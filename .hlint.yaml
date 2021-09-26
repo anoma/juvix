@@ -1,0 +1,55 @@
+# Based on HLint configuration file from https://github.com/ndmitchell/hlint
+
+- arguments: [--color]
+
+# --------------------------------------------------------------------------------
+# RESTRICTIONS
+# --------------------------------------------------------------------------------
+
+- extensions:
+  - default: false
+  - name: [DeriveFunctor, OverloadedStrings]
+  - name: [MultiWayIf, PatternGuards, RecordWildCards]
+  - name: [ScopedTypeVariables]
+  - name: [ConstraintKinds, RankNTypes, TypeFamilies]
+  # - {name: nameEXT, within: [moduleName]} 
+
+- flags:
+  - default: false
+  - {name: [-Wno-incomplete-patterns, -Wno-overlapping-patterns]}
+
+- modules:
+  # if you import Data.Set qualified, it must be as 'Set'
+  - {name: [Data.Set, Data.HashSet], as: Set} 
+  - {name: [Data.Map, Data.HashMap.Strict, Data.HashMap.Lazy], as: Map}
+  # - {name: Control.Arrow, within: []} # Certain modules are banned entirely
+
+- functions:
+  - {name: Data.List.NonEmpty.nub, within: []}
+  - {name: Data.List.NonEmpty.nubBy, within: []}
+
+# --------------------------------------------------------------------------------
+# OTHER HINTS
+# --------------------------------------------------------------------------------
+
+- warn: {name: Use explicit module export list}
+
+# --------------------------------------------------------------------------------
+# HINTS
+# --------------------------------------------------------------------------------
+
+- error: {lhs: idea Warning, rhs: warn}
+- error: {lhs: idea Suggestion, rhs: suggest}
+- error: {lhs: ideaN Warning, rhs: warnN}
+- error: {lhs: ideaN Suggestion, rhs: suggestN}
+
+- error: {lhs: occNameString (occName (unLoc x)), rhs: rdrNameStr x}
+- error: {lhs: occNameString (occName x), rhs: occNameStr x}
+- error: {lhs: noLoc (HsVar noExtField (noLoc (mkRdrUnqual (mkVarOcc x)))), rhs: strToVar x}
+
+# --------------------------------------------------------------------------------
+# IGNORES
+# --------------------------------------------------------------------------------
+
+- ignore: {name: Use let, within: [Test.All]}
+- ignore: {name: Use String}
