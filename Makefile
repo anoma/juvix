@@ -22,6 +22,10 @@ doc :
 build :
 	cabal build all
 
+.PHONY : gen
+gen : 
+	agda2hs ./src/MiniJuvix/Syntax/Core.agda -o src -X UnicodeSyntax
+
 .PHONY : stan
 stan :
 	stan check --include --filter-all --directory=src 
