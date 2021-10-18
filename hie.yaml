@@ -1,0 +1,8 @@
+cradle:
+  stack:
+    - path: ./src/test
+      component: "juvix:test:juvix-test"
+    - path: ./src/MiniJuvix
+      component: "juvix:src"
+    - path: ./src/app
+      component: "juvix:exe:MiniJuvix"
