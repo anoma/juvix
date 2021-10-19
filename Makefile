@@ -25,6 +25,7 @@ build :
 .PHONY : gen
 gen : 
 	agda2hs ./src/MiniJuvix/Syntax/Core.agda -o src -X UnicodeSyntax
+	agda2hs ./src/MiniJuvix/Syntax/Eval.agda -o src -X UnicodeSyntax
 
 .PHONY : stan
 stan :

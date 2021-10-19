@@ -9,6 +9,9 @@ data Quantity = Zero
               | One
               | Many
 
+data Relevance = Relevant
+               | Irrelevant
+
 type Name = String
 
 type BName = String

@@ -1,19 +1,33 @@
+-- Core syntax splits terms in two categories:
+-- CheckableTerm as the ones we must check.
+-- InferableTerm as the ones we can infer.
 module MiniJuvix.Syntax.Core where
+
+--------------------------------------------------------------------------------
 
 open import Haskell.Prelude
 open import Agda.Builtin.Equality
 
--- language extensions
+-- Language extensions
 {-# FOREIGN AGDA2HS
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleInstances #-}
 #-}
 
+--------------------------------------------------------------------------------
+
 data Quantity : Set where
   Zero One Many : Quantity
-
 {-# COMPILE AGDA2HS Quantity #-}
 
+--------------------------------------------------------------------------------
+-- Being relevant for a term is to have non zero quantity.
+data Relevance : Set where
+  Relevant   : Relevance  -- terms to compute.
+  Irrelevant : Relevance  -- terms to contemplate (for type formers).
+{-# COMPILE AGDA2HS Relevance #-}
+
+--------------------------------------------------------------------------------
 Name : Set
 Name = String
 {-# COMPILE AGDA2HS Name #-}
@@ -22,15 +36,15 @@ BName : Set
 BName = String
 {-# COMPILE AGDA2HS BName #-}
 
-
+--------------------------------------------------------------------------------
 data Term : Set where
   ToCheck : Term  -- terms with a type checkable.
   ToInfer : Term  -- terms that which types can be inferred.
-
 {-# COMPILE AGDA2HS Term #-}
 
+
 {-
-Following [Dunfield and Krishnaswami, 2019], we below follow the
+Following [Dunfield and Krishnaswami, 2019] and the
 Pfenning principle: "If the rule is an introduction rule, make the
 principal judgement "checking", and if the rule is an elimination
 rule, make the principal judgement "synthesising." Glossary:
@@ -113,7 +127,6 @@ data InferableTerm where
     → CheckableTerm -- ^ Type annotation of the result of the elimination.
     → InferableTerm
 {-# COMPILE AGDA2HS InferableTerm #-}
-
 
 -- | Substitution on type-synthesising terms.
 substInferableTerm
