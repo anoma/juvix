@@ -16,35 +16,27 @@ type Name = String
 
 type BName = String
 
-data Term = ToCheck
-          | ToInfer
-
 data CheckableTerm = UniverseType
-                   | Lam BName CheckableTerm
                    | PiType Quantity BName CheckableTerm CheckableTerm
-                   | TensorIntro CheckableTerm CheckableTerm
+                   | Lam BName CheckableTerm
                    | TensorType Quantity BName CheckableTerm CheckableTerm
-                   | Unit
+                   | TensorIntro CheckableTerm CheckableTerm
                    | UnitType
+                   | Unit
+                   | SumType CheckableTerm CheckableTerm
                    | Inl CheckableTerm
                    | Inr CheckableTerm
-                   | SumType CheckableTerm CheckableTerm
                    | Inferred InferableTerm
 
-data InferableTerm = Ann CheckableTerm CheckableTerm
-                   | Bound Natural
+data InferableTerm = Bound Natural
                    | Free Name
+                   | Ann CheckableTerm CheckableTerm
                    | App InferableTerm CheckableTerm
                    | TensorTypeElim Quantity BName BName BName InferableTerm
                                     CheckableTerm CheckableTerm
                    | SumTypeElim Quantity BName InferableTerm BName CheckableTerm
                                  BName CheckableTerm CheckableTerm
 
-substInferableTerm ::
-                   Natural -> InferableTerm -> InferableTerm -> InferableTerm
-substInferableTerm v i1 i2 = Bound 0
-
-checkableSubst ::
-               Natural -> InferableTerm -> CheckableTerm -> CheckableTerm
-checkableSubst v i c = Unit
+data Term = Checkable CheckableTerm
+          | Inferable InferableTerm
 
