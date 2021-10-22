@@ -23,6 +23,18 @@ data Quantity : Set where
   Zero One Many : Quantity
 {-# COMPILE AGDA2HS Quantity #-}
 
+instance
+  QuantityEq : Eq Quantity
+  QuantityEq ._==_ = check 
+    where
+    check : Quantity → Quantity → Bool
+    check Zero Zero = true
+    check One One = true
+    check Many Many = true
+    check _ _ = false
+
+-- TODO: add Semiring instance for Quantity
+
 --------------------------------------------------------------------------------
 -- Being relevant for a term is to have non zero quantity.
 data Relevance : Set where
@@ -34,19 +46,22 @@ relevancy : Quantity → Relevance
 relevancy Zero = Irrelevant
 relevancy One  = Relevant
 relevancy Many = Relevant
+{-# COMPILE AGDA2HS relevancy #-}
 
 --------------------------------------------------------------------------------
 
-Name : Set
-Name = String
-{-# COMPILE AGDA2HS Name #-}
-
+-- Name of a bound variable.
 BName : Set
 BName = String
 {-# COMPILE AGDA2HS BName #-}
 
---------------------------------------------------------------------------------
 
+-- TODO: this should be changed to cover Bruijn, internal and global context.
+Name : Set
+Name = String
+{-# COMPILE AGDA2HS Name #-}
+
+--------------------------------------------------------------------------------
 
 {- 
 Core syntax follows the pattern design for bidirectional typing
@@ -115,6 +130,7 @@ data CheckableTerm where
 
 {-# COMPILE AGDA2HS CheckableTerm #-}
 
+
 --------------------------------------------------------------------------------
 -- Type-inferable terms (a.k.a terms that synthesise)
 --------------------------------------------------------------------------------
@@ -163,8 +179,68 @@ data InferableTerm where
 {-# COMPILE AGDA2HS InferableTerm #-}
 
 
+--------------------------------------------------------------------------------
+-- Equality
+--------------------------------------------------------------------------------
+
+checkEq : CheckableTerm → CheckableTerm → Bool
+inferEq : InferableTerm → InferableTerm → Bool
+
+-- We below explicitly use `checkEq` and `inferEq` to have a more
+-- reliable Haskell output using Agda2HS. The traditional way gives an
+-- extraneous instance definitions.
+
+checkEq UniverseType UniverseType = true
+checkEq (PiType q₁ _ a₁ b₁) (PiType q₂ _ a₂ b₂) 
+  = q₁ == q₂ && checkEq a₁ a₂ && checkEq b₁ b₂
+checkEq (TensorType q₁ _ a₁ b₁) (TensorType q₂ _ a₂ b₂)
+   = q₁ == q₂ && checkEq a₁ a₂ &&  checkEq b₁ b₂
+checkEq (TensorIntro x₁ y₁) (TensorIntro x₂ y₂) = checkEq x₁ x₂ && checkEq y₁ y₂
+checkEq UnitType UnitType = true
+checkEq Unit Unit = true
+checkEq (SumType x₁ y₁) (SumType x₂ y₂) = checkEq x₁ x₂ && checkEq y₁ y₂
+checkEq (Inl x) (Inl y) = checkEq  x y
+checkEq (Inr x) (Inr y) = checkEq  x y
+checkEq (Inferred x) (Inferred y) = inferEq x y
+checkEq _ _ = false
+{-# COMPILE AGDA2HS checkEq #-}
+
+inferEq (Bound x) (Bound y) = x == y
+inferEq (Free x) (Free y) = x == y
+inferEq (Ann x₁ y₁) (Ann x₂ y₂) = checkEq x₁ x₂ &&  checkEq y₁ y₂
+inferEq (App x₁ y₁) (App x₂ y₂) =  inferEq x₁ x₂ &&  checkEq y₁ y₂
+inferEq (TensorTypeElim q₁ _ _ _ a₁ b₁ c₁) (TensorTypeElim q₂ _ _ _ a₂ b₂ c₂) 
+  = q₁ == q₂ &&  inferEq a₁ a₂ &&  checkEq b₁ b₂ &&  checkEq c₁ c₂
+inferEq (SumTypeElim q₁ _ x₁ _ a₁ _ b₁ c₁) 
+      (SumTypeElim q₂ _ x₂ _ a₂ _ b₂ c₂)
+  = q₁ == q₂ &&  inferEq x₁ x₂ && checkEq a₁ a₂ &&  checkEq b₁ b₂ &&  checkEq c₁ c₂
+inferEq _ _ = false
+{-# COMPILE AGDA2HS inferEq #-}
+
+instance
+  CheckableTermEq : Eq CheckableTerm
+  CheckableTermEq ._==_ = checkEq
+{-# COMPILE AGDA2HS CheckableTermEq #-}
+
+instance
+  InferableTermEq : Eq InferableTerm
+  InferableTermEq ._==_ = inferEq
+{-# COMPILE AGDA2HS InferableTermEq #-}
+
+
 data Term : Set where
   Checkable : CheckableTerm → Term  -- terms with a type checkable.
   Inferable : InferableTerm → Term  -- terms that which types can be inferred.
-  
 {-# COMPILE AGDA2HS Term #-}
+
+termEq : Term → Term → Bool
+termEq (Checkable x) (Checkable y) = x == y
+termEq (Inferable x) (Inferable y) = x == y
+termEq _ _ = false
+{-# COMPILE AGDA2HS termEq #-}
+
+instance 
+  TermEq : Eq Term 
+  TermEq ._==_ = termEq
+
+{-# COMPILE AGDA2HS TermEq #-}
