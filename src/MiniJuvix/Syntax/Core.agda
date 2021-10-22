@@ -18,22 +18,50 @@ open import Agda.Builtin.Equality
 #-}
 
 --------------------------------------------------------------------------------
+-- Quantity (a.k.a. Usage)
+--------------------------------------------------------------------------------
 
 data Quantity : Set where
   Zero One Many : Quantity
 {-# COMPILE AGDA2HS Quantity #-}
 
+--------------------------------------------------------------------------------
+-- The type of usages forms an ordered semiring.
+--------------------------------------------------------------------------------
+
 instance
   QuantityEq : Eq Quantity
-  QuantityEq ._==_ = check 
-    where
-    check : Quantity → Quantity → Bool
-    check Zero Zero = true
-    check One One = true
-    check Many Many = true
-    check _ _ = false
+  QuantityEq ._==_ Zero Zero = true
+  QuantityEq ._==_ One  One  = true
+  QuantityEq ._==_ Many Many = true
+  QuantityEq ._==_ _    _    = false
+{-# COMPILE AGDA2HS QuantityEq #-}
 
--- TODO: add Semiring instance for Quantity
+instance
+  -- TODO: this must be defined using copatterns or a top-level record.
+  -- QuantityOrd : Ord Quantity
+  -- QuantityOrd = ordFromCompare λ where
+  --   Zero  Zero →  EQ
+  --   Zero  _    →  LT
+  --   _    Zero  →  GT
+  --   One  One   →  EQ
+  --   One  _     →  LT
+  --   _    One   →  GT
+  --   Many Many  →  EQ
+
+  QuantitySGroup : Semigroup Quantity
+  QuantitySGroup ._<>_ Zero _ = Zero
+  QuantitySGroup ._<>_ One m = m
+  QuantitySGroup ._<>_ Many Zero = Zero
+  QuantitySGroup ._<>_ Many One = Many
+  QuantitySGroup ._<>_ Many Many = Many
+
+  QuantityMon : Monoid Quantity
+  QuantityMon .mempty = Zero
+
+-- {-# COMPILE AGDA2HS QuantityOrd #-}
+{-# COMPILE AGDA2HS QuantitySGroup #-}
+{-# COMPILE AGDA2HS QuantityMon #-}
 
 --------------------------------------------------------------------------------
 -- Being relevant for a term is to have non zero quantity.

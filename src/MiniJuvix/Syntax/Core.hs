@@ -9,6 +9,22 @@ data Quantity = Zero
               | One
               | Many
 
+instance Eq Quantity where
+    Zero == Zero = True
+    One == One = True
+    Many == Many = True
+    _ == _ = False
+
+instance Semigroup Quantity where
+    Zero <> _ = Zero
+    One <> m = m
+    Many <> Zero = Zero
+    Many <> One = Many
+    Many <> Many = Many
+
+instance Monoid Quantity where
+    mempty = Zero
+
 data Relevance = Relevant
                | Irrelevant
 
