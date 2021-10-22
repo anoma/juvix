@@ -12,19 +12,92 @@ import qualified MiniJuvix.Syntax.Core as Core
 #-}
 
 --------------------------------------------------------------------------------
+-- Values and neutral terms
+--------------------------------------------------------------------------------
 
--- What is a value? it's simply a term that contains an answer, i.e. a
--- term that does no longer reduce.
+{-
+  We are interested in a normal form for posibbly open terms. This
+  means that a term may have free variables. Therefore, we must
+  consider two kind of reduced terms: values and neutral terms. A term
+  that do not longer beta-reduce (i.e. that it contains an evaluation
+  answer) is called a value. A term is neutral whenever its futher
+  beta-reduction depends on a free variable. Terms in normal form are
+  then defined by mutual recursion with neutral terms.
+-}
 
-data Value : Set where
-  Universe : Value
-  -- TODO: Obviously there is more stuff I need to add here to cover
-  -- all the possible values.
+{- Since Agda2HS does not support indexed data types, we have to
+  repeat ourselves with syntax for values and neutral terms based on
+  Core syntax. The following is ideally for formal verification, but
+  not doable.
+-}
+
+{-
+data Value : Term → Set
+data Neutral : Term → Set
+
+data Value where
+  IsUniverse : Value (Checkable UniverseType)
+  IsNeutral : (t : Term) → Neutral t → Value t
+  IsUnit : Value (Checkable Unit)
+  IsUnitType : Value (Checkable UnitType)
+  ...
+  
+data Neutral where
+  IsFree : (b : Name) → Neutral (Inferable (Free b))
+  ...
+-}
+
+{-# NO_POSITIVITY_CHECK #-}
+data Value : Set 
+data Neutral : Set 
+
+data Value where
+  IsUniverse : Value
+  IsPiType : Quantity → BName → Value → (Value -> Value) -> Value
+  IsLam : BName → (Value -> Value) -> Value
+  IsTensorType : Quantity → BName → Value → (Value -> Value) -> Value
+  IsTensorIntro : Value → Value -> Value
+  IsUnitType : Value
+  IsUnit : Value
+  IsSumType : Value → Value -> Value
+  IsInl : Value -> Value
+  IsInr : Value -> Value
+  IsNeutral : Neutral -> Value
 
 {-# COMPILE AGDA2HS Value #-}
 
+data Neutral where
+  IsFree : Name → Neutral
+  IsApp : Neutral → Value → Neutral
+  IsTensorTypeElim :
+    Quantity → BName → BName → BName
+    → Neutral
+    → (Value -> Value -> Value)
+    → (Value -> Value)
+    → Neutral
+  NSumElim :
+    Quantity
+    → BName
+    → Neutral
+    → BName
+    → (Value -> Value)
+    → BName
+    → (Value -> Value)
+    → (Value -> Value)
+    → Neutral
+
+{-# COMPILE AGDA2HS Neutral #-}
+
+-- We can have an embedding from values to terms as a sort of quoting.
+-- Usages: we can check for value equality by defining term equality.
+
+valueToTerm : Value → Term
+valueToTerm v = Checkable Unit -- TODO
+
+{-# COMPILE AGDA2HS valueToTerm #-}
+
 --------------------------------------------------------------------------------
--- Substitution.
+-- Substitution. (see Def. 12 in Conor's paper to see where subst is needed.)
 --------------------------------------------------------------------------------
 
 substCheckableTerm

@@ -4,7 +4,27 @@ import Numeric.Natural (Natural)
 
 import qualified MiniJuvix.Syntax.Core as Core
 
-data Value = Universe
+data Value = IsUniverse
+           | IsPiType Quantity BName Value (Value -> Value)
+           | IsLam BName (Value -> Value)
+           | IsTensorType Quantity BName Value (Value -> Value)
+           | IsTensorIntro Value Value
+           | IsUnitType
+           | IsUnit
+           | IsSumType Value Value
+           | IsInl Value
+           | IsInr Value
+           | IsNeutral Neutral
+
+data Neutral = IsFree Name
+             | IsApp Neutral Value
+             | IsTensorTypeElim Quantity BName BName BName Neutral
+                                (Value -> Value -> Value) (Value -> Value)
+             | NSumElim Quantity BName Neutral BName (Value -> Value) BName
+                        (Value -> Value) (Value -> Value)
+
+valueToTerm :: Value -> Term
+valueToTerm v = Checkable Unit
 
 substCheckableTerm ::
                    CheckableTerm -> Natural -> InferableTerm -> CheckableTerm
