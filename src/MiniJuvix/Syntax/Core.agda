@@ -39,28 +39,30 @@ instance
 
 instance
   -- TODO: this must be defined using copatterns or a top-level record.
-  -- QuantityOrd : Ord Quantity
-  -- QuantityOrd = ordFromCompare λ where
-  --   Zero  Zero →  EQ
-  --   Zero  _    →  LT
-  --   _    Zero  →  GT
-  --   One  One   →  EQ
-  --   One  _     →  LT
-  --   _    One   →  GT
-  --   Many Many  →  EQ
+  QuantityOrd : Ord Quantity
+  QuantityOrd = ordFromCompare 
+    λ {
+        Zero  Zero →  EQ;
+        Zero  _    →  LT;
+        _    Zero  →  GT;
+        One  One   →  EQ;
+        One  _     →  LT;
+        _    One   →  GT;
+        Many Many  →  EQ
+      }
 
-  QuantitySGroup : Semigroup Quantity
-  QuantitySGroup ._<>_ Zero _ = Zero
-  QuantitySGroup ._<>_ One m = m
-  QuantitySGroup ._<>_ Many Zero = Zero
-  QuantitySGroup ._<>_ Many One = Many
-  QuantitySGroup ._<>_ Many Many = Many
+  QuantitySemigroup : Semigroup Quantity
+  QuantitySemigroup ._<>_ Zero _ = Zero
+  QuantitySemigroup ._<>_ One m = m
+  QuantitySemigroup ._<>_ Many Zero = Zero
+  QuantitySemigroup ._<>_ Many One = Many
+  QuantitySemigroup ._<>_ Many Many = Many
 
   QuantityMon : Monoid Quantity
   QuantityMon .mempty = Zero
 
 -- {-# COMPILE AGDA2HS QuantityOrd #-}
-{-# COMPILE AGDA2HS QuantitySGroup #-}
+{-# COMPILE AGDA2HS QuantitySemigroup #-}
 {-# COMPILE AGDA2HS QuantityMon #-}
 
 --------------------------------------------------------------------------------
@@ -164,7 +166,9 @@ data CheckableTerm where
 --------------------------------------------------------------------------------
 
 data InferableTerm where
-  -- | Variables, typing rule Var⇒.
+  -- | Variables, typing rule Var⇒. The separation for a variable
+  -- between Bound and Free is due to McBride and McKinna in
+  -- "Functional Pearl: I am not a Number—I am a Free Variable". 
   Bound : Nat → InferableTerm
   Free : Name → InferableTerm
   -- | Annotations, typing rule Ann⇒.
@@ -262,7 +266,9 @@ data Term : Set where
 {-# COMPILE AGDA2HS Term #-}
 
 termEq : Term → Term → Bool
+termEq (Checkable (Inferred x))  (Inferable y) = x == y
 termEq (Checkable x) (Checkable y) = x == y
+termEq (Inferable x) (Checkable (Inferred y)) = x == y
 termEq (Inferable x) (Inferable y) = x == y
 termEq _ _ = false
 {-# COMPILE AGDA2HS termEq #-}
@@ -271,4 +277,4 @@ instance
   TermEq : Eq Term 
   TermEq ._==_ = termEq
 
-{-# COMPILE AGDA2HS TermEq #-}
+{-# COMPILE AGDA2HS TermEq #-}  

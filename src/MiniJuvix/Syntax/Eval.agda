@@ -98,6 +98,7 @@ valueToTerm v = Checkable Unit -- TODO
 
 --------------------------------------------------------------------------------
 -- Substitution. (see Def. 12 in Conor's paper to see where subst is needed.)
+-- See a relevant discussion on ekmett/bound-making-de-bruijn-succ-less.
 --------------------------------------------------------------------------------
 
 substCheckableTerm

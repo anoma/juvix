@@ -99,7 +99,9 @@ data Term = Checkable CheckableTerm
           | Inferable InferableTerm
 
 termEq :: Term -> Term -> Bool
+termEq (Checkable (Inferred x)) (Inferable y) = x == y
 termEq (Checkable x) (Checkable y) = x == y
+termEq (Inferable x) (Checkable (Inferred y)) = x == y
 termEq (Inferable x) (Inferable y) = x == y
 termEq _ _ = False
 
