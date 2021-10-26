@@ -1,8 +1,12 @@
+{-# OPTIONS_GHC
+  -fno-warn-missing-export-lists -fno-warn-unused-matches #-}
+
 module MiniJuvix.Syntax.Eval where
 
 import Numeric.Natural (Natural)
 
-import qualified MiniJuvix.Syntax.Core as Core
+import MiniJuvix.Syntax.Core
+import MiniJuvix.Utils.Prelude
 
 data Value = IsUniverse
            | IsPiType Quantity BName Value (Value -> Value)

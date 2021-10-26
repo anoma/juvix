@@ -1,1 +1,2 @@
 resolver: lts-15.5
+allow-newer: true

@@ -7,8 +7,17 @@ open import Agda.Builtin.Equality
 
 open import MiniJuvix.Syntax.Core
 
+--------------------------------------------------------------------------------
+-- Haskell stuff 
+--------------------------------------------------------------------------------
+
+{-# FOREIGN AGDA2HS 
+{-# OPTIONS_GHC -fno-warn-missing-export-lists -fno-warn-unused-matches #-}
+#-}
+
 {-# FOREIGN AGDA2HS
-import qualified MiniJuvix.Syntax.Core as Core
+import MiniJuvix.Syntax.Core
+import MiniJuvix.Utils.Prelude
 #-}
 
 --------------------------------------------------------------------------------
@@ -171,4 +180,4 @@ substInferableTerm (SumTypeElim q z esum u r1 v r2 ann) x m
 
 substTerm : Term → Nat → InferableTerm → Term
 substTerm (Checkable n) x m = Checkable (substCheckableTerm n x m)
-substTerm (Inferable n) x m = Inferable (substInferableTerm n x m)
+substTerm (Inferable n) x m = Inferable (substInferableTerm n x m) 
