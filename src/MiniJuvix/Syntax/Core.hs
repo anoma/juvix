@@ -1,9 +1,11 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# OPTIONS_GHC
+  -fno-warn-missing-export-lists -fno-warn-unused-matches #-}
 
 module MiniJuvix.Syntax.Core where
 
 import Numeric.Natural (Natural)
+
+import MiniJuvix.Utils.Prelude
 
 data Quantity = Zero
               | One
@@ -15,6 +17,24 @@ instance Eq Quantity where
     Many == Many = True
     _ == _ = False
 
+compareQuantity :: Quantity -> Quantity -> Ordering
+compareQuantity Zero Zero = EQ
+compareQuantity Zero _ = LT
+compareQuantity _ Zero = GT
+compareQuantity One One = EQ
+compareQuantity One _ = LT
+compareQuantity _ One = GT
+compareQuantity Many Many = EQ
+
+instance Ord Quantity where
+    compare = compareQuantity
+    x < y = compareQuantity x y == LT
+    x > y = compareQuantity x y == GT
+    x <= y = compareQuantity x y /= GT
+    x >= y = compareQuantity x y /= LT
+    max x y = if compareQuantity x y == LT then y else x
+    min x y = if compareQuantity x y == GT then y else x
+
 instance Semigroup Quantity where
     Zero <> _ = Zero
     One <> m = m
@@ -25,13 +45,20 @@ instance Semigroup Quantity where
 instance Monoid Quantity where
     mempty = Zero
 
+instance Semiring Quantity where
+    one = One
+    times Zero _ = Zero
+    times One m = m
+    times Many Zero = Zero
+    times Many One = Many
+    times Many Many = Many
+
 data Relevance = Relevant
                | Irrelevant
 
 relevancy :: Quantity -> Relevance
 relevancy Zero = Irrelevant
-relevancy One = Relevant
-relevancy Many = Relevant
+relevancy _ = Relevant
 
 type BName = String
 

@@ -4,17 +4,27 @@ inferable. As the name indicates, a term of type CheckableTerm is a
 term we must check. Similarly, a term of type InferableTerm, it is a
 term we can infer.
 -}
-module MiniJuvix.Syntax.Core where
+
+
+module MiniJuvix.Syntax.Core 
+  where
+
 
 --------------------------------------------------------------------------------
 
 open import Haskell.Prelude
 open import Agda.Builtin.Equality
 
--- Haskell language extensions
+--------------------------------------------------------------------------------
+-- Haskell stuff 
+--------------------------------------------------------------------------------
+
+{-# FOREIGN AGDA2HS 
+{-# OPTIONS_GHC -fno-warn-missing-export-lists -fno-warn-unused-matches #-}
+#-}
+
 {-# FOREIGN AGDA2HS
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE FlexibleInstances #-}
+import MiniJuvix.Utils.Prelude
 #-}
 
 --------------------------------------------------------------------------------
@@ -37,19 +47,29 @@ instance
   QuantityEq ._==_ _    _    = false
 {-# COMPILE AGDA2HS QuantityEq #-}
 
+compareQuantity : Quantity -> Quantity -> Ordering
+compareQuantity Zero  Zero = EQ
+compareQuantity Zero  _    = LT
+compareQuantity _    Zero  = GT
+compareQuantity One  One   = EQ
+compareQuantity One  _     = LT
+compareQuantity _    One   = GT
+compareQuantity Many Many  = EQ
+{-# COMPILE AGDA2HS compareQuantity #-}
+
 instance
-  -- TODO: this must be defined using copatterns or a top-level record.
   QuantityOrd : Ord Quantity
-  QuantityOrd = ordFromCompare 
-    λ {
-        Zero  Zero →  EQ;
-        Zero  _    →  LT;
-        _    Zero  →  GT;
-        One  One   →  EQ;
-        One  _     →  LT;
-        _    One   →  GT;
-        Many Many  →  EQ
-      }
+  QuantityOrd .compare  = compareQuantity 
+  QuantityOrd ._<_  x y = compareQuantity x y == LT
+  QuantityOrd ._>_  x y = compareQuantity x y == GT
+  QuantityOrd ._<=_ x y = compareQuantity x y /= GT
+  QuantityOrd ._>=_ x y = compareQuantity x y /= LT
+  QuantityOrd .max  x y = if compareQuantity x y == LT then y else x
+  QuantityOrd .min  x y = if compareQuantity x y == GT then y else x
+
+  -- TODO: this must be defined using copatterns or a top-level
+  -- record. Using ordFromCompare doesn't compile to haskell, I might
+  -- need to open an issue for this, I guess.
 
   QuantitySemigroup : Semigroup Quantity
   QuantitySemigroup ._<>_ Zero _ = Zero
@@ -61,12 +81,22 @@ instance
   QuantityMon : Monoid Quantity
   QuantityMon .mempty = Zero
 
--- {-# COMPILE AGDA2HS QuantityOrd #-}
+  QuantitySemiring : Semiring Quantity
+  QuantitySemiring .one = One
+  QuantitySemiring .times Zero _ = Zero
+  QuantitySemiring .times One m = m
+  QuantitySemiring .times Many Zero = Zero
+  QuantitySemiring .times Many One = Many
+  QuantitySemiring .times Many Many = Many
+
+{-# COMPILE AGDA2HS QuantityOrd #-}
 {-# COMPILE AGDA2HS QuantitySemigroup #-}
 {-# COMPILE AGDA2HS QuantityMon #-}
+{-# COMPILE AGDA2HS QuantitySemiring #-}
 
 --------------------------------------------------------------------------------
 -- Being relevant for a term is to have non zero quantity.
+
 data Relevance : Set where
   Relevant   : Relevance  -- terms to compute.
   Irrelevant : Relevance  -- terms to contemplate (for type formation).
@@ -74,8 +104,7 @@ data Relevance : Set where
 
 relevancy : Quantity → Relevance
 relevancy Zero = Irrelevant
-relevancy One  = Relevant
-relevancy Many = Relevant
+relevancy _    = Relevant
 {-# COMPILE AGDA2HS relevancy #-}
 
 --------------------------------------------------------------------------------
@@ -111,7 +140,6 @@ Jargon:
 - Principal Judgement of a rule is the judgment that contains the
   principal connective.
 -}
-
 
 --------------------------------------------------------------------------------
 -- Type-checkable terms.
@@ -277,4 +305,4 @@ instance
   TermEq : Eq Term 
   TermEq ._==_ = termEq
 
-{-# COMPILE AGDA2HS TermEq #-}  
+{-# COMPILE AGDA2HS TermEq #-}   
