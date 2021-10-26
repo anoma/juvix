@@ -1,3 +1,14 @@
+PWD=$(CURDIR)
+PREFIX="$(PWD)/.stack-work/prefix"
+UNAME := $(shell uname)
+
+ifeq ($(UNAME), Darwin)
+	THREADS := $(shell sysctl -n hw.logicalcpu)
+else ifeq ($(UNAME), Linux)
+	THREADS := $(shell nproc)
+else
+	THREADS := $(shell echo %NUMBER_OF_PROCESSORS%)
+endif
 
 .PHONY : checklines
 checklines :
@@ -18,8 +29,8 @@ hlint :
 doc :
 	cabal haddock --enable-documentation
 
-.PHONY : build
-build :
+.PHONY : cabal-build
+cabal-build :
 	cabal build all
 
 .PHONY : gen
@@ -30,3 +41,19 @@ gen :
 .PHONY : stan
 stan :
 	stan check --include --filter-all --directory=src 
+
+stack-build:
+	stack build --fast --jobs $(THREADS)
+
+stack-build-watch:
+	stack build --fast --file-watch
+
+repl-lib:
+	stack ghci minijuvix:lib
+
+clean:
+	cabal clean
+	stack clean
+
+clean-full:
+	stack clean --full
