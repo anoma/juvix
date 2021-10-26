@@ -2,7 +2,7 @@ name: Haskell CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master , qtt ]
   pull_request:
     branches: [ master ]
 
