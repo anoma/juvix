@@ -1,10 +1,11 @@
 {-# OPTIONS_HADDOCK show-extensions #-}
 
-{- | 
--}
-module MiniJuvix.Scopechecking () where
+-- |
+module MiniJuvix.Scopechecking
+  (
+  )
+where
 
 --------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------
-

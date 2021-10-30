@@ -6,9 +6,6 @@ Tools used so far:
 - summoner
 - ghcup
 
-
-Also,
-
 - See
   [gluedeval](https://gist.github.com/AndrasKovacs/a0e0938113b193d6b9c1c0620d853784).
   During elaboration different kind of evaluation strategies may be
@@ -23,3 +20,7 @@ Initial task order for Minijuvix indicated between parenthesis:
 3. Compiler (2.)
 4. Interpreter (4.)
 
+- On deriving stuff using Standalone Der.
+See https://kowainik.github.io/posts/deriving.
+- To avoid boilerplate in the cabal file, one could use [common stanzas](https://vrom911.github.io/blog/common-stanzas). At the moment, I'm using cabal-edit to keep the bounds and this tool do not support stanzas. So be it.
+- Using MultiParamTypeClasses to allow me deriving multi instances in one line. 

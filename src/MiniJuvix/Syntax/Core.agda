@@ -5,10 +5,8 @@ term we must check. Similarly, a term of type InferableTerm, it is a
 term we can infer.
 -}
 
-
 module MiniJuvix.Syntax.Core 
   where
-
 
 --------------------------------------------------------------------------------
 
@@ -19,7 +17,7 @@ open import Agda.Builtin.Equality
 -- Haskell stuff 
 --------------------------------------------------------------------------------
 
-{-# FOREIGN AGDA2HS 
+{-# FOREIGN AGDA2HS
 {-# OPTIONS_GHC -fno-warn-missing-export-lists -fno-warn-unused-matches #-}
 #-}
 
@@ -34,10 +32,6 @@ import MiniJuvix.Utils.Prelude
 data Quantity : Set where
   Zero One Many : Quantity
 {-# COMPILE AGDA2HS Quantity #-}
-
---------------------------------------------------------------------------------
--- The type of usages forms an ordered semiring.
---------------------------------------------------------------------------------
 
 instance
   QuantityEq : Eq Quantity
@@ -66,11 +60,12 @@ instance
   QuantityOrd ._>=_ x y = compareQuantity x y /= LT
   QuantityOrd .max  x y = if compareQuantity x y == LT then y else x
   QuantityOrd .min  x y = if compareQuantity x y == GT then y else x
+  -- Using ordFromCompare didnn' work, I might need to open an issue
+  -- for this in agda2hs, Idk.
 
-  -- TODO: this must be defined using copatterns or a top-level
-  -- record. Using ordFromCompare doesn't compile to haskell, I might
-  -- need to open an issue for this, I guess.
+-- The type of usages forms an ordered semiring.
 
+instance
   QuantitySemigroup : Semigroup Quantity
   QuantitySemigroup ._<>_ Zero _ = Zero
   QuantitySemigroup ._<>_ One m = m
@@ -101,6 +96,10 @@ data Relevance : Set where
   Relevant   : Relevance  -- terms to compute.
   Irrelevant : Relevance  -- terms to contemplate (for type formation).
 {-# COMPILE AGDA2HS Relevance #-}
+{-# FOREIGN AGDA2HS
+deriving stock instance Eq Relevance
+deriving stock instance Ord Relevance
+#-}
 
 relevancy : Quantity → Relevance
 relevancy Zero = Irrelevant
@@ -108,17 +107,60 @@ relevancy _    = Relevant
 {-# COMPILE AGDA2HS relevancy #-}
 
 --------------------------------------------------------------------------------
+-- Variables. Relevant on the following design is the separation for a
+-- variable between Bound and Free as a data constructr, due to
+-- McBride and McKinna in "Functional Pearl: I am not a Number—I am a
+-- Free Variable". 
+--------------------------------------------------------------------------------
 
--- Name of a bound variable.
-BName : Set
-BName = String
-{-# COMPILE AGDA2HS BName #-}
+-- DeBruijn index.
+Index : Set
+Index = Nat
+{-# COMPILE AGDA2HS Index #-}
 
+-- A variable can be "bound", "binding bound", or simply free. For
+-- example, consider  the term "x(λy.y)". The variable x is free, the
+-- first y is a binding bound variable, and the latter y is bound.
 
--- TODO: this should be changed to cover Bruijn, internal and global context.
-Name : Set
-Name = String
+BindingName : Set
+BindingName = String
+{-# COMPILE AGDA2HS BindingName #-}
+
+-- A named variable can be in a local or global enviroment. In the
+-- lambda term above, for example, the second occurrence of y is
+-- globally bound. However, inside the the body of the lambda, the
+-- variable is local free.
+
+data Name : Set where
+  -- the variable has zero binding 
+  Global : String → Name
+  -- the variable has a binding in its scope.
+  Local : BindingName → Index → Name
 {-# COMPILE AGDA2HS Name #-}
+
+instance
+  nameEq : Eq Name
+  nameEq ._==_ (Global x) (Global y) = x == y
+  nameEq ._==_ (Local x1 y1) (Local x2 y2) = x1 == x2 && y1 == y2
+  nameEq ._==_ _ _ = false
+{-# COMPILE AGDA2HS nameEq #-}
+
+-- A variable is then a number indicating its DeBruijn index.
+-- Otherwise, it is free, with an identifier as a name, or
+-- inside 
+data Variable : Set where
+  Bound : Index → Variable
+  Free  : Name → Variable
+{-# COMPILE AGDA2HS Variable #-}
+
+instance
+  variableEq : Eq Variable 
+  variableEq ._==_ (Bound x) (Bound y) = x == y
+  variableEq ._==_ (Free x) (Free y) = x == y
+  variableEq ._==_ _ _ = false
+{-# COMPILE AGDA2HS variableEq #-}
+
+-- TODO: May I want to have Instances of Ord, Functor, Applicative, Monad?
 
 --------------------------------------------------------------------------------
 
@@ -158,14 +200,14 @@ data CheckableTerm where
     1. (Π[ x :ρ S ] P x) : U
     2. (λ x. t) : Π[ x :ρ S ] P x
   -}
-  PiType : Quantity → BName → CheckableTerm → CheckableTerm → CheckableTerm
-  Lam : BName → CheckableTerm → CheckableTerm
+  PiType : Quantity → BindingName → CheckableTerm → CheckableTerm → CheckableTerm
+  Lam : BindingName → CheckableTerm → CheckableTerm
   {- Dependent tensor product types. 
   See the typing rules ⊗-F-⇐,  ⊗-I₀⇐, and ⊗-I₁⇐.
     1. * S ⊗ T : U
     2. (M , N) : S ⊗ T
   -}
-  TensorType : Quantity → BName → CheckableTerm → CheckableTerm → CheckableTerm
+  TensorType : Quantity → BindingName → CheckableTerm → CheckableTerm → CheckableTerm
   TensorIntro : CheckableTerm → CheckableTerm → CheckableTerm
   {- Unit types. 
   See the typing rule 1-F-⇐ and 1-I-⇐.
@@ -188,17 +230,13 @@ data CheckableTerm where
 
 {-# COMPILE AGDA2HS CheckableTerm #-}
 
-
 --------------------------------------------------------------------------------
 -- Type-inferable terms (a.k.a terms that synthesise)
 --------------------------------------------------------------------------------
 
 data InferableTerm where
-  -- | Variables, typing rule Var⇒. The separation for a variable
-  -- between Bound and Free is due to McBride and McKinna in
-  -- "Functional Pearl: I am not a Number—I am a Free Variable". 
-  Bound : Nat → InferableTerm
-  Free : Name → InferableTerm
+  -- | Variables, typing rule Var⇒. 
+  Var : Variable → InferableTerm
   -- | Annotations, typing rule Ann⇒.
   {- Maybe, I want to have the rules here like this:
   
@@ -213,10 +251,10 @@ data InferableTerm where
   -- let z@(u, v) = M in N :^q (a ⊗ b))
   TensorTypeElim
     : Quantity       -- q is the multiplicity of the eliminated pair.
-    → BName          -- z is the name of the variable binding the pair in the
+    → BindingName          -- z is the name of the variable binding the pair in the
                      -- type annotation of the result of elimination.
-    → BName          -- u is the name of the variable binding the first element.
-    → BName          -- v is the name of the variable binding the second element.
+    → BindingName          -- u is the name of the variable binding the first element.
+    → BindingName          -- v is the name of the variable binding the second element.
     → InferableTerm  -- (u,v) is the eliminated pair.
     → CheckableTerm  -- Result of the elimination.
     → CheckableTerm  -- Type annotation of the result of elimination.
@@ -225,22 +263,21 @@ data InferableTerm where
   -- let (z : S + T) in (case z of {(inl u) ↦ r1; (inr v) ↦ r2}  :^q  T) 
   SumTypeElim        -- Case
     :  Quantity      -- Multiplicity of the sum contents.
-    →  BName         -- Name of the variable binding the sum in the type
+    →  BindingName         -- Name of the variable binding the sum in the type
                      -- annotation of the result of elimination.
     → InferableTerm  -- The eliminated sum.
-    → BName          -- u is the name of the variable binding the left element.
+    → BindingName          -- u is the name of the variable binding the left element.
     → CheckableTerm  -- r1 is the result of the elimination in case the sum contains
                      -- the left element.
-    → BName          -- v is the name of the variable binding the right element.
+    → BindingName          -- v is the name of the variable binding the right element.
     → CheckableTerm  -- r2 is the result of the elimination in case the sum contains
                      -- the right element.
     → CheckableTerm  -- Type annotation of the result of the elimination.
     → InferableTerm
 {-# COMPILE AGDA2HS InferableTerm #-}
 
-
 --------------------------------------------------------------------------------
--- Equality
+-- Term Equality
 --------------------------------------------------------------------------------
 
 checkEq : CheckableTerm → CheckableTerm → Bool
@@ -265,8 +302,8 @@ checkEq (Inferred x) (Inferred y) = inferEq x y
 checkEq _ _ = false
 {-# COMPILE AGDA2HS checkEq #-}
 
-inferEq (Bound x) (Bound y) = x == y
-inferEq (Free x) (Free y) = x == y
+
+inferEq (Var x) (Var y) = x == y
 inferEq (Ann x₁ y₁) (Ann x₂ y₂) = checkEq x₁ x₂ &&  checkEq y₁ y₂
 inferEq (App x₁ y₁) (App x₂ y₂) =  inferEq x₁ x₂ &&  checkEq y₁ y₂
 inferEq (TensorTypeElim q₁ _ _ _ a₁ b₁ c₁) (TensorTypeElim q₂ _ _ _ a₂ b₂ c₂) 
@@ -306,3 +343,7 @@ instance
   TermEq ._==_ = termEq
 
 {-# COMPILE AGDA2HS TermEq #-}   
+
+--------------------------------------------------------------------------------
+-- Other Instances
+--------------------------------------------------------------------------------

@@ -3,15 +3,13 @@
 
 module MiniJuvix.Syntax.Eval where
 
-import Numeric.Natural (Natural)
-
 import MiniJuvix.Syntax.Core
 import MiniJuvix.Utils.Prelude
 
 data Value = IsUniverse
-           | IsPiType Quantity BName Value (Value -> Value)
-           | IsLam BName (Value -> Value)
-           | IsTensorType Quantity BName Value (Value -> Value)
+           | IsPiType Quantity BindingName Value (Value -> Value)
+           | IsLam BindingName (Value -> Value)
+           | IsTensorType Quantity BindingName Value (Value -> Value)
            | IsTensorIntro Value Value
            | IsUnitType
            | IsUnit
@@ -22,16 +20,16 @@ data Value = IsUniverse
 
 data Neutral = IsFree Name
              | IsApp Neutral Value
-             | IsTensorTypeElim Quantity BName BName BName Neutral
-                                (Value -> Value -> Value) (Value -> Value)
-             | NSumElim Quantity BName Neutral BName (Value -> Value) BName
-                        (Value -> Value) (Value -> Value)
+             | IsTensorTypeElim Quantity BindingName BindingName BindingName
+                                Neutral (Value -> Value -> Value) (Value -> Value)
+             | NSumElim Quantity BindingName Neutral BindingName
+                        (Value -> Value) BindingName (Value -> Value) (Value -> Value)
 
 valueToTerm :: Value -> Term
 valueToTerm v = Checkable Unit
 
 substCheckableTerm ::
-                   CheckableTerm -> Natural -> InferableTerm -> CheckableTerm
+                   CheckableTerm -> Index -> InferableTerm -> CheckableTerm
 substCheckableTerm UniverseType x m = UniverseType
 substCheckableTerm (PiType q y a b) x m
   = PiType q y (substCheckableTerm a x m)
@@ -54,9 +52,10 @@ substCheckableTerm (Inferred n) x m
   = Inferred (substInferableTerm n x m)
 
 substInferableTerm ::
-                   InferableTerm -> Natural -> InferableTerm -> InferableTerm
-substInferableTerm (Bound y) x m = if x == y then m else Bound y
-substInferableTerm (Free y) x m = Free y
+                   InferableTerm -> Index -> InferableTerm -> InferableTerm
+substInferableTerm (Var (Bound y)) x m
+  = if x == y then m else Var (Bound y)
+substInferableTerm (Var (Free y)) x m = Var (Free y)
 substInferableTerm (Ann y a) x m
   = Ann (substCheckableTerm y x m) (substCheckableTerm a x m)
 substInferableTerm (App f t) x m

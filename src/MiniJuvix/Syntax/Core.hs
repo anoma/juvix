@@ -56,18 +56,37 @@ instance Semiring Quantity where
 data Relevance = Relevant
                | Irrelevant
 
+deriving stock instance Eq Relevance
+deriving stock instance Ord Relevance
+
 relevancy :: Quantity -> Relevance
 relevancy Zero = Irrelevant
 relevancy _ = Relevant
 
-type BName = String
+type Index = Natural
 
-type Name = String
+type BindingName = String
+
+data Name = Global String
+          | Local BindingName Index
+
+instance Eq Name where
+    Global x == Global y = x == y
+    Local x1 y1 == Local x2 y2 = x1 == x2 && y1 == y2
+    _ == _ = False
+
+data Variable = Bound Index
+              | Free Name
+
+instance Eq Variable where
+    Bound x == Bound y = x == y
+    Free x == Free y = x == y
+    _ == _ = False
 
 data CheckableTerm = UniverseType
-                   | PiType Quantity BName CheckableTerm CheckableTerm
-                   | Lam BName CheckableTerm
-                   | TensorType Quantity BName CheckableTerm CheckableTerm
+                   | PiType Quantity BindingName CheckableTerm CheckableTerm
+                   | Lam BindingName CheckableTerm
+                   | TensorType Quantity BindingName CheckableTerm CheckableTerm
                    | TensorIntro CheckableTerm CheckableTerm
                    | UnitType
                    | Unit
@@ -76,14 +95,13 @@ data CheckableTerm = UniverseType
                    | Inr CheckableTerm
                    | Inferred InferableTerm
 
-data InferableTerm = Bound Natural
-                   | Free Name
+data InferableTerm = Var Variable
                    | Ann CheckableTerm CheckableTerm
                    | App InferableTerm CheckableTerm
-                   | TensorTypeElim Quantity BName BName BName InferableTerm
-                                    CheckableTerm CheckableTerm
-                   | SumTypeElim Quantity BName InferableTerm BName CheckableTerm
-                                 BName CheckableTerm CheckableTerm
+                   | TensorTypeElim Quantity BindingName BindingName BindingName
+                                    InferableTerm CheckableTerm CheckableTerm
+                   | SumTypeElim Quantity BindingName InferableTerm BindingName
+                                 CheckableTerm BindingName CheckableTerm CheckableTerm
 
 checkEq :: CheckableTerm -> CheckableTerm -> Bool
 checkEq UniverseType UniverseType = True
@@ -103,8 +121,7 @@ checkEq (Inferred x) (Inferred y) = inferEq x y
 checkEq _ _ = False
 
 inferEq :: InferableTerm -> InferableTerm -> Bool
-inferEq (Bound x) (Bound y) = x == y
-inferEq (Free x) (Free y) = x == y
+inferEq (Var x) (Var y) = x == y
 inferEq (Ann x₁ y₁) (Ann x₂ y₂) = checkEq x₁ x₂ && checkEq y₁ y₂
 inferEq (App x₁ y₁) (App x₂ y₂) = inferEq x₁ x₂ && checkEq y₁ y₂
 inferEq (TensorTypeElim q₁ _ _ _ a₁ b₁ c₁)

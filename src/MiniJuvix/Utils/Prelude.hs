@@ -1,21 +1,19 @@
-module MiniJuvix.Utils.Prelude 
-  (
-    String
-  , module Protolude
-  , Semiring(..)
+module MiniJuvix.Utils.Prelude
+  ( String,
+    module Protolude,
+    Semiring (..),
   )
-  where
-  
+where
+
 --------------------------------------------------------------------------------
 
-import Protolude hiding (Semiring(..))
+import Protolude hiding (Semiring (..))
 import Prelude (String)
 
 --------------------------------------------------------------------------------
 
-
 --------------------------------------------------------------------------------
--- Semiring 
+-- Semiring
 --------------------------------------------------------------------------------
 
 class Monoid m => Semiring m where
