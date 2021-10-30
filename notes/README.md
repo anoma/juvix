@@ -5,6 +5,7 @@ Tools used so far:
 - stan
 - summoner
 - ghcup
+- `implicit-hie` generates `hie.yaml`.
 
 - See
   [gluedeval](https://gist.github.com/AndrasKovacs/a0e0938113b193d6b9c1c0620d853784).
@@ -22,5 +23,5 @@ Initial task order for Minijuvix indicated between parenthesis:
 
 - On deriving stuff using Standalone Der.
 See https://kowainik.github.io/posts/deriving.
-- To avoid boilerplate in the cabal file, one could use [common stanzas](https://vrom911.github.io/blog/common-stanzas). At the moment, I'm using cabal-edit to keep the bounds and this tool do not support stanzas. So be it.
+- To avoid boilerplate in the cabal file, one could use [common stanzas](https://vrom911.github.io/blog/common-stanzas). At the moment, I'm using cabal-edit to keep the bounds and this tool does not support stanzas. So be it.
 - Using MultiParamTypeClasses to allow me deriving multi instances in one line. 
