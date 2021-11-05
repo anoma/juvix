@@ -58,7 +58,7 @@ stack-build-watch:
 	stack build --fast --file-watch
 
 repl-lib:
-	stack ghci minijuvix:lib
+	stack ghci MiniJuvix:lib
 
 clean:
 	cabal clean

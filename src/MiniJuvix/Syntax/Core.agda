@@ -40,7 +40,7 @@ instance
   QuantityEq ._==_ Many Many = true
   QuantityEq ._==_ _    _    = false
 {-# COMPILE AGDA2HS QuantityEq #-}
-
+ 
 compareQuantity : Quantity -> Quantity -> Ordering
 compareQuantity Zero  Zero = EQ
 compareQuantity Zero  _    = LT
