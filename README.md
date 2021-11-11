@@ -36,7 +36,8 @@ src
  │ └─ Options.hs
  ├─ MiniJuvix
  │ ├─ Pipeline.hs
- │ ├─ Parser
+ │ ├─ Parsing
+ │ ├─ Desugaring 
  │ ├─ Syntax
  │ │ ├─ Sugared.hs
  │ │ ├─ Desugared.hs
