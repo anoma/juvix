@@ -56,3 +56,6 @@ TAGS
 
 _build/
 *.agdai
+.agda/
+agda/
+agda2hs/
