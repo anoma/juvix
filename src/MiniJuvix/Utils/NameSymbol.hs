@@ -1,8 +1,7 @@
-module MiniJuvix.Utils.NameSymbol 
-  (
-    fromString
+module MiniJuvix.Utils.NameSymbol
+  ( fromString,
   )
-  where
+where
 
 --------------------------------------------------------------------------------
 -- Adapted from https://github.com/heliaxdev/juvix/library/StandardLibrary
@@ -11,9 +10,10 @@ module MiniJuvix.Utils.NameSymbol
 -- import Data.String (IsString (..))
 -- import qualified Data.Text as Text
 
-import MiniJuvix.Utils.Prelude
 import qualified MiniJuvix.Utils.Parser.Token as Tok
+import MiniJuvix.Utils.Prelude
 import qualified MiniJuvix.Utils.Pretty as PP
+
 -- import qualified Prelude (foldr1)
 
 --------------------------------------------------------------------------------

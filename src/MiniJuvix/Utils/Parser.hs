@@ -1,7 +1,8 @@
 module MiniJuvix.Utils.Parser
-  (Parser
-  , ParserError)
-  where
+  ( Parser,
+    ParserError,
+  )
+where
 
 import Protolude
 import qualified Text.Megaparsec as P

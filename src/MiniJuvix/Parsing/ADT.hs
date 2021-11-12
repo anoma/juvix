@@ -1,8 +1,8 @@
--- | Adapted from https://github.com/heliaxdev/juvix/
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+-- | Adapted from https://github.com/heliaxdev/juvix/
 module MiniJuvix.Parsing.ADT where
 
 --------------------------------------------------------------------------------
@@ -12,6 +12,7 @@ import qualified Data.Aeson as A
 --------------------------------------------------------------------------------
 
 type ConstructorName = NameSymb
+
 type NameSymb = NonEmpty Symbol
 
 type ModuleName = NameSymb
@@ -47,14 +48,15 @@ data InfixDeclar
 -- Types
 --------------------------------------------------------------------------------
 
-data Type = Typ
-  -- Was a usage but can't alias for now
-  { typeUsage :: Maybe Expression,
-    typeName' :: !Symbol,
-    typeArgs :: [Symbol],
-    typeForm :: Data
-    -- TODO: To support Empty type this should be 'Maybe Data'
-  }
+data Type
+  = Typ
+      -- Was a usage but can't alias for now
+      { typeUsage :: Maybe Expression,
+        typeName' :: !Symbol,
+        typeArgs :: [Symbol],
+        typeForm :: Data
+        -- TODO: To support Empty type this should be 'Maybe Data'
+      }
   deriving (Show, Read, Eq, Generic)
 
 -- | 'Data' is the data declaration in the Juvix language
@@ -72,17 +74,19 @@ data Data
 -- Arrows
 --------------------------------------------------------------------------------
 
-data NamedType = NamedType'
-  { nameRefineName :: !Name,
-    namedRefineRefine :: Expression
-  }
+data NamedType
+  = NamedType'
+      { nameRefineName :: !Name,
+        namedRefineRefine :: Expression
+      }
   deriving (Show, Read, Eq, Generic)
 
 -- TODO ∷ change TypeName to TypeNameModule
-data TypeRefine = TypeRefine
-  { typeRefineName :: Expression,
-    typeRefineRefinement :: Expression
-  }
+data TypeRefine
+  = TypeRefine
+      { typeRefineName :: Expression,
+        typeRefineRefinement :: Expression
+      }
   deriving (Show, Read, Eq, Generic)
 
 --------------------------------------------------------------------------------
@@ -122,10 +126,11 @@ data Adt
   | Product Product
   deriving (Show, Read, Eq, Generic)
 
-data Sum = S
-  { sumConstructor :: !Symbol,
-    sumValue :: !(Maybe Product)
-  }
+data Sum
+  = S
+      { sumConstructor :: !Symbol,
+        sumValue :: !(Maybe Product)
+      }
   deriving (Show, Read, Eq, Generic)
 
 -- For when a product is without a sum only a record can apply a sum
@@ -136,27 +141,30 @@ data Product
   | ADTLike [Expression]
   deriving (Show, Read, Eq, Generic)
 
-data Record = Record''
-  { recordFields :: NonEmpty NameType,
-    recordFamilySignature :: Maybe Expression
-  }
+data Record
+  = Record''
+      { recordFields :: NonEmpty NameType,
+        recordFamilySignature :: Maybe Expression
+      }
   deriving (Show, Read, Eq, Generic)
 
-data NameType = NameType'
-  { nameTypeSignature :: Expression,
-    nameTypeName :: !Name,
-    nameTypeUsage :: Maybe Expression
-  }
+data NameType
+  = NameType'
+      { nameTypeSignature :: Expression,
+        nameTypeName :: !Name,
+        nameTypeUsage :: Maybe Expression
+      }
   deriving (Show, Read, Eq, Generic)
 
 --------------------------------------------------------------------------------
 -- Effect Handlers
 --------------------------------------------------------------------------------
 
-data Effect = Eff
-  { effName :: Symbol,
-    effOps :: [Signature]
-  }
+data Effect
+  = Eff
+      { effName :: Symbol,
+        effOps :: [Signature]
+      }
   deriving (Show, Read, Eq, Generic)
 
 data Operation = Op (FunctionLike Expression)
@@ -186,18 +194,20 @@ newtype Module
   = Mod (FunctionLike (NonEmpty TopLevel))
   deriving (Show, Read, Eq, Generic)
 
-data ModuleE = ModE
-  { moduleEBindings :: FunctionLike (NonEmpty TopLevel),
-    moduleEBody :: Expression
-  }
+data ModuleE
+  = ModE
+      { moduleEBindings :: FunctionLike (NonEmpty TopLevel),
+        moduleEBody :: Expression
+      }
   deriving (Show, Read, Eq, Generic)
 
 -- 'FunctionLike' is the generic version for both modules and functions
-data FunctionLike a = Like
-  { functionLikedName :: Symbol,
-    functionLikeArgs :: [Arg],
-    functionLikeBody :: GuardBody a
-  }
+data FunctionLike a
+  = Like
+      { functionLikedName :: Symbol,
+        functionLikeArgs :: [Arg],
+        functionLikeBody :: GuardBody a
+      }
   deriving (Show, Read, Eq, Generic)
 
 -- 'GuardBody' determines if a form is a guard or a body
@@ -210,10 +220,11 @@ newtype ModuleOpen
   = Open ModuleName
   deriving (Show, Read, Eq, Generic)
 
-data ModuleOpenExpr = OpenExpress
-  { moduleOpenExprModuleN :: ModuleName,
-    moduleOpenExprExpr :: Expression
-  }
+data ModuleOpenExpr
+  = OpenExpress
+      { moduleOpenExprModuleN :: ModuleName,
+        moduleOpenExprExpr :: Expression
+      }
   deriving (Show, Read, Eq, Generic)
 
 -- Very similar to name, but match instead of symbol
@@ -226,23 +237,25 @@ newtype Cond a
   = C (NonEmpty (CondLogic a))
   deriving (Show, Read, Eq, Generic)
 
-data CondLogic a = CondExpression
-  { condLogicPred :: Expression,
-    condLogicBody :: a
-  }
+data CondLogic a
+  = CondExpression
+      { condLogicPred :: Expression,
+        condLogicBody :: a
+      }
   deriving (Show, Read, Eq, Generic)
 
 --------------------------------------------------------------------------------
 -- Signatures
 --------------------------------------------------------------------------------
 
-data Signature = Sig
-  { signatureName :: Symbol,
-    -- Was a usage but can't alias for now
-    signatureUsage :: Maybe Expression,
-    signatureArrowType :: Expression,
-    signatureConstraints :: [Expression]
-  }
+data Signature
+  = Sig
+      { signatureName :: Symbol,
+        -- Was a usage but can't alias for now
+        signatureUsage :: Maybe Expression,
+        signatureArrowType :: Expression,
+        signatureConstraints :: [Expression]
+      }
   deriving (Show, Read, Eq, Generic)
 
 --------------------------------------------------------------------------------
@@ -296,12 +309,13 @@ data Tuple
   = TupleLit [Expression]
   deriving (Show, Read, Eq, Generic)
 
-data ArrowExp = Arr'
-  { arrowExpLeft :: Expression,
-    -- Was a usage but can't alias for now
-    arrowExpUsage :: Expression,
-    arrowExpRight :: Expression
-  }
+data ArrowExp
+  = Arr'
+      { arrowExpLeft :: Expression,
+        -- Was a usage but can't alias for now
+        arrowExpUsage :: Expression,
+        arrowExpRight :: Expression
+      }
   deriving (Show, Read, Eq, Generic)
 
 data Constant
@@ -318,26 +332,30 @@ newtype String'
   = Sho Text
   deriving (Show, Read, Eq, Generic)
 
-newtype Block = Bloc
-  {blockExpr :: Expression}
+newtype Block
+  = Bloc
+      {blockExpr :: Expression}
   deriving (Show, Read, Eq, Generic)
 
-data Lambda = Lamb
-  { lambdaArgs :: NonEmpty MatchLogic,
-    lambdaBody :: Expression
-  }
+data Lambda
+  = Lamb
+      { lambdaArgs :: NonEmpty MatchLogic,
+        lambdaBody :: Expression
+      }
   deriving (Show, Read, Eq, Generic)
 
-data Application = App
-  { applicationName :: Expression,
-    applicationArgs :: NonEmpty Expression
-  }
+data Application
+  = App
+      { applicationName :: Expression,
+        applicationArgs :: NonEmpty Expression
+      }
   deriving (Show, Read, Eq, Generic)
 
-data EffApp = Via
-  { effappHand :: Expression,
-    effappArg :: Expression
-  }
+data EffApp
+  = Via
+      { effappHand :: Expression,
+        effappArg :: Expression
+      }
   deriving (Show, Read, Generic, Eq)
 
 -- Was a newtype but extensible adds fields
@@ -346,10 +364,11 @@ newtype Do
   deriving (Show, Read, Eq, Generic)
 
 -- promote this to a match!!!
-data DoBody = DoBody
-  { doBodyName :: Maybe Symbol,
-    doBodyExpr :: Computation -- computation as in effect
-  }
+data DoBody
+  = DoBody
+      { doBodyName :: Maybe Symbol,
+        doBodyExpr :: Computation -- computation as in effect
+      }
   deriving (Show, Read, Eq, Generic)
 
 data Computation
@@ -357,68 +376,77 @@ data Computation
   | DoPure DoPure
   deriving (Show, Read, Eq, Generic)
 
-data DoOp = DoOp'
-  { opName :: Expression,
-    opArgs :: NonEmpty Expression
-  }
+data DoOp
+  = DoOp'
+      { opName :: Expression,
+        opArgs :: NonEmpty Expression
+      }
   deriving (Show, Read, Eq, Generic)
 
-data DoPure = DoPure'
-  { pureArg :: Expression
-  }
+data DoPure
+  = DoPure'
+      { pureArg :: Expression
+      }
   deriving (Show, Read, Eq, Generic)
 
 -- TODO ∷ we need includes in here as well!
 -- Was a newtype but extensible adds fields
-newtype ExpRecord = ExpressionRecord
-  { expRecordFields :: NonEmpty (NameSet Expression)
-  }
+newtype ExpRecord
+  = ExpressionRecord
+      { expRecordFields :: NonEmpty (NameSet Expression)
+      }
   deriving (Show, Read, Eq, Generic)
 
 --------------------------------------------------------------------------------
 -- Symbol Binding
 --------------------------------------------------------------------------------
 
-data Let = Let'
-  { letBindings :: FunctionLike Expression,
-    letBody :: Expression
-  }
+data Let
+  = Let'
+      { letBindings :: FunctionLike Expression,
+        letBody :: Expression
+      }
   deriving (Show, Read, Eq, Generic)
 
-data LetType = LetType''
-  { letTypeBindings :: Type,
-    letTypeBody :: Expression
-  }
+data LetType
+  = LetType''
+      { letTypeBindings :: Type,
+        letTypeBody :: Expression
+      }
   deriving (Show, Read, Eq, Generic)
 
-data Infix = Inf
-  { infixLeft :: Expression,
-    infixOp :: NameSymb,
-    infixRight :: Expression
-  }
+data Infix
+  = Inf
+      { infixLeft :: Expression,
+        infixOp :: NameSymb,
+        infixRight :: Expression
+      }
   deriving (Show, Read, Eq, Generic)
 
 --------------------------------------------------------------------------------
 -- Matching
 --------------------------------------------------------------------------------
 
-data Match = Match''
-  { matchOn :: Expression,
-    matchBindigns :: NonEmpty MatchL
-  }
+data Match
+  = Match''
+      { matchOn :: Expression,
+        matchBindigns :: NonEmpty MatchL
+      }
   deriving (Show, Read, Eq, Generic)
 
-data MatchL = MatchL
-  { matchLPattern :: MatchLogic,
-    matchLBody :: Expression
-  }
+data MatchL
+  = MatchL
+      { matchLPattern :: MatchLogic,
+        matchLBody :: Expression
+      }
   deriving (Show, Read, Eq, Generic)
 
 -- TODO ∷ add literals to the match
-data MatchLogic = MatchLogic
-  { matchLogicContents :: MatchLogicStart,
-    matchLogicNamed :: Maybe Symbol
-  }
+data MatchLogic
+  = MatchLogic
+      { matchLogicContents :: MatchLogicStart,
+        matchLogicNamed :: Maybe Symbol
+      }
   deriving (Show, Read, Eq, Generic)
 
 data MatchLogicStart

@@ -1,11 +1,10 @@
 -- | Adapted from https://github.com/heliaxdev/juvix/
-
 module MiniJuvix.Parsing.Location where
 
 --------------------------------------------------------------------------------
 
-import MiniJuvix.Utils.Prelude
 import MiniJuvix.Utils.Parser (Parser)
+import MiniJuvix.Utils.Prelude
 import qualified Text.Megaparsec as P
 
 --------------------------------------------------------------------------------

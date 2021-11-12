@@ -1,5 +1,4 @@
 -- | Adapted from https://github.com/heliaxdev/juvix/
-
 module MiniJuvix.Utils.Parser.Lexer
   ( spacer,
     spaceLiner,

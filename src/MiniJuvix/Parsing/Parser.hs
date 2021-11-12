@@ -1,6 +1,6 @@
--- | Adapted from https://github.com/heliaxdev/juvix/
 {-# LANGUAGE ApplicativeDo #-}
 
+-- | Adapted from https://github.com/heliaxdev/juvix/
 module Juvix.Frontend.Parser
   ( parse,
     prettyParse,
@@ -318,8 +318,7 @@ nameSetMany' :: Parser a -> Parser (NonEmpty (Types.NameSet a))
 nameSetMany' parser =
   J.curly $ do
     x <- J.sepBy1H (nameSetSN parser) (skipLiner J.comma)
-    if
-        | length x == 1 && isPunned x ->
+    if  | length x == 1 && isPunned x ->
           x <$ skipLiner J.comma
         | otherwise ->
           x <$ P.optional (skipLiner J.comma)
@@ -449,9 +448,9 @@ product =
 record :: Parser Types.Record
 record = do
   names <-
-    spaceLiner $
-      J.curly $
-        J.sepBy1HFinal nameTypeSN (skipLiner J.comma)
+    spaceLiner
+      $ J.curly
+      $ J.sepBy1HFinal nameTypeSN (skipLiner J.comma)
   familySignature <- P.optional (skipLiner J.colon *> expression)
   pure (Types.Record'' names familySignature)
 
@@ -760,8 +759,7 @@ doPureParser = do
 infixSymbolGen :: Parser Symbol -> Parser Symbol
 infixSymbolGen p = do
   symb <- p
-  if
-      | Set.member symb J.reservedSymbols -> fail "symbol is reserved word"
+  if  | Set.member symb J.reservedSymbols -> fail "symbol is reserved word"
       | otherwise -> pure symb
 
 infixSymbolDot :: Parser (NonEmpty Symbol)
@@ -795,8 +793,7 @@ prefixSymbolGen startParser = do
   rest <- P.takeWhileP (Just "Valid Middle Symbol") J.validMiddleSymbol
   -- Slow O(n) call, could maybe peek ahead instead, then parse it all at once?
   let new = ByteString.cons start rest
-  if
-      | Set.member new J.reservedWords -> fail "symbol is reserved operator"
+  if  | Set.member new J.reservedWords -> fail "symbol is reserved operator"
       | otherwise -> pure (internText $ Encoding.decodeUtf8 new)
 
 symbolEndGen :: ByteString -> Parser ()
@@ -887,11 +884,11 @@ arrowExp =
 
 refine :: Expr.Operator Parser Types.Expression
 refine =
-  Expr.Postfix $
-    P.try $
-      do
-        refine <- spaceLiner (J.curly expressionSN)
-        pure (\p -> Types.RefinedE (Types.TypeRefine p refine))
+  Expr.Postfix
+    $ P.try
+    $ do
+      refine <- spaceLiner (J.curly expressionSN)
+      pure (\p -> Types.RefinedE (Types.TypeRefine p refine))
 
 -- For Do!
 table :: Semigroup a => [[Expr.Operator Parser a]]
@@ -1012,4 +1009,3 @@ parseSingleFile file = do
 _fileNameToModuleName :: FilePath -> NameSymbol.T
 _fileNameToModuleName =
   NameSymbol.fromSymbol . intern . toUpperFirst . FilePath.takeBaseName
-

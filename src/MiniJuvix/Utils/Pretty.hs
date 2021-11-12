@@ -6,15 +6,14 @@ module MiniJuvix.Utils.Pretty
     color,
     render,
     hardlines,
+    format,
+    annotateSpecialSymbol,
+    printList,
   )
 where
 
 --------------------------------------------------------------------------------
 
---------------------------------------------------------------------------------
-
-import MiniJuvix.Syntax.Core
-import MiniJuvix.Syntax.Eval
 import MiniJuvix.Utils.Prelude
 import Prettyprinter hiding
   ( Doc,
@@ -26,6 +25,7 @@ import qualified Prettyprinter.Render.Terminal as Term
 --------------------------------------------------------------------------------
 -- See https://hackage.haskell.org/package/prettyprinter-1.7.1/docs/Prettyprinter.html
 --     https://hackage.haskell.org/package/prettyprinter-ansi-terminal
+-- to know why we decide to have the def. below.
 
 type Doc = PP.Doc Term.AnsiStyle
 
@@ -114,6 +114,3 @@ annotateSpecialSymbol b s = annotate (Term.color (color s)) (format b s)
 
 class Pretty a where
   pretty :: Bool -> a -> Doc
-
-printList :: Pretty a => [a] -> IO ()
-printList = printDoc . vsep . punctuate line . map p

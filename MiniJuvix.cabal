@@ -24,33 +24,34 @@ source-repository head
 
 library
     exposed-modules:
-        MiniJuvix.Pipeline
-        MiniJuvix.Error
+        -- MiniJuvix.Pipeline
+        -- MiniJuvix.Error
         MiniJuvix.Pretty
-        MiniJuvix.Monad
-        MiniJuvix.Parsing.ADT
-        MiniJuvix.Parsing.Parser
-        MiniJuvix.Parsing.Location
-        MiniJuvix.Parsing.Error
-        MiniJuvix.Desugaring.Error
-        MiniJuvix.Syntax.Sugared
-        MiniJuvix.Syntax.Desugared
+        -- MiniJuvix.Monad
+        -- MiniJuvix.Parsing.ADT
+        -- MiniJuvix.Parsing.Parser
+        -- MiniJuvix.Parsing.Location
+        -- MiniJuvix.Parsing.Error
+        -- MiniJuvix.Desugaring.Error
+        -- MiniJuvix.Syntax.Sugared
+        -- MiniJuvix.Syntax.Desugared
         MiniJuvix.Syntax.Core
         MiniJuvix.Syntax.Eval
         MiniJuvix.Utils.Prelude
         MiniJuvix.Utils.Pretty
-        MiniJuvix.Utils.Parser
-        MiniJuvix.Utils.Parser.Lexer
-        MiniJuvix.Utils.Parser.Token
-        MiniJuvix.Utils.NameSymbol
-        MiniJuvix.Utils.File
-        MiniJuvix.Utils.Monad
-        MiniJuvix.Typing
-        MiniJuvix.Typing.Coverage
-        MiniJuvix.Typing.Erasure
-        MiniJuvix.Typing.Scopechecking
-        MiniJuvix.Typing.Termination
+        -- MiniJuvix.Utils.Parser
+        -- MiniJuvix.Utils.Parser.Lexer
+        -- MiniJuvix.Utils.Parser.Token
+        -- MiniJuvix.Utils.NameSymbol
+        -- MiniJuvix.Utils.File
+        -- MiniJuvix.Utils.Monad
+        -- MiniJuvix.Typing
+        -- MiniJuvix.Typing.Coverage
+        -- MiniJuvix.Typing.Erasure
+        -- MiniJuvix.Typing.Scopechecking
+        -- MiniJuvix.Typing.Termination
         MiniJuvix.Typing.Typechecking
+        MiniJuvix.Typing.Utils
         MiniJuvix.Typing.Error
 
 

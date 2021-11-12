@@ -102,7 +102,6 @@ data Neutral where
 
 valueToTerm : Value → Term
 valueToTerm v = Checkable Unit -- TODO
-
 {-# COMPILE AGDA2HS valueToTerm #-}
 
 --------------------------------------------------------------------------------

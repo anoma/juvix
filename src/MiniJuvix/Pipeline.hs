@@ -10,8 +10,6 @@ where
 
 --------------------------------------------------------------------------------
 
---------------------------------------------------------------------------------
-
 import MiniJuvix.Error
 import MiniJuvix.Utils.Prelude (Eq, FilePath, Maybe, Ord, Show, Text)
 
@@ -22,12 +20,13 @@ data CompilerMode
   | BuildMode Config FilePath
   | TestMode Config FilePath
 
-data Config = Config
-  { _configPass :: Pass,
-    _configBackend :: Backend,
-    _configOutputDirectory :: Maybe FilePath,
-    _configWriteToFsBehavior :: WriteToFsBehavior
-  }
+data Config
+  = Config
+      { _configPass :: Pass,
+        _configBackend :: Backend,
+        _configOutputDirectory :: Maybe FilePath,
+        _configWriteToFsBehavior :: WriteToFsBehavior
+      }
 
 data Pass
   = Parsing
@@ -40,13 +39,12 @@ data Backend = LLVM
   deriving (Eq, Ord, Show)
 
 data WriteToFsBehavior = OverwriteTargetFiles | WriteIfDoesNotExist
-
-runAndLogErrs :: MiniJuvix a -> IO ()
-runAndLogErrs m = runMiniJuvix m >>= \(_, errs) -> logErrs errs
+-- runAndLogErrs :: MiniJuvix a -> IO ()
+-- runAndLogErrs m = runMiniJuvix m >>= \(_, errs) -> logErrs errs
 
 -- runTestWith :: FilePath -> Config -> IO ()
 -- runTestWith filePath config = case _configPass config of
---   Parsing -> undefined 
+--   Parsing -> undefined
 --   Desugaring -> undefined
 --   Typechecking -> runAndLogErrs $ depAnalPass filePath >>= parsePass >>= checkPass
 --   Compiling -> undefined
