@@ -18,16 +18,20 @@ open import Agda.Builtin.Equality
 --------------------------------------------------------------------------------
 
 {-# FOREIGN AGDA2HS
-{-# OPTIONS_GHC -fno-warn-missing-export-lists -fno-warn-unused-matches #-}
+{-# OPTIONS_GHC -fno-warn-missing-export-lists #-}
+{-# OPTIONS_GHC -fno-warn-unused-matches #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
 #-}
 
 {-# FOREIGN AGDA2HS
+--------------------------------------------------------------------------------
+
 import MiniJuvix.Utils.Prelude
-#-}
 
 --------------------------------------------------------------------------------
 -- Quantity (a.k.a. Usage)
 --------------------------------------------------------------------------------
+#-}
 
 data Quantity : Set where
   Zero One Many : Quantity
@@ -162,7 +166,9 @@ instance
 
 -- TODO: May I want to have Instances of Ord, Functor, Applicative, Monad?
 
+{-# FOREIGN AGDA2HS
 --------------------------------------------------------------------------------
+#-}
 
 {- 
 Core syntax follows the pattern design for bidirectional typing
@@ -183,9 +189,11 @@ Jargon:
   principal connective.
 -}
 
+{-# FOREIGN AGDA2HS
 --------------------------------------------------------------------------------
 -- Type-checkable terms.
 --------------------------------------------------------------------------------
+#-}
 
 data CheckableTerm : Set
 data InferableTerm : Set
@@ -230,9 +238,11 @@ data CheckableTerm where
 
 {-# COMPILE AGDA2HS CheckableTerm #-}
 
+{-# FOREIGN AGDA2HS
 --------------------------------------------------------------------------------
 -- Type-inferable terms (a.k.a terms that synthesise)
 --------------------------------------------------------------------------------
+#-}
 
 data InferableTerm where
   -- | Variables, typing rule Var⇒. 
@@ -276,9 +286,11 @@ data InferableTerm where
     → InferableTerm
 {-# COMPILE AGDA2HS InferableTerm #-}
 
+{-# FOREIGN AGDA2HS
 --------------------------------------------------------------------------------
 -- Term Equality
 --------------------------------------------------------------------------------
+#-}
 
 checkEq : CheckableTerm → CheckableTerm → Bool
 inferEq : InferableTerm → InferableTerm → Bool
@@ -302,7 +314,6 @@ checkEq (Inferred x) (Inferred y) = inferEq x y
 checkEq _ _ = false
 {-# COMPILE AGDA2HS checkEq #-}
 
-
 inferEq (Var x) (Var y) = x == y
 inferEq (Ann x₁ y₁) (Ann x₂ y₂) = checkEq x₁ x₂ &&  checkEq y₁ y₂
 inferEq (App x₁ y₁) (App x₂ y₂) =  inferEq x₁ x₂ &&  checkEq y₁ y₂
@@ -323,7 +334,6 @@ instance
   InferableTermEq : Eq InferableTerm
   InferableTermEq ._==_ = inferEq
 {-# COMPILE AGDA2HS InferableTermEq #-}
-
 
 data Term : Set where
   Checkable : CheckableTerm → Term  -- terms with a type checkable.

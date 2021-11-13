@@ -48,10 +48,6 @@ instance Pretty Variable where
   pretty _ (Bound idx) = undefined -- PP.pretty idx
   pretty b (Free name) = undefined -- pretty b name
 
-instance Pretty Term where
-  pretty b (Checkable t) = pretty b t
-  pretty b (Inferable t) = pretty b t
-
 instance Pretty CheckableTerm where
   pretty _ = prettyCheckable
 
@@ -78,11 +74,21 @@ prettyInferrable (App m n) = undefined
 prettyInferrable (TensorTypeElim q x _ _ t _ _) = undefined
 prettyInferrable (SumTypeElim q b x y c z s t) = undefined
 
+instance Pretty Term where
+  pretty b (Checkable t) = pretty b t
+  pretty b (Inferable t) = pretty b t
+
 instance Pretty Value where
   pretty _ = undefined
 
 instance Pretty Neutral where
   pretty _ = undefined
 
+instance Pretty Binding where
+  pretty _ = undefined
+
 instance Pretty TypingEnv where
+  pretty _ = undefined
+
+instance Pretty TypingContext where
   pretty _ = undefined

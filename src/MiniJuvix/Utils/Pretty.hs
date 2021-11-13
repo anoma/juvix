@@ -8,7 +8,6 @@ module MiniJuvix.Utils.Pretty
     hardlines,
     format,
     annotateSpecialSymbol,
-    printList,
   )
 where
 

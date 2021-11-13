@@ -1,17 +1,15 @@
 -- | Adapted from https://github.com/heliaxdev/juvix/
 module MiniJuvix.Parsing.Error
-  ( ParsingError,
-    Error,
+  ( Error (..),
   )
 where
 
 --------------------------------------------------------------------------------
 
-import MiniJuvix.Utils.Prelude
+import safe MiniJuvix.Utils.Prelude (FilePath)
 
 --------------------------------------------------------------------------------
 
 data ParsingError
 
 data Error = NoHeaderErr FilePath | ParseError ParsingError
-  deriving stock (Show)

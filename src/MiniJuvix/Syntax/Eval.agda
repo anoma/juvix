@@ -20,9 +20,11 @@ import MiniJuvix.Syntax.Core
 import MiniJuvix.Utils.Prelude
 #-}
 
+{-# FOREIGN AGDA2HS
 --------------------------------------------------------------------------------
 -- Values and neutral terms
 --------------------------------------------------------------------------------
+#-}
 
 {-
   We are interested in a normal form for posibbly open terms. This

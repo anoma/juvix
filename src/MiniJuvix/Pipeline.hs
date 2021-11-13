@@ -17,7 +17,8 @@ import MiniJuvix.Utils.Prelude (Eq, FilePath, Maybe, Ord, Show, Text)
 
 data CompilerMode
   = ReplMode
-  | BuildMode Config FilePath
+  | CheckMode Config FilePath
+  | CompileMode Config FilePath
   | TestMode Config FilePath
 
 data Config
@@ -33,12 +34,13 @@ data Pass
   | Desugaring
   | Typechecking
   | Compiling
-  deriving stock (Show)
+  deriving stock Show
 
 data Backend = LLVM
   deriving (Eq, Ord, Show)
 
 data WriteToFsBehavior = OverwriteTargetFiles | WriteIfDoesNotExist
+
 -- runAndLogErrs :: MiniJuvix a -> IO ()
 -- runAndLogErrs m = runMiniJuvix m >>= \(_, errs) -> logErrs errs
 
@@ -46,5 +48,9 @@ data WriteToFsBehavior = OverwriteTargetFiles | WriteIfDoesNotExist
 -- runTestWith filePath config = case _configPass config of
 --   Parsing -> undefined
 --   Desugaring -> undefined
---   Typechecking -> runAndLogErrs $ depAnalPass filePath >>= parsePass >>= checkPass
+  -- Typechecking -> runAndLogErrs $ depAnalPass filePath >>= parsePass >>= checkPass
 --   Compiling -> undefined
+
+
+runMiniJuvix :: 
+runMiniJuvix = ?
