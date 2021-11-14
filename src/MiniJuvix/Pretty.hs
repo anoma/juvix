@@ -17,6 +17,7 @@ import MiniJuvix.Utils.Pretty
     ascii,
     color,
     hardlines,
+    printList,
     render,
     unicode,
   )
@@ -85,9 +86,6 @@ instance Pretty Neutral where
   pretty _ = undefined
 
 instance Pretty Binding where
-  pretty _ = undefined
-
-instance Pretty TypingEnv where
   pretty _ = undefined
 
 instance Pretty TypingContext where

@@ -24,10 +24,9 @@ where
 
 import qualified Data.Char as Char
 import Relude hiding
-  ( one,
+  ( Type,
+    one,
   )
-
-import safe Relude.Container
 
 --------------------------------------------------------------------------------
 -- Logical connectives

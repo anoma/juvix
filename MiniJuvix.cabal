@@ -29,8 +29,18 @@ library
         MiniJuvix.Utils.Prelude
         MiniJuvix.Utils.Pretty
         MiniJuvix.Utils.Parser
+        MiniJuvix.Parsing.ADT
         MiniJuvix.Parsing.Error
         MiniJuvix.Parsing.Location
+        MiniJuvix.Parsing.Parser
+        MiniJuvix.Desugaring.Error
+        MiniJuvix.Typing.Typechecking
+        MiniJuvix.Typing.Utils
+        MiniJuvix.Typing.Error
+        MiniJuvix.Error
+        MiniJuvix.Pretty
+        MiniJuvix.Pipeline
+        MiniJuvix.Monad
 
     hs-source-dirs:     src
     other-modules:      Paths_MiniJuvix

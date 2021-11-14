@@ -1,30 +1,35 @@
 module MiniJuvix.Error
   ( ErrorType (..),
     ErrorLocation (..),
+    ErrorReport (..),
+    printErrors,
   )
 where
 
 --------------------------------------------------------------------------------
 
+import qualified Data.List as List
+import qualified Data.Set as Set
 import MiniJuvix.Desugaring.Error (DesugaringError)
 import MiniJuvix.Parsing.Error
 import MiniJuvix.Pretty
-import MiniJuvix.Typing.Error (TypingError (..))
+import MiniJuvix.Typing.Error
 import MiniJuvix.Utils.Prelude
+import qualified Text.Show
 
 --------------------------------------------------------------------------------
 
 data ErrorType
   = PError ParsingError
   | DError DesugaringError
-  | TError TypingError
+  | CError CheckingError
   | UnknownError
 
 instance Show ErrorType where
   show e = case e of
     PError pe -> show pe
     DError de -> show de
-    TError te -> show pe
+    CError te -> show te
     UnknownError -> show "UnknownError"
 
 --------------------------------------------------------------------------------
@@ -49,15 +54,18 @@ type ErrorDescription = Text
 
 type ErrorScope = Maybe Scope
 
-data Error = Error
-  { _errorType :: ErrorType,
-    _errorLoc :: ErrorLocation,
-    _errorText :: ErrorDescription,
-    _errorParentScopes :: [ErrorScope]
-  }
-  deriving stock (Eq, Show)
+data ErrorReport
+  = ErrorReport
+      { _errorType :: ErrorType,
+        _errorLoc :: ErrorLocation,
+        _errorText :: ErrorDescription,
+        _errorParentScopes :: [ErrorScope]
+      }
+
+instance Show ErrorReport where
+  show _ = undefined
 
 --------------------------------------------------------------------------------
 
-printErrors :: Set Error -> IO ()
-printErrors = printList . L.sort . S.toList
+printErrors :: Set ErrorReport -> IO ()
+printErrors = printList . Set.toList

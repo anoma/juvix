@@ -1,14 +1,17 @@
 {-# OPTIONS_GHC -Wno-partial-fields #-}
+
 -- | Adapted from https://github.com/heliaxdev/juvix/
-module MiniJuvix.Parsing.Location 
-  (noLoc,location,mkLocated)
-  where
+module MiniJuvix.Parsing.Location
+  ( noLoc,
+    location,
+    mkLocated,
+  )
+where
 
 --------------------------------------------------------------------------------
 
 import MiniJuvix.Utils.Parser (Parser)
 import MiniJuvix.Utils.Prelude
-
 import qualified Text.Megaparsec as P
 
 --------------------------------------------------------------------------------
@@ -19,7 +22,7 @@ data Loc
   deriving stock (Eq, Show, Ord)
 
 data Located a = Located {located :: Loc, locVal :: a}
-  deriving stock Show
+  deriving stock (Show)
 
 instance Functor Located where
   fmap f (Located l v) = Located l (f v)

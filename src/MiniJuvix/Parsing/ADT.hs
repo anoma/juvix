@@ -1,9 +1,8 @@
--- {-# LANGUAGE DeriveAnyClass #-}
--- {-# LANGUAGE TypeFamilies #-}
--- {-# LANGUAGE UndecidableInstances #-}
-
 -- |  Adapted from heliaxdev/Juvix/library/StandardLibrary/src/Juvix/
-module MiniJuvix.Parsing.ADT where
+module MiniJuvix.Parsing.ADT
+  (
+  )
+where
 
 --------------------------------------------------------------------------------
 

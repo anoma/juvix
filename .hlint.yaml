@@ -32,7 +32,7 @@
 # OTHER HINTS
 # --------------------------------------------------------------------------------
 
-- warn: {name: Use explicit module export list}
+# - warn: {name: Use explicit module export list}
 
 # --------------------------------------------------------------------------------
 # HINTS
@@ -52,6 +52,8 @@
 # --------------------------------------------------------------------------------
 
 - ignore: {within: [MiniJuvix.Syntax.Core, MiniJuvix.Syntax.Eval]}
+- ignore: {within: [MiniJuvix.Monad]}
 - ignore: {within: [MiniJuvix.Pretty]}
 - ignore: {name: Use let, within: [Test.All]}
 - ignore: {name: Use String}
+- ignore: {name: Avoid restricted flags}

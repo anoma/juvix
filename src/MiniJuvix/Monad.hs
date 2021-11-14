@@ -1,5 +1,5 @@
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module MiniJuvix.Monad where
@@ -7,27 +7,25 @@ module MiniJuvix.Monad where
 --------------------------------------------------------------------------------
 
 import MiniJuvix.Utils.Prelude
-import qualified MiniJuvix.Utils.Prelude.Set as S
 
 --------------------------------------------------------------------------------
 
-newtype MiniJuvixT e r s m a
-  = MiniJuvixT {unMgT :: ExceptT e (ReaderT r (StateT s m)) a}
-  deriving anyclass (Functor, Applicative, Monad)
+-- newtype MiniJuvixT e r s m a
+--   = MiniJuvixT {unMgT :: ExceptT e (ReaderT r (StateT s m)) a}
+--   deriving anyclass (Functor, Applicative, Monad)
 
-instance MonadIO m => MonadIO (MiniJuvixT e r s m) where
-  liftIO = MiniJuvixT . liftIO
--- type MiniJuvix = MiniJuvixT () [Name] (S.Set Err) IO
+-- instance MonadIO m => MonadIO (MiniJuvixT e r s m) where
+--   liftIO = MiniJuvixT . liftIO
+-- -- type MiniJuvix = MiniJuvixT () [Name] (S.Set Err) IO
 
+-- type MiniJuvix = MiniJuvixT () [Name] (Set Error) IO
 
-type MiniJuvix = MiniJuvixT () [Name] (Set Error) IO
+-- runMiniJuvixT :: MiniJuvixT e r s m a -> r -> s -> m (Either e a, s)
+-- runMiniJuvixT mgm r s =
+--   (`St.runStateT` s) . (`R.runReaderT` r) . E.runExceptT $ unMgT mgm
 
-runMiniJuvixT :: MiniJuvixT e r s m a -> r -> s -> m (Either e a, s)
-runMiniJuvixT mgm r s =
-  (`St.runStateT` s) . (`R.runReaderT` r) . E.runExceptT $ unMgT mgm
-
-runMiniJuvix :: MiniJuvix a -> IO (Either () a, S.Set Err)
-runMiniJuvix m = runMiniJuvixT m [] S.empty
+-- runMiniJuvix :: MiniJuvix a -> IO (Either () a, S.Set Err)
+-- runMiniJuvix m = runMiniJuvixT m [] S.empty
 
 -- -- | Retrieves the state within a MiniJuvixT.
 -- get :: Monad m => MiniJuvixT e r s m s

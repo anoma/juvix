@@ -1,10 +1,10 @@
 module MiniJuvix.Pipeline
   ( -- * Compiler configuration-related data structures
-    CompilerMode (..),
     Config (..),
     WriteToFsBehavior (..),
     Pass (..),
     Backend (..),
+    Mode (..),
   )
 where
 
@@ -15,7 +15,7 @@ import MiniJuvix.Utils.Prelude (Eq, FilePath, Maybe, Ord, Show, Text)
 
 --------------------------------------------------------------------------------
 
-data CompilerMode
+data Mode
   = ReplMode
   | CheckMode Config FilePath
   | CompileMode Config FilePath
@@ -32,25 +32,23 @@ data Config
 data Pass
   = Parsing
   | Desugaring
-  | Typechecking
+  | Checking
   | Compiling
-  deriving stock Show
+  deriving stock (Show)
 
 data Backend = LLVM
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show)
 
 data WriteToFsBehavior = OverwriteTargetFiles | WriteIfDoesNotExist
-
--- runAndLogErrs :: MiniJuvix a -> IO ()
--- runAndLogErrs m = runMiniJuvix m >>= \(_, errs) -> logErrs errs
+-- run' :: MiniJuvix a -> IO ()
+-- run' m = runMiniJuvix m >>= \(_, errs) -> logErrors errs
 
 -- runTestWith :: FilePath -> Config -> IO ()
 -- runTestWith filePath config = case _configPass config of
 --   Parsing -> undefined
 --   Desugaring -> undefined
-  -- Typechecking -> runAndLogErrs $ depAnalPass filePath >>= parsePass >>= checkPass
+-- Checking -> run' $ filePath >>= parsingPass >>= checkingPass
 --   Compiling -> undefined
 
-
-runMiniJuvix :: 
-runMiniJuvix = ?
+-- runMiniJuvix :: MiniJuvix a -> IO ()
+-- runMiniJuvix = undefined

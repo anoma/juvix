@@ -8,11 +8,13 @@ module MiniJuvix.Utils.Pretty
     hardlines,
     format,
     annotateSpecialSymbol,
+    printList,
   )
 where
 
 --------------------------------------------------------------------------------
 
+import qualified Data.List as List
 import MiniJuvix.Utils.Prelude
 import Prettyprinter hiding
   ( Doc,
@@ -113,3 +115,6 @@ annotateSpecialSymbol b s = annotate (Term.color (color s)) (format b s)
 
 class Pretty a where
   pretty :: Bool -> a -> Doc
+
+printList :: [a] -> IO ()
+printList = undefined
