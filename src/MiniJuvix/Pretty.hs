@@ -21,6 +21,7 @@ import MiniJuvix.Utils.Pretty
     render,
     unicode,
   )
+
 -- import qualified MiniJuvix.Utils.Pretty as PP
 -- import qualified Prettyprinter.Render.Terminal as Term
 
