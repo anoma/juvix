@@ -29,7 +29,7 @@ library
         MiniJuvix.Utils.Prelude
         MiniJuvix.Utils.Pretty
         MiniJuvix.Utils.Parser
-        MiniJuvix.Parsing.ADT
+        MiniJuvix.Parsing.Statements
         MiniJuvix.Parsing.Error
         MiniJuvix.Parsing.Location
         MiniJuvix.Parsing.Parser

@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans -Wno-unused-matches #-}
 
 module MiniJuvix.Pretty
   ( module MiniJuvix.Utils.Pretty,
@@ -21,8 +21,8 @@ import MiniJuvix.Utils.Pretty
     render,
     unicode,
   )
-import qualified MiniJuvix.Utils.Pretty as PP
-import qualified Prettyprinter.Render.Terminal as Term
+-- import qualified MiniJuvix.Utils.Pretty as PP
+-- import qualified Prettyprinter.Render.Terminal as Term
 
 --------------------------------------------------------------------------------
 

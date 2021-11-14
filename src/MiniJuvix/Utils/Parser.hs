@@ -5,7 +5,7 @@ module MiniJuvix.Utils.Parser
 
     -- * Tokens
     charToWord8,
-    wordToChr,
+    toChar,
     validUpperSymbol,
     validStartSymbol',
     dash,
@@ -91,16 +91,16 @@ charToWord8 :: Char -> Word8
 charToWord8 = fromIntegral . ord
 {-# INLINE charToWord8 #-}
 
-wordToChr :: Integral a => a -> Char
-wordToChr = chr . fromIntegral
+toChar :: Integral a => a -> Char
+toChar = chr . fromIntegral
 
 -- Hopefully this is fast!
 validStartSymbol' :: Integral a => a -> Bool
-validStartSymbol' = Unicode.isAlpha . wordToChr
+validStartSymbol' = Unicode.isAlpha . toChar
 
 -- Unicode.isUpper 'İ' = True!
 validUpperSymbol :: Integral a => a -> Bool
-validUpperSymbol = Unicode.isUpper . wordToChr
+validUpperSymbol = Unicode.isUpper . toChar
 
 dash :: Word8
 dash = charToWord8 '-'
@@ -195,7 +195,7 @@ validStartSymbol w =
 
 validInfixSymbol :: Word8 -> Bool
 validInfixSymbol w =
-  Unicode.isSymbol (wordToChr w)
+  Unicode.isSymbol (toChar w)
     || w == asterisk
     || w == hat
     || w == dash
@@ -224,27 +224,20 @@ reservedWords :: (Ord a, IsString a) => Set a
 reservedWords =
   Set.fromList
     [ "let",
-      "val",
-      "type",
-      "case",
       "in",
+      "case",
       "open",
+      "import",
       "if",
-      "cond",
+      "then",
       "end",
-      "of",
       "begin",
-      "sig", -- TODO: we might removed this from the language.
-      "mod",
-      "declare",
-      "where",
-      "via",
-      "handler",
-      "effect"
+      "module",
+      "where"
     ]
 
 reservedSymbols :: (Ord a, IsString a) => Set a
-reservedSymbols = Set.fromList ["=", "|", "", "--"]
+reservedSymbols = Set.fromList [":", "=", "|", "", "--"]
 
 --------------------------------------------------------------------------------
 -- Lexing

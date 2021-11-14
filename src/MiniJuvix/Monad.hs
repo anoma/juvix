@@ -1,12 +1,8 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-
-module MiniJuvix.Monad where
+module MiniJuvix.Monad () where
 
 --------------------------------------------------------------------------------
 
-import MiniJuvix.Utils.Prelude
+-- import MiniJuvix.Utils.Prelude
 
 --------------------------------------------------------------------------------
 

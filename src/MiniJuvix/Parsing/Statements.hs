@@ -1,5 +1,5 @@
--- |  Adapted from heliaxdev/Juvix/library/StandardLibrary/src/Juvix/
-module MiniJuvix.Parsing.ADT
+-- | Adapted from heliaxdev/Juvix/library/StandardLibrary/src/Juvix
+module MiniJuvix.Parsing.Statements
   (
   )
 where
@@ -11,42 +11,44 @@ import MiniJuvix.Utils.Prelude
 
 --------------------------------------------------------------------------------
 
--- type ConstructorName = NameSymb
+type Symbol = Text
 
--- type NameSymb = NonEmpty Symbol
+-- -- type ConstructorName = NameSymb
 
--- type ModuleName = NameSymb
+-- -- type NameSymb = NonEmpty Symbol
+
+-- -- type ModuleName = NameSymb
 
 -- data TopLevel
 --   = Type Type
 --   | ModuleOpen ModuleOpen
 --   | Signature Signature
 --   | Module Module
---   | Function Function
+  -- | Function Function
 --   | Effect Effect
 --   | Handler Handler
---   | Declaration Declaration
+  -- | Declaration Declaration
 --   | TypeClass
 --   | TypeClassInstance
 --   deriving stock (Show, Read, Eq)
 
--- --------------------------------------------------------------------------------
--- -- Declarations
--- --------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- Declarations
+--------------------------------------------------------------------------------
 
--- newtype Declaration
---   = Infixivity InfixDeclar
---   deriving stock (Show, Read, Eq)
+newtype Declaration
+  = Infixivity InfixDeclaration
+  deriving stock (Show, Read, Eq)
 
--- data InfixDeclar
---   = NonAssoc Symbol Natural
---   | AssocL Symbol Natural
---   | AssocR Symbol Natural
---   deriving stock (Show, Read, Eq)
+data InfixDeclaration
+  = NonAssoc Symbol Natural
+  | AssocL Symbol Natural
+  | AssocR Symbol Natural
+  deriving stock (Show, Read, Eq)
 
--- --------------------------------------------------------------------------------
--- -- Types
--- --------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- Types
+--------------------------------------------------------------------------------
 
 -- data Type
 --   = Typ
