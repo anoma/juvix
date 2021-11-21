@@ -29,10 +29,9 @@ library
         MiniJuvix.Utils.Prelude
         MiniJuvix.Utils.Pretty
         MiniJuvix.Utils.Parser
-        MiniJuvix.Parsing.Statements
+        MiniJuvix.Parsing.Language
         MiniJuvix.Parsing.Error
         MiniJuvix.Parsing.Location
-        MiniJuvix.Parsing.Parser
         MiniJuvix.Desugaring.Error
         MiniJuvix.Typing.Typechecking
         MiniJuvix.Typing.Utils
