@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiWayIf #-}
+
 -- | Adapted from heliaxdev/Juvix/library/StandardLibrary/src/Juvix/Parser*
 module MiniJuvix.Utils.Parser
   ( Parser,
@@ -41,8 +43,6 @@ module MiniJuvix.Utils.Parser
     validMiddleSymbol,
     validInfixSymbol,
     endOfLine,
-    reservedWords,
-    reservedSymbols,
 
     -- * Lexing
     emptyCheck,
@@ -60,16 +60,24 @@ module MiniJuvix.Utils.Parser
     sepBy1H,
     maybeParend,
     integer,
+
+    -- * Misc
+    symbolEndGen,
+    symbolEnd,
+    reserved,
   )
 where
 
 --------------------------------------------------------------------------------
 
+-- import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Char8 as Char8
+-- import qualified Data.Set as Set
 import qualified Data.Word8 as Word8
 import qualified GHC.Unicode as Unicode
 import MiniJuvix.Utils.Prelude
-import qualified MiniJuvix.Utils.Prelude as Set
+-- import qualified MiniJuvix.Utils.Prelude as Encoding
+-- import qualified MiniJuvix.Utils.Prelude as Set
 import qualified Text.Megaparsec as P
 import qualified Text.Megaparsec.Byte as P
 
@@ -218,27 +226,6 @@ validMiddleSymbol w =
 endOfLine :: (Eq a, Num a) => a -> Bool
 endOfLine w = w == 13 || w == 10
 
--- Reserved words and symbols.
-
-reservedWords :: (Ord a, IsString a) => Set a
-reservedWords =
-  Set.fromList
-    [ "let",
-      "in",
-      "case",
-      "open",
-      "import",
-      "if",
-      "then",
-      "end",
-      "begin",
-      "module",
-      "where"
-    ]
-
-reservedSymbols :: (Ord a, IsString a) => Set a
-reservedSymbols = Set.fromList [":", "=", "|", "", "--"]
-
 --------------------------------------------------------------------------------
 -- Lexing
 --------------------------------------------------------------------------------
@@ -293,3 +280,17 @@ integer = do
   case Char8.readInteger digits of
     Just (x, _) -> pure x
     Nothing -> fail "didn't parse an int"
+
+symbolEndGen :: ByteString -> Parser ()
+symbolEndGen _s = do
+  P.notFollowedBy (P.satisfy validMiddleSymbol)
+  _ <- P.takeWhileP (Just "Empty Check") emptyCheck
+  return ()
+
+symbolEnd :: Parser ()
+symbolEnd = symbolEndGen "current symbol is not over"
+
+reserved :: ByteString -> Parser ()
+reserved w = do
+  _ <- P.string w
+  symbolEndGen "symbol is not the reserved symbol"

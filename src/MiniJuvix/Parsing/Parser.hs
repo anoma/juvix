@@ -6,103 +6,243 @@ module MiniJuvix.Parsing.Parser
   )
 where
 
--- parse,
--- prettyParse,
--- expressionSN,
--- removeComments,
--- topLevelSN,
--- expression,
--- matchLogic,
--- cond,
--- prefixSymbol,
--- moduleOpen,
--- moduleName,
-
 --------------------------------------------------------------------------------
 
+import MiniJuvix.Parsing.Language
+import qualified MiniJuvix.Utils.Parser as P
 import MiniJuvix.Utils.Prelude
-
--- import Control.Arrow (left)
--- import qualified Control.Monad.Combinators.Expr as Expr
--- import qualified Data.ByteString as ByteString
--- import qualified Data.List.NonEmpty as NonEmpty
--- import qualified Data.Set as Set
--- import qualified Data.Text.Encoding as Encoding
--- import Data.Word8 (isDigit)
--- import qualified Juvix.Frontend.Types as Types
--- import Juvix.Library hiding (guard, list, mod, product, sum)
--- import Juvix.Library.Parser (Parser, ParserError, skipLiner, spaceLiner)
--- import qualified Juvix.Library.Parser as J
--- import qualified Text.Megaparsec as P
--- import qualified Text.Megaparsec.Byte as P
--- import Prelude (fail)
+import qualified Text.Megaparsec as P
+import qualified Text.Megaparsec.Byte as P
 
 --------------------------------------------------------------------------------
 
+------------------------------------------------------------------------------
+-- Reserved words/symbols
+------------------------------------------------------------------------------
+
+kwBegin
+  , kwCase
+  , kwDeclare
+  , kwEnd
+  , kwIf
+  , kwImport
+  , kwIn
+  , kwInfix
+  , kwInfixL
+  , kwInfixR
+  , kwLet
+  , kwModule
+  , kwOpen
+  , kwThen
+  , kwDataTypeConstructor
+  , kwRecordTypeConstructor
+  , kwTypeSignature
+  , kwWhere :: ByteString
+
+kwBegin = "begin"
+kwCase = "case"
+kwDeclare = "declare"
+kwEnd = "end"
+kwIf = "if"
+kwImport = "import"
+kwIn = "in"
+kwInfix = "infix"
+kwInfixL = "infixl"
+kwInfixR = "infixr"
+kwLet = "let"
+kwModule = "mod"
+kwOpen = "open"
+kwThen = "then"
+kwDataTypeConstructor = "data"
+kwRecordTypeConstructor = "record"
+kwTypeSignature = "sig"
+kwWhere = "where"
+
+reservedWords :: (Ord a, IsString a) => Set a
+reservedWords =
+  Set.fromList
+    [ kwBegin,
+      kwCase,
+      kwDeclare,
+      kwEnd,
+      kwIf,
+      kwImport,
+      kwIn,
+      kwInfix,
+      kwInfix,
+      kwInfix,
+      kwLet,
+      kwModule,
+      kwOpen,
+      kwThen,
+      kwDataTypeConstructor,
+      kwRecordTypeConstructor,
+      kwTypeSignature,
+      kwWhere
+    ]
+
+symTyping,
+  symDefine,
+  symGuard,
+  symComment,
+  symConstraint :: ByteString
+
+symTyping = ":"
+symDefine = "="
+symGuard = "|"
+symComment = "--"
+symTypeConstraint = "=>"
+
+reservedSymbols :: (Ord a, IsString a) => Set a
+reservedSymbols =
+  Set.fromList
+    [ symTyping,
+      symDefine,
+      symGuard,
+      symComment,
+      symTypeConstraint
+    ]
+
 --------------------------------------------------------------------------------
--- Top Level Runner
+-- Comment related methods
 --------------------------------------------------------------------------------
 
--- prettyParse :: ByteString -> Either [Char] (Types.Header Types.TopLevel)
--- prettyParse = left P.errorBundlePretty . parse
+removeComments :: ByteString -> ByteString
+removeComments = ByteString.concat . grabComments
+  where
+    onBreakDo _break _con "" = []
+    onBreakDo break cont str = break str |> cont
+    grabComments = breakComment `onBreakDo` f
+      where
+        f (notIn, in') = notIn : grabComments (dropNewLine in')
+    dropNewLine = ByteString.dropWhile (/= P.newLine)
 
--- parse :: ByteString -> Either ParserError (Types.Header Types.TopLevel)
--- parse = P.parse (J.eatSpaces (header <* P.eof)) "" . removeComments
+breakComment :: ByteString -> (ByteString, ByteString)
+breakComment = ByteString.breakSubstring symComment
 
--- --------------------------------------------------------------------------------
--- -- Pre-Process
--- --------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- File Header
+-- e.g. "mod Main where"
+--------------------------------------------------------------------------------
 
--- removeComments :: ByteString -> ByteString
--- removeComments = ByteString.concat . grabComments
---   where
---     onBreakDo _break _con "" = []
---     onBreakDo break cont str = break str |> cont
---     -- TODO: Make faster
---     grabComments = breakComment `onBreakDo` f
---       where
---         f (notIn, in') =
---           notIn : grabComments (dropNewLine in')
---     dropNewLine =
---       ByteString.dropWhile (/= J.newLine)
+fileHeaderCase :: Parser (Header TopLevel)
+fileHeaderCase = do
+  reserved kwModule
+  name <- prefixSymbolDotSN
+  reserved kwWhere
+  FileHeader name <$> P.some topLevelSN
 
--- -- These two functions have size 4*8 = 32 < Bits.finiteBitSize (0 :: Word) = 64
--- -- thus this compiles to a shift
--- breakComment :: ByteString -> (ByteString, ByteString)
--- breakComment = ByteString.breakSubstring "--"
+noFileHeaderCase :: Parser (Header TopLevel)
+noFileHeaderCase = NoFileHeader <$> P.some topLevelSN
 
--- --------------------------------------------------------------------------------
--- -- Header
--- --------------------------------------------------------------------------------
+fileHeader :: Parser (Header TopLevel)
+fileHeader = P.try fileHeaderCase <|> noFileHeaderCase
 
--- header :: Parser (Types.Header Types.TopLevel)
--- header = P.try headerCase <|> noHeaderCase
+--------------------------------------------------------------------------------
+-- Fixity declarations
+-- e.g. "infixr _*_ 100"
+--------------------------------------------------------------------------------
 
--- headerCase :: Parser (Types.Header Types.TopLevel)
--- headerCase = do
---   reserved "mod"
---   name <- prefixSymbolDotSN
---   reserved "where"
---   Types.Header name <$> P.some topLevelSN
+fixityDeclaration :: Parser InfixDeclaration
+fixityDeclaration = do
+  _ <- P.string kwInfix
+  fixityMode <-
+    P.try
+      (LeftAssociative <$ P.string "l")
+      <|> P.try (RightAssociative <$ P.string "r")
+      <|> pure NonAssociative
+  symbolEnd
+  name <- prefixSymbolSN
+  fixityMode name . fromInteger <$> spaceLiner integer
 
--- noHeaderCase :: Parser (Types.Header Types.TopLevel)
--- noHeaderCase = do
---   Types.NoHeader <$> P.some topLevelSN
+fixity :: Parser Declaration
+fixity = Fixity <$> fixityDeclaration
 
--- --------------------------------------------------------------------------------
--- -- Top Level
--- --------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- Type signature
+-- e.g. "sig x ω : ctx => T"
+-- where "ctx" has the form "(e [,e ])" where e is a valid expr.
+-- If ω is greater than one, it just Many.
+--------------------------------------------------------------------------------
 
--- topLevel :: Parser Types.TopLevel
--- topLevel =
---   P.try (Types.Type <$> typeP)
---     <|> P.try fun
---     <|> P.try modT
---     <|> P.try (Types.ModuleOpen <$> moduleOpen)
---     <|> P.try (Types.Signature <$> signature')
---     <|> P.try (Types.Declaration <$> declaration)
---     <|> P.try (Types.Effect <$> effParser)
---     <|> P.try (Types.Handler <$> handlerParser)
+typeSignatureContext :: Parser [Expression]
+typeSignatureContext =
+  P.try (pure <$> expression <* reserved symTypeConstraint)
+    <|> P.try
+      ( P.parens
+          ( P.sepBy
+              expression
+              (skipLiner P.comma)
+          )
+          <* reserved symTypeConstraint
+      )
+    <|> pure []
+
+typeSignatureContextSN :: Parser [Expression]
+typeSignatureContextSN = spaceLiner typeSignatureContext
+
+typeSignature :: Parser TypeSignature
+typeSignature = do
+  reserved kwTypeSignature
+  name <- prefixSymbolSN
+  maybeQuantity <- P.optional (spaceLiner integer)
+  skipLiner P.colon
+  ctx <- typeSignatureContextSN
+  Signature name maybeQuantity ctx <$> expression
+
+--------------------------------------------------------------------------------
+-- Data type constructor
+-- e.g. "type T where" or "type T v1 where One : (p : v1) -> T p"
+--------------------------------------------------------------------------------
+
+parseDataConstructors :: Parser [ DataConstructor ]
+parseDataConstructors = undefined
+-- parseDataConstructors = do
+  -- arrow <- P.optional (skipLiner P.colon *> expression)
+--   P.skipLiner P.equals
+--   adt <- adt
+--   case arrow of
+--     Just arr -> pure (Types.Arrowed arr adt)
+--     Nothing -> pure (Types.NonArrowed adt)
+
+dataTypeConstructor :: Parser DataTypeConstructor
+dataTypeConstructor = do
+  reserved kwDataTypeConstructor
+  typeName <- prefixSymbolSN
+  typeParams <- P.many prefixSymbolSN
+  reserved kwWhere
+  DataType typeName typeParams <$> parseDataConstructors
+
+-- record :: Parser Types.Record
+-- record = do
+--   names <-
+--     spaceLiner
+--       $ P.curly
+--       $ P.sepBy1HFinal nameTypeSN (skipLiner P.comma)
+--   familySignature <- P.optional (skipLiner P.colon *> expression)
+--   pure (Types.Record'' names familySignature)
+
+-- nameType :: Parser Types.NameType
+-- nameType = do
+--   name <- nameParserSN
+--   maybeQuantity <-
+--     P.optional (fmap Types.Constant constantSN <|> spaceLiner (P.parens expressionSN))
+--   skipLiner P.colon
+--   sig <- expression
+--   pure (Types.NameType' sig name maybeQuantity)
+
+-- -- nameParserColon :: Parser Types.Name
+-- -- nameParserColon =
+-- --   nameParserSN <* skip (== P.colon)
+
+-- nameParser :: Parser Types.Name
+-- nameParser =
+--   P.try (P.skipSome (P.char P.hash) *> fmap Types.Implicit prefixSymbol)
+--     <|> Types.Concrete <$> prefixSymbol
+
+----------------------------------------------------------------------------
+-- Top Level
+------------------------------------------------------------------------------
 
 -- expressionGen' ::
 --   Parser Types.Expression -> Parser Types.Expression
@@ -161,29 +301,14 @@ import MiniJuvix.Utils.Prelude
 -- usage :: Parser Types.Expression
 -- usage = P.string "u#" *> expression
 
--- --------------------------------------------------------------------------------
--- -- Declarations
--- --------------------------------------------------------------------------------
-
--- declaration :: Parser Types.Declaration
--- declaration = do
---   reserved "declare"
---   Types.Infixivity <$> infixDeclar
-
--- declarationExpression :: Parser Types.DeclarationExpression
--- declarationExpression =
---   Types.DeclareExpression <$> declaration <*> (reserved "in" *> expression)
-
--- infixDeclar :: Parser Types.InfixDeclar
--- infixDeclar = do
---   _ <- P.string "infix"
---   f <-
---     P.try (Types.AssocL <$ P.string "l")
---       <|> P.try (Types.AssocR <$ P.string "r")
---       <|> pure Types.NonAssoc
---   symbolEnd
---   name <- prefixSymbolSN
---   f name . fromInteger <$> spaceLiner J.integer
+topLevel :: Parser Types.TopLevel
+topLevel =
+        P.try (TypeSignature <$> signature)
+    <|> P.try (FixityDeclaration <$> declaration)
+    <|> P.try (TypeConstructorDeclaration <$> dataTypeConstructor)
+    <|> P.try fun
+    <|> P.try modT
+    <|> P.try (Types.ModuleOpen <$> moduleOpen)
 
 -- --------------------------------------------------------------------------------
 -- -- Modules/ Function Gen
@@ -213,7 +338,7 @@ import MiniJuvix.Utils.Prelude
 -- guard :: Parser a -> Parser (Types.GuardBody a)
 -- guard p =
 --   P.try (Types.Guard <$> condB p)
---     <|> P.try (Types.Body <$> (J.skipLiner J.equals *> p))
+--     <|> P.try (Types.Body <$> (P.skipLiner P.equals *> p))
 
 -- --------------------------------------------------------------------------------
 -- -- Args
@@ -221,39 +346,8 @@ import MiniJuvix.Utils.Prelude
 
 -- arg :: Parser Types.Arg
 -- arg =
---   P.try (Types.ImplicitA <$> (P.char J.hash *> matchLogic))
+--   P.try (Types.ImplicitA <$> (P.char P.hash *> matchLogic))
 --     <|> (Types.ConcreteA <$> matchLogic)
-
--- --------------------------------------------------------------------------------
--- -- Signature
--- --------------------------------------------------------------------------------
-
--- signature' :: Parser Types.Signature
--- signature' = do
---   reserved "sig"
---   name <- prefixSymbolSN
---   maybeUsage <-
---     P.optional
---       ( fmap Types.Constant constantSN
---           <|> spaceLiner (J.parens expressionSN)
---       )
---   skipLiner J.colon
---   typeclasses <- signatureConstraintSN
---   exp <- expression
---   pure (Types.Sig name maybeUsage exp typeclasses)
-
--- signatureConstraint :: Parser [Types.Expression]
--- signatureConstraint =
---   P.try (pure <$> expression <* reserved "=>")
---     <|> P.try
---       ( J.parens
---           ( P.sepBy
---               expression
---               (skipLiner J.comma)
---           )
---           <* reserved "=>"
---       )
---     <|> pure []
 
 -- --------------------------------------------------------------------------------
 -- -- Match
@@ -264,24 +358,24 @@ import MiniJuvix.Utils.Prelude
 --   reserved "case"
 --   matchOn <- expressionSN
 --   reserved "of"
---   matchs <- J.many1H (P.try matchLSN)
+--   matchs <- P.many1H (P.try matchLSN)
 --   pure (Types.Match'' matchOn matchs)
 
 -- matchL :: Parser Types.MatchL
 -- matchL = do
---   skipLiner J.pipe
+--   skipLiner P.pipe
 --   match <- P.try matchLogicSN
 --   spaceLiner (P.string "->")
 --   Types.MatchL match <$> P.try expression
 
 -- matchLogic :: Parser Types.MatchLogic
--- matchLogic = J.maybeParend (P.try matchLogicNamedSN <|> matchLogicNotNamedSN)
+-- matchLogic = P.maybeParend (P.try matchLogicNamedSN <|> matchLogicNotNamedSN)
 
 -- matchLogicNamed :: Parser Types.MatchLogic
 -- matchLogicNamed = do
 --   name <- prefixSymbol
---   skipLiner J.at
---   start <- J.maybeParend matchLogicStartSN
+--   skipLiner P.at
+--   start <- P.maybeParend matchLogicStartSN
 --   pure (Types.MatchLogic start (Just name))
 
 -- matchLogicNotNamed :: Parser Types.MatchLogic
@@ -318,12 +412,12 @@ import MiniJuvix.Utils.Prelude
 
 -- nameSetMany' :: Parser a -> Parser (NonEmpty (Types.NameSet a))
 -- nameSetMany' parser =
---   J.curly $ do
---     x <- J.sepBy1H (nameSetSN parser) (skipLiner J.comma)
+--   P.curly $ do
+--     x <- P.sepBy1H (nameSetSN parser) (skipLiner P.comma)
 --     if  | length x == 1 && isPunned x ->
---           x <$ skipLiner J.comma
+--           x <$ skipLiner P.comma
 --         | otherwise ->
---           x <$ P.optional (skipLiner J.comma)
+--           x <$ P.optional (skipLiner P.comma)
 
 -- isPunned :: NonEmpty (Types.NameSet t) -> Bool
 -- isPunned (Types.Punned {} :| _) = True
@@ -331,7 +425,7 @@ import MiniJuvix.Utils.Prelude
 
 -- nameSetMany :: Parser a -> Parser (NonEmpty (Types.NameSet a))
 -- nameSetMany parser =
---   J.curly (J.sepBy1HFinal (nameSetSN parser) (skipLiner J.comma))
+--   P.curly (P.sepBy1HFinal (nameSetSN parser) (skipLiner P.comma))
 
 -- nameSet :: Parser a -> Parser (Types.NameSet a)
 -- nameSet parser = P.try (nameMatch parser) <|> namePunned
@@ -342,7 +436,7 @@ import MiniJuvix.Utils.Prelude
 -- nameMatch :: Parser a -> Parser (Types.NameSet a)
 -- nameMatch parser = do
 --   name <- prefixSymbolDotSN
---   J.skipLiner J.equals
+--   P.skipLiner P.equals
 --   Types.NonPunned name <$> parser
 
 -- --------------------------------------------------------------------------------
@@ -364,7 +458,7 @@ import MiniJuvix.Utils.Prelude
 -- modT = functionModStartReserved "mod" mod
 --   where
 --     mod n a =
---       ( genGuard n a (J.many1H topLevelSN)
+--       ( genGuard n a (P.many1H topLevelSN)
 --           >>| Types.Module . Types.Mod
 --       )
 --         <* reserved "end"
@@ -386,93 +480,18 @@ import MiniJuvix.Utils.Prelude
 --   -- we want it to fail at the ., since it's a paren after it
 --   -- Int.()
 --   name <- prefixSymbolDotPermissive
---   P.char J.dot
---   expr <- J.parens expression
+--   P.char P.dot
+--   expr <- P.parens expression
 --   pure (Types.OpenExpress name expr)
 
 -- moduleOpenExprNormal :: Parser Types.ModuleOpenExpr
 -- moduleOpenExprNormal = do
 --   reserved "open"
 --   name <- moduleNameSN
---   reserved "in"
+--   kwIn
 --   Types.OpenExpress name <$> expression
 
--- --------------------------------------------------------------------------------
--- -- Types
--- --------------------------------------------------------------------------------
-
--- typeP :: Parser Types.Type
--- typeP = do
---   reserved "type"
---   usag <- P.optional usage
---   name <- prefixSymbolSN
---   args <- P.many prefixSymbolSN
---   Types.Typ usag name args <$> dataParser
-
--- -- TODO: J: use 'P.optional dataParser' to support Emtpy type defs.
-
--- dataParser :: Parser Types.Data
--- dataParser = do
---   arrow <- P.optional (skipLiner J.colon *> expression)
---   J.skipLiner J.equals
---   adt <- adt
---   case arrow of
---     Just arr -> pure (Types.Arrowed arr adt)
---     Nothing -> pure (Types.NonArrowed adt)
-
--- --------------------------------------------------------------------------------
--- -- ADT parser
--- --------------------------------------------------------------------------------
-
--- adt :: Parser Types.Adt
--- adt =
---   P.try
---     ( Types.Sum
---         <$> ( P.optional
---                 (skipLiner J.pipe)
---                 *> J.sepBy1H sumSN (skipLiner J.pipe)
---             )
---     )
---     <|> (Types.Product <$> standAloneProduct)
-
--- sum :: Parser Types.Sum
--- sum = Types.S <$> prefixSymbolSN <*> P.optional product
-
--- standAloneProduct :: Parser Types.Product
--- standAloneProduct = Types.Record <$> record
-
--- product :: Parser Types.Product
--- product =
---   P.try (Types.Record <$> record)
---     <|> P.try (skipLiner J.colon *> fmap Types.Arrow expression)
---     <|> fmap Types.ADTLike (P.many (P.try expression'''SN))
-
--- record :: Parser Types.Record
--- record = do
---   names <-
---     spaceLiner
---       $ J.curly
---       $ J.sepBy1HFinal nameTypeSN (skipLiner J.comma)
---   familySignature <- P.optional (skipLiner J.colon *> expression)
---   pure (Types.Record'' names familySignature)
-
--- nameType :: Parser Types.NameType
--- nameType = do
---   name <- nameParserSN
---   maybeUsage <-
---     P.optional (fmap Types.Constant constantSN <|> spaceLiner (J.parens expressionSN))
---   skipLiner J.colon
---   sig <- expression
---   pure (Types.NameType' sig name maybeUsage)
-
--- -- nameParserColon :: Parser Types.Name
--- -- nameParserColon =
--- --   nameParserSN <* skip (== J.colon)
-
--- nameParser :: Parser Types.Name
--- nameParser =
---   P.try (P.skipSome (P.char J.hash) *> fmap Types.Implicit prefixSymbol)
---     <|> Types.Concrete <$> prefixSymbol
+-
 
 -- --------------------------------------------------------------------------------
 -- -- Effect handler parser
@@ -482,8 +501,8 @@ import MiniJuvix.Utils.Prelude
 -- handlerParser = do
 --   reserved "handler"
 --   name <- prefixSymbolSN
---   J.skipLiner J.equals
---   ops <- P.many (J.spaceLiner opParser)
+--   P.skipLiner P.equals
+--   ops <- P.many (P.spaceLiner opParser)
 --   reserved "end"
 --   pure $ Types.Hand name ops
 
@@ -501,24 +520,24 @@ import MiniJuvix.Utils.Prelude
 -- effParser = do
 --   reserved "effect"
 --   name <- prefixSymbolSN
---   J.skipLiner J.equals
---   ops <- P.many (J.spaceLiner opSig)
+--   P.skipLiner P.equals
+--   ops <- P.many (P.spaceLiner opSig)
 --   reserved "end"
 --   pure $ Types.Eff {effName = name, effOps = ops}
 
--- opSig :: Parser Types.Signature
+-- opSig :: Parser TypeSignature
 -- opSig = do
 --   reserved "let"
 --   name <- prefixSymbolSN
---   maybeUsage <-
+--   maybeQuantity <-
 --     P.optional
 --       ( fmap Types.Constant constantSN
---           <|> spaceLiner (J.parens expressionSN)
+--           <|> spaceLiner (P.parens expressionSN)
 --       )
---   skipLiner J.colon
---   typeclasses <- signatureConstraintSN
+--   skipLiner P.colon
+--   typeclasses <- signatureContextSN
 --   exp <- expression
---   pure (Types.Sig name maybeUsage exp typeclasses)
+--   pure (Types.Sig name maybeQuantity exp typeclasses)
 
 -- via_ :: Parser Types.EffApp
 -- via_ = do
@@ -548,7 +567,7 @@ import MiniJuvix.Utils.Prelude
 -- universeExpression =
 --   P.try (Types.UniverseExpression <$> prefixSymbolSN)
 --     -- TODO: make this proper do + and max!
---     <|> Types.UniverseExpression <$> J.parens prefixSymbolSN
+--     <|> Types.UniverseExpression <$> P.parens prefixSymbolSN
 
 -- --------------------------------------------------------------------------------
 -- -- Expressions
@@ -574,25 +593,25 @@ import MiniJuvix.Utils.Prelude
 
 -- mod :: Parser Types.ModuleE
 -- mod = do
---   reserved "mod"
+--   kwModule
 --   name <- prefixSymbolSN
 --   args <- P.many argSN
---   guarded <- guard (J.many1H topLevelSN)
+--   guarded <- guard (P.many1H topLevelSN)
 --   reserved "end"
---   reserved "in"
+--   kwIn
 --   Types.ModE (Types.Like name args guarded) <$> expression
 
 -- let' :: Parser Types.Let
 -- let' = do
 --   binds <- functionModGen expression
---   reserved "in"
+--   kwIn
 --   Types.Let' binds <$> expression
 
 -- letType :: Parser Types.LetType
 -- letType = do
 --   reserved "let"
---   typ <- typePSN
---   reserved "in"
+--   typ <- dataTypeConstructorSN
+--   kwIn
 --   Types.LetType'' typ <$> expression
 
 -- --------------------------------------------------------------------------------
@@ -605,13 +624,13 @@ import MiniJuvix.Utils.Prelude
 --   condB expression
 
 -- condB :: Parser a -> Parser (Types.Cond a)
--- condB p = Types.C <$> J.many1H (P.try $ condLogicSN p)
+-- condB p = Types.C <$> P.many1H (P.try $ condLogicSN p)
 
 -- condLogic :: Parser a -> Parser (Types.CondLogic a)
 -- condLogic p = do
---   J.skipLiner J.pipe
+--   P.skipLiner P.pipe
 --   pred <- expressionSN
---   J.skipLiner J.equals
+--   P.skipLiner P.equals
 --   Types.CondExpression pred <$> p
 
 -- --------------------------------------------------------------------------------
@@ -620,8 +639,8 @@ import MiniJuvix.Utils.Prelude
 
 -- lam :: Parser Types.Lambda
 -- lam = do
---   skipLiner J.backSlash
---   args <- J.many1H matchLogicSN
+--   skipLiner P.backSlash
+--   args <- P.many1H matchLogicSN
 --   reserved "->"
 --   Types.Lamb args <$> expression
 
@@ -632,7 +651,7 @@ import MiniJuvix.Utils.Prelude
 -- application :: Parser Types.Application
 -- application = do
 --   name <- spaceLiner (expressionGen' (fail ""))
---   args <- J.many1H (spaceLiner expressionArguments)
+--   args <- P.many1H (spaceLiner expressionArguments)
 --   pure (Types.App name args)
 
 -- --------------------------------------------------------------------------------
@@ -641,15 +660,15 @@ import MiniJuvix.Utils.Prelude
 
 -- primitives :: Parser Types.Primitive
 -- primitives = do
---   _ <- P.single J.percent
+--   _ <- P.single P.percent
 --   Types.Prim <$> prefixSymbolDot
 
 -- list :: Parser Types.List
--- list = Types.ListLit <$> J.brackets (P.sepBy expression (skipLiner J.comma))
+-- list = Types.ListLit <$> P.brackets (P.sepBy expression (skipLiner P.comma))
 
 -- tupleParen :: Parser Types.Expression
 -- tupleParen = do
---   p <- J.parens (P.sepBy1 (expressionGen all'') (skipLiner J.comma))
+--   p <- P.parens (P.sepBy1 (expressionGen all'') (skipLiner P.comma))
 --   case p of
 --     [] -> fail "doesn't happen"
 --     [x] -> pure (Types.Parened x)
@@ -662,7 +681,7 @@ import MiniJuvix.Utils.Prelude
 
 -- number :: Parser Types.Numb
 -- number =
---   P.try (Types.Integer' <$> J.integer)
+--   P.try (Types.Integer' <$> P.integer)
 --     <|> Types.Double' <$> float
 
 -- digits :: Parser ByteString
@@ -671,7 +690,7 @@ import MiniJuvix.Utils.Prelude
 -- float :: Parser Double
 -- float = do
 --   _s1 <- digits
---   void (P.char J.dot)
+--   void (P.char P.dot)
 --   _s2 <- digits
 --   fail "float not implemented"
 
@@ -680,28 +699,28 @@ import MiniJuvix.Utils.Prelude
 --   P.between
 --     (P.string "\\'")
 --     (P.string "\\'")
---     (P.takeWhile1P (Just "Not quote") (/= J.quote))
+--     (P.takeWhile1P (Just "Not quote") (/= P.quote))
 
 -- doubleStringEscape :: Parser ByteString
 -- doubleStringEscape =
 --   P.between
 --     (P.string "\\\"")
 --     (P.string "\\\"")
---     (P.takeWhile1P (Just "Not quote") (/= J.doubleQuote))
+--     (P.takeWhile1P (Just "Not quote") (/= P.doubleQuote))
 
 -- stringWithoutEscape :: Parser ByteString
 -- stringWithoutEscape =
---   J.between J.quote (P.takeWhile1P (Just "Not quote") (/= J.quote)) J.quote
+--   P.between P.quote (P.takeWhile1P (Just "Not quote") (/= P.quote)) P.quote
 
 -- doubleStringWithoutEscape :: Parser ByteString
 -- doubleStringWithoutEscape =
---   J.between
---     J.doubleQuote
+--   P.between
+--     P.doubleQuote
 --     ( P.takeWhile1P
 --         (Just "Not quote")
---         (/= J.doubleQuote)
+--         (/= P.doubleQuote)
 --     )
---     J.doubleQuote
+--     P.doubleQuote
 
 -- string' :: Parser Types.String'
 -- string' = do
@@ -745,7 +764,7 @@ import MiniJuvix.Utils.Prelude
 -- doOpParser :: Parser Types.Computation
 -- doOpParser = do
 --   name <- spaceLiner (expressionGen' (fail ""))
---   args <- J.many1H (spaceLiner expressionArguments)
+--   args <- P.many1H (spaceLiner expressionArguments)
 --   pure (Types.DoOp $ Types.DoOp' name args)
 
 -- doPureParser :: Parser Types.Computation
@@ -753,104 +772,6 @@ import MiniJuvix.Utils.Prelude
 --   reserved "pure"
 --   arg <- spaceLiner expressionArguments
 --   pure (Types.DoPure $ Types.DoPure' arg)
-
--- --------------------------------------------------------------------------------
--- -- Symbol Handlers
--- --------------------------------------------------------------------------------
-
--- infixSymbolGen :: Parser Symbol -> Parser Symbol
--- infixSymbolGen p = do
---   symb <- p
---   if  | Set.member symb J.reservedSymbols -> fail "symbol is reserved word"
---       | otherwise -> pure symb
-
--- infixSymbolDot :: Parser (NonEmpty Symbol)
--- infixSymbolDot = do
---   qualified <-
---     P.option
---       []
---       (NonEmpty.toList <$> prefixSymbolDotPermissive <* P.char J.dot)
---   -- -o is a bit special since it's a normal letter
---   -- this is a bit of a hack
---   infix' <- P.try ("-o" <$ P.string "-o") <|> P.try infixSymbol
---   pure (NonEmpty.fromList (qualified <> [infix']))
-
--- infixSymbol :: Parser Symbol
--- infixSymbol = infixSymbolGen (P.try infixSymbol' <|> infixPrefix)
-
--- infixSymbol' :: Parser Symbol
--- infixSymbol' =
---   internText . Encoding.decodeUtf8
---     <$> P.takeWhile1P
---       (Just "Valid Infix Symbol")
---       J.validInfixSymbol
-
--- infixPrefix :: Parser Symbol
--- infixPrefix =
---   P.single J.backtick *> prefixSymbol <* P.single J.backtick
-
--- prefixSymbolGen :: Parser Word8 -> Parser Symbol
--- prefixSymbolGen startParser = do
---   start <- startParser
---   rest <- P.takeWhileP (Just "Valid Middle Symbol") J.validMiddleSymbol
---   -- Slow O(n) call, could maybe peek ahead instead, then parse it all at once?
---   let new = ByteString.cons start rest
---   if  | Set.member new J.reservedWords -> fail "symbol is reserved operator"
---       | otherwise -> pure (internText $ Encoding.decodeUtf8 new)
-
--- symbolEndGen :: ByteString -> Parser ()
--- symbolEndGen _s = do
---   P.notFollowedBy (P.satisfy J.validMiddleSymbol)
---   P.takeWhileP (Just "Empty Check") J.emptyCheck *> pure ()
-
--- symbolEnd :: Parser ()
--- symbolEnd = symbolEndGen "current symbol is not over"
-
--- reserved :: ByteString -> Parser ()
--- reserved res =
---   P.string res *> symbolEndGen "symbol is not the reserved symbol"
-
--- -- TODO: this may be bad
--- -- this allows "(*).Foo.(<*>)" to be accepted
--- -- Though Should we allow this since, these are prefix if spelled this way
--- -- we don't enforce capitalization, and thus it would be improper for to
--- -- special case it out!
-
--- prefixSepGen :: Parser Symbol -> Parser (NonEmpty Symbol)
--- prefixSepGen parser = do
---   ret <- J.sepBy1H parser (P.char J.dot)
---   v <- P.optional $ P.try P.eof
---   case v of
---     Nothing -> do
---       d <- P.optional $ P.lookAhead (P.char J.dot)
---       case d of
---         Nothing -> pure ret
---         Just _ -> fail "symbol not prefix"
---     Just _ -> pure ret
-
--- -- the permissive functions allow the functions to not fully parse the word
--- -- useful for infix application
--- prefixSymbolDotPermissive :: Parser (NonEmpty Symbol)
--- prefixSymbolDotPermissive = J.sepBy1H prefixSymbol (P.char J.dot)
-
--- prefixSymbolDot :: Parser (NonEmpty Symbol)
--- prefixSymbolDot = prefixSepGen prefixSymbol
-
--- prefixCapitalDot :: Parser (NonEmpty Symbol)
--- prefixCapitalDot = prefixSepGen prefixCapital
-
--- prefixSymbol :: Parser Symbol
--- prefixSymbol =
---   P.try (prefixSymbolGen (P.satisfy J.validStartSymbol))
---     <|> parend
-
--- parend :: Parser Symbol
--- parend =
---   skipLiner J.openParen
---     *> spaceLiner (infixSymbolGen infixSymbol') <* P.char J.closeParen
-
--- prefixCapital :: Parser Symbol
--- prefixCapital = prefixSymbolGen (P.satisfy J.validUpperSymbol)
 
 -- --------------------------------------------------------------------------------
 -- -- Expr Parser
@@ -877,7 +798,7 @@ import MiniJuvix.Utils.Prelude
 -- arrowExp =
 --   Expr.InfixR
 --     ( P.try $ do
---         skipLiner J.dash
+--         skipLiner P.dash
 --         exp <- expressionSN
 --         reserved "->"
 --         pure
@@ -889,7 +810,7 @@ import MiniJuvix.Utils.Prelude
 --   Expr.Postfix
 --     $ P.try
 --     $ do
---       refine <- spaceLiner (J.curly expressionSN)
+--       refine <- spaceLiner (P.curly expressionSN)
 --       pure (\p -> Types.RefinedE (Types.TypeRefine p refine))
 
 -- -- For Do!
@@ -916,8 +837,8 @@ import MiniJuvix.Utils.Prelude
 -- expressionSN :: Parser Types.Expression
 -- expressionSN = spaceLiner expression
 
--- signatureConstraintSN :: Parser [Types.Expression]
--- signatureConstraintSN = spaceLiner signatureConstraint
+-- signatureContextSN :: Parser [Expression]
+-- signatureContextSN = spaceLiner signatureContext
 
 -- argSN :: Parser Types.Arg
 -- argSN = spaceLiner arg
@@ -946,8 +867,8 @@ import MiniJuvix.Utils.Prelude
 -- condLogicSN :: Parser a -> Parser (Types.CondLogic a)
 -- condLogicSN = spaceLiner . condLogic
 
--- typePSN :: Parser Types.Type
--- typePSN = spaceLiner typeP
+-- dataTypeConstructorSN :: Parser Types.Type
+-- dataTypeConstructorSN = spaceLiner dataTypeConstructor
 
 -- nameTypeSN :: Parser Types.NameType
 -- nameTypeSN = spaceLiner nameType
@@ -986,6 +907,113 @@ import MiniJuvix.Utils.Prelude
 -- -- we abuse laziness here
 -- -- TODO ∷ add directory option
 -- -- this will add top level to the thing, and properly handle paths
+
+--------------------------------------------------------------------------------
+-- Symbol Handlers
+--------------------------------------------------------------------------------
+
+-- prefixCapitalDotSN :: Parser (NonEmpty Symbol)
+-- prefixCapitalDotSN = spaceLiner prefixCapitalDot
+
+-- prefixSymbolDotSN :: Parser (NonEmpty Symbol)
+-- prefixSymbolDotSN = spaceLiner prefixSymbolDot
+
+-- prefixSymbolSN :: Parser Symbol
+-- prefixSymbolSN = spaceLiner prefixSymbol
+
+-- infixSymbolGen :: Parser Symbol -> Parser Symbol
+-- infixSymbolGen p = do
+--   symb <- p
+--   if Set.member symb reservedSymbols
+--     then fail "symbol is reserved word"
+--     else pure symb
+
+-- infixSymbolDot :: Parser (NonEmpty Symbol)
+-- infixSymbolDot = do
+--   qualified <-
+--     P.option
+--       []
+--       (toList <$> prefixSymbolDotPermissive <* P.char dot)
+--   -- -o is a bit special since it's a normal letter
+--   -- this is a bit of a hack
+--   infix' <- P.try ("-o" <$ P.string "-o") <|> P.try infixSymbol
+--   pure (fromList (qualified <> [infix']))
+
+-- infixSymbol :: Parser Symbol
+-- infixSymbol = infixSymbolGen (P.try infixSymbol' <|> infixPrefix)
+
+-- infixSymbol' :: Parser Symbol
+-- infixSymbol' =
+--   internText . Encoding.decodeUtf8
+--     <$> P.takeWhile1P
+--       (Just "Valid Infix Symbol")
+--       validInfixSymbol
+
+-- infixPrefix :: Parser Symbol
+-- infixPrefix =
+--   P.single backtick *> prefixSymbol <* P.single backtick
+
+-- prefixSymbolGen :: Parser Word8 -> Parser Symbol
+-- prefixSymbolGen startParser = do
+--   start <- startParser
+--   rest <- P.takeWhileP (Just "Valid Middle Symbol") validMiddleSymbol
+--   -- Slow O(n) call, could maybe peek ahead instead, then parse it all at once?
+--   let new = ByteString.cons start rest
+--   if Set.member new reservedWords
+--     then fail "symbol is reserved operator"
+--     else pure (internText $ Encoding.decodeUtf8 new)
+
+-- -- TODO: this may be bad
+-- -- this allows "(*).Foo.(<*>)" to be accepted
+-- -- Though Should we allow this since, these are prefix if spelled this way
+-- -- we don't enforce capitalization, and thus it would be improper for to
+-- -- special case it out!
+
+-- prefixSepGen :: Parser Symbol -> Parser (NonEmpty Symbol)
+-- prefixSepGen parser = do
+--   ret <- sepBy1H parser (P.char dot)
+--   v <- P.optional $ P.try P.eof
+--   case v of
+--     Nothing -> do
+--       d <- P.optional $ P.lookAhead (P.char dot)
+--       case d of
+--         Nothing -> pure ret
+--         Just _ -> fail "symbol not prefix"
+--     Just _ -> pure ret
+
+-- -- the permissive functions allow the functions to not fully parse the word
+-- -- useful for infix application
+-- prefixSymbolDotPermissive :: Parser (NonEmpty Symbol)
+-- prefixSymbolDotPermissive = sepBy1H prefixSymbol (P.char dot)
+
+-- prefixSymbolDot :: Parser (NonEmpty Symbol)
+-- prefixSymbolDot = prefixSepGen prefixSymbol
+
+-- prefixCapitalDot :: Parser (NonEmpty Symbol)
+-- prefixCapitalDot = prefixSepGen prefixCapital
+
+-- prefixSymbol :: Parser Symbol
+-- prefixSymbol =
+--   P.try (prefixSymbolGen (P.satisfy validStartSymbol))
+--     <|> parend
+
+-- parend :: Parser Symbol
+-- parend =
+--   skipLiner openParen
+--     *> spaceLiner (infixSymbolGen infixSymbol') <* P.char closeParen
+
+-- prefixCapital :: Parser Symbol
+-- prefixCapital = prefixSymbolGen (P.satisfy validUpperSymbol)
+
+------------------------------------------------------------------------------
+-- Top Level Runner
+------------------------------------------------------------------------------
+
+-- prettyParse :: ByteString -> Either [Char] (Types.Header Types.TopLevel)
+-- prettyParse = left P.errorBundlePretty . parse
+
+-- parse :: ByteString -> Either ParserError (Types.Header Types.TopLevel)
+-- parse = P.parse (P.eatSpaces (header <* P.eof)) "" . removeComments
 
 -- -- | Parse multiple files into ML AST
 -- parseFiles :: [FilePath] -> IO (Either Error [(NameSymbol.T, [Types.TopLevel])])
