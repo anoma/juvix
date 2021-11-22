@@ -30,6 +30,7 @@ library
         MiniJuvix.Utils.Pretty
         MiniJuvix.Utils.Parser
         MiniJuvix.Parsing.Language
+        MiniJuvix.Parsing.Parser
         MiniJuvix.Parsing.Error
         MiniJuvix.Parsing.Location
         MiniJuvix.Desugaring.Error
