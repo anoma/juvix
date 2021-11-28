@@ -20,9 +20,11 @@ import MiniJuvix.Syntax.Core
 import MiniJuvix.Utils.Prelude
 #-}
 
+{-# FOREIGN AGDA2HS
 --------------------------------------------------------------------------------
 -- Values and neutral terms
 --------------------------------------------------------------------------------
+#-}
 
 {-
   We are interested in a normal form for posibbly open terms. This
@@ -102,7 +104,6 @@ data Neutral where
 
 valueToTerm : Value → Term
 valueToTerm v = Checkable Unit -- TODO
-
 {-# COMPILE AGDA2HS valueToTerm #-}
 
 --------------------------------------------------------------------------------

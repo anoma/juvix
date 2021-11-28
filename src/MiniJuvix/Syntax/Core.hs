@@ -1,9 +1,17 @@
-{-# OPTIONS_GHC -fno-warn-missing-export-lists -fno-warn-unused-matches #-}
+{-# OPTIONS_GHC -fno-warn-missing-export-lists #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+{-# OPTIONS_GHC -fno-warn-unused-matches #-}
 
 module MiniJuvix.Syntax.Core where
 
+--------------------------------------------------------------------------------
+
 import MiniJuvix.Utils.Prelude
 import Numeric.Natural (Natural)
+
+--------------------------------------------------------------------------------
+-- Quantity (a.k.a. Usage)
+--------------------------------------------------------------------------------
 
 data Quantity
   = Zero
@@ -86,6 +94,12 @@ instance Eq Variable where
   Free x == Free y = x == y
   _ == _ = False
 
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- Type-checkable terms.
+--------------------------------------------------------------------------------
+
 data CheckableTerm
   = UniverseType
   | PiType Quantity BindingName CheckableTerm CheckableTerm
@@ -120,6 +134,14 @@ data InferableTerm
       BindingName
       CheckableTerm
       CheckableTerm
+
+--------------------------------------------------------------------------------
+-- Type-inferable terms (a.k.a terms that synthesise)
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- Term Equality
+--------------------------------------------------------------------------------
 
 checkEq :: CheckableTerm -> CheckableTerm -> Bool
 checkEq UniverseType UniverseType = True

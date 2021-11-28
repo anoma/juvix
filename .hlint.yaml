@@ -8,7 +8,7 @@
 
 - extensions:
   - default: false
-  - name: [DeriveFunctor, OverloadedStrings]
+  - name: [DeriveFunctor, GeneralizedNewtypeDeriving, OverloadedStrings]
   - name: [MultiWayIf, PatternGuards, RecordWildCards]
   - name: [ScopedTypeVariables]
   - name: [ConstraintKinds, RankNTypes, TypeFamilies]
@@ -16,7 +16,7 @@
 
 - flags:
   - default: false
-  - {name: [-Wno-incomplete-patterns, -Wno-overlapping-patterns]}
+  - {name: [-Wno-incomplete-patterns, -Wno-overlapping-patterns , Wno-partial-fields]}
 
 - modules:
   # if you import Data.Set qualified, it must be as 'Set'
@@ -32,7 +32,7 @@
 # OTHER HINTS
 # --------------------------------------------------------------------------------
 
-- warn: {name: Use explicit module export list}
+# - warn: {name: Use explicit module export list}
 
 # --------------------------------------------------------------------------------
 # HINTS
@@ -52,5 +52,8 @@
 # --------------------------------------------------------------------------------
 
 - ignore: {within: [MiniJuvix.Syntax.Core, MiniJuvix.Syntax.Eval]}
+- ignore: {within: [MiniJuvix.Monad]}
+- ignore: {within: [MiniJuvix.Pretty]}
 - ignore: {name: Use let, within: [Test.All]}
 - ignore: {name: Use String}
+- ignore: {name: Avoid restricted flags}

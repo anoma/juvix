@@ -5,6 +5,10 @@ module MiniJuvix.Syntax.Eval where
 import MiniJuvix.Syntax.Core
 import MiniJuvix.Utils.Prelude
 
+--------------------------------------------------------------------------------
+-- Values and neutral terms
+--------------------------------------------------------------------------------
+
 data Value
   = IsUniverse
   | IsPiType Quantity BindingName Value (Value -> Value)

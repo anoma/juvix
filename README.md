@@ -30,32 +30,48 @@ the Juvix Translate library) and checking operations are denoted by cᵢ
 ```bash
 $ tree src/
 ...
-src
- ├─ app
- │ ├─ Main.hs
- │ └─ Options.hs
- ├─ MiniJuvix
- │ ├─ Pipeline.hs
- │ ├─ Parser
- │ ├─ Syntax
- │ │ ├─ Sugared.hs
- │ │ ├─ Desugared.hs
- │ │ ├─ Core.Agda
- │ │ ├─ Core.hs
- │ │ └─ Eval.Agda
- │ │ └─ Eval.hs
- │ ├─ Typing
- │ │ ├─ Scopechecking.hs
- │ │ ├─ Coverage.hs
- │ │ ├─ Typechecking.hs
- │ │ ├─ Termination.hs
- │ │ └─ Erasure.hs
- │ └─ Utils
- │   ├─ Parsing.hs
- │   ├─ Pretty.hs
- │   ├─ File.hs
- │   └─ Version.hs
- └─ test
-     └─ Spec.hs
+.
+├── MiniJuvix
+│   ├── Desugaring
+│   │   └── Error.hs
+│   ├── Error.hs
+│   ├── Monad.hs
+│   ├── Parsing
+│   │   ├── ADT.hs
+│   │   ├── Error.hs
+│   │   ├── Location.hs
+│   │   └── Parser.hs
+│   ├── Pipeline.hs
+│   ├── Pretty.hs
+│   ├── Syntax
+│   │   ├── Core.agda
+│   │   ├── Core.hs
+│   │   ├── Desugared.hs
+│   │   ├── Eval.agda
+│   │   ├── Eval.hs
+│   │   └── Sugared.hs
+│   ├── Typing
+│   │   ├── Coverage.hs
+│   │   ├── Erasure.hs
+│   │   ├── Error.hs
+│   │   ├── Scopechecking.hs
+│   │   ├── Termination.hs
+│   │   └── Typechecking.hs
+│   └── Utils
+│       ├── File.hs
+│       ├── Monad.hs
+│       ├── NameSymbol.hs
+│       ├── Parser
+│       │   ├── Lexer.hs
+│       │   └── Token.hs
+│       ├── Parser.hs
+│       ├── Prelude.hs
+│       ├── Pretty.hs
+│       └── Version.hs
+├── app
+│   ├── Main.hs
+│   └── Options.hs
+└── test
+    └── Spec.hs
 ...
 ```

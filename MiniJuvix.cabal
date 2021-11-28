@@ -27,15 +27,27 @@ library
         MiniJuvix.Syntax.Core
         MiniJuvix.Syntax.Eval
         MiniJuvix.Utils.Prelude
-        MiniJuvix.Utils.Version
         MiniJuvix.Utils.Pretty
+        MiniJuvix.Utils.Parser
+        MiniJuvix.Parsing.Language
+        MiniJuvix.Parsing.Parser
+        MiniJuvix.Parsing.Error
+        MiniJuvix.Parsing.Location
+        MiniJuvix.Desugaring.Error
+        MiniJuvix.Typing.Typechecking
+        MiniJuvix.Typing.Utils
+        MiniJuvix.Typing.Error
+        MiniJuvix.Error
+        MiniJuvix.Pretty
+        MiniJuvix.Pipeline
+        MiniJuvix.Monad
 
     hs-source-dirs:     src
     other-modules:      Paths_MiniJuvix
     default-language:   Haskell2010
     default-extensions:
-        NoImplicitPrelude DerivingStrategies StandaloneDeriving
-        MultiParamTypeClasses
+        NoImplicitPrelude Safe DerivingStrategies StandaloneDeriving
+        MultiParamTypeClasses OverloadedStrings
 
     ghc-options:
         -Wall -Wcompat -Widentities -Wincomplete-uni-patterns
@@ -43,14 +55,20 @@ library
         -Wderiving-defaults
 
     build-depends:
+        aeson >=2.0 && <=2.1,
         base >=4.14 && <=4.16,
-        prettyprinter ^>=1.7,
-        prettyprinter-ansi-terminal ^>=1.1,
-        process ^>=1.6,
-        protolude >=0.3 && <=0.4,
+        bytestring >=0.11 && <=0.12,
+        capability >=0.5 && <=0.6,
+        containers >=0.6 && <=0.7,
+        filepath >=1.4 && <=1.5,
+        megaparsec >=9.2 && <=9.3,
+        prettyprinter >=1.7 && <=1.8,
+        prettyprinter-ansi-terminal >=1.1 && <=1.2,
+        process >=1.6 && <=1.7,
+        relude >=1.0 && <=1.1,
         semirings >=0.6 && <=0.7,
-        text >=1.2 && <=1.3,
-        unordered-containers ^>=0.2
+        unordered-containers >=0.2 && <=0.3,
+        word8 >=0.1 && <=0.2
 
     if impl(ghc >=8.0)
         ghc-options: -Wredundant-constraints
@@ -73,9 +91,7 @@ executable MiniJuvix
         -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
         -fwrite-ide-info -hiedir=.hie
 
-    build-depends:
-        base >=4.14 && <=4.16,
-        optparse-applicative >=0.16 && <=0.17
+    build-depends:    base >=4.14 && <=4.16
 
     if impl(ghc >=8.0)
         ghc-options: -Wredundant-constraints
@@ -98,9 +114,7 @@ test-suite MiniJuvix-test
         -Wall -Wcompat -Widentities -Wincomplete-uni-patterns
         -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
 
-    build-depends:
-        base >=4.14 && <=4.16,
-        MiniJuvix -any
+    build-depends:    MiniJuvix -any
 
     if impl(ghc >=8.0)
         ghc-options: -Wredundant-constraints

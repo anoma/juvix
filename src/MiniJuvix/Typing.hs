@@ -1,3 +1,3 @@
-module MiniJuvix.Typing.Termination where
+module MiniJuvix.Typing where
 
 --------------------------------------------------------------------------------
