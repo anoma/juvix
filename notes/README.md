@@ -25,11 +25,20 @@ $$
 
 ###### tags: `juvix-project`, `MiniJuvix`
 
-This document is a work-in-progress report containing a detailed description of the bidirectional typechecker implemented in the MiniJuvix project. The primary purpose is to serve as a guide to extending the Juvix typechecker.
+This document is a work-in-progress report containing a detailed description of
+the bidirectional typechecker implemented in the MiniJuvix project. The primary
+purpose is to serve as a guide to extending the Juvix typechecker.
+
+
 
 ## Core syntax
 
-The type theory implemented in MiniJuvix is quantitative type theory (QTT), where each term has a usage/quantity annotation in the semiring from $\{0,1,\omega\}$ using the order $0<\omega$, $1<\omega$, and $0 \not < 1$. The core language in MiniJuvix is bidirectional syntax-based, meaning that a term in the language is either a checkable term or an inferable term. We therefore find two AST right below for each case.
+The type theory implemented in MiniJuvix is quantitative type theory (QTT),
+where each term has a usage/quantity annotation in the semiring from
+$\{0,1,\omega\}$ using the order $0<\omega$, $1<\omega$, and $0 \not < 1$. The
+core language in MiniJuvix is bidirectional syntax-based, meaning that a term in
+the language is either a checkable term or an inferable term. We therefore find
+two AST right below for each case.
 
 
 \begin{aligned}
@@ -39,15 +48,13 @@ x,y,z &\EQ \dotsb & \text{term variables} \\[.5em]
 s, t, A, B &\EQ \mathcal{U} & \text{Universe type} \\
            &\OR (x :^{\sigma} A) \to B      &\Pi\mbox{-}\text{types} \\
            %&\OR ...      &\text{...} \\[.5em]
-           &\OR ...      &\text{...} \\[.5em]
-C, D &\EQ \mathcal{U} & \text{Universe type} \\
-           &\OR ... & ... \\
-           &\OR ...      &\text{...} \\[.5em]           
 e, f &\EQ  & \text{... } \\
      &\OR ...  & \text{... }
 \\[1em]
 \Gamma, \Delta &\EQ \emptyset \Or \Gamma, x :^{\sigma} A & \text{ contexts}
 \end{aligned}
+
+TODO: add all the cases based on the types below.
 
 ### Checkable terms
 
@@ -139,10 +146,41 @@ data InferableTerm where
     → InferableTerm
 ```
 
+# Judgements
+
+$$
+\begin{gathered}
+ \Gamma \vdash t \Leftarrow^\sigma M \text{   (type checking)}
+\\[.5em]
+\Gamma \vdash t \Rightarrow^\sigma M \text{   (type inference)}
+\end{gathered}
+%
+$$
+
+- [ ] Explain the usage/resource semantics.
+
+## Contexts
+
+# Type checking
+
+- [ ] UniverseType
+- [ ] PiType
+- [ ] Lam
+- [ ] TensorType
+- [ ] TensorIntro
+- [ ] UnitType
+- [ ] Unit 
+- [ ] SumType
+
+
 # Type inference
 
 
-The algorithm that implements type inference is called `infer`. A type inference is denoted by ($\Rightarrow$). The `infer` method receives three arguments: one implicit for the context $\Gamma$ and two explicit arguments, the term $t$ and its quantity $\sigma$, respectively. The inference algorithm is a set of rules like the following.
+The algorithm that implements type inference is called `infer`. The `infer`
+method receives three arguments: one implicit argument for the context $\Gamma$
+and two explicit arguments, respectively, the term $t$ and its quantity $\sigma$
+in the rule below. The output of the algorithm is precisely the type $M$ for
+$t$.
 
 $$
 \begin{gathered}
@@ -155,7 +193,15 @@ p_1 \cdots\ p_n
 %
 $$
 
-By design, a term is inferable if it is one of the following cases. 
+The variable $M$ in the rule above represents the output of the algorithm. The
+variables $p_i$ are inner steps of the algorithm and their order is relevant. An
+inner step can be infering a type, checking if a property holds, reducing a
+term, or checking a term against a type. A reduction step is denoted by $\Gamma
+\vdash t \rightsquigarrow t'$ or simply by $t \rightsquigarrow t'$ whenever the
+context $\Gamma$ is known. Such a reduction is obtained by calling `eval` in the
+implementation.
+
+By design, a term is inferable if it is one of the following cases.
 
 - [x] Variables
 - [x] Annotations
@@ -163,7 +209,8 @@ By design, a term is inferable if it is one of the following cases.
 - [ ] Tensor type elim
 - [ ] Sum type elim
 
-We show each case as a rule in what follows. The variable $M$ in the rule above represents the output of the algorithm. The variables $p_i$ are inner steps of the algorithm and their order is relevant. An inner step can be infering a type, checking if a property holds, reducing a term, or checking a term against a type. A reduction step is denoted by $\Gamma \vdash t \rightsquigarrow t'$ or simply by $t \rightsquigarrow t'$ whenever the context $\Gamma$ is known. Such a reduction is obtained by calling `eval` in the implementation.
+
+Each case above has as a rule in what follows. 
 
 The Haskell type of `infer` would be similar as the following.
 
@@ -180,7 +227,8 @@ Resources = Map Name Quantity
 
 ## Variables
 
-A variable can be *free* or *bound*. If the variable is free, the rule is as follows.
+A variable can be *free* or *bound*. If the variable is free, the rule is as
+follows.
 
 ### Free variables
 
@@ -242,13 +290,21 @@ $$
 
 An annotation is something we infer, this is a choice.
 
-- First, we must check that $M$ is a type, i.e., a term in *some* universe. Because there is only one universe we denote it by $\mathcal{U}$. The formation rule for types has no computation content, then the usage is zero in this case.
-- Second, the term $x$ needs to be checked against $M$ using the same usage $\sigma$ we need in the conclusion. The context for this is $\Gamma$. There is one issue here. This type checking expects $M$ to be in normal form. When it is not, typechecking the judgment $\Gamma \vdash x \Leftarrow^\sigma M$ may give us a false negative.
+- First, we must check that $M$ is a type, i.e., a term in *some* universe.
+Because there is only one universe we denote it by $\mathcal{U}$. The formation
+rule for types has no computation content, then the usage is zero in this case.
+- Second, the term $x$ needs to be checked against $M$ using the same usage
+$\sigma$ we need in the conclusion. The context for this is $\Gamma$. There is
+one issue here. This type checking expects $M$ to be in normal form. When it is
+not, typechecking the judgment $\Gamma \vdash x \Leftarrow^\sigma M$ may give us
+a false negative.
 
 
     - *Example*: Why do we need $M'$? Imagine that we want to infer the type of $v$ given $\Gamma \vdash x : \mathsf{Ann}(v, \mathsf{Vec}(\mathsf{Nat},2+2))$. Clearly, the answer should be `Vec(Nat,4)`. However, this reasoning step requires computation. $$\Gamma \vdash x : \mathsf{Ann}(v, \mathsf{Vec}(\mathsf{Nat},2+2)) \Rightarrow \mathsf{Vec}(\mathsf{Nat},4))\,.$$
      
--  Using $M'$ as the normal form of $M$, it remains to check if $x$ is of type $M'$. If so, the returning type is $M'$ and the resources map has to be updated (the $\color{gray}{gray}$ $\Theta$ in the rule below).
+-  Using $M'$ as the normal form of $M$, it remains to check if $x$ is of type
+$M'$. If so, the returning type is $M'$ and the resources map has to be updated
+(the $\color{gray}{gray}$ $\Theta$ in the rule below).
 
 $$
 \begin{gathered}
@@ -277,9 +333,20 @@ infer _ (Ann termX typeM) = do
 
 ## Applications
 
-Recall the task is to find $M$ in $\Gamma \vdash \mathsf{App}(f,x) :^{\sigma} M$. If we follow the bidirectional type-checking recipe, then it makes sense to infer the type for an application, i.e., $\Gamma \vdash \mathsf{App}(f,x) \Rightarrow^{\sigma} M$. An application essentially removes a lambda abstraction introduced earlier in the derivation tree. The rule for this inference case is a bit more settle, especially because of the usage variables.
+Recall the task is to find $M$ in $\Gamma \vdash \mathsf{App}(f,x) :^{\sigma}
+M$. If we follow the bidirectional type-checking recipe, then it makes sense to
+infer the type for an application, i.e., $\Gamma \vdash \mathsf{App}(f,x)
+\Rightarrow^{\sigma} M$. An application essentially removes a lambda abstraction
+introduced earlier in the derivation tree. The rule for this inference case is a
+bit more settle, especially because of the usage variables.
 
-To introduce the term of an application, $\mathsf{App}(f,x)$, it requires to give/have a judgement saying that $f$ is a (dependent) function, i.e., $\Gamma \vdash f :^{\sigma} (x : ^\pi A) \to  B$, for usages variables $\sigma$ and $\pi$. Then, given $\Gamma$, the function $f$ uses $\pi$ times its input, mandatory. We therefore need $\sigma\pi$ resources of an input for $f$ if we want to apply $f$ $\sigma$ times, as in the conclusion $\Gamma \vdash \mathsf{App}(f,x) \Rightarrow^{\sigma} M$.
+To introduce the term of an application, $\mathsf{App}(f,x)$, it requires to
+give/have a judgement saying that $f$ is a (dependent) function, i.e., $\Gamma
+\vdash f :^{\sigma} (x : ^\pi A) \to  B$, for usages variables $\sigma$ and
+$\pi$. Then, given $\Gamma$, the function $f$ uses $\pi$ times its input,
+mandatory. We therefore need $\sigma\pi$ resources of an input for $f$ if we
+want to apply $f$ $\sigma$ times, as in the conclusion $\Gamma \vdash
+\mathsf{App}(f,x) \Rightarrow^{\sigma} M$.
 
 In summary, the elimanation rule is as follows.
 
@@ -296,7 +363,9 @@ $$\begin{gathered}
 $$
 
 
-The first judgement about $f$ is *principal*. Then, it must an inference step. After having inferred the type of $f$, the types $A$ and $B$ become known facts. It is then time to check the type of $x$ against $A$. 
+The first judgement about $f$ is *principal*. Then, it must an inference step.
+After having inferred the type of $f$, the types $A$ and $B$ become known facts.
+It is then time to check the type of $x$ against $A$. 
 
 $$\begin{gathered}
 \rule{App{\Rightarrow_2}}{
@@ -311,7 +380,8 @@ $$\begin{gathered}
 $$
 
 
-To make our life much easier, the rule above can be splitted in two cases, emphasising the usage bussiness.
+To make our life much easier, the rule above can be splitted in two cases,
+emphasising the usage bussiness.
 
 
 1. $$\begin{gathered}
@@ -343,10 +413,13 @@ $$
 
 In the rules above, we have used two lemmas:
 
-- $1 \cdot \Gamma \vdash x :^1 M$ entails that $\rho \cdot \Gamma \vdash x :^\rho M$ for any usage $\rho$.
+- $1 \cdot \Gamma \vdash x :^1 M$ entails that $\rho \cdot \Gamma \vdash x
+:^\rho M$ for any usage $\rho$.
 
 
-In summary, we infer the type of $f$. If it is a $\Pi$-type, then one checks whether $\sigma\pi$ is zero or not. If so, we use Rule No.1, otherwise, Rule No. 2. Otherwise, something goes wrong, an error arise.
+In summary, we infer the type of $f$. If it is a $\Pi$-type, then one checks
+whether $\sigma\pi$ is zero or not. If so, we use Rule No.1, otherwise, Rule No.
+2. Otherwise, something goes wrong, an error arise.
 
 
 Sketch:
@@ -369,20 +442,9 @@ infer σ (App f x) = do
 
 ## Tensor type elim
 
-At this point and following the previous case, it makes sense why we need to infer the type and not to check if an elimination rule is studied.
+At this point and following the previous case, it makes sense why we need to
+infer the type and not to check if an elimination rule is studied.
 
 ## Sum type elim
 
 TODO
-
-
-# Type checking
-
-- [ ] UniverseType
-- [ ] PiType
-- [ ] Lam
-- [ ] TensorType
-- [ ] TensorIntro
-- [ ] UnitType
-- [ ] Unit 
-- [ ] SumType
