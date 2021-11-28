@@ -29,7 +29,7 @@ This document is a work-in-progress report containing a detailed description of 
 
 ## Core syntax
 
-The type theory implemented in MiniJuvix is, at the time of writing, Quantitative type theory, i.e., each term has a usage/quantity annotation in the semiring from $\{0,1,\omega\}$ using the order $0<\omega$, $1<\omega$, and $0 \not < 1$. Furthermore, the core language is bidirectional syntax-based. As a consequence, any term in the language is either a checkable term or an inferable term, and each case has its own AST. 
+The type theory implemented in MiniJuvix is quantitative type theory (QTT), where each term has a usage/quantity annotation in the semiring from $\{0,1,\omega\}$ using the order $0<\omega$, $1<\omega$, and $0 \not < 1$. The core language in MiniJuvix is bidirectional syntax-based, meaning that a term in the language is either a checkable term or an inferable term. We therefore find two AST right below for each case.
 
 
 \begin{aligned}
@@ -37,7 +37,7 @@ x,y,z &\EQ \dotsb & \text{term variables} \\[.5em]
 \pi,\rho,\sigma &\EQ 0 \Or 1 \Or \omega
   & \text{quantity variables} \\[.5em]
 s, t, A, B &\EQ \mathcal{U} & \text{Universe type} \\
-           &\OR (x :^{\sigma} A) \to B(x)      &\Pi\mbox{-}\text{types} \\
+           &\OR (x :^{\sigma} A) \to B      &\Pi\mbox{-}\text{types} \\
            %&\OR ...      &\text{...} \\[.5em]
            &\OR ...      &\text{...} \\[.5em]
 C, D &\EQ \mathcal{U} & \text{Universe type} \\
@@ -46,7 +46,7 @@ C, D &\EQ \mathcal{U} & \text{Universe type} \\
 e, f &\EQ  & \text{... } \\
      &\OR ...  & \text{... }
 \\[1em]
-\Gamma &\EQ \emptyset \Or \Gamma, x :^{\sigma} A & \text{ contexts}
+\Gamma, \Delta &\EQ \emptyset \Or \Gamma, x :^{\sigma} A & \text{ contexts}
 \end{aligned}
 
 ### Checkable terms
@@ -139,29 +139,23 @@ data InferableTerm where
     → InferableTerm
 ```
 
+# Type inference
 
-### Notation
 
-
-- [x] The reduction for a term $t$ in the context $\Gamma$ is denoted by $\Gamma \vdash t \rightsquigarrow t'$ for some $t'$, or simply by $t \rightsquigarrow t'$ if the context $\Gamma$ can be inferred. Such a reduction is in the implementation a call to the method `eval`, which also calls to the method `evalWithContext` with the global context.
-
-Each case of the bidirectional typechecker is presented as a rule. Each rule represents one possible combination, in the sense that there may exist coherent order. The order is relevant from the implementation point of view.
+The algorithm that implements type inference is called `infer`. A type inference is denoted by ($\Rightarrow$). The `infer` method receives three arguments: one implicit for the context $\Gamma$ and two explicit arguments, the term $t$ and its quantity $\sigma$, respectively. The inference algorithm is a set of rules like the following.
 
 $$
 \begin{gathered}
-\rule{name}{
-p_1 \qquad p_2 \quad  \cdots \quad p_n
+\rule{}{
+p_1 \cdots\ p_n
 }{
-c
+ \Gamma \vdash t \Rightarrow^\sigma M 
 }
 \end{gathered}
 %
 $$
 
-
-# Type inference (a.k.a synthesis)
-
-For type inference, the following cases need to be addressed.
+By design, a term is inferable if it is one of the following cases. 
 
 - [x] Variables
 - [x] Annotations
@@ -169,8 +163,26 @@ For type inference, the following cases need to be addressed.
 - [ ] Tensor type elim
 - [ ] Sum type elim
 
+We show each case as a rule in what follows. The variable $M$ in the rule above represents the output of the algorithm. The variables $p_i$ are inner steps of the algorithm and their order is relevant. An inner step can be infering a type, checking if a property holds, reducing a term, or checking a term against a type. A reduction step is denoted by $\Gamma \vdash t \rightsquigarrow t'$ or simply by $t \rightsquigarrow t'$ whenever the context $\Gamma$ is known. Such a reduction is obtained by calling `eval` in the implementation.
+
+The Haskell type of `infer` would be similar as the following.
+
+```haskell
+infer :: Quantity -> InferableTerm -> Output (Type , Resources)
+```
+
+where
+
+```haskell
+Output = Either ErrorType 
+Resources = Map Name Quantity
+```
+
 ## Variables
 
+A variable can be *free* or *bound*. If the variable is free, the rule is as follows.
+
+### Free variables
 
 $$
 \begin{gathered}
@@ -183,33 +195,34 @@ $$
 %
 $$
 
-### Free variables
+*Explanation*:
 
 1. The input to `infer` is a variable term of the form `Free x`.
 2. The only case for introducing a variable is to have it in the context.
 3. Therefore, we ask if the variable is in the context.
 4. If it's not the case, throw an error.
-5. Otherwise, one gets a hypothesis $x :^q S$ from the context that matches $x$.
+5. Otherwise, one gets a hypothesis $x :^\sigma S$ from the context that matches $x$.
 6. At the end, we return two things: 
   6.1. first, the inferred type and
   6.2. a table with the new usage information for  each variable.
   
-Sketch:
+Haskell prototype:
 
 ```haskell
-infer : Relevance -> InferableTerm -> Either ErrorType (Type , Map Name Quantity)
-infer relevance (Free x) = do
+infer σ (Free x) = do
   Γ <- asks contextMonad
   case find ((== x) . getVarName) Γ of
-    Just (BindingName _ σ typeM) 
-      -> return (typeM, updatedLeftOvers (x, relevance) )
+    Just (BindingName _ _σ typeM) 
+      -> return (typeM, updateResources (x, _σ) )
     Nothing               
       -> throwError "Variable not present in the context"
 ```
 
+The method `updateResources` rewrites the map tracking names with their quantities.
+
 ### Bound variables
 
-The case of the`Bound` variable just throws an error.
+The case of the`Bound` variable throws an error.
 
 
 ## Annotations
@@ -229,13 +242,13 @@ $$
 
 An annotation is something we infer, this is a choice.
 
-- First, we must check that $M$ is a type, i.e., a term of *some* universe. At the time of writing, only one universe is available and we denote it by $\mathcal{U}$.
-- Second, one has to check if $x$ is of type $M$ given the context $\Gamma$. To do this check, we need $M$ to be in normal form, otherwise, the check may give us a false negative. We denote by $M'$ the normal form of $M$. 
+- First, we must check that $M$ is a type, i.e., a term in *some* universe. Because there is only one universe we denote it by $\mathcal{U}$. The formation rule for types has no computation content, then the usage is zero in this case.
+- Second, the term $x$ needs to be checked against $M$ using the same usage $\sigma$ we need in the conclusion. The context for this is $\Gamma$. There is one issue here. This type checking expects $M$ to be in normal form. When it is not, typechecking the judgment $\Gamma \vdash x \Leftarrow^\sigma M$ may give us a false negative.
 
 
-    - *Example*: Why do we need $M'$? Imagine that we want to infer the type of $v$ given $\Gamma \vdash x : \mathsf{Ann}(v, \mathsf{Vector}(\mathsf{Nat},2+2))$. Clearly, the answer should be `Vector(Nat,4)`, but this output requires a computation step, therefore, we work with $M$, instead of $M'$.
+    - *Example*: Why do we need $M'$? Imagine that we want to infer the type of $v$ given $\Gamma \vdash x : \mathsf{Ann}(v, \mathsf{Vec}(\mathsf{Nat},2+2))$. Clearly, the answer should be `Vec(Nat,4)`. However, this reasoning step requires computation. $$\Gamma \vdash x : \mathsf{Ann}(v, \mathsf{Vec}(\mathsf{Nat},2+2)) \Rightarrow \mathsf{Vec}(\mathsf{Nat},4))\,.$$
      
-- Finally, it remains to check if $x$ is of type $M'$. If so, we also return the new usage table.
+-  Using $M'$ as the normal form of $M$, it remains to check if $x$ is of type $M'$. If so, the returning type is $M'$ and the resources map has to be updated (the $\color{gray}{gray}$ $\Theta$ in the rule below).
 
 $$
 \begin{gathered}
@@ -252,29 +265,60 @@ M \rightsquigarrow M'
 %
 $$
 
-Sketch:
+Haskell prototype:
 
 ```haskell
 infer _ (Ann termX typeM) = do
-  _         <- check (zeroQuantity context) typeM zero Universe
+  _         <- check (0 .*. context) typeM zero Universe
   typeM'    <- evalWithContext typeM
-  newUsages <- check context termX typeM'
+  (_ , newUsages) <- check context termX typeM'
   return (typeM' , newUsages)
 ```
 
 ## Applications
 
-Following the bidirectional type-checking recipe it makes sense to infer the type in an application. Recall that an application essentially removes a lambda abstraction, as it is precisely its elimination rule. 
+Recall the task is to find $M$ in $\Gamma \vdash \mathsf{App}(f,x) :^{\sigma} M$. If we follow the bidirectional type-checking recipe, then it makes sense to infer the type for an application, i.e., $\Gamma \vdash \mathsf{App}(f,x) \Rightarrow^{\sigma} M$. An application essentially removes a lambda abstraction introduced earlier in the derivation tree. The rule for this inference case is a bit more settle, especially because of the usage variables.
 
-One needs to find $M$ in $\Gamma \vdash \mathsf{App}(f,x) : M$. The only way is to infer a type for $f$ because the following two reasons. First, we clearly don't know a priori a type to check for $f$, we just know if must be a $\Pi$-type. Second, this case is what the recipe calls the *principal judgement*. Then, the corresponding rule must synthetise a type, as Then, it is eliminating the arrow symbol.
+To introduce the term of an application, $\mathsf{App}(f,x)$, it requires to give/have a judgement saying that $f$ is a (dependent) function, i.e., $\Gamma \vdash f :^{\sigma} (x : ^\pi A) \to  B$, for usages variables $\sigma$ and $\pi$. Then, given $\Gamma$, the function $f$ uses $\pi$ times its input, mandatory. We therefore need $\sigma\pi$ resources of an input for $f$ if we want to apply $f$ $\sigma$ times, as in the conclusion $\Gamma \vdash \mathsf{App}(f,x) \Rightarrow^{\sigma} M$.
 
-Under these considerations, two scenarios arise. The treatment of usages in each follows the intuition given by the Atkey's paper. In first case, note that after infering the type of $f$, the types $A$ and $B$ become known facts. Therefore, it is right to check that $x$ is of type $A$, see the red symbol below. 
+In summary, the elimanation rule is as follows.
+
+$$\begin{gathered}
+\rule{}{
+\Gamma \vdash f :^{\sigma} (x : ^\pi A) \to  B
+\qquad
+\sigma\pi\cdot\Delta \vdash x : ^{\sigma\pi} A
+}{
+\Gamma + \sigma\pi\cdot\Delta  \vdash f\,x :^{\sigma} B
+}
+\end{gathered}
+%
+$$
+
+
+The first judgement about $f$ is *principal*. Then, it must an inference step. After having inferred the type of $f$, the types $A$ and $B$ become known facts. It is then time to check the type of $x$ against $A$. 
+
+$$\begin{gathered}
+\rule{App{\Rightarrow_2}}{
+\Gamma \vdash f {\color{blue}\Rightarrow}^{\sigma}(x : ^\pi A) \to  B
+\qquad
+\sigma\pi\cdot\Delta \vdash x {\color{red}\Leftarrow}^{\sigma\pi} A
+}{
+\Gamma + \sigma\pi\cdot\Delta  \vdash f\,x\,{\color{blue}\Rightarrow^{\sigma}}\, B
+}
+\end{gathered}
+%
+$$
+
+
+To make our life much easier, the rule above can be splitted in two cases, emphasising the usage bussiness.
+
 
 1. $$\begin{gathered}
-\rule{App{\Rightarrow_2}}{
+\rule{App{\Rightarrow_1}}{
 \Gamma \vdash f {\color{blue}\Rightarrow^{\sigma}} (x :^{\pi} A) \to B
 \qquad
-\sigma \cdot \pi = 0
+\color{green}{\sigma \cdot \pi = 0}
 \qquad
 0\Gamma \vdash x {\color{red}\Leftarrow^{0}} A
 }{
@@ -284,18 +328,25 @@ Under these considerations, two scenarios arise. The treatment of usages in each
 %
 $$
 
-1. $$\begin{gathered}
-\rule{App{\Rightarrow_1}}{
+2. $$\begin{gathered}
+\rule{App{\Rightarrow_2}}{
 \Gamma_1 \vdash f \Rightarrow^{\sigma} (x :^{\pi} A) \to B
 \qquad
-\sigma \cdot \pi \neq 0
+\color{green}{\sigma \cdot \pi \neq 0}
 \qquad
 \Gamma_2 \vdash x \Leftarrow^{1} A
 }{
-\Gamma_1 + (\sigma \cdot \pi)\, \Gamma_2 \vdash f\,x \Rightarrow^{\sigma} B
+\Gamma_1 + \sigma \pi\cdot \Gamma_2 \vdash f\,x \Rightarrow^{\sigma} B
 }
 \end{gathered}
 $$
+
+In the rules above, we have used two lemmas:
+
+- $1 \cdot \Gamma \vdash x :^1 M$ entails that $\rho \cdot \Gamma \vdash x :^\rho M$ for any usage $\rho$.
+
+
+In summary, we infer the type of $f$. If it is a $\Pi$-type, then one checks whether $\sigma\pi$ is zero or not. If so, we use Rule No.1, otherwise, Rule No. 2. Otherwise, something goes wrong, an error arise.
 
 
 Sketch:
@@ -306,11 +357,12 @@ infer σ (App f x) = do
   case arrowAtoB of
     IsPiType π _ typeA typeB -> do
       σπ <- case (σ .*. π) of
+       -- Rule No. 1
        Zero -> do 
-         (_ , nqs) 
-             <- check x typeA (mult Zero context)
+         (_ , nqs) <- check x typeA (mult Zero context)
           return nqs
-       _ -> TODO: (mult σπ context)
+       -- Rule No. 2
+       _ -> undefined -- TODO (mult σπ context)
     -- f is not a function:
     ty -> throwError $ Error ExpectedPiType ty (App f x)
 ```
