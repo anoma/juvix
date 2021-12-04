@@ -25,6 +25,7 @@ jobs:
         run: |
           cd main
           make docs
+          rm docs/README.md
 
       - name: Deploy HTML to github pages
         if: steps.html.outputs.cache-hit != 'true' 
