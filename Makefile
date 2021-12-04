@@ -31,9 +31,14 @@ checklines :
 hlint :
 	hlint src
 
+.PHONY : haddock
+haddock :
+	cabal --docdir=docs/ --htmldir=docs/ haddock --enable-documentation 
+
 .PHONY : docs
 docs :
-	cabal haddock --enable-documentation
+	cd docs ; \
+	sh conv.sh
 
 .PHONY : cabal
 cabal :

@@ -1,4 +1,4 @@
-# Proposal: MiniJuvix
+# Proposal : MiniJuvix
 
 <!-- Latex stuff adapted from Andy's record proposal: 
 https://hackmd.io/Xlvu82eFQ_m-cebUWAtGsw?edit -->
@@ -28,11 +28,19 @@ $$
 
 ## Abstract 
 
-This document is a **work-in-progress** report containing a detailed description of
-the bidirectional typechecker implemented in the MiniJuvix project. The primary
-purpose is to serve as a guide to extending the Juvix typechecker.
+This document is a **work-in-progress** report containing a detailed description
+of the bidirectional typechecker implemented for the MiniJuvix project. The
+primary purpose is to serve as a guide to extending the
+[Juvix](/Q5LbuHI5RXaJ8mD08yW7-g) typechecker.
 
-## Core syntax
+The source code will be available on the Github repository
+[heliaxdev/MiniJuvix](https://github.com/heliaxdev/MiniJuvix). In this document,
+we will only refer to the implementation as the one provided on the `qtt`
+branch.
+
+## Language
+
+### Syntax
 
 The type theory implemented in MiniJuvix is quantitative type theory (QTT),
 where each term has a usage/quantity annotation in the semiring from
@@ -536,7 +544,11 @@ TODO: I need the syntax "let" as we need pattern-matching to make sure one uses 
 TODO
 
 
-
 ## Typing rules summary
 
 TODO put all the typing rules without bidirectional syntax (intro, elims, computation rules).
+
+
+## References
+
+TODO, juvix core docs, atkey, wood, svoboda, cockx and mcbride.

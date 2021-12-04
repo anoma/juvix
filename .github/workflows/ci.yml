@@ -7,6 +7,32 @@ on:
     branches: [ master ]
 
 jobs:
+  docs:
+    steps:
+      - name: Checkout the main repository
+        uses: actions/checkout@v2
+        with:
+          path: main
+
+      - uses: r-lib/actions/setup-pandoc@v1
+        with:
+          pandoc-version: '2.13'
+      - run: echo "# Test" | pandoc -t html
+
+      - name: Generate HTML
+        id: html
+        run: |
+          cd main
+          make docs
+
+      - name: Deploy HTML to github pages
+        if: steps.html.outputs.cache-hit != 'true' 
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: main/docs
+          enable_jekyll: true
+
   build:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -28,7 +54,8 @@ jobs:
             main/.hie
             main/dist-newstyle
             main/cabal-dev
-            main/_build
+            main/_build/
+            main/.stack-work/
             agda/
             agda2hs/
           key: ${{ runner.os }}-build-${{ matrix.agda }}-${{ matrix.ghc }}-${{ hashFiles('main/src/**') }}

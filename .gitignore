@@ -59,3 +59,4 @@ _build/
 .agda/
 agda/
 agda2hs/
+docs/*.html

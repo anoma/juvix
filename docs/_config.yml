@@ -1,0 +1,9 @@
+theme: minima
+# title: "Proposal: MiniJuvix"
+keywords:
+  - minijuvix
+
+lang: en_US
+css:
+  - main.css
+  - Agda.css
