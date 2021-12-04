@@ -8,6 +8,7 @@ on:
 
 jobs:
   docs:
+    runs-on: macOS-latest
     steps:
       - name: Checkout the main repository
         uses: actions/checkout@v2
