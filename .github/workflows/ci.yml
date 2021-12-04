@@ -35,92 +35,92 @@ jobs:
           publish_dir: main/docs
           enable_jekyll: true
 
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ ubuntu-latest , macOS-latest ]
-        ghc: ["8.10.7"]
-        agda: ["2.6.2"]
+  # build:
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     matrix:
+  #       os: [ ubuntu-latest , macOS-latest ]
+  #       ghc: ["8.10.7"]
+  #       agda: ["2.6.2"]
 
-    steps:
-      - uses: actions/cache@v2
-        name: Caching
-        id: cache
-        env:
-          cache-name: cache-env
-        with:
-          path: |
-            ~/.cabal
-            dist-newstyle
-            main/.hie
-            main/dist-newstyle
-            main/cabal-dev
-            main/_build/
-            main/.stack-work/
-            agda/
-            agda2hs/
-          key: ${{ runner.os }}-build-${{ matrix.agda }}-${{ matrix.ghc }}-${{ hashFiles('main/src/**') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ matrix.agda }}-${{ matrix.ghc }}-
-            ${{ runner.os }}-build-${{ matrix.agda }}-
-            ${{ runner.os }}-
+  #   steps:
+  #     - uses: actions/cache@v2
+  #       name: Caching
+  #       id: cache
+  #       env:
+  #         cache-name: cache-env
+  #       with:
+  #         path: |
+  #           ~/.cabal
+  #           dist-newstyle
+  #           main/.hie
+  #           main/dist-newstyle
+  #           main/cabal-dev
+  #           main/_build/
+  #           main/.stack-work/
+  #           agda/
+  #           agda2hs/
+  #         key: ${{ runner.os }}-build-${{ matrix.agda }}-${{ matrix.ghc }}-${{ hashFiles('main/src/**') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-build-${{ matrix.agda }}-${{ matrix.ghc }}-
+  #           ${{ runner.os }}-build-${{ matrix.agda }}-
+  #           ${{ runner.os }}-
 
-      - uses: haskell/actions/setup@v1
-        name: Setup Haskell
-        with:
-          ghc-version: ${{ matrix.ghc }}
+  #     - uses: haskell/actions/setup@v1
+  #       name: Setup Haskell
+  #       with:
+  #         ghc-version: ${{ matrix.ghc }}
 
-      - name: Add .cabal/bin into PATH
-        run:
-          echo "$HOME/.cabal/bin" >> $GITHUB_PATH
-        shell: bash
+  #     - name: Add .cabal/bin into PATH
+  #       run:
+  #         echo "$HOME/.cabal/bin" >> $GITHUB_PATH
+  #       shell: bash
 
-      - uses: actions/checkout@v2
-        name: Checkout Agda repository
-        if: steps.cache.outputs.cache-hit != 'true'
-        with:
-          repository: agda/agda
-          path: agda
-          ref: ${{ matrix.agda }}
+  #     - uses: actions/checkout@v2
+  #       name: Checkout Agda repository
+  #       if: steps.cache.outputs.cache-hit != 'true'
+  #       with:
+  #         repository: agda/agda
+  #         path: agda
+  #         ref: ${{ matrix.agda }}
 
-      - name: Install Agda
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          cd agda
-          touch doc/user-manual.pdf
-          cabal install --overwrite-policy=always --ghc-options='-O2 +RTS -M6G -RTS' -foptimise-heavily
-        shell: bash
+  #     - name: Install Agda
+  #       if: steps.cache.outputs.cache-hit != 'true'
+  #       run: |
+  #         cd agda
+  #         touch doc/user-manual.pdf
+  #         cabal install --overwrite-policy=always --ghc-options='-O2 +RTS -M6G -RTS' -foptimise-heavily
+  #       shell: bash
 
-      - uses: actions/checkout@v2
-        name: Checkout Agda2HS repository
-        if: steps.cache.outputs.cache-hit != 'true'
-        with:
-          repository: agda/agda2hs
-          path: agda2hs
-          ref: ${{ matrix.agda }}
+  #     - uses: actions/checkout@v2
+  #       name: Checkout Agda2HS repository
+  #       if: steps.cache.outputs.cache-hit != 'true'
+  #       with:
+  #         repository: agda/agda2hs
+  #         path: agda2hs
+  #         ref: ${{ matrix.agda }}
 
-      - name: Install Agda2HS
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          cd agda2hs
-          make install
+  #     - name: Install Agda2HS
+  #       if: steps.cache.outputs.cache-hit != 'true'
+  #       run: |
+  #         cd agda2hs
+  #         make install
 
-      - name: Checkout our repository
-        uses: actions/checkout@v2
-        with:
-          path: main
+  #     - name: Checkout our repository
+  #       uses: actions/checkout@v2
+  #       with:
+  #         path: main
 
-      - name: Verify the Agda files in it
-        if: steps.cache.outputs.cache-hit != 'true'
-        id: check-agda
-        run: |
-          cd main
-          make agda
+  #     - name: Verify the Agda files in it
+  #       if: steps.cache.outputs.cache-hit != 'true'
+  #       id: check-agda
+  #       run: |
+  #         cd main
+  #         make agda
 
-      - name: Build the Haskell project
-        run: cabal update
-             make cabal
+  #     - name: Build the Haskell project
+  #       run: cabal update
+  #            make cabal
 
     # - name: Run tests
     #   run: cabal test all

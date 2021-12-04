@@ -31,3 +31,4 @@ do
          --variable=pandocVersion:"${PANDOCVERSION:u}" \
          --variable=file:"src/$filename"
 done
+cp README.html index.html
