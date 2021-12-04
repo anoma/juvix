@@ -31,8 +31,8 @@ checklines :
 hlint :
 	hlint src
 
-.PHONY : doc
-doc :
+.PHONY : docs
+docs :
 	cabal haddock --enable-documentation
 
 .PHONY : cabal
@@ -87,6 +87,6 @@ install-agda2hs:
 	echo "agda2hs/agda2hs.agda-lib" > ~/.agda/libraries
 
 .PHONY : agda
- agda : 
+agda : 
 	agda2hs ./src/MiniJuvix/Syntax/Core.agda -o src -XUnicodeSyntax -XStandaloneDeriving -XDerivingStrategies -XMultiParamTypeClasses
 	agda2hs ./src/MiniJuvix/Syntax/Eval.agda -o src -XUnicodeSyntax -XStandaloneDeriving -XDerivingStrategies -XMultiParamTypeClasses
