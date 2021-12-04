@@ -1,6 +1,7 @@
-# MiniJuvix typechecker WIP
+# Proposal: MiniJuvix
 
-<!-- Latex stuff adapted from Andy's record proposal: https://hackmd.io/Xlvu82eFQ_m-cebUWAtGsw?edit -->
+<!-- Latex stuff adapted from Andy's record proposal: 
+https://hackmd.io/Xlvu82eFQ_m-cebUWAtGsw?edit -->
 
 $$
 \renewcommand\.{\mathord.}
@@ -16,7 +17,7 @@ $$
 \newcommand\I{\color{blue}} \newcommand\O{\color{green}}
 \let\Rule\mathsf
 \let\N\mathsf
-\newcommand\rule[3]{\frac{\begin{gathered}#2\end{gathered}}{#3}\:\Rule{#1}}
+\newcommand\rule[3]{\frac{\begin{gathered}\,{#2}\end{gathered}}{#3}\:\Rule{#1}}
 \let\Check\Leftarrow 
 \let\Infer\Rightarrow
 \newcommand\Tel[1]{\mathbf{tel}\:#1}
@@ -25,11 +26,11 @@ $$
 
 ###### tags: `juvix-project`, `MiniJuvix`
 
-This document is a work-in-progress report containing a detailed description of
+## Abstract 
+
+This document is a **work-in-progress** report containing a detailed description of
 the bidirectional typechecker implemented in the MiniJuvix project. The primary
 purpose is to serve as a guide to extending the Juvix typechecker.
-
-
 
 ## Core syntax
 
@@ -40,143 +41,216 @@ core language in MiniJuvix is bidirectional syntax-based, meaning that a term in
 the language is either a checkable term or an inferable term. We therefore find
 two AST right below for each case.
 
+### Terms and types
 
-\begin{aligned}
-x,y,z &\EQ \dotsb & \text{term variables} \\[.5em]
+The following syntax description is given
+thinking on its implementation. This may change later, for presentation purposes. The gray parts are
+expected to be added later.
+
+<!-- \begin{aligned}
+%x,y,z &\EQ \dotsb & \text{term variable} \\[.5em]
 \pi,\rho,\sigma &\EQ 0 \Or 1 \Or \omega
   & \text{quantity variables} \\[.5em]
-s, t, A, B &\EQ \mathcal{U} & \text{Universe type} \\
-           &\OR (x :^{\sigma} A) \to B      &\Pi\mbox{-}\text{types} \\
-           %&\OR ...      &\text{...} \\[.5em]
-e, f &\EQ  & \text{... } \\
-     &\OR ...  & \text{... }
+A, B &\EQ \mathcal{U}                  & \text{universe} \\
+     &\OR (x :^{\sigma} A) \to B       &\text{depend. fun. type} \\
+     &\OR (x :^{\sigma} A) \otimes B   &\text{tensor prod. type} \\[.5em]
+u, v &\EQ \mathsf{Var}(x)    &\text{variable}\\
+&\OR \mathsf{Ann}(x, A) &\text{annotation}\\
+
+&\OR u\,v  &\text{application} \\
+&\OR \lambda x.v  &\text{lambda abs.} \\[.5em]
+&\OR \color{gray}{f}  &\color{gray}{\text{named function(review)}} \\
+&\OR \color{gray}{D} &\color{gray}{\text{data type decl.}}\\
+&\OR \color{gray}{c} &\color{gray}{\text{data constr.}}\\
+&\OR \color{gray}{R}  &\color{gray}{\text{...check andy's record constr decl..}} \\
+&\OR \color{gray}{r}  &\color{gray}{\text{record. intro}} \\ 
+&\OR \color{gray}{\cdots}  &\color{gray}{\text{record. proj.}} \\[.7em]
+\Gamma &\EQ \emptyset \Or \Gamma, x :^{\sigma} A & \text{ contexts}
 \\[1em]
-\Gamma, \Delta &\EQ \emptyset \Or \Gamma, x :^{\sigma} A & \text{ contexts}
-\end{aligned}
+\Delta &\EQ () \Or (x : A)\,\Delta& \text{ telescopes}
+\end{aligned} -->
 
-TODO: add all the cases based on the types below.
+TODO: add all the cases based on the types below. Mention something about metavariables, as they appear usually in the context of type inference. Introduce telescopes for data types later and for pattern-matching.
 
-### Checkable terms
+## Judgement forms
 
-
-```haskell
-data CheckableTerm where
-  {- Universe types. 
-  See the typing rule Univ⇐.
-  -}
-  UniverseType : CheckableTerm
-  {- Dependent function types. 
-  See the typing rules →F⇐ and →I⇐.
-    1. (Π[ x :ρ S ] P x) : U
-    2. (λ x. t) : Π[ x :ρ S ] P x
-  -}
-  PiType : Quantity → BindingName → CheckableTerm 
-         → CheckableTerm → CheckableTerm
-  Lam : BindingName → CheckableTerm → CheckableTerm
-  {- Dependent tensor product types. 
-  See the typing rules ⊗-F-⇐,  ⊗-I₀⇐, and ⊗-I₁⇐.
-    1. * S ⊗ T : U
-    2. (M , N) : S ⊗ T
-  -}
-  TensorType : Quantity → BindingName → CheckableTerm 
-             → CheckableTerm → CheckableTerm
-  TensorIntro : CheckableTerm → CheckableTerm → CheckableTerm
-  {- Unit types. 
-  See the typing rule 1-F-⇐ and 1-I-⇐.
-    1. 𝟙 : U
-    2. ⋆ : 𝟙
-  -}
-  UnitType : CheckableTerm
-  Unit : CheckableTerm
-  {- Disjoint sum types.
-  See the typing rules
-    1. S + T : U
-    2. inl x : S + T
-    3. inr x : S + T
-  -}
-  SumType : CheckableTerm → CheckableTerm → CheckableTerm
-  Inl : CheckableTerm → CheckableTerm
-  Inr : CheckableTerm → CheckableTerm
-  -- Inferrable terms are clearly checkable, see typing rule Inf⇐.
-  Inferred : InferableTerm → CheckableTerm
-```
-
-### Inferable terms
-
-```haskell
-data InferableTerm where
-  -- | Variables, typing rule Var⇒. 
-  Var : Variable → InferableTerm
-  -- | Annotations, typing rule Ann⇒.
-  {- Maybe, I want to have the rules here like this:
-  
-    OΓ ⊢ S ⇐0 𝕌     Γ ⊢ M ⇐0 𝕌
-    ────────────────────────────── Ann⇒
-           Γ ⊢ (M : S) ⇒ S
-  -}
-  Ann : CheckableTerm → CheckableTerm → InferableTerm
-  -- |  Application (eliminator).
-  App : InferableTerm → CheckableTerm → InferableTerm
-  -- | Dependent Tensor product eliminator. See section 2.1.3 in Atkey 2018.
-  -- let z@(u, v) = M in N :^q (a ⊗ b))
-  TensorTypeElim
-    : Quantity       -- q is the multiplicity of the eliminated pair.
-    → BindingName          -- z is the name of the variable binding the pair in the
-                     -- type annotation of the result of elimination.
-    → BindingName          -- u is the name of the variable binding the first element.
-    → BindingName          -- v is the name of the variable binding the second element.
-    → InferableTerm  -- (u,v) is the eliminated pair.
-    → CheckableTerm  -- Result of the elimination.
-    → CheckableTerm  -- Type annotation of the result of elimination.
-    → InferableTerm
-  -- | Sum type eliminator (a.k.a. case)
-  -- let (z : S + T) in (case z of {(inl u) ↦ r1; (inr v) ↦ r2}  :^q  T) 
-  SumTypeElim        -- Case
-    :  Quantity      -- Multiplicity of the sum contents.
-    →  BindingName         -- Name of the variable binding the sum in the type
-                     -- annotation of the result of elimination.
-    → InferableTerm  -- The eliminated sum.
-    → BindingName          -- u is the name of the variable binding the left element.
-    → CheckableTerm  -- r1 is the result of the elimination in case the sum contains
-                     -- the left element.
-    → BindingName          -- v is the name of the variable binding the right element.
-    → CheckableTerm  -- r2 is the result of the elimination in case the sum contains
-                     -- the right element.
-    → CheckableTerm  -- Type annotation of the result of the elimination.
-    → InferableTerm
-```
-
-# Judgements
 
 $$
 \begin{gathered}
- \Gamma \vdash t \Leftarrow^\sigma M \text{   (type checking)}
+ \Gamma \vdash t\, {\color{red}\Leftarrow}^\sigma\, M \text{   (type checking)}
 \\[.5em]
-\Gamma \vdash t \Rightarrow^\sigma M \text{   (type inference)}
+\Gamma \vdash t \, {\color{blue} \Rightarrow}^\sigma \, M \text{   (type inference)}
 \end{gathered}
 %
 $$
 
-- [ ] Explain the usage/resource semantics.
 
 ## Contexts
 
-# Type checking
+- The formation rules for contexts.
+- Context transformations
 
-- [ ] UniverseType
-- [ ] PiType
-- [ ] Lam
-- [ ] TensorType
+## Type checking
+
+TODO: explain the intuition about the following rules below.
+
+- [x] UniverseType
+- [x] PiType
+- [x] Lam
+- [x] TensorType
 - [ ] TensorIntro
 - [ ] UnitType
 - [ ] Unit 
 - [ ] SumType
 
+There is no resources needed to form a type. Therefore, the rules
+below only checks when forming a type, both, in the premises and the conclusion.
+
+### Universe
+
+- Type formation rule
+
+$$\begin{gathered}
+\rule{Univ{\Leftarrow}}{
+0\cdot \Gamma \vdash  
+}{
+0\cdot \Gamma \vdash \mathcal{U}\, \overset{0}{\color{red}\Leftarrow}\,\, \mathcal{U}
+}
+\end{gathered}
+%
+$$
+
+### Dependent function types
+
+- Type formation rule
+
+$$\begin{gathered}
+\rule{Pi{\Leftarrow}}{
+0\cdot \Gamma \vdash A \, \overset{0}{\color{red}\Leftarrow}\,\mathcal{U}
+\qquad
+0\cdot \Gamma,\,x\overset{0}{:}A \vdash B \, \overset{0}{\color{red}\Leftarrow}\,\mathcal{U}\quad
+}{
+0\cdot \Gamma \vdash (x\overset{\pi}{:}A)\rightarrow B \overset{0}{\color{red}\Leftarrow}\mathcal{U}
+}
+\end{gathered}
+%
+$$
+
+### Lambda abstractions
+
+The lambda abstraction rule is the introduction rule of a dependent function
+type. The principal judgement in this case is the conclusion, and we therefore
+check against the corresponing type $(x \overset{\sigma}{:} A) \to B$. With
+the types $A$ and $B$, all the information about the premise
+becomes known, and it just remains to check its judgment.
+
+
+
+$$\begin{gathered}
+\rule{lam{\Leftarrow}}{
+\Gamma, x\overset{\sigma\pi}{:}A \vdash M \,\overset{\sigma}{\color{red}\Leftarrow}\,B
+}{
+\Gamma \vdash \lambda x.M \overset{\sigma}{\color{red}\Leftarrow} (x\overset{\pi}{:}A)\rightarrow B
+}
+\end{gathered}
+%
+$$
+
+### Tensor product types
+
+- Type formation rule
+
+$$\begin{gathered}
+\rule{\hspace{0.4cm}\otimes-F{\Leftarrow}}{
+0\cdot \Gamma \vdash A \,\overset{0}{\color{red}\Leftarrow}\,\mathcal{U}
+\qquad
+0\cdot \Gamma, x\overset{0}{:}A \vdash B\overset{0}{\color{red}\Leftarrow}\,\mathcal{U}
+}{
+0\cdot \Gamma \vdash (x\overset{\pi}{:}A) \otimes B \overset{0}{\color{red}\Leftarrow}\,\mathcal{U}
+}
+\end{gathered}
+%
+$$
+
+- Make pairs
+
+The original rule in Atkey's paper is too condense. A more didactical way on
+presenting the rules is splitting it into two cases: the erased and present
+part of the theory, i.e., respectively, $\sigma =0$ or $\sigma \neq 0$ in the
+rule's conclusion.
+
+
+TODO: use the same reasoning as for applications.
+
+
+1. 
+
+$$\begin{gathered}
+\rule{TensorIntro_1{\Leftarrow}}{
+\color{green}{\sigma\pi = 0}
+\qquad
+0\cdot \Gamma \vdash M \,\overset{0}{\color{red}\Leftarrow}\,A
+\qquad
+\Gamma \vdash N \,\overset{\sigma}{\color{red}\Leftarrow}\,B[M/x]
+\qquad 
+}{
+\Gamma \vdash (M,N)\overset{\sigma}{\color{red}\Leftarrow} (x\overset{\pi}{:}A) \otimes B
+}
+\end{gathered}
+%
+$$
+
+2. 
+
+$$\begin{gathered}
+\rule{TensorIntro_2{\Leftarrow}}{
+\color{green}{\sigma\pi \neq 0}\qquad
+\Gamma_{1} \vdash M \,\overset{1}{\color{red}\Leftarrow}\,A
+\qquad
+\Gamma_{2} \vdash N \,\overset{\sigma}{\color{red}\Leftarrow}\,B[M/x]
+\qquad 
+}{
+\color{green}{\sigma\pi}\cdot \Gamma_{1}+\Gamma_{2} \vdash (M,N)\overset{\sigma}{\color{red}\Leftarrow} (x\overset{\pi}{:}A) \otimes B 
+}
+\end{gathered}
+%
+$$
+
+
+
+## Conversion rules
+
+
+Include the rules for definitional equality:
+- [ ] β-equality, 
+- [ ] reflexivity, 
+- [ ] symmetry, 
+- [ ] transitivity, and
+- [ ] congruence.
+
+
+We want to check if $M$ is of type $T$.
+
+$$\begin{gathered}
+\rule{Inf{\Leftarrow}}{
+\Gamma \vdash M \,\overset{\sigma}{\color{blue}\Rightarrow}\,S \qquad
+\Gamma \vdash S\, \overset{0}{\color{red}\Leftarrow}\, \mathcal{U}\qquad
+\Gamma \vdash T \,\overset{0}{\color{red}\Leftarrow}\,\mathcal{U} \qquad 
+\color{green}{S =_{\beta} T}\ \,\,\,
+}{
+\Gamma \vdash M \overset{\sigma}{\color{red}\Leftarrow} T
+}
+\end{gathered}
+%
+$$
+
 
 # Type inference
 
+The algorithm that implements type inference is called `infer`. Inspired by Agda and its inference strategy, MiniJuvix only infer values that are *uniquely* determined by the context.
+There are no guesses. Either we fail or get a unique answer, giving us a predicatable behaviour. 
 
-The algorithm that implements type inference is called `infer`. The `infer`
+The `infer`
 method receives three arguments: one implicit argument for the context $\Gamma$
 and two explicit arguments, respectively, the term $t$ and its quantity $\sigma$
 in the rule below. The output of the algorithm is precisely the type $M$ for
@@ -187,28 +261,26 @@ $$
 \rule{}{
 p_1 \cdots\ p_n
 }{
- \Gamma \vdash t \Rightarrow^\sigma M 
+\Gamma \vdash t \Rightarrow^\sigma M 
 }
 \end{gathered}
 %
 $$
 
-The variable $M$ in the rule above represents the output of the algorithm. The
-variables $p_i$ are inner steps of the algorithm and their order is relevant. An
-inner step can be infering a type, checking if a property holds, reducing a
-term, or checking a term against a type. A reduction step is denoted by $\Gamma
-\vdash t \rightsquigarrow t'$ or simply by $t \rightsquigarrow t'$ whenever the
-context $\Gamma$ is known. Such a reduction is obtained by calling `eval` in the
-implementation.
+The variables $p_i$ in the rule are inner steps of the algorithm and their order
+is relevant. An inner step can be infering a type, checking if a property holds,
+reducing a term, or checking a term against a type. A reduction step is denoted
+by $\Gamma \vdash t \rightsquigarrow t'$ or simply by $t \rightsquigarrow t'$
+whenever the context $\Gamma$ is known. Such a reduction is obtained by calling
+`eval` in the implementation.
 
 By design, a term is inferable if it is one of the following cases.
 
-- [x] Variables
-- [x] Annotations
-- [x] Applications
+- [x] Variable
+- [x] Annotation
+- [x] Application
 - [ ] Tensor type elim
 - [ ] Sum type elim
-
 
 Each case above has as a rule in what follows. 
 
@@ -225,19 +297,19 @@ Output = Either ErrorType
 Resources = Map Name Quantity
 ```
 
-## Variables
+## Variable
 
 A variable can be *free* or *bound*. If the variable is free, the rule is as
 follows.
 
-### Free variables
+### Free variable
 
 $$
 \begin{gathered}
 \rule{Var⇒}{
 (x :^{\sigma} M) \in \Gamma
 }{
-  \Gamma \vdash \mathsf{Free}(x) \Rightarrow^{\sigma} M
+  \Gamma \vdash \mathsf{Free}(x) {\color{blue}\Rightarrow}^{\sigma} M
 }
 \end{gathered}
 %
@@ -272,23 +344,22 @@ The method `updateResources` rewrites the map tracking names with their quantiti
 
 The case of the`Bound` variable throws an error.
 
-
 ## Annotations
 
 $$
 \begin{gathered}
-\rule{Ann⇒}{
-0\Gamma \vdash M \Leftarrow^0 \mathcal{U}
+\rule{Ann{⇒}}{
+0\cdot \Gamma \vdash M\,{\color{red}\Leftarrow}^0\,\mathcal{U}
 \qquad
-\Gamma \vdash x \Leftarrow^\sigma M
+\Gamma \vdash x\,{\color{red}\Leftarrow}^\sigma\, M
 }{
-  \Gamma \vdash \mathsf{Ann}(x,M) \Rightarrow^{\sigma} M
+  \Gamma \vdash \mathsf{Ann}(x,M)\,{\color{blue}\Rightarrow}^{\sigma}\,M
 }
 \end{gathered}
 %
 $$
 
-An annotation is something we infer, this is a choice.
+Any annotation possess type information that counts as known facts, and we therefore infer. However, this is a choice.
 
 - First, we must check that $M$ is a type, i.e., a term in *some* universe.
 Because there is only one universe we denote it by $\mathcal{U}$. The formation
@@ -299,23 +370,24 @@ one issue here. This type checking expects $M$ to be in normal form. When it is
 not, typechecking the judgment $\Gamma \vdash x \Leftarrow^\sigma M$ may give us
 a false negative.
 
+  - *Example*: Why do we need $M'$? Imagine that we want to infer the type of $v$ given $\Gamma \vdash x : \mathsf{Ann}(v, \mathsf{Vec}(\mathsf{Nat},2+2))$. Clearly, the answer should be `Vec(Nat,4)`. 
+  However, this reasoning step requires computation. $$\Gamma \vdash x : \mathsf{Ann}(v, \mathsf{Vec}(\mathsf{Nat},2+2)) \Rightarrow \mathsf{Vec}(\mathsf{Nat},4))\,.$$
 
-    - *Example*: Why do we need $M'$? Imagine that we want to infer the type of $v$ given $\Gamma \vdash x : \mathsf{Ann}(v, \mathsf{Vec}(\mathsf{Nat},2+2))$. Clearly, the answer should be `Vec(Nat,4)`. However, this reasoning step requires computation. $$\Gamma \vdash x : \mathsf{Ann}(v, \mathsf{Vec}(\mathsf{Nat},2+2)) \Rightarrow \mathsf{Vec}(\mathsf{Nat},4))\,.$$
-     
--  Using $M'$ as the normal form of $M$, it remains to check if $x$ is of type
+- Using $M'$ as the normal form of $M$, it remains to check if $x$ is of type
 $M'$. If so, the returning type is $M'$ and the resources map has to be updated
 (the $\color{gray}{gray}$ $\Theta$ in the rule below).
 
 $$
 \begin{gathered}
-\rule{Ann⇒}{
-0\Gamma \vdash M \Leftarrow^0 \mathcal{U}
+\rule{Ann{⇒}}{
+0\cdot \Gamma \vdash M \Leftarrow^0 \mathcal{U}
 \qquad
 M \rightsquigarrow M'
 \qquad
 \Gamma \vdash x \Leftarrow^\sigma M' \color{darkgrey}{\dashv \Theta}
 }{
-  \Gamma \vdash \mathsf{Ann}(x,M) \Rightarrow^{\sigma} M' \color{darkgrey}{\dashv \Theta}
+  \Gamma \vdash \mathsf{Ann}(x,M) \Rightarrow^{\sigma} M'
+    \color{darkgrey}{\dashv \Theta}
 }
 \end{gathered}
 %
@@ -331,7 +403,7 @@ infer _ (Ann termX typeM) = do
   return (typeM' , newUsages)
 ```
 
-## Applications
+## Application
 
 Recall the task is to find $M$ in $\Gamma \vdash \mathsf{App}(f,x) :^{\sigma}
 M$. If we follow the bidirectional type-checking recipe, then it makes sense to
@@ -354,16 +426,15 @@ $$\begin{gathered}
 \rule{}{
 \Gamma \vdash f :^{\sigma} (x : ^\pi A) \to  B
 \qquad
-\sigma\pi\cdot\Delta \vdash x : ^{\sigma\pi} A
+\sigma\pi\cdot\Gamma' \vdash x : ^{\sigma\pi} A
 }{
-\Gamma + \sigma\pi\cdot\Delta  \vdash f\,x :^{\sigma} B
+\Gamma + \sigma\pi\cdot\Gamma'  \vdash f\,x :^{\sigma} B
 }
 \end{gathered}
 %
 $$
 
-
-The first judgement about $f$ is *principal*. Then, it must an inference step.
+The first judgement about $f$ is *principal*. Then, it must be an inference step.
 After having inferred the type of $f$, the types $A$ and $B$ become known facts.
 It is then time to check the type of $x$ against $A$. 
 
@@ -371,18 +442,16 @@ $$\begin{gathered}
 \rule{App{\Rightarrow_2}}{
 \Gamma \vdash f {\color{blue}\Rightarrow}^{\sigma}(x : ^\pi A) \to  B
 \qquad
-\sigma\pi\cdot\Delta \vdash x {\color{red}\Leftarrow}^{\sigma\pi} A
+\sigma\pi\cdot\Gamma' \vdash x {\color{red}\Leftarrow}^{\sigma\pi} A
 }{
-\Gamma + \sigma\pi\cdot\Delta  \vdash f\,x\,{\color{blue}\Rightarrow^{\sigma}}\, B
+\Gamma + \sigma\pi\cdot\Gamma'  \vdash f\,x\,{\color{blue}\Rightarrow^{\sigma}}\, B
 }
 \end{gathered}
 %
 $$
 
-
 To make our life much easier, the rule above can be splitted in two cases,
 emphasising the usage bussiness.
-
 
 1. $$\begin{gathered}
 \rule{App{\Rightarrow_1}}{
@@ -390,7 +459,7 @@ emphasising the usage bussiness.
 \qquad
 \color{green}{\sigma \cdot \pi = 0}
 \qquad
-0\Gamma \vdash x {\color{red}\Leftarrow^{0}} A
+0\cdot \Gamma \vdash x {\color{red}\Leftarrow^{0}} A
 }{
 \Gamma \vdash f\,x \Rightarrow^{\sigma} B
 }
@@ -416,11 +485,9 @@ In the rules above, we have used two lemmas:
 - $1 \cdot \Gamma \vdash x :^1 M$ entails that $\rho \cdot \Gamma \vdash x
 :^\rho M$ for any usage $\rho$.
 
-
 In summary, we infer the type of $f$. If it is a $\Pi$-type, then one checks
 whether $\sigma\pi$ is zero or not. If so, we use Rule No.1, otherwise, Rule No.
 2. Otherwise, something goes wrong, an error arise.
-
 
 Sketch:
 
@@ -440,11 +507,36 @@ infer σ (App f x) = do
     ty -> throwError $ Error ExpectedPiType ty (App f x)
 ```
 
-## Tensor type elim
+## Tensor type elimination
 
-At this point and following the previous case, it makes sense why we need to
-infer the type and not to check if an elimination rule is studied.
+In QTT, there is no $\Sigma$-types but instead tensor product types.
+As with any other elimination rule, we synthetise the type in the principal judgement,
+which it is the first premise. In our case, the first premise is the fact that $M$ is a tensor product type. Then, the types $A$ and $B$ are known facts.
+
+TODO: use notebook page
+
+$$\begin{gathered}
+\rule{TensorElim{\Rightarrow}}{
+\Gamma_{1} \vdash M \,\overset{\sigma}{\color{blue}\Rightarrow}\,(x\overset{\pi}{:}A)\otimes B 
+\\
+0\cdot \Gamma_{1},z\overset{0}{:}(x\overset{\pi}{:}A)\otimes B \vdash C \,\overset{0}{\color{red}\Leftarrow}\,\mathcal{U}
+\qquad
+\Gamma_{2},x\overset{\sigma\pi}{:}A, y\overset{\sigma}{:}B\vdash N \overset{\sigma}{\color{red}{\Leftarrow}}C[(x,y)/z]\qquad
+}{
+\Gamma_{1}+\Gamma_{2} \vdash \mathrm{let}\,z@(x,y)=M\,\,\mathrm{in}\,\,N :C \overset{\sigma}{\color{blue}\Rightarrow}\, C[M/x] 
+}
+\end{gathered}
+%
+$$
+
+TODO: I need the syntax "let" as we need pattern-matching to make sure one uses all the components in the pair. Exactly the same situation occurs in linear logic, which actually inspires this rule.
 
 ## Sum type elim
 
 TODO
+
+
+
+## Typing rules summary
+
+TODO put all the typing rules without bidirectional syntax (intro, elims, computation rules).
