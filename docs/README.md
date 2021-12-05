@@ -13,7 +13,7 @@ $$
 \newcommand{\OR}[1][]{\mkern17mu | \mkern12mu}
 \newcommand{\Or}{\mathrel|}
 \newcommand{\RT}[1]{\{#1\}}
-\newcommand{\RV}[1]{\langle#1\rangle}
+\newcommand{\RV}[1]{\langle#1\rangle}œ
 \newcommand{\Let}{\mathbf{let}\:}
 \newcommand{\Q}{\mathrel|}
 \newcommand{\I}{\color{blue}}
@@ -40,7 +40,7 @@ MiniJuvix implements a programming language that takes variable resources very
 seriously in the programs. As mathematical foundation, we are inspired by
 Quantitative type theory (QTT), a dependent type theory that marriages ideas
 from linear logic and traditional dependently typed programs to writing memory-efficient programs using resource accounting. Among the language features, there is a type for a universe,
-dependent function types, tensor products, sum types, among others. 
+dependent function types, tensor products, and sum types.
 
 The main
 purpose of MiniJuvix is to serve as a guide to supporting/extending the
@@ -146,8 +146,7 @@ $$
 $$
 
 **Telescopes** A *resource* telescope is the name for grouping types with some resource
-variable information. We use telescopes in forming new types below, for example,
-for data types.
+variable information. We use telescopes in forming new types below, for example, when forming new inductive types.
 
 \begin{aligned}
 \Delta &\EQ () \Or \Delta(x \overset{\sigma}{:} A) & \text{(telescopes)}
@@ -493,7 +492,7 @@ By design, a term is inferable if it is one of the following cases.
 - [x] Variable
 - [x] Annotation
 - [x] Application
-- [ ] Tensor type elim
+- [x] Tensor type elim
 - [ ] Sum type elim
 
 Each case above has as a rule in what follows. 
@@ -731,7 +730,7 @@ In the rules above, we have the lemma:
 :^\sigma A$ for any usage $\sigma$.
 
 
-## Tensor type
+## Tensor products
 
 **Elimination rule**
 
@@ -739,7 +738,7 @@ In Atkey's QTT, there is no $\Sigma$-types but instead tensor product types. As
 with any other elimination rule, in the principal judgement, we synthetise a
 type. In our case, the principal judgemente shows up in the first premise, which
 is the fact that $M$ is a tensor product type. If we infer that, the types $A$
-and $B$ become known facts.
+and $B$ become known facts. Then, the type $C$, depending on $A$ and $B$ become checkable, also making the next judgement checking.
 
 
 
@@ -749,7 +748,7 @@ $$\begin{gathered}
 \\
 \check{(0\cdot \Gamma_{1},z\overset{0}{:}(x\overset{\pi}{:}A)\otimes B)}{C}{0}{\mathcal{U}}
 \\
-\check{\Gamma_{2}, u \overset{\sigma\pi}{:} A, v\overset{\sigma}{:}B}{%
+\check{(\Gamma_{2}, u \overset{\sigma\pi}{:} A, v\overset{\sigma}{:}B)}{%
 N}{\sigma}{C[(x,y)/z]}
 }{
 \Gamma_{1}+\Gamma_{2} \vdash \mathsf{let}\,z@(u,v)=M\,\,\mathsf{in}\,\,N :C \overset{\sigma}{\color{blue}\Rightarrow}\, C[M/x] 
@@ -758,20 +757,19 @@ N}{\sigma}{C[(x,y)/z]}
 %
 $$
 
-Inspired by the tensor product rules in linear logic, there is a need to
+*Remark* Inspired by the tensor product rules in linear logic, there is a need to
 decompose a pair in its components. We have to be sure that all the resources in
-each component are effectively used. Then, such a mechanism needs to be introduced, using the keyword $\mathsf{let}\mbox{-}\mathsf{in}$.
+each component are effectively used. This mechanism needs to be introduced somewhere somehow, Idk yet. It is the keyword $\mathsf{let}\mbox{-}\mathsf{in}$.
 
 ## Sum type elim
 
 TODO
 
 
-## Typing rules summary
-
-TODO put all the typing rules without bidirectional syntax (intro, elims, computation rules).
-
-
 ## References
 
-TODO, juvix core docs, atkey, wood, svoboda, cockx and mcbride.
+- Robert Atkey. 2018. Syntax and Semantics of Quantitative Type Theory. In Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science (LICS '18). Association for Computing Machinery, New York, NY, USA, 56–65. DOI:https://doi.org/10.1145/3209108.3209189
+- Jana Dunfield and Neel Krishnaswami. 2021. Bidirectional Typing. ACM Comput. Surv. 54, 5, Article 98 (June 2022), 38 pages. DOI:https://doi.org/10.1145/3450952
+- ADD svodovo 
+- Conor McBride. 2016. I Got Plenty o' Nuttin'. In A List of Successes That Can Change the World-Essays Dedicated to Philip Wadler on the Occasion of His $60 t h$ Birthday. 207-233. DOI:https://doi.org/10.1007/978-3-319-30936-1
+- https://personal.cis.strath.ac.uk/james.wood.100/pub/quant-subst-paper.pdf
