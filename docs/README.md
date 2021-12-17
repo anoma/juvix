@@ -1,7 +1,6 @@
-# Proposal : MiniJuvix
+# Proposal : MiniJuvix [draft]
 
 [![hackmd-github-sync-badge](https://hackmd.io/R8f7FXyOTAKdQ5_cZ-L-og/badge)](https://hackmd.io/R8f7FXyOTAKdQ5_cZ-L-og)
-
 
 <!-- Latex stuff adapted from Andy's record proposal: 
 https://hackmd.io/Xlvu82eFQ_m-cebUWAtGsw?edit -->
@@ -13,7 +12,7 @@ $$
 \newcommand{\OR}[1][]{\mkern17mu | \mkern12mu}
 \newcommand{\Or}{\mathrel|}
 \newcommand{\RT}[1]{\{#1\}}
-\newcommand{\RV}[1]{\langle#1\rangle}œ
+\newcommand{\RV}[1]{\langle#1\rangle}
 \newcommand{\Let}{\mathbf{let}\:}
 \newcommand{\Q}{\mathrel|}
 \newcommand{\I}{\color{blue}}
@@ -24,15 +23,13 @@ $$
 \begin{gathered}\,{#2}%
 \end{gathered}%
 }{#3}\:{\mathsf{#1}}}
-% Bidirectional judgmentes
+% Bidirectional judgements
 \newcommand{\check}[4]{{{#1}\,\vdash\,{#2}\,\overset{{#3}}{\color{red}{\Leftarrow}}\, {#4}}}
 \newcommand{\infer}[4]{{{#1}\,\vdash\,{#2}\,\overset{{#3}}{\color{blue}{\Rightarrow}}\, {#4}}}
 % ------------------------------------------------------------
 $$
 
-
-
-###### tags: `juvix-project`, `MiniJuvix`
+###### tags: `Juvix`
 
 ## Abstract 
 
@@ -40,29 +37,36 @@ MiniJuvix implements a programming language that takes variable resources very
 seriously in the programs. As mathematical foundation, we are inspired by
 Quantitative type theory (QTT), a dependent type theory that marriages ideas
 from linear logic and traditional dependently typed programs to writing memory-efficient programs using resource accounting. Among the language features, there is a type for a universe,
-dependent function types, tensor products, and sum types.
+dependent function types, tensor products, sum types, and more type formers.
 
 The main
 purpose of MiniJuvix is to serve as a guide to supporting/extending the
 [Juvix](/Q5LbuHI5RXaJ8mD08yW7-g) programming language, in particular, the design
-of its typechecker and the addition of new features.
+of a correct and efficient typechecker.
 
 In this document we provide a work in progress report containing a description
-of the MiniJuvix bidirectional type checking algorithm. Haskell sketches are
-provided on the implementation of the algorithm.
+of the MiniJuvix bidirectional type checking algorithm. We have provide some
+Haskell sketches for the algorithm implementation.
 
-The code is be available on the Github repository:
+The code will be available on the Github repository:
 [heliaxdev/MiniJuvix](https://github.com/heliaxdev/MiniJuvix). In this document,
-we refer to the implementation provided in the `qtt` branch.
+we only refer to the implementation provided in the `qtt` branch.
 
 ## Language
 
 ### Syntax
 
-**Quantities** In QTT, each term has a usage/quantity annotation in the semiring
-$\{0,1,\omega\}$. There are different orders for this semiring. One order that
-gives good match with the different meaning between 0 and 1 is the order $0,1 <
-\omega$ and not comparable $0$ and $1$, i.e., $0 \not < 1$. 
+**Quantities** In the traditional QTT, each term has a usage/quantity annotation
+in the semiring $\{0,1,\omega\}$. Besides the semiring structure, we also
+consider different ordering of these terms. One choice for such an order states
+that $0,1 < \omega$ and $0$ and $1$ are not comparable, i.e., $0 \not < 1$. This
+order is good, at least in the sense that terms of zero usage and $1$ usage live
+in completely different worlds, from the evaluation point-of-view. Terms or zero
+usage are *irrelevant* at runtime, and we therefore erase them in the *erasure*
+phase. While, non-zero terms are *present* during compilation and execution of
+the program. We embrace this distinction in the implementation with the data type
+`Relevant` with constructors *irrelevant* and *relevant*.
+
 
 $$
 \begin{aligned}
@@ -89,11 +93,11 @@ u, v &\EQ \mathsf{Var}(x)    &\text{variable}\\
 \\[1em]
 \Delta &\EQ () \Or (x : A)\,\Delta& \text{ telescopes} -->
 
-**Judgements** The core language in MiniJuvix is bidirectional syntax-based, meaning that a
-*judgement* in the theory contains a term that is either checkable or inferable
-term. A type judgment consists of a *context*, a *term*, the term quantity
-required, a *mode* that could be *checking* or *inferring* (respectively the red
-and blue arrows below), and finally, a *type*.
+**Judgements** The core language in MiniJuvix is bidirectional syntax-directed,
+meaning that a *judgement* in the theory contains a term that is either
+*checkable* or *inferable*. A type judgement consists of a *context*, a *term* --the term quantity required--, a *judgement mode*, and a *type*. Precisely, the judgement
+mode is either *checking* or *inferring*, as illustrated in the rules below,
+respectively, using a red and blue arrow.
 
 $$
 \begin{gathered}
@@ -107,8 +111,7 @@ $$
 We will refer to the *erased* part of the theory when the variable resource
 $\sigma$ is zero in the type judgement ; otherwise, we are in the *present*
 segment of the theory. Another way to refer to this distinction is that no
-computation is required in the $\sigma$ zero case. Otherwise, the judgement
-possess *computation content*.
+computation is required in the $\sigma$ zero theory. Otherwise, we say that the judgement possess *computation content*.
 
 
 **Contexts** The context in which a term is judged is fundamental to determine
@@ -122,57 +125,58 @@ $$
 \end{aligned}
 $$
 
-A context operation used in the theory is *scaling*. The *scalar product* with a
-context $\Gamma$ is defined by induction on the structure of the contexts. Given
-a scalar number $\sigma$, the product $\sigma \cdot \Gamma$ denotes the context
-after multiplying *all* resources variables by $\sigma$.
+A needed context operation is *scaling*. The *scalar product* with a context
+$\Gamma$ is defined by induction on the context structure. Given a scalar number
+$\sigma$, the product $\sigma \cdot \Gamma$ denotes the context $\Gamma$ after
+multiplying *all* its resources variables by $\sigma$.
 
 $$
 \begin{aligned}
-\sigma \cdot \emptyset &:= \emptyset,\\
-\sigma \cdot (\Gamma, x \overset{\pi}{:} A) &:= \sigma \cdot \Gamma , x \overset{\sigma\pi}{:} A.
+\color{green}{\sigma} \cdot \emptyset &:= \emptyset,\\
+\color{green}{\sigma} \cdot (\Gamma, x \overset{\color{green}{\pi}}{:} A) &:= \color{green}{\sigma} \cdot \Gamma , x \overset{\color{green}{\sigma\cdot \pi}}{:} A.
 \end{aligned}
 $$
 
-The addition of context is a binary operation only defined between contexts with
-the same variable set. This condition is the proposition $0 \cdot \Gamma_1 = 0 \cdot \Gamma_2$ between the contexts $\Gamma_1$ and $\Gamma_2$. Then, adding contexts create another one with all the
-initial variables from the input  with the resource varaibles summed up, as follows.
+The addition operation for contexts is a binary operation only defined between
+contexts with the same variable set. The latter condition is the proposition
+stating $0 \cdot \Gamma_1 = 0 \cdot \Gamma_2$ between contexts $\Gamma_1$ and
+$\Gamma_2$. Consequently, adding contexts create another context with the same
+variables from the input but with their resource summed up. 
 
 $$
 \begin{aligned}
 \emptyset+\emptyset &:=\emptyset \\
-(\Gamma_{1}, x \overset{\sigma}{:} A)+(\Gamma_{2}, x \overset{\pi}{:} A) &:=(\Gamma_{1}+\Gamma_{2}), x^{\sigma+\pi} S
+(\Gamma_{1}, x \overset{\color{green}{\sigma}}{:} A)+(\Gamma_{2}, x \overset{\color{green}{\pi}}{:} A) &:=(\Gamma_{1}+\Gamma_{2}), x^{\color{green}{\sigma+\pi}} S
 \end{aligned}
 $$
 
-**Telescopes** A *resource* telescope is the name for grouping types with some resource
-variable information. We use telescopes in forming new types below, for example, when forming new inductive types.
+**Telescopes** A *resource* telescope is the name for grouping types with
+resource information. We use telescopes in forming new types, for
+example, in forming new inductive types.
 
 \begin{aligned}
 \Delta &\EQ () \Or \Delta(x \overset{\sigma}{:} A) & \text{(telescopes)}
 \end{aligned}
 
+The $\color{gray}{gray}$ cases below are expected to be incorporated in the future.
 
-**Types** A *type* in the theory is one of the following synthatical cases. The
-gray cases below are expected to be incorporated in the future. 
-
+**Types** A *type* in the theory is one of the following synthactical cases.  
 
 $$
 \begin{aligned}
 A , B%
-&\EQ \mathcal{U} & \text{(universe)} \\
-&\OR (x :^{\sigma} A) \to B       &\text{(depend. fun.)} \\
-&\OR (x :^{\sigma} A) \otimes B   &\text{(tensor prod.)} \\
-&\OR A + B   &\text{(sum)} \\
-&\OR 1   &\text{(unit)} \\
+&\EQ \mathcal{U} & \text{(universe type)} \\
+&\OR (x \overset{\sigma}{:} A) \to B       &\text{(depend. fun. type)} \\
+&\OR (x \overset{\sigma}{:} A) \otimes B   &\text{(tensor prod. type)} \\
+&\OR A + B   &\text{(sum type)} \\
+&\OR 1   &\text{(unit type)} \\
 &\OR \color{gray}{P} &\color{gray}{\text{(primitive type)}}\\
-&\OR \color{gray}{D} &\color{gray}{\text{(inductive type)}}\\
-&\OR \color{gray}{R} &\color{gray}{\text{(record decl.)}}
+&\OR \color{gray}{D} &\color{gray}{\text{(inductive type decl.)}}\\
+&\OR \color{gray}{R} &\color{gray}{\text{(record type decl.)}}
 \end{aligned}
 $$
 
-On the other hand, a set of *primitive types* can be introduced. Each of these
-come with a set of terms. An example of a primitie we want to have is the type
+On the other hand, we want to consider a set of *primitive types*, each of these with a set of *primitive* terms. An example of a primitive types is that of the type
 of *boolens*, denoted by $\mathsf{Bool}$.  $\mathsf{true} : \mathsf{Bool}$ and
 $\mathsf{False} : \mathsf{Bool}$.
 
@@ -187,7 +191,8 @@ u, v , t , f &\EQ \mathsf{Var}(x)    &\text{(variable)}\\
 &\OR \mathsf{Lam}(x,t)           &\text{(lambda abstraction)}\\
 &\OR\mathsf{App}(u,v)            &\text{(application)}\\
 &\OR *                           &\text{(unit)}\\
-&\OR \color{gray}{\mathsf{Fun(t)}} &\color{gray}{\text{(function)}}
+&\OR \color{gray}{\mathsf{Fun}} &\color{gray}{\text{(named function)}}\\
+&\OR \color{gray}{\mathsf{Con}} &\color{gray}{\text{(data constr.)}} 
 \end{aligned}
 $$
 
@@ -199,15 +204,45 @@ i.e., $x : A$ and $x \overset{\sigma}{:} A$.
 
 # Typing rules
 
-We present the types rules in the same way as one would expect to see in the
-implementation using the bidirectional approach. We must also assume that the contexts appearing in the rules are *well-formed*.
+We present the types rules almost in the same way as one would expect to see them in the
+implementation, i.e., using the bidirectional notation. 
 
-TODO: defined what means well-formed for contexts.
+It must be assumed that contexts appearing in the rules are *well-formed*, i.e. terms build up using the following derivation rules. 
+
+$$
+\rule{\mathsf{empty}\mbox{-}\mathsf{ctx}}{
+%
+}
+{\emptyset \ \mathsf{ctx}}
+\qquad
+\rule{,\mbox{-}\mathsf{ctx}}{
+\Gamma \ \mathsf{ctx}
+\qquad
+\color{green}{\Gamma \vdash A \ \mathsf{type}}
+\qquad
+\sigma \ \mathsf{Quantity}
+}
+{
+(\Gamma , x \overset{\sigma}{:} A) \ \mathsf{ctx}
+}
+$$
+$$
+\rule{\cdot\mbox{-}\mathsf{ctx}}{%
+\Gamma \ \mathsf{ctx} \qquad \sigma \ \mathsf{Quantity}
+}{
+\sigma \cdot \Gamma \ \mathsf{ctx}
+}\qquad
+\rule{\mbox{+}\mbox{-}\mathsf{ctx}}{%
+\Gamma_1 \ \mathsf{ctx} \qquad \Gamma_2 \ \mathsf{ctx} \qquad  0\cdot \Gamma_1 = 0 \cdot \Gamma_2
+}{
+\Gamma_1 + \Gamma_2 \ \mathsf{ctx}
+}
+$$
 
 Below, we describe the algorithms for checking and infering types in a mutually
 defined way. The corresponding algorithms are the functions `check` and `infer`
 in the implementation. The definition of each is the collection and
-interpretation of the typing rules (read them bottom-up) given in this section.
+interpretation of the typing rules (reading them bottom to top).
 
 For example, the `infer` method is defined to work with three
 arguments: one implicit argument for the context $\Gamma$ and two explicit
@@ -224,17 +259,19 @@ p_1 \cdots\ p_n
 %
 $$
 
-The variables $p_i$ in the rule are inner steps of the algorithm and their order
-is relevant, for chekcing and infering. An internal step can be infering a type,
-checking if a property holds, reducing a term, or checking a term against a
-type. A *reduction* step is denoted by $\Gamma \vdash t \rightsquigarrow t'$ or
-simply by $t \rightsquigarrow t'$ whenever the context $\Gamma$ is known. Such a
-reduction is obtained by calling `eval` in the implementation.
+The variables $p_i$ in the rule above are inner steps of the algorithm and the order
+in which they are presented matters. For example, an inner step can be infering
+a type, checking if a property holds for a term, reducing a term, or simply
+checking a term against another type. 
 
-*Remark**  A term in the
-[Core](https://github.com/heliaxdev/MiniJuvix/blob/qtt/src/MiniJuvix/Syntax/Core.agda) implementation is either a checkable or inferable term. In a typing rule
-the is no explicit reference to the term kind. However, that information becomes
-evident after the given judgement mode in which the term is introduced/judged. 
+A *reduction* step is denoted by $\Gamma \vdash
+t \rightsquigarrow t'$ or simply by $t \rightsquigarrow t'$ whenever the context
+$\Gamma$ is known. Such a reduction is obtained by calling `eval` in the
+implementation.
+
+**Remark.**  A term in the [Core](https://github.com/heliaxdev/MiniJuvix/blob/qtt/src/MiniJuvix/Syntax/Core.agda) implementation is either a Checkable or Inferable term. We refer to these
+options as the *mode* of the term. In a typing rule the strategy/mode in a type
+judgement determines the mode of the term in the conclusion. In the example above, $t$ is Inferable.
 
 ```haskell
 data Term : Set where
@@ -243,25 +280,7 @@ data Term : Set where
 ```
 
 
-### Well-formed context
-
-$$
-\rule{\mathsf{empty}}{
-%
-}
-{\emptyset \ \mathsf{ctx}}
-\qquad
-\rule{\mathsf{ext}}{
-\Gamma \ \mathsf{ctx}
-\qquad
-\Gamma \vdash A \ \mathsf{type}
-}
-{
-(\Gamma , x \overset{\sigma}{:} A) \ \mathsf{ctx}
-}
-$$
-
-**TODO**: need to reflect on how to introduce the judgement $\Gamma \vdash A\  \mathsf{type}$, the well-formed types. This may change the way of presenting formation rules, as the first ones below.
+**TODO**: we need to reflect on how we introduce the judgement $\Gamma \vdash A\  \mathsf{type}$ of the well-formed types. This may change the way of presenting formation rules, as the first ones below.
 
 ## Checking rules
 
@@ -294,7 +313,7 @@ $$
 \qquad
 \begin{gathered}
 \rule{Univ{\Leftarrow}}{
-0\cdot \Gamma \ \mathsf{ctx} 
+(0\cdot \Gamma) \ \mathsf{ctx} 
 }{
 0\cdot \Gamma \vdash \mathcal{U}\, \overset{0}{\color{red}\Leftarrow}\,\, \mathcal{U}
 }
@@ -330,19 +349,22 @@ The lambda abstraction rule is the introduction rule of a dependent function
 type. The principal judgement in this case is the conclusion, and we therefore
 check against the corresponing type $(x \overset{\sigma}{:} A) \to B$. With
 the types $A$ and $B$, all the information about the premise
-becomes known, and it just remains to check its judgment.
+becomes known, and it just remains to check its judgement.
 
 
 
 $$\begin{gathered}
 \rule{Lam{\Leftarrow}}{
-(\Gamma, x\overset{\sigma\pi}{:}A) \vdash M \,\overset{\sigma}{\color{red}\Leftarrow}\,B
+(\Gamma, x\overset{\sigma\pi}{:}A) \vdash b \,\overset{\sigma}{\color{red}\Leftarrow}\,B
 }{
-\Gamma \vdash \lambda x.M \overset{\sigma}{\color{red}\Leftarrow} (x\overset{\pi}{:}A)\rightarrow B
+\Gamma \vdash \lambda x.b \overset{\sigma}{\color{red}\Leftarrow} (x\overset{\pi}{:}A)\rightarrow B
 }
 \end{gathered}
 %
 $$
+
+Another choice here is $\lambda x.b$ instead of $\lambda\,\mathsf{Ann}(x,A). b$.
+The former option will change the strategy, to infer the conclusion, since one would have enough information for typing.
 
 ### Tensor product types
 
@@ -363,11 +385,12 @@ $$
 **Introduction rule**
 
 A rule to introduce pairs in QTT appears in [Section 2.1.3 in Atkey's
-paper](https://bentnib.org/quantitative-type-theory.pdf). We do present the same
-rule in a more a more didactical way but also following the bidirectional
+paper](https://bentnib.org/quantitative-type-theory.pdf). We here present this rule
+in a more didactical way but also following the bidirectional
 recipe. Briefly, the known rule is splitted in two cases, the erased and present
 part of the theory, after studying the usage variable in the conclusion. Recall
-that forming pairs is the way one introduces values of the tensor product. One then must check the rule conclusion. After doing this, the types $A$ and $B$ become
+that forming pairs is the way one introduces values of the tensor product.
+One then must check the rule conclusion. After doing this, the types $A$ and $B$ become
 known facts and it makes sense to check the types in the premises. The usage
 bussiness follows a similar reasoning as infering applications. 
 
@@ -580,7 +603,7 @@ rule for types has no computation content, then the usage is zero in this case.
 - Second, the term $x$ needs to be checked against $A$ using the same usage
 $\sigma$ we need in the conclusion. The context for this is $\Gamma$. There is
 one issue here. This type checking expects $A$ to be in normal form. When it is
-not, typechecking the judgment $\Gamma \vdash x \Leftarrow^\sigma A$ may give us
+not, typechecking the judgement $\Gamma \vdash x \Leftarrow^\sigma A$ may give us
 a false negative.
 
   - *Example*: Why do we need $A'$? Imagine that we want to infer the type of $v$ given $\Gamma \vdash x : \mathsf{Ann}(v, \mathsf{Vec}(\mathsf{Nat},2+2))$. Clearly, the answer should be `Vec(Nat,4)`. 
@@ -736,7 +759,7 @@ In the rules above, we have the lemma:
 
 In Atkey's QTT, there is no $\Sigma$-types but instead tensor product types. As
 with any other elimination rule, in the principal judgement, we synthetise a
-type. In our case, the principal judgemente shows up in the first premise, which
+type. In our case, the principal judgement shows up in the first premise, which
 is the fact that $M$ is a tensor product type. If we infer that, the types $A$
 and $B$ become known facts. Then, the type $C$, depending on $A$ and $B$ become checkable, also making the next judgement checking.
 
@@ -770,6 +793,8 @@ TODO
 
 - Robert Atkey. 2018. Syntax and Semantics of Quantitative Type Theory. In Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science (LICS '18). Association for Computing Machinery, New York, NY, USA, 56–65. DOI:https://doi.org/10.1145/3209108.3209189
 - Jana Dunfield and Neel Krishnaswami. 2021. Bidirectional Typing. ACM Comput. Surv. 54, 5, Article 98 (June 2022), 38 pages. DOI:https://doi.org/10.1145/3450952
-- ADD svodovo 
+- James Wood, Robert Atkey. A Linear Algebra Approach to Linear Metatheory. Arxiv: https://arxiv.org/abs/2005.02247
+- Andy Morris. Juvix: Core language documentation. https://juvix.readthedocs.io/en/latest/compiler/core/core-language.html#id6
+- Andy Morris. Proposal: Records in Core. https://hackmd.io/UT269VN1R6-qchHaWzg7KQ
+- SVOBODA, Tomáš. Additive Pairs in Quantitative Type Theory. Praha, 2021. Diplomová práce Univerzita Karlova, Matematicko-fyzikální fakulta, Katedra algebry. Vedoucí práce Šefl, Vít. http://hdl.handle.net/20.500.11956/127263
 - Conor McBride. 2016. I Got Plenty o' Nuttin'. In A List of Successes That Can Change the World-Essays Dedicated to Philip Wadler on the Occasion of His $60 t h$ Birthday. 207-233. DOI:https://doi.org/10.1007/978-3-319-30936-1
-- https://personal.cis.strath.ac.uk/james.wood.100/pub/quant-subst-paper.pdf
