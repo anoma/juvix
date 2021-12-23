@@ -1,5 +1,3 @@
-{-# LANGUAGE MultiWayIf #-}
-
 -- | Adapted from heliaxdev/Juvix/library/StandardLibrary/src/Juvix/Parser*
 module MiniJuvix.Utils.Parser
   ( Parser,
