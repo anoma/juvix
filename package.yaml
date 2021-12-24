@@ -17,26 +17,23 @@ extra-source-files:
 - CHANGELOG.md
 
 dependencies:
-- aeson
-- base
-- bytestring
-- containers
-- filepath
-- megaparsec
-- polysemy
-- polysemy-plugin
-- prettyprinter
-- prettyprinter-ansi-terminal
-- process
-- relude
-- semirings
-- unordered-containers
-- word8
+- aeson == 2.0.*
+- base == 4.15.*
+- bytestring == 0.10.*
+- containers == 0.6.*
+- filepath == 1.4.*
+- megaparsec == 9.2.*
+- prettyprinter == 1.7.*
+- prettyprinter-ansi-terminal == 1.1.*
+- process == 1.6.*
+- relude == 1.0.*
+- semirings == 0.6.*
+- unordered-containers == 0.2.*
+- word8 == 0.1.*
 
 ghc-options:
 - -O2 -flate-specialise -fspecialise-aggressively
 - -Wincomplete-patterns
-- -fplugin=Polysemy.Plugin
 - -Wall -Wcompat -Widentities -Wincomplete-uni-patterns
 - -Wincomplete-record-updates -fwrite-ide-info -hiedir=.hie
 - -Wderiving-defaults -Wredundant-constraints
