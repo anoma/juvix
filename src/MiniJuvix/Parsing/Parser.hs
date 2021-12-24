@@ -28,9 +28,9 @@ kwImport
   , kwModule
   , kwOpen
   , kwDataType
-  , kwRecordType
-  , kwRecordTypeConstructor
-  , kwPretype 
+  -- , kwRecordType
+  -- , kwRecordTypeConstructor
+  , kwPretype
   , kwPreterm
   , kwUniverse
   , kwTypeSignature
@@ -45,15 +45,15 @@ kwLet = "let"
 kwModule = "mod"
 kwOpen = "open"
 kwDataType = "data"
-kwRecordType = "record"
-kwRecordTypeConstructor = "constructor"
+-- kwRecordType = "record"
+-- kwRecordTypeConstructor = "constructor"
 kwPretype = "Pretype"
 kwPreterm = "Preterm"
 kwTypeSignature = "sig"
 kwUniverse = "U#"
 kwWhere = "where"
 
-reservedWords :: Set ByteString 
+reservedWords :: Set ByteString
 reservedWords =
   Set.fromList
     [ kwImport,
@@ -65,8 +65,8 @@ reservedWords =
       kwModule,
       kwOpen,
       kwDataType,
-      kwRecordType,
-      kwRecordTypeConstructor,
+      -- kwRecordType,
+      -- kwRecordTypeConstructor,
       kwTypeSignature,
       kwWhere
     ]
@@ -119,18 +119,18 @@ breakComment = ByteString.breakSubstring symComment
 -- e.g. "mod Main where"
 --------------------------------------------------------------------------------
 
-fileHeaderCase :: Parser (FileHeader TopLevel)
-fileHeaderCase = do
-  reserved kwModule
-  name <- prefixSymbolDotSN
-  reserved kwWhere
-  FileHeader name <$> P.some topLevelSN
+-- fileHeaderCase :: Parser FileHeader
+-- fileHeaderCase = do
+--   reserved kwModule
+--   name <- prefixSymbolDotSN
+--   reserved kwWhere
+--   FileHeader name <$> P.some topLevelSN
 
-noFileHeaderCase :: Parser (FileHeader TopLevel)
-noFileHeaderCase = NoFileHeader <$> P.some topLevelSN
+-- noFileHeaderCase :: Parser FileHeader
+-- noFileHeaderCase = NoFileHeader <$> P.some topLevelSN
 
-fileHeader :: Parser (FileHeader TopLevel)
-fileHeader = P.try fileHeaderCase <|> noFileHeaderCase
+-- fileHeader :: Parser FileHeader
+-- fileHeader = P.try fileHeaderCase <|> noFileHeaderCase
 
 ----------------------------------------------------------------------------
 -- Top Level
@@ -141,21 +141,22 @@ topLevelSN = spaceLiner topLevel
 
 topLevel :: Parser TopLevel
 topLevel =
-  P.try (FixityDeclaration <$> fixity)
-    <|> P.try (TypeSignatureDeclaration <$> typeSignature)
+  P.try
+    -- (FixityDeclaration <$> fixity)
+     (TypeSignatureDeclaration <$> typeSignature)
     <|> P.try (DataTypeDeclaration <$> dataTypeConstructor)
-    <|> P.try (RecordTypeDeclaration <$> recordTypeConstructor)
+    -- <|> P.try (RecordTypeDeclaration <$> recordTypeConstructor)
     <|> P.try (ModuleDeclaration <$> moduleD)
     <|> P.try (OpenModuleDeclaration <$> openModuleD)
-    <|> P.try (FunctionDeclaration <$> function)
+    -- <|> P.try (FunctionDeclaration <$> function)
 
 --------------------------------------------------------------------------------
 -- Fixity declarations
 -- e.g. "infixr _*_ 100"
 --------------------------------------------------------------------------------
 
-fixityDeclaration :: Parser FixityMode
-fixityDeclaration = undefined 
+-- fixityDeclaration :: Parser FixityMode
+-- fixityDeclaration = undefined
   -- do
   -- _ <- P.string kwInfix
   -- fixityMode <-
@@ -167,8 +168,8 @@ fixityDeclaration = undefined
   -- name <- prefixSymbolSN
   -- fixityMode name . fromInteger <$> spaceLiner integer
 
-fixity :: Parser Fixity
-fixity = Fixity <$> fixityDeclaration
+-- fixity :: Parser Fixity
+-- fixity = Fixity <$> fixityDeclaration
 
 --------------------------------------------------------------------------------
 -- Type signature
@@ -178,7 +179,7 @@ fixity = Fixity <$> fixityDeclaration
 --------------------------------------------------------------------------------
 
 typeSignatureContext :: Parser [Expression]
-typeSignatureContext = undefined 
+typeSignatureContext = undefined
   -- P.try (pure <$> expression <* reserved symTypeConstraint)
   --   <|> P.try
   --     ( P.parens
@@ -194,7 +195,7 @@ typeSignatureContextSN :: Parser [Expression]
 typeSignatureContextSN = spaceLiner typeSignatureContext
 
 typeSignature :: Parser TypeSignature
-typeSignature = undefined 
+typeSignature = undefined
   -- do
   -- reserved kwTypeSignature
   -- name <- prefixSymbolSN
@@ -202,21 +203,21 @@ typeSignature = undefined
   -- P.skipLiner P.colon
   -- ctx <- typeSignatureContextSN
   -- TypeSignature name maybeQuantity ctx <$> expression
-  
+
 
 --------------------------------------------------------------------------------
 -- Data type constructor
 -- e.g. "type T where" or "type T v1 where One : (p : v1) -> T p"
 --------------------------------------------------------------------------------
 
-parseDataConstructors :: Parser [ DataConstructor ]
+parseDataConstructors :: Parser [DataConstructorDef]
 parseDataConstructors = undefined
 
 dataTypeConstructorSN :: Parser DataType
 dataTypeConstructorSN = spaceLiner dataTypeConstructor
 
 dataTypeConstructor :: Parser DataType
-dataTypeConstructor = undefined 
+dataTypeConstructor = undefined
     -- do
   -- reserved kwDataType
   -- typeName <- prefixSymbolSN
@@ -231,11 +232,11 @@ dataTypeConstructor = undefined
 --         a : (v : Δ) → T₁ v
 --------------------------------------------------------------------------------
 
-parseRecordFields :: Parser RecordField
-parseRecordFields = undefined
+-- parseRecordFields :: Parser RecordField
+-- parseRecordFields = undefined
 
-recordTypeConstructor :: Parser RecordType
-recordTypeConstructor = undefined
+-- recordTypeConstructor :: Parser RecordType
+-- recordTypeConstructor = undefined
     -- do
   --  reserved kwRecordType
   --  typeName <- prefixSymbolSN
@@ -243,14 +244,14 @@ recordTypeConstructor = undefined
   --  reserved kwWhere
   --  reserved kwRecordTypeConstructor
   --  RecordType typeName recordTypeConstructorName typeParams parseRecordFields
-   
+
 --------------------------------------------------------------------------------
 -- Module/Open Module
 -- e.g. "module A where"
 --------------------------------------------------------------------------------
 
 moduleD :: Parser Module
-moduleD =  undefined 
+moduleD =  undefined
     -- do
   -- reserved kwModule
   -- name <- prefixSymbolDotSN
@@ -265,7 +266,7 @@ openModuleD = undefined
 --------------------------------------------------------------------------------
 
 universeSymbol :: Parser Expression
-universeSymbol = undefined 
+universeSymbol = undefined
   -- do
   -- _ <- P.string kwUniverse
   -- level <- skipLiner integer
@@ -281,21 +282,18 @@ universeExpression = undefined
 --------------------------------------------------------------------------------
 
 letBlock :: Parser LetBlock
-letBlock = undefined 
+letBlock = undefined
 
 --------------------------------------------------------------------------------
 -- Function
 --------------------------------------------------------------------------------
-
-function :: Parser Function
-function = undefined 
 
 --------------------------------------------------------------------------------
 -- Lambda
 --------------------------------------------------------------------------------
 
 lambda :: Parser Lambda
-lambda = undefined 
+lambda = undefined
   -- skipLiner P.backSlash
   -- args <- P.many1H patternSN
   -- reserved symLambdaBody
@@ -306,7 +304,7 @@ lambda = undefined
 --------------------------------------------------------------------------------
 
 application :: Parser Application
-application = undefined 
+application = undefined
 
 --------------------------------------------------------------------------------
 -- Pre- types and terms
@@ -333,14 +331,9 @@ application = undefined
 --------------------------------------------------------------------------------
 
 expressionSN :: Parser Expression
-expressionSN = undefined 
+expressionSN = undefined
 
 --------------------------------------------------------------------------------
-
--- Unwrap the header from the rest of the definitions
-extractTopLevel :: FileHeader topLevel -> [topLevel]
-extractTopLevel (FileHeader _ decls) = decls
-extractTopLevel (NoFileHeader decls) = decls
 
 --------------------------------------------------------------------------------
 -- Symbol Handlers
@@ -379,7 +372,7 @@ infixSymbol :: Parser Symbol
 infixSymbol = infixSymbolGen (P.try infixSymbol' <|> infixPrefix)
 
 infixSymbol' :: Parser Symbol
-infixSymbol' = undefined 
+infixSymbol' = undefined
   -- internText . Encoding.decodeUtf8
   --   <$> P.takeWhile1P
   --     (Just "Valid Infix Symbol")
@@ -390,7 +383,7 @@ infixPrefix =
   P.single backtick *> prefixSymbol <* P.single backtick
 
 prefixSymbolGen :: Parser Word8 -> Parser Symbol
-prefixSymbolGen startParser = undefined 
+prefixSymbolGen startParser = undefined
   -- do
   -- start <- startParser
   -- rest <- P.takeWhileP (Just "Valid Middle Symbol") validMiddleSymbol
@@ -427,11 +420,11 @@ prefixSymbolDot :: Parser (NonEmpty Symbol)
 prefixSymbolDot = prefixSepGen prefixSymbol
 
 prefixCapitalDot :: Parser (NonEmpty Symbol)
-prefixCapitalDot = undefined 
+prefixCapitalDot = undefined
   -- prefixSepGen prefixCapital
 
 prefixSymbol :: Parser Symbol
-prefixSymbol = undefined 
+prefixSymbol = undefined
   -- P.try (prefixSymbolGen (P.satisfy validStartSymbol))
   --   <|> parend
 
