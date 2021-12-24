@@ -2,10 +2,12 @@ module MiniJuvix.Utils.Version (getVersion) where
 
 ------------------------------------------------------------------------------
 
-import Data.List (init)
+import qualified Data.List as List
 import Data.Version (Version (versionTags))
-import MiniJuvix.Utils.Prelude hiding (hash, tryIO)
+import MiniJuvix.Utils.Prelude
 import System.Process (readProcessWithExitCode)
+import Control.Exception (IOException, try)
+import System.Exit
 
 ------------------------------------------------------------------------------
 
@@ -20,7 +22,7 @@ commitInfo = do
   case res of
     Right (ExitSuccess, hash, _) -> do
       (_, _, _) <- readProcessWithExitCode "git" ["diff", "--quiet"] ""
-      return $ Just (init hash)
+      return $ Just (List.init hash)
     _ -> return Nothing
 
 gitVersion :: Version -> String -> Version

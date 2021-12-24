@@ -1,5 +1,3 @@
-{-# LANGUAGE RankNTypes #-}
-
 {-
 * This Predude is =Protolude= except with a few changes
   + _Additions_

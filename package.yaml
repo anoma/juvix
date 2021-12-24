@@ -1,0 +1,69 @@
+name:            MiniJuvix
+version:         0.0.0.0
+license:         GPL-3.0-only
+license-file:    LICENSE
+copyright:       2021 Heliax AG
+maintainer:      Jonathan Prieto-Cubides <jonathan@heliax.dev>, Jan Mas Rovira <jan@heliax.dev>
+author:          [Jonathan Prieto-Cubides]
+tested-with:     ghc == 9.0.1
+homepage:        https://github.com/heliaxdev/MiniJuvix
+bug-reports:     https://github.com/heliaxdev/MiniJuvix/issues
+description:     A tiny dependent typed programming language for experimentation.
+category:        Compilers/Interpreters
+github:          heliaxdev/MiniJuvix
+
+extra-source-files:
+- README.md
+- CHANGELOG.md
+
+dependencies:
+- aeson == 2.0.*
+- base == 4.15.*
+- bytestring == 0.10.*
+- containers == 0.6.*
+- filepath == 1.4.*
+- megaparsec == 9.2.*
+- prettyprinter == 1.7.*
+- prettyprinter-ansi-terminal == 1.1.*
+- process == 1.6.*
+- relude == 1.0.*
+- semirings == 0.6.*
+- unordered-containers == 0.2.*
+- word8 == 0.1.*
+
+ghc-options:
+- -O2 -flate-specialise -fspecialise-aggressively
+- -Wincomplete-patterns
+- -Wall -Wcompat -Widentities -Wincomplete-uni-patterns
+- -Wincomplete-record-updates -fwrite-ide-info -hiedir=.hie
+- -Wderiving-defaults -Wredundant-constraints
+- -fhide-source-paths -Wpartial-fields
+- -Wmissing-deriving-strategies
+
+default-extensions:
+- DerivingStrategies
+- NoImplicitPrelude
+- OverloadedStrings
+- Safe
+- ScopedTypeVariables
+- StandaloneDeriving
+- UnicodeSyntax
+
+library:
+  source-dirs: src
+
+executables:
+  MiniJuvix:
+    main: Main.hs
+    source-dirs: src/app
+    dependencies:
+    - MiniJuvix
+
+tests:
+  curry-test:
+    main:                Spec.hs
+    source-dirs:         src/test
+    dependencies:
+    - curry
+    - tasty
+    - tasty-hunit
