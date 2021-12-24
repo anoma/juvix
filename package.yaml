@@ -41,39 +41,13 @@ ghc-options:
 - -Wmissing-deriving-strategies
 
 default-extensions:
-- ApplicativeDo
-- BlockArguments
-- DataKinds
-- DeriveDataTypeable
-- DeriveLift
 - DerivingStrategies
-- ExistentialQuantification
-- FlexibleContexts
-- FlexibleInstances
-- GADTs
-- InstanceSigs
-- KindSignatures
-- LambdaCase
-- MultiParamTypeClasses
-- NamedFieldPuns
 - NoImplicitPrelude
 - OverloadedStrings
-- PolyKinds
-- QuasiQuotes
-- RankNTypes
-- RecordWildCards
 - Safe
 - ScopedTypeVariables
 - StandaloneDeriving
-- StandaloneKindSignatures
-- TupleSections
-- TypeApplications
-- TypeFamilies
-- TypeOperators
-- TypeSynonymInstances
-- UndecidableInstances
 - UnicodeSyntax
-- ViewPatterns
 
 library:
   source-dirs: src
