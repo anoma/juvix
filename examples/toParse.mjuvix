@@ -1,0 +1,190 @@
+-- Comments as in Haskell.
+--This is another comment
+------ This is another comment
+-- This is another comment --possible text-- 
+  -- This is a comment, as it is not indent
+  -- sensitive. It should be fine.
+
+-- reserved symbols are (with their Unicode counterpart):
+-- , ; : { } -> |-> := === @
+-- reserved words:
+-- module close open axiom inductive record options
+-- where let in
+
+-- Options to check/run this file.
+options { 
+debug   := INFO;
+phase   := { parsing , check };
+backend := none; -- llvm.
+};
+
+module toParse;
+
+module M;
+-- This creates a module called M,
+-- which it must be closed with:
+close M;
+
+open M;  -- comments can follow after ;
+close M;
+
+-- Judgement decl. 
+-- `x : M;`
+
+-- Nonindexed inductive type declaration:
+inductive Nat
+{ zero : Nat ;
+suc : Nat -> Nat ;
+};
+
+-- Term definition uses := instead of =.
+-- = is not a reserved name.
+-- == is not a reserved name.
+-- === is a reserved symbol for def. equality.
+zero' : Nat;
+zero'                 
+:= zero; 
+
+-- Axioms/definitions.
+axiom A : Type;
+axiom a a' : A; 
+
+f : Nat -> A;
+f := \x -> match x
+{
+	zero |-> a  ;
+	suc  |-> a' ;
+}; 
+
+g : Nat -> A;
+g Nat.zero    := a;
+g (Nat.suc t) := a';
+
+-- Qualified names for pattern-matching seems convenient.
+-- For example, if we define a function without a type sig.
+-- that also matches on inductive type with constructor names
+-- appearing in another type, e.g. Nat and Fin.
+
+inductive Fin (n : Nat) {
+	zero : Fin Nat.zero;
+	suc  : (n : Nat) -> Fin (Nat.suc n);
+};
+
+infixl 10 _+_ ; -- fixity notation as in Agda or Haskell.
+_+_ : Nat → Nat → Nat ;
+_+_ Nat.zero m    := m;
+_+_ (Nat.suc n) m := Nat.suc (n + m) ;
+
+-- Unicode is possible.
+ℕ : Type;
+ℕ := Nat;
+-- Maybe consider alises for types and data constructors:
+-- `alias ℕ := Nat` ;
+
+-- The function `g` should be transformed to
+-- a function of the form f. (aka. case-tree compilation)
+
+-- Examples we must have to make things interesting:
+-- Recall ; goes after any declarations.
+
+
+inductive Empty{};
+inductive Unit { tt : Unit;};
+
+-- Indexed inductive type declarations:
+inductive Vect (n : Nat) (A : Type)
+{
+	zero : Vect Nat.zero A;
+	succ : A -> Vect n A -> Vect (Nat.succ n) A;
+};
+
+Vect' : Nat -> Type -> Type;
+Vect' Nat.zero A      := Unit;
+Vect' (Vect'.suc n) A := A -> Vect' n A;
+
+-- Record
+record Person {
+	name : String;
+	age: Nat;
+};
+
+h : Person -> Nat;
+h := \x -> match x {
+	{name = s , age = n} |-> n;
+};
+
+h' : Person -> Nat;
+h' {name = s , age = n} := n;
+
+-- So far, we haven't used quantites, here is some examples.
+-- One candidate is @ to mark the variable quantity.
+-- If the quantity is not explicit, we assume it is `Any`.
+
+-- The term `a` has quantity 3.
+axiom B : (1@x : A) -> Type;  -- type family
+axiom T : [1@x : A] -> B;     -- Tensor product type.
+axiom em : (1@x : A) -> B;  
+
+-- Tensor product type.
+f : [ 1@x : A ] -> B;
+f x := em x;
+
+-- The construction of a record must be in principle
+-- based on the tensor prod. type constr. First guess.
+-- A quantity can annotate a field name.
+record P (A : Type) (B : A -> Type) {
+	1@proj1 : A;
+	0@proj2 : 
+} -- maybe after, we can parse a list of identifiers/options.
+eta-equality, constructor prop;
+
+
+-- More inductive types.
+inductive Id (A : Type) (x : A)
+{
+	refl : Id A x;
+};
+
+
+a-is-a : a = a;
+a-is-a := refl;
+
+-- The usual where
+
+a-is-a' : a = a;
+a-is-a' := helper
+where helper := a-is-a;
+
+a-is-a'' : a = a;
+a-is-a'' := helper
+where {
+helper : a = a;
+helper := a-is-a';
+}
+
+-- Let can appear in type level definition
+-- but also in term definitions.
+
+a-is-a-3 : a = a;
+a-is-a-3 := let { helper : a = a; helper := a-is-a;} in helper;
+
+a-is-a-4 : let {
+typeId : (M : Type) -> (x : M) -> Type;
+typeId M x := x = x;
+} in typeId A a;
+a-is-a-4 := a-is-a;
+
+close toParse;
+
+-- future:
+-- module M' (X : Type);
+-- x-is-x : (x : X) -> x = x;
+-- x-is-x x := refl;
+-- end M';
+-- open M' A;
+-- a-is-a-5 := a = a;
+-- a-is-a-5 = x-is-x a;
+-- Also, for debugging:
+
+-- print e; print out the internal representation for e, without normalise.
+-- eval e;  compute e and print it out;
