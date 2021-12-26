@@ -1,4 +1,4 @@
--- Based on example3.ju in anoma/juvix
+-- Based on example2.ju in anoma/juvix
 
 module Example2;
 
@@ -26,7 +26,6 @@ determine-trust-level s :=
   if s === "bob"  then (Trusted 30)
   else if s === "maria" then (Trusted 50)
   else NotTrusted;
-
 
 inductive Bool {
 True : Bool;

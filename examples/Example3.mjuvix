@@ -1,5 +1,4 @@
 -- Based on example3.ju in anoma/juvix
--- Below would be the equivalent file
 
 module Example3;
 

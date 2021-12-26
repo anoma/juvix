@@ -5,8 +5,8 @@
   -- This is a comment, as it is not indent
   -- sensitive. It should be fine.
 
--- reserved symbols are (with their Unicode counterpart):
--- , ; : { } -> |-> := === @
+-- reserved symbols (with their Unicode counterpart):
+-- , ; : { } -> |-> := === @ _ \
 -- reserved words:
 -- module close open axiom inductive record options
 -- where let in
@@ -31,7 +31,7 @@ close M;
 -- import moduleName {names} hiding {names};
 import Primitives;       -- imports all the public names.
 import Backend {LLVM};   -- imports to local scope a var. called LLVM.
-import Prelude {} hiding {Nat, Vec, Empty, Unit};
+import Prelude hiding {Nat, Vec, Empty, Unit};
 	-- same as before, but without the names inside `hiding`
 
 -- Judgement decl. 
@@ -93,8 +93,6 @@ _+_ (Nat.suc n) m := Nat.suc (n + m) ;
 -- Examples we must have to make things interesting:
 -- Recall ; goes after any declarations.
 
-
-inductive Empty{};
 inductive Unit { tt : Unit;};
 
 -- Indexed inductive type declarations:
@@ -107,6 +105,14 @@ inductive Vec (n : Nat) (A : Type)
 Vec' : Nat -> Type -> Type;
 Vec' Nat.zero A      := Unit;
 Vec' (Vec'.suc n) A := A -> Vec' n A;
+
+inductive Empty{};
+
+exfalso : (A : Type) -> Empty -> A;
+exfalso A e := match e {};
+
+neg : Type -> Type;
+neg := A -> Empty;
 
 -- Record
 record Person {
@@ -143,7 +149,7 @@ axiom T' : [ x :1 A ] B;      -- Tensor product type.
 axiom em : (x :1 A) -> B;  
 
 -- Tensor product type.
-f' : [ 1@x : A ] -> B;
+f' : [ x :1 A ] -> B;
 f' x := em x;
 
 -- Pattern-matching on tensor pairs;
@@ -176,7 +182,7 @@ inductive Id (A : Type) (x : A)
 a-is-a : a = a;
 a-is-a := refl;
 
--- The usual where
+-- Where
 
 a-is-a' : a = a;
 a-is-a' := helper
@@ -189,7 +195,7 @@ helper : a = a;
 helper := a-is-a';
 }
 
--- Let can appear in type level definition
+-- `Let` can appear in type level definition
 -- but also in term definitions.
 
 a-is-a-3 : a = a;
@@ -213,5 +219,5 @@ end Example1;
 -- a-is-a-5 = x-is-x a;
 -- Also, for debugging:
 
--- print e; print out the internal representation for e, without normalise.
+-- print e; print out the internal representation for e, without normalising it.
 -- eval e;  compute e and print it out;
