@@ -18,15 +18,21 @@ phase   := { parsing , check };
 backend := none; -- llvm.
 };
 
-module toParse;
+module Example1;
 
 module M;
 -- This creates a module called M,
 -- which it must be closed with:
-close M;
+end M;
 
 open M;  -- comments can follow after ;
 close M;
+
+-- import moduleName {names} hiding {names};
+import Primitives;       -- imports all the public names.
+import Backend {LLVM};   -- imports to local scope a var. called LLVM.
+import Prelude {} hiding {Nat, Vec, Empty, Unit};
+	-- same as before, but without the names inside `hiding`
 
 -- Judgement decl. 
 -- `x : M;`
@@ -34,7 +40,7 @@ close M;
 -- Nonindexed inductive type declaration:
 inductive Nat
 { zero : Nat ;
-suc : Nat -> Nat ;
+	suc : Nat -> Nat ;
 };
 
 -- Term definition uses := instead of =.
@@ -92,15 +98,15 @@ inductive Empty{};
 inductive Unit { tt : Unit;};
 
 -- Indexed inductive type declarations:
-inductive Vect (n : Nat) (A : Type)
+inductive Vec (n : Nat) (A : Type)
 {
-	zero : Vect Nat.zero A;
-	succ : A -> Vect n A -> Vect (Nat.succ n) A;
+	zero : Vec Nat.zero A;
+	succ : A -> Vec n A -> Vec (Nat.succ n) A;
 };
 
-Vect' : Nat -> Type -> Type;
-Vect' Nat.zero A      := Unit;
-Vect' (Vect'.suc n) A := A -> Vect' n A;
+Vec' : Nat -> Type -> Type;
+Vec' Nat.zero A      := Unit;
+Vec' (Vec'.suc n) A := A -> Vec' n A;
 
 -- Record
 record Person {
@@ -116,28 +122,49 @@ h := \x -> match x {
 h' : Person -> Nat;
 h' {name = s , age = n} := n;
 
--- So far, we haven't used quantites, here is some examples.
--- One candidate is @ to mark the variable quantity.
--- If the quantity is not explicit, we assume it is `Any`.
+-- projecting fields values.
+h'' : Person -> String;
+h'' p := Person.name p;
 
--- The term `a` has quantity 3.
-axiom B : (1@x : A) -> Type;  -- type family
-axiom T : [1@x : A] -> B;     -- Tensor product type.
-axiom em : (1@x : A) -> B;  
+-- maybe, harder to support but very convenient.
+h''' : Person -> String;
+h''' p := p.name;
+
+-- So far, we haven't used quantites, here is some examples.
+-- We mark a type judgment `x : M` of quantity n as `x :n M`. 
+-- If the quantity n is not explicit, then the judgement
+-- is `x :Any M`.
+
+-- The following says that the term z of type A has quantity 0.
+axiom z :0 A;
+axiom B : (x :1 A) -> Type;   -- type family
+axiom T : [ A ] B;            -- Tensor product type. usages Any
+axiom T' : [ x :1 A ] B;      -- Tensor product type.
+axiom em : (x :1 A) -> B;  
 
 -- Tensor product type.
-f : [ 1@x : A ] -> B;
-f x := em x;
+f' : [ 1@x : A ] -> B;
+f' x := em x;
 
--- The construction of a record must be in principle
--- based on the tensor prod. type constr. First guess.
--- A quantity can annotate a field name.
+-- Pattern-matching on tensor pairs;
+
+g' : ([ A -> B ] A) -> B;  -- it should be the same as `[ A -> B ] A -> B` 
+g' (k , a) = k a; 			   
+
+g'' : ([ A -> B ] A) -> B;
+g'' = \p -> match p {
+	(k , a) |-> k a;
+};
+
+axiom C : Type;
+axiom D : Type;
+
+-- A quantity can annotate a field name in a record type.
 record P (A : Type) (B : A -> Type) {
-	1@proj1 : A;
-	0@proj2 : 
-} -- maybe after, we can parse a list of identifiers/options.
-eta-equality, constructor prop;
-
+	proj1 : C;
+	proj2 :0 D;
+} 
+eta-equality, constructor prop;  -- extra options.
 
 -- More inductive types.
 inductive Id (A : Type) (x : A)
@@ -174,7 +201,7 @@ typeId M x := x = x;
 } in typeId A a;
 a-is-a-4 := a-is-a;
 
-close toParse;
+end Example1;
 
 -- future:
 -- module M' (X : Type);

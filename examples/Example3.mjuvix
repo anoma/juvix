@@ -1,0 +1,33 @@
+-- Based on example3.ju in anoma/juvix
+-- Below would be the equivalent file
+
+module Example3;
+
+import Prelude;
+
+record Account {
+   balance : Nat;
+   name    : String;
+};
+
+record Transaction {
+  sender   : Account;
+  receiver : Account;
+};
+
+record Storage { trans : Transaction; };
+
+determine-maximum-withdraw : String -> Nat;
+determine-maximum-withdraw s := 
+  if s === "bob" then 30
+  else if s === "maria" then 50
+  else 0;
+
+accept-withdraws-from : Storage -> Storage -> Bool;
+accept-withdraws-from initial final :=
+  let { withdrawl-amount :=
+    determine-maximum-withdraw initial.trans.receiver.name;
+  } in 
+  withdrawl-amount >= final.trans.sender.balance - initial.trans.sender.balance;
+
+end Example3;
