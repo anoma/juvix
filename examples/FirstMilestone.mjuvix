@@ -28,10 +28,10 @@ import Prelude hiding { Nat, Vec, Empty, Unit };  -- name hiding.
 -- Inductive type declarations
 --------------------------------------------------------------------------------
 
--- A inductive type named Empty without data constructors.
+-- An inductive type named Empty without data constructors.
 inductive Empty {};
 
--- A inductive type type named Unit with only one constructor.
+-- An inductive type named Unit with only one constructor.
 inductive Unit { tt : Unit; };
 
 inductive Nat' : Type ;
@@ -49,7 +49,7 @@ inductive Nat {
 
 -- A term definition uses the symbol (:=) instead of the traditional
 -- symbol (=). The symbol (===) is reserved for def. equality. The
--- symbols (=,==) are not reserved.
+-- symbols (=) and (==) are not reserved.
 
 zero' : Nat;
 zero' := zero;
@@ -70,7 +70,7 @@ inductive Vec (n : Nat) (A : Type)
   succ : A -> Vec n A -> Vec (Nat.succ n) A;
 };
 
--- * Indexed inductive type declarations:
+-- * Indexed inductive type declarations.
 
 -- A very interesting data type.
 inductive Id (A : Type) (x : A) : A -> Type
