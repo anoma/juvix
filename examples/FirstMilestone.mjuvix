@@ -1,91 +1,145 @@
-module Example1;
+module FirstMilestone;
 
-module M;
--- This creates a module called M,
--- which it must be closed with:
-end;
+--------------------------------------------------------------------------------
+-- Module declaration
+--------------------------------------------------------------------------------
 
-open M;  -- comments can follow after ;
+module M;  -- This creates a module called M.
+end;       -- This closed the current module in scope.
 
--- import moduleName {names} hiding {names};
-import Primitives;       -- imports all the public names.
-import Backend {LLVM};   -- imports to local scope a var. called LLVM.
-import Prelude hiding {Nat, Vec, Empty, Unit};
-	-- same as before, but without the names inside `hiding`
+open M;    -- This will bring to the scope all the name/definitions
+           -- from the module called M.
 
--- Judgement decl.
--- `x : M;`
+--------------------------------------------------------------------------------
+-- Import definitions from other modules
+--------------------------------------------------------------------------------
 
--- Nonindexed inductive type declaration:
-inductive Nat ;
-{ zero : Nat ;
-	suc : Nat -> Nat ;
+-- import moduleName { names } hiding { names };
+
+import Primitives;        -- this imports to the local scope all the
+                          -- public names in a module called Primitives.
+
+import Backend { LLVM };  -- this imports to the local scope only a
+                          -- var. called LLVM.
+
+import Prelude hiding { Nat, Vec, Empty, Unit };  -- name hiding.
+
+--------------------------------------------------------------------------------
+-- Inductive type declarations
+--------------------------------------------------------------------------------
+
+-- A inductive type named Empty without data constructors.
+inductive Empty {};
+
+-- A inductive type type named Unit with only one constructor.
+inductive Unit { tt : Unit; };
+
+inductive Nat' : Type ;
+{ zero : Nat' ;
+  suc : Nat' -> Nat' ;
 };
 
--- Term definition uses := instead of =.
--- = is not a reserved name.
--- == is not a reserved name.
--- === is a reserved symbol for def. equality.
-zero' : Nat;
-zero' :=
-zero;
+-- The use of the type `Type` below is optional.
+-- The following declaration is equivalent to Nat'.
 
--- Axioms/definitions.
+inductive Nat {
+  zero : Nat ;
+  suc : Nat -> Nat ;
+};
+
+-- A term definition uses the symbol (:=) instead of the traditional
+-- symbol (=). The symbol (===) is reserved for def. equality. The
+-- symbols (=,==) are not reserved.
+
+zero' : Nat;
+zero' := zero;
+
+
+-- * Inductive type declarations with paramenters.
+
+-- The n-point type.
+inductive Fin (n : Nat) {
+  zero : Fin zero;
+  suc  : (n : Nat) -> Fin (suc n);
+};
+
+-- The type of sized vectors.
+inductive Vec (n : Nat) (A : Type)
+{
+  zero : Vec Nat.zero A;
+  succ : A -> Vec n A -> Vec (Nat.succ n) A;
+};
+
+-- * Indexed inductive type declarations:
+
+-- A very interesting data type.
+inductive Id (A : Type) (x : A) : A -> Type
+{
+  refl : Id A x x;
+};
+
+--------------------------------------------------------------------------------
+-- Unicode, whitespaces, newlines
+--------------------------------------------------------------------------------
+
+-- Unicode symbols are permitted.
+ℕ : Type;
+ℕ := Nat;
+
+-- Whitespaces and newlines are optional. The following term
+-- declaration is equivalent to the previous one.
+ℕ'
+  : Type;
+ℕ'
+:=
+  Nat;
+
+-- Again, whitespaces are optional in declarations. For example,
+-- `keyword nameID { content ; x := something; };` is equivalent to
+-- `keyword nameID{content;x:=something;};`. However, we must strive
+-- for readability and therefore, the former expression is better.
+
+--------------------------------------------------------------------------------
+-- Axioms/definitions
+--------------------------------------------------------------------------------
+
 axiom A : Type;
 axiom a : A;
+axiom a' : A;
+
+--------------------------------------------------------------------------------
+-- Pattern-matching
+--------------------------------------------------------------------------------
 
 f : Nat -> A;
-f := \x -> match x
-{
-	zero ↦ a  ;
-	suc  -> a' ;
-};
+f := \x -> match x  -- \x  or λ x to denote a lambda abstraction.
+  {
+    zero ↦ a   ; -- case declaration uses the mapsto symbol or the normal arrow.
+    suc  -> a' ;
+  };
+
+-- We can use qualified names to disambiguate names for
+-- pattern-matching. For example, imagine the case where there are
+-- distinct matches of the same constructor name for different
+-- inductive types (e.g. zero in Nat and Fin), AND the function type
+-- signature is missing.
 
 g : Nat -> A;
 g Nat.zero    := a;
 g (Nat.suc t) := a';
 
--- Qualified names for pattern-matching seems convenient.
--- For example, if we define a function without a type sig.
--- that also matches on inductive type with constructor names
--- appearing in another type, e.g. Nat and Fin.
+-- For pattern-matching, the symbol `_` is the wildcard pattern as in
+-- Haskell or Agda. The following function definition is equivalent to
+-- the former.
 
-inductive Fin (n : Nat) {
-	zero : Fin Nat.zero;
-	suc  : (n : Nat) -> Fin (Nat.suc n);
-};
+g' : Nat -> A;
+g' zero := a;
+g' _    := a';
 
-infixl 10 + ; -- fixity notation as in Agda or Haskell.
-+ : Nat → Nat → Nat ;
-+ Nat.zero m    := m;
-+ (Nat.suc n) m := Nat.suc (n + m) ;
+-- Note that the function `g` will be transformed to a function equal
+-- to the function f above in the case-tree compilation phase.
 
--- Unicode is possible.
-ℕ : Type;
-ℕ := Nat;
--- Maybe consider alises for types and data constructors:
--- `alias ℕ := Nat` ;
-
--- The function `g` should be transformed to
--- a function of the form f. (aka. case-tree compilation)
-
--- Examples we must have to make things interesting:
--- Recall ; goes after any declarations.
-
-inductive Unit { tt : Unit;};
-
--- Indexed inductive type declarations:
-inductive Vec (n : Nat) (A : Type)
-{
-	zero : Vec Nat.zero A;
-	succ : A -> Vec n A -> Vec (Nat.succ n) A;
-};
-
-Vec' : Nat -> Type -> Type;
-Vec' Nat.zero A      := Unit;
-Vec' (Vec'.suc n) A := A -> Vec' n A;
-
-inductive Empty{};
+-- The absurd case for patterns.
 
 exfalso : (A : Type) -> Empty -> A;
 exfalso A e := match e {};
@@ -93,92 +147,84 @@ exfalso A e := match e {};
 neg : Type -> Type;
 neg := A -> Empty;
 
--- projecting fields values.
-h'' : Person -> String;
-h'' p := Person.name p;
+-- An equivalent type for sized vectors.
 
--- So far, we haven't used quantites, here is some examples.
--- We mark a type judgment `x : M` of quantity n as `x :n M`.
--- If the quantity n is not explicit, then the judgement
--- is `x :Any M`.
+Vec' : Nat -> Type -> Type;
+Vec' Nat.zero A    := Unit;
+Vec' (Nat.suc n) A := A -> Vec' n A;
 
--- The following says that the term z of type A has quantity 0.
-axiom z :0 A;
-axiom B : (x :1 A) -> Type;   -- type family
+--------------------------------------------------------------------------------
+-- Fixity notation similarly as in Agda or Haskell.
+--------------------------------------------------------------------------------
+
+infixl 10 + ;
++ : Nat → Nat → Nat ;
++ Nat.zero m    := m;
++ (Nat.suc n) m := Nat.suc (n + m) ;
+
+--------------------------------------------------------------------------------
+-- Quantities for variables.
+--------------------------------------------------------------------------------
+
+-- A quantity for a variable in MiniJuvix can be either 0,1, or Any.
+-- If the quantity n is not explicit, then it is Any.
+
+-- The type of functions that uses once its input of type A to produce a number.
+axiom funs : (x :1 A) -> Nat
+
+axiom B : (x :1 A) -> Type;   -- B is a type family.
 axiom em : (x :1 A) -> B;
 
-axiom C : Type;
-axiom D : Type;
+--------------------------------------------------------------------------------
+-- Where
+--------------------------------------------------------------------------------
 
--- More inductive types.
-inductive Id (A : Type) (x : A)
-{
-	refl : Id A x;
-};
-
--- Usages
--- Minijuvix: 0,1,ω
--- Juvix: i<ω, ω
-
-record Tensor (A : Type) (B : (x :1 A) → Type) {
-	proj1 : A;
-	proj2 :0 B proj1;
-}
-
-inductive Tensor' (A : Type) (B : (x :1 A) → Type) {
-	mkTensor : (proj1 : A) → (B proj1) → Tensor' A B;
-}
-
-proj1 : Tensor' A B → A
-proj1 (mkTensor p1 _) = p1
-
-proj1 : (t : Tensor' A B) → B (proj1 t)
-proj1 (mkTensor _ p2) = p2
-
-a-is-a : a = a;
+a-is-a : Id A a a;
 a-is-a := refl;
 
--- Where
-
-a-is-a' : a = a;
+a-is-a' : Id A a a;
 a-is-a' := helper
   where {
     open somemodule;
-    helper : a = a;
+    helper : Id A a a;
     helper := a-is-a;
     };
 
-a-is-a'' : a = a;
-a-is-a'' := helper
-where {
-helper : a = a;
-helper := a-is-a';
-}
+--------------------------------------------------------------------------------
+-- Let
+--------------------------------------------------------------------------------
 
--- `Let` can appear in type level definition
--- but also in term definitions.
+-- `let` can appear in term and type level definitions.
 
-a-is-a-3 : a = a;
-a-is-a-3 := let { helper : a = a;
-                  helper := a-is-a;} in helper;
+a-is-a'' : Id A a a;
+a-is-a'' := let { helper : Id A a a;
+                  helper := a-is-a; }
+            in helper;
 
-a-is-a-4 : let {
-typeId : (M : Type) -> (x : M) -> Type;
-typeId M x := x = x;
-} in typeId A a;
-a-is-a-4 := a-is-a;
+a-is-a''' : let { typeId : (M : Type) -> (x : M) -> Type;
+                  typeId M x := Id M x x;
+                } in typeId A a;
+a-is-a''' := a-is-a;
+
+--------------------------------------------------------------------------------
+-- Debugging
+--------------------------------------------------------------------------------
+
+e : Nat;
+e : suc zero + suc zero;
+
+two : Nat;
+two := suc (suc zero);
+
+e-is-two : Id Nat e two;
+e-is-two := refl;
+
+-- print out the internal representation for e without normalising it.
+print e;
+
+-- compute e and print e.
+eval e;
+
+--------------------------------------------------------------------------------
 
 end;
-
--- future:
--- module M' (X : Type);
--- x-is-x : (x : X) -> x = x;
--- x-is-x x := refl;
--- end M';
--- open M' A;
--- a-is-a-5 := a = a;
--- a-is-a-5 = x-is-x a;
--- Also, for debugging:
-
--- print e; print out the internal representation for e, without normalising it.
--- eval e;  compute e and print it out;
