@@ -1,1 +1,1 @@
-:set -fdefer-type-errors
+:set -fdefer-type-errors -fno-warn-unused-imports

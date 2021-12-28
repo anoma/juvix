@@ -4,23 +4,42 @@ module MiniJuvix.Parsing.Language where
 
 import MiniJuvix.Utils.Prelude
 
-newtype Symbol = Sym Text
-  deriving stock (Show, Read, Eq)
 
-type Name = NonEmpty Symbol
+--------------------------------------------------------------------------------
+-- Symbols and names
+--------------------------------------------------------------------------------
+
+newtype Symbol = Sym Text
+  deriving stock (Show)
+
+newtype ModulePath = ModulePath {
+  path :: NonEmpty Symbol
+  }
+  deriving stock (Show)
+
+data Qualified = Qualified {
+  modulePath :: ModulePath,
+  name :: Symbol
+  }
+  deriving stock (Show)
+
+data Name =
+  QualifiedName Qualified
+  | Unqualified Symbol
+  deriving stock (Show)
 
 --------------------------------------------------------------------------------
 -- Top level declaration
 --------------------------------------------------------------------------------
 
-data TopLevel
-  = OperatorDef OperatorSyntaxDef
-  | TypeSignatureDeclaration TypeSignature
-  | DataTypeDeclaration DataType
-  | ModuleDeclaration Module
-  | OpenModuleDeclaration OpenModule
-  | FunctionClause FunctionClause
-  deriving stock (Show, Read, Eq)
+data Statement
+  = StatementOperator OperatorSyntaxDef
+  | StatementTypeSignature TypeSignature
+  | StatementDataType DataTypeDef
+  | StatementModule Module
+  | StatementOpenModule OpenModule
+  | StatementFunctionClause FunctionClause
+  deriving stock (Show)
 
 --------------------------------------------------------------------------------
 -- Operator syntax declaration
@@ -28,13 +47,11 @@ data TopLevel
 
 type Precedence = Natural
 
-type Operator = Name
-
 data UnaryAssoc = PrefixOp | PostfixOp
-  deriving stock (Show, Read, Eq)
+  deriving stock (Show)
 
 data BinaryAssoc = None | LeftAssoc | RightAssoc
-  deriving stock (Show, Read, Eq)
+  deriving stock (Show)
 
 data OperatorArity =
   Unary {
@@ -43,15 +60,25 @@ data OperatorArity =
   | Binary {
     binaryAssoc :: BinaryAssoc
   }
-  deriving stock (Show, Read, Eq)
+  deriving stock (Show)
 
 data OperatorSyntaxDef =
   OperatorSyntaxDef {
   opArity :: OperatorArity
-  , opSymbol :: Operator
+  , opSymbol :: Symbol
   , opPrecedence :: Int
   }
-  deriving stock (Show, Read, Eq)
+  deriving stock (Show)
+
+-------------------------------------------------------------------------------
+-- Usage
+-------------------------------------------------------------------------------
+
+data Usage =
+  UsageNone
+  | UsageOnce
+  | UsageAny
+  deriving stock (Show)
 
 -------------------------------------------------------------------------------
 -- Type signature declaration
@@ -60,52 +87,52 @@ data OperatorSyntaxDef =
 data TypeSignature
   = TypeSignature
       {
-        sigName :: Name,
-        sigQuantity :: Maybe Expression,
+        sigName :: Symbol,
         sigType :: Expression
       }
-  deriving stock (Show, Read, Eq)
+  deriving stock (Show)
 
 -------------------------------------------------------------------------------
 -- Data type construction declaration
 -------------------------------------------------------------------------------
 
-type DataConstructorName = Name
+type DataConstructorName = Symbol
 
-type DataTypeName = Name
+type DataTypeName = Symbol
 
 data DataConstructorDef = DataConstructorDef {
   constructorName :: DataConstructorName
   , constructorType :: Expression
   }
-  deriving stock (Show, Read, Eq)
+  deriving stock (Show)
 
-data DataType
-  = DataType
+data DataTypeDef
+  = DataTypeDef
       { dataTypeName :: DataTypeName,
         dataTypeArgs :: [Expression],
         dataTypeConstructors :: [DataConstructorDef]
       }
-  deriving stock (Show, Read, Eq)
+  deriving stock (Show)
 
 --------------------------------------------------------------------------------
 -- Function binding declaration
 --------------------------------------------------------------------------------
 
 data Pattern
-  = PatternName Name
+  = PatternVariable Symbol
   | PatternConstructor DataConstructorName [Pattern]
   | PatternWildcard
-  deriving stock (Show, Read, Eq)
+  | PatternEmpty
+  deriving stock (Show)
 
 data FunctionClause
   = FunClause
-      { ownerFunction :: Name,
+      { ownerFunction :: Symbol,
         clausePatterns :: [Pattern],
         clauseBody :: Expression,
         clauseWhere :: Maybe WhereBlock
       }
-  deriving stock (Show, Read, Eq)
+  deriving stock (Show)
 
 --------------------------------------------------------------------------------
 -- Module declaration
@@ -113,15 +140,14 @@ data FunctionClause
 
 data Module
   = Module
-      { moduleName :: Name,
-        moduleArgs :: [Expression],
-        body :: [TopLevel]
+      { moduleName :: Symbol,
+        body :: [Statement]
       }
-  deriving stock (Show, Read, Eq)
+  deriving stock (Show)
 
 newtype OpenModule
   = OpenModule Name
-  deriving stock (Show, Read, Eq)
+  deriving stock (Show)
 
 --------------------------------------------------------------------------------
 -- Expression
@@ -133,14 +159,32 @@ data Expression
   | ExprLambda Lambda
   | ExprLetBlock LetBlock
   | ExprUniverse Universe
-  deriving stock (Show, Read, Eq)
+  | ExprFun Function
+  deriving stock (Show)
 
 --------------------------------------------------------------------------------
 -- Universe expression
 --------------------------------------------------------------------------------
 
 newtype Universe = Universe Natural
-  deriving stock (Show, Read, Eq)
+  deriving stock (Show)
+
+--------------------------------------------------------------------------------
+-- Function expression
+--------------------------------------------------------------------------------
+
+data FunParameter = FunParameter {
+  paramName :: Maybe Symbol,
+  paramUsage :: Maybe Usage,
+  paramType :: Expression
+  }
+  deriving stock (Show)
+
+data Function = Function {
+  funParameter :: FunParameter,
+  funReturn :: Expression
+  }
+  deriving stock (Show)
 
 --------------------------------------------------------------------------------
 -- Where block clauses
@@ -149,13 +193,13 @@ newtype Universe = Universe Natural
 newtype WhereBlock = WhereBlock {
   whereClauses :: [WhereClause]
   }
-  deriving stock (Show, Read, Eq)
+  deriving stock (Show)
 
 data WhereClause =
   WhereOpenModule OpenModule
   | WhereTypeSig TypeSignature
   | WhereFunClause FunctionClause
-  deriving stock (Show, Read, Eq)
+  deriving stock (Show)
 
 --------------------------------------------------------------------------------
 -- Lambda expression
@@ -169,7 +213,7 @@ data Lambda
       { lambdaArguments :: [Pattern],
         lambdaBody :: Expression
       }
-  deriving stock (Show, Read, Eq)
+  deriving stock (Show)
 
 --------------------------------------------------------------------------------
 -- Application expression
@@ -180,16 +224,16 @@ data Application
       { applicationFun :: Expression,
         applicationArg :: Expression
       }
-  deriving stock (Show, Read, Eq)
+  deriving stock (Show)
 
 --------------------------------------------------------------------------------
 -- Let block expression
 --------------------------------------------------------------------------------
 
 newtype LetBlock = LetBlock [LetClause]
-  deriving stock (Show, Read, Eq)
+  deriving stock (Show)
 
 data LetClause =
   LetTypeSig TypeSignature
   | LetDefinition FunctionClause
-  deriving stock (Show, Read, Eq)
+  deriving stock (Show)
