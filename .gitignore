@@ -61,3 +61,4 @@ agda/
 agda2hs/
 docs/*.html
 *.cabal
+/src/MiniJuvix/Utils/OldParser.hs

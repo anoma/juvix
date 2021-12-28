@@ -1,10 +1,16 @@
 cradle:
-  cabal:
-    - path: "src"
-      component: "lib:MiniJuvix"
+  stack:
+    - path: "./src"
+      component: "MiniJuvix:lib"
 
-    - path: "src/app/Main.hs"
+    - path: "./src/app/Main.hs"
       component: "MiniJuvix:exe:MiniJuvix"
 
-    - path: "src/test"
-      component: "MiniJuvix:test:MiniJuvix-test"
+    - path: "./src/app/Options.hs"
+      component: "MiniJuvix:exe:MiniJuvix"
+
+    - path: "./src/app/Paths_MiniJuvix.hs"
+      component: "MiniJuvix:exe:MiniJuvix"
+
+    - path: "./src/test"
+      component: "MiniJuvix:test:curry-test"
