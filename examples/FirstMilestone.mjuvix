@@ -102,8 +102,6 @@ h'' p := Person.name p;
 -- If the quantity n is not explicit, then the judgement
 -- is `x :Any M`.
 
--- The following says that the term z of type A has quantity 0.
-axiom z :0 A;
 axiom B : (x :1 A) -> Type;   -- type family
 axiom em : (x :1 A) -> B;
 

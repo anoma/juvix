@@ -39,6 +39,7 @@ data Statement
   | StatementModule Module
   | StatementOpenModule OpenModule
   | StatementFunctionClause FunctionClause
+  | StatementAxiom AxiomDef
   deriving stock (Show)
 
 --------------------------------------------------------------------------------
@@ -90,6 +91,16 @@ data TypeSignature
         sigName :: Symbol,
         sigType :: Expression
       }
+  deriving stock (Show)
+
+-------------------------------------------------------------------------------
+-- Axioms
+-------------------------------------------------------------------------------
+
+data AxiomDef = AxiomDef {
+   axiomName :: Symbol,
+   axiomType :: Expression
+  }
   deriving stock (Show)
 
 -------------------------------------------------------------------------------
@@ -161,6 +172,20 @@ data Expression
   | ExprUniverse Universe
   | ExprFun Function
   deriving stock (Show)
+
+--------------------------------------------------------------------------------
+-- Expression section
+--------------------------------------------------------------------------------
+
+-- | Expressions without applications and functions
+data ExpressionSection
+  = SectionIdentifier Name
+  | SectionLambda Lambda
+  | SectionLetBlock LetBlock
+  | SectionUniverse Universe
+  | SectionFunParameter FunParameter
+  deriving stock (Show)
+
 
 --------------------------------------------------------------------------------
 -- Universe expression
