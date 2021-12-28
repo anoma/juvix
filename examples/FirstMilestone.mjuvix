@@ -1,0 +1,184 @@
+module Example1;
+
+module M;
+-- This creates a module called M,
+-- which it must be closed with:
+end;
+
+open M;  -- comments can follow after ;
+
+-- import moduleName {names} hiding {names};
+import Primitives;       -- imports all the public names.
+import Backend {LLVM};   -- imports to local scope a var. called LLVM.
+import Prelude hiding {Nat, Vec, Empty, Unit};
+	-- same as before, but without the names inside `hiding`
+
+-- Judgement decl.
+-- `x : M;`
+
+-- Nonindexed inductive type declaration:
+inductive Nat ;
+{ zero : Nat ;
+	suc : Nat -> Nat ;
+};
+
+-- Term definition uses := instead of =.
+-- = is not a reserved name.
+-- == is not a reserved name.
+-- === is a reserved symbol for def. equality.
+zero' : Nat;
+zero' :=
+zero;
+
+-- Axioms/definitions.
+axiom A : Type;
+axiom a : A;
+
+f : Nat -> A;
+f := \x -> match x
+{
+	zero ↦ a  ;
+	suc  -> a' ;
+};
+
+g : Nat -> A;
+g Nat.zero    := a;
+g (Nat.suc t) := a';
+
+-- Qualified names for pattern-matching seems convenient.
+-- For example, if we define a function without a type sig.
+-- that also matches on inductive type with constructor names
+-- appearing in another type, e.g. Nat and Fin.
+
+inductive Fin (n : Nat) {
+	zero : Fin Nat.zero;
+	suc  : (n : Nat) -> Fin (Nat.suc n);
+};
+
+infixl 10 + ; -- fixity notation as in Agda or Haskell.
++ : Nat → Nat → Nat ;
++ Nat.zero m    := m;
++ (Nat.suc n) m := Nat.suc (n + m) ;
+
+-- Unicode is possible.
+ℕ : Type;
+ℕ := Nat;
+-- Maybe consider alises for types and data constructors:
+-- `alias ℕ := Nat` ;
+
+-- The function `g` should be transformed to
+-- a function of the form f. (aka. case-tree compilation)
+
+-- Examples we must have to make things interesting:
+-- Recall ; goes after any declarations.
+
+inductive Unit { tt : Unit;};
+
+-- Indexed inductive type declarations:
+inductive Vec (n : Nat) (A : Type)
+{
+	zero : Vec Nat.zero A;
+	succ : A -> Vec n A -> Vec (Nat.succ n) A;
+};
+
+Vec' : Nat -> Type -> Type;
+Vec' Nat.zero A      := Unit;
+Vec' (Vec'.suc n) A := A -> Vec' n A;
+
+inductive Empty{};
+
+exfalso : (A : Type) -> Empty -> A;
+exfalso A e := match e {};
+
+neg : Type -> Type;
+neg := A -> Empty;
+
+-- projecting fields values.
+h'' : Person -> String;
+h'' p := Person.name p;
+
+-- So far, we haven't used quantites, here is some examples.
+-- We mark a type judgment `x : M` of quantity n as `x :n M`.
+-- If the quantity n is not explicit, then the judgement
+-- is `x :Any M`.
+
+-- The following says that the term z of type A has quantity 0.
+axiom z :0 A;
+axiom B : (x :1 A) -> Type;   -- type family
+axiom em : (x :1 A) -> B;
+
+axiom C : Type;
+axiom D : Type;
+
+-- More inductive types.
+inductive Id (A : Type) (x : A)
+{
+	refl : Id A x;
+};
+
+-- Usages
+-- Minijuvix: 0,1,ω
+-- Juvix: i<ω, ω
+
+record Tensor (A : Type) (B : (x :1 A) → Type) {
+	proj1 : A;
+	proj2 :0 B proj1;
+}
+
+inductive Tensor' (A : Type) (B : (x :1 A) → Type) {
+	mkTensor : (proj1 : A) → (B proj1) → Tensor' A B;
+}
+
+proj1 : Tensor' A B → A
+proj1 (mkTensor p1 _) = p1
+
+proj1 : (t : Tensor' A B) → B (proj1 t)
+proj1 (mkTensor _ p2) = p2
+
+a-is-a : a = a;
+a-is-a := refl;
+
+-- Where
+
+a-is-a' : a = a;
+a-is-a' := helper
+  where {
+    open somemodule;
+    helper : a = a;
+    helper := a-is-a;
+    };
+
+a-is-a'' : a = a;
+a-is-a'' := helper
+where {
+helper : a = a;
+helper := a-is-a';
+}
+
+-- `Let` can appear in type level definition
+-- but also in term definitions.
+
+a-is-a-3 : a = a;
+a-is-a-3 := let { helper : a = a;
+                  helper := a-is-a;} in helper;
+
+a-is-a-4 : let {
+typeId : (M : Type) -> (x : M) -> Type;
+typeId M x := x = x;
+} in typeId A a;
+a-is-a-4 := a-is-a;
+
+end;
+
+-- future:
+-- module M' (X : Type);
+-- x-is-x : (x : X) -> x = x;
+-- x-is-x x := refl;
+-- end M';
+-- open M' A;
+-- a-is-a-5 := a = a;
+-- a-is-a-5 = x-is-x a;
+-- Also, for debugging:
+
+-- print e; print out the internal representation for e, without normalising it.
+-- eval e;  compute e and print it out;

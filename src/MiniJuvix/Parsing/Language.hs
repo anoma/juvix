@@ -17,14 +17,13 @@ data TopLevel
   = OperatorDef OperatorSyntaxDef
   | TypeSignatureDeclaration TypeSignature
   | DataTypeDeclaration DataType
-  --- | RecordTypeDeclaration RecordType
   | ModuleDeclaration Module
   | OpenModuleDeclaration OpenModule
   | FunctionClause FunctionClause
   deriving stock (Show, Read, Eq)
 
 --------------------------------------------------------------------------------
--- Fixity declaration
+-- Operator syntax declaration
 --------------------------------------------------------------------------------
 
 type Precedence = Natural
@@ -54,9 +53,9 @@ data OperatorSyntaxDef =
   }
   deriving stock (Show, Read, Eq)
 
-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 -- Type signature declaration
-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 
 data TypeSignature
   = TypeSignature
@@ -67,9 +66,9 @@ data TypeSignature
       }
   deriving stock (Show, Read, Eq)
 
------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 -- Data type construction declaration
------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 
 type DataConstructorName = Name
 
@@ -89,43 +88,13 @@ data DataType
       }
   deriving stock (Show, Read, Eq)
 
-------------------------------------------------------------------------------
--- Record type declaration
-------------------------------------------------------------------------------
-
--- type RecordFieldName = Name
-
--- type RecordTypeName = Name
-
--- data RecordField = RecordField {
---   recordFieldName :: RecordFieldName,
---   recordType :: Expression
---   }
---   deriving stock (Show, Read, Eq)
-
--- data RecordType
---   = RecordType
---       { recordTypeName :: Name,
---         recordTypeConstructorName :: Name,
---         recordTypeArgs :: [Expression],
---         recordFields :: [RecordField]
---       }
---   deriving stock (Show, Read, Eq)
-
 --------------------------------------------------------------------------------
 -- Function binding declaration
 --------------------------------------------------------------------------------
 
-type PreTermName = Name
-
--- newtype RecordFieldData = Set [(Name, Expression)]
---   deriving stock (Show, Read, Eq)
-
 data Pattern
   = PatternName Name
   | PatternConstructor DataConstructorName [Pattern]
-  --- | PatternRecord RecordTypeName RecordFieldData
-  | PatternPreTerm PreTermName Name
   | PatternWildcard
   deriving stock (Show, Read, Eq)
 
@@ -159,20 +128,11 @@ newtype OpenModule
 --------------------------------------------------------------------------------
 
 data Expression
-  = IdentifierExpr Name
-  | ApplicationExpr Application
-  | LambdaExpr Lambda
-  | LetBlockExpr LetBlock
-  | OpenModuleExpr OpenModule
-  | PreTermExpr PreTerm
-  | UniverseExpr Universe
-  deriving stock (Show, Read, Eq)
-
---------------------------------------------------------------------------------
--- Pre- types and terms (a.k.a primitive types and terms)
---------------------------------------------------------------------------------
-
-newtype PreTerm = PreTerm PreTermName -- PreType should be here somehow?
+  = ExprIdentifier Name
+  | ExprApplication Application
+  | ExprLambda Lambda
+  | ExprLetBlock LetBlock
+  | ExprUniverse Universe
   deriving stock (Show, Read, Eq)
 
 --------------------------------------------------------------------------------
@@ -226,17 +186,10 @@ data Application
 -- Let block expression
 --------------------------------------------------------------------------------
 
-newtype LetBlock = LetBlock Expression
+newtype LetBlock = LetBlock [LetClause]
   deriving stock (Show, Read, Eq)
 
---------------------------------------------------------------------------------
--- Infix expression
---------------------------------------------------------------------------------
-
-data Infix
-  = Infix
-      { leftPart :: Expression,
-        infixOp :: Name,
-        rightPart :: Expression
-      }
+data LetClause =
+  LetTypeSig TypeSignature
+  | LetDefinition FunctionClause
   deriving stock (Show, Read, Eq)
