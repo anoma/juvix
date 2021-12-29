@@ -1,9 +1,27 @@
+{-# language UndecidableInstances #-}
 -- | Adapted from heliaxdev/Juvix/library/StandardLibrary/src/Juvix
 module MiniJuvix.Parsing.Language where
 
 
 import MiniJuvix.Utils.Prelude
+import qualified Data.Kind                   as GHC
 
+--------------------------------------------------------------------------------
+-- Parsing stage
+--------------------------------------------------------------------------------
+
+data Stage =
+  Preparsed
+  | Parsed
+  deriving stock (Show)
+
+type family ExpressionType (s ∷ Stage) ∷ GHC.Type where
+  ExpressionType 'Preparsed = ExpressionSections
+  ExpressionType 'Parsed = Expression
+
+type family PatternType (s ∷ Stage) ∷ GHC.Type where
+  PatternType 'Preparsed = PatternSection
+  PatternType 'Parsed = Pattern
 
 --------------------------------------------------------------------------------
 -- Symbols and names
@@ -12,14 +30,16 @@ import MiniJuvix.Utils.Prelude
 newtype Symbol = Sym Text
   deriving stock (Show)
 
-newtype ModulePath = ModulePath {
-  path :: NonEmpty Symbol
+-- A.B.C corresponds to ModulePath [A,B] C
+data ModulePath = ModulePath {
+  modulePathDir ∷ [Symbol],
+  modulePathName ∷ Symbol
   }
   deriving stock (Show)
 
 data Qualified = Qualified {
-  modulePath :: ModulePath,
-  name :: Symbol
+  modulePath ∷ ModulePath,
+  nameSymbol ∷ Symbol
   }
   deriving stock (Show)
 
@@ -29,17 +49,30 @@ data Name =
   deriving stock (Show)
 
 --------------------------------------------------------------------------------
--- Top level declaration
+-- Top level statement
 --------------------------------------------------------------------------------
 
-data Statement
+data Statement (s ∷ Stage)
   = StatementOperator OperatorSyntaxDef
-  | StatementTypeSignature TypeSignature
-  | StatementDataType DataTypeDef
-  | StatementModule Module
+  | StatementTypeSignature (TypeSignature s)
+  | StatementImport Import
+  | StatementDataType (DataTypeDef s)
+  | StatementModule (Module s)
   | StatementOpenModule OpenModule
-  | StatementFunctionClause FunctionClause
-  | StatementAxiom AxiomDef
+  | StatementFunctionClause (FunctionClause s)
+  | StatementAxiom (AxiomDef s)
+  | StatementEval (Eval s)
+  | StatementPrint (Print s)
+deriving stock instance (Show (PatternType s), Show (ExpressionType s))
+  ⇒ Show (Statement s)
+
+--------------------------------------------------------------------------------
+-- Import statement
+--------------------------------------------------------------------------------
+
+newtype Import = Import {
+  importModule ∷ ModulePath
+  }
   deriving stock (Show)
 
 --------------------------------------------------------------------------------
@@ -48,26 +81,26 @@ data Statement
 
 type Precedence = Natural
 
-data UnaryAssoc = PrefixOp | PostfixOp
+data UnaryAssoc = AssocPrefix | AssocPostfix
   deriving stock (Show)
 
-data BinaryAssoc = None | LeftAssoc | RightAssoc
+data BinaryAssoc = AssocNone | AssocLeft | AssocRight
   deriving stock (Show)
 
 data OperatorArity =
   Unary {
-   unaryAssoc :: UnaryAssoc
+   unaryAssoc ∷ UnaryAssoc
   }
   | Binary {
-    binaryAssoc :: BinaryAssoc
+    binaryAssoc ∷ BinaryAssoc
   }
   deriving stock (Show)
 
 data OperatorSyntaxDef =
   OperatorSyntaxDef {
-  opArity :: OperatorArity
-  , opSymbol :: Symbol
-  , opPrecedence :: Int
+  opArity ∷ OperatorArity
+  , opSymbol ∷ Symbol
+  , opPrecedence ∷ Precedence
   }
   deriving stock (Show)
 
@@ -78,30 +111,30 @@ data OperatorSyntaxDef =
 data Usage =
   UsageNone
   | UsageOnce
-  | UsageAny
+  | UsageOmega
   deriving stock (Show)
 
 -------------------------------------------------------------------------------
 -- Type signature declaration
 -------------------------------------------------------------------------------
 
-data TypeSignature
+data TypeSignature (s ∷ Stage)
   = TypeSignature
       {
-        sigName :: Symbol,
-        sigType :: Expression
+        sigName ∷ Symbol,
+        sigType ∷ ExpressionType s
       }
-  deriving stock (Show)
+deriving stock instance Show (ExpressionType s) ⇒ Show (TypeSignature s)
 
 -------------------------------------------------------------------------------
 -- Axioms
 -------------------------------------------------------------------------------
 
-data AxiomDef = AxiomDef {
-   axiomName :: Symbol,
-   axiomType :: Expression
+data AxiomDef (s ∷ Stage) = AxiomDef {
+   axiomName ∷ Symbol,
+   axiomType ∷ ExpressionType s
   }
-  deriving stock (Show)
+deriving stock instance Show (ExpressionType s) ⇒ Show (AxiomDef s)
 
 -------------------------------------------------------------------------------
 -- Data type construction declaration
@@ -111,22 +144,31 @@ type DataConstructorName = Symbol
 
 type DataTypeName = Symbol
 
-data DataConstructorDef = DataConstructorDef {
-  constructorName :: DataConstructorName
-  , constructorType :: Expression
+data DataConstructorDef (s ∷ Stage) = DataConstructorDef {
+  constructorName ∷ DataConstructorName
+  , constructorType ∷ ExpressionType s
   }
-  deriving stock (Show)
+deriving stock instance Show (ExpressionType s) ⇒ Show (DataConstructorDef s)
 
-data DataTypeDef
+
+data DataTypeParameter (s ∷ Stage) = DataTypeParameter {
+  dataTypeParameterName ∷ Symbol,
+  dataTypeParameterType ∷ ExpressionType s
+  }
+deriving stock instance Show (ExpressionType s) ⇒ Show (DataTypeParameter s)
+
+data DataTypeDef (s ∷ Stage)
   = DataTypeDef
-      { dataTypeName :: DataTypeName,
-        dataTypeArgs :: [Expression],
-        dataTypeConstructors :: [DataConstructorDef]
+      { dataTypeName ∷ DataTypeName,
+        dataTypeParameters ∷ [DataTypeParameter s],
+        dataTypeType ∷ Maybe (ExpressionType s),
+        dataTypeConstructors ∷ [DataConstructorDef s]
       }
-  deriving stock (Show)
+deriving stock instance Show (ExpressionType s) ⇒ Show (DataTypeDef s)
+
 
 --------------------------------------------------------------------------------
--- Function binding declaration
+-- Pattern
 --------------------------------------------------------------------------------
 
 data Pattern
@@ -136,28 +178,52 @@ data Pattern
   | PatternEmpty
   deriving stock (Show)
 
-data FunctionClause
-  = FunClause
-      { ownerFunction :: Symbol,
-        clausePatterns :: [Pattern],
-        clauseBody :: Expression,
-        clauseWhere :: Maybe WhereBlock
-      }
+--------------------------------------------------------------------------------
+-- Pattern section
+--------------------------------------------------------------------------------
+
+data PatternSection
+  = PatternSectionVariable Symbol
+  | PatternSectionWildcard
+  | PatternSectionEmpty
+  | PatternSectionParen PatternSections
   deriving stock (Show)
+
+newtype PatternSections = PatternSections (NonEmpty PatternSection)
+  deriving stock (Show)
+
+--------------------------------------------------------------------------------
+-- Function binding declaration
+--------------------------------------------------------------------------------
+
+data FunctionClause (s ∷ Stage)
+  = FunClause
+      { clauseOwnerFunction ∷ Symbol,
+        clausePatterns ∷ [PatternType s],
+        clauseBody ∷ ExpressionType s,
+        clauseWhere ∷ Maybe (WhereBlock s)
+      }
+deriving stock instance (Show (PatternType s), Show (ExpressionType s))
+  ⇒ Show (FunctionClause s)
+
 
 --------------------------------------------------------------------------------
 -- Module declaration
 --------------------------------------------------------------------------------
 
-data Module
+data Module (s ∷ Stage)
   = Module
-      { moduleName :: Symbol,
-        body :: [Statement]
+      { moduleName ∷ Symbol,
+        moduleBody ∷ [Statement s]
       }
-  deriving stock (Show)
+deriving stock instance (Show (PatternType s), Show (ExpressionType s))
+  ⇒ Show (Module s)
 
-newtype OpenModule
-  = OpenModule Name
+data OpenModule = OpenModule {
+  openModuleName ∷ Symbol,
+  openUsing ∷ Maybe (NonEmpty Symbol),
+  openHiding ∷ Maybe (NonEmpty Symbol)
+  }
   deriving stock (Show)
 
 --------------------------------------------------------------------------------
@@ -167,25 +233,28 @@ newtype OpenModule
 data Expression
   = ExprIdentifier Name
   | ExprApplication Application
-  | ExprLambda Lambda
-  | ExprLetBlock LetBlock
+  | ExprLambda (Lambda 'Parsed)
+  | ExprLetBlock (LetBlock 'Parsed)
   | ExprUniverse Universe
-  | ExprFun Function
+  | ExprFunction (Function 'Parsed)
   deriving stock (Show)
 
 --------------------------------------------------------------------------------
 -- Expression section
 --------------------------------------------------------------------------------
 
--- | Expressions without applications and functions
+-- | Expressions without application
 data ExpressionSection
   = SectionIdentifier Name
-  | SectionLambda Lambda
-  | SectionLetBlock LetBlock
+  | SectionLambda (Lambda 'Preparsed)
+  | SectionLetBlock (LetBlock 'Preparsed)
   | SectionUniverse Universe
-  | SectionFunParameter FunParameter
+  | SectionFunction (Function 'Preparsed)
+  | SectionParens ExpressionSections
   deriving stock (Show)
 
+newtype ExpressionSections = ExpressionSections (NonEmpty ExpressionSection)
+  deriving stock (Show)
 
 --------------------------------------------------------------------------------
 -- Universe expression
@@ -198,33 +267,37 @@ newtype Universe = Universe Natural
 -- Function expression
 --------------------------------------------------------------------------------
 
-data FunParameter = FunParameter {
-  paramName :: Maybe Symbol,
-  paramUsage :: Maybe Usage,
-  paramType :: Expression
+data FunctionParameter (s ∷ Stage) = FunctionParameter {
+  paramName ∷ Maybe Symbol,
+  paramUsage ∷ Maybe Usage,
+  paramType ∷ ExpressionType s
   }
-  deriving stock (Show)
+deriving stock instance Show (ExpressionType s) ⇒ Show (FunctionParameter s)
 
-data Function = Function {
-  funParameter :: FunParameter,
-  funReturn :: Expression
+
+data Function (s ∷ Stage) = Function {
+  funParameter ∷ FunctionParameter s,
+  funReturn ∷ ExpressionType s
   }
-  deriving stock (Show)
+deriving stock instance Show (ExpressionType s) ⇒ Show (Function s)
+
 
 --------------------------------------------------------------------------------
 -- Where block clauses
 --------------------------------------------------------------------------------
 
-newtype WhereBlock = WhereBlock {
-  whereClauses :: [WhereClause]
+newtype WhereBlock (s ∷ Stage) = WhereBlock {
+  whereClauses ∷ [WhereClause s]
   }
-  deriving stock (Show)
+deriving stock instance (Show (PatternType s), Show (ExpressionType s))
+  ⇒ Show (WhereBlock s)
 
-data WhereClause =
+data WhereClause (s ∷ Stage) =
   WhereOpenModule OpenModule
-  | WhereTypeSig TypeSignature
-  | WhereFunClause FunctionClause
-  deriving stock (Show)
+  | WhereTypeSig (TypeSignature s)
+  | WhereFunClause (FunctionClause s)
+deriving stock instance (Show (PatternType s), Show (ExpressionType s))
+  ⇒ Show (WhereClause s)
 
 --------------------------------------------------------------------------------
 -- Lambda expression
@@ -233,12 +306,14 @@ data WhereClause =
 -- Notes: An empty lambda, here called 'the impossible case', is a lambda
 -- expression with empty list of arguments and empty body.
 
-data Lambda
+data Lambda (s ∷ Stage)
   = Lambda
-      { lambdaArguments :: [Pattern],
-        lambdaBody :: Expression
+      { lambdaParameters ∷ NonEmpty (PatternType s),
+        lambdaBody ∷ ExpressionType s
       }
-  deriving stock (Show)
+deriving stock instance (Show (PatternType s), Show (ExpressionType s))
+ ⇒ Show (Lambda s)
+
 
 --------------------------------------------------------------------------------
 -- Application expression
@@ -246,8 +321,8 @@ data Lambda
 
 data Application
   = Application
-      { applicationFun :: Expression,
-        applicationArg :: Expression
+      { applicationFun ∷ ExpressionType 'Parsed,
+        applicationArg ∷ ExpressionType 'Parsed
       }
   deriving stock (Show)
 
@@ -255,10 +330,26 @@ data Application
 -- Let block expression
 --------------------------------------------------------------------------------
 
-newtype LetBlock = LetBlock [LetClause]
-  deriving stock (Show)
+newtype LetBlock (s ∷ Stage) = LetBlock [LetClause s]
+deriving stock instance (Show (PatternType s), Show (ExpressionType s))
+   ⇒ Show (LetBlock s)
 
-data LetClause =
-  LetTypeSig TypeSignature
-  | LetDefinition FunctionClause
-  deriving stock (Show)
+data LetClause (s ∷ Stage) =
+  LetTypeSig (TypeSignature s)
+  | LetDefinition (FunctionClause s)
+deriving stock instance (Show (PatternType s), Show (ExpressionType s))
+  ⇒ Show (LetClause s)
+
+--------------------------------------------------------------------------------
+-- Debugging statements
+--------------------------------------------------------------------------------
+
+newtype Eval (s ∷ Stage) = Eval {
+  evalExpression ∷ ExpressionType s
+  }
+deriving stock instance Show (ExpressionType s) ⇒ Show (Eval s)
+
+newtype Print (s ∷ Stage) = Print {
+  printExpression ∷ ExpressionType s
+  }
+deriving stock instance Show (ExpressionType s) ⇒ Show (Print s)

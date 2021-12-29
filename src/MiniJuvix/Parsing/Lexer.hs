@@ -2,9 +2,9 @@ module MiniJuvix.Parsing.Lexer where
 
 
 import MiniJuvix.Utils.Prelude
-import Text.Megaparsec            as M
-import Text.Megaparsec.Char       (space1)
 import qualified Text.Megaparsec.Char.Lexer as L
+import qualified MiniJuvix.Parsing.Base as P
+import MiniJuvix.Parsing.Base hiding (space)
 import GHC.Unicode
 
 type OperatorSym = Text
@@ -25,18 +25,31 @@ decimal ∷ (MonadParsec e Text m, Num n) ⇒ m n
 decimal = lexeme L.decimal
 
 identifier ∷ MonadParsec e Text m ⇒ m Text
-identifier = do
+identifier = lexeme bareIdentifier
+
+-- | Same as @identifier@ but does not consume space after it.
+bareIdentifier ∷ MonadParsec e Text m ⇒ m Text
+bareIdentifier = do
   notFollowedBy (choice allKeywords)
-  lexeme $
-    M.takeWhileP Nothing (isAlphaNum .||. (`elem`("_'-" ∷ String)))
+  P.takeWhile1P Nothing (isAlphaNum .||. (`elem`("_'-" ∷ String)))
+
+dottedIdentifier ∷ ∀ e m. MonadParsec e Text m ⇒ m (NonEmpty Text)
+dottedIdentifier = P.sepBy1 bareIdentifier dot 
+  where
+  dot = P.char '.'
 
 allKeywords ∷ MonadParsec e Text m ⇒ [m ()]
 allKeywords =
   [
     kwArrowR
+  , kwAxiom
   , kwCase
   , kwColon
+  , kwColonOmega
+  , kwColonOne
+  , kwColonZero
   , kwEnd
+  , kwEval
   , kwHiding
   , kwImport
   , kwInductive
@@ -50,10 +63,12 @@ allKeywords =
   , kwOpen
   , kwPostfix
   , kwPrefix
+  , kwPrint
   , kwSemicolon
   , kwType
+  , kwUsing
   , kwWhere
-  , kwOmega
+  , kwWildcard
   ]
 
 parens ∷ MonadParsec e Text m ⇒ m a → m a
@@ -74,8 +89,23 @@ kwSemicolon = symbol ";"
 kwDef ∷ MonadParsec e Text m ⇒ m ()
 kwDef = symbol "≔" <|> symbol ":="
 
+kwEval ∷ MonadParsec e Text m ⇒ m ()
+kwEval = symbol "eval"
+
+kwPrint ∷ MonadParsec e Text m ⇒ m ()
+kwPrint = symbol "print"
+
 kwColon ∷ MonadParsec e Text m ⇒ m ()
 kwColon = symbol ":"
+
+kwColonZero ∷ MonadParsec e Text m ⇒ m ()
+kwColonZero = symbol ":0"
+
+kwColonOne ∷ MonadParsec e Text m ⇒ m ()
+kwColonOne = symbol ":1"
+
+kwColonOmega ∷ MonadParsec e Text m ⇒ m ()
+kwColonOmega = symbol ":ω" <|> symbol ":any"
 
 kwArrowR ∷ MonadParsec e Text m ⇒ m ()
 kwArrowR = symbol "→" <|> symbol "->"
@@ -116,6 +146,9 @@ kwImport = symbol "import"
 kwHiding ∷ MonadParsec e Text m ⇒ m ()
 kwHiding = symbol "hiding"
 
+kwUsing ∷ MonadParsec e Text m ⇒ m ()
+kwUsing = symbol "using"
+
 kwModule ∷ MonadParsec e Text m ⇒ m ()
 kwModule = symbol "module"
 
@@ -125,5 +158,8 @@ kwEnd = symbol "end"
 kwWhere ∷ MonadParsec e Text m ⇒ m ()
 kwWhere = symbol "where"
 
-kwOmega ∷ MonadParsec e Text m ⇒ m ()
-kwOmega = symbol "ω" <|> symbol "any"
+kwAxiom ∷ MonadParsec e Text m ⇒ m ()
+kwAxiom = symbol "axiom"
+
+kwWildcard ∷ MonadParsec e Text m ⇒ m ()
+kwWildcard = symbol "_"

@@ -18,6 +18,8 @@ module MiniJuvix.Utils.Prelude
   )
 where
 
+import qualified Data.List.NonEmpty as NonEmpty
+
 --------------------------------------------------------------------------------
 
 import qualified Data.Char as Char
@@ -97,3 +99,28 @@ class Monoid m => Semiring m where
 
   one :: m
   times :: m -> m -> m
+
+--------------------------------------------------------------------------------
+-- List
+--------------------------------------------------------------------------------
+
+unsnoc ∷ [a] -> Maybe ([a], a)
+unsnoc [] = Nothing
+unsnoc [x] = Just ([], x)
+unsnoc (x:xs) = case unsnoc xs of
+  Just (a, b) → Just (x:a, b)
+  _ → error "impossible"
+
+--------------------------------------------------------------------------------
+-- NonEmpty
+--------------------------------------------------------------------------------
+
+nonEmptyUnsnoc ∷ NonEmpty a → (Maybe (NonEmpty a), a)
+nonEmptyUnsnoc e = (NonEmpty.nonEmpty (NonEmpty.init e), NonEmpty.last e)
+
+--------------------------------------------------------------------------------
+-- Tuple
+--------------------------------------------------------------------------------
+
+mapFirst ∷ (a → b) → (a , d) → (b , d)
+mapFirst f (a , b) = (f a, b)

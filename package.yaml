@@ -45,11 +45,15 @@ ghc-options:
 default-extensions:
 - DerivingStrategies
 - FlexibleContexts
+- DataKinds
+- KindSignatures
 - NoImplicitPrelude
 - OverloadedStrings
+- RecordWildCards
 - Safe
 - ScopedTypeVariables
 - StandaloneDeriving
+- TypeFamilies
 - UnicodeSyntax
 
 library:
