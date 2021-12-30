@@ -57,3 +57,4 @@
 - ignore: {name: Use let, within: [Test.All]}
 - ignore: {name: Use String}
 - ignore: {name: Avoid restricted flags}
+- ignore: {name: Avoid restricted extensions, within: [MiniJuvix.Parsing.Language]}
