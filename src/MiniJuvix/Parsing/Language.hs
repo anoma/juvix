@@ -1,13 +1,12 @@
 {-# LANGUAGE UndecidableInstances #-}
 
--- | Adapted from heliaxdev/Juvix/library/StandardLibrary/src/Juvix
 module MiniJuvix.Parsing.Language where
 
 import qualified Data.Kind as GHC
 import MiniJuvix.Utils.Prelude
 
 --------------------------------------------------------------------------------
--- Parsing stage
+-- Parsing stages
 --------------------------------------------------------------------------------
 
 data Stage
