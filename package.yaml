@@ -3,8 +3,11 @@ version:         0.0.0.0
 license:         GPL-3.0-only
 license-file:    LICENSE
 copyright:       2021 Heliax AG
-maintainer:      Jonathan Prieto-Cubides <jonathan@heliax.dev>, Jan Mas Rovira <jan@heliax.dev>
-author:          [Jonathan Prieto-Cubides]
+maintainer:      [ Jonathan Prieto-Cubides <jonathan@heliax.dev>
+                 , Jan Mas Rovira <jan@heliax.dev>
+                 , Heliax AG <hello@heliax.dev>
+                 ]  
+author:          [Jonathan Prieto-Cubides , Jan Mas Rovira ]
 tested-with:     ghc == 9.0.1
 homepage:        https://github.com/heliaxdev/MiniJuvix
 bug-reports:     https://github.com/heliaxdev/MiniJuvix/issues
@@ -34,18 +37,18 @@ dependencies:
 - word8 == 0.1.*
 
 ghc-options:
-- -O2 -flate-specialise -fspecialise-aggressively
-- -Wincomplete-patterns
-- -Wall -Wcompat -Widentities -Wincomplete-uni-patterns
-- -Wincomplete-record-updates -fwrite-ide-info -hiedir=.hie
-- -Wderiving-defaults -Wredundant-constraints
 - -fhide-source-paths
+- -O2 -flate-specialise -fspecialise-aggressively
+- -Wall -Wcompat -Widentities -Wincomplete-uni-patterns
+- -Wderiving-defaults -Wredundant-constraints
+- -Wincomplete-patterns
+- -Wincomplete-record-updates -fwrite-ide-info -hiedir=.hie
 - -Wmissing-deriving-strategies
 
 default-extensions:
+- DataKinds
 - DerivingStrategies
 - FlexibleContexts
-- DataKinds
 - KindSignatures
 - NoImplicitPrelude
 - OverloadedStrings
