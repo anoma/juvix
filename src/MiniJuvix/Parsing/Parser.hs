@@ -1,11 +1,16 @@
 module MiniJuvix.Parsing.Parser where
 
+
+--------------------------------------------------------------------------------
+
 import MiniJuvix.Parsing.Language
 import MiniJuvix.Utils.Prelude hiding (universe)
 import MiniJuvix.Parsing.Lexer hiding (symbol)
 import qualified MiniJuvix.Parsing.Base as P
 import MiniJuvix.Parsing.Base (MonadParsec)
 import qualified Data.List.NonEmpty as NonEmpty
+
+--------------------------------------------------------------------------------
 
 topModuleDef ∷ MonadParsec e Text m ⇒ m (Module 'Preparsed)
 topModuleDef = space >> moduleDef <* P.eof
@@ -179,7 +184,7 @@ functionParam = do
 function ∷ MonadParsec e Text m ⇒ m (Function 'Preparsed)
 function = do
   funParameter ← functionParam
-  kwArrowR
+  kwRightArrow
   funReturn ← expressionSections
   return Function{..}
 
@@ -208,7 +213,7 @@ lambda ∷ MonadParsec e Text m ⇒ m (Lambda 'Preparsed)
 lambda = do
   kwLambda
   lambdaParameters ← P.some patternSection 
-  kwArrowR
+  kwRightArrow
   lambdaBody ← expressionSections
   return Lambda{..}
 
@@ -258,7 +263,7 @@ patternSections = PatternSections <$> P.some patternSection
 functionClause ∷ ∀ e m. MonadParsec e Text m ⇒ Symbol → m (FunctionClause 'Preparsed)
 functionClause clauseOwnerFunction = do
   clausePatterns ← P.many patternSection
-  kwDef
+  kwAssignment
   clauseBody ← expressionSections
   clauseWhere ← optional whereBlock
   return FunClause{..}
@@ -274,7 +279,6 @@ moduleDef = do
   moduleBody ← P.many statement
   kwEnd
   return Module{..}
-
 
 openModule ∷ ∀ e m. MonadParsec e Text m ⇒ m OpenModule
 openModule = do

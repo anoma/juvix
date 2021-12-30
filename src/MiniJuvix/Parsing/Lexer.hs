@@ -1,11 +1,14 @@
 module MiniJuvix.Parsing.Lexer where
 
+--------------------------------------------------------------------------------
 
 import MiniJuvix.Utils.Prelude
 import qualified Text.Megaparsec.Char.Lexer as L
 import qualified MiniJuvix.Parsing.Base as P
 import MiniJuvix.Parsing.Base hiding (space)
 import GHC.Unicode
+
+--------------------------------------------------------------------------------
 
 type OperatorSym = Text
 
@@ -27,23 +30,30 @@ decimal = lexeme L.decimal
 identifier ∷ MonadParsec e Text m ⇒ m Text
 identifier = lexeme bareIdentifier
 
+allowedSymbols :: String
+allowedSymbols = "_'-"
+
 -- | Same as @identifier@ but does not consume space after it.
 bareIdentifier ∷ MonadParsec e Text m ⇒ m Text
 bareIdentifier = do
   notFollowedBy (choice allKeywords)
-  P.takeWhile1P Nothing (isAlphaNum .||. (`elem`("_'-" ∷ String)))
+  P.takeWhile1P Nothing (isAlphaNum .||. (`elem` allowedSymbols))
 
 dottedIdentifier ∷ ∀ e m. MonadParsec e Text m ⇒ m (NonEmpty Text)
 dottedIdentifier = P.sepBy1 bareIdentifier dot 
   where
   dot = P.char '.'
 
+parens ∷ MonadParsec e Text m ⇒ m a → m a
+parens = between (symbol "(") (symbol ")")
+
+braces ∷ MonadParsec e Text m ⇒ m a → m a
+braces = between (symbol "{") (symbol "}")
+
 allKeywords ∷ MonadParsec e Text m ⇒ [m ()]
 allKeywords =
-  [
-    kwArrowR
+  [ kwAssignment
   , kwAxiom
-  , kwCase
   , kwColon
   , kwColonOmega
   , kwColonOne
@@ -59,11 +69,13 @@ allKeywords =
   , kwLambda
   , kwLet
   , kwMapsTo
+  , kwMatch
   , kwModule
   , kwOpen
   , kwPostfix
   , kwPrefix
   , kwPrint
+  , kwRightArrow
   , kwSemicolon
   , kwType
   , kwUsing
@@ -71,65 +83,68 @@ allKeywords =
   , kwWildcard
   ]
 
-parens ∷ MonadParsec e Text m ⇒ m a → m a
-parens = between (symbol "(") (symbol ")")
+kwAssignment ∷ MonadParsec e Text m ⇒ m ()
+kwAssignment = symbol "≔" <|> symbol ":="
 
-braces ∷ MonadParsec e Text m ⇒ m a → m a
-braces = between (symbol "{") (symbol "}")
+kwRightArrow ∷ MonadParsec e Text m ⇒ m ()
+kwRightArrow = symbol "→" <|> symbol "->"
 
-kwLet ∷ MonadParsec e Text m ⇒ m ()
-kwLet = symbol "let"
-
-kwInductive ∷ MonadParsec e Text m ⇒ m ()
-kwInductive = symbol "inductive"
-
-kwSemicolon ∷ MonadParsec e Text m ⇒ m ()
-kwSemicolon = symbol ";"
-
-kwDef ∷ MonadParsec e Text m ⇒ m ()
-kwDef = symbol "≔" <|> symbol ":="
-
-kwEval ∷ MonadParsec e Text m ⇒ m ()
-kwEval = symbol "eval"
-
-kwPrint ∷ MonadParsec e Text m ⇒ m ()
-kwPrint = symbol "print"
+kwAxiom ∷ MonadParsec e Text m ⇒ m ()
+kwAxiom = symbol "axiom"
 
 kwColon ∷ MonadParsec e Text m ⇒ m ()
 kwColon = symbol ":"
 
-kwColonZero ∷ MonadParsec e Text m ⇒ m ()
-kwColonZero = symbol ":0"
+kwColonOmega ∷ MonadParsec e Text m ⇒ m ()
+kwColonOmega = symbol ":ω" <|> symbol ":any"
 
 kwColonOne ∷ MonadParsec e Text m ⇒ m ()
 kwColonOne = symbol ":1"
 
-kwColonOmega ∷ MonadParsec e Text m ⇒ m ()
-kwColonOmega = symbol ":ω" <|> symbol ":any"
+kwColonZero ∷ MonadParsec e Text m ⇒ m ()
+kwColonZero = symbol ":0"
 
-kwArrowR ∷ MonadParsec e Text m ⇒ m ()
-kwArrowR = symbol "→" <|> symbol "->"
+kwEnd ∷ MonadParsec e Text m ⇒ m ()
+kwEnd = symbol "end"
 
-kwMapsTo ∷ MonadParsec e Text m ⇒ m ()
-kwMapsTo = symbol "↦" <|> symbol "->"
+kwEval ∷ MonadParsec e Text m ⇒ m ()
+kwEval = symbol "eval"
 
-kwLambda ∷ MonadParsec e Text m ⇒ m ()
-kwLambda = symbol "λ" <|> symbol "\\"
+kwHiding ∷ MonadParsec e Text m ⇒ m ()
+kwHiding = symbol "hiding"
 
-kwCase ∷ MonadParsec e Text m ⇒ m ()
-kwCase = symbol "case"
+kwImport ∷ MonadParsec e Text m ⇒ m ()
+kwImport = symbol "import"
 
-kwType ∷ MonadParsec e Text m ⇒ m ()
-kwType = symbol "Type"
+kwInductive ∷ MonadParsec e Text m ⇒ m ()
+kwInductive = symbol "inductive"
 
 kwInfix ∷ MonadParsec e Text m ⇒ m ()
 kwInfix = symbol "infix"
 
+kwInfixl ∷ MonadParsec e Text m ⇒ m ()
+kwInfixl = symbol "infixl"
+
 kwInfixr ∷ MonadParsec e Text m ⇒ m ()
 kwInfixr = symbol "infixr"
 
-kwInfixl ∷ MonadParsec e Text m ⇒ m ()
-kwInfixl = symbol "infixl"
+kwLambda ∷ MonadParsec e Text m ⇒ m ()
+kwLambda = symbol "λ" <|> symbol "\\"
+
+kwLet ∷ MonadParsec e Text m ⇒ m ()
+kwLet = symbol "let"
+
+kwMapsTo ∷ MonadParsec e Text m ⇒ m ()
+kwMapsTo = symbol "↦" <|> symbol "->"
+
+kwMatch ∷ MonadParsec e Text m ⇒ m ()
+kwMatch = symbol "match"
+
+kwModule ∷ MonadParsec e Text m ⇒ m ()
+kwModule = symbol "module"
+
+kwOpen ∷ MonadParsec e Text m ⇒ m ()
+kwOpen = symbol "open"
 
 kwPostfix ∷ MonadParsec e Text m ⇒ m ()
 kwPostfix = symbol "postfix"
@@ -137,29 +152,20 @@ kwPostfix = symbol "postfix"
 kwPrefix ∷ MonadParsec e Text m ⇒ m ()
 kwPrefix = symbol "prefix"
 
-kwOpen ∷ MonadParsec e Text m ⇒ m ()
-kwOpen = symbol "open"
+kwPrint ∷ MonadParsec e Text m ⇒ m ()
+kwPrint = symbol "print"
 
-kwImport ∷ MonadParsec e Text m ⇒ m ()
-kwImport = symbol "import"
+kwSemicolon ∷ MonadParsec e Text m ⇒ m ()
+kwSemicolon = symbol ";"
 
-kwHiding ∷ MonadParsec e Text m ⇒ m ()
-kwHiding = symbol "hiding"
+kwType ∷ MonadParsec e Text m ⇒ m ()
+kwType = symbol "Type"
 
 kwUsing ∷ MonadParsec e Text m ⇒ m ()
 kwUsing = symbol "using"
 
-kwModule ∷ MonadParsec e Text m ⇒ m ()
-kwModule = symbol "module"
-
-kwEnd ∷ MonadParsec e Text m ⇒ m ()
-kwEnd = symbol "end"
-
 kwWhere ∷ MonadParsec e Text m ⇒ m ()
 kwWhere = symbol "where"
-
-kwAxiom ∷ MonadParsec e Text m ⇒ m ()
-kwAxiom = symbol "axiom"
 
 kwWildcard ∷ MonadParsec e Text m ⇒ m ()
 kwWildcard = symbol "_"
