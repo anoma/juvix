@@ -86,9 +86,6 @@ allKeywords =
 kwAssignment :: MonadParsec e Text m => m ()
 kwAssignment = symbol "≔" <|> symbol ":="
 
-kwRightArrow :: MonadParsec e Text m => m ()
-kwRightArrow = symbol "→" <|> symbol "->"
-
 kwAxiom :: MonadParsec e Text m => m ()
 kwAxiom = symbol "axiom"
 
@@ -154,6 +151,9 @@ kwPrefix = symbol "prefix"
 
 kwPrint :: MonadParsec e Text m => m ()
 kwPrint = symbol "print"
+
+kwRightArrow :: MonadParsec e Text m => m ()
+kwRightArrow = symbol "→" <|> symbol "->"
 
 kwSemicolon :: MonadParsec e Text m => m ()
 kwSemicolon = symbol ";"

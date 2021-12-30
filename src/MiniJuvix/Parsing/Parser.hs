@@ -170,7 +170,7 @@ explicitFunParam ::
   m (FunctionParameter 'Preparsed)
 explicitFunParam = parens $ do
   paramName <- pName
-  paramUsage <- pUsage
+  paramQuantity <- pQuantity
   paramType <- expressionSections
   return $ FunctionParameter {..}
   where
@@ -178,11 +178,11 @@ explicitFunParam = parens $ do
     pName =
       (Just <$> symbol)
         <|> (Nothing <$ kwWildcard)
-    pUsage :: m (Maybe Usage)
-    pUsage =
-      (Just UsageNone <$ kwColonZero)
-        <|> (Just UsageOnce <$ kwColonOne)
-        <|> (Just UsageOmega <$ kwColonOmega)
+    pQuantity :: m (Maybe Quantity)
+    pQuantity =
+      (Just QuantityNone <$ kwColonZero)
+        <|> (Just QuantityOnce <$ kwColonOne)
+        <|> (Just QuantityOmega <$ kwColonOmega)
         <|> (Nothing <$ kwColon)
 
 functionParam :: MonadParsec e Text m => m (FunctionParameter 'Preparsed)
@@ -195,7 +195,7 @@ functionParam = do
       return
         FunctionParameter
           { paramName = Nothing,
-            paramUsage = Nothing,
+            paramQuantity = Nothing,
             paramType = ty
           }
 

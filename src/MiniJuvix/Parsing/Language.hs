@@ -2,8 +2,12 @@
 
 module MiniJuvix.Parsing.Language where
 
+--------------------------------------------------------------------------------
+
 import qualified Data.Kind as GHC
 import MiniJuvix.Utils.Prelude
+
+--------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------
 -- Parsing stages
@@ -109,13 +113,13 @@ data OperatorSyntaxDef
   deriving stock (Show)
 
 -------------------------------------------------------------------------------
--- Usage
+-- Quantity
 -------------------------------------------------------------------------------
 
-data Usage
-  = UsageNone
-  | UsageOnce
-  | UsageOmega
+data Quantity
+  = QuantityNone
+  | QuantityOnce
+  | QuantityOmega
   deriving stock (Show)
 
 -------------------------------------------------------------------------------
@@ -283,7 +287,7 @@ newtype Universe = Universe Natural
 data FunctionParameter (s :: Stage)
   = FunctionParameter
       { paramName :: Maybe Symbol,
-        paramUsage :: Maybe Usage,
+        paramQuantity :: Maybe Quantity,
         paramType :: ExpressionType s
       }
 
