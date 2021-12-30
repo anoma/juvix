@@ -1,4 +1,3 @@
--- | Adapted from https://github.com/heliaxdev/juvix/
 module MiniJuvix.Parsing.Parser where
 
 import MiniJuvix.Parsing.Language
