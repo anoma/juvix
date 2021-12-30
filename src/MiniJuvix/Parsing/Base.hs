@@ -1,9 +1,9 @@
-module MiniJuvix.Parsing.Base (
-  module Text.Megaparsec
-  , module Data.List.NonEmpty
-  , module Text.Megaparsec.Char
-  , sepBy1 
-  , some
+module MiniJuvix.Parsing.Base
+  ( module Text.Megaparsec,
+    module Data.List.NonEmpty,
+    module Text.Megaparsec.Char,
+    sepBy1,
+    some,
   )
 where
 
@@ -15,8 +15,8 @@ import qualified Text.Megaparsec as P
 import Text.Megaparsec (MonadParsec)
 import Text.Megaparsec.Char
 
-sepBy1 :: MonadPlus m ⇒ m a → m sep → m (NonEmpty a)
+sepBy1 :: MonadPlus m => m a -> m sep -> m (NonEmpty a)
 sepBy1 m s = fromList <$> P.sepBy1 m s
 
-some :: MonadPlus m ⇒ m a → m (NonEmpty a)
+some :: MonadPlus m => m a -> m (NonEmpty a)
 some m = fromList <$> P.some m

@@ -34,9 +34,9 @@ instance Pretty Int where
   pretty = undefined -- const PP.pretty
 
 instance Pretty Quantity where
-  pretty _ Zero = undefined --  annotate (Term.color Term.Magenta) (PP.pretty "0")
-  pretty _ One = undefined --  annotate (Term.color Term.Magenta) (PP.pretty "1")
-  pretty b Many = undefined --  annotateSpecialSymbol b ManyQuantitySymbol
+  pretty _ Zero = undefined
+  pretty _ One = undefined
+  pretty b Many = undefined
 
 instance Pretty Relevance where
   pretty _ Relevant = undefined -- PP.pretty "!"

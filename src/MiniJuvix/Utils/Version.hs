@@ -2,12 +2,12 @@ module MiniJuvix.Utils.Version (getVersion) where
 
 ------------------------------------------------------------------------------
 
+import Control.Exception (IOException, try)
 import qualified Data.List as List
 import Data.Version (Version (versionTags))
 import MiniJuvix.Utils.Prelude
-import System.Process (readProcessWithExitCode)
-import Control.Exception (IOException, try)
 import System.Exit
+import System.Process (readProcessWithExitCode)
 
 ------------------------------------------------------------------------------
 

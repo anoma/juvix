@@ -5,7 +5,12 @@ module MiniJuvix.Typing.Typechecking () where
 import MiniJuvix.Syntax.Core
 import MiniJuvix.Syntax.Eval
 import MiniJuvix.Typing.Error
-import MiniJuvix.Typing.Utils (Binding, Quantities, TypingContext, TypingContextM)
+import MiniJuvix.Typing.Utils
+  ( Binding,
+    Quantities,
+    TypingContext,
+    TypingContextM,
+  )
 import MiniJuvix.Utils.Prelude
 
 --------------------------------------------------------------------------------
@@ -48,5 +53,9 @@ check' = undefined
 infer :: TypingContext -> Quantity -> Term -> TypingResult (Type, LeftOvers)
 infer = undefined
 
-infer' :: TypingContext -> Quantity -> InferableTerm -> TypingResult (Type, LeftOvers)
+infer' ::
+  TypingContext ->
+  Quantity ->
+  InferableTerm ->
+  TypingResult (Type, LeftOvers)
 infer' = undefined

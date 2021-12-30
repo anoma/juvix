@@ -14,7 +14,6 @@ where
 
 --------------------------------------------------------------------------------
 
-import qualified Data.List as List
 import MiniJuvix.Utils.Prelude
 import Prettyprinter hiding
   ( Doc,
@@ -24,9 +23,6 @@ import qualified Prettyprinter as PP
 import qualified Prettyprinter.Render.Terminal as Term
 
 --------------------------------------------------------------------------------
--- See https://hackage.haskell.org/package/prettyprinter-1.7.1/docs/Prettyprinter.html
---     https://hackage.haskell.org/package/prettyprinter-ansi-terminal
--- to know why we decide to have the def. below.
 
 type Doc = PP.Doc Term.AnsiStyle
 

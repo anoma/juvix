@@ -1,4 +1,3 @@
--- | Adapted from https://github.com/heliaxdev/juvix/
 module MiniJuvix.Parsing.Error
   ( Error (..),
     ParsingError (..),
