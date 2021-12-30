@@ -85,14 +85,14 @@ import_ = do
 -- Expression
 --------------------------------------------------------------------------------
 
-expressionSection ∷ MonadParsec e Text m ⇒ m ExpressionSection
+expressionSection ∷ MonadParsec e Text m ⇒ m (ExpressionSection 'Preparsed)
 expressionSection = do
   SectionIdentifier <$> name
   <|> (SectionUniverse <$> universe)
   <|> (SectionLambda <$> lambda)
   <|> parens (SectionParens <$> expressionSections)
 
-expressionSections ∷ MonadParsec e Text m ⇒ m ExpressionSections
+expressionSections ∷ MonadParsec e Text m ⇒ m (ExpressionSections 'Preparsed)
 expressionSections = ExpressionSections <$> P.some expressionSection
 
 --------------------------------------------------------------------------------
@@ -184,12 +184,12 @@ function = do
 -- Where block clauses
 --------------------------------------------------------------------------------
 
-whereBlock ∷ MonadParsec e Text m ⇒ m (WhereBlock 'Preparsed) 
+whereBlock ∷ MonadParsec e Text m ⇒ m (WhereBlock 'Preparsed)
 whereBlock = do
   kwWhere
   WhereBlock <$> P.sepBy whereClause kwSemicolon
 
-whereClause ∷ ∀ e m. MonadParsec e Text m ⇒ m (WhereClause 'Preparsed) 
+whereClause ∷ ∀ e m. MonadParsec e Text m ⇒ m (WhereClause 'Preparsed)
 whereClause =
   (WhereOpenModule <$> openModule)
   <|> sigOrFun
@@ -204,7 +204,7 @@ whereClause =
 lambda ∷ MonadParsec e Text m ⇒ m (Lambda 'Preparsed)
 lambda = do
   kwLambda
-  lambdaParameters ← P.some patternSection 
+  lambdaParameters ← P.some patternSection
   kwArrowR
   lambdaBody ← expressionSections
   return Lambda{..}
@@ -239,13 +239,13 @@ constructorDef = do
 -- Pattern section
 --------------------------------------------------------------------------------
 
-patternSection ∷ ∀ e m. MonadParsec e Text m ⇒ m PatternSection
+patternSection ∷ ∀ e m. MonadParsec e Text m ⇒ m (PatternSection 'Preparsed)
 patternSection =
   PatternSectionVariable <$> symbol
   <|> PatternSectionWildcard <$ kwWildcard
   <|> (PatternSectionParen <$> parens patternSections)
 
-patternSections ∷ ∀ e m. MonadParsec e Text m ⇒ m PatternSections
+patternSections ∷ ∀ e m. MonadParsec e Text m ⇒ m (PatternSections 'Preparsed)
 patternSections = PatternSections <$> P.some patternSection
 
 --------------------------------------------------------------------------------
@@ -277,10 +277,10 @@ openModule = do
   kwOpen
   openModuleName ← symbol
   r ← optional usingOrHiding
-  let (openUsing, openHiding) = case r of 
+  let (openUsing, openHiding) = case r of
         Nothing → (Nothing, Nothing)
-        Just (Left using) → (Just using, Nothing)   
-        Just (Right hiding) → (Nothing, Just hiding)   
+        Just (Left using) → (Just using, Nothing)
+        Just (Right hiding) → (Nothing, Just hiding)
   return OpenModule {..}
   where
   usingOrHiding ∷ m (Either (NonEmpty Symbol) (NonEmpty Symbol))
