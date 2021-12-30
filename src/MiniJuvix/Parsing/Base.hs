@@ -11,8 +11,6 @@ import qualified Control.Monad.Combinators as P
 import Data.List.NonEmpty (NonEmpty)
 import MiniJuvix.Utils.Prelude hiding (some)
 import Text.Megaparsec hiding (sepBy1, some)
-import qualified Text.Megaparsec as P
-import Text.Megaparsec (MonadParsec)
 import Text.Megaparsec.Char
 
 sepBy1 :: MonadPlus m ⇒ m a → m sep → m (NonEmpty a)

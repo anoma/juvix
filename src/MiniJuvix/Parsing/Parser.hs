@@ -37,20 +37,17 @@ symbolList = braces (P.sepBy1 symbol kwSemicolon)
 -- Top level statement
 --------------------------------------------------------------------------------
 
-stmt ∷ MonadParsec e Text m ⇒ (a → Statement 'Preparsed) → m a → m (Statement 'Preparsed)
-stmt f s = (f <$> s) <* kwSemicolon 
-
 statement ∷ ∀ e m. MonadParsec e Text m ⇒ m (Statement 'Preparsed)
 statement =
-  stmt StatementOperator operatorSyntaxDef
-  <|> stmt StatementOpenModule openModule
-  <|> stmt StatementEval eval
-  <|> stmt StatementImport import_
-  <|> stmt StatementDataType dataTypeDef
-  <|> stmt StatementPrint printS
-  <|> stmt StatementModule moduleDef
-  <|> stmt StatementAxiom axiomDef
-  <|> stmt (either StatementTypeSignature StatementFunctionClause) auxTypeSigFunClause
+  (StatementOperator <$> operatorSyntaxDef)
+  <|> (StatementOpenModule <$> openModule)
+  <|> (StatementEval <$> eval)
+  <|> (StatementImport <$> import_)
+  <|> (StatementDataType <$> dataTypeDef)
+  <|> (StatementPrint <$> printS)
+  <|> (StatementModule <$> moduleDef)
+  <|> (StatementAxiom <$> axiomDef)
+  <|> (either StatementTypeSignature StatementFunctionClause <$> auxTypeSigFunClause)
 
 --------------------------------------------------------------------------------
 -- Operator syntax declaration
@@ -190,7 +187,7 @@ function = do
 whereBlock ∷ MonadParsec e Text m ⇒ m (WhereBlock 'Preparsed) 
 whereBlock = do
   kwWhere
-  WhereBlock <$> P.many whereClause
+  WhereBlock <$> P.sepBy whereClause kwSemicolon
 
 whereClause ∷ ∀ e m. MonadParsec e Text m ⇒ m (WhereClause 'Preparsed) 
 whereClause =
@@ -271,10 +268,9 @@ moduleDef ∷ MonadParsec e Text m ⇒ m (Module 'Preparsed)
 moduleDef = do
   kwModule
   moduleName ← symbol
-  moduleBody ← P.many statement
+  moduleBody ← P.sepBy statement kwSemicolon
   kwEnd
   return Module{..}
-
 
 openModule ∷ ∀ e m. MonadParsec e Text m ⇒ m OpenModule
 openModule = do
