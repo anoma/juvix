@@ -1,3 +1,5 @@
 resolver: nightly-2021-12-22
 extra-deps:
 - aeson-2.0.2.0
+- polysemy-1.7.1.0
+- polysemy-plugin-0.4.3.0

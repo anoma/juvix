@@ -31,6 +31,8 @@ dependencies:
 - semirings == 0.6.*
 - text == 1.2.*
 - unordered-containers == 0.2.*
+- polysemy == 1.7.*
+- polysemy-plugin == 0.4.*
 - word8 == 0.1.*
 
 ghc-options:
@@ -50,7 +52,6 @@ default-extensions:
 - NoImplicitPrelude
 - OverloadedStrings
 - RecordWildCards
-- Safe
 - ScopedTypeVariables
 - StandaloneDeriving
 - TypeFamilies
