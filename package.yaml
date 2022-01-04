@@ -33,7 +33,6 @@ dependencies:
 - relude == 1.0.*
 - semirings == 0.6.*
 - singletons == 3.0.*
-- singletons-th == 3.0.*
 - text == 1.2.*
 - unordered-containers == 0.2.*
 - word8 == 0.1.*
