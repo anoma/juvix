@@ -3,22 +3,39 @@ module MiniJuvix.Parsing.Scoper where
 import MiniJuvix.Parsing.Language
 import qualified MiniJuvix.Parsing.Base as P
 import MiniJuvix.Parsing.Base (MonadParsec)
+import MiniJuvix.Parsing.Parser (runModuleParserIO)
 import qualified Data.List.NonEmpty as NonEmpty
-import MiniJuvix.Utils.Prelude hiding (State, get, put)
+import MiniJuvix.Utils.Prelude hiding (State, get, put, modify, Reader, ask, asks)
 import qualified Data.Kind as GHC
-import           Polysemy
-import           Polysemy.Error         hiding (fromEither)
-import           Polysemy.State
+import Polysemy
+import Polysemy.Error         hiding (fromEither)
+import Polysemy.State
+import Polysemy.Reader
+import Polysemy.Embed
+import System.FilePath
+import qualified Data.Text as Text
 
-
+-- | Relevant scope information of a module.
 data ModuleScopeInfo = ModuleScopeInfo {
+  -- | Operator definitions. They can refer to either constructors or functions.
   syntaxOperators ∷ [OperatorSyntaxDef],
-  syntaxDataConstructors ∷ HashSet DataConstructorName,
+  -- | constructors introduced by inductive definitions (E.g. ℕ; zero; suc).
+  syntaxConstructors ∷ HashSet DataConstructorName,
+  -- | function names in scope. Function names are introduced with function clauses.
   syntaxFunctions ∷ HashSet FunctionName,
+  -- | locally defined modules. Imported modules are not included.
   syntaxModules ∷ HashMap Symbol ModuleScopeInfo
   }
 
+newtype IdentifierInfo = IdentifierInfo {
+  idenInfoOrigins ∷ HashSet ModulePath
+  }
+
 data ModuleCurrentScope = ModuleGlobalScope {
+  currentOperators ∷ [OperatorSyntaxDef],
+  currentConstructors ∷ HashMap DataConstructorName IdentifierInfo,
+  currentFunctions ∷ HashMap FunctionName IdentifierInfo,
+  currentImported ∷ HashMap ModulePath ModuleScopeInfo
   }
 
 newtype LocalScope = LocalScope {
@@ -29,12 +46,45 @@ newtype PatternScope = PatternScope {
   patternScopeSymbols ∷ HashSet Symbol
   }
 
-
-data ScopeError = DupOperatorDef
+data ScopeError =
+  ParseError Text
+  | Err
   deriving stock (Show)
 
-scopeCheck ∷ Module 'Parsed → Either ScopeError ModuleScopeInfo
-scopeCheck = undefined
+data ScopeParameters = ScopParameters {
+  scopeRootPath ∷ FilePath,
+  scopeExtension ∷ FilePath
+  }
+
+scopeCheck ∷ FilePath → Module 'Parsed → Either ScopeError ModuleScopeInfo
+scopeCheck root m = undefined
+
+checkImport ∷ Members '[Error ScopeError, State ModuleScopeInfo, Reader ScopeParameters, Embed IO] r ⇒
+  Import → Sem r Import
+checkImport (Import p) = do
+  par ← readParseModule p
+  undefined
+
+readParseModule ∷ Members '[Error ScopeError, Reader ScopeParameters, Embed IO] r ⇒
+  ModulePath → Sem r (Module 'Parsed)
+readParseModule mp = do
+  path ← modulePathToFilePath mp
+  res ← embed (runModuleParserIO path)
+  case res of
+    Left err → throw (ParseError err)
+    Right r → return r
+
+modulePathToFilePath ∷ Members '[Reader ScopeParameters] r ⇒
+  ModulePath → Sem r FilePath
+modulePathToFilePath mp = do
+  root ← asks scopeRootPath
+  ext ← asks scopeExtension
+  let relDirPath = foldr ((</>) . toPath) mempty (modulePathDir mp)
+      relFilePath = relDirPath </> toPath (modulePathName mp) <.> ext
+  return $ root </> relFilePath
+  where
+  toPath ∷ Symbol → FilePath
+  toPath (Sym t) = Text.unpack t
 
 addOperatorSyntaxDef ∷ Members '[Error ScopeError, State ModuleScopeInfo] r ⇒
   OperatorSyntaxDef → Sem r ()
@@ -52,7 +102,7 @@ checkDataTypeDef ∷ Members '[Error ScopeError, State ModuleScopeInfo] r ⇒
   DataTypeDef 'Parsed → Sem r (DataTypeDef 'Scoped)
 checkDataTypeDef = undefined
 
-checkModule ∷ Members '[Error ScopeError, State ModuleScopeInfo] r ⇒
+checkModule ∷ Members '[Error ScopeError, State ModuleScopeInfo, Reader ScopeParameters] r ⇒
   Module 'Parsed → Sem r (Module 'Scoped)
 checkModule = undefined
 
@@ -102,15 +152,11 @@ checkExpressionSections ∷ Members '[Error ScopeError, State ModuleScopeInfo] r
   ExpressionSections 'Parsed → Sem r (ExpressionSections 'Scoped)
 checkExpressionSections (ExpressionSections l) = ExpressionSections <$> mapM checkExpressionSection l
 
-parseExpressionSections ∷ Members '[Error ScopeError, State ModuleScopeInfo] r ⇒
-  ExpressionSections 'Scoped → Sem r Expression
-parseExpressionSections = undefined
-
 checkParseExpressionSections ∷ Members '[Error ScopeError, State ModuleScopeInfo] r ⇒
   ExpressionSections 'Parsed → Sem r Expression
 checkParseExpressionSections = checkExpressionSections >=> parseExpressionSections
 
-checkStatement ∷ Members '[Error ScopeError, State ModuleScopeInfo] r
+checkStatement ∷ Members '[Error ScopeError, State ModuleScopeInfo, Reader ScopeParameters, Embed IO] r
   ⇒ Statement 'Parsed → Sem r (Statement 'Scoped)
 checkStatement s = case s of
   StatementOperator opDef → StatementOperator opDef <$ addOperatorSyntaxDef opDef
@@ -123,3 +169,27 @@ checkStatement s = case s of
   StatementAxiom ax → StatementAxiom <$> checkAxiom ax
   StatementEval e → StatementEval <$> checkEval e
   StatementPrint e → StatementPrint <$> checkPrint e
+
+-------------------------------------------------------------------------------
+-- Infix Parsers
+-------------------------------------------------------------------------------
+
+parseExpressionSections ∷ Members '[Error ScopeError, State ModuleScopeInfo] r ⇒
+  ExpressionSections 'Scoped → Sem r Expression
+parseExpressionSections = undefined
+
+parsePatternSections ∷ Members '[Error ScopeError, State ModuleScopeInfo] r ⇒
+  PatternSections 'Scoped → Sem r Pattern
+parsePatternSections = undefined
+
+
+parsePatternTerm ∷ MonadParsec e [PatternSections 'Scoped] m ⇒ m Pattern
+parsePatternTerm = undefined
+
+parsePatternWildcard ∷ MonadParsec e [PatternSection 'Scoped] m ⇒ m Pattern
+parsePatternWildcard = PatternWildcard <$ P.satisfy isWildcard
+  where isWildcard PatternSectionWildcard = True
+        isWildcard _ = False
+
+tmp ∷ MonadParsec e [PatternSections 'Scoped] m ⇒ ModuleCurrentScope → m Pattern
+tmp = undefined
