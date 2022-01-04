@@ -6,8 +6,32 @@ import MiniJuvix.Parsing.Lexer hiding (symbol)
 import qualified MiniJuvix.Parsing.Base as P
 import MiniJuvix.Parsing.Base (MonadParsec)
 import qualified Data.List.NonEmpty as NonEmpty
+import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 
-topModuleDef ∷ MonadParsec e Text m ⇒ m (Module 'Parsed)
+--------------------------------------------------------------------------------
+-- Running the parser
+--------------------------------------------------------------------------------
+
+debugModuleParser ∷ FilePath → IO ()
+debugModuleParser fileName = do
+  r ← runModuleParserIO fileName
+  case r of
+    Left err → error err
+    Right m → print m
+
+runModuleParserIO ∷ FilePath → IO (Either Text (Module 'Parsed))
+runModuleParserIO fileName = do
+  input ← Text.readFile fileName
+  return (runModuleParser fileName input)
+
+runModuleParser ∷ FilePath → Text → Either Text (Module 'Parsed)
+runModuleParser fileName input =
+  case P.runParser topModuleDef fileName input of
+    Left err → Left $ Text.pack (P.errorBundlePretty err)
+    Right r → return r
+
+topModuleDef ∷ MonadParsec Void Text m ⇒ m (Module 'Parsed)
 topModuleDef = space >> moduleDef <* P.eof
 
 --------------------------------------------------------------------------------
