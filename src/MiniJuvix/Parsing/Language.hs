@@ -24,6 +24,10 @@ type family PatternType (s ∷ Stage) ∷ GHC.Type where
   PatternType 'Parsed = (PatternSection 'Parsed)
   PatternType 'Scoped = Pattern
 
+type family ImportType (s ∷ Stage) ∷ GHC.Type where
+  ImportType 'Parsed = Import
+  ImportType 'Scoped = Module 'Scoped
+
 --------------------------------------------------------------------------------
 -- Symbols and names
 --------------------------------------------------------------------------------
@@ -60,7 +64,7 @@ data Name =
 data Statement (s ∷ Stage)
   = StatementOperator OperatorSyntaxDef
   | StatementTypeSignature (TypeSignature s)
-  | StatementImport Import
+  | StatementImport (ImportType s)
   | StatementDataType (DataTypeDef s)
   | StatementModule (Module s)
   | StatementOpenModule OpenModule
@@ -68,9 +72,9 @@ data Statement (s ∷ Stage)
   | StatementAxiom (AxiomDef s)
   | StatementEval (Eval s)
   | StatementPrint (Print s)
-deriving stock instance (Show (PatternType s), Show (ExpressionType s)) ⇒ Show (Statement s)
-deriving stock instance (Eq (PatternType s), Eq (ExpressionType s)) ⇒ Eq (Statement s)
-deriving stock instance (Ord (PatternType s), Ord (ExpressionType s)) ⇒ Ord (Statement s)
+deriving stock instance (Show (ImportType s), Show (PatternType s), Show (ExpressionType s)) ⇒ Show (Statement s)
+deriving stock instance (Eq (ImportType s), Eq (PatternType s), Eq (ExpressionType s)) ⇒ Eq (Statement s)
+deriving stock instance (Ord (ImportType s), Ord (PatternType s), Ord (ExpressionType s)) ⇒ Ord (Statement s)
 
 --------------------------------------------------------------------------------
 -- Import statement
@@ -238,9 +242,9 @@ data Module (s ∷ Stage)
       { moduleName ∷ Symbol,
         moduleBody ∷ [Statement s]
       }
-deriving stock instance (Show (PatternType s), Show (ExpressionType s)) ⇒ Show (Module s)
-deriving stock instance (Eq (PatternType s), Eq (ExpressionType s)) ⇒ Eq (Module s)
-deriving stock instance (Ord (PatternType s), Ord (ExpressionType s)) ⇒ Ord (Module s)
+deriving stock instance (Show (ImportType s), Show (PatternType s), Show (ExpressionType s)) ⇒ Show (Module s)
+deriving stock instance (Eq (ImportType s), Eq (PatternType s), Eq (ExpressionType s)) ⇒ Eq (Module s)
+deriving stock instance (Ord (ImportType s), Ord (PatternType s), Ord (ExpressionType s)) ⇒ Ord (Module s)
 
 data OpenModule = OpenModule {
   openModuleName ∷ Symbol,
