@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# language DeriveGeneric #-}
 {-# language UndecidableInstances #-}
 -- | Adapted from heliaxdev/Juvix/library/StandardLibrary/src/Juvix
 module MiniJuvix.Parsing.Language where
@@ -6,6 +6,7 @@ module MiniJuvix.Parsing.Language where
 
 import MiniJuvix.Utils.Prelude
 import qualified Data.Kind                   as GHC
+import Data.Singletons
 
 --------------------------------------------------------------------------------
 -- Parsing stage
@@ -242,6 +243,20 @@ deriving stock instance (Ord (PatternType s), Ord (ExpressionType s)) ⇒ Ord (F
 --------------------------------------------------------------------------------
 
 data ModuleIsTop = ModuleTop | ModuleLocal
+
+-- The following Singleton related definitions could be scrapped if we depended
+-- on the singletons-th library.
+data SModuleIsTop (t ∷ ModuleIsTop) where
+  SModuleTop ∷ SModuleIsTop 'ModuleTop
+  SModuleLocal ∷ SModuleIsTop 'ModuleLocal
+
+type instance Sing = SModuleIsTop
+
+instance SingI 'ModuleTop where
+  sing = SModuleTop
+
+instance SingI 'ModuleLocal where
+  sing = SModuleLocal
 
 data Module (s ∷ Stage) (t ∷ ModuleIsTop)
   = Module

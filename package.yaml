@@ -47,12 +47,14 @@ ghc-options:
 - -Wmissing-deriving-strategies
 
 default-extensions:
+- DataKinds
 - DerivingStrategies
 - FlexibleContexts
-- DataKinds
+- GADTs
 - KindSignatures
 - NoImplicitPrelude
 - OverloadedStrings
+- PolyKinds
 - RecordWildCards
 - ScopedTypeVariables
 - StandaloneDeriving
