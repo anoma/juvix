@@ -26,7 +26,11 @@ type family PatternType (s ∷ Stage) ∷ GHC.Type where
 
 type family ImportType (s ∷ Stage) ∷ GHC.Type where
   ImportType 'Parsed = Import
-  ImportType 'Scoped = Module 'Scoped
+  ImportType 'Scoped = Module 'Scoped 'ModuleTop
+
+type family ModulePathType (t ∷ ModuleIsTop) ∷ GHC.Type where
+  ModulePathType 'ModuleTop = ModulePath
+  ModulePathType 'ModuleLocal = Symbol
 
 --------------------------------------------------------------------------------
 -- Symbols and names
@@ -66,7 +70,7 @@ data Statement (s ∷ Stage)
   | StatementTypeSignature (TypeSignature s)
   | StatementImport (ImportType s)
   | StatementDataType (DataTypeDef s)
-  | StatementModule (Module s)
+  | StatementModule (Module s 'ModuleLocal)
   | StatementOpenModule OpenModule
   | StatementFunctionClause (FunctionClause s)
   | StatementAxiom (AxiomDef s)
@@ -237,14 +241,16 @@ deriving stock instance (Ord (PatternType s), Ord (ExpressionType s)) ⇒ Ord (F
 -- Module declaration
 --------------------------------------------------------------------------------
 
-data Module (s ∷ Stage)
+data ModuleIsTop = ModuleTop | ModuleLocal
+
+data Module (s ∷ Stage) (t ∷ ModuleIsTop)
   = Module
-      { moduleName ∷ Symbol,
+      { moduleModulePath ∷ ModulePathType t,
         moduleBody ∷ [Statement s]
       }
-deriving stock instance (Show (ImportType s), Show (PatternType s), Show (ExpressionType s)) ⇒ Show (Module s)
-deriving stock instance (Eq (ImportType s), Eq (PatternType s), Eq (ExpressionType s)) ⇒ Eq (Module s)
-deriving stock instance (Ord (ImportType s), Ord (PatternType s), Ord (ExpressionType s)) ⇒ Ord (Module s)
+deriving stock instance (Show (ModulePathType t), Show (ImportType s), Show (PatternType s), Show (ExpressionType s)) ⇒ Show (Module s t)
+deriving stock instance (Eq (ModulePathType t), Eq (ImportType s), Eq (PatternType s), Eq (ExpressionType s)) ⇒ Eq (Module s t)
+deriving stock instance (Ord (ModulePathType t), Ord (ImportType s), Ord (PatternType s), Ord (ExpressionType s)) ⇒ Ord (Module s t)
 
 data OpenModule = OpenModule {
   openModuleName ∷ Symbol,

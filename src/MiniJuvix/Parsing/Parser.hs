@@ -20,18 +20,18 @@ debugModuleParser fileName = do
     Left err → error err
     Right m → print m
 
-runModuleParserIO ∷ FilePath → IO (Either Text (Module 'Parsed))
+runModuleParserIO ∷ FilePath → IO (Either Text (Module 'Parsed 'ModuleTop))
 runModuleParserIO fileName = do
   input ← Text.readFile fileName
   return (runModuleParser fileName input)
 
-runModuleParser ∷ FilePath → Text → Either Text (Module 'Parsed)
+runModuleParser ∷ FilePath → Text → Either Text (Module 'Parsed 'ModuleTop)
 runModuleParser fileName input =
   case P.runParser topModuleDef fileName input of
     Left err → Left $ Text.pack (P.errorBundlePretty err)
     Right r → return r
 
-topModuleDef ∷ MonadParsec Void Text m ⇒ m (Module 'Parsed)
+topModuleDef ∷ MonadParsec Void Text m ⇒ m (Module 'Parsed 'ModuleTop)
 topModuleDef = space >> moduleDef <* P.eof
 
 --------------------------------------------------------------------------------
@@ -56,6 +56,9 @@ mkModulePath l = ModulePath (NonEmpty.init l) (NonEmpty.last l)
 
 symbolList ∷ MonadParsec e Text m ⇒ m (NonEmpty Symbol)
 symbolList = braces (P.sepBy1 symbol kwSemicolon)
+
+modulePath ∷ MonadParsec e Text m ⇒ m ModulePath
+modulePath = mkModulePath <$> dottedSymbol
 
 --------------------------------------------------------------------------------
 -- Top level statement
@@ -102,7 +105,7 @@ operatorSyntaxDef = do
 import_ ∷ MonadParsec e Text m ⇒ m Import
 import_ = do
   kwImport
-  importModule ← mkModulePath <$> dottedSymbol
+  importModule ← modulePath
   return Import {..}
 
 --------------------------------------------------------------------------------
@@ -291,7 +294,7 @@ functionClause clauseOwnerFunction = do
 moduleDef ∷ MonadParsec e Text m ⇒ m (Module 'Parsed)
 moduleDef = do
   kwModule
-  moduleName ← symbol
+  moduleModulePath ← modulePath
   moduleBody ← P.sepBy statement kwSemicolon
   kwEnd
   return Module{..}
