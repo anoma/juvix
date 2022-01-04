@@ -24,8 +24,8 @@ name ∷ ∀ e m. MonadParsec e Text m ⇒ m Name
 name = do
   parts ← dottedSymbol
   return $ case nonEmptyUnsnoc parts of
-    (Just p, n) → QualifiedName (Qualified (mkModulePath p) n)
-    (Nothing, n) → Unqualified n
+    (Just p, n) → NameQualified (QualifiedName (mkModulePath p) n)
+    (Nothing, n) → NameUnqualified n
 
 mkModulePath ∷ NonEmpty Symbol → ModulePath
 mkModulePath l = ModulePath (NonEmpty.init l) (NonEmpty.last l)

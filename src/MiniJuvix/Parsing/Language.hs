@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# language UndecidableInstances #-}
 -- | Adapted from heliaxdev/Juvix/library/StandardLibrary/src/Juvix
 module MiniJuvix.Parsing.Language where
@@ -38,17 +39,18 @@ data ModulePath = ModulePath {
   modulePathDir ∷ [Symbol],
   modulePathName ∷ Symbol
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+instance Hashable ModulePath
 
-data Qualified = Qualified {
-  modulePath ∷ ModulePath,
-  nameSymbol ∷ Symbol
+data QualifiedName = QualifiedName {
+  qualifiedModulePath ∷ ModulePath,
+  qualifiedNameSymbol ∷ Symbol
   }
   deriving stock (Show, Eq, Ord)
 
 data Name =
-  QualifiedName Qualified
-  | Unqualified Symbol
+  NameQualified QualifiedName
+  | NameUnqualified Symbol
   deriving stock (Show, Eq, Ord)
 
 --------------------------------------------------------------------------------
@@ -187,7 +189,7 @@ deriving stock instance Ord (ExpressionType s) ⇒ Ord (DataTypeDef s)
 
 data Pattern
   = PatternVariable Symbol
-  | PatternConstructor DataConstructorName [Pattern]
+  | PatternAppConstructor QualifiedName Pattern
   | PatternWildcard
   | PatternEmpty
   deriving stock (Show, Eq, Ord)
@@ -252,7 +254,7 @@ data OpenModule = OpenModule {
 --------------------------------------------------------------------------------
 
 data Expression
-  = ExprIdentifier Name
+  = ExprIdentifier QualifiedName
   | ExprApplication Application
   | ExprLambda (Lambda 'Scoped)
   | ExprLetBlock (LetBlock 'Scoped)
