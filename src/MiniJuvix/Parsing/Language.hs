@@ -29,7 +29,7 @@ type family ImportType (s ∷ Stage) ∷ GHC.Type where
   ImportType 'Parsed = Import
   ImportType 'Scoped = Module 'Scoped 'ModuleTop
 
-type family ModulePathType (t ∷ ModuleIsTop) ∷ GHC.Type where
+type family ModulePathType (t ∷ ModuleIsTop) ∷ (res ∷ GHC.Type) | res → t where
   ModulePathType 'ModuleTop = ModulePath
   ModulePathType 'ModuleLocal = Symbol
 

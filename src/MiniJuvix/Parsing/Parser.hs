@@ -8,6 +8,7 @@ import MiniJuvix.Parsing.Base (MonadParsec)
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
+import Data.Singletons
 
 --------------------------------------------------------------------------------
 -- Running the parser
@@ -291,10 +292,15 @@ functionClause clauseOwnerFunction = do
 -- Module declaration
 --------------------------------------------------------------------------------
 
-moduleDef ∷ MonadParsec e Text m ⇒ m (Module 'Parsed)
+pmoduleModulePath ∷ ∀ t e m. (SingI t, MonadParsec e Text m) ⇒ m (ModulePathType t)
+pmoduleModulePath = case sing ∷ SModuleIsTop t of
+  SModuleTop → modulePath
+  SModuleLocal → symbol
+
+moduleDef ∷ (SingI t, MonadParsec e Text m) ⇒ m (Module 'Parsed t)
 moduleDef = do
   kwModule
-  moduleModulePath ← modulePath
+  moduleModulePath ← pmoduleModulePath
   moduleBody ← P.sepBy statement kwSemicolon
   kwEnd
   return Module{..}

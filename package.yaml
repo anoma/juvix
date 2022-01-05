@@ -58,7 +58,7 @@ default-extensions:
 - RecordWildCards
 - ScopedTypeVariables
 - StandaloneDeriving
-- TypeFamilies
+- TypeFamilyDependencies
 - UnicodeSyntax
 
 library:
