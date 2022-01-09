@@ -26,6 +26,8 @@ runModuleParserIO fileName = do
   input ← Text.readFile fileName
   return (runModuleParser fileName input)
 
+-- | The 'FilePath' is only used for reporting errors. It is safe to pass
+-- an empty string.
 runModuleParser ∷ FilePath → Text → Either Text (Module 'Parsed 'ModuleTop)
 runModuleParser fileName input =
   case P.runParser topModuleDef fileName input of
@@ -86,9 +88,10 @@ precedence = decimal
 
 operatorSyntaxDef ∷ ∀ e m. MonadParsec e Text m ⇒ m OperatorSyntaxDef
 operatorSyntaxDef = do
-  opArity ← arity
-  opPrecedence ← precedence
+  fixityArity ← arity
+  fixityPrecedence ← precedence
   opSymbol ← symbol
+  let opFixity = Fixity {..}
   return OperatorSyntaxDef {..}
   where
   arity ∷ m OperatorArity
@@ -308,18 +311,14 @@ moduleDef = do
 openModule ∷ ∀ e m. MonadParsec e Text m ⇒ m OpenModule
 openModule = do
   kwOpen
-  openModuleName ← symbol
-  r ← optional usingOrHiding
-  let (openUsing, openHiding) = case r of
-        Nothing → (Nothing, Nothing)
-        Just (Left using) → (Just using, Nothing)
-        Just (Right hiding) → (Nothing, Just hiding)
+  openModuleName ← modulePath
+  openUsingHiding ← optional usingOrHiding
   return OpenModule {..}
   where
-  usingOrHiding ∷ m (Either (NonEmpty Symbol) (NonEmpty Symbol))
+  usingOrHiding ∷ m UsingHiding
   usingOrHiding =
-    (kwUsing >> (Left <$> symbolList))
-    <|> (kwHiding >> (Right <$> symbolList))
+    (kwUsing >> (Using <$> symbolList))
+    <|> (kwHiding >> (Hiding <$> symbolList))
 
 --------------------------------------------------------------------------------
 -- Debugging statements
