@@ -1,6 +1,9 @@
 {-# language TypeApplications #-}
 {-# language TemplateHaskell #-}
+
 module MiniJuvix.Parsing.Scoper where
+
+--------------------------------------------------------------------------------
 
 import MiniJuvix.Parsing.Language
 import qualified MiniJuvix.Parsing.Base as P
@@ -16,6 +19,8 @@ import qualified Data.Text as Text
 import Lens.Micro.Platform
 import qualified Data.HashSet as HashSet
 import qualified Data.HashMap.Strict as HashMap
+
+--------------------------------------------------------------------------------
 
 -- | Relevant scope information of a module.
 data ModuleScopeInfo = ModuleScopeInfo {

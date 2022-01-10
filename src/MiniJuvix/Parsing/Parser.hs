@@ -12,7 +12,6 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import Data.Singletons
 
-
 --------------------------------------------------------------------------------
 -- Running the parser
 --------------------------------------------------------------------------------
@@ -270,7 +269,7 @@ lambda ∷ MonadParsec e Text m ⇒ m (Lambda 'Parsed)
 lambda = do
   kwLambda
   lambdaParameters ← P.some patternSection
-  kwArrowR
+  kwRightArrow
   lambdaBody ← expressionSections
   return Lambda{..}
 
@@ -305,13 +304,13 @@ constructorDef = do
 -- Pattern section
 --------------------------------------------------------------------------------
 
-patternSection :: forall e m. MonadParsec e Text m => m PatternSection
+patternSection :: forall e m. MonadParsec e Text m => m (PatternSection 'Parsed)
 patternSection =
-  PatternSectionVariable <$> symbol
+  PatternSectionName <$> name
     <|> PatternSectionWildcard <$ kwWildcard
     <|> (PatternSectionParen <$> parens patternSections)
 
-patternSections :: forall e m. MonadParsec e Text m => m PatternSections
+patternSections :: forall e m. MonadParsec e Text m => m (PatternSections 'Parsed)
 patternSections = PatternSections <$> P.some patternSection
 
 --------------------------------------------------------------------------------

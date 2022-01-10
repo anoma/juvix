@@ -41,7 +41,7 @@ bareIdentifier = do
   where
   validChar ∷ Char → Bool
   validChar c = or
-    [isAlphaNum c
+    [ isAlphaNum c
     , isMathSymbol
     , isCurrencySymbol
     , c `elem` ("_'-" ∷ String)
@@ -57,16 +57,12 @@ dot = P.char '.'
 dottedIdentifier ∷ ∀ e m. MonadParsec e Text m ⇒ m (NonEmpty Text)
 dottedIdentifier = lexeme $ P.sepBy1 bareIdentifier dot
 
-parens :: MonadParsec e Text m => m a -> m a
-parens = between (symbol "(") (symbol ")")
-
 braces :: MonadParsec e Text m => m a -> m a
 braces = between (symbol "{") (symbol "}")
 
 allKeywords :: MonadParsec e Text m => [m ()]
 allKeywords =
-  [
-    kwRightArrow
+  [ kwAssignment
   , kwAxiom
   , kwColon
   , kwColonOmega
@@ -90,6 +86,7 @@ allKeywords =
   , kwPostfix
   , kwPrefix
   , kwPrint
+  , kwRightArrow
   , kwSemicolon
   , kwType
   , kwUsing

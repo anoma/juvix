@@ -3,11 +3,8 @@ version:         0.0.0.0
 license:         GPL-3.0-only
 license-file:    LICENSE
 copyright:       (c) 2021-2022 Heliax AG.
-maintainer:      [ Jonathan Prieto-Cubides <jonathan@heliax.dev>
-                 , Jan Mas Rovira <jan@heliax.dev>
-                 , Heliax AG <hello@heliax.dev>
-                 ]  
-author:          [Jonathan Prieto-Cubides , Jan Mas Rovira ]
+maintainer:      The PLT Team at Heliax AG <hello@heliax.dev>
+author:          [ Jonathan Prieto-Cubides , Jan Mas Rovira ]
 tested-with:     ghc == 9.0.1
 homepage:        https://github.com/heliaxdev/MiniJuvix
 bug-reports:     https://github.com/heliaxdev/MiniJuvix/issues

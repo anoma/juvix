@@ -229,7 +229,7 @@ data PatternSection (s ∷ Stage)
   | PatternSectionWildcard
   | PatternSectionEmpty
   | PatternSectionParen (PatternSections s)
-  
+
 deriving stock instance (Show (ExpressionType s), Show (PatternType s)) ⇒ Show (PatternSection s)
 deriving stock instance (Eq (ExpressionType s), Eq (PatternType s)) ⇒ Eq (PatternSection s)
 deriving stock instance (Ord (ExpressionType s), Ord (PatternType s)) ⇒ Ord (PatternSection s)
