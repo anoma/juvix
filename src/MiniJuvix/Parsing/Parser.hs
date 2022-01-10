@@ -1,5 +1,7 @@
 module MiniJuvix.Parsing.Parser where
 
+--------------------------------------------------------------------------------
+
 import MiniJuvix.Parsing.Language
 import MiniJuvix.Utils.Prelude hiding (universe)
 import MiniJuvix.Parsing.Lexer hiding (symbol)
@@ -9,6 +11,7 @@ import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import Data.Singletons
+
 
 --------------------------------------------------------------------------------
 -- Running the parser
@@ -41,23 +44,23 @@ topModuleDef = space >> moduleDef <* (optional kwSemicolon >> P.eof)
 -- Symbols and names
 --------------------------------------------------------------------------------
 
-symbol ∷ MonadParsec e Text m ⇒ m Symbol
+symbol :: MonadParsec e Text m => m Symbol
 symbol = Sym <$> identifier
 
-dottedSymbol ∷ ∀ e m. MonadParsec e Text m ⇒ m (NonEmpty Symbol)
+dottedSymbol :: forall e m. MonadParsec e Text m => m (NonEmpty Symbol)
 dottedSymbol = fmap Sym <$> dottedIdentifier
 
-name ∷ ∀ e m. MonadParsec e Text m ⇒ m Name
+name :: forall e m. MonadParsec e Text m => m Name
 name = do
-  parts ← dottedSymbol
+  parts <- dottedSymbol
   return $ case nonEmptyUnsnoc parts of
     (Just p, n) → NameQualified (QualifiedName (mkModulePath p) n)
     (Nothing, n) → NameUnqualified n
 
-mkModulePath ∷ NonEmpty Symbol → ModulePath
+mkModulePath :: NonEmpty Symbol -> ModulePath
 mkModulePath l = ModulePath (NonEmpty.init l) (NonEmpty.last l)
 
-symbolList ∷ MonadParsec e Text m ⇒ m (NonEmpty Symbol)
+symbolList :: MonadParsec e Text m => m (NonEmpty Symbol)
 symbolList = braces (P.sepBy1 symbol kwSemicolon)
 
 modulePath ∷ MonadParsec e Text m ⇒ m ModulePath
@@ -83,10 +86,10 @@ statement =
 -- Operator syntax declaration
 --------------------------------------------------------------------------------
 
-precedence ∷ MonadParsec e Text m ⇒ m Precedence
+precedence :: MonadParsec e Text m => m Precedence
 precedence = decimal
 
-operatorSyntaxDef ∷ ∀ e m. MonadParsec e Text m ⇒ m OperatorSyntaxDef
+operatorSyntaxDef :: forall e m. MonadParsec e Text m => m OperatorSyntaxDef
 operatorSyntaxDef = do
   fixityArity ← arity
   fixityPrecedence ← precedence
@@ -94,19 +97,20 @@ operatorSyntaxDef = do
   let opFixity = Fixity {..}
   return OperatorSyntaxDef {..}
   where
-  arity ∷ m OperatorArity
-  arity = do
-    Binary AssocRight <$ kwInfixr
-    <|> Binary AssocLeft <$ kwInfixl
-    <|> Binary AssocNone <$ kwInfix
-    <|> Unary AssocPrefix <$ kwPrefix
-    <|> Unary AssocPostfix <$ kwPrefix
+    arity :: m OperatorArity
+    arity =
+      do
+        Binary AssocRight <$ kwInfixr
+        <|> Binary AssocLeft <$ kwInfixl
+        <|> Binary AssocNone <$ kwInfix
+        <|> Unary AssocPrefix <$ kwPrefix
+        <|> Unary AssocPostfix <$ kwPrefix
 
 --------------------------------------------------------------------------------
 -- Import statement
 --------------------------------------------------------------------------------
 
-import_ ∷ MonadParsec e Text m ⇒ m Import
+import_ :: MonadParsec e Text m => m Import
 import_ = do
   kwImport
   importModule ← modulePath
@@ -124,7 +128,7 @@ expressionSection = do
   <|> (SectionFunction <$> function)
   <|> (SectionMatch <$> match)
   <|> (SectionLetBlock <$> letBlock)
-  <|> (SectionFunArrow <$ kwArrowR)
+  <|> (SectionFunArrow <$ kwRightArrow)
   <|> parens (SectionParens <$> expressionSections)
 
 expressionSections ∷ MonadParsec e Text m ⇒ m (ExpressionSections 'Parsed)
@@ -162,15 +166,14 @@ letBlock = do
   letClauses ← braces (P.sepEndBy letClause kwSemicolon)
   return LetBlock {..}
 
-
 --------------------------------------------------------------------------------
 -- Universe expression
 --------------------------------------------------------------------------------
 
-defaultUniverse ∷ Universe
+defaultUniverse :: Universe
 defaultUniverse = Universe 0
 
-universe ∷ MonadParsec e Text m ⇒ m Universe
+universe :: MonadParsec e Text m => m Universe
 universe = defaultUniverse <$ kwType
 
 -------------------------------------------------------------------------------
@@ -180,8 +183,8 @@ universe = defaultUniverse <$ kwType
 typeSignature ∷ ∀ e m. MonadParsec e Text m ⇒ Symbol → m (TypeSignature 'Parsed)
 typeSignature sigName = do
   kwColon
-  sigType ← expressionSections
-  return TypeSignature{..}
+  sigType <- expressionSections
+  return TypeSignature {..}
 
 -------------------------------------------------------------------------------
 -- Aux type signature function clause
@@ -191,9 +194,9 @@ typeSignature sigName = do
 auxTypeSigFunClause ∷ ∀ e m. MonadParsec e Text m
   ⇒ m (Either (TypeSignature 'Parsed) (FunctionClause 'Parsed))
 auxTypeSigFunClause = do
-  s ← symbol
+  s <- symbol
   (Left <$> typeSignature s)
-   <|> (Right <$> functionClause s)
+    <|> (Right <$> functionClause s)
 
 -------------------------------------------------------------------------------
 -- Axioms
@@ -202,10 +205,10 @@ auxTypeSigFunClause = do
 axiomDef ∷ ∀ e m. MonadParsec e Text m ⇒ m (AxiomDef 'Parsed)
 axiomDef = do
   kwAxiom
-  axiomName ← symbol
+  axiomName <- symbol
   kwColon
-  axiomType ← expressionSections
-  return AxiomDef{..}
+  axiomType <- expressionSections
+  return AxiomDef {..}
 
 --------------------------------------------------------------------------------
 -- Function expression
@@ -237,10 +240,10 @@ functionParam = explicitFunParam
 
 function ∷ MonadParsec e Text m ⇒ m (Function 'Parsed)
 function = do
-  funParameter ← functionParam
-  kwArrowR
-  funReturn ← expressionSections
-  return Function{..}
+  funParameter <- functionParam
+  kwRightArrow
+  funReturn <- expressionSections
+  return Function {..}
 
 --------------------------------------------------------------------------------
 -- Where block clauses
@@ -254,7 +257,7 @@ whereBlock = do
 whereClause ∷ ∀ e m. MonadParsec e Text m ⇒ m (WhereClause 'Parsed)
 whereClause =
   (WhereOpenModule <$> openModule)
-  <|> sigOrFun
+    <|> sigOrFun
   where
   sigOrFun ∷ m (WhereClause 'Parsed)
   sigOrFun = either WhereTypeSig WhereFunClause <$> auxTypeSigFunClause
@@ -293,22 +296,22 @@ dataTypeParam = parens $ do
 
 constructorDef ∷ MonadParsec e Text m ⇒ m (DataConstructorDef 'Parsed)
 constructorDef = do
-  constructorName ← symbol
+  constructorName <- symbol
   kwColon
-  constructorType ← expressionSections
+  constructorType <- expressionSections
   return DataConstructorDef {..}
 
 --------------------------------------------------------------------------------
 -- Pattern section
 --------------------------------------------------------------------------------
 
-patternSection ∷ ∀ e m. MonadParsec e Text m ⇒ m (PatternSection 'Parsed)
+patternSection :: forall e m. MonadParsec e Text m => m PatternSection
 patternSection =
-  PatternSectionName <$> name
-  <|> PatternSectionWildcard <$ kwWildcard
-  <|> (PatternSectionParen <$> parens patternSections)
+  PatternSectionVariable <$> symbol
+    <|> PatternSectionWildcard <$ kwWildcard
+    <|> (PatternSectionParen <$> parens patternSections)
 
-patternSections ∷ ∀ e m. MonadParsec e Text m ⇒ m (PatternSections 'Parsed)
+patternSections :: forall e m. MonadParsec e Text m => m PatternSections
 patternSections = PatternSections <$> P.some patternSection
 
 --------------------------------------------------------------------------------
@@ -317,11 +320,11 @@ patternSections = PatternSections <$> P.some patternSection
 
 functionClause ∷ ∀ e m. MonadParsec e Text m ⇒ Symbol → m (FunctionClause 'Parsed)
 functionClause clauseOwnerFunction = do
-  clausePatterns ← P.many patternSection
-  kwDef
-  clauseBody ← expressionSections
-  clauseWhere ← optional whereBlock
-  return FunClause{..}
+  clausePatterns <- P.many patternSection
+  kwAssignment
+  clauseBody <- expressionSections
+  clauseWhere <- optional whereBlock
+  return FunClause {..}
 
 --------------------------------------------------------------------------------
 -- Module declaration

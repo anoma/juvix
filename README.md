@@ -1,7 +1,6 @@
 MiniJuvix  <!-- [![GitHub CI](https://github.com/heliaxdev/MiniJuvix/workflows/CI/badge.svg)](https://github.com/heliaxdev/MiniJuvix/actions) -->
-[![GPL-3.0-only license](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](LICENSE) [![Haskell CI](https://github.com/heliaxdev/MiniJuvix/actions/workflows/haskell.yml/badge.svg?branch=qtt)](https://github.com/heliaxdev/MiniJuvix/actions/workflows/haskell.yml)
+[![GPL-3.0-only license](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](LICENSE) [![Haskell CI](https://github.com/heliaxdev/MiniJuvix/actions/workflows/ci.yml/badge.svg?branch=qtt)](https://github.com/heliaxdev/MiniJuvix/actions/workflows/ci.yml)
 =========
-
 
 This repository aims to be a conservative Haskell project of a tiny
 language with dependent types based on the Juvix project. The primary
@@ -9,69 +8,18 @@ purpose is to be a laboratory to study/experiment in implementing a
 functional language with dependent types. 
 
 In this branch `qtt`, MiniJuvix aims to be programming language based
-on Quantitative type theory, but with the semiring of the extended
-natural numbers. Some Haskell code has been generated automatically by
-`agda2hs`. In the future, we want to prove properties about the
-Minijuvix programs directly in Agda.
+on Quantitative type theory. Some Haskell code has been generated
+automatically by `agda2hs`. In the future, we want to prove properties
+about the Minijuvix programs directly in Agda.
 
 The following is a tentative project structure, but it can change at
 any moment. See below the file project structure. The diagram shows
 the design of the compiler related with the project structure. 
 
 <p align="center">
-<img src="doc/minijuvix.png">
+<img src="docs/minijuvix.png">
 </p>
 
-In the picture, syntax transformations are denoted by pᵢ (e.g. passes in
-the Juvix Translate library) and checking operations are denoted by cᵢ
-(e.g. found in the Juvix Core library), and both families of items are the priority of this project.
+In the picture, syntax transformations are denoted by pᵢ and checking
+operations are denoted by cᵢ .
 
-
-```bash
-$ tree src/
-...
-.
-├── MiniJuvix
-│   ├── Desugaring
-│   │   └── Error.hs
-│   ├── Error.hs
-│   ├── Monad.hs
-│   ├── Parsing
-│   │   ├── ADT.hs
-│   │   ├── Error.hs
-│   │   ├── Location.hs
-│   │   └── Parser.hs
-│   ├── Pipeline.hs
-│   ├── Pretty.hs
-│   ├── Syntax
-│   │   ├── Core.agda
-│   │   ├── Core.hs
-│   │   ├── Desugared.hs
-│   │   ├── Eval.agda
-│   │   ├── Eval.hs
-│   │   └── Sugared.hs
-│   ├── Typing
-│   │   ├── Coverage.hs
-│   │   ├── Erasure.hs
-│   │   ├── Error.hs
-│   │   ├── Scopechecking.hs
-│   │   ├── Termination.hs
-│   │   └── Typechecking.hs
-│   └── Utils
-│       ├── File.hs
-│       ├── Monad.hs
-│       ├── NameSymbol.hs
-│       ├── Parser
-│       │   ├── Lexer.hs
-│       │   └── Token.hs
-│       ├── Parser.hs
-│       ├── Prelude.hs
-│       ├── Pretty.hs
-│       └── Version.hs
-├── app
-│   ├── Main.hs
-│   └── Options.hs
-└── test
-    └── Spec.hs
-...
-```

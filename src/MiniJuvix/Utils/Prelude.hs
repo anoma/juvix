@@ -18,11 +18,10 @@ module MiniJuvix.Utils.Prelude
   )
 where
 
-import qualified Data.List.NonEmpty as NonEmpty
-
 --------------------------------------------------------------------------------
 
 import qualified Data.Char as Char
+import qualified Data.List.NonEmpty as NonEmpty
 import Relude hiding
   ( Type,
     one,
@@ -42,7 +41,7 @@ infixr 2 ∨
 
 infixr 3 ∧
 
-(.||.) ∷ (a → Bool) → (a → Bool) → a → Bool
+(.||.) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
 (f .||. g) x = f x || g x
 
 --------------------------------------------------------------------------------
@@ -104,23 +103,23 @@ class Monoid m => Semiring m where
 -- List
 --------------------------------------------------------------------------------
 
-unsnoc ∷ [a] -> Maybe ([a], a)
+unsnoc :: [a] -> Maybe ([a], a)
 unsnoc [] = Nothing
 unsnoc [x] = Just ([], x)
-unsnoc (x:xs) = case unsnoc xs of
-  Just (a, b) → Just (x:a, b)
-  _ → error "impossible"
+unsnoc (x : xs) = case unsnoc xs of
+  Just (a, b) -> Just (x : a, b)
+  _ -> error "impossible"
 
 --------------------------------------------------------------------------------
 -- NonEmpty
 --------------------------------------------------------------------------------
 
-nonEmptyUnsnoc ∷ NonEmpty a → (Maybe (NonEmpty a), a)
+nonEmptyUnsnoc :: NonEmpty a -> (Maybe (NonEmpty a), a)
 nonEmptyUnsnoc e = (NonEmpty.nonEmpty (NonEmpty.init e), NonEmpty.last e)
 
 --------------------------------------------------------------------------------
 -- Tuple
 --------------------------------------------------------------------------------
 
-mapFirst ∷ (a → b) → (a , d) → (b , d)
-mapFirst f (a , b) = (f a, b)
+mapFirst :: (a -> b) -> (a, d) -> (b, d)
+mapFirst f (a, b) = (f a, b)

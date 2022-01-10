@@ -5,24 +5,37 @@ module FirstMilestone;
 --------------------------------------------------------------------------------
 
 module M;  -- This creates a module called M.
-end;       -- This closed the current module in scope.
-
-open M;    -- This will bring to the scope all the name/definitions
-           -- from the module called M.
+end;       -- This closes the current module in scope.
 
 --------------------------------------------------------------------------------
--- Import definitions from other modules
+-- Import definitions from existing modules
 --------------------------------------------------------------------------------
 
--- import moduleName { names } hiding { names };
+import Primitives;
 
-import Primitives;        -- this imports to the local scope all the
-                          -- public names in a module called Primitives.
+{- The line above will import to the local scope all the
+   public names qualified in the module called
+   Primitives.
+-}
 
-import Backend { LLVM };  -- this imports to the local scope only a
-                          -- var. called LLVM.
+open Primitives;
 
-import Prelude hiding { Nat, Vec, Empty, Unit };  -- name hiding.
+{- The line above will import to the local scope all the
+   public names unqualified in the module called
+   Prelude.
+-}
+
+import Backend;
+
+-- Additionally, one can only import unqualified names by means of
+-- the keyword "using".
+open Backend using { LLVM };  -- this imports to the local scope only the
+                              -- variable called LLVM.
+-- One can use ---in combination with `using`--- the keyword `hiding`
+-- to avoid importing undesirable names.
+
+import Prelude;
+open Prelude using { Bool } hiding { Nat ; Unit ; Empty } ;
 
 --------------------------------------------------------------------------------
 -- Inductive type declarations

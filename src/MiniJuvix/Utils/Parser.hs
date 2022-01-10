@@ -259,7 +259,8 @@ curly p = between openCurly p closeCurly
 many1H :: Parser a -> Parser (NonEmpty a)
 many1H = fmap fromList . P.some
 
--- | 'sepBy1HFinal' is like 'sepBy1H' but also tries to parse a last separator
+-- | 'sepBy1HFinal' is like 'sepBy1H' but also tries to
+-- parse a last separator
 sepBy1HFinal :: Parser a -> Parser s -> Parser (NonEmpty a)
 sepBy1HFinal parse sep = sepBy1H parse sep <* P.optional sep
 

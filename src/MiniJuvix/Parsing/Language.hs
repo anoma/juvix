@@ -1,16 +1,19 @@
+
 {-# language DeriveGeneric #-}
 {-# language UndecidableInstances #-}
--- | Adapted from heliaxdev/Juvix/library/StandardLibrary/src/Juvix
 module MiniJuvix.Parsing.Language where
 
+--------------------------------------------------------------------------------
 
+import qualified Data.Kind as GHC
 import MiniJuvix.Utils.Prelude
-import qualified Data.Kind                   as GHC
 import Data.Singletons
 import Language.Haskell.TH.Syntax (Lift)
 
 --------------------------------------------------------------------------------
--- Parsing stage
+
+--------------------------------------------------------------------------------
+-- Parsing stages
 --------------------------------------------------------------------------------
 
 data Stage =
@@ -67,7 +70,7 @@ data Name =
 -- Top level statement
 --------------------------------------------------------------------------------
 
-data Statement (s ∷ Stage)
+data Statement (s :: Stage)
   = StatementOperator OperatorSyntaxDef
   | StatementTypeSignature (TypeSignature s)
   | StatementImport (ImportType s)
@@ -78,6 +81,7 @@ data Statement (s ∷ Stage)
   | StatementAxiom (AxiomDef s)
   | StatementEval (Eval s)
   | StatementPrint (Print s)
+
 deriving stock instance (Show (ImportType s), Show (PatternType s), Show (ExpressionType s)) ⇒ Show (Statement s)
 deriving stock instance (Eq (ImportType s), Eq (PatternType s), Eq (ExpressionType s)) ⇒ Eq (Statement s)
 deriving stock instance (Ord (ImportType s), Ord (PatternType s), Ord (ExpressionType s)) ⇒ Ord (Statement s)
@@ -91,7 +95,7 @@ newtype Import = Import {
   importModule ∷ ModulePath
   }
   deriving stock (Show, Eq, Ord, Lift)
-
+  
 --------------------------------------------------------------------------------
 -- Operator syntax declaration
 --------------------------------------------------------------------------------
@@ -127,7 +131,7 @@ data OperatorSyntaxDef =
   deriving stock (Show, Eq, Ord, Lift)
 
 -------------------------------------------------------------------------------
--- Usage
+-- Quantity
 -------------------------------------------------------------------------------
 
 data Usage =
@@ -140,12 +144,12 @@ data Usage =
 -- Type signature declaration
 -------------------------------------------------------------------------------
 
-data TypeSignature (s ∷ Stage)
+data TypeSignature (s :: Stage)
   = TypeSignature
-      {
-        sigName ∷ Symbol,
-        sigType ∷ ExpressionType s
+      { sigName :: Symbol,
+        sigType :: ExpressionType s
       }
+      
 deriving stock instance Show (ExpressionType s) ⇒ Show (TypeSignature s)
 deriving stock instance Eq (ExpressionType s) ⇒ Eq (TypeSignature s)
 deriving stock instance Ord (ExpressionType s) ⇒ Ord (TypeSignature s)
@@ -159,6 +163,7 @@ data AxiomDef (s ∷ Stage) = AxiomDef {
    axiomName ∷ Symbol,
    axiomType ∷ ExpressionType s
   }
+  
 deriving stock instance Show (ExpressionType s) ⇒ Show (AxiomDef s)
 deriving stock instance Eq (ExpressionType s) ⇒ Eq (AxiomDef s)
 deriving stock instance Ord (ExpressionType s) ⇒ Ord (AxiomDef s)
@@ -191,18 +196,18 @@ deriving stock instance Eq (ExpressionType s) ⇒ Eq (DataTypeParameter s)
 deriving stock instance Ord (ExpressionType s) ⇒ Ord (DataTypeParameter s)
 deriving stock instance Lift (ExpressionType s) ⇒ Lift (DataTypeParameter s)
 
-data DataTypeDef (s ∷ Stage)
+data DataTypeDef (s :: Stage)
   = DataTypeDef
-      { dataTypeName ∷ DataTypeName,
-        dataTypeParameters ∷ [DataTypeParameter s],
-        dataTypeType ∷ Maybe (ExpressionType s),
-        dataTypeConstructors ∷ [DataConstructorDef s]
+      { dataTypeName :: DataTypeName,
+        dataTypeParameters :: [DataTypeParameter s],
+        dataTypeType :: Maybe (ExpressionType s),
+        dataTypeConstructors :: [DataConstructorDef s]
       }
+
 deriving stock instance Show (ExpressionType s) ⇒ Show (DataTypeDef s)
 deriving stock instance Eq (ExpressionType s) ⇒ Eq (DataTypeDef s)
 deriving stock instance Ord (ExpressionType s) ⇒ Ord (DataTypeDef s)
 deriving stock instance Lift (ExpressionType s) ⇒ Lift (DataTypeDef s)
-
 
 --------------------------------------------------------------------------------
 -- Pattern
@@ -224,12 +229,14 @@ data PatternSection (s ∷ Stage)
   | PatternSectionWildcard
   | PatternSectionEmpty
   | PatternSectionParen (PatternSections s)
+  
 deriving stock instance (Show (ExpressionType s), Show (PatternType s)) ⇒ Show (PatternSection s)
 deriving stock instance (Eq (ExpressionType s), Eq (PatternType s)) ⇒ Eq (PatternSection s)
 deriving stock instance (Ord (ExpressionType s), Ord (PatternType s)) ⇒ Ord (PatternSection s)
 deriving stock instance (Lift (ExpressionType s), Lift (PatternType s)) ⇒ Lift (PatternSection s)
 
 newtype PatternSections (s ∷ Stage) = PatternSections (NonEmpty (PatternSection s))
+
 deriving stock instance (Show (ExpressionType s), Show (PatternType s)) ⇒ Show (PatternSections s)
 deriving stock instance (Eq (ExpressionType s), Eq (PatternType s)) ⇒ Eq (PatternSections s)
 deriving stock instance (Ord (ExpressionType s), Ord (PatternType s)) ⇒ Ord (PatternSections s)
@@ -278,6 +285,7 @@ data Module (s ∷ Stage) (t ∷ ModuleIsTop)
       { moduleModulePath ∷ ModulePathType t,
         moduleBody ∷ [Statement s]
       }
+      
 deriving stock instance (Show (ModulePathType t), Show (ImportType s), Show (PatternType s), Show (ExpressionType s)) ⇒ Show (Module s t)
 deriving stock instance (Eq (ModulePathType t), Eq (ImportType s), Eq (PatternType s), Eq (ExpressionType s)) ⇒ Eq (Module s t)
 deriving stock instance (Ord (ModulePathType t), Ord (ImportType s), Ord (PatternType s), Ord (ExpressionType s)) ⇒ Ord (Module s t)
@@ -321,12 +329,14 @@ data ExpressionSection (s ∷ Stage)
   | SectionFunArrow
   | SectionMatch (Match s)
   | SectionParens (ExpressionSections s)
+  
 deriving stock instance (Show (ExpressionType s), Show (PatternType s)) ⇒ Show (ExpressionSection s)
 deriving stock instance (Eq (ExpressionType s), Eq (PatternType s)) ⇒ Eq (ExpressionSection s)
 deriving stock instance (Ord (ExpressionType s), Ord (PatternType s)) ⇒ Ord (ExpressionSection s)
 deriving stock instance (Lift (ExpressionType s), Lift (PatternType s)) ⇒ Lift (ExpressionSection s)
 
 newtype ExpressionSections (s ∷ Stage) = ExpressionSections (NonEmpty (ExpressionSection s))
+
 deriving stock instance (Show (ExpressionType s), Show (PatternType s)) ⇒ Show (ExpressionSections s)
 deriving stock instance (Eq (ExpressionType s), Eq (PatternType s)) ⇒ Eq (ExpressionSections s)
 deriving stock instance (Ord (ExpressionType s), Ord (PatternType s)) ⇒ Ord (ExpressionSections s)
@@ -340,6 +350,7 @@ data MatchAlt (s ∷ Stage) = MatchAlt {
   matchAltPattern ∷ PatternType s,
   matchAltBody ∷ ExpressionType s
   }
+  
 deriving stock instance (Show (ExpressionType s), Show (PatternType s)) ⇒ Show (MatchAlt s)
 deriving stock instance (Eq (ExpressionType s), Eq (PatternType s)) ⇒ Eq (MatchAlt s)
 deriving stock instance (Ord (ExpressionType s), Ord (PatternType s)) ⇒ Ord (MatchAlt s)
@@ -353,7 +364,6 @@ deriving stock instance (Show (ExpressionType s), Show (PatternType s)) ⇒ Show
 deriving stock instance (Eq (ExpressionType s), Eq (PatternType s)) ⇒ Eq (Match s)
 deriving stock instance (Ord (ExpressionType s), Ord (PatternType s)) ⇒ Ord (Match s)
 deriving stock instance (Lift (ExpressionType s), Lift (PatternType s)) ⇒ Lift (Match s)
-
 
 --------------------------------------------------------------------------------
 -- Universe expression
@@ -376,7 +386,6 @@ deriving stock instance Eq (ExpressionType s) ⇒ Eq (FunctionParameter s)
 deriving stock instance Ord (ExpressionType s) ⇒ Ord (FunctionParameter s)
 deriving stock instance Lift (ExpressionType s) ⇒ Lift (FunctionParameter s)
 
-
 data Function (s ∷ Stage) = Function {
   funParameter ∷ FunctionParameter s,
   funReturn ∷ ExpressionType s
@@ -393,15 +402,17 @@ deriving stock instance Lift (ExpressionType s) ⇒ Lift (Function s)
 newtype WhereBlock (s ∷ Stage) = WhereBlock {
   whereClauses ∷ [WhereClause s]
   }
+  
 deriving stock instance (Show (PatternType s), Show (ExpressionType s)) ⇒ Show (WhereBlock s)
 deriving stock instance (Eq (PatternType s), Eq (ExpressionType s)) ⇒ Eq (WhereBlock s)
 deriving stock instance (Ord (PatternType s), Ord (ExpressionType s)) ⇒ Ord (WhereBlock s)
 deriving stock instance (Lift (PatternType s), Lift (ExpressionType s)) ⇒ Lift (WhereBlock s)
 
-data WhereClause (s ∷ Stage) =
-  WhereOpenModule OpenModule
+data WhereClause (s :: Stage)
+  = WhereOpenModule OpenModule
   | WhereTypeSig (TypeSignature s)
   | WhereFunClause (FunctionClause s)
+  
 deriving stock instance (Show (PatternType s), Show (ExpressionType s)) ⇒ Show (WhereClause s)
 deriving stock instance (Eq (PatternType s), Eq (ExpressionType s)) ⇒ Eq (WhereClause s)
 deriving stock instance (Ord (PatternType s), Ord (ExpressionType s)) ⇒ Ord (WhereClause s)
@@ -414,11 +425,12 @@ deriving stock instance (Lift (PatternType s), Lift (ExpressionType s)) ⇒ Lift
 -- Notes: An empty lambda, here called 'the impossible case', is a lambda
 -- expression with empty list of arguments and empty body.
 
-data Lambda (s ∷ Stage)
+data Lambda (s :: Stage)
   = Lambda
-      { lambdaParameters ∷ NonEmpty (PatternType s),
-        lambdaBody ∷ ExpressionType s
+      { lambdaParameters :: NonEmpty (PatternType s),
+        lambdaBody :: ExpressionType s
       }
+      
 deriving stock instance (Show (PatternType s), Show (ExpressionType s)) ⇒ Show (Lambda s)
 deriving stock instance (Eq (PatternType s), Eq (ExpressionType s)) ⇒ Eq (Lambda s)
 deriving stock instance (Ord (PatternType s), Ord (ExpressionType s)) ⇒ Ord (Lambda s)
@@ -439,9 +451,8 @@ data Application
 -- Let block expression
 --------------------------------------------------------------------------------
 
-newtype LetBlock (s ∷ Stage) = LetBlock {
-  letClauses ∷ [LetClause s]
-  }
+newtype LetBlock (s ∷ Stage) = LetBlock { letClauses ∷ [LetClause s] }
+
 deriving stock instance (Show (PatternType s), Show (ExpressionType s)) ⇒ Show (LetBlock s)
 deriving stock instance (Eq (PatternType s), Eq (ExpressionType s)) ⇒ Eq (LetBlock s)
 deriving stock instance (Ord (PatternType s), Ord (ExpressionType s)) ⇒ Ord (LetBlock s)
@@ -459,18 +470,16 @@ deriving stock instance (Lift (PatternType s), Lift (ExpressionType s)) ⇒ Lift
 -- Debugging statements
 --------------------------------------------------------------------------------
 
-newtype Eval (s ∷ Stage) = Eval {
-  evalExpression ∷ ExpressionType s
-  }
+newtype Eval (s ∷ Stage) = Eval { evalExpression ∷ ExpressionType s }
+  
 deriving stock instance Show (ExpressionType s) ⇒ Show (Eval s)
 deriving stock instance Eq (ExpressionType s) ⇒ Eq (Eval s)
 deriving stock instance Ord (ExpressionType s) ⇒ Ord (Eval s)
 deriving stock instance Lift (ExpressionType s) ⇒ Lift (Eval s)
 
 
-newtype Print (s ∷ Stage) = Print {
-  printExpression ∷ ExpressionType s
-  }
+newtype Print (s ∷ Stage) = Print { printExpression ∷ ExpressionType s }
+  
 deriving stock instance Show (ExpressionType s) ⇒ Show (Print s)
 deriving stock instance Eq (ExpressionType s) ⇒ Eq (Print s)
 deriving stock instance Ord (ExpressionType s) ⇒ Ord (Print s)

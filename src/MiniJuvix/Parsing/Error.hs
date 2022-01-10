@@ -1,4 +1,3 @@
--- | Adapted from https://github.com/heliaxdev/juvix/
 module MiniJuvix.Parsing.Error
   ( Error (..),
     ParsingError (..),
@@ -7,7 +6,6 @@ where
 
 --------------------------------------------------------------------------------
 
---------------------------------------------------------------------------------
 import MiniJuvix.Utils.Prelude
 import qualified Text.Show
 
