@@ -35,7 +35,7 @@ runModuleParser fileName input =
     Right r → return r
 
 topModuleDef ∷ MonadParsec Void Text m ⇒ m (Module 'Parsed 'ModuleTop)
-topModuleDef = space >> moduleDef <* P.eof
+topModuleDef = space >> moduleDef <* (optional kwSemicolon >> P.eof)
 
 --------------------------------------------------------------------------------
 -- Symbols and names
@@ -121,10 +121,47 @@ expressionSection = do
   SectionIdentifier <$> name
   <|> (SectionUniverse <$> universe)
   <|> (SectionLambda <$> lambda)
+  <|> (SectionFunction <$> function)
+  <|> (SectionMatch <$> match)
+  <|> (SectionLetBlock <$> letBlock)
+  <|> (SectionFunArrow <$ kwArrowR)
   <|> parens (SectionParens <$> expressionSections)
 
 expressionSections ∷ MonadParsec e Text m ⇒ m (ExpressionSections 'Parsed)
 expressionSections = ExpressionSections <$> P.some expressionSection
+
+--------------------------------------------------------------------------------
+-- Match expression
+--------------------------------------------------------------------------------
+
+matchAlt ∷ MonadParsec e Text m ⇒ m (MatchAlt 'Parsed)
+matchAlt = do
+  matchAltPattern ← patternSection
+  kwMapsTo
+  matchAltBody ← expressionSections
+  return MatchAlt {..}
+
+match ∷ MonadParsec e Text m ⇒ m (Match 'Parsed)
+match = do
+  kwMatch
+  matchExpression ← expressionSections
+  matchAlts ← braces (P.sepEndBy matchAlt kwSemicolon)
+  return Match {..}
+
+--------------------------------------------------------------------------------
+-- Let expression
+--------------------------------------------------------------------------------
+
+letClause ∷ MonadParsec e Text m ⇒ m (LetClause 'Parsed)
+letClause = do
+  either LetTypeSig LetFunClause <$> auxTypeSigFunClause
+
+letBlock ∷ MonadParsec e Text m ⇒ m (LetBlock 'Parsed)
+letBlock = do
+  kwLet
+  letClauses ← braces (P.sepEndBy letClause kwSemicolon)
+  return LetBlock {..}
+
 
 --------------------------------------------------------------------------------
 -- Universe expression
@@ -175,10 +212,14 @@ axiomDef = do
 --------------------------------------------------------------------------------
 
 explicitFunParam ∷ ∀ e m. MonadParsec e Text m ⇒ m (FunctionParameter 'Parsed)
-explicitFunParam = parens $ do
-  paramName ← pName
-  paramUsage ← pUsage
+explicitFunParam = do
+  (paramName, paramUsage) ← P.try $ do
+    lparen
+    n ← pName
+    u ← pUsage
+    return (n, u)
   paramType ← expressionSections
+  rparen
   return $ FunctionParameter {..}
   where
   pName ∷ m (Maybe Symbol)
@@ -192,17 +233,7 @@ explicitFunParam = parens $ do
     <|> (Nothing <$ kwColon)
 
 functionParam ∷ MonadParsec e Text m ⇒ m (FunctionParameter 'Parsed)
-functionParam = do
-  sec ← P.try (P.optional explicitFunParam)
-  case sec of
-    Just p → return p
-    Nothing → do
-      ty ← expressionSections
-      return FunctionParameter {
-        paramName = Nothing,
-        paramUsage = Nothing,
-        paramType = ty
-        }
+functionParam = explicitFunParam
 
 function ∷ MonadParsec e Text m ⇒ m (Function 'Parsed)
 function = do
@@ -218,7 +249,7 @@ function = do
 whereBlock ∷ MonadParsec e Text m ⇒ m (WhereBlock 'Parsed)
 whereBlock = do
   kwWhere
-  WhereBlock <$> P.sepBy whereClause kwSemicolon
+  WhereBlock <$> braces (P.sepEndBy whereClause kwSemicolon)
 
 whereClause ∷ ∀ e m. MonadParsec e Text m ⇒ m (WhereClause 'Parsed)
 whereClause =
@@ -250,12 +281,13 @@ dataTypeDef = do
   dataTypeName ← symbol
   dataTypeParameters ← P.many dataTypeParam
   dataTypeType ← optional (kwColon >> expressionSections)
-  dataTypeConstructors ← braces $ P.sepBy constructorDef kwSemicolon
+  dataTypeConstructors ← braces $ P.sepEndBy constructorDef kwSemicolon
   return DataTypeDef {..}
 
 dataTypeParam ∷ MonadParsec e Text m ⇒ m (DataTypeParameter 'Parsed)
 dataTypeParam = parens $ do
   dataTypeParameterName ← symbol
+  kwColon
   dataTypeParameterType ← expressionSections
   return DataTypeParameter {..}
 
@@ -272,7 +304,7 @@ constructorDef = do
 
 patternSection ∷ ∀ e m. MonadParsec e Text m ⇒ m (PatternSection 'Parsed)
 patternSection =
-  PatternSectionVariable <$> symbol
+  PatternSectionName <$> name
   <|> PatternSectionWildcard <$ kwWildcard
   <|> (PatternSectionParen <$> parens patternSections)
 
@@ -304,7 +336,8 @@ moduleDef ∷ (SingI t, MonadParsec e Text m) ⇒ m (Module 'Parsed t)
 moduleDef = do
   kwModule
   moduleModulePath ← pmoduleModulePath
-  moduleBody ← P.sepBy statement kwSemicolon
+  kwSemicolon
+  moduleBody ← P.sepEndBy statement kwSemicolon
   kwEnd
   return Module{..}
 

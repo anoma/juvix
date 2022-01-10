@@ -31,23 +31,36 @@ identifier = lexeme bareIdentifier
 bareIdentifier ∷ MonadParsec e Text m ⇒ m Text
 bareIdentifier = do
   notFollowedBy (choice allKeywords)
-  P.takeWhile1P Nothing (isAlphaNum .||. (`elem`("_'-" ∷ String)))
+  P.takeWhile1P Nothing validChar
+  where
+  validChar ∷ Char → Bool
+  validChar c = or
+    [isAlphaNum c
+    , isMathSymbol
+    , isCurrencySymbol
+    , c `elem` ("_'-" ∷ String)
+    ]
+    where
+    cat = generalCategory c
+    isMathSymbol = cat == MathSymbol
+    isCurrencySymbol = cat == CurrencySymbol
+
+dot ∷ ∀ e m. MonadParsec e Text m ⇒ m Char
+dot = P.char '.'
 
 dottedIdentifier ∷ ∀ e m. MonadParsec e Text m ⇒ m (NonEmpty Text)
-dottedIdentifier = P.sepBy1 bareIdentifier dot 
-  where
-  dot = P.char '.'
+dottedIdentifier = lexeme $ P.sepBy1 bareIdentifier dot
 
 allKeywords ∷ MonadParsec e Text m ⇒ [m ()]
 allKeywords =
   [
     kwArrowR
   , kwAxiom
-  , kwCase
   , kwColon
   , kwColonOmega
   , kwColonOne
   , kwColonZero
+  , kwDef
   , kwEnd
   , kwEval
   , kwHiding
@@ -59,6 +72,7 @@ allKeywords =
   , kwLambda
   , kwLet
   , kwMapsTo
+  , kwMatch
   , kwModule
   , kwOpen
   , kwPostfix
@@ -71,8 +85,14 @@ allKeywords =
   , kwWildcard
   ]
 
+lparen ∷ MonadParsec e Text m ⇒ m ()
+lparen = symbol "("
+
+rparen ∷ MonadParsec e Text m ⇒ m ()
+rparen = symbol ")"
+
 parens ∷ MonadParsec e Text m ⇒ m a → m a
-parens = between (symbol "(") (symbol ")")
+parens = between lparen rparen
 
 braces ∷ MonadParsec e Text m ⇒ m a → m a
 braces = between (symbol "{") (symbol "}")
@@ -95,8 +115,9 @@ kwEval = symbol "eval"
 kwPrint ∷ MonadParsec e Text m ⇒ m ()
 kwPrint = symbol "print"
 
+-- | Note that the trailing space is needed to distinguish it from ':='.
 kwColon ∷ MonadParsec e Text m ⇒ m ()
-kwColon = symbol ":"
+kwColon = symbol ": "
 
 kwColonZero ∷ MonadParsec e Text m ⇒ m ()
 kwColonZero = symbol ":0"
@@ -116,8 +137,8 @@ kwMapsTo = symbol "↦" <|> symbol "->"
 kwLambda ∷ MonadParsec e Text m ⇒ m ()
 kwLambda = symbol "λ" <|> symbol "\\"
 
-kwCase ∷ MonadParsec e Text m ⇒ m ()
-kwCase = symbol "case"
+kwMatch ∷ MonadParsec e Text m ⇒ m ()
+kwMatch = symbol "match"
 
 kwType ∷ MonadParsec e Text m ⇒ m ()
 kwType = symbol "Type"

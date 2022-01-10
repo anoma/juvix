@@ -220,7 +220,7 @@ data Pattern
 --------------------------------------------------------------------------------
 
 data PatternSection (s ∷ Stage)
-  = PatternSectionVariable Symbol
+  = PatternSectionName Name
   | PatternSectionWildcard
   | PatternSectionEmpty
   | PatternSectionParen (PatternSections s)
@@ -318,6 +318,8 @@ data ExpressionSection (s ∷ Stage)
   | SectionLetBlock (LetBlock s)
   | SectionUniverse Universe
   | SectionFunction (Function s)
+  | SectionFunArrow
+  | SectionMatch (Match s)
   | SectionParens (ExpressionSections s)
 deriving stock instance (Show (ExpressionType s), Show (PatternType s)) ⇒ Show (ExpressionSection s)
 deriving stock instance (Eq (ExpressionType s), Eq (PatternType s)) ⇒ Eq (ExpressionSection s)
@@ -329,6 +331,29 @@ deriving stock instance (Show (ExpressionType s), Show (PatternType s)) ⇒ Show
 deriving stock instance (Eq (ExpressionType s), Eq (PatternType s)) ⇒ Eq (ExpressionSections s)
 deriving stock instance (Ord (ExpressionType s), Ord (PatternType s)) ⇒ Ord (ExpressionSections s)
 deriving stock instance (Lift (ExpressionType s), Lift (PatternType s)) ⇒ Lift (ExpressionSections s)
+
+--------------------------------------------------------------------------------
+-- Match expression
+--------------------------------------------------------------------------------
+
+data MatchAlt (s ∷ Stage) = MatchAlt {
+  matchAltPattern ∷ PatternType s,
+  matchAltBody ∷ ExpressionType s
+  }
+deriving stock instance (Show (ExpressionType s), Show (PatternType s)) ⇒ Show (MatchAlt s)
+deriving stock instance (Eq (ExpressionType s), Eq (PatternType s)) ⇒ Eq (MatchAlt s)
+deriving stock instance (Ord (ExpressionType s), Ord (PatternType s)) ⇒ Ord (MatchAlt s)
+deriving stock instance (Lift (ExpressionType s), Lift (PatternType s)) ⇒ Lift (MatchAlt s)
+
+data Match (s ∷ Stage) = Match {
+  matchExpression ∷ ExpressionType s,
+  matchAlts ∷ [MatchAlt s]
+  }
+deriving stock instance (Show (ExpressionType s), Show (PatternType s)) ⇒ Show (Match s)
+deriving stock instance (Eq (ExpressionType s), Eq (PatternType s)) ⇒ Eq (Match s)
+deriving stock instance (Ord (ExpressionType s), Ord (PatternType s)) ⇒ Ord (Match s)
+deriving stock instance (Lift (ExpressionType s), Lift (PatternType s)) ⇒ Lift (Match s)
+
 
 --------------------------------------------------------------------------------
 -- Universe expression
@@ -414,7 +439,9 @@ data Application
 -- Let block expression
 --------------------------------------------------------------------------------
 
-newtype LetBlock (s ∷ Stage) = LetBlock [LetClause s]
+newtype LetBlock (s ∷ Stage) = LetBlock {
+  letClauses ∷ [LetClause s]
+  }
 deriving stock instance (Show (PatternType s), Show (ExpressionType s)) ⇒ Show (LetBlock s)
 deriving stock instance (Eq (PatternType s), Eq (ExpressionType s)) ⇒ Eq (LetBlock s)
 deriving stock instance (Ord (PatternType s), Ord (ExpressionType s)) ⇒ Ord (LetBlock s)
@@ -422,7 +449,7 @@ deriving stock instance (Lift (PatternType s), Lift (ExpressionType s)) ⇒ Lift
 
 data LetClause (s ∷ Stage) =
   LetTypeSig (TypeSignature s)
-  | LetDefinition (FunctionClause s)
+  | LetFunClause (FunctionClause s)
 deriving stock instance (Show (PatternType s), Show (ExpressionType s)) ⇒ Show (LetClause s)
 deriving stock instance (Eq (PatternType s), Eq (ExpressionType s)) ⇒ Eq (LetClause s)
 deriving stock instance (Ord (PatternType s), Ord (ExpressionType s)) ⇒ Ord (LetClause s)
