@@ -73,12 +73,3 @@ executables:
     source-dirs: src/app
     dependencies:
     - MiniJuvix
-
-tests:
-  curry-test:
-    main:                Spec.hs
-    source-dirs:         src/test
-    dependencies:
-    - curry
-    - tasty
-    - tasty-hunit
