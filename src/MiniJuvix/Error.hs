@@ -30,7 +30,7 @@ instance Show ErrorType where
     PError pe -> show pe
     DError de -> show de
     CError te -> show te
-    UnknownError -> show "UnknownError"
+    UnknownError -> show ("UnknownError" :: String)
 
 --------------------------------------------------------------------------------
 

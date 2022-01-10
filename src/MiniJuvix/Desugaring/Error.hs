@@ -3,7 +3,6 @@ module MiniJuvix.Desugaring.Error where
 --------------------------------------------------------------------------------
 
 import MiniJuvix.Utils.Prelude
-import qualified Text.Show
 
 --------------------------------------------------------------------------------
 
