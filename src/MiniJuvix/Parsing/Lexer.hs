@@ -3,8 +3,8 @@ module MiniJuvix.Parsing.Lexer where
 --------------------------------------------------------------------------------
 
 import GHC.Unicode
-import qualified MiniJuvix.Parsing.Base as P
 import MiniJuvix.Parsing.Base hiding (space)
+import qualified MiniJuvix.Parsing.Base as P
 import MiniJuvix.Utils.Prelude
 import qualified Text.Megaparsec.Char.Lexer as L
 
@@ -39,22 +39,23 @@ bareIdentifier = do
   notFollowedBy (choice allKeywords)
   P.takeWhile1P Nothing validChar
   where
-  validChar ∷ Char → Bool
-  validChar c = or
-    [ isAlphaNum c
-    , isMathSymbol
-    , isCurrencySymbol
-    , c `elem` ("_'-" ∷ String)
-    ]
-    where
-    cat = generalCategory c
-    isMathSymbol = cat == MathSymbol
-    isCurrencySymbol = cat == CurrencySymbol
+    validChar :: Char -> Bool
+    validChar c =
+      or
+        [ isAlphaNum c,
+          isMathSymbol,
+          isCurrencySymbol,
+          c `elem` ("_'-" :: String)
+        ]
+      where
+        cat = generalCategory c
+        isMathSymbol = cat == MathSymbol
+        isCurrencySymbol = cat == CurrencySymbol
 
-dot ∷ ∀ e m. MonadParsec e Text m ⇒ m Char
+dot :: forall e m. MonadParsec e Text m => m Char
 dot = P.char '.'
 
-dottedIdentifier ∷ ∀ e m. MonadParsec e Text m ⇒ m (NonEmpty Text)
+dottedIdentifier :: forall e m. MonadParsec e Text m => m (NonEmpty Text)
 dottedIdentifier = lexeme $ P.sepBy1 bareIdentifier dot
 
 braces :: MonadParsec e Text m => m a -> m a
@@ -62,45 +63,45 @@ braces = between (symbol "{") (symbol "}")
 
 allKeywords :: MonadParsec e Text m => [m ()]
 allKeywords =
-  [ kwAssignment
-  , kwAxiom
-  , kwColon
-  , kwColonOmega
-  , kwColonOne
-  , kwColonZero
-  , kwAssignment
-  , kwEnd
-  , kwEval
-  , kwHiding
-  , kwImport
-  , kwInductive
-  , kwInfix
-  , kwInfixl
-  , kwInfixr
-  , kwLambda
-  , kwLet
-  , kwMapsTo
-  , kwMatch
-  , kwModule
-  , kwOpen
-  , kwPostfix
-  , kwPrefix
-  , kwPrint
-  , kwRightArrow
-  , kwSemicolon
-  , kwType
-  , kwUsing
-  , kwWhere
-  , kwWildcard
+  [ kwAssignment,
+    kwAxiom,
+    kwColon,
+    kwColonOmega,
+    kwColonOne,
+    kwColonZero,
+    kwAssignment,
+    kwEnd,
+    kwEval,
+    kwHiding,
+    kwImport,
+    kwInductive,
+    kwInfix,
+    kwInfixl,
+    kwInfixr,
+    kwLambda,
+    kwLet,
+    kwMapsTo,
+    kwMatch,
+    kwModule,
+    kwOpen,
+    kwPostfix,
+    kwPrefix,
+    kwPrint,
+    kwRightArrow,
+    kwSemicolon,
+    kwType,
+    kwUsing,
+    kwWhere,
+    kwWildcard
   ]
 
-lparen ∷ MonadParsec e Text m ⇒ m ()
+lparen :: MonadParsec e Text m => m ()
 lparen = symbol "("
 
-rparen ∷ MonadParsec e Text m ⇒ m ()
+rparen :: MonadParsec e Text m => m ()
 rparen = symbol ")"
 
-parens ∷ MonadParsec e Text m ⇒ m a → m a
+parens :: MonadParsec e Text m => m a -> m a
 parens = between lparen rparen
 
 kwAssignment :: MonadParsec e Text m => m ()
