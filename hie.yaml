@@ -11,6 +11,3 @@ cradle:
 
     - path: "./src/app/Paths_MiniJuvix.hs"
       component: "MiniJuvix:exe:MiniJuvix"
-
-    - path: "./src/test"
-      component: "MiniJuvix:test:curry-test"

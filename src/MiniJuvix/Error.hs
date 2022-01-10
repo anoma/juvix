@@ -30,7 +30,7 @@ instance Show ErrorType where
     PError pe -> show pe
     DError de -> show de
     CError te -> show te
-    UnknownError -> show "UnknownError"
+    UnknownError -> show ("UnknownError" :: String)
 
 --------------------------------------------------------------------------------
 
@@ -54,13 +54,12 @@ type ErrorDescription = Text
 
 type ErrorScope = Maybe Scope
 
-data ErrorReport
-  = ErrorReport
-      { _errorType :: ErrorType,
-        _errorLoc :: ErrorLocation,
-        _errorText :: ErrorDescription,
-        _errorParentScopes :: [ErrorScope]
-      }
+data ErrorReport = ErrorReport
+  { _errorType :: ErrorType,
+    _errorLoc :: ErrorLocation,
+    _errorText :: ErrorDescription,
+    _errorParentScopes :: [ErrorScope]
+  }
 
 instance Show ErrorReport where
   show _ = undefined

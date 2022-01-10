@@ -28,20 +28,18 @@ import qualified MiniJuvix.Utils.Prelude as Map
   of a variable, its quantity, and its type.
 -}
 
-data Binding
-  = Binding
-      { varName :: Name,
-        varQuantity :: Quantity,
-        varType :: Value
-      }
+data Binding = Binding
+  { varName :: Name,
+    varQuantity :: Quantity,
+    varType :: Value
+  }
 
 type Context = [Binding]
 
-data TypingContext
-  = TypingContext
-      { globalEnv :: Context,
-        localEnv :: Context
-      }
+data TypingContext = TypingContext
+  { globalEnv :: Context,
+    localEnv :: Context
+  }
 
 type TypingContextM = ReaderT TypingContext
 

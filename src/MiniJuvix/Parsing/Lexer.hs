@@ -3,8 +3,8 @@ module MiniJuvix.Parsing.Lexer where
 --------------------------------------------------------------------------------
 
 import GHC.Unicode
-import qualified MiniJuvix.Parsing.Base as P
 import MiniJuvix.Parsing.Base hiding (space)
+import qualified MiniJuvix.Parsing.Base as P
 import MiniJuvix.Utils.Prelude
 import qualified Text.Megaparsec.Char.Lexer as L
 
@@ -37,15 +37,26 @@ allowedSymbols = "_'-"
 bareIdentifier :: MonadParsec e Text m => m Text
 bareIdentifier = do
   notFollowedBy (choice allKeywords)
-  P.takeWhile1P Nothing (isAlphaNum .||. (`elem` allowedSymbols))
+  P.takeWhile1P Nothing validChar
+  where
+    validChar :: Char -> Bool
+    validChar c =
+      or
+        [ isAlphaNum c,
+          isMathSymbol,
+          isCurrencySymbol,
+          c `elem` ("_'-" :: String)
+        ]
+      where
+        cat = generalCategory c
+        isMathSymbol = cat == MathSymbol
+        isCurrencySymbol = cat == CurrencySymbol
+
+dot :: forall e m. MonadParsec e Text m => m Char
+dot = P.char '.'
 
 dottedIdentifier :: forall e m. MonadParsec e Text m => m (NonEmpty Text)
-dottedIdentifier = P.sepBy1 bareIdentifier dot
-  where
-    dot = P.char '.'
-
-parens :: MonadParsec e Text m => m a -> m a
-parens = between (symbol "(") (symbol ")")
+dottedIdentifier = lexeme $ P.sepBy1 bareIdentifier dot
 
 braces :: MonadParsec e Text m => m a -> m a
 braces = between (symbol "{") (symbol "}")
@@ -58,6 +69,7 @@ allKeywords =
     kwColonOmega,
     kwColonOne,
     kwColonZero,
+    kwAssignment,
     kwEnd,
     kwEval,
     kwHiding,
@@ -83,14 +95,24 @@ allKeywords =
     kwWildcard
   ]
 
+lparen :: MonadParsec e Text m => m ()
+lparen = symbol "("
+
+rparen :: MonadParsec e Text m => m ()
+rparen = symbol ")"
+
+parens :: MonadParsec e Text m => m a -> m a
+parens = between lparen rparen
+
 kwAssignment :: MonadParsec e Text m => m ()
 kwAssignment = symbol "≔" <|> symbol ":="
 
 kwAxiom :: MonadParsec e Text m => m ()
 kwAxiom = symbol "axiom"
 
+-- | Note that the trailing space is needed to distinguish it from ':='.
 kwColon :: MonadParsec e Text m => m ()
-kwColon = symbol ":"
+kwColon = symbol ": "
 
 kwColonOmega :: MonadParsec e Text m => m ()
 kwColonOmega = symbol ":ω" <|> symbol ":any"

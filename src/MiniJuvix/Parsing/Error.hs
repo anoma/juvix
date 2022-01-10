@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
 module MiniJuvix.Parsing.Error
   ( Error (..),
     ParsingError (..),
@@ -6,7 +7,7 @@ where
 
 --------------------------------------------------------------------------------
 
-import safe MiniJuvix.Utils.Prelude
+import MiniJuvix.Utils.Prelude
 import qualified Text.Show
 
 --------------------------------------------------------------------------------

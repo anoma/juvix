@@ -21,13 +21,12 @@ data Mode
   | CompileMode Config FilePath
   | TestMode Config FilePath
 
-data Config
-  = Config
-      { _configPass :: Pass,
-        _configBackend :: Backend,
-        _configOutputDirectory :: Maybe FilePath,
-        _configWriteToFsBehavior :: WriteToFsBehavior
-      }
+data Config = Config
+  { _configPass :: Pass,
+    _configBackend :: Backend,
+    _configOutputDirectory :: Maybe FilePath,
+    _configWriteToFsBehavior :: WriteToFsBehavior
+  }
 
 data Pass
   = Parsing
@@ -40,6 +39,7 @@ data Backend = LLVM
   deriving stock (Eq, Ord, Show)
 
 data WriteToFsBehavior = OverwriteTargetFiles | WriteIfDoesNotExist
+
 -- run' :: MiniJuvix a -> IO ()
 -- run' m = runMiniJuvix m >>= \(_, errs) -> logErrors errs
 
