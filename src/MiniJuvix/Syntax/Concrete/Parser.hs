@@ -69,7 +69,7 @@ modulePath = mkModulePath <$> dottedSymbol
 -- Top level statement
 --------------------------------------------------------------------------------
 
-statement :: forall e m. MonadParsec e Text m => m (Statement)
+statement :: forall e m. MonadParsec e Text m => m Statement
 statement =
   (StatementOperator <$> operatorSyntaxDef)
     <|> (StatementOpenModule <$> openModule)
@@ -121,7 +121,7 @@ import_ = do
 -- Expression
 --------------------------------------------------------------------------------
 
-expressionSection :: MonadParsec e Text m => m (ExpressionSection)
+expressionSection :: MonadParsec e Text m => m ExpressionSection
 expressionSection =
   do
     SectionIdentifier <$> name
@@ -133,14 +133,14 @@ expressionSection =
     <|> (SectionFunArrow <$ kwRightArrow)
     <|> parens (SectionParens <$> expressionSections)
 
-expressionSections :: MonadParsec e Text m => m (ExpressionSections)
+expressionSections :: MonadParsec e Text m => m ExpressionSections
 expressionSections = ExpressionSections <$> P.some expressionSection
 
 --------------------------------------------------------------------------------
 -- Match expression
 --------------------------------------------------------------------------------
 
-matchAlt :: MonadParsec e Text m => m (MatchAlt)
+matchAlt :: MonadParsec e Text m => m MatchAlt
 matchAlt = do
   matchAltPattern <- patternSection
   kwMapsTo
@@ -158,11 +158,11 @@ match = do
 -- Let expression
 --------------------------------------------------------------------------------
 
-letClause :: MonadParsec e Text m => m (LetClause)
+letClause :: MonadParsec e Text m => m LetClause
 letClause = do
   either LetTypeSig LetFunClause <$> auxTypeSigFunClause
 
-letBlock :: MonadParsec e Text m => m (LetBlock)
+letBlock :: MonadParsec e Text m => m LetBlock
 letBlock = do
   kwLet
   letClauses <- braces (P.sepEndBy letClause kwSemicolon)
@@ -200,7 +200,7 @@ typeSignature sigName = do
 auxTypeSigFunClause ::
   forall e m.
   MonadParsec e Text m =>
-  m (Either (TypeSignature) (FunctionClause))
+  m (Either TypeSignature FunctionClause)
 auxTypeSigFunClause = do
   s <- symbol
   (Left <$> typeSignature s)
@@ -210,7 +210,7 @@ auxTypeSigFunClause = do
 -- Axioms
 -------------------------------------------------------------------------------
 
-axiomDef :: forall e m. MonadParsec e Text m => m (AxiomDef)
+axiomDef :: forall e m. MonadParsec e Text m => m AxiomDef
 axiomDef = do
   kwAxiom
   axiomName <- symbol
@@ -247,10 +247,10 @@ explicitFunParam = do
         <|> (Just UsageOmega <$ kwColonOmega)
         <|> (Nothing <$ kwColon)
 
-functionParam :: MonadParsec e Text m => m (FunctionParameter)
+functionParam :: MonadParsec e Text m => m FunctionParameter
 functionParam = explicitFunParam
 
-function :: MonadParsec e Text m => m (Function)
+function :: MonadParsec e Text m => m Function
 function = do
   funParameter <- functionParam
   kwRightArrow
@@ -261,12 +261,12 @@ function = do
 -- Where block clauses
 --------------------------------------------------------------------------------
 
-whereBlock :: MonadParsec e Text m => m (WhereBlock)
+whereBlock :: MonadParsec e Text m => m WhereBlock
 whereBlock = do
   kwWhere
   WhereBlock <$> braces (P.sepEndBy whereClause kwSemicolon)
 
-whereClause :: forall e m. MonadParsec e Text m => m (WhereClause)
+whereClause :: forall e m. MonadParsec e Text m => m WhereClause
 whereClause =
   (WhereOpenModule <$> openModule)
     <|> sigOrFun
@@ -278,19 +278,25 @@ whereClause =
 -- Lambda expression
 --------------------------------------------------------------------------------
 
-lambda :: MonadParsec e Text m => m (Lambda)
+lambdaClause :: MonadParsec e Text m => m LambdaClause
+lambdaClause = do
+  lambdaParameters <- P.some patternSection
+  kwMapsTo
+  lambdaBody <- expressionSections
+  return LambdaClause {..}
+
+
+lambda :: MonadParsec e Text m => m Lambda
 lambda = do
   kwLambda
-  lambdaParameters <- P.some patternSection
-  kwRightArrow
-  lambdaBody <- expressionSections
+  lambdaClauses ← braces (P.sepEndBy lambdaClause kwSemicolon)
   return Lambda {..}
 
 -------------------------------------------------------------------------------
 -- Data type construction declaration
 -------------------------------------------------------------------------------
 
-dataTypeDef :: MonadParsec e Text m => m (DataTypeDef)
+dataTypeDef :: MonadParsec e Text m => m DataTypeDef
 dataTypeDef = do
   kwInductive
   dataTypeName <- symbol
@@ -299,14 +305,14 @@ dataTypeDef = do
   dataTypeConstructors <- braces $ P.sepEndBy constructorDef kwSemicolon
   return DataTypeDef {..}
 
-dataTypeParam :: MonadParsec e Text m => m (DataTypeParameter)
+dataTypeParam :: MonadParsec e Text m => m DataTypeParameter
 dataTypeParam = parens $ do
   dataTypeParameterName <- symbol
   kwColon
   dataTypeParameterType <- expressionSections
   return DataTypeParameter {..}
 
-constructorDef :: MonadParsec e Text m => m (DataConstructorDef)
+constructorDef :: MonadParsec e Text m => m DataConstructorDef
 constructorDef = do
   constructorName <- symbol
   kwColon
@@ -317,7 +323,7 @@ constructorDef = do
 -- Pattern section
 --------------------------------------------------------------------------------
 
-patternSection :: forall e m. MonadParsec e Text m => m (PatternSection)
+patternSection :: forall e m. MonadParsec e Text m => m PatternSection
 patternSection =
   PatternSectionName <$> name
     <|> PatternSectionWildcard <$ kwWildcard
@@ -382,12 +388,12 @@ openModule = do
 -- Debugging statements
 --------------------------------------------------------------------------------
 
-eval :: MonadParsec e Text m => m (Eval)
+eval :: MonadParsec e Text m => m Eval
 eval = do
   kwEval
   Eval <$> expressionSections
 
-printS :: MonadParsec e Text m => m (Print)
+printS :: MonadParsec e Text m => m Print
 printS = do
   kwPrint
   Print <$> expressionSections

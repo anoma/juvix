@@ -132,11 +132,17 @@ axiom a' : A;
 --------------------------------------------------------------------------------
 
 f : Nat -> A;
-f := \x -> match x  -- \x  or λ x to denote a lambda abstraction.
+f x := match x  -- \x  or λ x to denote a lambda abstraction.
   {
     zero ↦ a   ; -- case declaration uses the mapsto symbol or the normal arrow.
-    suc  -> a' ;
+    (suc _)  -> a' ;
   };
+
+f' : Nat -> A;
+f' := \ {zero ↦ a ;  -- We can use lambda abstractions to pattern match
+    (suc _)  -> a' ;};
+
+
 
 -- We can use qualified names to disambiguate names for
 -- pattern-matching. For example, imagine the case where there are

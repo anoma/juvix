@@ -177,7 +177,6 @@ data PatternSection
   | PatternSectionParen PatternSections
   deriving stock (Show, Eq, Ord, Lift)
 
-
 newtype PatternSections
   = PatternSections (NonEmpty PatternSection)
   deriving stock (Show, Eq, Ord, Lift)
@@ -336,6 +335,10 @@ data WhereClause
 -- expression with empty list of arguments and empty body.
 
 data Lambda = Lambda
+  { lambdaClauses :: [LambdaClause] }
+  deriving stock (Show, Eq, Ord, Lift)
+
+data LambdaClause = LambdaClause
   { lambdaParameters :: NonEmpty PatternSection,
     lambdaBody :: ExpressionSections
   }
