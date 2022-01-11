@@ -1,6 +1,6 @@
 module Parsing.Test where
 
-import MiniJuvix.Parsing.ParserQQ
+import MiniJuvix.Syntax.Concrete.ParserQQ
 
 m :: Module 'Parsed 'ModuleTop
 m =

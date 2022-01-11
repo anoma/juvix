@@ -1,10 +1,10 @@
-module MiniJuvix.Parsing.Lexer where
+module MiniJuvix.Syntax.Concrete.Lexer where
 
 --------------------------------------------------------------------------------
 
 import GHC.Unicode
-import MiniJuvix.Parsing.Base hiding (space)
-import qualified MiniJuvix.Parsing.Base as P
+import MiniJuvix.Syntax.Concrete.Base hiding (space)
+import qualified MiniJuvix.Syntax.Concrete.Base as P
 import MiniJuvix.Utils.Prelude
 import qualified Text.Megaparsec.Char.Lexer as L
 

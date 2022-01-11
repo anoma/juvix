@@ -1,16 +1,16 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module MiniJuvix.Parsing.ParserQQ
-  ( module MiniJuvix.Parsing.Language,
-    module MiniJuvix.Parsing.ParserQQ,
+module MiniJuvix.Syntax.Concrete.ParserQQ
+  ( module MiniJuvix.Syntax.Concrete.Language,
+    module MiniJuvix.Syntax.Concrete.ParserQQ,
   )
 where
 
 import Data.Text (pack, unpack)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax (Exp, Q)
-import MiniJuvix.Parsing.Language
-import MiniJuvix.Parsing.Parser
+import MiniJuvix.Syntax.Concrete.Language
+import MiniJuvix.Syntax.Concrete.Parser
 import MiniJuvix.Utils.Prelude
 
 mjuvixMod :: QuasiQuoter

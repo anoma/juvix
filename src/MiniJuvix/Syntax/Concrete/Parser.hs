@@ -1,4 +1,4 @@
-module MiniJuvix.Parsing.Parser where
+module MiniJuvix.Syntax.Concrete.Parser where
 
 --------------------------------------------------------------------------------
 
@@ -6,10 +6,10 @@ import qualified Data.List.NonEmpty as NonEmpty
 import Data.Singletons
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
-import MiniJuvix.Parsing.Base (MonadParsec)
-import qualified MiniJuvix.Parsing.Base as P
-import MiniJuvix.Parsing.Language
-import MiniJuvix.Parsing.Lexer hiding (symbol)
+import MiniJuvix.Syntax.Concrete.Base (MonadParsec)
+import qualified MiniJuvix.Syntax.Concrete.Base as P
+import MiniJuvix.Syntax.Concrete.Language
+import MiniJuvix.Syntax.Concrete.Lexer hiding (symbol)
 import MiniJuvix.Utils.Prelude hiding (universe)
 
 --------------------------------------------------------------------------------

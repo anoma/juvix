@@ -1,4 +1,4 @@
-module MiniJuvix.Parsing.Base
+module MiniJuvix.Syntax.Concrete.Base
   ( module Text.Megaparsec,
     module Data.List.NonEmpty,
     module Text.Megaparsec.Char,
@@ -7,7 +7,6 @@ module MiniJuvix.Parsing.Base
   )
 where
 
-import qualified Control.Monad.Combinators as P
 import Control.Monad.Combinators.Expr
 import Control.Monad.Combinators.NonEmpty (sepBy1, some)
 import Data.List.NonEmpty (NonEmpty)

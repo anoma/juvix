@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
-module MiniJuvix.Parsing.Scoper where
+module MiniJuvix.Syntax.Scoped.Scoper where
 
 --------------------------------------------------------------------------------
 
@@ -9,10 +9,10 @@ import qualified Data.HashMap.Strict as HashMap
 import qualified Data.HashSet as HashSet
 import qualified Data.Text as Text
 import Lens.Micro.Platform
-import MiniJuvix.Parsing.Base (MonadParsec)
-import qualified MiniJuvix.Parsing.Base as P
-import MiniJuvix.Parsing.Language
-import MiniJuvix.Parsing.Parser (runModuleParserIO)
+import MiniJuvix.Syntax.Concrete.Base (MonadParsec)
+import qualified MiniJuvix.Syntax.Concrete.Base as P
+import MiniJuvix.Syntax.Concrete.Language
+import MiniJuvix.Syntax.Concrete.Parser (runModuleParserIO)
 import MiniJuvix.Utils.Prelude hiding (Reader, State, ask, asks, get, gets, local, modify, put)
 import Polysemy
 import Polysemy.Error hiding (fromEither)

@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module MiniJuvix.Parsing.Language where
+module MiniJuvix.Syntax.Concrete.Language where
 
 --------------------------------------------------------------------------------
 
