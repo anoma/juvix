@@ -1,4 +1,4 @@
-module Test where
+module Parsing.Test where
 
 import MiniJuvix.Parsing.ParserQQ
 
