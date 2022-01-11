@@ -35,7 +35,7 @@ open Backend using { LLVM };  -- this imports to the local scope only the
 -- to avoid importing undesirable names.
 
 import Prelude;
-open Prelude using { Bool } hiding { Nat ; Unit ; Empty } ;
+open Prelude hiding { Nat ; Unit ; Empty } ;
 
 --------------------------------------------------------------------------------
 -- Inductive type declarations
@@ -47,7 +47,7 @@ inductive Empty {};
 -- An inductive type named Unit with only one constructor.
 inductive Unit { tt : Unit; };
 
-inductive Nat' : Type ;
+inductive Nat' : Type
 { zero : Nat' ;
   suc : Nat' -> Nat' ;
 };
@@ -183,7 +183,7 @@ infixl 10 + ;
 -- If the quantity n is not explicit, then it is Any.
 
 -- The type of functions that uses once its input of type A to produce a number.
-axiom funs : (x :1 A) -> Nat
+axiom funs : (x :1 A) -> Nat;
 
 axiom B : (x :1 A) -> Type;   -- B is a type family.
 axiom em : (x :1 A) -> B;
