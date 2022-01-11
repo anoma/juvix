@@ -2,7 +2,7 @@ module Parsing.Test where
 
 import MiniJuvix.Syntax.Concrete.ParserQQ
 
-m :: Module 'Parsed 'ModuleTop
+m :: Module 'ModuleTop
 m =
   [mjuvixMod|
 module FirstMilestone;

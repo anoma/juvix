@@ -26,7 +26,7 @@ mjuvixMod =
     qqExp str = do
       r <- parseOrThrow str
       [|r|]
-    parseOrThrow :: String -> Q (Module 'Parsed 'ModuleTop)
+    parseOrThrow :: String -> Q (Module 'ModuleTop)
     parseOrThrow str =
       case runModuleParser "Quasi Quote" (pack str) of
         Left err -> fail ("Parser Error: " ++ unpack err)

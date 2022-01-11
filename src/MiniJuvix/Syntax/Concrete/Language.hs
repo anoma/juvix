@@ -12,27 +12,6 @@ import MiniJuvix.Utils.Prelude
 
 --------------------------------------------------------------------------------
 
---------------------------------------------------------------------------------
--- Parsing stages
---------------------------------------------------------------------------------
-
-data Stage
-  = Parsed
-  | Scoped
-  deriving stock (Show)
-
-type family ExpressionType (s :: Stage) :: GHC.Type where
-  ExpressionType 'Parsed = (ExpressionSections 'Parsed)
-  ExpressionType 'Scoped = Expression
-
-type family PatternType (s :: Stage) :: GHC.Type where
-  PatternType 'Parsed = (PatternSection 'Parsed)
-  PatternType 'Scoped = Pattern
-
-type family ImportType (s :: Stage) :: GHC.Type where
-  ImportType 'Parsed = Import
-  ImportType 'Scoped = Module 'Scoped 'ModuleTop
-
 type family
   ModulePathType (t :: ModuleIsTop) ::
     (res :: GHC.Type) | res -> t
@@ -74,45 +53,18 @@ data Name
 -- Top level statement
 --------------------------------------------------------------------------------
 
-data Statement (s :: Stage)
+data Statement
   = StatementOperator OperatorSyntaxDef
-  | StatementTypeSignature (TypeSignature s)
-  | StatementImport (ImportType s)
-  | StatementDataType (DataTypeDef s)
-  | StatementModule (Module s 'ModuleLocal)
+  | StatementTypeSignature TypeSignature
+  | StatementImport Import
+  | StatementDataType DataTypeDef
+  | StatementModule (Module 'ModuleLocal)
   | StatementOpenModule OpenModule
-  | StatementFunctionClause (FunctionClause s)
-  | StatementAxiom (AxiomDef s)
-  | StatementEval (Eval s)
-  | StatementPrint (Print s)
-
-deriving stock instance
-  ( Show (ImportType s),
-    Show (PatternType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (Statement s)
-
-deriving stock instance
-  ( Eq (ImportType s),
-    Eq (PatternType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (Statement s)
-
-deriving stock instance
-  ( Ord (ImportType s),
-    Ord (PatternType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (Statement s)
-
-deriving stock instance
-  ( Lift (ImportType s),
-    Lift (PatternType s),
-    Lift (ExpressionType s)
-  ) =>
-  Lift (Statement s)
+  | StatementFunctionClause FunctionClause
+  | StatementAxiom AxiomDef
+  | StatementEval Eval
+  | StatementPrint Print
+  deriving stock (Show, Eq, Ord, Lift)
 
 --------------------------------------------------------------------------------
 -- Import statement
@@ -170,35 +122,21 @@ data Usage
 -- Type signature declaration
 -------------------------------------------------------------------------------
 
-data TypeSignature (s :: Stage) = TypeSignature
+data TypeSignature = TypeSignature
   { sigName :: Symbol,
-    sigType :: ExpressionType s
+    sigType :: ExpressionSections
   }
-
-deriving stock instance Show (ExpressionType s) => Show (TypeSignature s)
-
-deriving stock instance Eq (ExpressionType s) => Eq (TypeSignature s)
-
-deriving stock instance Ord (ExpressionType s) => Ord (TypeSignature s)
-
-deriving stock instance Lift (ExpressionType s) => Lift (TypeSignature s)
+  deriving stock (Show, Eq, Ord, Lift)
 
 -------------------------------------------------------------------------------
 -- Axioms
 -------------------------------------------------------------------------------
 
-data AxiomDef (s :: Stage) = AxiomDef
+data AxiomDef = AxiomDef
   { axiomName :: Symbol,
-    axiomType :: ExpressionType s
+    axiomType :: ExpressionSections
   }
-
-deriving stock instance Show (ExpressionType s) => Show (AxiomDef s)
-
-deriving stock instance Eq (ExpressionType s) => Eq (AxiomDef s)
-
-deriving stock instance Ord (ExpressionType s) => Ord (AxiomDef s)
-
-deriving stock instance Lift (ExpressionType s) => Lift (AxiomDef s)
+  deriving stock (Show, Eq, Ord, Lift)
 
 -------------------------------------------------------------------------------
 -- Lift type construction declaration
@@ -208,118 +146,41 @@ type DataConstructorName = Symbol
 
 type DataTypeName = Symbol
 
-data DataConstructorDef (s :: Stage) = DataConstructorDef
+data DataConstructorDef = DataConstructorDef
   { constructorName :: DataConstructorName,
-    constructorType :: ExpressionType s
+    constructorType :: ExpressionSections
   }
+  deriving stock (Show, Eq, Ord, Lift)
 
-deriving stock instance Show (ExpressionType s) => Show (DataConstructorDef s)
-
-deriving stock instance Eq (ExpressionType s) => Eq (DataConstructorDef s)
-
-deriving stock instance Ord (ExpressionType s) => Ord (DataConstructorDef s)
-
-deriving stock instance Lift (ExpressionType s) => Lift (DataConstructorDef s)
-
-data DataTypeParameter (s :: Stage) = DataTypeParameter
+data DataTypeParameter = DataTypeParameter
   { dataTypeParameterName :: Symbol,
-    dataTypeParameterType :: ExpressionType s
+    dataTypeParameterType :: ExpressionSections
   }
+  deriving stock (Show, Eq, Ord, Lift)
 
-deriving stock instance Show (ExpressionType s) => Show (DataTypeParameter s)
-
-deriving stock instance Eq (ExpressionType s) => Eq (DataTypeParameter s)
-
-deriving stock instance Ord (ExpressionType s) => Ord (DataTypeParameter s)
-
-deriving stock instance Lift (ExpressionType s) => Lift (DataTypeParameter s)
-
-data DataTypeDef (s :: Stage) = DataTypeDef
+data DataTypeDef = DataTypeDef
   { dataTypeName :: DataTypeName,
-    dataTypeParameters :: [DataTypeParameter s],
-    dataTypeType :: Maybe (ExpressionType s),
-    dataTypeConstructors :: [DataConstructorDef s]
+    dataTypeParameters :: [DataTypeParameter],
+    dataTypeType :: Maybe (ExpressionSections),
+    dataTypeConstructors :: [DataConstructorDef]
   }
-
-deriving stock instance Show (ExpressionType s) => Show (DataTypeDef s)
-
-deriving stock instance Eq (ExpressionType s) => Eq (DataTypeDef s)
-
-deriving stock instance Ord (ExpressionType s) => Ord (DataTypeDef s)
-
-deriving stock instance Lift (ExpressionType s) => Lift (DataTypeDef s)
-
---------------------------------------------------------------------------------
--- Pattern
---------------------------------------------------------------------------------
-
-data Pattern
-  = PatternVariable Symbol
-  | PatternAppConstructor QualifiedName Pattern
-  | PatternWildcard
-  | PatternEmpty
   deriving stock (Show, Eq, Ord, Lift)
 
 --------------------------------------------------------------------------------
 -- Pattern section
 --------------------------------------------------------------------------------
 
-data PatternSection (s :: Stage)
+data PatternSection
   = PatternSectionName Name
   | PatternSectionWildcard
   | PatternSectionEmpty
-  | PatternSectionParen (PatternSections s)
+  | PatternSectionParen PatternSections
+  deriving stock (Show, Eq, Ord, Lift)
 
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (PatternType s)
-  ) =>
-  Show (PatternSection s)
 
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (PatternType s)
-  ) =>
-  Eq (PatternSection s)
-
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (PatternType s)
-  ) =>
-  Ord (PatternSection s)
-
-deriving stock instance
-  ( Lift (ExpressionType s),
-    Lift (PatternType s)
-  ) =>
-  Lift (PatternSection s)
-
-newtype PatternSections (s :: Stage)
-  = PatternSections (NonEmpty (PatternSection s))
-
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (PatternType s)
-  ) =>
-  Show (PatternSections s)
-
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (PatternType s)
-  ) =>
-  Eq (PatternSections s)
-
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (PatternType s)
-  ) =>
-  Ord (PatternSections s)
-
-deriving stock instance
-  ( Lift (ExpressionType s),
-    Lift (PatternType s)
-  ) =>
-  Lift (PatternSections s)
+newtype PatternSections
+  = PatternSections (NonEmpty PatternSection)
+  deriving stock (Show, Eq, Ord, Lift)
 
 --------------------------------------------------------------------------------
 -- Function binding declaration
@@ -327,36 +188,13 @@ deriving stock instance
 
 type FunctionName = Symbol
 
-data FunctionClause (s :: Stage) = FunClause
+data FunctionClause = FunClause
   { clauseOwnerFunction :: FunctionName,
-    clausePatterns :: [PatternType s],
-    clauseBody :: ExpressionType s,
-    clauseWhere :: Maybe (WhereBlock s)
+    clausePatterns :: [PatternSection],
+    clauseBody :: ExpressionSections,
+    clauseWhere :: Maybe WhereBlock
   }
-
-deriving stock instance
-  ( Show (PatternType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (FunctionClause s)
-
-deriving stock instance
-  ( Eq (PatternType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (FunctionClause s)
-
-deriving stock instance
-  ( Ord (PatternType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (FunctionClause s)
-
-deriving stock instance
-  ( Lift (PatternType s),
-    Lift (ExpressionType s)
-  ) =>
-  Lift (FunctionClause s)
+  deriving stock (Show, Eq, Ord, Lift)
 
 --------------------------------------------------------------------------------
 -- Module declaration
@@ -378,42 +216,30 @@ instance SingI 'ModuleTop where
 instance SingI 'ModuleLocal where
   sing = SModuleLocal
 
-data Module (s :: Stage) (t :: ModuleIsTop) = Module
+data Module (t :: ModuleIsTop) = Module
   { moduleModulePath :: ModulePathType t,
-    moduleBody :: [Statement s]
+    moduleBody :: [Statement]
   }
 
 deriving stock instance
-  ( Show (ModulePathType t),
-    Show (ImportType s),
-    Show (PatternType s),
-    Show (ExpressionType s)
+  ( Show (ModulePathType t)
   ) =>
-  Show (Module s t)
+  Show (Module t)
 
 deriving stock instance
-  ( Eq (ModulePathType t),
-    Eq (ImportType s),
-    Eq (PatternType s),
-    Eq (ExpressionType s)
+  ( Eq (ModulePathType t)
   ) =>
-  Eq (Module s t)
+  Eq (Module t)
 
 deriving stock instance
-  ( Ord (ModulePathType t),
-    Ord (ImportType s),
-    Ord (PatternType s),
-    Ord (ExpressionType s)
+  ( Ord (ModulePathType t)
   ) =>
-  Ord (Module s t)
+  Ord (Module t)
 
 deriving stock instance
-  ( Lift (ModulePathType t),
-    Lift (ImportType s),
-    Lift (PatternType s),
-    Lift (ExpressionType s)
+  ( Lift (ModulePathType t)
   ) =>
-  Lift (Module s t)
+  Lift (Module t)
 
 data UsingHiding
   = Using (NonEmpty Symbol)
@@ -427,146 +253,41 @@ data OpenModule = OpenModule
   deriving stock (Show, Eq, Ord, Lift)
 
 --------------------------------------------------------------------------------
--- Expression
---------------------------------------------------------------------------------
-
-data Expression
-  = ExprIdentifier QualifiedName
-  | ExprApplication Application
-  | ExprLambda (Lambda 'Scoped)
-  | ExprLetBlock (LetBlock 'Scoped)
-  | ExprUniverse Universe
-  | ExprFunction (Function 'Scoped)
-  deriving stock (Show, Eq, Ord, Lift)
-
---------------------------------------------------------------------------------
 -- Expression section
 --------------------------------------------------------------------------------
 
 -- | Expressions without application
-data ExpressionSection (s :: Stage)
+data ExpressionSection
   = SectionIdentifier Name
-  | SectionLambda (Lambda s)
-  | SectionLetBlock (LetBlock s)
+  | SectionLambda Lambda
+  | SectionLetBlock LetBlock
   | SectionUniverse Universe
-  | SectionFunction (Function s)
+  | SectionFunction Function
   | SectionFunArrow
-  | SectionMatch (Match s)
-  | SectionParens (ExpressionSections s)
-
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (PatternType s)
-  ) =>
-  Show (ExpressionSection s)
-
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (PatternType s)
-  ) =>
-  Eq (ExpressionSection s)
-
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (PatternType s)
-  ) =>
-  Ord (ExpressionSection s)
-
-deriving stock instance
-  ( Lift (ExpressionType s),
-    Lift (PatternType s)
-  ) =>
-  Lift (ExpressionSection s)
+  | SectionMatch Match
+  | SectionParens ExpressionSections
+  deriving stock (Show, Eq, Ord, Lift)
 
 -- | Expressions without application
-newtype ExpressionSections (s :: Stage)
-  = ExpressionSections (NonEmpty (ExpressionSection s))
-
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (PatternType s)
-  ) =>
-  Show (ExpressionSections s)
-
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (PatternType s)
-  ) =>
-  Eq (ExpressionSections s)
-
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (PatternType s)
-  ) =>
-  Ord (ExpressionSections s)
-
-deriving stock instance
-  ( Lift (ExpressionType s),
-    Lift (PatternType s)
-  ) =>
-  Lift (ExpressionSections s)
+newtype ExpressionSections
+  = ExpressionSections (NonEmpty ExpressionSection)
+  deriving stock (Show, Eq, Ord, Lift)
 
 --------------------------------------------------------------------------------
 -- Match expression
 --------------------------------------------------------------------------------
 
-data MatchAlt (s :: Stage) = MatchAlt
-  { matchAltPattern :: PatternType s,
-    matchAltBody :: ExpressionType s
+data MatchAlt = MatchAlt
+  { matchAltPattern :: PatternSection,
+    matchAltBody :: ExpressionSections
   }
+  deriving stock (Show, Eq, Ord, Lift)
 
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (PatternType s)
-  ) =>
-  Show (MatchAlt s)
-
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (PatternType s)
-  ) =>
-  Eq (MatchAlt s)
-
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (PatternType s)
-  ) =>
-  Ord (MatchAlt s)
-
-deriving stock instance
-  ( Lift (ExpressionType s),
-    Lift (PatternType s)
-  ) =>
-  Lift (MatchAlt s)
-
-data Match (s :: Stage) = Match
-  { matchExpression :: ExpressionType s,
-    matchAlts :: [MatchAlt s]
+data Match = Match
+  { matchExpression :: ExpressionSections,
+    matchAlts :: [MatchAlt]
   }
-
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (PatternType s)
-  ) =>
-  Show (Match s)
-
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (PatternType s)
-  ) =>
-  Eq (Match s)
-
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (PatternType s)
-  ) =>
-  Ord (Match s)
-
-deriving stock instance
-  ( Lift (ExpressionType s),
-    Lift (PatternType s)
-  ) =>
-  Lift (Match s)
+  deriving stock (Show, Eq, Ord, Lift)
 
 --------------------------------------------------------------------------------
 -- Universe expression
@@ -579,93 +300,33 @@ newtype Universe = Universe Natural
 -- Function expression
 --------------------------------------------------------------------------------
 
-data FunctionParameter (s :: Stage) = FunctionParameter
+data FunctionParameter = FunctionParameter
   { paramName :: Maybe Symbol,
     paramUsage :: Maybe Usage,
-    paramType :: ExpressionType s
+    paramType :: ExpressionSections
   }
+  deriving stock (Show, Eq, Ord, Lift)
 
-deriving stock instance Show (ExpressionType s) => Show (FunctionParameter s)
-
-deriving stock instance Eq (ExpressionType s) => Eq (FunctionParameter s)
-
-deriving stock instance Ord (ExpressionType s) => Ord (FunctionParameter s)
-
-deriving stock instance Lift (ExpressionType s) => Lift (FunctionParameter s)
-
-data Function (s :: Stage) = Function
-  { funParameter :: FunctionParameter s,
-    funReturn :: ExpressionType s
+data Function = Function
+  { funParameter :: FunctionParameter,
+    funReturn :: ExpressionSections
   }
-
-deriving stock instance Show (ExpressionType s) => Show (Function s)
-
-deriving stock instance Eq (ExpressionType s) => Eq (Function s)
-
-deriving stock instance Ord (ExpressionType s) => Ord (Function s)
-
-deriving stock instance Lift (ExpressionType s) => Lift (Function s)
+  deriving stock (Show, Eq, Ord, Lift)
 
 --------------------------------------------------------------------------------
 -- Where block clauses
 --------------------------------------------------------------------------------
 
-newtype WhereBlock (s :: Stage) = WhereBlock
-  { whereClauses :: [WhereClause s]
+newtype WhereBlock = WhereBlock
+  { whereClauses :: [WhereClause]
   }
+  deriving stock (Show, Eq, Ord, Lift)
 
-deriving stock instance
-  ( Show (PatternType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (WhereBlock s)
-
-deriving stock instance
-  ( Eq (PatternType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (WhereBlock s)
-
-deriving stock instance
-  ( Ord (PatternType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (WhereBlock s)
-
-deriving stock instance
-  ( Lift (PatternType s),
-    Lift (ExpressionType s)
-  ) =>
-  Lift (WhereBlock s)
-
-data WhereClause (s :: Stage)
+data WhereClause
   = WhereOpenModule OpenModule
-  | WhereTypeSig (TypeSignature s)
-  | WhereFunClause (FunctionClause s)
-
-deriving stock instance
-  ( Show (PatternType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (WhereClause s)
-
-deriving stock instance
-  ( Eq (PatternType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (WhereClause s)
-
-deriving stock instance
-  ( Ord (PatternType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (WhereClause s)
-
-deriving stock instance
-  ( Lift (PatternType s),
-    Lift (ExpressionType s)
-  ) =>
-  Lift (WhereClause s)
+  | WhereTypeSig TypeSignature
+  | WhereFunClause FunctionClause
+  deriving stock (Show, Eq, Ord, Lift)
 
 --------------------------------------------------------------------------------
 -- Lambda expression
@@ -674,42 +335,9 @@ deriving stock instance
 -- Notes: An empty lambda, here called 'the impossible case', is a lambda
 -- expression with empty list of arguments and empty body.
 
-data Lambda (s :: Stage) = Lambda
-  { lambdaParameters :: NonEmpty (PatternType s),
-    lambdaBody :: ExpressionType s
-  }
-
-deriving stock instance
-  ( Show (PatternType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (Lambda s)
-
-deriving stock instance
-  ( Eq (PatternType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (Lambda s)
-
-deriving stock instance
-  ( Ord (PatternType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (Lambda s)
-
-deriving stock instance
-  ( Lift (PatternType s),
-    Lift (ExpressionType s)
-  ) =>
-  Lift (Lambda s)
-
---------------------------------------------------------------------------------
--- Application expression
---------------------------------------------------------------------------------
-
-data Application = Application
-  { applicationFun :: ExpressionType 'Scoped,
-    applicationArg :: ExpressionType 'Scoped
+data Lambda = Lambda
+  { lambdaParameters :: NonEmpty PatternSection,
+    lambdaBody :: ExpressionSections
   }
   deriving stock (Show, Eq, Ord, Lift)
 
@@ -717,105 +345,20 @@ data Application = Application
 -- Let block expression
 --------------------------------------------------------------------------------
 
-newtype LetBlock (s :: Stage) = LetBlock {letClauses :: [LetClause s]}
+newtype LetBlock = LetBlock {letClauses :: [LetClause]}
+  deriving stock (Show, Eq, Ord, Lift)
 
-deriving stock instance
-  ( Show (PatternType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (LetBlock s)
-
-deriving stock instance
-  ( Eq (PatternType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (LetBlock s)
-
-deriving stock instance
-  ( Ord (PatternType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (LetBlock s)
-
-deriving stock instance
-  ( Lift (PatternType s),
-    Lift (ExpressionType s)
-  ) =>
-  Lift (LetBlock s)
-
-data LetClause (s :: Stage)
-  = LetTypeSig (TypeSignature s)
-  | LetFunClause (FunctionClause s)
-
-deriving stock instance
-  ( Show (PatternType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (LetClause s)
-
-deriving stock instance
-  ( Eq (PatternType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (LetClause s)
-
-deriving stock instance
-  ( Ord (PatternType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (LetClause s)
-
-deriving stock instance
-  ( Lift (PatternType s),
-    Lift (ExpressionType s)
-  ) =>
-  Lift (LetClause s)
+data LetClause
+  = LetTypeSig TypeSignature
+  | LetFunClause FunctionClause
+  deriving stock (Show, Eq, Ord, Lift)
 
 --------------------------------------------------------------------------------
 -- Debugging statements
 --------------------------------------------------------------------------------
 
-newtype Eval (s :: Stage) = Eval {evalExpression :: ExpressionType s}
+newtype Eval = Eval {evalExpression :: ExpressionSections}
+  deriving stock (Show, Eq, Ord, Lift)
 
-deriving stock instance
-  Show
-    (ExpressionType s) =>
-  Show (Eval s)
-
-deriving stock instance
-  Eq
-    (ExpressionType s) =>
-  Eq (Eval s)
-
-deriving stock instance
-  Ord
-    (ExpressionType s) =>
-  Ord (Eval s)
-
-deriving stock instance
-  Lift
-    (ExpressionType s) =>
-  Lift (Eval s)
-
-newtype Print (s :: Stage) = Print {printExpression :: ExpressionType s}
-
-deriving stock instance
-  Show
-    ( ExpressionType s
-    ) =>
-  Show (Print s)
-
-deriving stock instance
-  Eq
-    (ExpressionType s) =>
-  Eq (Print s)
-
-deriving stock instance
-  Ord
-    (ExpressionType s) =>
-  Ord (Print s)
-
-deriving stock instance
-  Lift
-    (ExpressionType s) =>
-  Lift (Print s)
+newtype Print = Print {printExpression :: ExpressionSections}
+  deriving stock (Show, Eq, Ord, Lift)
