@@ -1,7 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module MiniJuvix.Syntax.Scoped.Name where
 
+import Lens.Micro.Platform
 import Data.Stream (Stream (Cons))
 import qualified Data.Stream
 import qualified MiniJuvix.Syntax.Concrete.Name as C
@@ -14,6 +16,17 @@ import MiniJuvix.Utils.Prelude
 newtype NameId = NameId Word64
   deriving stock (Show, Eq, Ord, Generic)
 
+data AbsModulePath = AbsModulePath {
+  absTopModulePath :: C.TopModulePath,
+  absLocalPath :: [C.Symbol]
+  }
+  deriving stock (Show)
+
+-- | Appends a local path to the absolute path
+-- e.g. TopMod.Local <.> Inner == TopMod.Local.Inner
+(<.>) :: AbsModulePath -> C.Symbol -> AbsModulePath
+absP <.> localMod = absP {absLocalPath = absLocalPath absP ++ [localMod] }
+
 allNameIds :: Stream NameId
 allNameIds = NameId <$> ids
   where
@@ -22,26 +35,6 @@ allNameIds = NameId <$> ids
     aux i = Cons i (aux (succ i))
 
 instance Hashable NameId
-
-type Name = Name' C.Name
-
-type Symbol = Name' C.Symbol
-
-data Name' n = Name'
-  { nameId :: NameId,
-    nameConcrete :: n,
-    nameKind :: NameKind
-  }
-  deriving stock (Show)
-
-instance Eq (Name' n) where
-  (==) = (==) `on` nameId
-
-instance Ord (Name' n) where
-  compare = compare `on` nameId
-
-instance Hashable (Name' n) where
-  hashWithSalt salt = hashWithSalt salt . nameId
 
 data NameKind
   = -- | Constructor name.
@@ -52,4 +45,26 @@ data NameKind
     KNameFunName
   | -- | A locally bound name (patterns, arguments, etc.).
     KNameLocal
+  deriving stock (Show, Eq)
+
+type Name = Name' C.Name
+
+type Symbol = Name' C.Symbol
+
+data Name' n = Name'
+  { _nameId :: NameId,
+    _nameConcrete :: n,
+    _nameKind :: NameKind,
+    _nameDefinedIn :: AbsModulePath
+  }
   deriving stock (Show)
+makeLenses ''Name'
+
+instance Eq (Name' n) where
+  (==) = (==) `on` _nameId
+
+instance Ord (Name' n) where
+  compare = compare `on` _nameId
+
+instance Hashable (Name' n) where
+  hashWithSalt salt = hashWithSalt salt . _nameId
