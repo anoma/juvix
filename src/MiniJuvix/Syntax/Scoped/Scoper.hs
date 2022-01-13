@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
-
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module MiniJuvix.Syntax.Scoped.Scoper where
 
 --------------------------------------------------------------------------------
@@ -11,6 +11,7 @@ import qualified Data.Text as Text
 import Lens.Micro.Platform
 import MiniJuvix.Syntax.Concrete.Base (MonadParsec)
 import qualified MiniJuvix.Syntax.Concrete.Base as P
+import qualified MiniJuvix.Syntax.Scoped.Name as S
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Parser (runModuleParserIO)
 import MiniJuvix.Utils.Prelude hiding (Reader, State, ask, asks, get, gets, local, modify, put)
@@ -19,49 +20,55 @@ import Polysemy.Error hiding (fromEither)
 import Polysemy.Reader
 import Polysemy.State
 import System.FilePath
+import qualified Data.Stream as Stream
+import Data.Stream (Stream)
 
 --------------------------------------------------------------------------------
 
 -- | Relevant scope information of a module.
 data ModuleScopeInfo = ModuleScopeInfo
   { -- | Operator definitions. They can refer to either constructors or functions.
-    _syntaxOperators :: [OperatorSyntaxDef],
+    _syntaxOperators :: HashMap Symbol Fixity,
     -- | constructors introduced by inductive definitions (E.g. zero; suc).
-    _syntaxConstructors :: HashSet DataConstructorName,
+    _syntaxConstructors :: HashSet (DataConstructorName 'Parsed),
     -- | data types  introduced by inductive definitions (E.g. ℕ).
-    _syntaxDataTypes :: HashSet DataTypeName,
+    _syntaxDataTypes :: HashSet (DataTypeName 'Parsed),
     -- | function names in scope. Function names are introduced with function clauses.
-    _syntaxFunctions :: HashSet FunctionName,
+    _syntaxFunctions :: HashSet (FunctionName 'Parsed),
     -- | locally defined modules. Imported modules are not included.
-    _syntaxModules :: HashMap Symbol ModuleScopeInfo
+    _syntaxLocalModules :: HashMap (LocalModuleName 'Parsed) ModuleScopeInfo
   }
 
 newtype IdentifierInfo = IdentifierInfo
-  { idenInfoOrigins :: HashSet ModulePath
+  { idenInfoOrigins :: HashSet TopModulePath
   }
+
+newtype LocalVariable = LocalVariable {
+  variableName ∷ S.Name
+  }
+  deriving newtype (Show, Eq, Hashable)
 
 data ModuleCurrentScope = ModuleGlobalScope
   { _currentOperators :: HashMap Symbol Fixity,
-    _currentConstructors :: HashMap DataConstructorName IdentifierInfo,
-    _currentFunctions :: HashMap FunctionName IdentifierInfo,
-    _currentImported :: HashMap ModulePath ModuleScopeInfo
+    _currentConstructors :: HashMap (DataConstructorName 'Scoped) IdentifierInfo,
+    _currentFunctions :: HashMap (FunctionName 'Scoped) IdentifierInfo,
+    _currentModules :: HashMap QualifiedName ModuleScopeInfo,
+    _currentBindBlock :: HashMap Symbol LocalVariable,
+    _currentLocalVars :: HashMap Symbol LocalVariable
   }
 
 makeLenses ''ModuleCurrentScope
 
 newtype ModulesCache = ModulesCache
-  { cachedModules :: HashMap ModulePath (Module 'Scoped 'ModuleTop)
+  { _cachedModules :: HashMap TopModulePath (Module 'Scoped 'ModuleTop)
   }
-
-newtype LocalScope = LocalScope
-  { localScopeSymbols :: HashSet Symbol
-  }
+makeLenses ''ModulesCache
 
 data ScopeError
   = ParseError Text
   | Err
-  | ErrImportCycle ModulePath
-  | ErrOpenNotInScope ModulePath
+  | ErrImportCycle TopModulePath
+  | ErrOpenNotInScope QualifiedName
   deriving stock (Show)
 
 data ScopeParameters = ScopeParameters
@@ -70,61 +77,67 @@ data ScopeParameters = ScopeParameters
     -- | Usually set to ".mjuvix".
     _scopeFileExtension :: String,
     -- | Used for import cycle detection.
-    _scopeTopParents :: HashSet ModulePath
+    _scopeTopParents :: HashSet TopModulePath
   }
-
 makeLenses ''ScopeParameters
 
-scopeCheck :: FilePath -> [Module 'Parsed t] -> Either ScopeError [Module 'Scoped t]
+data ScopeState = ScopeState {
+  _scopeModulesCacheCache :: ModulesCache,
+  _scopeFreeNames :: Stream S.NameId
+  }
+makeLenses ''ScopeState
+
+scopeCheck :: FilePath -> [Module 'Parsed 'ModuleTop] -> Either ScopeError [Module  'Scoped 'ModuleTop]
 scopeCheck = undefined
 
 checkImport ::
   Members '[Error ScopeError, State ModuleCurrentScope, Reader ScopeParameters, Embed IO, State ModulesCache] r =>
-  Import ->
-  Sem r (Module 'Scoped 'ModuleTop)
-checkImport (Import p) = readParseModule p >>= checkTopModule
+  Import 'Parsed ->
+  Sem r (Import 'Scoped)
+checkImport (Import p) = Import <$> (readParseModule p >>= checkTopModule)
 
 moduleScopeInfo :: Module 'Scoped t -> ModuleScopeInfo
 moduleScopeInfo (Module _ stmts) = ModuleScopeInfo {..}
   where
-    _syntaxModules :: HashMap Symbol ModuleScopeInfo
-    _syntaxModules = HashMap.fromList (mapMaybe getModule stmts)
+    _syntaxLocalModules :: HashMap Symbol ModuleScopeInfo
+    _syntaxLocalModules = HashMap.fromList (mapMaybe getModule stmts)
       where
         getModule :: Statement 'Scoped -> Maybe (Symbol, ModuleScopeInfo)
         getModule s = case s of
-          StatementModule m -> Just (moduleModulePath m, moduleScopeInfo m)
+          StatementModule m@Module {..} -> Just (S.nameConcrete moduleModulePath, moduleScopeInfo m)
           _ -> Nothing
-    _syntaxFunctions :: HashSet FunctionName
+    _syntaxFunctions :: HashSet (FunctionName 'Parsed)
     _syntaxFunctions = HashSet.fromList (mapMaybe getFun stmts)
       where
-        getFun :: Statement 'Scoped -> Maybe FunctionName
+        getFun :: Statement 'Scoped -> Maybe (FunctionName 'Parsed)
         getFun s = case s of
           -- StatementDataType DataTypeDef {..} → HashSet.fromList (map constructorName dataTypeConstructors)
           _ -> undefined
-    _syntaxConstructors :: HashSet DataConstructorName
+    _syntaxConstructors :: HashSet (DataConstructorName 'Parsed)
     _syntaxConstructors = mconcat (map getConstrs stmts)
       where
-        getConstrs :: Statement 'Scoped -> HashSet DataConstructorName
+        getConstrs :: Statement 'Scoped -> HashSet (DataConstructorName 'Parsed)
         getConstrs s = case s of
-          StatementDataType DataTypeDef {..} -> HashSet.fromList (map constructorName dataTypeConstructors)
+          StatementDataType DataTypeDef {..} -> HashSet.fromList
+            (map (S.nameConcrete . constructorName) dataTypeConstructors)
           _ -> mempty
-    _syntaxDataTypes :: HashSet DataTypeName
+    _syntaxDataTypes :: HashSet (DataTypeName 'Parsed)
     _syntaxDataTypes = HashSet.fromList (mapMaybe getDT stmts)
       where
-        getDT :: Statement 'Scoped -> Maybe DataTypeName
+        getDT :: Statement 'Scoped -> Maybe (DataTypeName 'Parsed)
         getDT s = case s of
-          StatementDataType DataTypeDef {..} -> Just dataTypeName
+          StatementDataType DataTypeDef {..} -> Just (S.nameConcrete dataTypeName)
           _ -> Nothing
-    _syntaxOperators :: [OperatorSyntaxDef]
-    _syntaxOperators = mapMaybe getDef stmts
+    _syntaxOperators :: HashMap Symbol Fixity
+    _syntaxOperators = HashMap.fromList (mapMaybe getDef stmts)
       where
         getDef s = case s of
-          StatementOperator op -> Just op
+          StatementOperator OperatorSyntaxDef {..} -> Just (opSymbol, opFixity)
           _ -> Nothing
 
 readParseModule ::
   Members '[Error ScopeError, Reader ScopeParameters, Embed IO] r =>
-  ModulePath ->
+  TopModulePath ->
   Sem r (Module 'Parsed 'ModuleTop)
 readParseModule mp = do
   path <- modulePathToFilePath mp
@@ -135,12 +148,12 @@ readParseModule mp = do
 
 modulePathToFilePath ::
   Members '[Reader ScopeParameters] r =>
-  ModulePath ->
+  TopModulePath ->
   Sem r FilePath
 modulePathToFilePath mp = do
   root <- asks _scopeRootPath
   ext <- asks _scopeFileExtension
-  let relDirPath = foldr ((</>) . toPath) mempty (modulePathDir mp)
+  let relDirPath = foldr ((</>) . toPath) mempty (pathParts (modulePathDir mp))
       relFilePath = relDirPath </> toPath (modulePathName mp) <.> ext
   return $ root </> relFilePath
   where
@@ -172,7 +185,7 @@ checkTopModule ::
   Sem r (Module 'Scoped 'ModuleTop)
 checkTopModule (Module path stmts) = do
   checkCycle
-  cache <- gets @ModulesCache cachedModules
+  cache <- gets @ModulesCache _cachedModules
   maybe checkedModule return (cache ^. at path)
   where
     addParent :: ScopeParameters -> ScopeParameters
@@ -192,7 +205,7 @@ checkLocalModule ::
   Members '[Error ScopeError, State ModuleCurrentScope, Reader ScopeParameters, State ModulesCache, Embed IO] r =>
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
-checkLocalModule (Module path stmts) = Module path <$> mapM checkStatement stmts
+checkLocalModule (Module path stmts) = Module undefined <$> mapM checkStatement stmts
 
 checkOpenModule ::
   forall r.
@@ -205,7 +218,7 @@ checkOpenModule OpenModule {..} = do
   where
     openInfo :: Sem r ModuleScopeInfo
     openInfo = do
-      r <- HashMap.lookup openModuleName <$> gets _currentImported
+      r <- HashMap.lookup openModuleName <$> gets _currentModules
       case r of
         Just info -> return info
         _ -> throw (ErrOpenNotInScope openModuleName)
@@ -213,20 +226,21 @@ checkOpenModule OpenModule {..} = do
 openOperatorSyntaxDef ::
   forall r.
   Members '[Error ScopeError, State ModuleCurrentScope] r =>
-  ModulePath ->
-  OperatorSyntaxDef ->
+  QualifiedName ->
+  (Symbol, Fixity) ->
   Sem r ()
 openOperatorSyntaxDef path d = undefined
 
 openModule ::
   forall r.
   Members '[Error ScopeError, State ModuleCurrentScope] r =>
-  ModulePath ->
+  QualifiedName ->
   ModuleScopeInfo ->
   Maybe UsingHiding ->
   Sem r ()
-openModule openPath ModuleScopeInfo {..} uh = do
-  mapM_ (openOperatorSyntaxDef openPath) (filter (shouldOpen . opSymbol) _syntaxOperators)
+openModule qname ModuleScopeInfo {..} uh = do
+  mapM_ (openOperatorSyntaxDef qname) (filter (shouldOpen . fst) (HashMap.toList _syntaxOperators))
+  undefined
   where
     setsUsingHiding :: Maybe (Either (HashSet Symbol) (HashSet Symbol))
     setsUsingHiding = case uh of
@@ -292,6 +306,12 @@ checkExpressionSection e = case e of
   SectionUniverse uni -> return (SectionUniverse uni)
   SectionFunction fun -> SectionFunction <$> checkFunction fun
   SectionParens par -> SectionParens <$> checkExpressionSections par
+  SectionFunArrow -> return SectionFunArrow
+  SectionMatch match -> SectionMatch <$> checkMatch match
+
+checkMatch :: Members '[Error ScopeError, State ModuleCurrentScope] r =>
+  Match 'Parsed -> Sem r (Match 'Scoped)
+checkMatch = undefined
 
 checkExpressionSections ::
   Members '[Error ScopeError, State ModuleCurrentScope] r =>

@@ -23,20 +23,20 @@ debugModuleParser fileName = do
     Left err -> error err
     Right m -> print m
 
-runModuleParserIO :: FilePath -> IO (Either Text (Module 'ModuleTop))
+runModuleParserIO :: FilePath -> IO (Either Text (Module 'Parsed 'ModuleTop))
 runModuleParserIO fileName = do
   input <- Text.readFile fileName
   return (runModuleParser fileName input)
 
 -- | The 'FilePath' is only used for reporting errors. It is safe to pass
 -- an empty string.
-runModuleParser :: FilePath -> Text -> Either Text (Module 'ModuleTop)
+runModuleParser :: FilePath -> Text -> Either Text (Module 'Parsed 'ModuleTop)
 runModuleParser fileName input =
   case P.runParser topModuleDef fileName input of
     Left err -> Left $ Text.pack (P.errorBundlePretty err)
     Right r -> return r
 
-topModuleDef :: MonadParsec Void Text m => m (Module 'ModuleTop)
+topModuleDef :: MonadParsec Void Text m => m (Module 'Parsed 'ModuleTop)
 topModuleDef = space >> moduleDef <* (optional kwSemicolon >> P.eof)
 
 --------------------------------------------------------------------------------
@@ -53,23 +53,30 @@ name :: forall e m. MonadParsec e Text m => m Name
 name = do
   parts <- dottedSymbol
   return $ case nonEmptyUnsnoc parts of
-    (Just p, n) -> NameQualified (QualifiedName (mkModulePath p) n)
+    (Just p, n) -> NameQualified (QualifiedName (Path . toList $ p) n)
     (Nothing, n) -> NameUnqualified n
 
-mkModulePath :: NonEmpty Symbol -> ModulePath
-mkModulePath l = ModulePath (NonEmpty.init l) (NonEmpty.last l)
+qualifiedName :: forall e m. MonadParsec e Text m => m QualifiedName
+qualifiedName = do
+  parts <- dottedSymbol
+  let qualifiedPath = Path (NonEmpty.init parts)
+      qualifiedSymbol = NonEmpty.last parts
+  return QualifiedName {..}
+
+mkTopModulePath :: NonEmpty Symbol -> TopModulePath
+mkTopModulePath l = TopModulePath (Path (NonEmpty.init l)) (NonEmpty.last l)
 
 symbolList :: MonadParsec e Text m => m (NonEmpty Symbol)
 symbolList = braces (P.sepBy1 symbol kwSemicolon)
 
-modulePath :: MonadParsec e Text m => m ModulePath
-modulePath = mkModulePath <$> dottedSymbol
+topModulePath :: MonadParsec e Text m => m TopModulePath
+topModulePath = mkTopModulePath <$> dottedSymbol
 
 --------------------------------------------------------------------------------
 -- Top level statement
 --------------------------------------------------------------------------------
 
-statement :: forall e m. MonadParsec e Text m => m Statement
+statement :: forall e m. MonadParsec e Text m => m (Statement 'Parsed)
 statement =
   (StatementOperator <$> operatorSyntaxDef)
     <|> (StatementOpenModule <$> openModule)
@@ -111,17 +118,17 @@ operatorSyntaxDef = do
 -- Import statement
 --------------------------------------------------------------------------------
 
-import_ :: MonadParsec e Text m => m Import
+import_ :: MonadParsec e Text m => m (Import 'Parsed)
 import_ = do
   kwImport
-  importModule <- modulePath
+  importModule <- topModulePath
   return Import {..}
 
 --------------------------------------------------------------------------------
 -- Expression
 --------------------------------------------------------------------------------
 
-expressionSection :: MonadParsec e Text m => m ExpressionSection
+expressionSection :: MonadParsec e Text m => m (ExpressionSection 'Parsed)
 expressionSection =
   do
     SectionIdentifier <$> name
@@ -133,21 +140,21 @@ expressionSection =
     <|> (SectionFunArrow <$ kwRightArrow)
     <|> parens (SectionParens <$> expressionSections)
 
-expressionSections :: MonadParsec e Text m => m ExpressionSections
+expressionSections :: MonadParsec e Text m => m (ExpressionSections 'Parsed)
 expressionSections = ExpressionSections <$> P.some expressionSection
 
 --------------------------------------------------------------------------------
 -- Match expression
 --------------------------------------------------------------------------------
 
-matchAlt :: MonadParsec e Text m => m MatchAlt
+matchAlt :: MonadParsec e Text m => m (MatchAlt 'Parsed)
 matchAlt = do
   matchAltPattern <- patternSection
   kwMapsTo
   matchAltBody <- expressionSections
   return MatchAlt {..}
 
-match :: MonadParsec e Text m => m (Match)
+match :: MonadParsec e Text m => m (Match 'Parsed)
 match = do
   kwMatch
   matchExpression <- expressionSections
@@ -158,11 +165,11 @@ match = do
 -- Let expression
 --------------------------------------------------------------------------------
 
-letClause :: MonadParsec e Text m => m LetClause
+letClause :: MonadParsec e Text m => m (LetClause 'Parsed)
 letClause = do
   either LetTypeSig LetFunClause <$> auxTypeSigFunClause
 
-letBlock :: MonadParsec e Text m => m LetBlock
+letBlock :: MonadParsec e Text m => m (LetBlock 'Parsed)
 letBlock = do
   kwLet
   letClauses <- braces (P.sepEndBy letClause kwSemicolon)
@@ -186,7 +193,7 @@ typeSignature ::
   forall e m.
   MonadParsec e Text m =>
   Symbol ->
-  m (TypeSignature)
+  m (TypeSignature 'Parsed)
 typeSignature sigName = do
   kwColon
   sigType <- expressionSections
@@ -200,7 +207,7 @@ typeSignature sigName = do
 auxTypeSigFunClause ::
   forall e m.
   MonadParsec e Text m =>
-  m (Either TypeSignature FunctionClause)
+  m (Either (TypeSignature 'Parsed) (FunctionClause 'Parsed))
 auxTypeSigFunClause = do
   s <- symbol
   (Left <$> typeSignature s)
@@ -210,7 +217,7 @@ auxTypeSigFunClause = do
 -- Axioms
 -------------------------------------------------------------------------------
 
-axiomDef :: forall e m. MonadParsec e Text m => m AxiomDef
+axiomDef :: forall e m. MonadParsec e Text m => m (AxiomDef 'Parsed)
 axiomDef = do
   kwAxiom
   axiomName <- symbol
@@ -225,7 +232,7 @@ axiomDef = do
 explicitFunParam ::
   forall e m.
   MonadParsec e Text m =>
-  m (FunctionParameter)
+  m (FunctionParameter 'Parsed)
 explicitFunParam = do
   (paramName, paramUsage) <- P.try $ do
     lparen
@@ -247,10 +254,10 @@ explicitFunParam = do
         <|> (Just UsageOmega <$ kwColonOmega)
         <|> (Nothing <$ kwColon)
 
-functionParam :: MonadParsec e Text m => m FunctionParameter
+functionParam :: MonadParsec e Text m => m (FunctionParameter 'Parsed)
 functionParam = explicitFunParam
 
-function :: MonadParsec e Text m => m Function
+function :: MonadParsec e Text m => m (Function 'Parsed)
 function = do
   funParameter <- functionParam
   kwRightArrow
@@ -261,24 +268,24 @@ function = do
 -- Where block clauses
 --------------------------------------------------------------------------------
 
-whereBlock :: MonadParsec e Text m => m WhereBlock
+whereBlock :: MonadParsec e Text m => m (WhereBlock 'Parsed)
 whereBlock = do
   kwWhere
   WhereBlock <$> braces (P.sepEndBy whereClause kwSemicolon)
 
-whereClause :: forall e m. MonadParsec e Text m => m WhereClause
+whereClause :: forall e m. MonadParsec e Text m => m (WhereClause 'Parsed)
 whereClause =
   (WhereOpenModule <$> openModule)
     <|> sigOrFun
   where
-    sigOrFun :: m (WhereClause)
+    sigOrFun :: m (WhereClause 'Parsed)
     sigOrFun = either WhereTypeSig WhereFunClause <$> auxTypeSigFunClause
 
 --------------------------------------------------------------------------------
 -- Lambda expression
 --------------------------------------------------------------------------------
 
-lambdaClause :: MonadParsec e Text m => m LambdaClause
+lambdaClause :: MonadParsec e Text m => m (LambdaClause 'Parsed)
 lambdaClause = do
   lambdaParameters <- P.some patternSection
   kwMapsTo
@@ -286,7 +293,7 @@ lambdaClause = do
   return LambdaClause {..}
 
 
-lambda :: MonadParsec e Text m => m Lambda
+lambda :: MonadParsec e Text m => m (Lambda 'Parsed)
 lambda = do
   kwLambda
   lambdaClauses ← braces (P.sepEndBy lambdaClause kwSemicolon)
@@ -296,7 +303,7 @@ lambda = do
 -- Data type construction declaration
 -------------------------------------------------------------------------------
 
-dataTypeDef :: MonadParsec e Text m => m DataTypeDef
+dataTypeDef :: MonadParsec e Text m => m (DataTypeDef 'Parsed)
 dataTypeDef = do
   kwInductive
   dataTypeName <- symbol
@@ -305,14 +312,14 @@ dataTypeDef = do
   dataTypeConstructors <- braces $ P.sepEndBy constructorDef kwSemicolon
   return DataTypeDef {..}
 
-dataTypeParam :: MonadParsec e Text m => m DataTypeParameter
+dataTypeParam :: MonadParsec e Text m => m (DataTypeParameter 'Parsed)
 dataTypeParam = parens $ do
   dataTypeParameterName <- symbol
   kwColon
   dataTypeParameterType <- expressionSections
   return DataTypeParameter {..}
 
-constructorDef :: MonadParsec e Text m => m DataConstructorDef
+constructorDef :: MonadParsec e Text m => m (DataConstructorDef 'Parsed)
 constructorDef = do
   constructorName <- symbol
   kwColon
@@ -323,7 +330,7 @@ constructorDef = do
 -- Pattern section
 --------------------------------------------------------------------------------
 
-patternSection :: forall e m. MonadParsec e Text m => m PatternSection
+patternSection :: forall e m. MonadParsec e Text m => m (PatternSection 'Parsed)
 patternSection =
   PatternSectionName <$> name
     <|> PatternSectionWildcard <$ kwWildcard
@@ -332,7 +339,7 @@ patternSection =
 patternSections ::
   forall e m.
   MonadParsec e Text m =>
-  m (PatternSections)
+  m (PatternSections 'Parsed)
 patternSections = PatternSections <$> P.some patternSection
 
 --------------------------------------------------------------------------------
@@ -343,7 +350,7 @@ functionClause ::
   forall e m.
   MonadParsec e Text m =>
   Symbol ->
-  m (FunctionClause)
+  m (FunctionClause 'Parsed)
 functionClause clauseOwnerFunction = do
   clausePatterns <- P.many patternSection
   kwAssignment
@@ -358,12 +365,12 @@ functionClause clauseOwnerFunction = do
 pmoduleModulePath ::
   forall t e m.
   (SingI t, MonadParsec e Text m) =>
-  m (ModulePathType t)
+  m (ModulePathType 'Parsed t)
 pmoduleModulePath = case sing :: SModuleIsTop t of
-  SModuleTop -> modulePath
+  SModuleTop -> topModulePath
   SModuleLocal -> symbol
 
-moduleDef :: (SingI t, MonadParsec e Text m) => m (Module t)
+moduleDef :: (SingI t, MonadParsec e Text m) => m (Module 'Parsed t)
 moduleDef = do
   kwModule
   moduleModulePath <- pmoduleModulePath
@@ -375,7 +382,7 @@ moduleDef = do
 openModule :: forall e m. MonadParsec e Text m => m OpenModule
 openModule = do
   kwOpen
-  openModuleName <- modulePath
+  openModuleName <- qualifiedName
   openUsingHiding <- optional usingOrHiding
   return OpenModule {..}
   where
@@ -388,12 +395,12 @@ openModule = do
 -- Debugging statements
 --------------------------------------------------------------------------------
 
-eval :: MonadParsec e Text m => m Eval
+eval :: MonadParsec e Text m => m (Eval 'Parsed)
 eval = do
   kwEval
   Eval <$> expressionSections
 
-printS :: MonadParsec e Text m => m Print
+printS :: MonadParsec e Text m => m (Print 'Parsed)
 printS = do
   kwPrint
   Print <$> expressionSections

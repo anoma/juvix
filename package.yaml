@@ -33,6 +33,7 @@ dependencies:
 - relude == 1.0.*
 - semirings == 0.6.*
 - singletons == 3.0.*
+- Stream == 0.4.*
 - template-haskell == 2.17.*
 - text == 1.2.*
 - unordered-containers == 0.2.*
