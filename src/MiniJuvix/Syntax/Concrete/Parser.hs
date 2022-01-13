@@ -292,7 +292,6 @@ lambdaClause = do
   lambdaBody <- expressionSections
   return LambdaClause {..}
 
-
 lambda :: MonadParsec e Text m => m (Lambda 'Parsed)
 lambda = do
   kwLambda

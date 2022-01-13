@@ -19,8 +19,7 @@ import qualified Text.Show
 --------------------------------------------------------------------------------
 
 data ErrorType
-  =
-  DError DesugaringError
+  = DError DesugaringError
   | CError CheckingError
   | UnknownError
 

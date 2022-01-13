@@ -1,19 +1,20 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module MiniJuvix.Syntax.Concrete.Language (
-  module MiniJuvix.Syntax.Concrete.Language,
-  module MiniJuvix.Syntax.Concrete.Name
-  ) where
+module MiniJuvix.Syntax.Concrete.Language
+  ( module MiniJuvix.Syntax.Concrete.Language,
+    module MiniJuvix.Syntax.Concrete.Name,
+  )
+where
 
 --------------------------------------------------------------------------------
 
 import qualified Data.Kind as GHC
 import Data.Singletons
 import Language.Haskell.TH.Syntax (Lift)
-import MiniJuvix.Utils.Prelude
 import MiniJuvix.Syntax.Concrete.Name
 import qualified MiniJuvix.Syntax.Scoped.Name as S
+import MiniJuvix.Utils.Prelude
 
 --------------------------------------------------------------------------------
 -- Parsing stages
@@ -115,9 +116,13 @@ deriving stock instance
 newtype Import (s :: Stage) = Import
   { importModule :: ImportType s
   }
+
 deriving stock instance (Show (ImportType s)) => Show (Import s)
+
 deriving stock instance (Eq (ImportType s)) => Eq (Import s)
+
 deriving stock instance (Ord (ImportType s)) => Ord (Import s)
+
 deriving stock instance (Lift (ImportType s)) => Lift (Import s)
 
 --------------------------------------------------------------------------------
@@ -331,7 +336,7 @@ deriving stock instance
 -- Function binding declaration
 --------------------------------------------------------------------------------
 
-type (FunctionName s) = SymbolType s
+type FunctionName s = SymbolType s
 
 data FunctionClause (s :: Stage) = FunClause
   { clauseOwnerFunction :: FunctionName s,
@@ -392,7 +397,7 @@ instance SingI 'ModuleTop where
 instance SingI 'ModuleLocal where
   sing = SModuleLocal
 
-type (LocalModuleName s) = SymbolType s
+type LocalModuleName s = SymbolType s
 
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
   { moduleModulePath :: ModulePathType s t,
@@ -735,7 +740,7 @@ deriving stock instance
 -- expression with empty list of arguments and empty body.
 
 data Lambda (s :: Stage) = Lambda
-  { lambdaClauses :: [LambdaClause s] }
+  {lambdaClauses :: [LambdaClause s]}
 
 deriving stock instance
   ( Show (PatternType s),
@@ -765,6 +770,7 @@ data LambdaClause (s :: Stage) = LambdaClause
   { lambdaParameters :: NonEmpty (PatternType s),
     lambdaBody :: ExpressionType s
   }
+
 deriving stock instance
   ( Show (PatternType s),
     Show (ExpressionType s)

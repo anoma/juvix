@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module MiniJuvix.Syntax.Concrete.Name where
 
 import Language.Haskell.TH.Syntax (Lift)
@@ -24,8 +25,8 @@ data Name
   | NameUnqualified Symbol
   deriving stock (Show, Eq, Ord, Lift)
 
-newtype Path = Path {
-  pathParts :: [Symbol]
+newtype Path = Path
+  { pathParts :: [Symbol]
   }
   deriving stock (Show, Eq, Ord, Lift)
 
@@ -39,9 +40,10 @@ data TopModulePath = TopModulePath
   deriving stock (Show, Eq, Ord, Generic, Lift)
 
 topModulePathToQualified :: TopModulePath -> QualifiedName
-topModulePathToQualified TopModulePath {..} = QualifiedName {
-  qualifiedPath = modulePathDir,
-  qualifiedSymbol = modulePathName
-  }
+topModulePathToQualified TopModulePath {..} =
+  QualifiedName
+    { qualifiedPath = modulePathDir,
+      qualifiedSymbol = modulePathName
+    }
 
 instance Hashable TopModulePath

@@ -1,27 +1,28 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module MiniJuvix.Syntax.Scoped.Scoper where
 
 --------------------------------------------------------------------------------
 
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.HashSet as HashSet
+import Data.Stream (Stream)
+import qualified Data.Stream as Stream
 import qualified Data.Text as Text
 import Lens.Micro.Platform
 import MiniJuvix.Syntax.Concrete.Base (MonadParsec)
 import qualified MiniJuvix.Syntax.Concrete.Base as P
-import qualified MiniJuvix.Syntax.Scoped.Name as S
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Parser (runModuleParserIO)
+import qualified MiniJuvix.Syntax.Scoped.Name as S
 import MiniJuvix.Utils.Prelude hiding (Reader, State, ask, asks, get, gets, local, modify, put)
 import Polysemy
 import Polysemy.Error hiding (fromEither)
 import Polysemy.Reader
 import Polysemy.State
 import System.FilePath
-import qualified Data.Stream as Stream
-import Data.Stream (Stream)
 
 --------------------------------------------------------------------------------
 
@@ -43,8 +44,8 @@ newtype IdentifierInfo = IdentifierInfo
   { idenInfoOrigins :: HashSet TopModulePath
   }
 
-newtype LocalVariable = LocalVariable {
-  variableName ∷ S.Name
+newtype LocalVariable = LocalVariable
+  { variableName :: S.Name
   }
   deriving newtype (Show, Eq, Hashable)
 
@@ -62,6 +63,7 @@ makeLenses ''ModuleCurrentScope
 newtype ModulesCache = ModulesCache
   { _cachedModules :: HashMap TopModulePath (Module 'Scoped 'ModuleTop)
   }
+
 makeLenses ''ModulesCache
 
 data ScopeError
@@ -79,15 +81,17 @@ data ScopeParameters = ScopeParameters
     -- | Used for import cycle detection.
     _scopeTopParents :: HashSet TopModulePath
   }
+
 makeLenses ''ScopeParameters
 
-data ScopeState = ScopeState {
-  _scopeModulesCacheCache :: ModulesCache,
-  _scopeFreeNames :: Stream S.NameId
+data ScopeState = ScopeState
+  { _scopeModulesCacheCache :: ModulesCache,
+    _scopeFreeNames :: Stream S.NameId
   }
+
 makeLenses ''ScopeState
 
-scopeCheck :: FilePath -> [Module 'Parsed 'ModuleTop] -> Either ScopeError [Module  'Scoped 'ModuleTop]
+scopeCheck :: FilePath -> [Module 'Parsed 'ModuleTop] -> Either ScopeError [Module 'Scoped 'ModuleTop]
 scopeCheck = undefined
 
 checkImport ::
@@ -118,8 +122,9 @@ moduleScopeInfo (Module _ stmts) = ModuleScopeInfo {..}
       where
         getConstrs :: Statement 'Scoped -> HashSet (DataConstructorName 'Parsed)
         getConstrs s = case s of
-          StatementDataType DataTypeDef {..} -> HashSet.fromList
-            (map (S.nameConcrete . constructorName) dataTypeConstructors)
+          StatementDataType DataTypeDef {..} ->
+            HashSet.fromList
+              (map (S.nameConcrete . constructorName) dataTypeConstructors)
           _ -> mempty
     _syntaxDataTypes :: HashSet (DataTypeName 'Parsed)
     _syntaxDataTypes = HashSet.fromList (mapMaybe getDT stmts)
@@ -309,8 +314,10 @@ checkExpressionSection e = case e of
   SectionFunArrow -> return SectionFunArrow
   SectionMatch match -> SectionMatch <$> checkMatch match
 
-checkMatch :: Members '[Error ScopeError, State ModuleCurrentScope] r =>
-  Match 'Parsed -> Sem r (Match 'Scoped)
+checkMatch ::
+  Members '[Error ScopeError, State ModuleCurrentScope] r =>
+  Match 'Parsed ->
+  Sem r (Match 'Scoped)
 checkMatch = undefined
 
 checkExpressionSections ::
