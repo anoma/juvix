@@ -4,6 +4,7 @@
 module MiniJuvix.Syntax.Concrete.Language
   ( module MiniJuvix.Syntax.Concrete.Language,
     module MiniJuvix.Syntax.Concrete.Name,
+    module MiniJuvix.Syntax.Concrete.Fixity,
   )
 where
 
@@ -13,6 +14,7 @@ import qualified Data.Kind as GHC
 import Data.Singletons
 import Language.Haskell.TH.Syntax (Lift)
 import MiniJuvix.Syntax.Concrete.Name
+import MiniJuvix.Syntax.Concrete.Fixity
 import qualified MiniJuvix.Syntax.Scoped.Name as S
 import MiniJuvix.Utils.Prelude
 
@@ -128,29 +130,6 @@ deriving stock instance (Lift (ImportType s)) => Lift (Import s)
 --------------------------------------------------------------------------------
 -- Operator syntax declaration
 --------------------------------------------------------------------------------
-
-type Precedence = Natural
-
-data UnaryAssoc = AssocPrefix | AssocPostfix
-  deriving stock (Show, Eq, Ord, Lift)
-
-data BinaryAssoc = AssocNone | AssocLeft | AssocRight
-  deriving stock (Show, Eq, Ord, Lift)
-
-data OperatorArity
-  = Unary
-      { unaryAssoc :: UnaryAssoc
-      }
-  | Binary
-      { binaryAssoc :: BinaryAssoc
-      }
-  deriving stock (Show, Eq, Ord, Lift)
-
-data Fixity = Fixity
-  { fixityPrecedence :: Precedence,
-    fixityArity :: OperatorArity
-  }
-  deriving stock (Show, Eq, Ord, Lift)
 
 data OperatorSyntaxDef = OperatorSyntaxDef
   { opSymbol :: Symbol,
@@ -338,7 +317,7 @@ deriving stock instance
 
 type FunctionName s = SymbolType s
 
-data FunctionClause (s :: Stage) = FunClause
+data FunctionClause (s :: Stage) = FunctionClause
   { clauseOwnerFunction :: FunctionName s,
     clausePatterns :: [PatternType s],
     clauseBody :: ExpressionType s,

@@ -355,7 +355,7 @@ functionClause clauseOwnerFunction = do
   kwAssignment
   clauseBody <- expressionSections
   clauseWhere <- optional whereBlock
-  return FunClause {..}
+  return FunctionClause {..}
 
 --------------------------------------------------------------------------------
 -- Module declaration
