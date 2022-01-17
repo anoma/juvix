@@ -14,6 +14,8 @@
 -- | Adapted from heliaxdev/Juvix/library/StandardLibrary/src/Juvix/Library.hs
 module MiniJuvix.Utils.Prelude
   ( module MiniJuvix.Utils.Prelude,
+    module Data.List.Extra,
+    module Control.Monad.Extra,
     module Relude,
   )
 where
@@ -21,6 +23,8 @@ where
 --------------------------------------------------------------------------------
 
 import qualified Data.Char as Char
+import Data.List.Extra (unsnoc, groupSortOn)
+import Control.Monad.Extra (maybeM)
 import qualified Data.List.NonEmpty as NonEmpty
 import Relude hiding
   ( Type,
@@ -103,22 +107,8 @@ class Monoid m => Semiring m where
 -- Maybe
 --------------------------------------------------------------------------------
 
-maybeM :: Monad m => m b -> (a -> m b) -> m (Maybe a) -> m b
-maybeM n j x = maybe n j =<< x
-
 fromMaybeM :: Monad m => m a -> m (Maybe a) -> m a
-fromMaybeM n x = maybeM n pure x
-
---------------------------------------------------------------------------------
--- List
---------------------------------------------------------------------------------
-
-unsnoc :: [a] -> Maybe ([a], a)
-unsnoc [] = Nothing
-unsnoc [x] = Just ([], x)
-unsnoc (x : xs) = case unsnoc xs of
-  Just (a, b) -> Just (x : a, b)
-  _ -> error "impossible"
+fromMaybeM n = maybeM n pure
 
 --------------------------------------------------------------------------------
 -- NonEmpty

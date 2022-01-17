@@ -361,18 +361,18 @@ functionClause clauseOwnerFunction = do
 -- Module declaration
 --------------------------------------------------------------------------------
 
-pmoduleModulePath ::
+pmodulePath ::
   forall t e m.
   (SingI t, MonadParsec e Text m) =>
   m (ModulePathType 'Parsed t)
-pmoduleModulePath = case sing :: SModuleIsTop t of
+pmodulePath = case sing :: SModuleIsTop t of
   SModuleTop -> topModulePath
   SModuleLocal -> symbol
 
 moduleDef :: (SingI t, MonadParsec e Text m) => m (Module 'Parsed t)
 moduleDef = do
   kwModule
-  moduleModulePath <- pmoduleModulePath
+  modulePath <- pmodulePath
   kwSemicolon
   moduleBody <- P.sepEndBy statement kwSemicolon
   kwEnd

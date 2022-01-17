@@ -1,7 +1,7 @@
 module MiniJuvix.Syntax.Concrete.Fixity where
 
-import MiniJuvix.Utils.Prelude
 import Language.Haskell.TH.Syntax (Lift)
+import MiniJuvix.Utils.Prelude
 
 type Precedence = Natural
 
@@ -25,4 +25,3 @@ data Fixity = Fixity
     fixityArity :: OperatorArity
   }
   deriving stock (Show, Eq, Ord, Lift)
-

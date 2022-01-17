@@ -3,10 +3,10 @@
 
 module MiniJuvix.Syntax.Scoped.Name where
 
-import Lens.Micro.Platform
 import Data.Stream (Stream (Cons))
-import qualified MiniJuvix.Syntax.Concrete.Name as C
+import Lens.Micro.Platform
 import qualified MiniJuvix.Syntax.Concrete.Fixity as C
+import qualified MiniJuvix.Syntax.Concrete.Name as C
 import MiniJuvix.Utils.Prelude
 
 --------------------------------------------------------------------------------
@@ -16,9 +16,9 @@ import MiniJuvix.Utils.Prelude
 newtype NameId = NameId Word64
   deriving stock (Show, Eq, Ord, Generic)
 
-data AbsModulePath = AbsModulePath {
-  absTopModulePath :: C.TopModulePath,
-  absLocalPath :: [C.Symbol]
+data AbsModulePath = AbsModulePath
+  { absTopModulePath :: C.TopModulePath,
+    absLocalPath :: [C.Symbol]
   }
   deriving stock (Show, Eq, Generic)
 
@@ -27,7 +27,7 @@ instance Hashable AbsModulePath
 -- | Appends a local path to the absolute path
 -- e.g. TopMod.Local <.> Inner == TopMod.Local.Inner
 (<.>) :: AbsModulePath -> C.Symbol -> AbsModulePath
-absP <.> localMod = absP {absLocalPath = absLocalPath absP ++ [localMod] }
+absP <.> localMod = absP {absLocalPath = absLocalPath absP ++ [localMod]}
 
 allNameIds :: Stream NameId
 allNameIds = NameId <$> ids
@@ -38,8 +38,8 @@ allNameIds = NameId <$> ids
 
 instance Hashable NameId
 
-data NameFixity =
-  NoFixity
+data NameFixity
+  = NoFixity
   | SomeFixity C.Fixity
   deriving stock (Show, Eq)
 
@@ -52,6 +52,10 @@ data NameKind
     KNameFunction
   | -- | A locally bound name (patterns, arguments, etc.).
     KNameLocal
+  | -- | An axiom.
+    KNameAxiom
+  | -- | An local module name.
+    KNameLocalModule
   deriving stock (Show, Eq)
 
 canHaveFixity :: NameKind -> Bool
@@ -59,7 +63,9 @@ canHaveFixity k = case k of
   KNameConstructor -> True
   KNameInductive -> True
   KNameFunction -> True
+  KNameAxiom -> True
   KNameLocal -> False
+  KNameLocalModule -> False
 
 type Name = Name' C.Name
 
@@ -73,7 +79,13 @@ data Name' n = Name'
     _nameFixity :: NameFixity
   }
   deriving stock (Show)
+
 makeLenses ''Name'
+
+hasFixity :: Name' s -> Bool
+hasFixity Name' {..} = case _nameFixity of
+  SomeFixity{} -> True
+  NoFixity -> False
 
 instance Eq (Name' n) where
   (==) = (==) `on` _nameId

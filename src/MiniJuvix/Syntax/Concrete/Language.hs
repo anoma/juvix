@@ -13,8 +13,8 @@ where
 import qualified Data.Kind as GHC
 import Data.Singletons
 import Language.Haskell.TH.Syntax (Lift)
-import MiniJuvix.Syntax.Concrete.Name
 import MiniJuvix.Syntax.Concrete.Fixity
+import MiniJuvix.Syntax.Concrete.Name
 import qualified MiniJuvix.Syntax.Scoped.Name as S
 import MiniJuvix.Utils.Prelude
 
@@ -379,7 +379,7 @@ instance SingI 'ModuleLocal where
 type LocalModuleName s = SymbolType s
 
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
-  { moduleModulePath :: ModulePathType s t,
+  { modulePath :: ModulePathType s t,
     moduleBody :: [Statement s]
   }
 
@@ -443,12 +443,13 @@ data OpenModule = OpenModule
 --------------------------------------------------------------------------------
 
 data Expression
-  = ExprIdentifier QualifiedName
-  | ExprApplication Application
-  | ExprLambda (Lambda 'Scoped)
-  | ExprLetBlock (LetBlock 'Scoped)
-  | ExprUniverse Universe
-  | ExprFunction (Function 'Scoped)
+  = ExpressionIdentifier (NameType 'Scoped)
+  | ExpressionApplication Application
+  | ExpressionLambda (Lambda 'Scoped)
+  | ExpressionMatch (Match 'Scoped)
+  | ExpressionLetBlock (LetBlock 'Scoped)
+  | ExpressionUniverse Universe
+  | ExpressionFunction (Function 'Scoped)
   deriving stock (Show, Eq, Ord)
 
 --------------------------------------------------------------------------------
@@ -779,8 +780,8 @@ deriving stock instance
 --------------------------------------------------------------------------------
 
 data Application = Application
-  { applicationFun :: ExpressionType 'Scoped,
-    applicationArg :: ExpressionType 'Scoped
+  { applicationFunction :: ExpressionType 'Scoped,
+    applicationParameter :: ExpressionType 'Scoped
   }
   deriving stock (Show, Eq, Ord)
 

@@ -9,29 +9,32 @@ module MiniJuvix.Syntax.Scoped.Scoper where
 
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.HashSet as HashSet
+import qualified Data.List.NonEmpty as NonEmpty
 import Data.Stream (Stream)
 import qualified Data.Stream as Stream
-import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Text as Text
 import Lens.Micro.Platform
 import MiniJuvix.Syntax.Concrete.Base (MonadParsec)
 import qualified MiniJuvix.Syntax.Concrete.Base as P
 import MiniJuvix.Syntax.Concrete.Language
-import MiniJuvix.Syntax.Concrete.Parser (runModuleParserIO)
+import MiniJuvix.Syntax.Concrete.Parser (runModuleParserIO, dottedSymbol)
 import qualified MiniJuvix.Syntax.Scoped.Name as S
 import MiniJuvix.Utils.Prelude hiding (Reader, State, ask, asks, get, gets, local, modify, put, runReader, runState)
 import Polysemy
 import Polysemy.Error hiding (fromEither)
 import Polysemy.Reader
 import Polysemy.State
+import Polysemy.Embed
+import Polysemy.NonDet
 import System.FilePath
+import qualified Control.Monad.Combinators.Expr as P
+import qualified Text.Megaparsec as P
 
 --------------------------------------------------------------------------------
 
 -- | Relevant scope information of a module.
 data ModuleScopeInfo = ModuleScopeInfo
-  {
-    -- | Absolute path to the module
+  { -- | Absolute path to the module
     _syntaxPath :: S.AbsModulePath,
     -- | constructors introduced by inductive definitions (E.g. zero; suc).
     _syntaxConstructors :: HashSet (DataConstructorName 'Parsed),
@@ -52,35 +55,36 @@ newtype LocalVariable = LocalVariable
   }
   deriving newtype (Show, Eq, Hashable)
 
-data SymbolInfo = SymbolInfo {
-  -- | This map must have at least one entry.
-  -- If there are more than one entry, it means that the same symbol has been
-  -- brought into scope from two different places.
-  symbolInfo :: HashMap S.AbsModulePath SymbolEntry
+data SymbolInfo = SymbolInfo
+  { -- | This map must have at least one entry.
+    -- If there are more than one entry, it means that the same symbol has been
+    -- brought into scope from two different places.
+    symbolInfo :: HashMap S.AbsModulePath SymbolEntry
   }
 
-data SymbolEntry = SymbolEntry {
-  symbolKind :: S.NameKind,
-  symbolDefinedIn :: S.AbsModulePath,
-  symbolId :: S.NameId,
-  symbolFixity :: S.NameFixity
+data SymbolEntry = SymbolEntry
+  { symbolKind :: S.NameKind,
+    symbolDefinedIn :: S.AbsModulePath,
+    symbolId :: S.NameId,
+    symbolFixity :: S.NameFixity
   }
   deriving stock (Show)
 
 data Scope = Scope
-  {
-    _scopePath      :: S.AbsModulePath,
-    _scopeFixities  :: HashMap Symbol Fixity,
+  { _scopePath :: S.AbsModulePath,
+    _scopeFixities :: HashMap Symbol Fixity,
     _scopeUsedFixities :: HashSet Symbol,
-    _scopeSymbols   :: HashMap Symbol SymbolInfo,
-    _scopeModules   :: HashMap QualifiedName ModuleScopeInfo,
+    _scopeSymbols :: HashMap Symbol SymbolInfo,
+    _scopeModules :: HashMap QualifiedName ModuleScopeInfo,
     _scopeBindGroup :: HashMap Symbol LocalVariable
   }
+
 makeLenses ''Scope
 
-data LocalVars = LocalVars {
-   _localVars :: HashMap Symbol LocalVariable
+data LocalVars = LocalVars
+  { _localVars :: HashMap Symbol LocalVariable
   }
+
 makeLenses ''LocalVars
 
 newtype ModulesCache = ModulesCache
@@ -90,8 +94,9 @@ newtype ModulesCache = ModulesCache
 makeLenses ''ModulesCache
 
 data ScopeError
-  = ParseError Text
+  = ErrParser Text
   | Err
+  | ErrInfixParser
   | ErrAlreadyDefined Symbol
   | ErrLacksTypeSig Symbol
   | ErrImportCycle TopModulePath
@@ -117,12 +122,14 @@ data ScopeState = ScopeState
   { _scopeModulesCache :: ModulesCache,
     _scopeFreeNames :: Stream S.NameId
   }
+
 makeLenses ''ScopeState
 
 scopeCheck :: FilePath -> [Module 'Parsed 'ModuleTop] -> Either ScopeError [Module 'Scoped 'ModuleTop]
 scopeCheck = undefined
 
-freshNameId :: Members '[State ScopeState] r =>
+freshNameId ::
+  Members '[State ScopeState] r =>
   Sem r S.NameId
 freshNameId = do
   i <- gets (Stream.head . _scopeFreeNames)
@@ -132,72 +139,103 @@ freshNameId = do
 freshVariable :: Members '[State ScopeState, State Scope] r => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol S.KNameLocal
 
-freshSymbol :: forall r. Members '[State ScopeState, State Scope] r =>
-   S.NameKind -> Symbol -> Sem r S.Symbol
+freshSymbol ::
+  forall r.
+  Members '[State ScopeState, State Scope] r =>
+  S.NameKind ->
+  Symbol ->
+  Sem r S.Symbol
 freshSymbol _nameKind _nameConcrete = do
   _nameId <- freshNameId
   _nameDefinedIn <- gets _scopePath
   _nameFixity <- getFixity
   return S.Name' {..}
   where
-  getFixity :: Sem r S.NameFixity
-  getFixity
-   | S.canHaveFixity _nameKind = do
-       mfix <- HashMap.lookup _nameConcrete <$> gets _scopeFixities
-       case mfix of
-         Nothing -> return S.NoFixity
-         Just fixity -> do
-           -- deleting the fixity so we know it has been used
-           modify (over scopeFixities (HashMap.delete _nameConcrete))
-           modify (over scopeUsedFixities (HashSet.insert _nameConcrete))
-           return (S.SomeFixity fixity)
-   | otherwise = return S.NoFixity
+    getFixity :: Sem r S.NameFixity
+    getFixity
+      | S.canHaveFixity _nameKind = do
+        mfix <- HashMap.lookup _nameConcrete <$> gets _scopeFixities
+        case mfix of
+          Nothing -> return S.NoFixity
+          Just fixity -> do
+            -- deleting the fixity so we know it has been used
+            modify (over scopeFixities (HashMap.delete _nameConcrete))
+            modify (over scopeUsedFixities (HashSet.insert _nameConcrete))
+            return (S.SomeFixity fixity)
+      | otherwise = return S.NoFixity
 
-reserveSymbolOf :: forall r. Members '[Error ScopeError, State ScopeState, State Scope] r =>
-  S.NameKind -> Symbol -> Sem r S.Symbol
+reserveSymbolOf ::
+  forall r.
+  Members '[Error ScopeError, State ScopeState, State Scope] r =>
+  S.NameKind ->
+  Symbol ->
+  Sem r S.Symbol
 reserveSymbolOf k s = do
   checkNotBound
   s' <- freshSymbol k s
   return s'
   where
-  checkNotBound :: Sem r ()
-  checkNotBound = do
-    path <- gets _scopePath
-    syms <- gets _scopeSymbols
-    let exists = fromMaybe False (HashMap.member path . symbolInfo <$> HashMap.lookup s syms)
-    when exists (throw (ErrAlreadyDefined s))
+    checkNotBound :: Sem r ()
+    checkNotBound = do
+      path <- gets _scopePath
+      syms <- gets _scopeSymbols
+      let exists = fromMaybe False (HashMap.member path . symbolInfo <$> HashMap.lookup s syms)
+      when exists (throw (ErrAlreadyDefined s))
 
-bindReservedSymbol :: Members '[State Scope] r =>
-  S.Symbol -> Sem r ()
+bindReservedSymbol ::
+  Members '[State Scope] r =>
+  S.Symbol ->
+  Sem r ()
 bindReservedSymbol s' = do
   path <- gets _scopePath
   modify (over scopeSymbols (HashMap.alter (Just . addS path) s))
   where
-  s = S._nameConcrete s'
-  entry :: SymbolEntry
-  entry = symbolEntry s'
-  addS :: S.AbsModulePath -> Maybe SymbolInfo -> SymbolInfo
-  addS path m = case m of
-    Nothing -> SymbolInfo (HashMap.singleton path entry)
-    Just SymbolInfo {..} -> SymbolInfo (HashMap.insert path entry symbolInfo)
+    s = S._nameConcrete s'
+    entry :: SymbolEntry
+    entry = symbolEntry s'
+    addS :: S.AbsModulePath -> Maybe SymbolInfo -> SymbolInfo
+    addS path m = case m of
+      Nothing -> SymbolInfo (HashMap.singleton path entry)
+      Just SymbolInfo {..} -> SymbolInfo (HashMap.insert path entry symbolInfo)
 
-bindSymbolOf :: Members '[Error ScopeError, State ScopeState, State Scope] r =>
-  S.NameKind -> Symbol -> Sem r S.Symbol
+bindSymbolOf ::
+  Members '[Error ScopeError, State ScopeState, State Scope] r =>
+  S.NameKind ->
+  Symbol ->
+  Sem r S.Symbol
 bindSymbolOf k s = do
   s' <- reserveSymbolOf k s
   bindReservedSymbol s'
   return s'
 
-bindFunctionSymbol :: Members '[Error ScopeError, State ScopeState, State Scope] r =>
-  Symbol -> Sem r S.Symbol
+bindFunctionSymbol ::
+  Members '[Error ScopeError, State ScopeState, State Scope] r =>
+  Symbol ->
+  Sem r S.Symbol
 bindFunctionSymbol = bindSymbolOf S.KNameFunction
 
-bindInductiveSymbol :: Members '[Error ScopeError, State ScopeState, State Scope] r =>
-  Symbol -> Sem r S.Symbol
+bindInductiveSymbol ::
+  Members '[Error ScopeError, State ScopeState, State Scope] r =>
+  Symbol ->
+  Sem r S.Symbol
 bindInductiveSymbol = bindSymbolOf S.KNameInductive
 
-bindConstructorSymbol :: Members '[Error ScopeError, State ScopeState, State Scope] r =>
-  Symbol -> Sem r S.Symbol
+bindAxiomSymbol ::
+  Members '[Error ScopeError, State ScopeState, State Scope] r =>
+  Symbol ->
+  Sem r S.Symbol
+bindAxiomSymbol = bindSymbolOf S.KNameAxiom
+
+bindLocalModuleSymbol ::
+  Members '[Error ScopeError, State ScopeState, State Scope] r =>
+  Symbol ->
+  Sem r S.Symbol
+bindLocalModuleSymbol = bindSymbolOf S.KNameLocalModule
+
+bindConstructorSymbol ::
+  Members '[Error ScopeError, State ScopeState, State Scope] r =>
+  Symbol ->
+  Sem r S.Symbol
 bindConstructorSymbol = bindSymbolOf S.KNameConstructor
 
 checkImport ::
@@ -207,61 +245,63 @@ checkImport ::
 checkImport (Import p) = Import <$> (readParseModule p >>= checkTopModule)
 
 getTopModulePath :: Module s 'ModuleTop -> S.AbsModulePath
-getTopModulePath Module{..} = S.AbsModulePath {
- S.absTopModulePath = moduleModulePath,
- S.absLocalPath = mempty
-  }
+getTopModulePath Module {..} =
+  S.AbsModulePath
+    { S.absTopModulePath = modulePath,
+      S.absLocalPath = mempty
+    }
 
 localModuleScopeInfo :: S.AbsModulePath -> Module 'Scoped 'ModuleLocal -> ModuleScopeInfo
 localModuleScopeInfo parentPath lmod = moduleScopeInfo (parentPath S.<.> localModSym) lmod
   where
-  localModSym :: Symbol
-  localModSym = S._nameConcrete (moduleModulePath lmod)
+    localModSym :: Symbol
+    localModSym = S._nameConcrete (modulePath lmod)
 
 topModuleScopeInfo :: Module 'Scoped 'ModuleTop -> ModuleScopeInfo
 topModuleScopeInfo m = moduleScopeInfo (getTopModulePath m) m
 
 moduleScopeInfo :: S.AbsModulePath -> Module 'Scoped t -> ModuleScopeInfo
-moduleScopeInfo modulePath (Module _ stmts) = ModuleScopeInfo {..}
+moduleScopeInfo absPath sModule = ModuleScopeInfo {..}
   where
-    _syntaxPath :: S.AbsModulePath
-    _syntaxPath = undefined
-    _syntaxLocalModules :: HashMap Symbol ModuleScopeInfo
-    _syntaxLocalModules = HashMap.fromList (mapMaybe getModule stmts)
-      where
-        getModule :: Statement 'Scoped -> Maybe (Symbol, ModuleScopeInfo)
-        getModule s = case s of
-          StatementModule m@Module {..} -> Just (S._nameConcrete moduleModulePath, moduleScopeInfo undefined m)
-          _ -> Nothing
-    _syntaxFunctions :: HashSet (FunctionName 'Parsed)
-    _syntaxFunctions = HashSet.fromList (mapMaybe getFun stmts)
-      where
-        getFun :: Statement 'Scoped -> Maybe (FunctionName 'Parsed)
-        getFun s = case s of
-          -- StatementDataType DataTypeDef {..} → HashSet.fromList (map constructorName dataTypeConstructors)
-          _ -> undefined
-    _syntaxConstructors :: HashSet (DataConstructorName 'Parsed)
-    _syntaxConstructors = mconcat (map getConstrs stmts)
-      where
-        getConstrs :: Statement 'Scoped -> HashSet (DataConstructorName 'Parsed)
-        getConstrs s = case s of
-          StatementDataType DataTypeDef {..} ->
-            HashSet.fromList
-              (map (S._nameConcrete . constructorName) dataTypeConstructors)
-          _ -> mempty
-    _syntaxDataTypes :: HashSet (DataTypeName 'Parsed)
-    _syntaxDataTypes = HashSet.fromList (mapMaybe getDT stmts)
-      where
-        getDT :: Statement 'Scoped -> Maybe (DataTypeName 'Parsed)
-        getDT s = case s of
-          StatementDataType DataTypeDef {..} -> Just (S._nameConcrete dataTypeName)
-          _ -> Nothing
-    _syntaxOperators :: HashMap Symbol Fixity
-    _syntaxOperators = HashMap.fromList (mapMaybe getDef stmts)
-      where
-        getDef s = case s of
-          StatementOperator OperatorSyntaxDef {..} -> Just (opSymbol, opFixity)
-          _ -> Nothing
+  stmts = moduleBody sModule
+  _syntaxPath :: S.AbsModulePath
+  _syntaxPath = undefined
+  _syntaxLocalModules :: HashMap Symbol ModuleScopeInfo
+  _syntaxLocalModules = HashMap.fromList (mapMaybe getModule stmts)
+    where
+      getModule :: Statement 'Scoped -> Maybe (Symbol, ModuleScopeInfo)
+      getModule s = case s of
+        StatementModule m -> Just (S._nameConcrete (modulePath m), moduleScopeInfo undefined m)
+        _ -> Nothing
+  _syntaxFunctions :: HashSet (FunctionName 'Parsed)
+  _syntaxFunctions = HashSet.fromList (mapMaybe getFun stmts)
+    where
+      getFun :: Statement 'Scoped -> Maybe (FunctionName 'Parsed)
+      getFun s = case s of
+        -- StatementDataType DataTypeDef {..} → HashSet.fromList (map constructorName dataTypeConstructors)
+        _ -> undefined
+  _syntaxConstructors :: HashSet (DataConstructorName 'Parsed)
+  _syntaxConstructors = mconcat (map getConstrs stmts)
+    where
+      getConstrs :: Statement 'Scoped -> HashSet (DataConstructorName 'Parsed)
+      getConstrs s = case s of
+        StatementDataType DataTypeDef {..} ->
+          HashSet.fromList
+            (map (S._nameConcrete . constructorName) dataTypeConstructors)
+        _ -> mempty
+  _syntaxDataTypes :: HashSet (DataTypeName 'Parsed)
+  _syntaxDataTypes = HashSet.fromList (mapMaybe getDT stmts)
+    where
+      getDT :: Statement 'Scoped -> Maybe (DataTypeName 'Parsed)
+      getDT s = case s of
+        StatementDataType DataTypeDef {..} -> Just (S._nameConcrete dataTypeName)
+        _ -> Nothing
+  _syntaxOperators :: HashMap Symbol Fixity
+  _syntaxOperators = HashMap.fromList (mapMaybe getDef stmts)
+    where
+      getDef s = case s of
+        StatementOperator OperatorSyntaxDef {..} -> Just (opSymbol, opFixity)
+        _ -> Nothing
 
 readParseModule ::
   Members '[Error ScopeError, Reader ScopeParameters, Embed IO] r =>
@@ -271,7 +311,7 @@ readParseModule mp = do
   path <- modulePathToFilePath mp
   res <- embed (runModuleParserIO path)
   case res of
-    Left err -> throw (ParseError err)
+    Left err -> throw (ErrParser err)
     Right r -> return r
 
 modulePathToFilePath ::
@@ -288,7 +328,8 @@ modulePathToFilePath mp = do
     toPath :: Symbol -> FilePath
     toPath (Sym t) = Text.unpack t
 
-checkOperatorSyntaxDef :: forall r.
+checkOperatorSyntaxDef ::
+  forall r.
   Members '[Error ScopeError, State Scope] r =>
   OperatorSyntaxDef ->
   Sem r ()
@@ -296,11 +337,15 @@ checkOperatorSyntaxDef OperatorSyntaxDef {..} = do
   checkNotDefined
   modify (over scopeFixities (HashMap.insert opSymbol opFixity))
   where
-  checkNotDefined :: Sem r ()
-  checkNotDefined = whenM
-     (orM [HashSet.member opSymbol <$> gets _scopeUsedFixities,
-           HashMap.member opSymbol <$> gets _scopeFixities])
-     (throw (ErrDuplicateFixity opSymbol))
+    checkNotDefined :: Sem r ()
+    checkNotDefined =
+      whenM
+        ( orM
+            [ HashSet.member opSymbol <$> gets _scopeUsedFixities,
+              HashMap.member opSymbol <$> gets _scopeFixities
+            ]
+        )
+        (throw (ErrDuplicateFixity opSymbol))
 
 checkTypeSignature ::
   Members '[Error ScopeError, State Scope, State ScopeState] r =>
@@ -309,64 +354,74 @@ checkTypeSignature ::
 checkTypeSignature TypeSignature {..} = do
   sigType' <- localScope (checkParseExpressionSections sigType)
   sigName' <- bindFunctionSymbol sigName
-  return TypeSignature {
-    sigName = sigName',
-    sigType = sigType'
-    }
+  return
+    TypeSignature
+      { sigName = sigName',
+        sigType = sigType'
+      }
 
 symbolEntry :: S.Symbol -> SymbolEntry
-symbolEntry S.Name' {..} = SymbolEntry {
-  symbolKind = _nameKind,
-  symbolDefinedIn = _nameDefinedIn,
-  symbolId = _nameId,
-  symbolFixity = _nameFixity
-  }
+symbolEntry S.Name' {..} =
+  SymbolEntry
+    { symbolKind = _nameKind,
+      symbolDefinedIn = _nameDefinedIn,
+      symbolId = _nameId,
+      symbolFixity = _nameFixity
+    }
 
-checkConstructorDef :: Members '[Error ScopeError, Reader LocalVars, State Scope, State ScopeState] r =>
-  DataConstructorDef 'Parsed -> Sem r (DataConstructorDef 'Scoped)
+checkConstructorDef ::
+  Members '[Error ScopeError, Reader LocalVars, State Scope, State ScopeState] r =>
+  DataConstructorDef 'Parsed ->
+  Sem r (DataConstructorDef 'Scoped)
 checkConstructorDef DataConstructorDef {..} = do
   constructorType' <- checkParseExpressionSections constructorType
   constructorName' <- bindConstructorSymbol constructorName
-  return DataConstructorDef {
-    constructorName = constructorName',
-    constructorType = constructorType'
-    }
+  return
+    DataConstructorDef
+      { constructorName = constructorName',
+        constructorType = constructorType'
+      }
 
 checkDataTypeDef ::
   Members '[Error ScopeError, State Scope, State ScopeState] r =>
-  DataTypeDef 'Parsed -> Sem r (DataTypeDef 'Scoped)
+  DataTypeDef 'Parsed ->
+  Sem r (DataTypeDef 'Scoped)
 checkDataTypeDef DataTypeDef {..} = do
   localScope $ checkDataTypeRec dataTypeParameters
   where
-  checkDataTypeRec :: forall r. Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
-    [DataTypeParameter 'Parsed] -> Sem r (DataTypeDef 'Scoped)
-  checkDataTypeRec dtp = go dtp []
-    where
-    go :: [DataTypeParameter 'Parsed] -> [DataTypeParameter 'Scoped] -> Sem r (DataTypeDef 'Scoped)
-    go params dataTypeParameters' =
-      case params of
-        -- More params to check
-        (DataTypeParameter {..} : ps) -> do
-          dataTypeParameterType' <- checkParseExpressionSections dataTypeParameterType
-          dataTypeParameterName' <- freshVariable dataTypeParameterName
-          let param' = DataTypeParameter {
-                dataTypeParameterType = dataTypeParameterType',
-                dataTypeParameterName = dataTypeParameterName' 
-              }
-          withBindLocalVariable (LocalVariable dataTypeParameterName') $
-            go ps (dataTypeParameters' ++ [param'])
-        -- All params have been checked
-        [] -> do
-         dataTypeType' <- sequence (checkParseExpressionSections <$> dataTypeType)
-         dataTypeName' <- bindInductiveSymbol dataTypeName
-         dataTypeConstructors' <- mapM checkConstructorDef dataTypeConstructors
-         return DataTypeDef {
-           dataTypeName = dataTypeName',
-           dataTypeParameters = dataTypeParameters',
-           dataTypeType = dataTypeType',
-           dataTypeConstructors = dataTypeConstructors'
-           }
-
+    checkDataTypeRec ::
+      forall r.
+      Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
+      [DataTypeParameter 'Parsed] ->
+      Sem r (DataTypeDef 'Scoped)
+    checkDataTypeRec dtp = go dtp []
+      where
+        go :: [DataTypeParameter 'Parsed] -> [DataTypeParameter 'Scoped] -> Sem r (DataTypeDef 'Scoped)
+        go params dataTypeParameters' =
+          case params of
+            -- More params to check
+            (DataTypeParameter {..} : ps) -> do
+              dataTypeParameterType' <- checkParseExpressionSections dataTypeParameterType
+              dataTypeParameterName' <- freshVariable dataTypeParameterName
+              let param' =
+                    DataTypeParameter
+                      { dataTypeParameterType = dataTypeParameterType',
+                        dataTypeParameterName = dataTypeParameterName'
+                      }
+              withBindLocalVariable (LocalVariable dataTypeParameterName') $
+                go ps (dataTypeParameters' ++ [param'])
+            -- All params have been checked
+            [] -> do
+              dataTypeType' <- sequence (checkParseExpressionSections <$> dataTypeType)
+              dataTypeName' <- bindInductiveSymbol dataTypeName
+              dataTypeConstructors' <- mapM checkConstructorDef dataTypeConstructors
+              return
+                DataTypeDef
+                  { dataTypeName = dataTypeName',
+                    dataTypeParameters = dataTypeParameters',
+                    dataTypeType = dataTypeType',
+                    dataTypeConstructors = dataTypeConstructors'
+                  }
 
 checkTopModule ::
   forall r.
@@ -395,7 +450,13 @@ checkLocalModule ::
   Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScopeState, Embed IO] r =>
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
-checkLocalModule (Module path stmts) = Module undefined <$> mapM checkStatement stmts
+checkLocalModule Module {..} = do
+  modulePath' <- bindLocalModuleSymbol modulePath
+  moduleBody' <- mapM checkStatement moduleBody
+  return Module {
+    modulePath = modulePath',
+      moduleBody = moduleBody'
+    }
 
 checkOpenModule ::
   forall r.
@@ -435,57 +496,69 @@ openModule qname _ uh = do
       Just (Left using) -> HashSet.member s using
       Just (Right hiding) -> not (HashSet.member s hiding)
 
-checkWhereBlock :: forall r.
+checkWhereBlock ::
+  forall r.
   Members '[Error ScopeError, State Scope, State ScopeState] r =>
   WhereBlock 'Parsed ->
   Sem r (WhereBlock 'Scoped)
 checkWhereBlock WhereBlock {..} = WhereBlock <$> mapM checkWhereClause whereClauses
 
-checkWhereClause :: forall r.
+checkWhereClause ::
+  forall r.
   Members '[Error ScopeError, State Scope, State ScopeState] r =>
   WhereClause 'Parsed ->
   Sem r (WhereClause 'Scoped)
 checkWhereClause c = case c of
   WhereOpenModule _ -> undefined
-  WhereTypeSig s -> undefined
-  WhereFunClause f -> undefined
+  WhereTypeSig s -> WhereTypeSig <$> checkTypeSignature s
+  WhereFunClause f -> WhereFunClause <$> checkFunctionClause f
 
-checkFunctionClause :: forall r.
+checkFunctionClause ::
+  forall r.
   Members '[Error ScopeError, State Scope, State ScopeState] r =>
   FunctionClause 'Parsed ->
   Sem r (FunctionClause 'Scoped)
 checkFunctionClause FunctionClause {..} = do
   clauseOwnerFunction' <- checkSymbolInScope
   clausePatterns' <- mapM checkParsePatternSection clausePatterns
-  (clauseWhere', clauseBody') <- localScope $ withBindCurrentGroup $ do
-    clw <- sequence (checkWhereBlock <$> clauseWhere)
-    clb <- checkParseExpressionSections clauseBody
-    return (clw, clb)
-  return FunctionClause {
-    clauseOwnerFunction = clauseOwnerFunction',
-    clausePatterns = clausePatterns',
-    clauseBody = clauseBody',
-    clauseWhere = clauseWhere'
-    }
+  (clauseWhere', clauseBody') <- localScope $
+    withBindCurrentGroup $ do
+      clw <- sequence (checkWhereBlock <$> clauseWhere)
+      clb <- checkParseExpressionSections clauseBody
+      return (clw, clb)
+  return
+    FunctionClause
+      { clauseOwnerFunction = clauseOwnerFunction',
+        clausePatterns = clausePatterns',
+        clauseBody = clauseBody',
+        clauseWhere = clauseWhere'
+      }
   where
-  fun = clauseOwnerFunction
-  checkSymbolInScope :: Sem r S.Symbol
-  checkSymbolInScope = do
-   SymbolInfo {..} <- fromMaybeM err (HashMap.lookup fun <$> gets _scopeSymbols)
-   -- The symbol must be defined in the same path
-   path <- gets _scopePath
-   e@SymbolEntry {..} <- fromMaybe err (return <$> HashMap.lookup path symbolInfo)
-   when (symbolKind /= S.KNameFunction) err
-   return (entryToSName fun e)
-     where
-     err :: Sem r a
-     err = throw (ErrLacksTypeSig fun)
+    fun = clauseOwnerFunction
+    checkSymbolInScope :: Sem r S.Symbol
+    checkSymbolInScope = do
+      SymbolInfo {..} <- fromMaybeM err (HashMap.lookup fun <$> gets _scopeSymbols)
+      -- The symbol must be defined in the same path
+      path <- gets _scopePath
+      e@SymbolEntry {..} <- fromMaybe err (return <$> HashMap.lookup path symbolInfo)
+      when (symbolKind /= S.KNameFunction) err
+      return (entryToSName fun e)
+      where
+        err :: Sem r a
+        err = throw (ErrLacksTypeSig fun)
 
 checkAxiom ::
   Members '[Error ScopeError, State Scope, State ScopeState] r =>
   AxiomDef 'Parsed ->
   Sem r (AxiomDef 'Scoped)
-checkAxiom = undefined
+checkAxiom AxiomDef {..} = do
+  axiomName' <- bindAxiomSymbol axiomName
+  axiomType' <- localScope $ checkParseExpressionSections axiomType
+  return
+    AxiomDef
+      { axiomName = axiomName',
+        axiomType = axiomType'
+      }
 
 localScope :: Sem (Reader LocalVars : r) a -> Sem r a
 localScope = runReader (LocalVars mempty)
@@ -503,7 +576,8 @@ checkPrint ::
 checkPrint (Print s) = Print <$> localScope (checkParseExpressionSections s)
 
 checkFunction ::
-  forall r. Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
+  forall r.
+  Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
   Function 'Parsed ->
   Sem r (Function 'Scoped)
 checkFunction Function {..} = do
@@ -512,26 +586,28 @@ checkFunction Function {..} = do
         Nothing -> id
         Just s -> withBindLocalVariable (LocalVariable s)
   funReturn' <- scoped (checkParseExpressionSections funReturn)
-  return Function {
-     funParameter = funParameter',
-     funReturn = funReturn'
-    }
-  where
-  checkParam :: Sem r (FunctionParameter 'Scoped)
-  checkParam = do
-    paramType' <- checkParseExpressionSections paramType
-    paramName' <- checkParamName
-    return FunctionParameter {
-      paramName = paramName',
-      paramUsage = paramUsage,
-      paramType = paramType'
+  return
+    Function
+      { funParameter = funParameter',
+        funReturn = funReturn'
       }
-    where
-    FunctionParameter {..} = funParameter
-    checkParamName :: Sem r (Maybe S.Symbol)
-    checkParamName = case paramName of
-      Nothing -> return Nothing
-      Just s -> Just <$> freshVariable s
+  where
+    checkParam :: Sem r (FunctionParameter 'Scoped)
+    checkParam = do
+      paramType' <- checkParseExpressionSections paramType
+      paramName' <- checkParamName
+      return
+        FunctionParameter
+          { paramName = paramName',
+            paramUsage = paramUsage,
+            paramType = paramType'
+          }
+      where
+        FunctionParameter {..} = funParameter
+        checkParamName :: Sem r (Maybe S.Symbol)
+        checkParamName = case paramName of
+          Nothing -> return Nothing
+          Just s -> Just <$> freshVariable s
 
 -- | Like a regular type signature?
 checkLocalTypeSig ::
@@ -556,9 +632,10 @@ checkLetBlock LetBlock {..} = do
   s <- get @Scope -- backup scope: we do not want local definitions to stay in scope
   letClauses' <- mapM checkLetClause letClauses
   put s -- restore scope
-  return LetBlock {
-    letClauses = letClauses'
-    }
+  return
+    LetBlock
+      { letClauses = letClauses'
+      }
 
 checkLambda ::
   Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
@@ -573,14 +650,16 @@ checkLambdaClause ::
 checkLambdaClause LambdaClause {..} = do
   lambdaParameters' <- mapM checkParsePatternSection lambdaParameters
   lambdaBody' <- withBindCurrentGroup (checkParseExpressionSections lambdaBody)
-  return LambdaClause {
-    lambdaParameters = lambdaParameters',
-    lambdaBody = lambdaBody'
-    }
+  return
+    LambdaClause
+      { lambdaParameters = lambdaParameters',
+        lambdaBody = lambdaBody'
+      }
 
 checkQualified ::
   Members '[Error ScopeError, State Scope] r =>
-  QualifiedName -> Sem r S.Name
+  QualifiedName ->
+  Sem r S.Name
 checkQualified q = undefined
 
 unqualifiedSName :: S.Symbol -> S.Name
@@ -588,37 +667,44 @@ unqualifiedSName = over S.nameConcrete NameUnqualified
 
 checkUnqualified ::
   Members '[Error ScopeError, State Scope, Reader LocalVars] r =>
-  Symbol -> Sem r S.Name
+  Symbol ->
+  Sem r S.Name
 checkUnqualified s = do
   -- Local vars have scope priority
   l <- HashMap.lookup s <$> asks _localVars
   case l of
     Just LocalVariable {..} -> return (unqualifiedSName variableName)
     Nothing -> do
-     -- Lookup at the global scope
-     let err = throw (ErrSymNotInScope s)
-     SymbolInfo {..} <- fromMaybeM err (HashMap.lookup s <$> gets _scopeSymbols)
-     case HashMap.toList symbolInfo of
-      [] -> error "impossible"
-      [(_, e)] -> return (entryToSName (NameUnqualified s) e)
-      es -> throw (ErrAmbiguousSym es) -- This is meant to happen only at the top level
+      -- Lookup at the global scope
+      let err = throw (ErrSymNotInScope s)
+      SymbolInfo {..} <- fromMaybeM err (HashMap.lookup s <$> gets _scopeSymbols)
+      case HashMap.toList symbolInfo of
+        [] -> error "impossible"
+        [(_, e)] -> return (entryToSName (NameUnqualified s) e)
+        es -> throw (ErrAmbiguousSym es) -- This is meant to happen only at the top level
 
 entryToSName :: s -> SymbolEntry -> S.Name' s
-entryToSName s SymbolEntry {..} =  S.Name' {
-        _nameId = symbolId,
-        _nameConcrete = s,
-        _nameDefinedIn = symbolDefinedIn,
-        _nameFixity = symbolFixity,
-        _nameKind = symbolKind }
+entryToSName s SymbolEntry {..} =
+  S.Name'
+    { _nameId = symbolId,
+      _nameConcrete = s,
+      _nameDefinedIn = symbolDefinedIn,
+      _nameFixity = symbolFixity,
+      _nameKind = symbolKind
+    }
 
-checkPatternName :: Members '[Error ScopeError, State Scope, State ScopeState] r =>
- Name -> Sem r S.Name
+checkPatternName ::
+  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  Name ->
+  Sem r S.Name
 checkPatternName n = case n of
   NameQualified _ -> undefined
   NameUnqualified s -> checkPatternUnqualified s
 
-withBindCurrentGroup :: Members '[State Scope, Reader LocalVars] r =>
- Sem r a -> Sem r a
+withBindCurrentGroup ::
+  Members '[State Scope, Reader LocalVars] r =>
+  Sem r a ->
+  Sem r a
 withBindCurrentGroup ma = do
   grp <- gets _scopeBindGroup
   modify (over scopeBindGroup (const mempty)) -- empties the group
@@ -626,59 +712,73 @@ withBindCurrentGroup ma = do
 
 addLocalVars :: [LocalVariable] -> LocalVars -> LocalVars
 addLocalVars lv = over localVars (flip (foldr insertVar) lv)
-  where insertVar v = HashMap.insert (S._nameConcrete (variableName v)) v
+  where
+    insertVar v = HashMap.insert (S._nameConcrete (variableName v)) v
 
-withBindLocalVariable :: Members '[Reader LocalVars] r =>
-  LocalVariable -> Sem r a -> Sem r a
+withBindLocalVariable ::
+  Members '[Reader LocalVars] r =>
+  LocalVariable ->
+  Sem r a ->
+  Sem r a
 withBindLocalVariable var = local (addLocalVars [var])
 
-
 -- | Binds a local variable in a bind group, i.e. a pattern.
-groupBindLocalVariable :: forall r. Members '[Error ScopeError, State Scope, State ScopeState] r =>
-  Symbol -> Sem r S.Symbol
+groupBindLocalVariable ::
+  forall r.
+  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  Symbol ->
+  Sem r S.Symbol
 groupBindLocalVariable s = do
   checkNotInGroup
   addToGroup
   where
-  checkNotInGroup :: Sem r ()
-  checkNotInGroup = whenJustM (HashMap.lookup s <$> gets _scopeBindGroup)
-   (const (throw (ErrBindGroup s)))
-  addToGroup :: Sem r S.Symbol
-  addToGroup = do
-    n <- freshVariable s
-    modify (over scopeBindGroup (HashMap.insert s (LocalVariable n)))
-    return n
+    checkNotInGroup :: Sem r ()
+    checkNotInGroup =
+      whenJustM
+        (HashMap.lookup s <$> gets _scopeBindGroup)
+        (const (throw (ErrBindGroup s)))
+    addToGroup :: Sem r S.Symbol
+    addToGroup = do
+      n <- freshVariable s
+      modify (over scopeBindGroup (HashMap.insert s (LocalVariable n)))
+      return n
 
-checkPatternUnqualified :: forall r. Members '[Error ScopeError, State Scope, State ScopeState] r =>
- Symbol -> Sem r S.Name
+checkPatternUnqualified ::
+  forall r.
+  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  Symbol ->
+  Sem r S.Name
 checkPatternUnqualified s = do
   c <- isConstructor
   case c of
     Just constr -> return constr -- the symbol is a constructor
     Nothing -> unqualifiedSName <$> groupBindLocalVariable s -- the symbol is a variable
-  -- check whether the symbol is a constructor in scope
+    -- check whether the symbol is a constructor in scope
   where
-  isConstructor :: Sem r (Maybe S.Name)
-  isConstructor = do
-    r <- HashMap.lookup s <$> gets _scopeSymbols
-    case r of
-      Nothing -> return Nothing
-      Just SymbolInfo {..} ->
-        let entries = filter (isConstructorKind . symbolKind . snd) (HashMap.toList symbolInfo)
-        in case map snd entries of
-          [] -> return Nothing -- There is no constructor with such a name
-          [e] -> return (Just (entryToSName (NameUnqualified s) e)) -- There is one constructor with such a name
-          _ -> throw Err -- There is more than one constructor with such a name
-  isConstructorKind :: S.NameKind -> Bool
-  isConstructorKind = (== S.KNameConstructor)
+    isConstructor :: Sem r (Maybe S.Name)
+    isConstructor = do
+      r <- HashMap.lookup s <$> gets _scopeSymbols
+      case r of
+        Nothing -> return Nothing
+        Just SymbolInfo {..} ->
+          let entries = filter (isConstructorKind . symbolKind . snd) (HashMap.toList symbolInfo)
+           in case map snd entries of
+                [] -> return Nothing -- There is no constructor with such a name
+                [e] -> return (Just (entryToSName (NameUnqualified s) e)) -- There is one constructor with such a name
+                _ -> throw Err -- There is more than one constructor with such a name
+    isConstructorKind :: S.NameKind -> Bool
+    isConstructorKind = (== S.KNameConstructor)
 
-
-checkPatternSections :: Members '[Error ScopeError, State Scope, State ScopeState] r =>
- PatternSections 'Parsed -> Sem r (PatternSections 'Scoped)
+checkPatternSections ::
+  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  PatternSections 'Parsed ->
+  Sem r (PatternSections 'Scoped)
 checkPatternSections (PatternSections s) = PatternSections <$> mapM checkPatternSection s
 
-checkPatternSection :: Members '[Error ScopeError, State Scope, State ScopeState] r =>
- PatternSection 'Parsed -> Sem r (PatternSection 'Scoped)
+checkPatternSection ::
+  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  PatternSection 'Parsed ->
+  Sem r (PatternSection 'Scoped)
 checkPatternSection p = case p of
   PatternSectionWildcard -> return PatternSectionWildcard
   PatternSectionEmpty -> return PatternSectionEmpty
@@ -687,7 +787,8 @@ checkPatternSection p = case p of
 
 checkName ::
   Members '[Error ScopeError, State Scope, Reader LocalVars] r =>
-  Name -> Sem r S.Name
+  Name ->
+  Sem r S.Name
 checkName n = case n of
   NameQualified q -> checkQualified q
   NameUnqualified s -> checkUnqualified s
@@ -713,10 +814,11 @@ checkMatchAlt ::
 checkMatchAlt MatchAlt {..} = do
   matchAltPattern' <- checkParsePatternSection matchAltPattern
   matchAltBody' <- withBindCurrentGroup (checkParseExpressionSections matchAltBody)
-  return MatchAlt {
-   matchAltPattern = matchAltPattern',
-   matchAltBody = matchAltBody'
-    }
+  return
+    MatchAlt
+      { matchAltPattern = matchAltPattern',
+        matchAltBody = matchAltBody'
+      }
 
 checkMatch ::
   Members '[Error ScopeError, State Scope, Reader LocalVars, State ScopeState] r =>
@@ -725,10 +827,11 @@ checkMatch ::
 checkMatch Match {..} = do
   matchExpression' <- checkParseExpressionSections matchExpression
   matchAlts' <- mapM checkMatchAlt matchAlts
-  return Match {
-    matchExpression = matchExpression',
-    matchAlts  = matchAlts'
-    }
+  return
+    Match
+      { matchExpression = matchExpression',
+        matchAlts = matchAlts'
+      }
 
 checkExpressionSections ::
   Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
@@ -765,14 +868,196 @@ checkStatement s = case s of
   StatementPrint e -> StatementPrint <$> checkPrint e
 
 -------------------------------------------------------------------------------
--- Infix Parsers
+-- Infix Expression
 -------------------------------------------------------------------------------
+
+makeExpressionTable :: forall r. (Members '[State Scope] r) =>
+  Sem r [[P.Operator Parse Expression]]
+makeExpressionTable = do
+  symbolTable <- mkSymbolTable . toList <$> gets _scopeSymbols
+  -- application has the highest precedence. Arrow has the lowest.
+  return $ [appOp] : symbolTable ++ [[functionOp]]
+  where
+  -- TODO think what to do with qualified symbols
+  mkSymbolTable :: [SymbolInfo] -> [[P.Operator Parse Expression]]
+  mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe (unqualifiedSymbolOp . getEntry)
+    where
+    getEntry :: SymbolInfo -> SymbolEntry
+    getEntry (SymbolInfo m) = case toList m of 
+      [] -> error "impossible"
+      [e] -> e
+      _ -> error "impossible after scope checking"
+    unqualifiedSymbolOp :: SymbolEntry -> Maybe (Precedence, P.Operator Parse Expression)
+    unqualifiedSymbolOp SymbolEntry {..}
+     | S.SomeFixity Fixity {..} <- symbolFixity = Just $
+       case fixityArity of
+        Unary u -> (fixityPrecedence, prePost (unaryApp <$> parseSymbolId symbolId))
+          where 
+          unaryApp :: S.Name -> Expression -> Expression
+          unaryApp funName arg = ExpressionApplication (Application (ExpressionIdentifier funName) arg)
+          prePost :: Parse (Expression -> Expression) -> P.Operator Parse Expression
+          prePost = case u of
+           AssocPrefix -> P.Prefix
+           AssocPostfix -> P.Postfix
+        Binary b -> (fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId symbolId))
+          where 
+          binaryApp :: S.Name -> Expression -> Expression -> Expression
+          binaryApp funName argLeft argRight =
+            ExpressionApplication (Application (ExpressionApplication
+              (Application (ExpressionIdentifier funName) argLeft)) argRight)
+          infixLRN :: Parse (Expression -> Expression -> Expression) -> P.Operator Parse Expression
+          infixLRN = case b of
+           AssocLeft -> P.InfixL
+           AssocRight -> P.InfixR
+           AssocNone -> P.InfixN
+     | otherwise = Nothing
+    parseSymbolId :: S.NameId -> Parse S.Name
+    parseSymbolId uid = P.token getName mempty
+      where
+      getName :: ExpressionSection 'Scoped -> Maybe S.Name
+      getName s = case s of
+        SectionIdentifier n'
+         | uid == S._nameId n' -> Just n' 
+        _ -> Nothing
+
+  -- | Application by juxtaposition.
+  appOp :: P.Operator Parse Expression
+  appOp = P.InfixL (app <$ notFollowedByInfix)
+    where
+    notFollowedByInfix :: Parse ()
+    notFollowedByInfix = P.notFollowedBy (P.token infixName mempty)
+      where
+      infixName :: ExpressionSection 'Scoped -> Maybe S.Name
+      infixName s = case s of
+        SectionIdentifier n
+         | S.hasFixity n -> Just n
+        _ -> Nothing
+
+    app :: Expression -> Expression -> Expression
+    app f x = ExpressionApplication Application {
+      applicationFunction = f,
+      applicationParameter = x
+      }
+  -- | Non-dependent function type: A → B
+  functionOp :: P.Operator Parse Expression
+  functionOp = P.InfixR (nonDepFun <$ P.single SectionFunArrow)
+    where
+    nonDepFun :: Expression -> Expression -> Expression
+    nonDepFun a b = ExpressionFunction Function {
+      funParameter = param,
+      funReturn = b
+      }
+      where
+      param = FunctionParameter {
+        paramName = Nothing,
+        paramUsage = Nothing,
+        paramType = a
+      }
 
 parseExpressionSections ::
   Members '[Error ScopeError, State Scope] r =>
   ExpressionSections 'Scoped ->
   Sem r Expression
-parseExpressionSections = undefined
+parseExpressionSections (ExpressionSections sections) = do
+  tbl <- makeExpressionTable
+  let
+    parser :: Parse Expression
+    parser = runM (mkExpressionParser tbl) <* P.eof
+    res = P.parse parser filePath (toList sections)
+  case res of
+    Left {} -> throw ErrInfixParser
+    Right r -> return r
+  where
+  filePath = "tmp"
+
+-- | Monad for parsing expression sections.
+type Parse = P.Parsec () [ExpressionSection 'Scoped]
+
+mkExpressionParser :: forall r. Members '[Embed Parse] r =>
+  [[P.Operator Parse Expression]] -> Sem r Expression
+mkExpressionParser table = embed @Parse pExpression
+  where
+  pExpression :: Parse Expression
+  pExpression = P.makeExprParser pTerm table
+  pTerm :: Parse Expression
+  pTerm = runM (runNonDetMaybe parseTermRec) >>= maybe mzero pure
+    where
+    parseTermRec :: Sem '[NonDet, Embed Parse] Expression
+    parseTermRec = runReader pExpression parseTerm
+
+parseTerm :: forall r. Members '[Reader (Parse Expression), Embed Parse, NonDet] r => Sem r Expression
+parseTerm =
+  parseNoInfixIdentifier
+  <|> parseParens
+  <|> parseFunction
+  <|> parseLambda
+  <|> parseMatch
+  <|> parseUniverse
+  <|> parseLetBlock
+  where
+  parseLambda :: Sem r Expression
+  parseLambda = ExpressionLambda <$> embed @Parse (P.token lambda mempty)
+    where
+    lambda :: ExpressionSection 'Scoped -> Maybe (Lambda 'Scoped)
+    lambda s = case s of
+      SectionLambda l -> Just l
+      _ -> Nothing
+
+  parseMatch :: Sem r Expression
+  parseMatch = ExpressionMatch <$> embed @Parse (P.token match mempty)
+    where
+    match :: ExpressionSection 'Scoped -> Maybe (Match 'Scoped)
+    match s = case s of
+      SectionMatch l -> Just l
+      _ -> Nothing
+
+  parseUniverse :: Sem r Expression
+  parseUniverse = ExpressionUniverse <$> embed @Parse (P.token universe' mempty)
+    where
+    universe' :: ExpressionSection 'Scoped -> Maybe Universe
+    universe' s = case s of
+      SectionUniverse u -> Just u
+      _ -> Nothing
+
+  parseFunction :: Sem r Expression
+  parseFunction = ExpressionFunction <$> embed @Parse (P.token function mempty)
+    where
+    function :: ExpressionSection 'Scoped -> Maybe (Function 'Scoped)
+    function s = case s of
+      SectionFunction u -> Just u
+      _ -> Nothing
+
+  parseLetBlock ::Sem r Expression
+  parseLetBlock = ExpressionLetBlock <$> embed @Parse (P.token letBlock mempty)
+    where
+    letBlock :: ExpressionSection 'Scoped -> Maybe (LetBlock 'Scoped)
+    letBlock s = case s of
+      SectionLetBlock u -> Just u
+      _ -> Nothing
+
+  parseNoInfixIdentifier :: Sem r Expression
+  parseNoInfixIdentifier = ExpressionIdentifier <$> embed @Parse (P.token identifierNoFixity mempty)
+    where
+    identifierNoFixity :: ExpressionSection 'Scoped -> Maybe S.Name
+    identifierNoFixity s = case s of
+      SectionIdentifier n
+       | not (S.hasFixity n) -> Just n
+      _ -> Nothing
+
+  parseParens :: Sem r Expression
+  parseParens = do
+    parser <- ask @(Parse Expression)
+    exprs <- embed @Parse (P.token parenExpr mempty)
+    case P.parse parser strPath exprs of
+      Right r -> return r
+      Left {} -> embed @Parse $ P.failure Nothing mempty
+    where
+    strPath :: FilePath
+    strPath = "inner parens"
+    parenExpr :: ExpressionSection 'Scoped -> Maybe [ExpressionSection 'Scoped]
+    parenExpr s = case s of
+      SectionParens (ExpressionSections ss) -> Just (toList ss)
+      _ -> Nothing
 
 parsePatternSection ::
   Members '[Error ScopeError, State Scope] r => PatternSection 'Scoped -> Sem r Pattern
@@ -793,5 +1078,6 @@ parsePatternWildcard = PatternWildcard <$ P.satisfy isWildcard
     isWildcard PatternSectionWildcard = True
     isWildcard _ = False
 
-tmp :: MonadParsec e [PatternSections 'Scoped] m => Scope -> m Pattern
-tmp = undefined
+-------------------------------------------------------------------------------
+-- Infix Patterns
+-------------------------------------------------------------------------------
