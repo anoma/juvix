@@ -333,7 +333,7 @@ patternSection :: forall e m. MonadParsec e Text m => m (PatternSection 'Parsed)
 patternSection =
   PatternSectionName <$> name
     <|> PatternSectionWildcard <$ kwWildcard
-    <|> (PatternSectionParen <$> parens patternSections)
+    <|> (PatternSectionParens <$> parens patternSections)
 
 patternSections ::
   forall e m.

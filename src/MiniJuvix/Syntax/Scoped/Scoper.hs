@@ -5,29 +5,26 @@
 -- 1. A symbol introduced by a type signature can only be used once per Module.
 module MiniJuvix.Syntax.Scoped.Scoper where
 
---------------------------------------------------------------------------------
-
+import qualified Control.Monad.Combinators.Expr as P
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.HashSet as HashSet
-import qualified Data.List.NonEmpty as NonEmpty
 import Data.Stream (Stream)
 import qualified Data.Stream as Stream
 import qualified Data.Text as Text
 import Lens.Micro.Platform
-import MiniJuvix.Syntax.Concrete.Base (MonadParsec)
 import qualified MiniJuvix.Syntax.Concrete.Base as P
 import MiniJuvix.Syntax.Concrete.Language
-import MiniJuvix.Syntax.Concrete.Parser (runModuleParserIO, dottedSymbol)
+import MiniJuvix.Syntax.Concrete.Parser (dottedSymbol, runModuleParserIO)
+import MiniJuvix.Syntax.Scoped.Name (NameKind (KNameConstructor))
 import qualified MiniJuvix.Syntax.Scoped.Name as S
-import MiniJuvix.Utils.Prelude hiding (Reader, State, ask, asks, get, gets, local, modify, put, runReader, runState)
+import MiniJuvix.Utils.Prelude hiding (Reader, State, ask, asks, get, gets, local, modify, put, runReader, runState, evalState)
 import Polysemy
+import Polysemy.Embed
 import Polysemy.Error hiding (fromEither)
+import Polysemy.NonDet
 import Polysemy.Reader
 import Polysemy.State
-import Polysemy.Embed
-import Polysemy.NonDet
 import System.FilePath
-import qualified Control.Monad.Combinators.Expr as P
 import qualified Text.Megaparsec as P
 
 --------------------------------------------------------------------------------
@@ -55,7 +52,7 @@ newtype LocalVariable = LocalVariable
   }
   deriving newtype (Show, Eq, Hashable)
 
-data SymbolInfo = SymbolInfo
+newtype SymbolInfo = SymbolInfo
   { -- | This map must have at least one entry.
     -- If there are more than one entry, it means that the same symbol has been
     -- brought into scope from two different places.
@@ -81,7 +78,7 @@ data Scope = Scope
 
 makeLenses ''Scope
 
-data LocalVars = LocalVars
+newtype LocalVars = LocalVars
   { _localVars :: HashMap Symbol LocalVariable
   }
 
@@ -97,6 +94,8 @@ data ScopeError
   = ErrParser Text
   | Err
   | ErrInfixParser
+  | ErrPrePattern
+  | ErrPrePatternUnfold
   | ErrAlreadyDefined Symbol
   | ErrLacksTypeSig Symbol
   | ErrImportCycle TopModulePath
@@ -125,8 +124,25 @@ data ScopeState = ScopeState
 
 makeLenses ''ScopeState
 
-scopeCheck :: FilePath -> [Module 'Parsed 'ModuleTop] -> Either ScopeError [Module 'Scoped 'ModuleTop]
-scopeCheck = undefined
+scopeCheck :: FilePath -> [Module 'Parsed 'ModuleTop] -> IO (Either ScopeError [Module 'Scoped 'ModuleTop])
+scopeCheck root modules =
+  runM
+  $ runError
+  $ runReader scopeParameters
+  $ evalState iniScopeState
+  $ mapM checkTopModule modules
+  where
+  iniScopeState :: ScopeState
+  iniScopeState = ScopeState {
+    _scopeModulesCache = ModulesCache mempty,
+    _scopeFreeNames = S.allNameIds
+  }
+  scopeParameters :: ScopeParameters
+  scopeParameters = ScopeParameters {
+   _scopeRootPath = root,
+   _scopeFileExtension = ".mjuvix",
+   _scopeTopParents = mempty
+    }
 
 freshNameId ::
   Members '[State ScopeState] r =>
@@ -263,45 +279,45 @@ topModuleScopeInfo m = moduleScopeInfo (getTopModulePath m) m
 moduleScopeInfo :: S.AbsModulePath -> Module 'Scoped t -> ModuleScopeInfo
 moduleScopeInfo absPath sModule = ModuleScopeInfo {..}
   where
-  stmts = moduleBody sModule
-  _syntaxPath :: S.AbsModulePath
-  _syntaxPath = undefined
-  _syntaxLocalModules :: HashMap Symbol ModuleScopeInfo
-  _syntaxLocalModules = HashMap.fromList (mapMaybe getModule stmts)
-    where
-      getModule :: Statement 'Scoped -> Maybe (Symbol, ModuleScopeInfo)
-      getModule s = case s of
-        StatementModule m -> Just (S._nameConcrete (modulePath m), moduleScopeInfo undefined m)
-        _ -> Nothing
-  _syntaxFunctions :: HashSet (FunctionName 'Parsed)
-  _syntaxFunctions = HashSet.fromList (mapMaybe getFun stmts)
-    where
-      getFun :: Statement 'Scoped -> Maybe (FunctionName 'Parsed)
-      getFun s = case s of
-        -- StatementDataType DataTypeDef {..} → HashSet.fromList (map constructorName dataTypeConstructors)
-        _ -> undefined
-  _syntaxConstructors :: HashSet (DataConstructorName 'Parsed)
-  _syntaxConstructors = mconcat (map getConstrs stmts)
-    where
-      getConstrs :: Statement 'Scoped -> HashSet (DataConstructorName 'Parsed)
-      getConstrs s = case s of
-        StatementDataType DataTypeDef {..} ->
-          HashSet.fromList
-            (map (S._nameConcrete . constructorName) dataTypeConstructors)
-        _ -> mempty
-  _syntaxDataTypes :: HashSet (DataTypeName 'Parsed)
-  _syntaxDataTypes = HashSet.fromList (mapMaybe getDT stmts)
-    where
-      getDT :: Statement 'Scoped -> Maybe (DataTypeName 'Parsed)
-      getDT s = case s of
-        StatementDataType DataTypeDef {..} -> Just (S._nameConcrete dataTypeName)
-        _ -> Nothing
-  _syntaxOperators :: HashMap Symbol Fixity
-  _syntaxOperators = HashMap.fromList (mapMaybe getDef stmts)
-    where
-      getDef s = case s of
-        StatementOperator OperatorSyntaxDef {..} -> Just (opSymbol, opFixity)
-        _ -> Nothing
+    stmts = moduleBody sModule
+    _syntaxPath :: S.AbsModulePath
+    _syntaxPath = undefined
+    _syntaxLocalModules :: HashMap Symbol ModuleScopeInfo
+    _syntaxLocalModules = HashMap.fromList (mapMaybe getModule stmts)
+      where
+        getModule :: Statement 'Scoped -> Maybe (Symbol, ModuleScopeInfo)
+        getModule s = case s of
+          StatementModule m -> Just (S._nameConcrete (modulePath m), moduleScopeInfo undefined m)
+          _ -> Nothing
+    _syntaxFunctions :: HashSet (FunctionName 'Parsed)
+    _syntaxFunctions = HashSet.fromList (mapMaybe getFun stmts)
+      where
+        getFun :: Statement 'Scoped -> Maybe (FunctionName 'Parsed)
+        getFun s = case s of
+          -- StatementDataType DataTypeDef {..} → HashSet.fromList (map constructorName dataTypeConstructors)
+          _ -> undefined
+    _syntaxConstructors :: HashSet (DataConstructorName 'Parsed)
+    _syntaxConstructors = mconcat (map getConstrs stmts)
+      where
+        getConstrs :: Statement 'Scoped -> HashSet (DataConstructorName 'Parsed)
+        getConstrs s = case s of
+          StatementDataType DataTypeDef {..} ->
+            HashSet.fromList
+              (map (S._nameConcrete . constructorName) dataTypeConstructors)
+          _ -> mempty
+    _syntaxDataTypes :: HashSet (DataTypeName 'Parsed)
+    _syntaxDataTypes = HashSet.fromList (mapMaybe getDT stmts)
+      where
+        getDT :: Statement 'Scoped -> Maybe (DataTypeName 'Parsed)
+        getDT s = case s of
+          StatementDataType DataTypeDef {..} -> Just (S._nameConcrete dataTypeName)
+          _ -> Nothing
+    _syntaxOperators :: HashMap Symbol Fixity
+    _syntaxOperators = HashMap.fromList (mapMaybe getDef stmts)
+      where
+        getDef s = case s of
+          StatementOperator OperatorSyntaxDef {..} -> Just (opSymbol, opFixity)
+          _ -> Nothing
 
 readParseModule ::
   Members '[Error ScopeError, Reader ScopeParameters, Embed IO] r =>
@@ -425,18 +441,27 @@ checkDataTypeDef DataTypeDef {..} = do
 
 checkTopModule ::
   forall r.
-  Members '[Error ScopeError, State Scope, Reader ScopeParameters, Embed IO, State ScopeState] r =>
+  Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State ScopeState] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (Module 'Scoped 'ModuleTop)
-checkTopModule (Module path stmts) = do
+checkTopModule m@(Module path stmts) = do
   checkCycle
   cache <- gets (_cachedModules . _scopeModulesCache)
   maybe checkedModule return (cache ^. at path)
   where
+    iniScope :: Scope
+    iniScope = Scope {
+      _scopePath = getTopModulePath m,
+      _scopeFixities = mempty,
+      _scopeUsedFixities = mempty,
+      _scopeSymbols = mempty,
+      _scopeModules = mempty,
+      _scopeBindGroup = mempty
+      }
     addParent :: ScopeParameters -> ScopeParameters
     addParent = over scopeTopParents (HashSet.insert path)
     checkedModule :: Sem r (Module 'Scoped 'ModuleTop)
-    checkedModule =
+    checkedModule = evalState iniScope $
       Module path
         <$> local addParent (mapM checkStatement stmts)
     checkCycle :: Sem r ()
@@ -453,10 +478,11 @@ checkLocalModule ::
 checkLocalModule Module {..} = do
   modulePath' <- bindLocalModuleSymbol modulePath
   moduleBody' <- mapM checkStatement moduleBody
-  return Module {
-    modulePath = modulePath',
-      moduleBody = moduleBody'
-    }
+  return
+    Module
+      { modulePath = modulePath',
+        moduleBody = moduleBody'
+      }
 
 checkOpenModule ::
   forall r.
@@ -782,7 +808,7 @@ checkPatternSection ::
 checkPatternSection p = case p of
   PatternSectionWildcard -> return PatternSectionWildcard
   PatternSectionEmpty -> return PatternSectionEmpty
-  PatternSectionParen e -> PatternSectionParen <$> checkPatternSections e
+  PatternSectionParens e -> PatternSectionParens <$> checkPatternSections e
   PatternSectionName n -> PatternSectionName <$> checkPatternName n
 
 checkName ::
@@ -849,7 +875,7 @@ checkParsePatternSection ::
   Members '[Error ScopeError, State Scope, State ScopeState] r =>
   PatternSection 'Parsed ->
   Sem r Pattern
-checkParsePatternSection = checkPatternSection >=> parsePatternSection
+checkParsePatternSection = checkPatternSection >=> parsePatternSection >=> parsePrePattern
 
 checkStatement ::
   Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State Scope, State ScopeState] r =>
@@ -871,88 +897,100 @@ checkStatement s = case s of
 -- Infix Expression
 -------------------------------------------------------------------------------
 
-makeExpressionTable :: forall r. (Members '[State Scope] r) =>
+makeExpressionTable ::
+  forall r.
+  (Members '[State Scope] r) =>
   Sem r [[P.Operator Parse Expression]]
 makeExpressionTable = do
   symbolTable <- mkSymbolTable . toList <$> gets _scopeSymbols
   -- application has the highest precedence. Arrow has the lowest.
   return $ [appOp] : symbolTable ++ [[functionOp]]
   where
-  -- TODO think what to do with qualified symbols
-  mkSymbolTable :: [SymbolInfo] -> [[P.Operator Parse Expression]]
-  mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe (unqualifiedSymbolOp . getEntry)
-    where
-    getEntry :: SymbolInfo -> SymbolEntry
-    getEntry (SymbolInfo m) = case toList m of 
-      [] -> error "impossible"
-      [e] -> e
-      _ -> error "impossible after scope checking"
-    unqualifiedSymbolOp :: SymbolEntry -> Maybe (Precedence, P.Operator Parse Expression)
-    unqualifiedSymbolOp SymbolEntry {..}
-     | S.SomeFixity Fixity {..} <- symbolFixity = Just $
-       case fixityArity of
-        Unary u -> (fixityPrecedence, prePost (unaryApp <$> parseSymbolId symbolId))
-          where 
-          unaryApp :: S.Name -> Expression -> Expression
-          unaryApp funName arg = ExpressionApplication (Application (ExpressionIdentifier funName) arg)
-          prePost :: Parse (Expression -> Expression) -> P.Operator Parse Expression
-          prePost = case u of
-           AssocPrefix -> P.Prefix
-           AssocPostfix -> P.Postfix
-        Binary b -> (fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId symbolId))
-          where 
-          binaryApp :: S.Name -> Expression -> Expression -> Expression
-          binaryApp funName argLeft argRight =
-            ExpressionApplication (Application (ExpressionApplication
-              (Application (ExpressionIdentifier funName) argLeft)) argRight)
-          infixLRN :: Parse (Expression -> Expression -> Expression) -> P.Operator Parse Expression
-          infixLRN = case b of
-           AssocLeft -> P.InfixL
-           AssocRight -> P.InfixR
-           AssocNone -> P.InfixN
-     | otherwise = Nothing
-    parseSymbolId :: S.NameId -> Parse S.Name
-    parseSymbolId uid = P.token getName mempty
+    -- TODO think what to do with qualified symbols
+    mkSymbolTable :: [SymbolInfo] -> [[P.Operator Parse Expression]]
+    mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe (unqualifiedSymbolOp . getEntry)
       where
-      getName :: ExpressionSection 'Scoped -> Maybe S.Name
-      getName s = case s of
-        SectionIdentifier n'
-         | uid == S._nameId n' -> Just n' 
-        _ -> Nothing
+        getEntry :: SymbolInfo -> SymbolEntry
+        getEntry (SymbolInfo m) = case toList m of
+          [] -> error "impossible"
+          [e] -> e
+          _ -> error "impossible after scope checking"
+        unqualifiedSymbolOp :: SymbolEntry -> Maybe (Precedence, P.Operator Parse Expression)
+        unqualifiedSymbolOp SymbolEntry {..}
+          | S.SomeFixity Fixity {..} <- symbolFixity = Just $
+            case fixityArity of
+              Unary u -> (fixityPrecedence, prePost (unaryApp <$> parseSymbolId symbolId))
+                where
+                  unaryApp :: S.Name -> Expression -> Expression
+                  unaryApp funName arg = ExpressionApplication (Application (ExpressionIdentifier funName) arg)
+                  prePost :: Parse (Expression -> Expression) -> P.Operator Parse Expression
+                  prePost = case u of
+                    AssocPrefix -> P.Prefix
+                    AssocPostfix -> P.Postfix
+              Binary b -> (fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId symbolId))
+                where
+                  binaryApp :: S.Name -> Expression -> Expression -> Expression
+                  binaryApp funName argLeft argRight =
+                    ExpressionApplication
+                      ( Application
+                          ( ExpressionApplication
+                              (Application (ExpressionIdentifier funName) argLeft)
+                          )
+                          argRight
+                      )
+                  infixLRN :: Parse (Expression -> Expression -> Expression) -> P.Operator Parse Expression
+                  infixLRN = case b of
+                    AssocLeft -> P.InfixL
+                    AssocRight -> P.InfixR
+                    AssocNone -> P.InfixN
+          | otherwise = Nothing
+        parseSymbolId :: S.NameId -> Parse S.Name
+        parseSymbolId uid = P.token getName mempty
+          where
+            getName :: ExpressionSection 'Scoped -> Maybe S.Name
+            getName s = case s of
+              SectionIdentifier n'
+                | uid == S._nameId n' -> Just n'
+              _ -> Nothing
 
-  -- | Application by juxtaposition.
-  appOp :: P.Operator Parse Expression
-  appOp = P.InfixL (app <$ notFollowedByInfix)
-    where
-    notFollowedByInfix :: Parse ()
-    notFollowedByInfix = P.notFollowedBy (P.token infixName mempty)
+    -- Application by juxtaposition.
+    appOp :: P.Operator Parse Expression
+    appOp = P.InfixL (app <$ notFollowedByInfix)
       where
-      infixName :: ExpressionSection 'Scoped -> Maybe S.Name
-      infixName s = case s of
-        SectionIdentifier n
-         | S.hasFixity n -> Just n
-        _ -> Nothing
+        notFollowedByInfix :: Parse ()
+        notFollowedByInfix = P.notFollowedBy (P.token infixName mempty)
+          where
+            infixName :: ExpressionSection 'Scoped -> Maybe S.Name
+            infixName s = case s of
+              SectionIdentifier n
+                | S.hasFixity n -> Just n
+              _ -> Nothing
 
-    app :: Expression -> Expression -> Expression
-    app f x = ExpressionApplication Application {
-      applicationFunction = f,
-      applicationParameter = x
-      }
-  -- | Non-dependent function type: A → B
-  functionOp :: P.Operator Parse Expression
-  functionOp = P.InfixR (nonDepFun <$ P.single SectionFunArrow)
-    where
-    nonDepFun :: Expression -> Expression -> Expression
-    nonDepFun a b = ExpressionFunction Function {
-      funParameter = param,
-      funReturn = b
-      }
+        app :: Expression -> Expression -> Expression
+        app f x =
+          ExpressionApplication
+            Application
+              { applicationFunction = f,
+                applicationParameter = x
+              }
+    -- Non-dependent function type: A → B
+    functionOp :: P.Operator Parse Expression
+    functionOp = P.InfixR (nonDepFun <$ P.single SectionFunArrow)
       where
-      param = FunctionParameter {
-        paramName = Nothing,
-        paramUsage = Nothing,
-        paramType = a
-      }
+        nonDepFun :: Expression -> Expression -> Expression
+        nonDepFun a b =
+          ExpressionFunction
+            Function
+              { funParameter = param,
+                funReturn = b
+              }
+          where
+            param =
+              FunctionParameter
+                { paramName = Nothing,
+                  paramUsage = Nothing,
+                  paramType = a
+                }
 
 parseExpressionSections ::
   Members '[Error ScopeError, State Scope] r =>
@@ -960,124 +998,294 @@ parseExpressionSections ::
   Sem r Expression
 parseExpressionSections (ExpressionSections sections) = do
   tbl <- makeExpressionTable
-  let
-    parser :: Parse Expression
-    parser = runM (mkExpressionParser tbl) <* P.eof
-    res = P.parse parser filePath (toList sections)
+  let parser :: Parse Expression
+      parser = runM (mkExpressionParser tbl) <* P.eof
+      res = P.parse parser filePath (toList sections)
   case res of
     Left {} -> throw ErrInfixParser
     Right r -> return r
   where
-  filePath = "tmp"
+    filePath = "tmp"
 
 -- | Monad for parsing expression sections.
 type Parse = P.Parsec () [ExpressionSection 'Scoped]
 
-mkExpressionParser :: forall r. Members '[Embed Parse] r =>
-  [[P.Operator Parse Expression]] -> Sem r Expression
+mkExpressionParser ::
+  forall r.
+  Members '[Embed Parse] r =>
+  [[P.Operator Parse Expression]] ->
+  Sem r Expression
 mkExpressionParser table = embed @Parse pExpression
   where
-  pExpression :: Parse Expression
-  pExpression = P.makeExprParser pTerm table
-  pTerm :: Parse Expression
-  pTerm = runM (runNonDetMaybe parseTermRec) >>= maybe mzero pure
-    where
-    parseTermRec :: Sem '[NonDet, Embed Parse] Expression
-    parseTermRec = runReader pExpression parseTerm
+    pExpression :: Parse Expression
+    pExpression = P.makeExprParser pTerm table
+    pTerm :: Parse Expression
+    pTerm = runM (runNonDetMaybe parseTermRec) >>= maybe mzero pure
+      where
+        parseTermRec :: Sem '[NonDet, Embed Parse] Expression
+        parseTermRec = runReader pExpression parseTerm
 
 parseTerm :: forall r. Members '[Reader (Parse Expression), Embed Parse, NonDet] r => Sem r Expression
 parseTerm =
   parseNoInfixIdentifier
-  <|> parseParens
-  <|> parseFunction
-  <|> parseLambda
-  <|> parseMatch
-  <|> parseUniverse
-  <|> parseLetBlock
+    <|> parseParens
+    <|> parseFunction
+    <|> parseLambda
+    <|> parseMatch
+    <|> parseUniverse
+    <|> parseLetBlock
   where
-  parseLambda :: Sem r Expression
-  parseLambda = ExpressionLambda <$> embed @Parse (P.token lambda mempty)
-    where
-    lambda :: ExpressionSection 'Scoped -> Maybe (Lambda 'Scoped)
-    lambda s = case s of
-      SectionLambda l -> Just l
-      _ -> Nothing
+    parseLambda :: Sem r Expression
+    parseLambda = ExpressionLambda <$> embed @Parse (P.token lambda mempty)
+      where
+        lambda :: ExpressionSection 'Scoped -> Maybe (Lambda 'Scoped)
+        lambda s = case s of
+          SectionLambda l -> Just l
+          _ -> Nothing
 
-  parseMatch :: Sem r Expression
-  parseMatch = ExpressionMatch <$> embed @Parse (P.token match mempty)
-    where
-    match :: ExpressionSection 'Scoped -> Maybe (Match 'Scoped)
-    match s = case s of
-      SectionMatch l -> Just l
-      _ -> Nothing
+    parseMatch :: Sem r Expression
+    parseMatch = ExpressionMatch <$> embed @Parse (P.token match mempty)
+      where
+        match :: ExpressionSection 'Scoped -> Maybe (Match 'Scoped)
+        match s = case s of
+          SectionMatch l -> Just l
+          _ -> Nothing
 
-  parseUniverse :: Sem r Expression
-  parseUniverse = ExpressionUniverse <$> embed @Parse (P.token universe' mempty)
-    where
-    universe' :: ExpressionSection 'Scoped -> Maybe Universe
-    universe' s = case s of
-      SectionUniverse u -> Just u
-      _ -> Nothing
+    parseUniverse :: Sem r Expression
+    parseUniverse = ExpressionUniverse <$> embed @Parse (P.token universe' mempty)
+      where
+        universe' :: ExpressionSection 'Scoped -> Maybe Universe
+        universe' s = case s of
+          SectionUniverse u -> Just u
+          _ -> Nothing
 
-  parseFunction :: Sem r Expression
-  parseFunction = ExpressionFunction <$> embed @Parse (P.token function mempty)
-    where
-    function :: ExpressionSection 'Scoped -> Maybe (Function 'Scoped)
-    function s = case s of
-      SectionFunction u -> Just u
-      _ -> Nothing
+    parseFunction :: Sem r Expression
+    parseFunction = ExpressionFunction <$> embed @Parse (P.token function mempty)
+      where
+        function :: ExpressionSection 'Scoped -> Maybe (Function 'Scoped)
+        function s = case s of
+          SectionFunction u -> Just u
+          _ -> Nothing
 
-  parseLetBlock ::Sem r Expression
-  parseLetBlock = ExpressionLetBlock <$> embed @Parse (P.token letBlock mempty)
-    where
-    letBlock :: ExpressionSection 'Scoped -> Maybe (LetBlock 'Scoped)
-    letBlock s = case s of
-      SectionLetBlock u -> Just u
-      _ -> Nothing
+    parseLetBlock :: Sem r Expression
+    parseLetBlock = ExpressionLetBlock <$> embed @Parse (P.token letBlock mempty)
+      where
+        letBlock :: ExpressionSection 'Scoped -> Maybe (LetBlock 'Scoped)
+        letBlock s = case s of
+          SectionLetBlock u -> Just u
+          _ -> Nothing
 
-  parseNoInfixIdentifier :: Sem r Expression
-  parseNoInfixIdentifier = ExpressionIdentifier <$> embed @Parse (P.token identifierNoFixity mempty)
-    where
-    identifierNoFixity :: ExpressionSection 'Scoped -> Maybe S.Name
-    identifierNoFixity s = case s of
-      SectionIdentifier n
-       | not (S.hasFixity n) -> Just n
-      _ -> Nothing
+    parseNoInfixIdentifier :: Sem r Expression
+    parseNoInfixIdentifier = ExpressionIdentifier <$> embed @Parse (P.token identifierNoFixity mempty)
+      where
+        identifierNoFixity :: ExpressionSection 'Scoped -> Maybe S.Name
+        identifierNoFixity s = case s of
+          SectionIdentifier n
+            | not (S.hasFixity n) -> Just n
+          _ -> Nothing
 
-  parseParens :: Sem r Expression
-  parseParens = do
-    parser <- ask @(Parse Expression)
-    exprs <- embed @Parse (P.token parenExpr mempty)
-    case P.parse parser strPath exprs of
-      Right r -> return r
-      Left {} -> embed @Parse $ P.failure Nothing mempty
-    where
-    strPath :: FilePath
-    strPath = "inner parens"
-    parenExpr :: ExpressionSection 'Scoped -> Maybe [ExpressionSection 'Scoped]
-    parenExpr s = case s of
-      SectionParens (ExpressionSections ss) -> Just (toList ss)
-      _ -> Nothing
-
-parsePatternSection ::
-  Members '[Error ScopeError, State Scope] r => PatternSection 'Scoped -> Sem r Pattern
-parsePatternSection = undefined
-
-parsePatternSections ::
-  Members '[Error ScopeError, State Scope] r =>
-  PatternSections 'Scoped ->
-  Sem r Pattern
-parsePatternSections = undefined
-
-parsePatternTerm :: MonadParsec e [PatternSections 'Scoped] m => m Pattern
-parsePatternTerm = undefined
-
-parsePatternWildcard :: MonadParsec e [PatternSection 'Scoped] m => m Pattern
-parsePatternWildcard = PatternWildcard <$ P.satisfy isWildcard
-  where
-    isWildcard PatternSectionWildcard = True
-    isWildcard _ = False
+    parseParens :: Sem r Expression
+    parseParens = do
+      parser <- ask @(Parse Expression)
+      exprs <- embed @Parse (P.token parenExpr mempty)
+      case P.parse parser strPath exprs of
+        Right r -> return r
+        Left {} -> embed @Parse $ P.failure Nothing mempty
+      where
+        strPath :: FilePath
+        strPath = "inner parens"
+        parenExpr :: ExpressionSection 'Scoped -> Maybe [ExpressionSection 'Scoped]
+        parenExpr s = case s of
+          SectionParens (ExpressionSections ss) -> Just (toList ss)
+          _ -> Nothing
 
 -------------------------------------------------------------------------------
 -- Infix Patterns
 -------------------------------------------------------------------------------
+
+type ParsePat = P.Parsec () [PatternSection 'Scoped]
+
+makePatternTable ::
+  forall r.
+  (Members '[State Scope] r) =>
+  Sem r [[P.Operator ParsePat PrePattern]]
+makePatternTable = do
+  symbolTable <- mkSymbolTable . toList <$> gets _scopeSymbols
+  -- application has the highest precedence.
+  return $ [appOp] : symbolTable
+  where
+    -- TODO think what to do with qualified symbols
+    mkSymbolTable :: [SymbolInfo] -> [[P.Operator ParsePat PrePattern]]
+    mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe (unqualifiedSymbolOp . getEntry)
+      where
+        getEntry :: SymbolInfo -> SymbolEntry
+        getEntry (SymbolInfo m) = case toList m of
+          [] -> error "impossible"
+          [e] -> e
+          _ -> error "impossible after scope checking"
+        unqualifiedSymbolOp :: SymbolEntry -> Maybe (Precedence, P.Operator ParsePat PrePattern)
+        unqualifiedSymbolOp SymbolEntry {..}
+          | S.SomeFixity Fixity {..} <- symbolFixity,
+            symbolKind == KNameConstructor = Just $
+            case fixityArity of
+              Unary u -> (fixityPrecedence, prePost (unaryApp <$> parseSymbolId symbolId))
+                where
+                  unaryApp :: S.Name -> PrePattern -> PrePattern
+                  unaryApp funName = PrePatternApp (PrePatternConstructor funName)
+                  prePost :: ParsePat (PrePattern -> PrePattern) -> P.Operator ParsePat PrePattern
+                  prePost = case u of
+                    AssocPrefix -> P.Prefix
+                    AssocPostfix -> P.Postfix
+              Binary b -> (fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId symbolId))
+                where
+                  binaryApp :: S.Name -> PrePattern -> PrePattern -> PrePattern
+                  binaryApp constr argLeft = PrePatternApp (PrePatternApp (PrePatternConstructor constr) argLeft)
+                  infixLRN :: ParsePat (PrePattern -> PrePattern -> PrePattern) -> P.Operator ParsePat PrePattern
+                  infixLRN = case b of
+                    AssocLeft -> P.InfixL
+                    AssocRight -> P.InfixR
+                    AssocNone -> P.InfixN
+          | otherwise = Nothing
+        parseSymbolId :: S.NameId -> ParsePat S.Name
+        parseSymbolId uid = P.token getName mempty
+          where
+            getName :: PatternSection 'Scoped -> Maybe S.Name
+            getName s = case s of
+              PatternSectionName n'
+                | uid == S._nameId n' -> Just n'
+              _ -> Nothing
+
+    -- Application by juxtaposition.
+    appOp :: P.Operator ParsePat PrePattern
+    appOp = P.InfixL (PrePatternApp <$ notFollowedByInfix)
+      where
+        notFollowedByInfix :: ParsePat ()
+        notFollowedByInfix = P.notFollowedBy (P.token infixName mempty)
+          where
+            infixName :: PatternSection 'Scoped -> Maybe S.Name
+            infixName s = case s of
+              PatternSectionName n
+                | S.hasFixity n -> Just n
+              _ -> Nothing
+
+parsePrePatTerm ::
+  forall r.
+  Members '[Reader (ParsePat PrePattern), Embed ParsePat, NonDet] r =>
+  Sem r PrePattern
+parsePrePatTerm =
+  parseNoInfixConstructor
+    <|> parseVariable
+    <|> parseParens
+    <|> parseWildcard
+    <|> parseEmpty
+  where
+    parseNoInfixConstructor :: Sem r PrePattern
+    parseNoInfixConstructor =
+      PrePatternConstructor
+        <$> embed @ParsePat (P.token constructorNoFixity mempty)
+      where
+        constructorNoFixity :: PatternSection 'Scoped -> Maybe S.Name
+        constructorNoFixity s = case s of
+          PatternSectionName n
+            | not (S.hasFixity n) -> Just n
+          _ -> Nothing
+
+    parseWildcard :: Sem r PrePattern
+    parseWildcard = PrePatternWildcard <$ embed @ParsePat (P.satisfy isWildcard)
+      where
+        isWildcard :: PatternSection 'Scoped -> Bool
+        isWildcard s = case s of
+          PatternSectionWildcard -> True
+          _ -> False
+
+    parseEmpty :: Sem r PrePattern
+    parseEmpty = PrePatternWildcard <$ embed @ParsePat (P.satisfy isEmpty)
+      where
+        isEmpty :: PatternSection 'Scoped -> Bool
+        isEmpty s = case s of
+          PatternSectionEmpty -> True
+          _ -> False
+
+    parseVariable :: Sem r PrePattern
+    parseVariable = PrePatternWildcard <$ embed @ParsePat (P.token var mempty)
+      where
+        var :: PatternSection 'Scoped -> Maybe S.Symbol
+        var s = case s of
+          PatternSectionName S.Name' {..}
+            | NameUnqualified sym <- _nameConcrete,
+              S.KNameLocal <- _nameKind ->
+              Just
+                S.Name'
+                  { S._nameConcrete = sym,
+                    ..
+                  }
+          _ -> Nothing
+
+    parseParens :: Sem r PrePattern
+    parseParens = do
+      parser <- ask @(ParsePat PrePattern)
+      exprs <- embed @ParsePat (P.token parenPat mempty)
+      case P.parse parser strPath exprs of
+        Right r -> return r
+        Left {} -> embed @ParsePat $ P.failure Nothing mempty
+      where
+        strPath :: FilePath
+        strPath = "inner parens"
+        parenPat :: PatternSection 'Scoped -> Maybe [PatternSection 'Scoped]
+        parenPat s = case s of
+          PatternSectionParens (PatternSections ss) -> Just (toList ss)
+          _ -> Nothing
+
+mkPrePatternParser ::
+  forall r.
+  Members '[Embed ParsePat] r =>
+  [[P.Operator ParsePat PrePattern]] ->
+  Sem r PrePattern
+mkPrePatternParser table = embed @ParsePat pPattern
+  where
+    pPattern :: ParsePat PrePattern
+    pPattern = P.makeExprParser pTerm table
+    pTerm :: ParsePat PrePattern
+    pTerm = runM (runNonDetMaybe parseTermRec) >>= maybe mzero pure
+      where
+        parseTermRec :: Sem '[NonDet, Embed ParsePat] PrePattern
+        parseTermRec = runReader pPattern parsePrePatTerm
+
+parsePatternSection ::
+  Members '[Error ScopeError, State Scope] r => PatternSection 'Scoped -> Sem r PrePattern
+parsePatternSection sec = do
+  tbl <- makePatternTable
+  let parser :: ParsePat PrePattern
+      parser = runM (mkPrePatternParser tbl) <* P.eof
+      res = P.parse parser filePath [sec]
+  case res of
+    Left {} -> throw ErrPrePattern
+    Right r -> return r
+  where
+    filePath = "tmp"
+
+unfoldApp :: PrePattern -> Maybe (PrePattern, PrePattern)
+unfoldApp p = case p of
+  PrePatternApp l r -> Just (l, r)
+  _ -> Nothing
+
+-- | Unfolds applications. Checks that the leftmost thing in an application is a constructor
+parsePrePattern ::
+  forall r.
+  Members '[Error ScopeError] r =>
+  PrePattern ->
+  Sem r Pattern
+parsePrePattern = go []
+  where
+    go :: [Pattern] -> PrePattern -> Sem r Pattern
+    go reverseArgs p = case p of
+      PrePatternApp l r -> do
+        r' <- parsePrePattern r
+        go (r' : reverseArgs) l
+      PrePatternConstructor constr ->
+        return $ PatternConstructor constr (reverse reverseArgs)
+      _
+        | not (null reverseArgs) -> throw ErrPrePatternUnfold
+      PrePatternWildcard -> return PatternWildcard
+      PrePatternEmpty -> return PatternEmpty
+      PrePatternVariable var -> return (PatternVariable var)

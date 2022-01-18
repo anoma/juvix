@@ -22,9 +22,9 @@ where
 
 --------------------------------------------------------------------------------
 
-import qualified Data.Char as Char
-import Data.List.Extra (unsnoc, groupSortOn)
 import Control.Monad.Extra (maybeM)
+import qualified Data.Char as Char
+import Data.List.Extra (groupSortOn, unsnoc)
 import qualified Data.List.NonEmpty as NonEmpty
 import Relude hiding
   ( Type,

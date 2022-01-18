@@ -234,13 +234,20 @@ deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (
 -- Pattern
 --------------------------------------------------------------------------------
 
+data PrePattern
+  = PrePatternVariable (SymbolType 'Scoped)
+  | PrePatternConstructor (NameType 'Scoped)
+  | PrePatternApp PrePattern PrePattern
+  | PrePatternWildcard
+  | PrePatternEmpty
+  deriving stock (Show, Eq)
+
 data Pattern
-  = PatternVariable Symbol
-  | PatternConstructor Name
-  | PatternApp Pattern Pattern
+  = PatternVariable (SymbolType 'Scoped)
+  | PatternConstructor (NameType 'Scoped) [Pattern]
   | PatternWildcard
   | PatternEmpty
-  deriving stock (Show, Eq, Ord, Lift)
+  deriving stock (Show, Eq, Ord)
 
 --------------------------------------------------------------------------------
 -- Pattern section
@@ -250,7 +257,7 @@ data PatternSection (s :: Stage)
   = PatternSectionName (NameType s)
   | PatternSectionWildcard
   | PatternSectionEmpty
-  | PatternSectionParen (PatternSections s)
+  | PatternSectionParens (PatternSections s)
 
 deriving stock instance
   ( Show (ExpressionType s),

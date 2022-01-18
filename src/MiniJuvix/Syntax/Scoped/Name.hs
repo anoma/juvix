@@ -84,7 +84,7 @@ makeLenses ''Name'
 
 hasFixity :: Name' s -> Bool
 hasFixity Name' {..} = case _nameFixity of
-  SomeFixity{} -> True
+  SomeFixity {} -> True
   NoFixity -> False
 
 instance Eq (Name' n) where
