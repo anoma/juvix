@@ -15,7 +15,7 @@ import Data.Singletons
 import Language.Haskell.TH.Syntax (Lift)
 import MiniJuvix.Syntax.Concrete.Fixity
 import MiniJuvix.Syntax.Concrete.Name
-import qualified MiniJuvix.Syntax.Scoped.Name as S
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Utils.Prelude
 
 --------------------------------------------------------------------------------

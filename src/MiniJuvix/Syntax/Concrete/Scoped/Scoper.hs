@@ -3,7 +3,7 @@
 
 -- | Limitations:
 -- 1. A symbol introduced by a type signature can only be used once per Module.
-module MiniJuvix.Syntax.Scoped.Scoper where
+module MiniJuvix.Syntax.Concrete.Scoped.Scoper where
 
 import qualified Control.Monad.Combinators.Expr as P
 import qualified Data.HashMap.Strict as HashMap
@@ -15,8 +15,8 @@ import Lens.Micro.Platform
 import qualified MiniJuvix.Syntax.Concrete.Base as P
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Parser (runModuleParserIO)
-import MiniJuvix.Syntax.Scoped.Name (NameKind (KNameConstructor))
-import qualified MiniJuvix.Syntax.Scoped.Name as S
+import MiniJuvix.Syntax.Concrete.Scoped.Name (NameKind (KNameConstructor))
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Utils.Prelude hiding (Reader, State, ask, asks, evalState, get, gets, local, modify, put, runReader, runState)
 import Polysemy
 import Polysemy.Error hiding (fromEither)
@@ -1267,11 +1267,6 @@ parsePatternSection sec = do
     Right r -> return r
   where
     filePath = "tmp"
-
-unfoldApp :: PrePattern -> Maybe (PrePattern, PrePattern)
-unfoldApp p = case p of
-  PrePatternApp l r -> Just (l, r)
-  _ -> Nothing
 
 -- | Unfolds applications. Checks that the leftmost thing in an application is a constructor
 parsePrePattern ::

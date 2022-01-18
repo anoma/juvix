@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module MiniJuvix.Syntax.Scoped.Name where
+module MiniJuvix.Syntax.Concrete.Scoped.Name where
 
 import Data.Stream (Stream (Cons))
 import Lens.Micro.Platform

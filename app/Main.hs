@@ -3,7 +3,7 @@ module Main (main) where
 
 import MiniJuvix.Utils.Prelude
 import qualified MiniJuvix.Syntax.Concrete.Parser as M
-import qualified MiniJuvix.Syntax.Scoped.Scoper as M
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
 import Options.Applicative
 import Options.Applicative.Help.Pretty
 
