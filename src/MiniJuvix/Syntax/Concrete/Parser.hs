@@ -112,7 +112,7 @@ operatorSyntaxDef = do
         <|> Binary AssocLeft <$ kwInfixl
         <|> Binary AssocNone <$ kwInfix
         <|> Unary AssocPrefix <$ kwPrefix
-        <|> Unary AssocPostfix <$ kwPrefix
+        <|> Unary AssocPostfix <$ kwPostfix
 
 --------------------------------------------------------------------------------
 -- Import statement
