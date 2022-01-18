@@ -17,7 +17,7 @@ import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Parser (runModuleParserIO)
 import MiniJuvix.Syntax.Scoped.Name (NameKind (KNameConstructor))
 import qualified MiniJuvix.Syntax.Scoped.Name as S
-import MiniJuvix.Utils.Prelude hiding (Reader, State, ask, asks, get, gets, local, modify, put, runReader, runState, evalState)
+import MiniJuvix.Utils.Prelude hiding (Reader, State, ask, asks, evalState, get, gets, local, modify, put, runReader, runState)
 import Polysemy
 import Polysemy.Error hiding (fromEither)
 import Polysemy.NonDet
@@ -91,8 +91,8 @@ makeLenses ''ModulesCache
 data ScopeError
   = ErrParser Text
   | Err
-  | ErrInfixParser
-  | ErrPrePattern
+  | ErrInfixParser String
+  | ErrPrePattern String
   | ErrPrePatternUnfold
   | ErrAlreadyDefined Symbol
   | ErrLacksTypeSig Symbol
@@ -124,23 +124,25 @@ makeLenses ''ScopeState
 
 scopeCheck :: FilePath -> [Module 'Parsed 'ModuleTop] -> IO (Either ScopeError [Module 'Scoped 'ModuleTop])
 scopeCheck root modules =
-  runM
-  $ runError
-  $ runReader scopeParameters
-  $ evalState iniScopeState
-  $ mapM checkTopModule modules
+  runM $
+    runError $
+      runReader scopeParameters $
+        evalState iniScopeState $
+          mapM checkTopModule modules
   where
-  iniScopeState :: ScopeState
-  iniScopeState = ScopeState {
-    _scopeModulesCache = ModulesCache mempty,
-    _scopeFreeNames = S.allNameIds
-  }
-  scopeParameters :: ScopeParameters
-  scopeParameters = ScopeParameters {
-   _scopeRootPath = root,
-   _scopeFileExtension = ".mjuvix",
-   _scopeTopParents = mempty
-    }
+    iniScopeState :: ScopeState
+    iniScopeState =
+      ScopeState
+        { _scopeModulesCache = ModulesCache mempty,
+          _scopeFreeNames = S.allNameIds
+        }
+    scopeParameters :: ScopeParameters
+    scopeParameters =
+      ScopeParameters
+        { _scopeRootPath = root,
+          _scopeFileExtension = ".mjuvix",
+          _scopeTopParents = mempty
+        }
 
 freshNameId ::
   Members '[State ScopeState] r =>
@@ -447,20 +449,22 @@ checkTopModule m@(Module path stmts) = do
   maybe checkedModule return (cache ^. at path)
   where
     iniScope :: Scope
-    iniScope = Scope {
-      _scopePath = getTopModulePath m,
-      _scopeFixities = mempty,
-      _scopeUsedFixities = mempty,
-      _scopeSymbols = mempty,
-      _scopeModules = mempty,
-      _scopeBindGroup = mempty
-      }
+    iniScope =
+      Scope
+        { _scopePath = getTopModulePath m,
+          _scopeFixities = mempty,
+          _scopeUsedFixities = mempty,
+          _scopeSymbols = mempty,
+          _scopeModules = mempty,
+          _scopeBindGroup = mempty
+        }
     addParent :: ScopeParameters -> ScopeParameters
     addParent = over scopeTopParents (HashSet.insert path)
     checkedModule :: Sem r (Module 'Scoped 'ModuleTop)
-    checkedModule = evalState iniScope $
-      Module path
-        <$> local addParent (mapM checkStatement stmts)
+    checkedModule =
+      evalState iniScope $
+        Module path
+          <$> local addParent (mapM checkStatement stmts)
     checkCycle :: Sem r ()
     checkCycle =
       whenM
@@ -683,7 +687,7 @@ checkQualified ::
   Members '[Error ScopeError, State Scope] r =>
   QualifiedName ->
   Sem r S.Name
-checkQualified q = undefined
+checkQualified q = error "todo"
 
 unqualifiedSName :: S.Symbol -> S.Name
 unqualifiedSName = over S.nameConcrete NameUnqualified
@@ -721,7 +725,7 @@ checkPatternName ::
   Name ->
   Sem r S.Name
 checkPatternName n = case n of
-  NameQualified _ -> undefined
+  NameQualified _ -> error "todo"
   NameUnqualified s -> checkPatternUnqualified s
 
 withBindCurrentGroup ::
@@ -999,7 +1003,7 @@ parseExpressionSections (ExpressionSections sections) = do
       parser = runM (mkExpressionParser tbl) <* P.eof
       res = P.parse parser filePath (toList sections)
   case res of
-    Left {} -> throw ErrInfixParser
+    Left err -> throw (ErrInfixParser (show err))
     Right r -> return r
   where
     filePath = "tmp"
@@ -1007,73 +1011,76 @@ parseExpressionSections (ExpressionSections sections) = do
 -- | Monad for parsing expression sections.
 type Parse = P.Parsec () [ExpressionSection 'Scoped]
 
+-- data Parser tok m a where
+--   EmbedParsec ::
+
 mkExpressionParser ::
-  forall r.
-  Members '[Embed Parse] r =>
   [[P.Operator Parse Expression]] ->
-  Sem r Expression
+  Sem '[Embed Parse] Expression
 mkExpressionParser table = embed @Parse pExpression
   where
     pExpression :: Parse Expression
     pExpression = P.makeExprParser pTerm table
     pTerm :: Parse Expression
-    pTerm = runM (runNonDetMaybe parseTermRec) >>= maybe mzero pure
+    pTerm = runM parseTermRec
       where
-        parseTermRec :: Sem '[NonDet, Embed Parse] Expression
+        parseTermRec :: Sem '[Embed Parse] Expression
         parseTermRec = runReader pExpression parseTerm
 
-parseTerm :: forall r. Members '[Reader (Parse Expression), Embed Parse, NonDet] r => Sem r Expression
-parseTerm =
-  parseNoInfixIdentifier
-    <|> parseParens
+parseTerm :: forall r. Members '[Reader (Parse Expression), Embed Parse] r => Sem r Expression
+parseTerm = do
+  pExpr <- ask
+  embed @Parse $
+     parseUniverse
+    <|> parseNoInfixIdentifier
+    <|> parseParens pExpr
     <|> parseFunction
     <|> parseLambda
     <|> parseMatch
-    <|> parseUniverse
     <|> parseLetBlock
   where
-    parseLambda :: Sem r Expression
-    parseLambda = ExpressionLambda <$> embed @Parse (P.token lambda mempty)
+    parseLambda :: Parse Expression
+    parseLambda = ExpressionLambda <$> P.token lambda mempty
       where
         lambda :: ExpressionSection 'Scoped -> Maybe (Lambda 'Scoped)
         lambda s = case s of
           SectionLambda l -> Just l
           _ -> Nothing
 
-    parseMatch :: Sem r Expression
-    parseMatch = ExpressionMatch <$> embed @Parse (P.token match mempty)
+    parseMatch :: Parse Expression
+    parseMatch = ExpressionMatch <$> P.token match mempty
       where
         match :: ExpressionSection 'Scoped -> Maybe (Match 'Scoped)
         match s = case s of
           SectionMatch l -> Just l
           _ -> Nothing
 
-    parseUniverse :: Sem r Expression
-    parseUniverse = ExpressionUniverse <$> embed @Parse (P.token universe' mempty)
+    parseUniverse :: Parse Expression
+    parseUniverse = ExpressionUniverse <$> P.token universe' mempty
       where
         universe' :: ExpressionSection 'Scoped -> Maybe Universe
         universe' s = case s of
           SectionUniverse u -> Just u
           _ -> Nothing
 
-    parseFunction :: Sem r Expression
-    parseFunction = ExpressionFunction <$> embed @Parse (P.token function mempty)
+    parseFunction :: Parse Expression
+    parseFunction = ExpressionFunction <$> P.token function mempty
       where
         function :: ExpressionSection 'Scoped -> Maybe (Function 'Scoped)
         function s = case s of
           SectionFunction u -> Just u
           _ -> Nothing
 
-    parseLetBlock :: Sem r Expression
-    parseLetBlock = ExpressionLetBlock <$> embed @Parse (P.token letBlock mempty)
+    parseLetBlock :: Parse Expression
+    parseLetBlock = ExpressionLetBlock <$> P.token letBlock mempty
       where
         letBlock :: ExpressionSection 'Scoped -> Maybe (LetBlock 'Scoped)
         letBlock s = case s of
           SectionLetBlock u -> Just u
           _ -> Nothing
 
-    parseNoInfixIdentifier :: Sem r Expression
-    parseNoInfixIdentifier = ExpressionIdentifier <$> embed @Parse (P.token identifierNoFixity mempty)
+    parseNoInfixIdentifier :: Parse Expression
+    parseNoInfixIdentifier = ExpressionIdentifier <$> P.token identifierNoFixity mempty
       where
         identifierNoFixity :: ExpressionSection 'Scoped -> Maybe S.Name
         identifierNoFixity s = case s of
@@ -1081,13 +1088,12 @@ parseTerm =
             | not (S.hasFixity n) -> Just n
           _ -> Nothing
 
-    parseParens :: Sem r Expression
-    parseParens = do
-      parser <- ask @(Parse Expression)
-      exprs <- embed @Parse (P.token parenExpr mempty)
-      case P.parse parser strPath exprs of
+    parseParens :: Parse Expression -> Parse Expression
+    parseParens expressionParer = do
+      exprs <- P.token parenExpr mempty
+      case P.parse expressionParer strPath exprs of
         Right r -> return r
-        Left {} -> embed @Parse $ P.failure Nothing mempty
+        Left {} -> P.failure Nothing mempty
       where
         strPath :: FilePath
         strPath = "inner parens"
@@ -1169,17 +1175,19 @@ parsePrePatTerm ::
   forall r.
   Members '[Reader (ParsePat PrePattern), Embed ParsePat, NonDet] r =>
   Sem r PrePattern
-parsePrePatTerm =
-  parseNoInfixConstructor
-    <|> parseVariable
-    <|> parseParens
-    <|> parseWildcard
-    <|> parseEmpty
+parsePrePatTerm = do
+  pPat <- ask
+  embed @ParsePat $
+   parseNoInfixConstructor
+     <|> parseVariable
+     <|> parseParens pPat
+     <|> parseWildcard
+     <|> parseEmpty
   where
-    parseNoInfixConstructor :: Sem r PrePattern
+    parseNoInfixConstructor :: ParsePat PrePattern
     parseNoInfixConstructor =
       PrePatternConstructor
-        <$> embed @ParsePat (P.token constructorNoFixity mempty)
+        <$> P.token constructorNoFixity mempty
       where
         constructorNoFixity :: PatternSection 'Scoped -> Maybe S.Name
         constructorNoFixity s = case s of
@@ -1187,24 +1195,24 @@ parsePrePatTerm =
             | not (S.hasFixity n) -> Just n
           _ -> Nothing
 
-    parseWildcard :: Sem r PrePattern
-    parseWildcard = PrePatternWildcard <$ embed @ParsePat (P.satisfy isWildcard)
+    parseWildcard :: ParsePat PrePattern
+    parseWildcard = PrePatternWildcard <$ P.satisfy isWildcard
       where
         isWildcard :: PatternSection 'Scoped -> Bool
         isWildcard s = case s of
           PatternSectionWildcard -> True
           _ -> False
 
-    parseEmpty :: Sem r PrePattern
-    parseEmpty = PrePatternWildcard <$ embed @ParsePat (P.satisfy isEmpty)
+    parseEmpty :: ParsePat PrePattern
+    parseEmpty = PrePatternWildcard <$ P.satisfy isEmpty
       where
         isEmpty :: PatternSection 'Scoped -> Bool
         isEmpty s = case s of
           PatternSectionEmpty -> True
           _ -> False
 
-    parseVariable :: Sem r PrePattern
-    parseVariable = PrePatternWildcard <$ embed @ParsePat (P.token var mempty)
+    parseVariable :: ParsePat PrePattern
+    parseVariable = PrePatternWildcard <$ P.token var mempty
       where
         var :: PatternSection 'Scoped -> Maybe S.Symbol
         var s = case s of
@@ -1218,13 +1226,12 @@ parsePrePatTerm =
                   }
           _ -> Nothing
 
-    parseParens :: Sem r PrePattern
-    parseParens = do
-      parser <- ask @(ParsePat PrePattern)
-      exprs <- embed @ParsePat (P.token parenPat mempty)
-      case P.parse parser strPath exprs of
+    parseParens :: ParsePat PrePattern -> ParsePat PrePattern
+    parseParens patternParser = do
+      exprs <- P.token parenPat mempty
+      case P.parse patternParser strPath exprs of
         Right r -> return r
-        Left {} -> embed @ParsePat $ P.failure Nothing mempty
+        Left {} -> mzero
       where
         strPath :: FilePath
         strPath = "inner parens"
@@ -1243,7 +1250,7 @@ mkPrePatternParser table = embed @ParsePat pPattern
     pPattern :: ParsePat PrePattern
     pPattern = P.makeExprParser pTerm table
     pTerm :: ParsePat PrePattern
-    pTerm = runM (runNonDetMaybe parseTermRec) >>= maybe mzero pure
+    pTerm = runM (runNonDet parseTermRec) >>= maybe mzero pure
       where
         parseTermRec :: Sem '[NonDet, Embed ParsePat] PrePattern
         parseTermRec = runReader pPattern parsePrePatTerm
@@ -1256,7 +1263,7 @@ parsePatternSection sec = do
       parser = runM (mkPrePatternParser tbl) <* P.eof
       res = P.parse parser filePath [sec]
   case res of
-    Left {} -> throw ErrPrePattern
+    Left err -> throw (ErrPrePattern (show err))
     Right r -> return r
   where
     filePath = "tmp"
