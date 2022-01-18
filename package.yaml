@@ -72,11 +72,12 @@ library:
   source-dirs: src
 
 executables:
-  MiniJuvix:
+  minijuvix:
     main: Main.hs
-    source-dirs: src/app
+    source-dirs: app
     dependencies:
     - MiniJuvix
+    - optparse-applicative == 0.16.*
 
 tests:
   MiniJuvix-test:

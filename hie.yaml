@@ -3,14 +3,11 @@ cradle:
     - path: "./src"
       component: "MiniJuvix:lib"
 
-    - path: "./src/app/Main.hs"
-      component: "MiniJuvix:exe:MiniJuvix"
+    - path: "./app/Main.hs"
+      component: "MiniJuvix:exe:minijuvix"
 
-    - path: "./src/app/Options.hs"
-      component: "MiniJuvix:exe:MiniJuvix"
-
-    - path: "./src/app/Paths_MiniJuvix.hs"
-      component: "MiniJuvix:exe:MiniJuvix"
+    - path: "./app/Paths_MiniJuvix.hs"
+      component: "MiniJuvix:exe:minijuvix"
 
     - path: "./test"
       component: "MiniJuvix:test:MiniJuvix-test"

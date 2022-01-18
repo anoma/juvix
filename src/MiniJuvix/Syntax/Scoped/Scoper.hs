@@ -14,18 +14,16 @@ import qualified Data.Text as Text
 import Lens.Micro.Platform
 import qualified MiniJuvix.Syntax.Concrete.Base as P
 import MiniJuvix.Syntax.Concrete.Language
-import MiniJuvix.Syntax.Concrete.Parser (dottedSymbol, runModuleParserIO)
+import MiniJuvix.Syntax.Concrete.Parser (runModuleParserIO)
 import MiniJuvix.Syntax.Scoped.Name (NameKind (KNameConstructor))
 import qualified MiniJuvix.Syntax.Scoped.Name as S
 import MiniJuvix.Utils.Prelude hiding (Reader, State, ask, asks, get, gets, local, modify, put, runReader, runState, evalState)
 import Polysemy
-import Polysemy.Embed
 import Polysemy.Error hiding (fromEither)
 import Polysemy.NonDet
 import Polysemy.Reader
 import Polysemy.State
 import System.FilePath
-import qualified Text.Megaparsec as P
 
 --------------------------------------------------------------------------------
 
@@ -188,14 +186,13 @@ reserveSymbolOf ::
   Sem r S.Symbol
 reserveSymbolOf k s = do
   checkNotBound
-  s' <- freshSymbol k s
-  return s'
+  freshSymbol k s
   where
     checkNotBound :: Sem r ()
     checkNotBound = do
       path <- gets _scopePath
       syms <- gets _scopeSymbols
-      let exists = fromMaybe False (HashMap.member path . symbolInfo <$> HashMap.lookup s syms)
+      let exists = maybe False (HashMap.member path . symbolInfo) (HashMap.lookup s syms)
       when exists (throw (ErrAlreadyDefined s))
 
 bindReservedSymbol ::
