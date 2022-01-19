@@ -69,7 +69,6 @@ allKeywords =
     kwColonOmega,
     kwColonOne,
     kwColonZero,
-    kwAssignment,
     kwEnd,
     kwEval,
     kwHiding,
