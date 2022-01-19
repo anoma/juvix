@@ -432,7 +432,7 @@ ppPattern = goAtom
   ppPatternPostfixApp PatternPostfixApp {..} = do
     patPostfixConstructor' <- ppSName patPostfixConstructor
     patPostfixParameter' <- goAtom patPostfixParameter
-    return $ patPostfixConstructor' <+> patPostfixParameter'
+    return $  patPostfixParameter' <+> patPostfixConstructor'
 
 ppExpressionAtom :: forall r. Members '[Reader Options] r => Expression -> Sem r (Doc Ann)
 ppExpressionAtom e = do 
