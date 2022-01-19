@@ -5,33 +5,42 @@ import MiniJuvix.Utils.Prelude
 import qualified MiniJuvix.Syntax.Concrete.Parser as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
 import Options.Applicative
 import Options.Applicative.Help.Pretty
+import Data.Aeson (defaultOptions)
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (Options(_optShowNameId))
 
 data Command =
   Scope ScopeOptions
   | Parse ParseOptions
 
 data ScopeOptions = ScopeOptions {
-  _rootDir :: FilePath
-  , _inputFile :: FilePath
+  _scopeRootDir :: FilePath
+  , _scopeInputFile :: FilePath
+  , _scopeShowIds :: Bool
   }
 
 data ParseOptions = ParseOptions
 
 parseScope :: Parser ScopeOptions
 parseScope = do
-  _rootDir <- strOption
+  _scopeRootDir <- strOption
     (long "rootDir"
      <> short 'd'
      <> metavar "DIR"
      <> value "."
      <> showDefault
      <> help "Root directory")
-  _inputFile <- argument str
+  _scopeInputFile <- argument str
      (metavar "MINIJUVIX_FILE"
      <> help "Path to a .mjuvix file"
      )
+  _scopeShowIds <- switch
+     ( long "show-name-ids"
+     <> help "Show the unique number of each identifier"
+     )
+
   pure ScopeOptions {..}
 
 parseParse :: Parser ParseOptions
@@ -54,19 +63,24 @@ parseCommand = subparser (
    <> command "scope" (info (Scope <$> parseScope) (progDesc "Parse and scope some .mjuvix files"))
                     )
 
+mkPrettyOptions :: ScopeOptions -> M.Options
+mkPrettyOptions ScopeOptions {..} = M.defaultOptions {
+  _optShowNameId = _scopeShowIds
+  }
+
 go :: Command -> IO ()
 go c = case c of
-  Scope ScopeOptions {..} -> do
-    res <- M.runModuleParserIO _inputFile
+  Scope opts@ScopeOptions {..} -> do
+    res <- M.runModuleParserIO _scopeInputFile
     case res of
       Left err -> print err
       Right m -> do
         print m
         putStrLn "\n\n"
-        s <- M.scopeCheck _inputFile [m]
+        s <- M.scopeCheck _scopeInputFile [m]
         case s of
           Left err -> print err
-          Right [r] -> M.printTopModuleDefault r
+          Right [r] -> M.printTopModule (mkPrettyOptions opts) r
           Right _ -> error "impossible"
   Parse _ -> putStrLn "not implemented"
 
