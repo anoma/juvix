@@ -25,7 +25,7 @@ stylize a = case a of
     KNameInductive -> colorDull Green
     KNameAxiom -> colorDull Red
     KNameLocalModule -> mempty
-    KNameFunction -> mempty
+    KNameFunction -> colorDull Yellow
     KNameLocal -> mempty
-  AnnDelimiter -> mempty
+  AnnDelimiter -> colorDull White
   AnnKeyword -> colorDull Blue

@@ -348,10 +348,12 @@ ppLambda Lambda {..} = do
 ppFunctionClause :: forall r. Members '[Reader Options] r => FunctionClause 'Scoped -> Sem r (Doc Ann)
 ppFunctionClause FunctionClause {..} = do
   clauseOwnerFunction' <- ppSSymbol clauseOwnerFunction
-  clausePatterns' <- hsep <$> mapM ppPattern clausePatterns
+  clausePatterns' <- case nonEmpty clausePatterns of
+    Nothing -> return Nothing
+    Just ne -> Just . hsep . toList <$> mapM ppPattern ne
   clauseBody' <- ppExpression clauseBody
   clauseWhere' <- sequence $ ppWhereBlock <$> clauseWhere
-  return $ clauseOwnerFunction' <+> clausePatterns' <+> kwAssignment <+> clauseBody' 
+  return $ clauseOwnerFunction' <+?> clausePatterns' <+> kwAssignment <+> clauseBody' 
    <+?> (((line <> kwWhere)  <+>) <$> clauseWhere')
   where
   ppWhereBlock :: WhereBlock 'Scoped -> Sem r (Doc Ann)
@@ -432,7 +434,7 @@ ppPattern = goAtom
   ppPatternPostfixApp PatternPostfixApp {..} = do
     patPostfixConstructor' <- ppSName patPostfixConstructor
     patPostfixParameter' <- goAtom patPostfixParameter
-    return $  patPostfixParameter' <+> patPostfixConstructor'
+    return $ patPostfixParameter' <+> patPostfixConstructor'
 
 ppExpressionAtom :: forall r. Members '[Reader Options] r => Expression -> Sem r (Doc Ann)
 ppExpressionAtom e = do 

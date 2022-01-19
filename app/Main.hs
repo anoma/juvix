@@ -8,7 +8,6 @@ import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
 import Options.Applicative
 import Options.Applicative.Help.Pretty
-import Data.Aeson (defaultOptions)
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (Options(_optShowNameId))
 
 data Command =
