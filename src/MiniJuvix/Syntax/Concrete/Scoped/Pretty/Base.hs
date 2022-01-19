@@ -390,7 +390,11 @@ ppPattern = goAtom
   isAtomicPat :: Pattern -> Bool
   isAtomicPat p = case p of
     PatternVariable {} -> True
-    PatternConstructor _ args -> null args
+    PatternApplication {} -> False
+    PatternConstructor {} -> True
+    PatternInfixApplication {} -> False
+    PatternPostfixApplication {} -> False
+    PatternPrefixApplication {} -> False
     PatternWildcard -> True
     PatternEmpty -> True
   goAtom :: Pattern -> Sem r (Doc Ann)
@@ -400,12 +404,35 @@ ppPattern = goAtom
   go :: Pattern -> Sem r (Doc Ann)
   go p = case p of
     PatternVariable v -> ppSSymbol v
-    PatternConstructor constr pats -> do
-      constr' <- ppSName constr
-      pats' <- hsep <$> mapM goAtom pats
-      return $ constr' <+?> (if null pats then Nothing else Just pats')
+    PatternApplication l r -> do
+      l' <- goAtom l
+      r' <- goAtom r
+      return $ l' <+> r'
     PatternWildcard -> return kwWildcard
     PatternEmpty -> return $ parens mempty
+    PatternConstructor constr -> ppSName constr
+    PatternInfixApplication i -> ppPatternInfixApp i
+    PatternPrefixApplication i -> ppPatternPrefixApp i
+    PatternPostfixApplication i -> ppPatternPostfixApp i
+
+  ppPatternInfixApp :: PatternInfixApp -> Sem r (Doc Ann)
+  ppPatternInfixApp PatternInfixApp {..} = do
+    patInfixConstructor' <- ppSName patInfixConstructor
+    patInfixLeft' <- goAtom patInfixLeft
+    patInfixRight' <- goAtom patInfixRight
+    return $ patInfixLeft' <+> patInfixConstructor' <+> patInfixRight'
+
+  ppPatternPrefixApp :: PatternPrefixApp -> Sem r (Doc Ann)
+  ppPatternPrefixApp PatternPrefixApp {..} = do
+    patPrefixConstructor' <- ppSName patPrefixConstructor
+    patPrefixParameter' <- goAtom patPrefixParameter
+    return $ patPrefixConstructor' <+> patPrefixParameter'
+
+  ppPatternPostfixApp :: PatternPostfixApp -> Sem r (Doc Ann)
+  ppPatternPostfixApp PatternPostfixApp {..} = do
+    patPostfixConstructor' <- ppSName patPostfixConstructor
+    patPostfixParameter' <- goAtom patPostfixParameter
+    return $ patPostfixConstructor' <+> patPostfixParameter'
 
 ppExpressionAtom :: forall r. Members '[Reader Options] r => Expression -> Sem r (Doc Ann)
 ppExpressionAtom e = do 

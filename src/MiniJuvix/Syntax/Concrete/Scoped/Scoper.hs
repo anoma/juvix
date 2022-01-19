@@ -92,8 +92,8 @@ data ScopeError
   = ErrParser Text
   | Err
   | ErrInfixParser String
-  | ErrPrePattern String
-  | ErrPrePatternUnfold
+  | ErrPattern String
+  | ErrPatternUnfold
   | ErrAlreadyDefined Symbol
   | ErrLacksTypeSig Symbol
   | ErrImportCycle TopModulePath
@@ -878,7 +878,7 @@ checkParsePatternSection ::
   Members '[Error ScopeError, State Scope, State ScopeState] r =>
   PatternSection 'Parsed ->
   Sem r Pattern
-checkParsePatternSection = checkPatternSection >=> parsePatternSection >=> parsePrePattern
+checkParsePatternSection = checkPatternSection >=> parsePatternSection
 
 checkStatement ::
   Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State Scope, State ScopeState] r =>
@@ -1110,45 +1110,47 @@ type ParsePat = P.Parsec () [PatternSection 'Scoped]
 makePatternTable ::
   forall r.
   (Members '[State Scope] r) =>
-  Sem r [[P.Operator ParsePat PrePattern]]
+  Sem r [[P.Operator ParsePat Pattern]]
 makePatternTable = do
   symbolTable <- mkSymbolTable . toList <$> gets _scopeSymbols
   -- application has the highest precedence.
   return $ [appOp] : symbolTable
   where
     -- TODO think what to do with qualified symbols
-    mkSymbolTable :: [SymbolInfo] -> [[P.Operator ParsePat PrePattern]]
+    mkSymbolTable :: [SymbolInfo] -> [[P.Operator ParsePat Pattern]]
     mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe (unqualifiedSymbolOp . getEntry)
       where
-        nameToPrePattern :: S.Name -> PrePattern
-        nameToPrePattern n@S.Name' {..} = case _nameKind of
-          S.KNameConstructor -> PrePatternConstructor n
+        nameToPattern :: S.Name -> Pattern
+        nameToPattern n@S.Name' {..} = case _nameKind of
+          S.KNameConstructor -> PatternConstructor n
           S.KNameLocal
-           | NameUnqualified s <- _nameConcrete -> PrePatternVariable S.Name' {S._nameConcrete = s, ..}
+           | NameUnqualified s <- _nameConcrete -> PatternVariable S.Name' {S._nameConcrete = s, ..}
           _ -> error "impossible"
         getEntry :: SymbolInfo -> SymbolEntry
         getEntry (SymbolInfo m) = case toList m of
           [] -> error "impossible"
           [e] -> e
           _ -> error "impossible after scope checking"
-        unqualifiedSymbolOp :: SymbolEntry -> Maybe (Precedence, P.Operator ParsePat PrePattern)
+        unqualifiedSymbolOp :: SymbolEntry -> Maybe (Precedence, P.Operator ParsePat Pattern)
         unqualifiedSymbolOp SymbolEntry {..}
           | S.SomeFixity Fixity {..} <- symbolFixity,
             symbolKind == KNameConstructor = Just $
             case fixityArity of
               Unary u -> (fixityPrecedence, prePost (unaryApp <$> parseSymbolId symbolId))
                 where
-                  unaryApp :: S.Name -> PrePattern -> PrePattern
-                  unaryApp funName = PrePatternApp (nameToPrePattern funName)
-                  prePost :: ParsePat (PrePattern -> PrePattern) -> P.Operator ParsePat PrePattern
+                  unaryApp :: S.Name -> Pattern -> Pattern
+                  unaryApp funName = case u of
+                    AssocPrefix -> PatternPrefixApplication . PatternPrefixApp funName
+                    AssocPostfix -> PatternPostfixApplication . PatternPostfixApp funName
+                  prePost :: ParsePat (Pattern -> Pattern) -> P.Operator ParsePat Pattern
                   prePost = case u of
                     AssocPrefix -> P.Prefix
                     AssocPostfix -> P.Postfix
-              Binary b -> (fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId symbolId))
+              Binary b -> (fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId symbolId))
                 where
-                  binaryApp :: S.Name -> PrePattern -> PrePattern -> PrePattern
-                  binaryApp name argLeft = PrePatternApp (PrePatternApp (nameToPrePattern name) argLeft)
-                  infixLRN :: ParsePat (PrePattern -> PrePattern -> PrePattern) -> P.Operator ParsePat PrePattern
+                  binaryInfixApp :: S.Name -> Pattern -> Pattern -> Pattern
+                  binaryInfixApp name argLeft = PatternInfixApplication . PatternInfixApp name argLeft
+                  infixLRN :: ParsePat (Pattern -> Pattern -> Pattern) -> P.Operator ParsePat Pattern
                   infixLRN = case b of
                     AssocLeft -> P.InfixL
                     AssocRight -> P.InfixR
@@ -1164,8 +1166,8 @@ makePatternTable = do
               _ -> Nothing
 
     -- Application by juxtaposition.
-    appOp :: P.Operator ParsePat PrePattern
-    appOp = P.InfixL (PrePatternApp <$ notFollowedByInfix)
+    appOp :: P.Operator ParsePat Pattern
+    appOp = P.InfixL (PatternApplication <$ notFollowedByInfix)
       where
         notFollowedByInfix :: ParsePat ()
         notFollowedByInfix = P.notFollowedBy (P.token infixName mempty)
@@ -1178,8 +1180,8 @@ makePatternTable = do
 
 parsePrePatTerm ::
   forall r.
-  Members '[Reader (ParsePat PrePattern), Embed ParsePat, NonDet] r =>
-  Sem r PrePattern
+  Members '[Reader (ParsePat Pattern), Embed ParsePat, NonDet] r =>
+  Sem r Pattern
 parsePrePatTerm = do
   pPat <- ask
   embed @ParsePat $
@@ -1189,9 +1191,9 @@ parsePrePatTerm = do
      <|> parseWildcard
      <|> parseEmpty
   where
-    parseNoInfixConstructor :: ParsePat PrePattern
+    parseNoInfixConstructor :: ParsePat Pattern
     parseNoInfixConstructor =
-      PrePatternConstructor
+      PatternConstructor
         <$> P.token constructorNoFixity mempty
       where
         constructorNoFixity :: PatternSection 'Scoped -> Maybe S.Name
@@ -1200,24 +1202,24 @@ parsePrePatTerm = do
             | not (S.hasFixity n) -> Just n
           _ -> Nothing
 
-    parseWildcard :: ParsePat PrePattern
-    parseWildcard = PrePatternWildcard <$ P.satisfy isWildcard
+    parseWildcard :: ParsePat Pattern
+    parseWildcard = PatternWildcard <$ P.satisfy isWildcard
       where
         isWildcard :: PatternSection 'Scoped -> Bool
         isWildcard s = case s of
           PatternSectionWildcard -> True
           _ -> False
 
-    parseEmpty :: ParsePat PrePattern
-    parseEmpty = PrePatternWildcard <$ P.satisfy isEmpty
+    parseEmpty :: ParsePat Pattern
+    parseEmpty = PatternWildcard <$ P.satisfy isEmpty
       where
         isEmpty :: PatternSection 'Scoped -> Bool
         isEmpty s = case s of
           PatternSectionEmpty -> True
           _ -> False
 
-    parseVariable :: ParsePat PrePattern
-    parseVariable = PrePatternWildcard <$ P.token var mempty
+    parseVariable :: ParsePat Pattern
+    parseVariable = PatternWildcard <$ P.token var mempty
       where
         var :: PatternSection 'Scoped -> Maybe S.Symbol
         var s = case s of
@@ -1231,7 +1233,7 @@ parsePrePatTerm = do
                   }
           _ -> Nothing
 
-    parseParens :: ParsePat PrePattern -> ParsePat PrePattern
+    parseParens :: ParsePat Pattern -> ParsePat Pattern
     parseParens patternParser = do
       exprs <- P.token parenPat mempty
       case P.parse patternParser strPath exprs of
@@ -1245,51 +1247,30 @@ parsePrePatTerm = do
           PatternSectionParens (PatternSections ss) -> Just (toList ss)
           _ -> Nothing
 
-mkPrePatternParser ::
+mkPatternParser ::
   forall r.
   Members '[Embed ParsePat] r =>
-  [[P.Operator ParsePat PrePattern]] ->
-  Sem r PrePattern
-mkPrePatternParser table = embed @ParsePat pPattern
+  [[P.Operator ParsePat Pattern]] ->
+  Sem r Pattern
+mkPatternParser table = embed @ParsePat pPattern
   where
-    pPattern :: ParsePat PrePattern
+    pPattern :: ParsePat Pattern
     pPattern = P.makeExprParser pTerm table
-    pTerm :: ParsePat PrePattern
+    pTerm :: ParsePat Pattern
     pTerm = runM (runNonDet parseTermRec) >>= maybe mzero pure
       where
-        parseTermRec :: Sem '[NonDet, Embed ParsePat] PrePattern
+        parseTermRec :: Sem '[NonDet, Embed ParsePat] Pattern
         parseTermRec = runReader pPattern parsePrePatTerm
 
 parsePatternSection ::
-  Members '[Error ScopeError, State Scope] r => PatternSection 'Scoped -> Sem r PrePattern
+  Members '[Error ScopeError, State Scope] r => PatternSection 'Scoped -> Sem r Pattern
 parsePatternSection sec = do
   tbl <- makePatternTable
-  let parser :: ParsePat PrePattern
-      parser = runM (mkPrePatternParser tbl) <* P.eof
+  let parser :: ParsePat Pattern
+      parser = runM (mkPatternParser tbl) <* P.eof
       res = P.parse parser filePath [sec]
   case res of
-    Left err -> throw (ErrPrePattern (show err))
+    Left err -> throw (ErrPattern (show err))
     Right r -> return r
   where
     filePath = "tmp"
-
--- | Unfolds applications. Checks that the leftmost thing in an application is a constructor
-parsePrePattern ::
-  forall r.
-  Members '[Error ScopeError] r =>
-  PrePattern ->
-  Sem r Pattern
-parsePrePattern = go []
-  where
-    go :: [Pattern] -> PrePattern -> Sem r Pattern
-    go reverseArgs p = case p of
-      PrePatternApp l r -> do
-        r' <- parsePrePattern r
-        go (r' : reverseArgs) l
-      PrePatternConstructor constr ->
-        return $ PatternConstructor constr (reverse reverseArgs)
-      _
-        | not (null reverseArgs) -> throw ErrPrePatternUnfold
-      PrePatternWildcard -> return PatternWildcard
-      PrePatternEmpty -> return PatternEmpty
-      PrePatternVariable var -> return (PatternVariable var)

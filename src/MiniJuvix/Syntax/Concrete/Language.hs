@@ -234,17 +234,32 @@ deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (
 -- Pattern
 --------------------------------------------------------------------------------
 
-data PrePattern
-  = PrePatternVariable (SymbolType 'Scoped)
-  | PrePatternConstructor (NameType 'Scoped)
-  | PrePatternApp PrePattern PrePattern
-  | PrePatternWildcard
-  | PrePatternEmpty
-  deriving stock (Show, Eq)
+data PatternInfixApp = PatternInfixApp {
+  patInfixConstructor :: NameType 'Scoped,
+  patInfixLeft :: Pattern,
+  patInfixRight :: Pattern
+  }
+  deriving stock (Show, Eq, Ord)
+
+data PatternPostfixApp = PatternPostfixApp {
+  patPostfixConstructor :: NameType 'Scoped,
+  patPostfixParameter :: Pattern
+  }
+  deriving stock (Show, Eq, Ord)
+
+data PatternPrefixApp = PatternPrefixApp {
+  patPrefixConstructor :: NameType 'Scoped,
+  patPrefixParameter :: Pattern
+  }
+  deriving stock (Show, Eq, Ord)
 
 data Pattern
   = PatternVariable (SymbolType 'Scoped)
-  | PatternConstructor (NameType 'Scoped) [Pattern]
+  | PatternConstructor (NameType 'Scoped)
+  | PatternApplication Pattern Pattern
+  | PatternInfixApplication PatternInfixApp
+  | PatternPostfixApplication PatternPostfixApp
+  | PatternPrefixApplication PatternPrefixApp
   | PatternWildcard
   | PatternEmpty
   deriving stock (Show, Eq, Ord)
