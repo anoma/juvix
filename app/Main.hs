@@ -4,6 +4,7 @@ module Main (main) where
 import MiniJuvix.Utils.Prelude
 import qualified MiniJuvix.Syntax.Concrete.Parser as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
 import Options.Applicative
 import Options.Applicative.Help.Pretty
 
@@ -65,7 +66,8 @@ go c = case c of
         s <- M.scopeCheck _inputFile [m]
         case s of
           Left err -> print err
-          Right r -> print r
+          Right [r] -> M.printTopModuleDefault r
+          Right _ -> error "impossible"
   Parse _ -> putStrLn "not implemented"
 
 main :: IO ()
