@@ -161,9 +161,6 @@ ppModulePathType x = case sing :: SModuleIsTop t of
   SModuleTop -> ppTopModulePath x
   SModuleLocal -> ppSSymbol x
 
-ppSSymbol :: Members '[Reader Options] r => S.Symbol -> Sem r (Doc Ann)
-ppSSymbol S.Name' {..} = annotate (AnnKind _nameKind) <$> ppSymbol _nameConcrete
-
 ppSymbol :: Members '[Reader Options] r => Symbol -> Sem r (Doc Ann)
 ppSymbol (Sym t) = return (pretty t)
 
@@ -258,9 +255,15 @@ ppName n = case n of
 ppNameId :: S.NameId -> Doc Ann
 ppNameId (S.NameId k) = pretty k
 
+ppSSymbol :: Members '[Reader Options] r => S.Symbol -> Sem r (Doc Ann)
+ppSSymbol = ppSName' ppSymbol
+
 ppSName :: Members '[Reader Options] r => S.Name -> Sem r (Doc Ann)
-ppSName S.Name'{..} = do
-  nameConcrete' <- annotate (AnnKind _nameKind) <$> ppName _nameConcrete
+ppSName = ppSName' ppName
+
+ppSName' :: Members '[Reader Options] r => (s -> Sem r (Doc Ann)) -> S.Name' s -> Sem r (Doc Ann)
+ppSName' ppConcrete S.Name' {..} = do
+  nameConcrete' <- annotate (AnnKind _nameKind) <$> ppConcrete _nameConcrete
   showNameId <- asks _optShowNameId
   let uid = if showNameId then "@" <> ppNameId _nameId else mempty
   return $ nameConcrete' <> uid
@@ -282,8 +285,8 @@ ppTypeSignature TypeSignature {..} = do
 
 ppFunction :: forall r. Members '[Reader Options] r => Function 'Scoped -> Sem r (Doc Ann)
 ppFunction Function {..} = do
-  funReturn' <- ppExpression funReturn
   funParameter' <- ppFunParameter funParameter
+  funReturn' <- ppExpressionAtom funReturn
   return $ funParameter' <+> kwArrowR <+> funReturn'
   where
   ppUsage :: Maybe Usage -> Doc Ann
@@ -295,11 +298,11 @@ ppFunction Function {..} = do
       UsageOmega -> kwColonOmega
   ppFunParameter :: FunctionParameter 'Scoped -> Sem r (Doc Ann)
   ppFunParameter FunctionParameter {..} = do
-    paramType' <- ppExpression paramType
     case paramName of
-      Nothing -> return paramType'
+      Nothing -> ppExpressionAtom paramType
       Just n -> do
         paramName' <- ppSSymbol n
+        paramType' <- ppExpression paramType
         return $ parens (paramName' <+> ppUsage paramUsage <+> paramType')
 
 ppUniverse :: Members '[Reader Options] r => Universe -> Sem r (Doc Ann)
@@ -348,8 +351,8 @@ ppFunctionClause FunctionClause {..} = do
   clausePatterns' <- hsep <$> mapM ppPattern clausePatterns
   clauseBody' <- ppExpression clauseBody
   clauseWhere' <- sequence $ ppWhereBlock <$> clauseWhere
-  return $ clauseOwnerFunction' <+> clausePatterns' <+> kwAssignment <+> clauseBody' <> line
-   <> kwWhere <+?> clauseWhere'
+  return $ clauseOwnerFunction' <+> clausePatterns' <+> kwAssignment <+> clauseBody' 
+   <+?> (((line <> kwWhere)  <+>) <$> clauseWhere')
   where
   ppWhereBlock :: WhereBlock 'Scoped -> Sem r (Doc Ann)
   ppWhereBlock WhereBlock {..} = ppBlock ppWhereClause whereClauses
@@ -384,38 +387,60 @@ ppImport (Import (Module {..})) = do
 ppPattern :: forall r. Members '[Reader Options] r => Pattern -> Sem r (Doc Ann)
 ppPattern = goAtom
   where
-  isAtomic :: Pattern -> Bool
-  isAtomic p = case p of
+  isAtomicPat :: Pattern -> Bool
+  isAtomicPat p = case p of
     PatternVariable {} -> True
-    PatternConstructor {} -> False
+    PatternConstructor _ args -> null args
     PatternWildcard -> True
     PatternEmpty -> True
   goAtom :: Pattern -> Sem r (Doc Ann)
   goAtom p = do 
     p' <- go p
-    return $ if isAtomic p then p' else parens p'
+    return $ if isAtomicPat p then p' else parens p'
   go :: Pattern -> Sem r (Doc Ann)
   go p = case p of
     PatternVariable v -> ppSSymbol v
     PatternConstructor constr pats -> do
       constr' <- ppSName constr
       pats' <- hsep <$> mapM goAtom pats
-      return $ constr' <+> pats'
+      return $ constr' <+?> (if null pats then Nothing else Just pats')
     PatternWildcard -> return kwWildcard
     PatternEmpty -> return $ parens mempty
+
+ppExpressionAtom :: forall r. Members '[Reader Options] r => Expression -> Sem r (Doc Ann)
+ppExpressionAtom e = do 
+    e' <- ppExpression e
+    return $ if isAtomic e then e' else parens e'
+
+isAtomic :: Expression -> Bool
+isAtomic e = case e of
+  ExpressionIdentifier {} -> True
+  ExpressionApplication {} -> False
+  ExpressionInfixApplication {} -> False
+  ExpressionPostfixApplication {} -> False
+  ExpressionLambda {} -> True
+  ExpressionMatch {} -> True
+  ExpressionLetBlock {} -> True
+  ExpressionUniverse {} -> True
+  ExpressionFunction {} -> False
+
+ppInfixApplication :: forall r. Members '[Reader Options] r => InfixApplication -> Sem r (Doc Ann)
+ppInfixApplication InfixApplication {..} = do 
+  infixAppLeft' <- ppExpressionAtom infixAppLeft
+  infixAppOperator' <- ppSName infixAppOperator 
+  infixAppRight' <- ppExpressionAtom infixAppRight
+  return $ infixAppLeft' <+> infixAppOperator' <+> infixAppRight'
+
+ppPostfixApplication :: forall r. Members '[Reader Options] r => PostfixApplication -> Sem r (Doc Ann)
+ppPostfixApplication PostfixApplication {..} = do 
+  postfixAppParameter' <- ppExpressionAtom postfixAppParameter
+  postfixAppOperator' <- ppSName postfixAppOperator 
+  return $ postfixAppParameter' <+> postfixAppOperator'
+
 
 ppExpression :: forall r. Members '[Reader Options] r => Expression -> Sem r (Doc Ann)
 ppExpression = go
   where
-  isAtomic :: Expression -> Bool
-  isAtomic e = case e of
-    ExpressionIdentifier {} -> True
-    ExpressionApplication {} -> False
-    ExpressionLambda {} -> True
-    ExpressionMatch {} -> True
-    ExpressionLetBlock {} -> True
-    ExpressionUniverse {} -> True
-    ExpressionFunction {} -> False
   ppApplication :: Application -> Sem r (Doc Ann)
   ppApplication (Application l r) = do
     l' <- goAtom l
@@ -429,6 +454,8 @@ ppExpression = go
   go e = case e of
     ExpressionIdentifier n -> ppSName n
     ExpressionApplication a -> ppApplication a
+    ExpressionInfixApplication a -> ppInfixApplication a
+    ExpressionPostfixApplication a -> ppPostfixApplication a
     ExpressionLambda l -> ppLambda l
     ExpressionMatch m -> ppMatch m
     ExpressionLetBlock lb -> ppLetBlock lb

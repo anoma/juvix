@@ -452,6 +452,8 @@ data OpenModule = OpenModule
 data Expression
   = ExpressionIdentifier (NameType 'Scoped)
   | ExpressionApplication Application
+  | ExpressionInfixApplication InfixApplication
+  | ExpressionPostfixApplication PostfixApplication
   | ExpressionLambda (Lambda 'Scoped)
   | ExpressionMatch (Match 'Scoped)
   | ExpressionLetBlock (LetBlock 'Scoped)
@@ -789,6 +791,19 @@ deriving stock instance
 data Application = Application
   { applicationFunction :: ExpressionType 'Scoped,
     applicationParameter :: ExpressionType 'Scoped
+  }
+  deriving stock (Show, Eq, Ord)
+
+data InfixApplication = InfixApplication
+  { infixAppLeft :: ExpressionType 'Scoped,
+    infixAppOperator :: NameType 'Scoped,
+    infixAppRight :: ExpressionType 'Scoped
+  }
+  deriving stock (Show, Eq, Ord)
+
+data PostfixApplication = PostfixApplication
+  { postfixAppOperator :: NameType 'Scoped,
+    postfixAppParameter :: ExpressionType 'Scoped
   }
   deriving stock (Show, Eq, Ord)
 

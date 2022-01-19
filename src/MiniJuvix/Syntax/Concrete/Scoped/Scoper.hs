@@ -925,7 +925,10 @@ makeExpressionTable = do
               Unary u -> (fixityPrecedence, prePost (unaryApp <$> parseSymbolId symbolId))
                 where
                   unaryApp :: S.Name -> Expression -> Expression
-                  unaryApp funName arg = ExpressionApplication (Application (ExpressionIdentifier funName) arg)
+                  unaryApp funName arg = case u of
+                    -- TODO Prefix application
+                    AssocPrefix -> ExpressionApplication (Application (ExpressionIdentifier funName) arg)
+                    AssocPostfix -> ExpressionPostfixApplication (PostfixApplication funName arg)
                   prePost :: Parse (Expression -> Expression) -> P.Operator Parse Expression
                   prePost = case u of
                     AssocPrefix -> P.Prefix
@@ -933,14 +936,8 @@ makeExpressionTable = do
               Binary b -> (fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId symbolId))
                 where
                   binaryApp :: S.Name -> Expression -> Expression -> Expression
-                  binaryApp funName argLeft argRight =
-                    ExpressionApplication
-                      ( Application
-                          ( ExpressionApplication
-                              (Application (ExpressionIdentifier funName) argLeft)
-                          )
-                          argRight
-                      )
+                  binaryApp infixAppOperator infixAppLeft infixAppRight =
+                    ExpressionInfixApplication InfixApplication {..}
                   infixLRN :: Parse (Expression -> Expression -> Expression) -> P.Operator Parse Expression
                   infixLRN = case b of
                     AssocLeft -> P.InfixL
@@ -1123,6 +1120,12 @@ makePatternTable = do
     mkSymbolTable :: [SymbolInfo] -> [[P.Operator ParsePat PrePattern]]
     mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe (unqualifiedSymbolOp . getEntry)
       where
+        nameToPrePattern :: S.Name -> PrePattern
+        nameToPrePattern n@S.Name' {..} = case _nameKind of
+          S.KNameConstructor -> PrePatternConstructor n
+          S.KNameLocal
+           | NameUnqualified s <- _nameConcrete -> PrePatternVariable S.Name' {S._nameConcrete = s, ..}
+          _ -> error "impossible"
         getEntry :: SymbolInfo -> SymbolEntry
         getEntry (SymbolInfo m) = case toList m of
           [] -> error "impossible"
@@ -1136,7 +1139,7 @@ makePatternTable = do
               Unary u -> (fixityPrecedence, prePost (unaryApp <$> parseSymbolId symbolId))
                 where
                   unaryApp :: S.Name -> PrePattern -> PrePattern
-                  unaryApp funName = PrePatternApp (PrePatternConstructor funName)
+                  unaryApp funName = PrePatternApp (nameToPrePattern funName)
                   prePost :: ParsePat (PrePattern -> PrePattern) -> P.Operator ParsePat PrePattern
                   prePost = case u of
                     AssocPrefix -> P.Prefix
@@ -1144,7 +1147,7 @@ makePatternTable = do
               Binary b -> (fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId symbolId))
                 where
                   binaryApp :: S.Name -> PrePattern -> PrePattern -> PrePattern
-                  binaryApp constr argLeft = PrePatternApp (PrePatternApp (PrePatternConstructor constr) argLeft)
+                  binaryApp name argLeft = PrePatternApp (PrePatternApp (nameToPrePattern name) argLeft)
                   infixLRN :: ParsePat (PrePattern -> PrePattern -> PrePattern) -> P.Operator ParsePat PrePattern
                   infixLRN = case b of
                     AssocLeft -> P.InfixL
