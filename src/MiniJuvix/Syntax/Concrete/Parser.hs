@@ -173,6 +173,8 @@ letBlock :: MonadParsec e Text m => m (LetBlock 'Parsed)
 letBlock = do
   kwLet
   letClauses <- braces (P.sepEndBy letClause kwSemicolon)
+  kwIn
+  letExpression <- expressionSections
   return LetBlock {..}
 
 --------------------------------------------------------------------------------

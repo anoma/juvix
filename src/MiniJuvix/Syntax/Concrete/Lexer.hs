@@ -74,6 +74,7 @@ allKeywords =
     kwEval,
     kwHiding,
     kwImport,
+    kwIn,
     kwInductive,
     kwInfix,
     kwInfixl,
@@ -134,6 +135,9 @@ kwHiding = symbol "hiding"
 
 kwImport :: MonadParsec e Text m => m ()
 kwImport = symbol "import"
+
+kwIn :: MonadParsec e Text m => m ()
+kwIn = symbol "in"
 
 kwInductive :: MonadParsec e Text m => m ()
 kwInductive = symbol "inductive"

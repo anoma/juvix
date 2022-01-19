@@ -796,7 +796,10 @@ data Application = Application
 -- Let block expression
 --------------------------------------------------------------------------------
 
-newtype LetBlock (s :: Stage) = LetBlock {letClauses :: [LetClause s]}
+data LetBlock (s :: Stage) = LetBlock {
+  letClauses :: [LetClause s],
+  letExpression :: ExpressionType s
+  }
 
 deriving stock instance
   ( Show (PatternType s),

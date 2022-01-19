@@ -658,10 +658,12 @@ checkLetBlock ::
 checkLetBlock LetBlock {..} = do
   s <- get @Scope -- backup scope: we do not want local definitions to stay in scope
   letClauses' <- mapM checkLetClause letClauses
+  letExpression' <- checkParseExpressionSections letExpression
   put s -- restore scope
   return
     LetBlock
-      { letClauses = letClauses'
+      { letClauses = letClauses',
+        letExpression = letExpression'
       }
 
 checkLambda ::
