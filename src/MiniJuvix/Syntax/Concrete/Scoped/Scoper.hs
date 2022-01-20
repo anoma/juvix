@@ -1030,13 +1030,13 @@ parseTerm :: forall r. Members '[Reader (Parse Expression), Embed Parse] r => Se
 parseTerm = do
   pExpr <- ask
   embed @Parse $
-     parseUniverse
-    <|> parseNoInfixIdentifier
-    <|> parseParens pExpr
-    <|> parseFunction
-    <|> parseLambda
-    <|> parseMatch
-    <|> parseLetBlock
+    parseUniverse
+      <|> parseNoInfixIdentifier
+      <|> parseParens pExpr
+      <|> parseFunction
+      <|> parseLambda
+      <|> parseMatch
+      <|> parseLetBlock
   where
     parseLambda :: Parse Expression
     parseLambda = ExpressionLambda <$> P.token lambda mempty
@@ -1124,7 +1124,7 @@ makePatternTable = do
         nameToPattern n@S.Name' {..} = case _nameKind of
           S.KNameConstructor -> PatternConstructor n
           S.KNameLocal
-           | NameUnqualified s <- _nameConcrete -> PatternVariable S.Name' {S._nameConcrete = s, ..}
+            | NameUnqualified s <- _nameConcrete -> PatternVariable S.Name' {S._nameConcrete = s, ..}
           _ -> error "impossible"
         getEntry :: SymbolInfo -> SymbolEntry
         getEntry (SymbolInfo m) = case toList m of
@@ -1185,11 +1185,11 @@ parsePrePatTerm ::
 parsePrePatTerm = do
   pPat <- ask
   embed @ParsePat $
-   parseNoInfixConstructor
-     <|> parseVariable
-     <|> parseParens pPat
-     <|> parseWildcard
-     <|> parseEmpty
+    parseNoInfixConstructor
+      <|> parseVariable
+      <|> parseParens pPat
+      <|> parseWildcard
+      <|> parseEmpty
   where
     parseNoInfixConstructor :: ParsePat Pattern
     parseNoInfixConstructor =

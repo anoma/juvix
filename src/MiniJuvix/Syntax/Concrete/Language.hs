@@ -234,22 +234,22 @@ deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (
 -- Pattern
 --------------------------------------------------------------------------------
 
-data PatternInfixApp = PatternInfixApp {
-  patInfixConstructor :: NameType 'Scoped,
-  patInfixLeft :: Pattern,
-  patInfixRight :: Pattern
+data PatternInfixApp = PatternInfixApp
+  { patInfixConstructor :: NameType 'Scoped,
+    patInfixLeft :: Pattern,
+    patInfixRight :: Pattern
   }
   deriving stock (Show, Eq, Ord)
 
-data PatternPostfixApp = PatternPostfixApp {
-  patPostfixConstructor :: NameType 'Scoped,
-  patPostfixParameter :: Pattern
+data PatternPostfixApp = PatternPostfixApp
+  { patPostfixConstructor :: NameType 'Scoped,
+    patPostfixParameter :: Pattern
   }
   deriving stock (Show, Eq, Ord)
 
-data PatternPrefixApp = PatternPrefixApp {
-  patPrefixConstructor :: NameType 'Scoped,
-  patPrefixParameter :: Pattern
+data PatternPrefixApp = PatternPrefixApp
+  { patPrefixConstructor :: NameType 'Scoped,
+    patPrefixParameter :: Pattern
   }
   deriving stock (Show, Eq, Ord)
 
@@ -826,9 +826,9 @@ data PostfixApplication = PostfixApplication
 -- Let block expression
 --------------------------------------------------------------------------------
 
-data LetBlock (s :: Stage) = LetBlock {
-  letClauses :: [LetClause s],
-  letExpression :: ExpressionType s
+data LetBlock (s :: Stage) = LetBlock
+  { letClauses :: [LetClause s],
+    letExpression :: ExpressionType s
   }
 
 deriving stock instance

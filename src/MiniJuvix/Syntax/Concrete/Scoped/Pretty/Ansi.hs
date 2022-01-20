@@ -1,11 +1,11 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi where
 
-import Prettyprinter
-import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base
 import MiniJuvix.Syntax.Concrete.Language
+import MiniJuvix.Syntax.Concrete.Scoped.Name (NameKind (..))
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base
 import MiniJuvix.Utils.Prelude
+import Prettyprinter
 import Prettyprinter.Render.Terminal
-import MiniJuvix.Syntax.Concrete.Scoped.Name (NameKind(..))
 
 printTopModuleDefault :: Module 'Scoped 'ModuleTop -> IO ()
 printTopModuleDefault = printTopModule defaultOptions
@@ -13,10 +13,10 @@ printTopModuleDefault = printTopModule defaultOptions
 printTopModule :: Options -> Module 'Scoped 'ModuleTop -> IO ()
 printTopModule opts m = renderIO stdout docStream'
   where
-  docStream :: SimpleDocStream Ann
-  docStream = layoutPretty defaultLayoutOptions (prettyTopModule opts m)
-  docStream' :: SimpleDocStream AnsiStyle
-  docStream' = reAnnotateS stylize docStream
+    docStream :: SimpleDocStream Ann
+    docStream = layoutPretty defaultLayoutOptions (prettyTopModule opts m)
+    docStream' :: SimpleDocStream AnsiStyle
+    docStream' = reAnnotateS stylize docStream
 
 stylize :: Ann -> AnsiStyle
 stylize a = case a of
