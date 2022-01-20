@@ -68,7 +68,6 @@ data SymbolEntry = SymbolEntry
 data Scope = Scope
   { _scopePath :: S.AbsModulePath,
     _scopeFixities :: HashMap Symbol Fixity,
-    _scopeUsedFixities :: HashSet Symbol,
     _scopeSymbols :: HashMap Symbol SymbolInfo,
     _scopeModules :: HashMap QualifiedName ModuleScopeInfo,
     _scopeBindGroup :: HashMap Symbol LocalVariable
@@ -92,8 +91,7 @@ data ScopeError
   = ErrParser Text
   | Err
   | ErrInfixParser String
-  | ErrPattern String
-  | ErrPatternUnfold
+  | ErrInfixPattern String
   | ErrAlreadyDefined Symbol
   | ErrLacksTypeSig Symbol
   | ErrImportCycle TopModulePath
@@ -122,7 +120,10 @@ data ScopeState = ScopeState
 
 makeLenses ''ScopeState
 
-scopeCheck :: FilePath -> [Module 'Parsed 'ModuleTop] -> IO (Either ScopeError [Module 'Scoped 'ModuleTop])
+scopeCheck1 :: FilePath -> Module 'Parsed 'ModuleTop -> IO (Either ScopeError (Module 'Scoped 'ModuleTop))
+scopeCheck1 root m = fmap head <$> scopeCheck root (pure m)
+
+scopeCheck :: FilePath -> NonEmpty (Module 'Parsed 'ModuleTop) -> IO (Either ScopeError (NonEmpty (Module 'Scoped 'ModuleTop)))
 scopeCheck root modules =
   runM $
     runError $
@@ -170,14 +171,7 @@ freshSymbol _nameKind _nameConcrete = do
     getFixity :: Sem r S.NameFixity
     getFixity
       | S.canHaveFixity _nameKind = do
-        mfix <- HashMap.lookup _nameConcrete <$> gets _scopeFixities
-        case mfix of
-          Nothing -> return S.NoFixity
-          Just fixity -> do
-            -- deleting the fixity so we know it has been used
-            modify (over scopeFixities (HashMap.delete _nameConcrete))
-            modify (over scopeUsedFixities (HashSet.insert _nameConcrete))
-            return (S.SomeFixity fixity)
+        maybe S.NoFixity S.SomeFixity . HashMap.lookup _nameConcrete <$> gets _scopeFixities
       | otherwise = return S.NoFixity
 
 reserveSymbolOf ::
@@ -354,12 +348,7 @@ checkOperatorSyntaxDef OperatorSyntaxDef {..} = do
   where
     checkNotDefined :: Sem r ()
     checkNotDefined =
-      whenM
-        ( orM
-            [ HashSet.member opSymbol <$> gets _scopeUsedFixities,
-              HashMap.member opSymbol <$> gets _scopeFixities
-            ]
-        )
+      whenM (HashMap.member opSymbol <$> gets _scopeFixities)
         (throw (ErrDuplicateFixity opSymbol))
 
 checkTypeSignature ::
@@ -453,7 +442,6 @@ checkTopModule m@(Module path stmts) = do
       Scope
         { _scopePath = getTopModulePath m,
           _scopeFixities = mempty,
-          _scopeUsedFixities = mempty,
           _scopeSymbols = mempty,
           _scopeModules = mempty,
           _scopeBindGroup = mempty
@@ -484,6 +472,10 @@ checkLocalModule Module {..} = do
       { modulePath = modulePath',
         moduleBody = moduleBody'
       }
+
+-- | checks if there is an infix declaration without a binding.
+checkOrphanFixities :: Members '[Error ScopeError, State Scope] r => Sem r ()
+checkOrphanFixities = undefined
 
 checkOpenModule ::
   forall r.
@@ -1270,7 +1262,7 @@ parsePatternSection sec = do
       parser = runM (mkPatternParser tbl) <* P.eof
       res = P.parse parser filePath [sec]
   case res of
-    Left err -> throw (ErrPattern (show err))
+    Left err -> throw (ErrInfixPattern (show err))
     Right r -> return r
   where
     filePath = "tmp"

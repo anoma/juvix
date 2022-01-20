@@ -78,6 +78,7 @@ executables:
     dependencies:
     - MiniJuvix
     - optparse-applicative == 0.16.*
+    - pretty-show == 1.10.*
 
 tests:
   MiniJuvix-test:

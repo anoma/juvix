@@ -3,12 +3,17 @@ module Main (main) where
 
 import MiniJuvix.Utils.Prelude
 import qualified MiniJuvix.Syntax.Concrete.Parser as M
+import qualified MiniJuvix.Syntax.Concrete.Language as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
 import Options.Applicative
+import System.IO.Error
 import Options.Applicative.Help.Pretty
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (Options(_optShowNameId))
+import Data.Text (unpack)
+import Text.Show.Pretty
+import Control.Monad.Extra
 
 data Command =
   Scope ScopeOptions
@@ -20,7 +25,23 @@ data ScopeOptions = ScopeOptions {
   , _scopeShowIds :: Bool
   }
 
-data ParseOptions = ParseOptions
+data ParseOptions = ParseOptions {
+  _parseInputFile :: FilePath,
+  _parseNoPrettyShow :: Bool
+  }
+
+parseParse :: Parser ParseOptions
+parseParse = do
+  _parseInputFile <- argument str
+     (metavar "MINIJUVIX_FILE"
+     <> help "Path to a .mjuvix file"
+     )
+  _parseNoPrettyShow <- switch
+     ( long "no-pretty-show"
+     <> help "Disable formatting of the Haskell AST"
+     )
+  pure ParseOptions {..}
+
 
 parseScope :: Parser ScopeOptions
 parseScope = do
@@ -42,46 +63,61 @@ parseScope = do
 
   pure ScopeOptions {..}
 
-parseParse :: Parser ParseOptions
-parseParse = pure ParseOptions
-
 descr :: ParserInfo Command
 descr = info (parseCommand <**> helper)
        (fullDesc
         <> progDesc "The MiniJuvix compiler."
-        <> headerDoc (Just $ dullblue $ bold $ underline "MiniJuvix help")
+        <> headerDoc (Just headDoc)
         <> footerDoc (Just foot)
        )
   where
+  headDoc :: Doc
+  headDoc = dullblue $ bold $ underline "MiniJuvix help"
   foot :: Doc
   foot = bold "maintainers: " <> "jan@heliax.dev; jonathan@heliax.dev"
 
 parseCommand :: Parser Command
-parseCommand = subparser (
-   command "parse" (info (Parse <$> parseParse) (progDesc "Parse some .mjuvix files"))
-   <> command "scope" (info (Scope <$> parseScope) (progDesc "Parse and scope some .mjuvix files"))
-                    )
+parseCommand = hsubparser $ mconcat [
+    commandParse,
+    commandScope
+   ]
+  where
+  commandParse :: Mod CommandFields Command
+  commandParse = command "parse" minfo
+    where
+    minfo :: ParserInfo Command
+    minfo = info (Parse <$> parseParse)
+       (progDesc "Parse a .mjuvix file")
+
+  commandScope :: Mod CommandFields Command
+  commandScope = command "scope" minfo
+    where
+    minfo :: ParserInfo Command
+    minfo = info (Scope <$> parseScope)
+      (progDesc "Parse and scope a .mjuvix file")
+
 
 mkPrettyOptions :: ScopeOptions -> M.Options
 mkPrettyOptions ScopeOptions {..} = M.defaultOptions {
   _optShowNameId = _scopeShowIds
   }
 
+parseModuleIO :: FilePath -> IO (M.Module 'M.Parsed 'M.ModuleTop)
+parseModuleIO = fromRightIO id . M.runModuleParserIO
+
+fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
+fromRightIO pp = eitherM (ioError . userError . unpack . pp) return
+
 go :: Command -> IO ()
 go c = case c of
   Scope opts@ScopeOptions {..} -> do
-    res <- M.runModuleParserIO _scopeInputFile
-    case res of
-      Left err -> print err
-      Right m -> do
-        print m
-        putStrLn "\n\n"
-        s <- M.scopeCheck _scopeInputFile [m]
-        case s of
-          Left err -> print err
-          Right [r] -> M.printTopModule (mkPrettyOptions opts) r
-          Right _ -> error "impossible"
-  Parse _ -> putStrLn "not implemented"
+    m <- parseModuleIO _scopeInputFile
+    s <- fromRightIO show $ M.scopeCheck1 _scopeInputFile m
+    M.printTopModule (mkPrettyOptions opts) s
+  Parse ParseOptions {..} -> do
+    m <- parseModuleIO _parseInputFile
+    if _parseNoPrettyShow then print m else pPrint m
+
 
 main :: IO ()
 main = execParser descr >>= go
