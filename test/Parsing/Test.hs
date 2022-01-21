@@ -54,11 +54,6 @@ inductive Empty {};
 -- An inductive type named Unit with only one constructor.
 inductive Unit { tt : Unit; };
 
-inductive Nat' : Type
-{ zero : Nat' ;
-  suc : Nat' -> Nat' ;
-};
-
 -- The use of the type `Type` below is optional.
 -- The following declaration is equivalent to Nat'.
 
@@ -86,8 +81,8 @@ inductive Fin (n : Nat) {
 -- The type of sized vectors.
 inductive Vec (n : Nat) (A : Type)
 {
-  zero : Vec Nat.zero A;
-  succ : A -> Vec n A -> Vec (Nat.succ n) A;
+  zero : Vec zero A;
+  succ : A -> Vec n A -> Vec (succ n) A;
 };
 
 -- * Indexed inductive type declarations.
@@ -151,8 +146,8 @@ f' := \ {zero ↦ a ;  -- We can use lambda abstractions to pattern match
 -- signature is missing.
 
 g : Nat -> A;
-g Nat.zero    := a;
-g (Nat.suc t) := a';
+g zero    := a;
+g (suc t) := a';
 
 -- For pattern-matching, the symbol `_` is the wildcard pattern as in
 -- Haskell or Agda. The following function definition is equivalent to
@@ -176,8 +171,8 @@ neg := A -> Empty;
 -- An equivalent type for sized vectors.
 
 Vec' : Nat -> Type -> Type;
-Vec' Nat.zero A    := Unit;
-Vec' (Nat.suc n) A := A -> Vec' n A;
+Vec' zero A    := Unit;
+Vec' (suc n) A := A -> Vec' n A;
 
 --------------------------------------------------------------------------------
 -- Fixity notation similarly as in Agda or Haskell.
@@ -185,8 +180,8 @@ Vec' (Nat.suc n) A := A -> Vec' n A;
 
 infixl 10 + ;
 + : Nat → Nat → Nat ;
-+ Nat.zero m    := m;
-+ (Nat.suc n) m := Nat.suc (n + m) ;
++ zero m    := m;
++ (suc n) m := suc (n + m) ;
 
 --------------------------------------------------------------------------------
 -- Quantities for variables.
