@@ -2,7 +2,8 @@ module MiniJuvix.Utils.Version (getVersion) where
 
 ------------------------------------------------------------------------------
 
-import Control.Exception (IOException, try)
+import Control.Exception (IOException)
+import qualified Control.Exception as Exception
 import qualified Data.List as List
 import Data.Version (Version (versionTags))
 import MiniJuvix.Utils.Prelude
@@ -12,7 +13,7 @@ import System.Process (readProcessWithExitCode)
 ------------------------------------------------------------------------------
 
 tryIO :: IO a -> IO (Either IOException a)
-tryIO = try
+tryIO = Exception.try
 
 commitInfo :: IO (Maybe String)
 commitInfo = do

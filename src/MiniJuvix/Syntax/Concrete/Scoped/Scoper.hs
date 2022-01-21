@@ -8,7 +8,6 @@ module MiniJuvix.Syntax.Concrete.Scoped.Scoper where
 import qualified Control.Monad.Combinators.Expr as P
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.HashSet as HashSet
-import Data.Stream (Stream)
 import qualified Data.Stream as Stream
 import qualified Data.Text as Text
 import Lens.Micro.Platform
@@ -17,12 +16,7 @@ import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Parser (runModuleParserIO)
 import MiniJuvix.Syntax.Concrete.Scoped.Name (NameKind (KNameConstructor))
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
-import MiniJuvix.Utils.Prelude hiding (Reader, State, ask, asks, evalState, get, gets, local, modify, put, runReader, runState)
-import Polysemy
-import Polysemy.Error hiding (fromEither)
-import Polysemy.NonDet
-import Polysemy.Reader
-import Polysemy.State
+import MiniJuvix.Utils.Prelude
 import System.FilePath
 
 --------------------------------------------------------------------------------
@@ -348,7 +342,8 @@ checkOperatorSyntaxDef OperatorSyntaxDef {..} = do
   where
     checkNotDefined :: Sem r ()
     checkNotDefined =
-      whenM (HashMap.member opSymbol <$> gets _scopeFixities)
+      whenM
+        (HashMap.member opSymbol <$> gets _scopeFixities)
         (throw (ErrDuplicateFixity opSymbol))
 
 checkTypeSignature ::
@@ -1022,13 +1017,13 @@ parseTerm :: forall r. Members '[Reader (Parse Expression), Embed Parse] r => Se
 parseTerm = do
   pExpr <- ask
   embed @Parse $
-     parseUniverse
-    <|> parseNoInfixIdentifier
-    <|> parseParens pExpr
-    <|> parseFunction
-    <|> parseLambda
-    <|> parseMatch
-    <|> parseLetBlock
+    parseUniverse
+      <|> parseNoInfixIdentifier
+      <|> parseParens pExpr
+      <|> parseFunction
+      <|> parseLambda
+      <|> parseMatch
+      <|> parseLetBlock
   where
     parseLambda :: Parse Expression
     parseLambda = ExpressionLambda <$> P.token lambda mempty
@@ -1116,7 +1111,7 @@ makePatternTable = do
         nameToPattern n@S.Name' {..} = case _nameKind of
           S.KNameConstructor -> PatternConstructor n
           S.KNameLocal
-           | NameUnqualified s <- _nameConcrete -> PatternVariable S.Name' {S._nameConcrete = s, ..}
+            | NameUnqualified s <- _nameConcrete -> PatternVariable S.Name' {S._nameConcrete = s, ..}
           _ -> error "impossible"
         getEntry :: SymbolInfo -> SymbolEntry
         getEntry (SymbolInfo m) = case toList m of
@@ -1172,16 +1167,16 @@ makePatternTable = do
 
 parsePrePatTerm ::
   forall r.
-  Members '[Reader (ParsePat Pattern), Embed ParsePat, NonDet] r =>
+  Members '[Reader (ParsePat Pattern), Embed ParsePat] r =>
   Sem r Pattern
 parsePrePatTerm = do
   pPat <- ask
   embed @ParsePat $
-   parseNoInfixConstructor
-     <|> parseVariable
-     <|> parseParens pPat
-     <|> parseWildcard
-     <|> parseEmpty
+    parseNoInfixConstructor
+      <|> parseVariable
+      <|> parseParens pPat
+      <|> parseWildcard
+      <|> parseEmpty
   where
     parseNoInfixConstructor :: ParsePat Pattern
     parseNoInfixConstructor =
@@ -1249,9 +1244,9 @@ mkPatternParser table = embed @ParsePat pPattern
     pPattern :: ParsePat Pattern
     pPattern = P.makeExprParser pTerm table
     pTerm :: ParsePat Pattern
-    pTerm = runM (runNonDet parseTermRec) >>= maybe mzero pure
+    pTerm = runM parseTermRec
       where
-        parseTermRec :: Sem '[NonDet, Embed ParsePat] Pattern
+        parseTermRec :: Sem '[Embed ParsePat] Pattern
         parseTermRec = runReader pPattern parsePrePatTerm
 
 parsePatternSection ::
