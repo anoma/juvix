@@ -488,7 +488,7 @@ data ExpressionAtom (s :: Stage)
   | AtomFunction (Function s)
   | AtomFunArrow
   | AtomMatch (Match s)
-  | AtomParens (ExpressionAtoms s)
+  | AtomParens (ExpressionType s)
 
 deriving stock instance
   ( Show (ExpressionType s),

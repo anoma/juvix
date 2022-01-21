@@ -819,7 +819,7 @@ checkExpressionAtom e = case e of
   AtomLetBlock letBlock -> AtomLetBlock <$> checkLetBlock letBlock
   AtomUniverse uni -> return (AtomUniverse uni)
   AtomFunction fun -> AtomFunction <$> checkFunction fun
-  AtomParens par -> AtomParens <$> checkExpressionAtoms par
+  AtomParens par -> AtomParens <$> checkParseExpressionAtoms par
   AtomFunArrow -> return AtomFunArrow
   AtomMatch match -> AtomMatch <$> checkMatch match
 
@@ -1006,20 +1006,14 @@ mkExpressionParser ::
 mkExpressionParser table = embed @Parse pExpression
   where
     pExpression :: Parse Expression
-    pExpression = P.makeExprParser pTerm table
-    pTerm :: Parse Expression
-    pTerm = runM parseTermRec
-      where
-        parseTermRec :: Sem '[Embed Parse] Expression
-        parseTermRec = runReader pExpression parseTerm
+    pExpression = P.makeExprParser (runM parseTerm) table
 
-parseTerm :: forall r. Members '[Reader (Parse Expression), Embed Parse] r => Sem r Expression
-parseTerm = do
-  pExpr <- ask
+parseTerm :: forall r. Members '[Embed Parse] r => Sem r Expression
+parseTerm =
   embed @Parse $
     parseUniverse
       <|> parseNoInfixIdentifier
-      <|> parseParens pExpr
+      <|> parseParens
       <|> parseFunction
       <|> parseLambda
       <|> parseMatch
@@ -1074,18 +1068,12 @@ parseTerm = do
             | not (S.hasFixity n) -> Just n
           _ -> Nothing
 
-    parseParens :: Parse Expression -> Parse Expression
-    parseParens expressionParer = do
-      exprs <- P.token parenExpr mempty
-      case P.parse expressionParer strPath exprs of
-        Right r -> return r
-        Left {} -> P.failure Nothing mempty
+    parseParens :: Parse Expression
+    parseParens = P.token parenExpr mempty
       where
-        strPath :: FilePath
-        strPath = "inner parens"
-        parenExpr :: ExpressionAtom 'Scoped -> Maybe [ExpressionAtom 'Scoped]
+        parenExpr :: ExpressionAtom 'Scoped -> Maybe Expression
         parenExpr s = case s of
-          AtomParens (ExpressionAtoms ss) -> Just (toList ss)
+          AtomParens e -> Just e
           _ -> Nothing
 
 -------------------------------------------------------------------------------
