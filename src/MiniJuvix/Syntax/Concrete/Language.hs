@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module MiniJuvix.Syntax.Concrete.Language
@@ -36,11 +35,11 @@ type family NameType (s :: Stage) :: (res :: GHC.Type) | res -> s where
   NameType 'Scoped = S.Name
 
 type family ExpressionType (s :: Stage) :: GHC.Type where
-  ExpressionType 'Parsed = (ExpressionSections 'Parsed)
+  ExpressionType 'Parsed = (ExpressionAtoms 'Parsed)
   ExpressionType 'Scoped = Expression
 
 type family PatternType (s :: Stage) :: GHC.Type where
-  PatternType 'Parsed = (PatternSection 'Parsed)
+  PatternType 'Parsed = (PatternAtom 'Parsed)
   PatternType 'Scoped = Pattern
 
 type family ImportType (s :: Stage) :: GHC.Type where
@@ -268,70 +267,70 @@ data Pattern
 -- Pattern section
 --------------------------------------------------------------------------------
 
-data PatternSection (s :: Stage)
-  = PatternSectionName (NameType s)
-  | PatternSectionWildcard
-  | PatternSectionEmpty
-  | PatternSectionParens (PatternSections s)
+data PatternAtom (s :: Stage)
+  = PatternAtomName (NameType s)
+  | PatternAtomWildcard
+  | PatternAtomEmpty
+  | PatternAtomParens (PatternAtoms s)
 
 deriving stock instance
   ( Show (ExpressionType s),
     Show (NameType s),
     Show (PatternType s)
   ) =>
-  Show (PatternSection s)
+  Show (PatternAtom s)
 
 deriving stock instance
   ( Eq (ExpressionType s),
     Eq (NameType s),
     Eq (PatternType s)
   ) =>
-  Eq (PatternSection s)
+  Eq (PatternAtom s)
 
 deriving stock instance
   ( Ord (ExpressionType s),
     Ord (NameType s),
     Ord (PatternType s)
   ) =>
-  Ord (PatternSection s)
+  Ord (PatternAtom s)
 
 deriving stock instance
   ( Lift (ExpressionType s),
     Lift (NameType s),
     Lift (PatternType s)
   ) =>
-  Lift (PatternSection s)
+  Lift (PatternAtom s)
 
-newtype PatternSections (s :: Stage)
-  = PatternSections (NonEmpty (PatternSection s))
+newtype PatternAtoms (s :: Stage)
+  = PatternAtoms (NonEmpty (PatternAtom s))
 
 deriving stock instance
   ( Show (ExpressionType s),
     Show (NameType s),
     Show (PatternType s)
   ) =>
-  Show (PatternSections s)
+  Show (PatternAtoms s)
 
 deriving stock instance
   ( Eq (ExpressionType s),
     Eq (NameType s),
     Eq (PatternType s)
   ) =>
-  Eq (PatternSections s)
+  Eq (PatternAtoms s)
 
 deriving stock instance
   ( Ord (ExpressionType s),
     Ord (NameType s),
     Ord (PatternType s)
   ) =>
-  Ord (PatternSections s)
+  Ord (PatternAtoms s)
 
 deriving stock instance
   ( Lift (ExpressionType s),
     Lift (NameType s),
     Lift (PatternType s)
   ) =>
-  Lift (PatternSections s)
+  Lift (PatternAtoms s)
 
 --------------------------------------------------------------------------------
 -- Function binding declaration
@@ -481,15 +480,15 @@ data Expression
 --------------------------------------------------------------------------------
 
 -- | Expressions without application
-data ExpressionSection (s :: Stage)
-  = SectionIdentifier (NameType s)
-  | SectionLambda (Lambda s)
-  | SectionLetBlock (LetBlock s)
-  | SectionUniverse Universe
-  | SectionFunction (Function s)
-  | SectionFunArrow
-  | SectionMatch (Match s)
-  | SectionParens (ExpressionSections s)
+data ExpressionAtom (s :: Stage)
+  = AtomIdentifier (NameType s)
+  | AtomLambda (Lambda s)
+  | AtomLetBlock (LetBlock s)
+  | AtomUniverse Universe
+  | AtomFunction (Function s)
+  | AtomFunArrow
+  | AtomMatch (Match s)
+  | AtomParens (ExpressionAtoms s)
 
 deriving stock instance
   ( Show (ExpressionType s),
@@ -497,7 +496,7 @@ deriving stock instance
     Show (SymbolType s),
     Show (PatternType s)
   ) =>
-  Show (ExpressionSection s)
+  Show (ExpressionAtom s)
 
 deriving stock instance
   ( Eq (ExpressionType s),
@@ -505,7 +504,7 @@ deriving stock instance
     Eq (SymbolType s),
     Eq (PatternType s)
   ) =>
-  Eq (ExpressionSection s)
+  Eq (ExpressionAtom s)
 
 deriving stock instance
   ( Ord (ExpressionType s),
@@ -513,7 +512,7 @@ deriving stock instance
     Ord (SymbolType s),
     Ord (PatternType s)
   ) =>
-  Ord (ExpressionSection s)
+  Ord (ExpressionAtom s)
 
 deriving stock instance
   ( Lift (ExpressionType s),
@@ -521,11 +520,11 @@ deriving stock instance
     Lift (SymbolType s),
     Lift (PatternType s)
   ) =>
-  Lift (ExpressionSection s)
+  Lift (ExpressionAtom s)
 
 -- | Expressions without application
-newtype ExpressionSections (s :: Stage)
-  = ExpressionSections (NonEmpty (ExpressionSection s))
+newtype ExpressionAtoms (s :: Stage)
+  = ExpressionAtoms (NonEmpty (ExpressionAtom s))
 
 deriving stock instance
   ( Show (ExpressionType s),
@@ -533,7 +532,7 @@ deriving stock instance
     Show (SymbolType s),
     Show (PatternType s)
   ) =>
-  Show (ExpressionSections s)
+  Show (ExpressionAtoms s)
 
 deriving stock instance
   ( Eq (ExpressionType s),
@@ -541,7 +540,7 @@ deriving stock instance
     Eq (SymbolType s),
     Eq (PatternType s)
   ) =>
-  Eq (ExpressionSections s)
+  Eq (ExpressionAtoms s)
 
 deriving stock instance
   ( Ord (ExpressionType s),
@@ -549,7 +548,7 @@ deriving stock instance
     Ord (SymbolType s),
     Ord (PatternType s)
   ) =>
-  Ord (ExpressionSections s)
+  Ord (ExpressionAtoms s)
 
 deriving stock instance
   ( Lift (ExpressionType s),
@@ -557,7 +556,7 @@ deriving stock instance
     Lift (SymbolType s),
     Lift (PatternType s)
   ) =>
-  Lift (ExpressionSections s)
+  Lift (ExpressionAtoms s)
 
 --------------------------------------------------------------------------------
 -- Match expression
@@ -743,7 +742,7 @@ deriving stock instance
 -- Notes: An empty lambda, here called 'the impossible case', is a lambda
 -- expression with empty list of arguments and empty body.
 
-data Lambda (s :: Stage) = Lambda
+newtype Lambda (s :: Stage) = Lambda
   {lambdaClauses :: [LambdaClause s]}
 
 deriving stock instance

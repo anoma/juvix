@@ -351,7 +351,7 @@ checkTypeSignature ::
   TypeSignature 'Parsed ->
   Sem r (TypeSignature 'Scoped)
 checkTypeSignature TypeSignature {..} = do
-  sigType' <- localScope (checkParseExpressionSections sigType)
+  sigType' <- localScope (checkParseExpressionAtoms sigType)
   sigName' <- bindFunctionSymbol sigName
   return
     TypeSignature
@@ -373,7 +373,7 @@ checkConstructorDef ::
   DataConstructorDef 'Parsed ->
   Sem r (DataConstructorDef 'Scoped)
 checkConstructorDef DataConstructorDef {..} = do
-  constructorType' <- checkParseExpressionSections constructorType
+  constructorType' <- checkParseExpressionAtoms constructorType
   constructorName' <- bindConstructorSymbol constructorName
   return
     DataConstructorDef
@@ -400,7 +400,7 @@ checkDataTypeDef DataTypeDef {..} = do
           case params of
             -- More params to check
             (DataTypeParameter {..} : ps) -> do
-              dataTypeParameterType' <- checkParseExpressionSections dataTypeParameterType
+              dataTypeParameterType' <- checkParseExpressionAtoms dataTypeParameterType
               dataTypeParameterName' <- freshVariable dataTypeParameterName
               let param' =
                     DataTypeParameter
@@ -411,7 +411,7 @@ checkDataTypeDef DataTypeDef {..} = do
                 go ps (dataTypeParameters' ++ [param'])
             -- All params have been checked
             [] -> do
-              dataTypeType' <- sequence (checkParseExpressionSections <$> dataTypeType)
+              dataTypeType' <- sequence (checkParseExpressionAtoms <$> dataTypeType)
               dataTypeName' <- bindInductiveSymbol dataTypeName
               dataTypeConstructors' <- mapM checkConstructorDef dataTypeConstructors
               return
@@ -534,11 +534,11 @@ checkFunctionClause ::
   Sem r (FunctionClause 'Scoped)
 checkFunctionClause FunctionClause {..} = do
   clauseOwnerFunction' <- checkSymbolInScope
-  clausePatterns' <- mapM checkParsePatternSection clausePatterns
+  clausePatterns' <- mapM checkParsePatternAtom clausePatterns
   (clauseWhere', clauseBody') <- localScope $
     withBindCurrentGroup $ do
       clw <- sequence (checkWhereBlock <$> clauseWhere)
-      clb <- checkParseExpressionSections clauseBody
+      clb <- checkParseExpressionAtoms clauseBody
       return (clw, clb)
   return
     FunctionClause
@@ -567,7 +567,7 @@ checkAxiom ::
   Sem r (AxiomDef 'Scoped)
 checkAxiom AxiomDef {..} = do
   axiomName' <- bindAxiomSymbol axiomName
-  axiomType' <- localScope $ checkParseExpressionSections axiomType
+  axiomType' <- localScope $ checkParseExpressionAtoms axiomType
   return
     AxiomDef
       { axiomName = axiomName',
@@ -581,13 +581,13 @@ checkEval ::
   Members '[Error ScopeError, State Scope, State ScopeState] r =>
   Eval 'Parsed ->
   Sem r (Eval 'Scoped)
-checkEval (Eval s) = Eval <$> localScope (checkParseExpressionSections s)
+checkEval (Eval s) = Eval <$> localScope (checkParseExpressionAtoms s)
 
 checkPrint ::
   Members '[Error ScopeError, State Scope, State ScopeState] r =>
   Print 'Parsed ->
   Sem r (Print 'Scoped)
-checkPrint (Print s) = Print <$> localScope (checkParseExpressionSections s)
+checkPrint (Print s) = Print <$> localScope (checkParseExpressionAtoms s)
 
 checkFunction ::
   forall r.
@@ -599,7 +599,7 @@ checkFunction Function {..} = do
   let scoped = case paramName funParameter' of
         Nothing -> id
         Just s -> withBindLocalVariable (LocalVariable s)
-  funReturn' <- scoped (checkParseExpressionSections funReturn)
+  funReturn' <- scoped (checkParseExpressionAtoms funReturn)
   return
     Function
       { funParameter = funParameter',
@@ -608,7 +608,7 @@ checkFunction Function {..} = do
   where
     checkParam :: Sem r (FunctionParameter 'Scoped)
     checkParam = do
-      paramType' <- checkParseExpressionSections paramType
+      paramType' <- checkParseExpressionAtoms paramType
       paramName' <- checkParamName
       return
         FunctionParameter
@@ -645,7 +645,7 @@ checkLetBlock ::
 checkLetBlock LetBlock {..} = do
   s <- get @Scope -- backup scope: we do not want local definitions to stay in scope
   letClauses' <- mapM checkLetClause letClauses
-  letExpression' <- checkParseExpressionSections letExpression
+  letExpression' <- checkParseExpressionAtoms letExpression
   put s -- restore scope
   return
     LetBlock
@@ -664,8 +664,8 @@ checkLambdaClause ::
   LambdaClause 'Parsed ->
   Sem r (LambdaClause 'Scoped)
 checkLambdaClause LambdaClause {..} = do
-  lambdaParameters' <- mapM checkParsePatternSection lambdaParameters
-  lambdaBody' <- withBindCurrentGroup (checkParseExpressionSections lambdaBody)
+  lambdaParameters' <- mapM checkParsePatternAtom lambdaParameters
+  lambdaBody' <- withBindCurrentGroup (checkParseExpressionAtoms lambdaBody)
   return
     LambdaClause
       { lambdaParameters = lambdaParameters',
@@ -785,21 +785,21 @@ checkPatternUnqualified s = do
     isConstructorKind :: S.NameKind -> Bool
     isConstructorKind = (== S.KNameConstructor)
 
-checkPatternSections ::
+checkPatternAtoms ::
   Members '[Error ScopeError, State Scope, State ScopeState] r =>
-  PatternSections 'Parsed ->
-  Sem r (PatternSections 'Scoped)
-checkPatternSections (PatternSections s) = PatternSections <$> mapM checkPatternSection s
+  PatternAtoms 'Parsed ->
+  Sem r (PatternAtoms 'Scoped)
+checkPatternAtoms (PatternAtoms s) = PatternAtoms <$> mapM checkPatternAtom s
 
-checkPatternSection ::
+checkPatternAtom ::
   Members '[Error ScopeError, State Scope, State ScopeState] r =>
-  PatternSection 'Parsed ->
-  Sem r (PatternSection 'Scoped)
-checkPatternSection p = case p of
-  PatternSectionWildcard -> return PatternSectionWildcard
-  PatternSectionEmpty -> return PatternSectionEmpty
-  PatternSectionParens e -> PatternSectionParens <$> checkPatternSections e
-  PatternSectionName n -> PatternSectionName <$> checkPatternName n
+  PatternAtom 'Parsed ->
+  Sem r (PatternAtom 'Scoped)
+checkPatternAtom p = case p of
+  PatternAtomWildcard -> return PatternAtomWildcard
+  PatternAtomEmpty -> return PatternAtomEmpty
+  PatternAtomParens e -> PatternAtomParens <$> checkPatternAtoms e
+  PatternAtomName n -> PatternAtomName <$> checkPatternName n
 
 checkName ::
   Members '[Error ScopeError, State Scope, Reader LocalVars] r =>
@@ -809,27 +809,27 @@ checkName n = case n of
   NameQualified q -> checkQualified q
   NameUnqualified s -> checkUnqualified s
 
-checkExpressionSection ::
+checkExpressionAtom ::
   Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
-  ExpressionSection 'Parsed ->
-  Sem r (ExpressionSection 'Scoped)
-checkExpressionSection e = case e of
-  SectionIdentifier n -> SectionIdentifier <$> checkName n
-  SectionLambda lam -> SectionLambda <$> checkLambda lam
-  SectionLetBlock letBlock -> SectionLetBlock <$> checkLetBlock letBlock
-  SectionUniverse uni -> return (SectionUniverse uni)
-  SectionFunction fun -> SectionFunction <$> checkFunction fun
-  SectionParens par -> SectionParens <$> checkExpressionSections par
-  SectionFunArrow -> return SectionFunArrow
-  SectionMatch match -> SectionMatch <$> checkMatch match
+  ExpressionAtom 'Parsed ->
+  Sem r (ExpressionAtom 'Scoped)
+checkExpressionAtom e = case e of
+  AtomIdentifier n -> AtomIdentifier <$> checkName n
+  AtomLambda lam -> AtomLambda <$> checkLambda lam
+  AtomLetBlock letBlock -> AtomLetBlock <$> checkLetBlock letBlock
+  AtomUniverse uni -> return (AtomUniverse uni)
+  AtomFunction fun -> AtomFunction <$> checkFunction fun
+  AtomParens par -> AtomParens <$> checkExpressionAtoms par
+  AtomFunArrow -> return AtomFunArrow
+  AtomMatch match -> AtomMatch <$> checkMatch match
 
 checkMatchAlt ::
   Members '[Error ScopeError, State Scope, Reader LocalVars, State ScopeState] r =>
   MatchAlt 'Parsed ->
   Sem r (MatchAlt 'Scoped)
 checkMatchAlt MatchAlt {..} = do
-  matchAltPattern' <- checkParsePatternSection matchAltPattern
-  matchAltBody' <- withBindCurrentGroup (checkParseExpressionSections matchAltBody)
+  matchAltPattern' <- checkParsePatternAtom matchAltPattern
+  matchAltBody' <- withBindCurrentGroup (checkParseExpressionAtoms matchAltBody)
   return
     MatchAlt
       { matchAltPattern = matchAltPattern',
@@ -841,7 +841,7 @@ checkMatch ::
   Match 'Parsed ->
   Sem r (Match 'Scoped)
 checkMatch Match {..} = do
-  matchExpression' <- checkParseExpressionSections matchExpression
+  matchExpression' <- checkParseExpressionAtoms matchExpression
   matchAlts' <- mapM checkMatchAlt matchAlts
   return
     Match
@@ -849,23 +849,23 @@ checkMatch Match {..} = do
         matchAlts = matchAlts'
       }
 
-checkExpressionSections ::
+checkExpressionAtoms ::
   Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
-  ExpressionSections 'Parsed ->
-  Sem r (ExpressionSections 'Scoped)
-checkExpressionSections (ExpressionSections l) = ExpressionSections <$> mapM checkExpressionSection l
+  ExpressionAtoms 'Parsed ->
+  Sem r (ExpressionAtoms 'Scoped)
+checkExpressionAtoms (ExpressionAtoms l) = ExpressionAtoms <$> mapM checkExpressionAtom l
 
-checkParseExpressionSections ::
+checkParseExpressionAtoms ::
   Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
-  ExpressionSections 'Parsed ->
+  ExpressionAtoms 'Parsed ->
   Sem r Expression
-checkParseExpressionSections = checkExpressionSections >=> parseExpressionSections
+checkParseExpressionAtoms = checkExpressionAtoms >=> parseExpressionAtoms
 
-checkParsePatternSection ::
+checkParsePatternAtom ::
   Members '[Error ScopeError, State Scope, State ScopeState] r =>
-  PatternSection 'Parsed ->
+  PatternAtom 'Parsed ->
   Sem r Pattern
-checkParsePatternSection = checkPatternSection >=> parsePatternSection
+checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
 
 checkStatement ::
   Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State Scope, State ScopeState] r =>
@@ -934,9 +934,9 @@ makeExpressionTable = do
         parseSymbolId :: S.NameId -> Parse S.Name
         parseSymbolId uid = P.token getName mempty
           where
-            getName :: ExpressionSection 'Scoped -> Maybe S.Name
+            getName :: ExpressionAtom 'Scoped -> Maybe S.Name
             getName s = case s of
-              SectionIdentifier n'
+              AtomIdentifier n'
                 | uid == S._nameId n' -> Just n'
               _ -> Nothing
 
@@ -947,9 +947,9 @@ makeExpressionTable = do
         notFollowedByInfix :: Parse ()
         notFollowedByInfix = P.notFollowedBy (P.token infixName mempty)
           where
-            infixName :: ExpressionSection 'Scoped -> Maybe S.Name
+            infixName :: ExpressionAtom 'Scoped -> Maybe S.Name
             infixName s = case s of
-              SectionIdentifier n
+              AtomIdentifier n
                 | S.hasFixity n -> Just n
               _ -> Nothing
 
@@ -962,7 +962,7 @@ makeExpressionTable = do
               }
     -- Non-dependent function type: A → B
     functionOp :: P.Operator Parse Expression
-    functionOp = P.InfixR (nonDepFun <$ P.single SectionFunArrow)
+    functionOp = P.InfixR (nonDepFun <$ P.single AtomFunArrow)
       where
         nonDepFun :: Expression -> Expression -> Expression
         nonDepFun a b =
@@ -979,11 +979,11 @@ makeExpressionTable = do
                   paramType = a
                 }
 
-parseExpressionSections ::
+parseExpressionAtoms ::
   Members '[Error ScopeError, State Scope] r =>
-  ExpressionSections 'Scoped ->
+  ExpressionAtoms 'Scoped ->
   Sem r Expression
-parseExpressionSections (ExpressionSections sections) = do
+parseExpressionAtoms (ExpressionAtoms sections) = do
   tbl <- makeExpressionTable
   let parser :: Parse Expression
       parser = runM (mkExpressionParser tbl) <* P.eof
@@ -995,7 +995,7 @@ parseExpressionSections (ExpressionSections sections) = do
     filePath = "tmp"
 
 -- | Monad for parsing expression sections.
-type Parse = P.Parsec () [ExpressionSection 'Scoped]
+type Parse = P.Parsec () [ExpressionAtom 'Scoped]
 
 -- data Parser tok m a where
 --   EmbedParsec ::
@@ -1028,49 +1028,49 @@ parseTerm = do
     parseLambda :: Parse Expression
     parseLambda = ExpressionLambda <$> P.token lambda mempty
       where
-        lambda :: ExpressionSection 'Scoped -> Maybe (Lambda 'Scoped)
+        lambda :: ExpressionAtom 'Scoped -> Maybe (Lambda 'Scoped)
         lambda s = case s of
-          SectionLambda l -> Just l
+          AtomLambda l -> Just l
           _ -> Nothing
 
     parseMatch :: Parse Expression
     parseMatch = ExpressionMatch <$> P.token match mempty
       where
-        match :: ExpressionSection 'Scoped -> Maybe (Match 'Scoped)
+        match :: ExpressionAtom 'Scoped -> Maybe (Match 'Scoped)
         match s = case s of
-          SectionMatch l -> Just l
+          AtomMatch l -> Just l
           _ -> Nothing
 
     parseUniverse :: Parse Expression
     parseUniverse = ExpressionUniverse <$> P.token universe' mempty
       where
-        universe' :: ExpressionSection 'Scoped -> Maybe Universe
+        universe' :: ExpressionAtom 'Scoped -> Maybe Universe
         universe' s = case s of
-          SectionUniverse u -> Just u
+          AtomUniverse u -> Just u
           _ -> Nothing
 
     parseFunction :: Parse Expression
     parseFunction = ExpressionFunction <$> P.token function mempty
       where
-        function :: ExpressionSection 'Scoped -> Maybe (Function 'Scoped)
+        function :: ExpressionAtom 'Scoped -> Maybe (Function 'Scoped)
         function s = case s of
-          SectionFunction u -> Just u
+          AtomFunction u -> Just u
           _ -> Nothing
 
     parseLetBlock :: Parse Expression
     parseLetBlock = ExpressionLetBlock <$> P.token letBlock mempty
       where
-        letBlock :: ExpressionSection 'Scoped -> Maybe (LetBlock 'Scoped)
+        letBlock :: ExpressionAtom 'Scoped -> Maybe (LetBlock 'Scoped)
         letBlock s = case s of
-          SectionLetBlock u -> Just u
+          AtomLetBlock u -> Just u
           _ -> Nothing
 
     parseNoInfixIdentifier :: Parse Expression
     parseNoInfixIdentifier = ExpressionIdentifier <$> P.token identifierNoFixity mempty
       where
-        identifierNoFixity :: ExpressionSection 'Scoped -> Maybe S.Name
+        identifierNoFixity :: ExpressionAtom 'Scoped -> Maybe S.Name
         identifierNoFixity s = case s of
-          SectionIdentifier n
+          AtomIdentifier n
             | not (S.hasFixity n) -> Just n
           _ -> Nothing
 
@@ -1083,16 +1083,16 @@ parseTerm = do
       where
         strPath :: FilePath
         strPath = "inner parens"
-        parenExpr :: ExpressionSection 'Scoped -> Maybe [ExpressionSection 'Scoped]
+        parenExpr :: ExpressionAtom 'Scoped -> Maybe [ExpressionAtom 'Scoped]
         parenExpr s = case s of
-          SectionParens (ExpressionSections ss) -> Just (toList ss)
+          AtomParens (ExpressionAtoms ss) -> Just (toList ss)
           _ -> Nothing
 
 -------------------------------------------------------------------------------
 -- Infix Patterns
 -------------------------------------------------------------------------------
 
-type ParsePat = P.Parsec () [PatternSection 'Scoped]
+type ParsePat = P.Parsec () [PatternAtom 'Scoped]
 
 makePatternTable ::
   forall r.
@@ -1146,9 +1146,9 @@ makePatternTable = do
         parseSymbolId :: S.NameId -> ParsePat S.Name
         parseSymbolId uid = P.token getName mempty
           where
-            getName :: PatternSection 'Scoped -> Maybe S.Name
+            getName :: PatternAtom 'Scoped -> Maybe S.Name
             getName s = case s of
-              PatternSectionName n'
+              PatternAtomName n'
                 | uid == S._nameId n' -> Just n'
               _ -> Nothing
 
@@ -1159,9 +1159,9 @@ makePatternTable = do
         notFollowedByInfix :: ParsePat ()
         notFollowedByInfix = P.notFollowedBy (P.token infixName mempty)
           where
-            infixName :: PatternSection 'Scoped -> Maybe S.Name
+            infixName :: PatternAtom 'Scoped -> Maybe S.Name
             infixName s = case s of
-              PatternSectionName n
+              PatternAtomName n
                 | S.hasFixity n -> Just n
               _ -> Nothing
 
@@ -1183,34 +1183,34 @@ parsePrePatTerm = do
       PatternConstructor
         <$> P.token constructorNoFixity mempty
       where
-        constructorNoFixity :: PatternSection 'Scoped -> Maybe S.Name
+        constructorNoFixity :: PatternAtom 'Scoped -> Maybe S.Name
         constructorNoFixity s = case s of
-          PatternSectionName n
+          PatternAtomName n
             | not (S.hasFixity n) -> Just n
           _ -> Nothing
 
     parseWildcard :: ParsePat Pattern
     parseWildcard = PatternWildcard <$ P.satisfy isWildcard
       where
-        isWildcard :: PatternSection 'Scoped -> Bool
+        isWildcard :: PatternAtom 'Scoped -> Bool
         isWildcard s = case s of
-          PatternSectionWildcard -> True
+          PatternAtomWildcard -> True
           _ -> False
 
     parseEmpty :: ParsePat Pattern
     parseEmpty = PatternWildcard <$ P.satisfy isEmpty
       where
-        isEmpty :: PatternSection 'Scoped -> Bool
+        isEmpty :: PatternAtom 'Scoped -> Bool
         isEmpty s = case s of
-          PatternSectionEmpty -> True
+          PatternAtomEmpty -> True
           _ -> False
 
     parseVariable :: ParsePat Pattern
     parseVariable = PatternWildcard <$ P.token var mempty
       where
-        var :: PatternSection 'Scoped -> Maybe S.Symbol
+        var :: PatternAtom 'Scoped -> Maybe S.Symbol
         var s = case s of
-          PatternSectionName S.Name' {..}
+          PatternAtomName S.Name' {..}
             | NameUnqualified sym <- _nameConcrete,
               S.KNameLocal <- _nameKind ->
               Just
@@ -1229,9 +1229,9 @@ parsePrePatTerm = do
       where
         strPath :: FilePath
         strPath = "inner parens"
-        parenPat :: PatternSection 'Scoped -> Maybe [PatternSection 'Scoped]
+        parenPat :: PatternAtom 'Scoped -> Maybe [PatternAtom 'Scoped]
         parenPat s = case s of
-          PatternSectionParens (PatternSections ss) -> Just (toList ss)
+          PatternAtomParens (PatternAtoms ss) -> Just (toList ss)
           _ -> Nothing
 
 mkPatternParser ::
@@ -1249,9 +1249,9 @@ mkPatternParser table = embed @ParsePat pPattern
         parseTermRec :: Sem '[Embed ParsePat] Pattern
         parseTermRec = runReader pPattern parsePrePatTerm
 
-parsePatternSection ::
-  Members '[Error ScopeError, State Scope] r => PatternSection 'Scoped -> Sem r Pattern
-parsePatternSection sec = do
+parsePatternAtom ::
+  Members '[Error ScopeError, State Scope] r => PatternAtom 'Scoped -> Sem r Pattern
+parsePatternAtom sec = do
   tbl <- makePatternTable
   let parser :: ParsePat Pattern
       parser = runM (mkPatternParser tbl) <* P.eof

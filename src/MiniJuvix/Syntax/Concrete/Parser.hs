@@ -128,20 +128,20 @@ import_ = do
 -- Expression
 --------------------------------------------------------------------------------
 
-expressionSection :: MonadParsec e Text m => m (ExpressionSection 'Parsed)
-expressionSection =
+expressionAtom :: MonadParsec e Text m => m (ExpressionAtom 'Parsed)
+expressionAtom =
   do
-    SectionIdentifier <$> name
-    <|> (SectionUniverse <$> universe)
-    <|> (SectionLambda <$> lambda)
-    <|> (SectionFunction <$> function)
-    <|> (SectionMatch <$> match)
-    <|> (SectionLetBlock <$> letBlock)
-    <|> (SectionFunArrow <$ kwRightArrow)
-    <|> parens (SectionParens <$> expressionSections)
+    AtomIdentifier <$> name
+    <|> (AtomUniverse <$> universe)
+    <|> (AtomLambda <$> lambda)
+    <|> (AtomFunction <$> function)
+    <|> (AtomMatch <$> match)
+    <|> (AtomLetBlock <$> letBlock)
+    <|> (AtomFunArrow <$ kwRightArrow)
+    <|> parens (AtomParens <$> expressionAtoms)
 
-expressionSections :: MonadParsec e Text m => m (ExpressionSections 'Parsed)
-expressionSections = ExpressionSections <$> P.some expressionSection
+expressionAtoms :: MonadParsec e Text m => m (ExpressionAtoms 'Parsed)
+expressionAtoms = ExpressionAtoms <$> P.some expressionAtom
 
 --------------------------------------------------------------------------------
 -- Match expression
@@ -149,15 +149,15 @@ expressionSections = ExpressionSections <$> P.some expressionSection
 
 matchAlt :: MonadParsec e Text m => m (MatchAlt 'Parsed)
 matchAlt = do
-  matchAltPattern <- patternSection
+  matchAltPattern <- patternAtom
   kwMapsTo
-  matchAltBody <- expressionSections
+  matchAltBody <- expressionAtoms
   return MatchAlt {..}
 
 match :: MonadParsec e Text m => m (Match 'Parsed)
 match = do
   kwMatch
-  matchExpression <- expressionSections
+  matchExpression <- expressionAtoms
   matchAlts <- braces (P.sepEndBy matchAlt kwSemicolon)
   return Match {..}
 
@@ -174,7 +174,7 @@ letBlock = do
   kwLet
   letClauses <- braces (P.sepEndBy letClause kwSemicolon)
   kwIn
-  letExpression <- expressionSections
+  letExpression <- expressionAtoms
   return LetBlock {..}
 
 --------------------------------------------------------------------------------
@@ -198,7 +198,7 @@ typeSignature ::
   m (TypeSignature 'Parsed)
 typeSignature sigName = do
   kwColon
-  sigType <- expressionSections
+  sigType <- expressionAtoms
   return TypeSignature {..}
 
 -------------------------------------------------------------------------------
@@ -224,7 +224,7 @@ axiomDef = do
   kwAxiom
   axiomName <- symbol
   kwColon
-  axiomType <- expressionSections
+  axiomType <- expressionAtoms
   return AxiomDef {..}
 
 --------------------------------------------------------------------------------
@@ -241,7 +241,7 @@ explicitFunParam = do
     n <- pName
     u <- pUsage
     return (n, u)
-  paramType <- expressionSections
+  paramType <- expressionAtoms
   rparen
   return $ FunctionParameter {..}
   where
@@ -263,7 +263,7 @@ function :: MonadParsec e Text m => m (Function 'Parsed)
 function = do
   funParameter <- functionParam
   kwRightArrow
-  funReturn <- expressionSections
+  funReturn <- expressionAtoms
   return Function {..}
 
 --------------------------------------------------------------------------------
@@ -289,9 +289,9 @@ whereClause =
 
 lambdaClause :: MonadParsec e Text m => m (LambdaClause 'Parsed)
 lambdaClause = do
-  lambdaParameters <- P.some patternSection
+  lambdaParameters <- P.some patternAtom
   kwMapsTo
-  lambdaBody <- expressionSections
+  lambdaBody <- expressionAtoms
   return LambdaClause {..}
 
 lambda :: MonadParsec e Text m => m (Lambda 'Parsed)
@@ -309,7 +309,7 @@ dataTypeDef = do
   kwInductive
   dataTypeName <- symbol
   dataTypeParameters <- P.many dataTypeParam
-  dataTypeType <- optional (kwColon >> expressionSections)
+  dataTypeType <- optional (kwColon >> expressionAtoms)
   dataTypeConstructors <- braces $ P.sepEndBy constructorDef kwSemicolon
   return DataTypeDef {..}
 
@@ -317,31 +317,31 @@ dataTypeParam :: MonadParsec e Text m => m (DataTypeParameter 'Parsed)
 dataTypeParam = parens $ do
   dataTypeParameterName <- symbol
   kwColon
-  dataTypeParameterType <- expressionSections
+  dataTypeParameterType <- expressionAtoms
   return DataTypeParameter {..}
 
 constructorDef :: MonadParsec e Text m => m (DataConstructorDef 'Parsed)
 constructorDef = do
   constructorName <- symbol
   kwColon
-  constructorType <- expressionSections
+  constructorType <- expressionAtoms
   return DataConstructorDef {..}
 
 --------------------------------------------------------------------------------
 -- Pattern section
 --------------------------------------------------------------------------------
 
-patternSection :: forall e m. MonadParsec e Text m => m (PatternSection 'Parsed)
-patternSection =
-  PatternSectionName <$> name
-    <|> PatternSectionWildcard <$ kwWildcard
-    <|> (PatternSectionParens <$> parens patternSections)
+patternAtom :: forall e m. MonadParsec e Text m => m (PatternAtom 'Parsed)
+patternAtom =
+  PatternAtomName <$> name
+    <|> PatternAtomWildcard <$ kwWildcard
+    <|> (PatternAtomParens <$> parens patternAtoms)
 
-patternSections ::
+patternAtoms ::
   forall e m.
   MonadParsec e Text m =>
-  m (PatternSections 'Parsed)
-patternSections = PatternSections <$> P.some patternSection
+  m (PatternAtoms 'Parsed)
+patternAtoms = PatternAtoms <$> P.some patternAtom
 
 --------------------------------------------------------------------------------
 -- Function binding declaration
@@ -353,9 +353,9 @@ functionClause ::
   Symbol ->
   m (FunctionClause 'Parsed)
 functionClause clauseOwnerFunction = do
-  clausePatterns <- P.many patternSection
+  clausePatterns <- P.many patternAtom
   kwAssignment
-  clauseBody <- expressionSections
+  clauseBody <- expressionAtoms
   clauseWhere <- optional whereBlock
   return FunctionClause {..}
 
@@ -399,9 +399,9 @@ openModule = do
 eval :: MonadParsec e Text m => m (Eval 'Parsed)
 eval = do
   kwEval
-  Eval <$> expressionSections
+  Eval <$> expressionAtoms
 
 printS :: MonadParsec e Text m => m (Print 'Parsed)
 printS = do
   kwPrint
-  Print <$> expressionSections
+  Print <$> expressionAtoms
