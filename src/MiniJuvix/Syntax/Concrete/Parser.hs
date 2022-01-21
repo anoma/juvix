@@ -181,11 +181,10 @@ letBlock = do
 -- Universe expression
 --------------------------------------------------------------------------------
 
-defaultUniverse :: Universe
-defaultUniverse = Universe 0
-
 universe :: MonadParsec e Text m => m Universe
-universe = defaultUniverse <$ kwType
+universe = do
+  kwType
+  Universe <$> optional decimal
 
 -------------------------------------------------------------------------------
 -- Type signature declaration

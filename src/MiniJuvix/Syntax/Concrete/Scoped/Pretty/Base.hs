@@ -309,7 +309,7 @@ ppFunction Function {..} = do
           return $ parens (paramName' <+> ppUsage paramUsage <+> paramType')
 
 ppUniverse :: Members '[Reader Options] r => Universe -> Sem r (Doc Ann)
-ppUniverse (Universe n) = return $ kwType <+> pretty n
+ppUniverse (Universe n) = return $ kwType <+?> (pretty <$> n)
 
 ppLetBlock :: forall r. Members '[Reader Options] r => LetBlock 'Scoped -> Sem r (Doc Ann)
 ppLetBlock LetBlock {..} = do
