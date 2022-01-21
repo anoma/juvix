@@ -8,7 +8,6 @@ module MiniJuvix.Syntax.Concrete.Scoped.Scoper where
 import qualified Control.Monad.Combinators.Expr as P
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.HashSet as HashSet
-import Data.Stream (Stream)
 import qualified Data.Stream as Stream
 import qualified Data.Text as Text
 import Lens.Micro.Platform
@@ -17,12 +16,7 @@ import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Parser (runModuleParserIO)
 import MiniJuvix.Syntax.Concrete.Scoped.Name (NameKind (KNameConstructor))
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
-import MiniJuvix.Utils.Prelude hiding (Reader, State, ask, asks, evalState, get, gets, local, modify, put, runReader, runState)
-import Polysemy
-import Polysemy.Error hiding (fromEither)
-import Polysemy.NonDet
-import Polysemy.Reader
-import Polysemy.State
+import MiniJuvix.Utils.Prelude
 import System.FilePath
 
 --------------------------------------------------------------------------------
@@ -68,7 +62,6 @@ data SymbolEntry = SymbolEntry
 data Scope = Scope
   { _scopePath :: S.AbsModulePath,
     _scopeFixities :: HashMap Symbol Fixity,
-    _scopeUsedFixities :: HashSet Symbol,
     _scopeSymbols :: HashMap Symbol SymbolInfo,
     _scopeModules :: HashMap QualifiedName ModuleScopeInfo,
     _scopeBindGroup :: HashMap Symbol LocalVariable
@@ -92,8 +85,7 @@ data ScopeError
   = ErrParser Text
   | Err
   | ErrInfixParser String
-  | ErrPattern String
-  | ErrPatternUnfold
+  | ErrInfixPattern String
   | ErrAlreadyDefined Symbol
   | ErrLacksTypeSig Symbol
   | ErrImportCycle TopModulePath
@@ -122,7 +114,10 @@ data ScopeState = ScopeState
 
 makeLenses ''ScopeState
 
-scopeCheck :: FilePath -> [Module 'Parsed 'ModuleTop] -> IO (Either ScopeError [Module 'Scoped 'ModuleTop])
+scopeCheck1 :: FilePath -> Module 'Parsed 'ModuleTop -> IO (Either ScopeError (Module 'Scoped 'ModuleTop))
+scopeCheck1 root m = fmap head <$> scopeCheck root (pure m)
+
+scopeCheck :: FilePath -> NonEmpty (Module 'Parsed 'ModuleTop) -> IO (Either ScopeError (NonEmpty (Module 'Scoped 'ModuleTop)))
 scopeCheck root modules =
   runM $
     runError $
@@ -170,14 +165,7 @@ freshSymbol _nameKind _nameConcrete = do
     getFixity :: Sem r S.NameFixity
     getFixity
       | S.canHaveFixity _nameKind = do
-        mfix <- HashMap.lookup _nameConcrete <$> gets _scopeFixities
-        case mfix of
-          Nothing -> return S.NoFixity
-          Just fixity -> do
-            -- deleting the fixity so we know it has been used
-            modify (over scopeFixities (HashMap.delete _nameConcrete))
-            modify (over scopeUsedFixities (HashSet.insert _nameConcrete))
-            return (S.SomeFixity fixity)
+        maybe S.NoFixity S.SomeFixity . HashMap.lookup _nameConcrete <$> gets _scopeFixities
       | otherwise = return S.NoFixity
 
 reserveSymbolOf ::
@@ -355,11 +343,7 @@ checkOperatorSyntaxDef OperatorSyntaxDef {..} = do
     checkNotDefined :: Sem r ()
     checkNotDefined =
       whenM
-        ( orM
-            [ HashSet.member opSymbol <$> gets _scopeUsedFixities,
-              HashMap.member opSymbol <$> gets _scopeFixities
-            ]
-        )
+        (HashMap.member opSymbol <$> gets _scopeFixities)
         (throw (ErrDuplicateFixity opSymbol))
 
 checkTypeSignature ::
@@ -453,7 +437,6 @@ checkTopModule m@(Module path stmts) = do
       Scope
         { _scopePath = getTopModulePath m,
           _scopeFixities = mempty,
-          _scopeUsedFixities = mempty,
           _scopeSymbols = mempty,
           _scopeModules = mempty,
           _scopeBindGroup = mempty
@@ -484,6 +467,10 @@ checkLocalModule Module {..} = do
       { modulePath = modulePath',
         moduleBody = moduleBody'
       }
+
+-- | checks if there is an infix declaration without a binding.
+checkOrphanFixities :: Members '[Error ScopeError, State Scope] r => Sem r ()
+checkOrphanFixities = undefined
 
 checkOpenModule ::
   forall r.
@@ -1180,7 +1167,7 @@ makePatternTable = do
 
 parsePrePatTerm ::
   forall r.
-  Members '[Reader (ParsePat Pattern), Embed ParsePat, NonDet] r =>
+  Members '[Reader (ParsePat Pattern), Embed ParsePat] r =>
   Sem r Pattern
 parsePrePatTerm = do
   pPat <- ask
@@ -1257,9 +1244,9 @@ mkPatternParser table = embed @ParsePat pPattern
     pPattern :: ParsePat Pattern
     pPattern = P.makeExprParser pTerm table
     pTerm :: ParsePat Pattern
-    pTerm = runM (runNonDet parseTermRec) >>= maybe mzero pure
+    pTerm = runM parseTermRec
       where
-        parseTermRec :: Sem '[NonDet, Embed ParsePat] Pattern
+        parseTermRec :: Sem '[Embed ParsePat] Pattern
         parseTermRec = runReader pPattern parsePrePatTerm
 
 parsePatternSection ::
@@ -1270,7 +1257,7 @@ parsePatternSection sec = do
       parser = runM (mkPatternParser tbl) <* P.eof
       res = P.parse parser filePath [sec]
   case res of
-    Left err -> throw (ErrPattern (show err))
+    Left err -> throw (ErrInfixPattern (show err))
     Right r -> return r
   where
     filePath = "tmp"

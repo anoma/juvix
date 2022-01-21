@@ -3,9 +3,7 @@ module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base where
 import Data.Singletons
 import MiniJuvix.Syntax.Concrete.Language
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
-import MiniJuvix.Utils.Prelude hiding (Reader, asks, runReader)
-import Polysemy
-import Polysemy.Reader
+import MiniJuvix.Utils.Prelude
 import Prettyprinter hiding (braces, parens)
 
 data Ann
@@ -353,11 +351,13 @@ ppLambda Lambda {..} = do
 ppFunctionClause :: forall r. Members '[Reader Options] r => FunctionClause 'Scoped -> Sem r (Doc Ann)
 ppFunctionClause FunctionClause {..} = do
   clauseOwnerFunction' <- ppSSymbol clauseOwnerFunction
-  clausePatterns' <- hsep <$> mapM ppPattern clausePatterns
+  clausePatterns' <- case nonEmpty clausePatterns of
+    Nothing -> return Nothing
+    Just ne -> Just . hsep . toList <$> mapM ppPattern ne
   clauseBody' <- ppExpression clauseBody
   clauseWhere' <- sequence $ ppWhereBlock <$> clauseWhere
   return $
-    clauseOwnerFunction' <+> clausePatterns' <+> kwAssignment <+> clauseBody'
+    clauseOwnerFunction' <+?> clausePatterns' <+> kwAssignment <+> clauseBody'
       <+?> (((line <> kwWhere) <+>) <$> clauseWhere')
   where
     ppWhereBlock :: WhereBlock 'Scoped -> Sem r (Doc Ann)
@@ -438,7 +438,7 @@ ppPattern = goAtom
     ppPatternPostfixApp PatternPostfixApp {..} = do
       patPostfixConstructor' <- ppSName patPostfixConstructor
       patPostfixParameter' <- goAtom patPostfixParameter
-      return $ patPostfixConstructor' <+> patPostfixParameter'
+      return $ patPostfixParameter' <+> patPostfixConstructor'
 
 ppExpressionAtom :: forall r. Members '[Reader Options] r => Expression -> Sem r (Doc Ann)
 ppExpressionAtom e = do
