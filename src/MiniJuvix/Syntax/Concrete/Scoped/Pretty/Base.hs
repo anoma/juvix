@@ -212,8 +212,8 @@ ppOperatorSyntaxDef OperatorSyntaxDef {..} = do
             AssocLeft -> kwInfixl
             AssocNone -> kwInfix
 
-ppDataConstructorDef :: Members '[Reader Options] r => DataConstructorDef 'Scoped -> Sem r (Doc Ann)
-ppDataConstructorDef DataConstructorDef {..} = do
+ppInductiveConstructorDef :: Members '[Reader Options] r => InductiveConstructorDef 'Scoped -> Sem r (Doc Ann)
+ppInductiveConstructorDef InductiveConstructorDef {..} = do
   constructorName' <- ppSSymbol constructorName
   constructorType' <- ppExpression constructorType
   return $ constructorName' <+> kwColon <+> constructorType'
@@ -223,7 +223,7 @@ ppInductiveDef InductiveDef {..} = do
   inductiveName' <- ppSSymbol inductiveName
   inductiveParameters' <- hsep <$> mapM ppInductiveParameter inductiveParameters
   inductiveType' <- ppTypeType
-  inductiveConstructors' <- ppBlock ppDataConstructorDef inductiveConstructors
+  inductiveConstructors' <- ppBlock ppInductiveConstructorDef inductiveConstructors
   return $
     kwInductive <+> inductiveName' <+> inductiveParameters' <+?> inductiveType'
       <+> inductiveConstructors'

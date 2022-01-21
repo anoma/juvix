@@ -26,7 +26,7 @@ data ModuleScopeInfo = ModuleScopeInfo
   { -- | Absolute path to the module
     _syntaxPath :: S.AbsModulePath,
     -- | constructors introduced by inductive definitions (E.g. zero; suc).
-    _syntaxConstructors :: HashSet (DataConstructorName 'Parsed),
+    _syntaxConstructors :: HashSet (InductiveConstructorName 'Parsed),
     -- | data types  introduced by inductive definitions (E.g. ℕ).
     _syntaxInductives :: HashSet (InductiveName 'Parsed),
     -- | function names in scope. Function names are introduced with function clauses.
@@ -283,10 +283,10 @@ moduleScopeInfo absPath sModule = ModuleScopeInfo {..}
         getFun s = case s of
           -- StatementInductive InductiveDef {..} → HashSet.fromList (map constructorName inductiveConstructors)
           _ -> undefined
-    _syntaxConstructors :: HashSet (DataConstructorName 'Parsed)
+    _syntaxConstructors :: HashSet (InductiveConstructorName 'Parsed)
     _syntaxConstructors = mconcat (map getConstrs stmts)
       where
-        getConstrs :: Statement 'Scoped -> HashSet (DataConstructorName 'Parsed)
+        getConstrs :: Statement 'Scoped -> HashSet (InductiveConstructorName 'Parsed)
         getConstrs s = case s of
           StatementInductive InductiveDef {..} ->
             HashSet.fromList
@@ -370,13 +370,13 @@ symbolEntry S.Name' {..} =
 
 checkConstructorDef ::
   Members '[Error ScopeError, Reader LocalVars, State Scope, State ScopeState] r =>
-  DataConstructorDef 'Parsed ->
-  Sem r (DataConstructorDef 'Scoped)
-checkConstructorDef DataConstructorDef {..} = do
+  InductiveConstructorDef 'Parsed ->
+  Sem r (InductiveConstructorDef 'Scoped)
+checkConstructorDef InductiveConstructorDef {..} = do
   constructorType' <- checkParseExpressionAtoms constructorType
   constructorName' <- bindConstructorSymbol constructorName
   return
-    DataConstructorDef
+    InductiveConstructorDef
       { constructorName = constructorName',
         constructorType = constructorType'
       }

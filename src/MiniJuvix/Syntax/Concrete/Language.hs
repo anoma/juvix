@@ -184,22 +184,22 @@ deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (
 -- Lift type construction declaration
 -------------------------------------------------------------------------------
 
-type DataConstructorName s = SymbolType s
+type InductiveConstructorName s = SymbolType s
 
 type InductiveName s = SymbolType s
 
-data DataConstructorDef (s :: Stage) = DataConstructorDef
-  { constructorName :: DataConstructorName s,
+data InductiveConstructorDef (s :: Stage) = InductiveConstructorDef
+  { constructorName :: InductiveConstructorName s,
     constructorType :: ExpressionType s
   }
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (DataConstructorDef s)
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (InductiveConstructorDef s)
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (DataConstructorDef s)
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (InductiveConstructorDef s)
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (DataConstructorDef s)
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveConstructorDef s)
 
-deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (DataConstructorDef s)
+deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (InductiveConstructorDef s)
 
 data InductiveParameter (s :: Stage) = InductiveParameter
   { inductiveParameterName :: SymbolType s,
@@ -218,7 +218,7 @@ data InductiveDef (s :: Stage) = InductiveDef
   { inductiveName :: InductiveName s,
     inductiveParameters :: [InductiveParameter s],
     inductiveType :: Maybe (ExpressionType s),
-    inductiveConstructors :: [DataConstructorDef s]
+    inductiveConstructors :: [InductiveConstructorDef s]
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (InductiveDef s)

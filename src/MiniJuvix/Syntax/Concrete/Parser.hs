@@ -320,12 +320,12 @@ inductiveParam = parens $ do
   inductiveParameterType <- expressionAtoms
   return InductiveParameter {..}
 
-constructorDef :: MonadParsec e Text m => m (DataConstructorDef 'Parsed)
+constructorDef :: MonadParsec e Text m => m (InductiveConstructorDef 'Parsed)
 constructorDef = do
   constructorName <- symbol
   kwColon
   constructorType <- expressionAtoms
-  return DataConstructorDef {..}
+  return InductiveConstructorDef {..}
 
 --------------------------------------------------------------------------------
 -- Pattern section
