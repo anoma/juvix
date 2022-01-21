@@ -168,7 +168,7 @@ ppStatement s = case s of
   StatementOperator op -> ppOperatorSyntaxDef op
   StatementTypeSignature sig -> ppTypeSignature sig
   StatementImport i -> ppImport i
-  StatementDataType d -> ppDataTypeDef d
+  StatementInductive d -> ppInductiveDef d
   StatementModule m -> ppModule m
   StatementOpenModule o -> ppOpen o
   StatementFunctionClause c -> ppFunctionClause c
@@ -218,25 +218,25 @@ ppDataConstructorDef DataConstructorDef {..} = do
   constructorType' <- ppExpression constructorType
   return $ constructorName' <+> kwColon <+> constructorType'
 
-ppDataTypeDef :: forall r. Members '[Reader Options] r => DataTypeDef 'Scoped -> Sem r (Doc Ann)
-ppDataTypeDef DataTypeDef {..} = do
-  dataTypeName' <- ppSSymbol dataTypeName
-  dataTypeParameters' <- hsep <$> mapM ppDataTypeParameter dataTypeParameters
-  dataTypeType' <- ppTypeType
-  dataTypeConstructors' <- ppBlock ppDataConstructorDef dataTypeConstructors
+ppInductiveDef :: forall r. Members '[Reader Options] r => InductiveDef 'Scoped -> Sem r (Doc Ann)
+ppInductiveDef InductiveDef {..} = do
+  inductiveName' <- ppSSymbol inductiveName
+  inductiveParameters' <- hsep <$> mapM ppInductiveParameter inductiveParameters
+  inductiveType' <- ppTypeType
+  inductiveConstructors' <- ppBlock ppDataConstructorDef inductiveConstructors
   return $
-    kwInductive <+> dataTypeName' <+> dataTypeParameters' <+?> dataTypeType'
-      <+> dataTypeConstructors'
+    kwInductive <+> inductiveName' <+> inductiveParameters' <+?> inductiveType'
+      <+> inductiveConstructors'
   where
     ppTypeType :: Sem r (Maybe (Doc Ann))
-    ppTypeType = case dataTypeType of
+    ppTypeType = case inductiveType of
       Nothing -> return Nothing
       Just e -> Just . (kwColon <+>) <$> ppExpression e
-    ppDataTypeParameter :: DataTypeParameter 'Scoped -> Sem r (Doc Ann)
-    ppDataTypeParameter DataTypeParameter {..} = do
-      dataTypeParameterName' <- ppSSymbol dataTypeParameterName
-      dataTypeParameterType' <- ppExpression dataTypeParameterType
-      return $ parens (dataTypeParameterName' <+> kwColon <+> dataTypeParameterType')
+    ppInductiveParameter :: InductiveParameter 'Scoped -> Sem r (Doc Ann)
+    ppInductiveParameter InductiveParameter {..} = do
+      inductiveParameterName' <- ppSSymbol inductiveParameterName
+      inductiveParameterType' <- ppExpression inductiveParameterType
+      return $ parens (inductiveParameterName' <+> kwColon <+> inductiveParameterType')
 
 dotted :: [Doc Ann] -> Doc Ann
 dotted = concatWith (surround kwDot)

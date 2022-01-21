@@ -28,7 +28,7 @@ data ModuleScopeInfo = ModuleScopeInfo
     -- | constructors introduced by inductive definitions (E.g. zero; suc).
     _syntaxConstructors :: HashSet (DataConstructorName 'Parsed),
     -- | data types  introduced by inductive definitions (E.g. ℕ).
-    _syntaxDataTypes :: HashSet (DataTypeName 'Parsed),
+    _syntaxInductives :: HashSet (InductiveName 'Parsed),
     -- | function names in scope. Function names are introduced with function clauses.
     _syntaxFunctions :: HashSet (FunctionName 'Parsed),
     -- | locally defined modules. Imported modules are not included.
@@ -281,23 +281,23 @@ moduleScopeInfo absPath sModule = ModuleScopeInfo {..}
       where
         getFun :: Statement 'Scoped -> Maybe (FunctionName 'Parsed)
         getFun s = case s of
-          -- StatementDataType DataTypeDef {..} → HashSet.fromList (map constructorName dataTypeConstructors)
+          -- StatementInductive InductiveDef {..} → HashSet.fromList (map constructorName inductiveConstructors)
           _ -> undefined
     _syntaxConstructors :: HashSet (DataConstructorName 'Parsed)
     _syntaxConstructors = mconcat (map getConstrs stmts)
       where
         getConstrs :: Statement 'Scoped -> HashSet (DataConstructorName 'Parsed)
         getConstrs s = case s of
-          StatementDataType DataTypeDef {..} ->
+          StatementInductive InductiveDef {..} ->
             HashSet.fromList
-              (map (S._nameConcrete . constructorName) dataTypeConstructors)
+              (map (S._nameConcrete . constructorName) inductiveConstructors)
           _ -> mempty
-    _syntaxDataTypes :: HashSet (DataTypeName 'Parsed)
-    _syntaxDataTypes = HashSet.fromList (mapMaybe getDT stmts)
+    _syntaxInductives :: HashSet (InductiveName 'Parsed)
+    _syntaxInductives = HashSet.fromList (mapMaybe getDT stmts)
       where
-        getDT :: Statement 'Scoped -> Maybe (DataTypeName 'Parsed)
+        getDT :: Statement 'Scoped -> Maybe (InductiveName 'Parsed)
         getDT s = case s of
-          StatementDataType DataTypeDef {..} -> Just (S._nameConcrete dataTypeName)
+          StatementInductive InductiveDef {..} -> Just (S._nameConcrete inductiveName)
           _ -> Nothing
     _syntaxOperators :: HashMap Symbol Fixity
     _syntaxOperators = HashMap.fromList (mapMaybe getDef stmts)
@@ -381,45 +381,45 @@ checkConstructorDef DataConstructorDef {..} = do
         constructorType = constructorType'
       }
 
-checkDataTypeDef ::
+checkInductiveDef ::
   Members '[Error ScopeError, State Scope, State ScopeState] r =>
-  DataTypeDef 'Parsed ->
-  Sem r (DataTypeDef 'Scoped)
-checkDataTypeDef DataTypeDef {..} = do
-  localScope $ checkDataTypeRec dataTypeParameters
+  InductiveDef 'Parsed ->
+  Sem r (InductiveDef 'Scoped)
+checkInductiveDef InductiveDef {..} = do
+  localScope $ checkInductiveRec inductiveParameters
   where
-    checkDataTypeRec ::
+    checkInductiveRec ::
       forall r.
       Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
-      [DataTypeParameter 'Parsed] ->
-      Sem r (DataTypeDef 'Scoped)
-    checkDataTypeRec dtp = go dtp []
+      [InductiveParameter 'Parsed] ->
+      Sem r (InductiveDef 'Scoped)
+    checkInductiveRec dtp = go dtp []
       where
-        go :: [DataTypeParameter 'Parsed] -> [DataTypeParameter 'Scoped] -> Sem r (DataTypeDef 'Scoped)
-        go params dataTypeParameters' =
+        go :: [InductiveParameter 'Parsed] -> [InductiveParameter 'Scoped] -> Sem r (InductiveDef 'Scoped)
+        go params inductiveParameters' =
           case params of
             -- More params to check
-            (DataTypeParameter {..} : ps) -> do
-              dataTypeParameterType' <- checkParseExpressionAtoms dataTypeParameterType
-              dataTypeParameterName' <- freshVariable dataTypeParameterName
+            (InductiveParameter {..} : ps) -> do
+              inductiveParameterType' <- checkParseExpressionAtoms inductiveParameterType
+              inductiveParameterName' <- freshVariable inductiveParameterName
               let param' =
-                    DataTypeParameter
-                      { dataTypeParameterType = dataTypeParameterType',
-                        dataTypeParameterName = dataTypeParameterName'
+                    InductiveParameter
+                      { inductiveParameterType = inductiveParameterType',
+                        inductiveParameterName = inductiveParameterName'
                       }
-              withBindLocalVariable (LocalVariable dataTypeParameterName') $
-                go ps (dataTypeParameters' ++ [param'])
+              withBindLocalVariable (LocalVariable inductiveParameterName') $
+                go ps (inductiveParameters' ++ [param'])
             -- All params have been checked
             [] -> do
-              dataTypeType' <- sequence (checkParseExpressionAtoms <$> dataTypeType)
-              dataTypeName' <- bindInductiveSymbol dataTypeName
-              dataTypeConstructors' <- mapM checkConstructorDef dataTypeConstructors
+              inductiveType' <- sequence (checkParseExpressionAtoms <$> inductiveType)
+              inductiveName' <- bindInductiveSymbol inductiveName
+              inductiveConstructors' <- mapM checkConstructorDef inductiveConstructors
               return
-                DataTypeDef
-                  { dataTypeName = dataTypeName',
-                    dataTypeParameters = dataTypeParameters',
-                    dataTypeType = dataTypeType',
-                    dataTypeConstructors = dataTypeConstructors'
+                InductiveDef
+                  { inductiveName = inductiveName',
+                    inductiveParameters = inductiveParameters',
+                    inductiveType = inductiveType',
+                    inductiveConstructors = inductiveConstructors'
                   }
 
 checkTopModule ::
@@ -875,7 +875,7 @@ checkStatement s = case s of
   StatementOperator opDef -> StatementOperator opDef <$ checkOperatorSyntaxDef opDef
   StatementTypeSignature tySig -> StatementTypeSignature <$> checkTypeSignature tySig
   StatementImport imp -> StatementImport <$> checkImport imp
-  StatementDataType dt -> StatementDataType <$> checkDataTypeDef dt
+  StatementInductive dt -> StatementInductive <$> checkInductiveDef dt
   StatementModule dt -> StatementModule <$> checkLocalModule dt
   StatementOpenModule open -> StatementOpenModule open <$ checkOpenModule open
   StatementFunctionClause clause -> StatementFunctionClause <$> checkFunctionClause clause

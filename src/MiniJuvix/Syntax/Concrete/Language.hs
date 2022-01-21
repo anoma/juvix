@@ -35,11 +35,11 @@ type family NameType (s :: Stage) :: (res :: GHC.Type) | res -> s where
   NameType 'Scoped = S.Name
 
 type family ExpressionType (s :: Stage) :: GHC.Type where
-  ExpressionType 'Parsed = (ExpressionAtoms 'Parsed)
+  ExpressionType 'Parsed = ExpressionAtoms 'Parsed
   ExpressionType 'Scoped = Expression
 
 type family PatternType (s :: Stage) :: GHC.Type where
-  PatternType 'Parsed = (PatternAtom 'Parsed)
+  PatternType 'Parsed = PatternAtom 'Parsed
   PatternType 'Scoped = Pattern
 
 type family ImportType (s :: Stage) :: GHC.Type where
@@ -62,7 +62,7 @@ data Statement (s :: Stage)
   = StatementOperator OperatorSyntaxDef
   | StatementTypeSignature (TypeSignature s)
   | StatementImport (Import s)
-  | StatementDataType (DataTypeDef s)
+  | StatementInductive (InductiveDef s)
   | StatementModule (Module s 'ModuleLocal)
   | StatementOpenModule OpenModule
   | StatementFunctionClause (FunctionClause s)
@@ -186,7 +186,7 @@ deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (
 
 type DataConstructorName s = SymbolType s
 
-type DataTypeName s = SymbolType s
+type InductiveName s = SymbolType s
 
 data DataConstructorDef (s :: Stage) = DataConstructorDef
   { constructorName :: DataConstructorName s,
@@ -201,33 +201,33 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Dat
 
 deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (DataConstructorDef s)
 
-data DataTypeParameter (s :: Stage) = DataTypeParameter
-  { dataTypeParameterName :: SymbolType s,
-    dataTypeParameterType :: ExpressionType s
+data InductiveParameter (s :: Stage) = InductiveParameter
+  { inductiveParameterName :: SymbolType s,
+    inductiveParameterType :: ExpressionType s
   }
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (DataTypeParameter s)
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (InductiveParameter s)
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (DataTypeParameter s)
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (InductiveParameter s)
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (DataTypeParameter s)
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveParameter s)
 
-deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (DataTypeParameter s)
+deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (InductiveParameter s)
 
-data DataTypeDef (s :: Stage) = DataTypeDef
-  { dataTypeName :: DataTypeName s,
-    dataTypeParameters :: [DataTypeParameter s],
-    dataTypeType :: Maybe (ExpressionType s),
-    dataTypeConstructors :: [DataConstructorDef s]
+data InductiveDef (s :: Stage) = InductiveDef
+  { inductiveName :: InductiveName s,
+    inductiveParameters :: [InductiveParameter s],
+    inductiveType :: Maybe (ExpressionType s),
+    inductiveConstructors :: [DataConstructorDef s]
   }
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (DataTypeDef s)
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (InductiveDef s)
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (DataTypeDef s)
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (InductiveDef s)
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (DataTypeDef s)
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveDef s)
 
-deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (DataTypeDef s)
+deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (InductiveDef s)
 
 --------------------------------------------------------------------------------
 -- Pattern

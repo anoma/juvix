@@ -82,7 +82,7 @@ statement =
     <|> (StatementOpenModule <$> openModule)
     <|> (StatementEval <$> eval)
     <|> (StatementImport <$> import_)
-    <|> (StatementDataType <$> dataTypeDef)
+    <|> (StatementInductive <$> inductiveDef)
     <|> (StatementPrint <$> printS)
     <|> (StatementModule <$> moduleDef)
     <|> (StatementAxiom <$> axiomDef)
@@ -304,21 +304,21 @@ lambda = do
 -- Data type construction declaration
 -------------------------------------------------------------------------------
 
-dataTypeDef :: MonadParsec e Text m => m (DataTypeDef 'Parsed)
-dataTypeDef = do
+inductiveDef :: MonadParsec e Text m => m (InductiveDef 'Parsed)
+inductiveDef = do
   kwInductive
-  dataTypeName <- symbol
-  dataTypeParameters <- P.many dataTypeParam
-  dataTypeType <- optional (kwColon >> expressionAtoms)
-  dataTypeConstructors <- braces $ P.sepEndBy constructorDef kwSemicolon
-  return DataTypeDef {..}
+  inductiveName <- symbol
+  inductiveParameters <- P.many inductiveParam
+  inductiveType <- optional (kwColon >> expressionAtoms)
+  inductiveConstructors <- braces $ P.sepEndBy constructorDef kwSemicolon
+  return InductiveDef {..}
 
-dataTypeParam :: MonadParsec e Text m => m (DataTypeParameter 'Parsed)
-dataTypeParam = parens $ do
-  dataTypeParameterName <- symbol
+inductiveParam :: MonadParsec e Text m => m (InductiveParameter 'Parsed)
+inductiveParam = parens $ do
+  inductiveParameterName <- symbol
   kwColon
-  dataTypeParameterType <- expressionAtoms
-  return DataTypeParameter {..}
+  inductiveParameterType <- expressionAtoms
+  return InductiveParameter {..}
 
 constructorDef :: MonadParsec e Text m => m (DataConstructorDef 'Parsed)
 constructorDef = do
