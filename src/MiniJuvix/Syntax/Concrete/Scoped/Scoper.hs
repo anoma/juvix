@@ -3,6 +3,9 @@
 
 -- | Limitations:
 -- 1. A symbol introduced by a type signature can only be used once per Module.
+--
+-- Efficiency considerations:
+-- 1. The expression parser should be cached somehow.
 module MiniJuvix.Syntax.Concrete.Scoped.Scoper where
 
 import qualified Control.Monad.Combinators.Expr as P
@@ -17,7 +20,6 @@ import MiniJuvix.Syntax.Concrete.Parser (runModuleParserIO)
 import MiniJuvix.Syntax.Concrete.Scoped.Name (NameKind (KNameConstructor))
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Utils.Prelude
-import System.FilePath
 
 --------------------------------------------------------------------------------
 
