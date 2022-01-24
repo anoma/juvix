@@ -1,0 +1,6 @@
+module Top;
+  module A;
+    module P; end;
+  end;
+  import A;
+end;
