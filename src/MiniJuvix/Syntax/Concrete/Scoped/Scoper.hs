@@ -5,7 +5,7 @@
 -- 1. A symbol introduced by a type signature can only be used once per Module.
 --
 -- Efficiency considerations:
--- 1. The expression parser should be cached somehow.
+-- 1. The expression parser should be cached somehow. Consider Polysemy.View
 module MiniJuvix.Syntax.Concrete.Scoped.Scoper where
 
 import qualified Control.Monad.Combinators.Expr as P
@@ -1097,12 +1097,6 @@ makePatternTable = do
     mkSymbolTable :: [SymbolInfo] -> [[P.Operator ParsePat Pattern]]
     mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe (unqualifiedSymbolOp . getEntry)
       where
-        nameToPattern :: S.Name -> Pattern
-        nameToPattern n@S.Name' {..} = case _nameKind of
-          S.KNameConstructor -> PatternConstructor n
-          S.KNameLocal
-            | NameUnqualified s <- _nameConcrete -> PatternVariable S.Name' {S._nameConcrete = s, ..}
-          _ -> error "impossible"
         getEntry :: SymbolInfo -> SymbolEntry
         getEntry (SymbolInfo m) = case toList m of
           [] -> error "impossible"
@@ -1155,11 +1149,11 @@ makePatternTable = do
                 | S.hasFixity n -> Just n
               _ -> Nothing
 
-parsePrePatTerm ::
+parsePatternTerm ::
   forall r.
   Members '[Reader (ParsePat Pattern), Embed ParsePat] r =>
   Sem r Pattern
-parsePrePatTerm = do
+parsePatternTerm = do
   pPat <- ask
   embed @ParsePat $
     parseNoInfixConstructor
@@ -1176,7 +1170,7 @@ parsePrePatTerm = do
         constructorNoFixity :: PatternAtom 'Scoped -> Maybe S.Name
         constructorNoFixity s = case s of
           PatternAtomName n
-            | not (S.hasFixity n) -> Just n
+            | not (S.hasFixity n), S.isConstructor n -> Just n
           _ -> Nothing
 
     parseWildcard :: ParsePat Pattern
@@ -1237,7 +1231,7 @@ mkPatternParser table = embed @ParsePat pPattern
     pTerm = runM parseTermRec
       where
         parseTermRec :: Sem '[Embed ParsePat] Pattern
-        parseTermRec = runReader pPattern parsePrePatTerm
+        parseTermRec = runReader pPattern parsePatternTerm
 
 parsePatternAtom ::
   Members '[Error ScopeError, State Scope] r => PatternAtom 'Scoped -> Sem r Pattern

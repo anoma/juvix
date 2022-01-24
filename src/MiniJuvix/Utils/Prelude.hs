@@ -35,6 +35,7 @@ module MiniJuvix.Utils.Prelude
     module Data.Word,
     module Data.Functor,
     module Data.Int,
+    module Polysemy.View,
     module System.IO,
     module Control.Applicative,
     module Data.Foldable,
@@ -96,6 +97,7 @@ import Polysemy.Embed
 import Polysemy.Error hiding (fromEither)
 import Polysemy.Reader
 import Polysemy.State
+import Polysemy.View
 import System.Directory
 import System.FilePath
 import System.IO

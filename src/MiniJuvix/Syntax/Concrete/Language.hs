@@ -624,8 +624,8 @@ deriving stock instance
 -- Universe expression
 --------------------------------------------------------------------------------
 
-newtype Universe = Universe {
-  universeLevel :: Maybe Natural
+newtype Universe = Universe
+  { universeLevel :: Maybe Natural
   }
   deriving stock (Show, Eq, Ord, Lift)
 

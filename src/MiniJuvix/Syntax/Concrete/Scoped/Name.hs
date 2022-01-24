@@ -87,6 +87,11 @@ hasFixity Name' {..} = case _nameFixity of
   SomeFixity {} -> True
   NoFixity -> False
 
+isConstructor :: Name' s -> Bool
+isConstructor Name' {..} = case _nameKind of
+  KNameConstructor {} -> True
+  _ -> False
+
 instance Eq (Name' n) where
   (==) = (==) `on` _nameId
 
