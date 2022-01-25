@@ -394,13 +394,14 @@ ppFunctionClause FunctionClause {..} = do
     Nothing -> return Nothing
     Just ne -> Just . hsep . toList <$> mapM ppPattern ne
   clauseBody' <- ppExpression clauseBody
-  clauseWhere' <- sequence $ ppWhereBlock <$> clauseWhere
+  clauseWhere' <- sequence (ppWhereBlock <$> clauseWhere)
   return $
     clauseOwnerFunction' <+?> clausePatterns' <+> kwAssignment <+> clauseBody'
-      <+?> (((line <> kwWhere) <+>) <$> clauseWhere')
+      <+?> ((line <>) <$> clauseWhere')
   where
     ppWhereBlock :: WhereBlock 'Scoped -> Sem r (Doc Ann)
-    ppWhereBlock WhereBlock {..} = ppBlock ppWhereClause whereClauses
+    ppWhereBlock WhereBlock {..} =
+       ppBlock ppWhereClause whereClauses >>= indented . (kwWhere <+>)
       where
         ppWhereClause :: WhereClause 'Scoped -> Sem r (Doc Ann)
         ppWhereClause c = case c of
