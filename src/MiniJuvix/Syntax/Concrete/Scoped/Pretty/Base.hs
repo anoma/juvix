@@ -166,6 +166,38 @@ ppModulePathType x = case sing :: SModuleIsTop t of
 ppSymbol :: Members '[Reader Options] r => Symbol -> Sem r (Doc Ann)
 ppSymbol (Sym t) = return (pretty t)
 
+groupStatements :: [Statement 'Scoped] -> [[Statement 'Scoped]]
+groupStatements = groupBy g
+  where
+  g :: Statement 'Scoped -> Statement 'Scoped -> Bool
+  g a b = case (a, b) of
+    (StatementOperator _, StatementOperator _) -> True
+    (StatementOperator _, _) -> False
+    (StatementImport _, StatementImport _) -> True
+    (StatementImport _, _) -> False
+    (StatementOpenModule {}, StatementOpenModule {}) -> True
+    (StatementOpenModule {}, _) -> True
+    (StatementInductive {}, _) -> False
+    (StatementModule {}, _) -> False
+    (StatementAxiom {}, StatementAxiom{}) -> True
+    (StatementAxiom {}, _) -> False
+    (StatementEval {}, StatementEval{}) -> True
+    (StatementEval {}, _) -> False
+    (StatementPrint {}, StatementPrint {}) -> True
+    (StatementPrint {}, _) -> False
+    (StatementTypeSignature sig, StatementFunctionClause fun)
+      -> sigName sig == clauseOwnerFunction fun
+    (StatementTypeSignature {}, _) -> False
+    (StatementFunctionClause fun1, StatementFunctionClause fun2)
+      -> clauseOwnerFunction fun1 == clauseOwnerFunction fun2
+    (StatementFunctionClause {}, _) -> False
+
+ppStatements :: Members '[Reader Options] r => [Statement 'Scoped] -> Sem r (Doc Ann)
+ppStatements ss = joinGroups <$> mapM (fmap mkGroup . mapM (fmap endSemicolon . ppStatement)) (groupStatements ss)
+  where
+  mkGroup = vsep
+  joinGroups = concatWith (\a b -> a <> line <> line <> b)
+
 ppStatement :: Members '[Reader Options] r => Statement 'Scoped -> Sem r (Doc Ann)
 ppStatement s = case s of
   StatementOperator op -> ppOperatorSyntaxDef op
@@ -187,7 +219,7 @@ endSemicolon x = x <> kwSemicolon
 
 ppModule :: forall t r. (SingI t, Members '[Reader Options] r) => Module 'Scoped t -> Sem r (Doc Ann)
 ppModule Module {..} = do
-  moduleBody' <- mapM (fmap endSemicolon . ppStatement) moduleBody >>= indented . vsep
+  moduleBody' <- ppStatements moduleBody >>= indented
   modulePath' <- ppModulePathType modulePath
   return $
     kwModule <+> modulePath' <> kwSemicolon <> line
