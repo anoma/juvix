@@ -34,6 +34,9 @@ infixl 7 <+?>
 (<+?>) :: Doc ann -> Maybe (Doc ann) -> Doc ann
 (<+?>) a = maybe a (a <+>)
 
+(<?>) :: Doc ann -> Maybe (Doc ann) -> Doc ann
+(<?>) a = maybe a (a <>)
+
 keyword :: Text -> Doc Ann
 keyword = annotate AnnKeyword . pretty
 
@@ -182,7 +185,7 @@ ppTopModulePath TopModulePath {..} = dotted <$> mapM ppSymbol (pathParts moduleP
 endSemicolon :: Doc Ann -> Doc Ann
 endSemicolon x = x <> kwSemicolon
 
-ppModule :: (SingI t, Members '[Reader Options] r) => Module 'Scoped t -> Sem r (Doc Ann)
+ppModule :: forall t r. (SingI t, Members '[Reader Options] r) => Module 'Scoped t -> Sem r (Doc Ann)
 ppModule Module {..} = do
   moduleBody' <- mapM (fmap endSemicolon . ppStatement) moduleBody >>= indented . vsep
   modulePath' <- ppModulePathType modulePath
@@ -191,7 +194,11 @@ ppModule Module {..} = do
       <> moduleBody'
       <> line
       <> kwEnd
-      <> kwSemicolon
+      <?> lastSemicolon
+  where
+  lastSemicolon = case sing :: SModuleIsTop t of
+    SModuleLocal -> Nothing
+    SModuleTop -> Just kwSemicolon
 
 ppOperatorSyntaxDef :: Members '[Reader Options] r => OperatorSyntaxDef -> Sem r (Doc Ann)
 ppOperatorSyntaxDef OperatorSyntaxDef {..} = do
