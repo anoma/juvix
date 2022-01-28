@@ -96,6 +96,7 @@ data ExportScope = ExportScope {
   }
   deriving stock (Show)
 makeLenses ''ExportScope
+makeLenses ''ExportSymbolInfo
 makeLenses ''SymbolEntry
 makeLenses ''SymbolInfo
 
@@ -323,7 +324,7 @@ exportScope Scope{..} = do
   return ExportScope {..}
  where
  getExportModules :: HashMap Symbol ExportModuleSymbolInfo
- getExportModules = HashMap.fromList . mapMaybe mayEntry $ HashMap.toList _scopeModules
+ getExportModules = HashMap.fromList . mapMaybe mayModuleEntry $ HashMap.toList _scopeModules
   where
   shouldExport :: Symbol -> S.AbsModulePath -> ModuleSymbolEntry -> Maybe S.NameId
   shouldExport modName path ModuleSymbolEntry {..} = do
@@ -347,8 +348,12 @@ exportScope Scope{..} = do
       HashMap.lookupDefault mempty modName (allEntries <$> _scopeSymbols) of
       Just r | _symbolPublicAnn r == Public -> True
       _ -> False
-  mayEntry :: (QualifiedName, ModuleSymbolInfo) -> Maybe (Symbol, ExportModuleSymbolInfo)
-  mayEntry (QualifiedName qualpath moduleName, ModuleSymbolInfo {..}) = case qualpath of
+  -- | Should this module be exported?
+  mayModuleEntry :: (QualifiedName, ModuleSymbolInfo) -> Maybe (Symbol, ExportModuleSymbolInfo)
+  mayModuleEntry (QualifiedName qualpath moduleName, ModuleSymbolInfo {..}) = case qualpath of
+    -- nonempty paths means that it is an imported top level module,
+    -- therefore must not be exported
+    Path (_:_) -> Nothing
     -- If it has an empty path it may be a local module.
     Path [] -> case [ (moduleName, exportInfo) |
                       (path, moduleEntry) <- HashMap.toList moduleSymbolInfo
@@ -359,10 +364,8 @@ exportScope Scope{..} = do
                             _exportModuleSymbolScope = moduleEntryExportScope moduleEntry}
                       ] of
       [] -> Nothing
-      _ -> undefined
-    -- nonempty paths means that it is an imported top level module,
-    -- therefore must not be exported
-    Path _ -> Nothing
+      [(name, exportInfo)] -> Just (name, exportInfo)
+      _ -> impossible -- already handled in getExportSymbols
  getExportSymbols :: Sem r (HashMap Symbol ExportSymbolInfo)
  getExportSymbols = HashMap.fromList <$> mapMaybeM entry (HashMap.toList _scopeSymbols)
   where
@@ -581,26 +584,6 @@ moduleSymbolInfoSingle absPath = ModuleSymbolInfo . HashMap.singleton absPath
 checkOrphanFixities :: Members '[Error ScopeError, State Scope] r => Sem r ()
 checkOrphanFixities = return ()
 
-mergeScope :: forall r. Members '[State Scope] r => ExportScope -> Sem r ()
-mergeScope ExportScope {..} = do
-  mapM_ mergeSymbol (HashMap.toList _exportSymbols)
-  mapM_ mergeModule (HashMap.toList _exportModules)
-  where
-  mergeSymbol :: (Symbol, ExportSymbolInfo) -> Sem r ()
-  mergeSymbol (s, ExportSymbolInfo {..}) =
-    modify (over scopeSymbols (HashMap.insertWith (<>) s
-       (symbolInfoSingle _exportSymbolPath _exportSymbolEntry)))
-  mergeModule :: (Symbol, ExportModuleSymbolInfo) -> Sem r ()
-  mergeModule (s, ExportModuleSymbolInfo {..}) =
-    modify (over scopeModules (HashMap.insertWith (<>) name
-       (moduleSymbolInfoSingle _exportModuleSymbolPath entry)))
-    where
-    entry = ModuleSymbolEntry {
-      moduleEntryExportNameId = Just _exportModuleNameId,
-      moduleEntryExportScope = _exportModuleSymbolScope
-      }
-    name = QualifiedName emptyPath s
-
 symbolInfoSingle :: S.AbsModulePath -> SymbolEntry -> SymbolInfo
 symbolInfoSingle p = SymbolInfo . HashMap.singleton p
 
@@ -613,28 +596,57 @@ checkOpenModule OpenModule {..} = do
   (ModuleSymbolInfo s) <- fromMaybeM errNotFound $ HashMap.lookup openModuleName <$> gets _scopeModules
   case HashMap.toList s of
     [] -> impossible
-    [(_, entry)] -> mergeScope (filterScope (moduleEntryExportScope entry))
+    [(_, entry)] -> mergeScope (alterScope (moduleEntryExportScope entry))
     ls -> throw (ErrAmbiguousModuleSym ls)
   where
+  mergeScope :: ExportScope -> Sem r ()
+  mergeScope ExportScope {..} = do
+    mapM_ mergeSymbol (HashMap.toList _exportSymbols)
+    mapM_ mergeModule (HashMap.toList _exportModules)
+    where
+    mergeSymbol :: (Symbol, ExportSymbolInfo) -> Sem r ()
+    mergeSymbol (s, ExportSymbolInfo {..}) =
+      modify (over scopeSymbols (HashMap.insertWith (<>) s
+        (symbolInfoSingle _exportSymbolPath _exportSymbolEntry)))
+    mergeModule :: (Symbol, ExportModuleSymbolInfo) -> Sem r ()
+    mergeModule (s, ExportModuleSymbolInfo {..}) = do
+      modify (over scopeModules (HashMap.insertWith (<>) name
+        (moduleSymbolInfoSingle _exportModuleSymbolPath entry)))
+      where
+      entry = ModuleSymbolEntry {
+        moduleEntryExportNameId = Just _exportModuleNameId,
+        moduleEntryExportScope = _exportModuleSymbolScope
+        }
+      name = QualifiedName emptyPath s
   errNotFound = throw (ErrModuleNotInScope openModuleName)
   setsUsingHiding :: Maybe (Either (HashSet Symbol) (HashSet Symbol))
   setsUsingHiding = case openUsingHiding of
     Just (Using l) -> Just (Left (HashSet.fromList (toList l)))
     Just (Hiding l) -> Just (Right (HashSet.fromList (toList l)))
     Nothing -> Nothing
-  filterScope :: ExportScope -> ExportScope
-  filterScope ExportScope {..} = ExportScope {
-     _exportSymbols = filterTable _exportSymbols,
-     _exportModules = filterTable _exportModules
-    }
+  alterScope :: ExportScope -> ExportScope
+  alterScope = alterEntries . filterScope
     where
-    filterTable :: HashMap Symbol a -> HashMap Symbol a
-    filterTable = HashMap.filterWithKey (const . shouldOpen)
-  shouldOpen :: Symbol -> Bool
-  shouldOpen s = case setsUsingHiding of
-    Nothing -> True
-    Just (Left using) -> HashSet.member s using
-    Just (Right hiding) -> not (HashSet.member s hiding)
+    alterEntry :: SymbolEntry -> SymbolEntry
+    alterEntry = set symbolWhyInScope BecauseOpened . set symbolPublicAnn openPublic
+    alterEntries :: ExportScope -> ExportScope
+    alterEntries ExportScope {..} = ExportScope {
+      _exportSymbols = fmap (over exportSymbolEntry alterEntry) _exportSymbols,
+      _exportModules = _exportModules
+      }
+    filterScope :: ExportScope -> ExportScope
+    filterScope ExportScope {..} = ExportScope {
+      _exportSymbols = filterTable _exportSymbols,
+      _exportModules = filterTable _exportModules
+      }
+      where
+      filterTable :: HashMap Symbol a -> HashMap Symbol a
+      filterTable = HashMap.filterWithKey (const . shouldOpen)
+    shouldOpen :: Symbol -> Bool
+    shouldOpen s = case setsUsingHiding of
+      Nothing -> True
+      Just (Left using) -> HashSet.member s using
+      Just (Right hiding) -> not (HashSet.member s hiding)
 
 checkWhereBlock ::
   forall r.
