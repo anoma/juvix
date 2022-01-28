@@ -30,6 +30,9 @@ newtype Path = Path
   }
   deriving stock (Show, Eq, Ord, Lift)
 
+emptyPath :: Path
+emptyPath = Path mempty
+
 deriving newtype instance Hashable Path
 
 -- | A.B.C corresponds to TopModulePath [A,B] C
@@ -45,5 +48,8 @@ topModulePathToQualified TopModulePath {..} =
     { qualifiedPath = modulePathDir,
       qualifiedSymbol = modulePathName
     }
+
+localModuleNameToQualified :: Symbol -> QualifiedName
+localModuleNameToQualified = QualifiedName emptyPath
 
 instance Hashable TopModulePath

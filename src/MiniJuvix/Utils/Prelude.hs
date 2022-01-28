@@ -195,3 +195,7 @@ error = Err.error . unpack
 
 undefined :: HasCallStack => a
 undefined = Err.error "undefined"
+
+-- | Used to indicate impossible corner cases.
+impossible :: HasCallStack => a
+impossible = Err.error "impossible"

@@ -384,6 +384,7 @@ openModule = do
   kwOpen
   openModuleName <- qualifiedName
   openUsingHiding <- optional usingOrHiding
+  openPublic <- maybe NoPublic (const Public) <$> optional kwPublic
   return OpenModule {..}
   where
     usingOrHiding :: m UsingHiding

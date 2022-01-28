@@ -23,20 +23,6 @@ import MiniJuvix.Utils.Prelude
 
 --------------------------------------------------------------------------------
 
--- | Relevant scope information of a module.
-data ModuleScopeInfo = ModuleScopeInfo
-  { -- | Absolute path to the module
-    _syntaxPath :: S.AbsModulePath,
-    -- | constructors introduced by inductive definitions (E.g. zero; suc).
-    _syntaxConstructors :: HashSet (InductiveConstructorName 'Parsed),
-    -- | data types  introduced by inductive definitions (E.g. ℕ).
-    _syntaxInductives :: HashSet (InductiveName 'Parsed),
-    -- | function names in scope. Function names are introduced with function clauses.
-    _syntaxFunctions :: HashSet (FunctionName 'Parsed),
-    -- | locally defined modules. Imported modules are not included.
-    _syntaxLocalModules :: HashMap (LocalModuleName 'Parsed) ModuleScopeInfo
-  }
-
 newtype IdentifierInfo = IdentifierInfo
   { idenInfoOrigins :: HashSet TopModulePath
   }
@@ -47,28 +33,79 @@ newtype LocalVariable = LocalVariable
   deriving newtype (Show, Eq, Hashable)
 
 newtype SymbolInfo = SymbolInfo
-  { -- | This map must have at least one entry.
-    -- If there are more than one entry, it means that the same symbol has been
-    -- brought into scope from two different places.
-    symbolInfo :: HashMap S.AbsModulePath SymbolEntry
+  { -- | This map must have at least one entry. If there are more than one
+    -- entry, it means that the same symbol has been brought into scope from two
+    -- different places.
+    _symbolInfo :: HashMap S.AbsModulePath SymbolEntry
   }
+  deriving newtype (Show, Semigroup, Monoid)
 
-data SymbolEntry = SymbolEntry
-  { symbolKind :: S.NameKind,
-    symbolDefinedIn :: S.AbsModulePath,
-    symbolId :: S.NameId,
-    symbolFixity :: S.NameFixity
+
+data ExportSymbolInfo = ExportSymbolInfo
+  { _exportSymbolPath :: S.AbsModulePath,
+    _exportSymbolEntry :: SymbolEntry
   }
   deriving stock (Show)
+
+newtype ModuleSymbolInfo = ModuleSymbolInfo
+  { -- | This map must have at least one entry. If there are more than one
+    -- entry, it means that the module same symbol has been brought into scope
+    -- from two different places.
+    moduleSymbolInfo :: HashMap S.AbsModulePath ModuleSymbolEntry
+  }
+  deriving newtype (Show, Semigroup, Monoid)
+
+data ModuleSymbolEntry = ModuleSymbolEntry {
+  moduleEntryExportNameId :: Maybe S.NameId, -- Nothing for top modules
+  moduleEntryExportScope :: ExportScope
+  }
+  deriving stock (Show)
+
+data ExportModuleSymbolInfo = ExportModuleSymbolInfo
+  {
+    _exportModuleNameId :: S.NameId,
+    _exportModuleSymbolPath :: S.AbsModulePath,
+    _exportModuleSymbolScope :: ExportScope
+  }
+  deriving stock (Show)
+
+-- | Why a symbol is in scope.
+data WhyInScope =
+  -- | Inherited from the parent module.
+  BecauseInherited WhyInScope
+  -- | Opened in this module.
+  | BecauseOpened
+  -- | Defined in this module.
+  | BecauseDefined
+  deriving stock (Show)
+
+data SymbolEntry = SymbolEntry
+  { _symbolKind :: S.NameKind,
+    _symbolDefinedIn :: S.AbsModulePath,
+    _symbolId :: S.NameId,
+    _symbolFixity :: S.NameFixity,
+    _symbolWhyInScope :: WhyInScope,
+    _symbolPublicAnn :: PublicAnn
+  }
+  deriving stock (Show)
+
+-- | Symbols that a module exports
+data ExportScope = ExportScope {
+   _exportSymbols :: HashMap Symbol ExportSymbolInfo,
+   _exportModules :: HashMap Symbol ExportModuleSymbolInfo
+  }
+  deriving stock (Show)
+makeLenses ''ExportScope
+makeLenses ''SymbolEntry
+makeLenses ''SymbolInfo
 
 data Scope = Scope
   { _scopePath :: S.AbsModulePath,
     _scopeFixities :: HashMap Symbol Fixity,
     _scopeSymbols :: HashMap Symbol SymbolInfo,
-    _scopeModules :: HashMap QualifiedName ModuleScopeInfo,
+    _scopeModules :: HashMap QualifiedName ModuleSymbolInfo,
     _scopeBindGroup :: HashMap Symbol LocalVariable
   }
-
 makeLenses ''Scope
 
 newtype LocalVars = LocalVars
@@ -78,7 +115,7 @@ newtype LocalVars = LocalVars
 makeLenses ''LocalVars
 
 newtype ModulesCache = ModulesCache
-  { _cachedModules :: HashMap TopModulePath (Module 'Scoped 'ModuleTop)
+  { _cachedModules :: HashMap TopModulePath (ExportScope, Module 'Scoped 'ModuleTop)
   }
 
 makeLenses ''ModulesCache
@@ -93,9 +130,12 @@ data ScopeError
   | ErrImportCycle TopModulePath
   | ErrOpenNotInScope QualifiedName
   | ErrSymNotInScope Symbol
+  | ErrModuleNotInScope QualifiedName
   | ErrBindGroup Symbol
   | ErrDuplicateFixity Symbol
+  | ErrMultipleExport Symbol
   | ErrAmbiguousSym [(S.AbsModulePath, SymbolEntry)]
+  | ErrAmbiguousModuleSym [(S.AbsModulePath, ModuleSymbolEntry)]
   deriving stock (Show)
 
 data ScopeParameters = ScopeParameters
@@ -125,7 +165,7 @@ scopeCheck root modules =
     runError $
       runReader scopeParameters $
         evalState iniScopeState $
-          mapM checkTopModule modules
+          mapM checkTopModule_ modules
   where
     iniScopeState :: ScopeState
     iniScopeState =
@@ -184,7 +224,7 @@ reserveSymbolOf k s = do
     checkNotBound = do
       path <- gets _scopePath
       syms <- gets _scopeSymbols
-      let exists = maybe False (HashMap.member path . symbolInfo) (HashMap.lookup s syms)
+      let exists = maybe False (HashMap.member path . _symbolInfo) (HashMap.lookup s syms)
       when exists (throw (ErrAlreadyDefined s))
 
 bindReservedSymbol ::
@@ -195,13 +235,23 @@ bindReservedSymbol s' = do
   path <- gets _scopePath
   modify (over scopeSymbols (HashMap.alter (Just . addS path) s))
   where
+    symbolEntry :: S.Symbol -> SymbolEntry
+    symbolEntry S.Name' {..} =
+      SymbolEntry
+        { _symbolKind = _nameKind,
+          _symbolDefinedIn = _nameDefinedIn,
+          _symbolId = _nameId,
+          _symbolFixity = _nameFixity,
+          _symbolPublicAnn = NoPublic,
+          _symbolWhyInScope = BecauseDefined
+        }
     s = S._nameConcrete s'
     entry :: SymbolEntry
     entry = symbolEntry s'
     addS :: S.AbsModulePath -> Maybe SymbolInfo -> SymbolInfo
     addS path m = case m of
-      Nothing -> SymbolInfo (HashMap.singleton path entry)
-      Just SymbolInfo {..} -> SymbolInfo (HashMap.insert path entry symbolInfo)
+      Nothing -> symbolInfoSingle path entry
+      Just SymbolInfo {..} -> SymbolInfo (HashMap.insert path entry _symbolInfo)
 
 bindSymbolOf ::
   Members '[Error ScopeError, State ScopeState, State Scope] r =>
@@ -247,7 +297,16 @@ checkImport ::
   Members '[Error ScopeError, State Scope, Reader ScopeParameters, Embed IO, State ScopeState] r =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
-checkImport (Import p) = Import <$> (readParseModule p >>= checkTopModule)
+checkImport (Import p) = do
+  (exported, checked) <- readParseModule p >>= checkTopModule
+  let qname = topModulePathToQualified p
+      entry = ModuleSymbolEntry {
+        moduleEntryExportNameId = Nothing,
+        moduleEntryExportScope = exported
+        }
+  modify (over scopeModules (undefined))
+  undefined
+  return (Import checked)
 
 getTopModulePath :: Module s 'ModuleTop -> S.AbsModulePath
 getTopModulePath Module {..} =
@@ -256,57 +315,70 @@ getTopModulePath Module {..} =
       S.absLocalPath = mempty
     }
 
-localModuleScopeInfo :: S.AbsModulePath -> Module 'Scoped 'ModuleLocal -> ModuleScopeInfo
-localModuleScopeInfo parentPath lmod = moduleScopeInfo (parentPath S.<.> localModSym) lmod
+-- | We gather all symbols which have been defined or marked to be public in the given scope.
+exportScope :: forall r. Members '[Error ScopeError] r => Scope -> Sem r ExportScope
+exportScope Scope{..} = do
+  _exportSymbols <- getExportSymbols
+  let _exportModules = getExportModules
+  return ExportScope {..}
+ where
+ getExportModules :: HashMap Symbol ExportModuleSymbolInfo
+ getExportModules = HashMap.fromList . mapMaybe mayEntry $ HashMap.toList _scopeModules
   where
-    localModSym :: Symbol
-    localModSym = S._nameConcrete (modulePath lmod)
-
-topModuleScopeInfo :: Module 'Scoped 'ModuleTop -> ModuleScopeInfo
-topModuleScopeInfo m = moduleScopeInfo (getTopModulePath m) m
-
-moduleScopeInfo :: S.AbsModulePath -> Module 'Scoped t -> ModuleScopeInfo
-moduleScopeInfo absPath sModule = ModuleScopeInfo {..}
+  shouldExport :: Symbol -> S.AbsModulePath -> ModuleSymbolEntry -> Maybe S.NameId
+  shouldExport modName path ModuleSymbolEntry {..} = do
+    exportBecauseChild
+    <|> exportBecausePublic
+    where
+    exportBecauseChild :: Maybe S.NameId
+    exportBecauseChild = do
+      guard (isChildModule path)
+      moduleEntryExportNameId
+    exportBecausePublic :: Maybe S.NameId
+    exportBecausePublic = do
+      moduleEntryExportNameId >>= guard . isPublic
+      moduleEntryExportNameId
+    isChildModule :: S.AbsModulePath -> Bool
+    isChildModule child = child `S.isChildOf` _scopePath
+    allEntries :: SymbolInfo -> [SymbolEntry]
+    allEntries (SymbolInfo s) = toList s
+    isPublic :: S.NameId -> Bool
+    isPublic uid = case find ((uid==) . _symbolId) $
+      HashMap.lookupDefault mempty modName (allEntries <$> _scopeSymbols) of
+      Just r | _symbolPublicAnn r == Public -> True
+      _ -> False
+  mayEntry :: (QualifiedName, ModuleSymbolInfo) -> Maybe (Symbol, ExportModuleSymbolInfo)
+  mayEntry (QualifiedName qualpath moduleName, ModuleSymbolInfo {..}) = case qualpath of
+    -- If it has an empty path it may be a local module.
+    Path [] -> case [ (moduleName, exportInfo) |
+                      (path, moduleEntry) <- HashMap.toList moduleSymbolInfo
+                      , Just moduleId <- pure $ shouldExport moduleName path moduleEntry
+                      , let exportInfo = ExportModuleSymbolInfo {
+                            _exportModuleNameId = moduleId,
+                            _exportModuleSymbolPath = path,
+                            _exportModuleSymbolScope = moduleEntryExportScope moduleEntry}
+                      ] of
+      [] -> Nothing
+      _ -> undefined
+    -- nonempty paths means that it is an imported top level module,
+    -- therefore must not be exported
+    Path _ -> Nothing
+ getExportSymbols :: Sem r (HashMap Symbol ExportSymbolInfo)
+ getExportSymbols = HashMap.fromList <$> mapMaybeM entry (HashMap.toList _scopeSymbols)
   where
-    stmts = moduleBody sModule
-    _syntaxPath :: S.AbsModulePath
-    _syntaxPath = undefined
-    _syntaxLocalModules :: HashMap Symbol ModuleScopeInfo
-    _syntaxLocalModules = HashMap.fromList (mapMaybe getModule stmts)
-      where
-        getModule :: Statement 'Scoped -> Maybe (Symbol, ModuleScopeInfo)
-        getModule s = case s of
-          StatementModule m -> Just (S._nameConcrete (modulePath m), moduleScopeInfo undefined m)
-          _ -> Nothing
-    _syntaxFunctions :: HashSet (FunctionName 'Parsed)
-    _syntaxFunctions = HashSet.fromList (mapMaybe getFun stmts)
-      where
-        getFun :: Statement 'Scoped -> Maybe (FunctionName 'Parsed)
-        getFun s = case s of
-          -- StatementInductive InductiveDef {..} → HashSet.fromList (map constructorName inductiveConstructors)
-          _ -> undefined
-    _syntaxConstructors :: HashSet (InductiveConstructorName 'Parsed)
-    _syntaxConstructors = mconcat (map getConstrs stmts)
-      where
-        getConstrs :: Statement 'Scoped -> HashSet (InductiveConstructorName 'Parsed)
-        getConstrs s = case s of
-          StatementInductive InductiveDef {..} ->
-            HashSet.fromList
-              (map (S._nameConcrete . constructorName) inductiveConstructors)
-          _ -> mempty
-    _syntaxInductives :: HashSet (InductiveName 'Parsed)
-    _syntaxInductives = HashSet.fromList (mapMaybe getDT stmts)
-      where
-        getDT :: Statement 'Scoped -> Maybe (InductiveName 'Parsed)
-        getDT s = case s of
-          StatementInductive InductiveDef {..} -> Just (S._nameConcrete inductiveName)
-          _ -> Nothing
-    _syntaxOperators :: HashMap Symbol Fixity
-    _syntaxOperators = HashMap.fromList (mapMaybe getDef stmts)
-      where
-        getDef s = case s of
-          StatementOperator OperatorSyntaxDef {..} -> Just (opSymbol, opFixity)
-          _ -> Nothing
+  shouldExport :: SymbolEntry -> Bool
+  shouldExport SymbolEntry {..} =
+    _symbolDefinedIn == _scopePath
+    || _symbolPublicAnn == Public
+  entry :: (Symbol, SymbolInfo) -> Sem r (Maybe (Symbol, ExportSymbolInfo))
+  entry (s, SymbolInfo {..}) =
+   case filter shouldExport (toList _symbolInfo) of
+     [] -> return Nothing
+     [e] -> return $ Just (s, ExportSymbolInfo {
+        _exportSymbolPath = _scopePath,
+         _exportSymbolEntry = e
+                        })
+     _ -> throw (ErrMultipleExport s)
 
 readParseModule ::
   Members '[Error ScopeError, Reader ScopeParameters, Embed IO] r =>
@@ -360,15 +432,6 @@ checkTypeSignature TypeSignature {..} = do
       { sigName = sigName',
         sigType = sigType'
       }
-
-symbolEntry :: S.Symbol -> SymbolEntry
-symbolEntry S.Name' {..} =
-  SymbolEntry
-    { symbolKind = _nameKind,
-      symbolDefinedIn = _nameDefinedIn,
-      symbolId = _nameId,
-      symbolFixity = _nameFixity
-    }
 
 checkConstructorDef ::
   Members '[Error ScopeError, Reader LocalVars, State Scope, State ScopeState] r =>
@@ -424,11 +487,18 @@ checkInductiveDef InductiveDef {..} = do
                     inductiveConstructors = inductiveConstructors'
                   }
 
-checkTopModule ::
+checkTopModule_ ::
   forall r.
   Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State ScopeState] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (Module 'Scoped 'ModuleTop)
+checkTopModule_ = fmap snd . checkTopModule
+
+checkTopModule ::
+  forall r.
+  Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State ScopeState] r =>
+  Module 'Parsed 'ModuleTop ->
+  Sem r (ExportScope, Module 'Scoped 'ModuleTop)
 checkTopModule m@(Module path stmts) = do
   checkCycle
   cache <- gets (_cachedModules . _scopeModulesCache)
@@ -445,11 +515,11 @@ checkTopModule m@(Module path stmts) = do
         }
     addParent :: ScopeParameters -> ScopeParameters
     addParent = over scopeTopParents (HashSet.insert path)
-    checkedModule :: Sem r (Module 'Scoped 'ModuleTop)
-    checkedModule =
-      evalState iniScope $
-        Module path
-          <$> local addParent (mapM checkStatement stmts)
+    checkedModule :: Sem r (ExportScope, Module 'Scoped 'ModuleTop)
+    checkedModule = do
+      (scope, checked) <- runState iniScope $
+          Module path <$> local addParent (mapM checkStatement stmts)
+      (,checked) <$> exportScope scope
     checkCycle :: Sem r ()
     checkCycle =
       whenM
@@ -462,17 +532,77 @@ checkLocalModule ::
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
-  modulePath' <- bindLocalModuleSymbol modulePath
+  before <- get @Scope
+  inheritScope
+  let absPath = _scopePath before S.<.> modulePath
+  modify (set scopePath absPath)
   moduleBody' <- mapM checkStatement moduleBody
+  checkOrphanFixities
+  exportedScope <- get >>= exportScope
+  put before
+  modulePath' <- bindLocalModuleSymbol modulePath
+  let localName = localModuleNameToQualified modulePath
+      entry :: ModuleSymbolEntry
+      entry = ModuleSymbolEntry {
+         moduleEntryExportNameId = Just (S._nameId modulePath'),
+         moduleEntryExportScope = exportedScope
+        }
+  addModuleEntry localName absPath entry
   return
     Module
       { modulePath = modulePath',
         moduleBody = moduleBody'
       }
+  where
+  -- | Mark all inherited symbols as NoPublic
+  inheritScope :: Sem r ()
+  inheritScope = modify (over scopeSymbols (fmap inheritSymbol))
+    where
+    inheritSymbol :: SymbolInfo -> SymbolInfo
+    inheritSymbol (SymbolInfo s) = SymbolInfo (fmap inheritEntry s)
+    inheritEntry :: SymbolEntry -> SymbolEntry
+    inheritEntry = over symbolWhyInScope BecauseInherited
 
--- | checks if there is an infix declaration without a binding.
+addModuleEntry :: Members '[State Scope] r =>
+  QualifiedName -> S.AbsModulePath -> ModuleSymbolEntry -> Sem r ()
+addModuleEntry moduleName absPath entry =
+  modify (over scopeModules (HashMap.alter (Just . addInfo) moduleName))
+  where
+  addInfo :: Maybe ModuleSymbolInfo -> ModuleSymbolInfo
+  addInfo m = case m of
+   Nothing -> moduleSymbolInfoSingle absPath entry
+   Just (ModuleSymbolInfo t) -> ModuleSymbolInfo (HashMap.insert absPath entry t)
+
+moduleSymbolInfoSingle
+  :: S.AbsModulePath -> ModuleSymbolEntry -> ModuleSymbolInfo
+moduleSymbolInfoSingle absPath = ModuleSymbolInfo . HashMap.singleton absPath
+
+-- | TODO checks if there is an infix declaration without a binding.
 checkOrphanFixities :: Members '[Error ScopeError, State Scope] r => Sem r ()
-checkOrphanFixities = undefined
+checkOrphanFixities = return ()
+
+mergeScope :: forall r. Members '[State Scope] r => ExportScope -> Sem r ()
+mergeScope ExportScope {..} = do
+  mapM_ mergeSymbol (HashMap.toList _exportSymbols)
+  mapM_ mergeModule (HashMap.toList _exportModules)
+  where
+  mergeSymbol :: (Symbol, ExportSymbolInfo) -> Sem r ()
+  mergeSymbol (s, ExportSymbolInfo {..}) =
+    modify (over scopeSymbols (HashMap.insertWith (<>) s
+       (symbolInfoSingle _exportSymbolPath _exportSymbolEntry)))
+  mergeModule :: (Symbol, ExportModuleSymbolInfo) -> Sem r ()
+  mergeModule (s, ExportModuleSymbolInfo {..}) =
+    modify (over scopeModules (HashMap.insertWith (<>) name
+       (moduleSymbolInfoSingle _exportModuleSymbolPath entry)))
+    where
+    entry = ModuleSymbolEntry {
+      moduleEntryExportNameId = Just _exportModuleNameId,
+      moduleEntryExportScope = _exportModuleSymbolScope
+      }
+    name = QualifiedName emptyPath s
+
+symbolInfoSingle :: S.AbsModulePath -> SymbolEntry -> SymbolInfo
+symbolInfoSingle p = SymbolInfo . HashMap.singleton p
 
 checkOpenModule ::
   forall r.
@@ -480,37 +610,31 @@ checkOpenModule ::
   OpenModule ->
   Sem r ()
 checkOpenModule OpenModule {..} = do
-  info <- openInfo
-  openModule openModuleName info openUsingHiding
+  (ModuleSymbolInfo s) <- fromMaybeM errNotFound $ HashMap.lookup openModuleName <$> gets _scopeModules
+  case HashMap.toList s of
+    [] -> impossible
+    [(_, entry)] -> mergeScope (filterScope (moduleEntryExportScope entry))
+    ls -> throw (ErrAmbiguousModuleSym ls)
   where
-    openInfo :: Sem r ModuleScopeInfo
-    openInfo = do
-      r <- HashMap.lookup openModuleName <$> gets _scopeModules
-      case r of
-        Just info -> return info
-        _ -> throw (ErrOpenNotInScope openModuleName)
-
-openModule ::
-  forall r.
-  Members '[Error ScopeError, State Scope] r =>
-  QualifiedName ->
-  ModuleScopeInfo ->
-  Maybe UsingHiding ->
-  Sem r ()
-openModule qname _ uh = do
-  -- mapM_ (openOperatorSyntaxDef qname) (filter (shouldOpen . fst) (HashMap.toList _syntaxOperators))
-  undefined
-  where
-    setsUsingHiding :: Maybe (Either (HashSet Symbol) (HashSet Symbol))
-    setsUsingHiding = case uh of
-      Just (Using l) -> Just (Left (HashSet.fromList (toList l)))
-      Just (Hiding l) -> Just (Right (HashSet.fromList (toList l)))
-      Nothing -> Nothing
-    shouldOpen :: Symbol -> Bool
-    shouldOpen s = case setsUsingHiding of
-      Nothing -> True
-      Just (Left using) -> HashSet.member s using
-      Just (Right hiding) -> not (HashSet.member s hiding)
+  errNotFound = throw (ErrModuleNotInScope openModuleName)
+  setsUsingHiding :: Maybe (Either (HashSet Symbol) (HashSet Symbol))
+  setsUsingHiding = case openUsingHiding of
+    Just (Using l) -> Just (Left (HashSet.fromList (toList l)))
+    Just (Hiding l) -> Just (Right (HashSet.fromList (toList l)))
+    Nothing -> Nothing
+  filterScope :: ExportScope -> ExportScope
+  filterScope ExportScope {..} = ExportScope {
+     _exportSymbols = filterTable _exportSymbols,
+     _exportModules = filterTable _exportModules
+    }
+    where
+    filterTable :: HashMap Symbol a -> HashMap Symbol a
+    filterTable = HashMap.filterWithKey (const . shouldOpen)
+  shouldOpen :: Symbol -> Bool
+  shouldOpen s = case setsUsingHiding of
+    Nothing -> True
+    Just (Left using) -> HashSet.member s using
+    Just (Right hiding) -> not (HashSet.member s hiding)
 
 checkWhereBlock ::
   forall r.
@@ -539,8 +663,10 @@ checkFunctionClause FunctionClause {..} = do
   clausePatterns' <- mapM checkParsePatternAtom clausePatterns
   (clauseWhere', clauseBody') <- localScope $
     withBindCurrentGroup $ do
+      s <- get @Scope
       clw <- sequence (checkWhereBlock <$> clauseWhere)
       clb <- checkParseExpressionAtoms clauseBody
+      put s
       return (clw, clb)
   return
     FunctionClause
@@ -556,8 +682,8 @@ checkFunctionClause FunctionClause {..} = do
       SymbolInfo {..} <- fromMaybeM err (HashMap.lookup fun <$> gets _scopeSymbols)
       -- The symbol must be defined in the same path
       path <- gets _scopePath
-      e@SymbolEntry {..} <- fromMaybe err (return <$> HashMap.lookup path symbolInfo)
-      when (symbolKind /= S.KNameFunction) err
+      e@SymbolEntry {..} <- maybe err return (HashMap.lookup path _symbolInfo)
+      when (_symbolKind /= S.KNameFunction) err
       return (entryToSName fun e)
       where
         err :: Sem r a
@@ -696,19 +822,19 @@ checkUnqualified s = do
       -- Lookup at the global scope
       let err = throw (ErrSymNotInScope s)
       SymbolInfo {..} <- fromMaybeM err (HashMap.lookup s <$> gets _scopeSymbols)
-      case HashMap.toList symbolInfo of
-        [] -> error "impossible"
+      case HashMap.toList _symbolInfo of
+        [] -> impossible
         [(_, e)] -> return (entryToSName (NameUnqualified s) e)
         es -> throw (ErrAmbiguousSym es) -- This is meant to happen only at the top level
 
 entryToSName :: s -> SymbolEntry -> S.Name' s
 entryToSName s SymbolEntry {..} =
   S.Name'
-    { _nameId = symbolId,
+    { _nameId = _symbolId,
       _nameConcrete = s,
-      _nameDefinedIn = symbolDefinedIn,
-      _nameFixity = symbolFixity,
-      _nameKind = symbolKind
+      _nameDefinedIn = _symbolDefinedIn,
+      _nameFixity = _symbolFixity,
+      _nameKind = _symbolKind
     }
 
 checkPatternName ::
@@ -779,7 +905,7 @@ checkPatternUnqualified s = do
       case r of
         Nothing -> return Nothing
         Just SymbolInfo {..} ->
-          let entries = filter (isConstructorKind . symbolKind . snd) (HashMap.toList symbolInfo)
+          let entries = filter (isConstructorKind . _symbolKind . snd) (HashMap.toList _symbolInfo)
            in case map snd entries of
                 [] -> return Nothing -- There is no constructor with such a name
                 [e] -> return (Just (entryToSName (NameUnqualified s) e)) -- There is one constructor with such a name
@@ -904,14 +1030,14 @@ makeExpressionTable = do
       where
         getEntry :: SymbolInfo -> SymbolEntry
         getEntry (SymbolInfo m) = case toList m of
-          [] -> error "impossible"
+          [] -> impossible
           [e] -> e
-          _ -> error "impossible after scope checking"
+          (e :_ ) -> e
         unqualifiedSymbolOp :: SymbolEntry -> Maybe (Precedence, P.Operator Parse Expression)
         unqualifiedSymbolOp SymbolEntry {..}
-          | S.SomeFixity Fixity {..} <- symbolFixity = Just $
+          | S.SomeFixity Fixity {..} <- _symbolFixity = Just $
             case fixityArity of
-              Unary u -> (fixityPrecedence, prePost (unaryApp <$> parseSymbolId symbolId))
+              Unary u -> (fixityPrecedence, prePost (unaryApp <$> parseSymbolId _symbolId))
                 where
                   unaryApp :: S.Name -> Expression -> Expression
                   unaryApp funName arg = case u of
@@ -922,7 +1048,7 @@ makeExpressionTable = do
                   prePost = case u of
                     AssocPrefix -> P.Prefix
                     AssocPostfix -> P.Postfix
-              Binary b -> (fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId symbolId))
+              Binary b -> (fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId _symbolId))
                 where
                   binaryApp :: S.Name -> Expression -> Expression -> Expression
                   binaryApp infixAppOperator infixAppLeft infixAppRight =
@@ -1099,15 +1225,15 @@ makePatternTable = do
       where
         getEntry :: SymbolInfo -> SymbolEntry
         getEntry (SymbolInfo m) = case toList m of
-          [] -> error "impossible"
+          [] -> impossible
           [e] -> e
-          _ -> error "impossible after scope checking"
+          _ -> impossible
         unqualifiedSymbolOp :: SymbolEntry -> Maybe (Precedence, P.Operator ParsePat Pattern)
         unqualifiedSymbolOp SymbolEntry {..}
-          | S.SomeFixity Fixity {..} <- symbolFixity,
-            symbolKind == KNameConstructor = Just $
+          | S.SomeFixity Fixity {..} <- _symbolFixity,
+            _symbolKind == KNameConstructor = Just $
             case fixityArity of
-              Unary u -> (fixityPrecedence, prePost (unaryApp <$> parseSymbolId symbolId))
+              Unary u -> (fixityPrecedence, prePost (unaryApp <$> parseSymbolId _symbolId))
                 where
                   unaryApp :: S.Name -> Pattern -> Pattern
                   unaryApp funName = case u of
@@ -1117,7 +1243,7 @@ makePatternTable = do
                   prePost = case u of
                     AssocPrefix -> P.Prefix
                     AssocPostfix -> P.Postfix
-              Binary b -> (fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId symbolId))
+              Binary b -> (fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _symbolId))
                 where
                   binaryInfixApp :: S.Name -> Pattern -> Pattern -> Pattern
                   binaryInfixApp name argLeft = PatternInfixApplication . PatternInfixApp name argLeft

@@ -76,6 +76,9 @@ kwLet = keyword "let"
 kwIn :: Doc Ann
 kwIn = keyword "in"
 
+kwPublic :: Doc Ann
+kwPublic = keyword "public"
+
 kwWildcard :: Doc Ann
 kwWildcard = keyword "_"
 
@@ -314,10 +317,15 @@ ppOpen :: forall r. Members '[Reader Options] r => OpenModule -> Sem r (Doc Ann)
 ppOpen OpenModule {..} = do
   openModuleName' <- ppQualified openModuleName
   openUsingHiding' <- ppUsingHiding
-  return $ keyword "open" <+> openModuleName' <+> openUsingHiding'
+  let openPublic' = ppPublic
+  return $ keyword "open" <+> openModuleName' <+> openUsingHiding' <+?> openPublic'
   where
-    ppUsingHiding :: Sem r (Doc Ann)
-    ppUsingHiding = return $ pretty ("TODO" :: Text)
+   ppUsingHiding :: Sem r (Doc Ann)
+   ppUsingHiding = return $ pretty ("TODO" :: Text)
+   ppPublic :: Maybe (Doc Ann)
+   ppPublic = case openPublic of
+     Public -> Just kwPublic
+     NoPublic -> Nothing
 
 ppTypeSignature :: Members '[Reader Options] r => TypeSignature 'Scoped -> Sem r (Doc Ann)
 ppTypeSignature TypeSignature {..} = do

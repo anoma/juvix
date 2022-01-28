@@ -453,9 +453,13 @@ data UsingHiding
   | Hiding (NonEmpty Symbol)
   deriving stock (Show, Eq, Ord, Lift)
 
+data PublicAnn = Public | NoPublic
+  deriving stock (Show, Eq, Ord, Lift)
+
 data OpenModule = OpenModule
   { openModuleName :: QualifiedName,
-    openUsingHiding :: Maybe UsingHiding
+    openUsingHiding :: Maybe UsingHiding,
+    openPublic :: PublicAnn
   }
   deriving stock (Show, Eq, Ord, Lift)
 
