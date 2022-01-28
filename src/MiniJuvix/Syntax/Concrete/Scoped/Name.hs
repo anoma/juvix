@@ -21,6 +21,7 @@ data AbsModulePath = AbsModulePath
     absLocalPath :: [C.Symbol]
   }
   deriving stock (Show, Eq, Generic)
+
 instance Hashable AbsModulePath
 
 -- | Tells whether the first argument is an immediate child of the second argument.
@@ -28,8 +29,9 @@ instance Hashable AbsModulePath
 isChildOf :: AbsModulePath -> AbsModulePath -> Bool
 isChildOf child parent
   | null (absLocalPath child) = False
-  | otherwise = init (absLocalPath child) == absLocalPath parent &&
-       absTopModulePath child == absTopModulePath parent
+  | otherwise =
+    init (absLocalPath child) == absLocalPath parent
+      && absTopModulePath child == absTopModulePath parent
 
 -- | Appends a local path to the absolute path
 -- e.g. TopMod.Local <.> Inner == TopMod.Local.Inner

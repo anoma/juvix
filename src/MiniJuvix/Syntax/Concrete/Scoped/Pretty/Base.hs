@@ -178,34 +178,34 @@ ppSymbol (Sym t) = return (pretty t)
 groupStatements :: [Statement 'Scoped] -> [[Statement 'Scoped]]
 groupStatements = groupBy g
   where
-  g :: Statement 'Scoped -> Statement 'Scoped -> Bool
-  g a b = case (a, b) of
-    (StatementOperator _, StatementOperator _) -> True
-    (StatementOperator _, _) -> False
-    (StatementImport _, StatementImport _) -> True
-    (StatementImport _, _) -> False
-    (StatementOpenModule {}, StatementOpenModule {}) -> True
-    (StatementOpenModule {}, _) -> True
-    (StatementInductive {}, _) -> False
-    (StatementModule {}, _) -> False
-    (StatementAxiom {}, StatementAxiom{}) -> True
-    (StatementAxiom {}, _) -> False
-    (StatementEval {}, StatementEval{}) -> True
-    (StatementEval {}, _) -> False
-    (StatementPrint {}, StatementPrint {}) -> True
-    (StatementPrint {}, _) -> False
-    (StatementTypeSignature sig, StatementFunctionClause fun)
-      -> sigName sig == clauseOwnerFunction fun
-    (StatementTypeSignature {}, _) -> False
-    (StatementFunctionClause fun1, StatementFunctionClause fun2)
-      -> clauseOwnerFunction fun1 == clauseOwnerFunction fun2
-    (StatementFunctionClause {}, _) -> False
+    g :: Statement 'Scoped -> Statement 'Scoped -> Bool
+    g a b = case (a, b) of
+      (StatementOperator _, StatementOperator _) -> True
+      (StatementOperator _, _) -> False
+      (StatementImport _, StatementImport _) -> True
+      (StatementImport _, _) -> False
+      (StatementOpenModule {}, StatementOpenModule {}) -> True
+      (StatementOpenModule {}, _) -> True
+      (StatementInductive {}, _) -> False
+      (StatementModule {}, _) -> False
+      (StatementAxiom {}, StatementAxiom {}) -> True
+      (StatementAxiom {}, _) -> False
+      (StatementEval {}, StatementEval {}) -> True
+      (StatementEval {}, _) -> False
+      (StatementPrint {}, StatementPrint {}) -> True
+      (StatementPrint {}, _) -> False
+      (StatementTypeSignature sig, StatementFunctionClause fun) ->
+        sigName sig == clauseOwnerFunction fun
+      (StatementTypeSignature {}, _) -> False
+      (StatementFunctionClause fun1, StatementFunctionClause fun2) ->
+        clauseOwnerFunction fun1 == clauseOwnerFunction fun2
+      (StatementFunctionClause {}, _) -> False
 
 ppStatements :: Members '[Reader Options] r => [Statement 'Scoped] -> Sem r (Doc Ann)
 ppStatements ss = joinGroups <$> mapM (fmap mkGroup . mapM (fmap endSemicolon . ppStatement)) (groupStatements ss)
   where
-  mkGroup = vsep
-  joinGroups = concatWith (\a b -> a <> line <> line <> b)
+    mkGroup = vsep
+    joinGroups = concatWith (\a b -> a <> line <> line <> b)
 
 ppStatement :: Members '[Reader Options] r => Statement 'Scoped -> Sem r (Doc Ann)
 ppStatement s = case s of
@@ -237,9 +237,9 @@ ppModule Module {..} = do
       <> kwEnd
       <?> lastSemicolon
   where
-  lastSemicolon = case sing :: SModuleIsTop t of
-    SModuleLocal -> Nothing
-    SModuleTop -> Just kwSemicolon
+    lastSemicolon = case sing :: SModuleIsTop t of
+      SModuleLocal -> Nothing
+      SModuleTop -> Just kwSemicolon
 
 ppOperatorSyntaxDef :: Members '[Reader Options] r => OperatorSyntaxDef -> Sem r (Doc Ann)
 ppOperatorSyntaxDef OperatorSyntaxDef {..} = do
@@ -322,18 +322,18 @@ ppOpen OpenModule {..} = do
   let openPublic' = ppPublic
   return $ keyword "open" <+> openModuleName' <+?> openUsingHiding' <+?> openPublic'
   where
-   ppUsingHiding :: UsingHiding -> Sem r (Doc Ann)
-   ppUsingHiding uh = do
-     bracedList <- encloseSep lbrace rbrace kwSemicolon . toList <$> mapM ppSymbol syms
-     return $ kw <+> bracedList
-     where
-     (kw, syms) = case uh of
-       Using s -> (kwUsing, s)
-       Hiding s -> (kwHiding, s)
-   ppPublic :: Maybe (Doc Ann)
-   ppPublic = case openPublic of
-     Public -> Just kwPublic
-     NoPublic -> Nothing
+    ppUsingHiding :: UsingHiding -> Sem r (Doc Ann)
+    ppUsingHiding uh = do
+      bracedList <- encloseSep lbrace rbrace kwSemicolon . toList <$> mapM ppSymbol syms
+      return $ kw <+> bracedList
+      where
+        (kw, syms) = case uh of
+          Using s -> (kwUsing, s)
+          Hiding s -> (kwHiding, s)
+    ppPublic :: Maybe (Doc Ann)
+    ppPublic = case openPublic of
+      Public -> Just kwPublic
+      NoPublic -> Nothing
 
 ppTypeSignature :: Members '[Reader Options] r => TypeSignature 'Scoped -> Sem r (Doc Ann)
 ppTypeSignature TypeSignature {..} = do
@@ -417,7 +417,7 @@ ppFunctionClause FunctionClause {..} = do
   where
     ppWhereBlock :: WhereBlock 'Scoped -> Sem r (Doc Ann)
     ppWhereBlock WhereBlock {..} =
-       ppBlock ppWhereClause whereClauses >>= indented . (kwWhere <+>)
+      ppBlock ppWhereClause whereClauses >>= indented . (kwWhere <+>)
       where
         ppWhereClause :: WhereClause 'Scoped -> Sem r (Doc Ann)
         ppWhereClause c = case c of
