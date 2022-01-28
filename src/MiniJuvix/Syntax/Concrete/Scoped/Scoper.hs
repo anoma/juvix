@@ -1026,13 +1026,13 @@ makeExpressionTable = do
   where
     -- TODO think what to do with qualified symbols
     mkSymbolTable :: [SymbolInfo] -> [[P.Operator Parse Expression]]
-    mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe (unqualifiedSymbolOp . getEntry)
+    mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe (getEntry >=> unqualifiedSymbolOp )
       where
-        getEntry :: SymbolInfo -> SymbolEntry
+        getEntry :: SymbolInfo -> Maybe SymbolEntry
         getEntry (SymbolInfo m) = case toList m of
           [] -> impossible
-          [e] -> e
-          (e :_ ) -> e
+          [e] -> Just e
+          _ -> Nothing -- ambiguous symbol, will result in an error if found
         unqualifiedSymbolOp :: SymbolEntry -> Maybe (Precedence, P.Operator Parse Expression)
         unqualifiedSymbolOp SymbolEntry {..}
           | S.SomeFixity Fixity {..} <- _symbolFixity = Just $
@@ -1221,13 +1221,13 @@ makePatternTable = do
   where
     -- TODO think what to do with qualified symbols
     mkSymbolTable :: [SymbolInfo] -> [[P.Operator ParsePat Pattern]]
-    mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe (unqualifiedSymbolOp . getEntry)
+    mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe (getEntry >=> unqualifiedSymbolOp)
       where
-        getEntry :: SymbolInfo -> SymbolEntry
+        getEntry :: SymbolInfo -> Maybe SymbolEntry
         getEntry (SymbolInfo m) = case toList m of
           [] -> impossible
-          [e] -> e
-          _ -> impossible
+          [e] -> Just e
+          _ -> Nothing -- if this symbol es found will result in an ambiguity error.
         unqualifiedSymbolOp :: SymbolEntry -> Maybe (Precedence, P.Operator ParsePat Pattern)
         unqualifiedSymbolOp SymbolEntry {..}
           | S.SomeFixity Fixity {..} <- _symbolFixity,
