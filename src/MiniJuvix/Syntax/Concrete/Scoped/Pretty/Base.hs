@@ -124,6 +124,12 @@ kwPrint = keyword "print"
 kwOpen :: Doc Ann
 kwOpen = keyword "open"
 
+kwUsing :: Doc Ann
+kwUsing = keyword "using"
+
+kwHiding :: Doc Ann
+kwHiding = keyword "hiding"
+
 kwImport :: Doc Ann
 kwImport = keyword "import"
 
@@ -285,12 +291,8 @@ dotted = concatWith (surround kwDot)
 
 ppQualified :: Members '[Reader Options] r => QualifiedName -> Sem r (Doc Ann)
 ppQualified QualifiedName {..} = do
-  qualifiedPath' <- ppPath qualifiedPath
-  qualifiedSymbol' <- ppSymbol qualifiedSymbol
-  return (dotted [qualifiedPath', qualifiedSymbol'])
-
-ppPath :: Members '[Reader Options] r => Path -> Sem r (Doc Ann)
-ppPath = fmap dotted . mapM ppSymbol . pathParts
+  let symbols = pathParts qualifiedPath ++ [qualifiedSymbol]
+  dotted <$> mapM ppSymbol symbols
 
 ppName :: Members '[Reader Options] r => Name -> Sem r (Doc Ann)
 ppName n = case n of
@@ -316,12 +318,18 @@ ppSName' ppConcrete S.Name' {..} = do
 ppOpen :: forall r. Members '[Reader Options] r => OpenModule -> Sem r (Doc Ann)
 ppOpen OpenModule {..} = do
   openModuleName' <- ppQualified openModuleName
-  openUsingHiding' <- ppUsingHiding
+  openUsingHiding' <- sequence $ ppUsingHiding <$> openUsingHiding
   let openPublic' = ppPublic
-  return $ keyword "open" <+> openModuleName' <+> openUsingHiding' <+?> openPublic'
+  return $ keyword "open" <+> openModuleName' <+?> openUsingHiding' <+?> openPublic'
   where
-   ppUsingHiding :: Sem r (Doc Ann)
-   ppUsingHiding = return $ pretty ("TODO" :: Text)
+   ppUsingHiding :: UsingHiding -> Sem r (Doc Ann)
+   ppUsingHiding uh = do
+     bracedList <- encloseSep lbrace rbrace kwSemicolon . toList <$> mapM ppSymbol syms
+     return $ kw <+> bracedList
+     where
+     (kw, syms) = case uh of
+       Using s -> (kwUsing, s)
+       Hiding s -> (kwHiding, s)
    ppPublic :: Maybe (Doc Ann)
    ppPublic = case openPublic of
      Public -> Just kwPublic
