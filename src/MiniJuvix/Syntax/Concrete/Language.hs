@@ -50,7 +50,8 @@ type family
   ModulePathType (s :: Stage) (t :: ModuleIsTop) ::
     (res :: GHC.Type) | res -> t
   where
-  ModulePathType _ 'ModuleTop = TopModulePath
+  ModulePathType 'Parsed 'ModuleTop = TopModulePath
+  ModulePathType 'Scoped 'ModuleTop = S.TopModulePath
   ModulePathType 'Parsed 'ModuleLocal = Symbol
   ModulePathType 'Scoped 'ModuleLocal = S.Symbol
 

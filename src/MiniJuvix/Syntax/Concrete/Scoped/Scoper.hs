@@ -34,23 +34,6 @@ newtype ModulesCache = ModulesCache
 
 makeLenses ''ModulesCache
 
-data ScopeError
-  = ErrParser Text
-  | Err
-  | ErrInfixParser String
-  | ErrInfixPattern String
-  | ErrAlreadyDefined Symbol
-  | ErrLacksTypeSig Symbol
-  | ErrImportCycle TopModulePath
-  | ErrOpenNotInScope QualifiedName
-  | ErrSymNotInScope Symbol
-  | ErrModuleNotInScope QualifiedName
-  | ErrBindGroup Symbol
-  | ErrDuplicateFixity Symbol
-  | ErrMultipleExport Symbol
-  | ErrAmbiguousSym [(S.AbsModulePath, SymbolEntry)]
-  | ErrAmbiguousModuleSym [(S.AbsModulePath, ModuleSymbolEntry)]
-  deriving stock (Show)
 
 data ScopeParameters = ScopeParameters
   { -- | Root of the project.
@@ -557,8 +540,8 @@ checkOpenModule OpenModule {..} = do
           where
             entry =
               ModuleSymbolEntry
-                { moduleEntryExportNameId = Just _exportModuleNameId,
-                  moduleEntryExportScope = _exportModuleSymbolScope
+                { _moduleEntryExportNameId = Just _exportModuleNameId,
+                  _moduleEntryExportScope = _exportModuleSymbolScope
                 }
             name = QualifiedName emptyPath s
     errNotFound = throw (ErrModuleNotInScope openModuleName)
@@ -763,9 +746,6 @@ checkQualified ::
   Sem r S.Name
 checkQualified q = error "todo"
 
-unqualifiedSName :: S.Symbol -> S.Name
-unqualifiedSName = over S.nameConcrete NameUnqualified
-
 checkUnqualified ::
   Members '[Error ScopeError, State Scope, Reader LocalVars] r =>
   Symbol ->
@@ -783,16 +763,6 @@ checkUnqualified s = do
         [] -> impossible
         [(_, e)] -> return (entryToSName (NameUnqualified s) e)
         es -> throw (ErrAmbiguousSym es) -- This is meant to happen only at the top level
-
-entryToSName :: s -> SymbolEntry -> S.Name' s
-entryToSName s SymbolEntry {..} =
-  S.Name'
-    { _nameId = _symbolId,
-      _nameConcrete = s,
-      _nameDefinedIn = _symbolDefinedIn,
-      _nameFixity = _symbolFixity,
-      _nameKind = _symbolKind
-    }
 
 checkPatternName ::
   Members '[Error ScopeError, State Scope, State ScopeState] r =>

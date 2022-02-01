@@ -65,6 +65,8 @@ data NameKind
     KNameAxiom
   | -- | An local module name.
     KNameLocalModule
+  | -- | An top module name.
+    KNameTopModule
   deriving stock (Show, Eq)
 
 canHaveFixity :: NameKind -> Bool
@@ -75,10 +77,13 @@ canHaveFixity k = case k of
   KNameAxiom -> True
   KNameLocal -> False
   KNameLocalModule -> False
+  KNameTopModule -> False
 
 type Name = Name' C.Name
 
 type Symbol = Name' C.Symbol
+
+type TopModulePath = Name' C.TopModulePath
 
 data Name' n = Name'
   { _nameId :: NameId,

@@ -169,7 +169,7 @@ parens = enclose kwParenL kwParenR
 
 ppModulePathType :: forall t r. (SingI t, Members '[Reader Options] r) => ModulePathType 'Scoped t -> Sem r (Doc Ann)
 ppModulePathType x = case sing :: SModuleIsTop t of
-  SModuleTop -> ppTopModulePath x
+  SModuleTop -> ppTopModulePath (S._nameConcrete x)
   SModuleLocal -> ppSSymbol x
 
 ppSymbol :: Members '[Reader Options] r => Symbol -> Sem r (Doc Ann)
@@ -443,7 +443,7 @@ ppPrint (Print p) = do
 
 ppImport :: Members '[Reader Options] r => Import 'Scoped -> Sem r (Doc Ann)
 ppImport (Import (Module {..})) = do
-  modulePath' <- ppTopModulePath modulePath
+  modulePath' <- ppTopModulePath (S._nameConcrete modulePath)
   return $ kwImport <+> modulePath'
 
 ppPattern :: forall r. Members '[Reader Options] r => Pattern -> Sem r (Doc Ann)
