@@ -97,6 +97,16 @@ reserveSymbolOf k s = do
       let exists = maybe False (HashMap.member path . _symbolInfo) (HashMap.lookup s syms)
       when exists (throw (ErrAlreadyDefined s))
 
+symbolEntry :: S.Name' a -> SymbolEntry
+symbolEntry S.Name' {..} = SymbolEntry
+  { _symbolKind = _nameKind,
+    _symbolDefinedIn = _nameDefinedIn,
+    _symbolId = _nameId,
+    _symbolFixity = _nameFixity,
+    _symbolPublicAnn = NoPublic,
+    _symbolWhyInScope = BecauseDefined
+  }
+
 bindReservedSymbol ::
   Members '[State Scope] r =>
   S.Symbol ->
@@ -105,16 +115,6 @@ bindReservedSymbol s' = do
   path <- gets _scopePath
   modify (over scopeSymbols (HashMap.alter (Just . addS path) s))
   where
-    symbolEntry :: S.Symbol -> SymbolEntry
-    symbolEntry S.Name' {..} =
-      SymbolEntry
-        { _symbolKind = _nameKind,
-          _symbolDefinedIn = _nameDefinedIn,
-          _symbolId = _nameId,
-          _symbolFixity = _nameFixity,
-          _symbolPublicAnn = NoPublic,
-          _symbolWhyInScope = BecauseDefined
-        }
     s = S._nameConcrete s'
     entry :: SymbolEntry
     entry = symbolEntry s'
@@ -169,9 +169,13 @@ checkImport ::
   Sem r (Import 'Scoped)
 checkImport (Import p) = do
   (exported, checked) <- readParseModule p >>= checkTopModule
-  let moduleId = S._nameId (modulePath checked)
+  let sname = modulePath checked
+      moduleId = S._nameId sname
+      -- entry = symbolEntry sname
+      -- path = S._symbolDefinedIn sname
   modify (over scopeTopModules (HashMap.insert p moduleId))
   modify (over scoperModules (HashMap.insert moduleId exported))
+  -- TODO add entry to scopeSymbols
   return (Import checked)
 
 getTopModulePath :: Module 'Parsed 'ModuleTop -> S.AbsModulePath
@@ -181,56 +185,38 @@ getTopModulePath Module {..} =
       S.absLocalPath = mempty
     }
 
--- | We return a list of entries because qualified names can point to different
--- modules due to nesting.
-lookupQualifiedSymbol :: forall r. Members '[State Scope, Error ScopeError, State ScoperState] r =>
-   QualifiedName -> Sem r [SymbolEntry]
-lookupQualifiedSymbol q@(QualifiedName (Path path@(p :| ps)) sym) = do
-  here' <- here
-  there' <- there
-  return (here' ++ there')
-  where
-  allTopPaths :: [(TopModulePath, [Symbol])]
-  allTopPaths = map (first nonEmptyToTopPath) raw
-    where
-    path' = toList path
-    raw :: [(NonEmpty Symbol, [Symbol])]
-    raw = [  (l, r) | i <- [1..length path],
-            (Just l, r) <- [ first nonEmpty (splitAt i path') ]
-            ]
-    nonEmptyToTopPath :: NonEmpty Symbol -> TopModulePath
-    nonEmptyToTopPath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
-  -- | Looks for a top level modules
-  there :: Sem r [SymbolEntry]
-  there = concatMapM (uncurry lookInTopModule) allTopPaths
-  -- | Looks for a local module symbol in scope
-  here :: Sem r [SymbolEntry]
-  here = do
-    r <- fmap (filter (S.isModuleKind . S._symbolKind) . toList
-      . _symbolInfo) . HashMap.lookup p <$> gets _scopeSymbols
-    case r of
-      Just [x] -> do
-        export <- getExportScope (_symbolId x)
-        go export ps
-      Just [] -> impossible
-      Just _ -> throw $ ErrGeneric ("ambiguous name " <> show q)
-      Nothing -> return []
-  go :: ExportScope -> [Symbol] -> Sem r [SymbolEntry]
-  go = undefined
-  lookInTopModule :: TopModulePath -> [Symbol] -> Sem r [SymbolEntry]
-  lookInTopModule topPath remaining = do
-    r <- HashMap.lookup topPath <$> gets _scopeTopModules
-    case r of
-      Nothing -> return []
-      Just i -> getExportScope i >>= lookInExport remaining
-  lookInExport :: [Symbol] -> ExportScope -> Sem r [SymbolEntry]
-  lookInExport remaining e = case remaining of
-    [] -> return $ maybeToList (HashMap.lookup sym (_exportSymbols e))
-    (s : ss) -> do
-      mexport <- mayModule e s
-      case mexport of
-        Nothing -> return []
-        Just e' -> lookInExport ss e'
+-- | Looks for a symbol in (possibly) nested local modules
+lookupSymbolGeneric :: forall a r. (Show a, Members '[State Scope, Error ScopeError, State ScoperState] r) =>
+   (SymbolEntry -> Bool) -> a -> [Symbol] -> Symbol -> Sem r (Maybe SymbolEntry)
+lookupSymbolGeneric filtr name modules final = case modules of
+    [] -> do
+      let err = throw (ErrSymNotInScope final)
+      SymbolInfo {..} <- fromMaybeM err (HashMap.lookup final <$> gets _scopeSymbols)
+      case filter filtr (toList _symbolInfo) of
+        [] -> impossible
+        [e] -> return (Just e)
+        es -> throw (ErrAmbiguousSym es) -- This is meant to happen only at the top level
+    (p : ps) -> do
+      r <- fmap (filter (S.isModuleKind . _symbolKind) . toList . _symbolInfo)
+        . HashMap.lookup p <$> gets _scopeSymbols
+      case r of
+        Just [x] -> do
+          export <- getExportScope (_symbolId x)
+          lookInExport final ps export
+        Just [] -> return Nothing
+        Just _ -> throw $ ErrGeneric ("ambiguous name " <> show name)
+        Nothing -> return Nothing
+
+lookInExport :: forall r. Members '[State Scope, State ScoperState] r =>
+  Symbol -> [Symbol] -> ExportScope -> Sem r (Maybe SymbolEntry)
+lookInExport sym remaining e = case remaining of
+  [] -> return (HashMap.lookup sym (_exportSymbols e))
+  (s : ss) -> do
+    mexport <- mayModule e s
+    case mexport of
+      Nothing -> return Nothing
+      Just e' -> lookInExport sym ss e'
+ where
   mayModule :: ExportScope -> Symbol -> Sem r (Maybe ExportScope)
   mayModule ExportScope {..} s =
     case do
@@ -239,36 +225,53 @@ lookupQualifiedSymbol q@(QualifiedName (Path path@(p :| ps)) sym) = do
       return entry of
         Just entry -> Just <$> getExportScope (_symbolId entry)
         Nothing -> return Nothing
-  errAmbiguousModule :: [(S.AbsModulePath, SymbolEntry)] -> Sem r a
-  errAmbiguousModule = throw . ErrAmbiguousModuleSym
 
-lookupQualifiedSymbol' :: forall r. Members '[State Scope, Error ScopeError] r =>
-   QualifiedName -> Sem r [SymbolEntry]
-lookupQualifiedSymbol' q@(QualifiedName (Path path) sym) = undefined
-  -- case nonEmpty path of
-  -- Nothing -> impossible
-  -- Just ne -> gets _scopeSpace >>= findSymbol ne
-  -- where
-  -- errNotInScope :: Sem r a
-  -- errNotInScope = throw (ErrQualSymNotInScope q)
-  -- findSymbol :: NonEmpty Symbol -> ScopeSpace -> Sem r [SymbolEntry]
-  -- findSymbol qual space = do
-  --   modules <- gets _scopeModules
-  --   mapMaybe (HashMap.lookup  sym . _exportSymbols) . mapMaybe (`HashMap.lookup` modules)
-  --                 . toList <$> findSpace qual space
-  -- findSpace :: NonEmpty Symbol -> ScopeSpace -> Sem r (HashSet ModuleNameId)
-  -- findSpace (p :| ps) ScopeSpace{..} =
-  --   case HashMap.lookup p _spaceChildren of
-  --   Nothing -> errNotInScope
-  --   Just m -> case HashMap.toList m of
-  --     [] -> impossible
-  --     l -> mconcatMapM (uncurry (goNode ps)) l
-  -- goNode :: [Symbol] -> SpaceNode -> ScopeSpace -> Sem r (HashSet ModuleNameId)
-  -- goNode syms node space = case nonEmpty syms of
-  --   Nothing -> case node of
-  --     SpaceFolder -> errNotInScope
-  --     SpaceModule modId -> return $ HashSet.singleton modId
-  --   Just syms' -> findSpace syms' space
+-- | We return a list of entries because qualified names can point to different
+-- modules due to nesting.
+lookupQualifiedSymbol :: forall r. Members '[State Scope, Error ScopeError, State ScoperState] r =>
+   ([Symbol], Symbol) -> Sem r [SymbolEntry]
+lookupQualifiedSymbol q@(path, sym) = do
+  here' <- here
+  there' <- there
+  return (maybeToList here' ++ there')
+  where
+  -- | Looks for a local module symbol in scope
+  here :: Sem r (Maybe SymbolEntry)
+  here = lookupSymbolGeneric (S.isModuleKind . S._symbolKind) q path sym
+  -- | Looks for a top level modules
+  there :: Sem r [SymbolEntry]
+  there = concatMapM (fmap maybeToList . uncurry lookInTopModule) allTopPaths
+    where
+    allTopPaths :: [(TopModulePath, [Symbol])]
+    allTopPaths = map (first nonEmptyToTopPath) raw
+      where
+      lpath = toList path
+      raw :: [(NonEmpty Symbol, [Symbol])]
+      raw = [  (l, r) | i <- [1..length path],
+              (Just l, r) <- [ first nonEmpty (splitAt i lpath) ]]
+      nonEmptyToTopPath :: NonEmpty Symbol -> TopModulePath
+      nonEmptyToTopPath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
+    lookInTopModule :: TopModulePath -> [Symbol] -> Sem r (Maybe SymbolEntry)
+    lookInTopModule topPath remaining = do
+      r <- HashMap.lookup topPath <$> gets _scopeTopModules
+      case r of
+        Nothing -> return Nothing
+        Just i -> getExportScope i >>= lookInExport sym remaining
+
+checkQualifiedExpr ::
+  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  QualifiedName ->
+  Sem r S.Name
+checkQualifiedExpr q@(QualifiedName (Path p) sym) = do
+   es <- lookupQualifiedSymbol (toList p, sym)
+   case es of
+     [] -> notInScope
+     [e] -> return $ entryToSName q' e
+     _ -> throw (ErrAmbiguousSym es)
+  where
+  q' = NameQualified q
+  notInScope = throw (ErrQualSymNotInScope q)
+
 
 unqualifiedSName :: S.Symbol -> S.Name
 unqualifiedSName = over S.nameConcrete NameUnqualified
@@ -325,8 +328,8 @@ modulePathToFilePath mp = do
       relFilePath = relDirPath </> toPath (modulePathName mp) <.> ext
   return $ root </> relFilePath
   where
-    toPath :: Symbol -> FilePath
-    toPath (Sym t) = Text.unpack t
+  toPath :: Symbol -> FilePath
+  toPath (Sym t) = Text.unpack t
 
 checkOperatorSyntaxDef ::
   forall r.
@@ -485,10 +488,6 @@ checkLocalModule Module {..} = do
     inheritEntry :: SymbolEntry -> SymbolEntry
     inheritEntry = over symbolWhyInScope BecauseInherited
 
--- moduleSymbolInfoSingle ::
---   S.AbsModulePath -> ModuleSymbolEntry -> ModuleSymbolInfo
--- moduleSymbolInfoSingle absPath = ModuleSymbolInfo . HashMap.singleton absPath
-
 -- | TODO checks if there is an infix declaration without a binding.
 checkOrphanFixities :: Members '[Error ScopeError, State Scope] r => Sem r ()
 checkOrphanFixities = return ()
@@ -496,26 +495,25 @@ checkOrphanFixities = return ()
 symbolInfoSingle :: SymbolEntry -> SymbolInfo
 symbolInfoSingle p = SymbolInfo $ HashMap.singleton (_symbolDefinedIn p) p
 
+-- TODO what about top level modules? they are not in scopeSymbols
 lookupModuleSymbol :: Members '[Error ScopeError, State Scope, State ScoperState] r =>
   Name -> Sem r S.Name
-lookupModuleSymbol modName = undefined
-
-lookupModuleExport :: Members '[Error ScopeError, State Scope, State ScoperState] r =>
-  Name -> Sem r ExportScope
-lookupModuleExport modName = do
-  errNotFound
-  undefined
-  -- case HashMap.toList s of
-  --   [] -> impossible
-  --   [(_, entry)] -> do something
-  --   ls -> throw (ErrAmbiguousModuleSym ls)
-
+lookupModuleSymbol n = do
+  es <- lookupQualifiedSymbol (path, sym)
+  case filter (S.isModuleKind . _symbolKind) es of
+    [] -> err
+    [x] -> return $ entryToSName n x
+    _ -> throw (ErrAmbiguousModuleSym es)
   where
-  errNotFound = throw (ErrModuleNotInScope modName)
+  err = throw (ErrModuleNotInScope n)
+  (path, sym) = case n of
+    NameUnqualified s -> ([], s)
+    NameQualified (QualifiedName (Path p) s) -> (toList p, s)
 
 getExportScope :: forall r. Members '[State ScoperState] r =>
  S.ModuleNameId -> Sem r ExportScope
-getExportScope = undefined
+getExportScope modId =
+  HashMap.lookupDefault impossible modId <$> gets _scoperModules
 
 checkOpenModule ::
   forall r.
@@ -532,7 +530,6 @@ checkOpenModule OpenModule {..} = do
     openPublic = openPublic
     }
   where
-
     mergeScope :: ExportScope -> Sem r ()
     mergeScope ExportScope {..} =
       mapM_ mergeSymbol (HashMap.toList _exportSymbols)
@@ -728,14 +725,8 @@ checkLambdaClause LambdaClause {..} = do
         lambdaBody = lambdaBody'
       }
 
-checkQualified ::
-  Members '[Error ScopeError, State Scope] r =>
-  QualifiedName ->
-  Sem r S.Name
-checkQualified (QualifiedName (Path p) sym) = error "todo"
-
 checkUnqualified ::
-  Members '[Error ScopeError, State Scope, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState] r =>
   Symbol ->
   Sem r S.Name
 checkUnqualified s = do
@@ -746,11 +737,9 @@ checkUnqualified s = do
     Nothing -> do
       -- Lookup at the global scope
       let err = throw (ErrSymNotInScope s)
-      SymbolInfo {..} <- fromMaybeM err (HashMap.lookup s <$> gets _scopeSymbols)
-      case HashMap.toList _symbolInfo of
-        [] -> impossible
-        [(_, e)] -> return (entryToSName (NameUnqualified s) e)
-        es -> throw (ErrAmbiguousSym es) -- This is meant to happen only at the top level
+      entryToSName (NameUnqualified s) <$>
+        fromMaybeM err (lookupSymbolGeneric (S.isExprKind . _symbolKind) s [] s)
+
 
 checkPatternName ::
   Members '[Error ScopeError, State Scope, State ScoperState] r =>
@@ -845,11 +834,11 @@ checkPatternAtom p = case p of
   PatternAtomName n -> PatternAtomName <$> checkPatternName n
 
 checkName ::
-  Members '[Error ScopeError, State Scope, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState] r =>
   Name ->
   Sem r S.Name
 checkName n = case n of
-  NameQualified q -> checkQualified q
+  NameQualified q -> checkQualifiedExpr q
   NameUnqualified s -> checkUnqualified s
 
 checkExpressionAtom ::

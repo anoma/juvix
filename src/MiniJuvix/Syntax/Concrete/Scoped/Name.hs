@@ -72,6 +72,16 @@ data NameKind
     KNameTopModule
   deriving stock (Show, Eq)
 
+isExprKind :: NameKind -> Bool
+isExprKind k = case k of
+    KNameConstructor -> True
+    KNameInductive -> True
+    KNameFunction -> True
+    KNameLocal -> True
+    KNameAxiom -> True
+    KNameLocalModule -> False
+    KNameTopModule -> False
+
 isModuleKind :: NameKind -> Bool
 isModuleKind k = case k of
   KNameLocalModule -> True

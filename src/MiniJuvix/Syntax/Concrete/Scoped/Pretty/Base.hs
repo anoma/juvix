@@ -170,7 +170,7 @@ parens = enclose kwParenL kwParenR
 
 ppModulePathType :: forall t r. (SingI t, Members '[Reader Options] r) => ModulePathType 'Scoped t -> Sem r (Doc Ann)
 ppModulePathType x = case sing :: SModuleIsTop t of
-  SModuleTop -> ppTopModulePath (S._nameConcrete x)
+  SModuleTop -> ppSTopModulePath x
   SModuleLocal -> ppSSymbol x
 
 ppSymbol :: Members '[Reader Options] r => Symbol -> Sem r (Doc Ann)
@@ -224,6 +224,9 @@ ppStatement s = case s of
 ppTopModulePath :: Members '[Reader Options] r => TopModulePath -> Sem r (Doc Ann)
 ppTopModulePath TopModulePath {..} =
   dotted <$> mapM ppSymbol (modulePathDir ++ [modulePathName])
+
+ppSTopModulePath :: Members '[Reader Options] r => S.TopModulePath -> Sem r (Doc Ann)
+ppSTopModulePath = ppSName' ppTopModulePath
 
 endSemicolon :: Doc Ann -> Doc Ann
 endSemicolon x = x <> kwSemicolon
@@ -319,7 +322,7 @@ ppSName' ppConcrete S.Name' {..} = do
 
 ppOpen :: forall r. Members '[Reader Options] r => OpenModule 'Scoped -> Sem r (Doc Ann)
 ppOpen OpenModule {..} = do
-  openModuleName' <- ppName (S._nameConcrete openModuleName)
+  openModuleName' <- ppSName openModuleName
   openUsingHiding' <- sequence $ ppUsingHiding <$> openUsingHiding
   let openPublic' = ppPublic
   return $ keyword "open" <+> openModuleName' <+?> openUsingHiding' <+?> openPublic'
@@ -445,7 +448,7 @@ ppPrint (Print p) = do
 
 ppImport :: Members '[Reader Options] r => Import 'Scoped -> Sem r (Doc Ann)
 ppImport (Import (Module {..})) = do
-  modulePath' <- ppTopModulePath (S._nameConcrete modulePath)
+  modulePath' <- ppSTopModulePath modulePath
   return $ kwImport <+> modulePath'
 
 ppPattern :: forall r. Members '[Reader Options] r => Pattern -> Sem r (Doc Ann)

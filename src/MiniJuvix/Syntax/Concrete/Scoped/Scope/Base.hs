@@ -21,8 +21,8 @@ data ScopeError
   | ErrBindGroup Symbol
   | ErrDuplicateFixity Symbol
   | ErrMultipleExport Symbol
-  | ErrAmbiguousSym [(S.AbsModulePath, SymbolEntry)]
-  | ErrAmbiguousModuleSym [(S.AbsModulePath, SymbolEntry)]
+  | ErrAmbiguousSym [SymbolEntry]
+  | ErrAmbiguousModuleSym [SymbolEntry]
   deriving stock (Show)
 
 

@@ -126,8 +126,9 @@ fromRightIO pp = eitherM (ioError . userError . unpack . pp) return
 go :: Command -> IO ()
 go c = case c of
   Scope opts@ScopeOptions {..} -> do
+    root <- getCurrentDirectory
     m <- parseModuleIO _scopeInputFile
-    s <- fromRightIO show $ M.scopeCheck1 _scopeInputFile m
+    s <- fromRightIO show $ M.scopeCheck1 root m
     M.printTopModule (mkPrettyOptions opts) s
   Parse ParseOptions {..} -> do
     m <- parseModuleIO _parseInputFile
