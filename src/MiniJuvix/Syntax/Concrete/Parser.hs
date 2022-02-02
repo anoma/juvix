@@ -2,7 +2,7 @@ module MiniJuvix.Syntax.Concrete.Parser where
 
 --------------------------------------------------------------------------------
 
-import qualified Data.List.NonEmpty as NonEmpty
+import qualified Data.List.NonEmpty.Extra as NonEmpty
 import Data.Singletons
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
@@ -53,18 +53,11 @@ name :: forall e m. MonadParsec e Text m => m Name
 name = do
   parts <- dottedSymbol
   return $ case nonEmptyUnsnoc parts of
-    (Just p, n) -> NameQualified (QualifiedName (Path . toList $ p) n)
+    (Just p, n) -> NameQualified (QualifiedName (Path p) n)
     (Nothing, n) -> NameUnqualified n
 
-qualifiedName :: forall e m. MonadParsec e Text m => m QualifiedName
-qualifiedName = do
-  parts <- dottedSymbol
-  let qualifiedPath = Path (NonEmpty.init parts)
-      qualifiedSymbol = NonEmpty.last parts
-  return QualifiedName {..}
-
 mkTopModulePath :: NonEmpty Symbol -> TopModulePath
-mkTopModulePath l = TopModulePath (Path (NonEmpty.init l)) (NonEmpty.last l)
+mkTopModulePath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
 
 symbolList :: MonadParsec e Text m => m (NonEmpty Symbol)
 symbolList = braces (P.sepBy1 symbol kwSemicolon)
@@ -379,18 +372,18 @@ moduleDef = do
   kwEnd
   return Module {..}
 
-openModule :: forall e m. MonadParsec e Text m => m OpenModule
+openModule :: forall e m. MonadParsec e Text m => m (OpenModule 'Parsed)
 openModule = do
   kwOpen
-  openModuleName <- qualifiedName
+  openModuleName <- name
   openUsingHiding <- optional usingOrHiding
   openPublic <- maybe NoPublic (const Public) <$> optional kwPublic
   return OpenModule {..}
   where
-    usingOrHiding :: m UsingHiding
-    usingOrHiding =
-      (kwUsing >> (Using <$> symbolList))
-        <|> (kwHiding >> (Hiding <$> symbolList))
+  usingOrHiding :: m UsingHiding
+  usingOrHiding =
+    (kwUsing >> (Using <$> symbolList))
+     <|> (kwHiding >> (Hiding <$> symbolList))
 
 --------------------------------------------------------------------------------
 -- Debugging statements

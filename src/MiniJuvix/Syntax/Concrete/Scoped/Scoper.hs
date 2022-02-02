@@ -19,39 +19,11 @@ import MiniJuvix.Syntax.Concrete.Parser (runModuleParserIO)
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Syntax.Concrete.Scoped.Scope
 import MiniJuvix.Utils.Prelude
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Scope.Base as S
+import qualified Data.List.NonEmpty as NonEmpty
+import MiniJuvix.Syntax.Concrete.Scoped.Name (topModulePathToAbsPath)
 
 --------------------------------------------------------------------------------
-
-newtype LocalVars = LocalVars
-  { _localVars :: HashMap Symbol LocalVariable
-  }
-
-makeLenses ''LocalVars
-
-newtype ModulesCache = ModulesCache
-  { _cachedModules :: HashMap TopModulePath (ExportScope, Module 'Scoped 'ModuleTop)
-  }
-
-makeLenses ''ModulesCache
-
-
-data ScopeParameters = ScopeParameters
-  { -- | Root of the project.
-    _scopeRootPath :: FilePath,
-    -- | Usually set to ".mjuvix".
-    _scopeFileExtension :: String,
-    -- | Used for import cycle detection.
-    _scopeTopParents :: HashSet TopModulePath
-  }
-
-makeLenses ''ScopeParameters
-
-data ScopeState = ScopeState
-  { _scopeModulesCache :: ModulesCache,
-    _scopeFreeNames :: Stream S.NameId
-  }
-
-makeLenses ''ScopeState
 
 scopeCheck1 :: FilePath -> Module 'Parsed 'ModuleTop -> IO (Either ScopeError (Module 'Scoped 'ModuleTop))
 scopeCheck1 root m = fmap head <$> scopeCheck root (pure m)
@@ -61,14 +33,15 @@ scopeCheck root modules =
   runM $
     runError $
       runReader scopeParameters $
-        evalState iniScopeState $
+        evalState iniScoperState $
           mapM checkTopModule_ modules
   where
-    iniScopeState :: ScopeState
-    iniScopeState =
-      ScopeState
-        { _scopeModulesCache = ModulesCache mempty,
-          _scopeFreeNames = S.allNameIds
+    iniScoperState :: ScoperState
+    iniScoperState =
+      ScoperState
+        { _scoperModulesCache = ModulesCache mempty,
+          _scoperFreeNames = S.allNameIds,
+          _scoperModules = mempty
         }
     scopeParameters :: ScopeParameters
     scopeParameters =
@@ -79,19 +52,19 @@ scopeCheck root modules =
         }
 
 freshNameId ::
-  Members '[State ScopeState] r =>
+  Members '[State ScoperState] r =>
   Sem r S.NameId
 freshNameId = do
-  i <- gets (Stream.head . _scopeFreeNames)
-  modify (over scopeFreeNames Stream.tail)
+  i <- gets (Stream.head . _scoperFreeNames)
+  modify (over scoperFreeNames Stream.tail)
   return i
 
-freshVariable :: Members '[State ScopeState, State Scope] r => Symbol -> Sem r S.Symbol
+freshVariable :: Members '[State ScoperState, State Scope] r => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol S.KNameLocal
 
 freshSymbol ::
   forall r.
-  Members '[State ScopeState, State Scope] r =>
+  Members '[State ScoperState, State Scope] r =>
   S.NameKind ->
   Symbol ->
   Sem r S.Symbol
@@ -109,7 +82,7 @@ freshSymbol _nameKind _nameConcrete = do
 
 reserveSymbolOf ::
   forall r.
-  Members '[Error ScopeError, State ScopeState, State Scope] r =>
+  Members '[Error ScopeError, State ScoperState, State Scope] r =>
   S.NameKind ->
   Symbol ->
   Sem r S.Symbol
@@ -147,11 +120,11 @@ bindReservedSymbol s' = do
     entry = symbolEntry s'
     addS :: S.AbsModulePath -> Maybe SymbolInfo -> SymbolInfo
     addS path m = case m of
-      Nothing -> symbolInfoSingle path entry
+      Nothing -> symbolInfoSingle entry
       Just SymbolInfo {..} -> SymbolInfo (HashMap.insert path entry _symbolInfo)
 
 bindSymbolOf ::
-  Members '[Error ScopeError, State ScopeState, State Scope] r =>
+  Members '[Error ScopeError, State ScoperState, State Scope] r =>
   S.NameKind ->
   Symbol ->
   Sem r S.Symbol
@@ -161,131 +134,173 @@ bindSymbolOf k s = do
   return s'
 
 bindFunctionSymbol ::
-  Members '[Error ScopeError, State ScopeState, State Scope] r =>
+  Members '[Error ScopeError, State ScoperState, State Scope] r =>
   Symbol ->
   Sem r S.Symbol
 bindFunctionSymbol = bindSymbolOf S.KNameFunction
 
 bindInductiveSymbol ::
-  Members '[Error ScopeError, State ScopeState, State Scope] r =>
+  Members '[Error ScopeError, State ScoperState, State Scope] r =>
   Symbol ->
   Sem r S.Symbol
 bindInductiveSymbol = bindSymbolOf S.KNameInductive
 
 bindAxiomSymbol ::
-  Members '[Error ScopeError, State ScopeState, State Scope] r =>
+  Members '[Error ScopeError, State ScoperState, State Scope] r =>
   Symbol ->
   Sem r S.Symbol
 bindAxiomSymbol = bindSymbolOf S.KNameAxiom
 
 bindLocalModuleSymbol ::
-  Members '[Error ScopeError, State ScopeState, State Scope] r =>
+  Members '[Error ScopeError, State ScoperState, State Scope] r =>
   Symbol ->
   Sem r S.Symbol
 bindLocalModuleSymbol = bindSymbolOf S.KNameLocalModule
 
 bindConstructorSymbol ::
-  Members '[Error ScopeError, State ScopeState, State Scope] r =>
+  Members '[Error ScopeError, State ScoperState, State Scope] r =>
   Symbol ->
   Sem r S.Symbol
 bindConstructorSymbol = bindSymbolOf S.KNameConstructor
 
 checkImport ::
-  Members '[Error ScopeError, State Scope, Reader ScopeParameters, Embed IO, State ScopeState] r =>
+  Members '[Error ScopeError, State Scope, Reader ScopeParameters, Embed IO, State ScoperState] r =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
 checkImport (Import p) = do
   (exported, checked) <- readParseModule p >>= checkTopModule
-  let qname = topModulePathToQualified p
-      entry =
-        ModuleSymbolEntry
-          { moduleEntryExportNameId = Nothing,
-            moduleEntryExportScope = exported
-          }
-  modify (over scopeModules (undefined))
-  undefined
+  let moduleId = S._nameId (modulePath checked)
+  modify (over scopeTopModules (HashMap.insert p moduleId))
+  modify (over scoperModules (HashMap.insert moduleId exported))
   return (Import checked)
 
-getTopModulePath :: Module s 'ModuleTop -> S.AbsModulePath
+getTopModulePath :: Module 'Parsed 'ModuleTop -> S.AbsModulePath
 getTopModulePath Module {..} =
   S.AbsModulePath
     { S.absTopModulePath = modulePath,
       S.absLocalPath = mempty
     }
 
+-- | We return a list of entries because qualified names can point to different
+-- modules due to nesting.
+lookupQualifiedSymbol :: forall r. Members '[State Scope, Error ScopeError, State ScoperState] r =>
+   QualifiedName -> Sem r [SymbolEntry]
+lookupQualifiedSymbol q@(QualifiedName (Path path@(p :| ps)) sym) = do
+  here' <- here
+  there' <- there
+  return (here' ++ there')
+  where
+  allTopPaths :: [(TopModulePath, [Symbol])]
+  allTopPaths = map (first nonEmptyToTopPath) raw
+    where
+    path' = toList path
+    raw :: [(NonEmpty Symbol, [Symbol])]
+    raw = [  (l, r) | i <- [1..length path],
+            (Just l, r) <- [ first nonEmpty (splitAt i path') ]
+            ]
+    nonEmptyToTopPath :: NonEmpty Symbol -> TopModulePath
+    nonEmptyToTopPath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
+  -- | Looks for a top level modules
+  there :: Sem r [SymbolEntry]
+  there = concatMapM (uncurry lookInTopModule) allTopPaths
+  -- | Looks for a local module symbol in scope
+  here :: Sem r [SymbolEntry]
+  here = do
+    r <- fmap (filter (S.isModuleKind . S._symbolKind) . toList
+      . _symbolInfo) . HashMap.lookup p <$> gets _scopeSymbols
+    case r of
+      Just [x] -> do
+        export <- getExportScope (_symbolId x)
+        go export ps
+      Just [] -> impossible
+      Just _ -> throw $ ErrGeneric ("ambiguous name " <> show q)
+      Nothing -> return []
+  go :: ExportScope -> [Symbol] -> Sem r [SymbolEntry]
+  go = undefined
+  lookInTopModule :: TopModulePath -> [Symbol] -> Sem r [SymbolEntry]
+  lookInTopModule topPath remaining = do
+    r <- HashMap.lookup topPath <$> gets _scopeTopModules
+    case r of
+      Nothing -> return []
+      Just i -> getExportScope i >>= lookInExport remaining
+  lookInExport :: [Symbol] -> ExportScope -> Sem r [SymbolEntry]
+  lookInExport remaining e = case remaining of
+    [] -> return $ maybeToList (HashMap.lookup sym (_exportSymbols e))
+    (s : ss) -> do
+      mexport <- mayModule e s
+      case mexport of
+        Nothing -> return []
+        Just e' -> lookInExport ss e'
+  mayModule :: ExportScope -> Symbol -> Sem r (Maybe ExportScope)
+  mayModule ExportScope {..} s =
+    case do
+      entry <- HashMap.lookup s _exportSymbols
+      guard (S.isModuleKind (_symbolKind entry))
+      return entry of
+        Just entry -> Just <$> getExportScope (_symbolId entry)
+        Nothing -> return Nothing
+  errAmbiguousModule :: [(S.AbsModulePath, SymbolEntry)] -> Sem r a
+  errAmbiguousModule = throw . ErrAmbiguousModuleSym
+
+lookupQualifiedSymbol' :: forall r. Members '[State Scope, Error ScopeError] r =>
+   QualifiedName -> Sem r [SymbolEntry]
+lookupQualifiedSymbol' q@(QualifiedName (Path path) sym) = undefined
+  -- case nonEmpty path of
+  -- Nothing -> impossible
+  -- Just ne -> gets _scopeSpace >>= findSymbol ne
+  -- where
+  -- errNotInScope :: Sem r a
+  -- errNotInScope = throw (ErrQualSymNotInScope q)
+  -- findSymbol :: NonEmpty Symbol -> ScopeSpace -> Sem r [SymbolEntry]
+  -- findSymbol qual space = do
+  --   modules <- gets _scopeModules
+  --   mapMaybe (HashMap.lookup  sym . _exportSymbols) . mapMaybe (`HashMap.lookup` modules)
+  --                 . toList <$> findSpace qual space
+  -- findSpace :: NonEmpty Symbol -> ScopeSpace -> Sem r (HashSet ModuleNameId)
+  -- findSpace (p :| ps) ScopeSpace{..} =
+  --   case HashMap.lookup p _spaceChildren of
+  --   Nothing -> errNotInScope
+  --   Just m -> case HashMap.toList m of
+  --     [] -> impossible
+  --     l -> mconcatMapM (uncurry (goNode ps)) l
+  -- goNode :: [Symbol] -> SpaceNode -> ScopeSpace -> Sem r (HashSet ModuleNameId)
+  -- goNode syms node space = case nonEmpty syms of
+  --   Nothing -> case node of
+  --     SpaceFolder -> errNotInScope
+  --     SpaceModule modId -> return $ HashSet.singleton modId
+  --   Just syms' -> findSpace syms' space
+
+unqualifiedSName :: S.Symbol -> S.Name
+unqualifiedSName = over S.nameConcrete NameUnqualified
+
+entryToSName :: s -> SymbolEntry -> S.Name' s
+entryToSName s SymbolEntry {..} =
+  S.Name'
+    { _nameId = _symbolId,
+      _nameConcrete = s,
+      _nameDefinedIn = _symbolDefinedIn,
+      _nameFixity = _symbolFixity,
+      _nameKind = _symbolKind
+    }
+
 -- | We gather all symbols which have been defined or marked to be public in the given scope.
 exportScope :: forall r. Members '[Error ScopeError] r => Scope -> Sem r ExportScope
 exportScope Scope {..} = do
   _exportSymbols <- getExportSymbols
-  let _exportModules = getExportModules
   return ExportScope {..}
   where
-    getExportModules :: HashMap Symbol ExportModuleSymbolInfo
-    getExportModules = HashMap.fromList . mapMaybe mayModuleEntry $ HashMap.toList _scopeModules
-      where
-        shouldExport :: Symbol -> S.AbsModulePath -> ModuleSymbolEntry -> Maybe S.NameId
-        shouldExport modName path ModuleSymbolEntry {..} =
-          do
-            exportBecauseChild
-            <|> exportBecausePublic
-          where
-            exportBecauseChild :: Maybe S.NameId
-            exportBecauseChild = do
-              guard (isChildModule path)
-              moduleEntryExportNameId
-            exportBecausePublic :: Maybe S.NameId
-            exportBecausePublic = do
-              moduleEntryExportNameId >>= guard . isPublic
-              moduleEntryExportNameId
-            isChildModule :: S.AbsModulePath -> Bool
-            isChildModule child = child `S.isChildOf` _scopePath
-            allEntries :: SymbolInfo -> [SymbolEntry]
-            allEntries (SymbolInfo s) = toList s
-            isPublic :: S.NameId -> Bool
-            isPublic uid = case find ((uid ==) . _symbolId) $
-              HashMap.lookupDefault mempty modName (allEntries <$> _scopeSymbols) of
-              Just r | _symbolPublicAnn r == Public -> True
-              _ -> False
-        -- Should this module be exported?
-        mayModuleEntry :: (QualifiedName, ModuleSymbolInfo) -> Maybe (Symbol, ExportModuleSymbolInfo)
-        mayModuleEntry (QualifiedName qualpath moduleName, ModuleSymbolInfo {..}) = case qualpath of
-          -- nonempty paths means that it is an imported top level module,
-          -- therefore must not be exported
-          Path (_ : _) -> Nothing
-          -- If it has an empty path it may be a local module.
-          Path [] -> case [ (moduleName, exportInfo)
-                            | (path, moduleEntry) <- HashMap.toList moduleSymbolInfo,
-                              Just moduleId <- pure $ shouldExport moduleName path moduleEntry,
-                              let exportInfo =
-                                    ExportModuleSymbolInfo
-                                      { _exportModuleNameId = moduleId,
-                                        _exportModuleSymbolPath = path,
-                                        _exportModuleSymbolScope = moduleEntryExportScope moduleEntry
-                                      }
-                          ] of
-            [] -> Nothing
-            [(name, exportInfo)] -> Just (name, exportInfo)
-            _ -> impossible -- already handled in getExportSymbols
-    getExportSymbols :: Sem r (HashMap Symbol ExportSymbolInfo)
+    getExportSymbols :: Sem r (HashMap Symbol SymbolEntry)
     getExportSymbols = HashMap.fromList <$> mapMaybeM entry (HashMap.toList _scopeSymbols)
       where
         shouldExport :: SymbolEntry -> Bool
         shouldExport SymbolEntry {..} =
           _symbolDefinedIn == _scopePath
             || _symbolPublicAnn == Public
-        entry :: (Symbol, SymbolInfo) -> Sem r (Maybe (Symbol, ExportSymbolInfo))
+        entry :: (Symbol, SymbolInfo) -> Sem r (Maybe (Symbol, SymbolEntry))
         entry (s, SymbolInfo {..}) =
           case filter shouldExport (toList _symbolInfo) of
             [] -> return Nothing
-            [e] ->
-              return $
-                Just
-                  ( s,
-                    ExportSymbolInfo
-                      { _exportSymbolPath = _scopePath,
-                        _exportSymbolEntry = e
-                      }
-                  )
+            [e] -> return $ Just (s, e)
             _ -> throw (ErrMultipleExport s)
 
 readParseModule ::
@@ -306,7 +321,7 @@ modulePathToFilePath ::
 modulePathToFilePath mp = do
   root <- asks _scopeRootPath
   ext <- asks _scopeFileExtension
-  let relDirPath = foldr ((</>) . toPath) mempty (pathParts (modulePathDir mp))
+  let relDirPath = foldr ((</>) . toPath) mempty (modulePathDir mp)
       relFilePath = relDirPath </> toPath (modulePathName mp) <.> ext
   return $ root </> relFilePath
   where
@@ -329,7 +344,7 @@ checkOperatorSyntaxDef OperatorSyntaxDef {..} = do
         (throw (ErrDuplicateFixity opSymbol))
 
 checkTypeSignature ::
-  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState] r =>
   TypeSignature 'Parsed ->
   Sem r (TypeSignature 'Scoped)
 checkTypeSignature TypeSignature {..} = do
@@ -342,7 +357,7 @@ checkTypeSignature TypeSignature {..} = do
       }
 
 checkConstructorDef ::
-  Members '[Error ScopeError, Reader LocalVars, State Scope, State ScopeState] r =>
+  Members '[Error ScopeError, Reader LocalVars, State Scope, State ScoperState] r =>
   InductiveConstructorDef 'Parsed ->
   Sem r (InductiveConstructorDef 'Scoped)
 checkConstructorDef InductiveConstructorDef {..} = do
@@ -355,7 +370,7 @@ checkConstructorDef InductiveConstructorDef {..} = do
       }
 
 checkInductiveDef ::
-  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState] r =>
   InductiveDef 'Parsed ->
   Sem r (InductiveDef 'Scoped)
 checkInductiveDef InductiveDef {..} = do
@@ -363,7 +378,7 @@ checkInductiveDef InductiveDef {..} = do
   where
     checkInductiveRec ::
       forall r.
-      Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
+      Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
       [InductiveParameter 'Parsed] ->
       Sem r (InductiveDef 'Scoped)
     checkInductiveRec dtp = go dtp []
@@ -397,47 +412,50 @@ checkInductiveDef InductiveDef {..} = do
 
 checkTopModule_ ::
   forall r.
-  Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State ScopeState] r =>
+  Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State ScoperState] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (Module 'Scoped 'ModuleTop)
 checkTopModule_ = fmap snd . checkTopModule
 
 checkTopModule ::
   forall r.
-  Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State ScopeState] r =>
+  Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State ScoperState] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (ExportScope, Module 'Scoped 'ModuleTop)
 checkTopModule m@(Module path stmts) = do
   checkCycle
-  cache <- gets (_cachedModules . _scopeModulesCache)
+  cache <- gets (_cachedModules . _scoperModulesCache)
   maybe checkedModule return (cache ^. at path)
   where
-    iniScope :: Scope
-    iniScope =
-      Scope
-        { _scopePath = getTopModulePath m,
-          _scopeFixities = mempty,
-          _scopeSymbols = mempty,
-          _scopeModules = mempty,
-          _scopeBindGroup = mempty
-        }
-    addParent :: ScopeParameters -> ScopeParameters
-    addParent = over scopeTopParents (HashSet.insert path)
-    checkedModule :: Sem r (ExportScope, Module 'Scoped 'ModuleTop)
-    checkedModule = do
-      (scope, checked) <-
-        runState iniScope $
-          Module path <$> local addParent (mapM checkStatement stmts)
-      (,checked) <$> exportScope scope
-    checkCycle :: Sem r ()
-    checkCycle =
-      whenM
-        (HashSet.member path <$> asks _scopeTopParents)
-        (throw (ErrImportCycle path))
+  freshTopModulePath :: forall s. Members '[State ScoperState] s =>
+     Sem s S.TopModulePath
+  freshTopModulePath = do
+    _nameId <- freshNameId
+    let _nameDefinedIn = topModulePathToAbsPath path
+        _nameConcrete = path
+        _nameKind = S.KNameTopModule
+        _nameFixity = S.NoFixity
+    return S.Name' {..}
+  iniScope :: Scope
+  iniScope = emptyScope (getTopModulePath m)
+  addParent :: ScopeParameters -> ScopeParameters
+  addParent = over scopeTopParents (HashSet.insert path)
+  checkedModule :: Sem r (ExportScope, Module 'Scoped 'ModuleTop)
+  checkedModule = do
+    (exported, checked) <-
+      runState iniScope $ do
+        path' <- freshTopModulePath
+        Module path' <$> local addParent (mapM checkStatement stmts)
+    (,checked) <$> exportScope exported
+  checkCycle :: Sem r ()
+  checkCycle =
+    whenM
+      (HashSet.member path <$> asks _scopeTopParents)
+      (throw (ErrImportCycle path))
 
 checkLocalModule ::
   forall r.
-  Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScopeState, Embed IO] r =>
+  Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScoperState, Embed IO] r =>
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
@@ -450,101 +468,79 @@ checkLocalModule Module {..} = do
   exportedScope <- get >>= exportScope
   put before
   modulePath' <- bindLocalModuleSymbol modulePath
-  let localName = localModuleNameToQualified modulePath
-      entry :: ModuleSymbolEntry
-      entry =
-        ModuleSymbolEntry
-          { moduleEntryExportNameId = Just (S._nameId modulePath'),
-            moduleEntryExportScope = exportedScope
-          }
-  addModuleEntry localName absPath entry
+  let moduleId = S._nameId modulePath'
+  modify (over scoperModules (HashMap.insert moduleId exportedScope))
   return
     Module
       { modulePath = modulePath',
         moduleBody = moduleBody'
       }
   where
-    -- Mark all inherited symbols as NoPublic
-    inheritScope :: Sem r ()
-    inheritScope = modify (over scopeSymbols (fmap inheritSymbol))
-      where
-        inheritSymbol :: SymbolInfo -> SymbolInfo
-        inheritSymbol (SymbolInfo s) = SymbolInfo (fmap inheritEntry s)
-        inheritEntry :: SymbolEntry -> SymbolEntry
-        inheritEntry = over symbolWhyInScope BecauseInherited
+  -- | Mark all inherited symbols as NoPublic
+  inheritScope :: Sem r ()
+  inheritScope = modify (over scopeSymbols (fmap inheritSymbol))
+    where
+    inheritSymbol :: SymbolInfo -> SymbolInfo
+    inheritSymbol (SymbolInfo s) = SymbolInfo (fmap inheritEntry s)
+    inheritEntry :: SymbolEntry -> SymbolEntry
+    inheritEntry = over symbolWhyInScope BecauseInherited
 
-addModuleEntry ::
-  Members '[State Scope] r =>
-  QualifiedName ->
-  S.AbsModulePath ->
-  ModuleSymbolEntry ->
-  Sem r ()
-addModuleEntry moduleName absPath entry =
-  modify (over scopeModules (HashMap.alter (Just . addInfo) moduleName))
-  where
-    addInfo :: Maybe ModuleSymbolInfo -> ModuleSymbolInfo
-    addInfo m = case m of
-      Nothing -> moduleSymbolInfoSingle absPath entry
-      Just (ModuleSymbolInfo t) -> ModuleSymbolInfo (HashMap.insert absPath entry t)
-
-moduleSymbolInfoSingle ::
-  S.AbsModulePath -> ModuleSymbolEntry -> ModuleSymbolInfo
-moduleSymbolInfoSingle absPath = ModuleSymbolInfo . HashMap.singleton absPath
+-- moduleSymbolInfoSingle ::
+--   S.AbsModulePath -> ModuleSymbolEntry -> ModuleSymbolInfo
+-- moduleSymbolInfoSingle absPath = ModuleSymbolInfo . HashMap.singleton absPath
 
 -- | TODO checks if there is an infix declaration without a binding.
 checkOrphanFixities :: Members '[Error ScopeError, State Scope] r => Sem r ()
 checkOrphanFixities = return ()
 
-symbolInfoSingle :: S.AbsModulePath -> SymbolEntry -> SymbolInfo
-symbolInfoSingle p = SymbolInfo . HashMap.singleton p
+symbolInfoSingle :: SymbolEntry -> SymbolInfo
+symbolInfoSingle p = SymbolInfo $ HashMap.singleton (_symbolDefinedIn p) p
+
+lookupModuleSymbol :: Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  Name -> Sem r S.Name
+lookupModuleSymbol modName = undefined
+
+lookupModuleExport :: Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  Name -> Sem r ExportScope
+lookupModuleExport modName = do
+  errNotFound
+  undefined
+  -- case HashMap.toList s of
+  --   [] -> impossible
+  --   [(_, entry)] -> do something
+  --   ls -> throw (ErrAmbiguousModuleSym ls)
+
+  where
+  errNotFound = throw (ErrModuleNotInScope modName)
+
+getExportScope :: forall r. Members '[State ScoperState] r =>
+ S.ModuleNameId -> Sem r ExportScope
+getExportScope = undefined
 
 checkOpenModule ::
   forall r.
-  Members '[Error ScopeError, State Scope] r =>
-  OpenModule ->
-  Sem r ()
+  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  OpenModule 'Parsed ->
+  Sem r (OpenModule 'Scoped)
 checkOpenModule OpenModule {..} = do
-  (ModuleSymbolInfo s) <- fromMaybeM errNotFound $ HashMap.lookup openModuleName <$> gets _scopeModules
-  case HashMap.toList s of
-    [] -> impossible
-    [(_, entry)] -> mergeScope (alterScope (moduleEntryExportScope entry))
-    ls -> throw (ErrAmbiguousModuleSym ls)
+  openModuleName' <- lookupModuleSymbol openModuleName
+  exported <- getExportScope (S._nameId openModuleName')
+  mergeScope (alterScope exported)
+  return OpenModule {
+    openModuleName = openModuleName',
+    openUsingHiding = openUsingHiding,
+    openPublic = openPublic
+    }
   where
+
     mergeScope :: ExportScope -> Sem r ()
-    mergeScope ExportScope {..} = do
+    mergeScope ExportScope {..} =
       mapM_ mergeSymbol (HashMap.toList _exportSymbols)
-      mapM_ mergeModule (HashMap.toList _exportModules)
       where
-        mergeSymbol :: (Symbol, ExportSymbolInfo) -> Sem r ()
-        mergeSymbol (s, ExportSymbolInfo {..}) =
+        mergeSymbol :: (Symbol, SymbolEntry) -> Sem r ()
+        mergeSymbol (s, entry) =
           modify
-            ( over
-                scopeSymbols
-                ( HashMap.insertWith
-                    (<>)
-                    s
-                    (symbolInfoSingle _exportSymbolPath _exportSymbolEntry)
-                )
-            )
-        mergeModule :: (Symbol, ExportModuleSymbolInfo) -> Sem r ()
-        mergeModule (s, ExportModuleSymbolInfo {..}) = do
-          modify
-            ( over
-                scopeModules
-                ( HashMap.insertWith
-                    (<>)
-                    name
-                    (moduleSymbolInfoSingle _exportModuleSymbolPath entry)
-                )
-            )
-          where
-            entry =
-              ModuleSymbolEntry
-                { _moduleEntryExportNameId = Just _exportModuleNameId,
-                  _moduleEntryExportScope = _exportModuleSymbolScope
-                }
-            name = QualifiedName emptyPath s
-    errNotFound = throw (ErrModuleNotInScope openModuleName)
+            (over scopeSymbols (HashMap.insertWith (<>) s (symbolInfoSingle entry)))
     setsUsingHiding :: Maybe (Either (HashSet Symbol) (HashSet Symbol))
     setsUsingHiding = case openUsingHiding of
       Just (Using l) -> Just (Left (HashSet.fromList (toList l)))
@@ -554,19 +550,11 @@ checkOpenModule OpenModule {..} = do
     alterScope = alterEntries . filterScope
       where
         alterEntry :: SymbolEntry -> SymbolEntry
-        alterEntry = set symbolWhyInScope BecauseOpened . set symbolPublicAnn openPublic
+        alterEntry = set symbolWhyInScope S.BecauseImportedOpened . set symbolPublicAnn openPublic
         alterEntries :: ExportScope -> ExportScope
-        alterEntries ExportScope {..} =
-          ExportScope
-            { _exportSymbols = fmap (over exportSymbolEntry alterEntry) _exportSymbols,
-              _exportModules = _exportModules
-            }
+        alterEntries = over exportSymbols (fmap alterEntry)
         filterScope :: ExportScope -> ExportScope
-        filterScope ExportScope {..} =
-          ExportScope
-            { _exportSymbols = filterTable _exportSymbols,
-              _exportModules = filterTable _exportModules
-            }
+        filterScope = over exportSymbols filterTable
           where
             filterTable :: HashMap Symbol a -> HashMap Symbol a
             filterTable = HashMap.filterWithKey (const . shouldOpen)
@@ -578,14 +566,14 @@ checkOpenModule OpenModule {..} = do
 
 checkWhereBlock ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState] r =>
   WhereBlock 'Parsed ->
   Sem r (WhereBlock 'Scoped)
 checkWhereBlock WhereBlock {..} = WhereBlock <$> mapM checkWhereClause whereClauses
 
 checkWhereClause ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState] r =>
   WhereClause 'Parsed ->
   Sem r (WhereClause 'Scoped)
 checkWhereClause c = case c of
@@ -595,7 +583,7 @@ checkWhereClause c = case c of
 
 checkFunctionClause ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState] r =>
   FunctionClause 'Parsed ->
   Sem r (FunctionClause 'Scoped)
 checkFunctionClause FunctionClause {..} = do
@@ -630,7 +618,7 @@ checkFunctionClause FunctionClause {..} = do
         err = throw (ErrLacksTypeSig fun)
 
 checkAxiom ::
-  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState] r =>
   AxiomDef 'Parsed ->
   Sem r (AxiomDef 'Scoped)
 checkAxiom AxiomDef {..} = do
@@ -646,20 +634,20 @@ localScope :: Sem (Reader LocalVars : r) a -> Sem r a
 localScope = runReader (LocalVars mempty)
 
 checkEval ::
-  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState] r =>
   Eval 'Parsed ->
   Sem r (Eval 'Scoped)
 checkEval (Eval s) = Eval <$> localScope (checkParseExpressionAtoms s)
 
 checkPrint ::
-  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState] r =>
   Print 'Parsed ->
   Sem r (Print 'Scoped)
 checkPrint (Print s) = Print <$> localScope (checkParseExpressionAtoms s)
 
 checkFunction ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   Function 'Parsed ->
   Sem r (Function 'Scoped)
 checkFunction Function {..} = do
@@ -693,13 +681,13 @@ checkFunction Function {..} = do
 
 -- | Like a regular type signature?
 checkLocalTypeSig ::
-  Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   TypeSignature 'Parsed ->
   Sem r (TypeSignature 'Scoped)
 checkLocalTypeSig = checkTypeSignature
 
 checkLetClause ::
-  Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   LetClause 'Parsed ->
   Sem r (LetClause 'Scoped)
 checkLetClause lc = case lc of
@@ -707,7 +695,7 @@ checkLetClause lc = case lc of
   LetFunClause c -> LetFunClause <$> checkFunctionClause c
 
 checkLetBlock ::
-  Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   LetBlock 'Parsed ->
   Sem r (LetBlock 'Scoped)
 checkLetBlock LetBlock {..} = do
@@ -722,13 +710,13 @@ checkLetBlock LetBlock {..} = do
       }
 
 checkLambda ::
-  Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   Lambda 'Parsed ->
   Sem r (Lambda 'Scoped)
 checkLambda Lambda {..} = Lambda <$> mapM checkLambdaClause lambdaClauses
 
 checkLambdaClause ::
-  Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   LambdaClause 'Parsed ->
   Sem r (LambdaClause 'Scoped)
 checkLambdaClause LambdaClause {..} = do
@@ -744,7 +732,7 @@ checkQualified ::
   Members '[Error ScopeError, State Scope] r =>
   QualifiedName ->
   Sem r S.Name
-checkQualified q = error "todo"
+checkQualified (QualifiedName (Path p) sym) = error "todo"
 
 checkUnqualified ::
   Members '[Error ScopeError, State Scope, Reader LocalVars] r =>
@@ -765,7 +753,7 @@ checkUnqualified s = do
         es -> throw (ErrAmbiguousSym es) -- This is meant to happen only at the top level
 
 checkPatternName ::
-  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState] r =>
   Name ->
   Sem r S.Name
 checkPatternName n = case n of
@@ -796,7 +784,7 @@ withBindLocalVariable var = local (addLocalVars [var])
 -- | Binds a local variable in a bind group, i.e. a pattern.
 groupBindLocalVariable ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState] r =>
   Symbol ->
   Sem r S.Symbol
 groupBindLocalVariable s = do
@@ -816,7 +804,7 @@ groupBindLocalVariable s = do
 
 checkPatternUnqualified ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState] r =>
   Symbol ->
   Sem r S.Name
 checkPatternUnqualified s = do
@@ -836,18 +824,18 @@ checkPatternUnqualified s = do
            in case map snd entries of
                 [] -> return Nothing -- There is no constructor with such a name
                 [e] -> return (Just (entryToSName (NameUnqualified s) e)) -- There is one constructor with such a name
-                _ -> throw Err -- There is more than one constructor with such a name
+                _ -> throw $ ErrGeneric "There is more than one constructor with such a name"
     isConstructorKind :: S.NameKind -> Bool
     isConstructorKind = (== S.KNameConstructor)
 
 checkPatternAtoms ::
-  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState] r =>
   PatternAtoms 'Parsed ->
   Sem r (PatternAtoms 'Scoped)
 checkPatternAtoms (PatternAtoms s) = PatternAtoms <$> mapM checkPatternAtom s
 
 checkPatternAtom ::
-  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState] r =>
   PatternAtom 'Parsed ->
   Sem r (PatternAtom 'Scoped)
 checkPatternAtom p = case p of
@@ -865,7 +853,7 @@ checkName n = case n of
   NameUnqualified s -> checkUnqualified s
 
 checkExpressionAtom ::
-  Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   ExpressionAtom 'Parsed ->
   Sem r (ExpressionAtom 'Scoped)
 checkExpressionAtom e = case e of
@@ -879,7 +867,7 @@ checkExpressionAtom e = case e of
   AtomMatch match -> AtomMatch <$> checkMatch match
 
 checkMatchAlt ::
-  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScopeState] r =>
+  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState] r =>
   MatchAlt 'Parsed ->
   Sem r (MatchAlt 'Scoped)
 checkMatchAlt MatchAlt {..} = do
@@ -892,7 +880,7 @@ checkMatchAlt MatchAlt {..} = do
       }
 
 checkMatch ::
-  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScopeState] r =>
+  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState] r =>
   Match 'Parsed ->
   Sem r (Match 'Scoped)
 checkMatch Match {..} = do
@@ -905,25 +893,25 @@ checkMatch Match {..} = do
       }
 
 checkExpressionAtoms ::
-  Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   ExpressionAtoms 'Parsed ->
   Sem r (ExpressionAtoms 'Scoped)
 checkExpressionAtoms (ExpressionAtoms l) = ExpressionAtoms <$> mapM checkExpressionAtom l
 
 checkParseExpressionAtoms ::
-  Members '[Error ScopeError, State Scope, State ScopeState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   ExpressionAtoms 'Parsed ->
   Sem r Expression
 checkParseExpressionAtoms = checkExpressionAtoms >=> parseExpressionAtoms
 
 checkParsePatternAtom ::
-  Members '[Error ScopeError, State Scope, State ScopeState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState] r =>
   PatternAtom 'Parsed ->
   Sem r Pattern
 checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
 
 checkStatement ::
-  Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State Scope, State ScopeState] r =>
+  Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State Scope, State ScoperState] r =>
   Statement 'Parsed ->
   Sem r (Statement 'Scoped)
 checkStatement s = case s of
@@ -932,7 +920,7 @@ checkStatement s = case s of
   StatementImport imp -> StatementImport <$> checkImport imp
   StatementInductive dt -> StatementInductive <$> checkInductiveDef dt
   StatementModule dt -> StatementModule <$> checkLocalModule dt
-  StatementOpenModule open -> StatementOpenModule open <$ checkOpenModule open
+  StatementOpenModule open -> StatementOpenModule <$> checkOpenModule open
   StatementFunctionClause clause -> StatementFunctionClause <$> checkFunctionClause clause
   StatementAxiom ax -> StatementAxiom <$> checkAxiom ax
   StatementEval e -> StatementEval <$> checkEval e

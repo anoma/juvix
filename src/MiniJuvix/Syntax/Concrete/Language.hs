@@ -65,7 +65,7 @@ data Statement (s :: Stage)
   | StatementImport (Import s)
   | StatementInductive (InductiveDef s)
   | StatementModule (Module s 'ModuleLocal)
-  | StatementOpenModule OpenModule
+  | StatementOpenModule (OpenModule s)
   | StatementFunctionClause (FunctionClause s)
   | StatementAxiom (AxiomDef s)
   | StatementEval (Eval s)
@@ -457,12 +457,31 @@ data UsingHiding
 data PublicAnn = Public | NoPublic
   deriving stock (Show, Eq, Ord, Lift)
 
-data OpenModule = OpenModule
-  { openModuleName :: QualifiedName,
+data OpenModule (s :: Stage) = OpenModule
+  { openModuleName :: NameType s,
     openUsingHiding :: Maybe UsingHiding,
     openPublic :: PublicAnn
   }
-  deriving stock (Show, Eq, Ord, Lift)
+deriving stock instance
+  (
+    Eq (NameType s)
+  ) =>
+  Eq (OpenModule s)
+deriving stock instance
+  (
+    Ord (NameType s)
+  ) =>
+  Ord (OpenModule s)
+deriving stock instance
+  (
+    Show (NameType s)
+  ) =>
+  Show (OpenModule s)
+deriving stock instance
+  (
+    Lift (NameType s)
+  ) =>
+  Lift (OpenModule s)
 
 --------------------------------------------------------------------------------
 -- Expression
@@ -706,7 +725,7 @@ deriving stock instance
   Lift (WhereBlock s)
 
 data WhereClause (s :: Stage)
-  = WhereOpenModule OpenModule
+  = WhereOpenModule (OpenModule s)
   | WhereTypeSig (TypeSignature s)
   | WhereFunClause (FunctionClause s)
 

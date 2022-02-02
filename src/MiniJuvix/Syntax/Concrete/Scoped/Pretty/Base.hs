@@ -4,6 +4,7 @@ import Data.Singletons
 import MiniJuvix.Syntax.Concrete.Language
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Utils.Prelude
+import qualified Data.List.NonEmpty.Extra as NonEmpty
 import Prettyprinter hiding (braces, parens)
 
 data Ann
@@ -221,7 +222,8 @@ ppStatement s = case s of
   StatementPrint p -> ppPrint p
 
 ppTopModulePath :: Members '[Reader Options] r => TopModulePath -> Sem r (Doc Ann)
-ppTopModulePath TopModulePath {..} = dotted <$> mapM ppSymbol (pathParts modulePathDir ++ [modulePathName])
+ppTopModulePath TopModulePath {..} =
+  dotted <$> mapM ppSymbol (modulePathDir ++ [modulePathName])
 
 endSemicolon :: Doc Ann -> Doc Ann
 endSemicolon x = x <> kwSemicolon
@@ -286,12 +288,12 @@ ppInductiveDef InductiveDef {..} = do
       inductiveParameterType' <- ppExpression inductiveParameterType
       return $ parens (inductiveParameterName' <+> kwColon <+> inductiveParameterType')
 
-dotted :: [Doc Ann] -> Doc Ann
+dotted :: Foldable f => f (Doc Ann) -> Doc Ann
 dotted = concatWith (surround kwDot)
 
 ppQualified :: Members '[Reader Options] r => QualifiedName -> Sem r (Doc Ann)
 ppQualified QualifiedName {..} = do
-  let symbols = pathParts qualifiedPath ++ [qualifiedSymbol]
+  let symbols = pathParts qualifiedPath NonEmpty.|> qualifiedSymbol
   dotted <$> mapM ppSymbol symbols
 
 ppName :: Members '[Reader Options] r => Name -> Sem r (Doc Ann)
@@ -315,9 +317,9 @@ ppSName' ppConcrete S.Name' {..} = do
   let uid = if showNameId then "@" <> ppNameId _nameId else mempty
   return $ nameConcrete' <> uid
 
-ppOpen :: forall r. Members '[Reader Options] r => OpenModule -> Sem r (Doc Ann)
+ppOpen :: forall r. Members '[Reader Options] r => OpenModule 'Scoped -> Sem r (Doc Ann)
 ppOpen OpenModule {..} = do
-  openModuleName' <- ppQualified openModuleName
+  openModuleName' <- ppName (S._nameConcrete openModuleName)
   openUsingHiding' <- sequence $ ppUsingHiding <$> openUsingHiding
   let openPublic' = ppPublic
   return $ keyword "open" <+> openModuleName' <+?> openUsingHiding' <+?> openPublic'

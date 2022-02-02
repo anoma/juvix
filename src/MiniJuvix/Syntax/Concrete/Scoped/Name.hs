@@ -22,6 +22,9 @@ data AbsModulePath = AbsModulePath
   }
   deriving stock (Show, Eq, Generic)
 
+topModulePathToAbsPath :: C.TopModulePath -> AbsModulePath
+topModulePathToAbsPath p = AbsModulePath p []
+
 instance Hashable AbsModulePath
 
 -- | Tells whether the first argument is an immediate child of the second argument.
@@ -69,6 +72,12 @@ data NameKind
     KNameTopModule
   deriving stock (Show, Eq)
 
+isModuleKind :: NameKind -> Bool
+isModuleKind k = case k of
+  KNameLocalModule -> True
+  KNameTopModule -> True
+  _ -> False
+
 canHaveFixity :: NameKind -> Bool
 canHaveFixity k = case k of
   KNameConstructor -> True
@@ -84,6 +93,8 @@ type Name = Name' C.Name
 type Symbol = Name' C.Symbol
 
 type TopModulePath = Name' C.TopModulePath
+
+type ModuleNameId = NameId
 
 data Name' n = Name'
   { _nameId :: NameId,
