@@ -206,7 +206,7 @@ lookupSymbolGeneric filtr name modules final = do
          case r of
           Nothing -> return Nothing
           Just SymbolInfo {..} -> case filter filtr (toList _symbolInfo) of
-            [] -> impossible
+            [] -> return Nothing
             [e] -> return (Just e)
             es -> throw (ErrAmbiguousSym es) -- This is meant to happen only at the top level
       (p : ps) -> do
