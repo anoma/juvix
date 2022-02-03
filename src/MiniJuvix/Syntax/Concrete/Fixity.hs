@@ -3,7 +3,7 @@ module MiniJuvix.Syntax.Concrete.Fixity where
 import Language.Haskell.TH.Syntax (Lift)
 import MiniJuvix.Utils.Prelude
 
-type Precedence = Natural
+type Precedence = Int
 
 data UnaryAssoc = AssocPrefix | AssocPostfix
   deriving stock (Show, Eq, Ord, Lift)

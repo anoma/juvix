@@ -543,6 +543,32 @@ ppPostfixApplication PostfixApplication {..} = do
   postfixAppOperator' <- ppSName postfixAppOperator
   return $ postfixAppParameter' <+> postfixAppOperator'
 
+data Atomicity =
+  Atom
+  | NoAtom (Fixity, S.NameId)
+
+atomicity :: Expression -> Atomicity
+atomicity e = case e of
+    ExpressionIdentifier {} -> Atom
+    ExpressionApplication a -> goApplication a
+    ExpressionInfixApplication a -> goInfixApplication a
+    ExpressionPostfixApplication a -> goPostfixApplication a
+    ExpressionLambda {} -> Atom
+    ExpressionMatch {} -> Atom
+    ExpressionLetBlock {} -> Atom
+    ExpressionUniverse {} -> Atom
+    ExpressionFunction f -> goFunction f
+  where
+  goFunction :: Function 'Scoped -> Atomicity
+  goFunction = undefined
+  goApplication :: Application -> Atomicity
+  goApplication = undefined
+  goInfixApplication :: InfixApplication -> Atomicity
+  goInfixApplication = undefined
+  goPostfixApplication :: PostfixApplication -> Atomicity
+  goPostfixApplication = undefined
+
+
 ppExpression :: forall r. Members '[Reader Options] r => Expression -> Sem r (Doc Ann)
 ppExpression = go
   where
