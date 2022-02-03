@@ -962,17 +962,11 @@ makeExpressionTable = do
         unqualifiedSymbolOp SymbolEntry {..}
           | S.SomeFixity Fixity {..} <- _symbolFixity = Just $
             case fixityArity of
-              Unary u -> (fixityPrecedence, prePost (unaryApp <$> parseSymbolId _symbolId))
+              Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _symbolId))
                 where
                   unaryApp :: S.Name -> Expression -> Expression
                   unaryApp funName arg = case u of
-                    -- TODO Prefix application
-                    AssocPrefix -> ExpressionApplication (Application (ExpressionIdentifier funName) arg)
-                    AssocPostfix -> ExpressionPostfixApplication (PostfixApplication funName arg)
-                  prePost :: Parse (Expression -> Expression) -> P.Operator Parse Expression
-                  prePost = case u of
-                    AssocPrefix -> P.Prefix
-                    AssocPostfix -> P.Postfix
+                    AssocPostfix -> ExpressionPostfixApplication (PostfixApplication arg funName)
               Binary b -> (fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId _symbolId))
                 where
                   binaryApp :: S.Name -> Expression -> Expression -> Expression
@@ -1158,20 +1152,15 @@ makePatternTable = do
           | S.SomeFixity Fixity {..} <- _symbolFixity,
             _symbolKind == S.KNameConstructor = Just $
             case fixityArity of
-              Unary u -> (fixityPrecedence, prePost (unaryApp <$> parseSymbolId _symbolId))
+              Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _symbolId))
                 where
                   unaryApp :: S.Name -> Pattern -> Pattern
                   unaryApp funName = case u of
-                    AssocPrefix -> PatternPrefixApplication . PatternPrefixApp funName
-                    AssocPostfix -> PatternPostfixApplication . PatternPostfixApp funName
-                  prePost :: ParsePat (Pattern -> Pattern) -> P.Operator ParsePat Pattern
-                  prePost = case u of
-                    AssocPrefix -> P.Prefix
-                    AssocPostfix -> P.Postfix
+                    AssocPostfix -> PatternPostfixApplication . (`PatternPostfixApp` funName)
               Binary b -> (fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _symbolId))
                 where
                   binaryInfixApp :: S.Name -> Pattern -> Pattern -> Pattern
-                  binaryInfixApp name argLeft = PatternInfixApplication . PatternInfixApp name argLeft
+                  binaryInfixApp name argLeft = PatternInfixApplication . PatternInfixApp argLeft name
                   infixLRN :: ParsePat (Pattern -> Pattern -> Pattern) -> P.Operator ParsePat Pattern
                   infixLRN = case b of
                     AssocLeft -> P.InfixL

@@ -20,7 +20,7 @@ instance Ord Precedence where
     (PrecOmega, _) -> GT
 
 
-data UnaryAssoc = AssocPrefix | AssocPostfix
+data UnaryAssoc = AssocPostfix
   deriving stock (Show, Eq, Ord, Lift)
 
 data BinaryAssoc = AssocNone | AssocLeft | AssocRight

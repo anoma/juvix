@@ -85,7 +85,6 @@ allKeywords =
     kwModule,
     kwOpen,
     kwPostfix,
-    kwPrefix,
     kwPrint,
     kwPublic,
     kwRightArrow,
@@ -171,9 +170,6 @@ kwOpen = symbol "open"
 
 kwPostfix :: MonadParsec e Text m => m ()
 kwPostfix = symbol "postfix"
-
-kwPrefix :: MonadParsec e Text m => m ()
-kwPrefix = symbol "prefix"
 
 kwPrint :: MonadParsec e Text m => m ()
 kwPrint = symbol "print"

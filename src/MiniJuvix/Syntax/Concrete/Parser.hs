@@ -104,7 +104,6 @@ operatorSyntaxDef = do
         Binary AssocRight <$ kwInfixr
         <|> Binary AssocLeft <$ kwInfixl
         <|> Binary AssocNone <$ kwInfix
-        <|> Unary AssocPrefix <$ kwPrefix
         <|> Unary AssocPostfix <$ kwPostfix
 
 --------------------------------------------------------------------------------
