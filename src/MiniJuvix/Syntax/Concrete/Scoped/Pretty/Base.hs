@@ -248,6 +248,12 @@ ppModule Module {..} = do
       SModuleLocal -> Nothing
       SModuleTop -> Just kwSemicolon
 
+ppPrecedence :: Precedence -> Doc Ann
+ppPrecedence p = case p of
+  PrecMinusOmega -> pretty ("-ω" :: Text)
+  PrecNat n -> pretty n
+  PrecOmega -> pretty ("ω" :: Text)
+
 ppOperatorSyntaxDef :: Members '[Reader Options] r => OperatorSyntaxDef -> Sem r (Doc Ann)
 ppOperatorSyntaxDef OperatorSyntaxDef {..} = do
   opSymbol' <- ppSymbol opSymbol
@@ -255,7 +261,7 @@ ppOperatorSyntaxDef OperatorSyntaxDef {..} = do
   where
     ppFixity :: Fixity -> Doc Ann
     ppFixity Fixity {..} =
-      ppArity <+> pretty fixityPrecedence
+      ppArity <+> ppPrecedence fixityPrecedence
       where
         ppArity :: Doc Ann
         ppArity = case fixityArity of
@@ -351,7 +357,7 @@ ppTypeSignature TypeSignature {..} = do
 ppFunction :: forall r. Members '[Reader Options] r => Function 'Scoped -> Sem r (Doc Ann)
 ppFunction Function {..} = do
   funParameter' <- ppFunParameter funParameter
-  funReturn' <- ppExpressionAtom funReturn
+  funReturn' <- ppRightExpression funAtomicity funReturn
   return $ funParameter' <+> kwArrowR <+> funReturn'
   where
     ppUsage :: Maybe Usage -> Doc Ann
@@ -364,7 +370,7 @@ ppFunction Function {..} = do
     ppFunParameter :: FunctionParameter 'Scoped -> Sem r (Doc Ann)
     ppFunParameter FunctionParameter {..} = do
       case paramName of
-        Nothing -> ppExpressionAtom paramType
+        Nothing -> ppLeftExpression funAtomicity paramType
         Just n -> do
           paramName' <- ppSSymbol n
           paramType' <- ppExpression paramType
@@ -513,11 +519,6 @@ ppPattern = goAtom
       patPostfixParameter' <- goAtom patPostfixParameter
       return $ patPostfixParameter' <+> patPostfixConstructor'
 
-ppExpressionAtom :: forall r. Members '[Reader Options] r => Expression -> Sem r (Doc Ann)
-ppExpressionAtom e = do
-  e' <- ppExpression e
-  return $ if isAtomic e then e' else parens e'
-
 isAtomic :: Expression -> Bool
 isAtomic e = case e of
   ExpressionIdentifier {} -> True
@@ -531,56 +532,116 @@ isAtomic e = case e of
   ExpressionFunction {} -> False
 
 ppInfixApplication :: forall r. Members '[Reader Options] r => InfixApplication -> Sem r (Doc Ann)
-ppInfixApplication InfixApplication {..} = do
-  infixAppLeft' <- ppExpressionAtom infixAppLeft
+ppInfixApplication i@InfixApplication {..} = do
+  infixAppLeft' <- ppLeftExpression (infixAtomicity i) infixAppLeft
   infixAppOperator' <- ppSName infixAppOperator
-  infixAppRight' <- ppExpressionAtom infixAppRight
+  infixAppRight' <- ppRightExpression (infixAtomicity i) infixAppRight
   return $ infixAppLeft' <+> infixAppOperator' <+> infixAppRight'
 
 ppPostfixApplication :: forall r. Members '[Reader Options] r => PostfixApplication -> Sem r (Doc Ann)
-ppPostfixApplication PostfixApplication {..} = do
-  postfixAppParameter' <- ppExpressionAtom postfixAppParameter
+ppPostfixApplication i@PostfixApplication {..} = do
+  postfixAppParameter' <- ppPostExpression (postfixAtomicity i) postfixAppParameter
   postfixAppOperator' <- ppSName postfixAppOperator
   return $ postfixAppParameter' <+> postfixAppOperator'
 
+data GlobIden =
+  NameId S.NameId
+  | NonDepFun
+  | NormalApp
+  deriving stock (Eq)
+
 data Atomicity =
   Atom
-  | NoAtom (Fixity, S.NameId)
+  | Glob (Fixity, GlobIden)
 
 atomicity :: Expression -> Atomicity
 atomicity e = case e of
     ExpressionIdentifier {} -> Atom
-    ExpressionApplication a -> goApplication a
-    ExpressionInfixApplication a -> goInfixApplication a
-    ExpressionPostfixApplication a -> goPostfixApplication a
+    ExpressionApplication {} -> Glob appAtomicity
+    ExpressionInfixApplication a -> Glob (infixAtomicity a)
+    ExpressionPostfixApplication a -> Glob (postfixAtomicity a)
     ExpressionLambda {} -> Atom
     ExpressionMatch {} -> Atom
     ExpressionLetBlock {} -> Atom
     ExpressionUniverse {} -> Atom
-    ExpressionFunction f -> goFunction f
-  where
-  goFunction :: Function 'Scoped -> Atomicity
-  goFunction = undefined
-  goApplication :: Application -> Atomicity
-  goApplication = undefined
-  goInfixApplication :: InfixApplication -> Atomicity
-  goInfixApplication = undefined
-  goPostfixApplication :: PostfixApplication -> Atomicity
-  goPostfixApplication = undefined
+    ExpressionFunction {} -> Glob funAtomicity
 
+infixAtomicity :: InfixApplication -> (Fixity, GlobIden)
+infixAtomicity (InfixApplication  _ op _) = (f, NameId (S._nameId op))
+  where
+  f = case S._nameFixity op of
+    S.NoFixity -> impossible
+    S.SomeFixity s -> s
+
+postfixAtomicity :: PostfixApplication -> (Fixity, GlobIden)
+postfixAtomicity (PostfixApplication op _) = (f, NameId (S._nameId op))
+  where
+  f = case S._nameFixity op of
+    S.NoFixity -> impossible
+    S.SomeFixity s -> s
+
+appAtomicity :: (Fixity, GlobIden)
+appAtomicity = (appFixity, NormalApp)
+  where
+  appFixity = Fixity PrecOmega (Binary AssocLeft)
+
+funAtomicity :: (Fixity, GlobIden)
+funAtomicity = (fixity, NonDepFun)
+  where
+  fixity = Fixity PrecMinusOmega (Binary AssocRight)
+
+isLeftAssoc :: Fixity -> Bool
+isLeftAssoc opInf = case fixityArity opInf of
+    Binary AssocLeft -> True
+    _ -> False
+
+isRightAssoc :: Fixity -> Bool
+isRightAssoc opInf = case fixityArity opInf of
+    Binary AssocRight -> True
+    _ -> False
+
+isPostfixAssoc :: Fixity -> Bool
+isPostfixAssoc opInf = case fixityArity opInf of
+    Unary AssocPostfix -> True
+    _ -> False
+
+atomParens :: (Fixity -> Bool) -> Atomicity -> (Fixity, GlobIden) -> Bool
+atomParens associates argAtom (opInf, opId) = case argAtom of
+  Atom -> False
+  Glob (argInf, argId)
+   | argInf > opInf -> False
+   | argInf < opInf -> True
+   | argId == opId && associates opInf -> False
+   | otherwise -> True
+
+parensCond :: Bool -> Doc Ann -> Doc Ann
+parensCond t d = if t then parens d else d
+
+ppPostExpression :: Member (Reader Options) r => (Fixity, GlobIden) -> Expression -> Sem r (Doc Ann)
+ppPostExpression = ppLRExpression isPostfixAssoc
+
+ppRightExpression :: Member (Reader Options) r => (Fixity, GlobIden) -> Expression -> Sem r (Doc Ann)
+ppRightExpression = ppLRExpression isRightAssoc
+
+ppLeftExpression :: Member (Reader Options) r => (Fixity, GlobIden) -> Expression -> Sem r (Doc Ann)
+ppLeftExpression = ppLRExpression isLeftAssoc
+
+ppLRExpression :: Member (Reader Options) r =>
+  (Fixity -> Bool) -> (Fixity, GlobIden) -> Expression -> Sem r (Doc Ann)
+ppLRExpression associates atom e =
+  parensCond (atomParens associates (atomicity e) atom)
+      <$> ppExpression e
 
 ppExpression :: forall r. Members '[Reader Options] r => Expression -> Sem r (Doc Ann)
 ppExpression = go
   where
     ppApplication :: Application -> Sem r (Doc Ann)
     ppApplication (Application l r) = do
-      l' <- goAtom l
-      r' <- goAtom r
+      -- Note: parentheses on the left of an application are never necessary,
+      -- but I prefer homogeneous code.
+      l' <- ppLeftExpression appAtomicity l
+      r' <- ppRightExpression appAtomicity r
       return $ l' <+> r'
-    goAtom :: Expression -> Sem r (Doc Ann)
-    goAtom e = do
-      e' <- go e
-      return $ if isAtomic e then e' else parens e'
     go :: Expression -> Sem r (Doc Ann)
     go e = case e of
       ExpressionIdentifier n -> ppSName n

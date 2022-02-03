@@ -88,7 +88,7 @@ statement =
 --------------------------------------------------------------------------------
 
 precedence :: MonadParsec e Text m => m Precedence
-precedence = decimal
+precedence = PrecNat <$> decimal
 
 operatorSyntaxDef :: forall e m. MonadParsec e Text m => m OperatorSyntaxDef
 operatorSyntaxDef = do
