@@ -27,5 +27,6 @@ stylize a = case a of
     KNameLocalModule -> mempty
     KNameFunction -> colorDull Yellow
     KNameLocal -> mempty
+    KNameTopModule -> mempty
   AnnDelimiter -> colorDull White
   AnnKeyword -> colorDull Blue

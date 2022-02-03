@@ -50,7 +50,8 @@ type family
   ModulePathType (s :: Stage) (t :: ModuleIsTop) ::
     (res :: GHC.Type) | res -> t
   where
-  ModulePathType _ 'ModuleTop = TopModulePath
+  ModulePathType 'Parsed 'ModuleTop = TopModulePath
+  ModulePathType 'Scoped 'ModuleTop = S.TopModulePath
   ModulePathType 'Parsed 'ModuleLocal = Symbol
   ModulePathType 'Scoped 'ModuleLocal = S.Symbol
 
@@ -64,7 +65,7 @@ data Statement (s :: Stage)
   | StatementImport (Import s)
   | StatementInductive (InductiveDef s)
   | StatementModule (Module s 'ModuleLocal)
-  | StatementOpenModule OpenModule
+  | StatementOpenModule (OpenModule s)
   | StatementFunctionClause (FunctionClause s)
   | StatementAxiom (AxiomDef s)
   | StatementEval (Eval s)
@@ -453,11 +454,34 @@ data UsingHiding
   | Hiding (NonEmpty Symbol)
   deriving stock (Show, Eq, Ord, Lift)
 
-data OpenModule = OpenModule
-  { openModuleName :: QualifiedName,
-    openUsingHiding :: Maybe UsingHiding
-  }
+data PublicAnn = Public | NoPublic
   deriving stock (Show, Eq, Ord, Lift)
+
+data OpenModule (s :: Stage) = OpenModule
+  { openModuleName :: NameType s,
+    openUsingHiding :: Maybe UsingHiding,
+    openPublic :: PublicAnn
+  }
+deriving stock instance
+  (
+    Eq (NameType s)
+  ) =>
+  Eq (OpenModule s)
+deriving stock instance
+  (
+    Ord (NameType s)
+  ) =>
+  Ord (OpenModule s)
+deriving stock instance
+  (
+    Show (NameType s)
+  ) =>
+  Show (OpenModule s)
+deriving stock instance
+  (
+    Lift (NameType s)
+  ) =>
+  Lift (OpenModule s)
 
 --------------------------------------------------------------------------------
 -- Expression
@@ -701,7 +725,7 @@ deriving stock instance
   Lift (WhereBlock s)
 
 data WhereClause (s :: Stage)
-  = WhereOpenModule OpenModule
+  = WhereOpenModule (OpenModule s)
   | WhereTypeSig (TypeSignature s)
   | WhereFunClause (FunctionClause s)
 

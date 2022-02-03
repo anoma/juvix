@@ -87,6 +87,7 @@ allKeywords =
     kwPostfix,
     kwPrefix,
     kwPrint,
+    kwPublic,
     kwRightArrow,
     kwSemicolon,
     kwType,
@@ -176,6 +177,9 @@ kwPrefix = symbol "prefix"
 
 kwPrint :: MonadParsec e Text m => m ()
 kwPrint = symbol "print"
+
+kwPublic :: MonadParsec e Text m => m ()
+kwPublic = symbol "public"
 
 kwRightArrow :: MonadParsec e Text m => m ()
 kwRightArrow = symbol "→" <|> symbol "->"

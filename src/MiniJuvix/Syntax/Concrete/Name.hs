@@ -26,7 +26,7 @@ data Name
   deriving stock (Show, Eq, Ord, Lift)
 
 newtype Path = Path
-  { pathParts :: [Symbol]
+  { pathParts :: NonEmpty Symbol
   }
   deriving stock (Show, Eq, Ord, Lift)
 
@@ -34,16 +34,9 @@ deriving newtype instance Hashable Path
 
 -- | A.B.C corresponds to TopModulePath [A,B] C
 data TopModulePath = TopModulePath
-  { modulePathDir :: Path,
+  { modulePathDir :: [Symbol],
     modulePathName :: Symbol
   }
   deriving stock (Show, Eq, Ord, Generic, Lift)
-
-topModulePathToQualified :: TopModulePath -> QualifiedName
-topModulePathToQualified TopModulePath {..} =
-  QualifiedName
-    { qualifiedPath = modulePathDir,
-      qualifiedSymbol = modulePathName
-    }
 
 instance Hashable TopModulePath

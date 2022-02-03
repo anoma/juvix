@@ -6,7 +6,7 @@ import Control.Monad.Extra
 import qualified MiniJuvix.Syntax.Concrete.Language as M
 import qualified MiniJuvix.Syntax.Concrete.Parser as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
-import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (Options (_optShowNameId))
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (Options (..))
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
 import MiniJuvix.Utils.Prelude
@@ -22,7 +22,8 @@ data Command
 data ScopeOptions = ScopeOptions
   { _scopeRootDir :: FilePath,
     _scopeInputFile :: FilePath,
-    _scopeShowIds :: Bool
+    _scopeShowIds :: Bool,
+    _scopeInlineImports :: Bool
   }
 
 data ParseOptions = ParseOptions
@@ -67,6 +68,12 @@ parseScope = do
       ( long "show-name-ids"
           <> help "Show the unique number of each identifier"
       )
+  _scopeInlineImports <-
+    switch
+      ( long "inline-imports"
+          <> help "Show the code of imported modules next to the import statement"
+      )
+
 
   pure ScopeOptions {..}
 
@@ -114,7 +121,8 @@ parseCommand =
 mkPrettyOptions :: ScopeOptions -> M.Options
 mkPrettyOptions ScopeOptions {..} =
   M.defaultOptions
-    { _optShowNameId = _scopeShowIds
+    { _optShowNameId = _scopeShowIds,
+      _optInlineImports = _scopeInlineImports
     }
 
 parseModuleIO :: FilePath -> IO (M.Module 'M.Parsed 'M.ModuleTop)
@@ -126,8 +134,9 @@ fromRightIO pp = eitherM (ioError . userError . unpack . pp) return
 go :: Command -> IO ()
 go c = case c of
   Scope opts@ScopeOptions {..} -> do
+    root <- getCurrentDirectory
     m <- parseModuleIO _scopeInputFile
-    s <- fromRightIO show $ M.scopeCheck1 _scopeInputFile m
+    s <- fromRightIO show $ M.scopeCheck1 root m
     M.printTopModule (mkPrettyOptions opts) s
   Parse ParseOptions {..} -> do
     m <- parseModuleIO _parseInputFile

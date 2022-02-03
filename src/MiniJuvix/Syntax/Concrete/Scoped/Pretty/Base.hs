@@ -4,6 +4,7 @@ import Data.Singletons
 import MiniJuvix.Syntax.Concrete.Language
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Utils.Prelude
+import qualified Data.List.NonEmpty.Extra as NonEmpty
 import Prettyprinter hiding (braces, parens)
 
 data Ann
@@ -14,6 +15,7 @@ data Ann
 data Options = Options
   { _optOptimizeParens :: Bool,
     _optShowNameId :: Bool,
+    _optInlineImports :: Bool,
     _optIndent :: Int
   }
 
@@ -22,6 +24,7 @@ defaultOptions =
   Options
     { _optOptimizeParens = True,
       _optShowNameId = False,
+      _optInlineImports = True,
       _optIndent = 2
     }
 
@@ -76,6 +79,9 @@ kwLet = keyword "let"
 kwIn :: Doc Ann
 kwIn = keyword "in"
 
+kwPublic :: Doc Ann
+kwPublic = keyword "public"
+
 kwWildcard :: Doc Ann
 kwWildcard = keyword "_"
 
@@ -121,6 +127,12 @@ kwPrint = keyword "print"
 kwOpen :: Doc Ann
 kwOpen = keyword "open"
 
+kwUsing :: Doc Ann
+kwUsing = keyword "using"
+
+kwHiding :: Doc Ann
+kwHiding = keyword "hiding"
+
 kwImport :: Doc Ann
 kwImport = keyword "import"
 
@@ -160,7 +172,7 @@ parens = enclose kwParenL kwParenR
 
 ppModulePathType :: forall t r. (SingI t, Members '[Reader Options] r) => ModulePathType 'Scoped t -> Sem r (Doc Ann)
 ppModulePathType x = case sing :: SModuleIsTop t of
-  SModuleTop -> ppTopModulePath x
+  SModuleTop -> ppSTopModulePath x
   SModuleLocal -> ppSSymbol x
 
 ppSymbol :: Members '[Reader Options] r => Symbol -> Sem r (Doc Ann)
@@ -169,34 +181,34 @@ ppSymbol (Sym t) = return (pretty t)
 groupStatements :: [Statement 'Scoped] -> [[Statement 'Scoped]]
 groupStatements = groupBy g
   where
-  g :: Statement 'Scoped -> Statement 'Scoped -> Bool
-  g a b = case (a, b) of
-    (StatementOperator _, StatementOperator _) -> True
-    (StatementOperator _, _) -> False
-    (StatementImport _, StatementImport _) -> True
-    (StatementImport _, _) -> False
-    (StatementOpenModule {}, StatementOpenModule {}) -> True
-    (StatementOpenModule {}, _) -> True
-    (StatementInductive {}, _) -> False
-    (StatementModule {}, _) -> False
-    (StatementAxiom {}, StatementAxiom{}) -> True
-    (StatementAxiom {}, _) -> False
-    (StatementEval {}, StatementEval{}) -> True
-    (StatementEval {}, _) -> False
-    (StatementPrint {}, StatementPrint {}) -> True
-    (StatementPrint {}, _) -> False
-    (StatementTypeSignature sig, StatementFunctionClause fun)
-      -> sigName sig == clauseOwnerFunction fun
-    (StatementTypeSignature {}, _) -> False
-    (StatementFunctionClause fun1, StatementFunctionClause fun2)
-      -> clauseOwnerFunction fun1 == clauseOwnerFunction fun2
-    (StatementFunctionClause {}, _) -> False
+    g :: Statement 'Scoped -> Statement 'Scoped -> Bool
+    g a b = case (a, b) of
+      (StatementOperator _, StatementOperator _) -> True
+      (StatementOperator _, _) -> False
+      (StatementImport _, StatementImport _) -> True
+      (StatementImport _, _) -> False
+      (StatementOpenModule {}, StatementOpenModule {}) -> True
+      (StatementOpenModule {}, _) -> False
+      (StatementInductive {}, _) -> False
+      (StatementModule {}, _) -> False
+      (StatementAxiom {}, StatementAxiom {}) -> True
+      (StatementAxiom {}, _) -> False
+      (StatementEval {}, StatementEval {}) -> True
+      (StatementEval {}, _) -> False
+      (StatementPrint {}, StatementPrint {}) -> True
+      (StatementPrint {}, _) -> False
+      (StatementTypeSignature sig, StatementFunctionClause fun) ->
+        sigName sig == clauseOwnerFunction fun
+      (StatementTypeSignature {}, _) -> False
+      (StatementFunctionClause fun1, StatementFunctionClause fun2) ->
+        clauseOwnerFunction fun1 == clauseOwnerFunction fun2
+      (StatementFunctionClause {}, _) -> False
 
 ppStatements :: Members '[Reader Options] r => [Statement 'Scoped] -> Sem r (Doc Ann)
 ppStatements ss = joinGroups <$> mapM (fmap mkGroup . mapM (fmap endSemicolon . ppStatement)) (groupStatements ss)
   where
-  mkGroup = vsep
-  joinGroups = concatWith (\a b -> a <> line <> line <> b)
+    mkGroup = vsep
+    joinGroups = concatWith (\a b -> a <> line <> line <> b)
 
 ppStatement :: Members '[Reader Options] r => Statement 'Scoped -> Sem r (Doc Ann)
 ppStatement s = case s of
@@ -212,7 +224,11 @@ ppStatement s = case s of
   StatementPrint p -> ppPrint p
 
 ppTopModulePath :: Members '[Reader Options] r => TopModulePath -> Sem r (Doc Ann)
-ppTopModulePath TopModulePath {..} = dotted <$> mapM ppSymbol (pathParts modulePathDir ++ [modulePathName])
+ppTopModulePath TopModulePath {..} =
+  dotted <$> mapM ppSymbol (modulePathDir ++ [modulePathName])
+
+ppSTopModulePath :: Members '[Reader Options] r => S.TopModulePath -> Sem r (Doc Ann)
+ppSTopModulePath = ppSName' ppTopModulePath
 
 endSemicolon :: Doc Ann -> Doc Ann
 endSemicolon x = x <> kwSemicolon
@@ -228,9 +244,9 @@ ppModule Module {..} = do
       <> kwEnd
       <?> lastSemicolon
   where
-  lastSemicolon = case sing :: SModuleIsTop t of
-    SModuleLocal -> Nothing
-    SModuleTop -> Just kwSemicolon
+    lastSemicolon = case sing :: SModuleIsTop t of
+      SModuleLocal -> Nothing
+      SModuleTop -> Just kwSemicolon
 
 ppOperatorSyntaxDef :: Members '[Reader Options] r => OperatorSyntaxDef -> Sem r (Doc Ann)
 ppOperatorSyntaxDef OperatorSyntaxDef {..} = do
@@ -277,17 +293,13 @@ ppInductiveDef InductiveDef {..} = do
       inductiveParameterType' <- ppExpression inductiveParameterType
       return $ parens (inductiveParameterName' <+> kwColon <+> inductiveParameterType')
 
-dotted :: [Doc Ann] -> Doc Ann
+dotted :: Foldable f => f (Doc Ann) -> Doc Ann
 dotted = concatWith (surround kwDot)
 
 ppQualified :: Members '[Reader Options] r => QualifiedName -> Sem r (Doc Ann)
 ppQualified QualifiedName {..} = do
-  qualifiedPath' <- ppPath qualifiedPath
-  qualifiedSymbol' <- ppSymbol qualifiedSymbol
-  return (dotted [qualifiedPath', qualifiedSymbol'])
-
-ppPath :: Members '[Reader Options] r => Path -> Sem r (Doc Ann)
-ppPath = fmap dotted . mapM ppSymbol . pathParts
+  let symbols = pathParts qualifiedPath NonEmpty.|> qualifiedSymbol
+  dotted <$> mapM ppSymbol symbols
 
 ppName :: Members '[Reader Options] r => Name -> Sem r (Doc Ann)
 ppName n = case n of
@@ -310,14 +322,25 @@ ppSName' ppConcrete S.Name' {..} = do
   let uid = if showNameId then "@" <> ppNameId _nameId else mempty
   return $ nameConcrete' <> uid
 
-ppOpen :: forall r. Members '[Reader Options] r => OpenModule -> Sem r (Doc Ann)
+ppOpen :: forall r. Members '[Reader Options] r => OpenModule 'Scoped -> Sem r (Doc Ann)
 ppOpen OpenModule {..} = do
-  openModuleName' <- ppQualified openModuleName
-  openUsingHiding' <- ppUsingHiding
-  return $ keyword "open" <+> openModuleName' <+> openUsingHiding'
+  openModuleName' <- ppSName openModuleName
+  openUsingHiding' <- sequence $ ppUsingHiding <$> openUsingHiding
+  let openPublic' = ppPublic
+  return $ keyword "open" <+> openModuleName' <+?> openUsingHiding' <+?> openPublic'
   where
-    ppUsingHiding :: Sem r (Doc Ann)
-    ppUsingHiding = return $ pretty ("TODO" :: Text)
+    ppUsingHiding :: UsingHiding -> Sem r (Doc Ann)
+    ppUsingHiding uh = do
+      bracedList <- encloseSep lbrace rbrace kwSemicolon . toList <$> mapM ppSymbol syms
+      return $ kw <+> bracedList
+      where
+        (kw, syms) = case uh of
+          Using s -> (kwUsing, s)
+          Hiding s -> (kwHiding, s)
+    ppPublic :: Maybe (Doc Ann)
+    ppPublic = case openPublic of
+      Public -> Just kwPublic
+      NoPublic -> Nothing
 
 ppTypeSignature :: Members '[Reader Options] r => TypeSignature 'Scoped -> Sem r (Doc Ann)
 ppTypeSignature TypeSignature {..} = do
@@ -401,7 +424,7 @@ ppFunctionClause FunctionClause {..} = do
   where
     ppWhereBlock :: WhereBlock 'Scoped -> Sem r (Doc Ann)
     ppWhereBlock WhereBlock {..} =
-       ppBlock ppWhereClause whereClauses >>= indented . (kwWhere <+>)
+      ppBlock ppWhereClause whereClauses >>= indented . (kwWhere <+>)
       where
         ppWhereClause :: WhereClause 'Scoped -> Sem r (Doc Ann)
         ppWhereClause c = case c of
@@ -425,10 +448,20 @@ ppPrint (Print p) = do
   p' <- ppExpression p
   return $ kwPrint <+> p'
 
-ppImport :: Members '[Reader Options] r => Import 'Scoped -> Sem r (Doc Ann)
-ppImport (Import (Module {..})) = do
-  modulePath' <- ppTopModulePath modulePath
-  return $ kwImport <+> modulePath'
+ppImport :: forall r. Members '[Reader Options] r => Import 'Scoped -> Sem r (Doc Ann)
+ppImport (Import m@Module {..}) = do
+  modulePath' <- ppSTopModulePath modulePath
+  inlineImport' <- inlineImport
+  return $ kwImport <+> modulePath' <+?> inlineImport'
+  where
+  jumpLines :: Doc Ann -> Doc Ann
+  jumpLines x = line <> x <> line
+  inlineImport :: Sem r (Maybe (Doc Ann))
+  inlineImport = do
+    b <- asks _optInlineImports
+    if b then do
+      ppModule m >>= fmap (Just . braces . jumpLines) . indented
+      else return Nothing
 
 ppPattern :: forall r. Members '[Reader Options] r => Pattern -> Sem r (Doc Ann)
 ppPattern = goAtom

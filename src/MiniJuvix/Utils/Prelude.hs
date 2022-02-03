@@ -16,6 +16,7 @@ module MiniJuvix.Utils.Prelude
     module System.FilePath,
     module Data.Singletons,
     module Data.Hashable,
+    module Lens.Micro.Platform,
     module GHC.Generics,
     module Data.Bool,
     module Data.List.NonEmpty,
@@ -92,6 +93,7 @@ import GHC.Generics (Generic)
 import GHC.Num
 import GHC.Real
 import GHC.Stack.Types
+import Lens.Micro.Platform hiding (both)
 import Polysemy
 import Polysemy.Embed
 import Polysemy.Error hiding (fromEither)
@@ -195,3 +197,7 @@ error = Err.error . unpack
 
 undefined :: HasCallStack => a
 undefined = Err.error "undefined"
+
+-- | Used to indicate impossible corner cases.
+impossible :: HasCallStack => a
+impossible = Err.error "impossible"

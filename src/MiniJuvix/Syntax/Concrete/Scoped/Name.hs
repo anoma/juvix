@@ -22,7 +22,19 @@ data AbsModulePath = AbsModulePath
   }
   deriving stock (Show, Eq, Generic)
 
+topModulePathToAbsPath :: C.TopModulePath -> AbsModulePath
+topModulePathToAbsPath p = AbsModulePath p []
+
 instance Hashable AbsModulePath
+
+-- | Tells whether the first argument is an immediate child of the second argument.
+-- In other words, tells whether the first argument is a local module of the second.
+isChildOf :: AbsModulePath -> AbsModulePath -> Bool
+isChildOf child parent
+  | null (absLocalPath child) = False
+  | otherwise =
+    init (absLocalPath child) == absLocalPath parent
+      && absTopModulePath child == absTopModulePath parent
 
 -- | Appends a local path to the absolute path
 -- e.g. TopMod.Local <.> Inner == TopMod.Local.Inner
@@ -56,7 +68,25 @@ data NameKind
     KNameAxiom
   | -- | An local module name.
     KNameLocalModule
+  | -- | An top module name.
+    KNameTopModule
   deriving stock (Show, Eq)
+
+isExprKind :: NameKind -> Bool
+isExprKind k = case k of
+    KNameConstructor -> True
+    KNameInductive -> True
+    KNameFunction -> True
+    KNameLocal -> True
+    KNameAxiom -> True
+    KNameLocalModule -> False
+    KNameTopModule -> False
+
+isModuleKind :: NameKind -> Bool
+isModuleKind k = case k of
+  KNameLocalModule -> True
+  KNameTopModule -> True
+  _ -> False
 
 canHaveFixity :: NameKind -> Bool
 canHaveFixity k = case k of
@@ -66,10 +96,15 @@ canHaveFixity k = case k of
   KNameAxiom -> True
   KNameLocal -> False
   KNameLocalModule -> False
+  KNameTopModule -> False
 
 type Name = Name' C.Name
 
 type Symbol = Name' C.Symbol
+
+type TopModulePath = Name' C.TopModulePath
+
+type ModuleNameId = NameId
 
 data Name' n = Name'
   { _nameId :: NameId,
