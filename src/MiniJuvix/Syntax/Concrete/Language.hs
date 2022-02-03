@@ -235,21 +235,17 @@ deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (
 --------------------------------------------------------------------------------
 
 data PatternInfixApp = PatternInfixApp
-  { patInfixConstructor :: NameType 'Scoped,
+  { 
     patInfixLeft :: Pattern,
+    patInfixConstructor :: NameType 'Scoped,
     patInfixRight :: Pattern
   }
   deriving stock (Show, Eq, Ord)
 
 data PatternPostfixApp = PatternPostfixApp
-  { patPostfixConstructor :: NameType 'Scoped,
-    patPostfixParameter :: Pattern
-  }
-  deriving stock (Show, Eq, Ord)
-
-data PatternPrefixApp = PatternPrefixApp
-  { patPrefixConstructor :: NameType 'Scoped,
-    patPrefixParameter :: Pattern
+  { 
+    patPostfixParameter :: Pattern,
+    patPostfixConstructor :: NameType 'Scoped
   }
   deriving stock (Show, Eq, Ord)
 
@@ -259,7 +255,6 @@ data Pattern
   | PatternApplication Pattern Pattern
   | PatternInfixApplication PatternInfixApp
   | PatternPostfixApplication PatternPostfixApp
-  | PatternPrefixApplication PatternPrefixApp
   | PatternWildcard
   | PatternEmpty
   deriving stock (Show, Eq, Ord)
@@ -842,8 +837,9 @@ data InfixApplication = InfixApplication
   deriving stock (Show, Eq, Ord)
 
 data PostfixApplication = PostfixApplication
-  { postfixAppOperator :: NameType 'Scoped,
-    postfixAppParameter :: ExpressionType 'Scoped
+  { 
+    postfixAppParameter :: ExpressionType 'Scoped,
+    postfixAppOperator :: NameType 'Scoped
   }
   deriving stock (Show, Eq, Ord)
 

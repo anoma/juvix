@@ -3,9 +3,24 @@ module MiniJuvix.Syntax.Concrete.Fixity where
 import Language.Haskell.TH.Syntax (Lift)
 import MiniJuvix.Utils.Prelude
 
-type Precedence = Natural
+data Precedence =
+  PrecMinusOmega
+  | PrecNat Natural
+  | PrecOmega
+  deriving stock (Show, Eq, Lift)
 
-data UnaryAssoc = AssocPrefix | AssocPostfix
+instance Ord Precedence where
+  compare a b = case (a, b) of
+    (PrecMinusOmega, PrecMinusOmega) -> EQ
+    (PrecMinusOmega, _) -> LT
+    (PrecNat _, PrecMinusOmega) -> GT
+    (PrecNat n, PrecNat m) -> compare n m
+    (PrecNat _, PrecOmega) -> LT
+    (PrecOmega, PrecOmega) -> EQ
+    (PrecOmega, _) -> GT
+
+
+data UnaryAssoc = AssocPostfix
   deriving stock (Show, Eq, Ord, Lift)
 
 data BinaryAssoc = AssocNone | AssocLeft | AssocRight

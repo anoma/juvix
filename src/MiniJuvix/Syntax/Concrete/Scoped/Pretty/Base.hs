@@ -85,9 +85,6 @@ kwPublic = keyword "public"
 kwWildcard :: Doc Ann
 kwWildcard = keyword "_"
 
-kwPrefix :: Doc Ann
-kwPrefix = keyword "prefix"
-
 kwPostfix :: Doc Ann
 kwPostfix = keyword "postfix"
 
@@ -179,30 +176,47 @@ ppSymbol :: Members '[Reader Options] r => Symbol -> Sem r (Doc Ann)
 ppSymbol (Sym t) = return (pretty t)
 
 groupStatements :: [Statement 'Scoped] -> [[Statement 'Scoped]]
-groupStatements = groupBy g
+groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
   where
-    g :: Statement 'Scoped -> Statement 'Scoped -> Bool
-    g a b = case (a, b) of
-      (StatementOperator _, StatementOperator _) -> True
-      (StatementOperator _, _) -> False
-      (StatementImport _, StatementImport _) -> True
-      (StatementImport _, _) -> False
-      (StatementOpenModule {}, StatementOpenModule {}) -> True
-      (StatementOpenModule {}, _) -> False
-      (StatementInductive {}, _) -> False
-      (StatementModule {}, _) -> False
-      (StatementAxiom {}, StatementAxiom {}) -> True
-      (StatementAxiom {}, _) -> False
-      (StatementEval {}, StatementEval {}) -> True
-      (StatementEval {}, _) -> False
-      (StatementPrint {}, StatementPrint {}) -> True
-      (StatementPrint {}, _) -> False
-      (StatementTypeSignature sig, StatementFunctionClause fun) ->
-        sigName sig == clauseOwnerFunction fun
-      (StatementTypeSignature {}, _) -> False
-      (StatementFunctionClause fun1, StatementFunctionClause fun2) ->
-        clauseOwnerFunction fun1 == clauseOwnerFunction fun2
-      (StatementFunctionClause {}, _) -> False
+  aux :: ([Statement 'Scoped], [[Statement 'Scoped]]) -> Statement 'Scoped
+      -> ([Statement 'Scoped], [[Statement 'Scoped]])
+  aux ([], acc) s = ([s], acc)
+  aux (gr@(a : _), acc) b
+    | g a b = (b : gr, acc)
+    | otherwise = ([b], gr : acc)
+  -- | Decides if statements a and b should be next to each other without a
+  -- blank line
+  g :: Statement 'Scoped -> Statement 'Scoped -> Bool
+  g a b = case (a, b) of
+    (StatementOperator _, StatementOperator _) -> True
+    (StatementOperator o, s) -> definesSymbol (opSymbol o) s
+    (StatementImport _, StatementImport _) -> True
+    (StatementImport i, StatementOpenModule o) ->
+      S._nameId (modulePath (importModule i)) == S._nameId (openModuleName o)
+    (StatementImport _, _) -> False
+    (StatementOpenModule {}, StatementOpenModule {}) -> True
+    (StatementOpenModule {}, _) -> False
+    (StatementInductive {}, _) -> False
+    (StatementModule {}, _) -> False
+    (StatementAxiom {}, StatementAxiom {}) -> True
+    (StatementAxiom {}, _) -> False
+    (StatementEval {}, StatementEval {}) -> True
+    (StatementEval {}, _) -> False
+    (StatementPrint {}, StatementPrint {}) -> True
+    (StatementPrint {}, _) -> False
+    (StatementTypeSignature sig, StatementFunctionClause fun) ->
+      sigName sig == clauseOwnerFunction fun
+    (StatementTypeSignature {}, _) -> False
+    (StatementFunctionClause fun1, StatementFunctionClause fun2) ->
+      clauseOwnerFunction fun1 == clauseOwnerFunction fun2
+    (StatementFunctionClause {}, _) -> False
+  definesSymbol :: Symbol -> Statement 'Scoped -> Bool
+  definesSymbol n s = case s of
+    StatementTypeSignature sig -> n == S._nameConcrete (sigName sig)
+    StatementInductive InductiveDef{..} ->
+      n == S._nameConcrete inductiveName ||
+      elem n (map (S._nameConcrete . constructorName) inductiveConstructors)
+    _ -> False
 
 ppStatements :: Members '[Reader Options] r => [Statement 'Scoped] -> Sem r (Doc Ann)
 ppStatements ss = joinGroups <$> mapM (fmap mkGroup . mapM (fmap endSemicolon . ppStatement)) (groupStatements ss)
@@ -248,6 +262,12 @@ ppModule Module {..} = do
       SModuleLocal -> Nothing
       SModuleTop -> Just kwSemicolon
 
+ppPrecedence :: Precedence -> Doc Ann
+ppPrecedence p = case p of
+  PrecMinusOmega -> pretty ("-ω" :: Text)
+  PrecNat n -> pretty n
+  PrecOmega -> pretty ("ω" :: Text)
+
 ppOperatorSyntaxDef :: Members '[Reader Options] r => OperatorSyntaxDef -> Sem r (Doc Ann)
 ppOperatorSyntaxDef OperatorSyntaxDef {..} = do
   opSymbol' <- ppSymbol opSymbol
@@ -255,13 +275,11 @@ ppOperatorSyntaxDef OperatorSyntaxDef {..} = do
   where
     ppFixity :: Fixity -> Doc Ann
     ppFixity Fixity {..} =
-      ppArity <+> pretty fixityPrecedence
+      ppArity <+> ppPrecedence fixityPrecedence
       where
         ppArity :: Doc Ann
         ppArity = case fixityArity of
-          Unary p -> case p of
-            AssocPrefix -> kwPrefix
-            AssocPostfix -> kwPostfix
+          Unary {} -> kwPostfix
           Binary p -> case p of
             AssocRight -> kwInfixr
             AssocLeft -> kwInfixl
@@ -351,7 +369,7 @@ ppTypeSignature TypeSignature {..} = do
 ppFunction :: forall r. Members '[Reader Options] r => Function 'Scoped -> Sem r (Doc Ann)
 ppFunction Function {..} = do
   funParameter' <- ppFunParameter funParameter
-  funReturn' <- ppExpressionAtom funReturn
+  funReturn' <- ppRightExpression funFixity funReturn
   return $ funParameter' <+> kwArrowR <+> funReturn'
   where
     ppUsage :: Maybe Usage -> Doc Ann
@@ -364,7 +382,7 @@ ppFunction Function {..} = do
     ppFunParameter :: FunctionParameter 'Scoped -> Sem r (Doc Ann)
     ppFunParameter FunctionParameter {..} = do
       case paramName of
-        Nothing -> ppExpressionAtom paramType
+        Nothing -> ppLeftExpression funFixity paramType
         Just n -> do
           paramName' <- ppSSymbol n
           paramType' <- ppExpression paramType
@@ -464,59 +482,49 @@ ppImport (Import m@Module {..}) = do
       else return Nothing
 
 ppPattern :: forall r. Members '[Reader Options] r => Pattern -> Sem r (Doc Ann)
-ppPattern = goAtom
+ppPattern pat = do
+  p' <- ppNestedPattern pat
+  return $ if isAtomicPat pat then p' else parens p'
   where
-    isAtomicPat :: Pattern -> Bool
-    isAtomicPat p = case p of
-      PatternVariable {} -> True
-      PatternApplication {} -> False
-      PatternConstructor {} -> True
-      PatternInfixApplication {} -> False
-      PatternPostfixApplication {} -> False
-      PatternPrefixApplication {} -> False
-      PatternWildcard -> True
-      PatternEmpty -> True
-    goAtom :: Pattern -> Sem r (Doc Ann)
-    goAtom p = do
-      p' <- go p
-      return $ if isAtomicPat p then p' else parens p'
+  isAtomicPat :: Pattern -> Bool
+  isAtomicPat p = case p of
+    PatternVariable {} -> True
+    PatternApplication {} -> False
+    PatternConstructor {} -> True
+    PatternInfixApplication {} -> False
+    PatternPostfixApplication {} -> False
+    PatternWildcard -> True
+    PatternEmpty -> True
+
+
+ppNestedPattern :: forall r. Members '[Reader Options] r => Pattern -> Sem r (Doc Ann)
+ppNestedPattern = go
+  where
     go :: Pattern -> Sem r (Doc Ann)
     go p = case p of
       PatternVariable v -> ppSSymbol v
       PatternApplication l r -> do
-        l' <- goAtom l
-        r' <- goAtom r
+        l' <- ppLeftExpression appFixity l
+        r' <- ppRightExpression appFixity r
         return $ l' <+> r'
       PatternWildcard -> return kwWildcard
       PatternEmpty -> return $ parens mempty
       PatternConstructor constr -> ppSName constr
       PatternInfixApplication i -> ppPatternInfixApp i
-      PatternPrefixApplication i -> ppPatternPrefixApp i
       PatternPostfixApplication i -> ppPatternPostfixApp i
 
     ppPatternInfixApp :: PatternInfixApp -> Sem r (Doc Ann)
-    ppPatternInfixApp PatternInfixApp {..} = do
+    ppPatternInfixApp p@PatternInfixApp {..} = do
       patInfixConstructor' <- ppSName patInfixConstructor
-      patInfixLeft' <- goAtom patInfixLeft
-      patInfixRight' <- goAtom patInfixRight
+      patInfixLeft' <- ppLeftExpression (pinfixFixity p) patInfixLeft
+      patInfixRight' <- ppRightExpression (pinfixFixity p) patInfixRight
       return $ patInfixLeft' <+> patInfixConstructor' <+> patInfixRight'
 
-    ppPatternPrefixApp :: PatternPrefixApp -> Sem r (Doc Ann)
-    ppPatternPrefixApp PatternPrefixApp {..} = do
-      patPrefixConstructor' <- ppSName patPrefixConstructor
-      patPrefixParameter' <- goAtom patPrefixParameter
-      return $ patPrefixConstructor' <+> patPrefixParameter'
-
     ppPatternPostfixApp :: PatternPostfixApp -> Sem r (Doc Ann)
-    ppPatternPostfixApp PatternPostfixApp {..} = do
+    ppPatternPostfixApp p@PatternPostfixApp {..} = do
       patPostfixConstructor' <- ppSName patPostfixConstructor
-      patPostfixParameter' <- goAtom patPostfixParameter
+      patPostfixParameter' <- ppLeftExpression (ppostfixFixity p) patPostfixParameter
       return $ patPostfixParameter' <+> patPostfixConstructor'
-
-ppExpressionAtom :: forall r. Members '[Reader Options] r => Expression -> Sem r (Doc Ann)
-ppExpressionAtom e = do
-  e' <- ppExpression e
-  return $ if isAtomic e then e' else parens e'
 
 isAtomic :: Expression -> Bool
 isAtomic e = case e of
@@ -531,30 +539,134 @@ isAtomic e = case e of
   ExpressionFunction {} -> False
 
 ppInfixApplication :: forall r. Members '[Reader Options] r => InfixApplication -> Sem r (Doc Ann)
-ppInfixApplication InfixApplication {..} = do
-  infixAppLeft' <- ppExpressionAtom infixAppLeft
+ppInfixApplication i@InfixApplication {..} = do
+  infixAppLeft' <- ppLeftExpression (infixFixity i) infixAppLeft
   infixAppOperator' <- ppSName infixAppOperator
-  infixAppRight' <- ppExpressionAtom infixAppRight
+  infixAppRight' <- ppRightExpression (infixFixity i) infixAppRight
   return $ infixAppLeft' <+> infixAppOperator' <+> infixAppRight'
 
 ppPostfixApplication :: forall r. Members '[Reader Options] r => PostfixApplication -> Sem r (Doc Ann)
-ppPostfixApplication PostfixApplication {..} = do
-  postfixAppParameter' <- ppExpressionAtom postfixAppParameter
+ppPostfixApplication i@PostfixApplication {..} = do
+  postfixAppParameter' <- ppPostExpression (postfixFixity i) postfixAppParameter
   postfixAppOperator' <- ppSName postfixAppOperator
   return $ postfixAppParameter' <+> postfixAppOperator'
+
+class PrettyCode a where
+  ppCode :: forall r. Members '[Reader Options] r => a -> Sem r (Doc Ann)
+
+instance PrettyCode Expression where
+  ppCode = ppExpression
+
+instance PrettyCode Pattern where
+  ppCode = ppNestedPattern
+
+class HasFixity a where
+  getFixity :: a -> Maybe Fixity
+
+instance HasFixity Expression where
+ getFixity e = case e of
+    ExpressionIdentifier {} -> Nothing
+    ExpressionApplication {} -> Just appFixity
+    ExpressionInfixApplication a -> Just (infixFixity a)
+    ExpressionPostfixApplication a -> Just (postfixFixity a)
+    ExpressionLambda {} -> Nothing
+    ExpressionMatch {} -> Nothing
+    ExpressionLetBlock {} -> Nothing
+    ExpressionUniverse {} -> Nothing
+    ExpressionFunction {} -> Just funFixity
+
+instance HasFixity Pattern where
+ getFixity e = case e of
+    PatternVariable {} -> Nothing
+    PatternConstructor {} -> Nothing
+    PatternApplication {} -> Just appFixity
+    PatternInfixApplication a -> Just (pinfixFixity a)
+    PatternPostfixApplication p -> Just (ppostfixFixity p)
+    PatternWildcard -> Nothing
+    PatternEmpty -> Nothing
+
+pinfixFixity :: PatternInfixApp -> Fixity
+pinfixFixity (PatternInfixApp  _ op _) = case S._nameFixity op of
+    S.NoFixity -> impossible
+    S.SomeFixity s -> s
+
+ppostfixFixity :: PatternPostfixApp -> Fixity
+ppostfixFixity (PatternPostfixApp  _ op) = case S._nameFixity op of
+    S.NoFixity -> impossible
+    S.SomeFixity s -> s
+
+infixFixity :: InfixApplication -> Fixity
+infixFixity (InfixApplication  _ op _) = case S._nameFixity op of
+    S.NoFixity -> impossible
+    S.SomeFixity s -> s
+
+postfixFixity :: PostfixApplication -> Fixity
+postfixFixity (PostfixApplication _ op) = case S._nameFixity op of
+    S.NoFixity -> impossible
+    S.SomeFixity s -> s
+
+appFixity :: Fixity
+appFixity = Fixity PrecOmega (Binary AssocLeft)
+
+funFixity :: Fixity
+funFixity = Fixity PrecMinusOmega (Binary AssocRight)
+
+isLeftAssoc :: Fixity -> Bool
+isLeftAssoc opInf = case fixityArity opInf of
+    Binary AssocLeft -> True
+    _ -> False
+
+isRightAssoc :: Fixity -> Bool
+isRightAssoc opInf = case fixityArity opInf of
+    Binary AssocRight -> True
+    _ -> False
+
+isPostfixAssoc :: Fixity -> Bool
+isPostfixAssoc opInf = case fixityArity opInf of
+    Unary AssocPostfix -> True
+    _ -> False
+
+atomParens :: (Fixity -> Bool) -> Maybe Fixity -> Fixity -> Bool
+atomParens associates argAtom opInf = case argAtom of
+  Nothing -> False
+  Just argInf
+   | argInf > opInf -> False
+   | argInf < opInf -> True
+   | associates opInf -> False
+   | otherwise -> True
+
+parensCond :: Bool -> Doc Ann -> Doc Ann
+parensCond t d = if t then parens d else d
+
+ppPostExpression ::(PrettyCode a, HasFixity a, Member (Reader Options) r)  =>
+  Fixity -> a -> Sem r (Doc Ann)
+ppPostExpression = ppLRExpression isPostfixAssoc
+
+ppRightExpression :: (PrettyCode a, HasFixity a, Member (Reader Options) r ) =>
+  Fixity -> a -> Sem r (Doc Ann)
+ppRightExpression = ppLRExpression isRightAssoc
+
+ppLeftExpression :: (PrettyCode a, HasFixity a, Member (Reader Options) r ) =>
+  Fixity -> a -> Sem r (Doc Ann)
+ppLeftExpression = ppLRExpression isLeftAssoc
+
+ppLRExpression
+  :: (HasFixity a, PrettyCode a, Member (Reader Options) r) =>
+     (Fixity -> Bool) -> Fixity -> a -> Sem r (Doc Ann)
+ppLRExpression associates atom e =
+  parensCond (atomParens associates (getFixity e) atom)
+      <$> ppCode e
 
 ppExpression :: forall r. Members '[Reader Options] r => Expression -> Sem r (Doc Ann)
 ppExpression = go
   where
     ppApplication :: Application -> Sem r (Doc Ann)
     ppApplication (Application l r) = do
-      l' <- goAtom l
-      r' <- goAtom r
+      -- Note: parentheses on the left of an application are never necessary,
+      -- but I prefer homogeneous code.
+      l' <- ppLeftExpression appFixity l
+      r' <- ppRightExpression appFixity r
       return $ l' <+> r'
-    goAtom :: Expression -> Sem r (Doc Ann)
-    goAtom e = do
-      e' <- go e
-      return $ if isAtomic e then e' else parens e'
     go :: Expression -> Sem r (Doc Ann)
     go e = case e of
       ExpressionIdentifier n -> ppSName n
