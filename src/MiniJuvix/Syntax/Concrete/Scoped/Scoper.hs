@@ -168,14 +168,12 @@ checkImport ::
   Import 'Parsed ->
   Sem r (Import 'Scoped)
 checkImport (Import p) = do
+  -- TODO check if it is already imported
   (exported, checked) <- readParseModule p >>= checkTopModule
   let sname = modulePath checked
       moduleId = S._nameId sname
-      -- entry = symbolEntry sname
-      -- path = S._symbolDefinedIn sname
   modify (over scopeTopModules (HashMap.insert p moduleId))
   modify (over scoperModules (HashMap.insert moduleId exported))
-  -- TODO add entry to scopeSymbols
   return (Import checked)
 
 getTopModulePath :: Module 'Parsed 'ModuleTop -> S.AbsModulePath
@@ -196,12 +194,13 @@ lookupSymbolGeneric filtr name modules final = do
   inLocalModule :: Sem r (Maybe SymbolEntry) =
     case modules of
       [] -> do
-        let err = throw (ErrSymNotInScope final)
-        SymbolInfo {..} <- fromMaybeM err (HashMap.lookup final <$> gets _scopeSymbols)
-        case filter filtr (toList _symbolInfo) of
-          [] -> impossible
-          [e] -> return (Just e)
-          es -> throw (ErrAmbiguousSym es) -- This is meant to happen only at the top level
+         r <- HashMap.lookup final <$> gets _scopeSymbols
+         case r of
+          Nothing -> return Nothing
+          Just SymbolInfo {..} -> case filter filtr (toList _symbolInfo) of
+            [] -> impossible
+            [e] -> return (Just e)
+            es -> throw (ErrAmbiguousSym es) -- This is meant to happen only at the top level
       (p : ps) -> do
         r <- fmap (filter (S.isModuleKind . _symbolKind) . toList . _symbolInfo)
           . HashMap.lookup p <$> gets _scopeSymbols
@@ -519,11 +518,11 @@ lookupModuleSymbol :: Members '[Error ScopeError, State Scope, State ScoperState
 lookupModuleSymbol n = do
   es <- lookupQualifiedSymbol (path, sym)
   case filter (S.isModuleKind . _symbolKind) es of
-    [] -> err
+    [] -> notInScope
     [x] -> return $ entryToSName n x
     _ -> throw (ErrAmbiguousModuleSym es)
   where
-  err = throw (ErrModuleNotInScope n)
+  notInScope = throw (ErrModuleNotInScope n)
   (path, sym) = case n of
     NameUnqualified s -> ([], s)
     NameQualified (QualifiedName (Path p) s) -> (toList p, s)
