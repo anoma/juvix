@@ -1,0 +1,3 @@
+[submodule "minijuvix-stdlib"]
+	path = minijuvix-stdlib
+	url = git@github.com:heliaxdev/minijuvix-stdlib.git
