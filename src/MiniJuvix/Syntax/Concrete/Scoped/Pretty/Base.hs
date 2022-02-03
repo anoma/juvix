@@ -213,6 +213,9 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
   definesSymbol :: Symbol -> Statement 'Scoped -> Bool
   definesSymbol n s = case s of
     StatementTypeSignature sig -> n == S._nameConcrete (sigName sig)
+    StatementInductive InductiveDef{..} ->
+      n == S._nameConcrete inductiveName ||
+      elem n (map (S._nameConcrete . constructorName) inductiveConstructors)
     _ -> False
 
 ppStatements :: Members '[Reader Options] r => [Statement 'Scoped] -> Sem r (Doc Ann)
