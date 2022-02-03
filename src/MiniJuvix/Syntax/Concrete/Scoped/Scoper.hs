@@ -187,25 +187,43 @@ getTopModulePath Module {..} =
 
 -- | Looks for a symbol in (possibly) nested local modules
 lookupSymbolGeneric :: forall a r. (Show a, Members '[State Scope, Error ScopeError, State ScoperState] r) =>
-   (SymbolEntry -> Bool) -> a -> [Symbol] -> Symbol -> Sem r (Maybe SymbolEntry)
-lookupSymbolGeneric filtr name modules final = case modules of
-    [] -> do
-      let err = throw (ErrSymNotInScope final)
-      SymbolInfo {..} <- fromMaybeM err (HashMap.lookup final <$> gets _scopeSymbols)
-      case filter filtr (toList _symbolInfo) of
-        [] -> impossible
-        [e] -> return (Just e)
-        es -> throw (ErrAmbiguousSym es) -- This is meant to happen only at the top level
-    (p : ps) -> do
-      r <- fmap (filter (S.isModuleKind . _symbolKind) . toList . _symbolInfo)
-        . HashMap.lookup p <$> gets _scopeSymbols
-      case r of
-        Just [x] -> do
-          export <- getExportScope (_symbolId x)
-          lookInExport final ps export
-        Just [] -> return Nothing
-        Just _ -> throw $ ErrGeneric ("ambiguous name " <> show name)
-        Nothing -> return Nothing
+   (SymbolEntry -> Bool) -> a -> [Symbol] -> Symbol -> Sem r [SymbolEntry]
+lookupSymbolGeneric filtr name modules final = do
+  local' <- inLocalModule
+  import' <- inImport
+  return $ maybeToList local' ++ maybeToList import'
+  where
+  inLocalModule :: Sem r (Maybe SymbolEntry) =
+    case modules of
+      [] -> do
+        let err = throw (ErrSymNotInScope final)
+        SymbolInfo {..} <- fromMaybeM err (HashMap.lookup final <$> gets _scopeSymbols)
+        case filter filtr (toList _symbolInfo) of
+          [] -> impossible
+          [e] -> return (Just e)
+          es -> throw (ErrAmbiguousSym es) -- This is meant to happen only at the top level
+      (p : ps) -> do
+        r <- fmap (filter (S.isModuleKind . _symbolKind) . toList . _symbolInfo)
+          . HashMap.lookup p <$> gets _scopeSymbols
+        case r of
+          Just [x] -> do
+            export <- getExportScope (_symbolId x)
+            lookInExport final ps export
+          Just [] -> return Nothing
+          Just _ -> throw $ ErrGeneric ("ambiguous name " <> show name)
+          Nothing -> return Nothing
+  inImport :: Sem r (Maybe SymbolEntry)
+  inImport = do
+    fmap mkEntry . HashMap.lookup path <$> gets _scopeTopModules
+    where
+    mkEntry modId = SymbolEntry {
+         _symbolKind = S.KNameTopModule ,
+         _symbolDefinedIn = S.topModulePathToAbsPath path,
+         _symbolId = modId,
+         _symbolFixity = S.NoFixity,
+         _symbolWhyInScope = BecauseImportedOpened,
+         _symbolPublicAnn = NoPublic}
+    path = TopModulePath modules final
 
 lookInExport :: forall r. Members '[State Scope, State ScoperState] r =>
   Symbol -> [Symbol] -> ExportScope -> Sem r (Maybe SymbolEntry)
@@ -233,10 +251,10 @@ lookupQualifiedSymbol :: forall r. Members '[State Scope, Error ScopeError, Stat
 lookupQualifiedSymbol q@(path, sym) = do
   here' <- here
   there' <- there
-  return (maybeToList here' ++ there')
+  return (here' ++ there')
   where
   -- | Looks for a local module symbol in scope
-  here :: Sem r (Maybe SymbolEntry)
+  here :: Sem r [SymbolEntry]
   here = lookupSymbolGeneric (S.isModuleKind . S._symbolKind) q path sym
   -- | Looks for a top level modules
   there :: Sem r [SymbolEntry]
@@ -738,7 +756,8 @@ checkUnqualified s = do
       -- Lookup at the global scope
       let err = throw (ErrSymNotInScope s)
       entryToSName (NameUnqualified s) <$>
-        fromMaybeM err (lookupSymbolGeneric (S.isExprKind . _symbolKind) s [] s)
+         -- TODO change listToMaybe, it is a bit too hacky
+        fromMaybeM err (listToMaybe <$> lookupSymbolGeneric (S.isExprKind . _symbolKind) s [] s)
 
 
 checkPatternName ::
