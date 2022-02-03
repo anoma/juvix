@@ -19,7 +19,6 @@ import MiniJuvix.Syntax.Concrete.Parser (runModuleParserIO)
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Syntax.Concrete.Scoped.Scope
 import MiniJuvix.Utils.Prelude
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Scope.Base as S
 import qualified Data.List.NonEmpty as NonEmpty
 import MiniJuvix.Syntax.Concrete.Scoped.Name (topModulePathToAbsPath)
 
@@ -164,17 +163,26 @@ bindConstructorSymbol ::
 bindConstructorSymbol = bindSymbolOf S.KNameConstructor
 
 checkImport ::
+  forall r.
   Members '[Error ScopeError, State Scope, Reader ScopeParameters, Embed IO, State ScoperState] r =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
-checkImport (Import p) = do
-  -- TODO check if it is already imported
-  (exported, checked) <- readParseModule p >>= checkTopModule
+checkImport (Import path) = do
+  checkCycle
+  cache <- gets (_cachedModules . _scoperModulesCache)
+  (exported, checked) <- maybe (readParseModule path >>= checkTopModule) return (cache ^. at path)
   let sname = modulePath checked
       moduleId = S._nameId sname
-  modify (over scopeTopModules (HashMap.insert p moduleId))
+  modify (over scopeTopModules (HashMap.insert path moduleId))
   modify (over scoperModules (HashMap.insert moduleId exported))
   return (Import checked)
+  where
+  checkCycle :: Sem r ()
+  checkCycle =
+    whenM
+      (HashSet.member path <$> asks _scopeTopParents)
+      (throw (ErrImportCycle path))
+
 
 getTopModulePath :: Module 'Parsed 'ModuleTop -> S.AbsModulePath
 getTopModulePath Module {..} =
@@ -254,7 +262,7 @@ lookupQualifiedSymbol q@(path, sym) = do
   where
   -- | Looks for a local module symbol in scope
   here :: Sem r [SymbolEntry]
-  here = lookupSymbolGeneric (S.isModuleKind . S._symbolKind) q path sym
+  here = lookupSymbolGeneric (S.isModuleKind . _symbolKind) q path sym
   -- | Looks for a top level modules
   there :: Sem r [SymbolEntry]
   there = concatMapM (fmap maybeToList . uncurry lookInTopModule) allTopPaths
@@ -443,9 +451,9 @@ checkTopModule ::
   Module 'Parsed 'ModuleTop ->
   Sem r (ExportScope, Module 'Scoped 'ModuleTop)
 checkTopModule m@(Module path stmts) = do
-  checkCycle
-  cache <- gets (_cachedModules . _scoperModulesCache)
-  maybe checkedModule return (cache ^. at path)
+  r <- checkedModule
+  modify (over (scoperModulesCache .  cachedModules) (HashMap.insert path r))
+  return r
   where
   freshTopModulePath :: forall s. Members '[State ScoperState] s =>
      Sem s S.TopModulePath
@@ -467,11 +475,6 @@ checkTopModule m@(Module path stmts) = do
         path' <- freshTopModulePath
         Module path' <$> local addParent (mapM checkStatement stmts)
     (,checked) <$> exportScope exported
-  checkCycle :: Sem r ()
-  checkCycle =
-    whenM
-      (HashSet.member path <$> asks _scopeTopParents)
-      (throw (ErrImportCycle path))
 
 checkLocalModule ::
   forall r.
@@ -564,7 +567,7 @@ checkOpenModule OpenModule {..} = do
     alterScope = alterEntries . filterScope
       where
         alterEntry :: SymbolEntry -> SymbolEntry
-        alterEntry = set symbolWhyInScope S.BecauseImportedOpened . set symbolPublicAnn openPublic
+        alterEntry = set symbolWhyInScope BecauseImportedOpened . set symbolPublicAnn openPublic
         alterEntries :: ExportScope -> ExportScope
         alterEntries = over exportSymbols (fmap alterEntry)
         filterScope :: ExportScope -> ExportScope

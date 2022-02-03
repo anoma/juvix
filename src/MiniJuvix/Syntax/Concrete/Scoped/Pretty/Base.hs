@@ -15,6 +15,7 @@ data Ann
 data Options = Options
   { _optOptimizeParens :: Bool,
     _optShowNameId :: Bool,
+    _optInlineImports :: Bool,
     _optIndent :: Int
   }
 
@@ -23,6 +24,7 @@ defaultOptions =
   Options
     { _optOptimizeParens = True,
       _optShowNameId = False,
+      _optInlineImports = True,
       _optIndent = 2
     }
 
@@ -186,7 +188,7 @@ groupStatements = groupBy g
       (StatementImport _, StatementImport _) -> True
       (StatementImport _, _) -> False
       (StatementOpenModule {}, StatementOpenModule {}) -> True
-      (StatementOpenModule {}, _) -> True
+      (StatementOpenModule {}, _) -> False
       (StatementInductive {}, _) -> False
       (StatementModule {}, _) -> False
       (StatementAxiom {}, StatementAxiom {}) -> True
@@ -446,10 +448,20 @@ ppPrint (Print p) = do
   p' <- ppExpression p
   return $ kwPrint <+> p'
 
-ppImport :: Members '[Reader Options] r => Import 'Scoped -> Sem r (Doc Ann)
-ppImport (Import (Module {..})) = do
+ppImport :: forall r. Members '[Reader Options] r => Import 'Scoped -> Sem r (Doc Ann)
+ppImport (Import m@Module {..}) = do
   modulePath' <- ppSTopModulePath modulePath
-  return $ kwImport <+> modulePath'
+  inlineImport' <- inlineImport
+  return $ kwImport <+> modulePath' <+?> inlineImport'
+  where
+  jumpLines :: Doc Ann -> Doc Ann
+  jumpLines x = line <> x <> line
+  inlineImport :: Sem r (Maybe (Doc Ann))
+  inlineImport = do
+    b <- asks _optInlineImports
+    if b then do
+      ppModule m >>= fmap (Just . braces . jumpLines) . indented
+      else return Nothing
 
 ppPattern :: forall r. Members '[Reader Options] r => Pattern -> Sem r (Doc Ann)
 ppPattern = goAtom
