@@ -30,3 +30,5 @@ stylize a = case a of
     KNameTopModule -> mempty
   AnnDelimiter -> colorDull White
   AnnKeyword -> colorDull Blue
+  AnnDef {} -> mempty
+  AnnRef {} -> mempty

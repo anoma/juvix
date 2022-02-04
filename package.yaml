@@ -19,6 +19,8 @@ extra-source-files:
 dependencies:
 - aeson == 2.0.*
 - base == 4.15.*
+- blaze-html == 0.9.*
+- blaze-markup == 0.8.*
 - bytestring == 0.10.*
 - containers == 0.6.*
 - directory == 1.3.*

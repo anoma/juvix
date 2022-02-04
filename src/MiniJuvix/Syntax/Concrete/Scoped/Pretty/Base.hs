@@ -1,4 +1,7 @@
-module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base where
+module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (
+  module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base,
+  module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ann
+                                                    ) where
 
 import Data.Singletons
 import MiniJuvix.Syntax.Concrete.Language
@@ -6,11 +9,7 @@ import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Utils.Prelude
 import qualified Data.List.NonEmpty.Extra as NonEmpty
 import Prettyprinter hiding (braces, parens)
-
-data Ann
-  = AnnKind S.NameKind
-  | AnnKeyword
-  | AnnDelimiter
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ann
 
 data Options = Options
   { _optOptimizeParens :: Bool,
