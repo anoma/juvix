@@ -11,7 +11,6 @@ import qualified Control.Monad.Combinators.Expr as P
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.HashSet as HashSet
 import qualified Data.Stream as Stream
-import qualified Data.Text as Text
 import Lens.Micro.Platform
 import qualified MiniJuvix.Syntax.Concrete.Base as P
 import MiniJuvix.Syntax.Concrete.Language
@@ -349,12 +348,7 @@ modulePathToFilePath ::
 modulePathToFilePath mp = do
   root <- asks _scopeRootPath
   ext <- asks _scopeFileExtension
-  let relDirPath = foldr ((</>) . toPath) mempty (modulePathDir mp)
-      relFilePath = relDirPath </> toPath (modulePathName mp) <.> ext
-  return $ root </> relFilePath
-  where
-  toPath :: Symbol -> FilePath
-  toPath (Sym t) = Text.unpack t
+  return $ topModulePathToFilePath' (Just ext) root mp
 
 checkOperatorSyntaxDef ::
   forall r.
@@ -1222,7 +1216,7 @@ parsePatternTerm = do
           _ -> False
 
     parseEmpty :: ParsePat Pattern
-    parseEmpty = PatternWildcard <$ P.satisfy isEmpty
+    parseEmpty = PatternEmpty <$ P.satisfy isEmpty
       where
         isEmpty :: PatternAtom 'Scoped -> Bool
         isEmpty s = case s of
@@ -1230,7 +1224,7 @@ parsePatternTerm = do
           _ -> False
 
     parseVariable :: ParsePat Pattern
-    parseVariable = PatternWildcard <$ P.token var mempty
+    parseVariable = PatternVariable <$> P.token var mempty
       where
         var :: PatternAtom 'Scoped -> Maybe S.Symbol
         var s = case s of

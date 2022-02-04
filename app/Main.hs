@@ -13,11 +13,14 @@ import MiniJuvix.Utils.Prelude
 import Options.Applicative
 import Options.Applicative.Help.Pretty
 import System.IO.Error
-import Text.Show.Pretty
+import Text.Show.Pretty hiding (Html)
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (defaultOptions)
 
 data Command
   = Scope ScopeOptions
   | Parse ParseOptions
+  | Html HtmlOptions
 
 data ScopeOptions = ScopeOptions
   { _scopeRootDir :: FilePath,
@@ -30,6 +33,20 @@ data ParseOptions = ParseOptions
   { _parseInputFile :: FilePath,
     _parseNoPrettyShow :: Bool
   }
+
+data HtmlOptions = HtmlOptions
+  { _htmlInputFile :: FilePath
+  }
+
+parseHtml :: Parser HtmlOptions
+parseHtml = do
+  _htmlInputFile <-
+    argument
+      str
+      ( metavar "MINIJUVIX_FILE"
+          <> help "Path to a .mjuvix file"
+      )
+  pure HtmlOptions {..}
 
 parseParse :: Parser ParseOptions
 parseParse = do
@@ -97,7 +114,8 @@ parseCommand =
   hsubparser $
     mconcat
       [ commandParse,
-        commandScope
+        commandScope,
+        commandHtml
       ]
   where
     commandParse :: Mod CommandFields Command
@@ -109,6 +127,14 @@ parseCommand =
             (Parse <$> parseParse)
             (progDesc "Parse a .mjuvix file")
 
+    commandHtml :: Mod CommandFields Command
+    commandHtml = command "html" minfo
+      where
+        minfo :: ParserInfo Command
+        minfo =
+          info
+            (Html <$> parseHtml)
+            (progDesc "Generate html for a .mjuvix file")
     commandScope :: Mod CommandFields Command
     commandScope = command "scope" minfo
       where
@@ -141,6 +167,11 @@ go c = case c of
   Parse ParseOptions {..} -> do
     m <- parseModuleIO _parseInputFile
     if _parseNoPrettyShow then print m else pPrint m
+  Html HtmlOptions {..} -> do
+    root <- getCurrentDirectory
+    m <- parseModuleIO _htmlInputFile
+    s <- fromRightIO show $ M.scopeCheck1 root m
+    genHtml defaultOptions s
 
 main :: IO ()
 main = execParser descr >>= go

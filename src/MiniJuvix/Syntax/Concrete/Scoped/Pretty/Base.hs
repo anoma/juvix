@@ -23,7 +23,7 @@ defaultOptions =
   Options
     { _optOptimizeParens = True,
       _optShowNameId = False,
-      _optInlineImports = True,
+      _optInlineImports = False,
       _optIndent = 2
     }
 
@@ -168,7 +168,7 @@ parens = enclose kwParenL kwParenR
 
 ppModulePathType :: forall t r. (SingI t, Members '[Reader Options] r) => ModulePathType 'Scoped t -> Sem r (Doc Ann)
 ppModulePathType x = case sing :: SModuleIsTop t of
-  SModuleTop -> ppSTopModulePath x
+  SModuleTop -> annDef x <$> ppSTopModulePath x
   SModuleLocal -> ppSSymbol x
 
 ppSymbol :: Members '[Reader Options] r => Symbol -> Sem r (Doc Ann)
@@ -286,13 +286,13 @@ ppOperatorSyntaxDef OperatorSyntaxDef {..} = do
 
 ppInductiveConstructorDef :: Members '[Reader Options] r => InductiveConstructorDef 'Scoped -> Sem r (Doc Ann)
 ppInductiveConstructorDef InductiveConstructorDef {..} = do
-  constructorName' <- ppSSymbol constructorName
+  constructorName' <- annDef constructorName <$> ppSSymbol constructorName
   constructorType' <- ppExpression constructorType
   return $ constructorName' <+> kwColon <+> constructorType'
 
 ppInductiveDef :: forall r. Members '[Reader Options] r => InductiveDef 'Scoped -> Sem r (Doc Ann)
 ppInductiveDef InductiveDef {..} = do
-  inductiveName' <- ppSSymbol inductiveName
+  inductiveName' <- annDef inductiveName <$> ppSSymbol inductiveName
   inductiveParameters' <- hsep <$> mapM ppInductiveParameter inductiveParameters
   inductiveType' <- ppTypeType
   inductiveConstructors' <- ppBlock ppInductiveConstructorDef inductiveConstructors
@@ -306,7 +306,7 @@ ppInductiveDef InductiveDef {..} = do
       Just e -> Just . (kwColon <+>) <$> ppExpression e
     ppInductiveParameter :: InductiveParameter 'Scoped -> Sem r (Doc Ann)
     ppInductiveParameter InductiveParameter {..} = do
-      inductiveParameterName' <- ppSSymbol inductiveParameterName
+      inductiveParameterName' <- annDef inductiveParameterName <$> ppSSymbol inductiveParameterName
       inductiveParameterType' <- ppExpression inductiveParameterType
       return $ parens (inductiveParameterName' <+> kwColon <+> inductiveParameterType')
 
@@ -329,8 +329,14 @@ ppNameId (S.NameId k) = pretty k
 ppSSymbol :: Members '[Reader Options] r => S.Symbol -> Sem r (Doc Ann)
 ppSSymbol = ppSName' ppSymbol
 
+annDef :: S.Name' n -> Doc Ann -> Doc Ann
+annDef nm = annotate (AnnDef (S._nameId nm))
+
+annRef :: S.Name' n -> Doc Ann -> Doc Ann
+annRef nm = annotate (AnnRef (S.absTopModulePath (S._nameDefinedIn nm)) (S._nameId nm))
+
 ppSName :: Members '[Reader Options] r => S.Name -> Sem r (Doc Ann)
-ppSName = ppSName' ppName
+ppSName nm = annRef nm <$> ppSName' ppName nm
 
 ppSName' :: Members '[Reader Options] r => (s -> Sem r (Doc Ann)) -> S.Name' s -> Sem r (Doc Ann)
 ppSName' ppConcrete S.Name' {..} = do
@@ -361,7 +367,7 @@ ppOpen OpenModule {..} = do
 
 ppTypeSignature :: Members '[Reader Options] r => TypeSignature 'Scoped -> Sem r (Doc Ann)
 ppTypeSignature TypeSignature {..} = do
-  sigName' <- ppSSymbol sigName
+  sigName' <- annDef sigName <$> ppSSymbol sigName
   sigType' <- ppExpression sigType
   return $ sigName' <+> kwColon <+> sigType'
 
@@ -383,7 +389,7 @@ ppFunction Function {..} = do
       case paramName of
         Nothing -> ppLeftExpression funFixity paramType
         Just n -> do
-          paramName' <- ppSSymbol n
+          paramName' <- annDef n <$> ppSSymbol n
           paramType' <- ppExpression paramType
           return $ parens (paramName' <+> ppUsage paramUsage <+> paramType')
 
@@ -467,7 +473,7 @@ ppPrint (Print p) = do
 
 ppImport :: forall r. Members '[Reader Options] r => Import 'Scoped -> Sem r (Doc Ann)
 ppImport (Import m@Module {..}) = do
-  modulePath' <- ppSTopModulePath modulePath
+  modulePath' <- annRef modulePath <$> ppSTopModulePath modulePath
   inlineImport' <- inlineImport
   return $ kwImport <+> modulePath' <+?> inlineImport'
   where
@@ -501,7 +507,7 @@ ppNestedPattern = go
   where
     go :: Pattern -> Sem r (Doc Ann)
     go p = case p of
-      PatternVariable v -> ppSSymbol v
+      PatternVariable v -> annDef v <$> ppSSymbol v
       PatternApplication l r -> do
         l' <- ppLeftExpression appFixity l
         r' <- ppRightExpression appFixity r
