@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html (genHtml) where
+module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html (genHtml, Theme(..)) where
 
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Scoped.Utils
@@ -16,9 +16,13 @@ import Data.Text.Lazy (toStrict)
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Utils.Paths
 
+data Theme =
+  Nord
+  | Ayu
+  deriving stock (Show)
 
-genHtml :: Options -> Bool -> Module 'Scoped 'ModuleTop -> IO ()
-genHtml opts recursive entry = do
+genHtml :: Options -> Bool -> Theme -> Module 'Scoped 'ModuleTop -> IO ()
+genHtml opts recursive theme entry = do
   createDirectoryIfMissing True htmlPath
   copyAssetFiles
   withCurrentDirectory htmlPath $ do
@@ -26,7 +30,7 @@ genHtml opts recursive entry = do
   where
   allModules
     | recursive = toList $ getAllModules entry
-    | otherwise = pure entry 
+    | otherwise = pure entry
   htmlPath = "html"
 
   copyAssetFiles :: IO ()
@@ -38,23 +42,28 @@ genHtml opts recursive entry = do
     toAssetsDir = htmlPath </> "assets"
     cpFile (fromDir, name, toDir) = copyFile (fromDir </> name) (toDir </> name)
     assetFiles = [ (fromAssetsDir, name, toAssetsDir)
-                | name <- ["highlight.js" , "source.css"]]
+                | name <- ["highlight.js"
+                          , "source-ayu-light.css"
+                          , "source-nord.css"]]
 
   outputModule :: Module 'Scoped 'ModuleTop -> IO ()
   outputModule m = do
     createDirectoryIfMissing True (takeDirectory htmlFile)
     putStrLn $ "Writing " <> htmlFile
-    Text.writeFile htmlFile (genModule opts m)
+    Text.writeFile htmlFile (genModule opts theme m)
    where
    htmlFile = dottedPath (S._nameConcrete (modulePath m)) <.> ".html"
 
-genModule :: Options -> Module 'Scoped 'ModuleTop -> Text
-genModule opts m =
+genModule :: Options -> Theme -> Module 'Scoped 'ModuleTop -> Text
+genModule opts theme m =
   toStrict $ Html.renderHtml $
   docTypeHtml ! Attr.xmlns "http://www.w3.org/1999/xhtml" $
   mhead
   <> mbody
   where
+  themeCss = case theme of
+    Ayu -> ayuCss
+    Nord -> nordCss
   prettySrc = (pre ! Attr.id "src-content")
     $ renderTree $ treeForm $ docStream opts m
 
@@ -65,7 +74,7 @@ genModule opts m =
   mhead :: Html
   mhead =
     metaUtf8
-    <> sourceCss
+    <> themeCss
     <> highlightJs
   mbody :: Html
   mbody =
@@ -134,10 +143,16 @@ nameIdAttrRef :: TopModulePath -> S.NameId -> AttributeValue
 nameIdAttrRef tp s =
   dottedPath tp <> ".html" <> preEscapedToValue '#' <> nameIdAttr s
 
-sourceCss :: Html
-sourceCss = link ! Attr.href "assets/source.css"
+cssLink :: AttributeValue -> Html
+cssLink css = link ! Attr.href css
         ! Attr.rel "stylesheet"
         ! Attr.type_ "text/css"
+
+ayuCss :: Html
+ayuCss = cssLink "assets/source-ayu-light.css"
+
+nordCss :: Html
+nordCss = cssLink "assets/source-nord.css"
 
 highlightJs :: Html
 highlightJs = script ! Attr.src "assets/highlight.js"

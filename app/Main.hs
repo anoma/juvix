@@ -36,7 +36,8 @@ data ParseOptions = ParseOptions
 
 data HtmlOptions = HtmlOptions
   { _htmlInputFile :: FilePath,
-    _htmlRecursive :: Bool
+    _htmlRecursive :: Bool,
+    _htmlTheme :: Theme
   }
 
 parseHtml :: Parser HtmlOptions
@@ -52,8 +53,20 @@ parseHtml = do
       ( long "recursive"
           <> help "export imported modules recursively"
       )
-
+  _htmlTheme <- option (eitherReader parseTheme)
+      ( long "theme"
+          <> metavar "THEME"
+          <> value Nord
+          <> showDefault
+          <> help "selects a theme: ayu (light); nord (dark)"
+      )
   pure HtmlOptions {..}
+  where
+  parseTheme :: String -> Either String Theme
+  parseTheme s = case s of
+    "nord" -> Right Nord
+    "ayu" -> Right Ayu
+    _ -> Left $ "unrecognised theme: " <> s
 
 parseParse :: Parser ParseOptions
 parseParse = do
@@ -178,7 +191,7 @@ go c = case c of
     root <- getCurrentDirectory
     m <- parseModuleIO _htmlInputFile
     s <- fromRightIO show $ M.scopeCheck1 root m
-    genHtml defaultOptions _htmlRecursive s
+    genHtml defaultOptions _htmlRecursive _htmlTheme s
 
 main :: IO ()
 main = execParser descr >>= go

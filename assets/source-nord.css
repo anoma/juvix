@@ -1,0 +1,44 @@
+/* Color palette based on https://www.nordtheme.com/ */
+body {
+	  background-color: #2e3440;
+}
+
+.ju-inductive {
+	  color: #a3be8c;
+}
+
+.ju-constructor {
+	  color: #b48ead;
+}
+
+.ju-function {
+	  color: #ebcb8b;
+}
+
+.ju-axiom {
+	  color: #bf616a;
+}
+
+.ju-keyword {
+	  color: #81a1c1;
+}
+
+.ju-delimiter {
+	  color: #5e81ac;
+}
+
+.ju-var {
+    color: #d8dee9
+}
+
+.ju-number {
+    color: #d8dee9
+}
+
+a:link, a:visited {
+	text-decoration: none;
+}
+
+a:hover, a.hover-highlight {
+	background-color: #4c566a;
+}
