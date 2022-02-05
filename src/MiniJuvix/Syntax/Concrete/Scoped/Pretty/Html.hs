@@ -1,55 +1,80 @@
+{-# LANGUAGE TemplateHaskell #-}
 module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html (genHtml) where
 
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Scoped.Utils
-import MiniJuvix.Syntax.Concrete.Scoped.Name (NameKind (..))
 import           Prettyprinter.Render.Util.SimpleDocTree
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base
 import MiniJuvix.Utils.Prelude
 import Prettyprinter
 import qualified Text.Blaze.Html.Renderer.Text           as Html
-import           Text.Blaze.Html5                       as Html hiding (map) 
+import           Text.Blaze.Html5                       as Html hiding (map)
 import qualified Text.Blaze.Html5.Attributes             as Attr
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import Data.Text.Lazy (toStrict)
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Utils.Paths
 
 
 genHtml :: Options -> Module 'Scoped 'ModuleTop -> IO ()
 genHtml opts entry = do
   createDirectoryIfMissing True htmlPath
+  copyAssetFiles
   withCurrentDirectory htmlPath $ do
     mapM_ outputModule allModules
   where
   allModules = toList $ getAllModules entry
   htmlPath = "html"
-  genModule :: Module 'Scoped 'ModuleTop -> Text
-  genModule = renderHtml . docStream opts
+
+  copyAssetFiles :: IO ()
+  copyAssetFiles = do
+    createDirectoryIfMissing True toAssetsDir
+    mapM_ cpFile assetFiles
+    where
+    fromAssetsDir = $(assetsDir)
+    toAssetsDir = htmlPath </> "assets"
+    cpFile (fromDir, name, toDir) = copyFile (fromDir </> name) (toDir </> name)
+    assetFiles = [ (fromAssetsDir, name, toAssetsDir)
+                | name <- ["highlight.js" , "source.css"]]
+
   outputModule :: Module 'Scoped 'ModuleTop -> IO ()
   outputModule m = do
     createDirectoryIfMissing True (takeDirectory htmlFile)
     putStrLn $ "Writing " <> htmlFile
-    Text.writeFile htmlFile (genModule m)
+    Text.writeFile htmlFile (genModule opts m)
    where
    htmlFile = dottedPath (S._nameConcrete (modulePath m)) <.> ".html"
 
-renderHtml :: SimpleDocStream Ann -> Text
-renderHtml = toStrict . Html.renderHtml . renderTree . treeForm
+genModule :: Options -> Module 'Scoped 'ModuleTop -> Text
+genModule opts m =
+  toStrict $ Html.renderHtml $
+  docTypeHtml ! Attr.xmlns "http://www.w3.org/1999/xhtml" $
+  mhead
+  <> mbody
+  where
+  prettySrc = (pre ! Attr.id "src-content")
+    $ renderTree $ treeForm $ docStream opts m
+
+  mheader :: Html
+  mheader = Html.div ! Attr.id "package-header"
+    $ (Html.span ! Attr.class_ "caption" $ "")
+
+  mhead :: Html
+  mhead =
+    metaUtf8
+    <> sourceCss
+    <> highlightJs
+  mbody :: Html
+  mbody =
+    mheader
+    <> prettySrc
 
 docStream :: Options -> Module 'Scoped 'ModuleTop -> SimpleDocStream Ann
 docStream opts m = layoutPretty defaultLayoutOptions (prettyTopModule opts m)
 
 renderTree :: SimpleDocTree Ann -> Html
-renderTree sdt =
-    docType <> (Html.body ! sty1 $ pre ! sty2 $ go sdt)
-  where
-  sty1 = Attr.style ("background: #fdf6e3; overflow:auto; width:auto; font-size:"
-                      <> defFontSize <> ";padding: 3em 15% 5em 15%")
-  sty2 = Attr.style "margin: 0; line-height: 125%"
-  defFontSize :: AttributeValue
-  defFontSize = "14pt"
-
+renderTree = go
 
 go :: SimpleDocTree Ann -> Html
 go sdt = case sdt of
@@ -57,7 +82,7 @@ go sdt = case sdt of
     STChar c -> toHtml c
     STText _ t -> toHtml t
     STLine s -> "\n" <> toHtml (textSpaces s)
-    STAnn ann content -> putTag defaultTheme ann (go content)
+    STAnn ann content -> putTag ann (go content)
     STConcat l -> mconcatMap go l
     where
     textSpaces :: Int -> Text
@@ -66,20 +91,34 @@ go sdt = case sdt of
 fromText :: IsString a => Text -> a
 fromText = fromString . unpack
 
-color :: Color -> Attribute
-color c = Attr.style (fromText $ "color:" <> c)
+putTag :: Ann -> Html -> Html
+putTag ann x = case ann of
+   AnnKind k -> tagKind k x
+   AnnNumber -> Html.span ! Attr.class_ "ju-number" $ x
+   AnnKeyword -> Html.span ! Attr.class_ "ju-keyword" $ x
+   AnnUnkindedSym -> Html.span ! Attr.class_ "ju-var" $ x
+   AnnDelimiter -> Html.span ! Attr.class_ "ju-delimiter" $ x
+   AnnDef tmp ni -> tagDef tmp ni
+   AnnRef tmp ni -> tagRef tmp ni
 
-putTag :: Theme -> Ann -> Html -> Html
-putTag Theme {..} ann x = case ann of
-   AnnKind {} -> x
-   AnnKeyword -> strong x ! color _kwColor
-   AnnDelimiter -> x
-   AnnDef ni -> u $ Html.a ! Attr.name (nameIdAttr ni)
-                           ! color _typeNameColor
-                             $ x
-   AnnRef tmp ni -> a ! Attr.href (nameIdAttrRef tmp ni)
-                      ! color _typeRefColor
-                      $ x
+  where
+  tagDef :: TopModulePath -> S.NameId -> Html
+  tagDef tmp nid = Html.span ! Attr.id (nameIdAttr nid)
+    $ tagRef tmp nid
+
+  tagRef tmp ni = Html.span ! Attr.class_ "annot"
+                  $ a ! Attr.href (nameIdAttrRef tmp ni)
+                  $ x
+  tagKind k = Html.span ! Attr.class_
+     (case k of
+      S.KNameConstructor -> "ju-constructor"
+      S.KNameInductive -> "ju-inductive"
+      S.KNameFunction -> "ju-function"
+      S.KNameLocal -> "ju-var"
+      S.KNameAxiom -> "ju-axiom"
+      S.KNameLocalModule -> "ju-var"
+      S.KNameTopModule -> "ju-var")
+
 dottedPath :: IsString s => TopModulePath -> s
 dottedPath (TopModulePath l r) =
   fromText $ mconcat $ intersperse "." $ map fromSymbol $ l ++ [r]
@@ -93,21 +132,15 @@ nameIdAttrRef :: TopModulePath -> S.NameId -> AttributeValue
 nameIdAttrRef tp s =
   dottedPath tp <> ".html" <> preEscapedToValue '#' <> nameIdAttr s
 
-type Color = Text
+sourceCss :: Html
+sourceCss = link ! Attr.href "assets/source.css"
+        ! Attr.rel "stylesheet"
+        ! Attr.type_ "text/css"
 
-data Theme = Theme {
-  _kwColor :: Color,
-  _symColor :: Color,
-  _fieldColor :: Color,
-  _typeRefColor :: Color,
-  _typeNameColor :: Color
-  }
+highlightJs :: Html
+highlightJs = script ! Attr.src "assets/highlight.js"
+        ! Attr.type_ "text/javascript"
+        $ mempty
 
-defaultTheme :: Theme
-defaultTheme = Theme {
-  _kwColor = "#c43063",
-  _symColor = "#df443f",
-  _fieldColor = "#388057",
-  _typeRefColor = "#de7185",
-  _typeNameColor = "#e98176"
-  }
+metaUtf8 :: Html
+metaUtf8 = meta ! Attr.charset "UTF-8"

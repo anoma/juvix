@@ -7,5 +7,7 @@ data Ann
   = AnnKind S.NameKind
   | AnnKeyword
   | AnnDelimiter
-  | AnnDef S.NameId
+  | AnnUnkindedSym
+  | AnnNumber
+  | AnnDef TopModulePath S.NameId
   | AnnRef TopModulePath S.NameId

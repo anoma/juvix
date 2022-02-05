@@ -32,3 +32,5 @@ stylize a = case a of
   AnnKeyword -> colorDull Blue
   AnnDef {} -> mempty
   AnnRef {} -> mempty
+  AnnNumber -> mempty
+  AnnUnkindedSym -> mempty

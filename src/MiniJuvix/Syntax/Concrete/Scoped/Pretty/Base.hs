@@ -171,6 +171,9 @@ ppModulePathType x = case sing :: SModuleIsTop t of
   SModuleTop -> annDef x <$> ppSTopModulePath x
   SModuleLocal -> ppSSymbol x
 
+ppUnkindedSymbol :: Members '[Reader Options] r => Symbol -> Sem r (Doc Ann)
+ppUnkindedSymbol = fmap (annotate AnnUnkindedSym) . ppSymbol
+
 ppSymbol :: Members '[Reader Options] r => Symbol -> Sem r (Doc Ann)
 ppSymbol (Sym t) = return (pretty t)
 
@@ -262,14 +265,14 @@ ppModule Module {..} = do
       SModuleTop -> Just kwSemicolon
 
 ppPrecedence :: Precedence -> Doc Ann
-ppPrecedence p = case p of
+ppPrecedence p = annotate AnnNumber $ case p of
   PrecMinusOmega -> pretty ("-ω" :: Text)
   PrecNat n -> pretty n
   PrecOmega -> pretty ("ω" :: Text)
 
 ppOperatorSyntaxDef :: Members '[Reader Options] r => OperatorSyntaxDef -> Sem r (Doc Ann)
 ppOperatorSyntaxDef OperatorSyntaxDef {..} = do
-  opSymbol' <- ppSymbol opSymbol
+  opSymbol' <- ppUnkindedSymbol opSymbol
   return $ ppFixity opFixity <+> opSymbol'
   where
     ppFixity :: Fixity -> Doc Ann
@@ -330,7 +333,7 @@ ppSSymbol :: Members '[Reader Options] r => S.Symbol -> Sem r (Doc Ann)
 ppSSymbol = ppSName' ppSymbol
 
 annDef :: S.Name' n -> Doc Ann -> Doc Ann
-annDef nm = annotate (AnnDef (S._nameId nm))
+annDef nm = annotate (AnnDef (S.absTopModulePath (S._nameDefinedIn nm)) (S._nameId nm))
 
 annRef :: S.Name' n -> Doc Ann -> Doc Ann
 annRef nm = annotate (AnnRef (S.absTopModulePath (S._nameDefinedIn nm)) (S._nameId nm))
@@ -345,6 +348,7 @@ ppSName' ppConcrete S.Name' {..} = do
   let uid = if showNameId then "@" <> ppNameId _nameId else mempty
   return $ nameConcrete' <> uid
 
+
 ppOpen :: forall r. Members '[Reader Options] r => OpenModule 'Scoped -> Sem r (Doc Ann)
 ppOpen OpenModule {..} = do
   openModuleName' <- ppSName openModuleName
@@ -354,7 +358,8 @@ ppOpen OpenModule {..} = do
   where
     ppUsingHiding :: UsingHiding -> Sem r (Doc Ann)
     ppUsingHiding uh = do
-      bracedList <- encloseSep lbrace rbrace kwSemicolon . toList <$> mapM ppSymbol syms
+      bracedList <- encloseSep kwBraceL kwBraceR kwSemicolon . toList
+        <$> mapM ppUnkindedSymbol syms
       return $ kw <+> bracedList
       where
         (kw, syms) = case uh of
@@ -435,7 +440,7 @@ ppLambda Lambda {..} = do
 
 ppFunctionClause :: forall r. Members '[Reader Options] r => FunctionClause 'Scoped -> Sem r (Doc Ann)
 ppFunctionClause FunctionClause {..} = do
-  clauseOwnerFunction' <- ppSSymbol clauseOwnerFunction
+  clauseOwnerFunction' <- annRef clauseOwnerFunction <$> ppSSymbol clauseOwnerFunction
   clausePatterns' <- case nonEmpty clausePatterns of
     Nothing -> return Nothing
     Just ne -> Just . hsep . toList <$> mapM ppPattern ne
