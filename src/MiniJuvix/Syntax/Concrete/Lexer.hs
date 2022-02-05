@@ -43,14 +43,13 @@ bareIdentifier = do
     validChar c =
       or
         [ isAlphaNum c,
-          isMathSymbol,
-          isCurrencySymbol,
-          c `elem` ("_'-" :: String)
+          cat == MathSymbol,
+          cat == CurrencySymbol,
+          cat == ModifierLetter,
+          c `elem` ("_'-*" :: String)
         ]
       where
         cat = generalCategory c
-        isMathSymbol = cat == MathSymbol
-        isCurrencySymbol = cat == CurrencySymbol
 
 dot :: forall e m. MonadParsec e Text m => m Char
 dot = P.char '.'

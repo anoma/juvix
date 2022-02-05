@@ -17,14 +17,16 @@ import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Utils.Paths
 
 
-genHtml :: Options -> Module 'Scoped 'ModuleTop -> IO ()
-genHtml opts entry = do
+genHtml :: Options -> Bool -> Module 'Scoped 'ModuleTop -> IO ()
+genHtml opts recursive entry = do
   createDirectoryIfMissing True htmlPath
   copyAssetFiles
   withCurrentDirectory htmlPath $ do
     mapM_ outputModule allModules
   where
-  allModules = toList $ getAllModules entry
+  allModules
+    | recursive = toList $ getAllModules entry
+    | otherwise = pure entry 
   htmlPath = "html"
 
   copyAssetFiles :: IO ()

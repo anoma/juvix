@@ -539,6 +539,7 @@ ppNestedPattern = go
 isAtomic :: Expression -> Bool
 isAtomic e = case e of
   ExpressionIdentifier {} -> True
+  ExpressionParensIdentifier {} -> True
   ExpressionApplication {} -> False
   ExpressionInfixApplication {} -> False
   ExpressionPostfixApplication {} -> False
@@ -576,6 +577,7 @@ class HasFixity a where
 instance HasFixity Expression where
  getFixity e = case e of
     ExpressionIdentifier {} -> Nothing
+    ExpressionParensIdentifier {} -> Nothing
     ExpressionApplication {} -> Just appFixity
     ExpressionInfixApplication a -> Just (infixFixity a)
     ExpressionPostfixApplication a -> Just (postfixFixity a)
@@ -680,6 +682,7 @@ ppExpression = go
     go :: Expression -> Sem r (Doc Ann)
     go e = case e of
       ExpressionIdentifier n -> ppSName n
+      ExpressionParensIdentifier n -> parens <$> ppSName n
       ExpressionApplication a -> ppApplication a
       ExpressionInfixApplication a -> ppInfixApplication a
       ExpressionPostfixApplication a -> ppPostfixApplication a

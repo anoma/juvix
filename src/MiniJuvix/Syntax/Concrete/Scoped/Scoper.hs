@@ -866,9 +866,15 @@ checkExpressionAtom e = case e of
   AtomLetBlock letBlock -> AtomLetBlock <$> checkLetBlock letBlock
   AtomUniverse uni -> return (AtomUniverse uni)
   AtomFunction fun -> AtomFunction <$> checkFunction fun
-  AtomParens par -> AtomParens <$> checkParseExpressionAtoms par
+  AtomParens par -> AtomParens <$> checkParens par
   AtomFunArrow -> return AtomFunArrow
   AtomMatch match -> AtomMatch <$> checkMatch match
+
+checkParens :: Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
+  ExpressionAtoms 'Parsed -> Sem r Expression
+checkParens e@(ExpressionAtoms as) = case as of
+  AtomIdentifier s :| [] -> ExpressionParensIdentifier . set S.nameFixity S.NoFixity <$> checkName s
+  _ -> checkParseExpressionAtoms e
 
 checkMatchAlt ::
   Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState] r =>

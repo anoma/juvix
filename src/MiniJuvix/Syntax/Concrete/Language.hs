@@ -235,7 +235,7 @@ deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (
 --------------------------------------------------------------------------------
 
 data PatternInfixApp = PatternInfixApp
-  { 
+  {
     patInfixLeft :: Pattern,
     patInfixConstructor :: NameType 'Scoped,
     patInfixRight :: Pattern
@@ -243,7 +243,7 @@ data PatternInfixApp = PatternInfixApp
   deriving stock (Show, Eq, Ord)
 
 data PatternPostfixApp = PatternPostfixApp
-  { 
+  {
     patPostfixParameter :: Pattern,
     patPostfixConstructor :: NameType 'Scoped
   }
@@ -484,6 +484,7 @@ deriving stock instance
 
 data Expression
   = ExpressionIdentifier (NameType 'Scoped)
+  | ExpressionParensIdentifier (NameType 'Scoped)
   | ExpressionApplication Application
   | ExpressionInfixApplication InfixApplication
   | ExpressionPostfixApplication PostfixApplication
@@ -837,7 +838,7 @@ data InfixApplication = InfixApplication
   deriving stock (Show, Eq, Ord)
 
 data PostfixApplication = PostfixApplication
-  { 
+  {
     postfixAppParameter :: ExpressionType 'Scoped,
     postfixAppOperator :: NameType 'Scoped
   }

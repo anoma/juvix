@@ -35,7 +35,8 @@ data ParseOptions = ParseOptions
   }
 
 data HtmlOptions = HtmlOptions
-  { _htmlInputFile :: FilePath
+  { _htmlInputFile :: FilePath,
+    _htmlRecursive :: Bool
   }
 
 parseHtml :: Parser HtmlOptions
@@ -46,6 +47,12 @@ parseHtml = do
       ( metavar "MINIJUVIX_FILE"
           <> help "Path to a .mjuvix file"
       )
+  _htmlRecursive <-
+    switch
+      ( long "recursive"
+          <> help "export imported modules recursively"
+      )
+
   pure HtmlOptions {..}
 
 parseParse :: Parser ParseOptions
@@ -171,7 +178,7 @@ go c = case c of
     root <- getCurrentDirectory
     m <- parseModuleIO _htmlInputFile
     s <- fromRightIO show $ M.scopeCheck1 root m
-    genHtml defaultOptions s
+    genHtml defaultOptions _htmlRecursive s
 
 main :: IO ()
 main = execParser descr >>= go
