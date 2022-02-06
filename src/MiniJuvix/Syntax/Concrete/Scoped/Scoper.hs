@@ -588,7 +588,7 @@ checkWhereClause ::
   WhereClause 'Parsed ->
   Sem r (WhereClause 'Scoped)
 checkWhereClause c = case c of
-  WhereOpenModule _ -> undefined
+  WhereOpenModule o -> WhereOpenModule <$> checkOpenModule o
   WhereTypeSig s -> WhereTypeSig <$> checkTypeSignature s
   WhereFunClause f -> WhereFunClause <$> checkFunctionClause f
 
