@@ -366,11 +366,11 @@ checkOperatorSyntaxDef OperatorSyntaxDef {..} = do
         (throw (ErrDuplicateFixity opSymbol))
 
 checkTypeSignature ::
-  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   TypeSignature 'Parsed ->
   Sem r (TypeSignature 'Scoped)
 checkTypeSignature TypeSignature {..} = do
-  sigType' <- localScope (checkParseExpressionAtoms sigType)
+  sigType' <- checkParseExpressionAtoms sigType
   sigName' <- bindFunctionSymbol sigName
   return
     TypeSignature
@@ -577,14 +577,14 @@ checkOpenModule OpenModule {..} = do
 
 checkWhereBlock ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   WhereBlock 'Parsed ->
   Sem r (WhereBlock 'Scoped)
 checkWhereBlock WhereBlock {..} = WhereBlock <$> mapM checkWhereClause whereClauses
 
 checkWhereClause ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   WhereClause 'Parsed ->
   Sem r (WhereClause 'Scoped)
 checkWhereClause c = case c of
@@ -599,14 +599,14 @@ checkFunctionClause ::
   Sem r (FunctionClause 'Scoped)
 checkFunctionClause FunctionClause {..} = do
   clauseOwnerFunction' <- checkSymbolInScope
-  clausePatterns' <- mapM checkParsePatternAtom clausePatterns
-  (clauseWhere', clauseBody') <- localScope $
-    withBindCurrentGroup $ do
+  (clausePatterns', clauseWhere', clauseBody') <- do
+    clp <- mapM checkParsePatternAtom clausePatterns
+    localScope $ withBindCurrentGroup $ do
       s <- get @Scope
       clw <- sequence (checkWhereBlock <$> clauseWhere)
       clb <- checkParseExpressionAtoms clauseBody
       put s
-      return (clw, clb)
+      return (clp, clw, clb)
   return
     FunctionClause
       { clauseOwnerFunction = clauseOwnerFunction',
@@ -749,8 +749,10 @@ checkUnqualified s = do
   case l of
     Just LocalVariable {..} -> return (unqualifiedSName variableName)
     Nothing -> do
+      scope <- get
+      locals <- ask
       -- Lookup at the global scope
-      let err = throw (ErrSymNotInScope s)
+      let err = throw (ErrSymNotInScope s scope locals)
       entryToSName (NameUnqualified s) <$>
          -- TODO change listToMaybe, it is a bit too hacky
         fromMaybeM err (listToMaybe <$> lookupSymbolGeneric (S.isExprKind . _symbolKind) s [] s)
@@ -816,8 +818,8 @@ checkPatternUnqualified s = do
   case c of
     Just constr -> return constr -- the symbol is a constructor
     Nothing -> unqualifiedSName <$> groupBindLocalVariable s -- the symbol is a variable
-    -- check whether the symbol is a constructor in scope
   where
+    -- check whether the symbol is a constructor in scope
     isConstructor :: Sem r (Maybe S.Name)
     isConstructor = do
       r <- HashMap.lookup s <$> gets _scopeSymbols
@@ -926,7 +928,7 @@ checkStatement ::
   Sem r (Statement 'Scoped)
 checkStatement s = case s of
   StatementOperator opDef -> StatementOperator opDef <$ checkOperatorSyntaxDef opDef
-  StatementTypeSignature tySig -> StatementTypeSignature <$> checkTypeSignature tySig
+  StatementTypeSignature tySig -> StatementTypeSignature <$> localScope (checkTypeSignature tySig)
   StatementImport imp -> StatementImport <$> checkImport imp
   StatementInductive dt -> StatementInductive <$> checkInductiveDef dt
   StatementModule dt -> StatementModule <$> checkLocalModule dt

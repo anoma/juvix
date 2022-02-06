@@ -16,7 +16,7 @@ data ScopeError
   | ErrLacksTypeSig Symbol
   | ErrImportCycle TopModulePath
   | ErrOpenNotInScope QualifiedName
-  | ErrSymNotInScope Symbol
+  | ErrSymNotInScope Symbol Scope LocalVars
   | ErrQualSymNotInScope QualifiedName
   | ErrModuleNotInScope Name
   | ErrBindGroup Symbol
@@ -35,6 +35,7 @@ newtype LocalVariable = LocalVariable
 newtype LocalVars = LocalVars
   { _localVars :: HashMap Symbol LocalVariable
   }
+  deriving stock (Show)
 
 newtype SymbolInfo = SymbolInfo
   { -- | This map must have at least one entry. If there are more than one
@@ -77,6 +78,7 @@ data Scope = Scope
     _scopeTopModules :: HashMap TopModulePath S.ModuleNameId,
     _scopeBindGroup :: HashMap Symbol LocalVariable
   }
+  deriving stock (Show)
 makeLenses ''ExportScope
 makeLenses ''SymbolEntry
 makeLenses ''SymbolInfo
