@@ -46,7 +46,7 @@ bareIdentifier = do
           cat == MathSymbol,
           cat == CurrencySymbol,
           cat == ModifierLetter,
-          c `elem` ("_'-*," :: String)
+          c `elem` ("_'-*,&" :: String)
         ]
       where
         cat = generalCategory c
