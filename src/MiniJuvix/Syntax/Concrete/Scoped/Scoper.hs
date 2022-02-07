@@ -594,14 +594,14 @@ checkWhereClause c = case c of
 
 checkFunctionClause ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   FunctionClause 'Parsed ->
   Sem r (FunctionClause 'Scoped)
 checkFunctionClause FunctionClause {..} = do
   clauseOwnerFunction' <- checkSymbolInScope
   (clausePatterns', clauseWhere', clauseBody') <- do
     clp <- mapM checkParsePatternAtom clausePatterns
-    localScope $ withBindCurrentGroup $ do
+    withBindCurrentGroup $ do
       s <- get @Scope
       clw <- sequence (checkWhereBlock <$> clauseWhere)
       clb <- checkParseExpressionAtoms clauseBody
@@ -933,7 +933,7 @@ checkStatement s = case s of
   StatementInductive dt -> StatementInductive <$> checkInductiveDef dt
   StatementModule dt -> StatementModule <$> checkLocalModule dt
   StatementOpenModule open -> StatementOpenModule <$> checkOpenModule open
-  StatementFunctionClause clause -> StatementFunctionClause <$> checkFunctionClause clause
+  StatementFunctionClause clause -> StatementFunctionClause <$> localScope (checkFunctionClause clause)
   StatementAxiom ax -> StatementAxiom <$> checkAxiom ax
   StatementEval e -> StatementEval <$> checkEval e
   StatementPrint e -> StatementPrint <$> checkPrint e
