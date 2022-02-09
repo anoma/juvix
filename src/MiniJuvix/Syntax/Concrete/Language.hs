@@ -397,6 +397,7 @@ type LocalModuleName s = SymbolType s
 
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
   { modulePath :: ModulePathType s t,
+    moduleParameters :: [FunctionParameter s],
     moduleBody :: [Statement s]
   }
 

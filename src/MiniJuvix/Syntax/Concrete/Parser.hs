@@ -222,11 +222,11 @@ axiomDef = do
 -- Function expression
 --------------------------------------------------------------------------------
 
-explicitFunParam ::
+functionParam ::
   forall e m.
   MonadParsec e Text m =>
   m (FunctionParameter 'Parsed)
-explicitFunParam = do
+functionParam = do
   (paramName, paramUsage) <- P.try $ do
     lparen
     n <- pName
@@ -246,9 +246,6 @@ explicitFunParam = do
         <|> (Just UsageOnce <$ kwColonOne)
         <|> (Just UsageOmega <$ kwColonOmega)
         <|> (Nothing <$ kwColon)
-
-functionParam :: MonadParsec e Text m => m (FunctionParameter 'Parsed)
-functionParam = explicitFunParam
 
 function :: MonadParsec e Text m => m (Function 'Parsed)
 function = do
@@ -366,6 +363,7 @@ moduleDef :: (SingI t, MonadParsec e Text m) => m (Module 'Parsed t)
 moduleDef = do
   kwModule
   modulePath <- pmodulePath
+  moduleParameters <- many functionParam
   kwSemicolon
   moduleBody <- P.sepEndBy statement kwSemicolon
   kwEnd
