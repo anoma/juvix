@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 -- | Limitations:
 -- 1. A symbol introduced by a type signature can only be used once per Module.
@@ -169,11 +170,13 @@ checkImport ::
 checkImport (Import path) = do
   checkCycle
   cache <- gets (_cachedModules . _scoperModulesCache)
-  (exported, checked) <- maybe (readParseModule path >>= checkTopModule) return (cache ^. at path)
-  let sname = modulePath checked
+  entry' <- maybe (readParseModule path >>= checkTopModule) return (cache ^. at path)
+  let checked = _moduleEntryScoped entry'
+      sname = modulePath checked
       moduleId = S._nameId sname
   modify (over scopeTopModules (HashMap.insert path moduleId))
-  modify (over scoperModules (HashMap.insert moduleId exported))
+  let entry = mkModuleEntry entry'
+  modify (over scoperModules (HashMap.insert moduleId entry))
   return (Import checked)
   where
   checkCycle :: Sem r ()
@@ -213,7 +216,7 @@ lookupSymbolGeneric filtr name modules final = do
           . HashMap.lookup p <$> gets _scopeSymbols
         case r of
           Just [x] -> do
-            export <- getExportScope (_symbolId x)
+            export <- getExportInfo (_symbolId x)
             lookInExport final ps export
           Just [] -> return Nothing
           Just _ -> throw $ ErrGeneric ("ambiguous name " <> show name)
@@ -232,7 +235,7 @@ lookupSymbolGeneric filtr name modules final = do
     path = TopModulePath modules final
 
 lookInExport :: forall r. Members '[State Scope, State ScoperState] r =>
-  Symbol -> [Symbol] -> ExportScope -> Sem r (Maybe SymbolEntry)
+  Symbol -> [Symbol] -> ExportInfo -> Sem r (Maybe SymbolEntry)
 lookInExport sym remaining e = case remaining of
   [] -> return (HashMap.lookup sym (_exportSymbols e))
   (s : ss) -> do
@@ -241,13 +244,13 @@ lookInExport sym remaining e = case remaining of
       Nothing -> return Nothing
       Just e' -> lookInExport sym ss e'
  where
-  mayModule :: ExportScope -> Symbol -> Sem r (Maybe ExportScope)
-  mayModule ExportScope {..} s =
+  mayModule :: ExportInfo -> Symbol -> Sem r (Maybe ExportInfo)
+  mayModule ExportInfo {..} s =
     case do
       entry <- HashMap.lookup s _exportSymbols
       guard (S.isModuleKind (_symbolKind entry))
       return entry of
-        Just entry -> Just <$> getExportScope (_symbolId entry)
+        Just entry -> Just <$> getExportInfo (_symbolId entry)
         Nothing -> return Nothing
 
 -- | We return a list of entries because qualified names can point to different
@@ -280,7 +283,7 @@ lookupQualifiedSymbol q@(path, sym) = do
       r <- HashMap.lookup topPath <$> gets _scopeTopModules
       case r of
         Nothing -> return Nothing
-        Just i -> getExportScope i >>= lookInExport sym remaining
+        Just i -> getExportInfo i >>= lookInExport sym remaining
 
 checkQualifiedExpr ::
   Members '[Error ScopeError, State Scope, State ScoperState] r =>
@@ -311,10 +314,10 @@ entryToSName s SymbolEntry {..} =
     }
 
 -- | We gather all symbols which have been defined or marked to be public in the given scope.
-exportScope :: forall r. Members '[Error ScopeError] r => Scope -> Sem r ExportScope
+exportScope :: forall r. Members '[Error ScopeError] r => Scope -> Sem r ExportInfo
 exportScope Scope {..} = do
   _exportSymbols <- getExportSymbols
-  return ExportScope {..}
+  return ExportInfo {..}
   where
     getExportSymbols :: Sem r (HashMap Symbol SymbolEntry)
     getExportSymbols = HashMap.fromList <$> mapMaybeM entry (HashMap.toList _scopeSymbols)
@@ -391,60 +394,56 @@ checkConstructorDef InductiveConstructorDef {..} = do
         constructorType = constructorType'
       }
 
-checkInductiveDef ::
-  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+withParams :: forall r a. Members '[Reader LocalVars, Error ScopeError, State Scope, State ScoperState] r
+  => [InductiveParameter 'Parsed] -> ([InductiveParameter 'Scoped] -> Sem r a) -> Sem r a
+withParams xs a = go [] xs
+  where
+  go :: [InductiveParameter 'Scoped] -> [InductiveParameter 'Parsed] -> Sem r a
+  go inductiveParameters' params =
+    case params of
+      -- More params to check
+      (InductiveParameter {..} : ps) -> do
+        inductiveParameterType' <- checkParseExpressionAtoms inductiveParameterType
+        inductiveParameterName' <- freshVariable inductiveParameterName
+        let param' =
+              InductiveParameter
+                { inductiveParameterType = inductiveParameterType',
+                  inductiveParameterName = inductiveParameterName'
+                }
+        withBindLocalVariable (LocalVariable inductiveParameterName') $
+          go (inductiveParameters' ++ [param']) ps
+      -- All params have been checked
+      [] -> a inductiveParameters'
+
+checkInductiveDef :: forall r.
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   InductiveDef 'Parsed ->
   Sem r (InductiveDef 'Scoped)
 checkInductiveDef InductiveDef {..} = do
-  localScope $ checkInductiveRec inductiveParameters
-  where
-    checkInductiveRec ::
-      forall r.
-      Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
-      [InductiveParameter 'Parsed] ->
-      Sem r (InductiveDef 'Scoped)
-    checkInductiveRec dtp = go dtp []
-      where
-        go :: [InductiveParameter 'Parsed] -> [InductiveParameter 'Scoped] -> Sem r (InductiveDef 'Scoped)
-        go params inductiveParameters' =
-          case params of
-            -- More params to check
-            (InductiveParameter {..} : ps) -> do
-              inductiveParameterType' <- checkParseExpressionAtoms inductiveParameterType
-              inductiveParameterName' <- freshVariable inductiveParameterName
-              let param' =
-                    InductiveParameter
-                      { inductiveParameterType = inductiveParameterType',
-                        inductiveParameterName = inductiveParameterName'
-                      }
-              withBindLocalVariable (LocalVariable inductiveParameterName') $
-                go ps (inductiveParameters' ++ [param'])
-            -- All params have been checked
-            [] -> do
-              inductiveType' <- sequence (checkParseExpressionAtoms <$> inductiveType)
-              inductiveName' <- bindInductiveSymbol inductiveName
-              inductiveConstructors' <- mapM checkConstructorDef inductiveConstructors
-              return
-                InductiveDef
-                  { inductiveName = inductiveName',
-                    inductiveParameters = inductiveParameters',
-                    inductiveType = inductiveType',
-                    inductiveConstructors = inductiveConstructors'
-                  }
+  withParams inductiveParameters $ \inductiveParameters' -> do
+    inductiveType' <- sequence (checkParseExpressionAtoms <$> inductiveType)
+    inductiveName' <- bindInductiveSymbol inductiveName
+    inductiveConstructors' <- mapM checkConstructorDef inductiveConstructors
+    return InductiveDef
+      { inductiveName = inductiveName',
+        inductiveParameters = inductiveParameters',
+        inductiveType = inductiveType',
+        inductiveConstructors = inductiveConstructors'
+      }
 
 checkTopModule_ ::
   forall r.
   Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State ScoperState] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (Module 'Scoped 'ModuleTop)
-checkTopModule_ = fmap snd . checkTopModule
+checkTopModule_ = fmap _moduleEntryScoped . checkTopModule
 
 checkTopModule ::
   forall r.
   Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State ScoperState] r =>
   Module 'Parsed 'ModuleTop ->
-  Sem r (ExportScope, Module 'Scoped 'ModuleTop)
-checkTopModule m@(Module path stmts) = do
+  Sem r (ModuleEntry' 'ModuleTop)
+checkTopModule m@(Module path params body) = do
   r <- checkedModule
   modify (over (scoperModulesCache .  cachedModules) (HashMap.insert path r))
   return r
@@ -462,40 +461,63 @@ checkTopModule m@(Module path stmts) = do
   iniScope = emptyScope (getTopModulePath m)
   addParent :: ScopeParameters -> ScopeParameters
   addParent = over scopeTopParents (HashSet.insert path)
-  checkedModule :: Sem r (ExportScope, Module 'Scoped 'ModuleTop)
+  checkedModule :: Sem r (ModuleEntry' 'ModuleTop)
   checkedModule = do
-    (exported, checked) <-
-      runState iniScope $ do
-        path' <- freshTopModulePath
-        Module path' <$> local addParent (mapM checkStatement stmts)
-    (,checked) <$> exportScope exported
+    evalState iniScope $ do
+      path' <- freshTopModulePath
+      localScope $ withParams params $ \params' -> do
+        (_moduleEntryExport, body') <- local addParent (checkModuleBody body)
+        let _moduleEntryScoped = Module {
+          modulePath = path',
+          moduleParameters = params',
+          moduleBody = body' }
+        return ModuleEntry' {..}
+
+withScope :: Members '[State Scope] r => Sem r a -> Sem r a
+withScope ma = do
+  before <- get @Scope
+  x <- ma
+  put before
+  return x
+
+checkModuleBody :: forall r.
+  Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScoperState, Embed IO, Reader LocalVars] r =>
+  [Statement 'Parsed] ->
+  Sem r (ExportInfo, [Statement 'Scoped])
+checkModuleBody body = do
+  body' <- mapM checkStatement body
+  checkOrphanFixities
+  exported <- get >>= exportScope
+  return (exported, body')
 
 checkLocalModule ::
   forall r.
-  Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScoperState, Embed IO] r =>
+  Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScoperState, Embed IO, Reader LocalVars] r =>
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
-  before <- get @Scope
-  inheritScope
-  let absPath = _scopePath before S.<.> modulePath
-  modify (set scopePath absPath)
-  moduleBody' <- mapM checkStatement moduleBody
-  checkOrphanFixities
-  exportedScope <- get >>= exportScope
-  put before
+  (_moduleEntryExport, moduleBody', moduleParameters') <-
+      withScope $ withParams moduleParameters $ \p' -> do
+    inheritScope
+    (e, b) <- checkModuleBody moduleBody
+    return (e, b, p')
   modulePath' <- bindLocalModuleSymbol modulePath
   let moduleId = S._nameId modulePath'
-  modify (over scoperModules (HashMap.insert moduleId exportedScope))
-  return
-    Module
-      { modulePath = modulePath',
-        moduleBody = moduleBody'
-      }
+      _moduleEntryScoped = Module
+        { modulePath = modulePath',
+          moduleParameters = moduleParameters',
+          moduleBody = moduleBody'
+        }
+      entry = mkModuleEntry ModuleEntry' {..}
+  modify (over scoperModules (HashMap.insert moduleId entry))
+  return _moduleEntryScoped
   where
-  -- | Mark all inherited symbols as NoPublic
   inheritScope :: Sem r ()
-  inheritScope = modify (over scopeSymbols (fmap inheritSymbol))
+  inheritScope = do
+    absPath <- (S.<.> modulePath) <$> gets _scopePath
+    modify (set scopePath absPath)
+    modify (over scopeSymbols (fmap inheritSymbol))
+    modify (set scopeFixities mempty) -- do not inherit fixity declarations
     where
     inheritSymbol :: SymbolInfo -> SymbolInfo
     inheritSymbol (SymbolInfo s) = SymbolInfo (fmap inheritEntry s)
@@ -509,7 +531,6 @@ checkOrphanFixities = return ()
 symbolInfoSingle :: SymbolEntry -> SymbolInfo
 symbolInfoSingle p = SymbolInfo $ HashMap.singleton (_symbolDefinedIn p) p
 
--- TODO what about top level modules? they are not in scopeSymbols
 lookupModuleSymbol :: Members '[Error ScopeError, State Scope, State ScoperState] r =>
   Name -> Sem r S.Name
 lookupModuleSymbol n = do
@@ -524,28 +545,33 @@ lookupModuleSymbol n = do
     NameUnqualified s -> ([], s)
     NameQualified (QualifiedName (Path p) s) -> (toList p, s)
 
-getExportScope :: forall r. Members '[State ScoperState] r =>
- S.ModuleNameId -> Sem r ExportScope
-getExportScope modId =
-  HashMap.lookupDefault impossible modId <$> gets _scoperModules
+getExportInfo :: forall r. Members '[State ScoperState] r =>
+ S.ModuleNameId -> Sem r ExportInfo
+getExportInfo modId = do
+  l <- HashMap.lookupDefault impossible modId
+        <$> gets _scoperModules
+  case l of
+    _ :&: ent -> return $ _moduleEntryExport ent
 
 checkOpenModule ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenModule OpenModule {..} = do
+  openParameters' <- mapM checkParseExpressionAtoms openParameters
   openModuleName' <- lookupModuleSymbol openModuleName
-  exported <- getExportScope (S._nameId openModuleName')
+  exported <- getExportInfo (S._nameId openModuleName')
   mergeScope (alterScope exported)
   return OpenModule {
     openModuleName = openModuleName',
+    openParameters = openParameters',
     openUsingHiding = openUsingHiding,
     openPublic = openPublic
     }
   where
-    mergeScope :: ExportScope -> Sem r ()
-    mergeScope ExportScope {..} =
+    mergeScope :: ExportInfo -> Sem r ()
+    mergeScope ExportInfo {..} =
       mapM_ mergeSymbol (HashMap.toList _exportSymbols)
       where
         mergeSymbol :: (Symbol, SymbolEntry) -> Sem r ()
@@ -557,14 +583,14 @@ checkOpenModule OpenModule {..} = do
       Just (Using l) -> Just (Left (HashSet.fromList (toList l)))
       Just (Hiding l) -> Just (Right (HashSet.fromList (toList l)))
       Nothing -> Nothing
-    alterScope :: ExportScope -> ExportScope
+    alterScope :: ExportInfo -> ExportInfo
     alterScope = alterEntries . filterScope
       where
         alterEntry :: SymbolEntry -> SymbolEntry
         alterEntry = set symbolWhyInScope BecauseImportedOpened . set symbolPublicAnn openPublic
-        alterEntries :: ExportScope -> ExportScope
+        alterEntries :: ExportInfo -> ExportInfo
         alterEntries = over exportSymbols (fmap alterEntry)
-        filterScope :: ExportScope -> ExportScope
+        filterScope :: ExportInfo -> ExportInfo
         filterScope = over exportSymbols filterTable
           where
             filterTable :: HashMap Symbol a -> HashMap Symbol a
@@ -923,17 +949,17 @@ checkParsePatternAtom ::
 checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
 
 checkStatement ::
-  Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State Scope, State ScoperState] r =>
+  Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State Scope, State ScoperState, Reader LocalVars] r =>
   Statement 'Parsed ->
   Sem r (Statement 'Scoped)
 checkStatement s = case s of
   StatementOperator opDef -> StatementOperator opDef <$ checkOperatorSyntaxDef opDef
-  StatementTypeSignature tySig -> StatementTypeSignature <$> localScope (checkTypeSignature tySig)
+  StatementTypeSignature tySig -> StatementTypeSignature <$> checkTypeSignature tySig
   StatementImport imp -> StatementImport <$> checkImport imp
   StatementInductive dt -> StatementInductive <$> checkInductiveDef dt
   StatementModule dt -> StatementModule <$> checkLocalModule dt
   StatementOpenModule open -> StatementOpenModule <$> checkOpenModule open
-  StatementFunctionClause clause -> StatementFunctionClause <$> localScope (checkFunctionClause clause)
+  StatementFunctionClause clause -> StatementFunctionClause <$> checkFunctionClause clause
   StatementAxiom ax -> StatementAxiom <$> checkAxiom ax
   StatementEval e -> StatementEval <$> checkEval e
   StatementPrint e -> StatementPrint <$> checkPrint e

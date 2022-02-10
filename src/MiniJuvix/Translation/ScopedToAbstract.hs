@@ -1,4 +1,4 @@
-module MiniJuvix.Translate.ScopedToAbstract where
+module MiniJuvix.Translation.ScopedToAbstract where
 
 import MiniJuvix.Utils.Prelude
 import MiniJuvix.Syntax.Concrete.Language
@@ -7,6 +7,6 @@ import qualified MiniJuvix.Syntax.Abstract.Language as A
 
 
 type Err = Text
-  
+
 translateModule :: Module 'Scoped 'ModuleTop -> Either Err A.Module
 translateModule = undefined

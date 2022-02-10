@@ -397,7 +397,7 @@ type LocalModuleName s = SymbolType s
 
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
   { modulePath :: ModulePathType s t,
-    moduleParameters :: [FunctionParameter s],
+    moduleParameters :: [InductiveParameter s],
     moduleBody :: [Statement s]
   }
 
@@ -455,27 +455,40 @@ data PublicAnn = Public | NoPublic
 
 data OpenModule (s :: Stage) = OpenModule
   { openModuleName :: NameType s,
+    openParameters :: [ExpressionType s],
     openUsingHiding :: Maybe UsingHiding,
     openPublic :: PublicAnn
   }
 deriving stock instance
   (
-    Eq (NameType s)
+    Eq (NameType s),
+    Eq (SymbolType s),
+    Eq (PatternType s),
+    Eq (ExpressionType s)
   ) =>
   Eq (OpenModule s)
 deriving stock instance
   (
-    Ord (NameType s)
+    Ord (NameType s),
+    Ord (SymbolType s),
+    Ord (PatternType s),
+    Ord (ExpressionType s)
   ) =>
   Ord (OpenModule s)
 deriving stock instance
   (
-    Show (NameType s)
+    Show (NameType s),
+    Show (SymbolType s),
+    Show (PatternType s),
+    Show (ExpressionType s)
   ) =>
   Show (OpenModule s)
 deriving stock instance
   (
-    Lift (NameType s)
+    Lift (NameType s),
+    Lift (SymbolType s),
+    Lift (PatternType s),
+    Lift (ExpressionType s)
   ) =>
   Lift (OpenModule s)
 

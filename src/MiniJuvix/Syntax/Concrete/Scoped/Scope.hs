@@ -2,7 +2,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module MiniJuvix.Syntax.Concrete.Scoped.Scope where
 
-
 import MiniJuvix.Utils.Prelude
 import MiniJuvix.Syntax.Concrete.Language
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
@@ -66,10 +65,21 @@ data SymbolEntry = SymbolEntry
   deriving stock (Show)
 
 -- | Symbols that a module exports
-newtype ExportScope = ExportScope {
+newtype ExportInfo = ExportInfo {
    _exportSymbols :: HashMap Symbol SymbolEntry
   }
   deriving stock (Show)
+
+-- | A module entry for either a local or a top module.
+type ModuleEntry = Σ ModuleIsTop (TyCon1 ModuleEntry')
+
+mkModuleEntry :: SingI t => ModuleEntry' t -> ModuleEntry
+mkModuleEntry = (sing :&:)
+
+data ModuleEntry' (t :: ModuleIsTop) = ModuleEntry' {
+  _moduleEntryExport :: ExportInfo,
+  _moduleEntryScoped :: Module 'Scoped t
+  }
 
 data Scope = Scope
   { _scopePath :: S.AbsModulePath,
@@ -79,14 +89,15 @@ data Scope = Scope
     _scopeBindGroup :: HashMap Symbol LocalVariable
   }
   deriving stock (Show)
-makeLenses ''ExportScope
+makeLenses ''ExportInfo
 makeLenses ''SymbolEntry
 makeLenses ''SymbolInfo
 makeLenses ''LocalVars
 makeLenses ''Scope
+makeLenses ''ModuleEntry'
 
 newtype ModulesCache = ModulesCache
-  { _cachedModules :: HashMap TopModulePath (ExportScope, Module 'Scoped 'ModuleTop)
+  { _cachedModules :: HashMap TopModulePath (ModuleEntry' 'ModuleTop)
   }
 
 makeLenses ''ModulesCache
@@ -104,7 +115,7 @@ makeLenses ''ScopeParameters
 data ScoperState = ScoperState
   { _scoperModulesCache :: ModulesCache,
     _scoperFreeNames :: Stream S.NameId,
-    _scoperModules :: HashMap S.ModuleNameId ExportScope
+    _scoperModules :: HashMap S.ModuleNameId ModuleEntry
   }
 makeLenses ''ScoperState
 

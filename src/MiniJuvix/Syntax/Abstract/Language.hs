@@ -79,8 +79,21 @@ data LambdaClause = LambdaClause
   }
   deriving stock (Show, Eq)
 
+data Usage
+  = UsageNone
+  | UsageOnce
+  | UsageOmega
+  deriving stock (Show, Eq)
+
+data FunctionParameter = FunctionParameter
+  { paramName :: Maybe NameId,
+    paramUsage :: Usage,
+    paramType :: Expression
+  }
+  deriving stock (Show, Eq)
+
 data Function = Function
-  { funParameter :: Expression,
+  { funParameter :: FunctionParameter,
     funReturn :: Expression
   }
   deriving stock (Show, Eq)

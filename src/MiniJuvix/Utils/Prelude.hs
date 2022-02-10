@@ -15,6 +15,7 @@ module MiniJuvix.Utils.Prelude
     module System.Directory,
     module System.FilePath,
     module Data.Singletons,
+    module Data.Singletons.Sigma,
     module Data.Hashable,
     module Lens.Micro.Platform,
     module GHC.Generics,
@@ -75,6 +76,7 @@ import Data.List.Extra hiding (head, last)
 import Data.List.NonEmpty (NonEmpty (..), head, last, nonEmpty)
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Maybe
+import Data.Singletons.Sigma
 import Data.Monoid
 import Data.Ord
 import Data.Semigroup (Semigroup, (<>))

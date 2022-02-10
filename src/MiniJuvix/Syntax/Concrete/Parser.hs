@@ -363,16 +363,26 @@ moduleDef :: (SingI t, MonadParsec e Text m) => m (Module 'Parsed t)
 moduleDef = do
   kwModule
   modulePath <- pmodulePath
-  moduleParameters <- many functionParam
+  moduleParameters <- many inductiveParam
   kwSemicolon
   moduleBody <- P.sepEndBy statement kwSemicolon
   kwEnd
   return Module {..}
 
+-- | An ExpressionAtom which is a valid expression on its own.
+atomicExpression :: forall e m. MonadParsec e Text m => m (ExpressionType 'Parsed)
+atomicExpression = do
+  atom <- expressionAtom
+  case atom of
+    AtomFunArrow -> P.failure Nothing mempty
+    _ -> return ()
+  return $ ExpressionAtoms (NonEmpty.singleton atom)
+
 openModule :: forall e m. MonadParsec e Text m => m (OpenModule 'Parsed)
 openModule = do
   kwOpen
   openModuleName <- name
+  openParameters <- many atomicExpression
   openUsingHiding <- optional usingOrHiding
   openPublic <- maybe NoPublic (const Public) <$> optional kwPublic
   return OpenModule {..}

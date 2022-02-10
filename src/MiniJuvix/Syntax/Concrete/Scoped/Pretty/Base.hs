@@ -249,12 +249,17 @@ ppSTopModulePath = ppSName' ppTopModulePath
 endSemicolon :: Doc Ann -> Doc Ann
 endSemicolon x = x <> kwSemicolon
 
+ppInductiveParameters :: Members '[Reader Options] r => [InductiveParameter 'Scoped] -> Sem r (Maybe (Doc Ann))
+ppInductiveParameters =
+  fmap (fmap (hsep . toList) . nonEmpty) . mapM ppInductiveParameter
+
 ppModule :: forall t r. (SingI t, Members '[Reader Options] r) => Module 'Scoped t -> Sem r (Doc Ann)
 ppModule Module {..} = do
   moduleBody' <- ppStatements moduleBody >>= indented
   modulePath' <- ppModulePathType modulePath
+  moduleParameters' <- ppInductiveParameters moduleParameters
   return $
-    kwModule <+> modulePath' <> kwSemicolon <> line
+    kwModule <+> modulePath' <+?> moduleParameters' <> kwSemicolon <> line
       <> moduleBody'
       <> line
       <> kwEnd
@@ -296,22 +301,23 @@ ppInductiveConstructorDef InductiveConstructorDef {..} = do
 ppInductiveDef :: forall r. Members '[Reader Options] r => InductiveDef 'Scoped -> Sem r (Doc Ann)
 ppInductiveDef InductiveDef {..} = do
   inductiveName' <- annDef inductiveName <$> ppSSymbol inductiveName
-  inductiveParameters' <- hsep <$> mapM ppInductiveParameter inductiveParameters
+  inductiveParameters' <- ppInductiveParameters inductiveParameters
   inductiveType' <- ppTypeType
   inductiveConstructors' <- ppBlock ppInductiveConstructorDef inductiveConstructors
   return $
-    kwInductive <+> inductiveName' <+> inductiveParameters' <+?> inductiveType'
+    kwInductive <+> inductiveName' <+?> inductiveParameters' <+?> inductiveType'
       <+> inductiveConstructors'
   where
     ppTypeType :: Sem r (Maybe (Doc Ann))
     ppTypeType = case inductiveType of
       Nothing -> return Nothing
       Just e -> Just . (kwColon <+>) <$> ppExpression e
-    ppInductiveParameter :: InductiveParameter 'Scoped -> Sem r (Doc Ann)
-    ppInductiveParameter InductiveParameter {..} = do
-      inductiveParameterName' <- annDef inductiveParameterName <$> ppSSymbol inductiveParameterName
-      inductiveParameterType' <- ppExpression inductiveParameterType
-      return $ parens (inductiveParameterName' <+> kwColon <+> inductiveParameterType')
+
+ppInductiveParameter :: Members '[Reader Options] r => InductiveParameter 'Scoped -> Sem r (Doc Ann)
+ppInductiveParameter InductiveParameter {..} = do
+  inductiveParameterName' <- annDef inductiveParameterName <$> ppSSymbol inductiveParameterName
+  inductiveParameterType' <- ppExpression inductiveParameterType
+  return $ parens (inductiveParameterName' <+> kwColon <+> inductiveParameterType')
 
 dotted :: Foldable f => f (Doc Ann) -> Doc Ann
 dotted = concatWith (surround kwDot)
@@ -348,27 +354,34 @@ ppSName' ppConcrete S.Name' {..} = do
   let uid = if showNameId then "@" <> ppNameId _nameId else mempty
   return $ nameConcrete' <> uid
 
+ppAtom :: Members '[Reader Options] r => Expression -> Sem r (Doc Ann)
+ppAtom e = parensCond (isAtomic e) <$> ppExpression e
 
 ppOpen :: forall r. Members '[Reader Options] r => OpenModule 'Scoped -> Sem r (Doc Ann)
 ppOpen OpenModule {..} = do
   openModuleName' <- ppSName openModuleName
   openUsingHiding' <- sequence $ ppUsingHiding <$> openUsingHiding
+  openParameters' <- ppOpenParams
   let openPublic' = ppPublic
-  return $ keyword "open" <+> openModuleName' <+?> openUsingHiding' <+?> openPublic'
+  return $ keyword "open" <+> openModuleName' <+?> openParameters' <+?> openUsingHiding' <+?> openPublic'
   where
-    ppUsingHiding :: UsingHiding -> Sem r (Doc Ann)
-    ppUsingHiding uh = do
-      bracedList <- encloseSep kwBraceL kwBraceR kwSemicolon . toList
-        <$> mapM ppUnkindedSymbol syms
-      return $ kw <+> bracedList
-      where
-        (kw, syms) = case uh of
-          Using s -> (kwUsing, s)
-          Hiding s -> (kwHiding, s)
-    ppPublic :: Maybe (Doc Ann)
-    ppPublic = case openPublic of
-      Public -> Just kwPublic
-      NoPublic -> Nothing
+  ppOpenParams :: Sem r (Maybe (Doc Ann))
+  ppOpenParams = case openParameters of
+    [] -> return Nothing
+    _ -> Just . hsep <$> mapM ppAtom openParameters
+  ppUsingHiding :: UsingHiding -> Sem r (Doc Ann)
+  ppUsingHiding uh = do
+    bracedList <- encloseSep kwBraceL kwBraceR kwSemicolon . toList
+      <$> mapM ppUnkindedSymbol syms
+    return $ kw <+> bracedList
+    where
+      (kw, syms) = case uh of
+        Using s -> (kwUsing, s)
+        Hiding s -> (kwHiding, s)
+  ppPublic :: Maybe (Doc Ann)
+  ppPublic = case openPublic of
+    Public -> Just kwPublic
+    NoPublic -> Nothing
 
 ppTypeSignature :: Members '[Reader Options] r => TypeSignature 'Scoped -> Sem r (Doc Ann)
 ppTypeSignature TypeSignature {..} = do
@@ -535,6 +548,8 @@ ppNestedPattern = go
       patPostfixConstructor' <- ppSName patPostfixConstructor
       patPostfixParameter' <- ppLeftExpression (ppostfixFixity p) patPostfixParameter
       return $ patPostfixParameter' <+> patPostfixConstructor'
+
+-- ppAtom
 
 isAtomic :: Expression -> Bool
 isAtomic e = case e of
