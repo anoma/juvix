@@ -3,6 +3,7 @@
 module MiniJuvix.Syntax.Concrete.Language
   ( module MiniJuvix.Syntax.Concrete.Language,
     module MiniJuvix.Syntax.Concrete.Name,
+    module MiniJuvix.Syntax.Concrete.Loc,
     module MiniJuvix.Syntax.Concrete.Fixity,
   )
 where
@@ -14,6 +15,7 @@ import Data.Singletons
 import Language.Haskell.TH.Syntax (Lift)
 import MiniJuvix.Syntax.Concrete.Fixity
 import MiniJuvix.Syntax.Concrete.Name
+import MiniJuvix.Syntax.Concrete.Loc
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Utils.Prelude
 
@@ -478,16 +480,12 @@ deriving stock instance
 deriving stock instance
   (
     Show (NameType s),
-    Show (SymbolType s),
-    Show (PatternType s),
     Show (ExpressionType s)
   ) =>
   Show (OpenModule s)
 deriving stock instance
   (
     Lift (NameType s),
-    Lift (SymbolType s),
-    Lift (PatternType s),
     Lift (ExpressionType s)
   ) =>
   Lift (OpenModule s)

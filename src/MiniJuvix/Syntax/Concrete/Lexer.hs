@@ -3,10 +3,11 @@ module MiniJuvix.Syntax.Concrete.Lexer where
 --------------------------------------------------------------------------------
 
 import GHC.Unicode
-import MiniJuvix.Syntax.Concrete.Base hiding (space)
+import MiniJuvix.Syntax.Concrete.Base hiding (space, Pos)
 import qualified MiniJuvix.Syntax.Concrete.Base as P
 import MiniJuvix.Utils.Prelude
 import qualified Text.Megaparsec.Char.Lexer as L
+import MiniJuvix.Syntax.Concrete.Loc
 
 --------------------------------------------------------------------------------
 
@@ -28,14 +29,39 @@ decimal :: (MonadParsec e Text m, Num n) => m n
 decimal = lexeme L.decimal
 
 identifier :: MonadParsec e Text m => m Text
-identifier = lexeme bareIdentifier
+identifier = fmap fst identifierL
 
-allowedSymbols :: String
-allowedSymbols = "_'-"
+identifierL :: MonadParsec e Text m => m (Text, Interval)
+identifierL = lexeme bareIdentifier
+
+fromPos :: P.Pos -> Pos
+fromPos = Pos . fromIntegral . P.unPos
+
+mkLoc :: SourcePos -> Loc
+mkLoc SourcePos {..} = Loc {..}
+  where
+  _locFile = sourceName
+  _locFileLoc = FileLoc {..}
+    where
+    _locLine = fromPos sourceLine
+    _locCol = undefined sourceColumn
+
+getLoc :: MonadParsec e Text m => m Loc
+getLoc = mkLoc <$> getSourcePos
+
+withLoc :: MonadParsec e Text m => (Loc -> m a) -> m a
+withLoc ma = getLoc >>= ma
+
+interval :: MonadParsec e Text m => m a -> m (a, Interval)
+interval ma = do
+  start <- getLoc
+  res <- ma
+  end <- getLoc
+  return (res, mkInterval start end)
 
 -- | Same as @identifier@ but does not consume space after it.
-bareIdentifier :: MonadParsec e Text m => m Text
-bareIdentifier = do
+bareIdentifier :: MonadParsec e Text m => m (Text, Interval)
+bareIdentifier = interval $ do
   notFollowedBy (choice allKeywords)
   P.takeWhile1P Nothing validChar
   where
@@ -46,15 +72,17 @@ bareIdentifier = do
           cat == MathSymbol,
           cat == CurrencySymbol,
           cat == ModifierLetter,
-          c `elem` ("_'-*,&" :: String)
+          c `elem` extraAllowedChars
         ]
       where
-        cat = generalCategory c
+      extraAllowedChars :: [Char]
+      extraAllowedChars = "_'-*,&"
+      cat = generalCategory c
 
 dot :: forall e m. MonadParsec e Text m => m Char
 dot = P.char '.'
 
-dottedIdentifier :: forall e m. MonadParsec e Text m => m (NonEmpty Text)
+dottedIdentifier :: forall e m. MonadParsec e Text m => m (NonEmpty (Text, Interval))
 dottedIdentifier = lexeme $ P.sepBy1 bareIdentifier dot
 
 braces :: MonadParsec e Text m => m a -> m a

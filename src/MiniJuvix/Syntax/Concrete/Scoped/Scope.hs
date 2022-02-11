@@ -6,25 +6,6 @@ import MiniJuvix.Utils.Prelude
 import MiniJuvix.Syntax.Concrete.Language
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 
-data ScopeError
-  = ErrParser Text
-  | ErrGeneric Text
-  | ErrInfixParser String
-  | ErrInfixPattern String
-  | ErrAlreadyDefined Symbol
-  | ErrLacksTypeSig Symbol
-  | ErrImportCycle TopModulePath
-  | ErrOpenNotInScope QualifiedName
-  | ErrSymNotInScope Symbol Scope LocalVars
-  | ErrQualSymNotInScope QualifiedName
-  | ErrModuleNotInScope Name
-  | ErrBindGroup Symbol
-  | ErrDuplicateFixity Symbol
-  | ErrMultipleExport Symbol
-  | ErrAmbiguousSym [SymbolEntry]
-  | ErrAmbiguousModuleSym [SymbolEntry]
-  deriving stock (Show)
-
 
 newtype LocalVariable = LocalVariable
   { variableName :: S.Symbol

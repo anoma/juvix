@@ -3,7 +3,6 @@ module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (
   module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ann
                                                     ) where
 
-import Data.Singletons
 import MiniJuvix.Syntax.Concrete.Language
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Utils.Prelude
@@ -32,10 +31,10 @@ prettyTopModule :: Options -> Module 'Scoped 'ModuleTop -> Doc Ann
 prettyTopModule opts = run . runReader opts . ppModule
 
 infixl 7 <+?>
-
 (<+?>) :: Doc ann -> Maybe (Doc ann) -> Doc ann
 (<+?>) a = maybe a (a <+>)
 
+infixl 7 <?>
 (<?>) :: Doc ann -> Maybe (Doc ann) -> Doc ann
 (<?>) a = maybe a (a <>)
 
@@ -175,7 +174,7 @@ ppUnkindedSymbol :: Members '[Reader Options] r => Symbol -> Sem r (Doc Ann)
 ppUnkindedSymbol = fmap (annotate AnnUnkindedSym) . ppSymbol
 
 ppSymbol :: Members '[Reader Options] r => Symbol -> Sem r (Doc Ann)
-ppSymbol (Sym t) = return (pretty t)
+ppSymbol Symbol {..} = return (pretty _symbolText)
 
 groupStatements :: [Statement 'Scoped] -> [[Statement 'Scoped]]
 groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])

@@ -5,12 +5,22 @@ module MiniJuvix.Syntax.Concrete.Name where
 
 import Language.Haskell.TH.Syntax (Lift)
 import MiniJuvix.Utils.Prelude
+import MiniJuvix.Syntax.Concrete.Loc
 
-newtype Symbol = Sym Text
-  deriving stock (Show, Eq, Ord, Lift)
+data Symbol = Symbol {
+  _symbolText :: Text,
+  _symbolLoc :: Interval
+  }
+  deriving stock (Show, Lift)
+
+instance Eq Symbol where
+  (==) = (==) `on` _symbolText
+
+instance Ord Symbol where
+  compare = compare `on` _symbolText
 
 instance Hashable Symbol where
-  hashWithSalt i (Sym t) = hashWithSalt i t
+  hashWithSalt i Symbol {..} = hashWithSalt i _symbolText 
 
 data QualifiedName = QualifiedName
   { qualifiedPath :: Path,
@@ -52,7 +62,7 @@ topModulePathToFilePath' ext root mp = absPath
     Nothing -> root </> relFilePath
     Just e -> root </> relFilePath <.> e
   toPath :: Symbol -> FilePath
-  toPath (Sym t) = unpack t
+  toPath Symbol{..} = unpack _symbolText
 
 
 instance Hashable TopModulePath

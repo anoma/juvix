@@ -43,11 +43,14 @@ topModuleDef = space >> moduleDef <* (optional kwSemicolon >> P.eof)
 -- Symbols and names
 --------------------------------------------------------------------------------
 
+loc :: MonadParsec e Text m => m Loc
+loc = undefined
+
 symbol :: MonadParsec e Text m => m Symbol
-symbol = Sym <$> identifier
+symbol = uncurry Symbol <$> identifierL
 
 dottedSymbol :: forall e m. MonadParsec e Text m => m (NonEmpty Symbol)
-dottedSymbol = fmap Sym <$> dottedIdentifier
+dottedSymbol = fmap (uncurry Symbol) <$> dottedIdentifier
 
 name :: forall e m. MonadParsec e Text m => m Name
 name = do

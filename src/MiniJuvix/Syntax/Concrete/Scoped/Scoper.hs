@@ -18,6 +18,7 @@ import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Parser (runModuleParserIO)
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Syntax.Concrete.Scoped.Scope
+import MiniJuvix.Syntax.Concrete.Scoped.Error
 import MiniJuvix.Utils.Prelude
 import qualified Data.List.NonEmpty as NonEmpty
 import MiniJuvix.Syntax.Concrete.Scoped.Name (topModulePathToAbsPath)
@@ -1067,13 +1068,10 @@ parseExpressionAtoms (ExpressionAtoms sections) = do
     Left err -> throw (ErrInfixParser (show err))
     Right r -> return r
   where
-    filePath = "tmp"
+  filePath = ""
 
 -- | Monad for parsing expression sections.
 type Parse = P.Parsec () [ExpressionAtom 'Scoped]
-
--- data Parser tok m a where
---   EmbedParsec ::
 
 mkExpressionParser ::
   [[P.Operator Parse Expression]] ->
