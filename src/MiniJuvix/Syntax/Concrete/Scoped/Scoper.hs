@@ -1,6 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-
 -- | Limitations:
 -- 1. A symbol introduced by a type signature can only be used once per Module.
 --
@@ -21,7 +18,8 @@ import MiniJuvix.Syntax.Concrete.Scoped.Scope
 import MiniJuvix.Syntax.Concrete.Scoped.Error
 import MiniJuvix.Utils.Prelude
 import qualified Data.List.NonEmpty as NonEmpty
-import MiniJuvix.Syntax.Concrete.Scoped.Name (topModulePathToAbsPath)
+import MiniJuvix.Syntax.Concrete.Scoped.Name (topModulePathToAbsPath, Name' (_nameDefined))
+import MiniJuvix.Syntax.Concrete.Scoped.Scope (SymbolEntry(_symbolDefined))
 
 --------------------------------------------------------------------------------
 
@@ -71,6 +69,7 @@ freshSymbol ::
 freshSymbol _nameKind _nameConcrete = do
   _nameId <- freshNameId
   _nameDefinedIn <- gets _scopePath
+  let _nameDefined = _symbolLoc _nameConcrete
   _nameFixity <- getFixity
   return S.Name' {..}
   where
@@ -90,12 +89,18 @@ reserveSymbolOf k s = do
   checkNotBound
   freshSymbol k s
   where
-    checkNotBound :: Sem r ()
-    checkNotBound = do
-      path <- gets _scopePath
-      syms <- gets _scopeSymbols
-      let exists = maybe False (HashMap.member path . _symbolInfo) (HashMap.lookup s syms)
-      when exists (throw (ErrAlreadyDefined s))
+  checkNotBound :: Sem r ()
+  checkNotBound = do
+    path <- gets _scopePath
+    syms <- gets _scopeSymbols
+    let exists = HashMap.lookup s syms >>= HashMap.lookup path . _symbolInfo
+    whenJust exists $
+      \ e -> throw (ErrMultipleDeclarations
+         MultipleDeclarations  {
+         _multipleDeclEntry = e,
+         _multipleDeclSymbol = _symbolText s,
+         _multipleDeclSecond = _symbolLoc s
+         } )
 
 symbolEntry :: S.Name' a -> SymbolEntry
 symbolEntry S.Name' {..} = SymbolEntry
@@ -103,6 +108,7 @@ symbolEntry S.Name' {..} = SymbolEntry
     _symbolDefinedIn = _nameDefinedIn,
     _symbolId = _nameId,
     _symbolFixity = _nameFixity,
+    _symbolDefined = _nameDefined,
     _symbolPublicAnn = NoPublic,
     _symbolWhyInScope = BecauseDefined
   }
@@ -199,7 +205,7 @@ lookupSymbolGeneric :: forall a r. (Show a, Members '[State Scope, Error ScopeEr
    (SymbolEntry -> Bool) -> a -> [Symbol] -> Symbol -> Sem r [SymbolEntry]
 lookupSymbolGeneric filtr name modules final = do
   local' <- inLocalModule
-  import' <- inImport
+  import' <- importedTopModule
   return $ maybeToList local' ++ maybeToList import'
   where
   inLocalModule :: Sem r (Maybe SymbolEntry) =
@@ -222,13 +228,14 @@ lookupSymbolGeneric filtr name modules final = do
           Just [] -> return Nothing
           Just _ -> throw $ ErrGeneric ("ambiguous name " <> show name)
           Nothing -> return Nothing
-  inImport :: Sem r (Maybe SymbolEntry)
-  inImport = do
+  importedTopModule :: Sem r (Maybe SymbolEntry)
+  importedTopModule = do
     fmap mkEntry . HashMap.lookup path <$> gets _scopeTopModules
     where
     mkEntry modId = SymbolEntry {
          _symbolKind = S.KNameTopModule ,
          _symbolDefinedIn = S.topModulePathToAbsPath path,
+         _symbolDefined = _symbolLoc final,
          _symbolId = modId,
          _symbolFixity = S.NoFixity,
          _symbolWhyInScope = BecauseImportedOpened,
@@ -310,6 +317,7 @@ entryToSName s SymbolEntry {..} =
     { _nameId = _symbolId,
       _nameConcrete = s,
       _nameDefinedIn = _symbolDefinedIn,
+      _nameDefined = _symbolDefined,
       _nameFixity = _symbolFixity,
       _nameKind = _symbolKind
     }
@@ -455,6 +463,7 @@ checkTopModule m@(Module path params body) = do
     _nameId <- freshNameId
     let _nameDefinedIn = topModulePathToAbsPath path
         _nameConcrete = path
+        _nameDefined = _symbolLoc $ modulePathName path
         _nameKind = S.KNameTopModule
         _nameFixity = S.NoFixity
     return S.Name' {..}

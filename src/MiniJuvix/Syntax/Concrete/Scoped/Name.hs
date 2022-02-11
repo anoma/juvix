@@ -7,6 +7,7 @@ import Data.Stream (Stream (Cons))
 import Lens.Micro.Platform
 import qualified MiniJuvix.Syntax.Concrete.Fixity as C
 import qualified MiniJuvix.Syntax.Concrete.Name as C
+import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Utils.Prelude
 
 --------------------------------------------------------------------------------
@@ -109,6 +110,7 @@ type ModuleNameId = NameId
 data Name' n = Name'
   { _nameId :: NameId,
     _nameConcrete :: n,
+    _nameDefined :: Interval,
     _nameKind :: NameKind,
     _nameDefinedIn :: AbsModulePath,
     _nameFixity :: NameFixity

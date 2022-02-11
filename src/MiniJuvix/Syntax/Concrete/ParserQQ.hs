@@ -6,7 +6,6 @@ module MiniJuvix.Syntax.Concrete.ParserQQ
   )
 where
 
-import Data.Text (pack, unpack)
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax (Exp, Q)
 import MiniJuvix.Syntax.Concrete.Language

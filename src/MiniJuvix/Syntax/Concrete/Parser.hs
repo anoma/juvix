@@ -43,9 +43,6 @@ topModuleDef = space >> moduleDef <* (optional kwSemicolon >> P.eof)
 -- Symbols and names
 --------------------------------------------------------------------------------
 
-loc :: MonadParsec e Text m => m Loc
-loc = undefined
-
 symbol :: MonadParsec e Text m => m Symbol
 symbol = uncurry Symbol <$> identifierL
 

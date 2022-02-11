@@ -44,7 +44,7 @@ mkLoc SourcePos {..} = Loc {..}
   _locFileLoc = FileLoc {..}
     where
     _locLine = fromPos sourceLine
-    _locCol = undefined sourceColumn
+    _locCol = fromPos sourceColumn
 
 getLoc :: MonadParsec e Text m => m Loc
 getLoc = mkLoc <$> getSourcePos

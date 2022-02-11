@@ -9,6 +9,7 @@ import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (Options (..))
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
+import MiniJuvix.Syntax.Concrete.Scoped.Error.Pretty as M
 import MiniJuvix.Utils.Prelude
 import Options.Applicative
 import Options.Applicative.Help.Pretty
@@ -174,15 +175,21 @@ mkPrettyOptions ScopeOptions {..} =
 parseModuleIO :: FilePath -> IO (M.Module 'M.Parsed 'M.ModuleTop)
 parseModuleIO = fromRightIO id . M.runModuleParserIO
 
+fromRightIO' :: (e -> IO ()) -> IO (Either e r) -> IO r
+fromRightIO' pp = do
+  eitherM ifLeft return
+  where
+  ifLeft e = pp e >> exitFailure
+
 fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
-fromRightIO pp = eitherM (ioError . userError . unpack . pp) return
+fromRightIO pp = fromRightIO' (putStrLn . pp)
 
 go :: Command -> IO ()
 go c = case c of
   Scope opts@ScopeOptions {..} -> do
     root <- getCurrentDirectory
     m <- parseModuleIO _scopeInputFile
-    s <- fromRightIO show $ M.scopeCheck1 root m
+    s <- fromRightIO' printErrorAnsi $ M.scopeCheck1 root m
     M.printTopModule (mkPrettyOptions opts) s
   Parse ParseOptions {..} -> do
     m <- parseModuleIO _parseInputFile

@@ -25,6 +25,7 @@ module MiniJuvix.Utils.Prelude
     module Data.Monoid,
     module Polysemy,
     module Polysemy.Reader,
+    module Data.Text.IO,
     module Polysemy.State,
     module Polysemy.Error,
     module Polysemy.Embed,
@@ -38,6 +39,7 @@ module MiniJuvix.Utils.Prelude
     module Data.Functor,
     module Data.Int,
     module Polysemy.View,
+    module System.Exit,
     module System.IO,
     module Control.Applicative,
     module Data.Foldable,
@@ -103,9 +105,11 @@ import Polysemy.Reader
 import Polysemy.State
 import Polysemy.View
 import System.Directory
+import System.Exit
 import System.FilePath
-import System.IO
+import System.IO hiding (putStr, putStrLn, hPutStr, hPutStrLn, writeFile, hGetContents, interact, readFile, getContents, getLine, appendFile, hGetLine)
 import Text.Show (Show)
+import Data.Text.IO
 import qualified Text.Show as Show
 
 --------------------------------------------------------------------------------

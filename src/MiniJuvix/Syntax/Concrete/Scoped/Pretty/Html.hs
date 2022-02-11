@@ -49,7 +49,7 @@ genHtml opts recursive theme entry = do
   outputModule :: Module 'Scoped 'ModuleTop -> IO ()
   outputModule m = do
     createDirectoryIfMissing True (takeDirectory htmlFile)
-    putStrLn $ "Writing " <> htmlFile
+    putStrLn $ "Writing " <> pack htmlFile
     Text.writeFile htmlFile (genModule opts theme m)
    where
    htmlFile = dottedPath (S._nameConcrete (modulePath m)) <.> ".html"
@@ -134,7 +134,7 @@ dottedPath :: IsString s => TopModulePath -> s
 dottedPath (TopModulePath l r) =
   fromText $ mconcat $ intersperse "." $ map fromSymbol $ l ++ [r]
   where
-  fromSymbol (Sym t) = t
+  fromSymbol Symbol {..} = _symbolText
 
 nameIdAttr :: S.NameId -> AttributeValue
 nameIdAttr (S.NameId k) = fromString . show $ k

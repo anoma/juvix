@@ -38,6 +38,7 @@ data WhyInScope =
 data SymbolEntry = SymbolEntry
   { _symbolKind :: S.NameKind,
     _symbolDefinedIn :: S.AbsModulePath,
+    _symbolDefined :: Interval,
     _symbolId :: S.NameId,
     _symbolFixity :: S.NameFixity,
     _symbolWhyInScope :: WhyInScope,
