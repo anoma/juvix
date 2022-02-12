@@ -9,7 +9,6 @@ import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (Options (..))
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
-import MiniJuvix.Syntax.Concrete.Scoped.Error.Pretty as M
 import MiniJuvix.Prelude
 import Options.Applicative
 import Options.Applicative.Help.Pretty

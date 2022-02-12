@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (
   module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base,
   module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ann
@@ -26,8 +27,10 @@ defaultOptions =
       _optIndent = 2
     }
 
+type IsStage s = (SingI s, PrettyCode (ExpressionType s), Eq (SymbolType s), HasFixity (ExpressionType s))
+
 -- | Pretty prints a top module.
-prettyTopModule :: Options -> Module 'Scoped 'ModuleTop -> Doc Ann
+prettyTopModule :: IsStage s => Options -> Module s 'ModuleTop -> Doc Ann
 prettyTopModule opts = run . runReader opts . ppModule
 
 infixl 7 <+?>
@@ -165,35 +168,46 @@ braces = enclose kwBraceL kwBraceR
 parens :: Doc Ann -> Doc Ann
 parens = enclose kwParenL kwParenR
 
-ppModulePathType :: forall t r. (SingI t, Members '[Reader Options] r) => ModulePathType 'Scoped t -> Sem r (Doc Ann)
+ppModulePathType :: forall t s r. (SingI t, IsStage s, Members '[Reader Options] r) =>
+  ModulePathType s t -> Sem r (Doc Ann)
 ppModulePathType x = case sing :: SModuleIsTop t of
-  SModuleTop -> annDef x <$> ppSTopModulePath x
-  SModuleLocal -> ppSSymbol x
+  SModuleTop -> case sing :: SStage s of
+    SParsed -> ppCTopModulePath x
+    SScoped -> annSDef x <$> ppTopModulePath x
+  SModuleLocal -> case sing :: SStage s of
+    SParsed -> ppCSymbol x
+    SScoped -> ppSSymbol x
 
 ppUnkindedSymbol :: Members '[Reader Options] r => Symbol -> Sem r (Doc Ann)
 ppUnkindedSymbol = fmap (annotate AnnUnkindedSym) . ppSymbol
 
-ppSymbol :: Members '[Reader Options] r => Symbol -> Sem r (Doc Ann)
-ppSymbol Symbol {..} = return (pretty _symbolText)
+ppSymbol :: forall s r. (SingI s, Members '[Reader Options] r) => SymbolType s -> Sem r (Doc Ann)
+ppSymbol = case sing :: SStage s of
+  SParsed -> ppCSymbol
+  SScoped -> ppSSymbol
 
-groupStatements :: [Statement 'Scoped] -> [[Statement 'Scoped]]
+ppCSymbol :: Members '[Reader Options] r => Symbol -> Sem r (Doc Ann)
+ppCSymbol Symbol {..} = return (pretty _symbolText)
+
+groupStatements :: forall s. IsStage s => [Statement s] -> [[Statement s]]
 groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
   where
-  aux :: ([Statement 'Scoped], [[Statement 'Scoped]]) -> Statement 'Scoped
-      -> ([Statement 'Scoped], [[Statement 'Scoped]])
+  aux :: ([Statement s], [[Statement s]]) -> Statement s
+      -> ([Statement s], [[Statement s]])
   aux ([], acc) s = ([s], acc)
   aux (gr@(a : _), acc) b
     | g a b = (b : gr, acc)
     | otherwise = ([b], gr : acc)
   -- | Decides if statements a and b should be next to each other without a
   -- blank line
-  g :: Statement 'Scoped -> Statement 'Scoped -> Bool
+  g :: Statement s -> Statement s -> Bool
   g a b = case (a, b) of
     (StatementOperator _, StatementOperator _) -> True
     (StatementOperator o, s) -> definesSymbol (opSymbol o) s
     (StatementImport _, StatementImport _) -> True
-    (StatementImport i, StatementOpenModule o) ->
-      S._nameId (modulePath (importModule i)) == S._nameId (openModuleName o)
+    (StatementImport i, StatementOpenModule o) -> case sing :: SStage s of
+      SParsed -> True
+      SScoped -> S._nameId (modulePath (importModule i)) == S._nameId (openModuleName o)
     (StatementImport _, _) -> False
     (StatementOpenModule {}, StatementOpenModule {}) -> True
     (StatementOpenModule {}, _) -> False
@@ -211,21 +225,31 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
     (StatementFunctionClause fun1, StatementFunctionClause fun2) ->
       clauseOwnerFunction fun1 == clauseOwnerFunction fun2
     (StatementFunctionClause {}, _) -> False
-  definesSymbol :: Symbol -> Statement 'Scoped -> Bool
+  definesSymbol :: Symbol -> Statement s -> Bool
   definesSymbol n s = case s of
-    StatementTypeSignature sig -> n == S._nameConcrete (sigName sig)
-    StatementInductive InductiveDef{..} ->
-      n == S._nameConcrete inductiveName ||
-      elem n (map (S._nameConcrete . constructorName) inductiveConstructors)
+    StatementTypeSignature sig ->
+      let sym = case sing :: SStage s of
+            SParsed -> sigName sig
+            SScoped -> S._nameConcrete $ sigName sig
+      in n == sym
+    StatementInductive d -> n `elem` syms d
     _ -> False
+    where
+    syms :: InductiveDef s -> [Symbol]
+    syms InductiveDef {..} = case sing :: SStage s of
+      SParsed -> inductiveName : map constructorName inductiveConstructors
+      SScoped -> S._nameConcrete inductiveName :
+          map (S._nameConcrete . constructorName) inductiveConstructors
 
-ppStatements :: Members '[Reader Options] r => [Statement 'Scoped] -> Sem r (Doc Ann)
+
+ppStatements :: (IsStage s, Members '[Reader Options] r)
+   => [Statement s] -> Sem r (Doc Ann)
 ppStatements ss = joinGroups <$> mapM (fmap mkGroup . mapM (fmap endSemicolon . ppStatement)) (groupStatements ss)
   where
     mkGroup = vsep
     joinGroups = concatWith (\a b -> a <> line <> line <> b)
 
-ppStatement :: Members '[Reader Options] r => Statement 'Scoped -> Sem r (Doc Ann)
+ppStatement :: (IsStage s, Members '[Reader Options] r) => Statement s -> Sem r (Doc Ann)
 ppStatement s = case s of
   StatementOperator op -> ppOperatorSyntaxDef op
   StatementTypeSignature sig -> ppTypeSignature sig
@@ -238,8 +262,14 @@ ppStatement s = case s of
   StatementEval e -> ppEval e
   StatementPrint p -> ppPrint p
 
-ppTopModulePath :: Members '[Reader Options] r => TopModulePath -> Sem r (Doc Ann)
-ppTopModulePath TopModulePath {..} =
+ppTopModulePath :: forall s r. (SingI s, Members '[Reader Options] r) =>
+  ModulePathType s 'ModuleTop -> Sem r (Doc Ann)
+ppTopModulePath = case sing :: SStage s of
+  SParsed -> ppCTopModulePath
+  SScoped -> ppSTopModulePath
+
+ppCTopModulePath :: Members '[Reader Options] r => TopModulePath -> Sem r (Doc Ann)
+ppCTopModulePath TopModulePath {..} =
   dotted <$> mapM ppSymbol (modulePathDir ++ [modulePathName])
 
 ppSTopModulePath :: Members '[Reader Options] r => S.TopModulePath -> Sem r (Doc Ann)
@@ -248,11 +278,13 @@ ppSTopModulePath = ppSName' ppTopModulePath
 endSemicolon :: Doc Ann -> Doc Ann
 endSemicolon x = x <> kwSemicolon
 
-ppInductiveParameters :: Members '[Reader Options] r => [InductiveParameter 'Scoped] -> Sem r (Maybe (Doc Ann))
+ppInductiveParameters :: (IsStage s, Members '[Reader Options] r)
+    => [InductiveParameter s] -> Sem r (Maybe (Doc Ann))
 ppInductiveParameters =
   fmap (fmap (hsep . toList) . nonEmpty) . mapM ppInductiveParameter
 
-ppModule :: forall t r. (SingI t, Members '[Reader Options] r) => Module 'Scoped t -> Sem r (Doc Ann)
+ppModule :: forall t r s. (SingI t, IsStage s, Members '[Reader Options] r)
+   => Module s t -> Sem r (Doc Ann)
 ppModule Module {..} = do
   moduleBody' <- ppStatements moduleBody >>= indented
   modulePath' <- ppModulePathType modulePath
@@ -291,15 +323,17 @@ ppOperatorSyntaxDef OperatorSyntaxDef {..} = do
             AssocLeft -> kwInfixl
             AssocNone -> kwInfix
 
-ppInductiveConstructorDef :: Members '[Reader Options] r => InductiveConstructorDef 'Scoped -> Sem r (Doc Ann)
+ppInductiveConstructorDef :: (IsStage s, Members '[Reader Options] r)
+   => InductiveConstructorDef s -> Sem r (Doc Ann)
 ppInductiveConstructorDef InductiveConstructorDef {..} = do
-  constructorName' <- annDef constructorName <$> ppSSymbol constructorName
+  constructorName' <- annDef constructorName <$> ppSymbol constructorName
   constructorType' <- ppExpression constructorType
   return $ constructorName' <+> kwColon <+> constructorType'
 
-ppInductiveDef :: forall r. Members '[Reader Options] r => InductiveDef 'Scoped -> Sem r (Doc Ann)
+ppInductiveDef :: forall r s. (IsStage s, Members '[Reader Options] r) =>
+   InductiveDef s -> Sem r (Doc Ann)
 ppInductiveDef InductiveDef {..} = do
-  inductiveName' <- annDef inductiveName <$> ppSSymbol inductiveName
+  inductiveName' <- annDef inductiveName <$> ppSymbol inductiveName
   inductiveParameters' <- ppInductiveParameters inductiveParameters
   inductiveType' <- ppTypeType
   inductiveConstructors' <- ppBlock ppInductiveConstructorDef inductiveConstructors
@@ -312,9 +346,9 @@ ppInductiveDef InductiveDef {..} = do
       Nothing -> return Nothing
       Just e -> Just . (kwColon <+>) <$> ppExpression e
 
-ppInductiveParameter :: Members '[Reader Options] r => InductiveParameter 'Scoped -> Sem r (Doc Ann)
+ppInductiveParameter :: (IsStage s, Members '[Reader Options] r) => InductiveParameter s -> Sem r (Doc Ann)
 ppInductiveParameter InductiveParameter {..} = do
-  inductiveParameterName' <- annDef inductiveParameterName <$> ppSSymbol inductiveParameterName
+  inductiveParameterName' <- annDef inductiveParameterName <$> ppSymbol inductiveParameterName
   inductiveParameterType' <- ppExpression inductiveParameterType
   return $ parens (inductiveParameterName' <+> kwColon <+> inductiveParameterType')
 
@@ -326,8 +360,13 @@ ppQualified QualifiedName {..} = do
   let symbols = pathParts qualifiedPath NonEmpty.|> qualifiedSymbol
   dotted <$> mapM ppSymbol symbols
 
-ppName :: Members '[Reader Options] r => Name -> Sem r (Doc Ann)
-ppName n = case n of
+ppName :: forall s r. (SingI s, Members '[Reader Options] r) => NameType s -> Sem r (Doc Ann)
+ppName = case sing :: SStage s of
+  SParsed -> ppCName
+  SScoped -> ppSName
+
+ppCName :: Members '[Reader Options] r => Name -> Sem r (Doc Ann)
+ppCName n = case n of
   NameUnqualified s -> ppSymbol s
   NameQualified s -> ppQualified s
 
@@ -337,14 +376,24 @@ ppNameId (S.NameId k) = pretty k
 ppSSymbol :: Members '[Reader Options] r => S.Symbol -> Sem r (Doc Ann)
 ppSSymbol = ppSName' ppSymbol
 
-annDef :: S.Name' n -> Doc Ann -> Doc Ann
-annDef nm = annotate (AnnDef (S.absTopModulePath (S._nameDefinedIn nm)) (S._nameId nm))
+annDef :: forall s. IsStage s => SymbolType s -> Doc Ann -> Doc Ann
+annDef nm = case sing :: SStage s of
+  SScoped -> annSDef nm
+  SParsed -> id
 
-annRef :: S.Name' n -> Doc Ann -> Doc Ann
-annRef nm = annotate (AnnRef (S.absTopModulePath (S._nameDefinedIn nm)) (S._nameId nm))
+annSDef :: S.Name' n -> Doc Ann -> Doc Ann
+annSDef nm = annotate (AnnDef (S.absTopModulePath (S._nameDefinedIn nm)) (S._nameId nm))
+
+annSRef :: S.Name' n -> Doc Ann -> Doc Ann
+annSRef nm = annotate (AnnRef (S.absTopModulePath (S._nameDefinedIn nm)) (S._nameId nm))
+
+annRef :: forall s. IsStage s => SymbolType s -> Doc Ann -> Doc Ann
+annRef nm = case sing :: SStage s of
+  SParsed -> id
+  SScoped -> annSRef nm
 
 ppSName :: Members '[Reader Options] r => S.Name -> Sem r (Doc Ann)
-ppSName nm = annRef nm <$> ppSName' ppName nm
+ppSName nm = annSRef nm <$> ppSName' ppName nm
 
 ppSName' :: Members '[Reader Options] r => (s -> Sem r (Doc Ann)) -> S.Name' s -> Sem r (Doc Ann)
 ppSName' ppConcrete S.Name' {..} = do
@@ -353,12 +402,13 @@ ppSName' ppConcrete S.Name' {..} = do
   let uid = if showNameId then "@" <> ppNameId _nameId else mempty
   return $ nameConcrete' <> uid
 
-ppAtom :: Members '[Reader Options] r => Expression -> Sem r (Doc Ann)
+ppAtom :: (IsStage s, Members '[Reader Options] r) => ExpressionType s -> Sem r (Doc Ann)
 ppAtom e = parensCond (isAtomic e) <$> ppExpression e
 
-ppOpen :: forall r. Members '[Reader Options] r => OpenModule 'Scoped -> Sem r (Doc Ann)
+ppOpen :: forall s r. (IsStage s, Members '[Reader Options] r)
+    => OpenModule s -> Sem r (Doc Ann)
 ppOpen OpenModule {..} = do
-  openModuleName' <- ppSName openModuleName
+  openModuleName' <- ppName openModuleName
   openUsingHiding' <- sequence $ ppUsingHiding <$> openUsingHiding
   openParameters' <- ppOpenParams
   let openPublic' = ppPublic
@@ -382,13 +432,13 @@ ppOpen OpenModule {..} = do
     Public -> Just kwPublic
     NoPublic -> Nothing
 
-ppTypeSignature :: Members '[Reader Options] r => TypeSignature 'Scoped -> Sem r (Doc Ann)
+ppTypeSignature :: (IsStage s, Members '[Reader Options] r) => TypeSignature s -> Sem r (Doc Ann)
 ppTypeSignature TypeSignature {..} = do
-  sigName' <- annDef sigName <$> ppSSymbol sigName
+  sigName' <- annDef sigName <$> ppSymbol sigName
   sigType' <- ppExpression sigType
   return $ sigName' <+> kwColon <+> sigType'
 
-ppFunction :: forall r. Members '[Reader Options] r => Function 'Scoped -> Sem r (Doc Ann)
+ppFunction :: forall s r. (IsStage s, Members '[Reader Options] r) => Function s -> Sem r (Doc Ann)
 ppFunction Function {..} = do
   funParameter' <- ppFunParameter funParameter
   funReturn' <- ppRightExpression funFixity funReturn
@@ -401,25 +451,25 @@ ppFunction Function {..} = do
         UsageNone -> kwColonZero
         UsageOnce -> kwColonOne
         UsageOmega -> kwColonOmega
-    ppFunParameter :: FunctionParameter 'Scoped -> Sem r (Doc Ann)
+    ppFunParameter :: FunctionParameter s -> Sem r (Doc Ann)
     ppFunParameter FunctionParameter {..} = do
       case paramName of
         Nothing -> ppLeftExpression funFixity paramType
         Just n -> do
-          paramName' <- annDef n <$> ppSSymbol n
+          paramName' <- annDef n <$> ppSymbol n
           paramType' <- ppExpression paramType
           return $ parens (paramName' <+> ppUsage paramUsage <+> paramType')
 
 ppUniverse :: Members '[Reader Options] r => Universe -> Sem r (Doc Ann)
 ppUniverse (Universe n) = return $ kwType <+?> (pretty <$> n)
 
-ppLetBlock :: forall r. Members '[Reader Options] r => LetBlock 'Scoped -> Sem r (Doc Ann)
+ppLetBlock :: forall s r. (IsStage s, Members '[Reader Options] r) => LetBlock s -> Sem r (Doc Ann)
 ppLetBlock LetBlock {..} = do
   letClauses' <- ppBlock ppLetClause letClauses
   letExpression' <- ppExpression letExpression
   return $ kwLet <+> letClauses' <+> kwIn <+> letExpression'
   where
-    ppLetClause :: LetClause 'Scoped -> Sem r (Doc Ann)
+    ppLetClause :: LetClause s -> Sem r (Doc Ann)
     ppLetClause c = case c of
       LetTypeSig sig -> ppTypeSignature sig
       LetFunClause cl -> ppFunctionClause cl
@@ -427,32 +477,33 @@ ppLetBlock LetBlock {..} = do
 ppBlock :: Members '[Reader Options] r => (a -> Sem r (Doc Ann)) -> [a] -> Sem r (Doc Ann)
 ppBlock ppItem items = mapM (fmap endSemicolon . ppItem) items >>= bracesIndent . vsep
 
-ppMatch :: forall r. Members '[Reader Options] r => Match 'Scoped -> Sem r (Doc Ann)
+ppMatch :: forall s r. (IsStage s, Members '[Reader Options] r) => Match s -> Sem r (Doc Ann)
 ppMatch Match {..} = do
   matchExpression' <- ppExpression matchExpression
   matchAlts' <- ppBlock ppMatchAlt matchAlts
   return $ kwMatch <+> matchExpression' <+> matchAlts'
   where
-    ppMatchAlt :: MatchAlt 'Scoped -> Sem r (Doc Ann)
+    ppMatchAlt :: MatchAlt s -> Sem r (Doc Ann)
     ppMatchAlt MatchAlt {..} = do
       matchAltPattern' <- ppPattern matchAltPattern
       matchAltBody' <- ppExpression matchAltBody
       return $ matchAltPattern' <+> kwMapsto <+> matchAltBody'
 
-ppLambda :: forall r. Members '[Reader Options] r => Lambda 'Scoped -> Sem r (Doc Ann)
+ppLambda :: forall r s. (IsStage s, Members '[Reader Options] r) => Lambda s -> Sem r (Doc Ann)
 ppLambda Lambda {..} = do
   lambdaClauses' <- ppBlock ppLambdaClause lambdaClauses
   return $ kwLambda <+> lambdaClauses'
   where
-    ppLambdaClause :: LambdaClause 'Scoped -> Sem r (Doc Ann)
+    ppLambdaClause :: LambdaClause s -> Sem r (Doc Ann)
     ppLambdaClause LambdaClause {..} = do
       lambdaParameters' <- hsep . toList <$> mapM ppPattern lambdaParameters
       lambdaBody' <- ppExpression lambdaBody
       return $ lambdaParameters' <+> kwMapsto <+> lambdaBody'
 
-ppFunctionClause :: forall r. Members '[Reader Options] r => FunctionClause 'Scoped -> Sem r (Doc Ann)
+ppFunctionClause :: forall r s. (IsStage s, Members '[Reader Options] r)
+   => FunctionClause s -> Sem r (Doc Ann)
 ppFunctionClause FunctionClause {..} = do
-  clauseOwnerFunction' <- annRef clauseOwnerFunction <$> ppSSymbol clauseOwnerFunction
+  clauseOwnerFunction' <- annRef clauseOwnerFunction <$> ppSymbol clauseOwnerFunction
   clausePatterns' <- case nonEmpty clausePatterns of
     Nothing -> return Nothing
     Just ne -> Just . hsep . toList <$> mapM ppPattern ne
@@ -462,49 +513,68 @@ ppFunctionClause FunctionClause {..} = do
     clauseOwnerFunction' <+?> clausePatterns' <+> kwAssignment <+> clauseBody'
       <+?> ((line <>) <$> clauseWhere')
   where
-    ppWhereBlock :: WhereBlock 'Scoped -> Sem r (Doc Ann)
+    ppWhereBlock :: WhereBlock s -> Sem r (Doc Ann)
     ppWhereBlock WhereBlock {..} =
       ppBlock ppWhereClause whereClauses >>= indented . (kwWhere <+>)
       where
-        ppWhereClause :: WhereClause 'Scoped -> Sem r (Doc Ann)
+        ppWhereClause :: WhereClause s -> Sem r (Doc Ann)
         ppWhereClause c = case c of
           WhereOpenModule o -> ppOpen o
           WhereTypeSig sig -> ppTypeSignature sig
           WhereFunClause fun -> ppFunctionClause fun
 
-ppAxiom :: Members '[Reader Options] r => AxiomDef 'Scoped -> Sem r (Doc Ann)
+ppAxiom :: (IsStage s, Members '[Reader Options] r) => AxiomDef s -> Sem r (Doc Ann)
 ppAxiom AxiomDef {..} = do
-  axiomName' <- ppSSymbol axiomName
+  axiomName' <- ppSymbol axiomName
   axiomType' <- ppExpression axiomType
   return $ kwAxiom <+> axiomName' <+> kwColon <+> axiomType'
 
-ppEval :: Members '[Reader Options] r => Eval 'Scoped -> Sem r (Doc Ann)
+ppEval :: (IsStage s, Members '[Reader Options] r) => Eval s -> Sem r (Doc Ann)
 ppEval (Eval p) = do
   p' <- ppExpression p
   return $ kwEval <+> p'
 
-ppPrint :: Members '[Reader Options] r => Print 'Scoped -> Sem r (Doc Ann)
+ppPrint :: (IsStage s, Members '[Reader Options] r) => Print s -> Sem r (Doc Ann)
 ppPrint (Print p) = do
   p' <- ppExpression p
   return $ kwPrint <+> p'
 
-ppImport :: forall r. Members '[Reader Options] r => Import 'Scoped -> Sem r (Doc Ann)
-ppImport (Import m@Module {..}) = do
-  modulePath' <- annRef modulePath <$> ppSTopModulePath modulePath
+ppImport :: forall r s. (IsStage s, Members '[Reader Options] r) => Import s -> Sem r (Doc Ann)
+ppImport (Import m) = do
+  modulePath' <- ppModulePath
   inlineImport' <- inlineImport
   return $ kwImport <+> modulePath' <+?> inlineImport'
   where
+  ppModulePath = case sing :: SStage s of
+    SParsed -> ppCTopModulePath m
+    SScoped -> annSRef (modulePath m) <$> ppTopModulePath (modulePath m)
   jumpLines :: Doc Ann -> Doc Ann
   jumpLines x = line <> x <> line
   inlineImport :: Sem r (Maybe (Doc Ann))
   inlineImport = do
     b <- asks _optInlineImports
-    if b then do
-      ppModule m >>= fmap (Just . braces . jumpLines) . indented
+    if b then case sing :: SStage s of
+      SParsed -> return Nothing
+      SScoped -> ppModule m >>= fmap (Just . braces . jumpLines) . indented
       else return Nothing
 
-ppPattern :: forall r. Members '[Reader Options] r => Pattern -> Sem r (Doc Ann)
-ppPattern pat = do
+ppPattern :: forall s r. (IsStage s, Members '[Reader Options] r) => PatternType s -> Sem r (Doc Ann)
+ppPattern = case sing :: SStage s of
+  SParsed -> ppCPattern
+  SScoped -> ppSPattern
+
+ppCPattern :: forall r. Members '[Reader Options] r => PatternAtom 'Parsed -> Sem r (Doc Ann)
+ppCPattern a = case a of
+  PatternAtomName n -> ppName n
+  PatternAtomWildcard -> return kwWildcard
+  PatternAtomEmpty -> return $ parens mempty
+  PatternAtomParens p -> parens <$> ppCPatterns p
+
+ppCPatterns :: forall r. Members '[Reader Options] r => PatternAtoms 'Parsed -> Sem r (Doc Ann)
+ppCPatterns (PatternAtoms ps) = hsep . toList <$> mapM ppCPattern ps
+
+ppSPattern :: forall r. Members '[Reader Options] r => Pattern -> Sem r (Doc Ann)
+ppSPattern pat = do
   p' <- ppNestedPattern pat
   return $ if isAtomicPat pat then p' else parens p'
   where
@@ -548,20 +618,22 @@ ppNestedPattern = go
       patPostfixParameter' <- ppLeftExpression (ppostfixFixity p) patPostfixParameter
       return $ patPostfixParameter' <+> patPostfixConstructor'
 
--- ppAtom
-
-isAtomic :: Expression -> Bool
-isAtomic e = case e of
-  ExpressionIdentifier {} -> True
-  ExpressionParensIdentifier {} -> True
-  ExpressionApplication {} -> False
-  ExpressionInfixApplication {} -> False
-  ExpressionPostfixApplication {} -> False
-  ExpressionLambda {} -> True
-  ExpressionMatch {} -> True
-  ExpressionLetBlock {} -> True
-  ExpressionUniverse {} -> True
-  ExpressionFunction {} -> False
+isAtomic :: forall s. IsStage s => ExpressionType s -> Bool
+isAtomic e = case sing :: SStage s of
+  SScoped -> case e of
+    ExpressionIdentifier {} -> True
+    ExpressionParensIdentifier {} -> True
+    ExpressionApplication {} -> False
+    ExpressionInfixApplication {} -> False
+    ExpressionPostfixApplication {} -> False
+    ExpressionLambda {} -> True
+    ExpressionMatch {} -> True
+    ExpressionLetBlock {} -> True
+    ExpressionUniverse {} -> True
+    ExpressionFunction {} -> False
+  SParsed -> case e of
+    ExpressionAtoms (_  :| []) -> True
+    ExpressionAtoms (_  :| _) -> False
 
 ppInfixApplication :: forall r. Members '[Reader Options] r => InfixApplication -> Sem r (Doc Ann)
 ppInfixApplication i@InfixApplication {..} = do
@@ -584,6 +656,9 @@ instance PrettyCode Expression where
 
 instance PrettyCode Pattern where
   ppCode = ppNestedPattern
+
+instance PrettyCode (ExpressionAtoms 'Parsed) where
+  ppCode = goAtoms
 
 class HasFixity a where
   getFixity :: a -> Maybe Fixity
@@ -610,6 +685,10 @@ instance HasFixity Pattern where
     PatternPostfixApplication p -> Just (ppostfixFixity p)
     PatternWildcard -> Nothing
     PatternEmpty -> Nothing
+
+-- TODO never used.
+instance HasFixity (ExpressionAtoms 'Parsed) where
+  getFixity = const Nothing
 
 pinfixFixity :: PatternInfixApp -> Fixity
 pinfixFixity (PatternInfixApp  _ op _) = case S._nameFixity op of
@@ -683,8 +762,24 @@ ppLRExpression associates atom e =
   parensCond (atomParens associates (getFixity e) atom)
       <$> ppCode e
 
-ppExpression :: forall r. Members '[Reader Options] r => Expression -> Sem r (Doc Ann)
-ppExpression = go
+goAtom :: forall r. Members '[Reader Options] r => ExpressionAtom 'Parsed -> Sem r (Doc Ann)
+goAtom a = case a of
+  AtomIdentifier n -> ppName n
+  AtomLambda l -> ppLambda l
+  AtomLetBlock lb -> ppLetBlock lb
+  AtomUniverse uni -> ppUniverse uni
+  AtomFunction fun -> ppFunction fun
+  AtomFunArrow -> return kwArrowR
+  AtomMatch m -> ppMatch m
+  AtomParens e -> parens <$> goAtoms e
+
+goAtoms :: forall r. Members '[Reader Options] r => ExpressionAtoms 'Parsed -> Sem r (Doc Ann)
+goAtoms (ExpressionAtoms l) = hsep . toList <$> mapM goAtom l
+
+ppExpression :: forall s r. (IsStage s, Members '[Reader Options] r) => ExpressionType s -> Sem r (Doc Ann)
+ppExpression = case sing :: SStage s of
+  SScoped -> go
+  SParsed -> goAtoms
   where
     ppApplication :: Application -> Sem r (Doc Ann)
     ppApplication (Application l r) = do

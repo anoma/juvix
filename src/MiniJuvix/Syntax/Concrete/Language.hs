@@ -28,6 +28,19 @@ data Stage
   | Scoped
   deriving stock (Show)
 
+data SStage (s :: Stage) where
+  SParsed :: SStage 'Parsed
+  SScoped :: SStage 'Scoped
+
+type instance Sing = SStage
+
+instance SingI 'Parsed where
+  sing = SParsed
+
+instance SingI 'Scoped where
+  sing = SScoped
+
+
 type family SymbolType (s :: Stage) :: (res :: GHC.Type) | res -> s where
   SymbolType 'Parsed = Symbol
   SymbolType 'Scoped = S.Symbol
@@ -36,11 +49,11 @@ type family NameType (s :: Stage) :: (res :: GHC.Type) | res -> s where
   NameType 'Parsed = Name
   NameType 'Scoped = S.Name
 
-type family ExpressionType (s :: Stage) :: GHC.Type where
+type family ExpressionType (s :: Stage) :: (res :: GHC.Type) | res -> s where
   ExpressionType 'Parsed = ExpressionAtoms 'Parsed
   ExpressionType 'Scoped = Expression
 
-type family PatternType (s :: Stage) :: GHC.Type where
+type family PatternType (s :: Stage) :: (res :: GHC.Type) | res -> s where
   PatternType 'Parsed = PatternAtom 'Parsed
   PatternType 'Scoped = Pattern
 
@@ -50,7 +63,7 @@ type family ImportType (s :: Stage) :: GHC.Type where
 
 type family
   ModulePathType (s :: Stage) (t :: ModuleIsTop) ::
-    (res :: GHC.Type) | res -> t
+    (res :: GHC.Type) | res -> t s
   where
   ModulePathType 'Parsed 'ModuleTop = TopModulePath
   ModulePathType 'Scoped 'ModuleTop = S.TopModulePath

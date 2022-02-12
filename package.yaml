@@ -58,6 +58,7 @@ default-extensions:
 - DeriveLift
 - DerivingStrategies
 - FlexibleContexts
+- FlexibleInstances
 - GADTs
 - GeneralizedNewtypeDeriving
 - InstanceSigs
