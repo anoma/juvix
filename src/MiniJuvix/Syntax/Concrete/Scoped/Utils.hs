@@ -2,7 +2,7 @@ module MiniJuvix.Syntax.Concrete.Scoped.Utils where
 
 import MiniJuvix.Syntax.Concrete.Language
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 import qualified Data.HashMap.Strict as HashMap
 
 data ScopedModule = forall t. MkScopedModule (SModuleIsTop t) (Module 'Scoped t)

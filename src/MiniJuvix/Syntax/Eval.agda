@@ -17,7 +17,7 @@ open import MiniJuvix.Syntax.Core
 
 {-# FOREIGN AGDA2HS
 import MiniJuvix.Syntax.Core
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 #-}
 
 {-# FOREIGN AGDA2HS

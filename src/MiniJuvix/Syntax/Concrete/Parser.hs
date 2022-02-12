@@ -10,7 +10,7 @@ import MiniJuvix.Syntax.Concrete.Base (MonadParsec)
 import qualified MiniJuvix.Syntax.Concrete.Base as P
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Lexer hiding (symbol)
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 
 --------------------------------------------------------------------------------
 -- Running the parser

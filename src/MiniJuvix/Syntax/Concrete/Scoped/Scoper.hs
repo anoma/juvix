@@ -16,7 +16,7 @@ import MiniJuvix.Syntax.Concrete.Parser (runModuleParserIO)
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Syntax.Concrete.Scoped.Scope
 import MiniJuvix.Syntax.Concrete.Scoped.Error
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 import qualified Data.List.NonEmpty as NonEmpty
 import MiniJuvix.Syntax.Concrete.Scoped.Name (topModulePathToAbsPath, Name' (_nameDefined))
 import MiniJuvix.Syntax.Concrete.Scoped.Scope (SymbolEntry(_symbolDefined))

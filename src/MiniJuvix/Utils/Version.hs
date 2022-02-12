@@ -6,7 +6,7 @@ import Control.Exception (IOException)
 import qualified Control.Exception as Exception
 import qualified Data.List as List
 import Data.Version (Version (versionTags))
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 import System.Exit
 import System.Process (readProcessWithExitCode)
 

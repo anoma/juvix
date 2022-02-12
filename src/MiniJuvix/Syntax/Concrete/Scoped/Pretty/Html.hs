@@ -5,7 +5,7 @@ import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Scoped.Utils
 import           Prettyprinter.Render.Util.SimpleDocTree
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 import Prettyprinter
 import qualified Text.Blaze.Html.Renderer.Text           as Html
 import           Text.Blaze.Html5                       as Html hiding (map)

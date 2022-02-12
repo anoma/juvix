@@ -26,7 +26,7 @@ open import Agda.Builtin.Equality
 {-# FOREIGN AGDA2HS
 --------------------------------------------------------------------------------
 
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 
 --------------------------------------------------------------------------------
 -- Quantity (a.k.a. Usage)

@@ -3,7 +3,7 @@ module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi where
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Scoped.Name (NameKind (..))
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 import Prettyprinter
 import Prettyprinter.Render.Terminal
 

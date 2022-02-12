@@ -10,10 +10,9 @@ import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (Options (..))
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
 import MiniJuvix.Syntax.Concrete.Scoped.Error.Pretty as M
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 import Options.Applicative
 import Options.Applicative.Help.Pretty
-import System.IO.Error
 import Text.Show.Pretty hiding (Html)
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (defaultOptions)

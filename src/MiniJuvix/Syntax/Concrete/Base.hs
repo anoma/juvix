@@ -10,6 +10,6 @@ where
 import Control.Monad.Combinators.Expr
 import Control.Monad.Combinators.NonEmpty (sepBy1, some)
 import Data.List.NonEmpty (NonEmpty)
-import MiniJuvix.Utils.Prelude hiding (some)
+import MiniJuvix.Prelude hiding (some)
 import Text.Megaparsec hiding (sepBy1, some)
 import Text.Megaparsec.Char

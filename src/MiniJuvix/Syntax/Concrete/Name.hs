@@ -4,7 +4,7 @@
 module MiniJuvix.Syntax.Concrete.Name where
 
 import Language.Haskell.TH.Syntax (Lift)
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Loc
 
 data Symbol = Symbol {

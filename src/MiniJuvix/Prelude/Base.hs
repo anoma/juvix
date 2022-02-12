@@ -1,7 +1,8 @@
-module MiniJuvix.Utils.Prelude
-  ( module MiniJuvix.Utils.Prelude,
+module MiniJuvix.Prelude.Base 
+  ( module MiniJuvix.Prelude.Base,
     module Control.Monad.Extra,
     module Data.Char,
+    module Data.Typeable,
     module Data.Either.Extra,
     module Data.Function,
     module Data.List.Extra,
@@ -59,6 +60,7 @@ where
 --------------------------------------------------------------------------------
 
 import Control.Applicative
+import Data.Typeable hiding (TyCon)
 import Control.Monad.Extra
 import Data.Bool
 import Data.ByteString.Lazy (ByteString)
@@ -207,3 +209,4 @@ undefined = Err.error "undefined"
 -- | Used to indicate impossible corner cases.
 impossible :: HasCallStack => a
 impossible = Err.error "impossible"
+

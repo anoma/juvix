@@ -1,7 +1,7 @@
 module MiniJuvix.Syntax.Concrete.Fixity where
 
 import Language.Haskell.TH.Syntax (Lift)
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 
 data Precedence =
   PrecMinusOmega

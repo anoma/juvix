@@ -10,7 +10,7 @@ import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax (Exp, Q)
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Parser
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 
 mjuvixMod :: QuasiQuoter
 mjuvixMod =

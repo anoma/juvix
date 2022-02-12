@@ -6,7 +6,7 @@ module MiniJuvix.Syntax.Core where
 
 --------------------------------------------------------------------------------
 
-import MiniJuvix.Utils.Prelude hiding (Local)
+import MiniJuvix.Prelude hiding (Local)
 import Numeric.Natural (Natural)
 
 --------------------------------------------------------------------------------

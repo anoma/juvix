@@ -5,7 +5,7 @@ module MiniJuvix.Syntax.Concrete.Lexer where
 import GHC.Unicode
 import MiniJuvix.Syntax.Concrete.Base hiding (space, Pos)
 import qualified MiniJuvix.Syntax.Concrete.Base as P
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 import qualified Text.Megaparsec.Char.Lexer as L
 import MiniJuvix.Syntax.Concrete.Loc
 

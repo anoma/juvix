@@ -17,7 +17,7 @@ import MiniJuvix.Syntax.Concrete.Fixity
 import MiniJuvix.Syntax.Concrete.Name
 import MiniJuvix.Syntax.Concrete.Loc
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 
 --------------------------------------------------------------------------------
 -- Parsing stages

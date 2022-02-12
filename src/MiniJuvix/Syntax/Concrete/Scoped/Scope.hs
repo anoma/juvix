@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module MiniJuvix.Syntax.Concrete.Scoped.Scope where
 
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Language
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 

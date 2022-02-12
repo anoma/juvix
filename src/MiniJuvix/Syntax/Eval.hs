@@ -3,7 +3,7 @@
 module MiniJuvix.Syntax.Eval where
 
 import MiniJuvix.Syntax.Core
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 
 --------------------------------------------------------------------------------
 -- Values and neutral terms

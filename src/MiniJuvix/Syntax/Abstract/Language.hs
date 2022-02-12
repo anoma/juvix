@@ -1,7 +1,7 @@
 module MiniJuvix.Syntax.Abstract.Language where
 
 
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Scoped.Name
 
 type ModuleName = NameId

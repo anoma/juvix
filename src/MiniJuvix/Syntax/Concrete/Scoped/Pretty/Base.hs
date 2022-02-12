@@ -5,7 +5,7 @@ module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (
 
 import MiniJuvix.Syntax.Concrete.Language
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 import qualified Data.List.NonEmpty.Extra as NonEmpty
 import Prettyprinter hiding (braces, parens)
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ann

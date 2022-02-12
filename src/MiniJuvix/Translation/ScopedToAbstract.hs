@@ -1,6 +1,6 @@
 module MiniJuvix.Translation.ScopedToAbstract where
 
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Scoped.Name
 import qualified MiniJuvix.Syntax.Abstract.Language as A

@@ -1,6 +1,6 @@
 module MiniJuvix.Syntax.Concrete.Loc where
 
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 import Prettyprinter
 import Language.Haskell.TH.Syntax (Lift)
 

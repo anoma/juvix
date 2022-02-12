@@ -1,6 +1,6 @@
 module Main (main) where
 
-import MiniJuvix.Utils.Prelude
+import MiniJuvix.Prelude
 import Parsing.Test
 
 main :: IO ()
