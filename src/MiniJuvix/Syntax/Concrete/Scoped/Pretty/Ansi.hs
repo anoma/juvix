@@ -1,22 +1,26 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi where
 
-import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Scoped.Name (NameKind (..))
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base
 import MiniJuvix.Prelude
 import Prettyprinter
 import Prettyprinter.Render.Terminal
 
-printTopModuleDefault :: Module 'Scoped 'ModuleTop -> IO ()
-printTopModuleDefault = printTopModule defaultOptions
+printPrettyCodeDefault :: PrettyCode c => c -> IO ()
+printPrettyCodeDefault = printPrettyCode defaultOptions
 
-printTopModule :: Options -> Module 'Scoped 'ModuleTop -> IO ()
-printTopModule opts m = renderIO stdout docStream'
-  where
-    docStream :: SimpleDocStream Ann
-    docStream = layoutPretty defaultLayoutOptions (prettyTopModule opts m)
-    docStream' :: SimpleDocStream AnsiStyle
-    docStream' = reAnnotateS stylize docStream
+printPrettyCode :: PrettyCode c => Options -> c -> IO ()
+printPrettyCode = hPrintPrettyCode stdout
+
+hPrintPrettyCode :: PrettyCode c => Handle -> Options -> c -> IO ()
+hPrintPrettyCode h opts = renderIO h . docStream opts
+
+renderPrettyCode :: PrettyCode c => Options -> c -> Text
+renderPrettyCode opts = renderStrict . docStream opts
+
+docStream :: PrettyCode c => Options -> c -> SimpleDocStream AnsiStyle
+docStream opts = reAnnotateS stylize . layoutPretty defaultLayoutOptions
+    . run . runReader opts . ppCode
 
 stylize :: Ann -> AnsiStyle
 stylize a = case a of

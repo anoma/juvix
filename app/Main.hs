@@ -188,7 +188,7 @@ go c = case c of
     root <- getCurrentDirectory
     m <- parseModuleIO _scopeInputFile
     s <- fromRightIO' printErrorAnsi $ M.scopeCheck1 root m
-    M.printTopModule (mkPrettyOptions opts) s
+    M.printPrettyCode (mkPrettyOptions opts) s
   Parse ParseOptions {..} -> do
     m <- parseModuleIO _parseInputFile
     if _parseNoPrettyShow then print m else pPrint m

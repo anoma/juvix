@@ -82,7 +82,7 @@ genModule opts theme m =
     <> prettySrc
 
 docStream :: Options -> Module 'Scoped 'ModuleTop -> SimpleDocStream Ann
-docStream opts m = layoutPretty defaultLayoutOptions (prettyTopModule opts m)
+docStream opts m = layoutPretty defaultLayoutOptions (runPrettyCode opts m)
 
 renderTree :: SimpleDocTree Ann -> Html
 renderTree = go
