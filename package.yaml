@@ -42,7 +42,6 @@ dependencies:
 - text == 1.2.*
 - th-utilities == 0.2.*
 - unordered-containers == 0.2.*
-- word8 == 0.1.*
 
 ghc-options:
 - -fhide-source-paths
