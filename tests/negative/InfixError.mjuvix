@@ -1,0 +1,7 @@
+module InfixError;
+
+  infix 5 + ;
+  axiom + : Type → Type → Type;
+
+  axiom T : Type + Type + ;
+end;
