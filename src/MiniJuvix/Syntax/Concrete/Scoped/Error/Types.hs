@@ -36,3 +36,10 @@ newtype ImportCycle = ImportCycle {
   _importCycleImport :: Import 'Parsed
   }
  deriving stock (Show)
+
+data NotInScope = NotInScope {
+ _notInScopeSymbol :: Symbol,
+ _notInScopeLocal :: LocalVars,
+ _notInScopeScope :: Scope
+ }
+ deriving stock (Show)

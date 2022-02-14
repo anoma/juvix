@@ -786,7 +786,7 @@ checkUnqualified s = do
       scope <- get
       locals <- ask
       -- Lookup at the global scope
-      let err = throw (ErrSymNotInScope s scope locals)
+      let err = throw (ErrSymNotInScope (NotInScope s locals scope))
       entryToSName (NameUnqualified s) <$>
          -- TODO change listToMaybe, it is a bit too hacky
         fromMaybeM err (listToMaybe <$> lookupSymbolGeneric (S.isExprKind . _symbolKind) s [] s)

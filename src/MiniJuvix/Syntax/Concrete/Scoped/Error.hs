@@ -21,7 +21,7 @@ data ScopeError
   | ErrLacksTypeSig LacksTypeSig
   | ErrImportCycle ImportCycle
   | ErrOpenNotInScope QualifiedName
-  | ErrSymNotInScope Symbol Scope LocalVars
+  | ErrSymNotInScope NotInScope
   | ErrQualSymNotInScope QualifiedName
   | ErrModuleNotInScope Name
   | ErrBindGroup Symbol
@@ -43,7 +43,7 @@ ppScopeError s = case s of
   ErrLacksTypeSig e -> ppError e
   ErrImportCycle e -> ppError e
   ErrOpenNotInScope {} -> ugly
-  ErrSymNotInScope {} -> ugly
+  ErrSymNotInScope e -> ppError e
   ErrQualSymNotInScope {} -> ugly
   ErrModuleNotInScope {} -> ugly
   ErrBindGroup {} -> ugly
