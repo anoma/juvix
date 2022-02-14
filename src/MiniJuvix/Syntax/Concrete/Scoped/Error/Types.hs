@@ -13,3 +13,9 @@ data MultipleDeclarations = MultipleDeclarations {
   _multipleDeclSecond :: Interval
   }
  deriving stock (Show)
+
+-- | megaparsec error while resolving infixities
+newtype InfixError = InfixError {
+  _infixErrAtoms :: ExpressionAtoms 'Scoped
+  }
+ deriving stock (Show)

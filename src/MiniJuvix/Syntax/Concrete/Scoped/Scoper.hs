@@ -18,8 +18,6 @@ import MiniJuvix.Syntax.Concrete.Scoped.Scope
 import MiniJuvix.Syntax.Concrete.Scoped.Error
 import MiniJuvix.Prelude
 import qualified Data.List.NonEmpty as NonEmpty
-import MiniJuvix.Syntax.Concrete.Scoped.Name (topModulePathToAbsPath, Name' (_nameDefined))
-import MiniJuvix.Syntax.Concrete.Scoped.Scope (SymbolEntry(_symbolDefined))
 
 --------------------------------------------------------------------------------
 
@@ -461,7 +459,7 @@ checkTopModule m@(Module path params body) = do
      Sem s S.TopModulePath
   freshTopModulePath = do
     _nameId <- freshNameId
-    let _nameDefinedIn = topModulePathToAbsPath path
+    let _nameDefinedIn = S.topModulePathToAbsPath path
         _nameConcrete = path
         _nameDefined = _symbolLoc $ modulePathName path
         _nameKind = S.KNameTopModule
@@ -1068,13 +1066,16 @@ parseExpressionAtoms ::
   Members '[Error ScopeError, State Scope] r =>
   ExpressionAtoms 'Scoped ->
   Sem r Expression
-parseExpressionAtoms (ExpressionAtoms sections) = do
+parseExpressionAtoms a@(ExpressionAtoms sections) = do
   tbl <- makeExpressionTable
   let parser :: Parse Expression
       parser = runM (mkExpressionParser tbl) <* P.eof
       res = P.parse parser filePath (toList sections)
   case res of
-    Left err -> throw (ErrInfixParser (show err))
+    Left {} -> throw (ErrInfixParser
+                       InfixError {
+                        _infixErrAtoms = a
+          })
     Right r -> return r
   where
   filePath = ""

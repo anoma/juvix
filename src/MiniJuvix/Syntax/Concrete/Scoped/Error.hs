@@ -15,7 +15,7 @@ import Prettyprinter
 -- instead of in ./Error/Types to avoid orphan instances.
 data ScopeError
   = ErrParser Text
-  | ErrInfixParser Text
+  | ErrInfixParser InfixError
   | ErrInfixPattern Text
   | ErrMultipleDeclarations MultipleDeclarations
   | ErrLacksTypeSig Symbol
@@ -34,12 +34,12 @@ data ScopeError
   deriving stock (Show)
 
 ppScopeError :: ScopeError -> Doc Eann
-ppScopeError e = case e of
+ppScopeError s = case s of
   ErrParser txt -> pretty txt
   ErrGeneric txt -> pretty txt
-  ErrInfixParser txt -> pretty txt
+  ErrInfixParser e -> ppError e
   ErrInfixPattern txt -> pretty txt
-  ErrMultipleDeclarations er -> ppMultipleDeclarations er
+  ErrMultipleDeclarations e -> ppError e
   ErrLacksTypeSig {} -> ugly
   ErrImportCycle {} -> ugly
   ErrOpenNotInScope {} -> ugly
@@ -52,7 +52,7 @@ ppScopeError e = case e of
   ErrAmbiguousSym {} -> ugly
   ErrAmbiguousModuleSym {} -> ugly
   where
-  ugly = pretty (show e :: Text)
+  ugly = pretty (show s :: Text)
 
 docStream :: ScopeError -> SimpleDocStream Eann
 docStream = layoutPretty defaultLayoutOptions . ppScopeError
