@@ -563,14 +563,14 @@ instance SingI s => PrettyCode (Import s) where
         SScoped -> ppCode m >>= fmap (Just . braces . jumpLines) . indented
         else return Nothing
 
-instance PrettyCode (PatternAtom 'Parsed) where
+instance SingI s => PrettyCode (PatternAtom s) where
   ppCode a = case a of
     PatternAtomName n -> ppName n
     PatternAtomWildcard -> return kwWildcard
     PatternAtomEmpty -> return $ parens mempty
     PatternAtomParens p -> parens <$> ppCode p
 
-instance PrettyCode (PatternAtoms 'Parsed) where
+instance SingI s => PrettyCode (PatternAtoms s) where
   ppCode (PatternAtoms ps) = hsep . toList <$> mapM ppCode ps
 
 instance HasAtoms Pattern where

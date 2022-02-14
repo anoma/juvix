@@ -16,9 +16,9 @@ import Prettyprinter
 data ScopeError
   = ErrParser Text
   | ErrInfixParser InfixError
-  | ErrInfixPattern Text
+  | ErrInfixPattern InfixErrorP
   | ErrMultipleDeclarations MultipleDeclarations
-  | ErrLacksTypeSig Symbol
+  | ErrLacksTypeSig LacksTypeSig
   | ErrImportCycle TopModulePath
   | ErrOpenNotInScope QualifiedName
   | ErrSymNotInScope Symbol Scope LocalVars
@@ -38,9 +38,9 @@ ppScopeError s = case s of
   ErrParser txt -> pretty txt
   ErrGeneric txt -> pretty txt
   ErrInfixParser e -> ppError e
-  ErrInfixPattern txt -> pretty txt
+  ErrInfixPattern e -> ppError e
   ErrMultipleDeclarations e -> ppError e
-  ErrLacksTypeSig {} -> ugly
+  ErrLacksTypeSig e -> ppError e
   ErrImportCycle {} -> ugly
   ErrOpenNotInScope {} -> ugly
   ErrSymNotInScope {} -> ugly

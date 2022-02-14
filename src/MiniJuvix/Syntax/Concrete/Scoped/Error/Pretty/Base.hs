@@ -29,9 +29,24 @@ instance PrettyError MultipleDeclarations where
     "Multiple declarations of" <+> ppSymbolT _multipleDeclSymbol <> line
     <> "Declared at:" <+> align (vsep ints)
     where
-    ints = map ppInterval [_symbolDefined _multipleDeclEntry, _multipleDeclSecond]
+    ints = map pretty [_symbolDefined _multipleDeclEntry, _multipleDeclSecond]
 
 instance PrettyError InfixError where
   ppError InfixError {..} =
-    "Error while resolving infixities in the expression:" <> line
-    <> indent' (highlight $ ppCode _infixErrAtoms)
+    infixErrorAux "expression" (ppCode _infixErrAtoms)
+
+instance PrettyError InfixErrorP where
+  ppError InfixErrorP {..} = infixErrorAux "pattern" (ppCode _infixErrAtomsP)
+
+infixErrorAux :: Doc Eann -> Doc Eann -> Doc Eann
+infixErrorAux kind pp =
+  "Error while resolving infixities in the" <+> kind <> ":" <> line
+    <> indent' (highlight pp)
+
+instance PrettyError LacksTypeSig where
+  ppError LacksTypeSig {..} =
+     pretty loc <> line <>
+     "Missing type signature of declaration:" <> line
+     <> indent' (highlight (ppCode _lacksTypeSigClause))
+    where
+    loc = _symbolLoc $ clauseOwnerFunction _lacksTypeSigClause

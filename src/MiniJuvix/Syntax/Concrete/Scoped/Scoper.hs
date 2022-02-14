@@ -631,7 +631,7 @@ checkFunctionClause ::
   Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   FunctionClause 'Parsed ->
   Sem r (FunctionClause 'Scoped)
-checkFunctionClause FunctionClause {..} = do
+checkFunctionClause clause@FunctionClause {..} = do
   clauseOwnerFunction' <- checkSymbolInScope
   (clausePatterns', clauseWhere', clauseBody') <- do
     clp <- mapM checkParsePatternAtom clausePatterns
@@ -660,7 +660,7 @@ checkFunctionClause FunctionClause {..} = do
       return (entryToSName fun e)
       where
         err :: Sem r a
-        err = throw (ErrLacksTypeSig fun)
+        err = throw (ErrLacksTypeSig (LacksTypeSig clause))
 
 checkAxiom ::
   Members '[Error ScopeError, State Scope, State ScoperState] r =>
@@ -1317,7 +1317,7 @@ parsePatternAtom sec = do
       parser = runM (mkPatternParser tbl) <* P.eof
       res = P.parse parser filePath [sec]
   case res of
-    Left err -> throw (ErrInfixPattern (show err))
+    Left {} -> throw (ErrInfixPattern (InfixErrorP sec))
     Right r -> return r
   where
     filePath = "tmp"

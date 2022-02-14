@@ -19,3 +19,14 @@ newtype InfixError = InfixError {
   _infixErrAtoms :: ExpressionAtoms 'Scoped
   }
  deriving stock (Show)
+
+-- | megaparsec error while resolving infixities of patterns
+newtype InfixErrorP = InfixErrorP {
+  _infixErrAtomsP :: PatternAtom 'Scoped
+  }
+ deriving stock (Show)
+
+newtype LacksTypeSig = LacksTypeSig {
+  _lacksTypeSigClause :: FunctionClause 'Parsed
+  }
+ deriving stock (Show)
