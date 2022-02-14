@@ -48,25 +48,29 @@ mkInterval :: Loc -> Loc -> Interval
 mkInterval start end =
   Interval (_locFile start) (_locFileLoc start) (_locFileLoc end)
 
-ppPos :: Pos -> Doc a
-ppPos (Pos p) = pretty p
+instance Pretty Pos where
+  pretty :: Pos -> Doc a
+  pretty (Pos p) = pretty p
 
-ppFileLoc :: FileLoc -> Doc a
-ppFileLoc FileLoc {..}  =
-  ppPos _locLine <> colon <> ppPos _locCol
+instance Pretty FileLoc where
+  pretty :: FileLoc -> Doc a
+  pretty FileLoc {..}  =
+    pretty _locLine <> colon <> pretty _locCol
 
-ppLoc :: Loc -> Doc a
-ppLoc Loc {..} =
-  pretty _locFile <> colon <> ppFileLoc _locFileLoc
+instance Pretty Loc where
+  pretty :: Loc -> Doc a
+  pretty Loc {..} =
+    pretty _locFile <> colon <> pretty _locFileLoc
 
-ppInterval :: Interval -> Doc a
-ppInterval Interval {..} =
- pretty _intFile <> colon
- <> ppPosRange (_locLine _intStart, _locLine _intEnd) <> colon
- <> ppPosRange (_locCol _intStart, _locCol _intEnd)
- where
- hyphen = pretty '-'
- ppPosRange :: (Pos, Pos) -> Doc a
- ppPosRange (s, e)
-   | s == e = ppPos s
-   | otherwise = ppPos s <> hyphen <> ppPos e
+instance Pretty Interval where
+  pretty :: Interval -> Doc a
+  pretty Interval {..} =
+    pretty _intFile <> colon
+    <> ppPosRange (_locLine _intStart, _locLine _intEnd) <> colon
+    <> ppPosRange (_locCol _intStart, _locCol _intEnd)
+    where
+    hyphen = pretty '-'
+    ppPosRange :: (Pos, Pos) -> Doc a
+    ppPosRange (s, e)
+      | s == e = pretty s
+      | otherwise = pretty s <> hyphen <> pretty e
