@@ -50,3 +50,12 @@ instance PrettyError LacksTypeSig where
      <> indent' (highlight (ppCode _lacksTypeSigClause))
     where
     loc = _symbolLoc $ clauseOwnerFunction _lacksTypeSigClause
+
+instance PrettyError ImportCycle where
+  ppError ImportCycle {..} =
+    pretty loc <> line <>
+    "The following import causes an import cycle:" <> line
+    <> indent' (highlight (ppCode _importCycleImport))
+    where
+    loc :: Interval
+    loc = _symbolLoc $ modulePathName $ importModule _importCycleImport

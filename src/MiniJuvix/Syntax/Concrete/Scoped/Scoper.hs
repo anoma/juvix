@@ -172,7 +172,7 @@ checkImport ::
   Members '[Error ScopeError, State Scope, Reader ScopeParameters, Embed IO, State ScoperState] r =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
-checkImport (Import path) = do
+checkImport import_@(Import path) = do
   checkCycle
   cache <- gets (_cachedModules . _scoperModulesCache)
   entry' <- maybe (readParseModule path >>= checkTopModule) return (cache ^. at path)
@@ -188,7 +188,7 @@ checkImport (Import path) = do
   checkCycle =
     whenM
       (HashSet.member path <$> asks _scopeTopParents)
-      (throw (ErrImportCycle path))
+      (throw (ErrImportCycle (ImportCycle import_)))
 
 
 getTopModulePath :: Module 'Parsed 'ModuleTop -> S.AbsModulePath

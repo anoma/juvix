@@ -19,7 +19,7 @@ data ScopeError
   | ErrInfixPattern InfixErrorP
   | ErrMultipleDeclarations MultipleDeclarations
   | ErrLacksTypeSig LacksTypeSig
-  | ErrImportCycle TopModulePath
+  | ErrImportCycle ImportCycle
   | ErrOpenNotInScope QualifiedName
   | ErrSymNotInScope Symbol Scope LocalVars
   | ErrQualSymNotInScope QualifiedName
@@ -41,7 +41,7 @@ ppScopeError s = case s of
   ErrInfixPattern e -> ppError e
   ErrMultipleDeclarations e -> ppError e
   ErrLacksTypeSig e -> ppError e
-  ErrImportCycle {} -> ugly
+  ErrImportCycle e -> ppError e
   ErrOpenNotInScope {} -> ugly
   ErrSymNotInScope {} -> ugly
   ErrQualSymNotInScope {} -> ugly
