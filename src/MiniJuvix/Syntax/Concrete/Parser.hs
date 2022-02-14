@@ -261,7 +261,7 @@ function = do
 whereBlock :: MonadParsec e Text m => m (WhereBlock 'Parsed)
 whereBlock = do
   kwWhere
-  WhereBlock <$> braces (P.sepEndBy whereClause kwSemicolon)
+  WhereBlock <$> braces (P.sepEndBy1 whereClause kwSemicolon)
 
 whereClause :: forall e m. MonadParsec e Text m => m (WhereClause 'Parsed)
 whereClause =

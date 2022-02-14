@@ -27,7 +27,7 @@ defaultOptions =
     }
 
 class PrettyCode a where
-  ppCode :: forall r. Members '[Reader Options] r => a -> Sem r (Doc Ann)
+  ppCode :: Members '[Reader Options] r => a -> Sem r (Doc Ann)
 
 runPrettyCode :: PrettyCode c => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode

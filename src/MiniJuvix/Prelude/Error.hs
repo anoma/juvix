@@ -11,11 +11,11 @@ data AJuvixError = forall e. JuvixError e => AJuvixError e
 class Typeable e => JuvixError e where
    -- | Print the to stderr with Ansi formatting.
    printErrorAnsi :: e -> IO ()
-   printErrorAnsi =  hPutStrLn stderr . renderAnsiText
+   printErrorAnsi = hPutStrLn stderr . renderAnsiText
 
    -- | Print the to stderr without formatting.
    printErrorText :: e -> IO ()
-   printErrorText =  hPutStrLn stderr . renderText
+   printErrorText = hPutStrLn stderr . renderText
 
    -- | Render the error to Text.
    renderText :: e -> Text
@@ -25,7 +25,7 @@ class Typeable e => JuvixError e where
    renderAnsiText = renderText
 
 toAJuvixError :: JuvixError e => e -> AJuvixError
-toAJuvixError = AJuvixError 
+toAJuvixError = AJuvixError
 
 fromAJuvixError :: JuvixError e => AJuvixError -> Maybe e
 fromAJuvixError (AJuvixError e) = cast e

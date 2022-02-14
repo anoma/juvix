@@ -710,7 +710,7 @@ deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (
 --------------------------------------------------------------------------------
 
 newtype WhereBlock (s :: Stage) = WhereBlock
-  { whereClauses :: [WhereClause s]
+  { whereClauses :: NonEmpty (WhereClause s)
   }
 
 deriving stock instance
