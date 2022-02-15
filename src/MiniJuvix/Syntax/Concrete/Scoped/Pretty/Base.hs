@@ -480,8 +480,8 @@ instance SingI s => PrettyCode (LetClause s) where
     LetTypeSig sig -> ppCode sig
     LetFunClause cl -> ppCode cl
 
-ppBlock :: (PrettyCode a, Members '[Reader Options] r) => [a] -> Sem r (Doc Ann)
-ppBlock items = mapM (fmap endSemicolon . ppCode) items >>= bracesIndent . vsep
+ppBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
+ppBlock items = mapM (fmap endSemicolon . ppCode) items >>= bracesIndent . vsep . toList
 
 instance SingI s => PrettyCode (MatchAlt s) where
   ppCode MatchAlt {..} = do

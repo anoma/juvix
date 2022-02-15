@@ -1,11 +1,11 @@
-name:            MiniJuvix
+name:            minijuvix
 version:         0.0.0.0
 license:         GPL-3.0-only
 license-file:    LICENSE
 copyright:       (c) 2021-2022 Heliax AG.
 maintainer:      The PLT Team at Heliax AG <hello@heliax.dev>
 author:          [ Jonathan Prieto-Cubides , Jan Mas Rovira ]
-tested-with:     ghc == 9.0.1
+tested-with:     ghc == 9.0.2
 homepage:        https://github.com/heliaxdev/MiniJuvix
 bug-reports:     https://github.com/heliaxdev/MiniJuvix/issues
 description:     A tiny dependent typed programming language for experimentation.
@@ -85,15 +85,15 @@ executables:
     main: Main.hs
     source-dirs: app
     dependencies:
-    - MiniJuvix
+    - minijuvix
     - optparse-applicative == 0.16.*
     - pretty-show == 1.10.*
 
 tests:
-  MiniJuvix-test:
-    main:                Spec.hs
+  minijuvix-test:
+    main:                Main.hs
     source-dirs:         test
     dependencies:
-    - MiniJuvix
+    - minijuvix
     - tasty
     - tasty-hunit

@@ -9,7 +9,7 @@ import MiniJuvix.Syntax.Concrete.Scoped.Scope
 
 data MultipleDeclarations = MultipleDeclarations {
   _multipleDeclEntry :: SymbolEntry,
-  _multipleDeclSymbol :: Text,
+ _multipleDeclSymbol :: Text,
   _multipleDeclSecond :: Interval
   }
  deriving stock (Show)
