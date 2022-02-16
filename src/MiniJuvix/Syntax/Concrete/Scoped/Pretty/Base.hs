@@ -374,14 +374,6 @@ annDef nm = case sing :: SStage s of
 annSDef :: S.Name' n -> Doc Ann -> Doc Ann
 annSDef nm = annotate (AnnDef (S.absTopModulePath (S._nameDefinedIn nm)) (S._nameId nm))
 
-annSRef :: S.Name' n -> Doc Ann -> Doc Ann
-annSRef nm = annotate (AnnRef (S.absTopModulePath (S._nameDefinedIn nm)) (S._nameId nm))
-
-annRef :: forall s. SingI s => SymbolType s -> Doc Ann -> Doc Ann
-annRef nm = case sing :: SStage s of
-  SParsed -> id
-  SScoped -> annSRef nm
-
 instance PrettyCode TopModulePath where
   ppCode TopModulePath {..} =
     dotted <$> mapM ppSymbol (modulePathDir ++ [modulePathName])
@@ -399,7 +391,10 @@ instance PrettyCode n => PrettyCode (S.Name' n) where
     nameConcrete' <- annotate (AnnKind _nameKind) <$> ppCode _nameConcrete
     showNameId <- asks _optShowNameId
     uid <- if showNameId then ("@" <>) <$> ppCode _nameId else return mempty
-    return $ nameConcrete' <> uid
+    return $ annSRef (nameConcrete' <> uid)
+      where
+      annSRef :: Doc Ann -> Doc Ann
+      annSRef = annotate (AnnRef (S.absTopModulePath _nameDefinedIn) _nameId)
 
 instance SingI s => PrettyCode (OpenModule s) where
   ppCode :: forall r. Members '[Reader Options] r => OpenModule s -> Sem r (Doc Ann)
@@ -508,7 +503,7 @@ instance SingI s => PrettyCode (Lambda s) where
 
 instance SingI s => PrettyCode (FunctionClause s) where
   ppCode FunctionClause {..} = do
-    clauseOwnerFunction' <- annRef clauseOwnerFunction <$> ppSymbol clauseOwnerFunction
+    clauseOwnerFunction' <- ppSymbol clauseOwnerFunction
     clausePatterns' <- case nonEmpty clausePatterns of
       Nothing -> return Nothing
       Just ne -> Just . hsep . toList <$> mapM ppPatternAtom ne
@@ -552,7 +547,7 @@ instance SingI s => PrettyCode (Import s) where
     where
     ppModulePath = case sing :: SStage s of
       SParsed -> ppCode m
-      SScoped -> annSRef (modulePath m) <$> ppTopModulePath (modulePath m)
+      SScoped -> ppTopModulePath (modulePath m)
     jumpLines :: Doc Ann -> Doc Ann
     jumpLines x = line <> x <> line
     inlineImport :: Sem r (Maybe (Doc Ann))
