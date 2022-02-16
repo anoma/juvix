@@ -1,0 +1,5 @@
+module D;
+
+import B;
+
+end;

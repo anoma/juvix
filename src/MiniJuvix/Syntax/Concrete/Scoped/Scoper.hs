@@ -175,7 +175,7 @@ checkImport ::
 checkImport import_@(Import path) = do
   checkCycle
   cache <- gets (_cachedModules . _scoperModulesCache)
-  entry' <- maybe (readParseModule path >>= checkTopModule) return (cache ^. at path)
+  entry' <- maybe (readParseModule path >>= local addImport . checkTopModule) return (cache ^. at path)
   let checked = _moduleEntryScoped entry'
       sname = modulePath checked
       moduleId = S._nameId sname
@@ -184,11 +184,15 @@ checkImport import_@(Import path) = do
   modify (over scoperModules (HashMap.insert moduleId entry))
   return (Import checked)
   where
+  addImport :: ScopeParameters -> ScopeParameters
+  addImport = over scopeTopParents (cons import_)
   checkCycle :: Sem r ()
-  checkCycle =
-    whenM
-      (HashSet.member path <$> asks _scopeTopParents)
-      (throw (ErrImportCycle (ImportCycle import_)))
+  checkCycle = do
+    topp <- asks _scopeTopParents
+    case span (/= import_) topp of
+      (_, []) -> return ()
+      (c, _) -> let cyc = NonEmpty.reverse (import_ :| c)
+                in throw (ErrImportCycle (ImportCycle cyc))
 
 
 getTopModulePath :: Module 'Parsed 'ModuleTop -> S.AbsModulePath
@@ -467,14 +471,12 @@ checkTopModule m@(Module path params body) = do
     return S.Name' {..}
   iniScope :: Scope
   iniScope = emptyScope (getTopModulePath m)
-  addParent :: ScopeParameters -> ScopeParameters
-  addParent = over scopeTopParents (HashSet.insert path)
   checkedModule :: Sem r (ModuleEntry' 'ModuleTop)
   checkedModule = do
     evalState iniScope $ do
       path' <- freshTopModulePath
       localScope $ withParams params $ \params' -> do
-        (_moduleEntryExport, body') <- local addParent (checkModuleBody body)
+        (_moduleEntryExport, body') <- checkModuleBody body
         let _moduleEntryScoped = Module {
           modulePath = path',
           moduleParameters = params',

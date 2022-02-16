@@ -33,7 +33,8 @@ newtype LacksTypeSig = LacksTypeSig {
  deriving stock (Show)
 
 newtype ImportCycle = ImportCycle {
-  _importCycleImport :: Import 'Parsed
+  -- | If we have [a, b, c] it means that a import b imports c imports a.
+  _importCycleImports :: NonEmpty (Import 'Parsed)
   }
  deriving stock (Show)
 

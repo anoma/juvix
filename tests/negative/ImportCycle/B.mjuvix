@@ -1,3 +1,5 @@
 module B;
+
 import C;
+
 end;

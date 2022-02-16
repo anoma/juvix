@@ -9,6 +9,7 @@ import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import Text.EditDistance
 import qualified Data.HashSet as HashSet
 import qualified Data.HashMap.Strict as HashMap
+import qualified Data.List.NonEmpty.Extra as NonEmpty
 
 data Eann = Highlight
 
@@ -57,16 +58,18 @@ instance PrettyError LacksTypeSig where
      "Missing type signature of declaration:" <> line
      <> indent' (highlight (ppCode _lacksTypeSigClause))
     where
-    loc = _symbolLoc $ clauseOwnerFunction _lacksTypeSigClause
+    loc = getLoc $ clauseOwnerFunction _lacksTypeSigClause
 
 instance PrettyError ImportCycle where
   ppError ImportCycle {..} =
-    pretty loc <> line <>
-    "The following import causes an import cycle:" <> line
-    <> indent' (highlight (ppCode _importCycleImport))
+    "There is an import cycle:" <> line
+    <> indent' lst
     where
-    loc :: Interval
-    loc = _symbolLoc $ modulePathName $ importModule _importCycleImport
+    lst = vsep $ intersperse "⇓" (map pp (toList (tie _importCycleImports)))
+    pp :: Import 'Parsed -> Doc Eann
+    pp t = ppCode t <+> parens ("at" <+> pretty (getLoc t))
+    tie :: NonEmpty a -> NonEmpty a
+    tie x = x <> pure (NonEmpty.head x)
 
 instance PrettyError NotInScope where
   ppError NotInScope {..} =
@@ -74,7 +77,7 @@ instance PrettyError NotInScope where
     "Symbol not in scope:" <+> highlight (ppCode _notInScopeSymbol) <> line <>
     "Perhaps you meant:" <+> align (vsep suggestions)
     where
-    loc = _symbolLoc _notInScopeSymbol
+    loc = getLoc _notInScopeSymbol
     sym = _symbolText _notInScopeSymbol
     maxDist :: Int
     maxDist = 2

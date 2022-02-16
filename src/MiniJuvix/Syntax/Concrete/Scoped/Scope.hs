@@ -90,7 +90,7 @@ data ScopeParameters = ScopeParameters
     -- | Usually set to ".mjuvix".
     _scopeFileExtension :: String,
     -- | Used for import cycle detection.
-    _scopeTopParents :: HashSet TopModulePath
+    _scopeTopParents :: [Import 'Parsed]
   }
 makeLenses ''ScopeParameters
 
