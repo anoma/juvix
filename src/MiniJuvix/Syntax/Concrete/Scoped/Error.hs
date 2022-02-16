@@ -24,7 +24,7 @@ data ScopeError
   | ErrSymNotInScope NotInScope
   | ErrQualSymNotInScope QualifiedName
   | ErrModuleNotInScope Name
-  | ErrBindGroup Symbol
+  | ErrBindGroup BindGroupConflict
   | ErrDuplicateFixity Symbol
   | ErrMultipleExport Symbol
   | ErrAmbiguousSym [SymbolEntry]
@@ -46,7 +46,7 @@ ppScopeError s = case s of
   ErrSymNotInScope e -> ppError e
   ErrQualSymNotInScope {} -> ugly
   ErrModuleNotInScope {} -> ugly
-  ErrBindGroup {} -> ugly
+  ErrBindGroup e -> ppError e
   ErrDuplicateFixity {} -> ugly
   ErrMultipleExport {} -> ugly
   ErrAmbiguousSym {} -> ugly

@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use lambda-case" #-}
 module Scope.Negative (allTests) where
 
 import Base
@@ -8,7 +10,7 @@ type FailMsg = String
 
 data NegTest = NegTest {
   name :: String,
-  dir :: Maybe FilePath,
+  relDir :: FilePath,
   file :: FilePath,
   checkErr :: ScopeError -> Maybe FailMsg
   }
@@ -16,7 +18,7 @@ data NegTest = NegTest {
 instance IsTest NegTest where
   testDescr NegTest {..} = TestDescr {
     testName = name,
-    testRoot = maybe root (root </>) dir,
+    testRoot = root </> relDir,
     testAssertion = do
         p <- parseModuleIO file >>= M.scopeCheck1 "."
         case p of
@@ -27,20 +29,56 @@ instance IsTest NegTest where
 root :: FilePath
 root = "tests/negative"
 
+wrongError :: Maybe FailMsg
 wrongError = Just "Incorrect error"
 
 tests :: [NegTest]
 tests = [
-  NegTest "Not in scope" Nothing
-   "NotInScope.mjuvix" $ (\er ->
+  NegTest "Not in scope" "."
+   "NotInScope.mjuvix" $ \er ->
       case er of
         ErrSymNotInScope{} -> Nothing
-        _ -> wrongError)
-  ,  NegTest "Multiple declarations" Nothing
-   "MultipleDeclarations.mjuvix" $ (\er ->
+        _ -> wrongError
+
+  ,  NegTest "Multiple declarations" "."
+   "MultipleDeclarations.mjuvix" $ \er ->
       case er of
         ErrMultipleDeclarations{} -> Nothing
-        _ -> wrongError)
+        _ -> wrongError
+
+  ,  NegTest "Import Cycle" "ImportCycle"
+   "A.mjuvix" $ \er ->
+      case er of
+        ErrImportCycle {} -> Nothing
+        _ -> wrongError
+
+  ,  NegTest "Binding group conflict (function clause)"
+    "BindGroupConflict"
+   "Clause.mjuvix" $ \er ->
+      case er of
+        ErrBindGroup {} -> Nothing
+        _ -> wrongError
+
+  ,  NegTest "Binding group conflict (lambda clause)"
+    "BindGroupConflict"
+   "Lambda.mjuvix" $ \er ->
+      case er of
+        ErrBindGroup {} -> Nothing
+        _ -> wrongError
+
+  ,  NegTest "Infix error (expression)"
+    "."
+   "InfixError.mjuvix" $ \er ->
+      case er of
+        ErrInfixParser {} -> Nothing
+        _ -> wrongError
+
+  ,  NegTest "Infix error (pattern)"
+    "."
+   "InfixErrorP.mjuvix" $ \er ->
+      case er of
+        ErrInfixPattern {} -> Nothing
+        _ -> wrongError
 
   ]
 

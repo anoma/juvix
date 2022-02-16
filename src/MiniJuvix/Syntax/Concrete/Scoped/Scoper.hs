@@ -823,7 +823,7 @@ withBindLocalVariable ::
   Sem r a
 withBindLocalVariable var = local (addLocalVars [var])
 
--- | Binds a local variable in a bind group, i.e. a pattern.
+-- | Binds a local variable in a bind group, i.e. a group of pattern.
 groupBindLocalVariable ::
   forall r.
   Members '[Error ScopeError, State Scope, State ScoperState] r =>
@@ -837,7 +837,11 @@ groupBindLocalVariable s = do
     checkNotInGroup =
       whenJustM
         (HashMap.lookup s <$> gets _scopeBindGroup)
-        (const (throw (ErrBindGroup s)))
+        (\x -> throw (ErrBindGroup
+            BindGroupConflict {
+                _bindGroupFirst = S._nameConcrete (variableName x),
+                _bindGroupSecond =  s
+                }))
     addToGroup :: Sem r S.Symbol
     addToGroup = do
       n <- freshVariable s

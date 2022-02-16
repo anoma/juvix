@@ -1,0 +1,12 @@
+module InfixErrorP;
+
+  infix 5 , ;
+
+  inductive Pair {
+   , : Type → Type → Pair
+  };
+
+  fst : Pair → Type;
+  fst (x , ) ≔ x;
+
+end;

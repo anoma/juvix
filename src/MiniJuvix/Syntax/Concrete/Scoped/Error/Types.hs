@@ -44,3 +44,9 @@ data NotInScope = NotInScope {
  _notInScopeScope :: Scope
  }
  deriving stock (Show)
+
+data BindGroupConflict = BindGroupConflict {
+ _bindGroupFirst :: Symbol,
+ _bindGroupSecond :: Symbol
+ }
+ deriving stock (Show)

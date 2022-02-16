@@ -45,7 +45,8 @@ instance PrettyError InfixError where
     infixErrorAux "expression" (ppCode _infixErrAtoms)
 
 instance PrettyError InfixErrorP where
-  ppError InfixErrorP {..} = infixErrorAux "pattern" (ppCode _infixErrAtomsP)
+  ppError InfixErrorP {..} =
+    infixErrorAux "pattern" (ppCode _infixErrAtomsP)
 
 infixErrorAux :: Doc Eann -> Doc Eann -> Doc Eann
 infixErrorAux kind pp =
@@ -90,3 +91,11 @@ instance PrettyError NotInScope where
     candidates :: HashSet Text
     candidates = HashSet.fromList (map _symbolText (HashMap.keys $ _localVars _notInScopeLocal)) <>
       HashSet.fromList (map _symbolText (HashMap.keys $ _scopeSymbols _notInScopeScope))
+
+instance PrettyError BindGroupConflict where
+  ppError BindGroupConflict {..} =
+    "The symbol" <+> highlight (ppCode _bindGroupFirst)
+      <+> "appears twice in the same binding group:" <> line
+    <> indent' (align locs)
+    where
+      locs = vsep $ map (pretty . getLoc) [_bindGroupFirst , _bindGroupSecond]
