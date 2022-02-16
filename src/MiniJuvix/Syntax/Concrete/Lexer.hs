@@ -46,17 +46,17 @@ mkLoc SourcePos {..} = Loc {..}
     _locLine = fromPos sourceLine
     _locCol = fromPos sourceColumn
 
-getLoc :: MonadParsec e Text m => m Loc
-getLoc = mkLoc <$> getSourcePos
+curLoc :: MonadParsec e Text m => m Loc
+curLoc = mkLoc <$> getSourcePos
 
 withLoc :: MonadParsec e Text m => (Loc -> m a) -> m a
-withLoc ma = getLoc >>= ma
+withLoc ma = curLoc >>= ma
 
 interval :: MonadParsec e Text m => m a -> m (a, Interval)
 interval ma = do
-  start <- getLoc
+  start <- curLoc
   res <- ma
-  end <- getLoc
+  end <- curLoc
   return (res, mkInterval start end)
 
 -- | Same as @identifier@ but does not consume space after it.

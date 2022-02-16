@@ -142,6 +142,9 @@ deriving stock instance (Ord (ImportType s)) => Ord (Import s)
 
 deriving stock instance (Lift (ImportType s)) => Lift (Import s)
 
+instance HasLoc (Import 'Parsed) where
+  getLoc (Import t) = getLoc t
+
 --------------------------------------------------------------------------------
 -- Operator syntax declaration
 --------------------------------------------------------------------------------

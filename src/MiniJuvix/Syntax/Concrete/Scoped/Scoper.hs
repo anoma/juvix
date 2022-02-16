@@ -67,7 +67,7 @@ freshSymbol ::
 freshSymbol _nameKind _nameConcrete = do
   _nameId <- freshNameId
   _nameDefinedIn <- gets _scopePath
-  let _nameDefined = _symbolLoc _nameConcrete
+  let _nameDefined = getLoc _nameConcrete
   _nameFixity <- getFixity
   return S.Name' {..}
   where
@@ -97,7 +97,7 @@ reserveSymbolOf k s = do
          MultipleDeclarations  {
          _multipleDeclEntry = e,
          _multipleDeclSymbol = _symbolText s,
-         _multipleDeclSecond = _symbolLoc s
+         _multipleDeclSecond = getLoc s
          } )
 
 symbolEntry :: S.Name' a -> SymbolEntry
@@ -233,7 +233,7 @@ lookupSymbolGeneric filtr name modules final = do
     mkEntry modId = SymbolEntry {
          _symbolKind = S.KNameTopModule ,
          _symbolDefinedIn = S.topModulePathToAbsPath path,
-         _symbolDefined = _symbolLoc final,
+         _symbolDefined = getLoc final,
          _symbolId = modId,
          _symbolFixity = S.NoFixity,
          _symbolWhyInScope = BecauseImportedOpened,
@@ -461,7 +461,7 @@ checkTopModule m@(Module path params body) = do
     _nameId <- freshNameId
     let _nameDefinedIn = S.topModulePathToAbsPath path
         _nameConcrete = path
-        _nameDefined = _symbolLoc $ modulePathName path
+        _nameDefined = getLoc $ modulePathName path
         _nameKind = S.KNameTopModule
         _nameFixity = S.NoFixity
     return S.Name' {..}

@@ -6,6 +6,7 @@ module MiniJuvix.Syntax.Concrete.Name where
 import Language.Haskell.TH.Syntax (Lift)
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Loc
+import qualified Data.List.NonEmpty.Extra as NonEmpty
 
 data Symbol = Symbol {
   _symbolText :: Text,
@@ -19,14 +20,21 @@ instance Eq Symbol where
 instance Ord Symbol where
   compare = compare `on` _symbolText
 
+instance HasLoc Symbol where
+  getLoc = _symbolLoc
+
 instance Hashable Symbol where
-  hashWithSalt i Symbol {..} = hashWithSalt i _symbolText 
+  hashWithSalt i Symbol {..} = hashWithSalt i _symbolText
 
 data QualifiedName = QualifiedName
   { qualifiedPath :: Path,
     qualifiedSymbol :: Symbol
   }
   deriving stock (Show, Eq, Ord, Generic, Lift)
+
+instance HasLoc QualifiedName where
+  getLoc QualifiedName {..} =
+    getLoc qualifiedPath <> getLoc qualifiedSymbol
 
 instance Hashable QualifiedName
 
@@ -35,10 +43,18 @@ data Name
   | NameUnqualified Symbol
   deriving stock (Show, Eq, Ord, Lift)
 
+instance HasLoc Name where
+  getLoc n = case n of
+    NameQualified q -> getLoc q
+    NameUnqualified s -> getLoc s
+
 newtype Path = Path
   { pathParts :: NonEmpty Symbol
   }
   deriving stock (Show, Eq, Ord, Lift)
+
+instance HasLoc Path where
+  getLoc (Path p) = getLoc (NonEmpty.head p) <> getLoc (NonEmpty.last p)
 
 deriving newtype instance Hashable Path
 
@@ -48,6 +64,12 @@ data TopModulePath = TopModulePath
     modulePathName :: Symbol
   }
   deriving stock (Show, Eq, Ord, Generic, Lift)
+
+instance HasLoc TopModulePath where
+  getLoc TopModulePath {..} =
+    case modulePathDir of
+      [] -> getLoc modulePathName
+      (x : _) -> getLoc x <> getLoc modulePathName
 
 topModulePathToFilePath :: FilePath -> TopModulePath -> FilePath
 topModulePathToFilePath = topModulePathToFilePath' (Just ".mjuvix")

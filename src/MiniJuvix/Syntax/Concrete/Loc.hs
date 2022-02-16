@@ -40,6 +40,9 @@ data Interval = Interval {
   }
   deriving stock (Show, Ord, Eq, Lift)
 
+class HasLoc t where
+  getLoc :: t -> Interval
+
 -- | Assumes the file is the same
 instance Semigroup Interval where
   Interval f s e <> Interval _f s' e' = Interval f (min s s') (max e e')
