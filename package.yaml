@@ -44,6 +44,11 @@ dependencies:
 - th-utilities == 0.2.*
 - unordered-containers == 0.2.*
 
+# the tasty dependencies are here to avoid having to recompile minijuvix
+# when running the tests. Is there a better solution?
+- tasty
+- tasty-hunit
+
 ghc-options:
 - -fhide-source-paths
 - -O2 -flate-specialise -fspecialise-aggressively
@@ -95,5 +100,3 @@ tests:
     source-dirs:         test
     dependencies:
     - minijuvix
-    - tasty
-    - tasty-hunit
