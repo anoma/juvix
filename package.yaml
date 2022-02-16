@@ -38,6 +38,7 @@ dependencies:
 - process == 1.6.*
 - semirings == 0.6.*
 - singletons == 3.0.*
+- singletons-th == 3.0.*
 - Stream == 0.4.*
 - template-haskell == 2.17.*
 - text == 1.2.*

@@ -16,6 +16,7 @@ module MiniJuvix.Prelude.Base
     module System.Directory,
     module System.FilePath,
     module Data.Singletons,
+    module Data.Singletons.TH,
     module Data.Singletons.Sigma,
     module Data.Hashable,
     module Lens.Micro.Platform,
@@ -85,6 +86,7 @@ import Data.Monoid
 import Data.Ord
 import Data.Semigroup (Semigroup, (<>))
 import Data.Singletons
+import Data.Singletons.TH (genSingletons)
 import Data.Stream (Stream)
 import Data.String
 import Data.Text (Text, pack, strip, unpack)

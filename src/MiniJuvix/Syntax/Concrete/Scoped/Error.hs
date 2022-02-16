@@ -25,13 +25,12 @@ data ScopeError
   | ErrQualSymNotInScope QualifiedName
   | ErrModuleNotInScope Name
   | ErrBindGroup BindGroupConflict
-  | ErrDuplicateFixity Symbol
-  | ErrMultipleExport Symbol
+  | ErrDuplicateFixity DuplicateFixity
+  | ErrMultipleExport MultipleExportConflict
   | ErrAmbiguousSym [SymbolEntry]
   | ErrAmbiguousModuleSym [SymbolEntry]
   -- | Eventually this needs to go away
   | ErrGeneric Text
-  deriving stock (Show)
 
 ppScopeError :: ScopeError -> Doc Eann
 ppScopeError s = case s of
@@ -42,17 +41,15 @@ ppScopeError s = case s of
   ErrMultipleDeclarations e -> ppError e
   ErrLacksTypeSig e -> ppError e
   ErrImportCycle e -> ppError e
-  ErrOpenNotInScope {} -> ugly
+  ErrOpenNotInScope {} -> undefined
   ErrSymNotInScope e -> ppError e
-  ErrQualSymNotInScope {} -> ugly
-  ErrModuleNotInScope {} -> ugly
+  ErrQualSymNotInScope {} -> undefined
+  ErrModuleNotInScope {} -> undefined
   ErrBindGroup e -> ppError e
-  ErrDuplicateFixity {} -> ugly
-  ErrMultipleExport {} -> ugly
-  ErrAmbiguousSym {} -> ugly
-  ErrAmbiguousModuleSym {} -> ugly
-  where
-  ugly = pretty (show s :: Text)
+  ErrDuplicateFixity e -> ppError e
+  ErrMultipleExport e -> ppError e
+  ErrAmbiguousSym {} -> undefined
+  ErrAmbiguousModuleSym {} -> undefined
 
 docStream :: ScopeError -> SimpleDocStream Eann
 docStream = layoutPretty defaultLayoutOptions . ppScopeError

@@ -99,3 +99,29 @@ instance PrettyError BindGroupConflict where
     <> indent' (align locs)
     where
       locs = vsep $ map (pretty . getLoc) [_bindGroupFirst , _bindGroupSecond]
+
+instance PrettyError DuplicateFixity where
+  ppError DuplicateFixity {..} =
+    "Multiple fixity declarations for symbol" <+> highlight (ppCode sym) <> ":" <> line
+     <> indent' (align locs)
+      <+> "appears twice in the same binding group:" <> line
+    <> indent' (align locs)
+    where
+      sym = opSymbol _dupFixityFirst
+      locs = vsep $ map (pretty . getLoc) [_dupFixityFirst , _dupFixityFirst]
+
+instance PrettyError MultipleExportConflict where
+  ppError MultipleExportConflict {..} =
+    "The symbol" <+> ppCode sym <+> "is exported multiple times in the module" <+> undefined
+    where
+     sym :: S.Symbol
+     sym = case e of
+       SymbolEntry {..} -> case _symbolKind of
+         S.SKNameAxiom -> _symbolSymbol
+         S.SKNameConstructor -> _symbolSymbol
+         S.SKNameInductive -> _symbolSymbol
+         S.SKNameLocal -> _symbolSymbol
+         S.SKNameLocalModule -> _symbolSymbol
+         S.SKNameFunction -> _symbolSymbol
+         S.SKNameTopModule -> impossible
+     e = NonEmpty.head _multipleExportEntries

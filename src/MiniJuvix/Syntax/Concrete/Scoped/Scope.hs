@@ -6,7 +6,6 @@ import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Language
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 
-
 newtype LocalVariable = LocalVariable
   { variableName :: S.Symbol
   }
@@ -23,7 +22,7 @@ newtype SymbolInfo = SymbolInfo
     -- different places.
     _symbolInfo :: HashMap S.AbsModulePath SymbolEntry
   }
-  deriving newtype (Show, Semigroup, Monoid)
+  deriving newtype (Semigroup, Monoid)
 
 -- | Why a symbol is in scope.
 data WhyInScope =
@@ -35,22 +34,34 @@ data WhyInScope =
   | BecauseDefined
   deriving stock (Show)
 
-data SymbolEntry = SymbolEntry
-  { _symbolKind :: S.NameKind,
+data SymbolEntry = forall k. SymbolEntry
+  { _symbolKind :: S.SNameKind k,
     _symbolDefinedIn :: S.AbsModulePath,
     _symbolDefined :: Interval,
     _symbolId :: S.NameId,
     _symbolFixity :: S.NameFixity,
     _symbolWhyInScope :: WhyInScope,
-    _symbolPublicAnn :: PublicAnn
+    _symbolPublicAnn :: PublicAnn,
+    _symbolSymbol :: S.NameKindSymbolType k
   }
-  deriving stock (Show)
+
+getSymbolKind :: SymbolEntry -> S.NameKind
+getSymbolKind SymbolEntry {..} = fromSing _symbolKind
+
+instance HasLoc SymbolEntry where
+  getLoc SymbolEntry {..} = case _symbolKind of
+    S.SKNameTopModule -> getLoc _symbolSymbol
+    S.SKNameAxiom -> getLoc _symbolSymbol
+    S.SKNameConstructor -> getLoc _symbolSymbol
+    S.SKNameInductive -> getLoc _symbolSymbol
+    S.SKNameFunction -> getLoc _symbolSymbol
+    S.SKNameLocal -> getLoc _symbolSymbol
+    S.SKNameLocalModule -> getLoc _symbolSymbol
 
 -- | Symbols that a module exports
 newtype ExportInfo = ExportInfo {
    _exportSymbols :: HashMap Symbol SymbolEntry
   }
-  deriving stock (Show)
 
 -- | A module entry for either a local or a top module.
 type ModuleEntry = Σ ModuleIsTop (TyCon1 ModuleEntry')
@@ -65,12 +76,11 @@ data ModuleEntry' (t :: ModuleIsTop) = ModuleEntry' {
 
 data Scope = Scope
   { _scopePath :: S.AbsModulePath,
-    _scopeFixities :: HashMap Symbol Fixity,
+    _scopeFixities :: HashMap Symbol OperatorSyntaxDef,
     _scopeSymbols :: HashMap Symbol SymbolInfo,
     _scopeTopModules :: HashMap TopModulePath S.ModuleNameId,
     _scopeBindGroup :: HashMap Symbol LocalVariable
   }
-  deriving stock (Show)
 makeLenses ''ExportInfo
 makeLenses ''SymbolEntry
 makeLenses ''SymbolInfo

@@ -26,6 +26,9 @@ instance IsTest NegTest where
           Right _ -> assertFailure "The scope checker did not find an error."
     }
 
+allTests :: [ATest]
+allTests = map ATest tests
+
 root :: FilePath
 root = "tests/negative"
 
@@ -46,7 +49,7 @@ tests = [
         ErrMultipleDeclarations{} -> Nothing
         _ -> wrongError
 
-  ,  NegTest "Import Cycle" "ImportCycle"
+  ,  NegTest "Import cycle" "ImportCycle"
    "A.mjuvix" $ \er ->
       case er of
         ErrImportCycle {} -> Nothing
@@ -80,7 +83,17 @@ tests = [
         ErrInfixPattern {} -> Nothing
         _ -> wrongError
 
-  ]
+  ,  NegTest "Duplicate fixity declaration"
+    "."
+   "DuplicateFixity.mjuvix" $ \er ->
+      case er of
+        ErrDuplicateFixity {} -> Nothing
+        _ -> wrongError
 
-allTests :: [ATest]
-allTests = map ATest tests
+  ,  NegTest "Multiple export conflict"
+    "."
+   "MultipleExportConflict.mjuvix" $ \er ->
+      case er of
+        ErrMultipleExport {} -> Nothing
+        _ -> wrongError
+  ]

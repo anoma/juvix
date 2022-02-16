@@ -74,7 +74,8 @@ freshSymbol _nameKind _nameConcrete = do
     getFixity :: Sem r S.NameFixity
     getFixity
       | S.canHaveFixity _nameKind = do
-        maybe S.NoFixity S.SomeFixity . HashMap.lookup _nameConcrete <$> gets _scopeFixities
+        maybe S.NoFixity (S.SomeFixity . opFixity)
+           . HashMap.lookup _nameConcrete <$> gets _scopeFixities
       | otherwise = return S.NoFixity
 
 reserveSymbolOf ::
@@ -221,7 +222,7 @@ lookupSymbolGeneric filtr name modules final = do
             [e] -> return (Just e)
             es -> throw (ErrAmbiguousSym es) -- This is meant to happen only at the top level
       (p : ps) -> do
-        r <- fmap (filter (S.isModuleKind . _symbolKind) . toList . _symbolInfo)
+        r <- fmap (filter (S.isModuleKind . getSymbolKind) . toList . _symbolInfo)
           . HashMap.lookup p <$> gets _scopeSymbols
         case r of
           Just [x] -> do
@@ -235,7 +236,7 @@ lookupSymbolGeneric filtr name modules final = do
     fmap mkEntry . HashMap.lookup path <$> gets _scopeTopModules
     where
     mkEntry modId = SymbolEntry {
-         _symbolKind = S.KNameTopModule ,
+         _symbolKind = S.SKNameTopModule ,
          _symbolDefinedIn = S.topModulePathToAbsPath path,
          _symbolDefined = getLoc final,
          _symbolId = modId,
@@ -258,7 +259,7 @@ lookInExport sym remaining e = case remaining of
   mayModule ExportInfo {..} s =
     case do
       entry <- HashMap.lookup s _exportSymbols
-      guard (S.isModuleKind (_symbolKind entry))
+      guard (S.isModuleKind (getSymbolKind entry))
       return entry of
         Just entry -> Just <$> getExportInfo (_symbolId entry)
         Nothing -> return Nothing
@@ -274,7 +275,7 @@ lookupQualifiedSymbol q@(path, sym) = do
   where
   -- | Looks for a local module symbol in scope
   here :: Sem r [SymbolEntry]
-  here = lookupSymbolGeneric (S.isModuleKind . _symbolKind) q path sym
+  here = lookupSymbolGeneric (S.isModuleKind . getSymbolKind) q path sym
   -- | Looks for a top level modules
   there :: Sem r [SymbolEntry]
   there = concatMapM (fmap maybeToList . uncurry lookInTopModule) allTopPaths
@@ -321,7 +322,7 @@ entryToSName s SymbolEntry {..} =
       _nameDefinedIn = _symbolDefinedIn,
       _nameDefined = _symbolDefined,
       _nameFixity = _symbolFixity,
-      _nameKind = _symbolKind
+      _nameKind = fromSing _symbolKind
     }
 
 -- | We gather all symbols which have been defined or marked to be public in the given scope.
@@ -342,7 +343,7 @@ exportScope Scope {..} = do
           case filter shouldExport (toList _symbolInfo) of
             [] -> return Nothing
             [e] -> return $ Just (s, e)
-            _ -> throw (ErrMultipleExport s)
+            (e:es) -> throw (ErrMultipleExport (MultipleExportConflict (e :| es)))
 
 readParseModule ::
   Members '[Error ScopeError, Reader ScopeParameters, Embed IO] r =>
@@ -369,15 +370,15 @@ checkOperatorSyntaxDef ::
   Members '[Error ScopeError, State Scope] r =>
   OperatorSyntaxDef ->
   Sem r ()
-checkOperatorSyntaxDef OperatorSyntaxDef {..} = do
+checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
   checkNotDefined
-  modify (over scopeFixities (HashMap.insert opSymbol opFixity))
+  modify (over scopeFixities (HashMap.insert opSymbol s))
   where
     checkNotDefined :: Sem r ()
     checkNotDefined =
-      whenM
-        (HashMap.member opSymbol <$> gets _scopeFixities)
-        (throw (ErrDuplicateFixity opSymbol))
+      whenJustM
+        (HashMap.lookup opSymbol <$> gets _scopeFixities)
+        (\s' -> throw (ErrDuplicateFixity (DuplicateFixity s' s)))
 
 checkTypeSignature ::
   Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
@@ -545,7 +546,7 @@ lookupModuleSymbol :: Members '[Error ScopeError, State Scope, State ScoperState
   Name -> Sem r S.Name
 lookupModuleSymbol n = do
   es <- lookupQualifiedSymbol (path, sym)
-  case filter (S.isModuleKind . _symbolKind) es of
+  case filter (S.isModuleKind . getSymbolKind) es of
     [] -> notInScope
     [x] -> return $ entryToSName n x
     _ -> throw (ErrAmbiguousModuleSym es)
@@ -657,8 +658,8 @@ checkFunctionClause clause@FunctionClause {..} = do
       SymbolInfo {..} <- fromMaybeM err (HashMap.lookup fun <$> gets _scopeSymbols)
       -- The symbol must be defined in the same path
       path <- gets _scopePath
-      e@SymbolEntry {..} <- maybe err return (HashMap.lookup path _symbolInfo)
-      when (_symbolKind /= S.KNameFunction) err
+      e <- maybe err return (HashMap.lookup path _symbolInfo)
+      when (getSymbolKind e /= S.KNameFunction) err
       return (entryToSName fun e)
       where
         err :: Sem r a
@@ -791,7 +792,7 @@ checkUnqualified s = do
       let err = throw (ErrSymNotInScope (NotInScope s locals scope))
       entryToSName (NameUnqualified s) <$>
          -- TODO change listToMaybe, it is a bit too hacky
-        fromMaybeM err (listToMaybe <$> lookupSymbolGeneric (S.isExprKind . _symbolKind) s [] s)
+        fromMaybeM err (listToMaybe <$> lookupSymbolGeneric (S.isExprKind . getSymbolKind) s [] s)
 
 
 checkPatternName ::
@@ -866,7 +867,7 @@ checkPatternUnqualified s = do
       case r of
         Nothing -> return Nothing
         Just SymbolInfo {..} ->
-          let entries = filter (isConstructorKind . _symbolKind . snd) (HashMap.toList _symbolInfo)
+          let entries = filter (isConstructorKind . getSymbolKind . snd) (HashMap.toList _symbolInfo)
            in case map snd entries of
                 [] -> return Nothing -- There is no constructor with such a name
                 [e] -> return (Just (entryToSName (NameUnqualified s) e)) -- There is one constructor with such a name
@@ -1190,9 +1191,9 @@ makePatternTable = do
           [e] -> Just e
           _ -> Nothing -- if this symbol es found will result in an ambiguity error.
         unqualifiedSymbolOp :: SymbolEntry -> Maybe (Precedence, P.Operator ParsePat Pattern)
-        unqualifiedSymbolOp SymbolEntry {..}
+        unqualifiedSymbolOp e@SymbolEntry {..}
           | S.SomeFixity Fixity {..} <- _symbolFixity,
-            _symbolKind == S.KNameConstructor = Just $
+            getSymbolKind e == S.KNameConstructor = Just $
             case fixityArity of
               Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _symbolId))
                 where

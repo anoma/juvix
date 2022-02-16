@@ -4,6 +4,7 @@ module MiniJuvix.Syntax.Concrete.Language
   ( module MiniJuvix.Syntax.Concrete.Language,
     module MiniJuvix.Syntax.Concrete.Name,
     module MiniJuvix.Syntax.Concrete.Loc,
+    module MiniJuvix.Syntax.Concrete.Language.Stage,
     module MiniJuvix.Syntax.Concrete.Fixity,
   )
 where
@@ -17,29 +18,24 @@ import MiniJuvix.Syntax.Concrete.Fixity
 import MiniJuvix.Syntax.Concrete.Name
 import MiniJuvix.Syntax.Concrete.Loc
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Concrete.Language.Stage
 import MiniJuvix.Prelude
 
 --------------------------------------------------------------------------------
 -- Parsing stages
 --------------------------------------------------------------------------------
 
-data Stage
-  = Parsed
-  | Scoped
-  deriving stock (Show)
+-- data SStage (s :: Stage) where
+--   SParsed :: SStage 'Parsed
+--   SScoped :: SStage 'Scoped
 
-data SStage (s :: Stage) where
-  SParsed :: SStage 'Parsed
-  SScoped :: SStage 'Scoped
+-- type instance Sing = SStage
 
-type instance Sing = SStage
+-- instance SingI 'Parsed where
+--   sing = SParsed
 
-instance SingI 'Parsed where
-  sing = SParsed
-
-instance SingI 'Scoped where
-  sing = SScoped
-
+-- instance SingI 'Scoped where
+--   sing = SScoped
 
 type family SymbolType (s :: Stage) :: (res :: GHC.Type) | res -> s where
   SymbolType 'Parsed = Symbol
@@ -154,6 +150,9 @@ data OperatorSyntaxDef = OperatorSyntaxDef
     opFixity :: Fixity
   }
   deriving stock (Show, Eq, Ord, Lift)
+
+instance HasLoc OperatorSyntaxDef where
+  getLoc = getLoc . opSymbol
 
 -------------------------------------------------------------------------------
 -- Quantity

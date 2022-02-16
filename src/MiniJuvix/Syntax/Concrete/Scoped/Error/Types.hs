@@ -12,7 +12,6 @@ data MultipleDeclarations = MultipleDeclarations {
  _multipleDeclSymbol :: Text,
   _multipleDeclSecond :: Interval
   }
- deriving stock (Show)
 
 -- | megaparsec error while resolving infixities.
 newtype InfixError = InfixError {
@@ -43,10 +42,19 @@ data NotInScope = NotInScope {
  _notInScopeLocal :: LocalVars,
  _notInScopeScope :: Scope
  }
- deriving stock (Show)
 
 data BindGroupConflict = BindGroupConflict {
  _bindGroupFirst :: Symbol,
  _bindGroupSecond :: Symbol
  }
  deriving stock (Show)
+
+data DuplicateFixity = DuplicateFixity {
+ _dupFixityFirst :: OperatorSyntaxDef,
+ _dupFixitySecond :: OperatorSyntaxDef
+ }
+ deriving stock (Show)
+
+newtype MultipleExportConflict = MultipleExportConflict {
+  _multipleExportEntries :: NonEmpty SymbolEntry
+  }

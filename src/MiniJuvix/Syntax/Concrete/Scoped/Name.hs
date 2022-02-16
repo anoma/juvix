@@ -1,7 +1,10 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module MiniJuvix.Syntax.Concrete.Scoped.Name where
+module MiniJuvix.Syntax.Concrete.Scoped.Name (
+module MiniJuvix.Syntax.Concrete.Scoped.Name,
+module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
+                                             ) where
 
 import Data.Stream (Stream (Cons))
 import Lens.Micro.Platform
@@ -9,6 +12,8 @@ import qualified MiniJuvix.Syntax.Concrete.Fixity as C
 import qualified MiniJuvix.Syntax.Concrete.Name as C
 import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
+import qualified Data.Kind as GHC
 
 --------------------------------------------------------------------------------
 -- Names
@@ -56,49 +61,6 @@ data NameFixity
   | SomeFixity C.Fixity
   deriving stock (Show, Eq)
 
-data NameKind
-  = -- | Constructor name.
-    KNameConstructor
-  | -- | Name introduced by the inductive keyword.
-    KNameInductive
-  | -- | Name of a defined function (top level or let/where block).
-    KNameFunction
-  | -- | A locally bound name (patterns, arguments, etc.).
-    KNameLocal
-  | -- | An axiom.
-    KNameAxiom
-  | -- | An local module name.
-    KNameLocalModule
-  | -- | An top module name.
-    KNameTopModule
-  deriving stock (Show, Eq)
-
-isExprKind :: NameKind -> Bool
-isExprKind k = case k of
-    KNameConstructor -> True
-    KNameInductive -> True
-    KNameFunction -> True
-    KNameLocal -> True
-    KNameAxiom -> True
-    KNameLocalModule -> False
-    KNameTopModule -> False
-
-isModuleKind :: NameKind -> Bool
-isModuleKind k = case k of
-  KNameLocalModule -> True
-  KNameTopModule -> True
-  _ -> False
-
-canHaveFixity :: NameKind -> Bool
-canHaveFixity k = case k of
-  KNameConstructor -> True
-  KNameInductive -> True
-  KNameFunction -> True
-  KNameAxiom -> True
-  KNameLocal -> False
-  KNameLocalModule -> False
-  KNameTopModule -> False
-
 type Name = Name' C.Name
 
 type Symbol = Name' C.Symbol
@@ -116,8 +78,10 @@ data Name' n = Name'
     _nameFixity :: NameFixity
   }
   deriving stock (Show)
-
 makeLenses ''Name'
+
+instance HasLoc n => HasLoc (Name' n) where
+  getLoc = getLoc . _nameConcrete
 
 hasFixity :: Name' s -> Bool
 hasFixity Name' {..} = case _nameFixity of
@@ -137,3 +101,12 @@ instance Ord (Name' n) where
 
 instance Hashable (Name' n) where
   hashWithSalt salt = hashWithSalt salt . _nameId
+
+type family NameKindSymbolType (s :: NameKind) :: GHC.Type where
+  NameKindSymbolType 'KNameTopModule = TopModulePath
+  NameKindSymbolType 'KNameConstructor = Symbol
+  NameKindSymbolType 'KNameInductive = Symbol
+  NameKindSymbolType 'KNameFunction = Symbol
+  NameKindSymbolType 'KNameLocal = Symbol
+  NameKindSymbolType 'KNameAxiom = Symbol
+  NameKindSymbolType 'KNameLocalModule = Symbol

@@ -54,7 +54,7 @@ data Match = Match
 
 data MatchAlt = MatchAlt
   { matchAltPattern :: Pattern,
-    matchAltBody :: Expression 
+    matchAltBody :: Expression
   }
   deriving stock (Show, Eq)
 
@@ -111,4 +111,3 @@ data Pattern
   | PatternWildcard
   | PatternEmpty
   deriving stock (Show, Eq)
-
