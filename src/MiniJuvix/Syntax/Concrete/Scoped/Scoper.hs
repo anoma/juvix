@@ -527,9 +527,16 @@ checkLocalModule Module {..} = do
     inheritEntry :: SymbolEntry -> SymbolEntry
     inheritEntry = over S.nameWhyInScope S.BecauseInherited
 
--- | TODO checks if there is an infix declaration without a binding.
-checkOrphanFixities :: Members '[Error ScopeError, State Scope] r => Sem r ()
-checkOrphanFixities = return ()
+checkOrphanFixities :: forall r .Members '[Error ScopeError, State Scope] r => Sem r ()
+checkOrphanFixities = do
+  path <- gets _scopePath
+  declared <- gets _scopeFixities
+  used <- gets (HashMap.keys . fmap (filter (== path) . HashMap.keys . _symbolInfo) . _scopeSymbols)
+  let unused = toList $ foldr HashMap.delete declared used
+  case unused of
+    [] -> return ()
+    (x : _) -> throw (ErrUnusedOperatorDef (UnusedOperatorDef x))
+
 
 symbolInfoSingle :: SymbolEntry -> SymbolInfo
 symbolInfoSingle p = SymbolInfo $ HashMap.singleton (S._nameDefinedIn p) p

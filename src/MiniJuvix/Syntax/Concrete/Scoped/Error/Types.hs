@@ -74,3 +74,8 @@ newtype MegaParsecError = MegaParsecError {
   _megaParsecError :: Text
   }
  deriving stock (Show)
+
+newtype UnusedOperatorDef = UnusedOperatorDef {
+  _unusedOperatorDef :: OperatorSyntaxDef
+  }
+ deriving stock (Show)

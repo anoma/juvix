@@ -103,4 +103,12 @@ tests = [
       case er of
         ErrModuleNotInScope {} -> Nothing
         _ -> wrongError
+
+  ,  NegTest "Unused operator syntax definition"
+    "."
+   "UnusedOperatorDef.mjuvix" $ \er ->
+      case er of
+        ErrUnusedOperatorDef {} -> Nothing
+        _ -> wrongError
+
   ]

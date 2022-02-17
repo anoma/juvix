@@ -28,6 +28,7 @@ data ScopeError
   | ErrMultipleExport MultipleExportConflict
   | ErrAmbiguousSym [SymbolEntry]
   | ErrAmbiguousModuleSym [SymbolEntry]
+  | ErrUnusedOperatorDef UnusedOperatorDef
   -- | Eventually this needs to go away
   | ErrGeneric Text
   deriving stock (Show)
@@ -49,6 +50,7 @@ ppScopeError s = case s of
   ErrMultipleExport e -> ppError e
   ErrAmbiguousSym {} -> undefined
   ErrAmbiguousModuleSym {} -> undefined
+  ErrUnusedOperatorDef e -> ppError e
 
 docStream :: ScopeError -> SimpleDocStream Eann
 docStream = layoutPretty defaultLayoutOptions . ppScopeError

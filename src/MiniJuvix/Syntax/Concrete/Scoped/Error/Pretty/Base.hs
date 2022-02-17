@@ -119,3 +119,8 @@ instance PrettyError ModuleNotInScope where
 
 instance PrettyError MegaParsecError where
   ppError MegaParsecError {..} = pretty _megaParsecError
+
+instance PrettyError UnusedOperatorDef where
+  ppError UnusedOperatorDef {..} =
+    "Unused operator syntax definition:" <> line
+    <> ppCode _unusedOperatorDef
