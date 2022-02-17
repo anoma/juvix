@@ -3,7 +3,7 @@
 module Scope.Negative (allTests) where
 
 import Base
-import MiniJuvix.Syntax.Concrete.Scoped.Error (ScopeError(..))
+import MiniJuvix.Syntax.Concrete.Scoped.Error (ScopeError(..), AmbiguousSym (AmbiguousSym))
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
 
 type FailMsg = String
@@ -109,6 +109,13 @@ tests = [
    "UnusedOperatorDef.mjuvix" $ \er ->
       case er of
         ErrUnusedOperatorDef {} -> Nothing
+        _ -> wrongError
+
+  ,  NegTest "Ambiguous symbol"
+    "."
+   "AmbiguousSymbol.mjuvix" $ \er ->
+      case er of
+        ErrAmbiguousSym {} -> Nothing
         _ -> wrongError
 
   ]

@@ -19,6 +19,7 @@ import MiniJuvix.Syntax.Concrete.Scoped.Error
 import MiniJuvix.Prelude
 import qualified Data.List.NonEmpty as NonEmpty
 import MiniJuvix.Syntax.Concrete.Scoped.Name (WhyInScope(BecauseDefined))
+import Test.Tasty.Patterns.Parser (ParseResult(Ambiguous))
 
 --------------------------------------------------------------------------------
 
@@ -199,34 +200,34 @@ getTopModulePath Module {..} =
       S.absLocalPath = mempty
     }
 
--- | Looks for a symbol in (possibly) nested local modules
-lookupSymbolGeneric :: forall a r. (Show a, Members '[State Scope, Error ScopeError, State ScoperState] r) =>
-   (SymbolEntry -> Bool) -> a -> [Symbol] -> Symbol -> Sem r [SymbolEntry]
-lookupSymbolGeneric filtr name modules final = do
-  local' <- inLocalModule
+-- | Do not call directly. Looks for a symbol in (possibly) nested local modules
+lookupSymbolAux :: forall r. (Members '[State Scope, Error ScopeError, State ScoperState] r) =>
+   [Symbol] -> Symbol -> Sem r [SymbolEntry]
+lookupSymbolAux modules final = do
+  local' <- hereOrInLocalModule
   import' <- importedTopModule
-  return $ maybeToList local' ++ maybeToList import'
+  return $ local' ++ maybeToList import'
   where
-  inLocalModule :: Sem r (Maybe SymbolEntry) =
+  hereOrInLocalModule :: Sem r [SymbolEntry] =
     case modules of
       [] -> do
          r <- HashMap.lookup final <$> gets _scopeSymbols
          case r of
-          Nothing -> return Nothing
-          Just SymbolInfo {..} -> case filter filtr (toList _symbolInfo) of
-            [] -> return Nothing
-            [e] -> return (Just e)
-            es -> throw (ErrAmbiguousSym es) -- This is meant to happen only at the top level
+          Nothing -> return []
+          Just SymbolInfo {..} -> case toList _symbolInfo of
+            [] -> return []
+            [e] -> return [e]
+            es -> throw (ErrAmbiguousSym (AmbiguousSym es))
       (p : ps) -> do
         r <- fmap (filter (S.isModuleKind . S._nameKind) . toList . _symbolInfo)
           . HashMap.lookup p <$> gets _scopeSymbols
         case r of
           Just [x] -> do
             export <- getExportInfo (S._nameId x)
-            lookInExport final ps export
-          Just [] -> return Nothing
-          Just _ -> throw $ ErrGeneric ("ambiguous name " <> show name)
-          Nothing -> return Nothing
+            maybeToList <$> lookInExport final ps export
+          Just [] -> return []
+          Just es -> throw $ ErrAmbiguousSym (AmbiguousSym es)
+          Nothing -> return []
   importedTopModule :: Sem r (Maybe SymbolEntry)
   importedTopModule = do
     fmap mkEntry . HashMap.lookup path <$> gets _scopeTopModules
@@ -265,14 +266,14 @@ lookInExport sym remaining e = case remaining of
 -- modules due to nesting.
 lookupQualifiedSymbol :: forall r. Members '[State Scope, Error ScopeError, State ScoperState] r =>
    ([Symbol], Symbol) -> Sem r [SymbolEntry]
-lookupQualifiedSymbol q@(path, sym) = do
+lookupQualifiedSymbol (path, sym) = do
   here' <- here
   there' <- there
   return (here' ++ there')
   where
-  -- | Looks for a local module symbol in scope
+  -- | Current module.
   here :: Sem r [SymbolEntry]
-  here = lookupSymbolGeneric (S.isModuleKind . S._nameKind) q path sym
+  here = lookupSymbolAux path sym
   -- | Looks for a top level modules
   there :: Sem r [SymbolEntry]
   there = concatMapM (fmap maybeToList . uncurry lookInTopModule) allTopPaths
@@ -301,12 +302,11 @@ checkQualifiedExpr q@(QualifiedName (Path p) sym) = do
    es <- lookupQualifiedSymbol (toList p, sym)
    case es of
      [] -> notInScope
-     [e] -> return $ entryToSName q' e
-     _ -> throw (ErrAmbiguousSym es)
+     [e] -> return (entryToSName q' e)
+     _ -> throw (ErrAmbiguousSym (AmbiguousSym es))
   where
   q' = NameQualified q
   notInScope = throw (ErrQualSymNotInScope q)
-
 
 unqualifiedSName :: S.Symbol -> S.Name
 unqualifiedSName = over S.nameConcrete NameUnqualified
@@ -789,18 +789,40 @@ checkUnqualified s = do
       locals <- ask
       -- Lookup at the global scope
       let err = throw (ErrSymNotInScope (NotInScope s locals scope))
-      entryToSName (NameUnqualified s) <$>
-         -- TODO change listToMaybe, it is a bit too hacky
-        fromMaybeM err (listToMaybe <$> lookupSymbolGeneric (S.isExprKind . S._nameKind) s [] s)
-
+      entries <- filter (S.isExprKind . S._nameKind) <$>
+         lookupQualifiedSymbol ([], s)
+      case entries of
+        [] -> err
+        [x] -> return (entryToSName (NameUnqualified s) x)
+        es -> throw (ErrAmbiguousSym (AmbiguousSym es))
 
 checkPatternName ::
+  forall r.
   Members '[Error ScopeError, State Scope, State ScoperState] r =>
   Name ->
   Sem r S.Name
-checkPatternName n = case n of
-  NameQualified _ -> error "todo"
-  NameUnqualified s -> checkPatternUnqualified s
+checkPatternName n = do
+  c <- isConstructor
+  case c of
+    Just constr -> return constr -- the symbol is a constructor
+    Nothing -> unqualifiedSName <$> groupBindLocalVariable sym -- the symbol is a variable
+  where
+    (path, sym) = case n of
+      NameQualified (QualifiedName (Path p) s) -> (toList p, s)
+      NameUnqualified s -> ([], s)
+    -- check whether the symbol is a constructor in scope
+    isConstructor :: Sem r (Maybe S.Name)
+    isConstructor = do
+      entries <- filter (isConstructorKind . S._nameKind) <$>
+          lookupQualifiedSymbol (path, sym)
+      case entries of
+            [] -> case Path <$> nonEmpty path of
+              Nothing -> return Nothing -- There is no constructor with such a name
+              Just pth -> throw (ErrQualSymNotInScope (QualifiedName pth sym))
+            [e] -> return (Just (entryToSName n e)) -- There is one constructor with such a name
+            _ -> throw $ ErrGeneric "There is more than one constructor with such a name"
+    isConstructorKind :: S.NameKind -> Bool
+    isConstructorKind = (== S.KNameConstructor)
 
 withBindCurrentGroup ::
   Members '[State Scope, Reader LocalVars] r =>
@@ -847,32 +869,6 @@ groupBindLocalVariable s = do
       n <- freshVariable s
       modify (over scopeBindGroup (HashMap.insert s (LocalVariable n)))
       return n
-
-checkPatternUnqualified ::
-  forall r.
-  Members '[Error ScopeError, State Scope, State ScoperState] r =>
-  Symbol ->
-  Sem r S.Name
-checkPatternUnqualified s = do
-  c <- isConstructor
-  case c of
-    Just constr -> return constr -- the symbol is a constructor
-    Nothing -> unqualifiedSName <$> groupBindLocalVariable s -- the symbol is a variable
-  where
-    -- check whether the symbol is a constructor in scope
-    isConstructor :: Sem r (Maybe S.Name)
-    isConstructor = do
-      r <- HashMap.lookup s <$> gets _scopeSymbols
-      case r of
-        Nothing -> return Nothing
-        Just SymbolInfo {..} ->
-          let entries = filter (isConstructorKind . S._nameKind . snd) (HashMap.toList _symbolInfo)
-           in case map snd entries of
-                [] -> return Nothing -- There is no constructor with such a name
-                [e] -> return (Just (entryToSName (NameUnqualified s) e)) -- There is one constructor with such a name
-                _ -> throw $ ErrGeneric "There is more than one constructor with such a name"
-    isConstructorKind :: S.NameKind -> Bool
-    isConstructorKind = (== S.KNameConstructor)
 
 checkPatternAtoms ::
   Members '[Error ScopeError, State Scope, State ScoperState] r =>

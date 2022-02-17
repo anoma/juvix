@@ -124,3 +124,7 @@ instance PrettyError UnusedOperatorDef where
   ppError UnusedOperatorDef {..} =
     "Unused operator syntax definition:" <> line
     <> ppCode _unusedOperatorDef
+
+instance PrettyError AmbiguousSym where
+  ppError AmbiguousSym {} =
+    "AmbiguousSym"

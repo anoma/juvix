@@ -1,0 +1,10 @@
+module AmbiguousSymbol;
+
+  axiom A : Type;
+  module M;
+    axiom A : Type;
+  end;
+  open M;
+
+  axiom B : A;
+end;

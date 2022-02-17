@@ -79,3 +79,8 @@ newtype UnusedOperatorDef = UnusedOperatorDef {
   _unusedOperatorDef :: OperatorSyntaxDef
   }
  deriving stock (Show)
+
+newtype AmbiguousSym = AmbiguousSym {
+  _ambiguousSymEntires :: [SymbolEntry]
+  }
+ deriving stock (Show)

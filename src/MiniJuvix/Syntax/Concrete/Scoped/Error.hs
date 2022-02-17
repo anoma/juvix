@@ -26,7 +26,7 @@ data ScopeError
   | ErrBindGroup BindGroupConflict
   | ErrDuplicateFixity DuplicateFixity
   | ErrMultipleExport MultipleExportConflict
-  | ErrAmbiguousSym [SymbolEntry]
+  | ErrAmbiguousSym AmbiguousSym
   | ErrAmbiguousModuleSym [SymbolEntry]
   | ErrUnusedOperatorDef UnusedOperatorDef
   -- | Eventually this needs to go away
@@ -48,7 +48,7 @@ ppScopeError s = case s of
   ErrBindGroup e -> ppError e
   ErrDuplicateFixity e -> ppError e
   ErrMultipleExport e -> ppError e
-  ErrAmbiguousSym {} -> undefined
+  ErrAmbiguousSym e -> ppError e
   ErrAmbiguousModuleSym {} -> undefined
   ErrUnusedOperatorDef e -> ppError e
 
