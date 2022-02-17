@@ -112,8 +112,9 @@ instance PrettyError DuplicateFixity where
 
 instance PrettyError MultipleExportConflict where
   ppError MultipleExportConflict {..} =
-    "The symbol" <+> ppCode sym <+> "is exported multiple times in the module" <+> undefined
-    where
-     sym :: S.Symbol
-     sym = undefined
-     e = NonEmpty.head _multipleExportEntries
+    "The symbol" <+> highlight (ppCode _multipleExportSymbol) <+> "is exported multiple times in the module"
+      <+> ppCode _multipleExportModule
+
+instance PrettyError ModuleNotInScope where
+  ppError ModuleNotInScope {..} =
+    "The module" <+> ppCode _moduleNotInScopeName <+> "is not in scope"

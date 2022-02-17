@@ -315,7 +315,7 @@ entryToSName :: s -> SymbolEntry -> S.Name' s
 entryToSName s S.Name' {..} = S.Name' {_nameConcrete = s, ..}
 
 -- | We gather all symbols which have been defined or marked to be public in the given scope.
-exportScope :: forall r. Members '[Error ScopeError] r => Scope -> Sem r ExportInfo
+exportScope :: forall r. Members '[State Scope, Error ScopeError] r => Scope -> Sem r ExportInfo
 exportScope Scope {..} = do
   _exportSymbols <- getExportSymbols
   return ExportInfo {..}
@@ -332,7 +332,8 @@ exportScope Scope {..} = do
           case filter shouldExport (toList _symbolInfo) of
             [] -> return Nothing
             [e] -> return $ Just (s, e)
-            (e:es) -> throw (ErrMultipleExport (MultipleExportConflict (e :| es)))
+            (e:es) -> throw (ErrMultipleExport
+                       (MultipleExportConflict _scopePath  s (e :| es)))
 
 readParseModule ::
   Members '[Error ScopeError, Reader ScopeParameters, Embed IO] r =>
@@ -542,7 +543,7 @@ lookupModuleSymbol n = do
     [x] -> return $ entryToSName n x
     _ -> throw (ErrAmbiguousModuleSym es)
   where
-  notInScope = throw (ErrModuleNotInScope n)
+  notInScope = throw (ErrModuleNotInScope (ModuleNotInScope n))
   (path, sym) = case n of
     NameUnqualified s -> ([], s)
     NameQualified (QualifiedName (Path p) s) -> (toList p, s)

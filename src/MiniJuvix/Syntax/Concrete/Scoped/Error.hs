@@ -20,10 +20,9 @@ data ScopeError
   | ErrMultipleDeclarations MultipleDeclarations
   | ErrLacksTypeSig LacksTypeSig
   | ErrImportCycle ImportCycle
-  | ErrOpenNotInScope QualifiedName
   | ErrSymNotInScope NotInScope
   | ErrQualSymNotInScope QualifiedName
-  | ErrModuleNotInScope Name
+  | ErrModuleNotInScope ModuleNotInScope
   | ErrBindGroup BindGroupConflict
   | ErrDuplicateFixity DuplicateFixity
   | ErrMultipleExport MultipleExportConflict
@@ -42,10 +41,9 @@ ppScopeError s = case s of
   ErrMultipleDeclarations e -> ppError e
   ErrLacksTypeSig e -> ppError e
   ErrImportCycle e -> ppError e
-  ErrOpenNotInScope {} -> undefined
   ErrSymNotInScope e -> ppError e
-  ErrQualSymNotInScope {} -> undefined
-  ErrModuleNotInScope {} -> undefined
+  ErrQualSymNotInScope {} -> pretty (show s :: Text)
+  ErrModuleNotInScope e -> ppError e
   ErrBindGroup e -> ppError e
   ErrDuplicateFixity e -> ppError e
   ErrMultipleExport e -> ppError e

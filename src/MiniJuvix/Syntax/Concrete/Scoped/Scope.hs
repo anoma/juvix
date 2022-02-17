@@ -26,29 +26,10 @@ newtype SymbolInfo = SymbolInfo
 
 type SymbolEntry = S.Name' ()
 
--- data SymbolEntry = SymbolEntry
---   { _symbolKind :: S.NameKind,
---     _symbolDefinedIn :: S.AbsModulePath,
---     _symbolDefined :: Interval,
---     _symbolId :: S.NameId,
---     _symbolFixity :: S.NameFixity,
---     _symbolWhyInScope :: S.WhyInScope,
---     _symbolPublicAnn :: PublicAnn
+-- data SymbolEntry' = SymbolEntry' {
+--   _entryNameInfo :: NameInfo
+
 --   }
---   deriving stock (Show)
-
--- getSymbolKind :: SymbolEntry -> S.NameKind
--- getSymbolKind SymbolEntry {..} = fromSing _symbolKind
-
--- instance HasLoc SymbolEntry where
---   getLoc SymbolEntry {..} = case _symbolKind of
---     S.SKNameTopModule -> getLoc _symbolSymbol
---     S.SKNameAxiom -> getLoc _symbolSymbol
---     S.SKNameConstructor -> getLoc _symbolSymbol
---     S.SKNameInductive -> getLoc _symbolSymbol
---     S.SKNameFunction -> getLoc _symbolSymbol
---     S.SKNameLocal -> getLoc _symbolSymbol
---     S.SKNameLocalModule -> getLoc _symbolSymbol
 
 -- | Symbols that a module exports
 newtype ExportInfo = ExportInfo {

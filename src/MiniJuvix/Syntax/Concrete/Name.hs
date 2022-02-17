@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module MiniJuvix.Syntax.Concrete.Name where
@@ -26,18 +27,6 @@ instance HasLoc Symbol where
 instance Hashable Symbol where
   hashWithSalt i Symbol {..} = hashWithSalt i _symbolText
 
-data QualifiedName = QualifiedName
-  { qualifiedPath :: Path,
-    qualifiedSymbol :: Symbol
-  }
-  deriving stock (Show, Eq, Ord, Generic, Lift)
-
-instance HasLoc QualifiedName where
-  getLoc QualifiedName {..} =
-    getLoc qualifiedPath <> getLoc qualifiedSymbol
-
-instance Hashable QualifiedName
-
 data Name
   = NameQualified QualifiedName
   | NameUnqualified Symbol
@@ -53,10 +42,24 @@ newtype Path = Path
   }
   deriving stock (Show, Eq, Ord, Lift)
 
+data QualifiedName = QualifiedName
+  { _qualifiedPath :: Path,
+    _qualifiedSymbol :: Symbol
+  }
+  deriving stock (Show, Eq, Ord, Generic, Lift)
+
+instance HasLoc QualifiedName where
+  getLoc QualifiedName {..} =
+    getLoc _qualifiedPath <> getLoc _qualifiedSymbol
+
+instance Hashable QualifiedName
+
 instance HasLoc Path where
   getLoc (Path p) = getLoc (NonEmpty.head p) <> getLoc (NonEmpty.last p)
 
 deriving newtype instance Hashable Path
+
+makeLenses ''QualifiedName
 
 -- | A.B.C corresponds to TopModulePath [A,B] C
 data TopModulePath = TopModulePath
@@ -85,6 +88,5 @@ topModulePathToFilePath' ext root mp = absPath
     Just e -> root </> relFilePath <.> e
   toPath :: Symbol -> FilePath
   toPath Symbol{..} = unpack _symbolText
-
 
 instance Hashable TopModulePath

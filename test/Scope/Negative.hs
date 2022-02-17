@@ -96,4 +96,11 @@ tests = [
       case er of
         ErrMultipleExport {} -> Nothing
         _ -> wrongError
+
+  ,  NegTest "Module not in scope"
+    "."
+   "ModuleNotInScope.mjuvix" $ \er ->
+      case er of
+        ErrModuleNotInScope {} -> Nothing
+        _ -> wrongError
   ]

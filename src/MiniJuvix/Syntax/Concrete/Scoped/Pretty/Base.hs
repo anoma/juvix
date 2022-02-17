@@ -9,6 +9,7 @@ import MiniJuvix.Prelude
 import qualified Data.List.NonEmpty.Extra as NonEmpty
 import Prettyprinter hiding (braces, parens)
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ann
+import MiniJuvix.Syntax.Concrete.Scoped.Name (AbsModulePath)
 
 data Options = Options
   {
@@ -203,7 +204,9 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
     (StatementImport _, StatementImport _) -> True
     (StatementImport i, StatementOpenModule o) -> case sing :: SStage s of
       SParsed -> True
-      SScoped -> S._nameId (modulePath (importModule i)) == S._nameId (openModuleName o)
+      SScoped ->
+        S._nameId (modulePath (importModule i)) ==
+        S._nameId (openModuleName o)
     (StatementImport _, _) -> False
     (StatementOpenModule {}, StatementOpenModule {}) -> True
     (StatementOpenModule {}, _) -> False
@@ -280,6 +283,12 @@ instance SingI s => PrettyCode (InductiveParameter s) where
 instance SingI s => PrettyCode [InductiveParameter s] where
   ppCode = fmap hsep . mapM ppCode
 
+instance PrettyCode AbsModulePath where
+  ppCode S.AbsModulePath {..} = do
+    absLocalPath' <- mapM ppCode absLocalPath
+    absTopModulePath' <- ppCode absTopModulePath
+    return $ dotted (absTopModulePath' : absLocalPath')
+
 ppInductiveParameters :: (SingI s, Members '[Reader Options] r)
     => [InductiveParameter s] -> Sem r (Maybe (Doc Ann))
 ppInductiveParameters ps
@@ -355,7 +364,7 @@ dotted = concatWith (surround kwDot)
 
 instance PrettyCode QualifiedName where
   ppCode QualifiedName {..} = do
-    let symbols = pathParts qualifiedPath NonEmpty.|> qualifiedSymbol
+    let symbols = pathParts _qualifiedPath NonEmpty.|> _qualifiedSymbol
     dotted <$> mapM ppSymbol symbols
 
 ppName :: forall s r. (SingI s, Members '[Reader Options] r) => NameType s -> Sem r (Doc Ann)
@@ -372,7 +381,7 @@ annDef nm = case sing :: SStage s of
   SParsed -> id
 
 annSDef :: S.Name' n -> Doc Ann -> Doc Ann
-annSDef nm = annotate (AnnDef (S.absTopModulePath (S._nameDefinedIn nm)) (S._nameId nm))
+annSDef S.Name' {..} = annotate (AnnDef (S.absTopModulePath _nameDefinedIn) _nameId)
 
 instance PrettyCode TopModulePath where
   ppCode TopModulePath {..} =
@@ -708,22 +717,22 @@ instance HasFixity (ExpressionAtoms 'Parsed) where
   getFixity = const Nothing
 
 pinfixFixity :: PatternInfixApp -> Fixity
-pinfixFixity (PatternInfixApp  _ op _) = case S._nameFixity op of
+pinfixFixity (PatternInfixApp  _ op _) = case op ^. S.nameFixity of
     S.NoFixity -> impossible
     S.SomeFixity s -> s
 
 ppostfixFixity :: PatternPostfixApp -> Fixity
-ppostfixFixity (PatternPostfixApp  _ op) = case S._nameFixity op of
+ppostfixFixity (PatternPostfixApp  _ op) = case op ^. S.nameFixity of
     S.NoFixity -> impossible
     S.SomeFixity s -> s
 
 infixFixity :: InfixApplication -> Fixity
-infixFixity (InfixApplication  _ op _) = case S._nameFixity op of
+infixFixity (InfixApplication  _ op _) = case op ^. S.nameFixity of
     S.NoFixity -> impossible
     S.SomeFixity s -> s
 
 postfixFixity :: PostfixApplication -> Fixity
-postfixFixity (PostfixApplication _ op) = case S._nameFixity op of
+postfixFixity (PostfixApplication _ op) = case op ^. S.nameFixity of
     S.NoFixity -> impossible
     S.SomeFixity s -> s
 

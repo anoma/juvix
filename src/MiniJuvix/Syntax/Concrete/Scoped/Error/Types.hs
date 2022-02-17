@@ -6,6 +6,7 @@ module MiniJuvix.Syntax.Concrete.Scoped.Error.Types (
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Scoped.Scope
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 
 data MultipleDeclarations = MultipleDeclarations {
   _multipleDeclEntry :: SymbolEntry,
@@ -38,13 +39,6 @@ newtype ImportCycle = ImportCycle {
   }
  deriving stock (Show)
 
-data NotInScope = NotInScope {
- _notInScopeSymbol :: Symbol,
- _notInScopeLocal :: LocalVars,
- _notInScopeScope :: Scope
- }
- deriving stock (Show)
-
 data BindGroupConflict = BindGroupConflict {
  _bindGroupFirst :: Symbol,
  _bindGroupSecond :: Symbol
@@ -57,7 +51,21 @@ data DuplicateFixity = DuplicateFixity {
  }
  deriving stock (Show)
 
-newtype MultipleExportConflict = MultipleExportConflict {
+data MultipleExportConflict = MultipleExportConflict {
+  _multipleExportModule :: S.AbsModulePath,
+  _multipleExportSymbol :: Symbol,
   _multipleExportEntries :: NonEmpty SymbolEntry
+  }
+ deriving stock (Show)
+
+data NotInScope = NotInScope {
+ _notInScopeSymbol :: Symbol,
+ _notInScopeLocal :: LocalVars,
+ _notInScopeScope :: Scope
+ }
+ deriving stock (Show)
+
+newtype ModuleNotInScope = ModuleNotInScope {
+  _moduleNotInScopeName :: Name
   }
  deriving stock (Show)
