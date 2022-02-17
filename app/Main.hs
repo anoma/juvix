@@ -23,7 +23,7 @@ data Command
 
 data ScopeOptions = ScopeOptions
   { _scopeRootDir :: FilePath,
-    _scopeInputFile :: FilePath,
+    _scopeInputFiles :: [FilePath],
     _scopeShowIds :: Bool,
     _scopeInlineImports :: Bool
   }
@@ -93,11 +93,11 @@ parseScope = do
           <> showDefault
           <> help "Root directory"
       )
-  _scopeInputFile <-
-    argument
+  _scopeInputFiles <-
+    some $ argument
       str
-      ( metavar "MINIJUVIX_FILE"
-          <> help "Path to a .mjuvix file"
+      ( metavar "MINIJUVIX_FILE(s)"
+          <> help "Path to one ore more .mjuvix files"
       )
   _scopeShowIds <-
     switch
@@ -109,8 +109,6 @@ parseScope = do
       ( long "inline-imports"
           <> help "Show the code of imported modules next to the import statement"
       )
-
-
   pure ScopeOptions {..}
 
 descr :: ParserInfo Command
@@ -186,9 +184,10 @@ go :: Command -> IO ()
 go c = case c of
   Scope opts@ScopeOptions {..} -> do
     root <- getCurrentDirectory
-    m <- parseModuleIO _scopeInputFile
-    s <- fromRightIO' printErrorAnsi $ M.scopeCheck1 root m
-    M.printPrettyCode (mkPrettyOptions opts) s
+    forM_ _scopeInputFiles $ \scopeInputFile -> do
+      m <- parseModuleIO scopeInputFile
+      s <- fromRightIO' printErrorAnsi $ M.scopeCheck1 root m
+      M.printPrettyCode (mkPrettyOptions opts) s
   Parse ParseOptions {..} -> do
     m <- parseModuleIO _parseInputFile
     if _parseNoPrettyShow then print m else pPrint m

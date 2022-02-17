@@ -343,7 +343,7 @@ readParseModule mp = do
   path <- modulePathToFilePath mp
   res <- embed (runModuleParserIO path)
   case res of
-    Left err -> throw (ErrParser err)
+    Left err -> throw (ErrParser (MegaParsecError err))
     Right r -> return r
 
 modulePathToFilePath ::

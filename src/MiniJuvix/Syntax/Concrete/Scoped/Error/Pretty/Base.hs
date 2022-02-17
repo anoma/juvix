@@ -56,7 +56,7 @@ infixErrorAux kind pp =
 instance PrettyError LacksTypeSig where
   ppError LacksTypeSig {..} =
      pretty loc <> line <>
-     "Missing type signature of declaration:" <> line
+     "There is a declaration with a missing type signature:" <> line
      <> indent' (highlight (ppCode _lacksTypeSigClause))
     where
     loc = getLoc $ clauseOwnerFunction _lacksTypeSigClause
@@ -104,8 +104,6 @@ instance PrettyError DuplicateFixity where
   ppError DuplicateFixity {..} =
     "Multiple fixity declarations for symbol" <+> highlight (ppCode sym) <> ":" <> line
      <> indent' (align locs)
-      <+> "appears twice in the same binding group:" <> line
-    <> indent' (align locs)
     where
       sym = opSymbol _dupFixityFirst
       locs = vsep $ map (pretty . getLoc) [_dupFixityFirst , _dupFixityFirst]
