@@ -13,6 +13,7 @@ import qualified MiniJuvix.Syntax.Concrete.Name as C
 import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
+import MiniJuvix.Syntax.Concrete.PublicAnn
 import qualified Data.Kind as GHC
 
 --------------------------------------------------------------------------------
@@ -61,6 +62,22 @@ data NameFixity
   | SomeFixity C.Fixity
   deriving stock (Show, Eq)
 
+data NameInfo = NameIndo {
+
+  }
+ deriving stock (Show)
+makeLenses ''NameInfo
+
+-- | Why a symbol is in scope.
+data WhyInScope =
+  -- | Inherited from the parent module.
+  BecauseInherited WhyInScope
+  -- | Opened or imported in this module.
+  | BecauseImportedOpened
+  -- | Defined in this module.
+  | BecauseDefined
+  deriving stock (Show)
+
 type Name = Name' C.Name
 
 type Symbol = Name' C.Symbol
@@ -70,12 +87,15 @@ type TopModulePath = Name' C.TopModulePath
 type ModuleNameId = NameId
 
 data Name' n = Name'
-  { _nameId :: NameId,
+  {
     _nameConcrete :: n,
+    _nameId :: NameId,
     _nameDefined :: Interval,
     _nameKind :: NameKind,
     _nameDefinedIn :: AbsModulePath,
-    _nameFixity :: NameFixity
+    _nameFixity :: NameFixity,
+    _nameWhyInScope :: WhyInScope,
+    _namePublicAnn :: PublicAnn
   }
   deriving stock (Show)
 makeLenses ''Name'

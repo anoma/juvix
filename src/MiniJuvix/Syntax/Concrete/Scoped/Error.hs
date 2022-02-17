@@ -31,6 +31,7 @@ data ScopeError
   | ErrAmbiguousModuleSym [SymbolEntry]
   -- | Eventually this needs to go away
   | ErrGeneric Text
+  deriving stock (Show)
 
 ppScopeError :: ScopeError -> Doc Eann
 ppScopeError s = case s of

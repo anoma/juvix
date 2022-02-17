@@ -4,6 +4,7 @@ module MiniJuvix.Syntax.Concrete.Language
   ( module MiniJuvix.Syntax.Concrete.Language,
     module MiniJuvix.Syntax.Concrete.Name,
     module MiniJuvix.Syntax.Concrete.Loc,
+    module MiniJuvix.Syntax.Concrete.PublicAnn,
     module MiniJuvix.Syntax.Concrete.Language.Stage,
     module MiniJuvix.Syntax.Concrete.Fixity,
   )
@@ -13,29 +14,17 @@ where
 
 import qualified Data.Kind as GHC
 import Data.Singletons
-import Language.Haskell.TH.Syntax (Lift)
 import MiniJuvix.Syntax.Concrete.Fixity
 import MiniJuvix.Syntax.Concrete.Name
 import MiniJuvix.Syntax.Concrete.Loc
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Concrete.PublicAnn
 import MiniJuvix.Syntax.Concrete.Language.Stage
 import MiniJuvix.Prelude
 
 --------------------------------------------------------------------------------
 -- Parsing stages
 --------------------------------------------------------------------------------
-
--- data SStage (s :: Stage) where
---   SParsed :: SStage 'Parsed
---   SScoped :: SStage 'Scoped
-
--- type instance Sing = SStage
-
--- instance SingI 'Parsed where
---   sing = SParsed
-
--- instance SingI 'Scoped where
---   sing = SScoped
 
 type family SymbolType (s :: Stage) :: (res :: GHC.Type) | res -> s where
   SymbolType 'Parsed = Symbol
@@ -112,16 +101,6 @@ deriving stock instance
   ) =>
   Ord (Statement s)
 
-deriving stock instance
-  ( Lift (ImportType s),
-    Lift (PatternType s),
-    Lift (ModulePathType s 'ModuleLocal),
-    Lift (SymbolType s),
-    Lift (NameType s),
-    Lift (ExpressionType s)
-  ) =>
-  Lift (Statement s)
-
 --------------------------------------------------------------------------------
 -- Import statement
 --------------------------------------------------------------------------------
@@ -136,8 +115,6 @@ deriving stock instance (Eq (ImportType s)) => Eq (Import s)
 
 deriving stock instance (Ord (ImportType s)) => Ord (Import s)
 
-deriving stock instance (Lift (ImportType s)) => Lift (Import s)
-
 instance HasLoc (Import 'Parsed) where
   getLoc (Import t) = getLoc t
 
@@ -149,7 +126,7 @@ data OperatorSyntaxDef = OperatorSyntaxDef
   { opSymbol :: Symbol,
     opFixity :: Fixity
   }
-  deriving stock (Show, Eq, Ord, Lift)
+  deriving stock (Show, Eq, Ord)
 
 instance HasLoc OperatorSyntaxDef where
   getLoc = getLoc . opSymbol
@@ -162,7 +139,7 @@ data Usage
   = UsageNone
   | UsageOnce
   | UsageOmega
-  deriving stock (Show, Eq, Ord, Lift)
+  deriving stock (Show, Eq, Ord)
 
 -------------------------------------------------------------------------------
 -- Type signature declaration
@@ -179,8 +156,6 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (TypeSi
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (TypeSignature s)
 
-deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (TypeSignature s)
-
 -------------------------------------------------------------------------------
 -- Axioms
 -------------------------------------------------------------------------------
@@ -195,8 +170,6 @@ deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (
 deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (AxiomDef s)
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (AxiomDef s)
-
-deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (AxiomDef s)
 
 -------------------------------------------------------------------------------
 -- Lift type construction declaration
@@ -217,8 +190,6 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Induct
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveConstructorDef s)
 
-deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (InductiveConstructorDef s)
-
 data InductiveParameter (s :: Stage) = InductiveParameter
   { inductiveParameterName :: SymbolType s,
     inductiveParameterType :: ExpressionType s
@@ -229,8 +200,6 @@ deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (
 deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (InductiveParameter s)
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveParameter s)
-
-deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (InductiveParameter s)
 
 data InductiveDef (s :: Stage) = InductiveDef
   { inductiveName :: InductiveName s,
@@ -244,8 +213,6 @@ deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (
 deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (InductiveDef s)
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveDef s)
-
-deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (InductiveDef s)
 
 --------------------------------------------------------------------------------
 -- Pattern
@@ -307,13 +274,6 @@ deriving stock instance
   ) =>
   Ord (PatternAtom s)
 
-deriving stock instance
-  ( Lift (ExpressionType s),
-    Lift (NameType s),
-    Lift (PatternType s)
-  ) =>
-  Lift (PatternAtom s)
-
 newtype PatternAtoms (s :: Stage)
   = PatternAtoms (NonEmpty (PatternAtom s))
 
@@ -337,13 +297,6 @@ deriving stock instance
     Ord (PatternType s)
   ) =>
   Ord (PatternAtoms s)
-
-deriving stock instance
-  ( Lift (ExpressionType s),
-    Lift (NameType s),
-    Lift (PatternType s)
-  ) =>
-  Lift (PatternAtoms s)
 
 --------------------------------------------------------------------------------
 -- Function binding declaration
@@ -381,14 +334,6 @@ deriving stock instance
     Ord (ExpressionType s)
   ) =>
   Ord (FunctionClause s)
-
-deriving stock instance
-  ( Lift (PatternType s),
-    Lift (NameType s),
-    Lift (SymbolType s),
-    Lift (ExpressionType s)
-  ) =>
-  Lift (FunctionClause s)
 
 --------------------------------------------------------------------------------
 -- Module declaration
@@ -451,24 +396,10 @@ deriving stock instance
   ) =>
   Ord (Module s t)
 
-deriving stock instance
-  ( Lift (ModulePathType s t),
-    Lift (ModulePathType s 'ModuleLocal),
-    Lift (ImportType s),
-    Lift (PatternType s),
-    Lift (NameType s),
-    Lift (SymbolType s),
-    Lift (ExpressionType s)
-  ) =>
-  Lift (Module s t)
-
 data UsingHiding
   = Using (NonEmpty Symbol)
   | Hiding (NonEmpty Symbol)
-  deriving stock (Show, Eq, Ord, Lift)
-
-data PublicAnn = Public | NoPublic
-  deriving stock (Show, Eq, Ord, Lift)
+  deriving stock (Show, Eq, Ord)
 
 data OpenModule (s :: Stage) = OpenModule
   { openModuleName :: NameType s,
@@ -498,12 +429,6 @@ deriving stock instance
     Show (ExpressionType s)
   ) =>
   Show (OpenModule s)
-deriving stock instance
-  (
-    Lift (NameType s),
-    Lift (ExpressionType s)
-  ) =>
-  Lift (OpenModule s)
 
 --------------------------------------------------------------------------------
 -- Expression
@@ -561,14 +486,6 @@ deriving stock instance
   ) =>
   Ord (ExpressionAtom s)
 
-deriving stock instance
-  ( Lift (ExpressionType s),
-    Lift (NameType s),
-    Lift (SymbolType s),
-    Lift (PatternType s)
-  ) =>
-  Lift (ExpressionAtom s)
-
 -- | Expressions without application
 newtype ExpressionAtoms (s :: Stage)
   = ExpressionAtoms (NonEmpty (ExpressionAtom s))
@@ -597,14 +514,6 @@ deriving stock instance
   ) =>
   Ord (ExpressionAtoms s)
 
-deriving stock instance
-  ( Lift (ExpressionType s),
-    Lift (NameType s),
-    Lift (SymbolType s),
-    Lift (PatternType s)
-  ) =>
-  Lift (ExpressionAtoms s)
-
 --------------------------------------------------------------------------------
 -- Match expression
 --------------------------------------------------------------------------------
@@ -632,12 +541,6 @@ deriving stock instance
   ) =>
   Ord (MatchAlt s)
 
-deriving stock instance
-  ( Lift (ExpressionType s),
-    Lift (PatternType s)
-  ) =>
-  Lift (MatchAlt s)
-
 data Match (s :: Stage) = Match
   { matchExpression :: ExpressionType s,
     matchAlts :: [MatchAlt s]
@@ -661,12 +564,6 @@ deriving stock instance
   ) =>
   Ord (Match s)
 
-deriving stock instance
-  ( Lift (ExpressionType s),
-    Lift (PatternType s)
-  ) =>
-  Lift (Match s)
-
 --------------------------------------------------------------------------------
 -- Universe expression
 --------------------------------------------------------------------------------
@@ -674,7 +571,7 @@ deriving stock instance
 newtype Universe = Universe
   { universeLevel :: Maybe Natural
   }
-  deriving stock (Show, Eq, Ord, Lift)
+  deriving stock (Show, Eq, Ord)
 
 --------------------------------------------------------------------------------
 -- Function expression
@@ -692,8 +589,6 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Functi
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (FunctionParameter s)
 
-deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (FunctionParameter s)
-
 data Function (s :: Stage) = Function
   { funParameter :: FunctionParameter s,
     funReturn :: ExpressionType s
@@ -704,8 +599,6 @@ deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (
 deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Function s)
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Function s)
-
-deriving stock instance (Lift (ExpressionType s), Lift (SymbolType s)) => Lift (Function s)
 
 --------------------------------------------------------------------------------
 -- Where block clauses
@@ -739,14 +632,6 @@ deriving stock instance
   ) =>
   Ord (WhereBlock s)
 
-deriving stock instance
-  ( Lift (PatternType s),
-    Lift (NameType s),
-    Lift (SymbolType s),
-    Lift (ExpressionType s)
-  ) =>
-  Lift (WhereBlock s)
-
 data WhereClause (s :: Stage)
   = WhereOpenModule (OpenModule s)
   | WhereTypeSig (TypeSignature s)
@@ -776,14 +661,6 @@ deriving stock instance
   ) =>
   Ord (WhereClause s)
 
-deriving stock instance
-  ( Lift (PatternType s),
-    Lift (NameType s),
-    Lift (SymbolType s),
-    Lift (ExpressionType s)
-  ) =>
-  Lift (WhereClause s)
-
 --------------------------------------------------------------------------------
 -- Lambda expression
 --------------------------------------------------------------------------------
@@ -812,12 +689,6 @@ deriving stock instance
   ) =>
   Ord (Lambda s)
 
-deriving stock instance
-  ( Lift (PatternType s),
-    Lift (ExpressionType s)
-  ) =>
-  Lift (Lambda s)
-
 data LambdaClause (s :: Stage) = LambdaClause
   { lambdaParameters :: NonEmpty (PatternType s),
     lambdaBody :: ExpressionType s
@@ -840,12 +711,6 @@ deriving stock instance
     Ord (ExpressionType s)
   ) =>
   Ord (LambdaClause s)
-
-deriving stock instance
-  ( Lift (PatternType s),
-    Lift (ExpressionType s)
-  ) =>
-  Lift (LambdaClause s)
 
 --------------------------------------------------------------------------------
 -- Application expression
@@ -904,14 +769,6 @@ deriving stock instance
   ) =>
   Ord (LetBlock s)
 
-deriving stock instance
-  ( Lift (PatternType s),
-    Lift (NameType s),
-    Lift (SymbolType s),
-    Lift (ExpressionType s)
-  ) =>
-  Lift (LetBlock s)
-
 data LetClause (s :: Stage)
   = LetTypeSig (TypeSignature s)
   | LetFunClause (FunctionClause s)
@@ -940,14 +797,6 @@ deriving stock instance
   ) =>
   Ord (LetClause s)
 
-deriving stock instance
-  ( Lift (PatternType s),
-    Lift (NameType s),
-    Lift (SymbolType s),
-    Lift (ExpressionType s)
-  ) =>
-  Lift (LetClause s)
-
 --------------------------------------------------------------------------------
 -- Debugging statements
 --------------------------------------------------------------------------------
@@ -969,11 +818,6 @@ deriving stock instance
     (ExpressionType s) =>
   Ord (Eval s)
 
-deriving stock instance
-  Lift
-    (ExpressionType s) =>
-  Lift (Eval s)
-
 newtype Print (s :: Stage) = Print {printExpression :: ExpressionType s}
 
 deriving stock instance
@@ -991,8 +835,3 @@ deriving stock instance
   Ord
     (ExpressionType s) =>
   Ord (Print s)
-
-deriving stock instance
-  Lift
-    (ExpressionType s) =>
-  Lift (Print s)

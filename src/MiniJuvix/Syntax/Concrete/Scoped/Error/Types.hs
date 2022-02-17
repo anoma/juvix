@@ -9,9 +9,10 @@ import MiniJuvix.Syntax.Concrete.Scoped.Scope
 
 data MultipleDeclarations = MultipleDeclarations {
   _multipleDeclEntry :: SymbolEntry,
- _multipleDeclSymbol :: Text,
+  _multipleDeclSymbol :: Text,
   _multipleDeclSecond :: Interval
   }
+ deriving stock (Show)
 
 -- | megaparsec error while resolving infixities.
 newtype InfixError = InfixError {
@@ -42,6 +43,7 @@ data NotInScope = NotInScope {
  _notInScopeLocal :: LocalVars,
  _notInScopeScope :: Scope
  }
+ deriving stock (Show)
 
 data BindGroupConflict = BindGroupConflict {
  _bindGroupFirst :: Symbol,
@@ -58,3 +60,4 @@ data DuplicateFixity = DuplicateFixity {
 newtype MultipleExportConflict = MultipleExportConflict {
   _multipleExportEntries :: NonEmpty SymbolEntry
   }
+ deriving stock (Show)

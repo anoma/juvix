@@ -22,41 +22,33 @@ newtype SymbolInfo = SymbolInfo
     -- different places.
     _symbolInfo :: HashMap S.AbsModulePath SymbolEntry
   }
-  deriving newtype (Semigroup, Monoid)
+  deriving newtype (Show, Semigroup, Monoid)
 
--- | Why a symbol is in scope.
-data WhyInScope =
-  -- | Inherited from the parent module.
-  BecauseInherited WhyInScope
-  -- | Opened or imported in this module.
-  | BecauseImportedOpened
-  -- | Defined in this module.
-  | BecauseDefined
-  deriving stock (Show)
+type SymbolEntry = S.Name' ()
 
-data SymbolEntry = forall k. SymbolEntry
-  { _symbolKind :: S.SNameKind k,
-    _symbolDefinedIn :: S.AbsModulePath,
-    _symbolDefined :: Interval,
-    _symbolId :: S.NameId,
-    _symbolFixity :: S.NameFixity,
-    _symbolWhyInScope :: WhyInScope,
-    _symbolPublicAnn :: PublicAnn,
-    _symbolSymbol :: S.NameKindSymbolType k
-  }
+-- data SymbolEntry = SymbolEntry
+--   { _symbolKind :: S.NameKind,
+--     _symbolDefinedIn :: S.AbsModulePath,
+--     _symbolDefined :: Interval,
+--     _symbolId :: S.NameId,
+--     _symbolFixity :: S.NameFixity,
+--     _symbolWhyInScope :: S.WhyInScope,
+--     _symbolPublicAnn :: PublicAnn
+--   }
+--   deriving stock (Show)
 
-getSymbolKind :: SymbolEntry -> S.NameKind
-getSymbolKind SymbolEntry {..} = fromSing _symbolKind
+-- getSymbolKind :: SymbolEntry -> S.NameKind
+-- getSymbolKind SymbolEntry {..} = fromSing _symbolKind
 
-instance HasLoc SymbolEntry where
-  getLoc SymbolEntry {..} = case _symbolKind of
-    S.SKNameTopModule -> getLoc _symbolSymbol
-    S.SKNameAxiom -> getLoc _symbolSymbol
-    S.SKNameConstructor -> getLoc _symbolSymbol
-    S.SKNameInductive -> getLoc _symbolSymbol
-    S.SKNameFunction -> getLoc _symbolSymbol
-    S.SKNameLocal -> getLoc _symbolSymbol
-    S.SKNameLocalModule -> getLoc _symbolSymbol
+-- instance HasLoc SymbolEntry where
+--   getLoc SymbolEntry {..} = case _symbolKind of
+--     S.SKNameTopModule -> getLoc _symbolSymbol
+--     S.SKNameAxiom -> getLoc _symbolSymbol
+--     S.SKNameConstructor -> getLoc _symbolSymbol
+--     S.SKNameInductive -> getLoc _symbolSymbol
+--     S.SKNameFunction -> getLoc _symbolSymbol
+--     S.SKNameLocal -> getLoc _symbolSymbol
+--     S.SKNameLocalModule -> getLoc _symbolSymbol
 
 -- | Symbols that a module exports
 newtype ExportInfo = ExportInfo {
@@ -81,8 +73,8 @@ data Scope = Scope
     _scopeTopModules :: HashMap TopModulePath S.ModuleNameId,
     _scopeBindGroup :: HashMap Symbol LocalVariable
   }
+ deriving stock (Show)
 makeLenses ''ExportInfo
-makeLenses ''SymbolEntry
 makeLenses ''SymbolInfo
 makeLenses ''LocalVars
 makeLenses ''Scope

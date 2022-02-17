@@ -38,7 +38,7 @@ instance PrettyError MultipleDeclarations where
     "Multiple declarations of" <+> ppSymbolT _multipleDeclSymbol <> line
     <> "Declared at:" <+> align (vsep ints)
     where
-    ints = map pretty [_symbolDefined _multipleDeclEntry, _multipleDeclSecond]
+    ints = map pretty [S._nameDefined _multipleDeclEntry, _multipleDeclSecond]
 
 instance PrettyError InfixError where
   ppError InfixError {..} =
@@ -115,13 +115,5 @@ instance PrettyError MultipleExportConflict where
     "The symbol" <+> ppCode sym <+> "is exported multiple times in the module" <+> undefined
     where
      sym :: S.Symbol
-     sym = case e of
-       SymbolEntry {..} -> case _symbolKind of
-         S.SKNameAxiom -> _symbolSymbol
-         S.SKNameConstructor -> _symbolSymbol
-         S.SKNameInductive -> _symbolSymbol
-         S.SKNameLocal -> _symbolSymbol
-         S.SKNameLocalModule -> _symbolSymbol
-         S.SKNameFunction -> _symbolSymbol
-         S.SKNameTopModule -> impossible
+     sym = undefined
      e = NonEmpty.head _multipleExportEntries
