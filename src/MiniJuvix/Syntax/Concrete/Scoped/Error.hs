@@ -14,7 +14,7 @@ import Prettyprinter
 -- | An error that happens during scope checking. Note that it is defined here
 -- instead of in ./Error/Types to avoid orphan instances.
 data ScopeError
-  = ErrParser Text
+  = ErrParser MegaParsecError
   | ErrInfixParser InfixError
   | ErrInfixPattern InfixErrorP
   | ErrMultipleDeclarations MultipleDeclarations
@@ -34,7 +34,7 @@ data ScopeError
 
 ppScopeError :: ScopeError -> Doc Eann
 ppScopeError s = case s of
-  ErrParser txt -> pretty txt
+  ErrParser txt -> ppError txt
   ErrGeneric txt -> pretty txt
   ErrInfixParser e -> ppError e
   ErrInfixPattern e -> ppError e

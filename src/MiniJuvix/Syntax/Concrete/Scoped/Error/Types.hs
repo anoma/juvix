@@ -69,3 +69,8 @@ newtype ModuleNotInScope = ModuleNotInScope {
   _moduleNotInScopeName :: Name
   }
  deriving stock (Show)
+
+newtype MegaParsecError = MegaParsecError {
+  _megaParsecError :: Text
+  }
+ deriving stock (Show)

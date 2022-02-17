@@ -118,3 +118,6 @@ instance PrettyError MultipleExportConflict where
 instance PrettyError ModuleNotInScope where
   ppError ModuleNotInScope {..} =
     "The module" <+> ppCode _moduleNotInScopeName <+> "is not in scope"
+
+instance PrettyError MegaParsecError where
+  ppError MegaParsecError {..} = pretty _megaParsecError
