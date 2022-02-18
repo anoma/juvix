@@ -19,7 +19,6 @@ instance Ord Precedence where
     (PrecOmega, PrecOmega) -> EQ
     (PrecOmega, _) -> GT
 
-
 data UnaryAssoc = AssocPostfix
   deriving stock (Show, Eq, Ord, Lift)
 

@@ -996,7 +996,7 @@ makeExpressionTable2 (ExpressionAtoms atoms) = [appOp] : operators ++ [[function
         AtomIdentifier nm -> Just nm
         _ -> Nothing
   mkSymbolTable :: [S.Name] -> [[P.Operator Parse Expression]]
-  mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe mkOperator
+  mkSymbolTable = reverse . map (map snd) . groupSortOn fst . mapMaybe mkOperator
     where
       mkOperator :: S.Name -> Maybe (Precedence, P.Operator Parse Expression)
       mkOperator S.Name' {..}
@@ -1182,7 +1182,7 @@ makePatternTable atom = [appOp] : operators
           PatternAtomName nm -> Just nm
           _ -> Nothing
     mkSymbolTable :: [S.Name] -> [[P.Operator ParsePat Pattern]]
-    mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe unqualifiedSymbolOp
+    mkSymbolTable = reverse . map (map snd) . groupSortOn fst . mapMaybe unqualifiedSymbolOp
       where
         unqualifiedSymbolOp :: S.Name -> Maybe (Precedence, P.Operator ParsePat Pattern)
         unqualifiedSymbolOp S.Name' {..}
