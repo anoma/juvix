@@ -1,10 +1,10 @@
+
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module MiniJuvix.Syntax.Concrete.Name where
 
-import Language.Haskell.TH.Syntax (Lift)
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Loc
 import qualified Data.List.NonEmpty.Extra as NonEmpty
@@ -13,7 +13,7 @@ data Symbol = Symbol {
   _symbolText :: Text,
   _symbolLoc :: Interval
   }
-  deriving stock (Show, Lift)
+  deriving stock (Show, Data)
 
 instance Eq Symbol where
   (==) = (==) `on` _symbolText
@@ -30,7 +30,7 @@ instance Hashable Symbol where
 data Name
   = NameQualified QualifiedName
   | NameUnqualified Symbol
-  deriving stock (Show, Eq, Ord, Lift)
+  deriving stock (Show, Eq, Ord, Data)
 
 instance HasLoc Name where
   getLoc n = case n of
@@ -40,13 +40,13 @@ instance HasLoc Name where
 newtype Path = Path
   { pathParts :: NonEmpty Symbol
   }
-  deriving stock (Show, Eq, Ord, Lift)
+  deriving stock (Show, Eq, Ord, Data)
 
 data QualifiedName = QualifiedName
   { _qualifiedPath :: Path,
     _qualifiedSymbol :: Symbol
   }
-  deriving stock (Show, Eq, Ord, Generic, Lift)
+  deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance HasLoc QualifiedName where
   getLoc QualifiedName {..} =
@@ -66,7 +66,7 @@ data TopModulePath = TopModulePath
   { modulePathDir :: [Symbol],
     modulePathName :: Symbol
   }
-  deriving stock (Show, Eq, Ord, Generic, Lift)
+  deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance HasLoc TopModulePath where
   getLoc TopModulePath {..} =

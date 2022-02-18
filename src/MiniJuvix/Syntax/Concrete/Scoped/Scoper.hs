@@ -17,6 +17,7 @@ import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Syntax.Concrete.Scoped.Scope
 import MiniJuvix.Syntax.Concrete.Scoped.Error
 import MiniJuvix.Prelude
+import Data.Generics.Uniplate.Data
 import qualified Data.List.NonEmpty as NonEmpty
 import MiniJuvix.Syntax.Concrete.Scoped.Name (WhyInScope(BecauseDefined))
 import Test.Tasty.Patterns.Parser (ParseResult(Ambiguous))
@@ -977,109 +978,98 @@ checkStatement s = case s of
 -------------------------------------------------------------------------------
 -- Infix Expression
 -------------------------------------------------------------------------------
-
-makeExpressionTable ::
-  forall r.
-  (Members '[State Scope] r) =>
-  Sem r [[P.Operator Parse Expression]]
-makeExpressionTable = do
-  symbolTable <- mkSymbolTable . toList <$> gets _scopeSymbols
-  -- application has the highest precedence. Arrow has the lowest.
-  return $ [appOp] : symbolTable ++ [[functionOp]]
+makeExpressionTable2 ::
+  ExpressionAtoms 'Scoped -> [[P.Operator Parse Expression]]
+makeExpressionTable2 atoms = [appOp] : symbolTable ++ [[functionOp]]
   where
-    -- TODO think what to do with qualified symbols
-    mkSymbolTable :: [SymbolInfo] -> [[P.Operator Parse Expression]]
-    mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe (getEntry >=> unqualifiedSymbolOp)
-      where
-        getEntry :: SymbolInfo -> Maybe SymbolEntry
-        getEntry (SymbolInfo m) = case toList m of
-          [] -> impossible
-          [e] -> Just e
-          _ -> Nothing -- ambiguous symbol, will result in an error if found
-        unqualifiedSymbolOp :: SymbolEntry -> Maybe (Precedence, P.Operator Parse Expression)
-        unqualifiedSymbolOp S.Name' {..}
-          | S.SomeFixity Fixity {..} <- _nameFixity = Just $
-            case fixityArity of
-              Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
-                where
-                  unaryApp :: S.Name -> Expression -> Expression
-                  unaryApp funName arg = case u of
-                    AssocPostfix -> ExpressionPostfixApplication (PostfixApplication arg funName)
-              Binary b -> (fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId _nameId))
-                where
-                  binaryApp :: S.Name -> Expression -> Expression -> Expression
-                  binaryApp infixAppOperator infixAppLeft infixAppRight =
-                    ExpressionInfixApplication InfixApplication {..}
-                  infixLRN :: Parse (Expression -> Expression -> Expression) -> P.Operator Parse Expression
-                  infixLRN = case b of
-                    AssocLeft -> P.InfixL
-                    AssocRight -> P.InfixR
-                    AssocNone -> P.InfixN
-          | otherwise = Nothing
-        parseSymbolId :: S.NameId -> Parse S.Name
-        parseSymbolId uid = P.token getName mempty
-          where
-            getName :: ExpressionAtom 'Scoped -> Maybe S.Name
-            getName s = case s of
-              AtomIdentifier n'
-                | uid == S._nameId n' -> Just n'
-              _ -> Nothing
+  symbolTable = mkSymbolTable names
+  names :: [S.Name]
+  names = [ s | s@S.Name' {} <- universeBi atoms ]
+  mkSymbolTable :: [S.Name] -> [[P.Operator Parse Expression]]
+  mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe unqualifiedSymbolOp
+    where
+      unqualifiedSymbolOp :: S.Name -> Maybe (Precedence, P.Operator Parse Expression)
+      unqualifiedSymbolOp S.Name' {..}
+        | S.SomeFixity Fixity {..} <- _nameFixity = Just $
+          case fixityArity of
+            Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
+              where
+                unaryApp :: S.Name -> Expression -> Expression
+                unaryApp funName arg = case u of
+                  AssocPostfix -> ExpressionPostfixApplication (PostfixApplication arg funName)
+            Binary b -> (fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId _nameId))
+              where
+                binaryApp :: S.Name -> Expression -> Expression -> Expression
+                binaryApp infixAppOperator infixAppLeft infixAppRight =
+                  ExpressionInfixApplication InfixApplication {..}
+                infixLRN :: Parse (Expression -> Expression -> Expression) -> P.Operator Parse Expression
+                infixLRN = case b of
+                  AssocLeft -> P.InfixL
+                  AssocRight -> P.InfixR
+                  AssocNone -> P.InfixN
+        | otherwise = Nothing
+      parseSymbolId :: S.NameId -> Parse S.Name
+      parseSymbolId uid = P.token getName mempty
+        where
+          getName :: ExpressionAtom 'Scoped -> Maybe S.Name
+          getName s = case s of
+            AtomIdentifier n'
+              | uid == S._nameId n' -> Just n'
+            _ -> Nothing
 
-    -- Application by juxtaposition.
-    appOp :: P.Operator Parse Expression
-    appOp = P.InfixL (app <$ notFollowedByInfix)
-      where
-        notFollowedByInfix :: Parse ()
-        notFollowedByInfix = P.notFollowedBy (P.token infixName mempty)
-          where
-            infixName :: ExpressionAtom 'Scoped -> Maybe S.Name
-            infixName s = case s of
-              AtomIdentifier n
-                | S.hasFixity n -> Just n
-              _ -> Nothing
+  -- Application by juxtaposition.
+  appOp :: P.Operator Parse Expression
+  appOp = P.InfixL (app <$ notFollowedByInfix)
+    where
+      notFollowedByInfix :: Parse ()
+      notFollowedByInfix = P.notFollowedBy (P.token infixName mempty)
+        where
+          infixName :: ExpressionAtom 'Scoped -> Maybe S.Name
+          infixName s = case s of
+            AtomIdentifier n
+              | S.hasFixity n -> Just n
+            _ -> Nothing
 
-        app :: Expression -> Expression -> Expression
-        app f x =
-          ExpressionApplication
-            Application
-              { applicationFunction = f,
-                applicationParameter = x
+      app :: Expression -> Expression -> Expression
+      app f x =
+        ExpressionApplication
+          Application
+            { applicationFunction = f,
+              applicationParameter = x
+            }
+  -- Non-dependent function type: A → B
+  functionOp :: P.Operator Parse Expression
+  functionOp = P.InfixR (nonDepFun <$ P.single AtomFunArrow)
+    where
+      nonDepFun :: Expression -> Expression -> Expression
+      nonDepFun a b =
+        ExpressionFunction
+          Function
+            { funParameter = param,
+              funReturn = b
+            }
+        where
+          param =
+            FunctionParameter
+              { paramName = Nothing,
+                paramUsage = Nothing,
+                paramType = a
               }
-    -- Non-dependent function type: A → B
-    functionOp :: P.Operator Parse Expression
-    functionOp = P.InfixR (nonDepFun <$ P.single AtomFunArrow)
-      where
-        nonDepFun :: Expression -> Expression -> Expression
-        nonDepFun a b =
-          ExpressionFunction
-            Function
-              { funParameter = param,
-                funReturn = b
-              }
-          where
-            param =
-              FunctionParameter
-                { paramName = Nothing,
-                  paramUsage = Nothing,
-                  paramType = a
-                }
 
 parseExpressionAtoms ::
   Members '[Error ScopeError, State Scope] r =>
   ExpressionAtoms 'Scoped ->
   Sem r Expression
 parseExpressionAtoms a@(ExpressionAtoms sections) = do
-  tbl <- makeExpressionTable
-  let parser :: Parse Expression
-      parser = runM (mkExpressionParser tbl) <* P.eof
-      res = P.parse parser filePath (toList sections)
   case res of
     Left {} -> throw (ErrInfixParser
-                       InfixError {
-                        _infixErrAtoms = a
-          })
+                       InfixError {_infixErrAtoms = a})
     Right r -> return r
   where
+  parser :: Parse Expression
+  parser = runM (mkExpressionParser tbl) <* P.eof
+  res = P.parse parser filePath (toList sections)
+  tbl = makeExpressionTable2 a
   filePath = ""
 
 -- | Monad for parsing expression sections.
@@ -1168,24 +1158,16 @@ parseTerm =
 type ParsePat = P.Parsec () [PatternAtom 'Scoped]
 
 makePatternTable ::
-  forall r.
-  (Members '[State Scope] r) =>
-  Sem r [[P.Operator ParsePat Pattern]]
-makePatternTable = do
-  symbolTable <- mkSymbolTable . toList <$> gets _scopeSymbols
-  -- application has the highest precedence.
-  return $ [appOp] : symbolTable
+  PatternAtom 'Scoped -> [[P.Operator ParsePat Pattern]]
+makePatternTable atom = [appOp] : operators
   where
+    operators = mkSymbolTable names
+    names = [ s | s@S.Name' {} <- universeBi atom ]
     -- TODO think what to do with qualified symbols
-    mkSymbolTable :: [SymbolInfo] -> [[P.Operator ParsePat Pattern]]
-    mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe (getEntry >=> unqualifiedSymbolOp)
+    mkSymbolTable :: [S.Name] -> [[P.Operator ParsePat Pattern]]
+    mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe unqualifiedSymbolOp
       where
-        getEntry :: SymbolInfo -> Maybe SymbolEntry
-        getEntry (SymbolInfo m) = case toList m of
-          [] -> impossible
-          [e] -> Just e
-          _ -> Nothing -- if this symbol es found will result in an ambiguity error.
-        unqualifiedSymbolOp :: SymbolEntry -> Maybe (Precedence, P.Operator ParsePat Pattern)
+        unqualifiedSymbolOp :: S.Name -> Maybe (Precedence, P.Operator ParsePat Pattern)
         unqualifiedSymbolOp S.Name' {..}
           | S.SomeFixity Fixity {..} <- _nameFixity,
             _nameKind == S.KNameConstructor = Just $
@@ -1314,12 +1296,13 @@ mkPatternParser table = embed @ParsePat pPattern
 parsePatternAtom ::
   Members '[Error ScopeError, State Scope] r => PatternAtom 'Scoped -> Sem r Pattern
 parsePatternAtom sec = do
-  tbl <- makePatternTable
-  let parser :: ParsePat Pattern
-      parser = runM (mkPatternParser tbl) <* P.eof
-      res = P.parse parser filePath [sec]
   case res of
     Left {} -> throw (ErrInfixPattern (InfixErrorP sec))
     Right r -> return r
   where
+    tbl = makePatternTable sec
+    parser :: ParsePat Pattern
+    parser = runM (mkPatternParser tbl) <* P.eof
+    res = P.parse parser filePath [sec]
+
     filePath = "tmp"
