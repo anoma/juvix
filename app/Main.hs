@@ -9,7 +9,7 @@ import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (Options (..))
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
-import MiniJuvix.Prelude
+import MiniJuvix.Prelude hiding (Doc)
 import Options.Applicative
 import Options.Applicative.Help.Pretty
 import Text.Show.Pretty hiding (Html)
@@ -186,7 +186,7 @@ go c = case c of
     root <- getCurrentDirectory
     forM_ _scopeInputFiles $ \scopeInputFile -> do
       m <- parseModuleIO scopeInputFile
-      s <- fromRightIO' printErrorAnsi $ M.scopeCheck1 root m
+      s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       M.printPrettyCode (mkPrettyOptions opts) s
   Parse ParseOptions {..} -> do
     m <- parseModuleIO _parseInputFile
@@ -194,7 +194,7 @@ go c = case c of
   Html HtmlOptions {..} -> do
     root <- getCurrentDirectory
     m <- parseModuleIO _htmlInputFile
-    s <- fromRightIO show $ M.scopeCheck1 root m
+    s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
     genHtml defaultOptions _htmlRecursive _htmlTheme s
 
 main :: IO ()

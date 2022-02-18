@@ -1,4 +1,4 @@
-module MiniJuvix.Prelude.Base 
+module MiniJuvix.Prelude.Base
   ( module MiniJuvix.Prelude.Base,
     module Control.Monad.Extra,
     module Data.Char,
@@ -14,6 +14,7 @@ module MiniJuvix.Prelude.Base
     module Data.Void,
     module GHC.Enum,
     module System.Directory,
+    module Prettyprinter,
     module System.FilePath,
     module Data.Singletons,
     module Data.Singletons.TH,
@@ -73,6 +74,7 @@ import Data.Eq
 import Data.Foldable
 import Data.Function
 import Data.Functor
+import Prettyprinter (Doc, (<+>))
 import Data.HashMap.Strict (HashMap)
 import Data.HashSet (HashSet)
 import Data.Hashable
@@ -111,7 +113,7 @@ import Polysemy.View
 import System.Directory
 import System.Exit
 import System.FilePath
-import System.IO hiding (putStr, putStrLn, hPutStr, hPutStrLn, writeFile, hGetContents, interact, readFile, getContents, getLine, appendFile, hGetLine)
+import System.IO hiding (putStr, putStrLn, hPutStr, hPutStrLn, writeFile, hGetContents, interact, readFile, getContents, getLine, appendFile, hGetLine, readFile')
 import Text.Show (Show)
 import Data.Text.IO
 import qualified Text.Show as Show
@@ -212,3 +214,14 @@ undefined = Err.error "undefined"
 impossible :: HasCallStack => a
 impossible = Err.error "impossible"
 
+--------------------------------------------------------------------------------
+-- Errors
+--------------------------------------------------------------------------------
+
+infixl 7 <+?>
+(<+?>) :: Doc ann -> Maybe (Doc ann) -> Doc ann
+(<+?>) a = maybe a (a <+>)
+
+infixl 7 <?>
+(<?>) :: Semigroup m => m -> Maybe m -> m
+(<?>) a = maybe a (a <>)

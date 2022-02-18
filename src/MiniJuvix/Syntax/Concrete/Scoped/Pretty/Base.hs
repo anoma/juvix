@@ -33,14 +33,6 @@ class PrettyCode a where
 runPrettyCode :: PrettyCode c => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
-infixl 7 <+?>
-(<+?>) :: Doc ann -> Maybe (Doc ann) -> Doc ann
-(<+?>) a = maybe a (a <+>)
-
-infixl 7 <?>
-(<?>) :: Doc ann -> Maybe (Doc ann) -> Doc ann
-(<?>) a = maybe a (a <>)
-
 keyword :: Text -> Doc Ann
 keyword = annotate AnnKeyword . pretty
 
