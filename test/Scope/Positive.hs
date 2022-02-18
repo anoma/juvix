@@ -55,5 +55,7 @@ tests = [
   PosTest "Inductive"
      "." "Inductive.mjuvix",
   PosTest "Imports and qualified names"
-     "Imports" "A.mjuvix"
+     "Imports" "A.mjuvix",
+  PosTest "Data.List and friends from the stdlib"
+     "StdlibList" "Data/List.mjuvix"
  ]
