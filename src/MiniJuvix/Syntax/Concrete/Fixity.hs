@@ -1,13 +1,13 @@
-
 module MiniJuvix.Syntax.Concrete.Fixity where
 
+import Language.Haskell.TH.Syntax (Lift)
 import MiniJuvix.Prelude
 
 data Precedence =
   PrecMinusOmega
   | PrecNat Natural
   | PrecOmega
-  deriving stock (Show, Eq, Data)
+  deriving stock (Show, Eq, Lift)
 
 instance Ord Precedence where
   compare a b = case (a, b) of
@@ -21,10 +21,10 @@ instance Ord Precedence where
 
 
 data UnaryAssoc = AssocPostfix
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord, Lift)
 
 data BinaryAssoc = AssocNone | AssocLeft | AssocRight
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord, Lift)
 
 data OperatorArity
   = Unary
@@ -33,10 +33,10 @@ data OperatorArity
   | Binary
       { binaryAssoc :: BinaryAssoc
       }
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord, Lift)
 
 data Fixity = Fixity
   { fixityPrecedence :: Precedence,
     fixityArity :: OperatorArity
   }
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord, Lift)

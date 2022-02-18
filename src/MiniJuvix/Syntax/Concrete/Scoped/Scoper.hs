@@ -17,10 +17,7 @@ import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Syntax.Concrete.Scoped.Scope
 import MiniJuvix.Syntax.Concrete.Scoped.Error
 import MiniJuvix.Prelude
-import Data.Generics.Uniplate.Data
 import qualified Data.List.NonEmpty as NonEmpty
-import MiniJuvix.Syntax.Concrete.Scoped.Name (WhyInScope(BecauseDefined))
-import Test.Tasty.Patterns.Parser (ParseResult(Ambiguous))
 
 --------------------------------------------------------------------------------
 
@@ -71,7 +68,7 @@ freshSymbol _nameKind _nameConcrete = do
   _nameId <- freshNameId
   _nameDefinedIn <- gets _scopePath
   let _nameDefined = getLoc _nameConcrete
-      _nameWhyInScope = BecauseDefined
+      _nameWhyInScope = S.BecauseDefined
       _namePublicAnn = NoPublic
   _nameFixity <- getFixity
   return S.Name' {..}
@@ -980,16 +977,21 @@ checkStatement s = case s of
 -------------------------------------------------------------------------------
 makeExpressionTable2 ::
   ExpressionAtoms 'Scoped -> [[P.Operator Parse Expression]]
-makeExpressionTable2 atoms = [appOp] : symbolTable ++ [[functionOp]]
+makeExpressionTable2 (ExpressionAtoms atoms) = [appOp] : operators ++ [[functionOp]]
   where
-  symbolTable = mkSymbolTable names
+  operators = mkSymbolTable names
   names :: [S.Name]
-  names = [ s | s@S.Name' {} <- universeBi atoms ]
-  mkSymbolTable :: [S.Name] -> [[P.Operator Parse Expression]]
-  mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe unqualifiedSymbolOp
+  names = mapMaybe getName (toList atoms)
     where
-      unqualifiedSymbolOp :: S.Name -> Maybe (Precedence, P.Operator Parse Expression)
-      unqualifiedSymbolOp S.Name' {..}
+      getName :: ExpressionAtom 'Scoped -> Maybe S.Name
+      getName a = case a of
+        AtomIdentifier nm -> Just nm
+        _ -> Nothing
+  mkSymbolTable :: [S.Name] -> [[P.Operator Parse Expression]]
+  mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe mkOperator
+    where
+      mkOperator :: S.Name -> Maybe (Precedence, P.Operator Parse Expression)
+      mkOperator S.Name' {..}
         | S.SomeFixity Fixity {..} <- _nameFixity = Just $
           case fixityArity of
             Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
@@ -1162,8 +1164,15 @@ makePatternTable ::
 makePatternTable atom = [appOp] : operators
   where
     operators = mkSymbolTable names
-    names = [ s | s@S.Name' {} <- universeBi atom ]
-    -- TODO think what to do with qualified symbols
+    names :: [S.Name]
+    names = case atom of
+      PatternAtomParens (PatternAtoms atoms) -> mapMaybe getName (toList atoms)
+      _ -> []
+      where
+        getName :: PatternAtom 'Scoped -> Maybe S.Name
+        getName a = case a of
+          PatternAtomName nm -> Just nm
+          _ -> Nothing
     mkSymbolTable :: [S.Name] -> [[P.Operator ParsePat Pattern]]
     mkSymbolTable = map (map snd) . groupSortOn fst . mapMaybe unqualifiedSymbolOp
       where

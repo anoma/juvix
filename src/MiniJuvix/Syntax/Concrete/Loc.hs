@@ -5,7 +5,7 @@ import MiniJuvix.Prelude
 import Prettyprinter
 
 newtype Pos = Pos Word64
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord)
 
 instance Semigroup Pos where
   Pos x <> Pos y = Pos (x + y)
@@ -19,7 +19,7 @@ data FileLoc = FileLoc {
     -- | Column number
     _locCol :: !Pos
   }
-  deriving stock (Show, Eq, Data)
+  deriving stock (Show, Eq)
 
 instance Ord FileLoc where
   compare (FileLoc l c) (FileLoc l' c') = compare (l, c) (l', c')
@@ -30,7 +30,7 @@ data Loc = Loc
     -- | Position within the file
     _locFileLoc :: !FileLoc
   }
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord)
 
 -- | Inclusive interval
 data Interval = Interval {
@@ -38,7 +38,7 @@ data Interval = Interval {
   _intStart :: FileLoc,
   _intEnd :: FileLoc
   }
-  deriving stock (Show, Ord, Eq, Data)
+  deriving stock (Show, Ord, Eq)
 
 class HasLoc t where
   getLoc :: t -> Interval

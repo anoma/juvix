@@ -1,4 +1,3 @@
-
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -22,13 +21,13 @@ import qualified Data.Kind as GHC
 --------------------------------------------------------------------------------
 
 newtype NameId = NameId Word64
-  deriving stock (Show, Eq, Ord, Generic, Data)
+  deriving stock (Show, Eq, Ord, Generic)
 
 data AbsModulePath = AbsModulePath
   { absTopModulePath :: C.TopModulePath,
     absLocalPath :: [C.Symbol]
   }
-  deriving stock (Show, Eq, Generic, Data)
+  deriving stock (Show, Eq, Generic)
 
 topModulePathToAbsPath :: C.TopModulePath -> AbsModulePath
 topModulePathToAbsPath p = AbsModulePath p []
@@ -61,7 +60,7 @@ instance Hashable NameId
 data NameFixity
   = NoFixity
   | SomeFixity C.Fixity
-  deriving stock (Show, Eq, Data)
+  deriving stock (Show, Eq)
 
 data NameInfo = NameIndo {
 
@@ -77,7 +76,7 @@ data WhyInScope =
   | BecauseImportedOpened
   -- | Defined in this module.
   | BecauseDefined
-  deriving stock (Show, Data)
+  deriving stock (Show)
 
 type Name = Name' C.Name
 
@@ -98,7 +97,7 @@ data Name' n = Name'
     _nameWhyInScope :: WhyInScope,
     _namePublicAnn :: PublicAnn
   }
-  deriving stock (Show, Data)
+  deriving stock (Show)
 makeLenses ''Name'
 
 instance HasLoc n => HasLoc (Name' n) where

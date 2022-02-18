@@ -43,7 +43,6 @@ dependencies:
 - template-haskell == 2.17.*
 - text == 1.2.*
 - th-utilities == 0.2.*
-- uniplate
 - unordered-containers == 0.2.*
 
 # the tasty dependencies are here to avoid having to recompile minijuvix
@@ -62,7 +61,6 @@ ghc-options:
 
 default-extensions:
 - DataKinds
-- DeriveDataTypeable
 - DeriveLift
 - DerivingStrategies
 - FlexibleContexts

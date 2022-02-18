@@ -13,7 +13,7 @@ data Symbol = Symbol {
   _symbolText :: Text,
   _symbolLoc :: Interval
   }
-  deriving stock (Show, Data)
+  deriving stock (Show)
 
 instance Eq Symbol where
   (==) = (==) `on` _symbolText
@@ -30,7 +30,7 @@ instance Hashable Symbol where
 data Name
   = NameQualified QualifiedName
   | NameUnqualified Symbol
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord)
 
 instance HasLoc Name where
   getLoc n = case n of
@@ -40,13 +40,13 @@ instance HasLoc Name where
 newtype Path = Path
   { pathParts :: NonEmpty Symbol
   }
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord)
 
 data QualifiedName = QualifiedName
   { _qualifiedPath :: Path,
     _qualifiedSymbol :: Symbol
   }
-  deriving stock (Show, Eq, Ord, Generic, Data)
+  deriving stock (Show, Eq, Ord, Generic)
 
 instance HasLoc QualifiedName where
   getLoc QualifiedName {..} =
@@ -66,7 +66,7 @@ data TopModulePath = TopModulePath
   { modulePathDir :: [Symbol],
     modulePathName :: Symbol
   }
-  deriving stock (Show, Eq, Ord, Generic, Data)
+  deriving stock (Show, Eq, Ord, Generic)
 
 instance HasLoc TopModulePath where
   getLoc TopModulePath {..} =

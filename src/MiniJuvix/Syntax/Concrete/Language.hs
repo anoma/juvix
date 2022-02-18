@@ -1,4 +1,3 @@
-
 {-# LANGUAGE UndecidableInstances #-}
 
 module MiniJuvix.Syntax.Concrete.Language
@@ -140,7 +139,7 @@ data Usage
   = UsageNone
   | UsageOnce
   | UsageOmega
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord)
 
 -------------------------------------------------------------------------------
 -- Type signature declaration
@@ -156,8 +155,6 @@ deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (
 deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (TypeSignature s)
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (TypeSignature s)
-
-deriving stock instance (Data (ExpressionType s), Data (SymbolType s), Typeable s) => Data (TypeSignature s)
 
 -------------------------------------------------------------------------------
 -- Axioms
@@ -227,14 +224,14 @@ data PatternInfixApp = PatternInfixApp
     patInfixConstructor :: NameType 'Scoped,
     patInfixRight :: Pattern
   }
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord)
 
 data PatternPostfixApp = PatternPostfixApp
   {
     patPostfixParameter :: Pattern,
     patPostfixConstructor :: NameType 'Scoped
   }
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord)
 
 data Pattern
   = PatternVariable (SymbolType 'Scoped)
@@ -244,7 +241,7 @@ data Pattern
   | PatternPostfixApplication PatternPostfixApp
   | PatternWildcard
   | PatternEmpty
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord)
 
 --------------------------------------------------------------------------------
 -- Pattern section
@@ -277,14 +274,6 @@ deriving stock instance
   ) =>
   Ord (PatternAtom s)
 
-deriving stock instance
-  ( Data (ExpressionType s),
-    Data (NameType s),
-    Data (PatternType s),
-    Typeable s
-  ) =>
-  Data (PatternAtom s)
-
 newtype PatternAtoms (s :: Stage)
   = PatternAtoms (NonEmpty (PatternAtom s))
 
@@ -308,14 +297,6 @@ deriving stock instance
     Ord (PatternType s)
   ) =>
   Ord (PatternAtoms s)
-
-deriving stock instance
-  ( Data (ExpressionType s),
-    Data (NameType s),
-    Data (PatternType s),
-    Typeable s
-  ) =>
-  Data (PatternAtoms s)
 
 --------------------------------------------------------------------------------
 -- Function binding declaration
@@ -353,15 +334,6 @@ deriving stock instance
     Ord (ExpressionType s)
   ) =>
   Ord (FunctionClause s)
-
-deriving stock instance
-  ( Data (PatternType s),
-    Data (NameType s),
-    Data (SymbolType s),
-    Data (ExpressionType s),
-    Typeable s
-  ) =>
-  Data (FunctionClause s)
 
 --------------------------------------------------------------------------------
 -- Module declaration
@@ -427,7 +399,7 @@ deriving stock instance
 data UsingHiding
   = Using (NonEmpty Symbol)
   | Hiding (NonEmpty Symbol)
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord)
 
 data OpenModule (s :: Stage) = OpenModule
   { openModuleName :: NameType s,
@@ -443,7 +415,6 @@ deriving stock instance
     Eq (ExpressionType s)
   ) =>
   Eq (OpenModule s)
-
 deriving stock instance
   (
     Ord (NameType s),
@@ -452,17 +423,6 @@ deriving stock instance
     Ord (ExpressionType s)
   ) =>
   Ord (OpenModule s)
-
-deriving stock instance
-  (
-    Data (NameType s),
-    Data (SymbolType s),
-    Data (PatternType s),
-    Data (ExpressionType s),
-    Typeable s
-  ) =>
-  Data (OpenModule s)
-
 deriving stock instance
   (
     Show (NameType s),
@@ -485,7 +445,7 @@ data Expression
   | ExpressionLetBlock (LetBlock 'Scoped)
   | ExpressionUniverse Universe
   | ExpressionFunction (Function 'Scoped)
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord)
 
 --------------------------------------------------------------------------------
 -- Expression section
@@ -526,15 +486,6 @@ deriving stock instance
   ) =>
   Ord (ExpressionAtom s)
 
-deriving stock instance
-  ( Data (ExpressionType s),
-    Data (NameType s),
-    Data (SymbolType s),
-    Data (PatternType s),
-    Typeable s
-  ) =>
-  Data (ExpressionAtom s)
-
 -- | Expressions without application
 newtype ExpressionAtoms (s :: Stage)
   = ExpressionAtoms (NonEmpty (ExpressionAtom s))
@@ -563,16 +514,6 @@ deriving stock instance
   ) =>
   Ord (ExpressionAtoms s)
 
-deriving stock instance
-  ( Data (ExpressionType s),
-    Data (NameType s),
-    Data (SymbolType s),
-    Data (PatternType s),
-   Typeable s
-  ) =>
-  Data (ExpressionAtoms s)
-
-
 --------------------------------------------------------------------------------
 -- Match expression
 --------------------------------------------------------------------------------
@@ -600,14 +541,6 @@ deriving stock instance
   ) =>
   Ord (MatchAlt s)
 
-deriving stock instance
-  ( Data (ExpressionType s),
-    Data (PatternType s),
-    Typeable s
-  ) =>
-  Data (MatchAlt s)
-
-
 data Match (s :: Stage) = Match
   { matchExpression :: ExpressionType s,
     matchAlts :: [MatchAlt s]
@@ -631,14 +564,6 @@ deriving stock instance
   ) =>
   Ord (Match s)
 
-deriving stock instance
-  ( Data (ExpressionType s),
-    Data (PatternType s),
-    Typeable s
-  ) =>
-  Data (Match s)
-
-
 --------------------------------------------------------------------------------
 -- Universe expression
 --------------------------------------------------------------------------------
@@ -646,7 +571,7 @@ deriving stock instance
 newtype Universe = Universe
   { universeLevel :: Maybe Natural
   }
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord)
 
 --------------------------------------------------------------------------------
 -- Function expression
@@ -664,8 +589,6 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Functi
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (FunctionParameter s)
 
-deriving stock instance (Data (ExpressionType s), Data (SymbolType s), Typeable s) => Data (FunctionParameter s)
-
 data Function (s :: Stage) = Function
   { funParameter :: FunctionParameter s,
     funReturn :: ExpressionType s
@@ -676,8 +599,6 @@ deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (
 deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Function s)
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Function s)
-
-deriving stock instance (Data (ExpressionType s), Data (SymbolType s), Typeable s) => Data (Function s)
 
 --------------------------------------------------------------------------------
 -- Where block clauses
@@ -711,15 +632,6 @@ deriving stock instance
   ) =>
   Ord (WhereBlock s)
 
-deriving stock instance
-  ( Data (PatternType s),
-    Data (NameType s),
-    Data (SymbolType s),
-    Data (ExpressionType s),
-    Typeable s
-  ) =>
-  Data (WhereBlock s)
-
 data WhereClause (s :: Stage)
   = WhereOpenModule (OpenModule s)
   | WhereTypeSig (TypeSignature s)
@@ -749,15 +661,6 @@ deriving stock instance
   ) =>
   Ord (WhereClause s)
 
-deriving stock instance
-  ( Data (PatternType s),
-    Data (NameType s),
-    Data (SymbolType s),
-    Data (ExpressionType s),
-    Typeable s
-  ) =>
-  Data (WhereClause s)
-
 --------------------------------------------------------------------------------
 -- Lambda expression
 --------------------------------------------------------------------------------
@@ -786,13 +689,6 @@ deriving stock instance
   ) =>
   Ord (Lambda s)
 
-deriving stock instance
-  ( Data (PatternType s),
-    Data (ExpressionType s),
-    Typeable s
-  ) =>
-  Data (Lambda s)
-
 data LambdaClause (s :: Stage) = LambdaClause
   { lambdaParameters :: NonEmpty (PatternType s),
     lambdaBody :: ExpressionType s
@@ -816,13 +712,6 @@ deriving stock instance
   ) =>
   Ord (LambdaClause s)
 
-deriving stock instance
-  ( Data (PatternType s),
-    Data (ExpressionType s),
-    Typeable s
-  ) =>
-  Data (LambdaClause s)
-
 --------------------------------------------------------------------------------
 -- Application expression
 --------------------------------------------------------------------------------
@@ -831,21 +720,21 @@ data Application = Application
   { applicationFunction :: ExpressionType 'Scoped,
     applicationParameter :: ExpressionType 'Scoped
   }
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord)
 
 data InfixApplication = InfixApplication
   { infixAppLeft :: ExpressionType 'Scoped,
     infixAppOperator :: NameType 'Scoped,
     infixAppRight :: ExpressionType 'Scoped
   }
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord)
 
 data PostfixApplication = PostfixApplication
   {
     postfixAppParameter :: ExpressionType 'Scoped,
     postfixAppOperator :: NameType 'Scoped
   }
-  deriving stock (Show, Eq, Ord, Data)
+  deriving stock (Show, Eq, Ord)
 
 --------------------------------------------------------------------------------
 -- Let block expression
@@ -880,15 +769,6 @@ deriving stock instance
   ) =>
   Ord (LetBlock s)
 
-deriving stock instance
-  ( Data (PatternType s),
-    Data (NameType s),
-    Data (SymbolType s),
-    Data (ExpressionType s),
-    Typeable s
-  ) =>
-  Data (LetBlock s)
-
 data LetClause (s :: Stage)
   = LetTypeSig (TypeSignature s)
   | LetFunClause (FunctionClause s)
@@ -916,15 +796,6 @@ deriving stock instance
     Ord (ExpressionType s)
   ) =>
   Ord (LetClause s)
-
-deriving stock instance
-  ( Data (PatternType s),
-    Data (NameType s),
-    Data (SymbolType s),
-    Data (ExpressionType s),
-    Typeable s
-  ) =>
-  Data (LetClause s)
 
 --------------------------------------------------------------------------------
 -- Debugging statements

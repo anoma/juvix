@@ -19,7 +19,7 @@ data NameKind
     KNameLocalModule
   | -- | An top module name.
     KNameTopModule
-  deriving stock (Show, Eq, Data)
+  deriving stock (Show, Eq)
 
 $(genSingletons [''NameKind])
 
