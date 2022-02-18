@@ -12,21 +12,29 @@ import qualified Data.Stream as Stream
 import Lens.Micro.Platform
 import qualified MiniJuvix.Syntax.Concrete.Base as P
 import MiniJuvix.Syntax.Concrete.Language
-import MiniJuvix.Syntax.Concrete.Parser (runModuleParserIO)
+import MiniJuvix.Syntax.Concrete.Parser (runModuleParser)
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Syntax.Concrete.Scoped.Scope
 import MiniJuvix.Syntax.Concrete.Scoped.Error
 import MiniJuvix.Prelude
 import qualified Data.List.NonEmpty as NonEmpty
+import MiniJuvix.Syntax.Concrete.Scoped.Scoper.Files
 
 --------------------------------------------------------------------------------
 
-scopeCheck1 :: FilePath -> Module 'Parsed 'ModuleTop -> IO (Either ScopeError (Module 'Scoped 'ModuleTop))
+scopeCheck1IO :: FilePath -> Module 'Parsed 'ModuleTop -> IO (Either ScopeError (Module 'Scoped 'ModuleTop))
+scopeCheck1IO root = runM . runFilesIO . scopeCheck1 root
+
+scopeCheck1Pure :: HashMap FilePath Text -> FilePath -> Module 'Parsed 'ModuleTop -> IO (Either ScopeError (Module 'Scoped 'ModuleTop))
+scopeCheck1Pure fs root = runM . runFilesPure fs . scopeCheck1 root
+
+scopeCheck1 :: Member Files r =>
+  FilePath -> Module 'Parsed 'ModuleTop -> Sem r (Either ScopeError (Module 'Scoped 'ModuleTop))
 scopeCheck1 root m = fmap head <$> scopeCheck root (pure m)
 
-scopeCheck :: FilePath -> NonEmpty (Module 'Parsed 'ModuleTop) -> IO (Either ScopeError (NonEmpty (Module 'Scoped 'ModuleTop)))
+scopeCheck :: Member Files r =>
+    FilePath -> NonEmpty (Module 'Parsed 'ModuleTop) -> Sem r (Either ScopeError (NonEmpty (Module 'Scoped 'ModuleTop)))
 scopeCheck root modules =
-  runM $
     runError $
       runReader scopeParameters $
         evalState iniScoperState $
@@ -165,7 +173,7 @@ bindConstructorSymbol = bindSymbolOf S.KNameConstructor
 
 checkImport ::
   forall r.
-  Members '[Error ScopeError, State Scope, Reader ScopeParameters, Embed IO, State ScoperState] r =>
+  Members '[Error ScopeError, State Scope, Reader ScopeParameters, Files, State ScoperState] r =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
 checkImport import_@(Import path) = do
@@ -334,13 +342,13 @@ exportScope Scope {..} = do
                        (MultipleExportConflict _scopePath  s (e :| es)))
 
 readParseModule ::
-  Members '[Error ScopeError, Reader ScopeParameters, Embed IO] r =>
+  Members '[Error ScopeError, Reader ScopeParameters, Files] r =>
   TopModulePath ->
   Sem r (Module 'Parsed 'ModuleTop)
 readParseModule mp = do
   path <- modulePathToFilePath mp
-  res <- embed (runModuleParserIO path)
-  case res of
+  txt <- readFile' path
+  case runModuleParser path txt of
     Left err -> throw (ErrParser (MegaParsecError err))
     Right r -> return r
 
@@ -433,14 +441,14 @@ checkInductiveDef InductiveDef {..} = do
 
 checkTopModule_ ::
   forall r.
-  Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State ScoperState] r =>
+  Members '[Error ScopeError, Reader ScopeParameters, Files, State ScoperState] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (Module 'Scoped 'ModuleTop)
 checkTopModule_ = fmap _moduleEntryScoped . checkTopModule
 
 checkTopModule ::
   forall r.
-  Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State ScoperState] r =>
+  Members '[Error ScopeError, Reader ScopeParameters, Files, State ScoperState] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (ModuleEntry' 'ModuleTop)
 checkTopModule m@(Module path params body) = do
@@ -482,7 +490,7 @@ withScope ma = do
   return x
 
 checkModuleBody :: forall r.
-  Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScoperState, Embed IO, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars] r =>
   [Statement 'Parsed] ->
   Sem r (ExportInfo, [Statement 'Scoped])
 checkModuleBody body = do
@@ -493,7 +501,7 @@ checkModuleBody body = do
 
 checkLocalModule ::
   forall r.
-  Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScoperState, Embed IO, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars] r =>
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
@@ -957,7 +965,7 @@ checkParsePatternAtom ::
 checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
 
 checkStatement ::
-  Members '[Error ScopeError, Reader ScopeParameters, Embed IO, State Scope, State ScoperState, Reader LocalVars] r =>
+  Members '[Error ScopeError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars] r =>
   Statement 'Parsed ->
   Sem r (Statement 'Scoped)
 checkStatement s = case s of

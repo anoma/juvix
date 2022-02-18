@@ -2,6 +2,9 @@ module Scope.Positive where
 
 import Base
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text as M
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
+import MiniJuvix.Syntax.Concrete.Scoped.Utils
+import qualified Data.HashMap.Strict as HashMap
 
 
 data PosTest = PosTest {
@@ -25,6 +28,11 @@ testDescr PosTest {..} = TestDescr {
     step "Scope"
     -- do something
     s <- scopeModuleIO p
+    let
+      fs :: HashMap FilePath Text
+      fs = HashMap.fromList
+         [ (getModuleFilePath m , M.renderPrettyCodeDefault m)
+           | m <- toList (getAllModules s) ]
 
     step "Pretty"
     let txt = M.renderPrettyCodeDefault s
@@ -34,7 +42,7 @@ testDescr PosTest {..} = TestDescr {
     assertEqual "check: parse. pretty . scope . parse = id" p p'
 
     step "Scope again"
-    s' <- scopeModuleIO p
+    s' <- fromRightIO' printErrorAnsi $ M.scopeCheck1Pure fs "." p'
     assertEqual "check: scope . parse . pretty . scope . parse = id" s s'
   }
 
@@ -44,6 +52,8 @@ allTests = testGroup "Scope positive tests"
 
 tests :: [PosTest]
 tests = [
-  PosTest "Inductive" "." "Inductive.mjuvix"
-
+  PosTest "Inductive"
+     "." "Inductive.mjuvix",
+  PosTest "Imports and qualified names"
+     "Imports" "A.mjuvix"
  ]

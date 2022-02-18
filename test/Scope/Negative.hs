@@ -20,7 +20,7 @@ testDescr NegTest {..} = TestDescr {
   testName = name,
   testRoot = root </> relDir,
   testAssertion = Single $ do
-      p <- parseModuleIO file >>= M.scopeCheck1 "."
+      p <- parseModuleIO file >>= M.scopeCheck1IO "."
       case p of
         Left err -> whenJust (checkErr err) assertFailure
         Right _ -> assertFailure "The scope checker did not find an error."

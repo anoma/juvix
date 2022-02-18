@@ -20,3 +20,6 @@ getAllModules m =
     <> concatMap (allImports . mkScopedModule ) [ l | StatementModule l <- moduleBody w]
   singl :: Module 'Scoped 'ModuleTop -> (S.NameId, Module 'Scoped 'ModuleTop)
   singl n = (S._nameId (modulePath n), n)
+
+getModuleFilePath :: Module 'Scoped 'ModuleTop -> FilePath
+getModuleFilePath = _intFile . getLoc . modulePath

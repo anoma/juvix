@@ -28,7 +28,7 @@ fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
 fromRightIO pp = fromRightIO' (putStrLn . pp)
 
 scopeModuleIO :: M.Module 'M.Parsed 'M.ModuleTop -> IO (M.Module 'M.Scoped 'M.ModuleTop)
-scopeModuleIO = fromRightIO' printErrorAnsi . M.scopeCheck1 "."
+scopeModuleIO = fromRightIO' printErrorAnsi . M.scopeCheck1IO "."
 
 data AssertionDescr =
   Single Assertion
