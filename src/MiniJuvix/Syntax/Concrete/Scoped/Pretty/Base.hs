@@ -481,7 +481,7 @@ ppBlock items = mapM (fmap endSemicolon . ppCode) items >>= bracesIndent . vsep 
 
 instance SingI s => PrettyCode (MatchAlt s) where
   ppCode MatchAlt {..} = do
-    matchAltPattern' <- ppPattern matchAltPattern
+    matchAltPattern' <- ppPatternAtom matchAltPattern
     matchAltBody' <- ppExpression matchAltBody
     return $ matchAltPattern' <+> kwMapsto <+> matchAltBody'
 
@@ -633,8 +633,6 @@ instance PrettyCode PostfixApplication where
 
 instance PrettyCode Application where
   ppCode (Application l r) = do
-    -- Note: parentheses on the left of an application are never necessary,
-    -- but I prefer homogeneous code.
     l' <- ppLeftExpression appFixity l
     r' <- ppRightExpression appFixity r
     return $ l' <+> r'
@@ -776,8 +774,8 @@ ppLeftExpression = ppLRExpression isLeftAssoc
 ppLRExpression
   :: (HasFixity a, PrettyCode a, Member (Reader Options) r) =>
      (Fixity -> Bool) -> Fixity -> a -> Sem r (Doc Ann)
-ppLRExpression associates atom e =
-  parensCond (atomParens associates (getFixity e) atom)
+ppLRExpression associates fixlr e =
+  parensCond (atomParens associates (getFixity e) fixlr)
       <$> ppCode e
 
 instance SingI s => PrettyCode (ExpressionAtom s) where
