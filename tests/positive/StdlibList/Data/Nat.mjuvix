@@ -12,6 +12,6 @@ module Data.Nat;
   infixl 7 *;
   * : ℕ → ℕ → ℕ;
   * zero b ≔ zero;
-  * (suc a) b ≔ b + (a * b);
+  * (suc a) b ≔ b + a * b;
 
 end;

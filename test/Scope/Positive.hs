@@ -39,11 +39,11 @@ testDescr PosTest {..} = TestDescr {
 
     step "Parse again"
     p' <- parseTextModuleIO txt
-    assertEqual "check: parse. pretty . scope . parse = id" p p'
+    assertBool "check: parse. pretty . scope . parse = id" (p == p')
 
     step "Scope again"
     s' <- fromRightIO' printErrorAnsi $ M.scopeCheck1Pure fs "." p'
-    assertEqual "check: scope . parse . pretty . scope . parse = id" s s'
+    assertBool "check: scope . parse . pretty . scope . parse = id" (s == s')
   }
 
 allTests :: TestTree
@@ -53,9 +53,18 @@ allTests = testGroup "Scope positive tests"
 tests :: [PosTest]
 tests = [
   PosTest "Inductive"
-     "." "Inductive.mjuvix",
-  PosTest "Imports and qualified names"
-     "Imports" "A.mjuvix",
-  PosTest "Data.List and friends from the stdlib"
+     "." "Inductive.mjuvix"
+  , PosTest "Imports and qualified names"
+     "Imports" "A.mjuvix"
+  , PosTest "Data.Bool from the stdlib"
+     "StdlibList" "Data/Bool.mjuvix"
+  , PosTest "Data.Nat from the stdlib"
+     "StdlibList" "Data/Nat.mjuvix"
+  , PosTest "Data.Ord from the stdlib"
+     "StdlibList" "Data/Ord.mjuvix"
+  , PosTest "Data.Product from the stdlib"
+     "StdlibList" "Data/Product.mjuvix"
+  , PosTest "Data.List and friends from the stdlib"
      "StdlibList" "Data/List.mjuvix"
+
  ]

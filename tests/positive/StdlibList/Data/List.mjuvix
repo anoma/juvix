@@ -18,7 +18,7 @@ foldl a b f z (nil _) ≔ z ;
 foldl a b f z (∷ _ h hs) ≔ foldl a b f (f z h) hs;
 
 map : (a : Type) → (b : Type) → (a → b) → List a → List b;
-map _ b f (nil _) ≔ (nil b);
+map _ b f (nil _) ≔ nil b;
 map a b f (∷ _ h hs) ≔ ∷ a (f h) (map a b f hs);
 
 filter : (a : Type) → (a → Bool) → List a → List a;
@@ -44,12 +44,12 @@ reverse a l ≔ rev l (nil a)
   };
 
 replicate : (a : Type) → ℕ → a → List a;
-replicate a zero _ ≔ (nil a);
+replicate a zero _ ≔ nil a;
 replicate a (suc n) x ≔ ∷ a x (replicate a n x);
 
 take : (a : Type) → ℕ → List a → List a;
 take a (suc n) (∷ _ x xs) ≔ ∷ a x (take a n xs);
-take a _ _ ≔ (nil a);
+take a _ _ ≔ nil a;
 
 import Data.Ord;
 open Data.Ord;
@@ -79,7 +79,7 @@ merge _ _ xs (nil _) ≔ xs;
 ++ a (∷ _ x xs) ys ≔ ∷ a x (++ a xs ys);
 
 quickSort : (a : Type) → (a → a → Ordering) → List a → List a;
-quickSort a _ (nil _) ≔ (nil a);
+quickSort a _ (nil _) ≔ nil a;
 quickSort a _ (∷ _ x (nil _)) ≔ ∷ a x (nil a);
 quickSort a cmp (∷ _ x ys) ≔
   ++ a (quickSort a (filter a ltx) ys)
