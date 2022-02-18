@@ -3,7 +3,7 @@
 module Scope.Negative (allTests) where
 
 import Base
-import MiniJuvix.Syntax.Concrete.Scoped.Error (ScopeError(..), AmbiguousSym (AmbiguousSym))
+import MiniJuvix.Syntax.Concrete.Scoped.Error
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
 
 type FailMsg = String
@@ -15,19 +15,20 @@ data NegTest = NegTest {
   checkErr :: ScopeError -> Maybe FailMsg
   }
 
-instance IsTest NegTest where
-  testDescr NegTest {..} = TestDescr {
-    testName = name,
-    testRoot = root </> relDir,
-    testAssertion = do
-        p <- parseModuleIO file >>= M.scopeCheck1 "."
-        case p of
-          Left err -> whenJust (checkErr err) assertFailure
-          Right _ -> assertFailure "The scope checker did not find an error."
-    }
+testDescr :: NegTest -> TestDescr
+testDescr NegTest {..} = TestDescr {
+  testName = name,
+  testRoot = root </> relDir,
+  testAssertion = Single $ do
+      p <- parseModuleIO file >>= M.scopeCheck1 "."
+      case p of
+        Left err -> whenJust (checkErr err) assertFailure
+        Right _ -> assertFailure "The scope checker did not find an error."
+  }
 
-allTests :: [ATest]
-allTests = map ATest tests
+allTests :: TestTree
+allTests = testGroup "Scope negative tests"
+  (map (mkTest . testDescr) tests)
 
 root :: FilePath
 root = "tests/negative"
@@ -117,5 +118,4 @@ tests = [
       case er of
         ErrAmbiguousSym {} -> Nothing
         _ -> wrongError
-
   ]

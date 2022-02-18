@@ -2,15 +2,13 @@ module Main (main) where
 
 import Base
 
-import qualified Scope as Scope
+import qualified Scope
 
 negatives :: TestTree
-negatives = testGroup "Negative tests" $
-  map aTest $ concat
+negatives = testGroup "MiniJuvix tests" $
   [
   Scope.allTests
-
- ]
+  ]
 
 allTests :: TestTree
 allTests = negatives

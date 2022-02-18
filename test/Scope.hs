@@ -1,5 +1,10 @@
 module Scope (
-  module Scope.Negative,
+  allTests
              ) where
 
-import Scope.Negative
+import Base
+import qualified Scope.Negative as N
+import qualified Scope.Positive as P
+
+allTests :: TestTree
+allTests = testGroup "Scope tests" [P.allTests, N.allTests]

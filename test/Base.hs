@@ -15,6 +15,9 @@ import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
 parseModuleIO :: FilePath -> IO (M.Module 'M.Parsed 'M.ModuleTop)
 parseModuleIO = fromRightIO id . M.runModuleParserIO
 
+parseTextModuleIO :: Text -> IO (M.Module 'M.Parsed 'M.ModuleTop)
+parseTextModuleIO = fromRightIO id . return . M.runModuleParser "literal string"
+
 fromRightIO' :: (e -> IO ()) -> IO (Either e r) -> IO r
 fromRightIO' pp = do
   eitherM ifLeft return
@@ -27,22 +30,18 @@ fromRightIO pp = fromRightIO' (putStrLn . pp)
 scopeModuleIO :: M.Module 'M.Parsed 'M.ModuleTop -> IO (M.Module 'M.Scoped 'M.ModuleTop)
 scopeModuleIO = fromRightIO' printErrorAnsi . M.scopeCheck1 "."
 
+data AssertionDescr =
+  Single Assertion
+  | Steps ((String -> IO ()) -> Assertion)
+
 data TestDescr = TestDescr {
   testName :: String,
   testRoot :: FilePath,
   -- | relative to root
-  testAssertion :: Assertion
+  testAssertion :: AssertionDescr
   }
 
-class IsTest t where
-  testDescr :: t -> TestDescr
-
-data ATest = forall t. IsTest t => ATest t
-
-aTest :: ATest -> TestTree
-aTest (ATest t) = mkTest (testDescr t)
-
 mkTest :: TestDescr -> TestTree
-mkTest TestDescr {..} =
-  testCase testName $
-  withCurrentDirectory testRoot testAssertion
+mkTest TestDescr {..} = case testAssertion of
+  Single assertion -> testCase testName $ withCurrentDirectory testRoot assertion
+  Steps steps -> testCaseSteps testName (withCurrentDirectory testRoot . steps)
