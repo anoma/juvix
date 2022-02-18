@@ -75,9 +75,12 @@ instance PrettyError ImportCycle where
 instance PrettyError NotInScope where
   ppError NotInScope {..} =
     pretty loc <> line <>
-    "Symbol not in scope:" <+> highlight (ppCode _notInScopeSymbol) <> line <>
-    "Perhaps you meant:" <+> align (vsep suggestions)
+    "Symbol not in scope:" <+> highlight (ppCode _notInScopeSymbol)  <?>
+    ((line <>) <$> suggestion)
     where
+    suggestion
+       | null suggestions = Nothing
+       | otherwise = Just $ "Perhaps you meant:" <+> align (vsep suggestions)
     loc = getLoc _notInScopeSymbol
     sym = _symbolText _notInScopeSymbol
     maxDist :: Int
