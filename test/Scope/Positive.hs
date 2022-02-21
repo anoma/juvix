@@ -23,10 +23,8 @@ testDescr PosTest {..} = TestDescr {
   testAssertion = Steps $ \step -> do
     step "Parse"
     p <- parseModuleIO file
-    -- do something
 
     step "Scope"
-    -- do something
     s <- scopeModuleIO p
     let
       fs :: HashMap FilePath Text
@@ -39,11 +37,13 @@ testDescr PosTest {..} = TestDescr {
 
     step "Parse again"
     p' <- parseTextModuleIO txt
-    assertBool "check: parse. pretty . scope . parse = id" (p == p')
 
     step "Scope again"
     s' <- fromRightIO' printErrorAnsi $ M.scopeCheck1Pure fs "." p'
-    assertBool "check: scope . parse . pretty . scope . parse = id" (s == s')
+
+    step "Checks"
+    assertBool "check: scope . parse . pretty . scope . parse = scope . parse" (s == s')
+    assertBool "check: parse . pretty . scope . parse = parse" (p == p')
   }
 
 allTests :: TestTree
