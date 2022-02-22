@@ -218,6 +218,14 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Ind
 -- Pattern
 --------------------------------------------------------------------------------
 
+data PatternApp = PatternApp
+  {
+    patAppLeft :: Pattern,
+    patAppRight :: Pattern
+  }
+  deriving stock (Show, Eq, Ord)
+
+
 data PatternInfixApp = PatternInfixApp
   {
     patInfixLeft :: Pattern,
@@ -236,7 +244,7 @@ data PatternPostfixApp = PatternPostfixApp
 data Pattern
   = PatternVariable (SymbolType 'Scoped)
   | PatternConstructor (NameType 'Scoped)
-  | PatternApplication Pattern Pattern
+  | PatternApplication PatternApp
   | PatternInfixApplication PatternInfixApp
   | PatternPostfixApplication PatternPostfixApp
   | PatternWildcard

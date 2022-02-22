@@ -1215,8 +1215,10 @@ makePatternTable atom = [appOp] : operators
 
     -- Application by juxtaposition.
     appOp :: P.Operator ParsePat Pattern
-    appOp = P.InfixL (PatternApplication <$ notFollowedByInfix)
+    appOp = P.InfixL (app <$ notFollowedByInfix)
       where
+        app :: Pattern -> Pattern -> Pattern
+        app l = PatternApplication . PatternApp l
         notFollowedByInfix :: ParsePat ()
         notFollowedByInfix = P.notFollowedBy (P.token infixName mempty)
           where

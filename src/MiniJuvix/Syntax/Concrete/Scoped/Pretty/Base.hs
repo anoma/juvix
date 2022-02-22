@@ -654,7 +654,7 @@ instance PrettyCode Pattern where
   ppCode :: forall r. Members '[Reader Options] r => Pattern -> Sem r (Doc Ann)
   ppCode pat = case pat of
     PatternVariable v -> annDef v <$> ppCode v
-    PatternApplication l r -> do
+    PatternApplication (PatternApp l r) -> do
       l' <- ppLeftExpression appFixity l
       r' <- ppRightExpression appFixity r
       return $ l' <+> r'

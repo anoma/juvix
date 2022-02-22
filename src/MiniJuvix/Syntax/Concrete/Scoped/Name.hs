@@ -15,6 +15,7 @@ import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
 import MiniJuvix.Syntax.Concrete.PublicAnn
 import qualified Data.Kind as GHC
+import Prettyprinter
 
 --------------------------------------------------------------------------------
 -- Names
@@ -22,6 +23,9 @@ import qualified Data.Kind as GHC
 
 newtype NameId = NameId Word64
   deriving stock (Show, Eq, Ord, Generic)
+
+instance Pretty NameId where
+  pretty (NameId w) = pretty w
 
 data AbsModulePath = AbsModulePath
   { absTopModulePath :: C.TopModulePath,

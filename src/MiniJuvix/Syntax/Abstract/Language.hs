@@ -1,107 +1,118 @@
-module MiniJuvix.Syntax.Abstract.Language where
-
+{-# LANGUAGE TemplateHaskell #-}
+module MiniJuvix.Syntax.Abstract.Language (
+  module MiniJuvix.Syntax.Abstract.Language
+                                          ) where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Scoped.Name
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Concrete.Language (Usage)
+import qualified MiniJuvix.Syntax.Concrete.Name as C
 
-type ModuleName = NameId
-type FunctionName = NameId
-type VarName = NameId
-type ConstrName = NameId
+type TopModuleName = S.TopModulePath
+type LocalModuleName = S.Symbol
+type FunctionName = S.Symbol
+type VarName = S.Symbol
+type ConstrName = S.Symbol
+type InductiveName = S.Symbol
+type Name = S.Name
 
-data Module = Module
-  { moduleName :: ModuleName,
-    moduleBody :: [Statement]
+type TopModule = Module C.TopModulePath
+type LocalModule = Module C.Symbol
+
+data Module s = Module
+  { _moduleName :: S.Name' s,
+    _moduleBody :: [Statement]
   }
   deriving stock (Show, Eq)
 
 data Statement =
   StatementAxiom
-  | StatementInductive
+  | StatementInductive InductiveDef
   | StatementFunctionDef FunctionDef
-  | StatementModule Module
+  | StatementModule LocalModule
   deriving stock (Show, Eq)
 
 data FunctionDef = FunctionDef {
-   funDefName :: FunctionName,
-   funDefTypeSig :: Expression,
-   funDefClauses :: NonEmpty FunctionClause
+   _funDefName :: FunctionName,
+   _funDefTypeSig :: Expression,
+   _funDefClauses :: NonEmpty FunctionClause
+  }
+  deriving stock (Show, Eq)
+data FunctionClause = FunctionClause {
+    _clausePatterns :: [Pattern],
+    _clauseBody :: Expression
   }
   deriving stock (Show, Eq)
 
-data FunctionClause = FunctionClause {
-    clausePatterns :: [Pattern],
-    clauseBody :: Expression
-  }
+data Iden = 
+  IdenDefined Name
+  | IdenConstructor Name
+  | IdenVar VarName
+  | IdenInductive Name
+  | IdenAxiom Name
   deriving stock (Show, Eq)
 
 data Expression
-  = ExpressionVar VarName
-  | ExpressionConstructor ConstrName
+  = ExpressionIden Iden
   | ExpressionApplication Application
   | ExpressionUniverse Universe
   | ExpressionFunction Function
-  | ExpressionMatch Match
-  --  ExpressionLambda Lambda not supported yet
+
+  --- | ExpressionMatch Match
+  ---  ExpressionLambda Lambda not supported yet
   deriving stock (Show, Eq)
 
 data Match = Match
-  { matchExpression :: Expression,
-    matchAlts :: [MatchAlt]
+  { _matchExpression :: Expression,
+    _matchAlts :: [MatchAlt]
   }
   deriving stock (Show, Eq)
 
 
 data MatchAlt = MatchAlt
-  { matchAltPattern :: Pattern,
-    matchAltBody :: Expression
+  { _matchAltPattern :: Pattern,
+    _matchAltBody :: Expression
   }
   deriving stock (Show, Eq)
 
 newtype Universe = Universe {
-  _universeLevel :: Int
+  _universeLevel :: Maybe Natural
   }
   deriving stock (Show, Eq)
 
 data Application = Application {
-  appLeft :: Expression,
-  appRight :: Expression
+  _appLeft :: Expression,
+  _appRight :: Expression
   }
   deriving stock (Show, Eq)
 
 newtype Lambda = Lambda
-  {lambdaClauses :: [LambdaClause]}
+  {_lambdaClauses :: [LambdaClause]}
   deriving stock (Show, Eq)
 
 data LambdaClause = LambdaClause
-  { lambdaParameters :: NonEmpty Pattern,
-    lambdaBody :: Expression
+  { _lambdaParameters :: NonEmpty Pattern,
+    _lambdaBody :: Expression
   }
   deriving stock (Show, Eq)
 
-data Usage
-  = UsageNone
-  | UsageOnce
-  | UsageOmega
-  deriving stock (Show, Eq)
-
 data FunctionParameter = FunctionParameter
-  { paramName :: Maybe NameId,
-    paramUsage :: Usage,
-    paramType :: Expression
+  { _paramName :: Maybe VarName,
+    _paramUsage :: Usage,
+    _paramType :: Expression
   }
   deriving stock (Show, Eq)
 
 data Function = Function
-  { funParameter :: FunctionParameter,
-    funReturn :: Expression
+  { _funParameter :: FunctionParameter,
+    _funReturn :: Expression
   }
   deriving stock (Show, Eq)
 
 -- | Fully applied constructor in a pattern.
 data ConstructorApp = ConstructorApp {
-  constrAppConstructor :: ConstrName,
-  constrAppParameters :: [Pattern]
+  _constrAppConstructor :: Name,
+  _constrAppParameters :: [Pattern]
   }
   deriving stock (Show, Eq)
 
@@ -111,3 +122,25 @@ data Pattern
   | PatternWildcard
   | PatternEmpty
   deriving stock (Show, Eq)
+
+data InductiveDef = InductiveDef
+  { _inductiveName :: InductiveName,
+    _inductiveParameters :: [FunctionParameter],
+    _inductiveType :: Expression,
+    _inductiveConstructors :: [InductiveConstructorDef]
+  }
+  deriving stock (Show, Eq)
+
+data InductiveConstructorDef = InductiveConstructorDef
+  { _constructorName :: ConstrName,
+    _constructorType :: Expression
+  }
+  deriving stock (Show, Eq)
+
+makeLenses ''Module
+makeLenses ''FunctionParameter
+makeLenses ''Function
+makeLenses ''FunctionDef
+makeLenses ''FunctionClause
+makeLenses ''InductiveDef
+makeLenses ''InductiveConstructorDef
