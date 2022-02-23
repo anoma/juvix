@@ -11,6 +11,16 @@ newtype CallGraph = CallGraph {
   _callGraph :: HashMap A.FunctionName [Call] }
   deriving newtype (Semigroup, Monoid)
 
+data Argument = Argument {
+  _argOwnerFunction :: A.FunctionName,
+  _argIx :: Int
+  }
+
+data Rel =
+  REq
+  | RLe
+  | RNothing
+
 data Call = Call {
   _callName :: A.Name,
   _callArgs :: [A.Expression]
@@ -30,6 +40,6 @@ instance PrettyCode CallGraph where
     where
     ppEntry :: (A.FunctionName, [Call]) -> Sem r (Doc Ann)
     ppEntry (fun, calls) = do
-      fun' <- ppSCode fun
+      fun' <- annotate AnnImportant <$> ppSCode fun
       calls' <- vsep <$> mapM ppCode calls
-      return $ fun' <+> colon <+> align calls'
+      return $ fun' <+> pretty ("↝" :: Text) <+> align calls'

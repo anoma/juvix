@@ -43,8 +43,9 @@ data HtmlOptions = HtmlOptions
     _htmlTheme :: Theme
   }
 
-newtype CallGraphOptions = CallGraphOptions
-  { _graphInputFile :: FilePath
+data CallGraphOptions = CallGraphOptions
+  { _graphInputFile :: FilePath,
+    _graphShowIds :: Bool
   }
 
 parseHtml :: Parser HtmlOptions
@@ -82,6 +83,11 @@ parseCallGraph = do
       str
       ( metavar "MINIJUVIX_FILE"
           <> help "Path to a .mjuvix file"
+      )
+  _graphShowIds <-
+    switch
+      ( long "show-name-ids"
+          <> help "Show the unique number of each identifier"
       )
   pure CallGraphOptions {..}
 
@@ -195,6 +201,12 @@ mkScopePrettyOptions ScopeOptions {..} =
       _optInlineImports = _scopeInlineImports
     }
 
+mkAbstractPrettyOptions :: CallGraphOptions -> A.Options
+mkAbstractPrettyOptions CallGraphOptions {..} =
+  A.defaultOptions
+    { A._optShowNameId = _graphShowIds
+    }
+
 parseModuleIO :: FilePath -> IO (M.Module 'M.Parsed 'M.ModuleTop)
 parseModuleIO = fromRightIO id . M.runModuleParserIO
 
@@ -223,13 +235,13 @@ go c = case c of
     m <- parseModuleIO _htmlInputFile
     s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
     genHtml defaultOptions _htmlRecursive _htmlTheme s
-  CallGraph CallGraphOptions {..} -> do
+  CallGraph opts@CallGraphOptions {..} -> do
     root <- getCurrentDirectory
     m <- parseModuleIO _graphInputFile
     s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
     a <- fromRightIO' putStrLn (return $ A.translateModule s)
     let graph = A.buildCallGraph a
-    A.printPrettyCodeDefault graph
+    A.printPrettyCode (mkAbstractPrettyOptions opts) graph
 
 main :: IO ()
 main = execParser descr >>= go

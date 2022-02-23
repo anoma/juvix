@@ -4,7 +4,7 @@ module MiniJuvix.Termination.CallGraph
                                        ) where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Abstract.Language
+import MiniJuvix.Syntax.Abstract.Language.Extra
 import qualified Data.HashMap.Strict as HashMap
 import MiniJuvix.Termination.CallGraph.Types
 

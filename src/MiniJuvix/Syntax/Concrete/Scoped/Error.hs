@@ -19,6 +19,7 @@ data ScopeError
   | ErrInfixPattern InfixErrorP
   | ErrMultipleDeclarations MultipleDeclarations
   | ErrLacksTypeSig LacksTypeSig
+  | ErrLacksFunctionClause LacksFunctionClause
   | ErrImportCycle ImportCycle
   | ErrSymNotInScope NotInScope
   | ErrQualSymNotInScope QualifiedName
@@ -51,6 +52,7 @@ ppScopeError s = case s of
   ErrAmbiguousSym e -> ppError e
   ErrAmbiguousModuleSym e -> ppError e
   ErrUnusedOperatorDef e -> ppError e
+  ErrLacksFunctionClause e -> ppError e
 
 docStream :: ScopeError -> SimpleDocStream Eann
 docStream = layoutPretty defaultLayoutOptions . ppScopeError

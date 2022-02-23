@@ -8,6 +8,7 @@ import MiniJuvix.Prelude
 data Ann =
   AnnKind S.NameKind
   | AnnKeyword
+  | AnnImportant
 
 fromScopedAnn :: S.Ann -> Maybe Ann
 fromScopedAnn s = case s of
