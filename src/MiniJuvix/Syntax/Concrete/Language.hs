@@ -7,15 +7,18 @@ module MiniJuvix.Syntax.Concrete.Language
     module MiniJuvix.Syntax.Concrete.Loc,
     module MiniJuvix.Syntax.Concrete.PublicAnn,
     module MiniJuvix.Syntax.Concrete.Language.Stage,
-    module MiniJuvix.Syntax.Concrete.Fixity,
+    module MiniJuvix.Syntax.Fixity,
+    module MiniJuvix.Syntax.Usage,
+    module MiniJuvix.Syntax.Universe
   )
 where
 
 --------------------------------------------------------------------------------
 
 import qualified Data.Kind as GHC
-import Data.Singletons
-import MiniJuvix.Syntax.Concrete.Fixity
+import MiniJuvix.Syntax.Universe
+import MiniJuvix.Syntax.Fixity
+import MiniJuvix.Syntax.Usage
 import MiniJuvix.Syntax.Concrete.Name
 import MiniJuvix.Syntax.Concrete.Loc
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
@@ -133,16 +136,6 @@ instance HasLoc OperatorSyntaxDef where
   getLoc = getLoc . opSymbol
 
 -------------------------------------------------------------------------------
--- Quantity
--------------------------------------------------------------------------------
-
-data Usage
-  = UsageNone
-  | UsageOnce
-  | UsageOmega
-  deriving stock (Show, Eq, Ord)
-
--------------------------------------------------------------------------------
 -- Type signature declaration
 -------------------------------------------------------------------------------
 
@@ -235,12 +228,18 @@ data PatternInfixApp = PatternInfixApp
   }
   deriving stock (Show, Eq, Ord)
 
+instance HasFixity PatternInfixApp where
+  getFixity (PatternInfixApp  _ op _) = fromMaybe impossible (op ^. S.nameFixity)
+
 data PatternPostfixApp = PatternPostfixApp
   {
     patPostfixParameter :: Pattern,
     patPostfixConstructor :: NameType 'Scoped
   }
   deriving stock (Show, Eq, Ord)
+
+instance HasFixity PatternPostfixApp where
+  getFixity (PatternPostfixApp  _ op) = fromMaybe impossible (op ^. S.nameFixity)
 
 data Pattern
   = PatternVariable (SymbolType 'Scoped)
@@ -252,6 +251,16 @@ data Pattern
   | PatternEmpty
   deriving stock (Show, Eq, Ord)
 
+instance HasAtomicity Pattern where
+ atomicity e = case e of
+    PatternVariable {} -> Atom
+    PatternConstructor {} -> Atom
+    PatternApplication {} -> Aggregate appFixity
+    PatternInfixApplication a -> Aggregate (getFixity a)
+    PatternPostfixApplication p -> Aggregate (getFixity p)
+    PatternWildcard -> Atom
+    PatternEmpty -> Atom
+
 --------------------------------------------------------------------------------
 -- Pattern section
 --------------------------------------------------------------------------------
@@ -261,6 +270,9 @@ data PatternAtom (s :: Stage)
   | PatternAtomWildcard
   | PatternAtomEmpty
   | PatternAtomParens (PatternAtoms s)
+
+instance HasAtomicity (PatternAtom 'Parsed) where
+  atomicity = const Atom
 
 deriving stock instance
   ( Show (ExpressionType s),
@@ -456,6 +468,19 @@ data Expression
   | ExpressionFunction (Function 'Scoped)
   deriving stock (Show, Eq, Ord)
 
+instance HasAtomicity Expression where
+ atomicity e = case e of
+    ExpressionIdentifier {} -> Atom
+    ExpressionParensIdentifier {} -> Atom
+    ExpressionApplication {} -> Aggregate appFixity
+    ExpressionInfixApplication a -> Aggregate (getFixity a)
+    ExpressionPostfixApplication a -> Aggregate (getFixity a)
+    ExpressionLambda {} -> Atom
+    ExpressionMatch {} -> Atom
+    ExpressionLetBlock {} -> Atom
+    ExpressionUniverse {} -> Atom
+    ExpressionFunction {} -> Aggregate funFixity
+
 --------------------------------------------------------------------------------
 -- Expression section
 --------------------------------------------------------------------------------
@@ -498,6 +523,13 @@ deriving stock instance
 -- | Expressions without application
 newtype ExpressionAtoms (s :: Stage)
   = ExpressionAtoms (NonEmpty (ExpressionAtom s))
+
+instance HasAtomicity (ExpressionAtoms 'Parsed) where
+  atomicity (ExpressionAtoms l) = case l of
+    (_  :| []) -> Atom
+    (_  :| _)
+      | AtomFunArrow `elem` l -> Aggregate funFixity
+      | otherwise -> Aggregate appFixity
 
 deriving stock instance
   ( Show (ExpressionType s),
@@ -572,15 +604,6 @@ deriving stock instance
     Ord (PatternType s)
   ) =>
   Ord (Match s)
-
---------------------------------------------------------------------------------
--- Universe expression
---------------------------------------------------------------------------------
-
-newtype Universe = Universe
-  { universeLevel :: Maybe Natural
-  }
-  deriving stock (Show, Eq, Ord)
 
 --------------------------------------------------------------------------------
 -- Function expression
@@ -738,12 +761,19 @@ data InfixApplication = InfixApplication
   }
   deriving stock (Show, Eq, Ord)
 
+instance HasFixity InfixApplication where
+  getFixity (InfixApplication  _ op _) = fromMaybe impossible (op ^. S.nameFixity)
+
+
 data PostfixApplication = PostfixApplication
   {
     postfixAppParameter :: ExpressionType 'Scoped,
     postfixAppOperator :: NameType 'Scoped
   }
   deriving stock (Show, Eq, Ord)
+
+instance HasFixity PostfixApplication where
+  getFixity (PostfixApplication _ op) = fromMaybe impossible (op ^. S.nameFixity)
 
 --------------------------------------------------------------------------------
 -- Let block expression

@@ -570,16 +570,6 @@ instance SingI s => PrettyCode (PatternAtom s) where
 instance SingI s => PrettyCode (PatternAtoms s) where
   ppCode (PatternAtoms ps) = hsep . toList <$> mapM ppCode ps
 
-instance HasAtoms Pattern where
-  isAtomic p = case p of
-    PatternVariable {} -> True
-    PatternApplication {} -> False
-    PatternConstructor {} -> True
-    PatternInfixApplication {} -> False
-    PatternPostfixApplication {} -> False
-    PatternWildcard -> True
-    PatternEmpty -> True
-
 ppPattern :: forall s r. (SingI s,  Members '[Reader Options] r) => PatternType s -> Sem r (Doc Ann)
 ppPattern = case sing :: SStage s of
   SParsed -> ppCode
@@ -590,45 +580,16 @@ ppPatternAtom = case sing :: SStage s of
   SParsed -> ppCodeAtom
   SScoped -> ppCodeAtom
 
-ppCodeAtom :: (HasAtoms c, PrettyCode c, Members '[Reader Options] r) => c -> Sem r (Doc Ann)
-ppCodeAtom c = do
-  p' <- ppCode c
-  return $ if isAtomic c then p' else parens p'
-
-instance HasAtoms (PatternAtom s) where
-  isAtomic = const True
-
-class HasAtoms c where
-  isAtomic :: c -> Bool
-
-instance HasAtoms Expression where
-  isAtomic e = case e of
-    ExpressionIdentifier {} -> True
-    ExpressionParensIdentifier {} -> True
-    ExpressionApplication {} -> False
-    ExpressionInfixApplication {} -> False
-    ExpressionPostfixApplication {} -> False
-    ExpressionLambda {} -> True
-    ExpressionMatch {} -> True
-    ExpressionLetBlock {} -> True
-    ExpressionUniverse {} -> True
-    ExpressionFunction {} -> False
-
-instance HasAtoms (ExpressionAtoms s) where
-  isAtomic e = case e of
-    ExpressionAtoms (_  :| []) -> True
-    ExpressionAtoms (_  :| _) -> False
-
 instance PrettyCode InfixApplication where
   ppCode i@InfixApplication {..} = do
-    infixAppLeft' <- ppLeftExpression (infixFixity i) infixAppLeft
+    infixAppLeft' <- ppLeftExpression (getFixity i) infixAppLeft
     infixAppOperator' <- ppCode infixAppOperator
-    infixAppRight' <- ppRightExpression (infixFixity i) infixAppRight
+    infixAppRight' <- ppRightExpression (getFixity i) infixAppRight
     return $ infixAppLeft' <+> infixAppOperator' <+> infixAppRight'
 
 instance PrettyCode PostfixApplication where
   ppCode i@PostfixApplication {..} = do
-    postfixAppParameter' <- ppPostExpression (postfixFixity i) postfixAppParameter
+    postfixAppParameter' <- ppPostExpression (getFixity i) postfixAppParameter
     postfixAppOperator' <- ppCode postfixAppOperator
     return $ postfixAppParameter' <+> postfixAppOperator'
 
@@ -668,116 +629,42 @@ instance PrettyCode Pattern where
     ppPatternInfixApp :: PatternInfixApp -> Sem r (Doc Ann)
     ppPatternInfixApp p@PatternInfixApp {..} = do
       patInfixConstructor' <- ppCode patInfixConstructor
-      patInfixLeft' <- ppLeftExpression (pinfixFixity p) patInfixLeft
-      patInfixRight' <- ppRightExpression (pinfixFixity p) patInfixRight
+      patInfixLeft' <- ppLeftExpression (getFixity p) patInfixLeft
+      patInfixRight' <- ppRightExpression (getFixity p) patInfixRight
       return $ patInfixLeft' <+> patInfixConstructor' <+> patInfixRight'
 
     ppPatternPostfixApp :: PatternPostfixApp -> Sem r (Doc Ann)
     ppPatternPostfixApp p@PatternPostfixApp {..} = do
       patPostfixConstructor' <- ppCode patPostfixConstructor
-      patPostfixParameter' <- ppLeftExpression (ppostfixFixity p) patPostfixParameter
+      patPostfixParameter' <- ppLeftExpression (getFixity p) patPostfixParameter
       return $ patPostfixParameter' <+> patPostfixConstructor'
-
-class HasFixity a where
-  getFixity :: a -> Maybe Fixity
-
-instance HasFixity Expression where
- getFixity e = case e of
-    ExpressionIdentifier {} -> Nothing
-    ExpressionParensIdentifier {} -> Nothing
-    ExpressionApplication {} -> Just appFixity
-    ExpressionInfixApplication a -> Just (infixFixity a)
-    ExpressionPostfixApplication a -> Just (postfixFixity a)
-    ExpressionLambda {} -> Nothing
-    ExpressionMatch {} -> Nothing
-    ExpressionLetBlock {} -> Nothing
-    ExpressionUniverse {} -> Nothing
-    ExpressionFunction {} -> Just funFixity
-
-instance HasFixity Pattern where
- getFixity e = case e of
-    PatternVariable {} -> Nothing
-    PatternConstructor {} -> Nothing
-    PatternApplication {} -> Just appFixity
-    PatternInfixApplication a -> Just (pinfixFixity a)
-    PatternPostfixApplication p -> Just (ppostfixFixity p)
-    PatternWildcard -> Nothing
-    PatternEmpty -> Nothing
-
-instance HasFixity (ExpressionAtoms 'Parsed) where
-  getFixity = const Nothing
-
-pinfixFixity :: PatternInfixApp -> Fixity
-pinfixFixity (PatternInfixApp  _ op _) = case op ^. S.nameFixity of
-    S.NoFixity -> impossible
-    S.SomeFixity s -> s
-
-ppostfixFixity :: PatternPostfixApp -> Fixity
-ppostfixFixity (PatternPostfixApp  _ op) = case op ^. S.nameFixity of
-    S.NoFixity -> impossible
-    S.SomeFixity s -> s
-
-infixFixity :: InfixApplication -> Fixity
-infixFixity (InfixApplication  _ op _) = case op ^. S.nameFixity of
-    S.NoFixity -> impossible
-    S.SomeFixity s -> s
-
-postfixFixity :: PostfixApplication -> Fixity
-postfixFixity (PostfixApplication _ op) = case op ^. S.nameFixity of
-    S.NoFixity -> impossible
-    S.SomeFixity s -> s
-
-appFixity :: Fixity
-appFixity = Fixity PrecOmega (Binary AssocLeft)
-
-funFixity :: Fixity
-funFixity = Fixity PrecMinusOmega (Binary AssocRight)
-
-isLeftAssoc :: Fixity -> Bool
-isLeftAssoc opInf = case fixityArity opInf of
-    Binary AssocLeft -> True
-    _ -> False
-
-isRightAssoc :: Fixity -> Bool
-isRightAssoc opInf = case fixityArity opInf of
-    Binary AssocRight -> True
-    _ -> False
-
-isPostfixAssoc :: Fixity -> Bool
-isPostfixAssoc opInf = case fixityArity opInf of
-    Unary AssocPostfix -> True
-    _ -> False
-
-atomParens :: (Fixity -> Bool) -> Maybe Fixity -> Fixity -> Bool
-atomParens associates argAtom opInf = case argAtom of
-  Nothing -> False
-  Just argInf
-   | argInf > opInf -> False
-   | argInf < opInf -> True
-   | associates opInf -> False
-   | otherwise -> True
 
 parensCond :: Bool -> Doc Ann -> Doc Ann
 parensCond t d = if t then parens d else d
 
-ppPostExpression ::(PrettyCode a, HasFixity a, Member (Reader Options) r)  =>
+ppPostExpression ::(PrettyCode a, HasAtomicity a, Member (Reader Options) r)  =>
   Fixity -> a -> Sem r (Doc Ann)
 ppPostExpression = ppLRExpression isPostfixAssoc
 
-ppRightExpression :: (PrettyCode a, HasFixity a, Member (Reader Options) r) =>
+ppRightExpression :: (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
   Fixity -> a -> Sem r (Doc Ann)
 ppRightExpression = ppLRExpression isRightAssoc
 
-ppLeftExpression :: (PrettyCode a, HasFixity a, Member (Reader Options) r) =>
+ppLeftExpression :: (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
   Fixity -> a -> Sem r (Doc Ann)
 ppLeftExpression = ppLRExpression isLeftAssoc
 
 ppLRExpression
-  :: (HasFixity a, PrettyCode a, Member (Reader Options) r) =>
+  :: (HasAtomicity a, PrettyCode a, Member (Reader Options) r) =>
      (Fixity -> Bool) -> Fixity -> a -> Sem r (Doc Ann)
 ppLRExpression associates fixlr e =
-  parensCond (atomParens associates (getFixity e) fixlr)
+  parensCond (atomParens associates (atomicity e) fixlr)
       <$> ppCode e
+
+ppCodeAtom :: (HasAtomicity c, PrettyCode c, Members '[Reader Options] r) => c -> Sem r (Doc Ann)
+ppCodeAtom c = do
+  p' <- ppCode c
+  return $ if isAtomic c then p' else parens p'
 
 instance SingI s => PrettyCode (ExpressionAtom s) where
   ppCode a = case a of

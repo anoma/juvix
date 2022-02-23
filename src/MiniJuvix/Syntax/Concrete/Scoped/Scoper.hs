@@ -78,15 +78,14 @@ freshSymbol _nameKind _nameConcrete = do
   let _nameDefined = getLoc _nameConcrete
       _nameWhyInScope = S.BecauseDefined
       _namePublicAnn = NoPublic
-  _nameFixity <- getFixity
+  _nameFixity <- fixity
   return S.Name' {..}
   where
-    getFixity :: Sem r S.NameFixity
-    getFixity
-      | S.canHaveFixity _nameKind = do
-        maybe S.NoFixity (S.SomeFixity . opFixity)
-           . HashMap.lookup _nameConcrete <$> gets _scopeFixities
-      | otherwise = return S.NoFixity
+    fixity :: Sem r (Maybe Fixity)
+    fixity
+      | S.canHaveFixity _nameKind =
+        fmap opFixity . HashMap.lookup _nameConcrete <$> gets _scopeFixities
+      | otherwise = return Nothing
 
 reserveSymbolOf ::
   forall r.
@@ -244,7 +243,7 @@ lookupSymbolAux modules final = do
          _nameDefinedIn = S.topModulePathToAbsPath path,
          _nameDefined = getLoc final,
          _nameId = modId,
-         _nameFixity = S.NoFixity,
+         _nameFixity = Nothing,
          _nameWhyInScope = S.BecauseImportedOpened,
          _namePublicAnn = NoPublic}
     path = TopModulePath modules final
@@ -464,7 +463,7 @@ checkTopModule m@(Module path params body) = do
         _nameConcrete = path
         _nameDefined = getLoc $ modulePathName path
         _nameKind = S.KNameTopModule
-        _nameFixity = S.NoFixity
+        _nameFixity = Nothing
         _namePublicAnn = NoPublic
         _nameWhyInScope = S.BecauseDefined
     return S.Name' {..}
@@ -554,7 +553,7 @@ lookupModuleSymbol n = do
   case filter (S.isModuleKind . S._nameKind) es of
     [] -> notInScope
     [x] -> return $ entryToSName n x
-    _ -> throw (ErrAmbiguousModuleSym es)
+    _ -> throw (ErrAmbiguousModuleSym (AmbiguousModuleSym es))
   where
   notInScope = throw (ErrModuleNotInScope (ModuleNotInScope n))
   (path, sym) = case n of
@@ -917,7 +916,7 @@ checkExpressionAtom e = case e of
 checkParens :: Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   ExpressionAtoms 'Parsed -> Sem r Expression
 checkParens e@(ExpressionAtoms as) = case as of
-  AtomIdentifier s :| [] -> ExpressionParensIdentifier . set S.nameFixity S.NoFixity <$> checkName s
+  AtomIdentifier s :| [] -> ExpressionParensIdentifier . set S.nameFixity Nothing <$> checkName s
   _ -> checkParseExpressionAtoms e
 
 checkMatchAlt ::
@@ -1000,7 +999,7 @@ makeExpressionTable2 (ExpressionAtoms atoms) = [appOp] : operators ++ [[function
     where
       mkOperator :: S.Name -> Maybe (Precedence, P.Operator Parse Expression)
       mkOperator S.Name' {..}
-        | S.SomeFixity Fixity {..} <- _nameFixity = Just $
+        | Just Fixity {..} <- _nameFixity = Just $
           case fixityArity of
             Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
               where
@@ -1029,17 +1028,8 @@ makeExpressionTable2 (ExpressionAtoms atoms) = [appOp] : operators ++ [[function
 
   -- Application by juxtaposition.
   appOp :: P.Operator Parse Expression
-  appOp = P.InfixL (app <$ notFollowedByInfix)
+  appOp = P.InfixL (return app)
     where
-      notFollowedByInfix :: Parse ()
-      notFollowedByInfix = P.notFollowedBy (P.token infixName mempty)
-        where
-          infixName :: ExpressionAtom 'Scoped -> Maybe S.Name
-          infixName s = case s of
-            AtomIdentifier n
-              | S.hasFixity n -> Just n
-            _ -> Nothing
-
       app :: Expression -> Expression -> Expression
       app f x =
         ExpressionApplication
@@ -1186,7 +1176,7 @@ makePatternTable atom = [appOp] : operators
       where
         unqualifiedSymbolOp :: S.Name -> Maybe (Precedence, P.Operator ParsePat Pattern)
         unqualifiedSymbolOp S.Name' {..}
-          | S.SomeFixity Fixity {..} <- _nameFixity,
+          | Just Fixity {..} <- _nameFixity,
             _nameKind == S.KNameConstructor = Just $
             case fixityArity of
               Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
@@ -1215,18 +1205,10 @@ makePatternTable atom = [appOp] : operators
 
     -- Application by juxtaposition.
     appOp :: P.Operator ParsePat Pattern
-    appOp = P.InfixL (app <$ notFollowedByInfix)
+    appOp = P.InfixL (return app)
       where
         app :: Pattern -> Pattern -> Pattern
         app l = PatternApplication . PatternApp l
-        notFollowedByInfix :: ParsePat ()
-        notFollowedByInfix = P.notFollowedBy (P.token infixName mempty)
-          where
-            infixName :: PatternAtom 'Scoped -> Maybe S.Name
-            infixName s = case s of
-              PatternAtomName n
-                | S.hasFixity n -> Just n
-              _ -> Nothing
 
 parsePatternTerm ::
   forall r.

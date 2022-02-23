@@ -3,6 +3,7 @@ module MiniJuvix.Termination.CallGraph where
 
 import MiniJuvix.Prelude
 import qualified MiniJuvix.Syntax.Abstract.Language as A
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import qualified Data.HashMap.Strict as HashMap
 import Prettyprinter
 
@@ -19,7 +20,7 @@ makeLenses ''CallGraph
 
 viewCall :: A.Expression -> Maybe Call
 viewCall e = case e of
-  A.ExpressionDefinedName f -> Just (Call f [])
+  -- A.ExpressionDefinedName f -> Just (Call f [])
   A.ExpressionApplication (A.Application f x) ->
     over callArgs (`snoc`x) <$> viewCall f
   _ -> Nothing
@@ -32,18 +33,11 @@ registerCall c = do
   fun <- ask
   modify (addCall fun c)
 
-buildCallGraph :: A.Module -> CallGraph
+buildCallGraph :: A.TopModule -> CallGraph
 buildCallGraph = run . execState mempty . checkModule
 
-checkModule :: Members '[State CallGraph] r => A.Module -> Sem r ()
-checkModule m = mapM_ checkStatement (m ^. A.moduleBody)
-
--- checkStatement :: Members '[State CallGraph] r => A.Statement -> Sem r ()
--- checkStatement s = case s of
---   A.StatementAxiom {} -> return ()
---   A.StatementFunctionDef def -> checkFunctionDef def
---   A.StatementModule m -> checkModule m
---   _ -> return ()
+checkModule :: Members '[State CallGraph] r => A.TopModule -> Sem r ()
+checkModule m = undefined
 
 checkFunctionDef :: Members '[State CallGraph] r => A.FunctionDef -> Sem r ()
 checkFunctionDef def =
@@ -53,16 +47,14 @@ checkFunctionDef def =
 checkFunctionClause :: Members '[State CallGraph, Reader A.FunctionName] r => A.FunctionClause -> Sem r ()
 checkFunctionClause cl = checkExpression (cl ^. A.clauseBody)
 
--- checkExpression :: Members '[State CallGraph, Reader A.FunctionName] r => A.Expression -> Sem r ()
--- checkExpression e = do
---   whenJust (viewCall e) registerCall
---   case e of
---     A.ExpressionApplication a -> checkApplication a
---     A.ExpressionConstructor {} -> return ()
---     A.ExpressionVar {} -> return ()
---     A.ExpressionDefinedName {} -> return ()
---     A.ExpressionUniverse {} -> return ()
---     A.ExpressionFunction f -> checkFunction f
+checkExpression :: Members '[State CallGraph, Reader A.FunctionName] r => A.Expression -> Sem r ()
+checkExpression e = do
+  whenJust (viewCall e) registerCall
+  case e of
+    A.ExpressionApplication a -> checkApplication a
+    A.ExpressionIden {} -> return ()
+    A.ExpressionUniverse {} -> return ()
+    A.ExpressionFunction f -> checkFunction f
 
 checkApplication :: Members '[State CallGraph, Reader A.FunctionName] r => A.Application -> Sem r ()
 checkApplication (A.Application l r) = do
@@ -82,6 +74,6 @@ instance Pretty CallGraph where
   pretty (CallGraph m) = vsep (map ppEntry (HashMap.toList m))
     where
     ppEntry :: (A.FunctionName, [Call]) -> Doc a
-    ppEntry (fun, calls) = "@" <> pretty fun <> colon <> align (vsep (map ppCall calls))
+    ppEntry (fun, calls) = "@" <> pretty (fun ^. S.nameId) <> colon <> align (vsep (map ppCall calls))
     ppCall :: Call -> Doc a
-    ppCall c = "call @" <> pretty (c ^. callName) <+> pretty (length (c ^. callArgs))
+    ppCall c = "call @" <> pretty (c ^. callName . S.nameId) <+> pretty (length (c ^. callArgs))

@@ -8,7 +8,7 @@ module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
 
 import Data.Stream (Stream (Cons))
 import Lens.Micro.Platform
-import qualified MiniJuvix.Syntax.Concrete.Fixity as C
+import qualified MiniJuvix.Syntax.Fixity as C
 import qualified MiniJuvix.Syntax.Concrete.Name as C
 import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Prelude
@@ -61,17 +61,6 @@ allNameIds = NameId <$> ids
 
 instance Hashable NameId
 
-data NameFixity
-  = NoFixity
-  | SomeFixity C.Fixity
-  deriving stock (Show, Eq)
-
-data NameInfo = NameIndo {
-
-  }
- deriving stock (Show)
-makeLenses ''NameInfo
-
 -- | Why a symbol is in scope.
 data WhyInScope =
   -- | Inherited from the parent module.
@@ -97,7 +86,7 @@ data Name' n = Name'
     _nameDefined :: Interval,
     _nameKind :: NameKind,
     _nameDefinedIn :: AbsModulePath,
-    _nameFixity :: NameFixity,
+    _nameFixity :: Maybe C.Fixity,
     _nameWhyInScope :: WhyInScope,
     _namePublicAnn :: PublicAnn
   }
@@ -108,9 +97,7 @@ instance HasLoc n => HasLoc (Name' n) where
   getLoc = getLoc . _nameConcrete
 
 hasFixity :: Name' s -> Bool
-hasFixity Name' {..} = case _nameFixity of
-  SomeFixity {} -> True
-  NoFixity -> False
+hasFixity Name' {..} = isJust _nameFixity
 
 isConstructor :: Name' s -> Bool
 isConstructor Name' {..} = case _nameKind of

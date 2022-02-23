@@ -23,7 +23,7 @@ module MiniJuvix.Prelude.Base
     module Lens.Micro.Platform,
     module GHC.Generics,
     module Data.Bool,
-    module Data.List.NonEmpty,
+    module Data.List.NonEmpty.Extra,
     module Data.Traversable,
     module Data.Monoid,
     module Polysemy,
@@ -71,7 +71,7 @@ import qualified Data.Char as Char
 import Data.Data
 import Data.Either.Extra
 import Data.Eq
-import Data.Foldable
+import Data.Foldable hiding (minimum, minimumBy)
 import Data.Function
 import Data.Functor
 import Prettyprinter (Doc, (<+>))
@@ -80,7 +80,7 @@ import Data.HashSet (HashSet)
 import Data.Hashable
 import Data.Int
 import Data.List.Extra hiding (head, last)
-import Data.List.NonEmpty (NonEmpty (..), head, last, nonEmpty)
+import Data.List.NonEmpty.Extra (NonEmpty (..), head, last, nonEmpty, minimum1, minimumOn1, maximum1, maximumOn1)
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Maybe
 import Data.Singletons.Sigma

@@ -142,8 +142,8 @@ goExpression e = case e of
     r' <- goExpression r
     return $ A.Application (A.ExpressionApplication (A.Application op' l')) r'
 
-goUniverse :: Universe -> A.Universe
-goUniverse (Universe l) = A.Universe l
+goUniverse :: Universe -> Universe
+goUniverse = id
 
 goFunction :: Members '[Error Err] r => Function 'Scoped -> Sem r A.Function
 goFunction (Function l r) = do

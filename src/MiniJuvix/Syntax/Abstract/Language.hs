@@ -6,6 +6,8 @@ module MiniJuvix.Syntax.Abstract.Language (
 import MiniJuvix.Prelude
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Syntax.Concrete.Language (Usage)
+import MiniJuvix.Syntax.Fixity
+import MiniJuvix.Syntax.Universe
 import qualified MiniJuvix.Syntax.Concrete.Name as C
 
 type TopModuleName = S.TopModulePath
@@ -63,6 +65,13 @@ data Expression
   ---  ExpressionLambda Lambda not supported yet
   deriving stock (Show, Eq)
 
+instance HasAtomicity Expression where
+  atomicity e = case e of
+    ExpressionIden {} -> Atom
+    ExpressionUniverse u -> atomicity u
+    ExpressionApplication a -> atomicity a
+    ExpressionFunction f -> atomicity f
+
 data Match = Match
   { _matchExpression :: Expression,
     _matchAlts :: [MatchAlt]
@@ -76,16 +85,14 @@ data MatchAlt = MatchAlt
   }
   deriving stock (Show, Eq)
 
-newtype Universe = Universe {
-  _universeLevel :: Maybe Natural
-  }
-  deriving stock (Show, Eq)
-
 data Application = Application {
   _appLeft :: Expression,
   _appRight :: Expression
   }
   deriving stock (Show, Eq)
+
+instance HasAtomicity Application where
+  atomicity = const (Aggregate appFixity)
 
 newtype Lambda = Lambda
   {_lambdaClauses :: [LambdaClause]}
@@ -109,6 +116,9 @@ data Function = Function
     _funReturn :: Expression
   }
   deriving stock (Show, Eq)
+
+instance HasAtomicity Function where
+  atomicity = const (Aggregate funFixity)
 
 -- | Fully applied constructor in a pattern.
 data ConstructorApp = ConstructorApp {
