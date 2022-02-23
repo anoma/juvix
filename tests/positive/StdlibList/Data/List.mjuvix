@@ -25,7 +25,7 @@ filter : (a : Type) → (a → Bool) → List a → List a;
 filter a f (nil _) ≔ nil a;
 filter a f (∷ _ h hs) ≔ match f h {
   true ↦ ∷ a h (filter a f hs);
-  true ↦ filter a f hs;
+  false ↦ filter a f hs;
 };
 
 import Data.Nat;
