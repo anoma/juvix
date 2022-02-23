@@ -495,6 +495,7 @@ checkModuleBody :: forall r.
 checkModuleBody body = do
   body' <- mapM checkStatement body
   checkOrphanFixities
+  checkClausesExist body'
   exported <- get >>= exportScope
   return (exported, body')
 
@@ -532,7 +533,14 @@ checkLocalModule Module {..} = do
     inheritEntry :: SymbolEntry -> SymbolEntry
     inheritEntry = over S.nameWhyInScope S.BecauseInherited
 
-checkOrphanFixities :: forall r .Members '[Error ScopeError, State Scope] r => Sem r ()
+checkClausesExist :: forall r. Members '[Error ScopeError, State Scope] r => [Statement 'Scoped] -> Sem r ()
+checkClausesExist ss = whenJust msig (throw . ErrLacksFunctionClause . LacksFunctionClause)
+  where
+  msig = listToMaybe [ ts | StatementTypeSignature ts <- ss,
+          null [ c | StatementFunctionClause c <- ss ,
+                 c ^. clauseOwnerFunction == ts ^. sigName]]
+
+checkOrphanFixities :: forall r. Members '[Error ScopeError, State Scope] r => Sem r ()
 checkOrphanFixities = do
   path <- gets _scopePath
   declared <- gets _scopeFixities
@@ -541,7 +549,6 @@ checkOrphanFixities = do
   case unused of
     [] -> return ()
     (x : _) -> throw (ErrUnusedOperatorDef (UnusedOperatorDef x))
-
 
 symbolInfoSingle :: SymbolEntry -> SymbolInfo
 symbolInfoSingle p = SymbolInfo $ HashMap.singleton (S._nameDefinedIn p) p

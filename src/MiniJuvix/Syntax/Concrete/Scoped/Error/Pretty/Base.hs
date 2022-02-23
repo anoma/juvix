@@ -53,6 +53,14 @@ infixErrorAux kind pp =
   "Error while resolving infixities in the" <+> kind <> ":" <> line
     <> indent' (highlight pp)
 
+instance PrettyError LacksFunctionClause where
+  ppError LacksFunctionClause {..} =
+     pretty loc <> line <>
+     "There is a type signature no function clause:" <> line
+     <> indent' (highlight (ppCode _lacksFunctionClause))
+    where
+    loc = getLoc $ _sigName _lacksFunctionClause
+
 instance PrettyError LacksTypeSig where
   ppError LacksTypeSig {..} =
      pretty loc <> line <>

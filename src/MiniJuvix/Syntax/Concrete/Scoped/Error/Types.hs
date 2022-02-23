@@ -33,6 +33,12 @@ newtype LacksTypeSig = LacksTypeSig {
   }
  deriving stock (Show)
 
+-- | type signature without a function clause
+newtype LacksFunctionClause = LacksFunctionClause {
+  _lacksFunctionClause :: TypeSignature 'Scoped
+  }
+ deriving stock (Show)
+
 newtype ImportCycle = ImportCycle {
   -- | If we have [a, b, c] it means that a import b imports c imports a.
   _importCycleImports :: NonEmpty (Import 'Parsed)

@@ -118,4 +118,11 @@ tests = [
       case er of
         ErrAmbiguousSym {} -> Nothing
         _ -> wrongError
+  ,  NegTest "Lacks function clause"
+    "."
+   "LacksFunctionClause.mjuvix" $ \er ->
+      case er of
+        ErrLacksFunctionClause {} -> Nothing
+        _ -> wrongError
+
   ]
