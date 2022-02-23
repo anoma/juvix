@@ -66,5 +66,6 @@ tests = [
      "StdlibList" "Data/Product.mjuvix"
   , PosTest "Data.List and friends from the stdlib"
      "StdlibList" "Data/List.mjuvix"
-
+  , PosTest "Operators (+)"
+     "." "Operators.mjuvix"
  ]
