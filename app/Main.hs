@@ -6,6 +6,9 @@ import Control.Monad.Extra
 import qualified MiniJuvix.Syntax.Concrete.Language as M
 import qualified MiniJuvix.Syntax.Concrete.Parser as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
+import qualified MiniJuvix.Syntax.Abstract.Pretty.Ansi as A
+import qualified MiniJuvix.Termination.CallGraph as A
+import qualified MiniJuvix.Translation.ScopedToAbstract as A
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (Options (..))
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
@@ -20,6 +23,7 @@ data Command
   = Scope ScopeOptions
   | Parse ParseOptions
   | Html HtmlOptions
+  | CallGraph CallGraphOptions
 
 data ScopeOptions = ScopeOptions
   { _scopeRootDir :: FilePath,
@@ -37,6 +41,10 @@ data HtmlOptions = HtmlOptions
   { _htmlInputFile :: FilePath,
     _htmlRecursive :: Bool,
     _htmlTheme :: Theme
+  }
+
+newtype CallGraphOptions = CallGraphOptions
+  { _graphInputFile :: FilePath
   }
 
 parseHtml :: Parser HtmlOptions
@@ -66,6 +74,16 @@ parseHtml = do
     "nord" -> Right Nord
     "ayu" -> Right Ayu
     _ -> Left $ "unrecognised theme: " <> s
+
+parseCallGraph :: Parser CallGraphOptions
+parseCallGraph = do
+  _graphInputFile <-
+    argument
+      str
+      ( metavar "MINIJUVIX_FILE"
+          <> help "Path to a .mjuvix file"
+      )
+  pure CallGraphOptions {..}
 
 parseParse :: Parser ParseOptions
 parseParse = do
@@ -132,7 +150,8 @@ parseCommand =
     mconcat
       [ commandParse,
         commandScope,
-        commandHtml
+        commandHtml,
+        commandGraph
       ]
   where
     commandParse :: Mod CommandFields Command
@@ -160,9 +179,17 @@ parseCommand =
           info
             (Scope <$> parseScope)
             (progDesc "Parse and scope a .mjuvix file")
+    commandGraph :: Mod CommandFields Command
+    commandGraph = command "graph" minfo
+      where
+        minfo :: ParserInfo Command
+        minfo =
+          info
+            (CallGraph <$> parseCallGraph)
+            (progDesc "Compute the call graph of a .mjuvix file")
 
-mkPrettyOptions :: ScopeOptions -> M.Options
-mkPrettyOptions ScopeOptions {..} =
+mkScopePrettyOptions :: ScopeOptions -> M.Options
+mkScopePrettyOptions ScopeOptions {..} =
   M.defaultOptions
     { _optShowNameId = _scopeShowIds,
       _optInlineImports = _scopeInlineImports
@@ -187,7 +214,7 @@ go c = case c of
     forM_ _scopeInputFiles $ \scopeInputFile -> do
       m <- parseModuleIO scopeInputFile
       s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
-      M.printPrettyCode (mkPrettyOptions opts) s
+      M.printPrettyCode (mkScopePrettyOptions opts) s
   Parse ParseOptions {..} -> do
     m <- parseModuleIO _parseInputFile
     if _parseNoPrettyShow then print m else pPrint m
@@ -196,6 +223,13 @@ go c = case c of
     m <- parseModuleIO _htmlInputFile
     s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
     genHtml defaultOptions _htmlRecursive _htmlTheme s
+  CallGraph CallGraphOptions {..} -> do
+    root <- getCurrentDirectory
+    m <- parseModuleIO _graphInputFile
+    s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+    a <- fromRightIO' putStrLn (return $ A.translateModule s)
+    let graph = A.buildCallGraph a
+    A.printPrettyCodeDefault graph
 
 main :: IO ()
 main = execParser descr >>= go

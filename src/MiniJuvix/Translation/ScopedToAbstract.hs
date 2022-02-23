@@ -24,8 +24,8 @@ goLocalModule = goModule
 
 goModule :: (Members '[Error Err] r, ModulePathType 'Scoped t ~ S.Name' c) => Module 'Scoped t -> Sem r (A.Module c)
 goModule (Module n par b) = case par of
-  [] -> unsupported "Module parameters"
-  _ -> A.Module n <$> goModuleBody b
+  [] -> A.Module n <$> goModuleBody b
+  _ -> unsupported "Module parameters"
 
 -- | until we have modules with parameters, I think order of definitions is irrelevant
 goModuleBody :: forall r. Members '[Error Err] r => [Statement 'Scoped] -> Sem r A.ModuleBody
