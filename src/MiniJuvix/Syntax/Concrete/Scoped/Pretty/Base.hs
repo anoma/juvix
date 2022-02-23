@@ -10,6 +10,7 @@ import qualified Data.List.NonEmpty.Extra as NonEmpty
 import Prettyprinter hiding (braces, parens)
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ann
 import MiniJuvix.Syntax.Concrete.Scoped.Name (AbsModulePath)
+import MiniJuvix.Internal.Strings as Str
 
 data Options = Options
   {
@@ -40,94 +41,94 @@ delimiter :: Text -> Doc Ann
 delimiter = annotate AnnDelimiter . pretty
 
 kwModule :: Doc Ann
-kwModule = keyword "module"
+kwModule = keyword Str.module_
 
 kwEnd :: Doc Ann
-kwEnd = keyword "end"
+kwEnd = keyword Str.end
 
 kwInductive :: Doc Ann
-kwInductive = keyword "inductive"
+kwInductive = keyword Str.inductive
 
 kwType :: Doc Ann
-kwType = keyword "Type"
+kwType = keyword Str.type_
 
 kwColon :: Doc Ann
-kwColon = keyword ":"
+kwColon = keyword Str.colon
 
 kwArrowR :: Doc Ann
-kwArrowR = keyword "→"
+kwArrowR = keyword Str.toUnicode
 
 kwMatch :: Doc Ann
-kwMatch = keyword "match"
+kwMatch = keyword Str.match
 
 kwLambda :: Doc Ann
-kwLambda = keyword "λ"
+kwLambda = keyword Str.lambdaUnicode
 
 kwWhere :: Doc Ann
-kwWhere = keyword "where"
+kwWhere = keyword Str.where_
 
 kwLet :: Doc Ann
-kwLet = keyword "let"
+kwLet = keyword Str.let_
 
 kwIn :: Doc Ann
-kwIn = keyword "in"
+kwIn = keyword Str.in_
 
 kwPublic :: Doc Ann
-kwPublic = keyword "public"
+kwPublic = keyword Str.public
 
 kwWildcard :: Doc Ann
-kwWildcard = keyword "_"
+kwWildcard = keyword Str.underscore
 
 kwPostfix :: Doc Ann
-kwPostfix = keyword "postfix"
+kwPostfix = keyword Str.postfix
 
 kwInfixr :: Doc Ann
-kwInfixr = keyword "infixr"
+kwInfixr = keyword Str.infixr_
 
 kwInfixl :: Doc Ann
-kwInfixl = keyword "infixl"
+kwInfixl = keyword Str.infixl_
 
 kwInfix :: Doc Ann
-kwInfix = keyword "infix"
+kwInfix = keyword Str.infix_
 
 kwAssignment :: Doc Ann
-kwAssignment = keyword "≔"
+kwAssignment = keyword Str.assignUnicode
 
 kwMapsto :: Doc Ann
-kwMapsto = keyword "↦"
+kwMapsto = keyword Str.mapstoUnicode
 
 kwColonZero :: Doc Ann
-kwColonZero = keyword ":0"
+kwColonZero = keyword Str.colonZero
 
 kwColonOne :: Doc Ann
-kwColonOne = keyword ":1"
+kwColonOne = keyword Str.colonOne
 
 kwColonOmega :: Doc Ann
-kwColonOmega = keyword ":ω"
+kwColonOmega = keyword Str.colonOmegaUnicode
 
 kwAxiom :: Doc Ann
-kwAxiom = keyword "axiom"
+kwAxiom = keyword Str.axiom
 
 kwEval :: Doc Ann
-kwEval = keyword "eval"
+kwEval = keyword Str.eval
 
 kwPrint :: Doc Ann
-kwPrint = keyword "print"
+kwPrint = keyword Str.print
 
 kwOpen :: Doc Ann
-kwOpen = keyword "open"
+kwOpen = keyword Str.open
 
 kwUsing :: Doc Ann
-kwUsing = keyword "using"
+kwUsing = keyword Str.using
 
 kwHiding :: Doc Ann
-kwHiding = keyword "hiding"
+kwHiding = keyword Str.hiding
 
 kwImport :: Doc Ann
-kwImport = keyword "import"
+kwImport = keyword Str.import_
 
 kwSemicolon :: Doc Ann
-kwSemicolon = delimiter ";"
+kwSemicolon = delimiter Str.semicolon
 
 kwBraceL :: Doc Ann
 kwBraceL = delimiter "{"

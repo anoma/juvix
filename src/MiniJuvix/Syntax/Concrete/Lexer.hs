@@ -8,6 +8,7 @@ import qualified MiniJuvix.Syntax.Concrete.Base as P
 import MiniJuvix.Prelude
 import qualified Text.Megaparsec.Char.Lexer as L
 import MiniJuvix.Syntax.Concrete.Loc
+import qualified MiniJuvix.Internal.Strings as Str
 
 --------------------------------------------------------------------------------
 
@@ -132,92 +133,92 @@ parens :: MonadParsec e Text m => m a -> m a
 parens = between lparen rparen
 
 kwAssignment :: MonadParsec e Text m => m ()
-kwAssignment = symbol "≔" <|> symbol ":="
+kwAssignment = symbol Str.assignUnicode <|> symbol Str.assignAscii
 
 kwAxiom :: MonadParsec e Text m => m ()
-kwAxiom = symbol "axiom"
+kwAxiom = symbol Str.axiom
 
 -- | Note that the trailing space is needed to distinguish it from ':='.
 kwColon :: MonadParsec e Text m => m ()
-kwColon = symbol ": "
+kwColon = symbol Str.colonSpace
 
 kwColonOmega :: MonadParsec e Text m => m ()
-kwColonOmega = symbol ":ω" <|> symbol ":any"
+kwColonOmega = symbol Str.colonOmegaUnicode <|> symbol Str.colonOmegaAscii
 
 kwColonOne :: MonadParsec e Text m => m ()
-kwColonOne = symbol ":1"
+kwColonOne = symbol Str.colonOne
 
 kwColonZero :: MonadParsec e Text m => m ()
-kwColonZero = symbol ":0"
+kwColonZero = symbol Str.colonZero
 
 kwEnd :: MonadParsec e Text m => m ()
-kwEnd = symbol "end"
+kwEnd = symbol Str.end
 
 kwEval :: MonadParsec e Text m => m ()
-kwEval = symbol "eval"
+kwEval = symbol Str.eval
 
 kwHiding :: MonadParsec e Text m => m ()
-kwHiding = symbol "hiding"
+kwHiding = symbol Str.hiding
 
 kwImport :: MonadParsec e Text m => m ()
-kwImport = symbol "import"
+kwImport = symbol Str.import_
 
 kwIn :: MonadParsec e Text m => m ()
-kwIn = symbol "in"
+kwIn = symbol Str.in_
 
 kwInductive :: MonadParsec e Text m => m ()
-kwInductive = symbol "inductive"
+kwInductive = symbol Str.inductive
 
 kwInfix :: MonadParsec e Text m => m ()
-kwInfix = symbol "infix"
+kwInfix = symbol Str.infix_
 
 kwInfixl :: MonadParsec e Text m => m ()
-kwInfixl = symbol "infixl"
+kwInfixl = symbol Str.infixl_
 
 kwInfixr :: MonadParsec e Text m => m ()
-kwInfixr = symbol "infixr"
+kwInfixr = symbol Str.infixr_
 
 kwLambda :: MonadParsec e Text m => m ()
-kwLambda = symbol "λ" <|> symbol "\\"
+kwLambda = symbol Str.lambdaUnicode <|> symbol Str.lambdaAscii
 
 kwLet :: MonadParsec e Text m => m ()
-kwLet = symbol "let"
+kwLet = symbol Str.let_
 
 kwMapsTo :: MonadParsec e Text m => m ()
-kwMapsTo = symbol "↦" <|> symbol "->"
+kwMapsTo = symbol Str.mapstoUnicode <|> symbol Str.mapstoAscii
 
 kwMatch :: MonadParsec e Text m => m ()
-kwMatch = symbol "match"
+kwMatch = symbol Str.match
 
 kwModule :: MonadParsec e Text m => m ()
-kwModule = symbol "module"
+kwModule = symbol Str.module_
 
 kwOpen :: MonadParsec e Text m => m ()
-kwOpen = symbol "open"
+kwOpen = symbol Str.open
 
 kwPostfix :: MonadParsec e Text m => m ()
-kwPostfix = symbol "postfix"
+kwPostfix = symbol Str.postfix
 
 kwPrint :: MonadParsec e Text m => m ()
-kwPrint = symbol "print"
+kwPrint = symbol Str.print
 
 kwPublic :: MonadParsec e Text m => m ()
-kwPublic = symbol "public"
+kwPublic = symbol Str.public
 
 kwRightArrow :: MonadParsec e Text m => m ()
-kwRightArrow = symbol "→" <|> symbol "->"
+kwRightArrow = symbol Str.toUnicode <|> symbol Str.toAscii
 
 kwSemicolon :: MonadParsec e Text m => m ()
-kwSemicolon = symbol ";"
+kwSemicolon = symbol Str.semicolon
 
 kwType :: MonadParsec e Text m => m ()
-kwType = symbol "Type"
+kwType = symbol Str.type_
 
 kwUsing :: MonadParsec e Text m => m ()
-kwUsing = symbol "using"
+kwUsing = symbol Str.using
 
 kwWhere :: MonadParsec e Text m => m ()
-kwWhere = symbol "where"
+kwWhere = symbol Str.where_
 
 kwWildcard :: MonadParsec e Text m => m ()
-kwWildcard = symbol "_"
+kwWildcard = symbol Str.underscore
