@@ -27,7 +27,7 @@ data ScopeError
   | ErrDuplicateFixity DuplicateFixity
   | ErrMultipleExport MultipleExportConflict
   | ErrAmbiguousSym AmbiguousSym
-  | ErrAmbiguousModuleSym [SymbolEntry]
+  | ErrAmbiguousModuleSym AmbiguousModuleSym
   | ErrUnusedOperatorDef UnusedOperatorDef
   -- | Eventually this needs to go away
   | ErrGeneric Text
@@ -49,7 +49,7 @@ ppScopeError s = case s of
   ErrDuplicateFixity e -> ppError e
   ErrMultipleExport e -> ppError e
   ErrAmbiguousSym e -> ppError e
-  ErrAmbiguousModuleSym {} -> undefined
+  ErrAmbiguousModuleSym e -> ppError e
   ErrUnusedOperatorDef e -> ppError e
 
 docStream :: ScopeError -> SimpleDocStream Eann

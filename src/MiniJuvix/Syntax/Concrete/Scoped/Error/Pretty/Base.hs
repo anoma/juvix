@@ -130,4 +130,8 @@ instance PrettyError UnusedOperatorDef where
 
 instance PrettyError AmbiguousSym where
   ppError AmbiguousSym {} =
-    "AmbiguousSym"
+    "TODO Ambiguous symbol"
+
+instance PrettyError AmbiguousModuleSym where
+  ppError AmbiguousModuleSym {} =
+    "TODO Ambiguous module symbol"

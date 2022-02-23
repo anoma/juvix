@@ -84,3 +84,9 @@ newtype AmbiguousSym = AmbiguousSym {
   _ambiguousSymEntires :: [SymbolEntry]
   }
  deriving stock (Show)
+
+newtype AmbiguousModuleSym = AmbiguousModuleSym {
+  _ambiguousModSymEntires :: [SymbolEntry]
+  }
+ deriving stock (Show)
+
