@@ -56,7 +56,7 @@ infixErrorAux kind pp =
 instance PrettyError LacksFunctionClause where
   ppError LacksFunctionClause {..} =
      pretty loc <> line <>
-     "There is a type signature no function clause:" <> line
+     "There is a type signature with no function clause:" <> line
      <> indent' (highlight (ppCode _lacksFunctionClause))
     where
     loc = getLoc $ _sigName _lacksFunctionClause
