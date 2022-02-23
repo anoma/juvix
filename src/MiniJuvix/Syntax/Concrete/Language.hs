@@ -1,4 +1,5 @@
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module MiniJuvix.Syntax.Concrete.Language
   ( module MiniJuvix.Syntax.Concrete.Language,
@@ -146,8 +147,8 @@ data Usage
 -------------------------------------------------------------------------------
 
 data TypeSignature (s :: Stage) = TypeSignature
-  { sigName :: FunctionName s,
-    sigType :: ExpressionType s
+  { _sigName :: FunctionName s,
+    _sigType :: ExpressionType s
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (TypeSignature s)
@@ -161,8 +162,8 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Typ
 -------------------------------------------------------------------------------
 
 data AxiomDef (s :: Stage) = AxiomDef
-  { axiomName :: SymbolType s,
-    axiomType :: ExpressionType s
+  { _axiomName :: SymbolType s,
+    _axiomType :: ExpressionType s
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (AxiomDef s)
@@ -191,8 +192,8 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Induct
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveConstructorDef s)
 
 data InductiveParameter (s :: Stage) = InductiveParameter
-  { inductiveParameterName :: SymbolType s,
-    inductiveParameterType :: ExpressionType s
+  { _inductiveParameterName :: SymbolType s,
+    _inductiveParameterType :: ExpressionType s
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (InductiveParameter s)
@@ -202,10 +203,10 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Induct
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveParameter s)
 
 data InductiveDef (s :: Stage) = InductiveDef
-  { inductiveName :: InductiveName s,
-    inductiveParameters :: [InductiveParameter s],
-    inductiveType :: Maybe (ExpressionType s),
-    inductiveConstructors :: [InductiveConstructorDef s]
+  { _inductiveName :: InductiveName s,
+    _inductiveParameters :: [InductiveParameter s],
+    _inductiveType :: Maybe (ExpressionType s),
+    _inductiveConstructors :: [InductiveConstructorDef s]
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (InductiveDef s)
@@ -313,10 +314,10 @@ deriving stock instance
 type FunctionName s = SymbolType s
 
 data FunctionClause (s :: Stage) = FunctionClause
-  { clauseOwnerFunction :: FunctionName s,
-    clausePatterns :: [PatternType s],
-    clauseBody :: ExpressionType s,
-    clauseWhere :: Maybe (WhereBlock s)
+  { _clauseOwnerFunction :: FunctionName s,
+    _clausePatterns :: [PatternType s],
+    _clauseBody :: ExpressionType s,
+    _clauseWhere :: Maybe (WhereBlock s)
   }
 
 deriving stock instance
@@ -366,9 +367,9 @@ instance SingI 'ModuleLocal where
 type LocalModuleName s = SymbolType s
 
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
-  { modulePath :: ModulePathType s t,
-    moduleParameters :: [InductiveParameter s],
-    moduleBody :: [Statement s]
+  { _modulePath :: ModulePathType s t,
+    _moduleParameters :: [InductiveParameter s],
+    _moduleBody :: [Statement s]
   }
 
 deriving stock instance
@@ -843,3 +844,10 @@ deriving stock instance
   Ord
     (ExpressionType s) =>
   Ord (Print s)
+
+makeLenses ''InductiveDef
+makeLenses ''Module
+makeLenses ''TypeSignature
+makeLenses ''AxiomDef
+makeLenses ''FunctionClause
+makeLenses ''InductiveParameter

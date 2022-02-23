@@ -16,10 +16,10 @@ getAllModules m =
   where
   allImports :: ScopedModule -> [Import 'Scoped]
   allImports (MkScopedModule _ w) =
-    concat [ i : allImports (mkScopedModule t) | StatementImport i@(Import t) <- moduleBody w ]
-    <> concatMap (allImports . mkScopedModule ) [ l | StatementModule l <- moduleBody w]
+    concat [ i : allImports (mkScopedModule t) | StatementImport i@(Import t) <- _moduleBody w ]
+    <> concatMap (allImports . mkScopedModule ) [ l | StatementModule l <- _moduleBody w]
   singl :: Module 'Scoped 'ModuleTop -> (S.NameId, Module 'Scoped 'ModuleTop)
-  singl n = (S._nameId (modulePath n), n)
+  singl n = (S._nameId (_modulePath n), n)
 
 getModuleFilePath :: Module 'Scoped 'ModuleTop -> FilePath
-getModuleFilePath = _intFile . getLoc . modulePath
+getModuleFilePath = _intFile . getLoc . _modulePath

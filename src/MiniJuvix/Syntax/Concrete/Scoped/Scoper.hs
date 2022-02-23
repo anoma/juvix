@@ -181,7 +181,7 @@ checkImport import_@(Import path) = do
   cache <- gets (_cachedModules . _scoperModulesCache)
   entry' <- maybe (readParseModule path >>= local addImport . checkTopModule) return (cache ^. at path)
   let checked = _moduleEntryScoped entry'
-      sname = modulePath checked
+      sname = checked ^. modulePath
       moduleId = S._nameId sname
   modify (over scopeTopModules (HashMap.insert path moduleId))
   let entry = mkModuleEntry entry'
@@ -202,7 +202,7 @@ checkImport import_@(Import path) = do
 getTopModulePath :: Module 'Parsed 'ModuleTop -> S.AbsModulePath
 getTopModulePath Module {..} =
   S.AbsModulePath
-    { S.absTopModulePath = modulePath,
+    { S.absTopModulePath = _modulePath,
       S.absLocalPath = mempty
     }
 
@@ -381,12 +381,12 @@ checkTypeSignature ::
   TypeSignature 'Parsed ->
   Sem r (TypeSignature 'Scoped)
 checkTypeSignature TypeSignature {..} = do
-  sigType' <- checkParseExpressionAtoms sigType
-  sigName' <- bindFunctionSymbol sigName
+  sigType' <- checkParseExpressionAtoms _sigType
+  sigName' <- bindFunctionSymbol _sigName
   return
     TypeSignature
-      { sigName = sigName',
-        sigType = sigType'
+      { _sigName = sigName',
+        _sigType = sigType'
       }
 
 checkConstructorDef ::
@@ -411,12 +411,12 @@ withParams xs a = go [] xs
     case params of
       -- More params to check
       (InductiveParameter {..} : ps) -> do
-        inductiveParameterType' <- checkParseExpressionAtoms inductiveParameterType
-        inductiveParameterName' <- freshVariable inductiveParameterName
+        inductiveParameterType' <- checkParseExpressionAtoms _inductiveParameterType
+        inductiveParameterName' <- freshVariable _inductiveParameterName
         let param' =
               InductiveParameter
-                { inductiveParameterType = inductiveParameterType',
-                  inductiveParameterName = inductiveParameterName'
+                { _inductiveParameterType = inductiveParameterType',
+                  _inductiveParameterName = inductiveParameterName'
                 }
         withBindLocalVariable (LocalVariable inductiveParameterName') $
           go (inductiveParameters' ++ [param']) ps
@@ -428,15 +428,15 @@ checkInductiveDef :: forall r.
   InductiveDef 'Parsed ->
   Sem r (InductiveDef 'Scoped)
 checkInductiveDef InductiveDef {..} = do
-  withParams inductiveParameters $ \inductiveParameters' -> do
-    inductiveType' <- sequence (checkParseExpressionAtoms <$> inductiveType)
-    inductiveName' <- bindInductiveSymbol inductiveName
-    inductiveConstructors' <- mapM checkConstructorDef inductiveConstructors
+  withParams _inductiveParameters $ \inductiveParameters' -> do
+    inductiveType' <- sequence (checkParseExpressionAtoms <$> _inductiveType)
+    inductiveName' <- bindInductiveSymbol _inductiveName
+    inductiveConstructors' <- mapM checkConstructorDef _inductiveConstructors
     return InductiveDef
-      { inductiveName = inductiveName',
-        inductiveParameters = inductiveParameters',
-        inductiveType = inductiveType',
-        inductiveConstructors = inductiveConstructors'
+      { _inductiveName = inductiveName',
+        _inductiveParameters = inductiveParameters',
+        _inductiveType = inductiveType',
+        _inductiveConstructors = inductiveConstructors'
       }
 
 checkTopModule_ ::
@@ -477,9 +477,9 @@ checkTopModule m@(Module path params body) = do
       localScope $ withParams params $ \params' -> do
         (_moduleEntryExport, body') <- checkModuleBody body
         let _moduleEntryScoped = Module {
-          modulePath = path',
-          moduleParameters = params',
-          moduleBody = body' }
+          _modulePath = path',
+          _moduleParameters = params',
+          _moduleBody = body' }
         return ModuleEntry' {..}
 
 withScope :: Members '[State Scope] r => Sem r a -> Sem r a
@@ -506,16 +506,16 @@ checkLocalModule ::
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
   (_moduleEntryExport, moduleBody', moduleParameters') <-
-      withScope $ withParams moduleParameters $ \p' -> do
+      withScope $ withParams _moduleParameters $ \p' -> do
     inheritScope
-    (e, b) <- checkModuleBody moduleBody
+    (e, b) <- checkModuleBody _moduleBody
     return (e, b, p')
-  modulePath' <- bindLocalModuleSymbol modulePath
+  modulePath' <- bindLocalModuleSymbol _modulePath
   let moduleId = S._nameId modulePath'
       _moduleEntryScoped = Module
-        { modulePath = modulePath',
-          moduleParameters = moduleParameters',
-          moduleBody = moduleBody'
+        { _modulePath = modulePath',
+          _moduleParameters = moduleParameters',
+          _moduleBody = moduleBody'
         }
       entry = mkModuleEntry ModuleEntry' {..}
   modify (over scoperModules (HashMap.insert moduleId entry))
@@ -523,7 +523,7 @@ checkLocalModule Module {..} = do
   where
   inheritScope :: Sem r ()
   inheritScope = do
-    absPath <- (S.<.> modulePath) <$> gets _scopePath
+    absPath <- (S.<.> _modulePath) <$> gets _scopePath
     modify (set scopePath absPath)
     modify (over scopeSymbols (fmap inheritSymbol))
     modify (set scopeFixities mempty) -- do not inherit fixity declarations
@@ -642,22 +642,22 @@ checkFunctionClause ::
 checkFunctionClause clause@FunctionClause {..} = do
   clauseOwnerFunction' <- checkSymbolInScope
   (clausePatterns', clauseWhere', clauseBody') <- do
-    clp <- mapM checkParsePatternAtom clausePatterns
+    clp <- mapM checkParsePatternAtom _clausePatterns
     withBindCurrentGroup $ do
       s <- get @Scope
-      clw <- sequence (checkWhereBlock <$> clauseWhere)
-      clb <- checkParseExpressionAtoms clauseBody
+      clw <- sequence (checkWhereBlock <$> _clauseWhere)
+      clb <- checkParseExpressionAtoms _clauseBody
       put s
       return (clp, clw, clb)
   return
     FunctionClause
-      { clauseOwnerFunction = clauseOwnerFunction',
-        clausePatterns = clausePatterns',
-        clauseBody = clauseBody',
-        clauseWhere = clauseWhere'
+      { _clauseOwnerFunction = clauseOwnerFunction',
+        _clausePatterns = clausePatterns',
+        _clauseBody = clauseBody',
+        _clauseWhere = clauseWhere'
       }
   where
-    fun = clauseOwnerFunction
+    fun = _clauseOwnerFunction
     checkSymbolInScope :: Sem r S.Symbol
     checkSymbolInScope = do
       SymbolInfo {..} <- fromMaybeM err (HashMap.lookup fun <$> gets _scopeSymbols)
@@ -675,12 +675,12 @@ checkAxiom ::
   AxiomDef 'Parsed ->
   Sem r (AxiomDef 'Scoped)
 checkAxiom AxiomDef {..} = do
-  axiomName' <- bindAxiomSymbol axiomName
-  axiomType' <- localScope $ checkParseExpressionAtoms axiomType
+  axiomName' <- bindAxiomSymbol _axiomName
+  axiomType' <- localScope $ checkParseExpressionAtoms _axiomType
   return
     AxiomDef
-      { axiomName = axiomName',
-        axiomType = axiomType'
+      { _axiomName = axiomName',
+        _axiomType = axiomType'
       }
 
 localScope :: Sem (Reader LocalVars : r) a -> Sem r a

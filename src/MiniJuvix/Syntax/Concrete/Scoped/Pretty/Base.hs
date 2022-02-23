@@ -197,7 +197,7 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
     (StatementImport i, StatementOpenModule o) -> case sing :: SStage s of
       SParsed -> True
       SScoped ->
-        S._nameId (modulePath (importModule i)) ==
+        S._nameId (_modulePath (importModule i)) ==
         S._nameId (openModuleName o)
     (StatementImport _, _) -> False
     (StatementOpenModule {}, StatementOpenModule {}) -> True
@@ -212,29 +212,29 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
     (StatementPrint {}, _) -> False
     (StatementTypeSignature sig, StatementFunctionClause fun) ->
       case sing :: SStage s of
-        SParsed -> sigName sig == clauseOwnerFunction fun
-        SScoped -> sigName sig == clauseOwnerFunction fun
+        SParsed -> _sigName sig == _clauseOwnerFunction fun
+        SScoped -> _sigName sig == _clauseOwnerFunction fun
     (StatementTypeSignature {}, _) -> False
     (StatementFunctionClause fun1, StatementFunctionClause fun2) ->
       case sing :: SStage s of
-        SParsed -> clauseOwnerFunction fun1 == clauseOwnerFunction fun2
-        SScoped -> clauseOwnerFunction fun1 == clauseOwnerFunction fun2
+        SParsed -> _clauseOwnerFunction fun1 == _clauseOwnerFunction fun2
+        SScoped -> _clauseOwnerFunction fun1 == _clauseOwnerFunction fun2
     (StatementFunctionClause {}, _) -> False
   definesSymbol :: Symbol -> Statement s -> Bool
   definesSymbol n s = case s of
     StatementTypeSignature sig ->
       let sym = case sing :: SStage s of
-            SParsed -> sigName sig
-            SScoped -> S._nameConcrete $ sigName sig
+            SParsed -> _sigName sig
+            SScoped -> S._nameConcrete $ _sigName sig
       in n == sym
     StatementInductive d -> n `elem` syms d
     _ -> False
     where
     syms :: InductiveDef s -> [Symbol]
     syms InductiveDef {..} = case sing :: SStage s of
-      SParsed -> inductiveName : map constructorName inductiveConstructors
-      SScoped -> S._nameConcrete inductiveName :
-          map (S._nameConcrete . constructorName) inductiveConstructors
+      SParsed -> _inductiveName : map constructorName _inductiveConstructors
+      SScoped -> S._nameConcrete _inductiveName :
+          map (S._nameConcrete . constructorName) _inductiveConstructors
 
 instance SingI s => PrettyCode [Statement s] where
   ppCode ss = joinGroups <$> mapM (fmap mkGroup . mapM (fmap endSemicolon . ppCode)) (groupStatements ss)
@@ -266,10 +266,10 @@ endSemicolon x = x <> kwSemicolon
 
 instance SingI s => PrettyCode (InductiveParameter s) where
   ppCode InductiveParameter {..} = do
-    inductiveParameterName' <- annDef inductiveParameterName <$> ppSymbol inductiveParameterName
+    inductiveParameterName' <- annDef _inductiveParameterName <$> ppSymbol _inductiveParameterName
     inductiveParameterType' <- case sing :: SStage s of
-      SParsed -> ppCode inductiveParameterType
-      SScoped -> ppCode inductiveParameterType
+      SParsed -> ppCode _inductiveParameterType
+      SScoped -> ppCode _inductiveParameterType
     return $ parens (inductiveParameterName' <+> kwColon <+> inductiveParameterType')
 
 instance SingI s => PrettyCode [InductiveParameter s] where
@@ -289,9 +289,9 @@ ppInductiveParameters ps
 
 instance (SingI s, SingI t) => PrettyCode (Module s t) where
   ppCode Module {..} = do
-      moduleBody' <- ppCode moduleBody >>= indented
-      modulePath' <- ppModulePathType modulePath
-      moduleParameters' <- ppInductiveParameters moduleParameters
+      moduleBody' <- ppCode _moduleBody >>= indented
+      modulePath' <- ppModulePathType _modulePath
+      moduleParameters' <- ppInductiveParameters _moduleParameters
       return $
         kwModule <+> modulePath' <+?> moduleParameters' <> kwSemicolon <> line
           <> moduleBody'
@@ -338,16 +338,16 @@ instance SingI s => PrettyCode (InductiveConstructorDef s) where
 instance SingI s => PrettyCode (InductiveDef s) where
   ppCode :: forall r. Members '[Reader Options] r => InductiveDef s -> Sem r (Doc Ann)
   ppCode InductiveDef {..} = do
-    inductiveName' <- annDef inductiveName <$> ppSymbol inductiveName
-    inductiveParameters' <- ppInductiveParameters inductiveParameters
+    inductiveName' <- annDef _inductiveName <$> ppSymbol _inductiveName
+    inductiveParameters' <- ppInductiveParameters _inductiveParameters
     inductiveType' <- ppTypeType
-    inductiveConstructors' <- ppBlock inductiveConstructors
+    inductiveConstructors' <- ppBlock _inductiveConstructors
     return $
       kwInductive <+> inductiveName' <+?> inductiveParameters' <+?> inductiveType'
         <+> inductiveConstructors'
     where
       ppTypeType :: Sem r (Maybe (Doc Ann))
-      ppTypeType = case inductiveType of
+      ppTypeType = case _inductiveType of
         Nothing -> return Nothing
         Just e -> Just . (kwColon <+>) <$> ppExpression e
 
@@ -429,8 +429,8 @@ instance SingI s => PrettyCode (OpenModule s) where
 
 instance SingI s => PrettyCode (TypeSignature s) where
   ppCode TypeSignature {..} = do
-    sigName' <- annDef sigName <$> ppSymbol sigName
-    sigType' <- ppExpression sigType
+    sigName' <- annDef _sigName <$> ppSymbol _sigName
+    sigType' <- ppExpression _sigType
     return $ sigName' <+> kwColon <+> sigType'
 
 instance SingI s => PrettyCode (Function s) where
@@ -504,12 +504,12 @@ instance SingI s => PrettyCode (Lambda s) where
 
 instance SingI s => PrettyCode (FunctionClause s) where
   ppCode FunctionClause {..} = do
-    clauseOwnerFunction' <- ppSymbol clauseOwnerFunction
-    clausePatterns' <- case nonEmpty clausePatterns of
+    clauseOwnerFunction' <- ppSymbol _clauseOwnerFunction
+    clausePatterns' <- case nonEmpty _clausePatterns of
       Nothing -> return Nothing
       Just ne -> Just . hsep . toList <$> mapM ppPatternAtom ne
-    clauseBody' <- ppExpression clauseBody
-    clauseWhere' <- sequence (ppCode <$> clauseWhere)
+    clauseBody' <- ppExpression _clauseBody
+    clauseWhere' <- sequence (ppCode <$> _clauseWhere)
     return $
       clauseOwnerFunction' <+?> clausePatterns' <+> kwAssignment <+> clauseBody'
         <+?> ((line <>) <$> clauseWhere')
@@ -525,8 +525,8 @@ instance SingI s => PrettyCode (WhereClause s) where
 
 instance SingI s => PrettyCode (AxiomDef s) where
   ppCode AxiomDef {..} = do
-    axiomName' <- ppSymbol axiomName
-    axiomType' <- ppExpression axiomType
+    axiomName' <- ppSymbol _axiomName
+    axiomType' <- ppExpression _axiomType
     return $ kwAxiom <+> axiomName' <+> kwColon <+> axiomType'
 
 instance SingI s => PrettyCode (Eval s) where
@@ -548,7 +548,7 @@ instance SingI s => PrettyCode (Import s) where
     where
     ppModulePath = case sing :: SStage s of
       SParsed -> ppCode m
-      SScoped -> ppTopModulePath (modulePath m)
+      SScoped -> ppTopModulePath (m ^. modulePath)
     jumpLines :: Doc Ann -> Doc Ann
     jumpLines x = line <> x <> line
     inlineImport :: Sem r (Maybe (Doc Ann))

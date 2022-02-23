@@ -59,7 +59,7 @@ instance PrettyError LacksTypeSig where
      "There is a declaration with a missing type signature:" <> line
      <> indent' (highlight (ppCode _lacksTypeSigClause))
     where
-    loc = getLoc $ clauseOwnerFunction _lacksTypeSigClause
+    loc = getLoc $ _clauseOwnerFunction _lacksTypeSigClause
 
 instance PrettyError ImportCycle where
   ppError ImportCycle {..} =

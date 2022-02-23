@@ -38,12 +38,12 @@ buildCallGraph = run . execState mempty . checkModule
 checkModule :: Members '[State CallGraph] r => A.Module -> Sem r ()
 checkModule m = mapM_ checkStatement (m ^. A.moduleBody)
 
-checkStatement :: Members '[State CallGraph] r => A.Statement -> Sem r ()
-checkStatement s = case s of
-  A.StatementAxiom {} -> return ()
-  A.StatementFunctionDef def -> checkFunctionDef def
-  A.StatementModule m -> checkModule m
-  _ -> return ()
+-- checkStatement :: Members '[State CallGraph] r => A.Statement -> Sem r ()
+-- checkStatement s = case s of
+--   A.StatementAxiom {} -> return ()
+--   A.StatementFunctionDef def -> checkFunctionDef def
+--   A.StatementModule m -> checkModule m
+--   _ -> return ()
 
 checkFunctionDef :: Members '[State CallGraph] r => A.FunctionDef -> Sem r ()
 checkFunctionDef def =
@@ -53,16 +53,16 @@ checkFunctionDef def =
 checkFunctionClause :: Members '[State CallGraph, Reader A.FunctionName] r => A.FunctionClause -> Sem r ()
 checkFunctionClause cl = checkExpression (cl ^. A.clauseBody)
 
-checkExpression :: Members '[State CallGraph, Reader A.FunctionName] r => A.Expression -> Sem r ()
-checkExpression e = do
-  whenJust (viewCall e) registerCall
-  case e of
-    A.ExpressionApplication a -> checkApplication a
-    A.ExpressionConstructor {} -> return ()
-    A.ExpressionVar {} -> return ()
-    A.ExpressionDefinedName {} -> return ()
-    A.ExpressionUniverse {} -> return ()
-    A.ExpressionFunction f -> checkFunction f
+-- checkExpression :: Members '[State CallGraph, Reader A.FunctionName] r => A.Expression -> Sem r ()
+-- checkExpression e = do
+--   whenJust (viewCall e) registerCall
+--   case e of
+--     A.ExpressionApplication a -> checkApplication a
+--     A.ExpressionConstructor {} -> return ()
+--     A.ExpressionVar {} -> return ()
+--     A.ExpressionDefinedName {} -> return ()
+--     A.ExpressionUniverse {} -> return ()
+--     A.ExpressionFunction f -> checkFunction f
 
 checkApplication :: Members '[State CallGraph, Reader A.FunctionName] r => A.Application -> Sem r ()
 checkApplication (A.Application l r) = do

@@ -14,6 +14,7 @@ type FunctionName = S.Symbol
 type VarName = S.Symbol
 type ConstrName = S.Symbol
 type InductiveName = S.Symbol
+type AxiomName = S.Symbol
 type Name = S.Name
 
 type TopModule = Module C.TopModulePath
@@ -21,15 +22,15 @@ type LocalModule = Module C.Symbol
 
 data Module s = Module
   { _moduleName :: S.Name' s,
-    _moduleBody :: [Statement]
+    _moduleBody :: ModuleBody
   }
   deriving stock (Show, Eq)
 
-data Statement =
-  StatementAxiom
-  | StatementInductive InductiveDef
-  | StatementFunctionDef FunctionDef
-  | StatementModule LocalModule
+data ModuleBody = ModuleBody {
+  _moduleInductives :: HashMap InductiveName InductiveDef,
+  _moduleFunctions :: HashMap FunctionName FunctionDef,
+  _moduleLocalModules :: HashMap LocalModuleName LocalModule
+  }
   deriving stock (Show, Eq)
 
 data FunctionDef = FunctionDef {
@@ -44,7 +45,7 @@ data FunctionClause = FunctionClause {
   }
   deriving stock (Show, Eq)
 
-data Iden = 
+data Iden =
   IdenDefined Name
   | IdenConstructor Name
   | IdenVar VarName
@@ -126,7 +127,7 @@ data Pattern
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
     _inductiveParameters :: [FunctionParameter],
-    _inductiveType :: Expression,
+    _inductiveType :: Maybe Expression,
     _inductiveConstructors :: [InductiveConstructorDef]
   }
   deriving stock (Show, Eq)
@@ -134,6 +135,12 @@ data InductiveDef = InductiveDef
 data InductiveConstructorDef = InductiveConstructorDef
   { _constructorName :: ConstrName,
     _constructorType :: Expression
+  }
+  deriving stock (Show, Eq)
+
+data AxiomDef = AxiomDef {
+  _axiomName :: AxiomName,
+  _axiomType :: Expression
   }
   deriving stock (Show, Eq)
 

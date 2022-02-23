@@ -187,9 +187,9 @@ typeSignature ::
   MonadParsec e Text m =>
   Symbol ->
   m (TypeSignature 'Parsed)
-typeSignature sigName = do
+typeSignature _sigName = do
   kwColon
-  sigType <- expressionAtoms
+  _sigType <- expressionAtoms
   return TypeSignature {..}
 
 -------------------------------------------------------------------------------
@@ -213,9 +213,9 @@ auxTypeSigFunClause = do
 axiomDef :: forall e m. MonadParsec e Text m => m (AxiomDef 'Parsed)
 axiomDef = do
   kwAxiom
-  axiomName <- symbol
+  _axiomName <- symbol
   kwColon
-  axiomType <- expressionAtoms
+  _axiomType <- expressionAtoms
   return AxiomDef {..}
 
 --------------------------------------------------------------------------------
@@ -295,17 +295,17 @@ lambda = do
 inductiveDef :: MonadParsec e Text m => m (InductiveDef 'Parsed)
 inductiveDef = do
   kwInductive
-  inductiveName <- symbol
-  inductiveParameters <- P.many inductiveParam
-  inductiveType <- optional (kwColon >> expressionAtoms)
-  inductiveConstructors <- braces $ P.sepEndBy constructorDef kwSemicolon
+  _inductiveName <- symbol
+  _inductiveParameters <- P.many inductiveParam
+  _inductiveType <- optional (kwColon >> expressionAtoms)
+  _inductiveConstructors <- braces $ P.sepEndBy constructorDef kwSemicolon
   return InductiveDef {..}
 
 inductiveParam :: MonadParsec e Text m => m (InductiveParameter 'Parsed)
 inductiveParam = parens $ do
-  inductiveParameterName <- symbol
+  _inductiveParameterName <- symbol
   kwColon
-  inductiveParameterType <- expressionAtoms
+  _inductiveParameterType <- expressionAtoms
   return InductiveParameter {..}
 
 constructorDef :: MonadParsec e Text m => m (InductiveConstructorDef 'Parsed)
@@ -340,11 +340,11 @@ functionClause ::
   MonadParsec e Text m =>
   Symbol ->
   m (FunctionClause 'Parsed)
-functionClause clauseOwnerFunction = do
-  clausePatterns <- P.many patternAtom
+functionClause _clauseOwnerFunction = do
+  _clausePatterns <- P.many patternAtom
   kwAssignment
-  clauseBody <- expressionAtoms
-  clauseWhere <- optional whereBlock
+  _clauseBody <- expressionAtoms
+  _clauseWhere <- optional whereBlock
   return FunctionClause {..}
 
 --------------------------------------------------------------------------------
@@ -362,10 +362,10 @@ pmodulePath = case sing :: SModuleIsTop t of
 moduleDef :: (SingI t, MonadParsec e Text m) => m (Module 'Parsed t)
 moduleDef = do
   kwModule
-  modulePath <- pmodulePath
-  moduleParameters <- many inductiveParam
+  _modulePath <- pmodulePath
+  _moduleParameters <- many inductiveParam
   kwSemicolon
-  moduleBody <- P.sepEndBy statement kwSemicolon
+  _moduleBody <- P.sepEndBy statement kwSemicolon
   kwEnd
   return Module {..}
 
