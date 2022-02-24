@@ -16,7 +16,8 @@ import qualified MiniJuvix.Internal.Strings as Str
 data Options = Options
   {
     _optShowNameId :: Bool,
-    _optIndent :: Int
+    _optIndent :: Int,
+    _optShowDecreasingArgs :: Bool
   }
 
 toSOptions :: Options -> S.Options
@@ -38,7 +39,8 @@ defaultOptions =
   Options
     {
       _optShowNameId = False,
-      _optIndent = 2
+      _optIndent = 2,
+      _optShowDecreasingArgs = False
     }
 
 ppDefault :: PrettyCode c => c -> Doc Ann

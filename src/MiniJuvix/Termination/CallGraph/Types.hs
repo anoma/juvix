@@ -36,11 +36,13 @@ instance PrettyCode Call where
     return $ f' <+> hsep args'
     where
     ppArg :: (Maybe Int, A.Expression) -> Sem r (Doc Ann)
-    ppArg (mi, a) = case mi of
-      Just i -> do
-        a' <- ppCode a
-        return $ brackets (a' <+> kwPred <+> pretty i)
-      Nothing -> ppCodeAtom a
+    ppArg (mi, a) = do
+      showDecr <- asks _optShowDecreasingArgs
+      case mi of
+        Just i | showDecr -> do
+          a' <- ppCode a
+          return $ brackets (a' <+> kwPred <+> pretty i)
+        _ -> ppCodeAtom a
     kwPred :: Doc Ann
     kwPred = annotate AnnKeyword "≺"
 

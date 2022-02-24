@@ -18,6 +18,7 @@ import Options.Applicative.Help.Pretty
 import Text.Show.Pretty hiding (Html)
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (defaultOptions)
+import qualified MiniJuvix.Syntax.Abstract.Pretty.Ansi as A
 
 data Command
   = Scope ScopeOptions
@@ -45,7 +46,8 @@ data HtmlOptions = HtmlOptions
 
 data CallGraphOptions = CallGraphOptions
   { _graphInputFile :: FilePath,
-    _graphShowIds :: Bool
+    _graphShowIds :: Bool,
+    _graphShowDecreasingArgs :: Bool
   }
 
 parseHtml :: Parser HtmlOptions
@@ -88,6 +90,12 @@ parseCallGraph = do
     switch
       ( long "show-name-ids"
           <> help "Show the unique number of each identifier"
+      )
+  _graphShowDecreasingArgs <-
+    switch
+      ( long "show-decreasing-args"
+          <> short 'd'
+          <> help "Show the arguments that are detected to decrease"
       )
   pure CallGraphOptions {..}
 
@@ -204,7 +212,8 @@ mkScopePrettyOptions ScopeOptions {..} =
 mkAbstractPrettyOptions :: CallGraphOptions -> A.Options
 mkAbstractPrettyOptions CallGraphOptions {..} =
   A.defaultOptions
-    { A._optShowNameId = _graphShowIds
+    { A._optShowNameId = _graphShowIds,
+      A._optShowDecreasingArgs = _graphShowDecreasingArgs
     }
 
 parseModuleIO :: FilePath -> IO (M.Module 'M.Parsed 'M.ModuleTop)
