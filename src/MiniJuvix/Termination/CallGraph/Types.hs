@@ -23,16 +23,26 @@ data Rel =
 
 data Call = Call {
   _callName :: A.Name,
-  _callArgs :: [A.Expression]
+  _callArgs :: [(Maybe Int, A.Expression)]
   }
 makeLenses ''Call
 makeLenses ''CallGraph
 
 instance PrettyCode Call where
+  ppCode :: forall r. Members '[Reader Options] r => Call -> Sem r (Doc Ann)
   ppCode (Call f args) = do
-    args' <- mapM ppCodeAtom args
+    args' <- mapM ppArg args
     f' <- ppSCode f
     return $ f' <+> hsep args'
+    where
+    ppArg :: (Maybe Int, A.Expression) -> Sem r (Doc Ann)
+    ppArg (mi, a) = case mi of
+      Just i -> do
+        a' <- ppCode a
+        return $ brackets (a' <+> kwPred <+> pretty i)
+      Nothing -> ppCodeAtom a
+    kwPred :: Doc Ann
+    kwPred = annotate AnnKeyword "≺"
 
 instance PrettyCode CallGraph where
   ppCode :: forall r. Members '[Reader Options] r => CallGraph -> Sem r (Doc Ann)
