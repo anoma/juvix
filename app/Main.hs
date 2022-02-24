@@ -203,13 +203,13 @@ parseCommand =
             (Scope <$> parseScope)
             (progDesc "Parse and scope a .mjuvix file")
     commandGraph :: Mod CommandFields Command
-    commandGraph = command "graph" minfo
+    commandGraph = command "calls" minfo
       where
         minfo :: ParserInfo Command
         minfo =
           info
             (CallGraph <$> parseCallGraph)
-            (progDesc "Compute the call graph of a .mjuvix file")
+            (progDesc "Compute the calls graph of a .mjuvix file")
 
 mkScopePrettyOptions :: ScopeOptions -> M.Options
 mkScopePrettyOptions ScopeOptions {..} =
