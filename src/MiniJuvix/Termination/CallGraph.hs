@@ -11,9 +11,12 @@ import MiniJuvix.Termination.CallGraph.Types
 
 -- | i = SizeInfo [v] ⇔ v is smaller than argument i of the caller function.
 -- Indexes are 0 based
-type SizeInfo = HashMap VarName Int
+data SizeInfo = SizeInfo {
+  _sizeSmaller :: HashMap VarName Int,
+  _sizeEqual :: [Pattern]
+       }
 
-viewCall :: Members '[Reader SizeInfo] r
+viewCall :: forall r. Members '[Reader SizeInfo] r
    => Expression -> Sem r (Maybe Call)
 viewCall e = case e of
   ExpressionApplication (Application f x) -> do
@@ -21,12 +24,25 @@ viewCall e = case e of
     x' <- callArg
     return $ over callArgs (`snoc`x') <$> c
     where
-     callArg = case x of
-       ExpressionIden (IdenVar v) -> do
-         s <- asks (HashMap.lookup v)
-         return (s, x)
-       _ -> return (Nothing, x)
-
+    callArg :: Sem r (ArgRelation, Expression)
+    callArg =  do
+      lt <- lessThan
+      eq <- equalTo
+      return (fromMaybe DontKnow (lt `mplus` eq), x)
+      where
+      lessThan :: Sem r (Maybe ArgRelation)
+      lessThan = case x of
+        ExpressionIden (IdenVar v) -> do
+          s <- asks (HashMap.lookup v . _sizeSmaller)
+          return (LessThan <$> s)
+        _ -> return Nothing
+      equalTo :: Sem r (Maybe ArgRelation)
+      equalTo = do
+        case viewExpressionAsPattern x of
+          Just x' -> do
+            s <- asks (elemIndex x' . _sizeEqual)
+            return (EqualTo <$> s)
+          _ -> return Nothing
   ExpressionIden (IdenDefined x) ->
      return (Just (singletonCall x))
   _ -> return Nothing
@@ -63,12 +79,21 @@ checkFunctionDef def = runReader (def ^. funDefName) $ do
   mapM_ checkFunctionClause (def ^. funDefClauses)
 
 checkTypeSignature :: Members '[State CallGraph, Reader FunctionName] r => Expression -> Sem r ()
-checkTypeSignature = runReader (mempty :: SizeInfo) . checkExpression
+checkTypeSignature = runReader (emptySizeInfo :: SizeInfo) . checkExpression
+
+emptySizeInfo :: SizeInfo
+emptySizeInfo = SizeInfo {
+  _sizeEqual = mempty,
+  _sizeSmaller = mempty
+  }
 
 mkSizeInfo :: [Pattern] -> SizeInfo
-mkSizeInfo ps = HashMap.fromList
-  [ (v, i) | (i, p) <- zip [0..] ps,
-    v <- smallerPatternVariables p]
+mkSizeInfo ps = SizeInfo {..}
+  where
+  _sizeEqual = ps
+  _sizeSmaller = HashMap.fromList
+    [ (v, i) | (i, p) <- zip [0..] ps,
+      v <- smallerPatternVariables p]
 
 checkFunctionClause :: Members '[State CallGraph, Reader FunctionName] r =>
   FunctionClause -> Sem r ()

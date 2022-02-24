@@ -21,9 +21,14 @@ data Rel =
   | RLe
   | RNothing
 
+data ArgRelation =
+  LessThan Int
+  | EqualTo Int
+  | DontKnow
+
 data Call = Call {
   _callName :: A.Name,
-  _callArgs :: [(Maybe Int, A.Expression)]
+  _callArgs :: [(ArgRelation, A.Expression)]
   }
 makeLenses ''Call
 makeLenses ''CallGraph
@@ -35,16 +40,21 @@ instance PrettyCode Call where
     f' <- ppSCode f
     return $ f' <+> hsep args'
     where
-    ppArg :: (Maybe Int, A.Expression) -> Sem r (Doc Ann)
+    ppArg :: (ArgRelation, A.Expression) -> Sem r (Doc Ann)
     ppArg (mi, a) = do
       showDecr <- asks _optShowDecreasingArgs
       case mi of
-        Just i | showDecr -> do
+        LessThan i | showDecr -> do
           a' <- ppCode a
           return $ brackets (a' <+> kwPred <+> pretty i)
+        EqualTo i | showDecr -> do
+          a' <- ppCode a
+          return $ brackets (a' <+> kwEqual <+> pretty i)
         _ -> ppCodeAtom a
     kwPred :: Doc Ann
     kwPred = annotate AnnKeyword "≺"
+    kwEqual :: Doc Ann
+    kwEqual = annotate AnnKeyword "="
 
 instance PrettyCode CallGraph where
   ppCode :: forall r. Members '[Reader Options] r => CallGraph -> Sem r (Doc Ann)
