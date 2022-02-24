@@ -17,8 +17,10 @@ data Options = Options
   {
     _optShowNameId :: Bool,
     _optIndent :: Int,
-    _optShowDecreasingArgs :: Bool
+    _optShowDecreasingArgs :: ShowDecrArgs
   }
+
+data ShowDecrArgs = OnlyArg | OnlyRel | ArgRel
 
 toSOptions :: Options -> S.Options
 toSOptions Options {..} = S.defaultOptions {
@@ -40,7 +42,7 @@ defaultOptions =
     {
       _optShowNameId = False,
       _optIndent = 2,
-      _optShowDecreasingArgs = False
+      _optShowDecreasingArgs = OnlyRel
     }
 
 ppDefault :: PrettyCode c => c -> Doc Ann

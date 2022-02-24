@@ -6,11 +6,10 @@ import Control.Monad.Extra
 import qualified MiniJuvix.Syntax.Concrete.Language as M
 import qualified MiniJuvix.Syntax.Concrete.Parser as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
-import qualified MiniJuvix.Syntax.Abstract.Pretty.Ansi as A
 import qualified MiniJuvix.Termination.CallGraph as A
 import qualified MiniJuvix.Translation.ScopedToAbstract as A
-import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (Options (..))
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
+import qualified MiniJuvix.Syntax.Abstract.Pretty.Base as A
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
 import MiniJuvix.Prelude hiding (Doc)
 import Options.Applicative
@@ -47,7 +46,7 @@ data HtmlOptions = HtmlOptions
 data CallGraphOptions = CallGraphOptions
   { _graphInputFile :: FilePath,
     _graphShowIds :: Bool,
-    _graphShowDecreasingArgs :: Bool
+    _graphShowDecreasingArgs :: A.ShowDecrArgs
   }
 
 parseHtml :: Parser HtmlOptions
@@ -92,12 +91,22 @@ parseCallGraph = do
           <> help "Show the unique number of each identifier"
       )
   _graphShowDecreasingArgs <-
-    switch
+    option decrArgsParser
       ( long "show-decreasing-args"
           <> short 'd'
           <> help "Show the arguments that are detected to decrease"
       )
   pure CallGraphOptions {..}
+  where
+  decrArgsParser :: ReadM A.ShowDecrArgs
+  decrArgsParser = eitherReader $ \s ->
+    case map toLower s of
+      "argument" -> return A.OnlyArg
+      "relation" -> return A.OnlyRel
+      "both" -> return A.ArgRel
+      _ -> Left "bad argument"
+
+
 
 parseParse :: Parser ParseOptions
 parseParse = do
@@ -205,8 +214,8 @@ parseCommand =
 mkScopePrettyOptions :: ScopeOptions -> M.Options
 mkScopePrettyOptions ScopeOptions {..} =
   M.defaultOptions
-    { _optShowNameId = _scopeShowIds,
-      _optInlineImports = _scopeInlineImports
+    { M._optShowNameId = _scopeShowIds,
+      M._optInlineImports = _scopeInlineImports
     }
 
 mkAbstractPrettyOptions :: CallGraphOptions -> A.Options
@@ -251,6 +260,7 @@ go c = case c of
     a <- fromRightIO' putStrLn (return $ A.translateModule s)
     let graph = A.buildCallGraph a
     A.printPrettyCode (mkAbstractPrettyOptions opts) graph
+    putStrLn ""
 
 main :: IO ()
 main = execParser descr >>= go
