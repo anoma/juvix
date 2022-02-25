@@ -1,4 +1,4 @@
-module _ where
+module Termination.SizeRelation where
 
 open import Base
 open import Agda.Builtin.Sigma
