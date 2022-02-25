@@ -9,8 +9,9 @@ data S : Set where
   ≺ : S
   ∼ : S
 
-open import Algebra.Structures {lzero} {lzero} {A = S} _≡_
+open import Algebra.Structures {A = S} _≡_
 open import Algebra.Definitions {A = S} _≡_
+open import Algebra.Structures.StarSemiring {A = S} _≡_
 
 infixl 6 _+_
 infixl 7 _*_
@@ -28,6 +29,11 @@ _+_ : Op₂ S
 ∼ + ∼ = ∼
 ∼ + ⁇ = ∼
 ⁇ + b = b
+
+★ : Op₁ S
+★ ⁇ = ∼
+★ ≺ = ≺
+★ ∼ = ≺
 
 -- Proofs on _+_
 
@@ -88,6 +94,17 @@ _+_ : Op₂ S
 *-Associative ≺ ≺ ∼ = refl
 *-Associative ≺ ∼ _ = refl
 *-Associative ∼ _ _ = refl
+
+*-Commutative : Commutative _*_
+*-Commutative ⁇ ⁇ = refl
+*-Commutative ⁇ ≺ = refl
+*-Commutative ⁇ ∼ = refl
+*-Commutative ≺ ⁇ = refl
+*-Commutative ≺ ≺ = refl
+*-Commutative ≺ ∼ = refl
+*-Commutative ∼ ⁇ = refl
+*-Commutative ∼ ≺ = refl
+*-Commutative ∼ ∼ = refl
 
 *-Identityˡ : LeftIdentity ∼ _*_
 *-Identityˡ _ = refl
@@ -157,3 +174,26 @@ _+_ : Op₂ S
 +-*-IsSemiring = record
   { isSemiringWithoutAnnihilatingZero = +-*-IsSemiringWithoutAnnihilatingZero
   ; zero = *-Zero }
+
++-*-IsCommutativeSemiring : IsCommutativeSemiring _+_ _*_ ⁇ ∼
++-*-IsCommutativeSemiring =
+  record { isSemiring = +-*-IsSemiring
+  ; *-comm = *-Commutative }
+
+-- Proofs on ★
+
+★-condition-1 : (a : S) → ★ a ≡ ∼ + a * ★ a
+★-condition-1 ⁇ = refl
+★-condition-1 ≺ = refl
+★-condition-1 ∼ = refl
+
+★-condition-2 : (a : S) → ★ a ≡ ∼ + ★ a * a
+★-condition-2 ⁇ = refl
+★-condition-2 ≺ = refl
+★-condition-2 ∼ = refl
+
++-*-IsStarSemiring : IsStarSemiring _+_ _*_ ★ ⁇ ∼
++-*-IsStarSemiring = record
+   { isSemiring = +-*-IsSemiring
+   ; ★-cond-1 = ★-condition-1
+   ; ★-cond-2 = ★-condition-2 }
