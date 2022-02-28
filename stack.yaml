@@ -1,5 +1,4 @@
-resolver: nightly-2022-01-10
+resolver: nightly-2022-02-27
 extra-deps:
-- aeson-2.0.3.0
 - polysemy-1.7.1.0
 - polysemy-plugin-0.4.3.0
