@@ -18,6 +18,7 @@ extra-source-files:
 
 dependencies:
 - aeson == 2.0.*
+- algebraic-graphs == 0.6.*
 - base == 4.15.*
 - blaze-html == 0.9.*
 - blaze-markup == 0.8.*
