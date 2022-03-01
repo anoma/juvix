@@ -5,6 +5,7 @@ module MiniJuvix.Termination.CallGraph
 
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.Language.Extra
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import qualified Data.HashMap.Strict as HashMap
 import MiniJuvix.Termination.CallGraph.Types
 
@@ -17,7 +18,7 @@ data SizeInfo = SizeInfo {
        }
 
 viewCall :: forall r. Members '[Reader SizeInfo] r
-   => Expression -> Sem r (Maybe Call)
+   => Expression -> Sem r (Maybe FunCall)
 viewCall e = case e of
   ExpressionApplication (Application f x) -> do
     c <- viewCall f
@@ -47,38 +48,47 @@ viewCall e = case e of
      return (Just (singletonCall x))
   _ -> return Nothing
   where
-  singletonCall :: Name -> Call
-  singletonCall n = Call n []
+  singletonCall :: Name -> FunCall
+  singletonCall n = FunCall (S.fromName n) []
 
-addCall :: FunctionName -> Call -> CallGraph -> CallGraph
-addCall fun c = over callGraph (HashMap.insertWith (flip (<>)) fun [c])
+addCall :: FunctionName -> FunCall -> CallMap -> CallMap
+addCall fun c = over callGraph (HashMap.alter (Just . insertCall c) fun)
+  where
+  insertCall :: FunCall -> Maybe (HashMap FunctionName [FunCall]) -> HashMap FunctionName [FunCall]
+  insertCall f m = case m of
+    Nothing -> singl f
+    Just m' -> addFunCall f m'
+  singl :: FunCall -> HashMap FunctionName [FunCall]
+  singl f = HashMap.singleton (f ^. callName) [f]
+  addFunCall :: FunCall -> HashMap FunctionName [FunCall] -> HashMap FunctionName [FunCall]
+  addFunCall fc = HashMap.insertWith (flip (<>)) (fc ^. callName) [fc]
 
-registerCall :: Members '[State CallGraph, Reader FunctionName, Reader SizeInfo] r
-   => Call -> Sem r ()
+registerCall :: Members '[State CallMap, Reader FunctionName, Reader SizeInfo] r
+   => FunCall -> Sem r ()
 registerCall c = do
   fun <- ask
   modify (addCall fun c)
 
-buildCallGraph :: TopModule -> CallGraph
-buildCallGraph = run . execState mempty . checkModule
+buildCallMap :: TopModule -> CallMap
+buildCallMap = run . execState mempty . checkModule
 
-checkModule :: Members '[State CallGraph] r => TopModule -> Sem r ()
+checkModule :: Members '[State CallMap] r => TopModule -> Sem r ()
 checkModule m = checkModuleBody (m ^. moduleBody)
 
-checkModuleBody :: Members '[State CallGraph] r => ModuleBody -> Sem r ()
+checkModuleBody :: Members '[State CallMap] r => ModuleBody -> Sem r ()
 checkModuleBody body = do
   mapM_ checkFunctionDef (toList $ body ^. moduleFunctions)
   mapM_ checkLocalModule (toList $ body ^. moduleLocalModules)
 
-checkLocalModule :: Members '[State CallGraph] r => LocalModule -> Sem r ()
+checkLocalModule :: Members '[State CallMap] r => LocalModule -> Sem r ()
 checkLocalModule m = checkModuleBody (m ^. moduleBody)
 
-checkFunctionDef :: Members '[State CallGraph] r => FunctionDef -> Sem r ()
+checkFunctionDef :: Members '[State CallMap] r => FunctionDef -> Sem r ()
 checkFunctionDef def = runReader (def ^. funDefName) $ do
   checkTypeSignature (def ^. funDefTypeSig)
   mapM_ checkFunctionClause (def ^. funDefClauses)
 
-checkTypeSignature :: Members '[State CallGraph, Reader FunctionName] r => Expression -> Sem r ()
+checkTypeSignature :: Members '[State CallMap, Reader FunctionName] r => Expression -> Sem r ()
 checkTypeSignature = runReader (emptySizeInfo :: SizeInfo) . checkExpression
 
 emptySizeInfo :: SizeInfo
@@ -95,12 +105,12 @@ mkSizeInfo ps = SizeInfo {..}
     [ (v, i) | (i, p) <- zip [0..] ps,
       v <- smallerPatternVariables p]
 
-checkFunctionClause :: Members '[State CallGraph, Reader FunctionName] r =>
+checkFunctionClause :: Members '[State CallMap, Reader FunctionName] r =>
   FunctionClause -> Sem r ()
 checkFunctionClause cl = runReader (mkSizeInfo (cl ^. clausePatterns))
   $ checkExpression (cl ^. clauseBody)
 
-checkExpression :: Members '[State CallGraph, Reader FunctionName, Reader SizeInfo] r => Expression -> Sem r ()
+checkExpression :: Members '[State CallMap, Reader FunctionName, Reader SizeInfo] r => Expression -> Sem r ()
 checkExpression e = do
   mc <- viewCall e
   case mc of
@@ -112,18 +122,18 @@ checkExpression e = do
       ExpressionUniverse {} -> return ()
       ExpressionFunction f -> checkFunction f
 
-checkApplication :: Members '[State CallGraph, Reader FunctionName, Reader SizeInfo] r
+checkApplication :: Members '[State CallMap, Reader FunctionName, Reader SizeInfo] r
   => Application -> Sem r ()
 checkApplication (Application l r) = do
   checkExpression l
   checkExpression r
 
-checkFunction :: Members '[State CallGraph, Reader FunctionName, Reader SizeInfo] r
+checkFunction :: Members '[State CallMap, Reader FunctionName, Reader SizeInfo] r
   => Function -> Sem r ()
 checkFunction (Function l r) = do
   checkFunctionParameter l
   checkExpression r
 
-checkFunctionParameter :: Members '[State CallGraph, Reader FunctionName, Reader SizeInfo] r
+checkFunctionParameter :: Members '[State CallMap, Reader FunctionName, Reader SizeInfo] r
    => FunctionParameter -> Sem r ()
 checkFunctionParameter p = checkExpression (p ^. paramType)

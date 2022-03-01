@@ -258,7 +258,7 @@ go c = case c of
     m <- parseModuleIO _graphInputFile
     s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
     a <- fromRightIO' putStrLn (return $ A.translateModule s)
-    let graph = A.buildCallGraph a
+    let graph = A.buildCallMap a
     A.printPrettyCode (mkAbstractPrettyOptions opts) graph
     putStrLn ""
 

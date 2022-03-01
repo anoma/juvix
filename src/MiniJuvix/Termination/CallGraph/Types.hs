@@ -1,41 +1,138 @@
 {-# LANGUAGE TemplateHaskell #-}
-module MiniJuvix.Termination.CallGraph.Types where
+module MiniJuvix.Termination.CallGraph.Types (
+  module MiniJuvix.Termination.CallGraph.Types.SizeRelation,
+  module MiniJuvix.Termination.CallGraph.Types
+                                             ) where
 
 import MiniJuvix.Prelude
 import qualified MiniJuvix.Syntax.Abstract.Language as A
 import qualified Data.HashMap.Strict as HashMap
 import Prettyprinter
+import MiniJuvix.Termination.CallGraph.Types.SizeRelation
 import MiniJuvix.Syntax.Abstract.Pretty.Base
 
-newtype CallGraph = CallGraph {
-  _callGraph :: HashMap A.FunctionName [Call] }
+newtype CallMap = CallMap {
+  _callGraph :: HashMap A.FunctionName (HashMap A.FunctionName [FunCall]) }
   deriving newtype (Semigroup, Monoid)
 
 data Argument = Argument {
   _argOwnerFunction :: A.FunctionName,
   _argIx :: Int
   }
-
-data Rel =
-  REq
-  | RLe
-  | RNothing
+data FunCall = FunCall {
+  _callName :: A.FunctionName,
+  _callArgs :: [(ArgRelation, A.Expression)]
+  }
 
 data ArgRelation =
   LessThan Int
   | EqualTo Int
   | DontKnow
 
-data Call = Call {
-  _callName :: A.Name,
-  _callArgs :: [(ArgRelation, A.Expression)]
-  }
-makeLenses ''Call
-makeLenses ''CallGraph
+type CallRow = Maybe (Int, Rel')
 
-instance PrettyCode Call where
-  ppCode :: forall r. Members '[Reader Options] r => Call -> Sem r (Doc Ann)
-  ppCode (Call f args) = do
+type CallMatrix = [CallRow]
+data Call = Call {
+  _callFrom :: A.FunctionName,
+  _callTo :: A.FunctionName,
+  _callMatrix :: CallMatrix
+  }
+type Edges = HashMap (A.FunctionName, A.FunctionName) Edge
+
+data Edge = Edge {
+  _edgeFrom :: A.FunctionName,
+  _edgeTo :: A.FunctionName,
+  _edgeMatrices :: [CallMatrix]
+  }
+
+newtype CompleteCallGraph = CompleteCallGraph Edges
+
+data ReflexiveEdge = ReflexiveEdge {
+  _redgeMatrix :: CallMatrix,
+  _redgeFun :: A.FunctionName
+  }
+
+makeLenses ''FunCall
+makeLenses ''Edge
+makeLenses ''CallMap
+
+multiply :: CallMatrix -> CallMatrix -> CallMatrix
+multiply a b = map sumProdRow a
+  where
+  rowB :: Int -> CallRow
+  rowB i = case b !? i of
+    Just (Just c) -> Just c
+    _ -> Nothing
+  sumProdRow :: CallRow -> Maybe (Int, Rel')
+  sumProdRow mr = do
+    (ki, ra) <- mr
+    (j, rb) <- rowB ki
+    return (j, mul' ra rb)
+
+multiplyMany :: [CallMatrix] -> [CallMatrix] -> [CallMatrix]
+multiplyMany r s = [ multiply a b | a <- r, b <- s]
+
+composeEdge :: Edge -> Edge -> Maybe Edge
+composeEdge a b = do
+  guard (a ^. edgeTo == b ^. edgeFrom)
+  return Edge {
+    _edgeFrom = a ^. edgeFrom,
+    _edgeTo = b ^. edgeTo,
+    _edgeMatrices = multiplyMany (a ^. edgeMatrices) (b ^. edgeMatrices)
+    }
+
+fromFunCall :: A.FunctionName -> FunCall -> Call
+fromFunCall caller fc =
+  Call {_callFrom = caller,
+          _callTo = fc ^. callName,
+          _callMatrix = map (fromArgRelation . fst) (fc ^. callArgs)
+       }
+  where
+  fromArgRelation :: ArgRelation -> CallRow
+  fromArgRelation a = case a of
+    DontKnow -> Nothing
+    LessThan i -> Just (i, RLe)
+    EqualTo i -> Just (i, REq)
+
+completeCallGraph :: CallMap -> CompleteCallGraph
+completeCallGraph cm = CompleteCallGraph (go startingEdges)
+  where
+  startingEdges :: Edges
+  startingEdges = foldr insertCall mempty allCalls
+    where
+    insertCall :: Call -> Edges -> Edges
+    insertCall Call {..} = HashMap.alter (Just . aux) (_callFrom, _callTo)
+      where
+      aux :: Maybe Edge -> Edge
+      aux me = case me of
+        Nothing -> Edge _callFrom _callTo [_callMatrix]
+        Just e -> over edgeMatrices (_callMatrix : ) e
+  allCalls :: [Call]
+  allCalls = [ fromFunCall caller funCall
+               | (caller, callerMap) <- HashMap.toList (cm ^. callGraph),
+               (_, funCalls) <- HashMap.toList callerMap,
+               funCall <- funCalls ]
+  go :: Edges -> Edges
+  go m
+    | edgesCount m == edgesCount m' = m
+    | otherwise = go m'
+    where
+    m' = step m
+  step :: Edges -> Edges
+  step s = edgesUnion s (edgesCompose s startingEdges)
+  fromEdgeList :: [Edge] -> Edges
+  fromEdgeList l = HashMap.fromList [ ((e ^. edgeFrom, e ^. edgeTo), e) | e <- l]
+  edgesCompose :: Edges -> Edges -> Edges
+  edgesCompose a b = fromEdgeList $ catMaybes [ composeEdge ea eb | ea <- toList a, eb <- toList b ]
+  edgesUnion :: Edges -> Edges -> Edges
+  edgesUnion = HashMap.union
+  edgesCount :: Edges -> Int
+  edgesCount = HashMap.size
+
+
+instance PrettyCode FunCall where
+  ppCode :: forall r. Members '[Reader Options] r => FunCall -> Sem r (Doc Ann)
+  ppCode (FunCall f args) = do
     args' <- mapM ppArg args
     f' <- ppSCode f
     return $ f' <+> hsep args'
@@ -65,12 +162,14 @@ instance PrettyCode Call where
     kwQuestion :: Doc Ann
     kwQuestion = annotate AnnKeyword "?"
 
-instance PrettyCode CallGraph where
-  ppCode :: forall r. Members '[Reader Options] r => CallGraph -> Sem r (Doc Ann)
-  ppCode (CallGraph m) = vsep <$> mapM ppEntry (HashMap.toList m)
+instance PrettyCode CallMap where
+  ppCode :: forall r. Members '[Reader Options] r => CallMap -> Sem r (Doc Ann)
+  ppCode (CallMap m) = vsep <$> mapM ppEntry (HashMap.toList m)
     where
-    ppEntry :: (A.FunctionName, [Call]) -> Sem r (Doc Ann)
-    ppEntry (fun, calls) = do
+    ppEntry :: (A.FunctionName, HashMap A.FunctionName [FunCall]) -> Sem r (Doc Ann)
+    ppEntry (fun, mcalls) = do
       fun' <- annotate AnnImportant <$> ppSCode fun
       calls' <- vsep <$> mapM ppCode calls
       return $ fun' <+> pretty ("↝" :: Text) <+> align calls'
+      where
+      calls = concat (HashMap.elems mcalls)

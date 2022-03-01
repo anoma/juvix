@@ -8,7 +8,6 @@ import MiniJuvix.Syntax.Concrete.Scoped.Error.Types
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Scoped.Error.Pretty
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Error.Pretty as P
-import MiniJuvix.Syntax.Concrete.Scoped.Scope
 import Prettyprinter
 
 -- | An error that happens during scope checking. Note that it is defined here

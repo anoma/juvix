@@ -8,6 +8,7 @@ module MiniJuvix.Syntax.Core where
 
 import MiniJuvix.Prelude hiding (Local)
 import Numeric.Natural (Natural)
+import Algebra.Graph.Label (Semiring(..))
 
 --------------------------------------------------------------------------------
 -- Quantity (a.k.a. Usage)
@@ -54,11 +55,11 @@ instance Monoid Quantity where
 
 instance Semiring Quantity where
   one = One
-  times Zero _ = Zero
-  times One m = m
-  times Many Zero = Zero
-  times Many One = Many
-  times Many Many = Many
+  (<.>) Zero _ = Zero
+  (<.>) One m = m
+  (<.>) Many Zero = Zero
+  (<.>) Many One = Many
+  (<.>) Many Many = Many
 
 data Relevance
   = Relevant

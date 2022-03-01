@@ -104,6 +104,16 @@ isConstructor Name' {..} = case _nameKind of
   KNameConstructor {} -> True
   _ -> False
 
+fromQualifiedName :: C.QualifiedName -> C.Symbol
+fromQualifiedName (C.QualifiedName _ s) = s
+
+fromName :: Name -> Symbol
+fromName Name' {..} = Name' {_nameConcrete = unqual, ..}
+  where
+  unqual = case _nameConcrete of
+       C.NameUnqualified s -> s
+       C.NameQualified q -> fromQualifiedName q
+
 instance Eq (Name' n) where
   (==) = (==) `on` _nameId
 
