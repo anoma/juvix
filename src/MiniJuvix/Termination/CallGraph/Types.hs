@@ -21,13 +21,8 @@ data Argument = Argument {
   }
 data FunCall = FunCall {
   _callName :: A.FunctionName,
-  _callArgs :: [(ArgRelation, A.Expression)]
+  _callArgs :: [(CallRow, A.Expression)]
   }
-
-data ArgRelation =
-  LessThan Int
-  | EqualTo Int
-  | DontKnow
 
 newtype CallRow = CallRow {
   _callRow :: Maybe (Int, Rel')
@@ -87,14 +82,8 @@ fromFunCall :: A.FunctionName -> FunCall -> Call
 fromFunCall caller fc =
   Call {_callFrom = caller,
           _callTo = fc ^. callName,
-          _callMatrix = map (fromArgRelation . fst) (fc ^. callArgs)
+          _callMatrix = map fst (fc ^. callArgs)
        }
-  where
-  fromArgRelation :: ArgRelation -> CallRow
-  fromArgRelation a = CallRow $ case a of
-    DontKnow -> Nothing
-    LessThan i -> Just (i, RLe)
-    EqualTo i -> Just (i, REq)
 
 completeCallGraph :: CallMap -> CompleteCallGraph
 completeCallGraph cm = CompleteCallGraph (go startingEdges)
@@ -139,28 +128,24 @@ instance PrettyCode FunCall where
     f' <- ppSCode f
     return $ f' <+> hsep args'
     where
-    ppArg :: (ArgRelation, A.Expression) -> Sem r (Doc Ann)
-    ppArg (mi, a) =
+    ppArg :: (CallRow, A.Expression) -> Sem r (Doc Ann)
+    ppArg (CallRow mi, a) =
       case mi of
-        LessThan i -> relAux kwPred (Just i)
-        EqualTo i -> relAux kwEqual (Just i)
-        DontKnow -> relAux kwQuestion Nothing
+        Just (i, r) -> relAux (Just i) (RJust r)
+        Nothing -> relAux Nothing RNothing
       where
-      relAux kwRel mayIx = do
+      relAux mayIx r = do
         showDecr <- asks _optShowDecreasingArgs
         let pi = annotate AnnImportant . pretty <$> mayIx
+            pr = annotate AnnKeyword (pretty r)
         case showDecr of
           OnlyArg -> ppCodeAtom a
-          OnlyRel -> return $ dbrackets (kwRel <+?> pi)
+          OnlyRel -> return $ dbrackets (pr <+?> pi)
           ArgRel -> do
             a' <- ppCode a
-            return $ dbrackets (a' <+> kwRel <+?> pi)
+            return $ dbrackets (a' <+> pr <+?> pi)
     dbrackets :: Doc a -> Doc a
     dbrackets x = pretty '⟦' <> x <> pretty '⟧'
-    kwPred :: Doc Ann
-    kwPred = annotate AnnKeyword "≺"
-    kwEqual :: Doc Ann
-    kwEqual = annotate AnnKeyword "∼"
 
 instance PrettyCode CallMap where
   ppCode :: forall r. Members '[Reader Options] r => CallMap -> Sem r (Doc Ann)
@@ -196,7 +181,7 @@ instance PrettyCode Edge where
   ppCode Edge {..} = do
     fromFun <- ppSCode _edgeFrom
     toFun <- ppSCode _edgeTo
-    matrices <- ppMatrices . zip [0 :: Int ..] <$> mapM ppCode _edgeMatrices
+    matrices <- indent 2 . ppMatrices . zip [0 :: Int ..] <$> mapM ppCode _edgeMatrices
     return $ pretty ("Edge" :: Text) <+> fromFun <+> waveFun <+> toFun <> line
       <> matrices
     where
@@ -208,4 +193,4 @@ instance PrettyCode CompleteCallGraph where
   ppCode :: forall r. Members '[Reader Options] r => CompleteCallGraph -> Sem r (Doc Ann)
   ppCode (CompleteCallGraph edges) = do
     es <- vsep2 <$> mapM ppCode (toList edges)
-    return $ pretty ("Complete Call Graph" :: Text) <> line <> es
+    return $ pretty ("Complete Call Graph:" :: Text) <> line <> es

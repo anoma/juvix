@@ -25,25 +25,29 @@ viewCall e = case e of
     x' <- callArg
     return $ over callArgs (`snoc`x') <$> c
     where
-    callArg :: Sem r (ArgRelation, Expression)
+    callArg :: Sem r (CallRow, Expression)
     callArg =  do
       lt <- lessThan
       eq <- equalTo
-      return (fromMaybe DontKnow (lt `mplus` eq), x)
+      return (CallRow (_callRow lt `mplus` _callRow eq), x)
       where
-      lessThan :: Sem r (Maybe ArgRelation)
+      lessThan :: Sem r CallRow
       lessThan = case x of
         ExpressionIden (IdenVar v) -> do
           s <- asks (HashMap.lookup v . _sizeSmaller)
-          return (LessThan <$> s)
-        _ -> return Nothing
-      equalTo :: Sem r (Maybe ArgRelation)
+          return $ case s of
+            Nothing -> CallRow Nothing
+            Just s' -> CallRow (Just (s', RLe) )
+        _ -> return (CallRow Nothing)
+      equalTo :: Sem r CallRow
       equalTo = do
         case viewExpressionAsPattern x of
           Just x' -> do
             s <- asks (elemIndex x' . _sizeEqual)
-            return (EqualTo <$> s)
-          _ -> return Nothing
+            return $ case s of
+              Nothing -> CallRow Nothing
+              Just s' -> CallRow (Just (s', REq) )
+          _ -> return (CallRow Nothing)
   ExpressionIden (IdenDefined x) ->
      return (Just (singletonCall x))
   _ -> return Nothing

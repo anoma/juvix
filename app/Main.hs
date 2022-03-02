@@ -262,6 +262,7 @@ go c = case c of
         opts' = mkAbstractPrettyOptions opts
     A.printPrettyCode opts' graph
     putStrLn ""
+    putStrLn "------------"
     let completeGraph = A.completeCallGraph graph
     A.printPrettyCode opts' completeGraph
     putStrLn ""
