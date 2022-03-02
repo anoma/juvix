@@ -23,6 +23,7 @@ data Command
   = Scope ScopeOptions
   | Parse ParseOptions
   | Html HtmlOptions
+  | Calls CallsOptions
   | CallGraph CallGraphOptions
 
 data ScopeOptions = ScopeOptions
@@ -43,20 +44,18 @@ data HtmlOptions = HtmlOptions
     _htmlTheme :: Theme
   }
 
-data CallGraphOptions = CallGraphOptions
-  { _graphInputFile :: FilePath,
-    _graphShowIds :: Bool,
-    _graphShowDecreasingArgs :: A.ShowDecrArgs
+data CallsOptions = CallsOptions
+  { _callsInputFile :: FilePath,
+    _callsShowIds :: Bool,
+    _callsShowDecreasingArgs :: A.ShowDecrArgs
   }
+
+newtype CallGraphOptions = CallGraphOptions
+  { _graphInputFile :: FilePath}
 
 parseHtml :: Parser HtmlOptions
 parseHtml = do
-  _htmlInputFile <-
-    argument
-      str
-      ( metavar "MINIJUVIX_FILE"
-          <> help "Path to a .mjuvix file"
-      )
+  _htmlInputFile <- parseInputFile
   _htmlRecursive <-
     switch
       ( long "recursive"
@@ -77,26 +76,21 @@ parseHtml = do
     "ayu" -> Right Ayu
     _ -> Left $ "unrecognised theme: " <> s
 
-parseCallGraph :: Parser CallGraphOptions
-parseCallGraph = do
-  _graphInputFile <-
-    argument
-      str
-      ( metavar "MINIJUVIX_FILE"
-          <> help "Path to a .mjuvix file"
-      )
-  _graphShowIds <-
+parseCalls :: Parser CallsOptions
+parseCalls = do
+  _callsInputFile <- parseInputFile
+  _callsShowIds <-
     switch
       ( long "show-name-ids"
           <> help "Show the unique number of each identifier"
       )
-  _graphShowDecreasingArgs <-
+  _callsShowDecreasingArgs <-
     option decrArgsParser
       ( long "show-decreasing-args"
           <> short 'd'
           <> help "Show the arguments that are detected to decrease"
       )
-  pure CallGraphOptions {..}
+  pure CallsOptions {..}
   where
   decrArgsParser :: ReadM A.ShowDecrArgs
   decrArgsParser = eitherReader $ \s ->
@@ -107,15 +101,22 @@ parseCallGraph = do
       _ -> Left "bad argument"
 
 
+parseCallGraph :: Parser CallGraphOptions
+parseCallGraph = do
+  _graphInputFile <- parseInputFile
+  pure CallGraphOptions {..}
 
-parseParse :: Parser ParseOptions
-parseParse = do
-  _parseInputFile <-
-    argument
+parseInputFile :: Parser FilePath
+parseInputFile =
+ argument
       str
       ( metavar "MINIJUVIX_FILE"
           <> help "Path to a .mjuvix file"
       )
+
+parseParse :: Parser ParseOptions
+parseParse = do
+  _parseInputFile <- parseInputFile
   _parseNoPrettyShow <-
     switch
       ( long "no-pretty-show"
@@ -174,6 +175,7 @@ parseCommand =
       [ commandParse,
         commandScope,
         commandHtml,
+        commandCalls,
         commandGraph
       ]
   where
@@ -202,14 +204,23 @@ parseCommand =
           info
             (Scope <$> parseScope)
             (progDesc "Parse and scope a .mjuvix file")
+    commandCalls :: Mod CommandFields Command
+    commandCalls = command "calls" minfo
+      where
+        minfo :: ParserInfo Command
+        minfo =
+          info
+            (Calls <$> parseCalls)
+            (progDesc "Compute the calls table of a .mjuvix file")
     commandGraph :: Mod CommandFields Command
-    commandGraph = command "calls" minfo
+    commandGraph = command "graph" minfo
       where
         minfo :: ParserInfo Command
         minfo =
           info
             (CallGraph <$> parseCallGraph)
-            (progDesc "Compute the calls graph of a .mjuvix file")
+            (progDesc "Compute the complete call graph of a .mjuvix file")
+
 
 mkScopePrettyOptions :: ScopeOptions -> M.Options
 mkScopePrettyOptions ScopeOptions {..} =
@@ -218,11 +229,11 @@ mkScopePrettyOptions ScopeOptions {..} =
       M._optInlineImports = _scopeInlineImports
     }
 
-mkAbstractPrettyOptions :: CallGraphOptions -> A.Options
-mkAbstractPrettyOptions CallGraphOptions {..} =
+mkAbstractPrettyOptions :: CallsOptions -> A.Options
+mkAbstractPrettyOptions CallsOptions {..} =
   A.defaultOptions
-    { A._optShowNameId = _graphShowIds,
-      A._optShowDecreasingArgs = _graphShowDecreasingArgs
+    { A._optShowNameId = _callsShowIds,
+      A._optShowDecreasingArgs = _callsShowDecreasingArgs
     }
 
 parseModuleIO :: FilePath -> IO (M.Module 'M.Parsed 'M.ModuleTop)
@@ -238,34 +249,39 @@ fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
 fromRightIO pp = fromRightIO' (putStrLn . pp)
 
 go :: Command -> IO ()
-go c = case c of
-  Scope opts@ScopeOptions {..} -> do
-    root <- getCurrentDirectory
-    forM_ _scopeInputFiles $ \scopeInputFile -> do
-      m <- parseModuleIO scopeInputFile
+go c = do
+  root <- getCurrentDirectory
+  case c of
+    Scope opts@ScopeOptions {..} -> do
+      forM_ _scopeInputFiles $ \scopeInputFile -> do
+        m <- parseModuleIO scopeInputFile
+        s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+        M.printPrettyCode (mkScopePrettyOptions opts) s
+    Parse ParseOptions {..} -> do
+      m <- parseModuleIO _parseInputFile
+      if _parseNoPrettyShow then print m else pPrint m
+    Html HtmlOptions {..} -> do
+      m <- parseModuleIO _htmlInputFile
       s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
-      M.printPrettyCode (mkScopePrettyOptions opts) s
-  Parse ParseOptions {..} -> do
-    m <- parseModuleIO _parseInputFile
-    if _parseNoPrettyShow then print m else pPrint m
-  Html HtmlOptions {..} -> do
-    root <- getCurrentDirectory
-    m <- parseModuleIO _htmlInputFile
-    s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
-    genHtml defaultOptions _htmlRecursive _htmlTheme s
-  CallGraph opts@CallGraphOptions {..} -> do
-    root <- getCurrentDirectory
-    m <- parseModuleIO _graphInputFile
-    s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
-    a <- fromRightIO' putStrLn (return $ A.translateModule s)
-    let graph = A.buildCallMap a
-        opts' = mkAbstractPrettyOptions opts
-    A.printPrettyCode opts' graph
-    putStrLn ""
-    putStrLn "------------"
-    let completeGraph = A.completeCallGraph graph
-    A.printPrettyCode opts' completeGraph
-    putStrLn ""
+      genHtml defaultOptions _htmlRecursive _htmlTheme s
+    Calls opts@CallsOptions {..} -> do
+      m <- parseModuleIO _callsInputFile
+      s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+      a <- fromRightIO' putStrLn (return $ A.translateModule s)
+      let callMap = A.buildCallMap a
+          opts' = mkAbstractPrettyOptions opts
+      A.printPrettyCode opts' callMap
+      putStrLn ""
+    CallGraph CallGraphOptions {..} -> do
+      m <- parseModuleIO _graphInputFile
+      s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+      a <- fromRightIO' putStrLn (return $ A.translateModule s)
+      let callMap = A.buildCallMap a
+          opts' = A.defaultOptions
+          completeGraph = A.completeCallGraph callMap
+      A.printPrettyCode opts' completeGraph
+      putStrLn ""
+
 
 main :: IO ()
 main = execParser descr >>= go
