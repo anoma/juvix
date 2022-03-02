@@ -1,5 +1,5 @@
 module MiniJuvix.Termination.CallGraph (
-module MiniJuvix.Termination.CallGraph.Types ,
+module MiniJuvix.Termination.CallGraph.Types,
 module MiniJuvix.Termination.CallGraph
                                        ) where
 

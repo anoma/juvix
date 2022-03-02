@@ -259,7 +259,11 @@ go c = case c of
     s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
     a <- fromRightIO' putStrLn (return $ A.translateModule s)
     let graph = A.buildCallMap a
-    A.printPrettyCode (mkAbstractPrettyOptions opts) graph
+        opts' = mkAbstractPrettyOptions opts
+    A.printPrettyCode opts' graph
+    putStrLn ""
+    let completeGraph = A.completeCallGraph graph
+    A.printPrettyCode opts' completeGraph
     putStrLn ""
 
 main :: IO ()

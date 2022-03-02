@@ -2,6 +2,7 @@ module MiniJuvix.Termination.CallGraph.Types.SizeRelation where
 
 import MiniJuvix.Prelude
 import Algebra.Graph.Label
+import Prettyprinter
 
 data Rel =
   RJust Rel'
@@ -46,3 +47,13 @@ instance Monoid Rel where
 instance Semiring Rel where
   one = RJust REq
   (<.>) = mul
+
+instance Pretty Rel where
+  pretty r = case r of
+    RJust r' -> pretty r'
+    RNothing -> pretty ("?" :: Text)
+
+instance Pretty Rel' where
+  pretty r = case r of
+    REq -> pretty ("∼" :: Text)
+    RLe -> pretty ("≺" :: Text)

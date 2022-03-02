@@ -29,7 +29,9 @@ data ArgRelation =
   | EqualTo Int
   | DontKnow
 
-type CallRow = Maybe (Int, Rel')
+newtype CallRow = CallRow {
+  _callRow :: Maybe (Int, Rel')
+  }
 
 type CallMatrix = [CallRow]
 data Call = Call {
@@ -60,13 +62,13 @@ multiply :: CallMatrix -> CallMatrix -> CallMatrix
 multiply a b = map sumProdRow a
   where
   rowB :: Int -> CallRow
-  rowB i = case b !? i of
-    Just (Just c) -> Just c
+  rowB i = CallRow $ case b !? i of
+    Just (CallRow (Just c)) -> Just c
     _ -> Nothing
-  sumProdRow :: CallRow -> Maybe (Int, Rel')
-  sumProdRow mr = do
+  sumProdRow :: CallRow -> CallRow
+  sumProdRow (CallRow mr) = CallRow $ do
     (ki, ra) <- mr
-    (j, rb) <- rowB ki
+    (j, rb) <- _callRow (rowB ki)
     return (j, mul' ra rb)
 
 multiplyMany :: [CallMatrix] -> [CallMatrix] -> [CallMatrix]
@@ -89,7 +91,7 @@ fromFunCall caller fc =
        }
   where
   fromArgRelation :: ArgRelation -> CallRow
-  fromArgRelation a = case a of
+  fromArgRelation a = CallRow $ case a of
     DontKnow -> Nothing
     LessThan i -> Just (i, RLe)
     EqualTo i -> Just (i, REq)
@@ -159,8 +161,6 @@ instance PrettyCode FunCall where
     kwPred = annotate AnnKeyword "≺"
     kwEqual :: Doc Ann
     kwEqual = annotate AnnKeyword "∼"
-    kwQuestion :: Doc Ann
-    kwQuestion = annotate AnnKeyword "?"
 
 instance PrettyCode CallMap where
   ppCode :: forall r. Members '[Reader Options] r => CallMap -> Sem r (Doc Ann)
@@ -170,6 +170,42 @@ instance PrettyCode CallMap where
     ppEntry (fun, mcalls) = do
       fun' <- annotate AnnImportant <$> ppSCode fun
       calls' <- vsep <$> mapM ppCode calls
-      return $ fun' <+> pretty ("↝" :: Text) <+> align calls'
+      return $ fun' <+> waveFun <+> align calls'
       where
       calls = concat (HashMap.elems mcalls)
+
+kwQuestion :: Doc Ann
+kwQuestion = annotate AnnKeyword "?"
+
+waveFun :: Doc ann
+waveFun = pretty ("↝" :: Text)
+
+vsep2 :: [Doc ann] -> Doc ann
+vsep2 = concatWith (\a b -> a <> line <> line <> b)
+
+instance PrettyCode CallRow where
+  ppCode (CallRow r) = return $ case r of
+    Nothing -> kwQuestion
+    Just (i, r') ->
+      pretty i <+> annotate AnnKeyword (pretty r')
+
+instance PrettyCode CallMatrix where
+  ppCode l = vsep <$> mapM ppCode l
+
+instance PrettyCode Edge where
+  ppCode Edge {..} = do
+    fromFun <- ppSCode _edgeFrom
+    toFun <- ppSCode _edgeTo
+    matrices <- ppMatrices . zip [0 :: Int ..] <$> mapM ppCode _edgeMatrices
+    return $ pretty ("Edge" :: Text) <+> fromFun <+> waveFun <+> toFun <> line
+      <> matrices
+    where
+    ppMatrices = vsep2 . map ppMatrix
+    ppMatrix (i, t) = pretty ("Matrix" :: Text) <+> pretty i <> colon <> line
+      <> t
+
+instance PrettyCode CompleteCallGraph where
+  ppCode :: forall r. Members '[Reader Options] r => CompleteCallGraph -> Sem r (Doc Ann)
+  ppCode (CompleteCallGraph edges) = do
+    es <- vsep2 <$> mapM ppCode (toList edges)
+    return $ pretty ("Complete Call Graph" :: Text) <> line <> es
