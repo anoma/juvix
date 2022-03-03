@@ -1,4 +1,4 @@
-module MiniJuvix.Termination.CallGraph.Types.SizeRelation where
+module MiniJuvix.Termination.Types.SizeRelation where
 
 import MiniJuvix.Prelude
 import Algebra.Graph.Label

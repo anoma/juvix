@@ -1,12 +1,11 @@
 {-# LANGUAGE ApplicativeDo #-}
-
 module Main (main) where
 
 import Control.Monad.Extra
 import qualified MiniJuvix.Syntax.Concrete.Language as M
 import qualified MiniJuvix.Syntax.Concrete.Parser as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
-import qualified MiniJuvix.Termination.CallGraph as A
+import qualified MiniJuvix.Termination as T
 import qualified MiniJuvix.Translation.ScopedToAbstract as A
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
 import qualified MiniJuvix.Syntax.Abstract.Pretty.Base as A
@@ -268,7 +267,7 @@ go c = do
       m <- parseModuleIO _callsInputFile
       s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       a <- fromRightIO' putStrLn (return $ A.translateModule s)
-      let callMap = A.buildCallMap a
+      let callMap = T.buildCallMap a
           opts' = mkAbstractPrettyOptions opts
       A.printPrettyCode opts' callMap
       putStrLn ""
@@ -276,9 +275,9 @@ go c = do
       m <- parseModuleIO _graphInputFile
       s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       a <- fromRightIO' putStrLn (return $ A.translateModule s)
-      let callMap = A.buildCallMap a
+      let callMap = T.buildCallMap a
           opts' = A.defaultOptions
-          completeGraph = A.completeCallGraph callMap
+          completeGraph = T.completeCallGraph callMap
       A.printPrettyCode opts' completeGraph
       putStrLn ""
 
