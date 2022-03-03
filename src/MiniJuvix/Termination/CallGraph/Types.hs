@@ -12,7 +12,7 @@ import MiniJuvix.Termination.CallGraph.Types.SizeRelation
 import MiniJuvix.Syntax.Abstract.Pretty.Base
 
 newtype CallMap = CallMap {
-  _callGraph :: HashMap A.FunctionName (HashMap A.FunctionName [FunCall]) }
+  _callMap :: HashMap A.FunctionName (HashMap A.FunctionName [FunCall]) }
   deriving newtype (Semigroup, Monoid)
 
 data Argument = Argument {
@@ -100,7 +100,7 @@ completeCallGraph cm = CompleteCallGraph (go startingEdges)
         Just e -> over edgeMatrices (_callMatrix : ) e
   allCalls :: [Call]
   allCalls = [ fromFunCall caller funCall
-               | (caller, callerMap) <- HashMap.toList (cm ^. callGraph),
+               | (caller, callerMap) <- HashMap.toList (cm ^. callMap),
                (_, funCalls) <- HashMap.toList callerMap,
                funCall <- funCalls ]
   go :: Edges -> Edges

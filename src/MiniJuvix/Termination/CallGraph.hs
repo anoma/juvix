@@ -56,7 +56,7 @@ viewCall e = case e of
   singletonCall n = FunCall (S.fromName n) []
 
 addCall :: FunctionName -> FunCall -> CallMap -> CallMap
-addCall fun c = over callGraph (HashMap.alter (Just . insertCall c) fun)
+addCall fun c = over callMap (HashMap.alter (Just . insertCall c) fun)
   where
   insertCall :: FunCall -> Maybe (HashMap FunctionName [FunCall]) -> HashMap FunctionName [FunCall]
   insertCall f m = case m of
