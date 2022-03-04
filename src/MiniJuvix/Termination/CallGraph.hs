@@ -97,7 +97,7 @@ callMatrixDiag m = [ col i r | (i, r) <- zip [0 :: Int ..] m]
     Nothing -> RNothing
     Just (j, r')
       | i == j -> RJust r'
-      | otherwise -> RJust r'
+      | otherwise -> RNothing
 
 recursiveBehaviour :: ReflexiveEdge -> RecursiveBehaviour
 recursiveBehaviour re =
