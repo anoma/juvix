@@ -58,18 +58,23 @@ completeCallGraph cm = CompleteCallGraph (go startingEdges)
                | (caller, callerMap) <- HashMap.toList (cm ^. callMap),
                (_, funCalls) <- HashMap.toList callerMap,
                funCall <- funCalls ]
+
   go :: Edges -> Edges
   go m
     | edgesCount m == edgesCount m' = m
     | otherwise = go m'
     where
     m' = step m
+
   step :: Edges -> Edges
   step s = edgesUnion s (edgesCompose s startingEdges)
+
   fromEdgeList :: [Edge] -> Edges
   fromEdgeList l = HashMap.fromList [ ((e ^. edgeFrom, e ^. edgeTo), e) | e <- l]
+  
   edgesCompose :: Edges -> Edges -> Edges
-  edgesCompose a b = fromEdgeList $ catMaybes [ composeEdge ea eb | ea <- toList a, eb <- toList b ]
+  edgesCompose a b = fromEdgeList $ catMaybes 
+     [ composeEdge ea eb | ea <- toList a, eb <- toList b ]
   edgesUnion :: Edges -> Edges -> Edges
   edgesUnion = HashMap.union
   edgesCount :: Edges -> Int
@@ -80,12 +85,14 @@ reflexiveEdges (CompleteCallGraph es) = mapMaybe reflexive (toList es)
   where
   reflexive :: Edge -> Maybe ReflexiveEdge
   reflexive e
-   | e ^. edgeFrom == e ^. edgeTo = Just $ ReflexiveEdge (e ^.edgeFrom) (e ^. edgeMatrices)
+   | e ^. edgeFrom == e ^. edgeTo 
+    = Just $ ReflexiveEdge (e ^.edgeFrom) (e ^. edgeMatrices)
    | otherwise = Nothing
 
 callMatrixDiag :: CallMatrix -> [Rel]
 callMatrixDiag m = [ col i r | (i, r) <- zip [0 :: Int ..] m]
   where
+  col :: Int -> CallRow -> Rel  
   col i (CallRow row) = case row of
     Nothing -> RNothing
     Just (j, r')
@@ -94,44 +101,49 @@ callMatrixDiag m = [ col i r | (i, r) <- zip [0 :: Int ..] m]
 
 recursiveBehaviour :: ReflexiveEdge -> RecursiveBehaviour
 recursiveBehaviour re =
-  RecursiveBehaviour (re ^. redgeFun)
+  RecursiveBehaviour  (re ^. redgeFun )
   (map callMatrixDiag (re ^. redgeMatrices))
 
-findOrder :: RecursiveBehaviour -> Maybe LexicoOrder
+findOrder :: RecursiveBehaviour -> Maybe LexOrder
 findOrder rb
-  | null b0 = impossible
-  | otherwise = LexicoOrder <$> listToMaybe (mapMaybe isLexicoOrder allPerms)
+  | null b0   = Nothing  -- TODO!
+  | otherwise = LexOrder <$> listToMaybe (mapMaybe isLexOrder allPerms)
   where
-  isLexicoOrder :: [Int] -> Maybe [Int]
-  isLexicoOrder = go startB
+  b0 :: [[Rel]]
+  b0 = rb ^. recBehaviourMatrix
+  indexed = map (zip [0 :: Int ..] . take minLength) b0
+    where
+    minLength =  minimum (map length b0)
+
+  startB = removeUselessColumns indexed
+
+    -- | removes columns that don't have at least one ≺ in them
+  removeUselessColumns :: [[(Int, Rel)]] -> [[(Int, Rel)]]
+  removeUselessColumns = transpose . filter (any (isLess . snd) ) . transpose
+
+  isLexOrder :: [Int] -> Maybe [Int]
+  isLexOrder = go startB
     where
     go :: [[(Int, Rel)]] -> [Int] -> Maybe [Int]
-    go [] _ = Just []
+    go [] _   = Just []
     go b perm = case perm of
-      [] -> Nothing
+      [] -> error "The permutation should have one element at least!"
       (p0 : ptail)
-        | Just r <- find (isLess . snd . (!! p0)) b,
-          all (notNothing . snd . (!! p0)) b,
+        | Just r <- find (isLess . snd . (!! p0)) b ,
+          all (notNothing . snd . (!! p0)) b , 
           Just perm' <- go (b' p0) (map pred ptail)
-          -> Just (fst (r !! p0) : perm')
+          -> Just ( fst (r !! p0) : perm')
         | otherwise -> Nothing
       where
       b' i = map r' (filter (not . isLess . snd . (!!i)) b)
         where
         r' r = case splitAt i r of
           (x, y) -> x ++ drop 1 y
-  notNothing r = case r of
-    RNothing -> False
-    _ -> True
+
+  notNothing = (RNothing /=)
   isLess = (RJust RLe ==)
-  b0 = rb ^. recBehaviourMatrix
+
+  allPerms :: [[Int]]
   allPerms = case nonEmpty startB of
     Nothing -> impossible
     Just s -> permutations [0 .. length (head s) - 1]
-  indexed = map (zip [0 :: Int ..] . take minLength) b0
-    where
-    minLength =  minimum (map length b0)
-  -- | removes columns that don't have at least one ≺ in them
-  removeUselessColumns :: [[(Int, Rel)]] -> [[(Int, Rel)]]
-  removeUselessColumns = transpose . filter (any (isLess . snd) ) . transpose
-  startB = removeUselessColumns indexed
