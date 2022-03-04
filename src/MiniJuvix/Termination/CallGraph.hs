@@ -74,3 +74,67 @@ completeCallGraph cm = CompleteCallGraph (go startingEdges)
   edgesUnion = HashMap.union
   edgesCount :: Edges -> Int
   edgesCount = HashMap.size
+
+reflexiveEdges :: CompleteCallGraph -> [ReflexiveEdge]
+reflexiveEdges (CompleteCallGraph es) = mapMaybe reflexive (toList es)
+  where
+  reflexive :: Edge -> Maybe ReflexiveEdge
+  reflexive e
+   | e ^. edgeFrom == e ^. edgeTo = Just $ ReflexiveEdge (e ^.edgeFrom) (e ^. edgeMatrices)
+   | otherwise = Nothing
+
+callMatrixDiag :: CallMatrix -> [Rel]
+callMatrixDiag m = [ col i r | (i, r) <- zip [0 :: Int ..] m]
+  where
+  col i (CallRow row) = case row of
+    Nothing -> RNothing
+    Just (j, r')
+      | i == j -> RJust r'
+      | otherwise -> RJust r'
+
+recursiveBehaviour :: ReflexiveEdge -> RecursiveBehaviour
+recursiveBehaviour re =
+  RecursiveBehaviour (re ^. redgeFun)
+  (map callMatrixDiag (re ^. redgeMatrices))
+
+findOrder :: RecursiveBehaviour -> Maybe LexicoOrder
+findOrder rb
+  | null b0 = impossible
+  | otherwise = LexicoOrder <$> listToMaybe (mapMaybe isLexicoOrder allPerms)
+  where
+  isLexicoOrder :: [Int] -> Maybe [Int]
+  isLexicoOrder = go startB
+    where
+    go :: [[(Int, Rel)]] -> [Int] -> Maybe [Int]
+    go [] _ = Just []
+    go b perm = case perm of
+      [] -> Nothing
+      (p0 : ptail)
+        | Just r <- find (isLess . snd . (!! p0)) b,
+          all (notNothing . snd . (!! p0)) b,
+          Just perm' <- go (b' p0) (map pred ptail)
+          -> Just (fst (r !! p0) : perm')
+        | otherwise -> Nothing
+      where
+      b' i = map r' (filter (not . isLess . snd . (!!i)) b)
+        where
+        r' r = case splitAt i r of
+          (x, y) -> x ++ drop 1 y
+  notNothing r = case r of
+    RNothing -> False
+    _ -> True
+  isLess = (RJust RLe ==)
+  b0 = rb ^. recBehaviourMatrix
+  allPerms = case nonEmpty startB of
+    -- Nothing -> []
+    Nothing -> impossible -- temporary
+    Just s -> permutations [0 .. length (head s) - 1]
+  indexed = map (zip [0 :: Int ..] . take minLength) b0
+    where
+    minLength =  minimum (map length b0)
+  -- | removes columns that don't have at least one ≺ in them
+  removeUselessColumns :: [[(Int, Rel)]] -> [[(Int, Rel)]]
+  -- TODO fix.
+  -- removeUselessColumns = transpose . filter (any (isLess . snd) ) . transpose
+  removeUselessColumns = id
+  startB = removeUselessColumns indexed

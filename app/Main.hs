@@ -278,8 +278,18 @@ go c = do
       let callMap = T.buildCallMap a
           opts' = A.defaultOptions
           completeGraph = T.completeCallGraph callMap
+          recBehav = map T.recursiveBehaviour (T.reflexiveEdges completeGraph)
       A.printPrettyCode opts' completeGraph
       putStrLn ""
+      forM_ recBehav $ \r -> do
+        -- M.printPrettyCodeDefault (r ^. T.recBehaviourFunction)
+        A.printPrettyCode A.defaultOptions r
+        putStrLn ""
+        case T.findOrder r of
+          Nothing -> putStrLn " Fails the termination checking"
+          Just (T.LexicoOrder k) -> putStrLn (" Terminates with order " <> show k)
+        putStrLn ""
+
 
 
 main :: IO ()

@@ -7,10 +7,12 @@ import Prettyprinter
 data Rel =
   RJust Rel'
   | RNothing
+  deriving stock (Eq, Show)
 
 data Rel' =
   REq
   | RLe
+  deriving stock (Eq, Show)
 
 toRel :: Rel' -> Rel
 toRel = RJust

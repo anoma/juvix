@@ -7,7 +7,7 @@ module MiniJuvix.Termination.Types (
 import MiniJuvix.Prelude
 import qualified MiniJuvix.Syntax.Abstract.Language as A
 import qualified Data.HashMap.Strict as HashMap
-import Prettyprinter
+import Prettyprinter as PP
 import MiniJuvix.Termination.Types.SizeRelation
 import MiniJuvix.Syntax.Abstract.Pretty.Base
 
@@ -42,13 +42,23 @@ data Edge = Edge {
 newtype CompleteCallGraph = CompleteCallGraph Edges
 
 data ReflexiveEdge = ReflexiveEdge {
-  _redgeMatrix :: CallMatrix,
-  _redgeFun :: A.FunctionName
+  _redgeFun :: A.FunctionName,
+  _redgeMatrices :: [CallMatrix]
   }
+
+data RecursiveBehaviour = RecursiveBehaviour
+  {
+    _recBehaviourFunction :: A.FunctionName,
+    _recBehaviourMatrix :: [[Rel]]
+  }
+
+newtype LexicoOrder = LexicoOrder [Int]
 
 makeLenses ''FunCall
 makeLenses ''Edge
 makeLenses ''CallMap
+makeLenses ''RecursiveBehaviour
+makeLenses ''ReflexiveEdge
 
 instance PrettyCode FunCall where
   ppCode :: forall r. Members '[Reader Options] r => FunCall -> Sem r (Doc Ann)
@@ -123,3 +133,11 @@ instance PrettyCode CompleteCallGraph where
   ppCode (CompleteCallGraph edges) = do
     es <- vsep2 <$> mapM ppCode (toList edges)
     return $ pretty ("Complete Call Graph:" :: Text) <> line <> es
+
+instance PrettyCode RecursiveBehaviour where
+  ppCode :: forall r. Members '[Reader Options] r => RecursiveBehaviour -> Sem r (Doc Ann)
+  ppCode (RecursiveBehaviour f m) = do
+    f' <- ppSCode f
+    let m' = vsep (map (PP.list . map pretty) m)
+    return $ pretty ("Recursive behaviour of " :: Text)  <> f' <> colon <> line
+      <> indent 2 (align m')

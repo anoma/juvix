@@ -49,11 +49,11 @@ take : (a : Type) → ℕ → List a → List a;
 take a (suc n) (∷ _ x xs) ≔ ∷ a x (take a n xs);
 take a _ _ ≔ nil a;
 
-import Data.Ord;
-open Data.Ord;
+-- import Data.Ord;
+-- open Data.Ord;
 
-import Data.Product;
-open Data.Product;
+-- import Data.Product;
+-- open Data.Product;
 
 -- splitAt : (a : Type) → ℕ → List a → List a;
 -- splitAt a _ (nil _) ≔ nil a , nil a;
