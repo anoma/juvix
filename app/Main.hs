@@ -288,7 +288,7 @@ go c = do
         putStrLn ""
         case T.findOrder r of
           Nothing -> putStrLn (n <> " Fails the termination checking")
-          Just (T.LexicoOrder k) -> putStrLn (n<> " Terminates with order " <> show k)
+          Just (T.LexOrder k) -> putStrLn (n<> " Terminates with order " <> show k)
         putStrLn ""
 
 

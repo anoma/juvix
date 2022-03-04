@@ -71,9 +71,9 @@ completeCallGraph cm = CompleteCallGraph (go startingEdges)
 
   fromEdgeList :: [Edge] -> Edges
   fromEdgeList l = HashMap.fromList [ ((e ^. edgeFrom, e ^. edgeTo), e) | e <- l]
-  
+
   edgesCompose :: Edges -> Edges -> Edges
-  edgesCompose a b = fromEdgeList $ catMaybes 
+  edgesCompose a b = fromEdgeList $ catMaybes
      [ composeEdge ea eb | ea <- toList a, eb <- toList b ]
   edgesUnion :: Edges -> Edges -> Edges
   edgesUnion = HashMap.union
@@ -85,14 +85,14 @@ reflexiveEdges (CompleteCallGraph es) = mapMaybe reflexive (toList es)
   where
   reflexive :: Edge -> Maybe ReflexiveEdge
   reflexive e
-   | e ^. edgeFrom == e ^. edgeTo 
+   | e ^. edgeFrom == e ^. edgeTo
     = Just $ ReflexiveEdge (e ^.edgeFrom) (e ^. edgeMatrices)
    | otherwise = Nothing
 
 callMatrixDiag :: CallMatrix -> [Rel]
 callMatrixDiag m = [ col i r | (i, r) <- zip [0 :: Int ..] m]
   where
-  col :: Int -> CallRow -> Rel  
+  col :: Int -> CallRow -> Rel
   col i (CallRow row) = case row of
     Nothing -> RNothing
     Just (j, r')
@@ -105,9 +105,7 @@ recursiveBehaviour re =
   (map callMatrixDiag (re ^. redgeMatrices))
 
 findOrder :: RecursiveBehaviour -> Maybe LexOrder
-findOrder rb
-  | null b0   = Nothing  -- TODO!
-  | otherwise = LexOrder <$> listToMaybe (mapMaybe isLexOrder allPerms)
+findOrder rb = LexOrder <$> listToMaybe (mapMaybe (isLexOrder >=> nonEmpty) allPerms)
   where
   b0 :: [[Rel]]
   b0 = rb ^. recBehaviourMatrix
@@ -130,7 +128,7 @@ findOrder rb
       [] -> error "The permutation should have one element at least!"
       (p0 : ptail)
         | Just r <- find (isLess . snd . (!! p0)) b ,
-          all (notNothing . snd . (!! p0)) b , 
+          all (notNothing . snd . (!! p0)) b ,
           Just perm' <- go (b' p0) (map pred ptail)
           -> Just ( fst (r !! p0) : perm')
         | otherwise -> Nothing
@@ -145,5 +143,5 @@ findOrder rb
 
   allPerms :: [[Int]]
   allPerms = case nonEmpty startB of
-    Nothing -> impossible
+    Nothing -> []
     Just s -> permutations [0 .. length (head s) - 1]

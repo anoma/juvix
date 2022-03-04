@@ -52,7 +52,7 @@ data RecursiveBehaviour = RecursiveBehaviour
     _recBehaviourMatrix :: [[Rel]]
   }
 
-newtype LexicoOrder = LexicoOrder [Int]
+newtype LexOrder = LexOrder (NonEmpty Int)
 
 makeLenses ''FunCall
 makeLenses ''Edge
