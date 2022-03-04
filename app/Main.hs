@@ -8,6 +8,7 @@ import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
 import qualified MiniJuvix.Termination as T
 import qualified MiniJuvix.Translation.ScopedToAbstract as A
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
+import qualified MiniJuvix.Termination.CallGraph as A
 import qualified MiniJuvix.Syntax.Abstract.Pretty.Base as A
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
 import MiniJuvix.Prelude hiding (Doc)
@@ -282,12 +283,12 @@ go c = do
       A.printPrettyCode opts' completeGraph
       putStrLn ""
       forM_ recBehav $ \r -> do
-        -- M.printPrettyCodeDefault (r ^. T.recBehaviourFunction)
+        let n = M.renderPrettyCode M.defaultOptions $ A._recBehaviourFunction r
         A.printPrettyCode A.defaultOptions r
         putStrLn ""
         case T.findOrder r of
-          Nothing -> putStrLn " Fails the termination checking"
-          Just (T.LexicoOrder k) -> putStrLn (" Terminates with order " <> show k)
+          Nothing -> putStrLn (n <> " Fails the termination checking")
+          Just (T.LexicoOrder k) -> putStrLn (n<> " Terminates with order " <> show k)
         putStrLn ""
 
 

@@ -126,15 +126,12 @@ findOrder rb
   isLess = (RJust RLe ==)
   b0 = rb ^. recBehaviourMatrix
   allPerms = case nonEmpty startB of
-    -- Nothing -> []
-    Nothing -> impossible -- temporary
+    Nothing -> impossible
     Just s -> permutations [0 .. length (head s) - 1]
   indexed = map (zip [0 :: Int ..] . take minLength) b0
     where
     minLength =  minimum (map length b0)
   -- | removes columns that don't have at least one ≺ in them
   removeUselessColumns :: [[(Int, Rel)]] -> [[(Int, Rel)]]
-  -- TODO fix.
-  -- removeUselessColumns = transpose . filter (any (isLess . snd) ) . transpose
-  removeUselessColumns = id
+  removeUselessColumns = transpose . filter (any (isLess . snd) ) . transpose
   startB = removeUselessColumns indexed
