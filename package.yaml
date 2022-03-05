@@ -72,7 +72,6 @@ default-extensions:
 - KindSignatures
 - NoImplicitPrelude
 - OverloadedStrings
-- OverloadedStrings
 - PolyKinds
 - QuasiQuotes
 - RecordWildCards
