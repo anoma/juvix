@@ -49,6 +49,10 @@ take : (a : Type) → ℕ → List a → List a;
 take a (suc n) (∷ _ x xs) ≔ ∷ a x (take a n xs);
 take a _ _ ≔ nil a;
 
+alternate : (a : Type) → List a → List a → List a;
+alternate A (nil _) b ≔ b;
+alternate A (∷ _ h t) b ≔ ∷ A h (alternate A b t);
+
 -- import Data.Ord;
 -- open Data.Ord;
 

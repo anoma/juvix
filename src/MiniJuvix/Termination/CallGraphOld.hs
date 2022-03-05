@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
-module MiniJuvix.Termination.CallGraph (
+module MiniJuvix.Termination.CallGraphOld (
   module MiniJuvix.Termination.Types,
-  module MiniJuvix.Termination.CallGraph
+  module MiniJuvix.Termination.CallGraphOld
                                        ) where
 
 import MiniJuvix.Prelude
@@ -10,21 +10,20 @@ import qualified Data.HashMap.Strict as HashMap
 import MiniJuvix.Termination.Types
 import Prettyprinter as PP
 import MiniJuvix.Syntax.Abstract.Pretty.Base
-import qualified Data.HashSet as HashSet
 
 type Edges = HashMap (FunctionName, FunctionName) Edge
 
 data Edge = Edge {
   _edgeFrom :: FunctionName,
   _edgeTo :: FunctionName,
-  _edgeMatrices :: HashSet CallMatrix
+  _edgeMatrices :: [CallMatrix]
   }
 
 newtype CompleteCallGraph = CompleteCallGraph Edges
 
 data ReflexiveEdge = ReflexiveEdge {
   _redgeFun :: FunctionName,
-  _redgeMatrices :: HashSet CallMatrix
+  _redgeMatrices :: [CallMatrix]
   }
 
 data RecursiveBehaviour = RecursiveBehaviour
@@ -50,8 +49,8 @@ multiply a b = map sumProdRow a
     (j, rb) <- _callRow (rowB ki)
     return (j, mul' ra rb)
 
-multiplyMany :: HashSet CallMatrix -> HashSet CallMatrix -> HashSet CallMatrix
-multiplyMany r s = HashSet.fromList [ multiply a b | a <- toList r, b <- toList s]
+multiplyMany :: [CallMatrix] -> [CallMatrix] -> [CallMatrix]
+multiplyMany r s = [ multiply a b | a <- r, b <- s]
 
 composeEdge :: Edge -> Edge -> Maybe Edge
 composeEdge a b = do
@@ -80,8 +79,8 @@ completeCallGraph cm = CompleteCallGraph (go startingEdges)
       where
       aux :: Maybe Edge -> Edge
       aux me = case me of
-        Nothing -> Edge _callFrom _callTo (HashSet.singleton _callMatrix)
-        Just e -> over edgeMatrices (HashSet.insert _callMatrix) e
+        Nothing -> Edge _callFrom _callTo [_callMatrix]
+        Just e -> over edgeMatrices (_callMatrix : ) e
   allCalls :: [Call]
   allCalls = [ fromFunCall caller funCall
                | (caller, callerMap) <- HashMap.toList (cm ^. callMap),
@@ -104,20 +103,10 @@ completeCallGraph cm = CompleteCallGraph (go startingEdges)
   edgesCompose :: Edges -> Edges -> Edges
   edgesCompose a b = fromEdgeList $ catMaybes
      [ composeEdge ea eb | ea <- toList a, eb <- toList b ]
-
-  edgeUnion :: Edge -> Edge -> Edge
-  edgeUnion a b
-   | a ^. edgeFrom == b ^. edgeFrom,
-     a ^. edgeTo == b ^. edgeTo =
-       Edge (a ^. edgeFrom) (a ^. edgeTo)
-       (HashSet.union (a ^. edgeMatrices) (b ^. edgeMatrices))
-   | otherwise = impossible
-
   edgesUnion :: Edges -> Edges -> Edges
-  edgesUnion = HashMap.unionWith edgeUnion
-
+  edgesUnion = HashMap.union
   edgesCount :: Edges -> Int
-  edgesCount es = sum [ HashSet.size (e ^. edgeMatrices) | e <- toList es ]
+  edgesCount = HashMap.size
 
 reflexiveEdges :: CompleteCallGraph -> [ReflexiveEdge]
 reflexiveEdges (CompleteCallGraph es) = mapMaybe reflexive (toList es)
@@ -141,7 +130,7 @@ callMatrixDiag m = [ col i r | (i, r) <- zip [0 :: Int ..] m]
 recursiveBehaviour :: ReflexiveEdge -> RecursiveBehaviour
 recursiveBehaviour re =
   RecursiveBehaviour  (re ^. redgeFun )
-  (map callMatrixDiag (toList $ re ^. redgeMatrices))
+  (map callMatrixDiag (re ^. redgeMatrices))
 
 findOrder :: RecursiveBehaviour -> Maybe LexOrder
 findOrder rb = LexOrder <$> listToMaybe (mapMaybe (isLexOrder >=> nonEmpty) allPerms)
@@ -189,7 +178,7 @@ instance PrettyCode Edge where
   ppCode Edge {..} = do
     fromFun <- ppSCode _edgeFrom
     toFun <- ppSCode _edgeTo
-    matrices <- indent 2 . ppMatrices . zip [0 :: Int ..] <$> mapM ppCode (toList _edgeMatrices)
+    matrices <- indent 2 . ppMatrices . zip [0 :: Int ..] <$> mapM ppCode _edgeMatrices
     return $ pretty ("Edge" :: Text) <+> fromFun <+> waveFun <+> toFun <> line
       <> matrices
     where
@@ -205,10 +194,8 @@ instance PrettyCode CompleteCallGraph where
 
 instance PrettyCode RecursiveBehaviour where
   ppCode :: forall r. Members '[Reader Options] r => RecursiveBehaviour -> Sem r (Doc Ann)
-  ppCode (RecursiveBehaviour f m0) = do
+  ppCode (RecursiveBehaviour f m) = do
     f' <- ppSCode f
     let m' = vsep (map (PP.list . map pretty) m)
     return $ pretty ("Recursive behaviour of " :: Text)  <> f' <> colon <> line
       <> indent 2 (align m')
-    where
-    m = toList (HashSet.fromList m0)

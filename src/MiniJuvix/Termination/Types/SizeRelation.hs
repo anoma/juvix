@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 module MiniJuvix.Termination.Types.SizeRelation where
 
 import MiniJuvix.Prelude
@@ -7,12 +8,15 @@ import Prettyprinter
 data Rel =
   RJust Rel'
   | RNothing
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
 
 data Rel' =
   REq
   | RLe
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+
+instance Hashable Rel'
+instance Hashable Rel
 
 toRel :: Rel' -> Rel
 toRel = RJust

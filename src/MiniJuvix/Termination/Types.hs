@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 module MiniJuvix.Termination.Types (
   module MiniJuvix.Termination.Types.SizeRelation,
@@ -23,6 +24,9 @@ data FunCall = FunCall {
 newtype CallRow = CallRow {
   _callRow :: Maybe (Int, Rel')
   }
+  deriving stock (Eq, Show, Generic)
+
+instance Hashable CallRow
 
 type CallMatrix = [CallRow]
 
@@ -31,34 +35,10 @@ data Call = Call {
   _callTo :: A.FunctionName,
   _callMatrix :: CallMatrix
   }
-type Edges = HashMap (A.FunctionName, A.FunctionName) Edge
-
-data Edge = Edge {
-  _edgeFrom :: A.FunctionName,
-  _edgeTo :: A.FunctionName,
-  _edgeMatrices :: [CallMatrix]
-  }
-
-newtype CompleteCallGraph = CompleteCallGraph Edges
-
-data ReflexiveEdge = ReflexiveEdge {
-  _redgeFun :: A.FunctionName,
-  _redgeMatrices :: [CallMatrix]
-  }
-
-data RecursiveBehaviour = RecursiveBehaviour
-  {
-    _recBehaviourFunction :: A.FunctionName,
-    _recBehaviourMatrix :: [[Rel]]
-  }
-
 newtype LexOrder = LexOrder (NonEmpty Int)
 
 makeLenses ''FunCall
-makeLenses ''Edge
 makeLenses ''CallMap
-makeLenses ''RecursiveBehaviour
-makeLenses ''ReflexiveEdge
 
 instance PrettyCode FunCall where
   ppCode :: forall r. Members '[Reader Options] r => FunCall -> Sem r (Doc Ann)
@@ -115,29 +95,3 @@ instance PrettyCode CallRow where
 
 instance PrettyCode CallMatrix where
   ppCode l = vsep <$> mapM ppCode l
-
-instance PrettyCode Edge where
-  ppCode Edge {..} = do
-    fromFun <- ppSCode _edgeFrom
-    toFun <- ppSCode _edgeTo
-    matrices <- indent 2 . ppMatrices . zip [0 :: Int ..] <$> mapM ppCode _edgeMatrices
-    return $ pretty ("Edge" :: Text) <+> fromFun <+> waveFun <+> toFun <> line
-      <> matrices
-    where
-    ppMatrices = vsep2 . map ppMatrix
-    ppMatrix (i, t) = pretty ("Matrix" :: Text) <+> pretty i <> colon <> line
-      <> t
-
-instance PrettyCode CompleteCallGraph where
-  ppCode :: forall r. Members '[Reader Options] r => CompleteCallGraph -> Sem r (Doc Ann)
-  ppCode (CompleteCallGraph edges) = do
-    es <- vsep2 <$> mapM ppCode (toList edges)
-    return $ pretty ("Complete Call Graph:" :: Text) <> line <> es
-
-instance PrettyCode RecursiveBehaviour where
-  ppCode :: forall r. Members '[Reader Options] r => RecursiveBehaviour -> Sem r (Doc Ann)
-  ppCode (RecursiveBehaviour f m) = do
-    f' <- ppSCode f
-    let m' = vsep (map (PP.list . map pretty) m)
-    return $ pretty ("Recursive behaviour of " :: Text)  <> f' <> colon <> line
-      <> indent 2 (align m')
