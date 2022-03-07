@@ -67,33 +67,41 @@ alternate A (∷ _ h t) b ≔ ∷ A h (alternate A b t);
 --     (, la _ xs' xs'') ↦ , la la (∷ a x xs') xs'';
 --   };
 
--- merge : (a : Type) → (a → a → Ordering) → List a → List a → List a;
--- merge a cmp (∷ _ x xs) (∷ _ y ys) ≔ match cmp x y {
---     LT ↦ ∷ a x (merge a cmp xs (∷ a y ys));
---     _ ↦ ∷ a y (merge a cmp (∷ a x xs) ys);
---   };
--- merge _ _ (nil _) ys ≔ ys;
--- merge _ _ xs (nil _) ≔ xs;
+merge : (A : Type) → (A → A → Bool) → List A → List A → List A;
+merge _ _ (nil _) ys ≔ ys;
+merge _ _ xs (nil _) ≔ xs;
+merge A lessThan (∷ _ x xs) (∷ _ y ys) ≔ 
+  ite (List A) (lessThan x y)  
+          (∷ A x (merge A lessThan xs (∷ A y ys)))
+          (∷ A y (merge A lessThan ys (∷ A x xs)));
 
--- -- infixr 5 ++; waiting for implicit arguments
--- ++ : (a : Type) → List a → List a → List a;
--- ++ a (nil _) ys ≔ ys;
--- ++ a (∷ _ x xs) ys ≔ ∷ a x (++ a xs ys);
+-- infixr 5 ++; waiting for implicit arguments
+++ : (a : Type) → List a → List a → List a;
+++ a (nil _) ys ≔ ys;
+++ a (∷ _ x xs) ys ≔ ∷ a x (++ a xs ys);
 
--- quickSort : (a : Type) → (a → a → Ordering) → List a → List a;
--- quickSort a _ (nil _) ≔ nil a;
--- quickSort a _ (∷ _ x (nil _)) ≔ ∷ a x (nil a);
--- quickSort a cmp (∷ _ x ys) ≔
---   ++ a (quickSort a (filter a ltx) ys)
---   (++ a (∷ a x (nil a)) (quickSort a (filter a gex) ys))
---   where {
---     ltx : a → Bool;
---     ltx y ≔ match cmp y x {
---       LT ↦ true;
---       _ ↦ false;
---     };
---     gex : a → Bool;
---     gex y ≔ not (ltx y)
---   };
+ltx : (A : Type) → (A → A → Bool) → A → A → Bool;
+ltx A lessThan x y ≔ lessThan y x;
+
+gex : (A : Type) → (A → A → Bool) → A → A → Bool;
+gex A lessThan x y ≔ not (ltx A lessThan x y) ;
+
+quickSort : (A : Type) → (A → A → Bool) → List A → List A;
+quickSort A _ (nil _)         ≔ nil A;
+quickSort A _ (∷ _ x (nil _)) ≔ ∷ A x (nil A);
+quickSort A lessThan (∷ _ x ys) ≔
+  ++ A (quickSort A (filter A ltx) ys)
+       (++ A (∷ A x (nil A)) (quickSort A (filter A gex) ys));
+
+-- Mutual recursive function example
+
+aux : (A : Type) → A → List A → List A;
+flat : (A : Type) → List A → List A;
+
+aux A (nil _) ls    := flat ls;
+aux A (∷ _ x xs) ls := ∷ A x (aux xs ls);
+
+flat A (nil _)     := nil A;
+flat A (∷ _ x xs)  := aux A x xs;
 
 end;
