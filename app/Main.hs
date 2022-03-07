@@ -98,7 +98,8 @@ parseCalls = do
     option decrArgsParser
       ( long "show-decreasing-args"
           <> short 'd'
-          <> help "Show the arguments that are detected to decrease"
+          <> value A.ArgRel
+          <> help "possible values: argument, relation, both"
       )
   pure CallsOptions {..}
   where
