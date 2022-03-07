@@ -98,8 +98,8 @@ quickSort A lessThan (∷ _ x ys) ≔
 aux : (A : Type) → A → List A → List A;
 flat : (A : Type) → List A → List A;
 
-aux A (nil _) ls    := flat ls;
-aux A (∷ _ x xs) ls := ∷ A x (aux xs ls);
+aux A (nil _) ls    := flat A ls;
+aux A (∷ _ x xs) ls := ∷ A x (aux A xs ls);
 
 flat A (nil _)     := nil A;
 flat A (∷ _ x xs)  := aux A x xs;
