@@ -18,6 +18,7 @@ import Text.Show.Pretty hiding (Html)
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (defaultOptions)
 import qualified MiniJuvix.Syntax.Abstract.Pretty.Ansi as A
+import qualified MiniJuvix.Termination.CallGraph as T
 
 data Command
   = Scope ScopeOptions
@@ -47,11 +48,14 @@ data HtmlOptions = HtmlOptions
 data CallsOptions = CallsOptions
   { _callsInputFile :: FilePath,
     _callsShowIds :: Bool,
+    _callsFunctionNameFilter :: Maybe Text,
     _callsShowDecreasingArgs :: A.ShowDecrArgs
   }
 
-newtype CallGraphOptions = CallGraphOptions
-  { _graphInputFile :: FilePath}
+data CallGraphOptions = CallGraphOptions
+  { _graphInputFile :: FilePath,
+    _graphFunctionNameFilter :: Maybe Text
+  }
 
 parseHtml :: Parser HtmlOptions
 parseHtml = do
@@ -84,6 +88,12 @@ parseCalls = do
       ( long "show-name-ids"
           <> help "Show the unique number of each identifier"
       )
+  _callsFunctionNameFilter <-
+    optional $ option str
+      ( long "function"
+          <> short 'f'
+          <> help "Only shows the specified function"
+      )
   _callsShowDecreasingArgs <-
     option decrArgsParser
       ( long "show-decreasing-args"
@@ -104,6 +114,12 @@ parseCalls = do
 parseCallGraph :: Parser CallGraphOptions
 parseCallGraph = do
   _graphInputFile <- parseInputFile
+  _graphFunctionNameFilter <-
+    optional $ option str
+      ( long "function"
+          <> short 'f'
+          <> help "Only shows the specified function"
+      )
   pure CallGraphOptions {..}
 
 parseInputFile :: Parser FilePath
@@ -268,7 +284,10 @@ go c = do
       m <- parseModuleIO _callsInputFile
       s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       a <- fromRightIO' putStrLn (return $ A.translateModule s)
-      let callMap = T.buildCallMap a
+      let callMap0 =  T.buildCallMap a
+          callMap = case _callsFunctionNameFilter of
+            Nothing -> callMap0
+            Just f -> T.filterCallMap f callMap0
           opts' = mkAbstractPrettyOptions opts
       A.printPrettyCode opts' callMap
       putStrLn ""
@@ -276,7 +295,10 @@ go c = do
       m <- parseModuleIO _graphInputFile
       s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       a <- fromRightIO' putStrLn (return $ A.translateModule s)
-      let callMap = T.buildCallMap a
+      let callMap0 = T.buildCallMap a
+          callMap = case _graphFunctionNameFilter of
+            Nothing -> callMap0
+            Just f -> T.filterCallMap f callMap0
           opts' = A.defaultOptions
           completeGraph = T.completeCallGraph callMap
           recBehav = map T.recursiveBehaviour (T.reflexiveEdges completeGraph)

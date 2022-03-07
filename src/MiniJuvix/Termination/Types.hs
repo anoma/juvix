@@ -7,6 +7,8 @@ module MiniJuvix.Termination.Types (
 
 import MiniJuvix.Prelude
 import qualified MiniJuvix.Syntax.Abstract.Language as A
+import qualified MiniJuvix.Syntax.Concrete.Name as C
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import qualified Data.HashMap.Strict as HashMap
 import Prettyprinter as PP
 import MiniJuvix.Termination.Types.SizeRelation
@@ -15,6 +17,7 @@ import MiniJuvix.Syntax.Abstract.Pretty.Base
 newtype CallMap = CallMap {
   _callMap :: HashMap A.FunctionName (HashMap A.FunctionName [FunCall]) }
   deriving newtype (Semigroup, Monoid)
+
 
 data FunCall = FunCall {
   _callName :: A.FunctionName,
@@ -95,3 +98,9 @@ instance PrettyCode CallRow where
 
 instance PrettyCode CallMatrix where
   ppCode l = vsep <$> mapM ppCode l
+
+filterCallMap :: Text -> CallMap -> CallMap
+filterCallMap funName = over callMap (HashMap.filterWithKey (\k _ -> funStr k == funName))
+  where
+  funStr :: A.FunctionName -> Text
+  funStr = C._symbolText . S._nameConcrete
