@@ -64,10 +64,16 @@ goFunctionClause :: forall r. Members '[Error Err] r => FunctionClause 'Scoped -
 goFunctionClause FunctionClause {..} = do
   _clausePatterns' <- mapM goPattern _clausePatterns
   _clauseBody' <- goExpression _clauseBody
+  goWhereBlock _clauseWhere
   return A.FunctionClause {
     _clausePatterns = _clausePatterns',
     _clauseBody = _clauseBody'
     }
+
+goWhereBlock :: forall r. Members '[Error Err] r => Maybe (WhereBlock 'Scoped) -> Sem r ()
+goWhereBlock w = case w of
+ Just _ ->  unsupported "where block"
+ Nothing -> return ()
 
 goInductiveParameter :: Members '[Error Err] r => InductiveParameter 'Scoped -> Sem r A.FunctionParameter
 goInductiveParameter InductiveParameter {..} = do
