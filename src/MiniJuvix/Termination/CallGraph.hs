@@ -8,6 +8,7 @@ import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.Language.Extra
 import qualified Data.HashMap.Strict as HashMap
 import MiniJuvix.Termination.Types
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import Prettyprinter as PP
 import MiniJuvix.Syntax.Abstract.Pretty.Base
 import qualified Data.HashSet as HashSet
@@ -68,6 +69,12 @@ fromFunCall caller fc =
           _callTo = fc ^. callName,
           _callMatrix = map fst (fc ^. callArgs)
        }
+
+-- | IMPORTANT: the resulting call graph is not complete. Use this function
+-- only to filter the pretty printed graph
+unsafeFilterGraph :: [Text] -> CompleteCallGraph -> CompleteCallGraph
+unsafeFilterGraph funNames (CompleteCallGraph g) =
+  CompleteCallGraph (HashMap.filterWithKey  (\(f , _) _ -> S.symbolText f `elem`funNames) g)
 
 completeCallGraph :: CallMap -> CompleteCallGraph
 completeCallGraph cm = CompleteCallGraph (go startingEdges)

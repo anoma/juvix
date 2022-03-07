@@ -107,6 +107,9 @@ isConstructor Name' {..} = case _nameKind of
 fromQualifiedName :: C.QualifiedName -> C.Symbol
 fromQualifiedName (C.QualifiedName _ s) = s
 
+symbolText :: Symbol -> Text
+symbolText = C._symbolText . _nameConcrete
+
 fromName :: Name -> Symbol
 fromName Name' {..} = Name' {_nameConcrete = unqual, ..}
   where

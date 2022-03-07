@@ -99,8 +99,5 @@ instance PrettyCode CallRow where
 instance PrettyCode CallMatrix where
   ppCode l = vsep <$> mapM ppCode l
 
-filterCallMap :: Text -> CallMap -> CallMap
-filterCallMap funName = over callMap (HashMap.filterWithKey (\k _ -> funStr k == funName))
-  where
-  funStr :: A.FunctionName -> Text
-  funStr = C._symbolText . S._nameConcrete
+filterCallMap :: [Text] -> CallMap -> CallMap
+filterCallMap funNames = over callMap (HashMap.filterWithKey (\k _ -> S.symbolText k `elem` funNames))

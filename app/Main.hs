@@ -19,6 +19,8 @@ import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (defaultOptions)
 import qualified MiniJuvix.Syntax.Abstract.Pretty.Ansi as A
 import qualified MiniJuvix.Termination.CallGraph as T
+import qualified Data.Text as Text
+import qualified MiniJuvix.Termination.CallGraph as T
 
 data Command
   = Scope ScopeOptions
@@ -48,13 +50,13 @@ data HtmlOptions = HtmlOptions
 data CallsOptions = CallsOptions
   { _callsInputFile :: FilePath,
     _callsShowIds :: Bool,
-    _callsFunctionNameFilter :: Maybe Text,
+    _callsFunctionNameFilter :: Maybe [Text],
     _callsShowDecreasingArgs :: A.ShowDecrArgs
   }
 
 data CallGraphOptions = CallGraphOptions
   { _graphInputFile :: FilePath,
-    _graphFunctionNameFilter :: Maybe Text
+    _graphFunctionNameFilter :: Maybe [Text]
   }
 
 parseHtml :: Parser HtmlOptions
@@ -89,10 +91,11 @@ parseCalls = do
           <> help "Show the unique number of each identifier"
       )
   _callsFunctionNameFilter <-
-    optional $ option str
+    optional $ Text.words <$> option str
       ( long "function"
           <> short 'f'
-          <> help "Only shows the specified function"
+          <> metavar "fun1 fun2 ..."
+          <> help "Only shows the specified functions"
       )
   _callsShowDecreasingArgs <-
     option decrArgsParser
@@ -116,7 +119,7 @@ parseCallGraph :: Parser CallGraphOptions
 parseCallGraph = do
   _graphInputFile <- parseInputFile
   _graphFunctionNameFilter <-
-    optional $ option str
+    optional $ Text.words <$> option str
       ( long "function"
           <> short 'f'
           <> help "Only shows the specified function"
@@ -296,14 +299,12 @@ go c = do
       m <- parseModuleIO _graphInputFile
       s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       a <- fromRightIO' putStrLn (return $ A.translateModule s)
-      let callMap0 = T.buildCallMap a
-          callMap = case _graphFunctionNameFilter of
-            Nothing -> callMap0
-            Just f -> T.filterCallMap f callMap0
+      let callMap = T.buildCallMap a
           opts' = A.defaultOptions
           completeGraph = T.completeCallGraph callMap
-          recBehav = map T.recursiveBehaviour (T.reflexiveEdges completeGraph)
-      A.printPrettyCode opts' completeGraph
+          filteredGraph = maybe completeGraph (`T.unsafeFilterGraph` completeGraph) _graphFunctionNameFilter
+          recBehav = map T.recursiveBehaviour (T.reflexiveEdges filteredGraph)
+      A.printPrettyCode opts' filteredGraph
       putStrLn ""
       forM_ recBehav $ \r -> do
         let n = M.renderPrettyCode M.defaultOptions $ A._recBehaviourFunction r
@@ -311,10 +312,8 @@ go c = do
         putStrLn ""
         case T.findOrder r of
           Nothing -> putStrLn (n <> " Fails the termination checking")
-          Just (T.LexOrder k) -> putStrLn (n<> " Terminates with order " <> show (toList k))
+          Just (T.LexOrder k) -> putStrLn (n <> " Terminates with order " <> show (toList k))
         putStrLn ""
-
-
 
 main :: IO ()
 main = execParser descr >>= go
