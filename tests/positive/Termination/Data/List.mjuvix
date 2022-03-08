@@ -88,4 +88,19 @@ aux A (cons _ x xs) ls := cons A x (aux A xs ls);
 flat A (nil _)       := nil A;
 flat A (cons _ x xs) := aux A x xs;
 
+inductive Ord {
+  ZOrd : Ord;
+  SOrd : Ord -> Ord;
+  Lim  : (ℕ -> Ord) -> Ord;
+};
+
+addord : Ord -> Ord -> Ord;
+aux-addord : (ℕ -> Ord) -> Ord -> (ℕ -> Ord);
+
+addord (Zord)   y := y;
+addord (SOrd x) y := SOrd (addord x y);
+addord (Lim f)  y := Lim (aux-addord f y);
+-- where
+aux-addord f y z := addord (f z) y;
+
 end;

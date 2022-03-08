@@ -61,5 +61,5 @@ instance Pretty Rel where
 
 instance Pretty Rel' where
   pretty r = case r of
-    REq -> pretty ("∼" :: Text)
+    REq -> pretty ("=" :: Text)
     RLe -> pretty ("≺" :: Text)
