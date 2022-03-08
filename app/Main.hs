@@ -18,16 +18,14 @@ import Text.Show.Pretty hiding (Html)
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (defaultOptions)
 import qualified MiniJuvix.Syntax.Abstract.Pretty.Ansi as A
-import qualified MiniJuvix.Termination.CallGraph as T
-import qualified Data.Text as Text
-import qualified MiniJuvix.Termination.CallGraph as T
+import Commands.Extra
+import Commands.Termination as T
 
 data Command
   = Scope ScopeOptions
   | Parse ParseOptions
   | Html HtmlOptions
-  | Calls CallsOptions
-  | CallGraph CallGraphOptions
+  | Termination TerminationCommand
 
 data ScopeOptions = ScopeOptions
   { _scopeRootDir :: FilePath,
@@ -45,18 +43,6 @@ data HtmlOptions = HtmlOptions
   { _htmlInputFile :: FilePath,
     _htmlRecursive :: Bool,
     _htmlTheme :: Theme
-  }
-
-data CallsOptions = CallsOptions
-  { _callsInputFile :: FilePath,
-    _callsShowIds :: Bool,
-    _callsFunctionNameFilter :: Maybe [Text],
-    _callsShowDecreasingArgs :: A.ShowDecrArgs
-  }
-
-data CallGraphOptions = CallGraphOptions
-  { _graphInputFile :: FilePath,
-    _graphFunctionNameFilter :: Maybe [Text]
   }
 
 parseHtml :: Parser HtmlOptions
@@ -82,57 +68,7 @@ parseHtml = do
     "ayu" -> Right Ayu
     _ -> Left $ "unrecognised theme: " <> s
 
-parseCalls :: Parser CallsOptions
-parseCalls = do
-  _callsInputFile <- parseInputFile
-  _callsShowIds <-
-    switch
-      ( long "show-name-ids"
-          <> help "Show the unique number of each identifier"
-      )
-  _callsFunctionNameFilter <-
-    optional $ Text.words <$> option str
-      ( long "function"
-          <> short 'f'
-          <> metavar "fun1 fun2 ..."
-          <> help "Only shows the specified functions"
-      )
-  _callsShowDecreasingArgs <-
-    option decrArgsParser
-      ( long "show-decreasing-args"
-          <> short 'd'
-          <> value A.ArgRel
-          <> help "possible values: argument, relation, both"
-      )
-  pure CallsOptions {..}
-  where
-  decrArgsParser :: ReadM A.ShowDecrArgs
-  decrArgsParser = eitherReader $ \s ->
-    case map toLower s of
-      "argument" -> return A.OnlyArg
-      "relation" -> return A.OnlyRel
-      "both" -> return A.ArgRel
-      _ -> Left "bad argument"
 
-
-parseCallGraph :: Parser CallGraphOptions
-parseCallGraph = do
-  _graphInputFile <- parseInputFile
-  _graphFunctionNameFilter <-
-    optional $ Text.words <$> option str
-      ( long "function"
-          <> short 'f'
-          <> help "Only shows the specified function"
-      )
-  pure CallGraphOptions {..}
-
-parseInputFile :: Parser FilePath
-parseInputFile =
- argument
-      str
-      ( metavar "MINIJUVIX_FILE"
-          <> help "Path to a .mjuvix file"
-      )
 
 parseParse :: Parser ParseOptions
 parseParse = do
@@ -195,8 +131,7 @@ parseCommand =
       [ commandParse,
         commandScope,
         commandHtml,
-        commandCalls,
-        commandGraph
+        commandTermination
       ]
   where
     commandParse :: Mod CommandFields Command
@@ -224,22 +159,14 @@ parseCommand =
           info
             (Scope <$> parseScope)
             (progDesc "Parse and scope a .mjuvix file")
-    commandCalls :: Mod CommandFields Command
-    commandCalls = command "calls" minfo
+    commandTermination :: Mod CommandFields Command
+    commandTermination = command "termination" minfo
       where
         minfo :: ParserInfo Command
         minfo =
           info
-            (Calls <$> parseCalls)
-            (progDesc "Compute the calls table of a .mjuvix file")
-    commandGraph :: Mod CommandFields Command
-    commandGraph = command "graph" minfo
-      where
-        minfo :: ParserInfo Command
-        minfo =
-          info
-            (CallGraph <$> parseCallGraph)
-            (progDesc "Compute the complete call graph of a .mjuvix file")
+            (Termination <$> parseTerminationCommand)
+            (progDesc "Subcommands related to termination checking")
 
 
 mkScopePrettyOptions :: ScopeOptions -> M.Options
@@ -247,13 +174,6 @@ mkScopePrettyOptions ScopeOptions {..} =
   M.defaultOptions
     { M._optShowNameId = _scopeShowIds,
       M._optInlineImports = _scopeInlineImports
-    }
-
-mkAbstractPrettyOptions :: CallsOptions -> A.Options
-mkAbstractPrettyOptions CallsOptions {..} =
-  A.defaultOptions
-    { A._optShowNameId = _callsShowIds,
-      A._optShowDecreasingArgs = _callsShowDecreasingArgs
     }
 
 parseModuleIO :: FilePath -> IO (M.Module 'M.Parsed 'M.ModuleTop)
@@ -284,7 +204,7 @@ go c = do
       m <- parseModuleIO _htmlInputFile
       s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       genHtml defaultOptions _htmlRecursive _htmlTheme s
-    Calls opts@CallsOptions {..} -> do
+    Termination (Calls opts@CallsOptions {..}) -> do
       m <- parseModuleIO _callsInputFile
       s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       a <- fromRightIO' putStrLn (return $ A.translateModule s)
@@ -292,10 +212,10 @@ go c = do
           callMap = case _callsFunctionNameFilter of
             Nothing -> callMap0
             Just f -> T.filterCallMap f callMap0
-          opts' = mkAbstractPrettyOptions opts
+          opts' = T.callsPrettyOptions opts
       A.printPrettyCode opts' callMap
       putStrLn ""
-    CallGraph CallGraphOptions {..} -> do
+    Termination (CallGraph CallGraphOptions {..}) -> do
       m <- parseModuleIO _graphInputFile
       s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       a <- fromRightIO' putStrLn (return $ A.translateModule s)

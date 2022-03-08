@@ -80,7 +80,7 @@ import Data.HashSet (HashSet)
 import Data.Hashable
 import Data.Int
 import Data.List.Extra hiding (head, last)
-import Data.List.NonEmpty.Extra (NonEmpty (..), head, last, nonEmpty, minimum1, minimumOn1, maximum1, maximumOn1)
+import Data.List.NonEmpty.Extra (NonEmpty (..), head, last, nonEmpty, minimum1, minimumOn1, maximum1, maximumOn1, some1)
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Maybe
 import Data.Singletons.Sigma

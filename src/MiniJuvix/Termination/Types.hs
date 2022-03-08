@@ -7,7 +7,6 @@ module MiniJuvix.Termination.Types (
 
 import MiniJuvix.Prelude
 import qualified MiniJuvix.Syntax.Abstract.Language as A
-import qualified MiniJuvix.Syntax.Concrete.Name as C
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import qualified Data.HashMap.Strict as HashMap
 import Prettyprinter as PP
@@ -99,5 +98,5 @@ instance PrettyCode CallRow where
 instance PrettyCode CallMatrix where
   ppCode l = vsep <$> mapM ppCode l
 
-filterCallMap :: [Text] -> CallMap -> CallMap
+filterCallMap :: Foldable f => f Text -> CallMap -> CallMap
 filterCallMap funNames = over callMap (HashMap.filterWithKey (\k _ -> S.symbolText k `elem` funNames))
