@@ -19,10 +19,14 @@ data NameKind
     KNameTopModule
   deriving stock (Show, Eq)
 
-$(genSingletons [''NameKind])
+class HasNameKind a where
+  getNameKind :: a -> NameKind
 
-isExprKind :: NameKind -> Bool
-isExprKind k = case k of
+instance HasNameKind NameKind where
+  getNameKind = id
+
+isExprKind :: HasNameKind a => a -> Bool
+isExprKind k = case getNameKind k of
     KNameConstructor -> True
     KNameInductive -> True
     KNameFunction -> True
@@ -31,14 +35,14 @@ isExprKind k = case k of
     KNameLocalModule -> False
     KNameTopModule -> False
 
-isModuleKind :: NameKind -> Bool
-isModuleKind k = case k of
+isModuleKind :: HasNameKind a => a -> Bool
+isModuleKind k = case getNameKind k of
   KNameLocalModule -> True
   KNameTopModule -> True
   _ -> False
 
-canHaveFixity :: NameKind -> Bool
-canHaveFixity k = case k of
+canHaveFixity :: HasNameKind a => a -> Bool
+canHaveFixity k = case getNameKind k of
   KNameConstructor -> True
   KNameInductive -> True
   KNameFunction -> True
@@ -46,4 +50,3 @@ canHaveFixity k = case k of
   KNameLocal -> False
   KNameLocalModule -> False
   KNameTopModule -> False
-

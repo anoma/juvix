@@ -4,7 +4,6 @@ import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Language
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import qualified MiniJuvix.Syntax.Abstract.Language as A
-import qualified MiniJuvix.Syntax.Concrete.Language as C
 import qualified Data.HashMap.Strict as HashMap
 
 

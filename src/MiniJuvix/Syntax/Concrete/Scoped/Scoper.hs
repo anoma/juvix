@@ -104,11 +104,11 @@ reserveSymbolOf k s = do
     let exists = HashMap.lookup s syms >>= HashMap.lookup path . _symbolInfo
     whenJust exists $
       \ e -> throw (ErrMultipleDeclarations
-         MultipleDeclarations  {
+         MultipleDeclarations {
          _multipleDeclEntry = e,
          _multipleDeclSymbol = _symbolText s,
          _multipleDeclSecond = getLoc s
-         } )
+         })
 
 symbolEntry :: S.Name' a -> SymbolEntry
 symbolEntry S.Name' {..} = S.Name'
@@ -224,7 +224,7 @@ lookupSymbolAux modules final = do
             [e] -> return [e]
             es -> throw (ErrAmbiguousSym (AmbiguousSym es))
       (p : ps) -> do
-        r <- fmap (filter (S.isModuleKind . S._nameKind) . toList . _symbolInfo)
+        r <- fmap (filter S.isModuleKind . toList . _symbolInfo)
           . HashMap.lookup p <$> gets _scopeSymbols
         case r of
           Just [x] -> do
@@ -262,7 +262,7 @@ lookInExport sym remaining e = case remaining of
   mayModule ExportInfo {..} s =
     case do
       entry <- HashMap.lookup s _exportSymbols
-      guard (S.isModuleKind (S._nameKind entry))
+      guard (S.isModuleKind entry)
       return entry of
         Just entry -> Just <$> getExportInfo (S._nameId entry)
         Nothing -> return Nothing
@@ -557,7 +557,7 @@ lookupModuleSymbol :: Members '[Error ScopeError, State Scope, State ScoperState
   Name -> Sem r S.Name
 lookupModuleSymbol n = do
   es <- lookupQualifiedSymbol (path, sym)
-  case filter (S.isModuleKind . S._nameKind) es of
+  case filter S.isModuleKind es of
     [] -> notInScope
     [x] -> return $ entryToSName n x
     _ -> throw (ErrAmbiguousModuleSym (AmbiguousModuleSym es))
@@ -801,7 +801,7 @@ checkUnqualified s = do
       locals <- ask
       -- Lookup at the global scope
       let err = throw (ErrSymNotInScope (NotInScope s locals scope))
-      entries <- filter (S.isExprKind . S._nameKind) <$>
+      entries <- filter S.isExprKind <$>
          lookupQualifiedSymbol ([], s)
       case entries of
         [] -> err

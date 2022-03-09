@@ -90,6 +90,9 @@ data Name' n = Name'
   deriving stock (Show)
 makeLenses ''Name'
 
+instance HasNameKind (Name' n) where
+  getNameKind = _nameKind
+
 instance HasLoc n => HasLoc (Name' n) where
   getLoc = getLoc . _nameConcrete
 
