@@ -11,7 +11,6 @@ import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
 import MiniJuvix.Syntax.Concrete.PublicAnn
-import qualified Data.Kind as GHC
 import Prettyprinter
 
 --------------------------------------------------------------------------------
@@ -110,8 +109,8 @@ fromQualifiedName (C.QualifiedName _ s) = s
 symbolText :: Symbol -> Text
 symbolText = C._symbolText . _nameConcrete
 
-fromName :: Name -> Symbol
-fromName Name' {..} = Name' {_nameConcrete = unqual, ..}
+nameUnqualify :: Name -> Symbol
+nameUnqualify Name' {..} = Name' {_nameConcrete = unqual, ..}
   where
   unqual = case _nameConcrete of
        C.NameUnqualified s -> s
@@ -125,12 +124,3 @@ instance Ord (Name' n) where
 
 instance Hashable (Name' n) where
   hashWithSalt salt = hashWithSalt salt . _nameId
-
-type family NameKindSymbolType (s :: NameKind) :: GHC.Type where
-  NameKindSymbolType 'KNameTopModule = TopModulePath
-  NameKindSymbolType 'KNameConstructor = Symbol
-  NameKindSymbolType 'KNameInductive = Symbol
-  NameKindSymbolType 'KNameFunction = Symbol
-  NameKindSymbolType 'KNameLocal = Symbol
-  NameKindSymbolType 'KNameAxiom = Symbol
-  NameKindSymbolType 'KNameLocalModule = Symbol

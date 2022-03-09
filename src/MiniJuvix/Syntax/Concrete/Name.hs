@@ -4,12 +4,16 @@ module MiniJuvix.Syntax.Concrete.Name where
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Loc
 import qualified Data.List.NonEmpty.Extra as NonEmpty
+import Prettyprinter
 
 data Symbol = Symbol {
   _symbolText :: Text,
   _symbolLoc :: Interval
   }
   deriving stock (Show)
+
+instance Pretty Symbol where
+  pretty = pretty . _symbolText
 
 instance Eq Symbol where
   (==) = (==) `on` _symbolText

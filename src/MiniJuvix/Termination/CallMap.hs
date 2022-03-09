@@ -53,7 +53,7 @@ viewCall e = case e of
   _ -> return Nothing
   where
   singletonCall :: Name -> FunCall
-  singletonCall n = FunCall (S.fromName n) []
+  singletonCall n = FunCall (S.nameUnqualify n) []
 
 addCall :: FunctionName -> FunCall -> CallMap -> CallMap
 addCall fun c = over callMap (HashMap.alter (Just . insertCall c) fun)
