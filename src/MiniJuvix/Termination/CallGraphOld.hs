@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module MiniJuvix.Termination.CallGraphOld (
   module MiniJuvix.Termination.Types,
   module MiniJuvix.Termination.CallGraphOld

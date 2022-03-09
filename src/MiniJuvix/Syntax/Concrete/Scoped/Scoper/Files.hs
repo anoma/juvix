@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module MiniJuvix.Syntax.Concrete.Scoped.Scoper.Files where
 
 import MiniJuvix.Prelude

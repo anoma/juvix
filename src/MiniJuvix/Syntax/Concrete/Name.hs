@@ -1,8 +1,4 @@
-
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-
 module MiniJuvix.Syntax.Concrete.Name where
 
 import MiniJuvix.Prelude

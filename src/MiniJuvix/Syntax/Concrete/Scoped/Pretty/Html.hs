@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html (genHtml, Theme(..)) where
 
 import MiniJuvix.Syntax.Concrete.Language

@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TemplateHaskell #-}
 module MiniJuvix.Termination.Types (
   module MiniJuvix.Termination.Types.SizeRelation,
   module MiniJuvix.Termination.Types

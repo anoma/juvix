@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE StandaloneKindSignatures #-}
 module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind where
 
 import MiniJuvix.Prelude

@@ -1,6 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TemplateHaskell #-}
-
 module MiniJuvix.Syntax.Concrete.Scoped.Name (
 module MiniJuvix.Syntax.Concrete.Scoped.Name,
 module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind

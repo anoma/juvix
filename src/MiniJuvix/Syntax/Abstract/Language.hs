@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module MiniJuvix.Syntax.Abstract.Language (
   module MiniJuvix.Syntax.Abstract.Language
                                           ) where

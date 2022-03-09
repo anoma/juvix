@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
 module MiniJuvix.Termination.Types.SizeRelation where
 
 import MiniJuvix.Prelude

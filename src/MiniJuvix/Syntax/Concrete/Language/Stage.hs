@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 module MiniJuvix.Syntax.Concrete.Language.Stage where
 
@@ -10,4 +9,3 @@ data Stage
   deriving stock (Show)
 
 $(genSingletons [''Stage])
-
