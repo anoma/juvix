@@ -63,16 +63,16 @@ makeLenses ''QualifiedName
 
 -- | A.B.C corresponds to TopModulePath [A,B] C
 data TopModulePath = TopModulePath
-  { modulePathDir :: [Symbol],
-    modulePathName :: Symbol
+  { _modulePathDir :: [Symbol],
+    _modulePathName :: Symbol
   }
   deriving stock (Show, Eq, Ord, Generic)
 
 instance HasLoc TopModulePath where
   getLoc TopModulePath {..} =
-    case modulePathDir of
-      [] -> getLoc modulePathName
-      (x : _) -> getLoc x <> getLoc modulePathName
+    case _modulePathDir of
+      [] -> getLoc _modulePathName
+      (x : _) -> getLoc x <> getLoc _modulePathName
 
 topModulePathToFilePath :: FilePath -> TopModulePath -> FilePath
 topModulePathToFilePath = topModulePathToFilePath' (Just ".mjuvix")
@@ -81,8 +81,8 @@ topModulePathToFilePath'
   :: Maybe String -> FilePath -> TopModulePath -> FilePath
 topModulePathToFilePath' ext root mp = absPath
   where
-  relDirPath = foldr ((</>) . toPath) mempty (modulePathDir mp)
-  relFilePath = relDirPath </> toPath (modulePathName mp)
+  relDirPath = foldr ((</>) . toPath) mempty (_modulePathDir mp)
+  relFilePath = relDirPath </> toPath (_modulePathName mp)
   absPath = case ext of
     Nothing -> root </> relFilePath
     Just e -> root </> relFilePath <.> e

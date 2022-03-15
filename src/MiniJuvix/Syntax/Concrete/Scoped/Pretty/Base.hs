@@ -378,7 +378,7 @@ annSDef S.Name' {..} = annotate (AnnDef (S.absTopModulePath _nameDefinedIn) _nam
 
 instance PrettyCode TopModulePath where
   ppCode TopModulePath {..} =
-    dotted <$> mapM ppSymbol (modulePathDir ++ [modulePathName])
+    dotted <$> mapM ppSymbol (_modulePathDir ++ [_modulePathName])
 
 instance PrettyCode Symbol where
   ppCode = return . pretty . _symbolText

@@ -461,7 +461,7 @@ checkTopModule m@(Module path params body) = do
     _nameId <- freshNameId
     let _nameDefinedIn = S.topModulePathToAbsPath path
         _nameConcrete = path
-        _nameDefined = getLoc $ modulePathName path
+        _nameDefined = getLoc (_modulePathName path)
         _nameKind = S.KNameTopModule
         _nameFixity = Nothing
         _namePublicAnn = NoPublic

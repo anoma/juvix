@@ -106,6 +106,9 @@ isConstructor Name' {..} = case _nameKind of
 fromQualifiedName :: C.QualifiedName -> C.Symbol
 fromQualifiedName (C.QualifiedName _ s) = s
 
+topModulePathName :: TopModulePath -> Symbol
+topModulePathName = over nameConcrete C._modulePathName
+
 symbolText :: Symbol -> Text
 symbolText = C._symbolText . _nameConcrete
 

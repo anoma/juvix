@@ -29,6 +29,9 @@ instance Ord Name where
 instance Hashable Name where
   hashWithSalt salt = hashWithSalt salt . _nameId
 
+instance HasNameKind Name where
+  getNameKind = _nameKind
+
 data Module = Module
   { _moduleName :: Name,
     _moduleBody :: ModuleBody
@@ -54,21 +57,19 @@ data Iden =
   IdenDefined Name
   | IdenConstructor Name
   | IdenVar VarName
-  | IdenAxiom Name
 
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
-  | ExpressionFunction Function
 
 data Application = Application {
-  _appLeft :: Expression,
-  _appRight :: Expression
+  _appFunction :: FunctionName,
+  _appArguments :: [Expression]
   }
 
-data Function = Function
-  { _funParameter :: Type,
-    _funReturn :: Type
+data Function = Function {
+  _funParameters :: NonEmpty Type,
+  _funReturn :: Type
   }
 
 -- | Fully applied constructor in a pattern.
@@ -84,17 +85,19 @@ data Pattern
 
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
-    _inductiveType :: Maybe Expression,
     _inductiveConstructors :: [InductiveConstructorDef]
   }
 
 data InductiveConstructorDef = InductiveConstructorDef
   { _constructorName :: ConstrName,
-    _constructorType :: Type
+    _constructorParameters :: [Type]
   }
 
+newtype TypeIden =
+  TypeIdenInductive InductiveName
+
 data Type =
-  TypeInductive InductiveName
+  TypeIden TypeIden
  | TypeFunction Function
 
 makeLenses ''Module
