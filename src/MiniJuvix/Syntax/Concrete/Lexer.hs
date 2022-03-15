@@ -9,6 +9,7 @@ import MiniJuvix.Prelude
 import qualified Text.Megaparsec.Char.Lexer as L
 import MiniJuvix.Syntax.Concrete.Loc
 import qualified MiniJuvix.Internal.Strings as Str
+import qualified Data.Text as Text
 
 --------------------------------------------------------------------------------
 
@@ -38,6 +39,17 @@ identifierL = lexeme bareIdentifier
 fromPos :: P.Pos -> Pos
 fromPos = Pos . fromIntegral . P.unPos
 
+integer :: MonadParsec e Text m => m Integer
+integer = do
+  minus <- optional (char '-')
+  nat <- lexeme L.decimal
+  case minus of
+    Nothing -> return nat
+    _ -> return (- nat)
+
+string :: MonadParsec e Text m => m Text
+string = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
+
 mkLoc :: SourcePos -> Loc
 mkLoc SourcePos {..} = Loc {..}
   where
@@ -61,15 +73,22 @@ interval ma = do
   return (res, mkInterval start end)
 
 -- | Same as @identifier@ but does not consume space after it.
+-- TODO: revise.
 bareIdentifier :: MonadParsec e Text m => m (Text, Interval)
 bareIdentifier = interval $ do
   notFollowedBy (choice allKeywords)
-  P.takeWhile1P Nothing validChar
+  h <- P.satisfy validFirstChar
+  t <- P.takeWhileP Nothing validChar
+  return (Text.cons h t)
   where
     validChar :: Char -> Bool
     validChar c =
+      isAlphaNum c || validFirstChar c
+    validFirstChar :: Char -> Bool
+    validFirstChar c =
+      c /= '-' &&
       or
-        [ isAlphaNum c,
+        [ isLetter c,
           cat == MathSymbol,
           cat == CurrencySymbol,
           cat == ModifierLetter,

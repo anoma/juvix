@@ -104,7 +104,8 @@ fromText = fromString . unpack
 putTag :: Ann -> Html -> Html
 putTag ann x = case ann of
    AnnKind k -> tagKind k x
-   AnnNumber -> Html.span ! Attr.class_ "ju-number" $ x
+   AnnLiteralInteger -> Html.span ! Attr.class_ "ju-number" $ x
+   AnnLiteralString -> Html.span ! Attr.class_ "ju-string" $ x
    AnnKeyword -> Html.span ! Attr.class_ "ju-keyword" $ x
    AnnUnkindedSym -> Html.span ! Attr.class_ "ju-var" $ x
    AnnDelimiter -> Html.span ! Attr.class_ "ju-delimiter" $ x

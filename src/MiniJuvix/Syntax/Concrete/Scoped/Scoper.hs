@@ -918,6 +918,7 @@ checkExpressionAtom e = case e of
   AtomFunction fun -> AtomFunction <$> checkFunction fun
   AtomParens par -> AtomParens <$> checkParens par
   AtomFunArrow -> return AtomFunArrow
+  AtomLiteral l -> return (AtomLiteral l)
   AtomMatch match -> AtomMatch <$> checkMatch match
 
 checkParens :: Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
@@ -1090,7 +1091,7 @@ mkExpressionParser table = embed @Parse pExpression
     pExpression :: Parse Expression
     pExpression = P.makeExprParser (runM parseTerm) table
 
-parseTerm :: forall r. Members '[Embed Parse] r => Sem r Expression
+parseTerm :: Members '[Embed Parse] r => Sem r Expression
 parseTerm =
   embed @Parse $
     parseUniverse
@@ -1098,9 +1099,18 @@ parseTerm =
       <|> parseParens
       <|> parseFunction
       <|> parseLambda
+      <|> parseLiteral
       <|> parseMatch
       <|> parseLetBlock
   where
+    parseLiteral :: Parse Expression
+    parseLiteral = ExpressionLiteral <$> P.token lit mempty
+       where
+        lit :: ExpressionAtom 'Scoped -> Maybe Literal
+        lit s = case s of
+          AtomLiteral l -> Just l
+          _ -> Nothing
+
     parseLambda :: Parse Expression
     parseLambda = ExpressionLambda <$> P.token lambda mempty
       where

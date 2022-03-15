@@ -1,30 +1,34 @@
 /* Color palette based on https://github.com/ayu-theme/ayu-colors */
 body {
-	  background-color: #f8f9fa;
+    background-color: #f8f9fa;
 }
 
 .ju-inductive {
-	  color: #86b300;
+    color: #86b300;
 }
 
 .ju-constructor {
-	  color: #a37acc;
+    color: #a37acc;
 }
 
 .ju-function {
-	  color: #f2ae49;
+    color: #f2ae49;
 }
 
 .ju-axiom {
-	  color: #f07171;
+    color: #f07171;
+}
+
+.ju-string {
+    color: #f07171;
 }
 
 .ju-keyword {
-	  color: #399ee6;
+    color: #399ee6;
 }
 
 .ju-delimiter {
-	  color: #787b80;
+    color: #787b80;
 }
 
 .ju-var {
@@ -36,9 +40,9 @@ body {
 }
 
 a:hover, a.hover-highlight {
-	  background-color: #dadbdc ;
+    background-color: #dadbdc ;
 }
 
 a:link, a:visited {
-	  text-decoration: none;
+    text-decoration: none;
 }

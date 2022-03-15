@@ -37,3 +37,5 @@ stylize a = case a of
     KNameTopModule -> mempty
   AnnKeyword -> colorDull Blue
   AnnImportant -> bold
+  AnnLiteralString -> colorDull Red
+  AnnLiteralInteger -> colorDull Cyan

@@ -463,6 +463,7 @@ data Expression
   | ExpressionMatch (Match 'Scoped)
   | ExpressionLetBlock (LetBlock 'Scoped)
   | ExpressionUniverse Universe
+  | ExpressionLiteral Literal
   | ExpressionFunction (Function 'Scoped)
   deriving stock (Show, Eq, Ord)
 
@@ -474,14 +475,20 @@ instance HasAtomicity Expression where
     ExpressionInfixApplication a -> Aggregate (getFixity a)
     ExpressionPostfixApplication a -> Aggregate (getFixity a)
     ExpressionLambda {} -> Atom
+    ExpressionLiteral {} -> Atom
     ExpressionMatch {} -> Atom
     ExpressionLetBlock {} -> Atom
     ExpressionUniverse {} -> Atom
     ExpressionFunction {} -> Aggregate funFixity
 
 --------------------------------------------------------------------------------
--- Expression section
+-- Expression atom
 --------------------------------------------------------------------------------
+
+data Literal =
+  LitString Text
+  | LitInteger Integer
+  deriving stock (Show, Eq, Ord)
 
 -- | Expressions without application
 data ExpressionAtom (s :: Stage)
@@ -492,6 +499,7 @@ data ExpressionAtom (s :: Stage)
   | AtomFunction (Function s)
   | AtomFunArrow
   | AtomMatch (Match s)
+  | AtomLiteral Literal
   | AtomParens (ExpressionType s)
 
 deriving stock instance

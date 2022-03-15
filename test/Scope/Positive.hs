@@ -68,4 +68,6 @@ tests = [
      "StdlibList" "Data/List.mjuvix"
   , PosTest "Operators (+)"
      "." "Operators.mjuvix"
+  , PosTest "Literals"
+     "." "Literals.mjuvix"
  ]

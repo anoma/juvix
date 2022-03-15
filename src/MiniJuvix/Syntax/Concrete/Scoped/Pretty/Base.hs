@@ -142,6 +142,9 @@ kwParenL = delimiter "("
 kwParenR :: Doc Ann
 kwParenR = delimiter ")"
 
+kwDQuote :: Doc Ann
+kwDQuote = pretty ("\"" :: Text)
+
 kwDot :: Doc Ann
 kwDot = delimiter "."
 
@@ -160,6 +163,9 @@ braces = enclose kwBraceL kwBraceR
 
 parens :: Doc Ann -> Doc Ann
 parens = enclose kwParenL kwParenR
+
+doubleQuotes :: Doc Ann -> Doc Ann
+doubleQuotes = enclose kwDQuote kwDQuote
 
 ppModulePathType :: forall t s r. (SingI t, SingI s, Members '[Reader Options] r) =>
   ModulePathType s t -> Sem r (Doc Ann)
@@ -305,7 +311,7 @@ instance (SingI s, SingI t) => PrettyCode (Module s t) where
           SModuleTop -> Just kwSemicolon
 
 instance PrettyCode Precedence where
-  ppCode p = return $ annotate AnnNumber $ case p of
+  ppCode p = return $ case p of
     PrecMinusOmega -> pretty ("-ω" :: Text)
     PrecNat n -> pretty n
     PrecOmega -> pretty ("ω" :: Text)
@@ -599,6 +605,11 @@ instance PrettyCode Application where
     r' <- ppRightExpression appFixity r
     return $ l' <+> r'
 
+instance PrettyCode Literal where
+  ppCode l = case l of
+    LitInteger n -> return $ annotate AnnLiteralInteger (pretty n)
+    LitString s -> return $ annotate AnnLiteralString (doubleQuotes (pretty s))
+
 instance PrettyCode Expression where
   ppCode e = case e of
     ExpressionIdentifier n -> ppCode n
@@ -610,6 +621,7 @@ instance PrettyCode Expression where
     ExpressionMatch m -> ppCode m
     ExpressionLetBlock lb -> ppCode lb
     ExpressionUniverse u -> ppCode u
+    ExpressionLiteral l -> ppCode l
     ExpressionFunction f -> ppCode f
 
 instance PrettyCode Pattern where
@@ -673,6 +685,7 @@ instance SingI s => PrettyCode (ExpressionAtom s) where
     AtomLetBlock lb -> ppCode lb
     AtomUniverse uni -> ppCode uni
     AtomFunction fun -> ppCode fun
+    AtomLiteral lit -> ppCode lit
     AtomFunArrow -> return kwArrowR
     AtomMatch m -> ppCode m
     AtomParens e -> parens <$> ppExpression e

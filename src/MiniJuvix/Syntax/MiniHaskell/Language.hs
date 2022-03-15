@@ -63,8 +63,8 @@ data Expression
   | ExpressionApplication Application
 
 data Application = Application {
-  _appFunction :: FunctionName,
-  _appArguments :: [Expression]
+  _appLeft :: Expression,
+  _appRight :: Expression
   }
 
 data Function = Function {

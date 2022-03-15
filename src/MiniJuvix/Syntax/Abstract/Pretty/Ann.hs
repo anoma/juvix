@@ -9,6 +9,8 @@ data Ann =
   AnnKind S.NameKind
   | AnnKeyword
   | AnnImportant
+  | AnnLiteralString
+  | AnnLiteralInteger
 
 fromScopedAnn :: S.Ann -> Maybe Ann
 fromScopedAnn s = case s of
@@ -16,6 +18,7 @@ fromScopedAnn s = case s of
   S.AnnKeyword -> Nothing
   S.AnnDelimiter -> Nothing
   S.AnnUnkindedSym -> Nothing
-  S.AnnNumber -> Nothing
   S.AnnDef {} -> Nothing
   S.AnnRef {} -> Nothing
+  S.AnnLiteralString -> Just AnnLiteralInteger
+  S.AnnLiteralInteger -> Just AnnLiteralString

@@ -1,0 +1,12 @@
+module Literals;
+  axiom Int : Type;
+  axiom String : Type;
+  a : Int;
+  a := 12313;
+
+  b : Int;
+  b := -008;
+
+  c : String;
+  c := "hellooooo";
+end;

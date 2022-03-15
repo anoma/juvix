@@ -123,7 +123,8 @@ import_ = do
 expressionAtom :: MonadParsec e Text m => m (ExpressionAtom 'Parsed)
 expressionAtom =
   do
-    AtomIdentifier <$> name
+     AtomLiteral <$> literal
+    <|> AtomIdentifier <$> name
     <|> (AtomUniverse <$> universe)
     <|> (AtomLambda <$> lambda)
     <|> (AtomFunction <$> function)
@@ -134,6 +135,15 @@ expressionAtom =
 
 expressionAtoms :: MonadParsec e Text m => m (ExpressionAtoms 'Parsed)
 expressionAtoms = ExpressionAtoms <$> P.some expressionAtom
+
+--------------------------------------------------------------------------------
+-- Literals
+--------------------------------------------------------------------------------
+
+literal :: MonadParsec e Text m => m Literal
+literal =
+      LitInteger <$> integer
+  <|> LitString <$> string
 
 --------------------------------------------------------------------------------
 -- Match expression
