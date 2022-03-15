@@ -5,8 +5,10 @@ import Control.Monad.Extra
 import qualified MiniJuvix.Syntax.Concrete.Language as M
 import qualified MiniJuvix.Syntax.Concrete.Parser as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
+import qualified MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi as H
 import qualified MiniJuvix.Termination as T
 import qualified MiniJuvix.Translation.ScopedToAbstract as A
+import qualified MiniJuvix.Translation.AbstractToMiniHaskell as H
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
 import qualified MiniJuvix.Termination.CallGraph as A
 import qualified MiniJuvix.Syntax.Abstract.Pretty.Base as A
@@ -20,12 +22,14 @@ import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (defaultOptions)
 import qualified MiniJuvix.Syntax.Abstract.Pretty.Ansi as A
 import Commands.Extra
 import Commands.Termination as T
+import Commands.MiniHaskell
 
 data Command
   = Scope ScopeOptions
   | Parse ParseOptions
   | Html HtmlOptions
   | Termination TerminationCommand
+  | MiniHaskell MiniHaskellOptions
 
 data ScopeOptions = ScopeOptions
   { _scopeRootDir :: FilePath,
@@ -67,7 +71,6 @@ parseHtml = do
     "nord" -> Right Nord
     "ayu" -> Right Ayu
     _ -> Left $ "unrecognised theme: " <> s
-
 
 
 parseParse :: Parser ParseOptions
@@ -131,9 +134,19 @@ parseCommand =
       [ commandParse,
         commandScope,
         commandHtml,
-        commandTermination
+        commandTermination,
+        commandMiniHaskell
       ]
   where
+    commandMiniHaskell :: Mod CommandFields Command
+    commandMiniHaskell = command "minihaskell" minfo
+      where
+        minfo :: ParserInfo Command
+        minfo =
+          info
+            (MiniHaskell <$> parseMiniHaskell)
+            (progDesc "Translate a .mjuvix file to MiniHaskell")
+
     commandParse :: Mod CommandFields Command
     commandParse = command "parse" minfo
       where
@@ -204,6 +217,12 @@ go c = do
       m <- parseModuleIO _htmlInputFile
       s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       genHtml defaultOptions _htmlRecursive _htmlTheme s
+    MiniHaskell MiniHaskellOptions {..} -> do
+      m <- parseModuleIO _mhaskellInputFile
+      s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+      a <- fromRightIO' putStrLn (return $ A.translateModule s)
+      let mini = H.translateModule a
+      H.printPrettyCodeDefault mini
     Termination (Calls opts@CallsOptions {..}) -> do
       m <- parseModuleIO _callsInputFile
       s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m

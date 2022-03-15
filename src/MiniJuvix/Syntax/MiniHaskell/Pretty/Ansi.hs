@@ -1,4 +1,4 @@
-module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi where
+module MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi where
 
 import MiniJuvix.Syntax.MiniHaskell.Language
 import MiniJuvix.Syntax.MiniHaskell.Pretty.Base

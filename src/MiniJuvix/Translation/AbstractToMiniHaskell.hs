@@ -33,9 +33,12 @@ goModuleBody :: A.ModuleBody -> ModuleBody
 goModuleBody b
  | not (HashMap.null (b ^. A.moduleLocalModules)) = unsupported "local modules"
  | otherwise = ModuleBody {
-     _moduleInductives = HashMap.fromList [ (d ^. inductiveName, d)
-                                          | d <- map goInductiveDef (toList (b ^. A.moduleInductives))],
-     _moduleFunctions = HashMap.fromList []
+     _moduleInductives = HashMap.fromList
+       [ (d ^. inductiveName, d)
+        | d <- map goInductiveDef (toList (b ^. A.moduleInductives))],
+     _moduleFunctions = HashMap.fromList
+        [ (f ^. funDefName, f) |
+          f <- map goFunctionDef (toList (b ^. A.moduleFunctions)) ]
      }
 
 goTypeIden :: A.Iden -> TypeIden

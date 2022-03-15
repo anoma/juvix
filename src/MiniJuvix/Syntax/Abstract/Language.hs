@@ -54,6 +54,7 @@ data Iden =
   | IdenAxiom Name
   deriving stock (Show, Eq)
 
+-- TODO add literals
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
