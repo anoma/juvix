@@ -59,7 +59,7 @@ kwEquals :: Doc Ann
 kwEquals = keyword Str.equal
 
 kwColonColon :: Doc Ann
-kwColonColon = keyword Str.colon
+kwColonColon = keyword (Str.colon <> Str.colon)
 
 kwPipe :: Doc Ann
 kwPipe = keyword Str.pipe
