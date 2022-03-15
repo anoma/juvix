@@ -1,10 +1,8 @@
-module MiniJuvix.Syntax.Abstract.Pretty.Ansi (
-module MiniJuvix.Syntax.Abstract.Pretty.Base,
-module MiniJuvix.Syntax.Abstract.Pretty.Ansi
-                                             ) where
+module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi where
 
-import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
-import MiniJuvix.Syntax.Abstract.Pretty.Base
+import MiniJuvix.Syntax.MiniHaskell.Language
+import MiniJuvix.Syntax.MiniHaskell.Pretty.Base
+import MiniJuvix.Syntax.MiniHaskell.Pretty.Ann
 import MiniJuvix.Prelude
 import Prettyprinter
 import Prettyprinter.Render.Terminal
@@ -29,6 +27,5 @@ stylize :: Ann -> AnsiStyle
 stylize a = case a of
   AnnKind k -> nameKindAnsi k
   AnnKeyword -> colorDull Blue
-  AnnImportant -> bold
   AnnLiteralString -> colorDull Red
   AnnLiteralInteger -> colorDull Cyan

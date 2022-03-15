@@ -106,4 +106,6 @@ makeLenses ''FunctionDef
 makeLenses ''FunctionClause
 makeLenses ''InductiveDef
 makeLenses ''ModuleBody
+makeLenses ''Application
 makeLenses ''InductiveConstructorDef
+makeLenses ''ConstructorApp

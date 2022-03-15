@@ -1,6 +1,6 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi where
 
-import MiniJuvix.Syntax.Concrete.Scoped.Name (NameKind (..))
+import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base
 import MiniJuvix.Prelude
 import Prettyprinter
@@ -24,14 +24,7 @@ docStream opts = reAnnotateS stylize . layoutPretty defaultLayoutOptions
 
 stylize :: Ann -> AnsiStyle
 stylize a = case a of
-  AnnKind k -> case k of
-    KNameConstructor -> colorDull Magenta
-    KNameInductive -> colorDull Green
-    KNameAxiom -> colorDull Red
-    KNameLocalModule -> mempty
-    KNameFunction -> colorDull Yellow
-    KNameLocal -> mempty
-    KNameTopModule -> mempty
+  AnnKind k -> nameKindAnsi k
   AnnDelimiter -> colorDull White
   AnnKeyword -> colorDull Blue
   AnnDef {} -> mempty

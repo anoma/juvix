@@ -1,6 +1,7 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind where
 
 import MiniJuvix.Prelude
+import Prettyprinter.Render.Terminal
 
 data NameKind
   = -- | Constructor name.
@@ -50,3 +51,13 @@ canHaveFixity k = case getNameKind k of
   KNameLocal -> False
   KNameLocalModule -> False
   KNameTopModule -> False
+
+nameKindAnsi :: NameKind -> AnsiStyle
+nameKindAnsi k = case k of
+    KNameConstructor -> colorDull Magenta
+    KNameInductive -> colorDull Green
+    KNameAxiom -> colorDull Red
+    KNameLocalModule -> mempty
+    KNameFunction -> colorDull Yellow
+    KNameLocal -> mempty
+    KNameTopModule -> mempty

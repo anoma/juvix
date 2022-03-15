@@ -68,6 +68,15 @@ assignUnicode = "≔"
 assignAscii :: IsString s => s
 assignAscii = ":="
 
+pipe :: IsString s => s
+pipe = "|"
+
+equal :: IsString s => s
+equal = "="
+
+data_ :: IsString s => s
+data_ = "data"
+
 lambdaUnicode :: IsString s => s
 lambdaUnicode = "λ"
 
