@@ -58,8 +58,8 @@ kwData = keyword Str.data_
 kwEquals :: Doc Ann
 kwEquals = keyword Str.equal
 
-kwColon :: Doc Ann
-kwColon = keyword Str.colon
+kwColonColon :: Doc Ann
+kwColonColon = keyword Str.colon
 
 kwPipe :: Doc Ann
 kwPipe = keyword Str.pipe
@@ -122,7 +122,7 @@ instance PrettyCode FunctionDef where
     funDefName' <- ppCode (f ^. funDefName)
     funDefTypeSig' <- ppCode (f ^. funDefTypeSig)
     clauses' <- mapM (ppClause funDefName') (f ^. funDefClauses)
-    return $ funDefName' <+> kwColon <+> funDefTypeSig' <> line
+    return $ funDefName' <+> kwColonColon <+> funDefTypeSig' <> line
       <> vsep (toList clauses')
      where
      ppClause fun c = do
