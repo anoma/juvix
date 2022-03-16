@@ -86,7 +86,6 @@ bareIdentifier = interval $ do
       isAlphaNum c || validFirstChar c
     validFirstChar :: Char -> Bool
     validFirstChar c =
-      c /= '-' &&
       or
         [ isLetter c,
           cat == MathSymbol,
