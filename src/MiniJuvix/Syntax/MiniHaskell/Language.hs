@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 module MiniJuvix.Syntax.MiniHaskell.Language (
   module MiniJuvix.Syntax.MiniHaskell.Language,
   module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind,
@@ -7,6 +8,7 @@ module MiniJuvix.Syntax.MiniHaskell.Language (
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
 import MiniJuvix.Syntax.Concrete.Scoped.Name (NameId(..))
+import MiniJuvix.Syntax.Fixity
 
 type FunctionName = Name
 type VarName = Name
@@ -121,3 +123,30 @@ instance Monoid ModuleBody where
     _moduleInductives = mempty,
     _moduleFunctions = mempty
     }
+
+instance HasAtomicity Application where
+  atomicity = const (Aggregate appFixity)
+
+instance HasAtomicity Expression where
+  atomicity e = case e of
+    ExpressionIden {} -> Atom
+    ExpressionApplication a -> atomicity a
+
+instance HasAtomicity Function where
+  atomicity = const (Aggregate funFixity)
+
+instance HasAtomicity Type where
+  atomicity t = case t of
+    TypeIden {} -> Atom
+    TypeFunction f -> atomicity f
+
+instance HasAtomicity ConstructorApp where
+  atomicity (ConstructorApp _ args)
+   | null args = Atom
+   | otherwise = Aggregate appFixity
+
+instance HasAtomicity Pattern where
+  atomicity p = case p of
+    PatternConstructorApp a -> atomicity a
+    PatternVariable {} -> Atom
+    PatternWildcard {} -> Atom
