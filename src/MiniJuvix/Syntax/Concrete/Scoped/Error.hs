@@ -29,6 +29,7 @@ data ScopeError
   | ErrAmbiguousSym AmbiguousSym
   | ErrAmbiguousModuleSym AmbiguousModuleSym
   | ErrUnusedOperatorDef UnusedOperatorDef
+  | ErrWrongTopModuleName WrongTopModuleName
   -- | Eventually this needs to go away
   | ErrGeneric Text
   deriving stock (Show)
@@ -49,6 +50,7 @@ ppScopeError s = case s of
   ErrDuplicateFixity e -> ppError e
   ErrMultipleExport e -> ppError e
   ErrAmbiguousSym e -> ppError e
+  ErrWrongTopModuleName e -> ppError e
   ErrAmbiguousModuleSym e -> ppError e
   ErrUnusedOperatorDef e -> ppError e
   ErrLacksFunctionClause e -> ppError e

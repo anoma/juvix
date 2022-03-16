@@ -1,4 +1,3 @@
-
 module MiniJuvix.Syntax.Concrete.Loc where
 
 import MiniJuvix.Prelude
@@ -77,3 +76,6 @@ instance Pretty Interval where
     ppPosRange (s, e)
       | s == e = pretty s
       | otherwise = pretty s <> hyphen <> pretty e
+
+makeLenses ''Interval
+makeLenses ''Loc

@@ -451,10 +451,22 @@ checkTopModule ::
   Module 'Parsed 'ModuleTop ->
   Sem r (ModuleEntry' 'ModuleTop)
 checkTopModule m@(Module path params body) = do
+  checkPath
   r <- checkedModule
   modify (over (scoperModulesCache . cachedModules) (HashMap.insert path r))
   return r
   where
+  checkPath :: Members '[Files, Reader ScopeParameters, Error ScopeError] s => Sem s ()
+  checkPath = do
+    expectedPath <- modulePathToFilePath path
+    let actualPath = getLoc path ^. intFile
+    unlessM (fromMaybe True <$> equalPaths' expectedPath actualPath) $
+      throw (ErrWrongTopModuleName
+      WrongTopModuleName {
+       _wrongTopModuleNameActualName = path,
+       _wrongTopModuleNameExpectedPath = expectedPath,
+       _wrongTopModuleNameActualPath = actualPath
+      })
   freshTopModulePath :: forall s. Members '[State ScoperState] s =>
      Sem s S.TopModulePath
   freshTopModulePath = do

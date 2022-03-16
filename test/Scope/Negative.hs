@@ -39,90 +39,73 @@ wrongError = Just "Incorrect error"
 tests :: [NegTest]
 tests = [
   NegTest "Not in scope" "."
-   "NotInScope.mjuvix" $ \er ->
-      case er of
-        ErrSymNotInScope{} -> Nothing
-        _ -> wrongError
-
+   "NotInScope.mjuvix" $ \case
+      ErrSymNotInScope{} -> Nothing
+      _ -> wrongError
   ,  NegTest "Multiple declarations" "."
-   "MultipleDeclarations.mjuvix" $ \er ->
-      case er of
-        ErrMultipleDeclarations{} -> Nothing
-        _ -> wrongError
-
+   "MultipleDeclarations.mjuvix" $ \case
+      ErrMultipleDeclarations{} -> Nothing
+      _ -> wrongError
   ,  NegTest "Import cycle" "ImportCycle"
-   "A.mjuvix" $ \er ->
-      case er of
-        ErrImportCycle {} -> Nothing
-        _ -> wrongError
-
+   "A.mjuvix" $ \case
+      ErrImportCycle {} -> Nothing
+      _ -> wrongError
   ,  NegTest "Binding group conflict (function clause)"
     "BindGroupConflict"
-   "Clause.mjuvix" $ \er ->
-      case er of
-        ErrBindGroup {} -> Nothing
-        _ -> wrongError
-
+   "Clause.mjuvix" $ \case
+      ErrBindGroup {} -> Nothing
+      _ -> wrongError
   ,  NegTest "Binding group conflict (lambda clause)"
     "BindGroupConflict"
-   "Lambda.mjuvix" $ \er ->
-      case er of
-        ErrBindGroup {} -> Nothing
-        _ -> wrongError
+   "Lambda.mjuvix" $ \case
+      ErrBindGroup {} -> Nothing
+      _ -> wrongError
 
   ,  NegTest "Infix error (expression)"
     "."
-   "InfixError.mjuvix" $ \er ->
-      case er of
-        ErrInfixParser {} -> Nothing
-        _ -> wrongError
-
+   "InfixError.mjuvix" $ \case
+      ErrInfixParser {} -> Nothing
+      _ -> wrongError
   ,  NegTest "Infix error (pattern)"
     "."
-   "InfixErrorP.mjuvix" $ \er ->
-      case er of
-        ErrInfixPattern {} -> Nothing
-        _ -> wrongError
-
+   "InfixErrorP.mjuvix" $ \case
+      ErrInfixPattern {} -> Nothing
+      _ -> wrongError
   ,  NegTest "Duplicate fixity declaration"
     "."
-   "DuplicateFixity.mjuvix" $ \er ->
-      case er of
-        ErrDuplicateFixity {} -> Nothing
-        _ -> wrongError
-
+   "DuplicateFixity.mjuvix" $ \case
+      ErrDuplicateFixity {} -> Nothing
+      _ -> wrongError
   ,  NegTest "Multiple export conflict"
     "."
-   "MultipleExportConflict.mjuvix" $ \er ->
-      case er of
-        ErrMultipleExport {} -> Nothing
-        _ -> wrongError
+   "MultipleExportConflict.mjuvix" $ \case
+      ErrMultipleExport {} -> Nothing
+      _ -> wrongError
 
   ,  NegTest "Module not in scope"
     "."
-   "ModuleNotInScope.mjuvix" $ \er ->
-      case er of
-        ErrModuleNotInScope {} -> Nothing
-        _ -> wrongError
+   "ModuleNotInScope.mjuvix" $ \case
+      ErrModuleNotInScope {} -> Nothing
+      _ -> wrongError
 
   ,  NegTest "Unused operator syntax definition"
     "."
-   "UnusedOperatorDef.mjuvix" $ \er ->
-      case er of
-        ErrUnusedOperatorDef {} -> Nothing
-        _ -> wrongError
-
+   "UnusedOperatorDef.mjuvix" $ \case
+      ErrUnusedOperatorDef {} -> Nothing
+      _ -> wrongError
   ,  NegTest "Ambiguous symbol"
     "."
-   "AmbiguousSymbol.mjuvix" $ \er ->
-      case er of
-        ErrAmbiguousSym {} -> Nothing
-        _ -> wrongError
+   "AmbiguousSymbol.mjuvix" $ \case
+      ErrAmbiguousSym {} -> Nothing
+      _ -> wrongError
   ,  NegTest "Lacks function clause"
     "."
-   "LacksFunctionClause.mjuvix" $ \er ->
-      case er of
-        ErrLacksFunctionClause {} -> Nothing
-        _ -> wrongError
-
+   "LacksFunctionClause.mjuvix" $ \case
+      ErrLacksFunctionClause {} -> Nothing
+      _ -> wrongError
+  ,  NegTest "Incorrect top module path"
+    "."
+   "WrongModuleName.mjuvix" $ \case
+      ErrWrongTopModuleName {} -> Nothing
+      _ -> wrongError
   ]

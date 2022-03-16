@@ -86,6 +86,13 @@ newtype UnusedOperatorDef = UnusedOperatorDef {
   }
  deriving stock (Show)
 
+data WrongTopModuleName = WrongTopModuleName {
+  _wrongTopModuleNameExpectedPath :: FilePath,
+  _wrongTopModuleNameActualPath :: FilePath,
+  _wrongTopModuleNameActualName :: TopModulePath
+  }
+ deriving stock (Show)
+
 newtype AmbiguousSym = AmbiguousSym {
   _ambiguousSymEntires :: [SymbolEntry]
   }
@@ -95,4 +102,3 @@ newtype AmbiguousModuleSym = AmbiguousModuleSym {
   _ambiguousModSymEntires :: [SymbolEntry]
   }
  deriving stock (Show)
-

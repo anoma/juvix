@@ -131,6 +131,13 @@ instance PrettyError ModuleNotInScope where
 instance PrettyError MegaParsecError where
   ppError MegaParsecError {..} = pretty _megaParsecError
 
+instance PrettyError WrongTopModuleName where
+  ppError WrongTopModuleName {..} =
+    "The top module" <+> ppCode _wrongTopModuleNameActualName <+> "is defined in the file:" <> line
+    <> highlight (pretty _wrongTopModuleNameActualPath) <> line
+    <> "But it should be in the file:" <> line
+    <> pretty _wrongTopModuleNameExpectedPath
+
 instance PrettyError UnusedOperatorDef where
   ppError UnusedOperatorDef {..} =
     "Unused operator syntax definition:" <> line

@@ -71,6 +71,7 @@ default-extensions:
 - GeneralizedNewtypeDeriving
 - InstanceSigs
 - KindSignatures
+- LambdaCase
 - NoImplicitPrelude
 - OverloadedStrings
 - PolyKinds
