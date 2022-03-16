@@ -109,3 +109,15 @@ makeLenses ''ModuleBody
 makeLenses ''Application
 makeLenses ''InductiveConstructorDef
 makeLenses ''ConstructorApp
+
+instance Semigroup ModuleBody where
+  a <> b = ModuleBody {
+    _moduleInductives = a ^. moduleInductives <> b ^. moduleInductives,
+    _moduleFunctions = a ^. moduleFunctions <> b ^. moduleFunctions
+    }
+
+instance Monoid ModuleBody where
+  mempty = ModuleBody {
+    _moduleInductives = mempty,
+    _moduleFunctions = mempty
+    }

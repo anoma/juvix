@@ -29,6 +29,9 @@ goSymbol s = Name {
 unsupported :: Text -> a
 unsupported thing = error ("Not yet supported: " <> thing)
 
+goImport :: A.TopModule -> ModuleBody
+goImport m = goModuleBody (m ^. A.moduleBody)
+
 goModuleBody :: A.ModuleBody -> ModuleBody
 goModuleBody b
  | not (HashMap.null (b ^. A.moduleLocalModules)) = unsupported "local modules"
@@ -39,7 +42,7 @@ goModuleBody b
      _moduleFunctions = HashMap.fromList
         [ (f ^. funDefName, f) |
           f <- map goFunctionDef (toList (b ^. A.moduleFunctions)) ]
-     }
+     } <> mconcatMap goImport (b ^. A.moduleImports)
 
 goTypeIden :: A.Iden -> TypeIden
 goTypeIden i = case i of

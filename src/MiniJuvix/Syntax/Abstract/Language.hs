@@ -30,6 +30,7 @@ data Module s = Module
 data ModuleBody = ModuleBody {
   _moduleInductives :: HashMap InductiveName InductiveDef,
   _moduleFunctions :: HashMap FunctionName FunctionDef,
+  _moduleImports :: [TopModule],
   _moduleLocalModules :: HashMap LocalModuleName LocalModule
   }
   deriving stock (Show, Eq)

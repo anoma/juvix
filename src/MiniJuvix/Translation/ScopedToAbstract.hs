@@ -32,6 +32,7 @@ goModuleBody ss = do
   _moduleInductives <- inductives
   _moduleLocalModules <- locals
   _moduleFunctions <- functions
+  _moduleImports <- imports
   return A.ModuleBody {..}
   where
   inductives :: Sem r (HashMap A.InductiveName A.InductiveDef)
@@ -42,6 +43,10 @@ goModuleBody ss = do
   locals = sequence $ HashMap.fromList
     [ (m ^. modulePath, goLocalModule m)
     | StatementModule m <- ss ]
+  imports :: Sem r [A.TopModule]
+  imports = sequence $
+    [ goModule m
+    | StatementImport (Import m) <- ss ]
   functions :: Sem r (HashMap A.FunctionName A.FunctionDef)
   functions = do
     sequence $ HashMap.fromList

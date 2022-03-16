@@ -179,9 +179,9 @@ checkImport import_@(Import path) = do
   checkCycle
   cache <- gets (_cachedModules . _scoperModulesCache)
   entry' <- maybe (readParseModule path >>= local addImport . checkTopModule) return (cache ^. at path)
-  let checked = _moduleEntryScoped entry'
+  let checked = entry' ^. moduleEntryScoped
       sname = checked ^. modulePath
-      moduleId = S._nameId sname
+      moduleId = sname ^. S.nameId
   modify (over scopeTopModules (HashMap.insert path moduleId))
   let entry = mkModuleEntry entry'
   modify (over scoperModules (HashMap.insert moduleId entry))
@@ -452,7 +452,7 @@ checkTopModule ::
   Sem r (ModuleEntry' 'ModuleTop)
 checkTopModule m@(Module path params body) = do
   r <- checkedModule
-  modify (over (scoperModulesCache .  cachedModules) (HashMap.insert path r))
+  modify (over (scoperModulesCache . cachedModules) (HashMap.insert path r))
   return r
   where
   freshTopModulePath :: forall s. Members '[State ScoperState] s =>
