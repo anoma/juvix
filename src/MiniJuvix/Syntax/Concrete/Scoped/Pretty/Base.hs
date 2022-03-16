@@ -64,6 +64,9 @@ kwMatch = keyword Str.match
 kwLambda :: Doc Ann
 kwLambda = keyword Str.lambdaUnicode
 
+kwGhc :: Doc Ann
+kwGhc = keyword Str.ghc
+
 kwWhere :: Doc Ann
 kwWhere = keyword Str.where_
 
@@ -129,6 +132,12 @@ kwImport = keyword Str.import_
 
 kwSemicolon :: Doc Ann
 kwSemicolon = delimiter Str.semicolon
+
+kwCompile :: Doc Ann
+kwCompile = keyword Str.compile
+
+kwForeign :: Doc Ann
+kwForeign = keyword Str.foreign_
 
 kwBraceL :: Doc Ann
 kwBraceL = delimiter "{"
@@ -198,6 +207,9 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
   -- blank line
   g :: Statement s -> Statement s -> Bool
   g a b = case (a, b) of
+    (StatementCompile _, StatementCompile _) -> True
+    (StatementCompile _, _) -> False
+    (StatementForeign _, _) -> False
     (StatementOperator _, StatementOperator _) -> True
     (StatementOperator o, s) -> definesSymbol (opSymbol o) s
     (StatementImport _, StatementImport _) -> True
@@ -261,6 +273,28 @@ instance SingI s => PrettyCode (Statement s) where
     StatementAxiom a -> ppCode a
     StatementEval e -> ppCode e
     StatementPrint p -> ppCode p
+    StatementCompile p -> ppCode p
+    StatementForeign p -> ppCode p
+
+instance PrettyCode Backend where
+  ppCode = \case
+    BackendGhc -> return kwGhc
+
+instance PrettyCode ForeignBlock where
+  ppCode ForeignBlock {..} = do
+    _foreignBackend' <- ppCode _foreignBackend
+    return $ kwForeign <+> _foreignBackend' <+> lbrace <> line
+        <> pretty _foreignCode <> line <> rbrace
+
+instance SingI s => PrettyCode (CompileDef s) where
+  ppCode CompileDef {..} = do
+    _compileAxiom' <- ppSymbol _compileAxiom
+    _compileBackend' <- ppCode _compileBackend
+    _compileBackend' <- ppCode _compileBackend
+    return $ kwCompile <+> _compileAxiom' <+> _compileBackend' <+> ppStringLit _compileCode
+
+ppStringLit :: Text -> Doc Ann
+ppStringLit = annotate AnnLiteralString . doubleQuotes . pretty
 
 ppTopModulePath :: forall s r. (SingI s, Members '[Reader Options] r) =>
   ModulePathType s 'ModuleTop -> Sem r (Doc Ann)
@@ -608,7 +642,7 @@ instance PrettyCode Application where
 instance PrettyCode Literal where
   ppCode l = case l of
     LitInteger n -> return $ annotate AnnLiteralInteger (pretty n)
-    LitString s -> return $ annotate AnnLiteralString (doubleQuotes (pretty s))
+    LitString s -> return $ ppStringLit s
 
 instance PrettyCode Expression where
   ppCode e = case e of

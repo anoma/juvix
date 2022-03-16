@@ -658,7 +658,7 @@ checkFunctionClause ::
   FunctionClause 'Parsed ->
   Sem r (FunctionClause 'Scoped)
 checkFunctionClause clause@FunctionClause {..} = do
-  clauseOwnerFunction' <- checkSymbolInScope
+  clauseOwnerFunction' <- checkTypeSigInScope
   (clausePatterns', clauseWhere', clauseBody') <- do
     clp <- mapM checkParsePatternAtom _clausePatterns
     withBindCurrentGroup $ do
@@ -676,17 +676,35 @@ checkFunctionClause clause@FunctionClause {..} = do
       }
   where
     fun = _clauseOwnerFunction
-    checkSymbolInScope :: Sem r S.Symbol
-    checkSymbolInScope = do
-      SymbolInfo {..} <- fromMaybeM err (HashMap.lookup fun <$> gets _scopeSymbols)
-      -- The symbol must be defined in the same path
-      path <- gets _scopePath
-      e <- maybe err return (HashMap.lookup path _symbolInfo)
+    checkTypeSigInScope :: Sem r S.Symbol
+    checkTypeSigInScope = do
+      e <- fromMaybeM err (lookupLocalEntry fun)
       when (S._nameKind e /= S.KNameFunction) err
       return (entryToSName fun e)
       where
         err :: Sem r a
         err = throw (ErrLacksTypeSig (LacksTypeSig clause))
+
+lookupAxiom :: forall r.  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  Symbol -> Sem r S.Symbol
+lookupAxiom ax = do
+  e <- fromMaybeM err (lookupLocalEntry ax)
+  when (S._nameKind e /= S.KNameAxiom) err
+  return (entryToSName ax e)
+  where
+    -- TODO generate proper error
+    err :: Sem r a
+    err = throw (ErrGeneric "Axiom not in scope")
+
+lookupLocalEntry :: Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  Symbol -> Sem r (Maybe SymbolEntry)
+lookupLocalEntry sym = do
+  ms <- HashMap.lookup sym <$> gets _scopeSymbols
+  path <- gets _scopePath
+  -- The symbol must be defined in the same path
+  return $ do
+    SymbolInfo {..} <- ms
+    HashMap.lookup path _symbolInfo
 
 checkAxiom ::
   Members '[Error ScopeError, State Scope, State ScoperState] r =>
@@ -983,6 +1001,16 @@ checkParsePatternAtom ::
   Sem r Pattern
 checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
 
+checkCompileDef ::
+  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  CompileDef 'Parsed ->
+  Sem r (CompileDef 'Scoped)
+checkCompileDef CompileDef {..} = do
+  _compileAxiom' <- lookupAxiom _compileAxiom
+  return CompileDef {
+    _compileAxiom = _compileAxiom', ..
+    }
+
 checkStatement ::
   Members '[Error ScopeError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars] r =>
   Statement 'Parsed ->
@@ -998,6 +1026,8 @@ checkStatement s = case s of
   StatementAxiom ax -> StatementAxiom <$> checkAxiom ax
   StatementEval e -> StatementEval <$> checkEval e
   StatementPrint e -> StatementPrint <$> checkPrint e
+  StatementCompile d -> StatementCompile <$> checkCompileDef d
+  StatementForeign d -> return $ StatementForeign d
 
 -------------------------------------------------------------------------------
 -- Infix Expression

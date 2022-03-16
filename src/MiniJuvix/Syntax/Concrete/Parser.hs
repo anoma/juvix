@@ -77,11 +77,35 @@ statement =
     <|> (StatementImport <$> import_)
     <|> (StatementInductive <$> inductiveDef)
     <|> (StatementPrint <$> printS)
+    <|> (StatementForeign <$> foreignBlock)
+    <|> (StatementCompile <$> compileDef)
     <|> (StatementModule <$> moduleDef)
     <|> (StatementAxiom <$> axiomDef)
     <|> ( either StatementTypeSignature StatementFunctionClause
             <$> auxTypeSigFunClause
         )
+
+--------------------------------------------------------------------------------
+-- Foreign and compile
+--------------------------------------------------------------------------------
+
+backend :: forall e m. MonadParsec e Text m => m Backend
+backend = ghc $> BackendGhc
+
+foreignBlock :: forall e m. MonadParsec e Text m => m ForeignBlock
+foreignBlock = do
+  kwForeign
+  _foreignBackend <- backend
+  _foreignCode <- bracedString
+  return ForeignBlock {..}
+
+compileDef :: forall e m. MonadParsec e Text m => m (CompileDef 'Parsed)
+compileDef = do
+  kwCompile
+  _compileAxiom <- symbol
+  _compileBackend <- backend
+  _compileCode <- string
+  return CompileDef {..}
 
 --------------------------------------------------------------------------------
 -- Operator syntax declaration

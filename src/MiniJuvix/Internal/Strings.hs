@@ -95,6 +95,12 @@ mapstoUnicode = "↦"
 mapstoAscii :: IsString s => s
 mapstoAscii = "->"
 
+foreign_ :: IsString s => s
+foreign_ = "foreign"
+
+compile :: IsString s => s
+compile = "compile"
+
 semicolon :: IsString s => s
 semicolon = ";"
 
@@ -118,3 +124,6 @@ colonOne = ":1"
 
 colonZero :: IsString s => s
 colonZero = ":0"
+
+ghc :: IsString s => s
+ghc = "ghc"

@@ -47,6 +47,11 @@ integer = do
     Nothing -> return nat
     _ -> return (- nat)
 
+-- | TODO allow escaping { inside the string using \{
+bracedString :: MonadParsec e Text m => m Text
+bracedString =
+  Text.strip . pack <$> (char '{' >> manyTill anySingle (char '}'))
+
 string :: MonadParsec e Text m => m Text
 string = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
@@ -115,8 +120,10 @@ allKeywords =
     kwColonOmega,
     kwColonOne,
     kwColonZero,
+    kwCompile,
     kwEnd,
     kwEval,
+    kwForeign,
     kwHiding,
     kwImport,
     kwIn,
@@ -181,6 +188,12 @@ kwHiding = symbol Str.hiding
 kwImport :: MonadParsec e Text m => m ()
 kwImport = symbol Str.import_
 
+kwForeign :: MonadParsec e Text m => m ()
+kwForeign = symbol Str.foreign_
+
+kwCompile :: MonadParsec e Text m => m ()
+kwCompile = symbol Str.compile
+
 kwIn :: MonadParsec e Text m => m ()
 kwIn = symbol Str.in_
 
@@ -240,3 +253,6 @@ kwWhere = symbol Str.where_
 
 kwWildcard :: MonadParsec e Text m => m ()
 kwWildcard = symbol Str.underscore
+
+ghc :: MonadParsec e Text m => m ()
+ghc = symbol Str.ghc

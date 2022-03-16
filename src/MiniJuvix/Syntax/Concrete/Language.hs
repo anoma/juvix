@@ -72,6 +72,8 @@ data Statement (s :: Stage)
   | StatementAxiom (AxiomDef s)
   | StatementEval (Eval s)
   | StatementPrint (Print s)
+  | StatementForeign ForeignBlock
+  | StatementCompile (CompileDef s)
 
 deriving stock instance
   ( Show (ImportType s),
@@ -102,6 +104,21 @@ deriving stock instance
     Ord (ExpressionType s)
   ) =>
   Ord (Statement s)
+
+data CompileDef (s :: Stage) = CompileDef {
+  _compileAxiom :: SymbolType s,
+  _compileBackend :: Backend,
+  _compileCode :: Text
+  }
+deriving stock instance (Eq (SymbolType s)) => Eq (CompileDef s)
+deriving stock instance (Ord (SymbolType s)) => Ord (CompileDef s)
+deriving stock instance (Show (SymbolType s)) => Show (CompileDef s)
+
+data ForeignBlock = ForeignBlock {
+  _foreignBackend :: Backend,
+  _foreignCode :: Text
+  }
+  deriving stock (Eq, Ord, Show)
 
 --------------------------------------------------------------------------------
 -- Import statement
@@ -843,6 +860,13 @@ deriving stock instance
   Ord (LetClause s)
 
 --------------------------------------------------------------------------------
+-- Backends
+--------------------------------------------------------------------------------
+
+data Backend = BackendGhc
+  deriving stock (Show, Eq, Ord)
+
+--------------------------------------------------------------------------------
 -- Debugging statements
 --------------------------------------------------------------------------------
 
@@ -887,3 +911,5 @@ makeLenses ''TypeSignature
 makeLenses ''AxiomDef
 makeLenses ''FunctionClause
 makeLenses ''InductiveParameter
+makeLenses ''CompileDef
+makeLenses ''ForeignBlock
