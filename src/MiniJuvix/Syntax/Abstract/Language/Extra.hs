@@ -30,6 +30,7 @@ viewApp e = case e of
     second (`snoc` r) (viewApp l)
   ExpressionUniverse {} -> (e, [])
   ExpressionFunction {} -> (e, [])
+  ExpressionLiteral {} -> (e, [])
 
 viewExpressionAsPattern :: Expression -> Maybe Pattern
 viewExpressionAsPattern e = case viewApp e of

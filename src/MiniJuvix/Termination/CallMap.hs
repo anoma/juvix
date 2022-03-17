@@ -125,6 +125,7 @@ checkExpression e = do
       ExpressionIden {} -> return ()
       ExpressionUniverse {} -> return ()
       ExpressionFunction f -> checkFunction f
+      ExpressionLiteral {} -> return ()
 
 checkApplication :: Members '[State CallMap, Reader FunctionName, Reader SizeInfo] r
   => Application -> Sem r ()

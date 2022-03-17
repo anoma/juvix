@@ -63,6 +63,7 @@ data Iden =
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
+  -- TODO Add a constructor for literals
 
 data Application = Application {
   _appLeft :: Expression,

@@ -92,6 +92,7 @@ goType e = case e of
   A.ExpressionUniverse {} -> unsupported "universes in types"
   A.ExpressionApplication {} -> unsupported "application in types"
   A.ExpressionFunction f -> TypeFunction (goFunction f)
+  A.ExpressionLiteral {} -> unsupported "literals in types"
 
 goApplication :: A.Application -> Application
 goApplication (A.Application f x) = Application (goExpression f) (goExpression x)
@@ -110,6 +111,7 @@ goExpression e = case e of
   A.ExpressionUniverse {} -> unsupported "universes in expression"
   A.ExpressionFunction {} -> unsupported "function type in expressions"
   A.ExpressionApplication a -> ExpressionApplication (goApplication a)
+  A.ExpressionLiteral {} -> unsupported "literals in expression"
 
 goInductiveDef :: A.InductiveDef -> InductiveDef
 goInductiveDef i = case i ^. A.inductiveType of
@@ -128,12 +130,14 @@ goInductiveDef i = case i ^. A.inductiveType of
   goConstructorType :: A.Expression -> [Type]
   goConstructorType = fst . viewExpressionFunctionType
 
+-- TODO: add docs or an example
 viewExpressionFunctionType :: A.Expression -> ([Type], Type)
 viewExpressionFunctionType e = case e of
   A.ExpressionFunction f -> first toList (viewFunctionType f)
   A.ExpressionIden i -> ([], TypeIden (goTypeIden i))
   A.ExpressionApplication {} -> unsupported "application in a type"
   A.ExpressionUniverse {} -> unsupported "universe in a type"
+  A.ExpressionLiteral {} -> unsupported "literal in a type"
 
 viewFunctionType :: A.Function -> (NonEmpty Type, Type)
 viewFunctionType (A.Function p r) = (goFunctionParameter p :| args, ret)
