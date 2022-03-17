@@ -33,10 +33,12 @@ testDescr PosTest {..} = TestDescr {
            | m <- toList (getAllModules s) ]
 
     step "Pretty"
-    let txt = M.renderPrettyCodeDefault s
+    let scopedPretty = M.renderPrettyCodeDefault s
+    let parsedPretty = M.renderPrettyCodeDefault p
 
     step "Parse again"
-    p' <- parseTextModuleIO txt
+    p' <- parseTextModuleIO scopedPretty
+    parsedPretty' <- parseTextModuleIO parsedPretty
 
     step "Scope again"
     s' <- fromRightIO' printErrorAnsi $ M.scopeCheck1Pure fs "." p'
@@ -44,6 +46,7 @@ testDescr PosTest {..} = TestDescr {
     step "Checks"
     assertBool "check: scope . parse . pretty . scope . parse = scope . parse" (s == s')
     assertBool "check: parse . pretty . scope . parse = parse" (p == p')
+    assertBool "check: parse . pretty . parse = parse" (p == parsedPretty')
   }
 
 allTests :: TestTree

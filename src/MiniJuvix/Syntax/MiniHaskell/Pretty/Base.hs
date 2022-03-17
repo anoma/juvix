@@ -34,7 +34,6 @@ instance PrettyCode Iden where
    IdenConstructor na -> ppCode na
    IdenVar na -> ppCode na
 
--- TODO optimize parentheses.
 instance PrettyCode Application where
   ppCode a = do
     l' <- ppLeftExpression appFixity (a ^. appLeft)
