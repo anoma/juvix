@@ -8,9 +8,11 @@ import MiniJuvix.Syntax.Usage
 import MiniJuvix.Syntax.Universe
 import Prettyprinter
 import MiniJuvix.Prelude
+
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as S
 import MiniJuvix.Syntax.Abstract.Language
 import MiniJuvix.Syntax.Abstract.Pretty.Ann
+
 import qualified MiniJuvix.Internal.Strings as Str
 
 data Options = Options
@@ -80,6 +82,7 @@ instance PrettyCode Expression where
     ExpressionUniverse u -> ppCode u
     ExpressionApplication a -> ppCode a
     ExpressionFunction f -> ppCode f
+    ExpressionLiteral l -> ppSCode l
 
 kwColon :: Doc Ann
 kwColon = keyword Str.colon

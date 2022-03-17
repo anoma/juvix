@@ -467,6 +467,11 @@ data Expression
   | ExpressionFunction (Function 'Scoped)
   deriving stock (Show, Eq, Ord)
 
+instance HasAtomicity Literal where
+  atomicity = \case
+    LitInteger {} -> Atom
+    LitString {} -> Atom
+
 instance HasAtomicity Expression where
  atomicity e = case e of
     ExpressionIdentifier {} -> Atom

@@ -1,24 +1,34 @@
-module MiniJuvix.Syntax.Abstract.Language (
-  module MiniJuvix.Syntax.Abstract.Language
-                                          ) where
+module MiniJuvix.Syntax.Abstract.Language
+  ( module MiniJuvix.Syntax.Abstract.Language,
+    module MiniJuvix.Syntax.Concrete.Language
+  )
+where
 
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Concrete.Language (Usage, Literal(..))
+import qualified MiniJuvix.Syntax.Concrete.Name as C
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
-import MiniJuvix.Syntax.Concrete.Language (Usage)
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.Universe
-import qualified MiniJuvix.Syntax.Concrete.Name as C
 
 type TopModuleName = S.TopModulePath
+
 type LocalModuleName = S.Symbol
+
 type FunctionName = S.Symbol
+
 type VarName = S.Symbol
+
 type ConstrName = S.Symbol
+
 type InductiveName = S.Symbol
+
 type AxiomName = S.Symbol
+
 type Name = S.Name
 
 type TopModule = Module C.TopModulePath
+
 type LocalModule = Module C.Symbol
 
 data Module s = Module
@@ -27,41 +37,41 @@ data Module s = Module
   }
   deriving stock (Show, Eq)
 
-data ModuleBody = ModuleBody {
-  _moduleInductives :: HashMap InductiveName InductiveDef,
-  _moduleFunctions :: HashMap FunctionName FunctionDef,
-  _moduleImports :: [TopModule],
-  _moduleLocalModules :: HashMap LocalModuleName LocalModule
+data ModuleBody = ModuleBody
+  { _moduleInductives :: HashMap InductiveName InductiveDef,
+    _moduleFunctions :: HashMap FunctionName FunctionDef,
+    _moduleImports :: [TopModule],
+    _moduleLocalModules :: HashMap LocalModuleName LocalModule
   }
   deriving stock (Show, Eq)
 
-data FunctionDef = FunctionDef {
-   _funDefName :: FunctionName,
-   _funDefTypeSig :: Expression,
-   _funDefClauses :: NonEmpty FunctionClause
+data FunctionDef = FunctionDef
+  { _funDefName :: FunctionName,
+    _funDefTypeSig :: Expression,
+    _funDefClauses :: NonEmpty FunctionClause
   }
   deriving stock (Show, Eq)
-data FunctionClause = FunctionClause {
-    _clausePatterns :: [Pattern],
+
+data FunctionClause = FunctionClause
+  { _clausePatterns :: [Pattern],
     _clauseBody :: Expression
   }
   deriving stock (Show, Eq)
 
-data Iden =
-  IdenDefined Name
+data Iden
+  = IdenDefined Name
   | IdenConstructor Name
   | IdenVar VarName
   | IdenInductive Name
   | IdenAxiom Name
   deriving stock (Show, Eq)
 
--- TODO add literals
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
   | ExpressionUniverse Universe
   | ExpressionFunction Function
-
+  | ExpressionLiteral Literal
   --- | ExpressionMatch Match
   ---  ExpressionLambda Lambda not supported yet
   deriving stock (Show, Eq)
@@ -72,6 +82,7 @@ instance HasAtomicity Expression where
     ExpressionUniverse u -> atomicity u
     ExpressionApplication a -> atomicity a
     ExpressionFunction f -> atomicity f
+    ExpressionLiteral f -> atomicity f
 
 data Match = Match
   { _matchExpression :: Expression,
@@ -79,16 +90,15 @@ data Match = Match
   }
   deriving stock (Show, Eq)
 
-
 data MatchAlt = MatchAlt
   { _matchAltPattern :: Pattern,
     _matchAltBody :: Expression
   }
   deriving stock (Show, Eq)
 
-data Application = Application {
-  _appLeft :: Expression,
-  _appRight :: Expression
+data Application = Application
+  { _appLeft :: Expression,
+    _appRight :: Expression
   }
   deriving stock (Show, Eq)
 
@@ -122,9 +132,9 @@ instance HasAtomicity Function where
   atomicity = const (Aggregate funFixity)
 
 -- | Fully applied constructor in a pattern.
-data ConstructorApp = ConstructorApp {
-  _constrAppConstructor :: Name,
-  _constrAppParameters :: [Pattern]
+data ConstructorApp = ConstructorApp
+  { _constrAppConstructor :: Name,
+    _constrAppParameters :: [Pattern]
   }
   deriving stock (Show, Eq)
 
@@ -149,9 +159,9 @@ data InductiveConstructorDef = InductiveConstructorDef
   }
   deriving stock (Show, Eq)
 
-data AxiomDef = AxiomDef {
-  _axiomName :: AxiomName,
-  _axiomType :: Expression
+data AxiomDef = AxiomDef
+  { _axiomName :: AxiomName,
+    _axiomType :: Expression
   }
   deriving stock (Show, Eq)
 
