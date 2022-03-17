@@ -6,9 +6,10 @@ import qualified MiniJuvix.Syntax.Concrete.Language as M
 import qualified MiniJuvix.Syntax.Concrete.Parser as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
 import qualified MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi as H
+import qualified MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi as Micro
 import qualified MiniJuvix.Termination as T
 import qualified MiniJuvix.Translation.ScopedToAbstract as A
-import qualified MiniJuvix.Translation.AbstractToMiniHaskell as H
+import qualified MiniJuvix.Translation.AbstractToMicroJuvix as Micro
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
 import qualified MiniJuvix.Termination.CallGraph as A
 import qualified MiniJuvix.Syntax.Abstract.Pretty.Base as A
@@ -23,6 +24,7 @@ import qualified MiniJuvix.Syntax.Abstract.Pretty.Ansi as A
 import Commands.Extra
 import Commands.Termination as T
 import Commands.MiniHaskell
+import Commands.MicroJuvix
 
 data Command
   = Scope ScopeOptions
@@ -30,6 +32,7 @@ data Command
   | Html HtmlOptions
   | Termination TerminationCommand
   | MiniHaskell MiniHaskellOptions
+  | MicroJuvix MicroJuvixOptions
 
 data ScopeOptions = ScopeOptions
   { _scopeRootDir :: FilePath,
@@ -135,9 +138,19 @@ parseCommand =
         commandScope,
         commandHtml,
         commandTermination,
+        commandMicroJuvix,
         commandMiniHaskell
       ]
   where
+    commandMicroJuvix :: Mod CommandFields Command
+    commandMicroJuvix = command "microjuvix" minfo
+      where
+        minfo :: ParserInfo Command
+        minfo =
+          info
+            (MicroJuvix <$> parseMicroJuvix)
+            (progDesc "Translate a .mjuvix file to MicroJuvix")
+
     commandMiniHaskell :: Mod CommandFields Command
     commandMiniHaskell = command "minihaskell" minfo
       where
@@ -217,12 +230,20 @@ go c = do
       m <- parseModuleIO _htmlInputFile
       s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       genHtml defaultOptions _htmlRecursive _htmlTheme s
+    MicroJuvix MicroJuvixOptions {..} -> do
+      m <- parseModuleIO _mjuvixInputFile
+      s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+      a <- fromRightIO' putStrLn (return $ A.translateModule s)
+      let mini = Micro.translateModule a
+      Micro.printPrettyCodeDefault mini
     MiniHaskell MiniHaskellOptions {..} -> do
       m <- parseModuleIO _mhaskellInputFile
       s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       a <- fromRightIO' putStrLn (return $ A.translateModule s)
-      let mini = H.translateModule a
-      H.printPrettyCodeDefault mini
+      -- let mini = Micro.translateModule a
+      -- Micro.printPrettyCodeDefault mini
+      -- TODO
+      error "todo"
     Termination (Calls opts@CallsOptions {..}) -> do
       m <- parseModuleIO _callsInputFile
       s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m

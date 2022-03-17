@@ -81,8 +81,8 @@ checkModule m = checkModuleBody (m ^. moduleBody)
 
 checkModuleBody :: Members '[State CallMap] r => ModuleBody -> Sem r ()
 checkModuleBody body = do
-  mapM_ checkFunctionDef (toList $ body ^. moduleFunctions)
-  mapM_ checkLocalModule (toList $ body ^. moduleLocalModules)
+  mapM_ (checkFunctionDef . (^. indexedThing)) (toList $ body ^. moduleFunctions)
+  mapM_ (checkLocalModule . (^. indexedThing)) (toList $ body ^. moduleLocalModules)
 
 checkLocalModule :: Members '[State CallMap] r => LocalModule -> Sem r ()
 checkLocalModule m = checkModuleBody (m ^. moduleBody)

@@ -1,11 +1,12 @@
-module MiniJuvix.Syntax.MiniHaskell.Language (
-  module MiniJuvix.Syntax.MiniHaskell.Language,
+module MiniJuvix.Syntax.MicroJuvix.Language (
+  module MiniJuvix.Syntax.MicroJuvix.Language,
   module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind,
   module MiniJuvix.Syntax.Concrete.Scoped.Name
    ) where
 
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
+import MiniJuvix.Syntax.Concrete.Language (ForeignBlock(..))
 import MiniJuvix.Syntax.Concrete.Scoped.Name (NameId(..))
 import MiniJuvix.Syntax.Fixity
 
@@ -16,9 +17,19 @@ type InductiveName = Name
 
 data Name = Name {
     _nameText :: Text,
+    _nameId :: NameId,
     _nameKind :: NameKind
     }
 makeLenses ''Name
+
+instance Eq Name where
+  (==) = (==) `on` _nameId
+
+instance Ord Name where
+  compare = compare `on` _nameId
+
+instance Hashable Name where
+  hashWithSalt salt = hashWithSalt salt . _nameId
 
 instance HasNameKind Name where
   getNameKind = _nameKind
@@ -28,14 +39,11 @@ data Module = Module
     _moduleBody :: ModuleBody
   }
 
-newtype ModuleBody = ModuleBody {
-  _moduleStatements :: [Statement]
+data ModuleBody = ModuleBody {
+  _moduleInductives :: HashMap InductiveName (Indexed InductiveDef),
+  _moduleFunctions :: HashMap FunctionName (Indexed FunctionDef),
+  _moduleForeign :: [Indexed ForeignBlock]
   }
-  deriving newtype (Monoid, Semigroup)
-
-data Statement =
-  StatementInductiveDef InductiveDef
-  | StatementFunctionDef FunctionDef
 
 data FunctionDef = FunctionDef {
    _funDefName :: FunctionName,
@@ -48,12 +56,14 @@ data FunctionClause = FunctionClause {
     _clauseBody :: Expression
   }
 
-type Iden = Name
+data Iden =
+  IdenDefined Name
+  | IdenConstructor Name
+  | IdenVar VarName
 
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
-  -- TODO Add a constructor for literals
 
 data Application = Application {
   _appLeft :: Expression,
@@ -86,7 +96,8 @@ data InductiveConstructorDef = InductiveConstructorDef
     _constructorParameters :: [Type]
   }
 
-type TypeIden = InductiveName
+newtype TypeIden =
+  TypeIdenInductive InductiveName
 
 data Type =
   TypeIden TypeIden
@@ -101,6 +112,20 @@ makeLenses ''ModuleBody
 makeLenses ''Application
 makeLenses ''InductiveConstructorDef
 makeLenses ''ConstructorApp
+
+instance Semigroup ModuleBody where
+  a <> b = ModuleBody {
+    _moduleInductives = a ^. moduleInductives <> b ^. moduleInductives,
+    _moduleFunctions = a ^. moduleFunctions <> b ^. moduleFunctions,
+    _moduleForeign = a ^. moduleForeign <> b ^. moduleForeign
+    }
+
+instance Monoid ModuleBody where
+  mempty = ModuleBody {
+    _moduleInductives = mempty,
+    _moduleForeign = mempty,
+    _moduleFunctions = mempty
+    }
 
 instance HasAtomicity Application where
   atomicity = const (Aggregate appFixity)

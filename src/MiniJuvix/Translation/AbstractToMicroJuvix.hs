@@ -1,9 +1,9 @@
-module MiniJuvix.Translation.AbstractToMiniHaskell where
+module MiniJuvix.Translation.AbstractToMicroJuvix where
 
 import MiniJuvix.Prelude
 import qualified MiniJuvix.Syntax.Abstract.Language.Extra as A
 import qualified MiniJuvix.Syntax.Usage as A
-import MiniJuvix.Syntax.MiniHaskell.Language
+import MiniJuvix.Syntax.MicroJuvix.Language
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import qualified Data.HashMap.Strict as HashMap
 
@@ -37,12 +37,14 @@ goModuleBody b
  | not (HashMap.null (b ^. A.moduleLocalModules)) = unsupported "local modules"
  | otherwise = ModuleBody {
      _moduleInductives = HashMap.fromList
-       [ (d ^. inductiveName, d)
-        | d <- map goInductiveDef (toList (b ^. A.moduleInductives))],
+       [ (d ^. indexedThing . inductiveName, d)
+        | d <- map (fmap goInductiveDef) (toList (b ^. A.moduleInductives))],
      _moduleFunctions = HashMap.fromList
-        [ (f ^. funDefName, f) |
-          f <- map goFunctionDef (toList (b ^. A.moduleFunctions)) ]
-     } <> mconcatMap goImport (b ^. A.moduleImports)
+        [ (f ^. indexedThing . funDefName, f) |
+          f <- map (fmap goFunctionDef) (toList (b ^. A.moduleFunctions)) ],
+     _moduleForeign = b ^. A.moduleForeign
+     }
+     -- <> mconcatMap goImport (b ^. A.moduleImports)
 
 goTypeIden :: A.Iden -> TypeIden
 goTypeIden i = case i of
@@ -60,7 +62,7 @@ goFunctionParameter f = case f ^. A.paramName of
     _ -> unsupported "usages"
 
 goFunction :: A.Function -> Function
-goFunction = uncurry Function . viewFunctionType
+goFunction (A.Function l r) = Function (goFunctionParameter l) (goType r)
 
 goFunctionDef :: A.FunctionDef -> FunctionDef
 goFunctionDef f = FunctionDef {

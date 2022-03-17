@@ -215,3 +215,14 @@ infixl 7 <+?>
 infixl 7 <?>
 (<?>) :: Semigroup m => m -> Maybe m -> m
 (<?>) a = maybe a (a <>)
+
+data Indexed a = Indexed {
+  _indexedIx :: Int,
+  _indexedThing :: a
+  }
+  deriving stock (Show, Eq, Ord, Foldable, Traversable)
+
+instance Functor Indexed where
+  fmap f (Indexed i a) = Indexed i (f a)
+
+makeLenses ''Indexed

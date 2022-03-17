@@ -26,42 +26,48 @@ goModule (Module n par b) = case par of
   [] -> A.Module n <$> goModuleBody b
   _ -> unsupported "Module parameters"
 
--- | until we have modules with parameters, I think order of definitions is irrelevant
 goModuleBody :: forall r. Members '[Error Err] r => [Statement 'Scoped] -> Sem r A.ModuleBody
-goModuleBody ss = do
+goModuleBody ss' = do
   _moduleInductives <- inductives
   _moduleLocalModules <- locals
   _moduleFunctions <- functions
   _moduleImports <- imports
+  _moduleForeign <- foreigns
   return A.ModuleBody {..}
   where
-  inductives :: Sem r (HashMap A.InductiveName A.InductiveDef)
+  ss :: [Indexed (Statement 'Scoped)]
+  ss = zipWith Indexed [0 ..] ss'
+  inductives :: Sem r (HashMap A.InductiveName (Indexed A.InductiveDef))
   inductives = sequence $ HashMap.fromList
-    [ (def ^. inductiveName, goInductive def)
-    | StatementInductive def <- ss ]
-  locals :: Sem r (HashMap A.InductiveName A.LocalModule)
+    [ (def ^. inductiveName, Indexed i <$> goInductive def)
+    | Indexed i (StatementInductive def) <- ss ]
+  locals :: Sem r (HashMap A.InductiveName (Indexed A.LocalModule))
   locals = sequence $ HashMap.fromList
-    [ (m ^. modulePath, goLocalModule m)
-    | StatementModule m <- ss ]
-  imports :: Sem r [A.TopModule]
+    [ (m ^. modulePath, Indexed i <$> goLocalModule m)
+    | Indexed i (StatementModule m) <- ss ]
+  foreigns :: Sem r [Indexed ForeignBlock]
+  foreigns = return
+    [ Indexed i f
+    | Indexed i (StatementForeign f) <- ss ]
+  imports :: Sem r [Indexed A.TopModule]
   imports = sequence $
-    [ goModule m
-    | StatementImport (Import m) <- ss ]
-  functions :: Sem r (HashMap A.FunctionName A.FunctionDef)
+    [ Indexed i <$> goModule m
+    | Indexed i (StatementImport (Import m)) <- ss ]
+  functions :: Sem r (HashMap A.FunctionName (Indexed A.FunctionDef))
   functions = do
     sequence $ HashMap.fromList
-     [ (name, funDef)
-     | sig <- sigs,
+     [ (name, Indexed i <$> funDef)
+     | Indexed i sig <- sigs,
        let name = sig ^. sigName,
        let clauses = mapM goFunctionClause (getClauses name),
        let funDef = liftA2 (A.FunctionDef name) (goExpression (sig ^. sigType)) clauses ]
     where
     getClauses :: S.Symbol -> NonEmpty (FunctionClause 'Scoped)
     getClauses name = fromMaybe impossible $
-       nonEmpty [ c | StatementFunctionClause c <- ss,
+       nonEmpty [ c | StatementFunctionClause c <- ss',
                   name == c ^.clauseOwnerFunction ]
-    sigs :: [TypeSignature 'Scoped]
-    sigs = [ s | StatementTypeSignature s <- ss ]
+    sigs :: [Indexed (TypeSignature 'Scoped)]
+    sigs = [ Indexed i t | (Indexed i (StatementTypeSignature t)) <- ss ]
 
 
 goFunctionClause :: forall r. Members '[Error Err] r => FunctionClause 'Scoped -> Sem r A.FunctionClause
@@ -110,6 +116,7 @@ goExpression e = case e of
   ExpressionApplication a -> A.ExpressionApplication <$> goApplication a
   ExpressionInfixApplication ia -> A.ExpressionApplication <$> goInfix ia
   ExpressionPostfixApplication pa -> A.ExpressionApplication <$> goPostfix pa
+  ExpressionLiteral l -> return $ A.ExpressionLiteral l
   ExpressionLambda {} -> unsupported "Lambda"
   ExpressionMatch {} -> unsupported "Match"
   ExpressionLetBlock {} -> unsupported "Let Block"

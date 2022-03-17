@@ -5,7 +5,7 @@ import Commands.Extra
 import Options.Applicative
 import MiniJuvix.Prelude hiding (Doc)
 
-data MiniHaskellOptions = MiniHaskellOptions
+newtype MiniHaskellOptions = MiniHaskellOptions
   { _mhaskellInputFile :: FilePath
   }
 

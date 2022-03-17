@@ -24,7 +24,7 @@ axiom putStr : String -> Action;
 -- axiom to the given backend.
 compile Action ghc "IO ()";
 
-main : Action;
-main := putStr "hello world";
+-- main : Action;
+-- main := putStr "hello world";
 
 end;

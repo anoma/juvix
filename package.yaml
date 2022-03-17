@@ -62,8 +62,10 @@ ghc-options:
 
 default-extensions:
 - DataKinds
+- DeriveFoldable
 - DeriveGeneric
 - DeriveLift
+- DeriveTraversable
 - DerivingStrategies
 - FlexibleContexts
 - FlexibleInstances

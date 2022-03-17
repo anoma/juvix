@@ -5,7 +5,7 @@ module MiniJuvix.Syntax.Abstract.Language
 where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Language (Usage, Literal(..))
+import MiniJuvix.Syntax.Concrete.Language (Usage, Literal(..), ForeignBlock(..))
 import qualified MiniJuvix.Syntax.Concrete.Name as C
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Syntax.Fixity
@@ -38,10 +38,11 @@ data Module s = Module
   deriving stock (Show, Eq)
 
 data ModuleBody = ModuleBody
-  { _moduleInductives :: HashMap InductiveName InductiveDef,
-    _moduleFunctions :: HashMap FunctionName FunctionDef,
-    _moduleImports :: [TopModule],
-    _moduleLocalModules :: HashMap LocalModuleName LocalModule
+  { _moduleInductives :: HashMap InductiveName (Indexed InductiveDef),
+    _moduleFunctions :: HashMap FunctionName (Indexed FunctionDef),
+    _moduleImports :: [Indexed TopModule],
+    _moduleForeign :: [Indexed ForeignBlock],
+    _moduleLocalModules :: HashMap LocalModuleName (Indexed LocalModule)
   }
   deriving stock (Show, Eq)
 

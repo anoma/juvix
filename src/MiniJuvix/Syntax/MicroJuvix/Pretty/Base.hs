@@ -1,12 +1,13 @@
 -- TODO handle capital letters and characters not supported by Haskell.
-module MiniJuvix.Syntax.MiniHaskell.Pretty.Base where
+module MiniJuvix.Syntax.MicroJuvix.Pretty.Base where
 
 
 import MiniJuvix.Prelude
 import Prettyprinter
 import MiniJuvix.Syntax.Fixity
-import MiniJuvix.Syntax.MiniHaskell.Pretty.Ann
-import MiniJuvix.Syntax.MiniHaskell.Language
+import MiniJuvix.Syntax.MicroJuvix.Pretty.Ann
+import MiniJuvix.Syntax.MicroJuvix.Language
+import MiniJuvix.Syntax.Concrete.Language (ForeignBlock(..))
 import qualified MiniJuvix.Internal.Strings as Str
 
 newtype Options = Options
@@ -25,7 +26,14 @@ class PrettyCode c where
 instance PrettyCode Name where
   ppCode n =
     return $ annotate (AnnKind (n ^. nameKind))
-           $ pretty (n ^. nameText)
+           $ pretty (n ^. nameText) <> "_" <> pretty (n ^. nameId)
+
+instance PrettyCode Iden where
+  ppCode :: Member (Reader Options) r => Iden -> Sem r (Doc Ann)
+  ppCode i = case i of
+   IdenDefined na -> ppCode na
+   IdenConstructor na -> ppCode na
+   IdenVar na -> ppCode na
 
 instance PrettyCode Application where
   ppCode a = do
@@ -73,7 +81,7 @@ instance PrettyCode Function where
 
 instance PrettyCode Type where
   ppCode t = case t of
-    TypeIden n -> ppCode n
+    TypeIden (TypeIdenInductive n) -> ppCode n
     TypeFunction f -> ppCode f
 
 instance PrettyCode InductiveConstructorDef where
@@ -119,15 +127,21 @@ instance PrettyCode FunctionDef where
        clauseBody' <- ppCode (c ^. clauseBody)
        return $ fun <+> hsep clausePatterns' <+> kwEquals <+> clauseBody'
 
-instance PrettyCode Statement where
-  ppCode = \case
-    StatementFunctionDef f -> ppCode f
-    StatementInductiveDef d -> ppCode d
+instance PrettyCode ForeignBlock where
+  ppCode ForeignBlock {..} = do
+    _foreignBackend' <- ppCode _foreignBackend
+    return $ kwForeign <+> _foreignBackend' <+> lbrace <> line
+        <> pretty _foreignCode <> line <> rbrace
 
+
+-- TODO Jonathan review
 instance PrettyCode ModuleBody where
   ppCode m = do
-    statements' <- mapM ppCode (m ^. moduleStatements)
-    return $ vsep2 statements'
+    types' <- mapM (mapM ppCode) (toList (m ^. moduleInductives))
+    funs' <- mapM (mapM ppCode) (toList (m ^. moduleFunctions))
+    let foreigns' = m ^. moduleForeign
+    let everything = map (^. indexedThing) (sortOn (^. indexedIx) (types' ++ funs'))
+    return $ vsep2 everything
     where
     vsep2 = concatWith (\a b -> a <> line <> line <> b)
 
