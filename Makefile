@@ -33,7 +33,7 @@ hlint :
 
 .PHONY : haddock
 haddock :
-	cabal --docdir=docs/ --htmldir=docs/ haddock --enable-documentation 
+	cabal --docdir=docs/ --htmldir=docs/ haddock --enable-documentation
 
 .PHONY : docs
 docs :
@@ -46,7 +46,7 @@ cabal :
 
 .PHONY : stan
 stan :
-	stan check --include --filter-all --directory=src 
+	stan check --include --filter-all --directory=src
 
 setup:
 	stack build --only-dependencies --jobs $(THREADS)
@@ -68,7 +68,7 @@ clean-full:
 	stack clean --full
 
 format:
-	find ./src/ -name "*.hs" -exec ormolu --mode inplace {} --ghc-opt -XStandaloneDeriving --ghc-opt -XUnicodeSyntax --ghc-opt -XDerivingStrategies --ghc-opt -XMultiParamTypeClasses \;
+	find ./src/ -name "*.hs" -exec ormolu --mode inplace {} --ghc-opt -XStandaloneDeriving --ghc-opt -XUnicodeSyntax --ghc-opt -XDerivingStrategies --ghc-opt -XMultiParamTypeClasses  --ghc-opt  -XTemplateHaskell \;
 
 prepare-push:
 	make checklines && make hlint && make format
@@ -92,6 +92,6 @@ install-agda2hs:
 	echo "agda2hs/agda2hs.agda-lib" > ~/.agda/libraries
 
 .PHONY : agda
-agda : 
+agda :
 	agda2hs ./src/MiniJuvix/Syntax/Core.agda -o src -XUnicodeSyntax -XStandaloneDeriving -XDerivingStrategies -XMultiParamTypeClasses
 	agda2hs ./src/MiniJuvix/Syntax/Eval.agda -o src -XUnicodeSyntax -XStandaloneDeriving -XDerivingStrategies -XMultiParamTypeClasses
