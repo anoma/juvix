@@ -25,15 +25,22 @@ particular backends.
 Quick Start
 -----------
 
-* Install [Stack](https://haskellstack.org):
+To install MiniJuvix, you can download its sources using
+[Git](http://git-scm.com/) from the [Github
+repository](https://github.com/anoma/juvix.git). Then, the program
+can be downloaded and installed with the following commands.
+You will need to have installed [Stack](https://haskellstack.org).
 
- ````bash
+````bash
  $ git clone https://github.com/heliaxdev/minijuvix.git
  $ cd minijuvix
  $ stack install
 ````
 
-* How to install stack? if it's not installed.
+If the installation succeeds, you must be able to run the `minijuvix` command
+from any location. To get the complete list of commands, please run `minijuvix --help`.
+
+* How to install [Stack](https://haskellstack.org):? if it's not installed.
 
   - For Ubuntu        : `apt install stack`
   - For Debian        : `apt install haskell-stack`
@@ -42,19 +49,10 @@ Quick Start
   - For Windows, following the instructions
   [here](https://docs.haskellstack.org/en/stable/install_and_upgrade/#windows).
 
-  It is required at least 8GB RAM for `stack` installation.
-
-* To install MiniJuvix, you can download its sources using
- [Git](http://git-scm.com/) from the [Github
- repository](https://github.com/anoma/juvix.git). Then, the program
- can be downloaded and installed with the following commands:
-
- If the installation succeeds, you must be able to run the `minijuvix` command
- from any location. To get the complete list of commands, please run `minijuvix --help`.
+It is required at least 8GB RAM for `stack` installation.
 
 
-Testing
--------
+* To test everything works correctly, you can run the following command:
 
  ````bash
  $ stack test
