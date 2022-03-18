@@ -13,7 +13,11 @@ import Data.Text.IO
 
 };
 
-axiom Action : Type;
+axiom Action : Type {
+ ghc ↦ "IO ()";
+ c   ↦ "void";
+};
+
 axiom String : Type;
 axiom putStr : String -> Action;
 
@@ -22,7 +26,7 @@ axiom putStr : String -> Action;
 -- 2. The name of the backend.
 -- 3. The thing we should inline when compiling this
 -- axiom to the given backend.
-compile Action ghc "IO ()";
+
 
 -- main : Action;
 -- main := putStr "hello world";

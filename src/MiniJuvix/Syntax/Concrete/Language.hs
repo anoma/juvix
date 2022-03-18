@@ -470,8 +470,40 @@ deriving stock instance
 -- Expression
 --------------------------------------------------------------------------------
 
+data AxiomRef = AxiomRef {
+  _axiomRefName :: NameType 'Scoped,
+  _axiomRefBackends :: HashMap Backend Text
+  }
+  deriving stock (Show, Eq, Ord)
+
+data InductiveRef = InductiveRef {
+  _inductiveRefName :: NameType 'Scoped,
+  _inductiveRefDef :: InductiveDef 'Scoped
+  }
+  deriving stock (Show, Eq, Ord)
+
+data FunctionRef = FunctionRef {
+  _functionRefName :: NameType 'Scoped,
+  _functionRefSig :: Expression
+  }
+  deriving stock (Show, Eq, Ord)
+
+data ConstructorRef = ConstructorRef {
+  _constructorRefName :: NameType 'Scoped,
+  _constructorSig :: Expression
+  }
+  deriving stock (Show, Eq, Ord)
+
+data ScopedIden =
+  ScopedAxiom AxiomRef
+  | ScopedInductive InductiveRef
+  | ScopedVar (NameType 'Scoped)
+  | ScopedFunction FunctionRef
+  | ScopedConstructor ConstructorRef
+  deriving stock (Show, Eq, Ord)
+
 data Expression
-  = ExpressionIdentifier (NameType 'Scoped)
+  = ExpressionIdentifier ScopedIden
   | ExpressionParensIdentifier (NameType 'Scoped)
   | ExpressionApplication Application
   | ExpressionInfixApplication InfixApplication
