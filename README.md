@@ -5,9 +5,12 @@ MiniJuvix  <!-- [![GitHub CI](https://github.com/heliaxdev/MiniJuvix/workflows/C
 Description
 -----------
 
-MiniJuvix is a research dependently functional programming language for writing
+MiniJuvix is a dependently functional programming language for writing
 efficient formally-verified [validity predicates](https://anoma.network/blog/validity-predicates/), which can be
-deployed to various distributed ledgers. MiniJuvix addresses many issues that we have
+deployed to various distributed ledgers.  This is a software released for experimentation and research purposes
+only. No warranty is provided or implied.
+
+MiniJuvix addresses many issues that we have
 experienced while trying to write and deploy decentralised
 applications present in the ecosystem of smart-contracts:
 
@@ -19,14 +22,18 @@ complexity,
 - the lock-in to
 particular backends.
 
-The MiniJuvix compiler synthesises a high-level frontend syntax with
-support for dependent-linearly types and several other cutting-edge
-research ideas from programming language design and type theory.
-
 Quick Start
 -----------
 
 * Install [Stack](https://haskellstack.org):
+
+ ````bash
+ $ git clone https://github.com/heliaxdev/minijuvix.git
+ $ cd minijuvix
+ $ stack install
+````
+
+* How to install stack? if it's not installed.
 
   - For Ubuntu        : `apt install stack`
   - For Debian        : `apt install haskell-stack`
@@ -42,12 +49,6 @@ Quick Start
  repository](https://github.com/anoma/juvix.git). Then, the program
  can be downloaded and installed with the following commands:
 
- ````bash
- $ git clone https://github.com/heliaxdev/minijuvix.git
- $ cd minijuvix
- $ stack install
- ````
-
  If the installation succeeds, you must be able to run the `minijuvix` command
  from any location. To get the complete list of commands, please run `minijuvix --help`.
 
@@ -58,12 +59,6 @@ Testing
  ````bash
  $ stack test
  ````
-
-Known limitations
------------------
-
-This is a software released for experimentation and research purposes
-only. No warranty is provided or implied.
 
 Community
 ---------
