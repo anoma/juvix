@@ -25,11 +25,11 @@ particular backends.
 Quick Start
 -----------
 
-* To install MiniJuvix, you can download its sources using
- [Git](http://git-scm.com/) from the [Github
- repository](https://github.com/anoma/juvix.git). Then, the program
- can be downloaded and installed with the following commands.
- You will need to have installed [Stack](https://haskellstack.org).
+To install MiniJuvix, you can download its sources using
+[Git](http://git-scm.com/) from the [Github
+repository](https://github.com/anoma/juvix.git). Then, the program
+can be downloaded and installed with the following commands.
+You will need to have installed [Stack](https://haskellstack.org).
 
 ````bash
  $ git clone https://github.com/heliaxdev/minijuvix.git
@@ -37,10 +37,8 @@ Quick Start
  $ stack install
 ````
 
-
- If the installation succeeds, you must be able to run the `minijuvix` command
- from any location. To get the complete list of commands, please run `minijuvix --help`.
-
+If the installation succeeds, you must be able to run the `minijuvix` command
+from any location. To get the complete list of commands, please run `minijuvix --help`.
 
 * How to install [Stack](https://haskellstack.org):? if it's not installed.
 
