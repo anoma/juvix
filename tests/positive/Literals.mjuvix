@@ -1,0 +1,20 @@
+module Literals;
+  axiom Int : Type;
+  axiom String : Type;
+  axiom + : Int → Int → Int;
+  a : Int;
+  a := 12313;
+
+  b : Int;
+  b := -008;
+
+  - : Int;
+  - := 010;
+
+  -+-- : Int;
+  -+-- := - + -+--;
+
+
+  c : String;
+  c := "hellooooo";
+end;

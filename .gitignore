@@ -25,6 +25,8 @@ cabal.project.local
 # Stack
 .stack-work/
 stack.yaml.lock
+# GHCI
+.ghci
 
 ### IDE/support
 # Vim
@@ -53,3 +55,12 @@ TAGS
 
 # other
 .DS_Store
+
+_build/
+*.agdai
+.agda/
+agda/
+agda2hs/
+docs/*.html
+*.cabal
+/src/MiniJuvix/Utils/OldParser.hs

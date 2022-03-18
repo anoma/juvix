@@ -1,0 +1,13 @@
+cradle:
+  stack:
+    - path: "./src"
+      component: "minijuvix:lib"
+
+    - path: "./app/Main.hs"
+      component: "minijuvix:exe:minijuvix"
+
+    - path: "./app/Paths_minijuvix.hs"
+      component: "minijuvix:exe:minijuvix"
+
+    - path: "./test"
+      component: "minijuvix:test:minijuvix-test"

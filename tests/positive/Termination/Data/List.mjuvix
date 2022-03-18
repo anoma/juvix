@@ -1,0 +1,106 @@
+module Data.List;
+
+import Data.Bool;
+open Data.Bool;
+
+import Data.Nat;
+open Data.Nat;
+
+inductive List (A : Type) {
+  nil  : List A;
+  cons : A → List A → List A;
+};
+
+foldr : (A : Type) → (B : Type) → (A → B → B) → B → List A → B;
+foldr _ _ _ z (nil _) ≔ z;
+foldr A B f z (cons _ h hs) ≔ f h (foldr A B f z hs);
+
+foldl : (A : Type) → (B : Type) → (B → A → B) → B → List A → B;
+foldl A B f z (nil _) ≔ z ;
+foldl A B f z (cons _ h hs) ≔ foldl A B f (f z h) hs;
+
+map : (A : Type) → (B : Type) → (A → B) → List A → List B;
+map _ B f (nil _) ≔ nil B;
+map A B f (cons _ h hs) ≔ cons A (f h) (map A B f hs);
+
+filter : (A : Type) → (A → Bool) → List A → List A;
+filter A f (nil _) ≔ nil A;
+filter A f (cons _ h hs) ≔ ite (List A) (f h)
+  (cons A h (filter A f hs))
+  (filter A f hs);
+
+length : (A : Type) → List A → ℕ;
+length _ (nil _)      ≔ zero;
+length A (cons _ _ l) ≔ suc (length A l);
+
+rev : (A : Type) → List A → List A → List A;
+rev _ (nil _)       l ≔ l;
+rev A (cons _ x xs) l ≔ rev A xs (cons A x l);
+
+reverse : (A : Type) → List A → List A;
+reverse A l ≔ rev l (nil A);
+
+replicate : (A : Type) → ℕ → A → List A;
+replicate A zero _    ≔ nil A;
+replicate A (suc n) x ≔ cons A x (replicate A n x);
+
+take : (A : Type) → ℕ → List A → List A;
+take A (suc n) (cons _ x xs) ≔ cons A x (take A n xs);
+take A _ _                   ≔ nil A;
+
+alternate : (A : Type) → List A → List A → List A;
+alternate A (nil _)      b ≔ b;
+alternate A (cons _ h t) b ≔ cons A h (alternate A b t);
+
+merge : (A : Type) → (A → A → Bool) → List A → List A → List A;
+merge _ _ (nil _) ys ≔ ys;
+merge _ _ xs (nil _) ≔ xs;
+merge A lessThan (cons _ x xs) (cons _ y ys) ≔
+  ite (List A) (lessThan x y)
+          (cons A x (merge A lessThan xs (cons A y ys)))
+          (cons A y (merge A lessThan ys (cons A x xs)));
+
+concat : (A : Type) → List A → List A → List A;
+concat A (nil _) ys       ≔ ys;
+concat A (cons _ x xs) ys ≔ cons A x (concat A xs ys);
+
+ltx : (A : Type) → (A → A → Bool) → A → A → Bool;
+ltx A lessThan x y ≔ lessThan y x;
+
+gex : (A : Type) → (A → A → Bool) → A → A → Bool;
+gex A lessThan x y ≔ not (ltx A lessThan x y) ;
+
+quickSort : (A : Type) → (A → A → Bool) → List A → List A;
+quickSort A _ (nil _)              ≔ nil A;
+quickSort A _ (cons _ x (nil _))   ≔ cons A x (nil A);
+quickSort A lessThan (cons _ x ys) ≔
+  concat A (quickSort A (filter A ltx) ys)
+           (concat A (cons A x (nil A)) (quickSort A (filter A gex) ys));
+
+-- Mutual recursive function example
+
+aux  : (A : Type) → A → List A → List A;
+flat : (A : Type) → List A → List A;
+
+aux A (nil _) ls       := flat A ls;
+aux A (cons _ x xs) ls := cons A x (aux A xs ls);
+
+flat A (nil _)       := nil A;
+flat A (cons _ x xs) := aux A x xs;
+
+inductive Ord {
+  ZOrd : Ord;
+  SOrd : Ord -> Ord;
+  Lim  : (ℕ -> Ord) -> Ord;
+};
+
+addord : Ord -> Ord -> Ord;
+aux-addord : (ℕ -> Ord) -> Ord -> (ℕ -> Ord);
+
+addord (Zord)   y := y;
+addord (SOrd x) y := SOrd (addord x y);
+addord (Lim f)  y := Lim (aux-addord f y);
+-- where
+aux-addord f y z := addord (f z) y;
+
+end;

@@ -1,0 +1,8 @@
+module MultipleExportConflict;
+
+  module A;
+     axiom e : Type;
+  end;
+  open A public;
+  axiom e : Type;
+end;

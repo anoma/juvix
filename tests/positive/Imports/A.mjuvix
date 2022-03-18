@@ -1,0 +1,15 @@
+module A;
+  module M;
+  module N;
+   infix 3 t;
+   inductive T {
+    t : T;
+   };
+  end ;
+  infix 2 +;
+  axiom + : Type → Type → Type;
+  end ;
+  import M;
+  f : M.N.T;
+  f (_ M.N.t _) ≔ Type M.+ Type; 
+end;

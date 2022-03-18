@@ -1,0 +1,7 @@
+module MultipleDeclarations;
+
+  axiom a : Type;
+
+
+  axiom a : Type;
+end;

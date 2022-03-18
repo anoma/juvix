@@ -1,0 +1,25 @@
+module Data.Bool;
+  inductive Bool {
+    true : Bool;
+    false : Bool;
+  };
+
+  not : Bool → Bool;
+  not true ≔ false;
+  not false ≔ true;
+
+  infixr 2 ||;
+  || : Bool → Bool → Bool;
+  || false a ≔ a;
+  || true _ ≔ true;
+
+  infixr 2 &&;
+  && : Bool → Bool → Bool;
+  && false _ ≔ false;
+  && true a ≔ a;
+
+  ite : (a : Type) → Bool → a → a → a;
+  ite _ true a _ ≔ a;
+  ite _ false _ b ≔ b;
+
+end;

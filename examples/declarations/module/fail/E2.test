@@ -1,0 +1,34 @@
+<
+$ stack -- exec minijuvix parse ./../examples/E2.mjuvix
+>
+Module
+  { modulePath =
+      TopModulePath
+        { modulePathDir = Path { pathParts = [] }
+        , modulePathName = Sym "Top"
+        }
+  , moduleBody =
+      [ StatementModule
+          Module
+            { modulePath = Sym "A"
+            , moduleBody =
+                [ StatementModule Module { modulePath = Sym "O" , moduleBody = [] }
+                ]
+            }
+      , StatementModule
+          Module
+            { modulePath = Sym "B"
+            , moduleBody =
+                [ StatementModule Module { modulePath = Sym "O" , moduleBody = [] }
+                ]
+            }
+      ]
+  }
+>= 0
+
+
+<
+$ stack -- exec minijuvix scope ./../examples/E2.mjuvix
+>2
+minijuvix: user error (ErrAlreadyDefined (Sym "O"))
+>= 1

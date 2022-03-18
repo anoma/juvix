@@ -1,0 +1,35 @@
+* Module scoping
+  This document contains some notes on how the implementation of module scoping
+  is supposed to work.
+
+** Import statements
+   What happens when we see:
+   #+begin_example
+   import Data.Nat
+   #+end_example
+   All symbols *defined* in =Data.Nat= become available in the current module
+   through qualified names. I.e. =Data.Nat.zero=.
+
+** Open statements
+   What happens when we see:
+   #+begin_example
+   open Data.Nat
+   #+end_example
+   All symbols *defined* in =Data.Nat= become available in the current module
+   through unqualified names. I.e. =zero=.
+
+   =using= and =hiding= modifiers are handled in the expected way.
+
+** Nested modules
+   What happens when we see:
+   #+begin_example
+   module Local;
+   ...
+   end;
+   #+end_example
+   We need to answer two questions.
+   1. What happens after =module Local;=. Inside =Local= *all* symbols that were
+      in scope, continue to be in scope.
+   2. What happens after =end;=. All symbols *defined in* =Local= are in scope
+      through qualified names. One can think of this as the same as importing
+      =Local= if it was a top module.

@@ -1,0 +1,11 @@
+module ModuleNotInScope;
+
+    module A;
+    end;
+
+    axiom M : Type;
+
+    open M;
+
+
+end;

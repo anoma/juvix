@@ -1,0 +1,6 @@
+module Inductive;
+
+  inductive T {
+    t : T;
+  };
+end ;
