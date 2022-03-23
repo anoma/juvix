@@ -1,5 +1,4 @@
 {-# LANGUAGE UndecidableInstances #-}
-
 module MiniJuvix.Syntax.Concrete.Language
   ( module MiniJuvix.Syntax.Concrete.Language,
     module MiniJuvix.Syntax.Concrete.Name,
@@ -33,31 +32,39 @@ import Prelude (show)
 --------------------------------------------------------------------------------
 -- Parsing stages
 --------------------------------------------------------------------------------
-type family RefNameType (c :: S.IsConcrete) :: (res :: GHC.Type) | res -> c where
+
+type RefNameType :: S.IsConcrete -> GHC.Type
+type family RefNameType c = res | res -> c where
   RefNameType 'S.Concrete = S.Name
   RefNameType 'S.NotConcrete = S.Name' ()
 
-type family SymbolType (s :: Stage) :: (res :: GHC.Type) | res -> s where
+type SymbolType :: Stage -> GHC.Type
+type family SymbolType s = res | res -> s where
   SymbolType 'Parsed = Symbol
   SymbolType 'Scoped = S.Symbol
 
-type family ModuleRefType (s :: Stage) :: (res :: GHC.Type) | res -> s where
+type ModuleRefType :: Stage -> GHC.Type
+type family ModuleRefType s = res | res -> s where
   ModuleRefType 'Parsed = Name
   ModuleRefType 'Scoped = ModuleRef
 
-type family IdentifierType (s :: Stage) :: (res :: GHC.Type) | res -> s where
+type IdentifierType :: Stage -> GHC.Type
+type family IdentifierType s = res | res -> s where
   IdentifierType 'Parsed = Name
   IdentifierType 'Scoped = ScopedIden
 
-type family PatternAtomIdenType (s :: Stage) :: (res :: GHC.Type) | res -> s where
+type PatternAtomIdenType :: Stage -> GHC.Type
+type family PatternAtomIdenType s = res | res -> s where
   PatternAtomIdenType 'Parsed = Name
   PatternAtomIdenType 'Scoped = PatternScopedIden
 
-type family ExpressionType (s :: Stage) :: (res :: GHC.Type) | res -> s where
+type ExpressionType :: Stage -> GHC.Type
+type family ExpressionType s = res | res -> s where
   ExpressionType 'Parsed = ExpressionAtoms 'Parsed
   ExpressionType 'Scoped = Expression
 
-type family PatternType (s :: Stage) :: (res :: GHC.Type) | res -> s where
+type PatternType :: Stage -> GHC.Type
+type family PatternType s = res | res -> s where
   PatternType 'Parsed = PatternAtom 'Parsed
   PatternType 'Scoped = Pattern
 
@@ -65,9 +72,8 @@ type family ImportType (s :: Stage) :: GHC.Type where
   ImportType 'Parsed = TopModulePath
   ImportType 'Scoped = Module 'Scoped 'ModuleTop
 
-type family
-  ModulePathType (s :: Stage) (t :: ModuleIsTop) ::
-    (res :: GHC.Type) | res -> t s
+type ModulePathType :: Stage -> ModuleIsTop -> GHC.Type
+type family ModulePathType s t = res | res -> t s
   where
   ModulePathType 'Parsed 'ModuleTop = TopModulePath
   ModulePathType 'Scoped 'ModuleTop = S.TopModulePath
