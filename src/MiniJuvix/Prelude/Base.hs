@@ -232,3 +232,6 @@ instance Functor Indexed where
   fmap f (Indexed i a) = Indexed i (f a)
 
 makeLenses ''Indexed
+
+minimumMaybe :: (Foldable t, Ord a) => t a -> Maybe a
+minimumMaybe l = if null l then Nothing else Just (minimum l)
