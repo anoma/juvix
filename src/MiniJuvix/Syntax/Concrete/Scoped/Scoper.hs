@@ -770,7 +770,8 @@ checkAxiomDef AxiomDef {..} = do
   return
     AxiomDef
       { _axiomName = axiomName',
-        _axiomType = axiomType'
+        _axiomType = axiomType',
+        ..
       }
 
 localScope :: Sem (Reader LocalVars : r) a -> Sem r a
@@ -1081,7 +1082,6 @@ checkStatement s = case s of
   StatementAxiom ax -> StatementAxiom <$> checkAxiomDef ax
   StatementEval e -> StatementEval <$> checkEval e
   StatementPrint e -> StatementPrint <$> checkPrint e
-  StatementCompile {} -> undefined
   StatementForeign d -> return $ StatementForeign d
 
 -------------------------------------------------------------------------------

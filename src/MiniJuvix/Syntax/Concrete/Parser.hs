@@ -78,7 +78,6 @@ statement =
     <|> (StatementInductive <$> inductiveDef)
     <|> (StatementPrint <$> printS)
     <|> (StatementForeign <$> foreignBlock)
-    <|> (StatementCompile <$> compileDef)
     <|> (StatementModule <$> moduleDef)
     <|> (StatementAxiom <$> axiomDef)
     <|> ( either StatementTypeSignature StatementFunctionClause
@@ -86,11 +85,12 @@ statement =
         )
 
 --------------------------------------------------------------------------------
--- Foreign and compile
+-- Foreign
 --------------------------------------------------------------------------------
 
 backend :: forall e m. MonadParsec e Text m => m Backend
 backend = ghc $> BackendGhc
+  <|> agda $> BackendAgda
 
 foreignBlock :: forall e m. MonadParsec e Text m => m ForeignBlock
 foreignBlock = do
@@ -98,14 +98,6 @@ foreignBlock = do
   _foreignBackend <- backend
   _foreignCode <- bracedString
   return ForeignBlock {..}
-
-compileDef :: forall e m. MonadParsec e Text m => m (CompileDef 'Parsed)
-compileDef = do
-  kwCompile
-  _compileAxiom <- symbol
-  _compileBackend <- backend
-  _compileCode <- string
-  return CompileDef {..}
 
 --------------------------------------------------------------------------------
 -- Operator syntax declaration
@@ -250,7 +242,15 @@ axiomDef = do
   _axiomName <- symbol
   kwColon
   _axiomType <- expressionAtoms
+  _axiomBackendItems <- fromMaybe [] <$> optional backends
   return AxiomDef {..}
+  where
+    backends = toList <$> braces (P.sepEndBy1 backendItem kwSemicolon)
+    backendItem = do
+      _backendItemBackend <- backend
+      kwMapsTo
+      _backendItemCode <- string
+      return BackendItem {..}
 
 --------------------------------------------------------------------------------
 -- Function expression

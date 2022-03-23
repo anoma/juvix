@@ -90,7 +90,6 @@ data Statement (s :: Stage)
   | StatementEval (Eval s)
   | StatementPrint (Print s)
   | StatementForeign ForeignBlock
-  | StatementCompile (CompileDef s)
 
 deriving stock instance
   ( Show (ImportType s),
@@ -124,18 +123,6 @@ deriving stock instance
     Ord (ExpressionType s)
   ) =>
   Ord (Statement s)
-
-data CompileDef (s :: Stage) = CompileDef
-  { _compileAxiom :: SymbolType s,
-    _compileBackend :: Backend,
-    _compileCode :: Text
-  }
-
-deriving stock instance (Eq (SymbolType s)) => Eq (CompileDef s)
-
-deriving stock instance (Ord (SymbolType s)) => Ord (CompileDef s)
-
-deriving stock instance (Show (SymbolType s)) => Show (CompileDef s)
 
 data ForeignBlock = ForeignBlock
   { _foreignBackend :: Backend,
@@ -194,7 +181,8 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Typ
 
 data AxiomDef (s :: Stage) = AxiomDef
   { _axiomName :: SymbolType s,
-    _axiomType :: ExpressionType s
+    _axiomType :: ExpressionType s,
+    _axiomBackendItems :: [BackendItem]
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (AxiomDef s)
@@ -1061,7 +1049,13 @@ deriving stock instance
 -- Backends
 --------------------------------------------------------------------------------
 
-data Backend = BackendGhc
+data Backend = BackendGhc | BackendAgda
+  deriving stock (Show, Eq, Ord)
+
+data BackendItem = BackendItem
+  { _backendItemBackend :: Backend,
+    _backendItemCode :: Text
+  }
   deriving stock (Show, Eq, Ord)
 
 --------------------------------------------------------------------------------
@@ -1109,7 +1103,6 @@ makeLenses ''TypeSignature
 makeLenses ''AxiomDef
 makeLenses ''FunctionClause
 makeLenses ''InductiveParameter
-makeLenses ''CompileDef
 makeLenses ''ForeignBlock
 makeLenses ''AxiomRef'
 makeLenses ''InductiveRef'
@@ -1117,6 +1110,7 @@ makeLenses ''ModuleRef'
 makeLenses ''ModuleRef''
 makeLenses ''FunctionRef'
 makeLenses ''ConstructorRef'
+makeLenses ''BackendItem
 
 idenOverName :: (forall s. S.Name' s -> S.Name' s) -> ScopedIden -> ScopedIden
 idenOverName f = \case

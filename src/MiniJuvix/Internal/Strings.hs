@@ -127,3 +127,6 @@ colonZero = ":0"
 
 ghc :: IsString s => s
 ghc = "ghc"
+
+agda :: IsString s => s
+agda = "agda"

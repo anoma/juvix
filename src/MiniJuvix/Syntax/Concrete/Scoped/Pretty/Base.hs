@@ -66,6 +66,9 @@ kwLambda = keyword Str.lambdaUnicode
 kwGhc :: Doc Ann
 kwGhc = keyword Str.ghc
 
+kwAgda :: Doc Ann
+kwAgda = keyword Str.agda
+
 kwWhere :: Doc Ann
 kwWhere = keyword Str.where_
 
@@ -211,8 +214,6 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
     -- blank line
     g :: Statement s -> Statement s -> Bool
     g a b = case (a, b) of
-      (StatementCompile _, StatementCompile _) -> True
-      (StatementCompile _, _) -> False
       (StatementForeign _, _) -> False
       (StatementOperator _, StatementOperator _) -> True
       (StatementOperator o, s) -> definesSymbol (opSymbol o) s
@@ -278,28 +279,26 @@ instance SingI s => PrettyCode (Statement s) where
     StatementAxiom a -> ppCode a
     StatementEval e -> ppCode e
     StatementPrint p -> ppCode p
-    StatementCompile p -> ppCode p
     StatementForeign p -> ppCode p
 
 instance PrettyCode Backend where
   ppCode = \case
     BackendGhc -> return kwGhc
+    BackendAgda -> return kwAgda
 
 instance PrettyCode ForeignBlock where
   ppCode ForeignBlock {..} = do
     _foreignBackend' <- ppCode _foreignBackend
     return $
-      kwForeign <+> _foreignBackend' <+> lbrace <> line
+      kwForeign <+> _foreignBackend' <+> lbrace
         <> pretty _foreignCode
-        <> line
         <> rbrace
 
-instance SingI s => PrettyCode (CompileDef s) where
-  ppCode CompileDef {..} = do
-    _compileAxiom' <- ppSymbol _compileAxiom
-    _compileBackend' <- ppCode _compileBackend
-    _compileBackend' <- ppCode _compileBackend
-    return $ kwCompile <+> _compileAxiom' <+> _compileBackend' <+> ppStringLit _compileCode
+instance PrettyCode BackendItem where
+  ppCode BackendItem {..} = do
+    backend <- ppCode _backendItemBackend
+    return $
+      backend <+> kwMapsto <+> ppStringLit _backendItemCode
 
 ppStringLit :: Text -> Doc Ann
 ppStringLit = annotate AnnLiteralString . doubleQuotes . pretty
@@ -587,7 +586,10 @@ instance SingI s => PrettyCode (AxiomDef s) where
   ppCode AxiomDef {..} = do
     axiomName' <- ppSymbol _axiomName
     axiomType' <- ppExpression _axiomType
-    return $ kwAxiom <+> axiomName' <+> kwColon <+> axiomType'
+    axiomBackendItems' <- case _axiomBackendItems of
+      [] -> return Nothing
+      bs -> Just <$> ppBlock bs
+    return $ kwAxiom <+> axiomName' <+> kwColon <+> axiomType' <+?> axiomBackendItems'
 
 instance SingI s => PrettyCode (Eval s) where
   ppCode (Eval p) = do

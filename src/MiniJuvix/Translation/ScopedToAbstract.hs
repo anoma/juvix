@@ -231,4 +231,6 @@ goPattern p = case p of
   PatternEmpty -> return A.PatternEmpty
 
 goAxiom :: Members '[Error Err] r => AxiomDef 'Scoped -> Sem r A.AxiomDef
-goAxiom (AxiomDef n m) = A.AxiomDef n <$> goExpression m
+goAxiom (AxiomDef n m bs) = do
+  e <- goExpression m
+  return (A.AxiomDef n e bs)

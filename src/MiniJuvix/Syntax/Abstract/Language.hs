@@ -5,7 +5,7 @@ module MiniJuvix.Syntax.Abstract.Language
 where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Language (ForeignBlock (..), Literal (..), Usage)
+import MiniJuvix.Syntax.Concrete.Language (ForeignBlock (..), Literal (..), Usage, BackendItem)
 import qualified MiniJuvix.Syntax.Concrete.Name as C
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Syntax.Fixity
@@ -162,7 +162,8 @@ data InductiveConstructorDef = InductiveConstructorDef
 
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
-    _axiomType :: Expression
+    _axiomType :: Expression,
+    _axiomBackendItems :: [BackendItem]
   }
   deriving stock (Show, Eq)
 

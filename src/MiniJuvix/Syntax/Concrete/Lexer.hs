@@ -50,7 +50,7 @@ integer = do
 -- | TODO allow escaping { inside the string using \{
 bracedString :: MonadParsec e Text m => m Text
 bracedString =
-  Text.strip . pack <$> (char '{' >> manyTill anySingle (char '}'))
+  pack <$> (char '{' >> manyTill anySingle (char '}'))
 
 string :: MonadParsec e Text m => m Text
 string = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
@@ -256,3 +256,6 @@ kwWildcard = symbol Str.underscore
 
 ghc :: MonadParsec e Text m => m ()
 ghc = symbol Str.ghc
+
+agda :: MonadParsec e Text m => m ()
+agda = symbol Str.agda
