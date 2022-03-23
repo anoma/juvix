@@ -3,8 +3,8 @@ module MiniJuvix.Syntax.Fixity where
 import Language.Haskell.TH.Syntax (Lift)
 import MiniJuvix.Prelude
 
-data Precedence =
-  PrecMinusOmega
+data Precedence
+  = PrecMinusOmega
   | PrecNat Natural
   | PrecOmega
   deriving stock (Show, Eq, Lift)
@@ -40,8 +40,8 @@ data Fixity = Fixity
   }
   deriving stock (Show, Eq, Ord, Lift)
 
-data Atomicity =
-  Atom
+data Atomicity
+  = Atom
   | Aggregate Fixity
 
 class HasAtomicity a where
@@ -52,18 +52,18 @@ class HasFixity a where
 
 isLeftAssoc :: Fixity -> Bool
 isLeftAssoc opInf = case fixityArity opInf of
-    Binary AssocLeft -> True
-    _ -> False
+  Binary AssocLeft -> True
+  _ -> False
 
 isRightAssoc :: Fixity -> Bool
 isRightAssoc opInf = case fixityArity opInf of
-    Binary AssocRight -> True
-    _ -> False
+  Binary AssocRight -> True
+  _ -> False
 
 isPostfixAssoc :: Fixity -> Bool
 isPostfixAssoc opInf = case fixityArity opInf of
-    Unary AssocPostfix -> True
-    _ -> False
+  Unary AssocPostfix -> True
+  _ -> False
 
 appFixity :: Fixity
 appFixity = Fixity PrecOmega (Binary AssocLeft)
@@ -75,10 +75,10 @@ atomParens :: (Fixity -> Bool) -> Atomicity -> Fixity -> Bool
 atomParens associates argAtom opInf = case argAtom of
   Atom -> False
   Aggregate argInf
-   | argInf > opInf -> False
-   | argInf < opInf -> True
-   | associates opInf -> False
-   | otherwise -> True
+    | argInf > opInf -> False
+    | argInf < opInf -> True
+    | associates opInf -> False
+    | otherwise -> True
 
 isAtomic :: HasAtomicity a => a -> Bool
 isAtomic x = case atomicity x of

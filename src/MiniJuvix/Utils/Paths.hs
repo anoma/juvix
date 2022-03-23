@@ -1,8 +1,8 @@
 module MiniJuvix.Utils.Paths where
 
+import Language.Haskell.TH.Syntax as TH
 import MiniJuvix.Prelude
 import TH.RelativePaths
-import Language.Haskell.TH.Syntax as TH
 
 assetsDir :: Q Exp
 assetsDir = pathRelativeToCabalPackage "assets" >>= TH.lift

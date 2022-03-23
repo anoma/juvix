@@ -51,7 +51,13 @@ stan :
 setup:
 	stack build --only-dependencies --jobs $(THREADS)
 
-stack:
+test:
+	stack test --fast --jobs $(THREADS)
+
+install:
+	stack install --fast --jobs $(THREADS)
+
+build:
 	stack build --fast --jobs $(THREADS)
 
 stack-build-watch:

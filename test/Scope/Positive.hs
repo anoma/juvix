@@ -41,7 +41,7 @@ testDescr PosTest {..} = TestDescr {
     parsedPretty' <- parseTextModuleIO parsedPretty
 
     step "Scope again"
-    s' <- fromRightIO' printErrorAnsi $ M.scopeCheck1Pure fs "." p'
+    s' <- fromRightIO' printErrorAnsi $ return (M.scopeCheck1Pure fs "." p')
 
     step "Checks"
     assertBool "check: scope . parse . pretty . scope . parse = scope . parse" (s == s')

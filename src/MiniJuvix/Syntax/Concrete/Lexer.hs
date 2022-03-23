@@ -2,14 +2,14 @@ module MiniJuvix.Syntax.Concrete.Lexer where
 
 --------------------------------------------------------------------------------
 
-import GHC.Unicode
-import MiniJuvix.Syntax.Concrete.Base hiding (space, Pos)
-import qualified MiniJuvix.Syntax.Concrete.Base as P
-import MiniJuvix.Prelude
-import qualified Text.Megaparsec.Char.Lexer as L
-import MiniJuvix.Syntax.Concrete.Loc
-import qualified MiniJuvix.Internal.Strings as Str
 import qualified Data.Text as Text
+import GHC.Unicode
+import qualified MiniJuvix.Internal.Strings as Str
+import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Concrete.Base hiding (Pos, space)
+import qualified MiniJuvix.Syntax.Concrete.Base as P
+import MiniJuvix.Syntax.Concrete.Loc
+import qualified Text.Megaparsec.Char.Lexer as L
 
 --------------------------------------------------------------------------------
 
@@ -45,7 +45,7 @@ integer = do
   nat <- lexeme L.decimal
   case minus of
     Nothing -> return nat
-    _ -> return (- nat)
+    _ -> return (-nat)
 
 -- | TODO allow escaping { inside the string using \{
 bracedString :: MonadParsec e Text m => m Text
@@ -58,11 +58,11 @@ string = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
 mkLoc :: SourcePos -> Loc
 mkLoc SourcePos {..} = Loc {..}
   where
-  _locFile = sourceName
-  _locFileLoc = FileLoc {..}
-    where
-    _locLine = fromPos sourceLine
-    _locCol = fromPos sourceColumn
+    _locFile = sourceName
+    _locFileLoc = FileLoc {..}
+      where
+        _locLine = fromPos sourceLine
+        _locCol = fromPos sourceColumn
 
 curLoc :: MonadParsec e Text m => m Loc
 curLoc = mkLoc <$> getSourcePos
@@ -99,9 +99,9 @@ bareIdentifier = interval $ do
           c `elem` extraAllowedChars
         ]
       where
-      extraAllowedChars :: [Char]
-      extraAllowedChars = "_'-*,&"
-      cat = generalCategory c
+        extraAllowedChars :: [Char]
+        extraAllowedChars = "_'-*,&"
+        cat = generalCategory c
 
 dot :: forall e m. MonadParsec e Text m => m Char
 dot = P.char '.'

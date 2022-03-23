@@ -1,10 +1,11 @@
-module MiniJuvix.Syntax.Abstract.Language.Extra (
-  module MiniJuvix.Syntax.Abstract.Language,
-  module MiniJuvix.Syntax.Abstract.Language.Extra
-                                       ) where
+module MiniJuvix.Syntax.Abstract.Language.Extra
+  ( module MiniJuvix.Syntax.Abstract.Language,
+    module MiniJuvix.Syntax.Abstract.Language.Extra,
+  )
+where
 
-import MiniJuvix.Syntax.Abstract.Language
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Abstract.Language
 
 smallerPatternVariables :: Pattern -> [VarName]
 smallerPatternVariables p = case p of
@@ -13,15 +14,15 @@ smallerPatternVariables p = case p of
   PatternEmpty {} -> []
   PatternConstructorApp app -> appVariables app
   where
-  appVariables :: ConstructorApp -> [VarName]
-  appVariables (ConstructorApp _ ps) = concatMap patternVariables ps
+    appVariables :: ConstructorApp -> [VarName]
+    appVariables (ConstructorApp _ ps) = concatMap patternVariables ps
 
-  patternVariables :: Pattern -> [VarName]
-  patternVariables pat = case pat of
-    PatternVariable v -> [v]
-    PatternWildcard {} -> []
-    PatternEmpty {} -> []
-    PatternConstructorApp app -> appVariables app
+    patternVariables :: Pattern -> [VarName]
+    patternVariables pat = case pat of
+      PatternVariable v -> [v]
+      PatternWildcard {} -> []
+      PatternEmpty {} -> []
+      PatternConstructorApp app -> appVariables app
 
 viewApp :: Expression -> (Expression, [Expression])
 viewApp e = case e of
@@ -35,18 +36,18 @@ viewApp e = case e of
 viewExpressionAsPattern :: Expression -> Maybe Pattern
 viewExpressionAsPattern e = case viewApp e of
   (f, args)
-   | Just c <- getConstructor f -> do
-        args' <- mapM viewExpressionAsPattern args
-        Just $ PatternConstructorApp (ConstructorApp c args')
+    | Just c <- getConstructor f -> do
+      args' <- mapM viewExpressionAsPattern args
+      Just $ PatternConstructorApp (ConstructorApp c args')
   (f, [])
-   | Just v <- getVariable f -> Just (PatternVariable v)
+    | Just v <- getVariable f -> Just (PatternVariable v)
   _ -> Nothing
   where
-  getConstructor :: Expression -> Maybe Name
-  getConstructor f = case f of
-    ExpressionIden (IdenConstructor n) -> Just n
-    _ -> Nothing
-  getVariable :: Expression -> Maybe VarName
-  getVariable f = case f of
-    ExpressionIden (IdenVar n) -> Just n
-    _ -> Nothing
+    getConstructor :: Expression -> Maybe Name
+    getConstructor f = case f of
+      ExpressionIden (IdenConstructor n) -> Just n
+      _ -> Nothing
+    getVariable :: Expression -> Maybe VarName
+    getVariable f = case f of
+      ExpressionIden (IdenVar n) -> Just n
+      _ -> Nothing

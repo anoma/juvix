@@ -2,8 +2,8 @@
 
 module MiniJuvix.Syntax.Eval where
 
-import MiniJuvix.Syntax.Core
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Core
 
 --------------------------------------------------------------------------------
 -- Values and neutral terms

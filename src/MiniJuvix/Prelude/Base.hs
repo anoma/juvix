@@ -2,6 +2,7 @@ module MiniJuvix.Prelude.Base
   ( module MiniJuvix.Prelude.Base,
     module Control.Monad.Extra,
     module Data.Char,
+    module Control.Monad.Fix,
     module Data.Typeable,
     module Data.Either.Extra,
     module Data.Function,
@@ -30,6 +31,7 @@ module MiniJuvix.Prelude.Base
     module Polysemy.Reader,
     module Data.Text.IO,
     module Polysemy.State,
+    module Polysemy.Fixpoint,
     module Polysemy.Error,
     module Polysemy.Embed,
     module Text.Show,
@@ -62,8 +64,8 @@ where
 --------------------------------------------------------------------------------
 
 import Control.Applicative
-import Data.Typeable hiding (TyCon)
 import Control.Monad.Extra
+import Control.Monad.Fix
 import Data.Bool
 import Data.ByteString.Lazy (ByteString)
 import Data.Char
@@ -74,27 +76,28 @@ import Data.Eq
 import Data.Foldable hiding (minimum, minimumBy)
 import Data.Function
 import Data.Functor
-import Prettyprinter (Doc, (<+>))
 import Data.HashMap.Strict (HashMap)
 import Data.HashSet (HashSet)
 import Data.Hashable
 import Data.Int
 import Data.List.Extra hiding (head, last)
-import Data.List.NonEmpty.Extra (NonEmpty (..), head, last, nonEmpty, minimum1, minimumOn1, maximum1, maximumOn1, some1)
 import qualified Data.List.NonEmpty as NonEmpty
+import Data.List.NonEmpty.Extra (NonEmpty (..), head, last, maximum1, maximumOn1, minimum1, minimumOn1, nonEmpty, some1)
 import Data.Maybe
-import Data.Singletons.Sigma
 import Data.Monoid
 import Data.Ord
 import Data.Semigroup (Semigroup, (<>))
 import Data.Singletons
+import Data.Singletons.Sigma
 import Data.Singletons.TH (genSingletons)
 import Data.Stream (Stream)
 import Data.String
 import Data.Text (Text, pack, strip, unpack)
 import Data.Text.Encoding
+import Data.Text.IO
 import Data.Traversable
 import Data.Tuple.Extra
+import Data.Typeable hiding (TyCon)
 import Data.Void
 import Data.Word
 import GHC.Enum
@@ -107,15 +110,16 @@ import Lens.Micro.Platform hiding (both)
 import Polysemy
 import Polysemy.Embed
 import Polysemy.Error hiding (fromEither)
+import Polysemy.Fixpoint
 import Polysemy.Reader
 import Polysemy.State
 import Polysemy.View
+import Prettyprinter (Doc, (<+>))
 import System.Directory
 import System.Exit
 import System.FilePath
-import System.IO hiding (putStr, putStrLn, hPutStr, hPutStrLn, writeFile, hGetContents, interact, readFile, getContents, getLine, appendFile, hGetLine, readFile')
+import System.IO hiding (appendFile, getContents, getLine, hGetContents, hGetLine, hPutStr, hPutStrLn, interact, putStr, putStrLn, readFile, readFile', writeFile)
 import Text.Show (Show)
-import Data.Text.IO
 import qualified Text.Show as Show
 
 --------------------------------------------------------------------------------
@@ -209,16 +213,18 @@ impossible = Err.error "impossible"
 --------------------------------------------------------------------------------
 
 infixl 7 <+?>
+
 (<+?>) :: Doc ann -> Maybe (Doc ann) -> Doc ann
 (<+?>) a = maybe a (a <+>)
 
 infixl 7 <?>
+
 (<?>) :: Semigroup m => m -> Maybe m -> m
 (<?>) a = maybe a (a <>)
 
-data Indexed a = Indexed {
-  _indexedIx :: Int,
-  _indexedThing :: a
+data Indexed a = Indexed
+  { _indexedIx :: Int,
+    _indexedThing :: a
   }
   deriving stock (Show, Eq, Ord, Foldable, Traversable)
 

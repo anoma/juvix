@@ -12,8 +12,8 @@ instance Semigroup Pos where
 instance Monoid Pos where
   mempty = Pos 0
 
-data FileLoc = FileLoc {
-  -- | Line number
+data FileLoc = FileLoc
+  { -- | Line number
     _locLine :: !Pos,
     -- | Column number
     _locCol :: !Pos
@@ -32,10 +32,10 @@ data Loc = Loc
   deriving stock (Show, Eq, Ord)
 
 -- | Inclusive interval
-data Interval = Interval {
-  _intFile :: FilePath,
-  _intStart :: FileLoc,
-  _intEnd :: FileLoc
+data Interval = Interval
+  { _intFile :: FilePath,
+    _intStart :: FileLoc,
+    _intEnd :: FileLoc
   }
   deriving stock (Show, Ord, Eq)
 
@@ -56,7 +56,7 @@ instance Pretty Pos where
 
 instance Pretty FileLoc where
   pretty :: FileLoc -> Doc a
-  pretty FileLoc {..}  =
+  pretty FileLoc {..} =
     pretty _locLine <> colon <> pretty _locCol
 
 instance Pretty Loc where
@@ -68,14 +68,15 @@ instance Pretty Interval where
   pretty :: Interval -> Doc a
   pretty Interval {..} =
     pretty _intFile <> colon
-    <> ppPosRange (_locLine _intStart, _locLine _intEnd) <> colon
-    <> ppPosRange (_locCol _intStart, _locCol _intEnd)
+      <> ppPosRange (_locLine _intStart, _locLine _intEnd)
+      <> colon
+      <> ppPosRange (_locCol _intStart, _locCol _intEnd)
     where
-    hyphen = pretty '-'
-    ppPosRange :: (Pos, Pos) -> Doc a
-    ppPosRange (s, e)
-      | s == e = pretty s
-      | otherwise = pretty s <> hyphen <> pretty e
+      hyphen = pretty '-'
+      ppPosRange :: (Pos, Pos) -> Doc a
+      ppPosRange (s, e)
+        | s == e = pretty s
+        | otherwise = pretty s <> hyphen <> pretty e
 
 makeLenses ''Interval
 makeLenses ''Loc

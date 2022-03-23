@@ -1,39 +1,39 @@
 -- TODO handle capital letters and characters not supported by Haskell.
 module MiniJuvix.Syntax.MicroJuvix.Pretty.Base where
 
-
-import MiniJuvix.Prelude
-import Prettyprinter
-import MiniJuvix.Syntax.Fixity
-import MiniJuvix.Syntax.MicroJuvix.Pretty.Ann
-import MiniJuvix.Syntax.MicroJuvix.Language
-import MiniJuvix.Syntax.Concrete.Language (ForeignBlock(..))
 import qualified MiniJuvix.Internal.Strings as Str
+import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Concrete.Language (Backend (..), ForeignBlock (..))
+import MiniJuvix.Syntax.Fixity
+import MiniJuvix.Syntax.MicroJuvix.Language
+import MiniJuvix.Syntax.MicroJuvix.Pretty.Ann
+import Prettyprinter
 
 newtype Options = Options
-  {
-    _optIndent :: Int
+  { _optIndent :: Int
   }
 
 defaultOptions :: Options
-defaultOptions = Options {
-  _optIndent = 2
-  }
+defaultOptions =
+  Options
+    { _optIndent = 2
+    }
 
 class PrettyCode c where
   ppCode :: Member (Reader Options) r => c -> Sem r (Doc Ann)
 
 instance PrettyCode Name where
   ppCode n =
-    return $ annotate (AnnKind (n ^. nameKind))
-           $ pretty (n ^. nameText) <> "_" <> pretty (n ^. nameId)
+    return $
+      annotate (AnnKind (n ^. nameKind)) $
+        pretty (n ^. nameText) <> "_" <> pretty (n ^. nameId)
 
 instance PrettyCode Iden where
   ppCode :: Member (Reader Options) r => Iden -> Sem r (Doc Ann)
   ppCode i = case i of
-   IdenDefined na -> ppCode na
-   IdenConstructor na -> ppCode na
-   IdenVar na -> ppCode na
+    IdenFunction na -> ppCode na
+    IdenConstructor na -> ppCode na
+    IdenVar na -> ppCode na
 
 instance PrettyCode Application where
   ppCode a = do
@@ -51,6 +51,12 @@ keyword = annotate AnnKeyword . pretty
 
 kwArrow :: Doc Ann
 kwArrow = keyword Str.toAscii
+
+kwForeign :: Doc Ann
+kwForeign = keyword Str.foreign_
+
+kwGhc :: Doc Ann
+kwGhc = keyword Str.ghc
 
 kwData :: Doc Ann
 kwData = keyword Str.data_
@@ -119,60 +125,83 @@ instance PrettyCode FunctionDef where
     funDefName' <- ppCode (f ^. funDefName)
     funDefTypeSig' <- ppCode (f ^. funDefTypeSig)
     clauses' <- mapM (ppClause funDefName') (f ^. funDefClauses)
-    return $ funDefName' <+> kwColonColon <+> funDefTypeSig' <> line
-      <> vsep (toList clauses')
-     where
-     ppClause fun c = do
-       clausePatterns' <- mapM ppCodeAtom (c ^. clausePatterns)
-       clauseBody' <- ppCode (c ^. clauseBody)
-       return $ fun <+> hsep clausePatterns' <+> kwEquals <+> clauseBody'
+    return $
+      funDefName' <+> kwColonColon <+> funDefTypeSig' <> line
+        <> vsep (toList clauses')
+    where
+      ppClause fun c = do
+        clausePatterns' <- mapM ppCodeAtom (c ^. clausePatterns)
+        clauseBody' <- ppCode (c ^. clauseBody)
+        return $ fun <+> hsep clausePatterns' <+> kwEquals <+> clauseBody'
+
+instance PrettyCode Backend where
+  ppCode = \case
+    BackendGhc -> return kwGhc
 
 instance PrettyCode ForeignBlock where
   ppCode ForeignBlock {..} = do
     _foreignBackend' <- ppCode _foreignBackend
-    return $ kwForeign <+> _foreignBackend' <+> lbrace <> line
-        <> pretty _foreignCode <> line <> rbrace
-
+    return $
+      kwForeign <+> _foreignBackend' <+> lbrace <> line
+        <> pretty _foreignCode
+        <> line
+        <> rbrace
 
 -- TODO Jonathan review
 instance PrettyCode ModuleBody where
   ppCode m = do
     types' <- mapM (mapM ppCode) (toList (m ^. moduleInductives))
     funs' <- mapM (mapM ppCode) (toList (m ^. moduleFunctions))
-    let foreigns' = m ^. moduleForeign
-    let everything = map (^. indexedThing) (sortOn (^. indexedIx) (types' ++ funs'))
+    foreigns' <- mapM (mapM ppCode) (toList (m ^. moduleForeigns))
+    let everything = map (^. indexedThing) (sortOn (^. indexedIx) (types' ++ funs' ++ foreigns'))
     return $ vsep2 everything
     where
-    vsep2 = concatWith (\a b -> a <> line <> line <> b)
+      vsep2 = concatWith (\a b -> a <> line <> line <> b)
 
 instance PrettyCode Module where
   ppCode m = do
     name' <- ppCode (m ^. moduleName)
     body' <- ppCode (m ^. moduleBody)
-    return $ kwModule <+> name' <+> kwWhere
-      <> line <> line <> body' <> line
+    return $
+      kwModule <+> name' <+> kwWhere
+        <> line
+        <> line
+        <> body'
+        <> line
 
 parensCond :: Bool -> Doc Ann -> Doc Ann
 parensCond t d = if t then parens d else d
 
-ppPostExpression ::(PrettyCode a, HasAtomicity a, Member (Reader Options) r)  =>
-  Fixity -> a -> Sem r (Doc Ann)
+ppPostExpression ::
+  (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
+  Fixity ->
+  a ->
+  Sem r (Doc Ann)
 ppPostExpression = ppLRExpression isPostfixAssoc
 
-ppRightExpression :: (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
-  Fixity -> a -> Sem r (Doc Ann)
+ppRightExpression ::
+  (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
+  Fixity ->
+  a ->
+  Sem r (Doc Ann)
 ppRightExpression = ppLRExpression isRightAssoc
 
-ppLeftExpression :: (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
-  Fixity -> a -> Sem r (Doc Ann)
+ppLeftExpression ::
+  (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
+  Fixity ->
+  a ->
+  Sem r (Doc Ann)
 ppLeftExpression = ppLRExpression isLeftAssoc
 
-ppLRExpression
-  :: (HasAtomicity a, PrettyCode a, Member (Reader Options) r) =>
-     (Fixity -> Bool) -> Fixity -> a -> Sem r (Doc Ann)
+ppLRExpression ::
+  (HasAtomicity a, PrettyCode a, Member (Reader Options) r) =>
+  (Fixity -> Bool) ->
+  Fixity ->
+  a ->
+  Sem r (Doc Ann)
 ppLRExpression associates fixlr e =
   parensCond (atomParens associates (atomicity e) fixlr)
-      <$> ppCode e
+    <$> ppCode e
 
 ppCodeAtom :: (HasAtomicity c, PrettyCode c, Members '[Reader Options] r) => c -> Sem r (Doc Ann)
 ppCodeAtom c = do

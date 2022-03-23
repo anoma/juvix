@@ -1,9 +1,9 @@
 module MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi where
 
-import MiniJuvix.Syntax.MiniHaskell.Language
-import MiniJuvix.Syntax.MiniHaskell.Pretty.Base
-import MiniJuvix.Syntax.MiniHaskell.Pretty.Ann
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.MiniHaskell.Language
+import MiniJuvix.Syntax.MiniHaskell.Pretty.Ann
+import MiniJuvix.Syntax.MiniHaskell.Pretty.Base
 import Prettyprinter
 import Prettyprinter.Render.Terminal
 
@@ -20,8 +20,11 @@ renderPrettyCode :: PrettyCode c => Options -> c -> Text
 renderPrettyCode opts = renderStrict . docStream opts
 
 docStream :: PrettyCode c => Options -> c -> SimpleDocStream AnsiStyle
-docStream opts = reAnnotateS stylize . layoutPretty defaultLayoutOptions
-    . run . runReader opts . ppCode
+docStream opts =
+  reAnnotateS stylize . layoutPretty defaultLayoutOptions
+    . run
+    . runReader opts
+    . ppCode
 
 stylize :: Ann -> AnsiStyle
 stylize a = case a of

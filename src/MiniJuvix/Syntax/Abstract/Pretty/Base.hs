@@ -1,23 +1,21 @@
-module MiniJuvix.Syntax.Abstract.Pretty.Base (
-  module MiniJuvix.Syntax.Abstract.Pretty.Base,
-  module MiniJuvix.Syntax.Abstract.Pretty.Ann
-                                             ) where
-
-import MiniJuvix.Syntax.Fixity
-import MiniJuvix.Syntax.Usage
-import MiniJuvix.Syntax.Universe
-import Prettyprinter
-import MiniJuvix.Prelude
-
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as S
-import MiniJuvix.Syntax.Abstract.Language
-import MiniJuvix.Syntax.Abstract.Pretty.Ann
+module MiniJuvix.Syntax.Abstract.Pretty.Base
+  ( module MiniJuvix.Syntax.Abstract.Pretty.Base,
+    module MiniJuvix.Syntax.Abstract.Pretty.Ann,
+  )
+where
 
 import qualified MiniJuvix.Internal.Strings as Str
+import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Abstract.Language
+import MiniJuvix.Syntax.Abstract.Pretty.Ann
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as S
+import MiniJuvix.Syntax.Fixity
+import MiniJuvix.Syntax.Universe
+import MiniJuvix.Syntax.Usage
+import Prettyprinter
 
 data Options = Options
-  {
-    _optShowNameId :: Bool,
+  { _optShowNameId :: Bool,
     _optIndent :: Int,
     _optShowDecreasingArgs :: ShowDecrArgs
   }
@@ -25,10 +23,11 @@ data Options = Options
 data ShowDecrArgs = OnlyArg | OnlyRel | ArgRel
 
 toSOptions :: Options -> S.Options
-toSOptions Options {..} = S.defaultOptions {
-  S._optShowNameId = _optShowNameId,
-  S._optIndent = _optIndent
-  }
+toSOptions Options {..} =
+  S.defaultOptions
+    { S._optShowNameId = _optShowNameId,
+      S._optIndent = _optIndent
+    }
 
 class PrettyCode c where
   ppCode :: Members '[Reader Options] r => c -> Sem r (Doc Ann)
@@ -41,8 +40,7 @@ ppSCode c = do
 defaultOptions :: Options
 defaultOptions =
   Options
-    {
-      _optShowNameId = False,
+    { _optShowNameId = False,
       _optIndent = 2,
       _optShowDecreasingArgs = OnlyRel
     }
@@ -55,7 +53,7 @@ runPrettyCode opts = run . runReader opts . ppCode
 
 instance PrettyCode Iden where
   ppCode i = case i of
-    IdenDefined n -> ppSCode n
+    IdenFunction n -> ppSCode n
     IdenConstructor n -> ppSCode n
     IdenInductive n -> ppSCode n
     IdenVar n -> ppSCode n
@@ -101,9 +99,9 @@ kwColonOmega = keyword Str.colonOmegaUnicode
 
 instance PrettyCode Usage where
   ppCode u = return $ case u of
-     UsageNone -> kwColonZero
-     UsageOnce -> kwColonOne
-     UsageOmega -> kwColon
+    UsageNone -> kwColonZero
+    UsageOnce -> kwColonOne
+    UsageOmega -> kwColon
 
 instance PrettyCode FunctionParameter where
   ppCode FunctionParameter {..} = do
@@ -124,24 +122,36 @@ instance PrettyCode Function where
 parensCond :: Bool -> Doc Ann -> Doc Ann
 parensCond t d = if t then parens d else d
 
-ppPostExpression ::(PrettyCode a, HasAtomicity a, Member (Reader Options) r)  =>
-  Fixity -> a -> Sem r (Doc Ann)
+ppPostExpression ::
+  (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
+  Fixity ->
+  a ->
+  Sem r (Doc Ann)
 ppPostExpression = ppLRExpression isPostfixAssoc
 
-ppRightExpression :: (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
-  Fixity -> a -> Sem r (Doc Ann)
+ppRightExpression ::
+  (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
+  Fixity ->
+  a ->
+  Sem r (Doc Ann)
 ppRightExpression = ppLRExpression isRightAssoc
 
-ppLeftExpression :: (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
-  Fixity -> a -> Sem r (Doc Ann)
+ppLeftExpression ::
+  (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
+  Fixity ->
+  a ->
+  Sem r (Doc Ann)
 ppLeftExpression = ppLRExpression isLeftAssoc
 
-ppLRExpression
-  :: (HasAtomicity a, PrettyCode a, Member (Reader Options) r) =>
-     (Fixity -> Bool) -> Fixity -> a -> Sem r (Doc Ann)
+ppLRExpression ::
+  (HasAtomicity a, PrettyCode a, Member (Reader Options) r) =>
+  (Fixity -> Bool) ->
+  Fixity ->
+  a ->
+  Sem r (Doc Ann)
 ppLRExpression associates fixlr e =
   parensCond (atomParens associates (atomicity e) fixlr)
-      <$> ppCode e
+    <$> ppCode e
 
 ppCodeAtom :: (HasAtomicity c, PrettyCode c, Members '[Reader Options] r) => c -> Sem r (Doc Ann)
 ppCodeAtom c = do

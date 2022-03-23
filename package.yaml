@@ -78,6 +78,7 @@ default-extensions:
 - OverloadedStrings
 - PolyKinds
 - QuasiQuotes
+- RankNTypes
 - RecordWildCards
 - ScopedTypeVariables
 - StandaloneDeriving

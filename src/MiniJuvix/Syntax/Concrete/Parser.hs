@@ -6,11 +6,11 @@ import qualified Data.List.NonEmpty.Extra as NonEmpty
 import Data.Singletons
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
+import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Base (MonadParsec)
 import qualified MiniJuvix.Syntax.Concrete.Base as P
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Lexer hiding (symbol)
-import MiniJuvix.Prelude
 
 --------------------------------------------------------------------------------
 -- Running the parser
@@ -147,7 +147,7 @@ import_ = do
 expressionAtom :: MonadParsec e Text m => m (ExpressionAtom 'Parsed)
 expressionAtom =
   do
-     AtomLiteral <$> P.try literal
+    AtomLiteral <$> P.try literal
     <|> AtomIdentifier <$> name
     <|> (AtomUniverse <$> universe)
     <|> (AtomLambda <$> lambda)
@@ -166,8 +166,8 @@ expressionAtoms = ExpressionAtoms <$> P.some expressionAtom
 
 literal :: MonadParsec e Text m => m Literal
 literal =
-      LitInteger <$> integer
-  <|> LitString <$> string
+  LitInteger <$> integer
+    <|> LitString <$> string
 
 --------------------------------------------------------------------------------
 -- Match expression
@@ -319,7 +319,7 @@ lambdaClause = do
 lambda :: MonadParsec e Text m => m (Lambda 'Parsed)
 lambda = do
   kwLambda
-  lambdaClauses ← braces (P.sepEndBy lambdaClause kwSemicolon)
+  lambdaClauses <- braces (P.sepEndBy lambdaClause kwSemicolon)
   return Lambda {..}
 
 -------------------------------------------------------------------------------
@@ -355,7 +355,7 @@ constructorDef = do
 
 patternAtom :: forall e m. MonadParsec e Text m => m (PatternAtom 'Parsed)
 patternAtom =
-  PatternAtomName <$> name
+  PatternAtomIden <$> name
     <|> PatternAtomWildcard <$ kwWildcard
     <|> (PatternAtomParens <$> parens patternAtoms)
 
@@ -421,10 +421,10 @@ openModule = do
   openPublic <- maybe NoPublic (const Public) <$> optional kwPublic
   return OpenModule {..}
   where
-  usingOrHiding :: m UsingHiding
-  usingOrHiding =
-    (kwUsing >> (Using <$> symbolList))
-     <|> (kwHiding >> (Hiding <$> symbolList))
+    usingOrHiding :: m UsingHiding
+    usingOrHiding =
+      (kwUsing >> (Using <$> symbolList))
+        <|> (kwHiding >> (Hiding <$> symbolList))
 
 --------------------------------------------------------------------------------
 -- Debugging statements

@@ -1,7 +1,7 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ann where
 
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Syntax.Concrete.Language (TopModulePath)
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 
 data Ann
   = AnnKind S.NameKind

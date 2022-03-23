@@ -5,7 +5,6 @@ import Control.Monad.Extra
 import qualified MiniJuvix.Syntax.Concrete.Language as M
 import qualified MiniJuvix.Syntax.Concrete.Parser as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
-import qualified MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi as H
 import qualified MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi as Micro
 import qualified MiniJuvix.Termination as T
 import qualified MiniJuvix.Translation.ScopedToAbstract as A
@@ -239,7 +238,8 @@ go c = do
     MiniHaskell MiniHaskellOptions {..} -> do
       m <- parseModuleIO _mhaskellInputFile
       s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
-      a <- fromRightIO' putStrLn (return $ A.translateModule s)
+      -- a <- fromRightIO' putStrLn (return $ A.translateModule s)
+      fromRightIO' putStrLn (return $ A.translateModule s)
       -- let mini = Micro.translateModule a
       -- Micro.printPrettyCodeDefault mini
       -- TODO

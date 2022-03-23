@@ -1,13 +1,14 @@
-module MiniJuvix.Syntax.Concrete.Scoped.Error (
-  module MiniJuvix.Syntax.Concrete.Scoped.Error.Types,
-  module MiniJuvix.Syntax.Concrete.Scoped.Error,
-  module MiniJuvix.Syntax.Concrete.Scoped.Error.Pretty
-  ) where
+module MiniJuvix.Syntax.Concrete.Scoped.Error
+  ( module MiniJuvix.Syntax.Concrete.Scoped.Error.Types,
+    module MiniJuvix.Syntax.Concrete.Scoped.Error,
+    module MiniJuvix.Syntax.Concrete.Scoped.Error.Pretty,
+  )
+where
 
-import MiniJuvix.Syntax.Concrete.Scoped.Error.Types
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Scoped.Error.Pretty
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Error.Pretty as P
+import MiniJuvix.Syntax.Concrete.Scoped.Error.Types
 import Prettyprinter
 
 -- | An error that happens during scope checking. Note that it is defined here
@@ -30,8 +31,8 @@ data ScopeError
   | ErrAmbiguousModuleSym AmbiguousModuleSym
   | ErrUnusedOperatorDef UnusedOperatorDef
   | ErrWrongTopModuleName WrongTopModuleName
-  -- | Eventually this needs to go away
-  | ErrGeneric Text
+  | -- | Eventually this needs to go away
+    ErrGeneric Text
   deriving stock (Show)
 
 ppScopeError :: ScopeError -> Doc Eann

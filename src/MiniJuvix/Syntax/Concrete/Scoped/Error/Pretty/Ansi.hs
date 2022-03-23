@@ -1,9 +1,9 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Error.Pretty.Ansi where
 
-import Prettyprinter
 import MiniJuvix.Prelude
-import Prettyprinter.Render.Terminal
 import MiniJuvix.Syntax.Concrete.Scoped.Error.Pretty.Base
+import Prettyprinter
+import Prettyprinter.Render.Terminal
 
 renderAnsi :: SimpleDocStream Eann -> Text
 renderAnsi = renderStrict . reAnnotateS stylize

@@ -22,45 +22,25 @@ newtype SymbolInfo = SymbolInfo
   }
   deriving newtype (Show, Semigroup, Monoid)
 
-type SymbolEntry = S.Name' ()
-
--- data SymbolEntry' = SymbolEntry' {
---   _entryNameInfo :: NameInfo
-
---   }
-
--- | Symbols that a module exports
-newtype ExportInfo = ExportInfo {
-   _exportSymbols :: HashMap Symbol SymbolEntry
-  }
-
--- | A module entry for either a local or a top module.
-type ModuleEntry = Σ ModuleIsTop (TyCon1 ModuleEntry')
-
-mkModuleEntry :: SingI t => ModuleEntry' t -> ModuleEntry
-mkModuleEntry = (sing :&:)
-
-data ModuleEntry' (t :: ModuleIsTop) = ModuleEntry' {
-  _moduleEntryExport :: ExportInfo,
-  _moduleEntryScoped :: Module 'Scoped t
-  }
+mkModuleRef' :: SingI t => ModuleRef'' 'S.NotConcrete t -> ModuleRef' 'S.NotConcrete
+mkModuleRef' m = ModuleRef' (sing :&: m)
 
 data Scope = Scope
   { _scopePath :: S.AbsModulePath,
     _scopeFixities :: HashMap Symbol OperatorSyntaxDef,
     _scopeSymbols :: HashMap Symbol SymbolInfo,
-    _scopeTopModules :: HashMap TopModulePath S.ModuleNameId,
+    _scopeTopModules :: HashMap TopModulePath (ModuleRef'' 'S.NotConcrete 'ModuleTop),
     _scopeBindGroup :: HashMap Symbol LocalVariable
   }
- deriving stock (Show)
+  deriving stock (Show)
+
 makeLenses ''ExportInfo
 makeLenses ''SymbolInfo
 makeLenses ''LocalVars
 makeLenses ''Scope
-makeLenses ''ModuleEntry'
 
 newtype ModulesCache = ModulesCache
-  { _cachedModules :: HashMap TopModulePath (ModuleEntry' 'ModuleTop)
+  { _cachedModules :: HashMap TopModulePath (ModuleRef'' 'S.NotConcrete 'ModuleTop)
   }
 
 makeLenses ''ModulesCache
@@ -73,20 +53,23 @@ data ScopeParameters = ScopeParameters
     -- | Used for import cycle detection.
     _scopeTopParents :: [Import 'Parsed]
   }
+
 makeLenses ''ScopeParameters
 
 data ScoperState = ScoperState
   { _scoperModulesCache :: ModulesCache,
     _scoperFreeNames :: Stream S.NameId,
-    _scoperModules :: HashMap S.ModuleNameId ModuleEntry
+    _scoperModules :: HashMap S.ModuleNameId (ModuleRef' 'S.NotConcrete)
   }
+
 makeLenses ''ScoperState
 
 emptyScope :: S.AbsModulePath -> Scope
-emptyScope absPath = Scope
-        { _scopePath = absPath,
-          _scopeFixities = mempty,
-          _scopeSymbols = mempty,
-          _scopeTopModules = mempty,
-          _scopeBindGroup = mempty
-        }
+emptyScope absPath =
+  Scope
+    { _scopePath = absPath,
+      _scopeFixities = mempty,
+      _scopeSymbols = mempty,
+      _scopeTopModules = mempty,
+      _scopeBindGroup = mempty
+    }

@@ -8,8 +8,8 @@ module MiniJuvix.Syntax.Concrete.Base
 where
 
 import Control.Monad.Combinators.Expr
-import Control.Monad.Combinators.NonEmpty (sepBy1, some, sepEndBy1)
+import Control.Monad.Combinators.NonEmpty (sepBy1, sepEndBy1, some)
 import Data.List.NonEmpty (NonEmpty)
 import MiniJuvix.Prelude hiding (some)
-import Text.Megaparsec hiding (sepBy1, some, sepEndBy1)
+import Text.Megaparsec hiding (sepBy1, sepEndBy1, some)
 import Text.Megaparsec.Char

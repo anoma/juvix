@@ -1,23 +1,28 @@
-module MiniJuvix.Syntax.MiniHaskell.Language (
-  module MiniJuvix.Syntax.MiniHaskell.Language,
-  module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind,
-  module MiniJuvix.Syntax.Concrete.Scoped.Name
-   ) where
+module MiniJuvix.Syntax.MiniHaskell.Language
+  ( module MiniJuvix.Syntax.MiniHaskell.Language,
+    module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind,
+    module MiniJuvix.Syntax.Concrete.Scoped.Name,
+  )
+where
 
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Concrete.Scoped.Name (NameId (..))
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
-import MiniJuvix.Syntax.Concrete.Scoped.Name (NameId(..))
 import MiniJuvix.Syntax.Fixity
 
 type FunctionName = Name
+
 type VarName = Name
+
 type ConstrName = Name
+
 type InductiveName = Name
 
-data Name = Name {
-    _nameText :: Text,
+data Name = Name
+  { _nameText :: Text,
     _nameKind :: NameKind
-    }
+  }
+
 makeLenses ''Name
 
 instance HasNameKind Name where
@@ -28,23 +33,23 @@ data Module = Module
     _moduleBody :: ModuleBody
   }
 
-newtype ModuleBody = ModuleBody {
-  _moduleStatements :: [Statement]
+newtype ModuleBody = ModuleBody
+  { _moduleStatements :: [Statement]
   }
   deriving newtype (Monoid, Semigroup)
 
-data Statement =
-  StatementInductiveDef InductiveDef
+data Statement
+  = StatementInductiveDef InductiveDef
   | StatementFunctionDef FunctionDef
 
-data FunctionDef = FunctionDef {
-   _funDefName :: FunctionName,
-   _funDefTypeSig :: Type,
-   _funDefClauses :: NonEmpty FunctionClause
+data FunctionDef = FunctionDef
+  { _funDefName :: FunctionName,
+    _funDefTypeSig :: Type,
+    _funDefClauses :: NonEmpty FunctionClause
   }
 
-data FunctionClause = FunctionClause {
-    _clausePatterns :: [Pattern],
+data FunctionClause = FunctionClause
+  { _clausePatterns :: [Pattern],
     _clauseBody :: Expression
   }
 
@@ -53,22 +58,23 @@ type Iden = Name
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
-  -- TODO Add a constructor for literals
 
-data Application = Application {
-  _appLeft :: Expression,
-  _appRight :: Expression
+-- TODO Add a constructor for literals
+
+data Application = Application
+  { _appLeft :: Expression,
+    _appRight :: Expression
   }
 
-data Function = Function {
-  _funLeft :: Type,
-  _funRight :: Type
+data Function = Function
+  { _funLeft :: Type,
+    _funRight :: Type
   }
 
 -- | Fully applied constructor in a pattern.
-data ConstructorApp = ConstructorApp {
-  _constrAppConstructor :: Name,
-  _constrAppParameters :: [Pattern]
+data ConstructorApp = ConstructorApp
+  { _constrAppConstructor :: Name,
+    _constrAppParameters :: [Pattern]
   }
 
 data Pattern
@@ -88,9 +94,9 @@ data InductiveConstructorDef = InductiveConstructorDef
 
 type TypeIden = InductiveName
 
-data Type =
-  TypeIden TypeIden
- | TypeFunction Function
+data Type
+  = TypeIden TypeIden
+  | TypeFunction Function
 
 makeLenses ''Module
 makeLenses ''Function
@@ -120,8 +126,8 @@ instance HasAtomicity Type where
 
 instance HasAtomicity ConstructorApp where
   atomicity (ConstructorApp _ args)
-   | null args = Atom
-   | otherwise = Aggregate appFixity
+    | null args = Atom
+    | otherwise = Aggregate appFixity
 
 instance HasAtomicity Pattern where
   atomicity p = case p of
