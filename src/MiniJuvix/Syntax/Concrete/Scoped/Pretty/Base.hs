@@ -290,8 +290,9 @@ instance PrettyCode ForeignBlock where
   ppCode ForeignBlock {..} = do
     _foreignBackend' <- ppCode _foreignBackend
     return $
-      kwForeign <+> _foreignBackend' <+> lbrace
+      kwForeign <+> _foreignBackend' <+> lbrace <> line
         <> pretty _foreignCode
+        <> line
         <> rbrace
 
 instance PrettyCode BackendItem where
@@ -354,7 +355,7 @@ instance (SingI s, SingI t) => PrettyCode (Module s t) where
     where
       lastSemicolon = case sing :: SModuleIsTop t of
         SModuleLocal -> Nothing
-        SModuleTop -> Just kwSemicolon
+        SModuleTop -> Just (kwSemicolon <> line)
 
 instance PrettyCode Precedence where
   ppCode p = return $ case p of

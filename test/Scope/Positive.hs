@@ -77,4 +77,6 @@ tests = [
      "." "HelloWorld.mjuvix"
   , PosTest "Axiom with backends"
      "." "Axiom.mjuvix"
+  , PosTest "Foreign block parsing"
+     "." "Foreign.mjuvix"
  ]

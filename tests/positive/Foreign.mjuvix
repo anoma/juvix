@@ -1,0 +1,27 @@
+module Foreign;
+
+foreign ghc {};
+
+foreign ghc { import Foo.Bar };
+
+foreign agda { import Foo.Bar };
+
+foreign ghc { import Foo.Bar
+  import Foo.Baz };
+
+foreign ghc {
+  import Foo.Bar
+  import Foo.Baz };
+
+foreign ghc {
+  import Foo.Bar
+  import Foo.Baz
+};
+
+foreign ghc {
+  import Foo.Bar
+
+     import Foo.Baz
+};
+
+end;

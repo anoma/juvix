@@ -15,7 +15,7 @@ import Data.Text.IO
 
 axiom Action : Type {
  ghc ↦ "IO ()";
- c   ↦ "void";
+ agda   ↦ "void";
 };
 
 axiom String : Type;
