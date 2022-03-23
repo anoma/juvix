@@ -5,6 +5,7 @@ import Control.Monad.Extra
 import qualified MiniJuvix.Syntax.Concrete.Language as M
 import qualified MiniJuvix.Syntax.Concrete.Parser as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text as T
 import qualified MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi as Micro
 import qualified MiniJuvix.Termination as T
 import qualified MiniJuvix.Translation.ScopedToAbstract as A
@@ -37,7 +38,8 @@ data ScopeOptions = ScopeOptions
   { _scopeRootDir :: FilePath,
     _scopeInputFiles :: [FilePath],
     _scopeShowIds :: Bool,
-    _scopeInlineImports :: Bool
+    _scopeInlineImports :: Bool,
+    _scopeNoColors :: Bool
   }
 
 data ParseOptions = ParseOptions
@@ -111,6 +113,11 @@ parseScope = do
     switch
       ( long "inline-imports"
           <> help "Show the code of imported modules next to the import statement"
+      )
+  _scopeNoColors <-
+    switch
+      ( long "no-colors"
+          <> help "Disable ansi formatting"
       )
   pure ScopeOptions {..}
 
@@ -199,6 +206,7 @@ mkScopePrettyOptions ScopeOptions {..} =
   M.defaultOptions
     { M._optShowNameId = _scopeShowIds,
       M._optInlineImports = _scopeInlineImports
+
     }
 
 parseModuleIO :: FilePath -> IO (M.Module 'M.Parsed 'M.ModuleTop)
@@ -221,7 +229,12 @@ go c = do
       forM_ _scopeInputFiles $ \scopeInputFile -> do
         m <- parseModuleIO scopeInputFile
         s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
-        M.printPrettyCode (mkScopePrettyOptions opts) s
+        printer (mkScopePrettyOptions opts) s
+        where
+          printer
+            | not _scopeNoColors = M.printPrettyCode
+            | otherwise = T.printPrettyCode
+
     Parse ParseOptions {..} -> do
       m <- parseModuleIO _parseInputFile
       if _parseNoPrettyShow then print m else pPrint m

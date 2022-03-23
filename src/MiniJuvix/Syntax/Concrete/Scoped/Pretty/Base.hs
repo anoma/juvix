@@ -17,7 +17,7 @@ data Options = Options
   { _optShowNameId :: Bool,
     _optInlineImports :: Bool,
     _optIndent :: Int
-  }
+}
 
 defaultOptions :: Options
 defaultOptions =
