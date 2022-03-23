@@ -51,12 +51,15 @@ stan :
 setup:
 	stack build --only-dependencies --jobs $(THREADS)
 
+.PHONY : test
 test:
 	stack test --fast --jobs $(THREADS)
 
+.PHONY : install
 install:
 	stack install --fast --jobs $(THREADS)
 
+.PHONY : build
 build:
 	stack build --fast --jobs $(THREADS)
 
