@@ -168,7 +168,7 @@ bindInductiveSymbol def =
 
 bindAxiomSymbol ::
   Members '[Error ScopeError, State ScoperState, State Scope] r =>
-  HashMap Backend Text ->
+  [BackendItem] ->
   Expression ->
   Symbol ->
   Sem r S.Symbol
@@ -766,7 +766,7 @@ checkAxiomDef ::
   Sem r (AxiomDef 'Scoped)
 checkAxiomDef AxiomDef {..} = do
   axiomType' <- localScope $ checkParseExpressionAtoms _axiomType
-  axiomName' <- bindAxiomSymbol undefined axiomType' _axiomName
+  axiomName' <- bindAxiomSymbol _axiomBackendItems axiomType' _axiomName
   return
     AxiomDef
       { _axiomName = axiomName',

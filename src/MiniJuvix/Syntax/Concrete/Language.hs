@@ -544,7 +544,7 @@ type AxiomRef = AxiomRef' 'S.Concrete
 data AxiomRef' (n :: S.IsConcrete) = AxiomRef'
   { _axiomRefName :: RefNameType n,
     _axiomRefType :: Expression,
-    _axiomRefBackends :: HashMap Backend Text
+    _axiomRefBackends :: [BackendItem]
   }
 
 instance Eq (RefNameType s) => Eq (AxiomRef' s) where

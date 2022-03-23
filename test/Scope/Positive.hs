@@ -75,4 +75,6 @@ tests = [
      "." "Literals.mjuvix"
   , PosTest "Hello World backends"
      "." "HelloWorld.mjuvix"
+  , PosTest "Axiom with backends"
+     "." "Axiom.mjuvix"
  ]
