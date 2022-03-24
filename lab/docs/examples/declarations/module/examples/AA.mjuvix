@@ -1,0 +1,4 @@
+module A;
+  module A;
+  end;
+end;

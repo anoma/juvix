@@ -1,0 +1,51 @@
+-- The syntax is very similar to that of Agda. However, we need some extra ';'
+module Example where
+
+   -- The natural numbers can be inductively defined thus:
+   data ℕ : Type 0 ;
+      | zero : ℕ
+      | suc : ℕ → ℕ ;
+
+   -- A list of elements with typed size:
+   data Vec (A : Type) : ℕ → Type 0 ;
+     | nil : A → Vec A zero
+     | cons : (n : ℕ) → A → Vec A n → Vec A (suc n) ;
+
+   module ℕ-Ops where
+     infixl 6 + ;
+     + : ℕ → ℕ → ℕ ;
+     + zero b = b ;
+     + (suc a) b = suc (a + b) ;
+
+     infixl 7 * ;
+     * : ℕ → ℕ → ℕ ;
+     * zero b = zero ;
+     * (suc a) b = b + a * b ;
+   end
+
+   module M1 (A : Type 0) where
+      aVec : ℕ → Type 0 ;
+      aVec = Vec A ;
+   end
+
+   module Bot where
+      data ⊥ : Type 0 ;
+   end
+
+   open module M1 ℕ ;
+
+   two : ℕ ;
+   two = suc (suc zero) ;
+
+   id : (A : Type) → A → A ;
+   id _ = λ x → x ;
+
+   natVec : aVec (cons zero) ;
+   natVec = cons (two * two + one) nil ;
+     -- The 'where' part belongs to the clause
+     where
+     open module ℕ-Ops ;
+     one : ℕ ;
+     one = suc zero ;
+
+end
