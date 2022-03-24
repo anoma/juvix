@@ -1,16 +1,16 @@
 name:            minijuvix
-version:         0.0.0.0
+version:         0.1.0
 license:         GPL-3.0-only
 license-file:    LICENSE
-copyright:       (c) 2021-2022 Heliax AG.
+copyright:       (c) 2022- Heliax AG.
 maintainer:      The PLT Team at Heliax AG <hello@heliax.dev>
 author:          [ Jonathan Prieto-Cubides , Jan Mas Rovira , Paul Cadman ]
 tested-with:     ghc == 9.2.2
-homepage:        https://github.com/heliaxdev/MiniJuvix
-bug-reports:     https://github.com/heliaxdev/MiniJuvix/issues
-description:     A tiny dependent typed programming language for experimentation.
+homepage:        https://github.com/heliaxdev/minijuvix
+bug-reports:     https://github.com/heliaxdev/minijuvix/issues
+description:     The MiniJuvix compiler
 category:        Compilers/Interpreters
-github:          heliaxdev/MiniJuvix
+github:          heliaxdev/minijuvix
 
 extra-source-files:
 - README.md
@@ -18,7 +18,7 @@ extra-source-files:
 
 dependencies:
 - aeson == 2.0.*
-- algebraic-graphs == 0.6.*
+# - algebraic-graphs == 0.6.*
 - base == 4.16.*
 - blaze-html == 0.9.*
 - blaze-markup == 0.8.*

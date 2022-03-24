@@ -1,6 +1,6 @@
 module MiniJuvix.Termination.Types.SizeRelation where
 
-import Algebra.Graph.Label
+-- import Algebra.Graph.Label
 import MiniJuvix.Prelude
 import Prettyprinter
 
