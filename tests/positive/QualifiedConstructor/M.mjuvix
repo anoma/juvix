@@ -1,0 +1,22 @@
+module M;
+
+  module N;
+    module O;
+      inductive T {
+        A : T;
+      };
+    end;
+  end;
+
+  open N;
+  open O using { T; A };
+
+  module O;
+    axiom A : Type;
+  end;
+
+  open O;
+
+  fun : T → T;
+  fun A ≔ T;
+end;

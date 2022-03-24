@@ -79,4 +79,10 @@ tests = [
      "." "Axiom.mjuvix"
   , PosTest "Foreign block parsing"
      "." "Foreign.mjuvix"
+  , PosTest "Multiple modules non-ambiguous symbol - same file"
+     "QualifiedSymbol" "M.mjuvix"
+  , PosTest "Multiple modules non-ambiguous symbol"
+     "QualifiedSymbol2" "N.mjuvix"
+  , PosTest "Multiple modules constructor non-ambiguous symbol"
+     "QualifiedConstructor" "M.mjuvix"
  ]
