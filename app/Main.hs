@@ -252,7 +252,7 @@ go c = do
       m <- parseModuleIO _mhaskellInputFile
       s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       -- a <- fromRightIO' putStrLn (return $ A.translateModule s)
-      fromRightIO' putStrLn (return $ A.translateModule s)
+      _ <- fromRightIO' putStrLn (return $ A.translateModule s)
       -- let mini = Micro.translateModule a
       -- Micro.printPrettyCodeDefault mini
       -- TODO
