@@ -50,6 +50,8 @@ dependencies:
 # when running the tests. Is there a better solution?
 - tasty
 - tasty-hunit
+- Diff == 0.4.*
+- pretty-show == 1.10.*
 
 # TODO organize this
 ghc-options:
@@ -89,7 +91,6 @@ executables:
     dependencies:
     - minijuvix
     - optparse-applicative == 0.17.*
-    - pretty-show == 1.10.*
     verbatim:
       default-language: GHC2021
 
