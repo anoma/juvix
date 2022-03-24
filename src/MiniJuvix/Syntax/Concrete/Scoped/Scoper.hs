@@ -1,8 +1,6 @@
 -- | Limitations:
 -- 1. A symbol introduced by a type signature can only be used once per Module.
 --
--- Efficiency considerations:
--- 1. The expression parser should be cached somehow. Consider Polysemy.View
 module MiniJuvix.Syntax.Concrete.Scoped.Scoper where
 
 import qualified Control.Monad.Combinators.Expr as P
