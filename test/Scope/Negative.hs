@@ -111,4 +111,9 @@ tests = [
    "AmbiguousExport.mjuvix" $ \case
       ErrMultipleExport {} -> Nothing
       _ -> wrongError
+  ,  NegTest "Ambiguous nested modules"
+    "."
+   "AmbiguousModule.mjuvix" $ \case
+      ErrAmbiguousModuleSym {} -> Nothing
+      _ -> wrongError
   ]

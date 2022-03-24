@@ -100,7 +100,8 @@ data AmbiguousSym = AmbiguousSym
   }
   deriving stock (Show)
 
-newtype AmbiguousModuleSym = AmbiguousModuleSym
-  { _ambiguousModSymEntires :: [SymbolEntry]
+data AmbiguousModuleSym = AmbiguousModuleSym
+  { _ambiguousModName :: Name,
+    _ambiguousModSymEntires :: [SymbolEntry]
   }
   deriving stock (Show)

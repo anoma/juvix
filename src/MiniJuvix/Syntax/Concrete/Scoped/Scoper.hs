@@ -623,7 +623,7 @@ lookupModuleSymbol n = do
   case mapMaybe getModuleRef es of
     [] -> notInScope
     [x] -> return (overModuleRef'' (set (moduleRefName . S.nameConcrete) n) x)
-    _ -> throw (ErrAmbiguousModuleSym (AmbiguousModuleSym es))
+    _ -> throw (ErrAmbiguousModuleSym (AmbiguousModuleSym n es))
   where
     notInScope = throw (ErrModuleNotInScope (ModuleNotInScope n))
     (path, sym) = case n of

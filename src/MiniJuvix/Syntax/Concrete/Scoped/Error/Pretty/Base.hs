@@ -155,12 +155,14 @@ instance PrettyError UnusedOperatorDef where
       <> ppCode _unusedOperatorDef
 
 instance PrettyError AmbiguousSym where
-  ppError AmbiguousSym {..} =
-    "The symbol" <+> ppCode _ambiguousSymName <+> "at" <+> pretty (getLoc _ambiguousSymName) <+> "is ambiguous." <> line
-      <> "It could be any of:"
-      <> line
-      <> indent' (vsep (map ppCode _ambiguousSymEntires))
+  ppError AmbiguousSym {..} = ambiguousMessage _ambiguousSymName _ambiguousSymEntires
 
 instance PrettyError AmbiguousModuleSym where
-  ppError AmbiguousModuleSym {} =
-    "TODO Ambiguous module symbol"
+  ppError AmbiguousModuleSym {..} = ambiguousMessage _ambiguousModName _ambiguousModSymEntires
+
+ambiguousMessage :: Name -> [SymbolEntry] -> Doc Eann
+ambiguousMessage n es =
+    "The symbol" <+> ppCode n <+> "at" <+> pretty (getLoc n) <+> "is ambiguous." <> line
+      <> "It could be any of:"
+      <> line
+      <> indent' (vsep (map ppCode es))

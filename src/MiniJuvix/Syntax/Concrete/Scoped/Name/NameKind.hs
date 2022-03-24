@@ -57,7 +57,7 @@ nameKindAnsi k = case k of
   KNameConstructor -> colorDull Magenta
   KNameInductive -> colorDull Green
   KNameAxiom -> colorDull Red
-  KNameLocalModule -> mempty
+  KNameLocalModule -> color Cyan
   KNameFunction -> colorDull Yellow
   KNameLocal -> mempty
-  KNameTopModule -> mempty
+  KNameTopModule -> color Cyan
