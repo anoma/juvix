@@ -4,8 +4,8 @@ license:         GPL-3.0-only
 license-file:    LICENSE
 copyright:       (c) 2021-2022 Heliax AG.
 maintainer:      The PLT Team at Heliax AG <hello@heliax.dev>
-author:          [ Jonathan Prieto-Cubides , Jan Mas Rovira ]
-tested-with:     ghc == 9.0.2
+author:          [ Jonathan Prieto-Cubides , Jan Mas Rovira , Paul Cadman ]
+tested-with:     ghc == 9.2.2
 homepage:        https://github.com/heliaxdev/MiniJuvix
 bug-reports:     https://github.com/heliaxdev/MiniJuvix/issues
 description:     A tiny dependent typed programming language for experimentation.
@@ -62,35 +62,24 @@ ghc-options:
 
 default-extensions:
 - DataKinds
-- DeriveFoldable
-- DeriveGeneric
-- DeriveLift
-- DeriveTraversable
 - DerivingStrategies
-- FlexibleContexts
-- FlexibleInstances
 - GADTs
-- GeneralizedNewtypeDeriving
-- InstanceSigs
-- KindSignatures
 - LambdaCase
 - NoImplicitPrelude
 - OverloadedStrings
-- PolyKinds
 - QuasiQuotes
-- RankNTypes
 - RecordWildCards
-- ScopedTypeVariables
-- StandaloneDeriving
-- StandaloneKindSignatures
 - TemplateHaskell
-- TypeApplications
 - TypeFamilyDependencies
-- TypeOperators
 - UnicodeSyntax
+
+# verbatim:
+#   default-language: GHC2021
 
 library:
   source-dirs: src
+  verbatim:
+    default-language: GHC2021
 
 executables:
   minijuvix:
@@ -100,6 +89,8 @@ executables:
     - minijuvix
     - optparse-applicative == 0.17.*
     - pretty-show == 1.10.*
+    verbatim:
+      default-language: GHC2021
 
 tests:
   minijuvix-test:
@@ -107,3 +98,5 @@ tests:
     source-dirs:         test
     dependencies:
     - minijuvix
+    verbatim:
+      default-language: GHC2021
