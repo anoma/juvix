@@ -116,4 +116,9 @@ tests = [
    "AmbiguousModule.mjuvix" $ \case
       ErrAmbiguousModuleSym {} -> Nothing
       _ -> wrongError
+  ,  NegTest "Ambiguous nested constructors"
+    "."
+   "AmbiguousConstructor.mjuvix" $ \case
+      ErrAmbiguousSym {} -> Nothing
+      _ -> wrongError
   ]
