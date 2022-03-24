@@ -1,4 +1,0 @@
-module Top;
-  module A; end;
-  module A; end;
-end;

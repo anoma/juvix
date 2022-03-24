@@ -1,15 +1,16 @@
 {-# LANGUAGE ApplicativeDo #-}
+
 module Commands.Termination where
 
 import Commands.Extra
-import qualified Data.Text as Text
 import Control.Monad.Extra
-import Options.Applicative
-import qualified MiniJuvix.Syntax.Abstract.Pretty.Base as A
+import qualified Data.Text as Text
 import MiniJuvix.Prelude hiding (Doc)
+import qualified MiniJuvix.Syntax.Abstract.Pretty.Base as A
+import Options.Applicative
 
-data TerminationCommand =
-  Calls CallsOptions
+data TerminationCommand
+  = Calls CallsOptions
   | CallGraph CallGraphOptions
 
 data CallsOptions = CallsOptions
@@ -33,14 +34,18 @@ parseCalls = do
           <> help "Show the unique number of each identifier"
       )
   _callsFunctionNameFilter <-
-    fmap msum . optional $ nonEmpty . Text.words <$> option str
-      ( long "function"
-          <> short 'f'
-          <> metavar "fun1 fun2 ..."
-          <> help "Only shows the specified functions"
-      )
+    fmap msum . optional $
+      nonEmpty . Text.words
+        <$> option
+          str
+          ( long "function"
+              <> short 'f'
+              <> metavar "fun1 fun2 ..."
+              <> help "Only shows the specified functions"
+          )
   _callsShowDecreasingArgs <-
-    option decrArgsParser
+    option
+      decrArgsParser
       ( long "show-decreasing-args"
           <> short 'd'
           <> value A.ArgRel
@@ -48,24 +53,26 @@ parseCalls = do
       )
   pure CallsOptions {..}
   where
-  decrArgsParser :: ReadM A.ShowDecrArgs
-  decrArgsParser = eitherReader $ \s ->
-    case map toLower s of
-      "argument" -> return A.OnlyArg
-      "relation" -> return A.OnlyRel
-      "both" -> return A.ArgRel
-      _ -> Left "bad argument"
-
+    decrArgsParser :: ReadM A.ShowDecrArgs
+    decrArgsParser = eitherReader $ \s ->
+      case map toLower s of
+        "argument" -> return A.OnlyArg
+        "relation" -> return A.OnlyRel
+        "both" -> return A.ArgRel
+        _ -> Left "bad argument"
 
 parseCallGraph :: Parser CallGraphOptions
 parseCallGraph = do
   _graphInputFile <- parseInputFile
   _graphFunctionNameFilter <-
-    fmap msum . optional $ nonEmpty . Text.words <$> option str
-      ( long "function"
-          <> short 'f'
-          <> help "Only shows the specified function"
-      )
+    fmap msum . optional $
+      nonEmpty . Text.words
+        <$> option
+          str
+          ( long "function"
+              <> short 'f'
+              <> help "Only shows the specified function"
+          )
   pure CallGraphOptions {..}
 
 parseTerminationCommand :: Parser TerminationCommand

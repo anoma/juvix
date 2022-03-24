@@ -238,3 +238,12 @@ minimumMaybe l = if null l then Nothing else Just (minimum l)
 
 fromText :: IsString a => Text -> a
 fromText = fromString . unpack
+
+fromRightIO' :: (e -> IO ()) -> IO (Either e r) -> IO r
+fromRightIO' pp = do
+  eitherM ifLeft return
+  where
+    ifLeft e = pp e >> exitFailure
+
+fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
+fromRightIO pp = fromRightIO' (putStrLn . pp)

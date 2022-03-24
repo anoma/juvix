@@ -1,9 +1,10 @@
 {-# LANGUAGE ApplicativeDo #-}
+
 module Commands.MiniHaskell where
 
 import Commands.Extra
-import Options.Applicative
 import MiniJuvix.Prelude hiding (Doc)
+import Options.Applicative
 
 newtype MiniHaskellOptions = MiniHaskellOptions
   { _mhaskellInputFile :: FilePath
