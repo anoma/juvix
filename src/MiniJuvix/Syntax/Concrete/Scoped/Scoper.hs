@@ -16,6 +16,7 @@ import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Parser (runModuleParser)
 import MiniJuvix.Syntax.Concrete.Scoped.Error
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import qualified MiniJuvix.Syntax.Concrete.Name as N
 import MiniJuvix.Syntax.Concrete.Scoped.Scope
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper.Files
 
@@ -83,6 +84,7 @@ freshSymbol _nameKind _nameConcrete = do
   let _nameDefined = getLoc _nameConcrete
       _nameWhyInScope = S.BecauseDefined
       _namePublicAnn = NoPublic
+      _nameVerbatim = _symbolText _nameConcrete
   _nameFixity <- fixity
   return S.Name' {..}
   where
@@ -316,7 +318,7 @@ checkQualifiedExpr q@(QualifiedName (Path p) sym) = do
   case es of
     [] -> notInScope
     [e] -> return (entryToScopedIden q' e)
-    _ -> throw (ErrAmbiguousSym (AmbiguousSym es))
+    _ -> throw (ErrAmbiguousSym (AmbiguousSym q' es))
   where
     q' = NameQualified q
     notInScope = throw (ErrQualSymNotInScope q)
@@ -511,6 +513,7 @@ checkTopModule m@(Module path params body) = do
           _nameFixity = Nothing
           _namePublicAnn = NoPublic
           _nameWhyInScope = S.BecauseDefined
+          _nameVerbatim = N.topModulePathToDottedPath path
       return S.Name' {..}
     iniScope :: Scope
     iniScope = emptyScope (getTopModulePath m)
@@ -886,8 +889,10 @@ checkUnqualified s = do
           <$> lookupQualifiedSymbol ([], s)
       case entries of
         [] -> err
-        [x] -> return (entryToScopedIden (NameUnqualified s) x)
-        es -> throw (ErrAmbiguousSym (AmbiguousSym es))
+        [x] -> return (entryToScopedIden n x)
+        es -> throw (ErrAmbiguousSym (AmbiguousSym n es))
+      where
+        n = NameUnqualified s
 
 checkPatternName ::
   forall r.

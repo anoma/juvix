@@ -235,3 +235,6 @@ makeLenses ''Indexed
 
 minimumMaybe :: (Foldable t, Ord a) => t a -> Maybe a
 minimumMaybe l = if null l then Nothing else Just (minimum l)
+
+fromText :: IsString a => Text -> a
+fromText = fromString . unpack

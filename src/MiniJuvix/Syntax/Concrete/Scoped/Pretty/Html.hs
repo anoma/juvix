@@ -55,7 +55,7 @@ genHtml opts recursive theme entry = do
       putStrLn $ "Writing " <> pack htmlFile
       Text.writeFile htmlFile (genModule opts theme m)
       where
-        htmlFile = dottedPath (S._nameConcrete (_modulePath m)) <.> ".html"
+        htmlFile = topModulePathToDottedPath (S._nameConcrete (_modulePath m)) <.> ".html"
 
 genModule :: Options -> Theme -> Module 'Scoped 'ModuleTop -> Text
 genModule opts theme m =
@@ -105,9 +105,6 @@ go sdt = case sdt of
     textSpaces :: Int -> Text
     textSpaces n = Text.replicate n (Text.singleton ' ')
 
-fromText :: IsString a => Text -> a
-fromText = fromString . unpack
-
 putTag :: Ann -> Html -> Html
 putTag ann x = case ann of
   AnnKind k -> tagKind k x
@@ -141,18 +138,12 @@ putTag ann x = case ann of
               S.KNameTopModule -> "ju-var"
           )
 
-dottedPath :: IsString s => TopModulePath -> s
-dottedPath (TopModulePath l r) =
-  fromText $ mconcat $ intersperse "." $ map fromSymbol $ l ++ [r]
-  where
-    fromSymbol Symbol {..} = _symbolText
-
 nameIdAttr :: S.NameId -> AttributeValue
 nameIdAttr (S.NameId k) = fromString . show $ k
 
 nameIdAttrRef :: TopModulePath -> S.NameId -> AttributeValue
 nameIdAttrRef tp s =
-  dottedPath tp <> ".html" <> preEscapedToValue '#' <> nameIdAttr s
+  topModulePathToDottedPath tp <> ".html" <> preEscapedToValue '#' <> nameIdAttr s
 
 cssLink :: AttributeValue -> Html
 cssLink css =

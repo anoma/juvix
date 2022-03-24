@@ -90,4 +90,10 @@ topModulePathToFilePath' ext root mp = absPath
     toPath :: Symbol -> FilePath
     toPath Symbol {..} = unpack _symbolText
 
+topModulePathToDottedPath :: IsString s => TopModulePath -> s
+topModulePathToDottedPath (TopModulePath l r) =
+  fromText $ mconcat $ intersperse "." $ map fromSymbol $ l ++ [r]
+  where
+    fromSymbol Symbol {..} = _symbolText
+
 instance Hashable TopModulePath

@@ -178,6 +178,9 @@ parens = enclose kwParenL kwParenR
 doubleQuotes :: Doc Ann -> Doc Ann
 doubleQuotes = enclose kwDQuote kwDQuote
 
+annotateKind :: S.NameKind -> Doc Ann -> Doc Ann
+annotateKind k = (annotate . AnnKind) k
+
 ppModulePathType ::
   forall t s r.
   (SingI t, SingI s, Members '[Reader Options] r) =>
@@ -443,7 +446,7 @@ instance PrettyCode Name where
 
 instance PrettyCode n => PrettyCode (S.Name' n) where
   ppCode S.Name' {..} = do
-    nameConcrete' <- annotate (AnnKind _nameKind) <$> ppCode _nameConcrete
+    nameConcrete' <- annotateKind _nameKind <$> ppCode _nameConcrete
     showNameId <- asks _optShowNameId
     uid <- if showNameId then ("@" <>) <$> ppCode _nameId else return mempty
     return $ annSRef (nameConcrete' <> uid)
@@ -793,3 +796,17 @@ ppExpression :: forall s r. (SingI s, Members '[Reader Options] r) => Expression
 ppExpression = case sing :: SStage s of
   SScoped -> ppCode
   SParsed -> ppCode
+
+instance PrettyCode SymbolEntry where
+  ppCode ent = return (kindTag <+> pretty (entryName ent ^. S.nameVerbatim))
+    where
+    pretty' :: Text -> Doc a
+    pretty' = pretty
+    kindTag = case ent of
+      EntryAxiom _ -> annotateKind S.KNameAxiom (pretty' Str.axiom)
+      EntryInductive _ -> annotateKind S.KNameInductive (pretty' Str.inductive)
+      EntryFunction _ -> annotateKind S.KNameFunction (pretty' Str.function)
+      EntryConstructor _ -> annotateKind S.KNameConstructor (pretty' Str.constructor)
+      EntryModule (ModuleRef' (isTop :&: _))
+        | SModuleTop <- isTop -> annotateKind S.KNameTopModule (pretty' Str.topModule)
+        | SModuleLocal <- isTop -> annotateKind S.KNameLocalModule (pretty' Str.localModule)

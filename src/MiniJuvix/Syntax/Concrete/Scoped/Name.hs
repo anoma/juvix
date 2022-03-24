@@ -90,7 +90,9 @@ data Name' n = Name'
     _nameDefinedIn :: AbsModulePath,
     _nameFixity :: Maybe C.Fixity,
     _nameWhyInScope :: WhyInScope,
-    _namePublicAnn :: PublicAnn
+    _namePublicAnn :: PublicAnn,
+    -- | The textual representation of the name at the binding site
+    _nameVerbatim :: Text
   }
   deriving stock (Show)
 

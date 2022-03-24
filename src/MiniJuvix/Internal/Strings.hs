@@ -26,6 +26,18 @@ in_ = "in"
 inductive :: IsString s => s
 inductive = "inductive"
 
+function :: IsString s => s
+function = "function"
+
+constructor :: IsString s => s
+constructor = "constructor"
+
+topModule :: IsString s => s
+topModule = "top module"
+
+localModule :: IsString s => s
+localModule = "local module"
+
 infix_ :: IsString s => s
 infix_ = "infix"
 
