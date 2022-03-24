@@ -799,7 +799,7 @@ ppExpression = case sing :: SStage s of
 
 instance PrettyCode SymbolEntry where
   ppCode ent = return (kindTag <+> pretty (entryName ent ^. S.nameVerbatim)
-    <+> "at" <+> pretty (getLoc ent))
+    <+> "defined at" <+> pretty (getLoc ent))
     where
     pretty' :: Text -> Doc a
     pretty' = pretty

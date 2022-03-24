@@ -917,7 +917,7 @@ checkPatternName n = do
           Nothing -> return Nothing -- There is no constructor with such a name
           Just pth -> throw (ErrQualSymNotInScope (QualifiedName pth sym))
         [e] -> return (Just (set (constructorRefName . S.nameConcrete) n e)) -- There is one constructor with such a name
-        _ -> throw $ ErrGeneric "There is more than one constructor with such a name"
+        es -> throw (ErrAmbiguousSym (AmbiguousSym n (map EntryConstructor es)))
     getConstructor :: SymbolEntry -> Maybe (ConstructorRef' 'S.NotConcrete)
     getConstructor = \case
       EntryConstructor r -> Just r
