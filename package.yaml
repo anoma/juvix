@@ -16,9 +16,9 @@ extra-source-files:
 - README.md
 - CHANGELOG.md
 
+# TODO: make sections for dependency
 dependencies:
 - aeson == 2.0.*
-# - algebraic-graphs == 0.6.*
 - base == 4.16.*
 - blaze-html == 0.9.*
 - blaze-markup == 0.8.*
@@ -51,6 +51,7 @@ dependencies:
 - tasty
 - tasty-hunit
 
+# TODO organize this
 ghc-options:
 - -fhide-source-paths
 - -O2 -flate-specialise -fspecialise-aggressively
