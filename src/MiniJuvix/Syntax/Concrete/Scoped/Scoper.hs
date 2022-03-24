@@ -247,12 +247,9 @@ lookupSymbolAux modules final = do
       case modules of
         [] -> do
           r <- HashMap.lookup final <$> gets _scopeSymbols
-          case r of
-            Nothing -> return []
-            Just SymbolInfo {..} -> case toList _symbolInfo of
-              [] -> return []
-              [e] -> return [e]
-              es -> throw (ErrAmbiguousSym (AmbiguousSym es))
+          return $ case r of
+            Nothing -> []
+            Just SymbolInfo {..} -> toList _symbolInfo
         (p : ps) ->
           mapMaybe (lookInExport final ps . getModuleExportInfo) . concat . maybeToList . fmap (mapMaybe getModuleRef . toList . _symbolInfo)
             . HashMap.lookup p

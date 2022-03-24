@@ -1,5 +1,11 @@
 module M;
 
+  module O;
+    axiom A : Type;
+  end;
+
+  open O;
+
   module N;
     module O;
       inductive T {
@@ -8,14 +14,7 @@ module M;
     end;
   end;
 
-  open N;
-  open O using { T; A };
-
-  module O;
-    axiom A : Type;
-  end;
-
-  open O;
+  open N.O;
 
   fun : T → T;
   fun A ≔ T;
