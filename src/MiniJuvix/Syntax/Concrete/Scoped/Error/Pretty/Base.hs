@@ -13,6 +13,7 @@ import Prettyprinter
 import Text.EditDistance
 
 data Eann = Highlight
+  | ScopedAnn P.Ann
 
 highlight :: Doc Eann -> Doc Eann
 highlight = annotate Highlight
@@ -21,7 +22,7 @@ ppSymbolT :: Text -> Doc Eann
 ppSymbolT = highlight . pretty
 
 ppCode :: P.PrettyCode c => c -> Doc Eann
-ppCode = unAnnotate . P.runPrettyCode P.defaultOptions
+ppCode = reAnnotate ScopedAnn . P.runPrettyCode P.defaultOptions
 
 indent' :: Doc ann -> Doc ann
 indent' = indent 2
@@ -156,9 +157,9 @@ instance PrettyError UnusedOperatorDef where
 instance PrettyError AmbiguousSym where
   ppError AmbiguousSym {..} =
     "The symbol" <+> ppCode _ambiguousSymName <+> "at" <+> pretty (getLoc _ambiguousSymName) <+> "is ambiguous." <> line
-      <> "It could be either of"
+      <> "It could be any of:"
       <> line
-      <> undefined
+      <> indent' (vsep (map ppCode _ambiguousSymEntires))
 
 instance PrettyError AmbiguousModuleSym where
   ppError AmbiguousModuleSym {} =

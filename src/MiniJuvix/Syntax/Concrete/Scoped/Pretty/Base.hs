@@ -798,7 +798,8 @@ ppExpression = case sing :: SStage s of
   SParsed -> ppCode
 
 instance PrettyCode SymbolEntry where
-  ppCode ent = return (kindTag <+> pretty (entryName ent ^. S.nameVerbatim))
+  ppCode ent = return (kindTag <+> pretty (entryName ent ^. S.nameVerbatim)
+    <+> "at" <+> pretty (getLoc ent))
     where
     pretty' :: Text -> Doc a
     pretty' = pretty

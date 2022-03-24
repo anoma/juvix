@@ -1140,6 +1140,9 @@ entryOverName f = snd . entryPrism f
 entryName :: SymbolEntry -> S.Name' ()
 entryName = fst . entryPrism id
 
+instance HasLoc SymbolEntry where
+  getLoc = S._nameDefined . entryName
+
 overModuleRef'' :: forall s s'. (forall t. ModuleRef'' s t -> ModuleRef'' s' t) -> ModuleRef' s -> ModuleRef' s'
 overModuleRef'' f = over unModuleRef' (\(t :&: m'') -> t :&: f m'')
 
