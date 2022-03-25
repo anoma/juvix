@@ -1,5 +1,9 @@
 name:            minijuvix
+<<<<<<< HEAD
 version:         0.1.0
+=======
+version:         0.1.1
+>>>>>>> origin/main
 license:         GPL-3.0-only
 license-file:    LICENSE
 copyright:       (c) 2022- Heliax AG.
@@ -13,8 +17,8 @@ category:        Compilers/Interpreters
 github:          heliaxdev/minijuvix
 
 extra-source-files:
-- README.md
-- CHANGELOG.md
+- README.org
+- CHANGELOG.org
 
 # TODO: make sections for dependency
 dependencies:
