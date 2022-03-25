@@ -83,7 +83,7 @@ freshSymbol _nameKind _nameConcrete = do
   _nameDefinedIn <- gets _scopePath
   let _nameDefined = getLoc _nameConcrete
       _nameWhyInScope = S.BecauseDefined
-      _namePublicAnn = NoPublic
+      _nameVisibilityAnn = VisPublic
       _nameVerbatim = _symbolText _nameConcrete
   _nameFixity <- fixity
   return S.Name' {..}
@@ -347,9 +347,7 @@ exportScope Scope {..} = do
     getExportSymbols = HashMap.fromList <$> mapMaybeM entry (HashMap.toList _scopeSymbols)
       where
         shouldExport :: SymbolEntry -> Bool
-        shouldExport ent =
-          _nameDefinedIn == _scopePath
-            || _namePublicAnn == Public
+        shouldExport ent = _nameVisibilityAnn == VisPublic
           where
             S.Name' {..} = entryName ent
 
@@ -511,7 +509,8 @@ checkTopModule m@(Module path params body) = do
           _nameDefined = getLoc (_modulePathName path)
           _nameKind = S.KNameTopModule
           _nameFixity = Nothing
-          _namePublicAnn = NoPublic
+          -- This visibility annotation is not relevant
+          _nameVisibilityAnn = VisPublic
           _nameWhyInScope = S.BecauseDefined
           _nameVerbatim = N.topModulePathToDottedPath path
       return S.Name' {..}
@@ -589,7 +588,7 @@ checkLocalModule Module {..} = do
         inheritSymbol :: SymbolInfo -> SymbolInfo
         inheritSymbol (SymbolInfo s) = SymbolInfo (fmap inheritEntry s)
         inheritEntry :: SymbolEntry -> SymbolEntry
-        inheritEntry = entryOverName (over S.nameWhyInScope S.BecauseInherited)
+        inheritEntry = entryOverName (over S.nameWhyInScope S.BecauseInherited . set S.nameVisibilityAnn VisPrivate)
 
 checkClausesExist :: forall r. Members '[Error ScopeError, State Scope] r => [Statement 'Scoped] -> Sem r ()
 checkClausesExist ss = whenJust msig (throw . ErrLacksFunctionClause . LacksFunctionClause)
@@ -680,9 +679,14 @@ checkOpenModule OpenModule {..} = do
     alterScope = alterEntries . filterScope
       where
         alterEntry :: SymbolEntry -> SymbolEntry
-        alterEntry = entryOverName (set S.nameWhyInScope S.BecauseImportedOpened . set S.namePublicAnn _openPublic)
+        alterEntry = entryOverName (set S.nameWhyInScope S.BecauseImportedOpened
+                                    . set S.nameVisibilityAnn (publicAnnToVis _openPublic))
         alterEntries :: ExportInfo -> ExportInfo
         alterEntries = over exportSymbols (fmap alterEntry)
+        publicAnnToVis :: PublicAnn -> VisibilityAnn
+        publicAnnToVis = \case
+          Public -> VisPublic
+          NoPublic -> VisPrivate
         filterScope :: ExportInfo -> ExportInfo
         filterScope = over exportSymbols filterTable
           where

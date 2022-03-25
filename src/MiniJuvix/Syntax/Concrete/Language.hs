@@ -3,6 +3,7 @@ module MiniJuvix.Syntax.Concrete.Language
   ( module MiniJuvix.Syntax.Concrete.Language,
     module MiniJuvix.Syntax.Concrete.Name,
     module MiniJuvix.Syntax.Concrete.Loc,
+    module MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn,
     module MiniJuvix.Syntax.Concrete.PublicAnn,
     module MiniJuvix.Syntax.Concrete.ModuleIsTop,
     module MiniJuvix.Syntax.Concrete.Language.Stage,
@@ -20,6 +21,7 @@ import MiniJuvix.Syntax.Concrete.Language.Stage
 import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Syntax.Concrete.ModuleIsTop
 import MiniJuvix.Syntax.Concrete.Name
+import MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn
 import MiniJuvix.Syntax.Concrete.PublicAnn
 import MiniJuvix.Syntax.Concrete.Scoped.Name (unqualifiedSymbol)
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S

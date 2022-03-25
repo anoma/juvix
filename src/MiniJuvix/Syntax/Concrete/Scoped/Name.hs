@@ -11,7 +11,7 @@ import Lens.Micro.Platform
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Loc
 import qualified MiniJuvix.Syntax.Concrete.Name as C
-import MiniJuvix.Syntax.Concrete.PublicAnn
+import MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
 import qualified MiniJuvix.Syntax.Fixity as C
 import Prettyprinter
@@ -90,7 +90,7 @@ data Name' n = Name'
     _nameDefinedIn :: AbsModulePath,
     _nameFixity :: Maybe C.Fixity,
     _nameWhyInScope :: WhyInScope,
-    _namePublicAnn :: PublicAnn,
+    _nameVisibilityAnn :: VisibilityAnn,
     -- | The textual representation of the name at the binding site
     _nameVerbatim :: Text
   }
