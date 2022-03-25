@@ -501,8 +501,7 @@ data SymbolEntry
   | EntryInductive (InductiveRef' 'S.NotConcrete)
   | EntryFunction (FunctionRef' 'S.NotConcrete)
   | EntryConstructor (ConstructorRef' 'S.NotConcrete)
-  | -- | TODO does this ever contain top modules?
-    EntryModule (ModuleRef' 'S.NotConcrete)
+  | EntryModule (ModuleRef' 'S.NotConcrete)
   deriving stock (Show)
 
 -- | Symbols that a module exports
@@ -549,11 +548,8 @@ deriving stock instance
 
 type AxiomRef = AxiomRef' 'S.Concrete
 
-data AxiomRef' (n :: S.IsConcrete) = AxiomRef'
-  { _axiomRefName :: RefNameType n,
-    _axiomRefType :: Expression,
-    _axiomRefBackends :: [BackendItem]
-  }
+newtype AxiomRef' (n :: S.IsConcrete) = AxiomRef'
+  { _axiomRefName :: RefNameType n}
 
 instance Eq (RefNameType s) => Eq (AxiomRef' s) where
   (==) = (==) `on` _axiomRefName
@@ -566,9 +562,8 @@ instance Show (RefNameType s) => Show (AxiomRef' s) where
 
 type InductiveRef = InductiveRef' 'S.Concrete
 
-data InductiveRef' (n :: S.IsConcrete) = InductiveRef'
-  { _inductiveRefName :: RefNameType n,
-    _inductiveRefDef :: InductiveDef 'Scoped
+newtype InductiveRef' (n :: S.IsConcrete) = InductiveRef'
+  { _inductiveRefName :: RefNameType n
   }
 
 instance Eq (RefNameType s) => Eq (InductiveRef' s) where
@@ -582,9 +577,8 @@ instance Show (RefNameType s) => Show (InductiveRef' s) where
 
 type FunctionRef = FunctionRef' 'S.Concrete
 
-data FunctionRef' (n :: S.IsConcrete) = FunctionRef'
-  { _functionRefName :: RefNameType n,
-    _functionRefSig :: Expression
+newtype FunctionRef' (n :: S.IsConcrete) = FunctionRef'
+  { _functionRefName :: RefNameType n
   }
 
 instance Eq (RefNameType s) => Eq (FunctionRef' s) where
@@ -598,10 +592,12 @@ instance Show (RefNameType s) => Show (FunctionRef' s) where
 
 type ConstructorRef = ConstructorRef' 'S.Concrete
 
-data ConstructorRef' (n :: S.IsConcrete) = ConstructorRef'
-  { _constructorRefName :: RefNameType n,
-    _constructorSig :: Expression
+newtype ConstructorRef' (n :: S.IsConcrete) = ConstructorRef'
+  { _constructorRefName :: RefNameType n
   }
+
+instance Hashable (RefNameType s) => Hashable (ConstructorRef' s) where
+  hashWithSalt i = hashWithSalt i . _constructorRefName
 
 instance Eq (RefNameType s) => Eq (ConstructorRef' s) where
   (==) = (==) `on` _constructorRefName

@@ -148,44 +148,39 @@ bindSymbolOf k e s = do
 
 bindFunctionSymbol ::
   Members '[Error ScopeError, State ScoperState, State Scope] r =>
-  Expression ->
   Symbol ->
   Sem r S.Symbol
-bindFunctionSymbol sig =
+bindFunctionSymbol =
   bindSymbolOf
     S.KNameFunction
-    (\s' -> EntryFunction (FunctionRef' s' sig))
+    (\s' -> EntryFunction (FunctionRef' s'))
 
 bindInductiveSymbol ::
   Members '[Error ScopeError, State ScoperState, State Scope] r =>
-  InductiveDef 'Scoped ->
   Symbol ->
   Sem r S.Symbol
-bindInductiveSymbol def =
+bindInductiveSymbol =
   bindSymbolOf
     S.KNameInductive
-    (\s' -> EntryInductive (InductiveRef' s' def))
+    (\s' -> EntryInductive (InductiveRef' s'))
 
 bindAxiomSymbol ::
   Members '[Error ScopeError, State ScoperState, State Scope] r =>
-  [BackendItem] ->
-  Expression ->
   Symbol ->
   Sem r S.Symbol
-bindAxiomSymbol backends ty =
+bindAxiomSymbol =
   bindSymbolOf
     S.KNameAxiom
-    (\s' -> EntryAxiom (AxiomRef' s' ty backends))
+    (\s' -> EntryAxiom (AxiomRef' s'))
 
 bindConstructorSymbol ::
   Members '[Error ScopeError, State ScoperState, State Scope] r =>
-  Expression ->
   Symbol ->
   Sem r S.Symbol
-bindConstructorSymbol sig =
+bindConstructorSymbol =
   bindSymbolOf
     S.KNameConstructor
-    (\s' -> EntryConstructor (ConstructorRef' s' sig))
+    (\s' -> EntryConstructor (ConstructorRef' s'))
 
 bindLocalModuleSymbol ::
   Members '[Error ScopeError, State ScoperState, State Scope] r =>
@@ -403,7 +398,7 @@ checkTypeSignature ::
   Sem r (TypeSignature 'Scoped)
 checkTypeSignature TypeSignature {..} = do
   sigType' <- checkParseExpressionAtoms _sigType
-  sigName' <- bindFunctionSymbol sigType' _sigName
+  sigName' <- bindFunctionSymbol _sigName
   return
     TypeSignature
       { _sigName = sigName',
@@ -416,7 +411,7 @@ checkConstructorDef ::
   Sem r (InductiveConstructorDef 'Scoped)
 checkConstructorDef InductiveConstructorDef {..} = do
   constructorType' <- checkParseExpressionAtoms constructorType
-  constructorName' <- bindConstructorSymbol constructorType' constructorName
+  constructorName' <- bindConstructorSymbol constructorName
   return
     InductiveConstructorDef
       { constructorName = constructorName',
@@ -450,22 +445,21 @@ withParams xs a = go [] xs
 
 checkInductiveDef ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScoperState, Fixpoint, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
   InductiveDef 'Parsed ->
   Sem r (InductiveDef 'Scoped)
 checkInductiveDef InductiveDef {..} = do
   withParams _inductiveParameters $ \inductiveParameters' -> do
     inductiveType' <- sequence (checkParseExpressionAtoms <$> _inductiveType)
-    mfix $ \scopedDef -> do
-      inductiveName' <- bindInductiveSymbol scopedDef _inductiveName
-      inductiveConstructors' <- mapM checkConstructorDef _inductiveConstructors
-      return
-        InductiveDef
-          { _inductiveName = inductiveName',
-            _inductiveParameters = inductiveParameters',
-            _inductiveType = inductiveType',
-            _inductiveConstructors = inductiveConstructors'
-          }
+    inductiveName' <- bindInductiveSymbol _inductiveName
+    inductiveConstructors' <- mapM checkConstructorDef _inductiveConstructors
+    return
+      InductiveDef
+        { _inductiveName = inductiveName',
+          _inductiveParameters = inductiveParameters',
+          _inductiveType = inductiveType',
+          _inductiveConstructors = inductiveConstructors'
+        }
 
 checkTopModule_ ::
   forall r.
@@ -767,7 +761,7 @@ checkAxiomDef ::
   Sem r (AxiomDef 'Scoped)
 checkAxiomDef AxiomDef {..} = do
   axiomType' <- localScope $ checkParseExpressionAtoms _axiomType
-  axiomName' <- bindAxiomSymbol _axiomBackendItems axiomType' _axiomName
+  axiomName' <- bindAxiomSymbol _axiomName
   return
     AxiomDef
       { _axiomName = axiomName',
@@ -1298,7 +1292,7 @@ makePatternTable atom = [appOp] : operators
     mkSymbolTable = reverse . map (map snd) . groupSortOn fst . mapMaybe unqualifiedSymbolOp
       where
         unqualifiedSymbolOp :: ConstructorRef -> Maybe (Precedence, P.Operator ParsePat Pattern)
-        unqualifiedSymbolOp (ConstructorRef' (S.Name' {..}) _)
+        unqualifiedSymbolOp (ConstructorRef' (S.Name' {..}))
           | Just Fixity {..} <- _nameFixity,
             _nameKind == S.KNameConstructor = Just $
             case fixityArity of
