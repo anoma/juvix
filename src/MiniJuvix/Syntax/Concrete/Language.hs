@@ -551,6 +551,9 @@ type AxiomRef = AxiomRef' 'S.Concrete
 newtype AxiomRef' (n :: S.IsConcrete) = AxiomRef'
   { _axiomRefName :: RefNameType n}
 
+instance Hashable (RefNameType s) => Hashable (AxiomRef' s) where
+  hashWithSalt i = hashWithSalt i . _axiomRefName
+
 instance Eq (RefNameType s) => Eq (AxiomRef' s) where
   (==) = (==) `on` _axiomRefName
 
@@ -566,6 +569,9 @@ newtype InductiveRef' (n :: S.IsConcrete) = InductiveRef'
   { _inductiveRefName :: RefNameType n
   }
 
+instance Hashable (RefNameType s) => Hashable (InductiveRef' s) where
+  hashWithSalt i = hashWithSalt i . _inductiveRefName
+
 instance Eq (RefNameType s) => Eq (InductiveRef' s) where
   (==) = (==) `on` _inductiveRefName
 
@@ -580,6 +586,9 @@ type FunctionRef = FunctionRef' 'S.Concrete
 newtype FunctionRef' (n :: S.IsConcrete) = FunctionRef'
   { _functionRefName :: RefNameType n
   }
+
+instance Hashable (RefNameType s) => Hashable (FunctionRef' s) where
+  hashWithSalt i = hashWithSalt i . _functionRefName
 
 instance Eq (RefNameType s) => Eq (FunctionRef' s) where
   (==) = (==) `on` _functionRefName
