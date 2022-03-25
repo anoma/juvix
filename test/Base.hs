@@ -18,15 +18,6 @@ parseModuleIO = fromRightIO id . M.runModuleParserIO
 parseTextModuleIO :: Text -> IO (M.Module 'M.Parsed 'M.ModuleTop)
 parseTextModuleIO = fromRightIO id . return . M.runModuleParser "literal string"
 
-fromRightIO' :: (e -> IO ()) -> IO (Either e r) -> IO r
-fromRightIO' pp = do
-  eitherM ifLeft return
-  where
-  ifLeft e = pp e >> exitFailure
-
-fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
-fromRightIO pp = fromRightIO' (putStrLn . pp)
-
 scopeModuleIO :: M.Module 'M.Parsed 'M.ModuleTop -> IO (M.Module 'M.Scoped 'M.ModuleTop)
 scopeModuleIO = fromRightIO' printErrorAnsi . M.scopeCheck1IO "."
 
