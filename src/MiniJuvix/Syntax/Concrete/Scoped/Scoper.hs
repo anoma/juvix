@@ -197,7 +197,7 @@ bindLocalModuleSymbol _moduleExportInfo _moduleRefModule =
 
 checkImport ::
   forall r.
-  Members '[Error ScopeError, State Scope, Reader ScopeParameters, Files, State ScoperState, Fixpoint] r =>
+  Members '[Error ScopeError, State Scope, Reader ScopeParameters, Files, State ScoperState, Fixpoint, InfoTableBuilder] r =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
 checkImport import_@(Import path) = do
@@ -392,34 +392,30 @@ checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
         (\s' -> throw (ErrDuplicateFixity (DuplicateFixity s' s)))
 
 checkTypeSignature ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
   TypeSignature 'Parsed ->
   Sem r (TypeSignature 'Scoped)
 checkTypeSignature TypeSignature {..} = do
   sigType' <- checkParseExpressionAtoms _sigType
   sigName' <- bindFunctionSymbol _sigName
-  return
-    TypeSignature
-      { _sigName = sigName',
-        _sigType = sigType'
-      }
+  registerFunction' TypeSignature {_sigName = sigName', _sigType = sigType'}
 
 checkConstructorDef ::
-  Members '[Error ScopeError, Reader LocalVars, State Scope, State ScoperState] r =>
+  Members '[Error ScopeError, Reader LocalVars, State Scope, State ScoperState , InfoTableBuilder] r =>
   InductiveConstructorDef 'Parsed ->
   Sem r (InductiveConstructorDef 'Scoped)
 checkConstructorDef InductiveConstructorDef {..} = do
-  constructorType' <- checkParseExpressionAtoms constructorType
-  constructorName' <- bindConstructorSymbol constructorName
-  return
+  constructorType' <- checkParseExpressionAtoms _constructorType
+  constructorName' <- bindConstructorSymbol _constructorName
+  registerConstructor'
     InductiveConstructorDef
-      { constructorName = constructorName',
-        constructorType = constructorType'
+      { _constructorName = constructorName',
+        _constructorType = constructorType'
       }
 
 withParams ::
   forall r a.
-  Members '[Reader LocalVars, Error ScopeError, State Scope, State ScoperState] r =>
+  Members '[Reader LocalVars, Error ScopeError, State Scope, State ScoperState , InfoTableBuilder] r =>
   [InductiveParameter 'Parsed] ->
   ([InductiveParameter 'Scoped] -> Sem r a) ->
   Sem r a
@@ -444,7 +440,7 @@ withParams xs a = go [] xs
 
 checkInductiveDef ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder] r =>
   InductiveDef 'Parsed ->
   Sem r (InductiveDef 'Scoped)
 checkInductiveDef InductiveDef {..} = do
@@ -452,7 +448,7 @@ checkInductiveDef InductiveDef {..} = do
     inductiveType' <- sequence (checkParseExpressionAtoms <$> _inductiveType)
     inductiveName' <- bindInductiveSymbol _inductiveName
     inductiveConstructors' <- mapM checkConstructorDef _inductiveConstructors
-    return
+    registerInductive'
       InductiveDef
         { _inductiveName = inductiveName',
           _inductiveParameters = inductiveParameters',
@@ -462,14 +458,14 @@ checkInductiveDef InductiveDef {..} = do
 
 checkTopModule_ ::
   forall r.
-  Members '[Error ScopeError, Reader ScopeParameters, Files, State ScoperState, Fixpoint] r =>
+  Members '[Error ScopeError, Reader ScopeParameters, Files, State ScoperState, Fixpoint , InfoTableBuilder] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (Module 'Scoped 'ModuleTop)
 checkTopModule_ = fmap (^. moduleRefModule) . checkTopModule
 
 checkTopModule ::
   forall r.
-  Members '[Error ScopeError, Reader ScopeParameters, Files, State ScoperState, Fixpoint] r =>
+  Members '[Error ScopeError, Reader ScopeParameters, Files, State ScoperState, Fixpoint , InfoTableBuilder ] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
 checkTopModule m@(Module path params body) = do
@@ -534,7 +530,7 @@ withScope ma = do
 
 checkModuleBody ::
   forall r.
-  Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars, Fixpoint] r =>
+  Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars, Fixpoint , InfoTableBuilder ] r =>
   [Statement 'Parsed] ->
   Sem r (ExportInfo, [Statement 'Scoped])
 checkModuleBody body = do
@@ -546,7 +542,7 @@ checkModuleBody body = do
 
 checkLocalModule ::
   forall r.
-  Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars, Fixpoint] r =>
+  Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars, Fixpoint , InfoTableBuilder ] r =>
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
@@ -641,7 +637,7 @@ getExportInfo modId = do
 
 checkOpenModule ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenModule OpenModule {..} = do
@@ -693,14 +689,15 @@ checkOpenModule OpenModule {..} = do
 
 checkWhereBlock ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder
+  ] r =>
   WhereBlock 'Parsed ->
   Sem r (WhereBlock 'Scoped)
 checkWhereBlock WhereBlock {..} = WhereBlock <$> mapM checkWhereClause whereClauses
 
 checkWhereClause ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder] r =>
   WhereClause 'Parsed ->
   Sem r (WhereClause 'Scoped)
 checkWhereClause c = case c of
@@ -710,7 +707,7 @@ checkWhereClause c = case c of
 
 checkFunctionClause ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
   FunctionClause 'Parsed ->
   Sem r (FunctionClause 'Scoped)
 checkFunctionClause clause@FunctionClause {..} = do
@@ -761,32 +758,26 @@ checkAxiomDef ::
 checkAxiomDef AxiomDef {..} = do
   axiomType' <- localScope $ checkParseExpressionAtoms _axiomType
   axiomName' <- bindAxiomSymbol _axiomName
-  let def = AxiomDef {
-        _axiomName = axiomName',
-        _axiomType = axiomType',
-        ..
-     }
-  registerAxiom def
-  return def
+  registerAxiom' AxiomDef {_axiomName = axiomName', _axiomType = axiomType', ..}
 
 localScope :: Sem (Reader LocalVars : r) a -> Sem r a
 localScope = runReader (LocalVars mempty)
 
 checkEval ::
-  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState , InfoTableBuilder] r =>
   Eval 'Parsed ->
   Sem r (Eval 'Scoped)
 checkEval (Eval s) = Eval <$> localScope (checkParseExpressionAtoms s)
 
 checkPrint ::
-  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, InfoTableBuilder] r =>
   Print 'Parsed ->
   Sem r (Print 'Scoped)
 checkPrint (Print s) = Print <$> localScope (checkParseExpressionAtoms s)
 
 checkFunction ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
   Function 'Parsed ->
   Sem r (Function 'Scoped)
 checkFunction Function {..} = do
@@ -818,23 +809,16 @@ checkFunction Function {..} = do
           Nothing -> return Nothing
           Just s -> Just <$> freshVariable s
 
--- | Like a regular type signature?
-checkLocalTypeSig ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
-  TypeSignature 'Parsed ->
-  Sem r (TypeSignature 'Scoped)
-checkLocalTypeSig = checkTypeSignature
-
 checkLetClause ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
   LetClause 'Parsed ->
   Sem r (LetClause 'Scoped)
 checkLetClause lc = case lc of
-  LetTypeSig t -> LetTypeSig <$> checkLocalTypeSig t
+  LetTypeSig t -> LetTypeSig <$> checkTypeSignature t
   LetFunClause c -> LetFunClause <$> checkFunctionClause c
 
 checkLetBlock ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
   LetBlock 'Parsed ->
   Sem r (LetBlock 'Scoped)
 checkLetBlock LetBlock {..} = do
@@ -849,13 +833,13 @@ checkLetBlock LetBlock {..} = do
       }
 
 checkLambda ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
   Lambda 'Parsed ->
   Sem r (Lambda 'Scoped)
 checkLambda Lambda {..} = Lambda <$> mapM checkLambdaClause lambdaClauses
 
 checkLambdaClause ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
   LambdaClause 'Parsed ->
   Sem r (LambdaClause 'Scoped)
 checkLambdaClause LambdaClause {..} = do
@@ -995,7 +979,7 @@ checkName n = case n of
   NameUnqualified s -> checkUnqualified s
 
 checkExpressionAtom ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
   ExpressionAtom 'Parsed ->
   Sem r (ExpressionAtom 'Scoped)
 checkExpressionAtom e = case e of
@@ -1010,7 +994,7 @@ checkExpressionAtom e = case e of
   AtomMatch match -> AtomMatch <$> checkMatch match
 
 checkParens ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
   ExpressionAtoms 'Parsed ->
   Sem r Expression
 checkParens e@(ExpressionAtoms as) = case as of
@@ -1021,7 +1005,7 @@ checkParens e@(ExpressionAtoms as) = case as of
   _ -> checkParseExpressionAtoms e
 
 checkMatchAlt ::
-  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState] r =>
+  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState , InfoTableBuilder ] r =>
   MatchAlt 'Parsed ->
   Sem r (MatchAlt 'Scoped)
 checkMatchAlt MatchAlt {..} = do
@@ -1034,7 +1018,7 @@ checkMatchAlt MatchAlt {..} = do
       }
 
 checkMatch ::
-  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState] r =>
+  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState , InfoTableBuilder] r =>
   Match 'Parsed ->
   Sem r (Match 'Scoped)
 checkMatch Match {..} = do
@@ -1047,13 +1031,13 @@ checkMatch Match {..} = do
       }
 
 checkExpressionAtoms ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
   ExpressionAtoms 'Parsed ->
   Sem r (ExpressionAtoms 'Scoped)
 checkExpressionAtoms (ExpressionAtoms l) = ExpressionAtoms <$> mapM checkExpressionAtom l
 
 checkParseExpressionAtoms ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder ] r =>
   ExpressionAtoms 'Parsed ->
   Sem r Expression
 checkParseExpressionAtoms = checkExpressionAtoms >=> parseExpressionAtoms
@@ -1065,7 +1049,7 @@ checkParsePatternAtom ::
 checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
 
 checkStatement ::
-  Members '[Error ScopeError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, Fixpoint] r =>
+  Members '[Error ScopeError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, Fixpoint , InfoTableBuilder] r =>
   Statement 'Parsed ->
   Sem r (Statement 'Scoped)
 checkStatement s = case s of

@@ -208,8 +208,8 @@ type InductiveConstructorName s = SymbolType s
 type InductiveName s = SymbolType s
 
 data InductiveConstructorDef (s :: Stage) = InductiveConstructorDef
-  { constructorName :: InductiveConstructorName s,
-    constructorType :: ExpressionType s
+  { _constructorName :: InductiveConstructorName s,
+    _constructorType :: ExpressionType s
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (InductiveConstructorDef s)
@@ -247,15 +247,15 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Ind
 --------------------------------------------------------------------------------
 
 data PatternApp = PatternApp
-  { patAppLeft :: Pattern,
-    patAppRight :: Pattern
+  { _patAppLeft :: Pattern,
+    _patAppRight :: Pattern
   }
   deriving stock (Show, Eq, Ord)
 
 data PatternInfixApp = PatternInfixApp
-  { patInfixLeft :: Pattern,
-    patInfixConstructor :: ConstructorRef,
-    patInfixRight :: Pattern
+  { _patInfixLeft :: Pattern,
+    _patInfixConstructor :: ConstructorRef,
+    _patInfixRight :: Pattern
   }
   deriving stock (Show, Eq, Ord)
 
@@ -263,8 +263,8 @@ instance HasFixity PatternInfixApp where
   getFixity (PatternInfixApp _ op _) = fromMaybe impossible (_constructorRefName op ^. S.nameFixity)
 
 data PatternPostfixApp = PatternPostfixApp
-  { patPostfixParameter :: Pattern,
-    patPostfixConstructor :: ConstructorRef
+  { _patPostfixParameter :: Pattern,
+    _patPostfixConstructor :: ConstructorRef
   }
   deriving stock (Show, Eq, Ord)
 
@@ -1111,6 +1111,7 @@ deriving stock instance
   Ord (Print s)
 
 makeLenses ''InductiveDef
+makeLenses ''InductiveConstructorDef
 makeLenses ''Module
 makeLenses ''TypeSignature
 makeLenses ''AxiomDef
@@ -1125,6 +1126,9 @@ makeLenses ''FunctionRef'
 makeLenses ''ConstructorRef'
 makeLenses ''BackendItem
 makeLenses ''OpenModule
+makeLenses ''PatternApp
+makeLenses ''PatternInfixApp
+makeLenses ''PatternPostfixApp
 
 idenOverName :: (forall s. S.Name' s -> S.Name' s) -> ScopedIden -> ScopedIden
 idenOverName f = \case

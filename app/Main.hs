@@ -237,7 +237,7 @@ go c = do
     Scope opts@ScopeOptions {..} -> do
       forM_ _scopeInputFiles $ \scopeInputFile -> do
         m <- parseModuleIO scopeInputFile
-        s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+        (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
         printer (mkScopePrettyOptions opts) s
       where
         printer :: M.Options -> M.Module 'M.Scoped 'M.ModuleTop -> IO ()
@@ -249,17 +249,17 @@ go c = do
       if _parseNoPrettyShow then print m else pPrint m
     Html HtmlOptions {..} -> do
       m <- parseModuleIO _htmlInputFile
-      s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+      (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       genHtml defaultOptions _htmlRecursive _htmlTheme s
     MicroJuvix MicroJuvixOptions {..} -> do
       m <- parseModuleIO _mjuvixInputFile
-      s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+      (_, s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       a <- fromRightIO' putStrLn (return $ A.translateModule s)
       let mini = Micro.translateModule a
       Micro.printPrettyCodeDefault mini
     MiniHaskell MiniHaskellOptions {..} -> do
       m <- parseModuleIO _mhaskellInputFile
-      s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+      (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       -- a <- fromRightIO' putStrLn (return $ A.translateModule s)
       _ <- fromRightIO' putStrLn (return $ A.translateModule s)
       -- let mini = Micro.translateModule a
@@ -268,7 +268,7 @@ go c = do
       error "todo"
     Termination (Calls opts@CallsOptions {..}) -> do
       m <- parseModuleIO _callsInputFile
-      s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+      (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       a <- fromRightIO' putStrLn (return $ A.translateModule s)
       let callMap0 = T.buildCallMap a
           callMap = case _callsFunctionNameFilter of
@@ -279,7 +279,7 @@ go c = do
       putStrLn ""
     Termination (CallGraph CallGraphOptions {..}) -> do
       m <- parseModuleIO _graphInputFile
-      s <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+      (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       a <- fromRightIO' putStrLn (return $ A.translateModule s)
       let callMap = T.buildCallMap a
           opts' = A.defaultOptions

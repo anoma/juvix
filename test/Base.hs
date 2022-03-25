@@ -19,7 +19,7 @@ parseTextModuleIO :: Text -> IO (M.Module 'M.Parsed 'M.ModuleTop)
 parseTextModuleIO = fromRightIO id . return . M.runModuleParser "literal string"
 
 scopeModuleIO :: M.Module 'M.Parsed 'M.ModuleTop -> IO (M.Module 'M.Scoped 'M.ModuleTop)
-scopeModuleIO = fromRightIO' printErrorAnsi . M.scopeCheck1IO "."
+scopeModuleIO = fmap snd . fromRightIO' printErrorAnsi . M.scopeCheck1IO "."
 
 data AssertionDescr =
   Single Assertion

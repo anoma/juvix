@@ -259,10 +259,10 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
       where
         syms :: InductiveDef s -> [Symbol]
         syms InductiveDef {..} = case sing :: SStage s of
-          SParsed -> _inductiveName : map constructorName _inductiveConstructors
+          SParsed -> _inductiveName : map _constructorName _inductiveConstructors
           SScoped ->
             S._nameConcrete _inductiveName :
-            map (S._nameConcrete . constructorName) _inductiveConstructors
+            map (S._nameConcrete . _constructorName) _inductiveConstructors
 
 instance SingI s => PrettyCode [Statement s] where
   ppCode ss = joinGroups <$> mapM (fmap mkGroup . mapM (fmap endSemicolon . ppCode)) (groupStatements ss)
@@ -388,8 +388,8 @@ instance PrettyCode OperatorSyntaxDef where
 
 instance SingI s => PrettyCode (InductiveConstructorDef s) where
   ppCode InductiveConstructorDef {..} = do
-    constructorName' <- annDef constructorName <$> ppSymbol constructorName
-    constructorType' <- ppExpression constructorType
+    constructorName' <- annDef _constructorName <$> ppSymbol _constructorName
+    constructorType' <- ppExpression _constructorType
     return $ constructorName' <+> kwColon <+> constructorType'
 
 instance SingI s => PrettyCode (InductiveDef s) where
@@ -727,15 +727,15 @@ instance PrettyCode Pattern where
     where
       ppPatternInfixApp :: PatternInfixApp -> Sem r (Doc Ann)
       ppPatternInfixApp p@PatternInfixApp {..} = do
-        patInfixConstructor' <- ppCode patInfixConstructor
-        patInfixLeft' <- ppLeftExpression (getFixity p) patInfixLeft
-        patInfixRight' <- ppRightExpression (getFixity p) patInfixRight
+        patInfixConstructor' <- ppCode _patInfixConstructor
+        patInfixLeft' <- ppLeftExpression (getFixity p) _patInfixLeft
+        patInfixRight' <- ppRightExpression (getFixity p) _patInfixRight
         return $ patInfixLeft' <+> patInfixConstructor' <+> patInfixRight'
 
       ppPatternPostfixApp :: PatternPostfixApp -> Sem r (Doc Ann)
       ppPatternPostfixApp p@PatternPostfixApp {..} = do
-        patPostfixConstructor' <- ppCode patPostfixConstructor
-        patPostfixParameter' <- ppLeftExpression (getFixity p) patPostfixParameter
+        patPostfixConstructor' <- ppCode _patPostfixConstructor
+        patPostfixParameter' <- ppLeftExpression (getFixity p) _patPostfixParameter
         return $ patPostfixParameter' <+> patPostfixConstructor'
 
 parensCond :: Bool -> Doc Ann -> Doc Ann

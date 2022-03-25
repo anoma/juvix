@@ -344,9 +344,9 @@ inductiveParam = parens $ do
 
 constructorDef :: MonadParsec e Text m => m (InductiveConstructorDef 'Parsed)
 constructorDef = do
-  constructorName <- symbol
+  _constructorName <- symbol
   kwColon
-  constructorType <- expressionAtoms
+  _constructorType <- expressionAtoms
   return InductiveConstructorDef {..}
 
 --------------------------------------------------------------------------------
