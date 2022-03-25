@@ -1,17 +1,18 @@
 module MiniJuvix.Translation.AbstractToMicroJuvix where
 
+import qualified Data.HashMap.Strict as HashMap
 import MiniJuvix.Prelude
 import qualified MiniJuvix.Syntax.Abstract.Language.Extra as A
-import qualified MiniJuvix.Syntax.Usage as A
-import MiniJuvix.Syntax.MicroJuvix.Language
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
-import qualified Data.HashMap.Strict as HashMap
+import MiniJuvix.Syntax.MicroJuvix.Language
+import qualified MiniJuvix.Syntax.Usage as A
 
 translateModule :: A.TopModule -> Module
-translateModule m = Module {
-  _moduleName = goTopModuleName (m ^. A.moduleName),
-  _moduleBody = goModuleBody (m ^. A.moduleBody)
-  }
+translateModule m =
+  Module
+    { _moduleName = goTopModuleName (m ^. A.moduleName),
+      _moduleBody = goModuleBody (m ^. A.moduleBody)
+    }
 
 goTopModuleName :: A.TopModuleName -> Name
 goTopModuleName = goSymbol . S.topModulePathName
@@ -20,11 +21,12 @@ goName :: S.Name -> Name
 goName = goSymbol . S.nameUnqualify
 
 goSymbol :: S.Symbol -> Name
-goSymbol s = Name {
-  _nameText = S.symbolText s,
-  _nameId = S._nameId s,
-  _nameKind = getNameKind s
- }
+goSymbol s =
+  Name
+    { _nameText = S.symbolText s,
+      _nameId = S._nameId s,
+      _nameKind = getNameKind s
+    }
 
 unsupported :: Text -> a
 unsupported thing = error ("Not yet supported: " <> thing)
@@ -34,21 +36,27 @@ goImport m = goModuleBody (m ^. A.moduleBody)
 
 goModuleBody :: A.ModuleBody -> ModuleBody
 goModuleBody b
- | not (HashMap.null (b ^. A.moduleLocalModules)) = unsupported "local modules"
- | otherwise = ModuleBody {
-     _moduleInductives = HashMap.fromList
-       [ (d ^. indexedThing . inductiveName, d)
-        | d <- map (fmap goInductiveDef) (toList (b ^. A.moduleInductives))],
-     _moduleFunctions = HashMap.fromList
-        [ (f ^. indexedThing . funDefName, f) |
-          f <- map (fmap goFunctionDef) (toList (b ^. A.moduleFunctions)) ],
-     _moduleForeign = b ^. A.moduleForeign
-     }
-     -- <> mconcatMap goImport (b ^. A.moduleImports)
+  | not (HashMap.null (b ^. A.moduleLocalModules)) = unsupported "local modules"
+  | otherwise =
+    ModuleBody
+      { _moduleInductives =
+          HashMap.fromList
+            [ (d ^. indexedThing . inductiveName, d)
+              | d <- map (fmap goInductiveDef) (toList (b ^. A.moduleInductives))
+            ],
+        _moduleFunctions =
+          HashMap.fromList
+            [ (f ^. indexedThing . funDefName, f)
+              | f <- map (fmap goFunctionDef) (toList (b ^. A.moduleFunctions))
+            ],
+        _moduleForeigns = b ^. A.moduleForeigns
+      }
+
+-- <> mconcatMap goImport (b ^. A.moduleImports)
 
 goTypeIden :: A.Iden -> TypeIden
 goTypeIden i = case i of
-  A.IdenDefined {} -> unsupported "functions in types"
+  A.IdenFunction {} -> unsupported "functions in types"
   A.IdenConstructor {} -> unsupported "constructors in types"
   A.IdenVar {} -> unsupported "type variables"
   A.IdenInductive d -> TypeIdenInductive (goName d)
@@ -65,17 +73,19 @@ goFunction :: A.Function -> Function
 goFunction (A.Function l r) = Function (goFunctionParameter l) (goType r)
 
 goFunctionDef :: A.FunctionDef -> FunctionDef
-goFunctionDef f = FunctionDef {
-  _funDefName = goSymbol (f ^. A.funDefName),
-  _funDefTypeSig = goType (f ^. A.funDefTypeSig),
-  _funDefClauses = fmap goFunctionClause (f ^. A.funDefClauses)
-  }
+goFunctionDef f =
+  FunctionDef
+    { _funDefName = goSymbol (f ^. A.funDefName),
+      _funDefTypeSig = goType (f ^. A.funDefTypeSig),
+      _funDefClauses = fmap goFunctionClause (f ^. A.funDefClauses)
+    }
 
 goFunctionClause :: A.FunctionClause -> FunctionClause
-goFunctionClause c = FunctionClause {
-  _clausePatterns = map goPattern (c ^. A.clausePatterns),
-  _clauseBody = goExpression (c ^. A.clauseBody)
-  }
+goFunctionClause c =
+  FunctionClause
+    { _clausePatterns = map goPattern (c ^. A.clausePatterns),
+      _clauseBody = goExpression (c ^. A.clauseBody)
+    }
 
 goPattern :: A.Pattern -> Pattern
 goPattern p = case p of
@@ -85,8 +95,10 @@ goPattern p = case p of
   A.PatternEmpty -> unsupported "pattern empty"
 
 goConstructorApp :: A.ConstructorApp -> ConstructorApp
-goConstructorApp c = ConstructorApp (goName (c ^. A.constrAppConstructor))
-  (map goPattern (c ^. A.constrAppParameters))
+goConstructorApp c =
+  ConstructorApp
+    (goName (c ^. A.constrAppConstructor))
+    (map goPattern (c ^. A.constrAppParameters))
 
 goType :: A.Expression -> Type
 goType e = case e of
@@ -101,7 +113,7 @@ goApplication (A.Application f x) = Application (goExpression f) (goExpression x
 
 goIden :: A.Iden -> Iden
 goIden i = case i of
-  A.IdenDefined n -> IdenDefined (goName n)
+  A.IdenFunction n -> IdenFunction (goName n)
   A.IdenConstructor c -> IdenConstructor (goName c)
   A.IdenVar v -> IdenVar (goSymbol v)
   A.IdenAxiom {} -> unsupported "axiom identifier"
@@ -118,19 +130,21 @@ goExpression e = case e of
 goInductiveDef :: A.InductiveDef -> InductiveDef
 goInductiveDef i = case i ^. A.inductiveType of
   Just {} -> unsupported "inductive indices"
-  _ -> InductiveDef {
-    _inductiveName = indName,
-    _inductiveConstructors = map goConstructorDef (i ^. A.inductiveConstructors)
-  }
+  _ ->
+    InductiveDef
+      { _inductiveName = indName,
+        _inductiveConstructors = map goConstructorDef (i ^. A.inductiveConstructors)
+      }
   where
-  indName = goSymbol (i ^. A.inductiveName)
-  goConstructorDef :: A.InductiveConstructorDef -> InductiveConstructorDef
-  goConstructorDef c = InductiveConstructorDef {
-    _constructorName = goSymbol (c ^. A.constructorName),
-    _constructorParameters = goConstructorType (c ^. A.constructorType)
-    }
-  goConstructorType :: A.Expression -> [Type]
-  goConstructorType = fst . viewExpressionFunctionType
+    indName = goSymbol (i ^. A.inductiveName)
+    goConstructorDef :: A.InductiveConstructorDef -> InductiveConstructorDef
+    goConstructorDef c =
+      InductiveConstructorDef
+        { _constructorName = goSymbol (c ^. A.constructorName),
+          _constructorParameters = goConstructorType (c ^. A.constructorType)
+        }
+    goConstructorType :: A.Expression -> [Type]
+    goConstructorType = fst . viewExpressionFunctionType
 
 -- TODO: add docs or an example
 viewExpressionFunctionType :: A.Expression -> ([Type], Type)
@@ -143,4 +157,5 @@ viewExpressionFunctionType e = case e of
 
 viewFunctionType :: A.Function -> (NonEmpty Type, Type)
 viewFunctionType (A.Function p r) = (goFunctionParameter p :| args, ret)
-  where (args, ret) = viewExpressionFunctionType r
+  where
+    (args, ret) = viewExpressionFunctionType r

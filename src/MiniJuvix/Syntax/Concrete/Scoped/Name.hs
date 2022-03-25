@@ -1,21 +1,28 @@
-module MiniJuvix.Syntax.Concrete.Scoped.Name (
-module MiniJuvix.Syntax.Concrete.Scoped.Name,
-module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
-                                             ) where
+{-# LANGUAGE StandaloneKindSignatures #-}
+
+module MiniJuvix.Syntax.Concrete.Scoped.Name
+  ( module MiniJuvix.Syntax.Concrete.Scoped.Name,
+    module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind,
+  )
+where
 
 import Data.Stream (Stream (Cons))
 import Lens.Micro.Platform
-import qualified MiniJuvix.Syntax.Fixity as C
-import qualified MiniJuvix.Syntax.Concrete.Name as C
-import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Concrete.Loc
+import qualified MiniJuvix.Syntax.Concrete.Name as C
+import MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
-import MiniJuvix.Syntax.Concrete.PublicAnn
+import qualified MiniJuvix.Syntax.Fixity as C
 import Prettyprinter
 
 --------------------------------------------------------------------------------
 -- Names
 --------------------------------------------------------------------------------
+
+data IsConcrete = NotConcrete | Concrete
+
+$(genSingletons [''IsConcrete])
 
 newtype NameId = NameId Word64
   deriving stock (Show, Eq, Ord, Generic)
@@ -58,13 +65,13 @@ allNameIds = NameId <$> ids
 instance Hashable NameId
 
 -- | Why a symbol is in scope.
-data WhyInScope =
-  -- | Inherited from the parent module.
-  BecauseInherited WhyInScope
-  -- | Opened or imported in this module.
-  | BecauseImportedOpened
-  -- | Defined in this module.
-  | BecauseDefined
+data WhyInScope
+  = -- | Inherited from the parent module.
+    BecauseInherited WhyInScope
+  | -- | Opened or imported in this module.
+    BecauseImportedOpened
+  | -- | Defined in this module.
+    BecauseDefined
   deriving stock (Show)
 
 type Name = Name' C.Name
@@ -76,17 +83,19 @@ type TopModulePath = Name' C.TopModulePath
 type ModuleNameId = NameId
 
 data Name' n = Name'
-  {
-    _nameConcrete :: n,
+  { _nameConcrete :: n,
     _nameId :: NameId,
     _nameDefined :: Interval,
     _nameKind :: NameKind,
     _nameDefinedIn :: AbsModulePath,
     _nameFixity :: Maybe C.Fixity,
     _nameWhyInScope :: WhyInScope,
-    _namePublicAnn :: PublicAnn
+    _nameVisibilityAnn :: VisibilityAnn,
+    -- | The textual representation of the name at the binding site
+    _nameVerbatim :: Text
   }
   deriving stock (Show)
+
 makeLenses ''Name'
 
 instance HasNameKind (Name' n) where
@@ -112,12 +121,15 @@ topModulePathName = over nameConcrete C._modulePathName
 symbolText :: Symbol -> Text
 symbolText = C._symbolText . _nameConcrete
 
+unqualifiedSymbol :: Symbol -> Name
+unqualifiedSymbol = over nameConcrete C.NameUnqualified
+
 nameUnqualify :: Name -> Symbol
 nameUnqualify Name' {..} = Name' {_nameConcrete = unqual, ..}
   where
-  unqual = case _nameConcrete of
-       C.NameUnqualified s -> s
-       C.NameQualified q -> fromQualifiedName q
+    unqual = case _nameConcrete of
+      C.NameUnqualified s -> s
+      C.NameQualified q -> fromQualifiedName q
 
 instance Eq (Name' n) where
   (==) = (==) `on` _nameId

@@ -1,0 +1,8 @@
+module Axiom;
+
+axiom Action : Type {
+ ghc ↦ "IO ()";
+ agda ↦ "IO Unit";
+};
+
+end;

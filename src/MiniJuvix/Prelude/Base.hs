@@ -1,51 +1,53 @@
 module MiniJuvix.Prelude.Base
   ( module MiniJuvix.Prelude.Base,
+    module Control.Applicative,
     module Control.Monad.Extra,
-    module Data.Char,
-    module Data.Typeable,
-    module Data.Either.Extra,
-    module Data.Function,
-    module Data.List.Extra,
-    module Data.Maybe,
-    module Data.String,
-    module Data.Text.Encoding,
-    module GHC.Real,
-    module Data.Tuple.Extra,
-    module Data.Void,
-    module GHC.Enum,
-    module System.Directory,
-    module Prettyprinter,
-    module System.FilePath,
-    module Data.Singletons,
-    module Data.Singletons.TH,
-    module Data.Singletons.Sigma,
-    module Data.Hashable,
-    module Lens.Micro.Platform,
-    module GHC.Generics,
+    module Control.Monad.Fix,
     module Data.Bool,
-    module Data.List.NonEmpty.Extra,
-    module Data.Traversable,
-    module Data.Monoid,
-    module Polysemy,
-    module Polysemy.Reader,
-    module Data.Text.IO,
-    module Polysemy.State,
-    module Polysemy.Error,
-    module Polysemy.Embed,
-    module Text.Show,
+    module Data.Char,
+    module Data.Either.Extra,
     module Data.Eq,
+    module Data.Foldable,
+    module Data.Function,
+    module Data.Functor,
+    module Data.Hashable,
+    module Data.Int,
+    module Data.List.Extra,
+    module Data.List.NonEmpty.Extra,
+    module Data.Maybe,
+    module Data.Monoid,
     module Data.Ord,
     module Data.Semigroup,
+    module Data.Singletons,
+    module Data.Singletons.Sigma,
+    module Data.Singletons.TH,
     module Data.Stream,
-    module GHC.Num,
+    module Data.String,
+    module Data.Text.Encoding,
+    module Data.Text.IO,
+    module Data.Traversable,
+    module Data.Tuple.Extra,
+    module Data.Typeable,
+    module Data.Void,
     module Data.Word,
-    module Data.Functor,
-    module Data.Int,
+    module GHC.Enum,
+    module GHC.Generics,
+    module GHC.Num,
+    module GHC.Real,
+    module Lens.Micro.Platform,
+    module Polysemy,
+    module Polysemy.Embed,
+    module Polysemy.Error,
+    module Polysemy.Fixpoint,
+    module Polysemy.Reader,
+    module Polysemy.State,
     module Polysemy.View,
+    module Prettyprinter,
+    module System.Directory,
     module System.Exit,
+    module System.FilePath,
     module System.IO,
-    module Control.Applicative,
-    module Data.Foldable,
+    module Text.Show,
     Data,
     Text,
     pack,
@@ -62,8 +64,8 @@ where
 --------------------------------------------------------------------------------
 
 import Control.Applicative
-import Data.Typeable hiding (TyCon)
 import Control.Monad.Extra
+import Control.Monad.Fix
 import Data.Bool
 import Data.ByteString.Lazy (ByteString)
 import Data.Char
@@ -74,27 +76,28 @@ import Data.Eq
 import Data.Foldable hiding (minimum, minimumBy)
 import Data.Function
 import Data.Functor
-import Prettyprinter (Doc, (<+>))
 import Data.HashMap.Strict (HashMap)
 import Data.HashSet (HashSet)
 import Data.Hashable
 import Data.Int
 import Data.List.Extra hiding (head, last)
-import Data.List.NonEmpty.Extra (NonEmpty (..), head, last, nonEmpty, minimum1, minimumOn1, maximum1, maximumOn1, some1)
 import qualified Data.List.NonEmpty as NonEmpty
+import Data.List.NonEmpty.Extra (NonEmpty (..), head, last, maximum1, maximumOn1, minimum1, minimumOn1, nonEmpty, some1)
 import Data.Maybe
-import Data.Singletons.Sigma
 import Data.Monoid
 import Data.Ord
 import Data.Semigroup (Semigroup, (<>))
 import Data.Singletons
+import Data.Singletons.Sigma
 import Data.Singletons.TH (genSingletons)
 import Data.Stream (Stream)
 import Data.String
 import Data.Text (Text, pack, strip, unpack)
 import Data.Text.Encoding
+import Data.Text.IO
 import Data.Traversable
 import Data.Tuple.Extra
+import Data.Typeable hiding (TyCon)
 import Data.Void
 import Data.Word
 import GHC.Enum
@@ -107,15 +110,16 @@ import Lens.Micro.Platform hiding (both)
 import Polysemy
 import Polysemy.Embed
 import Polysemy.Error hiding (fromEither)
+import Polysemy.Fixpoint
 import Polysemy.Reader
 import Polysemy.State
 import Polysemy.View
+import Prettyprinter (Doc, (<+>))
 import System.Directory
 import System.Exit
 import System.FilePath
-import System.IO hiding (putStr, putStrLn, hPutStr, hPutStrLn, writeFile, hGetContents, interact, readFile, getContents, getLine, appendFile, hGetLine, readFile')
+import System.IO hiding (appendFile, getContents, getLine, hGetContents, hGetLine, hPutStr, hPutStrLn, interact, putStr, putStrLn, readFile, readFile', writeFile)
 import Text.Show (Show)
-import Data.Text.IO
 import qualified Text.Show as Show
 
 --------------------------------------------------------------------------------
@@ -209,16 +213,18 @@ impossible = Err.error "impossible"
 --------------------------------------------------------------------------------
 
 infixl 7 <+?>
+
 (<+?>) :: Doc ann -> Maybe (Doc ann) -> Doc ann
 (<+?>) a = maybe a (a <+>)
 
 infixl 7 <?>
+
 (<?>) :: Semigroup m => m -> Maybe m -> m
 (<?>) a = maybe a (a <>)
 
-data Indexed a = Indexed {
-  _indexedIx :: Int,
-  _indexedThing :: a
+data Indexed a = Indexed
+  { _indexedIx :: Int,
+    _indexedThing :: a
   }
   deriving stock (Show, Eq, Ord, Foldable, Traversable)
 
@@ -226,3 +232,18 @@ instance Functor Indexed where
   fmap f (Indexed i a) = Indexed i (f a)
 
 makeLenses ''Indexed
+
+minimumMaybe :: (Foldable t, Ord a) => t a -> Maybe a
+minimumMaybe l = if null l then Nothing else Just (minimum l)
+
+fromText :: IsString a => Text -> a
+fromText = fromString . unpack
+
+fromRightIO' :: (e -> IO ()) -> IO (Either e r) -> IO r
+fromRightIO' pp = do
+  eitherM ifLeft return
+  where
+    ifLeft e = pp e >> exitFailure
+
+fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
+fromRightIO pp = fromRightIO' (putStrLn . pp)

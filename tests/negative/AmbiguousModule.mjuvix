@@ -1,0 +1,9 @@
+module AmbiguousModule;
+  module M;
+    module M;
+    end;
+  end;
+
+  open M;
+  open M;
+end;

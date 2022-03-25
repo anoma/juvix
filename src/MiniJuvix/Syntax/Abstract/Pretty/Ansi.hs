@@ -1,11 +1,12 @@
-module MiniJuvix.Syntax.Abstract.Pretty.Ansi (
-module MiniJuvix.Syntax.Abstract.Pretty.Base,
 module MiniJuvix.Syntax.Abstract.Pretty.Ansi
-                                             ) where
+  ( module MiniJuvix.Syntax.Abstract.Pretty.Base,
+    module MiniJuvix.Syntax.Abstract.Pretty.Ansi,
+  )
+where
 
-import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
-import MiniJuvix.Syntax.Abstract.Pretty.Base
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Abstract.Pretty.Base
+import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
 import Prettyprinter
 import Prettyprinter.Render.Terminal
 
@@ -22,8 +23,11 @@ renderPrettyCode :: PrettyCode c => Options -> c -> Text
 renderPrettyCode opts = renderStrict . docStream opts
 
 docStream :: PrettyCode c => Options -> c -> SimpleDocStream AnsiStyle
-docStream opts = reAnnotateS stylize . layoutPretty defaultLayoutOptions
-    . run . runReader opts . ppCode
+docStream opts =
+  reAnnotateS stylize . layoutPretty defaultLayoutOptions
+    . run
+    . runReader opts
+    . ppCode
 
 stylize :: Ann -> AnsiStyle
 stylize a = case a of

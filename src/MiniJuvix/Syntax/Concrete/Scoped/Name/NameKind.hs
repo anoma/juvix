@@ -28,13 +28,13 @@ instance HasNameKind NameKind where
 
 isExprKind :: HasNameKind a => a -> Bool
 isExprKind k = case getNameKind k of
-    KNameConstructor -> True
-    KNameInductive -> True
-    KNameFunction -> True
-    KNameLocal -> True
-    KNameAxiom -> True
-    KNameLocalModule -> False
-    KNameTopModule -> False
+  KNameConstructor -> True
+  KNameInductive -> True
+  KNameFunction -> True
+  KNameLocal -> True
+  KNameAxiom -> True
+  KNameLocalModule -> False
+  KNameTopModule -> False
 
 isModuleKind :: HasNameKind a => a -> Bool
 isModuleKind k = case getNameKind k of
@@ -54,10 +54,10 @@ canHaveFixity k = case getNameKind k of
 
 nameKindAnsi :: NameKind -> AnsiStyle
 nameKindAnsi k = case k of
-    KNameConstructor -> colorDull Magenta
-    KNameInductive -> colorDull Green
-    KNameAxiom -> colorDull Red
-    KNameLocalModule -> mempty
-    KNameFunction -> colorDull Yellow
-    KNameLocal -> mempty
-    KNameTopModule -> mempty
+  KNameConstructor -> colorDull Magenta
+  KNameInductive -> colorDull Green
+  KNameAxiom -> colorDull Red
+  KNameLocalModule -> color Cyan
+  KNameFunction -> colorDull Yellow
+  KNameLocal -> mempty
+  KNameTopModule -> color Cyan

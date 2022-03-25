@@ -1,20 +1,25 @@
 module MiniJuvix.Termination.Types.SizeRelation where
 
+--------------------------------------------------------------------------------
+
+import Data.Semiring
 import MiniJuvix.Prelude
-import Algebra.Graph.Label
 import Prettyprinter
 
-data Rel =
-  RJust Rel'
+--------------------------------------------------------------------------------
+
+data Rel
+  = RJust Rel'
   | RNothing
   deriving stock (Eq, Show, Generic)
 
-data Rel' =
-  REq
+data Rel'
+  = REq
   | RLe
   deriving stock (Eq, Show, Generic)
 
 instance Hashable Rel'
+
 instance Hashable Rel
 
 toRel :: Rel' -> Rel
@@ -46,12 +51,11 @@ star_ (RJust REq) = RJust REq
 instance Semigroup Rel where
   (<>) = add
 
-instance Monoid Rel where
-  mempty = RNothing
-
 instance Semiring Rel where
   one = RJust REq
-  (<.>) = mul
+  zero = RNothing
+  plus = add
+  times = mul
 
 instance Pretty Rel where
   pretty r = case r of

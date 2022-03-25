@@ -1,31 +1,31 @@
 -- TODO handle capital letters and characters not supported by Haskell.
 module MiniJuvix.Syntax.MiniHaskell.Pretty.Base where
 
-
-import MiniJuvix.Prelude
-import Prettyprinter
-import MiniJuvix.Syntax.Fixity
-import MiniJuvix.Syntax.MiniHaskell.Pretty.Ann
-import MiniJuvix.Syntax.MiniHaskell.Language
 import qualified MiniJuvix.Internal.Strings as Str
+import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Fixity
+import MiniJuvix.Syntax.MiniHaskell.Language
+import MiniJuvix.Syntax.MiniHaskell.Pretty.Ann
+import Prettyprinter
 
 newtype Options = Options
-  {
-    _optIndent :: Int
+  { _optIndent :: Int
   }
 
 defaultOptions :: Options
-defaultOptions = Options {
-  _optIndent = 2
-  }
+defaultOptions =
+  Options
+    { _optIndent = 2
+    }
 
 class PrettyCode c where
   ppCode :: Member (Reader Options) r => c -> Sem r (Doc Ann)
 
 instance PrettyCode Name where
   ppCode n =
-    return $ annotate (AnnKind (n ^. nameKind))
-           $ pretty (n ^. nameText)
+    return $
+      annotate (AnnKind (n ^. nameKind)) $
+        pretty (n ^. nameText)
 
 instance PrettyCode Application where
   ppCode a = do
@@ -111,13 +111,14 @@ instance PrettyCode FunctionDef where
     funDefName' <- ppCode (f ^. funDefName)
     funDefTypeSig' <- ppCode (f ^. funDefTypeSig)
     clauses' <- mapM (ppClause funDefName') (f ^. funDefClauses)
-    return $ funDefName' <+> kwColonColon <+> funDefTypeSig' <> line
-      <> vsep (toList clauses')
-     where
-     ppClause fun c = do
-       clausePatterns' <- mapM ppCodeAtom (c ^. clausePatterns)
-       clauseBody' <- ppCode (c ^. clauseBody)
-       return $ fun <+> hsep clausePatterns' <+> kwEquals <+> clauseBody'
+    return $
+      funDefName' <+> kwColonColon <+> funDefTypeSig' <> line
+        <> vsep (toList clauses')
+    where
+      ppClause fun c = do
+        clausePatterns' <- mapM ppCodeAtom (c ^. clausePatterns)
+        clauseBody' <- ppCode (c ^. clauseBody)
+        return $ fun <+> hsep clausePatterns' <+> kwEquals <+> clauseBody'
 
 instance PrettyCode Statement where
   ppCode = \case
@@ -129,36 +130,52 @@ instance PrettyCode ModuleBody where
     statements' <- mapM ppCode (m ^. moduleStatements)
     return $ vsep2 statements'
     where
-    vsep2 = concatWith (\a b -> a <> line <> line <> b)
+      vsep2 = concatWith (\a b -> a <> line <> line <> b)
 
 instance PrettyCode Module where
   ppCode m = do
     name' <- ppCode (m ^. moduleName)
     body' <- ppCode (m ^. moduleBody)
-    return $ kwModule <+> name' <+> kwWhere
-      <> line <> line <> body' <> line
+    return $
+      kwModule <+> name' <+> kwWhere
+        <> line
+        <> line
+        <> body'
+        <> line
 
 parensCond :: Bool -> Doc Ann -> Doc Ann
 parensCond t d = if t then parens d else d
 
-ppPostExpression ::(PrettyCode a, HasAtomicity a, Member (Reader Options) r)  =>
-  Fixity -> a -> Sem r (Doc Ann)
+ppPostExpression ::
+  (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
+  Fixity ->
+  a ->
+  Sem r (Doc Ann)
 ppPostExpression = ppLRExpression isPostfixAssoc
 
-ppRightExpression :: (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
-  Fixity -> a -> Sem r (Doc Ann)
+ppRightExpression ::
+  (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
+  Fixity ->
+  a ->
+  Sem r (Doc Ann)
 ppRightExpression = ppLRExpression isRightAssoc
 
-ppLeftExpression :: (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
-  Fixity -> a -> Sem r (Doc Ann)
+ppLeftExpression ::
+  (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
+  Fixity ->
+  a ->
+  Sem r (Doc Ann)
 ppLeftExpression = ppLRExpression isLeftAssoc
 
-ppLRExpression
-  :: (HasAtomicity a, PrettyCode a, Member (Reader Options) r) =>
-     (Fixity -> Bool) -> Fixity -> a -> Sem r (Doc Ann)
+ppLRExpression ::
+  (HasAtomicity a, PrettyCode a, Member (Reader Options) r) =>
+  (Fixity -> Bool) ->
+  Fixity ->
+  a ->
+  Sem r (Doc Ann)
 ppLRExpression associates fixlr e =
   parensCond (atomParens associates (atomicity e) fixlr)
-      <$> ppCode e
+    <$> ppCode e
 
 ppCodeAtom :: (HasAtomicity c, PrettyCode c, Members '[Reader Options] r) => c -> Sem r (Doc Ann)
 ppCodeAtom c = do

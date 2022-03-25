@@ -1,12 +1,11 @@
 module MiniJuvix.Syntax.Abstract.Pretty.Ann where
 
-
+import MiniJuvix.Prelude
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as S
-import MiniJuvix.Prelude
 
-data Ann =
-  AnnKind S.NameKind
+data Ann
+  = AnnKind S.NameKind
   | AnnKeyword
   | AnnImportant
   | AnnLiteralString

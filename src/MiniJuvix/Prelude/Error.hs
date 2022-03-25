@@ -9,20 +9,20 @@ data AJuvixError = forall e. JuvixError e => AJuvixError e
 
 -- | Minimal interface of an minijuvix error.
 class Typeable e => JuvixError e where
-   -- | Print the to stderr with Ansi formatting.
-   printErrorAnsi :: e -> IO ()
-   printErrorAnsi = hPutStrLn stderr . renderAnsiText
+  -- | Print the to stderr with Ansi formatting.
+  printErrorAnsi :: e -> IO ()
+  printErrorAnsi = hPutStrLn stderr . renderAnsiText
 
-   -- | Print the to stderr without formatting.
-   printErrorText :: e -> IO ()
-   printErrorText = hPutStrLn stderr . renderText
+  -- | Print the to stderr without formatting.
+  printErrorText :: e -> IO ()
+  printErrorText = hPutStrLn stderr . renderText
 
-   -- | Render the error to Text.
-   renderText :: e -> Text
+  -- | Render the error to Text.
+  renderText :: e -> Text
 
-   -- | Render the error with Ansi formatting (if any).
-   renderAnsiText :: e -> Text
-   renderAnsiText = renderText
+  -- | Render the error with Ansi formatting (if any).
+  renderAnsiText :: e -> Text
+  renderAnsiText = renderText
 
 toAJuvixError :: JuvixError e => e -> AJuvixError
 toAJuvixError = AJuvixError

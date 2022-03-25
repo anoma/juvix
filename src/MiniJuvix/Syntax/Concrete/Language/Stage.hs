@@ -1,4 +1,5 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
+
 module MiniJuvix.Syntax.Concrete.Language.Stage where
 
 import MiniJuvix.Prelude

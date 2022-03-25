@@ -1,34 +1,35 @@
 name:            minijuvix
-version:         0.0.0.0
+version:         0.1.0
 license:         GPL-3.0-only
 license-file:    LICENSE
-copyright:       (c) 2021-2022 Heliax AG.
+copyright:       (c) 2022- Heliax AG.
 maintainer:      The PLT Team at Heliax AG <hello@heliax.dev>
-author:          [ Jonathan Prieto-Cubides , Jan Mas Rovira ]
-tested-with:     ghc == 9.0.2
-homepage:        https://github.com/heliaxdev/MiniJuvix
-bug-reports:     https://github.com/heliaxdev/MiniJuvix/issues
-description:     A tiny dependent typed programming language for experimentation.
+author:          [ Jonathan Prieto-Cubides , Jan Mas Rovira , Paul Cadman ]
+tested-with:     ghc == 9.2.2
+homepage:        https://github.com/heliaxdev/minijuvix
+bug-reports:     https://github.com/heliaxdev/minijuvix/issues
+description:     The MiniJuvix compiler
 category:        Compilers/Interpreters
-github:          heliaxdev/MiniJuvix
+github:          heliaxdev/minijuvix
 
 extra-source-files:
 - README.md
 - CHANGELOG.md
 
+# TODO: make sections for dependency
 dependencies:
 - aeson == 2.0.*
-- algebraic-graphs == 0.6.*
-- base == 4.15.*
+- base == 4.16.*
 - blaze-html == 0.9.*
 - blaze-markup == 0.8.*
-- bytestring == 0.10.*
+- bytestring == 0.11.*
 - containers == 0.6.*
 - directory == 1.3.*
 - edit-distance == 0.2.*
 - extra == 1.7.*
 - filepath == 1.4.*
-- hashable == 1.3.*
+- gitrev == 1.3.*
+- hashable == 1.4.*
 - megaparsec == 9.2.*
 - microlens-platform == 0.4.*
 - parser-combinators == 1.3.*
@@ -39,9 +40,9 @@ dependencies:
 - process == 1.6.*
 - semirings == 0.6.*
 - singletons == 3.0.*
-- singletons-th == 3.0.*
+- singletons-th == 3.1.*
 - Stream == 0.4.*
-- template-haskell == 2.17.*
+- template-haskell == 2.18.*
 - text == 1.2.*
 - th-utilities == 0.2.*
 - unordered-containers == 0.2.*
@@ -50,7 +51,10 @@ dependencies:
 # when running the tests. Is there a better solution?
 - tasty
 - tasty-hunit
+- Diff == 0.4.*
+- pretty-show == 1.10.*
 
+# TODO organize this
 ghc-options:
 - -fhide-source-paths
 - -O2 -flate-specialise -fspecialise-aggressively
@@ -62,33 +66,24 @@ ghc-options:
 
 default-extensions:
 - DataKinds
-- DeriveFoldable
-- DeriveGeneric
-- DeriveLift
-- DeriveTraversable
 - DerivingStrategies
-- FlexibleContexts
-- FlexibleInstances
 - GADTs
-- GeneralizedNewtypeDeriving
-- InstanceSigs
-- KindSignatures
 - LambdaCase
 - NoImplicitPrelude
 - OverloadedStrings
-- PolyKinds
 - QuasiQuotes
 - RecordWildCards
-- ScopedTypeVariables
-- StandaloneDeriving
 - TemplateHaskell
-- TypeApplications
 - TypeFamilyDependencies
-- TypeOperators
 - UnicodeSyntax
+
+# verbatim:
+#   default-language: GHC2021
 
 library:
   source-dirs: src
+  verbatim:
+    default-language: GHC2021
 
 executables:
   minijuvix:
@@ -96,8 +91,9 @@ executables:
     source-dirs: app
     dependencies:
     - minijuvix
-    - optparse-applicative == 0.16.*
-    - pretty-show == 1.10.*
+    - optparse-applicative == 0.17.*
+    verbatim:
+      default-language: GHC2021
 
 tests:
   minijuvix-test:
@@ -105,3 +101,5 @@ tests:
     source-dirs:         test
     dependencies:
     - minijuvix
+    verbatim:
+      default-language: GHC2021

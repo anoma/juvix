@@ -1,7 +1,7 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text where
 
-import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base
 import Prettyprinter
 import Prettyprinter.Render.Text
 
@@ -21,5 +21,8 @@ renderPrettyCode :: PrettyCode c => Options -> c -> Text
 renderPrettyCode opts = renderStrict . docStream opts
 
 docStream :: PrettyCode c => Options -> c -> SimpleDocStream Ann
-docStream opts = layoutPretty defaultLayoutOptions
-    . run . runReader opts . ppCode
+docStream opts =
+  layoutPretty defaultLayoutOptions
+    . run
+    . runReader opts
+    . ppCode

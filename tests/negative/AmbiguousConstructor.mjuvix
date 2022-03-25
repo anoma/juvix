@@ -1,0 +1,19 @@
+module AmbiguousConstructor;
+  module M;
+    inductive T1 {
+      A : T1;
+    };
+  end;
+
+  module N;
+    inductive T2 {
+      A : T2;
+    };
+  end;
+
+  open M;
+  open N;
+
+  f : T1 -> T2;
+  f A ≔ N.A;
+end;

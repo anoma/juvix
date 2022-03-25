@@ -106,4 +106,19 @@ tests = [
    "WrongModuleName.mjuvix" $ \case
       ErrWrongTopModuleName {} -> Nothing
       _ -> wrongError
+  ,  NegTest "Ambiguous export"
+    "."
+   "AmbiguousExport.mjuvix" $ \case
+      ErrMultipleExport {} -> Nothing
+      _ -> wrongError
+  ,  NegTest "Ambiguous nested modules"
+    "."
+   "AmbiguousModule.mjuvix" $ \case
+      ErrAmbiguousModuleSym {} -> Nothing
+      _ -> wrongError
+  ,  NegTest "Ambiguous nested constructors"
+    "."
+   "AmbiguousConstructor.mjuvix" $ \case
+      ErrAmbiguousSym {} -> Nothing
+      _ -> wrongError
   ]

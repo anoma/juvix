@@ -1,40 +1,78 @@
-module MiniJuvix.Utils.Version (getVersion) where
+module MiniJuvix.Utils.Version
+  ( branch,
+    commit,
+    commitDate,
+    infoVersionRepo,
+    progName,
+    progNameVersion,
+    progNameVersionTag,
+    runDisplayVersion,
+    shortHash,
+    versionDoc,
+    versionTag,
+)
+where
 
 ------------------------------------------------------------------------------
 
-import Control.Exception (IOException)
-import qualified Control.Exception as Exception
-import qualified Data.List as List
-import Data.Version (Version (versionTags))
-import MiniJuvix.Prelude
-import System.Exit
-import System.Process (readProcessWithExitCode)
+import Data.Version (showVersion)
+import Development.GitRev (gitBranch, gitCommitDate, gitHash)
+import MiniJuvix.Prelude hiding (Doc)
+import qualified Paths_minijuvix
+import Prettyprinter as PP
+import Prettyprinter.Render.Text (renderIO)
+import System.Environment (getProgName)
 
 ------------------------------------------------------------------------------
 
-tryIO :: IO a -> IO (Either IOException a)
-tryIO = Exception.try
+versionDoc :: Doc Text
+versionDoc = PP.pretty (showVersion Paths_minijuvix.version)
 
-commitInfo :: IO (Maybe String)
-commitInfo = do
-  res <-
-    tryIO $
-      readProcessWithExitCode "git" ["log", "--format=%h", "-n", "1"] ""
-  case res of
-    Right (ExitSuccess, hash, _) -> do
-      (_, _, _) <- readProcessWithExitCode "git" ["diff", "--quiet"] ""
-      return $ Just (List.init hash)
-    _ -> return Nothing
+branch :: Doc Text
+branch = PP.pretty (pack $(gitBranch))
 
-gitVersion :: Version -> String -> Version
-gitVersion version hash = version {versionTags = [take 7 hash]}
+commit :: Doc Text
+commit = PP.pretty (pack $(gitHash))
 
--- | If inside a `git` repository, then @'getVersion' x@ will return
--- @x@ plus the hash of the top commit used for
--- compilation. Otherwise, only @x@ will be returned.
-getVersion :: Version -> IO Version
-getVersion version = do
-  commit <- commitInfo
-  case commit of
-    Nothing -> return version
-    Just rev -> return $ gitVersion version rev
+commitDate :: Doc Text
+commitDate = PP.pretty (pack $(gitCommitDate))
+
+shortHash :: Doc Text
+shortHash = PP.pretty (pack (take 7 $(gitHash)))
+
+versionTag :: Doc Text
+versionTag = versionDoc <> "-" <> shortHash
+
+progName :: IO (Doc Text)
+progName = PP.pretty . pack . toUpperFirst <$> getProgName
+
+progNameVersion :: IO (Doc Text)
+progNameVersion = do
+  pName <- progName
+  pure (pName <+> "version" <+> versionDoc)
+
+progNameVersionTag :: IO (Doc Text)
+progNameVersionTag = do
+  progNameV <- progNameVersion
+  pure (progNameV <> "-" <> shortHash)
+
+infoVersionRepo :: IO (Doc Text)
+infoVersionRepo = do
+  pNameTag <- progNameVersionTag
+  pure
+    ( pNameTag <> line
+        <> "Branch"
+        <> colon <+> branch
+        <> line
+        <> "Commit"
+        <> colon <+> commit
+        <> line
+        <> "Date"
+        <> colon <+> commitDate
+        <> line
+    )
+
+runDisplayVersion :: IO ()
+runDisplayVersion = do
+  v <- layoutPretty defaultLayoutOptions <$> infoVersionRepo
+  renderIO stdout v
