@@ -653,15 +653,14 @@ checkOpenModule ::
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenModule OpenModule {..} = do
-  openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- lookupModuleSymbol openModuleName
-  openParameters' <- mapM checkParseExpressionAtoms openParameters
+  openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- lookupModuleSymbol _openModuleName
+  openParameters' <- mapM checkParseExpressionAtoms _openParameters
   mergeScope (alterScope (moduleRef'' ^. moduleExportInfo))
   return
     OpenModule
-      { openModuleName = openModuleName',
-        openParameters = openParameters',
-        openUsingHiding = openUsingHiding,
-        openPublic = openPublic
+      { _openModuleName = openModuleName',
+        _openParameters = openParameters',
+        ..
       }
   where
     mergeScope :: ExportInfo -> Sem r ()
@@ -673,7 +672,7 @@ checkOpenModule OpenModule {..} = do
           modify
             (over scopeSymbols (HashMap.insertWith (<>) s (symbolInfoSingle entry)))
     setsUsingHiding :: Maybe (Either (HashSet Symbol) (HashSet Symbol))
-    setsUsingHiding = case openUsingHiding of
+    setsUsingHiding = case _openUsingHiding of
       Just (Using l) -> Just (Left (HashSet.fromList (toList l)))
       Just (Hiding l) -> Just (Right (HashSet.fromList (toList l)))
       Nothing -> Nothing
@@ -681,7 +680,7 @@ checkOpenModule OpenModule {..} = do
     alterScope = alterEntries . filterScope
       where
         alterEntry :: SymbolEntry -> SymbolEntry
-        alterEntry = entryOverName (set S.nameWhyInScope S.BecauseImportedOpened . set S.namePublicAnn openPublic)
+        alterEntry = entryOverName (set S.nameWhyInScope S.BecauseImportedOpened . set S.namePublicAnn _openPublic)
         alterEntries :: ExportInfo -> ExportInfo
         alterEntries = over exportSymbols (fmap alterEntry)
         filterScope :: ExportInfo -> ExportInfo

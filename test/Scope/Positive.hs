@@ -99,4 +99,6 @@ tests = [
      "QualifiedSymbol2" "N.mjuvix"
   , PosTest "Multiple modules constructor non-ambiguous symbol"
      "QualifiedConstructor" "M.mjuvix"
+  , PosTest "open overrides open public"
+     "." "ShadowPublicOpen.mjuvix"
  ]

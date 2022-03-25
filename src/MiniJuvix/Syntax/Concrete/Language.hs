@@ -510,10 +510,10 @@ newtype ExportInfo = ExportInfo
   deriving stock (Show)
 
 data OpenModule (s :: Stage) = OpenModule
-  { openModuleName :: ModuleRefType s,
-    openParameters :: [ExpressionType s],
-    openUsingHiding :: Maybe UsingHiding,
-    openPublic :: PublicAnn
+  { _openModuleName :: ModuleRefType s,
+    _openParameters :: [ExpressionType s],
+    _openUsingHiding :: Maybe UsingHiding,
+    _openPublic :: PublicAnn
   }
 
 deriving stock instance
@@ -1117,6 +1117,7 @@ makeLenses ''ModuleRef''
 makeLenses ''FunctionRef'
 makeLenses ''ConstructorRef'
 makeLenses ''BackendItem
+makeLenses ''OpenModule
 
 idenOverName :: (forall s. S.Name' s -> S.Name' s) -> ScopedIden -> ScopedIden
 idenOverName f = \case

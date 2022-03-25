@@ -225,7 +225,7 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
         SParsed -> True
         SScoped ->
           S._nameId (_modulePath (importModule i))
-            == S._nameId (projSigma2 _moduleRefName (openModuleName o ^. unModuleRef'))
+            == S._nameId (projSigma2 _moduleRefName (o ^. openModuleName . unModuleRef'))
       (StatementImport _, _) -> False
       (StatementOpenModule {}, StatementOpenModule {}) -> True
       (StatementOpenModule {}, _) -> False
@@ -461,9 +461,9 @@ instance SingI s => PrettyCode (OpenModule s) where
   ppCode :: forall r. Members '[Reader Options] r => OpenModule s -> Sem r (Doc Ann)
   ppCode OpenModule {..} = do
     openModuleName' <- case sing :: SStage s of
-      SParsed -> ppCode openModuleName
-      SScoped -> ppCode openModuleName
-    openUsingHiding' <- sequence $ ppUsingHiding <$> openUsingHiding
+      SParsed -> ppCode _openModuleName
+      SScoped -> ppCode _openModuleName
+    openUsingHiding' <- sequence $ ppUsingHiding <$> _openUsingHiding
     openParameters' <- ppOpenParams
     let openPublic' = ppPublic
     return $ keyword "open" <+> openModuleName' <+?> openParameters' <+?> openUsingHiding' <+?> openPublic'
@@ -472,9 +472,9 @@ instance SingI s => PrettyCode (OpenModule s) where
         SParsed -> ppCodeAtom
         SScoped -> ppCodeAtom
       ppOpenParams :: Sem r (Maybe (Doc Ann))
-      ppOpenParams = case openParameters of
+      ppOpenParams = case _openParameters of
         [] -> return Nothing
-        _ -> Just . hsep <$> mapM ppAtom' openParameters
+        _ -> Just . hsep <$> mapM ppAtom' _openParameters
       ppUsingHiding :: UsingHiding -> Sem r (Doc Ann)
       ppUsingHiding uh = do
         bracedList <-
@@ -486,7 +486,7 @@ instance SingI s => PrettyCode (OpenModule s) where
             Using s -> (kwUsing, s)
             Hiding s -> (kwHiding, s)
       ppPublic :: Maybe (Doc Ann)
-      ppPublic = case openPublic of
+      ppPublic = case _openPublic of
         Public -> Just kwPublic
         NoPublic -> Nothing
 
