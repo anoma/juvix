@@ -1,0 +1,16 @@
+module AmbiguousExport;
+
+  module N;
+    module O;
+      inductive T {
+        A : T;
+      };
+    end;
+  end;
+
+  open N public;
+
+  module O;
+    axiom A : Type;
+  end;
+end;

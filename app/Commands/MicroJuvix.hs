@@ -1,9 +1,10 @@
 {-# LANGUAGE ApplicativeDo #-}
+
 module Commands.MicroJuvix where
 
 import Commands.Extra
-import Options.Applicative
 import MiniJuvix.Prelude hiding (Doc)
+import Options.Applicative
 
 newtype MicroJuvixOptions = MicroJuvixOptions
   { _mjuvixInputFile :: FilePath

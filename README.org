@@ -1,0 +1,63 @@
+MiniJuvix
+[[file:LICENSE][[[https://img.shields.io/badge/license-GPL--3.0--only-blue.svg]]]]
+[[https://github.com/heliaxdev/MiniJuvix/actions/workflows/ci.yml][[[https://github.com/heliaxdev/MiniJuvix/actions/workflows/ci.yml/badge.svg?branch=qtt]]]]
+====
+
+** Description
+
+MiniJuvix is a dependently functional programming language for writing
+efficient formally-verified
+[[https://anoma.network/blog/validity-predicates/][validity
+predicates]], which can be deployed to various distributed ledgers. This
+is a software released for experimentation and research purposes only.
+No warranty is provided or implied.
+
+MiniJuvix addresses many issues that we have experienced while trying to
+write and deploy decentralised applications present in the ecosystem of
+smart-contracts:
+
+- the difficulty of adequate program verification,
+- the ceiling of compositional complexity,
+- the illegibility of execution costs, and
+- the lock-in to particular backends.
+
+** Quick Start
+
+To install MiniJuvix, you can download its sources using
+[[http://git-scm.com/][Git]] from the
+[[https://github.com/anoma/juvix.git][Github repository]]. Then, the
+program can be downloaded and installed with the following commands. You
+will need to have installed [[https://haskellstack.org][Stack]].
+
+#+begin_src shell
+   $ git clone https://github.com/heliaxdev/minijuvix.git
+   $ cd minijuvix
+   $ stack install
+#+end_src
+
+If the installation succeeds, you must be able to run the =minijuvix=
+command from any location. To get the complete list of commands, please
+run =minijuvix --help=.
+
+- How to install [[https://haskellstack.org][Stack]]:? if it's not
+  installed.
+
+  - For Ubuntu : =apt install stack=
+  - For Debian : =apt install haskell-stack=
+  - For Arch Linux : =pacman -S stack=
+  - For macOS : =brew install haskell-stack=
+  - For Windows, following the instructions
+    [[https://docs.haskellstack.org/en/stable/install_and_upgrade/#windows][here]].
+
+It is required at least 8GB RAM for =stack= installation.
+
+- To test everything works correctly, you can run the following command:
+
+#+begin_src shell
+  $ stack test
+#+end_src
+
+** Community
+
+We would love to hear what you think of MiniJuvix! Join us on
+[[https://discord.gg/nsGaCZzJ][Discord]]

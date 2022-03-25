@@ -55,8 +55,12 @@ kwArrow = keyword Str.toAscii
 kwForeign :: Doc Ann
 kwForeign = keyword Str.foreign_
 
+kwAgda :: Doc Ann
+kwAgda = keyword Str.agda
+
 kwGhc :: Doc Ann
 kwGhc = keyword Str.ghc
+
 
 kwData :: Doc Ann
 kwData = keyword Str.data_
@@ -136,7 +140,8 @@ instance PrettyCode FunctionDef where
 
 instance PrettyCode Backend where
   ppCode = \case
-    BackendGhc -> return kwGhc
+    BackendGhc  -> return kwGhc
+    BackendAgda -> return kwAgda
 
 instance PrettyCode ForeignBlock where
   ppCode ForeignBlock {..} = do

@@ -1,4 +1,0 @@
-name: minijuvix-proofs
-depend: standard-library
-include: proofs
-flags:

@@ -1,4 +1,4 @@
-resolver: nightly-2022-02-27
-extra-deps:
-- polysemy-1.7.1.0
-- polysemy-plugin-0.4.3.0
+ghc-options:
+  "$locals": -optP-Wno-nonportable-include-path
+resolver: nightly-2022-03-23
+extra-deps: []

@@ -1,9 +1,9 @@
 {-# LANGUAGE UndecidableInstances #-}
-
 module MiniJuvix.Syntax.Concrete.Language
   ( module MiniJuvix.Syntax.Concrete.Language,
     module MiniJuvix.Syntax.Concrete.Name,
     module MiniJuvix.Syntax.Concrete.Loc,
+    module MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn,
     module MiniJuvix.Syntax.Concrete.PublicAnn,
     module MiniJuvix.Syntax.Concrete.ModuleIsTop,
     module MiniJuvix.Syntax.Concrete.Language.Stage,
@@ -21,6 +21,7 @@ import MiniJuvix.Syntax.Concrete.Language.Stage
 import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Syntax.Concrete.ModuleIsTop
 import MiniJuvix.Syntax.Concrete.Name
+import MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn
 import MiniJuvix.Syntax.Concrete.PublicAnn
 import MiniJuvix.Syntax.Concrete.Scoped.Name (unqualifiedSymbol)
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
@@ -33,31 +34,39 @@ import Prelude (show)
 --------------------------------------------------------------------------------
 -- Parsing stages
 --------------------------------------------------------------------------------
-type family RefNameType (c :: S.IsConcrete) :: (res :: GHC.Type) | res -> c where
+
+type RefNameType :: S.IsConcrete -> GHC.Type
+type family RefNameType c = res | res -> c where
   RefNameType 'S.Concrete = S.Name
   RefNameType 'S.NotConcrete = S.Name' ()
 
-type family SymbolType (s :: Stage) :: (res :: GHC.Type) | res -> s where
+type SymbolType :: Stage -> GHC.Type
+type family SymbolType s = res | res -> s where
   SymbolType 'Parsed = Symbol
   SymbolType 'Scoped = S.Symbol
 
-type family ModuleRefType (s :: Stage) :: (res :: GHC.Type) | res -> s where
+type ModuleRefType :: Stage -> GHC.Type
+type family ModuleRefType s = res | res -> s where
   ModuleRefType 'Parsed = Name
   ModuleRefType 'Scoped = ModuleRef
 
-type family IdentifierType (s :: Stage) :: (res :: GHC.Type) | res -> s where
+type IdentifierType :: Stage -> GHC.Type
+type family IdentifierType s = res | res -> s where
   IdentifierType 'Parsed = Name
   IdentifierType 'Scoped = ScopedIden
 
-type family PatternAtomIdenType (s :: Stage) :: (res :: GHC.Type) | res -> s where
+type PatternAtomIdenType :: Stage -> GHC.Type
+type family PatternAtomIdenType s = res | res -> s where
   PatternAtomIdenType 'Parsed = Name
   PatternAtomIdenType 'Scoped = PatternScopedIden
 
-type family ExpressionType (s :: Stage) :: (res :: GHC.Type) | res -> s where
+type ExpressionType :: Stage -> GHC.Type
+type family ExpressionType s = res | res -> s where
   ExpressionType 'Parsed = ExpressionAtoms 'Parsed
   ExpressionType 'Scoped = Expression
 
-type family PatternType (s :: Stage) :: (res :: GHC.Type) | res -> s where
+type PatternType :: Stage -> GHC.Type
+type family PatternType s = res | res -> s where
   PatternType 'Parsed = PatternAtom 'Parsed
   PatternType 'Scoped = Pattern
 
@@ -65,9 +74,8 @@ type family ImportType (s :: Stage) :: GHC.Type where
   ImportType 'Parsed = TopModulePath
   ImportType 'Scoped = Module 'Scoped 'ModuleTop
 
-type family
-  ModulePathType (s :: Stage) (t :: ModuleIsTop) ::
-    (res :: GHC.Type) | res -> t s
+type ModulePathType :: Stage -> ModuleIsTop -> GHC.Type
+type family ModulePathType s t = res | res -> t s
   where
   ModulePathType 'Parsed 'ModuleTop = TopModulePath
   ModulePathType 'Scoped 'ModuleTop = S.TopModulePath
@@ -200,8 +208,8 @@ type InductiveConstructorName s = SymbolType s
 type InductiveName s = SymbolType s
 
 data InductiveConstructorDef (s :: Stage) = InductiveConstructorDef
-  { constructorName :: InductiveConstructorName s,
-    constructorType :: ExpressionType s
+  { _constructorName :: InductiveConstructorName s,
+    _constructorType :: ExpressionType s
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (InductiveConstructorDef s)
@@ -239,15 +247,15 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Ind
 --------------------------------------------------------------------------------
 
 data PatternApp = PatternApp
-  { patAppLeft :: Pattern,
-    patAppRight :: Pattern
+  { _patAppLeft :: Pattern,
+    _patAppRight :: Pattern
   }
   deriving stock (Show, Eq, Ord)
 
 data PatternInfixApp = PatternInfixApp
-  { patInfixLeft :: Pattern,
-    patInfixConstructor :: ConstructorRef,
-    patInfixRight :: Pattern
+  { _patInfixLeft :: Pattern,
+    _patInfixConstructor :: ConstructorRef,
+    _patInfixRight :: Pattern
   }
   deriving stock (Show, Eq, Ord)
 
@@ -255,8 +263,8 @@ instance HasFixity PatternInfixApp where
   getFixity (PatternInfixApp _ op _) = fromMaybe impossible (_constructorRefName op ^. S.nameFixity)
 
 data PatternPostfixApp = PatternPostfixApp
-  { patPostfixParameter :: Pattern,
-    patPostfixConstructor :: ConstructorRef
+  { _patPostfixParameter :: Pattern,
+    _patPostfixConstructor :: ConstructorRef
   }
   deriving stock (Show, Eq, Ord)
 
@@ -493,8 +501,7 @@ data SymbolEntry
   | EntryInductive (InductiveRef' 'S.NotConcrete)
   | EntryFunction (FunctionRef' 'S.NotConcrete)
   | EntryConstructor (ConstructorRef' 'S.NotConcrete)
-  | -- | TODO does this ever contain top modules?
-    EntryModule (ModuleRef' 'S.NotConcrete)
+  | EntryModule (ModuleRef' 'S.NotConcrete)
   deriving stock (Show)
 
 -- | Symbols that a module exports
@@ -504,10 +511,10 @@ newtype ExportInfo = ExportInfo
   deriving stock (Show)
 
 data OpenModule (s :: Stage) = OpenModule
-  { openModuleName :: ModuleRefType s,
-    openParameters :: [ExpressionType s],
-    openUsingHiding :: Maybe UsingHiding,
-    openPublic :: PublicAnn
+  { _openModuleName :: ModuleRefType s,
+    _openParameters :: [ExpressionType s],
+    _openUsingHiding :: Maybe UsingHiding,
+    _openPublic :: PublicAnn
   }
 
 deriving stock instance
@@ -541,11 +548,11 @@ deriving stock instance
 
 type AxiomRef = AxiomRef' 'S.Concrete
 
-data AxiomRef' (n :: S.IsConcrete) = AxiomRef'
-  { _axiomRefName :: RefNameType n,
-    _axiomRefType :: Expression,
-    _axiomRefBackends :: HashMap Backend Text
-  }
+newtype AxiomRef' (n :: S.IsConcrete) = AxiomRef'
+  { _axiomRefName :: RefNameType n}
+
+instance Hashable (RefNameType s) => Hashable (AxiomRef' s) where
+  hashWithSalt i = hashWithSalt i . _axiomRefName
 
 instance Eq (RefNameType s) => Eq (AxiomRef' s) where
   (==) = (==) `on` _axiomRefName
@@ -558,10 +565,12 @@ instance Show (RefNameType s) => Show (AxiomRef' s) where
 
 type InductiveRef = InductiveRef' 'S.Concrete
 
-data InductiveRef' (n :: S.IsConcrete) = InductiveRef'
-  { _inductiveRefName :: RefNameType n,
-    _inductiveRefDef :: InductiveDef 'Scoped
+newtype InductiveRef' (n :: S.IsConcrete) = InductiveRef'
+  { _inductiveRefName :: RefNameType n
   }
+
+instance Hashable (RefNameType s) => Hashable (InductiveRef' s) where
+  hashWithSalt i = hashWithSalt i . _inductiveRefName
 
 instance Eq (RefNameType s) => Eq (InductiveRef' s) where
   (==) = (==) `on` _inductiveRefName
@@ -574,10 +583,12 @@ instance Show (RefNameType s) => Show (InductiveRef' s) where
 
 type FunctionRef = FunctionRef' 'S.Concrete
 
-data FunctionRef' (n :: S.IsConcrete) = FunctionRef'
-  { _functionRefName :: RefNameType n,
-    _functionRefSig :: Expression
+newtype FunctionRef' (n :: S.IsConcrete) = FunctionRef'
+  { _functionRefName :: RefNameType n
   }
+
+instance Hashable (RefNameType s) => Hashable (FunctionRef' s) where
+  hashWithSalt i = hashWithSalt i . _functionRefName
 
 instance Eq (RefNameType s) => Eq (FunctionRef' s) where
   (==) = (==) `on` _functionRefName
@@ -590,10 +601,12 @@ instance Show (RefNameType s) => Show (FunctionRef' s) where
 
 type ConstructorRef = ConstructorRef' 'S.Concrete
 
-data ConstructorRef' (n :: S.IsConcrete) = ConstructorRef'
-  { _constructorRefName :: RefNameType n,
-    _constructorSig :: Expression
+newtype ConstructorRef' (n :: S.IsConcrete) = ConstructorRef'
+  { _constructorRefName :: RefNameType n
   }
+
+instance Hashable (RefNameType s) => Hashable (ConstructorRef' s) where
+  hashWithSalt i = hashWithSalt i . _constructorRefName
 
 instance Eq (RefNameType s) => Eq (ConstructorRef' s) where
   (==) = (==) `on` _constructorRefName
@@ -1098,6 +1111,7 @@ deriving stock instance
   Ord (Print s)
 
 makeLenses ''InductiveDef
+makeLenses ''InductiveConstructorDef
 makeLenses ''Module
 makeLenses ''TypeSignature
 makeLenses ''AxiomDef
@@ -1111,6 +1125,10 @@ makeLenses ''ModuleRef''
 makeLenses ''FunctionRef'
 makeLenses ''ConstructorRef'
 makeLenses ''BackendItem
+makeLenses ''OpenModule
+makeLenses ''PatternApp
+makeLenses ''PatternInfixApp
+makeLenses ''PatternPostfixApp
 
 idenOverName :: (forall s. S.Name' s -> S.Name' s) -> ScopedIden -> ScopedIden
 idenOverName f = \case
@@ -1133,6 +1151,9 @@ entryOverName f = snd . entryPrism f
 
 entryName :: SymbolEntry -> S.Name' ()
 entryName = fst . entryPrism id
+
+instance HasLoc SymbolEntry where
+  getLoc = S._nameDefined . entryName
 
 overModuleRef'' :: forall s s'. (forall t. ModuleRef'' s t -> ModuleRef'' s' t) -> ModuleRef' s -> ModuleRef' s'
 overModuleRef'' f = over unModuleRef' (\(t :&: m'') -> t :&: f m'')

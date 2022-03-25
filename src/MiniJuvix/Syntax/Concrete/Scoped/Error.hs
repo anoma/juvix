@@ -31,14 +31,11 @@ data ScopeError
   | ErrAmbiguousModuleSym AmbiguousModuleSym
   | ErrUnusedOperatorDef UnusedOperatorDef
   | ErrWrongTopModuleName WrongTopModuleName
-  | -- | Eventually this needs to go away
-    ErrGeneric Text
   deriving stock (Show)
 
 ppScopeError :: ScopeError -> Doc Eann
 ppScopeError s = case s of
   ErrParser txt -> ppError txt
-  ErrGeneric txt -> pretty txt
   ErrInfixParser e -> ppError e
   ErrInfixPattern e -> ppError e
   ErrMultipleDeclarations e -> ppError e

@@ -94,12 +94,14 @@ data WrongTopModuleName = WrongTopModuleName
   }
   deriving stock (Show)
 
-newtype AmbiguousSym = AmbiguousSym
-  { _ambiguousSymEntires :: [SymbolEntry]
+data AmbiguousSym = AmbiguousSym
+  { _ambiguousSymName :: Name,
+    _ambiguousSymEntires :: [SymbolEntry]
   }
   deriving stock (Show)
 
-newtype AmbiguousModuleSym = AmbiguousModuleSym
-  { _ambiguousModSymEntires :: [SymbolEntry]
+data AmbiguousModuleSym = AmbiguousModuleSym
+  { _ambiguousModName :: Name,
+    _ambiguousModSymEntires :: [SymbolEntry]
   }
   deriving stock (Show)

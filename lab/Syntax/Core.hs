@@ -6,7 +6,7 @@ module MiniJuvix.Syntax.Core where
 
 --------------------------------------------------------------------------------
 
-import Algebra.Graph.Label (Semiring (..))
+-- import Algebra.Graph.Label (Semiring (..))
 import MiniJuvix.Prelude hiding (Local)
 import Numeric.Natural (Natural)
 

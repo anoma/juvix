@@ -17,7 +17,7 @@ data Options = Options
   { _optShowNameId :: Bool,
     _optInlineImports :: Bool,
     _optIndent :: Int
-  }
+}
 
 defaultOptions :: Options
 defaultOptions =
@@ -178,6 +178,9 @@ parens = enclose kwParenL kwParenR
 doubleQuotes :: Doc Ann -> Doc Ann
 doubleQuotes = enclose kwDQuote kwDQuote
 
+annotateKind :: S.NameKind -> Doc Ann -> Doc Ann
+annotateKind k = (annotate . AnnKind) k
+
 ppModulePathType ::
   forall t s r.
   (SingI t, SingI s, Members '[Reader Options] r) =>
@@ -222,7 +225,7 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
         SParsed -> True
         SScoped ->
           S._nameId (_modulePath (importModule i))
-            == S._nameId (projSigma2 _moduleRefName (openModuleName o ^. unModuleRef'))
+            == S._nameId (projSigma2 _moduleRefName (o ^. openModuleName . unModuleRef'))
       (StatementImport _, _) -> False
       (StatementOpenModule {}, StatementOpenModule {}) -> True
       (StatementOpenModule {}, _) -> False
@@ -256,10 +259,10 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
       where
         syms :: InductiveDef s -> [Symbol]
         syms InductiveDef {..} = case sing :: SStage s of
-          SParsed -> _inductiveName : map constructorName _inductiveConstructors
+          SParsed -> _inductiveName : map _constructorName _inductiveConstructors
           SScoped ->
             S._nameConcrete _inductiveName :
-            map (S._nameConcrete . constructorName) _inductiveConstructors
+            map (S._nameConcrete . _constructorName) _inductiveConstructors
 
 instance SingI s => PrettyCode [Statement s] where
   ppCode ss = joinGroups <$> mapM (fmap mkGroup . mapM (fmap endSemicolon . ppCode)) (groupStatements ss)
@@ -290,8 +293,9 @@ instance PrettyCode ForeignBlock where
   ppCode ForeignBlock {..} = do
     _foreignBackend' <- ppCode _foreignBackend
     return $
-      kwForeign <+> _foreignBackend' <+> lbrace
+      kwForeign <+> _foreignBackend' <+> lbrace <> line
         <> pretty _foreignCode
+        <> line
         <> rbrace
 
 instance PrettyCode BackendItem where
@@ -354,7 +358,7 @@ instance (SingI s, SingI t) => PrettyCode (Module s t) where
     where
       lastSemicolon = case sing :: SModuleIsTop t of
         SModuleLocal -> Nothing
-        SModuleTop -> Just kwSemicolon
+        SModuleTop -> Just (kwSemicolon <> line)
 
 instance PrettyCode Precedence where
   ppCode p = return $ case p of
@@ -384,8 +388,8 @@ instance PrettyCode OperatorSyntaxDef where
 
 instance SingI s => PrettyCode (InductiveConstructorDef s) where
   ppCode InductiveConstructorDef {..} = do
-    constructorName' <- annDef constructorName <$> ppSymbol constructorName
-    constructorType' <- ppExpression constructorType
+    constructorName' <- annDef _constructorName <$> ppSymbol _constructorName
+    constructorType' <- ppExpression _constructorType
     return $ constructorName' <+> kwColon <+> constructorType'
 
 instance SingI s => PrettyCode (InductiveDef s) where
@@ -442,7 +446,7 @@ instance PrettyCode Name where
 
 instance PrettyCode n => PrettyCode (S.Name' n) where
   ppCode S.Name' {..} = do
-    nameConcrete' <- annotate (AnnKind _nameKind) <$> ppCode _nameConcrete
+    nameConcrete' <- annotateKind _nameKind <$> ppCode _nameConcrete
     showNameId <- asks _optShowNameId
     uid <- if showNameId then ("@" <>) <$> ppCode _nameId else return mempty
     return $ annSRef (nameConcrete' <> uid)
@@ -457,9 +461,9 @@ instance SingI s => PrettyCode (OpenModule s) where
   ppCode :: forall r. Members '[Reader Options] r => OpenModule s -> Sem r (Doc Ann)
   ppCode OpenModule {..} = do
     openModuleName' <- case sing :: SStage s of
-      SParsed -> ppCode openModuleName
-      SScoped -> ppCode openModuleName
-    openUsingHiding' <- sequence $ ppUsingHiding <$> openUsingHiding
+      SParsed -> ppCode _openModuleName
+      SScoped -> ppCode _openModuleName
+    openUsingHiding' <- sequence $ ppUsingHiding <$> _openUsingHiding
     openParameters' <- ppOpenParams
     let openPublic' = ppPublic
     return $ keyword "open" <+> openModuleName' <+?> openParameters' <+?> openUsingHiding' <+?> openPublic'
@@ -468,9 +472,9 @@ instance SingI s => PrettyCode (OpenModule s) where
         SParsed -> ppCodeAtom
         SScoped -> ppCodeAtom
       ppOpenParams :: Sem r (Maybe (Doc Ann))
-      ppOpenParams = case openParameters of
+      ppOpenParams = case _openParameters of
         [] -> return Nothing
-        _ -> Just . hsep <$> mapM ppAtom' openParameters
+        _ -> Just . hsep <$> mapM ppAtom' _openParameters
       ppUsingHiding :: UsingHiding -> Sem r (Doc Ann)
       ppUsingHiding uh = do
         bracedList <-
@@ -482,7 +486,7 @@ instance SingI s => PrettyCode (OpenModule s) where
             Using s -> (kwUsing, s)
             Hiding s -> (kwHiding, s)
       ppPublic :: Maybe (Doc Ann)
-      ppPublic = case openPublic of
+      ppPublic = case _openPublic of
         Public -> Just kwPublic
         NoPublic -> Nothing
 
@@ -723,15 +727,15 @@ instance PrettyCode Pattern where
     where
       ppPatternInfixApp :: PatternInfixApp -> Sem r (Doc Ann)
       ppPatternInfixApp p@PatternInfixApp {..} = do
-        patInfixConstructor' <- ppCode patInfixConstructor
-        patInfixLeft' <- ppLeftExpression (getFixity p) patInfixLeft
-        patInfixRight' <- ppRightExpression (getFixity p) patInfixRight
+        patInfixConstructor' <- ppCode _patInfixConstructor
+        patInfixLeft' <- ppLeftExpression (getFixity p) _patInfixLeft
+        patInfixRight' <- ppRightExpression (getFixity p) _patInfixRight
         return $ patInfixLeft' <+> patInfixConstructor' <+> patInfixRight'
 
       ppPatternPostfixApp :: PatternPostfixApp -> Sem r (Doc Ann)
       ppPatternPostfixApp p@PatternPostfixApp {..} = do
-        patPostfixConstructor' <- ppCode patPostfixConstructor
-        patPostfixParameter' <- ppLeftExpression (getFixity p) patPostfixParameter
+        patPostfixConstructor' <- ppCode _patPostfixConstructor
+        patPostfixParameter' <- ppLeftExpression (getFixity p) _patPostfixParameter
         return $ patPostfixParameter' <+> patPostfixConstructor'
 
 parensCond :: Bool -> Doc Ann -> Doc Ann
@@ -792,3 +796,18 @@ ppExpression :: forall s r. (SingI s, Members '[Reader Options] r) => Expression
 ppExpression = case sing :: SStage s of
   SScoped -> ppCode
   SParsed -> ppCode
+
+instance PrettyCode SymbolEntry where
+  ppCode ent = return (kindTag <+> pretty (entryName ent ^. S.nameVerbatim)
+    <+> "defined at" <+> pretty (getLoc ent))
+    where
+    pretty' :: Text -> Doc a
+    pretty' = pretty
+    kindTag = case ent of
+      EntryAxiom _ -> annotateKind S.KNameAxiom (pretty' Str.axiom)
+      EntryInductive _ -> annotateKind S.KNameInductive (pretty' Str.inductive)
+      EntryFunction _ -> annotateKind S.KNameFunction (pretty' Str.function)
+      EntryConstructor _ -> annotateKind S.KNameConstructor (pretty' Str.constructor)
+      EntryModule (ModuleRef' (isTop :&: _))
+        | SModuleTop <- isTop -> annotateKind S.KNameTopModule (pretty' Str.topModule)
+        | SModuleLocal <- isTop -> annotateKind S.KNameLocalModule (pretty' Str.localModule)

@@ -50,7 +50,14 @@ integer = do
 -- | TODO allow escaping { inside the string using \{
 bracedString :: MonadParsec e Text m => m Text
 bracedString =
-  pack <$> (char '{' >> manyTill anySingle (char '}'))
+  Text.strip . unIndent . pack <$> (char '{' >> manyTill anySingle (char '}'))
+  where
+    unIndent :: Text -> Text
+    unIndent t = Text.unlines (Text.drop (fromMaybe 0 (indentIdx t)) <$> Text.lines t)
+    indentIdx :: Text -> Maybe Int
+    indentIdx = minimumMaybe . mapMaybe firstNonBlankChar . Text.lines
+    firstNonBlankChar :: Text -> Maybe Int
+    firstNonBlankChar = Text.findIndex (not . isSpace)
 
 string :: MonadParsec e Text m => m Text
 string = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))

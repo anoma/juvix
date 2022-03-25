@@ -1,0 +1,16 @@
+* Changelog
+
+MiniJuvix uses [[https://pvp.haskell.org][PVP Versioning]]. The
+changelog is available
+[[https://github.com/heliaxdev/MiniJuvix/releases][on GitHub]].
+
+** 0.1.1
+
+- Add support in the parser/scoper for Axiom backends
+- Add support for =foreign= keyword
+- New flag =--no-colors= for the scope command
+- Upgrade to GHC 9.2.2
+- Improve resolution of local symbols in the scoper
+- Several new tests related to ambiguous symbols
+- Add =--version= flag
+- Add InfoTableBuilder effect for the scoper

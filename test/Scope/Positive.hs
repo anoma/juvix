@@ -5,6 +5,9 @@ import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
 import MiniJuvix.Syntax.Concrete.Scoped.Utils
 import qualified Data.HashMap.Strict as HashMap
+import Text.Show.Pretty hiding (Html)
+import Data.Algorithm.Diff
+import Data.Algorithm.DiffOutput
 
 
 data PosTest = PosTest {
@@ -41,13 +44,24 @@ testDescr PosTest {..} = TestDescr {
     parsedPretty' <- parseTextModuleIO parsedPretty
 
     step "Scope again"
-    s' <- fromRightIO' printErrorAnsi $ return (M.scopeCheck1Pure fs "." p')
+    (_ , s') <- fromRightIO' printErrorAnsi $ return (M.scopeCheck1Pure fs "." p')
 
     step "Checks"
-    assertBool "check: scope . parse . pretty . scope . parse = scope . parse" (s == s')
-    assertBool "check: parse . pretty . scope . parse = parse" (p == p')
-    assertBool "check: parse . pretty . parse = parse" (p == parsedPretty')
+    assertEqDiff "check: scope . parse . pretty . scope . parse = scope . parse" s s'
+    assertEqDiff "check: parse . pretty . scope . parse = parse" p p'
+    assertEqDiff "check: parse . pretty . parse = parse" p parsedPretty'
   }
+
+assertEqDiff :: (Eq a, Show a) => String -> a -> a -> Assertion
+assertEqDiff msg a b
+  | a == b = return ()
+  | otherwise = do
+      putStrLn (pack $ ppDiff (getGroupedDiff pa pb))
+      putStrLn "End diff"
+      fail msg
+    where
+    pa = lines $ ppShow a
+    pb = lines $ ppShow b
 
 allTests :: TestTree
 allTests = testGroup "Scope positive tests"
@@ -75,4 +89,16 @@ tests = [
      "." "Literals.mjuvix"
   , PosTest "Hello World backends"
      "." "HelloWorld.mjuvix"
+  , PosTest "Axiom with backends"
+     "." "Axiom.mjuvix"
+  , PosTest "Foreign block parsing"
+     "." "Foreign.mjuvix"
+  , PosTest "Multiple modules non-ambiguous symbol - same file"
+     "QualifiedSymbol" "M.mjuvix"
+  , PosTest "Multiple modules non-ambiguous symbol"
+     "QualifiedSymbol2" "N.mjuvix"
+  , PosTest "Multiple modules constructor non-ambiguous symbol"
+     "QualifiedConstructor" "M.mjuvix"
+  , PosTest "open overrides open public"
+     "." "ShadowPublicOpen.mjuvix"
  ]

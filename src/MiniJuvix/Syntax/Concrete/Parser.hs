@@ -344,9 +344,9 @@ inductiveParam = parens $ do
 
 constructorDef :: MonadParsec e Text m => m (InductiveConstructorDef 'Parsed)
 constructorDef = do
-  constructorName <- symbol
+  _constructorName <- symbol
   kwColon
-  constructorType <- expressionAtoms
+  _constructorType <- expressionAtoms
   return InductiveConstructorDef {..}
 
 --------------------------------------------------------------------------------
@@ -415,10 +415,10 @@ atomicExpression = do
 openModule :: forall e m. MonadParsec e Text m => m (OpenModule 'Parsed)
 openModule = do
   kwOpen
-  openModuleName <- name
-  openParameters <- many atomicExpression
-  openUsingHiding <- optional usingOrHiding
-  openPublic <- maybe NoPublic (const Public) <$> optional kwPublic
+  _openModuleName <- name
+  _openParameters <- many atomicExpression
+  _openUsingHiding <- optional usingOrHiding
+  _openPublic <- maybe NoPublic (const Public) <$> optional kwPublic
   return OpenModule {..}
   where
     usingOrHiding :: m UsingHiding
