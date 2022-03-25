@@ -19,29 +19,31 @@ import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import qualified MiniJuvix.Syntax.Concrete.Name as N
 import MiniJuvix.Syntax.Concrete.Scoped.Scope
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper.Files
+import MiniJuvix.Syntax.Concrete.Scoped.Scoper.InfoTableBuilder
 
 --------------------------------------------------------------------------------
 
-scopeCheck1IO :: FilePath -> Module 'Parsed 'ModuleTop -> IO (Either ScopeError (Module 'Scoped 'ModuleTop))
+scopeCheck1IO :: FilePath -> Module 'Parsed 'ModuleTop -> IO (Either ScopeError (InfoTable, Module 'Scoped 'ModuleTop))
 scopeCheck1IO root = runFinal . embedToFinal @IO . runFilesIO . fixpointToFinal @IO . scopeCheck1 root
 
-scopeCheck1Pure :: HashMap FilePath Text -> FilePath -> Module 'Parsed 'ModuleTop -> Either ScopeError (Module 'Scoped 'ModuleTop)
+scopeCheck1Pure :: HashMap FilePath Text -> FilePath -> Module 'Parsed 'ModuleTop -> Either ScopeError (InfoTable, Module 'Scoped 'ModuleTop)
 scopeCheck1Pure fs root = runIdentity . runFinal . runFilesPure fs . fixpointToFinal @Identity . scopeCheck1 root
 
 scopeCheck1 ::
   Members [Files, Fixpoint] r =>
   FilePath ->
   Module 'Parsed 'ModuleTop ->
-  Sem r (Either ScopeError (Module 'Scoped 'ModuleTop))
-scopeCheck1 root m = fmap head <$> scopeCheck root (pure m)
+  Sem r (Either ScopeError (InfoTable, Module 'Scoped 'ModuleTop))
+scopeCheck1 root m = fmap (second head) <$> scopeCheck root (pure m)
 
 scopeCheck ::
   Members [Files, Fixpoint] r =>
   FilePath ->
   NonEmpty (Module 'Parsed 'ModuleTop) ->
-  Sem r (Either ScopeError (NonEmpty (Module 'Scoped 'ModuleTop)))
+  Sem r (Either ScopeError (InfoTable, NonEmpty (Module 'Scoped 'ModuleTop)))
 scopeCheck root modules =
   runError $
+   runInfoTableBuilder $
     runReader scopeParameters $
       evalState iniScoperState $
         mapM checkTopModule_ modules
@@ -317,9 +319,6 @@ checkQualifiedExpr q@(QualifiedName (Path p) sym) = do
   where
     q' = NameQualified q
     notInScope = throw (ErrQualSymNotInScope q)
-
-unqualifiedSName :: S.Symbol -> S.Name
-unqualifiedSName = over S.nameConcrete NameUnqualified
 
 entryToScopedIden :: Name -> SymbolEntry -> ScopedIden
 entryToScopedIden name = \case
@@ -756,18 +755,19 @@ lookupLocalEntry sym = do
     HashMap.lookup path _symbolInfo
 
 checkAxiomDef ::
-  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  Members '[InfoTableBuilder, Error ScopeError, State Scope, State ScoperState] r =>
   AxiomDef 'Parsed ->
   Sem r (AxiomDef 'Scoped)
 checkAxiomDef AxiomDef {..} = do
   axiomType' <- localScope $ checkParseExpressionAtoms _axiomType
   axiomName' <- bindAxiomSymbol _axiomName
-  return
-    AxiomDef
-      { _axiomName = axiomName',
+  let def = AxiomDef {
+        _axiomName = axiomName',
         _axiomType = axiomType',
         ..
-      }
+     }
+  registerAxiom def
+  return def
 
 localScope :: Sem (Reader LocalVars : r) a -> Sem r a
 localScope = runReader (LocalVars mempty)

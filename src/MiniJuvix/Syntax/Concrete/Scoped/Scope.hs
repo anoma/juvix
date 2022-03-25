@@ -110,12 +110,10 @@ emptyScope absPath =
       _scopeBindGroup = mempty
     }
 
-buildInfoTable :: NonEmpty (Module 'Scoped 'ModuleTop) -> InfoTable
-buildInfoTable = run . execState mempty . goModules
-  where
-  goModules :: Member (State InfoTable) r => NonEmpty (Module 'Scoped 'ModuleTop) -> Sem r ()
-  goModules = mapM_ goModule
-  goModule :: Member (State InfoTable) r => Module 'Scoped 'ModuleTop -> Sem r ()
-  goModule = undefined
-  addConstructor :: Member (State InfoTable) r => InductiveConstructorDef 'Scoped -> Sem r ()
-  addConstructor d = modify (over infoConstructors (HashMap.insert undefined undefined))
+emptyInfoTable :: InfoTable
+emptyInfoTable = InfoTable {
+  _infoConstructors = mempty,
+  _infoAxioms = mempty,
+  _infoInductives = mempty,
+  _infoFunctions = mempty
+  }
