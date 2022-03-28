@@ -1,7 +1,17 @@
-MiniJuvix
-[[file:LICENSE][[[https://img.shields.io/badge/license-GPL--3.0--only-blue.svg]]]]
-[[https://github.com/heliaxdev/MiniJuvix/actions/workflows/ci.yml][[[https://github.com/heliaxdev/MiniJuvix/actions/workflows/ci.yml/badge.svg?branch=qtt]]]]
-====
+* MiniJuvix
+
+#+begin_html
+<a href="https://github.com/heliaxdev/minijuvix/blob/main/LICENSE">
+<img alt="LICENSE" src="https://img.shields.io/badge/license-GPL--3.0--only-blue.svg" />
+</a>
+#+end_html
+
+#+begin_html
+<a href="https://github.com/heliaxdev/MiniJuvix/actions/workflows/ci.yml">
+<img alt="CI status" src="https://github.com/heliaxdev/MiniJuvix/actions/workflows/ci.yml/badge.svg" />
+</a>
+#+end_html
+
 
 ** Description
 
