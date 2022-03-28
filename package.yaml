@@ -1,9 +1,5 @@
 name:            minijuvix
-<<<<<<< HEAD
-version:         0.1.0
-=======
 version:         0.1.1
->>>>>>> origin/main
 license:         GPL-3.0-only
 license-file:    LICENSE
 copyright:       (c) 2022- Heliax AG.
@@ -80,9 +76,6 @@ default-extensions:
 - TemplateHaskell
 - TypeFamilyDependencies
 - UnicodeSyntax
-
-# verbatim:
-#   default-language: GHC2021
 
 library:
   source-dirs: src
