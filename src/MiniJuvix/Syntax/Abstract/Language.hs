@@ -70,14 +70,17 @@ newtype FunctionRef = FunctionRef
 newtype ConstructorRef = ConstructorRef
   { _constructorRefName :: Name }
   deriving stock (Show, Eq)
+  deriving newtype Hashable
 
 newtype InductiveRef = InductiveRef
   { _inductiveRefName :: Name }
   deriving stock (Show, Eq)
+  deriving newtype Hashable
 
 newtype AxiomRef = AxiomRef
   { _axiomRefName :: Name }
   deriving stock (Show, Eq)
+  deriving newtype Hashable
 
 data Iden
   = IdenFunction FunctionRef
