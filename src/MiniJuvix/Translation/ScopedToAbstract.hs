@@ -141,11 +141,11 @@ goExpression e = case e of
   where
     goIden :: C.ScopedIden -> A.Expression
     goIden x = A.ExpressionIden $ case x of
-      ScopedAxiom a -> A.IdenAxiom (a ^. C.axiomRefName)
-      ScopedInductive i -> A.IdenInductive (i ^. C.inductiveRefName)
+      ScopedAxiom a -> A.IdenAxiom (A.AxiomRef (a ^. C.axiomRefName))
+      ScopedInductive i -> A.IdenInductive (A.InductiveRef (i ^. C.inductiveRefName))
       ScopedVar v -> A.IdenVar v
-      ScopedFunction fun -> A.IdenFunction (fun ^. C.functionRefName)
-      ScopedConstructor c -> A.IdenConstructor (c ^. C.constructorRefName)
+      ScopedFunction fun -> A.IdenFunction (A.FunctionRef (fun ^. C.functionRefName))
+      ScopedConstructor c -> A.IdenConstructor (A.ConstructorRef (c ^. C.constructorRefName))
 
     goApplication :: Application -> Sem r A.Application
     goApplication (Application l r) = do
@@ -199,25 +199,28 @@ goInfixPatternApplication a = uncurry A.ConstructorApp <$> viewApp (PatternInfix
 goPostfixPatternApplication :: forall r. Members '[Error Err] r => PatternPostfixApp -> Sem r A.ConstructorApp
 goPostfixPatternApplication a = uncurry A.ConstructorApp <$> viewApp (PatternPostfixApplication a)
 
-viewApp :: forall r. Members '[Error Err] r => Pattern -> Sem r (A.Name, [A.Pattern])
+viewApp :: forall r. Members '[Error Err] r => Pattern -> Sem r (A.ConstructorRef, [A.Pattern])
 viewApp p = case p of
-  PatternConstructor c -> return (c ^. constructorRefName, [])
+  PatternConstructor c -> return (goConstructorRef c, [])
   PatternApplication (PatternApp l r) -> do
     r' <- goPattern r
     second (`snoc` r') <$> viewApp l
   PatternInfixApplication (PatternInfixApp l c r) -> do
     l' <- goPattern l
     r' <- goPattern r
-    return (c ^. constructorRefName, [l', r'])
+    return (goConstructorRef c, [l', r'])
   PatternPostfixApplication (PatternPostfixApp l c) -> do
     l' <- goPattern l
-    return (c ^. constructorRefName, [l'])
+    return (goConstructorRef c, [l'])
   PatternVariable {} -> err
   PatternWildcard {} -> err
   PatternEmpty {} -> err
   where
     err :: Sem r a
     err = throw ("constructor expected on the left of a pattern application" :: Err)
+
+goConstructorRef :: ConstructorRef -> A.ConstructorRef
+goConstructorRef (ConstructorRef' n) = A.ConstructorRef n
 
 goPattern :: forall r. Members '[Error Err] r => Pattern -> Sem r A.Pattern
 goPattern p = case p of

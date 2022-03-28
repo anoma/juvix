@@ -43,7 +43,7 @@ viewExpressionAsPattern e = case viewApp e of
     | Just v <- getVariable f -> Just (PatternVariable v)
   _ -> Nothing
   where
-    getConstructor :: Expression -> Maybe Name
+    getConstructor :: Expression -> Maybe ConstructorRef
     getConstructor f = case f of
       ExpressionIden (IdenConstructor n) -> Just n
       _ -> Nothing
