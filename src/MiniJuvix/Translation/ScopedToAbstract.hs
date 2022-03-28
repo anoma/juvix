@@ -127,7 +127,6 @@ goConstructorDef (InductiveConstructorDef c ty) = A.InductiveConstructorDef c <$
 
 goExpression :: forall r. Members '[Error Err] r => Expression -> Sem r A.Expression
 goExpression e = case e of
-  -- TODO: Continue here
   ExpressionIdentifier nt -> return (goIden nt)
   ExpressionParensIdentifier nt -> return (goIden nt)
   ExpressionApplication a -> A.ExpressionApplication <$> goApplication a

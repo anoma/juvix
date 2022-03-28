@@ -3,9 +3,8 @@ module MiniJuvix.Syntax.Concrete.Scoped.Scoper.InfoTableBuilder where
 import qualified Data.HashMap.Strict as HashMap
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Language
-import MiniJuvix.Syntax.Concrete.Language
-import MiniJuvix.Syntax.Concrete.Scoped.Scope
 import MiniJuvix.Syntax.Concrete.Scoped.Name
+import MiniJuvix.Syntax.Concrete.Scoped.Scope
 
 data InfoTableBuilder m a where
   RegisterAxiom :: AxiomDef 'Scoped -> InfoTableBuilder m ()
