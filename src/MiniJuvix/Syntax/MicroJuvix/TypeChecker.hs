@@ -97,11 +97,44 @@ foldFunType l r = case l of
   [] -> r
   (a : as) -> TypeFunction (Function a (foldFunType as r))
 
--- |  a -> (b -> c)  ==> ([a, b], c)
+-- | a -> (b -> c)  ==> ([a, b], c)
 unfoldFunType :: Type -> ([Type], Type)
 unfoldFunType t = case t of
   TypeIden {} -> ([], t)
   TypeFunction (Function l r) -> first (l:) (unfoldFunType r)
+
+checkFunctionClause :: forall r. Members '[Reader InfoTable, Error Err] r =>
+  FunctionInfo -> FunctionClause -> Sem r FunctionClause
+checkFunctionClause info FunctionClause{..} = do
+  let (argTys, rty) = unfoldFunType (info ^. functionInfoType)
+      (patTys, restTys) = splitAt (length _clausePatterns) argTys
+      bodyTy = foldFunType restTys rty
+  when (length patTys /= length _clausePatterns) (throwErr "too many patterns")
+  locals <- mconcat <$> zipWithM checkPattern patTys _clausePatterns
+  clauseBody' <- runReader locals (checkExpression bodyTy _clauseBody)
+  return FunctionClause {
+    _clauseBody = clauseBody',
+    ..
+    }
+
+checkPattern :: forall r. Members '[Reader InfoTable, Error Err] r =>
+  Type -> Pattern -> Sem r LocalVars
+checkPattern type_ pat = LocalVars . HashMap.fromList <$> go type_ pat
+  where
+  go :: Type -> Pattern -> Sem r [(VarName, Type)]
+  go ty p = case p of
+    PatternWildcard -> return []
+    PatternVariable v -> return [(v, ty)]
+    PatternConstructorApp a -> do
+      info <- lookupConstructor (a ^. constrAppConstructor)
+      when (TypeIden (TypeIdenInductive (info ^. constructorInfoInductive)) /= ty) (throwErr "wrong type for constructor")
+      goConstr a
+    where
+    goConstr :: ConstructorApp -> Sem r [(VarName, Type)]
+    goConstr (ConstructorApp c ps) = do
+      tys <- (^. constructorInfoArgs) <$> lookupConstructor c
+      when (length tys /= length ps) (throwErr "wrong number of arguments in constructor app")
+      concat <$> zipWithM go tys ps
 
 throwErr :: Members '[Error Err] r => Err -> Sem r a
 throwErr = throw
@@ -140,33 +173,3 @@ inferExpression' e = case e of
   getFunctionType t = case t of
     TypeFunction f -> return f
     _ -> throwErr "expected function type"
-
-checkFunctionClause :: forall r. Members '[Reader InfoTable, Error Err] r =>
-  FunctionInfo -> FunctionClause -> Sem r FunctionClause
-checkFunctionClause info FunctionClause{..} = do
-  let (argTys, rty) = unfoldFunType (info ^. functionInfoType)
-      (patTys, restTys) = splitAt (length _clausePatterns) argTys
-      bodyTy = foldFunType restTys rty
-  when (length patTys /= length _clausePatterns) (throwErr "wrong number of patterns")
-  locals <- mconcat <$> zipWithM checkPattern patTys _clausePatterns
-  clauseBody' <- runReader locals (checkExpression bodyTy _clauseBody)
-  return FunctionClause {
-    _clauseBody = clauseBody',
-    ..
-    }
-
-checkPattern :: forall r. Members '[Reader InfoTable, Error Err] r =>
-  Type -> Pattern -> Sem r LocalVars
-checkPattern type_ pat = LocalVars . HashMap.fromList <$> go type_ pat
-  where
-  go :: Type -> Pattern -> Sem r [(VarName, Type)]
-  go ty p = case p of
-    PatternWildcard -> return []
-    PatternVariable v -> return [(v, ty)]
-    PatternConstructorApp a -> goConstr a
-    where
-    goConstr :: ConstructorApp -> Sem r [(VarName, Type)]
-    goConstr (ConstructorApp c ps) = do
-      tys <- (^. constructorInfoArgs) <$> lookupConstructor c
-      when (length tys /= length ps) (throwErr "wrong number of arguments in constructor app")
-      concat <$> zipWithM go tys ps
