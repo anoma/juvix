@@ -35,7 +35,8 @@ emptyInfoTable = InfoTable {
   _infoConstructors = mempty,
   _infoAxioms = mempty,
   _infoInductives = mempty,
-  _infoFunctions = mempty
+  _infoFunctions = mempty,
+  _infoFunctionClauses = mempty
   }
 
 makeLenses ''InfoTable
