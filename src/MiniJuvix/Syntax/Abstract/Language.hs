@@ -25,6 +25,9 @@ type InductiveName = S.Symbol
 
 type AxiomName = S.Symbol
 
+-- TODO: Perhaps we could use a different Name type
+--  that just includes fields (nameId + debug info)
+-- requried in future passes.
 type Name = S.Name
 
 type TopModule = Module C.TopModulePath
@@ -59,12 +62,32 @@ data FunctionClause = FunctionClause
   }
   deriving stock (Show, Eq)
 
+newtype FunctionRef = FunctionRef
+  { _functionRefName :: Name }
+  deriving stock (Show, Eq)
+  deriving newtype Hashable
+
+newtype ConstructorRef = ConstructorRef
+  { _constructorRefName :: Name }
+  deriving stock (Show, Eq)
+  deriving newtype Hashable
+
+newtype InductiveRef = InductiveRef
+  { _inductiveRefName :: Name }
+  deriving stock (Show, Eq)
+  deriving newtype Hashable
+
+newtype AxiomRef = AxiomRef
+  { _axiomRefName :: Name }
+  deriving stock (Show, Eq)
+  deriving newtype Hashable
+
 data Iden
-  = IdenFunction Name
-  | IdenConstructor Name
+  = IdenFunction FunctionRef
+  | IdenConstructor ConstructorRef
   | IdenVar VarName
-  | IdenInductive Name
-  | IdenAxiom Name
+  | IdenInductive InductiveRef
+  | IdenAxiom AxiomRef
   deriving stock (Show, Eq)
 
 data Expression
@@ -134,7 +157,7 @@ instance HasAtomicity Function where
 
 -- | Fully applied constructor in a pattern.
 data ConstructorApp = ConstructorApp
-  { _constrAppConstructor :: Name,
+  { _constrAppConstructor :: ConstructorRef,
     _constrAppParameters :: [Pattern]
   }
   deriving stock (Show, Eq)
@@ -176,3 +199,16 @@ makeLenses ''InductiveDef
 makeLenses ''ModuleBody
 makeLenses ''InductiveConstructorDef
 makeLenses ''ConstructorApp
+makeLenses ''FunctionRef
+makeLenses ''ConstructorRef
+makeLenses ''InductiveRef
+makeLenses ''AxiomRef
+makeLenses ''AxiomDef
+
+idenName :: Iden -> Name
+idenName = \case
+    IdenFunction n -> n ^. functionRefName
+    IdenConstructor n -> n ^. constructorRefName
+    IdenInductive n -> n ^. inductiveRefName
+    IdenVar n -> S.unqualifiedSymbol n
+    IdenAxiom n -> n ^. axiomRefName

@@ -255,7 +255,7 @@ go c = do
     MicroJuvix MicroJuvixOptions {..} -> do
       m <- parseModuleIO _mjuvixInputFile
       (_, s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
-      a <- fromRightIO' putStrLn (return $ A.translateModule s)
+      (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
       let micro = Micro.translateModule a
       Micro.printPrettyCodeDefault micro
       putStrLn ""
@@ -274,7 +274,7 @@ go c = do
     Termination (Calls opts@CallsOptions {..}) -> do
       m <- parseModuleIO _callsInputFile
       (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
-      a <- fromRightIO' putStrLn (return $ A.translateModule s)
+      (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
       let callMap0 = T.buildCallMap a
           callMap = case _callsFunctionNameFilter of
             Nothing -> callMap0
@@ -285,7 +285,7 @@ go c = do
     Termination (CallGraph CallGraphOptions {..}) -> do
       m <- parseModuleIO _graphInputFile
       (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
-      a <- fromRightIO' putStrLn (return $ A.translateModule s)
+      (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
       let callMap = T.buildCallMap a
           opts' = A.defaultOptions
           completeGraph = T.completeCallGraph callMap

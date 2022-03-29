@@ -142,12 +142,12 @@ throwErr = throw
 inferExpression' :: forall r. Members '[Reader InfoTable, Error Err, Reader LocalVars] r =>
    Expression -> Sem r TypedExpression
 inferExpression' e = case e of
-  ExpressionIden i -> checkIden i
-  ExpressionApplication a -> checkApplication a
+  ExpressionIden i -> inferIden i
+  ExpressionApplication a -> inferApplication a
   ExpressionTyped {} -> impossible
   where
-  checkIden :: Iden -> Sem r TypedExpression
-  checkIden i = case i of
+  inferIden :: Iden -> Sem r TypedExpression
+  inferIden i = case i of
     IdenFunction fun -> do
       info <- lookupFunction fun
       return (TypedExpression (info ^. functionInfoType) (ExpressionIden i))
@@ -157,8 +157,8 @@ inferExpression' e = case e of
     IdenVar v -> do
       ty <- lookupVar v
       return (TypedExpression ty (ExpressionIden i))
-  checkApplication :: Application -> Sem r TypedExpression
-  checkApplication a = do
+  inferApplication :: Application -> Sem r TypedExpression
+  inferApplication a = do
     l <- inferExpression' (a ^. appLeft)
     fun <- getFunctionType (l ^. typedType)
     r <- checkExpression (fun ^. funLeft) (a ^. appRight)

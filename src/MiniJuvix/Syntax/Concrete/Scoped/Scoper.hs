@@ -720,13 +720,12 @@ checkFunctionClause clause@FunctionClause {..} = do
       clb <- checkParseExpressionAtoms _clauseBody
       put s
       return (clp, clw, clb)
-  return
-    FunctionClause
-      { _clauseOwnerFunction = clauseOwnerFunction',
-        _clausePatterns = clausePatterns',
-        _clauseBody = clauseBody',
-        _clauseWhere = clauseWhere'
-      }
+  registerFunctionClause' FunctionClause
+    { _clauseOwnerFunction = clauseOwnerFunction',
+      _clausePatterns = clausePatterns',
+      _clauseBody = clauseBody',
+      _clauseWhere = clauseWhere'
+    }
   where
     fun = _clauseOwnerFunction
     checkTypeSigInScope :: Sem r S.Symbol
