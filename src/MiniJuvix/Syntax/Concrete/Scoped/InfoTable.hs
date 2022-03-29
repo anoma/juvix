@@ -3,6 +3,7 @@
 module MiniJuvix.Syntax.Concrete.Scoped.InfoTable where
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Language
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 
 newtype FunctionInfo = FunctionInfo {
   _functionInfoType :: Expression
@@ -25,7 +26,8 @@ data InfoTable = InfoTable {
   _infoConstructors :: HashMap ConstructorRef ConstructorInfo,
   _infoAxioms :: HashMap AxiomRef AxiomInfo,
   _infoInductives :: HashMap InductiveRef InductiveInfo,
-  _infoFunctions :: HashMap FunctionRef FunctionInfo
+  _infoFunctions :: HashMap FunctionRef FunctionInfo,
+  _infoFunctionClauses :: HashMap S.Symbol (FunctionClause 'Scoped)
   }
 
 emptyInfoTable :: InfoTable
