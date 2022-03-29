@@ -45,10 +45,13 @@ data Module = Module
   }
 
 data ModuleBody = ModuleBody
-  { _moduleInductives :: HashMap InductiveName (Indexed InductiveDef),
-    _moduleFunctions :: HashMap FunctionName (Indexed FunctionDef),
-    _moduleForeigns :: [Indexed ForeignBlock]
+  { _moduleStatements :: [Statement]
   }
+
+data Statement =
+  StatementInductive InductiveDef
+  | StatementFunction FunctionDef
+  | StatementForeign ForeignBlock
 
 data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
@@ -66,9 +69,15 @@ data Iden
   | IdenConstructor Name
   | IdenVar VarName
 
+data TypedExpression = TypedExpression {
+  _typedType :: Type,
+  _typedExpression :: Expression
+  }
+
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
+  | ExpressionTyped TypedExpression
 
 data Application = Application
   { _appLeft :: Expression,
@@ -79,6 +88,7 @@ data Function = Function
   { _funLeft :: Type,
     _funRight :: Type
   }
+  deriving stock (Eq)
 
 -- | Fully applied constructor in a pattern.
 data ConstructorApp = ConstructorApp
@@ -103,36 +113,39 @@ data InductiveConstructorDef = InductiveConstructorDef
 
 newtype TypeIden
   = TypeIdenInductive InductiveName
+  deriving stock (Eq)
 
 data Type
   = TypeIden TypeIden
   | TypeFunction Function
+  deriving stock (Eq)
+
+data ConstructorInfo = ConstructorInfo {
+  _constructorInfoArgs :: [Type],
+  _constructorInfoInductive :: InductiveName
+  }
+
+data FunctionInfo = FunctionInfo {
+  _functionInfoType :: Type
+  }
+
+data InfoTable = InfoTable {
+  _infoConstructors :: HashMap Name ConstructorInfo,
+  _infoFunctions :: HashMap Name FunctionInfo
+  }
 
 makeLenses ''Module
 makeLenses ''Function
 makeLenses ''FunctionDef
+makeLenses ''FunctionInfo
+makeLenses ''ConstructorInfo
 makeLenses ''FunctionClause
 makeLenses ''InductiveDef
 makeLenses ''ModuleBody
 makeLenses ''Application
+makeLenses ''TypedExpression
 makeLenses ''InductiveConstructorDef
 makeLenses ''ConstructorApp
-
-instance Semigroup ModuleBody where
-  a <> b =
-    ModuleBody
-      { _moduleInductives = a ^. moduleInductives <> b ^. moduleInductives,
-        _moduleFunctions = a ^. moduleFunctions <> b ^. moduleFunctions,
-        _moduleForeigns = a ^. moduleForeigns <> b ^. moduleForeigns
-      }
-
-instance Monoid ModuleBody where
-  mempty =
-    ModuleBody
-      { _moduleInductives = mempty,
-        _moduleForeigns = mempty,
-        _moduleFunctions = mempty
-      }
 
 instance HasAtomicity Application where
   atomicity = const (Aggregate appFixity)
@@ -141,6 +154,7 @@ instance HasAtomicity Expression where
   atomicity e = case e of
     ExpressionIden {} -> Atom
     ExpressionApplication a -> atomicity a
+    ExpressionTyped t -> atomicity (t ^. typedExpression)
 
 instance HasAtomicity Function where
   atomicity = const (Aggregate funFixity)

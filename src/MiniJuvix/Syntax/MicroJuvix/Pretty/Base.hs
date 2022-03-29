@@ -41,10 +41,14 @@ instance PrettyCode Application where
     r' <- ppRightExpression appFixity (a ^. appRight)
     return $ l' <+> r'
 
+instance PrettyCode TypedExpression where
+  ppCode e = ppCode (e ^. typedExpression)
+
 instance PrettyCode Expression where
   ppCode e = case e of
     ExpressionIden i -> ppCode i
     ExpressionApplication a -> ppCode a
+    ExpressionTyped a -> ppCode a
 
 keyword :: Text -> Doc Ann
 keyword = annotate AnnKeyword . pretty
@@ -152,13 +156,15 @@ instance PrettyCode ForeignBlock where
         <> line
         <> rbrace
 
--- TODO Jonathan review
+instance PrettyCode Statement where
+  ppCode = \case
+    StatementForeign f -> ppCode f
+    StatementFunction f -> ppCode f
+    StatementInductive f -> ppCode f
+
 instance PrettyCode ModuleBody where
   ppCode m = do
-    types' <- mapM (mapM ppCode) (toList (m ^. moduleInductives))
-    funs' <- mapM (mapM ppCode) (toList (m ^. moduleFunctions))
-    foreigns' <- mapM (mapM ppCode) (toList (m ^. moduleForeigns))
-    let everything = map (^. indexedThing) (sortOn (^. indexedIx) (types' ++ funs' ++ foreigns'))
+    everything <- mapM ppCode (m ^. moduleStatements)
     return $ vsep2 everything
     where
       vsep2 = concatWith (\a b -> a <> line <> line <> b)

@@ -20,6 +20,7 @@ import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text as T
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
 import qualified MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi as Micro
+import qualified MiniJuvix.Syntax.MicroJuvix.TypeChecker as Micro
 import qualified MiniJuvix.Termination as T
 import qualified MiniJuvix.Termination.CallGraph as A
 import qualified MiniJuvix.Translation.AbstractToMicroJuvix as Micro
@@ -255,8 +256,12 @@ go c = do
       m <- parseModuleIO _mjuvixInputFile
       (_, s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       a <- fromRightIO' putStrLn (return $ A.translateModule s)
-      let mini = Micro.translateModule a
-      Micro.printPrettyCodeDefault mini
+      let micro = Micro.translateModule a
+      Micro.printPrettyCodeDefault micro
+      putStrLn ""
+      case Micro.checkModule micro of
+        Left er -> putStrLn er
+        Right {} -> putStrLn "Well done! It type checks"
     MiniHaskell MiniHaskellOptions {..} -> do
       m <- parseModuleIO _mhaskellInputFile
       (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m

@@ -2,6 +2,7 @@ module MiniJuvix.Translation.AbstractToMicroJuvix where
 
 import qualified Data.HashMap.Strict as HashMap
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Concrete.Language (ForeignBlock)
 import qualified MiniJuvix.Syntax.Abstract.Language.Extra as A
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Syntax.MicroJuvix.Language
@@ -38,19 +39,23 @@ goModuleBody :: A.ModuleBody -> ModuleBody
 goModuleBody b
   | not (HashMap.null (b ^. A.moduleLocalModules)) = unsupported "local modules"
   | otherwise =
-    ModuleBody
-      { _moduleInductives =
-          HashMap.fromList
-            [ (d ^. indexedThing . inductiveName, d)
-              | d <- map (fmap goInductiveDef) (toList (b ^. A.moduleInductives))
-            ],
-        _moduleFunctions =
-          HashMap.fromList
-            [ (f ^. indexedThing . funDefName, f)
-              | f <- map (fmap goFunctionDef) (toList (b ^. A.moduleFunctions))
-            ],
-        _moduleForeigns = b ^. A.moduleForeigns
-      }
+    ModuleBody sortedStatements
+  where
+   sortedStatements :: [Statement]
+   sortedStatements = map _indexedThing (sortOn _indexedIx statements)
+   statements :: [Indexed Statement]
+   statements = map (fmap StatementForeign) foreigns
+     <> map (fmap StatementFunction) functions
+     <> map (fmap StatementInductive) inductives
+   inductives :: [Indexed InductiveDef]
+   inductives =
+       [ d | d <- map (fmap goInductiveDef) (toList (b ^. A.moduleInductives))]
+   functions :: [Indexed FunctionDef]
+   functions  =
+      [ f | f <- map (fmap goFunctionDef) (toList (b ^. A.moduleFunctions))]
+   foreigns :: [Indexed ForeignBlock]
+   foreigns = b ^. A.moduleForeigns
+
 
 -- <> mconcatMap goImport (b ^. A.moduleImports)
 
