@@ -1,5 +1,3 @@
--- |
-
 module MiniJuvix.Syntax.Abstract.InfoTable where
 
 import MiniJuvix.Prelude

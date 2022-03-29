@@ -1,5 +1,3 @@
--- |
-
 module MiniJuvix.Syntax.Abstract.InfoTableBuilder
   ( module MiniJuvix.Syntax.Abstract.InfoTableBuilder,
    module MiniJuvix.Syntax.Abstract.InfoTable)
