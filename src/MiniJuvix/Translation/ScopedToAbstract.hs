@@ -6,27 +6,29 @@ import qualified MiniJuvix.Syntax.Abstract.Language as A
 import MiniJuvix.Syntax.Concrete.Language
 import qualified MiniJuvix.Syntax.Concrete.Language as C
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Abstract.InfoTableBuilder
+import MiniJuvix.Syntax.Abstract.Language (FunctionDef(_funDefTypeSig))
 
 type Err = Text
 
 unsupported :: Members '[Error Err] r => Err -> Sem r a
 unsupported msg = throw $ msg <> " not yet supported"
 
-translateModule :: Module 'Scoped 'ModuleTop -> Either Err A.TopModule
-translateModule = run . runError . goTopModule
+translateModule :: Module 'Scoped 'ModuleTop -> Either Err (InfoTable, A.TopModule)
+translateModule = run . runError . runInfoTableBuilder . goTopModule
 
-goTopModule :: Members '[Error Err] r => Module 'Scoped 'ModuleTop -> Sem r A.TopModule
+goTopModule :: Members '[Error Err, InfoTableBuilder] r => Module 'Scoped 'ModuleTop -> Sem r A.TopModule
 goTopModule = goModule
 
-goLocalModule :: Members '[Error Err] r => Module 'Scoped 'ModuleLocal -> Sem r A.LocalModule
+goLocalModule :: Members '[Error Err, InfoTableBuilder] r => Module 'Scoped 'ModuleLocal -> Sem r A.LocalModule
 goLocalModule = goModule
 
-goModule :: (Members '[Error Err] r, ModulePathType 'Scoped t ~ S.Name' c) => Module 'Scoped t -> Sem r (A.Module c)
+goModule :: (Members '[Error Err, InfoTableBuilder] r, ModulePathType 'Scoped t ~ S.Name' c) => Module 'Scoped t -> Sem r (A.Module c)
 goModule (Module n par b) = case par of
   [] -> A.Module n <$> goModuleBody b
   _ -> unsupported "Module parameters"
 
-goModuleBody :: forall r. Members '[Error Err] r => [Statement 'Scoped] -> Sem r A.ModuleBody
+goModuleBody :: forall r. Members '[Error Err, InfoTableBuilder] r => [Statement 'Scoped] -> Sem r A.ModuleBody
 goModuleBody ss' = do
   _moduleInductives <- inductives
   _moduleLocalModules <- locals
@@ -70,8 +72,7 @@ goModuleBody ss' = do
           [ (name, Indexed i <$> funDef)
             | Indexed i sig <- sigs,
               let name = sig ^. sigName,
-              let clauses = mapM goFunctionClause (getClauses name),
-              let funDef = liftA2 (A.FunctionDef name) (goExpression (sig ^. sigType)) clauses
+              let funDef = goFunctionDef sig (getClauses name)
           ]
       where
         getClauses :: S.Symbol -> NonEmpty (FunctionClause 'Scoped)
@@ -82,6 +83,13 @@ goModuleBody ss' = do
               ]
         sigs :: [Indexed (TypeSignature 'Scoped)]
         sigs = [Indexed i t | (Indexed i (StatementTypeSignature t)) <- ss]
+
+goFunctionDef :: forall r. Members '[Error Err, InfoTableBuilder] r => TypeSignature 'Scoped -> NonEmpty (FunctionClause 'Scoped) -> Sem r A.FunctionDef
+goFunctionDef sig clauses = do
+  let _funDefName = sig ^. sigName
+  _funDefClauses <- mapM goFunctionClause clauses
+  _funDefTypeSig <- goExpression (sig ^. sigType)
+  registerFunction' A.FunctionDef {..}
 
 goFunctionClause :: forall r. Members '[Error Err] r => FunctionClause 'Scoped -> Sem r A.FunctionClause
 goFunctionClause FunctionClause {..} = do
@@ -109,18 +117,21 @@ goInductiveParameter InductiveParameter {..} = do
         _paramUsage = UsageOmega
       }
 
-goInductive :: Members '[Error Err] r => InductiveDef 'Scoped -> Sem r A.InductiveDef
+goInductive :: Members '[Error Err, InfoTableBuilder] r => InductiveDef 'Scoped -> Sem r A.InductiveDef
 goInductive InductiveDef {..} = do
   _inductiveParameters' <- mapM goInductiveParameter _inductiveParameters
   _inductiveType' <- sequence $ goExpression <$> _inductiveType
   _inductiveConstructors' <- mapM goConstructorDef _inductiveConstructors
-  return
-    A.InductiveDef
-      { _inductiveParameters = _inductiveParameters',
-        _inductiveName = _inductiveName,
-        _inductiveType = _inductiveType',
-        _inductiveConstructors = _inductiveConstructors'
-      }
+  inductiveInfo <- registerInductive A.InductiveDef
+    { _inductiveParameters = _inductiveParameters',
+      _inductiveName = _inductiveName,
+      _inductiveType = _inductiveType',
+      _inductiveConstructors = _inductiveConstructors'
+    }
+
+  forM_ _inductiveConstructors' (registerConstructor inductiveInfo)
+
+  return (inductiveInfo ^. inductiveInfoDef)
 
 goConstructorDef :: Members '[Error Err] r => InductiveConstructorDef 'Scoped -> Sem r A.InductiveConstructorDef
 goConstructorDef (InductiveConstructorDef c ty) = A.InductiveConstructorDef c <$> goExpression ty
@@ -232,7 +243,7 @@ goPattern p = case p of
   PatternWildcard -> return A.PatternWildcard
   PatternEmpty -> return A.PatternEmpty
 
-goAxiom :: Members '[Error Err] r => AxiomDef 'Scoped -> Sem r A.AxiomDef
-goAxiom (AxiomDef n m bs) = do
-  e <- goExpression m
-  return (A.AxiomDef n e bs)
+goAxiom :: Members '[Error Err, InfoTableBuilder] r => AxiomDef 'Scoped -> Sem r A.AxiomDef
+goAxiom (AxiomDef {..}) = do
+  _axiomType' <- goExpression _axiomType
+  registerAxiom' A.AxiomDef { _axiomType = _axiomType', ..}

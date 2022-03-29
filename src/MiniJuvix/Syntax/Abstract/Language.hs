@@ -203,6 +203,7 @@ makeLenses ''FunctionRef
 makeLenses ''ConstructorRef
 makeLenses ''InductiveRef
 makeLenses ''AxiomRef
+makeLenses ''AxiomDef
 
 idenName :: Iden -> Name
 idenName = \case

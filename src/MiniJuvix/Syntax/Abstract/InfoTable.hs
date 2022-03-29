@@ -9,7 +9,8 @@ newtype FunctionInfo = FunctionInfo {
   _functionInfoDef :: FunctionDef
   }
 
-newtype ConstructorInfo = ConstructorInfo {
+data ConstructorInfo = ConstructorInfo {
+  _constructorInfoInductive :: InductiveInfo,
   _constructorInfoType :: Expression
   }
 
