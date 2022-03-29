@@ -22,6 +22,9 @@ defaultOptions =
 class PrettyCode c where
   ppCode :: Member (Reader Options) r => c -> Sem r (Doc Ann)
 
+runPrettyCode :: PrettyCode c => Options -> c -> Doc Ann
+runPrettyCode opts = run . runReader opts . ppCode
+
 instance PrettyCode Name where
   ppCode n =
     return $

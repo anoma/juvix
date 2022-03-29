@@ -262,7 +262,7 @@ go c = do
       Micro.printPrettyCodeDefault micro
       putStrLn ""
       case Micro.checkModule micro of
-        Left er -> putStrLn er
+        Left er -> printErrorAnsi er
         Right {} -> putStrLn "Well done! It type checks"
     MiniHaskell MiniHaskellOptions {..} -> do
       m <- parseModuleIO _mhaskellInputFile

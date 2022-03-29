@@ -3,7 +3,7 @@ import MiniJuvix.Prelude
 import MiniJuvix.Syntax.MicroJuvix.Language
 import MiniJuvix.Syntax.MicroJuvix.InfoTable
 import qualified Data.HashMap.Strict as HashMap
-import MiniJuvix.Syntax.MicroJuvix.Pretty.Text
+import MiniJuvix.Syntax.MicroJuvix.Error
 
 type Err = Text
 
@@ -13,10 +13,10 @@ newtype LocalVars = LocalVars {
   deriving newtype (Semigroup, Monoid)
 makeLenses ''LocalVars
 
-checkModule :: Module -> Either Err Module
+checkModule :: Module -> Either TypeCheckerError Module
 checkModule m = run $ runError $ runReader (buildTable m) (checkModule' m)
 
-checkModule' :: Members '[Reader InfoTable, Error Err] r =>
+checkModule' :: Members '[Reader InfoTable, Error TypeCheckerError] r =>
   Module -> Sem r Module
 checkModule' Module {..} = do
   _moduleBody' <- checkModuleBody _moduleBody
@@ -25,7 +25,7 @@ checkModule' Module {..} = do
     ..
     }
 
-checkModuleBody :: Members '[Reader InfoTable, Error Err] r =>
+checkModuleBody :: Members '[Reader InfoTable, Error TypeCheckerError] r =>
   ModuleBody -> Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
   _moduleStatements' <- mapM checkStatement _moduleStatements
@@ -33,7 +33,7 @@ checkModuleBody ModuleBody {..} = do
     _moduleStatements = _moduleStatements'
     }
 
-checkStatement :: Members '[Reader InfoTable, Error Err] r =>
+checkStatement :: Members '[Reader InfoTable, Error TypeCheckerError] r =>
   Statement -> Sem r Statement
 checkStatement s = case s of
   StatementFunction fun -> StatementFunction <$> checkFunctionDef fun
@@ -41,7 +41,7 @@ checkStatement s = case s of
   StatementInductive {} -> return s
   StatementAxiom {} -> return s
 
-checkFunctionDef :: Members '[Reader InfoTable, Error Err] r =>
+checkFunctionDef :: Members '[Reader InfoTable, Error TypeCheckerError] r =>
   FunctionDef -> Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
   info <- lookupFunction _funDefName
@@ -51,26 +51,14 @@ checkFunctionDef FunctionDef {..} = do
     ..
     }
 
-checkExpression :: Members '[Reader InfoTable, Error Err, Reader LocalVars] r =>
+checkExpression :: Members '[Reader InfoTable, Error TypeCheckerError, Reader LocalVars] r =>
   Type -> Expression -> Sem r Expression
 checkExpression t e = do
   t' <- inferExpression' e
-  unlessM (matchTypes t (t' ^. typedType)) (throwErr
-      ("wrong type" <> "\nExpression:" <> renderPrettyCodeDefault e
-      <> "\nInferred type: " <> renderPrettyCodeDefault (t' ^. typedType)
-      <> "\nExpected type: " <> renderPrettyCodeDefault t
-      ))
+  when (t /= t' ^. typedType) (throw ErrWrongType)
   return (ExpressionTyped t')
 
-matchTypes :: Members '[Reader InfoTable] r =>
-  Type -> Type -> Sem r Bool
-matchTypes a b = do
-  a' <- normalizeType a
-  b' <- normalizeType b
-  return $
-    a' == TypeAny || b' == TypeAny || a' == b'
-
-inferExpression :: Members '[Reader InfoTable, Error Err, Reader LocalVars] r =>
+inferExpression :: Members '[Reader InfoTable, Error TypeCheckerError, Reader LocalVars] r =>
    Expression -> Sem r Expression
 inferExpression = fmap ExpressionTyped . inferExpression'
 
@@ -104,13 +92,13 @@ unfoldFunType t = case t of
   TypeFunction (Function l r) -> first (l:) (unfoldFunType r)
   _ -> ([], t)
 
-checkFunctionClause :: forall r. Members '[Reader InfoTable, Error Err] r =>
+checkFunctionClause :: forall r. Members '[Reader InfoTable, Error TypeCheckerError] r =>
   FunctionInfo -> FunctionClause -> Sem r FunctionClause
 checkFunctionClause info FunctionClause{..} = do
   let (argTys, rty) = unfoldFunType (info ^. functionInfoType)
       (patTys, restTys) = splitAt (length _clausePatterns) argTys
       bodyTy = foldFunType restTys rty
-  when (length patTys /= length _clausePatterns) (throwErr "too many patterns")
+  when (length patTys /= length _clausePatterns) (throw ErrTooManyPatterns)
   locals <- mconcat <$> zipWithM checkPattern patTys _clausePatterns
   clauseBody' <- runReader locals (checkExpression bodyTy _clauseBody)
   return FunctionClause {
@@ -118,7 +106,7 @@ checkFunctionClause info FunctionClause{..} = do
     ..
     }
 
-checkPattern :: forall r. Members '[Reader InfoTable, Error Err] r =>
+checkPattern :: forall r. Members '[Reader InfoTable, Error TypeCheckerError] r =>
   Type -> Pattern -> Sem r LocalVars
 checkPattern type_ pat = LocalVars . HashMap.fromList <$> go type_ pat
   where
@@ -128,17 +116,15 @@ checkPattern type_ pat = LocalVars . HashMap.fromList <$> go type_ pat
     PatternVariable v -> return [(v, ty)]
     PatternConstructorApp a -> do
       info <- lookupConstructor (a ^. constrAppConstructor)
-      when (TypeIden (TypeIdenInductive (info ^. constructorInfoInductive)) /= ty) (throwErr "wrong type for constructor")
+      let inductiveTy = TypeIden (TypeIdenInductive (info ^. constructorInfoInductive))
+      when (inductiveTy /= ty) (throw (ErrWrongConstructorType (WrongConstructorType (a ^. constrAppConstructor) ty inductiveTy)))
       goConstr a
     where
     goConstr :: ConstructorApp -> Sem r [(VarName, Type)]
     goConstr (ConstructorApp c ps) = do
       tys <- (^. constructorInfoArgs) <$> lookupConstructor c
-      when (length tys /= length ps) (throwErr "wrong number of arguments in constructor app")
+      when (length tys /= length ps) (throw ErrConstructorAppArgs)
       concat <$> zipWithM go tys ps
-
-throwErr :: Members '[Error Err] r => Err -> Sem r a
-throwErr = throw
 
 -- TODO currently equivalent to id
 normalizeType :: forall r. Members '[Reader InfoTable] r => Type -> Sem r Type
@@ -158,7 +144,7 @@ normalizeType t = case t of
     r' <- normalizeType r
     return (Function l' r')
 
-inferExpression' :: forall r. Members '[Reader InfoTable, Error Err, Reader LocalVars] r =>
+inferExpression' :: forall r. Members '[Reader InfoTable, Error TypeCheckerError, Reader LocalVars] r =>
    Expression -> Sem r TypedExpression
 inferExpression' e = case e of
   ExpressionIden i -> inferIden i
@@ -197,4 +183,4 @@ inferExpression' e = case e of
   getFunctionType :: Type -> Sem r Function
   getFunctionType t = case t of
     TypeFunction f -> return f
-    _ -> throwErr ("expected function type " <> show t)
+    _ -> throw ErrExpectedFunctionType
