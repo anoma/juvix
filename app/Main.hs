@@ -21,6 +21,7 @@ import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text as T
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
 import qualified MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi as Micro
 import qualified MiniJuvix.Syntax.MicroJuvix.TypeChecker as Micro
+import qualified MiniJuvix.Syntax.MicroJuvix.Language as Micro
 import qualified MiniJuvix.Termination as T
 import qualified MiniJuvix.Termination.CallGraph as A
 import qualified MiniJuvix.Translation.AbstractToMicroJuvix as Micro
@@ -40,7 +41,7 @@ data Command
   | Html HtmlOptions
   | Termination TerminationCommand
   | MiniHaskell MiniHaskellOptions
-  | MicroJuvix MicroJuvixOptions
+  | MicroJuvix MicroJuvixCommand
   | DisplayVersion
 
 data ScopeOptions = ScopeOptions
@@ -174,8 +175,8 @@ parseCommand =
         minfo :: ParserInfo Command
         minfo =
           info
-            (MicroJuvix <$> parseMicroJuvix)
-            (progDesc "Translate a MiniJuvix file to MicroJuvix")
+            (MicroJuvix <$> parseMicroJuvixCommand)
+            (progDesc "Subcommands related to MicroJuvix")
 
     commandMiniHaskell :: Mod CommandFields Command
     commandMiniHaskell = command "minihaskell" minfo
@@ -254,13 +255,11 @@ go c = do
       m <- parseModuleIO _htmlInputFile
       (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       genHtml defaultOptions _htmlRecursive _htmlTheme s
-    MicroJuvix MicroJuvixOptions {..} -> do
-      m <- parseModuleIO _mjuvixInputFile
-      (_, s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
-      (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
-      let micro = Micro.translateModule a
+    MicroJuvix (Pretty MicroJuvixOptions {..}) -> do
+      micro <- miniToMicro root _mjuvixInputFile
       Micro.printPrettyCodeDefault micro
-      putStrLn ""
+    MicroJuvix (TypeCheck MicroJuvixOptions {..}) -> do
+      micro <- miniToMicro root _mjuvixInputFile
       case Micro.checkModule micro of
         Left er -> printErrorAnsi er
         Right {} -> putStrLn "Well done! It type checks"
@@ -302,6 +301,13 @@ go c = do
           Nothing -> putStrLn (n <> " Fails the termination checking")
           Just (T.LexOrder k) -> putStrLn (n <> " Terminates with order " <> show (toList k))
         putStrLn ""
+    where
+      miniToMicro :: FilePath -> FilePath -> IO Micro.Module
+      miniToMicro root p = do
+        m <- parseModuleIO p
+        (_, s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+        (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
+        return (Micro.translateModule a)
 
 main :: IO ()
 main = execParser descr >>= go
