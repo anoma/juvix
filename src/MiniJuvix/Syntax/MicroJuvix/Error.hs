@@ -14,18 +14,15 @@ import Prettyprinter
 data TypeCheckerError
  = ErrTooManyPatterns
  | ErrWrongConstructorType WrongConstructorType
- | ErrConstructorAppArgs
+ | ErrWrongConstructorAppArgs WrongConstructorAppArgs
  | ErrWrongType
  | ErrExpectedFunctionType
-
-prettyT :: Text -> Doc Eann
-prettyT = pretty
 
 ppTypeCheckerError :: TypeCheckerError -> Doc Eann
 ppTypeCheckerError = \case
   ErrWrongConstructorType e -> ppError e
   ErrTooManyPatterns -> prettyT "too many patterns"
-  ErrConstructorAppArgs -> prettyT "constructor has wrong args"
+  ErrWrongConstructorAppArgs e -> ppError e
   ErrWrongType -> prettyT "wrong type"
   ErrExpectedFunctionType -> prettyT "expected function type"
 

@@ -18,11 +18,11 @@ testDescr NegTest {..} = TestDescr {
   testName = name,
   testRoot = root </> relDir,
   testAssertion = Single $ do
-      p <- (parseModuleIO file)
+      p <- parseModuleIO file
            >>= scopeModuleIO
            >>= translateModuleIO
-           >>= (return . A.translateModule)
-           >>= (return . T.checkModule)
+           >>| A.translateModule
+           >>| T.checkModule
 
       case p of
         Left err -> whenJust (checkErr err) assertFailure
@@ -44,5 +44,9 @@ tests = [
   NegTest "Constructor in pattern type error" "MicroJuvix"
     "PatternConstructor.mjuvix" $ \case
       ErrWrongConstructorType {} -> Nothing
+      _ -> wrongError
+  , NegTest "Constructor pattern length mismatch" "MicroJuvix"
+    "PatternConstructorApp.mjuvix" $ \case
+      ErrWrongConstructorAppArgs {} -> Nothing
       _ -> wrongError
         ]

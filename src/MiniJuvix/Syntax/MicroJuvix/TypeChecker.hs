@@ -117,14 +117,22 @@ checkPattern type_ pat = LocalVars . HashMap.fromList <$> go type_ pat
     PatternConstructorApp a -> do
       info <- lookupConstructor (a ^. constrAppConstructor)
       let inductiveTy = TypeIden (TypeIdenInductive (info ^. constructorInfoInductive))
-      when (inductiveTy /= ty) (throw (ErrWrongConstructorType (WrongConstructorType (a ^. constrAppConstructor) ty inductiveTy)))
+      when
+        (inductiveTy /= ty)
+        (throw
+         (ErrWrongConstructorType (WrongConstructorType (a ^. constrAppConstructor) ty inductiveTy)))
       goConstr a
     where
     goConstr :: ConstructorApp -> Sem r [(VarName, Type)]
-    goConstr (ConstructorApp c ps) = do
+    goConstr app@(ConstructorApp c ps) = do
       tys <- (^. constructorInfoArgs) <$> lookupConstructor c
-      when (length tys /= length ps) (throw ErrConstructorAppArgs)
+      when
+        (length tys /= length ps)
+        (throw (ErrWrongConstructorAppArgs (appErr app tys)))
       concat <$> zipWithM go tys ps
+    appErr :: ConstructorApp -> [Type] -> WrongConstructorAppArgs
+    appErr app tys = WrongConstructorAppArgs { _wrongCtorAppApp = app,
+                                               _wrongCtorAppTypes = tys}
 
 -- TODO currently equivalent to id
 normalizeType :: forall r. Members '[Reader InfoTable] r => Type -> Sem r Type
