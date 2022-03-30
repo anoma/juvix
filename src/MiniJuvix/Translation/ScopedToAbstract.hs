@@ -1,6 +1,5 @@
 module MiniJuvix.Translation.ScopedToAbstract where
 
-import qualified Data.HashMap.Strict as HashMap
 import MiniJuvix.Prelude
 import qualified MiniJuvix.Syntax.Abstract.Language as A
 import MiniJuvix.Syntax.Concrete.Language
@@ -12,7 +11,7 @@ import MiniJuvix.Syntax.Abstract.Language (FunctionDef(_funDefTypeSig))
 type Err = Text
 
 unsupported :: Members '[Error Err] r => Err -> Sem r a
-unsupported msg = throw $ msg <> " not yet supported"
+unsupported msg = throw $ msg <> "Scoped to Abstract: not yet supported"
 
 translateModule :: Module 'Scoped 'ModuleTop -> Either Err (InfoTable, A.TopModule)
 translateModule = run . runError . runInfoTableBuilder . goTopModule
@@ -28,61 +27,48 @@ goModule (Module n par b) = case par of
   [] -> A.Module n <$> goModuleBody b
   _ -> unsupported "Module parameters"
 
-goModuleBody :: forall r. Members '[Error Err, InfoTableBuilder] r => [Statement 'Scoped] -> Sem r A.ModuleBody
+goModuleBody :: forall r. Members '[Error Err, InfoTableBuilder] r
+  => [Statement 'Scoped] -> Sem r A.ModuleBody
 goModuleBody ss' = do
-  _moduleInductives <- inductives
-  _moduleLocalModules <- locals
-  _moduleFunctions <- functions
-  _moduleImports <- imports
-  _moduleForeigns <- foreigns
+  otherThanFunctions <- mapMaybeM goStatement ss
+  functions <- map (fmap A.StatementFunction) <$> compiledFunctions
+  let _moduleStatements = map (^. indexedThing) (sortOn (^. indexedIx)
+                          (otherThanFunctions <> functions))
   return A.ModuleBody {..}
   where
     ss :: [Indexed (Statement 'Scoped)]
     ss = zipWith Indexed [0 ..] ss'
-    inductives :: Sem r (HashMap A.InductiveName (Indexed A.InductiveDef))
-    inductives =
+    compiledFunctions :: Sem r [Indexed A.FunctionDef]
+    compiledFunctions =
       sequence $
-        HashMap.fromList
-          [ (def ^. inductiveName, Indexed i <$> goInductive def)
-            | Indexed i (StatementInductive def) <- ss
-          ]
-    locals :: Sem r (HashMap A.InductiveName (Indexed A.LocalModule))
-    locals =
-      sequence $
-        HashMap.fromList
-          [ (m ^. modulePath, Indexed i <$> goLocalModule m)
-            | Indexed i (StatementModule m) <- ss
-          ]
-    foreigns :: Sem r [Indexed ForeignBlock]
-    foreigns =
-      return
-        [ Indexed i f
-          | Indexed i (StatementForeign f) <- ss
-        ]
-    imports :: Sem r [Indexed A.TopModule]
-    imports =
-      sequence $
-        [ Indexed i <$> goModule m
-          | Indexed i (StatementImport (Import m)) <- ss
-        ]
-    functions :: Sem r (HashMap A.FunctionName (Indexed A.FunctionDef))
-    functions = do
-      sequence $
-        HashMap.fromList
-          [ (name, Indexed i <$> funDef)
+          [ Indexed i <$> funDef
             | Indexed i sig <- sigs,
               let name = sig ^. sigName,
-              let funDef = goFunctionDef sig (getClauses name)
-          ]
+              let funDef = goFunctionDef sig (getClauses name) ]
       where
         getClauses :: S.Symbol -> NonEmpty (FunctionClause 'Scoped)
         getClauses name =
           fromMaybe impossible $
             nonEmpty
-              [ c | StatementFunctionClause c <- ss', name == c ^. clauseOwnerFunction
-              ]
+              [ c | StatementFunctionClause c <- ss', name == c ^. clauseOwnerFunction ]
         sigs :: [Indexed (TypeSignature 'Scoped)]
         sigs = [Indexed i t | (Indexed i (StatementTypeSignature t)) <- ss]
+
+goStatement :: forall r. Members '[Error Err, InfoTableBuilder] r
+   => Indexed (Statement 'Scoped) -> Sem r (Maybe (Indexed A.Statement))
+goStatement (Indexed idx s) = fmap (Indexed idx) <$> case s of
+  StatementAxiom d -> Just . A.StatementAxiom <$> goAxiom d
+  StatementImport (Import t) -> Just . A.StatementImport <$> goModule t
+  StatementOperator {} -> return Nothing
+  StatementOpenModule {} -> return Nothing
+  StatementEval {} -> unsupported "eval statements"
+  StatementPrint {} -> unsupported "print statements"
+  StatementInductive i -> Just . A.StatementInductive <$> goInductive i
+  StatementForeign f -> return (Just (A.StatementForeign f))
+  StatementModule f -> Just . A.StatementLocalModule <$> goLocalModule f
+  StatementTypeSignature {} -> return Nothing
+  StatementFunctionClause {} -> return Nothing
+
 
 goFunctionDef :: forall r. Members '[Error Err, InfoTableBuilder] r => TypeSignature 'Scoped -> NonEmpty (FunctionClause 'Scoped) -> Sem r A.FunctionDef
 goFunctionDef sig clauses = do

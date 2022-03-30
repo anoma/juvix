@@ -41,12 +41,17 @@ data Module s = Module
   deriving stock (Show, Eq)
 
 data ModuleBody = ModuleBody
-  { _moduleInductives :: HashMap InductiveName (Indexed InductiveDef),
-    _moduleFunctions :: HashMap FunctionName (Indexed FunctionDef),
-    _moduleImports :: [Indexed TopModule],
-    _moduleForeigns :: [Indexed ForeignBlock],
-    _moduleLocalModules :: HashMap LocalModuleName (Indexed LocalModule)
+  { _moduleStatements :: [Statement]
   }
+  deriving stock (Show, Eq)
+
+data Statement =
+  StatementInductive InductiveDef
+  | StatementFunction FunctionDef
+  | StatementImport TopModule
+  | StatementForeign ForeignBlock
+  | StatementLocalModule LocalModule
+  | StatementAxiom AxiomDef
   deriving stock (Show, Eq)
 
 data FunctionDef = FunctionDef

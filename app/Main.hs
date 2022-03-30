@@ -25,6 +25,8 @@ import qualified MiniJuvix.Termination as T
 import qualified MiniJuvix.Termination.CallGraph as A
 import qualified MiniJuvix.Translation.AbstractToMicroJuvix as Micro
 import qualified MiniJuvix.Translation.ScopedToAbstract as A
+import qualified MiniJuvix.Translation.MicroJuvixToMiniHaskell as Hask
+import qualified MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi as Hask
 import MiniJuvix.Utils.Version (runDisplayVersion)
 import Options.Applicative
 import Options.Applicative.Help.Pretty
@@ -264,13 +266,12 @@ go c = do
         Right {} -> putStrLn "Well done! It type checks"
     MiniHaskell MiniHaskellOptions {..} -> do
       m <- parseModuleIO _mhaskellInputFile
-      (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
-      -- a <- fromRightIO' putStrLn (return $ A.translateModule s)
-      _ <- fromRightIO' putStrLn (return $ A.translateModule s)
-      -- let mini = Micro.translateModule a
-      -- Micro.printPrettyCodeDefault mini
-      -- TODO
-      error "todo"
+      (_, s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+      (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
+      let micro = Micro.translateModule a
+      checkedMicro <- fromRightIO' putStrLn (return $ Micro.checkModule micro)
+      minihaskell <- fromRightIO' putStrLn (return $ Hask.translateModule checkedMicro)
+      Hask.printPrettyCodeDefault minihaskell
     Termination (Calls opts@CallsOptions {..}) -> do
       m <- parseModuleIO _callsInputFile
       (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m

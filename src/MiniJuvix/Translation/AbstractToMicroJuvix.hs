@@ -1,11 +1,10 @@
 module MiniJuvix.Translation.AbstractToMicroJuvix where
 
-import qualified Data.HashMap.Strict as HashMap
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Language (ForeignBlock)
 import qualified MiniJuvix.Syntax.Abstract.Language.Extra as A
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Syntax.MicroJuvix.Language
+import MiniJuvix.Syntax.Universe
 import qualified MiniJuvix.Syntax.Usage as A
 
 translateModule :: A.TopModule -> Module
@@ -26,38 +25,25 @@ goSymbol s =
   Name
     { _nameText = S.symbolText s,
       _nameId = S._nameId s,
-      _nameKind = getNameKind s
-    }
+      _nameKind = getNameKind s }
 
 unsupported :: Text -> a
-unsupported thing = error ("Not yet supported: " <> thing)
+unsupported thing = error ("Abstract to MicroJuvix: Not yet supported: " <> thing)
 
 goImport :: A.TopModule -> ModuleBody
 goImport m = goModuleBody (m ^. A.moduleBody)
 
 goModuleBody :: A.ModuleBody -> ModuleBody
-goModuleBody b
-  | not (HashMap.null (b ^. A.moduleLocalModules)) = unsupported "local modules"
-  | otherwise =
-    ModuleBody sortedStatements
-  where
-   sortedStatements :: [Statement]
-   sortedStatements = map _indexedThing (sortOn _indexedIx statements)
-   statements :: [Indexed Statement]
-   statements = map (fmap StatementForeign) foreigns
-     <> map (fmap StatementFunction) functions
-     <> map (fmap StatementInductive) inductives
-   inductives :: [Indexed InductiveDef]
-   inductives =
-       [ d | d <- map (fmap goInductiveDef) (toList (b ^. A.moduleInductives))]
-   functions :: [Indexed FunctionDef]
-   functions  =
-      [ f | f <- map (fmap goFunctionDef) (toList (b ^. A.moduleFunctions))]
-   foreigns :: [Indexed ForeignBlock]
-   foreigns = b ^. A.moduleForeigns
+goModuleBody b = ModuleBody (map goStatement (b ^. A.moduleStatements))
 
-
--- <> mconcatMap goImport (b ^. A.moduleImports)
+goStatement :: A.Statement -> Statement
+goStatement = \case
+  A.StatementAxiom d -> StatementAxiom (goAxiomDef d)
+  A.StatementForeign f -> StatementForeign f
+  A.StatementFunction f -> StatementFunction (goFunctionDef f)
+  A.StatementImport {} -> unsupported "imports"
+  A.StatementLocalModule {} -> unsupported "local modules"
+  A.StatementInductive i -> StatementInductive (goInductiveDef i)
 
 goTypeIden :: A.Iden -> TypeIden
 goTypeIden i = case i of
@@ -65,7 +51,14 @@ goTypeIden i = case i of
   A.IdenConstructor {} -> unsupported "constructors in types"
   A.IdenVar {} -> unsupported "type variables"
   A.IdenInductive d -> TypeIdenInductive (goName (d ^. A.inductiveRefName))
-  A.IdenAxiom {} -> unsupported "axioms in types"
+  A.IdenAxiom a -> TypeIdenAxiom (goName (a ^. A.axiomRefName))
+
+goAxiomDef :: A.AxiomDef -> AxiomDef
+goAxiomDef a =
+  AxiomDef {
+  _axiomName = goSymbol (a ^. A.axiomName),
+  _axiomType = goType (a ^. A.axiomType),
+  _axiomBackendItems = a ^. A.axiomBackendItems }
 
 goFunctionParameter :: A.FunctionParameter -> Type
 goFunctionParameter f = case f ^. A.paramName of
@@ -81,7 +74,7 @@ goFunctionDef :: A.FunctionDef -> FunctionDef
 goFunctionDef f =
   FunctionDef
     { _funDefName = goSymbol (f ^. A.funDefName),
-      _funDefTypeSig = goType (f ^. A.funDefTypeSig),
+      _funDefType = goType (f ^. A.funDefTypeSig),
       _funDefClauses = fmap goFunctionClause (f ^. A.funDefClauses)
     }
 
@@ -105,10 +98,15 @@ goConstructorApp c =
     (goName (c ^. A.constrAppConstructor . A.constructorRefName))
     (map goPattern (c ^. A.constrAppParameters))
 
+goTypeUniverse :: Universe -> Type
+goTypeUniverse u
+ | 0 == fromMaybe 0 (u ^. universeLevel) = TypeUniverse
+ | otherwise = unsupported "big universes"
+
 goType :: A.Expression -> Type
 goType e = case e of
   A.ExpressionIden i -> TypeIden (goTypeIden i)
-  A.ExpressionUniverse {} -> unsupported "universes in types"
+  A.ExpressionUniverse u -> goTypeUniverse u
   A.ExpressionApplication {} -> unsupported "application in types"
   A.ExpressionFunction f -> TypeFunction (goFunction f)
   A.ExpressionLiteral {} -> unsupported "literals in types"
@@ -121,7 +119,7 @@ goIden i = case i of
   A.IdenFunction n -> IdenFunction (goName (n ^. A.functionRefName))
   A.IdenConstructor c -> IdenConstructor (goName (c ^. A.constructorRefName))
   A.IdenVar v -> IdenVar (goSymbol v)
-  A.IdenAxiom {} -> unsupported "axiom identifier"
+  A.IdenAxiom a -> IdenAxiom (goName (a ^. A.axiomRefName))
   A.IdenInductive {} -> unsupported "inductive identifier"
 
 goExpression :: A.Expression -> Expression
@@ -130,7 +128,7 @@ goExpression e = case e of
   A.ExpressionUniverse {} -> unsupported "universes in expression"
   A.ExpressionFunction {} -> unsupported "function type in expressions"
   A.ExpressionApplication a -> ExpressionApplication (goApplication a)
-  A.ExpressionLiteral {} -> unsupported "literals in expression"
+  A.ExpressionLiteral l -> ExpressionLiteral l
 
 goInductiveDef :: A.InductiveDef -> InductiveDef
 goInductiveDef i = case i ^. A.inductiveType of
@@ -157,7 +155,7 @@ viewExpressionFunctionType e = case e of
   A.ExpressionFunction f -> first toList (viewFunctionType f)
   A.ExpressionIden i -> ([], TypeIden (goTypeIden i))
   A.ExpressionApplication {} -> unsupported "application in a type"
-  A.ExpressionUniverse {} -> unsupported "universe in a type"
+  A.ExpressionUniverse {} -> ([], TypeUniverse)
   A.ExpressionLiteral {} -> unsupported "literal in a type"
 
 viewFunctionType :: A.Function -> (NonEmpty Type, Type)

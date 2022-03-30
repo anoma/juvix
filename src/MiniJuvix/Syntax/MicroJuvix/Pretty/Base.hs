@@ -1,10 +1,10 @@
--- TODO handle capital letters and characters not supported by Haskell.
 module MiniJuvix.Syntax.MicroJuvix.Pretty.Base where
 
 import qualified MiniJuvix.Internal.Strings as Str
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Language (Backend (..), ForeignBlock (..))
 import MiniJuvix.Syntax.Fixity
+import MiniJuvix.Syntax.Backends
+import MiniJuvix.Syntax.ForeignBlock
 import MiniJuvix.Syntax.MicroJuvix.Language
 import MiniJuvix.Syntax.MicroJuvix.Pretty.Ann
 import Prettyprinter
@@ -34,6 +34,7 @@ instance PrettyCode Iden where
     IdenFunction na -> ppCode na
     IdenConstructor na -> ppCode na
     IdenVar na -> ppCode na
+    IdenAxiom a -> ppCode a
 
 instance PrettyCode Application where
   ppCode a = do
@@ -45,16 +46,20 @@ instance PrettyCode TypedExpression where
   ppCode e = ppCode (e ^. typedExpression)
 
 instance PrettyCode Expression where
-  ppCode e = case e of
+  ppCode = \case
     ExpressionIden i -> ppCode i
     ExpressionApplication a -> ppCode a
     ExpressionTyped a -> ppCode a
+    ExpressionLiteral l -> return (pretty l)
 
 keyword :: Text -> Doc Ann
 keyword = annotate AnnKeyword . pretty
 
 kwArrow :: Doc Ann
 kwArrow = keyword Str.toAscii
+
+kwMapsto :: Doc Ann
+kwMapsto = keyword Str.mapstoUnicode
 
 kwForeign :: Doc Ann
 kwForeign = keyword Str.foreign_
@@ -65,6 +70,8 @@ kwAgda = keyword Str.agda
 kwGhc :: Doc Ann
 kwGhc = keyword Str.ghc
 
+kwColon :: Doc Ann
+kwColon = keyword Str.colon
 
 kwData :: Doc Ann
 kwData = keyword Str.data_
@@ -78,14 +85,29 @@ kwColonColon = keyword (Str.colon <> Str.colon)
 kwPipe :: Doc Ann
 kwPipe = keyword Str.pipe
 
+kwAxiom :: Doc Ann
+kwAxiom = keyword Str.axiom
+
 kwWhere :: Doc Ann
 kwWhere = keyword Str.where_
 
 kwModule :: Doc Ann
 kwModule = keyword Str.module_
 
+kwAny :: Doc Ann
+kwAny = keyword Str.any
+
+kwType :: Doc Ann
+kwType = keyword Str.type_
+
 kwWildcard :: Doc Ann
 kwWildcard = keyword Str.underscore
+
+instance PrettyCode BackendItem where
+  ppCode BackendItem {..} = do
+    backend <- ppCode _backendItemBackend
+    return $
+      backend <+> kwMapsto <+> pretty _backendItemCode
 
 instance PrettyCode Function where
   ppCode (Function l r) = do
@@ -93,10 +115,17 @@ instance PrettyCode Function where
     r' <- ppRightExpression funFixity r
     return $ l' <+> kwArrow <+> r'
 
+instance PrettyCode TypeIden where
+  ppCode = \case
+    TypeIdenInductive i -> ppCode i
+    TypeIdenAxiom i -> ppCode i
+
 instance PrettyCode Type where
-  ppCode t = case t of
-    TypeIden (TypeIdenInductive n) -> ppCode n
+  ppCode = \case
+    TypeIden i -> ppCode i
     TypeFunction f -> ppCode f
+    TypeUniverse -> return kwType
+    TypeAny -> return kwAny
 
 instance PrettyCode InductiveConstructorDef where
   ppCode c = do
@@ -108,6 +137,14 @@ indent' :: Member (Reader Options) r => Doc a -> Sem r (Doc a)
 indent' d = do
   i <- asks _optIndent
   return $ indent i d
+
+ppBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
+ppBlock items = mapM ppCode items >>= bracesIndent . vsep . toList
+
+bracesIndent :: Members '[Reader Options] r => Doc Ann -> Sem r (Doc Ann)
+bracesIndent d = do
+  d' <- indent' d
+  return $ braces (line <> d' <> line)
 
 instance PrettyCode InductiveDef where
   ppCode d = do
@@ -131,10 +168,10 @@ instance PrettyCode Pattern where
 instance PrettyCode FunctionDef where
   ppCode f = do
     funDefName' <- ppCode (f ^. funDefName)
-    funDefTypeSig' <- ppCode (f ^. funDefTypeSig)
+    funDefType' <- ppCode (f ^. funDefType)
     clauses' <- mapM (ppClause funDefName') (f ^. funDefClauses)
     return $
-      funDefName' <+> kwColonColon <+> funDefTypeSig' <> line
+      funDefName' <+> kwColonColon <+> funDefType' <> line
         <> vsep (toList clauses')
     where
       ppClause fun c = do
@@ -156,11 +193,22 @@ instance PrettyCode ForeignBlock where
         <> line
         <> rbrace
 
+instance PrettyCode AxiomDef where
+  ppCode AxiomDef {..} = do
+    axiomName' <- ppCode _axiomName
+    axiomType' <- ppCode _axiomType
+    axiomBackendItems' <- case _axiomBackendItems of
+      [] -> return Nothing
+      bs -> Just <$> ppBlock bs
+    return $ kwAxiom <+> axiomName' <+> kwColon <+> axiomType' <+?> axiomBackendItems'
+
+
 instance PrettyCode Statement where
   ppCode = \case
     StatementForeign f -> ppCode f
     StatementFunction f -> ppCode f
     StatementInductive f -> ppCode f
+    StatementAxiom f -> ppCode f
 
 instance PrettyCode ModuleBody where
   ppCode m = do

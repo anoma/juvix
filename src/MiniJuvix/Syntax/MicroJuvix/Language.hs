@@ -2,16 +2,22 @@ module MiniJuvix.Syntax.MicroJuvix.Language
   ( module MiniJuvix.Syntax.MicroJuvix.Language,
     module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind,
     module MiniJuvix.Syntax.Concrete.Scoped.Name,
+    module MiniJuvix.Syntax.Concrete.Literal,
   )
 where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Language (ForeignBlock (..))
+import MiniJuvix.Syntax.ForeignBlock
+import MiniJuvix.Syntax.Backends
 import MiniJuvix.Syntax.Concrete.Scoped.Name (NameId (..))
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
+import MiniJuvix.Syntax.Concrete.Literal
 import MiniJuvix.Syntax.Fixity
+import Prettyprinter
 
 type FunctionName = Name
+
+type AxiomName = Name
 
 type VarName = Name
 
@@ -24,6 +30,7 @@ data Name = Name
     _nameId :: NameId,
     _nameKind :: NameKind
   }
+  deriving stock (Show)
 
 makeLenses ''Name
 
@@ -39,6 +46,9 @@ instance Hashable Name where
 instance HasNameKind Name where
   getNameKind = _nameKind
 
+instance Pretty Name where
+  pretty = pretty . _nameText
+
 data Module = Module
   { _moduleName :: Name,
     _moduleBody :: ModuleBody
@@ -52,10 +62,17 @@ data Statement =
   StatementInductive InductiveDef
   | StatementFunction FunctionDef
   | StatementForeign ForeignBlock
+  | StatementAxiom AxiomDef
+
+data AxiomDef = AxiomDef
+  { _axiomName :: AxiomName,
+    _axiomType :: Type,
+    _axiomBackendItems :: [BackendItem]
+  }
 
 data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
-    _funDefTypeSig :: Type,
+    _funDefType :: Type,
     _funDefClauses :: NonEmpty FunctionClause
   }
 
@@ -68,6 +85,7 @@ data Iden
   = IdenFunction Name
   | IdenConstructor Name
   | IdenVar VarName
+  | IdenAxiom Name
 
 data TypedExpression = TypedExpression {
   _typedType :: Type,
@@ -77,6 +95,7 @@ data TypedExpression = TypedExpression {
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
+  | ExpressionLiteral Literal
   | ExpressionTyped TypedExpression
 
 data Application = Application
@@ -88,7 +107,7 @@ data Function = Function
   { _funLeft :: Type,
     _funRight :: Type
   }
-  deriving stock (Eq)
+  deriving stock (Show, Eq)
 
 -- | Fully applied constructor in a pattern.
 data ConstructorApp = ConstructorApp
@@ -111,36 +130,24 @@ data InductiveConstructorDef = InductiveConstructorDef
     _constructorParameters :: [Type]
   }
 
-newtype TypeIden
+data TypeIden
   = TypeIdenInductive InductiveName
-  deriving stock (Eq)
+  | TypeIdenAxiom AxiomName
+  deriving stock (Show, Eq)
 
 data Type
   = TypeIden TypeIden
   | TypeFunction Function
-  deriving stock (Eq)
-
-data ConstructorInfo = ConstructorInfo {
-  _constructorInfoArgs :: [Type],
-  _constructorInfoInductive :: InductiveName
-  }
-
-data FunctionInfo = FunctionInfo {
-  _functionInfoType :: Type
-  }
-
-data InfoTable = InfoTable {
-  _infoConstructors :: HashMap Name ConstructorInfo,
-  _infoFunctions :: HashMap Name FunctionInfo
-  }
+  | TypeUniverse
+  | TypeAny
+  deriving stock (Show, Eq)
 
 makeLenses ''Module
 makeLenses ''Function
 makeLenses ''FunctionDef
-makeLenses ''FunctionInfo
-makeLenses ''ConstructorInfo
 makeLenses ''FunctionClause
 makeLenses ''InductiveDef
+makeLenses ''AxiomDef
 makeLenses ''ModuleBody
 makeLenses ''Application
 makeLenses ''TypedExpression
@@ -155,6 +162,7 @@ instance HasAtomicity Expression where
     ExpressionIden {} -> Atom
     ExpressionApplication a -> atomicity a
     ExpressionTyped t -> atomicity (t ^. typedExpression)
+    ExpressionLiteral l -> atomicity l
 
 instance HasAtomicity Function where
   atomicity = const (Aggregate funFixity)
@@ -163,6 +171,8 @@ instance HasAtomicity Type where
   atomicity t = case t of
     TypeIden {} -> Atom
     TypeFunction f -> atomicity f
+    TypeUniverse -> Atom
+    TypeAny -> Atom
 
 instance HasAtomicity ConstructorApp where
   atomicity (ConstructorApp _ args)
