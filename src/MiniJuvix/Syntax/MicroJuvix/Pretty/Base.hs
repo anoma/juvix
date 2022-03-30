@@ -171,16 +171,18 @@ instance PrettyCode Pattern where
 instance PrettyCode FunctionDef where
   ppCode f = do
     funDefName' <- ppCode (f ^. funDefName)
-    funDefType' <- ppCode (f ^. funDefType)
-    clauses' <- mapM (ppClause funDefName') (f ^. funDefClauses)
+    funDefTypeSig' <- ppCode (f ^. funDefTypeSig)
+    clauses' <- mapM ppCode (f ^. funDefClauses)
     return $
       funDefName' <+> kwColonColon <+> funDefType' <> line
         <> vsep (toList clauses')
-    where
-      ppClause fun c = do
-        clausePatterns' <- mapM ppCodeAtom (c ^. clausePatterns)
-        clauseBody' <- ppCode (c ^. clauseBody)
-        return $ fun <+> hsep clausePatterns' <+> kwEquals <+> clauseBody'
+
+instance PrettyCode FunctionClause where
+  ppCode c = do
+    funName <- ppCode (c ^. clauseName)
+    clausePatterns' <- mapM ppCodeAtom (c ^. clausePatterns)
+    clauseBody' <- ppCode (c ^. clauseBody)
+    return $ funName <+> hsep clausePatterns' <+> kwEquals <+> clauseBody'
 
 instance PrettyCode Backend where
   ppCode = \case

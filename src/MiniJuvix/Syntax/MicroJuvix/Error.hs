@@ -12,19 +12,19 @@ import MiniJuvix.Syntax.MicroJuvix.Error.Types
 import Prettyprinter
 
 data TypeCheckerError
- = ErrTooManyPatterns
+ = ErrTooManyPatterns TooManyPatterns
  | ErrWrongConstructorType WrongConstructorType
  | ErrWrongConstructorAppArgs WrongConstructorAppArgs
- | ErrWrongType
- | ErrExpectedFunctionType
+ | ErrWrongType WrongType
+ | ErrExpectedFunctionType ExpectedFunctionType
 
 ppTypeCheckerError :: TypeCheckerError -> Doc Eann
 ppTypeCheckerError = \case
   ErrWrongConstructorType e -> ppError e
-  ErrTooManyPatterns -> prettyT "too many patterns"
+  ErrTooManyPatterns e -> ppError e
   ErrWrongConstructorAppArgs e -> ppError e
-  ErrWrongType -> prettyT "wrong type"
-  ErrExpectedFunctionType -> prettyT "expected function type"
+  ErrWrongType e -> ppError e
+  ErrExpectedFunctionType e -> ppError e
 
 docStream :: TypeCheckerError -> SimpleDocStream Eann
 docStream = layoutPretty defaultLayoutOptions . ppTypeCheckerError

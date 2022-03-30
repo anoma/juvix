@@ -18,5 +18,29 @@ data WrongConstructorAppArgs = WrongConstructorAppArgs
     _wrongCtorAppTypes :: [Type]
   }
 
+-- | the type of an expression does not match the inferred type
+data WrongType = WrongType
+  { _wrongTypeExpression :: Expression,
+    _wrongTypeExpectedType :: Type,
+    _wrongTypeInferredType :: Type
+  }
+
+-- | The left hand expression of a function application is not
+-- a function type.
+data ExpectedFunctionType = ExpectedFunctionType
+  { _expectedFunctionTypeExpression :: Expression,
+    _expectedFunctionTypeApp :: Expression,
+    _expectedFunctionTypeType :: Type
+  }
+
+-- | A function definition clause matches too many arguments
+data TooManyPatterns = TooManyPatterns
+  { _tooManyPatternsClause :: FunctionClause,
+    _tooManyPatternsTypes :: [Type]
+  }
+
 makeLenses ''WrongConstructorType
 makeLenses ''WrongConstructorAppArgs
+makeLenses ''WrongType
+makeLenses ''ExpectedFunctionType
+makeLenses ''TooManyPatterns

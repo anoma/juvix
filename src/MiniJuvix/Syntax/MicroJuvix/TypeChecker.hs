@@ -55,7 +55,10 @@ checkExpression :: Members '[Reader InfoTable, Error TypeCheckerError, Reader Lo
   Type -> Expression -> Sem r Expression
 checkExpression t e = do
   t' <- inferExpression' e
-  when (t /= t' ^. typedType) (throw ErrWrongType)
+  let inferredType = t' ^. typedType
+  when (t /= inferredType) (throw (ErrWrongType (WrongType { _wrongTypeExpression = e,
+                                                             _wrongTypeInferredType = inferredType,
+                                                             _wrongTypeExpectedType = t})))
   return (ExpressionTyped t')
 
 inferExpression :: Members '[Reader InfoTable, Error TypeCheckerError, Reader LocalVars] r =>
@@ -94,11 +97,13 @@ unfoldFunType t = case t of
 
 checkFunctionClause :: forall r. Members '[Reader InfoTable, Error TypeCheckerError] r =>
   FunctionInfo -> FunctionClause -> Sem r FunctionClause
-checkFunctionClause info FunctionClause{..} = do
+checkFunctionClause info clause@FunctionClause{..} = do
   let (argTys, rty) = unfoldFunType (info ^. functionInfoType)
       (patTys, restTys) = splitAt (length _clausePatterns) argTys
       bodyTy = foldFunType restTys rty
-  when (length patTys /= length _clausePatterns) (throw ErrTooManyPatterns)
+  when (length patTys /= length _clausePatterns) (throw (ErrTooManyPatterns (TooManyPatterns {
+                                                                                _tooManyPatternsClause = clause,
+                                                                                _tooManyPatternsTypes = patTys})))
   locals <- mconcat <$> zipWithM checkPattern patTys _clausePatterns
   clauseBody' <- runReader locals (checkExpression bodyTy _clauseBody)
   return FunctionClause {
@@ -178,8 +183,9 @@ inferExpression' e = case e of
       return (TypedExpression (info ^. axiomInfoType) (ExpressionIden i))
   inferApplication :: Application -> Sem r TypedExpression
   inferApplication a = do
-    l <- inferExpression' (a ^. appLeft)
-    fun <- getFunctionType (l ^. typedType)
+    let leftExp = a ^. appLeft
+    l <- inferExpression' leftExp
+    fun <- getFunctionType leftExp (l ^. typedType)
     r <- checkExpression (fun ^. funLeft) (a ^. appRight)
     return TypedExpression {
       _typedExpression = ExpressionApplication Application {
@@ -188,7 +194,10 @@ inferExpression' e = case e of
           },
       _typedType = fun ^. funRight
       }
-  getFunctionType :: Type -> Sem r Function
-  getFunctionType t = case t of
-    TypeFunction f -> return f
-    _ -> throw ErrExpectedFunctionType
+    where
+      getFunctionType :: Expression -> Type -> Sem r Function
+      getFunctionType appExp t = case t of
+        TypeFunction f -> return f
+        _ -> throw (ErrExpectedFunctionType (ExpectedFunctionType { _expectedFunctionTypeExpression = e,
+                                                                    _expectedFunctionTypeApp = appExp,
+                                                                    _expectedFunctionTypeType = t}))

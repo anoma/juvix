@@ -78,7 +78,8 @@ data FunctionDef = FunctionDef
   }
 
 data FunctionClause = FunctionClause
-  { _clausePatterns :: [Pattern],
+  { _clauseName :: FunctionName,
+    _clausePatterns :: [Pattern],
     _clauseBody :: Expression
   }
 
