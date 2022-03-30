@@ -3,6 +3,7 @@ import MiniJuvix.Prelude
 import MiniJuvix.Syntax.MicroJuvix.Language
 import MiniJuvix.Syntax.MicroJuvix.InfoTable
 import qualified Data.HashMap.Strict as HashMap
+import MiniJuvix.Syntax.MicroJuvix.Pretty.Text
 
 type Err = Text
 
@@ -54,7 +55,11 @@ checkExpression :: Members '[Reader InfoTable, Error Err, Reader LocalVars] r =>
   Type -> Expression -> Sem r Expression
 checkExpression t e = do
   t' <- inferExpression' e
-  unlessM (matchTypes t (t' ^. typedType)) (throwErr "wrong type")
+  unlessM (matchTypes t (t' ^. typedType)) (throwErr
+      ("wrong type" <> "\nExpression:" <> renderPrettyCodeDefault e
+      <> "\nInferred type: " <> renderPrettyCodeDefault (t' ^. typedType)
+      <> "\nExpected type: " <> renderPrettyCodeDefault t
+      ))
   return (ExpressionTyped t')
 
 matchTypes :: Members '[Reader InfoTable] r =>
@@ -135,6 +140,7 @@ checkPattern type_ pat = LocalVars . HashMap.fromList <$> go type_ pat
 throwErr :: Members '[Error Err] r => Err -> Sem r a
 throwErr = throw
 
+-- TODO currently equivalent to id
 normalizeType :: forall r. Members '[Reader InfoTable] r => Type -> Sem r Type
 normalizeType t = case t of
   TypeAny -> return TypeAny
