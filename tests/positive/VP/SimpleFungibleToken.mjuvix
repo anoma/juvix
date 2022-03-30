@@ -1,0 +1,150 @@
+module SimpleFungibleToken;
+
+axiom String : Type {
+  ghc ↦ "[Char]";
+};
+
+axiom Int : Type {
+  ghc ↦ "Int";
+};
+
+inductive OptionInt {
+  Nothing : OptionInt;
+  Just : Int -> OptionInt;
+};
+
+inductive OptionString {
+  NothingString : OptionString;
+  JustString : String -> OptionString;
+};
+
+foreign ghc { defaultinteger = 0;};
+
+axiom defaultinteger : Int {
+  ghc ↦ "defaultinteger";
+};
+
+fromOptionInt  : OptionInt -> Int;
+fromOptionInt  Nothing := defaultinteger;
+
+fromOptionInt  (Just n) := n;
+
+foreign ghc {
+foreign import ccall "read_pre" read_pre :: String -> Maybe Int
+foreign import ccall "read_post" read_post :: String -> Maybe Int
+foreign import ccall "is_balance_key"  is_balance_key :: String -> String -> Maybe String
+};
+
+axiom read-pre : String -> OptionInt {
+  ghc ↦ "read_pre";
+};
+
+axiom read-post : String -> OptionInt {
+  ghc ↦ "read_post";
+};
+
+axiom is-balance-key : String -> String -> OptionString {
+  ghc ↦ "is_balance_key";
+};
+
+inductive ListString {
+  Nil : ListString;
+  Cons : String -> ListString -> ListString;
+};
+
+inductive Bool {
+  true : Bool;
+  false : Bool;
+};
+
+infixr 2 ||;
+|| : Bool → Bool → Bool;
+|| false a ≔ a;
+|| true _  ≔ true;
+
+and : Bool → Bool → Bool;
+and false _ ≔ false;
+and true a  ≔ a;
+
+infix 4 ==String;
+axiom ==String : String -> String -> Bool {
+  ghc ↦  "(==)";
+};
+
+infix 4 ==Int;
+axiom ==Int : Int -> Int -> Bool {
+  ghc ↦  "(==)";
+};
+
+
+elem : String -> ListString -> Bool;
+elem s Nil := false;
+elem s (Cons x xs) := (s ==String x) || elem s xs;
+
+inductive PairIntBool {
+  MakePair : Int -> Bool -> PairIntBool;
+};
+
+ifthenelse : Bool -> PairIntBool -> PairIntBool -> PairIntBool;
+ifthenelse true case1 _ := case1;
+ifthenelse false _ case2 := case2;
+
+infix 4 <;
+axiom < : Int -> Int -> Bool {
+  ghc ↦ "(<)";
+};
+
+infixl 6 -;
+axiom - : Int -> Int -> Int {
+  ghc ↦ "(-)";
+};
+
+infixl 6 +;
+axiom + : Int -> Int -> Int {
+  ghc ↦ "(+)";
+};
+
+check-vp : ListString -> String -> String -> Int -> PairIntBool;
+check-vp verifiers key owner change :=
+  ifthenelse
+    (((fromOptionInt (read-post key)) - (fromOptionInt (read-pre key))) < 0)
+    (MakePair (change + ((fromOptionInt (read-post key)) - (fromOptionInt (read-pre key))))
+              (elem owner verifiers))
+    (MakePair
+       (change +
+        ((fromOptionInt (read-post key)) - (fromOptionInt (read-pre key))))
+         true);
+
+check-vp' : ListString -> String -> Int -> String -> PairIntBool;
+check-vp' verifiers key change owner := check-vp verifiers key owner change;
+
+pairFromOptionString : (String -> PairIntBool) -> OptionString -> PairIntBool;
+pairFromOptionString _ NothingString := MakePair 0 false;
+pairFromOptionString f (JustString o) := f o;
+
+foreign ghc {
+  token = "secret";
+};
+axiom token : String {
+  ghc ↦ "token";
+};
+
+check-keys : ListString -> PairIntBool -> String -> PairIntBool;
+check-keys verifiers (MakePair change is-success) key :=
+  ifthenelse is-success
+    (pairFromOptionString (check-vp' verifiers key change) (is-balance-key token key))
+    (MakePair 0 false);
+
+foldl :  (PairIntBool -> String -> PairIntBool) → PairIntBool → ListString → PairIntBool;
+foldl f z Nil ≔ z ;
+foldl f z (Cons h hs) ≔ foldl f (f z h) hs;
+
+auxVP : PairIntBool -> Bool;
+auxVP (MakePair change all-checked) := and (change ==Int 0) all-checked;
+
+vp : String -> ListString -> ListString -> Bool;
+vp token keys-changed verifiers :=
+  auxVP (foldl (check-keys verifiers) (MakePair 0 false) keys-changed);
+
+end;
+

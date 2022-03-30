@@ -86,22 +86,26 @@ data Iden
   | IdenConstructor Name
   | IdenVar VarName
   | IdenAxiom Name
+  deriving stock (Show)
 
 data TypedExpression = TypedExpression {
   _typedType :: Type,
   _typedExpression :: Expression
   }
+  deriving stock (Show)
 
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
   | ExpressionLiteral Literal
   | ExpressionTyped TypedExpression
+  deriving stock (Show)
 
 data Application = Application
   { _appLeft :: Expression,
     _appRight :: Expression
   }
+  deriving stock (Show)
 
 data Function = Function
   { _funLeft :: Type,
