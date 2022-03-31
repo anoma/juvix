@@ -29,6 +29,7 @@ data Name = Name
   { _nameText :: Text,
     _nameId :: NameId,
     _nameKind :: NameKind
+    -- TODO: Add Location here so we can print out line numbers
   }
   deriving stock (Show)
 
@@ -77,7 +78,8 @@ data FunctionDef = FunctionDef
   }
 
 data FunctionClause = FunctionClause
-  { _clausePatterns :: [Pattern],
+  { _clauseName :: FunctionName,
+    _clausePatterns :: [Pattern],
     _clauseBody :: Expression
   }
 

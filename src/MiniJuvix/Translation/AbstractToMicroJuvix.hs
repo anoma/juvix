@@ -73,15 +73,19 @@ goFunction (A.Function l r) = Function (goFunctionParameter l) (goType r)
 goFunctionDef :: A.FunctionDef -> FunctionDef
 goFunctionDef f =
   FunctionDef
-    { _funDefName = goSymbol (f ^. A.funDefName),
+    { _funDefName = _funDefName',
       _funDefType = goType (f ^. A.funDefTypeSig),
-      _funDefClauses = fmap goFunctionClause (f ^. A.funDefClauses)
+      _funDefClauses = fmap (goFunctionClause _funDefName') (f ^. A.funDefClauses)
     }
+  where
+    _funDefName' :: Name
+    _funDefName' = goSymbol (f ^. A.funDefName)
 
-goFunctionClause :: A.FunctionClause -> FunctionClause
-goFunctionClause c =
+goFunctionClause :: Name -> A.FunctionClause -> FunctionClause
+goFunctionClause n c =
   FunctionClause
-    { _clausePatterns = map goPattern (c ^. A.clausePatterns),
+    { _clauseName = n,
+      _clausePatterns = map goPattern (c ^. A.clausePatterns),
       _clauseBody = goExpression (c ^. A.clauseBody)
     }
 

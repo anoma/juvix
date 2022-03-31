@@ -22,6 +22,9 @@ defaultOptions =
 class PrettyCode c where
   ppCode :: Member (Reader Options) r => c -> Sem r (Doc Ann)
 
+runPrettyCode :: PrettyCode c => Options -> c -> Doc Ann
+runPrettyCode opts = run . runReader opts . ppCode
+
 instance PrettyCode Name where
   ppCode n =
     return $
@@ -169,15 +172,17 @@ instance PrettyCode FunctionDef where
   ppCode f = do
     funDefName' <- ppCode (f ^. funDefName)
     funDefType' <- ppCode (f ^. funDefType)
-    clauses' <- mapM (ppClause funDefName') (f ^. funDefClauses)
+    clauses' <- mapM ppCode (f ^. funDefClauses)
     return $
       funDefName' <+> kwColonColon <+> funDefType' <> line
         <> vsep (toList clauses')
-    where
-      ppClause fun c = do
-        clausePatterns' <- mapM ppCodeAtom (c ^. clausePatterns)
-        clauseBody' <- ppCode (c ^. clauseBody)
-        return $ fun <+> hsep clausePatterns' <+> kwEquals <+> clauseBody'
+
+instance PrettyCode FunctionClause where
+  ppCode c = do
+    funName <- ppCode (c ^. clauseName)
+    clausePatterns' <- mapM ppCodeAtom (c ^. clausePatterns)
+    clauseBody' <- ppCode (c ^. clauseBody)
+    return $ funName <+> hsep clausePatterns' <+> kwEquals <+> clauseBody'
 
 instance PrettyCode Backend where
   ppCode = \case
