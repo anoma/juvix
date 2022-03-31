@@ -52,10 +52,9 @@ instance PrettyError WrongType where
     <> line <> indent' (ppCode (e ^. wrongTypeExpectedType))
 
 instance PrettyError ExpectedFunctionType where
-  ppError e = "Type error."
-    <> line <> "The expression:"
+  ppError e = "Type error in the expression:"
     <> line <> indent' (ppCode (e ^. expectedFunctionTypeExpression))
-    <> line <> "is expected to be a function application but" <+> ppCode (e ^. expectedFunctionTypeApp) <+> "has type:"
+    <> line <> "the expression" <+> ppCode (e ^. expectedFunctionTypeApp) <+> "is expected to have a function type but has type:"
     <> line <> indent' (ppCode (e ^. expectedFunctionTypeType))
 
 instance PrettyError TooManyPatterns where
