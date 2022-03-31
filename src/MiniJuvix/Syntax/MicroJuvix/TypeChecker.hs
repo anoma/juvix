@@ -53,20 +53,19 @@ checkFunctionDef FunctionDef {..} = do
     ..
     }
 
-checkExpression :: Members '[Reader InfoTable, Output TypeCheckerError, Reader LocalVars] r =>
+checkExpression :: Members '[Reader InfoTable, Error TypeCheckerError, Reader LocalVars] r =>
   Type -> Expression -> Sem r Expression
 checkExpression t e = do
   t' <- inferExpression' e
   let inferredType = t' ^. typedType
-  if (t /= inferredType)
-    then output (err inferredType) >> return e
-    else return (ExpressionTyped t')
+  when (t /= inferredType) (throw (err inferredType))
+  return (ExpressionTyped t')
   where
     err infTy = (ErrWrongType (WrongType { _wrongTypeExpression = e,
                                            _wrongTypeInferredType = infTy,
                                            _wrongTypeExpectedType = t}))
 
-inferExpression :: Members '[Reader InfoTable, Output TypeCheckerError, Reader LocalVars] r =>
+inferExpression :: Members '[Reader InfoTable, Error TypeCheckerError, Reader LocalVars] r =>
    Expression -> Sem r Expression
 inferExpression = fmap ExpressionTyped . inferExpression'
 
@@ -100,19 +99,22 @@ unfoldFunType t = case t of
   TypeFunction (Function l r) -> first (l:) (unfoldFunType r)
   _ -> ([], t)
 
-checkFunctionClause :: forall r. Members '[Reader InfoTable, Output TypeCheckerError] r =>
+checkFunctionClause :: Members '[Reader InfoTable, Output TypeCheckerError] r =>
   FunctionInfo -> FunctionClause -> Sem r FunctionClause
 checkFunctionClause info clause@FunctionClause{..} = do
   let (argTys, rty) = unfoldFunType (info ^. functionInfoType)
       (patTys, restTys) = splitAt (length _clausePatterns) argTys
       bodyTy = foldFunType restTys rty
   if (length patTys /= length _clausePatterns)
-    then output (tyErr patTys) >> return clause
+    then output (tyErr patTys) $> clause
     else do
       locals <- mconcat <$> zipWithM checkPattern patTys _clausePatterns
-      clauseBody' <- runReader locals (checkExpression bodyTy _clauseBody)
+      eclauseBody <- runError @TypeCheckerError $ runReader locals (checkExpression bodyTy _clauseBody)
+      _clauseBody' <- case eclauseBody of
+        Left err -> output err $> _clauseBody
+        Right r -> return r
       return FunctionClause {
-        _clauseBody = clauseBody',
+        _clauseBody = _clauseBody',
         ..
         }
   where
@@ -161,7 +163,7 @@ normalizeType t = case t of
     r' <- normalizeType r
     return (Function l' r')
 
-inferExpression' :: forall r. Members '[Reader InfoTable, Output TypeCheckerError, Reader LocalVars] r =>
+inferExpression' :: forall r. Members '[Reader InfoTable, Reader LocalVars, Error TypeCheckerError] r =>
    Expression -> Sem r TypedExpression
 inferExpression' e = case e of
   ExpressionIden i -> inferIden i
@@ -189,22 +191,20 @@ inferExpression' e = case e of
   inferApplication a = do
     let leftExp = a ^. appLeft
     l <- inferExpression' leftExp
-    case getFunctionType leftExp (l ^. typedType) of
-      Left tyErr -> output tyErr >> (return (TypedExpression TypeAny e))
-      Right fun -> do
-        r <- checkExpression (fun ^. funLeft) (a ^. appRight)
-        return TypedExpression {
-          _typedExpression = ExpressionApplication Application {
-              _appLeft = ExpressionTyped l,
-              _appRight = r
-              },
-          _typedType = fun ^. funRight
-          }
+    fun <- getFunctionType leftExp (l ^. typedType)
+    r <- checkExpression (fun ^. funLeft) (a ^. appRight)
+    return TypedExpression {
+      _typedExpression = ExpressionApplication Application {
+          _appLeft = ExpressionTyped l,
+          _appRight = r
+          },
+      _typedType = fun ^. funRight
+      }
     where
-      getFunctionType :: Expression -> Type -> Either TypeCheckerError Function
+      getFunctionType :: Expression -> Type -> Sem r Function
       getFunctionType appExp t = case t of
-        TypeFunction f -> Right f
-        _ -> Left tyErr
+        TypeFunction f -> return f
+        _ -> throw tyErr
         where
           tyErr :: TypeCheckerError
           tyErr = (ErrExpectedFunctionType (ExpectedFunctionType { _expectedFunctionTypeExpression = e,
