@@ -3,7 +3,7 @@ module MiniJuvix.Syntax.Concrete.Loc where
 import MiniJuvix.Prelude
 import Prettyprinter
 
-newtype Pos = Pos Word64
+newtype Pos = Pos {_unPos :: Word64 }
   deriving stock (Show, Eq, Ord)
 
 instance Semigroup Pos where
@@ -16,12 +16,14 @@ data FileLoc = FileLoc
   { -- | Line number
     _locLine :: !Pos,
     -- | Column number
-    _locCol :: !Pos
+    _locCol :: !Pos,
+    -- | Offset wrt the start of the input. Used for syntax highlighting.
+    _locOffset :: !Pos
   }
   deriving stock (Show, Eq)
 
 instance Ord FileLoc where
-  compare (FileLoc l c) (FileLoc l' c') = compare (l, c) (l', c')
+  compare (FileLoc l c o) (FileLoc l' c' o') = compare (l, c, o) (l', c', o')
 
 data Loc = Loc
   { -- | Name of source file
@@ -79,4 +81,6 @@ instance Pretty Interval where
         | otherwise = pretty s <> hyphen <> pretty e
 
 makeLenses ''Interval
+makeLenses ''FileLoc
 makeLenses ''Loc
+makeLenses ''Pos

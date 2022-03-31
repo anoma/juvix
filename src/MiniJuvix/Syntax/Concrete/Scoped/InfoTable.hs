@@ -27,7 +27,8 @@ data InfoTable = InfoTable {
   _infoAxioms :: HashMap AxiomRef AxiomInfo,
   _infoInductives :: HashMap InductiveRef InductiveInfo,
   _infoFunctions :: HashMap FunctionRef FunctionInfo,
-  _infoFunctionClauses :: HashMap S.Symbol (FunctionClause 'Scoped)
+  _infoFunctionClauses :: HashMap S.Symbol (FunctionClause 'Scoped),
+  _infoNames :: [S.Name]
   }
 
 emptyInfoTable :: InfoTable
@@ -36,7 +37,8 @@ emptyInfoTable = InfoTable {
   _infoAxioms = mempty,
   _infoInductives = mempty,
   _infoFunctions = mempty,
-  _infoFunctionClauses = mempty
+  _infoFunctionClauses = mempty,
+  _infoNames = mempty
   }
 
 makeLenses ''InfoTable
