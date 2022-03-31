@@ -325,7 +325,7 @@ runCommand c = do
       micro <- miniToMicro root _mjuvixInputFile
       case Micro.checkModule micro of
         Right _ -> putStrLn "Well done! It type checks"
-        Left es -> sequence_ (intersperse (putStrLn "") (printErrorAnsi <$> es)) >> exitFailure
+        Left es -> sequence_ (intersperse (putStrLn "") (printErrorAnsi <$> toList es)) >> exitFailure
     MiniHaskell MiniHaskellOptions {..} -> do
       m <- parseModuleIO _mhaskellInputFile
       (_, s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m

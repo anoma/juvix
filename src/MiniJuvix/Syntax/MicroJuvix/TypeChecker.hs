@@ -11,12 +11,12 @@ newtype LocalVars = LocalVars {
   deriving newtype (Semigroup, Monoid)
 makeLenses ''LocalVars
 
-checkModule :: Module -> Either [TypeCheckerError] Module
+checkModule :: Module -> Either (NonEmpty TypeCheckerError) Module
 checkModule m = run $ do
   (es, checkedModule) <- runOutputList $ runReader (buildTable m) (checkModule' m)
   return $ case es of
     [] -> Right checkedModule
-    _ -> Left es
+    (x : xs) -> Left (x :| xs)
 
 checkModule' :: Members '[Reader InfoTable, Output TypeCheckerError] r =>
   Module -> Sem r Module
