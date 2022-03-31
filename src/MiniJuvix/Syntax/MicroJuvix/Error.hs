@@ -17,6 +17,7 @@ data TypeCheckerError
  | ErrWrongConstructorAppArgs WrongConstructorAppArgs
  | ErrWrongType WrongType
  | ErrExpectedFunctionType ExpectedFunctionType
+ deriving stock (Show)
 
 ppTypeCheckerError :: TypeCheckerError -> Doc Eann
 ppTypeCheckerError = \case

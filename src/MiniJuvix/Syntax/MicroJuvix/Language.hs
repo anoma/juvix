@@ -82,6 +82,7 @@ data FunctionClause = FunctionClause
     _clausePatterns :: [Pattern],
     _clauseBody :: Expression
   }
+  deriving stock (Show)
 
 data Iden
   = IdenFunction Name
@@ -120,11 +121,13 @@ data ConstructorApp = ConstructorApp
   { _constrAppConstructor :: Name,
     _constrAppParameters :: [Pattern]
   }
+  deriving stock (Show)
 
 data Pattern
   = PatternVariable VarName
   | PatternConstructorApp ConstructorApp
   | PatternWildcard
+  deriving stock (Show)
 
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,

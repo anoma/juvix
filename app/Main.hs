@@ -324,16 +324,18 @@ runCommand c = do
     MicroJuvix (TypeCheck MicroJuvixOptions {..}) -> do
       micro <- miniToMicro root _mjuvixInputFile
       case Micro.checkModule micro of
-        Left er -> printErrorAnsi er
-        Right {} -> putStrLn "Well done! It type checks"
+        Right _ -> putStrLn "Well done! It type checks"
+        Left es -> sequence_ (intersperse (putStrLn "") (printErrorAnsi <$> es)) >> exitFailure
     MiniHaskell MiniHaskellOptions {..} -> do
       m <- parseModuleIO _mhaskellInputFile
       (_, s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
       let micro = Micro.translateModule a
-      checkedMicro <- fromRightIO' printErrorAnsi (return $ Micro.checkModule micro)
-      minihaskell <- fromRightIO' putStrLn (return $ Hask.translateModule checkedMicro)
-      Hask.printPrettyCodeDefault minihaskell
+      case Micro.checkModule micro of
+        Right checkedMicro -> do
+          minihaskell <- fromRightIO' putStrLn (return $ Hask.translateModule checkedMicro)
+          Hask.printPrettyCodeDefault minihaskell
+        Left es -> mapM_ printErrorAnsi es >> exitFailure
     Termination (Calls opts@CallsOptions {..}) -> do
       m <- parseModuleIO _callsInputFile
       (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m

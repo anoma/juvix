@@ -18,14 +18,15 @@ testDescr NegTest {..} = TestDescr {
   testName = name,
   testRoot = root </> relDir,
   testAssertion = Single $ do
-      p <- parseModuleIO file
-           >>= scopeModuleIO
-           >>= translateModuleIO
-           >>| A.translateModule
-           >>| T.checkModule
+      result <- parseModuleIO file
+                >>= scopeModuleIO
+                >>= translateModuleIO
+                >>| A.translateModule
+                >>| T.checkModule
 
-      case p of
-        Left err -> whenJust (checkErr err) assertFailure
+      case result of
+        Left es -> when (all (/= Nothing) (checkErr <$> es))
+                        (assertFailure "expected error not found")
         Right _ -> assertFailure "The type checker did not find an error."
   }
 
