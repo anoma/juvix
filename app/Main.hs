@@ -268,7 +268,7 @@ go c = do
       (_, s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
       let micro = Micro.translateModule a
-      checkedMicro <- fromRightIO' putStrLn (return $ Micro.checkModule micro)
+      checkedMicro <- fromRightIO' printErrorAnsi (return $ Micro.checkModule micro)
       minihaskell <- fromRightIO' putStrLn (return $ Hask.translateModule checkedMicro)
       Hask.printPrettyCodeDefault minihaskell
     Termination (Calls opts@CallsOptions {..}) -> do

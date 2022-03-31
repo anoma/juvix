@@ -74,7 +74,7 @@ goFunctionDef :: A.FunctionDef -> FunctionDef
 goFunctionDef f =
   FunctionDef
     { _funDefName = _funDefName',
-      _funDefTypeSig = goType (f ^. A.funDefTypeSig),
+      _funDefType = goType (f ^. A.funDefTypeSig),
       _funDefClauses = fmap (goFunctionClause _funDefName') (f ^. A.funDefClauses)
     }
   where

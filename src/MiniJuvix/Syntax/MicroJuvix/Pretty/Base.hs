@@ -171,7 +171,7 @@ instance PrettyCode Pattern where
 instance PrettyCode FunctionDef where
   ppCode f = do
     funDefName' <- ppCode (f ^. funDefName)
-    funDefTypeSig' <- ppCode (f ^. funDefTypeSig)
+    funDefType' <- ppCode (f ^. funDefType)
     clauses' <- mapM ppCode (f ^. funDefClauses)
     return $
       funDefName' <+> kwColonColon <+> funDefType' <> line
