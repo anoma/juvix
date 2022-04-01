@@ -18,6 +18,9 @@ indent' = indent 2
 prettyT :: Text -> Doc Eann
 prettyT = pretty
 
+highlight :: Doc Eann -> Doc Eann
+highlight = annotate Highlight
+
 class PrettyError e where
   ppError :: e -> Doc Eann
 
@@ -58,8 +61,12 @@ instance PrettyError ExpectedFunctionType where
     <> line <> indent' (ppCode (e ^. expectedFunctionTypeType))
 
 instance PrettyError TooManyPatterns where
-  ppError e = "Type error in the definition of" <+> ppCode (e ^. tooManyPatternsClause . clauseName) <> "."
-    <> line <> "The function clause:"
+  ppError e = "Type error near" <+> highlight (pretty (name ^. nameDefined))
+    <> line <> "In in the definition of" <+> ppCode name <+> "the function clause:"
     <> line <> indent' (ppCode (e ^. tooManyPatternsClause))
     <> line <> "matches too many patterns. It should match the following types:"
     <> line <> indent' (hsep (ppCode <$> (e ^. tooManyPatternsTypes)))
+
+    where
+      name :: Name
+      name =  (e ^. tooManyPatternsClause . clauseName)

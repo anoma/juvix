@@ -11,6 +11,7 @@ import MiniJuvix.Syntax.ForeignBlock
 import MiniJuvix.Syntax.Backends
 import MiniJuvix.Syntax.Concrete.Scoped.Name (NameId (..))
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
+import qualified MiniJuvix.Syntax.Concrete.Language as C
 import MiniJuvix.Syntax.Concrete.Literal
 import MiniJuvix.Syntax.Fixity
 import Prettyprinter
@@ -28,8 +29,8 @@ type InductiveName = Name
 data Name = Name
   { _nameText :: Text,
     _nameId :: NameId,
-    _nameKind :: NameKind
-    -- TODO: Add Location here so we can print out line numbers
+    _nameKind :: NameKind,
+    _nameDefined :: C.Interval
   }
   deriving stock (Show)
 

@@ -24,8 +24,9 @@ goSymbol :: S.Symbol -> Name
 goSymbol s =
   Name
     { _nameText = S.symbolText s,
-      _nameId = S._nameId s,
-      _nameKind = getNameKind s }
+      _nameId = s ^. S.nameId,
+      _nameKind = getNameKind s,
+      _nameDefined = s ^. S.nameDefined}
 
 unsupported :: Text -> a
 unsupported thing = error ("Abstract to MicroJuvix: Not yet supported: " <> thing)
