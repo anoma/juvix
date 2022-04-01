@@ -1,8 +1,7 @@
-{-# LANGUAGE StandaloneKindSignatures #-}
-
 module MiniJuvix.Syntax.Concrete.Scoped.Name
   ( module MiniJuvix.Syntax.Concrete.Scoped.Name,
     module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind,
+    module MiniJuvix.Syntax.NameId
   )
 where
 
@@ -12,9 +11,9 @@ import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Loc
 import qualified MiniJuvix.Syntax.Concrete.Name as C
 import MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn
+import MiniJuvix.Syntax.NameId
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
 import qualified MiniJuvix.Syntax.Fixity as C
-import Prettyprinter
 
 --------------------------------------------------------------------------------
 -- Names
@@ -23,12 +22,6 @@ import Prettyprinter
 data IsConcrete = NotConcrete | Concrete
 
 $(genSingletons [''IsConcrete])
-
-newtype NameId = NameId Word64
-  deriving stock (Show, Eq, Ord, Generic)
-
-instance Pretty NameId where
-  pretty (NameId w) = pretty w
 
 data AbsModulePath = AbsModulePath
   { absTopModulePath :: C.TopModulePath,
@@ -61,8 +54,6 @@ allNameIds = NameId <$> ids
     ids :: Stream Word64
     ids = aux minBound
     aux i = Cons i (aux (succ i))
-
-instance Hashable NameId
 
 -- | Why a symbol is in scope.
 data WhyInScope

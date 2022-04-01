@@ -77,9 +77,6 @@ default-extensions:
 - TypeFamilyDependencies
 - UnicodeSyntax
 
-# verbatim:
-#   default-language: GHC2021
-
 library:
   source-dirs: src
   verbatim:

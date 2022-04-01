@@ -63,11 +63,11 @@ composeEdge a b = do
         _edgeMatrices = multiplyMany (a ^. edgeMatrices) (b ^. edgeMatrices)
       }
 
-fromFunCall :: FunctionName -> FunCall -> Call
+fromFunCall :: FunctionRef -> FunCall -> Call
 fromFunCall caller fc =
   Call
-    { _callFrom = caller,
-      _callTo = fc ^. callName,
+    { _callFrom = S.nameUnqualify (caller ^. functionRefName),
+      _callTo = S.nameUnqualify (fc ^. callRef . functionRefName),
       _callMatrix = map fst (fc ^. callArgs)
     }
 

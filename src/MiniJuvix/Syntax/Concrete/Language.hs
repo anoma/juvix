@@ -3,6 +3,9 @@ module MiniJuvix.Syntax.Concrete.Language
   ( module MiniJuvix.Syntax.Concrete.Language,
     module MiniJuvix.Syntax.Concrete.Name,
     module MiniJuvix.Syntax.Concrete.Loc,
+    module MiniJuvix.Syntax.Concrete.Literal,
+    module MiniJuvix.Syntax.Backends,
+    module MiniJuvix.Syntax.ForeignBlock,
     module MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn,
     module MiniJuvix.Syntax.Concrete.PublicAnn,
     module MiniJuvix.Syntax.Concrete.ModuleIsTop,
@@ -18,7 +21,10 @@ where
 import qualified Data.Kind as GHC
 import MiniJuvix.Prelude hiding (show)
 import MiniJuvix.Syntax.Concrete.Language.Stage
+import MiniJuvix.Syntax.Backends
+import MiniJuvix.Syntax.ForeignBlock
 import MiniJuvix.Syntax.Concrete.Loc
+import MiniJuvix.Syntax.Concrete.Literal
 import MiniJuvix.Syntax.Concrete.ModuleIsTop
 import MiniJuvix.Syntax.Concrete.Name
 import MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn
@@ -131,12 +137,6 @@ deriving stock instance
     Ord (ExpressionType s)
   ) =>
   Ord (Statement s)
-
-data ForeignBlock = ForeignBlock
-  { _foreignBackend :: Backend,
-    _foreignCode :: Text
-  }
-  deriving stock (Eq, Ord, Show)
 
 --------------------------------------------------------------------------------
 -- Import statement
@@ -662,11 +662,6 @@ data Expression
   | ExpressionFunction (Function 'Scoped)
   deriving stock (Show, Eq, Ord)
 
-instance HasAtomicity Literal where
-  atomicity = \case
-    LitInteger {} -> Atom
-    LitString {} -> Atom
-
 instance HasAtomicity Expression where
   atomicity e = case e of
     ExpressionIdentifier {} -> Atom
@@ -684,11 +679,6 @@ instance HasAtomicity Expression where
 --------------------------------------------------------------------------------
 -- Expression atom
 --------------------------------------------------------------------------------
-
-data Literal
-  = LitString Text
-  | LitInteger Integer
-  deriving stock (Show, Eq, Ord)
 
 -- | Expressions without application
 data ExpressionAtom (s :: Stage)
@@ -1059,19 +1049,6 @@ deriving stock instance
   Ord (LetClause s)
 
 --------------------------------------------------------------------------------
--- Backends
---------------------------------------------------------------------------------
-
-data Backend = BackendGhc | BackendAgda
-  deriving stock (Show, Eq, Ord)
-
-data BackendItem = BackendItem
-  { _backendItemBackend :: Backend,
-    _backendItemCode :: Text
-  }
-  deriving stock (Show, Eq, Ord)
-
---------------------------------------------------------------------------------
 -- Debugging statements
 --------------------------------------------------------------------------------
 
@@ -1117,14 +1094,12 @@ makeLenses ''TypeSignature
 makeLenses ''AxiomDef
 makeLenses ''FunctionClause
 makeLenses ''InductiveParameter
-makeLenses ''ForeignBlock
 makeLenses ''AxiomRef'
 makeLenses ''InductiveRef'
 makeLenses ''ModuleRef'
 makeLenses ''ModuleRef''
 makeLenses ''FunctionRef'
 makeLenses ''ConstructorRef'
-makeLenses ''BackendItem
 makeLenses ''OpenModule
 makeLenses ''PatternApp
 makeLenses ''PatternInfixApp

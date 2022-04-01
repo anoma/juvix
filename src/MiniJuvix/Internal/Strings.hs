@@ -65,6 +65,9 @@ let_ = "let"
 public :: IsString s => s
 public = "public"
 
+any :: IsString s => s
+any = "Any"
+
 type_ :: IsString s => s
 type_ = "Type"
 

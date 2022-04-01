@@ -422,7 +422,7 @@ ppName = case sing :: SStage s of
   SScoped -> ppCode
 
 instance PrettyCode S.NameId where
-  ppCode (S.NameId k) = return $ pretty k
+  ppCode (S.NameId k) = return (pretty k)
 
 annDef :: forall s. SingI s => SymbolType s -> Doc Ann -> Doc Ann
 annDef nm = case sing :: SStage s of
@@ -673,7 +673,7 @@ instance PrettyCode Application where
     return $ l' <+> r'
 
 instance PrettyCode Literal where
-  ppCode l = case l of
+  ppCode = \case
     LitInteger n -> return $ annotate AnnLiteralInteger (pretty n)
     LitString s -> return $ ppStringLit s
 

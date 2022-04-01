@@ -138,7 +138,7 @@ bindReservedSymbol s' entry = do
       Just SymbolInfo {..} -> SymbolInfo (HashMap.insert path entry _symbolInfo)
 
 bindSymbolOf ::
-  Members '[Error ScopeError, State ScoperState, State Scope] r =>
+  Members '[Error ScopeError, State ScoperState, State Scope, InfoTableBuilder] r =>
   S.NameKind ->
   (S.Name' () -> SymbolEntry) ->
   Symbol ->
@@ -146,10 +146,11 @@ bindSymbolOf ::
 bindSymbolOf k e s = do
   s' <- reserveSymbolOf k s
   bindReservedSymbol s' (e (set S.nameConcrete () s'))
+  registerName (S.unqualifiedSymbol s')
   return s'
 
 bindFunctionSymbol ::
-  Members '[Error ScopeError, State ScoperState, State Scope] r =>
+  Members '[Error ScopeError, State ScoperState, State Scope, InfoTableBuilder] r =>
   Symbol ->
   Sem r S.Symbol
 bindFunctionSymbol =
@@ -158,7 +159,7 @@ bindFunctionSymbol =
     (\s' -> EntryFunction (FunctionRef' s'))
 
 bindInductiveSymbol ::
-  Members '[Error ScopeError, State ScoperState, State Scope] r =>
+  Members '[Error ScopeError, State ScoperState, State Scope, InfoTableBuilder] r =>
   Symbol ->
   Sem r S.Symbol
 bindInductiveSymbol =
@@ -167,7 +168,7 @@ bindInductiveSymbol =
     (\s' -> EntryInductive (InductiveRef' s'))
 
 bindAxiomSymbol ::
-  Members '[Error ScopeError, State ScoperState, State Scope] r =>
+  Members '[Error ScopeError, State ScoperState, State Scope, InfoTableBuilder] r =>
   Symbol ->
   Sem r S.Symbol
 bindAxiomSymbol =
@@ -176,7 +177,7 @@ bindAxiomSymbol =
     (\s' -> EntryAxiom (AxiomRef' s'))
 
 bindConstructorSymbol ::
-  Members '[Error ScopeError, State ScoperState, State Scope] r =>
+  Members '[Error ScopeError, State ScoperState, State Scope, InfoTableBuilder] r =>
   Symbol ->
   Sem r S.Symbol
 bindConstructorSymbol =
@@ -185,7 +186,7 @@ bindConstructorSymbol =
     (\s' -> EntryConstructor (ConstructorRef' s'))
 
 bindLocalModuleSymbol ::
-  Members '[Error ScopeError, State ScoperState, State Scope] r =>
+  Members '[Error ScopeError, State ScoperState, State Scope, InfoTableBuilder] r =>
   ExportInfo ->
   Module 'Scoped 'ModuleLocal ->
   Symbol ->
@@ -307,29 +308,33 @@ lookupQualifiedSymbol (path, sym) = do
           ((fmap (^. moduleExportInfo) . HashMap.lookup topPath) >=> lookInExport sym remaining) <$> gets _scopeTopModules
 
 checkQualifiedExpr ::
-  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, InfoTableBuilder] r =>
   QualifiedName ->
   Sem r ScopedIden
 checkQualifiedExpr q@(QualifiedName (Path p) sym) = do
   es <- lookupQualifiedSymbol (toList p, sym)
   case es of
     [] -> notInScope
-    [e] -> return (entryToScopedIden q' e)
+    [e] -> entryToScopedIden q' e
     _ -> throw (ErrAmbiguousSym (AmbiguousSym q' es))
   where
     q' = NameQualified q
     notInScope = throw (ErrQualSymNotInScope q)
 
-entryToScopedIden :: Name -> SymbolEntry -> ScopedIden
-entryToScopedIden name = \case
-  EntryAxiom ref -> ScopedAxiom (set (axiomRefName . S.nameConcrete) name ref)
-  EntryInductive ref ->
-    ScopedInductive (set (inductiveRefName . S.nameConcrete) name ref)
-  EntryConstructor ref ->
-    ScopedConstructor (set (constructorRefName . S.nameConcrete) name ref)
-  EntryFunction ref ->
-    ScopedFunction (set (functionRefName . S.nameConcrete) name ref)
-  EntryModule {} -> impossible
+entryToScopedIden :: Members '[InfoTableBuilder] r => Name -> SymbolEntry -> Sem r ScopedIden
+entryToScopedIden name e = do
+  let scopedName :: S.Name
+      scopedName = set S.nameConcrete name (entryName e)
+  registerName scopedName
+  return $ case e of
+    EntryAxiom ref -> ScopedAxiom (set (axiomRefName . S.nameConcrete) name ref)
+    EntryInductive ref ->
+      ScopedInductive (set (inductiveRefName . S.nameConcrete) name ref)
+    EntryConstructor ref ->
+      ScopedConstructor (set (constructorRefName . S.nameConcrete) name ref)
+    EntryFunction ref ->
+      ScopedFunction (set (functionRefName . S.nameConcrete) name ref)
+    EntryModule {} -> impossible
 
 -- | We gather all symbols which have been defined or marked to be public in the given scope.
 exportScope :: forall r. Members '[State Scope, Error ScopeError] r => Scope -> Sem r ExportInfo
@@ -502,7 +507,9 @@ checkTopModule m@(Module path params body) = do
           _nameVisibilityAnn = VisPublic
           _nameWhyInScope = S.BecauseDefined
           _nameVerbatim = N.topModulePathToDottedPath path
-      return S.Name' {..}
+          moduleName = S.Name' {..}
+      -- registerName moduleName
+      return moduleName
     iniScope :: Scope
     iniScope = emptyScope (getTopModulePath m)
     checkedModule :: Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
@@ -712,6 +719,7 @@ checkFunctionClause ::
   Sem r (FunctionClause 'Scoped)
 checkFunctionClause clause@FunctionClause {..} = do
   clauseOwnerFunction' <- checkTypeSigInScope
+  registerName (S.unqualifiedSymbol clauseOwnerFunction')
   (clausePatterns', clauseWhere', clauseBody') <- do
     clp <- mapM checkParsePatternAtom _clausePatterns
     withBindCurrentGroup $ do
@@ -720,13 +728,12 @@ checkFunctionClause clause@FunctionClause {..} = do
       clb <- checkParseExpressionAtoms _clauseBody
       put s
       return (clp, clw, clb)
-  return
-    FunctionClause
-      { _clauseOwnerFunction = clauseOwnerFunction',
-        _clausePatterns = clausePatterns',
-        _clauseBody = clauseBody',
-        _clauseWhere = clauseWhere'
-      }
+  registerFunctionClause' FunctionClause
+    { _clauseOwnerFunction = clauseOwnerFunction',
+      _clausePatterns = clausePatterns',
+      _clauseBody = clauseBody',
+      _clauseWhere = clauseWhere'
+    }
   where
     fun = _clauseOwnerFunction
     checkTypeSigInScope :: Sem r S.Symbol
@@ -852,7 +859,7 @@ checkLambdaClause LambdaClause {..} = do
       }
 
 checkUnqualified ::
-  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState] r =>
+  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState, InfoTableBuilder] r =>
   Symbol ->
   Sem r ScopedIden
 checkUnqualified s = do
@@ -870,20 +877,22 @@ checkUnqualified s = do
           <$> lookupQualifiedSymbol ([], s)
       case entries of
         [] -> err
-        [x] -> return (entryToScopedIden n x)
+        [x] -> entryToScopedIden n x
         es -> throw (ErrAmbiguousSym (AmbiguousSym n es))
       where
         n = NameUnqualified s
 
 checkPatternName ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, InfoTableBuilder] r =>
   Name ->
   Sem r PatternScopedIden
 checkPatternName n = do
   c <- getConstructorRef
   case c of
-    Just constr -> return (PatternScopedConstructor constr) -- the symbol is a constructor
+    Just constr -> do
+      registerName (constr ^. constructorRefName)
+      return (PatternScopedConstructor constr) -- the symbol is a constructor
     Nothing -> PatternScopedVar <$> groupBindLocalVariable sym -- the symbol is a variable
   where
     (path, sym) = case n of
@@ -955,13 +964,13 @@ groupBindLocalVariable s = do
       return n
 
 checkPatternAtoms ::
-  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, InfoTableBuilder] r =>
   PatternAtoms 'Parsed ->
   Sem r (PatternAtoms 'Scoped)
 checkPatternAtoms (PatternAtoms s) = PatternAtoms <$> mapM checkPatternAtom s
 
 checkPatternAtom ::
-  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, InfoTableBuilder] r =>
   PatternAtom 'Parsed ->
   Sem r (PatternAtom 'Scoped)
 checkPatternAtom p = case p of
@@ -971,7 +980,7 @@ checkPatternAtom p = case p of
   PatternAtomIden n -> PatternAtomIden <$> checkPatternName n
 
 checkName ::
-  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState] r =>
+  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState, InfoTableBuilder] r =>
   Name ->
   Sem r ScopedIden
 checkName n = case n of
@@ -1037,13 +1046,13 @@ checkExpressionAtoms ::
 checkExpressionAtoms (ExpressionAtoms l) = ExpressionAtoms <$> mapM checkExpressionAtom l
 
 checkParseExpressionAtoms ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder ] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder] r =>
   ExpressionAtoms 'Parsed ->
   Sem r Expression
 checkParseExpressionAtoms = checkExpressionAtoms >=> parseExpressionAtoms
 
 checkParsePatternAtom ::
-  Members '[Error ScopeError, State Scope, State ScoperState] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, InfoTableBuilder] r =>
   PatternAtom 'Parsed ->
   Sem r Pattern
 checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
