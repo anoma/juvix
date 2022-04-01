@@ -76,14 +76,14 @@ It is required at least 8GB RAM for =stack= installation.
   (push "/path/to/minijuvix/minijuvix-mode/" load-path)
   (require 'minijuvix-mode)
   #+end_src
-  Also, =minijuvix= must be installed in the path.
+  Also, =minijuvix= must be installed in your =PATH=.
 
   The MiniJuvix major mode will be activated automatically for =.mjuvix= files.
 *** Keybindings
 
-  | Key     | Function Name  | Description                                           |
-  |---------+----------------+-------------------------------------------------------|
-  | C-c C-l | minijuvix-load | Runs the scoper and adds semantic syntax highlighting |
+  | Key       | Function Name    | Description                                           |
+  |-----------+------------------+-------------------------------------------------------|
+  | =C-c C-l= | =minijuvix-load= | Runs the scoper and adds semantic syntax highlighting |
 
 ** Community
 
