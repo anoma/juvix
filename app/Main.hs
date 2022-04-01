@@ -9,6 +9,7 @@ import Commands.MicroJuvix
 import Commands.MiniHaskell
 import Commands.Termination as T
 import Control.Monad.Extra
+import qualified Control.Exception as IO
 import MiniJuvix.Prelude hiding (Doc)
 import qualified MiniJuvix.Syntax.Abstract.Pretty.Ansi as A
 import qualified MiniJuvix.Syntax.Concrete.Language as M
@@ -45,6 +46,7 @@ data Command
   | MiniHaskell MiniHaskellOptions
   | MicroJuvix MicroJuvixCommand
   | DisplayVersion
+  | DisplayRoot
   | Highlight HighlightOptions
 
 data ScopeOptions = ScopeOptions
@@ -151,6 +153,13 @@ parseDisplayVersion =
     DisplayVersion
     (long "version" <> short 'v' <> help "Print the version and exit")
 
+parseDisplayRoot :: Parser Command
+parseDisplayRoot =
+  flag'
+    DisplayRoot
+    (long "show-root" <> help "Print the detected root of the project")
+
+
 descr :: ParserInfo Command
 descr =
   info
@@ -170,17 +179,18 @@ descr =
 parseCommand :: Parser Command
 parseCommand =
   parseDisplayVersion
-    <|> ( hsubparser $
-            mconcat
-              [ commandParse,
-                commandScope,
-                commandHtml,
-                commandTermination,
-                commandMicroJuvix,
-                commandMiniHaskell,
-                commandHighlight
-              ]
-        )
+  <|> parseDisplayRoot
+  <|> ( hsubparser $
+          mconcat
+            [ commandParse,
+              commandScope,
+              commandHtml,
+              commandTermination,
+              commandMicroJuvix,
+              commandMiniHaskell,
+              commandHighlight
+            ]
+      )
   where
     commandMicroJuvix :: Mod CommandFields Command
     commandMicroJuvix = command "microjuvix" minfo
@@ -255,11 +265,38 @@ mkScopePrettyOptions ScopeOptions {..} =
 parseModuleIO :: FilePath -> IO (M.Module 'M.Parsed 'M.ModuleTop)
 parseModuleIO = fromRightIO id . M.runModuleParserIO
 
-go :: Command -> IO ()
-go c = do
-  root <- getCurrentDirectory
+minijuvixYamlFile :: FilePath
+minijuvixYamlFile = "minijuvix.yaml"
+
+findRoot :: IO FilePath
+findRoot = do
+  r <- IO.try go :: IO (Either IO.SomeException FilePath)
+  case r of
+    Left err -> do
+      putStrLn "Something went wrong when figuring out the root of the project."
+      putStrLn (pack (IO.displayException err))
+      putStrLn "I will try to use the current directory."
+      getCurrentDirectory
+    Right root -> return root
+  where
+  possiblePaths :: FilePath -> [FilePath]
+  possiblePaths start = takeWhile (/= "/") (aux start)
+    where
+    aux f = f : aux (takeDirectory f)
+  go :: IO FilePath
+  go = do
+    c <- getCurrentDirectory
+    l <- findFile (possiblePaths c) minijuvixYamlFile
+    case l of
+      Nothing -> return c
+      Just yaml -> return (takeDirectory yaml)
+
+runCommand :: Command -> IO ()
+runCommand c = do
+  root <- findRoot
   case c of
     DisplayVersion -> runDisplayVersion
+    DisplayRoot -> putStrLn (pack root)
     Scope opts@ScopeOptions {..} -> do
       forM_ _scopeInputFiles $ \scopeInputFile -> do
         m <- parseModuleIO scopeInputFile
@@ -336,4 +373,4 @@ go c = do
         return (Micro.translateModule a)
 
 main :: IO ()
-main = execParser descr >>= go
+main = execParser descr >>= runCommand
