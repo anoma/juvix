@@ -67,6 +67,24 @@ It is required at least 8GB RAM for =stack= installation.
   $ stack test
 #+end_src
 
+** Emacs mode
+  There is an emacs mode available for MiniJuvix. Currently it supports syntax
+  highlighting for well-scoped modules. It is a work in progress.
+
+  To install it add the following lines to your emacs configuration file:
+  #+begin_src elisp
+  (push "/path/to/minijuvix/minijuvix-mode/" load-path)
+  (require 'minijuvix-mode)
+  #+end_src
+  Also, =minijuvix= must be installed in your =PATH=.
+
+  The MiniJuvix major mode will be activated automatically for =.mjuvix= files.
+*** Keybindings
+
+  | Key       | Function Name    | Description                                           |
+  |-----------+------------------+-------------------------------------------------------|
+  | =C-c C-l= | =minijuvix-load= | Runs the scoper and adds semantic syntax highlighting |
+
 ** Community
 
 We would love to hear what you think of MiniJuvix! Join us on

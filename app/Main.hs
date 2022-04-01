@@ -14,6 +14,8 @@ import qualified MiniJuvix.Syntax.Abstract.Pretty.Ansi as A
 import qualified MiniJuvix.Syntax.Concrete.Language as M
 import qualified MiniJuvix.Syntax.Concrete.Parser as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
+import qualified MiniJuvix.Syntax.Concrete.Scoped.InfoTable as Scoped
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Highlight as Scoped
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (defaultOptions)
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
@@ -43,6 +45,7 @@ data Command
   | MiniHaskell MiniHaskellOptions
   | MicroJuvix MicroJuvixCommand
   | DisplayVersion
+  | Highlight HighlightOptions
 
 data ScopeOptions = ScopeOptions
   { _scopeRootDir :: FilePath,
@@ -55,6 +58,10 @@ data ScopeOptions = ScopeOptions
 data ParseOptions = ParseOptions
   { _parseInputFile :: FilePath,
     _parseNoPrettyShow :: Bool
+  }
+
+data HighlightOptions = HighlightOptions
+  { _highlightInputFile :: FilePath
   }
 
 data HtmlOptions = HtmlOptions
@@ -87,6 +94,11 @@ parseHtml = do
       "nord" -> Right Nord
       "ayu" -> Right Ayu
       _ -> Left $ "unrecognised theme: " <> s
+
+parseHighlight :: Parser HighlightOptions
+parseHighlight = do
+  _highlightInputFile <- parseInputFile
+  pure HighlightOptions {..}
 
 parseParse :: Parser ParseOptions
 parseParse = do
@@ -165,7 +177,8 @@ parseCommand =
                 commandHtml,
                 commandTermination,
                 commandMicroJuvix,
-                commandMiniHaskell
+                commandMiniHaskell,
+                commandHighlight
               ]
         )
   where
@@ -186,6 +199,15 @@ parseCommand =
           info
             (MiniHaskell <$> parseMiniHaskell)
             (progDesc "Translate a MiniJuvix file to MiniHaskell")
+
+    commandHighlight :: Mod CommandFields Command
+    commandHighlight = command "highlight" minfo
+      where
+        minfo :: ParserInfo Command
+        minfo =
+          info
+            (Highlight <$> parseHighlight)
+            (progDesc "Highlight a MiniJuvix file")
 
     commandParse :: Mod CommandFields Command
     commandParse = command "parse" minfo
@@ -248,6 +270,10 @@ go c = do
         printer
           | not _scopeNoColors = M.printPrettyCode
           | otherwise = T.printPrettyCode
+    Highlight HighlightOptions {..} -> do
+        m <- parseModuleIO _highlightInputFile
+        (i , _) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+        putStrLn (Scoped.go (i ^. Scoped.infoNames))
     Parse ParseOptions {..} -> do
       m <- parseModuleIO _parseInputFile
       if _parseNoPrettyShow then print m else pPrint m

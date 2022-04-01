@@ -62,17 +62,21 @@ bracedString =
 string :: MonadParsec e Text m => m Text
 string = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
-mkLoc :: SourcePos -> Loc
-mkLoc SourcePos {..} = Loc {..}
+mkLoc :: Int -> SourcePos -> Loc
+mkLoc offset SourcePos {..} = Loc {..}
   where
     _locFile = sourceName
+    _locOffset = Pos (fromIntegral offset)
     _locFileLoc = FileLoc {..}
       where
         _locLine = fromPos sourceLine
         _locCol = fromPos sourceColumn
 
 curLoc :: MonadParsec e Text m => m Loc
-curLoc = mkLoc <$> getSourcePos
+curLoc = do
+  sp <- getSourcePos
+  offset <- stateOffset <$> getParserState
+  return (mkLoc offset sp)
 
 withLoc :: MonadParsec e Text m => (Loc -> m a) -> m a
 withLoc ma = curLoc >>= ma
