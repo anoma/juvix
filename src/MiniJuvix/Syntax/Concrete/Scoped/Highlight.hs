@@ -14,7 +14,7 @@ data Face =
   | FaceModule
   | FaceAxiom
 
-data Property =
+newtype Property =
   PropertyFace Face
 
 data Instruction =

@@ -51,10 +51,9 @@
 # IGNORES
 # --------------------------------------------------------------------------------
 
-- ignore: {within: [MiniJuvix.Syntax.Core, MiniJuvix.Syntax.Eval]}
-- ignore: {within: [MiniJuvix.Monad]}
-- ignore: {within: [MiniJuvix.Pretty]}
 - ignore: {name: Use let, within: [Test.All]}
 - ignore: {name: Use String}
 - ignore: {name: Avoid restricted flags}
-- ignore: {name: Avoid restricted extensions, within: [MiniJuvix.Parsing.Language]}
+- ignore: {name: Avoid restricted extensions}
+# UndecidableInstances or StandaloneKindSignatures
+- ignore: {name: Avoid restricted qualification}

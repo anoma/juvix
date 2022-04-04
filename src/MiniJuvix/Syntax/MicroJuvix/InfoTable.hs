@@ -10,7 +10,7 @@ data ConstructorInfo = ConstructorInfo {
   _constructorInfoInductive :: InductiveName
   }
 
-data FunctionInfo = FunctionInfo {
+newtype FunctionInfo = FunctionInfo {
   _functionInfoType :: Type
   }
 
@@ -44,7 +44,7 @@ buildTable m = InfoTable {..}
    _infoAxioms = HashMap.fromList
      [ (d ^. axiomName , AxiomInfo (d ^. axiomType) (d ^. axiomBackendItems))
        | StatementAxiom d <- ss ]
-   ss = m ^. moduleBody ^. moduleStatements
+   ss = m ^. (moduleBody . moduleStatements)
 
 makeLenses ''InfoTable
 makeLenses ''FunctionInfo

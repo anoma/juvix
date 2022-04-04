@@ -62,9 +62,9 @@ checkExpression t e = do
   when (t /= inferredType) (throw (err inferredType))
   return (ExpressionTyped t')
   where
-    err infTy = (ErrWrongType (WrongType { _wrongTypeExpression = e,
+    err infTy = ErrWrongType (WrongType { _wrongTypeExpression = e,
                                            _wrongTypeInferredType = infTy,
-                                           _wrongTypeExpectedType = t}))
+                                           _wrongTypeExpectedType = t})
 
 inferExpression :: Members '[Reader InfoTable, Error TypeCheckerError, Reader LocalVars] r =>
    Expression -> Sem r Expression
@@ -106,7 +106,7 @@ checkFunctionClause info clause@FunctionClause{..} = do
   let (argTys, rty) = unfoldFunType (info ^. functionInfoType)
       (patTys, restTys) = splitAt (length _clausePatterns) argTys
       bodyTy = foldFunType restTys rty
-  if (length patTys /= length _clausePatterns)
+  if length patTys /= length _clausePatterns
     then output (tyErr patTys) $> clause
     else do
       locals <- mconcat <$> zipWithM (checkPattern _clauseName) patTys _clausePatterns
@@ -120,8 +120,8 @@ checkFunctionClause info clause@FunctionClause{..} = do
         }
   where
     tyErr :: [Type] -> TypeCheckerError
-    tyErr patTys = (ErrTooManyPatterns (TooManyPatterns {_tooManyPatternsClause = clause,
-                                                          _tooManyPatternsTypes = patTys}))
+    tyErr patTys = ErrTooManyPatterns (TooManyPatterns {_tooManyPatternsClause = clause,
+                                                          _tooManyPatternsTypes = patTys})
 
 checkPattern :: forall r. Members '[Reader InfoTable, Output TypeCheckerError] r =>
   FunctionName -> Type -> Pattern -> Sem r LocalVars
@@ -134,13 +134,13 @@ checkPattern funName type_ pat = LocalVars . HashMap.fromList <$> go type_ pat
     PatternConstructorApp a -> do
       info <- lookupConstructor (a ^. constrAppConstructor)
       let inductiveTy = TypeIden (TypeIdenInductive (info ^. constructorInfoInductive))
-      _ <- when (inductiveTy /= ty) (output (ErrWrongConstructorType (WrongConstructorType (a ^. constrAppConstructor) ty inductiveTy funName)))
+      when (inductiveTy /= ty) (output (ErrWrongConstructorType (WrongConstructorType (a ^. constrAppConstructor) ty inductiveTy funName)))
       goConstr a
     where
     goConstr :: ConstructorApp -> Sem r [(VarName, Type)]
     goConstr app@(ConstructorApp c ps) = do
       tys <- (^. constructorInfoArgs) <$> lookupConstructor c
-      _ <- when (length tys /= length ps) (output (appErr app tys))
+      when (length tys /= length ps) (output (appErr app tys))
       concat <$> zipWithM go tys ps
     appErr :: ConstructorApp -> [Type] -> TypeCheckerError
     appErr app tys = ErrWrongConstructorAppArgs (WrongConstructorAppArgs { _wrongCtorAppApp = app,
@@ -209,6 +209,6 @@ inferExpression' e = case e of
         _ -> throw tyErr
         where
           tyErr :: TypeCheckerError
-          tyErr = (ErrExpectedFunctionType (ExpectedFunctionType { _expectedFunctionTypeExpression = e,
+          tyErr = ErrExpectedFunctionType (ExpectedFunctionType { _expectedFunctionTypeExpression = e,
                                                                    _expectedFunctionTypeApp = appExp,
-                                                                   _expectedFunctionTypeType = t}))
+                                                                   _expectedFunctionTypeType = t})

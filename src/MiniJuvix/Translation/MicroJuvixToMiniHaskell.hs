@@ -20,7 +20,7 @@ goModule :: Members '[Error Err, Reader InfoTable] r => Module -> Sem r H.Module
 goModule Module {..} = do
   _moduleBody' <- goModuleBody _moduleBody
   return H.Module {
-    _moduleName = goName (_moduleName),
+    _moduleName = goName _moduleName,
     _moduleBody = _moduleBody'
     }
 

@@ -62,7 +62,7 @@ data ParseOptions = ParseOptions
     _parseNoPrettyShow :: Bool
   }
 
-data HighlightOptions = HighlightOptions
+newtype HighlightOptions = HighlightOptions
   { _highlightInputFile :: FilePath
   }
 
@@ -180,8 +180,8 @@ parseCommand :: Parser Command
 parseCommand =
   parseDisplayVersion
   <|> parseDisplayRoot
-  <|> ( hsubparser $
-          mconcat
+  <|> hsubparser
+          (mconcat
             [ commandParse,
               commandScope,
               commandHtml,
@@ -189,8 +189,7 @@ parseCommand =
               commandMicroJuvix,
               commandMiniHaskell,
               commandHighlight
-            ]
-      )
+            ])
   where
     commandMicroJuvix :: Mod CommandFields Command
     commandMicroJuvix = command "microjuvix" minfo

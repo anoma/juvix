@@ -179,7 +179,7 @@ doubleQuotes :: Doc Ann -> Doc Ann
 doubleQuotes = enclose kwDQuote kwDQuote
 
 annotateKind :: S.NameKind -> Doc Ann -> Doc Ann
-annotateKind k = (annotate . AnnKind) k
+annotateKind =  annotate . AnnKind
 
 ppModulePathType ::
   forall t s r.

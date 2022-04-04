@@ -59,7 +59,7 @@ data Module = Module
     _moduleBody :: ModuleBody
   }
 
-data ModuleBody = ModuleBody
+newtype ModuleBody = ModuleBody
   { _moduleStatements :: [Statement]
   }
 

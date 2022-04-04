@@ -153,10 +153,7 @@ bindFunctionSymbol ::
   Members '[Error ScopeError, State ScoperState, State Scope, InfoTableBuilder] r =>
   Symbol ->
   Sem r S.Symbol
-bindFunctionSymbol =
-  bindSymbolOf
-    S.KNameFunction
-    (\s' -> EntryFunction (FunctionRef' s'))
+bindFunctionSymbol = bindSymbolOf S.KNameFunction (EntryFunction . FunctionRef')
 
 bindInductiveSymbol ::
   Members '[Error ScopeError, State ScoperState, State Scope, InfoTableBuilder] r =>
@@ -164,8 +161,7 @@ bindInductiveSymbol ::
   Sem r S.Symbol
 bindInductiveSymbol =
   bindSymbolOf
-    S.KNameInductive
-    (\s' -> EntryInductive (InductiveRef' s'))
+    S.KNameInductive (EntryInductive . InductiveRef')
 
 bindAxiomSymbol ::
   Members '[Error ScopeError, State ScoperState, State Scope, InfoTableBuilder] r =>
@@ -173,8 +169,7 @@ bindAxiomSymbol ::
   Sem r S.Symbol
 bindAxiomSymbol =
   bindSymbolOf
-    S.KNameAxiom
-    (\s' -> EntryAxiom (AxiomRef' s'))
+    S.KNameAxiom (EntryAxiom . AxiomRef')
 
 bindConstructorSymbol ::
   Members '[Error ScopeError, State ScoperState, State Scope, InfoTableBuilder] r =>
@@ -183,7 +178,7 @@ bindConstructorSymbol ::
 bindConstructorSymbol =
   bindSymbolOf
     S.KNameConstructor
-    (\s' -> EntryConstructor (ConstructorRef' s'))
+    (EntryConstructor . ConstructorRef')
 
 bindLocalModuleSymbol ::
   Members '[Error ScopeError, State ScoperState, State Scope, InfoTableBuilder] r =>
@@ -1285,7 +1280,7 @@ makePatternTable atom = [appOp] : operators
     mkSymbolTable = reverse . map (map snd) . groupSortOn fst . mapMaybe unqualifiedSymbolOp
       where
         unqualifiedSymbolOp :: ConstructorRef -> Maybe (Precedence, P.Operator ParsePat Pattern)
-        unqualifiedSymbolOp (ConstructorRef' (S.Name' {..}))
+        unqualifiedSymbolOp (ConstructorRef' S.Name' {..})
           | Just Fixity {..} <- _nameFixity,
             _nameKind == S.KNameConstructor = Just $
             case fixityArity of

@@ -28,8 +28,7 @@ checklines :
 
 .PHONY : hlint
 hlint :
-	hlint src ${HLINTQUIET}
-	hlint app ${HLINTQUIET}
+	hlint src app ${HLINTQUIET}
 
 .PHONY : haddock
 haddock :

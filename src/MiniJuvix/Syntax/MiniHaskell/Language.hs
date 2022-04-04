@@ -107,7 +107,7 @@ data InductiveConstructorDef = InductiveConstructorDef
   }
   deriving stock (Show)
 
-data TypeIden
+newtype TypeIden
   = TypeIdenInductive InductiveName
   deriving stock (Show)
 

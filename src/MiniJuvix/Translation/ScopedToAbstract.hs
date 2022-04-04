@@ -230,6 +230,6 @@ goPattern p = case p of
   PatternEmpty -> return A.PatternEmpty
 
 goAxiom :: Members '[Error Err, InfoTableBuilder] r => AxiomDef 'Scoped -> Sem r A.AxiomDef
-goAxiom (AxiomDef {..}) = do
+goAxiom AxiomDef {..} = do
   _axiomType' <- goExpression _axiomType
   registerAxiom' A.AxiomDef { _axiomType = _axiomType', ..}

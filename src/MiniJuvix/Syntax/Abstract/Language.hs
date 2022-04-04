@@ -40,7 +40,7 @@ data Module s = Module
   }
   deriving stock (Show, Eq)
 
-data ModuleBody = ModuleBody
+newtype ModuleBody = ModuleBody
   { _moduleStatements :: [Statement]
   }
   deriving stock (Show, Eq)

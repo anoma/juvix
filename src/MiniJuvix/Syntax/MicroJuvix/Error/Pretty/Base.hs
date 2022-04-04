@@ -27,7 +27,7 @@ class PrettyError e where
 
 instance PrettyError WrongConstructorType where
   ppError e = "Type error near" <+> highlight (pretty (funName ^. nameDefined)) <+> "in the definition of" <+> highlight (pretty funName) <> "."
-    <> line <> "The constructor" <+> (ppCode (e ^. wrongCtorTypeName)) <+> "has type:"
+    <> line <> "The constructor" <+> ppCode (e ^. wrongCtorTypeName) <+> "has type:"
     <> line <> indent' (ppCode (e ^. wrongCtorTypeActual))
     <> line <> "but is expected to have type:"
     <> line <> indent' (ppCode (e ^. wrongCtorTypeExpected))
@@ -82,4 +82,4 @@ instance PrettyError TooManyPatterns where
 
     where
       name :: Name
-      name =  (e ^. tooManyPatternsClause . clauseName)
+      name =  e ^. tooManyPatternsClause . clauseName
