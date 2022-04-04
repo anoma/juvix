@@ -13,7 +13,7 @@ import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
 import qualified MiniJuvix.Syntax.Concrete.Language as C
 import MiniJuvix.Syntax.Fixity
 import Prettyprinter
-import MiniJuvix.Syntax.Concrete.Language (literalLocLoc, HasLoc)
+import MiniJuvix.Syntax.Concrete.Language (HasLoc)
 
 type FunctionName = Name
 
@@ -203,7 +203,7 @@ instance HasLoc Expression where
     ExpressionIden i -> C.getLoc i
     ExpressionApplication a -> C.getLoc (a ^. appLeft)
     ExpressionTyped t -> C.getLoc (t ^. typedExpression)
-    ExpressionLiteral l -> (l ^. literalLocLoc)
+    ExpressionLiteral l -> C.getLoc l
 
 instance HasLoc Iden where
   getLoc = \case

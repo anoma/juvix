@@ -694,6 +694,9 @@ instance Pretty LiteralLoc where
 instance Eq LiteralLoc where
   l1 == l2 = _literalLocLiteral l1 == _literalLocLiteral l2
 
+instance HasLoc LiteralLoc where
+  getLoc = _literalLocLoc
+
 -- | Expressions without application
 data ExpressionAtom (s :: Stage)
   = AtomIdentifier (IdentifierType s)
