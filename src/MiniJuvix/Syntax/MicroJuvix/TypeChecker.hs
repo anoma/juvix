@@ -109,7 +109,7 @@ checkFunctionClause info clause@FunctionClause{..} = do
   if (length patTys /= length _clausePatterns)
     then output (tyErr patTys) $> clause
     else do
-      locals <- mconcat <$> zipWithM checkPattern patTys _clausePatterns
+      locals <- mconcat <$> zipWithM (checkPattern _clauseName) patTys _clausePatterns
       eclauseBody <- runError @TypeCheckerError $ runReader locals (checkExpression bodyTy _clauseBody)
       _clauseBody' <- case eclauseBody of
         Left err -> output err $> _clauseBody
@@ -124,8 +124,8 @@ checkFunctionClause info clause@FunctionClause{..} = do
                                                           _tooManyPatternsTypes = patTys}))
 
 checkPattern :: forall r. Members '[Reader InfoTable, Output TypeCheckerError] r =>
-  Type -> Pattern -> Sem r LocalVars
-checkPattern type_ pat = LocalVars . HashMap.fromList <$> go type_ pat
+  FunctionName -> Type -> Pattern -> Sem r LocalVars
+checkPattern funName type_ pat = LocalVars . HashMap.fromList <$> go type_ pat
   where
   go :: Type -> Pattern -> Sem r [(VarName, Type)]
   go ty p = case p of
@@ -134,7 +134,7 @@ checkPattern type_ pat = LocalVars . HashMap.fromList <$> go type_ pat
     PatternConstructorApp a -> do
       info <- lookupConstructor (a ^. constrAppConstructor)
       let inductiveTy = TypeIden (TypeIdenInductive (info ^. constructorInfoInductive))
-      _ <- when (inductiveTy /= ty) (output (ErrWrongConstructorType (WrongConstructorType (a ^. constrAppConstructor) ty inductiveTy)))
+      _ <- when (inductiveTy /= ty) (output (ErrWrongConstructorType (WrongConstructorType (a ^. constrAppConstructor) ty inductiveTy funName)))
       goConstr a
     where
     goConstr :: ConstructorApp -> Sem r [(VarName, Type)]
@@ -144,7 +144,8 @@ checkPattern type_ pat = LocalVars . HashMap.fromList <$> go type_ pat
       concat <$> zipWithM go tys ps
     appErr :: ConstructorApp -> [Type] -> TypeCheckerError
     appErr app tys = ErrWrongConstructorAppArgs (WrongConstructorAppArgs { _wrongCtorAppApp = app,
-                                                                           _wrongCtorAppTypes = tys})
+                                                                           _wrongCtorAppTypes = tys,
+                                                                           _wrongCtorAppName = funName})
 
 -- TODO currently equivalent to id
 normalizeType :: forall r. Members '[Reader InfoTable] r => Type -> Sem r Type

@@ -25,14 +25,17 @@ class PrettyError e where
   ppError :: e -> Doc Eann
 
 instance PrettyError WrongConstructorType where
-  ppError e = "Type error during pattern matching."
+  ppError e = "Type error near" <+> highlight (pretty (funName ^. nameDefined)) <+> "in the definition of" <+> highlight (pretty funName) <> "."
     <> line <> "The constructor" <+> (ppCode (e ^. wrongCtorTypeName)) <+> "has type:"
     <> line <> indent' (ppCode (e ^. wrongCtorTypeActual))
     <> line <> "but is expected to have type:"
     <> line <> indent' (ppCode (e ^. wrongCtorTypeExpected))
+    where
+      funName :: Name
+      funName = e ^. wrongCtorTypeFunname
 
 instance PrettyError WrongConstructorAppArgs where
-  ppError e = "Type error during pattern matching."
+  ppError e = "Type error near" <+> highlight (pretty (funName ^. nameDefined)) <+> "in the definition of" <+> highlight (pretty (funName ^. nameText)) <> "."
     <> line <> "The constructor:" <+> ctorName <+> "is being matched against" <+> numPats <> ":"
     <> line <> indent' (ppCode (e ^. wrongCtorAppApp))
     <> line <> "but is expected to be matched against" <+> numTypes <+> "with the following types:"
@@ -46,6 +49,8 @@ instance PrettyError WrongConstructorAppArgs where
       ctorName = ppCode (e ^. wrongCtorAppApp . constrAppConstructor)
       pat :: Int -> Doc ann
       pat n = pretty n <+> plural "pattern" "patterns" n
+      funName :: Name
+      funName = e ^. wrongCtorAppName
 
 instance PrettyError WrongType where
   ppError e = "Type error."
