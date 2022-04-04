@@ -1,0 +1,21 @@
+# $ pip install pre-commit
+# $ pre-commit install
+# $ pre-commit run --all-files
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.1.0
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+    -   id: check-added-large-files
+    -   id: check-case-conflict
+    -   id: mixed-line-ending
+
+-   repo:  https://github.com/heliaxdev/minijuvix
+    rev: a54abcd6a50518476ee75b329e245c3341d02341
+    hooks:
+    -   id: ormolu
+    -   id: hlint

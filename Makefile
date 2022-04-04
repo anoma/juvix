@@ -1,6 +1,8 @@
 PWD=$(CURDIR)
 PREFIX="$(PWD)/.stack-work/prefix"
 UNAME := $(shell uname)
+HLINTQUIET :=
+
 
 ifeq ($(UNAME), Darwin)
 	THREADS := $(shell sysctl -n hw.logicalcpu)
@@ -26,7 +28,8 @@ checklines :
 
 .PHONY : hlint
 hlint :
-	hlint src
+	hlint src ${HLINTQUIET}
+	hlint app ${HLINTQUIET}
 
 .PHONY : haddock
 haddock :

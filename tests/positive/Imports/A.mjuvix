@@ -11,5 +11,5 @@ module A;
   end ;
   import M;
   f : M.N.T;
-  f (_ M.N.t _) ≔ Type M.+ Type; 
+  f (_ M.N.t _) ≔ Type M.+ Type;
 end;

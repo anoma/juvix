@@ -33,10 +33,10 @@ False : Bool;
 };
 
 accept-withdraws-from : Storage -> Storage -> Bool;
-accept-withdraws-from initial final := 
+accept-withdraws-from initial final :=
   let { trusted? := determine-trust-level initial.trans.receiver.name; }
   in match trusted? {
-     Trusted funds |-> 
+     Trusted funds |->
           funds.maximum-withdraw >=final.trans.sender.balance - initial.trans.sender.balance;
      NotTrusted |-> False;
   };

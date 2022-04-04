@@ -5,7 +5,7 @@ term we must check. Similarly, a term of type InferableTerm, it is a
 term we can infer.
 -}
 
-module MiniJuvix.Syntax.Core 
+module MiniJuvix.Syntax.Core
   where
 
 --------------------------------------------------------------------------------
@@ -14,7 +14,7 @@ open import Haskell.Prelude
 open import Agda.Builtin.Equality
 
 --------------------------------------------------------------------------------
--- Haskell stuff 
+-- Haskell stuff
 --------------------------------------------------------------------------------
 
 {-# FOREIGN AGDA2HS
@@ -44,7 +44,7 @@ instance
   QuantityEq ._==_ Many Many = true
   QuantityEq ._==_ _    _    = false
 {-# COMPILE AGDA2HS QuantityEq #-}
- 
+
 compareQuantity : Quantity -> Quantity -> Ordering
 compareQuantity Zero  Zero = EQ
 compareQuantity Zero  _    = LT
@@ -57,7 +57,7 @@ compareQuantity Many Many  = EQ
 
 instance
   QuantityOrd : Ord Quantity
-  QuantityOrd .compare  = compareQuantity 
+  QuantityOrd .compare  = compareQuantity
   QuantityOrd ._<_  x y = compareQuantity x y == LT
   QuantityOrd ._>_  x y = compareQuantity x y == GT
   QuantityOrd ._<=_ x y = compareQuantity x y /= GT
@@ -114,7 +114,7 @@ relevancy _    = Relevant
 -- Variables. Relevant on the following design is the separation for a
 -- variable between Bound and Free as a data constructr, due to
 -- McBride and McKinna in "Functional Pearl: I am not a Number—I am a
--- Free Variable". 
+-- Free Variable".
 --------------------------------------------------------------------------------
 
 -- DeBruijn index.
@@ -136,7 +136,7 @@ BindingName = String
 -- variable is local free.
 
 data Name : Set where
-  -- the variable has zero binding 
+  -- the variable has zero binding
   Global : String → Name
   -- the variable has a binding in its scope.
   Local : BindingName → Index → Name
@@ -151,14 +151,14 @@ instance
 
 -- A variable is then a number indicating its DeBruijn index.
 -- Otherwise, it is free, with an identifier as a name, or
--- inside 
+-- inside
 data Variable : Set where
   Bound : Index → Variable
   Free  : Name → Variable
 {-# COMPILE AGDA2HS Variable #-}
 
 instance
-  variableEq : Eq Variable 
+  variableEq : Eq Variable
   variableEq ._==_ (Bound x) (Bound y) = x == y
   variableEq ._==_ (Free x) (Free y) = x == y
   variableEq ._==_ _ _ = false
@@ -170,16 +170,16 @@ instance
 --------------------------------------------------------------------------------
 #-}
 
-{- 
+{-
 Core syntax follows the pattern design for bidirectional typing
 algorithmgs in [Dunfield and Krishnaswami, 2019]. Pfenning's principle
 is one of such criterion and stated as follows.
 
 1. If the rule is an introduction rule, make the principal judgement
-   "checking", and 
+   "checking", and
 2. if the rule is an elimination rule, make the principal judgement
    "synthesising".
-   
+
 Jargon:
 - Principal connective of a rule:
   - for an introduction rule is the connective that is being
@@ -199,25 +199,25 @@ data CheckableTerm : Set
 data InferableTerm : Set
 
 data CheckableTerm where
-  {- Universe types. 
+  {- Universe types.
   See the typing rule Univ⇐.
   -}
   UniverseType : CheckableTerm
-  {- Dependent function types. 
+  {- Dependent function types.
   See the typing rules →F⇐ and →I⇐.
     1. (Π[ x :ρ S ] P x) : U
     2. (λ x. t) : Π[ x :ρ S ] P x
   -}
   PiType : Quantity → BindingName → CheckableTerm → CheckableTerm → CheckableTerm
   Lam : BindingName → CheckableTerm → CheckableTerm
-  {- Dependent tensor product types. 
+  {- Dependent tensor product types.
   See the typing rules ⊗-F-⇐,  ⊗-I₀⇐, and ⊗-I₁⇐.
     1. * S ⊗ T : U
     2. (M , N) : S ⊗ T
   -}
   TensorType : Quantity → BindingName → CheckableTerm → CheckableTerm → CheckableTerm
   TensorIntro : CheckableTerm → CheckableTerm → CheckableTerm
-  {- Unit types. 
+  {- Unit types.
   See the typing rule 1-F-⇐ and 1-I-⇐.
     1. 𝟙 : U
     2. ⋆ : 𝟙
@@ -245,11 +245,11 @@ data CheckableTerm where
 #-}
 
 data InferableTerm where
-  -- | Variables, typing rule Var⇒. 
+  -- | Variables, typing rule Var⇒.
   Var : Variable → InferableTerm
   -- | Annotations, typing rule Ann⇒.
   {- Maybe, I want to have the rules here like this:
-  
+
     OΓ ⊢ S ⇐0 𝕌     Γ ⊢ M ⇐0 𝕌
     ­────────────────────────────── Ann⇒
            Γ ⊢ (M : S) ⇒ S
@@ -270,7 +270,7 @@ data InferableTerm where
     → CheckableTerm  -- Type annotation of the result of elimination.
     → InferableTerm
   -- | Sum type eliminator (a.k.a. case)
-  -- let (z : S + T) in (case z of {(inl u) ↦ r1; (inr v) ↦ r2}  :^q  T) 
+  -- let (z : S + T) in (case z of {(inl u) ↦ r1; (inr v) ↦ r2}  :^q  T)
   SumTypeElim        -- Case
     :  Quantity      -- Multiplicity of the sum contents.
     →  BindingName         -- Name of the variable binding the sum in the type
@@ -300,7 +300,7 @@ inferEq : InferableTerm → InferableTerm → Bool
 -- extraneous instance definitions.
 
 checkEq UniverseType UniverseType = true
-checkEq (PiType q₁ _ a₁ b₁) (PiType q₂ _ a₂ b₂) 
+checkEq (PiType q₁ _ a₁ b₁) (PiType q₂ _ a₂ b₂)
   = q₁ == q₂ && checkEq a₁ a₂ && checkEq b₁ b₂
 checkEq (TensorType q₁ _ a₁ b₁) (TensorType q₂ _ a₂ b₂)
    = q₁ == q₂ && checkEq a₁ a₂ &&  checkEq b₁ b₂
@@ -317,9 +317,9 @@ checkEq _ _ = false
 inferEq (Var x) (Var y) = x == y
 inferEq (Ann x₁ y₁) (Ann x₂ y₂) = checkEq x₁ x₂ &&  checkEq y₁ y₂
 inferEq (App x₁ y₁) (App x₂ y₂) =  inferEq x₁ x₂ &&  checkEq y₁ y₂
-inferEq (TensorTypeElim q₁ _ _ _ a₁ b₁ c₁) (TensorTypeElim q₂ _ _ _ a₂ b₂ c₂) 
+inferEq (TensorTypeElim q₁ _ _ _ a₁ b₁ c₁) (TensorTypeElim q₂ _ _ _ a₂ b₂ c₂)
   = q₁ == q₂ &&  inferEq a₁ a₂ &&  checkEq b₁ b₂ &&  checkEq c₁ c₂
-inferEq (SumTypeElim q₁ _ x₁ _ a₁ _ b₁ c₁) 
+inferEq (SumTypeElim q₁ _ x₁ _ a₁ _ b₁ c₁)
       (SumTypeElim q₂ _ x₂ _ a₂ _ b₂ c₂)
   = q₁ == q₂ &&  inferEq x₁ x₂ && checkEq a₁ a₂ &&  checkEq b₁ b₂ &&  checkEq c₁ c₂
 inferEq _ _ = false
@@ -348,11 +348,11 @@ termEq (Inferable x) (Inferable y) = x == y
 termEq _ _ = false
 {-# COMPILE AGDA2HS termEq #-}
 
-instance 
-  TermEq : Eq Term 
+instance
+  TermEq : Eq Term
   TermEq ._==_ = termEq
 
-{-# COMPILE AGDA2HS TermEq #-}   
+{-# COMPILE AGDA2HS TermEq #-}
 
 --------------------------------------------------------------------------------
 -- Other Instances

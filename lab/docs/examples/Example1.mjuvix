@@ -1,7 +1,7 @@
 -- Comments as in Haskell.
 --This is another comment
 ------ This is another comment
--- This is another comment --possible text-- 
+-- This is another comment --possible text--
   -- This is a comment, as it is not indent
   -- sensitive. It should be fine.
 
@@ -12,7 +12,7 @@
 -- where let in
 
 -- Options to check/run this file.
-options { 
+options {
 debug   := INFO;
 phase   := { parsing , check };
 backend := none; -- llvm.
@@ -34,7 +34,7 @@ import Backend {LLVM};   -- imports to local scope a var. called LLVM.
 import Prelude hiding {Nat, Vec, Empty, Unit};
 	-- same as before, but without the names inside `hiding`
 
--- Judgement decl. 
+-- Judgement decl.
 -- `x : M;`
 
 -- Nonindexed inductive type declaration:
@@ -48,19 +48,19 @@ inductive Nat
 -- == is not a reserved name.
 -- === is a reserved symbol for def. equality.
 zero' : Nat;
-zero'                 
-:= zero; 
+zero'
+:= zero;
 
 -- Axioms/definitions.
 axiom A : Type;
-axiom a a' : A; 
+axiom a a' : A;
 
 f : Nat -> A;
 f := \x -> match x
 {
 	zero |-> a  ;
 	suc  |-> a' ;
-}; 
+};
 
 g : Nat -> A;
 g Nat.zero    := a;
@@ -137,7 +137,7 @@ h''' : Person -> String;
 h''' p := p.name;
 
 -- So far, we haven't used quantites, here is some examples.
--- We mark a type judgment `x : M` of quantity n as `x :n M`. 
+-- We mark a type judgment `x : M` of quantity n as `x :n M`.
 -- If the quantity n is not explicit, then the judgement
 -- is `x :Any M`.
 
@@ -146,7 +146,7 @@ axiom z :0 A;
 axiom B : (x :1 A) -> Type;   -- type family
 axiom T : [ A ] B;            -- Tensor product type. usages Any
 axiom T' : [ x :1 A ] B;      -- Tensor product type.
-axiom em : (x :1 A) -> B;  
+axiom em : (x :1 A) -> B;
 
 -- Tensor product type.
 f' : [ x :1 A ] -> B;
@@ -154,8 +154,8 @@ f' x := em x;
 
 -- Pattern-matching on tensor pairs;
 
-g' : ([ A -> B ] A) -> B;  -- it should be the same as `[ A -> B ] A -> B` 
-g' (k , a) = k a; 			   
+g' : ([ A -> B ] A) -> B;  -- it should be the same as `[ A -> B ] A -> B`
+g' (k , a) = k a;
 
 g'' : ([ A -> B ] A) -> B;
 g'' = \p -> match p {
@@ -169,7 +169,7 @@ axiom D : Type;
 record P (A : Type) (B : A -> Type) {
 	proj1 : C;
 	proj2 :0 D;
-} 
+}
 eta-equality, constructor prop;  -- extra options.
 
 -- More inductive types.

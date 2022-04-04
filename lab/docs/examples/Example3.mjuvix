@@ -17,7 +17,7 @@ record Transaction {
 record Storage { trans : Transaction; };
 
 determine-maximum-withdraw : String -> Nat;
-determine-maximum-withdraw s := 
+determine-maximum-withdraw s :=
   if s === "bob" then 30
   else if s === "maria" then 50
   else 0;
@@ -26,7 +26,7 @@ accept-withdraws-from : Storage -> Storage -> Bool;
 accept-withdraws-from initial final :=
   let { withdrawl-amount :=
     determine-maximum-withdraw initial.trans.receiver.name;
-  } in 
+  } in
   withdrawl-amount >= final.trans.sender.balance - initial.trans.sender.balance;
 
 end Example3;

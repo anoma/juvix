@@ -147,4 +147,3 @@ vp token keys-changed verifiers :=
   auxVP (foldl (check-keys verifiers) (MakePair 0 false) keys-changed);
 
 end;
-

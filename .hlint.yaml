@@ -12,7 +12,7 @@
   - name: [MultiWayIf, PatternGuards, RecordWildCards]
   - name: [ScopedTypeVariables]
   - name: [ConstraintKinds, RankNTypes, TypeFamilies]
-  # - {name: nameEXT, within: [moduleName]} 
+  # - {name: nameEXT, within: [moduleName]}
 
 - flags:
   - default: false
@@ -20,7 +20,7 @@
 
 - modules:
   # if you import Data.Set qualified, it must be as 'Set'
-  - {name: [Data.Set, Data.HashSet], as: Set} 
+  - {name: [Data.Set, Data.HashSet], as: Set}
   - {name: [Data.Map, Data.HashMap.Strict, Data.HashMap.Lazy], as: Map}
   # - {name: Control.Arrow, within: []} # Certain modules are banned entirely
 
