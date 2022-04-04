@@ -89,7 +89,7 @@ jobs:
           cd main
           make test
 
-  ormolu:
+  static-checks:
     needs: build
     if:  ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ${{ matrix.os }}
@@ -110,17 +110,30 @@ jobs:
             main/dist-newstyle
             main/cabal-dev
           key: ${{ runner.os }}-build-${{ matrix.ghc }}
+
       - name: Checkout the main repository
         uses: actions/checkout@v2
         with:
           path: main
+
       - name: Build Ormolu
         id: install-ormolu
         run: |
           cd main
           stack install ormolu
-      - name: Stack build
+      - name: Check Ormolu
         id: check-ormolu
         run: |
           cd main
           make check-ormolu
+
+      - name: Build Hlint
+        id: install-hlint
+        run: |
+          cd main
+          stack install hlint
+      - name: Check HLint
+        id: check-hlint
+        run: |
+          cd main
+          make hlint
