@@ -1,7 +1,6 @@
 module MiniJuvix.Prelude.Base
   ( module MiniJuvix.Prelude.Base,
     module Control.Applicative,
-    module Control.Monad,
     module Control.Monad.Extra,
     module Control.Monad.Fix,
     module Data.Bool,
@@ -66,7 +65,6 @@ where
 --------------------------------------------------------------------------------
 
 import Control.Applicative
-import Control.Monad
 import Control.Monad.Extra
 import Control.Monad.Fix
 import Data.Bool
