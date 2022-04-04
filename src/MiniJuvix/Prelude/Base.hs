@@ -42,7 +42,6 @@ module MiniJuvix.Prelude.Base
     module Polysemy.Output,
     module Polysemy.Reader,
     module Polysemy.State,
-    module Polysemy.View,
     module Prettyprinter,
     module System.Directory,
     module System.Exit,
@@ -115,7 +114,6 @@ import Polysemy.Fixpoint
 import Polysemy.Output
 import Polysemy.Reader
 import Polysemy.State
-import Polysemy.View
 import Prettyprinter (Doc, (<+>))
 import System.Directory
 import System.Exit

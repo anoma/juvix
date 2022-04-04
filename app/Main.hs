@@ -16,6 +16,7 @@ import qualified MiniJuvix.Syntax.Concrete.Language as M
 import qualified MiniJuvix.Syntax.Concrete.Parser as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
 import qualified MiniJuvix.Syntax.Concrete.Scoped.InfoTable as Scoped
+import qualified MiniJuvix.Syntax.Concrete.Parser.InfoTable as Parser
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Highlight as Scoped
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (defaultOptions)
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
@@ -35,6 +36,7 @@ import MiniJuvix.Utils.Version (runDisplayVersion)
 import Options.Applicative
 import Options.Applicative.Help.Pretty
 import Text.Show.Pretty hiding (Html)
+import MiniJuvix.Syntax.Concrete.Parser.InfoTable (infoParsedItems)
 
 --------------------------------------------------------------------------------
 
@@ -265,6 +267,10 @@ mkScopePrettyOptions ScopeOptions {..} =
 parseModuleIO :: FilePath -> IO (M.Module 'M.Parsed 'M.ModuleTop)
 parseModuleIO = fromRightIO id . M.runModuleParserIO
 
+parseModuleIO' :: FilePath -> IO (Parser.InfoTable, M.Module 'M.Parsed 'M.ModuleTop)
+parseModuleIO' = fromRightIO id . M.runModuleParserIO'
+
+
 minijuvixYamlFile :: FilePath
 minijuvixYamlFile = "minijuvix.yaml"
 
@@ -275,8 +281,9 @@ findRoot = do
     Left err -> do
       putStrLn "Something went wrong when figuring out the root of the project."
       putStrLn (pack (IO.displayException err))
-      putStrLn "I will try to use the current directory."
-      getCurrentDirectory
+      cur <- getCurrentDirectory
+      putStrLn ("I will try to use the current directory: " <> pack cur)
+      return cur
     Right root -> return root
   where
   possiblePaths :: FilePath -> [FilePath]
@@ -300,7 +307,7 @@ runCommand c = do
     Scope opts@ScopeOptions {..} -> do
       forM_ _scopeInputFiles $ \scopeInputFile -> do
         m <- parseModuleIO scopeInputFile
-        (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+        s <- head . M._resultModules <$> fromRightIO' printErrorAnsi (M.scopeCheck1IO root m)
         printer (mkScopePrettyOptions opts) s
       where
         printer :: M.Options -> M.Module 'M.Scoped 'M.ModuleTop -> IO ()
@@ -308,15 +315,19 @@ runCommand c = do
           | not _scopeNoColors = M.printPrettyCode
           | otherwise = T.printPrettyCode
     Highlight HighlightOptions {..} -> do
-        m <- parseModuleIO _highlightInputFile
-        (i , _) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
-        putStrLn (Scoped.go (i ^. Scoped.infoNames))
+        (tbl, m) <- parseModuleIO' _highlightInputFile
+        res <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+        let
+          names = res ^. M.resultScoperTable . Scoped.infoNames
+          parsedItems = res ^. M.resultParserTable . Parser.infoParsedItems
+            <> tbl ^. infoParsedItems
+        putStrLn (Scoped.go parsedItems names)
     Parse ParseOptions {..} -> do
       m <- parseModuleIO _parseInputFile
       if _parseNoPrettyShow then print m else pPrint m
     Html HtmlOptions {..} -> do
       m <- parseModuleIO _htmlInputFile
-      (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+      s <- head . M._resultModules <$> fromRightIO' printErrorAnsi (M.scopeCheck1IO root m)
       genHtml defaultOptions _htmlRecursive _htmlTheme s
     MicroJuvix (Pretty MicroJuvixOptions {..}) -> do
       micro <- miniToMicro root _mjuvixInputFile
@@ -328,8 +339,8 @@ runCommand c = do
         Left es -> sequence_ (intersperse (putStrLn "") (printErrorAnsi <$> toList es)) >> exitFailure
     MiniHaskell MiniHaskellOptions {..} -> do
       m <- parseModuleIO _mhaskellInputFile
-      (_, s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
-      (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
+      s <- head . M._resultModules <$> fromRightIO' printErrorAnsi (M.scopeCheck1IO root m)
+      (_, a) <- fromRightIO' putStrLn (return (A.translateModule s))
       let micro = Micro.translateModule a
       case Micro.checkModule micro of
         Right checkedMicro -> do
@@ -338,7 +349,7 @@ runCommand c = do
         Left es -> mapM_ printErrorAnsi es >> exitFailure
     Termination (Calls opts@CallsOptions {..}) -> do
       m <- parseModuleIO _callsInputFile
-      (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+      s <- head . M._resultModules <$> fromRightIO' printErrorAnsi (M.scopeCheck1IO root m)
       (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
       let callMap0 = T.buildCallMap a
           callMap = case _callsFunctionNameFilter of
@@ -349,8 +360,8 @@ runCommand c = do
       putStrLn ""
     Termination (CallGraph CallGraphOptions {..}) -> do
       m <- parseModuleIO _graphInputFile
-      (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
-      (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
+      s <- head . M._resultModules <$> fromRightIO' printErrorAnsi (M.scopeCheck1IO root m)
+      (_, a) <- fromRightIO' putStrLn (return (A.translateModule s))
       let callMap = T.buildCallMap a
           opts' = A.defaultOptions
           completeGraph = T.completeCallGraph callMap
@@ -370,7 +381,7 @@ runCommand c = do
       miniToMicro :: FilePath -> FilePath -> IO Micro.Module
       miniToMicro root p = do
         m <- parseModuleIO p
-        (_, s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+        s <- head . M._resultModules <$> fromRightIO' printErrorAnsi (M.scopeCheck1IO root m)
         (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
         return (Micro.translateModule a)
 

@@ -4,6 +4,7 @@ module MiniJuvix.Syntax.Concrete.Base
     module Text.Megaparsec.Char,
     module Control.Monad.Combinators.Expr,
     module Control.Monad.Combinators.NonEmpty,
+    module Control.Monad.Trans.Class
   )
 where
 
@@ -13,3 +14,4 @@ import Data.List.NonEmpty (NonEmpty)
 import MiniJuvix.Prelude hiding (some)
 import Text.Megaparsec hiding (sepBy1, sepEndBy1, some)
 import Text.Megaparsec.Char
+import Control.Monad.Trans.Class (lift)

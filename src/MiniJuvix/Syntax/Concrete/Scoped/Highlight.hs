@@ -2,6 +2,7 @@ module MiniJuvix.Syntax.Concrete.Scoped.Highlight where
 
 import MiniJuvix.Syntax.Concrete.Scoped.Name
 import MiniJuvix.Syntax.Concrete.Loc
+import MiniJuvix.Syntax.Concrete.Parser.ParsedItem
 import qualified MiniJuvix.Internal.Strings as Str
 import MiniJuvix.Prelude
 import Prettyprinter
@@ -13,6 +14,9 @@ data Face =
   | FaceFunction
   | FaceModule
   | FaceAxiom
+  | FaceKeyword
+  | FaceString
+  | FaceNumber
 
 data Property =
   PropertyFace Face
@@ -31,8 +35,11 @@ data SExp =
 
 makeLenses ''Instruction
 
-go :: [Name] -> Text
-go = renderSExp . progn . mapMaybe goName
+go :: [ParsedItem] -> [Name] -> Text
+go items names =
+  renderSExp (progn (map goParsedItem items
+                     <> mapMaybe goName names
+                    ))
 
 progn :: [SExp] -> SExp
 progn l = List (Symbol "progn" : l)
@@ -57,14 +64,27 @@ instr i f =
   pos l = Int (succ (l ^. locOffset . unPos))
   start = pos (i ^. intStart)
   end = pos (i ^. intEnd)
-  face = Quote (List [Symbol "face", faceSymbol ])
-  faceSymbol = Symbol ("minijuvix-highlight-" <> faceSymbolStr <> "-face")
+  face = Quote (List [Symbol "face", faceSymbol faceSymbolStr])
   faceSymbolStr = case f of
     FaceAxiom -> Str.axiom
     FaceInductive -> Str.inductive
     FaceConstructor -> Str.constructor
     FaceModule -> Str.module_
+    FaceKeyword -> Str.keyword
     FaceFunction -> Str.function
+    FaceNumber -> Str.number
+    FaceString -> Str.string
+
+faceSymbol :: Text -> SExp
+faceSymbol faceSymbolStr = Symbol ("minijuvix-highlight-" <> faceSymbolStr <> "-face")
+
+goParsedItem :: ParsedItem -> SExp
+goParsedItem i = instr (getLoc i) face
+  where
+  face = case i ^. parsedTag of
+    ParsedTagKeyword -> FaceKeyword
+    ParsedTagLiteralInt -> FaceNumber
+    ParsedTagLiteralString -> FaceString
 
 goName :: Name -> Maybe SExp
 goName n = do
