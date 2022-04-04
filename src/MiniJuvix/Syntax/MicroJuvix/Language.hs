@@ -2,7 +2,6 @@ module MiniJuvix.Syntax.MicroJuvix.Language
   ( module MiniJuvix.Syntax.MicroJuvix.Language,
     module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind,
     module MiniJuvix.Syntax.Concrete.Scoped.Name,
-    module MiniJuvix.Syntax.Concrete.Literal,
   )
 where
 
