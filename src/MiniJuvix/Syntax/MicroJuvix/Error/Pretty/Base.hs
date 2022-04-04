@@ -5,6 +5,7 @@ import Prettyprinter
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.MicroJuvix.Error.Types
 import MiniJuvix.Syntax.MicroJuvix.Language
+import MiniJuvix.Syntax.Concrete.Language (getLoc)
 
 data Eann = Highlight
   | MicroAnn M.Ann
@@ -53,17 +54,24 @@ instance PrettyError WrongConstructorAppArgs where
       funName = e ^. wrongCtorAppName
 
 instance PrettyError WrongType where
-  ppError e = "Type error."
-    <> line <> "The expression" <+> ppCode (e ^. wrongTypeExpression) <+> "has type:"
+  ppError e = "Type error near" <+> highlight (pretty (getLoc subjectExpr)) <> "."
+    <> line <> "The expression" <+> ppCode subjectExpr <+> "has type:"
     <> line <> indent' (ppCode (e ^. wrongTypeInferredType))
     <> line <> "but is expected to have type:"
     <> line <> indent' (ppCode (e ^. wrongTypeExpectedType))
+    where
+      subjectExpr :: Expression
+      subjectExpr = e ^. wrongTypeExpression
 
 instance PrettyError ExpectedFunctionType where
-  ppError e = "Type error in the expression:"
+  ppError e = "Type error near" <+> highlight (pretty (getLoc subjectExpr)) <> "."
+    <> line <> "In the expression:"
     <> line <> indent' (ppCode (e ^. expectedFunctionTypeExpression))
     <> line <> "the expression" <+> ppCode (e ^. expectedFunctionTypeApp) <+> "is expected to have a function type but has type:"
     <> line <> indent' (ppCode (e ^. expectedFunctionTypeType))
+    where
+      subjectExpr :: Expression
+      subjectExpr = e ^. expectedFunctionTypeExpression
 
 instance PrettyError TooManyPatterns where
   ppError e = "Type error near" <+> highlight (pretty (name ^. nameDefined))

@@ -97,3 +97,5 @@ topModulePathToDottedPath (TopModulePath l r) =
     fromSymbol Symbol {..} = _symbolText
 
 instance Hashable TopModulePath
+
+makeLenses ''Symbol

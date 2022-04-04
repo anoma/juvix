@@ -8,7 +8,8 @@ import MiniJuvix.Syntax.MicroJuvix.Language
 data WrongConstructorType = WrongConstructorType
   { _wrongCtorTypeName :: Name,
     _wrongCtorTypeExpected :: Type,
-    _wrongCtorTypeActual :: Type
+    _wrongCtorTypeActual :: Type,
+    _wrongCtorTypeFunname :: Name
   }
   deriving stock (Show)
 
@@ -16,7 +17,8 @@ data WrongConstructorType = WrongConstructorType
 -- the expected arguments of the constructor
 data WrongConstructorAppArgs = WrongConstructorAppArgs
   { _wrongCtorAppApp :: ConstructorApp,
-    _wrongCtorAppTypes :: [Type]
+    _wrongCtorAppTypes :: [Type],
+    _wrongCtorAppName :: Name
   }
   deriving stock (Show)
 

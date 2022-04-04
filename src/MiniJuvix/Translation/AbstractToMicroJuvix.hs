@@ -6,6 +6,7 @@ import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Syntax.MicroJuvix.Language
 import MiniJuvix.Syntax.Universe
 import qualified MiniJuvix.Syntax.Usage as A
+import MiniJuvix.Syntax.Concrete.Name (symbolLoc)
 
 translateModule :: A.TopModule -> Module
 translateModule m =
@@ -26,7 +27,8 @@ goSymbol s =
     { _nameText = S.symbolText s,
       _nameId = s ^. S.nameId,
       _nameKind = getNameKind s,
-      _nameDefined = s ^. S.nameDefined}
+      _nameDefined = s ^. S.nameDefined,
+      _nameLoc = s ^. S.nameConcrete . symbolLoc }
 
 unsupported :: Text -> a
 unsupported thing = error ("Abstract to MicroJuvix: Not yet supported: " <> thing)

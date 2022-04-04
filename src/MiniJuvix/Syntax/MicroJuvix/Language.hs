@@ -2,7 +2,6 @@ module MiniJuvix.Syntax.MicroJuvix.Language
   ( module MiniJuvix.Syntax.MicroJuvix.Language,
     module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind,
     module MiniJuvix.Syntax.Concrete.Scoped.Name,
-    module MiniJuvix.Syntax.Concrete.Literal,
   )
 where
 
@@ -12,9 +11,9 @@ import MiniJuvix.Syntax.Backends
 import MiniJuvix.Syntax.Concrete.Scoped.Name (NameId (..))
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
 import qualified MiniJuvix.Syntax.Concrete.Language as C
-import MiniJuvix.Syntax.Concrete.Literal
 import MiniJuvix.Syntax.Fixity
 import Prettyprinter
+import MiniJuvix.Syntax.Concrete.Language (literalLocLoc, HasLoc)
 
 type FunctionName = Name
 
@@ -30,9 +29,13 @@ data Name = Name
   { _nameText :: Text,
     _nameId :: NameId,
     _nameKind :: NameKind,
-    _nameDefined :: C.Interval
+    _nameDefined :: C.Interval,
+    _nameLoc :: C.Interval
   }
   deriving stock (Show)
+
+instance HasLoc Name where
+  getLoc = _nameLoc
 
 makeLenses ''Name
 
@@ -194,3 +197,17 @@ instance HasAtomicity Pattern where
     PatternConstructorApp a -> atomicity a
     PatternVariable {} -> Atom
     PatternWildcard {} -> Atom
+
+instance HasLoc Expression where
+  getLoc = \case
+    ExpressionIden i -> C.getLoc i
+    ExpressionApplication a -> C.getLoc (a ^. appLeft)
+    ExpressionTyped t -> C.getLoc (t ^. typedExpression)
+    ExpressionLiteral l -> (l ^. literalLocLoc)
+
+instance HasLoc Iden where
+  getLoc = \case
+    IdenFunction f -> C.getLoc f
+    IdenConstructor c -> C.getLoc c
+    IdenVar v -> C.getLoc v
+    IdenAxiom a -> C.getLoc a
