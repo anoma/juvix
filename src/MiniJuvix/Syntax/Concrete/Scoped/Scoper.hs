@@ -1198,7 +1198,7 @@ parseTerm =
     parseLiteral :: Parse Expression
     parseLiteral = ExpressionLiteral <$> P.token lit mempty
       where
-        lit :: ExpressionAtom 'Scoped -> Maybe Literal
+        lit :: ExpressionAtom 'Scoped -> Maybe LiteralLoc
         lit s = case s of
           AtomLiteral l -> Just l
           _ -> Nothing

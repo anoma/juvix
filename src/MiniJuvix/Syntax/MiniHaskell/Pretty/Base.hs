@@ -2,6 +2,7 @@
 module MiniJuvix.Syntax.MiniHaskell.Pretty.Base where
 
 import qualified MiniJuvix.Internal.Strings as Str
+import MiniJuvix.Syntax.Concrete.Language (Literal (..), LiteralLoc (..))
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.MiniHaskell.Language
@@ -144,6 +145,9 @@ instance PrettyCode Literal where
   ppCode = \case
     LitInteger n -> return $ annotate AnnLiteralInteger (pretty n)
     LitString s -> return $ ppStringLit s
+
+instance PrettyCode LiteralLoc where
+  ppCode = ppCode . _literalLocLiteral
 
 doubleQuotes :: Doc Ann -> Doc Ann
 doubleQuotes = enclose kwDQuote kwDQuote

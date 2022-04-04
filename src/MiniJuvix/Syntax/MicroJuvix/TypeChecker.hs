@@ -4,6 +4,7 @@ import MiniJuvix.Syntax.MicroJuvix.Language
 import MiniJuvix.Syntax.MicroJuvix.InfoTable
 import qualified Data.HashMap.Strict as HashMap
 import MiniJuvix.Syntax.MicroJuvix.Error
+import MiniJuvix.Syntax.Concrete.Language (LiteralLoc)
 
 newtype LocalVars = LocalVars {
   _localTypes :: HashMap VarName Type
@@ -171,7 +172,7 @@ inferExpression' e = case e of
   ExpressionTyped {} -> impossible
   ExpressionLiteral l -> goLiteral l
   where
-  goLiteral :: Literal -> Sem r TypedExpression
+  goLiteral :: LiteralLoc -> Sem r TypedExpression
   goLiteral l = return (TypedExpression TypeAny (ExpressionLiteral l))
   inferIden :: Iden -> Sem r TypedExpression
   inferIden i = case i of

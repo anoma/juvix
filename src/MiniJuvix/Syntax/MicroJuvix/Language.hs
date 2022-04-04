@@ -101,7 +101,7 @@ data TypedExpression = TypedExpression {
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
-  | ExpressionLiteral Literal
+  | ExpressionLiteral C.LiteralLoc
   | ExpressionTyped TypedExpression
   deriving stock (Show)
 
