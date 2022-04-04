@@ -18,8 +18,8 @@ parseMicroJuvixCommand :: Parser MicroJuvixCommand
 parseMicroJuvixCommand =
   hsubparser $
     mconcat
-      [ commandPretty
-      , commandTypeCheck
+      [ commandPretty,
+        commandTypeCheck
       ]
   where
     commandPretty :: Mod CommandFields MicroJuvixCommand

@@ -67,6 +67,10 @@ test-watch:
 format:
 	find . -path './src/**/*.hs' -or -path './app/**/*.hs' -exec ormolu --mode inplace {} --ghc-opt -XStandaloneDeriving --ghc-opt -XUnicodeSyntax --ghc-opt -XDerivingStrategies --ghc-opt -XMultiParamTypeClasses  --ghc-opt  -XTemplateHaskell \;
 
+.PHONY: check-ormolu
+check-ormolu:
+	find . -path './src/**/*.hs' -or -path './app/**/*.hs' -exec ormolu --mode check {} \;
+
 .PHONY : install
 install:
 	stack install --fast --jobs $(THREADS)
@@ -78,6 +82,13 @@ install-watch:
 repl:
 	stack ghci MiniJuvix:lib
 
-
 prepare-push:
-	make checklines && make hlint && make format
+	make hlint && make format
+
+.PHONY : update-submodules
+update-submodules :
+	git submodule foreach git pull origin main
+
+.PHONY : minijuvix-stdlib
+minijuvix-stdlib:
+	git submodule update --init minijuvix-stdlib

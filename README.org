@@ -12,7 +12,6 @@
 </a>
 #+end_html
 
-
 ** Description
 
 MiniJuvix is a dependently functional programming language for writing
@@ -49,18 +48,6 @@ If the installation succeeds, you must be able to run the =minijuvix=
 command from any location. To get the complete list of commands, please
 run =minijuvix --help=.
 
-- How to install [[https://haskellstack.org][Stack]]:? if it's not
-  installed.
-
-  - For Ubuntu : =apt install stack=
-  - For Debian : =apt install haskell-stack=
-  - For Arch Linux : =pacman -S stack=
-  - For macOS : =brew install haskell-stack=
-  - For Windows, following the instructions
-    [[https://docs.haskellstack.org/en/stable/install_and_upgrade/#windows][here]].
-
-It is required at least 8GB RAM for =stack= installation.
-
 - To test everything works correctly, you can run the following command:
 
 #+begin_src shell
@@ -68,17 +55,21 @@ It is required at least 8GB RAM for =stack= installation.
 #+end_src
 
 ** Emacs mode
-  There is an emacs mode available for MiniJuvix. Currently it supports syntax
-  highlighting for well-scoped modules. It is a work in progress.
 
-  To install it add the following lines to your emacs configuration file:
+  There is an Emacs mode available for MiniJuvix. Currently, it
+  supports syntax highlighting for well-scoped modules.
+
+  To install it add the following lines to your Emacs configuration file:
+
   #+begin_src elisp
   (push "/path/to/minijuvix/minijuvix-mode/" load-path)
   (require 'minijuvix-mode)
   #+end_src
-  Also, =minijuvix= must be installed in your =PATH=.
+
+  Make sure that =minijuvix= is installed in your =PATH=.
 
   The MiniJuvix major mode will be activated automatically for =.mjuvix= files.
+
 *** Keybindings
 
   | Key       | Function Name    | Description                                           |

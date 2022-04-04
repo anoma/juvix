@@ -2,125 +2,125 @@ name: MiniJuvix CI
 
 on:
   push:
-    branches: [ master , develop , qtt ]
+    branches: [ main , dev ]
   pull_request:
-    branches: [ master ]
+    branches:
+      - main
+      - dev
 
 jobs:
-  docs:
-    runs-on: macOS-latest
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest , macOS-latest ]
+        # Explicit GHC version, e.g."9.0.2", "8.10.7"
+        ghc: ["9.2.2"]
     steps:
-      - name: Checkout the main repository
+      - uses: actions/cache@v2
+        name: Caching
+        id: cache
+        env:
+          cache-name: cache-env
+        with:
+          path: |
+            ~/.stack
+            ~/.cabal
+            dist-newstyle
+            main/.stack-work/
+            main/.hie
+            main/dist-newstyle
+            main/cabal-dev
+          key: ${{ runner.os }}-build-${{ matrix.ghc }}-${{ hashFiles('main/src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ matrix.ghc }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - uses: haskell/actions/setup@v1
+        name: Setup Haskell
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          enable-stack: true
+          stack-version: 'latest'
+
+      - name: Checkout our repository
         uses: actions/checkout@v2
         with:
           path: main
 
-      - uses: r-lib/actions/setup-pandoc@v1
-        with:
-          pandoc-version: '2.13'
-      - run: echo "# Test" | pandoc -t html
-
-      - name: Generate HTML
-        id: html
+      - name: Build Haskell Project
         run: |
           cd main
-          make docs
-          rm docs/README.md
+          make build
 
-      - name: Deploy HTML to github pages
-        if: steps.html.outputs.cache-hit != 'true'
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Download MiniJuvix-stdlib
+        run: |
+          cd main
+          make minijuvix-stdlib
+
+  stack-test:
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ macOS-latest , ubuntu-latest ]
+        ghc: ["9.2.2"]
+    steps:
+      - uses: actions/cache@v2
+        id: cache-build
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: main/docs
-          enable_jekyll: true
+          path: |
+            ~/.stack
+            ~/.cabal
+            dist-newstyle
+            main/.stack-work/
+            main/.hie
+            main/dist-newstyle
+            main/cabal-dev
+          key: ${{ runner.os }}-build-${{ matrix.ghc }}
+      - name: Checkout the main repository
+        uses: actions/checkout@v2
+        with:
+          path: main
+      - name: Test suite
+        id: stack-test
+        run: |
+          cd main
+          make test
 
-  # build:
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     matrix:
-  #       os: [ ubuntu-latest , macOS-latest ]
-  #       ghc: ["8.10.7"]
-  #       agda: ["2.6.2"]
-
-  #   steps:
-  #     - uses: actions/cache@v2
-  #       name: Caching
-  #       id: cache
-  #       env:
-  #         cache-name: cache-env
-  #       with:
-  #         path: |
-  #           ~/.cabal
-  #           dist-newstyle
-  #           main/.hie
-  #           main/dist-newstyle
-  #           main/cabal-dev
-  #           main/_build/
-  #           main/.stack-work/
-  #           agda/
-  #           agda2hs/
-  #         key: ${{ runner.os }}-build-${{ matrix.agda }}-${{ matrix.ghc }}-${{ hashFiles('main/src/**') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-build-${{ matrix.agda }}-${{ matrix.ghc }}-
-  #           ${{ runner.os }}-build-${{ matrix.agda }}-
-  #           ${{ runner.os }}-
-
-  #     - uses: haskell/actions/setup@v1
-  #       name: Setup Haskell
-  #       with:
-  #         ghc-version: ${{ matrix.ghc }}
-
-  #     - name: Add .cabal/bin into PATH
-  #       run:
-  #         echo "$HOME/.cabal/bin" >> $GITHUB_PATH
-  #       shell: bash
-
-  #     - uses: actions/checkout@v2
-  #       name: Checkout Agda repository
-  #       if: steps.cache.outputs.cache-hit != 'true'
-  #       with:
-  #         repository: agda/agda
-  #         path: agda
-  #         ref: ${{ matrix.agda }}
-
-  #     - name: Install Agda
-  #       if: steps.cache.outputs.cache-hit != 'true'
-  #       run: |
-  #         cd agda
-  #         touch doc/user-manual.pdf
-  #         cabal install --overwrite-policy=always --ghc-options='-O2 +RTS -M6G -RTS' -foptimise-heavily
-  #       shell: bash
-
-  #     - uses: actions/checkout@v2
-  #       name: Checkout Agda2HS repository
-  #       if: steps.cache.outputs.cache-hit != 'true'
-  #       with:
-  #         repository: agda/agda2hs
-  #         path: agda2hs
-  #         ref: ${{ matrix.agda }}
-
-  #     - name: Install Agda2HS
-  #       if: steps.cache.outputs.cache-hit != 'true'
-  #       run: |
-  #         cd agda2hs
-  #         make install
-
-  #     - name: Checkout our repository
-  #       uses: actions/checkout@v2
-  #       with:
-  #         path: main
-
-  #     - name: Verify the Agda files in it
-  #       if: steps.cache.outputs.cache-hit != 'true'
-  #       id: check-agda
-  #       run: |
-  #         cd main
-  #         make agda
-
-  #     - name: Build the Haskell project
-  #       run: cabal update
-  #            make cabal
-
-    # - name: Run tests
-    #   run: cabal test all
+  ormolu:
+    needs: build
+    if:  ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+        ghc: ["9.2.2"]
+    steps:
+      - uses: actions/cache@v2
+        id: cache-build
+        with:
+          path: |
+            ~/.stack
+            ~/.cabal
+            dist-newstyle
+            main/.stack-work/
+            main/.hie
+            main/dist-newstyle
+            main/cabal-dev
+          key: ${{ runner.os }}-build-${{ matrix.ghc }}
+      - name: Checkout the main repository
+        uses: actions/checkout@v2
+        with:
+          path: main
+      - name: Build Ormolu
+        id: install-ormolu
+        run: |
+          cd main
+          stack install ormolu
+      - name: Stack build
+        id: check-ormolu
+        run: |
+          cd main
+          make check-ormolu
