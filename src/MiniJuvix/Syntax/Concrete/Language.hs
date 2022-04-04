@@ -19,6 +19,7 @@ where
 --------------------------------------------------------------------------------
 
 import qualified Data.Kind as GHC
+import Prettyprinter
 import MiniJuvix.Prelude hiding (show)
 import MiniJuvix.Syntax.Concrete.Language.Stage
 import MiniJuvix.Syntax.Backends
@@ -658,7 +659,7 @@ data Expression
   | ExpressionMatch (Match 'Scoped)
   | ExpressionLetBlock (LetBlock 'Scoped)
   | ExpressionUniverse Universe
-  | ExpressionLiteral Literal
+  | ExpressionLiteral LiteralLoc
   | ExpressionFunction (Function 'Scoped)
   deriving stock (Show, Eq, Ord)
 
@@ -680,6 +681,22 @@ instance HasAtomicity Expression where
 -- Expression atom
 --------------------------------------------------------------------------------
 
+data LiteralLoc = LiteralLoc { _literalLocLiteral :: Literal,
+                               _literalLocLoc :: Interval }
+  deriving stock (Show, Ord)
+
+instance HasAtomicity LiteralLoc where
+  atomicity = atomicity . _literalLocLiteral
+
+instance Pretty LiteralLoc where
+  pretty = pretty . _literalLocLiteral
+
+instance Eq LiteralLoc where
+  l1 == l2 = _literalLocLiteral l1 == _literalLocLiteral l2
+
+instance HasLoc LiteralLoc where
+  getLoc = _literalLocLoc
+
 -- | Expressions without application
 data ExpressionAtom (s :: Stage)
   = AtomIdentifier (IdentifierType s)
@@ -689,7 +706,7 @@ data ExpressionAtom (s :: Stage)
   | AtomFunction (Function s)
   | AtomFunArrow
   | AtomMatch (Match s)
-  | AtomLiteral Literal
+  | AtomLiteral LiteralLoc
   | AtomParens (ExpressionType s)
 
 deriving stock instance
@@ -1104,6 +1121,7 @@ makeLenses ''OpenModule
 makeLenses ''PatternApp
 makeLenses ''PatternInfixApp
 makeLenses ''PatternPostfixApp
+makeLenses ''LiteralLoc
 
 idenOverName :: (forall s. S.Name' s -> S.Name' s) -> ScopedIden -> ScopedIden
 idenOverName f = \case

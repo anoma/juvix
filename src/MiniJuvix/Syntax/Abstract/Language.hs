@@ -5,7 +5,7 @@ module MiniJuvix.Syntax.Abstract.Language
 where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Language (ForeignBlock (..), Literal (..), Usage, BackendItem)
+import MiniJuvix.Syntax.Concrete.Language (ForeignBlock (..), LiteralLoc (..), Usage, BackendItem)
 import qualified MiniJuvix.Syntax.Concrete.Name as C
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Syntax.Fixity
@@ -100,7 +100,7 @@ data Expression
   | ExpressionApplication Application
   | ExpressionUniverse Universe
   | ExpressionFunction Function
-  | ExpressionLiteral Literal
+  | ExpressionLiteral LiteralLoc
   --- | ExpressionMatch Match
   ---  ExpressionLambda Lambda not supported yet
   deriving stock (Show, Eq)

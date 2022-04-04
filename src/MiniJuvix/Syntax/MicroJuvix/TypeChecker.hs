@@ -4,8 +4,7 @@ import MiniJuvix.Syntax.MicroJuvix.Language
 import MiniJuvix.Syntax.MicroJuvix.InfoTable
 import qualified Data.HashMap.Strict as HashMap
 import MiniJuvix.Syntax.MicroJuvix.Error
-
-type Err = Text
+import MiniJuvix.Syntax.Concrete.Language (LiteralLoc)
 
 newtype LocalVars = LocalVars {
   _localTypes :: HashMap VarName Type
@@ -13,10 +12,14 @@ newtype LocalVars = LocalVars {
   deriving newtype (Semigroup, Monoid)
 makeLenses ''LocalVars
 
-checkModule :: Module -> Either TypeCheckerError Module
-checkModule m = run $ runError $ runReader (buildTable m) (checkModule' m)
+checkModule :: Module -> Either (NonEmpty TypeCheckerError) Module
+checkModule m = run $ do
+  (es, checkedModule) <- runOutputList $ runReader (buildTable m) (checkModule' m)
+  return $ case es of
+    [] -> Right checkedModule
+    (x : xs) -> Left (x :| xs)
 
-checkModule' :: Members '[Reader InfoTable, Error TypeCheckerError] r =>
+checkModule' :: Members '[Reader InfoTable, Output TypeCheckerError] r =>
   Module -> Sem r Module
 checkModule' Module {..} = do
   _moduleBody' <- checkModuleBody _moduleBody
@@ -25,7 +28,7 @@ checkModule' Module {..} = do
     ..
     }
 
-checkModuleBody :: Members '[Reader InfoTable, Error TypeCheckerError] r =>
+checkModuleBody :: Members '[Reader InfoTable, Output TypeCheckerError] r =>
   ModuleBody -> Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
   _moduleStatements' <- mapM checkStatement _moduleStatements
@@ -33,7 +36,7 @@ checkModuleBody ModuleBody {..} = do
     _moduleStatements = _moduleStatements'
     }
 
-checkStatement :: Members '[Reader InfoTable, Error TypeCheckerError] r =>
+checkStatement :: Members '[Reader InfoTable, Output TypeCheckerError] r =>
   Statement -> Sem r Statement
 checkStatement s = case s of
   StatementFunction fun -> StatementFunction <$> checkFunctionDef fun
@@ -41,7 +44,7 @@ checkStatement s = case s of
   StatementInductive {} -> return s
   StatementAxiom {} -> return s
 
-checkFunctionDef :: Members '[Reader InfoTable, Error TypeCheckerError] r =>
+checkFunctionDef :: Members '[Reader InfoTable, Output TypeCheckerError] r =>
   FunctionDef -> Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
   info <- lookupFunction _funDefName
@@ -56,10 +59,12 @@ checkExpression :: Members '[Reader InfoTable, Error TypeCheckerError, Reader Lo
 checkExpression t e = do
   t' <- inferExpression' e
   let inferredType = t' ^. typedType
-  when (t /= inferredType) (throw (ErrWrongType (WrongType { _wrongTypeExpression = e,
-                                                             _wrongTypeInferredType = inferredType,
-                                                             _wrongTypeExpectedType = t})))
+  when (t /= inferredType) (throw (err inferredType))
   return (ExpressionTyped t')
+  where
+    err infTy = (ErrWrongType (WrongType { _wrongTypeExpression = e,
+                                           _wrongTypeInferredType = infTy,
+                                           _wrongTypeExpectedType = t}))
 
 inferExpression :: Members '[Reader InfoTable, Error TypeCheckerError, Reader LocalVars] r =>
    Expression -> Sem r Expression
@@ -95,25 +100,32 @@ unfoldFunType t = case t of
   TypeFunction (Function l r) -> first (l:) (unfoldFunType r)
   _ -> ([], t)
 
-checkFunctionClause :: forall r. Members '[Reader InfoTable, Error TypeCheckerError] r =>
+checkFunctionClause :: Members '[Reader InfoTable, Output TypeCheckerError] r =>
   FunctionInfo -> FunctionClause -> Sem r FunctionClause
 checkFunctionClause info clause@FunctionClause{..} = do
   let (argTys, rty) = unfoldFunType (info ^. functionInfoType)
       (patTys, restTys) = splitAt (length _clausePatterns) argTys
       bodyTy = foldFunType restTys rty
-  when (length patTys /= length _clausePatterns) (throw (ErrTooManyPatterns (TooManyPatterns {
-                                                                                _tooManyPatternsClause = clause,
-                                                                                _tooManyPatternsTypes = patTys})))
-  locals <- mconcat <$> zipWithM checkPattern patTys _clausePatterns
-  clauseBody' <- runReader locals (checkExpression bodyTy _clauseBody)
-  return FunctionClause {
-    _clauseBody = clauseBody',
-    ..
-    }
+  if (length patTys /= length _clausePatterns)
+    then output (tyErr patTys) $> clause
+    else do
+      locals <- mconcat <$> zipWithM (checkPattern _clauseName) patTys _clausePatterns
+      eclauseBody <- runError @TypeCheckerError $ runReader locals (checkExpression bodyTy _clauseBody)
+      _clauseBody' <- case eclauseBody of
+        Left err -> output err $> _clauseBody
+        Right r -> return r
+      return FunctionClause {
+        _clauseBody = _clauseBody',
+        ..
+        }
+  where
+    tyErr :: [Type] -> TypeCheckerError
+    tyErr patTys = (ErrTooManyPatterns (TooManyPatterns {_tooManyPatternsClause = clause,
+                                                          _tooManyPatternsTypes = patTys}))
 
-checkPattern :: forall r. Members '[Reader InfoTable, Error TypeCheckerError] r =>
-  Type -> Pattern -> Sem r LocalVars
-checkPattern type_ pat = LocalVars . HashMap.fromList <$> go type_ pat
+checkPattern :: forall r. Members '[Reader InfoTable, Output TypeCheckerError] r =>
+  FunctionName -> Type -> Pattern -> Sem r LocalVars
+checkPattern funName type_ pat = LocalVars . HashMap.fromList <$> go type_ pat
   where
   go :: Type -> Pattern -> Sem r [(VarName, Type)]
   go ty p = case p of
@@ -122,22 +134,18 @@ checkPattern type_ pat = LocalVars . HashMap.fromList <$> go type_ pat
     PatternConstructorApp a -> do
       info <- lookupConstructor (a ^. constrAppConstructor)
       let inductiveTy = TypeIden (TypeIdenInductive (info ^. constructorInfoInductive))
-      when
-        (inductiveTy /= ty)
-        (throw
-         (ErrWrongConstructorType (WrongConstructorType (a ^. constrAppConstructor) ty inductiveTy)))
+      _ <- when (inductiveTy /= ty) (output (ErrWrongConstructorType (WrongConstructorType (a ^. constrAppConstructor) ty inductiveTy funName)))
       goConstr a
     where
     goConstr :: ConstructorApp -> Sem r [(VarName, Type)]
     goConstr app@(ConstructorApp c ps) = do
       tys <- (^. constructorInfoArgs) <$> lookupConstructor c
-      when
-        (length tys /= length ps)
-        (throw (ErrWrongConstructorAppArgs (appErr app tys)))
+      _ <- when (length tys /= length ps) (output (appErr app tys))
       concat <$> zipWithM go tys ps
-    appErr :: ConstructorApp -> [Type] -> WrongConstructorAppArgs
-    appErr app tys = WrongConstructorAppArgs { _wrongCtorAppApp = app,
-                                               _wrongCtorAppTypes = tys}
+    appErr :: ConstructorApp -> [Type] -> TypeCheckerError
+    appErr app tys = ErrWrongConstructorAppArgs (WrongConstructorAppArgs { _wrongCtorAppApp = app,
+                                                                           _wrongCtorAppTypes = tys,
+                                                                           _wrongCtorAppName = funName})
 
 -- TODO currently equivalent to id
 normalizeType :: forall r. Members '[Reader InfoTable] r => Type -> Sem r Type
@@ -157,7 +165,7 @@ normalizeType t = case t of
     r' <- normalizeType r
     return (Function l' r')
 
-inferExpression' :: forall r. Members '[Reader InfoTable, Error TypeCheckerError, Reader LocalVars] r =>
+inferExpression' :: forall r. Members '[Reader InfoTable, Reader LocalVars, Error TypeCheckerError] r =>
    Expression -> Sem r TypedExpression
 inferExpression' e = case e of
   ExpressionIden i -> inferIden i
@@ -165,7 +173,7 @@ inferExpression' e = case e of
   ExpressionTyped {} -> impossible
   ExpressionLiteral l -> goLiteral l
   where
-  goLiteral :: Literal -> Sem r TypedExpression
+  goLiteral :: LiteralLoc -> Sem r TypedExpression
   goLiteral l = return (TypedExpression TypeAny (ExpressionLiteral l))
   inferIden :: Iden -> Sem r TypedExpression
   inferIden i = case i of
@@ -198,6 +206,9 @@ inferExpression' e = case e of
       getFunctionType :: Expression -> Type -> Sem r Function
       getFunctionType appExp t = case t of
         TypeFunction f -> return f
-        _ -> throw (ErrExpectedFunctionType (ExpectedFunctionType { _expectedFunctionTypeExpression = e,
-                                                                    _expectedFunctionTypeApp = appExp,
-                                                                    _expectedFunctionTypeType = t}))
+        _ -> throw tyErr
+        where
+          tyErr :: TypeCheckerError
+          tyErr = (ErrExpectedFunctionType (ExpectedFunctionType { _expectedFunctionTypeExpression = e,
+                                                                   _expectedFunctionTypeApp = appExp,
+                                                                   _expectedFunctionTypeType = t}))

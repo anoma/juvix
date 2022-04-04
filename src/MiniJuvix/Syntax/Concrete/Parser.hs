@@ -156,10 +156,18 @@ expressionAtoms = ExpressionAtoms <$> P.some expressionAtom
 -- Literals
 --------------------------------------------------------------------------------
 
-literal :: MonadParsec e Text m => m Literal
-literal =
-  LitInteger <$> integer
-    <|> LitString <$> string
+literalInteger :: MonadParsec e Text m => m LiteralLoc
+literalInteger = do
+  (x, loc) <- interval integer
+  return (LiteralLoc (LitInteger x) loc)
+
+literalString :: MonadParsec e Text m => m LiteralLoc
+literalString = do
+  (x, loc) <- interval string
+  return (LiteralLoc (LitString x) loc)
+
+literal :: MonadParsec e Text m => m LiteralLoc
+literal = literalInteger <|> literalString
 
 --------------------------------------------------------------------------------
 -- Match expression

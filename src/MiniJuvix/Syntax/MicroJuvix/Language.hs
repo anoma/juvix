@@ -2,7 +2,6 @@ module MiniJuvix.Syntax.MicroJuvix.Language
   ( module MiniJuvix.Syntax.MicroJuvix.Language,
     module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind,
     module MiniJuvix.Syntax.Concrete.Scoped.Name,
-    module MiniJuvix.Syntax.Concrete.Literal,
   )
 where
 
@@ -11,9 +10,10 @@ import MiniJuvix.Syntax.ForeignBlock
 import MiniJuvix.Syntax.Backends
 import MiniJuvix.Syntax.Concrete.Scoped.Name (NameId (..))
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
-import MiniJuvix.Syntax.Concrete.Literal
+import qualified MiniJuvix.Syntax.Concrete.Language as C
 import MiniJuvix.Syntax.Fixity
 import Prettyprinter
+import MiniJuvix.Syntax.Concrete.Language (HasLoc)
 
 type FunctionName = Name
 
@@ -28,10 +28,14 @@ type InductiveName = Name
 data Name = Name
   { _nameText :: Text,
     _nameId :: NameId,
-    _nameKind :: NameKind
-    -- TODO: Add Location here so we can print out line numbers
+    _nameKind :: NameKind,
+    _nameDefined :: C.Interval,
+    _nameLoc :: C.Interval
   }
   deriving stock (Show)
+
+instance HasLoc Name where
+  getLoc = _nameLoc
 
 makeLenses ''Name
 
@@ -82,6 +86,7 @@ data FunctionClause = FunctionClause
     _clausePatterns :: [Pattern],
     _clauseBody :: Expression
   }
+  deriving stock (Show)
 
 data Iden
   = IdenFunction Name
@@ -99,7 +104,7 @@ data TypedExpression = TypedExpression {
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
-  | ExpressionLiteral Literal
+  | ExpressionLiteral C.LiteralLoc
   | ExpressionTyped TypedExpression
   deriving stock (Show)
 
@@ -120,11 +125,13 @@ data ConstructorApp = ConstructorApp
   { _constrAppConstructor :: Name,
     _constrAppParameters :: [Pattern]
   }
+  deriving stock (Show)
 
 data Pattern
   = PatternVariable VarName
   | PatternConstructorApp ConstructorApp
   | PatternWildcard
+  deriving stock (Show)
 
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
@@ -190,3 +197,17 @@ instance HasAtomicity Pattern where
     PatternConstructorApp a -> atomicity a
     PatternVariable {} -> Atom
     PatternWildcard {} -> Atom
+
+instance HasLoc Expression where
+  getLoc = \case
+    ExpressionIden i -> C.getLoc i
+    ExpressionApplication a -> C.getLoc (a ^. appLeft)
+    ExpressionTyped t -> C.getLoc (t ^. typedExpression)
+    ExpressionLiteral l -> C.getLoc l
+
+instance HasLoc Iden where
+  getLoc = \case
+    IdenFunction f -> C.getLoc f
+    IdenConstructor c -> C.getLoc c
+    IdenVar v -> C.getLoc v
+    IdenAxiom a -> C.getLoc a

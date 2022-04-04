@@ -1,0 +1,15 @@
+module MultiWrongType;
+  inductive A {
+    a : A;
+  };
+
+  inductive B {
+    b : B;
+  };
+
+  f : A;
+  f ≔ b;
+
+  g : B;
+  g ≔ a;
+end;

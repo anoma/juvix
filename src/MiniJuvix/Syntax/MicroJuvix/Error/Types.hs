@@ -8,15 +8,19 @@ import MiniJuvix.Syntax.MicroJuvix.Language
 data WrongConstructorType = WrongConstructorType
   { _wrongCtorTypeName :: Name,
     _wrongCtorTypeExpected :: Type,
-    _wrongCtorTypeActual :: Type
+    _wrongCtorTypeActual :: Type,
+    _wrongCtorTypeFunname :: Name
   }
+  deriving stock (Show)
 
 -- | the arguments of a constructor pattern do not match
 -- the expected arguments of the constructor
 data WrongConstructorAppArgs = WrongConstructorAppArgs
   { _wrongCtorAppApp :: ConstructorApp,
-    _wrongCtorAppTypes :: [Type]
+    _wrongCtorAppTypes :: [Type],
+    _wrongCtorAppName :: Name
   }
+  deriving stock (Show)
 
 -- | the type of an expression does not match the inferred type
 data WrongType = WrongType
@@ -24,6 +28,7 @@ data WrongType = WrongType
     _wrongTypeExpectedType :: Type,
     _wrongTypeInferredType :: Type
   }
+  deriving stock (Show)
 
 -- | The left hand expression of a function application is not
 -- a function type.
@@ -32,12 +37,14 @@ data ExpectedFunctionType = ExpectedFunctionType
     _expectedFunctionTypeApp :: Expression,
     _expectedFunctionTypeType :: Type
   }
+  deriving stock (Show)
 
 -- | A function definition clause matches too many arguments
 data TooManyPatterns = TooManyPatterns
   { _tooManyPatternsClause :: FunctionClause,
     _tooManyPatternsTypes :: [Type]
   }
+  deriving stock (Show)
 
 makeLenses ''WrongConstructorType
 makeLenses ''WrongConstructorAppArgs

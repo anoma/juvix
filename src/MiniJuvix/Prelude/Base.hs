@@ -39,6 +39,7 @@ module MiniJuvix.Prelude.Base
     module Polysemy.Embed,
     module Polysemy.Error,
     module Polysemy.Fixpoint,
+    module Polysemy.Output,
     module Polysemy.Reader,
     module Polysemy.State,
     module Polysemy.View,
@@ -111,6 +112,7 @@ import Polysemy
 import Polysemy.Embed
 import Polysemy.Error hiding (fromEither)
 import Polysemy.Fixpoint
+import Polysemy.Output
 import Polysemy.Reader
 import Polysemy.State
 import Polysemy.View

@@ -2,14 +2,13 @@ module MiniJuvix.Syntax.MiniHaskell.Language
   ( module MiniJuvix.Syntax.MiniHaskell.Language,
     module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind,
     module MiniJuvix.Syntax.NameId,
-    module MiniJuvix.Syntax.Concrete.Literal,
   )
 where
 
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.NameId
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
-import MiniJuvix.Syntax.Concrete.Literal
+import qualified MiniJuvix.Syntax.Concrete.Language as C
 import MiniJuvix.Syntax.Fixity
 
 type FunctionName = Name
@@ -67,7 +66,7 @@ type Iden = Name
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
-  | ExpressionLiteral Literal
+  | ExpressionLiteral C.LiteralLoc
   | ExpressionVerbatim Text
   deriving stock (Show)
 

@@ -677,6 +677,9 @@ instance PrettyCode Literal where
     LitInteger n -> return $ annotate AnnLiteralInteger (pretty n)
     LitString s -> return $ ppStringLit s
 
+instance PrettyCode LiteralLoc where
+  ppCode l = ppCode (l ^. literalLocLiteral)
+
 instance PrettyCode AxiomRef where
   ppCode a = ppCode (a ^. axiomRefName)
 

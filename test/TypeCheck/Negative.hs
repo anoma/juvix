@@ -11,21 +11,21 @@ data NegTest = NegTest
   { name :: String,
     relDir :: FilePath,
     file :: FilePath,
-    checkErr :: TypeCheckerError -> Maybe FailMsg }
+    checkErr :: [TypeCheckerError] -> Maybe FailMsg }
 
 testDescr :: NegTest -> TestDescr
 testDescr NegTest {..} = TestDescr {
   testName = name,
   testRoot = root </> relDir,
   testAssertion = Single $ do
-      p <- parseModuleIO file
-           >>= scopeModuleIO
-           >>= translateModuleIO
-           >>| A.translateModule
-           >>| T.checkModule
+      result <- parseModuleIO file
+                >>= scopeModuleIO
+                >>= translateModuleIO
+                >>| A.translateModule
+                >>| T.checkModule
 
-      case p of
-        Left err -> whenJust (checkErr err) assertFailure
+      case result of
+        Left es -> whenJust (checkErr (toList es)) assertFailure
         Right _ -> assertFailure "The type checker did not find an error."
   }
 
@@ -43,22 +43,35 @@ tests :: [NegTest]
 tests = [
   NegTest "Constructor in pattern type error" "MicroJuvix"
     "PatternConstructor.mjuvix" $ \case
-      ErrWrongConstructorType {} -> Nothing
+      [ErrWrongConstructorType {}] -> Nothing
       _ -> wrongError
   , NegTest "Constructor pattern length mismatch" "MicroJuvix"
     "PatternConstructorApp.mjuvix" $ \case
-      ErrWrongConstructorAppArgs {} -> Nothing
+      [ErrWrongConstructorAppArgs {}] -> Nothing
       _ -> wrongError
   , NegTest "Type vs inferred type mismatch" "MicroJuvix"
     "WrongType.mjuvix" $ \case
-      ErrWrongType {} -> Nothing
+      [ErrWrongType {}] -> Nothing
+      _ -> wrongError
+  , NegTest "literal string vs inferred type mismatch" "MicroJuvix"
+    "WrongTypeLiteralString.mjuvix" $ \case
+      [ErrWrongType {}] -> Nothing
+      _ -> wrongError
+  , NegTest "literal int vs inferred type mismatch" "MicroJuvix"
+    "WrongTypeLiteralInt.mjuvix" $ \case
+      [ErrWrongType {}] -> Nothing
       _ -> wrongError
   , NegTest "Function application with non-function type" "MicroJuvix"
     "ExpectedFunctionType.mjuvix" $ \case
-      ErrExpectedFunctionType {} -> Nothing
+      [ErrExpectedFunctionType {}] -> Nothing
       _ -> wrongError
   , NegTest "Function definition clause with two many match patterns" "MicroJuvix"
     "TooManyPatterns.mjuvix" $ \case
-      ErrTooManyPatterns {} -> Nothing
+      [ErrTooManyPatterns {}] -> Nothing
+      _ -> wrongError
+  , NegTest "Multiple type errors are captured" "MicroJuvix"
+    "MultiWrongType.mjuvix" $ \case
+      [ErrWrongType {},
+       ErrWrongType {}] -> Nothing
       _ -> wrongError
         ]
