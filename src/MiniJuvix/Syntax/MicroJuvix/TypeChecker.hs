@@ -20,6 +20,7 @@ checkModule m = run $ do
     (x : xs) -> Left (x :| xs)
 
 checkModule' :: Members '[Reader InfoTable, Output TypeCheckerError] r =>
+
   Module -> Sem r Module
 checkModule' Module {..} = do
   _moduleBody' <- checkModuleBody _moduleBody
@@ -27,6 +28,7 @@ checkModule' Module {..} = do
     _moduleBody = _moduleBody',
     ..
     }
+
 
 checkModuleBody :: Members '[Reader InfoTable, Output TypeCheckerError] r =>
   ModuleBody -> Sem r ModuleBody
@@ -65,6 +67,7 @@ checkExpression t e = do
     err infTy = ErrWrongType (WrongType { _wrongTypeExpression = e,
                                            _wrongTypeInferredType = infTy,
                                            _wrongTypeExpectedType = t})
+
 
 inferExpression :: Members '[Reader InfoTable, Error TypeCheckerError, Reader LocalVars] r =>
    Expression -> Sem r Expression

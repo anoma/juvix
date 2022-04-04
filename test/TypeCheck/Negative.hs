@@ -13,6 +13,7 @@ data NegTest = NegTest
     file :: FilePath,
     checkErr :: [TypeCheckerError] -> Maybe FailMsg }
 
+
 testDescr :: NegTest -> TestDescr
 testDescr NegTest {..} = TestDescr {
   testName = name,
@@ -26,6 +27,7 @@ testDescr NegTest {..} = TestDescr {
 
       case result of
         Left es -> whenJust (checkErr (toList es)) assertFailure
+
         Right _ -> assertFailure "The type checker did not find an error."
   }
 

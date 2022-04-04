@@ -10,6 +10,7 @@ data ConstructorInfo = ConstructorInfo {
   _constructorInfoInductive :: InductiveName
   }
 
+
 newtype FunctionInfo = FunctionInfo {
   _functionInfoType :: Type
   }

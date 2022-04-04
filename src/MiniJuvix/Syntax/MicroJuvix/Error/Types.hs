@@ -13,6 +13,7 @@ data WrongConstructorType = WrongConstructorType
   }
   deriving stock (Show)
 
+
 -- | the arguments of a constructor pattern do not match
 -- the expected arguments of the constructor
 data WrongConstructorAppArgs = WrongConstructorAppArgs
@@ -30,6 +31,7 @@ data WrongType = WrongType
   }
   deriving stock (Show)
 
+
 -- | The left hand expression of a function application is not
 -- a function type.
 data ExpectedFunctionType = ExpectedFunctionType
@@ -38,6 +40,7 @@ data ExpectedFunctionType = ExpectedFunctionType
     _expectedFunctionTypeType :: Type
   }
   deriving stock (Show)
+
 
 -- | A function definition clause matches too many arguments
 data TooManyPatterns = TooManyPatterns

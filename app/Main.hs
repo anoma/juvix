@@ -61,7 +61,7 @@ data ParseOptions = ParseOptions
   { _parseInputFile :: FilePath,
     _parseNoPrettyShow :: Bool
   }
-
+  
 newtype HighlightOptions = HighlightOptions
   { _highlightInputFile :: FilePath
   }
@@ -182,6 +182,7 @@ parseCommand =
   <|> parseDisplayRoot
   <|> hsubparser
           (mconcat
+
             [ commandParse,
               commandScope,
               commandHtml,

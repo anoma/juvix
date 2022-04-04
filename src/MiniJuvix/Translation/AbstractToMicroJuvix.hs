@@ -30,6 +30,7 @@ goSymbol s =
       _nameDefined = s ^. S.nameDefined,
       _nameLoc = s ^. S.nameConcrete . symbolLoc }
 
+
 unsupported :: Text -> a
 unsupported thing = error ("Abstract to MicroJuvix: Not yet supported: " <> thing)
 

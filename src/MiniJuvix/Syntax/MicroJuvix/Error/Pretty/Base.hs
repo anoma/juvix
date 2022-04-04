@@ -50,6 +50,7 @@ instance PrettyError WrongConstructorAppArgs where
       ctorName = ppCode (e ^. wrongCtorAppApp . constrAppConstructor)
       pat :: Int -> Doc ann
       pat n = pretty n <+> plural "pattern" "patterns" n
+
       funName :: Name
       funName = e ^. wrongCtorAppName
 
