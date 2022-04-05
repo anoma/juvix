@@ -2,7 +2,6 @@ module MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder (
   InfoTableBuilder,
   registerLiteral,
   registerKeyword,
-  ignoring,
   mergeTable,
   runInfoTableBuilder,
   module MiniJuvix.Syntax.Concrete.Parser.InfoTable,
@@ -17,18 +16,17 @@ import MiniJuvix.Syntax.Concrete.Language (LiteralLoc(..))
 
 data InfoTableBuilder m a where
   RegisterItem :: ParsedItem -> InfoTableBuilder m ()
-  Ignoring :: m a -> InfoTableBuilder m a
   MergeTable :: InfoTable -> InfoTableBuilder m ()
 
 makeSem ''InfoTableBuilder
 
-registerKeyword :: Member (InfoTableBuilder) r => Interval -> Sem r ()
+registerKeyword :: Member InfoTableBuilder r => Interval -> Sem r ()
 registerKeyword i = registerItem ParsedItem {
   _parsedLoc = i,
   _parsedTag = ParsedTagKeyword
   }
 
-registerLiteral :: Member (InfoTableBuilder) r => LiteralLoc -> Sem r LiteralLoc
+registerLiteral :: Member InfoTableBuilder r => LiteralLoc -> Sem r LiteralLoc
 registerLiteral l =
   l <$ registerItem ParsedItem {
     _parsedLoc = loc,
@@ -40,8 +38,7 @@ registerLiteral l =
     LitInteger {} -> ParsedTagLiteralInt
   loc = getLoc l
 
-data BuilderState = BuilderState {
-  _stateIgnoring :: Bool,
+newtype BuilderState = BuilderState {
   _stateItems :: [ParsedItem]
   }
   deriving stock (Show)
@@ -49,27 +46,17 @@ makeLenses ''BuilderState
 
 iniState :: BuilderState
 iniState = BuilderState {
-  _stateIgnoring = False,
   _stateItems = []
   }
 
 build :: BuilderState -> InfoTable
-build st = InfoTable (st ^. stateItems)
+build st = InfoTable (nubHashable (st ^. stateItems))
 
 runInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
-runInfoTableBuilder = fmap (first build) . runState iniState . reinterpretH
+runInfoTableBuilder = fmap (first build) . runState iniState . reinterpret
   (\case
-      RegisterItem i -> do
-        unlessM (gets (^. stateIgnoring))
-          (modify' (over stateItems (i :)))
-        pureT ()
-      Ignoring m -> do
-        s0 <- gets (^. stateIgnoring)
-        modify (set stateIgnoring True)
-        r <- runTSimple m
-        modify (over stateIgnoring (const s0))
-        return r
-      MergeTable tbl -> do
+      RegisterItem i ->
+        modify' (over stateItems (i :))
+      MergeTable tbl ->
         modify' (over stateItems ((tbl ^. infoParsedItems)  <>))
-        pureT ()
   )

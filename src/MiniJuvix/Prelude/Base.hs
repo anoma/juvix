@@ -78,6 +78,7 @@ import Data.Function
 import Data.Functor
 import Data.HashMap.Strict (HashMap)
 import Data.HashSet (HashSet)
+import qualified Data.HashSet as HashSet
 import Data.Hashable
 import Data.Int
 import Data.List.Extra hiding (head, last)
@@ -247,3 +248,10 @@ fromRightIO' pp = do
 
 fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
 fromRightIO pp = fromRightIO' (putStrLn . pp)
+
+--------------------------------------------------------------------------------
+-- Misc
+--------------------------------------------------------------------------------
+
+nubHashable :: Hashable a => [a] -> [a]
+nubHashable = HashSet.toList . HashSet.fromList

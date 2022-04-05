@@ -10,18 +10,18 @@ import Test.Tasty.HUnit
 import MiniJuvix.Prelude
 import qualified MiniJuvix.Syntax.Concrete.Language as M
 import qualified MiniJuvix.Syntax.Abstract.Language as A
-import qualified MiniJuvix.Syntax.Concrete.Parser as M
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
+import qualified MiniJuvix.Syntax.Concrete.Parser as Parser
+import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as Scoper
 import qualified MiniJuvix.Translation.ScopedToAbstract as A
 
 parseModuleIO :: FilePath -> IO (M.Module 'M.Parsed 'M.ModuleTop)
-parseModuleIO = fromRightIO id . M.runModuleParserIO
+parseModuleIO = fromRightIO id . Parser.runModuleParserIO
 
 parseTextModuleIO :: Text -> IO (M.Module 'M.Parsed 'M.ModuleTop)
-parseTextModuleIO = fromRightIO id . return . M.runModuleParser "literal string"
+parseTextModuleIO = fromRightIO id . return . Parser.runModuleParser "literal string"
 
 scopeModuleIO :: M.Module 'M.Parsed 'M.ModuleTop -> IO (M.Module 'M.Scoped 'M.ModuleTop)
-scopeModuleIO = fmap snd . fromRightIO' printErrorAnsi . M.scopeCheck1IO "."
+scopeModuleIO = fmap (head . Scoper._resultModules) . fromRightIO' printErrorAnsi . Scoper.scopeCheck1IO "."
 
 translateModuleIO :: M.Module 'M.Scoped 'M.ModuleTop -> IO A.TopModule
 translateModuleIO = fmap snd . fromRightIO id . return . A.translateModule

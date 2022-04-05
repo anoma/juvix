@@ -7,7 +7,8 @@ data ParsedItem = ParsedItem {
   _parsedLoc :: Interval,
   _parsedTag :: ParsedItemTag
   }
-  deriving stock (Show)
+  deriving stock (Show, Eq, Generic)
+instance Hashable ParsedItem
 
 instance HasLoc ParsedItem where
   getLoc = _parsedLoc
@@ -16,6 +17,8 @@ data ParsedItemTag =
   ParsedTagKeyword
   | ParsedTagLiteralInt
   | ParsedTagLiteralString
-  deriving stock (Show)
+  deriving stock (Eq, Show, Generic)
+
+instance Hashable ParsedItemTag
 
 makeLenses ''ParsedItem

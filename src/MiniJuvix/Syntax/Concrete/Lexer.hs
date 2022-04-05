@@ -92,7 +92,6 @@ keyword kw = do
 -- TODO: revise.
 bareIdentifier :: Member InfoTableBuilder r => ParsecS r (Text, Interval)
 bareIdentifier = interval $ do
-  -- TODO how to ignore these keywords for the InfoTableBuilder?
   notFollowedBy (choice allKeywords)
   h <- P.satisfy validFirstChar
   t <- P.takeWhileP Nothing validChar

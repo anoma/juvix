@@ -25,6 +25,7 @@ import qualified MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper.Files
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper.InfoTableBuilder
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper.ScoperResult
+import qualified MiniJuvix.Syntax.Concrete.Parser as Parser
 
 scopeCheck1IO :: FilePath -> Module 'Parsed 'ModuleTop -> IO (Either ScopeError ScoperResult)
 scopeCheck1IO root = runFinal . embedToFinal @IO . runFilesIO . fixpointToFinal @IO . scopeCheck1 root
@@ -381,7 +382,8 @@ readParseModule mp = do
   txt <- readFile' path
   case runModuleParser' path txt of
     Left err -> throw (ErrParser (MegaParsecError err))
-    Right (t, r) -> Parser.mergeTable t $> r
+    Right res ->
+      Parser.mergeTable (res ^. Parser.resultTable) $> res ^. Parser.resultModules
 
 modulePathToFilePath ::
   Members '[Reader ScopeParameters] r =>

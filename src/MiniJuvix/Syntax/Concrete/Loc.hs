@@ -5,6 +5,7 @@ import Prettyprinter
 
 newtype Pos = Pos {_unPos :: Word64 }
   deriving stock (Show, Eq, Ord)
+  deriving newtype (Hashable)
 
 instance Semigroup Pos where
   Pos x <> Pos y = Pos (x + y)
@@ -20,7 +21,9 @@ data FileLoc = FileLoc
     -- | Offset wrt the start of the input. Used for syntax highlighting.
     _locOffset :: !Pos
   }
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+
+instance Hashable FileLoc
 
 instance Ord FileLoc where
   compare (FileLoc l c o) (FileLoc l' c' o') = compare (l, c, o) (l', c', o')
@@ -39,7 +42,9 @@ data Interval = Interval
     _intStart :: FileLoc,
     _intEnd :: FileLoc
   }
-  deriving stock (Show, Ord, Eq)
+  deriving stock (Show, Ord, Eq, Generic)
+
+instance Hashable Interval
 
 class HasLoc t where
   getLoc :: t -> Interval
