@@ -7,17 +7,17 @@ where
 
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.MicroJuvix.Error.Pretty
-import qualified MiniJuvix.Syntax.MicroJuvix.Error.Pretty as P
+import MiniJuvix.Syntax.MicroJuvix.Error.Pretty qualified as P
 import MiniJuvix.Syntax.MicroJuvix.Error.Types
 import Prettyprinter
 
 data TypeCheckerError
- = ErrTooManyPatterns TooManyPatterns
- | ErrWrongConstructorType WrongConstructorType
- | ErrWrongConstructorAppArgs WrongConstructorAppArgs
- | ErrWrongType WrongType
- | ErrExpectedFunctionType ExpectedFunctionType
- deriving stock (Show)
+  = ErrTooManyPatterns TooManyPatterns
+  | ErrWrongConstructorType WrongConstructorType
+  | ErrWrongConstructorAppArgs WrongConstructorAppArgs
+  | ErrWrongType WrongType
+  | ErrExpectedFunctionType ExpectedFunctionType
+  deriving stock (Show)
 
 ppTypeCheckerError :: TypeCheckerError -> Doc Eann
 ppTypeCheckerError = \case

@@ -1,7 +1,7 @@
 module TypeCheck (allTests) where
 
 import Base
-import qualified TypeCheck.Negative as N
+import TypeCheck.Negative qualified as N
 
 allTests :: TestTree
 allTests = testGroup "TypeCheck tests" [N.allTests]

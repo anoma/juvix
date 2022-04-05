@@ -4,12 +4,12 @@ module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base
   )
 where
 
-import qualified Data.List.NonEmpty.Extra as NonEmpty
+import Data.List.NonEmpty.Extra qualified as NonEmpty
 import MiniJuvix.Internal.Strings as Str
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Scoped.Name (AbsModulePath)
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ann
 import Prettyprinter hiding (braces, parens)
 
@@ -17,7 +17,7 @@ data Options = Options
   { _optShowNameId :: Bool,
     _optInlineImports :: Bool,
     _optIndent :: Int
-}
+  }
 
 defaultOptions :: Options
 defaultOptions =
@@ -179,7 +179,7 @@ doubleQuotes :: Doc Ann -> Doc Ann
 doubleQuotes = enclose kwDQuote kwDQuote
 
 annotateKind :: S.NameKind -> Doc Ann -> Doc Ann
-annotateKind =  annotate . AnnKind
+annotateKind = annotate . AnnKind
 
 ppModulePathType ::
   forall t s r.
@@ -801,16 +801,20 @@ ppExpression = case sing :: SStage s of
   SParsed -> ppCode
 
 instance PrettyCode SymbolEntry where
-  ppCode ent = return (kindTag <+> pretty (entryName ent ^. S.nameVerbatim)
-    <+> "defined at" <+> pretty (getLoc ent))
+  ppCode ent =
+    return
+      ( kindTag <+> pretty (entryName ent ^. S.nameVerbatim)
+          <+> "defined at"
+          <+> pretty (getLoc ent)
+      )
     where
-    pretty' :: Text -> Doc a
-    pretty' = pretty
-    kindTag = case ent of
-      EntryAxiom _ -> annotateKind S.KNameAxiom (pretty' Str.axiom)
-      EntryInductive _ -> annotateKind S.KNameInductive (pretty' Str.inductive)
-      EntryFunction _ -> annotateKind S.KNameFunction (pretty' Str.function)
-      EntryConstructor _ -> annotateKind S.KNameConstructor (pretty' Str.constructor)
-      EntryModule (ModuleRef' (isTop :&: _))
-        | SModuleTop <- isTop -> annotateKind S.KNameTopModule (pretty' Str.topModule)
-        | SModuleLocal <- isTop -> annotateKind S.KNameLocalModule (pretty' Str.localModule)
+      pretty' :: Text -> Doc a
+      pretty' = pretty
+      kindTag = case ent of
+        EntryAxiom _ -> annotateKind S.KNameAxiom (pretty' Str.axiom)
+        EntryInductive _ -> annotateKind S.KNameInductive (pretty' Str.inductive)
+        EntryFunction _ -> annotateKind S.KNameFunction (pretty' Str.function)
+        EntryConstructor _ -> annotateKind S.KNameConstructor (pretty' Str.constructor)
+        EntryModule (ModuleRef' (isTop :&: _))
+          | SModuleTop <- isTop -> annotateKind S.KNameTopModule (pretty' Str.topModule)
+          | SModuleLocal <- isTop -> annotateKind S.KNameLocalModule (pretty' Str.localModule)

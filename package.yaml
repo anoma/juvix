@@ -1,5 +1,5 @@
 name:            minijuvix
-version:         0.1.1
+version:         0.1.2
 license:         GPL-3.0-only
 license-file:    LICENSE
 copyright:       (c) 2022- Heliax AG.
@@ -16,7 +16,6 @@ extra-source-files:
 - README.org
 - CHANGELOG.org
 
-# TODO: make sections for dependency
 dependencies:
 - aeson == 2.0.*
 - base == 4.16.*
@@ -47,27 +46,36 @@ dependencies:
 - th-utilities == 0.2.*
 - unordered-containers == 0.2.*
 
-# the tasty dependencies are here to avoid having to recompile minijuvix
-# when running the tests. Is there a better solution?
+# the tasty dependencies are here to avoid having to recompile
+# minijuvix when running the tests.
 - tasty
 - tasty-hunit
 - Diff == 0.4.*
 - pretty-show == 1.10.*
 
-# TODO organize this
 ghc-options:
-- -fhide-source-paths
-- -O2 -flate-specialise -fspecialise-aggressively
-- -Wall -Wcompat -Widentities -Wincomplete-uni-patterns
-- -Wderiving-defaults -Wredundant-constraints
+# Warnings
+- -Wall
+- -Wcompat
+- -Wderiving-defaults
+- -Widentities
 - -Wincomplete-patterns
-- -Wincomplete-record-updates -fwrite-ide-info -hiedir=.hie
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
 - -Wmissing-deriving-strategies
+- -Wredundant-constraints
+# HIE Support
+- -fhide-source-paths
+- -fwrite-ide-info -hiedir=.hie
+# Polysemy Support
+- -O2 -flate-specialise -fspecialise-aggressively
 
 default-extensions:
 - DataKinds
 - DerivingStrategies
 - GADTs
+- GeneralizedNewtypeDeriving
+- ImportQualifiedPost
 - LambdaCase
 - NoImplicitPrelude
 - OverloadedStrings

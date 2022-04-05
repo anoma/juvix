@@ -1,12 +1,12 @@
 module MiniJuvix.Translation.ScopedToAbstract where
 
 import MiniJuvix.Prelude
-import qualified MiniJuvix.Syntax.Abstract.Language as A
-import MiniJuvix.Syntax.Concrete.Language
-import qualified MiniJuvix.Syntax.Concrete.Language as C
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
 import MiniJuvix.Syntax.Abstract.InfoTableBuilder
-import MiniJuvix.Syntax.Abstract.Language (FunctionDef(_funDefTypeSig))
+import MiniJuvix.Syntax.Abstract.Language (FunctionDef (_funDefTypeSig))
+import MiniJuvix.Syntax.Abstract.Language qualified as A
+import MiniJuvix.Syntax.Concrete.Language
+import MiniJuvix.Syntax.Concrete.Language qualified as C
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 
 type Err = Text
 
@@ -27,13 +27,21 @@ goModule (Module n par b) = case par of
   [] -> A.Module n <$> goModuleBody b
   _ -> unsupported "Module parameters"
 
-goModuleBody :: forall r. Members '[Error Err, InfoTableBuilder] r
-  => [Statement 'Scoped] -> Sem r A.ModuleBody
+goModuleBody ::
+  forall r.
+  Members '[Error Err, InfoTableBuilder] r =>
+  [Statement 'Scoped] ->
+  Sem r A.ModuleBody
 goModuleBody ss' = do
   otherThanFunctions <- mapMaybeM goStatement ss
   functions <- map (fmap A.StatementFunction) <$> compiledFunctions
-  let _moduleStatements = map (^. indexedThing) (sortOn (^. indexedIx)
-                          (otherThanFunctions <> functions))
+  let _moduleStatements =
+        map
+          (^. indexedThing)
+          ( sortOn
+              (^. indexedIx)
+              (otherThanFunctions <> functions)
+          )
   return A.ModuleBody {..}
   where
     ss :: [Indexed (Statement 'Scoped)]
@@ -41,34 +49,38 @@ goModuleBody ss' = do
     compiledFunctions :: Sem r [Indexed A.FunctionDef]
     compiledFunctions =
       sequence $
-          [ Indexed i <$> funDef
-            | Indexed i sig <- sigs,
-              let name = sig ^. sigName,
-              let funDef = goFunctionDef sig (getClauses name) ]
+        [ Indexed i <$> funDef
+          | Indexed i sig <- sigs,
+            let name = sig ^. sigName,
+            let funDef = goFunctionDef sig (getClauses name)
+        ]
       where
         getClauses :: S.Symbol -> NonEmpty (FunctionClause 'Scoped)
         getClauses name =
           fromMaybe impossible $
             nonEmpty
-              [ c | StatementFunctionClause c <- ss', name == c ^. clauseOwnerFunction ]
+              [c | StatementFunctionClause c <- ss', name == c ^. clauseOwnerFunction]
         sigs :: [Indexed (TypeSignature 'Scoped)]
         sigs = [Indexed i t | (Indexed i (StatementTypeSignature t)) <- ss]
 
-goStatement :: forall r. Members '[Error Err, InfoTableBuilder] r
-   => Indexed (Statement 'Scoped) -> Sem r (Maybe (Indexed A.Statement))
-goStatement (Indexed idx s) = fmap (Indexed idx) <$> case s of
-  StatementAxiom d -> Just . A.StatementAxiom <$> goAxiom d
-  StatementImport (Import t) -> Just . A.StatementImport <$> goModule t
-  StatementOperator {} -> return Nothing
-  StatementOpenModule {} -> return Nothing
-  StatementEval {} -> unsupported "eval statements"
-  StatementPrint {} -> unsupported "print statements"
-  StatementInductive i -> Just . A.StatementInductive <$> goInductive i
-  StatementForeign f -> return (Just (A.StatementForeign f))
-  StatementModule f -> Just . A.StatementLocalModule <$> goLocalModule f
-  StatementTypeSignature {} -> return Nothing
-  StatementFunctionClause {} -> return Nothing
-
+goStatement ::
+  forall r.
+  Members '[Error Err, InfoTableBuilder] r =>
+  Indexed (Statement 'Scoped) ->
+  Sem r (Maybe (Indexed A.Statement))
+goStatement (Indexed idx s) =
+  fmap (Indexed idx) <$> case s of
+    StatementAxiom d -> Just . A.StatementAxiom <$> goAxiom d
+    StatementImport (Import t) -> Just . A.StatementImport <$> goModule t
+    StatementOperator {} -> return Nothing
+    StatementOpenModule {} -> return Nothing
+    StatementEval {} -> unsupported "eval statements"
+    StatementPrint {} -> unsupported "print statements"
+    StatementInductive i -> Just . A.StatementInductive <$> goInductive i
+    StatementForeign f -> return (Just (A.StatementForeign f))
+    StatementModule f -> Just . A.StatementLocalModule <$> goLocalModule f
+    StatementTypeSignature {} -> return Nothing
+    StatementFunctionClause {} -> return Nothing
 
 goFunctionDef :: forall r. Members '[Error Err, InfoTableBuilder] r => TypeSignature 'Scoped -> NonEmpty (FunctionClause 'Scoped) -> Sem r A.FunctionDef
 goFunctionDef sig clauses = do
@@ -108,12 +120,14 @@ goInductive InductiveDef {..} = do
   _inductiveParameters' <- mapM goInductiveParameter _inductiveParameters
   _inductiveType' <- sequence $ goExpression <$> _inductiveType
   _inductiveConstructors' <- mapM goConstructorDef _inductiveConstructors
-  inductiveInfo <- registerInductive A.InductiveDef
-    { _inductiveParameters = _inductiveParameters',
-      _inductiveName = _inductiveName,
-      _inductiveType = _inductiveType',
-      _inductiveConstructors = _inductiveConstructors'
-    }
+  inductiveInfo <-
+    registerInductive
+      A.InductiveDef
+        { _inductiveParameters = _inductiveParameters',
+          _inductiveName = _inductiveName,
+          _inductiveType = _inductiveType',
+          _inductiveConstructors = _inductiveConstructors'
+        }
 
   forM_ _inductiveConstructors' (registerConstructor inductiveInfo)
 
@@ -232,4 +246,4 @@ goPattern p = case p of
 goAxiom :: Members '[Error Err, InfoTableBuilder] r => AxiomDef 'Scoped -> Sem r A.AxiomDef
 goAxiom AxiomDef {..} = do
   _axiomType' <- goExpression _axiomType
-  registerAxiom' A.AxiomDef { _axiomType = _axiomType', ..}
+  registerAxiom' A.AxiomDef {_axiomType = _axiomType', ..}

@@ -1,9 +1,9 @@
 -- TODO handle capital letters and characters not supported by Haskell.
 module MiniJuvix.Syntax.MiniHaskell.Pretty.Base where
 
-import qualified MiniJuvix.Internal.Strings as Str
-import MiniJuvix.Syntax.Concrete.Language (Literal (..), LiteralLoc (..))
+import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Concrete.Language (Literal (..), LiteralLoc (..))
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.MiniHaskell.Language
 import MiniJuvix.Syntax.MiniHaskell.Pretty.Ann
@@ -157,7 +157,6 @@ kwDQuote = pretty ("\"" :: Text)
 
 ppStringLit :: Text -> Doc Ann
 ppStringLit = annotate AnnLiteralString . doubleQuotes . pretty
-
 
 instance PrettyCode Module where
   ppCode m = do

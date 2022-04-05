@@ -1,18 +1,19 @@
-module Base (
- module Test.Tasty,
- module Test.Tasty.HUnit,
- module MiniJuvix.Prelude,
- module Base
- ) where
+module Base
+  ( module Test.Tasty,
+    module Test.Tasty.HUnit,
+    module MiniJuvix.Prelude,
+    module Base,
+  )
+where
 
+import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Abstract.Language qualified as A
+import MiniJuvix.Syntax.Concrete.Language qualified as M
+import MiniJuvix.Syntax.Concrete.Parser qualified as M
+import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as M
+import MiniJuvix.Translation.ScopedToAbstract qualified as A
 import Test.Tasty
 import Test.Tasty.HUnit
-import MiniJuvix.Prelude
-import qualified MiniJuvix.Syntax.Concrete.Language as M
-import qualified MiniJuvix.Syntax.Abstract.Language as A
-import qualified MiniJuvix.Syntax.Concrete.Parser as M
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
-import qualified MiniJuvix.Translation.ScopedToAbstract as A
 
 parseModuleIO :: FilePath -> IO (M.Module 'M.Parsed 'M.ModuleTop)
 parseModuleIO = fromRightIO id . M.runModuleParserIO
@@ -26,15 +27,15 @@ scopeModuleIO = fmap snd . fromRightIO' printErrorAnsi . M.scopeCheck1IO "."
 translateModuleIO :: M.Module 'M.Scoped 'M.ModuleTop -> IO A.TopModule
 translateModuleIO = fmap snd . fromRightIO id . return . A.translateModule
 
-data AssertionDescr =
-  Single Assertion
+data AssertionDescr
+  = Single Assertion
   | Steps ((String -> IO ()) -> Assertion)
 
-data TestDescr = TestDescr {
-  testName :: String,
-  testRoot :: FilePath,
-  -- | relative to root
-  testAssertion :: AssertionDescr
+data TestDescr = TestDescr
+  { testName :: String,
+    testRoot :: FilePath,
+    -- | relative to root
+    testAssertion :: AssertionDescr
   }
 
 mkTest :: TestDescr -> TestTree

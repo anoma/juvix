@@ -2,13 +2,13 @@ module MiniJuvix.Syntax.Concrete.Parser where
 
 --------------------------------------------------------------------------------
 
-import qualified Data.List.NonEmpty.Extra as NonEmpty
+import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Singletons
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
+import Data.Text qualified as Text
+import Data.Text.IO qualified as Text
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Base (MonadParsec)
-import qualified MiniJuvix.Syntax.Concrete.Base as P
+import MiniJuvix.Syntax.Concrete.Base qualified as P
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Lexer hiding (symbol)
 
@@ -89,8 +89,9 @@ statement =
 --------------------------------------------------------------------------------
 
 backend :: forall e m. MonadParsec e Text m => m Backend
-backend = ghc $> BackendGhc
-  <|> agda $> BackendAgda
+backend =
+  ghc $> BackendGhc
+    <|> agda $> BackendAgda
 
 foreignBlock :: forall e m. MonadParsec e Text m => m ForeignBlock
 foreignBlock = do

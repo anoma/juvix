@@ -4,9 +4,9 @@ module Commands.Termination where
 
 import Commands.Extra
 import Control.Monad.Extra
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import MiniJuvix.Prelude hiding (Doc)
-import qualified MiniJuvix.Syntax.Abstract.Pretty.Base as A
+import MiniJuvix.Syntax.Abstract.Pretty.Base qualified as A
 import Options.Applicative
 
 data TerminationCommand

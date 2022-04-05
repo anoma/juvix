@@ -1,4 +1,5 @@
 {-# LANGUAGE UndecidableInstances #-}
+
 module MiniJuvix.Syntax.Concrete.Language
   ( module MiniJuvix.Syntax.Concrete.Language,
     module MiniJuvix.Syntax.Concrete.Name,
@@ -18,24 +19,24 @@ where
 
 --------------------------------------------------------------------------------
 
-import qualified Data.Kind as GHC
-import Prettyprinter
+import Data.Kind qualified as GHC
 import MiniJuvix.Prelude hiding (show)
-import MiniJuvix.Syntax.Concrete.Language.Stage
 import MiniJuvix.Syntax.Backends
-import MiniJuvix.Syntax.ForeignBlock
-import MiniJuvix.Syntax.Concrete.Loc
+import MiniJuvix.Syntax.Concrete.Language.Stage
 import MiniJuvix.Syntax.Concrete.Literal
+import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Syntax.Concrete.ModuleIsTop
 import MiniJuvix.Syntax.Concrete.Name
-import MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn
 import MiniJuvix.Syntax.Concrete.PublicAnn
 import MiniJuvix.Syntax.Concrete.Scoped.Name (unqualifiedSymbol)
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
+import MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn
 import MiniJuvix.Syntax.Fixity
+import MiniJuvix.Syntax.ForeignBlock
 import MiniJuvix.Syntax.Universe
 import MiniJuvix.Syntax.Usage
+import Prettyprinter
 import Prelude (show)
 
 --------------------------------------------------------------------------------
@@ -82,8 +83,7 @@ type family ImportType (s :: Stage) :: GHC.Type where
   ImportType 'Scoped = Module 'Scoped 'ModuleTop
 
 type ModulePathType :: Stage -> ModuleIsTop -> GHC.Type
-type family ModulePathType s t = res | res -> t s
-  where
+type family ModulePathType s t = res | res -> t s where
   ModulePathType 'Parsed 'ModuleTop = TopModulePath
   ModulePathType 'Scoped 'ModuleTop = S.TopModulePath
   ModulePathType 'Parsed 'ModuleLocal = Symbol
@@ -550,7 +550,7 @@ deriving stock instance
 type AxiomRef = AxiomRef' 'S.Concrete
 
 newtype AxiomRef' (n :: S.IsConcrete) = AxiomRef'
-  { _axiomRefName :: RefNameType n}
+  {_axiomRefName :: RefNameType n}
 
 instance Hashable (RefNameType s) => Hashable (AxiomRef' s) where
   hashWithSalt i = hashWithSalt i . _axiomRefName
@@ -681,8 +681,10 @@ instance HasAtomicity Expression where
 -- Expression atom
 --------------------------------------------------------------------------------
 
-data LiteralLoc = LiteralLoc { _literalLocLiteral :: Literal,
-                               _literalLocLoc :: Interval }
+data LiteralLoc = LiteralLoc
+  { _literalLocLiteral :: Literal,
+    _literalLocLoc :: Interval
+  }
   deriving stock (Show, Ord)
 
 instance HasAtomicity LiteralLoc where

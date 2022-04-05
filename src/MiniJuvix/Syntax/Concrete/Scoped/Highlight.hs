@@ -1,30 +1,29 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Highlight where
 
-import MiniJuvix.Syntax.Concrete.Scoped.Name
-import MiniJuvix.Syntax.Concrete.Loc
-import qualified MiniJuvix.Internal.Strings as Str
+import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Concrete.Loc
+import MiniJuvix.Syntax.Concrete.Scoped.Name
 import Prettyprinter
 import Prettyprinter.Render.Text
 
-data Face =
-  FaceConstructor
+data Face
+  = FaceConstructor
   | FaceInductive
   | FaceFunction
   | FaceModule
   | FaceAxiom
 
-newtype Property =
-  PropertyFace Face
+newtype Property
+  = PropertyFace Face
 
-data Instruction =
-  SetProperty {
-  _setPropertyInterval :: Interval,
-  _setPropertyProperty :: Property
+data Instruction = SetProperty
+  { _setPropertyInterval :: Interval,
+    _setPropertyProperty :: Property
   }
 
-data SExp =
-  Symbol Text
+data SExp
+  = Symbol Text
   | List [SExp]
   | Quote SExp
   | Int Word64
@@ -52,19 +51,19 @@ nameKindFace = \case
 --  '(face minijuvix-highlight-constructor-face))
 instr :: Interval -> Face -> SExp
 instr i f =
-  List [Symbol "add-text-properties", start , end, face]
+  List [Symbol "add-text-properties", start, end, face]
   where
-  pos l = Int (succ (l ^. locOffset . unPos))
-  start = pos (i ^. intStart)
-  end = pos (i ^. intEnd)
-  face = Quote (List [Symbol "face", faceSymbol ])
-  faceSymbol = Symbol ("minijuvix-highlight-" <> faceSymbolStr <> "-face")
-  faceSymbolStr = case f of
-    FaceAxiom -> Str.axiom
-    FaceInductive -> Str.inductive
-    FaceConstructor -> Str.constructor
-    FaceModule -> Str.module_
-    FaceFunction -> Str.function
+    pos l = Int (succ (l ^. locOffset . unPos))
+    start = pos (i ^. intStart)
+    end = pos (i ^. intEnd)
+    face = Quote (List [Symbol "face", faceSymbol])
+    faceSymbol = Symbol ("minijuvix-highlight-" <> faceSymbolStr <> "-face")
+    faceSymbolStr = case f of
+      FaceAxiom -> Str.axiom
+      FaceInductive -> Str.inductive
+      FaceConstructor -> Str.constructor
+      FaceModule -> Str.module_
+      FaceFunction -> Str.function
 
 goName :: Name -> Maybe SExp
 goName n = do
@@ -74,8 +73,8 @@ goName n = do
 renderSExp :: SExp -> Text
 renderSExp =
   renderStrict
-  . layoutPretty defaultLayoutOptions
-  . pretty
+    . layoutPretty defaultLayoutOptions
+    . pretty
 
 instance Pretty SExp where
   pretty = \case

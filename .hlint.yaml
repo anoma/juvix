@@ -8,15 +8,37 @@
 
 - extensions:
   - default: false
-  - name: [DeriveFunctor, GeneralizedNewtypeDeriving, OverloadedStrings]
-  - name: [MultiWayIf, PatternGuards, RecordWildCards]
-  - name: [ScopedTypeVariables]
-  - name: [ConstraintKinds, RankNTypes, TypeFamilies]
-  # - {name: nameEXT, within: [moduleName]}
+  - name:
+    - ApplicativeDo
+    - DataKinds
+    - DerivingStrategies
+    - GADTs
+    - ImportQualifiedPost
+    - LambdaCase
+    - NoImplicitPrelude
+    - OverloadedStrings
+    - QuasiQuotes
+    - RecordWildCards
+    - StandaloneKindSignatures
+    - TemplateHaskell
+    - TypeFamilyDependencies
+    - UndecidableInstances
+    - UnicodeSyntax
+    - GeneralizedNewtypeDeriving
 
 - flags:
   - default: false
-  - {name: [-Wno-incomplete-patterns, -Wno-overlapping-patterns , Wno-partial-fields]}
+  - name:
+    - -Wall
+    - -Wcompat
+    - -Wderiving-defaults
+    - -Widentities
+    - -Wincomplete-patterns
+    - -Wincomplete-record-updates
+    - -Wincomplete-uni-patterns
+    - -Wmissing-deriving-strategies
+    - -Wredundant-constraints
+    - -O2 -flate-specialise -fspecialise-aggressively
 
 - modules:
   # if you import Data.Set qualified, it must be as 'Set'
@@ -53,7 +75,4 @@
 
 - ignore: {name: Use let, within: [Test.All]}
 - ignore: {name: Use String}
-- ignore: {name: Avoid restricted flags}
-- ignore: {name: Avoid restricted extensions}
-# UndecidableInstances or StandaloneKindSignatures
 - ignore: {name: Avoid restricted qualification}

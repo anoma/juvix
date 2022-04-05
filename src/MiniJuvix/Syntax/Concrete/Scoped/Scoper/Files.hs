@@ -1,6 +1,6 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Scoper.Files where
 
-import qualified Data.HashMap.Strict as HashMap
+import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Prelude
 
 data Files m a where

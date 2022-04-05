@@ -6,10 +6,10 @@ module MiniJuvix.Syntax.MiniHaskell.Language
 where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.NameId
+import MiniJuvix.Syntax.Concrete.Language qualified as C
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
-import qualified MiniJuvix.Syntax.Concrete.Language as C
 import MiniJuvix.Syntax.Fixity
+import MiniJuvix.Syntax.NameId
 
 type FunctionName = Name
 

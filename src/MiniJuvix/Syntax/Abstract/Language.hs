@@ -5,9 +5,9 @@ module MiniJuvix.Syntax.Abstract.Language
 where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Language (ForeignBlock (..), LiteralLoc (..), Usage, BackendItem)
-import qualified MiniJuvix.Syntax.Concrete.Name as C
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Concrete.Language (BackendItem, ForeignBlock (..), LiteralLoc (..), Usage)
+import MiniJuvix.Syntax.Concrete.Name qualified as C
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.Universe
 
@@ -45,8 +45,8 @@ newtype ModuleBody = ModuleBody
   }
   deriving stock (Show, Eq)
 
-data Statement =
-  StatementInductive InductiveDef
+data Statement
+  = StatementInductive InductiveDef
   | StatementFunction FunctionDef
   | StatementImport TopModule
   | StatementForeign ForeignBlock
@@ -68,24 +68,24 @@ data FunctionClause = FunctionClause
   deriving stock (Show, Eq)
 
 newtype FunctionRef = FunctionRef
-  { _functionRefName :: Name }
+  {_functionRefName :: Name}
   deriving stock (Show, Eq)
-  deriving newtype Hashable
+  deriving newtype (Hashable)
 
 newtype ConstructorRef = ConstructorRef
-  { _constructorRefName :: Name }
+  {_constructorRefName :: Name}
   deriving stock (Show, Eq)
-  deriving newtype Hashable
+  deriving newtype (Hashable)
 
 newtype InductiveRef = InductiveRef
-  { _inductiveRefName :: Name }
+  {_inductiveRefName :: Name}
   deriving stock (Show, Eq)
-  deriving newtype Hashable
+  deriving newtype (Hashable)
 
 newtype AxiomRef = AxiomRef
-  { _axiomRefName :: Name }
+  {_axiomRefName :: Name}
   deriving stock (Show, Eq)
-  deriving newtype Hashable
+  deriving newtype (Hashable)
 
 data Iden
   = IdenFunction FunctionRef
@@ -212,8 +212,8 @@ makeLenses ''AxiomDef
 
 idenName :: Iden -> Name
 idenName = \case
-    IdenFunction n -> n ^. functionRefName
-    IdenConstructor n -> n ^. constructorRefName
-    IdenInductive n -> n ^. inductiveRefName
-    IdenVar n -> S.unqualifiedSymbol n
-    IdenAxiom n -> n ^. axiomRefName
+  IdenFunction n -> n ^. functionRefName
+  IdenConstructor n -> n ^. constructorRefName
+  IdenInductive n -> n ^. inductiveRefName
+  IdenVar n -> S.unqualifiedSymbol n
+  IdenAxiom n -> n ^. axiomRefName

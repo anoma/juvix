@@ -1,9 +1,9 @@
 module MiniJuvix.Syntax.MicroJuvix.Pretty.Base where
 
-import qualified MiniJuvix.Internal.Strings as Str
+import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.Backends
+import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.ForeignBlock
 import MiniJuvix.Syntax.MicroJuvix.Language
 import MiniJuvix.Syntax.MicroJuvix.Pretty.Ann
@@ -186,7 +186,7 @@ instance PrettyCode FunctionClause where
 
 instance PrettyCode Backend where
   ppCode = \case
-    BackendGhc  -> return kwGhc
+    BackendGhc -> return kwGhc
     BackendAgda -> return kwAgda
 
 instance PrettyCode ForeignBlock where
@@ -206,7 +206,6 @@ instance PrettyCode AxiomDef where
       [] -> return Nothing
       bs -> Just <$> ppBlock bs
     return $ kwAxiom <+> axiomName' <+> kwColon <+> axiomType' <+?> axiomBackendItems'
-
 
 instance PrettyCode Statement where
   ppCode = \case

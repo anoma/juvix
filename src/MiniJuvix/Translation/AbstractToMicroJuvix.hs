@@ -1,12 +1,12 @@
 module MiniJuvix.Translation.AbstractToMicroJuvix where
 
 import MiniJuvix.Prelude
-import qualified MiniJuvix.Syntax.Abstract.Language.Extra as A
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Abstract.Language.Extra qualified as A
+import MiniJuvix.Syntax.Concrete.Name (symbolLoc)
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.MicroJuvix.Language
 import MiniJuvix.Syntax.Universe
-import qualified MiniJuvix.Syntax.Usage as A
-import MiniJuvix.Syntax.Concrete.Name (symbolLoc)
+import MiniJuvix.Syntax.Usage qualified as A
 
 translateModule :: A.TopModule -> Module
 translateModule m =
@@ -28,8 +28,8 @@ goSymbol s =
       _nameId = s ^. S.nameId,
       _nameKind = getNameKind s,
       _nameDefined = s ^. S.nameDefined,
-      _nameLoc = s ^. S.nameConcrete . symbolLoc }
-
+      _nameLoc = s ^. S.nameConcrete . symbolLoc
+    }
 
 unsupported :: Text -> a
 unsupported thing = error ("Abstract to MicroJuvix: Not yet supported: " <> thing)
@@ -59,10 +59,11 @@ goTypeIden i = case i of
 
 goAxiomDef :: A.AxiomDef -> AxiomDef
 goAxiomDef a =
-  AxiomDef {
-  _axiomName = goSymbol (a ^. A.axiomName),
-  _axiomType = goType (a ^. A.axiomType),
-  _axiomBackendItems = a ^. A.axiomBackendItems }
+  AxiomDef
+    { _axiomName = goSymbol (a ^. A.axiomName),
+      _axiomType = goType (a ^. A.axiomType),
+      _axiomBackendItems = a ^. A.axiomBackendItems
+    }
 
 goFunctionParameter :: A.FunctionParameter -> Type
 goFunctionParameter f = case f ^. A.paramName of
@@ -108,8 +109,8 @@ goConstructorApp c =
 
 goTypeUniverse :: Universe -> Type
 goTypeUniverse u
- | 0 == fromMaybe 0 (u ^. universeLevel) = TypeUniverse
- | otherwise = unsupported "big universes"
+  | 0 == fromMaybe 0 (u ^. universeLevel) = TypeUniverse
+  | otherwise = unsupported "big universes"
 
 goType :: A.Expression -> Type
 goType e = case e of

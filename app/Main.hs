@@ -8,29 +8,29 @@ import Commands.Extra
 import Commands.MicroJuvix
 import Commands.MiniHaskell
 import Commands.Termination as T
+import Control.Exception qualified as IO
 import Control.Monad.Extra
-import qualified Control.Exception as IO
 import MiniJuvix.Prelude hiding (Doc)
-import qualified MiniJuvix.Syntax.Abstract.Pretty.Ansi as A
-import qualified MiniJuvix.Syntax.Concrete.Language as M
-import qualified MiniJuvix.Syntax.Concrete.Parser as M
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
-import qualified MiniJuvix.Syntax.Concrete.Scoped.InfoTable as Scoped
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Highlight as Scoped
+import MiniJuvix.Syntax.Abstract.Pretty.Ansi qualified as A
+import MiniJuvix.Syntax.Concrete.Language qualified as M
+import MiniJuvix.Syntax.Concrete.Parser qualified as M
+import MiniJuvix.Syntax.Concrete.Scoped.Highlight qualified as Scoped
+import MiniJuvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoped
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi qualified as M
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (defaultOptions)
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base qualified as M
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text as T
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as M
-import qualified MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi as Micro
-import qualified MiniJuvix.Syntax.MicroJuvix.TypeChecker as Micro
-import qualified MiniJuvix.Syntax.MicroJuvix.Language as Micro
-import qualified MiniJuvix.Termination as T
-import qualified MiniJuvix.Termination.CallGraph as A
-import qualified MiniJuvix.Translation.AbstractToMicroJuvix as Micro
-import qualified MiniJuvix.Translation.ScopedToAbstract as A
-import qualified MiniJuvix.Translation.MicroJuvixToMiniHaskell as Hask
-import qualified MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi as Hask
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text qualified as T
+import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as M
+import MiniJuvix.Syntax.MicroJuvix.Language qualified as Micro
+import MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi qualified as Micro
+import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as Micro
+import MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi qualified as Hask
+import MiniJuvix.Termination qualified as T
+import MiniJuvix.Termination.CallGraph qualified as A
+import MiniJuvix.Translation.AbstractToMicroJuvix qualified as Micro
+import MiniJuvix.Translation.MicroJuvixToMiniHaskell qualified as Hask
+import MiniJuvix.Translation.ScopedToAbstract qualified as A
 import MiniJuvix.Utils.Version (runDisplayVersion)
 import Options.Applicative
 import Options.Applicative.Help.Pretty
@@ -61,7 +61,7 @@ data ParseOptions = ParseOptions
   { _parseInputFile :: FilePath,
     _parseNoPrettyShow :: Bool
   }
-  
+
 newtype HighlightOptions = HighlightOptions
   { _highlightInputFile :: FilePath
   }
@@ -159,7 +159,6 @@ parseDisplayRoot =
     DisplayRoot
     (long "show-root" <> help "Print the detected root of the project")
 
-
 descr :: ParserInfo Command
 descr =
   info
@@ -179,18 +178,18 @@ descr =
 parseCommand :: Parser Command
 parseCommand =
   parseDisplayVersion
-  <|> parseDisplayRoot
-  <|> hsubparser
-          (mconcat
-
-            [ commandParse,
-              commandScope,
-              commandHtml,
-              commandTermination,
-              commandMicroJuvix,
-              commandMiniHaskell,
-              commandHighlight
-            ])
+    <|> parseDisplayRoot
+    <|> hsubparser
+      ( mconcat
+          [ commandParse,
+            commandScope,
+            commandHtml,
+            commandTermination,
+            commandMicroJuvix,
+            commandMiniHaskell,
+            commandHighlight
+          ]
+      )
   where
     commandMicroJuvix :: Mod CommandFields Command
     commandMicroJuvix = command "microjuvix" minfo
@@ -279,17 +278,17 @@ findRoot = do
       getCurrentDirectory
     Right root -> return root
   where
-  possiblePaths :: FilePath -> [FilePath]
-  possiblePaths start = takeWhile (/= "/") (aux start)
-    where
-    aux f = f : aux (takeDirectory f)
-  go :: IO FilePath
-  go = do
-    c <- getCurrentDirectory
-    l <- findFile (possiblePaths c) minijuvixYamlFile
-    case l of
-      Nothing -> return c
-      Just yaml -> return (takeDirectory yaml)
+    possiblePaths :: FilePath -> [FilePath]
+    possiblePaths start = takeWhile (/= "/") (aux start)
+      where
+        aux f = f : aux (takeDirectory f)
+    go :: IO FilePath
+    go = do
+      c <- getCurrentDirectory
+      l <- findFile (possiblePaths c) minijuvixYamlFile
+      case l of
+        Nothing -> return c
+        Just yaml -> return (takeDirectory yaml)
 
 runCommand :: Command -> IO ()
 runCommand c = do
@@ -300,7 +299,7 @@ runCommand c = do
     Scope opts@ScopeOptions {..} -> do
       forM_ _scopeInputFiles $ \scopeInputFile -> do
         m <- parseModuleIO scopeInputFile
-        (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+        (_, s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
         printer (mkScopePrettyOptions opts) s
       where
         printer :: M.Options -> M.Module 'M.Scoped 'M.ModuleTop -> IO ()
@@ -308,15 +307,15 @@ runCommand c = do
           | not _scopeNoColors = M.printPrettyCode
           | otherwise = T.printPrettyCode
     Highlight HighlightOptions {..} -> do
-        m <- parseModuleIO _highlightInputFile
-        (i , _) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
-        putStrLn (Scoped.go (i ^. Scoped.infoNames))
+      m <- parseModuleIO _highlightInputFile
+      (i, _) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+      putStrLn (Scoped.go (i ^. Scoped.infoNames))
     Parse ParseOptions {..} -> do
       m <- parseModuleIO _parseInputFile
       if _parseNoPrettyShow then print m else pPrint m
     Html HtmlOptions {..} -> do
       m <- parseModuleIO _htmlInputFile
-      (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+      (_, s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       genHtml defaultOptions _htmlRecursive _htmlTheme s
     MicroJuvix (Pretty MicroJuvixOptions {..}) -> do
       micro <- miniToMicro root _mjuvixInputFile
@@ -338,7 +337,7 @@ runCommand c = do
         Left es -> mapM_ printErrorAnsi es >> exitFailure
     Termination (Calls opts@CallsOptions {..}) -> do
       m <- parseModuleIO _callsInputFile
-      (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+      (_, s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
       let callMap0 = T.buildCallMap a
           callMap = case _callsFunctionNameFilter of
@@ -349,7 +348,7 @@ runCommand c = do
       putStrLn ""
     Termination (CallGraph CallGraphOptions {..}) -> do
       m <- parseModuleIO _graphInputFile
-      (_ , s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+      (_, s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
       (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
       let callMap = T.buildCallMap a
           opts' = A.defaultOptions
@@ -366,13 +365,13 @@ runCommand c = do
           Nothing -> putStrLn (n <> " Fails the termination checking")
           Just (T.LexOrder k) -> putStrLn (n <> " Terminates with order " <> show (toList k))
         putStrLn ""
-    where
-      miniToMicro :: FilePath -> FilePath -> IO Micro.Module
-      miniToMicro root p = do
-        m <- parseModuleIO p
-        (_, s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
-        (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
-        return (Micro.translateModule a)
+  where
+    miniToMicro :: FilePath -> FilePath -> IO Micro.Module
+    miniToMicro root p = do
+      m <- parseModuleIO p
+      (_, s) <- fromRightIO' printErrorAnsi $ M.scopeCheck1IO root m
+      (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
+      return (Micro.translateModule a)
 
 main :: IO ()
 main = execParser descr >>= runCommand

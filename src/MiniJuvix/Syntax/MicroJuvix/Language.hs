@@ -6,15 +6,14 @@ module MiniJuvix.Syntax.MicroJuvix.Language
 where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.ForeignBlock
 import MiniJuvix.Syntax.Backends
+import MiniJuvix.Syntax.Concrete.Language (HasLoc)
+import MiniJuvix.Syntax.Concrete.Language qualified as C
 import MiniJuvix.Syntax.Concrete.Scoped.Name (NameId (..))
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
-import qualified MiniJuvix.Syntax.Concrete.Language as C
 import MiniJuvix.Syntax.Fixity
+import MiniJuvix.Syntax.ForeignBlock
 import Prettyprinter
-import MiniJuvix.Syntax.Concrete.Language (HasLoc)
-
 
 type FunctionName = Name
 
@@ -64,8 +63,8 @@ newtype ModuleBody = ModuleBody
   { _moduleStatements :: [Statement]
   }
 
-data Statement =
-  StatementInductive InductiveDef
+data Statement
+  = StatementInductive InductiveDef
   | StatementFunction FunctionDef
   | StatementForeign ForeignBlock
   | StatementAxiom AxiomDef
@@ -96,9 +95,9 @@ data Iden
   | IdenAxiom Name
   deriving stock (Show)
 
-data TypedExpression = TypedExpression {
-  _typedType :: Type,
-  _typedExpression :: Expression
+data TypedExpression = TypedExpression
+  { _typedType :: Type,
+    _typedExpression :: Expression
   }
   deriving stock (Show)
 

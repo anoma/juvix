@@ -18,6 +18,6 @@ instance Pretty Literal where
   pretty = \case
     LitInteger n -> pretty n
     LitString s -> ppStringLit s
-     where
-     ppStringLit :: Text -> Doc a
-     ppStringLit = dquotes . pretty
+      where
+        ppStringLit :: Text -> Doc a
+        ppStringLit = dquotes . pretty

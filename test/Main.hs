@@ -1,16 +1,16 @@
 module Main (main) where
 
 import Base
-
-import qualified TypeCheck
-import qualified Scope
+import Scope qualified
+import TypeCheck qualified
 
 negatives :: TestTree
-negatives = testGroup "MiniJuvix tests" $
-  [
-  Scope.allTests,
-  TypeCheck.allTests
-  ]
+negatives =
+  testGroup
+    "MiniJuvix tests"
+    [ Scope.allTests,
+      TypeCheck.allTests
+    ]
 
 allTests :: TestTree
 allTests = negatives

@@ -4,11 +4,11 @@ module MiniJuvix.Syntax.Abstract.Pretty.Base
   )
 where
 
-import qualified MiniJuvix.Internal.Strings as Str
+import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.Language
 import MiniJuvix.Syntax.Abstract.Pretty.Ann
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as S
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base qualified as S
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.Universe
 import MiniJuvix.Syntax.Usage

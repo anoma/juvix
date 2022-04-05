@@ -4,11 +4,11 @@ module MiniJuvix.Termination.CallMap
   )
 where
 
-import qualified Data.HashMap.Strict as HashMap
+import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.Language.Extra
-import MiniJuvix.Termination.Types
 import MiniJuvix.Syntax.Concrete.Scoped.Name (unqualifiedSymbol)
+import MiniJuvix.Termination.Types
 
 -- | i = SizeInfo [v] ⇔ v is smaller than argument i of the caller function.
 -- Indexes are 0 based
@@ -89,8 +89,8 @@ checkModuleBody body = do
   mapM_ checkFunctionDef moduleFunctions
   mapM_ checkLocalModule moduleLocalModules
   where
-  moduleFunctions = [ f | StatementFunction f <- body ^. moduleStatements ]
-  moduleLocalModules = [ f | StatementLocalModule f <- body ^. moduleStatements ]
+    moduleFunctions = [f | StatementFunction f <- body ^. moduleStatements]
+    moduleLocalModules = [f | StatementLocalModule f <- body ^. moduleStatements]
 
 checkLocalModule :: Members '[State CallMap] r => LocalModule -> Sem r ()
 checkLocalModule m = checkModuleBody (m ^. moduleBody)
