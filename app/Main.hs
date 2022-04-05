@@ -122,6 +122,7 @@ parseScope = do
           <> value "."
           <> showDefault
           <> help "Root directory"
+          <> action "directory"
       )
   _scopeInputFiles <-
     some $
@@ -129,6 +130,7 @@ parseScope = do
         str
         ( metavar "MINIJUVIX_FILE(s)"
             <> help "Path to one ore more MiniJuvix files"
+            <> action "file"
         )
   _scopeShowIds <-
     switch
