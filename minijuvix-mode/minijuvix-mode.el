@@ -20,9 +20,18 @@
   (font-lock-mode 0)
   )
 
+(defun minijuvix-clear-annotations ()
+  "Remove all annotations from the current buffer."
+  (interactive)
+  (remove-list-of-text-properties (point-min) (point-max)
+                                  '(face))
+  )
+
 (defun minijuvix-load ()
   "Load current buffer."
   (interactive)
+  (save-buffer)
+  (minijuvix-clear-annotations)
   (eval (read (shell-command-to-string (concat "minijuvix highlight " (buffer-file-name)))))
   )
 
