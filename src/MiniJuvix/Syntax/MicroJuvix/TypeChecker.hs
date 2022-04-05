@@ -75,7 +75,7 @@ checkExpression ::
 checkExpression t e = do
   t' <- inferExpression' e
   let inferredType = t' ^. typedType
-  when (t /= inferredType) (throw (err inferredType))
+  unlessM (matchTypes t inferredType) (throw (err inferredType))
   return (ExpressionTyped t')
   where
     err infTy =
@@ -86,6 +86,17 @@ checkExpression t e = do
               _wrongTypeExpectedType = t
             }
         )
+
+matchTypes ::
+  Members '[Reader InfoTable] r =>
+  Type ->
+  Type ->
+  Sem r Bool
+matchTypes a b = do
+  a' <- normalizeType a
+  b' <- normalizeType b
+  return $
+    a' == TypeAny || b' == TypeAny || a' == b'
 
 inferExpression ::
   Members '[Reader InfoTable, Error TypeCheckerError, Reader LocalVars] r =>

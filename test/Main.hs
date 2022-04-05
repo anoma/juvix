@@ -4,16 +4,13 @@ import Base
 import Scope qualified
 import TypeCheck qualified
 
-negatives :: TestTree
-negatives =
+allTests :: TestTree
+allTests =
   testGroup
     "MiniJuvix tests"
     [ Scope.allTests,
       TypeCheck.allTests
     ]
-
-allTests :: TestTree
-allTests = negatives
 
 main :: IO ()
 main = defaultMain allTests

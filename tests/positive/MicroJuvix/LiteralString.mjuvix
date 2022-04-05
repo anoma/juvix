@@ -1,4 +1,4 @@
-module WrongTypeLiteralInt;
+module LiteralString;
   inductive A {
     a : A;
   };
@@ -8,5 +8,5 @@ module WrongTypeLiteralInt;
   };
 
   f : A;
-  f ≔ 1;
+  f ≔ "a";
 end;
