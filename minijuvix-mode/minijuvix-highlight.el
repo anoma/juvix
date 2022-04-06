@@ -4,7 +4,7 @@
   "Syntax highlighting for MiniJuvix."
   :group 'minijuvix)
 
-(defgroup agda2-highlight-faces nil
+(defgroup minijuvix-highlight-faces nil
   "Faces used to highlight MiniJuvix code."
   :group 'minijuvix-highlight)
 
