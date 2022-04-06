@@ -27,7 +27,7 @@
    (lambda ()
 
      (eval-after-load 'evil-maps
-       '(evil-leader/set-key-for-mode 'minijuvix-mode
+       '(evil-leader/set-key
           "l" 'minijuvix-load
           "g" 'minijuvix-goto-definition
           ))
