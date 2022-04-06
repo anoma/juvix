@@ -12,9 +12,6 @@
     map)
   "Keymap for MiniJuvix mode.")
 
-(evil-define-key 'normal 'global (kbd "<localleader>l") 'minijuvix-load)
-(add-hook 'minijuvix-mode-hook #'evil-normalize-keymaps)
-
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.m?juvix\\'" . minijuvix-mode))
 
