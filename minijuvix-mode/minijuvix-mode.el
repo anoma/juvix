@@ -19,6 +19,19 @@
 (define-derived-mode minijuvix-mode prog-mode "MiniJuvix"
 
   (font-lock-mode 0)
+  (setq-local comment-start "--")
+
+
+  (add-hook
+   'minijuvix-mode-hook
+   (lambda ()
+
+     (eval-after-load 'evil-maps
+       '(evil-leader/set-key-for-mode 'minijuvix-mode
+          "l" 'minijuvix-load
+          "g" 'minijuvix-goto-definition
+          ))
+     ))
   )
 
 (defun minijuvix-clear-annotations ()
