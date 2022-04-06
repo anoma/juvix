@@ -29,20 +29,24 @@ data Instruction =
 
 data SExp =
   Symbol Text
-  | List [SExp]
+  | App [SExp]
+  | Pair SExp SExp
   | Quote SExp
+  | Backquote SExp
   | Int Word64
+  | String String
 
 makeLenses ''Instruction
 
 go :: [ParsedItem] -> [Name] -> Text
 go items names =
   renderSExp (progn (map goParsedItem items
-                     <> mapMaybe goName names
+                     <> mapMaybe colorName names
+                     <> map gotoDefName names
                     ))
 
 progn :: [SExp] -> SExp
-progn l = List (Symbol "progn" : l)
+progn l = App (Symbol "progn" : l)
 
 nameKindFace :: NameKind -> Maybe Face
 nameKindFace = \case
@@ -59,12 +63,12 @@ nameKindFace = \case
 --  '(face minijuvix-highlight-constructor-face))
 instr :: Interval -> Face -> SExp
 instr i f =
-  List [Symbol "add-text-properties", start , end, face]
+  App [Symbol "add-text-properties", start , end, face]
   where
   pos l = Int (succ (l ^. locOffset . unPos))
   start = pos (i ^. intStart)
   end = pos (i ^. intEnd)
-  face = Quote (List [Symbol "face", faceSymbol faceSymbolStr])
+  face = Quote (App [Symbol "face", faceSymbol faceSymbolStr])
   faceSymbolStr = case f of
     FaceAxiom -> Str.axiom
     FaceInductive -> Str.inductive
@@ -86,10 +90,24 @@ goParsedItem i = instr (getLoc i) face
     ParsedTagLiteralInt -> FaceNumber
     ParsedTagLiteralString -> FaceString
 
-goName :: Name -> Maybe SExp
-goName n = do
+colorName :: Name -> Maybe SExp
+colorName n = do
   f <- nameKindFace (n ^. nameKind)
   return (instr (getLoc n) f)
+
+gotoDefName :: Name -> SExp
+gotoDefName n =
+  App [Symbol "add-text-properties", start , end, goto]
+  where
+  i = getLoc n
+  targetPos = succ (n ^. nameDefined . intStart . locOffset . unPos)
+  targetFile = n ^. nameDefined . intFile
+  goto = Quote (App [Symbol "minijuvix-goto", gotoPair])
+  pos l = Int (succ (l ^. locOffset . unPos))
+  start = pos (i ^. intStart)
+  end = pos (i ^. intEnd)
+  gotoPair = Pair (String targetFile) (Int targetPos)
+
 
 renderSExp :: SExp -> Text
 renderSExp =
@@ -101,5 +119,8 @@ instance Pretty SExp where
   pretty = \case
     Symbol s -> pretty s
     Int s -> pretty s
-    List l -> parens (sep (map pretty l))
-    Quote l -> pretty '`' <> pretty l
+    App l -> parens (sep (map pretty l))
+    Pair l r -> parens (pretty l <+> dot <+> pretty r)
+    Backquote l -> pretty '`' <> pretty l
+    Quote l -> pretty '\'' <> pretty l
+    String s -> dquotes (pretty s)

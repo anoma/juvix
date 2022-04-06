@@ -22,6 +22,7 @@ import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text as T
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as Scoper
+import MiniJuvix.Pipeline
 import qualified MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi as Micro
 import qualified MiniJuvix.Syntax.MicroJuvix.TypeChecker as Micro
 import qualified MiniJuvix.Syntax.MicroJuvix.Language as Micro
@@ -266,9 +267,8 @@ mkScopePrettyOptions ScopeOptions {..} =
 parseModuleIO :: FilePath -> IO (M.Module 'M.Parsed 'M.ModuleTop)
 parseModuleIO = fromRightIO id . Parser.runModuleParserIO
 
-parseModuleIO' :: FilePath -> IO Parser.ParserResult
-parseModuleIO' = fromRightIO id . Parser.runModuleParserIO'
-
+-- parseModuleIO' :: FilePath -> IO Parser.ParserResult
+-- parseModuleIO' = fromRightIO id . Parser.runModuleParserIO'
 
 minijuvixYamlFile :: FilePath
 minijuvixYamlFile = "minijuvix.yaml"
@@ -314,8 +314,14 @@ runCommand c = do
           | not _scopeNoColors = M.printPrettyCode
           | otherwise = T.printPrettyCode
     Highlight HighlightOptions {..} -> do
+      let
+        entryp :: EntryPoint
+        entryp = EntryPoint {
+          _entryRoot = root,
+          _entryModulePaths = pure _highlightInputFile
+          }
       parserRes <- parseModuleIO' _highlightInputFile
-      let parsedMod = parserRes ^. Parser.resultModules
+      let parsedMod = head (parserRes ^. Parser.resultModules)
       res <- fromRightIO' printErrorAnsi $ Scoper.scopeCheck1IO root parsedMod
       let
         parserTable = parserRes ^. Parser.resultTable

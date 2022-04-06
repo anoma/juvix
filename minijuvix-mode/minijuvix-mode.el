@@ -8,6 +8,7 @@
   (let ((map (make-sparse-keymap))
         (menu-map (make-sparse-keymap "MiniJuvix")))
     (define-key map "\C-c\C-l" 'minijuvix-load)
+    (define-key map (kbd "M-.") 'minijuvix-goto-definition)
     map)
   "Keymap for MiniJuvix mode.")
 
@@ -33,6 +34,13 @@
   (save-buffer)
   (minijuvix-clear-annotations)
   (eval (read (shell-command-to-string (concat "minijuvix highlight " (buffer-file-name)))))
+  )
+
+(defun minijuvix-goto-definition ()
+  "Goes to the definition of the symbol at point."
+  (interactive)
+  (message "goto")
+  (goto-char (cdr (get-text-property (point) 'minijuvix-goto)))
   )
 
 (provide 'minijuvix-mode)

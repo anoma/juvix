@@ -29,3 +29,9 @@ toAJuvixError = AJuvixError
 
 fromAJuvixError :: JuvixError e => AJuvixError -> Maybe e
 fromAJuvixError (AJuvixError e) = cast e
+
+throwJuvixError :: (JuvixError err, Member (Error AJuvixError) r) => err -> Sem r a
+throwJuvixError = throw . toAJuvixError
+
+instance JuvixError Text where
+  renderText = id

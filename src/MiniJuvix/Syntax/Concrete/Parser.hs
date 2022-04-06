@@ -16,33 +16,54 @@ import MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder
 import MiniJuvix.Syntax.Concrete.Lexer hiding (symbol)
 import MiniJuvix.Syntax.Concrete.Parser.ParserResult
 import MiniJuvix.Syntax.Concrete.Parser.InfoTable
+import MiniJuvix.Pipeline.EntryPoint
 
 --------------------------------------------------------------------------------
 -- Running the parser
 --------------------------------------------------------------------------------
 
+entryParser :: Members '[Files, Error Text] r => EntryPoint -> Sem r ParserResult
+entryParser e = do
+  (_resultTable, _resultModules) <- runInfoTableBuilder (mapM goFile (e ^. entryModulePaths))
+  let _resultEntry = e
+  return ParserResult {..}
+  where
+  goFile :: Members '[Files, Error Text, InfoTableBuilder] r =>
+     FilePath -> Sem r (Module 'Parsed 'ModuleTop)
+  goFile fileName = do
+    input <- readFile' fileName
+    case runModuleParser'' fileName input of
+      Left er -> throw er
+      Right (tbl, m) -> mergeTable tbl $> m
+
 runModuleParserIO :: FilePath -> IO (Either Text (Module 'Parsed 'ModuleTop))
 runModuleParserIO fileName =
-  fmap (fmap (^. resultModules)) (runModuleParserIO' fileName)
+  fmap (fmap snd) (runModuleParserIO' fileName)
 
-runModuleParserIO' :: FilePath -> IO (Either Text ParserResult)
+runModuleParserIO' :: FilePath -> IO (Either Text (InfoTable, Module 'Parsed 'ModuleTop))
 runModuleParserIO' fileName = do
   input <- Text.readFile fileName
-  return (runModuleParser' fileName input)
+  return (runModuleParser'' fileName input)
 
 runModuleParser :: FilePath -> Text -> Either Text (Module 'Parsed 'ModuleTop)
-runModuleParser fileName input = fmap (^. resultModules) (runModuleParser' fileName input)
+runModuleParser fileName input = fmap snd (runModuleParser'' fileName input)
 
 -- | The 'FilePath' is only used for reporting errors. It is safe to pass
 -- an empty string.
-runModuleParser' :: FilePath -> Text -> Either Text ParserResult
-runModuleParser' fileName input =
+runModuleParser'' :: FilePath -> Text -> Either Text (InfoTable, Module 'Parsed 'ModuleTop)
+runModuleParser'' fileName input =
   case run $ runInfoTableBuilder $ P.runParserT topModuleDef fileName input of
     (_, Left err) -> Left (Text.pack (P.errorBundlePretty err))
-    (tbl, Right r) -> return ParserResult {
-      _resultTable = tbl,
-      _resultModules = r
-      }
+    (tbl, Right r) -> return (tbl, r)
+
+-- runModuleParser' :: FilePath -> Text -> Either Text ParserResult
+-- runModuleParser' fileName input =
+--   mkResult <$> runModuleParser'' fileName input
+--   where
+--   mkResult (t, m) = ParserResult {
+--       _resultTable = t,
+--       _resultModules = pure m
+--       }
 
 topModuleDef :: Member InfoTableBuilder r => ParsecS r (Module 'Parsed 'ModuleTop)
 topModuleDef = space >> moduleDef <* (optional kwSemicolon >> P.eof)
