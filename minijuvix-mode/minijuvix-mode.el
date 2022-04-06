@@ -12,6 +12,8 @@
     map)
   "Keymap for MiniJuvix mode.")
 
+(evil-define-key 'normal 'global (kbd "<localleader>l") 'minijuvix-load)
+(add-hook 'minijuvix-mode-hook #'evil-normalize-keymaps)
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.m?juvix\\'" . minijuvix-mode))
@@ -25,14 +27,10 @@
   (add-hook
    'minijuvix-mode-hook
    (lambda ()
-
-     (eval-after-load 'evil-maps
-       '(evil-leader/set-key
-          "l" 'minijuvix-load
-          "g" 'minijuvix-goto-definition
-          ))
-     ))
-  )
+     (with-eval-after-load 'evil-maps
+       (evil-define-key 'normal minijuvix-mode-map (kbd "SPC m l") 'minijuvix-load)
+       (evil-define-key 'normal minijuvix-mode-map (kbd "SPC m g") 'minijuvix-goto-definition)
+       (evil-normalize-keymaps)))))
 
 (defun minijuvix-clear-annotations ()
   "Remove all annotations from the current buffer."
