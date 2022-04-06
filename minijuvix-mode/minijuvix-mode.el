@@ -20,11 +20,10 @@
   (font-lock-mode 0)
   (setq-local comment-start "--")
 
-
   (add-hook
    'minijuvix-mode-hook
    (lambda ()
-     (with-eval-after-load 'evil-maps
+     (with-eval-after-load 'evil
        (evil-define-key 'normal minijuvix-mode-map (kbd "SPC m l") 'minijuvix-load)
        (evil-define-key 'normal minijuvix-mode-map (kbd "SPC m g") 'minijuvix-goto-definition)
        (evil-normalize-keymaps)))))
