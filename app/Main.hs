@@ -10,6 +10,7 @@ import Commands.MiniHaskell
 import Commands.Termination as T
 import Control.Exception qualified as IO
 import Control.Monad.Extra
+import MiniJuvix.Pipeline
 import MiniJuvix.Prelude hiding (Doc)
 import MiniJuvix.Syntax.Abstract.Pretty.Ansi qualified as A
 import MiniJuvix.Syntax.Concrete.Language qualified as M
@@ -31,7 +32,6 @@ import MiniJuvix.Termination.CallGraph qualified as A
 import MiniJuvix.Translation.AbstractToMicroJuvix qualified as Micro
 import MiniJuvix.Translation.MicroJuvixToMiniHaskell qualified as Hask
 import MiniJuvix.Translation.ScopedToAbstract qualified as Abstract
-import MiniJuvix.Pipeline
 import MiniJuvix.Utils.Version (runDisplayVersion)
 import Options.Applicative
 import Options.Applicative.Help.Pretty
@@ -51,8 +51,7 @@ data Command
   | Highlight HighlightOptions
 
 data ScopeOptions = ScopeOptions
-  {
-    _scopeInputFiles :: NonEmpty FilePath,
+  { _scopeInputFiles :: NonEmpty FilePath,
     _scopeShowIds :: Bool,
     _scopeInlineImports :: Bool,
     _scopeNoColors :: Bool
@@ -292,18 +291,25 @@ class HasEntryPoint a where
 
 instance HasEntryPoint ScopeOptions where
   getEntryPoint root = EntryPoint root . _scopeInputFiles
+
 instance HasEntryPoint ParseOptions where
   getEntryPoint root = EntryPoint root . pure . _parseInputFile
+
 instance HasEntryPoint HighlightOptions where
   getEntryPoint root = EntryPoint root . pure . _highlightInputFile
+
 instance HasEntryPoint HtmlOptions where
   getEntryPoint root = EntryPoint root . pure . _htmlInputFile
+
 instance HasEntryPoint MicroJuvixOptions where
   getEntryPoint root = EntryPoint root . pure . _mjuvixInputFile
+
 instance HasEntryPoint MiniHaskellOptions where
   getEntryPoint root = EntryPoint root . pure . _mhaskellInputFile
+
 instance HasEntryPoint CallsOptions where
   getEntryPoint root = EntryPoint root . pure . _callsInputFile
+
 instance HasEntryPoint CallGraphOptions where
   getEntryPoint root = EntryPoint root . pure . _graphInputFile
 
@@ -379,11 +385,11 @@ runCommand c = do
           Nothing -> putStrLn (n <> " Fails the termination checking")
           Just (T.LexOrder k) -> putStrLn (n <> " Terminates with order " <> show (toList k))
         putStrLn ""
-    where
-      miniToMicro :: FilePath -> MicroJuvixOptions -> IO Micro.Module
-      miniToMicro root o = do
-        res <- runIO (upToAbstract (getEntryPoint root o))
-        return (Micro.translateModule (head (res ^. Abstract.resultModules)))
+  where
+    miniToMicro :: FilePath -> MicroJuvixOptions -> IO Micro.Module
+    miniToMicro root o = do
+      res <- runIO (upToAbstract (getEntryPoint root o))
+      return (Micro.translateModule (head (res ^. Abstract.resultModules)))
 
 main :: IO ()
 main = execParser descr >>= runCommand

@@ -3,8 +3,8 @@ module MiniJuvix.Syntax.Concrete.Scoped.Highlight where
 import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Loc
-import MiniJuvix.Syntax.Concrete.Scoped.Name
 import MiniJuvix.Syntax.Concrete.Parser.ParsedItem
+import MiniJuvix.Syntax.Concrete.Scoped.Name
 import Prettyprinter
 import Prettyprinter.Render.Text
 
@@ -26,8 +26,8 @@ data Instruction = SetProperty
     _setPropertyProperty :: Property
   }
 
-data SExp =
-  Symbol Text
+data SExp
+  = Symbol Text
   | App [SExp]
   | Pair SExp SExp
   | Quote SExp
@@ -39,10 +39,13 @@ makeLenses ''Instruction
 
 go :: [ParsedItem] -> [Name] -> Text
 go items names =
-  renderSExp (progn (map goParsedItem items
-                     <> mapMaybe colorName names
-                     <> map gotoDefName names
-                    ))
+  renderSExp
+    ( progn
+        ( map goParsedItem items
+            <> mapMaybe colorName names
+            <> map gotoDefName names
+        )
+    )
 
 progn :: [SExp] -> SExp
 progn l = App (Symbol "progn" : l)
@@ -62,21 +65,21 @@ nameKindFace = \case
 --  '(face minijuvix-highlight-constructor-face))
 instr :: Interval -> Face -> SExp
 instr i f =
-  App [Symbol "add-text-properties", start , end, face]
+  App [Symbol "add-text-properties", start, end, face]
   where
-  pos l = Int (succ (l ^. locOffset . unPos))
-  start = pos (i ^. intStart)
-  end = pos (i ^. intEnd)
-  face = Quote (App [Symbol "face", faceSymbol faceSymbolStr])
-  faceSymbolStr = case f of
-    FaceAxiom -> Str.axiom
-    FaceInductive -> Str.inductive
-    FaceConstructor -> Str.constructor
-    FaceModule -> Str.module_
-    FaceKeyword -> Str.keyword
-    FaceFunction -> Str.function
-    FaceNumber -> Str.number
-    FaceString -> Str.string
+    pos l = Int (succ (l ^. locOffset . unPos))
+    start = pos (i ^. intStart)
+    end = pos (i ^. intEnd)
+    face = Quote (App [Symbol "face", faceSymbol faceSymbolStr])
+    faceSymbolStr = case f of
+      FaceAxiom -> Str.axiom
+      FaceInductive -> Str.inductive
+      FaceConstructor -> Str.constructor
+      FaceModule -> Str.module_
+      FaceKeyword -> Str.keyword
+      FaceFunction -> Str.function
+      FaceNumber -> Str.number
+      FaceString -> Str.string
 
 faceSymbol :: Text -> SExp
 faceSymbol faceSymbolStr = Symbol ("minijuvix-highlight-" <> faceSymbolStr <> "-face")
@@ -84,10 +87,10 @@ faceSymbol faceSymbolStr = Symbol ("minijuvix-highlight-" <> faceSymbolStr <> "-
 goParsedItem :: ParsedItem -> SExp
 goParsedItem i = instr (getLoc i) face
   where
-  face = case i ^. parsedTag of
-    ParsedTagKeyword -> FaceKeyword
-    ParsedTagLiteralInt -> FaceNumber
-    ParsedTagLiteralString -> FaceString
+    face = case i ^. parsedTag of
+      ParsedTagKeyword -> FaceKeyword
+      ParsedTagLiteralInt -> FaceNumber
+      ParsedTagLiteralString -> FaceString
 
 colorName :: Name -> Maybe SExp
 colorName n = do
@@ -96,17 +99,16 @@ colorName n = do
 
 gotoDefName :: Name -> SExp
 gotoDefName n =
-  App [Symbol "add-text-properties", start , end, goto]
+  App [Symbol "add-text-properties", start, end, goto]
   where
-  i = getLoc n
-  targetPos = succ (n ^. nameDefined . intStart . locOffset . unPos)
-  targetFile = n ^. nameDefined . intFile
-  goto = Quote (App [Symbol "minijuvix-goto", gotoPair])
-  pos l = Int (succ (l ^. locOffset . unPos))
-  start = pos (i ^. intStart)
-  end = pos (i ^. intEnd)
-  gotoPair = Pair (String targetFile) (Int targetPos)
-
+    i = getLoc n
+    targetPos = succ (n ^. nameDefined . intStart . locOffset . unPos)
+    targetFile = n ^. nameDefined . intFile
+    goto = Quote (App [Symbol "minijuvix-goto", gotoPair])
+    pos l = Int (succ (l ^. locOffset . unPos))
+    start = pos (i ^. intStart)
+    end = pos (i ^. intEnd)
+    gotoPair = Pair (String targetFile) (Int targetPos)
 
 renderSExp :: SExp -> Text
 renderSExp =

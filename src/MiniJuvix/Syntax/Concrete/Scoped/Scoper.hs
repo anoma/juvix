@@ -1,34 +1,33 @@
 -- | Limitations:
 -- 1. A symbol introduced by a type signature can only be used once per Module.
---
-module MiniJuvix.Syntax.Concrete.Scoped.Scoper (
-  module MiniJuvix.Syntax.Concrete.Scoped.Scoper,
-  module MiniJuvix.Syntax.Concrete.Scoped.Scoper.ScoperResult,
-  module MiniJuvix.Syntax.Concrete.Scoped.Error,
-    ) where
+module MiniJuvix.Syntax.Concrete.Scoped.Scoper
+  ( module MiniJuvix.Syntax.Concrete.Scoped.Scoper,
+    module MiniJuvix.Syntax.Concrete.Scoped.Scoper.ScoperResult,
+    module MiniJuvix.Syntax.Concrete.Scoped.Error,
+  )
+where
 
-import qualified Control.Monad.Combinators.Expr as P
-import qualified Data.HashMap.Strict as HashMap
-import qualified Data.HashSet as HashSet
-import qualified Data.List.NonEmpty as NonEmpty
-import qualified Data.Stream as Stream
+import Control.Monad.Combinators.Expr qualified as P
+import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
+import Data.List.NonEmpty qualified as NonEmpty
+import Data.Stream qualified as Stream
 import Lens.Micro.Platform
+import MiniJuvix.Pipeline.EntryPoint
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Base qualified as P
 import MiniJuvix.Syntax.Concrete.Language
+import MiniJuvix.Syntax.Concrete.Name qualified as N
 import MiniJuvix.Syntax.Concrete.Parser (runModuleParser'')
+import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
+import MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder (mergeTable)
+import MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder qualified as Parser
+import MiniJuvix.Syntax.Concrete.Parser.ParserResult (ParserResult)
 import MiniJuvix.Syntax.Concrete.Scoped.Error
 import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
-import MiniJuvix.Syntax.Concrete.Name qualified as N
 import MiniJuvix.Syntax.Concrete.Scoped.Scope
-import qualified MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper.InfoTableBuilder
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper.ScoperResult
-import qualified MiniJuvix.Syntax.Concrete.Parser as Parser
-import MiniJuvix.Syntax.Concrete.Parser.ParserResult (ParserResult)
-import MiniJuvix.Pipeline.EntryPoint
-import MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder (mergeTable)
-
 
 entryScoper :: Members '[Error ScopeError, Files] r => ParserResult -> Sem r ScoperResult
 entryScoper pr = do
@@ -43,35 +42,36 @@ scopeCheck ::
   NonEmpty (Module 'Parsed 'ModuleTop) ->
   Sem r ScoperResult
 scopeCheck pr root modules =
-   fmap mkResult $
-   Parser.runInfoTableBuilder $
-   runInfoTableBuilder $
-    runReader scopeParameters $
-      evalState iniScoperState $ do
-        mergeTable (pr ^. Parser.resultTable)
-        mapM checkTopModule_ modules
+  fmap mkResult $
+    Parser.runInfoTableBuilder $
+      runInfoTableBuilder $
+        runReader scopeParameters $
+          evalState iniScoperState $ do
+            mergeTable (pr ^. Parser.resultTable)
+            mapM checkTopModule_ modules
   where
-  mkResult :: (Parser.InfoTable, (InfoTable, NonEmpty (Module 'Scoped 'ModuleTop))) -> ScoperResult
-  mkResult (pt, (st, ms)) = ScoperResult {
-    _resultParserResult = pr,
-    _resultParserTable = pt,
-    _resultScoperTable = st,
-    _resultModules = ms
-    }
-  iniScoperState :: ScoperState
-  iniScoperState =
-    ScoperState
-      { _scoperModulesCache = ModulesCache mempty,
-        _scoperFreeNames = S.allNameIds,
-        _scoperModules = mempty
-      }
-  scopeParameters :: ScopeParameters
-  scopeParameters =
-    ScopeParameters
-      { _scopeRootPath = root,
-        _scopeFileExtension = ".mjuvix",
-        _scopeTopParents = mempty
-      }
+    mkResult :: (Parser.InfoTable, (InfoTable, NonEmpty (Module 'Scoped 'ModuleTop))) -> ScoperResult
+    mkResult (pt, (st, ms)) =
+      ScoperResult
+        { _resultParserResult = pr,
+          _resultParserTable = pt,
+          _resultScoperTable = st,
+          _resultModules = ms
+        }
+    iniScoperState :: ScoperState
+    iniScoperState =
+      ScoperState
+        { _scoperModulesCache = ModulesCache mempty,
+          _scoperFreeNames = S.allNameIds,
+          _scoperModules = mempty
+        }
+    scopeParameters :: ScopeParameters
+    scopeParameters =
+      ScopeParameters
+        { _scopeRootPath = root,
+          _scopeFileExtension = ".mjuvix",
+          _scopeTopParents = mempty
+        }
 
 freshNameId ::
   Members '[State ScoperState] r =>
@@ -486,54 +486,54 @@ checkTopModule m@(Module path params body) = do
   modify (over (scoperModulesCache . cachedModules) (HashMap.insert path r))
   return r
   where
-  checkPath :: Members '[Files, Reader ScopeParameters, Error ScopeError] s => Sem s ()
-  checkPath = do
-    expectedPath <- modulePathToFilePath path
-    let actualPath = getLoc path ^. intFile
-    unlessM (fromMaybe True <$> equalPaths' expectedPath actualPath) $
-      throw
-        ( ErrWrongTopModuleName
-            WrongTopModuleName
-              { _wrongTopModuleNameActualName = path,
-                _wrongTopModuleNameExpectedPath = expectedPath,
-                _wrongTopModuleNameActualPath = actualPath
-              }
-        )
-  freshTopModulePath ::
-    forall s.
-    Members '[State ScoperState] s =>
-    Sem s S.TopModulePath
-  freshTopModulePath = do
-    _nameId <- freshNameId
-    let _nameDefinedIn = S.topModulePathToAbsPath path
-        _nameConcrete = path
-        _nameDefined = getLoc (_modulePathName path)
-        _nameKind = S.KNameTopModule
-        _nameFixity = Nothing
-        -- This visibility annotation is not relevant
-        _nameVisibilityAnn = VisPublic
-        _nameWhyInScope = S.BecauseDefined
-        _nameVerbatim = N.topModulePathToDottedPath path
-        moduleName = S.Name' {..}
-    -- registerName moduleName
-    return moduleName
-  iniScope :: Scope
-  iniScope = emptyScope (getTopModulePath m)
-  checkedModule :: Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
-  checkedModule = do
-    evalState iniScope $ do
-      path' <- freshTopModulePath
-      localScope $
-        withParams params $ \params' -> do
-          (_moduleExportInfo, body') <- checkModuleBody body
-          let _moduleRefModule =
-                Module
-                  { _modulePath = path',
-                    _moduleParameters = params',
-                    _moduleBody = body'
-                  }
-              _moduleRefName = set S.nameConcrete () path'
-          return ModuleRef'' {..}
+    checkPath :: Members '[Files, Reader ScopeParameters, Error ScopeError] s => Sem s ()
+    checkPath = do
+      expectedPath <- modulePathToFilePath path
+      let actualPath = getLoc path ^. intFile
+      unlessM (fromMaybe True <$> equalPaths' expectedPath actualPath) $
+        throw
+          ( ErrWrongTopModuleName
+              WrongTopModuleName
+                { _wrongTopModuleNameActualName = path,
+                  _wrongTopModuleNameExpectedPath = expectedPath,
+                  _wrongTopModuleNameActualPath = actualPath
+                }
+          )
+    freshTopModulePath ::
+      forall s.
+      Members '[State ScoperState] s =>
+      Sem s S.TopModulePath
+    freshTopModulePath = do
+      _nameId <- freshNameId
+      let _nameDefinedIn = S.topModulePathToAbsPath path
+          _nameConcrete = path
+          _nameDefined = getLoc (_modulePathName path)
+          _nameKind = S.KNameTopModule
+          _nameFixity = Nothing
+          -- This visibility annotation is not relevant
+          _nameVisibilityAnn = VisPublic
+          _nameWhyInScope = S.BecauseDefined
+          _nameVerbatim = N.topModulePathToDottedPath path
+          moduleName = S.Name' {..}
+      -- registerName moduleName
+      return moduleName
+    iniScope :: Scope
+    iniScope = emptyScope (getTopModulePath m)
+    checkedModule :: Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
+    checkedModule = do
+      evalState iniScope $ do
+        path' <- freshTopModulePath
+        localScope $
+          withParams params $ \params' -> do
+            (_moduleExportInfo, body') <- checkModuleBody body
+            let _moduleRefModule =
+                  Module
+                    { _modulePath = path',
+                      _moduleParameters = params',
+                      _moduleBody = body'
+                    }
+                _moduleRefName = set S.nameConcrete () path'
+            return ModuleRef'' {..}
 
 withScope :: Members '[State Scope] r => Sem r a -> Sem r a
 withScope ma = do

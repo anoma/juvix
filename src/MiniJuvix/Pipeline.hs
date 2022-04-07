@@ -11,11 +11,11 @@ import MiniJuvix.Pipeline.EntryPoint
 import MiniJuvix.Pipeline.Stage
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.AbstractResult qualified as Abstract
-import MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult qualified as MicroJuvix
 import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
-import MiniJuvix.Translation.ScopedToAbstract qualified as Abstract
+import MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult qualified as MicroJuvix
 import MiniJuvix.Translation.AbstractToMicroJuvix qualified as MicroJuvix
+import MiniJuvix.Translation.ScopedToAbstract qualified as Abstract
 
 type StageInput :: Pipe -> GHC.Type
 type family StageInput c = res where

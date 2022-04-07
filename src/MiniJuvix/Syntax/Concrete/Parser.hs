@@ -1,22 +1,23 @@
-module MiniJuvix.Syntax.Concrete.Parser (
-  module MiniJuvix.Syntax.Concrete.Parser,
-  module MiniJuvix.Syntax.Concrete.Parser.ParserResult,
-  module MiniJuvix.Syntax.Concrete.Parser.InfoTable,
-  ) where
+module MiniJuvix.Syntax.Concrete.Parser
+  ( module MiniJuvix.Syntax.Concrete.Parser,
+    module MiniJuvix.Syntax.Concrete.Parser.ParserResult,
+    module MiniJuvix.Syntax.Concrete.Parser.InfoTable,
+  )
+where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Singletons
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
+import MiniJuvix.Pipeline.EntryPoint
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Base (MonadParsec)
 import MiniJuvix.Syntax.Concrete.Base qualified as P
 import MiniJuvix.Syntax.Concrete.Language
-import MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder
 import MiniJuvix.Syntax.Concrete.Lexer hiding (symbol)
-import MiniJuvix.Syntax.Concrete.Parser.ParserResult
 import MiniJuvix.Syntax.Concrete.Parser.InfoTable
-import MiniJuvix.Pipeline.EntryPoint
+import MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder
+import MiniJuvix.Syntax.Concrete.Parser.ParserResult
 
 --------------------------------------------------------------------------------
 -- Running the parser
@@ -28,13 +29,15 @@ entryParser e = do
   let _resultEntry = e
   return ParserResult {..}
   where
-  goFile :: Members '[Files, Error Text, InfoTableBuilder] r =>
-     FilePath -> Sem r (Module 'Parsed 'ModuleTop)
-  goFile fileName = do
-    input <- readFile' fileName
-    case runModuleParser'' fileName input of
-      Left er -> throw er
-      Right (tbl, m) -> mergeTable tbl $> m
+    goFile ::
+      Members '[Files, Error Text, InfoTableBuilder] r =>
+      FilePath ->
+      Sem r (Module 'Parsed 'ModuleTop)
+    goFile fileName = do
+      input <- readFile' fileName
+      case runModuleParser'' fileName input of
+        Left er -> throw er
+        Right (tbl, m) -> mergeTable tbl $> m
 
 runModuleParserIO :: FilePath -> IO (Either Text (Module 'Parsed 'ModuleTop))
 runModuleParserIO fileName =
@@ -198,8 +201,9 @@ literalString = do
 
 literal :: Member InfoTableBuilder r => ParsecS r LiteralLoc
 literal = do
-  l <- literalInteger
-     <|> literalString
+  l <-
+    literalInteger
+      <|> literalString
   P.lift (registerLiteral l)
 
 --------------------------------------------------------------------------------
@@ -260,7 +264,8 @@ typeSignature _sigName = do
 -------------------------------------------------------------------------------
 
 -- | Used to minimize the amount of required @P.try@s.
-auxTypeSigFunClause :: Member InfoTableBuilder r =>
+auxTypeSigFunClause ::
+  Member InfoTableBuilder r =>
   ParsecS r (Either (TypeSignature 'Parsed) (FunctionClause 'Parsed))
 auxTypeSigFunClause = do
   s <- symbol

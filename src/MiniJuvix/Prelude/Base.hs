@@ -78,7 +78,7 @@ import Data.Function
 import Data.Functor
 import Data.HashMap.Strict (HashMap)
 import Data.HashSet (HashSet)
-import qualified Data.HashSet as HashSet
+import Data.HashSet qualified as HashSet
 import Data.Hashable
 import Data.Int
 import Data.List.Extra hiding (head, last)
