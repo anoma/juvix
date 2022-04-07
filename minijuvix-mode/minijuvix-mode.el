@@ -7,7 +7,7 @@
 (defvar minijuvix-mode-map
   (let ((map (make-sparse-keymap))
         (menu-map (make-sparse-keymap "MiniJuvix")))
-    (define-key map "\C-c\C-l" 'minijuvix-load)
+    (define-key map (kbd "C-c C-l") 'minijuvix-load)
     (define-key map (kbd "M-.") 'minijuvix-goto-definition)
     map)
   "Keymap for MiniJuvix mode.")
@@ -26,7 +26,8 @@
      (with-eval-after-load 'evil
        (evil-define-key 'normal minijuvix-mode-map (kbd "SPC m l") 'minijuvix-load)
        (evil-define-key 'normal minijuvix-mode-map (kbd "SPC m g") 'minijuvix-goto-definition)
-       (evil-normalize-keymaps)))))
+       (evil-normalize-keymaps))))
+  )
 
 (defun minijuvix-clear-annotations ()
   "Remove all annotations from the current buffer."
