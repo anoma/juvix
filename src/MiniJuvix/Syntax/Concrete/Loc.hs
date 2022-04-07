@@ -3,7 +3,7 @@ module MiniJuvix.Syntax.Concrete.Loc where
 import MiniJuvix.Prelude
 import Prettyprinter
 
-newtype Pos = Pos {_unPos :: Word64 }
+newtype Pos = Pos {_unPos :: Word64}
   deriving stock (Show, Eq, Ord)
   deriving newtype (Hashable)
 

@@ -1,7 +1,7 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Name
   ( module MiniJuvix.Syntax.Concrete.Scoped.Name,
     module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind,
-    module MiniJuvix.Syntax.NameId
+    module MiniJuvix.Syntax.NameId,
   )
 where
 
@@ -9,11 +9,11 @@ import Data.Stream (Stream (Cons))
 import Lens.Micro.Platform
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Loc
-import qualified MiniJuvix.Syntax.Concrete.Name as C
-import MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn
-import MiniJuvix.Syntax.NameId
+import MiniJuvix.Syntax.Concrete.Name qualified as C
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
-import qualified MiniJuvix.Syntax.Fixity as C
+import MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn
+import MiniJuvix.Syntax.Fixity qualified as C
+import MiniJuvix.Syntax.NameId
 
 --------------------------------------------------------------------------------
 -- Names
@@ -40,8 +40,8 @@ isChildOf :: AbsModulePath -> AbsModulePath -> Bool
 isChildOf child parent
   | null (absLocalPath child) = False
   | otherwise =
-    init (absLocalPath child) == absLocalPath parent
-      && absTopModulePath child == absTopModulePath parent
+      init (absLocalPath child) == absLocalPath parent
+        && absTopModulePath child == absTopModulePath parent
 
 -- | Appends a local path to the absolute path
 -- e.g. TopMod.Local <.> Inner == TopMod.Local.Inner

@@ -4,15 +4,15 @@ module MiniJuvix.Termination.Types
   )
 where
 
-import qualified Data.HashMap.Strict as HashMap
+import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Prelude
-import qualified MiniJuvix.Syntax.Abstract.Language as A
+import MiniJuvix.Syntax.Abstract.Language (functionRefName)
+import MiniJuvix.Syntax.Abstract.Language qualified as A
 import MiniJuvix.Syntax.Abstract.Pretty.Base
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Concrete.Scoped.Name (nameUnqualify)
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Termination.Types.SizeRelation
 import Prettyprinter as PP
-import MiniJuvix.Syntax.Abstract.Language (functionRefName)
-import MiniJuvix.Syntax.Concrete.Scoped.Name (nameUnqualify)
 
 newtype CallMap = CallMap
   { _callMap :: HashMap A.FunctionRef (HashMap A.FunctionRef [FunCall])

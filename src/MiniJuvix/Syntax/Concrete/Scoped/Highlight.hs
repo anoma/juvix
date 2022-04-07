@@ -1,15 +1,14 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Highlight where
 
-import MiniJuvix.Syntax.Concrete.Scoped.Name
-import MiniJuvix.Syntax.Concrete.Loc
-import MiniJuvix.Syntax.Concrete.Parser.ParsedItem
-import qualified MiniJuvix.Internal.Strings as Str
+import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Concrete.Loc
+import MiniJuvix.Syntax.Concrete.Scoped.Name
 import Prettyprinter
 import Prettyprinter.Render.Text
 
-data Face =
-  FaceConstructor
+data Face
+  = FaceConstructor
   | FaceInductive
   | FaceFunction
   | FaceModule
@@ -18,13 +17,12 @@ data Face =
   | FaceString
   | FaceNumber
 
-data Property =
-  PropertyFace Face
+newtype Property
+  = PropertyFace Face
 
-data Instruction =
-  SetProperty {
-  _setPropertyInterval :: Interval,
-  _setPropertyProperty :: Property
+data Instruction = SetProperty
+  { _setPropertyInterval :: Interval,
+    _setPropertyProperty :: Property
   }
 
 data SExp =
@@ -112,8 +110,8 @@ gotoDefName n =
 renderSExp :: SExp -> Text
 renderSExp =
   renderStrict
-  . layoutPretty defaultLayoutOptions
-  . pretty
+    . layoutPretty defaultLayoutOptions
+    . pretty
 
 instance Pretty SExp where
   pretty = \case

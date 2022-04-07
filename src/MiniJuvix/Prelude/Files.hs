@@ -1,7 +1,7 @@
 module MiniJuvix.Prelude.Files where
 
-import qualified Data.HashMap.Strict as HashMap
-import MiniJuvix.Prelude.Base
+import Data.HashMap.Strict qualified as HashMap
+import MiniJuvix.Prelude
 
 data Files m a where
   ReadFile' :: FilePath -> Files m Text

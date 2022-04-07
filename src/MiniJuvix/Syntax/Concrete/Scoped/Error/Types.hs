@@ -6,7 +6,7 @@ where
 
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Language
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Concrete.Scoped.Scope
 
 data MultipleDeclarations = MultipleDeclarations

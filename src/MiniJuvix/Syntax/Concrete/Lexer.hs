@@ -1,14 +1,15 @@
 module MiniJuvix.Syntax.Concrete.Lexer where
 
-import qualified Data.Text as Text
+--------------------------------------------------------------------------------
+
+import Data.Text qualified as Text
 import GHC.Unicode
-import qualified MiniJuvix.Internal.Strings as Str
+import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Base hiding (Pos, space)
-import MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder
-import qualified MiniJuvix.Syntax.Concrete.Base as P
+import MiniJuvix.Syntax.Concrete.Base qualified as P
 import MiniJuvix.Syntax.Concrete.Loc
-import qualified Text.Megaparsec.Char.Lexer as L
+import Text.Megaparsec.Char.Lexer qualified as L
 
 type OperatorSym = Text
 type ParsecS r = ParsecT Void Text (Sem r)

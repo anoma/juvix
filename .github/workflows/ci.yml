@@ -9,29 +9,53 @@ on:
       - dev
 
 jobs:
+
+  ormolu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: mrkkrp/ormolu-action@v5
+        with:
+          extra-args: >-
+            --ghc-opt -XDerivingStrategies
+            --ghc-opt -XImportQualifiedPost
+            --ghc-opt -XMultiParamTypeClasses
+            --ghc-opt -XStandaloneDeriving
+            --ghc-opt -XTemplateHaskell
+            --ghc-opt -XUnicodeSyntax
+
+  hlint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: 'Set up HLint'
+      uses: rwe/actions-hlint-setup@v1
+      with:
+        version: '3.1.6'
+    - name: 'Run HLint'
+      uses: rwe/actions-hlint-run@v2.0.1
+      with:
+        path: '["src/", "app/", "test/"]'
+        fail-on: warning
+
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ ubuntu-latest , macOS-latest ]
-        # Explicit GHC version, e.g."9.0.2", "8.10.7"
         ghc: ["9.2.2"]
     steps:
-      - uses: actions/cache@v2
-        name: Caching
+      - uses: actions/cache@v3
+        name: Cache Stack
         id: cache
         env:
           cache-name: cache-env
         with:
           path: |
             ~/.stack
-            ~/.cabal
-            dist-newstyle
-            main/.stack-work/
+            main/.stack-work
             main/.hie
-            main/dist-newstyle
-            main/cabal-dev
-          key: ${{ runner.os }}-build-${{ matrix.ghc }}-${{ hashFiles('main/src/**') }}
+          key: ${{ runner.os }}-build-${{ matrix.ghc }}-${{ hashFiles('main/src/**/*.hs', 'main/app/**/*.hs',  'main/test/**/*.hs', 'main/package.yaml', 'main/stack.yaml') }}
           restore-keys: |
             ${{ runner.os }}-build-${{ matrix.ghc }}-
             ${{ runner.os }}-build-
@@ -59,7 +83,7 @@ jobs:
           cd main
           make minijuvix-stdlib
 
-  stack-test:
+  test:
     needs: build
     runs-on: ${{ matrix.os }}
     strategy:
@@ -67,60 +91,20 @@ jobs:
         os: [ macOS-latest , ubuntu-latest ]
         ghc: ["9.2.2"]
     steps:
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         id: cache-build
         with:
           path: |
             ~/.stack
-            ~/.cabal
-            dist-newstyle
             main/.stack-work/
             main/.hie
-            main/dist-newstyle
-            main/cabal-dev
-          key: ${{ runner.os }}-build-${{ matrix.ghc }}
+          key: ${{ runner.os }}-build-${{ matrix.ghc }}-
       - name: Checkout the main repository
         uses: actions/checkout@v2
         with:
           path: main
       - name: Test suite
-        id: stack-test
+        id: test
         run: |
           cd main
           make test
-
-  ormolu:
-    needs: build
-    if:  ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ ubuntu-latest ]
-        ghc: ["9.2.2"]
-    steps:
-      - uses: actions/cache@v2
-        id: cache-build
-        with:
-          path: |
-            ~/.stack
-            ~/.cabal
-            dist-newstyle
-            main/.stack-work/
-            main/.hie
-            main/dist-newstyle
-            main/cabal-dev
-          key: ${{ runner.os }}-build-${{ matrix.ghc }}
-      - name: Checkout the main repository
-        uses: actions/checkout@v2
-        with:
-          path: main
-      - name: Build Ormolu
-        id: install-ormolu
-        run: |
-          cd main
-          stack install ormolu
-      - name: Stack build
-        id: check-ormolu
-        run: |
-          cd main
-          make check-ormolu

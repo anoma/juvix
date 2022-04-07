@@ -8,30 +8,29 @@ import Commands.Extra
 import Commands.MicroJuvix
 import Commands.MiniHaskell
 import Commands.Termination as T
+import Control.Exception qualified as IO
 import Control.Monad.Extra
-import qualified Control.Exception as IO
 import MiniJuvix.Prelude hiding (Doc)
-import qualified MiniJuvix.Syntax.Abstract.Pretty.Ansi as A
-import qualified MiniJuvix.Syntax.Concrete.Language as M
-import qualified MiniJuvix.Syntax.Concrete.Parser as Parser
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
-import qualified MiniJuvix.Syntax.Concrete.Scoped.InfoTable as Scoper
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Highlight as Scoped
+import MiniJuvix.Syntax.Abstract.Pretty.Ansi qualified as A
+import MiniJuvix.Syntax.Concrete.Language qualified as M
+import MiniJuvix.Syntax.Concrete.Parser qualified as M
+import MiniJuvix.Syntax.Concrete.Scoped.Highlight qualified as Scoped
+import MiniJuvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoped
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi qualified as M
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (defaultOptions)
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base qualified as M
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text as T
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Scoper as Scoper
-import MiniJuvix.Pipeline
-import qualified MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi as Micro
-import qualified MiniJuvix.Syntax.MicroJuvix.TypeChecker as Micro
-import qualified MiniJuvix.Syntax.MicroJuvix.Language as Micro
-import qualified MiniJuvix.Termination as T
-import qualified MiniJuvix.Termination.CallGraph as A
-import qualified MiniJuvix.Translation.AbstractToMicroJuvix as Micro
-import qualified MiniJuvix.Translation.ScopedToAbstract as Abstract
-import qualified MiniJuvix.Translation.MicroJuvixToMiniHaskell as Hask
-import qualified MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi as Hask
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text qualified as T
+import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as M
+import MiniJuvix.Syntax.MicroJuvix.Language qualified as Micro
+import MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi qualified as Micro
+import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as Micro
+import MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi qualified as Hask
+import MiniJuvix.Termination qualified as T
+import MiniJuvix.Termination.CallGraph qualified as A
+import MiniJuvix.Translation.AbstractToMicroJuvix qualified as Micro
+import MiniJuvix.Translation.MicroJuvixToMiniHaskell qualified as Hask
+import MiniJuvix.Translation.ScopedToAbstract qualified as A
 import MiniJuvix.Utils.Version (runDisplayVersion)
 import Options.Applicative
 import Options.Applicative.Help.Pretty
@@ -63,7 +62,7 @@ data ParseOptions = ParseOptions
     _parseNoPrettyShow :: Bool
   }
 
-data HighlightOptions = HighlightOptions
+newtype HighlightOptions = HighlightOptions
   { _highlightInputFile :: FilePath
   }
 
@@ -121,14 +120,11 @@ parseScope = do
         str
         ( metavar "MINIJUVIX_FILE(s)"
             <> help "Path to one ore more MiniJuvix files"
+            <> action "file"
         )
   _scopeShowIds <-
     switch
       ( long "show-name-ids"
-          <> help "Show the unique number of each identifier"
-      )
-  _scopeInlineImports <-
-    switch
       ( long "inline-imports"
           <> help "Show the code of imported modules next to the import statement"
       )
@@ -137,10 +133,8 @@ parseScope = do
       ( long "no-colors"
           <> help "Disable ANSI formatting"
       )
-  pure ScopeOptions {..}
 
 parseDisplayVersion :: Parser Command
-parseDisplayVersion =
   flag'
     DisplayVersion
     (long "version" <> short 'v' <> help "Print the version and exit")
@@ -150,7 +144,6 @@ parseDisplayRoot =
   flag'
     DisplayRoot
     (long "show-root" <> help "Print the detected root of the project")
-
 
 descr :: ParserInfo Command
 descr =
@@ -171,17 +164,17 @@ descr =
 parseCommand :: Parser Command
 parseCommand =
   parseDisplayVersion
-  <|> parseDisplayRoot
-  <|> ( hsubparser $
-          mconcat
-            [ commandParse,
-              commandScope,
-              commandHtml,
-              commandTermination,
-              commandMicroJuvix,
-              commandMiniHaskell,
-              commandHighlight
-            ]
+    <|> parseDisplayRoot
+    <|> hsubparser
+      ( mconcat
+          [ commandParse,
+            commandScope,
+            commandHtml,
+            commandTermination,
+            commandMicroJuvix,
+            commandMiniHaskell,
+            commandHighlight
+          ]
       )
   where
     commandMicroJuvix :: Mod CommandFields Command
@@ -275,17 +268,17 @@ findRoot = do
       return cur
     Right root -> return root
   where
-  possiblePaths :: FilePath -> [FilePath]
-  possiblePaths start = takeWhile (/= "/") (aux start)
-    where
-    aux f = f : aux (takeDirectory f)
-  go :: IO FilePath
-  go = do
-    c <- getCurrentDirectory
-    l <- findFile (possiblePaths c) minijuvixYamlFile
-    case l of
-      Nothing -> return c
-      Just yaml -> return (takeDirectory yaml)
+    possiblePaths :: FilePath -> [FilePath]
+    possiblePaths start = takeWhile (/= "/") (aux start)
+      where
+        aux f = f : aux (takeDirectory f)
+    go :: IO FilePath
+    go = do
+      c <- getCurrentDirectory
+      l <- findFile (possiblePaths c) minijuvixYamlFile
+      case l of
+        Nothing -> return c
+        Just yaml -> return (takeDirectory yaml)
 
 class HasEntryPoint a where
   getEntryPoint :: FilePath -> a -> EntryPoint

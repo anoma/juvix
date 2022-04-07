@@ -1,18 +1,19 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Error.Pretty.Base where
 
-import qualified Data.HashMap.Strict as HashMap
-import qualified Data.HashSet as HashSet
-import qualified Data.List.NonEmpty.Extra as NonEmpty
+import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
+import Data.List.NonEmpty.Extra qualified as NonEmpty
 import MiniJuvix.Prelude
-import qualified MiniJuvix.Syntax.Concrete.Language as L
+import MiniJuvix.Syntax.Concrete.Language qualified as L
 import MiniJuvix.Syntax.Concrete.Scoped.Error.Types
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as P
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base qualified as P
 import MiniJuvix.Syntax.Concrete.Scoped.Scope
 import Prettyprinter
 import Text.EditDistance
 
-data Eann = Highlight
+data Eann
+  = Highlight
   | ScopedAnn P.Ann
 
 highlight :: Doc Eann -> Doc Eann
@@ -162,7 +163,7 @@ instance PrettyError AmbiguousModuleSym where
 
 ambiguousMessage :: Name -> [SymbolEntry] -> Doc Eann
 ambiguousMessage n es =
-    "The symbol" <+> ppCode n <+> "at" <+> pretty (getLoc n) <+> "is ambiguous." <> line
-      <> "It could be any of:"
-      <> line
-      <> indent' (vsep (map ppCode es))
+  "The symbol" <+> ppCode n <+> "at" <+> pretty (getLoc n) <+> "is ambiguous." <> line
+    <> "It could be any of:"
+    <> line
+    <> indent' (vsep (map ppCode es))

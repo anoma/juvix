@@ -1,6 +1,8 @@
 PWD=$(CURDIR)
 PREFIX="$(PWD)/.stack-work/prefix"
 UNAME := $(shell uname)
+HLINTQUIET :=
+
 
 ifeq ($(UNAME), Darwin)
 	THREADS := $(shell sysctl -n hw.logicalcpu)
@@ -11,7 +13,7 @@ else
 endif
 
 all:
-	make prepare-push
+	make pre-commit
 
 .PHONY : checklines
 checklines :
@@ -26,7 +28,7 @@ checklines :
 
 .PHONY : hlint
 hlint :
-	hlint src
+	@hlint src app test ${HLINTQUIET}
 
 .PHONY : haddock
 haddock :
@@ -65,11 +67,11 @@ test-watch:
 	stack test --fast --jobs $(THREADS) --file-watch
 
 format:
-	find . -path './src/**/*.hs' -or -path './app/**/*.hs' -exec ormolu --mode inplace {} --ghc-opt -XStandaloneDeriving --ghc-opt -XUnicodeSyntax --ghc-opt -XDerivingStrategies --ghc-opt -XMultiParamTypeClasses  --ghc-opt  -XTemplateHaskell \;
+	@find . -name "*.hs" -exec ormolu --mode inplace {} --ghc-opt -XStandaloneDeriving --ghc-opt -XUnicodeSyntax --ghc-opt -XDerivingStrategies --ghc-opt -XMultiParamTypeClasses  --ghc-opt  -XTemplateHaskell --ghc-opt -XImportQualifiedPost \;
 
 .PHONY: check-ormolu
 check-ormolu:
-	find . -path './src/**/*.hs' -or -path './app/**/*.hs' -exec ormolu --mode check {} \;
+	@find . -name "*.hs" -exec ormolu --mode check {} --ghc-opt -XStandaloneDeriving --ghc-opt -XUnicodeSyntax --ghc-opt -XDerivingStrategies --ghc-opt -XMultiParamTypeClasses  --ghc-opt  -XTemplateHaskell --ghc-opt -XImportQualifiedPost \;
 
 .PHONY : install
 install:
@@ -82,8 +84,14 @@ install-watch:
 repl:
 	stack ghci MiniJuvix:lib
 
-prepare-push:
-	make hlint && make format
+.PHONY : install-pre-commit
+install-pre-commit:
+	pip install pre-commit
+	pre-commit install
+
+.PHONY : pre-commit
+pre-commit :
+	pre-commit run --all-files
 
 .PHONY : update-submodules
 update-submodules :

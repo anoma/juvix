@@ -1,8 +1,8 @@
 module MiniJuvix.Syntax.Abstract.Pretty.Ann where
 
 import MiniJuvix.Prelude
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as S
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base qualified as S
 
 data Ann
   = AnnKind S.NameKind

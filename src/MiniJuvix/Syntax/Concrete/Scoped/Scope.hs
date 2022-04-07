@@ -1,12 +1,13 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Scope
   ( module MiniJuvix.Syntax.Concrete.Scoped.Scope,
-    module MiniJuvix.Syntax.Concrete.Scoped.InfoTable )
+    module MiniJuvix.Syntax.Concrete.Scoped.InfoTable,
+  )
 where
 
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Scoped.InfoTable
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 
 newtype LocalVariable = LocalVariable
   { variableName :: S.Symbol
@@ -37,7 +38,6 @@ data Scope = Scope
     _scopeBindGroup :: HashMap Symbol LocalVariable
   }
   deriving stock (Show)
-
 
 makeLenses ''ExportInfo
 makeLenses ''SymbolInfo

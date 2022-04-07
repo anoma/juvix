@@ -9,5 +9,4 @@ data ForeignBlock = ForeignBlock
   }
   deriving stock (Eq, Ord, Show)
 
-
 makeLenses ''ForeignBlock

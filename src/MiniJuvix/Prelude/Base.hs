@@ -69,7 +69,7 @@ import Control.Monad.Fix
 import Data.Bool
 import Data.ByteString.Lazy (ByteString)
 import Data.Char
-import qualified Data.Char as Char
+import Data.Char qualified as Char
 import Data.Data
 import Data.Either.Extra
 import Data.Eq
@@ -82,7 +82,7 @@ import qualified Data.HashSet as HashSet
 import Data.Hashable
 import Data.Int
 import Data.List.Extra hiding (head, last)
-import qualified Data.List.NonEmpty as NonEmpty
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.List.NonEmpty.Extra (NonEmpty (..), head, last, maximum1, maximumOn1, minimum1, minimumOn1, nonEmpty, some1)
 import Data.Maybe
 import Data.Monoid
@@ -102,7 +102,7 @@ import Data.Typeable hiding (TyCon)
 import Data.Void
 import Data.Word
 import GHC.Enum
-import qualified GHC.Err as Err
+import GHC.Err qualified as Err
 import GHC.Generics (Generic)
 import GHC.Num
 import GHC.Real
@@ -121,7 +121,7 @@ import System.Exit
 import System.FilePath
 import System.IO hiding (appendFile, getContents, getLine, hGetContents, hGetLine, hPutStr, hPutStrLn, interact, putStr, putStrLn, readFile, readFile', writeFile)
 import Text.Show (Show)
-import qualified Text.Show as Show
+import Text.Show qualified as Show
 
 --------------------------------------------------------------------------------
 -- Logical connectives

@@ -1,0 +1,11 @@
+-   id: hlint
+    name: hlint
+    description: Run Hlint linter
+    entry: make hlint
+    language: system
+
+-   id: ormolu
+    name: ormolu
+    description: Run Ormolu linter
+    entry: make check-format
+    language: system

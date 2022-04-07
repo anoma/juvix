@@ -10,7 +10,7 @@ module MiniJuvix.Utils.Version
     shortHash,
     versionDoc,
     versionTag,
-)
+  )
 where
 
 ------------------------------------------------------------------------------
@@ -18,7 +18,7 @@ where
 import Data.Version (showVersion)
 import Development.GitRev (gitBranch, gitCommitDate, gitHash)
 import MiniJuvix.Prelude hiding (Doc)
-import qualified Paths_minijuvix
+import Paths_minijuvix qualified
 import Prettyprinter as PP
 import Prettyprinter.Render.Text (renderIO)
 import System.Environment (getProgName)

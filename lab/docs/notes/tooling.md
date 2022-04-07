@@ -30,7 +30,7 @@ Tools used so far:
   [gluedeval](https://gist.github.com/AndrasKovacs/a0e0938113b193d6b9c1c0620d853784).
   During elaboration different kind of evaluation strategies may be
   needed.
-    - top vs. local scope. 
+    - top vs. local scope.
 - On equality type-checking, see
   [abstract](https://github.com/anjapetkovic/anjapetkovic.github.io/blob/master/talks/2021-06-17-TYPES2021/abstract.pdf)
 - To document the code, see
@@ -49,7 +49,7 @@ See https://kowainik.github.io/posts/deriving.
   moment, I'm using cabal-edit to keep the bounds and this tool does
   not support stanzas. So be it.
 
-- Using MultiParamTypeClasses to allow me deriving multi instances in one line. 
+- Using MultiParamTypeClasses to allow me deriving multi instances in one line.
 
 - TODO: make a `ref.bib` listing all the repositories and the
   source-code from where I took code, inspiration, whatever thing.

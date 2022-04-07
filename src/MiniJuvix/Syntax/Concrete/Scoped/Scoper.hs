@@ -14,12 +14,11 @@ import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Stream as Stream
 import Lens.Micro.Platform
 import MiniJuvix.Prelude
-import qualified MiniJuvix.Syntax.Concrete.Base as P
+import MiniJuvix.Syntax.Concrete.Base qualified as P
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Parser (runModuleParser'')
 import MiniJuvix.Syntax.Concrete.Scoped.Error
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
-import qualified MiniJuvix.Syntax.Concrete.Name as N
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Concrete.Scoped.Scope
 import qualified MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper.InfoTableBuilder
@@ -103,7 +102,7 @@ freshSymbol _nameKind _nameConcrete = do
     fixity :: Sem r (Maybe Fixity)
     fixity
       | S.canHaveFixity _nameKind =
-        fmap opFixity . HashMap.lookup _nameConcrete <$> gets _scopeFixities
+          fmap opFixity . HashMap.lookup _nameConcrete <$> gets _scopeFixities
       | otherwise = return Nothing
 
 reserveSymbolOf ::
@@ -163,10 +162,7 @@ bindFunctionSymbol ::
   Members '[Error ScopeError, State ScoperState, State Scope, InfoTableBuilder] r =>
   Symbol ->
   Sem r S.Symbol
-bindFunctionSymbol =
-  bindSymbolOf
-    S.KNameFunction
-    (\s' -> EntryFunction (FunctionRef' s'))
+bindFunctionSymbol = bindSymbolOf S.KNameFunction (EntryFunction . FunctionRef')
 
 bindInductiveSymbol ::
   Members '[Error ScopeError, State ScoperState, State Scope, InfoTableBuilder] r =>
@@ -175,7 +171,7 @@ bindInductiveSymbol ::
 bindInductiveSymbol =
   bindSymbolOf
     S.KNameInductive
-    (\s' -> EntryInductive (InductiveRef' s'))
+    (EntryInductive . InductiveRef')
 
 bindAxiomSymbol ::
   Members '[Error ScopeError, State ScoperState, State Scope, InfoTableBuilder] r =>
@@ -184,7 +180,7 @@ bindAxiomSymbol ::
 bindAxiomSymbol =
   bindSymbolOf
     S.KNameAxiom
-    (\s' -> EntryAxiom (AxiomRef' s'))
+    (EntryAxiom . AxiomRef')
 
 bindConstructorSymbol ::
   Members '[Error ScopeError, State ScoperState, State Scope, InfoTableBuilder] r =>
@@ -193,7 +189,7 @@ bindConstructorSymbol ::
 bindConstructorSymbol =
   bindSymbolOf
     S.KNameConstructor
-    (\s' -> EntryConstructor (ConstructorRef' s'))
+    (EntryConstructor . ConstructorRef')
 
 bindLocalModuleSymbol ::
   Members '[Error ScopeError, State ScoperState, State Scope, InfoTableBuilder] r =>
@@ -407,7 +403,7 @@ checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
         (\s' -> throw (ErrDuplicateFixity (DuplicateFixity s' s)))
 
 checkTypeSignature ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder] r =>
   TypeSignature 'Parsed ->
   Sem r (TypeSignature 'Scoped)
 checkTypeSignature TypeSignature {..} = do
@@ -416,7 +412,7 @@ checkTypeSignature TypeSignature {..} = do
   registerFunction' TypeSignature {_sigName = sigName', _sigType = sigType'}
 
 checkConstructorDef ::
-  Members '[Error ScopeError, Reader LocalVars, State Scope, State ScoperState , InfoTableBuilder] r =>
+  Members '[Error ScopeError, Reader LocalVars, State Scope, State ScoperState, InfoTableBuilder] r =>
   InductiveConstructorDef 'Parsed ->
   Sem r (InductiveConstructorDef 'Scoped)
 checkConstructorDef InductiveConstructorDef {..} = do
@@ -430,7 +426,7 @@ checkConstructorDef InductiveConstructorDef {..} = do
 
 withParams ::
   forall r a.
-  Members '[Reader LocalVars, Error ScopeError, State Scope, State ScoperState , InfoTableBuilder] r =>
+  Members '[Reader LocalVars, Error ScopeError, State Scope, State ScoperState, InfoTableBuilder] r =>
   [InductiveParameter 'Parsed] ->
   ([InductiveParameter 'Scoped] -> Sem r a) ->
   Sem r a
@@ -655,7 +651,7 @@ getExportInfo modId = do
 
 checkOpenModule ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder] r =>
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenModule OpenModule {..} = do
@@ -686,8 +682,11 @@ checkOpenModule OpenModule {..} = do
     alterScope = alterEntries . filterScope
       where
         alterEntry :: SymbolEntry -> SymbolEntry
-        alterEntry = entryOverName (set S.nameWhyInScope S.BecauseImportedOpened
-                                    . set S.nameVisibilityAnn (publicAnnToVis _openPublic))
+        alterEntry =
+          entryOverName
+            ( set S.nameWhyInScope S.BecauseImportedOpened
+                . set S.nameVisibilityAnn (publicAnnToVis _openPublic)
+            )
         alterEntries :: ExportInfo -> ExportInfo
         alterEntries = over exportSymbols (fmap alterEntry)
         publicAnnToVis :: PublicAnn -> VisibilityAnn
@@ -707,8 +706,14 @@ checkOpenModule OpenModule {..} = do
 
 checkWhereBlock ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder
-  ] r =>
+  Members
+    '[ Error ScopeError,
+       State Scope,
+       State ScoperState,
+       Reader LocalVars,
+       InfoTableBuilder
+     ]
+    r =>
   WhereBlock 'Parsed ->
   Sem r (WhereBlock 'Scoped)
 checkWhereBlock WhereBlock {..} = WhereBlock <$> mapM checkWhereClause whereClauses
@@ -725,7 +730,7 @@ checkWhereClause c = case c of
 
 checkFunctionClause ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder] r =>
   FunctionClause 'Parsed ->
   Sem r (FunctionClause 'Scoped)
 checkFunctionClause clause@FunctionClause {..} = do
@@ -739,12 +744,13 @@ checkFunctionClause clause@FunctionClause {..} = do
       clb <- checkParseExpressionAtoms _clauseBody
       put s
       return (clp, clw, clb)
-  registerFunctionClause' FunctionClause
-    { _clauseOwnerFunction = clauseOwnerFunction',
-      _clausePatterns = clausePatterns',
-      _clauseBody = clauseBody',
-      _clauseWhere = clauseWhere'
-    }
+  registerFunctionClause'
+    FunctionClause
+      { _clauseOwnerFunction = clauseOwnerFunction',
+        _clausePatterns = clausePatterns',
+        _clauseBody = clauseBody',
+        _clauseWhere = clauseWhere'
+      }
   where
     fun = _clauseOwnerFunction
     checkTypeSigInScope :: Sem r S.Symbol
@@ -782,7 +788,7 @@ localScope :: Sem (Reader LocalVars : r) a -> Sem r a
 localScope = runReader (LocalVars mempty)
 
 checkEval ::
-  Members '[Error ScopeError, State Scope, State ScoperState , InfoTableBuilder] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, InfoTableBuilder] r =>
   Eval 'Parsed ->
   Sem r (Eval 'Scoped)
 checkEval (Eval s) = Eval <$> localScope (checkParseExpressionAtoms s)
@@ -795,7 +801,7 @@ checkPrint (Print s) = Print <$> localScope (checkParseExpressionAtoms s)
 
 checkFunction ::
   forall r.
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder] r =>
   Function 'Parsed ->
   Sem r (Function 'Scoped)
 checkFunction Function {..} = do
@@ -828,7 +834,7 @@ checkFunction Function {..} = do
           Just s -> Just <$> freshVariable s
 
 checkLetClause ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder] r =>
   LetClause 'Parsed ->
   Sem r (LetClause 'Scoped)
 checkLetClause lc = case lc of
@@ -836,7 +842,7 @@ checkLetClause lc = case lc of
   LetFunClause c -> LetFunClause <$> checkFunctionClause c
 
 checkLetBlock ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder] r =>
   LetBlock 'Parsed ->
   Sem r (LetBlock 'Scoped)
 checkLetBlock LetBlock {..} = do
@@ -851,13 +857,13 @@ checkLetBlock LetBlock {..} = do
       }
 
 checkLambda ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder] r =>
   Lambda 'Parsed ->
   Sem r (Lambda 'Scoped)
 checkLambda Lambda {..} = Lambda <$> mapM checkLambdaClause lambdaClauses
 
 checkLambdaClause ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder] r =>
   LambdaClause 'Parsed ->
   Sem r (LambdaClause 'Scoped)
 checkLambdaClause LambdaClause {..} = do
@@ -1005,7 +1011,7 @@ checkName n = case n of
   NameUnqualified s -> checkUnqualified s
 
 checkExpressionAtom ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder] r =>
   ExpressionAtom 'Parsed ->
   Sem r (ExpressionAtom 'Scoped)
 checkExpressionAtom e = case e of
@@ -1020,7 +1026,7 @@ checkExpressionAtom e = case e of
   AtomMatch match -> AtomMatch <$> checkMatch match
 
 checkParens ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder] r =>
   ExpressionAtoms 'Parsed ->
   Sem r Expression
 checkParens e@(ExpressionAtoms as) = case as of
@@ -1031,7 +1037,7 @@ checkParens e@(ExpressionAtoms as) = case as of
   _ -> checkParseExpressionAtoms e
 
 checkMatchAlt ::
-  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState , InfoTableBuilder ] r =>
+  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState, InfoTableBuilder] r =>
   MatchAlt 'Parsed ->
   Sem r (MatchAlt 'Scoped)
 checkMatchAlt MatchAlt {..} = do
@@ -1044,7 +1050,7 @@ checkMatchAlt MatchAlt {..} = do
       }
 
 checkMatch ::
-  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState , InfoTableBuilder] r =>
+  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState, InfoTableBuilder] r =>
   Match 'Parsed ->
   Sem r (Match 'Scoped)
 checkMatch Match {..} = do
@@ -1057,7 +1063,7 @@ checkMatch Match {..} = do
       }
 
 checkExpressionAtoms ::
-  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars , InfoTableBuilder] r =>
+  Members '[Error ScopeError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder] r =>
   ExpressionAtoms 'Parsed ->
   Sem r (ExpressionAtoms 'Scoped)
 checkExpressionAtoms (ExpressionAtoms l) = ExpressionAtoms <$> mapM checkExpressionAtom l
@@ -1112,22 +1118,22 @@ makeExpressionTable2 (ExpressionAtoms atoms) = [appOp] : operators ++ [[function
         mkOperator :: ScopedIden -> Maybe (Precedence, P.Operator Parse Expression)
         mkOperator iden
           | Just Fixity {..} <- _nameFixity = Just $
-            case fixityArity of
-              Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
-                where
-                  unaryApp :: ScopedIden -> Expression -> Expression
-                  unaryApp funName arg = case u of
-                    AssocPostfix -> ExpressionPostfixApplication (PostfixApplication arg funName)
-              Binary b -> (fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId _nameId))
-                where
-                  binaryApp :: ScopedIden -> Expression -> Expression -> Expression
-                  binaryApp infixAppOperator infixAppLeft infixAppRight =
-                    ExpressionInfixApplication InfixApplication {..}
-                  infixLRN :: Parse (Expression -> Expression -> Expression) -> P.Operator Parse Expression
-                  infixLRN = case b of
-                    AssocLeft -> P.InfixL
-                    AssocRight -> P.InfixR
-                    AssocNone -> P.InfixN
+              case fixityArity of
+                Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
+                  where
+                    unaryApp :: ScopedIden -> Expression -> Expression
+                    unaryApp funName arg = case u of
+                      AssocPostfix -> ExpressionPostfixApplication (PostfixApplication arg funName)
+                Binary b -> (fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId _nameId))
+                  where
+                    binaryApp :: ScopedIden -> Expression -> Expression -> Expression
+                    binaryApp infixAppOperator infixAppLeft infixAppRight =
+                      ExpressionInfixApplication InfixApplication {..}
+                    infixLRN :: Parse (Expression -> Expression -> Expression) -> P.Operator Parse Expression
+                    infixLRN = case b of
+                      AssocLeft -> P.InfixL
+                      AssocRight -> P.InfixR
+                      AssocNone -> P.InfixN
           | otherwise = Nothing
           where
             S.Name' {..} = identifierName iden
@@ -1302,24 +1308,24 @@ makePatternTable atom = [appOp] : operators
     mkSymbolTable = reverse . map (map snd) . groupSortOn fst . mapMaybe unqualifiedSymbolOp
       where
         unqualifiedSymbolOp :: ConstructorRef -> Maybe (Precedence, P.Operator ParsePat Pattern)
-        unqualifiedSymbolOp (ConstructorRef' (S.Name' {..}))
+        unqualifiedSymbolOp (ConstructorRef' S.Name' {..})
           | Just Fixity {..} <- _nameFixity,
             _nameKind == S.KNameConstructor = Just $
-            case fixityArity of
-              Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
-                where
-                  unaryApp :: ConstructorRef -> Pattern -> Pattern
-                  unaryApp funName = case u of
-                    AssocPostfix -> PatternPostfixApplication . (`PatternPostfixApp` funName)
-              Binary b -> (fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _nameId))
-                where
-                  binaryInfixApp :: ConstructorRef -> Pattern -> Pattern -> Pattern
-                  binaryInfixApp name argLeft = PatternInfixApplication . PatternInfixApp argLeft name
-                  infixLRN :: ParsePat (Pattern -> Pattern -> Pattern) -> P.Operator ParsePat Pattern
-                  infixLRN = case b of
-                    AssocLeft -> P.InfixL
-                    AssocRight -> P.InfixR
-                    AssocNone -> P.InfixN
+              case fixityArity of
+                Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
+                  where
+                    unaryApp :: ConstructorRef -> Pattern -> Pattern
+                    unaryApp funName = case u of
+                      AssocPostfix -> PatternPostfixApplication . (`PatternPostfixApp` funName)
+                Binary b -> (fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _nameId))
+                  where
+                    binaryInfixApp :: ConstructorRef -> Pattern -> Pattern -> Pattern
+                    binaryInfixApp name argLeft = PatternInfixApplication . PatternInfixApp argLeft name
+                    infixLRN :: ParsePat (Pattern -> Pattern -> Pattern) -> P.Operator ParsePat Pattern
+                    infixLRN = case b of
+                      AssocLeft -> P.InfixL
+                      AssocRight -> P.InfixR
+                      AssocNone -> P.InfixN
           | otherwise = Nothing
         parseSymbolId :: S.NameId -> ParsePat ConstructorRef
         parseSymbolId uid = P.token getConstructorRefWithId mempty

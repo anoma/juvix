@@ -1,12 +1,13 @@
 module MiniJuvix.Syntax.NameId where
 
-import Prettyprinter
 import MiniJuvix.Prelude
+import Prettyprinter
 
-newtype NameId = NameId {
-  _unNameId :: Word64
+newtype NameId = NameId
+  { _unNameId :: Word64
   }
   deriving stock (Show, Eq, Ord, Generic)
+
 makeLenses ''NameId
 
 instance Pretty NameId where

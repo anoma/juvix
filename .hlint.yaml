@@ -8,19 +8,41 @@
 
 - extensions:
   - default: false
-  - name: [DeriveFunctor, GeneralizedNewtypeDeriving, OverloadedStrings]
-  - name: [MultiWayIf, PatternGuards, RecordWildCards]
-  - name: [ScopedTypeVariables]
-  - name: [ConstraintKinds, RankNTypes, TypeFamilies]
-  # - {name: nameEXT, within: [moduleName]} 
+  - name:
+    - ApplicativeDo
+    - DataKinds
+    - DerivingStrategies
+    - GADTs
+    - ImportQualifiedPost
+    - LambdaCase
+    - NoImplicitPrelude
+    - OverloadedStrings
+    - QuasiQuotes
+    - RecordWildCards
+    - StandaloneKindSignatures
+    - TemplateHaskell
+    - TypeFamilyDependencies
+    - UndecidableInstances
+    - UnicodeSyntax
+    - GeneralizedNewtypeDeriving
 
 - flags:
   - default: false
-  - {name: [-Wno-incomplete-patterns, -Wno-overlapping-patterns , Wno-partial-fields]}
+  - name:
+    - -Wall
+    - -Wcompat
+    - -Wderiving-defaults
+    - -Widentities
+    - -Wincomplete-patterns
+    - -Wincomplete-record-updates
+    - -Wincomplete-uni-patterns
+    - -Wmissing-deriving-strategies
+    - -Wredundant-constraints
+    - -O2 -flate-specialise -fspecialise-aggressively
 
 - modules:
   # if you import Data.Set qualified, it must be as 'Set'
-  - {name: [Data.Set, Data.HashSet], as: Set} 
+  - {name: [Data.Set, Data.HashSet], as: Set}
   - {name: [Data.Map, Data.HashMap.Strict, Data.HashMap.Lazy], as: Map}
   # - {name: Control.Arrow, within: []} # Certain modules are banned entirely
 
@@ -51,10 +73,6 @@
 # IGNORES
 # --------------------------------------------------------------------------------
 
-- ignore: {within: [MiniJuvix.Syntax.Core, MiniJuvix.Syntax.Eval]}
-- ignore: {within: [MiniJuvix.Monad]}
-- ignore: {within: [MiniJuvix.Pretty]}
 - ignore: {name: Use let, within: [Test.All]}
 - ignore: {name: Use String}
-- ignore: {name: Avoid restricted flags}
-- ignore: {name: Avoid restricted extensions, within: [MiniJuvix.Parsing.Language]}
+- ignore: {name: Avoid restricted qualification}

@@ -147,7 +147,7 @@ account-sub Accounts add number =
 
 
 // No feedback given, so don't know next move :(
-transfer-sub : 
+transfer-sub :
   (acc : Accounts) ->
   (add : Address) ->
   (num : Nat) ->

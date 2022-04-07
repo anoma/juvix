@@ -1,8 +1,8 @@
 module MiniJuvix.Syntax.MicroJuvix.Pretty.Text where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.MicroJuvix.Pretty.Base
 import MiniJuvix.Syntax.MicroJuvix.Pretty.Ann
+import MiniJuvix.Syntax.MicroJuvix.Pretty.Base
 import Prettyprinter
 import Prettyprinter.Render.Text
 
