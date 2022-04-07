@@ -30,8 +30,8 @@ import MiniJuvix.Pipeline.EntryPoint
 import MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder (mergeTable)
 
 
-entryScope :: Members '[Error ScopeError, Files] r => ParserResult -> Sem r ScoperResult
-entryScope pr = do
+entryScoper :: Members '[Error ScopeError, Files] r => ParserResult -> Sem r ScoperResult
+entryScoper pr = do
   let root = pr ^. Parser.resultEntry . entryRoot
       modules = pr ^. Parser.resultModules
   scopeCheck pr root modules
