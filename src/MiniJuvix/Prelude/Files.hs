@@ -17,6 +17,9 @@ runFilesIO = interpret $ \case
     h' <- makeAbsolute h
     return (Just $ f' == h')
 
+runFilesEmpty :: Sem (Files ': r) a -> Sem r a
+runFilesEmpty = runFilesPure mempty
+
 runFilesPure :: HashMap FilePath Text -> Sem (Files ': r) a -> Sem r a
 runFilesPure fs = interpret $ \case
   ReadFile' f -> case HashMap.lookup f fs of

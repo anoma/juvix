@@ -15,7 +15,7 @@ import qualified MiniJuvix.Syntax.Abstract.Pretty.Ansi as A
 import qualified MiniJuvix.Syntax.Concrete.Language as M
 import qualified MiniJuvix.Syntax.Concrete.Parser as Parser
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi as M
-import qualified MiniJuvix.Syntax.Concrete.Scoped.InfoTable as Scoped
+import qualified MiniJuvix.Syntax.Concrete.Scoped.InfoTable as Scoper
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Highlight as Scoped
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (defaultOptions)
 import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as M
@@ -29,14 +29,13 @@ import qualified MiniJuvix.Syntax.MicroJuvix.Language as Micro
 import qualified MiniJuvix.Termination as T
 import qualified MiniJuvix.Termination.CallGraph as A
 import qualified MiniJuvix.Translation.AbstractToMicroJuvix as Micro
-import qualified MiniJuvix.Translation.ScopedToAbstract as A
+import qualified MiniJuvix.Translation.ScopedToAbstract as Abstract
 import qualified MiniJuvix.Translation.MicroJuvixToMiniHaskell as Hask
 import qualified MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi as Hask
 import MiniJuvix.Utils.Version (runDisplayVersion)
 import Options.Applicative
 import Options.Applicative.Help.Pretty
 import Text.Show.Pretty hiding (Html)
-import MiniJuvix.Syntax.Concrete.Parser.InfoTable (infoParsedItems)
 
 --------------------------------------------------------------------------------
 
@@ -52,8 +51,8 @@ data Command
   | Highlight HighlightOptions
 
 data ScopeOptions = ScopeOptions
-  { _scopeRootDir :: FilePath,
-    _scopeInputFiles :: [FilePath],
+  {
+    _scopeInputFiles :: NonEmpty FilePath,
     _scopeShowIds :: Bool,
     _scopeInlineImports :: Bool,
     _scopeNoColors :: Bool
@@ -116,17 +115,8 @@ parseParse = do
 
 parseScope :: Parser ScopeOptions
 parseScope = do
-  _scopeRootDir <-
-    strOption
-      ( long "rootDir"
-          <> short 'd'
-          <> metavar "DIR"
-          <> value "."
-          <> showDefault
-          <> help "Root directory"
-      )
   _scopeInputFiles <-
-    some $
+    some1 $
       argument
         str
         ( metavar "MINIJUVIX_FILE(s)"
@@ -297,6 +287,26 @@ findRoot = do
       Nothing -> return c
       Just yaml -> return (takeDirectory yaml)
 
+class HasEntryPoint a where
+  getEntryPoint :: FilePath -> a -> EntryPoint
+
+instance HasEntryPoint ScopeOptions where
+  getEntryPoint root = EntryPoint root . _scopeInputFiles
+instance HasEntryPoint ParseOptions where
+  getEntryPoint root = EntryPoint root . pure . _parseInputFile
+instance HasEntryPoint HighlightOptions where
+  getEntryPoint root = EntryPoint root . pure . _highlightInputFile
+instance HasEntryPoint HtmlOptions where
+  getEntryPoint root = EntryPoint root . pure . _htmlInputFile
+instance HasEntryPoint MicroJuvixOptions where
+  getEntryPoint root = EntryPoint root . pure . _mjuvixInputFile
+instance HasEntryPoint MiniHaskellOptions where
+  getEntryPoint root = EntryPoint root . pure . _mhaskellInputFile
+instance HasEntryPoint CallsOptions where
+  getEntryPoint root = EntryPoint root . pure . _callsInputFile
+instance HasEntryPoint CallGraphOptions where
+  getEntryPoint root = EntryPoint root . pure . _graphInputFile
+
 runCommand :: Command -> IO ()
 runCommand c = do
   root <- findRoot
@@ -304,50 +314,39 @@ runCommand c = do
     DisplayVersion -> runDisplayVersion
     DisplayRoot -> putStrLn (pack root)
     Scope opts@ScopeOptions {..} -> do
-      forM_ _scopeInputFiles $ \scopeInputFile -> do
-        m <- parseModuleIO scopeInputFile
-        s <- head . Scoper._resultModules <$> fromRightIO' printErrorAnsi (Scoper.scopeCheck1IO root m)
+      l <- (^. Scoper.resultModules) <$> runIO (upToScoping (getEntryPoint root opts))
+      forM_ l $ \s -> do
         printer (mkScopePrettyOptions opts) s
       where
         printer :: M.Options -> M.Module 'M.Scoped 'M.ModuleTop -> IO ()
         printer
           | not _scopeNoColors = M.printPrettyCode
           | otherwise = T.printPrettyCode
-    Highlight HighlightOptions {..} -> do
-      let
-        entryp :: EntryPoint
-        entryp = EntryPoint {
-          _entryRoot = root,
-          _entryModulePaths = pure _highlightInputFile
-          }
-      parserRes <- parseModuleIO' _highlightInputFile
-      let parsedMod = head (parserRes ^. Parser.resultModules)
-      res <- fromRightIO' printErrorAnsi $ Scoper.scopeCheck1IO root parsedMod
-      let
-        parserTable = parserRes ^. Parser.resultTable
-        names = res ^. Scoper.resultScoperTable . Scoped.infoNames
-        parsedItems = res ^. Scoper.resultParserTable . Parser.infoParsedItems
-          <> parserTable ^. infoParsedItems
-      putStrLn (Scoped.go parsedItems names)
+    Highlight o -> do
+      let entry :: EntryPoint
+          entry = getEntryPoint root o
+      res <- runIO (upToScoping entry)
+      let tbl = res ^. Scoper.resultParserTable
+          items = tbl ^. Parser.infoParsedItems
+          names = res ^. Scoper.resultScoperTable ^. Scoper.infoNames
+      putStrLn (Scoped.go items names)
     Parse ParseOptions {..} -> do
       m <- parseModuleIO _parseInputFile
       if _parseNoPrettyShow then print m else pPrint m
-    Html HtmlOptions {..} -> do
-      m <- parseModuleIO _htmlInputFile
-      s <- head . Scoper._resultModules <$> fromRightIO' printErrorAnsi (Scoper.scopeCheck1IO root m)
-      genHtml defaultOptions _htmlRecursive _htmlTheme s
-    MicroJuvix (Pretty MicroJuvixOptions {..}) -> do
-      micro <- miniToMicro root _mjuvixInputFile
+    Html o@HtmlOptions {..} -> do
+      res <- runIO (upToScoping (getEntryPoint root o))
+      let m = head (res ^. Scoper.resultModules)
+      genHtml defaultOptions _htmlRecursive _htmlTheme m
+    MicroJuvix (Pretty o) -> do
+      micro <- miniToMicro root o
       Micro.printPrettyCodeDefault micro
-    MicroJuvix (TypeCheck MicroJuvixOptions {..}) -> do
-      micro <- miniToMicro root _mjuvixInputFile
+    MicroJuvix (TypeCheck o) -> do
+      micro <- miniToMicro root o
       case Micro.checkModule micro of
         Right _ -> putStrLn "Well done! It type checks"
         Left es -> sequence_ (intersperse (putStrLn "") (printErrorAnsi <$> toList es)) >> exitFailure
-    MiniHaskell MiniHaskellOptions {..} -> do
-      m <- parseModuleIO _mhaskellInputFile
-      s <- head . Scoper._resultModules <$> fromRightIO' printErrorAnsi (Scoper.scopeCheck1IO root m)
-      (_, a) <- fromRightIO' putStrLn (return (A.translateModule s))
+    MiniHaskell o -> do
+      a <- head . (^. Abstract.resultModules) <$> runIO (upToAbstract (getEntryPoint root o))
       let micro = Micro.translateModule a
       case Micro.checkModule micro of
         Right checkedMicro -> do
@@ -355,9 +354,7 @@ runCommand c = do
           Hask.printPrettyCodeDefault minihaskell
         Left es -> mapM_ printErrorAnsi es >> exitFailure
     Termination (Calls opts@CallsOptions {..}) -> do
-      m <- parseModuleIO _callsInputFile
-      s <- head . Scoper._resultModules <$> fromRightIO' printErrorAnsi (Scoper.scopeCheck1IO root m)
-      (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
+      a <- head . (^. Abstract.resultModules) <$> runIO (upToAbstract (getEntryPoint root opts))
       let callMap0 = T.buildCallMap a
           callMap = case _callsFunctionNameFilter of
             Nothing -> callMap0
@@ -365,10 +362,8 @@ runCommand c = do
           opts' = T.callsPrettyOptions opts
       A.printPrettyCode opts' callMap
       putStrLn ""
-    Termination (CallGraph CallGraphOptions {..}) -> do
-      m <- parseModuleIO _graphInputFile
-      s <- head . Scoper._resultModules <$> fromRightIO' printErrorAnsi (Scoper.scopeCheck1IO root m)
-      (_, a) <- fromRightIO' putStrLn (return (A.translateModule s))
+    Termination (CallGraph o@CallGraphOptions {..}) -> do
+      a <- head . (^. Abstract.resultModules) <$> runIO (upToAbstract (getEntryPoint root o))
       let callMap = T.buildCallMap a
           opts' = A.defaultOptions
           completeGraph = T.completeCallGraph callMap
@@ -385,12 +380,10 @@ runCommand c = do
           Just (T.LexOrder k) -> putStrLn (n <> " Terminates with order " <> show (toList k))
         putStrLn ""
     where
-      miniToMicro :: FilePath -> FilePath -> IO Micro.Module
-      miniToMicro root p = do
-        m <- parseModuleIO p
-        s <- head . Scoper._resultModules <$> fromRightIO' printErrorAnsi (Scoper.scopeCheck1IO root m)
-        (_, a) <- fromRightIO' putStrLn (return $ A.translateModule s)
-        return (Micro.translateModule a)
+      miniToMicro :: FilePath -> MicroJuvixOptions -> IO Micro.Module
+      miniToMicro root o = do
+        res <- runIO (upToAbstract (getEntryPoint root o))
+        return (Micro.translateModule (head (res ^. Abstract.resultModules)))
 
 main :: IO ()
 main = execParser descr >>= runCommand

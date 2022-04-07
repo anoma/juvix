@@ -90,7 +90,7 @@ import Data.Ord
 import Data.Semigroup (Semigroup, (<>))
 import Data.Singletons
 import Data.Singletons.Sigma
-import Data.Singletons.TH (genSingletons)
+import Data.Singletons.TH (genSingletons, promoteOrdInstances, singOrdInstances)
 import Data.Stream (Stream)
 import Data.String
 import Data.Text (Text, pack, strip, unpack)

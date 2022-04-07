@@ -35,3 +35,6 @@ throwJuvixError = throw . toAJuvixError
 
 instance JuvixError Text where
   renderText = id
+
+instance JuvixError AJuvixError where
+  renderText (AJuvixError r) = renderText r

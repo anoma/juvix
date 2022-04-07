@@ -25,42 +25,36 @@ import qualified MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper.InfoTableBuilder
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper.ScoperResult
 import qualified MiniJuvix.Syntax.Concrete.Parser as Parser
+import MiniJuvix.Syntax.Concrete.Parser.ParserResult (ParserResult)
+import MiniJuvix.Pipeline.EntryPoint
+import MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder (mergeTable)
 
 
-entryScope :: Members '[Error ScopeError, Files] r => Parser.ParserResult -> Sem r ScoperResult
-entryScope parsed = do
-  return ScoperResult {
-    }
-
-scopeCheck1IO :: FilePath -> Module 'Parsed 'ModuleTop -> IO (Either ScopeError ScoperResult)
-scopeCheck1IO root = runM . runFilesIO . scopeCheck1 root
-
-scopeCheck1Pure :: HashMap FilePath Text -> FilePath -> Module 'Parsed 'ModuleTop -> Either ScopeError ScoperResult
-scopeCheck1Pure fs root = run . runFilesPure fs . scopeCheck1 root
-
-scopeCheck1 ::
-  Members '[Files] r =>
-  FilePath ->
-  Module 'Parsed 'ModuleTop ->
-  Sem r (Either ScopeError ScoperResult)
-scopeCheck1 root m = runError (scopeCheck root (pure m))
+entryScope :: Members '[Error ScopeError, Files] r => ParserResult -> Sem r ScoperResult
+entryScope pr = do
+  let root = pr ^. Parser.resultEntry . entryRoot
+      modules = pr ^. Parser.resultModules
+  scopeCheck pr root modules
 
 scopeCheck ::
   Members '[Files, Error ScopeError] r =>
+  ParserResult ->
   FilePath ->
   NonEmpty (Module 'Parsed 'ModuleTop) ->
   Sem r ScoperResult
-scopeCheck root modules =
+scopeCheck pr root modules =
    fmap mkResult $
    Parser.runInfoTableBuilder $
    runInfoTableBuilder $
     runReader scopeParameters $
-      evalState iniScoperState $
+      evalState iniScoperState $ do
+        mergeTable (pr ^. Parser.resultTable)
         mapM checkTopModule_ modules
   where
   mkResult :: (Parser.InfoTable, (InfoTable, NonEmpty (Module 'Scoped 'ModuleTop))) -> ScoperResult
   mkResult (pt, (st, ms)) = ScoperResult {
-    _resultParserResult = undefined,
+    _resultParserResult = pr,
+    _resultParserTable = pt,
     _resultScoperTable = st,
     _resultModules = ms
     }
