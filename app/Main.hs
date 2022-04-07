@@ -13,15 +13,15 @@ import Control.Monad.Extra
 import MiniJuvix.Prelude hiding (Doc)
 import MiniJuvix.Syntax.Abstract.Pretty.Ansi qualified as A
 import MiniJuvix.Syntax.Concrete.Language qualified as M
-import MiniJuvix.Syntax.Concrete.Parser qualified as M
-import MiniJuvix.Syntax.Concrete.Scoped.Highlight qualified as Scoped
-import MiniJuvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoped
+import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
+import MiniJuvix.Syntax.Concrete.Scoped.Highlight qualified as Scoper
+import MiniJuvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi qualified as M
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (defaultOptions)
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base qualified as M
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text qualified as T
-import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as M
+import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
 import MiniJuvix.Syntax.MicroJuvix.Language qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as Micro
@@ -30,7 +30,8 @@ import MiniJuvix.Termination qualified as T
 import MiniJuvix.Termination.CallGraph qualified as A
 import MiniJuvix.Translation.AbstractToMicroJuvix qualified as Micro
 import MiniJuvix.Translation.MicroJuvixToMiniHaskell qualified as Hask
-import MiniJuvix.Translation.ScopedToAbstract qualified as A
+import MiniJuvix.Translation.ScopedToAbstract qualified as Abstract
+import MiniJuvix.Pipeline
 import MiniJuvix.Utils.Version (runDisplayVersion)
 import Options.Applicative
 import Options.Applicative.Help.Pretty
@@ -125,6 +126,10 @@ parseScope = do
   _scopeShowIds <-
     switch
       ( long "show-name-ids"
+          <> help "Show the unique number of each identifier"
+      )
+  _scopeInlineImports <-
+    switch
       ( long "inline-imports"
           <> help "Show the code of imported modules next to the import statement"
       )
@@ -133,8 +138,10 @@ parseScope = do
       ( long "no-colors"
           <> help "Disable ANSI formatting"
       )
+  pure ScopeOptions {..}
 
 parseDisplayVersion :: Parser Command
+parseDisplayVersion =
   flag'
     DisplayVersion
     (long "version" <> short 'v' <> help "Print the version and exit")
@@ -321,8 +328,8 @@ runCommand c = do
       res <- runIO (upToScoping entry)
       let tbl = res ^. Scoper.resultParserTable
           items = tbl ^. Parser.infoParsedItems
-          names = res ^. Scoper.resultScoperTable ^. Scoper.infoNames
-      putStrLn (Scoped.go items names)
+          names = res ^. (Scoper.resultScoperTable . Scoper.infoNames)
+      putStrLn (Scoper.go items names)
     Parse ParseOptions {..} -> do
       m <- parseModuleIO _parseInputFile
       if _parseNoPrettyShow then print m else pPrint m

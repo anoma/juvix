@@ -7,6 +7,7 @@ import GHC.Unicode
 import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Base hiding (Pos, space)
+import MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder
 import MiniJuvix.Syntax.Concrete.Base qualified as P
 import MiniJuvix.Syntax.Concrete.Loc
 import Text.Megaparsec.Char.Lexer qualified as L

@@ -117,7 +117,7 @@ statement =
 -- Foreign
 --------------------------------------------------------------------------------
 
-backend :: forall e m. MonadParsec e Text m => m Backend
+backend :: Member InfoTableBuilder r => ParsecS r Backend
 backend =
   ghc $> BackendGhc
     <|> agda $> BackendAgda

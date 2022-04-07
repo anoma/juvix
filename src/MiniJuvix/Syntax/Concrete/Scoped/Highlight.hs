@@ -4,6 +4,7 @@ import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Syntax.Concrete.Scoped.Name
+import MiniJuvix.Syntax.Concrete.Parser.ParsedItem
 import Prettyprinter
 import Prettyprinter.Render.Text
 

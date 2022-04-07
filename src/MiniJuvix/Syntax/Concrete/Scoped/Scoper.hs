@@ -19,6 +19,7 @@ import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Parser (runModuleParser'')
 import MiniJuvix.Syntax.Concrete.Scoped.Error
 import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
+import MiniJuvix.Syntax.Concrete.Name qualified as N
 import MiniJuvix.Syntax.Concrete.Scoped.Scope
 import qualified MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper.InfoTableBuilder
