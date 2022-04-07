@@ -4,55 +4,70 @@ import Base
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
 import Data.HashMap.Strict qualified as HashMap
+import MiniJuvix.Pipeline
+import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text qualified as M
-import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as M
+import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Utils
 import Text.Show.Pretty hiding (Html)
 
 data PosTest = PosTest
-  { name :: String,
-    relDir :: FilePath,
-    file :: FilePath
+  { _name :: String,
+    _relDir :: FilePath,
+    _file :: FilePath
   }
+
+makeLenses ''PosTest
 
 root :: FilePath
 root = "tests/positive"
 
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
-  TestDescr
-    { testName = name,
-      testRoot = root </> relDir,
-      testAssertion = Steps $ \step -> do
-        step "Parse"
-        p <- parseModuleIO file
+  let testRoot = root </> _relDir
+   in TestDescr
+        { _testName = _name,
+          _testRoot = testRoot,
+          _testAssertion = Steps $ \step -> do
+            let entryPoint = EntryPoint testRoot (pure _file)
 
-        step "Scope"
-        s <- scopeModuleIO p
-        let fs :: HashMap FilePath Text
-            fs =
-              HashMap.fromList
-                [ (getModuleFilePath m, M.renderPrettyCodeDefault m)
-                  | m <- toList (getAllModules s)
-                ]
+            step "Parsing"
+            p :: Parser.ParserResult <- runIO (upToParsing entryPoint)
 
-        step "Pretty"
-        let scopedPretty = M.renderPrettyCodeDefault s
-        let parsedPretty = M.renderPrettyCodeDefault p
+            let p2 = head (p ^. Parser.resultModules)
 
-        step "Parse again"
-        p' <- parseTextModuleIO scopedPretty
-        parsedPretty' <- parseTextModuleIO parsedPretty
+            step "Scoping"
+            s :: Scoper.ScoperResult <- runIO (pipelineScoper p)
 
-        step "Scope again"
-        s' <-
-          head . Scoper._resultModules
-            <$> fromRightIO' printErrorAnsi (return (Scoper.scopeCheck1Pure fs "." p'))
-        step "Checks"
-        assertEqDiff "check: scope . parse . pretty . scope . parse = scope . parse" s s'
-        assertEqDiff "check: parse . pretty . scope . parse = parse" p p'
-        assertEqDiff "check: parse . pretty . parse = parse" p parsedPretty'
-    }
+            let s2 = head (s ^. Scoper.resultModules)
+
+            let fs :: HashMap FilePath Text
+                fs =
+                  HashMap.fromList
+                    [ (getModuleFilePath m, M.renderPrettyCodeDefault m)
+                      | m <- toList (getAllModules s2)
+                    ]
+
+            let scopedPretty = M.renderPrettyCodeDefault s2
+            let parsedPretty = M.renderPrettyCodeDefault p2
+
+            step "Parsing pretty scoped"
+            let fs2 = HashMap.singleton _file scopedPretty
+            p' :: Parser.ParserResult <- (runM . runErrorIO @AJuvixError . runFilesPure fs2) (upToParsing entryPoint)
+
+            step "Parsing pretty parsed"
+            let fs3 = HashMap.singleton _file parsedPretty
+            parsedPretty' :: Parser.ParserResult <- (runM . runErrorIO @AJuvixError . runFilesPure fs3) (upToParsing entryPoint)
+
+            step "Scoping the scoped"
+            s' :: Scoper.ScoperResult <- (runM . runErrorIO @AJuvixError . runFilesPure fs) (upToScoping entryPoint)
+
+            step "Checks"
+            assertEqDiff "check: scope . parse . pretty . scope . parse = scope . parse" s s'
+            assertEqDiff "check: parse . pretty . scope . parse = parse" p p'
+            assertEqDiff "check: parse . pretty . parse = parse" p parsedPretty'
+        }
 
 assertEqDiff :: (Eq a, Show a) => String -> a -> a -> Assertion
 assertEqDiff msg a b

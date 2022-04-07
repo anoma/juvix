@@ -14,6 +14,7 @@ import MiniJuvix.Syntax.Abstract.AbstractResult qualified as Abstract
 import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
 import MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult qualified as MicroJuvix
+import MiniJuvix.Syntax.MicroJuvix.MicroJuvixTypedResult qualified as MicroJuvix
 import MiniJuvix.Translation.AbstractToMicroJuvix qualified as MicroJuvix
 import MiniJuvix.Translation.ScopedToAbstract qualified as Abstract
 
@@ -31,8 +32,13 @@ type family StageResult c = res | res -> c where
   StageResult 'Scoping = Scoper.ScoperResult
   StageResult 'Abstract = Abstract.AbstractResult
 
+--------------------------------------------------------------------------------
+
+runIOEither :: Sem '[Files, Error AJuvixError, Embed IO] a -> IO (Either AJuvixError a)
+runIOEither = runM . runError . runFilesIO
+
 runIO :: Sem '[Files, Error AJuvixError, Embed IO] a -> IO a
-runIO = (runM . runError . runFilesIO) >=> mayThrow
+runIO = runIOEither >=> mayThrow
   where
     mayThrow :: Either AJuvixError r -> IO r
     mayThrow = \case
@@ -53,8 +59,8 @@ upToAbstract = upToScoping >=> pipelineAbstract
 upToMicroJuvix :: Members '[Files, Error AJuvixError] r => EntryPoint -> Sem r MicroJuvix.MicroJuvixResult
 upToMicroJuvix = upToAbstract >=> pipelineMicroJuvix
 
--- upToMicroJuvixTyped :: Members '[Files, Error AJuvixError] r => EntryPoint -> Sem r MicroJuvixTyped.MicroJuvixTypedResult
--- upToMicroJuvixTyped = upToMicroJuvix >=> pipelineMicroJuvixTyped
+upToMicroJuvixTyped :: Members '[Files, Error AJuvixError] r => EntryPoint -> Sem r MicroJuvix.MicroJuvixTypedResult
+upToMicroJuvixTyped = upToMicroJuvix >=> pipelineMicroJuvixTyped
 
 --------------------------------------------------------------------------------
 
@@ -76,8 +82,9 @@ pipelineMicroJuvix ::
   Sem r MicroJuvix.MicroJuvixResult
 pipelineMicroJuvix = mapError (toAJuvixError @Text) . MicroJuvix.entryMicroJuvix
 
--- pipelineMicroJuvixTyped ::
---   Members '[Files, Error AJuvixError] r =>
---   Abstract.AbstractResult ->
---   Sem r MicroJuvix.MicroJuvixResult
--- pipelineMicroJuvixTyped = mapError (toAJuvixError @Text) . MicroJuvix.entryMicroJuvixTyped
+-- TODO:
+pipelineMicroJuvixTyped ::
+  Members '[Files, Error AJuvixError] r =>
+  MicroJuvix.MicroJuvixResult ->
+  Sem r MicroJuvix.MicroJuvixTypedResult
+pipelineMicroJuvixTyped = undefined

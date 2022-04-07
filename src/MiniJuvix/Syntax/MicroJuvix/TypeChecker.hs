@@ -14,12 +14,12 @@ newtype LocalVars = LocalVars
 
 makeLenses ''LocalVars
 
-checkModule :: Module -> Either (NonEmpty TypeCheckerError) Module
+checkModule :: Module -> Either TypeCheckerErrors Module
 checkModule m = run $ do
   (es, checkedModule) <- runOutputList $ runReader (buildTable m) (checkModule' m)
-  return $ case es of
-    [] -> Right checkedModule
-    (x : xs) -> Left (x :| xs)
+  return $ case nonEmpty es of
+    Nothing -> Right checkedModule
+    Just xs -> Left (TypeCheckerErrors {_unTypeCheckerErrors = xs})
 
 checkModule' ::
   Members '[Reader InfoTable, Output TypeCheckerError] r =>

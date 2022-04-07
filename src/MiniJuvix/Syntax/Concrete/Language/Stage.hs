@@ -7,6 +7,6 @@ import MiniJuvix.Prelude
 data Stage
   = Parsed
   | Scoped
-  deriving stock (Show)
+  deriving stock (Eq, Show)
 
 $(genSingletons [''Stage])

@@ -23,6 +23,7 @@ import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base qualified as M
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text qualified as T
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
+import MiniJuvix.Syntax.MicroJuvix.Error qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.Language qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as Micro
@@ -350,7 +351,7 @@ runCommand c = do
       micro <- miniToMicro root o
       case Micro.checkModule micro of
         Right _ -> putStrLn "Well done! It type checks"
-        Left es -> sequence_ (intersperse (putStrLn "") (printErrorAnsi <$> toList es)) >> exitFailure
+        Left (Micro.TypeCheckerErrors es) -> sequence_ (intersperse (putStrLn "") (printErrorAnsi <$> toList es)) >> exitFailure
     MiniHaskell o -> do
       a <- head . (^. Abstract.resultModules) <$> runIO (upToAbstract (getEntryPoint root o))
       let micro = Micro.translateModule a
@@ -358,7 +359,7 @@ runCommand c = do
         Right checkedMicro -> do
           minihaskell <- fromRightIO' putStrLn (return $ Hask.translateModule checkedMicro)
           Hask.printPrettyCodeDefault minihaskell
-        Left es -> mapM_ printErrorAnsi es >> exitFailure
+        Left es -> printErrorAnsi es >> exitFailure
     Termination (Calls opts@CallsOptions {..}) -> do
       a <- head . (^. Abstract.resultModules) <$> runIO (upToAbstract (getEntryPoint root opts))
       let callMap0 = T.buildCallMap a

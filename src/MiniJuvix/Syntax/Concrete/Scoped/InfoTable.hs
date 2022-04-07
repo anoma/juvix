@@ -7,19 +7,23 @@ import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 newtype FunctionInfo = FunctionInfo
   { _functionInfoType :: Expression
   }
+  deriving stock (Eq, Show)
 
 newtype ConstructorInfo = ConstructorInfo
   { _constructorInfoType :: Expression
   }
+  deriving stock (Eq, Show)
 
 data AxiomInfo = AxiomInfo
   { _axiomInfoType :: Expression,
     _axiomInfoBackends :: [BackendItem]
   }
+  deriving stock (Eq, Show)
 
 newtype InductiveInfo = InductiveInfo
   { _inductiveInfoDef :: InductiveDef 'Scoped
   }
+  deriving stock (Eq, Show)
 
 data InfoTable = InfoTable
   { _infoConstructors :: HashMap ConstructorRef ConstructorInfo,
@@ -29,6 +33,7 @@ data InfoTable = InfoTable
     _infoFunctionClauses :: HashMap S.Symbol (FunctionClause 'Scoped),
     _infoNames :: [S.Name]
   }
+  deriving stock (Eq, Show)
 
 emptyInfoTable :: InfoTable
 emptyInfoTable =

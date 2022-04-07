@@ -11,5 +11,6 @@ data ScoperResult = ScoperResult
     _resultScoperTable :: Scoped.InfoTable,
     _resultModules :: NonEmpty (Module 'Scoped 'ModuleTop)
   }
+  deriving stock (Eq, Show)
 
 makeLenses ''ScoperResult

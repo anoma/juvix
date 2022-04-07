@@ -7,5 +7,6 @@ newtype InfoTable = InfoTable
   { _infoParsedItems :: [ParsedItem]
   }
   deriving newtype (Semigroup, Monoid)
+  deriving stock (Eq, Show)
 
 makeLenses ''InfoTable

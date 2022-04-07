@@ -10,5 +10,6 @@ data ParserResult = ParserResult
     _resultTable :: InfoTable,
     _resultModules :: NonEmpty (Module 'Parsed 'ModuleTop)
   }
+  deriving stock (Eq, Show)
 
 makeLenses ''ParserResult

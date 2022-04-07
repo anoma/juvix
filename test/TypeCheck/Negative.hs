@@ -1,6 +1,7 @@
 module TypeCheck.Negative (allTests) where
 
 import Base
+import MiniJuvix.Pipeline
 import MiniJuvix.Syntax.MicroJuvix.Error
 import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as T
 import MiniJuvix.Translation.AbstractToMicroJuvix qualified as A
@@ -8,29 +9,29 @@ import MiniJuvix.Translation.AbstractToMicroJuvix qualified as A
 type FailMsg = String
 
 data NegTest = NegTest
-  { name :: String,
-    relDir :: FilePath,
-    file :: FilePath,
-    checkErr :: [TypeCheckerError] -> Maybe FailMsg
+  { _name :: String,
+    _relDir :: FilePath,
+    _file :: FilePath,
+    _checkErr :: TypeCheckerErrors -> Maybe FailMsg
   }
 
 testDescr :: NegTest -> TestDescr
 testDescr NegTest {..} =
-  TestDescr
-    { testName = name,
-      testRoot = root </> relDir,
-      testAssertion = Single $ do
-        result <-
-          parseModuleIO file
-            >>= scopeModuleIO
-            >>= translateModuleIO
-            >>| A.translateModule
-            >>| T.checkModule
+  let tRoot = root </> _relDir
+   in TestDescr
+        { _testName = _name,
+          _testRoot = tRoot,
+          _testAssertion = Single $ do
+            let entryPoint = EntryPoint tRoot (pure _file)
 
-        case result of
-          Left es -> whenJust (checkErr (toList es)) assertFailure
-          Right _ -> assertFailure "The type checker did not find an error."
-    }
+            result <- runIOEither (upToMicroJuvixTyped entryPoint)
+            let msg1 = "The type checker did not find an error."
+            let msg2 = "An error ocurred but it was not in the type checker."
+            case mapLeft fromAJuvixError result of
+              Left (Just err) -> whenJust (_checkErr err) assertFailure
+              Left Nothing -> assertFailure msg1
+              Right _ -> assertFailure msg2
+        }
 
 allTests :: TestTree
 allTests =

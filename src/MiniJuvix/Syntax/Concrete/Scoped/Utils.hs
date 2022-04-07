@@ -18,6 +18,7 @@ getAllModules m =
     allImports (MkScopedModule _ w) =
       concat [i : allImports (mkScopedModule t) | StatementImport i@(Import t) <- _moduleBody w]
         <> concatMap (allImports . mkScopedModule) [l | StatementModule l <- _moduleBody w]
+
     singl :: Module 'Scoped 'ModuleTop -> (S.NameId, Module 'Scoped 'ModuleTop)
     singl n = (S._nameId (_modulePath n), n)
 
