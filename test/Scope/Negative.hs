@@ -3,7 +3,6 @@ module Scope.Negative (allTests) where
 import Base
 import MiniJuvix.Pipeline
 import MiniJuvix.Syntax.Concrete.Scoped.Error
-import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as M
 
 type FailMsg = String
 
@@ -13,8 +12,6 @@ data NegTest = NegTest
     _file :: FilePath,
     _checkErr :: ScopeError -> Maybe FailMsg
   }
-
-makeLenses ''NegTest
 
 root :: FilePath
 root = "tests/negative"
@@ -26,7 +23,7 @@ testDescr NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = EntryPoint tRoot (pure _file)
+            let entryPoint = EntryPoint "." (pure _file)
             res <- runIOEither (upToScoping entryPoint)
             let msg1 = "The scope checker did not find an error."
             let msg2 = "An error ocurred but it was not in the scoper."

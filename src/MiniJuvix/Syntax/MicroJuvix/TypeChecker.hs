@@ -1,18 +1,32 @@
-module MiniJuvix.Syntax.MicroJuvix.TypeChecker where
+module MiniJuvix.Syntax.MicroJuvix.TypeChecker
+  ( module MiniJuvix.Syntax.MicroJuvix.TypeChecker,
+    module MiniJuvix.Syntax.MicroJuvix.MicroJuvixTypedResult,
+    module MiniJuvix.Syntax.MicroJuvix.Error,
+  )
+where
 
 import Data.HashMap.Strict qualified as HashMap
-import MiniJuvix.Prelude
+import MiniJuvix.Prelude hiding (fromEither)
 import MiniJuvix.Syntax.Concrete.Language (LiteralLoc)
 import MiniJuvix.Syntax.MicroJuvix.Error
 import MiniJuvix.Syntax.MicroJuvix.InfoTable
 import MiniJuvix.Syntax.MicroJuvix.Language
+import MiniJuvix.Syntax.MicroJuvix.LocalVars
+import MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult
+import MiniJuvix.Syntax.MicroJuvix.MicroJuvixTypedResult
+import Polysemy.Error (fromEither)
 
-newtype LocalVars = LocalVars
-  { _localTypes :: HashMap VarName Type
-  }
-  deriving newtype (Semigroup, Monoid)
-
-makeLenses ''LocalVars
+entryMicroJuvixTyped ::
+  (Member (Error TypeCheckerErrors) r) =>
+  MicroJuvixResult ->
+  Sem r MicroJuvixTypedResult
+entryMicroJuvixTyped res@MicroJuvixResult {..} = do
+  r <- fromEither (mapM checkModule _resultModules)
+  return
+    MicroJuvixTypedResult
+      { _resultMicroJuvixResult = res,
+        _resultModules = r
+      }
 
 checkModule :: Module -> Either TypeCheckerErrors Module
 checkModule m = run $ do

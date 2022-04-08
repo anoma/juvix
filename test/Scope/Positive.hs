@@ -5,7 +5,6 @@ import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
 import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Pipeline
-import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text qualified as M
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
@@ -25,12 +24,12 @@ root = "tests/positive"
 
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
-  let testRoot = root </> _relDir
+  let tRoot = root </> _relDir
    in TestDescr
         { _testName = _name,
-          _testRoot = testRoot,
+          _testRoot = tRoot,
           _testAssertion = Steps $ \step -> do
-            let entryPoint = EntryPoint testRoot (pure _file)
+            let entryPoint = EntryPoint "." (pure _file)
 
             step "Parsing"
             p :: Parser.ParserResult <- runIO (upToParsing entryPoint)
@@ -64,9 +63,16 @@ testDescr PosTest {..} =
             s' :: Scoper.ScoperResult <- (runM . runErrorIO @AJuvixError . runFilesPure fs) (upToScoping entryPoint)
 
             step "Checks"
-            assertEqDiff "check: scope . parse . pretty . scope . parse = scope . parse" s s'
-            assertEqDiff "check: parse . pretty . scope . parse = parse" p p'
-            assertEqDiff "check: parse . pretty . parse = parse" p parsedPretty'
+            let smodules = s ^. Scoper.resultModules
+            let smodules' = s' ^. Scoper.resultModules
+
+            let pmodules = p ^. Parser.resultModules
+            let pmodules' = p' ^. Parser.resultModules
+            let parsedPrettyModules = parsedPretty' ^. Parser.resultModules
+
+            assertEqDiff "check: scope . parse . pretty . scope . parse = scope . parse" smodules smodules'
+            assertEqDiff "check: parse . pretty . scope . parse = parse" pmodules pmodules'
+            assertEqDiff "check: parse . pretty . parse = parse" pmodules parsedPrettyModules
         }
 
 assertEqDiff :: (Eq a, Show a) => String -> a -> a -> Assertion

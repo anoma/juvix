@@ -15,6 +15,7 @@ import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
 import MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult qualified as MicroJuvix
 import MiniJuvix.Syntax.MicroJuvix.MicroJuvixTypedResult qualified as MicroJuvix
+import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as MicroJuvix
 import MiniJuvix.Translation.AbstractToMicroJuvix qualified as MicroJuvix
 import MiniJuvix.Translation.ScopedToAbstract qualified as Abstract
 
@@ -82,9 +83,8 @@ pipelineMicroJuvix ::
   Sem r MicroJuvix.MicroJuvixResult
 pipelineMicroJuvix = mapError (toAJuvixError @Text) . MicroJuvix.entryMicroJuvix
 
--- TODO:
 pipelineMicroJuvixTyped ::
   Members '[Files, Error AJuvixError] r =>
   MicroJuvix.MicroJuvixResult ->
   Sem r MicroJuvix.MicroJuvixTypedResult
-pipelineMicroJuvixTyped = undefined
+pipelineMicroJuvixTyped = mapError (toAJuvixError @MicroJuvix.TypeCheckerErrors) . MicroJuvix.entryMicroJuvixTyped

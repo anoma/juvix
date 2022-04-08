@@ -3,8 +3,6 @@ module TypeCheck.Negative (allTests) where
 import Base
 import MiniJuvix.Pipeline
 import MiniJuvix.Syntax.MicroJuvix.Error
-import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as T
-import MiniJuvix.Translation.AbstractToMicroJuvix qualified as A
 
 type FailMsg = String
 
@@ -22,7 +20,7 @@ testDescr NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = EntryPoint tRoot (pure _file)
+            let entryPoint = EntryPoint "." (pure _file)
 
             result <- runIOEither (upToMicroJuvixTyped entryPoint)
             let msg1 = "The type checker did not find an error."
@@ -52,43 +50,41 @@ tests =
       "MicroJuvix"
       "PatternConstructor.mjuvix"
       $ \case
-        [ErrWrongConstructorType {}] -> Nothing
+        (TypeCheckerErrors (ErrWrongConstructorType {} :| [])) -> Nothing
         _ -> wrongError,
     NegTest
       "Constructor pattern length mismatch"
       "MicroJuvix"
       "PatternConstructorApp.mjuvix"
       $ \case
-        [ErrWrongConstructorAppArgs {}] -> Nothing
+        (TypeCheckerErrors (ErrWrongConstructorAppArgs {} :| [])) -> Nothing
         _ -> wrongError,
     NegTest
       "Type vs inferred type mismatch"
       "MicroJuvix"
       "WrongType.mjuvix"
       $ \case
-        [ErrWrongType {}] -> Nothing
+        (TypeCheckerErrors (ErrWrongType {} :| [])) -> Nothing
         _ -> wrongError,
     NegTest
       "Function application with non-function type"
       "MicroJuvix"
       "ExpectedFunctionType.mjuvix"
       $ \case
-        [ErrExpectedFunctionType {}] -> Nothing
+        (TypeCheckerErrors (ErrExpectedFunctionType {} :| [])) -> Nothing
         _ -> wrongError,
     NegTest
       "Function definition clause with two many match patterns"
       "MicroJuvix"
       "TooManyPatterns.mjuvix"
       $ \case
-        [ErrTooManyPatterns {}] -> Nothing
+        (TypeCheckerErrors (ErrTooManyPatterns {} :| [])) -> Nothing
         _ -> wrongError,
     NegTest
       "Multiple type errors are captured"
       "MicroJuvix"
       "MultiWrongType.mjuvix"
       $ \case
-        [ ErrWrongType {},
-          ErrWrongType {}
-          ] -> Nothing
+        (TypeCheckerErrors (ErrWrongType {} :| [ErrWrongType {}])) -> Nothing
         _ -> wrongError
   ]

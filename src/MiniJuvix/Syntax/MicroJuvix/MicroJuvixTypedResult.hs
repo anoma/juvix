@@ -5,16 +5,13 @@ module MiniJuvix.Syntax.MicroJuvix.MicroJuvixTypedResult
 where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Abstract.AbstractResult qualified as Abstract
 import MiniJuvix.Syntax.MicroJuvix.InfoTable
 import MiniJuvix.Syntax.MicroJuvix.Language
-import MiniJuvix.Syntax.MicroJuvix.TypeChecker
+import MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult
 
 data MicroJuvixTypedResult = MicroJuvixTypedResult
-  { _resultAbstract :: Abstract.AbstractResult,
-    _resultTable :: InfoTable,
-    _resultModules :: NonEmpty Module,
-    _resultLocalVars :: LocalVars
+  { _resultMicroJuvixResult :: MicroJuvixResult,
+    _resultModules :: NonEmpty Module
   }
 
 makeLenses ''MicroJuvixTypedResult

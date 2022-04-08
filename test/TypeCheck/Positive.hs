@@ -1,14 +1,12 @@
 module TypeCheck.Positive where
 
 import Base
-import MiniJuvix.Syntax.MicroJuvix.Error
-import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as T
-import MiniJuvix.Translation.AbstractToMicroJuvix qualified as A
+import MiniJuvix.Pipeline
 
 data PosTest = PosTest
-  { name :: String,
-    relDir :: FilePath,
-    file :: FilePath
+  { _name :: String,
+    _relDir :: FilePath,
+    _file :: FilePath
   }
 
 root :: FilePath
@@ -16,21 +14,14 @@ root = "tests/positive"
 
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
-  TestDescr
-    { testName = name,
-      testRoot = root </> relDir,
-      testAssertion = Single $ do
-        result <-
-          parseModuleIO file
-            >>= scopeModuleIO
-            >>= translateModuleIO
-            >>| A.translateModule
-            >>| T.checkModule
-
-        case result of
-          Left es -> assertFailure ("The type checker returned the errors:\n" <> show (ppTypeCheckerError <$> toList es))
-          Right _ -> return ()
-    }
+  let tRoot = root </> _relDir
+   in TestDescr
+        { _testName = _name,
+          _testRoot = tRoot,
+          _testAssertion = Single $ do
+            let entryPoint = EntryPoint "." (pure _file)
+            (void . runIO) (upToMicroJuvixTyped entryPoint)
+        }
 
 allTests :: TestTree
 allTests =
