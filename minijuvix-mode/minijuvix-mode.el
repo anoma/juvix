@@ -42,6 +42,7 @@
   (save-buffer)
   (minijuvix-clear-annotations)
   (eval (read (shell-command-to-string (concat "minijuvix highlight " (buffer-file-name)))))
+  (save-buffer)
   )
 
 (defun minijuvix-goto-definition ()
