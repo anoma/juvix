@@ -1,0 +1,8 @@
+module WrongConstructorArity;
+  inductive T {
+    A : T;
+  };
+
+  f : T → T;
+  f (A i) ≔ i;
+end;

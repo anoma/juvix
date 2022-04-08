@@ -96,6 +96,7 @@ executables:
     main: Main.hs
     source-dirs: app
     dependencies:
+    - ansi-terminal == 0.11.*
     - minijuvix
     - optparse-applicative == 0.17.*
     verbatim:

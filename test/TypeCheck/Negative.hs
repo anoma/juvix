@@ -86,5 +86,12 @@ tests =
       "MultiWrongType.mjuvix"
       $ \case
         (TypeCheckerErrors (ErrWrongType {} :| [ErrWrongType {}])) -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Constructor pattern with arity greater than the constructor"
+      "MicroJuvix"
+      "WrongConstructorArity.mjuvix"
+      $ \case
+        (TypeCheckerErrors (ErrWrongConstructorAppArgs {} :| [])) -> Nothing
         _ -> wrongError
   ]

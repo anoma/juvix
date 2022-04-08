@@ -27,7 +27,8 @@ import MiniJuvix.Syntax.MicroJuvix.Error qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.Language qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as Micro
-import MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi qualified as Hask
+import MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi qualified as HaskAnsi
+import MiniJuvix.Syntax.MiniHaskell.Pretty.Text qualified as HaskText
 import MiniJuvix.Termination qualified as T
 import MiniJuvix.Termination.CallGraph qualified as A
 import MiniJuvix.Translation.AbstractToMicroJuvix qualified as Micro
@@ -36,6 +37,8 @@ import MiniJuvix.Translation.ScopedToAbstract qualified as Abstract
 import MiniJuvix.Utils.Version (runDisplayVersion)
 import Options.Applicative
 import Options.Applicative.Help.Pretty
+import System.Console.ANSI qualified as Ansi
+import System.IO qualified as IO
 import Text.Show.Pretty hiding (Html)
 
 --------------------------------------------------------------------------------
@@ -358,7 +361,10 @@ runCommand c = do
       case Micro.checkModule micro of
         Right checkedMicro -> do
           minihaskell <- fromRightIO' putStrLn (return $ Hask.translateModule checkedMicro)
-          Hask.printPrettyCodeDefault minihaskell
+          supportsAnsi <- Ansi.hSupportsANSI IO.stdout
+          if supportsAnsi
+            then HaskAnsi.printPrettyCodeDefault minihaskell
+            else HaskText.printPrettyCodeDefault minihaskell
         Left es -> printErrorAnsi es >> exitFailure
     Termination (Calls opts@CallsOptions {..}) -> do
       a <- head . (^. Abstract.resultModules) <$> runIO (upToAbstract (getEntryPoint root opts))
