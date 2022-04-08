@@ -86,7 +86,7 @@ goName n =
 
 goNameText :: Name -> Text
 goNameText n =
-  adaptFirstLetter lexeme <> "_" <> show (n ^. nameId . unNameId)
+  adaptFirstLetter lexeme <> nameTextSuffix
   where
     lexeme
       | Text.null lexeme' = "v"
@@ -110,6 +110,16 @@ goNameText n =
           KNameTopModule -> True
           KNameLocalModule -> True
           _ -> False
+    nameTextSuffix :: Text
+    nameTextSuffix = case n ^. nameKind of
+      KNameTopModule -> mempty
+      KNameFunction ->
+        if n ^. nameText == haskellMainName then mempty else idSuffix
+      _ -> idSuffix
+    idSuffix :: Text
+    idSuffix = "_" <> show (n ^. nameId . unNameId)
+    haskellMainName :: Text
+    haskellMainName = "main"
 
 goFunctionDef :: Members '[Error Err, Reader InfoTable] r => FunctionDef -> Sem r H.FunctionDef
 goFunctionDef FunctionDef {..} = do
