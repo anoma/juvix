@@ -17,11 +17,9 @@ import MiniJuvix.Syntax.Concrete.Language qualified as M
 import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Highlight qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoper
-import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi qualified as M
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (defaultOptions)
-import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base qualified as M
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
-import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text qualified as T
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
 import MiniJuvix.Syntax.MicroJuvix.Error qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.Language qualified as Micro
@@ -29,6 +27,7 @@ import MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as Micro
 import MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi qualified as HaskAnsi
 import MiniJuvix.Syntax.MiniHaskell.Pretty.Text qualified as HaskText
+import MiniJuvix.Syntax.Pretty qualified as Pretty
 import MiniJuvix.Termination qualified as T
 import MiniJuvix.Termination.CallGraph qualified as A
 import MiniJuvix.Translation.AbstractToMicroJuvix qualified as Micro
@@ -43,6 +42,12 @@ import Text.Show.Pretty hiding (Html)
 
 --------------------------------------------------------------------------------
 
+data GlobalOptions = GlobalOptions
+  { _globalNoColors :: Bool
+  }
+
+makeLenses ''GlobalOptions
+
 data Command
   = Scope ScopeOptions
   | Parse ParseOptions
@@ -54,11 +59,17 @@ data Command
   | DisplayRoot
   | Highlight HighlightOptions
 
+data CLI = CLI
+  { _cliGlobalOptions :: GlobalOptions,
+    _cliCommand :: Command
+  }
+
+makeLenses ''CLI
+
 data ScopeOptions = ScopeOptions
   { _scopeInputFiles :: NonEmpty FilePath,
     _scopeShowIds :: Bool,
-    _scopeInlineImports :: Bool,
-    _scopeNoColors :: Bool
+    _scopeInlineImports :: Bool
   }
 
 data ParseOptions = ParseOptions
@@ -75,6 +86,21 @@ data HtmlOptions = HtmlOptions
     _htmlRecursive :: Bool,
     _htmlTheme :: Theme
   }
+
+parseGlobalOptions :: Parser GlobalOptions
+parseGlobalOptions = do
+  _globalNoColors <-
+    switch
+      ( long "no-colors"
+          <> help "Disable globally ANSI formatting "
+      )
+  pure GlobalOptions {..}
+
+parseCLI :: Parser CLI
+parseCLI = do
+  _cliGlobalOptions <- parseGlobalOptions
+  _cliCommand <- parseCommand
+  pure CLI {..}
 
 parseHtml :: Parser HtmlOptions
 parseHtml = do
@@ -155,10 +181,10 @@ parseDisplayRoot =
     DisplayRoot
     (long "show-root" <> help "Print the detected root of the project")
 
-descr :: ParserInfo Command
+descr :: ParserInfo CLI
 descr =
   info
-    (parseCommand <**> helper)
+    (parseCLI <**> helper)
     ( fullDesc
         <> progDesc "The MiniJuvix compiler."
         <> headerDoc (Just headDoc)
@@ -317,21 +343,17 @@ instance HasEntryPoint CallsOptions where
 instance HasEntryPoint CallGraphOptions where
   getEntryPoint root = EntryPoint root . pure . _graphInputFile
 
-runCommand :: Command -> IO ()
-runCommand c = do
+runCLI :: CLI -> IO ()
+runCLI CLI {..} = do
   root <- findRoot
-  case c of
+  case _cliCommand of
     DisplayVersion -> runDisplayVersion
     DisplayRoot -> putStrLn (pack root)
     Scope opts@ScopeOptions {..} -> do
       l <- (^. Scoper.resultModules) <$> runIO (upToScoping (getEntryPoint root opts))
       forM_ l $ \s -> do
-        printer (mkScopePrettyOptions opts) s
-      where
-        printer :: M.Options -> M.Module 'M.Scoped 'M.ModuleTop -> IO ()
-        printer
-          | not _scopeNoColors = M.printPrettyCode
-          | otherwise = T.printPrettyCode
+        let useColors = not (CLI ^. (cliGlobalOptions . globalNoColors))
+        Pretty.prettyScoper useColors (mkScopePrettyOptions opts) s
     Highlight o -> do
       let entry :: EntryPoint
           entry = getEntryPoint root o
@@ -347,8 +369,8 @@ runCommand c = do
       res <- runIO (upToScoping (getEntryPoint root o))
       let m = head (res ^. Scoper.resultModules)
       genHtml defaultOptions _htmlRecursive _htmlTheme m
-    MicroJuvix (Pretty o) -> do
-      micro <- miniToMicro root o
+    MicroJuvix (Pretty opts) -> do
+      micro <- head . (^. Micro.resultModules) <$> runIO (upToMicroJuvix (getEntryPoint root opts))
       Micro.printPrettyCodeDefault micro
     MicroJuvix (TypeCheck o) -> do
       micro <- miniToMicro root o
@@ -394,9 +416,7 @@ runCommand c = do
         putStrLn ""
   where
     miniToMicro :: FilePath -> MicroJuvixOptions -> IO Micro.Module
-    miniToMicro root o = do
-      res <- runIO (upToAbstract (getEntryPoint root o))
-      return (Micro.translateModule (head (res ^. Abstract.resultModules)))
+    miniToMicro root o = runIO (upToAbstract (getEntryPoint root o))
 
 main :: IO ()
-main = execParser descr >>= runCommand
+main = execParser descr >>= runCLI
