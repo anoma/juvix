@@ -12,17 +12,22 @@
 </a>
 #+end_html
 
+#+begin_html
+<a href="https://github.com/heliaxdev/minijuvix/tags">
+<img alt="" src="https://img.shields.io/github/v/release/heliaxdev/minijuvix?include_prereleases" />
+</a>
+#+end_html
+
+
 ** Description
 
-MiniJuvix is a dependently functional programming language for writing
-efficient formally-verified
-[[https://anoma.network/blog/validity-predicates/][validity
-predicates]], which can be deployed to various distributed ledgers. This
-is a software released for experimentation and research purposes only.
-No warranty is provided or implied.
+MiniJuvix is a programming language for writing efficient formally-verified
+[[https://anoma.network/blog/validity-predicates/][validity predicates]], which can be deployed to various distributed ledgers. This
+is software released for experimentation and research purposes only. No warranty
+is provided or implied.
 
 MiniJuvix addresses many issues that we have experienced while trying to
-write and deploy decentralised applications present in the ecosystem of
+write and deploy decentralized applications present in the ecosystem of
 smart-contracts:
 
 - the difficulty of adequate program verification,
@@ -36,7 +41,7 @@ To install MiniJuvix, you can download its sources using
 [[http://git-scm.com/][Git]] from the
 [[https://github.com/anoma/juvix.git][Github repository]]. Then, the
 program can be downloaded and installed with the following commands. You
-will need to have installed [[https://haskellstack.org][Stack]].
+will need to have [[https://haskellstack.org][Stack]] installed.
 
 #+begin_src shell
    $ git clone https://github.com/heliaxdev/minijuvix.git
