@@ -160,11 +160,14 @@ checkFunctionClause info clause@FunctionClause {..} = do
   if length patTys /= length _clausePatterns
     then output (tyErr patTys) $> clause
     else do
-      locals <- mconcat <$> zipWithM (checkPattern _clauseName) patTys _clausePatterns
-      eclauseBody <- runError @TypeCheckerError $ runReader locals (checkExpression bodyTy _clauseBody)
-      _clauseBody' <- case eclauseBody of
+      eLocals <- checkPatterns _clauseName patTys _clausePatterns
+      _clauseBody' <- case eLocals of
         Left err -> output err $> _clauseBody
-        Right r -> return r
+        Right locals -> do
+          eclauseBody <- runError @TypeCheckerError $ runReader locals (checkExpression bodyTy _clauseBody)
+          case eclauseBody of
+            Left err -> output err $> _clauseBody
+            Right r -> return r
       return
         FunctionClause
           { _clauseBody = _clauseBody',
@@ -180,9 +183,18 @@ checkFunctionClause info clause@FunctionClause {..} = do
             }
         )
 
+checkPatterns ::
+  Members '[Reader InfoTable, Output TypeCheckerError] r =>
+  FunctionName ->
+  [Type] ->
+  [Pattern] ->
+  Sem r (Either TypeCheckerError LocalVars)
+checkPatterns name ctorTys ctorPs =
+  runError @TypeCheckerError (mconcat <$> zipWithM (checkPattern name) ctorTys ctorPs)
+
 checkPattern ::
   forall r.
-  Members '[Reader InfoTable, Output TypeCheckerError] r =>
+  Members '[Reader InfoTable, Output TypeCheckerError, Error TypeCheckerError] r =>
   FunctionName ->
   Type ->
   Pattern ->
@@ -202,7 +214,7 @@ checkPattern funName type_ pat = LocalVars . HashMap.fromList <$> go type_ pat
         goConstr :: ConstructorApp -> Sem r [(VarName, Type)]
         goConstr app@(ConstructorApp c ps) = do
           tys <- (^. constructorInfoArgs) <$> lookupConstructor c
-          when (length tys /= length ps) (output (appErr app tys))
+          when (length tys /= length ps) (throw (appErr app tys))
           concat <$> zipWithM go tys ps
         appErr :: ConstructorApp -> [Type] -> TypeCheckerError
         appErr app tys =
