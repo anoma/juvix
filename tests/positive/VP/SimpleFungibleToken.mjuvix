@@ -210,21 +210,19 @@ unwrap-default o ≔ maybe-int 0 o;
 change-from-key : String → Int;
 change-from-key key ≔ unwrap-default (read-post key) - unwrap-default (read-pre key);
 
-check-vp : ListString → String → String → Int → PairIntBool;
-check-vp verifiers key owner change ≔
+check-vp : ListString → String → Int → String → PairIntBool;
+check-vp verifiers key change owner ≔
     if-pairIntBool
         (change-from-key key < 0)
+        -- make sure the spender approved the transaction
         (MakePair (change + (change-from-key key)) (elem owner verifiers))
         (MakePair (change + (change-from-key key)) true);
-
-check-vp' : ListString → String → Int → String → PairIntBool;
-check-vp' verifiers key change owner ≔ check-vp verifiers key owner change;
 
 check-keys : String → ListString → PairIntBool → String → PairIntBool;
 check-keys token verifiers (MakePair change is-success) key ≔
     if-pairIntBool
         is-success
-        (pair-from-optionString (check-vp' verifiers key change) (is-balance-key token key))
+        (pair-from-optionString (check-vp verifiers key change) (is-balance-key token key))
         (MakePair 0 false);
 
 check-result : PairIntBool → Bool;
@@ -235,6 +233,59 @@ vp token keys-changed verifiers ≔
     check-result
         (foldl
             (check-keys token verifiers)
-            (MakePair 0 false) keys-changed);
+            (MakePair 0 true)
+            keys-changed);
+
+--------------------------------------------------------------------------------
+-- IO
+--------------------------------------------------------------------------------
+
+axiom Action : Type {
+ ghc ↦ "IO ()";
+};
+
+axiom putStr : String → Action {
+  ghc ↦ "putStr";
+};
+
+axiom putStrLn : String → Action {
+  ghc ↦ "putStrLn";
+};
+
+infixl 1 >>;
+axiom >> : Action → Action → Action {
+  ghc ↦ "(>>)";
+};
+
+show-result : Bool → String;
+show-result true ≔ "OK";
+show-result false ≔ "FAIL";
+
+--------------------------------------------------------------------------------
+-- Testing VP
+--------------------------------------------------------------------------------
+
+token : String;
+token ≔ "owner-token";
+
+owner-address : String;
+owner-address ≔ "owner-address";
+
+change1-key : String;
+change1-key ≔ "change1-key";
+
+change2-key : String;
+change2-key ≔ "change2-key";
+
+verifiers : ListString;
+verifiers ≔ Cons owner-address Nil;
+
+keys-changed : ListString;
+keys-changed ≔ Cons change1-key (Cons change2-key Nil);
+
+main : Action;
+main ≔
+    (putStr "VP Status: ")
+    >> (putStrLn (show-result (vp token keys-changed verifiers)));
 
 end;
