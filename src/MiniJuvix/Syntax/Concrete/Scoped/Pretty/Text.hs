@@ -19,10 +19,3 @@ renderPrettyCodeDefault = renderStrict . docStream defaultOptions
 
 renderPrettyCode :: PrettyCode c => Options -> c -> Text
 renderPrettyCode opts = renderStrict . docStream opts
-
-docStream :: PrettyCode c => Options -> c -> SimpleDocStream Ann
-docStream opts =
-  layoutPretty defaultLayoutOptions
-    . run
-    . runReader opts
-    . ppCode

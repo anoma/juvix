@@ -70,7 +70,7 @@ genModule opts theme m =
       Nord -> nordCss
     prettySrc =
       (pre ! Attr.id "src-content") $
-        renderTree $ treeForm $ docStream opts m
+        renderTree $ treeForm $ docStream' opts m
 
     mheader :: Html
     mheader =
@@ -87,8 +87,8 @@ genModule opts theme m =
       mheader
         <> prettySrc
 
-docStream :: Options -> Module 'Scoped 'ModuleTop -> SimpleDocStream Ann
-docStream opts m = layoutPretty defaultLayoutOptions (runPrettyCode opts m)
+docStream' :: Options -> Module 'Scoped 'ModuleTop -> SimpleDocStream Ann
+docStream' opts m = layoutPretty defaultLayoutOptions (runPrettyCode opts m)
 
 renderTree :: SimpleDocTree Ann -> Html
 renderTree = go
