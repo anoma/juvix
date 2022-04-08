@@ -38,12 +38,12 @@ data Module s = Module
   { _moduleName :: S.Name' s,
     _moduleBody :: ModuleBody
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 newtype ModuleBody = ModuleBody
   { _moduleStatements :: [Statement]
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data Statement
   = StatementInductive InductiveDef
@@ -52,39 +52,39 @@ data Statement
   | StatementForeign ForeignBlock
   | StatementLocalModule LocalModule
   | StatementAxiom AxiomDef
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
     _funDefTypeSig :: Expression,
     _funDefClauses :: NonEmpty FunctionClause
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data FunctionClause = FunctionClause
   { _clausePatterns :: [Pattern],
     _clauseBody :: Expression
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 newtype FunctionRef = FunctionRef
   {_functionRefName :: Name}
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
   deriving newtype (Hashable)
 
 newtype ConstructorRef = ConstructorRef
   {_constructorRefName :: Name}
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
   deriving newtype (Hashable)
 
 newtype InductiveRef = InductiveRef
   {_inductiveRefName :: Name}
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
   deriving newtype (Hashable)
 
 newtype AxiomRef = AxiomRef
   {_axiomRefName :: Name}
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
   deriving newtype (Hashable)
 
 data Iden
@@ -93,7 +93,7 @@ data Iden
   | IdenVar VarName
   | IdenInductive InductiveRef
   | IdenAxiom AxiomRef
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data Expression
   = ExpressionIden Iden
@@ -103,7 +103,7 @@ data Expression
   | ExpressionLiteral LiteralLoc
   --- | ExpressionMatch Match
   ---  ExpressionLambda Lambda not supported yet
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 instance HasAtomicity Expression where
   atomicity e = case e of
@@ -117,45 +117,45 @@ data Match = Match
   { _matchExpression :: Expression,
     _matchAlts :: [MatchAlt]
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data MatchAlt = MatchAlt
   { _matchAltPattern :: Pattern,
     _matchAltBody :: Expression
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data Application = Application
   { _appLeft :: Expression,
     _appRight :: Expression
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 instance HasAtomicity Application where
   atomicity = const (Aggregate appFixity)
 
 newtype Lambda = Lambda
   {_lambdaClauses :: [LambdaClause]}
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data LambdaClause = LambdaClause
   { _lambdaParameters :: NonEmpty Pattern,
     _lambdaBody :: Expression
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data FunctionParameter = FunctionParameter
   { _paramName :: Maybe VarName,
     _paramUsage :: Usage,
     _paramType :: Expression
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data Function = Function
   { _funParameter :: FunctionParameter,
     _funReturn :: Expression
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 instance HasAtomicity Function where
   atomicity = const (Aggregate funFixity)
@@ -165,14 +165,14 @@ data ConstructorApp = ConstructorApp
   { _constrAppConstructor :: ConstructorRef,
     _constrAppParameters :: [Pattern]
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data Pattern
   = PatternVariable VarName
   | PatternConstructorApp ConstructorApp
   | PatternWildcard
   | PatternEmpty
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
@@ -180,20 +180,20 @@ data InductiveDef = InductiveDef
     _inductiveType :: Maybe Expression,
     _inductiveConstructors :: [InductiveConstructorDef]
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data InductiveConstructorDef = InductiveConstructorDef
   { _constructorName :: ConstrName,
     _constructorType :: Expression
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
     _axiomType :: Expression,
     _axiomBackendItems :: [BackendItem]
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 makeLenses ''Module
 makeLenses ''FunctionParameter

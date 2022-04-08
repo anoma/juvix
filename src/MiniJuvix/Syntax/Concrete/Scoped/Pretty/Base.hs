@@ -5,7 +5,7 @@ module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base
 where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
-import MiniJuvix.Internal.Strings as Str
+import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Scoped.Name (AbsModulePath)

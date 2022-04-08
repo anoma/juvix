@@ -1,7 +1,7 @@
-module MiniJuvix.Syntax.Concrete.Scoped.Scoper.Files where
+module MiniJuvix.Prelude.Files where
 
 import Data.HashMap.Strict qualified as HashMap
-import MiniJuvix.Prelude
+import MiniJuvix.Prelude.Base
 
 data Files m a where
   ReadFile' :: FilePath -> Files m Text
@@ -17,9 +17,12 @@ runFilesIO = interpret $ \case
     h' <- makeAbsolute h
     return (Just $ f' == h')
 
+runFilesEmpty :: Sem (Files ': r) a -> Sem r a
+runFilesEmpty = runFilesPure mempty
+
 runFilesPure :: HashMap FilePath Text -> Sem (Files ': r) a -> Sem r a
 runFilesPure fs = interpret $ \case
-  (ReadFile' f) -> case HashMap.lookup f fs of
+  ReadFile' f -> case HashMap.lookup f fs of
     Nothing ->
       error $
         pack $
@@ -27,4 +30,4 @@ runFilesPure fs = interpret $ \case
             <> "\nThe contents of the mocked file system are:\n"
             <> unlines (HashMap.keys fs)
     Just c -> return c
-  (EqualPaths' _ _) -> return Nothing
+  EqualPaths' _ _ -> return Nothing

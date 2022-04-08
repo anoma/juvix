@@ -42,7 +42,6 @@ module MiniJuvix.Prelude.Base
     module Polysemy.Output,
     module Polysemy.Reader,
     module Polysemy.State,
-    module Polysemy.View,
     module Prettyprinter,
     module System.Directory,
     module System.Exit,
@@ -79,6 +78,7 @@ import Data.Function
 import Data.Functor
 import Data.HashMap.Strict (HashMap)
 import Data.HashSet (HashSet)
+import Data.HashSet qualified as HashSet
 import Data.Hashable
 import Data.Int
 import Data.List.Extra hiding (head, last)
@@ -90,7 +90,7 @@ import Data.Ord
 import Data.Semigroup (Semigroup, (<>))
 import Data.Singletons
 import Data.Singletons.Sigma
-import Data.Singletons.TH (genSingletons)
+import Data.Singletons.TH (genSingletons, promoteOrdInstances, singOrdInstances)
 import Data.Stream (Stream)
 import Data.String
 import Data.Text (Text, pack, strip, unpack)
@@ -115,7 +115,6 @@ import Polysemy.Fixpoint
 import Polysemy.Output
 import Polysemy.Reader
 import Polysemy.State
-import Polysemy.View
 import Prettyprinter (Doc, (<+>))
 import System.Directory
 import System.Exit
@@ -249,3 +248,10 @@ fromRightIO' pp = do
 
 fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
 fromRightIO pp = fromRightIO' (putStrLn . pp)
+
+--------------------------------------------------------------------------------
+-- Misc
+--------------------------------------------------------------------------------
+
+nubHashable :: Hashable a => [a] -> [a]
+nubHashable = HashSet.toList . HashSet.fromList

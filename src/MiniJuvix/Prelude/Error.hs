@@ -29,3 +29,21 @@ toAJuvixError = AJuvixError
 
 fromAJuvixError :: JuvixError e => AJuvixError -> Maybe e
 fromAJuvixError (AJuvixError e) = cast e
+
+throwJuvixError :: (JuvixError err, Member (Error AJuvixError) r) => err -> Sem r a
+throwJuvixError = throw . toAJuvixError
+
+runErrorIO ::
+  (JuvixError a, Member (Embed IO) r) =>
+  Sem (Error a ': r) b ->
+  Sem r b
+runErrorIO =
+  runError >=> \case
+    Left err -> embed (printErrorAnsi err >> exitFailure)
+    Right a -> return a
+
+instance JuvixError Text where
+  renderText = id
+
+instance JuvixError AJuvixError where
+  renderText (AJuvixError r) = renderText r

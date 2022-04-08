@@ -1,20 +1,36 @@
-module MiniJuvix.Translation.ScopedToAbstract where
+module MiniJuvix.Translation.ScopedToAbstract
+  ( module MiniJuvix.Translation.ScopedToAbstract,
+    module MiniJuvix.Syntax.Abstract.AbstractResult,
+  )
+where
 
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Abstract.AbstractResult
 import MiniJuvix.Syntax.Abstract.InfoTableBuilder
 import MiniJuvix.Syntax.Abstract.Language (FunctionDef (_funDefTypeSig))
 import MiniJuvix.Syntax.Abstract.Language qualified as A
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Language qualified as C
 import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
+import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
 
 type Err = Text
 
 unsupported :: Members '[Error Err] r => Err -> Sem r a
 unsupported msg = throw $ msg <> "Scoped to Abstract: not yet supported"
 
-translateModule :: Module 'Scoped 'ModuleTop -> Either Err (InfoTable, A.TopModule)
-translateModule = run . runError . runInfoTableBuilder . goTopModule
+entryAbstract :: Member (Error Err) r => Scoper.ScoperResult -> Sem r AbstractResult
+entryAbstract _resultScoper = do
+  (_resultTable, _resultModules) <- runInfoTableBuilder (mapM goTopModule ms)
+  return
+    AbstractResult
+      { ..
+      }
+  where
+    ms = _resultScoper ^. Scoper.resultModules
+
+-- translateModule :: Module 'Scoped 'ModuleTop -> Either Err (InfoTable, A.TopModule)
+-- translateModule = run . runError . runInfoTableBuilder . goTopModule
 
 goTopModule :: Members '[Error Err, InfoTableBuilder] r => Module 'Scoped 'ModuleTop -> Sem r A.TopModule
 goTopModule = goModule

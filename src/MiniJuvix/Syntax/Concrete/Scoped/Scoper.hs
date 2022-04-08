@@ -1,52 +1,63 @@
 -- | Limitations:
 -- 1. A symbol introduced by a type signature can only be used once per Module.
-module MiniJuvix.Syntax.Concrete.Scoped.Scoper where
+module MiniJuvix.Syntax.Concrete.Scoped.Scoper
+  ( module MiniJuvix.Syntax.Concrete.Scoped.Scoper,
+    module MiniJuvix.Syntax.Concrete.Scoped.Scoper.ScoperResult,
+    module MiniJuvix.Syntax.Concrete.Scoped.Error,
+  )
+where
 
 import Control.Monad.Combinators.Expr qualified as P
-import Data.Functor.Identity
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.Stream qualified as Stream
 import Lens.Micro.Platform
+import MiniJuvix.Pipeline.EntryPoint
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Base qualified as P
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Name qualified as N
-import MiniJuvix.Syntax.Concrete.Parser (runModuleParser)
+import MiniJuvix.Syntax.Concrete.Parser (runModuleParser'')
+import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
+import MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder (mergeTable)
+import MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder qualified as Parser
+import MiniJuvix.Syntax.Concrete.Parser.ParserResult (ParserResult)
 import MiniJuvix.Syntax.Concrete.Scoped.Error
 import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Concrete.Scoped.Scope
-import MiniJuvix.Syntax.Concrete.Scoped.Scoper.Files
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper.InfoTableBuilder
+import MiniJuvix.Syntax.Concrete.Scoped.Scoper.ScoperResult
 
---------------------------------------------------------------------------------
-
-scopeCheck1IO :: FilePath -> Module 'Parsed 'ModuleTop -> IO (Either ScopeError (InfoTable, Module 'Scoped 'ModuleTop))
-scopeCheck1IO root = runFinal . embedToFinal @IO . runFilesIO . fixpointToFinal @IO . scopeCheck1 root
-
-scopeCheck1Pure :: HashMap FilePath Text -> FilePath -> Module 'Parsed 'ModuleTop -> Either ScopeError (InfoTable, Module 'Scoped 'ModuleTop)
-scopeCheck1Pure fs root = runIdentity . runFinal . runFilesPure fs . fixpointToFinal @Identity . scopeCheck1 root
-
-scopeCheck1 ::
-  Members [Files, Fixpoint] r =>
-  FilePath ->
-  Module 'Parsed 'ModuleTop ->
-  Sem r (Either ScopeError (InfoTable, Module 'Scoped 'ModuleTop))
-scopeCheck1 root m = fmap (second head) <$> scopeCheck root (pure m)
+entryScoper :: Members '[Error ScopeError, Files] r => ParserResult -> Sem r ScoperResult
+entryScoper pr = do
+  let root = pr ^. Parser.resultEntry . entryRoot
+      modules = pr ^. Parser.resultModules
+  scopeCheck pr root modules
 
 scopeCheck ::
-  Members [Files, Fixpoint] r =>
+  Members '[Files, Error ScopeError] r =>
+  ParserResult ->
   FilePath ->
   NonEmpty (Module 'Parsed 'ModuleTop) ->
-  Sem r (Either ScopeError (InfoTable, NonEmpty (Module 'Scoped 'ModuleTop)))
-scopeCheck root modules =
-  runError $
-    runInfoTableBuilder $
-      runReader scopeParameters $
-        evalState iniScoperState $
-          mapM checkTopModule_ modules
+  Sem r ScoperResult
+scopeCheck pr root modules =
+  fmap mkResult $
+    Parser.runInfoTableBuilder $
+      runInfoTableBuilder $
+        runReader scopeParameters $
+          evalState iniScoperState $ do
+            mergeTable (pr ^. Parser.resultTable)
+            mapM checkTopModule_ modules
   where
+    mkResult :: (Parser.InfoTable, (InfoTable, NonEmpty (Module 'Scoped 'ModuleTop))) -> ScoperResult
+    mkResult (pt, (st, ms)) =
+      ScoperResult
+        { _resultParserResult = pr,
+          _resultParserTable = pt,
+          _resultScoperTable = st,
+          _resultModules = ms
+        }
     iniScoperState :: ScoperState
     iniScoperState =
       ScoperState
@@ -194,7 +205,7 @@ bindLocalModuleSymbol _moduleExportInfo _moduleRefModule =
 
 checkImport ::
   forall r.
-  Members '[Error ScopeError, State Scope, Reader ScopeParameters, Files, State ScoperState, Fixpoint, InfoTableBuilder] r =>
+  Members '[Error ScopeError, State Scope, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder] r =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
 checkImport import_@(Import path) = do
@@ -358,15 +369,15 @@ exportScope Scope {..} = do
                 )
 
 readParseModule ::
-  Members '[Error ScopeError, Reader ScopeParameters, Files] r =>
+  Members '[Error ScopeError, Reader ScopeParameters, Files, Parser.InfoTableBuilder] r =>
   TopModulePath ->
   Sem r (Module 'Parsed 'ModuleTop)
 readParseModule mp = do
   path <- modulePathToFilePath mp
   txt <- readFile' path
-  case runModuleParser path txt of
+  case runModuleParser'' path txt of
     Left err -> throw (ErrParser (MegaParsecError err))
-    Right r -> return r
+    Right (tbl, m) -> Parser.mergeTable tbl $> m
 
 modulePathToFilePath ::
   Members '[Reader ScopeParameters] r =>
@@ -459,14 +470,14 @@ checkInductiveDef InductiveDef {..} = do
 
 checkTopModule_ ::
   forall r.
-  Members '[Error ScopeError, Reader ScopeParameters, Files, State ScoperState, Fixpoint, InfoTableBuilder] r =>
+  Members '[Error ScopeError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (Module 'Scoped 'ModuleTop)
 checkTopModule_ = fmap (^. moduleRefModule) . checkTopModule
 
 checkTopModule ::
   forall r.
-  Members '[Error ScopeError, Reader ScopeParameters, Files, State ScoperState, Fixpoint, InfoTableBuilder] r =>
+  Members '[Error ScopeError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
 checkTopModule m@(Module path params body) = do
@@ -533,7 +544,7 @@ withScope ma = do
 
 checkModuleBody ::
   forall r.
-  Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars, Fixpoint, InfoTableBuilder] r =>
+  Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder] r =>
   [Statement 'Parsed] ->
   Sem r (ExportInfo, [Statement 'Scoped])
 checkModuleBody body = do
@@ -545,7 +556,7 @@ checkModuleBody body = do
 
 checkLocalModule ::
   forall r.
-  Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars, Fixpoint, InfoTableBuilder] r =>
+  Members '[Error ScopeError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder] r =>
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
@@ -555,20 +566,21 @@ checkLocalModule Module {..} = do
         inheritScope
         (e, b) <- checkModuleBody _moduleBody
         return (e, b, p')
-  mfix $ \scopedModule -> do
-    modulePath' <- bindLocalModuleSymbol _moduleExportInfo scopedModule _modulePath
-    let moduleId = S._nameId modulePath'
-        _moduleRefName = set S.nameConcrete () modulePath'
-        _moduleRefModule =
-          Module
-            { _modulePath = modulePath',
-              _moduleParameters = moduleParameters',
-              _moduleBody = moduleBody'
-            }
-        entry :: ModuleRef' 'S.NotConcrete
-        entry = mkModuleRef' @'ModuleLocal ModuleRef'' {..}
-    modify (over scoperModules (HashMap.insert moduleId entry))
-    return _moduleRefModule
+  _modulePath' <- reserveSymbolOf S.KNameLocalModule _modulePath
+  let moduleId = S._nameId _modulePath'
+      _moduleRefName = set S.nameConcrete () _modulePath'
+      _moduleRefModule =
+        Module
+          { _modulePath = _modulePath',
+            _moduleParameters = moduleParameters',
+            _moduleBody = moduleBody'
+          }
+      entry :: ModuleRef' 'S.NotConcrete
+      entry = mkModuleRef' @'ModuleLocal ModuleRef'' {..}
+  bindReservedSymbol _modulePath' (EntryModule entry)
+  registerName (S.unqualifiedSymbol _modulePath')
+  modify (over scoperModules (HashMap.insert moduleId entry))
+  return _moduleRefModule
   where
     inheritScope :: Sem r ()
     inheritScope = do
@@ -864,6 +876,12 @@ checkLambdaClause LambdaClause {..} = do
         lambdaBody = lambdaBody'
       }
 
+scopedVar :: Members '[InfoTableBuilder] r => LocalVariable -> Symbol -> Sem r S.Symbol
+scopedVar (LocalVariable s) n = do
+  let scoped = set S.nameConcrete n s
+  registerName (S.unqualifiedSymbol scoped)
+  return scoped
+
 checkUnqualified ::
   Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState, InfoTableBuilder] r =>
   Symbol ->
@@ -872,7 +890,7 @@ checkUnqualified s = do
   -- Local vars have scope priority
   l <- HashMap.lookup s <$> asks _localVars
   case l of
-    Just LocalVariable {..} -> return (ScopedVar variableName)
+    Just v -> ScopedVar <$> scopedVar v s
     Nothing -> do
       scope <- get
       locals <- ask
@@ -1064,7 +1082,7 @@ checkParsePatternAtom ::
 checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
 
 checkStatement ::
-  Members '[Error ScopeError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, Fixpoint, InfoTableBuilder] r =>
+  Members '[Error ScopeError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder] r =>
   Statement 'Parsed ->
   Sem r (Statement 'Scoped)
 checkStatement s = case s of

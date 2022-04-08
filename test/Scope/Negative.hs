@@ -1,38 +1,43 @@
 module Scope.Negative (allTests) where
 
 import Base
+import MiniJuvix.Pipeline
 import MiniJuvix.Syntax.Concrete.Scoped.Error
-import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as M
 
 type FailMsg = String
 
 data NegTest = NegTest
-  { name :: String,
-    relDir :: FilePath,
-    file :: FilePath,
-    checkErr :: ScopeError -> Maybe FailMsg
+  { _name :: String,
+    _relDir :: FilePath,
+    _file :: FilePath,
+    _checkErr :: ScopeError -> Maybe FailMsg
   }
+
+root :: FilePath
+root = "tests/negative"
 
 testDescr :: NegTest -> TestDescr
 testDescr NegTest {..} =
-  TestDescr
-    { testName = name,
-      testRoot = root </> relDir,
-      testAssertion = Single $ do
-        p <- parseModuleIO file >>= M.scopeCheck1IO "."
-        case p of
-          Left err -> whenJust (checkErr err) assertFailure
-          Right _ -> assertFailure "The scope checker did not find an error."
-    }
+  let tRoot = root </> _relDir
+   in TestDescr
+        { _testName = _name,
+          _testRoot = tRoot,
+          _testAssertion = Single $ do
+            let entryPoint = EntryPoint "." (pure _file)
+            res <- runIOEither (upToScoping entryPoint)
+            let msg1 = "The scope checker did not find an error."
+            let msg2 = "An error ocurred but it was not in the scoper."
+            case mapLeft fromAJuvixError res of
+              Left (Just err) -> whenJust (_checkErr err) assertFailure
+              Left Nothing -> assertFailure msg1
+              Right _ -> assertFailure msg2
+        }
 
 allTests :: TestTree
 allTests =
   testGroup
     "Scope negative tests"
     (map (mkTest . testDescr) tests)
-
-root :: FilePath
-root = "tests/negative"
 
 wrongError :: Maybe FailMsg
 wrongError = Just "Incorrect error"

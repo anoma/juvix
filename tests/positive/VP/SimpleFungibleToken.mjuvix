@@ -76,7 +76,6 @@ axiom ==Int : Int -> Int -> Bool {
   ghc ↦  "(==)";
 };
 
-
 elem : String -> ListString -> Bool;
 elem s Nil := false;
 elem s (Cons x xs) := (s ==String x) || elem s xs;

@@ -1,12 +1,24 @@
 module MiniJuvix.Translation.AbstractToMicroJuvix where
 
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Abstract.AbstractResult qualified as Abstract
 import MiniJuvix.Syntax.Abstract.Language.Extra qualified as A
 import MiniJuvix.Syntax.Concrete.Name (symbolLoc)
 import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.MicroJuvix.Language
+import MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult
 import MiniJuvix.Syntax.Universe
 import MiniJuvix.Syntax.Usage qualified as A
+
+entryMicroJuvix ::
+  Abstract.AbstractResult ->
+  Sem r MicroJuvixResult
+entryMicroJuvix ares =
+  return
+    MicroJuvixResult
+      { _resultAbstract = ares,
+        _resultModules = fmap translateModule (ares ^. Abstract.resultModules)
+      }
 
 translateModule :: A.TopModule -> Module
 translateModule m =
