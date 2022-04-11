@@ -1,5 +1,8 @@
--- TODO handle capital letters and characters not supported by Haskell.
-module MiniJuvix.Syntax.MiniHaskell.Pretty.Base where
+module MiniJuvix.Syntax.MiniHaskell.Pretty.Base
+  ( module MiniJuvix.Syntax.MiniHaskell.Pretty.Base,
+    module MiniJuvix.Syntax.MiniHaskell.Pretty.Ann,
+  )
+where
 
 import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
@@ -18,6 +21,13 @@ defaultOptions =
   Options
     { _optIndent = 2
     }
+
+docStream :: PrettyCode c => Options -> c -> SimpleDocStream Ann
+docStream opts =
+  layoutPretty defaultLayoutOptions
+    . run
+    . runReader opts
+    . ppCode
 
 class PrettyCode c where
   ppCode :: Member (Reader Options) r => c -> Sem r (Doc Ann)

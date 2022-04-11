@@ -13,6 +13,13 @@ import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ann
 import Prettyprinter hiding (braces, parens)
 
+docStream :: PrettyCode c => Options -> c -> SimpleDocStream Ann
+docStream opts =
+  layoutPretty defaultLayoutOptions
+    . run
+    . runReader opts
+    . ppCode
+
 data Options = Options
   { _optShowNameId :: Bool,
     _optInlineImports :: Bool,
