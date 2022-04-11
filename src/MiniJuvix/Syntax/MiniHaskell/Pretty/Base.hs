@@ -1,7 +1,8 @@
-module MiniJuvix.Syntax.MiniHaskell.Pretty.Base (
-module MiniJuvix.Syntax.MiniHaskell.Pretty.Base ,
-module MiniJuvix.Syntax.MiniHaskell.Pretty.Ann ,
-                                                ) where
+module MiniJuvix.Syntax.MiniHaskell.Pretty.Base
+  ( module MiniJuvix.Syntax.MiniHaskell.Pretty.Base,
+    module MiniJuvix.Syntax.MiniHaskell.Pretty.Ann,
+  )
+where
 
 import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude

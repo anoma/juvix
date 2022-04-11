@@ -1,7 +1,7 @@
-module MiniJuvix.Translation.MicroJuvixToMiniHaskell (
-module MiniJuvix.Translation.MicroJuvixToMiniHaskell ,
-module MiniJuvix.Syntax.MiniHaskell.MiniHaskellResult,
-                                                     )
+module MiniJuvix.Translation.MicroJuvixToMiniHaskell
+  ( module MiniJuvix.Translation.MicroJuvixToMiniHaskell,
+    module MiniJuvix.Syntax.MiniHaskell.MiniHaskellResult,
+  )
 where
 
 import Data.Text qualified as Text
@@ -12,12 +12,14 @@ import MiniJuvix.Syntax.MicroJuvix.InfoTable qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.Language qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.MicroJuvixTypedResult qualified as Micro
 import MiniJuvix.Syntax.MiniHaskell.Language
+import MiniJuvix.Syntax.MiniHaskell.MiniHaskellResult
 import MiniJuvix.Syntax.NameId
 import Prettyprinter
-import MiniJuvix.Syntax.MiniHaskell.MiniHaskellResult
 
-entryMiniHaskell :: Member (Error Err) r =>
-  Micro.MicroJuvixTypedResult -> Sem r MiniHaskellResult
+entryMiniHaskell ::
+  Member (Error Err) r =>
+  Micro.MicroJuvixTypedResult ->
+  Sem r MiniHaskellResult
 entryMiniHaskell = undefined
 
 translateModule :: Micro.Module -> Either Err Module

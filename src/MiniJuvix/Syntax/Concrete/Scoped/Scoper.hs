@@ -103,7 +103,7 @@ freshSymbol _nameKind _nameConcrete = do
     fixity :: Sem r (Maybe Fixity)
     fixity
       | S.canHaveFixity _nameKind =
-          fmap opFixity . HashMap.lookup _nameConcrete <$> gets _scopeFixities
+        fmap opFixity . HashMap.lookup _nameConcrete <$> gets _scopeFixities
       | otherwise = return Nothing
 
 reserveSymbolOf ::
@@ -1119,22 +1119,22 @@ makeExpressionTable2 (ExpressionAtoms atoms) = [appOp] : operators ++ [[function
         mkOperator :: ScopedIden -> Maybe (Precedence, P.Operator Parse Expression)
         mkOperator iden
           | Just Fixity {..} <- _nameFixity = Just $
-              case fixityArity of
-                Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
-                  where
-                    unaryApp :: ScopedIden -> Expression -> Expression
-                    unaryApp funName arg = case u of
-                      AssocPostfix -> ExpressionPostfixApplication (PostfixApplication arg funName)
-                Binary b -> (fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId _nameId))
-                  where
-                    binaryApp :: ScopedIden -> Expression -> Expression -> Expression
-                    binaryApp infixAppOperator infixAppLeft infixAppRight =
-                      ExpressionInfixApplication InfixApplication {..}
-                    infixLRN :: Parse (Expression -> Expression -> Expression) -> P.Operator Parse Expression
-                    infixLRN = case b of
-                      AssocLeft -> P.InfixL
-                      AssocRight -> P.InfixR
-                      AssocNone -> P.InfixN
+            case fixityArity of
+              Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
+                where
+                  unaryApp :: ScopedIden -> Expression -> Expression
+                  unaryApp funName arg = case u of
+                    AssocPostfix -> ExpressionPostfixApplication (PostfixApplication arg funName)
+              Binary b -> (fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId _nameId))
+                where
+                  binaryApp :: ScopedIden -> Expression -> Expression -> Expression
+                  binaryApp infixAppOperator infixAppLeft infixAppRight =
+                    ExpressionInfixApplication InfixApplication {..}
+                  infixLRN :: Parse (Expression -> Expression -> Expression) -> P.Operator Parse Expression
+                  infixLRN = case b of
+                    AssocLeft -> P.InfixL
+                    AssocRight -> P.InfixR
+                    AssocNone -> P.InfixN
           | otherwise = Nothing
           where
             S.Name' {..} = identifierName iden
@@ -1312,21 +1312,21 @@ makePatternTable atom = [appOp] : operators
         unqualifiedSymbolOp (ConstructorRef' S.Name' {..})
           | Just Fixity {..} <- _nameFixity,
             _nameKind == S.KNameConstructor = Just $
-              case fixityArity of
-                Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
-                  where
-                    unaryApp :: ConstructorRef -> Pattern -> Pattern
-                    unaryApp funName = case u of
-                      AssocPostfix -> PatternPostfixApplication . (`PatternPostfixApp` funName)
-                Binary b -> (fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _nameId))
-                  where
-                    binaryInfixApp :: ConstructorRef -> Pattern -> Pattern -> Pattern
-                    binaryInfixApp name argLeft = PatternInfixApplication . PatternInfixApp argLeft name
-                    infixLRN :: ParsePat (Pattern -> Pattern -> Pattern) -> P.Operator ParsePat Pattern
-                    infixLRN = case b of
-                      AssocLeft -> P.InfixL
-                      AssocRight -> P.InfixR
-                      AssocNone -> P.InfixN
+            case fixityArity of
+              Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
+                where
+                  unaryApp :: ConstructorRef -> Pattern -> Pattern
+                  unaryApp funName = case u of
+                    AssocPostfix -> PatternPostfixApplication . (`PatternPostfixApp` funName)
+              Binary b -> (fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _nameId))
+                where
+                  binaryInfixApp :: ConstructorRef -> Pattern -> Pattern -> Pattern
+                  binaryInfixApp name argLeft = PatternInfixApplication . PatternInfixApp argLeft name
+                  infixLRN :: ParsePat (Pattern -> Pattern -> Pattern) -> P.Operator ParsePat Pattern
+                  infixLRN = case b of
+                    AssocLeft -> P.InfixL
+                    AssocRight -> P.InfixR
+                    AssocNone -> P.InfixN
           | otherwise = Nothing
         parseSymbolId :: S.NameId -> ParsePat ConstructorRef
         parseSymbolId uid = P.token getConstructorRefWithId mempty

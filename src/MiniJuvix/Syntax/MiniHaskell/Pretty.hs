@@ -2,8 +2,9 @@ module MiniJuvix.Syntax.MiniHaskell.Pretty where
 
 import MiniJuvix.Prelude
 import MiniJuvix.Prelude.Pretty
-import qualified MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi as Ansi
+import MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi qualified as Ansi
 import MiniJuvix.Syntax.MiniHaskell.Pretty.Base
+
 newtype PPOutput = PPOutput (SimpleDocStream Ann)
 
 ppOut :: PrettyCode c => c -> PPOutput

@@ -1,7 +1,8 @@
-module MiniJuvix.Translation.AbstractToMicroJuvix (
-  module MiniJuvix.Translation.AbstractToMicroJuvix,
-  module MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult,
-                                                  ) where
+module MiniJuvix.Translation.AbstractToMicroJuvix
+  ( module MiniJuvix.Translation.AbstractToMicroJuvix,
+    module MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult,
+  )
+where
 
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.AbstractResult qualified as Abstract

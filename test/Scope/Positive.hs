@@ -79,9 +79,9 @@ assertEqDiff :: (Eq a, Show a) => String -> a -> a -> Assertion
 assertEqDiff msg a b
   | a == b = return ()
   | otherwise = do
-      putStrLn (pack $ ppDiff (getGroupedDiff pa pb))
-      putStrLn "End diff"
-      fail msg
+    putStrLn (pack $ ppDiff (getGroupedDiff pa pb))
+    putStrLn "End diff"
+    fail msg
   where
     pa = lines $ ppShow a
     pb = lines $ ppShow b

@@ -40,8 +40,8 @@ isChildOf :: AbsModulePath -> AbsModulePath -> Bool
 isChildOf child parent
   | null (absLocalPath child) = False
   | otherwise =
-      init (absLocalPath child) == absLocalPath parent
-        && absTopModulePath child == absTopModulePath parent
+    init (absLocalPath child) == absLocalPath parent
+      && absTopModulePath child == absTopModulePath parent
 
 -- | Appends a local path to the absolute path
 -- e.g. TopMod.Local <.> Inner == TopMod.Local.Inner

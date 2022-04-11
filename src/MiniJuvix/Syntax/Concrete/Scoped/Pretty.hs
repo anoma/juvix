@@ -1,15 +1,16 @@
-module MiniJuvix.Syntax.Concrete.Scoped.Pretty (
-module MiniJuvix.Syntax.Concrete.Scoped.Pretty,
-module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base,
-                                               ) where
+module MiniJuvix.Syntax.Concrete.Scoped.Pretty
+  ( module MiniJuvix.Syntax.Concrete.Scoped.Pretty,
+    module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base,
+  )
+where
 
 ------------------------------------------------------------------------------
 
+import MiniJuvix.Prelude
 import MiniJuvix.Prelude.Pretty
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ann
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ansi qualified as Ansi
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base
-import MiniJuvix.Prelude
 
 ------------------------------------------------------------------------------
 

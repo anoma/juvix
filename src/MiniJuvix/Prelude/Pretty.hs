@@ -24,7 +24,7 @@ renderIO useColors = hRenderIO useColors stdout
 
 hRenderIO :: (HasAnsiBackend a, HasTextBackend a) => Bool -> Handle -> a -> IO ()
 hRenderIO b h
-  | b  = Ansi.renderIO h . toAnsi
+  | b = Ansi.renderIO h . toAnsi
   | otherwise = Text.renderIO h . toText
 
 toAnsiText :: (HasAnsiBackend a, HasTextBackend a) => Bool -> a -> Text

@@ -26,7 +26,6 @@ docStream opts =
     . runReader opts
     . ppCode
 
-
 class PrettyCode c where
   ppCode :: Member (Reader Options) r => c -> Sem r (Doc Ann)
 

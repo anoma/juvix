@@ -37,8 +37,8 @@ viewExpressionAsPattern :: Expression -> Maybe Pattern
 viewExpressionAsPattern e = case viewApp e of
   (f, args)
     | Just c <- getConstructor f -> do
-        args' <- mapM viewExpressionAsPattern args
-        Just $ PatternConstructorApp (ConstructorApp c args')
+      args' <- mapM viewExpressionAsPattern args
+      Just $ PatternConstructorApp (ConstructorApp c args')
   (f, [])
     | Just v <- getVariable f -> Just (PatternVariable v)
   _ -> Nothing

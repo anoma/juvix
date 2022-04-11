@@ -119,7 +119,7 @@ reflexiveEdges (CompleteCallGraph es) = mapMaybe reflexive (toList es)
     reflexive :: Edge -> Maybe ReflexiveEdge
     reflexive e
       | e ^. edgeFrom == e ^. edgeTo =
-          Just $ ReflexiveEdge (e ^. edgeFrom) (e ^. edgeMatrices)
+        Just $ ReflexiveEdge (e ^. edgeFrom) (e ^. edgeMatrices)
       | otherwise = Nothing
 
 callMatrixDiag :: CallMatrix -> [Rel]
@@ -164,7 +164,7 @@ findOrder rb = LexOrder <$> listToMaybe (mapMaybe (isLexOrder >=> nonEmpty) allP
             | Just r <- find (isLess . snd . (!! p0)) b,
               all (notNothing . snd . (!! p0)) b,
               Just perm' <- go (b' p0) (map pred ptail) ->
-                Just (fst (r !! p0) : perm')
+              Just (fst (r !! p0) : perm')
             | otherwise -> Nothing
           where
             b' i = map r' (filter (not . isLess . snd . (!! i)) b)

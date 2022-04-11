@@ -13,6 +13,7 @@ import Control.Monad.Extra
 import MiniJuvix.Pipeline
 import MiniJuvix.Prelude hiding (Doc)
 import MiniJuvix.Prelude.Pretty hiding (Doc)
+import MiniJuvix.Syntax.Abstract.Pretty qualified as Abstract
 import MiniJuvix.Syntax.Abstract.Pretty.Ansi qualified as A
 import MiniJuvix.Syntax.Concrete.Language qualified as M
 import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
@@ -21,7 +22,6 @@ import MiniJuvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
-import MiniJuvix.Syntax.Abstract.Pretty qualified as Abstract
 import MiniJuvix.Syntax.MicroJuvix.Error qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.Pretty qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as MicroTyped
@@ -40,7 +40,7 @@ import Text.Show.Pretty hiding (Html)
 
 --------------------------------------------------------------------------------
 
-data GlobalOptions = GlobalOptions
+newtype GlobalOptions = GlobalOptions
   { _globalNoColors :: Bool
   }
 
@@ -377,8 +377,13 @@ runCLI cli = do
       micro <- head . (^. MicroTyped.resultModules) <$> runIO (upToMicroJuvixTyped (getEntryPoint root opts))
       case MicroTyped.checkModule micro of
         Right _ -> putStrLn "Well done! It type checks"
-        Left (Micro.TypeCheckerErrors es) -> sequence_ (intersperse (putStrLn "")
-                        (printErrorAnsi <$> toList es)) >> exitFailure
+        Left (Micro.TypeCheckerErrors es) ->
+          sequence_
+            ( intersperse
+                (putStrLn "")
+                (printErrorAnsi <$> toList es)
+            )
+            >> exitFailure
     MiniHaskell o -> do
       minihaskell <- head . (^. MiniHaskell.resultModules) <$> runIO (upToMiniHaskell (getEntryPoint root o))
       supportsAnsi <- Ansi.hSupportsANSI IO.stdout
