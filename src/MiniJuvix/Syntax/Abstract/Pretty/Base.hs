@@ -22,6 +22,13 @@ data Options = Options
 
 data ShowDecrArgs = OnlyArg | OnlyRel | ArgRel
 
+docStream :: PrettyCode c => Options -> c -> SimpleDocStream Ann
+docStream opts =
+  layoutPretty defaultLayoutOptions
+    . run
+    . runReader opts
+    . ppCode
+
 toSOptions :: Options -> S.Options
 toSOptions Options {..} =
   S.defaultOptions

@@ -14,17 +14,14 @@ printPrettyCode :: PrettyCode c => Options -> c -> IO ()
 printPrettyCode = hPrintPrettyCode stdout
 
 hPrintPrettyCode :: PrettyCode c => Handle -> Options -> c -> IO ()
-hPrintPrettyCode h opts = renderIO h . docStream opts
+hPrintPrettyCode h opts = renderIO h . docStream' opts
 
 renderPrettyCode :: PrettyCode c => Options -> c -> Text
-renderPrettyCode opts = renderStrict . docStream opts
+renderPrettyCode opts = renderStrict . docStream' opts
 
-docStream :: PrettyCode c => Options -> c -> SimpleDocStream AnsiStyle
-docStream opts =
-  reAnnotateS stylize . layoutPretty defaultLayoutOptions
-    . run
-    . runReader opts
-    . ppCode
+docStream' :: PrettyCode c => Options -> c -> SimpleDocStream AnsiStyle
+docStream' opts =
+  reAnnotateS stylize . docStream opts
 
 stylize :: Ann -> AnsiStyle
 stylize a = case a of

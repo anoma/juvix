@@ -17,6 +17,7 @@ import MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult qualified as MicroJuvix
 import MiniJuvix.Syntax.MicroJuvix.MicroJuvixTypedResult qualified as MicroJuvix
 import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as MicroJuvix
 import MiniJuvix.Translation.AbstractToMicroJuvix qualified as MicroJuvix
+import MiniJuvix.Translation.MicroJuvixToMiniHaskell qualified as MiniHaskell
 import MiniJuvix.Translation.ScopedToAbstract qualified as Abstract
 
 type StageInput :: Pipe -> GHC.Type
@@ -63,6 +64,10 @@ upToMicroJuvix = upToAbstract >=> pipelineMicroJuvix
 upToMicroJuvixTyped :: Members '[Files, Error AJuvixError] r => EntryPoint -> Sem r MicroJuvix.MicroJuvixTypedResult
 upToMicroJuvixTyped = upToMicroJuvix >=> pipelineMicroJuvixTyped
 
+upToMiniHaskell ::
+  Members '[Files, Error AJuvixError] r => EntryPoint -> Sem r MiniHaskell.MiniHaskellResult
+upToMiniHaskell = upToMicroJuvixTyped >=> pipelineMiniHaskell
+
 --------------------------------------------------------------------------------
 
 pipelineParser :: Members '[Files, Error AJuvixError] r => EntryPoint -> Sem r Parser.ParserResult
@@ -88,3 +93,9 @@ pipelineMicroJuvixTyped ::
   MicroJuvix.MicroJuvixResult ->
   Sem r MicroJuvix.MicroJuvixTypedResult
 pipelineMicroJuvixTyped = mapError (toAJuvixError @MicroJuvix.TypeCheckerErrors) . MicroJuvix.entryMicroJuvixTyped
+
+pipelineMiniHaskell ::
+  Members '[Files, Error AJuvixError] r =>
+  MicroJuvix.MicroJuvixTypedResult ->
+  Sem r MiniHaskell.MiniHaskellResult
+pipelineMiniHaskell = undefined

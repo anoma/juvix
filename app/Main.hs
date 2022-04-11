@@ -12,25 +12,24 @@ import Control.Exception qualified as IO
 import Control.Monad.Extra
 import MiniJuvix.Pipeline
 import MiniJuvix.Prelude hiding (Doc)
+import MiniJuvix.Prelude.Pretty hiding (Doc)
 import MiniJuvix.Syntax.Abstract.Pretty.Ansi qualified as A
 import MiniJuvix.Syntax.Concrete.Language qualified as M
 import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Highlight qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoper
-import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base (defaultOptions)
-import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base qualified as Scoper
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
+import MiniJuvix.Syntax.Abstract.Pretty qualified as Abstract
 import MiniJuvix.Syntax.MicroJuvix.Error qualified as Micro
-import MiniJuvix.Syntax.MicroJuvix.Language qualified as Micro
-import MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi qualified as Micro
-import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as Micro
-import MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi qualified as HaskAnsi
-import MiniJuvix.Syntax.MiniHaskell.Pretty.Text qualified as HaskText
+import MiniJuvix.Syntax.MicroJuvix.Pretty qualified as Micro
+import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as MicroTyped
+import MiniJuvix.Syntax.MiniHaskell.Pretty qualified as MiniHaskell
 import MiniJuvix.Termination qualified as T
 import MiniJuvix.Termination.CallGraph qualified as A
 import MiniJuvix.Translation.AbstractToMicroJuvix qualified as Micro
-import MiniJuvix.Translation.MicroJuvixToMiniHaskell qualified as Hask
+import MiniJuvix.Translation.MicroJuvixToMiniHaskell qualified as MiniHaskell
 import MiniJuvix.Translation.ScopedToAbstract qualified as Abstract
 import MiniJuvix.Utils.Version (runDisplayVersion)
 import Options.Applicative
@@ -342,16 +341,20 @@ instance HasEntryPoint CallGraphOptions where
   getEntryPoint root = EntryPoint root . pure . _graphInputFile
 
 runCLI :: CLI -> IO ()
-runCLI CLI {..} = do
-  let useColors = not (CLI ^. (cliGlobalOptions . globalNoColors))
+runCLI cli = do
+  let useColors = not (cli ^. (cliGlobalOptions . globalNoColors))
+      renderIO' :: forall a. (HasAnsiBackend a, HasTextBackend a) => a -> IO ()
+      renderIO' = renderIO useColors
+      toAnsiText' :: forall a. (HasAnsiBackend a, HasTextBackend a) => a -> Text
+      toAnsiText' = toAnsiText useColors
   root <- findRoot
-  case _cliCommand of
+  case cli ^. cliCommand of
     DisplayVersion -> runDisplayVersion
     DisplayRoot -> putStrLn (pack root)
-    Scope opts@ScopeOptions {..} -> do
+    Scope opts -> do
       l <- (^. Scoper.resultModules) <$> runIO (upToScoping (getEntryPoint root opts))
       forM_ l $ \s -> do
-        renderIO useColors (mkScopePrettyOptions opts) s
+        renderIO' (Scoper.ppOut' (mkScopePrettyOptions opts) s)
     Highlight o -> do
       let entry :: EntryPoint
           entry = getEntryPoint root o
@@ -366,26 +369,21 @@ runCLI CLI {..} = do
     Html o@HtmlOptions {..} -> do
       res <- runIO (upToScoping (getEntryPoint root o))
       let m = head (res ^. Scoper.resultModules)
-      genHtml defaultOptions _htmlRecursive _htmlTheme m
+      genHtml Scoper.defaultOptions _htmlRecursive _htmlTheme m
     MicroJuvix (Pretty opts) -> do
       micro <- head . (^. Micro.resultModules) <$> runIO (upToMicroJuvix (getEntryPoint root opts))
-      Micro.printPrettyCode useColors micro
-    MicroJuvix (TypeCheck o) -> do
-      micro <- miniToMicro root o
-      case Micro.checkModule micro of
+      renderIO' (Micro.ppOut micro)
+    MicroJuvix (TypeCheck opts) -> do
+      micro <- head . (^. MicroTyped.resultModules) <$> runIO (upToMicroJuvixTyped (getEntryPoint root opts))
+      case MicroTyped.checkModule micro of
         Right _ -> putStrLn "Well done! It type checks"
-        Left (Micro.TypeCheckerErrors es) -> sequence_ (intersperse (putStrLn "") (printErrorAnsi <$> toList es)) >> exitFailure
+        Left (Micro.TypeCheckerErrors es) -> sequence_ (intersperse (putStrLn "")
+                        (printErrorAnsi <$> toList es)) >> exitFailure
     MiniHaskell o -> do
-      a <- head . (^. Abstract.resultModules) <$> runIO (upToAbstract (getEntryPoint root o))
-      let micro = Micro.translateModule a
-      case Micro.checkModule micro of
-        Right checkedMicro -> do
-          minihaskell <- fromRightIO' putStrLn (return $ Hask.translateModule checkedMicro)
-          supportsAnsi <- Ansi.hSupportsANSI IO.stdout
-          if supportsAnsi
-            then HaskAnsi.printPrettyCodeDefault minihaskell
-            else HaskText.printPrettyCodeDefault minihaskell
-        Left es -> printErrorAnsi es >> exitFailure
+      minihaskell <- head . (^. MiniHaskell.resultModules) <$> runIO (upToMiniHaskell (getEntryPoint root o))
+      supportsAnsi <- Ansi.hSupportsANSI IO.stdout
+      -- TODO fix #38
+      renderIO (supportsAnsi && useColors) (MiniHaskell.ppOut minihaskell)
     Termination (Calls opts@CallsOptions {..}) -> do
       a <- head . (^. Abstract.resultModules) <$> runIO (upToAbstract (getEntryPoint root opts))
       let callMap0 = T.buildCallMap a
@@ -405,16 +403,13 @@ runCLI CLI {..} = do
       A.printPrettyCode opts' filteredGraph
       putStrLn ""
       forM_ recBehav $ \r -> do
-        let n = M.renderPrettyCode M.defaultOptions $ A._recBehaviourFunction r
-        A.printPrettyCode A.defaultOptions r
+        let n = toAnsiText' (Scoper.ppOut (A._recBehaviourFunction r))
+        renderIO useColors (Abstract.ppOut r)
         putStrLn ""
         case T.findOrder r of
           Nothing -> putStrLn (n <> " Fails the termination checking")
           Just (T.LexOrder k) -> putStrLn (n <> " Terminates with order " <> show (toList k))
         putStrLn ""
-  where
-    miniToMicro :: FilePath -> MicroJuvixOptions -> IO Micro.Module
-    miniToMicro root o = runIO (upToAbstract (getEntryPoint root o))
 
 main :: IO ()
 main = execParser descr >>= runCLI

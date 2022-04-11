@@ -2,7 +2,6 @@ module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text where
 
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base
-import Prettyprinter
 import Prettyprinter.Render.Text
 
 printPrettyCodeDefault :: PrettyCode c => c -> IO ()

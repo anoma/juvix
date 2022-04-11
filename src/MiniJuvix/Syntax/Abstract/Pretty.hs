@@ -1,10 +1,11 @@
-module MiniJuvix.Syntax.MicroJuvix.Pretty where
+module MiniJuvix.Syntax.Abstract.Pretty where
 
-import MiniJuvix.Syntax.MicroJuvix.Pretty.Ann
-import MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi qualified as Ansi
-import MiniJuvix.Syntax.MicroJuvix.Pretty.Base
+
 import MiniJuvix.Prelude.Pretty
+import qualified MiniJuvix.Syntax.Abstract.Pretty.Ansi as Ansi
+import MiniJuvix.Syntax.Abstract.Pretty.Base
 import MiniJuvix.Prelude
+
 
 newtype PPOutput = PPOutput (SimpleDocStream Ann)
 
