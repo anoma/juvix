@@ -1,0 +1,44 @@
+module Simple;
+  inductive T {
+    tt : T;
+  };
+
+  someT : T;
+  someT ≔ tt;
+
+  inductive Bool  {
+    false : Bool;
+    true : Bool;
+  };
+
+
+  inductive Nat  {
+     zero : Nat;
+     suc : Nat → Nat;
+  };
+
+  infix 3 ==;
+  == : Nat → Nat → Bool;
+  == zero zero ≔ true;
+  == (suc a) (suc b) ≔ a == b;
+  == _ _ ≔ false;
+
+  infixl 4 +;
+  + : Nat → Nat → Nat;
+  + zero b ≔ b;
+  + (suc a) b ≔ suc (a + b);
+
+  infixr 5 ∷;
+  inductive List {
+    nil : List;
+    ∷ : Nat → List → List;
+   };
+
+  foldr : (Nat → Nat → Nat) → Nat → List → Nat;
+  foldr _ v nil ≔ v;
+  foldr f v (a ∷ as) ≔ f a (foldr f v as);
+
+  sum : List → Nat;
+  sum ≔ foldr (+) zero;
+
+end;

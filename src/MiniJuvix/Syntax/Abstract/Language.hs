@@ -5,9 +5,9 @@ module MiniJuvix.Syntax.Abstract.Language
 where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Language (ForeignBlock (..), Literal (..), Usage, BackendItem)
-import qualified MiniJuvix.Syntax.Concrete.Name as C
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Concrete.Language (BackendItem, ForeignBlock (..), LiteralLoc (..), Usage)
+import MiniJuvix.Syntax.Concrete.Name qualified as C
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.Universe
 
@@ -25,6 +25,9 @@ type InductiveName = S.Symbol
 
 type AxiomName = S.Symbol
 
+-- TODO: Perhaps we could use a different Name type
+--  that just includes fields (nameId + debug info)
+-- requried in future passes.
 type Name = S.Name
 
 type TopModule = Module C.TopModulePath
@@ -35,47 +38,72 @@ data Module s = Module
   { _moduleName :: S.Name' s,
     _moduleBody :: ModuleBody
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
-data ModuleBody = ModuleBody
-  { _moduleInductives :: HashMap InductiveName (Indexed InductiveDef),
-    _moduleFunctions :: HashMap FunctionName (Indexed FunctionDef),
-    _moduleImports :: [Indexed TopModule],
-    _moduleForeigns :: [Indexed ForeignBlock],
-    _moduleLocalModules :: HashMap LocalModuleName (Indexed LocalModule)
+newtype ModuleBody = ModuleBody
+  { _moduleStatements :: [Statement]
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
+
+data Statement
+  = StatementInductive InductiveDef
+  | StatementFunction FunctionDef
+  | StatementImport TopModule
+  | StatementForeign ForeignBlock
+  | StatementLocalModule LocalModule
+  | StatementAxiom AxiomDef
+  deriving stock (Eq, Show)
 
 data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
     _funDefTypeSig :: Expression,
     _funDefClauses :: NonEmpty FunctionClause
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data FunctionClause = FunctionClause
   { _clausePatterns :: [Pattern],
     _clauseBody :: Expression
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
+
+newtype FunctionRef = FunctionRef
+  {_functionRefName :: Name}
+  deriving stock (Eq, Show)
+  deriving newtype (Hashable)
+
+newtype ConstructorRef = ConstructorRef
+  {_constructorRefName :: Name}
+  deriving stock (Eq, Show)
+  deriving newtype (Hashable)
+
+newtype InductiveRef = InductiveRef
+  {_inductiveRefName :: Name}
+  deriving stock (Eq, Show)
+  deriving newtype (Hashable)
+
+newtype AxiomRef = AxiomRef
+  {_axiomRefName :: Name}
+  deriving stock (Eq, Show)
+  deriving newtype (Hashable)
 
 data Iden
-  = IdenFunction Name
-  | IdenConstructor Name
+  = IdenFunction FunctionRef
+  | IdenConstructor ConstructorRef
   | IdenVar VarName
-  | IdenInductive Name
-  | IdenAxiom Name
-  deriving stock (Show, Eq)
+  | IdenInductive InductiveRef
+  | IdenAxiom AxiomRef
+  deriving stock (Eq, Show)
 
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
   | ExpressionUniverse Universe
   | ExpressionFunction Function
-  | ExpressionLiteral Literal
+  | ExpressionLiteral LiteralLoc
   --- | ExpressionMatch Match
   ---  ExpressionLambda Lambda not supported yet
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 instance HasAtomicity Expression where
   atomicity e = case e of
@@ -89,62 +117,62 @@ data Match = Match
   { _matchExpression :: Expression,
     _matchAlts :: [MatchAlt]
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data MatchAlt = MatchAlt
   { _matchAltPattern :: Pattern,
     _matchAltBody :: Expression
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data Application = Application
   { _appLeft :: Expression,
     _appRight :: Expression
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 instance HasAtomicity Application where
   atomicity = const (Aggregate appFixity)
 
 newtype Lambda = Lambda
   {_lambdaClauses :: [LambdaClause]}
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data LambdaClause = LambdaClause
   { _lambdaParameters :: NonEmpty Pattern,
     _lambdaBody :: Expression
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data FunctionParameter = FunctionParameter
   { _paramName :: Maybe VarName,
     _paramUsage :: Usage,
     _paramType :: Expression
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data Function = Function
   { _funParameter :: FunctionParameter,
     _funReturn :: Expression
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 instance HasAtomicity Function where
   atomicity = const (Aggregate funFixity)
 
 -- | Fully applied constructor in a pattern.
 data ConstructorApp = ConstructorApp
-  { _constrAppConstructor :: Name,
+  { _constrAppConstructor :: ConstructorRef,
     _constrAppParameters :: [Pattern]
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data Pattern
   = PatternVariable VarName
   | PatternConstructorApp ConstructorApp
   | PatternWildcard
   | PatternEmpty
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
@@ -152,20 +180,20 @@ data InductiveDef = InductiveDef
     _inductiveType :: Maybe Expression,
     _inductiveConstructors :: [InductiveConstructorDef]
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data InductiveConstructorDef = InductiveConstructorDef
   { _constructorName :: ConstrName,
     _constructorType :: Expression
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
     _axiomType :: Expression,
     _axiomBackendItems :: [BackendItem]
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 makeLenses ''Module
 makeLenses ''FunctionParameter
@@ -176,3 +204,16 @@ makeLenses ''InductiveDef
 makeLenses ''ModuleBody
 makeLenses ''InductiveConstructorDef
 makeLenses ''ConstructorApp
+makeLenses ''FunctionRef
+makeLenses ''ConstructorRef
+makeLenses ''InductiveRef
+makeLenses ''AxiomRef
+makeLenses ''AxiomDef
+
+idenName :: Iden -> Name
+idenName = \case
+  IdenFunction n -> n ^. functionRefName
+  IdenConstructor n -> n ^. constructorRefName
+  IdenInductive n -> n ^. inductiveRefName
+  IdenVar n -> S.unqualifiedSymbol n
+  IdenAxiom n -> n ^. axiomRefName

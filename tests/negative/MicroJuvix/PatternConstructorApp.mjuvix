@@ -1,0 +1,13 @@
+module PatternConstructorApp;
+  inductive A {
+    a : A -> A;
+  };
+
+  inductive B {
+    b : B;
+  };
+
+  f : A → B;
+  f (a x _) ≔ b;
+
+end;

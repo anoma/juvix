@@ -4,12 +4,12 @@ module MiniJuvix.Termination.CallGraph
   )
 where
 
-import qualified Data.HashMap.Strict as HashMap
-import qualified Data.HashSet as HashSet
+import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.Language.Extra
 import MiniJuvix.Syntax.Abstract.Pretty.Base
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Termination.Types
 import Prettyprinter as PP
 
@@ -63,11 +63,11 @@ composeEdge a b = do
         _edgeMatrices = multiplyMany (a ^. edgeMatrices) (b ^. edgeMatrices)
       }
 
-fromFunCall :: FunctionName -> FunCall -> Call
+fromFunCall :: FunctionRef -> FunCall -> Call
 fromFunCall caller fc =
   Call
-    { _callFrom = caller,
-      _callTo = fc ^. callName,
+    { _callFrom = S.nameUnqualify (caller ^. functionRefName),
+      _callTo = S.nameUnqualify (fc ^. callRef . functionRefName),
       _callMatrix = map fst (fc ^. callArgs)
     }
 
@@ -121,10 +121,10 @@ completeCallGraph cm = CompleteCallGraph (go startingEdges)
     edgeUnion a b
       | a ^. edgeFrom == b ^. edgeFrom,
         a ^. edgeTo == b ^. edgeTo =
-        Edge
-          (a ^. edgeFrom)
-          (a ^. edgeTo)
-          (HashSet.union (a ^. edgeMatrices) (b ^. edgeMatrices))
+          Edge
+            (a ^. edgeFrom)
+            (a ^. edgeTo)
+            (HashSet.union (a ^. edgeMatrices) (b ^. edgeMatrices))
       | otherwise = impossible
 
     edgesUnion :: Edges -> Edges -> Edges
@@ -139,7 +139,7 @@ reflexiveEdges (CompleteCallGraph es) = mapMaybe reflexive (toList es)
     reflexive :: Edge -> Maybe ReflexiveEdge
     reflexive e
       | e ^. edgeFrom == e ^. edgeTo =
-        Just $ ReflexiveEdge (e ^. edgeFrom) (e ^. edgeMatrices)
+          Just $ ReflexiveEdge (e ^. edgeFrom) (e ^. edgeMatrices)
       | otherwise = Nothing
 
 callMatrixDiag :: CallMatrix -> [Rel]
@@ -184,7 +184,7 @@ findOrder rb = LexOrder <$> listToMaybe (mapMaybe (isLexOrder >=> nonEmpty) allP
             | Just r <- find (isLess . snd . (!! p0)) b,
               all (notNothing . snd . (!! p0)) b,
               Just perm' <- go (b' p0) (map pred ptail) ->
-              Just (fst (r !! p0) : perm')
+                Just (fst (r !! p0) : perm')
             | otherwise -> Nothing
           where
             b' i = map r' (filter (not . isLess . snd . (!! i)) b)

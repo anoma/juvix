@@ -1,8 +1,7 @@
-{-# LANGUAGE StandaloneKindSignatures #-}
-
 module MiniJuvix.Syntax.Concrete.Scoped.Name
   ( module MiniJuvix.Syntax.Concrete.Scoped.Name,
     module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind,
+    module MiniJuvix.Syntax.NameId,
   )
 where
 
@@ -10,11 +9,11 @@ import Data.Stream (Stream (Cons))
 import Lens.Micro.Platform
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Loc
-import qualified MiniJuvix.Syntax.Concrete.Name as C
-import MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn
+import MiniJuvix.Syntax.Concrete.Name qualified as C
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
-import qualified MiniJuvix.Syntax.Fixity as C
-import Prettyprinter
+import MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn
+import MiniJuvix.Syntax.Fixity qualified as C
+import MiniJuvix.Syntax.NameId
 
 --------------------------------------------------------------------------------
 -- Names
@@ -23,12 +22,6 @@ import Prettyprinter
 data IsConcrete = NotConcrete | Concrete
 
 $(genSingletons [''IsConcrete])
-
-newtype NameId = NameId Word64
-  deriving stock (Show, Eq, Ord, Generic)
-
-instance Pretty NameId where
-  pretty (NameId w) = pretty w
 
 data AbsModulePath = AbsModulePath
   { absTopModulePath :: C.TopModulePath,
@@ -47,8 +40,8 @@ isChildOf :: AbsModulePath -> AbsModulePath -> Bool
 isChildOf child parent
   | null (absLocalPath child) = False
   | otherwise =
-    init (absLocalPath child) == absLocalPath parent
-      && absTopModulePath child == absTopModulePath parent
+      init (absLocalPath child) == absLocalPath parent
+        && absTopModulePath child == absTopModulePath parent
 
 -- | Appends a local path to the absolute path
 -- e.g. TopMod.Local <.> Inner == TopMod.Local.Inner
@@ -61,8 +54,6 @@ allNameIds = NameId <$> ids
     ids :: Stream Word64
     ids = aux minBound
     aux i = Cons i (aux (succ i))
-
-instance Hashable NameId
 
 -- | Why a symbol is in scope.
 data WhyInScope

@@ -4,20 +4,27 @@ module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base
   )
 where
 
-import qualified Data.List.NonEmpty.Extra as NonEmpty
-import MiniJuvix.Internal.Strings as Str
+import Data.List.NonEmpty.Extra qualified as NonEmpty
+import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Scoped.Name (AbsModulePath)
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ann
 import Prettyprinter hiding (braces, parens)
+
+docStream :: PrettyCode c => Options -> c -> SimpleDocStream Ann
+docStream opts =
+  layoutPretty defaultLayoutOptions
+    . run
+    . runReader opts
+    . ppCode
 
 data Options = Options
   { _optShowNameId :: Bool,
     _optInlineImports :: Bool,
     _optIndent :: Int
-}
+  }
 
 defaultOptions :: Options
 defaultOptions =
@@ -179,7 +186,7 @@ doubleQuotes :: Doc Ann -> Doc Ann
 doubleQuotes = enclose kwDQuote kwDQuote
 
 annotateKind :: S.NameKind -> Doc Ann -> Doc Ann
-annotateKind k = (annotate . AnnKind) k
+annotateKind = annotate . AnnKind
 
 ppModulePathType ::
   forall t s r.
@@ -422,7 +429,7 @@ ppName = case sing :: SStage s of
   SScoped -> ppCode
 
 instance PrettyCode S.NameId where
-  ppCode (S.NameId k) = return $ pretty k
+  ppCode (S.NameId k) = return (pretty k)
 
 annDef :: forall s. SingI s => SymbolType s -> Doc Ann -> Doc Ann
 annDef nm = case sing :: SStage s of
@@ -673,9 +680,12 @@ instance PrettyCode Application where
     return $ l' <+> r'
 
 instance PrettyCode Literal where
-  ppCode l = case l of
+  ppCode = \case
     LitInteger n -> return $ annotate AnnLiteralInteger (pretty n)
     LitString s -> return $ ppStringLit s
+
+instance PrettyCode LiteralLoc where
+  ppCode l = ppCode (l ^. literalLocLiteral)
 
 instance PrettyCode AxiomRef where
   ppCode a = ppCode (a ^. axiomRefName)
@@ -798,16 +808,20 @@ ppExpression = case sing :: SStage s of
   SParsed -> ppCode
 
 instance PrettyCode SymbolEntry where
-  ppCode ent = return (kindTag <+> pretty (entryName ent ^. S.nameVerbatim)
-    <+> "defined at" <+> pretty (getLoc ent))
+  ppCode ent =
+    return
+      ( kindTag <+> pretty (entryName ent ^. S.nameVerbatim)
+          <+> "defined at"
+          <+> pretty (getLoc ent)
+      )
     where
-    pretty' :: Text -> Doc a
-    pretty' = pretty
-    kindTag = case ent of
-      EntryAxiom _ -> annotateKind S.KNameAxiom (pretty' Str.axiom)
-      EntryInductive _ -> annotateKind S.KNameInductive (pretty' Str.inductive)
-      EntryFunction _ -> annotateKind S.KNameFunction (pretty' Str.function)
-      EntryConstructor _ -> annotateKind S.KNameConstructor (pretty' Str.constructor)
-      EntryModule (ModuleRef' (isTop :&: _))
-        | SModuleTop <- isTop -> annotateKind S.KNameTopModule (pretty' Str.topModule)
-        | SModuleLocal <- isTop -> annotateKind S.KNameLocalModule (pretty' Str.localModule)
+      pretty' :: Text -> Doc a
+      pretty' = pretty
+      kindTag = case ent of
+        EntryAxiom _ -> annotateKind S.KNameAxiom (pretty' Str.axiom)
+        EntryInductive _ -> annotateKind S.KNameInductive (pretty' Str.inductive)
+        EntryFunction _ -> annotateKind S.KNameFunction (pretty' Str.function)
+        EntryConstructor _ -> annotateKind S.KNameConstructor (pretty' Str.constructor)
+        EntryModule (ModuleRef' (isTop :&: _))
+          | SModuleTop <- isTop -> annotateKind S.KNameTopModule (pretty' Str.topModule)
+          | SModuleLocal <- isTop -> annotateKind S.KNameLocalModule (pretty' Str.localModule)

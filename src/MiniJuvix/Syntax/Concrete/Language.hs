@@ -1,8 +1,12 @@
 {-# LANGUAGE UndecidableInstances #-}
+
 module MiniJuvix.Syntax.Concrete.Language
   ( module MiniJuvix.Syntax.Concrete.Language,
     module MiniJuvix.Syntax.Concrete.Name,
     module MiniJuvix.Syntax.Concrete.Loc,
+    module MiniJuvix.Syntax.Concrete.Literal,
+    module MiniJuvix.Syntax.Backends,
+    module MiniJuvix.Syntax.ForeignBlock,
     module MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn,
     module MiniJuvix.Syntax.Concrete.PublicAnn,
     module MiniJuvix.Syntax.Concrete.ModuleIsTop,
@@ -15,20 +19,24 @@ where
 
 --------------------------------------------------------------------------------
 
-import qualified Data.Kind as GHC
+import Data.Kind qualified as GHC
 import MiniJuvix.Prelude hiding (show)
+import MiniJuvix.Syntax.Backends
 import MiniJuvix.Syntax.Concrete.Language.Stage
+import MiniJuvix.Syntax.Concrete.Literal
 import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Syntax.Concrete.ModuleIsTop
 import MiniJuvix.Syntax.Concrete.Name
-import MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn
 import MiniJuvix.Syntax.Concrete.PublicAnn
 import MiniJuvix.Syntax.Concrete.Scoped.Name (unqualifiedSymbol)
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
+import MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn
 import MiniJuvix.Syntax.Fixity
+import MiniJuvix.Syntax.ForeignBlock
 import MiniJuvix.Syntax.Universe
 import MiniJuvix.Syntax.Usage
+import Prettyprinter
 import Prelude (show)
 
 --------------------------------------------------------------------------------
@@ -75,8 +83,7 @@ type family ImportType (s :: Stage) :: GHC.Type where
   ImportType 'Scoped = Module 'Scoped 'ModuleTop
 
 type ModulePathType :: Stage -> ModuleIsTop -> GHC.Type
-type family ModulePathType s t = res | res -> t s
-  where
+type family ModulePathType s t = res | res -> t s where
   ModulePathType 'Parsed 'ModuleTop = TopModulePath
   ModulePathType 'Scoped 'ModuleTop = S.TopModulePath
   ModulePathType 'Parsed 'ModuleLocal = Symbol
@@ -131,12 +138,6 @@ deriving stock instance
     Ord (ExpressionType s)
   ) =>
   Ord (Statement s)
-
-data ForeignBlock = ForeignBlock
-  { _foreignBackend :: Backend,
-    _foreignCode :: Text
-  }
-  deriving stock (Eq, Ord, Show)
 
 --------------------------------------------------------------------------------
 -- Import statement
@@ -549,7 +550,7 @@ deriving stock instance
 type AxiomRef = AxiomRef' 'S.Concrete
 
 newtype AxiomRef' (n :: S.IsConcrete) = AxiomRef'
-  { _axiomRefName :: RefNameType n}
+  {_axiomRefName :: RefNameType n}
 
 instance Hashable (RefNameType s) => Hashable (AxiomRef' s) where
   hashWithSalt i = hashWithSalt i . _axiomRefName
@@ -658,14 +659,9 @@ data Expression
   | ExpressionMatch (Match 'Scoped)
   | ExpressionLetBlock (LetBlock 'Scoped)
   | ExpressionUniverse Universe
-  | ExpressionLiteral Literal
+  | ExpressionLiteral LiteralLoc
   | ExpressionFunction (Function 'Scoped)
   deriving stock (Show, Eq, Ord)
-
-instance HasAtomicity Literal where
-  atomicity = \case
-    LitInteger {} -> Atom
-    LitString {} -> Atom
 
 instance HasAtomicity Expression where
   atomicity e = case e of
@@ -685,10 +681,23 @@ instance HasAtomicity Expression where
 -- Expression atom
 --------------------------------------------------------------------------------
 
-data Literal
-  = LitString Text
-  | LitInteger Integer
-  deriving stock (Show, Eq, Ord)
+data LiteralLoc = LiteralLoc
+  { _literalLocLiteral :: Literal,
+    _literalLocLoc :: Interval
+  }
+  deriving stock (Show, Ord)
+
+instance HasAtomicity LiteralLoc where
+  atomicity = atomicity . _literalLocLiteral
+
+instance Pretty LiteralLoc where
+  pretty = pretty . _literalLocLiteral
+
+instance Eq LiteralLoc where
+  l1 == l2 = _literalLocLiteral l1 == _literalLocLiteral l2
+
+instance HasLoc LiteralLoc where
+  getLoc = _literalLocLoc
 
 -- | Expressions without application
 data ExpressionAtom (s :: Stage)
@@ -699,7 +708,7 @@ data ExpressionAtom (s :: Stage)
   | AtomFunction (Function s)
   | AtomFunArrow
   | AtomMatch (Match s)
-  | AtomLiteral Literal
+  | AtomLiteral LiteralLoc
   | AtomParens (ExpressionType s)
 
 deriving stock instance
@@ -1059,19 +1068,6 @@ deriving stock instance
   Ord (LetClause s)
 
 --------------------------------------------------------------------------------
--- Backends
---------------------------------------------------------------------------------
-
-data Backend = BackendGhc | BackendAgda
-  deriving stock (Show, Eq, Ord)
-
-data BackendItem = BackendItem
-  { _backendItemBackend :: Backend,
-    _backendItemCode :: Text
-  }
-  deriving stock (Show, Eq, Ord)
-
---------------------------------------------------------------------------------
 -- Debugging statements
 --------------------------------------------------------------------------------
 
@@ -1117,18 +1113,17 @@ makeLenses ''TypeSignature
 makeLenses ''AxiomDef
 makeLenses ''FunctionClause
 makeLenses ''InductiveParameter
-makeLenses ''ForeignBlock
 makeLenses ''AxiomRef'
 makeLenses ''InductiveRef'
 makeLenses ''ModuleRef'
 makeLenses ''ModuleRef''
 makeLenses ''FunctionRef'
 makeLenses ''ConstructorRef'
-makeLenses ''BackendItem
 makeLenses ''OpenModule
 makeLenses ''PatternApp
 makeLenses ''PatternInfixApp
 makeLenses ''PatternPostfixApp
+makeLenses ''LiteralLoc
 
 idenOverName :: (forall s. S.Name' s -> S.Name' s) -> ScopedIden -> ScopedIden
 idenOverName f = \case

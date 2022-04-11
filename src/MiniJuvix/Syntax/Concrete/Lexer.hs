@@ -2,18 +2,19 @@ module MiniJuvix.Syntax.Concrete.Lexer where
 
 --------------------------------------------------------------------------------
 
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import GHC.Unicode
-import qualified MiniJuvix.Internal.Strings as Str
+import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Base hiding (Pos, space)
-import qualified MiniJuvix.Syntax.Concrete.Base as P
+import MiniJuvix.Syntax.Concrete.Base qualified as P
 import MiniJuvix.Syntax.Concrete.Loc
-import qualified Text.Megaparsec.Char.Lexer as L
-
---------------------------------------------------------------------------------
+import MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder
+import Text.Megaparsec.Char.Lexer qualified as L
 
 type OperatorSym = Text
+
+type ParsecS r = ParsecT Void Text (Sem r)
 
 space :: forall m e. MonadParsec e Text m => m ()
 space = L.space space1 lineComment block
@@ -30,10 +31,10 @@ symbol = void . L.symbol space
 decimal :: (MonadParsec e Text m, Num n) => m n
 decimal = lexeme L.decimal
 
-identifier :: MonadParsec e Text m => m Text
+identifier :: Member InfoTableBuilder r => ParsecS r Text
 identifier = fmap fst identifierL
 
-identifierL :: MonadParsec e Text m => m (Text, Interval)
+identifierL :: Member InfoTableBuilder r => ParsecS r (Text, Interval)
 identifierL = lexeme bareIdentifier
 
 fromPos :: P.Pos -> Pos
@@ -62,20 +63,21 @@ bracedString =
 string :: MonadParsec e Text m => m Text
 string = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
-mkLoc :: SourcePos -> Loc
-mkLoc SourcePos {..} = Loc {..}
+mkLoc :: Int -> SourcePos -> Loc
+mkLoc offset SourcePos {..} = Loc {..}
   where
     _locFile = sourceName
+    _locOffset = Pos (fromIntegral offset)
     _locFileLoc = FileLoc {..}
       where
         _locLine = fromPos sourceLine
         _locCol = fromPos sourceColumn
 
 curLoc :: MonadParsec e Text m => m Loc
-curLoc = mkLoc <$> getSourcePos
-
-withLoc :: MonadParsec e Text m => (Loc -> m a) -> m a
-withLoc ma = curLoc >>= ma
+curLoc = do
+  sp <- getSourcePos
+  offset <- stateOffset <$> getParserState
+  return (mkLoc offset sp)
 
 interval :: MonadParsec e Text m => m a -> m (a, Interval)
 interval ma = do
@@ -84,9 +86,14 @@ interval ma = do
   end <- curLoc
   return (res, mkInterval start end)
 
+keyword :: Member InfoTableBuilder r => Text -> ParsecS r ()
+keyword kw = do
+  l <- snd <$> interval (symbol kw)
+  lift (registerKeyword l)
+
 -- | Same as @identifier@ but does not consume space after it.
 -- TODO: revise.
-bareIdentifier :: MonadParsec e Text m => m (Text, Interval)
+bareIdentifier :: Member InfoTableBuilder r => ParsecS r (Text, Interval)
 bareIdentifier = interval $ do
   notFollowedBy (choice allKeywords)
   h <- P.satisfy validFirstChar
@@ -113,13 +120,13 @@ bareIdentifier = interval $ do
 dot :: forall e m. MonadParsec e Text m => m Char
 dot = P.char '.'
 
-dottedIdentifier :: forall e m. MonadParsec e Text m => m (NonEmpty (Text, Interval))
+dottedIdentifier :: Member InfoTableBuilder r => ParsecS r (NonEmpty (Text, Interval))
 dottedIdentifier = lexeme $ P.sepBy1 bareIdentifier dot
 
 braces :: MonadParsec e Text m => m a -> m a
 braces = between (symbol "{") (symbol "}")
 
-allKeywords :: MonadParsec e Text m => [m ()]
+allKeywords :: Member InfoTableBuilder r => [ParsecS r ()]
 allKeywords =
   [ kwAssignment,
     kwAxiom,
@@ -127,7 +134,6 @@ allKeywords =
     kwColonOmega,
     kwColonOne,
     kwColonZero,
-    kwCompile,
     kwEnd,
     kwEval,
     kwForeign,
@@ -164,105 +170,102 @@ rparen = symbol ")"
 parens :: MonadParsec e Text m => m a -> m a
 parens = between lparen rparen
 
-kwAssignment :: MonadParsec e Text m => m ()
-kwAssignment = symbol Str.assignUnicode <|> symbol Str.assignAscii
+kwAssignment :: Member InfoTableBuilder r => ParsecS r ()
+kwAssignment = keyword Str.assignUnicode <|> keyword Str.assignAscii
 
-kwAxiom :: MonadParsec e Text m => m ()
-kwAxiom = symbol Str.axiom
+kwAxiom :: Member InfoTableBuilder r => ParsecS r ()
+kwAxiom = keyword Str.axiom
 
 -- | Note that the trailing space is needed to distinguish it from ':='.
-kwColon :: MonadParsec e Text m => m ()
-kwColon = symbol Str.colonSpace
+kwColon :: Member InfoTableBuilder r => ParsecS r ()
+kwColon = keyword Str.colonSpace
 
-kwColonOmega :: MonadParsec e Text m => m ()
-kwColonOmega = symbol Str.colonOmegaUnicode <|> symbol Str.colonOmegaAscii
+kwColonOmega :: Member InfoTableBuilder r => ParsecS r ()
+kwColonOmega = keyword Str.colonOmegaUnicode <|> keyword Str.colonOmegaAscii
 
-kwColonOne :: MonadParsec e Text m => m ()
-kwColonOne = symbol Str.colonOne
+kwColonOne :: Member InfoTableBuilder r => ParsecS r ()
+kwColonOne = keyword Str.colonOne
 
-kwColonZero :: MonadParsec e Text m => m ()
-kwColonZero = symbol Str.colonZero
+kwColonZero :: Member InfoTableBuilder r => ParsecS r ()
+kwColonZero = keyword Str.colonZero
 
-kwEnd :: MonadParsec e Text m => m ()
-kwEnd = symbol Str.end
+kwEnd :: Member InfoTableBuilder r => ParsecS r ()
+kwEnd = keyword Str.end
 
-kwEval :: MonadParsec e Text m => m ()
-kwEval = symbol Str.eval
+kwEval :: Member InfoTableBuilder r => ParsecS r ()
+kwEval = keyword Str.eval
 
-kwHiding :: MonadParsec e Text m => m ()
-kwHiding = symbol Str.hiding
+kwHiding :: Member InfoTableBuilder r => ParsecS r ()
+kwHiding = keyword Str.hiding
 
-kwImport :: MonadParsec e Text m => m ()
-kwImport = symbol Str.import_
+kwImport :: Member InfoTableBuilder r => ParsecS r ()
+kwImport = keyword Str.import_
 
-kwForeign :: MonadParsec e Text m => m ()
-kwForeign = symbol Str.foreign_
+kwForeign :: Member InfoTableBuilder r => ParsecS r ()
+kwForeign = keyword Str.foreign_
 
-kwCompile :: MonadParsec e Text m => m ()
-kwCompile = symbol Str.compile
+kwIn :: Member InfoTableBuilder r => ParsecS r ()
+kwIn = keyword Str.in_
 
-kwIn :: MonadParsec e Text m => m ()
-kwIn = symbol Str.in_
+kwInductive :: Member InfoTableBuilder r => ParsecS r ()
+kwInductive = keyword Str.inductive
 
-kwInductive :: MonadParsec e Text m => m ()
-kwInductive = symbol Str.inductive
+kwInfix :: Member InfoTableBuilder r => ParsecS r ()
+kwInfix = keyword Str.infix_
 
-kwInfix :: MonadParsec e Text m => m ()
-kwInfix = symbol Str.infix_
+kwInfixl :: Member InfoTableBuilder r => ParsecS r ()
+kwInfixl = keyword Str.infixl_
 
-kwInfixl :: MonadParsec e Text m => m ()
-kwInfixl = symbol Str.infixl_
+kwInfixr :: Member InfoTableBuilder r => ParsecS r ()
+kwInfixr = keyword Str.infixr_
 
-kwInfixr :: MonadParsec e Text m => m ()
-kwInfixr = symbol Str.infixr_
+kwLambda :: Member InfoTableBuilder r => ParsecS r ()
+kwLambda = keyword Str.lambdaUnicode <|> keyword Str.lambdaAscii
 
-kwLambda :: MonadParsec e Text m => m ()
-kwLambda = symbol Str.lambdaUnicode <|> symbol Str.lambdaAscii
+kwLet :: Member InfoTableBuilder r => ParsecS r ()
+kwLet = keyword Str.let_
 
-kwLet :: MonadParsec e Text m => m ()
-kwLet = symbol Str.let_
+kwMapsTo :: Member InfoTableBuilder r => ParsecS r ()
+kwMapsTo = keyword Str.mapstoUnicode <|> keyword Str.mapstoAscii
 
-kwMapsTo :: MonadParsec e Text m => m ()
-kwMapsTo = symbol Str.mapstoUnicode <|> symbol Str.mapstoAscii
+kwMatch :: Member InfoTableBuilder r => ParsecS r ()
+kwMatch = keyword Str.match
 
-kwMatch :: MonadParsec e Text m => m ()
-kwMatch = symbol Str.match
+kwModule :: Member InfoTableBuilder r => ParsecS r ()
+kwModule = keyword Str.module_
 
-kwModule :: MonadParsec e Text m => m ()
-kwModule = symbol Str.module_
+kwOpen :: Member InfoTableBuilder r => ParsecS r ()
+kwOpen = keyword Str.open
 
-kwOpen :: MonadParsec e Text m => m ()
-kwOpen = symbol Str.open
+kwPostfix :: Member InfoTableBuilder r => ParsecS r ()
+kwPostfix = keyword Str.postfix
 
-kwPostfix :: MonadParsec e Text m => m ()
-kwPostfix = symbol Str.postfix
+kwPrint :: Member InfoTableBuilder r => ParsecS r ()
+kwPrint = keyword Str.print
 
-kwPrint :: MonadParsec e Text m => m ()
-kwPrint = symbol Str.print
+kwPublic :: Member InfoTableBuilder r => ParsecS r ()
+kwPublic = keyword Str.public
 
-kwPublic :: MonadParsec e Text m => m ()
-kwPublic = symbol Str.public
+kwRightArrow :: Member InfoTableBuilder r => ParsecS r ()
+kwRightArrow = keyword Str.toUnicode <|> keyword Str.toAscii
 
-kwRightArrow :: MonadParsec e Text m => m ()
-kwRightArrow = symbol Str.toUnicode <|> symbol Str.toAscii
+kwSemicolon :: Member InfoTableBuilder r => ParsecS r ()
+kwSemicolon = keyword Str.semicolon
 
-kwSemicolon :: MonadParsec e Text m => m ()
-kwSemicolon = symbol Str.semicolon
+kwType :: Member InfoTableBuilder r => ParsecS r ()
+kwType = keyword Str.type_
 
-kwType :: MonadParsec e Text m => m ()
-kwType = symbol Str.type_
+kwUsing :: Member InfoTableBuilder r => ParsecS r ()
+kwUsing = keyword Str.using
 
-kwUsing :: MonadParsec e Text m => m ()
-kwUsing = symbol Str.using
+kwWhere :: Member InfoTableBuilder r => ParsecS r ()
+kwWhere = keyword Str.where_
 
-kwWhere :: MonadParsec e Text m => m ()
-kwWhere = symbol Str.where_
+kwWildcard :: Member InfoTableBuilder r => ParsecS r ()
+kwWildcard = keyword Str.underscore
 
-kwWildcard :: MonadParsec e Text m => m ()
-kwWildcard = symbol Str.underscore
+ghc :: Member InfoTableBuilder r => ParsecS r ()
+ghc = keyword Str.ghc
 
-ghc :: MonadParsec e Text m => m ()
-ghc = symbol Str.ghc
-
-agda :: MonadParsec e Text m => m ()
-agda = symbol Str.agda
+agda :: Member InfoTableBuilder r => ParsecS r ()
+agda = keyword Str.agda

@@ -1,8 +1,6 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-
 module MiniJuvix.Syntax.Concrete.Name where
 
-import qualified Data.List.NonEmpty.Extra as NonEmpty
+import Data.List.NonEmpty.Extra qualified as NonEmpty
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Loc
 import Prettyprinter
@@ -97,3 +95,5 @@ topModulePathToDottedPath (TopModulePath l r) =
     fromSymbol Symbol {..} = _symbolText
 
 instance Hashable TopModulePath
+
+makeLenses ''Symbol

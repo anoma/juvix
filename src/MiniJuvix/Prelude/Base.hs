@@ -39,9 +39,9 @@ module MiniJuvix.Prelude.Base
     module Polysemy.Embed,
     module Polysemy.Error,
     module Polysemy.Fixpoint,
+    module Polysemy.Output,
     module Polysemy.Reader,
     module Polysemy.State,
-    module Polysemy.View,
     module Prettyprinter,
     module System.Directory,
     module System.Exit,
@@ -69,7 +69,7 @@ import Control.Monad.Fix
 import Data.Bool
 import Data.ByteString.Lazy (ByteString)
 import Data.Char
-import qualified Data.Char as Char
+import Data.Char qualified as Char
 import Data.Data
 import Data.Either.Extra
 import Data.Eq
@@ -78,10 +78,11 @@ import Data.Function
 import Data.Functor
 import Data.HashMap.Strict (HashMap)
 import Data.HashSet (HashSet)
+import Data.HashSet qualified as HashSet
 import Data.Hashable
 import Data.Int
 import Data.List.Extra hiding (head, last)
-import qualified Data.List.NonEmpty as NonEmpty
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.List.NonEmpty.Extra (NonEmpty (..), head, last, maximum1, maximumOn1, minimum1, minimumOn1, nonEmpty, some1)
 import Data.Maybe
 import Data.Monoid
@@ -89,7 +90,7 @@ import Data.Ord
 import Data.Semigroup (Semigroup, (<>))
 import Data.Singletons
 import Data.Singletons.Sigma
-import Data.Singletons.TH (genSingletons)
+import Data.Singletons.TH (genSingletons, promoteOrdInstances, singOrdInstances)
 import Data.Stream (Stream)
 import Data.String
 import Data.Text (Text, pack, strip, unpack)
@@ -101,7 +102,7 @@ import Data.Typeable hiding (TyCon)
 import Data.Void
 import Data.Word
 import GHC.Enum
-import qualified GHC.Err as Err
+import GHC.Err qualified as Err
 import GHC.Generics (Generic)
 import GHC.Num
 import GHC.Real
@@ -111,16 +112,16 @@ import Polysemy
 import Polysemy.Embed
 import Polysemy.Error hiding (fromEither)
 import Polysemy.Fixpoint
+import Polysemy.Output
 import Polysemy.Reader
 import Polysemy.State
-import Polysemy.View
 import Prettyprinter (Doc, (<+>))
 import System.Directory
 import System.Exit
 import System.FilePath
 import System.IO hiding (appendFile, getContents, getLine, hGetContents, hGetLine, hPutStr, hPutStrLn, interact, putStr, putStrLn, readFile, readFile', writeFile)
 import Text.Show (Show)
-import qualified Text.Show as Show
+import Text.Show qualified as Show
 
 --------------------------------------------------------------------------------
 -- Logical connectives
@@ -201,6 +202,7 @@ nonEmptyUnsnoc e = (NonEmpty.nonEmpty (NonEmpty.init e), NonEmpty.last e)
 error :: HasCallStack => Text -> a
 error = Err.error . unpack
 
+{-# DEPRECATED undefined "undefined" #-}
 undefined :: HasCallStack => a
 undefined = Err.error "undefined"
 
@@ -247,3 +249,10 @@ fromRightIO' pp = do
 
 fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
 fromRightIO pp = fromRightIO' (putStrLn . pp)
+
+--------------------------------------------------------------------------------
+-- Misc
+--------------------------------------------------------------------------------
+
+nubHashable :: Hashable a => [a] -> [a]
+nubHashable = HashSet.toList . HashSet.fromList

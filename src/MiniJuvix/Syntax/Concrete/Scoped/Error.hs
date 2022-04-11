@@ -7,7 +7,7 @@ where
 
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Scoped.Error.Pretty
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Error.Pretty as P
+import MiniJuvix.Syntax.Concrete.Scoped.Error.Pretty qualified as P
 import MiniJuvix.Syntax.Concrete.Scoped.Error.Types
 import Prettyprinter
 

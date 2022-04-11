@@ -2,7 +2,7 @@
 
 [![hackmd-github-sync-badge](https://hackmd.io/R8f7FXyOTAKdQ5_cZ-L-og/badge)](https://hackmd.io/R8f7FXyOTAKdQ5_cZ-L-og)
 
-<!-- Latex stuff adapted from Andy's record proposal: 
+<!-- Latex stuff adapted from Andy's record proposal:
 https://hackmd.io/Xlvu82eFQ_m-cebUWAtGsw?edit -->
 
 $$
@@ -31,7 +31,7 @@ $$
 
 ###### tags: `Juvix`
 
-## Abstract 
+## Abstract
 
 MiniJuvix implements a programming language that takes variable resources very
 seriously in the programs. As mathematical foundation, we are inspired by
@@ -87,7 +87,7 @@ u, v &\EQ \mathsf{Var}(x)    &\text{variable}\\
 &\OR \color{gray}{D} &\color{gray}{\text{data type decl.}}\\
 &\OR \color{gray}{c} &\color{gray}{\text{data constr.}}\\
 &\OR \color{gray}{R}  &\color{gray}{\text{...check andy's record constr decl..}} \\
-&\OR \color{gray}{r}  &\color{gray}{\text{record. intro}} \\ 
+&\OR \color{gray}{r}  &\color{gray}{\text{record. intro}} \\
 &\OR \color{gray}{\cdots}  &\color{gray}{\text{record. proj.}} \\[.7em]
 \Gamma &\EQ \emptyset \Or \Gamma, x :^{\sigma} A & \text{ contexts}
 \\[1em]
@@ -101,7 +101,7 @@ respectively, using a red and blue arrow.
 
 $$
 \begin{gathered}
-\check{\Gamma}{t}{\sigma}{M}  
+\check{\Gamma}{t}{\sigma}{M}
 \qquad
 \infer{\Gamma}{t}{\sigma}{M}
 \end{gathered}
@@ -117,7 +117,7 @@ computation is required in the $\sigma$ zero theory. Otherwise, we say that the 
 **Contexts** The context in which a term is judged is fundamental to determine
 well-formed terms. Another name for context is *environment*. A context can be
 either empty or it can be extended by binding name annotations of the form $x
-\overset{\sigma}{:} M$ for a given type $A$. 
+\overset{\sigma}{:} M$ for a given type $A$.
 
 $$
 \begin{aligned}
@@ -141,7 +141,7 @@ The addition operation for contexts is a binary operation only defined between
 contexts with the same variable set. The latter condition is the proposition
 stating $0 \cdot \Gamma_1 = 0 \cdot \Gamma_2$ between contexts $\Gamma_1$ and
 $\Gamma_2$. Consequently, adding contexts create another context with the same
-variables from the input but with their resource summed up. 
+variables from the input but with their resource summed up.
 
 $$
 \begin{aligned}
@@ -160,7 +160,7 @@ example, in forming new inductive types.
 
 The $\color{gray}{gray}$ cases below are expected to be incorporated in the future.
 
-**Types** A *type* in the theory is one of the following synthactical cases.  
+**Types** A *type* in the theory is one of the following synthactical cases.
 
 $$
 \begin{aligned}
@@ -182,7 +182,7 @@ $\mathsf{False} : \mathsf{Bool}$.
 
 **Terms** We refer to terms as those elements that can inhabit a type. So far,
 we have used as a term the metavariable $x$. A term can take one of the
-following shapes. 
+following shapes.
 
 $$
 \begin{aligned}
@@ -192,7 +192,7 @@ u, v , t , f &\EQ \mathsf{Var}(x)    &\text{(variable)}\\
 &\OR\mathsf{App}(u,v)            &\text{(application)}\\
 &\OR *                           &\text{(unit)}\\
 &\OR \color{gray}{\mathsf{Fun}} &\color{gray}{\text{(named function)}}\\
-&\OR \color{gray}{\mathsf{Con}} &\color{gray}{\text{(data constr.)}} 
+&\OR \color{gray}{\mathsf{Con}} &\color{gray}{\text{(data constr.)}}
 \end{aligned}
 $$
 
@@ -205,9 +205,9 @@ i.e., $x : A$ and $x \overset{\sigma}{:} A$.
 # Typing rules
 
 We present the types rules almost in the same way as one would expect to see them in the
-implementation, i.e., using the bidirectional notation. 
+implementation, i.e., using the bidirectional notation.
 
-It must be assumed that contexts appearing in the rules are *well-formed*, i.e. terms build up using the following derivation rules. 
+It must be assumed that contexts appearing in the rules are *well-formed*, i.e. terms build up using the following derivation rules.
 
 $$
 \rule{\mathsf{empty}\mbox{-}\mathsf{ctx}}{
@@ -262,7 +262,7 @@ $$
 The variables $p_i$ in the rule above are inner steps of the algorithm and the order
 in which they are presented matters. For example, an inner step can be infering
 a type, checking if a property holds for a term, reducing a term, or simply
-checking a term against another type. 
+checking a term against another type.
 
 A *reduction* step is denoted by $\Gamma \vdash
 t \rightsquigarrow t'$ or simply by $t \rightsquigarrow t'$ whenever the context
@@ -299,7 +299,7 @@ conclusion.
 - [x] TensorType
 - [x] TensorIntro
 - [x] UnitType
-- [x] Unit 
+- [x] Unit
 - [ ] SumType
 
 
@@ -313,7 +313,7 @@ $$
 \qquad
 \begin{gathered}
 \rule{Univ{\Leftarrow}}{
-(0\cdot \Gamma) \ \mathsf{ctx} 
+(0\cdot \Gamma) \ \mathsf{ctx}
 }{
 0\cdot \Gamma \vdash \mathcal{U}\, \overset{0}{\color{red}\Leftarrow}\,\, \mathcal{U}
 }
@@ -392,7 +392,7 @@ part of the theory, after studying the usage variable in the conclusion. Recall
 that forming pairs is the way one introduces values of the tensor product.
 One then must check the rule conclusion. After doing this, the types $A$ and $B$ become
 known facts and it makes sense to check the types in the premises. The usage
-bussiness follows a similar reasoning as infering applications. 
+bussiness follows a similar reasoning as infering applications.
 
 
 $$\begin{gathered}
@@ -425,7 +425,7 @@ Finally, we obtain the following two rules that make up the original one.
 0\cdot \Gamma \vdash u \,\overset{0}{\color{red}\Leftarrow}\,A
 \qquad
 \Gamma \vdash v \,\overset{\sigma}{\color{red}\Leftarrow}\,B[u/x]
-\qquad 
+\qquad
 }{
 \Gamma \vdash (u,v)\overset{\sigma}{\color{red}\Leftarrow} (x\overset{\pi}{:}A) \otimes B
 }
@@ -442,7 +442,7 @@ $$
 \qquad
 \color{gray}{0 \cdot \Gamma_1 = 0\cdot \Gamma_2}\quad
 }{
-\color{green}{\sigma\pi}\cdot \Gamma_{1}+\Gamma_{2} \vdash (u,v)\overset{\sigma}{\color{red}\Leftarrow} (x\overset{\pi}{:}A) \otimes B 
+\color{green}{\sigma\pi}\cdot \Gamma_{1}+\Gamma_{2} \vdash (u,v)\overset{\sigma}{\color{red}\Leftarrow} (x\overset{\pi}{:}A) \otimes B
 }
 \end{gathered}
 %
@@ -462,7 +462,7 @@ $$
 }{
 \check{0\cdot\Gamma}{1}{0}{\mathcal{U}}
 }
-\qquad 
+\qquad
 \rule{*\mbox{-}I}{
 0 \cdot \Gamma \ \mathsf{ctx}
 }{
@@ -483,9 +483,9 @@ TODO
 
 
 Include the rules for definitional equality:
-- [ ] β-equality, 
-- [ ] reflexivity, 
-- [ ] symmetry, 
+- [ ] β-equality,
+- [ ] reflexivity,
+- [ ] symmetry,
 - [ ] transitivity, and
 - [ ] congruence.
 
@@ -494,7 +494,7 @@ $$\begin{gathered}
 \rule{conv{\Leftarrow}}{
 \Gamma \vdash M \,\overset{\sigma}{\color{blue}\Rightarrow}\,S \qquad
 \Gamma \vdash S\, \overset{0}{\color{red}\Leftarrow}\, \mathcal{U}\qquad
-\Gamma \vdash T \,\overset{0}{\color{red}\Leftarrow}\,\mathcal{U} \qquad 
+\Gamma \vdash T \,\overset{0}{\color{red}\Leftarrow}\,\mathcal{U} \qquad
 \color{green}{S =_{\beta} T}\ \,\,\,
 }{
 \Gamma \vdash M \overset{\sigma}{\color{red}\Leftarrow} T
@@ -507,7 +507,7 @@ $$
 ## Type inference
 
 The algorithm that implements type inference is called `infer`. Inspired by Agda and its inference strategy, MiniJuvix only infer values that are *uniquely* determined by the context.
-There are no guesses. Either we fail or get a unique answer, giving us a predicatable behaviour. 
+There are no guesses. Either we fail or get a unique answer, giving us a predicatable behaviour.
 
 
 By design, a term is inferable if it is one of the following cases.
@@ -518,7 +518,7 @@ By design, a term is inferable if it is one of the following cases.
 - [x] Tensor type elim
 - [ ] Sum type elim
 
-Each case above has as a rule in what follows. 
+Each case above has as a rule in what follows.
 
 The Haskell type of `infer` would be similar as the following.
 
@@ -529,7 +529,7 @@ infer :: Quantity -> InferableTerm -> Output (Type , Resources)
 where
 
 ```haskell
-Output = Either ErrorType 
+Output = Either ErrorType
 Resources = Map Name Quantity
 ```
 
@@ -558,19 +558,19 @@ $$
 3. Therefore, we ask if the variable is in the context.
 4. If it's not the case, throw an error.
 5. Otherwise, one gets a hypothesis $x :^\sigma S$ from the context that matches $x$.
-6. At the end, we return two things: 
+6. At the end, we return two things:
   6.1. first, the inferred type and
   6.2. a table with the new usage information for  each variable.
-  
+
 Haskell prototype:
 
 ```haskell
 infer σ (Free x) = do
   Γ <- asks contextMonad
   case find ((== x) . getVarName) Γ of
-    Just (BindingName _ _σ typeM) 
+    Just (BindingName _ _σ typeM)
       -> return (typeM, updateResources (x, _σ) )
-    Nothing               
+    Nothing
       -> throwError "Variable not present in the context"
 ```
 
@@ -606,7 +606,7 @@ one issue here. This type checking expects $A$ to be in normal form. When it is
 not, typechecking the judgement $\Gamma \vdash x \Leftarrow^\sigma A$ may give us
 a false negative.
 
-  - *Example*: Why do we need $A'$? Imagine that we want to infer the type of $v$ given $\Gamma \vdash x : \mathsf{Ann}(v, \mathsf{Vec}(\mathsf{Nat},2+2))$. Clearly, the answer should be `Vec(Nat,4)`. 
+  - *Example*: Why do we need $A'$? Imagine that we want to infer the type of $v$ given $\Gamma \vdash x : \mathsf{Ann}(v, \mathsf{Vec}(\mathsf{Nat},2+2))$. Clearly, the answer should be `Vec(Nat,4)`.
   However, this reasoning step requires computation. $$\Gamma \vdash x : \mathsf{Ann}(v, \mathsf{Vec}(\mathsf{Nat},2+2)) \Rightarrow \mathsf{Vec}(\mathsf{Nat},4))\,.$$
 
 - Using $M'$ as the normal form of $A$, it remains to check if $x$ is of type
@@ -674,7 +674,7 @@ $$
 
 The first judgement about $f$ is *principal*. Then, it must be an inference step.
 After having inferred the type of $f$, the types $A$ and $B$ become known facts.
-It is then correct to check the type of $x$ against $A$. 
+It is then correct to check the type of $x$ against $A$.
 
 $$\begin{gathered}
 \rule{}{
@@ -738,7 +738,7 @@ infer σ (App f x) = do
     IsPiType π _ typeA typeB -> do
       σπ <- case (σ .*. π) of
        -- Rule No. 1
-       Zero -> do 
+       Zero -> do
          (_ , nqs) <- check x typeA (mult Zero context)
           return nqs
        -- Rule No. 2
@@ -774,7 +774,7 @@ $$\begin{gathered}
 \check{(\Gamma_{2}, u \overset{\sigma\pi}{:} A, v\overset{\sigma}{:}B)}{%
 N}{\sigma}{C[(x,y)/z]}
 }{
-\Gamma_{1}+\Gamma_{2} \vdash \mathsf{let}\,z@(u,v)=M\,\,\mathsf{in}\,\,N :C \overset{\sigma}{\color{blue}\Rightarrow}\, C[M/x] 
+\Gamma_{1}+\Gamma_{2} \vdash \mathsf{let}\,z@(u,v)=M\,\,\mathsf{in}\,\,N :C \overset{\sigma}{\color{blue}\Rightarrow}\, C[M/x]
 }
 \end{gathered}
 %

@@ -4,21 +4,23 @@ module MiniJuvix.Termination.Types
   )
 where
 
-import qualified Data.HashMap.Strict as HashMap
+import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Prelude
-import qualified MiniJuvix.Syntax.Abstract.Language as A
+import MiniJuvix.Syntax.Abstract.Language (functionRefName)
+import MiniJuvix.Syntax.Abstract.Language qualified as A
 import MiniJuvix.Syntax.Abstract.Pretty.Base
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Concrete.Scoped.Name (nameUnqualify)
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Termination.Types.SizeRelation
 import Prettyprinter as PP
 
 newtype CallMap = CallMap
-  { _callMap :: HashMap A.FunctionName (HashMap A.FunctionName [FunCall])
+  { _callMap :: HashMap A.FunctionRef (HashMap A.FunctionRef [FunCall])
   }
   deriving newtype (Semigroup, Monoid)
 
 data FunCall = FunCall
-  { _callName :: A.FunctionName,
+  { _callRef :: A.FunctionRef,
     _callArgs :: [(CallRow, A.Expression)]
   }
 
@@ -46,7 +48,7 @@ instance PrettyCode FunCall where
   ppCode :: forall r. Members '[Reader Options] r => FunCall -> Sem r (Doc Ann)
   ppCode (FunCall f args) = do
     args' <- mapM ppArg args
-    f' <- ppSCode f
+    f' <- ppCode f
     return $ f' <+> hsep args'
     where
       ppArg :: (CallRow, A.Expression) -> Sem r (Doc Ann)
@@ -72,9 +74,9 @@ instance PrettyCode CallMap where
   ppCode :: forall r. Members '[Reader Options] r => CallMap -> Sem r (Doc Ann)
   ppCode (CallMap m) = vsep <$> mapM ppEntry (HashMap.toList m)
     where
-      ppEntry :: (A.FunctionName, HashMap A.FunctionName [FunCall]) -> Sem r (Doc Ann)
+      ppEntry :: (A.FunctionRef, HashMap A.FunctionRef [FunCall]) -> Sem r (Doc Ann)
       ppEntry (fun, mcalls) = do
-        fun' <- annotate AnnImportant <$> ppSCode fun
+        fun' <- annotate AnnImportant <$> ppCode fun
         calls' <- vsep <$> mapM ppCode calls
         return $ fun' <+> waveFun <+> align calls'
         where
@@ -99,4 +101,4 @@ instance PrettyCode CallMatrix where
   ppCode l = vsep <$> mapM ppCode l
 
 filterCallMap :: Foldable f => f Text -> CallMap -> CallMap
-filterCallMap funNames = over callMap (HashMap.filterWithKey (\k _ -> S.symbolText k `elem` funNames))
+filterCallMap funNames = over callMap (HashMap.filterWithKey (\k _ -> S.symbolText (nameUnqualify (k ^. functionRefName)) `elem` funNames))

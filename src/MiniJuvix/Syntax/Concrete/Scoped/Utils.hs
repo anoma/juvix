@@ -1,9 +1,9 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Utils where
 
-import qualified Data.HashMap.Strict as HashMap
+import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Language
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 
 data ScopedModule = forall t. MkScopedModule (SModuleIsTop t) (Module 'Scoped t)
 
@@ -18,6 +18,7 @@ getAllModules m =
     allImports (MkScopedModule _ w) =
       concat [i : allImports (mkScopedModule t) | StatementImport i@(Import t) <- _moduleBody w]
         <> concatMap (allImports . mkScopedModule) [l | StatementModule l <- _moduleBody w]
+
     singl :: Module 'Scoped 'ModuleTop -> (S.NameId, Module 'Scoped 'ModuleTop)
     singl n = (S._nameId (_modulePath n), n)
 

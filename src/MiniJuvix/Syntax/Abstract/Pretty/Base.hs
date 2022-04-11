@@ -4,11 +4,11 @@ module MiniJuvix.Syntax.Abstract.Pretty.Base
   )
 where
 
-import qualified MiniJuvix.Internal.Strings as Str
+import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.Language
 import MiniJuvix.Syntax.Abstract.Pretty.Ann
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base as S
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base qualified as S
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.Universe
 import MiniJuvix.Syntax.Usage
@@ -21,6 +21,13 @@ data Options = Options
   }
 
 data ShowDecrArgs = OnlyArg | OnlyRel | ArgRel
+
+docStream :: PrettyCode c => Options -> c -> SimpleDocStream Ann
+docStream opts =
+  layoutPretty defaultLayoutOptions
+    . run
+    . runReader opts
+    . ppCode
 
 toSOptions :: Options -> S.Options
 toSOptions Options {..} =
@@ -52,12 +59,7 @@ runPrettyCode :: PrettyCode c => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
 instance PrettyCode Iden where
-  ppCode i = case i of
-    IdenFunction n -> ppSCode n
-    IdenConstructor n -> ppSCode n
-    IdenInductive n -> ppSCode n
-    IdenVar n -> ppSCode n
-    IdenAxiom n -> ppSCode n
+  ppCode = ppSCode . idenName
 
 instance PrettyCode Application where
   ppCode (Application l r) = do
@@ -118,6 +120,18 @@ instance PrettyCode Function where
     funParameter' <- ppCode _funParameter
     funReturn' <- ppRightExpression funFixity _funReturn
     return $ funParameter' <+> kwTo <+> funReturn'
+
+instance PrettyCode FunctionRef where
+  ppCode FunctionRef {..} = ppSCode _functionRefName
+
+instance PrettyCode ConstructorRef where
+  ppCode ConstructorRef {..} = ppSCode _constructorRefName
+
+instance PrettyCode InductiveRef where
+  ppCode InductiveRef {..} = ppSCode _inductiveRefName
+
+instance PrettyCode AxiomRef where
+  ppCode AxiomRef {..} = ppSCode _axiomRefName
 
 parensCond :: Bool -> Doc Ann -> Doc Ann
 parensCond t d = if t then parens d else d

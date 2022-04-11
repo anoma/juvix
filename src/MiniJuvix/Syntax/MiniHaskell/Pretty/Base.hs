@@ -1,8 +1,12 @@
--- TODO handle capital letters and characters not supported by Haskell.
-module MiniJuvix.Syntax.MiniHaskell.Pretty.Base where
+module MiniJuvix.Syntax.MiniHaskell.Pretty.Base
+  ( module MiniJuvix.Syntax.MiniHaskell.Pretty.Base,
+    module MiniJuvix.Syntax.MiniHaskell.Pretty.Ann,
+  )
+where
 
-import qualified MiniJuvix.Internal.Strings as Str
+import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Concrete.Language (Literal (..), LiteralLoc (..))
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.MiniHaskell.Language
 import MiniJuvix.Syntax.MiniHaskell.Pretty.Ann
@@ -17,6 +21,13 @@ defaultOptions =
   Options
     { _optIndent = 2
     }
+
+docStream :: PrettyCode c => Options -> c -> SimpleDocStream Ann
+docStream opts =
+  layoutPretty defaultLayoutOptions
+    . run
+    . runReader opts
+    . ppCode
 
 class PrettyCode c where
   ppCode :: Member (Reader Options) r => c -> Sem r (Doc Ann)
@@ -37,6 +48,8 @@ instance PrettyCode Expression where
   ppCode e = case e of
     ExpressionIden i -> ppCode i
     ExpressionApplication a -> ppCode a
+    ExpressionVerbatim c -> return (pretty c)
+    ExpressionLiteral l -> ppCode l
 
 keyword :: Text -> Doc Ann
 keyword = annotate AnnKeyword . pretty
@@ -71,10 +84,15 @@ instance PrettyCode Function where
     r' <- ppRightExpression funFixity r
     return $ l' <+> kwArrow <+> r'
 
+instance PrettyCode TypeIden where
+  ppCode = \case
+    TypeIdenInductive t -> ppCode t
+
 instance PrettyCode Type where
   ppCode t = case t of
     TypeIden n -> ppCode n
     TypeFunction f -> ppCode f
+    TypeVerbatim c -> return (pretty c)
 
 instance PrettyCode InductiveConstructorDef where
   ppCode c = do
@@ -109,7 +127,7 @@ instance PrettyCode Pattern where
 instance PrettyCode FunctionDef where
   ppCode f = do
     funDefName' <- ppCode (f ^. funDefName)
-    funDefTypeSig' <- ppCode (f ^. funDefTypeSig)
+    funDefTypeSig' <- ppCode (f ^. funDefType)
     clauses' <- mapM (ppClause funDefName') (f ^. funDefClauses)
     return $
       funDefName' <+> kwColonColon <+> funDefTypeSig' <> line
@@ -122,8 +140,9 @@ instance PrettyCode FunctionDef where
 
 instance PrettyCode Statement where
   ppCode = \case
-    StatementFunctionDef f -> ppCode f
-    StatementInductiveDef d -> ppCode d
+    StatementFunction f -> ppCode f
+    StatementInductive d -> ppCode d
+    StatementVerbatim t -> return (pretty t)
 
 instance PrettyCode ModuleBody where
   ppCode m = do
@@ -131,6 +150,23 @@ instance PrettyCode ModuleBody where
     return $ vsep2 statements'
     where
       vsep2 = concatWith (\a b -> a <> line <> line <> b)
+
+instance PrettyCode Literal where
+  ppCode = \case
+    LitInteger n -> return $ annotate AnnLiteralInteger (pretty n)
+    LitString s -> return $ ppStringLit s
+
+instance PrettyCode LiteralLoc where
+  ppCode = ppCode . _literalLocLiteral
+
+doubleQuotes :: Doc Ann -> Doc Ann
+doubleQuotes = enclose kwDQuote kwDQuote
+
+kwDQuote :: Doc Ann
+kwDQuote = pretty ("\"" :: Text)
+
+ppStringLit :: Text -> Doc Ann
+ppStringLit = annotate AnnLiteralString . doubleQuotes . pretty
 
 instance PrettyCode Module where
   ppCode m = do

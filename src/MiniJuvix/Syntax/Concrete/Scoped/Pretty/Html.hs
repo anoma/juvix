@@ -1,19 +1,19 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html (genHtml, Theme (..)) where
 
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
+import Data.Text qualified as Text
+import Data.Text.IO qualified as Text
 import Data.Text.Lazy (toStrict)
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Language
-import qualified MiniJuvix.Syntax.Concrete.Scoped.Name as S
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base
 import MiniJuvix.Syntax.Concrete.Scoped.Utils
 import MiniJuvix.Utils.Paths
 import Prettyprinter
 import Prettyprinter.Render.Util.SimpleDocTree
-import qualified Text.Blaze.Html.Renderer.Text as Html
+import Text.Blaze.Html.Renderer.Text qualified as Html
 import Text.Blaze.Html5 as Html hiding (map)
-import qualified Text.Blaze.Html5.Attributes as Attr
+import Text.Blaze.Html5.Attributes qualified as Attr
 
 data Theme
   = Nord
@@ -70,7 +70,7 @@ genModule opts theme m =
       Nord -> nordCss
     prettySrc =
       (pre ! Attr.id "src-content") $
-        renderTree $ treeForm $ docStream opts m
+        renderTree $ treeForm $ docStream' opts m
 
     mheader :: Html
     mheader =
@@ -87,8 +87,8 @@ genModule opts theme m =
       mheader
         <> prettySrc
 
-docStream :: Options -> Module 'Scoped 'ModuleTop -> SimpleDocStream Ann
-docStream opts m = layoutPretty defaultLayoutOptions (runPrettyCode opts m)
+docStream' :: Options -> Module 'Scoped 'ModuleTop -> SimpleDocStream Ann
+docStream' opts m = layoutPretty defaultLayoutOptions (runPrettyCode opts m)
 
 renderTree :: SimpleDocTree Ann -> Html
 renderTree = go

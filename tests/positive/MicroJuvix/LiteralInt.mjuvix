@@ -1,0 +1,12 @@
+module LiteralInt;
+  inductive A {
+    a : A;
+  };
+
+  inductive B {
+    b : B;
+  };
+
+  f : A;
+  f ≔ 1;
+end;

@@ -9,4 +9,5 @@ parseInputFile =
     str
     ( metavar "MINIJUVIX_FILE"
         <> help "Path to a .mjuvix file"
+        <> action "file"
     )
