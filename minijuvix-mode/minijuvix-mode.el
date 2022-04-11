@@ -1,4 +1,5 @@
 (require 'minijuvix-highlight)
+(require 'minijuvix-input)
 
 (defgroup minijuvix nil
   "Major mode for MiniJuvix files."
@@ -18,6 +19,7 @@
 (define-derived-mode minijuvix-mode prog-mode "MiniJuvix"
 
   (font-lock-mode 0)
+  (set-input-method "minijuvix")
   (setq-local comment-start "--")
 
   (add-hook
