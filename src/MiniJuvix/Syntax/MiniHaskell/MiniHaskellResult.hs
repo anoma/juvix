@@ -1,10 +1,12 @@
 module MiniJuvix.Syntax.MiniHaskell.MiniHaskellResult where
 
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.MicroJuvix.MicroJuvixTypedResult qualified as Micro
 import MiniJuvix.Syntax.MiniHaskell.Language
 
-newtype MiniHaskellResult = MiniHaskellResult
-  { _resultModules :: NonEmpty Module
+data MiniHaskellResult = MiniHaskellResult
+  { _resultMicroJuvixTyped :: Micro.MicroJuvixTypedResult,
+    _resultModules :: NonEmpty Module
   }
 
 makeLenses ''MiniHaskellResult

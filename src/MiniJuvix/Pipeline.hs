@@ -98,4 +98,4 @@ pipelineMiniHaskell ::
   Members '[Files, Error AJuvixError] r =>
   MicroJuvix.MicroJuvixTypedResult ->
   Sem r MiniHaskell.MiniHaskellResult
-pipelineMiniHaskell = undefined
+pipelineMiniHaskell = mapError (toAJuvixError @Text) . MiniHaskell.entryMiniHaskell

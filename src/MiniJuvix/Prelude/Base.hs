@@ -202,6 +202,7 @@ nonEmptyUnsnoc e = (NonEmpty.nonEmpty (NonEmpty.init e), NonEmpty.last e)
 error :: HasCallStack => Text -> a
 error = Err.error . unpack
 
+{-# DEPRECATED undefined "undefined" #-}
 undefined :: HasCallStack => a
 undefined = Err.error "undefined"
 

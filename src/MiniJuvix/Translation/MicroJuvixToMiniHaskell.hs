@@ -13,14 +13,20 @@ import MiniJuvix.Syntax.MicroJuvix.Language qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.MicroJuvixTypedResult qualified as Micro
 import MiniJuvix.Syntax.MiniHaskell.Language
 import MiniJuvix.Syntax.MiniHaskell.MiniHaskellResult
-import MiniJuvix.Syntax.NameId
 import Prettyprinter
 
 entryMiniHaskell ::
   Member (Error Err) r =>
   Micro.MicroJuvixTypedResult ->
   Sem r MiniHaskellResult
-entryMiniHaskell = undefined
+entryMiniHaskell i = do
+  _resultModules <- mapM goModule' (i ^. Micro.resultModules)
+  return MiniHaskellResult {..}
+  where
+    _resultMicroJuvixTyped = i
+    goModule' m = runReader table (goModule m)
+      where
+        table = Micro.buildTable m
 
 translateModule :: Micro.Module -> Either Err Module
 translateModule m = run (runError (runReader table (goModule m)))

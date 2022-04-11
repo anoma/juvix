@@ -11,6 +11,7 @@ import MiniJuvix.Syntax.MicroJuvix.Language
 
 data MicroJuvixResult = MicroJuvixResult
   { _resultAbstract :: Abstract.AbstractResult,
+    -- _resultTable :: InfoTable,
     _resultModules :: NonEmpty Module
   }
 
