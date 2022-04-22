@@ -76,3 +76,5 @@
 - ignore: {name: Use let, within: [Test.All]}
 - ignore: {name: Use String}
 - ignore: {name: Avoid restricted qualification}
+- ignore: {name: Redundant multi-way if}
+- ignore: {name: Eta reduce}

@@ -22,14 +22,13 @@ import MiniJuvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
-import MiniJuvix.Syntax.MicroJuvix.Error qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.Pretty qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as MicroTyped
 import MiniJuvix.Syntax.MiniHaskell.Pretty qualified as MiniHaskell
 import MiniJuvix.Termination qualified as T
 import MiniJuvix.Termination.CallGraph qualified as A
 import MiniJuvix.Translation.AbstractToMicroJuvix qualified as Micro
-import MiniJuvix.Translation.MicroJuvixToMiniHaskell qualified as MiniHaskell
+import MiniJuvix.Translation.MonoJuvixToMiniHaskell qualified as MiniHaskell
 import MiniJuvix.Translation.ScopedToAbstract qualified as Abstract
 import MiniJuvix.Utils.Version (runDisplayVersion)
 import Options.Applicative
@@ -283,9 +282,6 @@ mkScopePrettyOptions ScopeOptions {..} =
 parseModuleIO :: FilePath -> IO (M.Module 'M.Parsed 'M.ModuleTop)
 parseModuleIO = fromRightIO id . Parser.runModuleParserIO
 
--- parseModuleIO' :: FilePath -> IO Parser.ParserResult
--- parseModuleIO' = fromRightIO id . Parser.runModuleParserIO'
-
 minijuvixYamlFile :: FilePath
 minijuvixYamlFile = "minijuvix.yaml"
 
@@ -377,13 +373,7 @@ runCLI cli = do
       micro <- head . (^. MicroTyped.resultModules) <$> runIO (upToMicroJuvixTyped (getEntryPoint root opts))
       case MicroTyped.checkModule micro of
         Right _ -> putStrLn "Well done! It type checks"
-        Left (Micro.TypeCheckerErrors es) ->
-          sequence_
-            ( intersperse
-                (putStrLn "")
-                (printErrorAnsi <$> toList es)
-            )
-            >> exitFailure
+        Left err -> printErrorAnsi err >> exitFailure
     MiniHaskell o -> do
       minihaskell <- head . (^. MiniHaskell.resultModules) <$> runIO (upToMiniHaskell (getEntryPoint root o))
       supportsAnsi <- Ansi.hSupportsANSI IO.stdout

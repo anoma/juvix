@@ -62,5 +62,9 @@ tests =
     PosTest
       "Operators"
       "."
-      "Operators.mjuvix"
+      "Operators.mjuvix",
+    PosTest
+      "Polymorphism and higher rank functions"
+      "."
+      "Polymorphism.mjuvix"
   ]

@@ -7,8 +7,8 @@ import MiniJuvix.Syntax.MicroJuvix.Language
 -- not match the type of the inductive being matched
 data WrongConstructorType = WrongConstructorType
   { _wrongCtorTypeName :: Name,
-    _wrongCtorTypeExpected :: Type,
-    _wrongCtorTypeActual :: Type,
+    _wrongCtorTypeExpected :: InductiveName,
+    _wrongCtorTypeActual :: InductiveName,
     _wrongCtorTypeFunname :: Name
   }
   deriving stock (Show)
@@ -17,7 +17,7 @@ data WrongConstructorType = WrongConstructorType
 -- the expected arguments of the constructor
 data WrongConstructorAppArgs = WrongConstructorAppArgs
   { _wrongCtorAppApp :: ConstructorApp,
-    _wrongCtorAppTypes :: [Type],
+    _wrongCtorAppTypes :: [FunctionArgType],
     _wrongCtorAppName :: Name
   }
   deriving stock (Show)
@@ -42,7 +42,7 @@ data ExpectedFunctionType = ExpectedFunctionType
 -- | A function definition clause matches too many arguments
 data TooManyPatterns = TooManyPatterns
   { _tooManyPatternsClause :: FunctionClause,
-    _tooManyPatternsTypes :: [Type]
+    _tooManyPatternsTypes :: [FunctionArgType]
   }
   deriving stock (Show)
 

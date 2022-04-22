@@ -78,6 +78,7 @@ default-extensions:
 - GeneralizedNewtypeDeriving
 - ImportQualifiedPost
 - LambdaCase
+- MultiWayIf
 - NoImplicitPrelude
 - OverloadedStrings
 - QuasiQuotes

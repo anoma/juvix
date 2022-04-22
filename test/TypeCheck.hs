@@ -5,4 +5,4 @@ import TypeCheck.Negative qualified as N
 import TypeCheck.Positive qualified as P
 
 allTests :: TestTree
-allTests = testGroup "TypeCheck tests" [P.allTests, N.allTests]
+allTests = testGroup "Type checker tests" [P.allTests, N.allTests]

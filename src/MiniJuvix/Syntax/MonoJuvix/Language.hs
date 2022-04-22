@@ -1,5 +1,5 @@
-module MiniJuvix.Syntax.MicroJuvix.Language
-  ( module MiniJuvix.Syntax.MicroJuvix.Language,
+module MiniJuvix.Syntax.MonoJuvix.Language
+  ( module MiniJuvix.Syntax.MonoJuvix.Language,
     module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind,
     module MiniJuvix.Syntax.Concrete.Scoped.Name,
   )
@@ -7,7 +7,6 @@ where
 
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Backends
-import MiniJuvix.Syntax.Concrete.Language (HasLoc)
 import MiniJuvix.Syntax.Concrete.Language qualified as C
 import MiniJuvix.Syntax.Concrete.Scoped.Name (NameId (..))
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
@@ -29,13 +28,10 @@ data Name = Name
   { _nameText :: Text,
     _nameId :: NameId,
     _nameKind :: NameKind,
-    _nameDefined :: C.Interval,
-    _nameLoc :: C.Interval
+    _nameDefined :: Maybe C.Interval,
+    _nameLoc :: Maybe C.Interval
   }
   deriving stock (Show)
-
-instance HasLoc Name where
-  getLoc = _nameLoc
 
 makeLenses ''Name
 
@@ -52,10 +48,7 @@ instance HasNameKind Name where
   getNameKind = _nameKind
 
 instance Pretty Name where
-  pretty n =
-    pretty (n ^. nameText)
-      <> "@"
-      <> pretty (n ^. nameId)
+  pretty = pretty . _nameText
 
 data Module = Module
   { _moduleName :: Name,
@@ -96,7 +89,6 @@ data Iden
   | IdenConstructor Name
   | IdenVar VarName
   | IdenAxiom Name
-  | IdenInductive Name
   deriving stock (Show)
 
 data TypedExpression = TypedExpression
@@ -122,7 +114,7 @@ data Function = Function
   { _funLeft :: Type,
     _funRight :: Type
   }
-  deriving stock (Show)
+  deriving stock (Show, Eq)
 
 -- | Fully applied constructor in a pattern.
 data ConstructorApp = ConstructorApp
@@ -137,14 +129,8 @@ data Pattern
   | PatternWildcard
   deriving stock (Show)
 
-newtype InductiveParameter = InductiveParameter
-  { _inductiveParamName :: VarName
-  }
-  deriving stock (Show, Eq)
-
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
-    _inductiveParameters :: [InductiveParameter],
     _inductiveConstructors :: [InductiveConstructorDef]
   }
 
@@ -156,34 +142,14 @@ data InductiveConstructorDef = InductiveConstructorDef
 data TypeIden
   = TypeIdenInductive InductiveName
   | TypeIdenAxiom AxiomName
-  | TypeIdenVariable VarName
   deriving stock (Show, Eq)
-
-data TypeApplication = TypeApplication
-  { _typeAppLeft :: Type,
-    _typeAppRight :: Type
-  }
-  deriving stock (Show)
-
-data TypeAbstraction = TypeAbstraction
-  { _typeAbsVar :: VarName,
-    _typeAbsBody :: Type
-  }
-  deriving stock (Show)
 
 data Type
   = TypeIden TypeIden
-  | TypeApp TypeApplication
   | TypeFunction Function
-  | TypeAbs TypeAbstraction
   | TypeUniverse
   | TypeAny
-  deriving stock (Show)
-
-data FunctionArgType
-  = FunctionArgTypeAbstraction VarName
-  | FunctionArgTypeType Type
-  deriving stock (Show)
+  deriving stock (Show, Eq)
 
 makeLenses ''Module
 makeLenses ''Function
@@ -194,19 +160,10 @@ makeLenses ''AxiomDef
 makeLenses ''ModuleBody
 makeLenses ''Application
 makeLenses ''TypedExpression
-makeLenses ''TypeAbstraction
-makeLenses ''TypeApplication
-makeLenses ''InductiveParameter
 makeLenses ''InductiveConstructorDef
 makeLenses ''ConstructorApp
 
-instance HasAtomicity Name where
-  atomicity = const Atom
-
 instance HasAtomicity Application where
-  atomicity = const (Aggregate appFixity)
-
-instance HasAtomicity TypeApplication where
   atomicity = const (Aggregate appFixity)
 
 instance HasAtomicity Expression where
@@ -219,17 +176,12 @@ instance HasAtomicity Expression where
 instance HasAtomicity Function where
   atomicity = const (Aggregate funFixity)
 
-instance HasAtomicity TypeAbstraction where
-  atomicity = const (Aggregate funFixity)
-
 instance HasAtomicity Type where
   atomicity t = case t of
     TypeIden {} -> Atom
     TypeFunction f -> atomicity f
     TypeUniverse -> Atom
     TypeAny -> Atom
-    TypeAbs a -> atomicity a
-    TypeApp a -> atomicity a
 
 instance HasAtomicity ConstructorApp where
   atomicity (ConstructorApp _ args)
@@ -241,18 +193,3 @@ instance HasAtomicity Pattern where
     PatternConstructorApp a -> atomicity a
     PatternVariable {} -> Atom
     PatternWildcard {} -> Atom
-
-instance HasLoc Expression where
-  getLoc = \case
-    ExpressionIden i -> C.getLoc i
-    ExpressionApplication a -> C.getLoc (a ^. appLeft)
-    ExpressionTyped t -> C.getLoc (t ^. typedExpression)
-    ExpressionLiteral l -> C.getLoc l
-
-instance HasLoc Iden where
-  getLoc = \case
-    IdenFunction f -> C.getLoc f
-    IdenConstructor c -> C.getLoc c
-    IdenVar v -> C.getLoc v
-    IdenAxiom a -> C.getLoc a
-    IdenInductive a -> C.getLoc a

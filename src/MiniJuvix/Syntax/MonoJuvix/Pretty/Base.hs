@@ -1,24 +1,22 @@
-module MiniJuvix.Syntax.MicroJuvix.Pretty.Base where
+module MiniJuvix.Syntax.MonoJuvix.Pretty.Base where
 
 import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Backends
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.ForeignBlock
-import MiniJuvix.Syntax.MicroJuvix.Language
-import MiniJuvix.Syntax.MicroJuvix.Pretty.Ann
+import MiniJuvix.Syntax.MonoJuvix.Language
+import MiniJuvix.Syntax.MonoJuvix.Pretty.Ann
 import Prettyprinter
 
-data Options = Options
-  { _optIndent :: Int,
-    _optShowNameId :: Bool
+newtype Options = Options
+  { _optIndent :: Int
   }
 
 defaultOptions :: Options
 defaultOptions =
   Options
-    { _optIndent = 2,
-      _optShowNameId = True
+    { _optIndent = 2
     }
 
 docStream :: PrettyCode c => Options -> c -> SimpleDocStream Ann
@@ -34,19 +32,11 @@ class PrettyCode c where
 runPrettyCode :: PrettyCode c => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
-instance PrettyCode NameId where
-  ppCode (NameId k) = return (pretty k)
-
 instance PrettyCode Name where
-  ppCode n = do
-    showNameId <- asks _optShowNameId
-    uid <-
-      if
-          | showNameId -> Just . ("@" <>) <$> ppCode (n ^. nameId)
-          | otherwise -> return Nothing
+  ppCode n =
     return $
       annotate (AnnKind (n ^. nameKind)) $
-        pretty (n ^. nameText) <?> uid
+        pretty (n ^. nameText) <> "_" <> pretty (n ^. nameId)
 
 instance PrettyCode Iden where
   ppCode :: Member (Reader Options) r => Iden -> Sem r (Doc Ann)
@@ -55,13 +45,6 @@ instance PrettyCode Iden where
     IdenConstructor na -> ppCode na
     IdenVar na -> ppCode na
     IdenAxiom a -> ppCode a
-    IdenInductive a -> ppCode a
-
-instance PrettyCode TypeApplication where
-  ppCode (TypeApplication l r) = do
-    l' <- ppLeftExpression appFixity l
-    r' <- ppRightExpression appFixity r
-    return $ l' <+> r'
 
 instance PrettyCode Application where
   ppCode a = do
@@ -136,13 +119,6 @@ instance PrettyCode BackendItem where
     return $
       backend <+> kwMapsto <+> pretty _backendItemCode
 
-instance PrettyCode TypeAbstraction where
-  ppCode (TypeAbstraction v r) = do
-    v' <- ppCode v
-    let l' = parens (v' <+> colon <+> kwType)
-    r' <- ppRightExpression funFixity r
-    return $ l' <+> kwArrow <+> r'
-
 instance PrettyCode Function where
   ppCode (Function l r) = do
     l' <- ppLeftExpression funFixity l
@@ -153,12 +129,6 @@ instance PrettyCode TypeIden where
   ppCode = \case
     TypeIdenInductive i -> ppCode i
     TypeIdenAxiom i -> ppCode i
-    TypeIdenVariable i -> ppCode i
-
-instance PrettyCode FunctionArgType where
-  ppCode = \case
-    FunctionArgTypeType t -> ppCode t
-    FunctionArgTypeAbstraction v -> ppCode v
 
 instance PrettyCode Type where
   ppCode = \case
@@ -166,13 +136,11 @@ instance PrettyCode Type where
     TypeFunction f -> ppCode f
     TypeUniverse -> return kwType
     TypeAny -> return kwAny
-    TypeApp a -> ppCode a
-    TypeAbs a -> ppCode a
 
 instance PrettyCode InductiveConstructorDef where
   ppCode c = do
     constructorName' <- ppCode (c ^. constructorName)
-    constructorParameters' <- mapM ppCodeAtom (c ^. constructorParameters)
+    constructorParameters' <- mapM ppCode (c ^. constructorParameters)
     return (hsep $ constructorName' : constructorParameters')
 
 indent' :: Member (Reader Options) r => Doc a -> Sem r (Doc a)
@@ -188,22 +156,12 @@ bracesIndent d = do
   d' <- indent' d
   return $ braces (line <> d' <> line)
 
-instance PrettyCode InductiveParameter where
-  ppCode (InductiveParameter v) = do
-    v' <- ppCode v
-    return $ parens (v' <+> kwColon <+> kwType)
-
 instance PrettyCode InductiveDef where
   ppCode d = do
     inductiveName' <- ppCode (d ^. inductiveName)
-    params <- hsep' <$> mapM ppCode (d ^. inductiveParameters)
     inductiveConstructors' <- mapM ppCode (d ^. inductiveConstructors)
     rhs <- indent' $ align $ concatWith (\a b -> a <> line <> kwPipe <+> b) inductiveConstructors'
-    return $ kwData <+> inductiveName' <+?> params <+> kwEquals <> line <> rhs
-    where
-      hsep' l
-        | null l = Nothing
-        | otherwise = Just (hsep l)
+    return $ kwData <+> inductiveName' <+> kwEquals <> line <> rhs
 
 instance PrettyCode ConstructorApp where
   ppCode c = do

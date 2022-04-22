@@ -5,17 +5,12 @@ module MiniJuvix.Syntax.MicroJuvix.Error
   )
 where
 
---------------------------------------------------------------------------------
-
-import Data.Text qualified as Text
 import MiniJuvix.Prelude qualified as Prelude
 import MiniJuvix.Prelude.Base
 import MiniJuvix.Syntax.MicroJuvix.Error.Pretty
 import MiniJuvix.Syntax.MicroJuvix.Error.Pretty qualified as P
 import MiniJuvix.Syntax.MicroJuvix.Error.Types
 import Prettyprinter
-
---------------------------------------------------------------------------------
 
 data TypeCheckerError
   = ErrTooManyPatterns TooManyPatterns
@@ -24,13 +19,6 @@ data TypeCheckerError
   | ErrWrongType WrongType
   | ErrExpectedFunctionType ExpectedFunctionType
   deriving stock (Show)
-
-newtype TypeCheckerErrors = TypeCheckerErrors
-  { _unTypeCheckerErrors :: NonEmpty TypeCheckerError
-  }
-  deriving stock (Show)
-
-makeLenses ''TypeCheckerErrors
 
 ppTypeCheckerError :: TypeCheckerError -> Doc Eann
 ppTypeCheckerError = \case
@@ -49,10 +37,3 @@ instance Prelude.JuvixError TypeCheckerError where
 
   renderText :: TypeCheckerError -> Text
   renderText = P.renderText . docStream
-
-instance Prelude.JuvixError TypeCheckerErrors where
-  renderAnsiText :: TypeCheckerErrors -> Text
-  renderAnsiText TypeCheckerErrors {..} = (Text.unlines . toList) (fmap Prelude.renderAnsiText _unTypeCheckerErrors)
-
-  renderText :: TypeCheckerErrors -> Text
-  renderText TypeCheckerErrors {..} = (Text.unlines . toList) (fmap Prelude.renderText _unTypeCheckerErrors)

@@ -1,11 +1,11 @@
 module MiniJuvix.Syntax.MiniHaskell.MiniHaskellResult where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.MicroJuvix.MicroJuvixTypedResult qualified as Micro
 import MiniJuvix.Syntax.MiniHaskell.Language
+import MiniJuvix.Syntax.MonoJuvix.MonoJuvixResult qualified as Mono
 
 data MiniHaskellResult = MiniHaskellResult
-  { _resultMicroJuvixTyped :: Micro.MicroJuvixTypedResult,
+  { _resultMonoJuvix :: Mono.MonoJuvixResult,
     _resultModules :: NonEmpty Module
   }
 
