@@ -14,7 +14,6 @@ import MiniJuvix.Pipeline
 import MiniJuvix.Prelude hiding (Doc)
 import MiniJuvix.Prelude.Pretty hiding (Doc)
 import MiniJuvix.Syntax.Abstract.Pretty qualified as Abstract
-import MiniJuvix.Syntax.Abstract.Pretty.Ansi qualified as A
 import MiniJuvix.Syntax.Concrete.Language qualified as M
 import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Highlight qualified as Scoper
@@ -39,8 +38,9 @@ import Text.Show.Pretty hiding (Html)
 
 --------------------------------------------------------------------------------
 
-newtype GlobalOptions = GlobalOptions
-  { _globalNoColors :: Bool
+data GlobalOptions = GlobalOptions
+  { _globalNoColors :: Bool,
+    _globalShowNameIds :: Bool
   }
 
 data Command
@@ -61,7 +61,6 @@ data CLI = CLI
 
 data ScopeOptions = ScopeOptions
   { _scopeInputFiles :: NonEmpty FilePath,
-    _scopeShowIds :: Bool,
     _scopeInlineImports :: Bool
   }
 
@@ -89,6 +88,11 @@ parseGlobalOptions = do
     switch
       ( long "no-colors"
           <> help "Disable globally ANSI formatting "
+      )
+  _globalShowNameIds <-
+    switch
+      ( long "show-name-ids"
+          <> help "Show the unique number of each identifier when pretty printing"
       )
   pure GlobalOptions {..}
 
@@ -148,11 +152,6 @@ parseScope = do
             <> help "Path to one ore more MiniJuvix files"
             <> action "file"
         )
-  _scopeShowIds <-
-    switch
-      ( long "show-name-ids"
-          <> help "Show the unique number of each identifier"
-      )
   _scopeInlineImports <-
     switch
       ( long "inline-imports"
@@ -272,10 +271,10 @@ parseCommand =
             (Termination <$> parseTerminationCommand)
             (progDesc "Subcommands related to termination checking")
 
-mkScopePrettyOptions :: ScopeOptions -> Scoper.Options
-mkScopePrettyOptions ScopeOptions {..} =
+mkScopePrettyOptions :: GlobalOptions -> ScopeOptions -> Scoper.Options
+mkScopePrettyOptions g ScopeOptions {..} =
   Scoper.defaultOptions
-    { Scoper._optShowNameId = _scopeShowIds,
+    { Scoper._optShowNameId = g ^. globalShowNameIds,
       Scoper._optInlineImports = _scopeInlineImports
     }
 
@@ -338,19 +337,25 @@ instance HasEntryPoint CallGraphOptions where
 
 runCLI :: CLI -> IO ()
 runCLI cli = do
-  let useColors = not (cli ^. (cliGlobalOptions . globalNoColors))
-      renderIO' :: forall a. (HasAnsiBackend a, HasTextBackend a) => a -> IO ()
-      renderIO' = renderIO useColors
+  supportsAnsiStdOut <- Ansi.hSupportsANSI IO.stdout
+  let globalOptions = cli ^. cliGlobalOptions
+      useColors = not (globalOptions ^. globalNoColors)
       toAnsiText' :: forall a. (HasAnsiBackend a, HasTextBackend a) => a -> Text
       toAnsiText' = toAnsiText useColors
+      -- Note: Probably a GHC bug specialises renderStdOut to the type
+      -- of the arugment for its first usage in the rest of the do block .
+      renderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> IO ()
+      renderStdOut = renderIO (supportsAnsiStdOut && useColors)
+      renderStdOutAbs :: Abstract.PPOutput -> IO ()
+      renderStdOutAbs = renderStdOut
+      renderStdOutMini :: MiniHaskell.PPOutput -> IO ()
+      renderStdOutMini = renderStdOut
+      renderStdOutMicro :: Micro.PPOutput -> IO ()
+      renderStdOutMicro = renderStdOut
   root <- findRoot
   case cli ^. cliCommand of
     DisplayVersion -> runDisplayVersion
     DisplayRoot -> putStrLn (pack root)
-    Scope opts -> do
-      l <- (^. Scoper.resultModules) <$> runIO (upToScoping (getEntryPoint root opts))
-      forM_ l $ \s -> do
-        renderIO' (Scoper.ppOut' (mkScopePrettyOptions opts) s)
     Highlight o -> do
       let entry :: EntryPoint
           entry = getEntryPoint root o
@@ -362,13 +367,21 @@ runCLI cli = do
     Parse ParseOptions {..} -> do
       m <- parseModuleIO _parseInputFile
       if _parseNoPrettyShow then print m else pPrint m
+    Scope opts -> do
+      l <- (^. Scoper.resultModules) <$> runIO (upToScoping (getEntryPoint root opts))
+      forM_ l $ \s -> do
+        renderStdOut (Scoper.ppOut (mkScopePrettyOptions globalOptions opts) s)
     Html o@HtmlOptions {..} -> do
       res <- runIO (upToScoping (getEntryPoint root o))
       let m = head (res ^. Scoper.resultModules)
       genHtml Scoper.defaultOptions _htmlRecursive _htmlTheme m
     MicroJuvix (Pretty opts) -> do
       micro <- head . (^. Micro.resultModules) <$> runIO (upToMicroJuvix (getEntryPoint root opts))
-      renderIO' (Micro.ppOut micro)
+      let ppOpts =
+            Micro.defaultOptions
+              { Micro._optShowNameId = globalOptions ^. globalShowNameIds
+              }
+      renderStdOutMicro (Micro.ppOut ppOpts micro)
     MicroJuvix (TypeCheck opts) -> do
       micro <- head . (^. MicroTyped.resultModules) <$> runIO (upToMicroJuvixTyped (getEntryPoint root opts))
       case MicroTyped.checkModule micro of
@@ -376,9 +389,7 @@ runCLI cli = do
         Left err -> printErrorAnsi err >> exitFailure
     MiniHaskell o -> do
       minihaskell <- head . (^. MiniHaskell.resultModules) <$> runIO (upToMiniHaskell (getEntryPoint root o))
-      supportsAnsi <- Ansi.hSupportsANSI IO.stdout
-      -- TODO fix #38
-      renderIO (supportsAnsi && useColors) (MiniHaskell.ppOut minihaskell)
+      renderStdOutMini (MiniHaskell.ppOutDefault minihaskell)
     Termination (Calls opts@CallsOptions {..}) -> do
       a <- head . (^. Abstract.resultModules) <$> runIO (upToAbstract (getEntryPoint root opts))
       let callMap0 = T.buildCallMap a
@@ -386,20 +397,27 @@ runCLI cli = do
             Nothing -> callMap0
             Just f -> T.filterCallMap f callMap0
           opts' = T.callsPrettyOptions opts
-      A.printPrettyCode opts' callMap
+      renderStdOutAbs (Abstract.ppOut opts' callMap)
       putStrLn ""
     Termination (CallGraph o@CallGraphOptions {..}) -> do
       a <- head . (^. Abstract.resultModules) <$> runIO (upToAbstract (getEntryPoint root o))
       let callMap = T.buildCallMap a
-          opts' = A.defaultOptions
+          opts' =
+            Abstract.defaultOptions
+              { Abstract._optShowNameId = globalOptions ^. globalShowNameIds
+              }
           completeGraph = T.completeCallGraph callMap
           filteredGraph = maybe completeGraph (`T.unsafeFilterGraph` completeGraph) _graphFunctionNameFilter
           recBehav = map T.recursiveBehaviour (T.reflexiveEdges filteredGraph)
-      A.printPrettyCode opts' filteredGraph
+      renderStdOutAbs (Abstract.ppOut opts' filteredGraph)
       putStrLn ""
       forM_ recBehav $ \r -> do
-        let n = toAnsiText' (Scoper.ppOut (A._recBehaviourFunction r))
-        renderIO useColors (Abstract.ppOut r)
+        let sopts =
+              Scoper.defaultOptions
+                { Scoper._optShowNameId = globalOptions ^. globalShowNameIds
+                }
+            n = toAnsiText' (Scoper.ppOut sopts (A._recBehaviourFunction r))
+        renderStdOutAbs (Abstract.ppOut opts' r)
         putStrLn ""
         case T.findOrder r of
           Nothing -> putStrLn (n <> " Fails the termination checking")

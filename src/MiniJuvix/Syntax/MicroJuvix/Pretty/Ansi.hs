@@ -2,7 +2,6 @@ module MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi where
 
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.MicroJuvix.Language
-import MiniJuvix.Syntax.MicroJuvix.Pretty.Ann
 import MiniJuvix.Syntax.MicroJuvix.Pretty.Base
 import Prettyprinter
 import Prettyprinter.Render.Terminal

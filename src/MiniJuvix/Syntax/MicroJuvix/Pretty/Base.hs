@@ -1,4 +1,9 @@
-module MiniJuvix.Syntax.MicroJuvix.Pretty.Base where
+module MiniJuvix.Syntax.MicroJuvix.Pretty.Base
+  ( module MiniJuvix.Syntax.MicroJuvix.Pretty.Base,
+    module MiniJuvix.Syntax.MicroJuvix.Pretty.Ann,
+    module MiniJuvix.Syntax.MicroJuvix.Pretty.Options,
+  )
+where
 
 import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
@@ -7,19 +12,8 @@ import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.ForeignBlock
 import MiniJuvix.Syntax.MicroJuvix.Language
 import MiniJuvix.Syntax.MicroJuvix.Pretty.Ann
+import MiniJuvix.Syntax.MicroJuvix.Pretty.Options
 import Prettyprinter
-
-data Options = Options
-  { _optIndent :: Int,
-    _optShowNameId :: Bool
-  }
-
-defaultOptions :: Options
-defaultOptions =
-  Options
-    { _optIndent = 2,
-      _optShowNameId = True
-    }
 
 docStream :: PrettyCode c => Options -> c -> SimpleDocStream Ann
 docStream opts =

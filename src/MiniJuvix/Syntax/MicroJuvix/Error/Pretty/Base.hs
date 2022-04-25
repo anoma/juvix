@@ -4,16 +4,16 @@ import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Language (getLoc)
 import MiniJuvix.Syntax.MicroJuvix.Error.Types
 import MiniJuvix.Syntax.MicroJuvix.Language
-import MiniJuvix.Syntax.MicroJuvix.Pretty.Ann qualified as M
-import MiniJuvix.Syntax.MicroJuvix.Pretty.Base qualified as M
+import MiniJuvix.Syntax.MicroJuvix.Pretty.Ann qualified as Micro
+import MiniJuvix.Syntax.MicroJuvix.Pretty.Base qualified as Micro
 import Prettyprinter
 
 data Eann
   = Highlight
-  | MicroAnn M.Ann
+  | MicroAnn Micro.Ann
 
-ppCode :: M.PrettyCode c => c -> Doc Eann
-ppCode = reAnnotate MicroAnn . M.runPrettyCode M.defaultOptions
+ppCode :: Micro.PrettyCode c => c -> Doc Eann
+ppCode = reAnnotate MicroAnn . Micro.runPrettyCode Micro.defaultOptions
 
 indent' :: Doc ann -> Doc ann
 indent' = indent 2

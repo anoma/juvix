@@ -1,6 +1,7 @@
 module MiniJuvix.Syntax.Abstract.Pretty.Base
   ( module MiniJuvix.Syntax.Abstract.Pretty.Base,
     module MiniJuvix.Syntax.Abstract.Pretty.Ann,
+    module MiniJuvix.Syntax.Abstract.Pretty.Options,
   )
 where
 
@@ -8,19 +9,12 @@ import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.Language
 import MiniJuvix.Syntax.Abstract.Pretty.Ann
+import MiniJuvix.Syntax.Abstract.Pretty.Options
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base qualified as S
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.Universe
 import MiniJuvix.Syntax.Usage
 import Prettyprinter
-
-data Options = Options
-  { _optShowNameId :: Bool,
-    _optIndent :: Int,
-    _optShowDecreasingArgs :: ShowDecrArgs
-  }
-
-data ShowDecrArgs = OnlyArg | OnlyRel | ArgRel
 
 docStream :: PrettyCode c => Options -> c -> SimpleDocStream Ann
 docStream opts =
@@ -43,14 +37,6 @@ ppSCode :: (Members '[Reader Options] r, S.PrettyCode c) => c -> Sem r (Doc Ann)
 ppSCode c = do
   opts <- asks toSOptions
   return $ alterAnnotations (maybeToList . fromScopedAnn) (S.runPrettyCode opts c)
-
-defaultOptions :: Options
-defaultOptions =
-  Options
-    { _optShowNameId = False,
-      _optIndent = 2,
-      _optShowDecreasingArgs = OnlyRel
-    }
 
 ppDefault :: PrettyCode c => c -> Doc Ann
 ppDefault = runPrettyCode defaultOptions

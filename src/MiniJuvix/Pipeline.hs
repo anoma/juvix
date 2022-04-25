@@ -6,7 +6,6 @@ module MiniJuvix.Pipeline
 where
 
 import Data.Kind qualified as GHC
-import GHC.IO.Exception
 import MiniJuvix.Pipeline.EntryPoint
 import MiniJuvix.Pipeline.Stage
 import MiniJuvix.Prelude
@@ -45,7 +44,7 @@ runIO = runIOEither >=> mayThrow
   where
     mayThrow :: Either AJuvixError r -> IO r
     mayThrow = \case
-      Left r -> printErrorAnsi r >> ioError (userError "")
+      Left err -> printErrorAnsi err >> exitFailure
       Right r -> return r
 
 --------------------------------------------------------------------------------

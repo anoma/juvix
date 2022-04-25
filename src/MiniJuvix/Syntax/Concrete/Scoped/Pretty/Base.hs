@@ -1,6 +1,7 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base
   ( module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base,
     module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ann,
+    module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Options,
   )
 where
 
@@ -11,6 +12,7 @@ import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Scoped.Name (AbsModulePath)
 import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ann
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Options
 import Prettyprinter hiding (braces, parens)
 
 docStream :: PrettyCode c => Options -> c -> SimpleDocStream Ann
@@ -19,20 +21,6 @@ docStream opts =
     . run
     . runReader opts
     . ppCode
-
-data Options = Options
-  { _optShowNameId :: Bool,
-    _optInlineImports :: Bool,
-    _optIndent :: Int
-  }
-
-defaultOptions :: Options
-defaultOptions =
-  Options
-    { _optShowNameId = False,
-      _optInlineImports = False,
-      _optIndent = 2
-    }
 
 class PrettyCode a where
   ppCode :: Members '[Reader Options] r => a -> Sem r (Doc Ann)

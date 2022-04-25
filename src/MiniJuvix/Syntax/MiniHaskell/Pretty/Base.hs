@@ -1,6 +1,7 @@
 module MiniJuvix.Syntax.MiniHaskell.Pretty.Base
   ( module MiniJuvix.Syntax.MiniHaskell.Pretty.Base,
     module MiniJuvix.Syntax.MiniHaskell.Pretty.Ann,
+    module MiniJuvix.Syntax.MiniHaskell.Pretty.Options,
   )
 where
 
@@ -10,17 +11,8 @@ import MiniJuvix.Syntax.Concrete.Language (Literal (..), LiteralLoc (..))
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.MiniHaskell.Language
 import MiniJuvix.Syntax.MiniHaskell.Pretty.Ann
+import MiniJuvix.Syntax.MiniHaskell.Pretty.Options
 import Prettyprinter
-
-newtype Options = Options
-  { _optIndent :: Int
-  }
-
-defaultOptions :: Options
-defaultOptions =
-  Options
-    { _optIndent = 2
-    }
 
 docStream :: PrettyCode c => Options -> c -> SimpleDocStream Ann
 docStream opts =
