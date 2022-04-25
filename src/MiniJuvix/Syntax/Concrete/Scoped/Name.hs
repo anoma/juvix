@@ -5,7 +5,6 @@ module MiniJuvix.Syntax.Concrete.Scoped.Name
   )
 where
 
-import Data.Stream (Stream (Cons))
 import Lens.Micro.Platform
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Loc
@@ -47,13 +46,6 @@ isChildOf child parent
 -- e.g. TopMod.Local <.> Inner == TopMod.Local.Inner
 (<.>) :: AbsModulePath -> C.Symbol -> AbsModulePath
 absP <.> localMod = absP {absLocalPath = absLocalPath absP ++ [localMod]}
-
-allNameIds :: Stream NameId
-allNameIds = NameId <$> ids
-  where
-    ids :: Stream Word64
-    ids = aux minBound
-    aux i = Cons i (aux (succ i))
 
 -- | Why a symbol is in scope.
 data WhyInScope

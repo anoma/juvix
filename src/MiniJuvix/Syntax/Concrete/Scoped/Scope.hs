@@ -63,7 +63,6 @@ makeLenses ''ScopeParameters
 
 data ScoperState = ScoperState
   { _scoperModulesCache :: ModulesCache,
-    _scoperFreeNames :: Stream S.NameId,
     _scoperModules :: HashMap S.ModuleNameId (ModuleRef' 'S.NotConcrete)
   }
 

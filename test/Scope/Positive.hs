@@ -4,6 +4,7 @@ import Base
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
 import Data.HashMap.Strict qualified as HashMap
+import MiniJuvix.Internal.NameIdGen
 import MiniJuvix.Pipeline
 import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text qualified as M
@@ -53,14 +54,14 @@ testDescr PosTest {..} =
 
             step "Parsing pretty scoped"
             let fs2 = HashMap.singleton _file scopedPretty
-            p' :: Parser.ParserResult <- (runM . runErrorIO @AJuvixError . runFilesPure fs2) (upToParsing entryPoint)
+            p' :: Parser.ParserResult <- (runM . runErrorIO @AJuvixError . runNameIdGen . runFilesPure fs2) (upToParsing entryPoint)
 
             step "Parsing pretty parsed"
             let fs3 = HashMap.singleton _file parsedPretty
-            parsedPretty' :: Parser.ParserResult <- (runM . runErrorIO @AJuvixError . runFilesPure fs3) (upToParsing entryPoint)
+            parsedPretty' :: Parser.ParserResult <- (runM . runErrorIO @AJuvixError . runNameIdGen . runFilesPure fs3) (upToParsing entryPoint)
 
             step "Scoping the scoped"
-            s' :: Scoper.ScoperResult <- (runM . runErrorIO @AJuvixError . runFilesPure fs) (upToScoping entryPoint)
+            s' :: Scoper.ScoperResult <- (runM . runErrorIO @AJuvixError . runNameIdGen . runFilesPure fs) (upToScoping entryPoint)
 
             step "Checks"
             let smodules = s ^. Scoper.resultModules
