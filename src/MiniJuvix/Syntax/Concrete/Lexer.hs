@@ -134,6 +134,7 @@ allKeywords =
     kwColonOmega,
     kwColonOne,
     kwColonZero,
+    kwCompile,
     kwEnd,
     kwEval,
     kwForeign,
@@ -188,6 +189,9 @@ kwColonOne = keyword Str.colonOne
 
 kwColonZero :: Member InfoTableBuilder r => ParsecS r ()
 kwColonZero = keyword Str.colonZero
+
+kwCompile :: Member InfoTableBuilder r => ParsecS r ()
+kwCompile = keyword Str.compile
 
 kwEnd :: Member InfoTableBuilder r => ParsecS r ()
 kwEnd = keyword Str.end

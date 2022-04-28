@@ -13,7 +13,10 @@ import MiniJuvix.Syntax.MiniHaskell.MiniHaskellResult
 import MiniJuvix.Syntax.MonoJuvix.InfoTable qualified as Mono
 import MiniJuvix.Syntax.MonoJuvix.Language qualified as Mono
 import MiniJuvix.Syntax.MonoJuvix.MonoJuvixResult qualified as Mono
+import MiniJuvix.Translation.MicroJuvixToMonoJuvix (goCompile)
 import Prettyprinter
+
+-- import Base (Members)
 
 entryMiniHaskell ::
   Member (Error Err) r =>
@@ -60,13 +63,24 @@ goStatement = \case
   Mono.StatementFunction d -> Just . StatementFunction <$> goFunctionDef d
   Mono.StatementForeign d -> return (goForeign d)
   Mono.StatementAxiom {} -> return Nothing
+  Mono.StatementCompile d -> return Nothing
 
 goForeign :: ForeignBlock -> Maybe Statement
 goForeign b = case b ^. foreignBackend of
   BackendGhc -> Just (StatementVerbatim (b ^. foreignCode))
   _ -> Nothing
 
-lookupAxiom :: Members '[Error Err, Reader Mono.InfoTable] r => Mono.Name -> Sem r Mono.AxiomInfo
+lookupCompile ::
+  Members '[Error Err, Reader Mono.InfoTable] r =>
+  Mono.Name ->
+  Sem r Mono.CompileInfo
+lookupCompile name =
+  fromMaybe impossible . (^. Mono.infoCompilationRules . at name) <$> ask
+
+lookupAxiom ::
+  Members '[Error Err, Reader Mono.InfoTable] r =>
+  Mono.Name ->
+  Sem r Mono.AxiomInfo
 lookupAxiom n =
   fromMaybe impossible . (^. Mono.infoAxioms . at n) <$> ask
 
@@ -75,16 +89,19 @@ goIden = \case
   Mono.IdenFunction fun -> return (goName' fun)
   Mono.IdenConstructor c -> return (goName' c)
   Mono.IdenVar v -> return (goName' v)
-  Mono.IdenAxiom a -> ExpressionVerbatim <$> goAxiomIden a
+  Mono.IdenAxiom a -> undefined
 
 throwErr :: Member (Error Err) r => Text -> Sem r a
 throwErr = throw
 
-goAxiomIden :: Members '[Error Err, Reader Mono.InfoTable] r => Mono.Name -> Sem r Text
-goAxiomIden n = do
-  backends <- (^. Mono.axiomInfoBackends) <$> lookupAxiom n
+goCompile ::
+  Members '[Error Err, Reader Mono.InfoTable] r =>
+  Mono.Name ->
+  Sem r Text
+goCompile name = do
+  backends <- (^. Mono.compileInfoBackendItems) <$> lookupCompile name
   case firstJust getCode backends of
-    Nothing -> throwErr ("ghc does not support this primitive:" <> show (pretty n))
+    Nothing -> throwErr ("ghc does not support this primitive:" <> show (pretty name))
     Just t -> return t
   where
     getCode :: BackendItem -> Maybe Text
@@ -236,7 +253,7 @@ goFunction Mono.Function {..} = do
 goTypeIden :: Members '[Error Err, Reader Mono.InfoTable] r => Mono.TypeIden -> Sem r Type
 goTypeIden = \case
   Mono.TypeIdenInductive n -> return (TypeIden (TypeIdenInductive (goName n)))
-  Mono.TypeIdenAxiom n -> TypeVerbatim <$> goAxiomIden n
+  Mono.TypeIdenAxiom _ -> undefined -- TypeVerbatim <$> goAxiomIden n
 
 goType :: Members '[Error Err, Reader Mono.InfoTable] r => Mono.Type -> Sem r Type
 goType = \case

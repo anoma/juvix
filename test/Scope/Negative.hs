@@ -162,5 +162,33 @@ tests =
       "AmbiguousConstructor.mjuvix"
       $ \case
         ErrAmbiguousSym {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Wrong location of a compile block"
+      "CompileBlocks"
+      "WrongLocationCompileBlock.mjuvix"
+      $ \case
+        ErrWrongLocationCompileBlock {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Multiple compile blocks for the same name"
+      "CompileBlocks"
+      "MultipleCompileBlockSameName.mjuvix"
+      $ \case
+        ErrMultipleCompileBlockSameName {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Multiple rules for a backend inside a compile block"
+      "CompileBlocks"
+      "MultipleCompileRuleSameBackend.mjuvix"
+      $ \case
+        ErrMultipleCompileRuleSameBackend {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Compile block for a unsupported kind of expression"
+      "CompileBlocks"
+      "WrongKindExpressionCompileBlock.mjuvix"
+      $ \case
+        ErrWrongKindExpressionCompileBlock {} -> Nothing
         _ -> wrongError
   ]

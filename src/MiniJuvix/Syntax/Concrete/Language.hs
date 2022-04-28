@@ -105,6 +105,7 @@ data Statement (s :: Stage)
   | StatementEval (Eval s)
   | StatementPrint (Print s)
   | StatementForeign ForeignBlock
+  | StatementCompile (Compile s)
 
 deriving stock instance
   ( Show (ImportType s),
@@ -190,8 +191,7 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Typ
 
 data AxiomDef (s :: Stage) = AxiomDef
   { _axiomName :: SymbolType s,
-    _axiomType :: ExpressionType s,
-    _axiomBackendItems :: [BackendItem]
+    _axiomType :: ExpressionType s
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (AxiomDef s)
@@ -1068,43 +1068,52 @@ deriving stock instance
   Ord (LetClause s)
 
 --------------------------------------------------------------------------------
+-- Compile statements
+--------------------------------------------------------------------------------
+
+data Compile s = Compile
+  { _compileName :: SymbolType s,
+    _compileBackendItems :: [BackendItem]
+  }
+
+deriving stock instance
+  (Show (SymbolType s)) => Show (Compile s)
+
+deriving stock instance
+  (Ord (SymbolType s)) => Ord (Compile s)
+
+deriving stock instance
+  (Eq (SymbolType s)) => Eq (Compile s)
+
+--------------------------------------------------------------------------------
 -- Debugging statements
 --------------------------------------------------------------------------------
 
 newtype Eval (s :: Stage) = Eval {evalExpression :: ExpressionType s}
 
 deriving stock instance
-  Show
-    (ExpressionType s) =>
-  Show (Eval s)
+  Show (ExpressionType s) => Show (Eval s)
 
 deriving stock instance
-  Eq
-    (ExpressionType s) =>
-  Eq (Eval s)
+  Eq (ExpressionType s) => Eq (Eval s)
 
 deriving stock instance
-  Ord
-    (ExpressionType s) =>
-  Ord (Eval s)
+  Ord (ExpressionType s) => Ord (Eval s)
+
+--------------------------------------------------------------------------------
 
 newtype Print (s :: Stage) = Print {printExpression :: ExpressionType s}
 
 deriving stock instance
-  Show
-    ( ExpressionType s
-    ) =>
-  Show (Print s)
+  Show (ExpressionType s) => Show (Print s)
 
 deriving stock instance
-  Eq
-    (ExpressionType s) =>
-  Eq (Print s)
+  Eq (ExpressionType s) => Eq (Print s)
 
 deriving stock instance
-  Ord
-    (ExpressionType s) =>
-  Ord (Print s)
+  Ord (ExpressionType s) => Ord (Print s)
+
+--------------------------------------------------------------------------------
 
 makeLenses ''InductiveDef
 makeLenses ''InductiveConstructorDef
@@ -1124,6 +1133,9 @@ makeLenses ''PatternApp
 makeLenses ''PatternInfixApp
 makeLenses ''PatternPostfixApp
 makeLenses ''LiteralLoc
+makeLenses ''Compile
+
+--------------------------------------------------------------------------------
 
 idenOverName :: (forall s. S.Name' s -> S.Name' s) -> ScopedIden -> ScopedIden
 idenOverName f = \case

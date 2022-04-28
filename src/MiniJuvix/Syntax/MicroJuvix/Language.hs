@@ -70,12 +70,17 @@ data Statement
   = StatementInductive InductiveDef
   | StatementFunction FunctionDef
   | StatementForeign ForeignBlock
+  | StatementCompile Compile
   | StatementAxiom AxiomDef
+
+data Compile = Compile
+  { _compileName :: Name,
+    _compileBackendItems :: [BackendItem]
+  }
 
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
-    _axiomType :: Type,
-    _axiomBackendItems :: [BackendItem]
+    _axiomType :: Type
   }
 
 data FunctionDef = FunctionDef
@@ -190,6 +195,7 @@ makeLenses ''Function
 makeLenses ''FunctionDef
 makeLenses ''FunctionClause
 makeLenses ''InductiveDef
+makeLenses ''Compile
 makeLenses ''AxiomDef
 makeLenses ''ModuleBody
 makeLenses ''Application

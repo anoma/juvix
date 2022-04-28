@@ -64,6 +64,7 @@ checkStatement s = case s of
   StatementForeign {} -> return s
   StatementInductive {} -> return s
   StatementAxiom {} -> return s
+  StatementCompile {} -> return s
 
 checkFunctionDef ::
   Members '[Reader InfoTable, Error TypeCheckerError] r =>

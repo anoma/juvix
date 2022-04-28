@@ -1,0 +1,13 @@
+module MultipleCompileBlockSameName;
+
+axiom A : Type;
+
+compile A {
+  ghc -> "Bool";
+};
+
+compile A {
+  ghc -> "Bool";
+};
+
+end;

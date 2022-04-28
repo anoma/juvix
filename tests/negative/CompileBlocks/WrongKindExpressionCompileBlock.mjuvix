@@ -1,0 +1,10 @@
+module WrongKindExpressionCompileBlock;
+
+module A;
+end;
+
+compile A {
+ghc -> "X";
+};
+
+end;

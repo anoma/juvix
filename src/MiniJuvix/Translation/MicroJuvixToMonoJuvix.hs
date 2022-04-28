@@ -58,6 +58,11 @@ goStatement = \case
   Micro.StatementFunction d -> StatementFunction <$> goFunctionDef d
   Micro.StatementForeign d -> return (StatementForeign d)
   Micro.StatementAxiom a -> StatementAxiom <$> goAxiomDef a
+  Micro.StatementCompile a -> StatementCompile <$> goCompile a
+
+goCompile :: Micro.Compile -> Sem r Compile
+goCompile Micro.Compile {..} = do
+  return Compile {_compileName = goName _compileName, ..}
 
 goAxiomDef :: Members '[Error Err, Reader Micro.InfoTable] r => Micro.AxiomDef -> Sem r AxiomDef
 goAxiomDef Micro.AxiomDef {..} = do
@@ -65,15 +70,14 @@ goAxiomDef Micro.AxiomDef {..} = do
   return
     AxiomDef
       { _axiomName = goName _axiomName,
-        _axiomType = _axiomType',
-        _axiomBackendItems = _axiomBackendItems
+        _axiomType = _axiomType'
       }
 
 lookupAxiom :: Members '[Error Err, Reader Micro.InfoTable] r => Micro.Name -> Sem r Micro.AxiomInfo
 lookupAxiom n =
   fromMaybe impossible . (^. Micro.infoAxioms . at n) <$> ask
 
-goIden :: Members '[Error Err, Reader Micro.InfoTable] r => Micro.Iden -> Sem r Iden
+goIden :: Micro.Iden -> Sem r Iden
 goIden = \case
   Micro.IdenFunction fun -> return (IdenFunction (goName fun))
   Micro.IdenConstructor c -> return (IdenConstructor (goName c))

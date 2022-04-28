@@ -14,14 +14,18 @@ newtype ConstructorInfo = ConstructorInfo
   }
   deriving stock (Eq, Show)
 
-data AxiomInfo = AxiomInfo
-  { _axiomInfoType :: Expression,
-    _axiomInfoBackends :: [BackendItem]
+newtype AxiomInfo = AxiomInfo
+  { _axiomInfoType :: Expression
   }
   deriving stock (Eq, Show)
 
 newtype InductiveInfo = InductiveInfo
   { _inductiveInfoDef :: InductiveDef 'Scoped
+  }
+  deriving stock (Eq, Show)
+
+newtype CompileInfo = CompileInfo
+  { _compileInfoBackendItems :: [BackendItem]
   }
   deriving stock (Eq, Show)
 
@@ -31,7 +35,8 @@ data InfoTable = InfoTable
     _infoInductives :: HashMap InductiveRef InductiveInfo,
     _infoFunctions :: HashMap FunctionRef FunctionInfo,
     _infoFunctionClauses :: HashMap S.Symbol (FunctionClause 'Scoped),
-    _infoNames :: [S.Name]
+    _infoNames :: [S.Name],
+    _infoCompilationRules :: HashMap S.Symbol CompileInfo
   }
   deriving stock (Eq, Show)
 
@@ -43,7 +48,8 @@ emptyInfoTable =
       _infoInductives = mempty,
       _infoFunctions = mempty,
       _infoFunctionClauses = mempty,
-      _infoNames = mempty
+      _infoNames = mempty,
+      _infoCompilationRules = mempty
     }
 
 makeLenses ''InfoTable
@@ -51,3 +57,4 @@ makeLenses ''InductiveInfo
 makeLenses ''ConstructorInfo
 makeLenses ''AxiomInfo
 makeLenses ''FunctionInfo
+makeLenses ''CompileInfo

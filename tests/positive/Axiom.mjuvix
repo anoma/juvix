@@ -1,8 +1,8 @@
 module Axiom;
 
-axiom Action : Type {
+axiom Action : Type;
+compile Action {
  ghc ↦ "IO ()";
- agda ↦ "IO Unit";
 };
 
 end;

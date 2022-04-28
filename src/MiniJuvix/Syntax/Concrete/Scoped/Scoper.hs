@@ -29,7 +29,10 @@ import MiniJuvix.Syntax.Concrete.Scoped.Scope
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper.InfoTableBuilder
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper.ScoperResult
 
-entryScoper :: Members '[Error ScopeError, Files, NameIdGen] r => ParserResult -> Sem r ScoperResult
+entryScoper ::
+  Members '[Error ScopeError, Files, NameIdGen] r =>
+  ParserResult ->
+  Sem r ScoperResult
 entryScoper pr = do
   let root = pr ^. Parser.resultEntry . entryRoot
       modules = pr ^. Parser.resultModules
@@ -591,8 +594,7 @@ checkClausesExist ss = whenJust msig (throw . ErrLacksFunctionClause . LacksFunc
     msig =
       listToMaybe
         [ ts | StatementTypeSignature ts <- ss, null
-                                                  [ c | StatementFunctionClause c <- ss, c ^. clauseOwnerFunction == ts ^. sigName
-                                                  ]
+                                                  [c | StatementFunctionClause c <- ss, c ^. clauseOwnerFunction == ts ^. sigName]
         ]
 
 checkOrphanFixities :: forall r. Members '[Error ScopeError, State Scope] r => Sem r ()
@@ -768,17 +770,92 @@ lookupLocalEntry sym = do
     SymbolInfo {..} <- ms
     HashMap.lookup path _symbolInfo
 
+localScope :: Sem (Reader LocalVars : r) a -> Sem r a
+localScope = runReader (LocalVars mempty)
+
 checkAxiomDef ::
   Members '[InfoTableBuilder, Error ScopeError, State Scope, State ScoperState, NameIdGen] r =>
   AxiomDef 'Parsed ->
   Sem r (AxiomDef 'Scoped)
 checkAxiomDef AxiomDef {..} = do
-  axiomType' <- localScope $ checkParseExpressionAtoms _axiomType
+  axiomType' <- localScope (checkParseExpressionAtoms _axiomType)
   axiomName' <- bindAxiomSymbol _axiomName
   registerAxiom' AxiomDef {_axiomName = axiomName', _axiomType = axiomType', ..}
 
-localScope :: Sem (Reader LocalVars : r) a -> Sem r a
-localScope = runReader (LocalVars mempty)
+checkCompile ::
+  Members '[InfoTableBuilder, Error ScopeError, State Scope, Reader LocalVars, State ScoperState] r =>
+  Compile 'Parsed ->
+  Sem r (Compile 'Scoped)
+checkCompile c@Compile {..} = do
+  scopedSym :: S.Symbol <- checkCompileName c
+  let sym :: Symbol = c ^. compileName
+  rules <- gets _scopeCompilationRules
+  if
+      | HashMap.member sym rules ->
+          throw
+            ( ErrMultipleCompileBlockSameName
+                (MultipleCompileBlockSameName sym)
+            )
+      | otherwise -> do
+          _ <- checkBackendItems sym _compileBackendItems mempty
+          registerName (S.unqualifiedSymbol scopedSym)
+          modify
+            ( over
+                scopeCompilationRules
+                (HashMap.insert _compileName (CompileInfo _compileBackendItems))
+            )
+          registerCompile' $ Compile {_compileName = scopedSym, ..}
+
+checkBackendItems ::
+  Members '[Error ScopeError] r =>
+  Symbol ->
+  [BackendItem] ->
+  HashSet Backend ->
+  Sem r (HashSet Backend)
+checkBackendItems _ [] bset = return bset
+checkBackendItems sym (b : bs) bset =
+  let cBackend = b ^. backendItemBackend
+   in if
+          | HashSet.member cBackend bset ->
+              throw
+                ( ErrMultipleCompileRuleSameBackend
+                    (MultipleCompileRuleSameBackend b sym)
+                )
+          | otherwise -> checkBackendItems sym bs (HashSet.insert cBackend bset)
+
+checkCompileName ::
+  Members '[Error ScopeError, State Scope, Reader LocalVars, State ScoperState, InfoTableBuilder] r =>
+  Compile 'Parsed ->
+  Sem r S.Symbol
+checkCompileName Compile {..} = do
+  let sym :: Symbol = _compileName
+  let name :: Name = NameUnqualified sym
+  scope <- get
+  locals <- ask
+  entries <- lookupQualifiedSymbol ([], sym)
+  case filter S.canBeCompiled entries of
+    [] -> case entries of
+      [] -> throw (ErrSymNotInScope (NotInScope sym locals scope))
+      (e : _) ->
+        throw
+          ( ErrWrongKindExpressionCompileBlock
+              (WrongKindExpressionCompileBlock e)
+          )
+    [x] -> do
+      actualPath <- gets _scopePath
+      let scoped = entryToSymbol x sym
+      let expectedPath = scoped ^. S.nameDefinedIn
+      if
+          | actualPath == expectedPath -> return scoped
+          | otherwise ->
+              throw
+                ( ErrWrongLocationCompileBlock
+                    (WrongLocationCompileBlock expectedPath name)
+                )
+    xs -> throw (ErrAmbiguousSym (AmbiguousSym name xs))
+
+entryToSymbol :: SymbolEntry -> Symbol -> S.Symbol
+entryToSymbol sentry csym = set S.nameConcrete csym (symbolEntryToSName sentry)
 
 checkEval ::
   Members '[Error ScopeError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
@@ -868,7 +945,11 @@ checkLambdaClause LambdaClause {..} = do
         lambdaBody = lambdaBody'
       }
 
-scopedVar :: Members '[InfoTableBuilder] r => LocalVariable -> Symbol -> Sem r S.Symbol
+scopedVar ::
+  Members '[InfoTableBuilder] r =>
+  LocalVariable ->
+  Symbol ->
+  Sem r S.Symbol
 scopedVar (LocalVariable s) n = do
   let scoped = set S.nameConcrete n s
   registerName (S.unqualifiedSymbol scoped)
@@ -1088,7 +1169,8 @@ checkStatement s = case s of
   StatementAxiom ax -> StatementAxiom <$> checkAxiomDef ax
   StatementEval e -> StatementEval <$> checkEval e
   StatementPrint e -> StatementPrint <$> checkPrint e
-  StatementForeign d -> return $ StatementForeign d
+  StatementForeign d -> return (StatementForeign d)
+  StatementCompile c -> StatementCompile <$> checkCompile c
 
 -------------------------------------------------------------------------------
 -- Infix Expression

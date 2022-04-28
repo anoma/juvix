@@ -1,0 +1,11 @@
+module MultipleCompileRuleSameBackend;
+
+
+axiom A : Type;
+
+compile A {
+  ghc -> "Bool";
+  ghc -> "Integer";
+};
+
+end;

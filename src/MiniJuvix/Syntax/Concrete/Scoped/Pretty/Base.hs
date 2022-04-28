@@ -213,6 +213,7 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
     g :: Statement s -> Statement s -> Bool
     g a b = case (a, b) of
       (StatementForeign _, _) -> False
+      (StatementCompile _, _) -> False -- TODO: not sure
       (StatementOperator _, StatementOperator _) -> True
       (StatementOperator o, s) -> definesSymbol (opSymbol o) s
       (StatementImport _, StatementImport _) -> True
@@ -278,11 +279,18 @@ instance SingI s => PrettyCode (Statement s) where
     StatementEval e -> ppCode e
     StatementPrint p -> ppCode p
     StatementForeign p -> ppCode p
+    StatementCompile c -> ppCode c
 
 instance PrettyCode Backend where
   ppCode = \case
     BackendGhc -> return kwGhc
     BackendAgda -> return kwAgda
+
+instance SingI s => PrettyCode (Compile s) where
+  ppCode Compile {..} = do
+    compileName' <- ppSymbol _compileName
+    compileBackendItems' <- ppBlock _compileBackendItems
+    return $ kwCompile <+> compileName' <+> compileBackendItems'
 
 instance PrettyCode ForeignBlock where
   ppCode ForeignBlock {..} = do
@@ -588,10 +596,7 @@ instance SingI s => PrettyCode (AxiomDef s) where
   ppCode AxiomDef {..} = do
     axiomName' <- ppSymbol _axiomName
     axiomType' <- ppExpression _axiomType
-    axiomBackendItems' <- case _axiomBackendItems of
-      [] -> return Nothing
-      bs -> Just <$> ppBlock bs
-    return $ kwAxiom <+> axiomName' <+> kwColon <+> axiomType' <+?> axiomBackendItems'
+    return $ kwAxiom <+> axiomName' <+> kwColon <+> axiomType'
 
 instance SingI s => PrettyCode (Eval s) where
   ppCode (Eval p) = do

@@ -112,9 +112,28 @@ statement =
     <|> (StatementForeign <$> foreignBlock)
     <|> (StatementModule <$> moduleDef)
     <|> (StatementAxiom <$> axiomDef)
+    <|> (StatementCompile <$> compileBlock)
     <|> ( either StatementTypeSignature StatementFunctionClause
             <$> auxTypeSigFunClause
         )
+
+--------------------------------------------------------------------------------
+-- Compile
+--------------------------------------------------------------------------------
+
+compileBlock :: Member InfoTableBuilder r => ParsecS r (Compile 'Parsed)
+compileBlock = do
+  kwCompile
+  _compileName <- symbol
+  _compileBackendItems <- backends
+  return Compile {..}
+  where
+    backends = toList <$> braces (P.sepEndBy1 backendItem kwSemicolon)
+    backendItem = do
+      _backendItemBackend <- backend
+      kwMapsTo
+      _backendItemCode <- string
+      return BackendItem {..}
 
 --------------------------------------------------------------------------------
 -- Foreign
@@ -171,9 +190,8 @@ import_ = do
 
 expressionAtom :: Member InfoTableBuilder r => ParsecS r (ExpressionAtom 'Parsed)
 expressionAtom =
-  do
-    AtomLiteral <$> P.try literal
-    <|> AtomIdentifier <$> name
+  do AtomLiteral <$> P.try literal
+    <|> (AtomIdentifier <$> name)
     <|> (AtomUniverse <$> universe)
     <|> (AtomLambda <$> lambda)
     <|> (AtomFunction <$> function)
@@ -282,15 +300,7 @@ axiomDef = do
   _axiomName <- symbol
   kwColon
   _axiomType <- expressionAtoms
-  _axiomBackendItems <- fromMaybe [] <$> optional backends
   return AxiomDef {..}
-  where
-    backends = toList <$> braces (P.sepEndBy1 backendItem kwSemicolon)
-    backendItem = do
-      _backendItemBackend <- backend
-      kwMapsTo
-      _backendItemCode <- string
-      return BackendItem {..}
 
 --------------------------------------------------------------------------------
 -- Function expression

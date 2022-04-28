@@ -105,3 +105,31 @@ data AmbiguousModuleSym = AmbiguousModuleSym
     _ambiguousModSymEntires :: [SymbolEntry]
   }
   deriving stock (Show)
+
+data WrongLocationCompileBlock = WrongLocationCompileBlock
+  { _wrongLocationCompileBlockExpectedModPath :: S.AbsModulePath,
+    _wrongLocationCompileBlockName :: Name
+  }
+  deriving stock (Show)
+
+newtype MultipleCompileBlockSameName = MultipleCompileBlockSameName
+  { _multipleCompileBlockSym :: Symbol
+  }
+  deriving stock (Show)
+
+data MultipleCompileRuleSameBackend = MultipleCompileRuleSameBackend
+  { _multipleCompileRuleSameBackendBackendItem :: BackendItem,
+    _multipleCompileRuleSameBackendSym :: Symbol
+  }
+  deriving stock (Show)
+
+newtype WrongKindExpressionCompileBlock = WrongKindExpressionCompileBlock
+  { _wrongKindExpressionCompileBlock :: SymbolEntry
+  }
+  deriving stock (Show)
+
+data UnsupportedBackend = UnsupportedBackend
+  { _unsupportedBackend :: Backend,
+    _unsupportedBackendSym :: Symbol
+  }
+  deriving stock (Show)

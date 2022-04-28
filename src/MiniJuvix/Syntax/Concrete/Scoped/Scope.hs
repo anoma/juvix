@@ -35,7 +35,8 @@ data Scope = Scope
     _scopeFixities :: HashMap Symbol OperatorSyntaxDef,
     _scopeSymbols :: HashMap Symbol SymbolInfo,
     _scopeTopModules :: HashMap TopModulePath (ModuleRef'' 'S.NotConcrete 'ModuleTop),
-    _scopeBindGroup :: HashMap Symbol LocalVariable
+    _scopeBindGroup :: HashMap Symbol LocalVariable,
+    _scopeCompilationRules :: HashMap Symbol CompileInfo
   }
   deriving stock (Show)
 
@@ -75,5 +76,6 @@ emptyScope absPath =
       _scopeFixities = mempty,
       _scopeSymbols = mempty,
       _scopeTopModules = mempty,
-      _scopeBindGroup = mempty
+      _scopeBindGroup = mempty,
+      _scopeCompilationRules = mempty
     }

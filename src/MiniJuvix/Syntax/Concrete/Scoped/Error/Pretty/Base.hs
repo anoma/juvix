@@ -161,6 +161,38 @@ instance PrettyError AmbiguousSym where
 instance PrettyError AmbiguousModuleSym where
   ppError AmbiguousModuleSym {..} = ambiguousMessage _ambiguousModName _ambiguousModSymEntires
 
+instance PrettyError WrongLocationCompileBlock where
+  ppError WrongLocationCompileBlock {..} =
+    let name = _wrongLocationCompileBlockName
+     in "The set of compilation rules for the symbol" <+> highlight (ppCode name)
+          <+> "at"
+          <+> pretty (getLoc name)
+          <> line
+          <> "need to be defined in the module:"
+          <> line
+          <> highlight (ppCode _wrongLocationCompileBlockExpectedModPath)
+          <> line
+
+instance PrettyError MultipleCompileBlockSameName where
+  ppError MultipleCompileBlockSameName {..} =
+    let name = _multipleCompileBlockSym
+     in "Multiple compile blocks for the symbol" <+> highlight (ppCode name)
+          <+> "at"
+          <+> pretty (getLoc name)
+
+instance PrettyError MultipleCompileRuleSameBackend where
+  ppError MultipleCompileRuleSameBackend {..} =
+    let backend = _backendItemBackend _multipleCompileRuleSameBackendBackendItem
+        name = _multipleCompileRuleSameBackendSym
+     in "Multiple" <+> highlight (ppCode backend) <+> "compilation rules for the symbol"
+          <+> highlight (ppCode name)
+          <+> "at"
+          <+> pretty (getLoc name)
+
+instance PrettyError WrongKindExpressionCompileBlock where
+  ppError WrongKindExpressionCompileBlock {..} =
+    "Unsupported expression kind for the symbol" <> ppCode _wrongKindExpressionCompileBlock
+
 ambiguousMessage :: Name -> [SymbolEntry] -> Doc Eann
 ambiguousMessage n es =
   "The symbol" <+> ppCode n <+> "at" <+> pretty (getLoc n) <+> "is ambiguous." <> line

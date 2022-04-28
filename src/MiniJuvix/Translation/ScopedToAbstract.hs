@@ -97,15 +97,25 @@ goStatement (Indexed idx s) =
     StatementModule f -> Just . A.StatementLocalModule <$> goLocalModule f
     StatementTypeSignature {} -> return Nothing
     StatementFunctionClause {} -> return Nothing
+    StatementCompile {} -> return Nothing
 
-goFunctionDef :: forall r. Members '[Error Err, InfoTableBuilder] r => TypeSignature 'Scoped -> NonEmpty (FunctionClause 'Scoped) -> Sem r A.FunctionDef
+goFunctionDef ::
+  forall r.
+  Members '[Error Err, InfoTableBuilder] r =>
+  TypeSignature 'Scoped ->
+  NonEmpty (FunctionClause 'Scoped) ->
+  Sem r A.FunctionDef
 goFunctionDef sig clauses = do
   let _funDefName = sig ^. sigName
   _funDefClauses <- mapM goFunctionClause clauses
   _funDefTypeSig <- goExpression (sig ^. sigType)
   registerFunction' A.FunctionDef {..}
 
-goFunctionClause :: forall r. Members '[Error Err] r => FunctionClause 'Scoped -> Sem r A.FunctionClause
+goFunctionClause ::
+  forall r.
+  Members '[Error Err] r =>
+  FunctionClause 'Scoped ->
+  Sem r A.FunctionClause
 goFunctionClause FunctionClause {..} = do
   _clausePatterns' <- mapM goPattern _clausePatterns
   _clauseBody' <- goExpression _clauseBody
@@ -116,12 +126,19 @@ goFunctionClause FunctionClause {..} = do
         _clauseBody = _clauseBody'
       }
 
-goWhereBlock :: forall r. Members '[Error Err] r => Maybe (WhereBlock 'Scoped) -> Sem r ()
+goWhereBlock ::
+  forall r.
+  Members '[Error Err] r =>
+  Maybe (WhereBlock 'Scoped) ->
+  Sem r ()
 goWhereBlock w = case w of
   Just _ -> unsupported "where block"
   Nothing -> return ()
 
-goInductiveParameter :: Members '[Error Err] r => InductiveParameter 'Scoped -> Sem r A.FunctionParameter
+goInductiveParameter ::
+  Members '[Error Err] r =>
+  InductiveParameter 'Scoped ->
+  Sem r A.FunctionParameter
 goInductiveParameter InductiveParameter {..} = do
   paramType' <- goExpression _inductiveParameterType
   return
@@ -131,7 +148,10 @@ goInductiveParameter InductiveParameter {..} = do
         _paramUsage = UsageOmega
       }
 
-goInductive :: Members '[Error Err, InfoTableBuilder] r => InductiveDef 'Scoped -> Sem r A.InductiveDef
+goInductive ::
+  Members '[Error Err, InfoTableBuilder] r =>
+  InductiveDef 'Scoped ->
+  Sem r A.InductiveDef
 goInductive InductiveDef {..} = do
   _inductiveParameters' <- mapM goInductiveParameter _inductiveParameters
   _inductiveType' <- sequence $ goExpression <$> _inductiveType
@@ -149,10 +169,17 @@ goInductive InductiveDef {..} = do
 
   return (inductiveInfo ^. inductiveInfoDef)
 
-goConstructorDef :: Members '[Error Err] r => InductiveConstructorDef 'Scoped -> Sem r A.InductiveConstructorDef
+goConstructorDef ::
+  Members '[Error Err] r =>
+  InductiveConstructorDef 'Scoped ->
+  Sem r A.InductiveConstructorDef
 goConstructorDef (InductiveConstructorDef c ty) = A.InductiveConstructorDef c <$> goExpression ty
 
-goExpression :: forall r. Members '[Error Err] r => Expression -> Sem r A.Expression
+goExpression ::
+  forall r.
+  Members '[Error Err] r =>
+  Expression ->
+  Sem r A.Expression
 goExpression e = case e of
   ExpressionIdentifier nt -> return (goIden nt)
   ExpressionParensIdentifier nt -> return (goIden nt)
@@ -208,13 +235,20 @@ defaultUsage = UsageOmega
 goUsage :: Maybe Usage -> Usage
 goUsage = fromMaybe defaultUsage
 
-goFunctionParameter :: Members '[Error Err] r => FunctionParameter 'Scoped -> Sem r A.FunctionParameter
+goFunctionParameter ::
+  Members '[Error Err] r =>
+  FunctionParameter 'Scoped ->
+  Sem r A.FunctionParameter
 goFunctionParameter (FunctionParameter _paramName u ty) = do
   _paramType <- goExpression ty
   let _paramUsage = goUsage u
   return A.FunctionParameter {..}
 
-goPatternApplication :: forall r. Members '[Error Err] r => PatternApp -> Sem r A.ConstructorApp
+goPatternApplication ::
+  forall r.
+  Members '[Error Err] r =>
+  PatternApp ->
+  Sem r A.ConstructorApp
 goPatternApplication a = uncurry A.ConstructorApp <$> viewApp (PatternApplication a)
 
 goPatternConstructor :: forall r. Members '[Error Err] r => ConstructorRef -> Sem r A.ConstructorApp

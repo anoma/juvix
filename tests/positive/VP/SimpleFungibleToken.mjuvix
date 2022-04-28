@@ -27,15 +27,18 @@ infixr 3 &&;
 -- Backend Booleans
 --------------------------------------------------------------------------------
 
-axiom BackendBool : Type {
+axiom BackendBool : Type;
+compile BackendBool {
   ghc ↦ "Bool";
 };
 
-axiom backend-true : BackendBool {
+axiom backend-true : BackendBool;
+compile backend-true {
   ghc ↦ "True";
 };
 
-axiom backend-false : BackendBool {
+axiom backend-false : BackendBool;
+compile backend-false {
   ghc ↦ "False";
 };
 
@@ -49,7 +52,8 @@ foreign ghc {
   bool False _ y = y
 };
 
-axiom bool : BackendBool → Bool → Bool → Bool {
+axiom bool : BackendBool → Bool → Bool → Bool;
+compile bool {
   ghc ↦ "bool";
 };
 
@@ -60,11 +64,13 @@ from-backend-bool bb ≔ bool bb true false;
 -- Integers
 --------------------------------------------------------------------------------
 
-axiom Int : Type {
+axiom Int : Type;
+compile Int {
   ghc ↦ "Int";
 };
 
-axiom lt : Int → Int → BackendBool {
+axiom lt : Int → Int → BackendBool;
+compile lt {
   ghc ↦ "(<)";
 };
 
@@ -72,7 +78,8 @@ infix 4 <;
 < : Int → Int → Bool;
 < i1 i2 ≔ from-backend-bool (lt i1 i2);
 
-axiom eqInt : Int → Int → BackendBool {
+axiom eqInt : Int → Int → BackendBool;
+compile eqInt {
   ghc ↦ "(==)";
 };
 
@@ -81,12 +88,14 @@ infix 4 ==Int;
 ==Int i1 i2 ≔ from-backend-bool (eqInt i1 i2);
 
 infixl 6 -;
-axiom - : Int -> Int -> Int {
+axiom - : Int -> Int -> Int;
+compile - {
   ghc ↦ "(-)";
 };
 
 infixl 6 +;
-axiom + : Int -> Int -> Int {
+axiom + : Int -> Int -> Int;
+compile + {
   ghc ↦ "(+)";
 };
 
@@ -94,11 +103,13 @@ axiom + : Int -> Int -> Int {
 -- Strings
 --------------------------------------------------------------------------------
 
-axiom String : Type {
+axiom String : Type;
+compile String {
   ghc ↦ "[Char]";
 };
 
-axiom eqString : String → String → BackendBool {
+axiom eqString : String → String → BackendBool;
+compile eqString {
   ghc ↦ "(==)";
 };
 
@@ -179,15 +190,18 @@ foldl f z (Cons h hs) ≔ foldl f (f z h) hs;
 -- Anoma
 --------------------------------------------------------------------------------
 
-axiom readPre : String → Int {
+axiom readPre : String → Int;
+compile readPre {
   ghc ↦ "readPre";
 };
 
-axiom readPost : String → Int {
+axiom readPost : String → Int;
+compile readPost {
   ghc ↦ "readPost";
 };
 
-axiom isBalanceKey : String → String → String {
+axiom isBalanceKey : String → String → String;
+compile isBalanceKey {
   ghc ↦ "isBalanceKey";
 };
 
@@ -240,20 +254,25 @@ vp token keys-changed verifiers ≔
 -- IO
 --------------------------------------------------------------------------------
 
-axiom Action : Type {
+axiom Action : Type;
+compile Action {
  ghc ↦ "IO ()";
 };
 
-axiom putStr : String → Action {
+axiom putStr : String → Action;
+compile putStr {
   ghc ↦ "putStr";
 };
 
-axiom putStrLn : String → Action {
+axiom putStrLn : String → Action;
+compile putStrLn {
   ghc ↦ "putStrLn";
 };
 
 infixl 1 >>;
-axiom >> : Action → Action → Action {
+axiom >> : Action → Action → Action ;
+
+compile >> {
   ghc ↦ "(>>)";
 };
 

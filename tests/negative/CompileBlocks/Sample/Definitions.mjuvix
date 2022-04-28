@@ -1,0 +1,13 @@
+module Sample.Definitions;
+
+axiom A : Type;
+
+inductive Nat {
+zero : Nat;
+suc : Nat -> Nat;
+};
+
+f : A -> Nat;
+f a := zero;
+
+end;

@@ -67,6 +67,13 @@ goStatement = \case
   A.StatementImport {} -> unsupported "imports"
   A.StatementLocalModule {} -> unsupported "local modules"
   A.StatementInductive i -> StatementInductive <$> goInductiveDef i
+  A.StatementCompile c -> StatementCompile <$> goCompile c
+
+goCompile :: A.Compile -> Sem r Compile
+goCompile c = return (Compile nameSym backends)
+  where
+    nameSym = goSymbol (c ^. A.compileName)
+    backends = c ^. A.compileBackendItems
 
 goTypeIden :: A.Iden -> TypeIden
 goTypeIden i = case i of
@@ -82,8 +89,7 @@ goAxiomDef a = do
   return
     AxiomDef
       { _axiomName = goSymbol (a ^. A.axiomName),
-        _axiomType = _axiomType',
-        _axiomBackendItems = a ^. A.axiomBackendItems
+        _axiomType = _axiomType'
       }
 
 goFunctionParameter :: A.FunctionParameter -> Sem r (Either VarName Type)
