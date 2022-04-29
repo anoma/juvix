@@ -3,6 +3,9 @@
 module MiniJuvix.Prelude.Error where
 
 import MiniJuvix.Prelude.Base
+import System.Console.ANSI qualified as Ansi
+
+-- import System.IO qualified as IO
 
 -- | Wrapper for any instance of JuvixError.
 data AJuvixError = forall e. JuvixError e => AJuvixError e
@@ -32,13 +35,20 @@ fromAJuvixError (AJuvixError e) = cast e
 throwJuvixError :: (JuvixError err, Member (Error AJuvixError) r) => err -> Sem r a
 throwJuvixError = throw . toAJuvixError
 
+printErrorAnsiSafe :: JuvixError e => e -> IO ()
+printErrorAnsiSafe e =
+  ifM
+    (Ansi.hSupportsANSI stderr)
+    (printErrorAnsi e)
+    (printErrorText e)
+
 runErrorIO ::
   (JuvixError a, Member (Embed IO) r) =>
   Sem (Error a ': r) b ->
   Sem r b
 runErrorIO =
   runError >=> \case
-    Left err -> embed (printErrorAnsi err >> exitFailure)
+    Left err -> embed (printErrorAnsiSafe err >> exitFailure)
     Right a -> return a
 
 instance JuvixError Text where

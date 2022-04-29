@@ -18,6 +18,7 @@ extra-source-files:
 
 dependencies:
 - aeson == 2.0.*
+- ansi-terminal == 0.11.*
 - base == 4.16.*
 - blaze-html == 0.9.*
 - blaze-markup == 0.8.*
@@ -97,7 +98,6 @@ executables:
     main: Main.hs
     source-dirs: app
     dependencies:
-    - ansi-terminal == 0.11.*
     - minijuvix
     - optparse-applicative == 0.17.*
     verbatim:

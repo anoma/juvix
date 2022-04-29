@@ -10,18 +10,6 @@ import MiniJuvix.Prelude
 import Test.Tasty
 import Test.Tasty.HUnit
 
--- parseModuleIO :: FilePath -> IO (M.Module 'M.Parsed 'M.ModuleTop)
--- parseModuleIO = fromRightIO id . Parser.runModuleParserIO
-
--- parseTextModuleIO :: Text -> IO (M.Module 'M.Parsed 'M.ModuleTop)
--- parseTextModuleIO = fromRightIO id . return . Parser.runModuleParser "literal string"
-
--- scopeModuleIO :: M.Module 'M.Parsed 'M.ModuleTop -> IO (M.Module 'M.Scoped 'M.ModuleTop)
--- scopeModuleIO = fmap (head . Scoper._resultModules) . fromRightIO' printErrorAnsi . Scoper.scopeCheck1IO "."
-
--- translateModuleIO :: M.Module 'M.Scoped 'M.ModuleTop -> IO A.TopModule
--- translateModuleIO = fmap snd . fromRightIO id . return . A.translateModule
-
 data AssertionDescr
   = Single Assertion
   | Steps ((String -> IO ()) -> Assertion)

@@ -386,7 +386,7 @@ runCLI cli = do
       micro <- head . (^. MicroTyped.resultModules) <$> runIO (upToMicroJuvixTyped (getEntryPoint root opts))
       case MicroTyped.checkModule micro of
         Right _ -> putStrLn "Well done! It type checks"
-        Left err -> printErrorAnsi err >> exitFailure
+        Left err -> printErrorAnsiSafe err >> exitFailure
     MiniHaskell o -> do
       minihaskell <- head . (^. MiniHaskell.resultModules) <$> runIO (upToMiniHaskell (getEntryPoint root o))
       renderStdOutMini (MiniHaskell.ppOutDefault minihaskell)

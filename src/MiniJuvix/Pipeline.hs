@@ -47,7 +47,7 @@ runIO = runIOEither >=> mayThrow
   where
     mayThrow :: Either AJuvixError r -> IO r
     mayThrow = \case
-      Left err -> printErrorAnsi err >> exitFailure
+      Left err -> printErrorAnsiSafe err >> exitFailure
       Right r -> return r
 
 --------------------------------------------------------------------------------
