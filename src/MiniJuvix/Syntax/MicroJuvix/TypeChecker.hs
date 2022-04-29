@@ -64,7 +64,6 @@ checkStatement s = case s of
   StatementForeign {} -> return s
   StatementInductive {} -> return s
   StatementAxiom {} -> return s
-  StatementCompile {} -> return s
 
 checkFunctionDef ::
   Members '[Reader InfoTable, Error TypeCheckerError] r =>
@@ -100,7 +99,6 @@ checkExpression t e = do
         )
 
 matchTypes ::
-  Members '[Reader InfoTable, Reader LocalVars] r =>
   Type ->
   Type ->
   Sem r Bool

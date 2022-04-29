@@ -67,13 +67,6 @@ goStatement = \case
   A.StatementImport {} -> unsupported "imports"
   A.StatementLocalModule {} -> unsupported "local modules"
   A.StatementInductive i -> StatementInductive <$> goInductiveDef i
-  A.StatementCompile c -> StatementCompile <$> goCompile c
-
-goCompile :: A.Compile -> Sem r Compile
-goCompile c = return (Compile nameSym backends)
-  where
-    nameSym = goSymbol (c ^. A.compileName)
-    backends = c ^. A.compileBackendItems
 
 goTypeIden :: A.Iden -> TypeIden
 goTypeIden i = case i of

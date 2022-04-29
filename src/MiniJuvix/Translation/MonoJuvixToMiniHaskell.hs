@@ -13,7 +13,6 @@ import MiniJuvix.Syntax.MiniHaskell.MiniHaskellResult
 import MiniJuvix.Syntax.MonoJuvix.InfoTable qualified as Mono
 import MiniJuvix.Syntax.MonoJuvix.Language qualified as Mono
 import MiniJuvix.Syntax.MonoJuvix.MonoJuvixResult qualified as Mono
-import MiniJuvix.Translation.MicroJuvixToMonoJuvix (goCompile)
 import Prettyprinter
 
 -- import Base (Members)
@@ -63,7 +62,6 @@ goStatement = \case
   Mono.StatementFunction d -> Just . StatementFunction <$> goFunctionDef d
   Mono.StatementForeign d -> return (goForeign d)
   Mono.StatementAxiom {} -> return Nothing
-  Mono.StatementCompile d -> return Nothing
 
 goForeign :: ForeignBlock -> Maybe Statement
 goForeign b = case b ^. foreignBackend of
