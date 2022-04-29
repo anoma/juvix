@@ -23,16 +23,11 @@ newtype InductiveInfo = InductiveInfo
   { _inductiveInfoDef :: InductiveDef
   }
 
-newtype CompileInfo = CompileInfo
-  { _compileBackendItems :: [BackendItem]
-  }
-
 data InfoTable = InfoTable
   { _infoConstructors :: HashMap Name ConstructorInfo,
     _infoAxioms :: HashMap Name AxiomInfo,
     _infoFunctions :: HashMap Name FunctionInfo,
-    _infoInductives :: HashMap Name InductiveInfo,
-    _infoCompilationRules :: HashMap Name CompileInfo
+    _infoInductives :: HashMap Name InductiveInfo
   }
 
 -- TODO temporary function.
@@ -67,12 +62,6 @@ buildTable m = InfoTable {..}
         [ (d ^. axiomName, AxiomInfo (d ^. axiomType))
           | StatementAxiom d <- ss
         ]
-    _infoCompilationRules :: HashMap Name CompileInfo
-    _infoCompilationRules =
-      HashMap.fromList
-        [ (d ^. compileName, CompileInfo (d ^. compileBackendItems))
-          | StatementCompile d <- ss
-        ]
     ss = m ^. (moduleBody . moduleStatements)
 
 makeLenses ''InfoTable
@@ -80,4 +69,3 @@ makeLenses ''FunctionInfo
 makeLenses ''ConstructorInfo
 makeLenses ''AxiomInfo
 makeLenses ''InductiveInfo
-makeLenses ''CompileInfo

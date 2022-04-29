@@ -58,11 +58,6 @@ goStatement = \case
   Micro.StatementFunction d -> StatementFunction <$> goFunctionDef d
   Micro.StatementForeign d -> return (StatementForeign d)
   Micro.StatementAxiom a -> StatementAxiom <$> goAxiomDef a
-  Micro.StatementCompile a -> StatementCompile <$> goCompile a
-
-goCompile :: Micro.Compile -> Sem r Compile
-goCompile Micro.Compile {..} = do
-  return Compile {_compileName = goName _compileName, ..}
 
 goAxiomDef :: Members '[Error Err, Reader Micro.InfoTable] r => Micro.AxiomDef -> Sem r AxiomDef
 goAxiomDef Micro.AxiomDef {..} = do

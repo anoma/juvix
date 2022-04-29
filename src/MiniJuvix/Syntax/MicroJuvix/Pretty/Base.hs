@@ -247,12 +247,6 @@ instance PrettyCode ForeignBlock where
         <> line
         <> rbrace
 
-instance PrettyCode Compile where
-  ppCode Compile {..} = do
-    name <- ppCode _compileName
-    backends <- ppBlock _compileBackendItems
-    return $ kwCompile <+> name <+> backends
-
 instance PrettyCode AxiomDef where
   ppCode AxiomDef {..} = do
     axiomName' <- ppCode _axiomName
@@ -265,7 +259,6 @@ instance PrettyCode Statement where
     StatementFunction f -> ppCode f
     StatementInductive f -> ppCode f
     StatementAxiom f -> ppCode f
-    StatementCompile f -> ppCode f
 
 instance PrettyCode ModuleBody where
   ppCode m = do
