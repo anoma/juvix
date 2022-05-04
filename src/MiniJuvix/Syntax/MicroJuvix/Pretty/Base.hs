@@ -272,8 +272,6 @@ instance PrettyCode ModuleBody where
   ppCode m = do
     everything <- mapM ppCode (m ^. moduleStatements)
     return $ vsep2 everything
-    where
-      vsep2 = concatWith (\a b -> a <> line <> line <> b)
 
 instance PrettyCode Module where
   ppCode m = do

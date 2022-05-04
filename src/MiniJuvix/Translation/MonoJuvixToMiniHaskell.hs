@@ -184,7 +184,6 @@ goExpression ::
   Sem r Expression
 goExpression = \case
   Mono.ExpressionIden i -> goIden i
-  Mono.ExpressionTyped t -> goExpression (t ^. Mono.typedExpression)
   Mono.ExpressionApplication a -> ExpressionApplication <$> goApplication a
   Mono.ExpressionLiteral l -> return (ExpressionLiteral l)
 

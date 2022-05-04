@@ -96,17 +96,10 @@ data Iden
   | IdenAxiom Name
   deriving stock (Show)
 
-data TypedExpression = TypedExpression
-  { _typedType :: Type,
-    _typedExpression :: Expression
-  }
-  deriving stock (Show)
-
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
   | ExpressionLiteral C.LiteralLoc
-  | ExpressionTyped TypedExpression
   deriving stock (Show)
 
 data Application = Application
@@ -164,7 +157,6 @@ makeLenses ''InductiveDef
 makeLenses ''AxiomDef
 makeLenses ''ModuleBody
 makeLenses ''Application
-makeLenses ''TypedExpression
 makeLenses ''InductiveConstructorDef
 makeLenses ''ConstructorApp
 makeLenses ''Compile
@@ -176,7 +168,6 @@ instance HasAtomicity Expression where
   atomicity e = case e of
     ExpressionIden {} -> Atom
     ExpressionApplication a -> atomicity a
-    ExpressionTyped t -> atomicity (t ^. typedExpression)
     ExpressionLiteral l -> atomicity l
 
 instance HasAtomicity Function where

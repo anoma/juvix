@@ -55,14 +55,10 @@ instance PrettyCode Application where
     r' <- ppRightExpression appFixity (a ^. appRight)
     return $ l' <+> r'
 
-instance PrettyCode TypedExpression where
-  ppCode e = ppCode (e ^. typedExpression)
-
 instance PrettyCode Expression where
   ppCode = \case
     ExpressionIden i -> ppCode i
     ExpressionApplication a -> ppCode a
-    ExpressionTyped a -> ppCode a
     ExpressionLiteral l -> return (pretty l)
 
 keyword :: Text -> Doc Ann
