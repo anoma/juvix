@@ -1,7 +1,5 @@
 module MiniJuvix.Syntax.Concrete.Lexer where
 
---------------------------------------------------------------------------------
-
 import Data.Text qualified as Text
 import GHC.Unicode
 import MiniJuvix.Internal.Strings qualified as Str
@@ -258,6 +256,9 @@ kwSemicolon = keyword Str.semicolon
 
 kwType :: Member InfoTableBuilder r => ParsecS r ()
 kwType = keyword Str.type_
+
+kwTerminating :: Member InfoTableBuilder r => ParsecS r ()
+kwTerminating = keyword Str.terminating
 
 kwUsing :: Member InfoTableBuilder r => ParsecS r ()
 kwUsing = keyword Str.using

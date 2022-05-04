@@ -1,0 +1,11 @@
+module NoLexOrde;
+
+axiom A : Type;
+
+f : A -> A -> A;
+g : A -> A -> A;
+
+g x y := f x x;
+f x y := g x (f x x);
+
+end;

@@ -404,7 +404,7 @@ checkTypeSignature ::
 checkTypeSignature TypeSignature {..} = do
   sigType' <- checkParseExpressionAtoms _sigType
   sigName' <- bindFunctionSymbol _sigName
-  registerFunction' TypeSignature {_sigName = sigName', _sigType = sigType'}
+  registerFunction' TypeSignature {_sigName = sigName', _sigType = sigType', ..}
 
 checkConstructorDef ::
   Members '[Error ScopeError, Reader LocalVars, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>

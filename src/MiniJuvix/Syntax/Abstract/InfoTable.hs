@@ -7,6 +7,7 @@ import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 newtype FunctionInfo = FunctionInfo
   { _functionInfoDef :: FunctionDef
   }
+  deriving stock (Show)
 
 data ConstructorInfo = ConstructorInfo
   { _constructorInfoInductive :: InductiveInfo,

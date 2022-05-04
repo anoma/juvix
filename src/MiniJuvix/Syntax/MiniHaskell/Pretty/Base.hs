@@ -7,6 +7,7 @@ where
 
 import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
+import MiniJuvix.Prelude.Pretty qualified as PP
 import MiniJuvix.Syntax.Concrete.Language (Literal (..), LiteralLoc (..))
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.MiniHaskell.Language
@@ -139,9 +140,7 @@ instance PrettyCode Statement where
 instance PrettyCode ModuleBody where
   ppCode m = do
     statements' <- mapM ppCode (m ^. moduleStatements)
-    return $ vsep2 statements'
-    where
-      vsep2 = concatWith (\a b -> a <> line <> line <> b)
+    return $ PP.vsep2 statements'
 
 instance PrettyCode Literal where
   ppCode = \case

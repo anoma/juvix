@@ -44,8 +44,24 @@ newtype LexOrder = LexOrder (NonEmpty Int)
 makeLenses ''FunCall
 makeLenses ''CallMap
 
+filterCallMap :: Foldable f => f Text -> CallMap -> CallMap
+filterCallMap funNames =
+  over
+    callMap
+    ( HashMap.filterWithKey
+        ( \k _ ->
+            S.symbolText
+              (nameUnqualify (k ^. functionRefName))
+              `elem` funNames
+        )
+    )
+
 instance PrettyCode FunCall where
-  ppCode :: forall r. Members '[Reader Options] r => FunCall -> Sem r (Doc Ann)
+  ppCode ::
+    forall r.
+    Members '[Reader Options] r =>
+    FunCall ->
+    Sem r (Doc Ann)
   ppCode (FunCall f args) = do
     args' <- mapM ppArg args
     f' <- ppCode f
@@ -71,25 +87,20 @@ instance PrettyCode FunCall where
       dbrackets x = pretty '⟦' <> x <> pretty '⟧'
 
 instance PrettyCode CallMap where
-  ppCode :: forall r. Members '[Reader Options] r => CallMap -> Sem r (Doc Ann)
+  ppCode ::
+    forall r.
+    Members '[Reader Options] r =>
+    CallMap ->
+    Sem r (Doc Ann)
   ppCode (CallMap m) = vsep <$> mapM ppEntry (HashMap.toList m)
     where
       ppEntry :: (A.FunctionRef, HashMap A.FunctionRef [FunCall]) -> Sem r (Doc Ann)
       ppEntry (fun, mcalls) = do
         fun' <- annotate AnnImportant <$> ppCode fun
         calls' <- vsep <$> mapM ppCode calls
-        return $ fun' <+> waveFun <+> align calls'
+        return $ fun' <+> kwWaveArrow <+> align calls'
         where
           calls = concat (HashMap.elems mcalls)
-
-kwQuestion :: Doc Ann
-kwQuestion = annotate AnnKeyword "?"
-
-waveFun :: Doc ann
-waveFun = pretty ("↝" :: Text)
-
-vsep2 :: [Doc ann] -> Doc ann
-vsep2 = concatWith (\a b -> a <> line <> line <> b)
 
 instance PrettyCode CallRow where
   ppCode (CallRow r) = return $ case r of
@@ -99,6 +110,3 @@ instance PrettyCode CallRow where
 
 instance PrettyCode CallMatrix where
   ppCode l = vsep <$> mapM ppCode l
-
-filterCallMap :: Foldable f => f Text -> CallMap -> CallMap
-filterCallMap funNames = over callMap (HashMap.filterWithKey (\k _ -> S.symbolText (nameUnqualify (k ^. functionRefName)) `elem` funNames))

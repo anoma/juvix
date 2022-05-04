@@ -1,0 +1,6 @@
+module ToEmpty;
+  axiom A : Type;
+  inductive Empty {};
+  f : A -> Empty;
+  f x := f x;
+end;

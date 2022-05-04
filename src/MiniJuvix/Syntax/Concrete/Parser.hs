@@ -247,8 +247,7 @@ match = do
 --------------------------------------------------------------------------------
 
 letClause :: Member InfoTableBuilder r => ParsecS r (LetClause 'Parsed)
-letClause = do
-  either LetTypeSig LetFunClause <$> auxTypeSigFunClause
+letClause = either LetTypeSig LetFunClause <$> auxTypeSigFunClause
 
 letBlock :: Member InfoTableBuilder r => ParsecS r (LetBlock 'Parsed)
 letBlock = do
@@ -271,8 +270,12 @@ universe = do
 -- Type signature declaration
 -------------------------------------------------------------------------------
 
-typeSignature :: Member InfoTableBuilder r => Symbol -> ParsecS r (TypeSignature 'Parsed)
-typeSignature _sigName = do
+typeSignature ::
+  Member InfoTableBuilder r =>
+  Bool ->
+  Symbol ->
+  ParsecS r (TypeSignature 'Parsed)
+typeSignature _sigTerminating _sigName = do
   kwColon
   _sigType <- expressionAtoms
   return TypeSignature {..}
@@ -286,9 +289,10 @@ auxTypeSigFunClause ::
   Member InfoTableBuilder r =>
   ParsecS r (Either (TypeSignature 'Parsed) (FunctionClause 'Parsed))
 auxTypeSigFunClause = do
-  s <- symbol
-  (Left <$> typeSignature s)
-    <|> (Right <$> functionClause s)
+  terminating <- isJust <$> optional kwTerminating
+  sym <- symbol
+  (Left <$> typeSignature terminating sym)
+    <|> (Right <$> functionClause sym)
 
 -------------------------------------------------------------------------------
 -- Axioms

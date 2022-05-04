@@ -1,12 +1,8 @@
 module MiniJuvix.Termination.Types.SizeRelation where
 
---------------------------------------------------------------------------------
-
 import Data.Semiring
 import MiniJuvix.Prelude
 import Prettyprinter
-
---------------------------------------------------------------------------------
 
 data Rel
   = RJust Rel'

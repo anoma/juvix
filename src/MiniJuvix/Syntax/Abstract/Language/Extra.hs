@@ -7,22 +7,22 @@ where
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.Language
 
+patternVariables :: Pattern -> [VarName]
+patternVariables pat = case pat of
+  PatternVariable v -> [v]
+  PatternWildcard {} -> []
+  PatternEmpty {} -> []
+  PatternConstructorApp app -> appVariables app
+
+appVariables :: ConstructorApp -> [VarName]
+appVariables (ConstructorApp _ ps) = concatMap patternVariables ps
+
 smallerPatternVariables :: Pattern -> [VarName]
-smallerPatternVariables p = case p of
+smallerPatternVariables = \case
   PatternVariable {} -> []
   PatternWildcard {} -> []
   PatternEmpty {} -> []
   PatternConstructorApp app -> appVariables app
-  where
-    appVariables :: ConstructorApp -> [VarName]
-    appVariables (ConstructorApp _ ps) = concatMap patternVariables ps
-
-    patternVariables :: Pattern -> [VarName]
-    patternVariables pat = case pat of
-      PatternVariable v -> [v]
-      PatternWildcard {} -> []
-      PatternEmpty {} -> []
-      PatternConstructorApp app -> appVariables app
 
 viewApp :: Expression -> (Expression, [Expression])
 viewApp e = case e of

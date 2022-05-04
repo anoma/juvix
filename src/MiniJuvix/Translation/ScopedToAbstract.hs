@@ -29,16 +29,22 @@ entryAbstract _resultScoper = do
   where
     ms = _resultScoper ^. Scoper.resultModules
 
--- translateModule :: Module 'Scoped 'ModuleTop -> Either Err (InfoTable, A.TopModule)
--- translateModule = run . runError . runInfoTableBuilder . goTopModule
-
-goTopModule :: Members '[Error Err, InfoTableBuilder] r => Module 'Scoped 'ModuleTop -> Sem r A.TopModule
+goTopModule ::
+  Members '[Error Err, InfoTableBuilder] r =>
+  Module 'Scoped 'ModuleTop ->
+  Sem r A.TopModule
 goTopModule = goModule
 
-goLocalModule :: Members '[Error Err, InfoTableBuilder] r => Module 'Scoped 'ModuleLocal -> Sem r A.LocalModule
+goLocalModule ::
+  Members '[Error Err, InfoTableBuilder] r =>
+  Module 'Scoped 'ModuleLocal ->
+  Sem r A.LocalModule
 goLocalModule = goModule
 
-goModule :: (Members '[Error Err, InfoTableBuilder] r, ModulePathType 'Scoped t ~ S.Name' c) => Module 'Scoped t -> Sem r (A.Module c)
+goModule ::
+  (Members '[Error Err, InfoTableBuilder] r, ModulePathType 'Scoped t ~ S.Name' c) =>
+  Module 'Scoped t ->
+  Sem r (A.Module c)
 goModule (Module n par b) = case par of
   [] -> A.Module n <$> goModuleBody b
   _ -> unsupported "Module parameters"
@@ -62,6 +68,7 @@ goModuleBody ss' = do
   where
     ss :: [Indexed (Statement 'Scoped)]
     ss = zipWith Indexed [0 ..] ss'
+
     compiledFunctions :: Sem r [Indexed A.FunctionDef]
     compiledFunctions =
       sequence $
@@ -105,10 +112,11 @@ goFunctionDef ::
   TypeSignature 'Scoped ->
   NonEmpty (FunctionClause 'Scoped) ->
   Sem r A.FunctionDef
-goFunctionDef sig clauses = do
-  let _funDefName = sig ^. sigName
+goFunctionDef TypeSignature {..} clauses = do
+  let _funDefName = _sigName
+      _funDefTerminating = _sigTerminating
   _funDefClauses <- mapM goFunctionClause clauses
-  _funDefTypeSig <- goExpression (sig ^. sigType)
+  _funDefTypeSig <- goExpression _sigType
   registerFunction' A.FunctionDef {..}
 
 goFunctionClause ::
@@ -173,14 +181,15 @@ goConstructorDef ::
   Members '[Error Err] r =>
   InductiveConstructorDef 'Scoped ->
   Sem r A.InductiveConstructorDef
-goConstructorDef (InductiveConstructorDef c ty) = A.InductiveConstructorDef c <$> goExpression ty
+goConstructorDef (InductiveConstructorDef c ty) =
+  A.InductiveConstructorDef c <$> goExpression ty
 
 goExpression ::
   forall r.
   Members '[Error Err] r =>
   Expression ->
   Sem r A.Expression
-goExpression e = case e of
+goExpression = \case
   ExpressionIdentifier nt -> return (goIden nt)
   ExpressionParensIdentifier nt -> return (goIden nt)
   ExpressionApplication a -> A.ExpressionApplication <$> goApplication a
@@ -251,17 +260,26 @@ goPatternApplication ::
   Sem r A.ConstructorApp
 goPatternApplication a = uncurry A.ConstructorApp <$> viewApp (PatternApplication a)
 
-goPatternConstructor :: forall r. Members '[Error Err] r => ConstructorRef -> Sem r A.ConstructorApp
+goPatternConstructor ::
+  Members '[Error Err] r =>
+  ConstructorRef ->
+  Sem r A.ConstructorApp
 goPatternConstructor a = uncurry A.ConstructorApp <$> viewApp (PatternConstructor a)
 
-goInfixPatternApplication :: forall r. Members '[Error Err] r => PatternInfixApp -> Sem r A.ConstructorApp
+goInfixPatternApplication ::
+  Members '[Error Err] r =>
+  PatternInfixApp ->
+  Sem r A.ConstructorApp
 goInfixPatternApplication a = uncurry A.ConstructorApp <$> viewApp (PatternInfixApplication a)
 
-goPostfixPatternApplication :: forall r. Members '[Error Err] r => PatternPostfixApp -> Sem r A.ConstructorApp
+goPostfixPatternApplication ::
+  Members '[Error Err] r =>
+  PatternPostfixApp ->
+  Sem r A.ConstructorApp
 goPostfixPatternApplication a = uncurry A.ConstructorApp <$> viewApp (PatternPostfixApplication a)
 
 viewApp :: forall r. Members '[Error Err] r => Pattern -> Sem r (A.ConstructorRef, [A.Pattern])
-viewApp p = case p of
+viewApp = \case
   PatternConstructor c -> return (goConstructorRef c, [])
   PatternApplication (PatternApp l r) -> do
     r' <- goPattern r
@@ -283,7 +301,7 @@ viewApp p = case p of
 goConstructorRef :: ConstructorRef -> A.ConstructorRef
 goConstructorRef (ConstructorRef' n) = A.ConstructorRef n
 
-goPattern :: forall r. Members '[Error Err] r => Pattern -> Sem r A.Pattern
+goPattern :: Members '[Error Err] r => Pattern -> Sem r A.Pattern
 goPattern p = case p of
   PatternVariable a -> return $ A.PatternVariable a
   PatternConstructor c -> A.PatternConstructorApp <$> goPatternConstructor c

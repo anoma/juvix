@@ -44,31 +44,17 @@ ppDefault = runPrettyCode defaultOptions
 runPrettyCode :: PrettyCode c => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
-instance PrettyCode Iden where
-  ppCode = ppSCode . idenName
-
-instance PrettyCode Application where
-  ppCode (Application l r) = do
-    l' <- ppLeftExpression appFixity l
-    r' <- ppRightExpression appFixity r
-    return $ l' <+> r'
-
 keyword :: Text -> Doc Ann
 keyword = annotate AnnKeyword . pretty
 
 kwType :: Doc Ann
 kwType = keyword Str.type_
 
-instance PrettyCode Universe where
-  ppCode (Universe n) = return $ kwType <+?> (pretty <$> n)
+kwQuestion :: Doc Ann
+kwQuestion = keyword Str.questionMark
 
-instance PrettyCode Expression where
-  ppCode e = case e of
-    ExpressionIden i -> ppCode i
-    ExpressionUniverse u -> ppCode u
-    ExpressionApplication a -> ppCode a
-    ExpressionFunction f -> ppCode f
-    ExpressionLiteral l -> ppSCode l
+kwWaveArrow :: Doc Ann
+kwWaveArrow = keyword Str.waveArrow
 
 kwColon :: Doc Ann
 kwColon = keyword Str.colon
@@ -84,40 +70,6 @@ kwColonOne = keyword Str.colonOne
 
 kwColonOmega :: Doc Ann
 kwColonOmega = keyword Str.colonOmegaUnicode
-
-instance PrettyCode Usage where
-  ppCode u = return $ case u of
-    UsageNone -> kwColonZero
-    UsageOnce -> kwColonOne
-    UsageOmega -> kwColon
-
-instance PrettyCode FunctionParameter where
-  ppCode FunctionParameter {..} = do
-    case _paramName of
-      Nothing -> ppLeftExpression funFixity _paramType
-      Just n -> do
-        paramName' <- ppSCode n
-        paramType' <- ppCode _paramType
-        paramUsage' <- ppCode _paramUsage
-        return $ parens (paramName' <+> paramUsage' <+> paramType')
-
-instance PrettyCode Function where
-  ppCode Function {..} = do
-    funParameter' <- ppCode _funParameter
-    funReturn' <- ppRightExpression funFixity _funReturn
-    return $ funParameter' <+> kwTo <+> funReturn'
-
-instance PrettyCode FunctionRef where
-  ppCode FunctionRef {..} = ppSCode _functionRefName
-
-instance PrettyCode ConstructorRef where
-  ppCode ConstructorRef {..} = ppSCode _constructorRefName
-
-instance PrettyCode InductiveRef where
-  ppCode InductiveRef {..} = ppSCode _inductiveRefName
-
-instance PrettyCode AxiomRef where
-  ppCode AxiomRef {..} = ppSCode _axiomRefName
 
 parensCond :: Bool -> Doc Ann -> Doc Ann
 parensCond t d = if t then parens d else d
@@ -153,7 +105,64 @@ ppLRExpression associates fixlr e =
   parensCond (atomParens associates (atomicity e) fixlr)
     <$> ppCode e
 
-ppCodeAtom :: (HasAtomicity c, PrettyCode c, Members '[Reader Options] r) => c -> Sem r (Doc Ann)
+ppCodeAtom ::
+  (HasAtomicity c, PrettyCode c, Members '[Reader Options] r) =>
+  c ->
+  Sem r (Doc Ann)
 ppCodeAtom c = do
   p' <- ppCode c
   return $ if isAtomic c then p' else parens p'
+
+instance PrettyCode Iden where
+  ppCode = ppSCode . idenName
+
+instance PrettyCode Application where
+  ppCode (Application l r) = do
+    l' <- ppLeftExpression appFixity l
+    r' <- ppRightExpression appFixity r
+    return $ l' <+> r'
+
+instance PrettyCode Universe where
+  ppCode (Universe n) = return $ kwType <+?> (pretty <$> n)
+
+instance PrettyCode Expression where
+  ppCode e = case e of
+    ExpressionIden i -> ppCode i
+    ExpressionUniverse u -> ppCode u
+    ExpressionApplication a -> ppCode a
+    ExpressionFunction f -> ppCode f
+    ExpressionLiteral l -> ppSCode l
+
+instance PrettyCode Usage where
+  ppCode u = return $ case u of
+    UsageNone -> kwColonZero
+    UsageOnce -> kwColonOne
+    UsageOmega -> kwColon
+
+instance PrettyCode FunctionParameter where
+  ppCode FunctionParameter {..} = do
+    case _paramName of
+      Nothing -> ppLeftExpression funFixity _paramType
+      Just n -> do
+        paramName' <- ppSCode n
+        paramType' <- ppCode _paramType
+        paramUsage' <- ppCode _paramUsage
+        return $ parens (paramName' <+> paramUsage' <+> paramType')
+
+instance PrettyCode Function where
+  ppCode Function {..} = do
+    funParameter' <- ppCode _funParameter
+    funReturn' <- ppRightExpression funFixity _funReturn
+    return $ funParameter' <+> kwTo <+> funReturn'
+
+instance PrettyCode FunctionRef where
+  ppCode FunctionRef {..} = ppSCode _functionRefName
+
+instance PrettyCode ConstructorRef where
+  ppCode ConstructorRef {..} = ppSCode _constructorRefName
+
+instance PrettyCode InductiveRef where
+  ppCode InductiveRef {..} = ppSCode _inductiveRefName
+
+instance PrettyCode AxiomRef where
+  ppCode AxiomRef {..} = ppSCode _axiomRefName

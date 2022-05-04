@@ -6,6 +6,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Abstract.InfoTable
 import MiniJuvix.Syntax.Abstract.Language.Extra
 import MiniJuvix.Syntax.Concrete.Scoped.Name (unqualifiedSymbol)
 import MiniJuvix.Termination.Types
@@ -22,7 +23,7 @@ viewCall ::
   Members '[Reader SizeInfo] r =>
   Expression ->
   Sem r (Maybe FunCall)
-viewCall e = case e of
+viewCall = \case
   ExpressionApplication (Application f x) -> do
     c <- viewCall f
     x' <- callArg
@@ -37,7 +38,7 @@ viewCall e = case e of
           lessThan :: Sem r CallRow
           lessThan = case x of
             ExpressionIden (IdenVar v) -> do
-              s <- asks (HashMap.lookup v . _sizeSmaller)
+              s :: Maybe Int <- asks (HashMap.lookup v . _sizeSmaller)
               return $ case s of
                 Nothing -> CallRow Nothing
                 Just s' -> CallRow (Just (s', RLe))
@@ -61,13 +62,21 @@ viewCall e = case e of
 addCall :: FunctionRef -> FunCall -> CallMap -> CallMap
 addCall fun c = over callMap (HashMap.alter (Just . insertCall c) fun)
   where
-    insertCall :: FunCall -> Maybe (HashMap FunctionRef [FunCall]) -> HashMap FunctionRef [FunCall]
-    insertCall f m = case m of
+    insertCall ::
+      FunCall ->
+      Maybe (HashMap FunctionRef [FunCall]) ->
+      HashMap FunctionRef [FunCall]
+    insertCall f = \case
       Nothing -> singl f
       Just m' -> addFunCall f m'
+
     singl :: FunCall -> HashMap FunctionRef [FunCall]
     singl f = HashMap.singleton (f ^. callRef) [f]
-    addFunCall :: FunCall -> HashMap FunctionRef [FunCall] -> HashMap FunctionRef [FunCall]
+
+    addFunCall ::
+      FunCall ->
+      HashMap FunctionRef [FunCall] ->
+      HashMap FunctionRef [FunCall]
     addFunCall fc = HashMap.insertWith (flip (<>)) (fc ^. callRef) [fc]
 
 registerCall ::
@@ -78,13 +87,16 @@ registerCall c = do
   fun <- ask
   modify (addCall fun c)
 
-buildCallMap :: TopModule -> CallMap
-buildCallMap = run . execState mempty . checkModule
+buildCallMap :: InfoTable -> TopModule -> CallMap
+buildCallMap infotable = run . execState mempty . runReader infotable . checkModule
 
-checkModule :: Members '[State CallMap] r => TopModule -> Sem r ()
+checkModule ::
+  Members '[State CallMap, Reader InfoTable] r =>
+  TopModule ->
+  Sem r ()
 checkModule m = checkModuleBody (m ^. moduleBody)
 
-checkModuleBody :: Members '[State CallMap] r => ModuleBody -> Sem r ()
+checkModuleBody :: Members '[State CallMap, Reader InfoTable] r => ModuleBody -> Sem r ()
 checkModuleBody body = do
   mapM_ checkFunctionDef moduleFunctions
   mapM_ checkLocalModule moduleLocalModules
@@ -92,15 +104,22 @@ checkModuleBody body = do
     moduleFunctions = [f | StatementFunction f <- body ^. moduleStatements]
     moduleLocalModules = [f | StatementLocalModule f <- body ^. moduleStatements]
 
-checkLocalModule :: Members '[State CallMap] r => LocalModule -> Sem r ()
+checkLocalModule :: Members '[State CallMap, Reader InfoTable] r => LocalModule -> Sem r ()
 checkLocalModule m = checkModuleBody (m ^. moduleBody)
 
-checkFunctionDef :: Members '[State CallMap] r => FunctionDef -> Sem r ()
-checkFunctionDef def = runReader (FunctionRef (unqualifiedSymbol (def ^. funDefName))) $ do
-  checkTypeSignature (def ^. funDefTypeSig)
-  mapM_ checkFunctionClause (def ^. funDefClauses)
+checkFunctionDef ::
+  Members '[State CallMap, Reader InfoTable] r =>
+  FunctionDef ->
+  Sem r ()
+checkFunctionDef FunctionDef {..} =
+  runReader (FunctionRef (unqualifiedSymbol _funDefName)) $ do
+    checkTypeSignature _funDefTypeSig
+    mapM_ checkFunctionClause _funDefClauses
 
-checkTypeSignature :: Members '[State CallMap, Reader FunctionRef] r => Expression -> Sem r ()
+checkTypeSignature ::
+  Members '[State CallMap, Reader FunctionRef, Reader InfoTable] r =>
+  Expression ->
+  Sem r ()
 checkTypeSignature = runReader (emptySizeInfo :: SizeInfo) . checkExpression
 
 emptySizeInfo :: SizeInfo
@@ -120,29 +139,39 @@ mkSizeInfo ps = SizeInfo {..}
         ]
 
 checkFunctionClause ::
-  Members '[State CallMap, Reader FunctionRef] r =>
+  Members '[State CallMap, Reader FunctionRef, Reader InfoTable] r =>
   FunctionClause ->
   Sem r ()
-checkFunctionClause cl =
-  runReader (mkSizeInfo (cl ^. clausePatterns)) $
-    checkExpression (cl ^. clauseBody)
+checkFunctionClause FunctionClause {..} =
+  runReader (mkSizeInfo _clausePatterns) $ checkExpression _clauseBody
 
-checkExpression :: Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r => Expression -> Sem r ()
-checkExpression e = do
-  mc <- viewCall e
-  case mc of
+checkExpression ::
+  Members '[State CallMap, Reader FunctionRef, Reader InfoTable, Reader SizeInfo] r =>
+  Expression ->
+  Sem r ()
+checkExpression e =
+  viewCall e >>= \case
     Just c -> do
-      registerCall c
-      mapM_ (checkExpression . snd) (c ^. callArgs)
+      h <- asks _infoFunctions
+      let fname = c ^. callRef
+          info = HashMap.lookupDefault impossible fname h
+          markedTerminating = info ^. (functionInfoDef . funDefTerminating)
+      if
+          | markedTerminating -> do
+              let cargs = map (\x -> (CallRow (Just (0, RLe)), snd x)) (c ^. callArgs)
+              registerCall $ FunCall fname cargs
+          | otherwise -> do
+              registerCall c
+              mapM_ (checkExpression . snd) (c ^. callArgs)
     Nothing -> case e of
       ExpressionApplication a -> checkApplication a
+      ExpressionFunction f -> checkFunction f
       ExpressionIden {} -> return ()
       ExpressionUniverse {} -> return ()
-      ExpressionFunction f -> checkFunction f
       ExpressionLiteral {} -> return ()
 
 checkApplication ::
-  Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r =>
+  Members '[State CallMap, Reader FunctionRef, Reader InfoTable, Reader SizeInfo] r =>
   Application ->
   Sem r ()
 checkApplication (Application l r) = do
@@ -150,7 +179,7 @@ checkApplication (Application l r) = do
   checkExpression r
 
 checkFunction ::
-  Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r =>
+  Members '[State CallMap, Reader FunctionRef, Reader InfoTable, Reader SizeInfo] r =>
   Function ->
   Sem r ()
 checkFunction (Function l r) = do
@@ -158,7 +187,7 @@ checkFunction (Function l r) = do
   checkExpression r
 
 checkFunctionParameter ::
-  Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r =>
+  Members '[State CallMap, Reader FunctionRef, Reader InfoTable, Reader SizeInfo] r =>
   FunctionParameter ->
   Sem r ()
 checkFunctionParameter p = checkExpression (p ^. paramType)

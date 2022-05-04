@@ -57,7 +57,8 @@ data Statement
 data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
     _funDefTypeSig :: Expression,
-    _funDefClauses :: NonEmpty FunctionClause
+    _funDefClauses :: NonEmpty FunctionClause,
+    _funDefTerminating :: Bool
   }
   deriving stock (Eq, Show)
 

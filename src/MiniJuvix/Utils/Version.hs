@@ -13,8 +13,6 @@ module MiniJuvix.Utils.Version
   )
 where
 
-------------------------------------------------------------------------------
-
 import Data.Version (showVersion)
 import Development.GitRev (gitBranch, gitCommitDate, gitHash)
 import MiniJuvix.Prelude hiding (Doc)
@@ -22,8 +20,6 @@ import Paths_minijuvix qualified
 import Prettyprinter as PP
 import Prettyprinter.Render.Text (renderIO)
 import System.Environment (getProgName)
-
-------------------------------------------------------------------------------
 
 versionDoc :: Doc Text
 versionDoc = PP.pretty (showVersion Paths_minijuvix.version)

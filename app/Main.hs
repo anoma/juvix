@@ -2,8 +2,6 @@
 
 module Main (main) where
 
---------------------------------------------------------------------------------
-
 import Commands.Extra
 import Commands.MicroJuvix
 import Commands.MiniHaskell
@@ -432,24 +430,30 @@ runCLI cli = do
       minihaskell <- head . (^. MiniHaskell.resultModules) <$> runIO (upToMiniHaskell (getEntryPoint root o))
       renderStdOutMini (MiniHaskell.ppOutDefault minihaskell)
     Termination (Calls opts@CallsOptions {..}) -> do
-      a <- head . (^. Abstract.resultModules) <$> runIO (upToAbstract (getEntryPoint root opts))
-      let callMap0 = T.buildCallMap a
+      results <- runIO (upToAbstract (getEntryPoint root opts))
+      let topModule = head (results ^. Abstract.resultModules)
+          infotable = results ^. Abstract.resultTable
+          callMap0 = T.buildCallMap infotable topModule
           callMap = case _callsFunctionNameFilter of
             Nothing -> callMap0
             Just f -> T.filterCallMap f callMap0
           opts' = T.callsPrettyOptions opts
       renderStdOutAbs (Abstract.ppOut opts' callMap)
       putStrLn ""
-    Termination (CallGraph o@CallGraphOptions {..}) -> do
-      a <- head . (^. Abstract.resultModules) <$> runIO (upToAbstract (getEntryPoint root o))
-      let callMap = T.buildCallMap a
+    Termination (CallGraph opts@CallGraphOptions {..}) -> do
+      results <- runIO (upToAbstract (getEntryPoint root opts))
+      let topModule = head (results ^. Abstract.resultModules)
+          infotable = results ^. Abstract.resultTable
+          callMap = T.buildCallMap infotable topModule
           opts' =
             Abstract.defaultOptions
               { Abstract._optShowNameId = globalOptions ^. globalShowNameIds
               }
           completeGraph = T.completeCallGraph callMap
           filteredGraph = maybe completeGraph (`T.unsafeFilterGraph` completeGraph) _graphFunctionNameFilter
-          recBehav = map T.recursiveBehaviour (T.reflexiveEdges filteredGraph)
+          rEdges = T.reflexiveEdges filteredGraph
+
+          recBehav = map T.recursiveBehaviour rEdges
       renderStdOutAbs (Abstract.ppOut opts' filteredGraph)
       putStrLn ""
       forM_ recBehav $ \r -> do
@@ -457,11 +461,11 @@ runCLI cli = do
               Scoper.defaultOptions
                 { Scoper._optShowNameId = globalOptions ^. globalShowNameIds
                 }
-            n = toAnsiText' (Scoper.ppOut sopts (A._recBehaviourFunction r))
+            n = toAnsiText' (Scoper.ppOut sopts (A._recursiveBehaviourFun r))
         renderStdOutAbs (Abstract.ppOut opts' r)
         putStrLn ""
         case T.findOrder r of
-          Nothing -> putStrLn (n <> " Fails the termination checking")
+          Nothing -> putStrLn (n <> " Fails the termination checking") >> exitFailure
           Just (T.LexOrder k) -> putStrLn (n <> " Terminates with order " <> show (toList k))
         putStrLn ""
 

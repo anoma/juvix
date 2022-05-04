@@ -17,8 +17,6 @@ module MiniJuvix.Syntax.Concrete.Language
   )
 where
 
---------------------------------------------------------------------------------
-
 import Data.Kind qualified as GHC
 import MiniJuvix.Prelude hiding (show)
 import MiniJuvix.Syntax.Backends
@@ -176,7 +174,8 @@ instance HasLoc OperatorSyntaxDef where
 
 data TypeSignature (s :: Stage) = TypeSignature
   { _sigName :: FunctionName s,
-    _sigType :: ExpressionType s
+    _sigType :: ExpressionType s,
+    _sigTerminating :: Bool
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (TypeSignature s)
