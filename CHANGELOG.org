@@ -1,16 +1,102 @@
-* Changelog
+* The MiniJuvix Changelog
+  :PROPERTIES:
+  :CUSTOM_ID: the-minijuvix-changelog
+  :END:
+** [[https://github.com/heliaxdev/minijuvix/tree/0.1.3][0.1.3]]
+(2022-05-03)
+   :PROPERTIES:
+   :CUSTOM_ID: section
+   :END:
+[[https://github.com/heliaxdev/minijuvix/compare/v0.1.2...0.1.3][Full
+Changelog]]
 
-MiniJuvix uses [[https://pvp.haskell.org][PVP Versioning]]. The
-changelog is available
-[[https://github.com/heliaxdev/MiniJuvix/releases][on GitHub]].
+*Closed issues:*
 
-** 0.1.1
+- Compile minihaskell output to WASM
+  [[https://github.com/heliaxdev/minijuvix/issues/50][#50]]
+- Stop type checking at the first type error
+  [[https://github.com/heliaxdev/minijuvix/issues/49][#49]]
+- Crash when typechecking a constructor pattern-match
+  [[https://github.com/heliaxdev/minijuvix/issues/41][#41]]
+- Do not mangle =main= function name
+  [[https://github.com/heliaxdev/minijuvix/issues/40][#40]]
+- Do not mangle top-level module names
+  [[https://github.com/heliaxdev/minijuvix/issues/39][#39]]
+- Make SimpleFungibleToken.mjuvix work end-to-end
+  [[https://github.com/heliaxdev/minijuvix/issues/33][#33]]
+- Make =--no-colors= flag global for pretty printer
+  [[https://github.com/heliaxdev/minijuvix/issues/29][#29]]
+- Github Action Haskell workflow
+  [[https://github.com/heliaxdev/minijuvix/issues/4][#4]]
+
+** [[https://github.com/heliaxdev/minijuvix/tree/v0.1.2][v0.1.2]]
+(2022-04-11)
+   :PROPERTIES:
+   :CUSTOM_ID: v0.1.2-2022-04-11
+   :END:
+[[https://github.com/heliaxdev/minijuvix/compare/v0.1.1...v0.1.2][Full
+Changelog]]
+
+*Closed issues:*
+
+- Add en emacs mode with support for scoped highlighting
+  [[https://github.com/heliaxdev/minijuvix/issues/25][#25]]
+- Add support for project root detection through a minijuvix.yaml file
+  [[https://github.com/heliaxdev/minijuvix/issues/24][#24]]
+- Add CLI cmd to generate minijuvix autocompletion files for fish and
+  zsh [[https://github.com/heliaxdev/minijuvix/issues/23][#23]]
+- Add pretty and typecheck subcommands to the microjuvix CLI
+  [[https://github.com/heliaxdev/minijuvix/issues/21][#21]]
+- Translate identifiers from MicroJuvix to MiniHaskell (valid Haskell)
+  [[https://github.com/heliaxdev/minijuvix/issues/19][#19]]
+- Implement the MiniHaskell to Haskell translation (prettyprinter)
+  [[https://github.com/heliaxdev/minijuvix/issues/18][#18]]
+- Implementation of a typechecker for MicroJuvix
+  [[https://github.com/heliaxdev/minijuvix/issues/16][#16]]
+- Add references to the Abstract AST to update compilation to
+  MiniHaskell [[https://github.com/heliaxdev/minijuvix/issues/12][#12]]
+- Order in the house
+  [[https://github.com/heliaxdev/minijuvix/issues/10][#10]]
+
+*Merged pull requests:*
+
+- The MiniJuvix project now follows the same goals as the original Juvix
+  project. [[https://github.com/heliaxdev/minijuvix/pull/7][#7]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- dev→main [[https://github.com/heliaxdev/minijuvix/pull/6][#6]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Big update including termination checking
+  [[https://github.com/heliaxdev/minijuvix/pull/5][#5]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Parser and scoper
+  [[https://github.com/heliaxdev/minijuvix/pull/3][#3]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- upgrade to ghc9 and use hpack
+  [[https://github.com/heliaxdev/minijuvix/pull/2][#2]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- merge [[https://github.com/heliaxdev/minijuvix/pull/1][#1]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+
+** [[https://github.com/heliaxdev/minijuvix/tree/v0.1.1][v0.1.1]]
+(2022-03-25)
+   :PROPERTIES:
+   :CUSTOM_ID: v0.1.1-2022-03-25
+   :END:
+[[https://github.com/heliaxdev/minijuvix/compare/48abde93b4e5380acabac810e584f4b7a6618592...v0.1.1][Full
+Changelog]]
 
 - Add support in the parser/scoper for Axiom backends
 - Add support for =foreign= keyword
-- New flag =--no-colors= for the scope command
+- Add flag =--no-colors= for the scope command
 - Upgrade to GHC 9.2.2
 - Improve resolution of local symbols in the scoper
 - Several new tests related to ambiguous symbols
 - Add =--version= flag
 - Add InfoTableBuilder effect for the scoper
+
+*Closed issues:*
+
+- Add diff output to the test suite
+  [[https://github.com/heliaxdev/minijuvix/issues/9][#9]]
+- Improve scoper ambiguity error messages
+  [[https://github.com/heliaxdev/minijuvix/issues/8][#8]]

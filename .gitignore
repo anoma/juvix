@@ -64,3 +64,5 @@ agda2hs/
 docs/*.html
 *.cabal
 /src/MiniJuvix/Utils/OldParser.hs
+CHANGELOG.md
+UPDATES-FOR-CHANGELOG.org
