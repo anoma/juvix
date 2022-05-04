@@ -26,15 +26,16 @@ id _ a ≔ a;
 undefined : (A : Type) → A;
 undefined A ≔ undefined A;
 
+add : Nat → Nat → Nat;
+add zero b ≔ b;
+add (suc a) b ≔ suc (add a b);
+
 nil' : (E : Type) → List E;
 nil' A ≔ nil A;
 
 -- currying
 nil'' : (E : Type) → List E;
 nil'' ≔ nil;
-
-l1 : List Nat;
-l1 ≔ cons Nat zero (nil Nat);
 
 fst : (A : Type) → (B : Type) → Pair A B → A;
 fst _ _ (mkPair a b) ≔ a;
@@ -56,6 +57,10 @@ ap A B f a ≔ f a;
 ite : (A : Type) → Bool → A → A → A;
 ite _ true tt _ ≔ tt;
 ite _ false _ ff ≔ ff;
+
+headDef : (A : Type) → A → List A → A;
+headDef _ d nil ≔ d;
+headDef A _ (cons h _) ≔ h;
 
 filter : (A : Type) → (A → Bool) → List A → List A;
 filter A f nil ≔ nil A;
@@ -85,5 +90,15 @@ rankn f b n ≔ mkPair Bool Nat (f Bool b) (f Nat n);
 -- currying
 trankn : Pair Bool Nat;
 trankn ≔ rankn id false zero;
+
+l1 : List Nat;
+l1 ≔ cons Nat zero (nil Nat);
+
+pairEval : (A : Type) → (B : Type) → Pair (A → B) A → B;
+pairEval _ _ (mkPair f x) ≔ f x;
+
+main : Nat;
+main ≔ headDef Nat (pairEval Nat Nat (mkPair (Nat → Nat) Nat (add zero) zero))
+   (zipWith Nat Nat Nat add l1 l1);
 
 end;

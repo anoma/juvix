@@ -2,7 +2,6 @@ module MiniJuvix.Syntax.MicroJuvix.InfoTable where
 
 import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Backends
 import MiniJuvix.Syntax.MicroJuvix.Language
 
 data ConstructorInfo = ConstructorInfo
@@ -12,7 +11,7 @@ data ConstructorInfo = ConstructorInfo
   }
 
 newtype FunctionInfo = FunctionInfo
-  { _functionInfoType :: Type
+  { _functionInfoDef :: FunctionDef
   }
 
 newtype AxiomInfo = AxiomInfo
@@ -30,9 +29,35 @@ data InfoTable = InfoTable
     _infoInductives :: HashMap Name InductiveInfo
   }
 
--- TODO temporary function.
-buildTable :: Module -> InfoTable
-buildTable m = InfoTable {..}
+makeLenses ''InfoTable
+makeLenses ''FunctionInfo
+makeLenses ''ConstructorInfo
+makeLenses ''AxiomInfo
+makeLenses ''InductiveInfo
+
+instance Semigroup InfoTable where
+  a <> b =
+    InfoTable
+      { _infoConstructors = a ^. infoConstructors <> b ^. infoConstructors,
+        _infoAxioms = a ^. infoAxioms <> b ^. infoAxioms,
+        _infoFunctions = a ^. infoFunctions <> b ^. infoFunctions,
+        _infoInductives = a ^. infoInductives <> b ^. infoInductives
+      }
+
+instance Monoid InfoTable where
+  mempty =
+    InfoTable
+      { _infoConstructors = mempty,
+        _infoAxioms = mempty,
+        _infoFunctions = mempty,
+        _infoInductives = mempty
+      }
+
+buildTable :: Foldable f => f Module -> InfoTable
+buildTable = mconcatMap buildTable1
+
+buildTable1 :: Module -> InfoTable
+buildTable1 m = InfoTable {..}
   where
     _infoInductives :: HashMap Name InductiveInfo
     _infoInductives =
@@ -53,7 +78,7 @@ buildTable m = InfoTable {..}
     _infoFunctions :: HashMap Name FunctionInfo
     _infoFunctions =
       HashMap.fromList
-        [ (f ^. funDefName, FunctionInfo (f ^. funDefType))
+        [ (f ^. funDefName, FunctionInfo f)
           | StatementFunction f <- ss
         ]
     _infoAxioms :: HashMap Name AxiomInfo
@@ -64,8 +89,14 @@ buildTable m = InfoTable {..}
         ]
     ss = m ^. (moduleBody . moduleStatements)
 
-makeLenses ''InfoTable
-makeLenses ''FunctionInfo
-makeLenses ''ConstructorInfo
-makeLenses ''AxiomInfo
-makeLenses ''InductiveInfo
+lookupConstructor :: Member (Reader InfoTable) r => Name -> Sem r ConstructorInfo
+lookupConstructor f = HashMap.lookupDefault impossible f <$> asks _infoConstructors
+
+lookupInductive :: Member (Reader InfoTable) r => InductiveName -> Sem r InductiveInfo
+lookupInductive f = HashMap.lookupDefault impossible f <$> asks _infoInductives
+
+lookupFunction :: Member (Reader InfoTable) r => Name -> Sem r FunctionInfo
+lookupFunction f = HashMap.lookupDefault impossible f <$> asks _infoFunctions
+
+lookupAxiom :: Member (Reader InfoTable) r => Name -> Sem r AxiomInfo
+lookupAxiom f = HashMap.lookupDefault impossible f <$> asks _infoAxioms

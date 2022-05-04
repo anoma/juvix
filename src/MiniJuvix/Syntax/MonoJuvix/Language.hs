@@ -28,8 +28,8 @@ data Name = Name
   { _nameText :: Text,
     _nameId :: NameId,
     _nameKind :: NameKind,
-    _nameDefined :: Maybe C.Interval,
-    _nameLoc :: Maybe C.Interval
+    _nameDefined :: C.Interval,
+    _nameLoc :: C.Interval
   }
   deriving stock (Show)
 

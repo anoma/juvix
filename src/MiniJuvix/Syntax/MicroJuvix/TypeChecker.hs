@@ -10,33 +10,31 @@ import MiniJuvix.Prelude hiding (fromEither)
 import MiniJuvix.Syntax.Concrete.Language (LiteralLoc)
 import MiniJuvix.Syntax.MicroJuvix.Error
 import MiniJuvix.Syntax.MicroJuvix.InfoTable
-import MiniJuvix.Syntax.MicroJuvix.Language
+import MiniJuvix.Syntax.MicroJuvix.Language.Extra
 import MiniJuvix.Syntax.MicroJuvix.LocalVars
 import MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult
 import MiniJuvix.Syntax.MicroJuvix.MicroJuvixTypedResult
-import Polysemy.Error (fromEither)
 
 entryMicroJuvixTyped ::
-  (Member (Error TypeCheckerError) r) =>
+  Member (Error TypeCheckerError) r =>
   MicroJuvixResult ->
   Sem r MicroJuvixTypedResult
 entryMicroJuvixTyped res@MicroJuvixResult {..} = do
-  r <- fromEither (mapM checkModule _resultModules)
+  r <- runReader table (mapM checkModule _resultModules)
   return
     MicroJuvixTypedResult
       { _resultMicroJuvixResult = res,
         _resultModules = r
       }
+  where
+    table :: InfoTable
+    table = buildTable _resultModules
 
-checkModule :: Module -> Either TypeCheckerError Module
-checkModule m =
-  run $ runError $ runReader (buildTable m) (checkModule' m)
-
-checkModule' ::
+checkModule ::
   Members '[Reader InfoTable, Error TypeCheckerError] r =>
   Module ->
   Sem r Module
-checkModule' Module {..} = do
+checkModule Module {..} = do
   _moduleBody' <- checkModuleBody _moduleBody
   return
     Module
@@ -86,7 +84,7 @@ checkExpression ::
 checkExpression t e = do
   e' <- inferExpression' e
   let inferredType = e' ^. typedType
-  unlessM (matchTypes t inferredType) (throw (err inferredType))
+  unless (matchTypes t inferredType) (throw (err inferredType))
   return (ExpressionTyped e')
   where
     err infTy =
@@ -101,19 +99,17 @@ checkExpression t e = do
 matchTypes ::
   Type ->
   Type ->
-  Sem r Bool
-matchTypes a b = do
-  areAlphaEq <- alphaEq a b
-  return $
-    isAny a || isAny b || areAlphaEq
+  Bool
+matchTypes a b =
+  isAny a || isAny b || alphaEq a b
   where
     isAny = \case
       TypeAny -> True
       _ -> False
 
 -- | Alpha equivalence
-alphaEq :: Type -> Type -> Sem r Bool
-alphaEq ty = runReader ini . go ty
+alphaEq :: Type -> Type -> Bool
+alphaEq ty = run . runReader ini . go ty
   where
     ini :: HashMap VarName VarName
     ini = mempty
@@ -157,18 +153,6 @@ inferExpression ::
   Sem r Expression
 inferExpression = fmap ExpressionTyped . inferExpression'
 
-lookupConstructor :: Member (Reader InfoTable) r => Name -> Sem r ConstructorInfo
-lookupConstructor f = HashMap.lookupDefault impossible f <$> asks _infoConstructors
-
-lookupInductive :: Member (Reader InfoTable) r => InductiveName -> Sem r InductiveInfo
-lookupInductive f = HashMap.lookupDefault impossible f <$> asks _infoInductives
-
-lookupFunction :: Member (Reader InfoTable) r => Name -> Sem r FunctionInfo
-lookupFunction f = HashMap.lookupDefault impossible f <$> asks _infoFunctions
-
-lookupAxiom :: Member (Reader InfoTable) r => Name -> Sem r AxiomInfo
-lookupAxiom f = HashMap.lookupDefault impossible f <$> asks _infoAxioms
-
 lookupVar :: Member (Reader LocalVars) r => Name -> Sem r Type
 lookupVar v = HashMap.lookupDefault impossible v <$> asks _localTypes
 
@@ -199,37 +183,19 @@ constructorArgTypes i =
     i ^. constructorInfoArgs
   )
 
--- | [a, b] c ==> a -> (b -> c)
-foldFunType :: [FunctionArgType] -> Type -> Type
-foldFunType l r = case l of
-  [] -> r
-  (a : as) ->
-    let r' = foldFunType as r
-     in case a of
-          FunctionArgTypeAbstraction v -> TypeAbs (TypeAbstraction v r')
-          FunctionArgTypeType t -> TypeFunction (Function t r')
-
--- | a -> (b -> c)  ==> ([a, b], c)
-unfoldFunType :: Type -> ([FunctionArgType], Type)
-unfoldFunType t = case t of
-  TypeFunction (Function l r) -> first (FunctionArgTypeType l :) (unfoldFunType r)
-  TypeAbs (TypeAbstraction var r) -> first (FunctionArgTypeAbstraction var :) (unfoldFunType r)
-  _ -> ([], t)
-
 checkFunctionClause ::
   Members '[Reader InfoTable, Error TypeCheckerError] r =>
   FunctionInfo ->
   FunctionClause ->
   Sem r FunctionClause
 checkFunctionClause info clause@FunctionClause {..} = do
-  let (argTys, rty) = unfoldFunType (info ^. functionInfoType)
+  let (argTys, rty) = unfoldFunType (info ^. functionInfoDef . funDefType)
       (patTys, restTys) = splitAt (length _clausePatterns) argTys
       bodyTy = foldFunType restTys rty
   if
-      -- TODO consider zip exact
       | length patTys /= length _clausePatterns -> throw (tyErr patTys)
       | otherwise -> do
-          locals <- checkPatterns _clauseName (zip patTys _clausePatterns)
+          locals <- checkPatterns _clauseName (zipExact patTys _clausePatterns)
           let bodyTy' =
                 substitution
                   ( fmap
@@ -271,44 +237,6 @@ typeOfArg :: FunctionArgType -> Type
 typeOfArg a = case a of
   FunctionArgTypeAbstraction {} -> TypeUniverse
   FunctionArgTypeType ty -> ty
-
-substitutionArg :: VarName -> VarName -> FunctionArgType -> FunctionArgType
-substitutionArg from v a = case a of
-  FunctionArgTypeAbstraction {} -> a
-  FunctionArgTypeType ty ->
-    FunctionArgTypeType
-      (substitution1 (from, TypeIden (TypeIdenVariable v)) ty)
-
-substitution1 :: (VarName, Type) -> Type -> Type
-substitution1 = substitution . uncurry HashMap.singleton
-
-substitution :: HashMap VarName Type -> Type -> Type
-substitution m = go
-  where
-    go :: Type -> Type
-    go = \case
-      TypeIden i -> goIden i
-      TypeApp a -> TypeApp (goApp a)
-      TypeAbs a -> TypeAbs (goAbs a)
-      TypeFunction f -> TypeFunction (goFunction f)
-      TypeUniverse -> TypeUniverse
-      TypeAny -> TypeAny
-    goApp :: TypeApplication -> TypeApplication
-    goApp (TypeApplication l r) = TypeApplication (go l) (go r)
-    goAbs :: TypeAbstraction -> TypeAbstraction
-    goAbs (TypeAbstraction v b) = TypeAbstraction v (go b)
-    goFunction :: Function -> Function
-    goFunction (Function l r) = Function (go l) (go r)
-    goIden :: TypeIden -> Type
-    goIden i = case i of
-      TypeIdenInductive {} -> TypeIden i
-      TypeIdenAxiom {} -> TypeIden i
-      TypeIdenVariable v -> case HashMap.lookup v m of
-        Just ty -> ty
-        Nothing -> TypeIden i
-
-substituteIndParams :: [(InductiveParameter, Type)] -> Type -> Type
-substituteIndParams = substitution . HashMap.fromList . map (first (^. inductiveParamName))
 
 checkPattern ::
   forall r.
@@ -373,26 +301,6 @@ checkPattern funName type_ pat = go type_ pat
       when (numArgs > numParams) (error "too many arguments to inductive type")
       return (ind, zip params args)
 
--- | The expression is assumed to be of type TypeUniverse.
--- If the assumption holds, it should never fail.
-expressionAsType :: Expression -> Type
-expressionAsType = go
-  where
-    go = \case
-      ExpressionIden i -> TypeIden (goIden i)
-      ExpressionApplication a -> TypeApp (goApp a)
-      ExpressionLiteral {} -> impossible
-      ExpressionTyped e -> go (e ^. typedExpression)
-    goIden :: Iden -> TypeIden
-    goIden = \case
-      IdenFunction {} -> impossible
-      IdenConstructor {} -> impossible
-      IdenVar v -> TypeIdenVariable v
-      IdenAxiom a -> TypeIdenAxiom a
-      IdenInductive i -> TypeIdenInductive i
-    goApp :: Application -> TypeApplication
-    goApp (Application l r) = TypeApplication (go l) (go r)
-
 inferExpression' ::
   forall r.
   Members '[Reader InfoTable, Reader LocalVars, Error TypeCheckerError] r =>
@@ -403,14 +311,20 @@ inferExpression' e = case e of
   ExpressionApplication a -> inferApplication a
   ExpressionTyped t -> return t
   ExpressionLiteral l -> goLiteral l
+  ExpressionFunction f -> goExpressionFunction f
   where
+    goExpressionFunction :: FunctionExpression -> Sem r TypedExpression
+    goExpressionFunction (FunctionExpression l r) = do
+      l' <- checkExpression TypeUniverse l
+      r' <- checkExpression TypeUniverse r
+      return (TypedExpression TypeUniverse (ExpressionFunction (FunctionExpression l' r')))
     goLiteral :: LiteralLoc -> Sem r TypedExpression
     goLiteral l = return (TypedExpression TypeAny (ExpressionLiteral l))
     inferIden :: Iden -> Sem r TypedExpression
     inferIden i = case i of
       IdenFunction fun -> do
         info <- lookupFunction fun
-        return (TypedExpression (info ^. functionInfoType) (ExpressionIden i))
+        return (TypedExpression (info ^. functionInfoDef . funDefType) (ExpressionIden i))
       IdenConstructor c -> do
         ty <- constructorType c
         return (TypedExpression ty (ExpressionIden i))
@@ -437,7 +351,7 @@ inferExpression' e = case e of
       case fun of
         Left ta -> do
           r <- checkExpression TypeUniverse (a ^. appRight)
-          let tr = expressionAsType r
+          let tr = expressionAsType' r
           return
             TypedExpression
               { _typedExpression =
@@ -446,7 +360,7 @@ inferExpression' e = case e of
                       { _appLeft = ExpressionTyped l,
                         _appRight = r
                       },
-                _typedType = substitution1 (ta ^. typeAbsVar, tr) (ta ^. typeAbsBody)
+                _typedType = substituteType1 (ta ^. typeAbsVar, tr) (ta ^. typeAbsBody)
               }
         Right f -> do
           r <- checkExpression (f ^. funLeft) (a ^. appRight)

@@ -56,7 +56,7 @@ bracedString =
     unIndent :: Text -> Text
     unIndent t = Text.unlines (Text.drop (fromMaybe 0 (indentIdx t)) <$> Text.lines t)
     indentIdx :: Text -> Maybe Int
-    indentIdx = minimumMaybe . mapMaybe firstNonBlankChar . Text.lines
+    indentIdx = minimumMay . mapMaybe firstNonBlankChar . Text.lines
     firstNonBlankChar :: Text -> Maybe Int
     firstNonBlankChar = Text.findIndex (not . isSpace)
 

@@ -7,7 +7,7 @@ where
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.MicroJuvix.InfoTable
 import MiniJuvix.Syntax.MicroJuvix.Language
-import MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult
+import MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult (MicroJuvixResult)
 
 data MicroJuvixTypedResult = MicroJuvixTypedResult
   { _resultMicroJuvixResult :: MicroJuvixResult,
@@ -15,3 +15,6 @@ data MicroJuvixTypedResult = MicroJuvixTypedResult
   }
 
 makeLenses ''MicroJuvixTypedResult
+
+mainModule :: Lens' MicroJuvixTypedResult Module
+mainModule = resultModules . _head

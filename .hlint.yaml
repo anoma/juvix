@@ -78,3 +78,5 @@
 - ignore: {name: Avoid restricted qualification}
 - ignore: {name: Redundant multi-way if}
 - ignore: {name: Eta reduce}
+- ignore: {name: Avoid restricted alias}
+- ignore: {name: Use tuple-section}

@@ -2,12 +2,13 @@ module MiniJuvix.Syntax.MicroJuvix.Language
   ( module MiniJuvix.Syntax.MicroJuvix.Language,
     module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind,
     module MiniJuvix.Syntax.Concrete.Scoped.Name,
+    module MiniJuvix.Syntax.Concrete.Loc,
   )
 where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Language (HasLoc)
-import MiniJuvix.Syntax.Concrete.Language qualified as C
+import MiniJuvix.Syntax.Concrete.Language (LiteralLoc)
+import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Syntax.Concrete.Scoped.Name (NameId (..))
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
 import MiniJuvix.Syntax.Fixity
@@ -15,6 +16,8 @@ import MiniJuvix.Syntax.ForeignBlock
 import Prettyprinter
 
 type FunctionName = Name
+
+type ConstructorName = Name
 
 type AxiomName = Name
 
@@ -28,8 +31,8 @@ data Name = Name
   { _nameText :: Text,
     _nameId :: NameId,
     _nameKind :: NameKind,
-    _nameDefined :: C.Interval,
-    _nameLoc :: C.Interval
+    _nameDefined :: Interval,
+    _nameLoc :: Interval
   }
   deriving stock (Show)
 
@@ -103,10 +106,17 @@ data TypedExpression = TypedExpression
   }
   deriving stock (Show)
 
+data FunctionExpression = FunctionExpression
+  { _functionExpressionLeft :: Expression,
+    _functionExpressionRight :: Expression
+  }
+  deriving stock (Show)
+
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
-  | ExpressionLiteral C.LiteralLoc
+  | ExpressionFunction FunctionExpression
+  | ExpressionLiteral LiteralLoc
   | ExpressionTyped TypedExpression
   deriving stock (Show)
 
@@ -120,7 +130,9 @@ data Function = Function
   { _funLeft :: Type,
     _funRight :: Type
   }
-  deriving stock (Show)
+  deriving stock (Show, Generic, Eq)
+
+instance Hashable Function
 
 -- | Fully applied constructor in a pattern.
 data ConstructorApp = ConstructorApp
@@ -155,19 +167,25 @@ data TypeIden
   = TypeIdenInductive InductiveName
   | TypeIdenAxiom AxiomName
   | TypeIdenVariable VarName
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+
+instance Hashable TypeIden
 
 data TypeApplication = TypeApplication
   { _typeAppLeft :: Type,
     _typeAppRight :: Type
   }
-  deriving stock (Show)
+  deriving stock (Show, Generic, Eq)
+
+instance Hashable TypeApplication
 
 data TypeAbstraction = TypeAbstraction
   { _typeAbsVar :: VarName,
     _typeAbsBody :: Type
   }
-  deriving stock (Show)
+  deriving stock (Show, Eq, Generic)
+
+instance Hashable TypeAbstraction
 
 data Type
   = TypeIden TypeIden
@@ -176,7 +194,9 @@ data Type
   | TypeAbs TypeAbstraction
   | TypeUniverse
   | TypeAny
-  deriving stock (Show)
+  deriving stock (Eq, Show, Generic)
+
+instance Hashable Type
 
 data FunctionArgType
   = FunctionArgTypeAbstraction VarName
@@ -185,6 +205,7 @@ data FunctionArgType
 
 makeLenses ''Module
 makeLenses ''Function
+makeLenses ''FunctionExpression
 makeLenses ''FunctionDef
 makeLenses ''FunctionClause
 makeLenses ''InductiveDef
@@ -207,12 +228,16 @@ instance HasAtomicity Application where
 instance HasAtomicity TypeApplication where
   atomicity = const (Aggregate appFixity)
 
+instance HasAtomicity FunctionExpression where
+  atomicity = const (Aggregate funFixity)
+
 instance HasAtomicity Expression where
   atomicity e = case e of
     ExpressionIden {} -> Atom
     ExpressionApplication a -> atomicity a
     ExpressionTyped t -> atomicity (t ^. typedExpression)
     ExpressionLiteral l -> atomicity l
+    ExpressionFunction f -> atomicity f
 
 instance HasAtomicity Function where
   atomicity = const (Aggregate funFixity)
@@ -240,17 +265,21 @@ instance HasAtomicity Pattern where
     PatternVariable {} -> Atom
     PatternWildcard {} -> Atom
 
+instance HasLoc FunctionExpression where
+  getLoc (FunctionExpression l r) = getLoc l <> getLoc r
+
 instance HasLoc Expression where
   getLoc = \case
-    ExpressionIden i -> C.getLoc i
-    ExpressionApplication a -> C.getLoc (a ^. appLeft)
-    ExpressionTyped t -> C.getLoc (t ^. typedExpression)
-    ExpressionLiteral l -> C.getLoc l
+    ExpressionIden i -> getLoc i
+    ExpressionApplication a -> getLoc (a ^. appLeft)
+    ExpressionTyped t -> getLoc (t ^. typedExpression)
+    ExpressionLiteral l -> getLoc l
+    ExpressionFunction f -> getLoc f
 
 instance HasLoc Iden where
   getLoc = \case
-    IdenFunction f -> C.getLoc f
-    IdenConstructor c -> C.getLoc c
-    IdenVar v -> C.getLoc v
-    IdenAxiom a -> C.getLoc a
-    IdenInductive a -> C.getLoc a
+    IdenFunction f -> getLoc f
+    IdenConstructor c -> getLoc c
+    IdenVar v -> getLoc v
+    IdenAxiom a -> getLoc a
+    IdenInductive a -> getLoc a

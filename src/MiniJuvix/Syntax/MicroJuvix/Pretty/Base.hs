@@ -5,15 +5,16 @@ module MiniJuvix.Syntax.MicroJuvix.Pretty.Base
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
+import MiniJuvix.Prelude.Pretty
 import MiniJuvix.Syntax.Backends
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.ForeignBlock
-import MiniJuvix.Syntax.MicroJuvix.Language
+import MiniJuvix.Syntax.MicroJuvix.Language.Extra
 import MiniJuvix.Syntax.MicroJuvix.Pretty.Ann
 import MiniJuvix.Syntax.MicroJuvix.Pretty.Options
-import Prettyprinter
 
 docStream :: PrettyCode c => Options -> c -> SimpleDocStream Ann
 docStream opts =
@@ -66,11 +67,18 @@ instance PrettyCode Application where
 instance PrettyCode TypedExpression where
   ppCode e = ppCode (e ^. typedExpression)
 
+instance PrettyCode FunctionExpression where
+  ppCode f = do
+    l' <- ppLeftExpression funFixity (f ^. functionExpressionLeft)
+    r' <- ppLeftExpression funFixity (f ^. functionExpressionRight)
+    return (l' <+> kwArrow <+> r')
+
 instance PrettyCode Expression where
   ppCode = \case
     ExpressionIden i -> ppCode i
     ExpressionApplication a -> ppCode a
     ExpressionTyped a -> ppCode a
+    ExpressionFunction f -> ppCode f
     ExpressionLiteral l -> return (pretty l)
 
 keyword :: Text -> Doc Ann
@@ -277,6 +285,47 @@ instance PrettyCode Module where
         <> line
         <> body'
         <> line
+
+instance PrettyCode TypeCallIden where
+  ppCode = \case
+    InductiveIden n -> ppCode n
+    FunctionIden n -> ppCode n
+
+instance PrettyCode Caller where
+  ppCode = \case
+    CallerInductive n -> ppCode n
+    CallerAxiom n -> ppCode n
+    CallerFunction n -> ppCode n
+
+instance PrettyCode ConcreteTypeCall where
+  ppCode = ppCode . fmap (^. unconcreteType)
+
+instance PrettyCode TypeCall where
+  ppCode (TypeCall' f args) = do
+    f' <- ppCode f
+    args' <- mapM ppCodeAtom args
+    return $ f' <+> hsep args'
+
+instance PrettyCode TypeCallsMap where
+  ppCode m = do
+    let title = keyword "Type Calls Map:"
+        elems :: [(Caller, TypeCall)]
+        elems =
+          [(caller, t) | (caller, l) <- HashMap.toList (m ^. typeCallsMap), t <- toList l]
+    elems' <- mapM ppCodeElem (sortOn fst elems)
+    return $ title <> line <> vsep elems' <> line
+    where
+      ppCodeElem (caller, t) = do
+        caller' <- ppCode caller
+        t' <- ppCode t
+        return $ caller' <+> kwMapsto <+> t'
+
+instance PrettyCode TypeCalls where
+  ppCode m = do
+    let title = keyword "Propagated Type Calls:"
+        elems = sortOn (^. typeCallIden) (concatMap HashMap.keys (toList (m ^. typeCallSet)))
+    elems' <- mapM ppCode elems
+    return $ title <> line <> vsep elems' <> line
 
 parensCond :: Bool -> Doc Ann -> Doc Ann
 parensCond t d = if t then parens d else d

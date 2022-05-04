@@ -183,11 +183,23 @@ goIden i = case i of
   A.IdenAxiom a -> IdenAxiom (goName (a ^. A.axiomRefName))
   A.IdenInductive a -> IdenInductive (goName (a ^. A.inductiveRefName))
 
+goExpressionFunction :: forall r. A.Function -> Sem r FunctionExpression
+goExpressionFunction f = do
+  l' <- goParam (f ^. A.funParameter)
+  r' <- goExpression (f ^. A.funReturn)
+  return (FunctionExpression l' r')
+  where
+    goParam :: A.FunctionParameter -> Sem r Expression
+    goParam p
+      | isJust (p ^. A.paramName) = unsupported "named type parameters"
+      | isOmegaUsage (p ^. A.paramUsage) = goExpression (p ^. A.paramType)
+      | otherwise = unsupported "usages"
+
 goExpression :: A.Expression -> Sem r Expression
 goExpression e = case e of
   A.ExpressionIden i -> return (ExpressionIden (goIden i))
   A.ExpressionUniverse {} -> unsupported "universes in expression"
-  A.ExpressionFunction {} -> unsupported "function type in expressions"
+  A.ExpressionFunction f -> ExpressionFunction <$> goExpressionFunction f
   A.ExpressionApplication a -> ExpressionApplication <$> goApplication a
   A.ExpressionLiteral l -> return (ExpressionLiteral l)
 

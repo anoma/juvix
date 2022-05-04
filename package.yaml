@@ -39,6 +39,7 @@ dependencies:
 - prettyprinter == 1.7.*
 - prettyprinter-ansi-terminal == 1.1.*
 - process == 1.6.*
+- safe == 0.3.*
 - semirings == 0.6.*
 - singletons == 3.0.*
 - singletons-th == 3.1.*

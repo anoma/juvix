@@ -1,7 +1,6 @@
 module MiniJuvix.Syntax.MicroJuvix.Error.Pretty.Base where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Language (getLoc)
 import MiniJuvix.Syntax.MicroJuvix.Error.Types
 import MiniJuvix.Syntax.MicroJuvix.Language
 import MiniJuvix.Syntax.MicroJuvix.Pretty.Ann qualified as Micro
