@@ -55,11 +55,11 @@ jobs:
             ~/.stack
             main/.stack-work
             main/.hie
-          key: ${{ runner.os }}-build-${{ matrix.ghc }}-${{ hashFiles('main/src/**/*.hs', 'main/app/**/*.hs',  'main/test/**/*.hs', 'main/package.yaml', 'main/stack.yaml') }}
+          key: ${{ runner.os }}-v1-build-${{ matrix.ghc }}-${{ hashFiles('main/src/**/*.hs', 'main/app/**/*.hs',  'main/test/**/*.hs', 'main/package.yaml', 'main/stack.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-build-${{ matrix.ghc }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+            ${{ runner.os }}-v1-build-${{ matrix.ghc }}-
+            ${{ runner.os }}-v1-build-
+            ${{ runner.os }}-v1-
 
       - uses: haskell/actions/setup@v1
         name: Setup Haskell
@@ -98,7 +98,7 @@ jobs:
             ~/.stack
             main/.stack-work/
             main/.hie
-          key: ${{ runner.os }}-build-${{ matrix.ghc }}-
+          key: ${{ runner.os }}-v1-build-${{ matrix.ghc }}-
       - name: Checkout the main repository
         uses: actions/checkout@v2
         with:

@@ -1,5 +1,4 @@
 ghc-options:
   "$locals": -optP-Wno-nonportable-include-path
-resolver: nightly-2022-03-23
-allow-newer: true
+resolver: nightly-2022-05-03
 extra-deps: []
