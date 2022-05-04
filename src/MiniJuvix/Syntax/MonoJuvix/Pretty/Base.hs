@@ -146,7 +146,7 @@ instance PrettyCode Type where
 instance PrettyCode InductiveConstructorDef where
   ppCode c = do
     constructorName' <- ppCode (c ^. constructorName)
-    constructorParameters' <- mapM ppCode (c ^. constructorParameters)
+    constructorParameters' <- mapM ppCodeAtom (c ^. constructorParameters)
     return (hsep $ constructorName' : constructorParameters')
 
 indent' :: Member (Reader Options) r => Doc a -> Sem r (Doc a)
@@ -172,8 +172,8 @@ instance PrettyCode InductiveDef where
 instance PrettyCode ConstructorApp where
   ppCode c = do
     constr' <- ppCode (c ^. constrAppConstructor)
-    params' <- mapM ppCodeAtom (c ^. constrAppParameters)
-    return $ hsep $ constr' : params'
+    params' <- hsepMaybe <$> mapM ppCodeAtom (c ^. constrAppParameters)
+    return (constr' <+?> params')
 
 instance PrettyCode Pattern where
   ppCode p = case p of
