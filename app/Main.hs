@@ -6,17 +6,21 @@ import Commands.Extra
 import Commands.MicroJuvix
 import Commands.MiniHaskell
 import Commands.MonoJuvix
-import Commands.Termination as T
+import Commands.Termination as Termination
 import Control.Exception qualified as IO
 import Control.Monad.Extra
+import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Pipeline
 import MiniJuvix.Prelude hiding (Doc)
 import MiniJuvix.Prelude.Pretty hiding (Doc)
+import MiniJuvix.Syntax.Abstract.InfoTable qualified as Abstract
+import MiniJuvix.Syntax.Abstract.Language qualified as Abstract
 import MiniJuvix.Syntax.Abstract.Pretty qualified as Abstract
-import MiniJuvix.Syntax.Concrete.Language qualified as M
+import MiniJuvix.Syntax.Concrete.Language qualified as Concrete
 import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Highlight qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoper
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
@@ -24,8 +28,8 @@ import MiniJuvix.Syntax.MicroJuvix.Pretty qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as MicroTyped
 import MiniJuvix.Syntax.MiniHaskell.Pretty qualified as MiniHaskell
 import MiniJuvix.Syntax.MonoJuvix.Pretty qualified as Mono
-import MiniJuvix.Termination qualified as T
-import MiniJuvix.Termination.CallGraph qualified as A
+import MiniJuvix.Termination qualified as Termination
+import MiniJuvix.Termination.CallGraph qualified as Termination
 import MiniJuvix.Translation.AbstractToMicroJuvix qualified as Micro
 import MiniJuvix.Translation.MicroJuvixToMonoJuvix qualified as Mono
 import MiniJuvix.Translation.MonoJuvixToMiniHaskell qualified as MiniHaskell
@@ -288,7 +292,7 @@ mkScopePrettyOptions g ScopeOptions {..} =
       Scoper._optInlineImports = _scopeInlineImports
     }
 
-parseModuleIO :: FilePath -> IO (M.Module 'M.Parsed 'M.ModuleTop)
+parseModuleIO :: FilePath -> IO (Concrete.Module 'Concrete.Parsed 'Concrete.ModuleTop)
 parseModuleIO = fromRightIO id . Parser.runModuleParserIO
 
 minijuvixYamlFile :: FilePath
@@ -433,40 +437,46 @@ runCLI cli = do
       results <- runIO (upToAbstract (getEntryPoint root opts))
       let topModule = head (results ^. Abstract.resultModules)
           infotable = results ^. Abstract.resultTable
-          callMap0 = T.buildCallMap infotable topModule
+          callMap0 = Termination.buildCallMap infotable topModule
           callMap = case _callsFunctionNameFilter of
             Nothing -> callMap0
-            Just f -> T.filterCallMap f callMap0
-          opts' = T.callsPrettyOptions opts
+            Just f -> Termination.filterCallMap f callMap0
+          opts' = Termination.callsPrettyOptions opts
       renderStdOutAbs (Abstract.ppOut opts' callMap)
       putStrLn ""
     Termination (CallGraph opts@CallGraphOptions {..}) -> do
       results <- runIO (upToAbstract (getEntryPoint root opts))
       let topModule = head (results ^. Abstract.resultModules)
           infotable = results ^. Abstract.resultTable
-          callMap = T.buildCallMap infotable topModule
+          callMap = Termination.buildCallMap infotable topModule
           opts' =
             Abstract.defaultOptions
               { Abstract._optShowNameId = globalOptions ^. globalShowNameIds
               }
-          completeGraph = T.completeCallGraph callMap
-          filteredGraph = maybe completeGraph (`T.unsafeFilterGraph` completeGraph) _graphFunctionNameFilter
-          rEdges = T.reflexiveEdges filteredGraph
-
-          recBehav = map T.recursiveBehaviour rEdges
+          completeGraph = Termination.completeCallGraph callMap
+          filteredGraph = maybe completeGraph (`Termination.unsafeFilterGraph` completeGraph) _graphFunctionNameFilter
+          rEdges = Termination.reflexiveEdges filteredGraph
+          recBehav = map Termination.recursiveBehaviour rEdges
       renderStdOutAbs (Abstract.ppOut opts' filteredGraph)
       putStrLn ""
       forM_ recBehav $ \r -> do
-        let sopts =
+        let funName = Termination._recursiveBehaviourFun r
+            funRef = Abstract.FunctionRef (Scoper.unqualifiedSymbol funName)
+            funInfo = HashMap.lookupDefault impossible funRef (infotable ^. Abstract.infoFunctions)
+            markedTerminating = funInfo ^. (Abstract.functionInfoDef . Abstract.funDefTerminating)
+            sopts =
               Scoper.defaultOptions
                 { Scoper._optShowNameId = globalOptions ^. globalShowNameIds
                 }
-            n = toAnsiText' (Scoper.ppOut sopts (A._recursiveBehaviourFun r))
+            n = toAnsiText' (Scoper.ppOut sopts funName)
         renderStdOutAbs (Abstract.ppOut opts' r)
         putStrLn ""
-        case T.findOrder r of
-          Nothing -> putStrLn (n <> " Fails the termination checking") >> exitFailure
-          Just (T.LexOrder k) -> putStrLn (n <> " Terminates with order " <> show (toList k))
+        if
+            | markedTerminating -> putStrLn (n <> " Terminates by assumption ")
+            | otherwise ->
+                case Termination.findOrder r of
+                  Nothing -> putStrLn (n <> " Fails the termination checking") >> exitFailure
+                  Just (Termination.LexOrder k) -> putStrLn (n <> " Terminates with order " <> show (toList k))
         putStrLn ""
 
 main :: IO ()

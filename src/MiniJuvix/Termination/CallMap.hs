@@ -152,17 +152,8 @@ checkExpression ::
 checkExpression e =
   viewCall e >>= \case
     Just c -> do
-      h <- asks _infoFunctions
-      let fname = c ^. callRef
-          info = HashMap.lookupDefault impossible fname h
-          markedTerminating = info ^. (functionInfoDef . funDefTerminating)
-      if
-          | markedTerminating -> do
-              let cargs = map (\x -> (CallRow (Just (0, RLe)), snd x)) (c ^. callArgs)
-              registerCall $ FunCall fname cargs
-          | otherwise -> do
-              registerCall c
-              mapM_ (checkExpression . snd) (c ^. callArgs)
+      registerCall c
+      mapM_ (checkExpression . snd) (c ^. callArgs)
     Nothing -> case e of
       ExpressionApplication a -> checkApplication a
       ExpressionFunction f -> checkFunction f
