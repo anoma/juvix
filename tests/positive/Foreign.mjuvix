@@ -4,7 +4,7 @@ foreign ghc {};
 
 foreign ghc { import Foo.Bar };
 
-foreign agda { import Foo.Bar };
+foreign c { import Foo.Bar };
 
 foreign ghc { import Foo.Bar
   import Foo.Baz };

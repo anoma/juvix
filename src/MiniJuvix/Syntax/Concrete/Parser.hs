@@ -140,10 +140,7 @@ compileBlock = do
 --------------------------------------------------------------------------------
 
 backend :: Member InfoTableBuilder r => ParsecS r Backend
-backend =
-  ghc $> BackendGhc
-    <|> agda $> BackendAgda
-    <|> cBackend $> BackendC
+backend = ghc $> BackendGhc <|> cBackend $> BackendC
 
 foreignBlock :: Member InfoTableBuilder r => ParsecS r ForeignBlock
 foreignBlock = do

@@ -62,9 +62,6 @@ kwLambda = keyword Str.lambdaUnicode
 kwGhc :: Doc Ann
 kwGhc = keyword Str.ghc
 
-kwAgda :: Doc Ann
-kwAgda = keyword Str.agda
-
 kwC :: Doc Ann
 kwC = keyword Str.cBackend
 
@@ -288,7 +285,6 @@ instance SingI s => PrettyCode (Statement s) where
 instance PrettyCode Backend where
   ppCode = \case
     BackendGhc -> return kwGhc
-    BackendAgda -> return kwAgda
     BackendC -> return kwC
 
 instance SingI s => PrettyCode (Compile s) where

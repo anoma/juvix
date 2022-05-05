@@ -275,8 +275,5 @@ kwWildcard = keyword Str.underscore
 ghc :: Member InfoTableBuilder r => ParsecS r ()
 ghc = keyword Str.ghc
 
-agda :: Member InfoTableBuilder r => ParsecS r ()
-agda = keyword Str.agda
-
 cBackend :: Member InfoTableBuilder r => ParsecS r ()
 cBackend = keyword Str.cBackend

@@ -96,9 +96,6 @@ kwForeign = keyword Str.foreign_
 kwCompile :: Doc Ann
 kwCompile = keyword Str.compile
 
-kwAgda :: Doc Ann
-kwAgda = keyword Str.agda
-
 kwC :: Doc Ann
 kwC = keyword Str.cBackend
 
@@ -247,7 +244,6 @@ instance PrettyCode FunctionClause where
 instance PrettyCode Backend where
   ppCode = \case
     BackendGhc -> return kwGhc
-    BackendAgda -> return kwAgda
     BackendC -> return kwC
 
 instance PrettyCode ForeignBlock where
