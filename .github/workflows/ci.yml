@@ -76,7 +76,7 @@ jobs:
       - name: Build Haskell Project
         run: |
           cd main
-          make build
+          make ci-build
 
       - name: Download MiniJuvix-stdlib
         run: |
@@ -111,4 +111,4 @@ jobs:
         id: test
         run: |
           cd main
-          make test
+          make ci-test

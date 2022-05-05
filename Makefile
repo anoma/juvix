@@ -43,9 +43,12 @@ docs :
 build:
 	stack build --fast --jobs $(THREADS)
 
+.PHONY : ci-build
+ci-build:
+	stack build --fast --jobs $(THREADS) --pedantic
+
 build-watch:
 	stack build --fast --file-watch
-
 
 .PHONY : cabal
 cabal :
@@ -61,6 +64,10 @@ clean-full:
 .PHONY : test
 test:
 	stack test --fast --jobs $(THREADS)
+
+.PHONY : ci-test
+ci-test:
+	stack test --fast --jobs $(THREADS) --pedantic
 
 .PHONY : test-skip-slow
 test-skip-slow:

@@ -17,7 +17,6 @@ extra-source-files:
 - CHANGELOG.org
 
 dependencies:
-- aeson == 2.0.*
 - ansi-terminal == 0.11.*
 - base == 4.16.*
 - blaze-html == 0.9.*
@@ -60,15 +59,21 @@ dependencies:
 
 ghc-options:
 # Warnings
-- -Wall
-- -Wcompat
-- -Wderiving-defaults
-- -Widentities
-- -Wincomplete-patterns
-- -Wincomplete-record-updates
-- -Wincomplete-uni-patterns
-- -Wmissing-deriving-strategies
-- -Wredundant-constraints
+- -Weverything
+- -Wno-unused-packages
+- -Wno-missing-exported-signatures
+- -Wno-missing-import-lists
+- -Wno-missed-specialisations
+- -Wno-all-missed-specialisations
+- -Wno-unsafe
+- -Wno-safe
+- -Wno-missing-safe-haskell-mode
+- -Wno-missing-local-signatures
+- -Wno-monomorphism-restriction
+- -Wno-missing-kind-signatures
+- -Wno-missing-export-lists
+- -Wno-partial-fields
+
 # HIE Support
 - -fhide-source-paths
 - -fwrite-ide-info -hiedir=.hie
