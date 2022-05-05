@@ -170,7 +170,10 @@ renamePattern m = go
     go p = case p of
       PatternVariable v
         | Just v' <- m ^. at v -> PatternVariable v'
+      PatternConstructorApp a -> PatternConstructorApp (goApp a)
       _ -> p
+    goApp :: ConstructorApp -> ConstructorApp
+    goApp (ConstructorApp c ps) = ConstructorApp c (map go ps)
 
 inductiveTypeVarsAssoc :: Foldable f => InductiveDef -> f a -> HashMap VarName a
 inductiveTypeVarsAssoc def l
@@ -291,6 +294,14 @@ unfoldFunType t = case t of
   TypeFunction (Function l r) -> first (FunctionArgTypeType l :) (unfoldFunType r)
   TypeAbs (TypeAbstraction var r) -> first (FunctionArgTypeAbstraction var :) (unfoldFunType r)
   _ -> ([], t)
+
+unfoldFunConcreteType :: ConcreteType -> ([ConcreteType], ConcreteType)
+unfoldFunConcreteType = bimap (map mkConcreteType') mkConcreteType' . go . (^. unconcreteType)
+  where
+    go :: Type -> ([Type], Type)
+    go t = case t of
+      TypeFunction (Function l r) -> first (l :) (go r)
+      _ -> ([], t)
 
 unfoldTypeAbsType :: Type -> ([VarName], Type)
 unfoldTypeAbsType t = case t of

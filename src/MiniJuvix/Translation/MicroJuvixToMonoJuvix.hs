@@ -40,6 +40,9 @@ newtype ConcreteTable = ConcreteTable
   { _concreteTable :: HashMap PolyIden PolyIdenInfo
   }
 
+-- fst : Pair Nat (Pair Nat Nat) → Nat;
+-- fst (mkPair a b) ≔ a;
+
 makeLenses ''ConcreteTable
 makeLenses ''PolyIdenInfo
 makeLenses ''ConcreteIdenInfo
@@ -50,9 +53,10 @@ entryMonoJuvix ::
   Sem r MonoJuvixResult
 entryMonoJuvix i = do
   concreteTbl <- buildConcreteTable table typesTable
-  _resultModules <- runReader concreteTbl (mapM goModule (i ^. Micro.resultModules))
+  _resultModules <- runReader infoTable (runReader concreteTbl (mapM goModule (i ^. Micro.resultModules)))
   return MonoJuvixResult {..}
   where
+    infoTable = Micro.buildTable (i ^. Micro.resultModules)
     typesTable :: Micro.TypeCalls
     typesTable = collectTypeCalls i
     table :: Micro.InfoTable
@@ -157,7 +161,7 @@ buildConcreteTable info =
           modify (over concreteTable (over (at iden) (Just . addConcreteInfo k cc)))
 
 goModule ::
-  Members '[Error Err, Reader ConcreteTable, NameIdGen] r =>
+  Members '[Error Err, Reader ConcreteTable, NameIdGen, Reader Micro.InfoTable] r =>
   Micro.Module ->
   Sem r Module
 goModule Micro.Module {..} = do
@@ -172,14 +176,14 @@ unsupported :: Text -> a
 unsupported msg = error $ msg <> " not yet supported"
 
 goModuleBody ::
-  Members '[Error Err, Reader ConcreteTable, NameIdGen] r =>
+  Members '[Error Err, Reader ConcreteTable, NameIdGen, Reader Micro.InfoTable] r =>
   Micro.ModuleBody ->
   Sem r ModuleBody
 goModuleBody Micro.ModuleBody {..} =
   ModuleBody <$> concatMapM goStatement _moduleStatements
 
 goStatement ::
-  Members '[Error Err, Reader ConcreteTable, NameIdGen] r =>
+  Members '[Error Err, Reader ConcreteTable, NameIdGen, Reader Micro.InfoTable] r =>
   Micro.Statement ->
   Sem r [Statement]
 goStatement = \case
@@ -229,7 +233,7 @@ lookupPolyFunction ::
 lookupPolyFunction i = asks (^. concreteTable . at (PolyFunctionIden i))
 
 goFunctionDef ::
-  Members '[Reader ConcreteTable, NameIdGen] r =>
+  Members '[Reader ConcreteTable, NameIdGen, Reader Micro.InfoTable] r =>
   Micro.FunctionDef ->
   Sem r [FunctionDef]
 goFunctionDef def = do
@@ -240,7 +244,7 @@ goFunctionDef def = do
       -- The function is either never called and has a polymrphic type. We can ignore it.
       Nothing -> return []
       -- the function has a concrete type
-      Just {} -> pure <$> goFunctionDefConcrete def
+      Just {} -> pure <$> goFunctionDefConcrete Nothing def
 
 goInductive ::
   forall r.
@@ -255,7 +259,6 @@ goInductive def = do
       | null (def ^. Micro.inductiveParameters) -> pure <$> goInductiveDefConcrete def
       | otherwise -> return []
 
--- | TODO: This function can be made non-monadic
 goInductiveDefConcrete ::
   forall r.
   Members '[Reader ConcreteTable] r =>
@@ -328,26 +331,34 @@ goExpression = go
 
 goFunctionDefConcrete ::
   forall r.
-  Members '[Reader ConcreteTable] r =>
+  Members '[Reader ConcreteTable, Reader Micro.InfoTable] r =>
+  Maybe Name ->
   Micro.FunctionDef ->
   Sem r FunctionDef
-goFunctionDefConcrete d = do
-  type' <- goType (Micro.mkConcreteType' (d ^. Micro.funDefType))
+goFunctionDefConcrete n d = do
+  type' <- goType concreteTy
   clauses' <- mapM goClause (d ^. Micro.funDefClauses)
   return
     FunctionDef
-      { _funDefName = goName (d ^. Micro.funDefName),
+      { _funDefName = funName,
         _funDefClauses = clauses',
         _funDefType = type'
       }
   where
+    funName :: Name
+    funName = fromMaybe (goName (d ^. Micro.funDefName)) n
+    concreteTy :: Micro.ConcreteType
+    concreteTy = Micro.mkConcreteType' (d ^. Micro.funDefType)
+    patternTys :: [Micro.ConcreteType]
+    patternTys = fst (Micro.unfoldFunConcreteType concreteTy)
     goClause :: Micro.FunctionClause -> Sem r FunctionClause
     goClause c = do
       body' <- goExpression (c ^. Micro.clauseBody)
+      patterns' <- zipWithM goPattern' patternTys (c ^. Micro.clausePatterns)
       return
         FunctionClause
-          { _clauseName = goName (d ^. Micro.funDefName),
-            _clausePatterns = map goPattern (c ^. Micro.clausePatterns),
+          { _clauseName = funName,
+            _clausePatterns = patterns',
             _clauseBody = body'
           }
 
@@ -389,7 +400,7 @@ goInductiveDefPoly def poly
 
 goFunctionDefPoly ::
   forall r.
-  Members '[Reader ConcreteTable, NameIdGen] r =>
+  Members '[Reader ConcreteTable, NameIdGen, Reader Micro.InfoTable] r =>
   Micro.FunctionDef ->
   PolyIdenInfo ->
   Sem r [FunctionDef]
@@ -400,30 +411,33 @@ goFunctionDefPoly def poly
     (tyVars, tyTail) = Micro.unfoldTypeAbsType (def ^. Micro.funDefType)
     go :: ConcreteIdenInfo -> Sem r FunctionDef
     go i = do
-      _funDefType <- goType sig'
-      let _funDefName = i ^. concreteName
-      _funDefClauses <- mapM (goClause _funDefName) (def ^. Micro.funDefClauses)
-      return FunctionDef {..}
+      let funName = i ^. concreteName
+      _funDefClauses <- mapM goClause (def ^. Micro.funDefClauses)
+      goFunctionDefConcrete
+        (Just funName)
+        Micro.FunctionDef
+          { _funDefName = impossible,
+            _funDefType = sig' ^. Micro.unconcreteType,
+            _funDefClauses = _funDefClauses
+          }
       where
         concreteSubs :: Micro.ConcreteSubs
         concreteSubs = i ^. concreteTypeSubs
         concreteSubsE :: Micro.SubsE
         concreteSubsE = Micro.concreteSubsToSubsE concreteSubs
-        goClause :: Name -> Micro.FunctionClause -> Sem r FunctionClause
-        goClause funName c = do
+        goClause :: Micro.FunctionClause -> Sem r Micro.FunctionClause
+        goClause c = do
           pvars' <- mapM cloneName' pvars
           let localVarsRename :: Micro.Rename
               localVarsRename = HashMap.fromList (zipExact pvars pvars')
-              _clausePatterns = map (goPattern . Micro.renamePattern localVarsRename) patsTail
-          _clauseBody <-
-            goExpression
-              ( Micro.substitutionE
+              _clausePatterns = map (Micro.renamePattern localVarsRename) patsTail
+              _clauseBody =
+                Micro.substitutionE
                   (concreteSubsE <> Micro.renameToSubsE localVarsRename)
                   (c ^. Micro.clauseBody)
-              )
           return
-            FunctionClause
-              { _clauseName = funName,
+            Micro.FunctionClause
+              { _clauseName = impossible,
                 ..
               }
           where
@@ -434,14 +448,46 @@ goFunctionDefPoly def poly
         sig' :: Micro.ConcreteType
         sig' = Micro.substitutionConcrete (i ^. concreteTypeSubs) tyTail
 
-goPattern :: Micro.Pattern -> Pattern
-goPattern = \case
-  Micro.PatternVariable v -> PatternVariable (goName v)
-  Micro.PatternConstructorApp a -> PatternConstructorApp (goApp a)
-  Micro.PatternWildcard {} -> PatternWildcard
+goPattern' :: forall r. Members '[Reader ConcreteTable, Reader Micro.InfoTable] r => Micro.ConcreteType -> Micro.Pattern -> Sem r Pattern
+goPattern' ty = \case
+  Micro.PatternVariable v -> return (PatternVariable (goName v))
+  Micro.PatternConstructorApp capp -> PatternConstructorApp <$> goApp capp
+  Micro.PatternWildcard {} -> return PatternWildcard
   where
-    goApp :: Micro.ConstructorApp -> ConstructorApp
-    goApp (Micro.ConstructorApp n ps) = ConstructorApp (goName n) (map goPattern ps)
+    goApp :: Micro.ConstructorApp -> Sem r ConstructorApp
+    goApp capp = case ty ^. Micro.unconcreteType of
+      Micro.TypeIden Micro.TypeIdenInductive {} -> do
+        let c' :: Name
+            c' = goName (capp ^. Micro.constrAppConstructor)
+        cInfo <- Micro.lookupConstructor (capp ^. Micro.constrAppConstructor)
+        let psTysConcrete = map Micro.mkConcreteType' (cInfo ^. Micro.constructorInfoArgs)
+        ps' <- zipWithM goPattern' psTysConcrete (capp ^. Micro.constrAppParameters)
+        return (ConstructorApp c' ps')
+      Micro.TypeApp a -> do
+        let getInductive :: Micro.Type -> Micro.Name
+            getInductive = \case
+              Micro.TypeIden (Micro.TypeIdenInductive i) -> i
+              _ -> impossible
+            (ind, instanceTypes) :: (Micro.Name, NonEmpty Micro.ConcreteType) =
+              bimap getInductive (Micro.mkConcreteType' <$>) (Micro.unfoldTypeApplication a)
+        res <- lookupPolyConstructor (capp ^. Micro.constrAppConstructor)
+        let c' :: Name
+            c' = fromJust $ do
+              poly <- res
+              info <- poly ^. polyConcretes . at instanceTypes
+              return (info ^. concreteName)
+        cInfo <- Micro.lookupConstructor (capp ^. Micro.constrAppConstructor)
+        iInfo <- Micro.lookupInductive ind
+        let psTys = cInfo ^. Micro.constructorInfoArgs
+            tyParamVars :: [Micro.VarName]
+            tyParamVars = iInfo ^.. Micro.inductiveInfoDef . Micro.inductiveParameters . each . Micro.inductiveParamName
+            subs :: Micro.ConcreteSubs
+            subs = HashMap.fromList (zipExact tyParamVars (toList instanceTypes))
+            psTysConcrete :: [Micro.ConcreteType]
+            psTysConcrete = map (Micro.substitutionConcrete subs) psTys
+        ps' <- zipWithM goPattern' psTysConcrete (capp ^. Micro.constrAppParameters)
+        return (ConstructorApp c' ps')
+      _ -> impossible
 
 goType ::
   forall r.
