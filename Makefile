@@ -62,6 +62,10 @@ clean-full:
 test:
 	stack test --fast --jobs $(THREADS)
 
+.PHONY : test-skip-slow
+test-skip-slow:
+	stack test --fast --jobs $(THREADS) --ta '-p "! /slow tests/"'
+
 .PHONY : test-watch
 test-watch:
 	stack test --fast --jobs $(THREADS) --file-watch

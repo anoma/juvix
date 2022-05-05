@@ -1,8 +1,6 @@
 module Scope.Positive where
 
 import Base
-import Data.Algorithm.Diff
-import Data.Algorithm.DiffOutput
 import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Internal.NameIdGen
 import MiniJuvix.Pipeline
@@ -10,7 +8,6 @@ import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text qualified as M
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Utils
-import Text.Show.Pretty hiding (Html)
 
 data PosTest = PosTest
   { _name :: String,
@@ -75,17 +72,6 @@ testDescr PosTest {..} =
             assertEqDiff "check: parse . pretty . scope . parse = parse" pmodules pmodules'
             assertEqDiff "check: parse . pretty . parse = parse" pmodules parsedPrettyModules
         }
-
-assertEqDiff :: (Eq a, Show a) => String -> a -> a -> Assertion
-assertEqDiff msg a b
-  | a == b = return ()
-  | otherwise = do
-      putStrLn (pack $ ppDiff (getGroupedDiff pa pb))
-      putStrLn "End diff"
-      fail msg
-  where
-    pa = lines $ ppShow a
-    pb = lines $ ppShow b
 
 allTests :: TestTree
 allTests =

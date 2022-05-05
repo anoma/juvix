@@ -1,7 +1,7 @@
 module HelloWorld;
 
 -- the foreign keyword has two arguments:
--- 1. The name of the backend. Only ghc is available now.
+-- 1. The name of the backend.
 -- 2. A string. For ease of use, the string is given between braces
 -- and can have multiple lines. Space at the beginning and at the end is ignored.
 -- The given code is inlined verbatim when compiling to the given backend.
@@ -9,26 +9,37 @@ module HelloWorld;
 foreign ghc {
 
 import Data.Text
-import Data.Text.IO
+
+};
+
+foreign c {
+
+#include <stdio.h>
 
 };
 
 axiom Action : Type;
+
 compile Action {
  ghc ↦ "IO ()";
+ c ↦ "int";
 };
 
 axiom String : Type;
-axiom putStr : String -> Action;
 
--- the compile keyword has three arguments:
--- 1. The name of the MiniJuvix Axiom.
--- 2. The name of the backend.
--- 3. The thing we should inline when compiling this
--- axiom to the given backend.
+compile String {
+  ghc ↦ "[Char]";
+  c ↦ "char*";
+};
 
+axiom putStrLn : String -> Action;
 
--- main : Action;
--- main := putStr "hello world";
+compile putStrLn {
+  ghc ↦ "putStrLn";
+  c ↦ "puts";
+};
+
+main : Action;
+main := putStrLn "hello world";
 
 end;

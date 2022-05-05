@@ -4,6 +4,7 @@ module Main (main) where
 
 import Commands.Extra
 import Commands.MicroJuvix
+import Commands.MiniC
 import Commands.MiniHaskell
 import Commands.MonoJuvix
 import Commands.Termination as Termination
@@ -29,9 +30,9 @@ import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as MicroTyped
 import MiniJuvix.Syntax.MiniHaskell.Pretty qualified as MiniHaskell
 import MiniJuvix.Syntax.MonoJuvix.Pretty qualified as Mono
 import MiniJuvix.Termination qualified as Termination
-import MiniJuvix.Termination.CallGraph qualified as Termination
 import MiniJuvix.Translation.AbstractToMicroJuvix qualified as Micro
 import MiniJuvix.Translation.MicroJuvixToMonoJuvix qualified as Mono
+import MiniJuvix.Translation.MonoJuvixToMiniC qualified as MiniC
 import MiniJuvix.Translation.MonoJuvixToMiniHaskell qualified as MiniHaskell
 import MiniJuvix.Translation.ScopedToAbstract qualified as Abstract
 import MiniJuvix.Utils.Version (runDisplayVersion)
@@ -52,6 +53,7 @@ data Command
   | Html HtmlOptions
   | Termination TerminationCommand
   | MiniHaskell MiniHaskellOptions
+  | MiniC MiniCOptions
   | MicroJuvix MicroJuvixCommand
   | MonoJuvix MonoJuvixOptions
   | DisplayVersion
@@ -209,6 +211,7 @@ parseCommand =
             commandMonoJuvix,
             commandMicroJuvix,
             commandMiniHaskell,
+            commandMiniC,
             commandHighlight
           ]
       )
@@ -239,6 +242,15 @@ parseCommand =
           info
             (MiniHaskell <$> parseMiniHaskell)
             (progDesc "Translate a MiniJuvix file to MiniHaskell")
+
+    commandMiniC :: Mod CommandFields Command
+    commandMiniC = command "minic" minfo
+      where
+        minfo :: ParserInfo Command
+        minfo =
+          info
+            (MiniC <$> parseMiniC)
+            (progDesc "Translate a MiniJuvix file to MiniC")
 
     commandHighlight :: Mod CommandFields Command
     commandHighlight = command "highlight" minfo
@@ -349,6 +361,9 @@ instance HasEntryPoint MonoJuvixOptions where
 instance HasEntryPoint MiniHaskellOptions where
   getEntryPoint root = EntryPoint root . pure . _mhaskellInputFile
 
+instance HasEntryPoint MiniCOptions where
+  getEntryPoint root = EntryPoint root . pure . _miniCInputFile
+
 instance HasEntryPoint CallsOptions where
   getEntryPoint root = EntryPoint root . pure . _callsInputFile
 
@@ -433,6 +448,9 @@ runCLI cli = do
     MiniHaskell o -> do
       minihaskell <- head . (^. MiniHaskell.resultModules) <$> runIO (upToMiniHaskell (getEntryPoint root o))
       renderStdOutMini (MiniHaskell.ppOutDefault minihaskell)
+    MiniC o -> do
+      miniC <- (^. MiniC.resultCCode) <$> runIO (upToMiniC (getEntryPoint root o))
+      putStrLn miniC
     Termination (Calls opts@CallsOptions {..}) -> do
       results <- runIO (upToAbstract (getEntryPoint root opts))
       let topModule = head (results ^. Abstract.resultModules)

@@ -53,7 +53,7 @@ If the installation succeeds, you must be able to run the =minijuvix=
 command from any location. To get the complete list of commands, please
 run =minijuvix --help=.
 
-- To test everything works correctly, you can run the following command:
+- To test everything works correctly, you can run the following command. You will need to have [[https://emscripten.org][emscripten]] and [[https://wasmer.io][wasmer]] installed.
 
 #+begin_src shell
   $ stack test

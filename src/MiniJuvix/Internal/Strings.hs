@@ -158,6 +158,9 @@ ghc = "ghc"
 agda :: IsString s => s
 agda = "agda"
 
+cBackend :: IsString s => s
+cBackend = "c"
+
 terminating :: IsString s => s
 terminating = "terminating"
 

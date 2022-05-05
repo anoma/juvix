@@ -6,7 +6,6 @@ module MiniJuvix.Syntax.MonoJuvix.Language
 where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Backends
 import MiniJuvix.Syntax.Concrete.Language qualified as C
 import MiniJuvix.Syntax.Concrete.Scoped.Name (NameId (..))
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
@@ -63,13 +62,7 @@ data Statement
   = StatementInductive InductiveDef
   | StatementFunction FunctionDef
   | StatementForeign ForeignBlock
-  | StatementCompile Compile
   | StatementAxiom AxiomDef
-
-data Compile = Compile
-  { _compileName :: Name,
-    _compileBackendItems :: [BackendItem]
-  }
 
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
@@ -159,7 +152,6 @@ makeLenses ''ModuleBody
 makeLenses ''Application
 makeLenses ''InductiveConstructorDef
 makeLenses ''ConstructorApp
-makeLenses ''Compile
 
 instance HasAtomicity Application where
   atomicity = const (Aggregate appFixity)

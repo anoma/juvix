@@ -1,0 +1,29 @@
+module Input;
+
+foreign c {
+  #include <stdio.h>
+};
+
+axiom String : Type;
+
+compile String {
+  c ↦ "char*";
+};
+
+axiom Action : Type;
+
+compile Action {
+  c ↦ "int";
+};
+
+axiom put-str-ln : String → Action;
+
+compile put-str-ln {
+  ghc ↦ "putStrLn";
+  c ↦ "puts";
+};
+
+main : Action;
+main ≔ put-str-ln "hello world!";
+
+end;

@@ -1,0 +1,97 @@
+module Input;
+
+foreign c {
+  #include <stdio.h>
+};
+
+--------------------------------------------------------------------------------
+-- Booleans
+--------------------------------------------------------------------------------
+
+inductive Bool {
+  true : Bool;
+  false : Bool;
+};
+
+--------------------------------------------------------------------------------
+-- Strings
+--------------------------------------------------------------------------------
+
+axiom String : Type;
+
+compile String {
+  ghc ↦ "[Char]";
+  c ↦ "char*";
+};
+
+--------------------------------------------------------------------------------
+-- IO
+--------------------------------------------------------------------------------
+
+axiom Action : Type;
+
+compile Action {
+  ghc ↦ "IO ()";
+  c ↦ "int";
+};
+
+foreign c {
+  int sequence(int a, int b) {
+    return a + b;
+  \}
+
+  int putStr(char* s) {
+    return fputs(s, stdout);
+  \}
+};
+
+infixl 1 >>;
+axiom >> : Action → Action → Action;
+
+compile >> {
+  ghc ↦ "(>>)";
+  c ↦ "sequence";
+};
+
+axiom put-str : String → Action;
+
+compile put-str {
+  ghc ↦ "putStr";
+  c ↦ "putStr";
+};
+
+axiom put-str-ln : String → Action;
+
+compile put-str-ln {
+  ghc ↦ "putStrLn";
+  c ↦ "puts";
+};
+
+bool-to-str : Bool → String;
+bool-to-str true ≔ "True";
+bool-to-str false ≔ "False";
+
+
+--------------------------------------------------------------------------------
+-- Pair
+--------------------------------------------------------------------------------
+
+inductive Pair (A : Type) (B : Type) {
+ mkPair : A → B → Pair A B;
+};
+
+fst : (A : Type) → (B : Type) → Pair A B → A;
+fst _ _ (mkPair a b) ≔ a;
+
+--------------------------------------------------------------------------------
+-- Main
+--------------------------------------------------------------------------------
+
+fst-of-pair : Action;
+fst-of-pair ≔ (put-str "fst (True, False) = ")
+               >> put-str-ln (bool-to-str (fst Bool Bool (mkPair Bool Bool true false)));
+
+main : Action;
+main ≔ fst-of-pair;
+
+end;

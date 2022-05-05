@@ -46,10 +46,9 @@ integer = do
     Nothing -> return nat
     _ -> return (-nat)
 
--- | TODO allow escaping { inside the string using \{
-bracedString :: MonadParsec e Text m => m Text
+bracedString :: forall e m. MonadParsec e Text m => m Text
 bracedString =
-  Text.strip . unIndent . pack <$> (char '{' >> manyTill anySingle (char '}'))
+  Text.strip . unIndent . pack <$> (char '{' >> manyTill (P.try escaped <|> anySingle) (char '}'))
   where
     unIndent :: Text -> Text
     unIndent t = Text.unlines (Text.drop (fromMaybe 0 (indentIdx t)) <$> Text.lines t)
@@ -57,6 +56,10 @@ bracedString =
     indentIdx = minimumMay . mapMaybe firstNonBlankChar . Text.lines
     firstNonBlankChar :: Text -> Maybe Int
     firstNonBlankChar = Text.findIndex (not . isSpace)
+    escaped :: m Char
+    escaped = do
+      void (char '\\')
+      char '}'
 
 string :: MonadParsec e Text m => m Text
 string = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
@@ -274,3 +277,6 @@ ghc = keyword Str.ghc
 
 agda :: Member InfoTableBuilder r => ParsecS r ()
 agda = keyword Str.agda
+
+cBackend :: Member InfoTableBuilder r => ParsecS r ()
+cBackend = keyword Str.cBackend

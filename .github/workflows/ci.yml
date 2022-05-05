@@ -103,6 +103,10 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: main
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v11
+      - name: Setup Wasmer
+        uses: wasmerio/setup-wasmer@v1
       - name: Test suite
         id: test
         run: |

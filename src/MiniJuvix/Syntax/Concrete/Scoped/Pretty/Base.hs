@@ -6,6 +6,7 @@ module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base
 where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
+import Data.Text qualified as T
 import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Language
@@ -63,6 +64,9 @@ kwGhc = keyword Str.ghc
 
 kwAgda :: Doc Ann
 kwAgda = keyword Str.agda
+
+kwC :: Doc Ann
+kwC = keyword Str.cBackend
 
 kwWhere :: Doc Ann
 kwWhere = keyword Str.where_
@@ -285,6 +289,7 @@ instance PrettyCode Backend where
   ppCode = \case
     BackendGhc -> return kwGhc
     BackendAgda -> return kwAgda
+    BackendC -> return kwC
 
 instance SingI s => PrettyCode (Compile s) where
   ppCode Compile {..} = do
@@ -297,9 +302,12 @@ instance PrettyCode ForeignBlock where
     _foreignBackend' <- ppCode _foreignBackend
     return $
       kwForeign <+> _foreignBackend' <+> lbrace <> line
-        <> pretty _foreignCode
+        <> pretty (escape _foreignCode)
         <> line
         <> rbrace
+    where
+      escape :: Text -> Text
+      escape = T.replace "}" "\\}"
 
 instance PrettyCode BackendItem where
   ppCode BackendItem {..} = do

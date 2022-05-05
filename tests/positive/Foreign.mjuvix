@@ -24,4 +24,14 @@ foreign ghc {
      import Foo.Baz
 };
 
+foreign ghc {
+  data Foo = Foo { _unFoo :: Int \} -- \\ test
+};
+
+foreign ghc {
+  data Foo = Foo {
+      _unFoo :: Int
+  \}
+};
+
 end;

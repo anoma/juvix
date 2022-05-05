@@ -18,6 +18,7 @@ import MiniJuvix.Syntax.MicroJuvix.MicroJuvixTypedResult qualified as MicroJuvix
 import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as MicroJuvix
 import MiniJuvix.Translation.AbstractToMicroJuvix qualified as MicroJuvix
 import MiniJuvix.Translation.MicroJuvixToMonoJuvix qualified as MonoJuvix
+import MiniJuvix.Translation.MonoJuvixToMiniC qualified as MiniC
 import MiniJuvix.Translation.MonoJuvixToMiniHaskell qualified as MiniHaskell
 import MiniJuvix.Translation.ScopedToAbstract qualified as Abstract
 
@@ -75,6 +76,10 @@ upToMiniHaskell ::
   Members '[Files, NameIdGen, Error AJuvixError] r => EntryPoint -> Sem r MiniHaskell.MiniHaskellResult
 upToMiniHaskell = upToMonoJuvix >=> pipelineMiniHaskell
 
+upToMiniC ::
+  Members '[Files, NameIdGen, Error AJuvixError] r => EntryPoint -> Sem r MiniC.MiniCResult
+upToMiniC = upToMonoJuvix >=> pipelineMiniC
+
 --------------------------------------------------------------------------------
 
 pipelineParser :: Members '[Files, Error AJuvixError] r => EntryPoint -> Sem r Parser.ParserResult
@@ -112,3 +117,9 @@ pipelineMiniHaskell ::
   MonoJuvix.MonoJuvixResult ->
   Sem r MiniHaskell.MiniHaskellResult
 pipelineMiniHaskell = mapError (toAJuvixError @Text) . MiniHaskell.entryMiniHaskell
+
+pipelineMiniC ::
+  Members '[Files, Error AJuvixError] r =>
+  MonoJuvix.MonoJuvixResult ->
+  Sem r MiniC.MiniCResult
+pipelineMiniC = mapError (toAJuvixError @Text) . MiniC.entryMiniC

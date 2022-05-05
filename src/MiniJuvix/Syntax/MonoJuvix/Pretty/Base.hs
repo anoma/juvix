@@ -79,6 +79,9 @@ kwCompile = keyword Str.compile
 kwAgda :: Doc Ann
 kwAgda = keyword Str.agda
 
+kwC :: Doc Ann
+kwC = keyword Str.cBackend
+
 kwGhc :: Doc Ann
 kwGhc = keyword Str.ghc
 
@@ -197,6 +200,7 @@ instance PrettyCode Backend where
   ppCode = \case
     BackendGhc -> return kwGhc
     BackendAgda -> return kwAgda
+    BackendC -> return kwC
 
 instance PrettyCode ForeignBlock where
   ppCode ForeignBlock {..} = do
@@ -206,12 +210,6 @@ instance PrettyCode ForeignBlock where
         <> pretty _foreignCode
         <> line
         <> rbrace
-
-instance PrettyCode Compile where
-  ppCode Compile {..} = do
-    compileName' <- ppCode _compileName
-    compileBackendItems' <- ppBlock _compileBackendItems
-    return $ kwCompile <+> compileName' <+> compileBackendItems'
 
 instance PrettyCode AxiomDef where
   ppCode AxiomDef {..} = do
@@ -225,7 +223,6 @@ instance PrettyCode Statement where
     StatementFunction f -> ppCode f
     StatementInductive f -> ppCode f
     StatementAxiom f -> ppCode f
-    StatementCompile f -> ppCode f
 
 instance PrettyCode ModuleBody where
   ppCode m = do
