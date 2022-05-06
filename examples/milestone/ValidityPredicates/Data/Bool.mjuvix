@@ -1,0 +1,60 @@
+module Data.Bool;
+
+--------------------------------------------------------------------------------
+-- Booleans
+--------------------------------------------------------------------------------
+
+inductive Bool {
+  true : Bool;
+  false : Bool;
+};
+
+infixr 2 ||;
+|| : Bool → Bool → Bool;
+|| false a ≔ a;
+|| true _ ≔ true;
+
+infixr 3 &&;
+&& : Bool → Bool → Bool;
+&& false _ ≔ false;
+&& true a ≔ a;
+
+if : (A : Type) → Bool → A → A → A;
+if _ true a _ ≔ a;
+if _ false _ b ≔ b;
+
+--------------------------------------------------------------------------------
+-- Backend Booleans
+--------------------------------------------------------------------------------
+
+axiom BackendBool : Type;
+compile BackendBool {
+  ghc ↦ "Bool";
+};
+
+axiom backend-true : BackendBool;
+compile backend-true {
+  ghc ↦ "True";
+};
+
+axiom backend-false : BackendBool;
+compile backend-false {
+  ghc ↦ "False";
+};
+
+
+foreign ghc {
+  bool :: Bool -> a -> a -> a
+  bool True x _ = x
+  bool False _ y = y
+};
+
+axiom bool : BackendBool → Bool → Bool → Bool;
+compile bool {
+  ghc ↦ "bool";
+};
+
+from-backend-bool : BackendBool → Bool;
+from-backend-bool bb ≔ bool bb true false;
+
+end;

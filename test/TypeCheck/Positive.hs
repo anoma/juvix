@@ -48,9 +48,9 @@ tests =
       "MiniHaskell"
       "HelloWorld.mjuvix",
     PosTest
-      "GHC backend SimpleFungibleToken"
-      "VP"
-      "SimpleFungibleToken.mjuvix",
+      "GHC backend MonoSimpleFungibleToken"
+      "FullExamples"
+      "MonoSimpleFungibleToken.mjuvix",
     PosTest
       "Axiom"
       "."

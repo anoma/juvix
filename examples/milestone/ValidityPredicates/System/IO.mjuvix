@@ -1,0 +1,32 @@
+module System.IO;
+
+--------------------------------------------------------------------------------
+-- Actions
+--------------------------------------------------------------------------------
+
+axiom Action : Type;
+compile Action {
+ ghc ↦ "IO ()";
+};
+
+axiom putStr : String → Action;
+compile putStr {
+  ghc ↦ "putStr";
+};
+
+axiom putStrLn : String → Action;
+compile putStrLn {
+  ghc ↦ "putStrLn";
+};
+
+infixl 1 >>;
+axiom >> : Action → Action → Action;
+compile >> {
+  ghc ↦ "(>>)";
+};
+
+show-result : Bool → String;
+show-result true ≔ "OK";
+show-result false ≔ "FAIL";
+
+end;

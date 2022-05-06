@@ -1,0 +1,24 @@
+module Data.String;
+
+import Data.Bool;
+open Data.Bool;
+
+--------------------------------------------------------------------------------
+-- Strings
+--------------------------------------------------------------------------------
+
+axiom String : Type;
+compile String {
+  ghc ↦ "[Char]";
+};
+
+axiom eqString : String → String → BackendBool;
+compile eqString  {
+  ghc ↦ "(==)";
+};
+
+infix 4 ==String;
+==String : String → String → Bool;
+==String s1 s2 ≔ from-backend-bool (eqString s1 s2);
+
+end;

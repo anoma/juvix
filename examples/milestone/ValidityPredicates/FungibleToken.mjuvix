@@ -1,0 +1,51 @@
+module FungibleToken;
+
+import Anoma.Base;
+open Anoma.Base;
+
+import Prelude;
+open Prelude;
+
+--------------------------------------------------------------------------------
+-- Misc
+--------------------------------------------------------------------------------
+
+pair-from-optionString : (String → Pair Int Bool) → Maybe String → Pair Int Bool;
+pair-from-optionString ≔ maybe String (Pair Int Bool) (mkPair Int Bool 0 false);
+
+check-result : Pair Int Bool → Bool;
+check-result (mkPair change all-checked) ≔ (change ==Int 0) && all-checked;
+
+--------------------------------------------------------------------------------
+-- Validity Predicate
+--------------------------------------------------------------------------------
+
+change-from-key : String → Int;
+change-from-key key ≔ unwrap-default (read-post key)
+                    - unwrap-default (read-pre key);
+
+check-vp : List String → String → Int → String → Pair Int Bool;
+check-vp verifiers key change owner ≔
+    if _
+      -- make sure the spender approved the transaction
+      (change-from-key key < 0)
+        (mkPair _ _ (change + (change-from-key key))
+                (elem _ (==String) owner verifiers))
+        (mkPair _ _ (change + (change-from-key key)) true);
+
+check-keys : String → List String → Pair Int Bool → String → Pair Int Bool;
+check-keys token verifiers (mkPair change is-success) key ≔
+    if _
+        is-success
+        (pair-from-optionString (check-vp verifiers key change)
+           (is-balance-key token key))
+        (mkPair _ _ 0 false);
+
+vp : String → List String → List String → Bool;
+vp token keys-changed verifiers ≔
+    check-result
+        (foldl _ _
+            (check-keys token verifiers)
+            (mkPair _ _ 0 true)
+            keys-changed);
+end;

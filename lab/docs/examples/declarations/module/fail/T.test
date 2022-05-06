@@ -1,4 +1,0 @@
-$ stack -- exec minijuvix scope ./../examples/T.mjuvix
->2
-minijuvix: examples/T.mjuvix/A.mjuvix: openFile: inappropriate type (Not a directory)
->= 1

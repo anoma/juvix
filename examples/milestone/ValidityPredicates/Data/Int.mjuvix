@@ -1,0 +1,46 @@
+module Data.Int;
+
+import Data.Bool;
+open Data.Bool;
+
+--------------------------------------------------------------------------------
+-- Integers
+--------------------------------------------------------------------------------
+
+axiom Int : Type;
+compile Int {
+  ghc ↦ "Int";
+};
+
+infix 4 <';
+axiom <' : Int → Int → BackendBool;
+compile <' {
+  ghc ↦ "(<)";
+};
+
+infix 4 <;
+< : Int → Int → Bool;
+< i1 i2 ≔ from-backend-bool (i1 <' i2);
+
+axiom eqInt : Int → Int → BackendBool;
+compile eqInt {
+  ghc ↦ "(==)";
+};
+
+infix 4 ==Int;
+==Int : Int → Int → Bool;
+==Int i1 i2 ≔ from-backend-bool (eqInt i1 i2);
+
+infixl 6 -;
+axiom - : Int -> Int -> Int;
+compile - {
+  ghc ↦ "(-)";
+};
+
+infixl 6 +;
+axiom + : Int -> Int -> Int;
+compile + {
+  ghc ↦ "(+)";
+};
+
+end;

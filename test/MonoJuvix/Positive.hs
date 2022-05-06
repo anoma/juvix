@@ -37,6 +37,6 @@ tests =
       "Polymorphism.mjuvix",
     PosTest
       "Polymorphic Simple Fungible Token"
-      "VP"
+      "FullExamples"
       "PolySimpleFungibleToken.mjuvix"
   ]

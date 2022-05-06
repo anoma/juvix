@@ -1,0 +1,41 @@
+module Anoma.Base;
+
+foreign ghc {
+  import Anoma.Base
+};
+
+import Prelude;
+open Prelude;
+
+--------------------------------------------------------------------------------
+-- Anoma
+--------------------------------------------------------------------------------
+
+axiom readPre : String → Int;
+compile readPre {
+  ghc ↦ "readPre";
+};
+
+axiom readPost : String → Int;
+compile readPost {
+  ghc ↦ "readPost";
+};
+
+axiom isBalanceKey : String → String → String;
+compile isBalanceKey {
+  ghc ↦ "isBalanceKey";
+};
+
+read-pre : String → Maybe Int;
+read-pre s ≔ from-int (readPre s);
+
+read-post : String → Maybe Int;
+read-post s ≔ from-int (readPost s);
+
+is-balance-key : String → String → Maybe String;
+is-balance-key token key ≔ from-string (isBalanceKey token key);
+
+unwrap-default : Maybe Int → Int;
+unwrap-default o ≔ maybe-int 0 o;
+
+end;

@@ -1,0 +1,16 @@
+module Data.Maybe;
+
+--------------------------------------------------------------------------------
+-- Maybe
+--------------------------------------------------------------------------------
+
+inductive Maybe (A : Type) {
+ nothing : Maybe A;
+ just : A → Maybe A;
+};
+
+maybe : (A : Type) → (B : Type) → B → (A → B) → Maybe A → B;
+maybe _ _ b _ nothing ≔ b;
+maybe _ _ _ f (just x) ≔ f x;
+
+end;

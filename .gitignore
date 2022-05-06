@@ -66,3 +66,6 @@ docs/*.html
 /src/MiniJuvix/Utils/OldParser.hs
 CHANGELOG.md
 UPDATES-FOR-CHANGELOG.org
+
+# C Code generation
+*.wasm
