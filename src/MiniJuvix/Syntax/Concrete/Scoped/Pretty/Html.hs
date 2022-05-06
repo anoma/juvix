@@ -30,6 +30,7 @@ genHtml opts recursive theme entry = do
     allModules
       | recursive = toList $ getAllModules entry
       | otherwise = pure entry
+    htmlPath :: FilePath
     htmlPath = "html"
 
     copyAssetFiles :: IO ()
@@ -37,9 +38,11 @@ genHtml opts recursive theme entry = do
       createDirectoryIfMissing True toAssetsDir
       mapM_ cpFile assetFiles
       where
+        fromAssetsDir :: FilePath
         fromAssetsDir = $(assetsDir)
         toAssetsDir = htmlPath </> "assets"
         cpFile (fromDir, name, toDir) = copyFile (fromDir </> name) (toDir </> name)
+        assetFiles :: [(FilePath, FilePath, FilePath)]
         assetFiles =
           [ (fromAssetsDir, name, toAssetsDir)
             | name <-
@@ -55,7 +58,7 @@ genHtml opts recursive theme entry = do
       putStrLn $ "Writing " <> pack htmlFile
       Text.writeFile htmlFile (genModule opts theme m)
       where
-        htmlFile = topModulePathToDottedPath (S._nameConcrete (_modulePath m)) <.> ".html"
+        htmlFile = topModulePathToDottedPath (m ^. modulePath . S.nameConcrete) <.> ".html"
 
 genModule :: Options -> Theme -> Module 'Scoped 'ModuleTop -> Text
 genModule opts theme m =

@@ -34,7 +34,7 @@ instance PrettyCode NameId where
 
 instance PrettyCode Name where
   ppCode n = do
-    showNameId <- asks _optShowNameId
+    showNameId <- asks (^. optShowNameId)
     uid <-
       if
           | showNameId -> Just . ("@" <>) <$> ppCode (n ^. nameId)
@@ -182,7 +182,7 @@ instance PrettyCode InductiveConstructorDef where
 
 indent' :: Member (Reader Options) r => Doc a -> Sem r (Doc a)
 indent' d = do
-  i <- asks _optIndent
+  i <- asks (^. optIndent)
   return $ indent i d
 
 ppBlock ::
@@ -204,14 +204,10 @@ instance PrettyCode InductiveParameter where
 instance PrettyCode InductiveDef where
   ppCode d = do
     inductiveName' <- ppCode (d ^. inductiveName)
-    params <- hsep' <$> mapM ppCode (d ^. inductiveParameters)
+    params <- hsepMaybe <$> mapM ppCode (d ^. inductiveParameters)
     inductiveConstructors' <- mapM ppCode (d ^. inductiveConstructors)
     rhs <- indent' $ align $ concatWith (\a b -> a <> line <> kwPipe <+> b) inductiveConstructors'
     return $ kwData <+> inductiveName' <+?> params <+> kwEquals <> line <> rhs
-    where
-      hsep' l
-        | null l = Nothing
-        | otherwise = Just (hsep l)
 
 instance PrettyCode ConstructorApp where
   ppCode c = do
@@ -313,6 +309,7 @@ instance PrettyCode TypeCallsMap where
     elems' <- mapM ppCodeElem (sortOn fst elems)
     return $ title <> line <> vsep elems' <> line
     where
+      ppCodeElem :: Member (Reader Options) r => (Caller, TypeCall) -> Sem r (Doc Ann)
       ppCodeElem (caller, t) = do
         caller' <- ppCode caller
         t' <- ppCode t

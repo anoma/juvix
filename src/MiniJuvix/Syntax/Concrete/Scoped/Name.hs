@@ -23,10 +23,12 @@ data IsConcrete = NotConcrete | Concrete
 $(genSingletons [''IsConcrete])
 
 data AbsModulePath = AbsModulePath
-  { absTopModulePath :: C.TopModulePath,
-    absLocalPath :: [C.Symbol]
+  { _absTopModulePath :: C.TopModulePath,
+    _absLocalPath :: [C.Symbol]
   }
   deriving stock (Show, Eq, Generic)
+
+makeLenses ''AbsModulePath
 
 topModulePathToAbsPath :: C.TopModulePath -> AbsModulePath
 topModulePathToAbsPath p = AbsModulePath p []
@@ -37,15 +39,15 @@ instance Hashable AbsModulePath
 -- In other words, tells whether the first argument is a local module of the second.
 isChildOf :: AbsModulePath -> AbsModulePath -> Bool
 isChildOf child parent
-  | null (absLocalPath child) = False
+  | null (child ^. absLocalPath) = False
   | otherwise =
-      init (absLocalPath child) == absLocalPath parent
-        && absTopModulePath child == absTopModulePath parent
+      init (child ^. absLocalPath) == parent ^. absLocalPath
+        && child ^. absTopModulePath == parent ^. absTopModulePath
 
 -- | Appends a local path to the absolute path
 -- e.g. TopMod.Local <.> Inner == TopMod.Local.Inner
 (<.>) :: AbsModulePath -> C.Symbol -> AbsModulePath
-absP <.> localMod = absP {absLocalPath = absLocalPath absP ++ [localMod]}
+absP <.> localMod = absP {_absLocalPath = absP ^. absLocalPath ++ [localMod]}
 
 -- | Why a symbol is in scope.
 data WhyInScope
@@ -82,16 +84,16 @@ data Name' n = Name'
 makeLenses ''Name'
 
 instance HasNameKind (Name' n) where
-  getNameKind = _nameKind
+  getNameKind = (^. nameKind)
 
 instance HasLoc n => HasLoc (Name' n) where
-  getLoc = getLoc . _nameConcrete
+  getLoc = getLoc . (^. nameConcrete)
 
 hasFixity :: Name' s -> Bool
-hasFixity Name' {..} = isJust _nameFixity
+hasFixity n = isJust (n ^. nameFixity)
 
 isConstructor :: Name' s -> Bool
-isConstructor Name' {..} = case _nameKind of
+isConstructor n = case n ^. nameKind of
   KNameConstructor {} -> True
   _ -> False
 
@@ -99,10 +101,10 @@ fromQualifiedName :: C.QualifiedName -> C.Symbol
 fromQualifiedName (C.QualifiedName _ s) = s
 
 topModulePathName :: TopModulePath -> Symbol
-topModulePathName = over nameConcrete C._modulePathName
+topModulePathName = over nameConcrete (^. C.modulePathName)
 
 symbolText :: Symbol -> Text
-symbolText = C._symbolText . _nameConcrete
+symbolText s = s ^. nameConcrete . C.symbolText
 
 unqualifiedSymbol :: Symbol -> Name
 unqualifiedSymbol = over nameConcrete C.NameUnqualified
@@ -115,10 +117,10 @@ nameUnqualify Name' {..} = Name' {_nameConcrete = unqual, ..}
       C.NameQualified q -> fromQualifiedName q
 
 instance Eq (Name' n) where
-  (==) = (==) `on` _nameId
+  (==) = (==) `on` (^. nameId)
 
 instance Ord (Name' n) where
-  compare = compare `on` _nameId
+  compare = compare `on` (^. nameId)
 
 instance Hashable (Name' n) where
-  hashWithSalt salt = hashWithSalt salt . _nameId
+  hashWithSalt salt = hashWithSalt salt . (^. nameId)

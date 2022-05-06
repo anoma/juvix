@@ -121,7 +121,7 @@ statement =
 -- Compile
 --------------------------------------------------------------------------------
 
-compileBlock :: Member InfoTableBuilder r => ParsecS r (Compile 'Parsed)
+compileBlock :: forall r. Member InfoTableBuilder r => ParsecS r (Compile 'Parsed)
 compileBlock = do
   kwCompile
   _compileName <- symbol
@@ -129,6 +129,7 @@ compileBlock = do
   return Compile {..}
   where
     backends = toList <$> braces (P.sepEndBy1 backendItem kwSemicolon)
+    backendItem :: ParsecS r BackendItem
     backendItem = do
       _backendItemBackend <- backend
       kwMapsTo
@@ -158,10 +159,10 @@ precedence = PrecNat <$> decimal
 
 operatorSyntaxDef :: forall r. Member InfoTableBuilder r => ParsecS r OperatorSyntaxDef
 operatorSyntaxDef = do
-  fixityArity <- arity
-  fixityPrecedence <- precedence
-  opSymbol <- symbol
-  let opFixity = Fixity {..}
+  _fixityArity <- arity
+  _fixityPrecedence <- precedence
+  _opSymbol <- symbol
+  let _opFixity = Fixity {..}
   return OperatorSyntaxDef {..}
   where
     arity :: ParsecS r OperatorArity
@@ -179,7 +180,7 @@ operatorSyntaxDef = do
 import_ :: Member InfoTableBuilder r => ParsecS r (Import 'Parsed)
 import_ = do
   kwImport
-  importModule <- topModulePath
+  _importModule <- topModulePath
   return Import {..}
 
 --------------------------------------------------------------------------------
@@ -250,9 +251,9 @@ letClause = either LetTypeSig LetFunClause <$> auxTypeSigFunClause
 letBlock :: Member InfoTableBuilder r => ParsecS r (LetBlock 'Parsed)
 letBlock = do
   kwLet
-  letClauses <- braces (P.sepEndBy letClause kwSemicolon)
+  _letClauses <- braces (P.sepEndBy letClause kwSemicolon)
   kwIn
-  letExpression <- expressionAtoms
+  _letExpression <- expressionAtoms
   return LetBlock {..}
 
 --------------------------------------------------------------------------------
@@ -310,12 +311,12 @@ axiomDef = do
 
 functionParam :: forall r. Member InfoTableBuilder r => ParsecS r (FunctionParameter 'Parsed)
 functionParam = do
-  (paramName, paramUsage) <- P.try $ do
+  (_paramName, _paramUsage) <- P.try $ do
     lparen
     n <- pName
     u <- pUsage
     return (n, u)
-  paramType <- expressionAtoms
+  _paramType <- expressionAtoms
   rparen
   return $ FunctionParameter {..}
   where
@@ -332,9 +333,9 @@ functionParam = do
 
 function :: Member InfoTableBuilder r => ParsecS r (Function 'Parsed)
 function = do
-  funParameter <- functionParam
+  _funParameter <- functionParam
   kwRightArrow
-  funReturn <- expressionAtoms
+  _funReturn <- expressionAtoms
   return Function {..}
 
 --------------------------------------------------------------------------------

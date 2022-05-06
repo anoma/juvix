@@ -10,7 +10,9 @@ newtype MiniCOptions = MiniCOptions
   { _miniCInputFile :: FilePath
   }
 
+makeLenses ''MiniCOptions
+
 parseMiniC :: Parser MiniCOptions
 parseMiniC = do
-  _miniCInputFile <- parseInputFile
+  _miniCInputFile <- parserInputFile
   pure MiniCOptions {..}

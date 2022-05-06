@@ -11,20 +11,22 @@ data Symbol = Symbol
   }
   deriving stock (Show)
 
+makeLenses ''Symbol
+
 instance Pretty Symbol where
-  pretty = pretty . _symbolText
+  pretty = pretty . (^. symbolText)
 
 instance Eq Symbol where
-  (==) = (==) `on` _symbolText
+  (==) = (==) `on` (^. symbolText)
 
 instance Ord Symbol where
-  compare = compare `on` _symbolText
+  compare = compare `on` (^. symbolText)
 
 instance HasLoc Symbol where
-  getLoc = _symbolLoc
+  getLoc = (^. symbolLoc)
 
 instance Hashable Symbol where
-  hashWithSalt i Symbol {..} = hashWithSalt i _symbolText
+  hashWithSalt i s = hashWithSalt i (s ^. symbolText)
 
 data Name
   = NameQualified QualifiedName
@@ -37,7 +39,7 @@ instance HasLoc Name where
     NameUnqualified s -> getLoc s
 
 newtype Path = Path
-  { pathParts :: NonEmpty Symbol
+  { _pathParts :: NonEmpty Symbol
   }
   deriving stock (Show, Eq, Ord)
 
@@ -59,6 +61,7 @@ instance HasLoc Path where
 deriving newtype instance Hashable Path
 
 makeLenses ''QualifiedName
+makeLenses ''Path
 
 -- | A.B.C corresponds to TopModulePath [A,B] C
 data TopModulePath = TopModulePath
@@ -66,6 +69,8 @@ data TopModulePath = TopModulePath
     _modulePathName :: Symbol
   }
   deriving stock (Show, Eq, Ord, Generic)
+
+makeLenses ''TopModulePath
 
 instance HasLoc TopModulePath where
   getLoc TopModulePath {..} =
@@ -80,8 +85,8 @@ topModulePathToFilePath' ::
   Maybe String -> FilePath -> TopModulePath -> FilePath
 topModulePathToFilePath' ext root mp = absPath
   where
-    relDirPath = foldr ((</>) . toPath) mempty (_modulePathDir mp)
-    relFilePath = relDirPath </> toPath (_modulePathName mp)
+    relDirPath = foldr ((</>) . toPath) mempty (mp ^. modulePathDir)
+    relFilePath = relDirPath </> toPath (mp ^. modulePathName)
     absPath = case ext of
       Nothing -> root </> relFilePath
       Just e -> root </> relFilePath <.> e
@@ -95,5 +100,3 @@ topModulePathToDottedPath (TopModulePath l r) =
     fromSymbol Symbol {..} = _symbolText
 
 instance Hashable TopModulePath
-
-makeLenses ''Symbol

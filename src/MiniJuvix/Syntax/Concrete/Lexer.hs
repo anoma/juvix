@@ -17,7 +17,9 @@ type ParsecS r = ParsecT Void Text (Sem r)
 space :: forall m e. MonadParsec e Text m => m ()
 space = L.space space1 lineComment block
   where
+    lineComment :: m ()
     lineComment = L.skipLineComment "--"
+    block :: m ()
     block = L.skipBlockComment "{-" "-}"
 
 lexeme :: MonadParsec e Text m => m a -> m a

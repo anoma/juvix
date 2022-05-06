@@ -13,6 +13,7 @@ allNameIds = NameId <$> ids
   where
     ids :: Stream Word64
     ids = aux minBound
+    aux :: Word64 -> Stream Word64
     aux i = Cons i (aux (succ i))
 
 data NameIdGen m a where

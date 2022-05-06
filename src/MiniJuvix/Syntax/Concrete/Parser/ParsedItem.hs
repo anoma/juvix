@@ -9,17 +9,17 @@ data ParsedItem = ParsedItem
   }
   deriving stock (Show, Eq, Generic)
 
-instance Hashable ParsedItem
-
-instance HasLoc ParsedItem where
-  getLoc = _parsedLoc
-
 data ParsedItemTag
   = ParsedTagKeyword
   | ParsedTagLiteralInt
   | ParsedTagLiteralString
   deriving stock (Eq, Show, Generic)
 
-instance Hashable ParsedItemTag
-
 makeLenses ''ParsedItem
+
+instance Hashable ParsedItem
+
+instance HasLoc ParsedItem where
+  getLoc = (^. parsedLoc)
+
+instance Hashable ParsedItemTag

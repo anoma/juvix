@@ -87,7 +87,7 @@ multiply a b = map sumProdRow a
     sumProdRow :: CallRow -> CallRow
     sumProdRow (CallRow mr) = CallRow $ do
       (ki, ra) <- mr
-      (j, rb) <- _callRow (rowB ki)
+      (j, rb) <- rowB ki ^. callRow
       return (j, mul' ra rb)
 
 multiplyMany :: HashSet CallMatrix -> HashSet CallMatrix -> HashSet CallMatrix
@@ -218,7 +218,9 @@ instance PrettyCode Edge where
       pretty ("Edge" :: Text) <+> fromFun <+> kwWaveArrow <+> toFun <> line
         <> matrices
     where
+      ppMatrices :: [(Int, Doc a)] -> Doc a
       ppMatrices = vsep2 . map ppMatrix
+      ppMatrix :: (Int, Doc ann) -> Doc ann
       ppMatrix (i, t) =
         pretty ("Matrix" :: Text) <+> pretty i <> colon <> line <> t
 

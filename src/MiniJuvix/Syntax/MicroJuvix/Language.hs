@@ -36,22 +36,22 @@ data Name = Name
   }
   deriving stock (Show)
 
-instance HasLoc Name where
-  getLoc = _nameLoc
-
 makeLenses ''Name
 
+instance HasLoc Name where
+  getLoc = (^. nameLoc)
+
 instance Eq Name where
-  (==) = (==) `on` _nameId
+  (==) = (==) `on` (^. nameId)
 
 instance Ord Name where
-  compare = compare `on` _nameId
+  compare = compare `on` (^. nameId)
 
 instance Hashable Name where
-  hashWithSalt salt = hashWithSalt salt . _nameId
+  hashWithSalt salt = hashWithSalt salt . (^. nameId)
 
 instance HasNameKind Name where
-  getNameKind = _nameKind
+  getNameKind = (^. nameKind)
 
 instance Pretty Name where
   pretty n =

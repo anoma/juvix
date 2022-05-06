@@ -86,18 +86,18 @@ freshSymbol ::
   Sem r S.Symbol
 freshSymbol _nameKind _nameConcrete = do
   _nameId <- freshNameId
-  _nameDefinedIn <- gets _scopePath
+  _nameDefinedIn <- gets (^. scopePath)
   let _nameDefined = getLoc _nameConcrete
       _nameWhyInScope = S.BecauseDefined
       _nameVisibilityAnn = VisPublic
-      _nameVerbatim = _symbolText _nameConcrete
+      _nameVerbatim = _nameConcrete ^. symbolText
   _nameFixity <- fixity
   return S.Name' {..}
   where
     fixity :: Sem r (Maybe Fixity)
     fixity
       | S.canHaveFixity _nameKind =
-          fmap opFixity . HashMap.lookup _nameConcrete <$> gets _scopeFixities
+          fmap (^. opFixity) . HashMap.lookup _nameConcrete <$> gets (^. scopeFixities)
       | otherwise = return Nothing
 
 reserveSymbolOf ::
@@ -112,16 +112,16 @@ reserveSymbolOf k s = do
   where
     checkNotBound :: Sem r ()
     checkNotBound = do
-      path <- gets _scopePath
-      syms <- gets _scopeSymbols
-      let exists = HashMap.lookup s syms >>= HashMap.lookup path . _symbolInfo
+      path <- gets (^. scopePath)
+      syms <- gets (^. scopeSymbols)
+      let exists = HashMap.lookup s syms >>= HashMap.lookup path . (^. symbolInfo)
       whenJust exists $
         \e ->
           throw
             ( ErrMultipleDeclarations
                 MultipleDeclarations
                   { _multipleDeclEntry = e,
-                    _multipleDeclSymbol = _symbolText s,
+                    _multipleDeclSymbol = s ^. symbolText,
                     _multipleDeclSecond = getLoc s
                   }
             )
@@ -132,10 +132,10 @@ bindReservedSymbol ::
   SymbolEntry ->
   Sem r ()
 bindReservedSymbol s' entry = do
-  path <- gets _scopePath
+  path <- gets (^. scopePath)
   modify (over scopeSymbols (HashMap.alter (Just . addS path) s))
   where
-    s = S._nameConcrete s'
+    s = s' ^. S.nameConcrete
     addS :: S.AbsModulePath -> Maybe SymbolInfo -> SymbolInfo
     addS path m = case m of
       Nothing -> symbolInfoSingle entry
@@ -204,7 +204,7 @@ checkImport ::
   Sem r (Import 'Scoped)
 checkImport import_@(Import path) = do
   checkCycle
-  cache <- gets (_cachedModules . _scoperModulesCache)
+  cache <- gets (^. scoperModulesCache . cachedModules)
   moduleRef <- maybe (readParseModule path >>= local addImport . checkTopModule) return (cache ^. at path)
   let checked = moduleRef ^. moduleRefModule
       sname = checked ^. modulePath
@@ -218,7 +218,7 @@ checkImport import_@(Import path) = do
     addImport = over scopeTopParents (cons import_)
     checkCycle :: Sem r ()
     checkCycle = do
-      topp <- asks _scopeTopParents
+      topp <- asks (^. scopeTopParents)
       case span (/= import_) topp of
         (_, []) -> return ()
         (c, _) ->
@@ -228,8 +228,8 @@ checkImport import_@(Import path) = do
 getTopModulePath :: Module 'Parsed 'ModuleTop -> S.AbsModulePath
 getTopModulePath Module {..} =
   S.AbsModulePath
-    { S.absTopModulePath = _modulePath,
-      S.absLocalPath = mempty
+    { S._absTopModulePath = _modulePath,
+      S._absLocalPath = mempty
     }
 
 -- | Do not call directly. Looks for a symbol in (possibly) nested local modules
@@ -247,23 +247,23 @@ lookupSymbolAux modules final = do
     hereOrInLocalModule :: Sem r [SymbolEntry] =
       case modules of
         [] -> do
-          r <- HashMap.lookup final <$> gets _scopeSymbols
+          r <- HashMap.lookup final <$> gets (^. scopeSymbols)
           return $ case r of
             Nothing -> []
             Just SymbolInfo {..} -> toList _symbolInfo
         (p : ps) ->
-          mapMaybe (lookInExport final ps . getModuleExportInfo) . concat . maybeToList . fmap (mapMaybe getModuleRef . toList . _symbolInfo)
+          mapMaybe (lookInExport final ps . getModuleExportInfo) . concat . maybeToList . fmap (mapMaybe getModuleRef . toList . (^. symbolInfo))
             . HashMap.lookup p
-            <$> gets _scopeSymbols
+            <$> gets (^. scopeSymbols)
     importedTopModule :: Sem r (Maybe SymbolEntry)
     importedTopModule = do
-      fmap (EntryModule . mkModuleRef') . HashMap.lookup path <$> gets _scopeTopModules
+      fmap (EntryModule . mkModuleRef') . HashMap.lookup path <$> gets (^. scopeTopModules)
       where
         path = TopModulePath modules final
 
 lookInExport :: Symbol -> [Symbol] -> ExportInfo -> Maybe SymbolEntry
 lookInExport sym remaining e = case remaining of
-  [] -> HashMap.lookup sym (_exportSymbols e)
+  [] -> HashMap.lookup sym (e ^. exportSymbols)
   (s : ss) -> do
     export <- mayModule e s
     lookInExport sym ss export
@@ -306,7 +306,7 @@ lookupQualifiedSymbol (path, sym) = do
             nonEmptyToTopPath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
         lookInTopModule :: TopModulePath -> [Symbol] -> Sem r (Maybe SymbolEntry)
         lookInTopModule topPath remaining =
-          ((fmap (^. moduleExportInfo) . HashMap.lookup topPath) >=> lookInExport sym remaining) <$> gets _scopeTopModules
+          ((fmap (^. moduleExportInfo) . HashMap.lookup topPath) >=> lookInExport sym remaining) <$> gets (^. scopeTopModules)
 
 checkQualifiedExpr ::
   Members '[Error ScopeError, State Scope, State ScoperState, InfoTableBuilder] r =>
@@ -378,8 +378,8 @@ modulePathToFilePath ::
   TopModulePath ->
   Sem r FilePath
 modulePathToFilePath mp = do
-  root <- asks _scopeRootPath
-  ext <- asks _scopeFileExtension
+  root <- asks (^. scopeRootPath)
+  ext <- asks (^. scopeFileExtension)
   return $ topModulePathToFilePath' (Just ext) root mp
 
 checkOperatorSyntaxDef ::
@@ -389,12 +389,12 @@ checkOperatorSyntaxDef ::
   Sem r ()
 checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
   checkNotDefined
-  modify (over scopeFixities (HashMap.insert opSymbol s))
+  modify (over scopeFixities (HashMap.insert _opSymbol s))
   where
     checkNotDefined :: Sem r ()
     checkNotDefined =
       whenJustM
-        (HashMap.lookup opSymbol <$> gets _scopeFixities)
+        (HashMap.lookup _opSymbol <$> gets (^. scopeFixities))
         (\s' -> throw (ErrDuplicateFixity (DuplicateFixity s' s)))
 
 checkTypeSignature ::
@@ -451,7 +451,7 @@ checkInductiveDef ::
   Sem r (InductiveDef 'Scoped)
 checkInductiveDef InductiveDef {..} = do
   withParams _inductiveParameters $ \inductiveParameters' -> do
-    inductiveType' <- sequence (checkParseExpressionAtoms <$> _inductiveType)
+    inductiveType' <- mapM checkParseExpressionAtoms _inductiveType
     inductiveName' <- bindInductiveSymbol _inductiveName
     inductiveConstructors' <- mapM checkConstructorDef _inductiveConstructors
     registerInductive'
@@ -501,8 +501,9 @@ checkTopModule m@(Module path params body) = do
       _nameId <- freshNameId
       let _nameDefinedIn = S.topModulePathToAbsPath path
           _nameConcrete = path
-          _nameDefined = getLoc (_modulePathName path)
+          _nameDefined = getLoc (path ^. modulePathName)
           _nameKind = S.KNameTopModule
+          _nameFixity :: Maybe Fixity
           _nameFixity = Nothing
           -- This visibility annotation is not relevant
           _nameVisibilityAnn = VisPublic
@@ -561,7 +562,7 @@ checkLocalModule Module {..} = do
         (e, b) <- checkModuleBody _moduleBody
         return (e, b, p')
   _modulePath' <- reserveSymbolOf S.KNameLocalModule _modulePath
-  let moduleId = S._nameId _modulePath'
+  let moduleId = _modulePath' ^. S.nameId
       _moduleRefName = set S.nameConcrete () _modulePath'
       _moduleRefModule =
         Module
@@ -578,7 +579,7 @@ checkLocalModule Module {..} = do
   where
     inheritScope :: Sem r ()
     inheritScope = do
-      absPath <- (S.<.> _modulePath) <$> gets _scopePath
+      absPath <- (S.<.> _modulePath) <$> gets (^. scopePath)
       modify (set scopePath absPath)
       modify (over scopeSymbols (fmap inheritSymbol))
       modify (set scopeFixities mempty) -- do not inherit fixity declarations
@@ -599,9 +600,9 @@ checkClausesExist ss = whenJust msig (throw . ErrLacksFunctionClause . LacksFunc
 
 checkOrphanFixities :: forall r. Members '[Error ScopeError, State Scope] r => Sem r ()
 checkOrphanFixities = do
-  path <- gets _scopePath
-  declared <- gets _scopeFixities
-  used <- gets (HashMap.keys . fmap (filter (== path) . HashMap.keys . _symbolInfo) . _scopeSymbols)
+  path <- gets (^. scopePath)
+  declared <- gets (^. scopeFixities)
+  used <- gets (HashMap.keys . fmap (filter (== path) . HashMap.keys . (^. symbolInfo)) . (^. scopeSymbols))
   let unused = toList $ foldr HashMap.delete declared used
   case unused of
     [] -> return ()
@@ -639,7 +640,7 @@ getExportInfo ::
 getExportInfo modId = do
   l <-
     HashMap.lookupDefault impossible modId
-      <$> gets _scoperModules
+      <$> gets (^. scoperModules)
   return $ case l ^. unModuleRef' of
     _ :&: ent -> ent ^. moduleExportInfo
 
@@ -735,7 +736,7 @@ checkFunctionClause clause@FunctionClause {..} = do
     clp <- mapM checkParsePatternAtom _clausePatterns
     withBindCurrentGroup $ do
       s <- get @Scope
-      clw <- sequence (checkWhereBlock <$> _clauseWhere)
+      clw <- mapM checkWhereBlock _clauseWhere
       clb <- checkParseExpressionAtoms _clauseBody
       put s
       return (clp, clw, clb)
@@ -763,8 +764,8 @@ lookupLocalEntry ::
   Symbol ->
   Sem r (Maybe SymbolEntry)
 lookupLocalEntry sym = do
-  ms <- HashMap.lookup sym <$> gets _scopeSymbols
-  path <- gets _scopePath
+  ms <- HashMap.lookup sym <$> gets (^. scopeSymbols)
+  path <- gets (^. scopePath)
   -- The symbol must be defined in the same path
   return $ do
     SymbolInfo {..} <- ms
@@ -789,7 +790,7 @@ checkCompile ::
 checkCompile c@Compile {..} = do
   scopedSym :: S.Symbol <- checkCompileName c
   let sym :: Symbol = c ^. compileName
-  rules <- gets _scopeCompilationRules
+  rules <- gets (^. scopeCompilationRules)
   if
       | HashMap.member sym rules ->
           throw
@@ -842,7 +843,7 @@ checkCompileName Compile {..} = do
               (WrongKindExpressionCompileBlock e)
           )
     [x] -> do
-      actualPath <- gets _scopePath
+      actualPath <- gets (^. scopePath)
       let scoped = entryToSymbol x sym
       let expectedPath = scoped ^. S.nameDefinedIn
       if
@@ -876,30 +877,30 @@ checkFunction ::
   Sem r (Function 'Scoped)
 checkFunction Function {..} = do
   funParameter' <- checkParam
-  let scoped = case paramName funParameter' of
+  let scoped = case funParameter' ^. paramName of
         Nothing -> id
         Just s -> withBindLocalVariable (LocalVariable s)
-  funReturn' <- scoped (checkParseExpressionAtoms funReturn)
+  funReturn' <- scoped (checkParseExpressionAtoms _funReturn)
   return
     Function
-      { funParameter = funParameter',
-        funReturn = funReturn'
+      { _funParameter = funParameter',
+        _funReturn = funReturn'
       }
   where
     checkParam :: Sem r (FunctionParameter 'Scoped)
     checkParam = do
-      paramType' <- checkParseExpressionAtoms paramType
+      paramType' <- checkParseExpressionAtoms _paramType
       paramName' <- checkParamName
       return
         FunctionParameter
-          { paramName = paramName',
-            paramUsage = paramUsage,
-            paramType = paramType'
+          { _paramName = paramName',
+            _paramUsage = _paramUsage,
+            _paramType = paramType'
           }
       where
-        FunctionParameter {..} = funParameter
+        FunctionParameter {..} = _funParameter
         checkParamName :: Sem r (Maybe S.Symbol)
-        checkParamName = case paramName of
+        checkParamName = case _paramName of
           Nothing -> return Nothing
           Just s -> Just <$> freshVariable s
 
@@ -917,13 +918,13 @@ checkLetBlock ::
   Sem r (LetBlock 'Scoped)
 checkLetBlock LetBlock {..} = do
   s <- get @Scope -- backup scope: we do not want local definitions to stay in scope
-  letClauses' <- mapM checkLetClause letClauses
-  letExpression' <- checkParseExpressionAtoms letExpression
+  letClauses' <- mapM checkLetClause _letClauses
+  letExpression' <- checkParseExpressionAtoms _letExpression
   put s -- restore scope
   return
     LetBlock
-      { letClauses = letClauses',
-        letExpression = letExpression'
+      { _letClauses = letClauses',
+        _letExpression = letExpression'
       }
 
 checkLambda ::
@@ -961,7 +962,7 @@ checkUnqualified ::
   Sem r ScopedIden
 checkUnqualified s = do
   -- Local vars have scope priority
-  l <- HashMap.lookup s <$> asks _localVars
+  l <- HashMap.lookup s <$> asks (^. localVars)
   case l of
     Just v -> ScopedVar <$> scopedVar v s
     Nothing -> do
@@ -1015,14 +1016,14 @@ withBindCurrentGroup ::
   Sem r a ->
   Sem r a
 withBindCurrentGroup ma = do
-  grp <- gets _scopeBindGroup
+  grp <- gets (^. scopeBindGroup)
   modify (over scopeBindGroup (const mempty)) -- empties the group
   local (over localVars (HashMap.union grp)) ma
 
 addLocalVars :: [LocalVariable] -> LocalVars -> LocalVars
 addLocalVars lv = over localVars (flip (foldr insertVar) lv)
   where
-    insertVar v = HashMap.insert (S._nameConcrete (variableName v)) v
+    insertVar v = HashMap.insert (v ^. variableName . S.nameConcrete) v
 
 withBindLocalVariable ::
   Members '[Reader LocalVars] r =>
@@ -1044,12 +1045,12 @@ groupBindLocalVariable s = do
     checkNotInGroup :: Sem r ()
     checkNotInGroup =
       whenJustM
-        (HashMap.lookup s <$> gets _scopeBindGroup)
+        (HashMap.lookup s <$> gets (^. scopeBindGroup))
         ( \x ->
             throw
               ( ErrBindGroup
                   BindGroupConflict
-                    { _bindGroupFirst = S._nameConcrete (variableName x),
+                    { _bindGroupFirst = x ^. variableName . S.nameConcrete,
                       _bindGroupSecond = s
                     }
               )
@@ -1193,16 +1194,16 @@ makeExpressionTable2 (ExpressionAtoms atoms) = [appOp] : operators ++ [[function
         mkOperator :: ScopedIden -> Maybe (Precedence, P.Operator Parse Expression)
         mkOperator iden
           | Just Fixity {..} <- _nameFixity = Just $
-              case fixityArity of
-                Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
+              case _fixityArity of
+                Unary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
                   where
                     unaryApp :: ScopedIden -> Expression -> Expression
                     unaryApp funName arg = case u of
                       AssocPostfix -> ExpressionPostfixApplication (PostfixApplication arg funName)
-                Binary b -> (fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId _nameId))
+                Binary b -> (_fixityPrecedence, infixLRN (binaryApp <$> parseSymbolId _nameId))
                   where
                     binaryApp :: ScopedIden -> Expression -> Expression -> Expression
-                    binaryApp infixAppOperator infixAppLeft infixAppRight =
+                    binaryApp _infixAppOperator _infixAppLeft _infixAppRight =
                       ExpressionInfixApplication InfixApplication {..}
                     infixLRN :: Parse (Expression -> Expression -> Expression) -> P.Operator Parse Expression
                     infixLRN = case b of
@@ -1229,8 +1230,8 @@ makeExpressionTable2 (ExpressionAtoms atoms) = [appOp] : operators ++ [[function
         app f x =
           ExpressionApplication
             Application
-              { applicationFunction = f,
-                applicationParameter = x
+              { _applicationFunction = f,
+                _applicationParameter = x
               }
     -- Non-dependent function type: A → B
     functionOp :: P.Operator Parse Expression
@@ -1240,15 +1241,15 @@ makeExpressionTable2 (ExpressionAtoms atoms) = [appOp] : operators ++ [[function
         nonDepFun a b =
           ExpressionFunction
             Function
-              { funParameter = param,
-                funReturn = b
+              { _funParameter = param,
+                _funReturn = b
               }
           where
             param =
               FunctionParameter
-                { paramName = Nothing,
-                  paramUsage = Nothing,
-                  paramType = a
+                { _paramName = Nothing,
+                  _paramUsage = Nothing,
+                  _paramType = a
                 }
 
 parseExpressionAtoms ::
@@ -1268,6 +1269,7 @@ parseExpressionAtoms a@(ExpressionAtoms sections) = do
     parser = runM (mkExpressionParser tbl) <* P.eof
     res = P.parse parser filePath (toList sections)
     tbl = makeExpressionTable2 a
+    filePath :: FilePath
     filePath = ""
 
 -- | Monad for parsing expression sections.
@@ -1386,13 +1388,13 @@ makePatternTable atom = [appOp] : operators
         unqualifiedSymbolOp (ConstructorRef' S.Name' {..})
           | Just Fixity {..} <- _nameFixity,
             _nameKind == S.KNameConstructor = Just $
-              case fixityArity of
-                Unary u -> (fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
+              case _fixityArity of
+                Unary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
                   where
                     unaryApp :: ConstructorRef -> Pattern -> Pattern
                     unaryApp funName = case u of
                       AssocPostfix -> PatternPostfixApplication . (`PatternPostfixApp` funName)
-                Binary b -> (fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _nameId))
+                Binary b -> (_fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _nameId))
                   where
                     binaryInfixApp :: ConstructorRef -> Pattern -> Pattern -> Pattern
                     binaryInfixApp name argLeft = PatternInfixApplication . PatternInfixApp argLeft name
@@ -1508,5 +1510,5 @@ parsePatternAtom sec = do
     parser :: ParsePat Pattern
     parser = runM (mkPatternParser tbl) <* P.eof
     res = P.parse parser filePath [sec]
-
+    filePath :: FilePath
     filePath = "tmp"

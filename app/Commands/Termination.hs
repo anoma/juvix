@@ -25,9 +25,12 @@ data CallGraphOptions = CallGraphOptions
     _graphFunctionNameFilter :: Maybe (NonEmpty Text)
   }
 
+makeLenses ''CallsOptions
+makeLenses ''CallGraphOptions
+
 parseCalls :: Parser CallsOptions
 parseCalls = do
-  _callsInputFile <- parseInputFile
+  _callsInputFile <- parserInputFile
   _callsShowIds <-
     switch
       ( long "show-name-ids"
@@ -63,7 +66,7 @@ parseCalls = do
 
 parseCallGraph :: Parser CallGraphOptions
 parseCallGraph = do
-  _graphInputFile <- parseInputFile
+  _graphInputFile <- parserInputFile
   _graphFunctionNameFilter <-
     fmap msum . optional $
       nonEmpty . Text.words

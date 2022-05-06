@@ -10,7 +10,9 @@ newtype MonoJuvixOptions = MonoJuvixOptions
   { _monoJuvixInputFile :: FilePath
   }
 
+makeLenses ''MonoJuvixOptions
+
 parseMonoJuvix :: Parser MonoJuvixOptions
 parseMonoJuvix = do
-  _monoJuvixInputFile <- parseInputFile
+  _monoJuvixInputFile <- parserInputFile
   pure MonoJuvixOptions {..}

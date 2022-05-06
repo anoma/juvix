@@ -7,10 +7,12 @@ import MiniJuvix.Prelude hiding (Doc)
 import Options.Applicative
 
 newtype MiniHaskellOptions = MiniHaskellOptions
-  { _mhaskellInputFile :: FilePath
+  { _miniHaskellInputFile :: FilePath
   }
+
+makeLenses ''MiniHaskellOptions
 
 parseMiniHaskell :: Parser MiniHaskellOptions
 parseMiniHaskell = do
-  _mhaskellInputFile <- parseInputFile
+  _miniHaskellInputFile <- parserInputFile
   pure MiniHaskellOptions {..}

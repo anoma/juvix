@@ -25,12 +25,10 @@ testDescr NegTest {..} =
           _testAssertion = Single $ do
             let entryPoint = EntryPoint "." (pure _file)
             res <- runIOEither (upToScoping entryPoint)
-            let msg1 = "The scope checker did not find an error."
-            let msg2 = "An error ocurred but it was not in the scoper."
             case mapLeft fromAJuvixError res of
               Left (Just err) -> whenJust (_checkErr err) assertFailure
-              Left Nothing -> assertFailure msg1
-              Right _ -> assertFailure msg2
+              Left Nothing -> assertFailure "The scope checker did not find an error."
+              Right _ -> assertFailure "An error ocurred but it was not in the scoper."
         }
 
 allTests :: TestTree

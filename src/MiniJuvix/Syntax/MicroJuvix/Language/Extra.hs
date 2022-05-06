@@ -191,6 +191,7 @@ functionTypeVarsAssoc def l = sig <> mconcatMap clause (def ^. funDefClauses)
     zipl :: [Maybe VarName] -> HashMap VarName a
     zipl x = HashMap.fromList (mapMaybe aux (zip x (toList l)))
       where
+        aux :: (Maybe x, y) -> Maybe (x, y)
         aux = \case
           (Just a, b) -> Just (a, b)
           _ -> Nothing

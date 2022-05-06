@@ -3,8 +3,8 @@ module Commands.Extra where
 import MiniJuvix.Prelude hiding (Doc)
 import Options.Applicative
 
-parseInputFile :: Parser FilePath
-parseInputFile =
+parserInputFile :: Parser FilePath
+parserInputFile =
   argument
     str
     ( metavar "MINIJUVIX_FILE"

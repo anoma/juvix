@@ -154,7 +154,7 @@ inferExpression ::
 inferExpression = fmap ExpressionTyped . inferExpression'
 
 lookupVar :: Member (Reader LocalVars) r => Name -> Sem r Type
-lookupVar v = HashMap.lookupDefault impossible v <$> asks _localTypes
+lookupVar v = HashMap.lookupDefault impossible v <$> asks (^. localTypes)
 
 constructorType :: Member (Reader InfoTable) r => Name -> Sem r Type
 constructorType c = do

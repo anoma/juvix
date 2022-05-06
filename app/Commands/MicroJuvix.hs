@@ -50,12 +50,12 @@ parseMicroJuvixCommand =
 
 parseMicroJuvixPretty :: Parser MicroJuvixPrettyOptions
 parseMicroJuvixPretty = do
-  _microJuvixPrettyInputFile <- parseInputFile
+  _microJuvixPrettyInputFile <- parserInputFile
   pure MicroJuvixPrettyOptions {..}
 
 parseMicroJuvixType :: Parser MicroJuvixTypeOptions
 parseMicroJuvixType = do
-  _microJuvixTypeInputFile <- parseInputFile
+  _microJuvixTypeInputFile <- parserInputFile
   _microJuvixTypePrint <-
     switch
       ( long "print-result"

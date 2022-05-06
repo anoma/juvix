@@ -522,7 +522,7 @@ goInductiveConstructorNew i ctor =
 
         ctorInit :: [DesigInit]
         -- TODO: _declName is never Nothing by construction, fix the types
-        ctorInit = map (f . fromJust . _declName) ctorDecls
+        ctorInit = map (f . fromJust . (^. declName)) ctorDecls
 
         f :: Text -> DesigInit
         f fieldName =

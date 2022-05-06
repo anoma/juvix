@@ -10,7 +10,7 @@ import MiniJuvix.Syntax.Concrete.Scoped.InfoTable
 import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 
 newtype LocalVariable = LocalVariable
-  { variableName :: S.Symbol
+  { _variableName :: S.Symbol
   }
   deriving newtype (Show, Eq, Hashable)
 
@@ -41,6 +41,7 @@ data Scope = Scope
   deriving stock (Show)
 
 makeLenses ''ExportInfo
+makeLenses ''LocalVariable
 makeLenses ''SymbolInfo
 makeLenses ''LocalVars
 makeLenses ''Scope

@@ -43,7 +43,7 @@ instance PrettyError MultipleDeclarations where
     "Multiple declarations of" <+> ppSymbolT _multipleDeclSymbol <> line
       <> "Declared at:" <+> align (vsep ints)
     where
-      ints = map pretty [S._nameDefined (L.symbolEntryToSName _multipleDeclEntry), _multipleDeclSecond]
+      ints = map pretty [L.symbolEntryToSName _multipleDeclEntry ^. S.nameDefined, _multipleDeclSecond]
 
 instance PrettyError InfixError where
   ppError InfixError {..} =
@@ -65,7 +65,7 @@ instance PrettyError LacksFunctionClause where
       <> line
       <> indent' (highlight (ppCode _lacksFunctionClause))
     where
-      loc = getLoc $ _sigName _lacksFunctionClause
+      loc = getLoc (_lacksFunctionClause ^. sigName)
 
 instance PrettyError LacksTypeSig where
   ppError LacksTypeSig {..} =
@@ -74,7 +74,7 @@ instance PrettyError LacksTypeSig where
       <> line
       <> indent' (highlight (ppCode _lacksTypeSigClause))
     where
-      loc = getLoc $ _clauseOwnerFunction _lacksTypeSigClause
+      loc = getLoc (_lacksTypeSigClause ^. clauseOwnerFunction)
 
 instance PrettyError ImportCycle where
   ppError ImportCycle {..} =
@@ -93,11 +93,12 @@ instance PrettyError NotInScope where
       <> "Symbol not in scope:" <+> highlight (ppCode _notInScopeSymbol)
       <?> ((line <>) <$> suggestion)
     where
+      suggestion :: Maybe (Doc a)
       suggestion
         | null suggestions = Nothing
         | otherwise = Just $ "Perhaps you meant:" <+> align (vsep suggestions)
       loc = getLoc _notInScopeSymbol
-      sym = _symbolText _notInScopeSymbol
+      sym = _notInScopeSymbol ^. symbolText
       maxDist :: Int
       maxDist = 2
       suggestions :: [Doc a]
@@ -109,8 +110,8 @@ instance PrettyError NotInScope where
             ]
       candidates :: HashSet Text
       candidates =
-        HashSet.fromList (map _symbolText (HashMap.keys $ _localVars _notInScopeLocal))
-          <> HashSet.fromList (map _symbolText (HashMap.keys $ _scopeSymbols _notInScopeScope))
+        HashSet.fromList (map (^. symbolText) (HashMap.keys (_notInScopeLocal ^. localVars)))
+          <> HashSet.fromList (map (^. symbolText) (HashMap.keys (_notInScopeScope ^. scopeSymbols)))
 
 instance PrettyError BindGroupConflict where
   ppError BindGroupConflict {..} =
@@ -126,7 +127,7 @@ instance PrettyError DuplicateFixity where
     "Multiple fixity declarations for symbol" <+> highlight (ppCode sym) <> ":" <> line
       <> indent' (align locs)
     where
-      sym = opSymbol _dupFixityFirst
+      sym = _dupFixityFirst ^. opSymbol
       locs = vsep $ map (pretty . getLoc) [_dupFixityFirst, _dupFixityFirst]
 
 instance PrettyError MultipleExportConflict where
@@ -182,7 +183,7 @@ instance PrettyError MultipleCompileBlockSameName where
 
 instance PrettyError MultipleCompileRuleSameBackend where
   ppError MultipleCompileRuleSameBackend {..} =
-    let backend = _backendItemBackend _multipleCompileRuleSameBackendBackendItem
+    let backend = _multipleCompileRuleSameBackendBackendItem ^. backendItemBackend
         name = _multipleCompileRuleSameBackendSym
      in "Multiple" <+> highlight (ppCode backend) <+> "compilation rules for the symbol"
           <+> highlight (ppCode name)

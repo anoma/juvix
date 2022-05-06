@@ -29,6 +29,8 @@ newtype CallRow = CallRow
   }
   deriving stock (Eq, Show, Generic)
 
+makeLenses ''CallRow
+
 instance Hashable CallRow
 
 type CallMatrix = [CallRow]
@@ -74,7 +76,7 @@ instance PrettyCode FunCall where
           Nothing -> relAux Nothing RNothing
         where
           relAux mayIx r = do
-            showDecr <- asks _optShowDecreasingArgs
+            showDecr <- asks (^. optShowDecreasingArgs)
             let pi = annotate AnnImportant . pretty <$> mayIx
                 pr = annotate AnnKeyword (pretty r)
             case showDecr of

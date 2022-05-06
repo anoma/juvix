@@ -18,6 +18,8 @@ data SizeInfo = SizeInfo
     _sizeEqual :: [Pattern]
   }
 
+makeLenses ''SizeInfo
+
 viewCall ::
   forall r.
   Members '[Reader SizeInfo] r =>
@@ -33,12 +35,12 @@ viewCall = \case
       callArg = do
         lt <- lessThan
         eq <- equalTo
-        return (CallRow (_callRow lt `mplus` _callRow eq), x)
+        return (CallRow ((lt ^. callRow) `mplus` (eq ^. callRow)), x)
         where
           lessThan :: Sem r CallRow
           lessThan = case x of
             ExpressionIden (IdenVar v) -> do
-              s :: Maybe Int <- asks (HashMap.lookup v . _sizeSmaller)
+              s :: Maybe Int <- asks (HashMap.lookup v . (^. sizeSmaller))
               return $ case s of
                 Nothing -> CallRow Nothing
                 Just s' -> CallRow (Just (s', RLe))
@@ -47,7 +49,7 @@ viewCall = \case
           equalTo = do
             case viewExpressionAsPattern x of
               Just x' -> do
-                s <- asks (elemIndex x' . _sizeEqual)
+                s <- asks (elemIndex x' . (^. sizeEqual))
                 return $ case s of
                   Nothing -> CallRow Nothing
                   Just s' -> CallRow (Just (s', REq))

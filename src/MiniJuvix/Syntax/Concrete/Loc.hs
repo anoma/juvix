@@ -53,9 +53,14 @@ class HasLoc t where
 instance Semigroup Interval where
   Interval f s e <> Interval _f s' e' = Interval f (min s s') (max e e')
 
+makeLenses ''Interval
+makeLenses ''FileLoc
+makeLenses ''Loc
+makeLenses ''Pos
+
 mkInterval :: Loc -> Loc -> Interval
 mkInterval start end =
-  Interval (_locFile start) (_locFileLoc start) (_locFileLoc end)
+  Interval (start ^. locFile) (start ^. locFileLoc) (end ^. locFileLoc)
 
 instance Pretty Pos where
   pretty :: Pos -> Doc a
@@ -73,19 +78,15 @@ instance Pretty Loc where
 
 instance Pretty Interval where
   pretty :: Interval -> Doc a
-  pretty Interval {..} =
-    pretty _intFile <> colon
-      <> ppPosRange (_locLine _intStart, _locLine _intEnd)
+  pretty i =
+    pretty (i ^. intFile) <> colon
+      <> ppPosRange (i ^. intStart . locLine, i ^. intEnd . locLine)
       <> colon
-      <> ppPosRange (_locCol _intStart, _locCol _intEnd)
+      <> ppPosRange (i ^. intStart . locCol, i ^. intEnd . locCol)
     where
+      hyphen :: Doc a
       hyphen = pretty '-'
       ppPosRange :: (Pos, Pos) -> Doc a
       ppPosRange (s, e)
         | s == e = pretty s
         | otherwise = pretty s <> hyphen <> pretty e
-
-makeLenses ''Interval
-makeLenses ''FileLoc
-makeLenses ''Loc
-makeLenses ''Pos

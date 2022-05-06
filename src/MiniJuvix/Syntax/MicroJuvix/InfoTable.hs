@@ -90,13 +90,13 @@ buildTable1 m = InfoTable {..}
     ss = m ^. (moduleBody . moduleStatements)
 
 lookupConstructor :: Member (Reader InfoTable) r => Name -> Sem r ConstructorInfo
-lookupConstructor f = HashMap.lookupDefault impossible f <$> asks _infoConstructors
+lookupConstructor f = HashMap.lookupDefault impossible f <$> asks (^. infoConstructors)
 
 lookupInductive :: Member (Reader InfoTable) r => InductiveName -> Sem r InductiveInfo
-lookupInductive f = HashMap.lookupDefault impossible f <$> asks _infoInductives
+lookupInductive f = HashMap.lookupDefault impossible f <$> asks (^. infoInductives)
 
 lookupFunction :: Member (Reader InfoTable) r => Name -> Sem r FunctionInfo
-lookupFunction f = HashMap.lookupDefault impossible f <$> asks _infoFunctions
+lookupFunction f = HashMap.lookupDefault impossible f <$> asks (^. infoFunctions)
 
 lookupAxiom :: Member (Reader InfoTable) r => Name -> Sem r AxiomInfo
-lookupAxiom f = HashMap.lookupDefault impossible f <$> asks _infoAxioms
+lookupAxiom f = HashMap.lookupDefault impossible f <$> asks (^. infoAxioms)

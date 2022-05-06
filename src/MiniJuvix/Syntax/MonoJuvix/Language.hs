@@ -35,19 +35,19 @@ data Name = Name
 makeLenses ''Name
 
 instance Eq Name where
-  (==) = (==) `on` _nameId
+  (==) = (==) `on` (^. nameId)
 
 instance Ord Name where
-  compare = compare `on` _nameId
+  compare = compare `on` (^. nameId)
 
 instance Hashable Name where
-  hashWithSalt salt = hashWithSalt salt . _nameId
+  hashWithSalt salt = hashWithSalt salt . (^. nameId)
 
 instance HasNameKind Name where
-  getNameKind = _nameKind
+  getNameKind = (^. nameKind)
 
 instance Pretty Name where
-  pretty = pretty . _nameText
+  pretty = pretty . (^. nameText)
 
 data Module = Module
   { _moduleName :: Name,

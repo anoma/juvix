@@ -9,8 +9,7 @@ module MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder
 where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Language (LiteralLoc (..))
-import MiniJuvix.Syntax.Concrete.Literal
+import MiniJuvix.Syntax.Concrete.LiteralLoc
 import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Syntax.Concrete.Parser.InfoTable
 import MiniJuvix.Syntax.Concrete.Parser.ParsedItem
@@ -38,7 +37,7 @@ registerLiteral l =
           _parsedTag = tag
         }
   where
-    tag = case _literalLocLiteral l of
+    tag = case l ^. literalLocLiteral of
       LitString {} -> ParsedTagLiteralString
       LitInteger {} -> ParsedTagLiteralInt
     loc = getLoc l

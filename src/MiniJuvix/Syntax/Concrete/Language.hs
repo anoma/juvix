@@ -3,8 +3,9 @@
 module MiniJuvix.Syntax.Concrete.Language
   ( module MiniJuvix.Syntax.Concrete.Language,
     module MiniJuvix.Syntax.Concrete.Name,
+    module MiniJuvix.Syntax.Concrete.Scoped.NameRef,
     module MiniJuvix.Syntax.Concrete.Loc,
-    module MiniJuvix.Syntax.Concrete.Literal,
+    module MiniJuvix.Syntax.Concrete.LiteralLoc,
     module MiniJuvix.Syntax.Backends,
     module MiniJuvix.Syntax.ForeignBlock,
     module MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn,
@@ -21,7 +22,7 @@ import Data.Kind qualified as GHC
 import MiniJuvix.Prelude hiding (show)
 import MiniJuvix.Syntax.Backends
 import MiniJuvix.Syntax.Concrete.Language.Stage
-import MiniJuvix.Syntax.Concrete.Literal
+import MiniJuvix.Syntax.Concrete.LiteralLoc
 import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Syntax.Concrete.ModuleIsTop
 import MiniJuvix.Syntax.Concrete.Name
@@ -29,22 +30,17 @@ import MiniJuvix.Syntax.Concrete.PublicAnn
 import MiniJuvix.Syntax.Concrete.Scoped.Name (unqualifiedSymbol)
 import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
+import MiniJuvix.Syntax.Concrete.Scoped.NameRef
 import MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.ForeignBlock
 import MiniJuvix.Syntax.Universe
 import MiniJuvix.Syntax.Usage
-import Prettyprinter
 import Prelude (show)
 
 --------------------------------------------------------------------------------
 -- Parsing stages
 --------------------------------------------------------------------------------
-
-type RefNameType :: S.IsConcrete -> GHC.Type
-type family RefNameType c = res | res -> c where
-  RefNameType 'S.Concrete = S.Name
-  RefNameType 'S.NotConcrete = S.Name' ()
 
 type SymbolType :: Stage -> GHC.Type
 type family SymbolType s = res | res -> s where
@@ -143,7 +139,7 @@ deriving stock instance
 --------------------------------------------------------------------------------
 
 newtype Import (s :: Stage) = Import
-  { importModule :: ImportType s
+  { _importModule :: ImportType s
   }
 
 deriving stock instance (Show (ImportType s)) => Show (Import s)
@@ -160,13 +156,13 @@ instance HasLoc (Import 'Parsed) where
 --------------------------------------------------------------------------------
 
 data OperatorSyntaxDef = OperatorSyntaxDef
-  { opSymbol :: Symbol,
-    opFixity :: Fixity
+  { _opSymbol :: Symbol,
+    _opFixity :: Fixity
   }
   deriving stock (Show, Eq, Ord)
 
 instance HasLoc OperatorSyntaxDef where
-  getLoc = getLoc . opSymbol
+  getLoc OperatorSyntaxDef {..} = getLoc _opSymbol
 
 -------------------------------------------------------------------------------
 -- Type signature declaration
@@ -260,7 +256,7 @@ data PatternInfixApp = PatternInfixApp
   deriving stock (Show, Eq, Ord)
 
 instance HasFixity PatternInfixApp where
-  getFixity (PatternInfixApp _ op _) = fromMaybe impossible (_constructorRefName op ^. S.nameFixity)
+  getFixity (PatternInfixApp _ op _) = fromMaybe impossible (op ^. constructorRefName . S.nameFixity)
 
 data PatternPostfixApp = PatternPostfixApp
   { _patPostfixParameter :: Pattern,
@@ -269,7 +265,7 @@ data PatternPostfixApp = PatternPostfixApp
   deriving stock (Show, Eq, Ord)
 
 instance HasFixity PatternPostfixApp where
-  getFixity (PatternPostfixApp _ op) = fromMaybe impossible (_constructorRefName op ^. S.nameFixity)
+  getFixity (PatternPostfixApp _ op) = fromMaybe impossible (op ^. constructorRefName . S.nameFixity)
 
 data Pattern
   = PatternVariable (SymbolType 'Scoped)
@@ -459,7 +455,6 @@ newtype ModuleRef' (c :: S.IsConcrete) = ModuleRef'
   { _unModuleRef' :: Σ ModuleIsTop (TyCon1 (ModuleRef'' c))
   }
 
--- | TODO can this be derived?
 instance SingI c => Show (ModuleRef' c) where
   show (ModuleRef' (isTop :&: r)) = case isTop of
     SModuleLocal -> case sing :: S.SIsConcrete c of
@@ -471,14 +466,14 @@ instance SingI c => Show (ModuleRef' c) where
 
 getNameRefId :: forall c. SingI c => RefNameType c -> S.NameId
 getNameRefId = case sing :: S.SIsConcrete c of
-  S.SConcrete -> S._nameId
-  S.SNotConcrete -> S._nameId
+  S.SConcrete -> (^. S.nameId)
+  S.SNotConcrete -> (^. S.nameId)
 
 getModuleExportInfo :: ModuleRef' c -> ExportInfo
-getModuleExportInfo = projSigma2 _moduleExportInfo . _unModuleRef'
+getModuleExportInfo (ModuleRef' (_ :&: ModuleRef'' {..})) = _moduleExportInfo
 
 getModuleRefNameType :: ModuleRef' c -> RefNameType c
-getModuleRefNameType = projSigma2 _moduleRefName . _unModuleRef'
+getModuleRefNameType (ModuleRef' (_ :&: ModuleRef'' {..})) = _moduleRefName
 
 instance SingI c => Eq (ModuleRef' c) where
   (==) = (==) `on` (getNameRefId . getModuleRefNameType)
@@ -486,7 +481,6 @@ instance SingI c => Eq (ModuleRef' c) where
 instance SingI c => Ord (ModuleRef' c) where
   compare = compare `on` (getNameRefId . getModuleRefNameType)
 
--- TODO find a better name
 data ModuleRef'' (c :: S.IsConcrete) (t :: ModuleIsTop) = ModuleRef''
   { _moduleRefName :: RefNameType c,
     _moduleExportInfo :: ExportInfo,
@@ -494,7 +488,7 @@ data ModuleRef'' (c :: S.IsConcrete) (t :: ModuleIsTop) = ModuleRef''
   }
 
 instance Show (RefNameType s) => Show (ModuleRef'' s t) where
-  show = show . _moduleRefName
+  show ModuleRef'' {..} = show _moduleRefName
 
 data SymbolEntry
   = EntryAxiom (AxiomRef' 'S.NotConcrete)
@@ -546,77 +540,6 @@ deriving stock instance
 -- Expression
 --------------------------------------------------------------------------------
 
-type AxiomRef = AxiomRef' 'S.Concrete
-
-newtype AxiomRef' (n :: S.IsConcrete) = AxiomRef'
-  {_axiomRefName :: RefNameType n}
-
-instance Hashable (RefNameType s) => Hashable (AxiomRef' s) where
-  hashWithSalt i = hashWithSalt i . _axiomRefName
-
-instance Eq (RefNameType s) => Eq (AxiomRef' s) where
-  (==) = (==) `on` _axiomRefName
-
-instance Ord (RefNameType s) => Ord (AxiomRef' s) where
-  compare = compare `on` _axiomRefName
-
-instance Show (RefNameType s) => Show (AxiomRef' s) where
-  show = show . _axiomRefName
-
-type InductiveRef = InductiveRef' 'S.Concrete
-
-newtype InductiveRef' (n :: S.IsConcrete) = InductiveRef'
-  { _inductiveRefName :: RefNameType n
-  }
-
-instance Hashable (RefNameType s) => Hashable (InductiveRef' s) where
-  hashWithSalt i = hashWithSalt i . _inductiveRefName
-
-instance Eq (RefNameType s) => Eq (InductiveRef' s) where
-  (==) = (==) `on` _inductiveRefName
-
-instance Ord (RefNameType s) => Ord (InductiveRef' s) where
-  compare = compare `on` _inductiveRefName
-
-instance Show (RefNameType s) => Show (InductiveRef' s) where
-  show = show . _inductiveRefName
-
-type FunctionRef = FunctionRef' 'S.Concrete
-
-newtype FunctionRef' (n :: S.IsConcrete) = FunctionRef'
-  { _functionRefName :: RefNameType n
-  }
-
-instance Hashable (RefNameType s) => Hashable (FunctionRef' s) where
-  hashWithSalt i = hashWithSalt i . _functionRefName
-
-instance Eq (RefNameType s) => Eq (FunctionRef' s) where
-  (==) = (==) `on` _functionRefName
-
-instance Ord (RefNameType s) => Ord (FunctionRef' s) where
-  compare = compare `on` _functionRefName
-
-instance Show (RefNameType s) => Show (FunctionRef' s) where
-  show = show . _functionRefName
-
-type ConstructorRef = ConstructorRef' 'S.Concrete
-
-newtype ConstructorRef' (n :: S.IsConcrete) = ConstructorRef'
-  { _constructorRefName :: RefNameType n
-  }
-
-instance Hashable (RefNameType s) => Hashable (ConstructorRef' s) where
-  hashWithSalt i = hashWithSalt i . _constructorRefName
-
-instance Eq (RefNameType s) => Eq (ConstructorRef' s) where
-  (==) = (==) `on` _constructorRefName
-
-instance Ord (RefNameType s) => Ord (ConstructorRef' s) where
-  compare = compare `on` _constructorRefName
-
-instance Show (RefNameType s) => Show (ConstructorRef' s) where
-  show = show . _constructorRefName
-
 type ScopedIden = ScopedIden' 'S.Concrete
 
 data ScopedIden' (n :: S.IsConcrete)
@@ -637,16 +560,16 @@ deriving stock instance
 
 identifierName :: forall n. SingI n => ScopedIden' n -> RefNameType n
 identifierName = \case
-  ScopedAxiom a -> _axiomRefName a
-  ScopedInductive i -> _inductiveRefName i
+  ScopedAxiom a -> a ^. axiomRefName
+  ScopedInductive i -> i ^. inductiveRefName
   ScopedVar v ->
     ( case sing :: S.SIsConcrete n of
         S.SConcrete -> id
         S.SNotConcrete -> set S.nameConcrete ()
     )
       (unqualifiedSymbol v)
-  ScopedFunction f -> _functionRefName f
-  ScopedConstructor c -> _constructorRefName c
+  ScopedFunction f -> f ^. functionRefName
+  ScopedConstructor c -> c ^. constructorRefName
 
 data Expression
   = ExpressionIdentifier ScopedIden
@@ -679,24 +602,6 @@ instance HasAtomicity Expression where
 --------------------------------------------------------------------------------
 -- Expression atom
 --------------------------------------------------------------------------------
-
-data LiteralLoc = LiteralLoc
-  { _literalLocLiteral :: Literal,
-    _literalLocLoc :: Interval
-  }
-  deriving stock (Show, Ord)
-
-instance HasAtomicity LiteralLoc where
-  atomicity = atomicity . _literalLocLiteral
-
-instance Pretty LiteralLoc where
-  pretty = pretty . _literalLocLiteral
-
-instance Eq LiteralLoc where
-  l1 == l2 = _literalLocLiteral l1 == _literalLocLiteral l2
-
-instance HasLoc LiteralLoc where
-  getLoc = _literalLocLoc
 
 -- | Expressions without application
 data ExpressionAtom (s :: Stage)
@@ -830,9 +735,9 @@ deriving stock instance
 --------------------------------------------------------------------------------
 
 data FunctionParameter (s :: Stage) = FunctionParameter
-  { paramName :: Maybe (SymbolType s),
-    paramUsage :: Maybe Usage,
-    paramType :: ExpressionType s
+  { _paramName :: Maybe (SymbolType s),
+    _paramUsage :: Maybe Usage,
+    _paramType :: ExpressionType s
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (FunctionParameter s)
@@ -842,8 +747,8 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Functi
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (FunctionParameter s)
 
 data Function (s :: Stage) = Function
-  { funParameter :: FunctionParameter s,
-    funReturn :: ExpressionType s
+  { _funParameter :: FunctionParameter s,
+    _funReturn :: ExpressionType s
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (Function s)
@@ -975,15 +880,15 @@ deriving stock instance
 --------------------------------------------------------------------------------
 
 data Application = Application
-  { applicationFunction :: ExpressionType 'Scoped,
-    applicationParameter :: ExpressionType 'Scoped
+  { _applicationFunction :: ExpressionType 'Scoped,
+    _applicationParameter :: ExpressionType 'Scoped
   }
   deriving stock (Show, Eq, Ord)
 
 data InfixApplication = InfixApplication
-  { infixAppLeft :: ExpressionType 'Scoped,
-    infixAppOperator :: IdentifierType 'Scoped,
-    infixAppRight :: ExpressionType 'Scoped
+  { _infixAppLeft :: ExpressionType 'Scoped,
+    _infixAppOperator :: IdentifierType 'Scoped,
+    _infixAppRight :: ExpressionType 'Scoped
   }
   deriving stock (Show, Eq, Ord)
 
@@ -991,8 +896,8 @@ instance HasFixity InfixApplication where
   getFixity (InfixApplication _ op _) = fromMaybe impossible (identifierName op ^. S.nameFixity)
 
 data PostfixApplication = PostfixApplication
-  { postfixAppParameter :: ExpressionType 'Scoped,
-    postfixAppOperator :: IdentifierType 'Scoped
+  { _postfixAppParameter :: ExpressionType 'Scoped,
+    _postfixAppOperator :: IdentifierType 'Scoped
   }
   deriving stock (Show, Eq, Ord)
 
@@ -1004,8 +909,8 @@ instance HasFixity PostfixApplication where
 --------------------------------------------------------------------------------
 
 data LetBlock (s :: Stage) = LetBlock
-  { letClauses :: [LetClause s],
-    letExpression :: ExpressionType s
+  { _letClauses :: [LetClause s],
+    _letExpression :: ExpressionType s
   }
 
 deriving stock instance
@@ -1114,24 +1019,27 @@ deriving stock instance
 
 --------------------------------------------------------------------------------
 
+makeLenses ''Function
 makeLenses ''InductiveDef
+makeLenses ''PostfixApplication
+makeLenses ''InfixApplication
+makeLenses ''Application
+makeLenses ''LetBlock
+makeLenses ''FunctionParameter
+makeLenses ''Import
+makeLenses ''OperatorSyntaxDef
 makeLenses ''InductiveConstructorDef
 makeLenses ''Module
 makeLenses ''TypeSignature
 makeLenses ''AxiomDef
 makeLenses ''FunctionClause
 makeLenses ''InductiveParameter
-makeLenses ''AxiomRef'
-makeLenses ''InductiveRef'
 makeLenses ''ModuleRef'
 makeLenses ''ModuleRef''
-makeLenses ''FunctionRef'
-makeLenses ''ConstructorRef'
 makeLenses ''OpenModule
 makeLenses ''PatternApp
 makeLenses ''PatternInfixApp
 makeLenses ''PatternPostfixApp
-makeLenses ''LiteralLoc
 makeLenses ''Compile
 
 --------------------------------------------------------------------------------
@@ -1159,7 +1067,7 @@ entryName :: SymbolEntry -> S.Name' ()
 entryName = fst . entryPrism id
 
 instance HasLoc SymbolEntry where
-  getLoc = S._nameDefined . entryName
+  getLoc = (^. S.nameDefined) . entryName
 
 overModuleRef'' :: forall s s'. (forall t. ModuleRef'' s t -> ModuleRef'' s' t) -> ModuleRef' s -> ModuleRef' s'
 overModuleRef'' f = over unModuleRef' (\(t :&: m'') -> t :&: f m'')

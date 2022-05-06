@@ -26,19 +26,17 @@ data BinaryAssoc = AssocNone | AssocLeft | AssocRight
   deriving stock (Show, Eq, Ord, Lift)
 
 data OperatorArity
-  = Unary
-      { unaryAssoc :: UnaryAssoc
-      }
-  | Binary
-      { binaryAssoc :: BinaryAssoc
-      }
+  = Unary UnaryAssoc
+  | Binary BinaryAssoc
   deriving stock (Show, Eq, Ord, Lift)
 
 data Fixity = Fixity
-  { fixityPrecedence :: Precedence,
-    fixityArity :: OperatorArity
+  { _fixityPrecedence :: Precedence,
+    _fixityArity :: OperatorArity
   }
   deriving stock (Show, Eq, Ord, Lift)
+
+makeLenses ''Fixity
 
 data Atomicity
   = Atom
@@ -51,17 +49,17 @@ class HasFixity a where
   getFixity :: a -> Fixity
 
 isLeftAssoc :: Fixity -> Bool
-isLeftAssoc opInf = case fixityArity opInf of
+isLeftAssoc opInf = case opInf ^. fixityArity of
   Binary AssocLeft -> True
   _ -> False
 
 isRightAssoc :: Fixity -> Bool
-isRightAssoc opInf = case fixityArity opInf of
+isRightAssoc opInf = case opInf ^. fixityArity of
   Binary AssocRight -> True
   _ -> False
 
 isPostfixAssoc :: Fixity -> Bool
-isPostfixAssoc opInf = case fixityArity opInf of
+isPostfixAssoc opInf = case opInf ^. fixityArity of
   Unary AssocPostfix -> True
   _ -> False
 

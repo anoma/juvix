@@ -28,7 +28,7 @@ data Name = Name
 makeLenses ''Name
 
 instance HasNameKind Name where
-  getNameKind = _nameKind
+  getNameKind = (^. nameKind)
 
 data Module = Module
   { _moduleName :: Name,

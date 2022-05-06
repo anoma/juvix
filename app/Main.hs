@@ -3,10 +3,13 @@
 module Main (main) where
 
 import Commands.Extra
+import Commands.Html
 import Commands.MicroJuvix
 import Commands.MiniC
 import Commands.MiniHaskell
 import Commands.MonoJuvix
+import Commands.Parse
+import Commands.Scope
 import Commands.Termination as Termination
 import Control.Exception qualified as IO
 import Control.Monad.Extra
@@ -65,26 +68,11 @@ data CLI = CLI
     _cliCommand :: Command
   }
 
-data ScopeOptions = ScopeOptions
-  { _scopeInputFiles :: NonEmpty FilePath,
-    _scopeInlineImports :: Bool
-  }
-
-data ParseOptions = ParseOptions
-  { _parseInputFile :: FilePath,
-    _parseNoPrettyShow :: Bool
-  }
-
 newtype HighlightOptions = HighlightOptions
   { _highlightInputFile :: FilePath
   }
 
-data HtmlOptions = HtmlOptions
-  { _htmlInputFile :: FilePath,
-    _htmlRecursive :: Bool,
-    _htmlTheme :: Theme
-  }
-
+makeLenses ''HighlightOptions
 makeLenses ''GlobalOptions
 makeLenses ''CLI
 
@@ -108,67 +96,10 @@ parseCLI = do
   _cliCommand <- parseCommand
   pure CLI {..}
 
-parseHtml :: Parser HtmlOptions
-parseHtml = do
-  _htmlInputFile <- parseInputFile
-  _htmlRecursive <-
-    switch
-      ( long "recursive"
-          <> help "export imported modules recursively"
-      )
-  _htmlTheme <-
-    option
-      (eitherReader parseTheme)
-      ( long "theme"
-          <> metavar "THEME"
-          <> value Ayu
-          <> showDefault
-          <> help "selects a theme: ayu (light); nord (dark)"
-      )
-  pure HtmlOptions {..}
-  where
-    parseTheme :: String -> Either String Theme
-    parseTheme s = case s of
-      "nord" -> Right Nord
-      "ayu" -> Right Ayu
-      _ -> Left $ "unrecognised theme: " <> s
-
 parseHighlight :: Parser HighlightOptions
 parseHighlight = do
-  _highlightInputFile <- parseInputFile
+  _highlightInputFile <- parserInputFile
   pure HighlightOptions {..}
-
-parseParse :: Parser ParseOptions
-parseParse = do
-  _parseInputFile <- parseInputFile
-  _parseNoPrettyShow <-
-    switch
-      ( long "no-pretty-show"
-          <> help "Disable formatting of the Haskell AST"
-      )
-  pure ParseOptions {..}
-
-parseScope :: Parser ScopeOptions
-parseScope = do
-  _scopeInputFiles <-
-    some1 $
-      argument
-        str
-        ( metavar "MINIJUVIX_FILE(s)"
-            <> help "Path to one ore more MiniJuvix files"
-            <> action "file"
-        )
-  _scopeInlineImports <-
-    switch
-      ( long "inline-imports"
-          <> help "Show the code of imported modules next to the import statement"
-      )
-  _scopeNoColors <-
-    switch
-      ( long "no-colors"
-          <> help "Disable ANSI formatting"
-      )
-  pure ScopeOptions {..}
 
 parseDisplayVersion :: Parser Command
 parseDisplayVersion =
@@ -338,37 +269,37 @@ class HasEntryPoint a where
   getEntryPoint :: FilePath -> a -> EntryPoint
 
 instance HasEntryPoint ScopeOptions where
-  getEntryPoint root = EntryPoint root . _scopeInputFiles
+  getEntryPoint root = EntryPoint root . (^. scopeInputFiles)
 
 instance HasEntryPoint ParseOptions where
-  getEntryPoint root = EntryPoint root . pure . _parseInputFile
+  getEntryPoint root = EntryPoint root . pure . (^. parseInputFile)
 
 instance HasEntryPoint HighlightOptions where
-  getEntryPoint root = EntryPoint root . pure . _highlightInputFile
+  getEntryPoint root = EntryPoint root . pure . (^. highlightInputFile)
 
 instance HasEntryPoint HtmlOptions where
-  getEntryPoint root = EntryPoint root . pure . _htmlInputFile
+  getEntryPoint root = EntryPoint root . pure . (^. htmlInputFile)
 
 instance HasEntryPoint MicroJuvixTypeOptions where
-  getEntryPoint root = EntryPoint root . pure . _microJuvixTypeInputFile
+  getEntryPoint root = EntryPoint root . pure . (^. microJuvixTypeInputFile)
 
 instance HasEntryPoint MicroJuvixPrettyOptions where
-  getEntryPoint root = EntryPoint root . pure . _microJuvixPrettyInputFile
+  getEntryPoint root = EntryPoint root . pure . (^. microJuvixPrettyInputFile)
 
 instance HasEntryPoint MonoJuvixOptions where
-  getEntryPoint root = EntryPoint root . pure . _monoJuvixInputFile
+  getEntryPoint root = EntryPoint root . pure . (^. monoJuvixInputFile)
 
 instance HasEntryPoint MiniHaskellOptions where
-  getEntryPoint root = EntryPoint root . pure . _mhaskellInputFile
+  getEntryPoint root = EntryPoint root . pure . (^. miniHaskellInputFile)
 
 instance HasEntryPoint MiniCOptions where
-  getEntryPoint root = EntryPoint root . pure . _miniCInputFile
+  getEntryPoint root = EntryPoint root . pure . (^. miniCInputFile)
 
 instance HasEntryPoint CallsOptions where
-  getEntryPoint root = EntryPoint root . pure . _callsInputFile
+  getEntryPoint root = EntryPoint root . pure . (^. callsInputFile)
 
 instance HasEntryPoint CallGraphOptions where
-  getEntryPoint root = EntryPoint root . pure . _graphInputFile
+  getEntryPoint root = EntryPoint root . pure . (^. graphInputFile)
 
 runCLI :: CLI -> IO ()
 runCLI cli = do
@@ -478,7 +409,7 @@ runCLI cli = do
       renderStdOutAbs (Abstract.ppOut opts' filteredGraph)
       putStrLn ""
       forM_ recBehav $ \r -> do
-        let funName = Termination._recursiveBehaviourFun r
+        let funName = r ^. Termination.recursiveBehaviourFun
             funRef = Abstract.FunctionRef (Scoper.unqualifiedSymbol funName)
             funInfo = HashMap.lookupDefault impossible funRef (infotable ^. Abstract.infoFunctions)
             markedTerminating = funInfo ^. (Abstract.functionInfoDef . Abstract.funDefTerminating)

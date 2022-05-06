@@ -61,18 +61,12 @@ ghc-options:
 # Warnings
 - -Weverything
 - -Wno-unused-packages
-- -Wno-missing-exported-signatures
 - -Wno-missing-import-lists
-- -Wno-missed-specialisations
-- -Wno-all-missed-specialisations
 - -Wno-unsafe
 - -Wno-safe
 - -Wno-missing-safe-haskell-mode
-- -Wno-missing-local-signatures
-- -Wno-monomorphism-restriction
 - -Wno-missing-kind-signatures
 - -Wno-missing-export-lists
-- -Wno-partial-fields
 
 # HIE Support
 - -fhide-source-paths
@@ -88,13 +82,13 @@ default-extensions:
 - ImportQualifiedPost
 - LambdaCase
 - MultiWayIf
+- NoFieldSelectors
 - NoImplicitPrelude
 - OverloadedStrings
 - QuasiQuotes
 - RecordWildCards
 - TemplateHaskell
 - TypeFamilyDependencies
-- UnicodeSyntax
 
 library:
   source-dirs: src
