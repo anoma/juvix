@@ -44,9 +44,9 @@ program can be downloaded and installed with the following commands. You
 will need to have [[https://haskellstack.org][Stack]] installed.
 
 #+begin_src shell
-   $ git clone https://github.com/heliaxdev/minijuvix.git
-   $ cd minijuvix
-   $ stack install
+git clone https://github.com/heliaxdev/minijuvix.git
+cd minijuvix
+stack install
 #+end_src
 
 If the installation succeeds, you must be able to run the =minijuvix=
@@ -56,62 +56,24 @@ run =minijuvix --help=.
 - To test everything works correctly, you can run the following command. You will need to have [[https://emscripten.org][emscripten]] and [[https://wasmer.io][wasmer]] installed.
 
 #+begin_src shell
-  $ stack test
+stack test
 #+end_src
 
-** Emacs mode
+** Usage Example
 
-  There is an Emacs mode available for MiniJuvix. Currently, it
-  supports syntax highlighting for well-scoped modules.
-
-  To install it add the following lines to your Emacs configuration file:
-
-  #+begin_src elisp
-  (push "/path/to/minijuvix/minijuvix-mode/" load-path)
-  (require 'minijuvix-mode)
-  #+end_src
-
-  Make sure that =minijuvix= is installed in your =PATH=.
-
-  The MiniJuvix major mode will be activated automatically for =.mjuvix= files.
-
-*** Keybindings
-
-  | Key       | Function Name    | Description                                           |
-  |-----------+------------------+-------------------------------------------------------|
-  | =C-c C-l= | =minijuvix-load= | Runs the scoper and adds semantic syntax highlighting |
-
-** CLI Auto-completion Scripts
-
-The MiniJuvix CLI can generate auto-completion scripts. Follow the instructions below for your shell.
-
-NB: You may need to restart your shell after installing the completion script.
-
-*** Bash
-
-Add the following line to your bash init script (for example =~/.bashrc=).
+In the following example a MiniJuvix file is compiled using the C backend.  The result is compiled to WASM using [[https://emscripten.org][emscripten]] and then executed using  [[https://wasmer.io][wasmer]].
 
 #+begin_src shell
-  eval "$(minijuvix --bash-completion-script minijuvix)"
+cd tests/positive/MiniC/HelloWorld
+minijuvix minic Input.mjuvix | emcc -x c - -o out.wasm && wasmer out.wasm
 #+end_src
 
-*** Fish
+#+RESULTS:
+: hello world!
 
-Run the following command in your shell:
+** Other Documentation
 
-#+begin_src shell
-  $ minijuvix --fish-completion-script minijuvix > ~/.config/fish/completions/minijuvix.fish
-#+end_src
-
-*** ZSH
-
-Run the following command in your shell:
-
-#+begin_src shell
-  $ minijuvix --zsh-completion-script minijuvix > $DIR_IN_FPATH/_minijuvix
-#+end_src
-
-where =$DIR_IN_FPATH= is a directory that is present on the [[https://zsh.sourceforge.io/Doc/Release/Functions.html][ZSH FPATH variable]] (which you can inspect by running =echo $FPATH= in the shell).
+[[docs/developer-tooling.org][Developer Tooling]]
 
 ** Community
 
