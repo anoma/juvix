@@ -84,6 +84,9 @@ instance PrettyCode Expression where
 keyword :: Text -> Doc Ann
 keyword = annotate AnnKeyword . pretty
 
+kwInclude :: Doc Ann
+kwInclude = keyword Str.include
+
 kwArrow :: Doc Ann
 kwArrow = keyword Str.toAscii
 
@@ -251,6 +254,11 @@ instance PrettyCode ForeignBlock where
         <> line
         <> rbrace
 
+instance PrettyCode Include where
+  ppCode i = do
+    name' <- ppCode (i ^. includeModule . moduleName)
+    return $ kwInclude <+> name'
+
 instance PrettyCode AxiomDef where
   ppCode AxiomDef {..} = do
     axiomName' <- ppCode _axiomName
@@ -263,6 +271,7 @@ instance PrettyCode Statement where
     StatementFunction f -> ppCode f
     StatementInductive f -> ppCode f
     StatementAxiom f -> ppCode f
+    StatementInclude i -> ppCode i
 
 instance PrettyCode ModuleBody where
   ppCode m = do

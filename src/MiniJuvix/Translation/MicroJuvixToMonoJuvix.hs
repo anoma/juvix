@@ -179,8 +179,15 @@ goModuleBody ::
   Members '[Error Err, Reader ConcreteTable, NameIdGen, Reader Micro.InfoTable] r =>
   Micro.ModuleBody ->
   Sem r ModuleBody
-goModuleBody Micro.ModuleBody {..} =
-  ModuleBody <$> concatMapM goStatement _moduleStatements
+goModuleBody b =
+  ModuleBody <$> concatMapM goStatement (b ^. Micro.moduleStatements)
+
+goInclude ::
+  Members '[Error Err, Reader ConcreteTable, NameIdGen, Reader Micro.InfoTable] r =>
+  Micro.Include ->
+  Sem r [Statement]
+goInclude i =
+  (^. moduleStatements) <$> goModuleBody (i ^. Micro.includeModule . Micro.moduleBody)
 
 goStatement ::
   Members '[Error Err, Reader ConcreteTable, NameIdGen, Reader Micro.InfoTable] r =>
@@ -191,6 +198,7 @@ goStatement = \case
   Micro.StatementFunction d -> map StatementFunction <$> goFunctionDef d
   Micro.StatementForeign d -> return [StatementForeign d]
   Micro.StatementAxiom a -> pure . StatementAxiom <$> goAxiomDef a
+  Micro.StatementInclude i -> goInclude i
 
 goAxiomDef :: Members '[Error Err, Reader ConcreteTable] r => Micro.AxiomDef -> Sem r AxiomDef
 goAxiomDef Micro.AxiomDef {..} = do

@@ -53,6 +53,12 @@ checkModuleBody ModuleBody {..} = do
       { _moduleStatements = _moduleStatements'
       }
 
+checkInclude ::
+  Members '[Reader InfoTable, Error TypeCheckerError] r =>
+  Include ->
+  Sem r Include
+checkInclude = traverseOf includeModule checkModule
+
 checkStatement ::
   Members '[Reader InfoTable, Error TypeCheckerError] r =>
   Statement ->
@@ -61,6 +67,7 @@ checkStatement s = case s of
   StatementFunction fun -> StatementFunction <$> checkFunctionDef fun
   StatementForeign {} -> return s
   StatementInductive {} -> return s
+  StatementInclude i -> StatementInclude <$> checkInclude i
   StatementAxiom {} -> return s
 
 checkFunctionDef ::

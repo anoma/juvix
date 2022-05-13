@@ -20,6 +20,9 @@ root = "tests/positive/MiniC"
 mainFile :: FilePath
 mainFile = "Input.mjuvix"
 
+expectedFile :: FilePath
+expectedFile = "expected.golden"
+
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
   let tRoot = root </> _relDir
@@ -32,7 +35,7 @@ testDescr PosTest {..} =
             assertCmdExists "wasmer"
 
             step "C Generation"
-            let entryPoint = EntryPoint "." (return "Input.mjuvix")
+            let entryPoint = EntryPoint "." (pure mainFile)
             p :: MiniC.MiniCResult <- runIO (upToMiniC entryPoint)
 
             actual <-
@@ -47,9 +50,9 @@ testDescr PosTest {..} =
                     pack <$> P.readProcess "wasmer" [wasmOutputFile] ""
                 )
 
-            expected <- TIO.readFile "expected.golden"
+            expected <- TIO.readFile expectedFile
             step "Compare expected and actual program output"
-            assertEqDiff "check: WASM output = expected.golden" actual expected
+            assertEqDiff ("check: WASM output = " <> expectedFile) actual expected
         }
 
 allTests :: TestTree
@@ -62,5 +65,6 @@ tests :: [PosTest]
 tests =
   [ PosTest "HelloWorld" "HelloWorld",
     PosTest "Inductive types and pattern matching" "Nat",
-    PosTest "Polymorphic types" "Polymorphism"
+    PosTest "Polymorphic types" "Polymorphism",
+    PosTest "Multiple modules" "MultiModules"
   ]

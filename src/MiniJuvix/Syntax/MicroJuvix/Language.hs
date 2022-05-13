@@ -64,6 +64,10 @@ data Module = Module
     _moduleBody :: ModuleBody
   }
 
+newtype Include = Include
+  { _includeModule :: Module
+  }
+
 newtype ModuleBody = ModuleBody
   { _moduleStatements :: [Statement]
   }
@@ -73,6 +77,7 @@ data Statement
   | StatementFunction FunctionDef
   | StatementForeign ForeignBlock
   | StatementAxiom AxiomDef
+  | StatementInclude Include
 
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
@@ -204,6 +209,7 @@ data FunctionArgType
   deriving stock (Show)
 
 makeLenses ''Module
+makeLenses ''Include
 makeLenses ''Function
 makeLenses ''FunctionExpression
 makeLenses ''FunctionDef

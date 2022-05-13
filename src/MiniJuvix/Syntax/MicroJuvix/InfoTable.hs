@@ -56,9 +56,12 @@ instance Monoid InfoTable where
 buildTable :: Foldable f => f Module -> InfoTable
 buildTable = mconcatMap buildTable1
 
+-- TODO avoid building a table for the same module twice
 buildTable1 :: Module -> InfoTable
-buildTable1 m = InfoTable {..}
+buildTable1 m = InfoTable {..} <> buildTable (map (^. includeModule) includes)
   where
+    includes :: [Include]
+    includes = [i | StatementInclude i <- ss]
     _infoInductives :: HashMap Name InductiveInfo
     _infoInductives =
       HashMap.fromList

@@ -1,0 +1,45 @@
+module IO;
+
+import String;
+open String;
+
+axiom Action : Type;
+
+compile Action {
+  ghc ↦ "IO ()";
+  c ↦ "int";
+};
+
+foreign c {
+  int sequence(int a, int b) {
+    return a + b;
+  \}
+
+  int putStr(char* s) {
+    return fputs(s, stdout);
+  \}
+};
+
+infixl 1 >>;
+axiom >> : Action → Action → Action;
+
+compile >> {
+  ghc ↦ "(>>)";
+  c ↦ "sequence";
+};
+
+axiom put-str : String → Action;
+
+compile put-str {
+  ghc ↦ "putStr";
+  c ↦ "putStr";
+};
+
+axiom put-str-ln : String → Action;
+
+compile put-str-ln {
+  ghc ↦ "putStrLn";
+  c ↦ "puts";
+};
+
+end;

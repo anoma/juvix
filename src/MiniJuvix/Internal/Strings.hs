@@ -17,6 +17,9 @@ eval = "eval"
 hiding :: IsString s => s
 hiding = "hiding"
 
+include :: IsString s => s
+include = "include"
+
 import_ :: IsString s => s
 import_ = "import"
 

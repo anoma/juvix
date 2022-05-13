@@ -1,0 +1,15 @@
+module Prelude;
+
+import String;
+open String public;
+
+import Bool;
+open Bool public;
+
+import Pair;
+open Pair public;
+
+import IO;
+open IO public;
+
+end;

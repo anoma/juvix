@@ -28,7 +28,11 @@ goStatement = \case
   StatementInductive d -> goInductiveDef d
   StatementFunction f -> goFunctionDef f
   StatementForeign {} -> return ()
+  StatementInclude i -> goInclude i
   StatementAxiom a -> goAxiomDef a
+
+goInclude :: Members '[State TypeCallsMap, Reader InfoTable] r => Include -> Sem r ()
+goInclude i = goModule (i ^. includeModule)
 
 goAxiomDef :: Members '[State TypeCallsMap] r => AxiomDef -> Sem r ()
 goAxiomDef a =

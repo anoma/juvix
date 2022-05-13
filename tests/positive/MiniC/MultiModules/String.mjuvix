@@ -1,0 +1,10 @@
+module String;
+
+axiom String : Type;
+
+compile String {
+  ghc ↦ "[Char]";
+  c ↦ "char*";
+};
+
+end;
