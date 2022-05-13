@@ -20,9 +20,8 @@ import MiniJuvix.Prelude.Pretty hiding (Doc)
 import MiniJuvix.Syntax.Abstract.InfoTable qualified as Abstract
 import MiniJuvix.Syntax.Abstract.Language qualified as Abstract
 import MiniJuvix.Syntax.Abstract.Pretty qualified as Abstract
-import MiniJuvix.Syntax.Concrete.Language qualified as Concrete
 import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
-import MiniJuvix.Syntax.Concrete.Scoped.Highlight qualified as Scoper
+import MiniJuvix.Syntax.Concrete.Scoped.Highlight qualified as Highlight
 import MiniJuvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty qualified as Scoper
@@ -235,9 +234,6 @@ mkScopePrettyOptions g ScopeOptions {..} =
       Scoper._optInlineImports = _scopeInlineImports
     }
 
-parseModuleIO :: FilePath -> IO (Concrete.Module 'Concrete.Parsed 'Concrete.ModuleTop)
-parseModuleIO = fromRightIO id . Parser.runModuleParserIO
-
 minijuvixYamlFile :: FilePath
 minijuvixYamlFile = "minijuvix.yaml"
 
@@ -328,13 +324,21 @@ runCLI cli = do
       let entry :: EntryPoint
           entry = getEntryPoint root o
       res <- runIO (upToScoping entry)
+      absP <- makeAbsolute (o ^. highlightInputFile)
       let tbl = res ^. Scoper.resultParserTable
           items = tbl ^. Parser.infoParsedItems
           names = res ^. (Scoper.resultScoperTable . Scoper.infoNames)
-      putStrLn (Scoper.go items names)
-    Parse ParseOptions {..} -> do
-      m <- parseModuleIO _parseInputFile
-      if _parseNoPrettyShow then print m else pPrint m
+          hinput =
+            Highlight.filterInput
+              absP
+              Highlight.HighlightInput
+                { _highlightNames = names,
+                  _highlightParsed = items
+                }
+      putStrLn (Highlight.go hinput)
+    Parse opts -> do
+      m <- head . (^. Parser.resultModules) <$> runIO (upToParsing (getEntryPoint root opts))
+      if opts ^. parseNoPrettyShow then print m else pPrint m
     Scope opts -> do
       l <- (^. Scoper.resultModules) <$> runIO (upToScoping (getEntryPoint root opts))
       forM_ l $ \s -> do

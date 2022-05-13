@@ -26,6 +26,13 @@ data Instruction = SetProperty
     _setPropertyProperty :: Property
   }
 
+data HighlightInput = HighlightInput
+  { _highlightParsed :: [ParsedItem],
+    _highlightNames :: [Name]
+  }
+
+makeLenses ''HighlightInput
+
 data SExp
   = Symbol Text
   | App [SExp]
@@ -37,8 +44,18 @@ data SExp
 
 makeLenses ''Instruction
 
-go :: [ParsedItem] -> [Name] -> Text
-go items names =
+filterInput :: FilePath -> HighlightInput -> HighlightInput
+filterInput absPth h =
+  HighlightInput
+    { _highlightNames = filterByLoc (h ^. highlightNames),
+      _highlightParsed = filterByLoc (h ^. highlightParsed)
+    }
+  where
+    filterByLoc :: HasLoc p => [p] -> [p]
+    filterByLoc = filter ((== absPth) . (^. intFile) . getLoc)
+
+go :: HighlightInput -> Text
+go HighlightInput {..} =
   renderSExp
     ( progn
         ( map goParsedItem items
@@ -46,6 +63,11 @@ go items names =
             <> map gotoDefName names
         )
     )
+  where
+    names :: [Name]
+    names = _highlightNames
+    items :: [ParsedItem]
+    items = _highlightParsed
 
 progn :: [SExp] -> SExp
 progn l = App (Symbol "progn" : l)

@@ -14,6 +14,12 @@ type OperatorSym = Text
 
 type ParsecS r = ParsecT Void Text (Sem r)
 
+newtype ParserParams = ParserParams
+  { _parserParamsRoot :: FilePath
+  }
+
+makeLenses ''ParserParams
+
 space :: forall m e. MonadParsec e Text m => m ()
 space = L.space space1 lineComment block
   where
@@ -31,10 +37,10 @@ symbol = void . L.symbol space
 decimal :: (MonadParsec e Text m, Num n) => m n
 decimal = lexeme L.decimal
 
-identifier :: Member InfoTableBuilder r => ParsecS r Text
+identifier :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r Text
 identifier = fmap fst identifierL
 
-identifierL :: Member InfoTableBuilder r => ParsecS r (Text, Interval)
+identifierL :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Text, Interval)
 identifierL = lexeme bareIdentifier
 
 fromPos :: P.Pos -> Pos
@@ -66,37 +72,38 @@ bracedString =
 string :: MonadParsec e Text m => m Text
 string = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
-mkLoc :: Int -> SourcePos -> Loc
-mkLoc offset SourcePos {..} = Loc {..}
+mkLoc :: Member (Reader ParserParams) r => Int -> SourcePos -> Sem r Loc
+mkLoc offset SourcePos {..} = do
+  root <- asks (^. parserParamsRoot)
+  let _locFile = normalise (root </> sourceName)
+  return Loc {..}
   where
-    _locFile = sourceName
     _locOffset = Pos (fromIntegral offset)
     _locFileLoc = FileLoc {..}
       where
         _locLine = fromPos sourceLine
         _locCol = fromPos sourceColumn
 
-curLoc :: MonadParsec e Text m => m Loc
+curLoc :: Member (Reader ParserParams) r => ParsecS r Loc
 curLoc = do
   sp <- getSourcePos
   offset <- stateOffset <$> getParserState
-  return (mkLoc offset sp)
+  lift (mkLoc offset sp)
 
-interval :: MonadParsec e Text m => m a -> m (a, Interval)
+interval :: Member (Reader ParserParams) r => ParsecS r a -> ParsecS r (a, Interval)
 interval ma = do
   start <- curLoc
   res <- ma
   end <- curLoc
   return (res, mkInterval start end)
 
-keyword :: Member InfoTableBuilder r => Text -> ParsecS r ()
+keyword :: Members '[Reader ParserParams, InfoTableBuilder] r => Text -> ParsecS r ()
 keyword kw = do
   l <- snd <$> interval (symbol kw)
   lift (registerKeyword l)
 
 -- | Same as @identifier@ but does not consume space after it.
--- TODO: revise.
-bareIdentifier :: Member InfoTableBuilder r => ParsecS r (Text, Interval)
+bareIdentifier :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Text, Interval)
 bareIdentifier = interval $ do
   notFollowedBy (choice allKeywords)
   h <- P.satisfy validFirstChar
@@ -123,13 +130,13 @@ bareIdentifier = interval $ do
 dot :: forall e m. MonadParsec e Text m => m Char
 dot = P.char '.'
 
-dottedIdentifier :: Member InfoTableBuilder r => ParsecS r (NonEmpty (Text, Interval))
+dottedIdentifier :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (NonEmpty (Text, Interval))
 dottedIdentifier = lexeme $ P.sepBy1 bareIdentifier dot
 
 braces :: MonadParsec e Text m => m a -> m a
 braces = between (symbol "{") (symbol "}")
 
-allKeywords :: Member InfoTableBuilder r => [ParsecS r ()]
+allKeywords :: Members '[Reader ParserParams, InfoTableBuilder] r => [ParsecS r ()]
 allKeywords =
   [ kwAssignment,
     kwAxiom,
@@ -174,108 +181,108 @@ rparen = symbol ")"
 parens :: MonadParsec e Text m => m a -> m a
 parens = between lparen rparen
 
-kwAssignment :: Member InfoTableBuilder r => ParsecS r ()
+kwAssignment :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwAssignment = keyword Str.assignUnicode <|> keyword Str.assignAscii
 
-kwAxiom :: Member InfoTableBuilder r => ParsecS r ()
+kwAxiom :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwAxiom = keyword Str.axiom
 
 -- | Note that the trailing space is needed to distinguish it from ':='.
-kwColon :: Member InfoTableBuilder r => ParsecS r ()
+kwColon :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwColon = keyword Str.colonSpace
 
-kwColonOmega :: Member InfoTableBuilder r => ParsecS r ()
+kwColonOmega :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwColonOmega = keyword Str.colonOmegaUnicode <|> keyword Str.colonOmegaAscii
 
-kwColonOne :: Member InfoTableBuilder r => ParsecS r ()
+kwColonOne :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwColonOne = keyword Str.colonOne
 
-kwColonZero :: Member InfoTableBuilder r => ParsecS r ()
+kwColonZero :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwColonZero = keyword Str.colonZero
 
-kwCompile :: Member InfoTableBuilder r => ParsecS r ()
+kwCompile :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwCompile = keyword Str.compile
 
-kwEnd :: Member InfoTableBuilder r => ParsecS r ()
+kwEnd :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwEnd = keyword Str.end
 
-kwEval :: Member InfoTableBuilder r => ParsecS r ()
+kwEval :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwEval = keyword Str.eval
 
-kwHiding :: Member InfoTableBuilder r => ParsecS r ()
+kwHiding :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwHiding = keyword Str.hiding
 
-kwImport :: Member InfoTableBuilder r => ParsecS r ()
+kwImport :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwImport = keyword Str.import_
 
-kwForeign :: Member InfoTableBuilder r => ParsecS r ()
+kwForeign :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwForeign = keyword Str.foreign_
 
-kwIn :: Member InfoTableBuilder r => ParsecS r ()
+kwIn :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwIn = keyword Str.in_
 
-kwInductive :: Member InfoTableBuilder r => ParsecS r ()
+kwInductive :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwInductive = keyword Str.inductive
 
-kwInfix :: Member InfoTableBuilder r => ParsecS r ()
+kwInfix :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwInfix = keyword Str.infix_
 
-kwInfixl :: Member InfoTableBuilder r => ParsecS r ()
+kwInfixl :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwInfixl = keyword Str.infixl_
 
-kwInfixr :: Member InfoTableBuilder r => ParsecS r ()
+kwInfixr :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwInfixr = keyword Str.infixr_
 
-kwLambda :: Member InfoTableBuilder r => ParsecS r ()
+kwLambda :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwLambda = keyword Str.lambdaUnicode <|> keyword Str.lambdaAscii
 
-kwLet :: Member InfoTableBuilder r => ParsecS r ()
+kwLet :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwLet = keyword Str.let_
 
-kwMapsTo :: Member InfoTableBuilder r => ParsecS r ()
+kwMapsTo :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwMapsTo = keyword Str.mapstoUnicode <|> keyword Str.mapstoAscii
 
-kwMatch :: Member InfoTableBuilder r => ParsecS r ()
+kwMatch :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwMatch = keyword Str.match
 
-kwModule :: Member InfoTableBuilder r => ParsecS r ()
+kwModule :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwModule = keyword Str.module_
 
-kwOpen :: Member InfoTableBuilder r => ParsecS r ()
+kwOpen :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwOpen = keyword Str.open
 
-kwPostfix :: Member InfoTableBuilder r => ParsecS r ()
+kwPostfix :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwPostfix = keyword Str.postfix
 
-kwPrint :: Member InfoTableBuilder r => ParsecS r ()
+kwPrint :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwPrint = keyword Str.print
 
-kwPublic :: Member InfoTableBuilder r => ParsecS r ()
+kwPublic :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwPublic = keyword Str.public
 
-kwRightArrow :: Member InfoTableBuilder r => ParsecS r ()
+kwRightArrow :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwRightArrow = keyword Str.toUnicode <|> keyword Str.toAscii
 
-kwSemicolon :: Member InfoTableBuilder r => ParsecS r ()
+kwSemicolon :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwSemicolon = keyword Str.semicolon
 
-kwType :: Member InfoTableBuilder r => ParsecS r ()
+kwType :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwType = keyword Str.type_
 
-kwTerminating :: Member InfoTableBuilder r => ParsecS r ()
+kwTerminating :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwTerminating = keyword Str.terminating
 
-kwUsing :: Member InfoTableBuilder r => ParsecS r ()
+kwUsing :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwUsing = keyword Str.using
 
-kwWhere :: Member InfoTableBuilder r => ParsecS r ()
+kwWhere :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwWhere = keyword Str.where_
 
-kwWildcard :: Member InfoTableBuilder r => ParsecS r ()
+kwWildcard :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwWildcard = keyword Str.underscore
 
-ghc :: Member InfoTableBuilder r => ParsecS r ()
+ghc :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 ghc = keyword Str.ghc
 
-cBackend :: Member InfoTableBuilder r => ParsecS r ()
+cBackend :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 cBackend = keyword Str.cBackend

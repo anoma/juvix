@@ -8,7 +8,6 @@ where
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Singletons
 import Data.Text qualified as Text
-import Data.Text.IO qualified as Text
 import MiniJuvix.Pipeline.EntryPoint
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Base (MonadParsec)
@@ -25,7 +24,7 @@ import MiniJuvix.Syntax.Concrete.Parser.ParserResult
 
 entryParser :: Members '[Files, Error Text] r => EntryPoint -> Sem r ParserResult
 entryParser e = do
-  (_resultTable, _resultModules) <- runInfoTableBuilder (mapM goFile (e ^. entryModulePaths))
+  (_resultTable, _resultModules) <- runInfoTableBuilder (runReader e (mapM goFile (e ^. entryModulePaths)))
   let _resultEntry = e
   return ParserResult {..}
   where
@@ -35,53 +34,37 @@ entryParser e = do
       Sem r (Module 'Parsed 'ModuleTop)
     goFile fileName = do
       input <- readFile' fileName
-      case runModuleParser'' fileName input of
+      case runModuleParser (e ^. entryRoot) fileName input of
         Left er -> throw er
         Right (tbl, m) -> mergeTable tbl $> m
 
-runModuleParserIO :: FilePath -> IO (Either Text (Module 'Parsed 'ModuleTop))
-runModuleParserIO fileName =
-  fmap (fmap snd) (runModuleParserIO' fileName)
-
-runModuleParserIO' :: FilePath -> IO (Either Text (InfoTable, Module 'Parsed 'ModuleTop))
-runModuleParserIO' fileName = do
-  input <- Text.readFile fileName
-  return (runModuleParser'' fileName input)
-
-runModuleParser :: FilePath -> Text -> Either Text (Module 'Parsed 'ModuleTop)
-runModuleParser fileName input = fmap snd (runModuleParser'' fileName input)
-
--- | The 'FilePath' is only used for reporting errors. It is safe to pass
+-- | The fileName is only used for reporting errors. It is safe to pass
 -- an empty string.
-runModuleParser'' :: FilePath -> Text -> Either Text (InfoTable, Module 'Parsed 'ModuleTop)
-runModuleParser'' fileName input =
-  case run $ runInfoTableBuilder $ P.runParserT topModuleDef fileName input of
+runModuleParser :: FilePath -> FilePath -> Text -> Either Text (InfoTable, Module 'Parsed 'ModuleTop)
+runModuleParser root fileName input =
+  case run $ runInfoTableBuilder $ runReader params $ P.runParserT topModuleDef fileName input of
     (_, Left err) -> Left (Text.pack (P.errorBundlePretty err))
     (tbl, Right r) -> return (tbl, r)
+  where
+    params =
+      ParserParams
+        { _parserParamsRoot = root
+        }
 
--- runModuleParser' :: FilePath -> Text -> Either Text ParserResult
--- runModuleParser' fileName input =
---   mkResult <$> runModuleParser'' fileName input
---   where
---   mkResult (t, m) = ParserResult {
---       _resultTable = t,
---       _resultModules = pure m
---       }
-
-topModuleDef :: Member InfoTableBuilder r => ParsecS r (Module 'Parsed 'ModuleTop)
+topModuleDef :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Module 'Parsed 'ModuleTop)
 topModuleDef = space >> moduleDef <* (optional kwSemicolon >> P.eof)
 
 --------------------------------------------------------------------------------
 -- Symbols and names
 --------------------------------------------------------------------------------
 
-symbol :: Member InfoTableBuilder r => ParsecS r Symbol
+symbol :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r Symbol
 symbol = uncurry Symbol <$> identifierL
 
-dottedSymbol :: Member InfoTableBuilder r => ParsecS r (NonEmpty Symbol)
+dottedSymbol :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (NonEmpty Symbol)
 dottedSymbol = fmap (uncurry Symbol) <$> dottedIdentifier
 
-name :: Member InfoTableBuilder r => ParsecS r Name
+name :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r Name
 name = do
   parts <- dottedSymbol
   return $ case nonEmptyUnsnoc parts of
@@ -91,17 +74,17 @@ name = do
 mkTopModulePath :: NonEmpty Symbol -> TopModulePath
 mkTopModulePath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
 
-symbolList :: Member InfoTableBuilder r => ParsecS r (NonEmpty Symbol)
+symbolList :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (NonEmpty Symbol)
 symbolList = braces (P.sepBy1 symbol kwSemicolon)
 
-topModulePath :: Member InfoTableBuilder r => ParsecS r TopModulePath
+topModulePath :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r TopModulePath
 topModulePath = mkTopModulePath <$> dottedSymbol
 
 --------------------------------------------------------------------------------
 -- Top level statement
 --------------------------------------------------------------------------------
 
-statement :: Member InfoTableBuilder r => ParsecS r (Statement 'Parsed)
+statement :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Statement 'Parsed)
 statement =
   (StatementOperator <$> operatorSyntaxDef)
     <|> (StatementOpenModule <$> openModule)
@@ -121,7 +104,7 @@ statement =
 -- Compile
 --------------------------------------------------------------------------------
 
-compileBlock :: forall r. Member InfoTableBuilder r => ParsecS r (Compile 'Parsed)
+compileBlock :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Compile 'Parsed)
 compileBlock = do
   kwCompile
   _compileName <- symbol
@@ -140,10 +123,10 @@ compileBlock = do
 -- Foreign
 --------------------------------------------------------------------------------
 
-backend :: Member InfoTableBuilder r => ParsecS r Backend
+backend :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r Backend
 backend = ghc $> BackendGhc <|> cBackend $> BackendC
 
-foreignBlock :: Member InfoTableBuilder r => ParsecS r ForeignBlock
+foreignBlock :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ForeignBlock
 foreignBlock = do
   kwForeign
   _foreignBackend <- backend
@@ -157,7 +140,7 @@ foreignBlock = do
 precedence :: MonadParsec e Text m => m Precedence
 precedence = PrecNat <$> decimal
 
-operatorSyntaxDef :: forall r. Member InfoTableBuilder r => ParsecS r OperatorSyntaxDef
+operatorSyntaxDef :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r OperatorSyntaxDef
 operatorSyntaxDef = do
   _fixityArity <- arity
   _fixityPrecedence <- precedence
@@ -177,7 +160,7 @@ operatorSyntaxDef = do
 -- Import statement
 --------------------------------------------------------------------------------
 
-import_ :: Member InfoTableBuilder r => ParsecS r (Import 'Parsed)
+import_ :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Import 'Parsed)
 import_ = do
   kwImport
   _importModule <- topModulePath
@@ -187,7 +170,7 @@ import_ = do
 -- Expression
 --------------------------------------------------------------------------------
 
-expressionAtom :: Member InfoTableBuilder r => ParsecS r (ExpressionAtom 'Parsed)
+expressionAtom :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (ExpressionAtom 'Parsed)
 expressionAtom =
   do AtomLiteral <$> P.try literal
     <|> (AtomIdentifier <$> name)
@@ -199,24 +182,24 @@ expressionAtom =
     <|> (AtomFunArrow <$ kwRightArrow)
     <|> parens (AtomParens <$> expressionAtoms)
 
-expressionAtoms :: Member InfoTableBuilder r => ParsecS r (ExpressionAtoms 'Parsed)
+expressionAtoms :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (ExpressionAtoms 'Parsed)
 expressionAtoms = ExpressionAtoms <$> P.some expressionAtom
 
 --------------------------------------------------------------------------------
 -- Literals
 --------------------------------------------------------------------------------
 
-literalInteger :: MonadParsec e Text m => m LiteralLoc
+literalInteger :: Member (Reader ParserParams) r => ParsecS r LiteralLoc
 literalInteger = do
   (x, loc) <- interval integer
   return (LiteralLoc (LitInteger x) loc)
 
-literalString :: MonadParsec e Text m => m LiteralLoc
+literalString :: Member (Reader ParserParams) r => ParsecS r LiteralLoc
 literalString = do
   (x, loc) <- interval string
   return (LiteralLoc (LitString x) loc)
 
-literal :: Member InfoTableBuilder r => ParsecS r LiteralLoc
+literal :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r LiteralLoc
 literal = do
   l <-
     literalInteger
@@ -227,14 +210,14 @@ literal = do
 -- Match expression
 --------------------------------------------------------------------------------
 
-matchAlt :: Member InfoTableBuilder r => ParsecS r (MatchAlt 'Parsed)
+matchAlt :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (MatchAlt 'Parsed)
 matchAlt = do
   matchAltPattern <- patternAtom
   kwMapsTo
   matchAltBody <- expressionAtoms
   return MatchAlt {..}
 
-match :: Member InfoTableBuilder r => ParsecS r (Match 'Parsed)
+match :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Match 'Parsed)
 match = do
   kwMatch
   matchExpression <- expressionAtoms
@@ -245,10 +228,10 @@ match = do
 -- Let expression
 --------------------------------------------------------------------------------
 
-letClause :: Member InfoTableBuilder r => ParsecS r (LetClause 'Parsed)
+letClause :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (LetClause 'Parsed)
 letClause = either LetTypeSig LetFunClause <$> auxTypeSigFunClause
 
-letBlock :: Member InfoTableBuilder r => ParsecS r (LetBlock 'Parsed)
+letBlock :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (LetBlock 'Parsed)
 letBlock = do
   kwLet
   _letClauses <- braces (P.sepEndBy letClause kwSemicolon)
@@ -260,7 +243,7 @@ letBlock = do
 -- Universe expression
 --------------------------------------------------------------------------------
 
-universe :: Member InfoTableBuilder r => ParsecS r Universe
+universe :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r Universe
 universe = do
   kwType
   Universe <$> optional decimal
@@ -270,7 +253,7 @@ universe = do
 -------------------------------------------------------------------------------
 
 typeSignature ::
-  Member InfoTableBuilder r =>
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
   Bool ->
   Symbol ->
   ParsecS r (TypeSignature 'Parsed)
@@ -285,7 +268,7 @@ typeSignature _sigTerminating _sigName = do
 
 -- | Used to minimize the amount of required @P.try@s.
 auxTypeSigFunClause ::
-  Member InfoTableBuilder r =>
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r (Either (TypeSignature 'Parsed) (FunctionClause 'Parsed))
 auxTypeSigFunClause = do
   terminating <- isJust <$> optional kwTerminating
@@ -297,7 +280,7 @@ auxTypeSigFunClause = do
 -- Axioms
 -------------------------------------------------------------------------------
 
-axiomDef :: Member InfoTableBuilder r => ParsecS r (AxiomDef 'Parsed)
+axiomDef :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (AxiomDef 'Parsed)
 axiomDef = do
   kwAxiom
   _axiomName <- symbol
@@ -309,7 +292,7 @@ axiomDef = do
 -- Function expression
 --------------------------------------------------------------------------------
 
-functionParam :: forall r. Member InfoTableBuilder r => ParsecS r (FunctionParameter 'Parsed)
+functionParam :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (FunctionParameter 'Parsed)
 functionParam = do
   (_paramName, _paramUsage) <- P.try $ do
     lparen
@@ -331,7 +314,7 @@ functionParam = do
         <|> (Just UsageOmega <$ kwColonOmega)
         <|> (Nothing <$ kwColon)
 
-function :: Member InfoTableBuilder r => ParsecS r (Function 'Parsed)
+function :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Function 'Parsed)
 function = do
   _funParameter <- functionParam
   kwRightArrow
@@ -342,12 +325,12 @@ function = do
 -- Where block clauses
 --------------------------------------------------------------------------------
 
-whereBlock :: Member InfoTableBuilder r => ParsecS r (WhereBlock 'Parsed)
+whereBlock :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (WhereBlock 'Parsed)
 whereBlock = do
   kwWhere
   WhereBlock <$> braces (P.sepEndBy1 whereClause kwSemicolon)
 
-whereClause :: forall r. Member InfoTableBuilder r => ParsecS r (WhereClause 'Parsed)
+whereClause :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (WhereClause 'Parsed)
 whereClause =
   (WhereOpenModule <$> openModule)
     <|> sigOrFun
@@ -359,14 +342,14 @@ whereClause =
 -- Lambda expression
 --------------------------------------------------------------------------------
 
-lambdaClause :: Member InfoTableBuilder r => ParsecS r (LambdaClause 'Parsed)
+lambdaClause :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (LambdaClause 'Parsed)
 lambdaClause = do
   lambdaParameters <- P.some patternAtom
   kwMapsTo
   lambdaBody <- expressionAtoms
   return LambdaClause {..}
 
-lambda :: Member InfoTableBuilder r => ParsecS r (Lambda 'Parsed)
+lambda :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Lambda 'Parsed)
 lambda = do
   kwLambda
   lambdaClauses <- braces (P.sepEndBy lambdaClause kwSemicolon)
@@ -376,7 +359,7 @@ lambda = do
 -- Data type construction declaration
 -------------------------------------------------------------------------------
 
-inductiveDef :: Member InfoTableBuilder r => ParsecS r (InductiveDef 'Parsed)
+inductiveDef :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (InductiveDef 'Parsed)
 inductiveDef = do
   kwInductive
   _inductiveName <- symbol
@@ -385,14 +368,14 @@ inductiveDef = do
   _inductiveConstructors <- braces $ P.sepEndBy constructorDef kwSemicolon
   return InductiveDef {..}
 
-inductiveParam :: Member InfoTableBuilder r => ParsecS r (InductiveParameter 'Parsed)
+inductiveParam :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (InductiveParameter 'Parsed)
 inductiveParam = parens $ do
   _inductiveParameterName <- symbol
   kwColon
   _inductiveParameterType <- expressionAtoms
   return InductiveParameter {..}
 
-constructorDef :: Member InfoTableBuilder r => ParsecS r (InductiveConstructorDef 'Parsed)
+constructorDef :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (InductiveConstructorDef 'Parsed)
 constructorDef = do
   _constructorName <- symbol
   kwColon
@@ -403,20 +386,20 @@ constructorDef = do
 -- Pattern section
 --------------------------------------------------------------------------------
 
-patternAtom :: Member InfoTableBuilder r => ParsecS r (PatternAtom 'Parsed)
+patternAtom :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (PatternAtom 'Parsed)
 patternAtom =
   PatternAtomIden <$> name
     <|> PatternAtomWildcard <$ kwWildcard
     <|> (PatternAtomParens <$> parens patternAtoms)
 
-patternAtoms :: Member InfoTableBuilder r => ParsecS r (PatternAtoms 'Parsed)
+patternAtoms :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (PatternAtoms 'Parsed)
 patternAtoms = PatternAtoms <$> P.some patternAtom
 
 --------------------------------------------------------------------------------
 -- Function binding declaration
 --------------------------------------------------------------------------------
 
-functionClause :: Member InfoTableBuilder r => Symbol -> ParsecS r (FunctionClause 'Parsed)
+functionClause :: Members '[Reader ParserParams, InfoTableBuilder] r => Symbol -> ParsecS r (FunctionClause 'Parsed)
 functionClause _clauseOwnerFunction = do
   _clausePatterns <- P.many patternAtom
   kwAssignment
@@ -428,12 +411,12 @@ functionClause _clauseOwnerFunction = do
 -- Module declaration
 --------------------------------------------------------------------------------
 
-pmodulePath :: forall t r. (SingI t, Member InfoTableBuilder r) => ParsecS r (ModulePathType 'Parsed t)
+pmodulePath :: forall t r. (SingI t, Members '[Reader ParserParams, InfoTableBuilder] r) => ParsecS r (ModulePathType 'Parsed t)
 pmodulePath = case sing :: SModuleIsTop t of
   SModuleTop -> topModulePath
   SModuleLocal -> symbol
 
-moduleDef :: (SingI t, Member InfoTableBuilder r) => ParsecS r (Module 'Parsed t)
+moduleDef :: (SingI t, Members '[Reader ParserParams, InfoTableBuilder] r) => ParsecS r (Module 'Parsed t)
 moduleDef = do
   kwModule
   _modulePath <- pmodulePath
@@ -444,7 +427,7 @@ moduleDef = do
   return Module {..}
 
 -- | An ExpressionAtom which is a valid expression on its own.
-atomicExpression :: Member InfoTableBuilder r => ParsecS r (ExpressionType 'Parsed)
+atomicExpression :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (ExpressionType 'Parsed)
 atomicExpression = do
   atom <- expressionAtom
   case atom of
@@ -452,7 +435,7 @@ atomicExpression = do
     _ -> return ()
   return $ ExpressionAtoms (NonEmpty.singleton atom)
 
-openModule :: forall r. Member InfoTableBuilder r => ParsecS r (OpenModule 'Parsed)
+openModule :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (OpenModule 'Parsed)
 openModule = do
   kwOpen
   _openModuleName <- name
@@ -470,12 +453,12 @@ openModule = do
 -- Debugging statements
 --------------------------------------------------------------------------------
 
-eval :: Member InfoTableBuilder r => ParsecS r (Eval 'Parsed)
+eval :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Eval 'Parsed)
 eval = do
   kwEval
   Eval <$> expressionAtoms
 
-printS :: Member InfoTableBuilder r => ParsecS r (Print 'Parsed)
+printS :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Print 'Parsed)
 printS = do
   kwPrint
   Print <$> expressionAtoms

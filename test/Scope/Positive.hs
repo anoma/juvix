@@ -27,7 +27,9 @@ testDescr PosTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Steps $ \step -> do
-            let entryPoint = EntryPoint "." (pure _file)
+            cwd <- getCurrentDirectory
+            entryFile <- makeAbsolute _file
+            let entryPoint = EntryPoint cwd (pure entryFile)
 
             step "Parsing"
             p :: Parser.ParserResult <- runIO (upToParsing entryPoint)
@@ -39,22 +41,22 @@ testDescr PosTest {..} =
 
             let s2 = head (s ^. Scoper.resultModules)
 
-            let fs :: HashMap FilePath Text
+                fs :: HashMap FilePath Text
                 fs =
                   HashMap.fromList
-                    [ (getModuleFilePath m, M.renderPrettyCodeDefault m)
+                    [ (getModuleFileAbsPath cwd m, M.renderPrettyCodeDefault m)
                       | m <- toList (getAllModules s2)
                     ]
 
             let scopedPretty = M.renderPrettyCodeDefault s2
-            let parsedPretty = M.renderPrettyCodeDefault p2
+                parsedPretty = M.renderPrettyCodeDefault p2
 
             step "Parsing pretty scoped"
-            let fs2 = HashMap.singleton _file scopedPretty
+            let fs2 = HashMap.singleton entryFile scopedPretty
             p' :: Parser.ParserResult <- (runM . runErrorIO @AJuvixError . runNameIdGen . runFilesPure fs2) (upToParsing entryPoint)
 
             step "Parsing pretty parsed"
-            let fs3 = HashMap.singleton _file parsedPretty
+            let fs3 = HashMap.singleton entryFile parsedPretty
             parsedPretty' :: Parser.ParserResult <- (runM . runErrorIO @AJuvixError . runNameIdGen . runFilesPure fs3) (upToParsing entryPoint)
 
             step "Scoping the scoped"
@@ -62,11 +64,11 @@ testDescr PosTest {..} =
 
             step "Checks"
             let smodules = s ^. Scoper.resultModules
-            let smodules' = s' ^. Scoper.resultModules
+                smodules' = s' ^. Scoper.resultModules
 
             let pmodules = p ^. Parser.resultModules
-            let pmodules' = p' ^. Parser.resultModules
-            let parsedPrettyModules = parsedPretty' ^. Parser.resultModules
+                pmodules' = p' ^. Parser.resultModules
+                parsedPrettyModules = parsedPretty' ^. Parser.resultModules
 
             assertEqDiff "check: scope . parse . pretty . scope . parse = scope . parse" smodules smodules'
             assertEqDiff "check: parse . pretty . scope . parse = parse" pmodules pmodules'

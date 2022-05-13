@@ -24,3 +24,6 @@ getAllModules m =
 
 getModuleFilePath :: Module 'Scoped 'ModuleTop -> FilePath
 getModuleFilePath m = getLoc (m ^. modulePath) ^. intFile
+
+getModuleFileAbsPath :: FilePath -> Module 'Scoped 'ModuleTop -> FilePath
+getModuleFileAbsPath root m = normalise (root </> getModuleFilePath m)

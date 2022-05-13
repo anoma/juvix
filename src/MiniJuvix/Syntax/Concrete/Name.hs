@@ -83,7 +83,7 @@ topModulePathToFilePath = topModulePathToFilePath' (Just ".mjuvix")
 
 topModulePathToFilePath' ::
   Maybe String -> FilePath -> TopModulePath -> FilePath
-topModulePathToFilePath' ext root mp = absPath
+topModulePathToFilePath' ext root mp = normalise absPath
   where
     relDirPath = foldr ((</>) . toPath) mempty (mp ^. modulePathDir)
     relFilePath = relDirPath </> toPath (mp ^. modulePathName)

@@ -18,7 +18,7 @@ import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Base qualified as P
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Name qualified as N
-import MiniJuvix.Syntax.Concrete.Parser (runModuleParser'')
+import MiniJuvix.Syntax.Concrete.Parser (runModuleParser)
 import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
 import MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder (mergeTable)
 import MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder qualified as Parser
@@ -369,7 +369,8 @@ readParseModule ::
 readParseModule mp = do
   path <- modulePathToFilePath mp
   txt <- readFile' path
-  case runModuleParser'' path txt of
+  root <- asks (^. scopeRootPath)
+  case runModuleParser root path txt of
     Left err -> throw (ErrParser (MegaParsecError err))
     Right (tbl, m) -> Parser.mergeTable tbl $> m
 
