@@ -10,7 +10,6 @@ import Data.Singletons
 import Data.Text qualified as Text
 import MiniJuvix.Pipeline.EntryPoint
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Base (MonadParsec)
 import MiniJuvix.Syntax.Concrete.Base qualified as P
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Lexer hiding (symbol)
@@ -116,7 +115,7 @@ compileBlock = do
     backendItem = do
       _backendItemBackend <- backend
       kwMapsTo
-      _backendItemCode <- string
+      _backendItemCode <- fst <$> string
       return BackendItem {..}
 
 --------------------------------------------------------------------------------
@@ -137,8 +136,8 @@ foreignBlock = do
 -- Operator syntax declaration
 --------------------------------------------------------------------------------
 
-precedence :: MonadParsec e Text m => m Precedence
-precedence = PrecNat <$> decimal
+precedence :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r Precedence
+precedence = PrecNat <$> (fst <$> decimal)
 
 operatorSyntaxDef :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r OperatorSyntaxDef
 operatorSyntaxDef = do
@@ -189,14 +188,14 @@ expressionAtoms = ExpressionAtoms <$> P.some expressionAtom
 -- Literals
 --------------------------------------------------------------------------------
 
-literalInteger :: Member (Reader ParserParams) r => ParsecS r LiteralLoc
+literalInteger :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r LiteralLoc
 literalInteger = do
-  (x, loc) <- interval integer
+  (x, loc) <- integer
   return (LiteralLoc (LitInteger x) loc)
 
-literalString :: Member (Reader ParserParams) r => ParsecS r LiteralLoc
+literalString :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r LiteralLoc
 literalString = do
-  (x, loc) <- interval string
+  (x, loc) <- string
   return (LiteralLoc (LitString x) loc)
 
 literal :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r LiteralLoc
@@ -246,7 +245,7 @@ letBlock = do
 universe :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r Universe
 universe = do
   kwType
-  Universe <$> optional decimal
+  Universe <$> optional (fst <$> decimal)
 
 -------------------------------------------------------------------------------
 -- Type signature declaration

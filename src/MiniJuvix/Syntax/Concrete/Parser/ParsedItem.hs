@@ -13,6 +13,7 @@ data ParsedItemTag
   = ParsedTagKeyword
   | ParsedTagLiteralInt
   | ParsedTagLiteralString
+  | ParsedTagComment
   deriving stock (Eq, Show, Generic)
 
 makeLenses ''ParsedItem

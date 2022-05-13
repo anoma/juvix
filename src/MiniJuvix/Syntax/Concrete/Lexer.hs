@@ -20,22 +20,31 @@ newtype ParserParams = ParserParams
 
 makeLenses ''ParserParams
 
-space :: forall m e. MonadParsec e Text m => m ()
+space :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 space = L.space space1 lineComment block
   where
-    lineComment :: m ()
-    lineComment = L.skipLineComment "--"
-    block :: m ()
-    block = L.skipBlockComment "{-" "-}"
+    lineComment :: ParsecS r ()
+    lineComment =
+      interval (L.skipLineComment "--") >>= lift . registerComment . snd
 
-lexeme :: MonadParsec e Text m => m a -> m a
+    block :: ParsecS r ()
+    block =
+      interval (L.skipBlockComment "{-" "-}") >>= lift . registerComment . snd
+
+lexeme :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r a
 lexeme = L.lexeme space
 
-symbol :: MonadParsec e Text m => Text -> m ()
+symbol :: Members '[Reader ParserParams, InfoTableBuilder] r => Text -> ParsecS r ()
 symbol = void . L.symbol space
 
-decimal :: (MonadParsec e Text m, Num n) => m n
-decimal = lexeme L.decimal
+lexemeInterval :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r (a, Interval)
+lexemeInterval = lexeme . interval
+
+symbolInterval :: Members '[Reader ParserParams, InfoTableBuilder] r => Text -> ParsecS r Interval
+symbolInterval = fmap snd . lexemeInterval . P.chunk
+
+decimal :: (Members '[Reader ParserParams, InfoTableBuilder] r, Num n) => ParsecS r (n, Interval)
+decimal = lexemeInterval L.decimal
 
 identifier :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r Text
 identifier = fmap fst identifierL
@@ -46,13 +55,14 @@ identifierL = lexeme bareIdentifier
 fromPos :: P.Pos -> Pos
 fromPos = Pos . fromIntegral . P.unPos
 
-integer :: MonadParsec e Text m => m Integer
+integer :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Integer, Interval)
 integer = do
   minus <- optional (char '-')
-  nat <- lexeme L.decimal
-  case minus of
-    Nothing -> return nat
-    _ -> return (-nat)
+  (nat, i) <- decimal
+  let nat' = case minus of
+        Nothing -> nat
+        _ -> (-nat)
+  return (nat', i)
 
 bracedString :: forall e m. MonadParsec e Text m => m Text
 bracedString =
@@ -69,8 +79,10 @@ bracedString =
       void (char '\\')
       char '}'
 
-string :: MonadParsec e Text m => m Text
-string = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
+string :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Text, Interval)
+string =
+  lexemeInterval $
+    pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
 mkLoc :: Member (Reader ParserParams) r => Int -> SourcePos -> Sem r Loc
 mkLoc offset SourcePos {..} = do
@@ -99,7 +111,7 @@ interval ma = do
 
 keyword :: Members '[Reader ParserParams, InfoTableBuilder] r => Text -> ParsecS r ()
 keyword kw = do
-  l <- snd <$> interval (symbol kw)
+  l <- symbolInterval kw
   lift (registerKeyword l)
 
 -- | Same as @identifier@ but does not consume space after it.
@@ -133,7 +145,7 @@ dot = P.char '.'
 dottedIdentifier :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (NonEmpty (Text, Interval))
 dottedIdentifier = lexeme $ P.sepBy1 bareIdentifier dot
 
-braces :: MonadParsec e Text m => m a -> m a
+braces :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r a
 braces = between (symbol "{") (symbol "}")
 
 allKeywords :: Members '[Reader ParserParams, InfoTableBuilder] r => [ParsecS r ()]
@@ -172,13 +184,13 @@ allKeywords =
     kwWildcard
   ]
 
-lparen :: MonadParsec e Text m => m ()
+lparen :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 lparen = symbol "("
 
-rparen :: MonadParsec e Text m => m ()
+rparen :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 rparen = symbol ")"
 
-parens :: MonadParsec e Text m => m a -> m a
+parens :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r a
 parens = between lparen rparen
 
 kwAssignment :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()

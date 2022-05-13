@@ -17,6 +17,7 @@ data Face
   | FaceKeyword
   | FaceString
   | FaceNumber
+  | FaceComment
 
 newtype Property
   = PropertyFace Face
@@ -101,6 +102,7 @@ instr i f =
       FaceKeyword -> Str.keyword
       FaceFunction -> Str.function
       FaceNumber -> Str.number
+      FaceComment -> Str.comment
       FaceString -> Str.string
 
 faceSymbol :: Text -> SExp
@@ -113,6 +115,7 @@ goParsedItem i = instr (getLoc i) face
       ParsedTagKeyword -> FaceKeyword
       ParsedTagLiteralInt -> FaceNumber
       ParsedTagLiteralString -> FaceString
+      ParsedTagComment -> FaceComment
 
 colorName :: Name -> Maybe SExp
 colorName n = do

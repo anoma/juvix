@@ -2,6 +2,7 @@ module MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder
   ( InfoTableBuilder,
     registerLiteral,
     registerKeyword,
+    registerComment,
     mergeTable,
     runInfoTableBuilder,
     module MiniJuvix.Syntax.Concrete.Parser.InfoTable,
@@ -19,6 +20,14 @@ data InfoTableBuilder m a where
   MergeTable :: InfoTable -> InfoTableBuilder m ()
 
 makeSem ''InfoTableBuilder
+
+registerComment :: Member InfoTableBuilder r => Interval -> Sem r ()
+registerComment i =
+  registerItem
+    ParsedItem
+      { _parsedLoc = i,
+        _parsedTag = ParsedTagComment
+      }
 
 registerKeyword :: Member InfoTableBuilder r => Interval -> Sem r ()
 registerKeyword i =

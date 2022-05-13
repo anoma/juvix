@@ -64,5 +64,17 @@
   "The face used for numbers."
   :group 'minijuvix-highlight-faces)
 
+(defface minijuvix-highlight-comment-face
+  '((((background light))
+     (:foreground "#8b2252"
+      :slant italic
+      ))
+    (((background dark))
+     (:foreground "#83898d"
+      :slant italic
+      )
+     ))
+  "The face used for comments."
+  :group 'minijuvix-highlight-faces)
 
 (provide 'minijuvix-highlight)
