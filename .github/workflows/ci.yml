@@ -103,8 +103,31 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: main
-      - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@v11
+      - name: Cache LLVM and Clang
+        id: cache-llvm
+        uses: actions/cache@v3
+        with:
+          path: |
+            C:/Program Files/LLVM
+            ./llvm
+          key: ${{ runner.os }}-llvm-13
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: "13.0"
+          cached: ${{ steps.cache-llvm.outputs.cache-hit }}
+      - name: Download and extract wasi-sysroot
+        run: |
+          curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/wasi-sysroot-15.0.tar.gz -OL
+          tar xfv wasi-sysroot-15.0.tar.gz
+      - name: Download and extract libclang_rt.builtins-wasm32-wasi
+        run: |
+          curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/libclang_rt.builtins-wasm32-wasi-15.0.tar.gz -OL
+          tar xfv libclang_rt.builtins-wasm32-wasi-15.0.tar.gz
+        working-directory: ${{ env.LLVM_PATH }}
+      - name: Set WASI_SYSROOT_PATH
+        run: |
+          echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
       - name: Setup Wasmer
         uses: wasmerio/setup-wasmer@v1
       - name: Test suite

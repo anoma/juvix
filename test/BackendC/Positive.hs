@@ -30,9 +30,15 @@ testDescr PosTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Steps $ \step -> do
-            step "Check emscripten and wasmer are on path"
-            assertCmdExists "emcc"
+            step "Check clang and wasmer are on path"
+            assertCmdExists "clang"
             assertCmdExists "wasmer"
+
+            step "Lookup WASI_SYSROOT_PATH"
+            sysrootPath <-
+              assertEnvVar
+                "Env var WASI_SYSROOT_PATH missing. Set to the location of the wasi-clib sysroot"
+                "WASI_SYSROOT_PATH"
 
             step "C Generation"
             let entryPoint = EntryPoint "." (pure mainFile)
@@ -45,7 +51,17 @@ testDescr PosTest {..} =
                         wasmOutputFile = dirPath </> "out.wasm"
                     TIO.writeFile cOutputFile (p ^. MiniC.resultCCode)
                     step "WASM generation"
-                    P.callProcess "emcc" ["-o", wasmOutputFile, cOutputFile]
+                    P.callProcess
+                      "clang"
+                      [ "-nodefaultlibs",
+                        "-lc",
+                        "--target=wasm32-wasi",
+                        "--sysroot",
+                        sysrootPath,
+                        "-o",
+                        wasmOutputFile,
+                        cOutputFile
+                      ]
                     step "WASM execution"
                     pack <$> P.readProcess "wasmer" [wasmOutputFile] ""
                 )

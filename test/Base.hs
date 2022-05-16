@@ -9,6 +9,7 @@ where
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
 import MiniJuvix.Prelude
+import System.Environment (lookupEnv)
 import Test.Tasty
 import Test.Tasty.HUnit
 import Text.Show.Pretty hiding (Html)
@@ -44,3 +45,6 @@ assertEqDiff msg a b
 
 assertCmdExists :: FilePath -> Assertion
 assertCmdExists cmd = assertBool ("Command: " <> cmd <> " is not present on $PATH") . isJust =<< findExecutable cmd
+
+assertEnvVar :: String -> String -> IO String
+assertEnvVar msg varName = fromMaybeM (assertFailure msg) (lookupEnv varName)
