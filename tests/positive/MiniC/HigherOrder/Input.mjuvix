@@ -4,14 +4,6 @@ foreign c {
   #include <stdio.h>
 };
 
---------------------------------------------------------------------------------
--- Booleans
---------------------------------------------------------------------------------
-
-inductive Bool {
-  true : Bool;
-  false : Bool;
-};
 
 --------------------------------------------------------------------------------
 -- Strings
@@ -20,7 +12,6 @@ inductive Bool {
 axiom String : Type;
 
 compile String {
-  ghc ↦ "[Char]";
   c ↦ "char*";
 };
 
@@ -31,7 +22,6 @@ compile String {
 axiom Action : Type;
 
 compile Action {
-  ghc ↦ "IO ()";
   c ↦ "int";
 };
 
@@ -49,27 +39,20 @@ infixl 1 >>;
 axiom >> : Action → Action → Action;
 
 compile >> {
-  ghc ↦ "(>>)";
   c ↦ "sequence";
 };
 
 axiom put-str : String → Action;
 
 compile put-str {
-  ghc ↦ "putStr";
   c ↦ "putStr";
 };
 
 axiom put-str-ln : String → Action;
 
 compile put-str-ln {
-  ghc ↦ "putStrLn";
   c ↦ "puts";
 };
-
-bool-to-str : Bool → String;
-bool-to-str true ≔ "True";
-bool-to-str false ≔ "False";
 
 --------------------------------------------------------------------------------
 -- Integers
@@ -78,7 +61,6 @@ bool-to-str false ≔ "False";
 axiom Int : Type;
 
 compile Int {
-  ghc ↦ "Int";
   c ↦ "int";
 };
 
@@ -106,7 +88,6 @@ compile +int {
 axiom to-str : Int → String;
 
 compile to-str {
-  ghc ↦ "show";
   c ↦ "intToStr";
 };
 
@@ -123,17 +104,6 @@ infixl 6 +;
 + : Nat → Nat → Nat;
 + zero n ≔ n;
 + (suc m) n ≔ suc (m + n);
-
-is-even : Nat → Bool;
-is-even zero ≔ true;
-is-even (suc (suc n)) ≔ is-even n;
-is-even _ ≔ false;
-
-infix 4 ==Nat;
-==Nat : Nat → Nat → Bool;
-==Nat zero zero ≔ true;
-==Nat (suc n) (suc m) ≔ n ==Nat m;
-==Nat _ _ ≔ false;
 
 to-int : Nat → Int;
 to-int zero ≔ 0;
@@ -152,34 +122,29 @@ three : Nat;
 three ≔ suc two;
 
 --------------------------------------------------------------------------------
--- Main
+-- Lists
 --------------------------------------------------------------------------------
 
-three-plus-suc-one : Action;
-three-plus-suc-one ≔ (put-str "3 + (1 + 1) = ")
-                      >> put-str-ln (nat-to-str (three + (suc one)));
+inductive ListNat {
+  null : ListNat;
+  cons : Nat → ListNat → ListNat;
+};
 
-three-eq-suc-two : Action;
-three-eq-suc-two ≔ (put-str "3 == 1 + 2 : ")
-                    >> put-str-ln (bool-to-str (three ==Nat (one + two)));
+foldl : (Nat → Nat → Nat) → Nat → ListNat → Nat;
+foldl _ z null ≔ z;
+foldl f z (cons n hs) ≔ foldl f (f z n) hs;
 
-three-neq-two : Action;
-three-neq-two ≔ (put-str "3 == 2 : ")
-                 >> put-str-ln (bool-to-str (three ==Nat two));
+l : ListNat;
+l ≔ cons one (cons two null);
 
-three-is-not-even : Action;
-three-is-not-even ≔ (put-str "is-even 3 : ")
-                 >> put-str-ln (bool-to-str (is-even three));
+sum : ListNat → Nat;
+sum l ≔ foldl (+) zero l;
 
-four-is-even : Action;
-four-is-even ≔ (put-str "is-even 4 : ")
-                 >> put-str-ln (bool-to-str (is-even (suc three)));
+sum-is-three : Action;
+sum-is-three ≔ put-str "list sum is: "
+                >> put-str-ln (nat-to-str (sum l));
 
 main : Action;
-main ≔ three-plus-suc-one
-   >> three-eq-suc-two
-   >> three-neq-two
-   >> three-is-not-even
-   >> four-is-even
+main ≔ sum-is-three
 
 end;

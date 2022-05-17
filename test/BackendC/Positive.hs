@@ -82,5 +82,6 @@ tests =
   [ PosTest "HelloWorld" "HelloWorld",
     PosTest "Inductive types and pattern matching" "Nat",
     PosTest "Polymorphic types" "Polymorphism",
-    PosTest "Multiple modules" "MultiModules"
+    PosTest "Multiple modules" "MultiModules",
+    PosTest "Higher Order Functions" "HigherOrder"
   ]

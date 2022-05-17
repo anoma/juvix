@@ -20,10 +20,11 @@ data Cpp
   = CppIncludeFile Text
   | CppIncludeSystem Text
   | CppDefine Define
+  | CppDefineParens Define
 
 data Define = Define
   { _defineName :: Text,
-    _defineBody :: Text
+    _defineBody :: Expression
   }
 
 --------------------------------------------------------------------------------
@@ -77,6 +78,7 @@ data DeclType
   | DeclStructUnion StructUnion
   | DeclTypeDef DeclType
   | DeclEnum Enum
+  | DeclFunPtr FunPtr
   | BoolType
 
 data StructUnion = StructUnion
@@ -92,6 +94,12 @@ data StructUnionTag
 data Enum = Enum
   { _enumName :: Maybe Text,
     _enumMembers :: Maybe [Text]
+  }
+
+data FunPtr = FunPtr
+  { _funPtrReturnType :: DeclType,
+    _funPtrIsPtr :: Bool,
+    _funPtrArgs :: [CDeclType]
   }
 
 data CDeclType = CDeclType

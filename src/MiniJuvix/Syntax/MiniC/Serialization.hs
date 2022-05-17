@@ -18,7 +18,13 @@ prettyCpp :: Cpp -> HP.Doc
 prettyCpp = \case
   CppIncludeFile i -> "#include" HP.<+> HP.doubleQuotes (prettyText i)
   CppIncludeSystem i -> "#include" HP.<+> encAngles (prettyText i)
-  CppDefine Define {..} -> "#define" HP.<+> (prettyText _defineName HP.<+> prettyText _defineBody)
+  CppDefine Define {..} -> prettyDefine _defineName (prettyDefineBody _defineBody)
+  CppDefineParens Define {..} -> prettyDefine _defineName (HP.parens (prettyDefineBody _defineBody))
+  where
+    prettyDefineBody :: Expression -> HP.Doc
+    prettyDefineBody e = P.pretty (mkCExpr e)
+    prettyDefine :: Text -> HP.Doc -> HP.Doc
+    prettyDefine n body = "#define" HP.<+> prettyText n HP.<+> body
 
 prettyCCode :: CCode -> HP.Doc
 prettyCCode = \case
@@ -33,19 +39,45 @@ serialize = show . codeUnitDoc
     codeUnitDoc :: CCodeUnit -> HP.Doc
     codeUnitDoc c = HP.vcat (map prettyCCode (c ^. ccodeCode))
 
+goTypeDecl' :: CDeclType -> Declaration
+goTypeDecl' CDeclType {..} =
+  Declaration
+    { _declType = _typeDeclType,
+      _declIsPtr = _typeIsPtr,
+      _declName = Nothing,
+      _declInitializer = Nothing
+    }
+
 mkCDecl :: Declaration -> CDecl
-mkCDecl Declaration {..} =
-  CDecl
-    (mkDeclSpecifier _declType)
-    [(Just declrName, initializer, Nothing)]
-    C.undefNode
-  where
-    declrName :: CDeclr
-    declrName = CDeclr (mkIdent <$> _declName) ptrDeclr Nothing [] C.undefNode
-    ptrDeclr :: [CDerivedDeclarator C.NodeInfo]
-    ptrDeclr = [CPtrDeclr [] C.undefNode | _declIsPtr]
-    initializer :: Maybe CInit
-    initializer = mkCInit <$> _declInitializer
+mkCDecl Declaration {..} = case _declType of
+  DeclFunPtr FunPtr {..} ->
+    CDecl
+      (mkDeclSpecifier _funPtrReturnType)
+      [(Just declr, Nothing, Nothing)]
+      C.undefNode
+    where
+      declr :: CDeclr
+      declr = CDeclr (mkIdent <$> _declName) derivedDeclr Nothing [] C.undefNode
+      derivedDeclr :: [CDerivedDeclr]
+      derivedDeclr = CPtrDeclr [] C.undefNode : (funDerDeclr <> ptrDeclr)
+      ptrDeclr :: [CDerivedDeclr]
+      ptrDeclr = [CPtrDeclr [] C.undefNode | _funPtrIsPtr]
+      funDerDeclr :: [CDerivedDeclr]
+      funDerDeclr = [CFunDeclr (Right (funArgs, False)) [] C.undefNode]
+      funArgs :: [CDecl]
+      funArgs = mkCDecl . goTypeDecl' <$> _funPtrArgs
+  _ ->
+    CDecl
+      (mkDeclSpecifier _declType)
+      [(Just declrName, initializer, Nothing)]
+      C.undefNode
+    where
+      declrName :: CDeclr
+      declrName = CDeclr (mkIdent <$> _declName) ptrDeclr Nothing [] C.undefNode
+      ptrDeclr :: [CDerivedDeclarator C.NodeInfo]
+      ptrDeclr = [CPtrDeclr [] C.undefNode | _declIsPtr]
+      initializer :: Maybe CInit
+      initializer = mkCInit <$> _declInitializer
 
 mkCInit :: Initializer -> CInit
 mkCInit = \case
@@ -128,6 +160,7 @@ mkDeclSpecifier = \case
   DeclStructUnion StructUnion {..} -> mkStructUnionTypeSpec _structUnionTag _structUnionName _structMembers
   DeclEnum Enum {..} -> mkEnumSpec _enumName _enumMembers
   BoolType -> [CTypeSpec (CBoolType C.undefNode)]
+  DeclFunPtr {} -> []
 
 mkEnumSpec :: Maybe Text -> Maybe [Text] -> [CDeclSpec]
 mkEnumSpec name members = [CTypeSpec (CEnumType enum C.undefNode)]
