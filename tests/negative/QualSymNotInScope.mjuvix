@@ -1,0 +1,9 @@
+module QualSymNotInScope;
+
+  module M;
+  axiom haha : Type;
+  end;
+
+  axiom test : M.hah;
+
+end;

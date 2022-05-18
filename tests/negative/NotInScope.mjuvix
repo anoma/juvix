@@ -1,6 +1,6 @@
 module NotInScope;
 
-  axiom haha : Type;
+axiom haha : Type;
   axiom blah : Type;
   axiom blaah : Type;
 

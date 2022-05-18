@@ -2,7 +2,6 @@ module MiniJuvix.Syntax.Concrete.Name where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Loc
 import Prettyprinter
 
 data Symbol = Symbol

@@ -50,6 +50,13 @@ tests =
         ErrSymNotInScope {} -> Nothing
         _ -> wrongError,
     NegTest
+      "Qualified not in scope"
+      "."
+      "QualSymNotInScope.mjuvix"
+      $ \case
+        ErrQualSymNotInScope {} -> Nothing
+        _ -> wrongError,
+    NegTest
       "Multiple declarations"
       "."
       "MultipleDeclarations.mjuvix"

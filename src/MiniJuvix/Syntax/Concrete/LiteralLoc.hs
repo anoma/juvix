@@ -7,7 +7,6 @@ where
 import MiniJuvix.Prelude
 import MiniJuvix.Prelude.Pretty
 import MiniJuvix.Syntax.Concrete.Literal
-import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Syntax.Fixity
 
 data LiteralLoc = LiteralLoc

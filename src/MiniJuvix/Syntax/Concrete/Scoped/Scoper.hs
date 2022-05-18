@@ -320,7 +320,7 @@ checkQualifiedExpr q@(QualifiedName (Path p) sym) = do
     _ -> throw (ErrAmbiguousSym (AmbiguousSym q' es))
   where
     q' = NameQualified q
-    notInScope = throw (ErrQualSymNotInScope q)
+    notInScope = throw (ErrQualSymNotInScope (QualSymNotInScope q))
 
 entryToScopedIden :: Members '[InfoTableBuilder] r => Name -> SymbolEntry -> Sem r ScopedIden
 entryToScopedIden name e = do
@@ -793,18 +793,29 @@ checkCompile c@Compile {..} = do
   let sym :: Symbol = c ^. compileName
   rules <- gets (^. scopeCompilationRules)
   if
-      | HashMap.member sym rules ->
+      | Just info <- HashMap.lookup sym rules ->
           throw
             ( ErrMultipleCompileBlockSameName
-                (MultipleCompileBlockSameName sym)
+                ( MultipleCompileBlockSameName
+                    { _multipleCompileBlockFirstDefined = info ^. compileInfoDefined,
+                      _multipleCompileBlockSym = sym
+                    }
+                )
             )
       | otherwise -> do
-          _ <- checkBackendItems sym _compileBackendItems mempty
+          void (checkBackendItems sym _compileBackendItems mempty)
           registerName (S.unqualifiedSymbol scopedSym)
           modify
             ( over
                 scopeCompilationRules
-                (HashMap.insert _compileName (CompileInfo _compileBackendItems))
+                ( HashMap.insert
+                    _compileName
+                    ( CompileInfo
+                        { _compileInfoBackendItems = _compileBackendItems,
+                          _compileInfoDefined = getLoc scopedSym
+                        }
+                    )
+                )
             )
           registerCompile' $ Compile {_compileName = scopedSym, ..}
 
@@ -831,7 +842,7 @@ checkCompileName ::
   Sem r S.Symbol
 checkCompileName Compile {..} = do
   let sym :: Symbol = _compileName
-  let name :: Name = NameUnqualified sym
+      name :: Name = NameUnqualified sym
   scope <- get
   locals <- ask
   entries <- lookupQualifiedSymbol ([], sym)
@@ -841,12 +852,16 @@ checkCompileName Compile {..} = do
       (e : _) ->
         throw
           ( ErrWrongKindExpressionCompileBlock
-              (WrongKindExpressionCompileBlock e)
+              ( WrongKindExpressionCompileBlock
+                  { _wrongKindExpressionCompileBlockSym = sym,
+                    _wrongKindExpressionCompileBlockEntry = e
+                  }
+              )
           )
     [x] -> do
       actualPath <- gets (^. scopePath)
       let scoped = entryToSymbol x sym
-      let expectedPath = scoped ^. S.nameDefinedIn
+          expectedPath = scoped ^. S.nameDefinedIn
       if
           | actualPath == expectedPath -> return scoped
           | otherwise ->
@@ -1004,7 +1019,7 @@ checkPatternName n = do
       case entries of
         [] -> case Path <$> nonEmpty path of
           Nothing -> return Nothing -- There is no constructor with such a name
-          Just pth -> throw (ErrQualSymNotInScope (QualifiedName pth sym))
+          Just pth -> throw (ErrQualSymNotInScope (QualSymNotInScope (QualifiedName pth sym)))
         [e] -> return (Just (set (constructorRefName . S.nameConcrete) n e)) -- There is one constructor with such a name
         es -> throw (ErrAmbiguousSym (AmbiguousSym n (map EntryConstructor es)))
     getConstructor :: SymbolEntry -> Maybe (ConstructorRef' 'S.NotConcrete)

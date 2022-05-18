@@ -2,7 +2,6 @@ module MiniJuvix.Syntax.Concrete.Scoped.Highlight where
 
 import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Syntax.Concrete.Parser.ParsedItem
 import MiniJuvix.Syntax.Concrete.Scoped.Name
 import Prettyprinter
@@ -18,6 +17,7 @@ data Face
   | FaceString
   | FaceNumber
   | FaceComment
+  | FaceError
 
 newtype Property
   = PropertyFace Face
@@ -48,12 +48,20 @@ makeLenses ''Instruction
 filterInput :: FilePath -> HighlightInput -> HighlightInput
 filterInput absPth h =
   HighlightInput
-    { _highlightNames = filterByLoc (h ^. highlightNames),
-      _highlightParsed = filterByLoc (h ^. highlightParsed)
+    { _highlightNames = filterByLoc absPth (h ^. highlightNames),
+      _highlightParsed = filterByLoc absPth (h ^. highlightParsed)
     }
+
+filterByLoc :: HasLoc p => FilePath -> [p] -> [p]
+filterByLoc absPth = filter ((== absPth) . (^. intFile) . getLoc)
+
+goError :: [Interval] -> Text
+goError l =
+  renderSExp
+    (progn (map goIntervalErr l))
   where
-    filterByLoc :: HasLoc p => [p] -> [p]
-    filterByLoc = filter ((== absPth) . (^. intFile) . getLoc)
+    goIntervalErr :: Interval -> SExp
+    goIntervalErr = instr FaceError
 
 go :: HighlightInput -> Text
 go HighlightInput {..} =
@@ -86,8 +94,8 @@ nameKindFace = \case
 -- | Example instruction:
 -- (add-text-properties 20 28
 --  '(face minijuvix-highlight-constructor-face))
-instr :: Interval -> Face -> SExp
-instr i f =
+instr :: Face -> Interval -> SExp
+instr f i =
   App [Symbol "add-text-properties", start, end, face]
   where
     pos l = Int (succ (l ^. locOffset . unPos))
@@ -104,12 +112,13 @@ instr i f =
       FaceNumber -> Str.number
       FaceComment -> Str.comment
       FaceString -> Str.string
+      FaceError -> Str.error
 
 faceSymbol :: Text -> SExp
 faceSymbol faceSymbolStr = Symbol ("minijuvix-highlight-" <> faceSymbolStr <> "-face")
 
 goParsedItem :: ParsedItem -> SExp
-goParsedItem i = instr (getLoc i) face
+goParsedItem i = instr face (getLoc i)
   where
     face = case i ^. parsedTag of
       ParsedTagKeyword -> FaceKeyword
@@ -120,7 +129,7 @@ goParsedItem i = instr (getLoc i) face
 colorName :: Name -> Maybe SExp
 colorName n = do
   f <- nameKindFace (n ^. nameKind)
-  return (instr (getLoc n) f)
+  return (instr f (getLoc n))
 
 gotoDefName :: Name -> SExp
 gotoDefName n =

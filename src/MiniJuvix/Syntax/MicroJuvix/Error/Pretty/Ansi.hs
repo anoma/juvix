@@ -1,7 +1,7 @@
 module MiniJuvix.Syntax.MicroJuvix.Error.Pretty.Ansi where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.MicroJuvix.Error.Pretty.Base
+import MiniJuvix.Syntax.MicroJuvix.Error.Pretty.Ann
 import MiniJuvix.Syntax.MicroJuvix.Pretty.Ansi qualified as M
 import Prettyprinter
 import Prettyprinter.Render.Terminal

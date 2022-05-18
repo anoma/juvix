@@ -15,10 +15,9 @@ import MiniJuvix.Syntax.MiniHaskell.Pretty.Ann
 import MiniJuvix.Syntax.MiniHaskell.Pretty.Options
 import Prettyprinter
 
-docStream :: PrettyCode c => Options -> c -> SimpleDocStream Ann
-docStream opts =
-  layoutPretty defaultLayoutOptions
-    . run
+doc :: PrettyCode c => Options -> c -> Doc Ann
+doc opts =
+  run
     . runReader opts
     . ppCode
 

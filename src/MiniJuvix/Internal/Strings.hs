@@ -74,6 +74,9 @@ comment = "comment"
 number :: IsString s => s
 number = "number"
 
+error :: IsString s => s
+error = "error"
+
 string :: IsString s => s
 string = "string"
 

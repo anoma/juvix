@@ -1,7 +1,8 @@
 module MiniJuvix.Syntax.Concrete.Loc where
 
-import MiniJuvix.Prelude
+import MiniJuvix.Prelude.Base
 import Prettyprinter
+import Text.Megaparsec qualified as M
 
 newtype Pos = Pos {_unPos :: Word64}
   deriving stock (Show, Eq, Ord)
@@ -36,6 +37,20 @@ data Loc = Loc
   }
   deriving stock (Show, Eq, Ord)
 
+mkLoc :: FilePath -> Int -> M.SourcePos -> Loc
+mkLoc root offset M.SourcePos {..} =
+  let _locFile = normalise (root </> sourceName)
+   in Loc {..}
+  where
+    _locOffset = Pos (fromIntegral offset)
+    _locFileLoc = FileLoc {..}
+      where
+        _locLine = fromPos sourceLine
+        _locCol = fromPos sourceColumn
+
+fromPos :: M.Pos -> Pos
+fromPos = Pos . fromIntegral . M.unPos
+
 -- | Inclusive interval
 data Interval = Interval
   { _intFile :: FilePath,
@@ -57,6 +72,21 @@ makeLenses ''Interval
 makeLenses ''FileLoc
 makeLenses ''Loc
 makeLenses ''Pos
+
+singletonInterval :: Loc -> Interval
+singletonInterval l =
+  Interval
+    { _intFile = l ^. locFile,
+      _intStart = l ^. locFileLoc,
+      _intEnd = l ^. locFileLoc
+    }
+
+intervalStart :: Interval -> Loc
+intervalStart i =
+  Loc
+    { _locFile = i ^. intFile,
+      _locFileLoc = i ^. intStart
+    }
 
 mkInterval :: Loc -> Loc -> Interval
 mkInterval start end =

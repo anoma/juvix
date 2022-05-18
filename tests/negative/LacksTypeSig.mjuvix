@@ -1,5 +1,6 @@
 module LacksTypeSig;
 
+ some ≔ Type;
 
-   some ≔ Type;
+
 end;

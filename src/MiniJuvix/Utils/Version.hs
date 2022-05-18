@@ -45,17 +45,17 @@ progName = PP.pretty . pack . toUpperFirst <$> getProgName
 progNameVersion :: IO (Doc Text)
 progNameVersion = do
   pName <- progName
-  pure (pName <+> "version" <+> versionDoc)
+  return (pName <+> "version" <+> versionDoc)
 
 progNameVersionTag :: IO (Doc Text)
 progNameVersionTag = do
   progNameV <- progNameVersion
-  pure (progNameV <> "-" <> shortHash)
+  return (progNameV <> "-" <> shortHash)
 
 infoVersionRepo :: IO (Doc Text)
 infoVersionRepo = do
   pNameTag <- progNameVersionTag
-  pure
+  return
     ( pNameTag <> line
         <> "Branch"
         <> colon <+> branch

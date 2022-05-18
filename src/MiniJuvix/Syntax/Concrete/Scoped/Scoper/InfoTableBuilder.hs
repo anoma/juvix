@@ -61,8 +61,12 @@ toState = reinterpret $ \case
      in modify (over infoAxioms (HashMap.insert ref info))
   RegisterCompile c ->
     let symb = c ^. compileName
-        backends = CompileInfo (c ^. compileBackendItems)
-     in modify (over infoCompilationRules (HashMap.insert symb backends))
+        info =
+          CompileInfo
+            { _compileInfoBackendItems = c ^. compileBackendItems,
+              _compileInfoDefined = getLoc symb
+            }
+     in modify (over infoCompilationRules (HashMap.insert symb info))
   RegisterConstructor c ->
     let ref = ConstructorRef' (S.unqualifiedSymbol (c ^. constructorName))
         info = ConstructorInfo {_constructorInfoType = c ^. constructorType}

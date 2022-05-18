@@ -52,7 +52,7 @@
   '((((background light))
      (:foreground "#f07171"))
     (((background dark))
-     (:foreground "#bf616a")))
+     (:foreground "#d08770")))
   "The face used for string literals."
   :group 'minijuvix-highlight-faces)
 
@@ -62,6 +62,14 @@
     (((background dark))
      (:foreground "#d8dee9")))
   "The face used for numbers."
+  :group 'minijuvix-highlight-faces)
+
+(defface minijuvix-highlight-error-face
+  '((((background light))
+     (:foreground "#bd3744"))
+    (((background dark))
+     (:foreground "#bd3744")))
+  "The face used for errors."
   :group 'minijuvix-highlight-faces)
 
 (defface minijuvix-highlight-comment-face

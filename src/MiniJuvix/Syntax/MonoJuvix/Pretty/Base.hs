@@ -15,9 +15,11 @@ import MiniJuvix.Syntax.MonoJuvix.Pretty.Ann
 import MiniJuvix.Syntax.MonoJuvix.Pretty.Options
 
 docStream :: PrettyCode c => Options -> c -> SimpleDocStream Ann
-docStream opts =
-  layoutPretty defaultLayoutOptions
-    . run
+docStream opts = layoutPretty defaultLayoutOptions . doc opts
+
+doc :: PrettyCode c => Options -> c -> Doc Ann
+doc opts =
+  run
     . runReader opts
     . ppCode
 

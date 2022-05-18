@@ -83,7 +83,7 @@ upToMiniC = upToMonoJuvix >=> pipelineMiniC
 --------------------------------------------------------------------------------
 
 pipelineParser :: Members '[Files, Error AJuvixError] r => EntryPoint -> Sem r Parser.ParserResult
-pipelineParser = mapError (toAJuvixError @Text) . Parser.entryParser
+pipelineParser = mapError (toAJuvixError @Parser.ParserError) . Parser.entryParser
 
 pipelineScoper :: Members '[Files, NameIdGen, Error AJuvixError] r => Parser.ParserResult -> Sem r Scoper.ScoperResult
 pipelineScoper = mapError (toAJuvixError @Scoper.ScopeError) . Scoper.entryScoper

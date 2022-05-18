@@ -10,16 +10,18 @@ import MiniJuvix.Syntax.MiniHaskell.Pretty.Ansi qualified as Ansi
 import MiniJuvix.Syntax.MiniHaskell.Pretty.Base
 import MiniJuvix.Syntax.MiniHaskell.Pretty.Options
 
-newtype PPOutput = PPOutput (SimpleDocStream Ann)
+newtype PPOutput = PPOutput (Doc Ann)
 
-ppOutDefault :: PrettyCode c => c -> PPOutput
-ppOutDefault = PPOutput . docStream defaultOptions
+ppOutDefault :: PrettyCode c => c -> AnsiText
+ppOutDefault = AnsiText . PPOutput . doc defaultOptions
 
-ppOut :: PrettyCode c => Options -> c -> PPOutput
-ppOut o = PPOutput . docStream o
+ppOut :: PrettyCode c => Options -> c -> AnsiText
+ppOut o = AnsiText . PPOutput . doc o
 
 instance HasAnsiBackend PPOutput where
-  toAnsi (PPOutput o) = reAnnotateS Ansi.stylize o
+  toAnsiStream (PPOutput o) = reAnnotateS Ansi.stylize (layoutPretty defaultLayoutOptions o)
+  toAnsiDoc (PPOutput o) = reAnnotate Ansi.stylize o
 
 instance HasTextBackend PPOutput where
-  toText (PPOutput o) = unAnnotateS o
+  toTextDoc (PPOutput o) = unAnnotate o
+  toTextStream (PPOutput o) = unAnnotateS (layoutPretty defaultLayoutOptions o)

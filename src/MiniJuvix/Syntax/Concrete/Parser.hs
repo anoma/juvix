@@ -2,17 +2,18 @@ module MiniJuvix.Syntax.Concrete.Parser
   ( module MiniJuvix.Syntax.Concrete.Parser,
     module MiniJuvix.Syntax.Concrete.Parser.ParserResult,
     module MiniJuvix.Syntax.Concrete.Parser.InfoTable,
+    module MiniJuvix.Syntax.Concrete.Parser.Error,
   )
 where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Singletons
-import Data.Text qualified as Text
 import MiniJuvix.Pipeline.EntryPoint
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Base qualified as P
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Lexer hiding (symbol)
+import MiniJuvix.Syntax.Concrete.Parser.Error
 import MiniJuvix.Syntax.Concrete.Parser.InfoTable
 import MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder
 import MiniJuvix.Syntax.Concrete.Parser.ParserResult
@@ -21,14 +22,14 @@ import MiniJuvix.Syntax.Concrete.Parser.ParserResult
 -- Running the parser
 --------------------------------------------------------------------------------
 
-entryParser :: Members '[Files, Error Text] r => EntryPoint -> Sem r ParserResult
+entryParser :: Members '[Files, Error ParserError] r => EntryPoint -> Sem r ParserResult
 entryParser e = do
   (_resultTable, _resultModules) <- runInfoTableBuilder (runReader e (mapM goFile (e ^. entryModulePaths)))
   let _resultEntry = e
   return ParserResult {..}
   where
     goFile ::
-      Members '[Files, Error Text, InfoTableBuilder] r =>
+      Members '[Files, Error ParserError, InfoTableBuilder] r =>
       FilePath ->
       Sem r (Module 'Parsed 'ModuleTop)
     goFile fileName = do
@@ -39,10 +40,10 @@ entryParser e = do
 
 -- | The fileName is only used for reporting errors. It is safe to pass
 -- an empty string.
-runModuleParser :: FilePath -> FilePath -> Text -> Either Text (InfoTable, Module 'Parsed 'ModuleTop)
+runModuleParser :: FilePath -> FilePath -> Text -> Either ParserError (InfoTable, Module 'Parsed 'ModuleTop)
 runModuleParser root fileName input =
   case run $ runInfoTableBuilder $ runReader params $ P.runParserT topModuleDef fileName input of
-    (_, Left err) -> Left (Text.pack (P.errorBundlePretty err))
+    (_, Left err) -> Left (ParserError err)
     (tbl, Right r) -> return (tbl, r)
   where
     params =

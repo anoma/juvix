@@ -1,5 +1,6 @@
 (require 'minijuvix-highlight)
 (require 'minijuvix-input)
+(require 'flycheck-minijuvix)
 
 (defgroup minijuvix nil
   "Major mode for MiniJuvix files."

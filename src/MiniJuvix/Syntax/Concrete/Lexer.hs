@@ -6,7 +6,6 @@ import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.Base hiding (Pos, space)
 import MiniJuvix.Syntax.Concrete.Base qualified as P
-import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder
 import Text.Megaparsec.Char.Lexer qualified as L
 
@@ -52,9 +51,6 @@ identifier = fmap fst identifierL
 identifierL :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Text, Interval)
 identifierL = lexeme bareIdentifier
 
-fromPos :: P.Pos -> Pos
-fromPos = Pos . fromIntegral . P.unPos
-
 integer :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Integer, Interval)
 integer = do
   minus <- optional (char '-')
@@ -84,23 +80,12 @@ string =
   lexemeInterval $
     pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
-mkLoc :: Member (Reader ParserParams) r => Int -> SourcePos -> Sem r Loc
-mkLoc offset SourcePos {..} = do
-  root <- asks (^. parserParamsRoot)
-  let _locFile = normalise (root </> sourceName)
-  return Loc {..}
-  where
-    _locOffset = Pos (fromIntegral offset)
-    _locFileLoc = FileLoc {..}
-      where
-        _locLine = fromPos sourceLine
-        _locCol = fromPos sourceColumn
-
 curLoc :: Member (Reader ParserParams) r => ParsecS r Loc
 curLoc = do
   sp <- getSourcePos
-  offset <- stateOffset <$> getParserState
-  lift (mkLoc offset sp)
+  offset <- getOffset
+  root <- lift (asks (^. parserParamsRoot))
+  return (mkLoc root offset sp)
 
 interval :: Member (Reader ParserParams) r => ParsecS r a -> ParsecS r (a, Interval)
 interval ma = do

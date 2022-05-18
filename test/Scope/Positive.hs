@@ -4,8 +4,9 @@ import Base
 import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Internal.NameIdGen
 import MiniJuvix.Pipeline
+import MiniJuvix.Prelude.Pretty
 import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
-import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Text qualified as M
+import MiniJuvix.Syntax.Concrete.Scoped.Pretty qualified as M
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Utils
 
@@ -19,6 +20,9 @@ makeLenses ''PosTest
 
 root :: FilePath
 root = "tests/positive"
+
+renderCode :: M.PrettyCode c => c -> Text
+renderCode = prettyText . M.ppOutDefault
 
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
@@ -44,12 +48,12 @@ testDescr PosTest {..} =
                 fs :: HashMap FilePath Text
                 fs =
                   HashMap.fromList
-                    [ (getModuleFileAbsPath cwd m, M.renderPrettyCodeDefault m)
+                    [ (getModuleFileAbsPath cwd m, renderCode m)
                       | m <- toList (getAllModules s2)
                     ]
 
-            let scopedPretty = M.renderPrettyCodeDefault s2
-                parsedPretty = M.renderPrettyCodeDefault p2
+            let scopedPretty = renderCode s2
+                parsedPretty = renderCode p2
 
             step "Parsing pretty scoped"
             let fs2 = HashMap.singleton entryFile scopedPretty

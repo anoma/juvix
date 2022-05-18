@@ -1,7 +1,6 @@
 module MiniJuvix.Syntax.Concrete.Parser.ParsedItem where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Loc
 
 data ParsedItem = ParsedItem
   { _parsedLoc :: Interval,

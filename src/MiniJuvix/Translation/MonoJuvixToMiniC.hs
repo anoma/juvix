@@ -2,7 +2,7 @@ module MiniJuvix.Translation.MonoJuvixToMiniC where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.Text qualified as T
-import MiniJuvix.Internal.Strings
+import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Backends
 import MiniJuvix.Syntax.Concrete.Language qualified as C
@@ -36,9 +36,9 @@ entryMiniC i = return (MiniCResult (serialize cunitResult))
     cheader =
       map
         ExternalMacro
-        [ CppIncludeSystem stdlib,
-          CppIncludeSystem stdbool,
-          CppIncludeSystem stdio
+        [ CppIncludeSystem Str.stdlib,
+          CppIncludeSystem Str.stdbool,
+          CppIncludeSystem Str.stdio
         ]
     cmodules :: [CCode]
     cmodules = toList (i ^. Mono.resultModules) >>= (run . runReader compileInfo . goModule)
@@ -142,7 +142,7 @@ mkName n =
     nameTextSuffix = case n ^. Mono.nameKind of
       Mono.KNameTopModule -> mempty
       Mono.KNameFunction ->
-        if n ^. Mono.nameText == main then mempty else idSuffix
+        if n ^. Mono.nameText == Str.main then mempty else idSuffix
       _ -> idSuffix
     idSuffix :: Text
     idSuffix = "_" <> show (n ^. Mono.nameId . unNameId)
@@ -181,7 +181,7 @@ goFunctionDef Mono.FunctionDef {..} =
           )
 
     isNullary :: Bool
-    isNullary = null funArgTypes && funcBasename /= main_
+    isNullary = null funArgTypes && funcBasename /= Str.main_
     funcBasename :: Text
     funcBasename = mkName _funDefName
     nullaryDefine :: Maybe Define
@@ -214,16 +214,16 @@ goFunctionDef Mono.FunctionDef {..} =
       StatementCompound
         [ StatementExpr
             ( functionCall
-                (ExpressionVar fprintf)
-                [ ExpressionVar stderr_,
+                (ExpressionVar Str.fprintf)
+                [ ExpressionVar Str.stderr_,
                   ExpressionLiteral (LiteralString "Error: Pattern match(es) are non-exhaustive in %s\n"),
                   ExpressionLiteral (LiteralString (_funDefName ^. Mono.nameText))
                 ]
             ),
           StatementExpr
             ( functionCall
-                (ExpressionVar exit)
-                [ ExpressionVar exitFailure_
+                (ExpressionVar Str.exit)
+                [ ExpressionVar Str.exitFailure_
                 ]
             )
         ]
@@ -435,11 +435,11 @@ goInductiveDef i =
               _structUnionName = Just (asStruct baseName),
               _structMembers =
                 Just
-                  [ typeDefType (asTag baseName) tag,
+                  [ typeDefType (asTag baseName) Str.tag,
                     Declaration
                       { _declType = unionMembers,
                         _declIsPtr = False,
-                        _declName = Just data_,
+                        _declName = Just Str.data_,
                         _declInitializer = Nothing
                       }
                   ]
@@ -467,7 +467,7 @@ goInductiveDef i =
           _funcBody =
             [ returnStatement
                 ( equals
-                    (memberAccess Pointer (ExpressionVar funcArg) tag)
+                    (memberAccess Pointer (ExpressionVar funcArg) Str.tag)
                     (ExpressionVar (asTag ctorName))
                 )
             ]
@@ -486,7 +486,7 @@ goInductiveDef i =
           _funcArgs = [ptrType (DeclTypeDefType (asTypeDef baseName)) funcArg],
           _funcBody =
             [ returnStatement
-                (memberAccess Object (memberAccess Pointer (ExpressionVar funcArg) data_) ctorName)
+                (memberAccess Object (memberAccess Pointer (ExpressionVar funcArg) Str.data_) ctorName)
             ]
         }
       where
@@ -518,7 +518,7 @@ goInductiveConstructorNew i ctor = ctorNewFun
             (asNewNullary baseName)
             []
             [ BodyDecl allocInductive,
-              BodyDecl (commonInitDecl (dataInit true_)),
+              BodyDecl (commonInitDecl (dataInit Str.true_)),
               BodyStatement assignPtr,
               returnStatement (ExpressionVar tmpPtrName)
             ],
@@ -590,11 +590,11 @@ goInductiveConstructorNew i ctor = ctorNewFun
               Just
                 ( DesignatorInitializer
                     [ DesigInit
-                        { _desigDesignator = tag,
+                        { _desigDesignator = Str.tag,
                           _desigInitializer = ExprInitializer (ExpressionVar (asTag baseName))
                         },
                       DesigInit
-                        { _desigDesignator = data_,
+                        { _desigDesignator = Str.data_,
                           _desigInitializer = di
                         }
                     ]
@@ -743,4 +743,4 @@ goTypeDecl n CDeclType {..} =
 
 mallocSizeOf :: Text -> Expression
 mallocSizeOf typeName =
-  functionCall (ExpressionVar malloc) [functionCall (ExpressionVar sizeof) [ExpressionVar typeName]]
+  functionCall (ExpressionVar Str.malloc) [functionCall (ExpressionVar Str.sizeof) [ExpressionVar typeName]]

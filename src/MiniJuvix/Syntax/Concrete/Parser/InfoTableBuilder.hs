@@ -11,7 +11,6 @@ where
 
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Concrete.LiteralLoc
-import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Syntax.Concrete.Parser.InfoTable
 import MiniJuvix.Syntax.Concrete.Parser.ParsedItem
 

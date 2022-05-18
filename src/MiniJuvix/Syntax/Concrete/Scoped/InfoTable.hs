@@ -24,8 +24,9 @@ newtype InductiveInfo = InductiveInfo
   }
   deriving stock (Eq, Show)
 
-newtype CompileInfo = CompileInfo
-  { _compileInfoBackendItems :: [BackendItem]
+data CompileInfo = CompileInfo
+  { _compileInfoBackendItems :: [BackendItem],
+    _compileInfoDefined :: Interval
   }
   deriving stock (Eq, Show)
 

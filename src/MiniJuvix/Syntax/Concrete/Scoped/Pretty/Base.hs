@@ -16,10 +16,9 @@ import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Ann
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Options
 
-docStream :: PrettyCode c => Options -> c -> SimpleDocStream Ann
-docStream opts =
-  layoutPretty defaultLayoutOptions
-    . run
+doc :: PrettyCode c => Options -> c -> Doc Ann
+doc opts =
+  run
     . runReader opts
     . ppCode
 
