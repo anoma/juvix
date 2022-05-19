@@ -211,3 +211,9 @@ tag = "tag"
 
 main_ :: IsString s => s
 main_ = "main"
+
+minicRuntime :: IsString s => s
+minicRuntime = "minic-runtime.h"
+
+putStrLn_ :: IsString s => s
+putStrLn_ = "putStrLn"

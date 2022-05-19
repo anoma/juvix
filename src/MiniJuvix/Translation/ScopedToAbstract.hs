@@ -162,7 +162,7 @@ goInductive ::
   Sem r A.InductiveDef
 goInductive InductiveDef {..} = do
   _inductiveParameters' <- mapM goInductiveParameter _inductiveParameters
-  _inductiveType' <- sequence $ goExpression <$> _inductiveType
+  _inductiveType' <- mapM goExpression _inductiveType
   _inductiveConstructors' <- mapM goConstructorDef _inductiveConstructors
   inductiveInfo <-
     registerInductive

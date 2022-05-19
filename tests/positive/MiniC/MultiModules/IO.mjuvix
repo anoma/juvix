@@ -14,10 +14,6 @@ foreign c {
   int sequence(int a, int b) {
     return a + b;
   \}
-
-  int putStr(char* s) {
-    return fputs(s, stdout);
-  \}
 };
 
 infixl 1 >>;
@@ -39,7 +35,7 @@ axiom put-str-ln : String → Action;
 
 compile put-str-ln {
   ghc ↦ "putStrLn";
-  c ↦ "puts";
+  c ↦ "putStrLn";
 };
 
 end;

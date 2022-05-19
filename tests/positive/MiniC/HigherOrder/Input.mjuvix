@@ -1,10 +1,5 @@
 module Input;
 
-foreign c {
-  #include <stdio.h>
-};
-
-
 --------------------------------------------------------------------------------
 -- Strings
 --------------------------------------------------------------------------------
@@ -29,10 +24,6 @@ foreign c {
   int sequence(int a, int b) {
     return a + b;
   \}
-
-  int putStr(char* s) {
-    return fputs(s, stdout);
-  \}
 };
 
 infixl 1 >>;
@@ -51,7 +42,7 @@ compile put-str {
 axiom put-str-ln : String → Action;
 
 compile put-str-ln {
-  c ↦ "puts";
+  c ↦ "putStrLn";
 };
 
 --------------------------------------------------------------------------------
@@ -67,13 +58,6 @@ compile Int {
 foreign c {
   int plus(int l, int r) {
     return l + r;
-  \}
-
-  char* intToStr(int i) {
-    int length = snprintf(NULL, 0, "%d", i);
-    char* str = malloc(length + 1);
-    snprintf(str, length + 1, "%d", i);
-    return str;
   \}
 };
 

@@ -1,9 +1,5 @@
 module Input;
 
-foreign c {
-  #include <stdio.h>
-};
-
 axiom String : Type;
 
 compile String {
@@ -20,7 +16,7 @@ axiom put-str-ln : String → Action;
 
 compile put-str-ln {
   ghc ↦ "putStrLn";
-  c ↦ "puts";
+  c ↦ "putStrLn";
 };
 
 main : Action;

@@ -1,6 +1,9 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module BackendC.Positive where
 
 import Base
+import Data.FileEmbed
 import Data.Text.IO qualified as TIO
 import MiniJuvix.Pipeline
 import MiniJuvix.Translation.MonoJuvixToMiniC as MiniC
@@ -44,32 +47,73 @@ testDescr PosTest {..} =
             let entryPoint = EntryPoint "." (pure mainFile)
             p :: MiniC.MiniCResult <- runIO (upToMiniC entryPoint)
 
-            actual <-
-              withTempDir
-                ( \dirPath -> do
-                    let cOutputFile = dirPath </> "out.c"
-                        wasmOutputFile = dirPath </> "out.wasm"
-                    TIO.writeFile cOutputFile (p ^. MiniC.resultCCode)
-                    step "WASM generation"
-                    P.callProcess
-                      "clang"
-                      [ "-nodefaultlibs",
-                        "-lc",
-                        "--target=wasm32-wasi",
-                        "--sysroot",
-                        sysrootPath,
-                        "-o",
-                        wasmOutputFile,
-                        cOutputFile
-                      ]
-                    step "WASM execution"
-                    pack <$> P.readProcess "wasmer" [wasmOutputFile] ""
-                )
-
             expected <- TIO.readFile expectedFile
+
+            step "Compile C with standalone runtime"
+            actualStandalone <- clangCompile (standaloneArgs sysrootPath) p step
             step "Compare expected and actual program output"
-            assertEqDiff ("check: WASM output = " <> expectedFile) actual expected
+            assertEqDiff ("check: WASM output = " <> expectedFile) actualStandalone expected
+
+            step "Compile C with libc runtime"
+            actualLibc <- clangCompile (libcArgs sysrootPath) p step
+            step "Compare expected and actual program output"
+            assertEqDiff ("check: WASM output = " <> expectedFile) actualLibc expected
         }
+
+clangCompile ::
+  (FilePath -> FilePath -> [String]) ->
+  MiniC.MiniCResult ->
+  (String -> IO ()) ->
+  IO Text
+clangCompile mkClangArgs cResult step =
+  withTempDir
+    ( \dirPath -> do
+        let cOutputFile = dirPath </> "out.c"
+            wasmOutputFile = dirPath </> "out.wasm"
+        TIO.writeFile cOutputFile (cResult ^. MiniC.resultCCode)
+        step "WASM generation"
+        P.callProcess
+          "clang"
+          (mkClangArgs wasmOutputFile cOutputFile)
+        step "WASM execution"
+        pack <$> P.readProcess "wasmer" [wasmOutputFile] ""
+    )
+
+standaloneArgs :: FilePath -> FilePath -> FilePath -> [String]
+standaloneArgs sysrootPath wasmOutputFile cOutputFile =
+  [ "-nodefaultlibs",
+    "-I",
+    takeDirectory minicRuntime,
+    "--target=wasm32-wasi",
+    "--sysroot",
+    sysrootPath,
+    "-o",
+    wasmOutputFile,
+    wallocPath,
+    cOutputFile
+  ]
+  where
+    minicRuntime :: FilePath
+    minicRuntime = $(makeRelativeToProject "minic-runtime/standalone/minic-runtime.h" >>= strToExp)
+    wallocPath :: FilePath
+    wallocPath = $(makeRelativeToProject "minic-runtime/standalone/walloc.c" >>= strToExp)
+
+libcArgs :: FilePath -> FilePath -> FilePath -> [String]
+libcArgs sysrootPath wasmOutputFile cOutputFile =
+  [ "-nodefaultlibs",
+    "-I",
+    takeDirectory minicRuntime,
+    "-lc",
+    "--target=wasm32-wasi",
+    "--sysroot",
+    sysrootPath,
+    "-o",
+    wasmOutputFile,
+    cOutputFile
+  ]
+  where
+    minicRuntime :: FilePath
+    minicRuntime = $(makeRelativeToProject "minic-runtime/libc/minic-runtime.h" >>= strToExp)
 
 allTests :: TestTree
 allTests =

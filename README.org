@@ -80,7 +80,7 @@ precompiled archives from the [[https://github.com/WebAssembly/wasi-sdk/releases
   tar xf libclang_rt.builtins-wasm32-wasi-15.0.tar.gz
   #+end_src
 
-2. Extract the =wasi-sysroot-*.tar.gz= archive on your local system and set =WASI_SYSROOT_PATH= to its path.
+2. <<sysroot>>Extract the =wasi-sysroot-*.tar.gz= archive on your local system and set =WASI_SYSROOT_PATH= to its path.
 
   For example:
 
@@ -109,11 +109,13 @@ stack test --ta '-p "! /slow tests/"'
 ** Usage Example
 
 In the following example a MiniJuvix file is compiled using the C backend. The
-result is compiled to WASM using [[https://emscripten.org][emscripten]] and then executed using [[https://wasmer.io][wasmer]].
+result is compiled to WASM using [[https://llvm.org][Clang]] and then executed using [[https://wasmer.io][wasmer]].
+
+NB: Set the =WASI_SYSROOT_PATH= environment variable to the root of the WASI sysroot, see [[sysroot]].
 
 #+begin_src shell
 cd tests/positive/MiniC/HelloWorld
-minijuvix minic Input.mjuvix | clang --target=wasm32-wasi -nodefaultlibs -lc --sysroot $WASI_SYSROOT_PATH -x c - -o out.wasm && wasmer out.wasm
+minijuvix minic Input.mjuvix | clang --target=wasm32-wasi -nodefaultlibs -lc --sysroot $WASI_SYSROOT_PATH -I../../../../minic-runtime/libc -x c - -o out.wasm && wasmer out.wasm
 #+end_src
 
 #+RESULTS:
