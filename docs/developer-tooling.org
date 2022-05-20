@@ -41,7 +41,7 @@ Add the following line to your bash init script (for example =~/.bashrc=).
 Run the following command in your shell:
 
 #+begin_src shell
-  $ minijuvix --fish-completion-script minijuvix > ~/.config/fish/completions/minijuvix.fish
+minijuvix --fish-completion-script minijuvix > ~/.config/fish/completions/minijuvix.fish
 #+end_src
 
 *** ZSH
@@ -49,7 +49,7 @@ Run the following command in your shell:
 Run the following command in your shell:
 
 #+begin_src shell
-  $ minijuvix --zsh-completion-script minijuvix > $DIR_IN_FPATH/_minijuvix
+minijuvix --zsh-completion-script minijuvix > $DIR_IN_FPATH/_minijuvix
 #+end_src
 
 where =$DIR_IN_FPATH= is a directory that is present on the [[https://zsh.sourceforge.io/Doc/Release/Functions.html][ZSH FPATH variable]] (which you can inspect by running =echo $FPATH= in the shell).

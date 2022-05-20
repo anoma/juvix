@@ -1,0 +1,13 @@
+[book]
+title = "MiniJuvix"
+authors =  [ "Jonathan Prieto-Cubides" , "Jan Mas Rovira" , "Paul Cadman" ]
+language = "en"
+multilingual = false
+src = "docs"
+
+[build]
+build-dir = "_docs"
+create-missing = true
+
+[output.html]
+mathjax-support = true

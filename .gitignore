@@ -69,3 +69,5 @@ UPDATES-FOR-CHANGELOG.org
 
 # C Code generation
 *.wasm
+docs/**/*.md
+_docs

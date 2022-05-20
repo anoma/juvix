@@ -3,6 +3,14 @@ PREFIX="$(PWD)/.stack-work/prefix"
 UNAME := $(shell uname)
 HLINTQUIET :=
 
+ORGFILES = $(shell find docs/ -type f -name '*.org')
+MDFILES:=$(ORGFILES:.org=.md)
+
+ORGTOMDPRG ?=pandoc
+ORGOPTS=--from org --to markdown --standalone -o $@
+
+# ORGTOMDPRG ?=emacs
+# ORGOPTS=--batch -f org-html-export-to-markdown
 
 ifeq ($(UNAME), Darwin)
 	THREADS := $(shell sysctl -n hw.logicalcpu)
@@ -15,10 +23,23 @@ endif
 all:
 	make pre-commit
 
+.PHONY: markdown-docs
+markdown-docs: $(MDFILES)
+	mdbook build
+
+.PHONY: serve-docs
+serve-docs:
+	make markdown-docs
+	mdbook serve --open
+
+%.md: %.org
+	@echo "Processing ...  $@"
+	${ORGTOMDPRG} $? ${ORGOPTS}
+
 .PHONY : checklines
 checklines :
 	@grep '.\{81,\}' \
-		--exclude=*.agda \
+		--exclude=*.org \
 		-l --recursive src; \
 		status=$$?; \
 		if [ $$status = 0 ] ; \
