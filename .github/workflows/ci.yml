@@ -1,14 +1,28 @@
 name: MiniJuvix CI
 
 on:
-  push:
-    branches: [ main , dev ]
   pull_request:
     branches:
       - main
-      - dev
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+      - review_requested
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
+  not-a-draft:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == true
+    steps:
+      - name: Fails in order to indicate that pull request needs to be marked as
+              ready to review.
+        run: exit 1
 
   ormolu:
     runs-on: ubuntu-latest
@@ -37,6 +51,36 @@ jobs:
       with:
         path: '["src/", "app/", "test/"]'
         fail-on: warning
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+    - uses: pre-commit/action@v2.0.3
+      with:
+        extra_args:
+          trailing-whitespace --all-files
+    - uses: pre-commit/action@v2.0.3
+      with:
+        extra_args:
+          end-of-file-fixer --all-files
+    - uses: pre-commit/action@v2.0.3
+      with:
+        extra_args:
+          check-yaml --all-files
+    - uses: pre-commit/action@v2.0.3
+      with:
+        extra_args:
+          check-added-large-files --all-files
+    - uses: pre-commit/action@v2.0.3
+      with:
+        extra_args:
+          check-case-conflict --all-files
+    - uses: pre-commit/action@v2.0.3
+      with:
+        extra_args:
+          mixed-line-ending --all-files
 
   build:
     runs-on: ${{ matrix.os }}

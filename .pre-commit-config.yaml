@@ -15,7 +15,7 @@ repos:
     -   id: mixed-line-ending
 
 -   repo:  https://github.com/heliaxdev/minijuvix
-    rev: a54abcd6a50518476ee75b329e245c3341d02341
+    rev: f987ef1c13e75e6ed60e8e85c8afecb3f485e224
     hooks:
     -   id: ormolu
     -   id: hlint
