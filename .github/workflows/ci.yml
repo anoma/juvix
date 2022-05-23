@@ -10,6 +10,7 @@ on:
       - synchronize
       - ready_for_review
       - review_requested
+      - closed
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -25,8 +26,8 @@ jobs:
         run: exit 1
 
   docs:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    if:  ${{ github.ref == 'refs/heads/master' }}
     steps:
       - name: Checkout our repository
         uses: actions/checkout@v2
@@ -113,7 +114,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest , macOS-latest ]
+        os: [ubuntu-latest , macOS-latest]
         ghc: ["9.2.2"]
     steps:
       - uses: actions/cache@v3
@@ -155,7 +156,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ macOS-latest , ubuntu-latest ]
+        os: [ubuntu-latest , macOS-latest]
         ghc: ["9.2.2"]
     steps:
       - uses: actions/cache@v3
