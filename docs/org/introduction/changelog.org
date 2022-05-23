@@ -1,8 +1,10 @@
-* The MiniJuvix Changelog
-  :PROPERTIES:
-  :CUSTOM_ID: the-minijuvix-changelog
-  :END:
+* Changelog
 
+#+begin_html
+<a href="https://github.com/heliaxdev/MiniJuvix">
+<img align="right" width="300" height="300" alt="MiniJuvix Mascot" src="https://juvix.org/_nuxt/img/greeting-mascot.ad540a1.svg" />
+</a>
+#+end_html
 
 ** [[https://github.com/heliaxdev/minijuvix/tree/v0.1.3][v0.1.3]]
 (2022-05-05)

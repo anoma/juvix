@@ -1,0 +1,83 @@
+* CLI
+
+** Usage
+
+#+begin_src shell
+minijuvix [Global options]  ((-v|--version) | --show-root | COMMAND)
+#+end_src
+
+** Informative options
+
+- =-v,--version=
+  Print the version and exit
+- =--show-root=
+  Print the detected root of the project
+- =-h,--help=
+  Show this help text
+
+
+** Global Command flags
+
+- =--no-colors=
+  Disable globally ANSI formatting
+- =--show-name-ids=
+  Show the unique number of each identifier when pretty
+                          printing
+- =--only-errors=
+  Only print errors in a uniform format (used by
+                          minijuvix-mode)
+
+** Commands
+
+- =parse=
+  Parse a MiniJuvix file
+- =scope=
+  Parse and scope a MiniJuvix file
+- =html=
+  Generate HTML for a MiniJuvix file
+- =termination=
+  Subcommands related to termination checking
+- =monojuvix=
+  Translate a MiniJuvix file to MonoJuvix
+- =microjuvix=
+  Subcommands related to MicroJuvix
+- =minihaskell=
+  Translate a MiniJuvix file to MiniHaskell
+- =minic=
+  Translate a MiniJuvix file to MiniC
+- =highlight=
+  Highlight a MiniJuvix file
+
+
+** CLI Auto-completion Scripts
+
+The MiniJuvix CLI can generate auto-completion scripts. Follow the instructions below for your shell.
+
+NB: You may need to restart your shell after installing the completion script.
+
+*** Bash
+
+Add the following line to your bash init script (for example =~/.bashrc=).
+
+#+begin_src shell
+  eval "$(minijuvix --bash-completion-script minijuvix)"
+#+end_src
+
+*** Fish
+
+Run the following command in your shell:
+
+#+begin_src shell
+minijuvix --fish-completion-script minijuvix
+  > ~/.config/fish/completions/minijuvix.fish
+#+end_src
+
+*** ZSH
+
+Run the following command in your shell:
+
+#+begin_src shell
+minijuvix --zsh-completion-script minijuvix > $DIR_IN_FPATH/_minijuvix
+#+end_src
+
+where =$DIR_IN_FPATH= is a directory that is present on the [[https://zsh.sourceforge.io/Doc/Release/Functions.html][ZSH FPATH variable]] (which you can inspect by running =echo $FPATH= in the shell).

@@ -1,0 +1,47 @@
+* MiniJuvix
+
+#+begin_html
+<a href="https://github.com/heliaxdev/minijuvix/blob/main/LICENSE">
+<img alt="LICENSE" src="https://img.shields.io/badge/license-GPL--3.0--only-blue.svg" />
+</a>
+#+end_html
+
+#+begin_html
+<a href="https://github.com/heliaxdev/MiniJuvix/actions/workflows/ci.yml">
+<img alt="CI status" src="https://github.com/heliaxdev/MiniJuvix/actions/workflows/ci.yml/badge.svg" />
+</a>
+#+end_html
+
+#+begin_html
+<a href="https://github.com/heliaxdev/minijuvix/tags">
+<img alt="" src="https://img.shields.io/github/v/release/heliaxdev/minijuvix?include_prereleases" />
+</a>
+#+end_html
+
+#+begin_html
+<a href="https://github.com/heliaxdev/minijuvix/issues">
+<img alt="" src="https://img.shields.io/github/issues/heliaxdev/minijuvix" />
+</a>
+#+end_html
+
+#+begin_html
+<a href="https://github.com/heliaxdev/MiniJuvix">
+<img align="right" width="300" height="300" alt="MiniJuvix Mascot" src="https://juvix.org/_nuxt/img/seating-mascot.051c86a.svg" />
+</a>
+#+end_html
+
+
+MiniJuvix is a pre-alpha programming language for writing efficient formally-verified
+[[https://anoma.network/blog/validity-predicates/][validity predicates]], which can be
+deployed to various distributed ledgers. MiniJuvix is part of the Anoma's Juvix Toolkit.
+At the moment, this is software released for experimentation and research purposes only as
+no warranty is provided or implied yet.
+
+MiniJuvix aims to address many issues that we have experienced while trying to
+write and deploy decentralized applications present in the ecosystem of
+smart-contracts:
+
+- the difficulty of adequate program verification,
+- the ceiling of compositional complexity,
+- the illegibility of execution costs, and
+- the lock-in to particular backends.

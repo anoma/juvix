@@ -1,0 +1,3 @@
+- [[./tools/CLI.md][Command line Interface]]
+- [[./tools/emacs-mode.md][Writting MiniJuvix programs with Emacs Mode]]
+- [[./tools/testing.md][Test Suite]]

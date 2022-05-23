@@ -7,5 +7,5 @@
 -   id: ormolu
     name: ormolu
     description: Run Ormolu linter
-    entry: make check-format
+    entry: make check-ormolu
     language: system

@@ -1,0 +1,17 @@
+* Comments
+
+A comment is introduced in the same fashion as in Haskell/Agda.
+
+- Inline Comment
+#+begin_src
+-- This is a comment!
+#+end_src
+
+- Region comment
+
+#+begin_src
+{-
+    This is a comment!
+
+-}
+#+end_src

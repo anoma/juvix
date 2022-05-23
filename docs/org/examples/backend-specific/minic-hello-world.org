@@ -1,0 +1,44 @@
+* Mini C Hello World
+
+In the following example a MiniJuvix file is compiled using the C backend.
+
+#+begin_src
+-- tests/positive/MiniC/HelloWorld/Input.mjuvix
+module Input;
+
+axiom String : Type;
+
+compile String {
+  c ↦ "char*";
+};
+
+axiom Action : Type;
+
+compile Action {
+  c ↦ "int";
+};
+
+axiom put-str-ln : String → Action;
+
+compile put-str-ln {
+  c ↦ "putStrLn";
+};
+
+main : Action;
+main ≔ put-str-ln "hello world!";
+
+end;
+#+end_src
+
+
+The result is compiled to WASM using [[https://llvm.org][Clang]] and then executed using [[https://wasmer.io][wasmer]].
+
+NB: Set the =WASI_SYSROOT_PATH= environment variable to the root of the WASI sysroot. See [[#Dependencies][Dependencies]] for instructions on how to install the sysroot.
+
+#+begin_src shell
+cd tests/positive/MiniC/HelloWorld
+minijuvix minic Input.mjuvix | clang --target=wasm32-wasi -nodefaultlibs -lc --sysroot $WASI_SYSROOT_PATH -I../../../../minic-runtime/libc -x c - -o out.wasm && wasmer out.wasm
+#+end_src
+
+#+RESULTS:
+: hello world!

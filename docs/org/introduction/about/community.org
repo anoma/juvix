@@ -1,0 +1,8 @@
+* MiniJuvix community
+
+We would love to hear what you think of MiniJuvix! Join us on
+[[https://discord.gg/nsGaCZzJ][Discord]]
+
+This project is part of a bigger effort called [[https://anoma.net/][Anoma]].
+Anoma is a suite of protocols and mechanisms for self-contained, self-sovereign coordination.
+Join the [[https://anoma.net/community][Anoma project]].

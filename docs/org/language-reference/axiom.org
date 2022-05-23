@@ -1,0 +1,18 @@
+* Axiom
+
+An axiom/postulate can be introduced by using the =axiom= keyword.
+For example, let us imagine one wants to write a program that assumes
+$A$ is a type and there exist a term $x$ that inhabits $A$. Then the program would
+like like the following.
+
+#+begin_src
+-- Example.mjuvix
+module Example;
+ axiom A : Type;
+ axom x : A;
+end;
+#+end_src
+
+Terms introduced by the =axiom= keyword lack of any computational content. However,
+it is possible to attach a computational content to an axiom by giving compilation rules,
+see [[./language-reference/compile-blocks.md][Compile blocks]].

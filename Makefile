@@ -3,11 +3,11 @@ PREFIX="$(PWD)/.stack-work/prefix"
 UNAME := $(shell uname)
 HLINTQUIET :=
 
-ORGFILES = $(shell find docs/ -type f -name '*.org')
-MDFILES:=$(ORGFILES:.org=.md)
+ORGFILES = $(shell find docs/org -type f -name '*.org')
+MDFILES:=$(patsubst docs/org/%,docs/md/%,$(ORGFILES:.org=.md))
 
 ORGTOMDPRG ?=pandoc
-ORGOPTS=--from org --to markdown --standalone -o $@
+ORGOPTS=--from org --to markdown_strict -s -o $@
 
 # ORGTOMDPRG ?=emacs
 # ORGOPTS=--batch -f org-html-export-to-markdown
@@ -23,18 +23,18 @@ endif
 all:
 	make pre-commit
 
+docs/md/%.md : docs/org/%.org
+	@echo "Processing ...  $@"
+	@mkdir -p $(dir $@)
+	${ORGTOMDPRG} $? ${ORGOPTS}
+
 .PHONY: markdown-docs
 markdown-docs: $(MDFILES)
 	mdbook build
 
 .PHONY: serve-docs
-serve-docs:
-	make markdown-docs
+serve-docs: $(MDFILES)
 	mdbook serve --open
-
-%.md: %.org
-	@echo "Processing ...  $@"
-	${ORGTOMDPRG} $? ${ORGOPTS}
 
 .PHONY : checklines
 checklines :

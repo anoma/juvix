@@ -1,4 +1,4 @@
-module NoLexOrde;
+module Loop;
 
 axiom A : Type;
 

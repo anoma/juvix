@@ -1,0 +1,7 @@
+* Internal MiniJuvix languages
+
+** Languages
+
+- [[./compiler-architecture/language/abstract.md][Abstract Language]]
+- [[./compiler-architecture/language/concrete.md][Concrete language]]
+- [[./compiler-architecture/language/microjuvix.md][MicroJuvix Language]]

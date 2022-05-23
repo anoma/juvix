@@ -1,0 +1,28 @@
+* Getting started
+
+** Quick Start
+
+#+begin_html
+<a href="https://github.com/heliaxdev/MiniJuvix">
+<img align="left" width="200" height="200" alt="MiniJuvix Mascot" src="https://juvix.org/_nuxt/img/teaching-mascot.f828959.svg" />
+</a>
+#+end_html
+
+
+To install MiniJuvix, you can download its sources using
+[[http://git-scm.com/][Git]] from the
+[[https://github.com/heliaxdev/minijuvix.git][Github repository]]. Then, the
+program can be downloaded and installed with the following commands. You
+will need to have [[https://haskellstack.org][Stack]] installed.
+
+#+begin_src shell
+git clone https://github.com/heliaxdev/minijuvix.git
+cd minijuvix
+stack install
+#+end_src
+
+If the installation succeeds, you must be able to run the =minijuvix=
+command from any location.
+
+
+To get the complete list of commands, please run =minijuvix --help=.

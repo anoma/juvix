@@ -1,0 +1,8 @@
+  - [[./language-reference/comments.md][Comments]]
+  - [[./language-reference/axiom.md][Axiom]]
+  - [[./language-reference/functions.md][Function]]
+  - [[./language-reference/modules.md][Module System]]
+  - [[./language-reference/inductive-data-types.md][Inductive data type]]
+  - [[./language-reference/termination-checking.md][Termination checking]]
+  - [[./language-reference/compile-blocks.md][Compile block]]
+  - [[./language-reference/foreign-blocks.md][Foreign block]]

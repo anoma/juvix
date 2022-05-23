@@ -1,0 +1,22 @@
+* Function declaration
+
+In MiniJuvix, a function declaration is a type signature /and/ a group
+of definitions called /function clauses/.
+
+#+begin_example
+fun : A → B;
+fun case1 := ...;
+fun case2 := ...;
+fun case3 := ...;
+#+end_example
+
+** Mutual recursive functions
+
+#+begin_example
+
+f : A -> A -> A;
+g : A -> A -> A;
+
+g x y := f x x;
+f x y := g x (f x x);
+#+end_example

@@ -1,3 +1,0 @@
-* Summary
-
-- [[./developer-tooling.md][Developer Tooling 1]]

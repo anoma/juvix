@@ -24,6 +24,33 @@ jobs:
               ready to review.
         run: exit 1
 
+  docs:
+    runs-on: ubuntu-latest
+    if:  ${{ github.ref == 'refs/heads/master' }}
+    steps:
+      - name: Checkout our repository
+        uses: actions/checkout@v2
+
+      - uses: r-lib/actions/setup-pandoc@v1
+        with:
+          pandoc-version: '2.13'
+
+      - name: MDBook setup
+        uses: peaceiris/actions-mdbook@v1
+        with:
+          mdbook-version: 'latest'
+
+      - name: Generate Markdown files for each Org file
+        run: make markdown-docs
+
+      - name: Deploy HTML to github pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: _docs
+          enable_jekyll: false
+
+
   ormolu:
     runs-on: ubuntu-latest
     steps:
@@ -116,16 +143,12 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: main
+          submodules: true
 
       - name: Build Haskell Project
         run: |
           cd main
           make ci-build
-
-      - name: Download MiniJuvix-stdlib
-        run: |
-          cd main
-          make minijuvix-stdlib
 
   test:
     needs: build
@@ -179,34 +202,3 @@ jobs:
         run: |
           cd main
           make ci-test
-
-  docs:
-    runs-on: ubuntu-latest
-    if:  ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
-    steps:
-      - name: Checkout our repository
-        uses: actions/checkout@v2
-        with:
-          path: main
-
-      - uses: r-lib/actions/setup-pandoc@v1
-        with:
-          pandoc-version: '2.13'
-
-      - name: Setup mdBook
-        uses: peaceiris/actions-mdbook@v1
-        with:
-          mdbook-version: 'latest'
-
-      - name: Generate Markdown files for each Org file
-        run: |
-          cd main
-          make markdown-docs
-
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        if: ${{ github.ref == 'refs/heads/main' }}
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: main/_docs/
-          enable_jekyll: false
