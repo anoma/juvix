@@ -16,8 +16,7 @@ makeLenses 'NoLexOrder
 instance ToGenericError NoLexOrder where
   genericError NoLexOrder {..} =
     GenericError
-      { _genericErrorFile = i ^. intervalFile,
-        _genericErrorLoc = intervalStartLoc i,
+      { _genericErrorLoc = i,
         _genericErrorMessage = prettyError msg,
         _genericErrorIntervals = [i]
       }

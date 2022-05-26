@@ -11,8 +11,7 @@ import Prettyprinter.Render.Text
 import System.Console.ANSI qualified as Ansi
 
 data GenericError = GenericError
-  { _genericErrorLoc :: Loc,
-    _genericErrorFile :: FilePath,
+  { _genericErrorLoc :: Interval,
     _genericErrorMessage :: AnsiText,
     _genericErrorIntervals :: [Interval]
   }
@@ -21,18 +20,17 @@ makeLenses ''GenericError
 
 instance Pretty GenericError where
   pretty :: GenericError -> Doc a
-  pretty g =
-    let lineNum = g ^. genericErrorLoc . locFileLoc . locLine
-        colNum = g ^. genericErrorLoc . locFileLoc . locCol
-     in pretty (g ^. genericErrorFile)
-          <> colon
-          <> pretty lineNum
-          <> colon
-          <> pretty colNum
-          <> colon <+> "error"
-          <> colon
-          <> line
-          <> pretty (g ^. genericErrorMessage)
+  pretty g = genericErrorHeader g <> pretty (g ^. genericErrorMessage)
+
+instance HasLoc GenericError where
+  getLoc = (^. genericErrorLoc)
+
+genericErrorHeader :: GenericError -> Doc a
+genericErrorHeader g =
+  pretty (g ^. genericErrorLoc)
+    <> colon <+> "error"
+    <> colon
+    <> line
 
 class ToGenericError a where
   genericError :: a -> GenericError
@@ -49,19 +47,8 @@ render ansi err
     helper f x = (f . layoutPretty defaultLayoutOptions) (header <> x <> endChar)
     g :: GenericError
     g = genericError err
-
     header :: Doc a
-    header =
-      let lineNum = g ^. genericErrorLoc . locFileLoc . locLine
-          colNum = g ^. genericErrorLoc . locFileLoc . locCol
-       in pretty (g ^. genericErrorFile)
-            <> colon
-            <> pretty lineNum
-            <> colon
-            <> pretty colNum
-            <> colon <+> "error"
-            <> colon
-            <> line
+    header = genericErrorHeader g
     endChar :: Doc a
     endChar = "ת"
 

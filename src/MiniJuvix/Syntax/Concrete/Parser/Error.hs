@@ -13,8 +13,7 @@ newtype ParserError = ParserError
 instance ToGenericError ParserError where
   genericError e =
     GenericError
-      { _genericErrorLoc = intervalStartLoc i,
-        _genericErrorFile = i ^. intervalFile,
+      { _genericErrorLoc = i,
         _genericErrorMessage = AnsiText $ pretty @_ @AnsiStyle e,
         _genericErrorIntervals = [i]
       }
