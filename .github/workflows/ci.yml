@@ -51,7 +51,6 @@ jobs:
           publish_dir: _docs
           enable_jekyll: false
 
-
   ormolu:
     runs-on: ubuntu-latest
     steps:

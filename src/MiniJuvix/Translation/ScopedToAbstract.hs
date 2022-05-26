@@ -14,12 +14,10 @@ import MiniJuvix.Syntax.Concrete.Language qualified as C
 import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
 
-type Err = Text
+unsupported :: Text -> a
+unsupported msg = error $ msg <> "Scoped to Abstract: not yet supported"
 
-unsupported :: Members '[Error Err] r => Err -> Sem r a
-unsupported msg = throw $ msg <> "Scoped to Abstract: not yet supported"
-
-entryAbstract :: Member (Error Err) r => Scoper.ScoperResult -> Sem r AbstractResult
+entryAbstract :: Scoper.ScoperResult -> Sem r AbstractResult
 entryAbstract _resultScoper = do
   (_resultTable, _resultModules) <- runInfoTableBuilder (mapM goTopModule ms)
   return
@@ -30,19 +28,19 @@ entryAbstract _resultScoper = do
     ms = _resultScoper ^. Scoper.resultModules
 
 goTopModule ::
-  Members '[Error Err, InfoTableBuilder] r =>
+  Members '[InfoTableBuilder] r =>
   Module 'Scoped 'ModuleTop ->
   Sem r A.TopModule
 goTopModule = goModule
 
 goLocalModule ::
-  Members '[Error Err, InfoTableBuilder] r =>
+  Members '[InfoTableBuilder] r =>
   Module 'Scoped 'ModuleLocal ->
   Sem r A.LocalModule
 goLocalModule = goModule
 
 goModule ::
-  (Members '[Error Err, InfoTableBuilder] r, ModulePathType 'Scoped t ~ S.Name' c) =>
+  (Members '[InfoTableBuilder] r, ModulePathType 'Scoped t ~ S.Name' c) =>
   Module 'Scoped t ->
   Sem r (A.Module c)
 goModule (Module n par b) = case par of
@@ -51,7 +49,7 @@ goModule (Module n par b) = case par of
 
 goModuleBody ::
   forall r.
-  Members '[Error Err, InfoTableBuilder] r =>
+  Members '[InfoTableBuilder] r =>
   [Statement 'Scoped] ->
   Sem r A.ModuleBody
 goModuleBody ss' = do
@@ -88,7 +86,7 @@ goModuleBody ss' = do
 
 goStatement ::
   forall r.
-  Members '[Error Err, InfoTableBuilder] r =>
+  Members '[InfoTableBuilder] r =>
   Indexed (Statement 'Scoped) ->
   Sem r (Maybe (Indexed A.Statement))
 goStatement (Indexed idx s) =
@@ -108,7 +106,7 @@ goStatement (Indexed idx s) =
 
 goFunctionDef ::
   forall r.
-  Members '[Error Err, InfoTableBuilder] r =>
+  Members '[InfoTableBuilder] r =>
   TypeSignature 'Scoped ->
   NonEmpty (FunctionClause 'Scoped) ->
   Sem r A.FunctionDef
@@ -120,8 +118,6 @@ goFunctionDef TypeSignature {..} clauses = do
   registerFunction' A.FunctionDef {..}
 
 goFunctionClause ::
-  forall r.
-  Members '[Error Err] r =>
   FunctionClause 'Scoped ->
   Sem r A.FunctionClause
 goFunctionClause FunctionClause {..} = do
@@ -135,8 +131,6 @@ goFunctionClause FunctionClause {..} = do
       }
 
 goWhereBlock ::
-  forall r.
-  Members '[Error Err] r =>
   Maybe (WhereBlock 'Scoped) ->
   Sem r ()
 goWhereBlock w = case w of
@@ -144,7 +138,6 @@ goWhereBlock w = case w of
   Nothing -> return ()
 
 goInductiveParameter ::
-  Members '[Error Err] r =>
   InductiveParameter 'Scoped ->
   Sem r A.FunctionParameter
 goInductiveParameter InductiveParameter {..} = do
@@ -157,7 +150,7 @@ goInductiveParameter InductiveParameter {..} = do
       }
 
 goInductive ::
-  Members '[Error Err, InfoTableBuilder] r =>
+  Members '[InfoTableBuilder] r =>
   InductiveDef 'Scoped ->
   Sem r A.InductiveDef
 goInductive InductiveDef {..} = do
@@ -178,15 +171,12 @@ goInductive InductiveDef {..} = do
   return (inductiveInfo ^. inductiveInfoDef)
 
 goConstructorDef ::
-  Members '[Error Err] r =>
   InductiveConstructorDef 'Scoped ->
   Sem r A.InductiveConstructorDef
 goConstructorDef (InductiveConstructorDef c ty) =
   A.InductiveConstructorDef c <$> goExpression ty
 
 goExpression ::
-  forall r.
-  Members '[Error Err] r =>
   Expression ->
   Sem r A.Expression
 goExpression = \case
@@ -232,7 +222,7 @@ goExpression = \case
 goUniverse :: Universe -> Universe
 goUniverse = id
 
-goFunction :: Members '[Error Err] r => Function 'Scoped -> Sem r A.Function
+goFunction :: Function 'Scoped -> Sem r A.Function
 goFunction (Function l r) = do
   _funParameter <- goFunctionParameter l
   _funReturn <- goExpression r
@@ -245,7 +235,6 @@ goUsage :: Maybe Usage -> Usage
 goUsage = fromMaybe defaultUsage
 
 goFunctionParameter ::
-  Members '[Error Err] r =>
   FunctionParameter 'Scoped ->
   Sem r A.FunctionParameter
 goFunctionParameter (FunctionParameter _paramName u ty) = do
@@ -254,31 +243,26 @@ goFunctionParameter (FunctionParameter _paramName u ty) = do
   return A.FunctionParameter {..}
 
 goPatternApplication ::
-  forall r.
-  Members '[Error Err] r =>
   PatternApp ->
   Sem r A.ConstructorApp
 goPatternApplication a = uncurry A.ConstructorApp <$> viewApp (PatternApplication a)
 
 goPatternConstructor ::
-  Members '[Error Err] r =>
   ConstructorRef ->
   Sem r A.ConstructorApp
 goPatternConstructor a = uncurry A.ConstructorApp <$> viewApp (PatternConstructor a)
 
 goInfixPatternApplication ::
-  Members '[Error Err] r =>
   PatternInfixApp ->
   Sem r A.ConstructorApp
 goInfixPatternApplication a = uncurry A.ConstructorApp <$> viewApp (PatternInfixApplication a)
 
 goPostfixPatternApplication ::
-  Members '[Error Err] r =>
   PatternPostfixApp ->
   Sem r A.ConstructorApp
 goPostfixPatternApplication a = uncurry A.ConstructorApp <$> viewApp (PatternPostfixApplication a)
 
-viewApp :: forall r. Members '[Error Err] r => Pattern -> Sem r (A.ConstructorRef, [A.Pattern])
+viewApp :: forall r. Pattern -> Sem r (A.ConstructorRef, [A.Pattern])
 viewApp = \case
   PatternConstructor c -> return (goConstructorRef c, [])
   PatternApplication (PatternApp l r) -> do
@@ -295,13 +279,13 @@ viewApp = \case
   PatternWildcard {} -> err
   PatternEmpty {} -> err
   where
-    err :: Sem r a
-    err = throw ("constructor expected on the left of a pattern application" :: Err)
+    err :: a
+    err = error "constructor expected on the left of a pattern application"
 
 goConstructorRef :: ConstructorRef -> A.ConstructorRef
 goConstructorRef (ConstructorRef' n) = A.ConstructorRef n
 
-goPattern :: Members '[Error Err] r => Pattern -> Sem r A.Pattern
+goPattern :: Pattern -> Sem r A.Pattern
 goPattern p = case p of
   PatternVariable a -> return $ A.PatternVariable a
   PatternConstructor c -> A.PatternConstructorApp <$> goPatternConstructor c
@@ -311,7 +295,7 @@ goPattern p = case p of
   PatternWildcard -> return A.PatternWildcard
   PatternEmpty -> return A.PatternEmpty
 
-goAxiom :: Members '[Error Err, InfoTableBuilder] r => AxiomDef 'Scoped -> Sem r A.AxiomDef
+goAxiom :: Members '[InfoTableBuilder] r => AxiomDef 'Scoped -> Sem r A.AxiomDef
 goAxiom AxiomDef {..} = do
   _axiomType' <- goExpression _axiomType
   registerAxiom' A.AxiomDef {_axiomType = _axiomType', ..}

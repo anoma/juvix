@@ -81,6 +81,8 @@ clean:
 
 clean-full:
 	stack clean --full
+	rm -rf .hie
+	rm -rf _docs
 
 .PHONY : test
 test:

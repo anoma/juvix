@@ -22,7 +22,10 @@ import MiniJuvix.Syntax.Concrete.Parser.ParserResult
 -- Running the parser
 --------------------------------------------------------------------------------
 
-entryParser :: Members '[Files, Error ParserError] r => EntryPoint -> Sem r ParserResult
+entryParser ::
+  Members '[Files, Error ParserError] r =>
+  EntryPoint ->
+  Sem r ParserResult
 entryParser e = do
   (_resultTable, _resultModules) <- runInfoTableBuilder (runReader e (mapM goFile (e ^. entryModulePaths)))
   let _resultEntry = e
@@ -51,7 +54,9 @@ runModuleParser root fileName input =
         { _parserParamsRoot = root
         }
 
-topModuleDef :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Module 'Parsed 'ModuleTop)
+topModuleDef ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  ParsecS r (Module 'Parsed 'ModuleTop)
 topModuleDef = space >> moduleDef <* (optional kwSemicolon >> P.eof)
 
 --------------------------------------------------------------------------------
@@ -180,10 +185,14 @@ expressionAtom =
     <|> (AtomMatch <$> match)
     <|> (AtomLetBlock <$> letBlock)
     <|> (AtomFunArrow <$ kwRightArrow)
-    <|> parens (AtomParens <$> expressionAtoms)
+    <|> parens (AtomParens <$> parseExpressionAtoms)
 
-expressionAtoms :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (ExpressionAtoms 'Parsed)
-expressionAtoms = ExpressionAtoms <$> P.some expressionAtom
+parseExpressionAtoms ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  ParsecS r (ExpressionAtoms 'Parsed)
+parseExpressionAtoms = do
+  (_expressionAtoms, _expressionAtomsLoc) <- interval (P.some expressionAtom)
+  return ExpressionAtoms {..}
 
 --------------------------------------------------------------------------------
 -- Literals
@@ -214,13 +223,13 @@ matchAlt :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Mat
 matchAlt = do
   matchAltPattern <- patternAtom
   kwMapsTo
-  matchAltBody <- expressionAtoms
+  matchAltBody <- parseExpressionAtoms
   return MatchAlt {..}
 
 match :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Match 'Parsed)
 match = do
   kwMatch
-  matchExpression <- expressionAtoms
+  matchExpression <- parseExpressionAtoms
   matchAlts <- braces (P.sepEndBy matchAlt kwSemicolon)
   return Match {..}
 
@@ -236,7 +245,7 @@ letBlock = do
   kwLet
   _letClauses <- braces (P.sepEndBy letClause kwSemicolon)
   kwIn
-  _letExpression <- expressionAtoms
+  _letExpression <- parseExpressionAtoms
   return LetBlock {..}
 
 --------------------------------------------------------------------------------
@@ -259,7 +268,7 @@ typeSignature ::
   ParsecS r (TypeSignature 'Parsed)
 typeSignature _sigTerminating _sigName = do
   kwColon
-  _sigType <- expressionAtoms
+  _sigType <- parseExpressionAtoms
   return TypeSignature {..}
 
 -------------------------------------------------------------------------------
@@ -285,7 +294,7 @@ axiomDef = do
   kwAxiom
   _axiomName <- symbol
   kwColon
-  _axiomType <- expressionAtoms
+  _axiomType <- parseExpressionAtoms
   return AxiomDef {..}
 
 --------------------------------------------------------------------------------
@@ -299,7 +308,7 @@ functionParam = do
     n <- pName
     u <- pUsage
     return (n, u)
-  _paramType <- expressionAtoms
+  _paramType <- parseExpressionAtoms
   rparen
   return $ FunctionParameter {..}
   where
@@ -318,7 +327,7 @@ function :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Fun
 function = do
   _funParameter <- functionParam
   kwRightArrow
-  _funReturn <- expressionAtoms
+  _funReturn <- parseExpressionAtoms
   return Function {..}
 
 --------------------------------------------------------------------------------
@@ -346,13 +355,13 @@ lambdaClause :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r 
 lambdaClause = do
   lambdaParameters <- P.some patternAtom
   kwMapsTo
-  lambdaBody <- expressionAtoms
+  lambdaBody <- parseExpressionAtoms
   return LambdaClause {..}
 
 lambda :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Lambda 'Parsed)
 lambda = do
   kwLambda
-  lambdaClauses <- braces (P.sepEndBy lambdaClause kwSemicolon)
+  _lambdaClauses <- braces (P.sepEndBy lambdaClause kwSemicolon)
   return Lambda {..}
 
 -------------------------------------------------------------------------------
@@ -364,7 +373,7 @@ inductiveDef = do
   kwInductive
   _inductiveName <- symbol
   _inductiveParameters <- P.many inductiveParam
-  _inductiveType <- optional (kwColon >> expressionAtoms)
+  _inductiveType <- optional (kwColon >> parseExpressionAtoms)
   _inductiveConstructors <- braces $ P.sepEndBy constructorDef kwSemicolon
   return InductiveDef {..}
 
@@ -372,14 +381,14 @@ inductiveParam :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS 
 inductiveParam = parens $ do
   _inductiveParameterName <- symbol
   kwColon
-  _inductiveParameterType <- expressionAtoms
+  _inductiveParameterType <- parseExpressionAtoms
   return InductiveParameter {..}
 
 constructorDef :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (InductiveConstructorDef 'Parsed)
 constructorDef = do
   _constructorName <- symbol
   kwColon
-  _constructorType <- expressionAtoms
+  _constructorType <- parseExpressionAtoms
   return InductiveConstructorDef {..}
 
 --------------------------------------------------------------------------------
@@ -390,10 +399,12 @@ patternAtom :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (
 patternAtom =
   PatternAtomIden <$> name
     <|> PatternAtomWildcard <$ kwWildcard
-    <|> (PatternAtomParens <$> parens patternAtoms)
+    <|> (PatternAtomParens <$> parens parsePatternAtoms)
 
-patternAtoms :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (PatternAtoms 'Parsed)
-patternAtoms = PatternAtoms <$> P.some patternAtom
+parsePatternAtoms :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (PatternAtoms 'Parsed)
+parsePatternAtoms = do
+  (_patternAtoms, _patternAtomsLoc) <- interval (P.some patternAtom)
+  return PatternAtoms {..}
 
 --------------------------------------------------------------------------------
 -- Function binding declaration
@@ -403,7 +414,7 @@ functionClause :: Members '[Reader ParserParams, InfoTableBuilder] r => Symbol -
 functionClause _clauseOwnerFunction = do
   _clausePatterns <- P.many patternAtom
   kwAssignment
-  _clauseBody <- expressionAtoms
+  _clauseBody <- parseExpressionAtoms
   _clauseWhere <- optional whereBlock
   return FunctionClause {..}
 
@@ -427,13 +438,13 @@ moduleDef = do
   return Module {..}
 
 -- | An ExpressionAtom which is a valid expression on its own.
-atomicExpression :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (ExpressionType 'Parsed)
+atomicExpression :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (ExpressionAtoms 'Parsed)
 atomicExpression = do
-  atom <- expressionAtom
+  (atom, loc) <- interval expressionAtom
   case atom of
     AtomFunArrow -> P.failure Nothing mempty
     _ -> return ()
-  return $ ExpressionAtoms (NonEmpty.singleton atom)
+  return $ ExpressionAtoms (NonEmpty.singleton atom) loc
 
 openModule :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (OpenModule 'Parsed)
 openModule = do
@@ -456,9 +467,9 @@ openModule = do
 eval :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Eval 'Parsed)
 eval = do
   kwEval
-  Eval <$> expressionAtoms
+  Eval <$> parseExpressionAtoms
 
 printS :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Print 'Parsed)
 printS = do
   kwPrint
-  Print <$> expressionAtoms
+  Print <$> parseExpressionAtoms

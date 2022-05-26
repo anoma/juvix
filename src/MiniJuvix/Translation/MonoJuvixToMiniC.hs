@@ -42,9 +42,7 @@ entryMiniC i = return (MiniCResult (serialize cunitResult))
     cmodules :: [CCode]
     cmodules = toList (i ^. Mono.resultModules) >>= (run . runReader compileInfo . goModule)
 
-type Err = Text
-
-unsupported :: Err -> a
+unsupported :: Text -> a
 unsupported msg = error (msg <> " Mono to C: not yet supported")
 
 goModule ::
@@ -197,17 +195,22 @@ goFunctionDef Mono.FunctionDef {..} =
       if
           | isNullary -> asNullary funcBasename
           | otherwise -> funcBasename
+
     funArgTypes :: [CDeclType]
     funArgTypes = fst funType
+
     funReturnType :: CDeclType
     funReturnType = snd funType
+
     funType :: ([CDeclType], CDeclType)
     funType = unfoldFunType' _funDefType
+
     unfoldFunType' :: Mono.Type -> ([CDeclType], CDeclType)
     unfoldFunType' = \case
       Mono.TypeFunction (Mono.Function l r) ->
         first (goType l :) (unfoldFunType' r)
       t -> ([], goType t)
+
     fallback :: Statement
     fallback =
       StatementCompound
@@ -215,7 +218,11 @@ goFunctionDef Mono.FunctionDef {..} =
             ( functionCall
                 (ExpressionVar Str.putStrLn_)
                 [ ExpressionLiteral
-                    (LiteralString ("Error: Pattern match(es) are non-exhaustive in " <> (_funDefName ^. Mono.nameText)))
+                    ( LiteralString
+                        ( "Error: Pattern match(es) are non-exhaustive in "
+                            <> (_funDefName ^. Mono.nameText)
+                        )
+                    )
                 ]
             ),
           StatementExpr
@@ -243,11 +250,14 @@ goFunctionClause Mono.FunctionClause {..} = (clauseCondition, returnStmt)
         where
           ctorName :: Text
           ctorName = mkName _constrAppConstructor
+
           isCtor :: Expression
           isCtor = functionCall (ExpressionVar (asIs ctorName)) [arg]
+
           asCtor :: Expression
           asCtor = functionCall (ExpressionVar (asCast ctorName)) [arg]
           subConditions :: [Expression]
+
           subConditions = do
             let subArgs = map (memberAccess Object asCtor) ctorArgs
             (p, subArg) <- zip _constrAppParameters subArgs
@@ -267,8 +277,10 @@ goFunctionClause Mono.FunctionClause {..} = (clauseCondition, returnStmt)
                   _binaryRight = e2
                 }
             )
+
     patternBindings :: PatternBindings
     patternBindings = HashMap.fromList patternVars
+
     patternVars :: [(Text, Expression)]
     patternVars = do
       (p, arg) <- zipWith (curry (second ExpressionVar)) _clausePatterns funArgs
@@ -277,6 +289,7 @@ goFunctionClause Mono.FunctionClause {..} = (clauseCondition, returnStmt)
         Mono.PatternConstructorApp Mono.ConstructorApp {..} ->
           goConstructorApp arg _constrAppConstructor _constrAppParameters
         Mono.PatternWildcard {} -> []
+
     returnStmt :: Statement
     returnStmt = StatementReturn (Just (run (runReader patternBindings (goExpression _clauseBody))))
 
@@ -313,6 +326,7 @@ goApplication a = do
   where
     f :: Sem r (Expression, [Expression])
     f = unfoldApp a
+
     unfoldApp :: Mono.Application -> Sem r (Expression, [Expression])
     unfoldApp Mono.Application {..} = case _appLeft of
       Mono.ExpressionApplication x -> do

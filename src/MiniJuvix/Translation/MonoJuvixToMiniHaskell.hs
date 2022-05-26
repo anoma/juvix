@@ -17,7 +17,6 @@ import MiniJuvix.Syntax.MonoJuvix.MonoJuvixResult qualified as Mono
 import Prettyprinter
 
 entryMiniHaskell ::
-  Member (Error Err) r =>
   Mono.MonoJuvixResult ->
   Sem r MiniHaskellResult
 entryMiniHaskell i = do
@@ -30,9 +29,7 @@ entryMiniHaskell i = do
         compileTable :: Mono.CompileInfoTable
         compileTable = Mono.compileInfoTable i
 
-type Err = Text
-
-goModule :: Members '[Error Err, Reader Mono.CompileInfoTable] r => Mono.Module -> Sem r Module
+goModule :: Members '[Reader Mono.CompileInfoTable] r => Mono.Module -> Sem r Module
 goModule Mono.Module {..} = do
   _moduleBody' <- goModuleBody _moduleBody
   return
@@ -45,13 +42,13 @@ unsupported :: Text -> a
 unsupported msg = error $ msg <> " not yet supported"
 
 goModuleBody ::
-  Members '[Error Err, Reader Mono.CompileInfoTable] r =>
+  Members '[Reader Mono.CompileInfoTable] r =>
   Mono.ModuleBody ->
   Sem r ModuleBody
 goModuleBody Mono.ModuleBody {..} =
   ModuleBody <$> mapMaybeM goStatement _moduleStatements
 
-goStatement :: Members '[Error Err, Reader Mono.CompileInfoTable] r => Mono.Statement -> Sem r (Maybe Statement)
+goStatement :: Members '[Reader Mono.CompileInfoTable] r => Mono.Statement -> Sem r (Maybe Statement)
 goStatement = \case
   Mono.StatementInductive d -> Just . StatementInductive <$> goInductive d
   Mono.StatementFunction d -> Just . StatementFunction <$> goFunctionDef d
@@ -63,21 +60,18 @@ goForeign b = case b ^. foreignBackend of
   BackendGhc -> Just (StatementVerbatim (b ^. foreignCode))
   _ -> Nothing
 
-goIden :: Members '[Error Err, Reader Mono.CompileInfoTable] r => Mono.Iden -> Sem r Expression
+goIden :: Members '[Reader Mono.CompileInfoTable] r => Mono.Iden -> Sem r Expression
 goIden = \case
   Mono.IdenFunction fun -> return (goName' fun)
   Mono.IdenConstructor c -> return (goName' c)
   Mono.IdenVar v -> return (goName' v)
   Mono.IdenAxiom a -> ExpressionVerbatim <$> goAxiomIden a
 
-throwErr :: Member (Error Err) r => Text -> Sem r a
-throwErr = throw
-
-goAxiomIden :: Members '[Error Err, Reader Mono.CompileInfoTable] r => Mono.Name -> Sem r Text
+goAxiomIden :: Members '[Reader Mono.CompileInfoTable] r => Mono.Name -> Sem r Text
 goAxiomIden n = do
   backends <- lookupBackends (n ^. Mono.nameId)
   case firstJust getCode backends of
-    Nothing -> throwErr ("ghc does not support this primitive:" <> show (pretty n))
+    Nothing -> error ("ghc does not support this primitive:" <> show (pretty n))
     Just t -> return t
   where
     getCode :: BackendItem -> Maybe Text
@@ -132,12 +126,10 @@ goNameText n =
       KNameFunction ->
         if n ^. Mono.nameText == haskellMainName then mempty else idSuffix
       _ -> idSuffix
-    idSuffix :: Text
     idSuffix = "_" <> show (n ^. Mono.nameId . unNameId)
-    haskellMainName :: Text
-    haskellMainName = "main"
+    haskellMainName = "main" :: Text
 
-goFunctionDef :: Members '[Error Err, Reader Mono.CompileInfoTable] r => Mono.FunctionDef -> Sem r FunctionDef
+goFunctionDef :: Members '[Reader Mono.CompileInfoTable] r => Mono.FunctionDef -> Sem r FunctionDef
 goFunctionDef Mono.FunctionDef {..} = do
   _funDefType' <- goType _funDefType
   _funDefClauses' <- mapM goFunctionClause _funDefClauses
@@ -162,7 +154,7 @@ goConstructorApp c =
     }
 
 goExpression ::
-  Members '[Error Err, Reader Mono.CompileInfoTable] r =>
+  Members '[Reader Mono.CompileInfoTable] r =>
   Mono.Expression ->
   Sem r Expression
 goExpression = \case
@@ -171,7 +163,7 @@ goExpression = \case
   Mono.ExpressionLiteral l -> return (ExpressionLiteral l)
 
 goApplication ::
-  Members '[Error Err, Reader Mono.CompileInfoTable] r =>
+  Members '[Reader Mono.CompileInfoTable] r =>
   Mono.Application ->
   Sem r Application
 goApplication Mono.Application {..} = do
@@ -184,7 +176,7 @@ goApplication Mono.Application {..} = do
       }
 
 goFunctionClause ::
-  Members '[Error Err, Reader Mono.CompileInfoTable] r =>
+  Members '[Reader Mono.CompileInfoTable] r =>
   Mono.FunctionClause ->
   Sem r FunctionClause
 goFunctionClause Mono.FunctionClause {..} = do
@@ -197,7 +189,7 @@ goFunctionClause Mono.FunctionClause {..} = do
       }
 
 goInductive ::
-  Members '[Error Err, Reader Mono.CompileInfoTable] r =>
+  Members '[Reader Mono.CompileInfoTable] r =>
   Mono.InductiveDef ->
   Sem r InductiveDef
 goInductive Mono.InductiveDef {..} = do
@@ -209,7 +201,7 @@ goInductive Mono.InductiveDef {..} = do
       }
 
 goConstructorDef ::
-  Members '[Error Err, Reader Mono.CompileInfoTable] r =>
+  Members '[Reader Mono.CompileInfoTable] r =>
   Mono.InductiveConstructorDef ->
   Sem r InductiveConstructorDef
 goConstructorDef Mono.InductiveConstructorDef {..} = do
@@ -220,7 +212,7 @@ goConstructorDef Mono.InductiveConstructorDef {..} = do
         _constructorParameters = _constructorParameters'
       }
 
-goFunction :: Members '[Error Err, Reader Mono.CompileInfoTable] r => Mono.Function -> Sem r Function
+goFunction :: Members '[Reader Mono.CompileInfoTable] r => Mono.Function -> Sem r Function
 goFunction Mono.Function {..} = do
   _funLeft' <- goType _funLeft
   _funRight' <- goType _funRight
@@ -230,14 +222,14 @@ goFunction Mono.Function {..} = do
         _funRight = _funRight'
       }
 
-goTypeIden :: Members '[Error Err, Reader Mono.CompileInfoTable] r => Mono.TypeIden -> Sem r Type
+goTypeIden :: Members '[Reader Mono.CompileInfoTable] r => Mono.TypeIden -> Sem r Type
 goTypeIden = \case
   Mono.TypeIdenInductive n -> return (TypeIden (TypeIdenInductive (goName n)))
   Mono.TypeIdenAxiom n -> TypeVerbatim <$> goAxiomIden n
 
-goType :: Members '[Error Err, Reader Mono.CompileInfoTable] r => Mono.Type -> Sem r Type
+goType :: Members '[Reader Mono.CompileInfoTable] r => Mono.Type -> Sem r Type
 goType = \case
   Mono.TypeIden t -> goTypeIden t
   Mono.TypeFunction f -> TypeFunction <$> goFunction f
-  Mono.TypeUniverse -> throwErr "MiniHaskell: universes in types not supported"
+  Mono.TypeUniverse -> error "MiniHaskell: universes in types not supported"
   Mono.TypeAny -> impossible

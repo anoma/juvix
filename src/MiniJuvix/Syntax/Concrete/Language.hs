@@ -302,59 +302,10 @@ data PatternAtom (s :: Stage)
   | PatternAtomEmpty
   | PatternAtomParens (PatternAtoms s)
 
-instance HasAtomicity (PatternAtom 'Parsed) where
-  atomicity = const Atom
-
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (IdentifierType s),
-    Show (PatternAtomIdenType s),
-    Show (PatternType s)
-  ) =>
-  Show (PatternAtom s)
-
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (IdentifierType s),
-    Eq (PatternAtomIdenType s),
-    Eq (PatternType s)
-  ) =>
-  Eq (PatternAtom s)
-
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (IdentifierType s),
-    Ord (PatternAtomIdenType s),
-    Ord (PatternType s)
-  ) =>
-  Ord (PatternAtom s)
-
-newtype PatternAtoms (s :: Stage)
-  = PatternAtoms (NonEmpty (PatternAtom s))
-
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (IdentifierType s),
-    Show (PatternAtomIdenType s),
-    Show (PatternType s)
-  ) =>
-  Show (PatternAtoms s)
-
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (IdentifierType s),
-    Eq (PatternAtomIdenType s),
-    Eq (PatternType s)
-  ) =>
-  Eq (PatternAtoms s)
-
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (IdentifierType s),
-    Ord (PatternAtomIdenType s),
-    Ord (PatternType s)
-  ) =>
-  Ord (PatternAtoms s)
+data PatternAtoms (s :: Stage) = PatternAtoms
+  { _patternAtoms :: NonEmpty (PatternAtom s),
+    _patternAtomsLoc :: Interval
+  }
 
 --------------------------------------------------------------------------------
 -- Function binding declaration
@@ -600,87 +551,6 @@ instance HasAtomicity Expression where
     ExpressionFunction {} -> Aggregate funFixity
 
 --------------------------------------------------------------------------------
--- Expression atom
---------------------------------------------------------------------------------
-
--- | Expressions without application
-data ExpressionAtom (s :: Stage)
-  = AtomIdentifier (IdentifierType s)
-  | AtomLambda (Lambda s)
-  | AtomLetBlock (LetBlock s)
-  | AtomUniverse Universe
-  | AtomFunction (Function s)
-  | AtomFunArrow
-  | AtomMatch (Match s)
-  | AtomLiteral LiteralLoc
-  | AtomParens (ExpressionType s)
-
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (IdentifierType s),
-    Show (ModuleRefType s),
-    Show (SymbolType s),
-    Show (PatternType s)
-  ) =>
-  Show (ExpressionAtom s)
-
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (IdentifierType s),
-    Eq (ModuleRefType s),
-    Eq (SymbolType s),
-    Eq (PatternType s)
-  ) =>
-  Eq (ExpressionAtom s)
-
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (IdentifierType s),
-    Ord (ModuleRefType s),
-    Ord (SymbolType s),
-    Ord (PatternType s)
-  ) =>
-  Ord (ExpressionAtom s)
-
--- | Expressions without application
-newtype ExpressionAtoms (s :: Stage)
-  = ExpressionAtoms (NonEmpty (ExpressionAtom s))
-
-instance HasAtomicity (ExpressionAtoms 'Parsed) where
-  atomicity (ExpressionAtoms l) = case l of
-    (_ :| []) -> Atom
-    (_ :| _)
-      | AtomFunArrow `elem` l -> Aggregate funFixity
-      | otherwise -> Aggregate appFixity
-
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (IdentifierType s),
-    Show (ModuleRefType s),
-    Show (SymbolType s),
-    Show (PatternType s)
-  ) =>
-  Show (ExpressionAtoms s)
-
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (IdentifierType s),
-    Eq (ModuleRefType s),
-    Eq (SymbolType s),
-    Eq (PatternType s)
-  ) =>
-  Eq (ExpressionAtoms s)
-
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (IdentifierType s),
-    Ord (ModuleRefType s),
-    Ord (SymbolType s),
-    Ord (PatternType s)
-  ) =>
-  Ord (ExpressionAtoms s)
-
---------------------------------------------------------------------------------
 -- Match expression
 --------------------------------------------------------------------------------
 
@@ -740,11 +610,17 @@ data FunctionParameter (s :: Stage) = FunctionParameter
     _paramType :: ExpressionType s
   }
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (FunctionParameter s)
+deriving stock instance
+  (Show (ExpressionType s), Show (SymbolType s)) =>
+  Show (FunctionParameter s)
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (FunctionParameter s)
+deriving stock instance
+  (Eq (ExpressionType s), Eq (SymbolType s)) =>
+  Eq (FunctionParameter s)
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (FunctionParameter s)
+deriving stock instance
+  (Ord (ExpressionType s), Ord (SymbolType s)) =>
+  Ord (FunctionParameter s)
 
 data Function (s :: Stage) = Function
   { _funParameter :: FunctionParameter s,
@@ -832,7 +708,8 @@ deriving stock instance
 -- expression with empty list of arguments and empty body.
 
 newtype Lambda (s :: Stage) = Lambda
-  {lambdaClauses :: [LambdaClause s]}
+  { _lambdaClauses :: [LambdaClause s]
+  }
 
 deriving stock instance
   ( Show (PatternType s),
@@ -880,15 +757,15 @@ deriving stock instance
 --------------------------------------------------------------------------------
 
 data Application = Application
-  { _applicationFunction :: ExpressionType 'Scoped,
-    _applicationParameter :: ExpressionType 'Scoped
+  { _applicationFunction :: Expression,
+    _applicationParameter :: Expression
   }
   deriving stock (Show, Eq, Ord)
 
 data InfixApplication = InfixApplication
-  { _infixAppLeft :: ExpressionType 'Scoped,
-    _infixAppOperator :: IdentifierType 'Scoped,
-    _infixAppRight :: ExpressionType 'Scoped
+  { _infixAppLeft :: Expression,
+    _infixAppOperator :: ScopedIden,
+    _infixAppRight :: Expression
   }
   deriving stock (Show, Eq, Ord)
 
@@ -896,8 +773,8 @@ instance HasFixity InfixApplication where
   getFixity (InfixApplication _ op _) = fromMaybe impossible (identifierName op ^. S.nameFixity)
 
 data PostfixApplication = PostfixApplication
-  { _postfixAppParameter :: ExpressionType 'Scoped,
-    _postfixAppOperator :: IdentifierType 'Scoped
+  { _postfixAppParameter :: Expression,
+    _postfixAppOperator :: ScopedIden
   }
   deriving stock (Show, Eq, Ord)
 
@@ -1018,6 +895,27 @@ deriving stock instance
   Ord (ExpressionType s) => Ord (Print s)
 
 --------------------------------------------------------------------------------
+-- Expression atom
+--------------------------------------------------------------------------------
+
+-- | Expressions without application
+data ExpressionAtom (s :: Stage)
+  = AtomIdentifier (IdentifierType s)
+  | AtomLambda (Lambda s)
+  | AtomLetBlock (LetBlock s)
+  | AtomUniverse Universe
+  | AtomFunction (Function s)
+  | AtomFunArrow
+  | AtomMatch (Match s)
+  | AtomLiteral LiteralLoc
+  | AtomParens (ExpressionType s)
+
+data ExpressionAtoms (s :: Stage) = ExpressionAtoms
+  { _expressionAtoms :: NonEmpty (ExpressionAtom s),
+    _expressionAtomsLoc :: Interval
+  }
+
+--------------------------------------------------------------------------------
 
 makeLenses ''Function
 makeLenses ''InductiveDef
@@ -1041,6 +939,134 @@ makeLenses ''PatternApp
 makeLenses ''PatternInfixApp
 makeLenses ''PatternPostfixApp
 makeLenses ''Compile
+makeLenses ''PatternAtoms
+makeLenses ''ExpressionAtoms
+
+instance HasAtomicity (PatternAtom 'Parsed) where
+  atomicity = const Atom
+
+deriving stock instance
+  ( Show (ExpressionType s),
+    Show (IdentifierType s),
+    Show (PatternAtomIdenType s),
+    Show (PatternType s)
+  ) =>
+  Show (PatternAtom s)
+
+deriving stock instance
+  ( Eq (ExpressionType s),
+    Eq (IdentifierType s),
+    Eq (PatternAtomIdenType s),
+    Eq (PatternType s)
+  ) =>
+  Eq (PatternAtom s)
+
+deriving stock instance
+  ( Ord (ExpressionType s),
+    Ord (IdentifierType s),
+    Ord (PatternAtomIdenType s),
+    Ord (PatternType s)
+  ) =>
+  Ord (PatternAtom s)
+
+deriving stock instance
+  ( Show (ExpressionType s),
+    Show (IdentifierType s),
+    Show (PatternAtomIdenType s),
+    Show (PatternType s)
+  ) =>
+  Show (PatternAtoms s)
+
+instance HasLoc (PatternAtoms s) where
+  getLoc = (^. patternAtomsLoc)
+
+instance
+  ( Eq (ExpressionType s),
+    Eq (IdentifierType s),
+    Eq (PatternAtomIdenType s),
+    Eq (PatternType s)
+  ) =>
+  Eq (PatternAtoms s)
+  where
+  (==) = (==) `on` (^. patternAtoms)
+
+instance
+  ( Ord (ExpressionType s),
+    Ord (IdentifierType s),
+    Ord (PatternAtomIdenType s),
+    Ord (PatternType s)
+  ) =>
+  Ord (PatternAtoms s)
+  where
+  compare = compare `on` (^. patternAtoms)
+
+deriving stock instance
+  ( Show (ExpressionType s),
+    Show (IdentifierType s),
+    Show (ModuleRefType s),
+    Show (SymbolType s),
+    Show (PatternType s)
+  ) =>
+  Show (ExpressionAtom s)
+
+deriving stock instance
+  ( Eq (ExpressionType s),
+    Eq (IdentifierType s),
+    Eq (ModuleRefType s),
+    Eq (SymbolType s),
+    Eq (PatternType s)
+  ) =>
+  Eq (ExpressionAtom s)
+
+deriving stock instance
+  ( Ord (ExpressionType s),
+    Ord (IdentifierType s),
+    Ord (ModuleRefType s),
+    Ord (SymbolType s),
+    Ord (PatternType s)
+  ) =>
+  Ord (ExpressionAtom s)
+
+deriving stock instance
+  ( Show (ExpressionType s),
+    Show (IdentifierType s),
+    Show (ModuleRefType s),
+    Show (SymbolType s),
+    Show (PatternType s)
+  ) =>
+  Show (ExpressionAtoms s)
+
+instance HasLoc (ExpressionAtoms s) where
+  getLoc = (^. expressionAtomsLoc)
+
+instance HasAtomicity (ExpressionAtoms 'Parsed) where
+  atomicity ExpressionAtoms {..} = case _expressionAtoms of
+    (_ :| []) -> Atom
+    (_ :| _)
+      | AtomFunArrow `elem` _expressionAtoms -> Aggregate funFixity
+      | otherwise -> Aggregate appFixity
+
+instance
+  ( Eq (ExpressionType s),
+    Eq (IdentifierType s),
+    Eq (ModuleRefType s),
+    Eq (SymbolType s),
+    Eq (PatternType s)
+  ) =>
+  Eq (ExpressionAtoms s)
+  where
+  (==) = (==) `on` (^. expressionAtoms)
+
+instance
+  ( Ord (ExpressionType s),
+    Ord (IdentifierType s),
+    Ord (ModuleRefType s),
+    Ord (SymbolType s),
+    Ord (PatternType s)
+  ) =>
+  Ord (ExpressionAtoms s)
+  where
+  compare = compare `on` (^. expressionAtoms)
 
 --------------------------------------------------------------------------------
 

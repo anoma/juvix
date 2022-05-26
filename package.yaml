@@ -1,5 +1,5 @@
 name:            minijuvix
-version:         0.1.3
+version:         0.1.4
 license:         GPL-3.0-only
 license-file:    LICENSE
 copyright:       (c) 2022- Heliax AG.
@@ -14,7 +14,6 @@ github:          heliaxdev/minijuvix
 
 extra-source-files:
 - README.org
-- CHANGELOG.org
 
 dependencies:
 - ansi-terminal == 0.11.*
@@ -68,7 +67,6 @@ ghc-options:
 - -Wno-missing-safe-haskell-mode
 - -Wno-missing-kind-signatures
 - -Wno-missing-export-lists
-
 # HIE Support
 - -fhide-source-paths
 - -fwrite-ide-info -hiedir=.hie
@@ -86,7 +84,6 @@ default-extensions:
 - NoFieldSelectors
 - NoImplicitPrelude
 - OverloadedStrings
-- QuasiQuotes
 - RecordWildCards
 - TemplateHaskell
 - TypeFamilyDependencies

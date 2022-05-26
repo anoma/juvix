@@ -3,14 +3,15 @@ module App where
 import GlobalOptions
 import MiniJuvix.Pipeline
 import MiniJuvix.Prelude hiding (Doc)
+import MiniJuvix.Prelude.Error qualified as Error
 import MiniJuvix.Prelude.Pretty hiding (Doc)
 import System.Console.ANSI qualified as Ansi
 
 data App m a where
-  ExitError :: AJuvixError -> App m a
+  ExitError :: MiniJuvixError -> App m a
   Say :: Text -> App m ()
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
-  RunPipelineEither :: Sem PipelineEff a -> App m (Either AJuvixError a)
+  RunPipelineEither :: Sem PipelineEff a -> App m (Either MiniJuvixError a)
   ReadGlobalOptions :: App m GlobalOptions
 
 makeSem ''App
@@ -28,7 +29,7 @@ runAppIO g = interpret $ \case
     | g ^. globalOnlyErrors -> return ()
     | otherwise -> embed (putStrLn t)
   ExitError e -> do
-    whenJust (genericError e) (embed . hPutStrLn stderr . renderGenericError (not (g ^. globalNoColors)))
+    (embed . hPutStrLn stderr . Error.render (not (g ^. globalNoColors))) e
     embed exitFailure
 
 runPipeline :: Member App r => Sem PipelineEff a -> Sem r a

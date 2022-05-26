@@ -53,9 +53,9 @@ fromPos = Pos . fromIntegral . M.unPos
 
 -- | Inclusive interval
 data Interval = Interval
-  { _intFile :: FilePath,
-    _intStart :: FileLoc,
-    _intEnd :: FileLoc
+  { _intervalFile :: FilePath,
+    _intervalStart :: FileLoc,
+    _intervalEnd :: FileLoc
   }
   deriving stock (Show, Ord, Eq, Generic)
 
@@ -76,16 +76,16 @@ makeLenses ''Pos
 singletonInterval :: Loc -> Interval
 singletonInterval l =
   Interval
-    { _intFile = l ^. locFile,
-      _intStart = l ^. locFileLoc,
-      _intEnd = l ^. locFileLoc
+    { _intervalFile = l ^. locFile,
+      _intervalStart = l ^. locFileLoc,
+      _intervalEnd = l ^. locFileLoc
     }
 
-intervalStart :: Interval -> Loc
-intervalStart i =
+intervalStartLoc :: Interval -> Loc
+intervalStartLoc i =
   Loc
-    { _locFile = i ^. intFile,
-      _locFileLoc = i ^. intStart
+    { _locFile = i ^. intervalFile,
+      _locFileLoc = i ^. intervalStart
     }
 
 mkInterval :: Loc -> Loc -> Interval
@@ -109,10 +109,10 @@ instance Pretty Loc where
 instance Pretty Interval where
   pretty :: Interval -> Doc a
   pretty i =
-    pretty (i ^. intFile) <> colon
-      <> ppPosRange (i ^. intStart . locLine, i ^. intEnd . locLine)
+    pretty (i ^. intervalFile) <> colon
+      <> ppPosRange (i ^. intervalStart . locLine, i ^. intervalEnd . locLine)
       <> colon
-      <> ppPosRange (i ^. intStart . locCol, i ^. intEnd . locCol)
+      <> ppPosRange (i ^. intervalStart . locCol, i ^. intervalEnd . locCol)
     where
       hyphen :: Doc a
       hyphen = pretty '-'

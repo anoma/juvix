@@ -2,69 +2,20 @@
 -- Control.Exception
 module MiniJuvix.Prelude.Error
   ( module MiniJuvix.Prelude.Error,
-    module MiniJuvix.Prelude.Error.GenericError,
     module MiniJuvix.Syntax.Concrete.Loc,
+    module MiniJuvix.Prelude.Error.GenericError,
   )
 where
 
 import MiniJuvix.Prelude.Base
 import MiniJuvix.Prelude.Error.GenericError
 import MiniJuvix.Syntax.Concrete.Loc
-import System.Console.ANSI qualified as Ansi
 
--- | Wrapper for any instance of JuvixError.
-data AJuvixError = forall e. (ToGenericError e, JuvixError e) => AJuvixError e
+data MiniJuvixError
+  = forall a. (ToGenericError a, Typeable a) => MiniJuvixError a
 
--- | Minimal interface of an minijuvix error.
-class (ToGenericError e, Typeable e) => JuvixError e where
-  -- | Print the error to stderr with Ansi formatting.
-  printErrorAnsi :: e -> IO ()
-  printErrorAnsi = hPutStrLn stderr . renderAnsiText
+instance ToGenericError MiniJuvixError where
+  genericError (MiniJuvixError e) = genericError e
 
-  -- | Print the error to stderr without formatting.
-  printErrorText :: e -> IO ()
-  printErrorText = hPutStrLn stderr . renderText
-
-  -- | Render the error to Text.
-  renderText :: e -> Text
-
-  -- | Render the error with Ansi formatting (if any).
-  renderAnsiText :: e -> Text
-
-toAJuvixError :: JuvixError e => e -> AJuvixError
-toAJuvixError = AJuvixError
-
-fromAJuvixError :: JuvixError e => AJuvixError -> Maybe e
-fromAJuvixError (AJuvixError e) = cast e
-
-throwJuvixError :: (JuvixError err, Member (Error AJuvixError) r) => err -> Sem r a
-throwJuvixError = throw . toAJuvixError
-
-printErrorAnsiSafe :: JuvixError e => e -> IO ()
-printErrorAnsiSafe e =
-  ifM
-    (Ansi.hSupportsANSI stderr)
-    (printErrorAnsi e)
-    (printErrorText e)
-
-runErrorIO ::
-  (JuvixError a, Member (Embed IO) r) =>
-  Sem (Error a ': r) b ->
-  Sem r b
-runErrorIO =
-  runError >=> \case
-    Left err -> embed (printErrorAnsiSafe err >> exitFailure)
-    Right a -> return a
-
-instance JuvixError Text where
-  renderText = id
-  renderAnsiText = id
-
-instance ToGenericError AJuvixError where
-  genericError (AJuvixError e) = genericError e
-
-instance JuvixError AJuvixError where
-  renderText (AJuvixError r) = renderText r
-  renderAnsiText (AJuvixError r) = renderAnsiText r
-  printErrorAnsi (AJuvixError r) = printErrorAnsi r
-  printErrorText (AJuvixError r) = printErrorText r
+fromMiniJuvixError :: Typeable a => MiniJuvixError -> Maybe a
+fromMiniJuvixError (MiniJuvixError e) = cast e

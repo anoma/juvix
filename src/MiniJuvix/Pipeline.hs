@@ -38,88 +38,112 @@ type family StageResult c = res | res -> c where
 
 --------------------------------------------------------------------------------
 
-type PipelineEff = '[Files, NameIdGen, Error AJuvixError, Embed IO]
+type PipelineEff = '[Files, NameIdGen, Error MiniJuvixError, Embed IO]
 
-runIOEither :: Sem PipelineEff a -> IO (Either AJuvixError a)
+runIOEither :: Sem PipelineEff a -> IO (Either MiniJuvixError a)
 runIOEither = runM . runError . runNameIdGen . runFilesIO
 
 runIO :: Sem PipelineEff a -> IO a
 runIO = runIOEither >=> mayThrow
   where
-    mayThrow :: Either AJuvixError r -> IO r
+    mayThrow :: Either MiniJuvixError r -> IO r
     mayThrow = \case
       Left err -> printErrorAnsiSafe err >> exitFailure
       Right r -> return r
 
 --------------------------------------------------------------------------------
 
-upToParsing :: Members '[Files, Error AJuvixError] r => EntryPoint -> Sem r Parser.ParserResult
+upToParsing ::
+  Members '[Files, Error MiniJuvixError] r =>
+  EntryPoint ->
+  Sem r Parser.ParserResult
 upToParsing = pipelineParser
 
-upToScoping :: Members '[Files, NameIdGen, Error AJuvixError] r => EntryPoint -> Sem r Scoper.ScoperResult
+upToScoping ::
+  Members '[Files, NameIdGen, Error MiniJuvixError] r =>
+  EntryPoint ->
+  Sem r Scoper.ScoperResult
 upToScoping = upToParsing >=> pipelineScoper
 
-upToAbstract :: Members '[Files, NameIdGen, Error AJuvixError] r => EntryPoint -> Sem r Abstract.AbstractResult
+upToAbstract ::
+  Members '[Files, NameIdGen, Error MiniJuvixError] r =>
+  EntryPoint ->
+  Sem r Abstract.AbstractResult
 upToAbstract = upToScoping >=> pipelineAbstract
 
-upToMicroJuvix :: Members '[Files, NameIdGen, Error AJuvixError] r => EntryPoint -> Sem r MicroJuvix.MicroJuvixResult
+upToMicroJuvix ::
+  Members '[Files, NameIdGen, Error MiniJuvixError] r =>
+  EntryPoint ->
+  Sem r MicroJuvix.MicroJuvixResult
 upToMicroJuvix = upToAbstract >=> pipelineMicroJuvix
 
-upToMicroJuvixTyped :: Members '[Files, NameIdGen, Error AJuvixError] r => EntryPoint -> Sem r MicroJuvix.MicroJuvixTypedResult
+upToMicroJuvixTyped ::
+  Members '[Files, NameIdGen, Error MiniJuvixError] r =>
+  EntryPoint ->
+  Sem r MicroJuvix.MicroJuvixTypedResult
 upToMicroJuvixTyped = upToMicroJuvix >=> pipelineMicroJuvixTyped
 
 upToMonoJuvix ::
-  Members '[Files, NameIdGen, Error AJuvixError] r => EntryPoint -> Sem r MonoJuvix.MonoJuvixResult
+  Members '[Files, NameIdGen, Error MiniJuvixError] r =>
+  EntryPoint ->
+  Sem r MonoJuvix.MonoJuvixResult
 upToMonoJuvix = upToMicroJuvixTyped >=> pipelineMonoJuvix
 
 upToMiniHaskell ::
-  Members '[Files, NameIdGen, Error AJuvixError] r => EntryPoint -> Sem r MiniHaskell.MiniHaskellResult
+  Members '[Files, NameIdGen, Error MiniJuvixError] r =>
+  EntryPoint ->
+  Sem r MiniHaskell.MiniHaskellResult
 upToMiniHaskell = upToMonoJuvix >=> pipelineMiniHaskell
 
 upToMiniC ::
-  Members '[Files, NameIdGen, Error AJuvixError] r => EntryPoint -> Sem r MiniC.MiniCResult
+  Members '[Files, NameIdGen, Error MiniJuvixError] r =>
+  EntryPoint ->
+  Sem r MiniC.MiniCResult
 upToMiniC = upToMonoJuvix >=> pipelineMiniC
 
 --------------------------------------------------------------------------------
 
-pipelineParser :: Members '[Files, Error AJuvixError] r => EntryPoint -> Sem r Parser.ParserResult
-pipelineParser = mapError (toAJuvixError @Parser.ParserError) . Parser.entryParser
+pipelineParser ::
+  Members '[Files, Error MiniJuvixError] r =>
+  EntryPoint ->
+  Sem r Parser.ParserResult
+pipelineParser = mapError (MiniJuvixError @Parser.ParserError) . Parser.entryParser
 
-pipelineScoper :: Members '[Files, NameIdGen, Error AJuvixError] r => Parser.ParserResult -> Sem r Scoper.ScoperResult
-pipelineScoper = mapError (toAJuvixError @Scoper.ScopeError) . Scoper.entryScoper
+pipelineScoper ::
+  Members '[Files, NameIdGen, Error MiniJuvixError] r =>
+  Parser.ParserResult ->
+  Sem r Scoper.ScoperResult
+pipelineScoper = mapError (MiniJuvixError @Scoper.ScoperError) . Scoper.entryScoper
 
 pipelineAbstract ::
-  Members '[Files, NameIdGen, Error AJuvixError] r =>
   Scoper.ScoperResult ->
   Sem r Abstract.AbstractResult
-pipelineAbstract = mapError (toAJuvixError @Text) . Abstract.entryAbstract
+pipelineAbstract = Abstract.entryAbstract
 
 pipelineMicroJuvix ::
-  Members '[Files, NameIdGen, Error AJuvixError] r =>
   Abstract.AbstractResult ->
   Sem r MicroJuvix.MicroJuvixResult
-pipelineMicroJuvix = mapError (toAJuvixError @Text) . MicroJuvix.entryMicroJuvix
+pipelineMicroJuvix = MicroJuvix.entryMicroJuvix
 
 pipelineMicroJuvixTyped ::
-  Members '[Files, NameIdGen, Error AJuvixError] r =>
+  Members '[Files, NameIdGen, Error MiniJuvixError] r =>
   MicroJuvix.MicroJuvixResult ->
   Sem r MicroJuvix.MicroJuvixTypedResult
-pipelineMicroJuvixTyped = mapError (toAJuvixError @MicroJuvix.TypeCheckerError) . MicroJuvix.entryMicroJuvixTyped
+pipelineMicroJuvixTyped =
+  mapError (MiniJuvixError @MicroJuvix.TypeCheckerError) . MicroJuvix.entryMicroJuvixTyped
 
 pipelineMonoJuvix ::
-  Members '[Files, NameIdGen, Error AJuvixError] r =>
+  Members '[Files, NameIdGen] r =>
   MicroJuvix.MicroJuvixTypedResult ->
   Sem r MonoJuvix.MonoJuvixResult
-pipelineMonoJuvix = mapError (toAJuvixError @Text) . MonoJuvix.entryMonoJuvix
+pipelineMonoJuvix = MonoJuvix.entryMonoJuvix
 
 pipelineMiniHaskell ::
-  Members '[Files, NameIdGen, Error AJuvixError] r =>
   MonoJuvix.MonoJuvixResult ->
   Sem r MiniHaskell.MiniHaskellResult
-pipelineMiniHaskell = mapError (toAJuvixError @Text) . MiniHaskell.entryMiniHaskell
+pipelineMiniHaskell = MiniHaskell.entryMiniHaskell
 
 pipelineMiniC ::
-  Members '[Files, Error AJuvixError] r =>
   MonoJuvix.MonoJuvixResult ->
   Sem r MiniC.MiniCResult
-pipelineMiniC = mapError (toAJuvixError @Text) . MiniC.entryMiniC
+pipelineMiniC = MiniC.entryMiniC

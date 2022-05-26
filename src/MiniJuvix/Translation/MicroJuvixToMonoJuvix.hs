@@ -40,15 +40,12 @@ newtype ConcreteTable = ConcreteTable
   { _concreteTable :: HashMap PolyIden PolyIdenInfo
   }
 
--- fst : Pair Nat (Pair Nat Nat) → Nat;
--- fst (mkPair a b) ≔ a;
-
 makeLenses ''ConcreteTable
 makeLenses ''PolyIdenInfo
 makeLenses ''ConcreteIdenInfo
 
 entryMonoJuvix ::
-  Members '[NameIdGen, Error Err] r =>
+  Members '[NameIdGen] r =>
   Micro.MicroJuvixTypedResult ->
   Sem r MonoJuvixResult
 entryMonoJuvix i = do
@@ -62,8 +59,6 @@ entryMonoJuvix i = do
     table :: Micro.InfoTable
     table = Micro.buildTable (i ^. Micro.resultModules)
     _resultMicroTyped = i
-
-type Err = Text
 
 cloneName' :: Members '[NameIdGen] r => Micro.Name -> Sem r Micro.Name
 cloneName' n = do
@@ -161,7 +156,7 @@ buildConcreteTable info =
           modify (over concreteTable (over (at iden) (Just . addConcreteInfo k cc)))
 
 goModule ::
-  Members '[Error Err, Reader ConcreteTable, NameIdGen, Reader Micro.InfoTable] r =>
+  Members '[Reader ConcreteTable, NameIdGen, Reader Micro.InfoTable] r =>
   Micro.Module ->
   Sem r Module
 goModule Micro.Module {..} = do
@@ -172,25 +167,22 @@ goModule Micro.Module {..} = do
         _moduleBody = _moduleBody'
       }
 
-unsupported :: Text -> a
-unsupported msg = error $ msg <> " not yet supported"
-
 goModuleBody ::
-  Members '[Error Err, Reader ConcreteTable, NameIdGen, Reader Micro.InfoTable] r =>
+  Members '[Reader ConcreteTable, NameIdGen, Reader Micro.InfoTable] r =>
   Micro.ModuleBody ->
   Sem r ModuleBody
 goModuleBody b =
   ModuleBody <$> concatMapM goStatement (b ^. Micro.moduleStatements)
 
 goInclude ::
-  Members '[Error Err, Reader ConcreteTable, NameIdGen, Reader Micro.InfoTable] r =>
+  Members '[Reader ConcreteTable, NameIdGen, Reader Micro.InfoTable] r =>
   Micro.Include ->
   Sem r [Statement]
 goInclude i =
   (^. moduleStatements) <$> goModuleBody (i ^. Micro.includeModule . Micro.moduleBody)
 
 goStatement ::
-  Members '[Error Err, Reader ConcreteTable, NameIdGen, Reader Micro.InfoTable] r =>
+  Members '[Reader ConcreteTable, NameIdGen, Reader Micro.InfoTable] r =>
   Micro.Statement ->
   Sem r [Statement]
 goStatement = \case
@@ -200,7 +192,7 @@ goStatement = \case
   Micro.StatementAxiom a -> pure . StatementAxiom <$> goAxiomDef a
   Micro.StatementInclude i -> goInclude i
 
-goAxiomDef :: Members '[Error Err, Reader ConcreteTable] r => Micro.AxiomDef -> Sem r AxiomDef
+goAxiomDef :: Members '[Reader ConcreteTable] r => Micro.AxiomDef -> Sem r AxiomDef
 goAxiomDef Micro.AxiomDef {..} = do
   _axiomType' <- goType (Micro.mkConcreteType' _axiomType)
   return
@@ -208,9 +200,6 @@ goAxiomDef Micro.AxiomDef {..} = do
       { _axiomName = goName _axiomName,
         _axiomType = _axiomType'
       }
-
-throwErr :: Member (Error Err) r => Text -> Sem r a
-throwErr = throw
 
 goName :: Micro.Name -> Name
 goName n =

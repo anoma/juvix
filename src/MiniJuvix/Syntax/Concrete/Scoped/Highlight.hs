@@ -53,7 +53,7 @@ filterInput absPth h =
     }
 
 filterByLoc :: HasLoc p => FilePath -> [p] -> [p]
-filterByLoc absPth = filter ((== absPth) . (^. intFile) . getLoc)
+filterByLoc absPth = filter ((== absPth) . (^. intervalFile) . getLoc)
 
 goError :: [Interval] -> Text
 goError l =
@@ -99,8 +99,8 @@ instr f i =
   App [Symbol "add-text-properties", start, end, face]
   where
     pos l = Int (succ (l ^. locOffset . unPos))
-    start = pos (i ^. intStart)
-    end = pos (i ^. intEnd)
+    start = pos (i ^. intervalStart)
+    end = pos (i ^. intervalEnd)
     face = Quote (App [Symbol "face", faceSymbol faceSymbolStr])
     faceSymbolStr = case f of
       FaceAxiom -> Str.axiom
@@ -136,12 +136,12 @@ gotoDefName n =
   App [Symbol "add-text-properties", start, end, goto]
   where
     i = getLoc n
-    targetPos = succ (n ^. nameDefined . intStart . locOffset . unPos)
-    targetFile = n ^. nameDefined . intFile
+    targetPos = succ (n ^. nameDefined . intervalStart . locOffset . unPos)
+    targetFile = n ^. nameDefined . intervalFile
     goto = Quote (App [Symbol "minijuvix-goto", gotoPair])
     pos l = Int (succ (l ^. locOffset . unPos))
-    start = pos (i ^. intStart)
-    end = pos (i ^. intEnd)
+    start = pos (i ^. intervalStart)
+    end = pos (i ^. intervalEnd)
     gotoPair = Pair (String targetFile) (Int targetPos)
 
 renderSExp :: SExp -> Text

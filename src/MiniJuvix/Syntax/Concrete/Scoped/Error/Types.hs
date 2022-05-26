@@ -14,46 +14,9 @@ import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Language qualified as L
 import MiniJuvix.Syntax.Concrete.Parser.Error qualified as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Error.Ann
-import MiniJuvix.Syntax.Concrete.Scoped.Error.Pretty.Ansi qualified as Ansi
+import MiniJuvix.Syntax.Concrete.Scoped.Error.Pretty
 import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
-import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base qualified as P
 import MiniJuvix.Syntax.Concrete.Scoped.Scope
-import Text.EditDistance
-
-class PrettyError e where
-  ppError :: e -> Doc Eann
-
-newtype PPOutput = PPOutput (Doc Eann)
-
-instance HasAnsiBackend PPOutput where
-  toAnsiStream (PPOutput o) = reAnnotateS Ansi.stylize (layoutPretty defaultLayoutOptions o)
-  toAnsiDoc (PPOutput o) = reAnnotate Ansi.stylize o
-
-instance HasTextBackend PPOutput where
-  toTextDoc (PPOutput o) = unAnnotate o
-  toTextStream (PPOutput o) = unAnnotateS (layoutPretty defaultLayoutOptions o)
-
-prettyError :: PrettyError e => e -> AnsiText
-prettyError = AnsiText . PPOutput . (<> "ת") . ppError
-
-highlight :: Doc Eann -> Doc Eann
-highlight = annotate Highlight
-
-ppSymbolT :: Text -> Doc Eann
-ppSymbolT = highlight . pretty
-
-ppCode :: P.PrettyCode c => c -> Doc Eann
-ppCode = reAnnotate ScopedAnn . P.runPrettyCode P.defaultOptions
-
-indent' :: Doc ann -> Doc ann
-indent' = indent 2
-
-textDistance :: Text -> Text -> Int
-textDistance a b =
-  restrictedDamerauLevenshteinDistance
-    defaultEditCosts
-    (unpack a)
-    (unpack b)
 
 data MultipleDeclarations = MultipleDeclarations
   { _multipleDeclEntry :: SymbolEntry,
@@ -62,37 +25,65 @@ data MultipleDeclarations = MultipleDeclarations
   }
   deriving stock (Show)
 
-instance PrettyError MultipleDeclarations where
-  ppError MultipleDeclarations {..} =
-    "Multiple declarations of" <+> ppSymbolT _multipleDeclSymbol <> line
-      <> "Declared at:" <+> align (vsep ints)
-    where
-      ints = map pretty [L.symbolEntryToSName _multipleDeclEntry ^. S.nameDefined, _multipleDeclSecond]
-
 instance ToGenericError MultipleDeclarations where
-  genericError e@MultipleDeclarations {..} =
-    Just
-      GenericError
-        { _genericErrorFile = _multipleDeclSecond ^. intFile,
-          _genericErrorLoc = intervalStart i1,
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = [i1, _multipleDeclSecond]
-        }
+  genericError MultipleDeclarations {..} =
+    GenericError
+      { _genericErrorFile = _multipleDeclSecond ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i1,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i1, _multipleDeclSecond]
+      }
     where
       i1 :: Interval
       i1 = entryName _multipleDeclEntry ^. S.nameDefined
+      msg =
+        "Multiple declarations of" <+> ppSymbolT _multipleDeclSymbol <> line
+          <> "Declared at:" <+> align (vsep lst)
+      lst = map pretty [L.symbolEntryToSName _multipleDeclEntry ^. S.nameDefined, _multipleDeclSecond]
 
 -- | megaparsec error while resolving infixities.
 newtype InfixError = InfixError
-  { _infixErrAtoms :: ExpressionAtoms 'Scoped
+  { _infixErrorAtoms :: ExpressionAtoms 'Scoped
   }
   deriving stock (Show)
 
+instance ToGenericError InfixError where
+  genericError InfixError {..} =
+    GenericError
+      { _genericErrorFile = i ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
+    where
+      i = getLoc _infixErrorAtoms
+      msg :: Doc Eann
+      msg =
+        "Error solving infixities"
+          <> line
+          <> indent' (highlight (ppCode _infixErrorAtoms))
+
 -- | megaparsec error while resolving infixities of patterns.
 newtype InfixErrorP = InfixErrorP
-  { _infixErrAtomsP :: PatternAtom 'Scoped
+  { _infixErrorAtomsP :: PatternAtoms 'Scoped
   }
   deriving stock (Show)
+
+instance ToGenericError InfixErrorP where
+  genericError InfixErrorP {..} =
+    GenericError
+      { _genericErrorFile = i ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
+    where
+      i = getLoc _infixErrorAtomsP
+      msg :: Doc Eann
+      msg =
+        "Error solving infixities:"
+          <> line
+          <> indent' (highlight (ppCode _infixErrorAtomsP))
 
 -- | function clause without a type signature.
 newtype LacksTypeSig = LacksTypeSig
@@ -100,23 +91,20 @@ newtype LacksTypeSig = LacksTypeSig
   }
   deriving stock (Show)
 
-instance PrettyError LacksTypeSig where
-  ppError LacksTypeSig {..} =
-    "The declaration is missing a type signature:"
-      <> line
-      <> indent' (highlight (ppCode _lacksTypeSigClause))
-
 instance ToGenericError LacksTypeSig where
-  genericError e@LacksTypeSig {..} =
-    Just
-      GenericError
-        { _genericErrorFile = i ^. intFile,
-          _genericErrorLoc = intervalStart i,
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = [i]
-        }
+  genericError LacksTypeSig {..} =
+    GenericError
+      { _genericErrorFile = i ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
     where
       i = _lacksTypeSigClause ^. clauseOwnerFunction . symbolLoc
+      msg =
+        "The declaration is missing a type signature:"
+          <> line
+          <> indent' (highlight (ppCode _lacksTypeSigClause))
 
 -- | type signature without a function clause
 newtype LacksFunctionClause = LacksFunctionClause
@@ -124,23 +112,20 @@ newtype LacksFunctionClause = LacksFunctionClause
   }
   deriving stock (Show)
 
-instance PrettyError LacksFunctionClause where
-  ppError LacksFunctionClause {..} =
-    "Type signature with no function clause:"
-      <> line
-      <> indent' (highlight (ppCode _lacksFunctionClause))
-
 instance ToGenericError LacksFunctionClause where
-  genericError e@LacksFunctionClause {..} =
-    Just
-      GenericError
-        { _genericErrorFile = i ^. intFile,
-          _genericErrorLoc = intervalStart i,
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = [i]
-        }
+  genericError LacksFunctionClause {..} =
+    GenericError
+      { _genericErrorFile = i ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
     where
       i = getLoc (_lacksFunctionClause ^. sigName)
+      msg =
+        "Type signature with no function clause:"
+          <> line
+          <> indent' (highlight (ppCode _lacksFunctionClause))
 
 newtype ImportCycle = ImportCycle
   { -- | If we have [a, b, c] it means that a import b imports c imports a.
@@ -148,50 +133,43 @@ newtype ImportCycle = ImportCycle
   }
   deriving stock (Show)
 
-instance PrettyError ImportCycle where
-  ppError ImportCycle {..} =
-    "There is an import cycle:" <> line
-      <> indent' lst
-    where
-      lst = vsep $ intersperse "⇓" (map pp (toList (tie _importCycleImports)))
-      pp :: Import 'Parsed -> Doc Eann
-      pp t = ppCode t <+> parens ("at" <+> pretty (getLoc t))
-      tie :: NonEmpty a -> NonEmpty a
-      tie x = x <> pure (NonEmpty.head x)
-
 instance ToGenericError ImportCycle where
-  genericError e@ImportCycle {..} =
-    Just
-      GenericError
-        { _genericErrorFile = i ^. intFile,
-          _genericErrorLoc = intervalStart i,
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = [i]
-        }
+  genericError ImportCycle {..} =
+    GenericError
+      { _genericErrorFile = i ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
     where
       h = head _importCycleImports
       i = getLoc h
+      msg =
+        "There is an import cycle:" <> line
+          <> indent' (vsep (intersperse "⇓" (map pp (toList (tie _importCycleImports)))))
+
+      pp :: Import 'Parsed -> Doc Eann
+      pp t = ppCode t <+> parens ("at" <+> pretty (getLoc t))
+
+      tie :: NonEmpty a -> NonEmpty a
+      tie x = x <> pure (NonEmpty.head x)
 
 newtype QualSymNotInScope = QualSymNotInScope
   { _qualSymNotInScope :: QualifiedName
   }
   deriving stock (Show)
 
-instance PrettyError QualSymNotInScope where
-  ppError QualSymNotInScope {..} =
-    "Qualified symbol not in scope:" <+> ppCode _qualSymNotInScope
-
 instance ToGenericError QualSymNotInScope where
-  genericError e@QualSymNotInScope {..} =
-    Just
-      GenericError
-        { _genericErrorFile = i ^. intFile,
-          _genericErrorLoc = intervalStart i,
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = [i]
-        }
+  genericError QualSymNotInScope {..} =
+    GenericError
+      { _genericErrorFile = i ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
     where
       i = getLoc _qualSymNotInScope
+      msg = "Qualified symbol not in scope:" <+> ppCode _qualSymNotInScope
 
 data BindGroupConflict = BindGroupConflict
   { _bindGroupFirst :: Symbol,
@@ -199,27 +177,23 @@ data BindGroupConflict = BindGroupConflict
   }
   deriving stock (Show)
 
-instance PrettyError BindGroupConflict where
-  ppError BindGroupConflict {..} =
-    "The variable" <+> highlight (ppCode _bindGroupFirst)
-      <+> "appears twice in the same binding group:"
-      <> line
-      <> indent' (align locs)
-    where
-      locs = vsep $ map (pretty . getLoc) [_bindGroupFirst, _bindGroupSecond]
-
 instance ToGenericError BindGroupConflict where
-  genericError e@BindGroupConflict {..} =
-    Just
-      GenericError
-        { _genericErrorFile = i2 ^. intFile,
-          _genericErrorLoc = intervalStart i2,
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = [i1, i2]
-        }
+  genericError BindGroupConflict {..} =
+    GenericError
+      { _genericErrorFile = i2 ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i2,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i1, i2]
+      }
     where
       i1 = getLoc _bindGroupFirst
       i2 = getLoc _bindGroupSecond
+
+      msg =
+        "The variable" <+> highlight (ppCode _bindGroupFirst)
+          <+> "appears twice in the same binding group:"
+          <> line
+          <> indent' (align (vsep (map pretty [i1, i2])))
 
 data DuplicateFixity = DuplicateFixity
   { _dupFixityFirst :: OperatorSyntaxDef,
@@ -227,26 +201,27 @@ data DuplicateFixity = DuplicateFixity
   }
   deriving stock (Show)
 
-instance PrettyError DuplicateFixity where
-  ppError DuplicateFixity {..} =
-    "Multiple fixity declarations for symbol" <+> highlight (ppCode sym) <> ":" <> line
-      <> indent' (align locs)
-    where
-      sym = _dupFixityFirst ^. opSymbol
-      locs = vsep $ map (pretty . getLoc) [_dupFixityFirst, _dupFixityFirst]
-
 instance ToGenericError DuplicateFixity where
-  genericError e@DuplicateFixity {..} =
-    Just
-      GenericError
-        { _genericErrorFile = i2 ^. intFile,
-          _genericErrorLoc = intervalStart i2,
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = [i1, i2]
-        }
+  genericError DuplicateFixity {..} =
+    GenericError
+      { _genericErrorFile = i2 ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i2,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i1, i2]
+      }
     where
       i1 = getLoc _dupFixityFirst
       i2 = getLoc _dupFixitySecond
+
+      msg =
+        "Multiple fixity declarations for symbol"
+          <+> highlight (ppCode sym)
+          <> ":"
+          <> line
+          <> indent' (align locs)
+        where
+          sym = _dupFixityFirst ^. opSymbol
+          locs = vsep $ map (pretty . getLoc) [_dupFixityFirst, _dupFixityFirst]
 
 data MultipleExportConflict = MultipleExportConflict
   { _multipleExportModule :: S.AbsModulePath,
@@ -255,22 +230,20 @@ data MultipleExportConflict = MultipleExportConflict
   }
   deriving stock (Show)
 
-instance PrettyError MultipleExportConflict where
-  ppError MultipleExportConflict {..} =
-    "The symbol" <+> highlight (ppCode _multipleExportSymbol) <+> "is exported multiple times in the module"
-      <+> ppCode _multipleExportModule
-
 instance ToGenericError MultipleExportConflict where
-  genericError e@MultipleExportConflict {..} =
-    Just
-      GenericError
-        { _genericErrorFile = i ^. intFile,
-          _genericErrorLoc = intervalStart i,
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = [i]
-        }
+  genericError MultipleExportConflict {..} =
+    GenericError
+      { _genericErrorFile = i ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
     where
       i = getLoc _multipleExportModule
+      msg =
+        "The symbol" <+> highlight (ppCode _multipleExportSymbol)
+          <+> "is exported multiple times in the module"
+          <+> ppCode _multipleExportModule
 
 data NotInScope = NotInScope
   { _notInScopeSymbol :: Symbol,
@@ -281,11 +254,18 @@ data NotInScope = NotInScope
 
 makeLenses ''NotInScope
 
-instance PrettyError NotInScope where
-  ppError NotInScope {..} =
-    "Symbol not in scope:" <+> highlight (ppCode _notInScopeSymbol)
-      <?> ((line <>) <$> suggestion)
+instance ToGenericError NotInScope where
+  genericError e@NotInScope {..} =
+    GenericError
+      { _genericErrorFile = e ^. notInScopeSymbol . symbolLoc . intervalFile,
+        _genericErrorLoc = intervalStartLoc (e ^. notInScopeSymbol . symbolLoc),
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [e ^. notInScopeSymbol . symbolLoc]
+      }
     where
+      msg =
+        "Symbol not in scope:" <+> highlight (ppCode _notInScopeSymbol)
+          <?> ((line <>) <$> suggestion)
       suggestion :: Maybe (Doc a)
       suggestion
         | null suggestions = Nothing
@@ -305,16 +285,6 @@ instance PrettyError NotInScope where
         HashSet.fromList (map (^. symbolText) (HashMap.keys (_notInScopeLocal ^. localVars)))
           <> HashSet.fromList (map (^. symbolText) (HashMap.keys (_notInScopeScope ^. scopeSymbols)))
 
-instance ToGenericError NotInScope where
-  genericError e =
-    Just
-      GenericError
-        { _genericErrorFile = e ^. notInScopeSymbol . symbolLoc . intFile,
-          _genericErrorLoc = intervalStart (e ^. notInScopeSymbol . symbolLoc),
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = [e ^. notInScopeSymbol . symbolLoc]
-        }
-
 instance HasLoc NotInScope where
   getLoc = getLoc . (^. notInScopeSymbol)
 
@@ -325,29 +295,22 @@ newtype ModuleNotInScope = ModuleNotInScope
 
 makeLenses ''ModuleNotInScope
 
-instance PrettyError ModuleNotInScope where
-  ppError ModuleNotInScope {..} =
-    "The module" <+> ppCode _moduleNotInScopeName <+> "is not in scope"
-
 instance ToGenericError ModuleNotInScope where
-  genericError e =
-    Just
-      GenericError
-        { _genericErrorFile = i ^. intFile,
-          _genericErrorLoc = intervalStart i,
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = [i]
-        }
+  genericError e@ModuleNotInScope {..} =
+    GenericError
+      { _genericErrorFile = i ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
     where
       i = getLoc (e ^. moduleNotInScopeName)
+      msg = "The module" <+> ppCode _moduleNotInScopeName <+> "is not in scope"
 
 newtype MegaParsecError = MegaParsecError
   { _megaParsecError :: Parser.ParserError
   }
   deriving stock (Show)
-
-instance PrettyError MegaParsecError where
-  ppError MegaParsecError {..} = pretty _megaParsecError
 
 instance ToGenericError MegaParsecError where
   genericError (MegaParsecError e) = genericError e
@@ -357,22 +320,19 @@ newtype UnusedOperatorDef = UnusedOperatorDef
   }
   deriving stock (Show)
 
-instance PrettyError UnusedOperatorDef where
-  ppError UnusedOperatorDef {..} =
-    "Unused operator syntax definition:" <> line
-      <> ppCode _unusedOperatorDef
-
 instance ToGenericError UnusedOperatorDef where
-  genericError e@UnusedOperatorDef {..} =
-    Just
-      GenericError
-        { _genericErrorFile = i ^. intFile,
-          _genericErrorLoc = intervalStart i,
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = [i]
-        }
+  genericError UnusedOperatorDef {..} =
+    GenericError
+      { _genericErrorFile = i ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
     where
       i = getLoc _unusedOperatorDef
+      msg =
+        "Unused operator syntax definition:" <> line
+          <> ppCode _unusedOperatorDef
 
 data WrongTopModuleName = WrongTopModuleName
   { _wrongTopModuleNameExpectedPath :: FilePath,
@@ -381,26 +341,25 @@ data WrongTopModuleName = WrongTopModuleName
   }
   deriving stock (Show)
 
-instance PrettyError WrongTopModuleName where
-  ppError WrongTopModuleName {..} =
-    "The top module" <+> ppCode _wrongTopModuleNameActualName <+> "is defined in the file:" <> line
-      <> highlight (pretty _wrongTopModuleNameActualPath)
-      <> line
-      <> "But it should be in the file:"
-      <> line
-      <> pretty _wrongTopModuleNameExpectedPath
-
 instance ToGenericError WrongTopModuleName where
-  genericError e@WrongTopModuleName {..} =
-    Just
-      GenericError
-        { _genericErrorFile = i ^. intFile,
-          _genericErrorLoc = intervalStart i,
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = [i]
-        }
+  genericError WrongTopModuleName {..} =
+    GenericError
+      { _genericErrorFile = i ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
     where
       i = getLoc _wrongTopModuleNameActualName
+      msg =
+        "The top module" <+> ppCode _wrongTopModuleNameActualName
+          <+> "is defined in the file:"
+          <> line
+          <> highlight (pretty _wrongTopModuleNameActualPath)
+          <> line
+          <> "But it should be in the file:"
+          <> line
+          <> pretty _wrongTopModuleNameExpectedPath
 
 data AmbiguousSym = AmbiguousSym
   { _ambiguousSymName :: Name,
@@ -408,21 +367,18 @@ data AmbiguousSym = AmbiguousSym
   }
   deriving stock (Show)
 
-instance PrettyError AmbiguousSym where
-  ppError AmbiguousSym {..} = ambiguousMessage _ambiguousSymName _ambiguousSymEntires
-
 instance ToGenericError AmbiguousSym where
-  genericError e@AmbiguousSym {..} =
-    Just
-      GenericError
-        { _genericErrorFile = i ^. intFile,
-          _genericErrorLoc = intervalStart i,
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = i : is
-        }
+  genericError AmbiguousSym {..} =
+    GenericError
+      { _genericErrorFile = i ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = i : is
+      }
     where
       i = getLoc _ambiguousSymName
       is = map getLoc _ambiguousSymEntires
+      msg = ambiguousMessage _ambiguousSymName _ambiguousSymEntires
 
 data AmbiguousModuleSym = AmbiguousModuleSym
   { _ambiguousModName :: Name,
@@ -431,17 +387,17 @@ data AmbiguousModuleSym = AmbiguousModuleSym
   deriving stock (Show)
 
 instance ToGenericError AmbiguousModuleSym where
-  genericError e@AmbiguousModuleSym {..} =
-    Just
-      GenericError
-        { _genericErrorFile = i ^. intFile,
-          _genericErrorLoc = intervalStart i,
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = i : is
-        }
+  genericError AmbiguousModuleSym {..} =
+    GenericError
+      { _genericErrorFile = i ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = i : is
+      }
     where
       i = getLoc _ambiguousModName
       is = map getLoc _ambiguousModSymEntires
+      msg = ambiguousMessage _ambiguousModName _ambiguousModSymEntires
 
 data WrongLocationCompileBlock = WrongLocationCompileBlock
   { _wrongLocationCompileBlockExpectedModPath :: S.AbsModulePath,
@@ -449,25 +405,22 @@ data WrongLocationCompileBlock = WrongLocationCompileBlock
   }
   deriving stock (Show)
 
-instance PrettyError WrongLocationCompileBlock where
-  ppError WrongLocationCompileBlock {..} =
-    let name = _wrongLocationCompileBlockName
-     in "The compilation rules for the symbol" <+> highlight (ppCode name)
+instance ToGenericError WrongLocationCompileBlock where
+  genericError WrongLocationCompileBlock {..} =
+    GenericError
+      { _genericErrorFile = i ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
+    where
+      name = _wrongLocationCompileBlockName
+      i = getLoc name
+      msg =
+        "The compilation rules for the symbol" <+> highlight (ppCode name)
           <+> "need to be defined in the module:"
           <> line
           <> highlight (ppCode _wrongLocationCompileBlockExpectedModPath)
-
-instance ToGenericError WrongLocationCompileBlock where
-  genericError e@WrongLocationCompileBlock {..} =
-    Just
-      GenericError
-        { _genericErrorFile = i ^. intFile,
-          _genericErrorLoc = intervalStart i,
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = [i]
-        }
-    where
-      i = getLoc _wrongLocationCompileBlockName
 
 data MultipleCompileBlockSameName = MultipleCompileBlockSameName
   { _multipleCompileBlockFirstDefined :: Interval,
@@ -475,23 +428,20 @@ data MultipleCompileBlockSameName = MultipleCompileBlockSameName
   }
   deriving stock (Show)
 
-instance PrettyError MultipleCompileBlockSameName where
-  ppError MultipleCompileBlockSameName {..} =
-    let name = _multipleCompileBlockSym
-     in "Multiple compile blocks for the symbol" <+> highlight (ppCode name)
-
 instance ToGenericError MultipleCompileBlockSameName where
-  genericError e@MultipleCompileBlockSameName {..} =
-    Just
-      GenericError
-        { _genericErrorFile = i2 ^. intFile,
-          _genericErrorLoc = intervalStart i2,
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = [i1, i2]
-        }
+  genericError MultipleCompileBlockSameName {..} =
+    GenericError
+      { _genericErrorFile = i2 ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i2,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i1, i2]
+      }
     where
       i1 = _multipleCompileBlockFirstDefined
       i2 = getLoc _multipleCompileBlockSym
+      msg =
+        "Multiple compile blocks for the symbol"
+          <+> highlight (ppCode _multipleCompileBlockSym)
 
 data MultipleCompileRuleSameBackend = MultipleCompileRuleSameBackend
   { _multipleCompileRuleSameBackendBackendItem :: BackendItem,
@@ -500,16 +450,23 @@ data MultipleCompileRuleSameBackend = MultipleCompileRuleSameBackend
   deriving stock (Show)
 
 instance ToGenericError MultipleCompileRuleSameBackend where
-  genericError e@MultipleCompileRuleSameBackend {..} =
-    Just
-      GenericError
-        { _genericErrorFile = i ^. intFile,
-          _genericErrorLoc = intervalStart i,
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = [i]
-        }
+  genericError MultipleCompileRuleSameBackend {..} =
+    GenericError
+      { _genericErrorFile = i ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
     where
+      backend = _multipleCompileRuleSameBackendBackendItem ^. backendItemBackend
+      name = _multipleCompileRuleSameBackendSym
       i = getLoc _multipleCompileRuleSameBackendSym
+      msg =
+        "Multiple" <+> highlight (ppCode backend)
+          <+> "compilation rules for the symbol"
+          <+> highlight (ppCode name)
+          <+> "at"
+          <+> pretty (getLoc name)
 
 data WrongKindExpressionCompileBlock = WrongKindExpressionCompileBlock
   { _wrongKindExpressionCompileBlockSym :: Symbol,
@@ -517,47 +474,25 @@ data WrongKindExpressionCompileBlock = WrongKindExpressionCompileBlock
   }
   deriving stock (Show)
 
-instance PrettyError WrongKindExpressionCompileBlock where
-  ppError WrongKindExpressionCompileBlock {..} =
-    "Symbol" <+> ppCode _wrongKindExpressionCompileBlockSym
-      <+> "is not a constructor, inductive, axiom nor a function. Thus, it cannot have a compile rule."
-
 instance ToGenericError WrongKindExpressionCompileBlock where
-  genericError e@WrongKindExpressionCompileBlock {..} =
-    Just
-      GenericError
-        { _genericErrorFile = i ^. intFile,
-          _genericErrorLoc = intervalStart i,
-          _genericErrorMessage = prettyError e,
-          _genericErrorIntervals = [i]
-        }
+  genericError WrongKindExpressionCompileBlock {..} =
+    GenericError
+      { _genericErrorFile = i ^. intervalFile,
+        _genericErrorLoc = intervalStartLoc i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
     where
       i = getLoc _wrongKindExpressionCompileBlockSym
-
-instance PrettyError InfixError where
-  ppError InfixError {..} =
-    infixErrorAux "expression" (ppCode _infixErrAtoms)
-
-instance PrettyError InfixErrorP where
-  ppError InfixErrorP {..} =
-    infixErrorAux "pattern" (ppCode _infixErrAtomsP)
+      msg =
+        "Symbol" <+> ppCode _wrongKindExpressionCompileBlockSym
+          <+> "is not a constructor, inductive data type, axiom nor a function."
+          <> "Thus, it cannot have a compile rule."
 
 infixErrorAux :: Doc Eann -> Doc Eann -> Doc Eann
 infixErrorAux kind pp =
   "Error while resolving infixities in the" <+> kind <> ":" <> line
     <> indent' (highlight pp)
-
-instance PrettyError AmbiguousModuleSym where
-  ppError AmbiguousModuleSym {..} = ambiguousMessage _ambiguousModName _ambiguousModSymEntires
-
-instance PrettyError MultipleCompileRuleSameBackend where
-  ppError MultipleCompileRuleSameBackend {..} =
-    let backend = _multipleCompileRuleSameBackendBackendItem ^. backendItemBackend
-        name = _multipleCompileRuleSameBackendSym
-     in "Multiple" <+> highlight (ppCode backend) <+> "compilation rules for the symbol"
-          <+> highlight (ppCode name)
-          <+> "at"
-          <+> pretty (getLoc name)
 
 ambiguousMessage :: Name -> [SymbolEntry] -> Doc Eann
 ambiguousMessage n es =

@@ -57,14 +57,14 @@ testDescr PosTest {..} =
 
             step "Parsing pretty scoped"
             let fs2 = HashMap.singleton entryFile scopedPretty
-            p' :: Parser.ParserResult <- (runM . runErrorIO @AJuvixError . runNameIdGen . runFilesPure fs2) (upToParsing entryPoint)
+            p' :: Parser.ParserResult <- (runM . runErrorIO @MiniJuvixError . runNameIdGen . runFilesPure fs2) (upToParsing entryPoint)
 
             step "Parsing pretty parsed"
             let fs3 = HashMap.singleton entryFile parsedPretty
-            parsedPretty' :: Parser.ParserResult <- (runM . runErrorIO @AJuvixError . runNameIdGen . runFilesPure fs3) (upToParsing entryPoint)
+            parsedPretty' :: Parser.ParserResult <- (runM . runErrorIO @MiniJuvixError . runNameIdGen . runFilesPure fs3) (upToParsing entryPoint)
 
             step "Scoping the scoped"
-            s' :: Scoper.ScoperResult <- (runM . runErrorIO @AJuvixError . runNameIdGen . runFilesPure fs) (upToScoping entryPoint)
+            s' :: Scoper.ScoperResult <- (runM . runErrorIO @MiniJuvixError . runNameIdGen . runFilesPure fs) (upToScoping entryPoint)
 
             step "Checks"
             let smodules = s ^. Scoper.resultModules

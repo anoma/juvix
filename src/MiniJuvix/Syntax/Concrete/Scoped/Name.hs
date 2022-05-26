@@ -118,6 +118,9 @@ nameUnqualify Name' {..} = Name' {_nameConcrete = unqual, ..}
       C.NameUnqualified s -> s
       C.NameQualified q -> fromQualifiedName q
 
+nameUnqualifiedText :: Name -> Text
+nameUnqualifiedText = symbolText . nameUnqualify
+
 instance Eq (Name' n) where
   (==) = (==) `on` (^. nameId)
 
