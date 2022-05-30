@@ -1,15 +1,43 @@
 module MiniJuvix.Termination.Checker
   ( module MiniJuvix.Termination.Checker,
     module MiniJuvix.Termination.FunctionCall,
+    module MiniJuvix.Termination.Error,
   )
 where
 
+import Data.HashMap.Internal.Strict qualified as HashMap
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Abstract.InfoTable
-import MiniJuvix.Syntax.Abstract.Language.Extra
+import MiniJuvix.Syntax.Abstract.InfoTable as Abstract
+import MiniJuvix.Syntax.Abstract.Language as Abstract
 import MiniJuvix.Syntax.Concrete.Scoped.Name (unqualifiedSymbol)
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as Scoper
+import MiniJuvix.Termination.Error
 import MiniJuvix.Termination.FunctionCall
+import MiniJuvix.Termination.LexOrder
 import MiniJuvix.Termination.Types
+
+checkTermination ::
+  Members '[Error TerminationError] r =>
+  Abstract.TopModule ->
+  Abstract.InfoTable ->
+  Sem r ()
+checkTermination topModule infotable = do
+  let callmap = buildCallMap infotable topModule
+      completeGraph = completeCallGraph callmap
+      rEdges = reflexiveEdges completeGraph
+      recBehav = map recursiveBehaviour rEdges
+  forM_ recBehav $ \r -> do
+    let funSym = r ^. recursiveBehaviourFun
+        funName = Scoper.unqualifiedSymbol funSym
+        funRef = Abstract.FunctionRef funName
+        funInfo = HashMap.lookupDefault impossible funRef (infotable ^. Abstract.infoFunctions)
+        markedTerminating = funInfo ^. (Abstract.functionInfoDef . Abstract.funDefTerminating)
+    if
+        | markedTerminating -> return ()
+        | otherwise ->
+            case findOrder r of
+              Nothing -> throw (ErrNoLexOrder (NoLexOrder funName))
+              Just _ -> return ()
 
 buildCallMap :: InfoTable -> TopModule -> CallMap
 buildCallMap infotable = run . execState mempty . runReader infotable . checkModule

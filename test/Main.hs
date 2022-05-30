@@ -4,6 +4,7 @@ import BackendC qualified
 import Base
 import MonoJuvix qualified
 import Scope qualified
+import Termination qualified
 import TypeCheck qualified
 
 slowTests :: TestTree
@@ -17,6 +18,7 @@ fastTests =
   testGroup
     "MiniJuvix fast tests"
     [ Scope.allTests,
+      Termination.allTests,
       TypeCheck.allTests,
       MonoJuvix.allTests
     ]

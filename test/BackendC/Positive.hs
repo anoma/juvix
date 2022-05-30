@@ -44,7 +44,7 @@ testDescr PosTest {..} =
                 "WASI_SYSROOT_PATH"
 
             step "C Generation"
-            let entryPoint = EntryPoint "." (pure mainFile)
+            let entryPoint = defaultEntryPoint mainFile
             p :: MiniC.MiniCResult <- runIO (upToMiniC entryPoint)
 
             expected <- TIO.readFile expectedFile

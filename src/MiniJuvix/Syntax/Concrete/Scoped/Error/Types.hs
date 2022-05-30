@@ -247,7 +247,7 @@ makeLenses ''NotInScope
 instance ToGenericError NotInScope where
   genericError e@NotInScope {..} =
     GenericError
-      { _genericErrorLoc = (e ^. notInScopeSymbol . symbolLoc),
+      { _genericErrorLoc = e ^. notInScopeSymbol . symbolLoc,
         _genericErrorMessage = prettyError msg,
         _genericErrorIntervals = [e ^. notInScopeSymbol . symbolLoc]
       }

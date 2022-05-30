@@ -121,9 +121,10 @@ pipelineAbstract ::
 pipelineAbstract = Abstract.entryAbstract
 
 pipelineMicroJuvix ::
+  Members '[Error MiniJuvixError] r =>
   Abstract.AbstractResult ->
   Sem r MicroJuvix.MicroJuvixResult
-pipelineMicroJuvix = MicroJuvix.entryMicroJuvix
+pipelineMicroJuvix = mapError (MiniJuvixError @MicroJuvix.TerminationError) . MicroJuvix.entryMicroJuvix
 
 pipelineMicroJuvixTyped ::
   Members '[Files, NameIdGen, Error MiniJuvixError] r =>

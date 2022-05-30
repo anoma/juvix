@@ -1,4 +1,4 @@
-module Loop;
+module Mutual;
 
 axiom A : Type;
 

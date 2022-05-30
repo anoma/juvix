@@ -213,8 +213,15 @@ mconcatMap f = List.mconcatMap f . toList
 -- HashMap
 --------------------------------------------------------------------------------
 
-tableInsert :: Hashable k => (a -> v) -> (a -> v -> v) -> k -> a -> HashMap k v -> HashMap k v
-tableInsert s f k a m = over (at k) (Just . aux) m
+tableInsert ::
+  Hashable k =>
+  (a -> v) ->
+  (a -> v -> v) ->
+  k ->
+  a ->
+  HashMap k v ->
+  HashMap k v
+tableInsert s f k a = over (at k) (Just . aux)
   where
     aux = \case
       Just v -> f a v

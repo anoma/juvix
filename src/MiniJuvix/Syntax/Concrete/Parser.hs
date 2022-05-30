@@ -27,7 +27,7 @@ entryParser ::
   EntryPoint ->
   Sem r ParserResult
 entryParser e = do
-  (_resultTable, _resultModules) <- runInfoTableBuilder (runReader e (mapM goFile (e ^. entryModulePaths)))
+  (_resultTable, _resultModules) <- runInfoTableBuilder (runReader e (mapM goFile (e ^. entryPointModulePaths)))
   let _resultEntry = e
   return ParserResult {..}
   where
@@ -37,7 +37,7 @@ entryParser e = do
       Sem r (Module 'Parsed 'ModuleTop)
     goFile fileName = do
       input <- readFile' fileName
-      case runModuleParser (e ^. entryRoot) fileName input of
+      case runModuleParser (e ^. entryPointRoot) fileName input of
         Left er -> throw er
         Right (tbl, m) -> mergeTable tbl $> m
 

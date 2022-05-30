@@ -66,40 +66,62 @@ findRoot cli = do
     dir0 = takeDirectory <$> cliMainFile cli
 
 class HasEntryPoint a where
-  getEntryPoint :: FilePath -> a -> EntryPoint
+  getEntryPoint :: FilePath -> GlobalOptions -> a -> EntryPoint
 
 instance HasEntryPoint ScopeOptions where
-  getEntryPoint root = EntryPoint root . (^. scopeInputFiles)
+  getEntryPoint r opts = EntryPoint r nT . (^. scopeInputFiles)
+    where
+      nT = opts ^. globalNoTermination
 
 instance HasEntryPoint ParseOptions where
-  getEntryPoint root = EntryPoint root . pure . (^. parseInputFile)
+  getEntryPoint r opts = EntryPoint r nT . pure . (^. parseInputFile)
+    where
+      nT = opts ^. globalNoTermination
 
 instance HasEntryPoint HighlightOptions where
-  getEntryPoint root = EntryPoint root . pure . (^. highlightInputFile)
+  getEntryPoint r opts = EntryPoint r nT . pure . (^. highlightInputFile)
+    where
+      nT = opts ^. globalNoTermination
 
 instance HasEntryPoint HtmlOptions where
-  getEntryPoint root = EntryPoint root . pure . (^. htmlInputFile)
+  getEntryPoint r opts = EntryPoint r nT . pure . (^. htmlInputFile)
+    where
+      nT = opts ^. globalNoTermination
 
 instance HasEntryPoint MicroJuvixTypeOptions where
-  getEntryPoint root = EntryPoint root . pure . (^. microJuvixTypeInputFile)
+  getEntryPoint r opts = EntryPoint r nT . pure . (^. microJuvixTypeInputFile)
+    where
+      nT = opts ^. globalNoTermination
 
 instance HasEntryPoint MicroJuvixPrettyOptions where
-  getEntryPoint root = EntryPoint root . pure . (^. microJuvixPrettyInputFile)
+  getEntryPoint r opts = EntryPoint r nT . pure . (^. microJuvixPrettyInputFile)
+    where
+      nT = opts ^. globalNoTermination
 
 instance HasEntryPoint MonoJuvixOptions where
-  getEntryPoint root = EntryPoint root . pure . (^. monoJuvixInputFile)
+  getEntryPoint r opts = EntryPoint r nT . pure . (^. monoJuvixInputFile)
+    where
+      nT = opts ^. globalNoTermination
 
 instance HasEntryPoint MiniHaskellOptions where
-  getEntryPoint root = EntryPoint root . pure . (^. miniHaskellInputFile)
+  getEntryPoint r opts = EntryPoint r nT . pure . (^. miniHaskellInputFile)
+    where
+      nT = opts ^. globalNoTermination
 
 instance HasEntryPoint MiniCOptions where
-  getEntryPoint root = EntryPoint root . pure . (^. miniCInputFile)
+  getEntryPoint r opts = EntryPoint r nT . pure . (^. miniCInputFile)
+    where
+      nT = opts ^. globalNoTermination
 
 instance HasEntryPoint CallsOptions where
-  getEntryPoint root = EntryPoint root . pure . (^. callsInputFile)
+  getEntryPoint r opts = EntryPoint r nT . pure . (^. callsInputFile)
+    where
+      nT = opts ^. globalNoTermination
 
 instance HasEntryPoint CallGraphOptions where
-  getEntryPoint root = EntryPoint root . pure . (^. graphInputFile)
+  getEntryPoint r opts = EntryPoint r nT . pure . (^. graphInputFile)
+    where
+      nT = opts ^. globalNoTermination
 
 runCLI :: Members '[Embed IO, App] r => CLI -> Sem r ()
 runCLI cli = do
@@ -111,7 +133,7 @@ runCLI cli = do
     DisplayVersion -> embed runDisplayVersion
     DisplayRoot -> say (pack root)
     Highlight o -> do
-      res <- runPipelineEither (upToScoping (getEntryPoint root o))
+      res <- runPipelineEither (upToScoping (getEntryPoint root globalOptions o))
       absP <- embed (makeAbsolute (o ^. highlightInputFile))
       case res of
         Left err -> say (Highlight.goError (errorIntervals err))
@@ -128,25 +150,27 @@ runCLI cli = do
                     }
           say (Highlight.go hinput)
     Parse opts -> do
-      m <- head . (^. Parser.resultModules) <$> runPipeline (upToParsing (getEntryPoint root opts))
+      m <-
+        head . (^. Parser.resultModules)
+          <$> runPipeline (upToParsing (getEntryPoint root globalOptions opts))
       if opts ^. parseNoPrettyShow then say (show m) else say (pack (ppShow m))
     Scope opts -> do
-      l <- (^. Scoper.resultModules) <$> runPipeline (upToScoping (getEntryPoint root opts))
+      l <- (^. Scoper.resultModules) <$> runPipeline (upToScoping (getEntryPoint root globalOptions opts))
       forM_ l $ \s -> do
         renderStdOut (Scoper.ppOut (mkScopePrettyOptions globalOptions opts) s)
     Html o@HtmlOptions {..} -> do
-      res <- runPipeline (upToScoping (getEntryPoint root o))
+      res <- runPipeline (upToScoping (getEntryPoint root globalOptions o))
       let m = head (res ^. Scoper.resultModules)
       embed (genHtml Scoper.defaultOptions _htmlRecursive _htmlTheme m)
     MicroJuvix (Pretty opts) -> do
-      micro <- head . (^. Micro.resultModules) <$> runPipeline (upToMicroJuvix (getEntryPoint root opts))
+      micro <- head . (^. Micro.resultModules) <$> runPipeline (upToMicroJuvix (getEntryPoint root globalOptions opts))
       let ppOpts =
             Micro.defaultOptions
               { Micro._optShowNameId = globalOptions ^. globalShowNameIds
               }
       App.renderStdOut (Micro.ppOut ppOpts micro)
     MicroJuvix (TypeCheck opts) -> do
-      res <- runPipeline (upToMicroJuvixTyped (getEntryPoint root opts))
+      res <- runPipeline (upToMicroJuvixTyped (getEntryPoint root globalOptions opts))
       say "Well done! It type checks"
       when (opts ^. microJuvixTypePrint) $ do
         let ppOpts =
@@ -166,16 +190,16 @@ runCLI cli = do
             Mono.defaultOptions
               { Mono._optShowNameIds = globalOptions ^. globalShowNameIds
               }
-      monojuvix <- head . (^. Mono.resultModules) <$> runPipeline (upToMonoJuvix (getEntryPoint root o))
+      monojuvix <- head . (^. Mono.resultModules) <$> runPipeline (upToMonoJuvix (getEntryPoint root globalOptions o))
       renderStdOut (Mono.ppOut ppOpts monojuvix)
     MiniHaskell o -> do
-      minihaskell <- head . (^. MiniHaskell.resultModules) <$> runPipeline (upToMiniHaskell (getEntryPoint root o))
+      minihaskell <- head . (^. MiniHaskell.resultModules) <$> runPipeline (upToMiniHaskell (getEntryPoint root globalOptions o))
       renderStdOut (MiniHaskell.ppOutDefault minihaskell)
     MiniC o -> do
-      miniC <- (^. MiniC.resultCCode) <$> runPipeline (upToMiniC (getEntryPoint root o))
+      miniC <- (^. MiniC.resultCCode) <$> runPipeline (upToMiniC (getEntryPoint root globalOptions o))
       say miniC
     Termination (Calls opts@CallsOptions {..}) -> do
-      results <- runPipeline (upToAbstract (getEntryPoint root opts))
+      results <- runPipeline (upToAbstract (getEntryPoint root globalOptions opts))
       let topModule = head (results ^. Abstract.resultModules)
           infotable = results ^. Abstract.resultTable
           callMap0 = Termination.buildCallMap infotable topModule
@@ -186,7 +210,7 @@ runCLI cli = do
       renderStdOut (Abstract.ppOut opts' callMap)
       newline
     Termination (CallGraph opts@CallGraphOptions {..}) -> do
-      results <- runPipeline (upToAbstract (getEntryPoint root opts))
+      results <- runPipeline (upToAbstract (getEntryPoint root globalOptions opts))
       let topModule = head (results ^. Abstract.resultModules)
           infotable = results ^. Abstract.resultTable
           callMap = Termination.buildCallMap infotable topModule

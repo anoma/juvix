@@ -26,5 +26,5 @@ instance ToGenericError NoLexOrder where
 
       msg :: Doc Eann
       msg =
-        "The function" <+> pretty (Scoped.nameUnqualifiedText name)
+        "The function" <+> highlight (pretty (Scoped.nameUnqualifiedText name))
           <+> "fails the termination checker."

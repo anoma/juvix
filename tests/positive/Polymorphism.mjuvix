@@ -23,6 +23,7 @@ inductive Bool {
 id : (A : Type) → A → A;
 id _ a ≔ a;
 
+terminating
 undefined : (A : Type) → A;
 undefined A ≔ undefined A;
 

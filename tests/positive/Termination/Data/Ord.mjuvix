@@ -1,7 +1,0 @@
-module Data.Ord;
-    inductive Ordering {
-      LT : Ordering;
-      EQ : Ordering;
-      GT : Ordering;
-    };
-end;

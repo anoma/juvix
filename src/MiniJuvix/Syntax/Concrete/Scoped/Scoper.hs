@@ -34,7 +34,7 @@ entryScoper ::
   ParserResult ->
   Sem r ScoperResult
 entryScoper pr = do
-  let root = pr ^. Parser.resultEntry . entryRoot
+  let root = pr ^. Parser.resultEntry . entryPointRoot
       modules = pr ^. Parser.resultModules
   scopeCheck pr root modules
 

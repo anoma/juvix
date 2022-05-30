@@ -1,0 +1,20 @@
+module Ord;
+
+import Data.Nat;
+open Data.Nat;
+
+inductive Ord {
+  ZOrd : Ord;
+  SOrd : Ord -> Ord;
+  Lim  : (ℕ -> Ord) -> Ord;
+};
+
+addord : Ord -> Ord -> Ord;
+aux-addord : (ℕ -> Ord) -> Ord -> (ℕ -> Ord);
+
+addord (Zord)   y := y;
+addord (SOrd x) y := SOrd (addord x y);
+addord (Lim f)  y := Lim (aux-addord f y);
+aux-addord f y z := addord (f z) y;
+
+end;

@@ -19,7 +19,7 @@ testDescr PosTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = EntryPoint "." (pure _file)
+            let entryPoint = defaultEntryPoint _file
             (void . runIO) (upToMonoJuvix entryPoint)
         }
 

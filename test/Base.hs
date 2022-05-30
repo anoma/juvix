@@ -44,7 +44,10 @@ assertEqDiff msg a b
     pb = lines $ ppShow b
 
 assertCmdExists :: FilePath -> Assertion
-assertCmdExists cmd = assertBool ("Command: " <> cmd <> " is not present on $PATH") . isJust =<< findExecutable cmd
+assertCmdExists cmd =
+  assertBool ("Command: " <> cmd <> " is not present on $PATH")
+    . isJust
+    =<< findExecutable cmd
 
 assertEnvVar :: String -> String -> IO String
 assertEnvVar msg varName = fromMaybeM (assertFailure msg) (lookupEnv varName)

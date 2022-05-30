@@ -252,7 +252,7 @@ checkPattern ::
   FunctionArgType ->
   Pattern ->
   Sem r ()
-checkPattern funName type_ pat = go type_ pat
+checkPattern funName = go
   where
     go :: FunctionArgType -> Pattern -> Sem r ()
     go argTy p = do

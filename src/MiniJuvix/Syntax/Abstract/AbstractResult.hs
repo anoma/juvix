@@ -4,9 +4,11 @@ module MiniJuvix.Syntax.Abstract.AbstractResult
   )
 where
 
+import MiniJuvix.Pipeline.EntryPoint qualified as E
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.InfoTable
 import MiniJuvix.Syntax.Abstract.Language
+import MiniJuvix.Syntax.Concrete.Parser.ParserResult
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper.ScoperResult
 
 data AbstractResult = AbstractResult
@@ -16,3 +18,6 @@ data AbstractResult = AbstractResult
   }
 
 makeLenses ''AbstractResult
+
+abstractResultEntryPoint :: Lens' AbstractResult E.EntryPoint
+abstractResultEntryPoint = resultScoper . resultParserResult . resultEntry

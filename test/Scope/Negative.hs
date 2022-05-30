@@ -23,7 +23,7 @@ testDescr NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = EntryPoint "." (pure _file)
+            let entryPoint = defaultEntryPoint _file
             res <- runIOEither (upToScoping entryPoint)
             case mapLeft fromMiniJuvixError res of
               Left (Just err) -> whenJust (_checkErr err) assertFailure
