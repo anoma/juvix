@@ -11,9 +11,11 @@ module Command
     module Commands.Parse,
     module Commands.Scope,
     module Commands.Termination,
+    module Commands.Compile,
   )
 where
 
+import Commands.Compile
 import Commands.Extra
 import Commands.Html
 import Commands.MicroJuvix
@@ -35,6 +37,7 @@ data Command
   | Termination TerminationCommand
   | MiniHaskell MiniHaskellOptions
   | MiniC MiniCOptions
+  | Compile CompileOptions
   | MicroJuvix MicroJuvixCommand
   | MonoJuvix MonoJuvixOptions
   | DisplayVersion
@@ -85,6 +88,7 @@ parseCommand =
             commandMicroJuvix,
             commandMiniHaskell,
             commandMiniC,
+            commandCompile,
             commandHighlight
           ]
       )
@@ -124,6 +128,15 @@ parseCommand =
           info
             (MiniC <$> parseMiniC)
             (progDesc "Translate a MiniJuvix file to MiniC")
+
+    commandCompile :: Mod CommandFields Command
+    commandCompile = command "compile" minfo
+      where
+        minfo :: ParserInfo Command
+        minfo =
+          info
+            (Compile <$> parseCompile)
+            (progDesc "Compile a MiniJuvix file")
 
     commandHighlight :: Mod CommandFields Command
     commandHighlight = command "highlight" minfo

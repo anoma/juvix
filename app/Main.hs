@@ -113,6 +113,11 @@ instance HasEntryPoint MiniCOptions where
     where
       nT = opts ^. globalNoTermination
 
+instance HasEntryPoint CompileOptions where
+  getEntryPoint r opts = EntryPoint r nT . pure . (^. compileInputFile)
+    where
+      nT = opts ^. globalNoTermination
+
 instance HasEntryPoint CallsOptions where
   getEntryPoint r opts = EntryPoint r nT . pure . (^. callsInputFile)
     where
@@ -198,6 +203,12 @@ runCLI cli = do
     MiniC o -> do
       miniC <- (^. MiniC.resultCCode) <$> runPipeline (upToMiniC (getEntryPoint root globalOptions o))
       say miniC
+    Compile o -> do
+      miniC <- (^. MiniC.resultCCode) <$> runPipeline (upToMiniC (getEntryPoint root globalOptions o))
+      result <- embed (runCompile root o miniC)
+      case result of
+        Left err -> say ("Error: " <> err)
+        _ -> return ()
     Termination (Calls opts@CallsOptions {..}) -> do
       results <- runPipeline (upToAbstract (getEntryPoint root globalOptions opts))
       let topModule = head (results ^. Abstract.resultModules)

@@ -39,6 +39,7 @@ cliMainFile = aux . (^. cliCommand)
       MiniHaskell s -> Just (s ^. miniHaskellInputFile)
       Highlight s -> Just (s ^. highlightInputFile)
       MiniC s -> Just (s ^. miniCInputFile)
+      Compile s -> Just (s ^. compileInputFile)
       MicroJuvix (TypeCheck s) -> Just (s ^. microJuvixTypeInputFile)
       MicroJuvix (Pretty s) -> Just (s ^. microJuvixPrettyInputFile)
       MonoJuvix s -> Just (s ^. monoJuvixInputFile)
@@ -58,6 +59,7 @@ makeAbsPaths = traverseOf cliCommand aux
       MiniHaskell s -> MiniHaskell <$> traverseOf miniHaskellInputFile makeAbsolute s
       Highlight s -> Highlight <$> traverseOf highlightInputFile makeAbsolute s
       MiniC s -> MiniC <$> traverseOf miniCInputFile makeAbsolute s
+      Compile s -> Compile <$> traverseOf compileInputFile makeAbsolute s
       MicroJuvix (TypeCheck s) -> MicroJuvix . TypeCheck <$> traverseOf microJuvixTypeInputFile makeAbsolute s
       MicroJuvix (Pretty s) -> MicroJuvix . Pretty <$> traverseOf microJuvixPrettyInputFile makeAbsolute s
       MonoJuvix s -> MonoJuvix <$> traverseOf monoJuvixInputFile makeAbsolute s
