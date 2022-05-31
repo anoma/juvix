@@ -150,30 +150,25 @@ clangCompile projRoot o = do
 
 standaloneArgs :: FilePath -> FilePath -> FilePath -> [String]
 standaloneArgs sysrootPath wasmOutputFile inputFile =
-  [ "-nodefaultlibs",
-    "-I",
-    minijuvixBuildDir,
-    "--target=wasm32-wasi",
-    "--sysroot",
-    sysrootPath,
-    "-o",
-    wasmOutputFile,
-    minijuvixBuildDir </> "walloc.c",
-    inputFile
-  ]
+  commonArgs sysrootPath wasmOutputFile
+    <> [minijuvixBuildDir </> "walloc.c", inputFile]
 
 libcArgs :: FilePath -> FilePath -> FilePath -> [String]
 libcArgs sysrootPath wasmOutputFile inputFile =
+  commonArgs sysrootPath wasmOutputFile
+    <> ["-lc", inputFile]
+
+commonArgs :: FilePath -> FilePath -> [String]
+commonArgs sysrootPath wasmOutputFile =
   [ "-nodefaultlibs",
+    "-Oz",
     "-I",
     minijuvixBuildDir,
-    "-lc",
     "--target=wasm32-wasi",
     "--sysroot",
     sysrootPath,
     "-o",
-    wasmOutputFile,
-    inputFile
+    wasmOutputFile
   ]
 
 runClang ::
