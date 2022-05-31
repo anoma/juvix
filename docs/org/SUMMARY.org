@@ -3,7 +3,7 @@
 - [[./introduction/about/what-is.md][MiniJuvix]]
 - [[./introduction/changelog.md][Changelog]]
 - [[./introduction/getting-started.md][Getting started]]
-- [[./examples/README.md][Examples]]
+- [[./examples/README.md][Tutorials]]
   - [[./examples/backend-specific/minic-hello-world.md][Hello world]]
   - [[./examples/validity-predicates/PolyFungibleToken.md][A simple fungible token]]
 
@@ -11,8 +11,8 @@
   - [[./language-reference/comments.md][Comments]]
   - [[./language-reference/axiom.md][Axiom]]
   - [[./language-reference/functions.md][Function]]
-  - [[./language-reference/modules.md][Module System]]
-  - [[./language-reference/inductive-data-types.md][Inductive data type]]
+  - [[./language-reference/modules.md][Module]]
+  - [[./language-reference/inductive-data-types.md][Data type]]
   - [[./language-reference/termination-checking.md][Termination checking]]
   - [[./language-reference/compile-blocks.md][Compile block]]
   - [[./language-reference/foreign-blocks.md][Foreign block]]
@@ -32,7 +32,8 @@
   - [[./tools/testing.md][Haskell test suite]]
 
 - [[./notes/README.md][Blog]]
-  - [[./notes/Monomorphization.md][Monomorphization]]
+  - [[./examples/validity-predicates/README.md][Validity predicates]]
+  - [[./notes/monomorphization.md][Monomorphization]]
 
 - [[./introduction/about/what-is.md][About]]
   - [[./introduction/about/team.md][The dev team]]

@@ -2,6 +2,6 @@
 
 ** Languages
 
-- [[./compiler-architecture/language/abstract.md][Abstract Language]]
-- [[./compiler-architecture/language/concrete.md][Concrete language]]
-- [[./compiler-architecture/language/microjuvix.md][MicroJuvix Language]]
+- [[./language/abstract.md][Abstract Language]]
+- [[./language/concrete.md][Concrete language]]
+- [[./language/microjuvix.md][MicroJuvix Language]]

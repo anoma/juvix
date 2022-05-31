@@ -1,1 +1,1 @@
-# Inductive data types
+* Inductive data types

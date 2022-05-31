@@ -15,4 +15,4 @@ end;
 
 Terms introduced by the =axiom= keyword lack of any computational content. However,
 it is possible to attach a computational content to an axiom by giving compilation rules,
-see [[./language-reference/compile-blocks.md][Compile blocks]].
+see [[./compile-blocks.md][Compile blocks]].
