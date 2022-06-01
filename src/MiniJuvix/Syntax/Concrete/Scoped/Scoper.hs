@@ -1113,8 +1113,21 @@ checkExpressionAtom e = case e of
   AtomFunction fun -> AtomFunction <$> checkFunction fun
   AtomParens par -> AtomParens <$> checkParens par
   AtomFunArrow -> return AtomFunArrow
+  AtomHole h -> AtomHole <$> checkHole h
   AtomLiteral l -> return (AtomLiteral l)
   AtomMatch match -> AtomMatch <$> checkMatch match
+
+checkHole ::
+  Members '[NameIdGen] r =>
+  HoleType 'Parsed ->
+  Sem r Hole
+checkHole h = do
+  i <- freshNameId
+  return
+    Hole
+      { _holeId = i,
+        _holeLoc = h
+      }
 
 checkParens ::
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
@@ -1306,12 +1319,21 @@ parseTerm =
     parseUniverse
       <|> parseNoInfixIdentifier
       <|> parseParens
+      <|> parseHole
       <|> parseFunction
       <|> parseLambda
       <|> parseLiteral
       <|> parseMatch
       <|> parseLetBlock
   where
+    parseHole :: Parse Expression
+    parseHole = ExpressionHole <$> P.token lit mempty
+      where
+        lit :: ExpressionAtom 'Scoped -> Maybe Hole
+        lit s = case s of
+          AtomHole l -> Just l
+          _ -> Nothing
+
     parseLiteral :: Parse Expression
     parseLiteral = ExpressionLiteral <$> P.token lit mempty
       where

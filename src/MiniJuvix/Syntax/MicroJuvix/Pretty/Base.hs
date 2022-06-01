@@ -75,6 +75,7 @@ instance PrettyCode FunctionExpression where
 instance PrettyCode Expression where
   ppCode = \case
     ExpressionIden i -> ppCode i
+    ExpressionHole h -> ppCode h
     ExpressionApplication a -> ppCode a
     ExpressionTyped a -> ppCode a
     ExpressionFunction f -> ppCode f
@@ -118,6 +119,9 @@ kwColonColon = keyword (Str.colon <> Str.colon)
 
 kwPipe :: Doc Ann
 kwPipe = keyword Str.pipe
+
+kwHole :: Doc Ann
+kwHole = keyword Str.underscore
 
 kwAxiom :: Doc Ann
 kwAxiom = keyword Str.axiom
@@ -167,6 +171,9 @@ instance PrettyCode FunctionArgType where
     FunctionArgTypeType t -> ppCode t
     FunctionArgTypeAbstraction v -> ppCode v
 
+instance PrettyCode Hole where
+  ppCode _ = return kwHole
+
 instance PrettyCode Type where
   ppCode = \case
     TypeIden i -> ppCode i
@@ -175,6 +182,7 @@ instance PrettyCode Type where
     TypeAny -> return kwAny
     TypeApp a -> ppCode a
     TypeAbs a -> ppCode a
+    TypeHole h -> ppCode h
 
 instance PrettyCode InductiveConstructorDef where
   ppCode c = do

@@ -97,6 +97,7 @@ goType = \case
   TypeIden {} -> return ()
   TypeApp a -> goTypeApplication a
   TypeAny -> return ()
+  TypeHole {} -> impossible
   TypeUniverse -> return ()
   TypeFunction f -> goFunction f
   TypeAbs a -> goTypeAbstraction a
@@ -115,6 +116,7 @@ goExpression = \case
   ExpressionApplication a -> goApplication a
   ExpressionFunction a -> goFunctionExpression a
   ExpressionLiteral {} -> return ()
+  ExpressionHole {} -> impossible
   ExpressionTyped t -> do
     goType (t ^. typedType)
     goExpression (t ^. typedExpression)

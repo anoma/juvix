@@ -1,0 +1,105 @@
+module PolymorphismHoles;
+
+inductive Pair (A : Type) (B : Type) {
+ mkPair : A → B → Pair A B;
+};
+
+inductive Nat {
+ zero : Nat;
+ suc : Nat → Nat;
+};
+
+inductive List (A : Type) {
+ nil : List A;
+ -- TODO check that the return type is saturated with the proper variable
+ cons : A → List A → Nat;
+};
+
+inductive Bool {
+ false : Bool;
+ true : Bool;
+};
+
+id : (A : Type) → A → A;
+id _ a ≔ a;
+
+terminating
+undefined : (A : Type) → A;
+undefined A ≔ undefined A;
+
+add : Nat → Nat → Nat;
+add zero b ≔ b;
+add (suc a) b ≔ suc (add a b);
+
+nil' : (E : Type) → List E;
+nil' A ≔ nil _;
+
+-- currying
+nil'' : (E : Type) → List E;
+nil'' ≔ nil;
+
+fst : (A : Type) → (B : Type) → Pair A B → A;
+fst _ _ (mkPair a b) ≔ a;
+
+p : Pair Bool Bool;
+p ≔ mkPair _ _ true false;
+
+swap : (A : Type) → (B : Type) → Pair A B → Pair B A;
+swap A B (mkPair a b) ≔ mkPair _ _ b a;
+
+curry : (A : Type) → (B : Type) → (C : Type)
+  → (Pair A B → C) → A → B → C;
+curry A B C f a b ≔ f (mkPair _ _ a b) ;
+
+ap : (A : Type) → (B : Type)
+  → (A → B) → A → B;
+ap A B f a ≔ f a;
+
+headDef : (A : Type) → A → List A → A;
+headDef _ d nil ≔ d;
+headDef A _ (cons h _) ≔ h;
+
+ite : (A : Type) → Bool → A → A → A;
+ite _ true tt _ ≔ tt;
+ite _ false _ ff ≔ ff;
+
+filter : (A : Type) → (A → Bool) → List A → List A;
+filter _ f nil ≔ nil _;
+filter _ f (cons x xs) ≔ ite _ (f x) (cons _ x (filter _ f xs)) (filter _ f xs);
+
+map : (A : Type) → (B : Type) →
+  (A → B) → List A → List B;
+map _ _ f nil ≔ nil _;
+map _ _ f (cons x xs) ≔ cons _ (f x) (map _ _ f xs);
+
+zip : (A : Type) → (B : Type)
+    → List A → List B → List (Pair A B);
+zip A _ nil _ ≔ nil _;
+zip _ _ _ nil ≔ nil _;
+zip _ _ (cons a as) (cons b bs) ≔ nil _;
+
+zipWith : (A : Type) → (B : Type) → (C : Type)
+  → (A → B → C)
+  → List A → List B → List C;
+zipWith _ _ C f nil _ ≔ nil C;
+zipWith _ _ C f _ nil ≔ nil C;
+zipWith _ _ _ f (cons a as) (cons b bs) ≔ cons _ (f a b) (zipWith _ _ _ f as bs);
+
+rankn : ((A : Type) → A → A) → Bool → Nat → Pair Bool Nat;
+rankn f b n ≔ mkPair _ _ (f _ b) (f _ n);
+
+-- currying
+trankn : Pair Bool Nat;
+trankn ≔ rankn id false zero;
+
+l1 : List Nat;
+l1 ≔ cons _ zero (nil _);
+
+pairEval : (A : Type) → (B : Type) → Pair (A → B) A → B;
+pairEval _ _ (mkPair f x) ≔ f x;
+
+main : Nat;
+main ≔ headDef _ (pairEval _ _ (mkPair _ _ (add zero) zero))
+   (zipWith _ _ _ add l1 l1);
+
+end;

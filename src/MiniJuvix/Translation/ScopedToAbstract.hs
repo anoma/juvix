@@ -182,12 +182,13 @@ goExpression = \case
   ExpressionApplication a -> A.ExpressionApplication <$> goApplication a
   ExpressionInfixApplication ia -> A.ExpressionApplication <$> goInfix ia
   ExpressionPostfixApplication pa -> A.ExpressionApplication <$> goPostfix pa
-  ExpressionLiteral l -> return $ A.ExpressionLiteral l
+  ExpressionLiteral l -> return (A.ExpressionLiteral l)
   ExpressionLambda {} -> unsupported "Lambda"
   ExpressionMatch {} -> unsupported "Match"
   ExpressionLetBlock {} -> unsupported "Let Block"
   ExpressionUniverse uni -> return $ A.ExpressionUniverse (goUniverse uni)
   ExpressionFunction func -> A.ExpressionFunction <$> goFunction func
+  ExpressionHole h -> return (A.ExpressionHole h)
   where
     goIden :: C.ScopedIden -> A.Expression
     goIden x = A.ExpressionIden $ case x of

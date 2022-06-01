@@ -5,6 +5,7 @@ module MiniJuvix.Syntax.Concrete.Language
     module MiniJuvix.Syntax.Concrete.Name,
     module MiniJuvix.Syntax.Concrete.Scoped.NameRef,
     module MiniJuvix.Syntax.Concrete.Loc,
+    module MiniJuvix.Syntax.Hole,
     module MiniJuvix.Syntax.Concrete.LiteralLoc,
     module MiniJuvix.Syntax.Backends,
     module MiniJuvix.Syntax.ForeignBlock,
@@ -34,6 +35,7 @@ import MiniJuvix.Syntax.Concrete.Scoped.NameRef
 import MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.ForeignBlock
+import MiniJuvix.Syntax.Hole
 import MiniJuvix.Syntax.Universe
 import MiniJuvix.Syntax.Usage
 import Prelude (show)
@@ -56,6 +58,11 @@ type IdentifierType :: Stage -> GHC.Type
 type family IdentifierType s = res | res -> s where
   IdentifierType 'Parsed = Name
   IdentifierType 'Scoped = ScopedIden
+
+type HoleType :: Stage -> GHC.Type
+type family HoleType s = res | res -> s where
+  HoleType 'Parsed = Interval
+  HoleType 'Scoped = Hole
 
 type PatternAtomIdenType :: Stage -> GHC.Type
 type family PatternAtomIdenType s = res | res -> s where
@@ -534,11 +541,13 @@ data Expression
   | ExpressionUniverse Universe
   | ExpressionLiteral LiteralLoc
   | ExpressionFunction (Function 'Scoped)
+  | ExpressionHole (HoleType 'Scoped)
   deriving stock (Show, Eq, Ord)
 
 instance HasAtomicity Expression where
   atomicity e = case e of
     ExpressionIdentifier {} -> Atom
+    ExpressionHole {} -> Atom
     ExpressionParensIdentifier {} -> Atom
     ExpressionApplication {} -> Aggregate appFixity
     ExpressionInfixApplication a -> Aggregate (getFixity a)
@@ -902,6 +911,7 @@ deriving stock instance
 data ExpressionAtom (s :: Stage)
   = AtomIdentifier (IdentifierType s)
   | AtomLambda (Lambda s)
+  | AtomHole (HoleType s)
   | AtomLetBlock (LetBlock s)
   | AtomUniverse Universe
   | AtomFunction (Function s)
@@ -1004,6 +1014,7 @@ deriving stock instance
   ( Show (ExpressionType s),
     Show (IdentifierType s),
     Show (ModuleRefType s),
+    Show (HoleType s),
     Show (SymbolType s),
     Show (PatternType s)
   ) =>
@@ -1012,6 +1023,7 @@ deriving stock instance
 deriving stock instance
   ( Eq (ExpressionType s),
     Eq (IdentifierType s),
+    Eq (HoleType s),
     Eq (ModuleRefType s),
     Eq (SymbolType s),
     Eq (PatternType s)
@@ -1022,6 +1034,7 @@ deriving stock instance
   ( Ord (ExpressionType s),
     Ord (IdentifierType s),
     Ord (ModuleRefType s),
+    Ord (HoleType s),
     Ord (SymbolType s),
     Ord (PatternType s)
   ) =>
@@ -1031,6 +1044,7 @@ deriving stock instance
   ( Show (ExpressionType s),
     Show (IdentifierType s),
     Show (ModuleRefType s),
+    Show (HoleType s),
     Show (SymbolType s),
     Show (PatternType s)
   ) =>
@@ -1050,6 +1064,7 @@ instance
   ( Eq (ExpressionType s),
     Eq (IdentifierType s),
     Eq (ModuleRefType s),
+    Eq (HoleType s),
     Eq (SymbolType s),
     Eq (PatternType s)
   ) =>
@@ -1061,6 +1076,7 @@ instance
   ( Ord (ExpressionType s),
     Ord (IdentifierType s),
     Ord (ModuleRefType s),
+    Ord (HoleType s),
     Ord (SymbolType s),
     Ord (PatternType s)
   ) =>

@@ -48,6 +48,10 @@ tests =
       "MiniHaskell"
       "HelloWorld.mjuvix",
     PosTest
+      "PolySimpleFungibleToken with explicit holes"
+      "FullExamples"
+      "PolySimpleFungibleTokenHoles.mjuvix",
+    PosTest
       "GHC backend MonoSimpleFungibleToken"
       "FullExamples"
       "MonoSimpleFungibleToken.mjuvix",
@@ -66,5 +70,9 @@ tests =
     PosTest
       "Polymorphism and higher rank functions"
       "."
-      "Polymorphism.mjuvix"
+      "Polymorphism.mjuvix",
+    PosTest
+      "Polymorphism and higher rank functions with explicit holes"
+      "."
+      "PolymorphismHoles.mjuvix"
   ]

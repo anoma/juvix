@@ -447,14 +447,17 @@ instance PrettyCode Name where
     NameUnqualified s -> ppSymbol s
     NameQualified s -> ppCode s
 
+nameIdSuffix :: Members '[Reader Options] r => S.NameId -> Sem r (Maybe (Doc Ann))
+nameIdSuffix nid = do
+  showNameId <- asks (^. optShowNameId)
+  if
+      | showNameId -> Just . ("@" <>) <$> ppCode nid
+      | otherwise -> return Nothing
+
 instance PrettyCode n => PrettyCode (S.Name' n) where
   ppCode S.Name' {..} = do
     nameConcrete' <- annotateKind _nameKind <$> ppCode _nameConcrete
-    showNameId <- asks (^. optShowNameId)
-    uid <-
-      if
-          | showNameId -> Just . ("@" <>) <$> ppCode _nameId
-          | otherwise -> return Nothing
+    uid <- nameIdSuffix _nameId
     return $ annSRef (nameConcrete' <?> uid)
     where
       annSRef :: Doc Ann -> Doc Ann
@@ -706,6 +709,7 @@ instance PrettyCode ScopedIden where
 instance PrettyCode Expression where
   ppCode e = case e of
     ExpressionIdentifier n -> ppCode n
+    ExpressionHole w -> ppHole w
     ExpressionParensIdentifier n -> parens <$> ppCode n
     ExpressionApplication a -> ppCode a
     ExpressionInfixApplication a -> ppCode a
@@ -783,8 +787,18 @@ ppCodeAtom c = do
   p' <- ppCode c
   return $ if isAtomic c then p' else parens p'
 
+ppHole :: forall s r. (Members '[Reader Options] r, SingI s) => HoleType s -> Sem r (Doc Ann)
+ppHole w = case sing :: SStage s of
+  SParsed -> return kwWildcard
+  SScoped -> ppCode w
+
+instance PrettyCode Hole where
+  ppCode h = do
+    suff <- nameIdSuffix (h ^. holeId)
+    return (kwWildcard <?> suff)
+
 instance SingI s => PrettyCode (ExpressionAtom s) where
-  ppCode a = case a of
+  ppCode = \case
     AtomIdentifier n -> ppName n
     AtomLambda l -> ppCode l
     AtomLetBlock lb -> ppCode lb
@@ -794,6 +808,7 @@ instance SingI s => PrettyCode (ExpressionAtom s) where
     AtomFunArrow -> return kwArrowR
     AtomMatch m -> ppCode m
     AtomParens e -> parens <$> ppExpression e
+    AtomHole w -> ppHole w
 
 instance SingI s => PrettyCode (ExpressionAtoms s) where
   ppCode as = hsep . toList <$> mapM ppCode (as ^. expressionAtoms)

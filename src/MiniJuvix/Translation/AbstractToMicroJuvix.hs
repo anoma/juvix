@@ -215,6 +215,7 @@ goType e = case e of
   Abstract.ExpressionApplication a -> TypeApp <$> goTypeApplication a
   Abstract.ExpressionFunction f -> goFunction f
   Abstract.ExpressionLiteral {} -> unsupported "literals in types"
+  Abstract.ExpressionHole h -> return (TypeHole h)
 
 goApplication :: Abstract.Application -> Sem r Application
 goApplication (Abstract.Application f x) = do
@@ -249,6 +250,7 @@ goExpression e = case e of
   Abstract.ExpressionFunction f -> ExpressionFunction <$> goExpressionFunction f
   Abstract.ExpressionApplication a -> ExpressionApplication <$> goApplication a
   Abstract.ExpressionLiteral l -> return (ExpressionLiteral l)
+  Abstract.ExpressionHole h -> return (ExpressionHole h)
 
 goInductiveParameter :: Abstract.FunctionParameter -> Sem r InductiveParameter
 goInductiveParameter f =
@@ -302,6 +304,7 @@ viewConstructorType :: Abstract.Expression -> Sem r ([Type], Type)
 viewConstructorType e = case e of
   Abstract.ExpressionFunction f -> first toList <$> viewFunctionType f
   Abstract.ExpressionIden i -> return ([], TypeIden (goTypeIden i))
+  Abstract.ExpressionHole {} -> unsupported "holes in constructor type"
   Abstract.ExpressionApplication a -> do
     a' <- goTypeApplication a
     return ([], TypeApp a')

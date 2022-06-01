@@ -292,6 +292,7 @@ goExpression = go
       Micro.ExpressionTyped t -> go (t ^. Micro.typedExpression)
       Micro.ExpressionApplication a -> goApp a
       Micro.ExpressionFunction {} -> impossible
+      Micro.ExpressionHole {} -> impossible
     goApp :: Micro.Application -> Sem r Expression
     goApp a = do
       let (f, args) = Micro.unfoldApplication a
@@ -499,6 +500,7 @@ goType = go . (^. Micro.unconcreteType)
       Micro.TypeAny -> return TypeAny
       Micro.TypeUniverse -> return TypeUniverse
       Micro.TypeAbs {} -> impossible
+      Micro.TypeHole {} -> impossible
       Micro.TypeFunction f -> TypeFunction <$> goFunction f
       Micro.TypeApp a -> goApp a
     goApp :: Micro.TypeApplication -> Sem r Type

@@ -146,6 +146,7 @@ allKeywords =
     kwEval,
     kwForeign,
     kwHiding,
+    kwHole,
     kwImport,
     kwIn,
     kwInductive,
@@ -274,6 +275,9 @@ kwUsing = keyword Str.using
 
 kwWhere :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwWhere = keyword Str.where_
+
+kwHole :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
+kwHole = keyword Str.underscore
 
 kwWildcard :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwWildcard = keyword Str.underscore

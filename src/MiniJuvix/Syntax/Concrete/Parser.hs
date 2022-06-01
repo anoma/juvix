@@ -185,6 +185,7 @@ expressionAtom =
     <|> (AtomMatch <$> match)
     <|> (AtomLetBlock <$> letBlock)
     <|> (AtomFunArrow <$ kwRightArrow)
+    <|> (AtomHole <$> hole)
     <|> parens (AtomParens <$> parseExpressionAtoms)
 
 parseExpressionAtoms ::
@@ -193,6 +194,13 @@ parseExpressionAtoms ::
 parseExpressionAtoms = do
   (_expressionAtoms, _expressionAtomsLoc) <- interval (P.some expressionAtom)
   return ExpressionAtoms {..}
+
+--------------------------------------------------------------------------------
+-- Holes
+--------------------------------------------------------------------------------
+
+hole :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (HoleType 'Parsed)
+hole = snd <$> interval kwHole
 
 --------------------------------------------------------------------------------
 -- Literals

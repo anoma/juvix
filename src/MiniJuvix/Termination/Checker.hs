@@ -94,6 +94,7 @@ checkExpression e =
       ExpressionApplication a -> checkApplication a
       ExpressionFunction f -> checkFunction f
       ExpressionIden {} -> return ()
+      ExpressionHole {} -> return ()
       ExpressionUniverse {} -> return ()
       ExpressionLiteral {} -> return ()
 

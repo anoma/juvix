@@ -1,6 +1,6 @@
-* Monomorphization
+#+author: Jan Mas Rovira
 
-/By Jan Mais Rovira/
+* Monomorphization
 
  Monomorphization refers to the process of converting polymorphic code to
  monomorphic code (no type variables) through static analysis.

@@ -3,6 +3,7 @@ module MiniJuvix.Syntax.MicroJuvix.Language
     module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind,
     module MiniJuvix.Syntax.Concrete.Scoped.Name,
     module MiniJuvix.Syntax.Concrete.Loc,
+    module MiniJuvix.Syntax.Hole,
   )
 where
 
@@ -13,6 +14,7 @@ import MiniJuvix.Syntax.Concrete.Scoped.Name (NameId (..))
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.ForeignBlock
+import MiniJuvix.Syntax.Hole
 import Prettyprinter
 
 type FunctionName = Name
@@ -122,6 +124,7 @@ data Expression
   | ExpressionApplication Application
   | ExpressionFunction FunctionExpression
   | ExpressionLiteral LiteralLoc
+  | ExpressionHole Hole
   | ExpressionTyped TypedExpression
   deriving stock (Show)
 
@@ -197,6 +200,7 @@ data Type
   | TypeApp TypeApplication
   | TypeFunction Function
   | TypeAbs TypeAbstraction
+  | TypeHole Hole
   | TypeUniverse
   | TypeAny
   deriving stock (Eq, Show, Generic)
@@ -244,6 +248,7 @@ instance HasAtomicity Expression where
     ExpressionTyped t -> atomicity (t ^. typedExpression)
     ExpressionLiteral l -> atomicity l
     ExpressionFunction f -> atomicity f
+    ExpressionHole {} -> Atom
 
 instance HasAtomicity Function where
   atomicity = const (Aggregate funFixity)
@@ -256,6 +261,7 @@ instance HasAtomicity Type where
     TypeIden {} -> Atom
     TypeFunction f -> atomicity f
     TypeUniverse -> Atom
+    TypeHole {} -> Atom
     TypeAny -> Atom
     TypeAbs a -> atomicity a
     TypeApp a -> atomicity a
@@ -281,6 +287,7 @@ instance HasLoc Expression where
     ExpressionTyped t -> getLoc (t ^. typedExpression)
     ExpressionLiteral l -> getLoc l
     ExpressionFunction f -> getLoc f
+    ExpressionHole h -> getLoc h
 
 instance HasLoc Iden where
   getLoc = \case

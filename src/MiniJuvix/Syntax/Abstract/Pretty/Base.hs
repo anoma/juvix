@@ -131,6 +131,7 @@ instance PrettyCode Expression where
     ExpressionApplication a -> ppCode a
     ExpressionFunction f -> ppCode f
     ExpressionLiteral l -> ppSCode l
+    ExpressionHole h -> ppSCode h
 
 instance PrettyCode Usage where
   ppCode u = return $ case u of
