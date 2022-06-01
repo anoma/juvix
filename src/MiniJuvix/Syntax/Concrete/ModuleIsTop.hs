@@ -1,5 +1,3 @@
-{-# LANGUAGE StandaloneKindSignatures #-}
-
 module MiniJuvix.Syntax.Concrete.ModuleIsTop where
 
 import MiniJuvix.Prelude

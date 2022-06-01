@@ -19,9 +19,7 @@ dependencies:
 - ansi-terminal == 0.11.*
 - base == 4.16.*
 - blaze-html == 0.9.*
-- blaze-markup == 0.8.*
 - bytestring == 0.11.*
-- containers == 0.6.*
 - directory == 1.3.*
 - edit-distance == 0.2.*
 - extra == 1.7.*
@@ -60,13 +58,14 @@ dependencies:
 ghc-options:
 # Warnings
 - -Weverything
-- -Wno-unused-packages
-- -Wno-missing-import-lists
-- -Wno-unsafe
-- -Wno-safe
-- -Wno-missing-safe-haskell-mode
-- -Wno-missing-kind-signatures
+- -Wno-all-missed-specialisations
 - -Wno-missing-export-lists
+- -Wno-missing-import-lists
+- -Wno-missing-kind-signatures
+- -Wno-missing-safe-haskell-mode
+- -Wno-safe
+- -Wno-unsafe
+- -Wno-unused-packages
 # HIE Support
 - -fhide-source-paths
 - -fwrite-ide-info -hiedir=.hie
@@ -100,6 +99,8 @@ executables:
     dependencies:
     - minijuvix
     - optparse-applicative == 0.17.*
+    default-extensions:
+    - ApplicativeDo
     verbatim:
       default-language: GHC2021
 

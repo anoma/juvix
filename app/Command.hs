@@ -1,5 +1,3 @@
-{-# LANGUAGE ApplicativeDo #-}
-
 module Command
   ( module Command,
     module Commands.Extra,

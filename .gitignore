@@ -72,3 +72,4 @@ UPDATES-FOR-CHANGELOG.org
 *.wasm
 docs/md/
 _docs
+docs/**/*.md

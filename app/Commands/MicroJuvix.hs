@@ -1,5 +1,3 @@
-{-# LANGUAGE ApplicativeDo #-}
-
 module Commands.MicroJuvix where
 
 import Commands.Extra

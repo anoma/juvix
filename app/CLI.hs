@@ -1,5 +1,3 @@
-{-# LANGUAGE ApplicativeDo #-}
-
 module CLI
   ( module CLI,
     module GlobalOptions,

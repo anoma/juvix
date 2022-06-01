@@ -1,5 +1,3 @@
-{-# LANGUAGE ApplicativeDo #-}
-
 module GlobalOptions
   ( module GlobalOptions,
   )

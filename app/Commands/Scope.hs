@@ -1,5 +1,3 @@
-{-# LANGUAGE ApplicativeDo #-}
-
 module Commands.Scope where
 
 import MiniJuvix.Prelude hiding (Doc)

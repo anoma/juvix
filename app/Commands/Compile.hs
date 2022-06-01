@@ -1,5 +1,3 @@
-{-# LANGUAGE ApplicativeDo #-}
-
 module Commands.Compile where
 
 import Commands.Extra

@@ -1,5 +1,3 @@
-{-# LANGUAGE ApplicativeDo #-}
-
 module Commands.Termination where
 
 import Commands.Extra
