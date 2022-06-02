@@ -75,8 +75,9 @@ checkFunctionDef ::
   Members '[Reader InfoTable, Error TypeCheckerError] r =>
   FunctionDef ->
   Sem r FunctionDef
-checkFunctionDef FunctionDef {..} = do
+checkFunctionDef FunctionDef {..} = runInferenceDef $ do
   info <- lookupFunction _funDefName
+  checkFunctionDefType _funDefType
   _funDefClauses' <- mapM (checkFunctionClause info) _funDefClauses
   return
     FunctionDef
@@ -84,15 +85,34 @@ checkFunctionDef FunctionDef {..} = do
         ..
       }
 
+checkFunctionDefType :: forall r. Members '[Inference] r => Type -> Sem r ()
+checkFunctionDefType = go
+  where
+    go :: Type -> Sem r ()
+    go t = case t of
+      TypeHole h -> void (freshMetavar h)
+      TypeIden {} -> return ()
+      TypeApp a -> goApp a
+      TypeFunction f -> goFunction f
+      TypeAbs f -> goAbs f
+      TypeAny -> return ()
+      TypeUniverse -> return ()
+    goApp :: TypeApplication -> Sem r ()
+    goApp (TypeApplication a b) = go a >> go b
+    goFunction :: Function -> Sem r ()
+    goFunction (Function a b) = go a >> go b
+    goAbs :: TypeAbstraction -> Sem r ()
+    goAbs (TypeAbstraction _ b) = go b
+
 checkExpression ::
   Members '[Reader InfoTable, Error TypeCheckerError, Reader LocalVars, Inference] r =>
   Type ->
   Expression ->
   Sem r Expression
-checkExpression t e = do
+checkExpression expectedTy e = do
   e' <- inferExpression' e
   let inferredType = e' ^. typedType
-  unlessM (matchTypes t inferredType) (throw (err inferredType))
+  unlessM (matchTypes expectedTy inferredType) (throw (err inferredType))
   return (ExpressionTyped e')
   where
     err infTy =
@@ -100,7 +120,7 @@ checkExpression t e = do
         ( WrongType
             { _wrongTypeExpression = e,
               _wrongTypeInferredType = infTy,
-              _wrongTypeExpectedType = t
+              _wrongTypeExpectedType = expectedTy
             }
         )
 
@@ -141,16 +161,16 @@ constructorArgTypes i =
   )
 
 checkFunctionClauseBody ::
-  Members '[Reader InfoTable, Error TypeCheckerError] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, Inference] r =>
   LocalVars ->
   Type ->
   Expression ->
   Sem r Expression
 checkFunctionClauseBody locals expectedTy body =
-  runInference (runReader locals (checkExpression expectedTy body))
+  runReader locals (checkExpression expectedTy body)
 
 checkFunctionClause ::
-  Members '[Reader InfoTable, Error TypeCheckerError] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, Inference] r =>
   FunctionInfo ->
   FunctionClause ->
   Sem r FunctionClause

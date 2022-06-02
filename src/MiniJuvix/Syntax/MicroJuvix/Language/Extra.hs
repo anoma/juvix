@@ -149,6 +149,17 @@ typeAsExpression = go
     goFunction :: Function -> FunctionExpression
     goFunction (Function l r) = FunctionExpression (go l) (go r)
 
+fillHolesFunctionDef :: HashMap Hole Type -> FunctionDef -> FunctionDef
+fillHolesFunctionDef m d =
+  FunctionDef
+    { _funDefName = d ^. funDefName,
+      _funDefType = fillHolesType m (d ^. funDefType),
+      _funDefClauses = fmap (fillHolesClause m) (d ^. funDefClauses)
+    }
+
+fillHolesClause :: HashMap Hole Type -> FunctionClause -> FunctionClause
+fillHolesClause m = over clauseBody (fillHoles m)
+
 fillHoles :: HashMap Hole Type -> Expression -> Expression
 fillHoles m = goe
   where

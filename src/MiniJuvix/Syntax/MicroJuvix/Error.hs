@@ -14,8 +14,8 @@ data TypeCheckerError
   | ErrWrongConstructorType WrongConstructorType
   | ErrWrongConstructorAppArgs WrongConstructorAppArgs
   | ErrWrongType WrongType
+  | ErrUnsolvedMeta UnsolvedMeta
   | ErrExpectedFunctionType ExpectedFunctionType
-  deriving stock (Show)
 
 instance ToGenericError TypeCheckerError where
   genericError :: TypeCheckerError -> GenericError
@@ -24,4 +24,5 @@ instance ToGenericError TypeCheckerError where
     ErrWrongConstructorType e -> genericError e
     ErrWrongConstructorAppArgs e -> genericError e
     ErrWrongType e -> genericError e
+    ErrUnsolvedMeta e -> genericError e
     ErrExpectedFunctionType e -> genericError e

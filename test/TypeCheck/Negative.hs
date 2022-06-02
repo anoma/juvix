@@ -78,6 +78,13 @@ tests =
         ErrTooManyPatterns {} -> Nothing
         _ -> wrongError,
     NegTest
+      "Unsolved hole"
+      "MicroJuvix"
+      "UnsolvedMeta.mjuvix"
+      $ \case
+        ErrUnsolvedMeta {} -> Nothing
+        _ -> wrongError,
+    NegTest
       "Multiple type errors are captured"
       "MicroJuvix"
       "MultiWrongType.mjuvix"

@@ -1,0 +1,10 @@
+module UnsolvedMeta;
+
+inductive Proxy (A : Type) {
+  x : Proxy A;
+};
+
+t : Proxy _;
+t ≔ x _;
+
+end;

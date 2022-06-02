@@ -38,7 +38,7 @@ closeState = \case
       where
         goHole :: Hole -> MetavarState -> Sem r' Type
         goHole h = \case
-          Fresh -> throw @TypeCheckerError (error "unsolved meta")
+          Fresh -> throw (ErrUnsolvedMeta (UnsolvedMeta h))
           Refined t -> do
             s <- gets @(HashMap Hole Type) (^. at h)
             case s of
@@ -68,7 +68,7 @@ closeState = \case
 getMetavar :: Member (State InferenceState) r => Hole -> Sem r MetavarState
 getMetavar h = gets (fromJust . (^. inferenceMap . at h))
 
-re :: Member (Error TypeCheckerError) r => Sem (Inference ': r) Expression -> Sem (State InferenceState ': r) Expression
+re :: Member (Error TypeCheckerError) r => Sem (Inference ': r) a -> Sem (State InferenceState ': r) a
 re = reinterpret $ \case
   FreshMetavar h -> freshMetavar' h
   MatchTypes a b -> matchTypes' a b
@@ -85,21 +85,16 @@ re = reinterpret $ \case
             _typedType = TypeUniverse
           }
 
-    refineMetavar' ::
+    refineFreshMetavar ::
       Members '[Error TypeCheckerError, State InferenceState] r =>
       Hole ->
       Type ->
       Sem r ()
-    refineMetavar' h t = do
+    refineFreshMetavar h t = do
       s <- gets (fromJust . (^. inferenceMap . at h))
       case s of
         Fresh -> modify (over inferenceMap (HashMap.insert h (Refined t)))
-        Refined r -> goRefine r t
-
-    goRefine :: Members '[Error TypeCheckerError, State InferenceState] r => Type -> Type -> Sem r ()
-    goRefine r t = do
-      eq <- matchTypes' r t
-      unless eq (error "type error: cannot match types")
+        Refined {} -> impossible
 
     metavarType :: MetavarState -> Maybe Type
     metavarType = \case
@@ -136,7 +131,7 @@ re = reinterpret $ \case
             goHole h t = do
               r <- queryMetavar' h
               case r of
-                Nothing -> refineMetavar' h t $> True
+                Nothing -> refineFreshMetavar h t $> True
                 Just ht -> matchTypes' t ht
             goIden :: TypeIden -> TypeIden -> Sem r Bool
             goIden ia ib = case (ia, ib) of
@@ -158,3 +153,8 @@ runInference :: Member (Error TypeCheckerError) r => Sem (Inference ': r) Expres
 runInference a = do
   (subs, expr) <- runState iniState (re a) >>= firstM closeState
   return (fillHoles subs expr)
+
+runInferenceDef :: Member (Error TypeCheckerError) r => Sem (Inference ': r) FunctionDef -> Sem r FunctionDef
+runInferenceDef a = do
+  (subs, expr) <- runState iniState (re a) >>= firstM closeState
+  return (fillHolesFunctionDef subs expr)

@@ -68,7 +68,7 @@ filter _ f nil ≔ nil _;
 filter _ f (cons x xs) ≔ ite _ (f x) (cons _ x (filter _ f xs)) (filter _ f xs);
 
 map : (A : Type) → (B : Type) →
-  (A → B) → List A → List B;
+  (A → B) → List _ → List _;
 map _ _ f nil ≔ nil _;
 map _ _ f (cons x xs) ≔ cons _ (f x) (map _ _ f xs);
 

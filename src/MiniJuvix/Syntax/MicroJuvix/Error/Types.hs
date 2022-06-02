@@ -35,6 +35,24 @@ instance ToGenericError WrongConstructorType where
           <> line
           <> indent' (ppCode (e ^. wrongCtorTypeExpected))
 
+newtype UnsolvedMeta = UnsolvedMeta
+  { _unsolvedMeta :: Hole
+  }
+
+makeLenses ''UnsolvedMeta
+
+instance ToGenericError UnsolvedMeta where
+  genericError e =
+    GenericError
+      { _genericErrorLoc = i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
+    where
+      i = getLoc (e ^. unsolvedMeta)
+      msg :: Doc a
+      msg = "Unable to infer the hole"
+
 -- | The arguments of a constructor pattern do not match
 -- the expected arguments of the constructor
 data WrongConstructorAppArgs = WrongConstructorAppArgs

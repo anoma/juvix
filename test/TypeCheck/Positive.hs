@@ -68,6 +68,10 @@ tests =
       "."
       "Operators.mjuvix",
     PosTest
+      "Holes in type signature"
+      "MicroJuvix"
+      "HoleInSignature.mjuvix",
+    PosTest
       "Polymorphism and higher rank functions"
       "."
       "Polymorphism.mjuvix",
