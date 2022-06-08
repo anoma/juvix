@@ -136,6 +136,9 @@ kwCompile = keyword Str.compile
 kwForeign :: Doc Ann
 kwForeign = keyword Str.foreign_
 
+kwTerminating :: Doc Ann
+kwTerminating = keyword Str.terminating
+
 kwBraceL :: Doc Ann
 kwBraceL = delimiter "{"
 
@@ -501,9 +504,10 @@ instance SingI s => PrettyCode (OpenModule s) where
 
 instance SingI s => PrettyCode (TypeSignature s) where
   ppCode TypeSignature {..} = do
+    let sigTerminating' = if _sigTerminating then kwTerminating <> line else mempty
     sigName' <- annDef _sigName <$> ppSymbol _sigName
     sigType' <- ppExpression _sigType
-    return $ sigName' <+> kwColon <+> sigType'
+    return $ sigTerminating' <> sigName' <+> kwColon <+> sigType'
 
 instance SingI s => PrettyCode (Function s) where
   ppCode :: forall r. Members '[Reader Options] r => Function s -> Sem r (Doc Ann)
