@@ -1,6 +1,5 @@
 module Commands.Compile where
 
-import Commands.Extra
 import Data.ByteString qualified as BS
 import Data.FileEmbed qualified as FE
 import Data.Text.IO qualified as TIO
@@ -19,8 +18,7 @@ data CompileRuntime = RuntimeStandalone | RuntimeLibC
   deriving stock (Show)
 
 data CompileOptions = CompileOptions
-  { _compileInputFile :: FilePath,
-    _compileTarget :: CompileTarget,
+  { _compileTarget :: CompileTarget,
     _compileRuntime :: CompileRuntime,
     _compileOutputFile :: Maybe FilePath
   }
@@ -61,9 +59,6 @@ parseCompile = do
             <> help "Path to output file"
             <> action "file"
         )
-
-  _compileInputFile <- parserInputFile
-
   pure CompileOptions {..}
   where
     parseTarget :: String -> Either String CompileTarget
@@ -88,19 +83,20 @@ parseCompile = do
       RuntimeStandalone -> "standalone"
       RuntimeLibC -> "libc"
 
-inputCFile :: FilePath -> CompileOptions -> FilePath
-inputCFile projRoot o = projRoot </> minijuvixBuildDir </> outputMiniCFile
+inputCFile :: FilePath -> FilePath -> FilePath
+inputCFile projRoot compileInputFile =
+  projRoot </> minijuvixBuildDir </> outputMiniCFile
   where
     outputMiniCFile :: FilePath
-    outputMiniCFile = takeBaseName (o ^. compileInputFile) <> ".c"
+    outputMiniCFile = takeBaseName compileInputFile <> ".c"
 
-runCompile :: FilePath -> CompileOptions -> Text -> IO (Either Text ())
-runCompile projRoot o minic = do
+runCompile :: FilePath -> FilePath -> CompileOptions -> Text -> IO (Either Text ())
+runCompile projRoot compileInputFile o minic = do
   createDirectoryIfMissing True (projRoot </> minijuvixBuildDir)
-  TIO.writeFile (inputCFile projRoot o) minic
+  TIO.writeFile (inputCFile projRoot compileInputFile) minic
   prepareRuntime projRoot o
   case o ^. compileTarget of
-    TargetWasm -> clangCompile projRoot o
+    TargetWasm -> clangCompile projRoot compileInputFile o
     TargetC -> return (Right ())
 
 prepareRuntime :: FilePath -> CompileOptions -> IO ()
@@ -122,15 +118,17 @@ prepareRuntime projRoot o = do
     writeRuntime (filePath, contents) =
       BS.writeFile (projRoot </> minijuvixBuildDir </> takeFileName filePath) contents
 
-clangCompile :: FilePath -> CompileOptions -> IO (Either Text ())
-clangCompile projRoot o = do
+clangCompile :: FilePath -> FilePath -> CompileOptions -> IO (Either Text ())
+clangCompile projRoot compileInputFile o = do
   v <- sysrootEnvVar
   case v of
     Left s -> return (Left s)
     Right sysrootPath -> withSysrootPath sysrootPath
   where
     sysrootEnvVar :: IO (Either Text String)
-    sysrootEnvVar = maybeToEither "Missing environment variable WASI_SYSROOT_PATH" <$> lookupEnv "WASI_SYSROOT_PATH"
+    sysrootEnvVar =
+      maybeToEither "Missing environment variable WASI_SYSROOT_PATH"
+        <$> lookupEnv "WASI_SYSROOT_PATH"
 
     withSysrootPath :: String -> IO (Either Text ())
     withSysrootPath sysrootPath = runClang clangArgs
@@ -141,10 +139,10 @@ clangCompile projRoot o = do
           RuntimeLibC -> libcArgs sysrootPath outputFile inputFile
 
         outputFile :: FilePath
-        outputFile = fromMaybe (takeBaseName (o ^. compileInputFile) <> ".wasm") (o ^. compileOutputFile)
+        outputFile = fromMaybe (takeBaseName compileInputFile <> ".wasm") (o ^. compileOutputFile)
 
         inputFile :: FilePath
-        inputFile = inputCFile projRoot o
+        inputFile = inputCFile projRoot compileInputFile
 
 standaloneArgs :: FilePath -> FilePath -> FilePath -> [String]
 standaloneArgs sysrootPath wasmOutputFile inputFile =

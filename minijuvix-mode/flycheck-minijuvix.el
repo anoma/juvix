@@ -8,7 +8,8 @@
 
 (flycheck-define-checker minijuvix
   "A MiniJuvix syntax checker."
-  :command ("minijuvix" "--only-errors" "--no-colors" "microjuvix" "typecheck" source-original)
+  :command ("minijuvix" "microjuvix" "typecheck" "--only-errors" "--no-colors"
+                source-original)
   :error-patterns
     (
      (error line-start (file-name) ":" line ":" column ": error:" (message (one-or-more (not "ת"))))

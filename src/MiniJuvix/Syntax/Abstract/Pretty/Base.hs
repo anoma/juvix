@@ -25,7 +25,7 @@ doc opts =
 toSOptions :: Options -> S.Options
 toSOptions Options {..} =
   S.defaultOptions
-    { S._optShowNameId = _optShowNameId,
+    { S._optShowNameIds = _optShowNameIds,
       S._optIndent = _optIndent
     }
 

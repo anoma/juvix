@@ -1,0 +1,3 @@
+$ minijuvix scope
+> /Provide.*/
+>= 1

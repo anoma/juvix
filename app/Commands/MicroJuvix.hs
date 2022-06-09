@@ -1,23 +1,16 @@
 module Commands.MicroJuvix where
 
-import Commands.Extra
 import MiniJuvix.Prelude hiding (Doc)
 import Options.Applicative
 
 data MicroJuvixCommand
-  = Pretty MicroJuvixPrettyOptions
+  = Pretty
   | TypeCheck MicroJuvixTypeOptions
 
-newtype MicroJuvixPrettyOptions = MicroJuvixPrettyOptions
-  { _microJuvixPrettyInputFile :: FilePath
+newtype MicroJuvixTypeOptions = MicroJuvixTypeOptions
+  { _microJuvixTypePrint :: Bool
   }
 
-data MicroJuvixTypeOptions = MicroJuvixTypeOptions
-  { _microJuvixTypeInputFile :: FilePath,
-    _microJuvixTypePrint :: Bool
-  }
-
-makeLenses ''MicroJuvixPrettyOptions
 makeLenses ''MicroJuvixTypeOptions
 
 parseMicroJuvixCommand :: Parser MicroJuvixCommand
@@ -37,7 +30,7 @@ parseMicroJuvixCommand =
     prettyInfo :: ParserInfo MicroJuvixCommand
     prettyInfo =
       info
-        (Pretty <$> parseMicroJuvixPretty)
+        (pure Pretty)
         (progDesc "Translate a MiniJuvix file to MicroJuvix and pretty print the result")
 
     typeCheckInfo :: ParserInfo MicroJuvixCommand
@@ -46,14 +39,8 @@ parseMicroJuvixCommand =
         (TypeCheck <$> parseMicroJuvixType)
         (progDesc "Translate a MiniJuvix file to MicroJuvix and typecheck the result")
 
-parseMicroJuvixPretty :: Parser MicroJuvixPrettyOptions
-parseMicroJuvixPretty = do
-  _microJuvixPrettyInputFile <- parserInputFile
-  pure MicroJuvixPrettyOptions {..}
-
 parseMicroJuvixType :: Parser MicroJuvixTypeOptions
 parseMicroJuvixType = do
-  _microJuvixTypeInputFile <- parserInputFile
   _microJuvixTypePrint <-
     switch
       ( long "print-result"

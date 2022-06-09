@@ -1,8 +1,8 @@
 module Commands.Termination where
 
-import Commands.Extra
 import Control.Monad.Extra
 import Data.Text qualified as Text
+import GlobalOptions
 import MiniJuvix.Prelude hiding (Doc)
 import MiniJuvix.Syntax.Abstract.Pretty.Base qualified as A
 import Options.Applicative
@@ -12,15 +12,12 @@ data TerminationCommand
   | CallGraph CallGraphOptions
 
 data CallsOptions = CallsOptions
-  { _callsInputFile :: FilePath,
-    _callsShowIds :: Bool,
-    _callsFunctionNameFilter :: Maybe (NonEmpty Text),
+  { _callsFunctionNameFilter :: Maybe (NonEmpty Text),
     _callsShowDecreasingArgs :: A.ShowDecrArgs
   }
 
-data CallGraphOptions = CallGraphOptions
-  { _graphInputFile :: FilePath,
-    _graphFunctionNameFilter :: Maybe (NonEmpty Text)
+newtype CallGraphOptions = CallGraphOptions
+  { _graphFunctionNameFilter :: Maybe (NonEmpty Text)
   }
 
 makeLenses ''CallsOptions
@@ -28,12 +25,6 @@ makeLenses ''CallGraphOptions
 
 parseCalls :: Parser CallsOptions
 parseCalls = do
-  _callsInputFile <- parserInputFile
-  _callsShowIds <-
-    switch
-      ( long "show-name-ids"
-          <> help "Show the unique number of each identifier"
-      )
   _callsFunctionNameFilter <-
     fmap msum . optional $
       nonEmpty . Text.words
@@ -64,7 +55,6 @@ parseCalls = do
 
 parseCallGraph :: Parser CallGraphOptions
 parseCallGraph = do
-  _graphInputFile <- parserInputFile
   _graphFunctionNameFilter <-
     fmap msum . optional $
       nonEmpty . Text.words
@@ -101,9 +91,9 @@ parseTerminationCommand =
             (CallGraph <$> parseCallGraph)
             (progDesc "Compute the complete call graph of a .mjuvix file")
 
-callsPrettyOptions :: CallsOptions -> A.Options
-callsPrettyOptions CallsOptions {..} =
+callsPrettyOptions :: GlobalOptions -> CallsOptions -> A.Options
+callsPrettyOptions GlobalOptions {..} CallsOptions {..} =
   A.defaultOptions
-    { A._optShowNameId = _callsShowIds,
+    { A._optShowNameIds = _globalShowNameIds,
       A._optShowDecreasingArgs = _callsShowDecreasingArgs
     }

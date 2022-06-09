@@ -33,7 +33,7 @@ instance PrettyCode NameId where
 
 instance PrettyCode Name where
   ppCode n = do
-    showNameId <- asks (^. optShowNameId)
+    showNameId <- asks (^. optShowNameIds)
     uid <-
       if
           | showNameId -> Just . ("@" <>) <$> ppCode (n ^. nameId)

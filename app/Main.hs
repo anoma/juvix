@@ -31,14 +31,17 @@ import MiniJuvix.Translation.MonoJuvixToMiniHaskell qualified as MiniHaskell
 import MiniJuvix.Translation.ScopedToAbstract qualified as Abstract
 import MiniJuvix.Utils.Version (runDisplayVersion)
 import Options.Applicative
+import System.Environment (getProgName)
 import Text.Show.Pretty hiding (Html)
 
 minijuvixYamlFile :: FilePath
 minijuvixYamlFile = "minijuvix.yaml"
 
-findRoot :: CLI -> IO FilePath
-findRoot cli = do
-  whenJust dir0 setCurrentDirectory
+findRoot :: CommandGlobalOptions -> IO FilePath
+findRoot copts = do
+  let dir :: Maybe FilePath
+      dir = takeDirectory <$> commandFirstFile copts
+  whenJust dir setCurrentDirectory
   r <- IO.try go :: IO (Either IO.SomeException FilePath)
   case r of
     Left err -> do
@@ -53,6 +56,7 @@ findRoot cli = do
     possiblePaths start = takeWhile (/= "/") (aux start)
       where
         aux f = f : aux (takeDirectory f)
+
     go :: IO FilePath
     go = do
       c <- getCurrentDirectory
@@ -60,200 +64,181 @@ findRoot cli = do
       case l of
         Nothing -> return c
         Just yaml -> return (takeDirectory yaml)
-    dir0 :: Maybe FilePath
-    dir0 = takeDirectory <$> cliMainFile cli
 
-class HasEntryPoint a where
-  getEntryPoint :: FilePath -> GlobalOptions -> a -> EntryPoint
+getEntryPoint :: FilePath -> GlobalOptions -> Maybe EntryPoint
+getEntryPoint r opts = nonEmpty (opts ^. globalInputFiles) >>= Just <$> entryPoint
+  where
+    entryPoint :: NonEmpty FilePath -> EntryPoint
+    entryPoint l =
+      EntryPoint
+        { _entryPointRoot = r,
+          _entryPointNoTermination = opts ^. globalNoTermination,
+          _entryPointModulePaths = l
+        }
 
-instance HasEntryPoint ScopeOptions where
-  getEntryPoint r opts = EntryPoint r nT . (^. scopeInputFiles)
-    where
-      nT = opts ^. globalNoTermination
-
-instance HasEntryPoint ParseOptions where
-  getEntryPoint r opts = EntryPoint r nT . pure . (^. parseInputFile)
-    where
-      nT = opts ^. globalNoTermination
-
-instance HasEntryPoint HighlightOptions where
-  getEntryPoint r opts = EntryPoint r nT . pure . (^. highlightInputFile)
-    where
-      nT = opts ^. globalNoTermination
-
-instance HasEntryPoint HtmlOptions where
-  getEntryPoint r opts = EntryPoint r nT . pure . (^. htmlInputFile)
-    where
-      nT = opts ^. globalNoTermination
-
-instance HasEntryPoint MicroJuvixTypeOptions where
-  getEntryPoint r opts = EntryPoint r nT . pure . (^. microJuvixTypeInputFile)
-    where
-      nT = opts ^. globalNoTermination
-
-instance HasEntryPoint MicroJuvixPrettyOptions where
-  getEntryPoint r opts = EntryPoint r nT . pure . (^. microJuvixPrettyInputFile)
-    where
-      nT = opts ^. globalNoTermination
-
-instance HasEntryPoint MonoJuvixOptions where
-  getEntryPoint r opts = EntryPoint r nT . pure . (^. monoJuvixInputFile)
-    where
-      nT = opts ^. globalNoTermination
-
-instance HasEntryPoint MiniHaskellOptions where
-  getEntryPoint r opts = EntryPoint r nT . pure . (^. miniHaskellInputFile)
-    where
-      nT = opts ^. globalNoTermination
-
-instance HasEntryPoint MiniCOptions where
-  getEntryPoint r opts = EntryPoint r nT . pure . (^. miniCInputFile)
-    where
-      nT = opts ^. globalNoTermination
-
-instance HasEntryPoint CompileOptions where
-  getEntryPoint r opts = EntryPoint r nT . pure . (^. compileInputFile)
-    where
-      nT = opts ^. globalNoTermination
-
-instance HasEntryPoint CallsOptions where
-  getEntryPoint r opts = EntryPoint r nT . pure . (^. callsInputFile)
-    where
-      nT = opts ^. globalNoTermination
-
-instance HasEntryPoint CallGraphOptions where
-  getEntryPoint r opts = EntryPoint r nT . pure . (^. graphInputFile)
-    where
-      nT = opts ^. globalNoTermination
-
-runCLI :: Members '[Embed IO, App] r => CLI -> Sem r ()
-runCLI cli = do
-  let globalOptions = cli ^. cliGlobalOptions
+runCommand :: Members '[Embed IO, App] r => CommandGlobalOptions -> Sem r ()
+runCommand cmdWithOpts = do
+  let cmd = cmdWithOpts ^. cliCommand
+      globalOpts = cmdWithOpts ^. cliGlobalOptions
       toAnsiText' :: forall a. (HasAnsiBackend a, HasTextBackend a) => a -> Text
-      toAnsiText' = toAnsiText (not (globalOptions ^. globalNoColors))
-  root <- embed (findRoot cli)
-  case cli ^. cliCommand of
-    DisplayVersion -> embed runDisplayVersion
+      toAnsiText' = toAnsiText (not (globalOpts ^. globalNoColors))
+  root <- embed (findRoot cmdWithOpts)
+  case cmd of
     DisplayRoot -> say (pack root)
-    Highlight o -> do
-      res <- runPipelineEither (upToScoping (getEntryPoint root globalOptions o))
-      absP <- embed (makeAbsolute (o ^. highlightInputFile))
-      case res of
-        Left err -> say (Highlight.goError (errorIntervals err))
-        Right r -> do
-          let tbl = r ^. Scoper.resultParserTable
-              items = tbl ^. Parser.infoParsedItems
-              names = r ^. (Scoper.resultScoperTable . Scoper.infoNames)
-              hinput =
-                Highlight.filterInput
-                  absP
-                  Highlight.HighlightInput
-                    { _highlightNames = names,
-                      _highlightParsed = items
-                    }
-          say (Highlight.go hinput)
-    Parse opts -> do
-      m <-
-        head . (^. Parser.resultModules)
-          <$> runPipeline (upToParsing (getEntryPoint root globalOptions opts))
-      if opts ^. parseNoPrettyShow then say (show m) else say (pack (ppShow m))
-    Scope opts -> do
-      l <- (^. Scoper.resultModules) <$> runPipeline (upToScoping (getEntryPoint root globalOptions opts))
-      forM_ l $ \s -> do
-        renderStdOut (Scoper.ppOut (mkScopePrettyOptions globalOptions opts) s)
-    Html o@HtmlOptions {..} -> do
-      res <- runPipeline (upToScoping (getEntryPoint root globalOptions o))
-      let m = head (res ^. Scoper.resultModules)
-      embed (genHtml Scoper.defaultOptions _htmlRecursive _htmlTheme m)
-    MicroJuvix (Pretty opts) -> do
-      micro <- head . (^. Micro.resultModules) <$> runPipeline (upToMicroJuvix (getEntryPoint root globalOptions opts))
-      let ppOpts =
-            Micro.defaultOptions
-              { Micro._optShowNameId = globalOptions ^. globalShowNameIds
-              }
-      App.renderStdOut (Micro.ppOut ppOpts micro)
-    MicroJuvix (TypeCheck opts) -> do
-      res <- runPipeline (upToMicroJuvixTyped (getEntryPoint root globalOptions opts))
-      say "Well done! It type checks"
-      when (opts ^. microJuvixTypePrint) $ do
-        let ppOpts =
-              Micro.defaultOptions
-                { Micro._optShowNameId = globalOptions ^. globalShowNameIds
-                }
-            checkedModule = head (res ^. MicroTyped.resultModules)
-        renderStdOut (Micro.ppOut ppOpts checkedModule)
-        newline
-        let typeCalls = Mono.buildTypeCallMap res
-        renderStdOut (Micro.ppOut ppOpts typeCalls)
-        newline
-        let concreteTypeCalls = Mono.collectTypeCalls res
-        renderStdOut (Micro.ppOut ppOpts concreteTypeCalls)
-    MonoJuvix o -> do
-      let ppOpts =
-            Mono.defaultOptions
-              { Mono._optShowNameIds = globalOptions ^. globalShowNameIds
-              }
-      monojuvix <- head . (^. Mono.resultModules) <$> runPipeline (upToMonoJuvix (getEntryPoint root globalOptions o))
-      renderStdOut (Mono.ppOut ppOpts monojuvix)
-    MiniHaskell o -> do
-      minihaskell <- head . (^. MiniHaskell.resultModules) <$> runPipeline (upToMiniHaskell (getEntryPoint root globalOptions o))
-      renderStdOut (MiniHaskell.ppOutDefault minihaskell)
-    MiniC o -> do
-      miniC <- (^. MiniC.resultCCode) <$> runPipeline (upToMiniC (getEntryPoint root globalOptions o))
-      say miniC
-    Compile o -> do
-      miniC <- (^. MiniC.resultCCode) <$> runPipeline (upToMiniC (getEntryPoint root globalOptions o))
-      result <- embed (runCompile root o miniC)
-      case result of
-        Left err -> say ("Error: " <> err)
-        _ -> return ()
-    Termination (Calls opts@CallsOptions {..}) -> do
-      results <- runPipeline (upToAbstract (getEntryPoint root globalOptions opts))
-      let topModule = head (results ^. Abstract.resultModules)
-          infotable = results ^. Abstract.resultTable
-          callMap0 = Termination.buildCallMap infotable topModule
-          callMap = case _callsFunctionNameFilter of
-            Nothing -> callMap0
-            Just f -> Termination.filterCallMap f callMap0
-          opts' = Termination.callsPrettyOptions opts
-      renderStdOut (Abstract.ppOut opts' callMap)
-      newline
-    Termination (CallGraph opts@CallGraphOptions {..}) -> do
-      results <- runPipeline (upToAbstract (getEntryPoint root globalOptions opts))
-      let topModule = head (results ^. Abstract.resultModules)
-          infotable = results ^. Abstract.resultTable
-          callMap = Termination.buildCallMap infotable topModule
-          opts' =
-            Abstract.defaultOptions
-              { Abstract._optShowNameId = globalOptions ^. globalShowNameIds
-              }
-          completeGraph = Termination.completeCallGraph callMap
-          filteredGraph = maybe completeGraph (`Termination.unsafeFilterGraph` completeGraph) _graphFunctionNameFilter
-          rEdges = Termination.reflexiveEdges filteredGraph
-          recBehav = map Termination.recursiveBehaviour rEdges
-      App.renderStdOut (Abstract.ppOut opts' filteredGraph)
-      newline
-      forM_ recBehav $ \r -> do
-        let funName = r ^. Termination.recursiveBehaviourFun
-            funRef = Abstract.FunctionRef (Scoper.unqualifiedSymbol funName)
-            funInfo = HashMap.lookupDefault impossible funRef (infotable ^. Abstract.infoFunctions)
-            markedTerminating = funInfo ^. (Abstract.functionInfoDef . Abstract.funDefTerminating)
-            sopts =
-              Scoper.defaultOptions
-                { Scoper._optShowNameId = globalOptions ^. globalShowNameIds
-                }
-            n = toAnsiText' (Scoper.ppOut sopts funName)
-        App.renderStdOut (Abstract.ppOut opts' r)
-        newline
-        if
-            | markedTerminating -> say (n <> " Terminates by assumption")
-            | otherwise ->
-                case Termination.findOrder r of
-                  Nothing -> say (n <> " Fails the termination checking") >> embed exitFailure
-                  Just (Termination.LexOrder k) -> say (n <> " Terminates with order " <> show (toList k))
-        newline
+    _ -> do
+      -- Other commands require an entry point:
+      case getEntryPoint root globalOpts of
+        Nothing -> printFailureExit "Provide a MiniJuvix file to run this command\nUse --help to see all the options"
+        Just entryPoint -> do
+          case cmd of
+            Highlight -> do
+              res <- runPipelineEither (upToScoping entryPoint)
+              case res of
+                Left err -> say (Highlight.goError (errorIntervals err))
+                Right r -> do
+                  let tbl = r ^. Scoper.resultParserTable
+                      items = tbl ^. Parser.infoParsedItems
+                      names = r ^. (Scoper.resultScoperTable . Scoper.infoNames)
+                      inputFile = entryPoint ^. mainModulePath
+                      hinput =
+                        Highlight.filterInput
+                          inputFile
+                          Highlight.HighlightInput
+                            { _highlightNames = names,
+                              _highlightParsed = items
+                            }
+                  say (Highlight.go hinput)
+            Parse localOpts -> do
+              m <-
+                head . (^. Parser.resultModules)
+                  <$> runPipeline (upToParsing entryPoint)
+              if localOpts ^. parseNoPrettyShow then say (show m) else say (pack (ppShow m))
+            Scope localOpts -> do
+              l <-
+                (^. Scoper.resultModules)
+                  <$> runPipeline
+                    (upToScoping entryPoint)
+              forM_ l $ \s -> do
+                renderStdOut (Scoper.ppOut (mkScopePrettyOptions globalOpts localOpts) s)
+            Html HtmlOptions {..} -> do
+              res <- runPipeline (upToScoping entryPoint)
+              let m = head (res ^. Scoper.resultModules)
+              embed (genHtml Scoper.defaultOptions _htmlRecursive _htmlTheme m)
+            MicroJuvix Pretty -> do
+              micro <-
+                head . (^. Micro.resultModules)
+                  <$> runPipeline (upToMicroJuvix entryPoint)
+              let ppOpts =
+                    Micro.defaultOptions
+                      { Micro._optShowNameIds = globalOpts ^. globalShowNameIds
+                      }
+              App.renderStdOut (Micro.ppOut ppOpts micro)
+            MicroJuvix (TypeCheck localOpts) -> do
+              res <- runPipeline (upToMicroJuvixTyped entryPoint)
+              say "Well done! It type checks"
+              when (localOpts ^. microJuvixTypePrint) $ do
+                let ppOpts =
+                      Micro.defaultOptions
+                        { Micro._optShowNameIds = globalOpts ^. globalShowNameIds
+                        }
+                    checkedModule = head (res ^. MicroTyped.resultModules)
+                renderStdOut (Micro.ppOut ppOpts checkedModule)
+                newline
+                let typeCalls = Mono.buildTypeCallMap res
+                renderStdOut (Micro.ppOut ppOpts typeCalls)
+                newline
+                let concreteTypeCalls = Mono.collectTypeCalls res
+                renderStdOut (Micro.ppOut ppOpts concreteTypeCalls)
+            MonoJuvix -> do
+              let ppOpts =
+                    Mono.defaultOptions
+                      { Mono._optShowNameIds = globalOpts ^. globalShowNameIds
+                      }
+              monojuvix <- head . (^. Mono.resultModules) <$> runPipeline (upToMonoJuvix entryPoint)
+              renderStdOut (Mono.ppOut ppOpts monojuvix)
+            MiniHaskell -> do
+              minihaskell <-
+                head . (^. MiniHaskell.resultModules)
+                  <$> runPipeline (upToMiniHaskell entryPoint)
+              renderStdOut (MiniHaskell.ppOutDefault minihaskell)
+            MiniC -> do
+              miniC <- (^. MiniC.resultCCode) <$> runPipeline (upToMiniC entryPoint)
+              say miniC
+            Compile localOpts -> do
+              miniC <- (^. MiniC.resultCCode) <$> runPipeline (upToMiniC entryPoint)
+              let inputFile = entryPoint ^. mainModulePath
+              result <- embed (runCompile root inputFile localOpts miniC)
+              case result of
+                Left err -> printFailureExit err
+                _ -> return ()
+            Termination (Calls localOpts@CallsOptions {..}) -> do
+              results <- runPipeline (upToAbstract entryPoint)
+              let topModule = head (results ^. Abstract.resultModules)
+                  infotable = results ^. Abstract.resultTable
+                  callMap0 = Termination.buildCallMap infotable topModule
+                  callMap = case _callsFunctionNameFilter of
+                    Nothing -> callMap0
+                    Just f -> Termination.filterCallMap f callMap0
+                  localOpts' = Termination.callsPrettyOptions globalOpts localOpts
+              renderStdOut (Abstract.ppOut localOpts' callMap)
+              newline
+            Termination (CallGraph CallGraphOptions {..}) -> do
+              results <- runPipeline (upToAbstract entryPoint)
+              let topModule = head (results ^. Abstract.resultModules)
+                  infotable = results ^. Abstract.resultTable
+                  callMap = Termination.buildCallMap infotable topModule
+                  localOpts' =
+                    Abstract.defaultOptions
+                      { Abstract._optShowNameIds = globalOpts ^. globalShowNameIds
+                      }
+                  completeGraph = Termination.completeCallGraph callMap
+                  filteredGraph =
+                    maybe
+                      completeGraph
+                      (`Termination.unsafeFilterGraph` completeGraph)
+                      _graphFunctionNameFilter
+                  rEdges = Termination.reflexiveEdges filteredGraph
+                  recBehav = map Termination.recursiveBehaviour rEdges
+              App.renderStdOut (Abstract.ppOut localOpts' filteredGraph)
+              newline
+              forM_ recBehav $ \r -> do
+                let funName = r ^. Termination.recursiveBehaviourFun
+                    funRef = Abstract.FunctionRef (Scoper.unqualifiedSymbol funName)
+                    funInfo =
+                      HashMap.lookupDefault
+                        impossible
+                        funRef
+                        (infotable ^. Abstract.infoFunctions)
+                    markedTerminating = funInfo ^. (Abstract.functionInfoDef . Abstract.funDefTerminating)
+                    scoperOpts =
+                      Scoper.defaultOptions
+                        { Scoper._optShowNameIds = globalOpts ^. globalShowNameIds
+                        }
+                    n = toAnsiText' (Scoper.ppOut scoperOpts funName)
+                App.renderStdOut (Abstract.ppOut localOpts' r)
+                newline
+                if
+                    | markedTerminating ->
+                        printSuccessExit (n <> " Terminates by assumption")
+                    | otherwise ->
+                        case Termination.findOrder r of
+                          Nothing ->
+                            printFailureExit (n <> " Fails the termination checking")
+                          Just (Termination.LexOrder k) ->
+                            printSuccessExit (n <> " Terminates with order " <> show (toList k))
+
+showHelpText :: ParserPrefs -> IO ()
+showHelpText p = do
+  progn <- getProgName
+  let helpText = parserFailure p descr (ShowHelpText Nothing) []
+  let (msg, _) = renderFailure helpText progn
+  putStrLn (pack msg)
 
 main :: IO ()
 main = do
-  cli <- execParser descr >>= makeAbsPaths
-  runM (runAppIO (cli ^. cliGlobalOptions) (runCLI cli))
+  let p = prefs showHelpOnEmpty
+  cli <- customExecParser p descr >>= makeAbsPaths
+  case cli of
+    DisplayVersion -> runDisplayVersion
+    DisplayHelp -> showHelpText p
+    Command cmd -> runM (runAppIO (cmd ^. cliGlobalOptions) (runCommand cmd))

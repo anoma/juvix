@@ -9,65 +9,50 @@ import Command
 import GlobalOptions
 import MiniJuvix.Prelude hiding (Doc)
 import Options.Applicative
+import Options.Applicative.Builder.Internal
 import Options.Applicative.Help.Pretty
 
-data CLI = CLI
-  { _cliGlobalOptions :: GlobalOptions,
-    _cliCommand :: Command
-  }
+data CLI
+  = DisplayVersion
+  | DisplayHelp
+  | Command CommandGlobalOptions
 
-makeLenses ''CLI
+parseDisplayVersion :: Parser CLI
+parseDisplayVersion =
+  flag'
+    DisplayVersion
+    (long "version" <> short 'v' <> help "Show the version" <> noGlobal)
+
+parseDisplayHelp :: Parser CLI
+parseDisplayHelp =
+  flag'
+    DisplayHelp
+    (long "help" <> short 'h' <> help "Show the help text" <> noGlobal)
+
+parseCommand :: Parser CLI
+parseCommand = Command <$> parseCommandGlobalOptions
 
 parseCLI :: Parser CLI
-parseCLI = do
-  _cliGlobalOptions <- parseGlobalOptions
-  _cliCommand <- parseCommand
-  pure CLI {..}
+parseCLI =
+  parseDisplayVersion
+    <|> parseDisplayHelp
+    <|> parseCommand
 
-cliMainFile :: CLI -> Maybe FilePath
-cliMainFile = aux . (^. cliCommand)
-  where
-    aux :: Command -> Maybe FilePath
-    aux = \case
-      Scope s -> Just (head (s ^. scopeInputFiles))
-      Parse s -> Just (s ^. parseInputFile)
-      Termination (Calls s) -> Just (s ^. callsInputFile)
-      Termination (CallGraph s) -> Just (s ^. graphInputFile)
-      Html s -> Just (s ^. htmlInputFile)
-      MiniHaskell s -> Just (s ^. miniHaskellInputFile)
-      Highlight s -> Just (s ^. highlightInputFile)
-      MiniC s -> Just (s ^. miniCInputFile)
-      Compile s -> Just (s ^. compileInputFile)
-      MicroJuvix (TypeCheck s) -> Just (s ^. microJuvixTypeInputFile)
-      MicroJuvix (Pretty s) -> Just (s ^. microJuvixPrettyInputFile)
-      MonoJuvix s -> Just (s ^. monoJuvixInputFile)
-      DisplayVersion -> Nothing
-      DisplayRoot -> Nothing
+commandFirstFile :: CommandGlobalOptions -> Maybe FilePath
+commandFirstFile CommandGlobalOptions {_cliGlobalOptions = GlobalOptions {..}} =
+  listToMaybe _globalInputFiles
 
 makeAbsPaths :: CLI -> IO CLI
-makeAbsPaths = traverseOf cliCommand aux
-  where
-    aux :: Command -> IO Command
-    aux = \case
-      Scope s -> Scope <$> traverseOf scopeInputFiles (mapM makeAbsolute) s
-      Parse s -> Parse <$> traverseOf parseInputFile makeAbsolute s
-      Termination (Calls s) -> Termination . Calls <$> traverseOf callsInputFile makeAbsolute s
-      Termination (CallGraph s) -> Termination . CallGraph <$> traverseOf graphInputFile makeAbsolute s
-      Html s -> Html <$> traverseOf htmlInputFile makeAbsolute s
-      MiniHaskell s -> MiniHaskell <$> traverseOf miniHaskellInputFile makeAbsolute s
-      Highlight s -> Highlight <$> traverseOf highlightInputFile makeAbsolute s
-      MiniC s -> MiniC <$> traverseOf miniCInputFile makeAbsolute s
-      Compile s -> Compile <$> traverseOf compileInputFile makeAbsolute s
-      MicroJuvix (TypeCheck s) -> MicroJuvix . TypeCheck <$> traverseOf microJuvixTypeInputFile makeAbsolute s
-      MicroJuvix (Pretty s) -> MicroJuvix . Pretty <$> traverseOf microJuvixPrettyInputFile makeAbsolute s
-      MonoJuvix s -> MonoJuvix <$> traverseOf monoJuvixInputFile makeAbsolute s
-      DisplayVersion -> return DisplayVersion
-      DisplayRoot -> return DisplayRoot
+makeAbsPaths cli = case cli of
+  Command cmd -> do
+    nOpts <- traverseOf globalInputFiles (mapM makeAbsolute) (cmd ^. cliGlobalOptions)
+    return (Command (set cliGlobalOptions nOpts cmd))
+  _ -> return cli
 
 descr :: ParserInfo CLI
 descr =
   info
-    (parseCLI <**> helper)
+    parseCLI
     ( fullDesc
         <> progDesc "The MiniJuvix compiler."
         <> headerDoc (Just headDoc)

@@ -4,14 +4,14 @@ import MiniJuvix.Prelude
 
 data Options = Options
   { _optIndent :: Int,
-    _optShowNameId :: Bool
+    _optShowNameIds :: Bool
   }
 
 defaultOptions :: Options
 defaultOptions =
   Options
     { _optIndent = 2,
-      _optShowNameId = True
+      _optShowNameIds = True
     }
 
 makeLenses ''Options

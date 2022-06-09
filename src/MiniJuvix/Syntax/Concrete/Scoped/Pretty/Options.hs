@@ -3,7 +3,7 @@ module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Options where
 import MiniJuvix.Prelude
 
 data Options = Options
-  { _optShowNameId :: Bool,
+  { _optShowNameIds :: Bool,
     _optInlineImports :: Bool,
     _optIndent :: Int
   }
@@ -11,7 +11,7 @@ data Options = Options
 defaultOptions :: Options
 defaultOptions =
   Options
-    { _optShowNameId = False,
+    { _optShowNameIds = False,
       _optInlineImports = False,
       _optIndent = 2
     }

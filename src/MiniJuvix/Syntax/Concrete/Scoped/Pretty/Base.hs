@@ -452,7 +452,7 @@ instance PrettyCode Name where
 
 nameIdSuffix :: Members '[Reader Options] r => S.NameId -> Sem r (Maybe (Doc Ann))
 nameIdSuffix nid = do
-  showNameId <- asks (^. optShowNameId)
+  showNameId <- asks (^. optShowNameIds)
   if
       | showNameId -> Just . ("@" <>) <$> ppCode nid
       | otherwise -> return Nothing

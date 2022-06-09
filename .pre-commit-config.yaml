@@ -8,11 +8,14 @@ repos:
     rev: v4.1.0
     hooks:
     -   id: trailing-whitespace
+        exclude: tests/
     -   id: end-of-file-fixer
+        exclude: tests/
     -   id: check-yaml
     -   id: check-added-large-files
     -   id: check-case-conflict
     -   id: mixed-line-ending
+        exclude: tests/
 
 -   repo:  https://github.com/heliaxdev/minijuvix
     rev: 6f5c3fc2bc70cf65594d3b74fb62e75e8fcfac5b

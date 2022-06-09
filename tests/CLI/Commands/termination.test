@@ -1,0 +1,24 @@
+$ minijuvix termination
+>2 /Usage\: minijuvix termination COMMAND \[MINIJUVIX_FILE\].*/
+>= 1
+
+$ minijuvix termination calls
+> /Provide.*/
+>2
+>=1
+
+$ minijuvix termination graph
+> /Provide.*/
+>2
+>= 1
+
+
+$ minijuvix termination calls --help
+> /Usage\: minijuvix termination calls \[MINIJUVIX_FILE\] 
+                                   \[\-f\|\-\-function fun1 fun2 ...\] 
+                                   \[\-d\|\-\-show\-decreasing\-args ARG\].*/
+>= 0
+
+$ minijuvix termination graph --help
+> /Usage\: minijuvix termination graph \[MINIJUVIX_FILE\] \[\-f\|\-\-function ARG\].*/
+>= 0

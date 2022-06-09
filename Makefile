@@ -100,6 +100,14 @@ test-skip-slow:
 test-watch:
 	stack test --fast --jobs $(THREADS) --file-watch
 
+.PHONY : install-shelltest
+install-shelltest:
+	stack install shelltestrunner
+
+.PHONY : test-shell
+test-shell :
+	shelltest --color --diff -a -j8 tests
+
 format:
 	@find . -name "*.hs" -exec ormolu --mode inplace {} --ghc-opt -XStandaloneDeriving --ghc-opt -XUnicodeSyntax --ghc-opt -XDerivingStrategies --ghc-opt -XMultiParamTypeClasses  --ghc-opt  -XTemplateHaskell --ghc-opt -XImportQualifiedPost \;
 
