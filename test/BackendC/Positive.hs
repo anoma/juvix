@@ -126,5 +126,6 @@ tests =
     PosTest "Polymorphic types" "Polymorphism",
     PosTest "Multiple modules" "MultiModules",
     PosTest "Higher Order Functions" "HigherOrder",
-    PosTest "Higher Order Functions and explicit holes" "PolymorphismHoles"
+    PosTest "Higher Order Functions and explicit holes" "PolymorphismHoles",
+    PosTest "Closures with no environment" "ClosureNoEnv"
   ]

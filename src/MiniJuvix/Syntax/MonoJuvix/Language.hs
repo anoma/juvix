@@ -89,6 +89,13 @@ data Iden
   | IdenAxiom Name
   deriving stock (Show)
 
+getName :: Iden -> Name
+getName = \case
+  IdenFunction n -> n
+  IdenConstructor n -> n
+  IdenVar n -> n
+  IdenAxiom n -> n
+
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
