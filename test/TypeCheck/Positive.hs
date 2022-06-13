@@ -78,5 +78,9 @@ tests =
     PosTest
       "Polymorphism and higher rank functions with explicit holes"
       "."
-      "PolymorphismHoles.mjuvix"
+      "PolymorphismHoles.mjuvix",
+    PosTest
+      "Implicit arguments"
+      "MicroJuvix"
+      "Implicit.mjuvix"
   ]

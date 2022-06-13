@@ -68,6 +68,6 @@ pairEval : {A : Type} → {B : Type} → Pair (A → B) A → B;
 pairEval (f , x) ≔ f x;
 
 pairEval' : {A : Type} → {B : Type} → Pair ({C : Type} → A → B) A → B;
-pairEval' {A} (f , x) ≔ f {Nat} x;
+pairEval' (f , x) ≔ f {Nat} x;
 
 end;
