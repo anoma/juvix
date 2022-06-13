@@ -30,7 +30,7 @@ runAppIO g = interpret $ \case
     | g ^. globalOnlyErrors -> return ()
     | otherwise -> embed (putStrLn t)
   ExitMiniJuvixError e -> do
-    (embed . hPutStrLn stderr . Error.render (not (g ^. globalNoColors))) e
+    (embed . hPutStrLn stderr . Error.render (not (g ^. globalNoColors)) (g ^. globalOnlyErrors)) e
     embed exitFailure
   ExitMsg exitCode t -> embed (putStrLn t >> exitWith exitCode)
 

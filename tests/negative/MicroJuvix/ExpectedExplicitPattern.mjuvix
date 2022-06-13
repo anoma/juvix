@@ -1,0 +1,8 @@
+module ExpectedExplicitPattern;
+  inductive T (A : Type) {
+    c : A → T A;
+  };
+
+  f : {A : Type} → T A → A;
+  f {_} {c a} ≔ a;
+end;

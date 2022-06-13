@@ -7,12 +7,14 @@ module MiniJuvix.Syntax.Concrete.Language
     module MiniJuvix.Syntax.Concrete.Loc,
     module MiniJuvix.Syntax.Hole,
     module MiniJuvix.Syntax.Concrete.LiteralLoc,
+    module MiniJuvix.Syntax.IsImplicit,
     module MiniJuvix.Syntax.Backends,
     module MiniJuvix.Syntax.ForeignBlock,
     module MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn,
     module MiniJuvix.Syntax.Concrete.PublicAnn,
     module MiniJuvix.Syntax.Concrete.ModuleIsTop,
     module MiniJuvix.Syntax.Concrete.Language.Stage,
+    module MiniJuvix.Syntax.Wildcard,
     module MiniJuvix.Syntax.Fixity,
     module MiniJuvix.Syntax.Usage,
     module MiniJuvix.Syntax.Universe,
@@ -36,8 +38,10 @@ import MiniJuvix.Syntax.Concrete.Scoped.VisibilityAnn
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.ForeignBlock
 import MiniJuvix.Syntax.Hole
+import MiniJuvix.Syntax.IsImplicit
 import MiniJuvix.Syntax.Universe
 import MiniJuvix.Syntax.Usage
+import MiniJuvix.Syntax.Wildcard
 import Prelude (show)
 
 --------------------------------------------------------------------------------
@@ -280,7 +284,8 @@ data Pattern
   | PatternApplication PatternApp
   | PatternInfixApplication PatternInfixApp
   | PatternPostfixApplication PatternPostfixApp
-  | PatternWildcard
+  | PatternBraces Pattern
+  | PatternWildcard Wildcard
   | PatternEmpty
   deriving stock (Show, Eq, Ord)
 
@@ -291,7 +296,8 @@ instance HasAtomicity Pattern where
     PatternApplication {} -> Aggregate appFixity
     PatternInfixApplication a -> Aggregate (getFixity a)
     PatternPostfixApplication p -> Aggregate (getFixity p)
-    PatternWildcard -> Atom
+    PatternWildcard {} -> Atom
+    PatternBraces {} -> Atom
     PatternEmpty -> Atom
 
 --------------------------------------------------------------------------------
@@ -305,9 +311,10 @@ data PatternScopedIden
 
 data PatternAtom (s :: Stage)
   = PatternAtomIden (PatternAtomIdenType s)
-  | PatternAtomWildcard
+  | PatternAtomWildcard Wildcard
   | PatternAtomEmpty
   | PatternAtomParens (PatternAtoms s)
+  | PatternAtomBraces (PatternAtoms s)
 
 data PatternAtoms (s :: Stage) = PatternAtoms
   { _patternAtoms :: NonEmpty (PatternAtom s),
@@ -542,6 +549,7 @@ data Expression
   | ExpressionLiteral LiteralLoc
   | ExpressionFunction (Function 'Scoped)
   | ExpressionHole (HoleType 'Scoped)
+  | ExpressionBraces (WithLoc Expression)
   deriving stock (Show, Eq, Ord)
 
 instance HasAtomicity Expression where
@@ -556,6 +564,7 @@ instance HasAtomicity Expression where
     ExpressionLiteral {} -> Atom
     ExpressionMatch {} -> Atom
     ExpressionLetBlock {} -> Atom
+    ExpressionBraces {} -> Atom
     ExpressionUniverse {} -> Atom
     ExpressionFunction {} -> Aggregate funFixity
 
@@ -616,6 +625,7 @@ deriving stock instance
 data FunctionParameter (s :: Stage) = FunctionParameter
   { _paramName :: Maybe (SymbolType s),
     _paramUsage :: Maybe Usage,
+    _paramImplicit :: IsImplicit,
     _paramType :: ExpressionType s
   }
 
@@ -912,6 +922,7 @@ data ExpressionAtom (s :: Stage)
   = AtomIdentifier (IdentifierType s)
   | AtomLambda (Lambda s)
   | AtomHole (HoleType s)
+  | AtomBraces (WithLoc (ExpressionType s))
   | AtomLetBlock (LetBlock s)
   | AtomUniverse Universe
   | AtomFunction (Function s)

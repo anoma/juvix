@@ -2,7 +2,7 @@ module MiniJuvix.Syntax.MicroJuvix.InfoTable where
 
 import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.MicroJuvix.Language
+import MiniJuvix.Syntax.MicroJuvix.Language.Extra
 
 data ConstructorInfo = ConstructorInfo
   { _constructorInfoInductiveParameters :: [InductiveParameter],
@@ -103,3 +103,42 @@ lookupFunction f = HashMap.lookupDefault impossible f <$> asks (^. infoFunctions
 
 lookupAxiom :: Member (Reader InfoTable) r => Name -> Sem r AxiomInfo
 lookupAxiom f = HashMap.lookupDefault impossible f <$> asks (^. infoAxioms)
+
+inductiveType :: Member (Reader InfoTable) r => Name -> Sem r Type
+inductiveType v = do
+  info <- lookupInductive v
+  let ps = info ^. inductiveInfoDef . inductiveParameters
+  return $
+    foldr
+      (\p k -> TypeAbs (TypeAbstraction (p ^. inductiveParamName) Explicit k))
+      TypeUniverse
+      ps
+
+constructorArgTypes :: ConstructorInfo -> ([VarName], [Type])
+constructorArgTypes i =
+  ( map (^. inductiveParamName) (i ^. constructorInfoInductiveParameters),
+    i ^. constructorInfoArgs
+  )
+
+constructorType :: Member (Reader InfoTable) r => Name -> Sem r Type
+constructorType c = do
+  info <- lookupConstructor c
+  let (inductiveParams, constrArgs) = constructorArgTypes info
+      args =
+        map (\ty -> FunctionArgTypeAbstraction (Implicit, ty)) inductiveParams
+          ++ map FunctionArgTypeType constrArgs
+      ind = TypeIden (TypeIdenInductive (info ^. constructorInfoInductive))
+      saturatedTy =
+        foldl'
+          ( \t v ->
+              TypeApp
+                ( TypeApplication
+                    { _typeAppLeft = t,
+                      _typeAppRight = TypeIden (TypeIdenVariable v),
+                      _typeAppImplicit = Implicit
+                    }
+                )
+          )
+          ind
+          inductiveParams
+  return (foldFunType args saturatedTy)

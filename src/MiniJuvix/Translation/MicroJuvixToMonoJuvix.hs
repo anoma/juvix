@@ -451,6 +451,7 @@ goPattern' ty = \case
   Micro.PatternVariable v -> return (PatternVariable (goName v))
   Micro.PatternConstructorApp capp -> PatternConstructorApp <$> goApp capp
   Micro.PatternWildcard {} -> return PatternWildcard
+  Micro.PatternBraces b -> goPattern' ty b
   where
     goApp :: Micro.ConstructorApp -> Sem r ConstructorApp
     goApp capp = case ty ^. Micro.unconcreteType of

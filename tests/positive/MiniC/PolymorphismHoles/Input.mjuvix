@@ -72,8 +72,8 @@ inductive Pair (A : Type) (B : Type) {
  mkPair : A → B → Pair A B;
 };
 
-fst : (A : Type) → (B : Type) → Pair A B → A;
-fst _ _ (mkPair a b) ≔ a;
+fst : {A : Type} → {B : Type} → Pair A B → A;
+fst (mkPair a b) ≔ a;
 
 --------------------------------------------------------------------------------
 -- Main
@@ -81,7 +81,7 @@ fst _ _ (mkPair a b) ≔ a;
 
 fst-of-pair : Action;
 fst-of-pair ≔ (put-str "fst (True, False) = ")
-               >> put-str-ln (bool-to-str (fst _ _ (mkPair _ _ true false)));
+               >> put-str-ln (bool-to-str (fst (mkPair true false)));
 
 main : Action;
 main ≔ fst-of-pair;

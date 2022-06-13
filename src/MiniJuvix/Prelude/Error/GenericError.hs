@@ -38,13 +38,13 @@ class ToGenericError a where
 errorIntervals :: ToGenericError e => e -> [Interval]
 errorIntervals = (^. genericErrorIntervals) . genericError
 
-render :: ToGenericError e => Bool -> e -> Text
-render ansi err
+render :: ToGenericError e => Bool -> Bool -> e -> Text
+render ansi endChar err
   | ansi = helper Ansi.renderStrict (toAnsiDoc gMsg)
   | otherwise = helper renderStrict (toTextDoc gMsg)
   where
     helper :: (SimpleDocStream a -> Text) -> Doc a -> Text
-    helper f x = (f . layoutPretty defaultLayoutOptions) (header <> x <> endChar)
+    helper f x = (f . layoutPretty defaultLayoutOptions) (header <> x <> lastChar)
 
     g :: GenericError
     g = genericError err
@@ -55,16 +55,18 @@ render ansi err
     header :: Doc a
     header = genericErrorHeader g
 
-    endChar :: Doc a
-    endChar = "ת"
+    lastChar :: Doc a
+    lastChar
+      | endChar = "ת"
+      | otherwise = ""
 
 -- | Render the error to Text.
 renderText :: ToGenericError e => e -> Text
-renderText = render False
+renderText = render False False
 
 -- | Render the error with Ansi formatting (if any).
 renderAnsiText :: ToGenericError e => e -> Text
-renderAnsiText = render True
+renderAnsiText = render True False
 
 printErrorAnsi :: ToGenericError e => e -> IO ()
 printErrorAnsi = hPutStrLn stderr . renderAnsiText

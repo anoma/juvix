@@ -23,7 +23,6 @@ data InfoTable = InfoTable
     _infoFunctions :: HashMap Name FunctionInfo
   }
 
--- TODO temporary function.
 buildTable :: Module -> InfoTable
 buildTable m = InfoTable {..}
   where

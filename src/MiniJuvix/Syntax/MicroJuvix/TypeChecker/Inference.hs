@@ -50,15 +50,15 @@ closeState = \case
         goType :: Type -> Sem r' Type
         goType t = case t of
           TypeIden {} -> return t
-          TypeApp (TypeApplication a b) -> do
+          TypeApp (TypeApplication a b i) -> do
             a' <- goType a
             b' <- goType b
-            return (TypeApp (TypeApplication a' b'))
+            return (TypeApp (TypeApplication a' b' i))
           TypeFunction (Function a b) -> do
             a' <- goType a
             b' <- goType b
             return (TypeFunction (Function a' b'))
-          TypeAbs (TypeAbstraction v b) -> TypeAbs . TypeAbstraction v <$> goType b
+          TypeAbs (TypeAbstraction v i b) -> TypeAbs . TypeAbstraction v i <$> goType b
           TypeUniverse -> return TypeUniverse
           TypeAny -> return TypeAny
           TypeHole h' ->
@@ -142,11 +142,11 @@ re = reinterpret $ \case
                 return (a == b || mappedEq)
               _ -> return False
             goApp :: TypeApplication -> TypeApplication -> Sem r Bool
-            goApp (TypeApplication f x) (TypeApplication f' x') = andM [go f f', go x x']
+            goApp (TypeApplication f x _) (TypeApplication f' x' _) = andM [go f f', go x x']
             goFunction :: Function -> Function -> Sem r Bool
             goFunction (Function l r) (Function l' r') = andM [go l l', go r r']
             goAbs :: TypeAbstraction -> TypeAbstraction -> Sem r Bool
-            goAbs (TypeAbstraction v1 r) (TypeAbstraction v2 r') =
+            goAbs (TypeAbstraction v1 _ r) (TypeAbstraction v2 _ r') =
               local (HashMap.insert v1 v2) (go r r')
 
 runInference :: Member (Error TypeCheckerError) r => Sem (Inference ': r) Expression -> Sem r Expression

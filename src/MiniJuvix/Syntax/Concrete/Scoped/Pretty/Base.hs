@@ -173,6 +173,11 @@ braces = enclose kwBraceL kwBraceR
 parens :: Doc Ann -> Doc Ann
 parens = enclose kwParenL kwParenR
 
+implicitDelim :: IsImplicit -> Doc Ann -> Doc Ann
+implicitDelim = \case
+  Implicit -> braces
+  Explicit -> parens
+
 doubleQuotes :: Doc Ann -> Doc Ann
 doubleQuotes = enclose kwDQuote kwDQuote
 
@@ -512,13 +517,23 @@ instance SingI s => PrettyCode (TypeSignature s) where
 instance SingI s => PrettyCode (Function s) where
   ppCode :: forall r. Members '[Reader Options] r => Function s -> Sem r (Doc Ann)
   ppCode Function {..} = do
-    funParameter' <- ppFunParameter _funParameter
+    funParameter' <- ppCode _funParameter
     funReturn' <- ppRightExpression' funFixity _funReturn
     return $ funParameter' <+> kwArrowR <+> funReturn'
     where
       ppRightExpression' = case sing :: SStage s of
         SParsed -> ppRightExpression
         SScoped -> ppRightExpression
+
+instance SingI s => PrettyCode (FunctionParameter s) where
+  ppCode FunctionParameter {..} = do
+    case _paramName of
+      Nothing -> ppLeftExpression' funFixity _paramType
+      Just n -> do
+        paramName' <- annDef n <$> ppSymbol n
+        paramType' <- ppExpression _paramType
+        return $ implicitDelim _paramImplicit (paramName' <+> ppUsage _paramUsage <+> paramType')
+    where
       ppLeftExpression' = case sing :: SStage s of
         SParsed -> ppLeftExpression
         SScoped -> ppLeftExpression
@@ -529,14 +544,6 @@ instance SingI s => PrettyCode (Function s) where
           UsageNone -> kwColonZero
           UsageOnce -> kwColonOne
           UsageOmega -> kwColonOmega
-      ppFunParameter :: FunctionParameter s -> Sem r (Doc Ann)
-      ppFunParameter FunctionParameter {..} = do
-        case _paramName of
-          Nothing -> ppLeftExpression' funFixity _paramType
-          Just n -> do
-            paramName' <- annDef n <$> ppSymbol n
-            paramType' <- ppExpression _paramType
-            return $ parens (paramName' <+> ppUsage _paramUsage <+> paramType')
 
 instance PrettyCode Universe where
   ppCode (Universe n) = return $ kwType <+?> (pretty <$> n)
@@ -646,9 +653,10 @@ instance SingI s => PrettyCode (PatternAtom s) where
     PatternAtomIden n -> case sing :: SStage s of
       SParsed -> ppCode n
       SScoped -> ppCode n
-    PatternAtomWildcard -> return kwWildcard
+    PatternAtomWildcard {} -> return kwWildcard
     PatternAtomEmpty -> return $ parens mempty
     PatternAtomParens p -> parens <$> ppCode p
+    PatternAtomBraces p -> braces <$> ppCode p
 
 instance SingI s => PrettyCode (PatternAtoms s) where
   ppCode (PatternAtoms ps _) = hsep . toList <$> mapM ppCode ps
@@ -710,11 +718,15 @@ instance PrettyCode ScopedIden where
     ScopedFunction f -> ppCode f
     ScopedConstructor c -> ppCode c
 
+instance PrettyCode c => PrettyCode (WithLoc c) where
+  ppCode = ppCode . (^. withLocParam)
+
 instance PrettyCode Expression where
   ppCode e = case e of
     ExpressionIdentifier n -> ppCode n
     ExpressionHole w -> ppHole w
     ExpressionParensIdentifier n -> parens <$> ppCode n
+    ExpressionBraces b -> braces <$> ppCode b
     ExpressionApplication a -> ppCode a
     ExpressionInfixApplication a -> ppCode a
     ExpressionPostfixApplication a -> ppCode a
@@ -733,8 +745,9 @@ instance PrettyCode Pattern where
       l' <- ppLeftExpression appFixity l
       r' <- ppRightExpression appFixity r
       return $ l' <+> r'
-    PatternWildcard -> return kwWildcard
+    PatternWildcard {} -> return kwWildcard
     PatternEmpty -> return $ parens mempty
+    PatternBraces p -> braces <$> ppCode p
     PatternConstructor constr -> ppCode constr
     PatternInfixApplication i -> ppPatternInfixApp i
     PatternPostfixApplication i -> ppPatternPostfixApp i
@@ -812,6 +825,7 @@ instance SingI s => PrettyCode (ExpressionAtom s) where
     AtomFunArrow -> return kwArrowR
     AtomMatch m -> ppCode m
     AtomParens e -> parens <$> ppExpression e
+    AtomBraces e -> braces <$> ppExpression (e ^. withLocParam)
     AtomHole w -> ppHole w
 
 instance SingI s => PrettyCode (ExpressionAtoms s) where

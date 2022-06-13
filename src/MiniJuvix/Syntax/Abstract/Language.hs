@@ -2,6 +2,8 @@ module MiniJuvix.Syntax.Abstract.Language
   ( module MiniJuvix.Syntax.Abstract.Language,
     module MiniJuvix.Syntax.Concrete.Language,
     module MiniJuvix.Syntax.Hole,
+    module MiniJuvix.Syntax.Wildcard,
+    module MiniJuvix.Syntax.IsImplicit,
   )
 where
 
@@ -11,7 +13,9 @@ import MiniJuvix.Syntax.Concrete.Name qualified as C
 import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.Hole
+import MiniJuvix.Syntax.IsImplicit
 import MiniJuvix.Syntax.Universe
+import MiniJuvix.Syntax.Wildcard
 
 type TopModuleName = S.TopModulePath
 
@@ -110,7 +114,7 @@ data Expression
   deriving stock (Eq, Show)
 
 instance HasAtomicity Expression where
-  atomicity e = case e of
+  atomicity = \case
     ExpressionIden {} -> Atom
     ExpressionHole {} -> Atom
     ExpressionUniverse u -> atomicity u
@@ -132,7 +136,8 @@ data MatchAlt = MatchAlt
 
 data Application = Application
   { _appLeft :: Expression,
-    _appRight :: Expression
+    _appRight :: Expression,
+    _appImplicit :: IsImplicit
   }
   deriving stock (Eq, Show)
 
@@ -152,6 +157,7 @@ data LambdaClause = LambdaClause
 data FunctionParameter = FunctionParameter
   { _paramName :: Maybe VarName,
     _paramUsage :: Usage,
+    _paramImplicit :: IsImplicit,
     _paramType :: Expression
   }
   deriving stock (Eq, Show)
@@ -175,8 +181,9 @@ data ConstructorApp = ConstructorApp
 data Pattern
   = PatternVariable VarName
   | PatternConstructorApp ConstructorApp
-  | PatternWildcard
+  | PatternWildcard Wildcard
   | PatternEmpty
+  | PatternBraces Pattern
   deriving stock (Eq, Show)
 
 data InductiveDef = InductiveDef

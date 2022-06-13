@@ -277,6 +277,27 @@ instance ToGenericError NotInScope where
 instance HasLoc NotInScope where
   getLoc = getLoc . (^. notInScopeSymbol)
 
+newtype AppLeftImplicit = AppLeftImplicit
+  { _appLeftImplicit :: WithLoc Expression
+  }
+  deriving stock (Show)
+
+makeLenses ''AppLeftImplicit
+
+instance ToGenericError AppLeftImplicit where
+  genericError e =
+    GenericError
+      { _genericErrorLoc = i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
+    where
+      i = getLoc (e ^. appLeftImplicit)
+      msg =
+        "The expression" <+> ppCode (e ^. appLeftImplicit) <+> "cannot appear by itself."
+          <> line
+          <> "It needs to be the argument of a function expecting an implicit argument."
+
 newtype ModuleNotInScope = ModuleNotInScope
   { _moduleNotInScopeName :: Name
   }

@@ -177,7 +177,7 @@ import_ = do
 
 expressionAtom :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (ExpressionAtom 'Parsed)
 expressionAtom =
-  do AtomLiteral <$> P.try literal
+  AtomLiteral <$> P.try literal
     <|> (AtomIdentifier <$> name)
     <|> (AtomUniverse <$> universe)
     <|> (AtomLambda <$> lambda)
@@ -187,6 +187,8 @@ expressionAtom =
     <|> (AtomFunArrow <$ kwRightArrow)
     <|> (AtomHole <$> hole)
     <|> parens (AtomParens <$> parseExpressionAtoms)
+    -- TODO: revise this try. Necessary to avoid confusion with match
+    <|> P.try (braces (AtomBraces <$> withLoc parseExpressionAtoms))
 
 parseExpressionAtoms ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
@@ -309,16 +311,26 @@ axiomDef = do
 -- Function expression
 --------------------------------------------------------------------------------
 
+implicitOpen :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r IsImplicit
+implicitOpen =
+  lbrace $> Implicit
+    <|> lparen $> Explicit
+
+implicitClose :: Members '[Reader ParserParams, InfoTableBuilder] r => IsImplicit -> ParsecS r ()
+implicitClose = \case
+  Implicit -> rbrace
+  Explicit -> rparen
+
 functionParam :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (FunctionParameter 'Parsed)
 functionParam = do
-  (_paramName, _paramUsage) <- P.try $ do
-    lparen
+  (_paramName, _paramUsage, _paramImplicit) <- P.try $ do
+    impl <- implicitOpen
     n <- pName
     u <- pUsage
-    return (n, u)
+    return (n, u, impl)
   _paramType <- parseExpressionAtoms
-  rparen
-  return $ FunctionParameter {..}
+  implicitClose _paramImplicit
+  return FunctionParameter {..}
   where
     pName :: ParsecS r (Maybe Symbol)
     pName =
@@ -399,6 +411,9 @@ constructorDef = do
   _constructorType <- parseExpressionAtoms
   return InductiveConstructorDef {..}
 
+wildcard :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r Wildcard
+wildcard = Wildcard . snd <$> interval kwWildcard
+
 --------------------------------------------------------------------------------
 -- Pattern section
 --------------------------------------------------------------------------------
@@ -406,8 +421,9 @@ constructorDef = do
 patternAtom :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (PatternAtom 'Parsed)
 patternAtom =
   PatternAtomIden <$> name
-    <|> PatternAtomWildcard <$ kwWildcard
+    <|> PatternAtomWildcard <$> wildcard
     <|> (PatternAtomParens <$> parens parsePatternAtoms)
+    <|> (PatternAtomBraces <$> braces parsePatternAtoms)
 
 parsePatternAtoms :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (PatternAtoms 'Parsed)
 parsePatternAtoms = do

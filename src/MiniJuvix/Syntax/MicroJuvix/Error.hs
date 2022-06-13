@@ -2,17 +2,18 @@ module MiniJuvix.Syntax.MicroJuvix.Error
   ( module MiniJuvix.Syntax.MicroJuvix.Error,
     module MiniJuvix.Syntax.MicroJuvix.Error.Pretty,
     module MiniJuvix.Syntax.MicroJuvix.Error.Types,
+    module MiniJuvix.Syntax.MicroJuvix.ArityChecker.Error,
   )
 where
 
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.MicroJuvix.ArityChecker.Error
 import MiniJuvix.Syntax.MicroJuvix.Error.Pretty
 import MiniJuvix.Syntax.MicroJuvix.Error.Types
 
 data TypeCheckerError
-  = ErrTooManyPatterns TooManyPatterns
-  | ErrWrongConstructorType WrongConstructorType
-  | ErrWrongConstructorAppArgs WrongConstructorAppArgs
+  = ErrWrongConstructorType WrongConstructorType
+  | ErrArity ArityCheckerError
   | ErrWrongType WrongType
   | ErrUnsolvedMeta UnsolvedMeta
   | ErrExpectedFunctionType ExpectedFunctionType
@@ -20,9 +21,8 @@ data TypeCheckerError
 instance ToGenericError TypeCheckerError where
   genericError :: TypeCheckerError -> GenericError
   genericError = \case
-    ErrTooManyPatterns e -> genericError e
     ErrWrongConstructorType e -> genericError e
-    ErrWrongConstructorAppArgs e -> genericError e
+    ErrArity e -> genericError e
     ErrWrongType e -> genericError e
     ErrUnsolvedMeta e -> genericError e
     ErrExpectedFunctionType e -> genericError e

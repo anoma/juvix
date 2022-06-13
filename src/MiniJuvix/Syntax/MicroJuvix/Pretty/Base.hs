@@ -52,15 +52,19 @@ instance PrettyCode Iden where
     IdenInductive a -> ppCode a
 
 instance PrettyCode TypeApplication where
-  ppCode (TypeApplication l r) = do
+  ppCode (TypeApplication l r i) = do
     l' <- ppLeftExpression appFixity l
-    r' <- ppRightExpression appFixity r
-    return $ l' <+> r'
+    r' <- case i of
+      Explicit -> ppRightExpression appFixity r
+      Implicit -> braces <$> ppCode r
+    return (l' <+> r')
 
 instance PrettyCode Application where
   ppCode a = do
     l' <- ppLeftExpression appFixity (a ^. appLeft)
-    r' <- ppRightExpression appFixity (a ^. appRight)
+    r' <- case a ^. appImplicit of
+      Explicit -> ppRightExpression appFixity (a ^. appRight)
+      Implicit -> braces <$> ppCode (a ^. appRight)
     return $ l' <+> r'
 
 instance PrettyCode TypedExpression where
@@ -88,7 +92,7 @@ kwInclude :: Doc Ann
 kwInclude = keyword Str.include
 
 kwArrow :: Doc Ann
-kwArrow = keyword Str.toAscii
+kwArrow = keyword Str.toUnicode
 
 kwMapsto :: Doc Ann
 kwMapsto = keyword Str.mapstoUnicode
@@ -148,9 +152,9 @@ instance PrettyCode BackendItem where
       backend <+> kwMapsto <+> pretty _backendItemCode
 
 instance PrettyCode TypeAbstraction where
-  ppCode (TypeAbstraction v r) = do
+  ppCode (TypeAbstraction v i r) = do
     v' <- ppCode v
-    let l' = parens (v' <+> colon <+> kwType)
+    let l' = implicitDelim i (v' <+> colon <+> kwType)
     r' <- ppRightExpression funFixity r
     return $ l' <+> kwArrow <+> r'
 
@@ -169,7 +173,7 @@ instance PrettyCode TypeIden where
 instance PrettyCode FunctionArgType where
   ppCode = \case
     FunctionArgTypeType t -> ppCode t
-    FunctionArgTypeAbstraction v -> ppCode v
+    FunctionArgTypeAbstraction (_, v) -> ppCode v
 
 instance PrettyCode Hole where
   ppCode _ = return kwHole
@@ -201,6 +205,11 @@ ppBlock ::
   Sem r (Doc Ann)
 ppBlock items = mapM ppCode items >>= bracesIndent . vsep . toList
 
+implicitDelim :: IsImplicit -> Doc Ann -> Doc Ann
+implicitDelim = \case
+  Implicit -> braces
+  Explicit -> parens
+
 bracesIndent :: Members '[Reader Options] r => Doc Ann -> Sem r (Doc Ann)
 bracesIndent d = do
   d' <- indent' d
@@ -229,7 +238,8 @@ instance PrettyCode Pattern where
   ppCode p = case p of
     PatternVariable v -> ppCode v
     PatternConstructorApp a -> ppCode a
-    PatternWildcard -> return kwWildcard
+    PatternWildcard {} -> return kwWildcard
+    PatternBraces b -> braces <$> ppCode b
 
 instance PrettyCode FunctionDef where
   ppCode f = do

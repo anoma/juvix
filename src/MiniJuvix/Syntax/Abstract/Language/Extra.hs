@@ -8,10 +8,11 @@ import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.Language
 
 patternVariables :: Pattern -> [VarName]
-patternVariables pat = case pat of
+patternVariables = \case
   PatternVariable v -> [v]
   PatternWildcard {} -> []
   PatternEmpty {} -> []
+  PatternBraces b -> patternVariables b
   PatternConstructorApp app -> appVariables app
 
 appVariables :: ConstructorApp -> [VarName]
@@ -20,13 +21,14 @@ appVariables (ConstructorApp _ ps) = concatMap patternVariables ps
 smallerPatternVariables :: Pattern -> [VarName]
 smallerPatternVariables = \case
   PatternVariable {} -> []
+  PatternBraces b -> smallerPatternVariables b
   PatternWildcard {} -> []
   PatternEmpty {} -> []
   PatternConstructorApp app -> appVariables app
 
 viewApp :: Expression -> (Expression, [Expression])
 viewApp e = case e of
-  ExpressionApplication (Application l r) ->
+  ExpressionApplication (Application l r _) ->
     second (`snoc` r) (viewApp l)
   _ -> (e, [])
 

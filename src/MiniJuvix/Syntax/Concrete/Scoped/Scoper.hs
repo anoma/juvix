@@ -911,6 +911,7 @@ checkFunction Function {..} = do
         FunctionParameter
           { _paramName = paramName',
             _paramUsage = _paramUsage,
+            _paramImplicit = _paramImplicit,
             _paramType = paramType'
           }
       where
@@ -1088,10 +1089,11 @@ checkPatternAtom ::
   PatternAtom 'Parsed ->
   Sem r (PatternAtom 'Scoped)
 checkPatternAtom p = case p of
-  PatternAtomWildcard -> return PatternAtomWildcard
+  PatternAtomWildcard i -> return (PatternAtomWildcard i)
   PatternAtomEmpty -> return PatternAtomEmpty
   PatternAtomParens e -> PatternAtomParens <$> checkPatternAtoms e
   PatternAtomIden n -> PatternAtomIden <$> checkPatternName n
+  PatternAtomBraces n -> PatternAtomBraces <$> checkPatternAtoms n
 
 checkName ::
   Members '[Error ScoperError, State Scope, Reader LocalVars, State ScoperState, InfoTableBuilder] r =>
@@ -1112,6 +1114,7 @@ checkExpressionAtom e = case e of
   AtomUniverse uni -> return (AtomUniverse uni)
   AtomFunction fun -> AtomFunction <$> checkFunction fun
   AtomParens par -> AtomParens <$> checkParens par
+  AtomBraces br -> AtomBraces <$> traverseOf withLocParam checkParseExpressionAtoms br
   AtomFunArrow -> return AtomFunArrow
   AtomHole h -> AtomHole <$> checkHole h
   AtomLiteral l -> return (AtomLiteral l)
@@ -1206,9 +1209,10 @@ checkStatement s = case s of
 -------------------------------------------------------------------------------
 -- Infix Expression
 -------------------------------------------------------------------------------
+
 makeExpressionTable2 ::
   ExpressionAtoms 'Scoped -> [[P.Operator Parse Expression]]
-makeExpressionTable2 (ExpressionAtoms atoms _) = [appOp] : operators ++ [[functionOp]]
+makeExpressionTable2 (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ [[functionOp]]
   where
     operators = mkSymbolTable idens
     idens :: [ScopedIden]
@@ -1253,8 +1257,8 @@ makeExpressionTable2 (ExpressionAtoms atoms _) = [appOp] : operators ++ [[functi
               _ -> Nothing
 
     -- Application by juxtaposition.
-    appOp :: P.Operator Parse Expression
-    appOp = P.InfixL (return app)
+    appOpExplicit :: P.Operator Parse Expression
+    appOpExplicit = P.InfixL (return app)
       where
         app :: Expression -> Expression -> Expression
         app f x =
@@ -1263,6 +1267,7 @@ makeExpressionTable2 (ExpressionAtoms atoms _) = [appOp] : operators ++ [[functi
               { _applicationFunction = f,
                 _applicationParameter = x
               }
+
     -- Non-dependent function type: A → B
     functionOp :: P.Operator Parse Expression
     functionOp = P.InfixR (nonDepFun <$ P.single AtomFunArrow)
@@ -1279,6 +1284,7 @@ makeExpressionTable2 (ExpressionAtoms atoms _) = [appOp] : operators ++ [[functi
               FunctionParameter
                 { _paramName = Nothing,
                   _paramUsage = Nothing,
+                  _paramImplicit = Explicit,
                   _paramType = a
                 }
 
@@ -1325,6 +1331,7 @@ parseTerm =
       <|> parseLiteral
       <|> parseMatch
       <|> parseLetBlock
+      <|> parseBraces
   where
     parseHole :: Parse Expression
     parseHole = ExpressionHole <$> P.token lit mempty
@@ -1389,6 +1396,14 @@ parseTerm =
         identifierNoFixity s = case s of
           AtomIdentifier iden
             | not (S.hasFixity (identifierName iden)) -> Just iden
+          _ -> Nothing
+
+    parseBraces :: Parse Expression
+    parseBraces = ExpressionBraces <$> P.token bracedExpr mempty
+      where
+        bracedExpr :: ExpressionAtom 'Scoped -> Maybe (WithLoc Expression)
+        bracedExpr = \case
+          AtomBraces l -> Just l
           _ -> Nothing
 
     parseParens :: Parse Expression
@@ -1457,7 +1472,13 @@ makePatternTable atom = [appOp] : operators
     appOp = P.InfixL (return app)
       where
         app :: Pattern -> Pattern -> Pattern
-        app l = PatternApplication . PatternApp l
+        app l r =
+          PatternApplication
+            ( PatternApp
+                { _patAppLeft = l,
+                  _patAppRight = r
+                }
+            )
 
 parsePatternTerm ::
   forall r.
@@ -1469,6 +1490,7 @@ parsePatternTerm = do
     parseNoInfixConstructor
       <|> parseVariable
       <|> parseParens pPat
+      <|> parseBraces pPat
       <|> parseWildcard
       <|> parseEmpty
   where
@@ -1486,12 +1508,12 @@ parsePatternTerm = do
           _ -> Nothing
 
     parseWildcard :: ParsePat Pattern
-    parseWildcard = PatternWildcard <$ P.satisfy isWildcard
+    parseWildcard = PatternWildcard <$> P.token isWildcard mempty
       where
-        isWildcard :: PatternAtom 'Scoped -> Bool
+        isWildcard :: PatternAtom 'Scoped -> Maybe Wildcard
         isWildcard s = case s of
-          PatternAtomWildcard -> True
-          _ -> False
+          PatternAtomWildcard i -> Just i
+          _ -> Nothing
 
     parseEmpty :: ParsePat Pattern
     parseEmpty = PatternEmpty <$ P.satisfy isEmpty
@@ -1509,15 +1531,25 @@ parsePatternTerm = do
           PatternAtomIden (PatternScopedVar sym) -> Just sym
           _ -> Nothing
 
+    parseBraces :: ParsePat Pattern -> ParsePat Pattern
+    parseBraces patternParser = do
+      exprs <- P.token bracesPat mempty
+      case P.parse patternParser "" exprs of
+        Right r -> return (PatternBraces r)
+        Left {} -> mzero
+      where
+        bracesPat :: PatternAtom 'Scoped -> Maybe [PatternAtom 'Scoped]
+        bracesPat s = case s of
+          PatternAtomBraces (PatternAtoms ss _) -> Just (toList ss)
+          _ -> Nothing
+
     parseParens :: ParsePat Pattern -> ParsePat Pattern
     parseParens patternParser = do
       exprs <- P.token parenPat mempty
-      case P.parse patternParser strPath exprs of
+      case P.parse patternParser "" exprs of
         Right r -> return r
         Left {} -> mzero
       where
-        strPath :: FilePath
-        strPath = "inner parens"
         parenPat :: PatternAtom 'Scoped -> Maybe [PatternAtom 'Scoped]
         parenPat s = case s of
           PatternAtomParens (PatternAtoms ss _) -> Just (toList ss)

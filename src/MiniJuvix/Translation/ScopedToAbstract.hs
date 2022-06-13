@@ -8,16 +8,16 @@ import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.AbstractResult
 import MiniJuvix.Syntax.Abstract.InfoTableBuilder
 import MiniJuvix.Syntax.Abstract.Language (FunctionDef (_funDefTypeSig))
-import MiniJuvix.Syntax.Abstract.Language qualified as A
-import MiniJuvix.Syntax.Concrete.Language
-import MiniJuvix.Syntax.Concrete.Language qualified as C
+import MiniJuvix.Syntax.Abstract.Language qualified as Abstract
+import MiniJuvix.Syntax.Concrete.Language qualified as Concrete
+import MiniJuvix.Syntax.Concrete.Scoped.Error
 import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
 
 unsupported :: Text -> a
 unsupported msg = error $ msg <> "Scoped to Abstract: not yet supported"
 
-entryAbstract :: Scoper.ScoperResult -> Sem r AbstractResult
+entryAbstract :: Member (Error ScoperError) r => Scoper.ScoperResult -> Sem r AbstractResult
 entryAbstract _resultScoper = do
   (_resultTable, _resultModules) <- runInfoTableBuilder (mapM goTopModule ms)
   return AbstractResult {..}
@@ -25,33 +25,33 @@ entryAbstract _resultScoper = do
     ms = _resultScoper ^. Scoper.resultModules
 
 goTopModule ::
-  Members '[InfoTableBuilder] r =>
+  Members '[InfoTableBuilder, Error ScoperError] r =>
   Module 'Scoped 'ModuleTop ->
-  Sem r A.TopModule
+  Sem r Abstract.TopModule
 goTopModule = goModule
 
 goLocalModule ::
-  Members '[InfoTableBuilder] r =>
+  Members '[InfoTableBuilder, Error ScoperError] r =>
   Module 'Scoped 'ModuleLocal ->
-  Sem r A.LocalModule
+  Sem r Abstract.LocalModule
 goLocalModule = goModule
 
 goModule ::
-  (Members '[InfoTableBuilder] r, ModulePathType 'Scoped t ~ S.Name' c) =>
+  (Members '[InfoTableBuilder, Error ScoperError] r, ModulePathType 'Scoped t ~ S.Name' c) =>
   Module 'Scoped t ->
-  Sem r (A.Module c)
+  Sem r (Abstract.Module c)
 goModule (Module n par b) = case par of
-  [] -> A.Module n <$> goModuleBody b
+  [] -> Abstract.Module n <$> goModuleBody b
   _ -> unsupported "Module parameters"
 
 goModuleBody ::
   forall r.
-  Members '[InfoTableBuilder] r =>
+  Members '[InfoTableBuilder, Error ScoperError] r =>
   [Statement 'Scoped] ->
-  Sem r A.ModuleBody
+  Sem r Abstract.ModuleBody
 goModuleBody ss' = do
   otherThanFunctions <- mapMaybeM goStatement ss
-  functions <- map (fmap A.StatementFunction) <$> compiledFunctions
+  functions <- map (fmap Abstract.StatementFunction) <$> compiledFunctions
   let _moduleStatements =
         map
           (^. indexedThing)
@@ -59,12 +59,12 @@ goModuleBody ss' = do
               (^. indexedIx)
               (otherThanFunctions <> functions)
           )
-  return A.ModuleBody {..}
+  return Abstract.ModuleBody {..}
   where
     ss :: [Indexed (Statement 'Scoped)]
     ss = zipWith Indexed [0 ..] ss'
 
-    compiledFunctions :: Sem r [Indexed A.FunctionDef]
+    compiledFunctions :: Sem r [Indexed Abstract.FunctionDef]
     compiledFunctions =
       sequence $
         [ Indexed i <$> funDef
@@ -83,46 +83,47 @@ goModuleBody ss' = do
 
 goStatement ::
   forall r.
-  Members '[InfoTableBuilder] r =>
+  Members '[InfoTableBuilder, Error ScoperError] r =>
   Indexed (Statement 'Scoped) ->
-  Sem r (Maybe (Indexed A.Statement))
+  Sem r (Maybe (Indexed Abstract.Statement))
 goStatement (Indexed idx s) =
   fmap (Indexed idx) <$> case s of
-    StatementAxiom d -> Just . A.StatementAxiom <$> goAxiom d
-    StatementImport (Import t) -> Just . A.StatementImport <$> goModule t
+    StatementAxiom d -> Just . Abstract.StatementAxiom <$> goAxiom d
+    StatementImport (Import t) -> Just . Abstract.StatementImport <$> goModule t
     StatementOperator {} -> return Nothing
     StatementOpenModule {} -> return Nothing
     StatementEval {} -> unsupported "eval statements"
     StatementPrint {} -> unsupported "print statements"
-    StatementInductive i -> Just . A.StatementInductive <$> goInductive i
-    StatementForeign f -> return (Just (A.StatementForeign f))
-    StatementModule f -> Just . A.StatementLocalModule <$> goLocalModule f
+    StatementInductive i -> Just . Abstract.StatementInductive <$> goInductive i
+    StatementForeign f -> return (Just (Abstract.StatementForeign f))
+    StatementModule f -> Just . Abstract.StatementLocalModule <$> goLocalModule f
     StatementTypeSignature {} -> return Nothing
     StatementFunctionClause {} -> return Nothing
     StatementCompile {} -> return Nothing
 
 goFunctionDef ::
   forall r.
-  Members '[InfoTableBuilder] r =>
+  Members '[InfoTableBuilder, Error ScoperError] r =>
   TypeSignature 'Scoped ->
   NonEmpty (FunctionClause 'Scoped) ->
-  Sem r A.FunctionDef
+  Sem r Abstract.FunctionDef
 goFunctionDef TypeSignature {..} clauses = do
   let _funDefName = _sigName
       _funDefTerminating = _sigTerminating
   _funDefClauses <- mapM goFunctionClause clauses
   _funDefTypeSig <- goExpression _sigType
-  registerFunction' A.FunctionDef {..}
+  registerFunction' Abstract.FunctionDef {..}
 
 goFunctionClause ::
+  Member (Error ScoperError) r =>
   FunctionClause 'Scoped ->
-  Sem r A.FunctionClause
+  Sem r Abstract.FunctionClause
 goFunctionClause FunctionClause {..} = do
   _clausePatterns' <- mapM goPattern _clausePatterns
   _clauseBody' <- goExpression _clauseBody
   goWhereBlock _clauseWhere
   return
-    A.FunctionClause
+    Abstract.FunctionClause
       { _clausePatterns = _clausePatterns',
         _clauseBody = _clauseBody'
       }
@@ -135,28 +136,30 @@ goWhereBlock w = case w of
   Nothing -> return ()
 
 goInductiveParameter ::
+  Member (Error ScoperError) r =>
   InductiveParameter 'Scoped ->
-  Sem r A.FunctionParameter
+  Sem r Abstract.FunctionParameter
 goInductiveParameter InductiveParameter {..} = do
   paramType' <- goExpression _inductiveParameterType
   return
-    A.FunctionParameter
+    Abstract.FunctionParameter
       { _paramType = paramType',
         _paramName = Just _inductiveParameterName,
+        _paramImplicit = Explicit,
         _paramUsage = UsageOmega
       }
 
 goInductive ::
-  Members '[InfoTableBuilder] r =>
+  Members '[InfoTableBuilder, Error ScoperError] r =>
   InductiveDef 'Scoped ->
-  Sem r A.InductiveDef
+  Sem r Abstract.InductiveDef
 goInductive InductiveDef {..} = do
   _inductiveParameters' <- mapM goInductiveParameter _inductiveParameters
   _inductiveType' <- mapM goExpression _inductiveType
   _inductiveConstructors' <- mapM goConstructorDef _inductiveConstructors
   inductiveInfo <-
     registerInductive
-      A.InductiveDef
+      Abstract.InductiveDef
         { _inductiveParameters = _inductiveParameters',
           _inductiveName = _inductiveName,
           _inductiveType = _inductiveType',
@@ -164,67 +167,75 @@ goInductive InductiveDef {..} = do
         }
 
   forM_ _inductiveConstructors' (registerConstructor inductiveInfo)
-
   return (inductiveInfo ^. inductiveInfoDef)
 
 goConstructorDef ::
+  Member (Error ScoperError) r =>
   InductiveConstructorDef 'Scoped ->
-  Sem r A.InductiveConstructorDef
+  Sem r Abstract.InductiveConstructorDef
 goConstructorDef (InductiveConstructorDef c ty) =
-  A.InductiveConstructorDef c <$> goExpression ty
+  Abstract.InductiveConstructorDef c <$> goExpression ty
 
 goExpression ::
+  forall r.
+  Member (Error ScoperError) r =>
   Expression ->
-  Sem r A.Expression
+  Sem r Abstract.Expression
 goExpression = \case
   ExpressionIdentifier nt -> return (goIden nt)
   ExpressionParensIdentifier nt -> return (goIden nt)
-  ExpressionApplication a -> A.ExpressionApplication <$> goApplication a
-  ExpressionInfixApplication ia -> A.ExpressionApplication <$> goInfix ia
-  ExpressionPostfixApplication pa -> A.ExpressionApplication <$> goPostfix pa
-  ExpressionLiteral l -> return (A.ExpressionLiteral l)
+  ExpressionApplication a -> Abstract.ExpressionApplication <$> goApplication a
+  ExpressionInfixApplication ia -> Abstract.ExpressionApplication <$> goInfix ia
+  ExpressionPostfixApplication pa -> Abstract.ExpressionApplication <$> goPostfix pa
+  ExpressionLiteral l -> return (Abstract.ExpressionLiteral l)
   ExpressionLambda {} -> unsupported "Lambda"
+  ExpressionBraces b -> throw (ErrAppLeftImplicit (AppLeftImplicit b))
   ExpressionMatch {} -> unsupported "Match"
   ExpressionLetBlock {} -> unsupported "Let Block"
-  ExpressionUniverse uni -> return $ A.ExpressionUniverse (goUniverse uni)
-  ExpressionFunction func -> A.ExpressionFunction <$> goFunction func
-  ExpressionHole h -> return (A.ExpressionHole h)
+  ExpressionUniverse uni -> return (Abstract.ExpressionUniverse (goUniverse uni))
+  ExpressionFunction func -> Abstract.ExpressionFunction <$> goFunction func
+  ExpressionHole h -> return (Abstract.ExpressionHole h)
   where
-    goIden :: C.ScopedIden -> A.Expression
-    goIden x = A.ExpressionIden $ case x of
-      ScopedAxiom a -> A.IdenAxiom (A.AxiomRef (a ^. C.axiomRefName))
-      ScopedInductive i -> A.IdenInductive (A.InductiveRef (i ^. C.inductiveRefName))
-      ScopedVar v -> A.IdenVar v
-      ScopedFunction fun -> A.IdenFunction (A.FunctionRef (fun ^. C.functionRefName))
-      ScopedConstructor c -> A.IdenConstructor (A.ConstructorRef (c ^. C.constructorRefName))
+    goIden :: Concrete.ScopedIden -> Abstract.Expression
+    goIden x = Abstract.ExpressionIden $ case x of
+      ScopedAxiom a -> Abstract.IdenAxiom (Abstract.AxiomRef (a ^. Concrete.axiomRefName))
+      ScopedInductive i -> Abstract.IdenInductive (Abstract.InductiveRef (i ^. Concrete.inductiveRefName))
+      ScopedVar v -> Abstract.IdenVar v
+      ScopedFunction fun -> Abstract.IdenFunction (Abstract.FunctionRef (fun ^. Concrete.functionRefName))
+      ScopedConstructor c -> Abstract.IdenConstructor (Abstract.ConstructorRef (c ^. Concrete.constructorRefName))
 
-    goApplication :: Application -> Sem r A.Application
-    goApplication (Application l r) = do
+    goApplication :: Application -> Sem r Abstract.Application
+    goApplication (Application l arg) = do
       l' <- goExpression l
       r' <- goExpression r
-      return (A.Application l' r')
+      return (Abstract.Application l' r' i)
+      where
+        (r, i) = case arg of
+          ExpressionBraces b -> (b ^. withLocParam, Implicit)
+          _ -> (arg, Explicit)
 
-    goPostfix :: PostfixApplication -> Sem r A.Application
+    goPostfix :: PostfixApplication -> Sem r Abstract.Application
     goPostfix (PostfixApplication l op) = do
       l' <- goExpression l
       let op' = goIden op
-      return (A.Application op' l')
+      return (Abstract.Application op' l' Explicit)
 
-    goInfix :: InfixApplication -> Sem r A.Application
+    goInfix :: InfixApplication -> Sem r Abstract.Application
     goInfix (InfixApplication l op r) = do
       l' <- goExpression l
       let op' = goIden op
+          l'' = Abstract.ExpressionApplication (Abstract.Application op' l' Explicit)
       r' <- goExpression r
-      return $ A.Application (A.ExpressionApplication (A.Application op' l')) r'
+      return (Abstract.Application l'' r' Explicit)
 
 goUniverse :: Universe -> Universe
 goUniverse = id
 
-goFunction :: Function 'Scoped -> Sem r A.Function
+goFunction :: Member (Error ScoperError) r => Function 'Scoped -> Sem r Abstract.Function
 goFunction (Function l r) = do
   _funParameter <- goFunctionParameter l
   _funReturn <- goExpression r
-  return A.Function {..}
+  return Abstract.Function {..}
 
 defaultUsage :: Usage
 defaultUsage = UsageOmega
@@ -233,34 +244,40 @@ goUsage :: Maybe Usage -> Usage
 goUsage = fromMaybe defaultUsage
 
 goFunctionParameter ::
+  Member (Error ScoperError) r =>
   FunctionParameter 'Scoped ->
-  Sem r A.FunctionParameter
-goFunctionParameter (FunctionParameter _paramName u ty) = do
-  _paramType <- goExpression ty
-  let _paramUsage = goUsage u
-  return A.FunctionParameter {..}
+  Sem r Abstract.FunctionParameter
+goFunctionParameter (FunctionParameter {..}) = do
+  _paramType' <- goExpression _paramType
+  return
+    Abstract.FunctionParameter
+      { Abstract._paramUsage = goUsage _paramUsage,
+        Abstract._paramType = _paramType',
+        Abstract._paramImplicit = _paramImplicit,
+        Abstract._paramName = _paramName
+      }
 
 goPatternApplication ::
   PatternApp ->
-  Sem r A.ConstructorApp
-goPatternApplication a = uncurry A.ConstructorApp <$> viewApp (PatternApplication a)
+  Sem r Abstract.ConstructorApp
+goPatternApplication a = uncurry Abstract.ConstructorApp <$> viewApp (PatternApplication a)
 
 goPatternConstructor ::
   ConstructorRef ->
-  Sem r A.ConstructorApp
-goPatternConstructor a = uncurry A.ConstructorApp <$> viewApp (PatternConstructor a)
+  Sem r Abstract.ConstructorApp
+goPatternConstructor a = uncurry Abstract.ConstructorApp <$> viewApp (PatternConstructor a)
 
 goInfixPatternApplication ::
   PatternInfixApp ->
-  Sem r A.ConstructorApp
-goInfixPatternApplication a = uncurry A.ConstructorApp <$> viewApp (PatternInfixApplication a)
+  Sem r Abstract.ConstructorApp
+goInfixPatternApplication a = uncurry Abstract.ConstructorApp <$> viewApp (PatternInfixApplication a)
 
 goPostfixPatternApplication ::
   PatternPostfixApp ->
-  Sem r A.ConstructorApp
-goPostfixPatternApplication a = uncurry A.ConstructorApp <$> viewApp (PatternPostfixApplication a)
+  Sem r Abstract.ConstructorApp
+goPostfixPatternApplication a = uncurry Abstract.ConstructorApp <$> viewApp (PatternPostfixApplication a)
 
-viewApp :: forall r. Pattern -> Sem r (A.ConstructorRef, [A.Pattern])
+viewApp :: forall r. Pattern -> Sem r (Abstract.ConstructorRef, [Abstract.Pattern])
 viewApp = \case
   PatternConstructor c -> return (goConstructorRef c, [])
   PatternApplication (PatternApp l r) -> do
@@ -275,25 +292,27 @@ viewApp = \case
     return (goConstructorRef c, [l'])
   PatternVariable {} -> err
   PatternWildcard {} -> err
+  PatternBraces {} -> err
   PatternEmpty {} -> err
   where
     err :: a
     err = error "constructor expected on the left of a pattern application"
 
-goConstructorRef :: ConstructorRef -> A.ConstructorRef
-goConstructorRef (ConstructorRef' n) = A.ConstructorRef n
+goConstructorRef :: ConstructorRef -> Abstract.ConstructorRef
+goConstructorRef (ConstructorRef' n) = Abstract.ConstructorRef n
 
-goPattern :: Pattern -> Sem r A.Pattern
+goPattern :: Pattern -> Sem r Abstract.Pattern
 goPattern p = case p of
-  PatternVariable a -> return $ A.PatternVariable a
-  PatternConstructor c -> A.PatternConstructorApp <$> goPatternConstructor c
-  PatternApplication a -> A.PatternConstructorApp <$> goPatternApplication a
-  PatternInfixApplication a -> A.PatternConstructorApp <$> goInfixPatternApplication a
-  PatternPostfixApplication a -> A.PatternConstructorApp <$> goPostfixPatternApplication a
-  PatternWildcard -> return A.PatternWildcard
-  PatternEmpty -> return A.PatternEmpty
+  PatternVariable a -> return $ Abstract.PatternVariable a
+  PatternConstructor c -> Abstract.PatternConstructorApp <$> goPatternConstructor c
+  PatternApplication a -> Abstract.PatternConstructorApp <$> goPatternApplication a
+  PatternInfixApplication a -> Abstract.PatternConstructorApp <$> goInfixPatternApplication a
+  PatternPostfixApplication a -> Abstract.PatternConstructorApp <$> goPostfixPatternApplication a
+  PatternWildcard i -> return (Abstract.PatternWildcard i)
+  PatternEmpty -> return Abstract.PatternEmpty
+  PatternBraces b -> Abstract.PatternBraces <$> goPattern b
 
-goAxiom :: Members '[InfoTableBuilder] r => AxiomDef 'Scoped -> Sem r A.AxiomDef
+goAxiom :: Members '[InfoTableBuilder, Error ScoperError] r => AxiomDef 'Scoped -> Sem r Abstract.AxiomDef
 goAxiom AxiomDef {..} = do
   _axiomType' <- goExpression _axiomType
-  registerAxiom' A.AxiomDef {_axiomType = _axiomType', ..}
+  registerAxiom' Abstract.AxiomDef {_axiomType = _axiomType', ..}

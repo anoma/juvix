@@ -11,7 +11,7 @@ defaultOptions :: Options
 defaultOptions =
   Options
     { _optIndent = 2,
-      _optShowNameIds = True
+      _optShowNameIds = False
     }
 
 makeLenses ''Options

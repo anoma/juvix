@@ -102,7 +102,7 @@ checkApplication ::
   Members '[State CallMap, Reader FunctionRef, Reader InfoTable, Reader SizeInfo] r =>
   Application ->
   Sem r ()
-checkApplication (Application l r) = do
+checkApplication (Application l r _) = do
   checkExpression l
   checkExpression r
 

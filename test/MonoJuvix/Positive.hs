@@ -38,7 +38,7 @@ tests =
     PosTest
       "Polymorphic Simple Fungible Token"
       "FullExamples"
-      "PolySimpleFungibleToken.mjuvix",
+      "SimpleFungibleTokenImplicit.mjuvix",
     PosTest
       "Polymorphism and higher rank functions with explicit holes"
       "."

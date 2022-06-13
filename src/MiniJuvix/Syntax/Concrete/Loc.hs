@@ -64,14 +64,36 @@ instance Hashable Interval
 class HasLoc t where
   getLoc :: t -> Interval
 
+getLocSpan :: HasLoc t => NonEmpty t -> Interval
+getLocSpan = foldr1 (<>) . fmap getLoc
+
 -- | Assumes the file is the same
 instance Semigroup Interval where
   Interval f s e <> Interval _f s' e' = Interval f (min s s') (max e e')
+
+data WithLoc a = WithLoc
+  { _withLocInt :: Interval,
+    _withLocParam :: a
+  }
+  deriving stock (Show)
 
 makeLenses ''Interval
 makeLenses ''FileLoc
 makeLenses ''Loc
 makeLenses ''Pos
+makeLenses ''WithLoc
+
+instance HasLoc (WithLoc a) where
+  getLoc = (^. withLocInt)
+
+instance Eq a => Eq (WithLoc a) where
+  (==) = (==) `on` (^. withLocParam)
+
+instance Ord a => Ord (WithLoc a) where
+  compare = compare `on` (^. withLocParam)
+
+instance Functor WithLoc where
+  fmap = over withLocParam
 
 singletonInterval :: Loc -> Interval
 singletonInterval l =

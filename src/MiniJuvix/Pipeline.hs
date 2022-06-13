@@ -13,6 +13,7 @@ import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.AbstractResult qualified as Abstract
 import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
+import MiniJuvix.Syntax.MicroJuvix.ArityChecker qualified as MicroJuvix
 import MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult qualified as MicroJuvix
 import MiniJuvix.Syntax.MicroJuvix.MicroJuvixTypedResult qualified as MicroJuvix
 import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as MicroJuvix
@@ -77,11 +78,17 @@ upToMicroJuvix ::
   Sem r MicroJuvix.MicroJuvixResult
 upToMicroJuvix = upToAbstract >=> pipelineMicroJuvix
 
+upToMicroJuvixArity ::
+  Members '[Files, NameIdGen, Error MiniJuvixError] r =>
+  EntryPoint ->
+  Sem r MicroJuvix.MicroJuvixArityResult
+upToMicroJuvixArity = upToMicroJuvix >=> pipelineMicroJuvixArity
+
 upToMicroJuvixTyped ::
   Members '[Files, NameIdGen, Error MiniJuvixError] r =>
   EntryPoint ->
   Sem r MicroJuvix.MicroJuvixTypedResult
-upToMicroJuvixTyped = upToMicroJuvix >=> pipelineMicroJuvixTyped
+upToMicroJuvixTyped = upToMicroJuvixArity >=> pipelineMicroJuvixTyped
 
 upToMonoJuvix ::
   Members '[Files, NameIdGen, Error MiniJuvixError] r =>
@@ -116,9 +123,10 @@ pipelineScoper ::
 pipelineScoper = mapError (MiniJuvixError @Scoper.ScoperError) . Scoper.entryScoper
 
 pipelineAbstract ::
+  Members '[Error MiniJuvixError] r =>
   Scoper.ScoperResult ->
   Sem r Abstract.AbstractResult
-pipelineAbstract = Abstract.entryAbstract
+pipelineAbstract = mapError (MiniJuvixError @Scoper.ScoperError) . Abstract.entryAbstract
 
 pipelineMicroJuvix ::
   Members '[Error MiniJuvixError] r =>
@@ -126,9 +134,15 @@ pipelineMicroJuvix ::
   Sem r MicroJuvix.MicroJuvixResult
 pipelineMicroJuvix = mapError (MiniJuvixError @MicroJuvix.TerminationError) . MicroJuvix.entryMicroJuvix
 
+pipelineMicroJuvixArity ::
+  Members '[Error MiniJuvixError, NameIdGen] r =>
+  MicroJuvix.MicroJuvixResult ->
+  Sem r MicroJuvix.MicroJuvixArityResult
+pipelineMicroJuvixArity = mapError (MiniJuvixError @MicroJuvix.ArityCheckerError) . MicroJuvix.entryMicroJuvixArity
+
 pipelineMicroJuvixTyped ::
   Members '[Files, NameIdGen, Error MiniJuvixError] r =>
-  MicroJuvix.MicroJuvixResult ->
+  MicroJuvix.MicroJuvixArityResult ->
   Sem r MicroJuvix.MicroJuvixTypedResult
 pipelineMicroJuvixTyped =
   mapError (MiniJuvixError @MicroJuvix.TypeCheckerError) . MicroJuvix.entryMicroJuvixTyped

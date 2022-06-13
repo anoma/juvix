@@ -1,0 +1,8 @@
+module FunctionPattern;
+  inductive T {
+    A : T;
+  };
+
+  f : (T → T) → T;
+  f A ≔ A;
+end;

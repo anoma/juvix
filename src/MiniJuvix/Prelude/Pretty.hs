@@ -87,3 +87,19 @@ hsepMaybe :: Foldable f => f (Doc a) -> Maybe (Doc a)
 hsepMaybe l
   | null l = Nothing
   | otherwise = Just (hsep l)
+
+ordinal :: Int -> Doc a
+ordinal = \case
+  1 -> "first"
+  2 -> "second"
+  3 -> "third"
+  4 -> "fourth"
+  5 -> "fifth"
+  6 -> "sixth"
+  7 -> "seventh"
+  8 -> "eighth"
+  9 -> "ninth"
+  10 -> "tenth"
+  11 -> "eleventh"
+  12 -> "twelfth"
+  n -> pretty n <> "th"

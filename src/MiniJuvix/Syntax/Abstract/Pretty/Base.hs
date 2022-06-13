@@ -73,6 +73,11 @@ kwColonOmega = keyword Str.colonOmegaUnicode
 parensCond :: Bool -> Doc Ann -> Doc Ann
 parensCond t d = if t then parens d else d
 
+implicitDelim :: IsImplicit -> Doc Ann -> Doc Ann
+implicitDelim = \case
+  Implicit -> braces
+  Explicit -> parens
+
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
   Fixity ->
@@ -116,9 +121,11 @@ instance PrettyCode Iden where
   ppCode = ppSCode . idenName
 
 instance PrettyCode Application where
-  ppCode (Application l r) = do
+  ppCode (Application l r i) = do
     l' <- ppLeftExpression appFixity l
-    r' <- ppRightExpression appFixity r
+    r' <- case i of
+      Explicit -> ppRightExpression appFixity r
+      Implicit -> implicitDelim i <$> ppCode r
     return $ l' <+> r'
 
 instance PrettyCode Universe where
@@ -147,7 +154,7 @@ instance PrettyCode FunctionParameter where
         paramName' <- ppSCode n
         paramType' <- ppCode _paramType
         paramUsage' <- ppCode _paramUsage
-        return $ parens (paramName' <+> paramUsage' <+> paramType')
+        return $ implicitDelim _paramImplicit (paramName' <+> paramUsage' <+> paramType')
 
 instance PrettyCode Function where
   ppCode Function {..} = do

@@ -48,9 +48,9 @@ tests =
       "MiniHaskell"
       "HelloWorld.mjuvix",
     PosTest
-      "PolySimpleFungibleToken with explicit holes"
+      "PolySimpleFungibleToken"
       "FullExamples"
-      "PolySimpleFungibleTokenHoles.mjuvix",
+      "SimpleFungibleTokenImplicit.mjuvix",
     PosTest
       "GHC backend MonoSimpleFungibleToken"
       "FullExamples"

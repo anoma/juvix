@@ -6,16 +6,17 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Abstract.AbstractResult qualified as A
-import MiniJuvix.Syntax.Concrete.Scoped.InfoTable qualified as S
-import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
+import MiniJuvix.Syntax.Abstract.AbstractResult qualified as Abstract
+import MiniJuvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoper
+import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
+import MiniJuvix.Syntax.MicroJuvix.MicroJuvixArityResult qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.MicroJuvixTypedResult qualified as Micro
 import MiniJuvix.Syntax.MonoJuvix.InfoTable
 import MiniJuvix.Syntax.MonoJuvix.Language
 
-type CompileInfoTable = HashMap S.NameId S.CompileInfo
+type CompileInfoTable = HashMap Scoper.NameId Scoper.CompileInfo
 
 data MonoJuvixResult = MonoJuvixResult
   { _resultMicroTyped :: Micro.MicroJuvixTypedResult,
@@ -27,12 +28,13 @@ makeLenses ''MonoJuvixResult
 compileInfoTable :: MonoJuvixResult -> CompileInfoTable
 compileInfoTable r =
   HashMap.mapKeys
-    (^. S.nameId)
+    (^. Scoper.nameId)
     ( r
         ^. resultMicroTyped
+          . Micro.resultMicroJuvixArityResult
           . Micro.resultMicroJuvixResult
           . Micro.resultAbstract
-          . A.resultScoper
+          . Abstract.resultScoper
           . Scoper.resultScoperTable
-          . S.infoCompilationRules
+          . Scoper.infoCompilationRules
     )

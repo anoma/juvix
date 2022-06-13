@@ -1,0 +1,8 @@
+module FunctionApplied;
+  inductive T (A : Type) {
+    c : A → T;
+  };
+
+  f : {A : Type} → A → T A;
+  f {A} a ≔ c {(A → A) A} a;
+end;

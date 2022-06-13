@@ -1,0 +1,8 @@
+module TooManyArguments;
+  inductive T (A : Type) {
+    c : A → T A;
+  };
+
+  f : {A : Type} → A → T A;
+  f {A} a ≔ c {A} a a {a} ;
+end;

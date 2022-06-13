@@ -29,6 +29,7 @@
      (with-eval-after-load 'evil
        (evil-define-key 'normal minijuvix-mode-map (kbd "SPC m l") 'minijuvix-load)
        (evil-define-key 'normal minijuvix-mode-map (kbd "SPC m g") 'minijuvix-goto-definition)
+       (evil-define-key 'normal minijuvix-mode-map (kbd "g d") 'minijuvix-goto-definition)
        (evil-normalize-keymaps))))
   )
 

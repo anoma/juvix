@@ -19,6 +19,7 @@ import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
+import MiniJuvix.Syntax.MicroJuvix.MicroJuvixArityResult qualified as MicroArity
 import MiniJuvix.Syntax.MicroJuvix.Pretty qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as MicroTyped
 import MiniJuvix.Syntax.MiniHaskell.Pretty qualified as MiniHaskell
@@ -133,6 +134,9 @@ runCommand cmdWithOpts = do
                       { Micro._optShowNameIds = globalOpts ^. globalShowNameIds
                       }
               App.renderStdOut (Micro.ppOut ppOpts micro)
+            MicroJuvix Arity -> do
+              micro <- head . (^. MicroArity.resultModules) <$> runPipeline (upToMicroJuvixArity entryPoint)
+              App.renderStdOut (Micro.ppOut Micro.defaultOptions micro)
             MicroJuvix (TypeCheck localOpts) -> do
               res <- runPipeline (upToMicroJuvixTyped entryPoint)
               say "Well done! It type checks"

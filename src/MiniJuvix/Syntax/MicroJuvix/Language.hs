@@ -3,18 +3,23 @@ module MiniJuvix.Syntax.MicroJuvix.Language
     module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind,
     module MiniJuvix.Syntax.Concrete.Scoped.Name,
     module MiniJuvix.Syntax.Concrete.Loc,
+    module MiniJuvix.Syntax.IsImplicit,
     module MiniJuvix.Syntax.Hole,
+    module MiniJuvix.Syntax.Wildcard,
+    module MiniJuvix.Syntax.Concrete.LiteralLoc,
   )
 where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Language (LiteralLoc)
+import MiniJuvix.Syntax.Concrete.LiteralLoc
 import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Syntax.Concrete.Scoped.Name (NameId (..))
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
 import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.ForeignBlock
 import MiniJuvix.Syntax.Hole
+import MiniJuvix.Syntax.IsImplicit
+import MiniJuvix.Syntax.Wildcard
 import Prettyprinter
 
 type FunctionName = Name
@@ -97,7 +102,6 @@ data FunctionClause = FunctionClause
     _clausePatterns :: [Pattern],
     _clauseBody :: Expression
   }
-  deriving stock (Show)
 
 data Iden
   = IdenFunction Name
@@ -105,19 +109,16 @@ data Iden
   | IdenVar VarName
   | IdenAxiom Name
   | IdenInductive Name
-  deriving stock (Show)
 
 data TypedExpression = TypedExpression
   { _typedType :: Type,
     _typedExpression :: Expression
   }
-  deriving stock (Show)
 
 data FunctionExpression = FunctionExpression
   { _functionExpressionLeft :: Expression,
     _functionExpressionRight :: Expression
   }
-  deriving stock (Show)
 
 data Expression
   = ExpressionIden Iden
@@ -126,19 +127,18 @@ data Expression
   | ExpressionLiteral LiteralLoc
   | ExpressionHole Hole
   | ExpressionTyped TypedExpression
-  deriving stock (Show)
 
 data Application = Application
   { _appLeft :: Expression,
-    _appRight :: Expression
+    _appRight :: Expression,
+    _appImplicit :: IsImplicit
   }
-  deriving stock (Show)
 
 data Function = Function
   { _funLeft :: Type,
     _funRight :: Type
   }
-  deriving stock (Show, Generic, Eq)
+  deriving stock (Eq, Generic)
 
 instance Hashable Function
 
@@ -147,18 +147,17 @@ data ConstructorApp = ConstructorApp
   { _constrAppConstructor :: Name,
     _constrAppParameters :: [Pattern]
   }
-  deriving stock (Show)
 
 data Pattern
   = PatternVariable VarName
   | PatternConstructorApp ConstructorApp
-  | PatternWildcard
-  deriving stock (Show)
+  | PatternWildcard Wildcard
+  | PatternBraces Pattern
 
 newtype InductiveParameter = InductiveParameter
   { _inductiveParamName :: VarName
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq)
 
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
@@ -175,23 +174,25 @@ data TypeIden
   = TypeIdenInductive InductiveName
   | TypeIdenAxiom AxiomName
   | TypeIdenVariable VarName
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Eq, Generic)
 
 instance Hashable TypeIden
 
 data TypeApplication = TypeApplication
   { _typeAppLeft :: Type,
-    _typeAppRight :: Type
+    _typeAppRight :: Type,
+    _typeAppImplicit :: IsImplicit
   }
-  deriving stock (Show, Generic, Eq)
+  deriving stock (Generic, Eq)
 
 instance Hashable TypeApplication
 
 data TypeAbstraction = TypeAbstraction
   { _typeAbsVar :: VarName,
+    _typeAbsImplicit :: IsImplicit,
     _typeAbsBody :: Type
   }
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Eq, Generic)
 
 instance Hashable TypeAbstraction
 
@@ -203,14 +204,13 @@ data Type
   | TypeHole Hole
   | TypeUniverse
   | TypeAny
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Eq, Generic)
 
 instance Hashable Type
 
 data FunctionArgType
-  = FunctionArgTypeAbstraction VarName
+  = FunctionArgTypeAbstraction (IsImplicit, VarName)
   | FunctionArgTypeType Type
-  deriving stock (Show)
 
 makeLenses ''Module
 makeLenses ''Include
@@ -276,6 +276,7 @@ instance HasAtomicity Pattern where
     PatternConstructorApp a -> atomicity a
     PatternVariable {} -> Atom
     PatternWildcard {} -> Atom
+    PatternBraces {} -> Atom
 
 instance HasLoc FunctionExpression where
   getLoc (FunctionExpression l r) = getLoc l <> getLoc r
@@ -296,3 +297,16 @@ instance HasLoc Iden where
     IdenVar v -> getLoc v
     IdenAxiom a -> getLoc a
     IdenInductive a -> getLoc a
+
+instance HasLoc Pattern where
+  getLoc = \case
+    PatternVariable v -> getLoc v
+    PatternConstructorApp a -> getLoc a
+    PatternBraces p -> getLoc p
+    PatternWildcard i -> getLoc i
+
+instance HasLoc ConstructorApp where
+  getLoc (ConstructorApp c ps) =
+    case last <$> nonEmpty ps of
+      Just p -> getLoc c <> getLoc p
+      Nothing -> getLoc c

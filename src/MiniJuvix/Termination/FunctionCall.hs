@@ -14,7 +14,7 @@ viewCall ::
   Expression ->
   Sem r (Maybe FunCall)
 viewCall = \case
-  ExpressionApplication (Application f x) -> do
+  ExpressionApplication (Application f x _) -> do
     c <- viewCall f
     x' <- callArg
     return $ over callArgs (`snoc` x') <$> c

@@ -12,6 +12,7 @@ import MiniJuvix.Syntax.Concrete.Scoped.Error.Types
 data ScoperError
   = ErrParser MegaParsecError
   | ErrInfixParser InfixError
+  | ErrAppLeftImplicit AppLeftImplicit
   | ErrInfixPattern InfixErrorP
   | ErrMultipleDeclarations MultipleDeclarations
   | ErrLacksTypeSig LacksTypeSig
@@ -37,6 +38,7 @@ instance ToGenericError ScoperError where
   genericError = \case
     ErrParser e -> genericError e
     ErrInfixParser e -> genericError e
+    ErrAppLeftImplicit e -> genericError e
     ErrInfixPattern e -> genericError e
     ErrMultipleDeclarations e -> genericError e
     ErrLacksTypeSig e -> genericError e

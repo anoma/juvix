@@ -7,10 +7,10 @@ where
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.MicroJuvix.InfoTable
 import MiniJuvix.Syntax.MicroJuvix.Language
-import MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult (MicroJuvixResult)
+import MiniJuvix.Syntax.MicroJuvix.MicroJuvixArityResult (MicroJuvixArityResult)
 
 data MicroJuvixTypedResult = MicroJuvixTypedResult
-  { _resultMicroJuvixResult :: MicroJuvixResult,
+  { _resultMicroJuvixArityResult :: MicroJuvixArityResult,
     _resultModules :: NonEmpty Module
   }
 

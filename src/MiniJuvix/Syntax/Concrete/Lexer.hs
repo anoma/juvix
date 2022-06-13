@@ -94,6 +94,11 @@ interval ma = do
   end <- curLoc
   return (res, mkInterval start end)
 
+withLoc :: Member (Reader ParserParams) r => ParsecS r a -> ParsecS r (WithLoc a)
+withLoc ma = do
+  (a, i) <- interval ma
+  return (WithLoc i a)
+
 keyword :: Members '[Reader ParserParams, InfoTableBuilder] r => Text -> ParsecS r ()
 keyword kw = do
   l <- symbolInterval kw
@@ -129,9 +134,6 @@ dot = P.char '.'
 
 dottedIdentifier :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (NonEmpty (Text, Interval))
 dottedIdentifier = lexeme $ P.sepBy1 bareIdentifier dot
-
-braces :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r a
-braces = between (symbol "{") (symbol "}")
 
 allKeywords :: Members '[Reader ParserParams, InfoTableBuilder] r => [ParsecS r ()]
 allKeywords =
@@ -170,6 +172,12 @@ allKeywords =
     kwWildcard
   ]
 
+lbrace :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
+lbrace = symbol "{"
+
+rbrace :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
+rbrace = symbol "}"
+
 lparen :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 lparen = symbol "("
 
@@ -178,6 +186,9 @@ rparen = symbol ")"
 
 parens :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r a
 parens = between lparen rparen
+
+braces :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r a
+braces = between (symbol "{") (symbol "}")
 
 kwAssignment :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwAssignment = keyword Str.assignUnicode <|> keyword Str.assignAscii

@@ -1,8 +1,0 @@
-module TooManyPatterns;
-  inductive A {
-    a : A;
-  };
-
-  f : A -> A;
-  f a _ ≔ a;
-end;

@@ -1,5 +1,6 @@
 module Main (main) where
 
+import Arity qualified
 import BackendC qualified
 import Base
 import MonoJuvix qualified
@@ -19,6 +20,7 @@ fastTests =
     "MiniJuvix fast tests"
     [ Scope.allTests,
       Termination.allTests,
+      Arity.allTests,
       TypeCheck.allTests,
       MonoJuvix.allTests
     ]

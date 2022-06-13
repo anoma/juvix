@@ -8,7 +8,6 @@ data LocalVars = LocalVars
   { _localTypes :: HashMap VarName Type,
     _localTyMap :: HashMap VarName VarName
   }
-  deriving stock (Show)
 
 makeLenses ''LocalVars
 

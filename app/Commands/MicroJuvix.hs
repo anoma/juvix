@@ -6,6 +6,7 @@ import Options.Applicative
 data MicroJuvixCommand
   = Pretty
   | TypeCheck MicroJuvixTypeOptions
+  | Arity
 
 newtype MicroJuvixTypeOptions = MicroJuvixTypeOptions
   { _microJuvixTypePrint :: Bool
@@ -18,14 +19,24 @@ parseMicroJuvixCommand =
   hsubparser $
     mconcat
       [ commandPretty,
+        commandArity,
         commandTypeCheck
       ]
   where
+    commandArity :: Mod CommandFields MicroJuvixCommand
+    commandArity = command "arity" arityInfo
+
     commandPretty :: Mod CommandFields MicroJuvixCommand
     commandPretty = command "pretty" prettyInfo
 
     commandTypeCheck :: Mod CommandFields MicroJuvixCommand
     commandTypeCheck = command "typecheck" typeCheckInfo
+
+    arityInfo :: ParserInfo MicroJuvixCommand
+    arityInfo =
+      info
+        (pure Arity)
+        (progDesc "Translate a MiniJuvix file to MicroJuvix and insert holes")
 
     prettyInfo :: ParserInfo MicroJuvixCommand
     prettyInfo =
