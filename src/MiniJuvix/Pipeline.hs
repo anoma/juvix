@@ -1,14 +1,11 @@
 module MiniJuvix.Pipeline
   ( module MiniJuvix.Pipeline,
     module MiniJuvix.Pipeline.EntryPoint,
-    module MiniJuvix.Pipeline.Stage,
   )
 where
 
-import Data.Kind qualified as GHC
 import MiniJuvix.Internal.NameIdGen
 import MiniJuvix.Pipeline.EntryPoint
-import MiniJuvix.Pipeline.Stage
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.AbstractResult qualified as Abstract
 import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
@@ -22,22 +19,6 @@ import MiniJuvix.Translation.MicroJuvixToMonoJuvix qualified as MonoJuvix
 import MiniJuvix.Translation.MonoJuvixToMiniC qualified as MiniC
 import MiniJuvix.Translation.MonoJuvixToMiniHaskell qualified as MiniHaskell
 import MiniJuvix.Translation.ScopedToAbstract qualified as Abstract
-
-type StageInput :: Pipe -> GHC.Type
-type family StageInput c = res where
-  StageInput 'Entry = EntryPoint
-  StageInput 'Parsing = EntryPoint
-  StageInput 'Scoping = Parser.ParserResult
-  StageInput 'Abstract = Scoper.ScoperResult
-
-type StageResult :: Pipe -> GHC.Type
-type family StageResult c = res | res -> c where
-  StageResult 'Entry = EntryPoint
-  StageResult 'Parsing = Parser.ParserResult
-  StageResult 'Scoping = Scoper.ScoperResult
-  StageResult 'Abstract = Abstract.AbstractResult
-
---------------------------------------------------------------------------------
 
 type PipelineEff = '[Files, NameIdGen, Error MiniJuvixError, Embed IO]
 
