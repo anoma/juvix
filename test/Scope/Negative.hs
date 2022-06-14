@@ -24,7 +24,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint = defaultEntryPoint _file
-            res <- runIOEither (upToScoping entryPoint)
+            res <- runIOEither (upToAbstract entryPoint)
             case mapLeft fromMiniJuvixError res of
               Left (Just err) -> whenJust (_checkErr err) assertFailure
               Left Nothing -> assertFailure "The scope checker did not find an error."
@@ -174,6 +174,13 @@ tests =
       "WrongLocationCompileBlock.mjuvix"
       $ \case
         ErrWrongLocationCompileBlock {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Implicit argument on the left of an application"
+      "."
+      "AppLeftImplicit.mjuvix"
+      $ \case
+        ErrAppLeftImplicit {} -> Nothing
         _ -> wrongError,
     NegTest
       "Multiple compile blocks for the same name"
