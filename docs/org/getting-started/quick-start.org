@@ -1,6 +1,4 @@
-* Getting started
-
-** Quick Start
+* Quick Start
 
 #+begin_html
 <a href="https://github.com/heliaxdev/MiniJuvix">

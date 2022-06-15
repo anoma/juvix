@@ -53,14 +53,14 @@ If the installation succeeds, you must be able to run the =minijuvix=
 command from any location. To get the complete list of commands, please
 run =minijuvix --help=.
 
-
-
 ** Usage Example
 
 In the following example a MiniJuvix file is compiled using the C backend. The
 result is compiled to WASM using [[https://llvm.org][Clang]] and then executed using [[https://wasmer.io][wasmer]].
 
-NB: Set the =WASI_SYSROOT_PATH= environment variable to the root of the WASI sysroot. See [[#Dependencies][Dependencies]] for instructions on how to install the sysroot.
+NB: Set the =WASI_SYSROOT_PATH= environment variable to the root of the WASI
+sysroot. See [[https://heliaxdev.github.io/minijuvix/getting-started/dependencies.html][Installing dependencies]] for instructions on how to install the
+sysroot.
 
 #+begin_src shell
 cd tests/positive/MiniC/HelloWorld

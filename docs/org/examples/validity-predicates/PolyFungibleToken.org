@@ -1,8 +1,8 @@
 # Polymorphic simple fungible token
 
 #+begin_src
--- tests/positive/FullExamples/PolySimpleFungibleToken.mjuvix
-module PolySimpleFungibleToken;
+-- tests/positive/FullExamples/SimpleFungibleTokenImplicit.mjuvix
+module SimpleFungibleTokenImplicit;
 
 foreign ghc {
   import Anoma
@@ -27,9 +27,9 @@ infixr 3 &&;
 && false _ ≔ false;
 && true a ≔ a;
 
-if : (A : Type) → Bool → A → A → A;
-if _ true a _ ≔ a;
-if _ false _ b ≔ b;
+if : {A : Type} → Bool → A → A → A;
+if true a _ ≔ a;
+if false _ b ≔ b;
 
 --------------------------------------------------------------------------------
 -- Backend Booleans
@@ -73,11 +73,8 @@ from-backend-bool bb ≔ bool bb true false;
 -- Functions
 --------------------------------------------------------------------------------
 
-const : (A : Type) → (B : Type) → A → B → A;
-const _ _ a _ ≔ a;
-
-id : (A : Type) → A → A;
-id _ a ≔ a;
+id : {A : Type} → A → A;
+id a ≔ a;
 
 --------------------------------------------------------------------------------
 -- Integers
@@ -141,36 +138,29 @@ infix 4 ==String;
 -- Lists
 --------------------------------------------------------------------------------
 
+infixr 5 ∷;
 inductive List (A : Type) {
   nil : List A;
-  cons : A → List A → List A;
+  ∷ : A → List A → List A;
 };
 
-elemGen : (A : Type) → (A → A → Bool) → A → List A → Bool;
-elemGen _ _ _ nil ≔ false;
-elemGen A eq s (cons x xs) ≔ eq s x || elemGen A eq s xs;
+elem : {A : Type} → (A → A → Bool) → A → List A → Bool;
+elem _ _ nil ≔ false;
+elem eq s (x ∷ xs) ≔ eq s x || elem eq s xs;
 
-elem : String → List String → Bool;
-elem s l ≔ elemGen String (==String) s l;
-
-foldl : (A : Type) → (B : Type) → (B → A → B) → B → List A → B;
-foldl _ _ f z nil ≔ z;
-foldl A B f z (cons h hs) ≔ foldl A B f (f z h) hs;
+foldl : {A : Type} → {B : Type} → (B → A → B) → B → List A → B;
+foldl f z nil ≔ z;
+foldl f z (h ∷ hs) ≔ foldl f (f z h) hs;
 
 --------------------------------------------------------------------------------
 -- Pair
 --------------------------------------------------------------------------------
 
--- inductive PairIntBool {
---   MakePair : Int → Bool → PairIntBool;
--- };
-
-inductive Pair (A : Type) (B : Type) {
-  mkPair : A → B → Pair A B;
+infixr 4 ,;
+infixr 2 ×;
+inductive × (A : Type) (B : Type) {
+  , : A → B → A × B;
 };
-
-if-pairIntBool : Bool → Pair Int Bool → Pair Int Bool → Pair Int Bool;
-if-pairIntBool ≔ if (Pair Int Bool);
 
 --------------------------------------------------------------------------------
 -- Maybe
@@ -181,34 +171,18 @@ inductive Maybe (A : Type) {
  just : A → Maybe A;
 };
 
-if-optionInt : Bool → Maybe Int → Maybe Int → Maybe Int;
-if-optionInt ≔ if (Maybe Int);
-
 from-int : Int → Maybe Int;
-from-int i ≔ if-optionInt (i < 0) (nothing Int) (just Int i);
+from-int i ≔ if (i < 0) nothing (just i);
 
-maybe : (A : Type) → (B : Type) → B → (A → B) → Maybe A → B;
-maybe _ _ b _ nothing ≔ b;
-maybe _ _ _ f (just x) ≔ f x;
-
-maybe-int : Int → Maybe Int → Int;
-maybe-int d ≔ maybe Int Int d (id Int);
-
-if-optionString : Bool → Maybe String → Maybe String → Maybe String;
-if-optionString ≔ if (Maybe String);
+maybe : {A : Type} → {B : Type} → B → (A → B) → Maybe A → B;
+maybe b _ nothing ≔ b;
+maybe _ f (just x) ≔ f x;
 
 from-string : String → Maybe String;
-from-string s ≔ if-optionString (s ==String "") (nothing String) (just String s);
+from-string s ≔ if (s ==String "") nothing (just s);
 
-pair-from-optionString : (String → Pair Int Bool) → Maybe String → Pair Int Bool;
-pair-from-optionString ≔ maybe String (Pair Int Bool) (mkPair Int Bool 0 false);
-
---------------------------------------------------------------------------------
--- foldl
---------------------------------------------------------------------------------
-
-foldl' : (Pair Int Bool → String → Pair Int Bool) → Pair Int Bool → List String → Pair Int Bool;
-foldl' ≔ foldl String (Pair Int Bool) ;
+pair-from-optionString : (String → Int × Bool) → Maybe String → Int × Bool;
+pair-from-optionString ≔ maybe (0 , false);
 
 --------------------------------------------------------------------------------
 -- Anoma
@@ -239,7 +213,7 @@ is-balance-key : String → String → Maybe String;
 is-balance-key token key ≔ from-string (isBalanceKey token key);
 
 unwrap-default : Maybe Int → Int;
-unwrap-default o ≔ maybe-int 0 o;
+unwrap-default ≔ maybe 0 id;
 
 --------------------------------------------------------------------------------
 -- Validity Predicate
@@ -248,30 +222,30 @@ unwrap-default o ≔ maybe-int 0 o;
 change-from-key : String → Int;
 change-from-key key ≔ unwrap-default (read-post key) - unwrap-default (read-pre key);
 
-check-vp : List String → String → Int → String → Pair Int Bool;
+check-vp : List String → String → Int → String → Int × Bool;
 check-vp verifiers key change owner ≔
-    if-pairIntBool
+    if
         (change-from-key key < 0)
         -- make sure the spender approved the transaction
-        (mkPair Int Bool (change + (change-from-key key)) (elem owner verifiers))
-        (mkPair Int Bool (change + (change-from-key key)) true);
+        (change + (change-from-key key), elem (==String) owner verifiers)
+        (change + (change-from-key key),  true);
 
-check-keys : String → List String → Pair Int Bool → String → Pair Int Bool;
-check-keys token verifiers (mkPair change is-success) key ≔
-    if-pairIntBool
+check-keys : String → List String → Int × Bool → String → Int × Bool;
+check-keys token verifiers (change , is-success) key ≔
+    if
         is-success
         (pair-from-optionString (check-vp verifiers key change) (is-balance-key token key))
-        (mkPair Int Bool 0 false);
+        (0 , false);
 
-check-result : Pair Int Bool → Bool;
-check-result (mkPair change all-checked) ≔ (change ==Int 0) && all-checked;
+check-result : Int × Bool → Bool;
+check-result (change , all-checked) ≔ (change ==Int 0) && all-checked;
 
 vp : String → List String → List String → Bool;
 vp token keys-changed verifiers ≔
     check-result
-        (foldl'
+        (foldl
             (check-keys token verifiers)
-            (mkPair Int Bool 0 true)
+            (0 , true)
             keys-changed);
 
 --------------------------------------------------------------------------------
@@ -320,10 +294,10 @@ change2-key : String;
 change2-key ≔ "change2-key";
 
 verifiers : List String;
-verifiers ≔ cons String owner-address (nil String);
+verifiers ≔ owner-address ∷ nil;
 
 keys-changed : List String;
-keys-changed ≔ cons String change1-key (cons String change2-key (nil String));
+keys-changed ≔ change1-key ∷ change2-key ∷ nil;
 
 main : Action;
 main ≔

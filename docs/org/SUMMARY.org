@@ -2,7 +2,9 @@
 
 - [[./introduction/about/what-is.md][MiniJuvix]]
 - [[./introduction/changelog.md][Changelog]]
-- [[./introduction/getting-started.md][Getting started]]
+- [[./getting-started/README.md][Getting started]]
+  - [[./getting-started/quick-start.md][Quick start]]
+  - [[./getting-started/dependencies.md][Installing dependencies]]
 - [[./examples/README.md][Tutorials]]
   - [[./examples/backend-specific/minic-hello-world.md][Hello world]]
   - [[./examples/validity-predicates/PolyFungibleToken.md][A simple fungible token]]
@@ -27,9 +29,9 @@
       - [[./compiler-architecture/language/microjuvix.md][MicroJuvix]]
 
 - [[./tooling/README.md][Tooling]]
-  - [[./tools/CLI.md][Command line interface]]
-  - [[./tools/emacs-mode.md][Emacs mode]]
-  - [[./tools/testing.md][Haskell test suite]]
+  - [[./tooling/CLI.md][Command line interface]]
+  - [[./tooling/emacs-mode.md][Emacs mode]]
+  - [[./tooling/testing.md][Haskell test suite]]
 
 - [[./notes/README.md][Blog]]
   - [[./examples/validity-predicates/README.md][Validity predicates]]
