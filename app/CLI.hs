@@ -45,7 +45,7 @@ commandFirstFile CommandGlobalOptions {_cliGlobalOptions = GlobalOptions {..}} =
 makeAbsPaths :: CLI -> IO CLI
 makeAbsPaths cli = case cli of
   Command cmd -> do
-    nOpts <- traverseOf globalInputFiles (mapM makeAbsolute) (cmd ^. cliGlobalOptions)
+    nOpts <- traverseOf globalInputFiles (mapM canonicalizePath) (cmd ^. cliGlobalOptions)
     return (Command (set cliGlobalOptions nOpts cmd))
   _ -> return cli
 

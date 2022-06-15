@@ -32,7 +32,7 @@ testDescr PosTest {..} =
           _testRoot = tRoot,
           _testAssertion = Steps $ \step -> do
             cwd <- getCurrentDirectory
-            entryFile <- makeAbsolute _file
+            entryFile <- canonicalizePath _file
             let entryPoint = EntryPoint cwd False (pure entryFile)
 
             step "Parsing"

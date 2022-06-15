@@ -13,9 +13,9 @@ runFilesIO :: Member (Embed IO) r => Sem (Files ': r) a -> Sem r a
 runFilesIO = interpret $ \case
   ReadFile' f -> embed (readFile f)
   EqualPaths' f h -> embed $ do
-    f' <- makeAbsolute f
-    h' <- makeAbsolute h
-    return (Just $ f' == h')
+    f' <- canonicalizePath f
+    h' <- canonicalizePath h
+    return (Just (equalFilePath f' h'))
 
 runFilesEmpty :: Sem (Files ': r) a -> Sem r a
 runFilesEmpty = runFilesPure mempty
