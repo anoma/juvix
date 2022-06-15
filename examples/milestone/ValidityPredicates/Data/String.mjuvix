@@ -3,17 +3,21 @@ module Data.String;
 import Data.Bool;
 open Data.Bool;
 
---------------------------------------------------------------------------------
--- Strings
---------------------------------------------------------------------------------
-
 axiom String : Type;
 compile String {
+  c ↦ "char*";
   ghc ↦ "[Char]";
+};
+
+foreign c {
+  bool eqString(char* l, char* r) {
+    return strcmp(l, r) == 0;
+  \}
 };
 
 axiom eqString : String → String → BackendBool;
 compile eqString  {
+  c ↦ "eqString";
   ghc ↦ "(==)";
 };
 

@@ -19,9 +19,9 @@ infixr 3 &&;
 && false _ ≔ false;
 && true a ≔ a;
 
-if : (A : Type) → Bool → A → A → A;
-if _ true a _ ≔ a;
-if _ false _ b ≔ b;
+if : {A : Type} → Bool → A → A → A;
+if true a _ ≔ a;
+if false _ b ≔ b;
 
 --------------------------------------------------------------------------------
 -- Backend Booleans
@@ -29,19 +29,21 @@ if _ false _ b ≔ b;
 
 axiom BackendBool : Type;
 compile BackendBool {
+  c ↦ "bool";
   ghc ↦ "Bool";
 };
 
 axiom backend-true : BackendBool;
 compile backend-true {
+  c ↦ "true";
   ghc ↦ "True";
 };
 
 axiom backend-false : BackendBool;
 compile backend-false {
+  c ↦ "false";
   ghc ↦ "False";
 };
-
 
 foreign ghc {
   bool :: Bool -> a -> a -> a
@@ -49,8 +51,16 @@ foreign ghc {
   bool False _ y = y
 };
 
+foreign c {
+  void* boolInd(bool b, void* a1, void* a2) {
+    return b ? a1 : a2;
+  \}
+};
+
+
 axiom bool : BackendBool → Bool → Bool → Bool;
 compile bool {
+  c ↦ "boolInd";
   ghc ↦ "bool";
 };
 

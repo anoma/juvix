@@ -23,15 +23,14 @@ change2-key : String;
 change2-key ≔ "change2-key";
 
 verifiers : List String;
-verifiers ≔ cons String owner-address (nil String);
+verifiers ≔ owner-address ∷ nil;
 
 keys-changed : List String;
-keys-changed ≔ cons String change1-key (cons String change2-key (nil String));
+keys-changed ≔ change1-key ∷ change2-key ∷ nil;
 
 main : Action;
 main ≔
     (putStr "VP Status: ")
     >> (putStrLn (show-result (vp token keys-changed verifiers)));
-end;
 
 end;

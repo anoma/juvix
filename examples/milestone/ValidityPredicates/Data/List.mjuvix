@@ -3,24 +3,18 @@ module Data.List;
 import Data.Bool;
 open Data.Bool;
 
-import Data.String;
-open Data.String;
-
---------------------------------------------------------------------------------
--- Lists
---------------------------------------------------------------------------------
-
+infixr 5 ∷;
 inductive List (A : Type) {
   nil : List A;
-  cons : A → List A → List A;
+  ∷ : A → List A → List A;
 };
 
-elem : (A : Type) → (A → A → Bool) → A → List A → Bool;
-elem _ _ _ nil ≔ false;
-elem A eq s (cons x xs) ≔ eq s x || elem _ eq s xs;
+elem : {A : Type} → (A → A → Bool) → A → List A → Bool;
+elem _ _ nil ≔ false;
+elem eq s (x ∷ xs) ≔ eq s x || elem eq s xs;
 
-foldl : (A : Type) → (B : Type) → (B → A → B) → B → List A → B;
-foldl _ _ f z nil ≔ z;
-foldl A B f z (cons h hs) ≔ foldl _ _ f (f z h) hs;
+foldl : {A : Type} → {B : Type} → (B → A → B) → B → List A → B;
+foldl f z nil ≔ z;
+foldl f z (h ∷ hs) ≔ foldl f (f z h) hs;
 
 end;

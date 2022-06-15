@@ -4,8 +4,40 @@ foreign ghc {
   import Anoma.Base
 };
 
+foreign c {
+  int readPre(const char *key) {
+      if (strcmp("change1-key", key)) {
+          return 100;
+      \} else if (strcmp("change2-key", key)) {
+          return 90;
+      \} else {
+          return -1;
+      \}
+  \}
+
+  int readPost(const char *key) {
+      if (strcmp("change1-key", key)) {
+          return 90;
+      \} else if (strcmp("change2-key", key)) {
+          return 100;
+      \} else {
+          return -1;
+      \}
+  \}
+
+  char* isBalanceKey(const char* s1, const char* s2) {
+      return "owner-address";
+  \}
+};
+
 import Prelude;
 open Prelude;
+
+from-int : Int → Maybe Int;
+from-int i ≔ if (i < 0) nothing (just i);
+
+from-string : String → Maybe String;
+from-string s ≔ if (s ==String "") nothing (just s);
 
 --------------------------------------------------------------------------------
 -- Anoma
@@ -13,16 +45,19 @@ open Prelude;
 
 axiom readPre : String → Int;
 compile readPre {
+  c ↦ "readPre";
   ghc ↦ "readPre";
 };
 
 axiom readPost : String → Int;
 compile readPost {
+  c ↦ "readPost";
   ghc ↦ "readPost";
 };
 
 axiom isBalanceKey : String → String → String;
 compile isBalanceKey {
+  c ↦ "isBalanceKey";
   ghc ↦ "isBalanceKey";
 };
 
@@ -36,6 +71,6 @@ is-balance-key : String → String → Maybe String;
 is-balance-key token key ≔ from-string (isBalanceKey token key);
 
 unwrap-default : Maybe Int → Int;
-unwrap-default o ≔ maybe-int 0 o;
+unwrap-default ≔ maybe 0 id;
 
 end;

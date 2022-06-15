@@ -73,3 +73,4 @@ UPDATES-FOR-CHANGELOG.org
 docs/md/
 _docs
 docs/**/*.md
+**/html/*

@@ -14,6 +14,7 @@ github:          heliaxdev/minijuvix
 
 extra-source-files:
 - README.org
+- assets/*
 
 dependencies:
 - ansi-terminal == 0.11.*

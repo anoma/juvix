@@ -3,18 +3,34 @@ module Data.Int;
 import Data.Bool;
 open Data.Bool;
 
---------------------------------------------------------------------------------
--- Integers
---------------------------------------------------------------------------------
-
 axiom Int : Type;
 compile Int {
+  c ↦ "int";
   ghc ↦ "Int";
+};
+
+foreign c {
+   bool lessThan(int l, int r) {
+     return l < r;
+   \}
+
+   bool eqInt(int l, int r) {
+     return l == r;
+   \}
+
+   int plus(int l, int r) {
+     return l + r;
+   \}
+
+   int minus(int l, int r) {
+     return l - r;
+   \}
 };
 
 infix 4 <';
 axiom <' : Int → Int → BackendBool;
 compile <' {
+  c ↦ "lessThan";
   ghc ↦ "(<)";
 };
 
@@ -24,6 +40,7 @@ infix 4 <;
 
 axiom eqInt : Int → Int → BackendBool;
 compile eqInt {
+  c ↦ "eqInt";
   ghc ↦ "(==)";
 };
 
@@ -34,12 +51,14 @@ infix 4 ==Int;
 infixl 6 -;
 axiom - : Int -> Int -> Int;
 compile - {
+  c ↦ "minus";
   ghc ↦ "(-)";
 };
 
 infixl 6 +;
 axiom + : Int -> Int -> Int;
 compile + {
+  c ↦ "plus";
   ghc ↦ "(+)";
 };
 
