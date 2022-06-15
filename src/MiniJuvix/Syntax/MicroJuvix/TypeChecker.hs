@@ -6,6 +6,7 @@ module MiniJuvix.Syntax.MicroJuvix.TypeChecker
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import MiniJuvix.Internal.NameIdGen
 import MiniJuvix.Prelude hiding (fromEither)
 import MiniJuvix.Syntax.MicroJuvix.Error
 import MiniJuvix.Syntax.MicroJuvix.InfoTable
@@ -16,7 +17,7 @@ import MiniJuvix.Syntax.MicroJuvix.MicroJuvixTypedResult
 import MiniJuvix.Syntax.MicroJuvix.TypeChecker.Inference
 
 entryMicroJuvixTyped ::
-  Member (Error TypeCheckerError) r =>
+  Members '[Error TypeCheckerError, NameIdGen] r =>
   MicroJuvixArityResult ->
   Sem r MicroJuvixTypedResult
 entryMicroJuvixTyped res@MicroJuvixArityResult {..} = do
@@ -31,7 +32,7 @@ entryMicroJuvixTyped res@MicroJuvixArityResult {..} = do
     table = buildTable _resultModules
 
 checkModule ::
-  Members '[Reader InfoTable, Error TypeCheckerError] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen] r =>
   Module ->
   Sem r Module
 checkModule Module {..} = do
@@ -43,7 +44,7 @@ checkModule Module {..} = do
       }
 
 checkModuleBody ::
-  Members '[Reader InfoTable, Error TypeCheckerError] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen] r =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -54,13 +55,13 @@ checkModuleBody ModuleBody {..} = do
       }
 
 checkInclude ::
-  Members '[Reader InfoTable, Error TypeCheckerError] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen] r =>
   Include ->
   Sem r Include
 checkInclude = traverseOf includeModule checkModule
 
 checkStatement ::
-  Members '[Reader InfoTable, Error TypeCheckerError] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen] r =>
   Statement ->
   Sem r Statement
 checkStatement s = case s of
@@ -71,7 +72,7 @@ checkStatement s = case s of
   StatementAxiom {} -> return s
 
 checkFunctionDef ::
-  Members '[Reader InfoTable, Error TypeCheckerError] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen] r =>
   FunctionDef ->
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = runInferenceDef $ do
@@ -104,7 +105,7 @@ checkFunctionDefType = go
     goAbs (TypeAbstraction _ _ b) = go b
 
 checkExpression ::
-  Members '[Reader InfoTable, Error TypeCheckerError, Reader LocalVars, Inference] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
   Type ->
   Expression ->
   Sem r Expression
@@ -124,7 +125,7 @@ checkExpression expectedTy e = do
         )
 
 inferExpression ::
-  Members '[Reader InfoTable, Error TypeCheckerError, Reader LocalVars, Inference] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
   Expression ->
   Sem r Expression
 inferExpression = fmap ExpressionTyped . inferExpression'
@@ -133,7 +134,7 @@ lookupVar :: Member (Reader LocalVars) r => Name -> Sem r Type
 lookupVar v = HashMap.lookupDefault impossible v <$> asks (^. localTypes)
 
 checkFunctionClauseBody ::
-  Members '[Reader InfoTable, Error TypeCheckerError, Inference] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, Inference] r =>
   LocalVars ->
   Type ->
   Expression ->
@@ -142,7 +143,7 @@ checkFunctionClauseBody locals expectedTy body =
   runReader locals (checkExpression expectedTy body)
 
 checkFunctionClause ::
-  Members '[Reader InfoTable, Error TypeCheckerError, Inference] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, Inference] r =>
   FunctionInfo ->
   FunctionClause ->
   Sem r FunctionClause
@@ -248,9 +249,16 @@ checkPattern funName = go
       when (numArgs > numParams) (error "too many arguments to inductive type")
       return (ind, zip params args)
 
+freshHole :: Members '[Inference, NameIdGen] r => Interval -> Sem r Hole
+freshHole l = do
+  uid <- freshNameId
+  let h = Hole uid l
+  void (freshMetavar h)
+  return h
+
 inferExpression' ::
   forall r.
-  Members '[Reader InfoTable, Reader LocalVars, Error TypeCheckerError, Inference] r =>
+  Members '[Reader InfoTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference] r =>
   Expression ->
   Sem r TypedExpression
 inferExpression' e = case e of
@@ -287,55 +295,75 @@ inferExpression' e = case e of
         kind <- inductiveType v
         return (TypedExpression kind (ExpressionIden i))
     inferApplication :: Application -> Sem r TypedExpression
-    inferApplication a = do
-      let leftExp = a ^. appLeft
-          i = a ^. appImplicit
-      l <- inferExpression' leftExp
-      fun <- getFunctionType leftExp (l ^. typedType)
-      case fun of
-        Left ta -> do
-          r <- checkExpression TypeUniverse (a ^. appRight)
-          let tr = expressionAsType' r
-          return
-            TypedExpression
-              { _typedExpression =
-                  ExpressionApplication
-                    Application
-                      { _appLeft = ExpressionTyped l,
-                        _appRight = r,
-                        _appImplicit = i
-                      },
-                _typedType = substituteType1 (ta ^. typeAbsVar, tr) (ta ^. typeAbsBody)
-              }
-        Right f -> do
-          r <- checkExpression (f ^. funLeft) (a ^. appRight)
-          return
-            TypedExpression
-              { _typedExpression =
-                  ExpressionApplication
-                    Application
-                      { _appLeft = ExpressionTyped l,
-                        _appRight = r,
-                        _appImplicit = i
-                      },
-                _typedType = f ^. funRight
-              }
+    inferApplication a = inferExpression' leftExp >>= helper
       where
-        getFunctionType :: Expression -> Type -> Sem r (Either TypeAbstraction Function)
-        getFunctionType appExp t = case t of
-          TypeFunction f -> return (Right f)
-          TypeAbs f -> return (Left f)
-          _ -> throw tyErr
-          where
-            tyErr :: TypeCheckerError
-            tyErr =
-              ErrExpectedFunctionType
-                ( ExpectedFunctionType
-                    { _expectedFunctionTypeExpression = e,
-                      _expectedFunctionTypeApp = appExp,
-                      _expectedFunctionTypeType = t
+        i = a ^. appImplicit
+        leftExp = a ^. appLeft
+        helper :: TypedExpression -> Sem r TypedExpression
+        helper l = case l ^. typedType of
+          TypeFunction f -> do
+            r <- checkExpression (f ^. funLeft) (a ^. appRight)
+            return
+              TypedExpression
+                { _typedExpression =
+                    ExpressionApplication
+                      Application
+                        { _appLeft = ExpressionTyped l,
+                          _appRight = r,
+                          _appImplicit = i
+                        },
+                  _typedType = f ^. funRight
+                }
+          TypeAbs ta -> do
+            r <- checkExpression TypeUniverse (a ^. appRight)
+            let tr = expressionAsType' r
+            return
+              TypedExpression
+                { _typedExpression =
+                    ExpressionApplication
+                      Application
+                        { _appLeft = ExpressionTyped l,
+                          _appRight = r,
+                          _appImplicit = i
+                        },
+                  _typedType = substituteType1 (ta ^. typeAbsVar, tr) (ta ^. typeAbsBody)
+                }
+          -- When we have have an application with a hole on the left: '_@1 x'
+          -- We assume that it is a type application and thus 'x' must be a type.
+          -- where @2 is fresh.
+          -- Not sure if this is always desirable.
+          TypeHole h -> do
+            q <- queryMetavar h
+            case q of
+              Just ty -> helper (set typedType ty l)
+              Nothing -> do
+                r <- checkExpression TypeUniverse (a ^. appRight)
+                h' <- freshHole (getLoc h)
+                let tr = expressionAsType' r
+                    fun = Function tr (TypeHole h')
+                unlessM (matchTypes (TypeHole h) (TypeFunction fun)) impossible
+                return
+                  TypedExpression
+                    { _typedType = TypeHole h',
+                      _typedExpression =
+                        ExpressionApplication
+                          Application
+                            { _appLeft = ExpressionTyped l,
+                              _appRight = r,
+                              _appImplicit = i
+                            }
                     }
-                )
+          _ -> throw tyErr
+            where
+              tyErr :: TypeCheckerError
+              tyErr =
+                ErrExpectedFunctionType
+                  ( ExpectedFunctionType
+                      { _expectedFunctionTypeExpression = e,
+                        _expectedFunctionTypeApp = leftExp,
+                        _expectedFunctionTypeType = l ^. typedType
+                      }
+                  )
 
 viewInductiveApp ::
   Member (Error TypeCheckerError) r =>
