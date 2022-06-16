@@ -18,8 +18,8 @@ module Data.Bool;
   && false _ ≔ false;
   && true a ≔ a;
 
-  ite : (a : Type) → Bool → a → a → a;
-  ite _ true a _ ≔ a;
-  ite _ false _ b ≔ b;
+  ite : {a : Type} → Bool → a → a → a;
+  ite true a _ ≔ a;
+  ite false _ b ≔ b;
 
 end;

@@ -11,45 +11,46 @@ inductive List (A : Type) {
   cons : A → List A → List A;
 };
 
-foldr : (A : Type) → (B : Type) → (A → B → B) → B → List A → B;
-foldr _ _ _ z nil ≔ z;
-foldr A B f z (cons h hs) ≔ f h (foldr A B f z hs);
+-- Do not remove implicit arguments. Useful for testing.
+foldr : {A : Type} → {B : Type} → (A → B → B) → B → List A → B;
+foldr _ z nil ≔ z;
+foldr f z (cons h hs) ≔ f h (foldr {_} f z hs);
 
-foldl : (A : Type) → (B : Type) → (B → A → B) → B → List A → B;
-foldl A B f z nil ≔ z ;
-foldl A B f z (cons h hs) ≔ foldl A B f (f z h) hs;
+foldl : {A : Type} → {B : Type} → (B → A → B) → B → List A → B;
+foldl f z nil ≔ z ;
+foldl {_} {_} f z (cons h hs) ≔ foldl {_} f (f z h) hs;
 
-map : (A : Type) → (B : Type) → (A → B) → List A → List B;
-map _ B f nil ≔ nil B;
-map A B f (cons h hs) ≔ cons B (f h) (map A B f hs);
+map : {A : Type} → {B : Type} → (A → B) → List A → List B;
+map f nil ≔ nil;
+map f (cons h hs) ≔ cons (f h) (map f hs);
 
-filter : (A : Type) → (A → Bool) → List A → List A;
-filter A f nil ≔ nil A;
-filter A f (cons h hs) ≔ ite (List A) (f h)
-  (cons A h (filter A f hs))
-  (filter A f hs);
+filter : {A : Type} → (A → Bool) → List A → List A;
+filter f nil ≔ nil;
+filter f (cons h hs) ≔ ite (f h)
+  (cons h (filter {_} f hs))
+  (filter f hs);
 
-length : (A : Type) → List A → ℕ;
-length _ nil ≔ zero;
-length A (cons _ l) ≔ suc (length A l);
+length : {A : Type} → List A → ℕ;
+length nil ≔ zero;
+length {_} (cons _ l) ≔ suc (length l);
 
-rev : (A : Type) → List A → List A → List A;
-rev _ nil l ≔ l;
-rev A (cons x xs) l ≔ rev A xs (cons A x l);
+rev : {A : Type} → List A → List A → List A;
+rev nil l ≔ l;
+rev (cons x xs) l ≔ rev xs (cons {_} x l);
 
-reverse : (A : Type) → List A → List A;
-reverse A l ≔ rev A l (nil A);
+reverse : {A : Type} → List A → List A;
+reverse l ≔ rev l nil;
 
-replicate : (A : Type) → ℕ → A → List A;
-replicate A zero _ ≔ nil A;
-replicate A (suc n) x ≔ cons A x (replicate A n x);
+replicate : {A : Type} → ℕ → A → List A;
+replicate zero _ ≔ nil;
+replicate (suc n) x ≔ cons x (replicate n x);
 
-take : (A : Type) → ℕ → List A → List A;
-take A (suc n) (cons x xs) ≔ cons A x (take A n xs);
-take A _ _ ≔ nil A;
+take : {A : Type} → ℕ → List A → List A;
+take (suc n) (cons x xs) ≔ cons x (take n xs);
+take _ _ ≔ nil;
 
-concat : (A : Type) → List A → List A → List A;
-concat A nil ys ≔ ys;
-concat A (cons x xs) ys ≔ cons A x (concat A xs ys);
+concat : {A : Type} → List A → List A → List A;
+concat nil ys ≔ ys;
+concat (cons x xs) ys ≔ cons x (concat xs ys);
 
 end;

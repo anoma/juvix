@@ -23,8 +23,12 @@ emptySizeInfo =
 mkSizeInfo :: [Pattern] -> SizeInfo
 mkSizeInfo ps = SizeInfo {..}
   where
+    ps' = filter (not . isBrace) ps
+    isBrace = \case
+      PatternBraces {} -> True
+      _ -> False
     _sizeEqual = ps
     _sizeSmaller =
       HashMap.fromList
-        [ (v, i) | (i, p) <- zip [0 ..] ps, v <- smallerPatternVariables p
+        [ (v, i) | (i, p) <- zip [0 ..] ps', v <- smallerPatternVariables p
         ]
