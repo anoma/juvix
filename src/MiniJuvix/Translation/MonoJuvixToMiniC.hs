@@ -972,7 +972,6 @@ goType t = case t of
   Mono.TypeIden ti -> getMonoType ti
   Mono.TypeFunction {} -> declFunctionPtrType
   Mono.TypeUniverse {} -> unsupported "TypeUniverse"
-  Mono.TypeAny {} -> unsupported "TypeAny"
   where
     getMonoType :: Mono.TypeIden -> CDeclType
     getMonoType = \case

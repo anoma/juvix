@@ -145,8 +145,14 @@ guessArity = \case
           ExpressionTyped {} -> impossible
           ExpressionIden i -> idenHelper i
 
+-- | The arity of all literals is assumed to be: {} -> 1
 arityLiteral :: Arity
-arityLiteral = ArityUnit
+arityLiteral =
+  ArityFunction
+    FunctionArity
+      { _functionArityLeft = ParamImplicit,
+        _functionArityRight = ArityUnit
+      }
 
 checkLhs ::
   forall r.
@@ -278,7 +284,6 @@ typeArity = go
       TypeAbs f -> ArityFunction <$> goAbs f
       TypeHole {} -> return ArityUnknown
       TypeUniverse {} -> return ArityUnit
-      TypeAny {} -> return ArityUnknown
 
     goIden :: TypeIden -> Sem r Arity
     goIden = \case
@@ -316,7 +321,7 @@ checkExpression ::
 checkExpression hintArity expr = case expr of
   ExpressionIden {} -> appHelper expr []
   ExpressionApplication a -> goApp a
-  ExpressionLiteral {} -> return expr
+  ExpressionLiteral {} -> appHelper expr []
   ExpressionFunction {} -> return expr
   ExpressionHole {} -> return expr
   ExpressionTyped {} -> impossible
@@ -328,19 +333,8 @@ checkExpression hintArity expr = case expr of
     appHelper fun args = do
       args' :: [(IsImplicit, Expression)] <- case fun of
         ExpressionHole {} -> mapM (secondM (checkExpression ArityUnknown)) args
-        ExpressionIden i -> do
-          ari <- idenArity i
-          let argsAris :: [Arity]
-              argsAris = map toArity (unfoldArity ari)
-              toArity :: ArityParameter -> Arity
-              toArity = \case
-                ParamExplicit a -> a
-                ParamImplicit -> ArityUnit
-          mapM
-            (secondM (uncurry checkExpression))
-            [(i', (a, e')) | (a, (i', e')) <- zip (argsAris ++ repeat ArityUnknown) args]
-            >>= addHoles (getLoc i) hintArity ari
-        ExpressionLiteral {} -> error "TODO literals on the left of an application"
+        ExpressionIden i -> idenArity i >>= helper (getLoc i)
+        ExpressionLiteral l -> helper (getLoc l) arityLiteral
         ExpressionFunction f ->
           throw
             ( ErrFunctionApplied
@@ -353,6 +347,18 @@ checkExpression hintArity expr = case expr of
         ExpressionTyped {} -> impossible
       return (foldApplication fun args')
       where
+        helper :: Interval -> Arity -> Sem r [(IsImplicit, Expression)]
+        helper i ari = do
+          let argsAris :: [Arity]
+              argsAris = map toArity (unfoldArity ari)
+              toArity :: ArityParameter -> Arity
+              toArity = \case
+                ParamExplicit a -> a
+                ParamImplicit -> ArityUnit
+          mapM
+            (secondM (uncurry checkExpression))
+            [(i', (a, e')) | (a, (i', e')) <- zip (argsAris ++ repeat ArityUnknown) args]
+            >>= addHoles i hintArity ari
         addHoles ::
           Interval ->
           Arity ->

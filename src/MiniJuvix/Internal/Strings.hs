@@ -80,9 +80,6 @@ error = "error"
 string :: IsString s => s
 string = "string"
 
-any :: IsString s => s
-any = "Any"
-
 type_ :: IsString s => s
 type_ = "Type"
 

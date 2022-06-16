@@ -296,29 +296,32 @@ goExpression = go
     goApp :: Micro.Application -> Sem r Expression
     goApp a = do
       let (f, args) = Micro.unfoldApplication a
-      m :: Maybe (PolyIdenInfo, Name -> Iden) <- case f of
-        Micro.ExpressionIden (Micro.IdenConstructor c) -> do
-          r <- lookupPolyConstructor c
-          return $ (\x -> (x, IdenConstructor)) <$> r
-        Micro.ExpressionIden (Micro.IdenFunction c) -> do
-          r <- lookupPolyFunction c
-          return $ (\x -> (x, IdenFunction)) <$> r
-        _ -> return Nothing
-      case m of
-        Nothing -> do
-          l' <- go (a ^. Micro.appLeft)
-          r' <- go (a ^. Micro.appRight)
-          return (ExpressionApplication (Application l' r'))
-        Just (poly, mkIden) -> do
-          let (headArgs, tailArgs) = splitAtExact (poly ^. polyTypeArity) (toList args)
-              headArgs' :: NonEmpty Micro.ConcreteType
-              headArgs' = fromJust (nonEmpty (map (Micro.mkConcreteType' . Micro.expressionAsType') headArgs))
-              conc :: ConcreteIdenInfo
-              conc = fromJust (poly ^. polyConcretes . at headArgs')
-              fun' :: Expression
-              fun' = ExpressionIden (mkIden (conc ^. concreteName))
-          tailArgs' <- mapM go tailArgs
-          return (foldApplication fun' tailArgs')
+      case f of
+        Micro.ExpressionLiteral {} -> goExpression f
+        _ -> do
+          m :: Maybe (PolyIdenInfo, Name -> Iden) <- case f of
+            Micro.ExpressionIden (Micro.IdenConstructor c) -> do
+              r <- lookupPolyConstructor c
+              return $ (\x -> (x, IdenConstructor)) <$> r
+            Micro.ExpressionIden (Micro.IdenFunction c) -> do
+              r <- lookupPolyFunction c
+              return $ (\x -> (x, IdenFunction)) <$> r
+            _ -> return Nothing
+          case m of
+            Nothing -> do
+              l' <- go (a ^. Micro.appLeft)
+              r' <- go (a ^. Micro.appRight)
+              return (ExpressionApplication (Application l' r'))
+            Just (poly, mkIden) -> do
+              let (headArgs, tailArgs) = splitAtExact (poly ^. polyTypeArity) (toList args)
+                  headArgs' :: NonEmpty Micro.ConcreteType
+                  headArgs' = fromJust (nonEmpty (map (Micro.mkConcreteType' . Micro.expressionAsType') headArgs))
+                  conc :: ConcreteIdenInfo
+                  conc = fromJust (poly ^. polyConcretes . at headArgs')
+                  fun' :: Expression
+                  fun' = ExpressionIden (mkIden (conc ^. concreteName))
+              tailArgs' <- mapM go tailArgs
+              return (foldApplication fun' tailArgs')
     goIden :: Micro.Iden -> Iden
     goIden = \case
       Micro.IdenFunction f -> IdenFunction (goName f)
@@ -498,7 +501,6 @@ goType = go . (^. Micro.unconcreteType)
     go :: Micro.Type -> Sem r Type
     go = \case
       Micro.TypeIden i -> return (TypeIden (goIden i))
-      Micro.TypeAny -> return TypeAny
       Micro.TypeUniverse -> return TypeUniverse
       Micro.TypeAbs {} -> impossible
       Micro.TypeHole {} -> impossible

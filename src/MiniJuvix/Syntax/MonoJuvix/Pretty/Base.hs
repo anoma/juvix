@@ -108,9 +108,6 @@ kwWhere = keyword Str.where_
 kwModule :: Doc Ann
 kwModule = keyword Str.module_
 
-kwAny :: Doc Ann
-kwAny = keyword Str.any
-
 kwType :: Doc Ann
 kwType = keyword Str.type_
 
@@ -139,7 +136,6 @@ instance PrettyCode Type where
     TypeIden i -> ppCode i
     TypeFunction f -> ppCode f
     TypeUniverse -> return kwType
-    TypeAny -> return kwAny
 
 instance PrettyCode InductiveConstructorDef where
   ppCode c = do

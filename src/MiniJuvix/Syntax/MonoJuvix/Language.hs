@@ -146,7 +146,6 @@ data Type
   = TypeIden TypeIden
   | TypeFunction Function
   | TypeUniverse
-  | TypeAny
   deriving stock (Show, Eq)
 
 makeLenses ''Module
@@ -177,7 +176,6 @@ instance HasAtomicity Type where
     TypeIden {} -> Atom
     TypeFunction f -> atomicity f
     TypeUniverse -> Atom
-    TypeAny -> Atom
 
 instance HasAtomicity ConstructorApp where
   atomicity (ConstructorApp _ args)

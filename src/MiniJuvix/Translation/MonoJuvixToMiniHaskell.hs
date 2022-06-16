@@ -232,4 +232,3 @@ goType = \case
   Mono.TypeIden t -> goTypeIden t
   Mono.TypeFunction f -> TypeFunction <$> goFunction f
   Mono.TypeUniverse -> error "MiniHaskell: universes in types not supported"
-  Mono.TypeAny -> impossible

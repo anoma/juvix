@@ -92,7 +92,6 @@ mkConcreteType = fmap ConcreteType . go
         l' <- go l
         r' <- go r
         return (TypeApp (TypeApplication l' r' i))
-      TypeAny -> return TypeAny
       TypeUniverse -> return TypeUniverse
       TypeFunction (Function l r) -> do
         l' <- go l
@@ -120,7 +119,6 @@ findHoles = go
       TypeAbs a -> go (a ^. typeAbsBody)
       TypeHole h -> HashSet.singleton h
       TypeUniverse -> mempty
-      TypeAny -> mempty
 
 hasHoles :: Type -> Bool
 hasHoles = not . HashSet.null . findHoles
@@ -134,7 +132,6 @@ typeAsExpression = go
         TypeIden i -> ExpressionIden (goTypeIden i)
         TypeApp a -> ExpressionApplication (goApp a)
         TypeFunction f -> ExpressionFunction (goFunction f)
-        TypeAny -> error "TODO TypeAny"
         TypeAbs {} -> error "TODO TypeAbs"
         TypeHole h -> ExpressionHole h
         TypeUniverse -> error "TODO TypeUniverse"
@@ -197,7 +194,6 @@ fillHolesType m = go
       TypeAbs a -> TypeAbs (goAbs a)
       TypeFunction f -> TypeFunction (goFunction f)
       TypeUniverse -> TypeUniverse
-      TypeAny -> TypeAny
       TypeHole h -> goHole h
       where
         goApp :: TypeApplication -> TypeApplication
@@ -330,7 +326,6 @@ concreteTypeToExpr = go . (^. unconcreteType)
       TypeApp (TypeApplication l r i) -> ExpressionApplication (Application (go l) (go r) i)
       TypeFunction (Function l r) -> ExpressionFunction (FunctionExpression (go l) (go r))
       TypeUniverse {} -> impossible
-      TypeAny {} -> impossible
       TypeHole {} -> impossible
     goIden :: TypeIden -> Iden
     goIden = \case
@@ -372,7 +367,6 @@ substitution m = go
       TypeAbs a -> TypeAbs (goAbs a)
       TypeFunction f -> TypeFunction (goFunction f)
       TypeUniverse -> TypeUniverse
-      TypeAny -> TypeAny
       TypeHole h -> TypeHole h
 
     goApp :: TypeApplication -> TypeApplication

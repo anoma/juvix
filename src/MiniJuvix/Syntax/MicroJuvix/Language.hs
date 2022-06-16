@@ -203,7 +203,6 @@ data Type
   | TypeAbs TypeAbstraction
   | TypeHole Hole
   | TypeUniverse
-  | TypeAny
   deriving stock (Eq, Generic)
 
 instance Hashable Type
@@ -262,7 +261,6 @@ instance HasAtomicity Type where
     TypeFunction f -> atomicity f
     TypeUniverse -> Atom
     TypeHole {} -> Atom
-    TypeAny -> Atom
     TypeAbs a -> atomicity a
     TypeApp a -> atomicity a
 

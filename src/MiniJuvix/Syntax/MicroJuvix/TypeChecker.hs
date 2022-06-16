@@ -95,7 +95,6 @@ checkFunctionDefType = go
       TypeApp a -> goApp a
       TypeFunction f -> goFunction f
       TypeAbs f -> goAbs f
-      TypeAny -> return ()
       TypeUniverse -> return ()
     goApp :: TypeApplication -> Sem r ()
     goApp (TypeApplication a b _) = go a >> go b
@@ -256,6 +255,31 @@ freshHole l = do
   void (freshMetavar h)
   return h
 
+-- | Returns {A : Type} → A
+literalType :: Members '[NameIdGen] r => LiteralLoc -> Sem r TypedExpression
+literalType l = do
+  uid <- freshNameId
+  let typeVar =
+        Name
+          { _nameText = "A",
+            _nameId = uid,
+            _nameKind = KNameLocal,
+            _nameLoc = getLoc l,
+            _nameDefined = getLoc l
+          }
+      type_ =
+        TypeAbs
+          TypeAbstraction
+            { _typeAbsVar = typeVar,
+              _typeAbsImplicit = Implicit,
+              _typeAbsBody = TypeIden (TypeIdenVariable typeVar)
+            }
+  return
+    TypedExpression
+      { _typedType = type_,
+        _typedExpression = ExpressionLiteral l
+      }
+
 inferExpression' ::
   forall r.
   Members '[Reader InfoTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference] r =>
@@ -275,7 +299,7 @@ inferExpression' e = case e of
       r' <- checkExpression TypeUniverse r
       return (TypedExpression TypeUniverse (ExpressionFunction (FunctionExpression l' r')))
     goLiteral :: LiteralLoc -> Sem r TypedExpression
-    goLiteral l = return (TypedExpression TypeAny (ExpressionLiteral l))
+    goLiteral = literalType
 
     inferIden :: Iden -> Sem r TypedExpression
     inferIden i = case i of

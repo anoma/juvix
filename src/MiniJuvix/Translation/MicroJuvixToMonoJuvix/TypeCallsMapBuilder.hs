@@ -96,7 +96,6 @@ goType :: Members '[State TypeCallsMap, Reader Caller] r => Type -> Sem r ()
 goType = \case
   TypeIden {} -> return ()
   TypeApp a -> goTypeApplication a
-  TypeAny -> return ()
   TypeHole {} -> impossible
   TypeUniverse -> return ()
   TypeFunction f -> goFunction f

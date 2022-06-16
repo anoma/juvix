@@ -61,7 +61,6 @@ closeState = \case
             return (TypeFunction (Function a' b'))
           TypeAbs (TypeAbstraction v i b) -> TypeAbs . TypeAbstraction v i <$> goType b
           TypeUniverse -> return TypeUniverse
-          TypeAny -> return TypeAny
           TypeHole h' ->
             let st = fromJust (m ^. at h')
              in goHole h' st
@@ -123,8 +122,6 @@ re = reinterpret $ \case
           (TypeAbs a, TypeAbs b) -> goAbs a b
           (TypeFunction a, TypeFunction b) -> goFunction a b
           (TypeUniverse, TypeUniverse) -> return True
-          (TypeAny, _) -> return True
-          (_, TypeAny) -> return True
           (TypeHole h, a) -> goHole h a
           (a, TypeHole h) -> goHole h a
           -- TODO is the final wildcard bad style?
