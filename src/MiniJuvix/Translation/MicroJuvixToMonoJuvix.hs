@@ -289,7 +289,6 @@ goExpression = go
     go = \case
       Micro.ExpressionIden i -> return (ExpressionIden (goIden i))
       Micro.ExpressionLiteral l -> return (ExpressionLiteral l)
-      Micro.ExpressionTyped t -> go (t ^. Micro.typedExpression)
       Micro.ExpressionApplication a -> goApp a
       Micro.ExpressionFunction {} -> impossible
       Micro.ExpressionHole {} -> impossible

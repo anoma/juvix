@@ -112,7 +112,7 @@ checkExpression expectedTy e = do
   e' <- inferExpression' e
   let inferredType = e' ^. typedType
   unlessM (matchTypes expectedTy inferredType) (throw (err inferredType))
-  return (ExpressionTyped e')
+  return (e' ^. typedExpression)
   where
     err infTy =
       ErrWrongType
@@ -127,7 +127,7 @@ inferExpression ::
   Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
   Expression ->
   Sem r Expression
-inferExpression = fmap ExpressionTyped . inferExpression'
+inferExpression = fmap (^. typedExpression) . inferExpression'
 
 lookupVar :: Member (Reader LocalVars) r => Name -> Sem r Type
 lookupVar v = HashMap.lookupDefault impossible v <$> asks (^. localTypes)
@@ -288,7 +288,6 @@ inferExpression' ::
 inferExpression' e = case e of
   ExpressionIden i -> inferIden i
   ExpressionApplication a -> inferApplication a
-  ExpressionTyped t -> return t
   ExpressionLiteral l -> goLiteral l
   ExpressionFunction f -> goExpressionFunction f
   ExpressionHole h -> freshMetavar h
@@ -332,7 +331,7 @@ inferExpression' e = case e of
                 { _typedExpression =
                     ExpressionApplication
                       Application
-                        { _appLeft = ExpressionTyped l,
+                        { _appLeft = l ^. typedExpression,
                           _appRight = r,
                           _appImplicit = i
                         },
@@ -346,7 +345,7 @@ inferExpression' e = case e of
                 { _typedExpression =
                     ExpressionApplication
                       Application
-                        { _appLeft = ExpressionTyped l,
+                        { _appLeft = l ^. typedExpression,
                           _appRight = r,
                           _appImplicit = i
                         },
@@ -372,7 +371,7 @@ inferExpression' e = case e of
                       _typedExpression =
                         ExpressionApplication
                           Application
-                            { _appLeft = ExpressionTyped l,
+                            { _appLeft = l ^. typedExpression,
                               _appRight = r,
                               _appImplicit = i
                             }

@@ -126,7 +126,6 @@ data Expression
   | ExpressionFunction FunctionExpression
   | ExpressionLiteral LiteralLoc
   | ExpressionHole Hole
-  | ExpressionTyped TypedExpression
 
 data Application = Application
   { _appLeft :: Expression,
@@ -244,7 +243,6 @@ instance HasAtomicity Expression where
   atomicity e = case e of
     ExpressionIden {} -> Atom
     ExpressionApplication a -> atomicity a
-    ExpressionTyped t -> atomicity (t ^. typedExpression)
     ExpressionLiteral l -> atomicity l
     ExpressionFunction f -> atomicity f
     ExpressionHole {} -> Atom
@@ -283,7 +281,6 @@ instance HasLoc Expression where
   getLoc = \case
     ExpressionIden i -> getLoc i
     ExpressionApplication a -> getLoc (a ^. appLeft)
-    ExpressionTyped t -> getLoc (t ^. typedExpression)
     ExpressionLiteral l -> getLoc l
     ExpressionFunction f -> getLoc f
     ExpressionHole h -> getLoc h

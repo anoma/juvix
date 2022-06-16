@@ -1,1 +1,2 @@
 fst (True, False) = True
+False

@@ -167,13 +167,6 @@ fillHoles m = goe
       ExpressionLiteral {} -> x
       ExpressionHole h -> goHole h
       ExpressionFunction f -> ExpressionFunction (goFunction f)
-      ExpressionTyped t ->
-        ExpressionTyped
-          ( over
-              typedType
-              (fillHolesType m)
-              (over typedExpression goe t)
-          )
       where
         goApp :: Application -> Application
         goApp (Application l r i) = Application (goe l) (goe r) i
@@ -216,7 +209,6 @@ expressionAsType = go
       ExpressionApplication a -> TypeApp <$> goApp a
       ExpressionLiteral {} -> Nothing
       ExpressionFunction f -> TypeFunction <$> goFunction f
-      ExpressionTyped e -> go (e ^. typedExpression)
       ExpressionHole h -> Just (TypeHole h)
     goFunction :: FunctionExpression -> Maybe Function
     goFunction (FunctionExpression l r) = do
@@ -346,7 +338,6 @@ substitutionE m = go
       ExpressionLiteral {} -> x
       ExpressionHole {} -> x
       ExpressionFunction f -> ExpressionFunction (goFunction f)
-      ExpressionTyped t -> ExpressionTyped (over typedExpression go t)
     goApp :: Application -> Application
     goApp (Application l r i) = Application (go l) (go r) i
     goFunction :: FunctionExpression -> FunctionExpression
@@ -431,7 +422,6 @@ unfoldApplication' (Application l' r' i') = second (|: (i', r')) (unfoldExpressi
     unfoldExpression e = case e of
       ExpressionApplication (Application l r i) ->
         second (`snoc` (i, r)) (unfoldExpression l)
-      ExpressionTyped t -> unfoldExpression (t ^. typedExpression)
       _ -> (e, [])
 
 unfoldApplication :: Application -> (Expression, NonEmpty Expression)

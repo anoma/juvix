@@ -116,9 +116,6 @@ goExpression = \case
   ExpressionFunction a -> goFunctionExpression a
   ExpressionLiteral {} -> return ()
   ExpressionHole {} -> impossible
-  ExpressionTyped t -> do
-    goType (t ^. typedType)
-    goExpression (t ^. typedExpression)
 
 goApplication :: Members '[State TypeCallsMap, Reader Caller, Reader InfoTable] r => Application -> Sem r ()
 goApplication a = do
@@ -137,6 +134,8 @@ goApplication a = do
             { _typeCallIden = FunctionIden fun,
               _typeCallArguments = tyArgs
             }
+    -- Note: cosntructors do not need to be checked as they are already covered
+    -- by inspecting the types
     _ -> return ()
   where
     take' :: Int -> NonEmpty a -> NonEmpty a

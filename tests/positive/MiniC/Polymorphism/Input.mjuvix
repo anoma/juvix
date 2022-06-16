@@ -63,17 +63,17 @@ bool-to-str : Bool → String;
 bool-to-str true ≔ "True";
 bool-to-str false ≔ "False";
 
-
---------------------------------------------------------------------------------
--- Pair
---------------------------------------------------------------------------------
-
-inductive Pair (A : Type) (B : Type) {
- mkPair : A → B → Pair A B;
+infixr 2 ×;
+infixr 4 ,;
+inductive × (A : Type) (B : Type) {
+  , : A → B → A × B;
 };
 
-fst : (A : Type) → (B : Type) → Pair A B → A;
-fst _ _ (mkPair a b) ≔ a;
+fst : {A : Type} → {B : Type} → A × B → A;
+fst (a , b) ≔ a;
+
+id' : {A : Type} → A → A;
+id' a ≔ fst (a , a);
 
 --------------------------------------------------------------------------------
 -- Main
@@ -81,9 +81,9 @@ fst _ _ (mkPair a b) ≔ a;
 
 fst-of-pair : Action;
 fst-of-pair ≔ (put-str "fst (True, False) = ")
-               >> put-str-ln (bool-to-str (fst Bool Bool (mkPair true false)));
+               >> put-str-ln (bool-to-str (fst (true , false)));
 
 main : Action;
-main ≔ fst-of-pair;
+main ≔ fst-of-pair >> put-str-ln (bool-to-str (id' false));
 
 end;

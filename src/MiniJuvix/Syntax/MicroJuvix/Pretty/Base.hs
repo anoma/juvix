@@ -81,7 +81,6 @@ instance PrettyCode Expression where
     ExpressionIden i -> ppCode i
     ExpressionHole h -> ppCode h
     ExpressionApplication a -> ppCode a
-    ExpressionTyped a -> ppCode a
     ExpressionFunction f -> ppCode f
     ExpressionLiteral l -> return (pretty l)
 

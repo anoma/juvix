@@ -108,7 +108,6 @@ guessArity ::
   Expression ->
   Sem r (Maybe Arity)
 guessArity = \case
-  ExpressionTyped {} -> impossible
   ExpressionHole {} -> return Nothing
   ExpressionFunction {} -> return (Just ArityUnit)
   ExpressionLiteral {} -> return (Just arityLiteral)
@@ -142,7 +141,6 @@ guessArity = \case
           ExpressionApplication {} -> impossible
           ExpressionFunction {} -> return (Just ArityUnit)
           ExpressionLiteral {} -> return (Just arityLiteral)
-          ExpressionTyped {} -> impossible
           ExpressionIden i -> idenHelper i
 
 -- | The arity of all literals is assumed to be: {} -> 1
@@ -324,7 +322,6 @@ checkExpression hintArity expr = case expr of
   ExpressionLiteral {} -> appHelper expr []
   ExpressionFunction {} -> return expr
   ExpressionHole {} -> return expr
-  ExpressionTyped {} -> impossible
   where
     goApp :: Application -> Sem r Expression
     goApp = uncurry appHelper . second toList . unfoldApplication'
@@ -344,7 +341,6 @@ checkExpression hintArity expr = case expr of
                   }
             )
         ExpressionApplication {} -> impossible
-        ExpressionTyped {} -> impossible
       return (foldApplication fun args')
       where
         helper :: Interval -> Arity -> Sem r [(IsImplicit, Expression)]
