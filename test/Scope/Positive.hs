@@ -154,6 +154,10 @@ tests =
       "QualifiedConstructor"
       "M.mjuvix",
     PosTest
+      "Parsing"
+      "."
+      "Parsing.mjuvix",
+    PosTest
       "open overrides open public"
       "."
       "ShadowPublicOpen.mjuvix"

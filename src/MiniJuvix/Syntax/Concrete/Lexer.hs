@@ -39,9 +39,6 @@ symbol = void . L.symbol space
 lexemeInterval :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r (a, Interval)
 lexemeInterval = lexeme . interval
 
-symbolInterval :: Members '[Reader ParserParams, InfoTableBuilder] r => Text -> ParsecS r Interval
-symbolInterval = fmap snd . lexemeInterval . P.chunk
-
 decimal :: (Members '[Reader ParserParams, InfoTableBuilder] r, Num n) => ParsecS r (n, Interval)
 decimal = lexemeInterval L.decimal
 
@@ -101,7 +98,11 @@ withLoc ma = do
 
 keyword :: Members '[Reader ParserParams, InfoTableBuilder] r => Text -> ParsecS r ()
 keyword kw = do
-  l <- symbolInterval kw
+  l <- P.try $ do
+    i <- snd <$> interval (P.chunk kw)
+    notFollowedBy (satisfy validTailChar)
+    space
+    return i
   lift (registerKeyword l)
 
 -- | Same as @identifier@ but does not consume space after it.
@@ -109,25 +110,26 @@ bareIdentifier :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS 
 bareIdentifier = interval $ do
   notFollowedBy (choice allKeywords)
   h <- P.satisfy validFirstChar
-  t <- P.takeWhileP Nothing validChar
+  t <- P.takeWhileP Nothing validTailChar
   return (Text.cons h t)
+
+validTailChar :: Char -> Bool
+validTailChar c =
+  isAlphaNum c || validFirstChar c
+
+validFirstChar :: Char -> Bool
+validFirstChar c =
+  or
+    [ isLetter c,
+      cat == MathSymbol,
+      cat == CurrencySymbol,
+      cat == ModifierLetter,
+      c `elem` extraAllowedChars
+    ]
   where
-    validChar :: Char -> Bool
-    validChar c =
-      isAlphaNum c || validFirstChar c
-    validFirstChar :: Char -> Bool
-    validFirstChar c =
-      or
-        [ isLetter c,
-          cat == MathSymbol,
-          cat == CurrencySymbol,
-          cat == ModifierLetter,
-          c `elem` extraAllowedChars
-        ]
-      where
-        extraAllowedChars :: [Char]
-        extraAllowedChars = "_'-*,&"
-        cat = generalCategory c
+    extraAllowedChars :: [Char]
+    extraAllowedChars = "_'-*,&"
+    cat = generalCategory c
 
 dot :: forall e m. MonadParsec e Text m => m Char
 dot = P.char '.'
@@ -196,9 +198,8 @@ kwAssignment = keyword Str.assignUnicode <|> keyword Str.assignAscii
 kwAxiom :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwAxiom = keyword Str.axiom
 
--- | Note that the trailing space is needed to distinguish it from ':='.
 kwColon :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
-kwColon = keyword Str.colonSpace
+kwColon = keyword Str.colon
 
 kwColonOmega :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwColonOmega = keyword Str.colonOmegaUnicode <|> keyword Str.colonOmegaAscii
