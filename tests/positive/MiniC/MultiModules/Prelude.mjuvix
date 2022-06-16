@@ -1,15 +1,11 @@
 module Prelude;
 
-import String;
-open String public;
+open import String public;
 
-import Bool;
-open Bool public;
+open import Bool public;
 
-import Pair;
-open Pair public;
+open import Pair public;
 
-import IO;
-open IO public;
+open import IO public;
 
 end;

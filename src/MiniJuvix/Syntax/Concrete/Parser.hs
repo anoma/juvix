@@ -473,6 +473,7 @@ atomicExpression = do
 openModule :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (OpenModule 'Parsed)
 openModule = do
   kwOpen
+  _openModuleImport <- isJust <$> optional kwImport
   _openModuleName <- name
   _openParameters <- many atomicExpression
   _openUsingHiding <- optional usingOrHiding

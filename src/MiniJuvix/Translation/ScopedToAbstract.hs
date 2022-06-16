@@ -91,7 +91,7 @@ goStatement (Indexed idx s) =
     StatementAxiom d -> Just . Abstract.StatementAxiom <$> goAxiom d
     StatementImport (Import t) -> Just . Abstract.StatementImport <$> goModule t
     StatementOperator {} -> return Nothing
-    StatementOpenModule {} -> return Nothing
+    StatementOpenModule o -> goOpenModule o
     StatementEval {} -> unsupported "eval statements"
     StatementPrint {} -> unsupported "print statements"
     StatementInductive i -> Just . Abstract.StatementInductive <$> goInductive i
@@ -100,6 +100,20 @@ goStatement (Indexed idx s) =
     StatementTypeSignature {} -> return Nothing
     StatementFunctionClause {} -> return Nothing
     StatementCompile {} -> return Nothing
+
+goOpenModule ::
+  forall r.
+  Members '[InfoTableBuilder, Error ScoperError] r =>
+  OpenModule 'Scoped ->
+  Sem r (Maybe Abstract.Statement)
+goOpenModule o
+  | o ^. openModuleImport =
+      case o ^. openModuleName of
+        ModuleRef' (SModuleTop :&: m) ->
+          Just . Abstract.StatementImport
+            <$> goModule (m ^. moduleRefModule)
+        _ -> impossible
+  | otherwise = return Nothing
 
 goFunctionDef ::
   forall r.

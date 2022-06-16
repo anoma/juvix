@@ -645,21 +645,41 @@ getExportInfo modId = do
   return $ case l ^. unModuleRef' of
     _ :&: ent -> ent ^. moduleExportInfo
 
-checkOpenModule ::
+checkOpenImportModule ::
+  Members '[Error ScoperError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  OpenModule 'Parsed ->
+  Sem r (OpenModule 'Scoped)
+checkOpenImportModule op
+  | op ^. openModuleImport =
+      let moduleNameToTopModulePath :: Name -> TopModulePath
+          moduleNameToTopModulePath = \case
+            NameUnqualified s -> TopModulePath [] s
+            NameQualified (QualifiedName (Path p) s) -> TopModulePath (toList p) s
+          import_ :: Import 'Parsed
+          import_ = Import (moduleNameToTopModulePath (op ^. openModuleName))
+       in do
+            void (checkImport import_)
+            scopedOpen <- checkOpenModule (set openModuleImport False op)
+            return (set openModuleImport True scopedOpen)
+  | otherwise = impossible
+
+checkOpenModuleNoImport ::
   forall r.
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
-checkOpenModule OpenModule {..} = do
-  openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- lookupModuleSymbol _openModuleName
-  openParameters' <- mapM checkParseExpressionAtoms _openParameters
-  mergeScope (alterScope (moduleRef'' ^. moduleExportInfo))
-  return
-    OpenModule
-      { _openModuleName = openModuleName',
-        _openParameters = openParameters',
-        ..
-      }
+checkOpenModuleNoImport OpenModule {..}
+  | _openModuleImport = error "unsupported: open import statement"
+  | otherwise = do
+      openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- lookupModuleSymbol _openModuleName
+      openParameters' <- mapM checkParseExpressionAtoms _openParameters
+      mergeScope (alterScope (moduleRef'' ^. moduleExportInfo))
+      return
+        OpenModule
+          { _openModuleName = openModuleName',
+            _openParameters = openParameters',
+            ..
+          }
   where
     mergeScope :: ExportInfo -> Sem r ()
     mergeScope ExportInfo {..} =
@@ -700,6 +720,15 @@ checkOpenModule OpenModule {..} = do
           Just (Left using) -> HashSet.member s using
           Just (Right hiding) -> not (HashSet.member s hiding)
 
+checkOpenModule ::
+  forall r.
+  Members '[Error ScoperError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  OpenModule 'Parsed ->
+  Sem r (OpenModule 'Scoped)
+checkOpenModule op
+  | op ^. openModuleImport = checkOpenImportModule op
+  | otherwise = checkOpenModuleNoImport op
+
 checkWhereBlock ::
   forall r.
   Members
@@ -721,7 +750,7 @@ checkWhereClause ::
   WhereClause 'Parsed ->
   Sem r (WhereClause 'Scoped)
 checkWhereClause c = case c of
-  WhereOpenModule o -> WhereOpenModule <$> checkOpenModule o
+  WhereOpenModule o -> WhereOpenModule <$> checkOpenModuleNoImport o
   WhereTypeSig s -> WhereTypeSig <$> checkTypeSignature s
   WhereFunClause f -> WhereFunClause <$> checkFunctionClause f
 

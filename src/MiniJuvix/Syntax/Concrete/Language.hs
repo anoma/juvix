@@ -471,6 +471,7 @@ newtype ExportInfo = ExportInfo
 
 data OpenModule (s :: Stage) = OpenModule
   { _openModuleName :: ModuleRefType s,
+    _openModuleImport :: Bool,
     _openParameters :: [ExpressionType s],
     _openUsingHiding :: Maybe UsingHiding,
     _openPublic :: PublicAnn

@@ -483,7 +483,10 @@ instance SingI s => PrettyCode (OpenModule s) where
     openUsingHiding' <- mapM ppUsingHiding _openUsingHiding
     openParameters' <- ppOpenParams
     let openPublic' = ppPublic
-    return $ keyword "open" <+> openModuleName' <+?> openParameters' <+?> openUsingHiding' <+?> openPublic'
+        import_
+          | _openModuleImport = Just Str.import_
+          | otherwise = Nothing
+    return $ kwOpen <+?> import_ <+> openModuleName' <+?> openParameters' <+?> openUsingHiding' <+?> openPublic'
     where
       ppAtom' = case sing :: SStage s of
         SParsed -> ppCodeAtom

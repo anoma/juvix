@@ -1,20 +1,15 @@
 module Input;
 
-import String;
-open String;
+open import String;
 
-import Bool;
-open Bool;
+open import Bool;
 
-import Pair;
-open Pair;
+open import Pair;
 
-import IO;
-open IO;
+open import IO;
 
 -- Not needed but useful for testing
-import Prelude;
-open Prelude;
+open import Prelude;
 
 bool-to-str : Bool → String;
 bool-to-str true ≔ "True";
