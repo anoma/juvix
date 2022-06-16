@@ -1,5 +1,6 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html (genHtml, Theme (..)) where
 
+import Data.ByteString qualified as BS
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Text.Lazy (toStrict)
@@ -36,21 +37,14 @@ genHtml opts recursive theme entry = do
     copyAssetFiles :: IO ()
     copyAssetFiles = do
       createDirectoryIfMissing True toAssetsDir
-      mapM_ cpFile assetFiles
+      mapM_ writeAsset assetFiles
       where
-        fromAssetsDir :: FilePath
-        fromAssetsDir = $(assetsDir)
+        assetFiles :: [(FilePath, BS.ByteString)]
+        assetFiles = $(assetsDir)
+        writeAsset :: (FilePath, BS.ByteString) -> IO ()
+        writeAsset (filePath, fileContents) =
+          BS.writeFile (toAssetsDir </> takeFileName filePath) fileContents
         toAssetsDir = htmlPath </> "assets"
-        cpFile (fromDir, name, toDir) = copyFile (fromDir </> name) (toDir </> name)
-        assetFiles :: [(FilePath, FilePath, FilePath)]
-        assetFiles =
-          [ (fromAssetsDir, name, toAssetsDir)
-            | name <-
-                [ "highlight.js",
-                  "source-ayu-light.css",
-                  "source-nord.css"
-                ]
-          ]
 
     outputModule :: Module 'Scoped 'ModuleTop -> IO ()
     outputModule m = do
