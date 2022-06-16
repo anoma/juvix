@@ -70,9 +70,9 @@ wasmer Input.wasm
 
 You should see the output: =hello world!=
 
-** Other Documentation
+** The MiniJuvix Book
 
-[[docs/developer-tooling.org][Developer Tooling]]
+The MiniJuvix language and related tools are documented in [[https://heliaxdev.github.io/minijuvix/][the MiniJuvix book]].
 
 ** Community
 
