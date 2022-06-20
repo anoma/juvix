@@ -2,46 +2,28 @@ module MiniJuvix.Syntax.Abstract.Language
   ( module MiniJuvix.Syntax.Abstract.Language,
     module MiniJuvix.Syntax.Concrete.Language,
     module MiniJuvix.Syntax.Hole,
+    module MiniJuvix.Syntax.Abstract.Name,
     module MiniJuvix.Syntax.Wildcard,
     module MiniJuvix.Syntax.IsImplicit,
   )
 where
 
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Concrete.Language (BackendItem, ForeignBlock (..), LiteralLoc (..), Usage)
-import MiniJuvix.Syntax.Concrete.Name qualified as C
-import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
-import MiniJuvix.Syntax.Fixity
+import MiniJuvix.Syntax.Abstract.Name
+import MiniJuvix.Syntax.Concrete.Language (BackendItem, ForeignBlock (..), LiteralLoc (..), Usage, symbolLoc)
 import MiniJuvix.Syntax.Hole
 import MiniJuvix.Syntax.IsImplicit
 import MiniJuvix.Syntax.Universe
 import MiniJuvix.Syntax.Wildcard
 
-type TopModuleName = S.TopModulePath
+type LocalModule = Module
 
-type LocalModuleName = S.Symbol
+type TopModule = Module
 
-type FunctionName = S.Symbol
+type TopModuleName = Name
 
-type VarName = S.Symbol
-
-type ConstrName = S.Symbol
-
-type InductiveName = S.Symbol
-
-type AxiomName = S.Symbol
-
--- TODO: Perhaps we could use a different Name type
---  that just includes fields (nameId + debug info)
--- requried in future passes.
-type Name = S.Name
-
-type TopModule = Module C.TopModulePath
-
-type LocalModule = Module C.Symbol
-
-data Module s = Module
-  { _moduleName :: S.Name' s,
+data Module = Module
+  { _moduleName :: Name,
     _moduleBody :: ModuleBody
   }
   deriving stock (Eq, Show)
@@ -220,11 +202,3 @@ makeLenses ''ConstructorRef
 makeLenses ''InductiveRef
 makeLenses ''AxiomRef
 makeLenses ''AxiomDef
-
-idenName :: Iden -> Name
-idenName = \case
-  IdenFunction n -> n ^. functionRefName
-  IdenConstructor n -> n ^. constructorRefName
-  IdenInductive n -> n ^. inductiveRefName
-  IdenVar n -> S.unqualifiedSymbol n
-  IdenAxiom n -> n ^. axiomRefName

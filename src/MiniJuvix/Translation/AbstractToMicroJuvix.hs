@@ -10,8 +10,6 @@ import MiniJuvix.Pipeline.EntryPoint qualified as E
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.AbstractResult qualified as Abstract
 import MiniJuvix.Syntax.Abstract.Language qualified as Abstract
-import MiniJuvix.Syntax.Concrete.Name (symbolLoc)
-import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as Scoper
 import MiniJuvix.Syntax.MicroJuvix.Language
 import MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult
 import MiniJuvix.Syntax.Universe
@@ -61,25 +59,9 @@ goModule m = do
   _moduleBody' <- goModuleBody (m ^. Abstract.moduleBody)
   return
     Module
-      { _moduleName = goTopModuleName (m ^. Abstract.moduleName),
+      { _moduleName = m ^. Abstract.moduleName,
         _moduleBody = _moduleBody'
       }
-
-goTopModuleName :: Abstract.TopModuleName -> Name
-goTopModuleName = goSymbol . Scoper.topModulePathName
-
-goName :: Scoper.Name -> Name
-goName = goSymbol . Scoper.nameUnqualify
-
-goSymbol :: Scoper.Symbol -> Name
-goSymbol s =
-  Name
-    { _nameText = Scoper.symbolText s,
-      _nameId = s ^. Scoper.nameId,
-      _nameKind = getNameKind s,
-      _nameDefined = s ^. Scoper.nameDefined,
-      _nameLoc = s ^. Scoper.nameConcrete . symbolLoc
-    }
 
 unsupported :: Text -> a
 unsupported thing = error ("Abstract to MicroJuvix: Not yet supported: " <> thing)
@@ -118,16 +100,16 @@ goTypeIden :: Abstract.Iden -> TypeIden
 goTypeIden i = case i of
   Abstract.IdenFunction {} -> unsupported "functions in types"
   Abstract.IdenConstructor {} -> unsupported "constructors in types"
-  Abstract.IdenVar v -> TypeIdenVariable (goSymbol v)
-  Abstract.IdenInductive d -> TypeIdenInductive (goName (d ^. Abstract.inductiveRefName))
-  Abstract.IdenAxiom a -> TypeIdenAxiom (goName (a ^. Abstract.axiomRefName))
+  Abstract.IdenVar v -> TypeIdenVariable v
+  Abstract.IdenInductive d -> TypeIdenInductive (d ^. Abstract.inductiveRefName)
+  Abstract.IdenAxiom a -> TypeIdenAxiom (a ^. Abstract.axiomRefName)
 
 goAxiomDef :: Abstract.AxiomDef -> Sem r AxiomDef
 goAxiomDef a = do
   _axiomType' <- goType (a ^. Abstract.axiomType)
   return
     AxiomDef
-      { _axiomName = goSymbol (a ^. Abstract.axiomName),
+      { _axiomName = a ^. Abstract.axiomName,
         _axiomType = _axiomType'
       }
 
@@ -135,7 +117,7 @@ goFunctionParameter :: Abstract.FunctionParameter -> Sem r (Either VarName Type)
 goFunctionParameter f = case f ^. Abstract.paramName of
   Just var
     | isSmallType (f ^. Abstract.paramType) && isOmegaUsage (f ^. Abstract.paramUsage) ->
-        return (Left (goSymbol var))
+        return (Left var)
     | otherwise -> unsupported "named function arguments only for small types without usages"
   Nothing
     | isOmegaUsage (f ^. Abstract.paramUsage) -> Right <$> goType (f ^. Abstract.paramType)
@@ -173,7 +155,7 @@ goFunctionDef f = do
       }
   where
     _funDefName' :: Name
-    _funDefName' = goSymbol (f ^. Abstract.funDefName)
+    _funDefName' = f ^. Abstract.funDefName
 
 goFunctionClause :: Name -> Abstract.FunctionClause -> Sem r FunctionClause
 goFunctionClause n c = do
@@ -188,7 +170,7 @@ goFunctionClause n c = do
 
 goPattern :: Abstract.Pattern -> Sem r Pattern
 goPattern p = case p of
-  Abstract.PatternVariable v -> return (PatternVariable (goSymbol v))
+  Abstract.PatternVariable v -> return (PatternVariable v)
   Abstract.PatternConstructorApp c -> PatternConstructorApp <$> goConstructorApp c
   Abstract.PatternWildcard i -> return (PatternWildcard i)
   Abstract.PatternBraces b -> PatternBraces <$> goPattern b
@@ -199,7 +181,7 @@ goConstructorApp c = do
   _constrAppParameters' <- mapM goPattern (c ^. Abstract.constrAppParameters)
   return
     ConstructorApp
-      { _constrAppConstructor = goName (c ^. Abstract.constrAppConstructor . Abstract.constructorRefName),
+      { _constrAppConstructor = c ^. Abstract.constrAppConstructor . Abstract.constructorRefName,
         _constrAppParameters = _constrAppParameters'
       }
 
@@ -233,11 +215,11 @@ goApplication (Abstract.Application f x i) = do
 
 goIden :: Abstract.Iden -> Iden
 goIden i = case i of
-  Abstract.IdenFunction n -> IdenFunction (goName (n ^. Abstract.functionRefName))
-  Abstract.IdenConstructor c -> IdenConstructor (goName (c ^. Abstract.constructorRefName))
-  Abstract.IdenVar v -> IdenVar (goSymbol v)
-  Abstract.IdenAxiom a -> IdenAxiom (goName (a ^. Abstract.axiomRefName))
-  Abstract.IdenInductive a -> IdenInductive (goName (a ^. Abstract.inductiveRefName))
+  Abstract.IdenFunction n -> IdenFunction (n ^. Abstract.functionRefName)
+  Abstract.IdenConstructor c -> IdenConstructor (c ^. Abstract.constructorRefName)
+  Abstract.IdenVar v -> IdenVar v
+  Abstract.IdenAxiom a -> IdenAxiom (a ^. Abstract.axiomRefName)
+  Abstract.IdenInductive a -> IdenInductive (a ^. Abstract.inductiveRefName)
 
 goExpressionFunction :: forall r. Abstract.Function -> Sem r FunctionExpression
 goExpressionFunction f = do
@@ -267,7 +249,7 @@ goInductiveParameter f =
       | isSmallUni u ->
           return
             InductiveParameter
-              { _inductiveParamName = goSymbol var
+              { _inductiveParamName = var
               }
     (Just {}, _, _) -> unsupported "only type variables of small types are allowed"
     (Nothing, _, _) -> unsupported "unnamed inductive parameters"
@@ -285,13 +267,13 @@ goInductiveDef i = case i ^. Abstract.inductiveType of
           _inductiveConstructors = _inductiveConstructors'
         }
   where
-    indName = goSymbol (i ^. Abstract.inductiveName)
+    indName = i ^. Abstract.inductiveName
     goConstructorDef :: Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
     goConstructorDef c = do
       _constructorParameters' <- goConstructorType (c ^. Abstract.constructorType)
       return
         InductiveConstructorDef
-          { _constructorName = goSymbol (c ^. Abstract.constructorName),
+          { _constructorName = c ^. Abstract.constructorName,
             _constructorParameters = _constructorParameters'
           }
     -- TODO check that the return type corresponds with the inductive type

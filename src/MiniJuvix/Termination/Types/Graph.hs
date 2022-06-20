@@ -39,8 +39,8 @@ makeLenses ''ReflexiveEdge
 
 instance PrettyCode Edge where
   ppCode Edge {..} = do
-    fromFun <- ppSCode _edgeFrom
-    toFun <- ppSCode _edgeTo
+    fromFun <- ppCode _edgeFrom
+    toFun <- ppCode _edgeTo
     matrices <-
       indent 2 . ppMatrices . zip [0 :: Int ..]
         <$> mapM ppCode (toList _edgeMatrices)
@@ -65,7 +65,7 @@ instance PrettyCode CompleteCallGraph where
 instance PrettyCode RecursiveBehaviour where
   ppCode :: Members '[Reader Options] r => RecursiveBehaviour -> Sem r (Doc Ann)
   ppCode (RecursiveBehaviour f m0) = do
-    f' <- ppSCode f
+    f' <- ppCode f
     let m' = PP.vsep (map (PP.list . map pretty) m)
     return $
       pretty ("Recursive behaviour of" :: Text) <+> f' <> colon <> line

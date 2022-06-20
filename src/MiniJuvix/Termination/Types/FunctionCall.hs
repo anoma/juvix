@@ -2,22 +2,19 @@ module MiniJuvix.Termination.Types.FunctionCall (module MiniJuvix.Termination.Ty
 
 import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Abstract.Language (functionRefName)
-import MiniJuvix.Syntax.Abstract.Language qualified as A
+import MiniJuvix.Syntax.Abstract.Language
 import MiniJuvix.Syntax.Abstract.Pretty.Base
-import MiniJuvix.Syntax.Concrete.Scoped.Name (nameUnqualify)
-import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Termination.Types.SizeRelation
 import Prettyprinter as PP
 
 newtype CallMap = CallMap
-  { _callMap :: HashMap A.FunctionRef (HashMap A.FunctionRef [FunCall])
+  { _callMap :: HashMap FunctionRef (HashMap FunctionRef [FunCall])
   }
   deriving newtype (Semigroup, Monoid)
 
 data FunCall = FunCall
-  { _callRef :: A.FunctionRef,
-    _callArgs :: [(CallRow, A.Expression)]
+  { _callRef :: FunctionRef,
+    _callArgs :: [(CallRow, Expression)]
   }
 
 newtype CallRow = CallRow
@@ -32,8 +29,8 @@ instance Hashable CallRow
 type CallMatrix = [CallRow]
 
 data Call = Call
-  { _callFrom :: A.FunctionName,
-    _callTo :: A.FunctionName,
+  { _callFrom :: FunctionName,
+    _callTo :: FunctionName,
     _callMatrix :: CallMatrix
   }
 
@@ -48,8 +45,7 @@ filterCallMap funNames =
     callMap
     ( HashMap.filterWithKey
         ( \k _ ->
-            S.symbolText
-              (nameUnqualify (k ^. functionRefName))
+            (k ^. functionRefName . nameText)
               `elem` funNames
         )
     )
@@ -65,7 +61,7 @@ instance PrettyCode FunCall where
     f' <- ppCode f
     return $ f' <+> hsep args'
     where
-      ppArg :: (CallRow, A.Expression) -> Sem r (Doc Ann)
+      ppArg :: (CallRow, Expression) -> Sem r (Doc Ann)
       ppArg (CallRow mi, a) =
         case mi of
           Just (i, r) -> relAux (Just i) (RJust r)
@@ -92,7 +88,7 @@ instance PrettyCode CallMap where
     Sem r (Doc Ann)
   ppCode (CallMap m) = vsep <$> mapM ppEntry (HashMap.toList m)
     where
-      ppEntry :: (A.FunctionRef, HashMap A.FunctionRef [FunCall]) -> Sem r (Doc Ann)
+      ppEntry :: (FunctionRef, HashMap FunctionRef [FunCall]) -> Sem r (Doc Ann)
       ppEntry (fun, mcalls) = do
         fun' <- annotate AnnImportant <$> ppCode fun
         calls' <- vsep <$> mapM ppCode calls

@@ -7,7 +7,6 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.Language.Extra
-import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Termination.Types
 
 fromEdgeList :: [Edge] -> Graph
@@ -64,8 +63,8 @@ multiplyMany r s = HashSet.fromList [multiply a b | a <- toList r, b <- toList s
 fromFunCall :: FunctionRef -> FunCall -> Call
 fromFunCall caller fc =
   Call
-    { _callFrom = S.nameUnqualify (caller ^. functionRefName),
-      _callTo = S.nameUnqualify (fc ^. callRef . functionRefName),
+    { _callFrom = caller ^. functionRefName,
+      _callTo = fc ^. callRef . functionRefName,
       _callMatrix = map fst (fc ^. callArgs)
     }
 
@@ -73,7 +72,7 @@ fromFunCall caller fc =
 -- only to filter the pretty printed graph
 unsafeFilterGraph :: Foldable f => f Text -> CompleteCallGraph -> CompleteCallGraph
 unsafeFilterGraph funNames (CompleteCallGraph g) =
-  CompleteCallGraph (HashMap.filterWithKey (\(f, _) _ -> S.symbolText f `elem` funNames) g)
+  CompleteCallGraph (HashMap.filterWithKey (\(f, _) _ -> f ^. nameText `elem` funNames) g)
 
 completeCallGraph :: CallMap -> CompleteCallGraph
 completeCallGraph CallMap {..} = CompleteCallGraph (go startingEdges)

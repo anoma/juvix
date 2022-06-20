@@ -27,7 +27,6 @@ data Name = Name
   { _nameText :: Text,
     _nameId :: NameId,
     _nameKind :: NameKind,
-    _nameDefined :: C.Interval,
     _nameLoc :: C.Interval
   }
   deriving stock (Show)

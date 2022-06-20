@@ -18,6 +18,14 @@ patternVariables = \case
 appVariables :: ConstructorApp -> [VarName]
 appVariables (ConstructorApp _ ps) = concatMap patternVariables ps
 
+idenName :: Iden -> Name
+idenName = \case
+  IdenFunction (FunctionRef f) -> f
+  IdenConstructor (ConstructorRef c) -> c
+  IdenVar v -> v
+  IdenInductive (InductiveRef i) -> i
+  IdenAxiom (AxiomRef a) -> a
+
 smallerPatternVariables :: Pattern -> [VarName]
 smallerPatternVariables = \case
   PatternVariable {} -> []

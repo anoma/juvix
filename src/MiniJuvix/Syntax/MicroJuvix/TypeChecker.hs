@@ -264,8 +264,7 @@ literalType l = do
           { _nameText = "A",
             _nameId = uid,
             _nameKind = KNameLocal,
-            _nameLoc = getLoc l,
-            _nameDefined = getLoc l
+            _nameLoc = getLoc l
           }
       type_ =
         TypeAbs

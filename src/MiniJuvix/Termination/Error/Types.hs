@@ -3,7 +3,6 @@ module MiniJuvix.Termination.Error.Types where
 import MiniJuvix.Prelude
 import MiniJuvix.Prelude.Pretty
 import MiniJuvix.Syntax.Abstract.Language
-import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as Scoped
 import MiniJuvix.Termination.Error.Pretty
 
 newtype NoLexOrder = NoLexOrder
@@ -26,5 +25,5 @@ instance ToGenericError NoLexOrder where
 
       msg :: Doc Eann
       msg =
-        "The function" <+> highlight (pretty (Scoped.nameUnqualifiedText name))
+        "The function" <+> highlight (pretty name)
           <+> "fails the termination checker."

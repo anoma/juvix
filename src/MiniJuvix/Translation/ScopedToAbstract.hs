@@ -12,6 +12,7 @@ import MiniJuvix.Syntax.Abstract.Language qualified as Abstract
 import MiniJuvix.Syntax.Concrete.Language qualified as Concrete
 import MiniJuvix.Syntax.Concrete.Scoped.Error
 import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
+import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
 
 unsupported :: Text -> a
@@ -37,12 +38,30 @@ goLocalModule ::
 goLocalModule = goModule
 
 goModule ::
-  (Members '[InfoTableBuilder, Error ScoperError] r, ModulePathType 'Scoped t ~ S.Name' c) =>
+  forall r t.
+  (Members '[InfoTableBuilder, Error ScoperError] r, SingI t) =>
   Module 'Scoped t ->
-  Sem r (Abstract.Module c)
+  Sem r Abstract.Module
 goModule (Module n par b) = case par of
-  [] -> Abstract.Module n <$> goModuleBody b
+  [] -> Abstract.Module modName <$> goModuleBody b
   _ -> unsupported "Module parameters"
+  where
+    modName :: Abstract.Name
+    modName = case sing :: SModuleIsTop t of
+      SModuleTop -> goSymbol (S.topModulePathName n)
+      SModuleLocal -> goSymbol n
+
+goName :: S.Name -> Abstract.Name
+goName = goSymbol . S.nameUnqualify
+
+goSymbol :: S.Symbol -> Abstract.Name
+goSymbol s =
+  Abstract.Name
+    { _nameText = S.symbolText s,
+      _nameId = s ^. S.nameId,
+      _nameKind = getNameKind s,
+      _nameLoc = s ^. S.nameConcrete . symbolLoc
+    }
 
 goModuleBody ::
   forall r.
@@ -122,7 +141,7 @@ goFunctionDef ::
   NonEmpty (FunctionClause 'Scoped) ->
   Sem r Abstract.FunctionDef
 goFunctionDef TypeSignature {..} clauses = do
-  let _funDefName = _sigName
+  let _funDefName = goSymbol _sigName
       _funDefTerminating = _sigTerminating
   _funDefClauses <- mapM goFunctionClause clauses
   _funDefTypeSig <- goExpression _sigType
@@ -158,7 +177,7 @@ goInductiveParameter InductiveParameter {..} = do
   return
     Abstract.FunctionParameter
       { _paramType = paramType',
-        _paramName = Just _inductiveParameterName,
+        _paramName = Just (goSymbol _inductiveParameterName),
         _paramImplicit = Explicit,
         _paramUsage = UsageOmega
       }
@@ -175,7 +194,7 @@ goInductive InductiveDef {..} = do
     registerInductive
       Abstract.InductiveDef
         { _inductiveParameters = _inductiveParameters',
-          _inductiveName = _inductiveName,
+          _inductiveName = goSymbol _inductiveName,
           _inductiveType = _inductiveType',
           _inductiveConstructors = _inductiveConstructors'
         }
@@ -188,7 +207,7 @@ goConstructorDef ::
   InductiveConstructorDef 'Scoped ->
   Sem r Abstract.InductiveConstructorDef
 goConstructorDef (InductiveConstructorDef c ty) =
-  Abstract.InductiveConstructorDef c <$> goExpression ty
+  Abstract.InductiveConstructorDef (goSymbol c) <$> goExpression ty
 
 goExpression ::
   forall r.
@@ -212,11 +231,11 @@ goExpression = \case
   where
     goIden :: Concrete.ScopedIden -> Abstract.Expression
     goIden x = Abstract.ExpressionIden $ case x of
-      ScopedAxiom a -> Abstract.IdenAxiom (Abstract.AxiomRef (a ^. Concrete.axiomRefName))
-      ScopedInductive i -> Abstract.IdenInductive (Abstract.InductiveRef (i ^. Concrete.inductiveRefName))
-      ScopedVar v -> Abstract.IdenVar v
-      ScopedFunction fun -> Abstract.IdenFunction (Abstract.FunctionRef (fun ^. Concrete.functionRefName))
-      ScopedConstructor c -> Abstract.IdenConstructor (Abstract.ConstructorRef (c ^. Concrete.constructorRefName))
+      ScopedAxiom a -> Abstract.IdenAxiom (Abstract.AxiomRef (goName (a ^. Concrete.axiomRefName)))
+      ScopedInductive i -> Abstract.IdenInductive (Abstract.InductiveRef (goName (i ^. Concrete.inductiveRefName)))
+      ScopedVar v -> Abstract.IdenVar (goSymbol v)
+      ScopedFunction fun -> Abstract.IdenFunction (Abstract.FunctionRef (goName (fun ^. Concrete.functionRefName)))
+      ScopedConstructor c -> Abstract.IdenConstructor (Abstract.ConstructorRef (goName (c ^. Concrete.constructorRefName)))
 
     goApplication :: Application -> Sem r Abstract.Application
     goApplication (Application l arg) = do
@@ -268,7 +287,7 @@ goFunctionParameter (FunctionParameter {..}) = do
       { Abstract._paramUsage = goUsage _paramUsage,
         Abstract._paramType = _paramType',
         Abstract._paramImplicit = _paramImplicit,
-        Abstract._paramName = _paramName
+        Abstract._paramName = goSymbol <$> _paramName
       }
 
 goPatternApplication ::
@@ -313,11 +332,11 @@ viewApp = \case
     err = error "constructor expected on the left of a pattern application"
 
 goConstructorRef :: ConstructorRef -> Abstract.ConstructorRef
-goConstructorRef (ConstructorRef' n) = Abstract.ConstructorRef n
+goConstructorRef (ConstructorRef' n) = Abstract.ConstructorRef (goName n)
 
 goPattern :: Pattern -> Sem r Abstract.Pattern
 goPattern p = case p of
-  PatternVariable a -> return $ Abstract.PatternVariable a
+  PatternVariable a -> return $ Abstract.PatternVariable (goSymbol a)
   PatternConstructor c -> Abstract.PatternConstructorApp <$> goPatternConstructor c
   PatternApplication a -> Abstract.PatternConstructorApp <$> goPatternApplication a
   PatternInfixApplication a -> Abstract.PatternConstructorApp <$> goInfixPatternApplication a
@@ -327,6 +346,10 @@ goPattern p = case p of
   PatternBraces b -> Abstract.PatternBraces <$> goPattern b
 
 goAxiom :: Members '[InfoTableBuilder, Error ScoperError] r => AxiomDef 'Scoped -> Sem r Abstract.AxiomDef
-goAxiom AxiomDef {..} = do
-  _axiomType' <- goExpression _axiomType
-  registerAxiom' Abstract.AxiomDef {_axiomType = _axiomType', ..}
+goAxiom a = do
+  _axiomType' <- goExpression (a ^. axiomType)
+  registerAxiom'
+    Abstract.AxiomDef
+      { _axiomType = _axiomType',
+        _axiomName = goSymbol (a ^. axiomName)
+      }

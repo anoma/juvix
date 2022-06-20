@@ -206,7 +206,6 @@ goName n =
   Name
     { _nameText = n ^. Micro.nameText,
       _nameId = n ^. Micro.nameId,
-      _nameDefined = n ^. Micro.nameDefined,
       _nameLoc = n ^. Micro.nameLoc,
       _nameKind = n ^. Micro.nameKind
     }

@@ -15,7 +15,6 @@ import MiniJuvix.Syntax.Abstract.Pretty qualified as Abstract
 import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Highlight qualified as Highlight
 import MiniJuvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoper
-import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty qualified as Scoper
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
@@ -207,18 +206,18 @@ runCommand cmdWithOpts = do
               newline
               forM_ recBehav $ \r -> do
                 let funName = r ^. Termination.recursiveBehaviourFun
-                    funRef = Abstract.FunctionRef (Scoper.unqualifiedSymbol funName)
+                    funRef = Abstract.FunctionRef funName
                     funInfo =
                       HashMap.lookupDefault
                         impossible
                         funRef
                         (infotable ^. Abstract.infoFunctions)
                     markedTerminating = funInfo ^. (Abstract.functionInfoDef . Abstract.funDefTerminating)
-                    scoperOpts =
-                      Scoper.defaultOptions
-                        { Scoper._optShowNameIds = globalOpts ^. globalShowNameIds
+                    ppOpts =
+                      Abstract.defaultOptions
+                        { Abstract._optShowNameIds = globalOpts ^. globalShowNameIds
                         }
-                    n = toAnsiText' (Scoper.ppOut scoperOpts funName)
+                    n = toAnsiText' (Abstract.ppOut ppOpts funName)
                 App.renderStdOut (Abstract.ppOut localOpts' r)
                 newline
                 if

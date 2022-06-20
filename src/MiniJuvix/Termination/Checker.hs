@@ -9,8 +9,6 @@ import Data.HashMap.Internal.Strict qualified as HashMap
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.InfoTable as Abstract
 import MiniJuvix.Syntax.Abstract.Language as Abstract
-import MiniJuvix.Syntax.Concrete.Scoped.Name (unqualifiedSymbol)
-import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as Scoper
 import MiniJuvix.Termination.Error
 import MiniJuvix.Termination.FunctionCall
 import MiniJuvix.Termination.LexOrder
@@ -27,8 +25,7 @@ checkTermination topModule infotable = do
       rEdges = reflexiveEdges completeGraph
       recBehav = map recursiveBehaviour rEdges
   forM_ recBehav $ \r -> do
-    let funSym = r ^. recursiveBehaviourFun
-        funName = Scoper.unqualifiedSymbol funSym
+    let funName = r ^. recursiveBehaviourFun
         funRef = Abstract.FunctionRef funName
         funInfo = HashMap.lookupDefault impossible funRef (infotable ^. Abstract.infoFunctions)
         markedTerminating = funInfo ^. (Abstract.functionInfoDef . Abstract.funDefTerminating)
@@ -64,7 +61,7 @@ checkFunctionDef ::
   FunctionDef ->
   Sem r ()
 checkFunctionDef FunctionDef {..} =
-  runReader (FunctionRef (unqualifiedSymbol _funDefName)) $ do
+  runReader (FunctionRef _funDefName) $ do
     checkTypeSignature _funDefTypeSig
     mapM_ checkFunctionClause _funDefClauses
 

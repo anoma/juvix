@@ -7,11 +7,10 @@ where
 
 import MiniJuvix.Internal.Strings qualified as Str
 import MiniJuvix.Prelude
-import MiniJuvix.Syntax.Abstract.Language
+import MiniJuvix.Syntax.Abstract.Language.Extra
 import MiniJuvix.Syntax.Abstract.Pretty.Ann
 import MiniJuvix.Syntax.Abstract.Pretty.Options
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Base qualified as S
-import MiniJuvix.Syntax.Fixity
 import MiniJuvix.Syntax.Universe
 import MiniJuvix.Syntax.Usage
 import Prettyprinter
@@ -118,7 +117,7 @@ ppCodeAtom c = do
   return $ if isAtomic c then p' else parens p'
 
 instance PrettyCode Iden where
-  ppCode = ppSCode . idenName
+  ppCode = ppCode . idenName
 
 instance PrettyCode Application where
   ppCode (Application l r i) = do
@@ -151,10 +150,24 @@ instance PrettyCode FunctionParameter where
     case _paramName of
       Nothing -> ppLeftExpression funFixity _paramType
       Just n -> do
-        paramName' <- ppSCode n
+        paramName' <- ppCode n
         paramType' <- ppCode _paramType
         paramUsage' <- ppCode _paramUsage
         return $ implicitDelim _paramImplicit (paramName' <+> paramUsage' <+> paramType')
+
+instance PrettyCode NameId where
+  ppCode (NameId k) = return (pretty k)
+
+instance PrettyCode Name where
+  ppCode n = do
+    showNameId <- asks (^. optShowNameIds)
+    uid <-
+      if
+          | showNameId -> Just . ("@" <>) <$> ppCode (n ^. nameId)
+          | otherwise -> return Nothing
+    return $
+      annotate (AnnKind (n ^. nameKind)) $
+        pretty (n ^. nameText) <?> uid
 
 instance PrettyCode Function where
   ppCode Function {..} = do
@@ -163,13 +176,13 @@ instance PrettyCode Function where
     return $ funParameter' <+> kwTo <+> funReturn'
 
 instance PrettyCode FunctionRef where
-  ppCode FunctionRef {..} = ppSCode _functionRefName
+  ppCode FunctionRef {..} = ppCode _functionRefName
 
 instance PrettyCode ConstructorRef where
-  ppCode ConstructorRef {..} = ppSCode _constructorRefName
+  ppCode ConstructorRef {..} = ppCode _constructorRefName
 
 instance PrettyCode InductiveRef where
-  ppCode InductiveRef {..} = ppSCode _inductiveRefName
+  ppCode InductiveRef {..} = ppCode _inductiveRefName
 
 instance PrettyCode AxiomRef where
-  ppCode AxiomRef {..} = ppSCode _axiomRefName
+  ppCode AxiomRef {..} = ppCode _axiomRefName
