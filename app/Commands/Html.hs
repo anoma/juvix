@@ -6,7 +6,8 @@ import Options.Applicative
 
 data HtmlOptions = HtmlOptions
   { _htmlRecursive :: Bool,
-    _htmlTheme :: Theme
+    _htmlTheme :: Theme,
+    _htmlOutputDir :: FilePath
   }
 
 makeLenses ''HtmlOptions
@@ -26,6 +27,16 @@ parseHtml = do
           <> value Ayu
           <> showDefault
           <> help "selects a theme: ayu (light); nord (dark)"
+      )
+  _htmlOutputDir <-
+    option
+      str
+      ( long "output-dir"
+          <> metavar "DIR"
+          <> value "html"
+          <> showDefault
+          <> help "html output directory"
+          <> action "directory"
       )
   pure HtmlOptions {..}
   where

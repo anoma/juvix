@@ -21,18 +21,16 @@ data Theme
   | Ayu
   deriving stock (Show)
 
-genHtml :: Options -> Bool -> Theme -> Module 'Scoped 'ModuleTop -> IO ()
-genHtml opts recursive theme entry = do
-  createDirectoryIfMissing True htmlPath
+genHtml :: Options -> Bool -> Theme -> FilePath -> Module 'Scoped 'ModuleTop -> IO ()
+genHtml opts recursive theme outputDir entry = do
+  createDirectoryIfMissing True outputDir
   copyAssetFiles
-  withCurrentDirectory htmlPath $ do
+  withCurrentDirectory outputDir $ do
     mapM_ outputModule allModules
   where
     allModules
-      | recursive = toList $ getAllModules entry
+      | recursive = toList (getAllModules entry)
       | otherwise = pure entry
-    htmlPath :: FilePath
-    htmlPath = "html"
 
     copyAssetFiles :: IO ()
     copyAssetFiles = do
@@ -44,7 +42,7 @@ genHtml opts recursive theme entry = do
         writeAsset :: (FilePath, BS.ByteString) -> IO ()
         writeAsset (filePath, fileContents) =
           BS.writeFile (toAssetsDir </> takeFileName filePath) fileContents
-        toAssetsDir = htmlPath </> "assets"
+        toAssetsDir = outputDir </> "assets"
 
     outputModule :: Module 'Scoped 'ModuleTop -> IO ()
     outputModule m = do

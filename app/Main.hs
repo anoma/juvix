@@ -123,7 +123,7 @@ runCommand cmdWithOpts = do
             Html HtmlOptions {..} -> do
               res <- runPipeline (upToScoping entryPoint)
               let m = head (res ^. Scoper.resultModules)
-              embed (genHtml Scoper.defaultOptions _htmlRecursive _htmlTheme m)
+              embed (genHtml Scoper.defaultOptions _htmlRecursive _htmlTheme _htmlOutputDir m)
             MicroJuvix Pretty -> do
               micro <-
                 head . (^. Micro.resultModules)
