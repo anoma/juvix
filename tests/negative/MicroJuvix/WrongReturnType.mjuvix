@@ -1,0 +1,8 @@
+module WrongReturnType;
+
+axiom B : Type;
+inductive A {
+c : B;
+};
+
+end;

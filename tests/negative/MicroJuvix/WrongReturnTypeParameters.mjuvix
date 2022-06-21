@@ -1,0 +1,7 @@
+module WrongReturnTypeParameters;
+
+inductive A (B : Type) {
+c : A;
+};
+
+end;

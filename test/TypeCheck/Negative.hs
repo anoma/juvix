@@ -76,5 +76,19 @@ tests =
       "MultiWrongType.mjuvix"
       $ \case
         ErrWrongType {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Wrong return type name for a constructor of a simple data type"
+      "MicroJuvix"
+      "WrongReturnType.mjuvix"
+      $ \case
+        ErrWrongReturnType {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Wrong return type for a constructor of a data type with parameters "
+      "MicroJuvix"
+      "WrongReturnTypeParameters.mjuvix"
+      $ \case
+        ErrWrongReturnType {} -> Nothing
         _ -> wrongError
   ]

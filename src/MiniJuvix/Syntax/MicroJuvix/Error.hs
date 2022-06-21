@@ -13,6 +13,7 @@ import MiniJuvix.Syntax.MicroJuvix.Error.Types
 
 data TypeCheckerError
   = ErrWrongConstructorType WrongConstructorType
+  | ErrWrongReturnType WrongReturnType
   | ErrArity ArityCheckerError
   | ErrWrongType WrongType
   | ErrUnsolvedMeta UnsolvedMeta
@@ -22,6 +23,7 @@ instance ToGenericError TypeCheckerError where
   genericError :: TypeCheckerError -> GenericError
   genericError = \case
     ErrWrongConstructorType e -> genericError e
+    ErrWrongReturnType e -> genericError e
     ErrArity e -> genericError e
     ErrWrongType e -> genericError e
     ErrUnsolvedMeta e -> genericError e

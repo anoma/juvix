@@ -411,7 +411,7 @@ foldExplicitApplication :: Expression -> [Expression] -> Expression
 foldExplicitApplication f = foldApplication f . zip (repeat Explicit)
 
 foldApplication :: Expression -> [(IsImplicit, Expression)] -> Expression
-foldApplication f args = case args of
+foldApplication f = \case
   [] -> f
   ((i, a) : as) -> foldApplication (ExpressionApplication (Application f a i)) as
 
@@ -434,3 +434,14 @@ unfoldTypeApplication (TypeApplication l' r' _) = second (|: r') (unfoldType l')
     unfoldType t = case t of
       TypeApp (TypeApplication l r _) -> second (`snoc` r) (unfoldType l)
       _ -> (t, [])
+
+foldTypeApp :: Type -> [Type] -> Type
+foldTypeApp ty = \case
+  [] -> ty
+  (p : ps) -> foldTypeApp (TypeApp (TypeApplication ty p Explicit)) ps
+
+foldTypeAppName :: Name -> [Name] -> Type
+foldTypeAppName tyName indParams =
+  foldTypeApp
+    (TypeIden (TypeIdenInductive tyName))
+    (map (TypeIden . TypeIdenVariable) indParams)

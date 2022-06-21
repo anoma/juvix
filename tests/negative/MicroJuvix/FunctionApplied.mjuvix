@@ -1,6 +1,6 @@
 module FunctionApplied;
   inductive T (A : Type) {
-    c : A → T;
+    c : A → T A;
   };
 
   f : {A : Type} → A → T A;

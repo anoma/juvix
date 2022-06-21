@@ -11,8 +11,7 @@ inductive Nat {
 
 inductive List (A : Type) {
  nil : List A;
- -- TODO check that the return type is saturated with the proper variable
- cons : A → List A → Nat;
+ cons : A → List A → List A;
 };
 
 inductive Bool {

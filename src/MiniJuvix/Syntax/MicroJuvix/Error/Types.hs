@@ -4,6 +4,7 @@ import MiniJuvix.Prelude
 import MiniJuvix.Prelude.Pretty
 import MiniJuvix.Syntax.MicroJuvix.Error.Pretty
 import MiniJuvix.Syntax.MicroJuvix.Language
+import MiniJuvix.Syntax.MicroJuvix.Language.Extra
 
 -- | the type of the constructor used in a pattern does
 -- not match the type of the inductive being matched
@@ -33,6 +34,34 @@ instance ToGenericError WrongConstructorType where
           <> "but is expected to have type:"
           <> line
           <> indent' (ppCode (e ^. wrongCtorTypeExpected))
+
+data WrongReturnType = WrongReturnType
+  { _wrongReturnTypeConstructorName :: Name,
+    _wrongReturnTypeExpected :: Type,
+    _wrongReturnTypeActual :: Type
+  }
+
+makeLenses ''WrongReturnType
+
+instance ToGenericError WrongReturnType where
+  genericError e =
+    GenericError
+      { _genericErrorLoc = j,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i, j]
+      }
+    where
+      ctorName = e ^. wrongReturnTypeConstructorName
+      i = getLoc ctorName
+      j = getLoc (typeAsExpression (e ^. wrongReturnTypeActual))
+      msg =
+        "The constructor" <+> ppCode ctorName <+> "has the wrong return type:"
+          <> line
+          <> indent' (ppCode (e ^. wrongReturnTypeActual))
+          <> line
+          <> "but is expected to have type:"
+          <> line
+          <> indent' (ppCode (e ^. wrongReturnTypeExpected))
 
 newtype UnsolvedMeta = UnsolvedMeta
   { _unsolvedMeta :: Hole

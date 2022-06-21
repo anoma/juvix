@@ -10,7 +10,9 @@ import MiniJuvix.Pipeline.EntryPoint qualified as E
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.AbstractResult qualified as Abstract
 import MiniJuvix.Syntax.Abstract.Language qualified as Abstract
+import MiniJuvix.Syntax.MicroJuvix.Error
 import MiniJuvix.Syntax.MicroJuvix.Language
+import MiniJuvix.Syntax.MicroJuvix.Language.Extra
 import MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult
 import MiniJuvix.Syntax.Universe
 import MiniJuvix.Syntax.Usage
@@ -30,15 +32,23 @@ iniState =
 makeLenses ''TranslationState
 
 entryMicroJuvix ::
-  Members '[Error TerminationError] r =>
+  Members '[Error MiniJuvixError] r =>
   Abstract.AbstractResult ->
   Sem r MicroJuvixResult
 entryMicroJuvix abstractResults = do
-  unless noTerminationOption (checkTermination topModule infoTable)
+  unless
+    noTerminationOption
+    ( mapError
+        (MiniJuvixError @TerminationError)
+        (checkTermination topModule infoTable)
+    )
   _resultModules' <-
     evalState
       iniState
-      (mapM goModule (abstractResults ^. Abstract.resultModules))
+      ( mapM
+          (mapError (MiniJuvixError @TypeCheckerError) . goModule)
+          (abstractResults ^. Abstract.resultModules)
+      )
   return
     MicroJuvixResult
       { _resultAbstract = abstractResults,
@@ -49,10 +59,11 @@ entryMicroJuvix abstractResults = do
     infoTable = abstractResults ^. Abstract.resultTable
     noTerminationOption =
       abstractResults
-        ^. Abstract.abstractResultEntryPoint . E.entryPointNoTermination
+        ^. Abstract.abstractResultEntryPoint
+          . E.entryPointNoTermination
 
 goModule ::
-  Member (State TranslationState) r =>
+  Members '[State TranslationState, Error TypeCheckerError] r =>
   Abstract.TopModule ->
   Sem r Module
 goModule m = do
@@ -66,10 +77,10 @@ goModule m = do
 unsupported :: Text -> a
 unsupported thing = error ("Abstract to MicroJuvix: Not yet supported: " <> thing)
 
-goModuleBody :: Member (State TranslationState) r => Abstract.ModuleBody -> Sem r ModuleBody
+goModuleBody :: Members '[State TranslationState, Error TypeCheckerError] r => Abstract.ModuleBody -> Sem r ModuleBody
 goModuleBody b = ModuleBody <$> mapMaybeM goStatement (b ^. Abstract.moduleStatements)
 
-goImport :: Member (State TranslationState) r => Abstract.TopModule -> Sem r (Maybe Include)
+goImport :: Members '[State TranslationState, Error TypeCheckerError] r => Abstract.TopModule -> Sem r (Maybe Include)
 goImport m = do
   inc <- gets (HashSet.member (m ^. Abstract.moduleName) . (^. translationStateIncluded))
   if
@@ -85,7 +96,7 @@ goImport m = do
             )
 
 goStatement ::
-  Member (State TranslationState) r =>
+  Members [State TranslationState, Error TypeCheckerError] r =>
   Abstract.Statement ->
   Sem r (Maybe Statement)
 goStatement = \case
@@ -97,7 +108,7 @@ goStatement = \case
   Abstract.StatementInductive i -> Just . StatementInductive <$> goInductiveDef i
 
 goTypeIden :: Abstract.Iden -> TypeIden
-goTypeIden i = case i of
+goTypeIden = \case
   Abstract.IdenFunction {} -> unsupported "functions in types"
   Abstract.IdenConstructor {} -> unsupported "constructors in types"
   Abstract.IdenVar v -> TypeIdenVariable v
@@ -254,31 +265,47 @@ goInductiveParameter f =
     (Just {}, _, _) -> unsupported "only type variables of small types are allowed"
     (Nothing, _, _) -> unsupported "unnamed inductive parameters"
 
-goInductiveDef :: forall r. Abstract.InductiveDef -> Sem r InductiveDef
+goConstructorType :: Abstract.Expression -> Sem r [Type]
+goConstructorType = fmap fst . viewConstructorType
+
+goInductiveDef ::
+  forall r.
+  Members '[Error TypeCheckerError] r =>
+  Abstract.InductiveDef ->
+  Sem r InductiveDef
 goInductiveDef i = case i ^. Abstract.inductiveType of
+  Just Abstract.ExpressionUniverse {} -> helper
   Just {} -> unsupported "inductive indices"
-  _ -> do
-    _inductiveParameters' <- mapM goInductiveParameter (i ^. Abstract.inductiveParameters)
-    _inductiveConstructors' <- mapM goConstructorDef (i ^. Abstract.inductiveConstructors)
-    return
-      InductiveDef
-        { _inductiveName = indName,
-          _inductiveParameters = _inductiveParameters',
-          _inductiveConstructors = _inductiveConstructors'
-        }
+  _ -> helper
   where
-    indName = i ^. Abstract.inductiveName
-    goConstructorDef :: Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
-    goConstructorDef c = do
-      _constructorParameters' <- goConstructorType (c ^. Abstract.constructorType)
+    indTypeName = i ^. Abstract.inductiveName
+    helper = do
+      inductiveParameters' <- mapM goInductiveParameter (i ^. Abstract.inductiveParameters)
+      let indTy :: Type = foldTypeAppName indTypeName (map (^. inductiveParamName) inductiveParameters')
+      inductiveConstructors' <- mapM (goConstructorDef indTy) (i ^. Abstract.inductiveConstructors)
       return
-        InductiveConstructorDef
-          { _constructorName = c ^. Abstract.constructorName,
-            _constructorParameters = _constructorParameters'
+        InductiveDef
+          { _inductiveName = indTypeName,
+            _inductiveParameters = inductiveParameters',
+            _inductiveConstructors = inductiveConstructors'
           }
-    -- TODO check that the return type corresponds with the inductive type
-    goConstructorType :: Abstract.Expression -> Sem r [Type]
-    goConstructorType = fmap fst . viewConstructorType
+      where
+        goConstructorDef :: Type -> Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
+        goConstructorDef expectedReturnType c = do
+          (_constructorParameters', actualReturnType) <- viewConstructorType (c ^. Abstract.constructorType)
+          let ctorName = c ^. Abstract.constructorName
+          if
+              | actualReturnType == expectedReturnType ->
+                  return
+                    InductiveConstructorDef
+                      { _constructorName = ctorName,
+                        _constructorParameters = _constructorParameters'
+                      }
+              | otherwise ->
+                  throw
+                    ( ErrWrongReturnType
+                        (WrongReturnType ctorName expectedReturnType actualReturnType)
+                    )
 
 goTypeApplication :: Abstract.Application -> Sem r TypeApplication
 goTypeApplication (Abstract.Application l r i) = do
@@ -292,7 +319,7 @@ goTypeApplication (Abstract.Application l r i) = do
       }
 
 viewConstructorType :: Abstract.Expression -> Sem r ([Type], Type)
-viewConstructorType e = case e of
+viewConstructorType = \case
   Abstract.ExpressionFunction f -> first toList <$> viewFunctionType f
   Abstract.ExpressionIden i -> return ([], TypeIden (goTypeIden i))
   Abstract.ExpressionHole {} -> unsupported "holes in constructor type"

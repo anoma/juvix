@@ -113,7 +113,7 @@ pipelineMicroJuvix ::
   Members '[Error MiniJuvixError] r =>
   Abstract.AbstractResult ->
   Sem r MicroJuvix.MicroJuvixResult
-pipelineMicroJuvix = mapError (MiniJuvixError @MicroJuvix.TerminationError) . MicroJuvix.entryMicroJuvix
+pipelineMicroJuvix = MicroJuvix.entryMicroJuvix
 
 pipelineMicroJuvixArity ::
   Members '[Error MiniJuvixError, NameIdGen] r =>
