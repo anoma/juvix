@@ -7,7 +7,8 @@ import Options.Applicative
 data HtmlOptions = HtmlOptions
   { _htmlRecursive :: Bool,
     _htmlTheme :: Theme,
-    _htmlOutputDir :: FilePath
+    _htmlOutputDir :: FilePath,
+    _htmlPrintMetadata :: Bool
   }
 
 makeLenses ''HtmlOptions
@@ -37,6 +38,11 @@ parseHtml = do
           <> showDefault
           <> help "html output directory"
           <> action "directory"
+      )
+  _htmlPrintMetadata <-
+    switch
+      ( long "print-metadata"
+          <> help "Add HTML footer with metadata"
       )
   pure HtmlOptions {..}
   where

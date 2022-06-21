@@ -46,3 +46,13 @@ a:hover, a.hover-highlight {
 a:link, a:visited {
     text-decoration: none;
 }
+
+footer {
+    color: gray
+}
+
+footer a {
+    color: gray;
+    font-size: small;
+    font-weight: bold;
+}

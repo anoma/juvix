@@ -46,3 +46,13 @@ a:link, a:visited {
 a:hover, a.hover-highlight {
   background-color: #4c566a;
 }
+
+footer {
+    color: gray
+}
+
+footer a {
+    color: gray;
+    font-size: small;
+    font-weight: bold;
+}
