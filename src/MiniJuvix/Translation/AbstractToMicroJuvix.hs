@@ -278,11 +278,11 @@ goInductiveDef i = case i ^. Abstract.inductiveType of
   Just {} -> unsupported "inductive indices"
   _ -> helper
   where
-    indTypeName = i ^. Abstract.inductiveName
     helper = do
       inductiveParameters' <- mapM goInductiveParameter (i ^. Abstract.inductiveParameters)
-      let indTy :: Type = foldTypeAppName indTypeName (map (^. inductiveParamName) inductiveParameters')
-      inductiveConstructors' <- mapM (goConstructorDef indTy) (i ^. Abstract.inductiveConstructors)
+      let indTypeName = i ^. Abstract.inductiveName
+          indParamNames = map (^. inductiveParamName) inductiveParameters'
+      inductiveConstructors' <- mapM (goConstructorDef indTypeName indParamNames) (i ^. Abstract.inductiveConstructors)
       return
         InductiveDef
           { _inductiveName = indTypeName,
@@ -290,10 +290,16 @@ goInductiveDef i = case i ^. Abstract.inductiveType of
             _inductiveConstructors = inductiveConstructors'
           }
       where
-        goConstructorDef :: Type -> Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
-        goConstructorDef expectedReturnType c = do
+        goConstructorDef :: Name -> [Name] -> Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
+        goConstructorDef expectedTypeName expectedNameParms c = do
           (_constructorParameters', actualReturnType) <- viewConstructorType (c ^. Abstract.constructorType)
           let ctorName = c ^. Abstract.constructorName
+              expectedReturnType :: Type
+              expectedReturnType = foldTypeAppName expectedTypeName expectedNameParms
+              expectedNumArgs = length expectedNameParms
+              (_, actualReturnTypeParams) = unfoldType actualReturnType
+              actualNumArgs = length actualReturnTypeParams
+              sameTypeName = Just expectedTypeName == getTypeName actualReturnType
           if
               | actualReturnType == expectedReturnType ->
                   return
@@ -301,10 +307,37 @@ goInductiveDef i = case i ^. Abstract.inductiveType of
                       { _constructorName = ctorName,
                         _constructorParameters = _constructorParameters'
                       }
+              | sameTypeName,
+                actualNumArgs < expectedNumArgs ->
+                  throw
+                    ( ErrTooFewArgumentsIndType
+                        ( WrongNumberArgumentsIndType
+                            { _wrongNumberArgumentsIndTypeActualType = actualReturnType,
+                              _wrongNumberArgumentsIndTypeActualNumArgs = actualNumArgs,
+                              _wrongNumberArgumentsIndTypeExpectedNumArgs = expectedNumArgs
+                            }
+                        )
+                    )
+              | sameTypeName,
+                actualNumArgs > expectedNumArgs ->
+                  throw
+                    ( ErrTooManyArgumentsIndType
+                        ( WrongNumberArgumentsIndType
+                            { _wrongNumberArgumentsIndTypeActualType = actualReturnType,
+                              _wrongNumberArgumentsIndTypeActualNumArgs = actualNumArgs,
+                              _wrongNumberArgumentsIndTypeExpectedNumArgs = expectedNumArgs
+                            }
+                        )
+                    )
               | otherwise ->
                   throw
                     ( ErrWrongReturnType
-                        (WrongReturnType ctorName expectedReturnType actualReturnType)
+                        ( WrongReturnType
+                            { _wrongReturnTypeConstructorName = ctorName,
+                              _wrongReturnTypeExpected = expectedReturnType,
+                              _wrongReturnTypeActual = actualReturnType
+                            }
+                        )
                     )
 
 goTypeApplication :: Abstract.Application -> Sem r TypeApplication

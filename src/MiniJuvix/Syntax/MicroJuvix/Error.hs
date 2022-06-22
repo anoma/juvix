@@ -18,6 +18,9 @@ data TypeCheckerError
   | ErrWrongType WrongType
   | ErrUnsolvedMeta UnsolvedMeta
   | ErrExpectedFunctionType ExpectedFunctionType
+  | ErrTooManyArgumentsIndType WrongNumberArgumentsIndType
+  | ErrTooFewArgumentsIndType WrongNumberArgumentsIndType
+  | ErrImpracticalPatternMatching ImpracticalPatternMatching
 
 instance ToGenericError TypeCheckerError where
   genericError :: TypeCheckerError -> GenericError
@@ -28,3 +31,6 @@ instance ToGenericError TypeCheckerError where
     ErrWrongType e -> genericError e
     ErrUnsolvedMeta e -> genericError e
     ErrExpectedFunctionType e -> genericError e
+    ErrTooManyArgumentsIndType e -> genericError e
+    ErrTooFewArgumentsIndType e -> genericError e
+    ErrImpracticalPatternMatching e -> genericError e

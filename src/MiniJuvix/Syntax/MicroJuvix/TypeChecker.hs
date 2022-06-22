@@ -237,15 +237,37 @@ checkPattern funName = go
                 )
             )
     checkSaturatedInductive :: Type -> Sem r (InductiveName, [(InductiveParameter, Type)])
-    checkSaturatedInductive t = do
-      (ind, args) <- viewInductiveApp t
+    checkSaturatedInductive ty = do
+      (ind, args) <- viewInductiveApp ty
       params <-
         (^. inductiveInfoDef . inductiveParameters)
           <$> lookupInductive ind
       let numArgs = length args
           numParams = length params
-      when (numArgs < numParams) (error "unsaturated inductive type")
-      when (numArgs > numParams) (error "too many arguments to inductive type")
+      when
+        (numArgs < numParams)
+        ( throw
+            ( ErrTooFewArgumentsIndType
+                ( WrongNumberArgumentsIndType
+                    { _wrongNumberArgumentsIndTypeActualType = ty,
+                      _wrongNumberArgumentsIndTypeActualNumArgs = numArgs,
+                      _wrongNumberArgumentsIndTypeExpectedNumArgs = numParams
+                    }
+                )
+            )
+        )
+      when
+        (numArgs > numParams)
+        ( throw
+            ( ErrTooManyArgumentsIndType
+                ( WrongNumberArgumentsIndType
+                    { _wrongNumberArgumentsIndTypeActualType = ty,
+                      _wrongNumberArgumentsIndTypeActualNumArgs = numArgs,
+                      _wrongNumberArgumentsIndTypeExpectedNumArgs = numParams
+                    }
+                )
+            )
+        )
       return (ind, zip params args)
 
 freshHole :: Members '[Inference, NameIdGen] r => Interval -> Sem r Hole
@@ -393,7 +415,7 @@ viewInductiveApp ::
   Sem r (InductiveName, [Type])
 viewInductiveApp ty = case t of
   TypeIden (TypeIdenInductive n) -> return (n, as)
-  _ -> throw @TypeCheckerError (error "only inductive types can be pattern matched")
+  _ -> throw (ErrImpracticalPatternMatching (ImpracticalPatternMatching ty))
   where
     (t, as) = viewTypeApp ty
 

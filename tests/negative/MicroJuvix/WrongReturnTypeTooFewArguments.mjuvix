@@ -1,0 +1,7 @@
+module WrongReturnTypeTooFewArguments;
+
+inductive A (B : Type) {
+c : A;
+};
+
+end;

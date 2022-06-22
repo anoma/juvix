@@ -1,4 +1,4 @@
-module WrongReturnTypeParameters;
+module WrongReturnTypeTooManyArguments;
 
 inductive A (B : Type) {
 c : A B B;

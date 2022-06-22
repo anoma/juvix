@@ -429,11 +429,11 @@ unfoldApplication = fmap (fmap snd) . unfoldApplication'
 
 unfoldTypeApplication :: TypeApplication -> (Type, NonEmpty Type)
 unfoldTypeApplication (TypeApplication l' r' _) = second (|: r') (unfoldType l')
-  where
-    unfoldType :: Type -> (Type, [Type])
-    unfoldType t = case t of
-      TypeApp (TypeApplication l r _) -> second (`snoc` r) (unfoldType l)
-      _ -> (t, [])
+
+unfoldType :: Type -> (Type, [Type])
+unfoldType = \case
+  TypeApp (TypeApplication l r _) -> second (`snoc` r) (unfoldType l)
+  t -> (t, [])
 
 foldTypeApp :: Type -> [Type] -> Type
 foldTypeApp ty = \case
@@ -445,3 +445,9 @@ foldTypeAppName tyName indParams =
   foldTypeApp
     (TypeIden (TypeIdenInductive tyName))
     (map (TypeIden . TypeIdenVariable) indParams)
+
+getTypeName :: Type -> Maybe Name
+getTypeName = \case
+  (TypeIden (TypeIdenInductive tyName)) -> Just tyName
+  (TypeApp (TypeApplication l _ _)) -> getTypeName l
+  _ -> Nothing
