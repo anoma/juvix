@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "nat.h"
+#include "io.h"
+
 typedef __UINTPTR_TYPE__ uintptr_t;
 
 typedef struct minijuvix_function {
@@ -88,6 +91,10 @@ int putStr(const char* str) {
 int putStrLn(const char* str) {
     puts(str);
     return fflush(stdout);
+}
+
+prim_io prim_printNat(prim_nat n) {
+    return putStrLn(intToStr(n));
 }
 
 #endif // MINIC_RUNTIME_H_

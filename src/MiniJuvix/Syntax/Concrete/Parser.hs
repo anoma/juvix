@@ -10,6 +10,7 @@ import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Singletons
 import MiniJuvix.Pipeline.EntryPoint
 import MiniJuvix.Prelude
+import MiniJuvix.Prelude.Pretty (Pretty, prettyText)
 import MiniJuvix.Syntax.Concrete.Base qualified as P
 import MiniJuvix.Syntax.Concrete.Language
 import MiniJuvix.Syntax.Concrete.Lexer hiding (symbol)
@@ -54,10 +55,21 @@ runModuleParser root fileName input =
         { _parserParamsRoot = root
         }
 
+top ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  ParsecS r a ->
+  ParsecS r a
+top p = space >> p <* (optional kwSemicolon >> P.eof)
+
 topModuleDef ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r (Module 'Parsed 'ModuleTop)
-topModuleDef = space >> moduleDef <* (optional kwSemicolon >> P.eof)
+topModuleDef = top moduleDef
+
+topStatement ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  ParsecS r (Statement 'Parsed)
+topStatement = top statement
 
 --------------------------------------------------------------------------------
 -- Symbols and names
@@ -95,15 +107,58 @@ statement =
     <|> (StatementOpenModule <$> openModule)
     <|> (StatementEval <$> eval)
     <|> (StatementImport <$> import_)
-    <|> (StatementInductive <$> inductiveDef)
+    <|> (StatementInductive <$> inductiveDef Nothing)
     <|> (StatementPrint <$> printS)
     <|> (StatementForeign <$> foreignBlock)
     <|> (StatementModule <$> moduleDef)
-    <|> (StatementAxiom <$> axiomDef)
+    <|> (StatementAxiom <$> axiomDef Nothing)
     <|> (StatementCompile <$> compileBlock)
+    <|> builtinStatement
     <|> ( either StatementTypeSignature StatementFunctionClause
             <$> auxTypeSigFunClause
         )
+
+builtinInductive :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r BuiltinInductive
+builtinInductive = builtinHelper
+
+builtinFunction :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r BuiltinFunction
+builtinFunction = builtinHelper
+
+builtinAxiom :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r BuiltinAxiom
+builtinAxiom = builtinHelper
+
+builtinHelper ::
+  (Members '[Reader ParserParams, InfoTableBuilder] r, Bounded a, Enum a, Pretty a) =>
+  ParsecS r a
+builtinHelper =
+  P.choice
+    [ keyword (prettyText a) $> a
+      | a <- allElements
+    ]
+
+builtinInductiveDef :: Members '[Reader ParserParams, InfoTableBuilder] r => BuiltinInductive -> ParsecS r (InductiveDef 'Parsed)
+builtinInductiveDef = inductiveDef . Just
+
+builtinAxiomDef ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  BuiltinAxiom ->
+  ParsecS r (AxiomDef 'Parsed)
+builtinAxiomDef = axiomDef . Just
+
+builtinTypeSig ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  BuiltinFunction ->
+  ParsecS r (TypeSignature 'Parsed)
+builtinTypeSig b = do
+  fun <- symbol
+  typeSignature False fun (Just b)
+
+builtinStatement :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Statement 'Parsed)
+builtinStatement = do
+  kwBuiltin
+  (builtinInductive >>= fmap StatementInductive . builtinInductiveDef)
+    <|> (builtinFunction >>= fmap StatementTypeSignature . builtinTypeSig)
+    <|> (builtinAxiom >>= fmap StatementAxiom . builtinAxiomDef)
 
 --------------------------------------------------------------------------------
 -- Compile
@@ -275,15 +330,12 @@ typeSignature ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   Bool ->
   Symbol ->
+  Maybe BuiltinFunction ->
   ParsecS r (TypeSignature 'Parsed)
-typeSignature _sigTerminating _sigName = do
+typeSignature _sigTerminating _sigName _sigBuiltin = do
   kwColon
   _sigType <- parseExpressionAtoms
   return TypeSignature {..}
-
--------------------------------------------------------------------------------
--- Aux type signature function clause
--------------------------------------------------------------------------------
 
 -- | Used to minimize the amount of required @P.try@s.
 auxTypeSigFunClause ::
@@ -292,15 +344,18 @@ auxTypeSigFunClause ::
 auxTypeSigFunClause = do
   terminating <- isJust <$> optional kwTerminating
   sym <- symbol
-  (Left <$> typeSignature terminating sym)
+  (Left <$> typeSignature terminating sym Nothing)
     <|> (Right <$> functionClause sym)
 
 -------------------------------------------------------------------------------
 -- Axioms
 -------------------------------------------------------------------------------
 
-axiomDef :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (AxiomDef 'Parsed)
-axiomDef = do
+axiomDef ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Maybe BuiltinAxiom ->
+  ParsecS r (AxiomDef 'Parsed)
+axiomDef _axiomBuiltin = do
   kwAxiom
   _axiomName <- symbol
   kwColon
@@ -388,8 +443,8 @@ lambda = do
 -- Data type construction declaration
 -------------------------------------------------------------------------------
 
-inductiveDef :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (InductiveDef 'Parsed)
-inductiveDef = do
+inductiveDef :: Members '[Reader ParserParams, InfoTableBuilder] r => Maybe BuiltinInductive -> ParsecS r (InductiveDef 'Parsed)
+inductiveDef _inductiveBuiltin = do
   kwInductive
   _inductiveName <- symbol
   _inductiveParameters <- P.many inductiveParam

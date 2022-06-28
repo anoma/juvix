@@ -26,7 +26,9 @@ runFilesPure fs = interpret $ \case
     Nothing ->
       error $
         pack $
-          "file " <> f <> " does not exist."
+          "file "
+            <> f
+            <> " does not exist."
             <> "\nThe contents of the mocked file system are:\n"
             <> unlines (HashMap.keys fs)
     Just c -> return c

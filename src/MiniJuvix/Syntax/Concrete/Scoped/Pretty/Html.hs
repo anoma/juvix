@@ -75,7 +75,9 @@ genModule opts printMetadata utc theme m =
     prettySrc :: Html
     prettySrc =
       (pre ! Attr.id "src-content") $
-        renderTree $ treeForm $ docStream' opts m
+        renderTree $
+          treeForm $
+            docStream' opts m
 
     mheader :: Html
     mheader =
@@ -167,7 +169,8 @@ nameIdAttrRef tp s =
 
 cssLink :: AttributeValue -> Html
 cssLink css =
-  link ! Attr.href css
+  link
+    ! Attr.href css
     ! Attr.rel "stylesheet"
     ! Attr.type_ "text/css"
 
@@ -179,7 +182,8 @@ nordCss = cssLink "assets/source-nord.css"
 
 highlightJs :: Html
 highlightJs =
-  script ! Attr.src "assets/highlight.js"
+  script
+    ! Attr.src "assets/highlight.js"
     ! Attr.type_ "text/javascript"
     $ mempty
 

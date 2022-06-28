@@ -2,6 +2,9 @@ module MiniJuvix.Syntax.Abstract.Language
   ( module MiniJuvix.Syntax.Abstract.Language,
     module MiniJuvix.Syntax.Concrete.Language,
     module MiniJuvix.Syntax.Hole,
+    module MiniJuvix.Syntax.Concrete.Builtins,
+    module MiniJuvix.Syntax.Usage,
+    module MiniJuvix.Syntax.Universe,
     module MiniJuvix.Syntax.Abstract.Name,
     module MiniJuvix.Syntax.Wildcard,
     module MiniJuvix.Syntax.IsImplicit,
@@ -10,10 +13,12 @@ where
 
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.Name
-import MiniJuvix.Syntax.Concrete.Language (BackendItem, ForeignBlock (..), LiteralLoc (..), Usage, symbolLoc)
+import MiniJuvix.Syntax.Concrete.Builtins
+import MiniJuvix.Syntax.Concrete.Language (BackendItem, ForeignBlock (..), LiteralLoc (..), symbolLoc)
 import MiniJuvix.Syntax.Hole
 import MiniJuvix.Syntax.IsImplicit
 import MiniJuvix.Syntax.Universe
+import MiniJuvix.Syntax.Usage
 import MiniJuvix.Syntax.Wildcard
 
 type LocalModule = Module
@@ -46,12 +51,14 @@ data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
     _funDefTypeSig :: Expression,
     _funDefClauses :: NonEmpty FunctionClause,
+    _funDefBuiltin :: Maybe BuiltinFunction,
     _funDefTerminating :: Bool
   }
   deriving stock (Eq, Show)
 
 data FunctionClause = FunctionClause
-  { _clausePatterns :: [Pattern],
+  { _clauseName :: FunctionName,
+    _clausePatterns :: [Pattern],
     _clauseBody :: Expression
   }
   deriving stock (Eq, Show)
@@ -170,8 +177,9 @@ data Pattern
 
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
+    _inductiveBuiltin :: Maybe BuiltinInductive,
     _inductiveParameters :: [FunctionParameter],
-    _inductiveType :: Maybe Expression,
+    _inductiveType :: Expression,
     _inductiveConstructors :: [InductiveConstructorDef]
   }
   deriving stock (Eq, Show)
@@ -184,6 +192,7 @@ data InductiveConstructorDef = InductiveConstructorDef
 
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
+    _axiomBuiltin :: Maybe BuiltinAxiom,
     _axiomType :: Expression
   }
   deriving stock (Eq, Show)
@@ -202,3 +211,15 @@ makeLenses ''ConstructorRef
 makeLenses ''InductiveRef
 makeLenses ''AxiomRef
 makeLenses ''AxiomDef
+
+instance HasLoc InductiveConstructorDef where
+  getLoc = getLoc . (^. constructorName)
+
+instance HasLoc InductiveDef where
+  getLoc = getLoc . (^. inductiveName)
+
+instance HasLoc AxiomDef where
+  getLoc = getLoc . (^. axiomName)
+
+instance HasLoc FunctionDef where
+  getLoc = getLoc . (^. funDefName)

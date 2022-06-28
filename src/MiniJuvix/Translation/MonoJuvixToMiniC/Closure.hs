@@ -1,9 +1,10 @@
 module MiniJuvix.Translation.MonoJuvixToMiniC.Closure where
 
 import MiniJuvix.Prelude
+import MiniJuvix.Syntax.Concrete.Builtins (IsBuiltin (toBuiltinPrim))
 import MiniJuvix.Syntax.MiniC.Language
+import MiniJuvix.Syntax.MonoJuvix.InfoTable qualified as Mono
 import MiniJuvix.Syntax.MonoJuvix.Language qualified as Mono
-import MiniJuvix.Translation.MicroJuvixToMonoJuvix qualified as Mono
 import MiniJuvix.Translation.MonoJuvixToMiniC.Base
 
 genClosures ::
@@ -29,6 +30,13 @@ functionDefClosures ::
 functionDefClosures Mono.FunctionDef {..} =
   concatMapM (clauseClosures (fst (unfoldFunType _funDefType))) (toList _funDefClauses)
 
+lookupBuiltinIden :: Members '[Reader Mono.InfoTable] r => Mono.Iden -> Sem r (Maybe Mono.BuiltinPrim)
+lookupBuiltinIden = \case
+  Mono.IdenFunction f -> fmap toBuiltinPrim . (^. Mono.functionInfoBuiltin) <$> Mono.lookupFunction f
+  Mono.IdenConstructor c -> fmap toBuiltinPrim . (^. Mono.constructorInfoBuiltin) <$> Mono.lookupConstructor c
+  Mono.IdenAxiom a -> fmap toBuiltinPrim . (^. Mono.axiomInfoBuiltin) <$> Mono.lookupAxiom a
+  Mono.IdenVar {} -> return Nothing
+
 genClosureExpression ::
   forall r.
   Members '[Reader Mono.InfoTable, Reader PatternInfoTable] r =>
@@ -40,6 +48,7 @@ genClosureExpression funArgTyps = \case
     let rootFunMonoName = Mono.getName i
         rootFunNameId = rootFunMonoName ^. Mono.nameId
         rootFunName = mkName rootFunMonoName
+    builtin <- lookupBuiltinIden i
     case i of
       Mono.IdenVar {} -> return []
       _ -> do
@@ -52,6 +61,7 @@ genClosureExpression funArgTyps = \case
                   [ ClosureInfo
                       { _closureNameId = rootFunNameId,
                         _closureRootName = rootFunName,
+                        _closureBuiltin = builtin,
                         _closureMembers = [],
                         _closureFunType = t,
                         _closureCArity = patterns
@@ -66,15 +76,16 @@ genClosureExpression funArgTyps = \case
       let rootFunMonoName = Mono.getName f
           rootFunNameId = rootFunMonoName ^. Mono.nameId
           rootFunName = mkName rootFunMonoName
+      builtin <- lookupBuiltinIden f
       (fType, patterns) <- getType f
       closureArgs <- concatMapM (genClosureExpression funArgTyps) appArgs
-
       if
           | length appArgs < length (fType ^. cFunArgTypes) ->
               return
                 ( [ ClosureInfo
                       { _closureNameId = rootFunNameId,
                         _closureRootName = rootFunName,
+                        _closureBuiltin = builtin,
                         _closureMembers = take (length appArgs) (fType ^. cFunArgTypes),
                         _closureFunType = fType,
                         _closureCArity = patterns
@@ -169,7 +180,10 @@ genClosureApply c =
                     ),
                   BodyStatement . StatementReturn . Just $ juvixFunctionCall funType (ExpressionVar localFunName) (drop nPatterns args)
                 ]
-            | otherwise -> [BodyStatement . StatementReturn . Just $ functionCall (ExpressionVar (c ^. closureRootName)) args]
+            | otherwise ->
+                [ BodyStatement . StatementReturn . Just $
+                    functionCall (ExpressionVar (closureRootFunction c)) args
+                ]
       envArg :: BodyItem
       envArg =
         BodyDecl

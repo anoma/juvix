@@ -1,6 +1,7 @@
 module MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind where
 
 import MiniJuvix.Prelude
+import MiniJuvix.Prelude.Pretty
 import Prettyprinter.Render.Terminal
 
 data NameKind
@@ -25,6 +26,16 @@ class HasNameKind a where
 
 instance HasNameKind NameKind where
   getNameKind = id
+
+instance Pretty NameKind where
+  pretty = \case
+    KNameConstructor -> "constructor"
+    KNameInductive -> "inductive type"
+    KNameFunction -> "function"
+    KNameLocal -> "variable"
+    KNameAxiom -> "axiom"
+    KNameLocalModule -> "local module"
+    KNameTopModule -> "module"
 
 isLocallyBounded :: HasNameKind a => a -> Bool
 isLocallyBounded k = case getNameKind k of

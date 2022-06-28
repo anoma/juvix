@@ -141,6 +141,7 @@ allKeywords :: Members '[Reader ParserParams, InfoTableBuilder] r => [ParsecS r 
 allKeywords =
   [ kwAssignment,
     kwAxiom,
+    -- kwBuiltin, -- no need to be a reserved keyword
     kwColon,
     kwColonOmega,
     kwColonOne,
@@ -191,6 +192,9 @@ parens = between lparen rparen
 
 braces :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r a
 braces = between (symbol "{") (symbol "}")
+
+kwBuiltin :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
+kwBuiltin = keyword Str.builtin
 
 kwAssignment :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwAssignment = keyword Str.assignUnicode <|> keyword Str.assignAscii

@@ -151,7 +151,8 @@ fillHolesFunctionDef m d =
   FunctionDef
     { _funDefName = d ^. funDefName,
       _funDefType = fillHolesType m (d ^. funDefType),
-      _funDefClauses = fmap (fillHolesClause m) (d ^. funDefClauses)
+      _funDefClauses = fmap (fillHolesClause m) (d ^. funDefClauses),
+      _funDefBuiltin = d ^. funDefBuiltin
     }
 
 fillHolesClause :: HashMap Hole Type -> FunctionClause -> FunctionClause

@@ -9,9 +9,9 @@ inductive Nat {
 };
 
 foreign c {
-  void* natInd(int n, void* zero, minijuvix_function_t* suc) {
-    if (n <= 0) return zero;
-    return ((void* (*) (minijuvix_function_t*, void*))suc->fun)(suc, natInd(n - 1, zero, suc));
+  void* natInd(int n, void* zeroCtor, minijuvix_function_t* sucCtor) {
+    if (n <= 0) return zeroCtor;
+    return ((void* (*) (minijuvix_function_t*, void*))sucCtor->fun)(sucCtor, natInd(n - 1, zeroCtor, sucCtor));
   \}
 };
 

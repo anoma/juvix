@@ -122,8 +122,11 @@ instance PrettyCode FunctionDef where
     funDefTypeSig' <- ppCode (f ^. funDefType)
     clauses' <- mapM (ppClause funDefName') (f ^. funDefClauses)
     return $
-      funDefName' <+> kwColonColon <+> funDefTypeSig' <> line
-        <> vsep (toList clauses')
+      funDefName'
+        <+> kwColonColon
+        <+> funDefTypeSig'
+          <> line
+          <> vsep (toList clauses')
     where
       ppClause :: Member (Reader Options) r => Doc Ann -> FunctionClause -> Sem r (Doc Ann)
       ppClause fun c = do
@@ -164,11 +167,13 @@ instance PrettyCode Module where
     name' <- ppCode (m ^. moduleName)
     body' <- ppCode (m ^. moduleBody)
     return $
-      kwModule <+> name' <+> kwWhere
-        <> line
-        <> line
-        <> body'
-        <> line
+      kwModule
+        <+> name'
+        <+> kwWhere
+          <> line
+          <> line
+          <> body'
+          <> line
 
 parensCond :: Bool -> Doc Ann -> Doc Ann
 parensCond t d = if t then parens d else d

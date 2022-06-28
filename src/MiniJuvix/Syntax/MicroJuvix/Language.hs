@@ -6,11 +6,13 @@ module MiniJuvix.Syntax.MicroJuvix.Language
     module MiniJuvix.Syntax.Hole,
     module MiniJuvix.Syntax.Wildcard,
     module MiniJuvix.Syntax.Concrete.LiteralLoc,
+    module MiniJuvix.Syntax.Concrete.Builtins,
   )
 where
 
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.Name
+import MiniJuvix.Syntax.Concrete.Builtins
 import MiniJuvix.Syntax.Concrete.LiteralLoc
 import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Syntax.ForeignBlock
@@ -40,13 +42,15 @@ data Statement
 
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
+    _axiomBuiltin :: Maybe BuiltinAxiom,
     _axiomType :: Type
   }
 
 data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
     _funDefType :: Type,
-    _funDefClauses :: NonEmpty FunctionClause
+    _funDefClauses :: NonEmpty FunctionClause,
+    _funDefBuiltin :: Maybe BuiltinFunction
   }
 
 data FunctionClause = FunctionClause
@@ -112,6 +116,7 @@ newtype InductiveParameter = InductiveParameter
 
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
+    _inductiveBuiltin :: Maybe BuiltinInductive,
     _inductiveParameters :: [InductiveParameter],
     _inductiveConstructors :: [InductiveConstructorDef]
   }

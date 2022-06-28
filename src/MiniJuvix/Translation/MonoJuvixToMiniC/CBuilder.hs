@@ -6,19 +6,22 @@ import MiniJuvix.Syntax.MiniC.Language
 import MiniJuvix.Translation.MonoJuvixToMiniC.CNames
 
 namedArgs :: (Text -> Text) -> [CDeclType] -> [Declaration]
-namedArgs prefix = zipWith goTypeDecl argLabels
+namedArgs prefix = zipWith namedCDecl argLabels
   where
     argLabels :: [Text]
     argLabels = prefix . show <$> [0 :: Integer ..]
 
-goTypeDecl :: Text -> CDeclType -> Declaration
-goTypeDecl n CDeclType {..} =
+namedDecl :: Text -> Bool -> DeclType -> Declaration
+namedDecl n isPtr typ =
   Declaration
-    { _declType = _typeDeclType,
-      _declIsPtr = _typeIsPtr,
+    { _declType = typ,
+      _declIsPtr = isPtr,
       _declName = Just n,
       _declInitializer = Nothing
     }
+
+namedCDecl :: Text -> CDeclType -> Declaration
+namedCDecl n CDeclType {..} = namedDecl n _typeIsPtr _typeDeclType
 
 declFunctionType :: DeclType
 declFunctionType = DeclTypeDefType Str.minijuvixFunctionT

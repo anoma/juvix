@@ -77,7 +77,8 @@ goAxiomIden n = do
     getCode :: BackendItem -> Maybe Text
     getCode b =
       guard (BackendGhc == b ^. backendItemBackend)
-        $> b ^. backendItemCode
+        $> b
+        ^. backendItemCode
     lookupBackends ::
       Member (Reader Mono.CompileInfoTable) r =>
       NameId ->

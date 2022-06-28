@@ -14,5 +14,5 @@ renderAnsi = renderStrict . reAnnotateS stylize
 
 stylize :: Eann -> AnsiStyle
 stylize a = case a of
-  Highlight -> colorDull Red
+  Highlight -> bold
   AbstractAnn m -> M.stylize m

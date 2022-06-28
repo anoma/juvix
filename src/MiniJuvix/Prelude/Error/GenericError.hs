@@ -28,9 +28,10 @@ instance HasLoc GenericError where
 genericErrorHeader :: GenericError -> Doc a
 genericErrorHeader g =
   pretty (g ^. genericErrorLoc)
-    <> colon <+> "error"
     <> colon
-    <> line
+    <+> "error"
+      <> colon
+      <> line
 
 class ToGenericError a where
   genericError :: a -> GenericError

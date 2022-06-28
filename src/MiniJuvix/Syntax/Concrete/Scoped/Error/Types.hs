@@ -36,8 +36,11 @@ instance ToGenericError MultipleDeclarations where
       i1 :: Interval
       i1 = entryName _multipleDeclEntry ^. S.nameDefined
       msg =
-        "Multiple declarations of" <+> ppSymbolT _multipleDeclSymbol <> line
-          <> "Declared at:" <+> align (vsep lst)
+        "Multiple declarations of"
+          <+> ppSymbolT _multipleDeclSymbol
+            <> line
+            <> "Declared at:"
+          <+> align (vsep lst)
       lst = map pretty [L.symbolEntryToSName _multipleDeclEntry ^. S.nameDefined, _multipleDeclSecond]
 
 -- | megaparsec error while resolving infixities.
@@ -139,7 +142,8 @@ instance ToGenericError ImportCycle where
       h = head _importCycleImports
       i = getLoc h
       msg =
-        "There is an import cycle:" <> line
+        "There is an import cycle:"
+          <> line
           <> indent' (vsep (intersperse "⇓" (map pp (toList (tie _importCycleImports)))))
 
       pp :: Import 'Parsed -> Doc Eann
@@ -182,10 +186,11 @@ instance ToGenericError BindGroupConflict where
       i2 = getLoc _bindGroupSecond
 
       msg =
-        "The variable" <+> highlight (ppCode _bindGroupFirst)
+        "The variable"
+          <+> highlight (ppCode _bindGroupFirst)
           <+> "appears twice in the same binding group:"
-          <> line
-          <> indent' (align (vsep (map pretty [i1, i2])))
+            <> line
+            <> indent' (align (vsep (map pretty [i1, i2])))
 
 data DuplicateFixity = DuplicateFixity
   { _dupFixityFirst :: OperatorSyntaxDef,
@@ -207,9 +212,9 @@ instance ToGenericError DuplicateFixity where
       msg =
         "Multiple fixity declarations for symbol"
           <+> highlight (ppCode sym)
-          <> ":"
-          <> line
-          <> indent' (align locs)
+            <> ":"
+            <> line
+            <> indent' (align locs)
         where
           sym = _dupFixityFirst ^. opSymbol
           locs = vsep $ map (pretty . getLoc) [_dupFixityFirst, _dupFixityFirst]
@@ -231,7 +236,8 @@ instance ToGenericError MultipleExportConflict where
     where
       i = getLoc _multipleExportModule
       msg =
-        "The symbol" <+> highlight (ppCode _multipleExportSymbol)
+        "The symbol"
+          <+> highlight (ppCode _multipleExportSymbol)
           <+> "is exported multiple times in the module"
           <+> ppCode _multipleExportModule
 
@@ -294,9 +300,11 @@ instance ToGenericError AppLeftImplicit where
     where
       i = getLoc (e ^. appLeftImplicit)
       msg =
-        "The expression" <+> ppCode (e ^. appLeftImplicit) <+> "cannot appear by itself."
-          <> line
-          <> "It needs to be the argument of a function expecting an implicit argument."
+        "The expression"
+          <+> ppCode (e ^. appLeftImplicit)
+          <+> "cannot appear by itself."
+            <> line
+            <> "It needs to be the argument of a function expecting an implicit argument."
 
 newtype ModuleNotInScope = ModuleNotInScope
   { _moduleNotInScopeName :: Name
@@ -339,7 +347,8 @@ instance ToGenericError UnusedOperatorDef where
     where
       i = getLoc _unusedOperatorDef
       msg =
-        "Unused operator syntax definition:" <> line
+        "Unused operator syntax definition:"
+          <> line
           <> ppCode _unusedOperatorDef
 
 data WrongTopModuleName = WrongTopModuleName
@@ -359,14 +368,15 @@ instance ToGenericError WrongTopModuleName where
     where
       i = getLoc _wrongTopModuleNameActualName
       msg =
-        "The top module" <+> ppCode _wrongTopModuleNameActualName
+        "The top module"
+          <+> ppCode _wrongTopModuleNameActualName
           <+> "is defined in the file:"
-          <> line
-          <> highlight (pretty _wrongTopModuleNameActualPath)
-          <> line
-          <> "But it should be in the file:"
-          <> line
-          <> pretty _wrongTopModuleNameExpectedPath
+            <> line
+            <> highlight (pretty _wrongTopModuleNameActualPath)
+            <> line
+            <> "But it should be in the file:"
+            <> line
+            <> pretty _wrongTopModuleNameExpectedPath
 
 data AmbiguousSym = AmbiguousSym
   { _ambiguousSymName :: Name,
@@ -421,10 +431,11 @@ instance ToGenericError WrongLocationCompileBlock where
       name = _wrongLocationCompileBlockName
       i = getLoc name
       msg =
-        "The compilation rules for the symbol" <+> highlight (ppCode name)
+        "The compilation rules for the symbol"
+          <+> highlight (ppCode name)
           <+> "need to be defined in the module:"
-          <> line
-          <> highlight (ppCode _wrongLocationCompileBlockExpectedModPath)
+            <> line
+            <> highlight (ppCode _wrongLocationCompileBlockExpectedModPath)
 
 data MultipleCompileBlockSameName = MultipleCompileBlockSameName
   { _multipleCompileBlockFirstDefined :: Interval,
@@ -464,7 +475,8 @@ instance ToGenericError MultipleCompileRuleSameBackend where
       name = _multipleCompileRuleSameBackendSym
       i = getLoc _multipleCompileRuleSameBackendSym
       msg =
-        "Multiple" <+> highlight (ppCode backend)
+        "Multiple"
+          <+> highlight (ppCode backend)
           <+> "compilation rules for the symbol"
           <+> highlight (ppCode name)
           <+> "at"
@@ -486,18 +498,27 @@ instance ToGenericError WrongKindExpressionCompileBlock where
     where
       i = getLoc _wrongKindExpressionCompileBlockSym
       msg =
-        "Symbol" <+> ppCode _wrongKindExpressionCompileBlockSym
+        "Symbol"
+          <+> ppCode _wrongKindExpressionCompileBlockSym
           <+> "is not a constructor, inductive data type, axiom nor a function."
-          <> "Thus, it cannot have a compile rule."
+            <> "Thus, it cannot have a compile rule."
 
 infixErrorAux :: Doc Eann -> Doc Eann -> Doc Eann
 infixErrorAux kind pp =
-  "Error while resolving infixities in the" <+> kind <> ":" <> line
-    <> indent' (highlight pp)
+  "Error while resolving infixities in the"
+    <+> kind
+      <> ":"
+      <> line
+      <> indent' (highlight pp)
 
 ambiguousMessage :: Name -> [SymbolEntry] -> Doc Eann
 ambiguousMessage n es =
-  "The symbol" <+> ppCode n <+> "at" <+> pretty (getLoc n) <+> "is ambiguous." <> line
-    <> "It could be any of:"
-    <> line
-    <> indent' (vsep (map ppCode es))
+  "The symbol"
+    <+> ppCode n
+    <+> "at"
+    <+> pretty (getLoc n)
+    <+> "is ambiguous."
+      <> line
+      <> "It could be any of:"
+      <> line
+      <> indent' (vsep (map ppCode es))

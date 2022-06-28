@@ -232,7 +232,7 @@ instance ToGenericError WrongNumberArgumentsIndType where
                     | expectedNumArgs == 1 -> "one argument"
                     | otherwise -> pretty expectedNumArgs <+> "arguments"
               )
-          <> ", but"
+            <> ", but"
           <+> ( if
                     | actualNumArgs == 0 -> "no argument is"
                     | actualNumArgs == 1 -> "only one argument is"

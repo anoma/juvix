@@ -31,10 +31,10 @@ compileInfoTable r =
     (^. Scoper.nameId)
     ( r
         ^. resultMicroTyped
-          . Micro.resultMicroJuvixArityResult
-          . Micro.resultMicroJuvixResult
-          . Micro.resultAbstract
-          . Abstract.resultScoper
-          . Scoper.resultScoperTable
-          . Scoper.infoCompilationRules
+        . Micro.resultMicroJuvixArityResult
+        . Micro.resultMicroJuvixResult
+        . Micro.resultAbstract
+        . Abstract.resultScoper
+        . Scoper.resultScoperTable
+        . Scoper.infoCompilationRules
     )

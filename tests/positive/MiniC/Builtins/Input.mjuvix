@@ -1,0 +1,31 @@
+module Input;
+
+builtin natural
+inductive ℕ {
+ zero : ℕ;
+ suc : ℕ → ℕ;
+};
+
+infixl 4 +;
+builtin natural-plus
++ : ℕ → ℕ → ℕ;
++ zero x ≔ x;
++ (suc a) b ≔ suc (a + b);
+
+mult : ℕ → ℕ → ℕ;
+mult zero _ ≔ zero;
+mult (suc n) m ≔ m + (mult n m);
+
+plusOne : ℕ → ℕ;
+plusOne ≔ suc;
+
+builtin IO axiom IO : Type;
+
+infixl 1 >>;
+builtin IO-sequence axiom >> : IO → IO → IO;
+builtin natural-print axiom printNat : ℕ → IO;
+
+main : IO;
+main ≔ printNat (mult 3 (2 + 2)) >> printNat 2;
+
+end;

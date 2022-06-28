@@ -56,16 +56,20 @@ infoVersionRepo :: IO (Doc Text)
 infoVersionRepo = do
   pNameTag <- progNameVersionTag
   return
-    ( PP.pretty pNameTag <> line
+    ( PP.pretty pNameTag
+        <> line
         <> "Branch"
-        <> colon <+> PP.pretty branch
-        <> line
-        <> "Commit"
-        <> colon <+> PP.pretty commit
-        <> line
-        <> "Date"
-        <> colon <+> PP.pretty commitDate
-        <> line
+        <> colon
+        <+> PP.pretty branch
+          <> line
+          <> "Commit"
+          <> colon
+        <+> PP.pretty commit
+          <> line
+          <> "Date"
+          <> colon
+        <+> PP.pretty commitDate
+          <> line
     )
 
 runDisplayVersion :: IO ()

@@ -3,6 +3,7 @@ module MiniJuvix.Prelude.Base
     module Control.Applicative,
     module Control.Monad.Extra,
     module Control.Monad.Fix,
+    module Data.Bitraversable,
     module Data.Bool,
     module Data.Char,
     module Data.Either.Extra,
@@ -45,6 +46,7 @@ module MiniJuvix.Prelude.Base
     module Polysemy.Output,
     module Polysemy.Reader,
     module Polysemy.State,
+    module Language.Haskell.TH.Syntax,
     module Prettyprinter,
     module System.Directory,
     module System.Exit,
@@ -68,6 +70,7 @@ import Control.Applicative
 import Control.Monad.Extra
 import Control.Monad.Fix
 import Data.Bifunctor hiding (first, second)
+import Data.Bitraversable
 import Data.Bool
 import Data.ByteString.Lazy (ByteString)
 import Data.Char
@@ -103,7 +106,7 @@ import Data.Maybe
 import Data.Monoid
 import Data.Ord
 import Data.Semigroup (Semigroup, (<>))
-import Data.Singletons
+import Data.Singletons hiding ((@@))
 import Data.Singletons.Sigma
 import Data.Singletons.TH (genSingletons, promoteOrdInstances, singOrdInstances)
 import Data.Stream (Stream)
@@ -122,6 +125,7 @@ import GHC.Generics (Generic)
 import GHC.Num
 import GHC.Real
 import GHC.Stack.Types
+import Language.Haskell.TH.Syntax (Lift)
 import Lens.Micro.Platform hiding (both, _head)
 import Polysemy
 import Polysemy.Embed
@@ -243,6 +247,9 @@ tableNestedInsert k1 k2 a = tableInsert (HashMap.singleton k2) (HashMap.insert k
 nonEmptyUnsnoc :: NonEmpty a -> (Maybe (NonEmpty a), a)
 nonEmptyUnsnoc e = (NonEmpty.nonEmpty (NonEmpty.init e), NonEmpty.last e)
 
+_nonEmpty :: Lens' [a] (Maybe (NonEmpty a))
+_nonEmpty f x = maybe [] toList <$> f (nonEmpty x)
+
 groupSortOn :: Ord b => (a -> b) -> [a] -> [NonEmpty a]
 groupSortOn f = map (fromJust . nonEmpty) . List.groupSortOn f
 
@@ -270,6 +277,13 @@ infixl 7 <+?>
 
 (<+?>) :: Doc ann -> Maybe (Doc ann) -> Doc ann
 (<+?>) a = maybe a (a <+>)
+
+infixl 7 <?+>
+
+(<?+>) :: Maybe (Doc ann) -> Doc ann -> Doc ann
+(<?+>) = \case
+  Nothing -> id
+  Just a -> (a <+>)
 
 infixl 7 <?>
 
@@ -307,3 +321,6 @@ fromRightIO pp = fromRightIO' (putStrLn . pp)
 
 nubHashable :: Hashable a => [a] -> [a]
 nubHashable = HashSet.toList . HashSet.fromList
+
+allElements :: (Bounded a, Enum a) => [a]
+allElements = [minBound .. maxBound]

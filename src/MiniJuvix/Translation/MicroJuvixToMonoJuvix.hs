@@ -195,9 +195,11 @@ goStatement = \case
 goAxiomDef :: Members '[Reader ConcreteTable] r => Micro.AxiomDef -> Sem r AxiomDef
 goAxiomDef Micro.AxiomDef {..} = do
   _axiomType' <- goType (Micro.mkConcreteType' _axiomType)
+  let _axiomBuiltin' = _axiomBuiltin
   return
     AxiomDef
       { _axiomName = goName _axiomName,
+        _axiomBuiltin = _axiomBuiltin',
         _axiomType = _axiomType'
       }
 
@@ -265,6 +267,7 @@ goInductiveDefConcrete def = do
   return
     InductiveDef
       { _inductiveName = goName (def ^. Micro.inductiveName),
+        _inductiveBuiltin = def ^. Micro.inductiveBuiltin,
         _inductiveConstructors = constructors'
       }
   where
@@ -341,7 +344,8 @@ goFunctionDefConcrete n d = do
     FunctionDef
       { _funDefName = funName,
         _funDefClauses = clauses',
-        _funDefType = type'
+        _funDefType = type',
+        _funDefBuiltin = d ^. Micro.funDefBuiltin
       }
   where
     funName :: Name
@@ -377,6 +381,7 @@ goInductiveDefPoly def poly
       return
         InductiveDef
           { _inductiveName = i ^. concreteName,
+            _inductiveBuiltin = Nothing,
             ..
           }
       where
@@ -417,7 +422,8 @@ goFunctionDefPoly def poly
         Micro.FunctionDef
           { _funDefName = impossible,
             _funDefType = sig' ^. Micro.unconcreteType,
-            _funDefClauses = _funDefClauses
+            _funDefClauses = _funDefClauses,
+            _funDefBuiltin = def ^. Micro.funDefBuiltin
           }
       where
         concreteSubs :: Micro.ConcreteSubs

@@ -39,9 +39,10 @@ instance PrettyCode Name where
       if
           | showNameId -> Just . ("@" <>) <$> ppCode (n ^. nameId)
           | otherwise -> return Nothing
-    return $
-      annotate (AnnKind (n ^. nameKind)) $
-        pretty (n ^. nameText) <?> uid
+    return
+      $ annotate (AnnKind (n ^. nameKind))
+      $ pretty (n ^. nameText)
+      <?> uid
 
 instance PrettyCode Iden where
   ppCode :: Member (Reader Options) r => Iden -> Sem r (Doc Ann)
@@ -181,8 +182,11 @@ instance PrettyCode FunctionDef where
     funDefType' <- ppCode (f ^. funDefType)
     clauses' <- mapM ppCode (f ^. funDefClauses)
     return $
-      funDefName' <+> kwColonColon <+> funDefType' <> line
-        <> vsep (toList clauses')
+      funDefName'
+        <+> kwColonColon
+        <+> funDefType'
+          <> line
+          <> vsep (toList clauses')
 
 instance PrettyCode FunctionClause where
   ppCode c = do
@@ -200,10 +204,13 @@ instance PrettyCode ForeignBlock where
   ppCode ForeignBlock {..} = do
     _foreignBackend' <- ppCode _foreignBackend
     return $
-      kwForeign <+> _foreignBackend' <+> lbrace <> line
-        <> pretty _foreignCode
-        <> line
-        <> rbrace
+      kwForeign
+        <+> _foreignBackend'
+        <+> lbrace
+          <> line
+          <> pretty _foreignCode
+          <> line
+          <> rbrace
 
 instance PrettyCode AxiomDef where
   ppCode AxiomDef {..} = do
@@ -228,11 +235,13 @@ instance PrettyCode Module where
     name' <- ppCode (m ^. moduleName)
     body' <- ppCode (m ^. moduleBody)
     return $
-      kwModule <+> name' <+> kwWhere
-        <> line
-        <> line
-        <> body'
-        <> line
+      kwModule
+        <+> name'
+        <+> kwWhere
+          <> line
+          <> line
+          <> body'
+          <> line
 
 parensCond :: Bool -> Doc Ann -> Doc Ann
 parensCond t d = if t then parens d else d

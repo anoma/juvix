@@ -252,7 +252,10 @@ lookupSymbolAux modules final = do
             Nothing -> []
             Just SymbolInfo {..} -> toList _symbolInfo
         (p : ps) ->
-          mapMaybe (lookInExport final ps . getModuleExportInfo) . concat . maybeToList . fmap (mapMaybe getModuleRef . toList . (^. symbolInfo))
+          mapMaybe (lookInExport final ps . getModuleExportInfo)
+            . concat
+            . maybeToList
+            . fmap (mapMaybe getModuleRef . toList . (^. symbolInfo))
             . HashMap.lookup p
             <$> gets (^. scopeSymbols)
     importedTopModule :: Sem r (Maybe SymbolEntry)
@@ -458,6 +461,7 @@ checkInductiveDef InductiveDef {..} = do
     registerInductive'
       InductiveDef
         { _inductiveName = inductiveName',
+          _inductiveBuiltin = _inductiveBuiltin,
           _inductiveParameters = inductiveParameters',
           _inductiveType = inductiveType',
           _inductiveConstructors = inductiveConstructors'

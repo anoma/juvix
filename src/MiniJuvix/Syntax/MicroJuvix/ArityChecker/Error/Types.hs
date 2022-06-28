@@ -27,7 +27,7 @@ instance ToGenericError WrongConstructorAppLength where
           <+> ppCode (e ^. wrongConstructorAppLength . constrAppConstructor)
           <+> "should have"
           <+> arguments (e ^. wrongConstructorAppLengthExpected)
-          <> ", but has been given"
+            <> ", but has been given"
           <+> pretty actual
 
       actual :: Int
@@ -105,13 +105,15 @@ instance ToGenericError ExpectedExplicitArgument where
       arg = snd (toList args !! idx)
       i = getLoc arg
       msg =
-        "Expected an explicit argument as the" <+> ordinal (succ idx) <+> "argument of"
+        "Expected an explicit argument as the"
+          <+> ordinal (succ idx)
+          <+> "argument of"
           <+> ppCode f
           <+> "but found"
           <+> ppArg Implicit arg
-          <> "."
-          <> softline
-          <> "In the application"
+            <> "."
+            <> softline
+            <> "In the application"
           <+> ppApp app
 
 newtype PatternFunction = PatternFunction
@@ -130,7 +132,8 @@ instance ToGenericError PatternFunction where
     where
       i = getLoc (e ^. patternFunction)
       msg =
-        "Invalid pattern" <+> ppCode (e ^. patternFunction) <> "."
+        "Invalid pattern"
+          <+> ppCode (e ^. patternFunction) <> "."
           <+> "Function types cannot be pattern matched"
 
 data TooManyArguments = TooManyArguments
@@ -158,12 +161,13 @@ instance ToGenericError TooManyArguments where
       app :: Expression
       app = foldApplication fun args
       msg =
-        "Too many arguments in the application" <+> ppCode app <> "."
+        "Too many arguments in the application"
+          <+> ppCode app <> "."
           <+> "The last"
           <+> numArguments
-          <> ", namely"
+            <> ", namely"
           <+> ppUnexpectedArgs
-          <> ","
+            <> ","
           <+> wasNotExpected
       numArguments :: Doc ann
       numArguments = plural "argument" (pretty numUnexpected <+> "arguments") numUnexpected
@@ -191,5 +195,7 @@ instance ToGenericError FunctionApplied where
       args = e ^. functionAppliedArguments
       fun = ExpressionFunction (e ^. functionAppliedFunction)
       msg =
-        "A function type cannot be applied." <> softline
-          <> "In the application" <+> ppApp (fun, args)
+        "A function type cannot be applied."
+          <> softline
+          <> "In the application"
+          <+> ppApp (fun, args)

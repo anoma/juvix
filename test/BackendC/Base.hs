@@ -56,11 +56,16 @@ clangAssertion mainFile expectedFile stdinText step = do
   step "Compare expected and actual program output"
   assertEqDiff ("check: WASM output = " <> expectedFile) actualLibc expected
 
+builtinRuntime :: FilePath
+builtinRuntime = $(makeRelativeToProject "minic-runtime/builtins" >>= strToExp)
+
 standaloneArgs :: FilePath -> FilePath -> FilePath -> [String]
 standaloneArgs sysrootPath wasmOutputFile cOutputFile =
   [ "-nodefaultlibs",
     "-I",
     takeDirectory minicRuntime,
+    "-I",
+    builtinRuntime,
     "-Werror",
     "--target=wasm32-wasi",
     "--sysroot",
@@ -81,6 +86,8 @@ libcArgs sysrootPath wasmOutputFile cOutputFile =
   [ "-nodefaultlibs",
     "-I",
     takeDirectory minicRuntime,
+    "-I",
+    builtinRuntime,
     "-Werror",
     "-lc",
     "--target=wasm32-wasi",

@@ -131,7 +131,8 @@ instance Pretty Loc where
 instance Pretty Interval where
   pretty :: Interval -> Doc a
   pretty i =
-    pretty (i ^. intervalFile) <> colon
+    pretty (i ^. intervalFile)
+      <> colon
       <> ppPosRange (i ^. intervalStart . locLine, i ^. intervalEnd . locLine)
       <> colon
       <> ppPosRange (i ^. intervalStart . locCol, i ^. intervalEnd . locCol)

@@ -1,0 +1,70 @@
+#+title: Builtins
+#+author: Jan Mas Rovira
+
+* Overview
+
+The goal is to support builtin types and functions that get compiled to
+efficient primitives. We plan on supporting primitives for the following types
+of definitions:
+
+1. Builtin inductive definitions. For example:
+   #+begin_example
+   builtin natural
+   inductive Nat {
+     zero : Nat;
+     suc : Nat → Nat;
+   };
+   #+end_example
+   We will call this the canonical definition of natural numbers.
+
+2. Builtin function definitions. For example:
+   #+begin_src text
+   inifl 6 +;
+   builtin natural-plus
+   + : Nat → Nat → Nat;
+   + zero b ≔ b;
+   + (suc a) b ≔ suc (a + b);
+   #+end_src
+
+3. Builtin axiom definitions. For example:
+   #+begin_src text
+   builtin natural-print
+   axiom printNat : Nat → Action;
+   #+end_src
+
+** Collecting builtin information
+
+The idea is that builtin definitions are treated normally throughout the
+pipeline except in the backend part. There is one exception to that. We need to
+collect information about the builtins that have been included in the code and
+what are the terms that refer to them. For instance, imagine that we find this
+definitions in a minijuvix module:
+#+begin_src text
+builtin natural
+inductive MyNat {
+    z : MyNat;
+    s : MyNat → MyNat;
+};
+#+end_src
+We need to take care of the following:
+1. Check that the definition =MyInt= is up to renaming equal to the canonical
+   definition that we provide in the compiler.
+2. Rember a map from concrete to canonical names: {MyNat ↦ Nat; z ↦ zero; s ↦ suc};
+3. Rembember that we have a definition for builtin natural numbers. This is
+   necessary if later we attempt to define a builtin function or axiom that
+   depends on natural numbers.
+
+
+In the compiler we need to know the following:
+1. For inductives:
+   1. What is the primitive type that we will target in the backend: E.g. {Nat ↦ int}.
+   2. For constructors:
+      1. What is the primitive constructor function: E.g. {zero ↦ 0; suc ↦ plus_one};
+      2. How to test if a term matches a pattern with that constructor.
+         E.g. {zero ↦ is_zero; suc ↦ is_not_zero};
+      3. How to deconstruct/project each of the constructor arguments. E.g. {zero ↦
+         ∅; suc ↦ minus_one}}. Note that if a constructor takes multiple arguments
+         we will need to have a projection function for each argument.
+2. For functions and axioms:
+   1. What is the primitive function that we will target in the backend: E.g. {+
+      ↦ add}.

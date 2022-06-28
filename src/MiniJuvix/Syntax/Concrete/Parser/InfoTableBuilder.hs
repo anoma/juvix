@@ -5,6 +5,7 @@ module MiniJuvix.Syntax.Concrete.Parser.InfoTableBuilder
     registerComment,
     mergeTable,
     runInfoTableBuilder,
+    ignoreInfoTableBuilder,
     module MiniJuvix.Syntax.Concrete.Parser.InfoTable,
   )
 where
@@ -68,7 +69,8 @@ build st = InfoTable (nubHashable (st ^. stateItems))
 
 runInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilder =
-  fmap (first build) . runState iniState
+  fmap (first build)
+    . runState iniState
     . reinterpret
       ( \case
           RegisterItem i ->
@@ -76,3 +78,6 @@ runInfoTableBuilder =
           MergeTable tbl ->
             modify' (over stateItems ((tbl ^. infoParsedItems) <>))
       )
+
+ignoreInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r a
+ignoreInfoTableBuilder = fmap snd . runInfoTableBuilder
