@@ -1,0 +1,26 @@
+module Data.Maybe;
+
+import Data.Int;
+open Data.Int;
+
+import Data.Bool;
+open Data.Bool;
+
+inductive Maybe (A : Type) {
+ nothing : Maybe A;
+ just : A → Maybe A;
+};
+
+maybe : {A : Type} → {B : Type} → B → (A → B) → Maybe A → B;
+maybe b _ nothing ≔ b;
+maybe _ f (just x) ≔ f x;
+
+fmapMaybe : {A : Type} → {B : Type} → (A → B) → Maybe A → Maybe B;
+fmapMaybe _ nothing ≔ nothing;
+fmapMaybe f (just a) ≔ just (f a);
+
+bindMaybe : {A : Type} → {B : Type} → (A → Maybe B) → Maybe A → Maybe B;
+bindMaybe _ nothing ≔ nothing;
+bindMaybe f (just a) ≔ f a;
+
+end;

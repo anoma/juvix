@@ -18,6 +18,24 @@ typedef struct minijuvix_function {
 void *malloc(size_t size);
 void free(void *p);
 
+void* memcpy(void *dest, const void *src, size_t n) {
+    char *csrc = (char*) src;
+    char *cdest = (char*) dest;
+
+    for (int i=0; i < n; i++) {
+        cdest[i] = csrc[i];
+    }
+    return dest;
+}
+
+void* realloc(void *ptr, size_t n) {
+    void* newptr;
+    newptr = malloc(n);
+    memcpy(newptr, ptr, n);
+    free(ptr);
+    return newptr;
+}
+
 /**
  * WASI Definitions
  */
@@ -31,6 +49,12 @@ uint16_t fd_write(uint32_t fd, Ciovec_t *iovs_ptr, uint32_t iovs_len, uint32_t *
     __attribute__((
                 __import_module__("wasi_snapshot_preview1"),
                 __import_name__("fd_write"),
+                   ));
+
+uint16_t fd_read(uint32_t fd, Ciovec_t *iovs_ptr, uint32_t iovs_len, uint32_t *read)
+    __attribute__((
+                __import_module__("wasi_snapshot_preview1"),
+                __import_name__("fd_read"),
                    ));
 
 _Noreturn void proc_exit(uint32_t rval)
@@ -127,9 +151,30 @@ char* intToStr(int i) {
     return buf;
 }
 
+int strToInt(char *str)
+{
+  int result;
+  int puiss;
+
+  result = 0;
+  puiss = 1;
+  while (('-' == (*str)) || ((*str) == '+'))
+  {
+      if (*str == '-')
+        puiss = puiss * -1;
+      str++;
+  }
+  while ((*str >= '0') && (*str <= '9'))
+  {
+      result = (result * 10) + ((*str) - '0');
+      str++;
+  }
+  return (result * puiss);
+}
+
 int putStr(const char* str) {
     size_t n = strlen(str);
-    Ciovec_t vec = {.buf = (uint8_t*)str, .buf_len=n};
+    Ciovec_t vec = {.buf = (uint8_t*)str, .buf_len=(uint32_t)n};
     return fd_write(1, &vec, 1, 0);
 }
 
@@ -137,5 +182,74 @@ int putStrLn(const char* str) {
     return putStr(str) || putStr("\n");
 }
 
+// Tries to parse str as a positive integer.
+// Returns -1 if parsing fails.
+int parsePositiveInt(char *str) {
+    int result = 0;
+    char* p = str;
+    size_t len = strlen(str);
+    while ((*str >= '0') && (*str <= '9'))
+    {
+        result = (result * 10) + ((*str) - '0');
+        str++;
+    }
+    if (str - p != len) return -1;
+    return result;
+}
+
+
+char* concat(const char* s1, const char* s2) {
+    const size_t len1 = strlen(s1);
+    const size_t len2 = strlen(s2);
+    int i,j=0,count=0;
+    char* result = (char*)malloc(len1 + len2 + 1);
+
+    for(i=0; i < len1; i++) {
+        result[i] = s1[i];
+        count++;
+    }
+
+    for(i=count; j < len2; i++) {
+        result[i] = s2[j];
+        j++;
+    }
+
+    result[len1 + len2] = '\0';
+    return result;
+}
+
+int getchar() {
+    int ch;
+    Ciovec_t v = {.buf = (uint8_t*) &ch, .buf_len=1};
+    if (fd_read(0, &v, 1, 0) != 0) return -1;
+    return ch;
+}
+
+char* readline() {
+    int i = 0, bytesAlloced = 64;
+    char* buffer = (char*) malloc(bytesAlloced);
+    int bufferSize = bytesAlloced;
+
+    for (;;++i) {
+        int ch;
+
+        if (i == bufferSize - 1) {
+            bytesAlloced += bytesAlloced;
+            buffer = (char*) realloc(buffer, bytesAlloced);
+            bufferSize = bytesAlloced;
+        }
+
+        ch = getchar();
+        if (ch == -1) {
+            free(buffer);
+            return 0;
+        }
+        if (ch == '\n') break;
+        buffer[i] = ch;
+    }
+
+    buffer[i] = '\0';
+    return buffer;
+}
 
 #endif // MINIC_RUNTIME_H_

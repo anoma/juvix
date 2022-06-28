@@ -451,3 +451,20 @@ getTypeName = \case
   (TypeIden (TypeIdenInductive tyName)) -> Just tyName
   (TypeApp (TypeApplication l _ _)) -> getTypeName l
   _ -> Nothing
+
+reachableModules :: Module -> [Module]
+reachableModules = fst . run . runOutputList . evalState (mempty :: HashSet Name) . go
+  where
+    go :: forall r. Members '[State (HashSet Name), Output Module] r => Module -> Sem r ()
+    go m = do
+      s <- get
+      unless
+        (HashSet.member (m ^. moduleName) s)
+        (output m >> goBody (m ^. moduleBody))
+      where
+        goBody :: ModuleBody -> Sem r ()
+        goBody = mapM_ goStatement . (^. moduleStatements)
+        goStatement :: Statement -> Sem r ()
+        goStatement = \case
+          StatementInclude (Include inc) -> go inc
+          _ -> return ()

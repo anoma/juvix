@@ -122,6 +122,12 @@ data CDeclType = CDeclType
   }
   deriving stock (Show, Eq)
 
+data CFunType = CFunType
+  { _cFunArgTypes :: [CDeclType],
+    _cFunReturnType :: CDeclType
+  }
+  deriving stock (Show, Eq)
+
 uIntPtrType :: DeclType
 uIntPtrType = DeclTypeDefType "uintptr_t"
 
@@ -160,6 +166,15 @@ castToType cDecl e =
           _castExpression = e
         }
     )
+
+cDeclToNamedDecl :: Text -> CDeclType -> Declaration
+cDeclToNamedDecl name CDeclType {..} =
+  Declaration
+    { _declType = _typeDeclType,
+      _declIsPtr = _typeIsPtr,
+      _declName = Just name,
+      _declInitializer = Nothing
+    }
 
 cDeclToDecl :: CDeclType -> Declaration
 cDeclToDecl CDeclType {..} =
@@ -267,6 +282,15 @@ typeDefType typName declName =
       _declInitializer = Nothing
     }
 
+namedDeclType :: Text -> DeclType -> Declaration
+namedDeclType name typ =
+  Declaration
+    { _declType = typ,
+      _declIsPtr = False,
+      _declName = Just name,
+      _declInitializer = Nothing
+    }
+
 equals :: Expression -> Expression -> Expression
 equals e1 e2 =
   ExpressionBinary
@@ -319,3 +343,4 @@ makeLenses ''Declaration
 makeLenses ''CDeclType
 makeLenses ''FunctionSig
 makeLenses ''Function
+makeLenses ''CFunType

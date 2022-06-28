@@ -134,9 +134,15 @@ data TypeApplication = TypeApplication
     _typeAppRight :: Type,
     _typeAppImplicit :: IsImplicit
   }
-  deriving stock (Generic, Eq)
 
-instance Hashable TypeApplication
+-- TODO: Eq and Hashable instances ignore the _typAppImplicit field
+--  to workaround a crash in Micro->Mono translation when looking up
+-- a concrete type.
+instance Eq TypeApplication where
+  (TypeApplication l r _) == (TypeApplication l' r' _) = (l == l') && (r == r')
+
+instance Hashable TypeApplication where
+  hashWithSalt salt TypeApplication {..} = hashWithSalt salt (_typeAppLeft, _typeAppRight)
 
 data TypeAbstraction = TypeAbstraction
   { _typeAbsVar :: VarName,

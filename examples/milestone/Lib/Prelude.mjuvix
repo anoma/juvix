@@ -1,0 +1,37 @@
+module Prelude;
+
+import Data.Bool;
+import Data.Int;
+import Data.Nat;
+import Data.String;
+import Data.List;
+import Data.Maybe;
+import Data.Pair;
+import System.IO;
+
+open Data.Bool public;
+open Data.Int public;
+open Data.Nat public;
+open Data.String public;
+open Data.List public;
+open Data.Maybe public;
+open Data.Pair public;
+open System.IO public;
+
+--------------------------------------------------------------------------------
+-- Functions
+--------------------------------------------------------------------------------
+
+axiom int-to-str : Int → String;
+
+compile int-to-str {
+  c ↦ "intToStr";
+};
+
+const : (A : Type) → (B : Type) → A → B → A;
+const _ _ a _ ≔ a;
+
+id : {A : Type} → A → A;
+id a ≔ a;
+
+end;

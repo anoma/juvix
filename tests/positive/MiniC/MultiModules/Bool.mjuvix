@@ -1,9 +1,0 @@
-module Bool;
-
-inductive Bool {
-  true : Bool;
-  false : Bool;
-};
-
-
-end;

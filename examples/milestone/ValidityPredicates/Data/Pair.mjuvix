@@ -1,9 +1,0 @@
-module Data.Pair;
-
-infixr 4 ,;
-infixr 2 ×;
-inductive × (A : Type) (B : Type) {
-  , : A → B → A × B;
-};
-
-end;

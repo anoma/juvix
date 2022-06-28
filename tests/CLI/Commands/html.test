@@ -2,24 +2,15 @@ $ minijuvix html
 > /Provide.*/
 >= 1
 
-$ cd examples/milestone/ValidityPredicates/ && minijuvix html Prelude.mjuvix && cat html/Prelude.html
+$ cd examples/milestone/Lib/ && minijuvix html Prelude.mjuvix && cat html/Prelude.html
 > /<!DOCTYPE HTML>.*/
 >= 0
 
-$ rm -rf examples/html && minijuvix html examples/milestone/ValidityPredicates/Prelude.mjuvix --output-dir=./../../html && [ -d examples/html/assets ] && [ -f examples/html/Prelude.html ]
+$ rm -rf examples/html && minijuvix html examples/milestone/Lib/Prelude.mjuvix --output-dir=./../../html && [ -d examples/html/assets ] && [ -f examples/html/Prelude.html ]
 > 
 Writing Prelude.html
 >= 0
 
-$ rm -rf examples/html && minijuvix html examples/milestone/ValidityPredicates/Prelude.mjuvix --recursive --output-dir=./../../html && (ls examples/html | wc -l) && cd examples/html && [ -f Data.String.html ] && [ -f Data.Maybe.html ] && [ -f Data.Int.html ] && [ -f System.IO.html ] && [ -f Data.List.html ] && [ -f Data.Pair.html ] && [ -f Data.Bool.html ] && [ -f Prelude.html ] && [ -f assets/highlight.js   ] && [ -f assets/source-ayu-light.css ] && [ -f assets/source-nord.css ]
-> 
-Writing Data.String.html
-Writing Data.Maybe.html
-Writing Data.Int.html
-Writing System.IO.html
-Writing Data.List.html
-Writing Data.Pair.html
-Writing Data.Bool.html
-Writing Prelude.html
-9
+$ rm -rf examples/html && minijuvix html examples/milestone/Lib/Prelude.mjuvix --recursive --output-dir=./../../html && (ls examples/html | wc -l) && cd examples/html && [ -f Data.String.html ] && [ -f Data.Maybe.html ] && [ -f Data.Int.html ] && [ -f System.IO.html ] && [ -f Data.List.html ] && [ -f Data.Pair.html ] && [ -f Data.Bool.html ] && [ -f Prelude.html ] && [ -f assets/highlight.js   ] && [ -f assets/source-ayu-light.css ] && [ -f assets/source-nord.css ]
+> /Writing.*/
 >= 0

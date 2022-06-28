@@ -12,10 +12,15 @@ collectTypeCalls res = run (execState emptyCalls (runReader typesTable (runReade
     goTopLevel :: Members '[State TypeCalls, Reader TypeCallsMap, Reader InfoTable] r => Sem r ()
     goTopLevel = mapM_ goConcreteFun entries
       where
-        -- the list of functions defined in the Main module with concrete types.
+        allModules :: [Module]
+        allModules = reachableModules main
+        -- the list of functions defined in any module with concrete types.
         entries :: [FunctionDef]
         entries =
-          [ f | StatementFunction f <- main ^. moduleBody . moduleStatements, hasConcreteType f
+          [ f
+            | m <- allModules,
+              StatementFunction f <- m ^. moduleBody . moduleStatements,
+              hasConcreteType f
           ]
           where
             hasConcreteType :: FunctionDef -> Bool

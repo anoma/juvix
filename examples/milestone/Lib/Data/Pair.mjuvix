@@ -1,0 +1,12 @@
+module Data.Pair;
+
+infixr 4 ,;
+infixr 2 ×;
+inductive × (A : Type) (B : Type) {
+  , : A → B → A × B;
+};
+
+fst : {A : Type} → {B : Type} → A × B → A;
+fst (a , _) ≔ a;
+
+end;

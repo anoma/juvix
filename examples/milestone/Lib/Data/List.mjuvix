@@ -1,0 +1,57 @@
+module Data.List;
+
+import Data.Bool;
+open Data.Bool;
+
+infixr 5 ∷;
+inductive List (A : Type) {
+  nil : List A;
+  ∷ : A → List A → List A;
+};
+
+elem : {A : Type} → (A → A → Bool) → A → List A → Bool;
+elem _ _ nil ≔ false;
+elem eq s (x ∷ xs) ≔ eq s x || elem eq s xs;
+
+foldl : {A : Type} → {B : Type} → (B → A → B) → B → List A → B;
+foldl f z nil ≔ z;
+foldl f z (h ∷ hs) ≔ foldl f (f z h) hs;
+
+map : {A : Type} → {B : Type} → (A → B) → List A → List B;
+map f nil ≔ nil;
+map f (h ∷ hs) ≔ f h ∷ map f hs;
+
+null : {A : Type} → List A → Bool;
+null nil ≔ true;
+null _ ≔ false;
+
+head : {A : Type} → List A → A;
+head (x ∷ _) ≔ x;
+
+tail : {A : Type} → List A → List A;
+tail (_ ∷ xs) ≔ xs;
+
+terminating
+transpose : {A : Type} → List (List A) → List (List A);
+transpose (nil ∷ _) ≔ nil;
+transpose xss ≔ (map head xss) ∷ (transpose (map tail xss));
+
+concatList : {A : Type} → List A → List A → List A;
+concatList nil xss ≔ xss;
+concatList (x ∷ xs) xss ≔ x ∷ (concatList xs xss);
+
+flatten : {A : Type} → List (List A) → List A;
+flatten ≔ foldl concatList nil;
+
+prependToAll : {A : Type} → A → List A → List A;
+prependToAll _ nil ≔ nil;
+prependToAll sep (x ∷ xs) ≔ sep ∷ x ∷ prependToAll sep xs;
+
+intersperse : {A : Type} → A → List A → List A;
+intersperse _ nil ≔ nil;
+intersperse sep (x ∷ xs) ≔ x ∷ prependToAll sep xs;
+
+any : {A : Type} → (A → Bool) → List A → Bool;
+any f xs ≔ foldl (||) false (map f xs);
+
+end;

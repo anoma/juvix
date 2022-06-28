@@ -1,0 +1,18 @@
+module Data.Bool;
+
+open import Data.String;
+
+inductive Bool {
+  true : Bool;
+  false : Bool;
+};
+
+not : Bool → Bool;
+not true ≔ false;
+not false ≔ true;
+
+boolToStr : Bool → String;
+boolToStr true ≔ "true";
+boolToStr false ≔ "false";
+
+end;

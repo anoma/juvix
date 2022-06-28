@@ -9,8 +9,9 @@ data ConstructorInfo = ConstructorInfo
     _constructorInfoInductive :: InductiveName
   }
 
-newtype FunctionInfo = FunctionInfo
-  { _functionInfoType :: Type
+data FunctionInfo = FunctionInfo
+  { _functionInfoType :: Type,
+    _functionInfoPatterns :: Int
   }
 
 newtype AxiomInfo = AxiomInfo
@@ -38,7 +39,7 @@ buildTable m = InfoTable {..}
     _infoFunctions :: HashMap Name FunctionInfo
     _infoFunctions =
       HashMap.fromList
-        [ (f ^. funDefName, FunctionInfo (f ^. funDefType))
+        [ (f ^. funDefName, FunctionInfo (f ^. funDefType) (length (head (f ^. funDefClauses) ^. clausePatterns)))
           | StatementFunction f <- ss
         ]
     _infoAxioms :: HashMap Name AxiomInfo

@@ -1,0 +1,96 @@
+module Input;
+
+open import Data.IO;
+open import Data.String;
+
+axiom Int : Type;
+
+compile Int {
+  c ↦ "int";
+};
+
+axiom to-str : Int → String;
+
+compile to-str {
+  c ↦ "intToStr";
+};
+
+foreign c {
+  int cplus(int l, int r) {
+    return l + r;
+  \}
+};
+
+axiom plus : Int → Int → Int;
+
+compile plus {
+  c ↦ "cplus";
+};
+
+inductive Nat {
+  zero : Nat;
+  suc : Nat → Nat;
+};
+
+nplus : Nat → Nat → Nat;
+nplus zero n ≔ n;
+nplus (suc m) n ≔ suc (nplus m n);
+
+nplus-to-int : Nat → Int;
+nplus-to-int zero ≔ 0;
+nplus-to-int (suc n) ≔ plus 1 (nplus-to-int n);
+
+nOne : Nat;
+nOne ≔ suc zero;
+
+nplusOne : Nat → Nat → Nat;
+nplusOne n ≔ nplus nOne;
+
+one : Int;
+one ≔ 1;
+
+two : Int;
+two ≔ 2;
+
+three : Int;
+three ≔ 3;
+
+plusXIgnore2 : Int → Int → Int → Int → Int;
+plusXIgnore2 _ _ ≔ plus;
+
+plusXIgnore : Int → Int → Int → Int;
+plusXIgnore _ ≔ plus;
+
+plusXIgnore22 : Int → Int → Int → Int → Int;
+plusXIgnore22 _ ≔ plusXIgnore;
+
+plusX : Int → Int → Int;
+plusX ≔ plus;
+
+plusXThree : Int → Int;
+plusXThree ≔ plusX three;
+
+plusOne : Int → Int;
+plusOne ≔ plus one;
+
+plusOneThenTwo : Int;
+plusOneThenTwo ≔ plusOne two;
+
+plusOneThenX : Int → Int;
+plusOneThenX x ≔ plusOne x;
+
+plusOneTwo : Int;
+plusOneTwo ≔ plus one two;
+
+main : Action;
+main ≔ put-str "plusOne one: " >> put-str-ln (to-str (plusOne one))
+      >> put-str "plusOneThenTwo: " >> put-str-ln (to-str (plusOneThenTwo))
+      >> put-str "plusOneThenX three: " >> put-str-ln (to-str (plusOneThenX three))
+      >> put-str "plusOneTwo: " >> put-str-ln (to-str (plusOneTwo))
+      >> put-str "plusX three three: " >> put-str-ln (to-str (plusX three three))
+      >> put-str "plusXIgnore one three three: " >> put-str-ln (to-str (plusXIgnore one three three))
+      >> put-str "plusXIgnore2 one one three three: " >> put-str-ln (to-str (plusXIgnore2 one one three three))
+      >> put-str "plusXIgnore22 one one three two: " >> put-str-ln (to-str (plusXIgnore22 one one three two))
+
+
+end;

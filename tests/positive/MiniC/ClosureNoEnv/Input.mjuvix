@@ -1,10 +1,7 @@
 module Input;
 
-import IO;
-open IO;
-
-import String;
-open String;
+open import Data.IO;
+open import Data.String;
 
 axiom Int : Type;
 

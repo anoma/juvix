@@ -1,0 +1,191 @@
+module MiniTicTacToe;
+
+import Prelude;
+open Prelude;
+
+--------------------------------------------------------------------------------
+-- Render Utils
+--------------------------------------------------------------------------------
+
+concat : List String → String;
+concat ≔ foldl (++) "";
+
+surround : String → List String → List String;
+surround x xs ≔ concatList (x ∷ intersperse x xs) (x ∷ nil);
+
+intercalate : String → List String → String;
+intercalate sep xs ≔ concat (intersperse sep xs);
+
+unlines : List String → String;
+unlines ≔ intercalate "\n";
+
+--------------------------------------------------------------------------------
+-- Symbol
+--------------------------------------------------------------------------------
+
+inductive Symbol {
+  O : Symbol;
+  X : Symbol;
+};
+
+==Symbol : Symbol → Symbol → Bool;
+==Symbol O O ≔ true;
+==Symbol X X ≔ true;
+==Symbol _ _ ≔ false;
+
+switch : Symbol → Symbol;
+switch O ≔ X;
+switch X ≔ O;
+
+showSymbol : Symbol → String;
+showSymbol O ≔ "O";
+showSymbol X ≔ "X";
+
+--------------------------------------------------------------------------------
+-- Square
+--------------------------------------------------------------------------------
+
+inductive Square {
+  empty : Nat → Square;
+  occupied : Symbol → Square;
+};
+
+==Square : Square → Square → Bool;
+==Square (empty m) (empty n) ≔ ==Nat m n;
+==Square (occupied s) (occupied t) ≔ ==Symbol s t;
+==Square _ _ ≔ false;
+
+showSquare : Square → String;
+showSquare (empty n) ≔ " " ++ natToStr n ++ " ";
+showSquare (occupied s) ≔ " " ++ showSymbol s ++ " ";
+
+--------------------------------------------------------------------------------
+-- Board
+--------------------------------------------------------------------------------
+
+inductive Board {
+  board : List (List Square) → Board;
+};
+
+possibleMoves : List Square → List Nat;
+possibleMoves nil ≔ nil;
+possibleMoves ((empty n) ∷ xs) ≔ n ∷ possibleMoves xs;
+possibleMoves (_ ∷ xs) ≔ possibleMoves xs;
+
+full : List Square → Bool;
+full (a ∷ b ∷ c ∷ nil) ≔ (==Square a b) && (==Square b c);
+
+diagonals : List (List Square) → List (List Square);
+diagonals ((a1 ∷ _ ∷ b1 ∷ nil) ∷ (_ ∷ c ∷ _ ∷ nil) ∷ (b2 ∷ _ ∷ a2 ∷ nil) ∷ nil) ≔ (a1 ∷ c ∷ a2 ∷ nil) ∷ (b1 ∷ c ∷ b2 ∷ nil) ∷ nil;
+
+columns : List (List Square) → List (List Square);
+columns ≔ transpose;
+
+rows : List (List Square) → List (List Square);
+rows ≔ id;
+
+showRow : List Square → String;
+showRow xs ≔ concat (surround "|" (map showSquare xs));
+
+showBoard : Board → String;
+showBoard (board squares) ≔ unlines (surround "+---+---+---+" (map showRow squares));
+
+--------------------------------------------------------------------------------
+-- Error
+--------------------------------------------------------------------------------
+
+inductive Error {
+  noError : Error;
+  continue : String → Error;
+  terminate : String → Error;
+};
+
+--------------------------------------------------------------------------------
+-- GameState
+--------------------------------------------------------------------------------
+
+inductive GameState {
+  state : Board → Symbol → Error → GameState;
+};
+
+showGameState : GameState → String;
+showGameState (state b _ _) ≔ showBoard b;
+
+player : GameState → Symbol;
+player (state _ p _) ≔ p;
+
+beginState : GameState;
+beginState ≔ state
+     (board (map (map empty) ((one ∷ two ∷ three ∷ nil) ∷ (four ∷ five ∷ six ∷ nil) ∷ (seven ∷ eight ∷ nine ∷ nil) ∷ nil)))
+     X
+     noError;
+
+won : GameState → Bool;
+won (state (board squares) _ _) ≔ any full (concatList (diagonals squares) (concatList (rows squares) (columns squares)));
+
+draw : GameState → Bool;
+draw (state (board squares) _ _) ≔ null (possibleMoves (flatten squares));
+
+--------------------------------------------------------------------------------
+-- Move
+--------------------------------------------------------------------------------
+
+replace : Symbol → Nat → Square → Square;
+replace player k (empty n) ≔ if (==Nat n k) (occupied player) (empty n);
+replace _ _ s ≔ s;
+
+checkState : GameState → GameState;
+checkState (state b p e) ≔
+  if (won (state b p e))
+     (state b p (terminate ("Player " ++ (showSymbol (switch p)) ++ " wins!")))
+     (if (draw (state b p e))
+         (state b p (terminate "It's a draw!"))
+         (state b p e));
+
+playMove : Maybe Nat → GameState → GameState;
+playMove nothing (state b p _) ≔
+    state b p (continue "\nInvalid number, try again\n");
+playMove (just k) (state (board s) player e) ≔
+    if (not (elem ==Nat k (possibleMoves (flatten s))))
+        (state (board s) player (continue "\nThe square is already occupied, try again\n"))
+        (checkState (state (board (map (map (replace player k)) s))
+                           (switch player)
+                           noError));
+
+--------------------------------------------------------------------------------
+-- IO
+--------------------------------------------------------------------------------
+
+axiom parsePositiveInt : String → Int;
+
+compile parsePositiveInt {
+  c ↦ "parsePositiveInt";
+};
+
+positiveInt : Int → Maybe Int;
+positiveInt i ≔ if (i < 0) nothing (just i);
+
+validMove : Nat → Maybe Nat;
+validMove n ≔ if ((n <=Nat nine) && (n >=Nat one)) (just n) nothing;
+
+getMove : Maybe Nat;
+getMove ≔ bindMaybe validMove (fmapMaybe from-backendNat (positiveInt (parsePositiveInt (readline))));
+
+do : Action × GameState -> GameState;
+do (_ , s) ≔ playMove getMove s;
+
+prompt : GameState → String;
+prompt x ≔ "\n" ++ (showGameState x) ++ "\nPlayer " ++ showSymbol (player x) ++ ": ";
+
+terminating
+run : (Action × GameState → GameState) → GameState → Action;
+run _ (state b p (terminate msg)) ≔ putStrLn ("\n" ++ (showGameState (state b p noError)) ++ "\n" ++ msg);
+run f (state b p (continue msg)) ≔ run f (f (putStr (msg ++ prompt (state b p noError)) , state b p noError));
+run f x ≔ run f (f (putStr (prompt x) , x));
+
+welcome : String;
+welcome ≔ "MiniTicTacToe\n-------------\n\nType a number then ENTER to make a move";
+
+main : Action;
+main ≔ putStrLn welcome >> run do beginState;
+end;

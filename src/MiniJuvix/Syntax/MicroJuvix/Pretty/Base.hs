@@ -381,3 +381,11 @@ ppCodeAtom :: (HasAtomicity c, PrettyCode c, Members '[Reader Options] r) => c -
 ppCodeAtom c = do
   p' <- ppCode c
   return $ if isAtomic c then p' else parens p'
+
+instance PrettyCode a => PrettyCode (NonEmpty a) where
+  ppCode x = do
+    cs <- mapM ppCode (toList x)
+    return $ encloseSep "(" ")" ", " cs
+
+instance PrettyCode ConcreteType where
+  ppCode ConcreteType {..} = ppCode _unconcreteType

@@ -1,12 +1,12 @@
 module Input;
 
-open import String;
+open import Data.String;
 
-open import Bool;
+open import Data.Bool;
 
-open import Pair;
+open import Data.Pair;
 
-open import IO;
+open import Data.IO;
 
 -- Not needed but useful for testing
 open import Prelude;

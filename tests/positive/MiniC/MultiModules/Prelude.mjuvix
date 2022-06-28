@@ -1,11 +1,1 @@
-module Prelude;
-
-open import String public;
-
-open import Bool public;
-
-open import Pair public;
-
-open import IO public;
-
-end;
+../Lib/Prelude.mjuvix

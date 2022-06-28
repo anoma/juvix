@@ -1,0 +1,34 @@
+module Data.Nat;
+
+open import Data.String;
+open import Data.Int;
+
+inductive Nat {
+  zero : Nat;
+  suc : Nat → Nat;
+};
+
+foreign c {
+  void* natInd(int n, void* zero, minijuvix_function_t* suc) {
+    if (n <= 0) return zero;
+    return ((void* (*) (minijuvix_function_t*, void*))suc->fun)(suc, natInd(n - 1, zero, suc));
+  \}
+};
+
+axiom natInd : Int → Nat → (Nat → Nat) → Nat;
+
+compile natInd {
+  c ↦ "natInd";
+};
+
+natToInt : Nat → Int;
+natToInt zero ≔ 0;
+natToInt (suc n) ≔ 1 + (natToInt n);
+
+natToStr : Nat → String;
+natToStr n ≔ intToStr (natToInt n);
+
+intToNat : Int → Nat;
+intToNat x ≔ natInd x zero suc;
+
+end;
