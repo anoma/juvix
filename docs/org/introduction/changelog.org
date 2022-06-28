@@ -6,6 +6,117 @@
 </a>
 #+end_html
 
+** [[https://github.com/heliaxdev/minijuvix/tree/v0.2.0][v0.2.0]]
+(2022-06-28)
+
+[[https://github.com/heliaxdev/minijuvix/compare/v0.1.4...v0.2.0][Full
+Changelog]]
+
+*Implemented enhancements:*
+
+- Support built in types
+  [[https://github.com/heliaxdev/minijuvix/pull/192][#192]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Support partial application and closure passing in C backend
+  [[https://github.com/heliaxdev/minijuvix/pull/190][#190]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Allow =open import= statements
+  [[https://github.com/heliaxdev/minijuvix/pull/175][#175]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Remove TypeAny and adapt typechecking for literals
+  [[https://github.com/heliaxdev/minijuvix/pull/173][#173]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Allow holes to be refined into function types
+  [[https://github.com/heliaxdev/minijuvix/pull/165][#165]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Support implicit arguments
+  [[https://github.com/heliaxdev/minijuvix/pull/144][#144]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Add support for holes in type signatures
+  [[https://github.com/heliaxdev/minijuvix/pull/141][#141]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Support function closures with no environment in minic
+  [[https://github.com/heliaxdev/minijuvix/pull/137][#137]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Add holes for expressions in function clauses and inference support
+  [[https://github.com/heliaxdev/minijuvix/pull/136][#136]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Add "-Oz" optimization flag to clang args
+  [[https://github.com/heliaxdev/minijuvix/pull/133][#133]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Add version and help option and root command to the CLI
+  [[https://github.com/heliaxdev/minijuvix/pull/131][#131]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+
+*Fixed bugs:*
+
+- Fix: Ignore implicit patterns and arguments in termination checking
+  [[https://github.com/heliaxdev/minijuvix/pull/172][#172]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Fix: pretty printing for terminating keyword
+  [[https://github.com/heliaxdev/minijuvix/pull/145][#145]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+
+*Merged pull requests:*
+
+- Fix: proper error handling for typechecker errors
+  [[https://github.com/heliaxdev/minijuvix/pull/189][#189]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Add minijuvix version info and date to HTML output
+  [[https://github.com/heliaxdev/minijuvix/pull/186][#186]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Fix: Add check for constructor return types
+  [[https://github.com/heliaxdev/minijuvix/pull/182][#182]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Use Abstract name in Abstract syntax and Micro/MonoJuvix
+  [[https://github.com/heliaxdev/minijuvix/pull/181][#181]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Add an option to specify the path where to put the HTML output
+  [[https://github.com/heliaxdev/minijuvix/pull/179][#179]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Upgrade to ghc-9.2.3
+  [[https://github.com/heliaxdev/minijuvix/pull/178][#178]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Replace dead link in README with a link to the MiniJuvix book
+  [[https://github.com/heliaxdev/minijuvix/pull/177][#177]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Embed HTML assets in the minijuvix binary
+  [[https://github.com/heliaxdev/minijuvix/pull/176][#176]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Fix: identifiers with a keyword prefix cannot be parsed
+  [[https://github.com/heliaxdev/minijuvix/pull/171][#171]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Improve filepath equality
+  [[https://github.com/heliaxdev/minijuvix/pull/170][#170]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Update validity predicate milestone example to 0.2 syntax
+  [[https://github.com/heliaxdev/minijuvix/pull/167][#167]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Fix links in documentation and update to new syntax
+  [[https://github.com/heliaxdev/minijuvix/pull/163][#163]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Update stdlib to work with version 0.2
+  [[https://github.com/heliaxdev/minijuvix/pull/160][#160]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Update README usage example to use the compile command
+  [[https://github.com/heliaxdev/minijuvix/pull/158][#158]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Remove dead code related to the pipeline
+  [[https://github.com/heliaxdev/minijuvix/pull/156][#156]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Add negative test for AppLeftImplicit
+  [[https://github.com/heliaxdev/minijuvix/pull/154][#154]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Add positive test designed for implicit arguments
+  [[https://github.com/heliaxdev/minijuvix/pull/153][#153]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Remove ExpressionTyped from MicroJuvix
+  [[https://github.com/heliaxdev/minijuvix/pull/143][#143]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Revision for package.yaml and minor deletions
+  [[https://github.com/heliaxdev/minijuvix/pull/135][#135]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+
 ** [[https://github.com/heliaxdev/minijuvix/tree/v0.1.4][v0.1.4]]
 (2022-05-30)
 

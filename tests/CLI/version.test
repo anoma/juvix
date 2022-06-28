@@ -1,5 +1,5 @@
 $ minijuvix --version
-> /Minijuvix version 0.1.4-([a-f0-9]{7})
+> /Minijuvix version 0.2.0-([a-f0-9]{7})
 Branch: .*
 Commit: .*
 Date: .*

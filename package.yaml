@@ -1,11 +1,11 @@
 name:            minijuvix
-version:         0.1.4
+version:         0.2.0
 license:         GPL-3.0-only
 license-file:    LICENSE
 copyright:       (c) 2022- Heliax AG.
 maintainer:      The PLT Team at Heliax AG <hello@heliax.dev>
 author:          [ Jonathan Prieto-Cubides , Jan Mas Rovira , Paul Cadman ]
-tested-with:     ghc == 9.2.2
+tested-with:     ghc == 9.2.3
 homepage:        https://github.com/heliaxdev/minijuvix
 bug-reports:     https://github.com/heliaxdev/minijuvix/issues
 description:     The MiniJuvix compiler
