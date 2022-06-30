@@ -14,7 +14,7 @@ program can be downloaded and installed with the following commands. You
 will need to have [[https://haskellstack.org][Stack]] installed.
 
 #+begin_src shell
-git clone https://github.com/heliaxdev/minijuvix.git
+git clone --recursive https://github.com/heliaxdev/minijuvix.git
 cd minijuvix
 stack install
 #+end_src
