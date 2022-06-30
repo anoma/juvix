@@ -27,6 +27,9 @@ data TestDescr = TestDescr
 
 makeLenses ''TestDescr
 
+data StdlibMode = StdlibInclude | StdlibExclude
+  deriving stock (Show, Eq)
+
 mkTest :: TestDescr -> TestTree
 mkTest TestDescr {..} = case _testAssertion of
   Single assertion -> testCase _testName $ withCurrentDirectory _testRoot assertion

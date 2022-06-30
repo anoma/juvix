@@ -24,7 +24,7 @@ testDescr ExampleTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = mainRoot,
-          _testAssertion = Steps $ clangAssertion _mainFile expectedFile _stdinText
+          _testAssertion = Steps $ clangAssertion StdlibExclude _mainFile expectedFile _stdinText
         }
 
 allTests :: TestTree

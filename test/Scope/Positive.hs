@@ -4,6 +4,7 @@ import Base
 import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Internal.NameIdGen
 import MiniJuvix.Pipeline
+import MiniJuvix.Pipeline.Setup
 import MiniJuvix.Prelude.Pretty
 import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
 import MiniJuvix.Syntax.Concrete.Scoped.Pretty qualified as M
@@ -13,6 +14,7 @@ import MiniJuvix.Syntax.Concrete.Scoped.Utils
 data PosTest = PosTest
   { _name :: String,
     _relDir :: FilePath,
+    _stdlibMode :: StdlibMode,
     _file :: FilePath
   }
 
@@ -33,7 +35,20 @@ testDescr PosTest {..} =
           _testAssertion = Steps $ \step -> do
             cwd <- getCurrentDirectory
             entryFile <- canonicalizePath _file
-            let entryPoint = EntryPoint cwd False (pure entryFile)
+            let noStdlib = _stdlibMode == StdlibExclude
+                entryPoint =
+                  EntryPoint
+                    { _entryPointRoot = cwd,
+                      _entryPointNoTermination = False,
+                      _entryPointNoStdlib = noStdlib,
+                      _entryPointModulePaths = pure entryFile
+                    }
+                stdlibMap :: HashMap FilePath Text
+                stdlibMap = HashMap.mapKeys (cwd </>) (HashMap.fromList stdlibDir)
+                unionStdlib :: HashMap FilePath Text -> HashMap FilePath Text
+                unionStdlib fs
+                  | noStdlib = fs
+                  | otherwise = HashMap.union fs stdlibMap
 
             step "Parsing"
             p :: Parser.ParserResult <- runIO (upToParsing entryPoint)
@@ -41,28 +56,35 @@ testDescr PosTest {..} =
             let p2 = head (p ^. Parser.resultModules)
 
             step "Scoping"
-            s :: Scoper.ScoperResult <- runIO (pipelineScoper p)
+            s :: Scoper.ScoperResult <-
+              runIO
+                ( do
+                    void (entrySetup entryPoint)
+                    pipelineScoper p
+                )
 
             let s2 = head (s ^. Scoper.resultModules)
 
                 fs :: HashMap FilePath Text
                 fs =
-                  HashMap.fromList
-                    [ (getModuleFileAbsPath cwd m, renderCode m)
-                      | m <- toList (getAllModules s2)
-                    ]
+                  unionStdlib
+                    ( HashMap.fromList
+                        [ (getModuleFileAbsPath cwd m, renderCode m)
+                          | m <- toList (getAllModules s2)
+                        ]
+                    )
 
             let scopedPretty = renderCode s2
                 parsedPretty = renderCode p2
 
             step "Parsing pretty scoped"
-            let fs2 = HashMap.singleton entryFile scopedPretty
+            let fs2 = unionStdlib (HashMap.singleton entryFile scopedPretty)
             p' :: Parser.ParserResult <-
               (runM . runErrorIO @MiniJuvixError . runNameIdGen . runFilesPure fs2)
                 (upToParsing entryPoint)
 
             step "Parsing pretty parsed"
-            let fs3 = HashMap.singleton entryFile parsedPretty
+            let fs3 = unionStdlib (HashMap.singleton entryFile parsedPretty)
             parsedPretty' :: Parser.ParserResult <-
               (runM . runErrorIO @MiniJuvixError . runNameIdGen . runFilesPure fs3)
                 (upToParsing entryPoint)
@@ -96,69 +118,91 @@ tests =
   [ PosTest
       "Inductive"
       "."
+      StdlibInclude
       "Inductive.mjuvix",
     PosTest
       "Imports and qualified names"
       "Imports"
+      StdlibInclude
       "A.mjuvix",
     PosTest
       "Data.Bool from the stdlib"
       "StdlibList"
+      StdlibExclude
       "Data/Bool.mjuvix",
     PosTest
       "Data.Nat from the stdlib"
       "StdlibList"
+      StdlibExclude
       "Data/Nat.mjuvix",
     PosTest
       "Data.Ord from the stdlib"
       "StdlibList"
+      StdlibExclude
       "Data/Ord.mjuvix",
     PosTest
       "Data.Product from the stdlib"
       "StdlibList"
+      StdlibExclude
       "Data/Product.mjuvix",
     PosTest
       "Data.List and friends from the stdlib"
       "StdlibList"
+      StdlibExclude
       "Data/List.mjuvix",
     PosTest
       "Operators (+)"
       "."
+      StdlibExclude
       "Operators.mjuvix",
     PosTest
       "Literals"
       "."
+      StdlibExclude
       "Literals.mjuvix",
     PosTest
       "Hello World backends"
       "."
+      StdlibExclude
       "HelloWorld.mjuvix",
     PosTest
       "Axiom with backends"
       "."
+      StdlibExclude
       "Axiom.mjuvix",
     PosTest
       "Foreign block parsing"
       "."
+      StdlibExclude
       "Foreign.mjuvix",
     PosTest
       "Multiple modules non-ambiguous symbol - same file"
       "QualifiedSymbol"
+      StdlibExclude
       "M.mjuvix",
     PosTest
       "Multiple modules non-ambiguous symbol"
       "QualifiedSymbol2"
+      StdlibExclude
       "N.mjuvix",
     PosTest
       "Multiple modules constructor non-ambiguous symbol"
       "QualifiedConstructor"
+      StdlibExclude
       "M.mjuvix",
     PosTest
       "Parsing"
       "."
+      StdlibExclude
       "Parsing.mjuvix",
     PosTest
       "open overrides open public"
       "."
-      "ShadowPublicOpen.mjuvix"
+      StdlibExclude
+      "ShadowPublicOpen.mjuvix",
+    PosTest
+      "Import embedded standard library"
+      "StdlibImport"
+      StdlibInclude
+      "StdlibImport.mjuvix"
   ]

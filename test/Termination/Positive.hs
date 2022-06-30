@@ -38,7 +38,7 @@ testDescrFlag N.NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = EntryPoint "." True (pure _file)
+            let entryPoint = EntryPoint "." True True (pure _file)
             (void . runIO) (upToMicroJuvix entryPoint)
         }
 

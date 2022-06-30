@@ -7,6 +7,7 @@ where
 import MiniJuvix.Builtins
 import MiniJuvix.Internal.NameIdGen
 import MiniJuvix.Pipeline.EntryPoint
+import MiniJuvix.Pipeline.Setup qualified as Setup
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Abstract.AbstractResult qualified as Abstract
 import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
@@ -36,11 +37,17 @@ runIO = runIOEither >=> mayThrow
 
 --------------------------------------------------------------------------------
 
+upToSetup ::
+  Member Files r =>
+  EntryPoint ->
+  Sem r EntryPoint
+upToSetup = Setup.entrySetup
+
 upToParsing ::
   Members '[Files, Error MiniJuvixError] r =>
   EntryPoint ->
   Sem r Parser.ParserResult
-upToParsing = pipelineParser
+upToParsing = upToSetup >=> pipelineParser
 
 upToScoping ::
   Members '[Files, NameIdGen, Error MiniJuvixError] r =>

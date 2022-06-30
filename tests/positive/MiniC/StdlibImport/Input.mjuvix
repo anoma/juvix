@@ -1,0 +1,86 @@
+module Input;
+
+
+-- import from stdlib
+open import Data.Nat;
+
+
+--------------------------------------------------------------------------------
+-- Strings
+--------------------------------------------------------------------------------
+
+axiom String : Type;
+
+compile String {
+  c ↦ "char*";
+};
+
+
+--------------------------------------------------------------------------------
+-- Integers
+--------------------------------------------------------------------------------
+
+axiom Int : Type;
+
+compile Int {
+  c ↦ "int";
+};
+
+foreign c {
+  int plus(int l, int r) {
+    return l + r;
+  \}
+};
+
+infixl 6 +int;
+axiom +int : Int -> Int -> Int;
+
+compile +int {
+  c ↦ "plus";
+};
+
+axiom intToStr : Int → String;
+
+compile intToStr {
+  c ↦ "intToStr";
+};
+
+natToInt : ℕ → Int;
+natToInt zero ≔ 0;
+natToInt (suc n) ≔ 1 +int (natToInt n);
+
+natToStr : ℕ → String;
+natToStr n ≔ intToStr (natToInt n);
+
+
+--------------------------------------------------------------------------------
+-- IO
+--------------------------------------------------------------------------------
+
+axiom Action : Type;
+
+compile Action {
+  c ↦ "int";
+};
+
+axiom putStrLn : String → Action;
+
+compile putStrLn {
+  c ↦ "putStrLn";
+};
+
+
+--------------------------------------------------------------------------------
+-- IO
+--------------------------------------------------------------------------------
+
+two : ℕ;
+two ≔ suc (suc zero);
+
+three : ℕ;
+three ≔ two + (suc zero);
+
+main : Action;
+main ≔ putStrLn (natToStr (two + three));
+
+end;

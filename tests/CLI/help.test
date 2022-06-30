@@ -1,7 +1,7 @@
 $ minijuvix --help
 > /.*
 Usage\: minijuvix \(\(\-v\|\-\-version\) \| \(\-h\|\-\-help\) \| \[\-\-no\-colors\] \[\-\-show\-name\-ids\]
-                   \[\-\-only\-errors\] \[\-\-no\-termination\] COMMAND\)
+                   \[\-\-only\-errors\] \[\-\-no\-termination\] \[\-\-no\-stdlib\] COMMAND\)
 .*
 /
 >= 0

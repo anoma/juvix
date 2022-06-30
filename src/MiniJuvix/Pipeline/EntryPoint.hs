@@ -9,6 +9,7 @@ import MiniJuvix.Prelude
 data EntryPoint = EntryPoint
   { _entryPointRoot :: FilePath,
     _entryPointNoTermination :: Bool,
+    _entryPointNoStdlib :: Bool,
     _entryPointModulePaths :: NonEmpty FilePath
   }
   deriving stock (Eq, Show)
@@ -18,6 +19,7 @@ defaultEntryPoint mainFile =
   EntryPoint
     { _entryPointRoot = ".",
       _entryPointNoTermination = False,
+      _entryPointNoStdlib = False,
       _entryPointModulePaths = pure mainFile
     }
 

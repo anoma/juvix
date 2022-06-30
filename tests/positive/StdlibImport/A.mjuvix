@@ -1,0 +1,7 @@
+module A;
+
+inductive Foo {
+  bar : Foo;
+};
+
+end;

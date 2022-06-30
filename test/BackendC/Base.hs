@@ -28,8 +28,8 @@ clangCompile mkClangArgs cResult stdinText step =
         pack <$> P.readProcess "wasmer" [wasmOutputFile] (unpack stdinText)
     )
 
-clangAssertion :: FilePath -> FilePath -> Text -> ((String -> IO ()) -> Assertion)
-clangAssertion mainFile expectedFile stdinText step = do
+clangAssertion :: StdlibMode -> FilePath -> FilePath -> Text -> ((String -> IO ()) -> Assertion)
+clangAssertion stdlibMode mainFile expectedFile stdinText step = do
   step "Check clang and wasmer are on path"
   assertCmdExists "clang"
   assertCmdExists "wasmer"
@@ -41,7 +41,7 @@ clangAssertion mainFile expectedFile stdinText step = do
       "WASI_SYSROOT_PATH"
 
   step "C Generation"
-  let entryPoint = defaultEntryPoint mainFile
+  let entryPoint = (defaultEntryPoint mainFile) {_entryPointNoStdlib = stdlibMode == StdlibExclude}
   p :: MiniC.MiniCResult <- runIO (upToMiniC entryPoint)
 
   expected <- TIO.readFile expectedFile
