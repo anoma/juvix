@@ -1,12 +1,6 @@
 * MiniJuvix
 
 #+begin_html
-<a href="https://github.com/heliaxdev/minijuvix/blob/main/LICENSE">
-<img alt="LICENSE" src="https://img.shields.io/badge/license-GPL--3.0--only-blue.svg" />
-</a>
-#+end_html
-
-#+begin_html
 <a href="https://github.com/heliaxdev/MiniJuvix/actions/workflows/ci.yml">
 <img alt="CI status" src="https://github.com/heliaxdev/MiniJuvix/actions/workflows/ci.yml/badge.svg" />
 </a>
@@ -18,22 +12,42 @@
 </a>
 #+end_html
 
+#+begin_html
+<a href="https://github.com/heliaxdev/minijuvix/blob/main/LICENSE">
+<img alt="LICENSE" src="https://img.shields.io/badge/license-GPL--3.0--only-blue.svg" />
+</a>
+#+end_html
+
+#+begin_html
+<a href="https://github.com/heliaxdev/minijuvix/actions/workflows/pages/pages-build-deployment"><img
+src="https://github.com/heliaxdev/minijuvix/actions/workflows/pages/pages-build-deployment/badge.svg"
+alt="pages-build-deployment" /></a>
+#+end_html
+
+#+begin_html
+<a href="https://github.com/heliaxdev/MiniJuvix">
+<img align="right" width="300" height="300" alt="MiniJuvix Mascot" src="https://juvix.org/_nuxt/img/seating-mascot.051c86a.svg" />
+</a>
+#+end_html
+
 
 ** Description
 
-MiniJuvix is a programming language for writing efficient formally-verified
-[[https://anoma.network/blog/validity-predicates/][validity predicates]], which can be deployed to various distributed ledgers. This
-is software released for experimentation and research purposes only. No warranty
-is provided or implied.
+MiniJuvix is a research programming language created by [[https://heliax.dev/][Heliax]] as a first step toward creating more robust and reliable alternatives for formally verified smart contracts than existing languages. The MiniJuvix language is constantly evolving, open-source, functional, and statically typed with special support for compiling [[https://anoma.network/blog/validity-predicates/][validity predicates]] to the =C= language, which can be deployed to various distributed ledgers including [[https://anoma.net/][Anoma]].
 
-MiniJuvix addresses many issues that we have experienced while trying to
-write and deploy decentralized applications present in the ecosystem of
-smart-contracts:
+The MiniJuvix programming language allows developers to write programs with a high degree of assurance that they will meet specific standards. This is due to the fact that several static analyses are performed during compilation, including, for example, scope, termination, arity, and type checking. As a result, functional programs, especially validity predicates, can be written with greater confidence that they will be free of runtime errors. [[https://github.com/heliaxdev/minijuvix/tree/main/examples/milestone][Here are some examples of MiniJuvix programs]].
 
-- the difficulty of adequate program verification,
-- the ceiling of compositional complexity,
-- the illegibility of execution costs, and
-- the lock-in to particular backends.
+The language features:
+
+- unicode syntax
+- parametric polymorphism
+- inductive and parametric data types
+- higher-order functions
+- implicit arguments
+- holes in programs
+- axioms for non-computable terms
+
+Additionally, the foreign and compile blocks syntax enable developers to compile a program to different backends including the =C= language. The MiniJuvix module system further permits splitting programs into several modules to build libraries which can be later documented by generating HTML files based on the codebase, see for example, [[https://heliaxdev.github.io/minijuvix-stdlib/][the Minijuvix standard library's website]]. For futher details, please refer to [[https://heliaxdev.github.io/minijuvix/][the MiniJuvix book]] which icludes our [[https://heliaxdev.github.io/minijuvix/introduction/changelog.html][latest updates]].
 
 ** Quick Start
 
