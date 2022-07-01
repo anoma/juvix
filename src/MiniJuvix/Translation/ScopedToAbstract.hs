@@ -4,6 +4,7 @@ module MiniJuvix.Translation.ScopedToAbstract
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Builtins
 import MiniJuvix.Internal.NameIdGen
 import MiniJuvix.Prelude
@@ -16,37 +17,49 @@ import MiniJuvix.Syntax.Concrete.Scoped.Name qualified as S
 import MiniJuvix.Syntax.Concrete.Scoped.Name.NameKind
 import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
 
+newtype ModulesCache = ModulesCache
+  {_cachedModules :: HashMap S.NameId Abstract.TopModule}
+
+makeLenses ''ModulesCache
+
 unsupported :: Text -> a
 unsupported msg = error $ msg <> "Scoped to Abstract: not yet supported"
 
 entryAbstract :: Members '[Error ScoperError, Builtins, NameIdGen] r => Scoper.ScoperResult -> Sem r AbstractResult
 entryAbstract _resultScoper = do
-  (_resultTable, _resultModules) <- runInfoTableBuilder (mapM goTopModule ms)
+  (_resultTable, _resultModules) <- runInfoTableBuilder (evalState (ModulesCache mempty) (mapM goTopModule ms))
   return AbstractResult {..}
   where
     ms = _resultScoper ^. Scoper.resultModules
 
 goTopModule ::
-  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r =>
+  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r =>
   Module 'Scoped 'ModuleTop ->
   Sem r Abstract.TopModule
 goTopModule = goModule
 
 goLocalModule ::
-  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r =>
+  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r =>
   Module 'Scoped 'ModuleLocal ->
   Sem r Abstract.LocalModule
 goLocalModule = goModule
 
 goModule ::
   forall r t.
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r, SingI t) =>
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r, SingI t) =>
   Module 'Scoped t ->
   Sem r Abstract.Module
 goModule (Module n par b) = case par of
-  [] -> Abstract.Module modName <$> goModuleBody b
+  [] -> do
+    am <- Abstract.Module modName <$> goModuleBody b
+    updateCache am
+    return am
   _ -> unsupported "Module parameters"
   where
+    updateCache :: Abstract.Module -> Sem r ()
+    updateCache am = case sing :: SModuleIsTop t of
+      SModuleTop -> modify (over cachedModules (HashMap.insert (n ^. S.nameId) am))
+      SModuleLocal -> return ()
     modName :: Abstract.Name
     modName = case sing :: SModuleIsTop t of
       SModuleTop -> goSymbol (S.topModulePathName n)
@@ -66,7 +79,7 @@ goSymbol s =
 
 goModuleBody ::
   forall r.
-  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r =>
+  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r =>
   [Statement 'Scoped] ->
   Sem r Abstract.ModuleBody
 goModuleBody ss' = do
@@ -103,13 +116,17 @@ goModuleBody ss' = do
 
 goStatement ::
   forall r.
-  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r =>
+  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r =>
   Indexed (Statement 'Scoped) ->
   Sem r (Maybe (Indexed Abstract.Statement))
 goStatement (Indexed idx s) =
   fmap (Indexed idx) <$> case s of
     StatementAxiom d -> Just . Abstract.StatementAxiom <$> goAxiom d
-    StatementImport (Import t) -> Just . Abstract.StatementImport <$> goModule t
+    StatementImport (Import t) -> do
+      cache <- gets (^. cachedModules)
+      let moduleNameId :: S.NameId
+          moduleNameId = t ^. Concrete.modulePath . S.nameId
+      Just . Abstract.StatementImport <$> maybe (goModule t) return (cache ^. at moduleNameId)
     StatementOperator {} -> return Nothing
     StatementOpenModule o -> goOpenModule o
     StatementEval {} -> unsupported "eval statements"
@@ -123,7 +140,7 @@ goStatement (Indexed idx s) =
 
 goOpenModule ::
   forall r.
-  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r =>
+  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r =>
   OpenModule 'Scoped ->
   Sem r (Maybe Abstract.Statement)
 goOpenModule o

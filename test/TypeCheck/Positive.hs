@@ -82,5 +82,9 @@ tests =
     PosTest
       "Implicit arguments"
       "MicroJuvix"
-      "Implicit.mjuvix"
+      "Implicit.mjuvix",
+    PosTest
+      "Import a builtin multiple times"
+      "BuiltinsMultiImport"
+      "Input.mjuvix"
   ]
