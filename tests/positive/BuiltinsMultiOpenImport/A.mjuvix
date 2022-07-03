@@ -1,0 +1,5 @@
+module A;
+
+open import Nat;
+
+end;

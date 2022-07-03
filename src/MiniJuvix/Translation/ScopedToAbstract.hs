@@ -49,21 +49,28 @@ goModule ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r, SingI t) =>
   Module 'Scoped t ->
   Sem r Abstract.Module
-goModule (Module n par b) = case par of
-  [] -> do
-    am <- Abstract.Module modName <$> goModuleBody b
-    updateCache am
-    return am
-  _ -> unsupported "Module parameters"
+goModule m = case sing :: SModuleIsTop t of
+  SModuleTop -> do
+    cache <- gets (^. cachedModules)
+    let moduleNameId :: S.NameId
+        moduleNameId = m ^. Concrete.modulePath . S.nameId
+    let processModule :: Sem r Abstract.Module
+        processModule = do
+          am <- goModule' m
+          modify (over cachedModules (HashMap.insert moduleNameId am))
+          return am
+    maybe processModule return (cache ^. at moduleNameId)
+  SModuleLocal -> goModule' m
   where
-    updateCache :: Abstract.Module -> Sem r ()
-    updateCache am = case sing :: SModuleIsTop t of
-      SModuleTop -> modify (over cachedModules (HashMap.insert (n ^. S.nameId) am))
-      SModuleLocal -> return ()
-    modName :: Abstract.Name
-    modName = case sing :: SModuleIsTop t of
-      SModuleTop -> goSymbol (S.topModulePathName n)
-      SModuleLocal -> goSymbol n
+    goModule' :: Module 'Scoped t -> Sem r Abstract.Module
+    goModule' (Module n par b) = case par of
+      [] -> Abstract.Module modName <$> goModuleBody b
+      _ -> unsupported "Module parameters"
+      where
+        modName :: Abstract.Name
+        modName = case sing :: SModuleIsTop t of
+          SModuleTop -> goSymbol (S.topModulePathName n)
+          SModuleLocal -> goSymbol n
 
 goName :: S.Name -> Abstract.Name
 goName = goSymbol . S.nameUnqualify
@@ -122,11 +129,7 @@ goStatement ::
 goStatement (Indexed idx s) =
   fmap (Indexed idx) <$> case s of
     StatementAxiom d -> Just . Abstract.StatementAxiom <$> goAxiom d
-    StatementImport (Import t) -> do
-      cache <- gets (^. cachedModules)
-      let moduleNameId :: S.NameId
-          moduleNameId = t ^. Concrete.modulePath . S.nameId
-      Just . Abstract.StatementImport <$> maybe (goModule t) return (cache ^. at moduleNameId)
+    StatementImport (Import t) -> Just . Abstract.StatementImport <$> goModule t
     StatementOperator {} -> return Nothing
     StatementOpenModule o -> goOpenModule o
     StatementEval {} -> unsupported "eval statements"

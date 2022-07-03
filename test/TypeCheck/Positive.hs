@@ -86,5 +86,9 @@ tests =
     PosTest
       "Import a builtin multiple times"
       "BuiltinsMultiImport"
+      "Input.mjuvix",
+    PosTest
+      "open import a builtin multiple times"
+      "BuiltinsMultiOpenImport"
       "Input.mjuvix"
   ]

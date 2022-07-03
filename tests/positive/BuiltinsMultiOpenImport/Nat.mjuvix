@@ -1,0 +1,9 @@
+module Nat;
+
+builtin natural
+inductive Nat {
+  zero : Nat;
+  suc : Nat → Nat;
+};
+
+end;
