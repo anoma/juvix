@@ -1,0 +1,30 @@
+module Foo.Data.Bool;
+
+open import Prelude;
+
+import Data.Bool;
+
+  inductive Bool {
+    true : Bool;
+    false : Bool;
+  };
+
+  not : Bool → Bool;
+  not true ≔ false;
+  not false ≔ true;
+
+  infixr 2 ||;
+  || : Bool → Bool → Bool;
+  || false a ≔ a;
+  || true _ ≔ true;
+
+  infixr 2 &&;
+  && : Bool → Bool → Bool;
+  && false _ ≔ false;
+  && true a ≔ a;
+
+  if : {A : Type} → Bool → A → A → A;
+  if true a _ ≔ a;
+  if false _ b ≔ b;
+
+end;

@@ -1,0 +1,5 @@
+module Foo;
+
+open import Foo.Data.Bool;
+
+end;

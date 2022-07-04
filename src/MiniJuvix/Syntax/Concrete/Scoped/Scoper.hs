@@ -316,7 +316,7 @@ checkQualifiedExpr ::
   QualifiedName ->
   Sem r ScopedIden
 checkQualifiedExpr q@(QualifiedName (Path p) sym) = do
-  es <- lookupQualifiedSymbol (toList p, sym)
+  es <- filter entryIsExpression <$> lookupQualifiedSymbol (toList p, sym)
   case es of
     [] -> notInScope
     [e] -> entryToScopedIden q' e
