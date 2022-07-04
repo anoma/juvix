@@ -1,0 +1,10 @@
+module Prod;
+
+open import Prelude;
+open import Foo;
+     import Foo.Data.Bool;
+
+fi : Foo.Data.Bool;
+fi ≔ Foo.Data.Bool.false;
+
+end;

@@ -1125,6 +1125,14 @@ entryOverName f = snd . entryPrism f
 entryName :: SymbolEntry -> S.Name' ()
 entryName = fst . entryPrism id
 
+entryIsExpression :: SymbolEntry -> Bool
+entryIsExpression = \case
+  EntryAxiom {} -> True
+  EntryInductive {} -> True
+  EntryFunction {} -> True
+  EntryConstructor {} -> True
+  EntryModule {} -> False
+
 instance HasLoc SymbolEntry where
   getLoc = (^. S.nameDefined) . entryName
 
