@@ -161,11 +161,6 @@ tests =
       StdlibExclude
       "Literals.mjuvix",
     PosTest
-      "Hello World backends"
-      "."
-      StdlibExclude
-      "HelloWorld.mjuvix",
-    PosTest
       "Axiom with backends"
       "."
       StdlibExclude
