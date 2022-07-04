@@ -33,18 +33,18 @@ newtype TypeCallsMap = TypeCallsMap
 instance Functor TypeCall' where
   fmap f (TypeCall' i args) = TypeCall' i (fmap f args)
 
-newtype ConcreteType = ConcreteType {_unconcreteType :: Type}
+newtype ConcreteType = ConcreteType {_unconcreteType :: Expression}
   deriving stock (Eq, Generic)
 
 type ConcreteTypeCall = TypeCall' ConcreteType
 
-type TypeCall = TypeCall' Type
+type TypeCall = TypeCall' Expression
 
 type SubsE = HashMap VarName Expression
 
 type Rename = HashMap VarName VarName
 
-type Subs = HashMap VarName Type
+type Subs = HashMap VarName Expression
 
 type ConcreteSubs = HashMap VarName ConcreteType
 
@@ -78,175 +78,127 @@ typeCallIdenToCaller = \case
   InductiveIden i -> CallerInductive i
   FunctionIden i -> CallerFunction i
 
-mkConcreteType' :: Type -> ConcreteType
+mkConcreteType' :: Expression -> ConcreteType
 mkConcreteType' =
   fromMaybe (error "the given type is not concrete")
     . mkConcreteType
 
-mkConcreteType :: Type -> Maybe ConcreteType
+-- TODO: consider using traversals to simplify
+mkConcreteType :: Expression -> Maybe ConcreteType
 mkConcreteType = fmap ConcreteType . go
   where
-    go :: Type -> Maybe Type
+    go :: Expression -> Maybe Expression
     go t = case t of
-      TypeApp (TypeApplication l r i) -> do
+      ExpressionApplication (Application l r i) -> do
         l' <- go l
         r' <- go r
-        return (TypeApp (TypeApplication l' r' i))
-      TypeUniverse -> return TypeUniverse
-      TypeFunction (Function l r) -> do
-        l' <- go l
+        return (ExpressionApplication (Application l' r' i))
+      ExpressionUniverse {} -> return t
+      ExpressionFunction (Function l r) -> do
+        l' <- goParam l
         r' <- go r
-        return (TypeFunction (Function l' r'))
-      TypeAbs {} -> Nothing
-      TypeHole {} -> Nothing
-      TypeIden i -> case i of
-        TypeIdenInductive {} -> return t
-        TypeIdenAxiom {} -> return t
-        TypeIdenVariable {} -> Nothing
+        return (ExpressionFunction (Function l' r'))
+      ExpressionHole {} -> Nothing
+      ExpressionLiteral {} -> return t
+      ExpressionIden i -> case i of
+        IdenFunction {} -> return t
+        IdenInductive {} -> return t
+        IdenConstructor {} -> return t
+        IdenAxiom {} -> return t
+        IdenVar {} -> Nothing
+    goParam :: FunctionParameter -> Maybe FunctionParameter
+    goParam (FunctionParameter m i e) = do
+      guard (isNothing m)
+      e' <- go e
+      return (FunctionParameter m i e')
 
--- | unsafe version
-expressionAsType' :: Expression -> Type
-expressionAsType' = fromMaybe impossible . expressionAsType
+class HasExpressions a where
+  leafExpressions :: Traversal' a Expression
 
-findHoles :: Type -> HashSet Hole
-findHoles = go
+instance HasExpressions Expression where
+  leafExpressions f e = case e of
+    ExpressionIden {} -> f e
+    ExpressionApplication a -> ExpressionApplication <$> leafExpressions f a
+    ExpressionFunction fun -> ExpressionFunction <$> leafExpressions f fun
+    ExpressionLiteral {} -> f e
+    ExpressionUniverse {} -> f e
+    ExpressionHole {} -> f e
+
+instance HasExpressions FunctionParameter where
+  leafExpressions f (FunctionParameter m i e) = do
+    e' <- leafExpressions f e
+    pure (FunctionParameter m i e')
+
+instance HasExpressions Function where
+  leafExpressions f (Function l r) = do
+    l' <- leafExpressions f l
+    r' <- leafExpressions f r
+    pure (Function l' r')
+
+instance HasExpressions Application where
+  leafExpressions f (Application l r i) = do
+    l' <- leafExpressions f l
+    r' <- leafExpressions f r
+    pure (Application l' r' i)
+
+-- | Prism
+_ExpressionHole :: Traversal' Expression Hole
+_ExpressionHole f e = case e of
+  ExpressionIden {} -> pure e
+  ExpressionApplication {} -> pure e
+  ExpressionFunction {} -> pure e
+  ExpressionLiteral {} -> pure e
+  ExpressionUniverse {} -> pure e
+  ExpressionHole h -> ExpressionHole <$> f h
+
+holes :: HasExpressions a => Traversal' a Hole
+holes = leafExpressions . _ExpressionHole
+
+hasHoles :: HasExpressions a => a -> Bool
+hasHoles = has holes
+
+subsHoles :: HasExpressions a => HashMap Hole Expression -> a -> a
+subsHoles s = over leafExpressions helper
   where
-    go :: Type -> HashSet Hole
-    go = \case
-      TypeIden {} -> mempty
-      TypeApp (TypeApplication a b _) -> go a <> go b
-      TypeFunction (Function a b) -> go a <> go b
-      TypeAbs a -> go (a ^. typeAbsBody)
-      TypeHole h -> HashSet.singleton h
-      TypeUniverse -> mempty
+    helper :: Expression -> Expression
+    helper e = case e of
+      ExpressionHole h -> fromMaybe e (s ^. at h)
+      _ -> e
 
-hasHoles :: Type -> Bool
-hasHoles = not . HashSet.null . findHoles
+instance HasExpressions FunctionClause where
+  leafExpressions f (FunctionClause n ps b) = do
+    b' <- leafExpressions f b
+    pure (FunctionClause n ps b')
 
-typeAsExpression :: Type -> Expression
-typeAsExpression = go
-  where
-    go :: Type -> Expression
-    go =
-      \case
-        TypeIden i -> ExpressionIden (goTypeIden i)
-        TypeApp a -> ExpressionApplication (goApp a)
-        TypeFunction f -> ExpressionFunction (goFunction f)
-        TypeAbs {} -> error "TODO TypeAbs"
-        TypeHole h -> ExpressionHole h
-        TypeUniverse -> error "TODO TypeUniverse"
+instance HasExpressions FunctionDef where
+  leafExpressions f (FunctionDef name ty clauses bi) = do
+    clauses' <- traverse (leafExpressions f) clauses
+    ty' <- leafExpressions f ty
+    return (FunctionDef name ty' clauses' bi)
 
-    goTypeIden :: TypeIden -> Iden
-    goTypeIden = \case
-      TypeIdenInductive i -> IdenInductive i
-      TypeIdenAxiom a -> IdenAxiom a
-      TypeIdenVariable v -> IdenVar v
-    goApp :: TypeApplication -> Application
-    goApp (TypeApplication l r i) = Application (go l) (go r) i
-    goFunction :: Function -> FunctionExpression
-    goFunction (Function l r) = FunctionExpression (go l) (go r)
+fillHolesFunctionDef :: HashMap Hole Expression -> FunctionDef -> FunctionDef
+fillHolesFunctionDef = subsHoles
 
-fillHolesFunctionDef :: HashMap Hole Type -> FunctionDef -> FunctionDef
-fillHolesFunctionDef m d =
-  FunctionDef
-    { _funDefName = d ^. funDefName,
-      _funDefType = fillHolesType m (d ^. funDefType),
-      _funDefClauses = fmap (fillHolesClause m) (d ^. funDefClauses),
-      _funDefBuiltin = d ^. funDefBuiltin
-    }
+fillHolesClause :: HashMap Hole Expression -> FunctionClause -> FunctionClause
+fillHolesClause = subsHoles
 
-fillHolesClause :: HashMap Hole Type -> FunctionClause -> FunctionClause
-fillHolesClause m = over clauseBody (fillHoles m)
+fillHoles :: HashMap Hole Expression -> Expression -> Expression
+fillHoles = subsHoles
 
-fillHoles :: HashMap Hole Type -> Expression -> Expression
-fillHoles m = goe
-  where
-    goe :: Expression -> Expression
-    goe x = case x of
-      ExpressionIden {} -> x
-      ExpressionApplication a -> ExpressionApplication (goApp a)
-      ExpressionLiteral {} -> x
-      ExpressionHole h -> goHole h
-      ExpressionFunction f -> ExpressionFunction (goFunction f)
-      where
-        goApp :: Application -> Application
-        goApp (Application l r i) = Application (goe l) (goe r) i
-        goFunction :: FunctionExpression -> FunctionExpression
-        goFunction (FunctionExpression l r) = FunctionExpression (goe l) (goe r)
-        goHole :: Hole -> Expression
-        goHole h = case HashMap.lookup h m of
-          Just r -> typeAsExpression r
-          Nothing -> ExpressionHole h
+substituteIndParams :: [(InductiveParameter, Expression)] -> Expression -> Expression
+substituteIndParams = substitutionE . HashMap.fromList . map (first (^. inductiveParamName))
 
-fillHolesType :: HashMap Hole Type -> Type -> Type
-fillHolesType m = go
-  where
-    go :: Type -> Type
-    go = \case
-      TypeIden i -> TypeIden i
-      TypeApp a -> TypeApp (goApp a)
-      TypeAbs a -> TypeAbs (goAbs a)
-      TypeFunction f -> TypeFunction (goFunction f)
-      TypeUniverse -> TypeUniverse
-      TypeHole h -> goHole h
-      where
-        goApp :: TypeApplication -> TypeApplication
-        goApp (TypeApplication l r i) = TypeApplication (go l) (go r) i
-        goAbs :: TypeAbstraction -> TypeAbstraction
-        goAbs (TypeAbstraction v i b) = TypeAbstraction v i (go b)
-        goFunction :: Function -> Function
-        goFunction (Function l r) = Function (go l) (go r)
-        goHole :: Hole -> Type
-        goHole h = case HashMap.lookup h m of
-          Just ty -> ty
-          Nothing -> TypeHole h
+typeAbstraction :: IsImplicit -> Name -> FunctionParameter
+typeAbstraction i var = FunctionParameter (Just var) i (ExpressionUniverse (SmallUniverse (getLoc var)))
 
--- | If the expression is of type TypeUniverse it should return Just.
-expressionAsType :: Expression -> Maybe Type
-expressionAsType = go
-  where
-    go = \case
-      ExpressionIden i -> TypeIden <$> goIden i
-      ExpressionApplication a -> TypeApp <$> goApp a
-      ExpressionLiteral {} -> Nothing
-      ExpressionFunction f -> TypeFunction <$> goFunction f
-      ExpressionHole h -> Just (TypeHole h)
-    goFunction :: FunctionExpression -> Maybe Function
-    goFunction (FunctionExpression l r) = do
-      l' <- go l
-      r' <- go r
-      return (Function l' r')
-    goIden :: Iden -> Maybe TypeIden
-    goIden = \case
-      IdenFunction {} -> Nothing
-      IdenConstructor {} -> Nothing
-      IdenVar v -> Just (TypeIdenVariable v)
-      IdenAxiom a -> Just (TypeIdenAxiom a)
-      IdenInductive i -> Just (TypeIdenInductive i)
-    goApp :: Application -> Maybe TypeApplication
-    goApp (Application l r i) = do
-      l' <- go l
-      r' <- go r
-      return (TypeApplication l' r' i)
-
-substituteIndParams :: [(InductiveParameter, Type)] -> Type -> Type
-substituteIndParams = substitution . HashMap.fromList . map (first (^. inductiveParamName))
-
-substitutionArg :: VarName -> VarName -> FunctionArgType -> FunctionArgType
-substitutionArg from v a = case a of
-  FunctionArgTypeAbstraction {} -> a
-  FunctionArgTypeType ty ->
-    FunctionArgTypeType
-      (substituteType1 (from, TypeIden (TypeIdenVariable v)) ty)
+unnamedParameter :: Expression -> FunctionParameter
+unnamedParameter = FunctionParameter Nothing Explicit
 
 renameToSubsE :: Rename -> SubsE
 renameToSubsE = fmap (ExpressionIden . IdenVar)
 
 renameExpression :: Rename -> Expression -> Expression
 renameExpression r = substitutionE (renameToSubsE r)
-
-substituteType1 :: (VarName, Type) -> Type -> Type
-substituteType1 = substitution . uncurry HashMap.singleton
 
 patternVariables :: Pattern -> [VarName]
 patternVariables = \case
@@ -306,28 +258,19 @@ functionTypeVarsAssoc def l = sig <> mconcatMap clause (def ^. funDefClauses)
               PatternVariable v -> Just v
               _ -> Nothing
 
-substitutionConcrete :: ConcreteSubs -> Type -> ConcreteType
-substitutionConcrete m = mkConcreteType' . substitution ((^. unconcreteType) <$> m)
+substitutionConcrete :: ConcreteSubs -> Expression -> ConcreteType
+substitutionConcrete m = mkConcreteType' . substitutionE ((^. unconcreteType) <$> m)
 
 concreteTypeToExpr :: ConcreteType -> Expression
-concreteTypeToExpr = go . (^. unconcreteType)
-  where
-    go :: Type -> Expression
-    go = \case
-      TypeAbs {} -> impossible
-      TypeIden i -> ExpressionIden (goIden i)
-      TypeApp (TypeApplication l r i) -> ExpressionApplication (Application (go l) (go r) i)
-      TypeFunction (Function l r) -> ExpressionFunction (FunctionExpression (go l) (go r))
-      TypeUniverse {} -> impossible
-      TypeHole {} -> impossible
-    goIden :: TypeIden -> Iden
-    goIden = \case
-      TypeIdenInductive n -> IdenInductive n
-      TypeIdenAxiom n -> IdenAxiom n
-      TypeIdenVariable v -> IdenVar v
+concreteTypeToExpr = (^. unconcreteType)
 
 concreteSubsToSubsE :: ConcreteSubs -> SubsE
 concreteSubsToSubsE = fmap concreteTypeToExpr
+
+substitutionApp :: (Maybe Name, Expression) -> Expression -> Expression
+substitutionApp (mv, ty) = case mv of
+  Nothing -> id
+  Just v -> substitutionE (HashMap.singleton v ty)
 
 substitutionE :: SubsE -> Expression -> Expression
 substitutionE m = go
@@ -336,76 +279,45 @@ substitutionE m = go
     go x = case x of
       ExpressionIden i -> goIden i
       ExpressionApplication a -> ExpressionApplication (goApp a)
+      ExpressionFunction a -> ExpressionFunction (goFun a)
       ExpressionLiteral {} -> x
+      ExpressionUniverse {} -> x
       ExpressionHole {} -> x
-      ExpressionFunction f -> ExpressionFunction (goFunction f)
+
+    goParam :: FunctionParameter -> FunctionParameter
+    goParam (FunctionParameter v i ty) = FunctionParameter v i (go ty)
+    goFun :: Function -> Function
+    goFun (Function l r) = Function (goParam l) (go r)
     goApp :: Application -> Application
     goApp (Application l r i) = Application (go l) (go r) i
-    goFunction :: FunctionExpression -> FunctionExpression
-    goFunction (FunctionExpression l r) = FunctionExpression (go l) (go r)
     goIden :: Iden -> Expression
     goIden i = case i of
       IdenVar v
         | Just e <- HashMap.lookup v m -> e
       _ -> ExpressionIden i
 
-substitution :: Subs -> Type -> Type
-substitution m = go
-  where
-    go :: Type -> Type
-    go = \case
-      TypeIden i -> goIden i
-      TypeApp a -> TypeApp (goApp a)
-      TypeAbs a -> TypeAbs (goAbs a)
-      TypeFunction f -> TypeFunction (goFunction f)
-      TypeUniverse -> TypeUniverse
-      TypeHole h -> TypeHole h
-
-    goApp :: TypeApplication -> TypeApplication
-    goApp (TypeApplication l r i) = TypeApplication (go l) (go r) i
-
-    goAbs :: TypeAbstraction -> TypeAbstraction
-    goAbs (TypeAbstraction v i b) = TypeAbstraction v i (go b)
-
-    goFunction :: Function -> Function
-    goFunction (Function l r) = Function (go l) (go r)
-
-    goIden :: TypeIden -> Type
-    goIden i = case i of
-      TypeIdenInductive {} -> TypeIden i
-      TypeIdenAxiom {} -> TypeIden i
-      TypeIdenVariable v -> case HashMap.lookup v m of
-        Just ty -> ty
-        Nothing -> TypeIden i
+smallUniverse :: Interval -> Expression
+smallUniverse = ExpressionUniverse . SmallUniverse
 
 -- | [a, b] c ==> a -> (b -> c)
-foldFunType :: [FunctionArgType] -> Type -> Type
-foldFunType l r = case l of
-  [] -> r
-  (a : as) ->
-    let r' = foldFunType as r
-     in case a of
-          FunctionArgTypeAbstraction (i, v) -> TypeAbs (TypeAbstraction v i r')
-          FunctionArgTypeType t -> TypeFunction (Function t r')
+foldFunType :: [FunctionParameter] -> Expression -> Expression
+foldFunType l r = go l
+  where
+    go :: [FunctionParameter] -> Expression
+    go = \case
+      [] -> r
+      arg : args -> ExpressionFunction (Function arg (go args))
 
--- | a -> (b -> c)  ==> ([a, b], c)
-unfoldFunType :: Type -> ([FunctionArgType], Type)
+-- -- | a -> (b -> c)  ==> ([a, b], c)
+unfoldFunType :: Expression -> ([FunctionParameter], Expression)
 unfoldFunType t = case t of
-  TypeFunction (Function l r) -> first (FunctionArgTypeType l :) (unfoldFunType r)
-  TypeAbs (TypeAbstraction var i r) -> first (FunctionArgTypeAbstraction (i, var) :) (unfoldFunType r)
+  ExpressionFunction (Function l r) -> first (l :) (unfoldFunType r)
   _ -> ([], t)
 
-unfoldFunConcreteType :: ConcreteType -> ([ConcreteType], ConcreteType)
-unfoldFunConcreteType = bimap (map mkConcreteType') mkConcreteType' . go . (^. unconcreteType)
-  where
-    go :: Type -> ([Type], Type)
-    go t = case t of
-      TypeFunction (Function l r) -> first (l :) (go r)
-      _ -> ([], t)
-
-unfoldTypeAbsType :: Type -> ([VarName], Type)
+unfoldTypeAbsType :: Expression -> ([VarName], Expression)
 unfoldTypeAbsType t = case t of
-  TypeAbs (TypeAbstraction var _ r) -> first (var :) (unfoldTypeAbsType r)
+  ExpressionFunction (Function (FunctionParameter (Just var) _ _) r) ->
+    first (var :) (unfoldTypeAbsType r)
   _ -> ([], t)
 
 foldExplicitApplication :: Expression -> [Expression] -> Expression
@@ -417,41 +329,16 @@ foldApplication f = \case
   ((i, a) : as) -> foldApplication (ExpressionApplication (Application f a i)) as
 
 unfoldApplication' :: Application -> (Expression, NonEmpty (IsImplicit, Expression))
-unfoldApplication' (Application l' r' i') = second (|: (i', r')) (unfoldExpression l')
-  where
-    unfoldExpression :: Expression -> (Expression, [(IsImplicit, Expression)])
-    unfoldExpression e = case e of
-      ExpressionApplication (Application l r i) ->
-        second (`snoc` (i, r)) (unfoldExpression l)
-      _ -> (e, [])
+unfoldApplication' (Application l' r' i') = second (|: (i', r')) (unfoldExpressionApp l')
+
+unfoldExpressionApp :: Expression -> (Expression, [(IsImplicit, Expression)])
+unfoldExpressionApp e = case e of
+  ExpressionApplication (Application l r i) ->
+    second (`snoc` (i, r)) (unfoldExpressionApp l)
+  _ -> (e, [])
 
 unfoldApplication :: Application -> (Expression, NonEmpty Expression)
 unfoldApplication = fmap (fmap snd) . unfoldApplication'
-
-unfoldTypeApplication :: TypeApplication -> (Type, NonEmpty Type)
-unfoldTypeApplication (TypeApplication l' r' _) = second (|: r') (unfoldType l')
-
-unfoldType :: Type -> (Type, [Type])
-unfoldType = \case
-  TypeApp (TypeApplication l r _) -> second (`snoc` r) (unfoldType l)
-  t -> (t, [])
-
-foldTypeApp :: Type -> [Type] -> Type
-foldTypeApp ty = \case
-  [] -> ty
-  (p : ps) -> foldTypeApp (TypeApp (TypeApplication ty p Explicit)) ps
-
-foldTypeAppName :: Name -> [Name] -> Type
-foldTypeAppName tyName indParams =
-  foldTypeApp
-    (TypeIden (TypeIdenInductive tyName))
-    (map (TypeIden . TypeIdenVariable) indParams)
-
-getTypeName :: Type -> Maybe Name
-getTypeName = \case
-  (TypeIden (TypeIdenInductive tyName)) -> Just tyName
-  (TypeApp (TypeApplication l _ _)) -> getTypeName l
-  _ -> Nothing
 
 reachableModules :: Module -> [Module]
 reachableModules = fst . run . runOutputList . evalState (mempty :: HashSet Name) . go

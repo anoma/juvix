@@ -113,6 +113,7 @@ guessArity = \case
   ExpressionLiteral {} -> return (Just arityLiteral)
   ExpressionApplication a -> appHelper a
   ExpressionIden i -> idenHelper i
+  ExpressionUniverse _ -> return (Just arityUniverse)
   where
     idenHelper :: Iden -> Sem r (Maybe Arity)
     idenHelper i = case i of
@@ -138,6 +139,7 @@ guessArity = \case
         arif :: Sem r (Maybe Arity)
         arif = case f of
           ExpressionHole {} -> return Nothing
+          ExpressionUniverse {} -> return (Just arityUniverse)
           ExpressionApplication {} -> impossible
           ExpressionFunction {} -> return (Just ArityUnit)
           ExpressionLiteral {} -> return (Just arityLiteral)
@@ -151,6 +153,9 @@ arityLiteral =
       { _functionArityLeft = ParamImplicit,
         _functionArityRight = ArityUnit
       }
+
+arityUniverse :: Arity
+arityUniverse = ArityUnit
 
 checkLhs ::
   forall r.
@@ -271,44 +276,43 @@ idenArity = \case
   IdenAxiom a -> lookupAxiom a >>= typeArity . (^. axiomInfoType)
   IdenInductive i -> inductiveType i >>= typeArity
 
-typeArity :: forall r. Members '[Reader InfoTable] r => Type -> Sem r Arity
+-- | let x be some expression of type T. The argument of this function is T and it returns
+-- the arity of x.
+typeArity :: forall r. Members '[Reader InfoTable] r => Expression -> Sem r Arity
 typeArity = go
   where
-    go :: Type -> Sem r Arity
+    go :: Expression -> Sem r Arity
     go = \case
-      TypeIden i -> goIden i
-      TypeApp {} -> return ArityUnit
-      TypeFunction f -> ArityFunction <$> goFun f
-      TypeAbs f -> ArityFunction <$> goAbs f
-      TypeHole {} -> return ArityUnknown
-      TypeUniverse {} -> return ArityUnit
+      ExpressionIden i -> goIden i
+      ExpressionApplication {} -> return ArityUnit
+      ExpressionLiteral {} -> return ArityUnknown
+      ExpressionFunction f -> ArityFunction <$> goFun2 f
+      ExpressionHole {} -> return ArityUnknown
+      ExpressionUniverse {} -> return ArityUnit
 
-    goIden :: TypeIden -> Sem r Arity
+    goIden :: Iden -> Sem r Arity
     goIden = \case
-      TypeIdenVariable {} -> return ArityUnknown
-      TypeIdenInductive {} -> return ArityUnit
-      TypeIdenAxiom ax -> do
-        ty <- (^. axiomInfoType) <$> lookupAxiom ax
-        go ty
+      IdenVar {} -> return ArityUnknown
+      IdenInductive {} -> return ArityUnit
+      IdenFunction {} -> return ArityUnknown -- we need normalization to determine the arity
+      IdenConstructor {} -> return ArityUnknown -- will be a type error
+      IdenAxiom ax -> lookupAxiom ax >>= go . (^. axiomInfoType)
 
-    goFun :: Function -> Sem r FunctionArity
-    goFun (Function l r) = do
-      l' <- ParamExplicit <$> go l
+    goParam :: FunctionParameter -> Sem r ArityParameter
+    goParam (FunctionParameter _ i e) =
+      case i of
+        Implicit -> return ParamImplicit
+        Explicit -> ParamExplicit <$> go e
+
+    goFun2 :: Function -> Sem r FunctionArity
+    goFun2 (Function l r) = do
+      l' <- goParam l
       r' <- go r
       return
         FunctionArity
           { _functionArityLeft = l',
             _functionArityRight = r'
           }
-    goAbs :: TypeAbstraction -> Sem r FunctionArity
-    goAbs t = do
-      r' <- go (t ^. typeAbsBody)
-      return (FunctionArity l r')
-      where
-        l :: ArityParameter
-        l = case t ^. typeAbsImplicit of
-          Implicit -> ParamImplicit
-          Explicit -> ParamExplicit ArityUnit
 
 checkExpression ::
   forall r.
@@ -321,6 +325,7 @@ checkExpression hintArity expr = case expr of
   ExpressionApplication a -> goApp a
   ExpressionLiteral {} -> appHelper expr []
   ExpressionFunction {} -> return expr
+  ExpressionUniverse {} -> return expr
   ExpressionHole {} -> return expr
   where
     goApp :: Application -> Sem r Expression
@@ -332,6 +337,7 @@ checkExpression hintArity expr = case expr of
         ExpressionHole {} -> mapM (secondM (checkExpression ArityUnknown)) args
         ExpressionIden i -> idenArity i >>= helper (getLoc i)
         ExpressionLiteral l -> helper (getLoc l) arityLiteral
+        ExpressionUniverse l -> helper (getLoc l) arityUniverse
         ExpressionFunction f ->
           throw
             ( ErrFunctionApplied

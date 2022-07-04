@@ -241,12 +241,13 @@ goInductive InductiveDef {..} = do
   _inductiveParameters' <- mapM goInductiveParameter _inductiveParameters
   _inductiveType' <- mapM goExpression _inductiveType
   _inductiveConstructors' <- mapM goConstructorDef _inductiveConstructors
+  let loc = getLoc _inductiveName
   let indDef =
         Abstract.InductiveDef
           { _inductiveParameters = _inductiveParameters',
             _inductiveBuiltin = _inductiveBuiltin,
             _inductiveName = goSymbol _inductiveName,
-            _inductiveType = fromMaybe (Abstract.ExpressionUniverse smallUniverse) _inductiveType',
+            _inductiveType = fromMaybe (Abstract.ExpressionUniverse (smallUniverse loc)) _inductiveType',
             _inductiveConstructors = _inductiveConstructors'
           }
   whenJust _inductiveBuiltin (registerBuiltinInductive indDef)

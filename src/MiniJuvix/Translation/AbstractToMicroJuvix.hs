@@ -14,7 +14,6 @@ import MiniJuvix.Syntax.MicroJuvix.Error
 import MiniJuvix.Syntax.MicroJuvix.Language
 import MiniJuvix.Syntax.MicroJuvix.Language.Extra
 import MiniJuvix.Syntax.MicroJuvix.MicroJuvixResult
-import MiniJuvix.Syntax.Universe
 import MiniJuvix.Syntax.Usage
 import MiniJuvix.Termination.Checker
 
@@ -107,13 +106,13 @@ goStatement = \case
   Abstract.StatementLocalModule {} -> unsupported "local modules"
   Abstract.StatementInductive i -> Just . StatementInductive <$> goInductiveDef i
 
-goTypeIden :: Abstract.Iden -> TypeIden
+goTypeIden :: Abstract.Iden -> Iden
 goTypeIden = \case
   Abstract.IdenFunction {} -> unsupported "functions in types"
   Abstract.IdenConstructor {} -> unsupported "constructors in types"
-  Abstract.IdenVar v -> TypeIdenVariable v
-  Abstract.IdenInductive d -> TypeIdenInductive (d ^. Abstract.inductiveRefName)
-  Abstract.IdenAxiom a -> TypeIdenAxiom (a ^. Abstract.axiomRefName)
+  Abstract.IdenVar v -> IdenVar v
+  Abstract.IdenInductive d -> IdenInductive (d ^. Abstract.inductiveRefName)
+  Abstract.IdenAxiom a -> IdenAxiom (a ^. Abstract.axiomRefName)
 
 goAxiomDef :: Abstract.AxiomDef -> Sem r AxiomDef
 goAxiomDef a = do
@@ -125,14 +124,14 @@ goAxiomDef a = do
         _axiomType = _axiomType'
       }
 
-goFunctionParameter :: Abstract.FunctionParameter -> Sem r (Either VarName Type)
+goFunctionParameter :: Abstract.FunctionParameter -> Sem r FunctionParameter
 goFunctionParameter f = case f ^. Abstract.paramName of
   Just var
     | isSmallType (f ^. Abstract.paramType) && isOmegaUsage (f ^. Abstract.paramUsage) ->
-        return (Left var)
+        return (FunctionParameter (Just var) (f ^. Abstract.paramImplicit) (smallUniverse (getLoc var)))
     | otherwise -> unsupported "named function arguments only for small types without usages"
   Nothing
-    | isOmegaUsage (f ^. Abstract.paramUsage) -> Right <$> goType (f ^. Abstract.paramType)
+    | isOmegaUsage (f ^. Abstract.paramUsage) -> unnamedParameter <$> goType (f ^. Abstract.paramType)
     | otherwise -> unsupported "usages"
 
 isOmegaUsage :: Usage -> Bool
@@ -140,20 +139,11 @@ isOmegaUsage u = case u of
   UsageOmega -> True
   _ -> False
 
-goFunction :: Abstract.Function -> Sem r Type
+goFunction :: Abstract.Function -> Sem r Function
 goFunction (Abstract.Function l r) = do
   l' <- goFunctionParameter l
   r' <- goType r
-  return $ case l' of
-    Left tyVar ->
-      TypeAbs
-        ( TypeAbstraction
-            { _typeAbsVar = tyVar,
-              _typeAbsImplicit = l ^. Abstract.paramImplicit,
-              _typeAbsBody = r'
-            }
-        )
-    Right ty -> TypeFunction (Function ty r')
+  return (Function l' r')
 
 goFunctionDef :: Abstract.FunctionDef -> Sem r FunctionDef
 goFunctionDef f = do
@@ -206,19 +196,19 @@ isSmallType e = case e of
 isSmallUni :: Universe -> Bool
 isSmallUni u = 0 == fromMaybe 0 (u ^. universeLevel)
 
-goTypeUniverse :: Universe -> Type
+goTypeUniverse :: Universe -> Expression
 goTypeUniverse u
-  | isSmallUni u = TypeUniverse
+  | isSmallUni u = smallUniverse (getLoc u)
   | otherwise = unsupported "big universes"
 
-goType :: Abstract.Expression -> Sem r Type
+goType :: Abstract.Expression -> Sem r Expression
 goType e = case e of
-  Abstract.ExpressionIden i -> return (TypeIden (goTypeIden i))
+  Abstract.ExpressionIden i -> return (ExpressionIden (goTypeIden i))
   Abstract.ExpressionUniverse u -> return (goTypeUniverse u)
-  Abstract.ExpressionApplication a -> TypeApp <$> goTypeApplication a
-  Abstract.ExpressionFunction f -> goFunction f
+  Abstract.ExpressionApplication a -> ExpressionApplication <$> goTypeApplication a
+  Abstract.ExpressionFunction f -> ExpressionFunction <$> goFunction f
   Abstract.ExpressionLiteral {} -> unsupported "literals in types"
-  Abstract.ExpressionHole h -> return (TypeHole h)
+  Abstract.ExpressionHole h -> return (ExpressionHole h)
 
 goApplication :: Abstract.Application -> Sem r Application
 goApplication (Abstract.Application f x i) = do
@@ -234,16 +224,17 @@ goIden i = case i of
   Abstract.IdenAxiom a -> IdenAxiom (a ^. Abstract.axiomRefName)
   Abstract.IdenInductive a -> IdenInductive (a ^. Abstract.inductiveRefName)
 
-goExpressionFunction :: forall r. Abstract.Function -> Sem r FunctionExpression
+goExpressionFunction :: forall r. Abstract.Function -> Sem r Function
 goExpressionFunction f = do
   l' <- goParam (f ^. Abstract.funParameter)
   r' <- goExpression (f ^. Abstract.funReturn)
-  return (FunctionExpression l' r')
+  return (Function l' r')
   where
-    goParam :: Abstract.FunctionParameter -> Sem r Expression
+    goParam :: Abstract.FunctionParameter -> Sem r FunctionParameter
     goParam p
-      | isJust (p ^. Abstract.paramName) = unsupported "named type parameters"
-      | isOmegaUsage (p ^. Abstract.paramUsage) = goExpression (p ^. Abstract.paramType)
+      | isOmegaUsage (p ^. Abstract.paramUsage) = do
+          ty' <- goExpression (p ^. Abstract.paramType)
+          return (FunctionParameter (p ^. Abstract.paramName) (p ^. Abstract.paramImplicit) ty')
       | otherwise = unsupported "usages"
 
 goExpression :: Abstract.Expression -> Sem r Expression
@@ -289,15 +280,16 @@ goInductiveDef i =
               }
   where
     goConstructorDef :: Name -> [Name] -> Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
-    goConstructorDef expectedTypeName expectedNameParms c = do
+    goConstructorDef indName paramNames c = do
       (_constructorParameters', actualReturnType) <- viewConstructorType (c ^. Abstract.constructorType)
       let ctorName = c ^. Abstract.constructorName
-          expectedReturnType :: Type
-          expectedReturnType = foldTypeAppName expectedTypeName expectedNameParms
-          expectedNumArgs = length expectedNameParms
-          (_, actualReturnTypeParams) = unfoldType actualReturnType
-          actualNumArgs = length actualReturnTypeParams
-          sameTypeName = Just expectedTypeName == getTypeName actualReturnType
+          foldTypeAppName :: Name -> [Name] -> Expression
+          foldTypeAppName tyName indParams =
+            foldExplicitApplication
+              (ExpressionIden (IdenInductive tyName))
+              (map (ExpressionIden . IdenVar) indParams)
+          expectedReturnType :: Expression
+          expectedReturnType = foldTypeAppName indName paramNames
       if
           | actualReturnType == expectedReturnType ->
               return
@@ -305,28 +297,6 @@ goInductiveDef i =
                   { _constructorName = ctorName,
                     _constructorParameters = _constructorParameters'
                   }
-          | sameTypeName,
-            actualNumArgs < expectedNumArgs ->
-              throw
-                ( ErrTooFewArgumentsIndType
-                    ( WrongNumberArgumentsIndType
-                        { _wrongNumberArgumentsIndTypeActualType = actualReturnType,
-                          _wrongNumberArgumentsIndTypeActualNumArgs = actualNumArgs,
-                          _wrongNumberArgumentsIndTypeExpectedNumArgs = expectedNumArgs
-                        }
-                    )
-                )
-          | sameTypeName,
-            actualNumArgs > expectedNumArgs ->
-              throw
-                ( ErrTooManyArgumentsIndType
-                    ( WrongNumberArgumentsIndType
-                        { _wrongNumberArgumentsIndTypeActualType = actualReturnType,
-                          _wrongNumberArgumentsIndTypeActualNumArgs = actualNumArgs,
-                          _wrongNumberArgumentsIndTypeExpectedNumArgs = expectedNumArgs
-                        }
-                    )
-                )
           | otherwise ->
               throw
                 ( ErrWrongReturnType
@@ -338,32 +308,27 @@ goInductiveDef i =
                     )
                 )
 
-goTypeApplication :: Abstract.Application -> Sem r TypeApplication
+goTypeApplication :: Abstract.Application -> Sem r Application
 goTypeApplication (Abstract.Application l r i) = do
   l' <- goType l
   r' <- goType r
-  return
-    TypeApplication
-      { _typeAppLeft = l',
-        _typeAppRight = r',
-        _typeAppImplicit = i
-      }
+  return (Application l' r' i)
 
-viewConstructorType :: Abstract.Expression -> Sem r ([Type], Type)
+viewConstructorType :: Abstract.Expression -> Sem r ([Expression], Expression)
 viewConstructorType = \case
   Abstract.ExpressionFunction f -> first toList <$> viewFunctionType f
-  Abstract.ExpressionIden i -> return ([], TypeIden (goTypeIden i))
+  Abstract.ExpressionIden i -> return ([], ExpressionIden (goTypeIden i))
   Abstract.ExpressionHole {} -> unsupported "holes in constructor type"
   Abstract.ExpressionApplication a -> do
     a' <- goTypeApplication a
-    return ([], TypeApp a')
-  Abstract.ExpressionUniverse {} -> return ([], TypeUniverse)
+    return ([], ExpressionApplication a')
+  Abstract.ExpressionUniverse u -> return ([], smallUniverse (getLoc u))
   Abstract.ExpressionLiteral {} -> unsupported "literal in a type"
   where
-    viewFunctionType :: Abstract.Function -> Sem r (NonEmpty Type, Type)
+    viewFunctionType :: Abstract.Function -> Sem r (NonEmpty Expression, Expression)
     viewFunctionType (Abstract.Function p r) = do
       (args, ret) <- viewConstructorType r
       p' <- goFunctionParameter p
-      return $ case p' of
-        Left {} -> unsupported "type abstraction in constructor type"
-        Right ty -> (ty :| args, ret)
+      return $ case p' ^. paramName of
+        Just {} -> unsupported "named argument in constructor type"
+        Nothing -> (p' ^. paramType :| args, ret)

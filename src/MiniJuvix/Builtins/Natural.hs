@@ -10,7 +10,7 @@ import MiniJuvix.Syntax.Abstract.Pretty
 registerNaturalDef :: Member Builtins r => InductiveDef -> Sem r ()
 registerNaturalDef d = do
   unless (null (d ^. inductiveParameters)) (error "Naturals should have no type parameters")
-  unless (d ^. inductiveType === smallUniverse) (error "Naturals should be in the small universe")
+  unless (isSmallUniverse' (d ^. inductiveType)) (error "Naturals should be in the small universe")
   registerBuiltin BuiltinNatural (d ^. inductiveName)
   case d ^. inductiveConstructors of
     [c1, c2] -> registerZero c1 >> registerSuc c2

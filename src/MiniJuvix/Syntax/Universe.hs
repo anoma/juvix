@@ -3,26 +3,53 @@ module MiniJuvix.Syntax.Universe where
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.Fixity
 
-newtype Universe = Universe
-  { _universeLevel :: Maybe Natural
+data Universe = Universe
+  { _universeLevel :: Maybe Natural,
+    _universeLoc :: Interval
   }
   deriving stock (Show, Ord)
 
-instance Eq Universe where
-  (Universe a) == (Universe b) = f a == f b
-    where
-      f :: Maybe Natural -> Natural
-      f = fromMaybe defaultLevel
+newtype SmallUniverse = SmallUniverse
+  { _smallUniverseLoc :: Interval
+  }
+  deriving stock (Generic)
 
-smallUniverse :: Universe
-smallUniverse = Universe (Just 0)
+instance Eq SmallUniverse where
+  _ == _ = True
+
+instance Hashable SmallUniverse
+
+getUniverseLevel :: Universe -> Natural
+getUniverseLevel Universe {..} = fromMaybe defaultLevel _universeLevel
+
+instance Eq Universe where
+  (==) = (==) `on` getUniverseLevel
 
 defaultLevel :: Natural
 defaultLevel = 0
 
+smallLevel :: Natural
+smallLevel = 0
+
 makeLenses ''Universe
+makeLenses ''SmallUniverse
+
+smallUniverse :: Interval -> Universe
+smallUniverse = Universe (Just smallLevel)
+
+isSmallUniverse :: Universe -> Bool
+isSmallUniverse = (== smallLevel) . getUniverseLevel
 
 instance HasAtomicity Universe where
   atomicity u = case u ^. universeLevel of
     Nothing -> Atom
     Just {} -> Aggregate appFixity
+
+instance HasAtomicity SmallUniverse where
+  atomicity _ = Atom
+
+instance HasLoc Universe where
+  getLoc = (^. universeLoc)
+
+instance HasLoc SmallUniverse where
+  getLoc = (^. smallUniverseLoc)

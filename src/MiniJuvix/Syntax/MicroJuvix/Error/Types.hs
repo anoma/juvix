@@ -4,7 +4,6 @@ import MiniJuvix.Prelude
 import MiniJuvix.Prelude.Pretty
 import MiniJuvix.Syntax.MicroJuvix.Error.Pretty
 import MiniJuvix.Syntax.MicroJuvix.Language
-import MiniJuvix.Syntax.MicroJuvix.Language.Extra
 
 -- | the type of the constructor used in a pattern does
 -- not match the type of the inductive being matched
@@ -40,8 +39,8 @@ instance ToGenericError WrongConstructorType where
 
 data WrongReturnType = WrongReturnType
   { _wrongReturnTypeConstructorName :: Name,
-    _wrongReturnTypeExpected :: Type,
-    _wrongReturnTypeActual :: Type
+    _wrongReturnTypeExpected :: Expression,
+    _wrongReturnTypeActual :: Expression
   }
 
 makeLenses ''WrongReturnType
@@ -57,7 +56,7 @@ instance ToGenericError WrongReturnType where
       ctorName = e ^. wrongReturnTypeConstructorName
       i = getLoc ctorName
       ty = e ^. wrongReturnTypeActual
-      j = getLoc (typeAsExpression ty)
+      j = getLoc ty
       msg =
         "The constructor"
           <+> ppCode ctorName
@@ -91,7 +90,7 @@ instance ToGenericError UnsolvedMeta where
 -- the expected arguments of the constructor
 data WrongConstructorAppArgs = WrongConstructorAppArgs
   { _wrongCtorAppApp :: ConstructorApp,
-    _wrongCtorAppTypes :: [FunctionArgType],
+    _wrongCtorAppTypes :: [FunctionParameter],
     _wrongCtorAppName :: Name
   }
 
@@ -134,8 +133,8 @@ instance ToGenericError WrongConstructorAppArgs where
 -- | the type of an expression does not match the inferred type
 data WrongType = WrongType
   { _wrongTypeExpression :: Expression,
-    _wrongTypeExpectedType :: Type,
-    _wrongTypeInferredType :: Type
+    _wrongTypeExpectedType :: Expression,
+    _wrongTypeInferredType :: Expression
   }
 
 makeLenses ''WrongType
@@ -172,7 +171,7 @@ instance ToGenericError WrongType where
 data ExpectedFunctionType = ExpectedFunctionType
   { _expectedFunctionTypeExpression :: Expression,
     _expectedFunctionTypeApp :: Expression,
-    _expectedFunctionTypeType :: Type
+    _expectedFunctionTypeType :: Expression
   }
 
 makeLenses ''ExpectedFunctionType
@@ -204,7 +203,7 @@ instance ToGenericError ExpectedFunctionType where
       subjectExpr = e ^. expectedFunctionTypeExpression
 
 data WrongNumberArgumentsIndType = WrongNumberArgumentsIndType
-  { _wrongNumberArgumentsIndTypeActualType :: Type,
+  { _wrongNumberArgumentsIndTypeActualType :: Expression,
     _wrongNumberArgumentsIndTypeExpectedNumArgs :: Int,
     _wrongNumberArgumentsIndTypeActualNumArgs :: Int
   }
@@ -220,12 +219,12 @@ instance ToGenericError WrongNumberArgumentsIndType where
       }
     where
       ty = e ^. wrongNumberArgumentsIndTypeActualType
-      i = getLoc (typeAsExpression ty)
+      i = getLoc ty
       expectedNumArgs = e ^. wrongNumberArgumentsIndTypeExpectedNumArgs
       actualNumArgs = e ^. wrongNumberArgumentsIndTypeActualNumArgs
       msg =
         "The type"
-          <+> pretty (getTypeName ty)
+          <+> ppCode ty
           <+> "expects"
           <+> ( if
                     | expectedNumArgs == 0 -> "no arguments"
@@ -241,7 +240,7 @@ instance ToGenericError WrongNumberArgumentsIndType where
           <+> "given"
 
 newtype ImpracticalPatternMatching = ImpracticalPatternMatching
-  { _impracticalPatternMatchingType :: Type
+  { _impracticalPatternMatchingType :: Expression
   }
 
 makeLenses ''ImpracticalPatternMatching
@@ -255,7 +254,7 @@ instance ToGenericError ImpracticalPatternMatching where
       }
     where
       ty = e ^. impracticalPatternMatchingType
-      i = getLoc (typeAsExpression ty)
+      i = getLoc ty
       msg =
         "The type"
           <+> ppCode ty

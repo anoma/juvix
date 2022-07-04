@@ -13,9 +13,11 @@ data LiteralLoc = LiteralLoc
   { _literalLocLiteral :: Literal,
     _literalLocLoc :: Interval
   }
-  deriving stock (Show)
+  deriving stock (Show, Generic)
 
 makeLenses ''LiteralLoc
+
+instance Hashable LiteralLoc
 
 instance HasAtomicity LiteralLoc where
   atomicity = atomicity . (^. literalLocLiteral)

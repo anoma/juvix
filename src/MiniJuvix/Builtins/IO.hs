@@ -6,7 +6,7 @@ import MiniJuvix.Syntax.Abstract.Language.Extra
 
 registerIO :: Member Builtins r => AxiomDef -> Sem r ()
 registerIO d = do
-  unless (d ^. axiomType === smallUniverse) (error "IO should be in the small universe")
+  unless (isSmallUniverse' (d ^. axiomType)) (error "IO should be in the small universe")
   registerBuiltin BuiltinIO (d ^. axiomName)
 
 registerIOSequence :: Member Builtins r => AxiomDef -> Sem r ()

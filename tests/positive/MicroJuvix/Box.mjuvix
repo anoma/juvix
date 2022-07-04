@@ -1,0 +1,20 @@
+module Box;
+
+ inductive Box (A : Type) {
+   box : A → Box A;
+ };
+
+ inductive T {
+   t : T;
+   };
+
+b : Box _;
+b ≔ box t;
+
+id : {A : Type} → A → A;
+id x ≔ x;
+
+tt : _;
+tt ≔ id t
+
+end;

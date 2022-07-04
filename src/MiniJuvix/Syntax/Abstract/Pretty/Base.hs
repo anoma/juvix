@@ -126,7 +126,7 @@ instance PrettyCode Application where
     return $ l' <+> r'
 
 instance PrettyCode Universe where
-  ppCode (Universe n) = return $ kwType <+?> (pretty <$> n)
+  ppCode (Universe n _) = return $ kwType <+?> (pretty <$> n)
 
 instance PrettyCode Expression where
   ppCode e = case e of

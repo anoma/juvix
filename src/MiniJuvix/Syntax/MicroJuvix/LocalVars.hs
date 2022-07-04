@@ -5,13 +5,13 @@ import MiniJuvix.Prelude
 import MiniJuvix.Syntax.MicroJuvix.Language
 
 data LocalVars = LocalVars
-  { _localTypes :: HashMap VarName Type,
+  { _localTypes :: HashMap VarName Expression,
     _localTyMap :: HashMap VarName VarName
   }
 
 makeLenses ''LocalVars
 
-addType :: VarName -> Type -> LocalVars -> LocalVars
+addType :: VarName -> Expression -> LocalVars -> LocalVars
 addType v t = over localTypes (HashMap.insert v t)
 
 emptyLocalVars :: LocalVars

@@ -195,6 +195,11 @@ instance IsExpression ConstructorApp where
   toExpression (ConstructorApp c args) =
     foldApplication (toExpression c) (map toApplicationArg args)
 
+isSmallUniverse' :: Expression -> Bool
+isSmallUniverse' = \case
+  ExpressionUniverse u -> isSmallUniverse u
+  _ -> False
+
 toApplicationArg :: Pattern -> ApplicationArg
 toApplicationArg = \case
   PatternVariable v -> ApplicationArg Explicit (toExpression v)

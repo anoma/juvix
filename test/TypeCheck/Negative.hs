@@ -89,13 +89,13 @@ tests =
       "MicroJuvix"
       "WrongReturnTypeTooFewArguments.mjuvix"
       $ \case
-        ErrTooFewArgumentsIndType {} -> Nothing
+        ErrWrongReturnType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Too many arguments for the return type of a constructor"
       "MicroJuvix"
       "WrongReturnTypeTooManyArguments.mjuvix"
       $ \case
-        ErrTooManyArgumentsIndType {} -> Nothing
+        ErrWrongReturnType {} -> Nothing
         _ -> wrongError
   ]

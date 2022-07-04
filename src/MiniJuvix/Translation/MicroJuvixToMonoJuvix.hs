@@ -10,6 +10,7 @@ import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Internal.NameIdGen
 import MiniJuvix.Prelude
 import MiniJuvix.Syntax.MicroJuvix.InfoTable qualified as Micro
+import MiniJuvix.Syntax.MicroJuvix.Language.Extra (mkConcreteType')
 import MiniJuvix.Syntax.MicroJuvix.Language.Extra qualified as Micro
 import MiniJuvix.Syntax.MicroJuvix.MicroJuvixTypedResult qualified as Micro
 import MiniJuvix.Syntax.MonoJuvix.Language.Extra
@@ -293,6 +294,7 @@ goExpression = go
       Micro.ExpressionLiteral l -> return (ExpressionLiteral l)
       Micro.ExpressionApplication a -> goApp a
       Micro.ExpressionFunction {} -> impossible
+      Micro.ExpressionUniverse {} -> impossible
       Micro.ExpressionHole {} -> impossible
     goApp :: Micro.Application -> Sem r Expression
     goApp a = do
@@ -316,7 +318,7 @@ goExpression = go
             Just (poly, mkIden) -> do
               let (headArgs, tailArgs) = splitAtExact (poly ^. polyTypeArity) (toList args)
                   headArgs' :: NonEmpty Micro.ConcreteType
-                  headArgs' = fromJust (nonEmpty (map (Micro.mkConcreteType' . Micro.expressionAsType') headArgs))
+                  headArgs' = fromJust (nonEmpty (map Micro.mkConcreteType' headArgs))
                   conc :: ConcreteIdenInfo
                   conc = fromJust (poly ^. polyConcretes . at headArgs')
                   fun' :: Expression
@@ -353,7 +355,7 @@ goFunctionDefConcrete n d = do
     concreteTy :: Micro.ConcreteType
     concreteTy = Micro.mkConcreteType' (d ^. Micro.funDefType)
     patternTys :: [Micro.ConcreteType]
-    patternTys = fst (Micro.unfoldFunConcreteType concreteTy)
+    patternTys = map (mkConcreteType' . (^. Micro.paramType)) . fst . Micro.unfoldFunType . (^. Micro.unconcreteType) $ concreteTy
     goClause :: Micro.FunctionClause -> Sem r FunctionClause
     goClause c = do
       body' <- goExpression (c ^. Micro.clauseBody)
@@ -462,20 +464,20 @@ goPattern' ty = \case
   where
     goApp :: Micro.ConstructorApp -> Sem r ConstructorApp
     goApp capp = case ty ^. Micro.unconcreteType of
-      Micro.TypeIden Micro.TypeIdenInductive {} -> do
+      Micro.ExpressionIden Micro.IdenInductive {} -> do
         let c' :: Name
             c' = goName (capp ^. Micro.constrAppConstructor)
         cInfo <- Micro.lookupConstructor (capp ^. Micro.constrAppConstructor)
         let psTysConcrete = map Micro.mkConcreteType' (cInfo ^. Micro.constructorInfoArgs)
         ps' <- zipWithM goPattern' psTysConcrete (capp ^. Micro.constrAppParameters)
         return (ConstructorApp c' ps')
-      Micro.TypeApp a -> do
-        let getInductive :: Micro.Type -> Micro.Name
+      Micro.ExpressionApplication a -> do
+        let getInductive :: Micro.Expression -> Micro.Name
             getInductive = \case
-              Micro.TypeIden (Micro.TypeIdenInductive i) -> i
+              Micro.ExpressionIden (Micro.IdenInductive i) -> i
               _ -> impossible
             (ind, instanceTypes) :: (Micro.Name, NonEmpty Micro.ConcreteType) =
-              bimap getInductive (Micro.mkConcreteType' <$>) (Micro.unfoldTypeApplication a)
+              bimap getInductive (Micro.mkConcreteType' <$>) (Micro.unfoldApplication a)
         res <- lookupPolyConstructor (capp ^. Micro.constrAppConstructor)
         let c' :: Name
             c' = fromJust $ do
@@ -502,17 +504,17 @@ goType ::
   Sem r Type
 goType = go . (^. Micro.unconcreteType)
   where
-    go :: Micro.Type -> Sem r Type
+    go :: Micro.Expression -> Sem r Type
     go = \case
-      Micro.TypeIden i -> return (TypeIden (goIden i))
-      Micro.TypeUniverse -> return TypeUniverse
-      Micro.TypeAbs {} -> impossible
-      Micro.TypeHole {} -> impossible
-      Micro.TypeFunction f -> TypeFunction <$> goFunction f
-      Micro.TypeApp a -> goApp a
-    goApp :: Micro.TypeApplication -> Sem r Type
+      Micro.ExpressionIden i -> return (TypeIden (goIden i))
+      Micro.ExpressionUniverse {} -> return TypeUniverse
+      Micro.ExpressionHole {} -> impossible
+      Micro.ExpressionLiteral {} -> impossible
+      Micro.ExpressionFunction f -> TypeFunction <$> goFunction f
+      Micro.ExpressionApplication a -> goApp a
+    goApp :: Micro.Application -> Sem r Type
     goApp a = case f of
-      Micro.TypeIden (Micro.TypeIdenInductive i) -> do
+      Micro.ExpressionIden (Micro.IdenInductive i) -> do
         info <- fromJust <$> lookupPolyInductive i
         let (headArgs, tailArgs) = splitAtExact (info ^. polyTypeArity) (toList args)
             headArgs' :: NonEmpty Micro.ConcreteType
@@ -523,14 +525,16 @@ goType = go . (^. Micro.unconcreteType)
         return (TypeIden (TypeIdenInductive (concrete ^. concreteName)))
       _ -> impossible
       where
-        (f, args) = Micro.unfoldTypeApplication a
+        (f, args) = Micro.unfoldApplication a
     goFunction :: Micro.Function -> Sem r Function
     goFunction (Micro.Function l r) = do
-      l' <- go l
+      l' <- go (l ^. Micro.paramType)
       r' <- go r
       return (Function l' r')
-    goIden :: Micro.TypeIden -> TypeIden
+    goIden :: Micro.Iden -> TypeIden
     goIden = \case
-      Micro.TypeIdenAxiom a -> TypeIdenAxiom (goName a)
-      Micro.TypeIdenInductive i -> TypeIdenInductive (goName i)
-      Micro.TypeIdenVariable {} -> impossible
+      Micro.IdenAxiom a -> TypeIdenAxiom (goName a)
+      Micro.IdenInductive i -> TypeIdenInductive (goName i)
+      Micro.IdenVar {} -> impossible
+      Micro.IdenFunction {} -> impossible
+      Micro.IdenConstructor {} -> impossible

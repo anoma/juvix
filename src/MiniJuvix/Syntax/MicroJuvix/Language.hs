@@ -3,6 +3,7 @@ module MiniJuvix.Syntax.MicroJuvix.Language
     module MiniJuvix.Syntax.Abstract.Name,
     module MiniJuvix.Syntax.Concrete.Loc,
     module MiniJuvix.Syntax.IsImplicit,
+    module MiniJuvix.Syntax.Universe,
     module MiniJuvix.Syntax.Hole,
     module MiniJuvix.Syntax.Wildcard,
     module MiniJuvix.Syntax.Concrete.LiteralLoc,
@@ -18,6 +19,7 @@ import MiniJuvix.Syntax.Concrete.Loc
 import MiniJuvix.Syntax.ForeignBlock
 import MiniJuvix.Syntax.Hole
 import MiniJuvix.Syntax.IsImplicit
+import MiniJuvix.Syntax.Universe hiding (smallUniverse)
 import MiniJuvix.Syntax.Wildcard
 
 data Module = Module
@@ -43,12 +45,12 @@ data Statement
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
     _axiomBuiltin :: Maybe BuiltinAxiom,
-    _axiomType :: Type
+    _axiomType :: Expression
   }
 
 data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
-    _funDefType :: Type,
+    _funDefType :: Expression,
     _funDefClauses :: NonEmpty FunctionClause,
     _funDefBuiltin :: Maybe BuiltinFunction
   }
@@ -65,23 +67,25 @@ data Iden
   | IdenVar VarName
   | IdenAxiom Name
   | IdenInductive Name
+  deriving stock (Eq, Generic)
+
+instance Hashable Iden
 
 data TypedExpression = TypedExpression
-  { _typedType :: Type,
+  { _typedType :: Expression,
     _typedExpression :: Expression
-  }
-
-data FunctionExpression = FunctionExpression
-  { _functionExpressionLeft :: Expression,
-    _functionExpressionRight :: Expression
   }
 
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
-  | ExpressionFunction FunctionExpression
+  | ExpressionFunction Function
   | ExpressionLiteral LiteralLoc
   | ExpressionHole Hole
+  | ExpressionUniverse SmallUniverse
+  deriving stock (Eq, Generic)
+
+instance Hashable Expression
 
 data Application = Application
   { _appLeft :: Expression,
@@ -89,13 +93,14 @@ data Application = Application
     _appImplicit :: IsImplicit
   }
 
-data Function = Function
-  { _funLeft :: Type,
-    _funRight :: Type
-  }
-  deriving stock (Eq, Generic)
+-- TODO: Eq and Hashable instances ignore the _appImplicit field
+--  to workaround a crash in Micro->Mono translation when looking up
+-- a concrete type.
+instance Eq Application where
+  (Application l r _) == (Application l' r' _) = (l == l') && (r == r')
 
-instance Hashable Function
+instance Hashable Application where
+  hashWithSalt salt (Application l r _) = hashWithSalt salt (l, r)
 
 -- | Fully applied constructor in a pattern.
 data ConstructorApp = ConstructorApp
@@ -123,60 +128,28 @@ data InductiveDef = InductiveDef
 
 data InductiveConstructorDef = InductiveConstructorDef
   { _constructorName :: ConstrName,
-    _constructorParameters :: [Type]
+    _constructorParameters :: [Expression]
   }
 
-data TypeIden
-  = TypeIdenInductive InductiveName
-  | TypeIdenAxiom AxiomName
-  | TypeIdenVariable VarName
-  deriving stock (Eq, Generic)
-
-instance Hashable TypeIden
-
-data TypeApplication = TypeApplication
-  { _typeAppLeft :: Type,
-    _typeAppRight :: Type,
-    _typeAppImplicit :: IsImplicit
-  }
-
--- TODO: Eq and Hashable instances ignore the _typAppImplicit field
---  to workaround a crash in Micro->Mono translation when looking up
--- a concrete type.
-instance Eq TypeApplication where
-  (TypeApplication l r _) == (TypeApplication l' r' _) = (l == l') && (r == r')
-
-instance Hashable TypeApplication where
-  hashWithSalt salt TypeApplication {..} = hashWithSalt salt (_typeAppLeft, _typeAppRight)
-
-data TypeAbstraction = TypeAbstraction
-  { _typeAbsVar :: VarName,
-    _typeAbsImplicit :: IsImplicit,
-    _typeAbsBody :: Type
+data FunctionParameter = FunctionParameter
+  { _paramName :: Maybe VarName,
+    _paramImplicit :: IsImplicit,
+    _paramType :: Expression
   }
   deriving stock (Eq, Generic)
 
-instance Hashable TypeAbstraction
+instance Hashable FunctionParameter
 
-data Type
-  = TypeIden TypeIden
-  | TypeApp TypeApplication
-  | TypeFunction Function
-  | TypeAbs TypeAbstraction
-  | TypeHole Hole
-  | TypeUniverse
+data Function = Function
+  { _functionLeft :: FunctionParameter,
+    _functionRight :: Expression
+  }
   deriving stock (Eq, Generic)
 
-instance Hashable Type
-
-data FunctionArgType
-  = FunctionArgTypeAbstraction (IsImplicit, VarName)
-  | FunctionArgTypeType Type
+instance Hashable Function
 
 makeLenses ''Module
 makeLenses ''Include
-makeLenses ''Function
-makeLenses ''FunctionExpression
 makeLenses ''FunctionDef
 makeLenses ''FunctionClause
 makeLenses ''InductiveDef
@@ -184,8 +157,8 @@ makeLenses ''AxiomDef
 makeLenses ''ModuleBody
 makeLenses ''Application
 makeLenses ''TypedExpression
-makeLenses ''TypeAbstraction
-makeLenses ''TypeApplication
+makeLenses ''Function
+makeLenses ''FunctionParameter
 makeLenses ''InductiveParameter
 makeLenses ''InductiveConstructorDef
 makeLenses ''ConstructorApp
@@ -193,34 +166,17 @@ makeLenses ''ConstructorApp
 instance HasAtomicity Application where
   atomicity = const (Aggregate appFixity)
 
-instance HasAtomicity TypeApplication where
-  atomicity = const (Aggregate appFixity)
-
-instance HasAtomicity FunctionExpression where
-  atomicity = const (Aggregate funFixity)
-
 instance HasAtomicity Expression where
   atomicity e = case e of
     ExpressionIden {} -> Atom
     ExpressionApplication a -> atomicity a
     ExpressionLiteral l -> atomicity l
-    ExpressionFunction f -> atomicity f
     ExpressionHole {} -> Atom
+    ExpressionUniverse u -> atomicity u
+    ExpressionFunction f -> atomicity f
 
 instance HasAtomicity Function where
   atomicity = const (Aggregate funFixity)
-
-instance HasAtomicity TypeAbstraction where
-  atomicity = const (Aggregate funFixity)
-
-instance HasAtomicity Type where
-  atomicity t = case t of
-    TypeIden {} -> Atom
-    TypeFunction f -> atomicity f
-    TypeUniverse -> Atom
-    TypeHole {} -> Atom
-    TypeAbs a -> atomicity a
-    TypeApp a -> atomicity a
 
 instance HasAtomicity ConstructorApp where
   atomicity (ConstructorApp _ args)
@@ -234,16 +190,24 @@ instance HasAtomicity Pattern where
     PatternWildcard {} -> Atom
     PatternBraces {} -> Atom
 
-instance HasLoc FunctionExpression where
-  getLoc (FunctionExpression l r) = getLoc l <> getLoc r
+instance HasLoc FunctionParameter where
+  getLoc f = v (getLoc (f ^. paramType))
+    where
+      v = case getLoc <$> f ^. paramName of
+        Nothing -> id
+        Just i -> (i <>)
+
+instance HasLoc Function where
+  getLoc (Function l r) = getLoc l <> getLoc r
 
 instance HasLoc Expression where
   getLoc = \case
     ExpressionIden i -> getLoc i
     ExpressionApplication a -> getLoc (a ^. appLeft)
     ExpressionLiteral l -> getLoc l
-    ExpressionFunction f -> getLoc f
     ExpressionHole h -> getLoc h
+    ExpressionUniverse u -> getLoc u
+    ExpressionFunction u -> getLoc u
 
 instance HasLoc Iden where
   getLoc = \case

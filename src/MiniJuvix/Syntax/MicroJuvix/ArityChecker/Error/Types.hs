@@ -177,7 +177,7 @@ instance ToGenericError TooManyArguments where
         | otherwise = "were not expected"
 
 data FunctionApplied = FunctionApplied
-  { _functionAppliedFunction :: FunctionExpression,
+  { _functionAppliedFunction :: Function,
     _functionAppliedArguments :: [(IsImplicit, Expression)]
   }
 

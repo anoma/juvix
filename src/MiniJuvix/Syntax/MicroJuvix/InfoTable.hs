@@ -6,7 +6,7 @@ import MiniJuvix.Syntax.MicroJuvix.Language.Extra
 
 data ConstructorInfo = ConstructorInfo
   { _constructorInfoInductiveParameters :: [InductiveParameter],
-    _constructorInfoArgs :: [Type],
+    _constructorInfoArgs :: [Expression],
     _constructorInfoInductive :: InductiveName
   }
 
@@ -15,7 +15,7 @@ newtype FunctionInfo = FunctionInfo
   }
 
 newtype AxiomInfo = AxiomInfo
-  { _axiomInfoType :: Type
+  { _axiomInfoType :: Expression
   }
 
 newtype InductiveInfo = InductiveInfo
@@ -104,38 +104,40 @@ lookupFunction f = HashMap.lookupDefault impossible f <$> asks (^. infoFunctions
 lookupAxiom :: Member (Reader InfoTable) r => Name -> Sem r AxiomInfo
 lookupAxiom f = HashMap.lookupDefault impossible f <$> asks (^. infoAxioms)
 
-inductiveType :: Member (Reader InfoTable) r => Name -> Sem r Type
+inductiveType :: Member (Reader InfoTable) r => Name -> Sem r Expression
 inductiveType v = do
   info <- lookupInductive v
   let ps = info ^. inductiveInfoDef . inductiveParameters
   return $
     foldr
-      (\p k -> TypeAbs (TypeAbstraction (p ^. inductiveParamName) Explicit k))
-      TypeUniverse
+      (\p k -> ExpressionFunction (typeAbs (p ^. inductiveParamName) k))
+      (ExpressionUniverse (SmallUniverse (getLoc v)))
       ps
+  where
+    typeAbs var = Function (typeAbstraction Explicit var)
 
-constructorArgTypes :: ConstructorInfo -> ([VarName], [Type])
+constructorArgTypes :: ConstructorInfo -> ([VarName], [Expression])
 constructorArgTypes i =
   ( map (^. inductiveParamName) (i ^. constructorInfoInductiveParameters),
     i ^. constructorInfoArgs
   )
 
-constructorType :: Member (Reader InfoTable) r => Name -> Sem r Type
+constructorType :: Member (Reader InfoTable) r => Name -> Sem r Expression
 constructorType c = do
   info <- lookupConstructor c
   let (inductiveParams, constrArgs) = constructorArgTypes info
       args =
-        map (\ty -> FunctionArgTypeAbstraction (Implicit, ty)) inductiveParams
-          ++ map FunctionArgTypeType constrArgs
-      ind = TypeIden (TypeIdenInductive (info ^. constructorInfoInductive))
+        map (typeAbstraction Implicit) inductiveParams
+          ++ map unnamedParameter constrArgs
+      ind = ExpressionIden (IdenInductive (info ^. constructorInfoInductive))
       saturatedTy =
         foldl'
           ( \t v ->
-              TypeApp
-                ( TypeApplication
-                    { _typeAppLeft = t,
-                      _typeAppRight = TypeIden (TypeIdenVariable v),
-                      _typeAppImplicit = Implicit
+              ExpressionApplication
+                ( Application
+                    { _appLeft = t,
+                      _appRight = ExpressionIden (IdenVar v),
+                      _appImplicit = Explicit
                     }
                 )
           )

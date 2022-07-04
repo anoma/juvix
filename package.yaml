@@ -75,6 +75,7 @@ ghc-options:
 - -O2 -flate-specialise -fspecialise-aggressively
 
 default-extensions:
+- ApplicativeDo
 - DataKinds
 - DerivingStrategies
 - GADTs
@@ -101,8 +102,6 @@ executables:
     dependencies:
     - minijuvix
     - optparse-applicative == 0.17.*
-    default-extensions:
-    - ApplicativeDo
     verbatim:
       default-language: GHC2021
 

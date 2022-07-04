@@ -586,7 +586,7 @@ instance SingI s => PrettyCode (FunctionParameter s) where
           UsageOmega -> kwColonOmega
 
 instance PrettyCode Universe where
-  ppCode (Universe n) = return $ kwType <+?> (pretty <$> n)
+  ppCode (Universe n _) = return $ kwType <+?> (pretty <$> n)
 
 instance SingI s => PrettyCode (LetBlock s) where
   ppCode LetBlock {..} = do

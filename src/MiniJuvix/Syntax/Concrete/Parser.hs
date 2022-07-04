@@ -319,8 +319,13 @@ letBlock = do
 
 universe :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r Universe
 universe = do
-  kwType
-  Universe <$> optional (fst <$> decimal)
+  i <- snd <$> interval kwType
+  uni <- optional decimal
+  return
+    ( case uni of
+        Nothing -> Universe Nothing i
+        Just (lvl, i') -> Universe (Just lvl) (i <> i')
+    )
 
 -------------------------------------------------------------------------------
 -- Type signature declaration

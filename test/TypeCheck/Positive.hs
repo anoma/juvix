@@ -40,6 +40,10 @@ tests =
       "MicroJuvix"
       "LiteralString.mjuvix",
     PosTest
+      "Box type"
+      "MicroJuvix"
+      "Box.mjuvix",
+    PosTest
       "Literal Int matches any type"
       "MicroJuvix"
       "LiteralInt.mjuvix",
