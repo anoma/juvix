@@ -138,7 +138,7 @@ clangCompile projRoot compileInputFile o = do
       where
         clangArgs :: [String]
         clangArgs = case o ^. compileRuntime of
-          RuntimeStandalone -> standaloneArgs sysrootPath outputFile inputFile
+          RuntimeStandalone -> standaloneArgs projRoot sysrootPath outputFile inputFile
           RuntimeLibC -> libcArgs sysrootPath outputFile inputFile
 
         outputFile :: FilePath
@@ -147,10 +147,10 @@ clangCompile projRoot compileInputFile o = do
         inputFile :: FilePath
         inputFile = inputCFile projRoot compileInputFile
 
-standaloneArgs :: FilePath -> FilePath -> FilePath -> [String]
-standaloneArgs sysrootPath wasmOutputFile inputFile =
+standaloneArgs :: FilePath -> FilePath -> FilePath -> FilePath -> [String]
+standaloneArgs projRoot sysrootPath wasmOutputFile inputFile =
   commonArgs sysrootPath wasmOutputFile
-    <> [minijuvixBuildDir </> "walloc.c", inputFile]
+    <> [projRoot </> minijuvixBuildDir </> "walloc.c", inputFile]
 
 libcArgs :: FilePath -> FilePath -> FilePath -> [String]
 libcArgs sysrootPath wasmOutputFile inputFile =
