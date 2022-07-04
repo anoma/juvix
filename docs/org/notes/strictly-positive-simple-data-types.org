@@ -1,0 +1,73 @@
+* Strictly positive simple data types
+
+- Luo's syntactic definition of strictly positive inductive familise.
+The type we are defining can only appear to the right of the arrows.
+
+#+begin_src minijuvix
+axiom B : Type;
+inductive X : Type {
+  c : (B -> X) -> X;
+};
+#+end_src
+
+** Examples of what is not allowed:
+
+#+begin_src minijuvix
+axiom B : Type;
+inductive X : Type {
+  c : (X -> B) -> B -> X;
+};
+#+end_src
+
+#+begin_src minijuvix
+inductive Empty : Type {};
+
+inductive NSPos : Type {
+  c : ((NSPos -> Empty) -> NSPos) -> NSPos;
+};
+#+end_src 
+
+#+begin_src minijuvix
+inductive A : Type {
+  c : (A -> A) -> A;
+};
+#+end_src
+
+#+begin_src minijuvix
+inductive Tree (A : Type) : Type {
+  leaf : Tree A;
+  node : (A -> Tree A) -> Tree A;
+};
+
+inductive Bad : Type {
+  bad : Tree Bad -> Bad;
+};
+#+end_src 
+
+
+#+begin_src minijuvix
+inductive B (A : Type) : Type {
+  b : A -> B (B A -> A) -> B A;
+};
+#+end_src 
+
+
+** Ideas
+
+An inductive type is declared using the following schema:
+
+#+begin_src minijuvix
+inductive D : Type {
+    c₁ : A₁ ;
+    ...
+    cₙ : Aₙ ;
+};
+#+end_src
+
+Folling Agda's implementation, one can collect all the occurrences in the
+type of each constructors of the data type name D. Each occurrence has one possible distinction, mixed, negative, positive,
+or strictly positive. As we support mutual defined blocks, a few considerations must be taken into account.
+
+
+
+

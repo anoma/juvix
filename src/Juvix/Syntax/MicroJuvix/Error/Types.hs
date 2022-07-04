@@ -260,3 +260,35 @@ instance ToGenericError ImpracticalPatternMatching where
           <+> ppCode ty
           <+> "is not an inductive data type."
           <+> "Therefore, pattern-matching is not available here"
+
+data NoPositivity = NoPositivity
+  { _noPositivityType :: Name,
+    _noPositivityConstructor :: Name,
+    _noPositivityArgument :: Expression
+  }
+
+makeLenses ''NoPositivity
+
+instance ToGenericError NoPositivity where
+  genericError e =
+    GenericError
+      { _genericErrorLoc = j,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i, j]
+      }
+    where
+      ty = e ^. noPositivityType
+      ctor = e ^. noPositivityConstructor
+      arg = e ^. noPositivityArgument
+      i = getLoc ty
+      j = getLoc arg
+      msg =
+        "The type"
+          <+> ppCode ty
+          <+> "is not strictly positive."
+            <> line
+            <> "When declaring its constructor"
+          <+> ppCode ctor
+          <+> "the type"
+          <+> ppCode ty
+          <+> "appears in a negative position."

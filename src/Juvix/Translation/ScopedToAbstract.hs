@@ -235,7 +235,7 @@ goInductive ::
   Members '[InfoTableBuilder, Builtins, Error ScoperError] r =>
   InductiveDef 'Scoped ->
   Sem r Abstract.InductiveDef
-goInductive InductiveDef {..} = do
+goInductive ty@InductiveDef {..} = do
   _inductiveParameters' <- mapM goInductiveParameter _inductiveParameters
   _inductiveType' <- mapM goExpression _inductiveType
   _inductiveConstructors' <- mapM goConstructorDef _inductiveConstructors
@@ -246,7 +246,8 @@ goInductive InductiveDef {..} = do
             _inductiveBuiltin = _inductiveBuiltin,
             _inductiveName = goSymbol _inductiveName,
             _inductiveType = fromMaybe (Abstract.ExpressionUniverse (smallUniverse loc)) _inductiveType',
-            _inductiveConstructors = _inductiveConstructors'
+            _inductiveConstructors = _inductiveConstructors',
+            _inductiveCheckPositivity = ty ^. inductiveCheckPositivity
           }
   whenJust _inductiveBuiltin (registerBuiltinInductive indDef)
   inductiveInfo <- registerInductive indDef
