@@ -49,7 +49,7 @@ entryMiniC i = MiniCResult . serialize <$> cunitResult
       let buildTable = Mono.buildTable m
       let defs =
             genStructDefs m
-              <> run (runReader compileInfo (genAxioms m))
+              <> run (runReader compileInfo (runReader buildTable (genAxioms m)))
               <> run (runReader buildTable (genCTypes m))
               <> run (runReader buildTable (genFunctionSigs m))
               <> run (runReader buildTable (genClosures m))
@@ -68,7 +68,7 @@ genStructDefs Mono.Module {..} =
       Mono.StatementInductive d -> mkInductiveTypeDef d
       _ -> []
 
-genAxioms :: forall r. Members '[Reader Mono.CompileInfoTable] r => Mono.Module -> Sem r [CCode]
+genAxioms :: forall r. Members '[Reader Mono.CompileInfoTable, Reader Mono.InfoTable] r => Mono.Module -> Sem r [CCode]
 genAxioms Mono.Module {..} =
   concatMapM go (_moduleBody ^. Mono.moduleStatements)
   where
@@ -402,26 +402,31 @@ goLiteral C.LiteralLoc {..} = case _literalLocLiteral of
   C.LitInteger i -> LiteralInt i
 
 goAxiom ::
-  Member (Reader Mono.CompileInfoTable) r =>
+  Members '[Reader Mono.CompileInfoTable, Reader Mono.InfoTable] r =>
   Mono.AxiomDef ->
   Sem r [CCode]
 goAxiom a
   | isJust (a ^. Mono.axiomBuiltin) = return []
   | otherwise = do
       backends <- lookupBackends (axiomName ^. Mono.nameId)
-      case firstJust getCode backends of
-        Nothing -> error ("C backend does not support this axiom:" <> show (axiomName ^. Mono.nameText))
-        Just defineBody ->
-          return
-            [ ExternalMacro
-                ( CppDefine
-                    ( Define
-                        { _defineName = defineName,
-                          _defineBody = ExpressionVar defineBody
-                        }
+      case backends of
+        Nothing -> do
+          sig <- ExternalFuncSig <$> (cFunTypeToFunSig defineName <$> typeToFunType (a ^. Mono.axiomType))
+          return [sig]
+        Just bs ->
+          case firstJust getCode bs of
+            Nothing -> error ("C backend does not support this axiom:" <> show (axiomName ^. Mono.nameText))
+            Just defineBody ->
+              return
+                [ ExternalMacro
+                    ( CppDefine
+                        ( Define
+                            { _defineName = defineName,
+                              _defineBody = ExpressionVar defineBody
+                            }
+                        )
                     )
-                )
-            ]
+                ]
   where
     axiomName :: Mono.Name
     axiomName = a ^. Mono.axiomName
@@ -435,8 +440,8 @@ goAxiom a
     lookupBackends ::
       Member (Reader Mono.CompileInfoTable) r =>
       NameId ->
-      Sem r [BackendItem]
-    lookupBackends f = (^. S.compileInfoBackendItems) . HashMap.lookupDefault (error (show (a ^. Mono.axiomName))) f <$> ask
+      Sem r (Maybe [BackendItem])
+    lookupBackends f = fmap (^. S.compileInfoBackendItems) . HashMap.lookup f <$> ask
 
 goForeign :: ForeignBlock -> [CCode]
 goForeign b = case b ^. foreignBackend of
