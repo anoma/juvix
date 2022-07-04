@@ -1,0 +1,24 @@
+module JSHello;
+
+inductive Unit {
+  unit : Unit;
+};
+
+axiom String : Type;
+
+compile String {
+  c ↦ "char*";
+};
+
+axiom Void : Type;
+
+compile Void {
+  c ↦ "void";
+};
+
+axiom displayString : String → Void;
+
+render : Unit → Void;
+render _ ≔ displayString "hello";
+
+end;
