@@ -180,7 +180,7 @@ bracesIndent d = do
   return $ braces (line <> d' <> line)
 
 instance PrettyCode InductiveParameter where
-  ppCode (InductiveParameter v) = do
+  ppCode (InductiveParameter v _) = do
     v' <- ppCode v
     return $ parens (v' <+> kwColon <+> kwType)
 

@@ -460,7 +460,7 @@ checkInductiveDef ::
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
   InductiveDef 'Parsed ->
   Sem r (InductiveDef 'Scoped)
-checkInductiveDef InductiveDef {..} = do
+checkInductiveDef ty@InductiveDef {..} = do
   withParams _inductiveParameters $ \inductiveParameters' -> do
     inductiveType' <- mapM checkParseExpressionAtoms _inductiveType
     inductiveName' <- bindInductiveSymbol _inductiveName
@@ -471,7 +471,8 @@ checkInductiveDef InductiveDef {..} = do
           _inductiveBuiltin = _inductiveBuiltin,
           _inductiveParameters = inductiveParameters',
           _inductiveType = inductiveType',
-          _inductiveConstructors = inductiveConstructors'
+          _inductiveConstructors = inductiveConstructors',
+          _inductiveCheckPositivity = ty ^. inductiveCheckPositivity
         }
 
 checkTopModule_ ::

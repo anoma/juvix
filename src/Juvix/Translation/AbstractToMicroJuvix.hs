@@ -261,7 +261,8 @@ goInductiveParameter f =
       | isSmallUni u ->
           return
             InductiveParameter
-              { _inductiveParamName = var
+              { _inductiveParamName = var,
+                _inductiveParamPolarity = Nothing
               }
     (Just {}, _, _) -> unsupported "only type variables of small types are allowed"
     (Nothing, _, _) -> unsupported "unnamed inductive parameters"
@@ -278,18 +279,24 @@ goInductiveDef i =
           inductiveParameters' <- mapM goInductiveParameter (i ^. Abstract.inductiveParameters)
           let indTypeName = i ^. Abstract.inductiveName
               indParamNames = map (^. inductiveParamName) inductiveParameters'
-          inductiveConstructors' <- mapM (goConstructorDef indTypeName indParamNames) (i ^. Abstract.inductiveConstructors)
+              checkPositivity = i ^. Abstract.inductiveCheckPositivity
+          inductiveConstructors' <-
+            mapM
+              (goConstructorDef indTypeName indParamNames checkPositivity)
+              (i ^. Abstract.inductiveConstructors)
           return
             InductiveDef
               { _inductiveName = indTypeName,
                 _inductiveParameters = inductiveParameters',
                 _inductiveBuiltin = i ^. Abstract.inductiveBuiltin,
-                _inductiveConstructors = inductiveConstructors'
+                _inductiveConstructors = inductiveConstructors',
+                _inducitvePolarity = Just StrictlyPositive
               }
   where
-    goConstructorDef :: Name -> [Name] -> Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
-    goConstructorDef indName paramNames c = do
-      (_constructorParameters', actualReturnType) <- viewConstructorType (c ^. Abstract.constructorType)
+    goConstructorDef :: Name -> [Name] -> Bool -> Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
+    goConstructorDef indName paramNames checkPositivity c = do
+      (constructorParameters', actualReturnType) <- viewConstructorType (c ^. Abstract.constructorType)
+
       let ctorName = c ^. Abstract.constructorName
           foldTypeAppName :: Name -> [Name] -> Expression
           foldTypeAppName tyName indParams =
@@ -298,12 +305,26 @@ goInductiveDef i =
               (map (ExpressionIden . IdenVar) indParams)
           expectedReturnType :: Expression
           expectedReturnType = foldTypeAppName indName paramNames
+
+          strictlyPosOcurrences :: Name -> Expression -> Sem r ()
+          strictlyPosOcurrences n arg =
+            case negativeInExpression n arg of
+              Just subExpr ->
+                throw $
+                  ErrNoPositivity $
+                    NoPositivity
+                      { _noPositivityType = indName,
+                        _noPositivityConstructor = ctorName,
+                        _noPositivityArgument = subExpr
+                      }
+              Nothing -> return ()
+      when checkPositivity (mapM_ (strictlyPosOcurrences indName) constructorParameters')
       if
           | actualReturnType == expectedReturnType ->
               return
                 InductiveConstructorDef
                   { _constructorName = ctorName,
-                    _constructorParameters = _constructorParameters'
+                    _constructorParameters = constructorParameters'
                   }
           | otherwise ->
               throw
@@ -315,6 +336,22 @@ goInductiveDef i =
                         }
                     )
                 )
+
+-- TODO: I need the infoTable to know if the parameters are annotated positive
+negativeInExpression :: Name -> Expression -> Maybe Expression
+negativeInExpression ty = helper False
+  where
+    helper :: Bool -> Expression -> Maybe Expression
+    helper inside e = case e of
+      ExpressionIden (IdenInductive ty') ->
+        if
+            | inside && ty == ty' -> Just e
+            | otherwise -> Nothing
+      ExpressionFunction (Function l r) ->
+        helper True (l ^. paramType) <|> helper False r
+      ExpressionApplication (Application l r _) ->
+        helper inside l <|> helper inside r
+      _ -> Nothing
 
 goTypeApplication :: Abstract.Application -> Sem r Application
 goTypeApplication (Abstract.Application l r i) = do

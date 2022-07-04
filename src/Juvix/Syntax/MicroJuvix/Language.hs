@@ -126,16 +126,21 @@ data Pattern
   | PatternConstructorApp ConstructorApp
   | PatternWildcard Wildcard
 
-newtype InductiveParameter = InductiveParameter
-  { _inductiveParamName :: VarName
+data InductiveParameter = InductiveParameter
+  { _inductiveParamName :: VarName,
+    _inductiveParamPolarity :: Maybe Polarity
   }
   deriving stock (Eq)
+
+data Polarity = StrictlyPositive | NoStrictlyPositive
+  deriving stock (Eq, Show)
 
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
     _inductiveBuiltin :: Maybe BuiltinInductive,
     _inductiveParameters :: [InductiveParameter],
-    _inductiveConstructors :: [InductiveConstructorDef]
+    _inductiveConstructors :: [InductiveConstructorDef],
+    _inducitvePolarity :: Maybe Polarity
   }
 
 data InductiveConstructorDef = InductiveConstructorDef
