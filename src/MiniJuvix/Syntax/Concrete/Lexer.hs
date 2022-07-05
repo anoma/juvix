@@ -148,7 +148,6 @@ allKeywords =
     kwColonZero,
     kwCompile,
     kwEnd,
-    kwEval,
     kwForeign,
     kwHiding,
     kwHole,
@@ -164,7 +163,6 @@ allKeywords =
     kwModule,
     kwOpen,
     kwPostfix,
-    kwPrint,
     kwPublic,
     kwRightArrow,
     kwSemicolon,
@@ -219,9 +217,6 @@ kwCompile = keyword Str.compile
 kwEnd :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwEnd = keyword Str.end
 
-kwEval :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
-kwEval = keyword Str.eval
-
 kwHiding :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwHiding = keyword Str.hiding
 
@@ -263,9 +258,6 @@ kwOpen = keyword Str.open
 
 kwPostfix :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwPostfix = keyword Str.postfix
-
-kwPrint :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
-kwPrint = keyword Str.print
 
 kwPublic :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwPublic = keyword Str.public

@@ -109,8 +109,6 @@ data Statement (s :: Stage)
   | StatementOpenModule (OpenModule s)
   | StatementFunctionClause (FunctionClause s)
   | StatementAxiom (AxiomDef s)
-  | StatementEval (Eval s)
-  | StatementPrint (Print s)
   | StatementForeign ForeignBlock
   | StatementCompile (Compile s)
 

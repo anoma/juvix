@@ -1207,8 +1207,6 @@ checkStatement s = case s of
   StatementOpenModule open -> StatementOpenModule <$> checkOpenModule open
   StatementFunctionClause clause -> StatementFunctionClause <$> checkFunctionClause clause
   StatementAxiom ax -> StatementAxiom <$> checkAxiomDef ax
-  StatementEval e -> StatementEval <$> checkEval e
-  StatementPrint e -> StatementPrint <$> checkPrint e
   StatementForeign d -> return (StatementForeign d)
   StatementCompile c -> StatementCompile <$> checkCompile c
 

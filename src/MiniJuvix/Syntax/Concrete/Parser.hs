@@ -105,10 +105,8 @@ statement :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (St
 statement =
   (StatementOperator <$> operatorSyntaxDef)
     <|> (StatementOpenModule <$> openModule)
-    <|> (StatementEval <$> eval)
     <|> (StatementImport <$> import_)
     <|> (StatementInductive <$> inductiveDef Nothing)
-    <|> (StatementPrint <$> printS)
     <|> (StatementForeign <$> foreignBlock)
     <|> (StatementModule <$> moduleDef)
     <|> (StatementAxiom <$> axiomDef Nothing)
@@ -524,17 +522,3 @@ openModule = do
     usingOrHiding =
       (kwUsing >> (Using <$> symbolList))
         <|> (kwHiding >> (Hiding <$> symbolList))
-
---------------------------------------------------------------------------------
--- Debugging statements
---------------------------------------------------------------------------------
-
-eval :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Eval 'Parsed)
-eval = do
-  kwEval
-  Eval <$> parseExpressionAtoms
-
-printS :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Print 'Parsed)
-printS = do
-  kwPrint
-  Print <$> parseExpressionAtoms

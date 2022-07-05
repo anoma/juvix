@@ -132,8 +132,6 @@ goStatement (Indexed idx s) =
     StatementImport (Import t) -> Just . Abstract.StatementImport <$> goModule t
     StatementOperator {} -> return Nothing
     StatementOpenModule o -> goOpenModule o
-    StatementEval {} -> unsupported "eval statements"
-    StatementPrint {} -> unsupported "print statements"
     StatementInductive i -> Just . Abstract.StatementInductive <$> goInductive i
     StatementForeign f -> return (Just (Abstract.StatementForeign f))
     StatementModule f -> Just . Abstract.StatementLocalModule <$> goLocalModule f

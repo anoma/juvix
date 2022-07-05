@@ -115,12 +115,6 @@ kwColonOmega = keyword Str.colonOmegaUnicode
 kwAxiom :: Doc Ann
 kwAxiom = keyword Str.axiom
 
-kwEval :: Doc Ann
-kwEval = keyword Str.eval
-
-kwPrint :: Doc Ann
-kwPrint = keyword Str.print
-
 kwOpen :: Doc Ann
 kwOpen = keyword Str.open
 
@@ -247,10 +241,6 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
       (StatementModule {}, _) -> False
       (StatementAxiom {}, StatementAxiom {}) -> True
       (StatementAxiom {}, _) -> False
-      (StatementEval {}, StatementEval {}) -> True
-      (StatementEval {}, _) -> False
-      (StatementPrint {}, StatementPrint {}) -> True
-      (StatementPrint {}, _) -> False
       (StatementTypeSignature sig, StatementFunctionClause fun) ->
         case sing :: SStage s of
           SParsed -> sig ^. sigName == fun ^. clauseOwnerFunction
@@ -293,8 +283,6 @@ instance SingI s => PrettyCode (Statement s) where
     StatementOpenModule o -> ppCode o
     StatementFunctionClause c -> ppCode c
     StatementAxiom a -> ppCode a
-    StatementEval e -> ppCode e
-    StatementPrint p -> ppCode p
     StatementForeign p -> ppCode p
     StatementCompile c -> ppCode c
 
@@ -640,16 +628,6 @@ instance SingI s => PrettyCode (AxiomDef s) where
     axiomType' <- ppExpression _axiomType
     builtin' <- traverse ppCode _axiomBuiltin
     return $ builtin' <?+> kwAxiom <+> axiomName' <+> kwColon <+> axiomType'
-
-instance SingI s => PrettyCode (Eval s) where
-  ppCode (Eval p) = do
-    p' <- ppExpression p
-    return $ kwEval <+> p'
-
-instance SingI s => PrettyCode (Print s) where
-  ppCode (Print p) = do
-    p' <- ppExpression p
-    return $ kwPrint <+> p'
 
 instance SingI s => PrettyCode (Import s) where
   ppCode :: forall r. Members '[Reader Options] r => Import s -> Sem r (Doc Ann)
