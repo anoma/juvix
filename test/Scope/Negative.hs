@@ -6,17 +6,17 @@ import MiniJuvix.Syntax.Concrete.Scoped.Error
 
 type FailMsg = String
 
-data NegTest = NegTest
+data NegTest a = NegTest
   { _name :: String,
     _relDir :: FilePath,
     _file :: FilePath,
-    _checkErr :: ScoperError -> Maybe FailMsg
+    _checkErr :: a -> Maybe FailMsg
   }
 
 root :: FilePath
 root = "tests/negative"
 
-testDescr :: NegTest -> TestDescr
+testDescr :: Typeable a => NegTest a -> TestDescr
 testDescr NegTest {..} =
   let tRoot = root </> _relDir
    in TestDescr
@@ -35,13 +35,15 @@ allTests :: TestTree
 allTests =
   testGroup
     "Scope negative tests"
-    (map (mkTest . testDescr) tests)
+    ( map (mkTest . testDescr) scoperErrorTests
+        <> map (mkTest . testDescr) filesErrorTests
+    )
 
 wrongError :: Maybe FailMsg
 wrongError = Just "Incorrect error"
 
-tests :: [NegTest]
-tests =
+scoperErrorTests :: [NegTest ScoperError]
+scoperErrorTests =
   [ NegTest
       "Not in scope"
       "."
@@ -210,4 +212,20 @@ tests =
       $ \case
         ErrWrongKindExpressionCompileBlock {} -> Nothing
         _ -> wrongError
+  ]
+
+filesErrorTests :: [NegTest FilesError]
+filesErrorTests =
+  [ NegTest
+      "A module that conflicts with a module in the stdlib"
+      "StdlibConflict"
+      "Data/Bool.mjuvix"
+      $ \case
+        FilesError {} -> Nothing,
+    NegTest
+      "Importing a module that conflicts with a module in the stdlib"
+      "StdlibConflict"
+      "Input.mjuvix"
+      $ \case
+        FilesError {} -> Nothing
   ]

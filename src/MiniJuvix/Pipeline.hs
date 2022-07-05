@@ -25,7 +25,7 @@ import MiniJuvix.Translation.ScopedToAbstract qualified as Abstract
 type PipelineEff = '[Files, NameIdGen, Builtins, Error MiniJuvixError, Embed IO]
 
 runIOEither :: Sem PipelineEff a -> IO (Either MiniJuvixError a)
-runIOEither = runM . runError . runBuiltins . runNameIdGen . runFilesIO
+runIOEither = runM . runError . runBuiltins . runNameIdGen . mapError (MiniJuvixError @FilesError) . runFilesIO
 
 runIO :: Sem PipelineEff a -> IO a
 runIO = runIOEither >=> mayThrow

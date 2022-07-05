@@ -1,7 +1,12 @@
-module MiniJuvix.Prelude.Files where
+module MiniJuvix.Prelude.Files
+  ( module MiniJuvix.Prelude.Files,
+    module MiniJuvix.Prelude.Files.Error,
+  )
+where
 
 import Data.HashMap.Strict qualified as HashMap
 import MiniJuvix.Prelude.Base
+import MiniJuvix.Prelude.Files.Error
 
 data Files m a where
   ReadFile' :: FilePath -> Files m Text
@@ -18,12 +23,25 @@ makeLenses ''FilesState
 initState :: FilesState
 initState = FilesState mempty
 
-readStdLibOrFile :: FilePath -> HashMap FilePath Text -> IO Text
-readStdLibOrFile f stdlib = do
-  cf <- canonicalizePath f
+readStdlibOrFile ::
+  Members '[Embed IO, Error FilesError] r =>
+  FilePath ->
+  HashMap FilePath Text ->
+  Sem r Text
+readStdlibOrFile f stdlib = do
+  cf <- embed (canonicalizePath f)
   case HashMap.lookup cf stdlib of
-    Nothing -> readFile f
-    Just c -> return c
+    Nothing -> embed (readFile f)
+    Just c -> do
+      ifM
+        (embed (doesFileExist f))
+        ( throw
+            FilesError
+              { _filesErrorPath = f,
+                _filesErrorCause = StdlibConflict
+              }
+        )
+        (return c)
 
 seqFst :: (IO a, b) -> IO (a, b)
 seqFst (ma, b) = do
@@ -33,11 +51,11 @@ seqFst (ma, b) = do
 canonicalizeStdlib :: [(FilePath, Text)] -> IO (HashMap FilePath Text)
 canonicalizeStdlib stdlib = HashMap.fromList <$> mapM seqFst (first canonicalizePath <$> stdlib)
 
-runFilesIO' :: forall r a. Member (Embed IO) r => Sem (Files ': r) a -> Sem (State FilesState ': r) a
-runFilesIO' = reinterpret $ \case
+runFilesIO' :: forall r a. Member (Embed IO) r => Sem (Files ': r) a -> Sem (State FilesState ': (Error FilesError ': r)) a
+runFilesIO' = reinterpret2 $ \case
   ReadFile' f -> do
     stdlib <- gets (^. stdlibTable)
-    embed (readStdLibOrFile f stdlib)
+    readStdlibOrFile f stdlib
   EqualPaths' f h -> embed $ do
     f' <- canonicalizePath f
     h' <- canonicalizePath h
@@ -46,7 +64,7 @@ runFilesIO' = reinterpret $ \case
     s <- embed (FilesState <$> canonicalizeStdlib stdlib)
     put s
 
-runFilesIO :: Member (Embed IO) r => Sem (Files ': r) a -> Sem r a
+runFilesIO :: Member (Embed IO) r => Sem (Files ': r) a -> Sem (Error FilesError ': r) a
 runFilesIO = evalState initState . runFilesIO'
 
 runFilesEmpty :: Sem (Files ': r) a -> Sem r a

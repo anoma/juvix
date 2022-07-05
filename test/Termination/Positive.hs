@@ -20,7 +20,7 @@ testDescr PosTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = defaultEntryPoint _file
+            let entryPoint = (defaultEntryPoint _file) {_entryPointNoStdlib = True}
             (void . runIO) (upToMicroJuvix entryPoint)
         }
 
