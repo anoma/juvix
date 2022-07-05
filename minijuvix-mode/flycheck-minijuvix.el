@@ -1,4 +1,5 @@
 (require 'flycheck)
+(require 'minijuvix-customize)
 
 (defgroup flycheck-minijuvix nil
   "MiniJuvix support for Flycheck."
@@ -9,7 +10,8 @@
 (flycheck-define-checker minijuvix
   "A MiniJuvix syntax checker."
   :command ("minijuvix" "microjuvix" "typecheck" "--only-errors" "--no-colors"
-                source-original)
+            (option-flag "--no-stdlib" minijuvix-disable-embedded-stdlib)
+            source-original)
   :error-patterns
     (
      (error line-start (file-name) ":" line ":" column ": error:" (message (one-or-more (not "ת"))))

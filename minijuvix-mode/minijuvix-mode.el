@@ -1,3 +1,4 @@
+(require 'minijuvix-customize)
 (require 'minijuvix-highlight)
 (require 'minijuvix-input)
 (require 'flycheck-minijuvix)
@@ -16,11 +17,6 @@
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.m?juvix\\'" . minijuvix-mode))
-
-(defcustom minijuvix-auto-input-method t
-  "Automatically set the input method in minijuvix files."
-  :type 'boolean
-  :group 'minijuvix)
 
 (define-derived-mode minijuvix-mode prog-mode "MiniJuvix"
 
@@ -52,7 +48,7 @@
   (interactive)
   (save-buffer)
   (minijuvix-clear-annotations)
-  (eval (read (shell-command-to-string (concat "minijuvix highlight " (buffer-file-name)))))
+  (eval (read (shell-command-to-string (concat "minijuvix highlight " (if minijuvix-disable-embedded-stdlib "--no-stdlib " "") (buffer-file-name)))))
   (save-buffer)
   )
 
