@@ -53,7 +53,6 @@ parseCommandGlobalOptions = do
             commandHtml,
             commandMicroJuvix,
             commandMiniC,
-            commandMiniHaskell,
             commandMonoJuvix,
             commandParse,
             commandScope,
@@ -61,6 +60,7 @@ parseCommandGlobalOptions = do
             commandTermination
           ]
       )
+      <|> hsubparser (commandMiniHaskell <> internal)
   return (cmd {_cliGlobalOptions = opts <> cmd ^. cliGlobalOptions})
 
 commandCompile :: Mod CommandFields CommandGlobalOptions
