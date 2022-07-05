@@ -161,7 +161,6 @@ allKeywords =
     kwLambda,
     kwLet,
     kwMapsTo,
-    kwMatch,
     kwModule,
     kwOpen,
     kwPostfix,
@@ -255,9 +254,6 @@ kwLet = keyword Str.let_
 
 kwMapsTo :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwMapsTo = keyword Str.mapstoUnicode <|> keyword Str.mapstoAscii
-
-kwMatch :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
-kwMatch = keyword Str.match
 
 kwModule :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwModule = keyword Str.module_

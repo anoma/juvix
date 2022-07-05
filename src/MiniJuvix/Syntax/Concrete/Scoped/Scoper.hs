@@ -1151,7 +1151,6 @@ checkExpressionAtom e = case e of
   AtomFunArrow -> return AtomFunArrow
   AtomHole h -> AtomHole <$> checkHole h
   AtomLiteral l -> return (AtomLiteral l)
-  AtomMatch match -> AtomMatch <$> checkMatch match
 
 checkHole ::
   Members '[NameIdGen] r =>
@@ -1175,32 +1174,6 @@ checkParens e@(ExpressionAtoms as _) = case as of
     let scopedIdenNoFix = idenOverName (set S.nameFixity Nothing) scopedId
     return (ExpressionParensIdentifier scopedIdenNoFix)
   _ -> checkParseExpressionAtoms e
-
-checkMatchAlt ::
-  Members '[Error ScoperError, State Scope, Reader LocalVars, State ScoperState, InfoTableBuilder, NameIdGen] r =>
-  MatchAlt 'Parsed ->
-  Sem r (MatchAlt 'Scoped)
-checkMatchAlt MatchAlt {..} = do
-  matchAltPattern' <- checkParsePatternAtom matchAltPattern
-  matchAltBody' <- withBindCurrentGroup (checkParseExpressionAtoms matchAltBody)
-  return
-    MatchAlt
-      { matchAltPattern = matchAltPattern',
-        matchAltBody = matchAltBody'
-      }
-
-checkMatch ::
-  Members '[Error ScoperError, State Scope, Reader LocalVars, State ScoperState, InfoTableBuilder, NameIdGen] r =>
-  Match 'Parsed ->
-  Sem r (Match 'Scoped)
-checkMatch Match {..} = do
-  matchExpression' <- checkParseExpressionAtoms matchExpression
-  matchAlts' <- mapM checkMatchAlt matchAlts
-  return
-    Match
-      { matchExpression = matchExpression',
-        matchAlts = matchAlts'
-      }
 
 checkExpressionAtoms ::
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
@@ -1362,7 +1335,6 @@ parseTerm =
       <|> parseFunction
       <|> parseLambda
       <|> parseLiteral
-      <|> parseMatch
       <|> parseLetBlock
       <|> parseBraces
   where
@@ -1388,14 +1360,6 @@ parseTerm =
         lambda :: ExpressionAtom 'Scoped -> Maybe (Lambda 'Scoped)
         lambda s = case s of
           AtomLambda l -> Just l
-          _ -> Nothing
-
-    parseMatch :: Parse Expression
-    parseMatch = ExpressionMatch <$> P.token match mempty
-      where
-        match :: ExpressionAtom 'Scoped -> Maybe (Match 'Scoped)
-        match s = case s of
-          AtomMatch l -> Just l
           _ -> Nothing
 
     parseUniverse :: Parse Expression

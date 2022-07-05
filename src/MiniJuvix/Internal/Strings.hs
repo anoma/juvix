@@ -50,9 +50,6 @@ infixl_ = "infixl"
 infixr_ :: IsString s => s
 infixr_ = "infixr"
 
-match :: IsString s => s
-match = "match"
-
 open :: IsString s => s
 open = "open"
 

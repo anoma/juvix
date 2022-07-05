@@ -237,13 +237,11 @@ expressionAtom =
     <|> (AtomUniverse <$> universe)
     <|> (AtomLambda <$> lambda)
     <|> (AtomFunction <$> function)
-    <|> (AtomMatch <$> match)
     <|> (AtomLetBlock <$> letBlock)
     <|> (AtomFunArrow <$ kwRightArrow)
     <|> (AtomHole <$> hole)
     <|> parens (AtomParens <$> parseExpressionAtoms)
-    -- TODO: revise this try. Necessary to avoid confusion with match
-    <|> P.try (braces (AtomBraces <$> withLoc parseExpressionAtoms))
+    <|> (braces (AtomBraces <$> withLoc parseExpressionAtoms))
 
 parseExpressionAtoms ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
@@ -279,24 +277,6 @@ literal = do
     literalInteger
       <|> literalString
   P.lift (registerLiteral l)
-
---------------------------------------------------------------------------------
--- Match expression
---------------------------------------------------------------------------------
-
-matchAlt :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (MatchAlt 'Parsed)
-matchAlt = do
-  matchAltPattern <- patternAtom
-  kwMapsTo
-  matchAltBody <- parseExpressionAtoms
-  return MatchAlt {..}
-
-match :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Match 'Parsed)
-match = do
-  kwMatch
-  matchExpression <- parseExpressionAtoms
-  matchAlts <- braces (P.sepEndBy matchAlt kwSemicolon)
-  return Match {..}
 
 --------------------------------------------------------------------------------
 -- Let expression

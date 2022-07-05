@@ -549,7 +549,6 @@ data Expression
   | ExpressionInfixApplication InfixApplication
   | ExpressionPostfixApplication PostfixApplication
   | ExpressionLambda (Lambda 'Scoped)
-  | ExpressionMatch (Match 'Scoped)
   | ExpressionLetBlock (LetBlock 'Scoped)
   | ExpressionUniverse Universe
   | ExpressionLiteral LiteralLoc
@@ -568,61 +567,10 @@ instance HasAtomicity Expression where
     ExpressionPostfixApplication a -> Aggregate (getFixity a)
     ExpressionLambda {} -> Atom
     ExpressionLiteral {} -> Atom
-    ExpressionMatch {} -> Atom
     ExpressionLetBlock {} -> Atom
     ExpressionBraces {} -> Atom
     ExpressionUniverse {} -> Atom
     ExpressionFunction {} -> Aggregate funFixity
-
---------------------------------------------------------------------------------
--- Match expression
---------------------------------------------------------------------------------
-
-data MatchAlt (s :: Stage) = MatchAlt
-  { matchAltPattern :: PatternType s,
-    matchAltBody :: ExpressionType s
-  }
-
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (PatternType s)
-  ) =>
-  Show (MatchAlt s)
-
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (PatternType s)
-  ) =>
-  Eq (MatchAlt s)
-
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (PatternType s)
-  ) =>
-  Ord (MatchAlt s)
-
-data Match (s :: Stage) = Match
-  { matchExpression :: ExpressionType s,
-    matchAlts :: [MatchAlt s]
-  }
-
-deriving stock instance
-  ( Show (ExpressionType s),
-    Show (PatternType s)
-  ) =>
-  Show (Match s)
-
-deriving stock instance
-  ( Eq (ExpressionType s),
-    Eq (PatternType s)
-  ) =>
-  Eq (Match s)
-
-deriving stock instance
-  ( Ord (ExpressionType s),
-    Ord (PatternType s)
-  ) =>
-  Ord (Match s)
 
 --------------------------------------------------------------------------------
 -- Function expression
@@ -933,7 +881,6 @@ data ExpressionAtom (s :: Stage)
   | AtomUniverse Universe
   | AtomFunction (Function s)
   | AtomFunArrow
-  | AtomMatch (Match s)
   | AtomLiteral LiteralLoc
   | AtomParens (ExpressionType s)
 

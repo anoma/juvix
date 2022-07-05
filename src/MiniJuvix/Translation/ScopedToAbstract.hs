@@ -276,7 +276,6 @@ goExpression = \case
   ExpressionLiteral l -> return (Abstract.ExpressionLiteral l)
   ExpressionLambda {} -> unsupported "Lambda"
   ExpressionBraces b -> throw (ErrAppLeftImplicit (AppLeftImplicit b))
-  ExpressionMatch {} -> unsupported "Match"
   ExpressionLetBlock {} -> unsupported "Let Block"
   ExpressionUniverse uni -> return (Abstract.ExpressionUniverse (goUniverse uni))
   ExpressionFunction func -> Abstract.ExpressionFunction <$> goFunction func

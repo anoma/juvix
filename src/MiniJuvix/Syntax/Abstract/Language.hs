@@ -98,7 +98,6 @@ data Expression
   | ExpressionFunction Function
   | ExpressionLiteral LiteralLoc
   | ExpressionHole Hole
-  --- | ExpressionMatch Match
   ---  ExpressionLambda Lambda not supported yet
   deriving stock (Eq, Show)
 
@@ -110,18 +109,6 @@ instance HasAtomicity Expression where
     ExpressionApplication a -> atomicity a
     ExpressionFunction f -> atomicity f
     ExpressionLiteral f -> atomicity f
-
-data Match = Match
-  { _matchExpression :: Expression,
-    _matchAlts :: [MatchAlt]
-  }
-  deriving stock (Eq, Show)
-
-data MatchAlt = MatchAlt
-  { _matchAltPattern :: Pattern,
-    _matchAltBody :: Expression
-  }
-  deriving stock (Eq, Show)
 
 data Application = Application
   { _appLeft :: Expression,

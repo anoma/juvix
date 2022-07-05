@@ -61,9 +61,6 @@ kwColon = keyword Str.colon
 kwArrowR :: Doc Ann
 kwArrowR = keyword Str.toUnicode
 
-kwMatch :: Doc Ann
-kwMatch = keyword Str.match
-
 kwLambda :: Doc Ann
 kwLambda = keyword Str.lambdaUnicode
 
@@ -602,18 +599,6 @@ instance SingI s => PrettyCode (LetClause s) where
 ppBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
 ppBlock items = mapM (fmap endSemicolon . ppCode) items >>= bracesIndent . vsep . toList
 
-instance SingI s => PrettyCode (MatchAlt s) where
-  ppCode MatchAlt {..} = do
-    matchAltPattern' <- ppPatternAtom matchAltPattern
-    matchAltBody' <- ppExpression matchAltBody
-    return $ matchAltPattern' <+> kwMapsto <+> matchAltBody'
-
-instance SingI s => PrettyCode (Match s) where
-  ppCode Match {..} = do
-    matchExpression' <- ppExpression matchExpression
-    matchAlts' <- ppBlock matchAlts
-    return $ kwMatch <+> matchExpression' <+> matchAlts'
-
 instance SingI s => PrettyCode (LambdaClause s) where
   ppCode LambdaClause {..} = do
     lambdaParameters' <- hsep . toList <$> mapM ppPatternAtom lambdaParameters
@@ -775,7 +760,6 @@ instance PrettyCode Expression where
     ExpressionInfixApplication a -> ppCode a
     ExpressionPostfixApplication a -> ppCode a
     ExpressionLambda l -> ppCode l
-    ExpressionMatch m -> ppCode m
     ExpressionLetBlock lb -> ppCode lb
     ExpressionUniverse u -> ppCode u
     ExpressionLiteral l -> ppCode l
@@ -867,7 +851,6 @@ instance SingI s => PrettyCode (ExpressionAtom s) where
     AtomFunction fun -> ppCode fun
     AtomLiteral lit -> ppCode lit
     AtomFunArrow -> return kwArrowR
-    AtomMatch m -> ppCode m
     AtomParens e -> parens <$> ppExpression e
     AtomBraces e -> braces <$> ppExpression (e ^. withLocParam)
     AtomHole w -> ppHole w
