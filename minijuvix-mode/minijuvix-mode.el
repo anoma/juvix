@@ -17,10 +17,17 @@
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.m?juvix\\'" . minijuvix-mode))
 
+(defcustom minijuvix-auto-input-method t
+  "Automatically set the input method in minijuvix files."
+  :type 'boolean
+  :group 'minijuvix)
+
 (define-derived-mode minijuvix-mode prog-mode "MiniJuvix"
 
   (font-lock-mode 0)
-  (set-input-method "minijuvix")
+  (when minijuvix-auto-input-method
+    (set-input-method "minijuvix")
+    )
   (setq-local comment-start "--")
 
   (add-hook

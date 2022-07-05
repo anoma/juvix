@@ -170,8 +170,8 @@ This suffix is dropped."
   "The minijuvix input method.
 After tweaking these settings you may want to inspect the resulting
 translations using `minijuvix-input-show-translations'."
-  :group 'minijuvix2
-  :group 'leim)
+  :group 'minijuvix
+  )
 
 (defcustom minijuvix-input-tweak-all
   '(minijuvix-input-compose
