@@ -57,7 +57,7 @@ goInductiveParameter :: InductiveParameter -> Sem r ()
 goInductiveParameter _ = return ()
 
 goInductiveConstructorDef :: Members '[State TypeCallsMap, Reader Caller, Reader InfoTable] r => InductiveConstructorDef -> Sem r ()
-goInductiveConstructorDef c = mapM_ goExpression (c ^. constructorParameters)
+goInductiveConstructorDef c = mapM_ goExpression (c ^. inductiveConstructorParameters)
 
 goParam :: Members '[State TypeCallsMap, Reader Caller, Reader InfoTable] r => FunctionParameter -> Sem r ()
 goParam (FunctionParameter _ _ ty) = goExpression ty

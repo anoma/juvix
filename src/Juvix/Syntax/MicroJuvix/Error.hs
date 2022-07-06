@@ -21,7 +21,8 @@ data TypeCheckerError
   | ErrTooManyArgumentsIndType WrongNumberArgumentsIndType
   | ErrTooFewArgumentsIndType WrongNumberArgumentsIndType
   | ErrImpracticalPatternMatching ImpracticalPatternMatching
-  | ErrNoPositivity NoPositivity
+  | ErrNoStrictPositivity NoStrictPositivity
+  | ErrWrongInductiveParameterName WrongInductiveParameterName
 
 instance ToGenericError TypeCheckerError where
   genericError :: TypeCheckerError -> GenericError
@@ -35,4 +36,5 @@ instance ToGenericError TypeCheckerError where
     ErrTooManyArgumentsIndType e -> genericError e
     ErrTooFewArgumentsIndType e -> genericError e
     ErrImpracticalPatternMatching e -> genericError e
-    ErrNoPositivity e -> genericError e
+    ErrNoStrictPositivity e -> genericError e
+    ErrWrongInductiveParameterName e -> genericError e

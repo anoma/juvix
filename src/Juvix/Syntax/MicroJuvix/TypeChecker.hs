@@ -77,6 +77,7 @@ checkStatement s = case s of
   StatementFunction fun -> StatementFunction <$> checkFunctionDef fun
   StatementForeign {} -> return s
   StatementInductive ind -> do
+    checkInductiveDef ind
     mapM_ registerConstructor (ind ^. inductiveConstructors)
     ty <- inductiveType (ind ^. inductiveName)
     modify (HashMap.insert (ind ^. inductiveName) ty)
@@ -137,6 +138,177 @@ checkFunctionParameter ::
 checkFunctionParameter (FunctionParameter mv i e) = do
   e' <- checkExpression (smallUniverse (getLoc e)) e
   return (FunctionParameter mv i e')
+
+-------------------------------------------------------------------------------
+-- Typechecking of data types
+-------------------------------------------------------------------------------
+
+type ErrorReference = Maybe Expression
+
+type RecursionLimit = Int
+
+checkStrictlyPositiveOccurrences ::
+  Members '[Reader InfoTable, Error TypeCheckerError] r =>
+  InductiveName ->
+  ConstrName ->
+  Name ->
+  RecursionLimit ->
+  ErrorReference ->
+  Expression ->
+  Sem r ()
+checkStrictlyPositiveOccurrences indName ctorName name recLimit ref = helper False
+  where
+    -- In the func. below, we want to determine if there is a negative occurence
+    -- of `name` in the expression `expr` The `inside` flag indicates whether
+    -- the current search happens in the left of an inner arrow.
+    helper ::
+      Members '[Reader InfoTable, Error TypeCheckerError] r =>
+      Bool ->
+      Expression ->
+      Sem r ()
+
+    helper inside expr = case expr of
+      ExpressionIden (IdenInductive ty') -> when (inside && name == ty') (strictlyPositivityError expr)
+      ExpressionIden (IdenVar name') -> when (inside && name == name') (strictlyPositivityError expr)
+      ExpressionFunction (Function l r) -> helper True (l ^. paramType) >> helper False r
+      ExpressionApplication
+        tyApp@(Application (ExpressionIden (IdenInductive ty')) r _) -> do
+          if
+              | inside && name == ty' -> strictlyPositivityError expr
+              | name /= ty' -> do
+                  -- Here `name` may show up as a subexpr of ty'. Therefore, we
+                  -- need to check if the type ty' preserves the str. positivity
+                  -- condition. The type ty', by assumption, has to be strictly
+                  -- positive. It is already in scope. Then, it remains to check
+                  --  that the ty' type constructor parameters in which `name`
+                  -- is, they are all strictly positive. TODO: This last check
+                  -- is done on demand, but it could be cached, if the infotable
+                  -- becomes stateful.
+                  InductiveInfo indTy' <- lookupInductive ty'
+                  let (_, args) = unfoldApplication tyApp
+                      paramsTy' = indTy' ^. inductiveParameters
+                      go ::
+                        Members '[Reader InfoTable, Error TypeCheckerError] r =>
+                        [(InductiveParameter, Expression)] ->
+                        Sem r ()
+                      go = \case
+                        ((InductiveParameter pName _, arg) : ps) ->
+                          if
+                              | nameInExpression name arg -> do
+                                  unless
+                                    (indTy' ^. inductiveNoPositivity || recLimit == 0)
+                                    ( forM_ (indTy' ^. inductiveConstructors) $ \ctor' -> do
+                                        -- check if pName occurs strictly positive in indTy'.
+                                        mapM_
+                                          ( checkStrictlyPositiveOccurrences
+                                              indName
+                                              ctorName
+                                              pName
+                                              (recLimit - 1)
+                                              (Just (fromMaybe arg ref))
+                                              -- (Just arg)
+                                          )
+                                          (ctor' ^. inductiveConstructorParameters)
+                                    )
+                                  go ps
+                              | otherwise -> go ps
+                        [] -> return ()
+                  go (zip paramsTy' (toList args))
+              | otherwise -> helper inside r
+      _ -> return ()
+
+    strictlyPositivityError :: Members '[Error TypeCheckerError] r => Expression -> Sem r ()
+    strictlyPositivityError expr = do
+      let errLoc = fromMaybe expr ref
+      throw
+        ( ErrNoStrictPositivity $
+            NoStrictPositivity
+              { _noStrictPositivityType = indName,
+                _noStrictPositivityConstructor = ctorName,
+                _noStrictPositivityArgument = errLoc
+              }
+        )
+
+checkInductiveDef ::
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen] r =>
+  InductiveDef ->
+  Sem r ()
+checkInductiveDef ty@InductiveDef {..} = do
+  checkInductiveParameterNames _inductiveName _inductiveParameters
+  mapM_ (checkConstructorDef ty) _inductiveConstructors
+  return ty
+
+checkInductiveParameterNames ::
+  Members '[Reader InfoTable, Error TypeCheckerError] r =>
+  InductiveName ->
+  [InductiveParameter] ->
+  Sem r ()
+checkInductiveParameterNames tyName = helper mempty
+  where
+    helper ::
+      Members '[Reader InfoTable, Error TypeCheckerError] r =>
+      HashSet Text ->
+      [InductiveParameter] ->
+      Sem r ()
+    helper _ [] = return ()
+    helper nset (p : parms) = do
+      let pName = p ^. inductiveParamName
+          pText = pName ^. nameText
+      if
+          | HashSet.member pText nset ->
+              throw
+                ( ErrWrongInductiveParameterName
+                    ( WrongInductiveParameterName
+                        { _wrongInductiveParameterName = pName,
+                          _wrongInductiveParameterType = tyName
+                        }
+                    )
+                )
+          | otherwise -> helper (HashSet.insert pText nset) parms
+
+checkConstructorDef ::
+  Members '[Reader InfoTable, Error TypeCheckerError] r =>
+  InductiveDef ->
+  InductiveConstructorDef ->
+  Sem r ()
+checkConstructorDef ty ctor = do
+  let indName = ty ^. inductiveName
+      ctorName = ctor ^. inductiveConstructorName
+  checkConstructorReturnType indName ctor
+  numInductives <- HashMap.size <$> asks (^. infoInductives)
+  unless
+    (ty ^. inductiveNoPositivity)
+    (mapM_ (checkStrictlyPositiveOccurrences indName ctorName indName numInductives Nothing) (ctor ^. inductiveConstructorParameters))
+
+checkConstructorReturnType ::
+  Members '[Reader InfoTable, Error TypeCheckerError] r =>
+  InductiveName ->
+  InductiveConstructorDef ->
+  Sem r ()
+checkConstructorReturnType indName ctor = do
+  InductiveInfo indType <- lookupInductive indName
+  let ctorName = ctor ^. inductiveConstructorName
+      ctorReturnType = ctor ^. inductiveConstructorReturnType
+      tyName = indType ^. inductiveName
+      indParams = map (^. inductiveParamName) (indType ^. inductiveParameters)
+      expectedReturnType =
+        foldExplicitApplication
+          (ExpressionIden (IdenInductive tyName))
+          (map (ExpressionIden . IdenVar) indParams)
+  when
+    (ctorReturnType /= expectedReturnType)
+    ( throw
+        ( ErrWrongReturnType
+            ( WrongReturnType
+                { _wrongReturnTypeConstructorName = ctorName,
+                  _wrongReturnTypeExpected = expectedReturnType,
+                  _wrongReturnTypeActual = ctorReturnType
+                }
+            )
+        )
+    )
+
+-------------------------------------------------------------------------------
 
 inferExpression ::
   Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
