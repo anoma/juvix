@@ -1,0 +1,5 @@
+module E1;
+inductive A {
+  ctor : (A -> A) -> A;
+};
+end;
