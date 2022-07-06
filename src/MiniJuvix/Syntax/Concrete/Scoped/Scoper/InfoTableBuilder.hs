@@ -12,7 +12,7 @@ data InfoTableBuilder m a where
   RegisterInductive :: InductiveDef 'Scoped -> InfoTableBuilder m ()
   RegisterFunction :: TypeSignature 'Scoped -> InfoTableBuilder m ()
   RegisterFunctionClause :: FunctionClause 'Scoped -> InfoTableBuilder m ()
-  RegisterName :: S.Name -> InfoTableBuilder m ()
+  RegisterName :: HasLoc c => S.Name' c -> InfoTableBuilder m ()
   RegisterCompile :: Compile 'Scoped -> InfoTableBuilder m ()
 
 makeSem ''InfoTableBuilder
@@ -89,7 +89,7 @@ toState = reinterpret $ \case
     let key = c ^. clauseOwnerFunction
         value = c
      in modify (over infoFunctionClauses (HashMap.insert key value))
-  RegisterName n -> modify (over infoNames (cons n))
+  RegisterName n -> modify (over infoNames (cons (S.AName n)))
 
 runInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilder = runState emptyInfoTable . toState

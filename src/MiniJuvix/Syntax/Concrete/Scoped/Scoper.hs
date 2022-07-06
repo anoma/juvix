@@ -210,6 +210,7 @@ checkImport import_@(Import path) = do
       sname = checked ^. modulePath
       moduleId = sname ^. S.nameId
   modify (over scopeTopModules (HashMap.insert path moduleRef))
+  registerName (set S.nameConcrete path sname)
   let moduleRef' = mkModuleRef' moduleRef
   modify (over scoperModules (HashMap.insert moduleId moduleRef'))
   return (Import checked)
@@ -515,7 +516,6 @@ checkTopModule m@(Module path params body) = do
           _nameWhyInScope = S.BecauseDefined
           _nameVerbatim = N.topModulePathToDottedPath path
           moduleName = S.Name' {..}
-      -- registerName moduleName
       return moduleName
     iniScope :: Scope
     iniScope = emptyScope (getTopModulePath m)
@@ -678,6 +678,7 @@ checkOpenModuleNoImport OpenModule {..}
       openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- lookupModuleSymbol _openModuleName
       openParameters' <- mapM checkParseExpressionAtoms _openParameters
       mergeScope (alterScope (moduleRef'' ^. moduleExportInfo))
+      registerName (moduleRef'' ^. moduleRefName)
       return
         OpenModule
           { _openModuleName = openModuleName',

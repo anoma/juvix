@@ -91,6 +91,17 @@ instance HasNameKind (Name' n) where
 instance HasLoc n => HasLoc (Name' n) where
   getLoc = getLoc . (^. nameConcrete)
 
+data AName = forall c.
+  HasLoc c =>
+  AName
+  {_aName :: Name' c}
+
+instance HasLoc AName where
+  getLoc (AName c) = getLoc c
+
+instance HasNameKind AName where
+  getNameKind (AName c) = getNameKind c
+
 hasFixity :: Name' s -> Bool
 hasFixity n = isJust (n ^. nameFixity)
 

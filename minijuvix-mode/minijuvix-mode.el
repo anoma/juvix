@@ -53,11 +53,14 @@
   )
 
 (defun minijuvix-goto-definition ()
-  "Goes to the definition of the symbol at point."
+  "Go to the definition of the symbol at point."
   (interactive)
   (let ((goto-info (get-text-property (point) 'minijuvix-goto)))
     (if goto-info
-      (goto-char (cdr goto-info))
+      (progn
+        (find-file (car goto-info))
+        (minijuvix-load)
+       (goto-char (cdr goto-info)))
       (message "No goto information found at cursor"))))
 
 (provide 'minijuvix-mode)

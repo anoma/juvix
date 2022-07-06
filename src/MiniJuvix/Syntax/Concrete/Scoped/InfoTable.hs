@@ -36,10 +36,9 @@ data InfoTable = InfoTable
     _infoInductives :: HashMap InductiveRef InductiveInfo,
     _infoFunctions :: HashMap FunctionRef FunctionInfo,
     _infoFunctionClauses :: HashMap S.Symbol (FunctionClause 'Scoped),
-    _infoNames :: [S.Name],
+    _infoNames :: [S.AName],
     _infoCompilationRules :: HashMap S.Symbol CompileInfo
   }
-  deriving stock (Eq, Show)
 
 emptyInfoTable :: InfoTable
 emptyInfoTable =

@@ -29,7 +29,7 @@ data Instruction = SetProperty
 
 data HighlightInput = HighlightInput
   { _highlightParsed :: [ParsedItem],
-    _highlightNames :: [Name]
+    _highlightNames :: [AName]
   }
 
 makeLenses ''HighlightInput
@@ -46,10 +46,10 @@ data SExp
 makeLenses ''Instruction
 
 filterInput :: FilePath -> HighlightInput -> HighlightInput
-filterInput absPth h =
+filterInput absPth HighlightInput {..} =
   HighlightInput
-    { _highlightNames = filterByLoc absPth (h ^. highlightNames),
-      _highlightParsed = filterByLoc absPth (h ^. highlightParsed)
+    { _highlightNames = filterByLoc absPth _highlightNames,
+      _highlightParsed = filterByLoc absPth _highlightParsed
     }
 
 filterByLoc :: HasLoc p => FilePath -> [p] -> [p]
@@ -73,7 +73,6 @@ go HighlightInput {..} =
         )
     )
   where
-    names :: [Name]
     names = _highlightNames
     items :: [ParsedItem]
     items = _highlightParsed
@@ -126,13 +125,13 @@ goParsedItem i = instr face (getLoc i)
       ParsedTagLiteralString -> FaceString
       ParsedTagComment -> FaceComment
 
-colorName :: Name -> Maybe SExp
+colorName :: AName -> Maybe SExp
 colorName n = do
-  f <- nameKindFace (n ^. nameKind)
+  f <- nameKindFace (getNameKind n)
   return (instr f (getLoc n))
 
-gotoDefName :: Name -> SExp
-gotoDefName n =
+gotoDefName :: AName -> SExp
+gotoDefName (AName n) =
   App [Symbol "add-text-properties", start, end, goto]
   where
     i = getLoc n
