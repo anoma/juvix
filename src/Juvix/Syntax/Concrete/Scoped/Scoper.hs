@@ -472,7 +472,7 @@ checkInductiveDef ty@InductiveDef {..} = do
           _inductiveParameters = inductiveParameters',
           _inductiveType = inductiveType',
           _inductiveConstructors = inductiveConstructors',
-          _inductiveCheckPositivity = ty ^. inductiveCheckPositivity
+          _inductiveNoPositivity = ty ^. inductiveNoPositivity
         }
 
 checkTopModule_ ::

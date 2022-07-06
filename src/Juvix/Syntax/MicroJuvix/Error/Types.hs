@@ -261,15 +261,15 @@ instance ToGenericError ImpracticalPatternMatching where
           <+> "is not an inductive data type."
           <+> "Therefore, pattern-matching is not available here"
 
-data NoPositivity = NoPositivity
-  { _noPositivityType :: Name,
-    _noPositivityConstructor :: Name,
-    _noPositivityArgument :: Expression
+data NoStrictPositivity = NoStrictPositivity
+  { _noStrictPositivityType :: Name,
+    _noStrictPositivityConstructor :: Name,
+    _noStrictPositivityArgument :: Expression
   }
 
-makeLenses ''NoPositivity
+makeLenses ''NoStrictPositivity
 
-instance ToGenericError NoPositivity where
+instance ToGenericError NoStrictPositivity where
   genericError e =
     GenericError
       { _genericErrorLoc = j,
@@ -277,9 +277,9 @@ instance ToGenericError NoPositivity where
         _genericErrorIntervals = [i, j]
       }
     where
-      ty = e ^. noPositivityType
-      ctor = e ^. noPositivityConstructor
-      arg = e ^. noPositivityArgument
+      ty = e ^. noStrictPositivityType
+      ctor = e ^. noStrictPositivityConstructor
+      arg = e ^. noStrictPositivityArgument
       i = getLoc ty
       j = getLoc arg
       msg =
@@ -292,3 +292,28 @@ instance ToGenericError NoPositivity where
           <+> "the type"
           <+> ppCode ty
           <+> "appears in a negative position."
+
+data WrongInductiveParameterName = WrongInductiveParameterName
+  { _wrongInductiveParameterName :: Name,
+    _wrongInductiveParameterType :: Name
+  }
+
+makeLenses ''WrongInductiveParameterName
+
+instance ToGenericError WrongInductiveParameterName where
+  genericError e =
+    GenericError
+      { _genericErrorLoc = i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
+    where
+      param = e ^. wrongInductiveParameterName
+      ty = e ^. wrongInductiveParameterType
+      i = getLoc param
+      msg =
+        "The parameter name"
+          <+> ppCode param
+          <+> "is not valid"
+          <+> "when declaring type"
+          <+> ppCode ty

@@ -249,7 +249,7 @@ data InductiveDef (s :: Stage) = InductiveDef
     _inductiveParameters :: [InductiveParameter s],
     _inductiveType :: Maybe (ExpressionType s),
     _inductiveConstructors :: [InductiveConstructorDef s],
-    _inductiveCheckPositivity :: Bool
+    _inductiveNoPositivity :: Bool
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (InductiveDef s)

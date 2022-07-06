@@ -140,12 +140,13 @@ data InductiveDef = InductiveDef
     _inductiveBuiltin :: Maybe BuiltinInductive,
     _inductiveParameters :: [InductiveParameter],
     _inductiveConstructors :: [InductiveConstructorDef],
-    _inducitvePolarity :: Maybe Polarity
+    _inductiveNoPositivity :: Bool
   }
 
 data InductiveConstructorDef = InductiveConstructorDef
-  { _constructorName :: ConstrName,
-    _constructorParameters :: [Expression]
+  { _inductiveConstructorName :: ConstrName,
+    _inductiveConstructorParameters :: [Expression],
+    _inductiveConstructorReturnType :: Expression
   }
 
 data FunctionParameter = FunctionParameter

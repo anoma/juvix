@@ -389,6 +389,24 @@ unfoldExpressionApp e = case e of
 unfoldApplication :: Application -> (Expression, NonEmpty Expression)
 unfoldApplication = fmap (fmap snd) . unfoldApplication'
 
+nameInExpression :: Name -> Expression -> Bool
+nameInExpression n = \case
+  ExpressionIden (IdenVar var) -> n == var
+  ExpressionIden (IdenInductive ty) -> n == ty
+  ExpressionApplication (Application l r _) -> nameInExpression n l || nameInExpression n r
+  ExpressionFunction (Function l r) -> nameInExpression n (l ^. paramType) || nameInExpression n r
+  _ -> False
+
+nameNegInExpression :: Name -> Expression -> Bool
+nameNegInExpression n = helper False
+  where
+    helper inside = \case
+      ExpressionIden (IdenVar var) -> inside && n == var
+      ExpressionIden (IdenInductive ty) -> n == ty
+      ExpressionApplication (Application l r _) -> helper True l || helper False r
+      ExpressionFunction (Function l r) -> helper True (l ^. paramType) || helper False r
+      _ -> False
+
 reachableModules :: Module -> [Module]
 reachableModules = fst . run . runOutputList . evalState (mempty :: HashSet Name) . go
   where
