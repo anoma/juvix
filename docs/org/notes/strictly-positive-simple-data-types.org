@@ -1,7 +1,7 @@
 * Strictly positive simple data types
 
 We follow a syntactic description of strictly positive inductive families.
-The name of the data type must always be to the right of any arrow 
+The name of the data type must always be to the right of any arrow
 in any argument type of its constructors. If th
 
 #+begin_src minijuvix

@@ -192,7 +192,7 @@ checkStrictlyPositiveOccurrences indName ctorName name recLimit ref = helper Fal
                         [(InductiveParameter, Expression)] ->
                         Sem r ()
                       go = \case
-                        ((InductiveParameter pName _, arg) : ps) ->
+                        ((InductiveParameter pName, arg) : ps) ->
                           if
                               | nameInExpression name arg -> do
                                   unless

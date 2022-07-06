@@ -13,4 +13,8 @@ inductive T2 {
 c2: (B -> (B -> T1 T2)) -> T2;
 };
 
+-- inductive T3 {
+-- c2: T0 T3 -> T3;
+-- };
+
 end;

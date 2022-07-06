@@ -261,8 +261,7 @@ goInductiveParameter f =
       | isSmallUni u ->
           return
             InductiveParameter
-              { _inductiveParamName = var,
-                _inductiveParamPolarity = Nothing
+              { _inductiveParamName = var
               }
     (Just {}, _, _) -> unsupported "only type variables of small types are allowed"
     (Nothing, _, _) -> unsupported "unnamed inductive parameters"
