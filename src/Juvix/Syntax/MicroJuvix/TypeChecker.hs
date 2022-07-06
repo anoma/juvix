@@ -176,6 +176,7 @@ checkStrictlyPositiveOccurrences indName ctorName name recLimit ref = helper Fal
           if
               | inside && name == ty' -> strictlyPositivityError expr
               | name /= ty' -> do
+<<<<<<< HEAD
                   -- Here `name` may show up as a subexpr of ty'. Therefore, we
                   -- need to check if the type ty' preserves the str. positivity
                   -- condition. The type ty', by assumption, has to be strictly
@@ -184,6 +185,14 @@ checkStrictlyPositiveOccurrences indName ctorName name recLimit ref = helper Fal
                   -- is, they are all strictly positive. TODO: This last check
                   -- is done on demand, but it could be cached, if the infotable
                   -- becomes stateful.
+=======
+                  -- Here `name` may show up as a subexpr of ty'. Therefore, we need to check
+                  -- if the type ty' preserves the str. positivity condition.
+                  -- The type ty', by assumption, has to be strictly positive. It is already in scope.
+                  -- Then, it remains to check that the ty' type constructor parameters in which `name`
+                  --  is, they are all strictly positive. TODO: This last check is done on demand, but it
+                  -- could be cached with a state, e.g. SPositiveNames : HashSet Name
+>>>>>>> bb830e3 (Add some revisions)
                   InductiveInfo indTy' <- lookupInductive ty'
                   let (_, args) = unfoldApplication tyApp
                       paramsTy' = indTy' ^. inductiveParameters
@@ -192,7 +201,7 @@ checkStrictlyPositiveOccurrences indName ctorName name recLimit ref = helper Fal
                         [(InductiveParameter, Expression)] ->
                         Sem r ()
                       go = \case
-                        ((InductiveParameter pName _, arg) : ps) ->
+                        ((InductiveParameter pName, arg) : ps) ->
                           if
                               | nameInExpression name arg -> do
                                   unless
@@ -368,9 +377,6 @@ checkFunctionClause info FunctionClause {..} = do
           (par : pars, ret) -> do
             checkPattern _clauseName par p
             go ps (foldFunType pars ret)
-
-typeOfArg :: FunctionParameter -> Expression
-typeOfArg = (^. paramType)
 
 checkPattern ::
   forall r.
