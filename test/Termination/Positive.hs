@@ -70,7 +70,7 @@ allTests =
         "Well-known terminating functions"
         (map (mkTest . testDescr) tests),
       testGroup
-        "Bypass checking using --non-termination flag on negative tests"
+        "Bypass termination checking using --non-termination flag on negative tests"
         (map (mkTest . testDescrFlag) negTests),
       testGroup
         "Terminating keyword"

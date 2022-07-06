@@ -111,5 +111,33 @@ tests =
       "WrongReturnTypeTooManyArguments.juvix"
       $ \case
         ErrWrongReturnType {} -> Nothing
+        _ -> wrongError,
+    NegTest "E1" "MicroJuvix/NoStrictlyPositiveDataTypes" "E1.mjuvix" $
+      \case
+        ErrNoStrictPositivity {} -> Nothing
+        _ -> wrongError,
+    NegTest "E2" "MicroJuvix/NoStrictlyPositiveDataTypes" "E2.mjuvix" $
+      \case
+        ErrNoStrictPositivity {} -> Nothing
+        _ -> wrongError,
+    NegTest "E3" "MicroJuvix/NoStrictlyPositiveDataTypes" "E3.mjuvix" $
+      \case
+        ErrNoStrictPositivity {} -> Nothing
+        _ -> wrongError,
+    NegTest "E4" "MicroJuvix/NoStrictlyPositiveDataTypes" "E4.mjuvix" $
+      \case
+        ErrNoStrictPositivity {} -> Nothing
+        _ -> wrongError,
+    NegTest "E5" "MicroJuvix/NoStrictlyPositiveDataTypes" "E5.mjuvix" $
+      \case
+        ErrNoStrictPositivity {} -> Nothing
+        _ -> wrongError,
+    NegTest "E6" "MicroJuvix/NoStrictlyPositiveDataTypes" "E6.mjuvix" $
+      \case
+        ErrNoStrictPositivity {} -> Nothing
+        _ -> wrongError,
+    NegTest "E7" "MicroJuvix/NoStrictlyPositiveDataTypes" "E7.mjuvix" $
+      \case
+        ErrNoStrictPositivity {} -> Nothing
         _ -> wrongError
   ]
