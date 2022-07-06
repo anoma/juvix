@@ -5,6 +5,7 @@ HLINTQUIET :=
 
 ORGFILES = $(shell find docs/org -type f -name '*.org')
 MDFILES:=$(patsubst docs/org/%,docs/md/%,$(ORGFILES:.org=.md))
+ASSETS = seating-mascot.051c86a.svg Seating_Tara_smiling.svg teaching-mascot.f828959.svg
 
 ORGTOMDPRG ?=pandoc
 ORGOPTS=--from org --to markdown_strict -s -o $@
@@ -30,6 +31,9 @@ docs/md/%.md : docs/org/%.org
 
 .PHONY: markdown-docs
 markdown-docs: $(MDFILES)
+	@echo "copying assets ..."
+	@mkdir -p docs/md/assets
+	@cp -v $(addprefix assets/,$(ASSETS)) docs/md/assets
 	mdbook build
 
 .PHONY: serve-docs

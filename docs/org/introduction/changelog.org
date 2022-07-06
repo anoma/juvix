@@ -2,7 +2,7 @@
 
 #+begin_html
 <a href="https://github.com/heliaxdev/MiniJuvix">
-<img align="right" width="300" height="300" alt="MiniJuvix Mascot" src="https://juvix.org/_nuxt/img/greeting-mascot.ad540a1.svg" />
+<img align="right" width="300" height="300" alt="MiniJuvix Mascot" src="../assets/Seating_Tara_smiling.svg" />
 </a>
 #+end_html
 
