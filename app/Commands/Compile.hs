@@ -160,6 +160,7 @@ libcArgs sysrootPath wasmOutputFile inputFile =
 commonArgs :: FilePath -> FilePath -> [String]
 commonArgs sysrootPath wasmOutputFile =
   [ "-nodefaultlibs",
+    "-std=c99",
     "-Oz",
     "-I",
     minijuvixBuildDir,

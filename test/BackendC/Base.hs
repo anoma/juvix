@@ -62,6 +62,7 @@ builtinRuntime = $(makeRelativeToProject "minic-runtime/builtins" >>= strToExp)
 standaloneArgs :: FilePath -> FilePath -> FilePath -> [String]
 standaloneArgs sysrootPath wasmOutputFile cOutputFile =
   [ "-nodefaultlibs",
+    "-std=c99",
     "-I",
     takeDirectory minicRuntime,
     "-I",
@@ -84,6 +85,7 @@ standaloneArgs sysrootPath wasmOutputFile cOutputFile =
 libcArgs :: FilePath -> FilePath -> FilePath -> [String]
 libcArgs sysrootPath wasmOutputFile cOutputFile =
   [ "-nodefaultlibs",
+    "-std=c99",
     "-I",
     takeDirectory minicRuntime,
     "-I",
