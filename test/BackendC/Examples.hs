@@ -9,7 +9,8 @@ data ExampleTest = ExampleTest
     _relDir :: FilePath,
     _mainFile :: FilePath,
     _expectedDir :: FilePath,
-    _stdinText :: Text
+    _stdinText :: Text,
+    _stdlibMode :: StdlibMode
   }
 
 makeLenses ''ExampleTest
@@ -24,7 +25,7 @@ testDescr ExampleTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = mainRoot,
-          _testAssertion = Steps $ clangAssertion StdlibExclude _mainFile expectedFile _stdinText
+          _testAssertion = Steps $ clangAssertion _stdlibMode _mainFile expectedFile _stdinText
         }
 
 allTests :: TestTree
@@ -35,6 +36,6 @@ allTests =
 
 tests :: [ExampleTest]
 tests =
-  [ ExampleTest "Validity Predicate example" "ValidityPredicates" "Tests.mjuvix" "ValidityPredicates" "",
-    ExampleTest "MiniTicTacToe example" "MiniTicTacToe" "MiniTicTacToe.mjuvix" "MiniTicTacToe" "aaa\n0\n10\n1\n2\n3\n3\n4\n5\n6\n7\n8\n9\n"
+  [ ExampleTest "Validity Predicate example" "ValidityPredicates" "Tests.mjuvix" "ValidityPredicates" "" StdlibExclude,
+    ExampleTest "MiniTicTacToe example" "MiniTicTacToe" "MiniTicTacToe.mjuvix" "MiniTicTacToe" "aaa\n0\n10\n1\n2\n3\n3\n4\n5\n6\n7\n8\n9\n" StdlibInclude
   ]

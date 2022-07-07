@@ -436,7 +436,7 @@ goAxiom a
       Member (Reader Mono.CompileInfoTable) r =>
       NameId ->
       Sem r [BackendItem]
-    lookupBackends f = (^. S.compileInfoBackendItems) . HashMap.lookupDefault impossible f <$> ask
+    lookupBackends f = (^. S.compileInfoBackendItems) . HashMap.lookupDefault (error (show (a ^. Mono.axiomName))) f <$> ask
 
 goForeign :: ForeignBlock -> [CCode]
 goForeign b = case b ^. foreignBackend of

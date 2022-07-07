@@ -1,8 +1,6 @@
 module Foo.Data.Bool;
 
-open import Prelude;
-
-import Data.Bool;
+import Stdlib.Data.Bool;
 
   inductive Bool {
     true : Bool;

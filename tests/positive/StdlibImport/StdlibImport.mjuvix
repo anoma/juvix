@@ -1,8 +1,7 @@
 module StdlibImport;
 
-open import Prelude;
+open import Stdlib.Prelude;
 
-open import Data.Nat;
 import A;
 
 two : ℕ;

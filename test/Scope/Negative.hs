@@ -219,7 +219,7 @@ filesErrorTests =
   [ NegTest
       "A module that conflicts with a module in the stdlib"
       "StdlibConflict"
-      "Data/Bool.mjuvix"
+      "Stdlib/Data/Bool.mjuvix"
       $ \case
         FilesError {} -> Nothing,
     NegTest

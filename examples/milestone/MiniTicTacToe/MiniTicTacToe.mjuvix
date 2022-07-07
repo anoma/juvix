@@ -1,17 +1,23 @@
 module MiniTicTacToe;
 
-import Prelude;
-open Prelude;
+open import Stdlib.Data.Nat.Ord;
+open import Stdlib.Prelude;
 
 --------------------------------------------------------------------------------
 -- Render Utils
 --------------------------------------------------------------------------------
 
+infixr 5 ++str;
+axiom ++str : String → String → String;
+compile ++str {
+  c ↦ "concat";
+};
+
 concat : List String → String;
-concat ≔ foldl (++) "";
+concat ≔ foldl (++str) "";
 
 surround : String → List String → List String;
-surround x xs ≔ concatList (x ∷ intersperse x xs) (x ∷ nil);
+surround x xs ≔ (x ∷ intersperse x xs) ++ (x ∷ nil);
 
 intercalate : String → List String → String;
 intercalate sep xs ≔ concat (intersperse sep xs);
@@ -46,18 +52,18 @@ showSymbol X ≔ "X";
 --------------------------------------------------------------------------------
 
 inductive Square {
-  empty : Nat → Square;
+  empty : ℕ → Square;
   occupied : Symbol → Square;
 };
 
 ==Square : Square → Square → Bool;
-==Square (empty m) (empty n) ≔ ==Nat m n;
+==Square (empty m) (empty n) ≔ m == n;
 ==Square (occupied s) (occupied t) ≔ ==Symbol s t;
 ==Square _ _ ≔ false;
 
 showSquare : Square → String;
-showSquare (empty n) ≔ " " ++ natToStr n ++ " ";
-showSquare (occupied s) ≔ " " ++ showSymbol s ++ " ";
+showSquare (empty n) ≔ " " ++str natToStr n ++str " ";
+showSquare (occupied s) ≔ " " ++str showSymbol s ++str " ";
 
 --------------------------------------------------------------------------------
 -- Board
@@ -67,7 +73,7 @@ inductive Board {
   board : List (List Square) → Board;
 };
 
-possibleMoves : List Square → List Nat;
+possibleMoves : List Square → List ℕ;
 possibleMoves nil ≔ nil;
 possibleMoves ((empty n) ∷ xs) ≔ n ∷ possibleMoves xs;
 possibleMoves (_ ∷ xs) ≔ possibleMoves xs;
@@ -121,7 +127,7 @@ beginState ≔ state
      noError;
 
 won : GameState → Bool;
-won (state (board squares) _ _) ≔ any full (concatList (diagonals squares) (concatList (rows squares) (columns squares)));
+won (state (board squares) _ _) ≔ any full (diagonals squares ++ rows squares ++ columns squares);
 
 draw : GameState → Bool;
 draw (state (board squares) _ _) ≔ null (possibleMoves (flatten squares));
@@ -130,31 +136,36 @@ draw (state (board squares) _ _) ≔ null (possibleMoves (flatten squares));
 -- Move
 --------------------------------------------------------------------------------
 
-replace : Symbol → Nat → Square → Square;
-replace player k (empty n) ≔ if (==Nat n k) (occupied player) (empty n);
+replace : Symbol → ℕ → Square → Square;
+replace player k (empty n) ≔ if (n Stdlib.Data.Nat.Ord.== k) (occupied player) (empty n);
 replace _ _ s ≔ s;
 
 checkState : GameState → GameState;
 checkState (state b p e) ≔
   if (won (state b p e))
-     (state b p (terminate ("Player " ++ (showSymbol (switch p)) ++ " wins!")))
+     (state b p (terminate ("Player " ++str (showSymbol (switch p)) ++str " wins!")))
      (if (draw (state b p e))
          (state b p (terminate "It's a draw!"))
          (state b p e));
 
-playMove : Maybe Nat → GameState → GameState;
+playMove : Maybe ℕ → GameState → GameState;
 playMove nothing (state b p _) ≔
     state b p (continue "\nInvalid number, try again\n");
 playMove (just k) (state (board s) player e) ≔
-    if (not (elem ==Nat k (possibleMoves (flatten s))))
+    if (not (elem (==) k (possibleMoves (flatten s))))
         (state (board s) player (continue "\nThe square is already occupied, try again\n"))
         (checkState (state (board (map (map (replace player k)) s))
                            (switch player)
                            noError));
 
 --------------------------------------------------------------------------------
--- IO
+-- IO Utils
 --------------------------------------------------------------------------------
+
+axiom readline : String;
+compile readline {
+  c ↦ "readline()";
+};
 
 axiom parsePositiveInt : String → Int;
 
@@ -162,30 +173,31 @@ compile parsePositiveInt {
   c ↦ "parsePositiveInt";
 };
 
-positiveInt : Int → Maybe Int;
-positiveInt i ≔ if (i < 0) nothing (just i);
+--------------------------------------------------------------------------------
+-- IO
+--------------------------------------------------------------------------------
 
-validMove : Nat → Maybe Nat;
-validMove n ≔ if ((n <=Nat nine) && (n >=Nat one)) (just n) nothing;
+validMove : ℕ → Maybe ℕ;
+validMove n ≔ if ((n <= nine) && (n >= one)) (just n) nothing;
 
-getMove : Maybe Nat;
-getMove ≔ bindMaybe validMove (fmapMaybe from-backendNat (positiveInt (parsePositiveInt (readline))));
+getMove : Maybe ℕ;
+getMove ≔ validMove (from-backendNat (parsePositiveInt (readline)));
 
-do : Action × GameState -> GameState;
+do : IO × GameState -> GameState;
 do (_ , s) ≔ playMove getMove s;
 
 prompt : GameState → String;
-prompt x ≔ "\n" ++ (showGameState x) ++ "\nPlayer " ++ showSymbol (player x) ++ ": ";
+prompt x ≔ "\n" ++str (showGameState x) ++str "\nPlayer " ++str showSymbol (player x) ++str ": ";
 
 terminating
-run : (Action × GameState → GameState) → GameState → Action;
-run _ (state b p (terminate msg)) ≔ putStrLn ("\n" ++ (showGameState (state b p noError)) ++ "\n" ++ msg);
-run f (state b p (continue msg)) ≔ run f (f (putStr (msg ++ prompt (state b p noError)) , state b p noError));
+run : (IO × GameState → GameState) → GameState → IO;
+run _ (state b p (terminate msg)) ≔ putStrLn ("\n" ++str (showGameState (state b p noError)) ++str "\n" ++str msg);
+run f (state b p (continue msg)) ≔ run f (f (putStr (msg ++str prompt (state b p noError)) , state b p noError));
 run f x ≔ run f (f (putStr (prompt x) , x));
 
 welcome : String;
 welcome ≔ "MiniTicTacToe\n-------------\n\nType a number then ENTER to make a move";
 
-main : Action;
+main : IO;
 main ≔ putStrLn welcome >> run do beginState;
 end;

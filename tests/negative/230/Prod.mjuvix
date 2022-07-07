@@ -1,6 +1,6 @@
 module Prod;
 
-open import Prelude;
+open import Stdlib.Prelude;
 open import Foo;
      import Foo.Data.Bool;
 
