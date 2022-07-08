@@ -1,10 +1,10 @@
-## Example of calling between JS and WASM via MiniJuvix
+## Example of calling between JS and WASM via Juvix
 
 ### Build
 
-`minijuvix compile --target c JSHello.mjuvix`
+`juvix compile --target c JSHello.juvix`
 
-`clang -Oz -fno-builtin --no-standard-libraries --target=wasm32 -Wl,--export=render_6 -Wl,--no-entry -Wl,--allow-undefined -o out.wasm .minijuvix-build/JSHello.c`
+`clang -Oz -fno-builtin --no-standard-libraries --target=wasm32 -Wl,--export=render_6 -Wl,--no-entry -Wl,--allow-undefined -o out.wasm .juvix-build/JSHello.c`
 
 Check the `render` function was exported, and the `displayString` function is imported. You may have to change the name id suffixes of these functions in the `clang` command and in `jshello.js` to match those shown by `wasm-objdump` (this command is available from https://github.com/WebAssembly/wabt):
 
