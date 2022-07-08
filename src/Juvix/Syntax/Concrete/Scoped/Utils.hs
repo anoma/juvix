@@ -11,16 +11,35 @@ mkScopedModule :: forall t. SingI t => Module 'Scoped t -> ScopedModule
 mkScopedModule = MkScopedModule sing
 
 getAllModules :: Module 'Scoped 'ModuleTop -> HashMap S.NameId (Module 'Scoped 'ModuleTop)
-getAllModules m =
-  HashMap.fromList $ singl m : [singl n | Import n <- allImports (mkScopedModule m)]
-  where
-    allImports :: ScopedModule -> [Import 'Scoped]
-    allImports (MkScopedModule _ w) =
-      concat [i : allImports (mkScopedModule t) | StatementImport i@(Import t) <- w ^. moduleBody]
-        <> concatMap (allImports . mkScopedModule) [l | StatementModule l <- w ^. moduleBody]
+getAllModules m = HashMap.fromList (fst (run (runOutputList (getAllModules' m))))
 
-    singl :: Module 'Scoped 'ModuleTop -> (S.NameId, Module 'Scoped 'ModuleTop)
-    singl n = (n ^. modulePath . S.nameId, n)
+getAllModules' ::
+  forall r.
+  Member (Output (S.NameId, Module 'Scoped 'ModuleTop)) r =>
+  Module 'Scoped 'ModuleTop ->
+  Sem r ()
+getAllModules' m = do
+  recordModule m
+  where
+    recordModule :: Module 'Scoped 'ModuleTop -> Sem r ()
+    recordModule n = do
+      output (n ^. modulePath . S.nameId, n)
+      processModule (mkScopedModule n)
+
+    processModule :: ScopedModule -> Sem r ()
+    processModule (MkScopedModule _ w) = forM_ (w ^. moduleBody) processStatement
+
+    processStatement :: Statement 'Scoped -> Sem r ()
+    processStatement = \case
+      StatementImport (Import n) -> recordModule n
+      StatementModule n -> processModule (mkScopedModule n)
+      StatementOpenModule n -> forM_ (getModuleRefTopModule (n ^. openModuleName)) recordModule
+      _ -> return ()
+
+    getModuleRefTopModule :: ModuleRef' c -> Maybe (Module 'Scoped 'ModuleTop)
+    getModuleRefTopModule (ModuleRef' (isTop :&: ModuleRef'' {..})) = case isTop of
+      SModuleLocal -> Nothing
+      SModuleTop -> Just _moduleRefModule
 
 getModuleFilePath :: Module 'Scoped 'ModuleTop -> FilePath
 getModuleFilePath m = getLoc (m ^. modulePath) ^. intervalFile
