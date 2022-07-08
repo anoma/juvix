@@ -1,14 +1,14 @@
-$ minijuvix parse
+$ juvix parse
 > /Provide.*/
 >= 1
 
-$ minijuvix parse tests/positive/Axiom.mjuvix
+$ juvix parse tests/positive/Axiom.juvix
 > /Module
 */
 >2
 >= 0
 
-$ minijuvix parse tests/positive/Axiom.mjuvix --no-pretty-show
+$ juvix parse tests/positive/Axiom.juvix --no-pretty-show
 > /Module \{.*/
 >2
 >= 0

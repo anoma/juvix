@@ -1,6 +1,6 @@
 * Summary
 
-- [[./introduction/about/what-is.md][MiniJuvix]]
+- [[./introduction/about/what-is.md][Juvix]]
 - [[./introduction/changelog.md][Changelog]]
 - [[./getting-started/README.md][Getting started]]
   - [[./getting-started/quick-start.md][Quick start]]

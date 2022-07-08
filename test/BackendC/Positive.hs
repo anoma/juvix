@@ -15,7 +15,7 @@ root :: FilePath
 root = "tests/positive/MiniC"
 
 mainFile :: FilePath
-mainFile = "Input.mjuvix"
+mainFile = "Input.juvix"
 
 expectedFile :: FilePath
 expectedFile = "expected.golden"

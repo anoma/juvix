@@ -1,16 +1,16 @@
-name:            minijuvix
-version:         0.2.0
+name:            juvix
+version:         0.2.1
 license:         GPL-3.0-only
 license-file:    LICENSE
 copyright:       (c) 2022- Heliax AG.
 maintainer:      The PLT Team at Heliax AG <hello@heliax.dev>
-author:          [ Jonathan Prieto-Cubides , Jan Mas Rovira , Paul Cadman ]
+author:          [ Jonathan Prieto-Cubides , Jan Mas Rovira , Paul Cadman , Github's contributors ]
 tested-with:     ghc == 9.2.3
-homepage:        https://github.com/heliaxdev/minijuvix
-bug-reports:     https://github.com/heliaxdev/minijuvix/issues
-description:     The MiniJuvix compiler
+homepage:        https://github.com/anoma/juvix
+bug-reports:     https://github.com/anoma/juvix/issues
+description:     The Juvix compiler
 category:        Compilers/Interpreters
-github:          heliaxdev/minijuvix
+github:          anoma/juvix
 
 extra-source-files:
 - README.org
@@ -51,7 +51,7 @@ dependencies:
 - unordered-containers == 0.2.*
 
 # the tasty dependencies are here to avoid having to recompile
-# minijuvix when running the tests.
+# juvix when running the tests.
 - tasty
 - tasty-hunit
 - Diff == 0.4.*
@@ -96,20 +96,20 @@ library:
     default-language: GHC2021
 
 executables:
-  minijuvix:
+  juvix:
     main: Main.hs
     source-dirs: app
     dependencies:
-    - minijuvix
+    - juvix
     - optparse-applicative == 0.17.*
     verbatim:
       default-language: GHC2021
 
 tests:
-  minijuvix-test:
+  juvix-test:
     main:                Main.hs
     source-dirs:         test
     dependencies:
-    - minijuvix
+    - juvix
     verbatim:
       default-language: GHC2021

@@ -1,37 +1,37 @@
-$ minijuvix microjuvix
->2 /Usage: minijuvix microjuvix .*/
+$ juvix microjuvix
+>2 /Usage: juvix microjuvix .*/
 >= 1
 
-$ minijuvix microjuvix --help
-> /Usage: minijuvix microjuvix COMMAND \[MINIJUVIX_FILE\].*/
+$ juvix microjuvix --help
+> /Usage: juvix microjuvix COMMAND \[JUVIX_FILE\].*/
 >= 0
 
-$ minijuvix microjuvix pretty
+$ juvix microjuvix pretty
 > /Provide.*/
 >= 1
 
-$ minijuvix microjuvix typecheck
+$ juvix microjuvix typecheck
 > /Provide.*/
 >= 1
 
-$ minijuvix microjuvix typecheck tests/positive/MicroJuvix/Simple.mjuvix
+$ juvix microjuvix typecheck tests/positive/MicroJuvix/Simple.juvix
 >
 Well done! It type checks
 >= 0
 
-$ minijuvix --only-errors microjuvix typecheck tests/positive/MicroJuvix/Simple.mjuvix
+$ juvix --only-errors microjuvix typecheck tests/positive/MicroJuvix/Simple.juvix
 >
 >= 0
 
-$ minijuvix microjuvix typecheck --only-errors tests/positive/MicroJuvix/Simple.mjuvix
+$ juvix microjuvix typecheck --only-errors tests/positive/MicroJuvix/Simple.juvix
 >
 >= 0
 
-$ minijuvix microjuvix typecheck tests/positive/MicroJuvix/Simple.mjuvix --only-errors
+$ juvix microjuvix typecheck tests/positive/MicroJuvix/Simple.juvix --only-errors
 >
 >= 0
 
-$ minijuvix microjuvix typecheck tests/negative/MicroJuvix/MultiWrongType.mjuvix --no-colors
->2 /(.+)\/([^\/]+)\.mjuvix\:11\:7\-8\: error.*
+$ juvix microjuvix typecheck tests/negative/MicroJuvix/MultiWrongType.juvix --no-colors
+>2 /(.+)\/([^\/]+)\.juvix\:11\:7\-8\: error.*
 .*/
 >= 1

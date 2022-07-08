@@ -1,6 +1,6 @@
 module Commands.Extra where
 
-import MiniJuvix.Prelude hiding (Doc)
+import Juvix.Prelude hiding (Doc)
 import Options.Applicative
 import Options.Applicative.Builder.Internal
 import Options.Applicative.Types
@@ -9,8 +9,8 @@ parserInputFile :: Parser FilePath
 parserInputFile =
   argument
     str
-    ( metavar "MINIJUVIX_FILE"
-        <> help "Path to a .mjuvix file"
+    ( metavar "JUVIX_FILE"
+        <> help "Path to a .juvix file"
         <> action "file"
     )
 

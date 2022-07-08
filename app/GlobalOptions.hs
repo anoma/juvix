@@ -4,7 +4,7 @@ module GlobalOptions
 where
 
 import Commands.Extra
-import MiniJuvix.Prelude
+import Juvix.Prelude
 import Options.Applicative hiding (hidden)
 
 data GlobalOptions = GlobalOptions
@@ -64,7 +64,7 @@ parseGlobalFlags b = do
   _globalOnlyErrors <-
     switch
       ( long "only-errors"
-          <> help "Only print errors in a uniform format (used by minijuvix-mode)"
+          <> help "Only print errors in a uniform format (used by juvix-mode)"
           <> hidden b
       )
   _globalNoTermination <-

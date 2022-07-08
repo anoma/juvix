@@ -1,13 +1,10 @@
-$ minijuvix --help
-> /.*
-Usage\: minijuvix \(\(\-v\|\-\-version\) \| \(\-h\|\-\-help\) \| \[\-\-no\-colors\] \[\-\-show\-name\-ids\]
-                   \[\-\-only\-errors\] \[\-\-no\-termination\] \[\-\-no\-stdlib\] COMMAND\)
-.*
-/
+$ juvix --help
+> /Usage: juvix \(\(\-v\|\-\-version\) \| \(\-h\|\-\-help\) \| \[\-\-no\-colors\] \[\-\-show\-name\-ids\] 
+               \[\-\-only\-errors\] \[\-\-no\-termination\] \[\-\-no\-stdlib\] COMMAND\).*/
 >= 0
 
 
-$ minijuvix --help --other
+$ juvix --help --other
 >2 /Invalid option `--other'
 */
 >= 1

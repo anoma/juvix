@@ -7,7 +7,7 @@ where
 
 import Command
 import GlobalOptions
-import MiniJuvix.Prelude hiding (Doc)
+import Juvix.Prelude hiding (Doc)
 import Options.Applicative
 import Options.Applicative.Builder.Internal
 import Options.Applicative.Help.Pretty
@@ -54,13 +54,9 @@ descr =
   info
     parseCLI
     ( fullDesc
-        <> progDesc "The MiniJuvix compiler."
-        <> headerDoc (Just headDoc)
+        <> progDesc "The Juvix compiler."
         <> footerDoc (Just foot)
     )
   where
-    headDoc :: Doc
-    headDoc = dullblue $ bold $ underline "MiniJuvix help"
-
     foot :: Doc
-    foot = bold "maintainers: " <> "The MiniJuvix Team"
+    foot = bold "maintainers: " <> "The Juvix Team"

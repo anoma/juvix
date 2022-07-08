@@ -1,14 +1,14 @@
 module Base
   ( module Test.Tasty,
     module Test.Tasty.HUnit,
-    module MiniJuvix.Prelude,
+    module Juvix.Prelude,
     module Base,
   )
 where
 
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
-import MiniJuvix.Prelude
+import Juvix.Prelude
 import System.Environment (lookupEnv)
 import Test.Tasty
 import Test.Tasty.HUnit

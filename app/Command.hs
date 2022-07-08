@@ -18,8 +18,8 @@ import Commands.Parse
 import Commands.Scope
 import Commands.Termination
 import GlobalOptions
-import MiniJuvix.Prelude hiding (Doc)
-import MiniJuvix.Syntax.Concrete.Scoped.Pretty qualified as Scoper
+import Juvix.Prelude hiding (Doc)
+import Juvix.Syntax.Concrete.Scoped.Pretty qualified as Scoper
 import Options.Applicative
 
 data Command
@@ -68,28 +68,28 @@ commandCompile =
   command "compile" $
     info
       (addGlobalOptions (Compile <$> parseCompile))
-      (progDesc "Compile a MiniJuvix file")
+      (progDesc "Compile a Juvix file")
 
 commandHighlight :: Mod CommandFields CommandGlobalOptions
 commandHighlight =
   command "highlight" $
     info
       (addGlobalOptions (pure Highlight))
-      (progDesc "Highlight a MiniJuvix file")
+      (progDesc "Highlight a Juvix file")
 
 commandHtml :: Mod CommandFields CommandGlobalOptions
 commandHtml =
   command "html" $
     info
       (addGlobalOptions (Html <$> parseHtml))
-      (progDesc "Generate HTML for a MiniJuvix file")
+      (progDesc "Generate HTML for a Juvix file")
 
 commandMiniC :: Mod CommandFields CommandGlobalOptions
 commandMiniC =
   command "minic" $
     info
       (addGlobalOptions (pure MiniC))
-      (progDesc "Translate a MiniJuvix file to MiniC")
+      (progDesc "Translate a Juvix file to MiniC")
 
 commandMicroJuvix :: Mod CommandFields CommandGlobalOptions
 commandMicroJuvix =
@@ -103,35 +103,35 @@ commandMiniHaskell =
   command "minihaskell" $
     info
       (addGlobalOptions (pure MiniHaskell))
-      (progDesc "Translate a MiniJuvix file to MiniHaskell")
+      (progDesc "Translate a Juvix file to MiniHaskell")
 
 commandMonoJuvix :: Mod CommandFields CommandGlobalOptions
 commandMonoJuvix =
   command "monojuvix" $
     info
       (addGlobalOptions (pure MonoJuvix))
-      (progDesc "Translate a MiniJuvix file to MonoJuvix")
+      (progDesc "Translate a Juvix file to MonoJuvix")
 
 commandParse :: Mod CommandFields CommandGlobalOptions
 commandParse =
   command "parse" $
     info
       (addGlobalOptions (Parse <$> parseParse))
-      (progDesc "Parse a MiniJuvix file")
+      (progDesc "Parse a Juvix file")
 
 commandScope :: Mod CommandFields CommandGlobalOptions
 commandScope =
   command "scope" $
     info
       (addGlobalOptions (Scope <$> parseScope))
-      (progDesc "Parse and scope a MiniJuvix file")
+      (progDesc "Parse and scope a Juvix file")
 
 commandShowRoot :: Mod CommandFields CommandGlobalOptions
 commandShowRoot =
   command "root" $
     info
       (liftParserCmd (pure DisplayRoot))
-      (progDesc "Show the root path for a Minijuvix project")
+      (progDesc "Show the root path for a Juvix project")
 
 commandTermination :: Mod CommandFields CommandGlobalOptions
 commandTermination =

@@ -1,7 +1,7 @@
 module Termination.Positive where
 
 import Base
-import MiniJuvix.Pipeline
+import Juvix.Pipeline
 import Termination.Negative qualified as N
 
 data PosTest = PosTest
@@ -46,15 +46,15 @@ testDescrFlag N.NegTest {..} =
 
 tests :: [PosTest]
 tests =
-  [ PosTest "Ackerman nice def. is terminating" "." "Ack.mjuvix",
-    PosTest "Recursive functions on Lists" "." "Data/List.mjuvix"
+  [ PosTest "Ackerman nice def. is terminating" "." "Ack.juvix",
+    PosTest "Recursive functions on Lists" "." "Data/List.juvix"
   ]
 
 testsWithKeyword :: [PosTest]
 testsWithKeyword =
-  [ PosTest "terminating added to fx:=fx" "." "ToEmpty.mjuvix",
-    PosTest "terminating for all functions in the mutual block" "." "Mutual.mjuvix",
-    PosTest "Undefined is terminating by assumption" "." "Undefined.mjuvix"
+  [ PosTest "terminating added to fx:=fx" "." "ToEmpty.juvix",
+    PosTest "terminating for all functions in the mutual block" "." "Mutual.juvix",
+    PosTest "Undefined is terminating by assumption" "." "Undefined.juvix"
   ]
 
 negTests :: [N.NegTest]

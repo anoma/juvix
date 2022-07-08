@@ -1,7 +1,7 @@
 module TypeCheck.Positive where
 
 import Base
-import MiniJuvix.Pipeline
+import Juvix.Pipeline
 
 data PosTest = PosTest
   { _name :: String,
@@ -34,65 +34,65 @@ tests =
   [ PosTest
       "Simple"
       "MicroJuvix"
-      "Simple.mjuvix",
+      "Simple.juvix",
     PosTest
       "Literal String matches any type"
       "MicroJuvix"
-      "LiteralString.mjuvix",
+      "LiteralString.juvix",
     PosTest
       "Box type"
       "MicroJuvix"
-      "Box.mjuvix",
+      "Box.juvix",
     PosTest
       "Literal Int matches any type"
       "MicroJuvix"
-      "LiteralInt.mjuvix",
+      "LiteralInt.juvix",
     PosTest
       "GHC backend Hello World"
       "MiniHaskell"
-      "HelloWorld.mjuvix",
+      "HelloWorld.juvix",
     PosTest
       "PolySimpleFungibleToken"
       "FullExamples"
-      "SimpleFungibleTokenImplicit.mjuvix",
+      "SimpleFungibleTokenImplicit.juvix",
     PosTest
       "GHC backend MonoSimpleFungibleToken"
       "FullExamples"
-      "MonoSimpleFungibleToken.mjuvix",
+      "MonoSimpleFungibleToken.juvix",
     PosTest
       "Axiom"
       "."
-      "Axiom.mjuvix",
+      "Axiom.juvix",
     PosTest
       "Inductive"
       "."
-      "Inductive.mjuvix",
+      "Inductive.juvix",
     PosTest
       "Operators"
       "."
-      "Operators.mjuvix",
+      "Operators.juvix",
     PosTest
       "Holes in type signature"
       "MicroJuvix"
-      "HoleInSignature.mjuvix",
+      "HoleInSignature.juvix",
     PosTest
       "Polymorphism and higher rank functions"
       "."
-      "Polymorphism.mjuvix",
+      "Polymorphism.juvix",
     PosTest
       "Polymorphism and higher rank functions with explicit holes"
       "."
-      "PolymorphismHoles.mjuvix",
+      "PolymorphismHoles.juvix",
     PosTest
       "Implicit arguments"
       "MicroJuvix"
-      "Implicit.mjuvix",
+      "Implicit.juvix",
     PosTest
       "Import a builtin multiple times"
       "BuiltinsMultiImport"
-      "Input.mjuvix",
+      "Input.juvix",
     PosTest
       "open import a builtin multiple times"
       "BuiltinsMultiOpenImport"
-      "Input.mjuvix"
+      "Input.juvix"
   ]

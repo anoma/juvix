@@ -1,6 +1,6 @@
-* MiniJuvix community
+* Juvix community
 
-We would love to hear what you think of MiniJuvix! Join us on
+We would love to hear what you think of Juvix! Join us on
 [[https://discord.gg/nsGaCZzJ][Discord]]
 
 This project is part of a bigger effort called [[https://anoma.net/][Anoma]].

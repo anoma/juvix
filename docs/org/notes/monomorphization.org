@@ -6,7 +6,7 @@
  monomorphic code (no type variables) through static analysis.
 
  Example:
- #+begin_src minijuvix
+ #+begin_src juvix
  id : (A : Type) → A → A;
  id _ a ≔ a;
 
@@ -18,7 +18,7 @@
  #+end_src
 
  Is translated into:
- #+begin_src minijuvix
+ #+begin_src juvix
  id_Bool : Bool → Bool;
  id_Bool a ≔ a;
 
@@ -28,7 +28,7 @@
 
 * More examples
 ** Mutual recursion
-#+begin_src minijuvix
+#+begin_src juvix
 inductive List (A : Type) {
   nil : List A;
   cons : A → List A → List A;
@@ -63,7 +63,7 @@ odd A (cons _ xs) ≔ not (even A xs) ;
 2. *Sub application*. If =t₁ t₂ … tₙ= is an application then for every =0<i<n=
    =t₁ t₂ … tᵢ= is a sub application.
 
-Fix a minijuvix program =P=. Let =𝒲= be the set of all applications that appear in =P=.
+Fix a juvix program =P=. Let =𝒲= be the set of all applications that appear in =P=.
 1. *Maximal application*. A maximal application is an application =A∈𝒲= such that
    for every =A'∈𝒲= we have that =A= is *not* a sub application of =A'=.
 

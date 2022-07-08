@@ -1,8 +1,8 @@
 module Scope.Negative (allTests) where
 
 import Base
-import MiniJuvix.Pipeline
-import MiniJuvix.Syntax.Concrete.Scoped.Error
+import Juvix.Pipeline
+import Juvix.Syntax.Concrete.Scoped.Error
 
 type FailMsg = String
 
@@ -25,7 +25,7 @@ testDescr NegTest {..} =
           _testAssertion = Single $ do
             let entryPoint = defaultEntryPoint _file
             res <- runIOEither (upToAbstract entryPoint)
-            case mapLeft fromMiniJuvixError res of
+            case mapLeft fromJuvixError res of
               Left (Just err) -> whenJust (_checkErr err) assertFailure
               Left Nothing -> assertFailure "The scope checker did not find an error."
               Right _ -> assertFailure "An error ocurred but it was not in the scoper."
@@ -47,168 +47,168 @@ scoperErrorTests =
   [ NegTest
       "Not in scope"
       "."
-      "NotInScope.mjuvix"
+      "NotInScope.juvix"
       $ \case
         ErrSymNotInScope {} -> Nothing
         _ -> wrongError,
     NegTest
       "Qualified not in scope"
       "."
-      "QualSymNotInScope.mjuvix"
+      "QualSymNotInScope.juvix"
       $ \case
         ErrQualSymNotInScope {} -> Nothing
         _ -> wrongError,
     NegTest
       "Multiple declarations"
       "."
-      "MultipleDeclarations.mjuvix"
+      "MultipleDeclarations.juvix"
       $ \case
         ErrMultipleDeclarations {} -> Nothing
         _ -> wrongError,
     NegTest
       "Import cycle"
       "ImportCycle"
-      "A.mjuvix"
+      "A.juvix"
       $ \case
         ErrImportCycle {} -> Nothing
         _ -> wrongError,
     NegTest
       "Binding group conflict (function clause)"
       "BindGroupConflict"
-      "Clause.mjuvix"
+      "Clause.juvix"
       $ \case
         ErrBindGroup {} -> Nothing
         _ -> wrongError,
     NegTest
       "Binding group conflict (lambda clause)"
       "BindGroupConflict"
-      "Lambda.mjuvix"
+      "Lambda.juvix"
       $ \case
         ErrBindGroup {} -> Nothing
         _ -> wrongError,
     NegTest
       "Infix error (expression)"
       "."
-      "InfixError.mjuvix"
+      "InfixError.juvix"
       $ \case
         ErrInfixParser {} -> Nothing
         _ -> wrongError,
     NegTest
       "Infix error (pattern)"
       "."
-      "InfixErrorP.mjuvix"
+      "InfixErrorP.juvix"
       $ \case
         ErrInfixPattern {} -> Nothing
         _ -> wrongError,
     NegTest
       "Duplicate fixity declaration"
       "."
-      "DuplicateFixity.mjuvix"
+      "DuplicateFixity.juvix"
       $ \case
         ErrDuplicateFixity {} -> Nothing
         _ -> wrongError,
     NegTest
       "Multiple export conflict"
       "."
-      "MultipleExportConflict.mjuvix"
+      "MultipleExportConflict.juvix"
       $ \case
         ErrMultipleExport {} -> Nothing
         _ -> wrongError,
     NegTest
       "Module not in scope"
       "."
-      "ModuleNotInScope.mjuvix"
+      "ModuleNotInScope.juvix"
       $ \case
         ErrModuleNotInScope {} -> Nothing
         _ -> wrongError,
     NegTest
       "Unused operator syntax definition"
       "."
-      "UnusedOperatorDef.mjuvix"
+      "UnusedOperatorDef.juvix"
       $ \case
         ErrUnusedOperatorDef {} -> Nothing
         _ -> wrongError,
     NegTest
       "Ambiguous symbol"
       "."
-      "AmbiguousSymbol.mjuvix"
+      "AmbiguousSymbol.juvix"
       $ \case
         ErrAmbiguousSym {} -> Nothing
         _ -> wrongError,
     NegTest
       "Lacks function clause"
       "."
-      "LacksFunctionClause.mjuvix"
+      "LacksFunctionClause.juvix"
       $ \case
         ErrLacksFunctionClause {} -> Nothing
         _ -> wrongError,
     NegTest
       "Incorrect top module path"
       "."
-      "WrongModuleName.mjuvix"
+      "WrongModuleName.juvix"
       $ \case
         ErrWrongTopModuleName {} -> Nothing
         _ -> wrongError,
     NegTest
       "Ambiguous export"
       "."
-      "AmbiguousExport.mjuvix"
+      "AmbiguousExport.juvix"
       $ \case
         ErrMultipleExport {} -> Nothing
         _ -> wrongError,
     NegTest
       "Ambiguous nested modules"
       "."
-      "AmbiguousModule.mjuvix"
+      "AmbiguousModule.juvix"
       $ \case
         ErrAmbiguousModuleSym {} -> Nothing
         _ -> wrongError,
     NegTest
       "Ambiguous nested constructors"
       "."
-      "AmbiguousConstructor.mjuvix"
+      "AmbiguousConstructor.juvix"
       $ \case
         ErrAmbiguousSym {} -> Nothing
         _ -> wrongError,
     NegTest
       "Wrong location of a compile block"
       "CompileBlocks"
-      "WrongLocationCompileBlock.mjuvix"
+      "WrongLocationCompileBlock.juvix"
       $ \case
         ErrWrongLocationCompileBlock {} -> Nothing
         _ -> wrongError,
     NegTest
       "Implicit argument on the left of an application"
       "."
-      "AppLeftImplicit.mjuvix"
+      "AppLeftImplicit.juvix"
       $ \case
         ErrAppLeftImplicit {} -> Nothing
         _ -> wrongError,
     NegTest
       "Multiple compile blocks for the same name"
       "CompileBlocks"
-      "MultipleCompileBlockSameName.mjuvix"
+      "MultipleCompileBlockSameName.juvix"
       $ \case
         ErrMultipleCompileBlockSameName {} -> Nothing
         _ -> wrongError,
     NegTest
       "Multiple rules for a backend inside a compile block"
       "CompileBlocks"
-      "MultipleCompileRuleSameBackend.mjuvix"
+      "MultipleCompileRuleSameBackend.juvix"
       $ \case
         ErrMultipleCompileRuleSameBackend {} -> Nothing
         _ -> wrongError,
     NegTest
       "issue 230"
       "230"
-      "Prod.mjuvix"
+      "Prod.juvix"
       $ \case
         ErrQualSymNotInScope {} -> Nothing
         _ -> wrongError,
     NegTest
       "Compile block for a unsupported kind of expression"
       "CompileBlocks"
-      "WrongKindExpressionCompileBlock.mjuvix"
+      "WrongKindExpressionCompileBlock.juvix"
       $ \case
         ErrWrongKindExpressionCompileBlock {} -> Nothing
         _ -> wrongError
@@ -219,13 +219,13 @@ filesErrorTests =
   [ NegTest
       "A module that conflicts with a module in the stdlib"
       "StdlibConflict"
-      "Stdlib/Data/Bool.mjuvix"
+      "Stdlib/Data/Bool.juvix"
       $ \case
         FilesError {} -> Nothing,
     NegTest
       "Importing a module that conflicts with a module in the stdlib"
       "StdlibConflict"
-      "Input.mjuvix"
+      "Input.juvix"
       $ \case
         FilesError {} -> Nothing
   ]

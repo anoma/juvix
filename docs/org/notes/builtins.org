@@ -38,7 +38,7 @@ The idea is that builtin definitions are treated normally throughout the
 pipeline except in the backend part. There is one exception to that. We need to
 collect information about the builtins that have been included in the code and
 what are the terms that refer to them. For instance, imagine that we find this
-definitions in a minijuvix module:
+definitions in a juvix module:
 #+begin_src text
 builtin natural
 inductive MyNat {

@@ -1,7 +1,7 @@
 module MonoJuvix.Positive where
 
 import Base
-import MiniJuvix.Pipeline
+import Juvix.Pipeline
 
 data PosTest = PosTest
   { _name :: String,
@@ -34,13 +34,13 @@ tests =
   [ PosTest
       "General example"
       "."
-      "Polymorphism.mjuvix",
+      "Polymorphism.juvix",
     PosTest
       "Polymorphic Simple Fungible Token"
       "FullExamples"
-      "SimpleFungibleTokenImplicit.mjuvix",
+      "SimpleFungibleTokenImplicit.juvix",
     PosTest
       "Polymorphism and higher rank functions with explicit holes"
       "."
-      "PolymorphismHoles.mjuvix"
+      "PolymorphismHoles.juvix"
   ]

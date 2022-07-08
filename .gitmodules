@@ -1,3 +1,3 @@
-[submodule "minijuvix-stdlib"]
-	path = minijuvix-stdlib
-	url = https://github.com/heliaxdev/minijuvix-stdlib.git
+[submodule "juvix-stdlib"]
+	path = juvix-stdlib
+	url = https://github.com/anoma/juvix-stdlib.git

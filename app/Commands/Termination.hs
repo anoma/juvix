@@ -3,8 +3,8 @@ module Commands.Termination where
 import Control.Monad.Extra
 import Data.Text qualified as Text
 import GlobalOptions
-import MiniJuvix.Prelude hiding (Doc)
-import MiniJuvix.Syntax.Abstract.Pretty.Base qualified as A
+import Juvix.Prelude hiding (Doc)
+import Juvix.Syntax.Abstract.Pretty.Base qualified as A
 import Options.Applicative
 
 data TerminationCommand
@@ -81,7 +81,7 @@ parseTerminationCommand =
         minfo =
           info
             (Calls <$> parseCalls)
-            (progDesc "Compute the calls table of a .mjuvix file")
+            (progDesc "Compute the calls table of a .juvix file")
     commandGraph :: Mod CommandFields TerminationCommand
     commandGraph = command "graph" minfo
       where
@@ -89,7 +89,7 @@ parseTerminationCommand =
         minfo =
           info
             (CallGraph <$> parseCallGraph)
-            (progDesc "Compute the complete call graph of a .mjuvix file")
+            (progDesc "Compute the complete call graph of a .juvix file")
 
 callsPrettyOptions :: GlobalOptions -> CallsOptions -> A.Options
 callsPrettyOptions GlobalOptions {..} CallsOptions {..} =

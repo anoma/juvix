@@ -1,8 +1,8 @@
 module Arity.Negative (allTests) where
 
 import Base
-import MiniJuvix.Pipeline
-import MiniJuvix.Syntax.MicroJuvix.ArityChecker.Error
+import Juvix.Pipeline
+import Juvix.Syntax.MicroJuvix.ArityChecker.Error
 
 type FailMsg = String
 
@@ -22,7 +22,7 @@ testDescr NegTest {..} =
           _testAssertion = Single $ do
             let entryPoint = defaultEntryPoint _file
             result <- runIOEither (upToMicroJuvixArity entryPoint)
-            case mapLeft fromMiniJuvixError result of
+            case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
               Left Nothing -> assertFailure "The arity checker did not find an error."
               Right _ -> assertFailure "An error ocurred but it was not in the arity checker."
@@ -45,42 +45,42 @@ tests =
   [ NegTest
       "Too many arguments in expression"
       "MicroJuvix"
-      "TooManyArguments.mjuvix"
+      "TooManyArguments.juvix"
       $ \case
         ErrTooManyArguments {} -> Nothing
         _ -> wrongError,
     NegTest
       "Pattern match a function type"
       "MicroJuvix"
-      "FunctionPattern.mjuvix"
+      "FunctionPattern.juvix"
       $ \case
         ErrPatternFunction {} -> Nothing
         _ -> wrongError,
     NegTest
       "Function type (* → *) application"
       "MicroJuvix"
-      "FunctionApplied.mjuvix"
+      "FunctionApplied.juvix"
       $ \case
         ErrFunctionApplied {} -> Nothing
         _ -> wrongError,
     NegTest
       "Expected explicit pattern"
       "MicroJuvix"
-      "ExpectedExplicitPattern.mjuvix"
+      "ExpectedExplicitPattern.juvix"
       $ \case
         ErrExpectedExplicitPattern {} -> Nothing
         _ -> wrongError,
     NegTest
       "Expected explicit argument"
       "MicroJuvix"
-      "ExpectedExplicitArgument.mjuvix"
+      "ExpectedExplicitArgument.juvix"
       $ \case
         ErrExpectedExplicitArgument {} -> Nothing
         _ -> wrongError,
     NegTest
       "Function clause with two many patterns in the lhs"
       "MicroJuvix"
-      "LhsTooManyPatterns.mjuvix"
+      "LhsTooManyPatterns.juvix"
       $ \case
         ErrLhsTooManyPatterns {} -> Nothing
         _ -> wrongError

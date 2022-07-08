@@ -1,41 +1,41 @@
-* MiniJuvix
+* Juvix
 
 #+begin_html
-<a href="https://github.com/heliaxdev/MiniJuvix/actions/workflows/ci.yml">
-<img alt="CI status" src="https://github.com/heliaxdev/MiniJuvix/actions/workflows/ci.yml/badge.svg" />
+<a href="https://github.com/anoma/juvix/actions/workflows/ci.yml">
+<img alt="CI status" src="https://github.com/anoma/juvix/actions/workflows/ci.yml/badge.svg" />
 </a>
 #+end_html
 
 #+begin_html
-<a href="https://github.com/heliaxdev/minijuvix/tags">
-<img alt="" src="https://img.shields.io/github/v/release/heliaxdev/minijuvix?include_prereleases" />
+<a href="https://github.com/anoma/juvix/tags">
+<img alt="" src="https://img.shields.io/github/v/release/anoma/juvix?include_prereleases" />
 </a>
 #+end_html
 
 #+begin_html
-<a href="https://github.com/heliaxdev/minijuvix/blob/main/LICENSE">
+<a href="https://github.com/anoma/juvix/blob/main/LICENSE">
 <img alt="LICENSE" src="https://img.shields.io/badge/license-GPL--3.0--only-blue.svg" />
 </a>
 #+end_html
 
 #+begin_html
-<a href="https://github.com/heliaxdev/minijuvix/actions/workflows/pages/pages-build-deployment"><img
-src="https://github.com/heliaxdev/minijuvix/actions/workflows/pages/pages-build-deployment/badge.svg"
+<a href="https://github.com/anoma/juvix/actions/workflows/pages/pages-build-deployment"><img
+src="https://github.com/anoma/juvix/actions/workflows/pages/pages-build-deployment/badge.svg"
 alt="pages-build-deployment" /></a>
 #+end_html
 
 #+begin_html
-<a href="https://github.com/heliaxdev/MiniJuvix">
-<img align="right" width="300" height="300" alt="MiniJuvix Mascot" src="assets/seating-mascot.051c86a.svg" />
+<a href="https://github.com/anoma/juvix">
+<img align="right" width="300" height="300" alt="Juvix Mascot" src="assets/seating-mascot.051c86a.svg" />
 </a>
 #+end_html
 
 
 ** Description
 
-MiniJuvix is a research programming language created by [[https://heliax.dev/][Heliax]] as a first step toward creating more robust and reliable alternatives for formally verified smart contracts than existing languages. The MiniJuvix language is constantly evolving, open-source, functional, and statically typed with special support for compiling [[https://anoma.network/blog/validity-predicates/][validity predicates]] to the =C= language, which can be deployed to various distributed ledgers including [[https://anoma.net/][Anoma]].
+Juvix is a research programming language created by [[https://heliax.dev/][Heliax]] as a first step toward creating more robust and reliable alternatives for formally verified smart contracts than existing languages. The Juvix language is constantly evolving, open-source, functional, and statically typed with special support for compiling [[https://anoma.network/blog/validity-predicates/][validity predicates]] to the =C= language, which can be deployed to various distributed ledgers including [[https://anoma.net/][Anoma]].
 
-The MiniJuvix programming language allows developers to write programs with a high degree of assurance that they will meet specific standards. This is due to the fact that several static analyses are performed during compilation, including, for example, scope, termination, arity, and type checking. As a result, functional programs, especially validity predicates, can be written with greater confidence that they will be free of runtime errors. [[https://github.com/heliaxdev/minijuvix/tree/main/examples/milestone][Here are some examples of MiniJuvix programs]].
+The Juvix programming language allows developers to write programs with a high degree of assurance that they will meet specific standards. This is due to the fact that several static analyses are performed during compilation, including, for example, scope, termination, arity, and type checking. As a result, functional programs, especially validity predicates, can be written with greater confidence that they will be free of runtime errors. [[https://github.com/anoma/juvix/tree/main/examples/milestone][Here are some examples of Juvix programs]].
 
 The language features:
 
@@ -47,48 +47,48 @@ The language features:
 - holes in programs
 - axioms for non-computable terms
 
-Additionally, the foreign and compile blocks syntax enable developers to compile a program to different backends including the =C= language. The MiniJuvix module system further permits splitting programs into several modules to build libraries which can be later documented by generating HTML files based on the codebase, see for example, [[https://heliaxdev.github.io/minijuvix-stdlib/][the Minijuvix standard library's website]]. For futher details, please refer to [[https://heliaxdev.github.io/minijuvix/][the MiniJuvix book]] which icludes our [[https://heliaxdev.github.io/minijuvix/introduction/changelog.html][latest updates]].
+Additionally, the foreign and compile blocks syntax enable developers to compile a program to different backends including the =C= language. The Juvix module system further permits splitting programs into several modules to build libraries which can be later documented by generating HTML files based on the codebase, see for example, [[https://anoma.github.io/juvix-stdlib/][the Juvix standard library's website]]. For futher details, please refer to [[https://anoma.github.io/juvix/][the Juvix book]] which icludes our [[https://anoma.github.io/juvix/introduction/changelog.html][latest updates]].
 
 ** Quick Start
 
-To install MiniJuvix, you can download its sources using
+To install Juvix, you can download its sources using
 [[http://git-scm.com/][Git]] from the
 [[https://github.com/anoma/juvix.git][Github repository]]. Then, the
 program can be downloaded and installed with the following commands. You
 will need to have [[https://haskellstack.org][Stack]] installed.
 
 #+begin_src shell
-git clone --recursive https://github.com/heliaxdev/minijuvix.git
-cd minijuvix
+git clone --recursive https://github.com/anoma/juvix.git
+cd juvix
 stack install
 #+end_src
 
-If the installation succeeds, you must be able to run the =minijuvix=
+If the installation succeeds, you must be able to run the =juvix=
 command from any location. To get the complete list of commands, please
-run =minijuvix --help=.
+run =juvix --help=.
 
 ** Usage Example
 
-In the following example a MiniJuvix file is compiled using the C backend. The
+In the following example a Juvix file is compiled using the C backend. The
 result is compiled to WASM using [[https://llvm.org][Clang]] and then executed using [[https://wasmer.io][wasmer]].
 
 NB: Set the =WASI_SYSROOT_PATH= environment variable to the root of the WASI
-sysroot. See [[https://heliaxdev.github.io/minijuvix/getting-started/dependencies.html][Installing dependencies]] for instructions on how to install the
+sysroot. See [[https://anoma.github.io/juvix/getting-started/dependencies.html][Installing dependencies]] for instructions on how to install the
 sysroot.
 
 #+begin_src shell
 cd tests/positive/MiniC/HelloWorld
-minijuvix compile Input.mjuvix
+juvix compile Input.juvix
 wasmer Input.wasm
 #+end_src
 
 You should see the output: =hello world!=
 
-** The MiniJuvix Book
+** The Juvix Book
 
-The MiniJuvix language and related tools are documented in [[https://heliaxdev.github.io/minijuvix/][the MiniJuvix book]].
+The Juvix language and related tools are documented in [[https://anoma.github.io/juvix/][the Juvix book]].
 
 ** Community
 
-We would love to hear what you think of MiniJuvix! Join us on
+We would love to hear what you think of Juvix! Join us on
 [[https://discord.gg/nsGaCZzJ][Discord]]

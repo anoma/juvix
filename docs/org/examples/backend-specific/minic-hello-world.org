@@ -1,9 +1,9 @@
 * Mini C Hello World
 
-In the following example a MiniJuvix file is compiled using the C backend.
+In the following example a Juvix file is compiled using the C backend.
 
 #+begin_src
--- tests/positive/MiniC/HelloWorld/Input.mjuvix
+-- tests/positive/MiniC/HelloWorld/Input.juvix
 module Input;
 
 axiom String : Type;
@@ -37,7 +37,7 @@ NB: Set the =WASI_SYSROOT_PATH= environment variable to the root of the WASI sys
 
 #+begin_src shell
 cd tests/positive/MiniC/HelloWorld
-minijuvix compile Input.mjuvix
+juvix compile Input.juvix
 wasmer Input.wasm
 #+end_src
 

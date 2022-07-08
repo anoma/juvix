@@ -1,6 +1,6 @@
 * Function declaration
 
-In MiniJuvix, a function declaration is a type signature /and/ a group
+In Juvix, a function declaration is a type signature /and/ a group
 of definitions called /function clauses/.
 
 #+begin_example

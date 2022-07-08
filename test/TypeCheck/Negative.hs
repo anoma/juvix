@@ -1,8 +1,8 @@
 module TypeCheck.Negative (allTests) where
 
 import Base
-import MiniJuvix.Pipeline
-import MiniJuvix.Syntax.MicroJuvix.Error
+import Juvix.Pipeline
+import Juvix.Syntax.MicroJuvix.Error
 
 type FailMsg = String
 
@@ -22,7 +22,7 @@ testDescr NegTest {..} =
           _testAssertion = Single $ do
             let entryPoint = defaultEntryPoint _file
             result <- runIOEither (upToMicroJuvixTyped entryPoint)
-            case mapLeft fromMiniJuvixError result of
+            case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
               Left Nothing -> assertFailure "The type checker did not find an error."
               Right _ -> assertFailure "An error ocurred but it was not in the type checker."
@@ -45,56 +45,56 @@ tests =
   [ NegTest
       "Constructor in pattern type error"
       "MicroJuvix"
-      "PatternConstructor.mjuvix"
+      "PatternConstructor.juvix"
       $ \case
         ErrWrongConstructorType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Type vs inferred type mismatch"
       "MicroJuvix"
-      "WrongType.mjuvix"
+      "WrongType.juvix"
       $ \case
         ErrWrongType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Function application with non-function type"
       "MicroJuvix"
-      "ExpectedFunctionType.mjuvix"
+      "ExpectedFunctionType.juvix"
       $ \case
         ErrExpectedFunctionType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Unsolved hole"
       "MicroJuvix"
-      "UnsolvedMeta.mjuvix"
+      "UnsolvedMeta.juvix"
       $ \case
         ErrUnsolvedMeta {} -> Nothing
         _ -> wrongError,
     NegTest
       "Multiple type errors are captured"
       "MicroJuvix"
-      "MultiWrongType.mjuvix"
+      "MultiWrongType.juvix"
       $ \case
         ErrWrongType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Wrong return type name for a constructor of a simple data type"
       "MicroJuvix"
-      "WrongReturnType.mjuvix"
+      "WrongReturnType.juvix"
       $ \case
         ErrWrongReturnType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Too few arguments for the return type of a constructor"
       "MicroJuvix"
-      "WrongReturnTypeTooFewArguments.mjuvix"
+      "WrongReturnTypeTooFewArguments.juvix"
       $ \case
         ErrWrongReturnType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Too many arguments for the return type of a constructor"
       "MicroJuvix"
-      "WrongReturnTypeTooManyArguments.mjuvix"
+      "WrongReturnTypeTooManyArguments.juvix"
       $ \case
         ErrWrongReturnType {} -> Nothing
         _ -> wrongError

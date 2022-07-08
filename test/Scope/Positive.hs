@@ -2,14 +2,14 @@ module Scope.Positive where
 
 import Base
 import Data.HashMap.Strict qualified as HashMap
-import MiniJuvix.Internal.NameIdGen
-import MiniJuvix.Pipeline
-import MiniJuvix.Pipeline.Setup
-import MiniJuvix.Prelude.Pretty
-import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
-import MiniJuvix.Syntax.Concrete.Scoped.Pretty qualified as M
-import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
-import MiniJuvix.Syntax.Concrete.Scoped.Utils
+import Juvix.Internal.NameIdGen
+import Juvix.Pipeline
+import Juvix.Pipeline.Setup
+import Juvix.Prelude.Pretty
+import Juvix.Syntax.Concrete.Parser qualified as Parser
+import Juvix.Syntax.Concrete.Scoped.Pretty qualified as M
+import Juvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
+import Juvix.Syntax.Concrete.Scoped.Utils
 
 data PosTest = PosTest
   { _name :: String,
@@ -80,18 +80,18 @@ testDescr PosTest {..} =
             step "Parsing pretty scoped"
             let fs2 = unionStdlib (HashMap.singleton entryFile scopedPretty)
             p' :: Parser.ParserResult <-
-              (runM . runErrorIO @MiniJuvixError . runNameIdGen . runFilesPure fs2)
+              (runM . runErrorIO @JuvixError . runNameIdGen . runFilesPure fs2)
                 (upToParsing entryPoint)
 
             step "Parsing pretty parsed"
             let fs3 = unionStdlib (HashMap.singleton entryFile parsedPretty)
             parsedPretty' :: Parser.ParserResult <-
-              (runM . runErrorIO @MiniJuvixError . runNameIdGen . runFilesPure fs3)
+              (runM . runErrorIO @JuvixError . runNameIdGen . runFilesPure fs3)
                 (upToParsing entryPoint)
 
             step "Scoping the scoped"
             s' :: Scoper.ScoperResult <-
-              (runM . runErrorIO @MiniJuvixError . runNameIdGen . runFilesPure fs)
+              (runM . runErrorIO @JuvixError . runNameIdGen . runFilesPure fs)
                 (upToScoping entryPoint)
 
             step "Checks"
@@ -119,85 +119,85 @@ tests =
       "Inductive"
       "."
       StdlibInclude
-      "Inductive.mjuvix",
+      "Inductive.juvix",
     PosTest
       "Imports and qualified names"
       "Imports"
       StdlibInclude
-      "A.mjuvix",
+      "A.juvix",
     PosTest
       "Data.Bool from the stdlib"
       "StdlibList"
       StdlibExclude
-      "Data/Bool.mjuvix",
+      "Data/Bool.juvix",
     PosTest
       "Data.Nat from the stdlib"
       "StdlibList"
       StdlibExclude
-      "Data/Nat.mjuvix",
+      "Data/Nat.juvix",
     PosTest
       "Data.Ord from the stdlib"
       "StdlibList"
       StdlibExclude
-      "Data/Ord.mjuvix",
+      "Data/Ord.juvix",
     PosTest
       "Data.Product from the stdlib"
       "StdlibList"
       StdlibExclude
-      "Data/Product.mjuvix",
+      "Data/Product.juvix",
     PosTest
       "Data.List and friends from the stdlib"
       "StdlibList"
       StdlibExclude
-      "Data/List.mjuvix",
+      "Data/List.juvix",
     PosTest
       "Operators (+)"
       "."
       StdlibExclude
-      "Operators.mjuvix",
+      "Operators.juvix",
     PosTest
       "Literals"
       "."
       StdlibExclude
-      "Literals.mjuvix",
+      "Literals.juvix",
     PosTest
       "Axiom with backends"
       "."
       StdlibExclude
-      "Axiom.mjuvix",
+      "Axiom.juvix",
     PosTest
       "Foreign block parsing"
       "."
       StdlibExclude
-      "Foreign.mjuvix",
+      "Foreign.juvix",
     PosTest
       "Multiple modules non-ambiguous symbol - same file"
       "QualifiedSymbol"
       StdlibExclude
-      "M.mjuvix",
+      "M.juvix",
     PosTest
       "Multiple modules non-ambiguous symbol"
       "QualifiedSymbol2"
       StdlibExclude
-      "N.mjuvix",
+      "N.juvix",
     PosTest
       "Multiple modules constructor non-ambiguous symbol"
       "QualifiedConstructor"
       StdlibExclude
-      "M.mjuvix",
+      "M.juvix",
     PosTest
       "Parsing"
       "."
       StdlibExclude
-      "Parsing.mjuvix",
+      "Parsing.juvix",
     PosTest
       "open overrides open public"
       "."
       StdlibExclude
-      "ShadowPublicOpen.mjuvix",
+      "ShadowPublicOpen.juvix",
     PosTest
       "Import embedded standard library"
       "StdlibImport"
       StdlibInclude
-      "StdlibImport.mjuvix"
+      "StdlibImport.juvix"
   ]

@@ -6,7 +6,7 @@ $A$ is a type and there exist a term $x$ that inhabits $A$. Then the program wou
 like like the following.
 
 #+begin_src
--- Example.mjuvix
+-- Example.juvix
 module Example;
  axiom A : Type;
  axom x : A;

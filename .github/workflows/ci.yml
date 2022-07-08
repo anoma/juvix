@@ -1,4 +1,4 @@
-name: MiniJuvix CI
+name: The Juvix compiler CI
 
 on:
   pull_request:

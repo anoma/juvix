@@ -3,13 +3,13 @@ module Commands.Compile where
 import Data.ByteString qualified as BS
 import Data.FileEmbed qualified as FE
 import Data.Text.IO qualified as TIO
-import MiniJuvix.Prelude hiding (Doc)
+import Juvix.Prelude hiding (Doc)
 import Options.Applicative
 import System.Environment
 import System.Process qualified as P
 
-minijuvixBuildDir :: FilePath
-minijuvixBuildDir = ".minijuvix-build"
+juvixBuildDir :: FilePath
+juvixBuildDir = ".juvix-build"
 
 data CompileTarget = TargetC | TargetWasm
   deriving stock (Show)
@@ -85,14 +85,14 @@ parseCompile = do
 
 inputCFile :: FilePath -> FilePath -> FilePath
 inputCFile projRoot compileInputFile =
-  projRoot </> minijuvixBuildDir </> outputMiniCFile
+  projRoot </> juvixBuildDir </> outputMiniCFile
   where
     outputMiniCFile :: FilePath
     outputMiniCFile = takeBaseName compileInputFile <> ".c"
 
 runCompile :: FilePath -> FilePath -> CompileOptions -> Text -> IO (Either Text ())
 runCompile projRoot compileInputFile o minic = do
-  createDirectoryIfMissing True (projRoot </> minijuvixBuildDir)
+  createDirectoryIfMissing True (projRoot </> juvixBuildDir)
   TIO.writeFile (inputCFile projRoot compileInputFile) minic
   prepareRuntime projRoot o
   case o ^. compileTarget of
@@ -119,7 +119,7 @@ prepareRuntime projRoot o = do
 
     writeRuntime :: (FilePath, BS.ByteString) -> IO ()
     writeRuntime (filePath, contents) =
-      BS.writeFile (projRoot </> minijuvixBuildDir </> takeFileName filePath) contents
+      BS.writeFile (projRoot </> juvixBuildDir </> takeFileName filePath) contents
 
 clangCompile :: FilePath -> FilePath -> CompileOptions -> IO (Either Text ())
 clangCompile projRoot compileInputFile o = do
@@ -150,7 +150,7 @@ clangCompile projRoot compileInputFile o = do
 standaloneArgs :: FilePath -> FilePath -> FilePath -> FilePath -> [String]
 standaloneArgs projRoot sysrootPath wasmOutputFile inputFile =
   commonArgs sysrootPath wasmOutputFile
-    <> [projRoot </> minijuvixBuildDir </> "walloc.c", inputFile]
+    <> [projRoot </> juvixBuildDir </> "walloc.c", inputFile]
 
 libcArgs :: FilePath -> FilePath -> FilePath -> [String]
 libcArgs sysrootPath wasmOutputFile inputFile =
@@ -163,7 +163,7 @@ commonArgs sysrootPath wasmOutputFile =
     "-std=c99",
     "-Oz",
     "-I",
-    minijuvixBuildDir,
+    juvixBuildDir,
     "--target=wasm32-wasi",
     "--sysroot",
     sysrootPath,

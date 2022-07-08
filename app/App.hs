@@ -1,18 +1,18 @@
 module App where
 
 import GlobalOptions
-import MiniJuvix.Pipeline
-import MiniJuvix.Prelude hiding (Doc)
-import MiniJuvix.Prelude.Error qualified as Error
-import MiniJuvix.Prelude.Pretty hiding (Doc)
+import Juvix.Pipeline
+import Juvix.Prelude hiding (Doc)
+import Juvix.Prelude.Error qualified as Error
+import Juvix.Prelude.Pretty hiding (Doc)
 import System.Console.ANSI qualified as Ansi
 
 data App m a where
   ExitMsg :: ExitCode -> Text -> App m ()
-  ExitMiniJuvixError :: MiniJuvixError -> App m a
+  ExitJuvixError :: JuvixError -> App m a
   ReadGlobalOptions :: App m GlobalOptions
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
-  RunPipelineEither :: Sem PipelineEff a -> App m (Either MiniJuvixError a)
+  RunPipelineEither :: Sem PipelineEff a -> App m (Either JuvixError a)
   Say :: Text -> App m ()
 
 makeSem ''App
@@ -29,7 +29,7 @@ runAppIO g = interpret $ \case
   Say t
     | g ^. globalOnlyErrors -> return ()
     | otherwise -> embed (putStrLn t)
-  ExitMiniJuvixError e -> do
+  ExitJuvixError e -> do
     (embed . hPutStrLn stderr . Error.render (not (g ^. globalNoColors)) (g ^. globalOnlyErrors)) e
     embed exitFailure
   ExitMsg exitCode t -> embed (putStrLn t >> exitWith exitCode)
@@ -38,7 +38,7 @@ runPipeline :: Member App r => Sem PipelineEff a -> Sem r a
 runPipeline p = do
   r <- runPipelineEither p
   case r of
-    Left err -> exitMiniJuvixError err
+    Left err -> exitJuvixError err
     Right res -> return res
 
 newline :: Member App r => Sem r ()

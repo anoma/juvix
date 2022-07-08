@@ -1,24 +1,23 @@
-$ minijuvix termination
->2 /Usage\: minijuvix termination COMMAND \[MINIJUVIX_FILE\].*/
+$ juvix termination
+>2 /Usage\: juvix termination COMMAND \[JUVIX_FILE\].*/
 >= 1
 
-$ minijuvix termination calls
+$ juvix termination calls
 > /Provide.*/
 >2
 >=1
 
-$ minijuvix termination graph
+$ juvix termination graph
 > /Provide.*/
 >2
 >= 1
 
 
-$ minijuvix termination calls --help
-> /Usage\: minijuvix termination calls \[MINIJUVIX_FILE\] 
-                                   \[\-f\|\-\-function fun1 fun2 ...\] 
-                                   \[\-d\|\-\-show\-decreasing\-args ARG\].*/
+$ juvix termination calls --help
+> /Usage\: juvix termination calls \[JUVIX_FILE\] \[\-f\|\-\-function fun1 fun2 ...\] 
+                               \[\-d\|\-\-show\-decreasing\-args ARG\].*/
 >= 0
 
-$ minijuvix termination graph --help
-> /Usage\: minijuvix termination graph \[MINIJUVIX_FILE\] \[\-f\|\-\-function ARG\].*/
+$ juvix termination graph --help
+> /Usage\: juvix termination graph \[JUVIX_FILE\] \[\-f\|\-\-function ARG\].*/
 >= 0

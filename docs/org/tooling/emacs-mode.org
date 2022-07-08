@@ -1,22 +1,22 @@
 ** Emacs Mode
 
 
-There is an Emacs mode available for MiniJuvix. Currently, it
+There is an Emacs mode available for Juvix. Currently, it
 supports syntax highlighting for well-scoped modules.
 
 To install it add the following lines to your Emacs configuration file:
 
 #+begin_src elisp
-(push "/path/to/minijuvix/minijuvix-mode/" load-path)
-(require 'minijuvix-mode)
+(push "/path/to/juvix/juvix-mode/" load-path)
+(require 'juvix-mode)
 #+end_src
 
-Make sure that =minijuvix= is installed in your =PATH=.
+Make sure that =juvix= is installed in your =PATH=.
 
-The MiniJuvix major mode will be activated automatically for =.mjuvix= files.
+The Juvix major mode will be activated automatically for =.juvix= files.
 
 *** Keybindings
 
   | Key       | Function Name    | Description                                           |
   |-----------+------------------+-------------------------------------------------------|
-  | =C-c C-l= | =minijuvix-load= | Runs the scoper and adds semantic syntax highlighting |
+  | =C-c C-l= | =juvix-load= | Runs the scoper and adds semantic syntax highlighting |

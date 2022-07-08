@@ -3,8 +3,8 @@ module BackendC.Base where
 import Base
 import Data.FileEmbed
 import Data.Text.IO qualified as TIO
-import MiniJuvix.Pipeline
-import MiniJuvix.Translation.MonoJuvixToMiniC as MiniC
+import Juvix.Pipeline
+import Juvix.Translation.MonoJuvixToMiniC as MiniC
 import System.IO.Extra (withTempDir)
 import System.Process qualified as P
 

@@ -3,7 +3,7 @@
 ** Usage
 
 #+begin_src shell
-minijuvix [Global options]  ((-v|--version) | --show-root | COMMAND)
+juvix [Global options]  ((-v|--version) | --show-root | COMMAND)
 #+end_src
 
 ** Informative options
@@ -25,33 +25,33 @@ minijuvix [Global options]  ((-v|--version) | --show-root | COMMAND)
                           printing
 - =--only-errors=
   Only print errors in a uniform format (used by
-                          minijuvix-mode)
+                          juvix-mode)
 
 ** Commands
 
 - =parse=
-  Parse a MiniJuvix file
+  Parse a Juvix file
 - =scope=
-  Parse and scope a MiniJuvix file
+  Parse and scope a Juvix file
 - =html=
-  Generate HTML for a MiniJuvix file
+  Generate HTML for a Juvix file
 - =termination=
   Subcommands related to termination checking
 - =monojuvix=
-  Translate a MiniJuvix file to MonoJuvix
+  Translate a Juvix file to MonoJuvix
 - =microjuvix=
   Subcommands related to MicroJuvix
 - =minihaskell=
-  Translate a MiniJuvix file to MiniHaskell
+  Translate a Juvix file to MiniHaskell
 - =minic=
-  Translate a MiniJuvix file to MiniC
+  Translate a Juvix file to MiniC
 - =highlight=
-  Highlight a MiniJuvix file
+  Highlight a Juvix file
 
 
 ** CLI Auto-completion Scripts
 
-The MiniJuvix CLI can generate auto-completion scripts. Follow the instructions below for your shell.
+The Juvix CLI can generate auto-completion scripts. Follow the instructions below for your shell.
 
 NB: You may need to restart your shell after installing the completion script.
 
@@ -60,7 +60,7 @@ NB: You may need to restart your shell after installing the completion script.
 Add the following line to your bash init script (for example =~/.bashrc=).
 
 #+begin_src shell
-  eval "$(minijuvix --bash-completion-script minijuvix)"
+  eval "$(juvix --bash-completion-script juvix)"
 #+end_src
 
 *** Fish
@@ -68,8 +68,8 @@ Add the following line to your bash init script (for example =~/.bashrc=).
 Run the following command in your shell:
 
 #+begin_src shell
-minijuvix --fish-completion-script minijuvix
-  > ~/.config/fish/completions/minijuvix.fish
+juvix --fish-completion-script juvix
+  > ~/.config/fish/completions/juvix.fish
 #+end_src
 
 *** ZSH
@@ -77,7 +77,7 @@ minijuvix --fish-completion-script minijuvix
 Run the following command in your shell:
 
 #+begin_src shell
-minijuvix --zsh-completion-script minijuvix > $DIR_IN_FPATH/_minijuvix
+juvix --zsh-completion-script juvix > $DIR_IN_FPATH/_juvix
 #+end_src
 
 where =$DIR_IN_FPATH= is a directory that is present on the [[https://zsh.sourceforge.io/Doc/Release/Functions.html][ZSH FPATH variable]] (which you can inspect by running =echo $FPATH= in the shell).

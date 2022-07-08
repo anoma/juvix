@@ -1,7 +1,7 @@
 # Polymorphic simple fungible token
 
 #+begin_src
--- tests/positive/FullExamples/SimpleFungibleTokenImplicit.mjuvix
+-- tests/positive/FullExamples/SimpleFungibleTokenImplicit.juvix
 module SimpleFungibleTokenImplicit;
 
 foreign ghc {

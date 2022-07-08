@@ -1,4 +1,4 @@
-* Internal MiniJuvix languages
+* Internal Juvix languages
 
 ** Languages
 

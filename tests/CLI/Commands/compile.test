@@ -1,8 +1,8 @@
-$ minijuvix compile --help
-> /Usage\: minijuvix compile \[\-t\|\-\-target TARGET\] \[\-r\|\-\-runtime RUNTIME\] 
-                         \[\-o\|\-\-output OUTPUT_FILE\] \[MINIJUVIX_FILE\].*/
+$ juvix compile --help
+> /Usage: juvix compile \[\-t\|\-\-target TARGET\] \[\-r\|\-\-runtime RUNTIME\] 
+                     \[\-o\|\-\-output OUTPUT_FILE\] \[JUVIX_FILE\].*/
 >= 0
 
-$ cd tests/positive/MiniC/HelloWorld && minijuvix compile Input.mjuvix -o hello.wasm
+$ cd tests/positive/MiniC/HelloWorld && juvix compile Input.juvix -o hello.wasm
 >
 >= 0

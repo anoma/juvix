@@ -10,9 +10,9 @@
 
 typedef __UINTPTR_TYPE__ uintptr_t;
 
-typedef struct minijuvix_function {
+typedef struct juvix_function {
     uintptr_t fun;
-} minijuvix_function_t;
+} juvix_function_t;
 
 char* intToStr(int i) {
     int length = snprintf(NULL, 0, "%d", i);

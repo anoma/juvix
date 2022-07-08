@@ -63,10 +63,10 @@ agda/
 agda2hs/
 docs/*.html
 *.cabal
-/src/MiniJuvix/Utils/OldParser.hs
+/src/Juvix/Utils/OldParser.hs
 CHANGELOG.md
 UPDATES-FOR-CHANGELOG.org
-.minijuvix-build
+.juvix-build
 
 # C Code generation
 *.wasm

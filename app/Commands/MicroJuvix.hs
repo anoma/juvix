@@ -1,6 +1,6 @@
 module Commands.MicroJuvix where
 
-import MiniJuvix.Prelude hiding (Doc)
+import Juvix.Prelude hiding (Doc)
 import Options.Applicative
 
 data MicroJuvixCommand
@@ -36,19 +36,19 @@ parseMicroJuvixCommand =
     arityInfo =
       info
         (pure Arity)
-        (progDesc "Translate a MiniJuvix file to MicroJuvix and insert holes")
+        (progDesc "Translate a Juvix file to MicroJuvix and insert holes")
 
     prettyInfo :: ParserInfo MicroJuvixCommand
     prettyInfo =
       info
         (pure Pretty)
-        (progDesc "Translate a MiniJuvix file to MicroJuvix and pretty print the result")
+        (progDesc "Translate a Juvix file to MicroJuvix and pretty print the result")
 
     typeCheckInfo :: ParserInfo MicroJuvixCommand
     typeCheckInfo =
       info
         (TypeCheck <$> parseMicroJuvixType)
-        (progDesc "Translate a MiniJuvix file to MicroJuvix and typecheck the result")
+        (progDesc "Translate a Juvix file to MicroJuvix and typecheck the result")
 
 parseMicroJuvixType :: Parser MicroJuvixTypeOptions
 parseMicroJuvixType = do

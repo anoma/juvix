@@ -17,7 +17,7 @@ repos:
     -   id: mixed-line-ending
         exclude: tests/
 
--   repo:  https://github.com/heliaxdev/minijuvix
+-   repo:  https://github.com/anoma/juvix
     rev: 6f5c3fc2bc70cf65594d3b74fb62e75e8fcfac5b
     hooks:
     -   id: ormolu

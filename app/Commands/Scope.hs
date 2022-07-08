@@ -1,6 +1,6 @@
 module Commands.Scope where
 
-import MiniJuvix.Prelude hiding (Doc)
+import Juvix.Prelude hiding (Doc)
 import Options.Applicative
 
 newtype ScopeOptions = ScopeOptions

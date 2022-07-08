@@ -11,13 +11,13 @@ import TypeCheck qualified
 slowTests :: TestTree
 slowTests =
   testGroup
-    "MiniJuvix slow tests"
+    "Juvix slow tests"
     [BackendC.allTests]
 
 fastTests :: TestTree
 fastTests =
   testGroup
-    "MiniJuvix fast tests"
+    "Juvix fast tests"
     [ Scope.allTests,
       Termination.allTests,
       Arity.allTests,
@@ -27,4 +27,4 @@ fastTests =
 
 main :: IO ()
 main = do
-  defaultMain (testGroup "MiniJuvix tests" [fastTests, slowTests])
+  defaultMain (testGroup "Juvix tests" [fastTests, slowTests])

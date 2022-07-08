@@ -2,7 +2,7 @@
 
 module Commands.Parse where
 
-import MiniJuvix.Prelude hiding (Doc)
+import Juvix.Prelude hiding (Doc)
 import Options.Applicative
 
 newtype ParseOptions = ParseOptions

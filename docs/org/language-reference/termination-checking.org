@@ -1,12 +1,12 @@
 * Termination checking
 
-To not bring inconsistencies by function declarations, MiniJuvix
+To not bring inconsistencies by function declarations, Juvix
 requires that all function pass the termination checker.
 This check is called before the typechecking in the compilation pipeline.
 
 
 Since the former requirement is vital but often tricky to fulfill for programs
-in a total language like MiniJuvix. It is convenient to have
+in a total language like Juvix. It is convenient to have
 a way to bypass the termination checking. The user may be certain  their
 programs are terminating even when our termination checker algorithm can not
 see it. The termination checker is limited as it only accepts a subset

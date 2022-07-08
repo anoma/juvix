@@ -1,6 +1,6 @@
 output=CHANGELOG.md
-project=minijuvix
+project=juvix
 issues=false
 pulls=true
-user=heliaxdev
+user=anoma
 verbose=false

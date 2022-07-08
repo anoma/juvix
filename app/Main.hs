@@ -6,36 +6,36 @@ import Commands.Termination as Termination
 import Control.Exception qualified as IO
 import Control.Monad.Extra
 import Data.HashMap.Strict qualified as HashMap
-import MiniJuvix.Pipeline
-import MiniJuvix.Prelude hiding (Doc)
-import MiniJuvix.Prelude.Pretty hiding (Doc)
-import MiniJuvix.Syntax.Abstract.InfoTable qualified as Abstract
-import MiniJuvix.Syntax.Abstract.Language qualified as Abstract
-import MiniJuvix.Syntax.Abstract.Pretty qualified as Abstract
-import MiniJuvix.Syntax.Concrete.Parser qualified as Parser
-import MiniJuvix.Syntax.Concrete.Scoped.Highlight qualified as Highlight
-import MiniJuvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoper
-import MiniJuvix.Syntax.Concrete.Scoped.Pretty qualified as Scoper
-import MiniJuvix.Syntax.Concrete.Scoped.Pretty.Html
-import MiniJuvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
-import MiniJuvix.Syntax.MicroJuvix.MicroJuvixArityResult qualified as MicroArity
-import MiniJuvix.Syntax.MicroJuvix.Pretty qualified as Micro
-import MiniJuvix.Syntax.MicroJuvix.TypeChecker qualified as MicroTyped
-import MiniJuvix.Syntax.MiniHaskell.Pretty qualified as MiniHaskell
-import MiniJuvix.Syntax.MonoJuvix.Pretty qualified as Mono
-import MiniJuvix.Termination qualified as Termination
-import MiniJuvix.Translation.AbstractToMicroJuvix qualified as Micro
-import MiniJuvix.Translation.MicroJuvixToMonoJuvix qualified as Mono
-import MiniJuvix.Translation.MonoJuvixToMiniC qualified as MiniC
-import MiniJuvix.Translation.MonoJuvixToMiniHaskell qualified as MiniHaskell
-import MiniJuvix.Translation.ScopedToAbstract qualified as Abstract
-import MiniJuvix.Utils.Version (runDisplayVersion)
+import Juvix.Pipeline
+import Juvix.Prelude hiding (Doc)
+import Juvix.Prelude.Pretty hiding (Doc)
+import Juvix.Syntax.Abstract.InfoTable qualified as Abstract
+import Juvix.Syntax.Abstract.Language qualified as Abstract
+import Juvix.Syntax.Abstract.Pretty qualified as Abstract
+import Juvix.Syntax.Concrete.Parser qualified as Parser
+import Juvix.Syntax.Concrete.Scoped.Highlight qualified as Highlight
+import Juvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoper
+import Juvix.Syntax.Concrete.Scoped.Pretty qualified as Scoper
+import Juvix.Syntax.Concrete.Scoped.Pretty.Html
+import Juvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
+import Juvix.Syntax.MicroJuvix.MicroJuvixArityResult qualified as MicroArity
+import Juvix.Syntax.MicroJuvix.Pretty qualified as Micro
+import Juvix.Syntax.MicroJuvix.TypeChecker qualified as MicroTyped
+import Juvix.Syntax.MiniHaskell.Pretty qualified as MiniHaskell
+import Juvix.Syntax.MonoJuvix.Pretty qualified as Mono
+import Juvix.Termination qualified as Termination
+import Juvix.Translation.AbstractToMicroJuvix qualified as Micro
+import Juvix.Translation.MicroJuvixToMonoJuvix qualified as Mono
+import Juvix.Translation.MonoJuvixToMiniC qualified as MiniC
+import Juvix.Translation.MonoJuvixToMiniHaskell qualified as MiniHaskell
+import Juvix.Translation.ScopedToAbstract qualified as Abstract
+import Juvix.Utils.Version (runDisplayVersion)
 import Options.Applicative
 import System.Environment (getProgName)
 import Text.Show.Pretty hiding (Html)
 
-minijuvixYamlFile :: FilePath
-minijuvixYamlFile = "minijuvix.yaml"
+juvixYamlFile :: FilePath
+juvixYamlFile = "juvix.yaml"
 
 findRoot :: CommandGlobalOptions -> IO FilePath
 findRoot copts = do
@@ -60,7 +60,7 @@ findRoot copts = do
     go :: IO FilePath
     go = do
       c <- getCurrentDirectory
-      l <- findFile (possiblePaths c) minijuvixYamlFile
+      l <- findFile (possiblePaths c) juvixYamlFile
       case l of
         Nothing -> return c
         Just yaml -> return (takeDirectory yaml)
@@ -89,7 +89,7 @@ runCommand cmdWithOpts = do
     _ -> do
       -- Other commands require an entry point:
       case getEntryPoint root globalOpts of
-        Nothing -> printFailureExit "Provide a MiniJuvix file to run this command\nUse --help to see all the options"
+        Nothing -> printFailureExit "Provide a Juvix file to run this command\nUse --help to see all the options"
         Just entryPoint -> do
           case cmd of
             Highlight -> do
