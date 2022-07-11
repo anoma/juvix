@@ -1,0 +1,16 @@
+module M;
+
+inductive Bool {
+  false : Bool;
+  true : Bool;
+};
+
+inductive Pair (A : Type) (B : Type) {
+  mkPair : A → B → Pair A B;
+};
+
+f : _ → _;
+f (mkPair false true) ≔ true;
+f _ ≔ false;
+
+end;

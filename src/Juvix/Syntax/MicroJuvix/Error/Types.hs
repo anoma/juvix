@@ -10,7 +10,7 @@ import Juvix.Syntax.MicroJuvix.Language
 data WrongConstructorType = WrongConstructorType
   { _wrongCtorTypeName :: Name,
     _wrongCtorTypeExpected :: InductiveName,
-    _wrongCtorTypeActual :: InductiveName,
+    _wrongCtorTypeActual :: Expression,
     _wrongCtorTypeFunName :: Name
   }
 

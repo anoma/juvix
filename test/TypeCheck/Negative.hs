@@ -50,6 +50,13 @@ tests =
         ErrWrongConstructorType {} -> Nothing
         _ -> wrongError,
     NegTest
+      "Check pattern with hole type"
+      "265"
+      "M.juvix"
+      $ \case
+        ErrWrongConstructorType {} -> Nothing
+        _ -> wrongError,
+    NegTest
       "Type vs inferred type mismatch"
       "MicroJuvix"
       "WrongType.juvix"
