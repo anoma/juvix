@@ -91,4 +91,4 @@ The Juvix language and related tools are documented in [[https://anoma.github.io
 ** Community
 
 We would love to hear what you think of Juvix! Join us on
-[[https://discord.gg/nsGaCZzJ][Discord]]
+[[https://discord.gg/vEQappb7wG][Discord]]
