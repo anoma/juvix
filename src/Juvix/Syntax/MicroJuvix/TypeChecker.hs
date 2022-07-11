@@ -21,18 +21,19 @@ entryMicroJuvixTyped ::
   MicroJuvixArityResult ->
   Sem r MicroJuvixTypedResult
 entryMicroJuvixTyped res@MicroJuvixArityResult {..} = do
-  r <- runReader table (mapM checkModule _resultModules)
+  (idens, r) <- runState (mempty :: HashMap Iden Expression) (runReader table (mapM checkModule _resultModules))
   return
     MicroJuvixTypedResult
       { _resultMicroJuvixArityResult = res,
-        _resultModules = r
+        _resultModules = r,
+        _resultIdenTypes = idens
       }
   where
     table :: InfoTable
     table = buildTable _resultModules
 
 checkModule ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State (HashMap Iden Expression)] r =>
   Module ->
   Sem r Module
 checkModule Module {..} = do
@@ -44,7 +45,7 @@ checkModule Module {..} = do
       }
 
 checkModuleBody ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State (HashMap Iden Expression)] r =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -55,13 +56,13 @@ checkModuleBody ModuleBody {..} = do
       }
 
 checkInclude ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State (HashMap Iden Expression)] r =>
   Include ->
   Sem r Include
 checkInclude = traverseOf includeModule checkModule
 
 checkStatement ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State (HashMap Iden Expression)] r =>
   Statement ->
   Sem r Statement
 checkStatement s = case s of
@@ -72,18 +73,24 @@ checkStatement s = case s of
   StatementAxiom {} -> return s
 
 checkFunctionDef ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State (HashMap Iden Expression)] r =>
   FunctionDef ->
   Sem r FunctionDef
-checkFunctionDef FunctionDef {..} = runInferenceDef $ do
-  info <- lookupFunction _funDefName
-  checkFunctionDefType _funDefType
-  _funDefClauses' <- mapM (checkFunctionClause info) _funDefClauses
-  return
-    FunctionDef
-      { _funDefClauses = _funDefClauses',
-        ..
-      }
+checkFunctionDef FunctionDef {..} = do
+  (funDef, idens) <- runInferenceDef $ do
+    info <- lookupFunction _funDefName
+    checkFunctionDefType _funDefType
+    _funDefClauses' <- mapM (checkFunctionClause info) _funDefClauses
+    return
+      FunctionDef
+        { _funDefClauses = _funDefClauses',
+          ..
+        }
+  addIdens idens
+  return funDef
+
+addIdens :: Member (State (HashMap Iden Expression)) r => HashMap Iden Expression -> Sem r ()
+addIdens idens = modify (HashMap.union idens)
 
 checkFunctionDefType :: forall r. Members '[Inference] r => Expression -> Sem r ()
 checkFunctionDefType = traverseOf_ (leafExpressions . _ExpressionHole) go

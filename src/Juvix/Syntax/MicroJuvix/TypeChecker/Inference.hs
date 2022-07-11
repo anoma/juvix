@@ -14,21 +14,26 @@ data Inference m a where
   FreshMetavar :: Hole -> Inference m TypedExpression
   MatchTypes :: Expression -> Expression -> Inference m Bool
   QueryMetavar :: Hole -> Inference m (Maybe Expression)
+  RegisterIden :: Iden -> Expression -> Inference m ()
 
 makeSem ''Inference
 
-newtype InferenceState = InferenceState
-  { _inferenceMap :: HashMap Hole MetavarState
+data InferenceState = InferenceState
+  { _inferenceMap :: HashMap Hole MetavarState,
+    _inferenceIdens :: HashMap Iden Expression
   }
 
 makeLenses ''InferenceState
 
 iniState :: InferenceState
-iniState = InferenceState mempty
+iniState = InferenceState mempty mempty
 
-closeState :: Member (Error TypeCheckerError) r => InferenceState -> Sem r (HashMap Hole Expression)
+closeState :: Member (Error TypeCheckerError) r => InferenceState -> Sem r (HashMap Hole Expression,
+                                                                             HashMap Iden Expression)
 closeState = \case
-  InferenceState m -> execState mempty (f m)
+  InferenceState m idens -> do
+    holeMap <- execState mempty (f m)
+    return (holeMap, idens)
   where
     f ::
       forall r'.
@@ -66,7 +71,11 @@ re = reinterpret $ \case
   FreshMetavar h -> freshMetavar' h
   MatchTypes a b -> matchTypes' a b
   QueryMetavar h -> queryMetavar' h
+  RegisterIden i ty -> registerIden' i ty
   where
+    registerIden' :: Members '[State InferenceState] r => Iden -> Expression -> Sem r ()
+    registerIden' i ty = modify (over inferenceIdens (HashMap.insert i ty))
+
     queryMetavar' :: Members '[State InferenceState] r => Hole -> Sem r (Maybe Expression)
     queryMetavar' h = do
       s <- getMetavar h
@@ -154,12 +163,8 @@ re = reinterpret $ \case
                     andM [go l1 l2, local' (go r1 r2)]
                 | otherwise = return False
 
-runInference :: Member (Error TypeCheckerError) r => Sem (Inference ': r) Expression -> Sem r Expression
-runInference a = do
-  (subs, expr) <- runState iniState (re a) >>= firstM closeState
-  return (fillHoles subs expr)
-
-runInferenceDef :: Member (Error TypeCheckerError) r => Sem (Inference ': r) FunctionDef -> Sem r FunctionDef
+runInferenceDef :: Member (Error TypeCheckerError) r => Sem (Inference ': r) FunctionDef
+   -> Sem r (FunctionDef, HashMap Iden Expression)
 runInferenceDef a = do
-  (subs, expr) <- runState iniState (re a) >>= firstM closeState
-  return (fillHolesFunctionDef subs expr)
+  ((subs, idens), expr) <- runState iniState (re a) >>= firstM closeState
+  return (fillHolesFunctionDef subs expr, fillHoles subs <$> idens)
