@@ -1,9 +1,9 @@
-module Juvix.Translation.MonoJuvixToMiniC.Types where
+module Juvix.Translation.MicroJuvixToMiniC.Types where
 
 import Juvix.Prelude
+import Juvix.Syntax.MicroJuvix.Language qualified as Micro
 import Juvix.Syntax.MiniC.Language
-import Juvix.Syntax.MonoJuvix.Language qualified as Mono
-import Juvix.Translation.MonoJuvixToMiniC.BuiltinTable
+import Juvix.Translation.MicroJuvixToMiniC.BuiltinTable
 
 newtype MiniCResult = MiniCResult
   { _resultCCode :: Text
@@ -20,9 +20,9 @@ newtype PatternInfoTable = PatternInfoTable
 type CArity = Int
 
 data ClosureInfo = ClosureInfo
-  { _closureNameId :: Mono.NameId,
+  { _closureNameId :: Micro.NameId,
     _closureRootName :: Text,
-    _closureBuiltin :: Maybe Mono.BuiltinPrim,
+    _closureBuiltin :: Maybe Micro.BuiltinPrim,
     _closureMembers :: [CDeclType],
     _closureFunType :: CFunType,
     _closureCArity :: CArity

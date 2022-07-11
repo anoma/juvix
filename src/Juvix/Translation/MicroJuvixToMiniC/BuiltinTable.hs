@@ -1,8 +1,8 @@
-module Juvix.Translation.MonoJuvixToMiniC.BuiltinTable where
+module Juvix.Translation.MicroJuvixToMiniC.BuiltinTable where
 
 import Juvix.Prelude
 import Juvix.Syntax.Concrete.Builtins
-import Juvix.Translation.MonoJuvixToMiniC.CNames
+import Juvix.Translation.MicroJuvixToMiniC.CNames
 
 builtinConstructorName :: BuiltinConstructor -> Maybe Text
 builtinConstructorName = \case

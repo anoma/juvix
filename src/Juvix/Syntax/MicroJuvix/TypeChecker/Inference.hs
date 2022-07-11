@@ -4,6 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Prelude hiding (fromEither)
 import Juvix.Syntax.MicroJuvix.Error
 import Juvix.Syntax.MicroJuvix.Language.Extra
+import Juvix.Syntax.MicroJuvix.MicroJuvixTypedResult
 
 data MetavarState
   = Fresh
@@ -21,13 +22,13 @@ data Inference m a where
   MatchTypes :: Expression -> Expression -> Inference m (Maybe MatchError)
   QueryMetavar :: Hole -> Inference m (Maybe Expression)
   NormalizeType :: Expression -> Inference m Expression
-  RegisterIden :: Iden -> Expression -> Inference m ()
+  RegisterIden :: Name -> Expression -> Inference m ()
 
 makeSem ''Inference
 
 data InferenceState = InferenceState
   { _inferenceMap :: HashMap Hole MetavarState,
-    _inferenceIdens :: HashMap Iden Expression
+    _inferenceIdens :: TypesTable
   }
 
 makeLenses ''InferenceState
@@ -35,8 +36,14 @@ makeLenses ''InferenceState
 iniState :: InferenceState
 iniState = InferenceState mempty mempty
 
-closeState :: Member (Error TypeCheckerError) r => InferenceState -> Sem r (HashMap Hole Expression,
-                                                                             HashMap Iden Expression)
+closeState ::
+  Member (Error TypeCheckerError) r =>
+  InferenceState ->
+  Sem
+    r
+    ( HashMap Hole Expression,
+      TypesTable
+    )
 closeState = \case
   InferenceState m idens -> do
     holeMap <- execState mempty (f m)
@@ -117,7 +124,7 @@ re = reinterpret $ \case
   NormalizeType t -> normalizeType' t
   RegisterIden i ty -> registerIden' i ty
   where
-    registerIden' :: Members '[State InferenceState] r => Iden -> Expression -> Sem r ()
+    registerIden' :: Members '[State InferenceState] r => Name -> Expression -> Sem r ()
     registerIden' i ty = modify (over inferenceIdens (HashMap.insert i ty))
 
     refineFreshMetavar ::
@@ -208,8 +215,10 @@ re = reinterpret $ \case
                     bicheck (go l1 l2) (local' (go r1 r2))
                 | otherwise = ok
 
-runInferenceDef :: Member (Error TypeCheckerError) r => Sem (Inference ': r) FunctionDef
-   -> Sem r (FunctionDef, HashMap Iden Expression)
+runInferenceDef ::
+  Member (Error TypeCheckerError) r =>
+  Sem (Inference ': r) FunctionDef ->
+  Sem r (FunctionDef, TypesTable)
 runInferenceDef a = do
   ((subs, idens), expr) <- runState iniState (re a) >>= firstM closeState
   return (fillHolesFunctionDef subs expr, fillHoles subs <$> idens)
