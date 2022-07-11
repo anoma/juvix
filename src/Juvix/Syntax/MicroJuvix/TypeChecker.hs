@@ -40,20 +40,28 @@ entryMicroJuvixTyped res@MicroJuvixArityResult {..} = do
     table :: InfoTable
     table = buildTable _resultModules
 
+type PosTypeParameters = HashSet Name
+
 checkModule ::
   Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
   Module ->
   Sem r Module
 checkModule Module {..} = do
-  _moduleBody' <- checkModuleBody _moduleBody
-  return
-    Module
-      { _moduleBody = _moduleBody',
-        ..
-      }
+      _moduleBody' <- 
+        (evalState (mempty :: PosTypeParameters) . checkModuleBody) _moduleBody
+      return
+        Module
+          { _moduleBody = _moduleBody',
+            ..
+          }
 
+<<<<<<< HEAD
 checkModuleBody ::
   Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
+=======
+checkModuleBody :: forall r.
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State PosTypeParameters] r =>
+>>>>>>> 445cab6 (the branch is back to feet)
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -70,7 +78,11 @@ checkInclude ::
 checkInclude = traverseOf includeModule checkModule
 
 checkStatement ::
+<<<<<<< HEAD
   Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
+=======
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State PosTypeParameters] r =>
+>>>>>>> 445cab6 (the branch is back to feet)
   Statement ->
   Sem r Statement
 checkStatement s = case s of
@@ -140,7 +152,7 @@ checkFunctionParameter (FunctionParameter mv i e) = do
   return (FunctionParameter mv i e')
 
 -------------------------------------------------------------------------------
--- Typechecking of data types
+-- Typechecking for data types
 -------------------------------------------------------------------------------
 
 type ErrorReference = Maybe Expression
@@ -176,7 +188,6 @@ checkStrictlyPositiveOccurrences indName ctorName name recLimit ref = helper Fal
           if
               | inside && name == ty' -> strictlyPositivityError expr
               | name /= ty' -> do
-<<<<<<< HEAD
                   -- Here `name` may show up as a subexpr of ty'. Therefore, we
                   -- need to check if the type ty' preserves the str. positivity
                   -- condition. The type ty', by assumption, has to be strictly
@@ -185,14 +196,6 @@ checkStrictlyPositiveOccurrences indName ctorName name recLimit ref = helper Fal
                   -- is, they are all strictly positive. TODO: This last check
                   -- is done on demand, but it could be cached, if the infotable
                   -- becomes stateful.
-=======
-                  -- Here `name` may show up as a subexpr of ty'. Therefore, we need to check
-                  -- if the type ty' preserves the str. positivity condition.
-                  -- The type ty', by assumption, has to be strictly positive. It is already in scope.
-                  -- Then, it remains to check that the ty' type constructor parameters in which `name`
-                  --  is, they are all strictly positive. TODO: This last check is done on demand, but it
-                  -- could be cached with a state, e.g. SPositiveNames : HashSet Name
->>>>>>> bb830e3 (Add some revisions)
                   InductiveInfo indTy' <- lookupInductive ty'
                   let (_, args) = unfoldApplication tyApp
                       paramsTy' = indTy' ^. inductiveParameters
@@ -243,37 +246,8 @@ checkInductiveDef ::
   InductiveDef ->
   Sem r ()
 checkInductiveDef ty@InductiveDef {..} = do
-  checkInductiveParameterNames _inductiveName _inductiveParameters
   mapM_ (checkConstructorDef ty) _inductiveConstructors
   return ty
-
-checkInductiveParameterNames ::
-  Members '[Reader InfoTable, Error TypeCheckerError] r =>
-  InductiveName ->
-  [InductiveParameter] ->
-  Sem r ()
-checkInductiveParameterNames tyName = helper mempty
-  where
-    helper ::
-      Members '[Reader InfoTable, Error TypeCheckerError] r =>
-      HashSet Text ->
-      [InductiveParameter] ->
-      Sem r ()
-    helper _ [] = return ()
-    helper nset (p : parms) = do
-      let pName = p ^. inductiveParamName
-          pText = pName ^. nameText
-      if
-          | HashSet.member pText nset ->
-              throw
-                ( ErrWrongInductiveParameterName
-                    ( WrongInductiveParameterName
-                        { _wrongInductiveParameterName = pName,
-                          _wrongInductiveParameterType = tyName
-                        }
-                    )
-                )
-          | otherwise -> helper (HashSet.insert pText nset) parms
 
 checkConstructorDef ::
   Members '[Reader InfoTable, Error TypeCheckerError] r =>
@@ -390,7 +364,7 @@ checkPattern funName = go
     go :: FunctionParameter -> Pattern -> Sem r ()
     go argTy p = do
       tyVarMap <- fmap (ExpressionIden . IdenVar) . (^. localTyMap) <$> get
-      ty <- normalizeType (substitutionE tyVarMap (typeOfArg argTy))
+      ty <- normalizeType (substitutionE tyVarMap (argTy ^. paramType))
       let unbrace = \case
             PatternBraces b -> b
             x -> x
