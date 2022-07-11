@@ -9,8 +9,8 @@ import Juvix.Syntax.MicroJuvix.Language
 -- not match the type of the inductive being matched
 data WrongConstructorType = WrongConstructorType
   { _wrongCtorTypeName :: Name,
-    _wrongCtorTypeExpected :: Name,
-    _wrongCtorTypeActual :: Name,
+    _wrongCtorTypeExpected :: InductiveName,
+    _wrongCtorTypeActual :: InductiveName,
     _wrongCtorTypeFunName :: Name
   }
 
