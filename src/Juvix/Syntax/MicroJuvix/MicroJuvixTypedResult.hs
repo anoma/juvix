@@ -11,7 +11,8 @@ import Juvix.Syntax.MicroJuvix.MicroJuvixArityResult (MicroJuvixArityResult)
 
 data MicroJuvixTypedResult = MicroJuvixTypedResult
   { _resultMicroJuvixArityResult :: MicroJuvixArityResult,
-    _resultModules :: NonEmpty Module
+    _resultModules :: NonEmpty Module,
+    _resultIdenTypes :: HashMap Iden Expression
   }
 
 makeLenses ''MicroJuvixTypedResult
