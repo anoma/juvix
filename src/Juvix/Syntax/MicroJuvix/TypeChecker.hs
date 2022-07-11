@@ -204,6 +204,16 @@ checkPattern funName = go
           info <- lookupConstructor (a ^. constrAppConstructor)
           let constrIndName = info ^. constructorInfoInductive
               constrName = a ^. constrAppConstructor
+              err patternTy =
+                throw
+                  ( ErrWrongConstructorType
+                      WrongConstructorType
+                        { _wrongCtorTypeName = constrName,
+                          _wrongCtorTypeExpected = constrIndName,
+                          _wrongCtorTypeActual = patternTy,
+                          _wrongCtorTypeFunName = funName
+                        }
+                  )
           case s of
             Left hole -> do
               let indParams = info ^. constructorInfoInductiveParameters
@@ -215,26 +225,13 @@ checkPattern funName = go
               let patternTy = foldApplication (ExpressionIden indName) (zip (repeat Explicit) paramHoles)
               unlessM
                 (matchTypes (ExpressionHole hole) patternTy)
-                ( throw
-                    ( ErrWrongConstructorType
-                        WrongConstructorType
-                          { _wrongCtorTypeName = constrName,
-                            _wrongCtorTypeExpected = constrIndName,
-                            _wrongCtorTypeActual = patternTy,
-                            _wrongCtorTypeFunName = funName
-                          }
-                    )
-                )
+                (err patternTy)
               let tyArgs = zipExact indParams paramHoles
               goConstr a tyArgs
             Right (ind, tyArgs) -> do
               when
                 (ind /= constrIndName)
-                ( throw
-                    ( ErrWrongConstructorType
-                        (WrongConstructorType constrName ind (ExpressionIden (IdenInductive constrIndName)) funName)
-                    )
-                )
+                (err (ExpressionIden (IdenInductive constrIndName)))
               goConstr a tyArgs
       where
         goConstr :: ConstructorApp -> [(InductiveParameter, Expression)] -> Sem r ()
