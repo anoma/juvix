@@ -112,31 +112,31 @@ tests =
       $ \case
         ErrWrongReturnType {} -> Nothing
         _ -> wrongError,
-    NegTest "E1" "MicroJuvix/NoStrictlyPositiveDataTypes" "E1.mjuvix" $
+    NegTest "E1" "MicroJuvix/NoStrictlyPositiveDataTypes" "E1.juvix" $
       \case
         ErrNoStrictPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E2" "MicroJuvix/NoStrictlyPositiveDataTypes" "E2.mjuvix" $
+    NegTest "E2" "MicroJuvix/NoStrictlyPositiveDataTypes" "E2.juvix" $
       \case
         ErrNoStrictPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E3" "MicroJuvix/NoStrictlyPositiveDataTypes" "E3.mjuvix" $
+    NegTest "E3" "MicroJuvix/NoStrictlyPositiveDataTypes" "E3.juvix" $
       \case
         ErrNoStrictPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E4" "MicroJuvix/NoStrictlyPositiveDataTypes" "E4.mjuvix" $
+    NegTest "E4" "MicroJuvix/NoStrictlyPositiveDataTypes" "E4.juvix" $
       \case
         ErrNoStrictPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E5" "MicroJuvix/NoStrictlyPositiveDataTypes" "E5.mjuvix" $
+    NegTest "E5" "MicroJuvix/NoStrictlyPositiveDataTypes" "E5.juvix" $
       \case
         ErrNoStrictPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E6" "MicroJuvix/NoStrictlyPositiveDataTypes" "E6.mjuvix" $
+    NegTest "E6" "MicroJuvix/NoStrictlyPositiveDataTypes" "E6.juvix" $
       \case
         ErrNoStrictPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E7" "MicroJuvix/NoStrictlyPositiveDataTypes" "E7.mjuvix" $
+    NegTest "E7" "MicroJuvix/NoStrictlyPositiveDataTypes" "E7.juvix" $
       \case
         ErrNoStrictPositivity {} -> Nothing
         _ -> wrongError

@@ -40,20 +40,28 @@ entryMicroJuvixTyped res@MicroJuvixArityResult {..} = do
     table :: InfoTable
     table = buildTable _resultModules
 
+type PosTypeParameters = HashSet Name
+
 checkModule ::
   Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
   Module ->
   Sem r Module
 checkModule Module {..} = do
-  _moduleBody' <- checkModuleBody _moduleBody
-  return
-    Module
-      { _moduleBody = _moduleBody',
-        ..
-      }
+      _moduleBody' <- 
+        (evalState (mempty :: PosTypeParameters) . checkModuleBody) _moduleBody
+      return
+        Module
+          { _moduleBody = _moduleBody',
+            ..
+          }
 
+<<<<<<< HEAD
 checkModuleBody ::
   Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
+=======
+checkModuleBody :: forall r.
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State PosTypeParameters] r =>
+>>>>>>> 445cab6 (the branch is back to feet)
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -70,7 +78,11 @@ checkInclude ::
 checkInclude = traverseOf includeModule checkModule
 
 checkStatement ::
+<<<<<<< HEAD
   Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
+=======
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State PosTypeParameters] r =>
+>>>>>>> 445cab6 (the branch is back to feet)
   Statement ->
   Sem r Statement
 checkStatement s = case s of
@@ -140,7 +152,7 @@ checkFunctionParameter (FunctionParameter mv i e) = do
   return (FunctionParameter mv i e')
 
 -------------------------------------------------------------------------------
--- Typechecking of data types
+-- Typechecking for data types
 -------------------------------------------------------------------------------
 
 type ErrorReference = Maybe Expression
@@ -234,37 +246,8 @@ checkInductiveDef ::
   InductiveDef ->
   Sem r ()
 checkInductiveDef ty@InductiveDef {..} = do
-  checkInductiveParameterNames _inductiveName _inductiveParameters
   mapM_ (checkConstructorDef ty) _inductiveConstructors
   return ty
-
-checkInductiveParameterNames ::
-  Members '[Reader InfoTable, Error TypeCheckerError] r =>
-  InductiveName ->
-  [InductiveParameter] ->
-  Sem r ()
-checkInductiveParameterNames tyName = helper mempty
-  where
-    helper ::
-      Members '[Reader InfoTable, Error TypeCheckerError] r =>
-      HashSet Text ->
-      [InductiveParameter] ->
-      Sem r ()
-    helper _ [] = return ()
-    helper nset (p : parms) = do
-      let pName = p ^. inductiveParamName
-          pText = pName ^. nameText
-      if
-          | HashSet.member pText nset ->
-              throw
-                ( ErrWrongInductiveParameterName
-                    ( WrongInductiveParameterName
-                        { _wrongInductiveParameterName = pName,
-                          _wrongInductiveParameterType = tyName
-                        }
-                    )
-                )
-          | otherwise -> helper (HashSet.insert pText nset) parms
 
 checkConstructorDef ::
   Members '[Reader InfoTable, Error TypeCheckerError] r =>
@@ -400,8 +383,16 @@ checkPattern funName = go
     go argTy patArg = do
       matchIsImplicit (argTy ^. paramImplicit) patArg
       tyVarMap <- fmap (ExpressionIden . IdenVar) . (^. localTyMap) <$> get
+<<<<<<< HEAD
       ty <- normalizeType (substitutionE tyVarMap (typeOfArg argTy))
       let pat = patArg ^. patternArgPattern
+=======
+      ty <- normalizeType (substitutionE tyVarMap (argTy ^. paramType))
+      let unbrace = \case
+            PatternBraces b -> b
+            x -> x
+          pat = unbrace p
+>>>>>>> 6bd835c (the branch is back to feet)
       case pat of
         PatternWildcard {} -> return ()
         PatternVariable v -> do
