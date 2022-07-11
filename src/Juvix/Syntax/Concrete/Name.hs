@@ -2,30 +2,15 @@ module Juvix.Syntax.Concrete.Name where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Prelude
-import Prettyprinter
+import Juvix.Syntax.Loc
 
-data Symbol = Symbol
-  { _symbolText :: Text,
-    _symbolLoc :: Interval
-  }
-  deriving stock (Show)
+type Symbol = WithLoc Text
 
-makeLenses ''Symbol
+symbolText :: Lens' Symbol Text
+symbolText = withLocParam
 
-instance Pretty Symbol where
-  pretty = pretty . (^. symbolText)
-
-instance Eq Symbol where
-  (==) = (==) `on` (^. symbolText)
-
-instance Ord Symbol where
-  compare = compare `on` (^. symbolText)
-
-instance HasLoc Symbol where
-  getLoc = (^. symbolLoc)
-
-instance Hashable Symbol where
-  hashWithSalt i s = hashWithSalt i (s ^. symbolText)
+symbolLoc :: Lens' Symbol Interval
+symbolLoc = withLocInt
 
 data Name
   = NameQualified QualifiedName
@@ -90,12 +75,10 @@ topModulePathToFilePath' ext root mp = normalise absPath
       Nothing -> root </> relFilePath
       Just e -> root </> relFilePath <.> e
     toPath :: Symbol -> FilePath
-    toPath Symbol {..} = unpack _symbolText
+    toPath s = unpack (s ^. withLocParam)
 
 topModulePathToDottedPath :: IsString s => TopModulePath -> s
 topModulePathToDottedPath (TopModulePath l r) =
-  fromText $ mconcat $ intersperse "." $ map fromSymbol $ l ++ [r]
-  where
-    fromSymbol Symbol {..} = _symbolText
+  fromText $ mconcat $ intersperse "." $ map (^. symbolText) $ l ++ [r]
 
 instance Hashable TopModulePath

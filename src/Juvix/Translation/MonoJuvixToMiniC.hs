@@ -397,7 +397,7 @@ goApplication a = do
       Mono.ExpressionLiteral {} -> impossible
 
 goLiteral :: C.LiteralLoc -> Literal
-goLiteral C.LiteralLoc {..} = case _literalLocLiteral of
+goLiteral l = case l ^. C.withLocParam of
   C.LitString s -> LiteralString s
   C.LitInteger i -> LiteralInt i
 

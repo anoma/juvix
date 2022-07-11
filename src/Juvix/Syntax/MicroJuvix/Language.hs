@@ -1,12 +1,12 @@
 module Juvix.Syntax.MicroJuvix.Language
   ( module Juvix.Syntax.MicroJuvix.Language,
     module Juvix.Syntax.Abstract.Name,
-    module Juvix.Syntax.Concrete.Loc,
+    module Juvix.Syntax.Loc,
     module Juvix.Syntax.IsImplicit,
+    module Juvix.Syntax.Concrete.Literal,
     module Juvix.Syntax.Universe,
     module Juvix.Syntax.Hole,
     module Juvix.Syntax.Wildcard,
-    module Juvix.Syntax.Concrete.LiteralLoc,
     module Juvix.Syntax.Concrete.Builtins,
   )
 where
@@ -14,11 +14,11 @@ where
 import Juvix.Prelude
 import Juvix.Syntax.Abstract.Name
 import Juvix.Syntax.Concrete.Builtins
-import Juvix.Syntax.Concrete.LiteralLoc
-import Juvix.Syntax.Concrete.Loc
+import Juvix.Syntax.Concrete.Literal
 import Juvix.Syntax.ForeignBlock
 import Juvix.Syntax.Hole
 import Juvix.Syntax.IsImplicit
+import Juvix.Syntax.Loc
 import Juvix.Syntax.Universe hiding (smallUniverse)
 import Juvix.Syntax.Wildcard
 
@@ -200,10 +200,13 @@ instance HasLoc FunctionParameter where
 instance HasLoc Function where
   getLoc (Function l r) = getLoc l <> getLoc r
 
+instance HasLoc Application where
+  getLoc (Application l r _) = getLoc l <> getLoc r
+
 instance HasLoc Expression where
   getLoc = \case
     ExpressionIden i -> getLoc i
-    ExpressionApplication a -> getLoc (a ^. appLeft)
+    ExpressionApplication a -> getLoc a
     ExpressionLiteral l -> getLoc l
     ExpressionHole h -> getLoc h
     ExpressionUniverse u -> getLoc u

@@ -1,6 +1,6 @@
 module Juvix.Syntax.Fixity where
 
-import Juvix.Prelude
+import Juvix.Prelude.Base
 
 data Precedence
   = PrecMinusOmega

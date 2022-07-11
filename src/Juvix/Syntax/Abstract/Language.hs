@@ -3,6 +3,7 @@ module Juvix.Syntax.Abstract.Language
     module Juvix.Syntax.Concrete.Language,
     module Juvix.Syntax.Hole,
     module Juvix.Syntax.Concrete.Builtins,
+    module Juvix.Syntax.Concrete.Literal,
     module Juvix.Syntax.Usage,
     module Juvix.Syntax.Universe,
     module Juvix.Syntax.Abstract.Name,
@@ -14,7 +15,8 @@ where
 import Juvix.Prelude
 import Juvix.Syntax.Abstract.Name
 import Juvix.Syntax.Concrete.Builtins
-import Juvix.Syntax.Concrete.Language (BackendItem, ForeignBlock (..), LiteralLoc (..), symbolLoc)
+import Juvix.Syntax.Concrete.Language (BackendItem, ForeignBlock (..), symbolLoc)
+import Juvix.Syntax.Concrete.Literal
 import Juvix.Syntax.Hole
 import Juvix.Syntax.IsImplicit
 import Juvix.Syntax.Universe

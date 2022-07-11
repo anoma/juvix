@@ -7,6 +7,7 @@ import Juvix.Prelude
 import Juvix.Syntax.Concrete.Base hiding (Pos, space)
 import Juvix.Syntax.Concrete.Base qualified as P
 import Juvix.Syntax.Concrete.Parser.InfoTableBuilder
+import Juvix.Syntax.Loc
 import Text.Megaparsec.Char.Lexer qualified as L
 
 type OperatorSym = Text
@@ -141,7 +142,6 @@ allKeywords :: Members '[Reader ParserParams, InfoTableBuilder] r => [ParsecS r 
 allKeywords =
   [ kwAssignment,
     kwAxiom,
-    -- kwBuiltin, -- no need to be a reserved keyword
     kwColon,
     kwColonOmega,
     kwColonOne,

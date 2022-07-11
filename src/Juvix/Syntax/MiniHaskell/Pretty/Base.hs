@@ -8,8 +8,9 @@ where
 import Juvix.Internal.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.Pretty qualified as PP
-import Juvix.Syntax.Concrete.LiteralLoc
+import Juvix.Syntax.Concrete.Literal
 import Juvix.Syntax.Fixity
+import Juvix.Syntax.Loc
 import Juvix.Syntax.MiniHaskell.Language
 import Juvix.Syntax.MiniHaskell.Pretty.Ann
 import Juvix.Syntax.MiniHaskell.Pretty.Options
@@ -41,7 +42,7 @@ instance PrettyCode Expression where
     ExpressionIden i -> ppCode i
     ExpressionApplication a -> ppCode a
     ExpressionVerbatim c -> return (pretty c)
-    ExpressionLiteral l -> ppCode l
+    ExpressionLiteral l -> ppCode (l ^. withLocParam)
 
 keyword :: Text -> Doc Ann
 keyword = annotate AnnKeyword . pretty
@@ -149,9 +150,6 @@ instance PrettyCode Literal where
   ppCode = \case
     LitInteger n -> return $ annotate AnnLiteralInteger (pretty n)
     LitString s -> return $ ppStringLit s
-
-instance PrettyCode LiteralLoc where
-  ppCode = ppCode . (^. literalLocLiteral)
 
 doubleQuotes :: Doc Ann -> Doc Ann
 doubleQuotes = enclose kwDQuote kwDQuote

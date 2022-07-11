@@ -11,9 +11,10 @@ module Juvix.Syntax.Concrete.Parser.InfoTableBuilder
 where
 
 import Juvix.Prelude
-import Juvix.Syntax.Concrete.LiteralLoc
+import Juvix.Syntax.Concrete.Literal
 import Juvix.Syntax.Concrete.Parser.InfoTable
 import Juvix.Syntax.Concrete.Parser.ParsedItem
+import Juvix.Syntax.Loc
 
 data InfoTableBuilder m a where
   RegisterItem :: ParsedItem -> InfoTableBuilder m ()
@@ -46,7 +47,7 @@ registerLiteral l =
           _parsedTag = tag
         }
   where
-    tag = case l ^. literalLocLiteral of
+    tag = case l ^. withLocParam of
       LitString {} -> ParsedTagLiteralString
       LitInteger {} -> ParsedTagLiteralInt
     loc = getLoc l

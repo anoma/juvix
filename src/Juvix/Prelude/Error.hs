@@ -2,14 +2,12 @@
 -- Control.Exception
 module Juvix.Prelude.Error
   ( module Juvix.Prelude.Error,
-    module Juvix.Syntax.Concrete.Loc,
     module Juvix.Prelude.Error.GenericError,
   )
 where
 
 import Juvix.Prelude.Base
 import Juvix.Prelude.Error.GenericError
-import Juvix.Syntax.Concrete.Loc
 
 data JuvixError
   = forall a. (ToGenericError a, Typeable a) => JuvixError a

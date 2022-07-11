@@ -2,6 +2,7 @@ module Juvix.Prelude.Files.Error where
 
 import Juvix.Prelude.Base
 import Juvix.Prelude.Error
+import Juvix.Prelude.Loc
 import Juvix.Prelude.Pretty
 
 data FilesErrorCause = StdlibConflict

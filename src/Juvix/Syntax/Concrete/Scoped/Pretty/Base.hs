@@ -468,9 +468,6 @@ instance PrettyCode TopModulePath where
   ppCode TopModulePath {..} =
     dotted <$> mapM ppSymbol (_modulePathDir ++ [_modulePathName])
 
-instance PrettyCode Symbol where
-  ppCode = return . pretty . (^. symbolText)
-
 instance PrettyCode Name where
   ppCode n = case n of
     NameUnqualified s -> ppSymbol s
@@ -678,6 +675,9 @@ ppPatternAtom = case sing :: SStage s of
   SParsed -> ppCodeAtom
   SScoped -> ppCodeAtom
 
+instance PrettyCode Text where
+  ppCode = return . pretty
+
 instance PrettyCode InfixApplication where
   ppCode i@InfixApplication {..} = do
     infixAppLeft' <- ppLeftExpression (getFixity i) _infixAppLeft
@@ -701,9 +701,6 @@ instance PrettyCode Literal where
   ppCode = \case
     LitInteger n -> return $ annotate AnnLiteralInteger (pretty n)
     LitString s -> return $ ppStringLit s
-
-instance PrettyCode LiteralLoc where
-  ppCode l = ppCode (l ^. literalLocLiteral)
 
 instance PrettyCode AxiomRef where
   ppCode a = ppCode (a ^. axiomRefName)
