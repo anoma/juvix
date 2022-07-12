@@ -174,7 +174,7 @@ goFunctionClause ::
   FunctionClause 'Scoped ->
   Sem r Abstract.FunctionClause
 goFunctionClause FunctionClause {..} = do
-  _clausePatterns' <- mapM goPattern _clausePatterns
+  _clausePatterns' <- mapM goPatternArg _clausePatterns
   _clauseBody' <- goExpression _clauseBody
   goWhereBlock _clauseWhere
   return
@@ -360,18 +360,18 @@ goPostfixPatternApplication ::
   Sem r Abstract.ConstructorApp
 goPostfixPatternApplication a = uncurry Abstract.ConstructorApp <$> viewApp (PatternPostfixApplication a)
 
-viewApp :: forall r. Pattern -> Sem r (Abstract.ConstructorRef, [Abstract.Pattern])
+viewApp :: forall r. Pattern -> Sem r (Abstract.ConstructorRef, [Abstract.PatternArg])
 viewApp = \case
   PatternConstructor c -> return (goConstructorRef c, [])
   PatternApplication (PatternApp l r) -> do
-    r' <- goPattern r
+    r' <- goPatternArg r
     second (`snoc` r') <$> viewApp l
   PatternInfixApplication (PatternInfixApp l c r) -> do
-    l' <- goPattern l
-    r' <- goPattern r
+    l' <- goPatternArg l
+    r' <- goPatternArg r
     return (goConstructorRef c, [l', r'])
   PatternPostfixApplication (PatternPostfixApp l c) -> do
-    l' <- goPattern l
+    l' <- goPatternArg l
     return (goConstructorRef c, [l'])
   PatternVariable {} -> err
   PatternWildcard {} -> err
@@ -384,6 +384,12 @@ viewApp = \case
 goConstructorRef :: ConstructorRef -> Abstract.ConstructorRef
 goConstructorRef (ConstructorRef' n) = Abstract.ConstructorRef (goName n)
 
+
+goPatternArg :: Pattern -> Sem r Abstract.PatternArg
+goPatternArg = \case
+  PatternBraces p -> Abstract.PatternArg Implicit <$> goPattern p
+  p -> Abstract.PatternArg Explicit <$> goPattern p
+
 goPattern :: Pattern -> Sem r Abstract.Pattern
 goPattern p = case p of
   PatternVariable a -> return $ Abstract.PatternVariable (goSymbol a)
@@ -393,7 +399,7 @@ goPattern p = case p of
   PatternPostfixApplication a -> Abstract.PatternConstructorApp <$> goPostfixPatternApplication a
   PatternWildcard i -> return (Abstract.PatternWildcard i)
   PatternEmpty -> return Abstract.PatternEmpty
-  PatternBraces b -> Abstract.PatternBraces <$> goPattern b
+  PatternBraces {} -> impossible
 
 goAxiom :: Members '[InfoTableBuilder, Error ScoperError, Builtins] r => AxiomDef 'Scoped -> Sem r Abstract.AxiomDef
 goAxiom a = do

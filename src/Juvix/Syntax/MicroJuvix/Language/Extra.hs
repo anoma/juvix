@@ -244,27 +244,25 @@ renameToSubsE = fmap (ExpressionIden . IdenVar)
 renameExpression :: Rename -> Expression -> Expression
 renameExpression r = substitutionE (renameToSubsE r)
 
-patternVariables :: Pattern -> [VarName]
-patternVariables = \case
-  PatternVariable v -> [v]
-  PatternConstructorApp a -> goApp a
-  PatternBraces b -> patternVariables b
-  PatternWildcard {} -> []
+patternArgVariables :: Traversal' PatternArg VarName
+patternArgVariables f = traverseOf patternArgPattern (patternVariables f)
+
+patternVariables :: Traversal' Pattern VarName
+patternVariables f p = case p of
+  PatternVariable v -> PatternVariable <$> f v
+  PatternConstructorApp a -> PatternConstructorApp <$> goApp f a
+  PatternWildcard {} -> pure p
   where
-    goApp :: ConstructorApp -> [VarName]
-    goApp (ConstructorApp _ ps) = concatMap patternVariables ps
+    goApp :: Traversal' ConstructorApp VarName
+    goApp g = traverseOf constrAppParameters (traverse (patternArgVariables g))
 
 renamePattern :: Rename -> Pattern -> Pattern
-renamePattern m = go
+renamePattern m = over patternVariables renameVar
   where
-    go :: Pattern -> Pattern
-    go p = case p of
-      PatternVariable v
-        | Just v' <- m ^. at v -> PatternVariable v'
-      PatternConstructorApp a -> PatternConstructorApp (goApp a)
-      _ -> p
-    goApp :: ConstructorApp -> ConstructorApp
-    goApp (ConstructorApp c ps) = ConstructorApp c (map go ps)
+    renameVar :: VarName -> VarName
+    renameVar v
+        | Just v' <- m ^. at v = v'
+        | otherwise = v
 
 inductiveTypeVarsAssoc :: Foldable f => InductiveDef -> f a -> HashMap VarName a
 inductiveTypeVarsAssoc def l

@@ -17,16 +17,18 @@ data ApplicationArg = ApplicationArg
 
 makeLenses ''ApplicationArg
 
-patternVariables :: Pattern -> [VarName]
-patternVariables = \case
-  PatternVariable v -> [v]
-  PatternWildcard {} -> []
-  PatternEmpty {} -> []
-  PatternBraces b -> patternVariables b
-  PatternConstructorApp app -> appVariables app
+patternVariables :: Traversal' Pattern VarName
+patternVariables f p = case p of
+  PatternVariable v -> PatternVariable <$> f v
+  PatternWildcard {} -> pure p
+  PatternEmpty {} -> pure p
+  PatternConstructorApp app -> PatternConstructorApp <$> appVariables f app
 
-appVariables :: ConstructorApp -> [VarName]
-appVariables (ConstructorApp _ ps) = concatMap patternVariables ps
+patternArgVariables :: Traversal' PatternArg VarName
+patternArgVariables f = traverseOf patternArgPattern (patternVariables f)
+
+appVariables :: Traversal' ConstructorApp VarName
+appVariables f = traverseOf constrAppParameters (traverse (patternArgVariables f))
 
 idenName :: Iden -> Name
 idenName = \case
@@ -36,25 +38,37 @@ idenName = \case
   IdenInductive (InductiveRef i) -> i
   IdenAxiom (AxiomRef a) -> a
 
-smallerPatternVariables :: Pattern -> [VarName]
-smallerPatternVariables = \case
-  PatternVariable {} -> []
-  PatternBraces b -> smallerPatternVariables b
-  PatternWildcard {} -> []
-  PatternEmpty {} -> []
-  PatternConstructorApp app -> appVariables app
+smallerPatternVariables :: Traversal' Pattern VarName
+smallerPatternVariables f p = case p of
+  PatternVariable {} -> pure p
+  PatternWildcard {} -> pure p
+  PatternEmpty {} -> pure p
+  PatternConstructorApp app -> PatternConstructorApp <$> appVariables f app
 
-viewApp :: Expression -> (Expression, [Expression])
-viewApp e = case e of
-  ExpressionApplication (Application l r _) ->
-    second (`snoc` r) (viewApp l)
+-- viewAppSimple :: Expression -> (Expression, [Expression])
+-- viewAppSimple = second (map (^. appArg)) . viewApp
+
+viewApp :: Expression -> (Expression, [ApplicationArg])
+viewApp e =
+ case e of
+  ExpressionApplication (Application l r i) ->
+    second (`snoc` ApplicationArg i r) (viewApp l)
   _ -> (e, [])
+
+
+viewAppArgAsPattern :: ApplicationArg -> Maybe PatternArg
+viewAppArgAsPattern a = do
+  p' <- viewExpressionAsPattern (a ^. appArg)
+  return (PatternArg {
+             _patternArgIsImplicit = a ^. appArgIsImplicit,
+             _patternArgPattern = p'
+                     })
 
 viewExpressionAsPattern :: Expression -> Maybe Pattern
 viewExpressionAsPattern e = case viewApp e of
   (f, args)
     | Just c <- getConstructor f -> do
-        args' <- mapM viewExpressionAsPattern args
+        args' <- mapM viewAppArgAsPattern args
         Just $ PatternConstructorApp (ConstructorApp c args')
   (f, [])
     | Just v <- getVariable f -> Just (PatternVariable v)
@@ -200,13 +214,16 @@ isSmallUniverse' = \case
   ExpressionUniverse u -> isSmallUniverse u
   _ -> False
 
-toApplicationArg :: Pattern -> ApplicationArg
-toApplicationArg = \case
-  PatternVariable v -> ApplicationArg Explicit (toExpression v)
-  PatternConstructorApp a -> ApplicationArg Explicit (toExpression a)
-  PatternEmpty -> impossible
-  PatternBraces p -> set appArgIsImplicit Implicit (toApplicationArg p)
-  PatternWildcard _ -> error "TODO"
+toApplicationArg :: PatternArg -> ApplicationArg
+toApplicationArg p =
+  set appArgIsImplicit (p ^. patternArgIsImplicit) (helper (p ^. patternArgPattern))
+  where
+  helper :: Pattern -> ApplicationArg
+  helper = \case
+    PatternVariable v -> ApplicationArg Explicit (toExpression v)
+    PatternConstructorApp a -> ApplicationArg Explicit (toExpression a)
+    PatternEmpty -> impossible
+    PatternWildcard _ -> error "TODO"
 
 clauseLhsAsExpression :: FunctionClause -> Expression
 clauseLhsAsExpression cl =
