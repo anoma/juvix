@@ -6,6 +6,100 @@
 </a>
 #+end_html
 
+** [[https://github.com/anoma/juvix/tree/v0.2.1][v0.2.1]] (2022-07-12)
+
+[[https://github.com/anoma/juvix/compare/v0.2.0...v0.2.1][Full
+Changelog]]
+
+*Implemented enhancements:*
+
+- Specialize commands of/for internal use
+  [[https://github.com/anoma/juvix/pull/270][#270]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Improve handling of location information for different objs
+  [[https://github.com/anoma/juvix/pull/263][#263]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Add issues and PR templates
+  [[https://github.com/anoma/juvix/pull/261][#261]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Throw error when reading a file that conflicts with embedded stdlib
+  [[https://github.com/anoma/juvix/pull/243][#243]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Embed standard library in the minijuvix binary
+  [[https://github.com/anoma/juvix/pull/210][#210]]
+  ([[https://github.com/paulcadman][paulcadman]])
+
+*Fixed bugs:*
+
+- Fixed a bug with the path to walloc.c
+  [[https://github.com/anoma/juvix/pull/237][#237]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Perform ScopedToAbstract exactly once for each module
+  [[https://github.com/anoma/juvix/pull/223][#223]]
+  ([[https://github.com/paulcadman][paulcadman]])
+
+*Merged pull requests:*
+
+- Label renaming [[https://github.com/anoma/juvix/pull/275][#275]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Update link to discord
+  [[https://github.com/anoma/juvix/pull/264][#264]]
+  ([[https://github.com/Romainua][Romainua]])
+- Include =open import= statements when generating HTML
+  [[https://github.com/anoma/juvix/pull/260][#260]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Renaming MiniJuvix to Juvix
+  [[https://github.com/anoma/juvix/pull/259][#259]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Updates tests to use the updated standard library
+  [[https://github.com/anoma/juvix/pull/253][#253]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Enforce C99 standard in the generated C files
+  [[https://github.com/anoma/juvix/pull/252][#252]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Restore mascot images to the minijuvix book
+  [[https://github.com/anoma/juvix/pull/250][#250]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Allow jumping to another module in emacs
+  [[https://github.com/anoma/juvix/pull/249][#249]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Restore Juvix mascot image to README
+  [[https://github.com/anoma/juvix/pull/248][#248]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Add emacs option =minijuvix-disable-embedded-stdlib=
+  [[https://github.com/anoma/juvix/pull/247][#247]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Deprecate GHC backend
+  [[https://github.com/anoma/juvix/pull/244][#244]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Removed 'eval' and 'print' keywords (#214)
+  [[https://github.com/anoma/juvix/pull/242][#242]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Add option to disable minijuvix input method
+  [[https://github.com/anoma/juvix/pull/239][#239]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Remove the 'match' keyword
+  [[https://github.com/anoma/juvix/pull/238][#238]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Removed tests/positive/HelloWorld.mjuvix and specified clang version
+  in the documentation [[https://github.com/anoma/juvix/pull/236][#236]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Filter symbol entries properly in the scoper
+  [[https://github.com/anoma/juvix/pull/234][#234]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Use the ModulesCache for =open= statements in ScopedToAbstract pass
+  [[https://github.com/anoma/juvix/pull/224][#224]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- README: Include =--recursive= in git clone command to fetch stdlib
+  [[https://github.com/anoma/juvix/pull/211][#211]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Update project description v0.2.0
+  [[https://github.com/anoma/juvix/pull/209][#209]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Unify AST representation of types and expressions in MicroJuvix
+  [[https://github.com/anoma/juvix/pull/188][#188]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+
 ** [[https://github.com/anoma/juvix/tree/v0.2.0][v0.2.0]]
 (2022-06-28)
 
