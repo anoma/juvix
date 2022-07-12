@@ -16,7 +16,7 @@
   "Keymap for Juvix mode.")
 
 ;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.m?juvix\\'" . juvix-mode))
+(add-to-list 'auto-mode-alist '("\\.juvix\\'" . juvix-mode))
 
 (define-derived-mode juvix-mode prog-mode "Juvix-v0.2.1"
 
@@ -48,7 +48,7 @@
   (interactive)
   (save-buffer)
   (juvix-clear-annotations)
-  (eval (read (shell-command-to-string (concat "juvix highlight " (if juvix-disable-embedded-stdlib "--no-stdlib " "") (buffer-file-name)))))
+  (eval (read (shell-command-to-string (concat "juvix internal highlight " (if juvix-disable-embedded-stdlib "--no-stdlib " "") (buffer-file-name)))))
   (save-buffer)
   )
 

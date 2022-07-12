@@ -1,5 +1,5 @@
 ;;; -*- lexical-binding: t; -*-
-;;; juvix-input.el --- The juvix input method
+;;; juvix-input.el --- The Juvix input method
 
 ;; Copyright (c) 2005-2021 remains with the authors.
 ;; Agda 2 was originally written by Ulf Norell,

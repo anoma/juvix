@@ -1,4 +1,4 @@
-module Commands.Termination where
+module Commands.Internal.Termination where
 
 import Control.Monad.Extra
 import Data.Text qualified as Text

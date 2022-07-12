@@ -1,6 +1,4 @@
-{-# LANGUAGE ApplicativeDo #-}
-
-module Commands.Parse where
+module Commands.Internal.Parse where
 
 import Juvix.Prelude hiding (Doc)
 import Options.Applicative

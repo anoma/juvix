@@ -9,7 +9,7 @@
 
 (flycheck-define-checker juvix
   "A Juvix syntax checker."
-  :command ("juvix" "microjuvix" "typecheck" "--only-errors" "--no-colors"
+  :command ("juvix" "internal" "microjuvix" "typecheck" "--only-errors" "--no-colors"
             (option-flag "--no-stdlib" juvix-disable-embedded-stdlib)
             source-original)
   :error-patterns

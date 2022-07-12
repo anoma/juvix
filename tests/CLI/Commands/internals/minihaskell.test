@@ -1,0 +1,3 @@
+$ juvix internal minihaskell
+> /Provide.*/
+>= 1
