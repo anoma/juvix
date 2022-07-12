@@ -187,7 +187,7 @@ checkPattern funName = go
     go argTy p = do
       tyVarMap <- fmap (ExpressionIden . IdenVar) . (^. localTyMap) <$> get
       ty <- normalizeType (substitutionE tyVarMap (typeOfArg argTy))
-      let  unbrace = \case
+      let unbrace = \case
             PatternBraces b -> b
             x -> x
       case unbrace p of
@@ -225,14 +225,16 @@ checkPattern funName = go
               paramHoles <- map ExpressionHole <$> replicateM numIndParams (freshHole loc)
               let patternTy = foldApplication (ExpressionIden indName) (zip (repeat Explicit) paramHoles)
               whenJustM
-                (matchTypes patternTy (ExpressionHole hole)) err
+                (matchTypes patternTy (ExpressionHole hole))
+                err
               let tyArgs = zipExact indParams paramHoles
               goConstr a tyArgs
             Right (ind, tyArgs) -> do
-              let m = MatchError {
-                    _matchErrorLeft = ExpressionIden (IdenInductive constrIndName),
-                    _matchErrorRight = ty
-                 }
+              let m =
+                    MatchError
+                      { _matchErrorLeft = ExpressionIden (IdenInductive constrIndName),
+                        _matchErrorRight = ty
+                      }
               when
                 (ind /= constrIndName)
                 (err m)

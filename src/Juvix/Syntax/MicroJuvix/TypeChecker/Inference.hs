@@ -10,10 +10,11 @@ data MetavarState
   | -- | Type may contain holes
     Refined Expression
 
-data MatchError = MatchError {
-  _matchErrorLeft :: Expression,
-  _matchErrorRight :: Expression
+data MatchError = MatchError
+  { _matchErrorLeft :: Expression,
+    _matchErrorRight :: Expression
   }
+
 makeLenses ''MatchError
 
 data Inference m a where
@@ -71,28 +72,26 @@ getMetavar h = gets (fromJust . (^. inferenceMap . at h))
 normalizeType' :: forall r. Members '[State InferenceState] r => Expression -> Sem r Expression
 normalizeType' = go
   where
-  go :: Expression -> Sem r Expression
-  go e = case e of
-    ExpressionIden {} -> return e
-    ExpressionHole h -> goHole h
-    ExpressionApplication a -> ExpressionApplication <$> goApp a
-    ExpressionLiteral {} -> return e
-    ExpressionUniverse {} -> return e
-    ExpressionFunction f -> ExpressionFunction <$> goFun f
-  goApp :: Application -> Sem r Application
-  goApp = traverseOf appLeft go >=> traverseOf appRight go
-  goFunPar :: FunctionParameter -> Sem r FunctionParameter
-  goFunPar = traverseOf paramType go
-  goFun :: Function -> Sem r Function
-  goFun = traverseOf functionLeft goFunPar >=> traverseOf functionRight go
-  goHole :: Hole -> Sem r Expression
-  goHole h = do
+    go :: Expression -> Sem r Expression
+    go e = case e of
+      ExpressionIden {} -> return e
+      ExpressionHole h -> goHole h
+      ExpressionApplication a -> ExpressionApplication <$> goApp a
+      ExpressionLiteral {} -> return e
+      ExpressionUniverse {} -> return e
+      ExpressionFunction f -> ExpressionFunction <$> goFun f
+    goApp :: Application -> Sem r Application
+    goApp = traverseOf appLeft go >=> traverseOf appRight go
+    goFunPar :: FunctionParameter -> Sem r FunctionParameter
+    goFunPar = traverseOf paramType go
+    goFun :: Function -> Sem r Function
+    goFun = traverseOf functionLeft goFunPar >=> traverseOf functionRight go
+    goHole :: Hole -> Sem r Expression
+    goHole h = do
       s <- getMetavar h
       case s of
         Fresh -> return (ExpressionHole h)
         Refined r -> go r
-
-
 
 re :: Member (Error TypeCheckerError) r => Sem (Inference ': r) a -> Sem (State InferenceState ': r) a
 re = reinterpret $ \case
