@@ -1,0 +1,28 @@
+module M;
+
+inductive Bool {
+  false : Bool;
+  true : Bool;
+};
+
+inductive T {
+t : T;
+};
+
+inductive Nat {
+  zero : Nat;
+  suc : Nat → Nat;
+};
+
+f : _;
+f false false ≔ true;
+f true _ ≔ false;
+
+inductive Pair (A : Type) (B : Type) {
+  mkPair : A → B → Pair A B;
+};
+
+g : _;
+g (mkPair (mkPair zero false) true) ≔ mkPair false zero;
+
+end;

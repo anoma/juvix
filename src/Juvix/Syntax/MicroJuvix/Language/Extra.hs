@@ -8,6 +8,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Prelude
 import Juvix.Syntax.MicroJuvix.Language
+import Juvix.Syntax.MicroJuvix.LocalVars
 
 data Caller
   = CallerInductive InductiveName
@@ -192,7 +193,12 @@ typeAbstraction :: IsImplicit -> Name -> FunctionParameter
 typeAbstraction i var = FunctionParameter (Just var) i (ExpressionUniverse (SmallUniverse (getLoc var)))
 
 unnamedParameter :: Expression -> FunctionParameter
-unnamedParameter = FunctionParameter Nothing Explicit
+unnamedParameter ty =
+  FunctionParameter
+    { _paramName = Nothing,
+      _paramImplicit = Explicit,
+      _paramType = ty
+    }
 
 renameToSubsE :: Rename -> SubsE
 renameToSubsE = fmap (ExpressionIden . IdenVar)
@@ -271,6 +277,9 @@ substitutionApp :: (Maybe Name, Expression) -> Expression -> Expression
 substitutionApp (mv, ty) = case mv of
   Nothing -> id
   Just v -> substitutionE (HashMap.singleton v ty)
+
+localsToSubsE :: LocalVars -> SubsE
+localsToSubsE l = ExpressionIden . IdenVar <$> l ^. localTyMap
 
 substitutionE :: SubsE -> Expression -> Expression
 substitutionE m = go
