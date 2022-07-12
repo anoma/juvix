@@ -60,7 +60,7 @@ data FunctionDef = FunctionDef
 
 data FunctionClause = FunctionClause
   { _clauseName :: FunctionName,
-    _clausePatterns :: [Pattern],
+    _clausePatterns :: [PatternArg],
     _clauseBody :: Expression
   }
   deriving stock (Eq, Show)
@@ -152,7 +152,13 @@ instance HasAtomicity Function where
 -- | Fully applied constructor in a pattern.
 data ConstructorApp = ConstructorApp
   { _constrAppConstructor :: ConstructorRef,
-    _constrAppParameters :: [Pattern]
+    _constrAppParameters :: [PatternArg]
+  }
+  deriving stock (Eq, Show)
+
+data PatternArg = PatternArg
+  { _patternArgIsImplicit :: IsImplicit,
+    _patternArgPattern :: Pattern
   }
   deriving stock (Eq, Show)
 
@@ -161,7 +167,6 @@ data Pattern
   | PatternConstructorApp ConstructorApp
   | PatternWildcard Wildcard
   | PatternEmpty
-  | PatternBraces Pattern
   deriving stock (Eq, Show)
 
 data InductiveDef = InductiveDef
@@ -187,6 +192,7 @@ data AxiomDef = AxiomDef
   deriving stock (Eq, Show)
 
 makeLenses ''Module
+makeLenses ''PatternArg
 makeLenses ''FunctionParameter
 makeLenses ''Function
 makeLenses ''FunctionDef
