@@ -105,9 +105,9 @@ checkExpression expectedTy e = do
     err matchErr =
       ErrWrongType
         ( WrongType
-            { _wrongTypeExpression = e,
-              _wrongTypeInferredType = matchErr ^. matchErrorRight,
-              _wrongTypeExpectedType = matchErr ^. matchErrorLeft
+            { _wrongTypeThing = Left e,
+              _wrongTypeActual = matchErr ^. matchErrorRight,
+              _wrongTypeExpected = matchErr ^. matchErrorLeft
             }
         )
 
@@ -190,7 +190,8 @@ checkPattern funName = go
       let unbrace = \case
             PatternBraces b -> b
             x -> x
-      case unbrace p of
+          pat = unbrace p
+      case pat of
         PatternWildcard {} -> return ()
         PatternBraces {} -> impossible
         PatternVariable v -> do
@@ -207,12 +208,11 @@ checkPattern funName = go
               err :: MatchError -> Sem r ()
               err m =
                 throw
-                  ( ErrWrongConstructorType
-                      WrongConstructorType
-                        { _wrongCtorTypeName = constrName,
-                          _wrongCtorTypeExpected = m ^. matchErrorRight,
-                          _wrongCtorTypeActual = m ^. matchErrorLeft,
-                          _wrongCtorTypeFunName = funName
+                  ( ErrWrongType
+                      WrongType
+                        { _wrongTypeThing = Right pat,
+                          _wrongTypeExpected = m ^. matchErrorRight,
+                          _wrongTypeActual = m ^. matchErrorLeft
                         }
                   )
           case s of
@@ -230,14 +230,18 @@ checkPattern funName = go
               let tyArgs = zipExact indParams paramHoles
               goConstr a tyArgs
             Right (ind, tyArgs) -> do
-              let m =
-                    MatchError
-                      { _matchErrorLeft = ExpressionIden (IdenInductive constrIndName),
-                        _matchErrorRight = ty
-                      }
               when
                 (ind /= constrIndName)
-                (err m)
+                ( throw
+                    ( ErrWrongConstructorType
+                        WrongConstructorType
+                          { _wrongCtorTypeName = constrName,
+                            _wrongCtorTypeExpected = ind,
+                            _wrongCtorTypeActual = constrIndName,
+                            _wrongCtorTypeFunName = funName
+                          }
+                    )
+                )
               goConstr a tyArgs
       where
         goConstr :: ConstructorApp -> [(InductiveParameter, Expression)] -> Sem r ()

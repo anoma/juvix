@@ -9,8 +9,8 @@ import Juvix.Syntax.MicroJuvix.Language
 -- not match the type of the inductive being matched
 data WrongConstructorType = WrongConstructorType
   { _wrongCtorTypeName :: Name,
-    _wrongCtorTypeExpected :: Expression,
-    _wrongCtorTypeActual :: Expression,
+    _wrongCtorTypeExpected :: Name,
+    _wrongCtorTypeActual :: Name,
     _wrongCtorTypeFunName :: Name
   }
 
@@ -29,11 +29,11 @@ instance ToGenericError WrongConstructorType where
       msg =
         "The constructor"
           <+> ppCode ctorName
-          <+> "has type:"
+          <+> "belongs to the inductive type:"
             <> line
             <> indent' (ppCode (e ^. wrongCtorTypeActual))
             <> line
-            <> "but is expected to have type:"
+            <> "but is expected to belong to the inductive type:"
             <> line
             <> indent' (ppCode (e ^. wrongCtorTypeExpected))
 
@@ -132,9 +132,9 @@ instance ToGenericError WrongConstructorAppArgs where
 
 -- | the type of an expression does not match the inferred type
 data WrongType = WrongType
-  { _wrongTypeExpression :: Expression,
-    _wrongTypeExpectedType :: Expression,
-    _wrongTypeInferredType :: Expression
+  { _wrongTypeThing :: Either Expression Pattern,
+    _wrongTypeExpected :: Expression,
+    _wrongTypeActual :: Expression
   }
 
 makeLenses ''WrongType
@@ -147,24 +147,24 @@ instance ToGenericError WrongType where
         _genericErrorIntervals = [i]
       }
     where
-      i = getLoc (e ^. wrongTypeExpression)
+      i = either getLoc getLoc (e ^. wrongTypeThing)
       msg =
-        "Type error near"
-          <+> pretty (getLoc subjectExpr)
-            <> "."
-            <> line
-            <> "The expression"
-          <+> ppCode subjectExpr
+        "The"
+          <+> thing
+          <+> either ppCode ppCode subjectThing
           <+> "has type:"
             <> line
-            <> indent' (ppCode (e ^. wrongTypeInferredType))
+            <> indent' (ppCode (e ^. wrongTypeActual))
             <> line
             <> "but is expected to have type:"
             <> line
-            <> indent' (ppCode (e ^. wrongTypeExpectedType))
-
-      subjectExpr :: Expression
-      subjectExpr = e ^. wrongTypeExpression
+            <> indent' (ppCode (e ^. wrongTypeExpected))
+      thing :: Doc a
+      thing = case subjectThing of
+        Left {} -> "expression"
+        Right {} -> "pattern"
+      subjectThing :: Either Expression Pattern
+      subjectThing = e ^. wrongTypeThing
 
 -- | The left hand expression of a function application is not
 -- a function type.
