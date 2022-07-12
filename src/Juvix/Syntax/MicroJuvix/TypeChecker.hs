@@ -99,15 +99,15 @@ checkExpression ::
 checkExpression expectedTy e = do
   e' <- inferExpression' e
   let inferredType = e' ^. typedType
-  unlessM (matchTypes expectedTy inferredType) (throw (err inferredType))
+  whenJustM (matchTypes expectedTy inferredType) (throw . err)
   return (e' ^. typedExpression)
   where
-    err infTy =
+    err matchErr =
       ErrWrongType
         ( WrongType
             { _wrongTypeExpression = e,
-              _wrongTypeInferredType = infTy,
-              _wrongTypeExpectedType = expectedTy
+              _wrongTypeInferredType = matchErr ^. matchErrorRight,
+              _wrongTypeExpectedType = matchErr ^. matchErrorLeft
             }
         )
 
@@ -186,8 +186,8 @@ checkPattern funName = go
     go :: FunctionParameter -> Pattern -> Sem r ()
     go argTy p = do
       tyVarMap <- fmap (ExpressionIden . IdenVar) . (^. localTyMap) <$> get
-      let ty = substitutionE tyVarMap (typeOfArg argTy)
-          unbrace = \case
+      ty <- normalizeType (substitutionE tyVarMap (typeOfArg argTy))
+      let  unbrace = \case
             PatternBraces b -> b
             x -> x
       case unbrace p of
@@ -204,13 +204,14 @@ checkPattern funName = go
           info <- lookupConstructor (a ^. constrAppConstructor)
           let constrIndName = info ^. constructorInfoInductive
               constrName = a ^. constrAppConstructor
-              err patternTy =
+              err :: MatchError -> Sem r ()
+              err m =
                 throw
                   ( ErrWrongConstructorType
                       WrongConstructorType
                         { _wrongCtorTypeName = constrName,
-                          _wrongCtorTypeExpected = constrIndName,
-                          _wrongCtorTypeActual = patternTy,
+                          _wrongCtorTypeExpected = m ^. matchErrorRight,
+                          _wrongCtorTypeActual = m ^. matchErrorLeft,
                           _wrongCtorTypeFunName = funName
                         }
                   )
@@ -223,15 +224,18 @@ checkPattern funName = go
                   loc = getLoc a
               paramHoles <- map ExpressionHole <$> replicateM numIndParams (freshHole loc)
               let patternTy = foldApplication (ExpressionIden indName) (zip (repeat Explicit) paramHoles)
-              unlessM
-                (matchTypes (ExpressionHole hole) patternTy)
-                (err patternTy)
+              whenJustM
+                (matchTypes patternTy (ExpressionHole hole)) err
               let tyArgs = zipExact indParams paramHoles
               goConstr a tyArgs
             Right (ind, tyArgs) -> do
+              let m = MatchError {
+                    _matchErrorLeft = ExpressionIden (IdenInductive constrIndName),
+                    _matchErrorRight = ty
+                 }
               when
                 (ind /= constrIndName)
-                (err (ExpressionIden (IdenInductive constrIndName)))
+                (err m)
               goConstr a tyArgs
       where
         goConstr :: ConstructorApp -> [(InductiveParameter, Expression)] -> Sem r ()
@@ -400,7 +404,7 @@ inferExpression' e = case e of
                 r' <- checkExpression (smallUniverse (getLoc h)) r
                 h' <- freshHole (getLoc h)
                 let fun = Function (unnamedParameter r') (ExpressionHole h')
-                unlessM (matchTypes (ExpressionHole h) (ExpressionFunction fun)) impossible
+                whenJustM (matchTypes (ExpressionHole h) (ExpressionFunction fun)) impossible
                 return
                   TypedExpression
                     { _typedType = ExpressionHole h',
