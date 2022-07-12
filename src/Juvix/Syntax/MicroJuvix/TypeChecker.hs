@@ -170,7 +170,7 @@ checkFunctionClause info FunctionClause {..} = do
               l <- ExpressionHole <$> freshHole (getLoc h)
               r <- ExpressionHole <$> freshHole (getLoc h)
               let fun = ExpressionFunction (Function (unnamedParameter l) r)
-              unlessM (matchTypes (ExpressionHole h) fun) impossible
+              whenJustM (matchTypes (ExpressionHole h) fun) impossible
               go pats fun
         _ -> case unfoldFunType bodyTy of
           ([], _) -> error "too many patterns"
