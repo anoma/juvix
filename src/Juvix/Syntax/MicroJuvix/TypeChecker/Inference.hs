@@ -182,7 +182,14 @@ re = reinterpret $ \case
               (IdenVar a, IdenVar b) -> do
                 mappedEq <- (== Just b) . HashMap.lookup a <$> ask
                 check (a == b || mappedEq)
-              _ -> ok
+              (IdenAxiom {}, _) -> err
+              (_, IdenAxiom {}) -> err
+              (IdenFunction {}, _) -> err
+              (_, IdenFunction {}) -> err
+              (_, IdenVar {}) -> err
+              (IdenVar {}, _) -> err
+              (IdenConstructor {}, _) -> err
+              (_, IdenConstructor {}) -> err
             goApplication :: Application -> Application -> Sem r (Maybe MatchError)
             goApplication (Application f x _) (Application f' x' _) = bicheck (go f f') (go x x')
             goFunction :: Function -> Function -> Sem r (Maybe MatchError)
