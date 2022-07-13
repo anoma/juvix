@@ -174,9 +174,9 @@ checkFunctionClause info FunctionClause {..} = do
   where
     clauseType :: Expression
     clauseType = info ^. functionInfoDef . funDefType
-    helper :: [Pattern] -> Expression -> Sem r (LocalVars, Expression)
+    helper :: [PatternArg] -> Expression -> Sem r (LocalVars, Expression)
     helper pats ty = runState emptyLocalVars (go pats ty)
-    go :: [Pattern] -> Expression -> Sem (State LocalVars ': r) Expression
+    go :: [PatternArg] -> Expression -> Sem (State LocalVars ': r) Expression
     go pats bodyTy = case pats of
       [] -> return bodyTy
       (p : ps) -> case bodyTy of
@@ -205,21 +205,17 @@ checkPattern ::
   Members '[Reader InfoTable, Error TypeCheckerError, State LocalVars, Inference, NameIdGen] r =>
   FunctionName ->
   FunctionParameter ->
-  Pattern ->
+  PatternArg ->
   Sem r ()
 checkPattern funName = go
   where
-    go :: FunctionParameter -> Pattern -> Sem r ()
-    go argTy p = do
+    go :: FunctionParameter -> PatternArg -> Sem r ()
+    go argTy patArg = do
       tyVarMap <- fmap (ExpressionIden . IdenVar) . (^. localTyMap) <$> get
       ty <- normalizeType (substitutionE tyVarMap (typeOfArg argTy))
-      let unbrace = \case
-            PatternBraces b -> b
-            x -> x
-          pat = unbrace p
+      let pat = patArg ^. patternArgPattern
       case pat of
         PatternWildcard {} -> return ()
-        PatternBraces {} -> impossible
         PatternVariable v -> do
           modify (addType v ty)
           registerIden v ty
