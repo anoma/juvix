@@ -140,6 +140,98 @@
 <a href="https://github.com/anoma/juvix">
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/Seating_Tara_smiling.svg" />
 </a>
+<h2 id="v021-2022-07-12"><a class="header" href="#v021-2022-07-12"><a href="https://github.com/anoma/juvix/tree/v0.2.1">v0.2.1</a> (2022-07-12)</a></h2>
+<p><a href="https://github.com/anoma/juvix/compare/v0.2.0...v0.2.1">Full Changelog</a></p>
+<p><strong>Implemented enhancements:</strong></p>
+<ul>
+<li>Specialize commands of/for internal use
+<a href="https://github.com/anoma/juvix/pull/270">#270</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Improve handling of location information for different objs
+<a href="https://github.com/anoma/juvix/pull/263">#263</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Add issues and PR templates
+<a href="https://github.com/anoma/juvix/pull/261">#261</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Throw error when reading a file that conflicts with embedded stdlib
+<a href="https://github.com/anoma/juvix/pull/243">#243</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Embed standard library in the minijuvix binary
+<a href="https://github.com/anoma/juvix/pull/210">#210</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+</ul>
+<p><strong>Fixed bugs:</strong></p>
+<ul>
+<li>Fixed a bug with the path to walloc.c
+<a href="https://github.com/anoma/juvix/pull/237">#237</a>
+(<a href="https://github.com/lukaszcz">lukaszcz</a>)</li>
+<li>Perform ScopedToAbstract exactly once for each module
+<a href="https://github.com/anoma/juvix/pull/223">#223</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+</ul>
+<p><strong>Merged pull requests:</strong></p>
+<ul>
+<li>Label renaming <a href="https://github.com/anoma/juvix/pull/275">#275</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Update link to discord
+<a href="https://github.com/anoma/juvix/pull/264">#264</a>
+(<a href="https://github.com/Romainua">Romainua</a>)</li>
+<li>Include <code>open import</code> statements when generating HTML
+<a href="https://github.com/anoma/juvix/pull/260">#260</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Renaming MiniJuvix to Juvix
+<a href="https://github.com/anoma/juvix/pull/259">#259</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Updates tests to use the updated standard library
+<a href="https://github.com/anoma/juvix/pull/253">#253</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Enforce C99 standard in the generated C files
+<a href="https://github.com/anoma/juvix/pull/252">#252</a>
+(<a href="https://github.com/lukaszcz">lukaszcz</a>)</li>
+<li>Restore mascot images to the minijuvix book
+<a href="https://github.com/anoma/juvix/pull/250">#250</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Allow jumping to another module in emacs
+<a href="https://github.com/anoma/juvix/pull/249">#249</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Restore Juvix mascot image to README
+<a href="https://github.com/anoma/juvix/pull/248">#248</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Add emacs option <code>minijuvix-disable-embedded-stdlib</code>
+<a href="https://github.com/anoma/juvix/pull/247">#247</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Deprecate GHC backend
+<a href="https://github.com/anoma/juvix/pull/244">#244</a>
+(<a href="https://github.com/lukaszcz">lukaszcz</a>)</li>
+<li>Removed 'eval' and 'print' keywords (#214)
+<a href="https://github.com/anoma/juvix/pull/242">#242</a>
+(<a href="https://github.com/lukaszcz">lukaszcz</a>)</li>
+<li>Add option to disable minijuvix input method
+<a href="https://github.com/anoma/juvix/pull/239">#239</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Remove the 'match' keyword
+<a href="https://github.com/anoma/juvix/pull/238">#238</a>
+(<a href="https://github.com/lukaszcz">lukaszcz</a>)</li>
+<li>Removed tests/positive/HelloWorld.mjuvix and specified clang version
+in the documentation
+<a href="https://github.com/anoma/juvix/pull/236">#236</a>
+(<a href="https://github.com/lukaszcz">lukaszcz</a>)</li>
+<li>Filter symbol entries properly in the scoper
+<a href="https://github.com/anoma/juvix/pull/234">#234</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Use the ModulesCache for <code>open</code> statements in ScopedToAbstract pass
+<a href="https://github.com/anoma/juvix/pull/224">#224</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>README: Include <code>--recursive</code> in git clone command to fetch stdlib
+<a href="https://github.com/anoma/juvix/pull/211">#211</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Update project description v0.2.0
+<a href="https://github.com/anoma/juvix/pull/209">#209</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Unify AST representation of types and expressions in MicroJuvix
+<a href="https://github.com/anoma/juvix/pull/188">#188</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+</ul>
 <h2 id="v020"><a class="header" href="#v020"><a href="https://github.com/anoma/juvix/tree/v0.2.0">v0.2.0</a></a></h2>
 <p>(2022-06-28)</p>
 <p><a href="https://github.com/anoma/juvix/compare/v0.1.4...v0.2.0">Full Changelog</a></p>
