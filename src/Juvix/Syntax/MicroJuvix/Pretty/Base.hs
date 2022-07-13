@@ -199,6 +199,11 @@ instance PrettyCode InductiveDef where
     rhs <- indent' $ align $ concatWith (\a b -> a <> line <> kwPipe <+> b) inductiveConstructors'
     return $ kwData <+> inductiveName' <+?> params <+> kwEquals <> line <> rhs
 
+instance PrettyCode PatternArg where
+  ppCode a = do
+    p <- ppCode (a ^. patternArgPattern)
+    return (bracesIf (Implicit == a ^. patternArgIsImplicit) p)
+
 instance PrettyCode ConstructorApp where
   ppCode c = do
     constr' <- ppCode (c ^. constrAppConstructor)
@@ -210,7 +215,6 @@ instance PrettyCode Pattern where
     PatternVariable v -> ppCode v
     PatternConstructorApp a -> ppCode a
     PatternWildcard {} -> return kwWildcard
-    PatternBraces b -> braces <$> ppCode b
 
 instance PrettyCode FunctionDef where
   ppCode f = do
@@ -327,8 +331,11 @@ instance PrettyCode TypeCalls where
     elems' <- mapM ppCode elems
     return $ title <> line <> vsep elems' <> line
 
-parensCond :: Bool -> Doc Ann -> Doc Ann
-parensCond t d = if t then parens d else d
+parensIf :: Bool -> Doc Ann -> Doc Ann
+parensIf t = if t then parens else id
+
+bracesIf :: Bool -> Doc Ann -> Doc Ann
+bracesIf t = if t then braces else id
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
@@ -358,7 +365,7 @@ ppLRExpression ::
   a ->
   Sem r (Doc Ann)
 ppLRExpression associates fixlr e =
-  parensCond (atomParens associates (atomicity e) fixlr)
+  parensIf (atomParens associates (atomicity e) fixlr)
     <$> ppCode e
 
 ppCodeAtom :: (HasAtomicity c, PrettyCode c, Members '[Reader Options] r) => c -> Sem r (Doc Ann)

@@ -40,7 +40,7 @@ instance ToGenericError WrongConstructorAppLength where
             | otherwise = pretty n
 
 newtype LhsTooManyPatterns = LhsTooManyPatterns
-  { _lhsTooManyPatternsRemaining :: NonEmpty Pattern
+  { _lhsTooManyPatternsRemaining :: NonEmpty PatternArg
   }
 
 makeLenses ''LhsTooManyPatterns
@@ -65,13 +65,15 @@ instance ToGenericError LhsTooManyPatterns where
         | n == 1 = "was"
         | otherwise = "were"
 
-newtype ExpectedExplicitPattern = ExpectedExplicitPattern
-  { _expectedExplicitPattern :: Pattern
+data WrongPatternIsImplicit = WrongPatternIsImplicit
+  {
+    _wrongPatternIsImplicitExpected :: IsImplicit,
+    _wrongPatternIsImplicitActual :: PatternArg
   }
 
-makeLenses ''ExpectedExplicitPattern
+makeLenses ''WrongPatternIsImplicit
 
-instance ToGenericError ExpectedExplicitPattern where
+instance ToGenericError WrongPatternIsImplicit where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
@@ -79,10 +81,13 @@ instance ToGenericError ExpectedExplicitPattern where
         _genericErrorIntervals = [i]
       }
     where
-      i = getLoc (e ^. expectedExplicitPattern)
+      i = getLoc (e ^. wrongPatternIsImplicitActual)
+      expec = e ^. wrongPatternIsImplicitExpected
+      found = e ^. wrongPatternIsImplicitActual . patternArgIsImplicit
+      pat = e ^. wrongPatternIsImplicitActual . patternArgPattern
       msg =
-        "Expected an explicit pattern but found an implicit pattern"
-          <+> ppCode (e ^. expectedExplicitPattern)
+        "Expected an" <+> pretty expec <+> "pattern but found an" <+> pretty found <+> "pattern:"
+          <+> ppCode pat
 
 data ExpectedExplicitArgument = ExpectedExplicitArgument
   { _expectedExplicitArgumentApp :: (Expression, [(IsImplicit, Expression)]),

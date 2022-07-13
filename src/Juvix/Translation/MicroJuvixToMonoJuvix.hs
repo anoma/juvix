@@ -437,7 +437,7 @@ goFunctionDefPoly def poly
           pvars' <- mapM cloneName' pvars
           let localVarsRename :: Micro.Rename
               localVarsRename = HashMap.fromList (zipExact pvars pvars')
-              _clausePatterns = map (Micro.renamePattern localVarsRename) patsTail
+              _clausePatterns = map (Micro.renamePatternArg localVarsRename) patsTail
               _clauseBody =
                 Micro.substitutionE
                   (concreteSubsE <> Micro.renameToSubsE localVarsRename)
@@ -448,10 +448,10 @@ goFunctionDefPoly def poly
                 ..
               }
           where
-            patsTail :: [Micro.Pattern]
+            patsTail :: [Micro.PatternArg]
             patsTail = dropExact (length tyVars) (c ^. Micro.clausePatterns)
             pvars :: [Micro.VarName]
-            pvars = concatMap Micro.patternVariables patsTail
+            pvars = concatMap (^.. Micro.patternArgVariables) patsTail
         sig' :: Micro.ConcreteType
         sig' = Micro.substitutionConcrete (i ^. concreteTypeSubs) tyTail
 
@@ -460,7 +460,6 @@ goPattern' ty = \case
   Micro.PatternVariable v -> return (PatternVariable (goName v))
   Micro.PatternConstructorApp capp -> PatternConstructorApp <$> goApp capp
   Micro.PatternWildcard {} -> return PatternWildcard
-  Micro.PatternBraces b -> goPattern' ty b
   where
     goApp :: Micro.ConstructorApp -> Sem r ConstructorApp
     goApp capp = case ty ^. Micro.unconcreteType of

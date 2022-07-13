@@ -256,6 +256,9 @@ patternVariables f p = case p of
     goApp :: Traversal' ConstructorApp VarName
     goApp g = traverseOf constrAppParameters (traverse (patternArgVariables g))
 
+renamePatternArg :: Rename -> PatternArg -> PatternArg
+renamePatternArg = over patternArgPattern . renamePattern
+
 renamePattern :: Rename -> Pattern -> Pattern
 renamePattern m = over patternVariables renameVar
   where
@@ -273,6 +276,7 @@ inductiveTypeVarsAssoc def l
     vars :: [VarName]
     vars = def ^.. inductiveParameters . each . inductiveParamName
 
+-- TODO remove this after monojuvix is gone
 functionTypeVarsAssoc :: forall a f. Foldable f => FunctionDef -> f a -> HashMap VarName a
 functionTypeVarsAssoc def l = sig <> mconcatMap clause (def ^. funDefClauses)
   where
@@ -295,8 +299,8 @@ functionTypeVarsAssoc def l = sig <> mconcatMap clause (def ^. funDefClauses)
         clauseVars :: [Maybe VarName]
         clauseVars = take n (map patternVar (c ^. clausePatterns))
           where
-            patternVar :: Pattern -> Maybe VarName
-            patternVar = \case
+            patternVar :: PatternArg -> Maybe VarName
+            patternVar a = case a ^. patternArgPattern of
               PatternVariable v -> Just v
               _ -> Nothing
 
