@@ -429,24 +429,31 @@ withParams ::
   [InductiveParameter 'Parsed] ->
   ([InductiveParameter 'Scoped] -> Sem r a) ->
   Sem r a
-withParams xs a = go [] xs
+withParams xs a = go [] [] xs
   where
-    go :: [InductiveParameter 'Scoped] -> [InductiveParameter 'Parsed] -> Sem r a
-    go inductiveParameters' params =
+    go :: [InductiveParameter 'Scoped] -> [Symbol] -> [InductiveParameter 'Parsed] -> Sem r a
+    go inductiveParameters' usedNames params =
       case params of
+        -- All params have been checked
+        [] -> a inductiveParameters'
         -- More params to check
         (InductiveParameter {..} : ps) -> do
           inductiveParameterType' <- checkParseExpressionAtoms _inductiveParameterType
-          inductiveParameterName' <- freshVariable _inductiveParameterName
-          let param' =
-                InductiveParameter
-                  { _inductiveParameterType = inductiveParameterType',
-                    _inductiveParameterName = inductiveParameterName'
-                  }
-          withBindLocalVariable (LocalVariable inductiveParameterName') $
-            go (inductiveParameters' ++ [param']) ps
-        -- All params have been checked
-        [] -> a inductiveParameters'
+          if
+              | _inductiveParameterName `elem` usedNames ->
+                  throw
+                    ( ErrWrongInductiveParameterName
+                        (WrongInductiveParameterName _inductiveParameterName)
+                    )
+              | otherwise -> do
+                  inductiveParameterName' <- freshVariable _inductiveParameterName
+                  let param' =
+                        InductiveParameter
+                          { _inductiveParameterType = inductiveParameterType',
+                            _inductiveParameterName = inductiveParameterName'
+                          }
+                  withBindLocalVariable (LocalVariable inductiveParameterName') $
+                    go (inductiveParameters' ++ [param']) (_inductiveParameterName : usedNames) ps
 
 checkInductiveDef ::
   forall r.

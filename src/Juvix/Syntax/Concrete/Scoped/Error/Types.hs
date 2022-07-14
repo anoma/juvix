@@ -522,3 +522,27 @@ ambiguousMessage n es =
       <> "It could be any of:"
       <> line
       <> indent' (vsep (map ppCode es))
+
+newtype WrongInductiveParameterName = WrongInductiveParameterName
+  { _wrongInductiveParameterName :: Symbol
+  }
+  deriving stock (Show)
+
+makeLenses ''WrongInductiveParameterName
+
+instance ToGenericError WrongInductiveParameterName where
+  genericError e =
+    GenericError
+      { _genericErrorLoc = i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
+    where
+      param = e ^. wrongInductiveParameterName
+      i = getLoc param
+      msg =
+        "The second occurrence of the parameter name"
+          <+> ppCode param
+          <+> "is not valid here."
+          <+> line
+            <> "Please use a fresh name."

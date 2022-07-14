@@ -211,6 +211,13 @@ scoperErrorTests =
       "WrongKindExpressionCompileBlock.juvix"
       $ \case
         ErrWrongKindExpressionCompileBlock {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "A type parameter name occurs twice when declaring an inductive type"
+      "."
+      "WrongInductiveParameterName.juvix"
+      $ \case
+        ErrWrongInductiveParameterName {} -> Nothing
         _ -> wrongError
   ]
 

@@ -1,0 +1,5 @@
+module WrongInductiveParameterName;
+
+inductive T (A : Type) (B : Type) (A : Type) {};
+
+end;
