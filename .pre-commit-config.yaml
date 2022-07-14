@@ -18,7 +18,7 @@ repos:
         exclude: tests/
 
 -   repo:  https://github.com/anoma/juvix
-    rev: 6f5c3fc2bc70cf65594d3b74fb62e75e8fcfac5b
+    rev: ea767ef2b4255cb2180ccf9628307f53fdd05ba0
     hooks:
     -   id: ormolu
     -   id: hlint
