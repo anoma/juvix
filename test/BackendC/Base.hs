@@ -63,6 +63,7 @@ standaloneArgs :: FilePath -> FilePath -> FilePath -> [String]
 standaloneArgs sysrootPath wasmOutputFile cOutputFile =
   [ "-nodefaultlibs",
     "-std=c99",
+    "-Oz",
     "-I",
     takeDirectory minicRuntime,
     "-I",
@@ -86,6 +87,7 @@ libcArgs :: FilePath -> FilePath -> FilePath -> [String]
 libcArgs sysrootPath wasmOutputFile cOutputFile =
   [ "-nodefaultlibs",
     "-std=c99",
+    "-Oz",
     "-I",
     takeDirectory minicRuntime,
     "-I",
