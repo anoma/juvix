@@ -35,7 +35,7 @@ alt="pages-build-deployment" /></a>
 
 Juvix is a research programming language created by [[https://heliax.dev/][Heliax]] as a first step toward creating more robust and reliable alternatives for formally verified smart contracts than existing languages. The Juvix language is constantly evolving, open-source, functional, and statically typed with special support for compiling [[https://anoma.network/blog/validity-predicates/][validity predicates]] to the =C= language, which can be deployed to various distributed ledgers including [[https://anoma.net/][Anoma]].
 
-The Juvix programming language allows developers to write programs with a high degree of assurance that they will meet specific standards. This is due to the fact that several static analyses are performed during compilation, including, for example, scope, termination, arity, and type checking. As a result, functional programs, especially validity predicates, can be written with greater confidence that they will be free of runtime errors. [[https://github.com/anoma/juvix/tree/main/examples/milestone][Here are some examples of Juvix programs]].
+The Juvix programming language allows developers to write programs with a high degree of assurance that they will meet specific standards. This is due to the fact that several static analyses are performed during compilation, including, for example, scope, termination, arity, and type checking. As a result, functional programs, especially validity predicates, can be written with greater confidence that they will be free of runtime errors.
 
 The language features:
 
@@ -48,6 +48,8 @@ The language features:
 - axioms for non-computable terms
 
 Additionally, the foreign and compile blocks syntax enable developers to compile a program to different backends including the =C= language. The Juvix module system further permits splitting programs into several modules to build libraries which can be later documented by generating HTML files based on the codebase, see for example, [[https://anoma.github.io/juvix-stdlib/][the Juvix standard library's website]]. For futher details, please refer to [[https://anoma.github.io/juvix/][the Juvix book]] which icludes our [[https://anoma.github.io/juvix/introduction/changelog.html][latest updates]].
+
+ [[https://github.com/anoma/juvix/tree/main/examples/milestone][See a few examples of Juvix programs]].
 
 ** Quick Start
 
@@ -91,4 +93,4 @@ The Juvix language and related tools are documented in [[https://anoma.github.io
 ** Community
 
 We would love to hear what you think of Juvix! Join us on
-[[https://discord.gg/vEQappb7wG][Discord]]
+[[https://discord.gg/vEQappb7wG][the Anoma Discord]].

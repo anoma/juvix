@@ -6,7 +6,7 @@ copyright:       (c) 2022- Heliax AG.
 maintainer:      The PLT Team at Heliax AG <hello@heliax.dev>
 author:          [ Jonathan Prieto-Cubides , Jan Mas Rovira , Paul Cadman , Github's contributors ]
 tested-with:     ghc == 9.2.3
-homepage:        https://github.com/anoma/juvix
+homepage:        juvix.org
 bug-reports:     https://github.com/anoma/juvix/issues
 description:     The Juvix compiler
 category:        Compilers/Interpreters
