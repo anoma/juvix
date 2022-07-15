@@ -523,14 +523,14 @@ ambiguousMessage n es =
       <> line
       <> indent' (vsep (map ppCode es))
 
-newtype WrongInductiveParameterName = WrongInductiveParameterName
-  { _wrongInductiveParameterName :: Symbol
+newtype DuplicateInductiveParameterName = DuplicateInductiveParameterName
+  { _duplicateInductiveParameterName :: Symbol
   }
   deriving stock (Show)
 
-makeLenses ''WrongInductiveParameterName
+makeLenses ''DuplicateInductiveParameterName
 
-instance ToGenericError WrongInductiveParameterName where
+instance ToGenericError DuplicateInductiveParameterName where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
@@ -538,11 +538,11 @@ instance ToGenericError WrongInductiveParameterName where
         _genericErrorIntervals = [i]
       }
     where
-      param = e ^. wrongInductiveParameterName
+      param = e ^. duplicateInductiveParameterName
       i = getLoc param
       msg =
-        "The second occurrence of the parameter name"
+        "Invalid name"
           <+> ppCode param
-          <+> "is not valid here."
-          <+> line
-            <> "Please use a fresh name."
+            <> "."
+            <> line
+            <> "Inductive parameter names can not be repeated."

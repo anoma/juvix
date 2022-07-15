@@ -215,9 +215,9 @@ scoperErrorTests =
     NegTest
       "A type parameter name occurs twice when declaring an inductive type"
       "."
-      "WrongInductiveParameterName.juvix"
+      "DuplicateInductiveParameterName.juvix"
       $ \case
-        ErrWrongInductiveParameterName {} -> Nothing
+        ErrDuplicateInductiveParameterName {} -> Nothing
         _ -> wrongError
   ]
 

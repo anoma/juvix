@@ -1,4 +1,4 @@
-module WrongInductiveParameterName;
+module DuplicateInductiveParameterName;
 
 inductive T (A : Type) (B : Type) (A : Type) {};
 

@@ -442,8 +442,8 @@ withParams xs a = go [] [] xs
           if
               | _inductiveParameterName `elem` usedNames ->
                   throw
-                    ( ErrWrongInductiveParameterName
-                        (WrongInductiveParameterName _inductiveParameterName)
+                    ( ErrDuplicateInductiveParameterName
+                        (DuplicateInductiveParameterName _inductiveParameterName)
                     )
               | otherwise -> do
                   inductiveParameterName' <- freshVariable _inductiveParameterName
