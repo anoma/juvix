@@ -99,15 +99,15 @@ checkExpression ::
 checkExpression expectedTy e = do
   e' <- inferExpression' e
   let inferredType = e' ^. typedType
-  unlessM (matchTypes expectedTy inferredType) (throw (err inferredType))
+  whenJustM (matchTypes expectedTy inferredType) (throw . err)
   return (e' ^. typedExpression)
   where
-    err infTy =
+    err matchErr =
       ErrWrongType
         ( WrongType
-            { _wrongTypeExpression = e,
-              _wrongTypeInferredType = infTy,
-              _wrongTypeExpectedType = expectedTy
+            { _wrongTypeThing = Left e,
+              _wrongTypeActual = matchErr ^. matchErrorRight,
+              _wrongTypeExpected = matchErr ^. matchErrorLeft
             }
         )
 
@@ -165,7 +165,7 @@ checkFunctionClause info FunctionClause {..} = do
               }
 
 checkPatterns ::
-  Members '[Reader InfoTable, Error TypeCheckerError] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, Inference, NameIdGen] r =>
   FunctionName ->
   [(FunctionParameter, Pattern)] ->
   Sem r LocalVars
@@ -176,7 +176,7 @@ typeOfArg = (^. paramType)
 
 checkPattern ::
   forall r.
-  Members '[Reader InfoTable, Error TypeCheckerError, State LocalVars] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, State LocalVars, Inference, NameIdGen] r =>
   FunctionName ->
   FunctionParameter ->
   Pattern ->
@@ -186,11 +186,12 @@ checkPattern funName = go
     go :: FunctionParameter -> Pattern -> Sem r ()
     go argTy p = do
       tyVarMap <- fmap (ExpressionIden . IdenVar) . (^. localTyMap) <$> get
-      let ty = substitutionE tyVarMap (typeOfArg argTy)
-          unbrace = \case
+      ty <- normalizeType (substitutionE tyVarMap (typeOfArg argTy))
+      let unbrace = \case
             PatternBraces b -> b
             x -> x
-      case unbrace p of
+          pat = unbrace p
+      case pat of
         PatternWildcard {} -> return ()
         PatternBraces {} -> impossible
         PatternVariable v -> do
@@ -200,17 +201,48 @@ checkPattern funName = go
               modify (over localTyMap (HashMap.insert v' v))
             _ -> return ()
         PatternConstructorApp a -> do
-          (ind, tyArgs) <- checkSaturatedInductive ty
+          s <- checkSaturatedInductive ty
           info <- lookupConstructor (a ^. constrAppConstructor)
-          let constrInd = info ^. constructorInfoInductive
-          when
-            (ind /= constrInd)
-            ( throw
-                ( ErrWrongConstructorType
-                    (WrongConstructorType (a ^. constrAppConstructor) ind constrInd funName)
+          let constrIndName = info ^. constructorInfoInductive
+              constrName = a ^. constrAppConstructor
+              err :: MatchError -> Sem r ()
+              err m =
+                throw
+                  ( ErrWrongType
+                      WrongType
+                        { _wrongTypeThing = Right pat,
+                          _wrongTypeExpected = m ^. matchErrorRight,
+                          _wrongTypeActual = m ^. matchErrorLeft
+                        }
+                  )
+          case s of
+            Left hole -> do
+              let indParams = info ^. constructorInfoInductiveParameters
+                  numIndParams = length indParams
+                  indName :: Iden
+                  indName = IdenInductive (info ^. constructorInfoInductive)
+                  loc = getLoc a
+              paramHoles <- map ExpressionHole <$> replicateM numIndParams (freshHole loc)
+              let patternTy = foldApplication (ExpressionIden indName) (zip (repeat Explicit) paramHoles)
+              whenJustM
+                (matchTypes patternTy (ExpressionHole hole))
+                err
+              let tyArgs = zipExact indParams paramHoles
+              goConstr a tyArgs
+            Right (ind, tyArgs) -> do
+              when
+                (ind /= constrIndName)
+                ( throw
+                    ( ErrWrongConstructorType
+                        WrongConstructorType
+                          { _wrongCtorTypeName = constrName,
+                            _wrongCtorTypeExpected = ind,
+                            _wrongCtorTypeActual = constrIndName,
+                            _wrongCtorTypeFunName = funName
+                          }
+                    )
                 )
-            )
-          goConstr a tyArgs
+              goConstr a tyArgs
       where
         goConstr :: ConstructorApp -> [(InductiveParameter, Expression)] -> Sem r ()
         goConstr app@(ConstructorApp c ps) ctx = do
@@ -230,39 +262,42 @@ checkPattern funName = go
                     }
                 )
             )
-    checkSaturatedInductive :: Expression -> Sem r (InductiveName, [(InductiveParameter, Expression)])
+    checkSaturatedInductive :: Expression -> Sem r (Either Hole (InductiveName, [(InductiveParameter, Expression)]))
     checkSaturatedInductive ty = do
-      (ind, args) <- viewInductiveApp ty
-      params <-
-        (^. inductiveInfoDef . inductiveParameters)
-          <$> lookupInductive ind
-      let numArgs = length args
-          numParams = length params
-      when
-        (numArgs < numParams)
-        ( throw
-            ( ErrTooFewArgumentsIndType
-                ( WrongNumberArgumentsIndType
-                    { _wrongNumberArgumentsIndTypeActualType = ty,
-                      _wrongNumberArgumentsIndTypeActualNumArgs = numArgs,
-                      _wrongNumberArgumentsIndTypeExpectedNumArgs = numParams
-                    }
+      i <- viewInductiveApp ty
+      case i of
+        Left hole -> return (Left hole)
+        Right (ind, args) -> do
+          params :: [InductiveParameter] <-
+            (^. inductiveInfoDef . inductiveParameters)
+              <$> lookupInductive ind
+          let numArgs = length args
+              numParams = length params
+          when
+            (numArgs < numParams)
+            ( throw
+                ( ErrTooFewArgumentsIndType
+                    ( WrongNumberArgumentsIndType
+                        { _wrongNumberArgumentsIndTypeActualType = ty,
+                          _wrongNumberArgumentsIndTypeActualNumArgs = numArgs,
+                          _wrongNumberArgumentsIndTypeExpectedNumArgs = numParams
+                        }
+                    )
                 )
             )
-        )
-      when
-        (numArgs > numParams)
-        ( throw
-            ( ErrTooManyArgumentsIndType
-                ( WrongNumberArgumentsIndType
-                    { _wrongNumberArgumentsIndTypeActualType = ty,
-                      _wrongNumberArgumentsIndTypeActualNumArgs = numArgs,
-                      _wrongNumberArgumentsIndTypeExpectedNumArgs = numParams
-                    }
+          when
+            (numArgs > numParams)
+            ( throw
+                ( ErrTooManyArgumentsIndType
+                    ( WrongNumberArgumentsIndType
+                        { _wrongNumberArgumentsIndTypeActualType = ty,
+                          _wrongNumberArgumentsIndTypeActualNumArgs = numArgs,
+                          _wrongNumberArgumentsIndTypeExpectedNumArgs = numParams
+                        }
+                    )
                 )
             )
-        )
-      return (ind, zip params args)
+          return (Right (ind, zipExact params args))
 
 freshHole :: Members '[Inference, NameIdGen] r => Interval -> Sem r Hole
 freshHole l = do
@@ -375,7 +410,7 @@ inferExpression' e = case e of
                 r' <- checkExpression (smallUniverse (getLoc h)) r
                 h' <- freshHole (getLoc h)
                 let fun = Function (unnamedParameter r') (ExpressionHole h')
-                unlessM (matchTypes (ExpressionHole h) (ExpressionFunction fun)) impossible
+                whenJustM (matchTypes (ExpressionHole h) (ExpressionFunction fun)) impossible
                 return
                   TypedExpression
                     { _typedType = ExpressionHole h',
@@ -400,11 +435,16 @@ inferExpression' e = case e of
                   )
 
 viewInductiveApp ::
-  Member (Error TypeCheckerError) r =>
+  Members '[Error TypeCheckerError, Inference] r =>
   Expression ->
-  Sem r (InductiveName, [Expression])
+  Sem r (Either Hole (InductiveName, [Expression]))
 viewInductiveApp ty = case t of
-  ExpressionIden (IdenInductive n) -> return (n, as)
+  ExpressionIden (IdenInductive n) -> return (Right (n, as))
+  ExpressionHole h -> do
+    r <- queryMetavar h
+    case r of
+      Just h' -> viewInductiveApp h'
+      Nothing -> return (Left h)
   _ -> throw (ErrImpracticalPatternMatching (ImpracticalPatternMatching ty))
   where
     (t, as) = viewTypeApp ty

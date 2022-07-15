@@ -10,10 +10,18 @@ data MetavarState
   | -- | Type may contain holes
     Refined Expression
 
+data MatchError = MatchError
+  { _matchErrorLeft :: Expression,
+    _matchErrorRight :: Expression
+  }
+
+makeLenses ''MatchError
+
 data Inference m a where
   FreshMetavar :: Hole -> Inference m TypedExpression
-  MatchTypes :: Expression -> Expression -> Inference m Bool
+  MatchTypes :: Expression -> Expression -> Inference m (Maybe MatchError)
   QueryMetavar :: Hole -> Inference m (Maybe Expression)
+  NormalizeType :: Expression -> Inference m Expression
 
 makeSem ''Inference
 
@@ -61,11 +69,36 @@ closeState = \case
 getMetavar :: Member (State InferenceState) r => Hole -> Sem r MetavarState
 getMetavar h = gets (fromJust . (^. inferenceMap . at h))
 
+normalizeType' :: forall r. Members '[State InferenceState] r => Expression -> Sem r Expression
+normalizeType' = go
+  where
+    go :: Expression -> Sem r Expression
+    go e = case e of
+      ExpressionIden {} -> return e
+      ExpressionHole h -> goHole h
+      ExpressionApplication a -> ExpressionApplication <$> goApp a
+      ExpressionLiteral {} -> return e
+      ExpressionUniverse {} -> return e
+      ExpressionFunction f -> ExpressionFunction <$> goFun f
+    goApp :: Application -> Sem r Application
+    goApp = traverseOf appLeft go >=> traverseOf appRight go
+    goFunPar :: FunctionParameter -> Sem r FunctionParameter
+    goFunPar = traverseOf paramType go
+    goFun :: Function -> Sem r Function
+    goFun = traverseOf functionLeft goFunPar >=> traverseOf functionRight go
+    goHole :: Hole -> Sem r Expression
+    goHole h = do
+      s <- getMetavar h
+      case s of
+        Fresh -> return (ExpressionHole h)
+        Refined r -> go r
+
 re :: Member (Error TypeCheckerError) r => Sem (Inference ': r) a -> Sem (State InferenceState ': r) a
 re = reinterpret $ \case
   FreshMetavar h -> freshMetavar' h
   MatchTypes a b -> matchTypes' a b
   QueryMetavar h -> queryMetavar' h
+  NormalizeType t -> normalizeType' t
   where
     queryMetavar' :: Members '[State InferenceState] r => Hole -> Sem r (Maybe Expression)
     queryMetavar' h = do
@@ -98,7 +131,7 @@ re = reinterpret $ \case
               Refined {} -> impossible
 
     -- Supports alpha equivalence.
-    matchTypes' :: Members '[Error TypeCheckerError, State InferenceState] r => Expression -> Expression -> Sem r Bool
+    matchTypes' :: Members '[Error TypeCheckerError, State InferenceState] r => Expression -> Expression -> Sem r (Maybe MatchError)
     matchTypes' ty = runReader ini . go ty
       where
         ini :: HashMap VarName VarName
@@ -108,41 +141,58 @@ re = reinterpret $ \case
           Members '[Error TypeCheckerError, State InferenceState, Reader (HashMap VarName VarName)] r =>
           Expression ->
           Expression ->
-          Sem r Bool
+          Sem r (Maybe MatchError)
         go a' b' = case (a', b') of
           (ExpressionIden a, ExpressionIden b) -> goIden a b
           (ExpressionApplication a, ExpressionApplication b) -> goApplication a b
           (ExpressionFunction a, ExpressionFunction b) -> goFunction a b
-          (ExpressionUniverse u, ExpressionUniverse u') -> return (u == u')
+          (ExpressionUniverse u, ExpressionUniverse u') -> check (u == u')
           (ExpressionHole h, a) -> goHole h a
           (a, ExpressionHole h) -> goHole h a
-          (ExpressionIden {}, _) -> return False
-          (_, ExpressionIden {}) -> return False
-          (ExpressionApplication {}, _) -> return False
-          (_, ExpressionApplication {}) -> return False
-          (ExpressionFunction {}, _) -> return False
-          (_, ExpressionFunction {}) -> return False
-          (ExpressionUniverse {}, _) -> return False
-          (_, ExpressionUniverse {}) -> return False
-          (ExpressionLiteral l, ExpressionLiteral l') -> return (l == l')
+          (ExpressionIden {}, _) -> err
+          (_, ExpressionIden {}) -> err
+          (ExpressionApplication {}, _) -> err
+          (_, ExpressionApplication {}) -> err
+          (ExpressionFunction {}, _) -> err
+          (_, ExpressionFunction {}) -> err
+          (ExpressionUniverse {}, _) -> err
+          (_, ExpressionUniverse {}) -> err
+          (ExpressionLiteral l, ExpressionLiteral l') -> check (l == l')
           where
-            goHole :: Hole -> Expression -> Sem r Bool
+            ok :: Sem r (Maybe MatchError)
+            ok = return Nothing
+            check :: Bool -> Sem r (Maybe MatchError)
+            check b
+              | b = ok
+              | otherwise = err
+            bicheck :: Sem r (Maybe MatchError) -> Sem r (Maybe MatchError) -> Sem r (Maybe MatchError)
+            bicheck = liftA2 (<|>)
+            err :: Sem r (Maybe MatchError)
+            err = return (Just (MatchError a' b'))
+            goHole :: Hole -> Expression -> Sem r (Maybe MatchError)
             goHole h t = do
               r <- queryMetavar' h
               case r of
-                Nothing -> refineFreshMetavar h t $> True
+                Nothing -> refineFreshMetavar h t $> Nothing
                 Just ht -> matchTypes' t ht
-            goIden :: Iden -> Iden -> Sem r Bool
+            goIden :: Iden -> Iden -> Sem r (Maybe MatchError)
             goIden ia ib = case (ia, ib) of
-              (IdenInductive a, IdenInductive b) -> return (a == b)
-              (IdenAxiom a, IdenAxiom b) -> return (a == b)
+              (IdenInductive a, IdenInductive b) -> check (a == b)
+              (IdenAxiom a, IdenAxiom b) -> check (a == b)
               (IdenVar a, IdenVar b) -> do
                 mappedEq <- (== Just b) . HashMap.lookup a <$> ask
-                return (a == b || mappedEq)
-              _ -> return False
-            goApplication :: Application -> Application -> Sem r Bool
-            goApplication (Application f x _) (Application f' x' _) = andM [go f f', go x x']
-            goFunction :: Function -> Function -> Sem r Bool
+                check (a == b || mappedEq)
+              (IdenAxiom {}, _) -> err
+              (_, IdenAxiom {}) -> err
+              (IdenFunction {}, _) -> err
+              (_, IdenFunction {}) -> err
+              (_, IdenVar {}) -> err
+              (IdenVar {}, _) -> err
+              (IdenConstructor {}, _) -> err
+              (_, IdenConstructor {}) -> err
+            goApplication :: Application -> Application -> Sem r (Maybe MatchError)
+            goApplication (Application f x _) (Application f' x' _) = bicheck (go f f') (go x x')
+            goFunction :: Function -> Function -> Sem r (Maybe MatchError)
             goFunction
               (Function (FunctionParameter m1 i1 l1) r1)
               (Function (FunctionParameter m2 i2 l2) r2)
@@ -151,8 +201,8 @@ re = reinterpret $ \case
                         local' = case (m1, m2) of
                           (Just v1, Just v2) -> local (HashMap.insert v1 v2)
                           _ -> id
-                    andM [go l1 l2, local' (go r1 r2)]
-                | otherwise = return False
+                    bicheck (go l1 l2) (local' (go r1 r2))
+                | otherwise = ok
 
 runInference :: Member (Error TypeCheckerError) r => Sem (Inference ': r) Expression -> Sem r Expression
 runInference a = do

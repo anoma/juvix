@@ -88,6 +88,10 @@ tests =
       "MicroJuvix"
       "Implicit.juvix",
     PosTest
+      "Pattern match a hole type"
+      "265"
+      "M.juvix",
+    PosTest
       "Import a builtin multiple times"
       "BuiltinsMultiImport"
       "Input.juvix",
