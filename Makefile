@@ -150,7 +150,7 @@ html-examples: $(EXAMPLES)
 $(EXAMPLES):
 	$(eval OUTPUTDIR=$(EXAMPLEHTMLOUTPUT)/$(dir $@))
 	mkdir -p ${OUTPUTDIR}
-	juvix html $(EXAMPLEMILESTONE)/$@ --recursive --output-dir=./../../../${OUTPUTDIR}
+	juvix html $(EXAMPLEMILESTONE)/$@ --recursive --output-dir=./../../../${OUTPUTDIR} --print-metadata
 
 .PHONY : install-pre-commit
 install-pre-commit:
