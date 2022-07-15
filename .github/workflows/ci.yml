@@ -17,34 +17,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  docs:
-    if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout our repository
-        uses: actions/checkout@v2
-        with:
-          submodules: recursive
-
-      - uses: r-lib/actions/setup-pandoc@v1
-        with:
-          pandoc-version: '2.13'
-
-      - name: MDBook setup
-        uses: peaceiris/actions-mdbook@v1
-        with:
-          mdbook-version: 'latest'
-
-      - name: Generate Markdown files for each Org file
-        run: make markdown-docs
-
-      - name: Deploy HTML to github pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: _docs
-          enable_jekyll: false
-          cname: docs.juvix.org
 
   ormolu:
     runs-on: ubuntu-latest
@@ -211,3 +183,52 @@ jobs:
           make install
           make install-shelltest
           make test-shell
+  docs:
+    # uncomment before merging it
+    # if: github.event.pull_request.merged == true
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        ghc: ["9.2.3"]
+    runs-on: ${{ matrix.os }}
+    steps:
+       - uses: actions/cache@v3
+        id: cache-build
+        with:
+          path: |
+            ~/.stack
+            main/.stack-work/
+            main/.hie
+          key: ${{ runner.os }}-v1-build-${{ matrix.ghc }}-
+      - name: Checkout our repository
+        uses: actions/checkout@v2
+        with:
+          path: main
+          submodules: recursive
+
+      - uses: r-lib/actions/setup-pandoc@v1
+        with:
+          pandoc-version: '2.13'
+
+      - name: MDBook setup
+        uses: peaceiris/actions-mdbook@v1
+        with:
+          mdbook-version: 'latest'
+
+      - name: Generate Markdown files for each Org file
+        run: |
+          cd main
+          make markdown-docs
+
+      - name : Generate HTML files from milestone examples
+        run : |
+          cd main
+          echo "$GITHUB_WORKSPACE/.local/bin" >> $GITHUB_PATH
+          make html-examples
+
+      - name: Deploy HTML to github pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: _docs
+          enable_jekyll: false

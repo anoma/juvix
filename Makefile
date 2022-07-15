@@ -137,6 +137,13 @@ install-watch:
 repl:
 	stack ghci Juvix:lib
 
+.PHONY: html-examples
+html-examples:
+	mkdir -p _docs/examples/html/ValidityPredicates/
+	juvix html examples/milestone/ValidityPredicates/SimpleFungibleToken.juvix --recursive --output-dir=./../../../_docs/examples/html/ValidityPredicates/
+	mkdir -p _docs/examples/html/MiniTicTacToe
+	juvix html examples/milestone/MiniTicTacToe/MiniTicTacToe.juvix --recursive --output-dir=./../../../_docs/examples/html/MiniTicTacToe
+
 .PHONY : install-pre-commit
 install-pre-commit:
 	pip install pre-commit
