@@ -223,6 +223,7 @@ jobs:
         run : |
           cd main
           echo "$GITHUB_WORKSPACE/.local/bin" >> $GITHUB_PATH
+          make install
           make html-examples
 
       - name: Deploy HTML to github pages
