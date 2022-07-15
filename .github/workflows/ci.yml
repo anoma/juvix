@@ -183,7 +183,7 @@ jobs:
           make install-shelltest
           make test-shell
   docs:
-    if: github.event.pull_request.merged == true
+    # if: github.event.pull_request.merged == true
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -229,6 +229,6 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: _docs
+          publish_dir: main/_docs
           enable_jekyll: false
           cname: docs.juvix.org
