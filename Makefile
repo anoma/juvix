@@ -11,7 +11,8 @@ EXAMPLEMILESTONE=examples/milestone
 EXAMPLEHTMLOUTPUT=_docs/examples/html
 EXAMPLES=ValidityPredicates/SimpleFungibleToken.juvix \
 		  MiniTicTacToe/MiniTicTacToe.juvix \
-		  Fibonacci/Fibonacci.juvix
+		  Fibonacci/Fibonacci.juvix \
+		  Collatz/Collatz.juvix.juvix
 
 ORGTOMDPRG ?=pandoc
 ORGOPTS=--from org --to markdown_strict -s -o $@

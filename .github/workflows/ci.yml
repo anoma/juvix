@@ -232,3 +232,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: _docs
           enable_jekyll: false
+          cname: docs.juvix.org
