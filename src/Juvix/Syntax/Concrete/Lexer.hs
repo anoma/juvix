@@ -118,19 +118,11 @@ validTailChar :: Char -> Bool
 validTailChar c =
   isAlphaNum c || validFirstChar c
 
+reservedSymbols :: [Char]
+reservedSymbols = "\";(){}[].≔λ\\"
+
 validFirstChar :: Char -> Bool
-validFirstChar c =
-  or
-    [ isLetter c,
-      cat == MathSymbol,
-      cat == CurrencySymbol,
-      cat == ModifierLetter,
-      c `elem` extraAllowedChars
-    ]
-  where
-    extraAllowedChars :: [Char]
-    extraAllowedChars = "_'-*,&"
-    cat = generalCategory c
+validFirstChar c = not $ isNumber c || isSpace c || (c `elem` reservedSymbols)
 
 dot :: forall e m. MonadParsec e Text m => m Char
 dot = P.char '.'
