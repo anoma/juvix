@@ -359,7 +359,7 @@ goFunctionDefConcrete n d = do
     goClause :: Micro.FunctionClause -> Sem r FunctionClause
     goClause c = do
       body' <- goExpression (c ^. Micro.clauseBody)
-      patterns' <- zipWithM goPattern' patternTys (c ^. Micro.clausePatterns)
+      patterns' <- zipWithM goPatternArg patternTys (c ^. Micro.clausePatterns)
       return
         FunctionClause
           { _clauseName = funName,
@@ -455,8 +455,11 @@ goFunctionDefPoly def poly
         sig' :: Micro.ConcreteType
         sig' = Micro.substitutionConcrete (i ^. concreteTypeSubs) tyTail
 
-goPattern' :: forall r. Members '[Reader ConcreteTable, Reader Micro.InfoTable] r => Micro.ConcreteType -> Micro.Pattern -> Sem r Pattern
-goPattern' ty = \case
+goPatternArg :: forall r. Members '[Reader ConcreteTable, Reader Micro.InfoTable] r => Micro.ConcreteType -> Micro.PatternArg -> Sem r Pattern
+goPatternArg ty = goPattern ty . (^. Micro.patternArgPattern)
+
+goPattern :: forall r. Members '[Reader ConcreteTable, Reader Micro.InfoTable] r => Micro.ConcreteType -> Micro.Pattern -> Sem r Pattern
+goPattern ty = \case
   Micro.PatternVariable v -> return (PatternVariable (goName v))
   Micro.PatternConstructorApp capp -> PatternConstructorApp <$> goApp capp
   Micro.PatternWildcard {} -> return PatternWildcard
@@ -468,7 +471,7 @@ goPattern' ty = \case
             c' = goName (capp ^. Micro.constrAppConstructor)
         cInfo <- Micro.lookupConstructor (capp ^. Micro.constrAppConstructor)
         let psTysConcrete = map Micro.mkConcreteType' (cInfo ^. Micro.constructorInfoArgs)
-        ps' <- zipWithM goPattern' psTysConcrete (capp ^. Micro.constrAppParameters)
+        ps' <- zipWithM goPatternArg psTysConcrete (capp ^. Micro.constrAppParameters)
         return (ConstructorApp c' ps')
       Micro.ExpressionApplication a -> do
         let getInductive :: Micro.Expression -> Micro.Name
@@ -492,7 +495,7 @@ goPattern' ty = \case
             subs = HashMap.fromList (zipExact tyParamVars (toList instanceTypes))
             psTysConcrete :: [Micro.ConcreteType]
             psTysConcrete = map (Micro.substitutionConcrete subs) psTys
-        ps' <- zipWithM goPattern' psTysConcrete (capp ^. Micro.constrAppParameters)
+        ps' <- zipWithM goPatternArg psTysConcrete (capp ^. Micro.constrAppParameters)
         return (ConstructorApp c' ps')
       _ -> impossible
 
