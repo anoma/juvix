@@ -18,7 +18,6 @@ data MatchError = MatchError
 makeLenses ''MatchError
 
 data Inference m a where
-  FreshMetavar :: Hole -> Inference m TypedExpression
   MatchTypes :: Expression -> Expression -> Inference m (Maybe MatchError)
   QueryMetavar :: Hole -> Inference m (Maybe Expression)
   NormalizeType :: Expression -> Inference m Expression
@@ -93,29 +92,25 @@ normalizeType' = go
         Fresh -> return (ExpressionHole h)
         Refined r -> go r
 
+freshMetavar :: Members '[Inference] r => Hole -> Sem r ()
+freshMetavar = void . queryMetavar
+
+queryMetavar' :: Members '[State InferenceState] r => Hole -> Sem r (Maybe Expression)
+queryMetavar' h = do
+  m <- gets (^. inferenceMap . at h)
+  case m of
+    Nothing -> do
+      modify (over inferenceMap (HashMap.insert h Fresh))
+      return Nothing
+    Just Fresh -> return Nothing
+    Just (Refined e) -> return (Just e)
+
 re :: Member (Error TypeCheckerError) r => Sem (Inference ': r) a -> Sem (State InferenceState ': r) a
 re = reinterpret $ \case
-  FreshMetavar h -> freshMetavar' h
   MatchTypes a b -> matchTypes' a b
   QueryMetavar h -> queryMetavar' h
   NormalizeType t -> normalizeType' t
   where
-    queryMetavar' :: Members '[State InferenceState] r => Hole -> Sem r (Maybe Expression)
-    queryMetavar' h = do
-      s <- getMetavar h
-      case s of
-        Fresh -> return Nothing
-        Refined t -> return (Just t)
-
-    freshMetavar' :: Members '[State InferenceState] r => Hole -> Sem r TypedExpression
-    freshMetavar' h = do
-      modify (over inferenceMap (HashMap.insert h Fresh))
-      return
-        TypedExpression
-          { _typedExpression = ExpressionHole h,
-            _typedType = ExpressionUniverse (SmallUniverse (getLoc h))
-          }
-
     refineFreshMetavar ::
       Members '[Error TypeCheckerError, State InferenceState] r =>
       Hole ->

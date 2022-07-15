@@ -89,7 +89,7 @@ checkFunctionDefType :: forall r. Members '[Inference] r => Expression -> Sem r 
 checkFunctionDefType = traverseOf_ (leafExpressions . _ExpressionHole) go
   where
     go :: Hole -> Sem r ()
-    go h = void (freshMetavar h)
+    go h = freshMetavar h
 
 checkExpression ::
   Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
@@ -138,38 +138,45 @@ checkFunctionClauseBody locals expectedTy body =
   runReader locals (checkExpression expectedTy body)
 
 checkFunctionClause ::
+  forall r.
   Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, Inference] r =>
   FunctionInfo ->
   FunctionClause ->
   Sem r FunctionClause
 checkFunctionClause info FunctionClause {..} = do
-  let (argTys, rty) = unfoldFunType (info ^. functionInfoDef . funDefType)
-      (patTys, restTys) = splitAt (length _clausePatterns) argTys
-      bodyTy = foldFunType restTys rty
-  if
-      | length patTys /= length _clausePatterns -> impossible
-      | otherwise -> do
-          locals <- checkPatterns _clauseName (zipExact patTys _clausePatterns)
-          let bodyTy' =
-                substitutionE
-                  ( fmap
-                      (ExpressionIden . IdenVar)
-                      (locals ^. localTyMap)
-                  )
-                  bodyTy
-          _clauseBody' <- checkFunctionClauseBody locals bodyTy' _clauseBody
-          return
-            FunctionClause
-              { _clauseBody = _clauseBody',
-                ..
-              }
-
-checkPatterns ::
-  Members '[Reader InfoTable, Error TypeCheckerError, Inference, NameIdGen] r =>
-  FunctionName ->
-  [(FunctionParameter, Pattern)] ->
-  Sem r LocalVars
-checkPatterns name = execState emptyLocalVars . mapM_ (uncurry (checkPattern name))
+  (locals, bodyTy) <- helper _clausePatterns clauseType
+  let bodyTy' = substitutionE (localsToSubsE locals) bodyTy
+  _clauseBody' <- checkFunctionClauseBody locals bodyTy' _clauseBody
+  return
+    FunctionClause
+      { _clauseBody = _clauseBody',
+        ..
+      }
+  where
+    clauseType :: Expression
+    clauseType = info ^. functionInfoDef . funDefType
+    helper :: [Pattern] -> Expression -> Sem r (LocalVars, Expression)
+    helper pats ty = runState emptyLocalVars (go pats ty)
+    go :: [Pattern] -> Expression -> Sem (State LocalVars ': r) Expression
+    go pats bodyTy = case pats of
+      [] -> return bodyTy
+      (p : ps) -> case bodyTy of
+        ExpressionHole h -> do
+          s <- queryMetavar h
+          case s of
+            Just h' -> go pats h'
+            Nothing -> do
+              freshMetavar h
+              l <- ExpressionHole <$> freshHole (getLoc h)
+              r <- ExpressionHole <$> freshHole (getLoc h)
+              let fun = ExpressionFunction (Function (unnamedParameter l) r)
+              whenJustM (matchTypes (ExpressionHole h) fun) impossible
+              go pats fun
+        _ -> case unfoldFunType bodyTy of
+          ([], _) -> error "too many patterns"
+          (par : pars, ret) -> do
+            checkPattern _clauseName par p
+            go ps (foldFunType pars ret)
 
 typeOfArg :: FunctionParameter -> Expression
 typeOfArg = (^. paramType)
@@ -303,7 +310,7 @@ freshHole :: Members '[Inference, NameIdGen] r => Interval -> Sem r Hole
 freshHole l = do
   uid <- freshNameId
   let h = Hole uid l
-  void (freshMetavar h)
+  freshMetavar h
   return h
 
 -- | Returns {A : Expression} → A
@@ -345,9 +352,18 @@ inferExpression' e = case e of
   ExpressionApplication a -> inferApplication a
   ExpressionLiteral l -> goLiteral l
   ExpressionFunction f -> goExpressionFunction f
-  ExpressionHole h -> freshMetavar h
+  ExpressionHole h -> inferHole h
   ExpressionUniverse u -> goUniverse u
   where
+    inferHole :: Hole -> Sem r TypedExpression
+    inferHole h = do
+      freshMetavar h
+      return
+        TypedExpression
+          { _typedExpression = ExpressionHole h,
+            _typedType = ExpressionUniverse (SmallUniverse (getLoc h))
+          }
+
     goUniverse :: SmallUniverse -> Sem r TypedExpression
     goUniverse u =
       return

@@ -88,6 +88,10 @@ tests =
       "MicroJuvix"
       "Implicit.juvix",
     PosTest
+      "Refine hole in type signature"
+      "272"
+      "M.juvix",
+    PosTest
       "Pattern match a hole type"
       "265"
       "M.juvix",
