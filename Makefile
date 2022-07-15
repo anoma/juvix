@@ -7,6 +7,13 @@ ORGFILES = $(shell find docs/org -type f -name '*.org')
 MDFILES:=$(patsubst docs/org/%,docs/md/%,$(ORGFILES:.org=.md))
 ASSETS = seating-mascot.051c86a.svg Seating_Tara_smiling.svg teaching-mascot.f828959.svg
 
+EXAMPLEMILESTONE=examples/milestone
+EXAMPLEHTMLOUTPUT=_docs/examples/html
+EXAMPLES=ValidityPredicates/SimpleFungibleToken.juvix \
+		  MiniTicTacToe/MiniTicTacToe.juvix \
+		  Fibonacci/Fibonacci.juvix \
+		  Collatz/Collatz.juvix
+
 ORGTOMDPRG ?=pandoc
 ORGOPTS=--from org --to markdown_strict -s -o $@
 
@@ -136,6 +143,14 @@ install-watch:
 
 repl:
 	stack ghci Juvix:lib
+
+.PHONY: html-examples
+html-examples: $(EXAMPLES)
+
+$(EXAMPLES):
+	$(eval OUTPUTDIR=$(EXAMPLEHTMLOUTPUT)/$(dir $@))
+	mkdir -p ${OUTPUTDIR}
+	juvix html $(EXAMPLEMILESTONE)/$@ --recursive --output-dir=./../../../${OUTPUTDIR}
 
 .PHONY : install-pre-commit
 install-pre-commit:
