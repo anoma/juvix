@@ -1,0 +1,638 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Changelog - The Juvix Book</title>
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <!-- MathJax -->
+        <script async type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction/about/what-is.html"><strong aria-hidden="true">1.</strong> Juvix</a></li><li class="chapter-item expanded "><a href="../introduction/changelog.html" class="active"><strong aria-hidden="true">2.</strong> Changelog</a></li><li class="chapter-item expanded "><a href="../getting-started/index.html"><strong aria-hidden="true">3.</strong> Getting started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting-started/quick-start.html"><strong aria-hidden="true">3.1.</strong> Quick start</a></li><li class="chapter-item expanded "><a href="../getting-started/dependencies.html"><strong aria-hidden="true">3.2.</strong> Installing dependencies</a></li></ol></li><li class="chapter-item expanded "><a href="../examples/index.html"><strong aria-hidden="true">4.</strong> Tutorials</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../examples/backend-specific/minic-hello-world.html"><strong aria-hidden="true">4.1.</strong> Hello world</a></li><li class="chapter-item expanded "><a href="../examples/validity-predicates/PolyFungibleToken.html"><strong aria-hidden="true">4.2.</strong> A simple fungible token</a></li></ol></li><li class="chapter-item expanded "><a href="../language-reference/index.html"><strong aria-hidden="true">5.</strong> Language reference</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../language-reference/comments.html"><strong aria-hidden="true">5.1.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../language-reference/axiom.html"><strong aria-hidden="true">5.2.</strong> Axiom</a></li><li class="chapter-item expanded "><a href="../language-reference/functions.html"><strong aria-hidden="true">5.3.</strong> Function</a></li><li class="chapter-item expanded "><a href="../language-reference/modules.html"><strong aria-hidden="true">5.4.</strong> Module</a></li><li class="chapter-item expanded "><a href="../language-reference/inductive-data-types.html"><strong aria-hidden="true">5.5.</strong> Data type</a></li><li class="chapter-item expanded "><a href="../language-reference/termination-checking.html"><strong aria-hidden="true">5.6.</strong> Termination checking</a></li><li class="chapter-item expanded "><a href="../language-reference/compile-blocks.html"><strong aria-hidden="true">5.7.</strong> Compile block</a></li><li class="chapter-item expanded "><a href="../language-reference/foreign-blocks.html"><strong aria-hidden="true">5.8.</strong> Foreign block</a></li><li class="chapter-item expanded "><a href="../backends/index.html"><strong aria-hidden="true">5.9.</strong> Backends</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../backends/minic.html"><strong aria-hidden="true">5.9.1.</strong> MiniC</a></li><li class="chapter-item expanded "><a href="../backends/minihaskell.html"><strong aria-hidden="true">5.9.2.</strong> MiniHaskell</a></li></ol></li><li class="chapter-item expanded "><a href="../compiler-architecture/index.html"><strong aria-hidden="true">5.10.</strong> Compiler architecture</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../compiler-architecture/pipeline.html"><strong aria-hidden="true">5.10.1.</strong> Pipeline</a></li><li class="chapter-item expanded "><a href="../compiler-architecture/languages.html"><strong aria-hidden="true">5.10.2.</strong> Internal languages</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../compiler-architecture/language/abstract.html"><strong aria-hidden="true">5.10.2.1.</strong> Abstract language</a></li><li class="chapter-item expanded "><a href="../compiler-architecture/language/concrete.html"><strong aria-hidden="true">5.10.2.2.</strong> Concrete language</a></li><li class="chapter-item expanded "><a href="../compiler-architecture/language/microjuvix.html"><strong aria-hidden="true">5.10.2.3.</strong> MicroJuvix</a></li></ol></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../tooling/index.html"><strong aria-hidden="true">6.</strong> Tooling</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../tooling/CLI.html"><strong aria-hidden="true">6.1.</strong> Command line interface</a></li><li class="chapter-item expanded "><a href="../tooling/emacs-mode.html"><strong aria-hidden="true">6.2.</strong> Emacs mode</a></li><li class="chapter-item expanded "><a href="../tooling/testing.html"><strong aria-hidden="true">6.3.</strong> Haskell test suite</a></li></ol></li><li class="chapter-item expanded "><a href="../notes/index.html"><strong aria-hidden="true">7.</strong> Blog</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../examples/validity-predicates/index.html"><strong aria-hidden="true">7.1.</strong> Validity predicates</a></li><li class="chapter-item expanded "><a href="../notes/monomorphization.html"><strong aria-hidden="true">7.2.</strong> Monomorphization</a></li></ol></li><li class="chapter-item expanded "><a href="../introduction/about/what-is.html"><strong aria-hidden="true">8.</strong> About</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../introduction/about/team.html"><strong aria-hidden="true">8.1.</strong> The dev team</a></li><li class="chapter-item expanded "><a href="../introduction/about/community.html"><strong aria-hidden="true">8.2.</strong> Community</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Juvix Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="changelog"><a class="header" href="#changelog">Changelog</a></h1>
+<a href="https://github.com/anoma/juvix">
+<img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/Seating_Tara_smiling.svg" />
+</a>
+<h2 id="v021-2022-07-12"><a class="header" href="#v021-2022-07-12"><a href="https://github.com/anoma/minijuvix/tree/v0.2.1">v0.2.1</a> (2022-07-12)</a></h2>
+<p><a href="https://github.com/anoma/minijuvix/compare/v0.2.0...v0.2.1">Full
+Changelog</a></p>
+<p><strong>Implemented enhancements:</strong></p>
+<ul>
+<li>Specialize commands of/for internal use
+<a href="https://github.com/anoma/minijuvix/pull/270">#270</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Improve handling of location information for different objs
+<a href="https://github.com/anoma/minijuvix/pull/263">#263</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Add issues and PR templates
+<a href="https://github.com/anoma/minijuvix/pull/261">#261</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Throw error when reading a file that conflicts with embedded stdlib
+<a href="https://github.com/anoma/minijuvix/pull/243">#243</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Embed standard library in the minijuvix binary
+<a href="https://github.com/anoma/minijuvix/pull/210">#210</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+</ul>
+<p><strong>Fixed bugs:</strong></p>
+<ul>
+<li>Fixed a bug with the path to walloc.c
+<a href="https://github.com/anoma/minijuvix/pull/237">#237</a>
+(<a href="https://github.com/lukaszcz">lukaszcz</a>)</li>
+<li>Perform ScopedToAbstract exactly once for each module
+<a href="https://github.com/anoma/minijuvix/pull/223">#223</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+</ul>
+<p><strong>Merged pull requests:</strong></p>
+<ul>
+<li>Label renaming <a href="https://github.com/anoma/minijuvix/pull/275">#275</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Update link to discord
+<a href="https://github.com/anoma/minijuvix/pull/264">#264</a>
+(<a href="https://github.com/Romainua">Romainua</a>)</li>
+<li>Include <code>open import</code> statements when generating HTML
+<a href="https://github.com/anoma/minijuvix/pull/260">#260</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Renaming MiniJuvix to Juvix
+<a href="https://github.com/anoma/minijuvix/pull/259">#259</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Updates tests to use the updated standard library
+<a href="https://github.com/anoma/minijuvix/pull/253">#253</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Enforce C99 standard in the generated C files
+<a href="https://github.com/anoma/minijuvix/pull/252">#252</a>
+(<a href="https://github.com/lukaszcz">lukaszcz</a>)</li>
+<li>Restore mascot images to the minijuvix book
+<a href="https://github.com/anoma/minijuvix/pull/250">#250</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Allow jumping to another module in emacs
+<a href="https://github.com/anoma/minijuvix/pull/249">#249</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Restore Juvix mascot image to README
+<a href="https://github.com/anoma/minijuvix/pull/248">#248</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Add emacs option <code>minijuvix-disable-embedded-stdlib</code>
+<a href="https://github.com/anoma/minijuvix/pull/247">#247</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Deprecate GHC backend
+<a href="https://github.com/anoma/minijuvix/pull/244">#244</a>
+(<a href="https://github.com/lukaszcz">lukaszcz</a>)</li>
+<li>Removed 'eval' and 'print' keywords (#214)
+<a href="https://github.com/anoma/minijuvix/pull/242">#242</a>
+(<a href="https://github.com/lukaszcz">lukaszcz</a>)</li>
+<li>Add option to disable minijuvix input method
+<a href="https://github.com/anoma/minijuvix/pull/239">#239</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Remove the 'match' keyword
+<a href="https://github.com/anoma/minijuvix/pull/238">#238</a>
+(<a href="https://github.com/lukaszcz">lukaszcz</a>)</li>
+<li>Removed tests/positive/HelloWorld.mjuvix and specified clang version
+in the documentation
+<a href="https://github.com/anoma/minijuvix/pull/236">#236</a>
+(<a href="https://github.com/lukaszcz">lukaszcz</a>)</li>
+<li>Filter symbol entries properly in the scoper
+<a href="https://github.com/anoma/minijuvix/pull/234">#234</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Use the ModulesCache for <code>open</code> statements in ScopedToAbstract pass
+<a href="https://github.com/anoma/minijuvix/pull/224">#224</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>README: Include <code>--recursive</code> in git clone command to fetch stdlib
+<a href="https://github.com/anoma/minijuvix/pull/211">#211</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Update project description v0.2.0
+<a href="https://github.com/anoma/minijuvix/pull/209">#209</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Unify AST representation of types and expressions in MicroJuvix
+<a href="https://github.com/anoma/minijuvix/pull/188">#188</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+</ul>
+<h2 id="v020"><a class="header" href="#v020"><a href="https://github.com/anoma/minijuvix/tree/v0.2.0">v0.2.0</a></a></h2>
+<p>(2022-06-28)</p>
+<p><a href="https://github.com/anoma/minijuvix/compare/v0.1.4...v0.2.0">Full
+Changelog</a></p>
+<p><strong>Implemented enhancements:</strong></p>
+<ul>
+<li>Support built in types
+<a href="https://github.com/anoma/minijuvix/pull/192">#192</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Support partial application and closure passing in C backend
+<a href="https://github.com/anoma/minijuvix/pull/190">#190</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Allow <code>open import</code> statements
+<a href="https://github.com/anoma/minijuvix/pull/175">#175</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Remove TypeAny and adapt typechecking for literals
+<a href="https://github.com/anoma/minijuvix/pull/173">#173</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Allow holes to be refined into function types
+<a href="https://github.com/anoma/minijuvix/pull/165">#165</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Support implicit arguments
+<a href="https://github.com/anoma/minijuvix/pull/144">#144</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Add support for holes in type signatures
+<a href="https://github.com/anoma/minijuvix/pull/141">#141</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Support function closures with no environment in minic
+<a href="https://github.com/anoma/minijuvix/pull/137">#137</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Add holes for expressions in function clauses and inference support
+<a href="https://github.com/anoma/minijuvix/pull/136">#136</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Add &quot;-Oz&quot; optimization flag to clang args
+<a href="https://github.com/anoma/minijuvix/pull/133">#133</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Add version and help option and root command to the CLI
+<a href="https://github.com/anoma/minijuvix/pull/131">#131</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+</ul>
+<p><strong>Fixed bugs:</strong></p>
+<ul>
+<li>Fix: Ignore implicit patterns and arguments in termination checking
+<a href="https://github.com/anoma/minijuvix/pull/172">#172</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Fix: pretty printing for terminating keyword
+<a href="https://github.com/anoma/minijuvix/pull/145">#145</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+</ul>
+<p><strong>Merged pull requests:</strong></p>
+<ul>
+<li>Fix: proper error handling for typechecker errors
+<a href="https://github.com/anoma/minijuvix/pull/189">#189</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Add juvix version info and date to HTML output
+<a href="https://github.com/anoma/minijuvix/pull/186">#186</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Fix: Add check for constructor return types
+<a href="https://github.com/anoma/minijuvix/pull/182">#182</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Use Abstract name in Abstract syntax and Micro/MonoJuvix
+<a href="https://github.com/anoma/minijuvix/pull/181">#181</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Add an option to specify the path where to put the HTML output
+<a href="https://github.com/anoma/minijuvix/pull/179">#179</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Upgrade to ghc-9.2.3
+<a href="https://github.com/anoma/minijuvix/pull/178">#178</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Replace dead link in README with a link to the Juvix book
+<a href="https://github.com/anoma/minijuvix/pull/177">#177</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Embed HTML assets in the juvix binary
+<a href="https://github.com/anoma/minijuvix/pull/176">#176</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Fix: identifiers with a keyword prefix cannot be parsed
+<a href="https://github.com/anoma/minijuvix/pull/171">#171</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Improve filepath equality
+<a href="https://github.com/anoma/minijuvix/pull/170">#170</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Update validity predicate milestone example to 0.2 syntax
+<a href="https://github.com/anoma/minijuvix/pull/167">#167</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Fix links in documentation and update to new syntax
+<a href="https://github.com/anoma/minijuvix/pull/163">#163</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Update stdlib to work with version 0.2
+<a href="https://github.com/anoma/minijuvix/pull/160">#160</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Update README usage example to use the compile command
+<a href="https://github.com/anoma/minijuvix/pull/158">#158</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Remove dead code related to the pipeline
+<a href="https://github.com/anoma/minijuvix/pull/156">#156</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Add negative test for AppLeftImplicit
+<a href="https://github.com/anoma/minijuvix/pull/154">#154</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Add positive test designed for implicit arguments
+<a href="https://github.com/anoma/minijuvix/pull/153">#153</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Remove ExpressionTyped from MicroJuvix
+<a href="https://github.com/anoma/minijuvix/pull/143">#143</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Revision for package.yaml and minor deletions
+<a href="https://github.com/anoma/minijuvix/pull/135">#135</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+</ul>
+<h2 id="v014"><a class="header" href="#v014"><a href="https://github.com/anoma/minijuvix/tree/v0.1.4">v0.1.4</a></a></h2>
+<p>(2022-05-30)</p>
+<p><a href="https://github.com/anoma/minijuvix/compare/v0.1.3...v0.1.4">Full
+Changelog</a></p>
+<p><strong>Merged pull requests:</strong></p>
+<ul>
+<li>Generic Errors and refactoring
+<a href="https://github.com/anoma/minijuvix/pull/123">#123</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Only generates docs if the pull request merges
+<a href="https://github.com/anoma/minijuvix/pull/121">#121</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Add initial docs generation website
+<a href="https://github.com/anoma/minijuvix/pull/119">#119</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Fix internal link in README
+<a href="https://github.com/anoma/minijuvix/pull/116">#116</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Add minic-runtime for linking without libc
+<a href="https://github.com/anoma/minijuvix/pull/113">#113</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Add termination checking to the pipeline
+<a href="https://github.com/anoma/minijuvix/pull/111">#111</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Support uncurried higher order functions
+<a href="https://github.com/anoma/minijuvix/pull/110">#110</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Improve error generation and handling
+<a href="https://github.com/anoma/minijuvix/pull/108">#108</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Add MiniC tests with clang+wasi-sdk
+<a href="https://github.com/anoma/minijuvix/pull/105">#105</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Add usage example and move developer docs
+<a href="https://github.com/anoma/minijuvix/pull/96">#96</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Refactor warning related stuff
+<a href="https://github.com/anoma/minijuvix/pull/91">#91</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Remove Agda backend
+<a href="https://github.com/anoma/minijuvix/pull/86">#86</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+</ul>
+<p><strong>Implemented enhancements:</strong></p>
+<ul>
+<li>Add <code>compile</code> subcommand to generate binaries
+<a href="https://github.com/anoma/juvix/issues/128">#128</a></li>
+<li>Add intervals to flycheck errors
+<a href="https://github.com/anoma/juvix/issues/124">#124</a></li>
+<li>Improve error handling in juvix-mode
+<a href="https://github.com/anoma/juvix/issues/107">#107</a></li>
+<li>Support multiple modules in compilation
+<a href="https://github.com/anoma/juvix/issues/93">#93</a></li>
+<li>Add compile command to CLI
+<a href="https://github.com/anoma/minijuvix/pull/130">#130</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Use Interval in GenericErrors
+<a href="https://github.com/anoma/minijuvix/pull/125">#125</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Remove dev in the CI and other tweaks
+<a href="https://github.com/anoma/minijuvix/pull/118">#118</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Highlight comments correctly
+<a href="https://github.com/anoma/minijuvix/pull/106">#106</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Support multiple modules in compilation
+<a href="https://github.com/anoma/minijuvix/pull/100">#100</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>New target syntax and modular VP examples
+<a href="https://github.com/anoma/minijuvix/pull/92">#92</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+</ul>
+<p><strong>Fixed bugs:</strong></p>
+<ul>
+<li>Missing error messages when using throw/error
+<a href="https://github.com/anoma/juvix/issues/117">#117</a></li>
+<li>Fix highlight of comments
+<a href="https://github.com/anoma/juvix/issues/104">#104</a></li>
+<li>Fix juvix-mode coloring for projects with multiple modules
+<a href="https://github.com/anoma/juvix/issues/101">#101</a></li>
+<li>Fix <code>highlight</code> command for modules with import statements
+<a href="https://github.com/anoma/minijuvix/pull/102">#102</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+</ul>
+<p><strong>Closed issues:</strong></p>
+<ul>
+<li>Deprecate the class JuvixError
+<a href="https://github.com/anoma/juvix/issues/115">#115</a></li>
+<li>Add ToGenericError instance for the infix parsing errors
+<a href="https://github.com/anoma/juvix/issues/114">#114</a></li>
+<li>Compile to WASM without linking libc
+<a href="https://github.com/anoma/juvix/issues/112">#112</a></li>
+<li>Add the termination checker to the pipeline
+<a href="https://github.com/anoma/juvix/issues/109">#109</a></li>
+<li>Use clang + wasi-sdk instead of emcc to compile to WASM
+<a href="https://github.com/anoma/juvix/issues/103">#103</a></li>
+<li>Move developer tooling docs out of README
+<a href="https://github.com/anoma/juvix/issues/95">#95</a></li>
+<li>Add pre-commit checks to CI checks
+<a href="https://github.com/anoma/juvix/issues/94">#94</a></li>
+<li>Support higher order functions in C backend
+<a href="https://github.com/anoma/juvix/issues/90">#90</a></li>
+<li>Remove dev from the list of branches in the CI
+<a href="https://github.com/anoma/juvix/issues/89">#89</a></li>
+<li>Refactor warning related stuff
+<a href="https://github.com/anoma/juvix/issues/87">#87</a></li>
+<li>The Juvix website <a href="https://github.com/anoma/juvix/issues/51">#51</a></li>
+</ul>
+<h2 id="v013"><a class="header" href="#v013"><a href="https://github.com/anoma/minijuvix/tree/v0.1.3">v0.1.3</a></a></h2>
+<p>(2022-05-05)</p>
+<p><a href="https://github.com/anoma/minijuvix/compare/v0.1.2...v0.1.3">Full
+Changelog</a></p>
+<p><strong>Closed issues:</strong></p>
+<ul>
+<li>Monomorphisation naming inconsistency
+<a href="https://github.com/anoma/juvix/issues/84">#84</a></li>
+<li>Remove BackendAgda <a href="https://github.com/anoma/juvix/issues/83">#83</a></li>
+<li>Change terminating keyword behavior
+<a href="https://github.com/anoma/juvix/issues/81">#81</a></li>
+<li>MonoJuvix <code>ExpressionTyped</code> is never used
+<a href="https://github.com/anoma/juvix/issues/79">#79</a></li>
+<li>Bump stackage nightly and delete <code>allow-newer: true</code> from
+<code>stack.yaml</code> <a href="https://github.com/anoma/juvix/issues/75">#75</a></li>
+<li>Generate automatically CHANGELOG and Github Release Notes
+<a href="https://github.com/anoma/juvix/issues/73">#73</a></li>
+<li>Make flag –show-name-ids global
+<a href="https://github.com/anoma/juvix/issues/61">#61</a></li>
+<li>Add C code generation backend
+<a href="https://github.com/anoma/juvix/issues/60">#60</a></li>
+<li>Add polymorphism <a href="https://github.com/anoma/juvix/issues/59">#59</a></li>
+<li>Add the compile keyword to the frontend syntax (support up to
+Scoping) <a href="https://github.com/anoma/juvix/issues/58">#58</a></li>
+<li>Error with undefined or underscores
+<a href="https://github.com/anoma/juvix/issues/54">#54</a></li>
+<li>Add support for other GHC and Stack stable version
+<a href="https://github.com/anoma/juvix/issues/52">#52</a></li>
+<li>Autodetect output ANSI support when prettyprinting
+<a href="https://github.com/anoma/juvix/issues/38">#38</a></li>
+<li>Terminating for type signatures
+<a href="https://github.com/anoma/juvix/issues/11">#11</a></li>
+</ul>
+<p><strong>Merged pull requests:</strong></p>
+<ul>
+<li>Remove agda backend
+<a href="https://github.com/anoma/minijuvix/pull/86">#86</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>84 monomorphisation naming inconsistency
+<a href="https://github.com/anoma/minijuvix/pull/85">#85</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Change terminating keyword behavior
+<a href="https://github.com/anoma/minijuvix/pull/82">#82</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Remove unused constructor ExpressionTyped in Monojuvix
+<a href="https://github.com/anoma/minijuvix/pull/80">#80</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Stricter stack builds and pedantic mode for CI
+<a href="https://github.com/anoma/minijuvix/pull/78">#78</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Bump stackage version and remove allow-newer
+<a href="https://github.com/anoma/minijuvix/pull/76">#76</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Add automatically updates/issues/merged PRs to the changelog
+<a href="https://github.com/anoma/minijuvix/pull/74">#74</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Add terminating keyword
+<a href="https://github.com/anoma/minijuvix/pull/71">#71</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Monomorphization <a href="https://github.com/anoma/minijuvix/pull/70">#70</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Remove StatementCompile in AST after scoping
+<a href="https://github.com/anoma/minijuvix/pull/69">#69</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Add C code generation backend
+<a href="https://github.com/anoma/minijuvix/pull/68">#68</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Check if stderr supports ANSI and print accordingly
+<a href="https://github.com/anoma/minijuvix/pull/67">#67</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Add support for compile (by Jonathan)
+<a href="https://github.com/anoma/minijuvix/pull/66">#66</a>
+(<a href="https://github.com/paulcadman">paulcadman</a>)</li>
+<li>Add NameIdGen effect to the pipeline
+<a href="https://github.com/anoma/minijuvix/pull/64">#64</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Make the <code>--show-name-ids</code> flag global
+<a href="https://github.com/anoma/minijuvix/pull/63">#63</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Implement type checker with polymorphism
+<a href="https://github.com/anoma/minijuvix/pull/62">#62</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+</ul>
+<h2 id="v012"><a class="header" href="#v012"><a href="https://github.com/anoma/minijuvix/tree/v0.1.2">v0.1.2</a></a></h2>
+<p>(2022-04-11)</p>
+<p><a href="https://github.com/anoma/minijuvix/compare/v0.1.1...v0.1.2">Full
+Changelog</a></p>
+<p><strong>Closed issues:</strong></p>
+<ul>
+<li>Add en emacs mode with support for scoped highlighting
+<a href="https://github.com/anoma/juvix/issues/25">#25</a></li>
+<li>Add support for project root detection through a juvix.yaml file
+<a href="https://github.com/anoma/juvix/issues/24">#24</a></li>
+<li>Add CLI cmd to generate juvix autocompletion files for fish and zsh
+<a href="https://github.com/anoma/juvix/issues/23">#23</a></li>
+<li>Add pretty and typecheck subcommands to the microjuvix CLI
+<a href="https://github.com/anoma/juvix/issues/21">#21</a></li>
+<li>Translate identifiers from MicroJuvix to MiniHaskell (valid Haskell)
+<a href="https://github.com/anoma/juvix/issues/19">#19</a></li>
+<li>Implement the MiniHaskell to Haskell translation (prettyprinter)
+<a href="https://github.com/anoma/juvix/issues/18">#18</a></li>
+<li>Implementation of a typechecker for MicroJuvix
+<a href="https://github.com/anoma/juvix/issues/16">#16</a></li>
+<li>Add references to the Abstract AST to update compilation to
+MiniHaskell <a href="https://github.com/anoma/juvix/issues/12">#12</a></li>
+<li>Order in the house <a href="https://github.com/anoma/juvix/issues/10">#10</a></li>
+</ul>
+<p><strong>Merged pull requests:</strong></p>
+<ul>
+<li>The Juvix project now follows the same goals as the original Juvix
+project. <a href="https://github.com/anoma/minijuvix/pull/7">#7</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Dev→main <a href="https://github.com/anoma/minijuvix/pull/6">#6</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Big update including termination checking
+<a href="https://github.com/anoma/minijuvix/pull/5">#5</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Parser and scoper <a href="https://github.com/anoma/minijuvix/pull/3">#3</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+<li>Upgrade to ghc9 and use hpack
+<a href="https://github.com/anoma/minijuvix/pull/2">#2</a>
+(<a href="https://github.com/janmasrovira">janmasrovira</a>)</li>
+<li>Merge <a href="https://github.com/anoma/minijuvix/pull/1">#1</a>
+(<a href="https://github.com/jonaprieto">jonaprieto</a>)</li>
+</ul>
+<h2 id="v011"><a class="header" href="#v011"><a href="https://github.com/anoma/minijuvix/tree/v0.1.1">v0.1.1</a></a></h2>
+<p>(2022-03-25)</p>
+<p><a href="https://github.com/anoma/minijuvix/compare/48abde93b4e5380acabac810e584f4b7a6618592...v0.1.1">Full
+Changelog</a></p>
+<ul>
+<li>Add support in the parser/scoper for Axiom backends</li>
+<li>Add support for <code>foreign</code> keyword</li>
+<li>Add flag <code>--no-colors</code> for the scope command</li>
+<li>Upgrade to GHC 9.2.2</li>
+<li>Improve resolution of local symbols in the scoper</li>
+<li>Several new tests related to ambiguous symbols</li>
+<li>Add <code>--version</code> flag</li>
+<li>Add InfoTableBuilder effect for the scoper</li>
+</ul>
+<p><strong>Closed issues:</strong></p>
+<ul>
+<li>Add diff output to the test suite
+<a href="https://github.com/anoma/juvix/issues/9">#9</a></li>
+<li>Improve scoper ambiguity error messages
+<a href="https://github.com/anoma/juvix/issues/8">#8</a></li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../introduction/about/what-is.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="../getting-started/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../introduction/about/what-is.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="../getting-started/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+    </body>
+</html>
