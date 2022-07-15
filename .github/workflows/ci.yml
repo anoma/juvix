@@ -183,7 +183,7 @@ jobs:
           make install-shelltest
           make test-shell
   docs:
-    # if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true
     strategy:
       matrix:
         os: [ubuntu-latest]
