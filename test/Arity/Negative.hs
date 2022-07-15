@@ -68,7 +68,7 @@ tests =
       "MicroJuvix"
       "ExpectedExplicitPattern.juvix"
       $ \case
-        ErrExpectedExplicitPattern {} -> Nothing
+        ErrWrongPatternIsImplicit {} -> Nothing
         _ -> wrongError,
     NegTest
       "Expected explicit argument"
