@@ -32,6 +32,7 @@ data ScoperError
   | ErrMultipleCompileBlockSameName MultipleCompileBlockSameName
   | ErrMultipleCompileRuleSameBackend MultipleCompileRuleSameBackend
   | ErrWrongKindExpressionCompileBlock WrongKindExpressionCompileBlock
+  | ErrDuplicateInductiveParameterName DuplicateInductiveParameterName
   deriving stock (Show)
 
 instance ToGenericError ScoperError where
@@ -58,3 +59,4 @@ instance ToGenericError ScoperError where
     ErrMultipleCompileBlockSameName e -> genericError e
     ErrMultipleCompileRuleSameBackend e -> genericError e
     ErrWrongKindExpressionCompileBlock e -> genericError e
+    ErrDuplicateInductiveParameterName e -> genericError e

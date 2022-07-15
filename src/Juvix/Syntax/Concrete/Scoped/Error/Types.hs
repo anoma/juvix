@@ -522,3 +522,27 @@ ambiguousMessage n es =
       <> "It could be any of:"
       <> line
       <> indent' (vsep (map ppCode es))
+
+newtype DuplicateInductiveParameterName = DuplicateInductiveParameterName
+  { _duplicateInductiveParameterName :: Symbol
+  }
+  deriving stock (Show)
+
+makeLenses ''DuplicateInductiveParameterName
+
+instance ToGenericError DuplicateInductiveParameterName where
+  genericError e =
+    GenericError
+      { _genericErrorLoc = i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
+    where
+      param = e ^. duplicateInductiveParameterName
+      i = getLoc param
+      msg =
+        "Invalid name"
+          <+> ppCode param
+            <> "."
+            <> line
+            <> "Inductive parameter names can not be repeated."
