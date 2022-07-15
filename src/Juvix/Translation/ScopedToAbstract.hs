@@ -384,7 +384,6 @@ viewApp = \case
 goConstructorRef :: ConstructorRef -> Abstract.ConstructorRef
 goConstructorRef (ConstructorRef' n) = Abstract.ConstructorRef (goName n)
 
-
 goPatternArg :: Pattern -> Sem r Abstract.PatternArg
 goPatternArg = \case
   PatternBraces p -> Abstract.PatternArg Implicit <$> goPattern p

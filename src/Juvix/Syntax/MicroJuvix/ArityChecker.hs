@@ -200,8 +200,7 @@ checkLhs loc hint ariSignature pats = do
               throw
                 ( ErrWrongPatternIsImplicit
                     WrongPatternIsImplicit
-                      {
-                        _wrongPatternIsImplicitExpected = Explicit,
+                      { _wrongPatternIsImplicitExpected = Explicit,
                         _wrongPatternIsImplicitActual = p
                       }
                 )
@@ -222,15 +221,16 @@ checkLhs loc hint ariSignature pats = do
         a' = dropSuffix target' (unfoldArity a)
         target' = unfoldArity target
 
-checkPattern :: forall r.
+checkPattern ::
+  forall r.
   Members '[Reader InfoTable, Error ArityCheckerError, State LocalVars] r =>
   Arity ->
   PatternArg ->
   Sem r PatternArg
 checkPattern ari = traverseOf patternArgPattern helper
   where
-  helper :: Pattern -> Sem r Pattern
-  helper = \case
+    helper :: Pattern -> Sem r Pattern
+    helper = \case
       PatternVariable v -> addArity v ari $> PatternVariable v
       PatternWildcard i -> return (PatternWildcard i)
       PatternConstructorApp c -> case ari of

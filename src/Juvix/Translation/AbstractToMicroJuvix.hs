@@ -174,10 +174,11 @@ goFunctionClause n c = do
 goPatternArg :: Abstract.PatternArg -> Sem r PatternArg
 goPatternArg p = do
   pat' <- goPattern (p ^. Abstract.patternArgPattern)
-  return PatternArg {
-    _patternArgIsImplicit = p ^. Abstract.patternArgIsImplicit,
-    _patternArgPattern = pat'
-                    }
+  return
+    PatternArg
+      { _patternArgIsImplicit = p ^. Abstract.patternArgIsImplicit,
+        _patternArgPattern = pat'
+      }
 
 goPattern :: Abstract.Pattern -> Sem r Pattern
 goPattern p = case p of

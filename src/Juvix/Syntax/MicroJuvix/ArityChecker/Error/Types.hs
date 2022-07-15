@@ -66,8 +66,7 @@ instance ToGenericError LhsTooManyPatterns where
         | otherwise = "were"
 
 data WrongPatternIsImplicit = WrongPatternIsImplicit
-  {
-    _wrongPatternIsImplicitExpected :: IsImplicit,
+  { _wrongPatternIsImplicitExpected :: IsImplicit,
     _wrongPatternIsImplicitActual :: PatternArg
   }
 
@@ -86,7 +85,11 @@ instance ToGenericError WrongPatternIsImplicit where
       found = e ^. wrongPatternIsImplicitActual . patternArgIsImplicit
       pat = e ^. wrongPatternIsImplicitActual . patternArgPattern
       msg =
-        "Expected an" <+> pretty expec <+> "pattern but found an" <+> pretty found <+> "pattern:"
+        "Expected an"
+          <+> pretty expec
+          <+> "pattern but found an"
+          <+> pretty found
+          <+> "pattern:"
           <+> ppCode pat
 
 data ExpectedExplicitArgument = ExpectedExplicitArgument
