@@ -1,7 +1,7 @@
 module Juvix.Syntax.IsImplicit where
 
-import Juvix.Prelude.Pretty
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 
 data IsImplicit = Explicit | Implicit
   deriving stock (Show, Eq, Ord, Generic)

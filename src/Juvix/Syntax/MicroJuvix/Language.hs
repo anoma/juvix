@@ -116,9 +116,9 @@ data ConstructorApp = ConstructorApp
     _constrAppParameters :: [PatternArg]
   }
 
-data PatternArg = PatternArg {
-  _patternArgIsImplicit :: IsImplicit,
-  _patternArgPattern :: Pattern
+data PatternArg = PatternArg
+  { _patternArgIsImplicit :: IsImplicit,
+    _patternArgPattern :: Pattern
   }
 
 data Pattern
@@ -198,8 +198,8 @@ instance HasAtomicity ConstructorApp where
 
 instance HasAtomicity PatternArg where
   atomicity p
-   | Implicit <- p ^. patternArgIsImplicit = Atom
-   | otherwise = atomicity (p ^. patternArgPattern)
+    | Implicit <- p ^. patternArgIsImplicit = Atom
+    | otherwise = atomicity (p ^. patternArgPattern)
 
 instance HasAtomicity Pattern where
   atomicity p = case p of

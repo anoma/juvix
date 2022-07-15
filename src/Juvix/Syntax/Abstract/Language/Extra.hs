@@ -50,19 +50,20 @@ smallerPatternVariables f p = case p of
 
 viewApp :: Expression -> (Expression, [ApplicationArg])
 viewApp e =
- case e of
-  ExpressionApplication (Application l r i) ->
-    second (`snoc` ApplicationArg i r) (viewApp l)
-  _ -> (e, [])
-
+  case e of
+    ExpressionApplication (Application l r i) ->
+      second (`snoc` ApplicationArg i r) (viewApp l)
+    _ -> (e, [])
 
 viewAppArgAsPattern :: ApplicationArg -> Maybe PatternArg
 viewAppArgAsPattern a = do
   p' <- viewExpressionAsPattern (a ^. appArg)
-  return (PatternArg {
-             _patternArgIsImplicit = a ^. appArgIsImplicit,
-             _patternArgPattern = p'
-                     })
+  return
+    ( PatternArg
+        { _patternArgIsImplicit = a ^. appArgIsImplicit,
+          _patternArgPattern = p'
+        }
+    )
 
 viewExpressionAsPattern :: Expression -> Maybe Pattern
 viewExpressionAsPattern e = case viewApp e of
@@ -218,12 +219,12 @@ toApplicationArg :: PatternArg -> ApplicationArg
 toApplicationArg p =
   set appArgIsImplicit (p ^. patternArgIsImplicit) (helper (p ^. patternArgPattern))
   where
-  helper :: Pattern -> ApplicationArg
-  helper = \case
-    PatternVariable v -> ApplicationArg Explicit (toExpression v)
-    PatternConstructorApp a -> ApplicationArg Explicit (toExpression a)
-    PatternEmpty -> impossible
-    PatternWildcard _ -> error "TODO"
+    helper :: Pattern -> ApplicationArg
+    helper = \case
+      PatternVariable v -> ApplicationArg Explicit (toExpression v)
+      PatternConstructorApp a -> ApplicationArg Explicit (toExpression a)
+      PatternEmpty -> impossible
+      PatternWildcard _ -> error "TODO"
 
 clauseLhsAsExpression :: FunctionClause -> Expression
 clauseLhsAsExpression cl =

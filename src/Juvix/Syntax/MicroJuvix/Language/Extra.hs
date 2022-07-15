@@ -264,8 +264,8 @@ renamePattern m = over patternVariables renameVar
   where
     renameVar :: VarName -> VarName
     renameVar v
-        | Just v' <- m ^. at v = v'
-        | otherwise = v
+      | Just v' <- m ^. at v = v'
+      | otherwise = v
 
 inductiveTypeVarsAssoc :: Foldable f => InductiveDef -> f a -> HashMap VarName a
 inductiveTypeVarsAssoc def l

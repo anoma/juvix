@@ -31,6 +31,5 @@ mkSizeInfo ps = SizeInfo {..}
     _sizeSmaller :: HashMap VarName Int
     _sizeSmaller =
       HashMap.fromList
-        [ (v, i) | (i, p) <- zip [0 ..] ps',
-          v <- p ^.. smallerPatternVariables
+        [ (v, i) | (i, p) <- zip [0 ..] ps', v <- p ^.. smallerPatternVariables
         ]
