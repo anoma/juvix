@@ -1,0 +1,75 @@
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml"><meta charset="UTF-8"><link href="assets/source-ayu-light.css" rel="stylesheet" type="text/css"><script src="assets/highlight.js" type="text/javascript"></script><div id="package-header"><span class="caption"></span></div><pre id="src-content"><span class="ju-keyword">module</span> <span id="1"><span class="annot"><a href="Anoma.Base.html#1"><span class="annot"><a href="Anoma.Base.html#1"><span class="ju-var">Anoma<span class="ju-delimiter">.</span>Base</span></a></span></a></span></span><span class="ju-delimiter">;</span>
+  <span class="ju-keyword">foreign</span> <span class="ju-keyword">ghc</span> {
+  import Anoma.Base
+  }<span class="ju-delimiter">;</span>
+
+  <span class="ju-keyword">foreign</span> <span class="ju-keyword">c</span> {
+  int readPre(const char *key) {
+      if (strcmp(&quot;change1-key&quot;, key)) {
+          return 100;
+      \} else if (strcmp(&quot;change2-key&quot;, key)) {
+          return 90;
+      \} else {
+          return -1;
+      \}
+  \}
+
+  int readPost(const char *key) {
+      if (strcmp(&quot;change1-key&quot;, key)) {
+          return 90;
+      \} else if (strcmp(&quot;change2-key&quot;, key)) {
+          return 100;
+      \} else {
+          return -1;
+      \}
+  \}
+
+  char* isBalanceKey(const char* s1, const char* s2) {
+      return &quot;owner-address&quot;;
+  \}
+  }<span class="ju-delimiter">;</span>
+
+  <span class="ju-keyword">import</span> <span class="annot"><a href="Prelude.html#2"><span class="ju-var">Prelude</span></a></span><span class="ju-delimiter">;</span>
+  <span class="ju-keyword">open</span> <span class="annot"><a href="Prelude.html#2"><span class="ju-var">Prelude</span></a></span><span class="ju-delimiter">;</span>
+
+  <span id="188"><span class="annot"><a href="Anoma.Base.html#188"><span class="annot"><a href="Anoma.Base.html#188"><span class="ju-function">from-int</span></a></span></a></span></span> <span class="ju-keyword">:</span> <span class="annot"><a href="Data.Int.html#31"><span class="ju-axiom">Int</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.Maybe.html#145"><span class="ju-inductive">Maybe</span></a></span> <span class="annot"><a href="Data.Int.html#31"><span class="ju-axiom">Int</span></a></span><span class="ju-delimiter">;</span>
+  <span class="annot"><a href="Anoma.Base.html#188"><span class="ju-function">from-int</span></a></span> <span id="189"><span class="annot"><a href="Anoma.Base.html#189"><span class="annot"><a href="Anoma.Base.html#189"><span class="ju-var">i</span></a></span></a></span></span> <span class="ju-keyword">≔</span> <span class="annot"><a href="Data.Bool.html#13"><span class="ju-function">if</span></a></span> <span class="ju-delimiter">(</span><span class="annot"><a href="Anoma.Base.html#189"><span class="ju-var">i</span></a></span> <span class="annot"><a href="Data.Int.html#33"><span class="ju-function">&lt;</span></a></span> <span class="ju-number">0</span><span class="ju-delimiter">)</span> <span class="annot"><a href="Data.Maybe.html#146"><span class="ju-constructor">nothing</span></a></span> <span class="ju-delimiter">(</span><span class="annot"><a href="Data.Maybe.html#147"><span class="ju-constructor">just</span></a></span> <span class="annot"><a href="Anoma.Base.html#189"><span class="ju-var">i</span></a></span><span class="ju-delimiter">)</span><span class="ju-delimiter">;</span>
+
+  <span id="190"><span class="annot"><a href="Anoma.Base.html#190"><span class="annot"><a href="Anoma.Base.html#190"><span class="ju-function">from-string</span></a></span></a></span></span> <span class="ju-keyword">:</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.Maybe.html#145"><span class="ju-inductive">Maybe</span></a></span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span><span class="ju-delimiter">;</span>
+  <span class="annot"><a href="Anoma.Base.html#190"><span class="ju-function">from-string</span></a></span> <span id="191"><span class="annot"><a href="Anoma.Base.html#191"><span class="annot"><a href="Anoma.Base.html#191"><span class="ju-var">s</span></a></span></a></span></span> <span class="ju-keyword">≔</span> <span class="annot"><a href="Data.Bool.html#13"><span class="ju-function">if</span></a></span> <span class="ju-delimiter">(</span><span class="annot"><a href="Anoma.Base.html#191"><span class="ju-var">s</span></a></span> <span class="annot"><a href="Data.String.html#26"><span class="ju-function">==String</span></a></span> <span class="ju-string">&quot;&quot;</span><span class="ju-delimiter">)</span> <span class="annot"><a href="Data.Maybe.html#146"><span class="ju-constructor">nothing</span></a></span> <span class="ju-delimiter">(</span><span class="annot"><a href="Data.Maybe.html#147"><span class="ju-constructor">just</span></a></span> <span class="annot"><a href="Anoma.Base.html#191"><span class="ju-var">s</span></a></span><span class="ju-delimiter">)</span><span class="ju-delimiter">;</span>
+
+  <span class="ju-keyword">axiom</span> <span class="annot"><a href="Anoma.Base.html#192"><span class="ju-axiom">readPre</span></a></span> <span class="ju-keyword">:</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.Int.html#31"><span class="ju-axiom">Int</span></a></span><span class="ju-delimiter">;</span>
+
+  <span class="ju-keyword">compile</span> <span class="annot"><a href="Anoma.Base.html#192"><span class="ju-axiom">readPre</span></a></span> <span class="ju-delimiter">{</span>
+    <span class="ju-keyword">c</span> <span class="ju-keyword">↦</span> <span class="ju-string">&quot;readPre&quot;</span><span class="ju-delimiter">;</span>
+    <span class="ju-keyword">ghc</span> <span class="ju-keyword">↦</span> <span class="ju-string">&quot;readPre&quot;</span><span class="ju-delimiter">;</span>
+  <span class="ju-delimiter">}</span><span class="ju-delimiter">;</span>
+
+  <span class="ju-keyword">axiom</span> <span class="annot"><a href="Anoma.Base.html#193"><span class="ju-axiom">readPost</span></a></span> <span class="ju-keyword">:</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.Int.html#31"><span class="ju-axiom">Int</span></a></span><span class="ju-delimiter">;</span>
+
+  <span class="ju-keyword">compile</span> <span class="annot"><a href="Anoma.Base.html#193"><span class="ju-axiom">readPost</span></a></span> <span class="ju-delimiter">{</span>
+    <span class="ju-keyword">c</span> <span class="ju-keyword">↦</span> <span class="ju-string">&quot;readPost&quot;</span><span class="ju-delimiter">;</span>
+    <span class="ju-keyword">ghc</span> <span class="ju-keyword">↦</span> <span class="ju-string">&quot;readPost&quot;</span><span class="ju-delimiter">;</span>
+  <span class="ju-delimiter">}</span><span class="ju-delimiter">;</span>
+
+  <span class="ju-keyword">axiom</span> <span class="annot"><a href="Anoma.Base.html#194"><span class="ju-axiom">isBalanceKey</span></a></span> <span class="ju-keyword">:</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span><span class="ju-delimiter">;</span>
+
+  <span class="ju-keyword">compile</span> <span class="annot"><a href="Anoma.Base.html#194"><span class="ju-axiom">isBalanceKey</span></a></span> <span class="ju-delimiter">{</span>
+    <span class="ju-keyword">c</span> <span class="ju-keyword">↦</span> <span class="ju-string">&quot;isBalanceKey&quot;</span><span class="ju-delimiter">;</span>
+    <span class="ju-keyword">ghc</span> <span class="ju-keyword">↦</span> <span class="ju-string">&quot;isBalanceKey&quot;</span><span class="ju-delimiter">;</span>
+  <span class="ju-delimiter">}</span><span class="ju-delimiter">;</span>
+
+  <span id="195"><span class="annot"><a href="Anoma.Base.html#195"><span class="annot"><a href="Anoma.Base.html#195"><span class="ju-function">read-pre</span></a></span></a></span></span> <span class="ju-keyword">:</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.Maybe.html#145"><span class="ju-inductive">Maybe</span></a></span> <span class="annot"><a href="Data.Int.html#31"><span class="ju-axiom">Int</span></a></span><span class="ju-delimiter">;</span>
+  <span class="annot"><a href="Anoma.Base.html#195"><span class="ju-function">read-pre</span></a></span> <span id="196"><span class="annot"><a href="Anoma.Base.html#196"><span class="annot"><a href="Anoma.Base.html#196"><span class="ju-var">s</span></a></span></a></span></span> <span class="ju-keyword">≔</span> <span class="annot"><a href="Anoma.Base.html#188"><span class="ju-function">from-int</span></a></span> <span class="ju-delimiter">(</span><span class="annot"><a href="Anoma.Base.html#192"><span class="ju-axiom">readPre</span></a></span> <span class="annot"><a href="Anoma.Base.html#196"><span class="ju-var">s</span></a></span><span class="ju-delimiter">)</span><span class="ju-delimiter">;</span>
+
+  <span id="197"><span class="annot"><a href="Anoma.Base.html#197"><span class="annot"><a href="Anoma.Base.html#197"><span class="ju-function">read-post</span></a></span></a></span></span> <span class="ju-keyword">:</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.Maybe.html#145"><span class="ju-inductive">Maybe</span></a></span> <span class="annot"><a href="Data.Int.html#31"><span class="ju-axiom">Int</span></a></span><span class="ju-delimiter">;</span>
+  <span class="annot"><a href="Anoma.Base.html#197"><span class="ju-function">read-post</span></a></span> <span id="198"><span class="annot"><a href="Anoma.Base.html#198"><span class="annot"><a href="Anoma.Base.html#198"><span class="ju-var">s</span></a></span></a></span></span> <span class="ju-keyword">≔</span> <span class="annot"><a href="Anoma.Base.html#188"><span class="ju-function">from-int</span></a></span> <span class="ju-delimiter">(</span><span class="annot"><a href="Anoma.Base.html#193"><span class="ju-axiom">readPost</span></a></span> <span class="annot"><a href="Anoma.Base.html#198"><span class="ju-var">s</span></a></span><span class="ju-delimiter">)</span><span class="ju-delimiter">;</span>
+
+  <span id="199"><span class="annot"><a href="Anoma.Base.html#199"><span class="annot"><a href="Anoma.Base.html#199"><span class="ju-function">is-balance-key</span></a></span></a></span></span> <span class="ju-keyword">:</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.Maybe.html#145"><span class="ju-inductive">Maybe</span></a></span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span><span class="ju-delimiter">;</span>
+  <span class="annot"><a href="Anoma.Base.html#199"><span class="ju-function">is-balance-key</span></a></span> <span id="200"><span class="annot"><a href="Anoma.Base.html#200"><span class="annot"><a href="Anoma.Base.html#200"><span class="ju-var">token</span></a></span></a></span></span> <span id="201"><span class="annot"><a href="Anoma.Base.html#201"><span class="annot"><a href="Anoma.Base.html#201"><span class="ju-var">key</span></a></span></a></span></span> <span class="ju-keyword">≔</span> <span class="annot"><a href="Anoma.Base.html#190"><span class="ju-function">from-string</span></a></span> <span class="ju-delimiter">(</span><span class="annot"><a href="Anoma.Base.html#194"><span class="ju-axiom">isBalanceKey</span></a></span> <span class="annot"><a href="Anoma.Base.html#200"><span class="ju-var">token</span></a></span> <span class="annot"><a href="Anoma.Base.html#201"><span class="ju-var">key</span></a></span><span class="ju-delimiter">)</span><span class="ju-delimiter">;</span>
+
+  <span id="202"><span class="annot"><a href="Anoma.Base.html#202"><span class="annot"><a href="Anoma.Base.html#202"><span class="ju-function">unwrap-default</span></a></span></a></span></span> <span class="ju-keyword">:</span> <span class="annot"><a href="Data.Maybe.html#145"><span class="ju-inductive">Maybe</span></a></span> <span class="annot"><a href="Data.Int.html#31"><span class="ju-axiom">Int</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.Int.html#31"><span class="ju-axiom">Int</span></a></span><span class="ju-delimiter">;</span>
+  <span class="annot"><a href="Anoma.Base.html#202"><span class="ju-function">unwrap-default</span></a></span> <span class="ju-keyword">≔</span> <span class="annot"><a href="Data.Maybe.html#150"><span class="ju-function">maybe</span></a></span> <span class="ju-number">0</span> <span class="annot"><a href="Prelude.html#186"><span class="ju-function">id</span></a></span><span class="ju-delimiter">;</span>
+<span class="ju-keyword">end</span><span class="ju-delimiter">;</span>
+</pre><footer><pre>Powered by <a href="https://anoma.github.io/juvix">Juvix CLI </a><a href="https://github.com/anoma/juvix/commit/34c6dd4">0.2.1-34c6dd4</a><br><span>Last modified on 2022-07-15 15:22 UTC</span></pre></footer></html>

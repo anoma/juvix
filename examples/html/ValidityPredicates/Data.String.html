@@ -1,0 +1,41 @@
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml"><meta charset="UTF-8"><link href="assets/source-ayu-light.css" rel="stylesheet" type="text/css"><script src="assets/highlight.js" type="text/javascript"></script><div id="package-header"><span class="caption"></span></div><pre id="src-content"><span class="ju-keyword">module</span> <span id="23"><span class="annot"><a href="Data.String.html#23"><span class="annot"><a href="Data.String.html#23"><span class="ju-var">Data<span class="ju-delimiter">.</span>String</span></a></span></a></span></span><span class="ju-delimiter">;</span>
+  <span class="ju-keyword">import</span> <span class="annot"><a href="Data.Bool.html#3"><span class="ju-var">Data<span class="ju-delimiter">.</span>Bool</span></a></span><span class="ju-delimiter">;</span>
+  <span class="ju-keyword">open</span> <span class="annot"><a href="Data.Bool.html#3"><span class="ju-var">Data<span class="ju-delimiter">.</span>Bool</span></a></span><span class="ju-delimiter">;</span>
+
+  <span class="ju-keyword">axiom</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span> <span class="ju-keyword">:</span> <span class="ju-keyword">Type</span><span class="ju-delimiter">;</span>
+
+  <span class="ju-keyword">compile</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span> <span class="ju-delimiter">{</span>
+    <span class="ju-keyword">c</span> <span class="ju-keyword">↦</span> <span class="ju-string">&quot;char*&quot;</span><span class="ju-delimiter">;</span>
+    <span class="ju-keyword">ghc</span> <span class="ju-keyword">↦</span> <span class="ju-string">&quot;[Char]&quot;</span><span class="ju-delimiter">;</span>
+  <span class="ju-delimiter">}</span><span class="ju-delimiter">;</span>
+
+  <span class="ju-keyword">foreign</span> <span class="ju-keyword">c</span> {
+  bool eqString(char* l, char* r) {
+    return strcmp(l, r) == 0;
+  \}
+  }<span class="ju-delimiter">;</span>
+
+  <span class="ju-keyword">axiom</span> <span class="annot"><a href="Data.String.html#25"><span class="ju-axiom">eqString</span></a></span> <span class="ju-keyword">:</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.Bool.html#16"><span class="ju-axiom">BackendBool</span></a></span><span class="ju-delimiter">;</span>
+
+  <span class="ju-keyword">compile</span> <span class="annot"><a href="Data.String.html#25"><span class="ju-axiom">eqString</span></a></span> <span class="ju-delimiter">{</span>
+    <span class="ju-keyword">c</span> <span class="ju-keyword">↦</span> <span class="ju-string">&quot;eqString&quot;</span><span class="ju-delimiter">;</span>
+    <span class="ju-keyword">ghc</span> <span class="ju-keyword">↦</span> <span class="ju-string">&quot;(==)&quot;</span><span class="ju-delimiter">;</span>
+  <span class="ju-delimiter">}</span><span class="ju-delimiter">;</span>
+
+  <span class="ju-keyword">infix</span> 4 <span class="ju-var">==String</span><span class="ju-delimiter">;</span>
+  <span id="26"><span class="annot"><a href="Data.String.html#26"><span class="annot"><a href="Data.String.html#26"><span class="ju-function">==String</span></a></span></a></span></span> <span class="ju-keyword">:</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.Bool.html#4"><span class="ju-inductive">Bool</span></a></span><span class="ju-delimiter">;</span>
+  <span class="annot"><a href="Data.String.html#26"><span class="ju-function">==String</span></a></span> <span id="27"><span class="annot"><a href="Data.String.html#27"><span class="annot"><a href="Data.String.html#27"><span class="ju-var">s1</span></a></span></a></span></span> <span id="28"><span class="annot"><a href="Data.String.html#28"><span class="annot"><a href="Data.String.html#28"><span class="ju-var">s2</span></a></span></a></span></span> <span class="ju-keyword">≔</span> <span class="annot"><a href="Data.Bool.html#20"><span class="ju-function">from-backend-bool</span></a></span> <span class="ju-delimiter">(</span><span class="annot"><a href="Data.String.html#25"><span class="ju-axiom">eqString</span></a></span> <span class="annot"><a href="Data.String.html#27"><span class="ju-var">s1</span></a></span> <span class="annot"><a href="Data.String.html#28"><span class="ju-var">s2</span></a></span><span class="ju-delimiter">)</span><span class="ju-delimiter">;</span>
+
+  <span id="29"><span class="annot"><a href="Data.String.html#29"><span class="annot"><a href="Data.String.html#29"><span class="ju-function">boolToStr</span></a></span></a></span></span> <span class="ju-keyword">:</span> <span class="annot"><a href="Data.Bool.html#4"><span class="ju-inductive">Bool</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span><span class="ju-delimiter">;</span>
+  <span class="annot"><a href="Data.String.html#29"><span class="ju-function">boolToStr</span></a></span> <span class="annot"><a href="Data.Bool.html#5"><span class="ju-constructor">true</span></a></span> <span class="ju-keyword">≔</span> <span class="ju-string">&quot;true&quot;</span><span class="ju-delimiter">;</span>
+  <span class="annot"><a href="Data.String.html#29"><span class="ju-function">boolToStr</span></a></span> <span class="annot"><a href="Data.Bool.html#6"><span class="ju-constructor">false</span></a></span> <span class="ju-keyword">≔</span> <span class="ju-string">&quot;false&quot;</span><span class="ju-delimiter">;</span>
+
+  <span class="ju-keyword">infixr</span> 5 <span class="ju-var">++</span><span class="ju-delimiter">;</span>
+  <span class="ju-keyword">axiom</span> <span class="annot"><a href="Data.String.html#30"><span class="ju-axiom">++</span></a></span> <span class="ju-keyword">:</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span> <span class="ju-keyword">→</span> <span class="annot"><a href="Data.String.html#24"><span class="ju-axiom">String</span></a></span><span class="ju-delimiter">;</span>
+
+  <span class="ju-keyword">compile</span> <span class="annot"><a href="Data.String.html#30"><span class="ju-axiom">++</span></a></span> <span class="ju-delimiter">{</span>
+    <span class="ju-keyword">c</span> <span class="ju-keyword">↦</span> <span class="ju-string">&quot;concat&quot;</span><span class="ju-delimiter">;</span>
+  <span class="ju-delimiter">}</span><span class="ju-delimiter">;</span>
+<span class="ju-keyword">end</span><span class="ju-delimiter">;</span>
+</pre><footer><pre>Powered by <a href="https://anoma.github.io/juvix">Juvix CLI </a><a href="https://github.com/anoma/juvix/commit/34c6dd4">0.2.1-34c6dd4</a><br><span>Last modified on 2022-07-15 15:22 UTC</span></pre></footer></html>
