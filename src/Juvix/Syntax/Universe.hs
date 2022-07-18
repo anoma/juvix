@@ -12,7 +12,7 @@ data Universe = Universe
 newtype SmallUniverse = SmallUniverse
   { _smallUniverseLoc :: Interval
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
 
 instance Eq SmallUniverse where
   _ == _ = True

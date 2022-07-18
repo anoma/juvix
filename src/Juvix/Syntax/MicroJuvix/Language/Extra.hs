@@ -381,10 +381,10 @@ unfoldApplication' :: Application -> (Expression, NonEmpty (IsImplicit, Expressi
 unfoldApplication' (Application l' r' i') = second (|: (i', r')) (unfoldExpressionApp l')
 
 unfoldExpressionApp :: Expression -> (Expression, [(IsImplicit, Expression)])
-unfoldExpressionApp e = case e of
+unfoldExpressionApp = \case
   ExpressionApplication (Application l r i) ->
     second (`snoc` (i, r)) (unfoldExpressionApp l)
-  _ -> (e, [])
+  e -> (e, [])
 
 unfoldApplication :: Application -> (Expression, NonEmpty Expression)
 unfoldApplication = fmap (fmap snd) . unfoldApplication'
@@ -396,16 +396,6 @@ nameInExpression n = \case
   ExpressionApplication (Application l r _) -> nameInExpression n l || nameInExpression n r
   ExpressionFunction (Function l r) -> nameInExpression n (l ^. paramType) || nameInExpression n r
   _ -> False
-
-nameNegInExpression :: Name -> Expression -> Bool
-nameNegInExpression n = helper False
-  where
-    helper inside = \case
-      ExpressionIden (IdenVar var) -> inside && n == var
-      ExpressionIden (IdenInductive ty) -> n == ty
-      ExpressionApplication (Application l r _) -> helper True l || helper False r
-      ExpressionFunction (Function l r) -> helper True (l ^. paramType) || helper False r
-      _ -> False
 
 reachableModules :: Module -> [Module]
 reachableModules = fst . run . runOutputList . evalState (mempty :: HashSet Name) . go

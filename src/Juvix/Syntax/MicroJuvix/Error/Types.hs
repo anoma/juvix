@@ -292,28 +292,3 @@ instance ToGenericError NoStrictPositivity where
           <+> "the type"
           <+> ppCode ty
           <+> "appears in a negative position."
-
-data WrongInductiveParameterName = WrongInductiveParameterName
-  { _wrongInductiveParameterName :: Name,
-    _wrongInductiveParameterType :: Name
-  }
-
-makeLenses ''WrongInductiveParameterName
-
-instance ToGenericError WrongInductiveParameterName where
-  genericError e =
-    GenericError
-      { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
-        _genericErrorIntervals = [i]
-      }
-    where
-      param = e ^. wrongInductiveParameterName
-      ty = e ^. wrongInductiveParameterType
-      i = getLoc param
-      msg =
-        "The parameter name"
-          <+> ppCode param
-          <+> "is not valid"
-          <+> "when declaring type"
-          <+> ppCode ty

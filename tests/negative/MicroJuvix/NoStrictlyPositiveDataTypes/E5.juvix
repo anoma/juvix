@@ -10,7 +10,7 @@ c1 : (B -> T0 A) -> T1 A;
 };
 
 inductive T2 {
-c2: (B -> (B -> T1 T2)) -> T2;
+c2 : (B -> (B -> T1 T2)) -> T2;
 };
 
 -- inductive T3 {
