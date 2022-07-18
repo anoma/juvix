@@ -20,7 +20,7 @@ inductive Nat {
 #+end_example
 
 The way to use inductive types is by declaring functions by pattern matching.
-Let us define, for example, the function for adding two natural numbers. 
+Let us define, for example, the function for adding two natural numbers.
 
 #+begin_src text
 inifl 6 +;

@@ -1,7 +1,7 @@
 
 * Built-ins
 
-Juvix has support for the built-in natural type and a few functions that are compiled to efficient primitives. 
+Juvix has support for the built-in natural type and a few functions that are compiled to efficient primitives.
 
 1. Built-in inductive definitions.
 

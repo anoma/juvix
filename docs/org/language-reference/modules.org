@@ -4,7 +4,7 @@
 
 Each Juvix file has to define a module of the same name.
 The keyword =module= stars the declaration and has to end with
-the keyword =end=. In the example below, we declare an empty module called =Example=. 
+the keyword =end=. In the example below, we declare an empty module called =Example=.
 
 #+begin_example
 -- Example.juvix
@@ -14,7 +14,7 @@ end;
 #+end_example
 
 A =Juvix= project is a collection of Juvix modules inside the main folder
-containing the file =juvix.yaml= with metadata about the project. To check that =Juvix= is correctly detecting your project's root, run the command =juvix internal root File.juvix=. 
+containing the file =juvix.yaml= with metadata about the project. To check that =Juvix= is correctly detecting your project's root, run the command =juvix internal root File.juvix=.
 
 # - Inside a module, other (sub) modules can be declared.
 
@@ -29,7 +29,7 @@ containing the file =juvix.yaml= with metadata about the project. To check that 
 ** Importing modules
 
 To bring into the current scope all module definitions from other
-external modules, one can use the =import= keyword along with the corresponding module name. This way, one gets all the imported names qualified. 
+external modules, one can use the =import= keyword along with the corresponding module name. This way, one gets all the imported names qualified.
 
 #+begin_example
 -- A.juvix
@@ -45,8 +45,8 @@ module B;
     x := A.zero;
 #+end_example
 
-Additionally, one can _open_ an imported module making available its 
-names but all unqualified. 
+Additionally, one can _open_ an imported module making available its
+names but all unqualified.
 
 #+begin_example
 -- A.juvix

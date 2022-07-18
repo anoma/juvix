@@ -27,7 +27,7 @@ The following Juvix examples are NOT valid.
 axiom Action : Type;
 compile Action {
  ghc ↦ "IO ()";
- ghc ↦ "IO ()";  -- 
+ ghc ↦ "IO ()";  --
 };
 ...
 #+end_src

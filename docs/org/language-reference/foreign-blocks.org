@@ -17,8 +17,8 @@ foreign c {
    \}
 };
 
-inductive Bool { 
-    true : Bool; 
+inductive Bool {
+    true : Bool;
     false : Bool;
 };
 
