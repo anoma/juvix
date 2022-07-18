@@ -8,6 +8,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Builtins
 import Juvix.Internal.NameIdGen
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 import Juvix.Syntax.Abstract.AbstractResult
 import Juvix.Syntax.Abstract.InfoTableBuilder
 import Juvix.Syntax.Abstract.Language qualified as Abstract
@@ -73,7 +74,11 @@ goModule m = case sing :: SModuleIsTop t of
           SModuleLocal -> goSymbol n
 
 goName :: S.Name -> Abstract.Name
-goName = goSymbol . S.nameUnqualify
+goName name =
+  goSymbol (set S.nameConcrete concr name)
+  where
+    concr :: Symbol
+    concr = WithLoc (getLoc name) (prettyText name)
 
 goSymbol :: S.Symbol -> Abstract.Name
 goSymbol s =
