@@ -199,5 +199,10 @@ tests =
       "Import embedded standard library"
       "StdlibImport"
       StdlibInclude
-      "StdlibImport.juvix"
+      "StdlibImport.juvix",
+    PosTest
+      "Check Valid Symbols"
+      ""
+      StdlibInclude
+      "Symbols.juvix"
   ]
