@@ -3,13 +3,18 @@
 ** Defining a module
 
 Each Juvix file has to define a module of the same name.
+The keyword =module= stars the declaration and has to end with
+the keyword =end=. In the example below, we declare an empty module called =Example=. 
 
 #+begin_example
 -- Example.juvix
 module Example;
--- module content ...
+
 end;
 #+end_example
+
+A =Juvix= project is a collection of Juvix modules inside the main folder
+containing the file =juvix.yaml= with metadata about the project. To check that =Juvix= is correctly detecting your project's root, run the command =juvix internal root File.juvix=. 
 
 # - Inside a module, other (sub) modules can be declared.
 
@@ -21,10 +26,10 @@ end;
 # end;
 # #+end_example
 
-** Importing external definitions
+** Importing modules
 
 To bring into the current scope all module definitions from other
-external modules, one can use the `import` keyword along with the corresponding module name. This way all imported names are qualified.
+external modules, one can use the =import= keyword along with the corresponding module name. This way, one gets all the imported names qualified. 
 
 #+begin_example
 -- A.juvix
@@ -58,7 +63,7 @@ module B;
     x := zero;
 #+end_example
 
-However, opening modules may create name collisions if you already have the imported names as definitions in the current module. In this case, Juvix will complain with an error letting you know which symbols is ambiguous. In the module =B= below, the name =a= is ambiguous.
+However, opening modules may create name collisions if you already have the imported names as definitions in the current module. In this case, Juvix will complain with an error, letting you know which symbols is ambiguous. For example, in module =B= below, the name =a= is ambiguous.
 
 #+begin_example
 -- A.juvix
@@ -93,7 +98,7 @@ end;
 
 Now, we can use the =open import= syntax to simplify the =import-open= statements.
 
-Instead of having
+Instead of having:
 
 #+begin_example
 import Prelude;
@@ -106,7 +111,7 @@ We simplify it by the expression:
 open import Prelude;
 #+end_example
 
-The `hiding` keyword can be used within an =open-import= statement.
+The =hiding= keyword can be used within an =open-import= statement.
 
 #+begin_example
 -- B.juvix
@@ -117,6 +122,36 @@ x := a;
 end;
 #+end_example
 
+** Exporting symbols
 
-** Public names 
+The module =C= below does not typecheck. Both symbols, originally defined in module =A=, are not visible in module =C= after importing =B=. The symbols =A= and =a= are not exported by the module =B=. To export symbols from an imported module, one can use the =public= keyword at the end of the corresponing =open= statement. For example, in module =B=, after marking the import of =A= as =public=, the module =C= typechecks.
 
+#+begin_example
+-- A.juvix
+module A;
+axiom A : Type;
+axiom a : A;
+end;
+
+-- B.juvix
+module B;
+open import A;
+end;
+
+-- C.juvix
+module C;
+open import B;
+
+x : A;
+x := a;
+end;
+#+end_example
+
+Fix:
+
+#+begin_example
+-- B.juvix
+module B;
+open import A public;
+end;
+#+end_example

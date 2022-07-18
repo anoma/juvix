@@ -27,14 +27,27 @@ juvix [Global options]  ((-v|--version) | --show-root | COMMAND)
   Only print errors in a uniform format (used by
                           juvix-mode)
 
-** Commands
+** Main Commands
+
+- =html=
+  Generate HTML output from a Juvix file
+
+- =typecheck=
+  Typecheck a Juvix file
+
+- =compile=
+  Compile a Juvix file
+
+** Internal Commands
+
+#+begin_src shell
+juvix internal COMMAND
+#+end_src
 
 - =parse=
   Parse a Juvix file
 - =scope=
   Parse and scope a Juvix file
-- =html=
-  Generate HTML for a Juvix file
 - =termination=
   Subcommands related to termination checking
 - =monojuvix=
@@ -45,9 +58,6 @@ juvix [Global options]  ((-v|--version) | --show-root | COMMAND)
   Translate a Juvix file to MiniHaskell
 - =minic=
   Translate a Juvix file to MiniC
-- =highlight=
-  Highlight a Juvix file
-
 
 ** CLI Auto-completion Scripts
 

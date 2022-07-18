@@ -1,13 +1,16 @@
 * Inductive data types
 
-The =inductive= keyword is reserved to declare simple inductive data types.
-An inductive type needs a name and it may have parameters or functions called data constructors used to build terms of their corresponding inductive type. The simplest inductive type is the empty type defined as follows:
+The =inductive= keyword is reserved for declaring simple inductive data types.
+An inductive type declaration needs a name for its type and functions called data constructors used to build its terms. As shown later, one can also provide
+type parameters to widen the family of inductive types one can define in =Juvix=.
+
+The simplest inductive type is the empty type defined as follows:
 
 #+begin_example
 inductive Empty {};
 #+end_example
 
-In the following example, we declare the inductive type =Nat=, the unary representation of natural numbers. This type comes with two data constructors, namely =zero= and =suc=. For example, the number one is represented by `suc zero`, two by `suc (suc zero)`, etc.
+In the following example, we declare the inductive type =Nat=, the unary representation of natural numbers. This type comes with two data constructors, namely =zero= and =suc=. For example, the number one is represented by =suc zero=, two by =suc (suc zero)=, etc.
 
 #+begin_example
 inductive Nat {
@@ -26,8 +29,8 @@ inifl 6 +;
 + (suc a) b ≔ suc (a + b);
 #+end_src
 
-As mentioned ealier, an inductive type may have type parameters. The canonical example is the polymorphic type =List=. The type =List= is the inductive type that takes as parameter the type of the elements in the list. This type has two data constructors. A constructor to build the empty list, that is the base case, and another constructor to enlarge the list, we usually called it =cons=.
-One possibly definition for this type is the following type taken from the Juvix standard library:
+As mentioned earlier, an inductive type may have type parameters. The canonical example is the polymorphic type =List=. The type =List=s the inductive type that considers the type of the elements in the list as a parameter. A constructor to build the empty list, that is the base case, and another constructor to enlarge the list, we usually called it =cons=.
+One possible definition for this type is the following type taken from the Juvix standard library:
 
 #+begin_example
 infixr 5 ∷;
