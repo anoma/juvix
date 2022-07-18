@@ -6,6 +6,7 @@ module Juvix.Syntax.MicroJuvix.TypeChecker
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Juvix.Internal.NameIdGen
 import Juvix.Prelude hiding (fromEither)
 import Juvix.Syntax.MicroJuvix.Error
@@ -40,28 +41,23 @@ entryMicroJuvixTyped res@MicroJuvixArityResult {..} = do
     table :: InfoTable
     table = buildTable _resultModules
 
-type PosTypeParameters = HashSet Name
+type NegativeTypeParameters = HashSet VarName
 
 checkModule ::
   Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
   Module ->
   Sem r Module
 checkModule Module {..} = do
-      _moduleBody' <- 
-        (evalState (mempty :: PosTypeParameters) . checkModuleBody) _moduleBody
-      return
-        Module
-          { _moduleBody = _moduleBody',
-            ..
-          }
+  _moduleBody' <-
+    (evalState (mempty :: NegativeTypeParameters) . checkModuleBody) _moduleBody
+  return
+    Module
+      { _moduleBody = _moduleBody',
+        ..
+      }
 
-<<<<<<< HEAD
 checkModuleBody ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
-=======
-checkModuleBody :: forall r.
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State PosTypeParameters] r =>
->>>>>>> 445cab6 (the branch is back to feet)
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State NegativeTypeParameters] r =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -78,11 +74,7 @@ checkInclude ::
 checkInclude = traverseOf includeModule checkModule
 
 checkStatement ::
-<<<<<<< HEAD
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
-=======
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State PosTypeParameters] r =>
->>>>>>> 445cab6 (the branch is back to feet)
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State NegativeTypeParameters] r =>
   Statement ->
   Sem r Statement
 checkStatement s = case s of
@@ -160,31 +152,29 @@ type ErrorReference = Maybe Expression
 type RecursionLimit = Int
 
 checkStrictlyPositiveOccurrences ::
-  Members '[Reader InfoTable, Error TypeCheckerError] r =>
-  InductiveName ->
+  Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters] r =>
+  InductiveDef ->
   ConstrName ->
   Name ->
   RecursionLimit ->
   ErrorReference ->
   Expression ->
   Sem r ()
-checkStrictlyPositiveOccurrences indName ctorName name recLimit ref = helper False
+checkStrictlyPositiveOccurrences ty ctorName name recLimit ref = helper False
   where
     -- In the func. below, we want to determine if there is a negative occurence
     -- of `name` in the expression `expr` The `inside` flag indicates whether
     -- the current search happens in the left of an inner arrow.
     helper ::
-      Members '[Reader InfoTable, Error TypeCheckerError] r =>
+      Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters] r =>
       Bool ->
       Expression ->
       Sem r ()
 
     helper inside expr = case expr of
       ExpressionIden (IdenInductive ty') -> when (inside && name == ty') (strictlyPositivityError expr)
-      ExpressionIden (IdenVar name') -> when (inside && name == name') (strictlyPositivityError expr)
-      ExpressionFunction (Function l r) -> helper True (l ^. paramType) >> helper False r
-      ExpressionApplication
-        tyApp@(Application (ExpressionIden (IdenInductive ty')) r _) -> do
+      ExpressionIden (IdenVar name') ->
+        when inside $
           if
               | inside && name == ty' -> strictlyPositivityError expr
               | name /= ty' -> do
@@ -242,7 +232,7 @@ checkStrictlyPositiveOccurrences indName ctorName name recLimit ref = helper Fal
         )
 
 checkInductiveDef ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State NegativeTypeParameters] r =>
   InductiveDef ->
   Sem r ()
 checkInductiveDef ty@InductiveDef {..} = do
@@ -250,26 +240,29 @@ checkInductiveDef ty@InductiveDef {..} = do
   return ty
 
 checkConstructorDef ::
-  Members '[Reader InfoTable, Error TypeCheckerError] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters] r =>
   InductiveDef ->
   InductiveConstructorDef ->
   Sem r ()
 checkConstructorDef ty ctor = do
   let indName = ty ^. inductiveName
       ctorName = ctor ^. inductiveConstructorName
-  checkConstructorReturnType indName ctor
+  checkConstructorReturnType ty ctor
   numInductives <- HashMap.size <$> asks (^. infoInductives)
   unless
     (ty ^. inductiveNoPositivity)
-    (mapM_ (checkStrictlyPositiveOccurrences indName ctorName indName numInductives Nothing) (ctor ^. inductiveConstructorParameters))
+    ( mapM_
+        (checkStrictlyPositiveOccurrences ty ctorName indName numInductives Nothing)
+        (ctor ^. inductiveConstructorParameters)
+    )
+  return ctor
 
 checkConstructorReturnType ::
   Members '[Reader InfoTable, Error TypeCheckerError] r =>
-  InductiveName ->
+  InductiveDef ->
   InductiveConstructorDef ->
   Sem r ()
-checkConstructorReturnType indName ctor = do
-  InductiveInfo indType <- lookupInductive indName
+checkConstructorReturnType indType ctor = do
   let ctorName = ctor ^. inductiveConstructorName
       ctorReturnType = ctor ^. inductiveConstructorReturnType
       tyName = indType ^. inductiveName
