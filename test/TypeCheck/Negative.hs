@@ -85,6 +85,13 @@ tests =
         ErrWrongType {} -> Nothing
         _ -> wrongError,
     NegTest
+      "Unexpected braces in pattern"
+      "issue1337"
+      "Braces.juvix"
+      $ \case
+        ErrArity (ErrWrongPatternIsImplicit {}) -> Nothing
+        _ -> wrongError,
+    NegTest
       "Wrong return type name for a constructor of a simple data type"
       "MicroJuvix"
       "WrongReturnType.juvix"

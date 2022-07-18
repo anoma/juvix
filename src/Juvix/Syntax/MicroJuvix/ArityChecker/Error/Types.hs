@@ -83,7 +83,7 @@ instance ToGenericError WrongPatternIsImplicit where
       i = getLoc (e ^. wrongPatternIsImplicitActual)
       expec = e ^. wrongPatternIsImplicitExpected
       found = e ^. wrongPatternIsImplicitActual . patternArgIsImplicit
-      pat = e ^. wrongPatternIsImplicitActual . patternArgPattern
+      pat = e ^. wrongPatternIsImplicitActual
       msg =
         "Expected an"
           <+> pretty expec

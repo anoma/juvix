@@ -200,6 +200,21 @@ checkFunctionClause info FunctionClause {..} = do
 typeOfArg :: FunctionParameter -> Expression
 typeOfArg = (^. paramType)
 
+matchIsImplicit :: Member (Error TypeCheckerError) r => IsImplicit -> PatternArg -> Sem r ()
+matchIsImplicit expected actual =
+  unless
+    (expected == actual ^. patternArgIsImplicit)
+    ( throw
+        ( ErrArity
+            ( ErrWrongPatternIsImplicit
+                WrongPatternIsImplicit
+                  { _wrongPatternIsImplicitExpected = expected,
+                    _wrongPatternIsImplicitActual = actual
+                  }
+            )
+        )
+    )
+
 checkPattern ::
   forall r.
   Members '[Reader InfoTable, Error TypeCheckerError, State LocalVars, Inference, NameIdGen] r =>
@@ -211,6 +226,7 @@ checkPattern funName = go
   where
     go :: FunctionParameter -> PatternArg -> Sem r ()
     go argTy patArg = do
+      matchIsImplicit (argTy ^. paramImplicit) patArg
       tyVarMap <- fmap (ExpressionIden . IdenVar) . (^. localTyMap) <$> get
       ty <- normalizeType (substitutionE tyVarMap (typeOfArg argTy))
       let pat = patArg ^. patternArgPattern

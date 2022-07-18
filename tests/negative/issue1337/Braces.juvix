@@ -1,0 +1,11 @@
+module Braces;
+
+inductive Nat {
+  O : Nat;
+  S : Nat -> Nat;
+};
+
+fun : Nat -> Nat;
+fun (S {S {x}}) := x;
+
+end;
