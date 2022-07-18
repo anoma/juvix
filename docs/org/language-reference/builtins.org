@@ -1,0 +1,31 @@
+
+* Built-ins
+
+Juvix has support for the built-in natural type and a few functions that are compiled to efficient primitives. 
+
+1. Built-in inductive definitions.
+
+   #+begin_example
+   builtin natural
+   inductive Nat {
+     zero : Nat;
+     suc : Nat → Nat;
+   };
+   #+end_example
+
+2. Builtin function definitions.
+
+   #+begin_example
+   inifl 6 +;
+   builtin natural-plus
+   + : Nat → Nat → Nat;
+   + zero b ≔ b;
+   + (suc a) b ≔ suc (a + b);
+   #+end_example
+
+3. Builtin axiom definitions.
+
+   #+begin_example
+   builtin natural-print
+   axiom printNat : Nat → Action;
+   #+end_example

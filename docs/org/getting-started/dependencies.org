@@ -1,6 +1,7 @@
+
 * Installing dependencies
 
-The following dependencies are required for the juvix WASM compiler.
+The following dependencies are only required for compiling to WASM.
 
 - [[https://wasmer.io][wasmer]]
 - [[https://releases.llvm.org/download.html][Clang / LLVM]] version 13 or later (NB: On macOS the preinstalled clang does not support the wasm

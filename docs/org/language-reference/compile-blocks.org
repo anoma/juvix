@@ -1,1 +1,65 @@
 * Compile blocks
+
+The compile keyword has two arguments:
+
+- A name of an expression to be compiled.
+- A set of compilation rules using the format (=backend= → =string=)
+  where the string is the text we inline.
+
+This is an example:
+
+#+begin_src haskell
+$ cat tests/positive/HelloWorld
+...
+axiom Action : Type;
+compile Action {
+ ghc ↦ "IO ()";
+};
+...
+#+end_src
+
+The following Juvix examples are NOT valid.
+
+- One can not repeat backend inside a =compile= block.
+
+#+begin_src haskell
+...
+axiom Action : Type;
+compile Action {
+ ghc ↦ "IO ()";
+ ghc ↦ "IO ()";  -- 
+};
+...
+#+end_src
+
+- One name, one compile block, no more.
+
+#+begin_src haskell
+...
+axiom Action : Type;
+compile Action {
+ ghc ↦ "IO ()";
+};
+compile Action {
+ ghc ↦ "IO ()";
+};
+...
+#+end_src
+
+- A compile block must be in the same module as their name definition.
+
+#+begin_src haskell
+$ cat A.mjuvix
+...
+axiom Action : Type;
+...
+#+end_src
+
+#+begin_src haskell
+$ cat B.mjuvix
+...
+compile Action {
+ ghc ↦ "IO ()";
+};
+...
+#+end_src
