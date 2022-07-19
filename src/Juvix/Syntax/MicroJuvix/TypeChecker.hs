@@ -238,7 +238,7 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref = helper False
     -- occurence of the symbol `name` in the given expression. The `inside` flag
     -- used below indicates whether the current search is performed on the left
     -- of an inner arrow or not.
-    
+
     helper ::
       Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters] r =>
       Bool ->
