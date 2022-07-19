@@ -1,0 +1,5 @@
+module NegParam;
+inductive T (A : Type) {
+c : (A -> T A) -> T A;
+};
+end;

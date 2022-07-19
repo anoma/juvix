@@ -53,9 +53,6 @@ checkModuleBody body = do
     moduleFunctions = [f | StatementFunction f <- body ^. moduleStatements]
     moduleLocalModules = [f ^. moduleBody | StatementLocalModule f <- body ^. moduleStatements]
 
--- checkLocalModule :: Members '[State CallMap, Reader InfoTable] r => LocalModule -> Sem r ()
--- checkLocalModule m = checkModuleBody (m ^. moduleBody)
-
 checkFunctionDef ::
   Members '[State CallMap, Reader InfoTable] r =>
   FunctionDef ->

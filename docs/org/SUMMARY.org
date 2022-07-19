@@ -34,6 +34,7 @@
 - [[./notes/README.md][Notes]]
   - [[./examples/validity-predicates/README.md][Validity predicates]]
   - [[./notes/monomorphization.md][Monomorphization]]
+  - [[./notes/strictly-positive-data-types.md][Strictly positive data types]]
 
 - [[./introduction/about/what-is.md][About]]
   # - [[./introduction/about/team.md][The dev team]]
