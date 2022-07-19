@@ -2,6 +2,7 @@ module TypeCheck.Positive where
 
 import Base
 import Juvix.Pipeline
+import TypeCheck.Negative qualified as N
 
 data PosTest = PosTest
   { _name :: String,
@@ -23,11 +24,66 @@ testDescr PosTest {..} =
             (void . runIO) (upToMicroJuvixTyped entryPoint)
         }
 
+--------------------------------------------------------------------------------
+-- Testing --no-positivity flag with all related negative tests
+--------------------------------------------------------------------------------
+
+rootNegTests :: FilePath
+rootNegTests = "tests/negative/"
+
+testNoPositivityFlag :: N.NegTest -> TestDescr
+testNoPositivityFlag N.NegTest {..} =
+  let tRoot = rootNegTests </> _relDir
+   in TestDescr
+        { _testName = _name,
+          _testRoot = tRoot,
+          _testAssertion = Single $ do
+            let entryPoint =
+                  EntryPoint
+                    { _entryPointRoot = ".",
+                      _entryPointNoTermination = False,
+                      _entryPointNoPositivity = True,
+                      _entryPointNoStdlib = False,
+                      _entryPointModulePaths = pure _file
+                    }
+
+            (void . runIO) (upToMicroJuvix entryPoint)
+        }
+
+negPositivityTests :: [N.NegTest]
+negPositivityTests = N.negPositivityTests
+
+testPositivityKeyword :: [PosTest]
+testPositivityKeyword =
+  [ PosTest
+      "Mark T0 data type as strictly positive"
+      "MicroJuvix/Positivity"
+      "E5.juvix"
+  ]
+
+positivityTestGroup :: TestTree
+positivityTestGroup =
+  testGroup
+    "Positive tests for the positivity condition"
+    [ testGroup
+        "Bypass positivity checking using --non-positivity flag on negative tests"
+        (map (mkTest . testNoPositivityFlag) negPositivityTests),
+      testGroup
+        "Usages of the nopositivity keyword"
+        (map (mkTest . testDescr) testPositivityKeyword)
+    ]
+
+--------------------------------------------------------------------------------
+
 allTests :: TestTree
 allTests =
   testGroup
-    "Scope positive tests"
-    (map (mkTest . testDescr) tests)
+    "Typecheck positive tests"
+    [ testGroup
+        "General typechecking tests"
+        (map (mkTest . testDescr) tests),
+      positivityTestGroup
+    ]
 
 tests :: [PosTest]
 tests =

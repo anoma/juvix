@@ -1,4 +1,4 @@
-module TypeCheck.Negative (allTests) where
+module TypeCheck.Negative where
 
 import Base
 import Juvix.Pipeline
@@ -31,8 +31,14 @@ testDescr NegTest {..} =
 allTests :: TestTree
 allTests =
   testGroup
-    "TypeCheck negative tests"
-    (map (mkTest . testDescr) tests)
+    "Typecheck negative tests"
+    [ testGroup
+        "General typechecking errors"
+        (map (mkTest . testDescr) tests),
+      testGroup
+        "Non-strictly positive data types"
+        (map (mkTest . testDescr) negPositivityTests)
+    ]
 
 root :: FilePath
 root = "tests/negative"
@@ -111,36 +117,40 @@ tests =
       "WrongReturnTypeTooManyArguments.juvix"
       $ \case
         ErrWrongReturnType {} -> Nothing
-        _ -> wrongError,
-    NegTest "E1" "MicroJuvix/NoStrictlyPositiveDataTypes" "E1.juvix" $
+        _ -> wrongError
+  ]
+
+negPositivityTests :: [NegTest]
+negPositivityTests =
+  [ NegTest "E1" "MicroJuvix/NoPositivity" "E1.juvix" $
       \case
         ErrNoStrictPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E2" "MicroJuvix/NoStrictlyPositiveDataTypes" "E2.juvix" $
+    NegTest "E2" "MicroJuvix/NoPositivity" "E2.juvix" $
       \case
         ErrNoStrictPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E3" "MicroJuvix/NoStrictlyPositiveDataTypes" "E3.juvix" $
+    NegTest "E3" "MicroJuvix/NoPositivity" "E3.juvix" $
       \case
         ErrNoStrictPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E4" "MicroJuvix/NoStrictlyPositiveDataTypes" "E4.juvix" $
+    NegTest "E4" "MicroJuvix/NoPositivity" "E4.juvix" $
       \case
         ErrNoStrictPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E5" "MicroJuvix/NoStrictlyPositiveDataTypes" "E5.juvix" $
+    NegTest "E5" "MicroJuvix/NoPositivity" "E5.juvix" $
       \case
         ErrNoStrictPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E6" "MicroJuvix/NoStrictlyPositiveDataTypes" "E6.juvix" $
+    NegTest "E6" "MicroJuvix/NoPositivity" "E6.juvix" $
       \case
         ErrNoStrictPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E7" "MicroJuvix/NoStrictlyPositiveDataTypes" "E7.juvix" $
+    NegTest "E7" "MicroJuvix/NoPositivity" "E7.juvix" $
       \case
         ErrNoStrictPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E8" "MicroJuvix/NoStrictlyPositiveDataTypes" "E8.juvix" $
+    NegTest "E8" "MicroJuvix/NoPositivity" "E8.juvix" $
       \case
         ErrNoStrictPositivity {} -> Nothing
         _ -> wrongError

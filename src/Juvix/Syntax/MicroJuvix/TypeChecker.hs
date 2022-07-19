@@ -8,6 +8,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Internal.NameIdGen
+import Juvix.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude hiding (fromEither)
 import Juvix.Syntax.MicroJuvix.Error
 import Juvix.Syntax.MicroJuvix.InfoTable
@@ -31,6 +32,10 @@ entryMicroJuvixTyped ::
   Sem r MicroJuvixTypedResult
 entryMicroJuvixTyped res@MicroJuvixArityResult {..} = do
   (idens, r) <- runState (mempty :: TypesTable) (runReader table (mapM checkModule _resultModules))
+  r <-
+    runReader entryPoint
+      . runReader table
+      $ mapM checkModule _resultModules
   return
     MicroJuvixTypedResult
       { _resultMicroJuvixArityResult = res,
@@ -41,10 +46,13 @@ entryMicroJuvixTyped res@MicroJuvixArityResult {..} = do
     table :: InfoTable
     table = buildTable _resultModules
 
+    entryPoint :: E.EntryPoint
+    entryPoint = res ^. microJuvixArityResultEntryPoint
+
 type NegativeTypeParameters = HashSet VarName
 
 checkModule ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
+  Members '[Reader E.EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
   Module ->
   Sem r Module
 checkModule Module {..} = do
@@ -57,7 +65,8 @@ checkModule Module {..} = do
       }
 
 checkModuleBody ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State NegativeTypeParameters] r =>
+  forall r.
+  Members '[Reader E.EntryPoint,Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State NegativeTypeParameters] r =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -68,7 +77,7 @@ checkModuleBody ModuleBody {..} = do
       }
 
 checkInclude ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
+  Members '[Reader E.EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
   Include ->
   Sem r Include
 checkInclude = traverseOf includeModule checkModule
@@ -232,7 +241,7 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref = helper False
         )
 
 checkInductiveDef ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State NegativeTypeParameters] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters, Reader E.EntryPoint] r =>
   InductiveDef ->
   Sem r ()
 checkInductiveDef ty@InductiveDef {..} = do
@@ -240,7 +249,13 @@ checkInductiveDef ty@InductiveDef {..} = do
   return ty
 
 checkConstructorDef ::
-  Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters] r =>
+  Members
+    '[ Reader E.EntryPoint,
+       Reader InfoTable,
+       Error TypeCheckerError,
+       State NegativeTypeParameters
+     ]
+    r =>
   InductiveDef ->
   InductiveConstructorDef ->
   Sem r ()
@@ -249,12 +264,11 @@ checkConstructorDef ty ctor = do
       ctorName = ctor ^. inductiveConstructorName
   checkConstructorReturnType ty ctor
   numInductives <- HashMap.size <$> asks (^. infoInductives)
-  unless
-    (ty ^. inductiveNoPositivity)
-    ( mapM_
-        (checkStrictlyPositiveOccurrences ty ctorName indName numInductives Nothing)
-        (ctor ^. inductiveConstructorParameters)
-    )
+  noCheckPositivity <- asks (^. E.entryPointNoPositivity)
+  unless (noCheckPositivity || ty ^. inductiveNoPositivity) $
+    mapM_
+      (checkStrictlyPositiveOccurrences ty ctorName indName numInductives Nothing)
+      (ctor ^. inductiveConstructorParameters)
   return ctor
 
 checkConstructorReturnType ::
@@ -283,7 +297,6 @@ checkConstructorReturnType indType ctor = do
             )
         )
     )
-
 
 type ErrorReference = Maybe Expression
 
@@ -344,26 +357,20 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref = helper False
                     [] -> return ()
                     ((InductiveParameter pName, arg) : ps) -> do
                       negParms :: NegativeTypeParameters <- get
-                      when
-                        (nameInExpression name arg)
-                        ( do
-                            when (HashSet.member pName negParms) (strictlyPositivityError arg)
-                            when
-                              (recLimit > 0)
-                              ( forM_ (typ ^. inductiveConstructors) $ \ctor' ->
-                                  do
-                                    mapM_
-                                      ( checkStrictlyPositiveOccurrences
-                                          typ
-                                          (ctor' ^. inductiveConstructorName)
-                                          pName
-                                          (recLimit - 1)
-                                          (Just (fromMaybe arg ref))
-                                      )
-                                      (ctor' ^. inductiveConstructorParameters)
-                                    >> modify (HashSet.insert pName)
+                      when (nameInExpression name arg) $ do
+                        when (HashSet.member pName negParms) (strictlyPositivityError arg)
+                        when (recLimit > 0) $
+                          forM_ (typ ^. inductiveConstructors) $ \ctor' ->
+                            mapM_
+                              ( checkStrictlyPositiveOccurrences
+                                  typ
+                                  (ctor' ^. inductiveConstructorName)
+                                  pName
+                                  (recLimit - 1)
+                                  (Just (fromMaybe arg ref))
                               )
-                        )
+                              (ctor' ^. inductiveConstructorParameters)
+                              >> modify (HashSet.insert pName)
                       go ty ps
                in go indTy' (zip paramsTy' (toList args))
           _ -> return ()
