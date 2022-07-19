@@ -365,7 +365,7 @@ viewApp = \case
   PatternConstructor c -> return (goConstructorRef c, [])
   PatternApplication (PatternApp l r) -> do
     r' <- goPatternArg r
-    second (`snoc` r') <$> viewApp l
+    second (`snoc` r') <$> viewAppLeft l
   PatternInfixApplication (PatternInfixApp l c r) -> do
     l' <- goPatternArg l
     r' <- goPatternArg r
@@ -375,19 +375,28 @@ viewApp = \case
     return (goConstructorRef c, [l'])
   PatternVariable {} -> err
   PatternWildcard {} -> err
-  PatternBraces {} -> err
   PatternEmpty {} -> err
   where
+    viewAppLeft :: PatternArg -> Sem r (Abstract.ConstructorRef, [Abstract.PatternArg])
+    viewAppLeft p
+      -- TODO proper error
+      | Implicit <- p ^. patternArgIsImplicit = error "An implicit pattern cannot be on the left of an application"
+      | otherwise = viewApp (p ^. patternArgPattern)
+    -- TODO proper error
     err :: a
     err = error "constructor expected on the left of a pattern application"
 
 goConstructorRef :: ConstructorRef -> Abstract.ConstructorRef
 goConstructorRef (ConstructorRef' n) = Abstract.ConstructorRef (goName n)
 
-goPatternArg :: Pattern -> Sem r Abstract.PatternArg
-goPatternArg = \case
-  PatternBraces p -> Abstract.PatternArg Implicit <$> goPattern p
-  p -> Abstract.PatternArg Explicit <$> goPattern p
+goPatternArg :: PatternArg -> Sem r Abstract.PatternArg
+goPatternArg p = do
+  pat' <- goPattern (p ^. patternArgPattern)
+  return
+    Abstract.PatternArg
+      { _patternArgIsImplicit = p ^. patternArgIsImplicit,
+        _patternArgPattern = pat'
+      }
 
 goPattern :: Pattern -> Sem r Abstract.Pattern
 goPattern p = case p of
@@ -398,7 +407,6 @@ goPattern p = case p of
   PatternPostfixApplication a -> Abstract.PatternConstructorApp <$> goPostfixPatternApplication a
   PatternWildcard i -> return (Abstract.PatternWildcard i)
   PatternEmpty -> return Abstract.PatternEmpty
-  PatternBraces {} -> impossible
 
 goAxiom :: Members '[InfoTableBuilder, Error ScoperError, Builtins] r => AxiomDef 'Scoped -> Sem r Abstract.AxiomDef
 goAxiom a = do

@@ -83,7 +83,7 @@ type family ExpressionType s = res | res -> s where
 type PatternType :: Stage -> GHC.Type
 type family PatternType s = res | res -> s where
   PatternType 'Parsed = PatternAtom 'Parsed
-  PatternType 'Scoped = Pattern
+  PatternType 'Scoped = PatternArg
 
 type family ImportType (s :: Stage) :: GHC.Type where
   ImportType 'Parsed = TopModulePath
@@ -257,15 +257,15 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Ind
 --------------------------------------------------------------------------------
 
 data PatternApp = PatternApp
-  { _patAppLeft :: Pattern,
-    _patAppRight :: Pattern
+  { _patAppLeft :: PatternArg,
+    _patAppRight :: PatternArg
   }
   deriving stock (Show, Eq, Ord)
 
 data PatternInfixApp = PatternInfixApp
-  { _patInfixLeft :: Pattern,
+  { _patInfixLeft :: PatternArg,
     _patInfixConstructor :: ConstructorRef,
-    _patInfixRight :: Pattern
+    _patInfixRight :: PatternArg
   }
   deriving stock (Show, Eq, Ord)
 
@@ -273,7 +273,7 @@ instance HasFixity PatternInfixApp where
   getFixity (PatternInfixApp _ op _) = fromMaybe impossible (op ^. constructorRefName . S.nameFixity)
 
 data PatternPostfixApp = PatternPostfixApp
-  { _patPostfixParameter :: Pattern,
+  { _patPostfixParameter :: PatternArg,
     _patPostfixConstructor :: ConstructorRef
   }
   deriving stock (Show, Eq, Ord)
@@ -281,13 +281,18 @@ data PatternPostfixApp = PatternPostfixApp
 instance HasFixity PatternPostfixApp where
   getFixity (PatternPostfixApp _ op) = fromMaybe impossible (op ^. constructorRefName . S.nameFixity)
 
+data PatternArg = PatternArg
+  { _patternArgIsImplicit :: IsImplicit,
+    _patternArgPattern :: Pattern
+  }
+  deriving stock (Show, Eq, Ord)
+
 data Pattern
   = PatternVariable (SymbolType 'Scoped)
   | PatternConstructor ConstructorRef
   | PatternApplication PatternApp
   | PatternInfixApplication PatternInfixApp
   | PatternPostfixApplication PatternPostfixApp
-  | PatternBraces Pattern
   | PatternWildcard Wildcard
   | PatternEmpty
   deriving stock (Show, Eq, Ord)
@@ -300,7 +305,6 @@ instance HasAtomicity Pattern where
     PatternInfixApplication a -> Aggregate (getFixity a)
     PatternPostfixApplication p -> Aggregate (getFixity p)
     PatternWildcard {} -> Atom
-    PatternBraces {} -> Atom
     PatternEmpty -> Atom
 
 --------------------------------------------------------------------------------
@@ -887,8 +891,7 @@ data ExpressionAtoms (s :: Stage) = ExpressionAtoms
     _expressionAtomsLoc :: Interval
   }
 
---------------------------------------------------------------------------------
-
+makeLenses ''PatternArg
 makeLenses ''Function
 makeLenses ''InductiveDef
 makeLenses ''PostfixApplication
@@ -1047,6 +1050,11 @@ instance
   compare = compare `on` (^. expressionAtoms)
 
 --------------------------------------------------------------------------------
+
+instance HasAtomicity PatternArg where
+  atomicity p
+    | Implicit <- p ^. patternArgIsImplicit = Atom
+    | otherwise = atomicity (p ^. patternArgPattern)
 
 idenOverName :: (forall s. S.Name' s -> S.Name' s) -> ScopedIden -> ScopedIden
 idenOverName f = \case
