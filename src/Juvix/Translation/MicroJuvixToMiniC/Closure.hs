@@ -1,19 +1,21 @@
-module Juvix.Translation.MonoJuvixToMiniC.Closure where
+module Juvix.Translation.MicroJuvixToMiniC.Closure where
 
 import Juvix.Prelude
 import Juvix.Syntax.Concrete.Builtins (IsBuiltin (toBuiltinPrim))
+import Juvix.Syntax.MicroJuvix.InfoTable qualified as Micro
+import Juvix.Syntax.MicroJuvix.Language.Extra (mkPolyType')
+import Juvix.Syntax.MicroJuvix.Language.Extra qualified as Micro
+import Juvix.Syntax.MicroJuvix.MicroJuvixTypedResult qualified as Micro
 import Juvix.Syntax.MiniC.Language
-import Juvix.Syntax.MonoJuvix.InfoTable qualified as Mono
-import Juvix.Syntax.MonoJuvix.Language qualified as Mono
-import Juvix.Translation.MonoJuvixToMiniC.Base
+import Juvix.Translation.MicroJuvixToMiniC.Base
 
 genClosures ::
   forall r.
-  Member (Reader Mono.InfoTable) r =>
-  Mono.Module ->
+  Members '[Reader Micro.InfoTable, Reader Micro.TypesTable] r =>
+  Micro.Module ->
   Sem r [CCode]
-genClosures Mono.Module {..} = do
-  closureInfos <- concatMapM (applyOnFunStatement functionDefClosures) (_moduleBody ^. Mono.moduleStatements)
+genClosures Micro.Module {..} = do
+  closureInfos <- concatMapM (applyOnFunStatement functionDefClosures) (_moduleBody ^. Micro.moduleStatements)
   return (genCClosure =<< nub closureInfos)
 
 genCClosure :: ClosureInfo -> [CCode]
@@ -24,33 +26,34 @@ genCClosure c =
   ]
 
 functionDefClosures ::
-  Member (Reader Mono.InfoTable) r =>
-  Mono.FunctionDef ->
+  Members '[Reader Micro.InfoTable, Reader Micro.TypesTable] r =>
+  Micro.FunctionDef ->
   Sem r [ClosureInfo]
-functionDefClosures Mono.FunctionDef {..} =
-  concatMapM (clauseClosures (fst (unfoldFunType _funDefType))) (toList _funDefClauses)
+functionDefClosures Micro.FunctionDef {..} =
+  concatMapM (clauseClosures (fst (unfoldFunType (mkPolyType' _funDefType)))) (toList _funDefClauses)
 
-lookupBuiltinIden :: Members '[Reader Mono.InfoTable] r => Mono.Iden -> Sem r (Maybe Mono.BuiltinPrim)
+lookupBuiltinIden :: Members '[Reader Micro.InfoTable] r => Micro.Iden -> Sem r (Maybe Micro.BuiltinPrim)
 lookupBuiltinIden = \case
-  Mono.IdenFunction f -> fmap toBuiltinPrim . (^. Mono.functionInfoBuiltin) <$> Mono.lookupFunction f
-  Mono.IdenConstructor c -> fmap toBuiltinPrim . (^. Mono.constructorInfoBuiltin) <$> Mono.lookupConstructor c
-  Mono.IdenAxiom a -> fmap toBuiltinPrim . (^. Mono.axiomInfoBuiltin) <$> Mono.lookupAxiom a
-  Mono.IdenVar {} -> return Nothing
+  Micro.IdenFunction f -> fmap toBuiltinPrim . (^. Micro.functionInfoDef . Micro.funDefBuiltin) <$> Micro.lookupFunction f
+  Micro.IdenConstructor c -> fmap toBuiltinPrim . (^. Micro.constructorInfoBuiltin) <$> Micro.lookupConstructor c
+  Micro.IdenAxiom a -> fmap toBuiltinPrim . (^. Micro.axiomInfoBuiltin) <$> Micro.lookupAxiom a
+  Micro.IdenVar {} -> return Nothing
+  Micro.IdenInductive {} -> impossible
 
 genClosureExpression ::
   forall r.
-  Members '[Reader Mono.InfoTable, Reader PatternInfoTable] r =>
-  [Mono.Type] ->
-  Mono.Expression ->
+  Members '[Reader Micro.InfoTable, Reader Micro.TypesTable, Reader PatternInfoTable] r =>
+  [Micro.PolyType] ->
+  Micro.Expression ->
   Sem r [ClosureInfo]
 genClosureExpression funArgTyps = \case
-  Mono.ExpressionIden i -> do
-    let rootFunMonoName = Mono.getName i
-        rootFunNameId = rootFunMonoName ^. Mono.nameId
-        rootFunName = mkName rootFunMonoName
+  Micro.ExpressionIden i -> do
+    let rootFunMicroName = Micro.getName i
+        rootFunNameId = rootFunMicroName ^. Micro.nameId
+        rootFunName = mkName rootFunMicroName
     builtin <- lookupBuiltinIden i
     case i of
-      Mono.IdenVar {} -> return []
+      Micro.IdenVar {} -> return []
       _ -> do
         (t, patterns) <- getType i
         let argTyps = t ^. cFunArgTypes
@@ -67,42 +70,42 @@ genClosureExpression funArgTyps = \case
                         _closureCArity = patterns
                       }
                   ]
-  Mono.ExpressionApplication a -> exprApplication a
-  Mono.ExpressionLiteral {} -> return []
+  Micro.ExpressionApplication a -> exprApplication a
+  Micro.ExpressionLiteral {} -> return []
+  Micro.ExpressionFunction {} -> impossible
+  Micro.ExpressionHole {} -> impossible
+  Micro.ExpressionUniverse {} -> impossible
   where
-    exprApplication :: Mono.Application -> Sem r [ClosureInfo]
+    exprApplication :: Micro.Application -> Sem r [ClosureInfo]
     exprApplication a = do
-      (f, appArgs) <- unfoldApp a
-      let rootFunMonoName = Mono.getName f
-          rootFunNameId = rootFunMonoName ^. Mono.nameId
-          rootFunName = mkName rootFunMonoName
-      builtin <- lookupBuiltinIden f
-      (fType, patterns) <- getType f
-      closureArgs <- concatMapM (genClosureExpression funArgTyps) appArgs
+      (f0, appArgs) <- unfoldPolyApp a
       if
-          | length appArgs < length (fType ^. cFunArgTypes) ->
-              return
-                ( [ ClosureInfo
-                      { _closureNameId = rootFunNameId,
-                        _closureRootName = rootFunName,
-                        _closureBuiltin = builtin,
-                        _closureMembers = take (length appArgs) (fType ^. cFunArgTypes),
-                        _closureFunType = fType,
-                        _closureCArity = patterns
-                      }
-                  ]
-                    <> closureArgs
-                )
-          | otherwise -> return closureArgs
-
-    unfoldApp :: Mono.Application -> Sem r (Mono.Iden, [Mono.Expression])
-    unfoldApp Mono.Application {..} = case _appLeft of
-      Mono.ExpressionApplication x -> do
-        uf <- unfoldApp x
-        return (second (_appRight :) uf)
-      Mono.ExpressionIden i -> do
-        return (i, [_appRight])
-      Mono.ExpressionLiteral {} -> impossible
+          | null appArgs -> genClosureExpression funArgTyps f0
+          | otherwise -> case f0 of
+              Micro.ExpressionLiteral {} -> return []
+              Micro.ExpressionIden f -> do
+                let rootFunMicroName = Micro.getName f
+                    rootFunNameId = rootFunMicroName ^. Micro.nameId
+                    rootFunName = mkName rootFunMicroName
+                builtin <- lookupBuiltinIden f
+                (fType, patterns) <- getType f
+                closureArgs <- concatMapM (genClosureExpression funArgTyps) (toList appArgs)
+                if
+                    | length appArgs < length (fType ^. cFunArgTypes) ->
+                        return
+                          ( [ ClosureInfo
+                                { _closureNameId = rootFunNameId,
+                                  _closureRootName = rootFunName,
+                                  _closureBuiltin = builtin,
+                                  _closureMembers = take (length appArgs) (fType ^. cFunArgTypes),
+                                  _closureFunType = fType,
+                                  _closureCArity = patterns
+                                }
+                            ]
+                              <> closureArgs
+                          )
+                    | otherwise -> return closureArgs
+              _ -> impossible
 
 genClosureEnv :: ClosureInfo -> Declaration
 genClosureEnv c =
@@ -159,13 +162,18 @@ genClosureApply c =
         (c ^. closureFunType)
           { _cFunArgTypes = drop nPatterns (c ^. closureFunType . cFunArgTypes)
           }
+      localFunType :: CFunType
+      localFunType =
+        (c ^. closureFunType)
+          { _cFunArgTypes = take nPatterns (c ^. closureFunType . cFunArgTypes)
+          }
       funName :: Expression
       funName = ExpressionVar (c ^. closureRootName)
       funCall :: Expression
       funCall =
         if
             | null patternArgs -> funName
-            | otherwise -> functionCall funName patternArgs
+            | otherwise -> functionCallCasted localFunType funName patternArgs
       juvixFunCall :: [BodyItem]
       juvixFunCall =
         if
@@ -182,7 +190,7 @@ genClosureApply c =
                 ]
             | otherwise ->
                 [ BodyStatement . StatementReturn . Just $
-                    functionCall (ExpressionVar (closureRootFunction c)) args
+                    functionCallCasted (c ^. closureFunType) (ExpressionVar (closureRootFunction c)) args
                 ]
       envArg :: BodyItem
       envArg =
@@ -269,10 +277,10 @@ genClosureEval c =
         }
 
 clauseClosures ::
-  Members '[Reader Mono.InfoTable] r =>
-  [Mono.Type] ->
-  Mono.FunctionClause ->
+  Members '[Reader Micro.InfoTable, Reader Micro.TypesTable] r =>
+  [Micro.PolyType] ->
+  Micro.FunctionClause ->
   Sem r [ClosureInfo]
 clauseClosures argTyps clause = do
   bindings <- buildPatternInfoTable argTyps clause
-  runReader bindings (genClosureExpression argTyps (clause ^. Mono.clauseBody))
+  runReader bindings (genClosureExpression argTyps (clause ^. Micro.clauseBody))

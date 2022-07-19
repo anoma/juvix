@@ -7,15 +7,17 @@ import Juvix.Syntax.MicroJuvix.Language.Extra
 data ConstructorInfo = ConstructorInfo
   { _constructorInfoInductiveParameters :: [InductiveParameter],
     _constructorInfoArgs :: [Expression],
-    _constructorInfoInductive :: InductiveName
+    _constructorInfoInductive :: InductiveName,
+    _constructorInfoBuiltin :: Maybe BuiltinConstructor
   }
 
 newtype FunctionInfo = FunctionInfo
   { _functionInfoDef :: FunctionDef
   }
 
-newtype AxiomInfo = AxiomInfo
-  { _axiomInfoType :: Expression
+data AxiomInfo = AxiomInfo
+  { _axiomInfoType :: Expression,
+    _axiomInfoBuiltin :: Maybe BuiltinAxiom
   }
 
 newtype InductiveInfo = InductiveInfo
@@ -71,11 +73,13 @@ buildTable1 m = InfoTable {..} <> buildTable (map (^. includeModule) includes)
     _infoConstructors :: HashMap Name ConstructorInfo
     _infoConstructors =
       HashMap.fromList
-        [ (c ^. constructorName, ConstructorInfo params args ind)
+        [ (c ^. constructorName, ConstructorInfo params args ind builtin)
           | StatementInductive d <- ss,
             let ind = d ^. inductiveName,
+            let n = length (d ^. inductiveConstructors),
             let params = d ^. inductiveParameters,
-            c <- d ^. inductiveConstructors,
+            let builtins = maybe (replicate n Nothing) (map Just . builtinConstructors) (d ^. inductiveBuiltin),
+            (builtin, c) <- zipExact builtins (d ^. inductiveConstructors),
             let args = c ^. constructorParameters
         ]
     _infoFunctions :: HashMap Name FunctionInfo
@@ -87,7 +91,7 @@ buildTable1 m = InfoTable {..} <> buildTable (map (^. includeModule) includes)
     _infoAxioms :: HashMap Name AxiomInfo
     _infoAxioms =
       HashMap.fromList
-        [ (d ^. axiomName, AxiomInfo (d ^. axiomType))
+        [ (d ^. axiomName, AxiomInfo (d ^. axiomType) (d ^. axiomBuiltin))
           | StatementAxiom d <- ss
         ]
     ss = m ^. (moduleBody . moduleStatements)

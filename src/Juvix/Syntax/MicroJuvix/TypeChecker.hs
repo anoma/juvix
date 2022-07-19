@@ -16,23 +16,32 @@ import Juvix.Syntax.MicroJuvix.MicroJuvixArityResult
 import Juvix.Syntax.MicroJuvix.MicroJuvixTypedResult
 import Juvix.Syntax.MicroJuvix.TypeChecker.Inference
 
+addIdens :: Member (State TypesTable) r => TypesTable -> Sem r ()
+addIdens idens = modify (HashMap.union idens)
+
+registerConstructor :: Members '[State TypesTable, Reader InfoTable] r => InductiveConstructorDef -> Sem r ()
+registerConstructor ctr = do
+  ty <- constructorType (ctr ^. constructorName)
+  modify (HashMap.insert (ctr ^. constructorName) ty)
+
 entryMicroJuvixTyped ::
   Members '[Error TypeCheckerError, NameIdGen] r =>
   MicroJuvixArityResult ->
   Sem r MicroJuvixTypedResult
 entryMicroJuvixTyped res@MicroJuvixArityResult {..} = do
-  r <- runReader table (mapM checkModule _resultModules)
+  (idens, r) <- runState (mempty :: TypesTable) (runReader table (mapM checkModule _resultModules))
   return
     MicroJuvixTypedResult
       { _resultMicroJuvixArityResult = res,
-        _resultModules = r
+        _resultModules = r,
+        _resultIdenTypes = idens
       }
   where
     table :: InfoTable
     table = buildTable _resultModules
 
 checkModule ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
   Module ->
   Sem r Module
 checkModule Module {..} = do
@@ -44,7 +53,7 @@ checkModule Module {..} = do
       }
 
 checkModuleBody ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -55,35 +64,45 @@ checkModuleBody ModuleBody {..} = do
       }
 
 checkInclude ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
   Include ->
   Sem r Include
 checkInclude = traverseOf includeModule checkModule
 
 checkStatement ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
   Statement ->
   Sem r Statement
 checkStatement s = case s of
   StatementFunction fun -> StatementFunction <$> checkFunctionDef fun
   StatementForeign {} -> return s
-  StatementInductive {} -> return s
+  StatementInductive ind -> do
+    mapM_ registerConstructor (ind ^. inductiveConstructors)
+    ty <- inductiveType (ind ^. inductiveName)
+    modify (HashMap.insert (ind ^. inductiveName) ty)
+    return s
   StatementInclude i -> StatementInclude <$> checkInclude i
-  StatementAxiom {} -> return s
+  StatementAxiom ax -> do
+    modify (HashMap.insert (ax ^. axiomName) (ax ^. axiomType))
+    return s
 
 checkFunctionDef ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
   FunctionDef ->
   Sem r FunctionDef
-checkFunctionDef FunctionDef {..} = runInferenceDef $ do
-  info <- lookupFunction _funDefName
-  checkFunctionDefType _funDefType
-  _funDefClauses' <- mapM (checkFunctionClause info) _funDefClauses
-  return
-    FunctionDef
-      { _funDefClauses = _funDefClauses',
-        ..
-      }
+checkFunctionDef FunctionDef {..} = do
+  (funDef, idens) <- runInferenceDef $ do
+    info <- lookupFunction _funDefName
+    checkFunctionDefType _funDefType
+    registerIden _funDefName _funDefType
+    _funDefClauses' <- mapM (checkFunctionClause info) _funDefClauses
+    return
+      FunctionDef
+        { _funDefClauses = _funDefClauses',
+          ..
+        }
+  addIdens idens
+  return funDef
 
 checkFunctionDefType :: forall r. Members '[Inference] r => Expression -> Sem r ()
 checkFunctionDefType = traverseOf_ (leafExpressions . _ExpressionHole) go
@@ -203,6 +222,7 @@ checkPattern funName = go
         PatternBraces {} -> impossible
         PatternVariable v -> do
           modify (addType v ty)
+          registerIden v ty
           case argTy ^. paramName of
             Just v' -> do
               modify (over localTyMap (HashMap.insert v' v))

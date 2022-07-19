@@ -113,6 +113,44 @@ mkConcreteType = fmap ConcreteType . go
       e' <- go e
       return (FunctionParameter m i e')
 
+newtype PolyType = PolyType {_unpolyType :: Expression}
+  deriving stock (Eq, Generic)
+
+instance Hashable PolyType
+
+makeLenses ''PolyType
+
+mkPolyType' :: Expression -> PolyType
+mkPolyType' =
+  fromMaybe (error "the given type contains holes")
+    . mkPolyType
+
+-- mkPolyType removes all named function parameters; currently the assumption in
+-- MicroJuvixToMiniC.hs is that these coincide with type parameters
+mkPolyType :: Expression -> Maybe PolyType
+mkPolyType = fmap PolyType . go
+  where
+    go :: Expression -> Maybe Expression
+    go t = case t of
+      ExpressionApplication (Application l r i) -> do
+        l' <- go l
+        r' <- go r
+        return (ExpressionApplication (Application l' r' i))
+      ExpressionUniverse {} -> return t
+      ExpressionFunction (Function (FunctionParameter m i e) r)
+        | isNothing m -> do
+            e' <- go e
+            r' <- go r
+            return (ExpressionFunction (Function (FunctionParameter m i e') r'))
+        | otherwise -> go r
+      ExpressionHole {} -> Nothing
+      ExpressionLiteral {} -> return t
+      ExpressionIden IdenFunction {} -> return t
+      ExpressionIden IdenInductive {} -> return t
+      ExpressionIden IdenConstructor {} -> return t
+      ExpressionIden IdenAxiom {} -> return t
+      ExpressionIden IdenVar {} -> return t
+
 class HasExpressions a where
   leafExpressions :: Traversal' a Expression
 

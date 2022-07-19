@@ -1,4 +1,4 @@
-module Juvix.Translation.MonoJuvixToMiniC.CNames where
+module Juvix.Translation.MicroJuvixToMiniC.CNames where
 
 import Juvix.Prelude
 

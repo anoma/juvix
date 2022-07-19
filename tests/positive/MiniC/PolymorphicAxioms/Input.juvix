@@ -1,0 +1,26 @@
+module Input;
+
+inductive Unit {
+  unit : Unit;
+};
+
+axiom Action : Type;
+
+compile Action {
+  c ↦ "int";
+};
+
+axiom ignore : {A : Type} -> A -> Action;
+
+compile ignore {
+  c ↦ "ignore";
+};
+
+foreign c {
+  static int ignore(uintptr_t ptr) { return 0; \}
+};
+
+main : Action;
+main := ignore unit;
+
+end;

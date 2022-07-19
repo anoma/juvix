@@ -17,8 +17,8 @@ import Juvix.Syntax.MicroJuvix.MicroJuvixResult qualified as MicroJuvix
 import Juvix.Syntax.MicroJuvix.MicroJuvixTypedResult qualified as MicroJuvix
 import Juvix.Syntax.MicroJuvix.TypeChecker qualified as MicroJuvix
 import Juvix.Translation.AbstractToMicroJuvix qualified as MicroJuvix
+import Juvix.Translation.MicroJuvixToMiniC qualified as MiniC
 import Juvix.Translation.MicroJuvixToMonoJuvix qualified as MonoJuvix
-import Juvix.Translation.MonoJuvixToMiniC qualified as MiniC
 import Juvix.Translation.MonoJuvixToMiniHaskell qualified as MiniHaskell
 import Juvix.Translation.ScopedToAbstract qualified as Abstract
 
@@ -95,7 +95,7 @@ upToMiniC ::
   Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
   EntryPoint ->
   Sem r MiniC.MiniCResult
-upToMiniC = upToMonoJuvix >=> pipelineMiniC
+upToMiniC = upToMicroJuvixTyped >=> pipelineMiniC
 
 --------------------------------------------------------------------------------
 
@@ -149,6 +149,6 @@ pipelineMiniHaskell = MiniHaskell.entryMiniHaskell
 
 pipelineMiniC ::
   Member Builtins r =>
-  MonoJuvix.MonoJuvixResult ->
+  MicroJuvix.MicroJuvixTypedResult ->
   Sem r MiniC.MiniCResult
 pipelineMiniC = MiniC.entryMiniC

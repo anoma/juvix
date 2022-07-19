@@ -9,9 +9,12 @@ import Juvix.Syntax.MicroJuvix.InfoTable
 import Juvix.Syntax.MicroJuvix.Language
 import Juvix.Syntax.MicroJuvix.MicroJuvixArityResult (MicroJuvixArityResult)
 
+type TypesTable = HashMap Name Expression
+
 data MicroJuvixTypedResult = MicroJuvixTypedResult
   { _resultMicroJuvixArityResult :: MicroJuvixArityResult,
-    _resultModules :: NonEmpty Module
+    _resultModules :: NonEmpty Module,
+    _resultIdenTypes :: TypesTable
   }
 
 makeLenses ''MicroJuvixTypedResult

@@ -4,6 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Prelude hiding (fromEither)
 import Juvix.Syntax.MicroJuvix.Error
 import Juvix.Syntax.MicroJuvix.Language.Extra
+import Juvix.Syntax.MicroJuvix.MicroJuvixTypedResult
 
 data MetavarState
   = Fresh
@@ -21,21 +22,32 @@ data Inference m a where
   MatchTypes :: Expression -> Expression -> Inference m (Maybe MatchError)
   QueryMetavar :: Hole -> Inference m (Maybe Expression)
   NormalizeType :: Expression -> Inference m Expression
+  RegisterIden :: Name -> Expression -> Inference m ()
 
 makeSem ''Inference
 
-newtype InferenceState = InferenceState
-  { _inferenceMap :: HashMap Hole MetavarState
+data InferenceState = InferenceState
+  { _inferenceMap :: HashMap Hole MetavarState,
+    _inferenceIdens :: TypesTable
   }
 
 makeLenses ''InferenceState
 
 iniState :: InferenceState
-iniState = InferenceState mempty
+iniState = InferenceState mempty mempty
 
-closeState :: Member (Error TypeCheckerError) r => InferenceState -> Sem r (HashMap Hole Expression)
+closeState ::
+  Member (Error TypeCheckerError) r =>
+  InferenceState ->
+  Sem
+    r
+    ( HashMap Hole Expression,
+      TypesTable
+    )
 closeState = \case
-  InferenceState m -> execState mempty (f m)
+  InferenceState m idens -> do
+    holeMap <- execState mempty (f m)
+    return (holeMap, idens)
   where
     f ::
       forall r'.
@@ -110,7 +122,11 @@ re = reinterpret $ \case
   MatchTypes a b -> matchTypes' a b
   QueryMetavar h -> queryMetavar' h
   NormalizeType t -> normalizeType' t
+  RegisterIden i ty -> registerIden' i ty
   where
+    registerIden' :: Members '[State InferenceState] r => Name -> Expression -> Sem r ()
+    registerIden' i ty = modify (over inferenceIdens (HashMap.insert i ty))
+
     refineFreshMetavar ::
       Members '[Error TypeCheckerError, State InferenceState] r =>
       Hole ->
@@ -199,12 +215,10 @@ re = reinterpret $ \case
                     bicheck (go l1 l2) (local' (go r1 r2))
                 | otherwise = ok
 
-runInference :: Member (Error TypeCheckerError) r => Sem (Inference ': r) Expression -> Sem r Expression
-runInference a = do
-  (subs, expr) <- runState iniState (re a) >>= firstM closeState
-  return (fillHoles subs expr)
-
-runInferenceDef :: Member (Error TypeCheckerError) r => Sem (Inference ': r) FunctionDef -> Sem r FunctionDef
+runInferenceDef ::
+  Member (Error TypeCheckerError) r =>
+  Sem (Inference ': r) FunctionDef ->
+  Sem r (FunctionDef, TypesTable)
 runInferenceDef a = do
-  (subs, expr) <- runState iniState (re a) >>= firstM closeState
-  return (fillHolesFunctionDef subs expr)
+  ((subs, idens), expr) <- runState iniState (re a) >>= firstM closeState
+  return (fillHolesFunctionDef subs expr, fillHoles subs <$> idens)

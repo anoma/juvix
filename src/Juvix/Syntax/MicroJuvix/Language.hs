@@ -69,6 +69,14 @@ data Iden
   | IdenInductive Name
   deriving stock (Eq, Generic)
 
+getName :: Iden -> Name
+getName = \case
+  IdenFunction n -> n
+  IdenConstructor n -> n
+  IdenVar n -> n
+  IdenAxiom n -> n
+  IdenInductive n -> n
+
 instance Hashable Iden
 
 data TypedExpression = TypedExpression

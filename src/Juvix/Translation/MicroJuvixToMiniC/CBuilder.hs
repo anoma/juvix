@@ -1,9 +1,9 @@
-module Juvix.Translation.MonoJuvixToMiniC.CBuilder where
+module Juvix.Translation.MicroJuvixToMiniC.CBuilder where
 
 import Juvix.Internal.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Syntax.MiniC.Language
-import Juvix.Translation.MonoJuvixToMiniC.CNames
+import Juvix.Translation.MicroJuvixToMiniC.CNames
 
 namedArgs :: (Text -> Text) -> [CDeclType] -> [Declaration]
 namedArgs prefix = zipWith namedCDecl argLabels
@@ -51,9 +51,13 @@ mallocSizeOf :: Text -> Expression
 mallocSizeOf typeName =
   functionCall (ExpressionVar Str.malloc) [functionCall (ExpressionVar Str.sizeof) [ExpressionVar typeName]]
 
+functionCallCasted :: CFunType -> Expression -> [Expression] -> Expression
+functionCallCasted fType fExpr args =
+  functionCall fExpr (zipWith castToType (fType ^. cFunArgTypes) args)
+
 juvixFunctionCall :: CFunType -> Expression -> [Expression] -> Expression
 juvixFunctionCall funType funParam args =
-  functionCall (castToType (funPtrType fTyp) (memberAccess Pointer funParam "fun")) (funParam : args)
+  functionCallCasted fTyp (castToType (funPtrType fTyp) (memberAccess Pointer funParam "fun")) (funParam : args)
   where
     fTyp :: CFunType
     fTyp = funType {_cFunArgTypes = declFunctionPtrType : (funType ^. cFunArgTypes)}

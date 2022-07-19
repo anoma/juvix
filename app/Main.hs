@@ -25,8 +25,8 @@ import Juvix.Syntax.MiniHaskell.Pretty qualified as MiniHaskell
 import Juvix.Syntax.MonoJuvix.Pretty qualified as Mono
 import Juvix.Termination qualified as Termination
 import Juvix.Translation.AbstractToMicroJuvix qualified as Micro
+import Juvix.Translation.MicroJuvixToMiniC qualified as MiniC
 import Juvix.Translation.MicroJuvixToMonoJuvix qualified as Mono
-import Juvix.Translation.MonoJuvixToMiniC qualified as MiniC
 import Juvix.Translation.MonoJuvixToMiniHaskell qualified as MiniHaskell
 import Juvix.Translation.ScopedToAbstract qualified as Abstract
 import Juvix.Utils.Version (runDisplayVersion)

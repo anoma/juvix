@@ -1,0 +1,26 @@
+module Input;
+
+inductive Unit {
+  unit : Unit;
+};
+
+terminating
+loop : {A : Type} -> A;
+loop := loop;
+
+const : {A : Type} -> A -> A -> A;
+const x y := x;
+
+fail : Unit;
+fail := const unit loop;
+
+axiom Action : Type;
+
+compile Action {
+  c ↦ "int";
+};
+
+main : Action;
+main := 0;
+
+end;

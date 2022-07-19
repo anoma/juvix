@@ -40,6 +40,8 @@ tests =
   [ PosTest "HelloWorld" "HelloWorld" StdlibExclude,
     PosTest "Inductive types and pattern matching" "Nat" StdlibExclude,
     PosTest "Polymorphic types" "Polymorphism" StdlibExclude,
+    PosTest "Polymorphic axioms" "PolymorphicAxioms" StdlibExclude,
+    PosTest "Polymorphic target" "PolymorphicTarget" StdlibExclude,
     PosTest "Multiple modules" "MultiModules" StdlibExclude,
     PosTest "Higher Order Functions" "HigherOrder" StdlibExclude,
     PosTest "Higher Order Functions and explicit holes" "PolymorphismHoles" StdlibExclude,
