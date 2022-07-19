@@ -19,7 +19,7 @@ cd juvix
 stack install
 #+end_src
 
-If the installation succeeds, you must be able to run the =juvix=
+If the installation succeeds, you must be able to run the Juvix
 command from any location.
 
 

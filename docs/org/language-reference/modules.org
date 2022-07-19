@@ -1,1 +1,173 @@
 * Module system
+
+** Defining a module
+
+A module is of the following form. The =module= keyword stars the declaration of
+a module followed by its name and its body. The module declaration ends after
+seeing the =end= keyword.
+
+#+begin_example
+-- ModuleName.juvix
+module ModuleName;
+
+end;
+#+end_example
+
+A _Juvix project_ is a collection of Juvix modules inside one main project
+folder containing a metadata file named =juvix.yaml=. Each Juvix file has to
+define a _module_ of the same name. The name of the module must coincide with
+the path of the its file respect to its project. For example, if the file is
+=root/Data/List.juvix= then the module must be called =Data.List=, assumming
+=root= is the project's folder.
+
+To check that Juvix is correctly detecting your project's root, one can run the
+command =juvix internal root File.juvix=.
+
+# - Inside a module, other (sub) modules can be declared.
+
+# #+begin_example
+# -- Example.juvix
+# module Example;
+#     module A;
+#     end;
+# end;
+# #+end_example
+
+** Importing modules
+
+To bring into the current scope all module definitions from other external
+modules, one can use the =import= keyword along with the corresponding module
+name. This way, one gets all the imported names qualified.
+
+#+begin_example
+-- A.juvix
+module A;
+   axiom Nat : Type;
+   axiom zero : Nat;
+end;
+
+-- B.juvix
+module B;
+    import A;
+    x : A.Nat;
+    x := A.zero;
+#+end_example
+
+Additionally, one can _open_ an imported module making available all its
+names by their unqualified name.
+
+#+begin_example
+-- A.juvix
+module A;
+   axiom Nat : Type;
+   axiom zero : Nat;
+end;
+
+-- B.juvix
+module B;
+    import A;
+    open A;
+    x : Nat;
+    x := zero;
+#+end_example
+
+However, opening modules may create name collisions if you already have the
+imported names as definitions in the current module. In this case, Juvix will
+complain with an error, letting you know which symbols are ambiguous. For
+example, in module =B= below, the name =a= is ambiguous.
+
+#+begin_example
+-- A.juvix
+module A;
+axiom A : Type;
+axiom a : A;
+end;
+
+-- B.juvix
+module B;
+import A;
+open A;
+axiom a : A;
+
+x := a;
+end;
+#+end_example
+
+One alternative here is hiding the name =a= as follows.
+
+#+begin_example
+-- B.juvix
+module B;
+import A;
+open A hiding {a};
+
+axiom a : A;
+x := a;
+
+end;
+#+end_example
+
+Now, we can use the =open import= syntax to simplify the =import-open= statements.
+
+Instead of having:
+
+#+begin_example
+import Prelude;
+open Prelude;
+#+end_example
+
+We simplify it by the expression:
+
+#+begin_example
+open import Prelude;
+#+end_example
+
+The =hiding= keyword can be used within an =open-import= statement.
+
+#+begin_example
+-- B.juvix
+module A;
+open import A hiding {a};
+axiom a : A;
+x := a;
+end;
+#+end_example
+
+** Exporting symbols
+
+The module =C= below does not typecheck. Both symbols, originally defined in
+module =A=, are not visible in module =C= after importing =B=. The symbols =A=
+and =a= are not exported by the module =B=. To export symbols from an imported
+module, one can use the =public= keyword at the end of the corresponing =open=
+statement. For example, in module =B=, after marking the import of =A= as
+=public=, the module =C= typechecks.
+
+#+begin_example
+-- A.juvix
+module A;
+axiom A : Type;
+axiom a : A;
+end;
+
+-- B.juvix
+module B;
+open import A;
+end;
+
+-- C.juvix
+module C;
+open import B;
+
+x : A;
+x := a;
+end;
+#+end_example
+
+Fix:
+
+#+begin_example
+-- B.juvix
+module B;
+open import A public;
+end;
+#+end_example
