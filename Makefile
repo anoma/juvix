@@ -17,9 +17,6 @@ EXAMPLES=ValidityPredicates/SimpleFungibleToken.juvix \
 ORGTOMDPRG ?=pandoc
 ORGOPTS=--from org --to markdown_strict -s -o $@
 
-# ORGTOMDPRG ?=emacs
-# ORGOPTS=--batch -f org-html-export-to-markdown
-
 ifeq ($(UNAME), Darwin)
 	THREADS := $(shell sysctl -n hw.logicalcpu)
 else ifeq ($(UNAME), Linux)
@@ -31,13 +28,17 @@ endif
 all:
 	make pre-commit
 
+docs/md/README.md :
+	@mkdir -p docs/md
+	@${ORGTOMDPRG} README.org ${ORGOPTS}
+
 docs/md/%.md : docs/org/%.org
 	@echo "Processing ...  $@"
 	@mkdir -p $(dir $@)
 	${ORGTOMDPRG} $? ${ORGOPTS}
 
 .PHONY: markdown-docs
-markdown-docs: $(MDFILES)
+markdown-docs: docs/md/README.md $(MDFILES)
 	@echo "copying assets ..."
 	@mkdir -p docs/md/assets
 	@cp -v $(addprefix assets/,$(ASSETS)) docs/md/assets

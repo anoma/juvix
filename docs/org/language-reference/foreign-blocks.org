@@ -1,7 +1,9 @@
 * Foreign blocks
 
-The =foreign= blocks give the developer the ability to introduce
-any piece of code in the compiled file. In addition, every foreign block specifies the backend's name that will include the code given in the body of the foreign block=. However, this language feature must be used cautiously and only considered for internal usage.
+The =foreign= blocks give the developer the ability to introduce any piece of
+code in the compiled file. In addition, every foreign block specifies the
+backend's name that will include the given code in the body of the foreign
+block.
 
 The following is an example taken from the Juvix standard library.
 

@@ -2,19 +2,26 @@
 
 ** Defining a module
 
-Each Juvix file has to define a module of the same name.
-The keyword =module= stars the declaration and has to end with
-the keyword =end=. In the example below, we declare an empty module called =Example=.
+A module is of the following form. The =module= keyword stars the declaration of
+a module followed by its name and its body. The module declaration ends after
+seeing the =end= keyword.
 
 #+begin_example
--- Example.juvix
-module Example;
+-- ModuleName.juvix
+module ModuleName;
 
 end;
 #+end_example
 
-A =Juvix= project is a collection of Juvix modules inside the main folder
-containing the file =juvix.yaml= with metadata about the project. To check that =Juvix= is correctly detecting your project's root, run the command =juvix internal root File.juvix=.
+A _Juvix project_ is a collection of Juvix modules inside one main project
+folder containing a metadata file named =juvix.yaml=. Each Juvix file has to
+define a _module_ of the same name. The name of the module must coincide with
+the path of the its file respect to its project. For example, if the file is
+=root/Data/List.juvix= then the module must be called =Data.List=, assumming
+=root= is the project's folder.
+
+To check that Juvix is correctly detecting your project's root, one can run the
+command =juvix internal root File.juvix=.
 
 # - Inside a module, other (sub) modules can be declared.
 
@@ -28,8 +35,9 @@ containing the file =juvix.yaml= with metadata about the project. To check that 
 
 ** Importing modules
 
-To bring into the current scope all module definitions from other
-external modules, one can use the =import= keyword along with the corresponding module name. This way, one gets all the imported names qualified.
+To bring into the current scope all module definitions from other external
+modules, one can use the =import= keyword along with the corresponding module
+name. This way, one gets all the imported names qualified.
 
 #+begin_example
 -- A.juvix
@@ -45,8 +53,8 @@ module B;
     x := A.zero;
 #+end_example
 
-Additionally, one can _open_ an imported module making available its
-names but all unqualified.
+Additionally, one can _open_ an imported module making available all its
+names by their unqualified name.
 
 #+begin_example
 -- A.juvix
@@ -63,7 +71,10 @@ module B;
     x := zero;
 #+end_example
 
-However, opening modules may create name collisions if you already have the imported names as definitions in the current module. In this case, Juvix will complain with an error, letting you know which symbols is ambiguous. For example, in module =B= below, the name =a= is ambiguous.
+However, opening modules may create name collisions if you already have the
+imported names as definitions in the current module. In this case, Juvix will
+complain with an error, letting you know which symbols are ambiguous. For
+example, in module =B= below, the name =a= is ambiguous.
 
 #+begin_example
 -- A.juvix
@@ -124,7 +135,12 @@ end;
 
 ** Exporting symbols
 
-The module =C= below does not typecheck. Both symbols, originally defined in module =A=, are not visible in module =C= after importing =B=. The symbols =A= and =a= are not exported by the module =B=. To export symbols from an imported module, one can use the =public= keyword at the end of the corresponing =open= statement. For example, in module =B=, after marking the import of =A= as =public=, the module =C= typechecks.
+The module =C= below does not typecheck. Both symbols, originally defined in
+module =A=, are not visible in module =C= after importing =B=. The symbols =A=
+and =a= are not exported by the module =B=. To export symbols from an imported
+module, one can use the =public= keyword at the end of the corresponing =open=
+statement. For example, in module =B=, after marking the import of =A= as
+=public=, the module =C= typechecks.
 
 #+begin_example
 -- A.juvix

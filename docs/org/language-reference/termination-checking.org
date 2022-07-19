@@ -1,19 +1,26 @@
 * Termination
 
 To not bring inconsistencies by function declarations, Juvix
-requires that every function pass the termination checker.
-This check is called before the typechecking in the compilation pipeline.
+requires that every function passes its termination checker.
+However, since this is a strong requirement, often tricky to fulfill,
+we give the user the possibility to skip this check in two different ways:
 
-Since the former requirement is vital but often tricky to fulfill for programs
-in a total language like Juvix, it is convenient to have
-a way to bypass the termination checking. The user may know their programs are terminating even when our termination checker algorithm can not see it. The termination checker is limited as it only accepts a subset of recursion functions. Our termination checker algorithm slightly modifies the algorithm for checking the termination of the Foetus's language.
-
-To skip the termination checker, we introduced the =terminating= keyword to annotate a type signature as terminating. The syntax is the following.
+- Using the =terminating= keyword to annotate function type signatures as terminating. The syntax is the following.
 
 #+begin_example
 terminating fun : A → B;
 #+end_example
 
-Annotating a function as =terminating= means that /all/ its function clauses pass the termination
-checker's criterion. To skip the termination checker for mutual recursive functions, all the functions
-involved must be annotated as =terminating=, otherwise, the checker will complain.
+Note that annotating a function as =terminating= means that /all/ its function
+clauses pass the termination checker's criterion. To skip the termination
+checker for mutual recursive functions, all the functions involved must be
+annotated as =terminating=.
+
+- Using the CLI global flag =--no=terminating=.
+
+
+#+begin_example
+juvix typecheck --no-termination MyProgram.juvix
+#+end_example
+
+In any case, be aware that our termination checker is limited as it only accepts a subset of recursion functions. The termination checker algorithm is a slightly modification of the algorithm for checking termination in the Foetus's language.

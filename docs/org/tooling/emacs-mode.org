@@ -11,7 +11,7 @@ To install it add the following lines to your Emacs configuration file:
 (require 'juvix-mode)
 #+end_src
 
-Make sure that =juvix= is installed in your =PATH=.
+Make sure that Juvix is installed in your =PATH=.
 
 The Juvix major mode will be activated automatically for =.juvix= files.
 
