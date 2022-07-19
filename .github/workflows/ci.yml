@@ -184,7 +184,8 @@ jobs:
           make install-shelltest
           make test-shell
   docs:
-    if: ${{github.event.pull_request.merged == true || contains(github.event.head_commit.message, 'docs') }}
+    needs: build
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
         os: [ubuntu-latest]
