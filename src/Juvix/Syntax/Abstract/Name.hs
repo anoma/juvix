@@ -12,6 +12,7 @@ import Juvix.Syntax.Concrete.Scoped.Name.NameKind
 import Juvix.Syntax.Fixity
 import Juvix.Syntax.NameId
 
+-- TODO: consider adding "namePretty" field for qualified names
 data Name = Name
   { _nameText :: Text,
     _nameId :: NameId,
