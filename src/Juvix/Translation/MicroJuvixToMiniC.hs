@@ -485,7 +485,7 @@ mkInductiveName :: Micro.InductiveDef -> Text
 mkInductiveName i = mkName (i ^. Micro.inductiveName)
 
 mkInductiveConstructorNames :: Micro.InductiveDef -> [Text]
-mkInductiveConstructorNames i = mkName . view Micro.constructorName <$> i ^. Micro.inductiveConstructors
+mkInductiveConstructorNames i = mkName . view Micro.inductiveConstructorName <$> i ^. Micro.inductiveConstructors
 
 mkInductiveTypeDef :: Micro.InductiveDef -> [CCode]
 mkInductiveTypeDef i =
@@ -638,13 +638,13 @@ goInductiveConstructorNew i ctor = ctorNewFun
     ctorNewFun = if null ctorParams then return ctorNewNullary else ctorNewNary
 
     baseName :: Text
-    baseName = mkName (ctor ^. Micro.constructorName)
+    baseName = mkName (ctor ^. Micro.inductiveConstructorName)
 
     inductiveName :: Text
     inductiveName = mkInductiveName i
 
     ctorParams :: [Micro.PolyType]
-    ctorParams = map mkPolyType' (ctor ^. Micro.constructorParameters)
+    ctorParams = map mkPolyType' (ctor ^. Micro.inductiveConstructorParameters)
 
     ctorNewNullary :: [CCode]
     ctorNewNullary =
@@ -791,7 +791,7 @@ goInductiveConstructorNew i ctor = ctorNewFun
         )
 
 inductiveCtorParams :: Members '[Reader Micro.InfoTable] r => Micro.InductiveConstructorDef -> Sem r [CDeclType]
-inductiveCtorParams ctor = mapM (goType . mkPolyType') (ctor ^. Micro.constructorParameters)
+inductiveCtorParams ctor = mapM (goType . mkPolyType') (ctor ^. Micro.inductiveConstructorParameters)
 
 inductiveCtorArgs :: Members '[Reader Micro.InfoTable] r => Micro.InductiveConstructorDef -> Sem r [Declaration]
 inductiveCtorArgs ctor = namedArgs asCtorArg <$> inductiveCtorParams ctor
@@ -814,10 +814,10 @@ goInductiveConstructorDef ctor = do
     ctorDecl = if null ctorParams then return ctorBool else ctorStruct
 
     baseName :: Text
-    baseName = mkName (ctor ^. Micro.constructorName)
+    baseName = mkName (ctor ^. Micro.inductiveConstructorName)
 
     ctorParams :: [Micro.PolyType]
-    ctorParams = map mkPolyType' (ctor ^. Micro.constructorParameters)
+    ctorParams = map mkPolyType' (ctor ^. Micro.inductiveConstructorParameters)
 
     ctorBool :: Declaration
     ctorBool = typeDefWrap (asTypeDef baseName) BoolType
@@ -848,7 +848,7 @@ goProjections inductiveTypeDef ctor = do
   return (ExternalFunc <$> zipWith projFunction [0 ..] params)
   where
     baseName :: Text
-    baseName = mkName (ctor ^. Micro.constructorName)
+    baseName = mkName (ctor ^. Micro.inductiveConstructorName)
 
     localName :: Text
     localName = "a"
