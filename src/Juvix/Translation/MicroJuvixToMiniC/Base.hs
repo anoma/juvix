@@ -174,7 +174,14 @@ typeOfConstructor name = do
   getInductiveCType (info ^. Micro.constructorInfoInductive)
 
 getClausePatterns :: Member (Reader Micro.TypesTable) r => Micro.FunctionClause -> Sem r [Micro.Pattern]
-getClausePatterns c = filterCompileTimeArgsOrPatterns (c ^. Micro.clauseName) (c ^. Micro.clausePatterns)
+getClausePatterns c =
+  filterCompileTimeArgsOrPatterns
+    (c ^. Micro.clauseName)
+    ( c
+        ^.. Micro.clausePatterns
+          . each
+          . Micro.patternArgPattern
+    )
 
 functionInfoPatternsNum :: Member (Reader Micro.TypesTable) r => Micro.FunctionInfo -> Sem r Int
 functionInfoPatternsNum fInfo = do
@@ -203,9 +210,8 @@ buildPatternInfoTable argTyps c =
         return
           [(v ^. Micro.nameText, BindingInfo {_bindingInfoExpr = exp, _bindingInfoType = typ})]
       Micro.PatternConstructorApp Micro.ConstructorApp {..} ->
-        goConstructorApp exp _constrAppConstructor _constrAppParameters
+        goConstructorApp exp _constrAppConstructor (_constrAppParameters ^.. each . Micro.patternArgPattern)
       Micro.PatternWildcard {} -> return []
-      Micro.PatternBraces b -> go (b, (exp, typ))
 
     goConstructorApp :: Expression -> Micro.Name -> [Micro.Pattern] -> Sem r [(Text, BindingInfo)]
     goConstructorApp exp constructorName ps = do

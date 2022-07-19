@@ -315,11 +315,17 @@ goFunctionClause funSig argTyps clause = do
             projCtor :: Text -> Expression
             projCtor ctorArg = functionCall (ExpressionVar (asProjName ctorArg ctorName)) [castToType ty arg]
             subConditions :: Sem r [Expression]
-            subConditions = fmap concat (zipWithM patternCondition (map projCtor ctorArgs) _constrAppParameters)
+            subConditions =
+              fmap
+                concat
+                ( zipWithM
+                    patternCondition
+                    (map projCtor ctorArgs)
+                    (_constrAppParameters ^.. each . Micro.patternArgPattern)
+                )
         fmap (isCtor :) subConditions
       Micro.PatternVariable {} -> return []
       Micro.PatternWildcard {} -> return []
-      Micro.PatternBraces b -> patternCondition arg b
 
     clauseCondition :: Sem r (Maybe Expression)
     clauseCondition = fmap (foldr1 f) . nonEmpty <$> conditions
