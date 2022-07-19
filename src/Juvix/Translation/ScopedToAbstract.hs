@@ -174,7 +174,7 @@ goFunctionClause ::
   FunctionClause 'Scoped ->
   Sem r Abstract.FunctionClause
 goFunctionClause FunctionClause {..} = do
-  _clausePatterns' <- mapM goPattern _clausePatterns
+  _clausePatterns' <- mapM goPatternArg _clausePatterns
   _clauseBody' <- goExpression _clauseBody
   goWhereBlock _clauseWhere
   return
@@ -360,29 +360,43 @@ goPostfixPatternApplication ::
   Sem r Abstract.ConstructorApp
 goPostfixPatternApplication a = uncurry Abstract.ConstructorApp <$> viewApp (PatternPostfixApplication a)
 
-viewApp :: forall r. Pattern -> Sem r (Abstract.ConstructorRef, [Abstract.Pattern])
+viewApp :: forall r. Pattern -> Sem r (Abstract.ConstructorRef, [Abstract.PatternArg])
 viewApp = \case
   PatternConstructor c -> return (goConstructorRef c, [])
   PatternApplication (PatternApp l r) -> do
-    r' <- goPattern r
-    second (`snoc` r') <$> viewApp l
+    r' <- goPatternArg r
+    second (`snoc` r') <$> viewAppLeft l
   PatternInfixApplication (PatternInfixApp l c r) -> do
-    l' <- goPattern l
-    r' <- goPattern r
+    l' <- goPatternArg l
+    r' <- goPatternArg r
     return (goConstructorRef c, [l', r'])
   PatternPostfixApplication (PatternPostfixApp l c) -> do
-    l' <- goPattern l
+    l' <- goPatternArg l
     return (goConstructorRef c, [l'])
   PatternVariable {} -> err
   PatternWildcard {} -> err
-  PatternBraces {} -> err
   PatternEmpty {} -> err
   where
+    viewAppLeft :: PatternArg -> Sem r (Abstract.ConstructorRef, [Abstract.PatternArg])
+    viewAppLeft p
+      -- TODO proper error
+      | Implicit <- p ^. patternArgIsImplicit = error "An implicit pattern cannot be on the left of an application"
+      | otherwise = viewApp (p ^. patternArgPattern)
+    -- TODO proper error
     err :: a
     err = error "constructor expected on the left of a pattern application"
 
 goConstructorRef :: ConstructorRef -> Abstract.ConstructorRef
 goConstructorRef (ConstructorRef' n) = Abstract.ConstructorRef (goName n)
+
+goPatternArg :: PatternArg -> Sem r Abstract.PatternArg
+goPatternArg p = do
+  pat' <- goPattern (p ^. patternArgPattern)
+  return
+    Abstract.PatternArg
+      { _patternArgIsImplicit = p ^. patternArgIsImplicit,
+        _patternArgPattern = pat'
+      }
 
 goPattern :: Pattern -> Sem r Abstract.Pattern
 goPattern p = case p of
@@ -393,7 +407,6 @@ goPattern p = case p of
   PatternPostfixApplication a -> Abstract.PatternConstructorApp <$> goPostfixPatternApplication a
   PatternWildcard i -> return (Abstract.PatternWildcard i)
   PatternEmpty -> return Abstract.PatternEmpty
-  PatternBraces b -> Abstract.PatternBraces <$> goPattern b
 
 goAxiom :: Members '[InfoTableBuilder, Error ScoperError, Builtins] r => AxiomDef 'Scoped -> Sem r Abstract.AxiomDef
 goAxiom a = do

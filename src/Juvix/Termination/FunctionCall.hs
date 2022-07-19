@@ -42,7 +42,7 @@ viewCall = \case
                 return $ case s of
                   Nothing -> CallRow Nothing
                   Just s' -> CallRow (Just (s', REq))
-              _ -> return (CallRow Nothing)
+              Nothing -> return (CallRow Nothing)
   ExpressionIden (IdenFunction x) ->
     return (Just (singletonCall x))
   _ -> return Nothing

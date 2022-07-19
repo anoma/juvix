@@ -448,6 +448,9 @@ instance PrettyCode QualifiedName where
     let symbols = _qualifiedPath ^. pathParts NonEmpty.|> _qualifiedSymbol
     dotted <$> mapM ppSymbol symbols
 
+bracesIf :: Bool -> Doc Ann -> Doc Ann
+bracesIf t = if t then braces else id
+
 ppName :: forall s r. (SingI s, Members '[Reader Options] r) => IdentifierType s -> Sem r (Doc Ann)
 ppName = case sing :: SStage s of
   SParsed -> ppCode
@@ -652,6 +655,11 @@ instance PrettyCode PatternScopedIden where
     PatternScopedVar v -> ppCode v
     PatternScopedConstructor c -> ppCode c
 
+instance PrettyCode PatternArg where
+  ppCode a = do
+    p <- ppCode (a ^. patternArgPattern)
+    return (bracesIf (Implicit == a ^. patternArgIsImplicit) p)
+
 instance SingI s => PrettyCode (PatternAtom s) where
   ppCode a = case a of
     PatternAtomIden n -> case sing :: SStage s of
@@ -750,7 +758,6 @@ instance PrettyCode Pattern where
       return $ l' <+> r'
     PatternWildcard {} -> return kwWildcard
     PatternEmpty -> return $ parens mempty
-    PatternBraces p -> braces <$> ppCode p
     PatternConstructor constr -> ppCode constr
     PatternInfixApplication i -> ppPatternInfixApp i
     PatternPostfixApplication i -> ppPatternPostfixApp i
