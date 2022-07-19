@@ -4,6 +4,7 @@ module Juvix.Syntax.MicroJuvix.MicroJuvixResult
   )
 where
 
+import Juvix.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude
 import Juvix.Syntax.Abstract.AbstractResult qualified as Abstract
 import Juvix.Syntax.MicroJuvix.InfoTable
@@ -16,3 +17,6 @@ data MicroJuvixResult = MicroJuvixResult
   }
 
 makeLenses ''MicroJuvixResult
+
+microJuvixResultEntryPoint :: Lens' MicroJuvixResult E.EntryPoint
+microJuvixResultEntryPoint = resultAbstract . Abstract.abstractResultEntryPoint

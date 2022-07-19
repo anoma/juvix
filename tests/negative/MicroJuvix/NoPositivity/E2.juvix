@@ -1,0 +1,9 @@
+module E2;
+
+open import NegParam;
+
+inductive D {
+d : T D -> D;
+};
+
+end;

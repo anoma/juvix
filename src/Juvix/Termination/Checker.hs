@@ -48,13 +48,10 @@ checkModule m = checkModuleBody (m ^. moduleBody)
 checkModuleBody :: Members '[State CallMap, Reader InfoTable] r => ModuleBody -> Sem r ()
 checkModuleBody body = do
   mapM_ checkFunctionDef moduleFunctions
-  mapM_ checkLocalModule moduleLocalModules
+  mapM_ checkModuleBody moduleLocalModules
   where
     moduleFunctions = [f | StatementFunction f <- body ^. moduleStatements]
-    moduleLocalModules = [f | StatementLocalModule f <- body ^. moduleStatements]
-
-checkLocalModule :: Members '[State CallMap, Reader InfoTable] r => LocalModule -> Sem r ()
-checkLocalModule m = checkModuleBody (m ^. moduleBody)
+    moduleLocalModules = [f ^. moduleBody | StatementLocalModule f <- body ^. moduleStatements]
 
 checkFunctionDef ::
   Members '[State CallMap, Reader InfoTable] r =>

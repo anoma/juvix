@@ -1,0 +1,17 @@
+module E5;
+
+nopositivity
+inductive T0 (A : Type){
+c0 : (A -> T0 A) -> T0 A;
+};
+
+axiom B : Type;
+inductive T1 (A : Type) {
+c1 : (B -> T0 A) -> T1 A;
+};
+
+inductive T2 {
+c2 : (B -> (B -> T1 T2)) -> T2;
+};
+
+end;

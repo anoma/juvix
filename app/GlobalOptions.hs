@@ -12,6 +12,7 @@ data GlobalOptions = GlobalOptions
     _globalShowNameIds :: Bool,
     _globalOnlyErrors :: Bool,
     _globalNoTermination :: Bool,
+    _globalNoPositivity :: Bool,
     _globalNoStdlib :: Bool,
     _globalInputFiles :: [FilePath]
   }
@@ -26,6 +27,7 @@ defaultGlobalOptions =
       _globalShowNameIds = False,
       _globalOnlyErrors = False,
       _globalNoTermination = False,
+      _globalNoPositivity = False,
       _globalNoStdlib = False,
       _globalInputFiles = []
     }
@@ -37,6 +39,7 @@ instance Semigroup GlobalOptions where
         _globalShowNameIds = o1 ^. globalShowNameIds || o2 ^. globalShowNameIds,
         _globalOnlyErrors = o1 ^. globalOnlyErrors || o2 ^. globalOnlyErrors,
         _globalNoTermination = o1 ^. globalNoTermination || o2 ^. globalNoTermination,
+        _globalNoPositivity = o1 ^. globalNoPositivity || o2 ^. globalNoPositivity,
         _globalNoStdlib = o1 ^. globalNoStdlib || o2 ^. globalNoStdlib,
         _globalInputFiles = o1 ^. globalInputFiles ++ o2 ^. globalInputFiles
       }
@@ -71,6 +74,12 @@ parseGlobalFlags b = do
     switch
       ( long "no-termination"
           <> help "Disable termination checking"
+          <> hidden b
+      )
+  _globalNoPositivity <-
+    switch
+      ( long "no-positivity"
+          <> help "Disable positivity checking for data types"
           <> hidden b
       )
   _globalNoStdlib <-
