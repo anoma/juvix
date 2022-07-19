@@ -1,6 +1,6 @@
 * Summary
 
-- [[./introduction/about/what-is.md][Juvix]]
+- [[./README.md][The Juvix project]]
 - [[./introduction/changelog.md][Changelog]]
 - [[./getting-started/README.md][Getting started]]
   - [[./getting-started/quick-start.md][Quick start]]
@@ -35,6 +35,6 @@
   - [[./examples/validity-predicates/README.md][Validity predicates]]
   - [[./notes/monomorphization.md][Monomorphization]]
 
-- [[./introduction/about/what-is.md][About]]
-  - [[./introduction/about/team.md][The dev team]]
+- [[./README.md][About]]
+  # - [[./introduction/about/team.md][The dev team]]
   - [[./introduction/about/community.md][Community]]
