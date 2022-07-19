@@ -21,7 +21,6 @@ import Juvix.Syntax.IsImplicit
 import Juvix.Syntax.Loc
 import Juvix.Syntax.Universe hiding (smallUniverse)
 import Juvix.Syntax.Wildcard
-import Text.Show qualified as Show
 
 data Module = Module
   { _moduleName :: Name,
@@ -68,7 +67,7 @@ data Iden
   | IdenVar VarName
   | IdenAxiom Name
   | IdenInductive Name
-  deriving stock (Eq, Generic, Show)
+  deriving stock (Eq, Generic)
 
 getName :: Iden -> Name
 getName = \case
@@ -94,15 +93,6 @@ data Expression
   | ExpressionUniverse SmallUniverse
   deriving stock (Eq, Generic)
 
-instance Show Expression where
-  show = \case
-    ExpressionIden e -> show e
-    ExpressionApplication e -> show e
-    ExpressionFunction e -> show e
-    ExpressionLiteral e -> show e
-    ExpressionHole e -> show e
-    ExpressionUniverse e -> show e
-
 instance Hashable Expression
 
 data Application = Application
@@ -110,9 +100,6 @@ data Application = Application
     _appRight :: Expression,
     _appImplicit :: IsImplicit
   }
-
-instance Show Application where
-  show Application {..} = "(" <> show _appLeft <> " " <> show _appRight <> ") "
 
 -- TODO: Eq and Hashable instances ignore the _appImplicit field
 --  to workaround a crash in Micro->Mono translation when looking up
@@ -142,7 +129,7 @@ data Pattern
 newtype InductiveParameter = InductiveParameter
   { _inductiveParamName :: VarName
   }
-  deriving stock (Eq, Show)
+  deriving stock (Eq)
 
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
@@ -165,10 +152,6 @@ data FunctionParameter = FunctionParameter
   }
   deriving stock (Eq, Generic)
 
-instance Show FunctionParameter where
-  show FunctionParameter {..} =
-    show _paramType
-
 instance Hashable FunctionParameter
 
 data Function = Function
@@ -176,9 +159,6 @@ data Function = Function
     _functionRight :: Expression
   }
   deriving stock (Eq, Generic)
-
-instance Show Function where
-  show Function {..} = show _functionLeft <> "->" <> show _functionRight
 
 instance Hashable Function
 

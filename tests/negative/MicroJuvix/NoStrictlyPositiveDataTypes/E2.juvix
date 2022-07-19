@@ -1,8 +1,9 @@
 module E2;
 
-axiom B : Type;
-inductive X  {
-  c : (X -> B) -> X;
+open import NegParam;
+
+inductive D {
+d : T D -> D;
 };
 
 end;
