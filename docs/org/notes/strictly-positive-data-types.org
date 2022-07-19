@@ -8,7 +8,7 @@ qualified as strictly positive for an inductive type if it never occurs at a neg
 position in the types of the arguments of its constructors. We refer to a negative
 position as those occurrences on the left of an arrow in a type constructor argument.
 
-In the example below, the type =X= occurs strictly positive in =c0= and negatively at 
+In the example below, the type =X= occurs strictly positive in =c0= and negatively at
 the constructor =c1=. Therefore, =X= is not strictly positive.
 
 #+begin_src minijuvix
@@ -22,7 +22,7 @@ inductive X {
 We could also refer to positive parameters as such parameters occurring in no negative positions.
 For example, the type =B= in the =c0= constructor above is on the left of the arrow =B->X=.
 Then, =B= is at a negative position. Negative parameters need to be considered when checking strictly
-positive data types as they may allow to define non-strictly positive data types. 
+positive data types as they may allow to define non-strictly positive data types.
 
 In the example below, the type =T0= is strictly positive. However, the type =T1= is not.
 Only after unfolding the type application =T0 (T1 A)= in the data constructor =c1=, we can
@@ -43,7 +43,7 @@ inductive T1 {
 ** Bypass the strict positivity condition
 
 To bypass the positivity check, a data type declaration can be annotated
-with the keyword =nopositivity=. Another way is to use the CLI global flag =--no-positivity= 
+with the keyword =nopositivity=. Another way is to use the CLI global flag =--no-positivity=
 when typechecking a =Juvix= File.
 
 #+begin_example
