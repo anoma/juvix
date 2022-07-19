@@ -73,6 +73,7 @@ getEntryPoint r opts = nonEmpty (opts ^. globalInputFiles) >>= Just <$> entryPoi
       EntryPoint
         { _entryPointRoot = r,
           _entryPointNoTermination = opts ^. globalNoTermination,
+          _entryPointNoPositivity = opts ^. globalNoPositivity,
           _entryPointNoStdlib = opts ^. globalNoStdlib,
           _entryPointModulePaths = l
         }

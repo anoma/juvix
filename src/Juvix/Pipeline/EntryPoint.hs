@@ -9,6 +9,7 @@ import Juvix.Prelude
 data EntryPoint = EntryPoint
   { _entryPointRoot :: FilePath,
     _entryPointNoTermination :: Bool,
+    _entryPointNoPositivity :: Bool,
     _entryPointNoStdlib :: Bool,
     _entryPointModulePaths :: NonEmpty FilePath
   }
@@ -19,6 +20,7 @@ defaultEntryPoint mainFile =
   EntryPoint
     { _entryPointRoot = ".",
       _entryPointNoTermination = False,
+      _entryPointNoPositivity = False,
       _entryPointNoStdlib = False,
       _entryPointModulePaths = pure mainFile
     }

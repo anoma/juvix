@@ -40,6 +40,7 @@ testDescr PosTest {..} =
                   EntryPoint
                     { _entryPointRoot = cwd,
                       _entryPointNoTermination = False,
+                      _entryPointNoPositivity = False,
                       _entryPointNoStdlib = noStdlib,
                       _entryPointModulePaths = pure entryFile
                     }
