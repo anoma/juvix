@@ -1,1 +1,36 @@
 * Foreign blocks
+
+The =foreign= blocks give the developer the ability to introduce any piece of
+code in the compiled file. In addition, every foreign block specifies the
+backend's name that will include the given code in the body of the foreign
+block.
+
+The following is an example taken from the Juvix standard library.
+
+#+begin_example
+module Integers;
+
+axiom Int : Type;
+compile Int {  c ↦ "int" };
+
+foreign c {
+   bool lessThan(int l, int r) {
+     return l < r;
+   \}
+};
+
+inductive Bool {
+    true : Bool;
+    false : Bool;
+};
+
+infix 4 <';
+axiom <' : Int → Int → Bool;
+compile <' {
+  c ↦ "lessThan";
+};
+
+infix 4 <;
+< : Int → Int → Bool;
+< a b ≔ from-backend-bool (a <' b);
+#+end_example

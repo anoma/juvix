@@ -1,6 +1,7 @@
 name: The Juvix compiler CI
 
 on:
+  workflow_dispatch:
   pull_request:
     branches:
       - main
@@ -183,7 +184,7 @@ jobs:
           make install-shelltest
           make test-shell
   docs:
-    if: github.event.pull_request.merged == true
+    if: ${{github.event.pull_request.merged == true || contains(github.event.head_commit.message, 'docs') }}
     strategy:
       matrix:
         os: [ubuntu-latest]
