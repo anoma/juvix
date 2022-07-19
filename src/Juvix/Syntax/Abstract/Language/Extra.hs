@@ -45,9 +45,6 @@ smallerPatternVariables f p = case p of
   PatternEmpty {} -> pure p
   PatternConstructorApp app -> PatternConstructorApp <$> appVariables f app
 
--- viewAppSimple :: Expression -> (Expression, [Expression])
--- viewAppSimple = second (map (^. appArg)) . viewApp
-
 viewApp :: Expression -> (Expression, [ApplicationArg])
 viewApp e =
   case e of
