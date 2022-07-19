@@ -1,4 +1,4 @@
-* Mini C Hello World
+* Hello World
 
 In the following example a Juvix file is compiled using the C backend.
 

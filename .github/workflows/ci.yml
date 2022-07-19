@@ -1,6 +1,7 @@
 name: The Juvix compiler CI
 
 on:
+  workflow_dispatch:
   pull_request:
     branches:
       - main
@@ -183,7 +184,8 @@ jobs:
           make install-shelltest
           make test-shell
   docs:
-    if: github.event.pull_request.merged == true
+    needs: build
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
         os: [ubuntu-latest]

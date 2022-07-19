@@ -1,6 +1,6 @@
 * Comments
 
-A comment is introduced in the same fashion as in Haskell/Agda.
+A comment is introduced in the same fashion as in =Haskell=/=Agda=.
 
 - Inline Comment
 #+begin_src
