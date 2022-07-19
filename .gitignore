@@ -74,3 +74,5 @@ docs/md/
 _docs
 docs/**/*.md
 **/html/*
+
+docs/org/README.org
