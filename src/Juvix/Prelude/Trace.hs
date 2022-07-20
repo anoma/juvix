@@ -6,11 +6,11 @@ import GHC.IO (unsafePerformIO)
 import Juvix.Prelude.Base
 
 setDebugMsg :: Text -> Text
-setDebugMsg msg = "[debug] " <> fmsg
+setDebugMsg msg = "[debug] " <> fmsg <> "\n"
   where
     fmsg
       | Text.null msg = ""
-      | otherwise = msg <> " :\n"
+      | otherwise = msg <> " :"
 
 traceLabel :: Text -> Text -> a -> a
 traceLabel msg a = T.trace (unpack $ setDebugMsg msg <> a)
