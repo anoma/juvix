@@ -14,15 +14,15 @@ setDebugMsg msg = "[debug] " <> fmsg
 
 traceLabel :: Text -> Text -> a -> a
 traceLabel msg a = T.trace (unpack $ setDebugMsg msg <> a)
-{-# WARNING traceLabel "Use traceLabel" #-}
+{-# WARNING traceLabel "Using traceLabel" #-}
 
 trace :: Text -> a -> a
 trace = traceLabel ""
-{-# WARNING trace "Use trace" #-}
+{-# WARNING trace "Using trace" #-}
 
 traceShow :: Show b => b -> b
 traceShow b = traceLabel "" (pack . show $ b) b
-{-# WARNING traceShow "Use traceShow" #-}
+{-# WARNING traceShow "Using traceShow" #-}
 
 traceToFile :: FilePath -> Text -> a -> a
 traceToFile fpath t a =
@@ -31,12 +31,12 @@ traceToFile fpath t a =
       do
         writeFile fpath t
         return a
-{-# WARNING traceToFile "Use traceToFile" #-}
+{-# WARNING traceToFile "Using traceToFile" #-}
 
 traceToFile' :: Text -> a -> a
 traceToFile' = traceToFile "./juvix.log"
-{-# WARNING traceToFile' "Use traceToFile'" #-}
+{-# WARNING traceToFile' "Using traceToFile'" #-}
 
-debugToFileM :: (Applicative m) => FilePath -> Text -> a -> m ()
-debugToFileM fpath t a = pure (traceToFile fpath t a) $> ()
-{-# WARNING debugToFileM "Use debugFileM" #-}
+traceToFileM :: (Applicative m) => FilePath -> Text -> a -> m ()
+traceToFileM fpath t a = pure (traceToFile fpath t a) $> ()
+{-# WARNING traceToFileM "Using traceFileM" #-}
