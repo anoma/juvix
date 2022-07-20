@@ -163,7 +163,7 @@ goFunctionDef f = do
 goFunctionClause :: Name -> Abstract.FunctionClause -> Sem r FunctionClause
 goFunctionClause n c = do
   _clauseBody' <- goExpression (c ^. Abstract.clauseBody)
-  _clausePatterns' <- mapM goPattern (c ^. Abstract.clausePatterns)
+  _clausePatterns' <- mapM goPatternArg (c ^. Abstract.clausePatterns)
   return
     FunctionClause
       { _clauseName = n,
@@ -171,17 +171,25 @@ goFunctionClause n c = do
         _clauseBody = _clauseBody'
       }
 
+goPatternArg :: Abstract.PatternArg -> Sem r PatternArg
+goPatternArg p = do
+  pat' <- goPattern (p ^. Abstract.patternArgPattern)
+  return
+    PatternArg
+      { _patternArgIsImplicit = p ^. Abstract.patternArgIsImplicit,
+        _patternArgPattern = pat'
+      }
+
 goPattern :: Abstract.Pattern -> Sem r Pattern
 goPattern p = case p of
   Abstract.PatternVariable v -> return (PatternVariable v)
   Abstract.PatternConstructorApp c -> PatternConstructorApp <$> goConstructorApp c
   Abstract.PatternWildcard i -> return (PatternWildcard i)
-  Abstract.PatternBraces b -> PatternBraces <$> goPattern b
   Abstract.PatternEmpty -> unsupported "pattern empty"
 
 goConstructorApp :: Abstract.ConstructorApp -> Sem r ConstructorApp
 goConstructorApp c = do
-  _constrAppParameters' <- mapM goPattern (c ^. Abstract.constrAppParameters)
+  _constrAppParameters' <- mapM goPatternArg (c ^. Abstract.constrAppParameters)
   return
     ConstructorApp
       { _constrAppConstructor = c ^. Abstract.constrAppConstructor . Abstract.constructorRefName,

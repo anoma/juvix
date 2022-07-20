@@ -10,7 +10,7 @@ import Juvix.Syntax.MicroJuvix.ArityChecker.Error.Types
 data ArityCheckerError
   = ErrWrongConstructorAppLength WrongConstructorAppLength
   | ErrLhsTooManyPatterns LhsTooManyPatterns
-  | ErrExpectedExplicitPattern ExpectedExplicitPattern
+  | ErrWrongPatternIsImplicit WrongPatternIsImplicit
   | ErrExpectedExplicitArgument ExpectedExplicitArgument
   | ErrPatternFunction PatternFunction
   | ErrTooManyArguments TooManyArguments
@@ -21,7 +21,7 @@ instance ToGenericError ArityCheckerError where
   genericError = \case
     ErrWrongConstructorAppLength e -> genericError e
     ErrLhsTooManyPatterns e -> genericError e
-    ErrExpectedExplicitPattern e -> genericError e
+    ErrWrongPatternIsImplicit e -> genericError e
     ErrExpectedExplicitArgument e -> genericError e
     ErrPatternFunction e -> genericError e
     ErrTooManyArguments e -> genericError e

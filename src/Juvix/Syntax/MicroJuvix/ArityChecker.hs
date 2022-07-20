@@ -163,8 +163,8 @@ checkLhs ::
   Interval ->
   Maybe Arity ->
   Arity ->
-  [Pattern] ->
-  Sem r ([Pattern], LocalVars, Arity)
+  [PatternArg] ->
+  Sem r ([PatternArg], LocalVars, Arity)
 checkLhs loc hint ariSignature pats = do
   (locals, (pats', bodyAri)) <- runState emptyLocalVars (goLhs ariSignature pats)
   return (pats', locals, bodyAri)
@@ -173,7 +173,7 @@ checkLhs loc hint ariSignature pats = do
     -- body once all the patterns have been processed).
     -- Does not insert holes greedily. I.e. implicit wildcards are only inserted
     -- between explicit parameters already in the pattern.
-    goLhs :: Arity -> [Pattern] -> Sem (State LocalVars ': r) ([Pattern], Arity)
+    goLhs :: Arity -> [PatternArg] -> Sem (State LocalVars ': r) ([PatternArg], Arity)
     goLhs a = \case
       [] -> return $ case hint >>= tailHelper a of
         Nothing -> ([], a)
@@ -192,25 +192,26 @@ checkLhs loc hint ariSignature pats = do
           p' <- checkPattern ArityUnknown p
           first (p' :) <$> goLhs ArityUnknown ps
         ArityFunction (FunctionArity l r) ->
-          case (getPatternBraces p, l) of
-            (Just b, ParamImplicit) -> do
-              b' <- checkPattern (arityParameter l) b
+          case (p ^. patternArgIsImplicit, l) of
+            (Implicit, ParamImplicit) -> do
+              b' <- checkPattern (arityParameter l) p
               first (b' :) <$> goLhs r ps
-            (Just x, ParamExplicit {}) ->
+            (Implicit, ParamExplicit {}) ->
               throw
-                ( ErrExpectedExplicitPattern
-                    ExpectedExplicitPattern
-                      { _expectedExplicitPattern = x
+                ( ErrWrongPatternIsImplicit
+                    WrongPatternIsImplicit
+                      { _wrongPatternIsImplicitExpected = Explicit,
+                        _wrongPatternIsImplicitActual = p
                       }
                 )
-            (Nothing, ParamImplicit) ->
+            (Explicit, ParamImplicit) ->
               first (wildcard :) <$> goLhs r lhs
-            (Nothing, ParamExplicit pa) -> do
+            (Explicit, ParamExplicit pa) -> do
               p' <- checkPattern pa p
               first (p' :) <$> goLhs r ps
       where
-        wildcard :: Pattern
-        wildcard = PatternBraces (PatternWildcard (Wildcard loc))
+        wildcard :: PatternArg
+        wildcard = PatternArg Implicit (PatternWildcard (Wildcard loc))
 
     tailHelper :: Arity -> Arity -> Maybe Int
     tailHelper a target
@@ -220,30 +221,28 @@ checkLhs loc hint ariSignature pats = do
         a' = dropSuffix target' (unfoldArity a)
         target' = unfoldArity target
 
-    getPatternBraces :: Pattern -> Maybe Pattern
-    getPatternBraces p = case p of
-      PatternBraces {} -> Just p
-      _ -> Nothing
-
 checkPattern ::
+  forall r.
   Members '[Reader InfoTable, Error ArityCheckerError, State LocalVars] r =>
   Arity ->
-  Pattern ->
-  Sem r Pattern
-checkPattern ari = \case
-  PatternBraces p -> checkPattern ari p
-  PatternVariable v -> addArity v ari $> PatternVariable v
-  PatternWildcard i -> return (PatternWildcard i)
-  PatternConstructorApp c -> case ari of
-    ArityUnit -> PatternConstructorApp <$> checkConstructorApp c
-    ArityUnknown -> PatternConstructorApp <$> checkConstructorApp c
-    ArityFunction {} ->
-      throw
-        ( ErrPatternFunction
-            PatternFunction
-              { _patternFunction = c
-              }
-        )
+  PatternArg ->
+  Sem r PatternArg
+checkPattern ari = traverseOf patternArgPattern helper
+  where
+    helper :: Pattern -> Sem r Pattern
+    helper = \case
+      PatternVariable v -> addArity v ari $> PatternVariable v
+      PatternWildcard i -> return (PatternWildcard i)
+      PatternConstructorApp c -> case ari of
+        ArityUnit -> PatternConstructorApp <$> checkConstructorApp c
+        ArityUnknown -> PatternConstructorApp <$> checkConstructorApp c
+        ArityFunction {} ->
+          throw
+            ( ErrPatternFunction
+                PatternFunction
+                  { _patternFunction = c
+                  }
+            )
 
 checkConstructorApp ::
   forall r.

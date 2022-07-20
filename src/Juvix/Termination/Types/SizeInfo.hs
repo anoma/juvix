@@ -20,15 +20,16 @@ emptySizeInfo =
       _sizeSmaller = mempty
     }
 
-mkSizeInfo :: [Pattern] -> SizeInfo
+mkSizeInfo :: [PatternArg] -> SizeInfo
 mkSizeInfo ps = SizeInfo {..}
   where
-    ps' = filter (not . isBrace) ps
-    isBrace = \case
-      PatternBraces {} -> True
-      _ -> False
-    _sizeEqual = ps
+    ps' :: [Pattern]
+    ps' = map (^. patternArgPattern) (filter (not . isBrace) ps)
+    isBrace :: PatternArg -> Bool
+    isBrace = (== Implicit) . (^. patternArgIsImplicit)
+    _sizeEqual = map (^. patternArgPattern) ps
+    _sizeSmaller :: HashMap VarName Int
     _sizeSmaller =
       HashMap.fromList
-        [ (v, i) | (i, p) <- zip [0 ..] ps', v <- smallerPatternVariables p
+        [ (v, i) | (i, p) <- zip [0 ..] ps', v <- p ^.. smallerPatternVariables
         ]

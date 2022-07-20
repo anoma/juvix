@@ -1198,7 +1198,7 @@ checkParseExpressionAtoms = checkExpressionAtoms >=> parseExpressionAtoms
 checkParsePatternAtom ::
   Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
   PatternAtom 'Parsed ->
-  Sem r Pattern
+  Sem r PatternArg
 checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
 
 checkStatement ::
@@ -1423,7 +1423,7 @@ parseTerm =
 type ParsePat = P.Parsec () [PatternAtom 'Scoped]
 
 makePatternTable ::
-  PatternAtom 'Scoped -> [[P.Operator ParsePat Pattern]]
+  PatternAtom 'Scoped -> [[P.Operator ParsePat PatternArg]]
 makePatternTable atom = [appOp] : operators
   where
     getConstructorRef :: PatternAtom 'Scoped -> Maybe ConstructorRef
@@ -1437,24 +1437,24 @@ makePatternTable atom = [appOp] : operators
     constructorRefs = case atom of
       PatternAtomParens (PatternAtoms atoms _) -> mapMaybe getConstructorRef (toList atoms)
       _ -> []
-    mkSymbolTable :: [ConstructorRef] -> [[P.Operator ParsePat Pattern]]
+    mkSymbolTable :: [ConstructorRef] -> [[P.Operator ParsePat PatternArg]]
     mkSymbolTable = reverse . map (map snd) . groupSortOn' fst . mapMaybe unqualifiedSymbolOp
       where
-        unqualifiedSymbolOp :: ConstructorRef -> Maybe (Precedence, P.Operator ParsePat Pattern)
+        unqualifiedSymbolOp :: ConstructorRef -> Maybe (Precedence, P.Operator ParsePat PatternArg)
         unqualifiedSymbolOp (ConstructorRef' S.Name' {..})
           | Just Fixity {..} <- _nameFixity,
             _nameKind == S.KNameConstructor = Just $
               case _fixityArity of
                 Unary u -> (_fixityPrecedence, P.Postfix (unaryApp <$> parseSymbolId _nameId))
                   where
-                    unaryApp :: ConstructorRef -> Pattern -> Pattern
+                    unaryApp :: ConstructorRef -> PatternArg -> PatternArg
                     unaryApp funName = case u of
-                      AssocPostfix -> PatternPostfixApplication . (`PatternPostfixApp` funName)
+                      AssocPostfix -> explicitP . PatternPostfixApplication . (`PatternPostfixApp` funName)
                 Binary b -> (_fixityPrecedence, infixLRN (binaryInfixApp <$> parseSymbolId _nameId))
                   where
-                    binaryInfixApp :: ConstructorRef -> Pattern -> Pattern -> Pattern
-                    binaryInfixApp name argLeft = PatternInfixApplication . PatternInfixApp argLeft name
-                    infixLRN :: ParsePat (Pattern -> Pattern -> Pattern) -> P.Operator ParsePat Pattern
+                    binaryInfixApp :: ConstructorRef -> PatternArg -> PatternArg -> PatternArg
+                    binaryInfixApp name argLeft = explicitP . PatternInfixApplication . PatternInfixApp argLeft name
+                    infixLRN :: ParsePat (PatternArg -> PatternArg -> PatternArg) -> P.Operator ParsePat PatternArg
                     infixLRN = case b of
                       AssocLeft -> P.InfixL
                       AssocRight -> P.InfixR
@@ -1470,22 +1470,30 @@ makePatternTable atom = [appOp] : operators
               return ref
 
     -- Application by juxtaposition.
-    appOp :: P.Operator ParsePat Pattern
+    appOp :: P.Operator ParsePat PatternArg
     appOp = P.InfixL (return app)
       where
-        app :: Pattern -> Pattern -> Pattern
+        app :: PatternArg -> PatternArg -> PatternArg
         app l r =
-          PatternApplication
-            ( PatternApp
-                { _patAppLeft = l,
-                  _patAppRight = r
-                }
+          explicitP
+            ( PatternApplication
+                ( PatternApp
+                    { _patAppLeft = l,
+                      _patAppRight = r
+                    }
+                )
             )
+
+explicitP :: Pattern -> PatternArg
+explicitP = PatternArg Explicit
+
+implicitP :: Pattern -> PatternArg
+implicitP = PatternArg Implicit
 
 parsePatternTerm ::
   forall r.
-  Members '[Reader (ParsePat Pattern), Embed ParsePat] r =>
-  Sem r Pattern
+  Members '[Reader (ParsePat PatternArg), Embed ParsePat] r =>
+  Sem r PatternArg
 parsePatternTerm = do
   pPat <- ask
   embed @ParsePat $
@@ -1496,9 +1504,9 @@ parsePatternTerm = do
       <|> parseWildcard
       <|> parseEmpty
   where
-    parseNoInfixConstructor :: ParsePat Pattern
+    parseNoInfixConstructor :: ParsePat PatternArg
     parseNoInfixConstructor =
-      PatternConstructor
+      explicitP . PatternConstructor
         <$> P.token constructorNoFixity mempty
       where
         constructorNoFixity :: PatternAtom 'Scoped -> Maybe ConstructorRef
@@ -1509,35 +1517,38 @@ parsePatternTerm = do
               n = ref ^. constructorRefName
           _ -> Nothing
 
-    parseWildcard :: ParsePat Pattern
-    parseWildcard = PatternWildcard <$> P.token isWildcard mempty
+    parseWildcard :: ParsePat PatternArg
+    parseWildcard = explicitP . PatternWildcard <$> P.token isWildcard mempty
       where
         isWildcard :: PatternAtom 'Scoped -> Maybe Wildcard
         isWildcard s = case s of
           PatternAtomWildcard i -> Just i
           _ -> Nothing
 
-    parseEmpty :: ParsePat Pattern
-    parseEmpty = PatternEmpty <$ P.satisfy isEmpty
+    parseEmpty :: ParsePat PatternArg
+    parseEmpty = explicitP PatternEmpty <$ P.satisfy isEmpty
       where
         isEmpty :: PatternAtom 'Scoped -> Bool
         isEmpty s = case s of
           PatternAtomEmpty -> True
           _ -> False
 
-    parseVariable :: ParsePat Pattern
-    parseVariable = PatternVariable <$> P.token var mempty
+    parseVariable :: ParsePat PatternArg
+    parseVariable = explicitP . PatternVariable <$> P.token var mempty
       where
         var :: PatternAtom 'Scoped -> Maybe S.Symbol
         var s = case s of
           PatternAtomIden (PatternScopedVar sym) -> Just sym
           _ -> Nothing
 
-    parseBraces :: ParsePat Pattern -> ParsePat Pattern
+    parseBraces :: ParsePat PatternArg -> ParsePat PatternArg
     parseBraces patternParser = do
       exprs <- P.token bracesPat mempty
       case P.parse patternParser "" exprs of
-        Right r -> return (PatternBraces r)
+        Right (PatternArg i p)
+          -- TODO proper error
+          | Implicit <- i -> error "nested braces"
+          | otherwise -> return (implicitP p)
         Left {} -> mzero
       where
         bracesPat :: PatternAtom 'Scoped -> Maybe [PatternAtom 'Scoped]
@@ -1545,7 +1556,7 @@ parsePatternTerm = do
           PatternAtomBraces (PatternAtoms ss _) -> Just (toList ss)
           _ -> Nothing
 
-    parseParens :: ParsePat Pattern -> ParsePat Pattern
+    parseParens :: ParsePat PatternArg -> ParsePat PatternArg
     parseParens patternParser = do
       exprs <- P.token parenPat mempty
       case P.parse patternParser "" exprs of
@@ -1560,22 +1571,22 @@ parsePatternTerm = do
 mkPatternParser ::
   forall r.
   Members '[Embed ParsePat] r =>
-  [[P.Operator ParsePat Pattern]] ->
-  Sem r Pattern
+  [[P.Operator ParsePat PatternArg]] ->
+  Sem r PatternArg
 mkPatternParser table = embed @ParsePat pPattern
   where
-    pPattern :: ParsePat Pattern
+    pPattern :: ParsePat PatternArg
     pPattern = P.makeExprParser pTerm table
-    pTerm :: ParsePat Pattern
+    pTerm :: ParsePat PatternArg
     pTerm = runM parseTermRec
       where
-        parseTermRec :: Sem '[Embed ParsePat] Pattern
+        parseTermRec :: Sem '[Embed ParsePat] PatternArg
         parseTermRec = runReader pPattern parsePatternTerm
 
 parsePatternAtom ::
   Members '[Error ScoperError, State Scope] r =>
   PatternAtom 'Scoped ->
-  Sem r Pattern
+  Sem r PatternArg
 parsePatternAtom sec = do
   case res of
     Left {} -> case sec of
@@ -1584,7 +1595,7 @@ parsePatternAtom sec = do
     Right r -> return r
   where
     tbl = makePatternTable sec
-    parser :: ParsePat Pattern
+    parser :: ParsePat PatternArg
     parser = runM (mkPatternParser tbl) <* P.eof
     res = P.parse parser filePath [sec]
 
