@@ -8,8 +8,14 @@ import Juvix.Prelude
 import Juvix.Prelude.Pretty
 import Juvix.Syntax.Concrete.Scoped.Error.Ann
 import Juvix.Syntax.Concrete.Scoped.Error.Pretty.Ansi qualified as Ansi
-import Juvix.Syntax.Concrete.Scoped.Pretty.Base qualified as P
+import Juvix.Syntax.Concrete.Scoped.Pretty.Base qualified as Scoped
 import Text.EditDistance
+
+ppCode :: Scoped.PrettyCode c => c -> Doc Eann
+ppCode = runPP . Scoped.ppCode
+
+runPP :: Sem '[Reader Scoped.Options] (Doc Scoped.Ann) -> Doc Eann
+runPP = highlight . reAnnotate ScopedAnn . run . runReader Scoped.defaultOptions
 
 newtype PPOutput = PPOutput (Doc Eann)
 
@@ -29,9 +35,6 @@ highlight = annotate Highlight
 
 ppSymbolT :: Text -> Doc Eann
 ppSymbolT = highlight . pretty
-
-ppCode :: P.PrettyCode c => c -> Doc Eann
-ppCode = reAnnotate ScopedAnn . P.runPrettyCode P.defaultOptions
 
 indent' :: Doc ann -> Doc ann
 indent' = indent 2
