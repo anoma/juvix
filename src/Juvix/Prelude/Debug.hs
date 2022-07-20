@@ -1,41 +1,42 @@
 module Juvix.Prelude.Debug where
 
-import Debug.Trace
+import Debug.Trace qualified as T
 import GHC.IO (unsafePerformIO)
 import Juvix.Prelude.Base
+import Data.Text qualified as Text
 
-setDebugMsg :: String -> String
+setDebugMsg :: Text -> Text
 setDebugMsg msg = "[debug] " <> fmsg
   where
     fmsg
-      | null msg = ""
+      | Text.null msg = ""
       | otherwise = msg <> " :\n"
 
-debugLText :: String -> Text -> a -> a
-debugLText msg a = trace (setDebugMsg msg <> unpack a)
-{-# WARNING debugLText "Use debugLText" #-}
+traceLabel :: Text -> Text -> a -> a
+traceLabel msg a = T.trace (unpack $ setDebugMsg msg <> a)
+{-# WARNING traceLabel "Use traceLabel" #-}
 
-debugText :: Text -> a -> a
-debugText = debugLText ""
-{-# WARNING debugText "Use debugText" #-}
+trace :: Text -> a -> a
+trace = traceLabel ""
+{-# WARNING trace "Use trace" #-}
 
-debugThis :: Show b => b -> b
-debugThis b = debugLText "" (pack . show $ b) b
-{-# WARNING debugThis "Use debugThis" #-}
+traceShow :: Show b => b -> b
+traceShow b = traceLabel "" (pack . show $ b) b
+{-# WARNING traceShow "Use traceShow" #-}
 
-debugTextToFile :: FilePath -> Text -> a -> a
-debugTextToFile fpath t a =
-  debugLText ("[" <> fpath <> "]") t $
+traceToFile :: FilePath -> Text -> a -> a
+traceToFile fpath t a =
+  traceLabel (pack ("[" <> fpath <> "]")) t $
     unsafePerformIO $
       do
         writeFile fpath t
         return a
-{-# WARNING debugTextToFile "Use debugTextToFile" #-}
+{-# WARNING traceToFile "Use traceToFile" #-}
 
-debugTextToFile' :: Text -> a -> a
-debugTextToFile' = debugTextToFile "./juvix.log"
-{-# WARNING debugTextToFile' "Use debugTextToFile'" #-}
+traceToFile' :: Text -> a -> a
+traceToFile' = traceToFile "./juvix.log"
+{-# WARNING traceToFile' "Use traceToFile'" #-}
 
 debugToFileM :: (Applicative m) => FilePath -> Text -> a -> m ()
-debugToFileM fpath t a = pure (debugTextToFile fpath t a) $> ()
+debugToFileM fpath t a = pure (traceToFile fpath t a) $> ()
 {-# WARNING debugToFileM "Use debugFileM" #-}

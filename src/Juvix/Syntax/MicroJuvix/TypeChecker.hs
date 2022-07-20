@@ -77,8 +77,7 @@ checkStatement ::
 checkStatement s = case s of
   StatementFunction fun -> StatementFunction <$> checkFunctionDef fun
   StatementForeign {} -> return s
-  StatementInductive ind ->
-    do
+  StatementInductive ind -> do
     mapM_ registerConstructor (ind ^. inductiveConstructors)
     ty <- inductiveType (ind ^. inductiveName)
     modify (HashMap.insert (ind ^. inductiveName) ty)
