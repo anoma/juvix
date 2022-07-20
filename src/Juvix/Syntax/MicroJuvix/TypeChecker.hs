@@ -450,6 +450,7 @@ inferExpression' e = case e of
   ExpressionFunction f -> goExpressionFunction f
   ExpressionHole h -> inferHole h
   ExpressionUniverse u -> goUniverse u
+  ExpressionLambda l -> goLambda l
   where
     inferHole :: Hole -> Sem r TypedExpression
     inferHole h = do
@@ -459,6 +460,17 @@ inferExpression' e = case e of
           { _typedExpression = ExpressionHole h,
             _typedType = ExpressionUniverse (SmallUniverse (getLoc h))
           }
+
+    goLambda :: Lambda -> Sem r TypedExpression
+    goLambda (Lambda v ty b) = do
+      b' <- inferExpression' b
+      let smallUni = smallUniverse (getLoc ty)
+      ty' <- checkExpression ty smallUni
+      let fun = Function (unnamedParameter smallUni) (b' ^. typedType)
+      return TypedExpression {
+        _typedType = ExpressionFunction fun,
+        _typedExpression = ExpressionLambda (Lambda v ty' (b' ^. typedExpression))
+        }
 
     goUniverse :: SmallUniverse -> Sem r TypedExpression
     goUniverse u =

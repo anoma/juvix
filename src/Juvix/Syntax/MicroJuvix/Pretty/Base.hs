@@ -45,6 +45,12 @@ instance PrettyCode Iden where
     IdenAxiom a -> ppCode a
     IdenInductive a -> ppCode a
 
+instance PrettyCode Lambda where
+  ppCode l = do
+    b' <- ppCode (l ^. lambdaBody)
+    v' <- ppCode (l ^. lambdaVar)
+    return $ kwLambda <+> braces (v' <+> kwMapsto <+> b')
+
 instance PrettyCode Application where
   ppCode a = do
     l' <- ppLeftExpression appFixity (a ^. appLeft)
@@ -67,9 +73,13 @@ instance PrettyCode Expression where
     ExpressionFunction f -> ppCode f
     ExpressionUniverse u -> ppCode u
     ExpressionLiteral l -> return (pretty l)
+    ExpressionLambda l -> ppCode l
 
 keyword :: Text -> Doc Ann
 keyword = annotate AnnKeyword . pretty
+
+kwLambda :: Doc Ann
+kwLambda = keyword Str.lambdaUnicode
 
 kwInclude :: Doc Ann
 kwInclude = keyword Str.include

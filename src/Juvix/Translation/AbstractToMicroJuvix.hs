@@ -108,7 +108,7 @@ goStatement = \case
 
 goTypeIden :: Abstract.Iden -> Iden
 goTypeIden = \case
-  Abstract.IdenFunction {} -> unsupported "functions in types"
+  Abstract.IdenFunction f -> IdenFunction (f ^. Abstract.functionRefName)
   Abstract.IdenConstructor {} -> unsupported "constructors in types"
   Abstract.IdenVar v -> IdenVar v
   Abstract.IdenInductive d -> IdenInductive (d ^. Abstract.inductiveRefName)

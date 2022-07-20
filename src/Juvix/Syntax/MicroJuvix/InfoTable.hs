@@ -28,7 +28,8 @@ data InfoTable = InfoTable
   { _infoConstructors :: HashMap Name ConstructorInfo,
     _infoAxioms :: HashMap Name AxiomInfo,
     _infoFunctions :: HashMap Name FunctionInfo,
-    _infoInductives :: HashMap Name InductiveInfo
+    _infoInductives :: HashMap Name InductiveInfo,
+    _infoEval :: HashMap FunctionName Expression
   }
 
 makeLenses ''InfoTable
@@ -43,7 +44,8 @@ instance Semigroup InfoTable where
       { _infoConstructors = a ^. infoConstructors <> b ^. infoConstructors,
         _infoAxioms = a ^. infoAxioms <> b ^. infoAxioms,
         _infoFunctions = a ^. infoFunctions <> b ^. infoFunctions,
-        _infoInductives = a ^. infoInductives <> b ^. infoInductives
+        _infoInductives = a ^. infoInductives <> b ^. infoInductives,
+        _infoEval = a ^. infoEval <> b ^. infoEval
       }
 
 instance Monoid InfoTable where
@@ -52,7 +54,8 @@ instance Monoid InfoTable where
       { _infoConstructors = mempty,
         _infoAxioms = mempty,
         _infoFunctions = mempty,
-        _infoInductives = mempty
+        _infoInductives = mempty,
+        _infoEval = mempty
       }
 
 buildTable :: Foldable f => f Module -> InfoTable
@@ -94,7 +97,25 @@ buildTable1 m = InfoTable {..} <> buildTable (map (^. includeModule) includes)
         [ (d ^. axiomName, AxiomInfo (d ^. axiomType) (d ^. axiomBuiltin))
           | StatementAxiom d <- ss
         ]
+
+    _infoEval :: HashMap FunctionName Expression
+    _infoEval = HashMap.fromList [(fun ^. funDefName, e) |
+               StatementFunction fun <- ss, Just e <- [functionDefEval fun]
+            ]
+
+    ss :: [Statement]
     ss = m ^. (moduleBody . moduleStatements)
+
+functionDefEval :: FunctionDef -> Maybe Expression
+functionDefEval f = case f ^. funDefClauses of
+  c :| [] -> goClause c
+  _ -> Nothing
+  where
+  goClause :: FunctionClause -> Maybe Expression
+  goClause c = go (c ^. clausePatterns)
+    where
+    go :: [PatternArg] -> Maybe Expression
+    go = undefined
 
 lookupConstructor :: Member (Reader InfoTable) r => Name -> Sem r ConstructorInfo
 lookupConstructor f = HashMap.lookupDefault impossible f <$> asks (^. infoConstructors)

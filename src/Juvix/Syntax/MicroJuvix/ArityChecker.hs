@@ -102,6 +102,9 @@ checkFunctionClause ari cl = do
     name = cl ^. clauseName
     loc = getLoc name
 
+lambda :: a
+lambda = error "lambda expressions are not supported by the arity checker"
+
 guessArity ::
   forall r.
   Members '[Reader InfoTable] r =>
@@ -113,7 +116,8 @@ guessArity = \case
   ExpressionLiteral {} -> return (Just arityLiteral)
   ExpressionApplication a -> appHelper a
   ExpressionIden i -> idenHelper i
-  ExpressionUniverse _ -> return (Just arityUniverse)
+  ExpressionUniverse {} -> return (Just arityUniverse)
+  ExpressionLambda {} -> lambda
   where
     idenHelper :: Iden -> Sem r (Maybe Arity)
     idenHelper i = case i of
@@ -144,6 +148,7 @@ guessArity = \case
           ExpressionFunction {} -> return (Just ArityUnit)
           ExpressionLiteral {} -> return (Just arityLiteral)
           ExpressionIden i -> idenHelper i
+          ExpressionLambda {} -> lambda
 
 -- | The arity of all literals is assumed to be: {} -> 1
 arityLiteral :: Arity
@@ -288,6 +293,7 @@ typeArity = go
       ExpressionFunction f -> ArityFunction <$> goFun2 f
       ExpressionHole {} -> return ArityUnknown
       ExpressionUniverse {} -> return ArityUnit
+      ExpressionLambda {} -> lambda
 
     goIden :: Iden -> Sem r Arity
     goIden = \case
@@ -326,6 +332,7 @@ checkExpression hintArity expr = case expr of
   ExpressionFunction {} -> return expr
   ExpressionUniverse {} -> return expr
   ExpressionHole {} -> return expr
+  ExpressionLambda {} -> lambda
   where
     goApp :: Application -> Sem r Expression
     goApp = uncurry appHelper . second toList . unfoldApplication'
@@ -337,6 +344,7 @@ checkExpression hintArity expr = case expr of
         ExpressionIden i -> idenArity i >>= helper (getLoc i)
         ExpressionLiteral l -> helper (getLoc l) arityLiteral
         ExpressionUniverse l -> helper (getLoc l) arityUniverse
+        ExpressionLambda {} -> lambda
         ExpressionFunction f ->
           throw
             ( ErrFunctionApplied

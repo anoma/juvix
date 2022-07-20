@@ -95,6 +95,10 @@ mkConcreteType = fmap ConcreteType . go
         r' <- go r
         return (ExpressionApplication (Application l' r' i))
       ExpressionUniverse {} -> return t
+      ExpressionLambda (Lambda v ty b) -> do
+        b' <- go b
+        ty' <- go ty
+        return (ExpressionLambda (Lambda v ty' b'))
       ExpressionFunction (Function l r) -> do
         l' <- goParam l
         r' <- go r
@@ -150,6 +154,10 @@ mkPolyType = fmap PolyType . go
       ExpressionIden IdenConstructor {} -> return t
       ExpressionIden IdenAxiom {} -> return t
       ExpressionIden IdenVar {} -> return t
+      ExpressionLambda (Lambda v ty b) -> do
+        b' <- go b
+        ty' <- go ty
+        return (ExpressionLambda (Lambda v ty' b'))
 
 class HasExpressions a where
   leafExpressions :: Traversal' a Expression
@@ -159,9 +167,16 @@ instance HasExpressions Expression where
     ExpressionIden {} -> f e
     ExpressionApplication a -> ExpressionApplication <$> leafExpressions f a
     ExpressionFunction fun -> ExpressionFunction <$> leafExpressions f fun
+    ExpressionLambda l -> ExpressionLambda <$> leafExpressions f l
     ExpressionLiteral {} -> f e
     ExpressionUniverse {} -> f e
     ExpressionHole {} -> f e
+
+instance HasExpressions Lambda where
+  leafExpressions f (Lambda v ty b) = do
+    b' <- leafExpressions f b
+    ty' <- leafExpressions f ty
+    pure (Lambda v ty' b')
 
 instance HasExpressions FunctionParameter where
   leafExpressions f (FunctionParameter m i e) = do
@@ -189,6 +204,7 @@ _ExpressionHole f e = case e of
   ExpressionLiteral {} -> pure e
   ExpressionUniverse {} -> pure e
   ExpressionHole h -> ExpressionHole <$> f h
+  ExpressionLambda {} -> pure e
 
 holes :: HasExpressions a => Traversal' a Hole
 holes = leafExpressions . _ExpressionHole
@@ -322,23 +338,12 @@ localsToSubsE :: LocalVars -> SubsE
 localsToSubsE l = ExpressionIden . IdenVar <$> l ^. localTyMap
 
 substitutionE :: SubsE -> Expression -> Expression
-substitutionE m = go
+substitutionE m = over leafExpressions goLeaf
   where
-    go :: Expression -> Expression
-    go x = case x of
+    goLeaf :: Expression -> Expression
+    goLeaf e = case e of
       ExpressionIden i -> goIden i
-      ExpressionApplication a -> ExpressionApplication (goApp a)
-      ExpressionFunction a -> ExpressionFunction (goFun a)
-      ExpressionLiteral {} -> x
-      ExpressionUniverse {} -> x
-      ExpressionHole {} -> x
-
-    goParam :: FunctionParameter -> FunctionParameter
-    goParam (FunctionParameter v i ty) = FunctionParameter v i (go ty)
-    goFun :: Function -> Function
-    goFun (Function l r) = Function (goParam l) (go r)
-    goApp :: Application -> Application
-    goApp (Application l r i) = Application (go l) (go r) i
+      _ -> e
     goIden :: Iden -> Expression
     goIden i = case i of
       IdenVar v

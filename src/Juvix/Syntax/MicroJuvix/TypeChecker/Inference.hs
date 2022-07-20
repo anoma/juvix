@@ -91,6 +91,7 @@ normalizeType' = go
       ExpressionLiteral {} -> return e
       ExpressionUniverse {} -> return e
       ExpressionFunction f -> ExpressionFunction <$> goFun f
+      ExpressionLambda {} -> error "todo"
     goApp :: Application -> Sem r Application
     goApp = traverseOf appLeft go >=> traverseOf appRight go
     goFunPar :: FunctionParameter -> Sem r FunctionParameter
@@ -158,8 +159,11 @@ re = reinterpret $ \case
           (ExpressionApplication a, ExpressionApplication b) -> goApplication a b
           (ExpressionFunction a, ExpressionFunction b) -> goFunction a b
           (ExpressionUniverse u, ExpressionUniverse u') -> check (u == u')
+          (ExpressionLambda a, ExpressionLambda b) -> goLambda a b
           (ExpressionHole h, a) -> goHole h a
           (a, ExpressionHole h) -> goHole h a
+          (ExpressionLambda {}, _) -> err
+          (_, ExpressionLambda {}) -> err
           (ExpressionIden {}, _) -> err
           (_, ExpressionIden {}) -> err
           (ExpressionApplication {}, _) -> err
@@ -203,6 +207,11 @@ re = reinterpret $ \case
               (_, IdenConstructor {}) -> err
             goApplication :: Application -> Application -> Sem r (Maybe MatchError)
             goApplication (Application f x _) (Application f' x' _) = bicheck (go f f') (go x x')
+            goLambda :: Lambda -> Lambda -> Sem r (Maybe MatchError)
+            goLambda (Lambda v1 ty1 b1) (Lambda v2 ty2 b2) = do
+              let local' :: Sem r x -> Sem r x
+                  local' = local (HashMap.insert v1 v2)
+              bicheck (go ty1 ty2) (local' (go b1 b2))
             goFunction :: Function -> Function -> Sem r (Maybe MatchError)
             goFunction
               (Function (FunctionParameter m1 i1 l1) r1)

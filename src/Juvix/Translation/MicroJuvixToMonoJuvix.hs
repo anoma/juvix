@@ -287,6 +287,7 @@ goExpression = go
       Micro.ExpressionFunction {} -> impossible
       Micro.ExpressionUniverse {} -> impossible
       Micro.ExpressionHole {} -> impossible
+      Micro.ExpressionLambda {} -> impossible
     goApp :: Micro.Application -> Sem r Expression
     goApp a = do
       let (f, args) = Micro.unfoldApplication a
@@ -505,6 +506,7 @@ goType = go . (^. Micro.unconcreteType)
       Micro.ExpressionLiteral {} -> impossible
       Micro.ExpressionFunction f -> TypeFunction <$> goFunction f
       Micro.ExpressionApplication a -> goApp a
+      Micro.ExpressionLambda {} -> impossible
     goApp :: Micro.Application -> Sem r Type
     goApp a = case f of
       Micro.ExpressionIden (Micro.IdenInductive i) -> do
