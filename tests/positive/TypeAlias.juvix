@@ -1,0 +1,13 @@
+module TypeAlias;
+
+ inductive T {
+ t : T;
+ };
+
+ alias : Type;
+ alias ≔ T;
+
+ x : alias;
+ x ≔ t;
+
+end;
