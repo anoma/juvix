@@ -49,6 +49,7 @@ dependencies:
 - text == 1.2.*
 - th-utilities == 0.2.*
 - unordered-containers == 0.2.*
+- containers == 0.6.*
 
 # the tasty dependencies are here to avoid having to recompile
 # juvix when running the tests.

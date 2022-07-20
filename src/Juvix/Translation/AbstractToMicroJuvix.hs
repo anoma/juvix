@@ -10,6 +10,7 @@ import Juvix.Analysis.Termination.Checker
 import Juvix.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude
 import Juvix.Syntax.Abstract.AbstractResult qualified as Abstract
+import Juvix.Syntax.Abstract.DependencyBuilder
 import Juvix.Syntax.Abstract.Language qualified as Abstract
 import Juvix.Syntax.MicroJuvix.Error
 import Juvix.Syntax.MicroJuvix.Language
@@ -51,7 +52,8 @@ entryMicroJuvix abstractResults = do
   return
     MicroJuvixResult
       { _resultAbstract = abstractResults,
-        _resultModules = _resultModules'
+        _resultModules = _resultModules',
+        _resultDepInfo = depInfo
       }
   where
     topModule = head (abstractResults ^. Abstract.resultModules)
@@ -60,6 +62,7 @@ entryMicroJuvix abstractResults = do
       abstractResults
         ^. Abstract.abstractResultEntryPoint
         . E.entryPointNoTermination
+    depInfo = buildDependencyInfo (toList (abstractResults ^. Abstract.resultModules))
 
 goModule ::
   Members '[State TranslationState, Error TypeCheckerError] r =>
