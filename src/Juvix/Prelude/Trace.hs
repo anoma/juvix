@@ -1,9 +1,9 @@
-module Juvix.Prelude.Debug where
+module Juvix.Prelude.Trace where
 
+import Data.Text qualified as Text
 import Debug.Trace qualified as T
 import GHC.IO (unsafePerformIO)
 import Juvix.Prelude.Base
-import Data.Text qualified as Text
 
 setDebugMsg :: Text -> Text
 setDebugMsg msg = "[debug] " <> fmsg

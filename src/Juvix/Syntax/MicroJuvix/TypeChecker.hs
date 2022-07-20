@@ -14,8 +14,8 @@ import Juvix.Syntax.MicroJuvix.Language.Extra
 import Juvix.Syntax.MicroJuvix.LocalVars
 import Juvix.Syntax.MicroJuvix.MicroJuvixArityResult
 import Juvix.Syntax.MicroJuvix.MicroJuvixTypedResult
-import Juvix.Syntax.MicroJuvix.TypeChecker.Inference
 import Juvix.Syntax.MicroJuvix.Pretty
+import Juvix.Syntax.MicroJuvix.TypeChecker.Inference
 
 addIdens :: Member (State TypesTable) r => TypesTable -> Sem r ()
 addIdens idens = modify (HashMap.union idens)
