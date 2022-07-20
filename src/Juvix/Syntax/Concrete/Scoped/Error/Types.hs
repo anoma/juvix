@@ -546,3 +546,26 @@ instance ToGenericError DuplicateInductiveParameterName where
             <> "."
             <> line
             <> "Inductive parameter names can not be repeated."
+
+newtype DoubleBracesPattern = DoubleBracesPattern
+  { _doubleBracesPatternArg :: PatternArg
+  }
+  deriving stock (Show)
+
+makeLenses ''DoubleBracesPattern
+
+instance ToGenericError DoubleBracesPattern where
+  genericError e =
+    GenericError
+      { _genericErrorLoc = i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
+    where
+      pat :: PatternArg
+      pat = e ^. doubleBracesPatternArg
+      i = getLoc (e ^. doubleBracesPatternArg)
+      msg =
+        "Double braces are not valid:"
+        -- TODO add bold to braces
+          <+> braces (ppCode pat)

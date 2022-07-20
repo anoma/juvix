@@ -1420,7 +1420,7 @@ parseTerm =
 -- Infix Patterns
 -------------------------------------------------------------------------------
 
-type ParsePat = P.Parsec () [PatternAtom 'Scoped]
+type ParsePat = P.ParsecT () [PatternAtom 'Scoped] (Sem '[Error ScoperError])
 
 makePatternTable ::
   PatternAtoms 'Scoped -> [[P.Operator ParsePat PatternArg]]
@@ -1543,11 +1543,18 @@ parsePatternTerm = do
           _ -> Nothing
 
     parseBraces :: ParsePat PatternArg
-    parseBraces = P.token bracesPat mempty
+    parseBraces = do
+      res <- P.token bracesPat mempty
+      case res of
+        Left er -> P.lift (throw er)
+        Right a -> return a
       where
-        bracesPat :: PatternAtom 'Scoped -> Maybe PatternArg
+        bracesPat :: PatternAtom 'Scoped -> Maybe (Either ScoperError PatternArg)
         bracesPat s = case s of
-          PatternAtomBraces r -> Just (set patternArgIsImplicit Implicit r)
+          PatternAtomBraces r
+            | Implicit <- r ^. patternArgIsImplicit ->
+              Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r)))
+            | otherwise -> Just (Right (set patternArgIsImplicit Implicit r))
           _ -> Nothing
 
     parseParens :: ParsePat PatternArg
@@ -1587,15 +1594,16 @@ parsePatternAtoms ::
   PatternAtoms 'Scoped ->
   Sem r PatternArg
 parsePatternAtoms atoms@(PatternAtoms sec' _) = do
-  case res of
-    Left {} -> throw (ErrInfixPattern (InfixErrorP atoms))
-    Right r -> return r
+  case run (runError res) of
+    Left e -> throw e -- Scoper effect error
+    Right Left {} -> throw (ErrInfixPattern (InfixErrorP atoms)) -- Megaparsec error
+    Right (Right r) -> return r
   where
     sec = toList sec'
     tbl = makePatternTable atoms
     parser :: ParsePat PatternArg
     parser = runM (mkPatternParser tbl) <* P.eof
-    res = P.parse parser filePath sec
+    res = P.runParserT parser filePath sec
 
     filePath :: FilePath
     filePath = "tmp"

@@ -206,6 +206,13 @@ scoperErrorTests =
         ErrQualSymNotInScope {} -> Nothing
         _ -> wrongError,
     NegTest
+      "Double braces in pattern"
+      "."
+      "NestedPatternBraces.juvix"
+      $ \case
+        ErrDoubleBracesPattern {} -> Nothing
+        _ -> wrongError,
+    NegTest
       "Compile block for a unsupported kind of expression"
       "CompileBlocks"
       "WrongKindExpressionCompileBlock.juvix"

@@ -33,6 +33,7 @@ data ScoperError
   | ErrMultipleCompileRuleSameBackend MultipleCompileRuleSameBackend
   | ErrWrongKindExpressionCompileBlock WrongKindExpressionCompileBlock
   | ErrDuplicateInductiveParameterName DuplicateInductiveParameterName
+  | ErrDoubleBracesPattern DoubleBracesPattern
   deriving stock (Show)
 
 instance ToGenericError ScoperError where
@@ -60,3 +61,4 @@ instance ToGenericError ScoperError where
     ErrMultipleCompileRuleSameBackend e -> genericError e
     ErrWrongKindExpressionCompileBlock e -> genericError e
     ErrDuplicateInductiveParameterName e -> genericError e
+    ErrDoubleBracesPattern e -> genericError e
