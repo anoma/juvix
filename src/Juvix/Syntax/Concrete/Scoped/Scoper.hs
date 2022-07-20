@@ -1130,10 +1130,10 @@ checkPatternAtom ::
   Sem r (PatternAtom 'Scoped)
 checkPatternAtom p = case p of
   PatternAtomWildcard i -> return (PatternAtomWildcard i)
-  PatternAtomEmpty -> return PatternAtomEmpty
-  PatternAtomParens e -> PatternAtomParens <$> checkPatternAtoms e
+  PatternAtomEmpty i -> return (PatternAtomEmpty i)
+  PatternAtomParens e -> PatternAtomParens <$> (checkPatternAtoms e >>= parsePatternAtoms)
   PatternAtomIden n -> PatternAtomIden <$> checkPatternName n
-  PatternAtomBraces n -> PatternAtomBraces <$> checkPatternAtoms n
+  PatternAtomBraces n -> PatternAtomBraces <$> (checkPatternAtoms n >>= parsePatternAtoms)
 
 checkName ::
   Members '[Error ScoperError, State Scope, Reader LocalVars, State ScoperState, InfoTableBuilder] r =>
@@ -1423,8 +1423,8 @@ parseTerm =
 type ParsePat = P.Parsec () [PatternAtom 'Scoped]
 
 makePatternTable ::
-  PatternAtom 'Scoped -> [[P.Operator ParsePat PatternArg]]
-makePatternTable atom = [appOp] : operators
+  PatternAtoms 'Scoped -> [[P.Operator ParsePat PatternArg]]
+makePatternTable (PatternAtoms latoms _) = [appOp] : operators
   where
     getConstructorRef :: PatternAtom 'Scoped -> Maybe ConstructorRef
     getConstructorRef s = case s of
@@ -1432,11 +1432,13 @@ makePatternTable atom = [appOp] : operators
         PatternScopedConstructor r -> Just r
         PatternScopedVar {} -> Nothing
       _ -> Nothing
-    operators = mkSymbolTable constructorRefs
-    constructorRefs :: [ConstructorRef]
-    constructorRefs = case atom of
-      PatternAtomParens (PatternAtoms atoms _) -> mapMaybe getConstructorRef (toList atoms)
-      _ -> []
+    operators = mkSymbolTable (mapMaybe constructorRefs (toList latoms))
+    constructorRefs :: PatternAtom 'Scoped -> Maybe ConstructorRef
+    constructorRefs = \case
+      PatternAtomIden i -> case i of
+        PatternScopedConstructor c -> Just c
+        _ -> Nothing
+      _ -> Nothing
     mkSymbolTable :: [ConstructorRef] -> [[P.Operator ParsePat PatternArg]]
     mkSymbolTable = reverse . map (map snd) . groupSortOn' fst . mapMaybe unqualifiedSymbolOp
       where
@@ -1492,15 +1494,14 @@ implicitP = PatternArg Implicit
 
 parsePatternTerm ::
   forall r.
-  Members '[Reader (ParsePat PatternArg), Embed ParsePat] r =>
+  Members '[Embed ParsePat] r =>
   Sem r PatternArg
 parsePatternTerm = do
-  pPat <- ask
   embed @ParsePat $
     parseNoInfixConstructor
       <|> parseVariable
-      <|> parseParens pPat
-      <|> parseBraces pPat
+      <|> parseParens
+      <|> parseBraces
       <|> parseWildcard
       <|> parseEmpty
   where
@@ -1526,12 +1527,12 @@ parsePatternTerm = do
           _ -> Nothing
 
     parseEmpty :: ParsePat PatternArg
-    parseEmpty = explicitP PatternEmpty <$ P.satisfy isEmpty
+    parseEmpty = explicitP . PatternEmpty <$> P.token isEmpty mempty
       where
-        isEmpty :: PatternAtom 'Scoped -> Bool
+        isEmpty :: PatternAtom 'Scoped -> Maybe Interval
         isEmpty s = case s of
-          PatternAtomEmpty -> True
-          _ -> False
+          PatternAtomEmpty i -> Just i
+          _ -> Nothing
 
     parseVariable :: ParsePat PatternArg
     parseVariable = explicitP . PatternVariable <$> P.token var mempty
@@ -1541,31 +1542,20 @@ parsePatternTerm = do
           PatternAtomIden (PatternScopedVar sym) -> Just sym
           _ -> Nothing
 
-    parseBraces :: ParsePat PatternArg -> ParsePat PatternArg
-    parseBraces patternParser = do
-      exprs <- P.token bracesPat mempty
-      case P.parse patternParser "" exprs of
-        Right (PatternArg i p)
-          -- TODO proper error
-          | Implicit <- i -> error "nested braces"
-          | otherwise -> return (implicitP p)
-        Left {} -> mzero
+    parseBraces :: ParsePat PatternArg
+    parseBraces = P.token bracesPat mempty
       where
-        bracesPat :: PatternAtom 'Scoped -> Maybe [PatternAtom 'Scoped]
+        bracesPat :: PatternAtom 'Scoped -> Maybe PatternArg
         bracesPat s = case s of
-          PatternAtomBraces (PatternAtoms ss _) -> Just (toList ss)
+          PatternAtomBraces r -> Just (set patternArgIsImplicit Implicit r)
           _ -> Nothing
 
-    parseParens :: ParsePat PatternArg -> ParsePat PatternArg
-    parseParens patternParser = do
-      exprs <- P.token parenPat mempty
-      case P.parse patternParser "" exprs of
-        Right r -> return r
-        Left {} -> mzero
+    parseParens :: ParsePat PatternArg
+    parseParens = P.token parenPat mempty
       where
-        parenPat :: PatternAtom 'Scoped -> Maybe [PatternAtom 'Scoped]
+        parenPat :: PatternAtom 'Scoped -> Maybe PatternArg
         parenPat s = case s of
-          PatternAtomParens (PatternAtoms ss _) -> Just (toList ss)
+          PatternAtomParens r -> Just r
           _ -> Nothing
 
 mkPatternParser ::
@@ -1587,17 +1577,25 @@ parsePatternAtom ::
   Members '[Error ScoperError, State Scope] r =>
   PatternAtom 'Scoped ->
   Sem r PatternArg
-parsePatternAtom sec = do
+parsePatternAtom = parsePatternAtoms . singletonAtom
+  where
+    singletonAtom :: PatternAtom 'Scoped -> PatternAtoms 'Scoped
+    singletonAtom a = PatternAtoms (NonEmpty.singleton a) (getLoc a)
+
+parsePatternAtoms ::
+  Members '[Error ScoperError, State Scope] r =>
+  PatternAtoms 'Scoped ->
+  Sem r PatternArg
+parsePatternAtoms atoms@(PatternAtoms sec' _) = do
   case res of
-    Left {} -> case sec of
-      PatternAtomParens a -> throw (ErrInfixPattern (InfixErrorP a))
-      _ -> impossible
+    Left {} -> throw (ErrInfixPattern (InfixErrorP atoms))
     Right r -> return r
   where
-    tbl = makePatternTable sec
+    sec = toList sec'
+    tbl = makePatternTable atoms
     parser :: ParsePat PatternArg
     parser = runM (mkPatternParser tbl) <* P.eof
-    res = P.parse parser filePath [sec]
+    res = P.parse parser filePath sec
 
     filePath :: FilePath
     filePath = "tmp"

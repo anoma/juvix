@@ -90,3 +90,6 @@ instance Ord (RefNameType s) => Ord (ConstructorRef' s) where
 
 instance Show (RefNameType s) => Show (ConstructorRef' s) where
   show = show . (^. constructorRefName)
+
+instance HasLoc (ConstructorRef' 'S.Concrete) where
+  getLoc (ConstructorRef' c) = getLoc c
