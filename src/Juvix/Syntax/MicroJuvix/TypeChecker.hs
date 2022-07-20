@@ -15,6 +15,7 @@ import Juvix.Syntax.MicroJuvix.LocalVars
 import Juvix.Syntax.MicroJuvix.MicroJuvixArityResult
 import Juvix.Syntax.MicroJuvix.MicroJuvixTypedResult
 import Juvix.Syntax.MicroJuvix.TypeChecker.Inference
+import Juvix.Syntax.MicroJuvix.Pretty
 
 addIdens :: Member (State TypesTable) r => TypesTable -> Sem r ()
 addIdens idens = modify (HashMap.union idens)
@@ -76,7 +77,8 @@ checkStatement ::
 checkStatement s = case s of
   StatementFunction fun -> StatementFunction <$> checkFunctionDef fun
   StatementForeign {} -> return s
-  StatementInductive ind -> do
+  StatementInductive ind ->
+    do
     mapM_ registerConstructor (ind ^. inductiveConstructors)
     ty <- inductiveType (ind ^. inductiveName)
     modify (HashMap.insert (ind ^. inductiveName) ty)
