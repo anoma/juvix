@@ -19,7 +19,7 @@ registerNaturalDef d = do
 registerZero :: Member Builtins r => InductiveConstructorDef -> Sem r ()
 registerZero d@(InductiveConstructorDef zero ty) = do
   nat <- getBuiltinName (getLoc d) BuiltinNatural
-  unless (ty === nat) (error $ "zero has the wrong type " <> ppSimple ty <> " | " <> ppSimple nat)
+  unless (ty === nat) (error $ "zero has the wrong type " <> ppTrace ty <> " | " <> ppTrace nat)
   registerBuiltin BuiltinNaturalZero zero
 
 registerSuc :: Member Builtins r => InductiveConstructorDef -> Sem r ()
@@ -66,4 +66,4 @@ registerNaturalPlus f = do
     Nothing -> error "Natural plus has the wrong number of clauses"
     Just z -> forM_ z $ \((exLhs, exBody), (lhs, body)) -> do
       unless (exLhs =% lhs) (error "clause lhs does not match")
-      unless (exBody =% body) (error $ "clause body does not match " <> ppSimple exBody <> " | " <> ppSimple body)
+      unless (exBody =% body) (error $ "clause body does not match " <> ppTrace exBody <> " | " <> ppTrace body)

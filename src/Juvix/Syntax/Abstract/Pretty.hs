@@ -18,8 +18,8 @@ ppOutDefault = AnsiText . PPOutput . doc defaultOptions
 ppOut :: PrettyCode c => Options -> c -> AnsiText
 ppOut o = AnsiText . PPOutput . doc o
 
-ppSimple :: PrettyCode c => c -> Text
-ppSimple = toAnsiText True . ppOutDefault
+ppTrace :: PrettyCode c => c -> Text
+ppTrace = toAnsiText True . ppOutDefault
 
 instance HasAnsiBackend PPOutput where
   toAnsiStream (PPOutput o) = reAnnotateS Ansi.stylize (layoutPretty defaultLayoutOptions o)

@@ -20,8 +20,8 @@ ppOutDefault = AnsiText . PPOutput . doc defaultOptions
 ppOut :: PrettyCode c => Options -> c -> AnsiText
 ppOut o = AnsiText . PPOutput . doc o
 
-ppSimple :: PrettyCode c => c -> Text
-ppSimple = Ansi.renderStrict . reAnnotateS Ansi.stylize . layoutPretty defaultLayoutOptions . doc defaultOptions
+ppTrace :: PrettyCode c => c -> Text
+ppTrace = Ansi.renderStrict . reAnnotateS Ansi.stylize . layoutPretty defaultLayoutOptions . doc defaultOptions
 
 instance HasAnsiBackend PPOutput where
   toAnsiStream (PPOutput o) = reAnnotateS Ansi.stylize (layoutPretty defaultLayoutOptions o)
