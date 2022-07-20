@@ -1,0 +1,6 @@
+module NestedPatternBraces;
+
+a : {A : Type} → Type;
+a {{A}} ≔ a;
+
+end;

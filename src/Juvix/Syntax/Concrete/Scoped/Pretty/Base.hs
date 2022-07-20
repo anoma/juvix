@@ -660,6 +660,12 @@ instance PrettyCode PatternArg where
     p <- ppCode (a ^. patternArgPattern)
     return (bracesIf (Implicit == a ^. patternArgIsImplicit) p)
 
+instance PrettyCode PatternApp where
+  ppCode (PatternApp l r) = do
+    l' <- ppLeftExpression appFixity l
+    r' <- ppRightExpression appFixity r
+    return $ l' <+> r'
+
 ppPatternParenType :: forall s r. (SingI s, Member (Reader Options) r) => PatternParensType s -> Sem r (Doc Ann)
 ppPatternParenType p = case sing :: SStage s of
   SParsed -> ppCode p

@@ -206,6 +206,27 @@ scoperErrorTests =
         ErrQualSymNotInScope {} -> Nothing
         _ -> wrongError,
     NegTest
+      "Double braces in pattern"
+      "."
+      "NestedPatternBraces.juvix"
+      $ \case
+        ErrDoubleBracesPattern {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Pattern matching an implicit argument on the left of an application"
+      "."
+      "ImplicitPatternLeftApplication.juvix"
+      $ \case
+        ErrImplicitPatternLeftApplication {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Constructor expected on the left of a pattern application"
+      "."
+      "ConstructorExpectedLeftApplication.juvix"
+      $ \case
+        ErrConstructorExpectedLeftApplication {} -> Nothing
+        _ -> wrongError,
+    NegTest
       "Compile block for a unsupported kind of expression"
       "CompileBlocks"
       "WrongKindExpressionCompileBlock.juvix"
