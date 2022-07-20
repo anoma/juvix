@@ -238,7 +238,7 @@ tableNestedInsert ::
   a ->
   HashMap k1 (HashMap k2 a) ->
   HashMap k1 (HashMap k2 a)
-tableNestedInsert k1 k2 a = tableInsert (HashMap.singleton k2) (HashMap.insert k2) k1 a
+tableNestedInsert k1 k2 = tableInsert (HashMap.singleton k2) (HashMap.insert k2) k1
 
 --------------------------------------------------------------------------------
 -- NonEmpty
