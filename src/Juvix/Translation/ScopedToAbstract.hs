@@ -406,7 +406,7 @@ goPattern p = case p of
   PatternInfixApplication a -> Abstract.PatternConstructorApp <$> goInfixPatternApplication a
   PatternPostfixApplication a -> Abstract.PatternConstructorApp <$> goPostfixPatternApplication a
   PatternWildcard i -> return (Abstract.PatternWildcard i)
-  PatternEmpty -> return Abstract.PatternEmpty
+  PatternEmpty {} -> return Abstract.PatternEmpty
 
 goAxiom :: Members '[InfoTableBuilder, Error ScoperError, Builtins] r => AxiomDef 'Scoped -> Sem r Abstract.AxiomDef
 goAxiom a = do

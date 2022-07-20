@@ -660,15 +660,20 @@ instance PrettyCode PatternArg where
     p <- ppCode (a ^. patternArgPattern)
     return (bracesIf (Implicit == a ^. patternArgIsImplicit) p)
 
+ppPatternParenType :: forall s r. (SingI s, Member (Reader Options) r) => PatternParensType s -> Sem r (Doc Ann)
+ppPatternParenType p = case sing :: SStage s of
+  SParsed -> ppCode p
+  SScoped -> ppCode p
+
 instance SingI s => PrettyCode (PatternAtom s) where
   ppCode a = case a of
     PatternAtomIden n -> case sing :: SStage s of
       SParsed -> ppCode n
       SScoped -> ppCode n
     PatternAtomWildcard {} -> return kwWildcard
-    PatternAtomEmpty -> return $ parens mempty
-    PatternAtomParens p -> parens <$> ppCode p
-    PatternAtomBraces p -> braces <$> ppCode p
+    PatternAtomEmpty {} -> return $ parens mempty
+    PatternAtomParens p -> parens <$> ppPatternParenType p
+    PatternAtomBraces p -> braces <$> ppPatternParenType p
 
 instance SingI s => PrettyCode (PatternAtoms s) where
   ppCode (PatternAtoms ps _) = hsep . toList <$> mapM ppCode ps
@@ -757,7 +762,7 @@ instance PrettyCode Pattern where
       r' <- ppRightExpression appFixity r
       return $ l' <+> r'
     PatternWildcard {} -> return kwWildcard
-    PatternEmpty -> return $ parens mempty
+    PatternEmpty {} -> return $ parens mempty
     PatternConstructor constr -> ppCode constr
     PatternInfixApplication i -> ppPatternInfixApp i
     PatternPostfixApplication i -> ppPatternPostfixApp i

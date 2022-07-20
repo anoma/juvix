@@ -85,6 +85,11 @@ type family PatternType s = res | res -> s where
   PatternType 'Parsed = PatternAtom 'Parsed
   PatternType 'Scoped = PatternArg
 
+type PatternParensType :: Stage -> GHC.Type
+type family PatternParensType s = res | res -> s where
+  PatternParensType 'Parsed = PatternAtoms 'Parsed
+  PatternParensType 'Scoped = PatternArg
+
 type family ImportType (s :: Stage) :: GHC.Type where
   ImportType 'Parsed = TopModulePath
   ImportType 'Scoped = Module 'Scoped 'ModuleTop
@@ -294,7 +299,7 @@ data Pattern
   | PatternInfixApplication PatternInfixApp
   | PatternPostfixApplication PatternPostfixApp
   | PatternWildcard Wildcard
-  | PatternEmpty
+  | PatternEmpty Interval
   deriving stock (Show, Eq, Ord)
 
 instance HasAtomicity Pattern where
@@ -305,7 +310,7 @@ instance HasAtomicity Pattern where
     PatternInfixApplication a -> Aggregate (getFixity a)
     PatternPostfixApplication p -> Aggregate (getFixity p)
     PatternWildcard {} -> Atom
-    PatternEmpty -> Atom
+    PatternEmpty {} -> Atom
 
 --------------------------------------------------------------------------------
 -- Pattern section
@@ -319,9 +324,9 @@ data PatternScopedIden
 data PatternAtom (s :: Stage)
   = PatternAtomIden (PatternAtomIdenType s)
   | PatternAtomWildcard Wildcard
-  | PatternAtomEmpty
-  | PatternAtomParens (PatternAtoms s)
-  | PatternAtomBraces (PatternAtoms s)
+  | PatternAtomEmpty Interval
+  | PatternAtomParens (PatternParensType s)
+  | PatternAtomBraces (PatternParensType s)
 
 data PatternAtoms (s :: Stage) = PatternAtoms
   { _patternAtoms :: NonEmpty (PatternAtom s),
@@ -924,6 +929,7 @@ deriving stock instance
   ( Show (ExpressionType s),
     Show (IdentifierType s),
     Show (PatternAtomIdenType s),
+    Show (PatternParensType s),
     Show (PatternType s)
   ) =>
   Show (PatternAtom s)
@@ -932,6 +938,7 @@ deriving stock instance
   ( Eq (ExpressionType s),
     Eq (IdentifierType s),
     Eq (PatternAtomIdenType s),
+    Eq (PatternParensType s),
     Eq (PatternType s)
   ) =>
   Eq (PatternAtom s)
@@ -940,6 +947,7 @@ deriving stock instance
   ( Ord (ExpressionType s),
     Ord (IdentifierType s),
     Ord (PatternAtomIdenType s),
+    Ord (PatternParensType s),
     Ord (PatternType s)
   ) =>
   Ord (PatternAtom s)
@@ -948,17 +956,65 @@ deriving stock instance
   ( Show (ExpressionType s),
     Show (IdentifierType s),
     Show (PatternAtomIdenType s),
+    Show (PatternParensType s),
     Show (PatternType s)
   ) =>
   Show (PatternAtoms s)
 
+instance HasLoc PatternScopedIden where
+  getLoc = \case
+    PatternScopedVar v -> getLoc v
+    PatternScopedConstructor c -> getLoc c
+
+instance SingI s => HasLoc (PatternAtom s) where
+  getLoc = \case
+    PatternAtomIden i -> getLocIden i
+    PatternAtomWildcard w -> getLoc w
+    PatternAtomEmpty i -> i
+    PatternAtomParens p -> getLocParens p
+    PatternAtomBraces p -> getLocParens p
+    where
+      getLocIden :: forall r. SingI r => PatternAtomIdenType r -> Interval
+      getLocIden p = case sing :: SStage r of
+        SParsed -> getLoc p
+        SScoped -> getLoc p
+      getLocParens :: forall r. SingI r => PatternParensType r -> Interval
+      getLocParens p =
+        case sing :: SStage r of
+          SParsed -> getLoc p
+          SScoped -> getLoc p
+
 instance HasLoc (PatternAtoms s) where
   getLoc = (^. patternAtomsLoc)
+
+instance HasLoc PatternArg where
+  getLoc = getLoc . (^. patternArgPattern)
+
+instance HasLoc PatternInfixApp where
+  getLoc (PatternInfixApp l _ r) =
+    getLoc l <> getLoc r
+
+instance HasLoc PatternPostfixApp where
+  getLoc (PatternPostfixApp l _) = getLoc l
+
+instance HasLoc PatternApp where
+  getLoc (PatternApp l r) = getLoc l <> getLoc r
+
+instance HasLoc Pattern where
+  getLoc = \case
+    PatternVariable v -> getLoc v
+    PatternConstructor c -> getLoc c
+    PatternApplication a -> getLoc a
+    PatternWildcard w -> getLoc w
+    PatternEmpty i -> i
+    PatternInfixApplication i -> getLoc i
+    PatternPostfixApplication i -> getLoc i
 
 instance
   ( Eq (ExpressionType s),
     Eq (IdentifierType s),
     Eq (PatternAtomIdenType s),
+    Eq (PatternParensType s),
     Eq (PatternType s)
   ) =>
   Eq (PatternAtoms s)
@@ -969,6 +1025,7 @@ instance
   ( Ord (ExpressionType s),
     Ord (IdentifierType s),
     Ord (PatternAtomIdenType s),
+    Ord (PatternParensType s),
     Ord (PatternType s)
   ) =>
   Ord (PatternAtoms s)
