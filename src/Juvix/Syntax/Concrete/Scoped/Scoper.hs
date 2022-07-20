@@ -1553,7 +1553,7 @@ parsePatternTerm = do
         bracesPat s = case s of
           PatternAtomBraces r
             | Implicit <- r ^. patternArgIsImplicit ->
-              Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r)))
+                Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r)))
             | otherwise -> Just (Right (set patternArgIsImplicit Implicit r))
           _ -> Nothing
 

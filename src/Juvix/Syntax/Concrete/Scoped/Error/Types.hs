@@ -564,8 +564,52 @@ instance ToGenericError DoubleBracesPattern where
     where
       pat :: PatternArg
       pat = e ^. doubleBracesPatternArg
-      i = getLoc (e ^. doubleBracesPatternArg)
+      i = getLoc pat
       msg =
         "Double braces are not valid:"
-        -- TODO add bold to braces
+          -- TODO add bold to braces
           <+> braces (ppCode pat)
+
+newtype ImplicitPatternLeftApplication = ImplicitPatternLeftApplication
+  { _implicitPatternLeftApplication :: PatternApp
+  }
+  deriving stock (Show)
+
+makeLenses ''ImplicitPatternLeftApplication
+
+instance ToGenericError ImplicitPatternLeftApplication where
+  genericError e =
+    GenericError
+      { _genericErrorLoc = i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
+    where
+      pat :: PatternApp
+      pat = e ^. implicitPatternLeftApplication
+      i = getLoc pat
+      msg =
+        "Pattern matching an implicit argument cannot occur on the left of an application:"
+          <+> ppCode pat
+
+newtype ConstructorExpectedLeftApplication = ConstructorExpectedLeftApplication
+  { _constructorExpectedLeftApplicationPattern :: Pattern
+  }
+  deriving stock (Show)
+
+makeLenses ''ConstructorExpectedLeftApplication
+
+instance ToGenericError ConstructorExpectedLeftApplication where
+  genericError e =
+    GenericError
+      { _genericErrorLoc = i,
+        _genericErrorMessage = prettyError msg,
+        _genericErrorIntervals = [i]
+      }
+    where
+      pat :: Pattern
+      pat = e ^. constructorExpectedLeftApplicationPattern
+      i = getLoc pat
+      msg =
+        "Constructor expected on the left of a pattern application:"
+          <+> ppCode pat

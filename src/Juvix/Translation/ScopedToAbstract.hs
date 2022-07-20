@@ -341,31 +341,35 @@ goFunctionParameter (FunctionParameter {..}) = do
       }
 
 goPatternApplication ::
+  Member (Error ScoperError) r =>
   PatternApp ->
   Sem r Abstract.ConstructorApp
 goPatternApplication a = uncurry Abstract.ConstructorApp <$> viewApp (PatternApplication a)
 
 goPatternConstructor ::
+  Member (Error ScoperError) r =>
   ConstructorRef ->
   Sem r Abstract.ConstructorApp
 goPatternConstructor a = uncurry Abstract.ConstructorApp <$> viewApp (PatternConstructor a)
 
 goInfixPatternApplication ::
+  Member (Error ScoperError) r =>
   PatternInfixApp ->
   Sem r Abstract.ConstructorApp
 goInfixPatternApplication a = uncurry Abstract.ConstructorApp <$> viewApp (PatternInfixApplication a)
 
 goPostfixPatternApplication ::
+  Member (Error ScoperError) r =>
   PatternPostfixApp ->
   Sem r Abstract.ConstructorApp
 goPostfixPatternApplication a = uncurry Abstract.ConstructorApp <$> viewApp (PatternPostfixApplication a)
 
-viewApp :: forall r. Pattern -> Sem r (Abstract.ConstructorRef, [Abstract.PatternArg])
-viewApp = \case
+viewApp :: forall r. Member (Error ScoperError) r => Pattern -> Sem r (Abstract.ConstructorRef, [Abstract.PatternArg])
+viewApp p = case p of
   PatternConstructor c -> return (goConstructorRef c, [])
-  PatternApplication (PatternApp l r) -> do
+  PatternApplication app@(PatternApp _ r) -> do
     r' <- goPatternArg r
-    second (`snoc` r') <$> viewAppLeft l
+    second (`snoc` r') <$> viewAppLeft app
   PatternInfixApplication (PatternInfixApp l c r) -> do
     l' <- goPatternArg l
     r' <- goPatternArg r
@@ -377,19 +381,16 @@ viewApp = \case
   PatternWildcard {} -> err
   PatternEmpty {} -> err
   where
-    viewAppLeft :: PatternArg -> Sem r (Abstract.ConstructorRef, [Abstract.PatternArg])
-    viewAppLeft p
-      -- TODO proper error
-      | Implicit <- p ^. patternArgIsImplicit = error "An implicit pattern cannot be on the left of an application"
-      | otherwise = viewApp (p ^. patternArgPattern)
-    -- TODO proper error
-    err :: a
-    err = error "constructor expected on the left of a pattern application"
+    viewAppLeft :: PatternApp -> Sem r (Abstract.ConstructorRef, [Abstract.PatternArg])
+    viewAppLeft app@(PatternApp l _)
+      | Implicit <- l ^. patternArgIsImplicit = throw (ErrImplicitPatternLeftApplication (ImplicitPatternLeftApplication app))
+      | otherwise = viewApp (l ^. patternArgPattern)
+    err = throw (ErrConstructorExpectedLeftApplication (ConstructorExpectedLeftApplication p))
 
 goConstructorRef :: ConstructorRef -> Abstract.ConstructorRef
 goConstructorRef (ConstructorRef' n) = Abstract.ConstructorRef (goName n)
 
-goPatternArg :: PatternArg -> Sem r Abstract.PatternArg
+goPatternArg :: Member (Error ScoperError) r => PatternArg -> Sem r Abstract.PatternArg
 goPatternArg p = do
   pat' <- goPattern (p ^. patternArgPattern)
   return
@@ -398,7 +399,7 @@ goPatternArg p = do
         _patternArgPattern = pat'
       }
 
-goPattern :: Pattern -> Sem r Abstract.Pattern
+goPattern :: Member (Error ScoperError) r => Pattern -> Sem r Abstract.Pattern
 goPattern p = case p of
   PatternVariable a -> return $ Abstract.PatternVariable (goSymbol a)
   PatternConstructor c -> Abstract.PatternConstructorApp <$> goPatternConstructor c
