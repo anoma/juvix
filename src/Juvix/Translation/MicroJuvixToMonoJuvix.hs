@@ -67,7 +67,7 @@ cloneName' n = do
   return (set Micro.nameId fresh n)
 
 cloneName :: Members '[NameIdGen] r => Micro.Name -> Sem r Name
-cloneName n = goName <$> cloneName' n
+cloneName n = cloneName' n
 
 addConcreteInfo :: NonEmpty Micro.ConcreteType -> ConcreteIdenInfo -> Maybe PolyIdenInfo -> PolyIdenInfo
 addConcreteInfo t c = \case
@@ -164,7 +164,7 @@ goModule Micro.Module {..} = do
   _moduleBody' <- goModuleBody _moduleBody
   return
     Module
-      { _moduleName = goName _moduleName,
+      { _moduleName = _moduleName,
         _moduleBody = _moduleBody'
       }
 
@@ -199,19 +199,10 @@ goAxiomDef Micro.AxiomDef {..} = do
   let _axiomBuiltin' = _axiomBuiltin
   return
     AxiomDef
-      { _axiomName = goName _axiomName,
+      { _axiomName = _axiomName,
         _axiomBuiltin = _axiomBuiltin',
         _axiomType = _axiomType'
       }
-
-goName :: Micro.Name -> Name
-goName n =
-  Name
-    { _nameText = n ^. Micro.nameText,
-      _nameId = n ^. Micro.nameId,
-      _nameLoc = n ^. Micro.nameLoc,
-      _nameKind = n ^. Micro.nameKind
-    }
 
 lookupPolyConstructor ::
   Members '[Reader ConcreteTable] r =>
@@ -267,7 +258,7 @@ goInductiveDefConcrete def = do
   constructors' <- mapM goConstructor (def ^. Micro.inductiveConstructors)
   return
     InductiveDef
-      { _inductiveName = goName (def ^. Micro.inductiveName),
+      { _inductiveName = def ^. Micro.inductiveName,
         _inductiveBuiltin = def ^. Micro.inductiveBuiltin,
         _inductiveConstructors = constructors'
       }
@@ -277,7 +268,7 @@ goInductiveDefConcrete def = do
       params' <- mapM (goType . Micro.mkConcreteType') (c ^. Micro.constructorParameters)
       return
         InductiveConstructorDef
-          { _constructorName = goName (c ^. Micro.constructorName),
+          { _constructorName = c ^. Micro.constructorName,
             _constructorParameters = params'
           }
 
@@ -327,10 +318,10 @@ goExpression = go
               return (foldApplication fun' tailArgs')
     goIden :: Micro.Iden -> Iden
     goIden = \case
-      Micro.IdenFunction f -> IdenFunction (goName f)
-      Micro.IdenVar v -> IdenVar (goName v)
-      Micro.IdenAxiom a -> IdenAxiom (goName a)
-      Micro.IdenConstructor c -> IdenConstructor (goName c)
+      Micro.IdenFunction f -> IdenFunction f
+      Micro.IdenVar v -> IdenVar v
+      Micro.IdenAxiom a -> IdenAxiom a
+      Micro.IdenConstructor c -> IdenConstructor c
       Micro.IdenInductive {} -> impossible
 
 goFunctionDefConcrete ::
@@ -351,7 +342,7 @@ goFunctionDefConcrete n d = do
       }
   where
     funName :: Name
-    funName = fromMaybe (goName (d ^. Micro.funDefName)) n
+    funName = fromMaybe (d ^. Micro.funDefName) n
     concreteTy :: Micro.ConcreteType
     concreteTy = Micro.mkConcreteType' (d ^. Micro.funDefType)
     patternTys :: [Micro.ConcreteType]
@@ -460,7 +451,7 @@ goPatternArg ty = goPattern ty . (^. Micro.patternArgPattern)
 
 goPattern :: forall r. Members '[Reader ConcreteTable, Reader Micro.InfoTable] r => Micro.ConcreteType -> Micro.Pattern -> Sem r Pattern
 goPattern ty = \case
-  Micro.PatternVariable v -> return (PatternVariable (goName v))
+  Micro.PatternVariable v -> return (PatternVariable v)
   Micro.PatternConstructorApp capp -> PatternConstructorApp <$> goApp capp
   Micro.PatternWildcard {} -> return PatternWildcard
   where
@@ -468,7 +459,7 @@ goPattern ty = \case
     goApp capp = case ty ^. Micro.unconcreteType of
       Micro.ExpressionIden Micro.IdenInductive {} -> do
         let c' :: Name
-            c' = goName (capp ^. Micro.constrAppConstructor)
+            c' = capp ^. Micro.constrAppConstructor
         cInfo <- Micro.lookupConstructor (capp ^. Micro.constrAppConstructor)
         let psTysConcrete = map Micro.mkConcreteType' (cInfo ^. Micro.constructorInfoArgs)
         ps' <- zipWithM goPatternArg psTysConcrete (capp ^. Micro.constrAppParameters)
@@ -535,8 +526,8 @@ goType = go . (^. Micro.unconcreteType)
       return (Function l' r')
     goIden :: Micro.Iden -> TypeIden
     goIden = \case
-      Micro.IdenAxiom a -> TypeIdenAxiom (goName a)
-      Micro.IdenInductive i -> TypeIdenInductive (goName i)
+      Micro.IdenAxiom a -> TypeIdenAxiom a
+      Micro.IdenInductive i -> TypeIdenInductive i
       Micro.IdenVar {} -> impossible
       Micro.IdenFunction {} -> impossible
       Micro.IdenConstructor {} -> impossible

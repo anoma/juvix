@@ -272,5 +272,6 @@ freshVar n = do
       { _nameId = uid,
         _nameText = n,
         _nameKind = KNameLocal,
+        _namePretty = n,
         _nameLoc = error "freshVar with no location"
       }

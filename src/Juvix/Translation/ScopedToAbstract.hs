@@ -75,10 +75,10 @@ goModule m = case sing :: SModuleIsTop t of
 
 goName :: S.Name -> Abstract.Name
 goName name =
-  goSymbol (set S.nameConcrete concr name)
+  set Abstract.namePretty prettyStr (goSymbol (S.nameUnqualify name))
   where
-    concr :: Symbol
-    concr = WithLoc (getLoc name) (prettyText name)
+    prettyStr :: Text
+    prettyStr = prettyText name
 
 goSymbol :: S.Symbol -> Abstract.Name
 goSymbol s =
@@ -86,6 +86,7 @@ goSymbol s =
     { _nameText = S.symbolText s,
       _nameId = s ^. S.nameId,
       _nameKind = getNameKind s,
+      _namePretty = S.symbolText s,
       _nameLoc = s ^. S.nameConcrete . symbolLoc
     }
 

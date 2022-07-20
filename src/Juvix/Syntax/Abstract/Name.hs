@@ -12,11 +12,11 @@ import Juvix.Syntax.Concrete.Scoped.Name.NameKind
 import Juvix.Syntax.Fixity
 import Juvix.Syntax.NameId
 
--- TODO: consider adding "namePretty" field for qualified names
 data Name = Name
   { _nameText :: Text,
     _nameId :: NameId,
     _nameKind :: NameKind,
+    _namePretty :: Text, -- How to print this name in error messages
     _nameLoc :: Interval
   }
   deriving stock (Show)
@@ -43,9 +43,19 @@ instance HasNameKind Name where
 
 instance Pretty Name where
   pretty n =
-    pretty (n ^. nameText)
+    pretty (n ^. namePretty)
       <> "@"
       <> pretty (n ^. nameId)
+
+prettyName :: HasNameKindAnn a => Bool -> Name -> Doc a
+prettyName showNameId n =
+  annotate
+    (annNameKind (n ^. nameKind))
+    (pretty (n ^. namePretty) <?> uid)
+  where
+    uid
+      | showNameId = Just ("@" <> pretty (n ^. nameId))
+      | otherwise = Nothing
 
 type FunctionName = Name
 
