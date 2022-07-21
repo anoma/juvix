@@ -34,14 +34,7 @@ instance PrettyCode NameId where
 instance PrettyCode Name where
   ppCode n = do
     showNameId <- asks (^. optShowNameIds)
-    uid <-
-      if
-          | showNameId -> Just . ("@" <>) <$> ppCode (n ^. nameId)
-          | otherwise -> return Nothing
-    return
-      $ annotate (AnnKind (n ^. nameKind))
-      $ pretty (n ^. nameText)
-      <?> uid
+    return (prettyName showNameId n)
 
 instance PrettyCode Iden where
   ppCode :: Member (Reader Options) r => Iden -> Sem r (Doc Ann)

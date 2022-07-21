@@ -7,3 +7,6 @@ data Ann
   | AnnKeyword
   | AnnLiteralString
   | AnnLiteralInteger
+
+instance HasNameKindAnn Ann where
+  annNameKind = AnnKind

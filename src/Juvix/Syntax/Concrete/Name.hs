@@ -2,6 +2,7 @@ module Juvix.Syntax.Concrete.Name where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 import Juvix.Syntax.Loc
 
 type Symbol = WithLoc Text
@@ -18,9 +19,22 @@ data Name
   deriving stock (Show, Eq, Ord)
 
 instance HasLoc Name where
-  getLoc n = case n of
+  getLoc = \case
     NameQualified q -> getLoc q
     NameUnqualified s -> getLoc s
+
+instance Pretty QualifiedName where
+  pretty (QualifiedName (Path path) s) =
+    let symbols = snoc (toList path) s
+     in dotted (map pretty symbols)
+    where
+      dotted :: Foldable f => f (Doc a) -> Doc a
+      dotted = concatWith (surround ".")
+
+instance Pretty Name where
+  pretty = \case
+    NameQualified q -> pretty q
+    NameUnqualified s -> pretty s
 
 newtype Path = Path
   { _pathParts :: NonEmpty Symbol

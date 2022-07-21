@@ -1,0 +1,7 @@
+module Other;
+
+  inductive Unit {
+  t : Unit;
+  };
+
+end;

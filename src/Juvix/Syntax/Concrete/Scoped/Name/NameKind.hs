@@ -24,6 +24,9 @@ data NameKind
 class HasNameKind a where
   getNameKind :: a -> NameKind
 
+class HasNameKindAnn a where
+  annNameKind :: NameKind -> a
+
 instance HasNameKind NameKind where
   getNameKind = id
 

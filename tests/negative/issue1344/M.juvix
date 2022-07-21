@@ -1,0 +1,11 @@
+module M;
+  import Other;
+
+  inductive Unit {
+  t : Unit;
+  };
+
+  u : Other.Unit;
+  u ≔ t;
+
+end;

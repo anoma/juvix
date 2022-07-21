@@ -6,6 +6,7 @@ module Juvix.Syntax.Concrete.Scoped.Name
 where
 
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 import Juvix.Syntax.Concrete.Name qualified as C
 import Juvix.Syntax.Concrete.Scoped.Name.NameKind
 import Juvix.Syntax.Concrete.Scoped.VisibilityAnn
@@ -89,6 +90,9 @@ instance HasNameKind (Name' n) where
 
 instance HasLoc n => HasLoc (Name' n) where
   getLoc = getLoc . (^. nameConcrete)
+
+instance Pretty a => Pretty (Name' a) where
+  pretty = pretty . (^. nameConcrete)
 
 data AName = forall c.
   HasLoc c =>

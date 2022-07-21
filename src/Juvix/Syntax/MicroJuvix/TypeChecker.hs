@@ -349,10 +349,13 @@ freshHole l = do
 literalType :: Members '[NameIdGen] r => LiteralLoc -> Sem r TypedExpression
 literalType l = do
   uid <- freshNameId
-  let typeVar =
+  let strA :: Text
+      strA = "A"
+      typeVar =
         Name
-          { _nameText = "A",
+          { _nameText = strA,
             _nameId = uid,
+            _namePretty = strA,
             _nameKind = KNameLocal,
             _nameLoc = getLoc l
           }

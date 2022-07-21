@@ -1,11 +1,11 @@
 module Juvix.Syntax.Abstract.Pretty.Ann where
 
 import Juvix.Prelude
-import Juvix.Syntax.Concrete.Scoped.Name qualified as S
+import Juvix.Syntax.Concrete.Scoped.Name.NameKind
 import Juvix.Syntax.Concrete.Scoped.Pretty.Base qualified as S
 
 data Ann
-  = AnnKind S.NameKind
+  = AnnKind NameKind
   | AnnKeyword
   | AnnImportant
   | AnnLiteralString
@@ -21,3 +21,6 @@ fromScopedAnn s = case s of
   S.AnnRef {} -> Nothing
   S.AnnLiteralString -> Just AnnLiteralInteger
   S.AnnLiteralInteger -> Just AnnLiteralString
+
+instance HasNameKindAnn Ann where
+  annNameKind = AnnKind
