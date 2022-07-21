@@ -410,3 +410,38 @@ reachableModules = fst . run . runOutputList . evalState (mempty :: HashSet Name
         goStatement = \case
           StatementInclude (Include inc) -> go inc
           _ -> return ()
+
+-- Assumes the given function has been type checked
+functionDefEval :: FunctionDef -> Maybe Expression
+functionDefEval f = case f ^. funDefClauses of
+  c :| [] -> goClause c
+  _ -> Nothing
+  where
+    goClause :: FunctionClause -> Maybe Expression
+    goClause c = do
+      let pats = c ^. clausePatterns
+          n = length (c ^. clausePatterns)
+      (patsTys, _) <- splitNExplicitParams n (f ^. funDefType)
+      go (zipExact pats patsTys)
+      where
+        splitNExplicitParams :: Int -> Expression -> Maybe ([Expression], Expression)
+        splitNExplicitParams n fun = do
+          let (params, r) = unfoldFunType fun
+          (nfirst, rest) <- splitAtExactMay n params
+          sparams <- mapM simpleExplicitParam nfirst
+          let r' = foldFunType rest r
+          return (sparams, r')
+        simpleExplicitParam :: FunctionParameter -> Maybe Expression
+        simpleExplicitParam = \case
+          FunctionParameter Nothing Explicit ty -> Just ty
+          _ -> Nothing
+        goPattern :: (Pattern, Expression) -> Expression -> Maybe Expression
+        goPattern (p, ty) = case p of
+          PatternVariable v -> return . ExpressionLambda . Lambda v ty
+          _ -> const Nothing
+        go :: [(PatternArg, Expression)] -> Maybe Expression
+        go = \case
+          [] -> return (c ^. clauseBody)
+          ((p, ty) : ps)
+            | Implicit <- p ^. patternArgIsImplicit -> Nothing
+            | otherwise -> go ps >>= goPattern (p ^. patternArgPattern, ty)

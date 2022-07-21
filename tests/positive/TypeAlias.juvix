@@ -1,13 +1,23 @@
 module TypeAlias;
 
- inductive T {
+inductive T {
  t : T;
- };
+};
 
  alias : Type;
  alias ≔ T;
 
  x : alias;
  x ≔ t;
+
+id : {A : Type} -> A -> A;
+id x ≔ x;
+
+inductive Pair (A : Type) (B : Type) {
+ mkPair : A -> B -> Pair A B;
+};
+
+x' : Pair alias alias;
+x' ≔ mkPair t t;
 
 end;

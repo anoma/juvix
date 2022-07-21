@@ -96,10 +96,10 @@ data Expression
 
 instance Hashable Expression
 
-data Lambda = Lambda {
-  _lambdaVar :: VarName,
-  _lambdaVarType :: Expression,
-  _lambdaBody :: Expression
+data Lambda = Lambda
+  { _lambdaVar :: VarName,
+    _lambdaVarType :: Expression,
+    _lambdaBody :: Expression
   }
   deriving stock (Eq, Generic)
 

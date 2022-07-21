@@ -1,10 +1,15 @@
-module Juvix.Syntax.MicroJuvix.TypeChecker.Inference where
+module Juvix.Syntax.MicroJuvix.TypeChecker.Inference
+  ( module Juvix.Syntax.MicroJuvix.TypeChecker.Inference,
+    module Juvix.Syntax.MicroJuvix.TypeChecker.FunctionsTable,
+  )
+where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Prelude hiding (fromEither)
 import Juvix.Syntax.MicroJuvix.Error
 import Juvix.Syntax.MicroJuvix.Language.Extra
 import Juvix.Syntax.MicroJuvix.MicroJuvixTypedResult
+import Juvix.Syntax.MicroJuvix.TypeChecker.FunctionsTable
 
 data MetavarState
   = Fresh
@@ -80,7 +85,7 @@ closeState = \case
 getMetavar :: Member (State InferenceState) r => Hole -> Sem r MetavarState
 getMetavar h = gets (fromJust . (^. inferenceMap . at h))
 
-normalizeType' :: forall r. Members '[State InferenceState] r => Expression -> Sem r Expression
+normalizeType' :: forall r. Members '[Reader FunctionsTable, State InferenceState] r => Expression -> Sem r Expression
 normalizeType' = go
   where
     go :: Expression -> Sem r Expression
@@ -118,7 +123,10 @@ queryMetavar' h = do
     Just Fresh -> return Nothing
     Just (Refined e) -> return (Just e)
 
-re :: Member (Error TypeCheckerError) r => Sem (Inference ': r) a -> Sem (State InferenceState ': r) a
+re ::
+  Members '[Error TypeCheckerError, Reader FunctionsTable] r =>
+  Sem (Inference ': r) a ->
+  Sem (State InferenceState ': r) a
 re = reinterpret $ \case
   MatchTypes a b -> matchTypes' a b
   QueryMetavar h -> queryMetavar' h
@@ -225,7 +233,7 @@ re = reinterpret $ \case
                 | otherwise = ok
 
 runInferenceDef ::
-  Member (Error TypeCheckerError) r =>
+  Members '[Error TypeCheckerError, Reader FunctionsTable] r =>
   Sem (Inference ': r) FunctionDef ->
   Sem r (FunctionDef, TypesTable)
 runInferenceDef a = do

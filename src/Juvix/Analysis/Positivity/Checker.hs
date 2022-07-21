@@ -67,7 +67,13 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref = helper False
       ExpressionLiteral {} -> return ()
       ExpressionHole {} -> return ()
       ExpressionUniverse {} -> return ()
+      ExpressionLambda l -> helperLambda l
       where
+        helperLambda :: Lambda -> Sem r ()
+        helperLambda (Lambda _ lamVarTy lamBody) = do
+          helper inside lamVarTy
+          helper inside lamBody
+
         helperIden :: Iden -> Sem r ()
         helperIden = \case
           IdenInductive ty' -> when (inside && name == ty') (strictlyPositivityError expr)

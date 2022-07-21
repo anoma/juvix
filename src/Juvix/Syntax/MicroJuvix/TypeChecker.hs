@@ -8,7 +8,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Analysis.Positivity.Checker
 import Juvix.Internal.NameIdGen
-import Juvix.Pipeline.EntryPoint qualified as E
+import Juvix.Pipeline.EntryPoint
 import Juvix.Prelude hiding (fromEither)
 import Juvix.Syntax.MicroJuvix.Error
 import Juvix.Syntax.MicroJuvix.InfoTable
@@ -16,6 +16,7 @@ import Juvix.Syntax.MicroJuvix.Language.Extra
 import Juvix.Syntax.MicroJuvix.LocalVars
 import Juvix.Syntax.MicroJuvix.MicroJuvixArityResult
 import Juvix.Syntax.MicroJuvix.MicroJuvixTypedResult
+import Juvix.Syntax.MicroJuvix.Pretty
 import Juvix.Syntax.MicroJuvix.TypeChecker.Inference
 
 addIdens :: Member (State TypesTable) r => TypesTable -> Sem r ()
@@ -34,6 +35,7 @@ entryMicroJuvixTyped res@MicroJuvixArityResult {..} = do
   (idens, r) <-
     runState (mempty :: TypesTable)
       . runReader entryPoint
+      . evalState (mempty :: FunctionsTable)
       . runReader table
       $ mapM checkModule _resultModules
   return
@@ -46,11 +48,11 @@ entryMicroJuvixTyped res@MicroJuvixArityResult {..} = do
     table :: InfoTable
     table = buildTable _resultModules
 
-    entryPoint :: E.EntryPoint
+    entryPoint :: EntryPoint
     entryPoint = res ^. microJuvixArityResultEntryPoint
 
 checkModule ::
-  Members '[Reader E.EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
+  Members '[Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable] r =>
   Module ->
   Sem r Module
 checkModule Module {..} = do
@@ -63,8 +65,7 @@ checkModule Module {..} = do
       }
 
 checkModuleBody ::
-  forall r.
-  Members '[Reader E.EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State NegativeTypeParameters] r =>
+  Members '[Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable] r =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -75,13 +76,13 @@ checkModuleBody ModuleBody {..} = do
       }
 
 checkInclude ::
-  Members '[Reader E.EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
+  Members '[Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable] r =>
   Include ->
   Sem r Include
 checkInclude = traverseOf includeModule checkModule
 
 checkStatement ::
-  Members '[Reader E.EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State NegativeTypeParameters] r =>
+  Members '[Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable] r =>
   Statement ->
   Sem r Statement
 checkStatement s = case s of
@@ -99,31 +100,46 @@ checkStatement s = case s of
     return s
 
 checkFunctionDef ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable] r =>
   FunctionDef ->
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
-  (funDef, idens) <- runInferenceDef $ do
-    info <- lookupFunction _funDefName
-    checkFunctionDefType _funDefType
-    registerIden _funDefName _funDefType
-    _funDefClauses' <- mapM (checkFunctionClause info) _funDefClauses
+  (funDef, idens) <- readerState @FunctionsTable $ runInferenceDef $ do
+    _funDefType' <- runReader emptyLocalVars (checkFunctionDefType _funDefType)
+    registerIden _funDefName _funDefType'
+    _funDefClauses' <- mapM (checkFunctionClause _funDefType') _funDefClauses
     return
       FunctionDef
         { _funDefClauses = _funDefClauses',
+          _funDefType = _funDefType',
           ..
         }
   addIdens idens
+  registerFunctionDef funDef
   return funDef
 
-checkFunctionDefType :: forall r. Members '[Inference] r => Expression -> Sem r ()
-checkFunctionDefType = traverseOf_ (leafExpressions . _ExpressionHole) go
+checkIsType ::
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
+  Interval ->
+  Expression ->
+  Sem r Expression
+checkIsType = checkExpression . smallUniverse
+
+checkFunctionDefType ::
+  forall r.
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
+  Expression ->
+  Sem r Expression
+checkFunctionDefType ty = do
+  traverseOf_ (leafExpressions . _ExpressionHole) go ty
+  checkIsType loc ty
   where
+    loc = getLoc ty
     go :: Hole -> Sem r ()
     go h = freshMetavar h
 
 checkExpression ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
   Expression ->
   Expression ->
   Sem r Expression
@@ -143,7 +159,7 @@ checkExpression expectedTy e = do
         )
 
 checkFunctionParameter ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
   FunctionParameter ->
   Sem r FunctionParameter
 checkFunctionParameter (FunctionParameter mv i e) = do
@@ -151,7 +167,7 @@ checkFunctionParameter (FunctionParameter mv i e) = do
   return (FunctionParameter mv i e')
 
 checkInductiveDef ::
-  Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters, Reader E.EntryPoint] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters, Reader EntryPoint] r =>
   InductiveDef ->
   Sem r ()
 checkInductiveDef ty@InductiveDef {..} = do
@@ -160,7 +176,7 @@ checkInductiveDef ty@InductiveDef {..} = do
 
 checkConstructorDef ::
   Members
-    '[ Reader E.EntryPoint,
+    '[ Reader EntryPoint,
        Reader InfoTable,
        Error TypeCheckerError,
        State NegativeTypeParameters
@@ -200,16 +216,18 @@ checkConstructorReturnType indType ctor = do
     )
 
 inferExpression ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
   Expression ->
   Sem r Expression
 inferExpression = fmap (^. typedExpression) . inferExpression'
 
 lookupVar :: Member (Reader LocalVars) r => Name -> Sem r Expression
-lookupVar v = HashMap.lookupDefault impossible v <$> asks (^. localTypes)
+lookupVar v = HashMap.lookupDefault err v <$> asks (^. localTypes)
+  where
+    err = error $ "internal error: could not find var " <> ppTrace v
 
 checkFunctionClauseBody ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, Inference] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Inference] r =>
   LocalVars ->
   Expression ->
   Expression ->
@@ -219,11 +237,11 @@ checkFunctionClauseBody locals expectedTy body =
 
 checkFunctionClause ::
   forall r.
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, Inference] r =>
-  FunctionInfo ->
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Inference] r =>
+  Expression ->
   FunctionClause ->
   Sem r FunctionClause
-checkFunctionClause info FunctionClause {..} = do
+checkFunctionClause clauseType FunctionClause {..} = do
   (locals, bodyTy) <- helper _clausePatterns clauseType
   let bodyTy' = substitutionE (localsToSubsE locals) bodyTy
   _clauseBody' <- checkFunctionClauseBody locals bodyTy' _clauseBody
@@ -233,8 +251,6 @@ checkFunctionClause info FunctionClause {..} = do
         ..
       }
   where
-    clauseType :: Expression
-    clauseType = info ^. functionInfoDef . funDefType
     helper :: [PatternArg] -> Expression -> Sem r (LocalVars, Expression)
     helper pats ty = runState emptyLocalVars (go pats ty)
     go :: [PatternArg] -> Expression -> Sem (State LocalVars ': r) Expression
@@ -440,14 +456,14 @@ literalType l = do
 
 inferExpression' ::
   forall r.
-  Members '[Reader InfoTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference] r =>
   Expression ->
   Sem r TypedExpression
 inferExpression' e = case e of
   ExpressionIden i -> inferIden i
   ExpressionApplication a -> inferApplication a
   ExpressionLiteral l -> goLiteral l
-  ExpressionFunction f -> goExpressionFunction f
+  ExpressionFunction f -> goFunction f
   ExpressionHole h -> inferHole h
   ExpressionUniverse u -> goUniverse u
   ExpressionLambda l -> goLambda l
@@ -465,12 +481,13 @@ inferExpression' e = case e of
     goLambda (Lambda v ty b) = do
       b' <- inferExpression' b
       let smallUni = smallUniverse (getLoc ty)
-      ty' <- checkExpression ty smallUni
+      ty' <- checkExpression smallUni ty
       let fun = Function (unnamedParameter smallUni) (b' ^. typedType)
-      return TypedExpression {
-        _typedType = ExpressionFunction fun,
-        _typedExpression = ExpressionLambda (Lambda v ty' (b' ^. typedExpression))
-        }
+      return
+        TypedExpression
+          { _typedType = ExpressionFunction fun,
+            _typedExpression = ExpressionLambda (Lambda v ty' (b' ^. typedExpression))
+          }
 
     goUniverse :: SmallUniverse -> Sem r TypedExpression
     goUniverse u =
@@ -479,11 +496,15 @@ inferExpression' e = case e of
           { _typedType = ExpressionUniverse u,
             _typedExpression = ExpressionUniverse u
           }
-    goExpressionFunction :: Function -> Sem r TypedExpression
-    goExpressionFunction (Function l r) = do
+    goFunction :: Function -> Sem r TypedExpression
+    goFunction (Function l r) = do
       let uni = smallUniverse (getLoc l)
       l' <- checkFunctionParameter l
-      r' <- checkExpression uni r
+      let bodyEnv :: Sem r a -> Sem r a
+          bodyEnv = case l ^. paramName of
+            Nothing -> id
+            Just v -> local (over localTypes (HashMap.insert v (l ^. paramType)))
+      r' <- bodyEnv (checkExpression uni r)
       return (TypedExpression uni (ExpressionFunction (Function l' r')))
     goLiteral :: LiteralLoc -> Sem r TypedExpression
     goLiteral = literalType
@@ -492,7 +513,9 @@ inferExpression' e = case e of
     inferIden i = case i of
       IdenFunction fun -> do
         info <- lookupFunction fun
-        return (TypedExpression (info ^. functionInfoDef . funDefType) (ExpressionIden i))
+        mbody <- askFunctionDef fun
+        let e' = fromMaybe (ExpressionIden i) mbody
+        return (TypedExpression (info ^. functionInfoDef . funDefType) e')
       IdenConstructor c -> do
         ty <- constructorType c
         return (TypedExpression ty (ExpressionIden i))
@@ -506,23 +529,32 @@ inferExpression' e = case e of
         kind <- inductiveType v
         return (TypedExpression kind (ExpressionIden i))
     inferApplication :: Application -> Sem r TypedExpression
-    inferApplication (Application l r i) = inferExpression' l >>= helper
+    inferApplication (Application l r iapp) = inferExpression' l >>= helper
       where
         helper :: TypedExpression -> Sem r TypedExpression
         helper l' = case l' ^. typedType of
-          ExpressionFunction (Function (FunctionParameter mv _ funL) funR) -> do
+          ExpressionFunction (Function (FunctionParameter paraName ifun funL) funR) -> do
             r' <- checkExpression funL r
-            return
-              TypedExpression
-                { _typedExpression =
-                    ExpressionApplication
-                      Application
-                        { _appLeft = l' ^. typedExpression,
-                          _appRight = r,
-                          _appImplicit = i
-                        },
-                  _typedType = substitutionApp (mv, r') funR
-                }
+            unless (iapp == ifun) (error "implicitness mismatch")
+            case l' ^. typedExpression of
+              ExpressionLambda (Lambda lamVar _ lamBody) ->
+                return
+                  TypedExpression
+                    { _typedExpression = substitutionE (HashMap.singleton lamVar r') lamBody,
+                      _typedType = substitutionApp (paraName, r') funR
+                    }
+              _ ->
+                return
+                  TypedExpression
+                    { _typedExpression =
+                        ExpressionApplication
+                          Application
+                            { _appLeft = l' ^. typedExpression,
+                              _appRight = r',
+                              _appImplicit = iapp
+                            },
+                      _typedType = substitutionApp (paraName, r') funR
+                    }
           -- When we have have an application with a hole on the left: '_@1 x'
           -- We assume that it is a type application and thus 'x' must be a type.
           -- Not sure if this is always desirable.
@@ -543,7 +575,7 @@ inferExpression' e = case e of
                           Application
                             { _appLeft = l' ^. typedExpression,
                               _appRight = r',
-                              _appImplicit = i
+                              _appImplicit = iapp
                             }
                     }
           _ -> throw tyErr
