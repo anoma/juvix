@@ -6,5 +6,5 @@ import Prettyprinter.Render.Terminal
 
 stylize :: Eann -> AnsiStyle
 stylize a = case a of
-  Highlight -> colorDull Red
+  Highlight -> bold
   ScopedAnn s -> S.stylize s

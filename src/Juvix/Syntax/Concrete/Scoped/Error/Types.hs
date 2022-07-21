@@ -62,7 +62,7 @@ instance ToGenericError InfixError where
       msg =
         "Error solving infixities"
           <> line
-          <> indent' (highlight (ppCode _infixErrorAtoms))
+          <> indent' (ppCode _infixErrorAtoms)
 
 -- | megaparsec error while resolving infixities of patterns.
 newtype InfixErrorP = InfixErrorP
@@ -83,7 +83,7 @@ instance ToGenericError InfixErrorP where
       msg =
         "Error solving infixities:"
           <> line
-          <> indent' (highlight (ppCode _infixErrorAtomsP))
+          <> indent' (ppCode _infixErrorAtomsP)
 
 -- | function clause without a type signature.
 newtype LacksTypeSig = LacksTypeSig
@@ -103,7 +103,7 @@ instance ToGenericError LacksTypeSig where
       msg =
         "The declaration is missing a type signature:"
           <> line
-          <> indent' (highlight (ppCode _lacksTypeSigClause))
+          <> indent' (ppCode _lacksTypeSigClause)
 
 -- | type signature without a function clause
 newtype LacksFunctionClause = LacksFunctionClause
@@ -123,7 +123,7 @@ instance ToGenericError LacksFunctionClause where
       msg =
         "Type signature with no function clause:"
           <> line
-          <> indent' (highlight (ppCode _lacksFunctionClause))
+          <> indent' (ppCode _lacksFunctionClause)
 
 newtype ImportCycle = ImportCycle
   { -- | If we have [a, b, c] it means that a import b imports c imports a.
@@ -187,7 +187,7 @@ instance ToGenericError BindGroupConflict where
 
       msg =
         "The variable"
-          <+> highlight (ppCode _bindGroupFirst)
+          <+> ppCode _bindGroupFirst
           <+> "appears twice in the same binding group:"
             <> line
             <> indent' (align (vsep (map pretty [i1, i2])))
@@ -211,7 +211,7 @@ instance ToGenericError DuplicateFixity where
 
       msg =
         "Multiple fixity declarations for symbol"
-          <+> highlight (ppCode sym)
+          <+> ppCode sym
             <> ":"
             <> line
             <> indent' (align locs)
@@ -237,7 +237,7 @@ instance ToGenericError MultipleExportConflict where
       i = getLoc _multipleExportModule
       msg =
         "The symbol"
-          <+> highlight (ppCode _multipleExportSymbol)
+          <+> ppCode _multipleExportSymbol
           <+> "is exported multiple times in the module"
           <+> ppCode _multipleExportModule
 
@@ -259,7 +259,7 @@ instance ToGenericError NotInScope where
       }
     where
       msg =
-        "Symbol not in scope:" <+> highlight (ppCode _notInScopeSymbol)
+        "Symbol not in scope:" <+> ppCode _notInScopeSymbol
           <?> ((line <>) <$> suggestion)
       suggestion :: Maybe (Doc a)
       suggestion
@@ -372,7 +372,7 @@ instance ToGenericError WrongTopModuleName where
           <+> ppCode _wrongTopModuleNameActualName
           <+> "is defined in the file:"
             <> line
-            <> highlight (pretty _wrongTopModuleNameActualPath)
+            <> pretty _wrongTopModuleNameActualPath
             <> line
             <> "But it should be in the file:"
             <> line
@@ -432,10 +432,10 @@ instance ToGenericError WrongLocationCompileBlock where
       i = getLoc name
       msg =
         "The compilation rules for the symbol"
-          <+> highlight (ppCode name)
+          <+> ppCode name
           <+> "need to be defined in the module:"
             <> line
-            <> highlight (ppCode _wrongLocationCompileBlockExpectedModPath)
+            <> ppCode _wrongLocationCompileBlockExpectedModPath
 
 data MultipleCompileBlockSameName = MultipleCompileBlockSameName
   { _multipleCompileBlockFirstDefined :: Interval,
@@ -455,7 +455,7 @@ instance ToGenericError MultipleCompileBlockSameName where
       i2 = getLoc _multipleCompileBlockSym
       msg =
         "Multiple compile blocks for the symbol"
-          <+> highlight (ppCode _multipleCompileBlockSym)
+          <+> ppCode _multipleCompileBlockSym
 
 data MultipleCompileRuleSameBackend = MultipleCompileRuleSameBackend
   { _multipleCompileRuleSameBackendBackendItem :: BackendItem,
@@ -476,9 +476,9 @@ instance ToGenericError MultipleCompileRuleSameBackend where
       i = getLoc _multipleCompileRuleSameBackendSym
       msg =
         "Multiple"
-          <+> highlight (ppCode backend)
+          <+> ppCode backend
           <+> "compilation rules for the symbol"
-          <+> highlight (ppCode name)
+          <+> ppCode name
           <+> "at"
           <+> pretty (getLoc name)
 
@@ -509,7 +509,7 @@ infixErrorAux kind pp =
     <+> kind
       <> ":"
       <> line
-      <> indent' (highlight pp)
+      <> indent' pp
 
 ambiguousMessage :: Name -> [SymbolEntry] -> Doc Eann
 ambiguousMessage n es =
@@ -567,8 +567,7 @@ instance ToGenericError DoubleBracesPattern where
       i = getLoc pat
       msg =
         "Double braces are not valid:"
-          -- TODO add bold to braces
-          <+> braces (ppCode pat)
+          <+> highlight (braces (ppCode pat))
 
 newtype ImplicitPatternLeftApplication = ImplicitPatternLeftApplication
   { _implicitPatternLeftApplication :: PatternApp
