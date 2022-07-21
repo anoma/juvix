@@ -1,0 +1,8 @@
+module D;
+  import Other;
+  import U;
+
+  u : Other.Unit;
+  u ≔ U.t;
+
+end;

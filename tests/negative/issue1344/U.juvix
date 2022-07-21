@@ -1,0 +1,6 @@
+module U;
+  inductive Unit {
+    t : Unit;
+  };
+  
+end;
