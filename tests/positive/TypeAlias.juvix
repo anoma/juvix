@@ -17,7 +17,14 @@ x ≔ t;
 id : Type → Type;
 id x ≔ x;
 
-flip : (Type → Type → Type) → id Type → Type → Type;
+infixr 9 ⊙;
+⊙ : (Type → Type) → (Type → Type) → Type → Type;
+⊙ f g x ≔ f (g x);
+
+x2 : (id ⊙ id) alias;
+x2 ≔ t;
+
+flip : (Type → Type → Type) → id Type → Type → (id ⊙ id) Type;
 flip f a b ≔ f b a;
 
 inductive Pair (A : Type) (B : Type) {

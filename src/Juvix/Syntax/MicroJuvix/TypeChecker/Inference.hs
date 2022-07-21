@@ -207,7 +207,7 @@ re = reinterpret $ \case
                 bicheck :: Sem r (Maybe MatchError) -> Sem r (Maybe MatchError) -> Sem r (Maybe MatchError)
                 bicheck = liftA2 (<|>)
                 err :: Sem r (Maybe MatchError)
-                err = return (Just (MatchError inputA inputB))
+                err = return (Just (MatchError normA normB))
                 goHole :: Hole -> Expression -> Sem r (Maybe MatchError)
                 goHole h t = do
                   r <- queryMetavar' h
@@ -262,3 +262,60 @@ runInferenceDef a = do
 
 addIdens :: Member (State TypesTable) r => TypesTable -> Sem r ()
 addIdens idens = modify (HashMap.union idens)
+
+-- | Assumes the given function has been type checked
+-- | NOTE: Registers the function *only* if the result type is Type
+functionDefEval :: forall r'. Member (Reader FunctionsTable) r' => FunctionDef -> Sem r' (Maybe Expression)
+functionDefEval funDef = do
+  x <- runError (goTop funDef)
+  case x of
+    Left () -> return Nothing
+    Right r -> return (Just r)
+  where
+    goTop :: forall r. (Members '[Error (), Reader FunctionsTable] r) => FunctionDef -> Sem r Expression
+    goTop f =
+      case f ^. funDefClauses of
+        c :| [] -> goClause c
+        _ -> nothing
+      where
+        nothing :: Sem r a
+        nothing = throw ()
+        goClause :: FunctionClause -> Sem r Expression
+        goClause c = do
+          let pats = c ^. clausePatterns
+              n = length (c ^. clausePatterns)
+          (patsTys, _) <- splitNExplicitParams n (f ^. funDefType)
+          go (zipExact pats patsTys)
+          where
+            splitNExplicitParams :: Int -> Expression -> Sem r ([Expression], Expression)
+            splitNExplicitParams n fun = do
+              let (params, r) = unfoldFunType fun
+              unlessM (isUniverse r) nothing
+              (nfirst, rest) <- note () (splitAtExactMay n params)
+              sparams <- mapM simpleExplicitParam nfirst
+              let r' = foldFunType rest r
+              return (sparams, r')
+            isUniverse :: Expression -> Sem r Bool
+            isUniverse e = do
+              e' <- evalState iniState (weakNormalize' e)
+              case e' of
+                ExpressionUniverse {} -> return True
+                _ -> return False
+            simpleExplicitParam :: FunctionParameter -> Sem r Expression
+            simpleExplicitParam = \case
+              FunctionParameter Nothing Explicit ty -> return ty
+              _ -> nothing
+            goPattern :: (Pattern, Expression) -> Expression -> Sem r Expression
+            goPattern (p, ty) = case p of
+              PatternVariable v -> return . ExpressionLambda . Lambda v ty
+              _ -> const nothing
+            go :: [(PatternArg, Expression)] -> Sem r Expression
+            go = \case
+              [] -> return (c ^. clauseBody)
+              ((p, ty) : ps)
+                | Implicit <- p ^. patternArgIsImplicit -> nothing
+                | otherwise -> go ps >>= goPattern (p ^. patternArgPattern, ty)
+
+registerFunctionDef :: Member (State FunctionsTable) r => FunctionDef -> Sem r ()
+registerFunctionDef f = whenJustM (readerState @FunctionsTable (functionDefEval f)) $ \e ->
+  modify (over functionsTable (HashMap.insert (f ^. funDefName) e))
