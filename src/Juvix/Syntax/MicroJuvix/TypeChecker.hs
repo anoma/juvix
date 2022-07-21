@@ -92,21 +92,24 @@ checkStatement s = case s of
     return s
 
 checkInductiveDef ::
-  forall r. Members '[Reader EntryPoint, Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, State NegativeTypeParameters] r =>
-  InductiveDef -> Sem r InductiveDef
+  forall r.
+  Members '[Reader EntryPoint, Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, State NegativeTypeParameters] r =>
+  InductiveDef ->
+  Sem r InductiveDef
 checkInductiveDef (InductiveDef name built params constrs pos) = runInferenceDef $ do
-    constrs' <- mapM goConstructor constrs
-    ty <- inductiveType name
-    modify (HashMap.insert name ty)
-    let d = InductiveDef name built params constrs' pos
-    checkPositivity d
-    return d
-    where
+  constrs' <- mapM goConstructor constrs
+  ty <- inductiveType name
+  modify (HashMap.insert name ty)
+  let d = InductiveDef name built params constrs' pos
+  checkPositivity d
+  return d
+  where
     paramLocals :: LocalVars
-    paramLocals = LocalVars {
-      _localTypes = HashMap.fromList [(p ^. inductiveParamName, smallUniverse (getLoc p)) | p <- params ],
-      _localTyMap = mempty
-       }
+    paramLocals =
+      LocalVars
+        { _localTypes = HashMap.fromList [(p ^. inductiveParamName, smallUniverse (getLoc p)) | p <- params],
+          _localTyMap = mempty
+        }
     goConstructor :: InductiveConstructorDef -> Sem (Inference ': r) InductiveConstructorDef
     goConstructor c@(InductiveConstructorDef n cty ret) = do
       cty' <- runReader paramLocals (mapM (checkIsType (getLoc n)) cty)
@@ -559,16 +562,16 @@ inferExpression' e = case e of
             --         }
             --   _ ->
             return
-                  TypedExpression
-                    { _typedExpression =
-                        ExpressionApplication
-                          Application
-                            { _appLeft = l' ^. typedExpression,
-                              _appRight = r',
-                              _appImplicit = iapp
-                            },
-                      _typedType = substitutionApp (paraName, r') funR
-                    }
+              TypedExpression
+                { _typedExpression =
+                    ExpressionApplication
+                      Application
+                        { _appLeft = l' ^. typedExpression,
+                          _appRight = r',
+                          _appImplicit = iapp
+                        },
+                  _typedType = substitutionApp (paraName, r') funR
+                }
           -- When we have have an application with a hole on the left: '_@1 x'
           -- We assume that it is a type application and thus 'x' must be a type.
           -- Not sure if this is always desirable.

@@ -105,7 +105,8 @@ weakNormalize' = go
           Nothing -> return i'
           Just x -> go x
       _ -> return i'
-      where i' = ExpressionIden i
+      where
+        i' = ExpressionIden i
     goApp :: Application -> Sem r Expression
     goApp (Application l r i) = do
       l' <- go l
@@ -177,87 +178,87 @@ re = reinterpret $ \case
           normB <- weakNormalize' inputB
           goNormalized normA normB
           where
-          goNormalized :: Expression -> Expression -> Sem r (Maybe MatchError)
-          goNormalized normA normB =
-            case (normA, normB) of
-            (ExpressionIden a, ExpressionIden b) -> goIden a b
-            (ExpressionIden (IdenFunction a), _) -> goIdenFunction a normB
-            (_, ExpressionIden (IdenFunction b)) -> goIdenFunction b normA
-            (ExpressionApplication a, ExpressionApplication b) -> goApplication a b
-            (ExpressionFunction a, ExpressionFunction b) -> goFunction a b
-            (ExpressionUniverse u, ExpressionUniverse u') -> check (u == u')
-            (ExpressionLambda a, ExpressionLambda b) -> goLambda a b
-            (ExpressionHole h, a) -> goHole h a
-            (a, ExpressionHole h) -> goHole h a
-            (ExpressionLambda {}, _) -> err
-            (_, ExpressionLambda {}) -> err
-            (ExpressionIden {}, _) -> err
-            (_, ExpressionIden {}) -> err
-            (ExpressionApplication {}, _) -> err
-            (_, ExpressionApplication {}) -> err
-            (ExpressionFunction {}, _) -> err
-            (_, ExpressionFunction {}) -> err
-            (ExpressionUniverse {}, _) -> err
-            (_, ExpressionUniverse {}) -> err
-            (ExpressionLiteral l, ExpressionLiteral l') -> check (l == l')
-            where
-              ok :: Sem r (Maybe MatchError)
-              ok = return Nothing
-              check :: Bool -> Sem r (Maybe MatchError)
-              check b
-                | b = ok
-                | otherwise = err
-              bicheck :: Sem r (Maybe MatchError) -> Sem r (Maybe MatchError) -> Sem r (Maybe MatchError)
-              bicheck = liftA2 (<|>)
-              err :: Sem r (Maybe MatchError)
-              err = return (Just (MatchError inputA inputB))
-              goIdenFunction :: FunctionName -> Expression -> Sem r (Maybe MatchError)
-              goIdenFunction fun e = do
-                abody <- askFunctionDef fun
-                case abody of
-                  Just a' -> go a' e
-                  _ -> err
-              goHole :: Hole -> Expression -> Sem r (Maybe MatchError)
-              goHole h t = do
-                r <- queryMetavar' h
-                case r of
-                  Nothing -> refineFreshMetavar h t $> Nothing
-                  Just ht -> matchTypes' t ht
-              goIden :: Iden -> Iden -> Sem r (Maybe MatchError)
-              goIden ia ib = case (ia, ib) of
-                (IdenInductive a, IdenInductive b) -> check (a == b)
-                (IdenAxiom a, IdenAxiom b) -> check (a == b)
-                (IdenFunction a, IdenFunction b) -> check (a == b)
-                (IdenConstructor a, IdenConstructor b) -> check (a == b)
-                (IdenVar a, IdenVar b) -> do
-                  mappedEq <- (== Just b) . HashMap.lookup a <$> ask
-                  check (a == b || mappedEq)
-                (IdenAxiom {}, _) -> err
-                (_, IdenAxiom {}) -> err
-                (IdenFunction {}, _) -> err
-                (_, IdenFunction {}) -> err
-                (_, IdenVar {}) -> err
-                (IdenVar {}, _) -> err
-                (IdenConstructor {}, _) -> err
-                (_, IdenConstructor {}) -> err
-              goApplication :: Application -> Application -> Sem r (Maybe MatchError)
-              goApplication (Application f x _) (Application f' x' _) = bicheck (go f f') (go x x')
-              goLambda :: Lambda -> Lambda -> Sem r (Maybe MatchError)
-              goLambda (Lambda v1 ty1 b1) (Lambda v2 ty2 b2) = do
-                let local' :: Sem r x -> Sem r x
-                    local' = local (HashMap.insert v1 v2)
-                bicheck (go ty1 ty2) (local' (go b1 b2))
-              goFunction :: Function -> Function -> Sem r (Maybe MatchError)
-              goFunction
-                (Function (FunctionParameter m1 i1 l1) r1)
-                (Function (FunctionParameter m2 i2 l2) r2)
-                  | i1 == i2 = do
-                      let local' :: Sem r x -> Sem r x
-                          local' = case (m1, m2) of
-                            (Just v1, Just v2) -> local (HashMap.insert v1 v2)
-                            _ -> id
-                      bicheck (go l1 l2) (local' (go r1 r2))
-                  | otherwise = ok
+            goNormalized :: Expression -> Expression -> Sem r (Maybe MatchError)
+            goNormalized normA normB =
+              case (normA, normB) of
+                (ExpressionIden a, ExpressionIden b) -> goIden a b
+                (ExpressionIden (IdenFunction a), _) -> goIdenFunction a normB
+                (_, ExpressionIden (IdenFunction b)) -> goIdenFunction b normA
+                (ExpressionApplication a, ExpressionApplication b) -> goApplication a b
+                (ExpressionFunction a, ExpressionFunction b) -> goFunction a b
+                (ExpressionUniverse u, ExpressionUniverse u') -> check (u == u')
+                (ExpressionLambda a, ExpressionLambda b) -> goLambda a b
+                (ExpressionHole h, a) -> goHole h a
+                (a, ExpressionHole h) -> goHole h a
+                (ExpressionLambda {}, _) -> err
+                (_, ExpressionLambda {}) -> err
+                (ExpressionIden {}, _) -> err
+                (_, ExpressionIden {}) -> err
+                (ExpressionApplication {}, _) -> err
+                (_, ExpressionApplication {}) -> err
+                (ExpressionFunction {}, _) -> err
+                (_, ExpressionFunction {}) -> err
+                (ExpressionUniverse {}, _) -> err
+                (_, ExpressionUniverse {}) -> err
+                (ExpressionLiteral l, ExpressionLiteral l') -> check (l == l')
+              where
+                ok :: Sem r (Maybe MatchError)
+                ok = return Nothing
+                check :: Bool -> Sem r (Maybe MatchError)
+                check b
+                  | b = ok
+                  | otherwise = err
+                bicheck :: Sem r (Maybe MatchError) -> Sem r (Maybe MatchError) -> Sem r (Maybe MatchError)
+                bicheck = liftA2 (<|>)
+                err :: Sem r (Maybe MatchError)
+                err = return (Just (MatchError inputA inputB))
+                goIdenFunction :: FunctionName -> Expression -> Sem r (Maybe MatchError)
+                goIdenFunction fun e = do
+                  abody <- askFunctionDef fun
+                  case abody of
+                    Just a' -> go a' e
+                    _ -> err
+                goHole :: Hole -> Expression -> Sem r (Maybe MatchError)
+                goHole h t = do
+                  r <- queryMetavar' h
+                  case r of
+                    Nothing -> refineFreshMetavar h t $> Nothing
+                    Just ht -> matchTypes' t ht
+                goIden :: Iden -> Iden -> Sem r (Maybe MatchError)
+                goIden ia ib = case (ia, ib) of
+                  (IdenInductive a, IdenInductive b) -> check (a == b)
+                  (IdenAxiom a, IdenAxiom b) -> check (a == b)
+                  (IdenFunction a, IdenFunction b) -> check (a == b)
+                  (IdenConstructor a, IdenConstructor b) -> check (a == b)
+                  (IdenVar a, IdenVar b) -> do
+                    mappedEq <- (== Just b) . HashMap.lookup a <$> ask
+                    check (a == b || mappedEq)
+                  (IdenAxiom {}, _) -> err
+                  (_, IdenAxiom {}) -> err
+                  (IdenFunction {}, _) -> err
+                  (_, IdenFunction {}) -> err
+                  (_, IdenVar {}) -> err
+                  (IdenVar {}, _) -> err
+                  (IdenConstructor {}, _) -> err
+                  (_, IdenConstructor {}) -> err
+                goApplication :: Application -> Application -> Sem r (Maybe MatchError)
+                goApplication (Application f x _) (Application f' x' _) = bicheck (go f f') (go x x')
+                goLambda :: Lambda -> Lambda -> Sem r (Maybe MatchError)
+                goLambda (Lambda v1 ty1 b1) (Lambda v2 ty2 b2) = do
+                  let local' :: Sem r x -> Sem r x
+                      local' = local (HashMap.insert v1 v2)
+                  bicheck (go ty1 ty2) (local' (go b1 b2))
+                goFunction :: Function -> Function -> Sem r (Maybe MatchError)
+                goFunction
+                  (Function (FunctionParameter m1 i1 l1) r1)
+                  (Function (FunctionParameter m2 i2 l2) r2)
+                    | i1 == i2 = do
+                        let local' :: Sem r x -> Sem r x
+                            local' = case (m1, m2) of
+                              (Just v1, Just v2) -> local (HashMap.insert v1 v2)
+                              _ -> id
+                        bicheck (go l1 l2) (local' (go r1 r2))
+                    | otherwise = ok
 
 runInferenceDef ::
   (Members '[Error TypeCheckerError, Reader FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
