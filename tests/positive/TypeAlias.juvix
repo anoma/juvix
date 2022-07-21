@@ -10,14 +10,14 @@ inductive T {
  x : alias;
  x ≔ t;
 
-id : {A : Type} -> A -> A;
+id : Type -> Type;
 id x ≔ x;
 
 inductive Pair (A : Type) (B : Type) {
  mkPair : A -> B -> Pair A B;
 };
 
-x' : Pair alias alias;
+x' : Pair (id alias) alias;
 x' ≔ mkPair t t;
 
 end;

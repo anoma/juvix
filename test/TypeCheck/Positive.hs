@@ -146,7 +146,7 @@ tests =
     PosTest
       "Simple type alias"
       "."
-      "TypeLias.juvix",
+      "TypeAlias.juvix",
     PosTest
       "Refine hole in type signature"
       "272"
