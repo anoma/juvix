@@ -322,7 +322,6 @@ checkPattern funName = go
     go argTy patArg = do
       matchIsImplicit (argTy ^. paramImplicit) patArg
       tyVarMap <- fmap (ExpressionIden . IdenVar) . (^. localTyMap) <$> get
-      -- NOTE: was filling holes needed? ty <- normalizeType ()
       let ty = substitutionE tyVarMap (typeOfArg argTy)
           pat = patArg ^. patternArgPattern
       case pat of
