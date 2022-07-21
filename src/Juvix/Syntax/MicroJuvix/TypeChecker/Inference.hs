@@ -182,8 +182,6 @@ re = reinterpret $ \case
             goNormalized normA normB =
               case (normA, normB) of
                 (ExpressionIden a, ExpressionIden b) -> goIden a b
-                (ExpressionIden (IdenFunction a), _) -> goIdenFunction a normB
-                (_, ExpressionIden (IdenFunction b)) -> goIdenFunction b normA
                 (ExpressionApplication a, ExpressionApplication b) -> goApplication a b
                 (ExpressionFunction a, ExpressionFunction b) -> goFunction a b
                 (ExpressionUniverse u, ExpressionUniverse u') -> check (u == u')
@@ -212,12 +210,6 @@ re = reinterpret $ \case
                 bicheck = liftA2 (<|>)
                 err :: Sem r (Maybe MatchError)
                 err = return (Just (MatchError inputA inputB))
-                goIdenFunction :: FunctionName -> Expression -> Sem r (Maybe MatchError)
-                goIdenFunction fun e = do
-                  abody <- askFunctionDef fun
-                  case abody of
-                    Just a' -> go a' e
-                    _ -> err
                 goHole :: Hole -> Expression -> Sem r (Maybe MatchError)
                 goHole h t = do
                   r <- queryMetavar' h
