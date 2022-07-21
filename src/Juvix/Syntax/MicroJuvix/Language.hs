@@ -136,7 +136,7 @@ data InductiveDef = InductiveDef
     _inductiveBuiltin :: Maybe BuiltinInductive,
     _inductiveParameters :: [InductiveParameter],
     _inductiveConstructors :: [InductiveConstructorDef],
-    _inductiveNoPositivity :: Bool
+    _inductivePositive :: Bool
   }
 
 data InductiveConstructorDef = InductiveConstructorDef

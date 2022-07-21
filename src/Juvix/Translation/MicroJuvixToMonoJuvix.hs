@@ -268,7 +268,7 @@ goInductiveDefConcrete def = do
       params' <- mapM (goType . Micro.mkConcreteType') (c ^. Micro.inductiveConstructorParameters)
       return
         InductiveConstructorDef
-          { _constructorName = c ^. Micro.constructorName,
+          { _constructorName = c ^. Micro.inductiveConstructorName,
             _constructorParameters = params'
           }
 

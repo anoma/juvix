@@ -253,7 +253,7 @@ goInductive ty@InductiveDef {..} = do
             _inductiveName = goSymbol _inductiveName,
             _inductiveType = fromMaybe (Abstract.ExpressionUniverse (smallUniverse loc)) _inductiveType',
             _inductiveConstructors = _inductiveConstructors',
-            _inductiveNoPositivity = ty ^. inductiveNoPositivity
+            _inductivePositive = ty ^. inductivePositive
           }
   whenJust _inductiveBuiltin (registerBuiltinInductive indDef)
   inductiveInfo <- registerInductive indDef

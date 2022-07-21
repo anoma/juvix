@@ -428,7 +428,7 @@ lambda = do
 
 inductiveDef :: Members '[Reader ParserParams, InfoTableBuilder] r => Maybe BuiltinInductive -> ParsecS r (InductiveDef 'Parsed)
 inductiveDef _inductiveBuiltin = do
-  _inductiveNoPositivity <- isJust <$> optional kwNoPositivity
+  _inductivePositive <- isJust <$> optional kwPositive
   kwInductive
   _inductiveName <- symbol
   _inductiveParameters <- P.many inductiveParam

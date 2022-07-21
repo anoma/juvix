@@ -43,13 +43,13 @@ inductive T1 {
 ** Bypass the strict positivity condition
 
 To bypass the positivity check, a data type declaration can be annotated
-with the keyword =nopositivity=. Another way is to use the CLI global flag =--no-positivity=
+with the keyword =positive=. Another way is to use the CLI global flag =--no-positivity=
 when typechecking a =Juvix= File.
 
 #+begin_example
 $ cat tests/negative/MicroJuvix/NoStrictlyPositiveDataTypes/E5.mjuvix
 module E5;
-  nopositivity
+  positive
   inductive T0 (A : Type){
     c0 : (T0 A -> A) -> T0 A;
   };

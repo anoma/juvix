@@ -266,8 +266,8 @@ kwType = keyword Str.type_
 kwTerminating :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwTerminating = keyword Str.terminating
 
-kwNoPositivity :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
-kwNoPositivity = keyword Str.nopositivity
+kwPositive :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
+kwPositive = keyword Str.positive
 
 kwUsing :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwUsing = keyword Str.using

@@ -1,6 +1,6 @@
 module E5;
 
-nopositivity
+positive
 inductive T0 (A : Type){
 c0 : (A -> T0 A) -> T0 A;
 };

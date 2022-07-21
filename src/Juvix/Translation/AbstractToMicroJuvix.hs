@@ -285,7 +285,7 @@ goInductiveDef i =
                 _inductiveParameters = inductiveParameters',
                 _inductiveBuiltin = i ^. Abstract.inductiveBuiltin,
                 _inductiveConstructors = inductiveConstructors',
-                _inductiveNoPositivity = i ^. Abstract.inductiveNoPositivity
+                _inductivePositive = i ^. Abstract.inductivePositive
               }
   where
     goConstructorDef :: Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef

@@ -261,15 +261,15 @@ instance ToGenericError ImpracticalPatternMatching where
           <+> "is not an inductive data type."
           <+> "Therefore, pattern-matching is not available here"
 
-data NoStrictPositivity = NoStrictPositivity
+data NoPositivity = NoPositivity
   { _noStrictPositivityType :: Name,
     _noStrictPositivityConstructor :: Name,
     _noStrictPositivityArgument :: Expression
   }
 
-makeLenses ''NoStrictPositivity
+makeLenses ''NoPositivity
 
-instance ToGenericError NoStrictPositivity where
+instance ToGenericError NoPositivity where
   genericError e =
     GenericError
       { _genericErrorLoc = j,
@@ -287,8 +287,5 @@ instance ToGenericError NoStrictPositivity where
           <+> ppCode ty
           <+> "is not strictly positive."
             <> line
-            <> "When declaring its constructor"
-          <+> ppCode ctor
-          <+> "the type"
-          <+> ppCode ty
-          <+> "appears in a negative position."
+            <> "It appears at a negative position when declaring the constructor"
+          <+> ppCode ctor <> "."

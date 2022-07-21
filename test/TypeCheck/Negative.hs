@@ -122,36 +122,36 @@ tests =
 
 negPositivityTests :: [NegTest]
 negPositivityTests =
-  [ NegTest "E1" "MicroJuvix/NoPositivity" "E1.juvix" $
+  [ NegTest "E1" "MicroJuvix/Positivity" "E1.juvix" $
       \case
-        ErrNoStrictPositivity {} -> Nothing
+        ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E2" "MicroJuvix/NoPositivity" "E2.juvix" $
+    NegTest "E2" "MicroJuvix/Positivity" "E2.juvix" $
       \case
-        ErrNoStrictPositivity {} -> Nothing
+        ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E3" "MicroJuvix/NoPositivity" "E3.juvix" $
+    NegTest "E3" "MicroJuvix/Positivity" "E3.juvix" $
       \case
-        ErrNoStrictPositivity {} -> Nothing
+        ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E4" "MicroJuvix/NoPositivity" "E4.juvix" $
+    NegTest "E4" "MicroJuvix/Positivity" "E4.juvix" $
       \case
-        ErrNoStrictPositivity {} -> Nothing
+        ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E5" "MicroJuvix/NoPositivity" "E5.juvix" $
+    NegTest "E5" "MicroJuvix/Positivity" "E5.juvix" $
       \case
-        ErrNoStrictPositivity {} -> Nothing
+        ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E6" "MicroJuvix/NoPositivity" "E6.juvix" $
+    NegTest "E6" "MicroJuvix/Positivity" "E6.juvix" $
       \case
-        ErrNoStrictPositivity {} -> Nothing
+        ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E7" "MicroJuvix/NoPositivity" "E7.juvix" $
+    NegTest "E7" "MicroJuvix/Positivity" "E7.juvix" $
       \case
-        ErrNoStrictPositivity {} -> Nothing
+        ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E8" "MicroJuvix/NoPositivity" "E8.juvix" $
+    NegTest "E8" "MicroJuvix/Positivity" "E8.juvix" $
       \case
-        ErrNoStrictPositivity {} -> Nothing
+        ErrNoPositivity {} -> Nothing
         _ -> wrongError
   ]

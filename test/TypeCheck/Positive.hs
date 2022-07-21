@@ -69,7 +69,7 @@ positivityTestGroup =
         "Bypass positivity checking using --non-positivity flag on negative tests"
         (map (mkTest . testNoPositivityFlag) negPositivityTests),
       testGroup
-        "Usages of the nopositivity keyword"
+        "Usages of the positive keyword"
         (map (mkTest . testDescr) testPositivityKeyword)
     ]
 

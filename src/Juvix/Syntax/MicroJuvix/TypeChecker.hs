@@ -188,7 +188,7 @@ checkConstructorDef ty ctor = do
   checkConstructorReturnType ty ctor
   numInductives <- HashMap.size <$> asks (^. infoInductives)
   noCheckPositivity <- asks (^. E.entryPointNoPositivity)
-  unless (noCheckPositivity || ty ^. inductiveNoPositivity) $
+  unless (noCheckPositivity || ty ^. inductivePositive) $
     mapM_
       (checkStrictlyPositiveOccurrences ty ctorName indName numInductives Nothing)
       (ctor ^. inductiveConstructorParameters)
@@ -266,7 +266,7 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref = helper False
             -- preserves the positivity condition, i.e., its type parameters
             -- are no negative.
 
-            unless (indTy' ^. inductiveNoPositivity) $
+            unless (indTy' ^. inductivePositive) $
               let paramsTy' = indTy' ^. inductiveParameters
                   go ::
                     Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters] r =>
@@ -283,8 +283,8 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref = helper False
                           forM_ (typ ^. inductiveConstructors) $ \ctor' ->
                             mapM_
                               ( checkStrictlyPositiveOccurrences
-                                  typ
-                                  (ctor' ^. inductiveConstructorName)
+                                  ty
+                                  ctorName
                                   pName
                                   (recLimit - 1)
                                   (Just (fromMaybe arg ref))
@@ -300,8 +300,8 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref = helper False
     strictlyPositivityError expr = do
       let errLoc = fromMaybe expr ref
       throw
-        ( ErrNoStrictPositivity $
-            NoStrictPositivity
+        ( ErrNoPositivity $
+            NoPositivity
               { _noStrictPositivityType = indName,
                 _noStrictPositivityConstructor = ctorName,
                 _noStrictPositivityArgument = errLoc
@@ -400,16 +400,8 @@ checkPattern funName = go
     go argTy patArg = do
       matchIsImplicit (argTy ^. paramImplicit) patArg
       tyVarMap <- fmap (ExpressionIden . IdenVar) . (^. localTyMap) <$> get
-<<<<<<< HEAD
       ty <- normalizeType (substitutionE tyVarMap (typeOfArg argTy))
       let pat = patArg ^. patternArgPattern
-=======
-      ty <- normalizeType (substitutionE tyVarMap (argTy ^. paramType))
-      let unbrace = \case
-            PatternBraces b -> b
-            x -> x
-          pat = unbrace p
->>>>>>> 6bd835c (the branch is back to feet)
       case pat of
         PatternWildcard {} -> return ()
         PatternVariable v -> do

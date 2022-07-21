@@ -175,7 +175,7 @@ data InductiveDef = InductiveDef
     _inductiveParameters :: [FunctionParameter],
     _inductiveType :: Expression,
     _inductiveConstructors :: [InductiveConstructorDef],
-    _inductiveNoPositivity :: Bool
+    _inductivePositive :: Bool
   }
   deriving stock (Eq, Show)
 
