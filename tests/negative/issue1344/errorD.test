@@ -1,7 +1,7 @@
 $ juvix typecheck tests/negative/issue1344/D.juvix --no-colors
 >2 /.*\.juvix\:[0-9]+\:[0-9]+\-[0-9]+\: error\:
-The expression t has type:
-  U.Unit
+The expression U.t has type:
+  Unit
 but is expected to have type:
   Other.Unit
 /
