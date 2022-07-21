@@ -411,7 +411,8 @@ reachableModules = fst . run . runOutputList . evalState (mempty :: HashSet Name
           StatementInclude (Include inc) -> go inc
           _ -> return ()
 
--- Assumes the given function has been type checked
+-- | Assumes the given function has been type checked
+-- | NOTE: Registers the function *only* if the result is Type
 functionDefEval :: FunctionDef -> Maybe Expression
 functionDefEval f = case f ^. funDefClauses of
   c :| [] -> goClause c
@@ -427,10 +428,15 @@ functionDefEval f = case f ^. funDefClauses of
         splitNExplicitParams :: Int -> Expression -> Maybe ([Expression], Expression)
         splitNExplicitParams n fun = do
           let (params, r) = unfoldFunType fun
+          guard (isUniverse r)
           (nfirst, rest) <- splitAtExactMay n params
           sparams <- mapM simpleExplicitParam nfirst
           let r' = foldFunType rest r
           return (sparams, r')
+        isUniverse :: Expression -> Bool
+        isUniverse = \case
+          ExpressionUniverse {} -> True
+          _ -> False
         simpleExplicitParam :: FunctionParameter -> Maybe Expression
         simpleExplicitParam = \case
           FunctionParameter Nothing Explicit ty -> Just ty

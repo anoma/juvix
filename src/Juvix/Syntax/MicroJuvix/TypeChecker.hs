@@ -163,7 +163,7 @@ checkFunctionParameter ::
   FunctionParameter ->
   Sem r FunctionParameter
 checkFunctionParameter (FunctionParameter mv i e) = do
-  e' <- checkExpression (smallUniverse (getLoc e)) e
+  e' <- checkIsType (getLoc e) e
   return (FunctionParameter mv i e')
 
 checkInductiveDef ::
@@ -506,6 +506,7 @@ inferExpression' e = case e of
             Just v -> local (over localTypes (HashMap.insert v (l ^. paramType)))
       r' <- bodyEnv (checkExpression uni r)
       return (TypedExpression uni (ExpressionFunction (Function l' r')))
+
     goLiteral :: LiteralLoc -> Sem r TypedExpression
     goLiteral = literalType
 
