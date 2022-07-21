@@ -224,6 +224,9 @@ instance HasAtomicity Pattern where
     PatternVariable {} -> Atom
     PatternWildcard {} -> Atom
 
+instance HasLoc InductiveParameter where
+  getLoc (InductiveParameter n) = getLoc n
+
 instance HasLoc FunctionParameter where
   getLoc f = v (getLoc (f ^. paramType))
     where

@@ -19,9 +19,6 @@ import Juvix.Syntax.MicroJuvix.MicroJuvixTypedResult
 import Juvix.Syntax.MicroJuvix.Pretty
 import Juvix.Syntax.MicroJuvix.TypeChecker.Inference
 
-addIdens :: Member (State TypesTable) r => TypesTable -> Sem r ()
-addIdens idens = modify (HashMap.union idens)
-
 registerConstructor :: Members '[State TypesTable, Reader InfoTable] r => InductiveConstructorDef -> Sem r ()
 registerConstructor ctr = do
   ty <- constructorType (ctr ^. inductiveConstructorName)
@@ -88,23 +85,41 @@ checkStatement ::
 checkStatement s = case s of
   StatementFunction fun -> StatementFunction <$> checkFunctionDef fun
   StatementForeign {} -> return s
-  StatementInductive ind -> do
-    checkInductiveDef ind
-    mapM_ registerConstructor (ind ^. inductiveConstructors)
-    ty <- inductiveType (ind ^. inductiveName)
-    modify (HashMap.insert (ind ^. inductiveName) ty)
-    return s
+  StatementInductive ind -> StatementInductive <$> readerState @FunctionsTable (checkInductiveDef ind)
   StatementInclude i -> StatementInclude <$> checkInclude i
   StatementAxiom ax -> do
     modify (HashMap.insert (ax ^. axiomName) (ax ^. axiomType))
     return s
+
+checkInductiveDef ::
+  forall r. Members '[Reader EntryPoint, Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, State NegativeTypeParameters] r =>
+  InductiveDef -> Sem r InductiveDef
+checkInductiveDef (InductiveDef name built params constrs pos) = runInferenceDef $ do
+    constrs' <- mapM goConstructor constrs
+    ty <- inductiveType name
+    modify (HashMap.insert name ty)
+    let d = InductiveDef name built params constrs' pos
+    checkPositivity d
+    return d
+    where
+    paramLocals :: LocalVars
+    paramLocals = LocalVars {
+      _localTypes = HashMap.fromList [(p ^. inductiveParamName, smallUniverse (getLoc p)) | p <- params ],
+      _localTyMap = mempty
+       }
+    goConstructor :: InductiveConstructorDef -> Sem (Inference ': r) InductiveConstructorDef
+    goConstructor c@(InductiveConstructorDef n cty ret) = do
+      cty' <- runReader paramLocals (mapM (checkIsType (getLoc n)) cty)
+      let c' = set inductiveConstructorParameters cty' c
+      registerConstructor c'
+      return c'
 
 checkFunctionDef ::
   Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable] r =>
   FunctionDef ->
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
-  (funDef, idens) <- readerState @FunctionsTable $ runInferenceDef $ do
+  funDef <- readerState @FunctionsTable $ runInferenceDef $ do
     _funDefType' <- runReader emptyLocalVars (checkFunctionDefType _funDefType)
     registerIden _funDefName _funDefType'
     _funDefClauses' <- mapM (checkFunctionClause _funDefType') _funDefClauses
@@ -114,7 +129,6 @@ checkFunctionDef FunctionDef {..} = do
           _funDefType = _funDefType',
           ..
         }
-  addIdens idens
   registerFunctionDef funDef
   return funDef
 
@@ -166,13 +180,13 @@ checkFunctionParameter (FunctionParameter mv i e) = do
   e' <- checkIsType (getLoc e) e
   return (FunctionParameter mv i e')
 
-checkInductiveDef ::
-  Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters, Reader EntryPoint] r =>
-  InductiveDef ->
-  Sem r ()
-checkInductiveDef ty@InductiveDef {..} = do
-  checkPositivity ty
-  mapM_ (checkConstructorDef ty) _inductiveConstructors
+-- checkInductiveDef ::
+--   Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters, Reader EntryPoint] r =>
+--   InductiveDef ->
+--   Sem r ()
+-- checkInductiveDef ty@InductiveDef {..} = do
+--   checkPositivity ty
+--   mapM_ (checkConstructorDef ty) _inductiveConstructors
 
 checkConstructorDef ::
   Members
@@ -305,8 +319,9 @@ checkPattern funName = go
     go argTy patArg = do
       matchIsImplicit (argTy ^. paramImplicit) patArg
       tyVarMap <- fmap (ExpressionIden . IdenVar) . (^. localTyMap) <$> get
-      ty <- normalizeType (substitutionE tyVarMap (typeOfArg argTy))
-      let pat = patArg ^. patternArgPattern
+      -- NOTE: was filling holes needed? ty <- normalizeType ()
+      let ty = substitutionE tyVarMap (typeOfArg argTy)
+          pat = patArg ^. patternArgPattern
       case pat of
         PatternWildcard {} -> return ()
         PatternVariable v -> do
@@ -514,9 +529,7 @@ inferExpression' e = case e of
     inferIden i = case i of
       IdenFunction fun -> do
         info <- lookupFunction fun
-        mbody <- askFunctionDef fun
-        let e' = fromMaybe (ExpressionIden i) mbody
-        return (TypedExpression (info ^. functionInfoDef . funDefType) e')
+        return (TypedExpression (info ^. functionInfoDef . funDefType) (ExpressionIden i))
       IdenConstructor c -> do
         ty <- constructorType c
         return (TypedExpression ty (ExpressionIden i))
@@ -537,15 +550,15 @@ inferExpression' e = case e of
           ExpressionFunction (Function (FunctionParameter paraName ifun funL) funR) -> do
             r' <- checkExpression funL r
             unless (iapp == ifun) (error "implicitness mismatch")
-            case l' ^. typedExpression of
-              ExpressionLambda (Lambda lamVar _ lamBody) ->
-                return
-                  TypedExpression
-                    { _typedExpression = substitutionE (HashMap.singleton lamVar r') lamBody,
-                      _typedType = substitutionApp (paraName, r') funR
-                    }
-              _ ->
-                return
+            -- case l' ^. typedExpression of
+            --   ExpressionLambda (Lambda lamVar _ lamBody) ->
+            --     return
+            --       TypedExpression
+            --         { _typedExpression = substitutionE (HashMap.singleton lamVar r') lamBody,
+            --           _typedType = substitutionApp (paraName, r') funR
+            --         }
+            --   _ ->
+            return
                   TypedExpression
                     { _typedExpression =
                         ExpressionApplication

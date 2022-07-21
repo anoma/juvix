@@ -4,20 +4,27 @@ inductive T {
  t : T;
 };
 
- alias : Type;
- alias ≔ T;
+inductive T2 {
+ t2 : T2;
+};
 
- x : alias;
- x ≔ t;
+alias : Type;
+alias ≔ T;
+
+x : alias;
+x ≔ t;
 
 id : Type -> Type;
 id x ≔ x;
 
+flip : (Type -> Type -> Type) -> Type -> Type -> Type;
+flip f a b ≔ f b a;
+
 inductive Pair (A : Type) (B : Type) {
- mkPair : A -> B -> Pair A B;
+ mkPair : id T -> id (id A) -> B -> Pair A B;
 };
 
-x' : Pair (id alias) alias;
-x' ≔ mkPair t t;
+x' : flip Pair (id alias) T2;
+x' ≔ mkPair x t2 t;
 
 end;

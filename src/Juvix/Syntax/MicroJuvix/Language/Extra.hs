@@ -229,7 +229,23 @@ instance HasExpressions FunctionDef where
   leafExpressions f (FunctionDef name ty clauses bi) = do
     clauses' <- traverse (leafExpressions f) clauses
     ty' <- leafExpressions f ty
-    return (FunctionDef name ty' clauses' bi)
+    pure (FunctionDef name ty' clauses' bi)
+
+instance HasExpressions InductiveParameter where
+  leafExpressions _ param@(InductiveParameter _) = do
+    pure param
+
+instance HasExpressions InductiveDef where
+  leafExpressions f (InductiveDef name built params constrs pos) = do
+    params' <- traverse (leafExpressions f) params
+    constrs' <- traverse (leafExpressions f) constrs
+    pure (InductiveDef name built params' constrs' pos)
+
+instance HasExpressions InductiveConstructorDef where
+  leafExpressions f (InductiveConstructorDef c args ret) = do
+    args' <- traverse (leafExpressions f) args
+    ret' <- leafExpressions f ret
+    pure (InductiveConstructorDef c args' ret')
 
 fillHolesFunctionDef :: HashMap Hole Expression -> FunctionDef -> FunctionDef
 fillHolesFunctionDef = subsHoles
