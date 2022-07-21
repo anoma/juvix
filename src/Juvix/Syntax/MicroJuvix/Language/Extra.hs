@@ -427,6 +427,19 @@ reachableModules = fst . run . runOutputList . evalState (mempty :: HashSet Name
           StatementInclude (Include inc) -> go inc
           _ -> return ()
 
+(-->) :: Expression -> Expression -> Expression
+(-->) a b =
+  ExpressionFunction
+    ( Function
+        ( FunctionParameter
+            { _paramName = Nothing,
+              _paramImplicit = Explicit,
+              _paramType = a
+            }
+        )
+        b
+    )
+
 -- | Assumes the given function has been type checked
 -- | NOTE: Registers the function *only* if the result is Type
 functionDefEval :: FunctionDef -> Maybe Expression
@@ -449,6 +462,7 @@ functionDefEval f = case f ^. funDefClauses of
           sparams <- mapM simpleExplicitParam nfirst
           let r' = foldFunType rest r
           return (sparams, r')
+        -- TODO normalize
         isUniverse :: Expression -> Bool
         isUniverse = \case
           ExpressionUniverse {} -> True

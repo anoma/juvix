@@ -14,17 +14,20 @@ alias ≔ T;
 x : alias;
 x ≔ t;
 
-id : Type -> Type;
+id : Type → Type;
 id x ≔ x;
 
-flip : (Type -> Type -> Type) -> Type -> Type -> Type;
+flip : (Type → Type → Type) → id Type → Type → Type;
 flip f a b ≔ f b a;
 
 inductive Pair (A : Type) (B : Type) {
- mkPair : id T -> id (id A) -> B -> Pair A B;
+ mkPair : id T → id (id A) → B → Pair A B;
 };
 
-x' : flip Pair (id alias) T2;
+p : {A : Type} → A → Pair A A;
+p a ≔ mkPair t a a;
+
+x' : flip Pair (id _) T2;
 x' ≔ mkPair x t2 t;
 
 end;

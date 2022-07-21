@@ -116,11 +116,11 @@ inductiveType v = do
   let ps = info ^. inductiveInfoDef . inductiveParameters
   return $
     foldr
-      (\p k -> ExpressionFunction (typeAbs (p ^. inductiveParamName) k))
-      (ExpressionUniverse (SmallUniverse (getLoc v)))
+      (\_ k -> uni --> k)
+      (smallUniverse (getLoc v))
       ps
   where
-    typeAbs var = Function (typeAbstraction Explicit var)
+    uni = smallUniverse (getLoc v)
 
 constructorArgTypes :: ConstructorInfo -> ([VarName], [Expression])
 constructorArgTypes i =

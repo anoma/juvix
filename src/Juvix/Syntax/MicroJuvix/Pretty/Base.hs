@@ -151,7 +151,7 @@ instance PrettyCode FunctionParameter where
       Just n -> do
         paramName' <- ppCode n
         paramType' <- ppCode _paramType
-        return $ implicitDelim _paramImplicit (paramName' <+> paramType')
+        return $ implicitDelim _paramImplicit (paramName' <+> kwColon <+> paramType')
 
 instance PrettyCode Function where
   ppCode (Function l r) = do

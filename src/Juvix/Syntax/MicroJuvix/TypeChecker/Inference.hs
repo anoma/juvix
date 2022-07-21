@@ -26,7 +26,6 @@ makeLenses ''MatchError
 data Inference m a where
   MatchTypes :: Expression -> Expression -> Inference m (Maybe MatchError)
   QueryMetavar :: Hole -> Inference m (Maybe Expression)
-  WeakNormalize :: Expression -> Inference m Expression
   RegisterIden :: Name -> Expression -> Inference m ()
 
 makeSem ''Inference
@@ -141,7 +140,6 @@ re ::
 re = reinterpret $ \case
   MatchTypes a b -> matchTypes' a b
   QueryMetavar h -> queryMetavar' h
-  WeakNormalize t -> weakNormalize' t
   RegisterIden i ty -> registerIden' i ty
   where
     registerIden' :: Members '[State InferenceState] r => Name -> Expression -> Sem r ()
