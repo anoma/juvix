@@ -116,11 +116,7 @@ checkFunctionDef FunctionDef {..} = do
   addIdens idens
   return funDef
 
-checkFunctionDefType ::
-  forall r.
-  Members '[Inference] r =>
-  Expression ->
-  Sem r ()
+checkFunctionDefType :: forall r. Members '[Inference] r => Expression -> Sem r ()
 checkFunctionDefType = traverseOf_ (leafExpressions . _ExpressionHole) go
   where
     go :: Hole -> Sem r ()
@@ -153,10 +149,6 @@ checkFunctionParameter ::
 checkFunctionParameter (FunctionParameter mv i e) = do
   e' <- checkExpression (smallUniverse (getLoc e)) e
   return (FunctionParameter mv i e')
-
--------------------------------------------------------------------------------
--- Typechecking for data types
--------------------------------------------------------------------------------
 
 checkInductiveDef ::
   Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters, Reader E.EntryPoint] r =>
@@ -206,8 +198,6 @@ checkConstructorReturnType indType ctor = do
             )
         )
     )
-
--------------------------------------------------------------------------------
 
 inferExpression ::
   Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>

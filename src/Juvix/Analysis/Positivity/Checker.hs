@@ -40,6 +40,7 @@ checkPositivity ty = do
         (ctor ^. inductiveConstructorParameters)
 
 checkStrictlyPositiveOccurrences ::
+  forall r.
   Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters] r =>
   InductiveDef ->
   ConstrName ->
@@ -58,22 +59,27 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref = helper False
     -- used below indicates whether the current search is performed on the left
     -- of an inner arrow or not.
 
-    helper ::
-      Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters] r =>
-      Bool ->
-      Expression ->
-      Sem r ()
-
+    helper :: Bool -> Expression -> Sem r ()
     helper inside expr = case expr of
-      ExpressionIden (IdenInductive ty') -> when (inside && name == ty') (strictlyPositivityError expr)
-      ExpressionIden (IdenVar name') ->
-        when inside $
-          if
-              | name == name' -> strictlyPositivityError expr
-              | InductiveParameter name' `elem` ty ^. inductiveParameters -> modify (HashSet.insert name')
-              | otherwise -> return ()
+      ExpressionIden i -> helperIden i
       ExpressionFunction (Function l r) -> helper True (l ^. paramType) >> helper inside r
-      ExpressionApplication tyApp -> do
+      ExpressionApplication tyApp -> helperApp tyApp
+      ExpressionLiteral {} -> return ()
+      ExpressionHole {} -> return ()
+      ExpressionUniverse {} -> return ()
+      where
+      helperIden :: Iden -> Sem r ()
+      helperIden = \case
+        IdenInductive ty' -> when (inside && name == ty') (strictlyPositivityError expr)
+        IdenVar name'
+          | not inside -> return ()
+          | name == name' -> strictlyPositivityError expr
+          | InductiveParameter name' `elem` ty ^. inductiveParameters -> modify (HashSet.insert name')
+          | otherwise -> return ()
+        _ -> return ()
+
+      helperApp :: Application -> Sem r ()
+      helperApp tyApp = do
         let (hdExpr, args) = unfoldApplication tyApp
         case hdExpr of
           ExpressionIden (IdenInductive ty') -> do
@@ -86,35 +92,31 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref = helper False
             -- are no negative.
 
             let paramsTy' = indTy' ^. inductiveParameters
-                go ::
-                  Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters] r =>
-                  InductiveDef ->
-                  [(InductiveParameter, Expression)] ->
-                  Sem r ()
-                go typ = \case
-                  ((InductiveParameter pName, arg) : ps) -> do
-                    negParms :: NegativeTypeParameters <- get
-                    when (varOrInductiveInExpression name arg) $ do
-                      when (HashSet.member pName negParms) (strictlyPositivityError arg)
-                      when (recLimit > 0) $
-                        forM_ (typ ^. inductiveConstructors) $ \ctor' ->
-                          mapM_
-                            ( checkStrictlyPositiveOccurrences
-                                ty
-                                ctorName
-                                pName
-                                (recLimit - 1)
-                                (Just (fromMaybe arg ref))
-                            )
-                            (ctor' ^. inductiveConstructorParameters)
-                            >> modify (HashSet.insert pName)
-                    go ty ps
-                  [] -> return ()
-             in go indTy' (zip paramsTy' (toList args))
+            helperInductiveApp indTy' (zip paramsTy' (toList args))
           _ -> return ()
-      _ -> return ()
 
-    strictlyPositivityError :: Members '[Error TypeCheckerError] r => Expression -> Sem r ()
+      helperInductiveApp :: InductiveDef -> [(InductiveParameter, Expression)] -> Sem r ()
+      helperInductiveApp typ = \case
+        ((InductiveParameter pName, arg) : ps) -> do
+          negParms :: NegativeTypeParameters <- get
+          when (varOrInductiveInExpression name arg) $ do
+            when (HashSet.member pName negParms) (strictlyPositivityError arg)
+            when (recLimit > 0) $
+              forM_ (typ ^. inductiveConstructors) $ \ctor' ->
+                mapM_
+                  ( checkStrictlyPositiveOccurrences
+                      ty
+                      ctorName
+                      pName
+                      (recLimit - 1)
+                      (Just (fromMaybe arg ref))
+                  )
+                  (ctor' ^. inductiveConstructorParameters)
+                  >> modify (HashSet.insert pName)
+          helperInductiveApp ty ps
+        [] -> return ()
+
+    strictlyPositivityError :: Expression -> Sem r ()
     strictlyPositivityError expr = do
       let errLoc = fromMaybe expr ref
       throw
