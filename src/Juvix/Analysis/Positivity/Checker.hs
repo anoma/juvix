@@ -68,53 +68,53 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref = helper False
       ExpressionHole {} -> return ()
       ExpressionUniverse {} -> return ()
       where
-      helperIden :: Iden -> Sem r ()
-      helperIden = \case
-        IdenInductive ty' -> when (inside && name == ty') (strictlyPositivityError expr)
-        IdenVar name'
-          | not inside -> return ()
-          | name == name' -> strictlyPositivityError expr
-          | InductiveParameter name' `elem` ty ^. inductiveParameters -> modify (HashSet.insert name')
-          | otherwise -> return ()
-        _ -> return ()
-
-      helperApp :: Application -> Sem r ()
-      helperApp tyApp = do
-        let (hdExpr, args) = unfoldApplication tyApp
-        case hdExpr of
-          ExpressionIden (IdenInductive ty') -> do
-            when (inside && name == ty') (strictlyPositivityError expr)
-            InductiveInfo indTy' <- lookupInductive ty'
-
-            -- We now need to know whether `name` negatively occurs at `indTy'`
-            -- or not. The way to know is by checking that the type ty'
-            -- preserves the positivity condition, i.e., its type parameters
-            -- are no negative.
-
-            let paramsTy' = indTy' ^. inductiveParameters
-            helperInductiveApp indTy' (zip paramsTy' (toList args))
+        helperIden :: Iden -> Sem r ()
+        helperIden = \case
+          IdenInductive ty' -> when (inside && name == ty') (strictlyPositivityError expr)
+          IdenVar name'
+            | not inside -> return ()
+            | name == name' -> strictlyPositivityError expr
+            | InductiveParameter name' `elem` ty ^. inductiveParameters -> modify (HashSet.insert name')
+            | otherwise -> return ()
           _ -> return ()
 
-      helperInductiveApp :: InductiveDef -> [(InductiveParameter, Expression)] -> Sem r ()
-      helperInductiveApp typ = \case
-        ((InductiveParameter pName, arg) : ps) -> do
-          negParms :: NegativeTypeParameters <- get
-          when (varOrInductiveInExpression name arg) $ do
-            when (HashSet.member pName negParms) (strictlyPositivityError arg)
-            when (recLimit > 0) $
-              forM_ (typ ^. inductiveConstructors) $ \ctor' ->
-                mapM_
-                  ( checkStrictlyPositiveOccurrences
-                      ty
-                      ctorName
-                      pName
-                      (recLimit - 1)
-                      (Just (fromMaybe arg ref))
-                  )
-                  (ctor' ^. inductiveConstructorParameters)
-                  >> modify (HashSet.insert pName)
-          helperInductiveApp ty ps
-        [] -> return ()
+        helperApp :: Application -> Sem r ()
+        helperApp tyApp = do
+          let (hdExpr, args) = unfoldApplication tyApp
+          case hdExpr of
+            ExpressionIden (IdenInductive ty') -> do
+              when (inside && name == ty') (strictlyPositivityError expr)
+              InductiveInfo indTy' <- lookupInductive ty'
+
+              -- We now need to know whether `name` negatively occurs at `indTy'`
+              -- or not. The way to know is by checking that the type ty'
+              -- preserves the positivity condition, i.e., its type parameters
+              -- are no negative.
+
+              let paramsTy' = indTy' ^. inductiveParameters
+              helperInductiveApp indTy' (zip paramsTy' (toList args))
+            _ -> return ()
+
+        helperInductiveApp :: InductiveDef -> [(InductiveParameter, Expression)] -> Sem r ()
+        helperInductiveApp typ = \case
+          ((InductiveParameter pName, arg) : ps) -> do
+            negParms :: NegativeTypeParameters <- get
+            when (varOrInductiveInExpression name arg) $ do
+              when (HashSet.member pName negParms) (strictlyPositivityError arg)
+              when (recLimit > 0) $
+                forM_ (typ ^. inductiveConstructors) $ \ctor' ->
+                  mapM_
+                    ( checkStrictlyPositiveOccurrences
+                        ty
+                        ctorName
+                        pName
+                        (recLimit - 1)
+                        (Just (fromMaybe arg ref))
+                    )
+                    (ctor' ^. inductiveConstructorParameters)
+                    >> modify (HashSet.insert pName)
+            helperInductiveApp ty ps
+          [] -> return ()
 
     strictlyPositivityError :: Expression -> Sem r ()
     strictlyPositivityError expr = do
