@@ -287,5 +287,5 @@ instance ToGenericError NoPositivity where
           <+> ppCode ty
           <+> "is not strictly positive."
             <> line
-            <> "It appears at a negative position when declaring the constructor"
+            <> "It appears at a negative position in one of the arguments of the constructor"
           <+> ppCode ctor <> "."

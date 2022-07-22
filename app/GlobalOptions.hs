@@ -79,7 +79,7 @@ parseGlobalFlags b = do
   _globalNoPositivity <-
     switch
       ( long "no-positivity"
-          <> help "Disable positivity checking for data types"
+          <> help "Disable positivity checking for inductive types"
           <> hidden b
       )
   _globalNoStdlib <-
