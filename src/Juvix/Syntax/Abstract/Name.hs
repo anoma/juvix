@@ -11,7 +11,6 @@ import Juvix.Prelude.Pretty
 import Juvix.Syntax.Concrete.Scoped.Name.NameKind
 import Juvix.Syntax.Fixity
 import Juvix.Syntax.NameId
-import Text.Show qualified as Show
 
 data Name = Name
   { _nameText :: Text,
@@ -20,9 +19,7 @@ data Name = Name
     _namePretty :: Text, -- How to print this name in error messages
     _nameLoc :: Interval
   }
-
-instance Show Name where
-  show Name {..} = show . unpack $ _nameText
+  deriving stock (Show)
 
 makeLenses ''Name
 
