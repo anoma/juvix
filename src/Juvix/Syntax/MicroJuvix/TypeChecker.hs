@@ -6,7 +6,7 @@ module Juvix.Syntax.MicroJuvix.TypeChecker
 where
 
 import Data.HashMap.Strict qualified as HashMap
-import Data.HashSet qualified as HashSet
+import Juvix.Analysis.Positivity.Checker
 import Juvix.Internal.NameIdGen
 import Juvix.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude hiding (fromEither)
@@ -48,8 +48,6 @@ entryMicroJuvixTyped res@MicroJuvixArityResult {..} = do
 
     entryPoint :: E.EntryPoint
     entryPoint = res ^. microJuvixArityResultEntryPoint
-
-type NegativeTypeParameters = HashSet VarName
 
 checkModule ::
   Members '[Reader E.EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
@@ -160,15 +158,12 @@ checkFunctionParameter (FunctionParameter mv i e) = do
 -- Typechecking for data types
 -------------------------------------------------------------------------------
 
-type ErrorReference = Maybe Expression
-
-type RecursionLimit = Int
-
 checkInductiveDef ::
   Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters, Reader E.EntryPoint] r =>
   InductiveDef ->
   Sem r ()
-checkInductiveDef ty@InductiveDef {..} =
+checkInductiveDef ty@InductiveDef {..} = do
+  checkPositivity ty
   mapM_ (checkConstructorDef ty) _inductiveConstructors
 
 checkConstructorDef ::
@@ -183,15 +178,7 @@ checkConstructorDef ::
   InductiveConstructorDef ->
   Sem r ()
 checkConstructorDef ty ctor = do
-  let indName = ty ^. inductiveName
-      ctorName = ctor ^. inductiveConstructorName
   checkConstructorReturnType ty ctor
-  numInductives <- HashMap.size <$> asks (^. infoInductives)
-  noCheckPositivity <- asks (^. E.entryPointNoPositivity)
-  unless (noCheckPositivity || ty ^. inductivePositive) $
-    mapM_
-      (checkStrictlyPositiveOccurrences ty ctorName indName numInductives Nothing)
-      (ctor ^. inductiveConstructorParameters)
 
 checkConstructorReturnType ::
   Members '[Reader InfoTable, Error TypeCheckerError] r =>
@@ -219,93 +206,6 @@ checkConstructorReturnType indType ctor = do
             )
         )
     )
-
-checkStrictlyPositiveOccurrences ::
-  Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters] r =>
-  InductiveDef ->
-  ConstrName ->
-  Name ->
-  RecursionLimit ->
-  ErrorReference ->
-  Expression ->
-  Sem r ()
-checkStrictlyPositiveOccurrences ty ctorName name recLimit ref = helper False
-  where
-    indName :: Name
-    indName = ty ^. inductiveName
-
-    -- The following `helper` function determines if there is any negative
-    -- occurence of the symbol `name` in the given expression. The `inside` flag
-    -- used below indicates whether the current search is performed on the left
-    -- of an inner arrow or not.
-
-    helper ::
-      Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters] r =>
-      Bool ->
-      Expression ->
-      Sem r ()
-
-    helper inside expr = case expr of
-      ExpressionIden (IdenInductive ty') -> when (inside && name == ty') (strictlyPositivityError expr)
-      ExpressionIden (IdenVar name') ->
-        when inside $
-          if
-              | name == name' -> strictlyPositivityError expr
-              | InductiveParameter name' `elem` ty ^. inductiveParameters -> modify (HashSet.insert name')
-              | otherwise -> return ()
-      ExpressionFunction (Function l r) -> helper True (l ^. paramType) >> helper False r
-      ExpressionApplication tyApp -> do
-        let (hdExpr, args) = unfoldApplication tyApp
-        case hdExpr of
-          ExpressionIden (IdenInductive ty') -> do
-            when (inside && name == ty') (strictlyPositivityError expr)
-            InductiveInfo indTy' <- lookupInductive ty'
-
-            -- We now need to know whether `name` negatively occurs at `indTy'`
-            -- or not. The way to know is by checking that the type ty'
-            -- preserves the positivity condition, i.e., its type parameters
-            -- are no negative.
-
-            let paramsTy' = indTy' ^. inductiveParameters
-                go ::
-                  Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters] r =>
-                  InductiveDef ->
-                  [(InductiveParameter, Expression)] ->
-                  Sem r ()
-                go typ = \case
-                  ((InductiveParameter pName, arg) : ps) -> do
-                    negParms :: NegativeTypeParameters <- get
-                    when (nameInExpression name arg) $ do
-                      when (HashSet.member pName negParms) (strictlyPositivityError arg)
-                      when (recLimit > 0) $
-                        forM_ (typ ^. inductiveConstructors) $ \ctor' ->
-                          mapM_
-                            ( checkStrictlyPositiveOccurrences
-                                ty
-                                ctorName
-                                pName
-                                (recLimit - 1)
-                                (Just (fromMaybe arg ref))
-                            )
-                            (ctor' ^. inductiveConstructorParameters)
-                            >> modify (HashSet.insert pName)
-                    go ty ps
-                  [] -> return ()
-              in go indTy' (zip paramsTy' (toList args))
-          _ -> return ()
-      _ -> return ()
-
-    strictlyPositivityError :: Members '[Error TypeCheckerError] r => Expression -> Sem r ()
-    strictlyPositivityError expr = do
-      let errLoc = fromMaybe expr ref
-      throw
-        ( ErrNoPositivity $
-            NoPositivity
-              { _noStrictPositivityType = indName,
-                _noStrictPositivityConstructor = ctorName,
-                _noStrictPositivityArgument = errLoc
-              }
-        )
 
 -------------------------------------------------------------------------------
 

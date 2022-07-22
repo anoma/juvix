@@ -1,6 +1,5 @@
 module E5;
 
-positive
 inductive T0 (A : Type){
 c0 : (A -> T0 A) -> T0 A;
 };
@@ -10,6 +9,7 @@ inductive T1 (A : Type) {
 c1 : (B -> T0 A) -> T1 A;
 };
 
+positive
 inductive T2 {
 c2 : (B -> (B -> T1 T2)) -> T2;
 };
