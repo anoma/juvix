@@ -55,6 +55,7 @@ goStatement mn = \case
   StatementForeign {} -> return ()
   StatementFunction f -> do
     addEdge (f ^. funDefName) mn
+    goExpression (f ^. funDefName) (f ^. funDefTypeSig)
     mapM_ (goFunctionClause (f ^. funDefName)) (f ^. funDefClauses)
   StatementImport m -> guardNotVisited (m ^. moduleName) (goModule m)
   StatementLocalModule m -> goLocalModule mn m
