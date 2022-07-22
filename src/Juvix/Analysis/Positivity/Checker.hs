@@ -72,7 +72,7 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref = helper False
               | name == name' -> strictlyPositivityError expr
               | InductiveParameter name' `elem` ty ^. inductiveParameters -> modify (HashSet.insert name')
               | otherwise -> return ()
-      ExpressionFunction (Function l r) -> helper True (l ^. paramType) >> helper False r
+      ExpressionFunction (Function l r) -> helper True (l ^. paramType) >> helper inside r
       ExpressionApplication tyApp -> do
         let (hdExpr, args) = unfoldApplication tyApp
         case hdExpr of

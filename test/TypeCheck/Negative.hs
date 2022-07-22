@@ -153,5 +153,9 @@ negPositivityTests =
     NegTest "E8" "MicroJuvix/Positivity" "E8.juvix" $
       \case
         ErrNoPositivity {} -> Nothing
+        _ -> wrongError,
+    NegTest "E9" "MicroJuvix/Positivity" "E9.juvix" $
+      \case
+        ErrNoPositivity {} -> Nothing
         _ -> wrongError
   ]
