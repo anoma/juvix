@@ -266,33 +266,32 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref = helper False
             -- preserves the positivity condition, i.e., its type parameters
             -- are no negative.
 
-            unless (indTy' ^. inductivePositive) $
-              let paramsTy' = indTy' ^. inductiveParameters
-                  go ::
-                    Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters] r =>
-                    InductiveDef ->
-                    [(InductiveParameter, Expression)] ->
-                    Sem r ()
-                  go typ = \case
-                    [] -> return ()
-                    ((InductiveParameter pName, arg) : ps) -> do
-                      negParms :: NegativeTypeParameters <- get
-                      when (nameInExpression name arg) $ do
-                        when (HashSet.member pName negParms) (strictlyPositivityError arg)
-                        when (recLimit > 0) $
-                          forM_ (typ ^. inductiveConstructors) $ \ctor' ->
-                            mapM_
-                              ( checkStrictlyPositiveOccurrences
-                                  ty
-                                  ctorName
-                                  pName
-                                  (recLimit - 1)
-                                  (Just (fromMaybe arg ref))
-                              )
-                              (ctor' ^. inductiveConstructorParameters)
-                              >> modify (HashSet.insert pName)
-                      go ty ps
-               in go indTy' (zip paramsTy' (toList args))
+            let paramsTy' = indTy' ^. inductiveParameters
+                go ::
+                  Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters] r =>
+                  InductiveDef ->
+                  [(InductiveParameter, Expression)] ->
+                  Sem r ()
+                go typ = \case
+                  ((InductiveParameter pName, arg) : ps) -> do
+                    negParms :: NegativeTypeParameters <- get
+                    when (nameInExpression name arg) $ do
+                      when (HashSet.member pName negParms) (strictlyPositivityError arg)
+                      when (recLimit > 0) $
+                        forM_ (typ ^. inductiveConstructors) $ \ctor' ->
+                          mapM_
+                            ( checkStrictlyPositiveOccurrences
+                                ty
+                                ctorName
+                                pName
+                                (recLimit - 1)
+                                (Just (fromMaybe arg ref))
+                            )
+                            (ctor' ^. inductiveConstructorParameters)
+                            >> modify (HashSet.insert pName)
+                    go ty ps
+                  [] -> return ()
+              in go indTy' (zip paramsTy' (toList args))
           _ -> return ()
       _ -> return ()
 
