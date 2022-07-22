@@ -1,0 +1,18 @@
+module M;
+
+open import Data.Nat;
+open import Data.Maybe;
+open import Data.Product;
+open import Data.Bool;
+open import Data.Ord;
+
+f : Bool -> Bool;
+f x := x;
+
+g : {A : Type} -> A -> Bool -> Bool;
+g x y := f y;
+
+h : {A : Type} -> A -> Maybe Bool;
+h x := nothing;
+
+end;

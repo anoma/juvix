@@ -7,6 +7,7 @@ import MonoJuvix qualified
 import Scope qualified
 import Termination qualified
 import TypeCheck qualified
+import Reachability qualified
 
 slowTests :: TestTree
 slowTests =
@@ -22,6 +23,7 @@ fastTests =
       Termination.allTests,
       Arity.allTests,
       TypeCheck.allTests,
+      Reachability.allTests,
       MonoJuvix.allTests
     ]
 

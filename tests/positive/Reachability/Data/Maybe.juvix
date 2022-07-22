@@ -1,0 +1,8 @@
+module Data.Maybe;
+
+  inductive Maybe (a : Type) {
+     nothing : Maybe a;
+     just : a → Maybe a;
+  }
+
+end;
