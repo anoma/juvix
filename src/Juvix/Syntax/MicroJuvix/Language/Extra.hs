@@ -357,9 +357,9 @@ substitutionE :: SubsE -> Expression -> Expression
 substitutionE m = over leafExpressions goLeaf
   where
     goLeaf :: Expression -> Expression
-    goLeaf e = case e of
+    goLeaf = \case
       ExpressionIden i -> goIden i
-      _ -> e
+      e -> e
     goIden :: Iden -> Expression
     goIden i = case i of
       IdenVar v
