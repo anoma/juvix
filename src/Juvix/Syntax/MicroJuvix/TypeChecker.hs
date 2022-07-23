@@ -111,9 +111,13 @@ checkInductiveDef (InductiveDef name built params constrs pos) = runInferenceDef
           _localTyMap = mempty
         }
     goConstructor :: InductiveConstructorDef -> Sem (Inference ': r) InductiveConstructorDef
-    goConstructor c@(InductiveConstructorDef n cty ret) = do
-      cty' <- runReader paramLocals (mapM (checkIsType (getLoc n)) cty)
-      let c' = set inductiveConstructorParameters cty' c
+    goConstructor (InductiveConstructorDef n cty ret) = do
+      expectedRetTy <- constructorReturnType n
+      (cty', ret') <- runReader paramLocals $ do
+        cargs' <- mapM (checkIsType (getLoc n)) cty
+        cret' <- checkExpression expectedRetTy ret
+        return (cargs', cret')
+      let c' = InductiveConstructorDef n cty' ret'
       registerConstructor c'
       return c'
 

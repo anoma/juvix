@@ -135,6 +135,13 @@ constructorType c = do
       args =
         map (typeAbstraction Implicit) inductiveParams
           ++ map unnamedParameter constrArgs
+  saturatedTy <- constructorReturnType c
+  return (foldFunType args saturatedTy)
+
+constructorReturnType :: Member (Reader InfoTable) r => ConstrName -> Sem r Expression
+constructorReturnType c = do
+  info <- lookupConstructor c
+  let inductiveParams = fst (constructorArgTypes info)
       ind = ExpressionIden (IdenInductive (info ^. constructorInfoInductive))
       saturatedTy =
         foldl'
@@ -149,4 +156,4 @@ constructorType c = do
           )
           ind
           inductiveParams
-  return (foldFunType args saturatedTy)
+  return saturatedTy
