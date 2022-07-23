@@ -113,13 +113,24 @@ checkInductiveDef (InductiveDef name built params constrs pos) = runInferenceDef
     goConstructor :: InductiveConstructorDef -> Sem (Inference ': r) InductiveConstructorDef
     goConstructor (InductiveConstructorDef n cty ret) = do
       expectedRetTy <- constructorReturnType n
-      (cty', ret') <- runReader paramLocals $ do
-        cargs' <- mapM (checkIsType (getLoc n)) cty
-        cret' <- checkExpression expectedRetTy ret
-        return (cargs', cret')
-      let c' = InductiveConstructorDef n cty' ret'
+      cty' <- runReader paramLocals $ do
+        void (checkIsType (getLoc ret) ret)
+        mapM (checkIsType (getLoc n)) cty
+      whenJustM (matchTypes expectedRetTy ret) (const (errRet expectedRetTy))
+      let c' = InductiveConstructorDef n cty' ret
       registerConstructor c'
       return c'
+      where
+        errRet :: Expression -> Sem (Inference ': r) a
+        errRet expected =
+          throw
+            ( ErrWrongReturnType
+                WrongReturnType
+                  { _wrongReturnTypeConstructorName = n,
+                    _wrongReturnTypeExpected = expected,
+                    _wrongReturnTypeActual = ret
+                  }
+            )
 
 checkFunctionDef ::
   Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable] r =>

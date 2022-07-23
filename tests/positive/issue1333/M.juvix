@@ -1,0 +1,7 @@
+module M;
+
+inductive T (A : Type) {
+c : T _;
+};
+
+end;
