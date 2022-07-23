@@ -1,4 +1,4 @@
-module TypeCheck.Negative (allTests) where
+module TypeCheck.Negative where
 
 import Base
 import Juvix.Pipeline
@@ -31,8 +31,14 @@ testDescr NegTest {..} =
 allTests :: TestTree
 allTests =
   testGroup
-    "TypeCheck negative tests"
-    (map (mkTest . testDescr) tests)
+    "Typecheck negative tests"
+    [ testGroup
+        "General typechecking errors"
+        (map (mkTest . testDescr) tests),
+      testGroup
+        "Non-strictly positive data types"
+        (map (mkTest . testDescr) negPositivityTests)
+    ]
 
 root :: FilePath
 root = "tests/negative"
@@ -111,5 +117,45 @@ tests =
       "WrongReturnTypeTooManyArguments.juvix"
       $ \case
         ErrWrongReturnType {} -> Nothing
+        _ -> wrongError
+  ]
+
+negPositivityTests :: [NegTest]
+negPositivityTests =
+  [ NegTest "E1" "MicroJuvix/Positivity" "E1.juvix" $
+      \case
+        ErrNoPositivity {} -> Nothing
+        _ -> wrongError,
+    NegTest "E2" "MicroJuvix/Positivity" "E2.juvix" $
+      \case
+        ErrNoPositivity {} -> Nothing
+        _ -> wrongError,
+    NegTest "E3" "MicroJuvix/Positivity" "E3.juvix" $
+      \case
+        ErrNoPositivity {} -> Nothing
+        _ -> wrongError,
+    NegTest "E4" "MicroJuvix/Positivity" "E4.juvix" $
+      \case
+        ErrNoPositivity {} -> Nothing
+        _ -> wrongError,
+    NegTest "E5" "MicroJuvix/Positivity" "E5.juvix" $
+      \case
+        ErrNoPositivity {} -> Nothing
+        _ -> wrongError,
+    NegTest "E6" "MicroJuvix/Positivity" "E6.juvix" $
+      \case
+        ErrNoPositivity {} -> Nothing
+        _ -> wrongError,
+    NegTest "E7" "MicroJuvix/Positivity" "E7.juvix" $
+      \case
+        ErrNoPositivity {} -> Nothing
+        _ -> wrongError,
+    NegTest "E8" "MicroJuvix/Positivity" "E8.juvix" $
+      \case
+        ErrNoPositivity {} -> Nothing
+        _ -> wrongError,
+    NegTest "E9" "MicroJuvix/Positivity" "E9.juvix" $
+      \case
+        ErrNoPositivity {} -> Nothing
         _ -> wrongError
   ]

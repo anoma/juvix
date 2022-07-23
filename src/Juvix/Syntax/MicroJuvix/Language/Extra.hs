@@ -381,10 +381,10 @@ unfoldApplication' :: Application -> (Expression, NonEmpty (IsImplicit, Expressi
 unfoldApplication' (Application l' r' i') = second (|: (i', r')) (unfoldExpressionApp l')
 
 unfoldExpressionApp :: Expression -> (Expression, [(IsImplicit, Expression)])
-unfoldExpressionApp e = case e of
+unfoldExpressionApp = \case
   ExpressionApplication (Application l r i) ->
     second (`snoc` (i, r)) (unfoldExpressionApp l)
-  _ -> (e, [])
+  e -> (e, [])
 
 unfoldApplication :: Application -> (Expression, NonEmpty Expression)
 unfoldApplication = fmap (fmap snd) . unfoldApplication'

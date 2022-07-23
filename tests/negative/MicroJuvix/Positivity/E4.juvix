@@ -1,0 +1,12 @@
+module E4;
+
+inductive Tree (A : Type) {
+  leaf : Tree A;
+  node : (A -> Tree A) -> Tree A;
+};
+
+inductive Bad {
+  bad : Tree Bad -> Bad;
+};
+
+end;

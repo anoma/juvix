@@ -125,7 +125,7 @@ buildConcreteTable info =
       let def :: Micro.InductiveDef
           def = info ^?! Micro.infoInductives . at ind . _Just . Micro.inductiveInfoDef
           constructorNames :: [Micro.Name]
-          constructorNames = def ^.. Micro.inductiveConstructors . each . Micro.constructorName
+          constructorNames = def ^.. Micro.inductiveConstructors . each . Micro.inductiveConstructorName
           k :: NonEmpty Micro.ConcreteType
           k = tc ^. Micro.typeCallArguments
           iden :: PolyIden
@@ -265,10 +265,10 @@ goInductiveDefConcrete def = do
   where
     goConstructor :: Micro.InductiveConstructorDef -> Sem r InductiveConstructorDef
     goConstructor c = do
-      params' <- mapM (goType . Micro.mkConcreteType') (c ^. Micro.constructorParameters)
+      params' <- mapM (goType . Micro.mkConcreteType') (c ^. Micro.inductiveConstructorParameters)
       return
         InductiveConstructorDef
-          { _constructorName = c ^. Micro.constructorName,
+          { _constructorName = c ^. Micro.inductiveConstructorName,
             _constructorParameters = params'
           }
 
@@ -380,14 +380,14 @@ goInductiveDefPoly def poly
       where
         goConstructorDef :: Micro.InductiveConstructorDef -> Sem r InductiveConstructorDef
         goConstructorDef cdef = do
-          cpolyInfo <- fromJust <$> lookupPolyConstructor (cdef ^. Micro.constructorName)
+          cpolyInfo <- fromJust <$> lookupPolyConstructor (cdef ^. Micro.inductiveConstructorName)
           let concrete :: ConcreteIdenInfo
               concrete = fromJust (cpolyInfo ^. polyConcretes . at k)
               params :: [Micro.ConcreteType]
               params =
                 map
                   (Micro.substitutionConcrete (concrete ^. concreteTypeSubs))
-                  (cdef ^. Micro.constructorParameters)
+                  (cdef ^. Micro.inductiveConstructorParameters)
           _constructorParameters <- mapM goType params
           return
             InductiveConstructorDef

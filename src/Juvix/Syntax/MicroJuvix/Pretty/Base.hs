@@ -154,8 +154,8 @@ instance PrettyCode Hole where
 
 instance PrettyCode InductiveConstructorDef where
   ppCode c = do
-    constructorName' <- ppCode (c ^. constructorName)
-    constructorParameters' <- mapM ppCodeAtom (c ^. constructorParameters)
+    constructorName' <- ppCode (c ^. inductiveConstructorName)
+    constructorParameters' <- mapM ppCodeAtom (c ^. inductiveConstructorParameters)
     return (hsep $ constructorName' : constructorParameters')
 
 indent' :: Member (Reader Options) r => Doc a -> Sem r (Doc a)

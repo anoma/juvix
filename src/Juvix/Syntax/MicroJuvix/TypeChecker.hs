@@ -6,7 +6,9 @@ module Juvix.Syntax.MicroJuvix.TypeChecker
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Analysis.Positivity.Checker
 import Juvix.Internal.NameIdGen
+import Juvix.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude hiding (fromEither)
 import Juvix.Syntax.MicroJuvix.Error
 import Juvix.Syntax.MicroJuvix.InfoTable
@@ -21,15 +23,19 @@ addIdens idens = modify (HashMap.union idens)
 
 registerConstructor :: Members '[State TypesTable, Reader InfoTable] r => InductiveConstructorDef -> Sem r ()
 registerConstructor ctr = do
-  ty <- constructorType (ctr ^. constructorName)
-  modify (HashMap.insert (ctr ^. constructorName) ty)
+  ty <- constructorType (ctr ^. inductiveConstructorName)
+  modify (HashMap.insert (ctr ^. inductiveConstructorName) ty)
 
 entryMicroJuvixTyped ::
   Members '[Error TypeCheckerError, NameIdGen] r =>
   MicroJuvixArityResult ->
   Sem r MicroJuvixTypedResult
 entryMicroJuvixTyped res@MicroJuvixArityResult {..} = do
-  (idens, r) <- runState (mempty :: TypesTable) (runReader table (mapM checkModule _resultModules))
+  (idens, r) <-
+    runState (mempty :: TypesTable)
+      . runReader entryPoint
+      . runReader table
+      $ mapM checkModule _resultModules
   return
     MicroJuvixTypedResult
       { _resultMicroJuvixArityResult = res,
@@ -40,12 +46,16 @@ entryMicroJuvixTyped res@MicroJuvixArityResult {..} = do
     table :: InfoTable
     table = buildTable _resultModules
 
+    entryPoint :: E.EntryPoint
+    entryPoint = res ^. microJuvixArityResultEntryPoint
+
 checkModule ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
+  Members '[Reader E.EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
   Module ->
   Sem r Module
 checkModule Module {..} = do
-  _moduleBody' <- checkModuleBody _moduleBody
+  _moduleBody' <-
+    (evalState (mempty :: NegativeTypeParameters) . checkModuleBody) _moduleBody
   return
     Module
       { _moduleBody = _moduleBody',
@@ -53,7 +63,8 @@ checkModule Module {..} = do
       }
 
 checkModuleBody ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
+  forall r.
+  Members '[Reader E.EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State NegativeTypeParameters] r =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -64,19 +75,20 @@ checkModuleBody ModuleBody {..} = do
       }
 
 checkInclude ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
+  Members '[Reader E.EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
   Include ->
   Sem r Include
 checkInclude = traverseOf includeModule checkModule
 
 checkStatement ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable] r =>
+  Members '[Reader E.EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State NegativeTypeParameters] r =>
   Statement ->
   Sem r Statement
 checkStatement s = case s of
   StatementFunction fun -> StatementFunction <$> checkFunctionDef fun
   StatementForeign {} -> return s
   StatementInductive ind -> do
+    checkInductiveDef ind
     mapM_ registerConstructor (ind ^. inductiveConstructors)
     ty <- inductiveType (ind ^. inductiveName)
     modify (HashMap.insert (ind ^. inductiveName) ty)
@@ -137,6 +149,55 @@ checkFunctionParameter ::
 checkFunctionParameter (FunctionParameter mv i e) = do
   e' <- checkExpression (smallUniverse (getLoc e)) e
   return (FunctionParameter mv i e')
+
+checkInductiveDef ::
+  Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters, Reader E.EntryPoint] r =>
+  InductiveDef ->
+  Sem r ()
+checkInductiveDef ty@InductiveDef {..} = do
+  checkPositivity ty
+  mapM_ (checkConstructorDef ty) _inductiveConstructors
+
+checkConstructorDef ::
+  Members
+    '[ Reader E.EntryPoint,
+       Reader InfoTable,
+       Error TypeCheckerError,
+       State NegativeTypeParameters
+     ]
+    r =>
+  InductiveDef ->
+  InductiveConstructorDef ->
+  Sem r ()
+checkConstructorDef ty ctor = do
+  checkConstructorReturnType ty ctor
+
+checkConstructorReturnType ::
+  Members '[Reader InfoTable, Error TypeCheckerError] r =>
+  InductiveDef ->
+  InductiveConstructorDef ->
+  Sem r ()
+checkConstructorReturnType indType ctor = do
+  let ctorName = ctor ^. inductiveConstructorName
+      ctorReturnType = ctor ^. inductiveConstructorReturnType
+      tyName = indType ^. inductiveName
+      indParams = map (^. inductiveParamName) (indType ^. inductiveParameters)
+      expectedReturnType =
+        foldExplicitApplication
+          (ExpressionIden (IdenInductive tyName))
+          (map (ExpressionIden . IdenVar) indParams)
+  when
+    (ctorReturnType /= expectedReturnType)
+    ( throw
+        ( ErrWrongReturnType
+            ( WrongReturnType
+                { _wrongReturnTypeConstructorName = ctorName,
+                  _wrongReturnTypeExpected = expectedReturnType,
+                  _wrongReturnTypeActual = ctorReturnType
+                }
+            )
+        )
+    )
 
 inferExpression ::
   Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>

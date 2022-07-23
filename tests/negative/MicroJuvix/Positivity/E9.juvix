@@ -1,0 +1,11 @@
+module E9;
+
+inductive B {
+b : B;
+};
+
+inductive T {
+  c : ((B → T) -> T) -> T;
+};
+
+end;

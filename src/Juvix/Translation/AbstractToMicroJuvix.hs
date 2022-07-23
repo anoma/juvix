@@ -267,8 +267,6 @@ goInductiveParameter f =
     (Nothing, _, _) -> unsupported "unnamed inductive parameters"
 
 goInductiveDef ::
-  forall r.
-  Member (Error TypeCheckerError) r =>
   Abstract.InductiveDef ->
   Sem r InductiveDef
 goInductiveDef i =
@@ -277,44 +275,28 @@ goInductiveDef i =
       | otherwise -> do
           inductiveParameters' <- mapM goInductiveParameter (i ^. Abstract.inductiveParameters)
           let indTypeName = i ^. Abstract.inductiveName
-              indParamNames = map (^. inductiveParamName) inductiveParameters'
-          inductiveConstructors' <- mapM (goConstructorDef indTypeName indParamNames) (i ^. Abstract.inductiveConstructors)
+          inductiveConstructors' <-
+            mapM
+              goConstructorDef
+              (i ^. Abstract.inductiveConstructors)
           return
             InductiveDef
               { _inductiveName = indTypeName,
                 _inductiveParameters = inductiveParameters',
                 _inductiveBuiltin = i ^. Abstract.inductiveBuiltin,
-                _inductiveConstructors = inductiveConstructors'
+                _inductiveConstructors = inductiveConstructors',
+                _inductivePositive = i ^. Abstract.inductivePositive
               }
   where
-    goConstructorDef :: Name -> [Name] -> Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
-    goConstructorDef indName paramNames c = do
-      (_constructorParameters', actualReturnType) <- viewConstructorType (c ^. Abstract.constructorType)
-      let ctorName = c ^. Abstract.constructorName
-          foldTypeAppName :: Name -> [Name] -> Expression
-          foldTypeAppName tyName indParams =
-            foldExplicitApplication
-              (ExpressionIden (IdenInductive tyName))
-              (map (ExpressionIden . IdenVar) indParams)
-          expectedReturnType :: Expression
-          expectedReturnType = foldTypeAppName indName paramNames
-      if
-          | actualReturnType == expectedReturnType ->
-              return
-                InductiveConstructorDef
-                  { _constructorName = ctorName,
-                    _constructorParameters = _constructorParameters'
-                  }
-          | otherwise ->
-              throw
-                ( ErrWrongReturnType
-                    ( WrongReturnType
-                        { _wrongReturnTypeConstructorName = ctorName,
-                          _wrongReturnTypeExpected = expectedReturnType,
-                          _wrongReturnTypeActual = actualReturnType
-                        }
-                    )
-                )
+    goConstructorDef :: Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
+    goConstructorDef c = do
+      (cParams, cReturnType) <- viewConstructorType (c ^. Abstract.constructorType)
+      return
+        InductiveConstructorDef
+          { _inductiveConstructorName = c ^. Abstract.constructorName,
+            _inductiveConstructorParameters = cParams,
+            _inductiveConstructorReturnType = cReturnType
+          }
 
 goTypeApplication :: Abstract.Application -> Sem r Application
 goTypeApplication (Abstract.Application l r i) = do

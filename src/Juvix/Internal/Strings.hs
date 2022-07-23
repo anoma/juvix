@@ -182,6 +182,9 @@ cBackend = "c"
 terminating :: IsString s => s
 terminating = "terminating"
 
+positive :: IsString s => s
+positive = "positive"
+
 waveArrow :: IsString s => s
 waveArrow = "↝"
 

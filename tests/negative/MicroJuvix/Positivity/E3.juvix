@@ -1,0 +1,8 @@
+module E3;
+
+axiom B : Type;
+inductive X  {
+  c : B -> (X -> B) -> X;
+};
+
+end;
