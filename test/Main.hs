@@ -4,6 +4,7 @@ import Arity qualified
 import BackendC qualified
 import Base
 import MonoJuvix qualified
+import Reachability qualified
 import Scope qualified
 import Termination qualified
 import TypeCheck qualified
@@ -22,6 +23,7 @@ fastTests =
       Termination.allTests,
       Arity.allTests,
       TypeCheck.allTests,
+      Reachability.allTests,
       MonoJuvix.allTests
     ]
 

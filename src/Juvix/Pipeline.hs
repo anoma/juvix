@@ -15,6 +15,7 @@ import Juvix.Pipeline.Setup qualified as Setup
 import Juvix.Prelude
 import Juvix.Syntax.Abstract.AbstractResult qualified as Abstract
 import Juvix.Syntax.MicroJuvix.MicroJuvixResult qualified as MicroJuvix
+import Juvix.Syntax.MicroJuvix.Reachability qualified as MicroJuvix
 import Juvix.Translation.AbstractToMicroJuvix qualified as MicroJuvix
 import Juvix.Translation.MicroJuvixToMiniC qualified as MiniC
 import Juvix.Translation.MicroJuvixToMonoJuvix qualified as MonoJuvix
@@ -78,6 +79,12 @@ upToMicroJuvixTyped ::
   Sem r MicroJuvix.MicroJuvixTypedResult
 upToMicroJuvixTyped = upToMicroJuvixArity >=> pipelineMicroJuvixTyped
 
+upToMicroJuvixReachability ::
+  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
+  EntryPoint ->
+  Sem r MicroJuvix.MicroJuvixTypedResult
+upToMicroJuvixReachability = upToMicroJuvixTyped >=> pipelineMicroJuvixReachability
+
 upToMonoJuvix ::
   Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
   EntryPoint ->
@@ -94,7 +101,7 @@ upToMiniC ::
   Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
   EntryPoint ->
   Sem r MiniC.MiniCResult
-upToMiniC = upToMicroJuvixTyped >=> pipelineMiniC
+upToMiniC = upToMicroJuvixReachability >=> pipelineMiniC
 
 --------------------------------------------------------------------------------
 
@@ -134,6 +141,9 @@ pipelineMicroJuvixTyped ::
   Sem r MicroJuvix.MicroJuvixTypedResult
 pipelineMicroJuvixTyped =
   mapError (JuvixError @MicroJuvix.TypeCheckerError) . MicroJuvix.entryMicroJuvixTyped
+
+pipelineMicroJuvixReachability :: MicroJuvix.MicroJuvixTypedResult -> Sem r MicroJuvix.MicroJuvixTypedResult
+pipelineMicroJuvixReachability = return . MicroJuvix.filterUnreachable
 
 pipelineMonoJuvix ::
   Members '[Files, NameIdGen] r =>

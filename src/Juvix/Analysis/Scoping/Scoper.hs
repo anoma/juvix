@@ -50,15 +50,16 @@ scopeCheck pr root modules =
         runReader scopeParameters $
           evalState iniScoperState $ do
             mergeTable (pr ^. Parser.resultTable)
-            mapM checkTopModule_ modules
+            checkTopModules modules
   where
-    mkResult :: (Parser.InfoTable, (InfoTable, NonEmpty (Module 'Scoped 'ModuleTop))) -> ScoperResult
-    mkResult (pt, (st, ms)) =
+    mkResult :: (Parser.InfoTable, (InfoTable, (NonEmpty (Module 'Scoped 'ModuleTop), HashSet NameId))) -> ScoperResult
+    mkResult (pt, (st, (ms, exp))) =
       ScoperResult
         { _resultParserResult = pr,
           _resultParserTable = pt,
           _resultScoperTable = st,
-          _resultModules = ms
+          _resultModules = ms,
+          _resultExports = exp
         }
     iniScoperState :: ScoperState
     iniScoperState =
@@ -474,6 +475,26 @@ checkInductiveDef ty@InductiveDef {..} = do
           _inductiveConstructors = inductiveConstructors',
           _inductivePositive = ty ^. inductivePositive
         }
+
+createExportsTable :: ExportInfo -> HashSet NameId
+createExportsTable ei = foldr (HashSet.insert . getNameId) HashSet.empty (HashMap.elems (ei ^. exportSymbols))
+  where
+    getNameId = \case
+      EntryAxiom r -> getNameRefId (r ^. axiomRefName)
+      EntryInductive r -> getNameRefId (r ^. inductiveRefName)
+      EntryFunction r -> getNameRefId (r ^. functionRefName)
+      EntryConstructor r -> getNameRefId (r ^. constructorRefName)
+      EntryModule r -> getNameRefId (getModuleRefNameType r)
+
+checkTopModules ::
+  forall r.
+  Members '[Error ScoperError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  NonEmpty (Module 'Parsed 'ModuleTop) ->
+  Sem r (NonEmpty (Module 'Scoped 'ModuleTop), HashSet NameId)
+checkTopModules modules = do
+  r <- checkTopModule (head modules)
+  mods <- (r ^. moduleRefModule :|) <$> mapM checkTopModule_ (NonEmpty.tail modules)
+  return (mods, createExportsTable (r ^. moduleExportInfo))
 
 checkTopModule_ ::
   forall r.

@@ -1,0 +1,9 @@
+module O;
+
+open import M public;
+open import Stdlib.Prelude;
+
+k : Bool;
+k := true;
+
+end;
