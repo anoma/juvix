@@ -326,20 +326,14 @@ addIdens idens = modify (HashMap.union idens)
 -- | Assumes the given function has been type checked
 -- | NOTE: Registers the function *only* if the result type is Type
 functionDefEval :: forall r'. Member (Reader FunctionsTable) r' => FunctionDef -> Sem r' (Maybe Expression)
-functionDefEval funDef = do
-  x <- runError (goTop funDef)
-  case x of
-    Left () -> return Nothing
-    Right r -> return (Just r)
+functionDefEval = runFail . goTop
   where
-    goTop :: forall r. (Members '[Error (), Reader FunctionsTable] r) => FunctionDef -> Sem r Expression
+    goTop :: forall r. (Members '[Fail, Reader FunctionsTable] r) => FunctionDef -> Sem r Expression
     goTop f =
       case f ^. funDefClauses of
         c :| [] -> goClause c
-        _ -> nothing
+        _ -> fail
       where
-        nothing :: Sem r a
-        nothing = throw ()
         goClause :: FunctionClause -> Sem r Expression
         goClause c = do
           let pats = c ^. clausePatterns
@@ -350,8 +344,8 @@ functionDefEval funDef = do
             splitNExplicitParams :: Int -> Expression -> Sem r ([Expression], Expression)
             splitNExplicitParams n fun = do
               let (params, r) = unfoldFunType fun
-              unlessM (isUniverse r) nothing
-              (nfirst, rest) <- note () (splitAtExactMay n params)
+              unlessM (isUniverse r) fail
+              (nfirst, rest) <- failMaybe (splitAtExactMay n params)
               sparams <- mapM simpleExplicitParam nfirst
               let r' = foldFunType rest r
               return (sparams, r')
@@ -364,16 +358,16 @@ functionDefEval funDef = do
             simpleExplicitParam :: FunctionParameter -> Sem r Expression
             simpleExplicitParam = \case
               FunctionParameter Nothing Explicit ty -> return ty
-              _ -> nothing
+              _ -> fail
             goPattern :: (Pattern, Expression) -> Expression -> Sem r Expression
             goPattern (p, ty) = case p of
               PatternVariable v -> return . ExpressionLambda . Lambda v ty
-              _ -> const nothing
+              _ -> const fail
             go :: [(PatternArg, Expression)] -> Sem r Expression
             go = \case
               [] -> return (c ^. clauseBody)
               ((p, ty) : ps)
-                | Implicit <- p ^. patternArgIsImplicit -> nothing
+                | Implicit <- p ^. patternArgIsImplicit -> fail
                 | otherwise -> go ps >>= goPattern (p ^. patternArgPattern, ty)
 
 registerFunctionDef :: Member (State FunctionsTable) r => FunctionDef -> Sem r ()
