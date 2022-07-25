@@ -121,3 +121,4 @@ goExpression = \case
   ExpressionFunction a -> goFunction a
   ExpressionLiteral {} -> return ()
   ExpressionHole {} -> impossible
+  ExpressionLambda {} -> impossible

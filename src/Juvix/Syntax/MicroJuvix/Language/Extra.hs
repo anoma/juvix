@@ -95,6 +95,10 @@ mkConcreteType = fmap ConcreteType . go
         r' <- go r
         return (ExpressionApplication (Application l' r' i))
       ExpressionUniverse {} -> return t
+      ExpressionLambda (Lambda v ty b) -> do
+        b' <- go b
+        ty' <- go ty
+        return (ExpressionLambda (Lambda v ty' b'))
       ExpressionFunction (Function l r) -> do
         l' <- goParam l
         r' <- go r
@@ -150,6 +154,10 @@ mkPolyType = fmap PolyType . go
       ExpressionIden IdenConstructor {} -> return t
       ExpressionIden IdenAxiom {} -> return t
       ExpressionIden IdenVar {} -> return t
+      ExpressionLambda (Lambda v ty b) -> do
+        b' <- go b
+        ty' <- go ty
+        return (ExpressionLambda (Lambda v ty' b'))
 
 class HasExpressions a where
   leafExpressions :: Traversal' a Expression
@@ -159,9 +167,16 @@ instance HasExpressions Expression where
     ExpressionIden {} -> f e
     ExpressionApplication a -> ExpressionApplication <$> leafExpressions f a
     ExpressionFunction fun -> ExpressionFunction <$> leafExpressions f fun
+    ExpressionLambda l -> ExpressionLambda <$> leafExpressions f l
     ExpressionLiteral {} -> f e
     ExpressionUniverse {} -> f e
     ExpressionHole {} -> f e
+
+instance HasExpressions Lambda where
+  leafExpressions f (Lambda v ty b) = do
+    b' <- leafExpressions f b
+    ty' <- leafExpressions f ty
+    pure (Lambda v ty' b')
 
 instance HasExpressions FunctionParameter where
   leafExpressions f (FunctionParameter m i e) = do
@@ -189,6 +204,7 @@ _ExpressionHole f e = case e of
   ExpressionLiteral {} -> pure e
   ExpressionUniverse {} -> pure e
   ExpressionHole h -> ExpressionHole <$> f h
+  ExpressionLambda {} -> pure e
 
 holes :: HasExpressions a => Traversal' a Hole
 holes = leafExpressions . _ExpressionHole
@@ -213,7 +229,23 @@ instance HasExpressions FunctionDef where
   leafExpressions f (FunctionDef name ty clauses bi) = do
     clauses' <- traverse (leafExpressions f) clauses
     ty' <- leafExpressions f ty
-    return (FunctionDef name ty' clauses' bi)
+    pure (FunctionDef name ty' clauses' bi)
+
+instance HasExpressions InductiveParameter where
+  leafExpressions _ param@(InductiveParameter _) = do
+    pure param
+
+instance HasExpressions InductiveDef where
+  leafExpressions f (InductiveDef name built params constrs pos) = do
+    params' <- traverse (leafExpressions f) params
+    constrs' <- traverse (leafExpressions f) constrs
+    pure (InductiveDef name built params' constrs' pos)
+
+instance HasExpressions InductiveConstructorDef where
+  leafExpressions f (InductiveConstructorDef c args ret) = do
+    args' <- traverse (leafExpressions f) args
+    ret' <- leafExpressions f ret
+    pure (InductiveConstructorDef c args' ret')
 
 fillHolesFunctionDef :: HashMap Hole Expression -> FunctionDef -> FunctionDef
 fillHolesFunctionDef = subsHoles
@@ -322,23 +354,12 @@ localsToSubsE :: LocalVars -> SubsE
 localsToSubsE l = ExpressionIden . IdenVar <$> l ^. localTyMap
 
 substitutionE :: SubsE -> Expression -> Expression
-substitutionE m = go
+substitutionE m = over leafExpressions goLeaf
   where
-    go :: Expression -> Expression
-    go x = case x of
+    goLeaf :: Expression -> Expression
+    goLeaf = \case
       ExpressionIden i -> goIden i
-      ExpressionApplication a -> ExpressionApplication (goApp a)
-      ExpressionFunction a -> ExpressionFunction (goFun a)
-      ExpressionLiteral {} -> x
-      ExpressionUniverse {} -> x
-      ExpressionHole {} -> x
-
-    goParam :: FunctionParameter -> FunctionParameter
-    goParam (FunctionParameter v i ty) = FunctionParameter v i (go ty)
-    goFun :: Function -> Function
-    goFun (Function l r) = Function (goParam l) (go r)
-    goApp :: Application -> Application
-    goApp (Application l r i) = Application (go l) (go r) i
+      e -> e
     goIden :: Iden -> Expression
     goIden i = case i of
       IdenVar v
@@ -405,3 +426,16 @@ reachableModules = fst . run . runOutputList . evalState (mempty :: HashSet Name
         goStatement = \case
           StatementInclude (Include inc) -> go inc
           _ -> return ()
+
+(-->) :: Expression -> Expression -> Expression
+(-->) a b =
+  ExpressionFunction
+    ( Function
+        ( FunctionParameter
+            { _paramName = Nothing,
+              _paramImplicit = Explicit,
+              _paramType = a
+            }
+        )
+        b
+    )

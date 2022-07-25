@@ -144,6 +144,10 @@ tests =
       "MicroJuvix"
       "Implicit.juvix",
     PosTest
+      "Simple type alias"
+      "."
+      "TypeAlias.juvix",
+    PosTest
       "Refine hole in type signature"
       "272"
       "M.juvix",

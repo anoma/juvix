@@ -13,7 +13,7 @@ even zero ≔ true;
 even (suc n) ≔ odd n;
 
 check : (Nat → Bool) → Int → String;
-check f x ≔ (boolToStr (f (intToNat x)));
+check f x ≔ boolToStr (f (intToNat x));
 
 checkEven : Int → String;
 checkEven ≔ check even;

@@ -91,9 +91,19 @@ data Expression
   | ExpressionLiteral LiteralLoc
   | ExpressionHole Hole
   | ExpressionUniverse SmallUniverse
+  | ExpressionLambda Lambda
   deriving stock (Eq, Generic)
 
 instance Hashable Expression
+
+data Lambda = Lambda
+  { _lambdaVar :: VarName,
+    _lambdaVarType :: Expression,
+    _lambdaBody :: Expression
+  }
+  deriving stock (Eq, Generic)
+
+instance Hashable Lambda
 
 data Application = Application
   { _appLeft :: Expression,
@@ -173,6 +183,7 @@ makeLenses ''ModuleBody
 makeLenses ''Application
 makeLenses ''TypedExpression
 makeLenses ''Function
+makeLenses ''Lambda
 makeLenses ''FunctionParameter
 makeLenses ''InductiveParameter
 makeLenses ''InductiveConstructorDef
@@ -180,6 +191,9 @@ makeLenses ''ConstructorApp
 
 instance HasAtomicity Application where
   atomicity = const (Aggregate appFixity)
+
+instance HasAtomicity Lambda where
+  atomicity = const Atom
 
 instance HasAtomicity Expression where
   atomicity e = case e of
@@ -189,6 +203,7 @@ instance HasAtomicity Expression where
     ExpressionHole {} -> Atom
     ExpressionUniverse u -> atomicity u
     ExpressionFunction f -> atomicity f
+    ExpressionLambda l -> atomicity l
 
 instance HasAtomicity Function where
   atomicity = const (Aggregate funFixity)
@@ -209,6 +224,9 @@ instance HasAtomicity Pattern where
     PatternVariable {} -> Atom
     PatternWildcard {} -> Atom
 
+instance HasLoc InductiveParameter where
+  getLoc (InductiveParameter n) = getLoc n
+
 instance HasLoc FunctionParameter where
   getLoc f = v (getLoc (f ^. paramType))
     where
@@ -222,6 +240,9 @@ instance HasLoc Function where
 instance HasLoc Application where
   getLoc (Application l r _) = getLoc l <> getLoc r
 
+instance HasLoc Lambda where
+  getLoc l = getLoc (l ^. lambdaVar) <> getLoc (l ^. lambdaBody)
+
 instance HasLoc Expression where
   getLoc = \case
     ExpressionIden i -> getLoc i
@@ -230,6 +251,7 @@ instance HasLoc Expression where
     ExpressionHole h -> getLoc h
     ExpressionUniverse u -> getLoc u
     ExpressionFunction u -> getLoc u
+    ExpressionLambda l -> getLoc l
 
 instance HasLoc Iden where
   getLoc = \case

@@ -108,7 +108,7 @@ goStatement = \case
 
 goTypeIden :: Abstract.Iden -> Iden
 goTypeIden = \case
-  Abstract.IdenFunction {} -> unsupported "functions in types"
+  Abstract.IdenFunction f -> IdenFunction (f ^. Abstract.functionRefName)
   Abstract.IdenConstructor {} -> unsupported "constructors in types"
   Abstract.IdenVar v -> IdenVar v
   Abstract.IdenInductive d -> IdenInductive (d ^. Abstract.inductiveRefName)
@@ -308,7 +308,7 @@ viewConstructorType :: Abstract.Expression -> Sem r ([Expression], Expression)
 viewConstructorType = \case
   Abstract.ExpressionFunction f -> first toList <$> viewFunctionType f
   Abstract.ExpressionIden i -> return ([], ExpressionIden (goTypeIden i))
-  Abstract.ExpressionHole {} -> unsupported "holes in constructor type"
+  Abstract.ExpressionHole h -> return ([], ExpressionHole h)
   Abstract.ExpressionApplication a -> do
     a' <- goTypeApplication a
     return ([], ExpressionApplication a')

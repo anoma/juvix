@@ -365,6 +365,7 @@ goExpression = \case
   Micro.ExpressionFunction {} -> impossible
   Micro.ExpressionHole {} -> impossible
   Micro.ExpressionUniverse {} -> impossible
+  Micro.ExpressionLambda {} -> impossible
 
 goIden :: Members '[Reader PatternInfoTable, Builtins, Reader Micro.InfoTable] r => Micro.Iden -> Sem r Expression
 goIden = \case

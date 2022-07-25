@@ -94,6 +94,8 @@ buildTable1 m = InfoTable {..} <> buildTable (map (^. includeModule) includes)
         [ (d ^. axiomName, AxiomInfo (d ^. axiomType) (d ^. axiomBuiltin))
           | StatementAxiom d <- ss
         ]
+
+    ss :: [Statement]
     ss = m ^. (moduleBody . moduleStatements)
 
 lookupConstructor :: Member (Reader InfoTable) r => Name -> Sem r ConstructorInfo
@@ -114,11 +116,11 @@ inductiveType v = do
   let ps = info ^. inductiveInfoDef . inductiveParameters
   return $
     foldr
-      (\p k -> ExpressionFunction (typeAbs (p ^. inductiveParamName) k))
-      (ExpressionUniverse (SmallUniverse (getLoc v)))
+      (\_ k -> uni --> k)
+      (smallUniverse (getLoc v))
       ps
   where
-    typeAbs var = Function (typeAbstraction Explicit var)
+    uni = smallUniverse (getLoc v)
 
 constructorArgTypes :: ConstructorInfo -> ([VarName], [Expression])
 constructorArgTypes i =
@@ -133,6 +135,13 @@ constructorType c = do
       args =
         map (typeAbstraction Implicit) inductiveParams
           ++ map unnamedParameter constrArgs
+  saturatedTy <- constructorReturnType c
+  return (foldFunType args saturatedTy)
+
+constructorReturnType :: Member (Reader InfoTable) r => ConstrName -> Sem r Expression
+constructorReturnType c = do
+  info <- lookupConstructor c
+  let inductiveParams = fst (constructorArgTypes info)
       ind = ExpressionIden (IdenInductive (info ^. constructorInfoInductive))
       saturatedTy =
         foldl'
@@ -147,4 +156,4 @@ constructorType c = do
           )
           ind
           inductiveParams
-  return (foldFunType args saturatedTy)
+  return saturatedTy

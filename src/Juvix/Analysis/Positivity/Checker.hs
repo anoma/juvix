@@ -1,3 +1,4 @@
+-- | Checker for strictly positive inductive data types
 module Juvix.Analysis.Positivity.Checker where
 
 import Data.HashMap.Strict qualified as HashMap
@@ -7,10 +8,7 @@ import Juvix.Prelude hiding (fromEither)
 import Juvix.Syntax.MicroJuvix.Error
 import Juvix.Syntax.MicroJuvix.InfoTable
 import Juvix.Syntax.MicroJuvix.Language.Extra
-
--------------------------------------------------------------------------------
--- Checker for strictly positive inductive data types
--------------------------------------------------------------------------------
+import Juvix.Syntax.MicroJuvix.TypeChecker.Inference
 
 type NegativeTypeParameters = HashSet VarName
 
@@ -23,6 +21,7 @@ checkPositivity ::
     '[ Reader E.EntryPoint,
        Reader InfoTable,
        Error TypeCheckerError,
+       Inference,
        State NegativeTypeParameters
      ]
     r =>
@@ -41,7 +40,7 @@ checkPositivity ty = do
 
 checkStrictlyPositiveOccurrences ::
   forall r.
-  Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters, Inference] r =>
   InductiveDef ->
   ConstrName ->
   Name ->
@@ -49,7 +48,8 @@ checkStrictlyPositiveOccurrences ::
   ErrorReference ->
   Expression ->
   Sem r ()
-checkStrictlyPositiveOccurrences ty ctorName name recLimit ref = helper False
+checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
+  strongNormalize >=> helper False
   where
     indName :: Name
     indName = ty ^. inductiveName
@@ -67,7 +67,13 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref = helper False
       ExpressionLiteral {} -> return ()
       ExpressionHole {} -> return ()
       ExpressionUniverse {} -> return ()
+      ExpressionLambda l -> helperLambda l
       where
+        helperLambda :: Lambda -> Sem r ()
+        helperLambda (Lambda _ lamVarTy lamBody) = do
+          helper inside lamVarTy
+          helper inside lamBody
+
         helperIden :: Iden -> Sem r ()
         helperIden = \case
           IdenInductive ty' -> when (inside && name == ty') (strictlyPositivityError expr)
