@@ -1,8 +1,8 @@
 module Termination.Negative (module Termination.Negative) where
 
 import Base
+import Juvix.Analysis.Termination
 import Juvix.Pipeline
-import Juvix.Termination
 
 type FailMsg = String
 

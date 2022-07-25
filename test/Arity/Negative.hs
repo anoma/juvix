@@ -1,8 +1,8 @@
 module Arity.Negative (allTests) where
 
 import Base
+import Juvix.Analysis.Arity.Error
 import Juvix.Pipeline
-import Juvix.Syntax.MicroJuvix.ArityChecker.Error
 
 type FailMsg = String
 

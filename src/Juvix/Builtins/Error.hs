@@ -1,9 +1,9 @@
 module Juvix.Builtins.Error where
 
+import Juvix.Analysis.Termination.Error.Pretty
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 import Juvix.Syntax.Concrete.Builtins
-import Juvix.Termination.Error.Pretty
 
 data AlreadyDefined = AlreadyDefined
   { _alreadyDefinedBuiltin :: BuiltinPrim,

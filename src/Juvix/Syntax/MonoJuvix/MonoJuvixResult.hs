@@ -5,11 +5,11 @@ module Juvix.Syntax.MonoJuvix.MonoJuvixResult
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Analysis.Scoping.Scoper qualified as Scoper
 import Juvix.Prelude
 import Juvix.Syntax.Abstract.AbstractResult qualified as Abstract
 import Juvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoper
 import Juvix.Syntax.Concrete.Scoped.Name qualified as Scoper
-import Juvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
 import Juvix.Syntax.MicroJuvix.MicroJuvixArityResult qualified as Micro
 import Juvix.Syntax.MicroJuvix.MicroJuvixResult qualified as Micro
 import Juvix.Syntax.MicroJuvix.MicroJuvixTypedResult qualified as Micro

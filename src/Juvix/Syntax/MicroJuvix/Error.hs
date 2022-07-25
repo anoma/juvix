@@ -2,12 +2,12 @@ module Juvix.Syntax.MicroJuvix.Error
   ( module Juvix.Syntax.MicroJuvix.Error,
     module Juvix.Syntax.MicroJuvix.Error.Pretty,
     module Juvix.Syntax.MicroJuvix.Error.Types,
-    module Juvix.Syntax.MicroJuvix.ArityChecker.Error,
+    module Juvix.Analysis.Arity.Error,
   )
 where
 
+import Juvix.Analysis.Arity.Error
 import Juvix.Prelude
-import Juvix.Syntax.MicroJuvix.ArityChecker.Error
 import Juvix.Syntax.MicroJuvix.Error.Pretty
 import Juvix.Syntax.MicroJuvix.Error.Types
 
