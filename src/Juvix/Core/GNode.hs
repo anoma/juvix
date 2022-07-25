@@ -18,7 +18,7 @@ type Symbol = Word
 
 -- Tag of a constructor, uniquely identifying it. Tag values are consecutive and
 -- separate from symbol IDs. We might need fixed special tag values in Core for
--- common "builtin" constructors, e.g., lists, pairs, so that the code generator
+-- common "builtin" constructors, e.g., unit, lists, pairs, so that the code generator
 -- can treat them specially.
 type Tag = Word
 
