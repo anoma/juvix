@@ -7,13 +7,13 @@ module Juvix.Core.GNode where
 
 import Data.Functor.Identity
 import Data.HashSet qualified as HashSet
-import Juvix.Prelude
 import Juvix.Core.Builtins
+import Juvix.Prelude
 
 {---------------------------------------------------------------------------------}
 {- Program graph datatype -}
 
--- Consecutive symbol IDs for builtins and reachable user functions.
+-- Consecutive symbol IDs for reachable user functions.
 type Symbol = Word
 
 -- Tag of a constructor, uniquely identifying it. Tag values are consecutive and
@@ -38,7 +38,7 @@ data GNode i
   | -- A builtin with no corresponding GNode, treated specially by the evaluator
     -- and the code generator. For example, basic arithmetic operations go into
     -- `Builtin`.
-    Builtin !i !Builtin
+    Builtin !i !BuiltinOp
   | Literal !i {-# UNPACK #-} !Constant
   | App !i !(GNode i) !(GNode i)
   | Lambda !i !(GNode i)
