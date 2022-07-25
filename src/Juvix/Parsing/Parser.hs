@@ -8,18 +8,18 @@ where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Singletons
-import Juvix.Pipeline.EntryPoint
-import Juvix.Prelude
-import Juvix.Prelude.Pretty (Pretty, prettyText)
-import Juvix.Syntax.Concrete.Base qualified as P
-import Juvix.Syntax.Concrete.Language
-import Juvix.Parsing.Lexer hiding (symbol)
+import Juvix.Internal.Strings qualified as Str
 import Juvix.Parsing.Error
 import Juvix.Parsing.InfoTable
 import Juvix.Parsing.InfoTableBuilder
+import Juvix.Parsing.Lexer hiding (symbol)
 import Juvix.Parsing.ParserResult
-import Juvix.Syntax.Concrete.Base (MonadParsec(takeWhile1P))
-import Juvix.Internal.Strings qualified as Str
+import Juvix.Pipeline.EntryPoint
+import Juvix.Prelude
+import Juvix.Prelude.Pretty (Pretty, prettyText)
+import Juvix.Syntax.Concrete.Base (MonadParsec (takeWhile1P))
+import Juvix.Syntax.Concrete.Base qualified as P
+import Juvix.Syntax.Concrete.Language
 
 type JudocStash = State (Maybe (Judoc 'Parsed))
 
@@ -46,11 +46,11 @@ entryParser e = do
 -- an empty string.
 runModuleParser :: FilePath -> FilePath -> Text -> Either ParserError (InfoTable, Module 'Parsed 'ModuleTop)
 runModuleParser root fileName input =
-  case run
-    $ runInfoTableBuilder
-    $ runReader params
-    $ evalState (Nothing @(Judoc 'Parsed))
-    $ P.runParserT topModuleDef fileName input of
+  case run $
+    runInfoTableBuilder $
+      runReader params $
+        evalState (Nothing @(Judoc 'Parsed)) $
+          P.runParserT topModuleDef fileName input of
     (_, Left err) -> Left (ParserError err)
     (tbl, Right r) -> return (tbl, r)
   where
@@ -59,14 +59,18 @@ runModuleParser root fileName input =
         { _parserParamsRoot = root
         }
 
-top :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r =>
-  ParsecS r a -> ParsecS r a
+top ::
+  Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r =>
+  ParsecS r a ->
+  ParsecS r a
 top p = space >> p <* (optional kwSemicolon >> P.eof)
 
 topModuleDef ::
   Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r =>
   ParsecS r (Module 'Parsed 'ModuleTop)
-topModuleDef = top moduleDef
+topModuleDef = do
+  void (optional judocBlock)
+  top moduleDef
 
 --------------------------------------------------------------------------------
 -- Symbols and names
@@ -129,19 +133,19 @@ judocLine = lexeme $ do
 judocAtom :: forall r. Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (JudocAtom 'Parsed)
 judocAtom =
   JudocText <$> judocText
-  <|> JudocExpression <$> judocExpression
+    <|> JudocExpression <$> judocExpression
   where
-  judocText :: ParsecS r Text
-  judocText = comment (takeWhile1P Nothing isValidText)
-    where
-    isValidText :: Char -> Bool
-    isValidText = (`notElem` ['\n', ';'])
-  judocExpression :: ParsecS r (ExpressionAtoms 'Parsed)
-  judocExpression = do
-    comment_ (P.char ';')
-    e <- parseExpressionAtoms
-    comment_ (P.char ';')
-    return e
+    judocText :: ParsecS r Text
+    judocText = comment (takeWhile1P Nothing isValidText)
+      where
+        isValidText :: Char -> Bool
+        isValidText = (`notElem` ['\n', ';'])
+    judocExpression :: ParsecS r (ExpressionAtoms 'Parsed)
+    judocExpression = do
+      comment_ (P.char ';')
+      e <- parseExpressionAtoms
+      comment_ (P.char ';')
+      return e
 
 builtinInductive :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r BuiltinInductive
 builtinInductive = builtinHelper
@@ -515,6 +519,7 @@ pmodulePath = case sing :: SModuleIsTop t of
 moduleDef :: (SingI t, Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r) => ParsecS r (Module 'Parsed t)
 moduleDef = do
   kwModule
+  _moduleDoc <- P.lift getJudoc
   _modulePath <- pmodulePath
   _moduleParameters <- many inductiveParam
   kwSemicolon

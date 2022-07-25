@@ -65,7 +65,7 @@ goModule m = case sing :: SModuleIsTop t of
   SModuleLocal -> goModule' m
   where
     goModule' :: Module 'Scoped t -> Sem r Abstract.Module
-    goModule' (Module n par b) = case par of
+    goModule' (Module n par _ b) = case par of
       [] -> Abstract.Module modName <$> goModuleBody b
       _ -> unsupported "Module parameters"
       where

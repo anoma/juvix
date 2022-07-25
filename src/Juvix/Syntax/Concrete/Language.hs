@@ -384,6 +384,7 @@ type LocalModuleName s = SymbolType s
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
   { _modulePath :: ModulePathType s t,
     _moduleParameters :: [InductiveParameter s],
+    _moduleDoc :: Maybe (Judoc s),
     _moduleBody :: [Statement s]
   }
 
@@ -898,8 +899,8 @@ data ExpressionAtoms (s :: Stage) = ExpressionAtoms
     _expressionAtomsLoc :: Interval
   }
 
-newtype Judoc (s :: Stage) = Judoc {
-  _block :: [JudocAtom s]
+newtype Judoc (s :: Stage) = Judoc
+  { _block :: [JudocAtom s]
   }
   deriving newtype (Semigroup, Monoid)
 
@@ -909,8 +910,8 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Judoc 
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Judoc s)
 
-data JudocAtom (s :: Stage) =
-  JudocExpression (ExpressionType s)
+data JudocAtom (s :: Stage)
+  = JudocExpression (ExpressionType s)
   | JudocText Text
   | JudocNewline
 

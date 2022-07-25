@@ -9,12 +9,12 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Analysis.Scoping.Scoper qualified as Scoper
 import Juvix.Analysis.Termination qualified as Termination
 import Juvix.Analysis.TypeChecking qualified as MicroTyped
+import Juvix.Documentation.Compiler qualified as Doc
 import Juvix.Parsing.Parser qualified as Parser
 import Juvix.Pipeline
 import Juvix.Prelude hiding (Doc)
 import Juvix.Prelude.Pretty hiding (Doc)
 import Juvix.Syntax.Abstract.InfoTable qualified as Abstract
-import Juvix.Documentation.Compiler qualified as Doc
 import Juvix.Syntax.Abstract.Language qualified as Abstract
 import Juvix.Syntax.Abstract.Pretty qualified as Abstract
 import Juvix.Syntax.Concrete.Scoped.Highlight qualified as Highlight
@@ -138,14 +138,14 @@ runCommand cmdWithOpts = do
                         (upToScoping entryPoint)
                   forM_ l $ \s -> do
                     renderStdOut (Scoper.ppOut (mkScopePrettyOptions globalOpts localOpts) s)
-
                 Doc localOpts -> do
-                    l <- (^. Scoper.mainModule)
+                  l <-
+                    (^. Scoper.mainModule)
                       <$> runPipeline
                         (upToScoping entryPoint)
-                    say "TODO"
-                    let txt = Doc.compileModuleHtmlText "test" l
-                    embed (writeFile "documentation.html" txt)
+                  say "TODO"
+                  let txt = Doc.compileModuleHtmlText "test" l
+                  embed (writeFile "documentation.html" txt)
                 MicroJuvix Pretty -> do
                   micro <-
                     head . (^. Micro.resultModules)

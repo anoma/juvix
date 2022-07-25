@@ -7,9 +7,9 @@ module Commands.Internal
   )
 where
 
+import Commands.Internal.Doc
 import Commands.Internal.MicroJuvix
 import Commands.Internal.Parse
-import Commands.Internal.Doc
 import Commands.Internal.Scope
 import Commands.Internal.Termination
 import Juvix.Prelude

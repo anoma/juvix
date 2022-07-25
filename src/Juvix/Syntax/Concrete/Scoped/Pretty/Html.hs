@@ -61,10 +61,10 @@ genHtml opts recursive theme outputDir printMetadata entry = do
 
 genModuleHtml :: Options -> Bool -> UTCTime -> Theme -> Module 'Scoped 'ModuleTop -> Html
 genModuleHtml opts printMetadata utc theme m =
-      docTypeHtml ! Attr.xmlns "http://www.w3.org/1999/xhtml" $
-        mhead
-          <> mbody
-          <> if printMetadata then infoFooter else mempty
+  docTypeHtml ! Attr.xmlns "http://www.w3.org/1999/xhtml" $
+    mhead
+      <> mbody
+      <> if printMetadata then infoFooter else mempty
   where
     themeCss :: Html
     themeCss = case theme of
@@ -108,8 +108,9 @@ genModuleHtml opts printMetadata utc theme m =
 
 genModule :: Options -> Bool -> UTCTime -> Theme -> Module 'Scoped 'ModuleTop -> Text
 genModule opts printMetadata utc theme =
-  toStrict .
-    Html.renderHtml . genModuleHtml opts printMetadata utc theme
+  toStrict
+    . Html.renderHtml
+    . genModuleHtml opts printMetadata utc theme
 
 docStream' :: PrettyCode a => Options -> a -> SimpleDocStream Ann
 docStream' opts m = layoutPretty defaultLayoutOptions (runPrettyCode opts m)

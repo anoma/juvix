@@ -509,7 +509,7 @@ checkTopModule ::
   Members '[Error ScoperError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
-checkTopModule m@(Module path params body) = do
+checkTopModule m@(Module path params doc body) = do
   checkPath
   r <- checkedModule
   modify (over (scoperModulesCache . cachedModules) (HashMap.insert path r))
@@ -555,11 +555,13 @@ checkTopModule m@(Module path params body) = do
         localScope $
           withParams params $ \params' -> do
             (_moduleExportInfo, body') <- checkModuleBody body
+            doc' <- mapM checkJudoc doc
             let _moduleRefModule =
                   Module
                     { _modulePath = path',
                       _moduleParameters = params',
-                      _moduleBody = body'
+                      _moduleBody = body',
+                      _moduleDoc = doc'
                     }
                 _moduleRefName = set S.nameConcrete () path'
             return ModuleRef'' {..}
@@ -589,12 +591,13 @@ checkLocalModule ::
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
-  (_moduleExportInfo, moduleBody', moduleParameters') <-
+  (_moduleExportInfo, moduleBody', moduleParameters', moduleDoc') <-
     withScope $
       withParams _moduleParameters $ \p' -> do
         inheritScope
         (e, b) <- checkModuleBody _moduleBody
-        return (e, b, p')
+        doc' <- mapM checkJudoc _moduleDoc
+        return (e, b, p', doc')
   _modulePath' <- reserveSymbolOf S.KNameLocalModule _modulePath
   let moduleId = _modulePath' ^. S.nameId
       _moduleRefName = set S.nameConcrete () _modulePath'
@@ -602,7 +605,8 @@ checkLocalModule Module {..} = do
         Module
           { _modulePath = _modulePath',
             _moduleParameters = moduleParameters',
-            _moduleBody = moduleBody'
+            _moduleBody = moduleBody',
+            _moduleDoc = moduleDoc'
           }
       entry :: ModuleRef' 'S.NotConcrete
       entry = mkModuleRef' @'ModuleLocal ModuleRef'' {..}
@@ -1214,12 +1218,14 @@ checkExpressionAtoms (ExpressionAtoms l i) = do
 
 checkJudoc ::
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
-  Judoc 'Parsed -> Sem r (Judoc 'Scoped)
+  Judoc 'Parsed ->
+  Sem r (Judoc 'Scoped)
 checkJudoc (Judoc atoms) = Judoc <$> mapM checkJudocAtom atoms
 
 checkJudocAtom ::
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
-  JudocAtom 'Parsed -> Sem r (JudocAtom 'Scoped)
+  JudocAtom 'Parsed ->
+  Sem r (JudocAtom 'Scoped)
 checkJudocAtom = \case
   JudocText t -> return (JudocText t)
   JudocNewline -> return JudocNewline

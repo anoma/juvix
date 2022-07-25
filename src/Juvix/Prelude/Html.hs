@@ -1,8 +1,8 @@
 module Juvix.Prelude.Html where
 
-import Text.Blaze.Html5.Attributes   qualified   as Attr
-import           Text.Blaze.Html5                as Html hiding (map)
 import Juvix.Prelude
+import Text.Blaze.Html5 as Html hiding (map)
+import Text.Blaze.Html5.Attributes qualified as Attr
 
 cssLink :: AttributeValue -> Html
 cssLink css =

@@ -536,15 +536,15 @@ instance SingI s => PrettyCode (Judoc s) where
   ppCode (Judoc blck) =
     mconcatMapM ppLine (linesBy isNewLine blck)
     where
-    isNewLine :: JudocAtom s -> Bool
-    isNewLine = \case
-      JudocNewline -> True
-      _ -> False
-    ppLine :: [JudocAtom s] -> Sem r (Doc Ann)
-    ppLine atoms = do
-      atoms' <- mconcatMapM ppCode atoms
-      let prefix = pretty (Str.judocStart :: Text) :: Doc Ann
-      return $ prefix <> atoms' <> line
+      isNewLine :: JudocAtom s -> Bool
+      isNewLine = \case
+        JudocNewline -> True
+        _ -> False
+      ppLine :: [JudocAtom s] -> Sem r (Doc Ann)
+      ppLine atoms = do
+        atoms' <- mconcatMapM ppCode atoms
+        let prefix = pretty (Str.judocStart :: Text) :: Doc Ann
+        return $ prefix <> atoms' <> line
 
 instance SingI s => PrettyCode (JudocAtom s) where
   ppCode :: forall r. (Members '[Reader Options] r) => JudocAtom s -> Sem r (Doc Ann)
@@ -553,12 +553,12 @@ instance SingI s => PrettyCode (JudocAtom s) where
     JudocExpression e -> goExpression e
     JudocText t -> return (annotate AnnComment (pretty t))
     where
-    goExpression :: ExpressionType s -> Sem r (Doc Ann)
-    goExpression e = do
-      e' <- ppExpression e
-      return $ semiDelim e'
-    semiDelim :: Doc Ann -> Doc Ann
-    semiDelim = enclose1 (annotate AnnComment ";")
+      goExpression :: ExpressionType s -> Sem r (Doc Ann)
+      goExpression e = do
+        e' <- ppExpression e
+        return $ semiDelim e'
+      semiDelim :: Doc Ann -> Doc Ann
+      semiDelim = enclose1 (annotate AnnComment ";")
 
 instance SingI s => PrettyCode (TypeSignature s) where
   ppCode TypeSignature {..} = do
