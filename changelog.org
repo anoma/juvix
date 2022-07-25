@@ -6,6 +6,96 @@
 </a>
 #+end_html
 
+** [[https://github.com/anoma/juvix/tree/v0.2.2][v0.2.2]] (2022-07-25)
+   :PROPERTIES:
+   :CUSTOM_ID: v0.2.2-2022-07-25
+   :END:
+[[https://github.com/anoma/juvix/compare/v0.2.1...v0.2.2][Full
+Changelog]]
+
+*Implemented enhancements:*
+
+- Compute name dependency graph and filter unreachable definitions
+  [[https://github.com/anoma/juvix/pull/1408][#1408]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Support type aliases
+  [[https://github.com/anoma/juvix/pull/1404][#1404]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Add debugging custom function to Prelude
+  [[https://github.com/anoma/juvix/pull/1401][#1401]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Add positivity check for data types
+  [[https://github.com/anoma/juvix/pull/1393][#1393]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Keep qualified names
+  [[https://github.com/anoma/juvix/pull/1392][#1392]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Direct translation from MicroJuvix to MiniC
+  [[https://github.com/anoma/juvix/pull/1386][#1386]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Widens the accepted symbol list
+  [[https://github.com/anoma/juvix/pull/1385][#1385]]
+  ([[https://github.com/mariari][mariari]])
+- Check all the type parameter names are different when declaring an
+  inductive type [[https://github.com/anoma/juvix/pull/1377][#1377]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+
+*Fixed bugs:*
+
+- Curly braces are allowed nested in patterns
+  [[https://github.com/anoma/juvix/pull/1380][#1380]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+
+*Merged pull requests:*
+
+- Add =Fail= effect (#1409)
+  [[https://github.com/anoma/juvix/pull/1411][#1411]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Refactor of typechecking and other checking processes
+  [[https://github.com/anoma/juvix/pull/1410][#1410]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Use bold for code in scoper error messages
+  [[https://github.com/anoma/juvix/pull/1403][#1403]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Replace ppSimple by text
+  [[https://github.com/anoma/juvix/pull/1402][#1402]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Implement some error messages (#1396)
+  [[https://github.com/anoma/juvix/pull/1400][#1400]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Refactor childs of pattern parentheses and braces
+  [[https://github.com/anoma/juvix/pull/1398][#1398]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Update Juvix standard-library
+  [[https://github.com/anoma/juvix/pull/1389][#1389]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Fix documentation generation
+  [[https://github.com/anoma/juvix/pull/1387][#1387]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Adds Collatz sequence generator example
+  [[https://github.com/anoma/juvix/pull/1384][#1384]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- html-examples [[https://github.com/anoma/juvix/pull/1381][#1381]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Refine hole in type signature to function type
+  [[https://github.com/anoma/juvix/pull/1379][#1379]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Type checking fails when the type of a pattern is not given by the
+  signature [[https://github.com/anoma/juvix/pull/1378][#1378]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Set cname for gh-pages action
+  [[https://github.com/anoma/juvix/pull/1376][#1376]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Add fibonacci sequence example program
+  [[https://github.com/anoma/juvix/pull/1375][#1375]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Fix Changelog links and minors
+  [[https://github.com/anoma/juvix/pull/1371][#1371]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Add Version number to the emacs mode
+  [[https://github.com/anoma/juvix/pull/1320][#1320]]
+  ([[https://github.com/mariari][mariari]])
+
 ** [[https://github.com/anoma/minijuvix/tree/v0.2.1][v0.2.1]] (2022-07-12)
 
 [[https://github.com/anoma/minijuvix/compare/v0.2.0...v0.2.1][Full
