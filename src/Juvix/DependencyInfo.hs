@@ -12,7 +12,7 @@ import Juvix.Prelude
 -- specialise DependencyInfo to any particular name type
 data DependencyInfo n = DependencyInfo
   { _depInfoGraph :: Graph,
-    _depInfoNodeFromVertex :: Vertex -> (n, [n]),
+    _depInfoNodeFromVertex :: Vertex -> (n, HashSet n),
     _depInfoVertexFromName :: n -> Maybe Vertex,
     _depInfoReachable :: HashSet n
   }
@@ -23,7 +23,7 @@ createDependencyInfo :: (Hashable n, Ord n) => HashMap n (HashSet n) -> HashSet 
 createDependencyInfo edges startNames =
   DependencyInfo
     { _depInfoGraph = graph,
-      _depInfoNodeFromVertex = \v -> case nodeFromVertex v of (_, x, y) -> (x, y),
+      _depInfoNodeFromVertex = \v -> case nodeFromVertex v of (_, x, y) -> (x, HashSet.fromList y),
       _depInfoVertexFromName = vertexFromName,
       _depInfoReachable = reachableNames
     }
