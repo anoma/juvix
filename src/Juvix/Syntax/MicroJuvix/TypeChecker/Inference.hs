@@ -27,6 +27,7 @@ data Inference m a where
   MatchTypes :: Expression -> Expression -> Inference m (Maybe MatchError)
   QueryMetavar :: Hole -> Inference m (Maybe Expression)
   RegisterIden :: Name -> Expression -> Inference m ()
+  StrongNormalize :: Expression -> Inference m Expression
 
 makeSem ''Inference
 
@@ -83,6 +84,64 @@ closeState = \case
 
 getMetavar :: Member (State InferenceState) r => Hole -> Sem r MetavarState
 getMetavar h = gets (fromJust . (^. inferenceMap . at h))
+
+strongNormalize' :: forall r. Members '[Reader FunctionsTable, State InferenceState] r => Expression -> Sem r Expression
+strongNormalize' = go
+  where
+    go :: Expression -> Sem r Expression
+    go e = case e of
+      ExpressionIden i -> goIden i
+      ExpressionApplication app -> goApp app
+      ExpressionLiteral {} -> return e
+      ExpressionHole h -> goHole h
+      ExpressionUniverse {} -> return e
+      ExpressionFunction f -> ExpressionFunction <$> goFunction f
+      ExpressionLambda l -> ExpressionLambda <$> goLambda l
+
+    goLambda :: Lambda -> Sem r Lambda
+    goLambda (Lambda lamVar lamTy lamBody) = do
+      lamTy' <- go lamTy
+      lamBody' <- go lamBody
+      return (Lambda lamVar lamTy' lamBody')
+
+    goFunctionParam :: FunctionParameter -> Sem r FunctionParameter
+    goFunctionParam (FunctionParameter mvar i ty) = do
+      ty' <- go ty
+      return (FunctionParameter mvar i ty')
+
+    goFunction :: Function -> Sem r Function
+    goFunction (Function l r) = do
+      l' <- goFunctionParam l
+      r' <- go r
+      return (Function l' r')
+
+    goHole :: Hole -> Sem r Expression
+    goHole h = do
+      s <- getMetavar h
+      case s of
+        Fresh -> return (ExpressionHole h)
+        Refined r -> go r
+
+    goApp :: Application -> Sem r Expression
+    goApp (Application l r i) = do
+      l' <- go l
+      case l' of
+        ExpressionLambda (Lambda lamVar _ lamBody) -> do
+          go (substitutionE (HashMap.singleton lamVar r) lamBody)
+        _ -> do
+          r' <- go r
+          return (ExpressionApplication (Application l' r' i))
+
+    goIden :: Iden -> Sem r Expression
+    goIden i = case i of
+      IdenFunction f -> do
+        f' <- askFunctionDef f
+        case f' of
+          Nothing -> return i'
+          Just x -> go x
+      _ -> return i'
+      where
+        i' = ExpressionIden i
 
 weakNormalize' :: forall r. Members '[Reader FunctionsTable, State InferenceState] r => Expression -> Sem r Expression
 weakNormalize' = go
@@ -141,6 +200,7 @@ re = reinterpret $ \case
   MatchTypes a b -> matchTypes' a b
   QueryMetavar h -> queryMetavar' h
   RegisterIden i ty -> registerIden' i ty
+  StrongNormalize ty -> strongNormalize' ty
   where
     registerIden' :: Members '[State InferenceState] r => Name -> Expression -> Sem r ()
     registerIden' i ty = modify (over inferenceIdens (HashMap.insert i ty))
