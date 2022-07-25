@@ -6,6 +6,7 @@ module Base
   )
 where
 
+import Control.Monad.Extra as Monad
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
 import Juvix.Prelude
@@ -41,7 +42,7 @@ assertEqDiff msg a b
   | otherwise = do
       putStrLn (pack $ ppDiff (getGroupedDiff pa pb))
       putStrLn "End diff"
-      fail msg
+      Monad.fail msg
   where
     pa = lines $ ppShow a
     pb = lines $ ppShow b
