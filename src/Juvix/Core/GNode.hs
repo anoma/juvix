@@ -6,7 +6,9 @@ module Juvix.Core.GNode where
 -}
 
 import Data.Functor.Identity
+import Data.HashSet qualified as HashSet
 import Juvix.Prelude
+import Juvix.Core.Builtins
 
 {---------------------------------------------------------------------------------}
 {- Program graph datatype -}
@@ -33,12 +35,10 @@ data GNode i
   | -- Global identifier of a function (with corresponding `GNode` in the global
     -- context).
     Ident !i !Symbol
-  | -- Global identifier of an external / builtin (no corresponding GNode). For
-    -- example, basic arithmetic operations go into `Builtin`. The numeric
-    -- symbol values for basic builtin operations (e.g. arithmetic) should be
-    -- fixed in Core, so that the evaluator and the code generator know about
-    -- them and can treat them specially.
-    Builtin !i !Symbol
+  | -- A builtin with no corresponding GNode, treated specially by the evaluator
+    -- and the code generator. For example, basic arithmetic operations go into
+    -- `Builtin`.
+    Builtin !i !Builtin
   | Literal !i {-# UNPACK #-} !Constant
   | App !i !(GNode i) !(GNode i)
   | Lambda !i !(GNode i)
@@ -59,6 +59,12 @@ data GNode i
 --   down the pipeline)
 -- - primitive record projections (efficiency of evaluation / code generation)
 -- - Fix and CoFix (anonymous recursion / co-recursion)
+-- - with dependent types, it might actually be more reasonable to have Pi as
+--   another node (because it's a binder); computationally it would be a unit,
+--   erased in further stages of the pipeline
+-- - with Pi a node, other basic type constructors should also be nodes:
+--   TypeIdent (named type identifier available in the global context, e.g.,
+--   inductive type), Universe
 
 data Constant
   = ConstInteger !Integer
@@ -70,8 +76,7 @@ data Constant
 -- - ConstFloat
 -- - ConstString
 -- - ConstType: computationally a unit, corresponds to a type argument; the
---   attached an info stores the type information; erased further down the
---   pipeline
+--   attached info stores the type information; erased further down the pipeline
 
 data CaseBranch i = CaseBranch !Tag !(GNode i)
 
@@ -81,8 +86,7 @@ data CaseBranch i = CaseBranch !Tag !(GNode i)
 -- a collector collects information top-down on a single path in the program
 -- tree
 data Collector a c = Collector
-  {
-    _cEmpty :: c,
+  { _cEmpty :: c,
     _cCollect :: a -> c -> c
   }
 
@@ -183,3 +187,100 @@ ufoldG coll uplus f = go (coll ^. cEmpty)
       _ -> f c n
       where
         c' = (coll ^. cCollect) n c
+
+ufoldM :: Monad m => (a -> a -> a) -> (GNode i -> m a) -> GNode i -> m a
+ufoldM uplus f = ufoldG unitCollector uplus (const f)
+
+ufoldMB :: Monad m => (a -> a -> a) -> ([i] -> GNode i -> m a) -> GNode i -> m a
+ufoldMB uplus f = ufoldG (bindingCollector (Collector [] (:))) uplus f
+
+ufoldMN :: Monad m => (a -> a -> a) -> (Index -> GNode i -> m a) -> GNode i -> m a
+ufoldMN uplus f = ufoldG (bindingCollector (Collector 0 (const (+ 1)))) uplus f
+
+ufold :: (a -> a -> a) -> (GNode i -> a) -> GNode i -> a
+ufold uplus f n = runIdentity $ ufoldM uplus (return . f) n
+
+ufoldB :: (a -> a -> a) -> ([i] -> GNode i -> a) -> GNode i -> a
+ufoldB uplus f n = runIdentity $ ufoldMB uplus (\is -> return . f is) n
+
+ufoldN :: (a -> a -> a) -> (Index -> GNode i -> a) -> GNode i -> a
+ufoldN uplus f n = runIdentity $ ufoldMN uplus (\idx -> return . f idx) n
+
+walk :: Monad m => (GNode i -> m ()) -> GNode i -> m ()
+walk = ufoldM mappend
+
+walkB :: Monad m => ([i] -> GNode i -> m ()) -> GNode i -> m ()
+walkB = ufoldMB mappend
+
+walkN :: Monad m => (Index -> GNode i -> m ()) -> GNode i -> m ()
+walkN = ufoldMN mappend
+
+gather :: (a -> GNode i -> a) -> a -> GNode i -> a
+gather f acc n = fst $ run $ runState acc (walk (\n' -> modify (`f` n')) n)
+
+gatherB :: ([i] -> a -> GNode i -> a) -> a -> GNode i -> a
+gatherB f acc n = fst $ run $ runState acc (walkB (\is n' -> modify (\a -> f is a n')) n)
+
+gatherN :: (Index -> a -> GNode i -> a) -> a -> GNode i -> a
+gatherN f acc n = fst $ run $ runState acc (walkN (\idx n' -> modify (\a -> f idx a n')) n)
+
+{---------------------------------------------------------------------------}
+{- useful functions implemented using general recursors -}
+
+isClosed :: GNode i -> Bool
+isClosed = ufoldN (&&) go
+  where
+    go :: Index -> GNode i -> Bool
+    go k = \case
+      Var _ idx | idx >= k -> False
+      _ -> True
+
+getFreeVars :: GNode i -> HashSet Index
+getFreeVars = gatherN go HashSet.empty
+  where
+    go :: Index -> HashSet Index -> GNode i -> HashSet Index
+    go k acc = \case
+      Var _ idx | idx >= k -> HashSet.insert (idx - k) acc
+      _ -> acc
+
+getIdents :: GNode i -> HashSet Symbol
+getIdents = gather go HashSet.empty
+  where
+    go :: HashSet Symbol -> GNode i -> HashSet Symbol
+    go acc = \case
+      Ident _ sym -> HashSet.insert sym acc
+      _ -> acc
+
+countFreeVarOccurrences :: Index -> GNode i -> Int
+countFreeVarOccurrences idx = gatherN go 0
+  where
+    go k acc = \case
+      Var _ idx' | idx' == idx + k -> acc + 1
+      _ -> acc
+
+-- increase all free variable indices by a given value
+shift :: Index -> GNode i -> GNode i
+shift m = umapN go
+  where
+    go k n = case n of
+      Var i idx | idx >= k -> Var i (idx + m)
+      _ -> n
+
+-- substitute a term t for the free variable with de Bruijn index 0, avoiding
+-- variable capture
+subst :: GNode i -> GNode i -> GNode i
+subst t = umapN go
+  where
+    go k n = case n of
+      Var _ idx | idx == k -> shift k t
+      _ -> n
+
+-- reduce all beta redexes present in a term (newly created redexes are not
+-- recursively reduced)
+reduceBeta :: GNode i -> GNode i
+reduceBeta = umap go
+  where
+    go :: GNode i -> GNode i
+    go n = case n of
+      App _ (Lambda _ body) arg -> subst arg body
+      _ -> n
