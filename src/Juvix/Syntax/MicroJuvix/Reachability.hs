@@ -1,6 +1,6 @@
 module Juvix.Syntax.MicroJuvix.Reachability where
 
-import Juvix.DependencyInfo qualified as DepInfo
+import Juvix.Syntax.Abstract.NameDependencyInfo
 import Juvix.Prelude
 import Juvix.Syntax.MicroJuvix.Language
 import Juvix.Syntax.MicroJuvix.MicroJuvixArityResult qualified as MicroArity
@@ -10,38 +10,23 @@ import Juvix.Syntax.MicroJuvix.MicroJuvixTypedResult qualified as MicroTyped
 filterUnreachable :: MicroTyped.MicroJuvixTypedResult -> MicroTyped.MicroJuvixTypedResult
 filterUnreachable r = r {MicroTyped._resultModules = modules'}
   where
-    depInfo =
-      DepInfo.computeReachability
-        (r ^. (MicroTyped.resultMicroJuvixArityResult . MicroArity.resultMicroJuvixResult . resultDepInfo))
-        startNames
-    startNames = getTopLevelNames (head modules)
+    depInfo = r ^. (MicroTyped.resultMicroJuvixArityResult . MicroArity.resultMicroJuvixResult . resultDepInfo)
     modules = r ^. MicroTyped.resultModules
     modules' = run $ runReader depInfo (mapM goModule modules)
 
-getTopLevelNames :: Module -> [Name]
-getTopLevelNames m = mapMaybe getDeclName (m ^. (moduleBody . moduleStatements))
-  where
-    getDeclName :: Statement -> Maybe Name
-    getDeclName = \case
-      StatementInductive i -> Just (i ^. inductiveName)
-      StatementFunction f -> Just (f ^. funDefName)
-      StatementForeign {} -> Nothing
-      StatementAxiom ax -> Just (ax ^. axiomName)
-      StatementInclude {} -> Nothing
-
-returnIfReachable :: Member (Reader DependencyInfo) r => Name -> a -> Sem r (Maybe a)
+returnIfReachable :: Member (Reader NameDependencyInfo) r => Name -> a -> Sem r (Maybe a)
 returnIfReachable n a = do
   depInfo <- ask
-  return $ if DepInfo.isReachable depInfo n then Just a else Nothing
+  return $ if isReachable depInfo n then Just a else Nothing
 
-goModule :: Member (Reader DependencyInfo) r => Module -> Sem r Module
+goModule :: Member (Reader NameDependencyInfo) r => Module -> Sem r Module
 goModule m = do
   stmts <- mapM goStatement (body ^. moduleStatements)
   return m {_moduleBody = body {_moduleStatements = catMaybes stmts}}
   where
     body = m ^. moduleBody
 
-goStatement :: Member (Reader DependencyInfo) r => Statement -> Sem r (Maybe Statement)
+goStatement :: Member (Reader NameDependencyInfo) r => Statement -> Sem r (Maybe Statement)
 goStatement s = case s of
   StatementInductive i -> returnIfReachable (i ^. inductiveName) s
   StatementFunction f -> returnIfReachable (f ^. funDefName) s

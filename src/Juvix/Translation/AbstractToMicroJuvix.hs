@@ -62,7 +62,7 @@ entryMicroJuvix abstractResults = do
       abstractResults
         ^. Abstract.abstractResultEntryPoint
         . E.entryPointNoTermination
-    depInfo = buildDependencyInfo (toList (abstractResults ^. Abstract.resultModules))
+    depInfo = buildDependencyInfo (abstractResults ^. Abstract.resultModules) (abstractResults ^. Abstract.resultExports)
 
 goModule ::
   Members '[State TranslationState, Error TypeCheckerError] r =>

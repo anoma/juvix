@@ -14,7 +14,8 @@ import Juvix.Syntax.Abstract.Language
 data AbstractResult = AbstractResult
   { _resultScoper :: ScoperResult,
     _resultTable :: InfoTable,
-    _resultModules :: NonEmpty TopModule
+    _resultModules :: NonEmpty TopModule,
+    _resultExports :: HashSet NameId
   }
 
 makeLenses ''AbstractResult

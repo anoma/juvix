@@ -81,5 +81,13 @@ tests =
       "N.juvix"
       ( HashSet.fromList
           ["test", "Unit"]
+      ),
+    PosTest
+      "Reachability with public imports"
+      "Reachability"
+      StdlibInclude
+      "O.juvix"
+      ( HashSet.fromList
+          ["f", "g", "h", "k", "Bool", "Maybe"]
       )
   ]

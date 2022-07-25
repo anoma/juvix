@@ -29,6 +29,7 @@ unsupported msg = error $ msg <> "Scoped to Abstract: not yet supported"
 entryAbstract :: Members '[Error ScoperError, Builtins, NameIdGen] r => Scoper.ScoperResult -> Sem r AbstractResult
 entryAbstract _resultScoper = do
   (_resultTable, _resultModules) <- runInfoTableBuilder (evalState (ModulesCache mempty) (mapM goTopModule ms))
+  let _resultExports = _resultScoper ^. Scoper.resultExports
   return AbstractResult {..}
   where
     ms = _resultScoper ^. Scoper.resultModules

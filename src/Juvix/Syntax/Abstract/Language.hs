@@ -220,8 +220,8 @@ instance HasLoc AxiomDef where
 instance HasLoc FunctionDef where
   getLoc = getLoc . (^. funDefName)
 
-getName :: Iden -> Name
-getName = \case
+getIdenName :: Iden -> Name
+getIdenName = \case
   IdenFunction r -> r ^. functionRefName
   IdenConstructor r -> r ^. constructorRefName
   IdenVar n -> n
