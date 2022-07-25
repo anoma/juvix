@@ -3,7 +3,7 @@ module Juvix.Syntax.Abstract.DependencyBuilder (buildDependencyInfo) where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Prelude
-import Juvix.Syntax.Abstract.Language
+import Juvix.Syntax.Abstract.Language.Extra
 import Juvix.Syntax.Abstract.NameDependencyInfo
 
 -- adjacency set representation
@@ -19,6 +19,8 @@ buildDependencyInfo :: NonEmpty TopModule -> ExportsTable -> NameDependencyInfo
 buildDependencyInfo ms tab =
   createDependencyInfo graph startNodes
   where
+    startNodes :: StartNodes
+    graph :: DependencyGraph
     (startNodes, graph) =
       run $
         evalState (HashSet.empty :: VisitedModules) $
@@ -44,18 +46,15 @@ addEdge n1 n2 =
 checkStartNode :: Members '[Reader ExportsTable, State StartNodes] r => Name -> Sem r ()
 checkStartNode n = do
   tab <- ask
-  if
-      | HashSet.member (n ^. nameId) tab -> addStartNode n
-      | otherwise -> return ()
+  when
+    (HashSet.member (n ^. nameId) tab)
+    (addStartNode n)
 
 guardNotVisited :: Member (State VisitedModules) r => Name -> Sem r () -> Sem r ()
-guardNotVisited n cont = do
-  s <- get
-  if
-      | HashSet.member n s -> return ()
-      | otherwise -> do
-          put (HashSet.insert n s)
-          cont
+guardNotVisited n cont =
+  unlessM
+    (HashSet.member n <$> get)
+    (modify (HashSet.insert n) >> cont)
 
 goModule :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State VisitedModules] r => Module -> Sem r ()
 goModule m = do
@@ -102,7 +101,7 @@ goFunctionClause p c = goExpression p (c ^. clauseBody)
 
 goExpression :: Member (State DependencyGraph) r => Name -> Expression -> Sem r ()
 goExpression p e = case e of
-  ExpressionIden i -> addEdge p (getIdenName i)
+  ExpressionIden i -> addEdge p (idenName i)
   ExpressionUniverse {} -> return ()
   ExpressionFunction f -> do
     goFunctionParameter p (f ^. funParameter)

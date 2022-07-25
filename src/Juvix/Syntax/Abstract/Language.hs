@@ -219,11 +219,3 @@ instance HasLoc AxiomDef where
 
 instance HasLoc FunctionDef where
   getLoc = getLoc . (^. funDefName)
-
-getIdenName :: Iden -> Name
-getIdenName = \case
-  IdenFunction r -> r ^. functionRefName
-  IdenConstructor r -> r ^. constructorRefName
-  IdenVar n -> n
-  IdenAxiom r -> r ^. axiomRefName
-  IdenInductive r -> r ^. inductiveRefName

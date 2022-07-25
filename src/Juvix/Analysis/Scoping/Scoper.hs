@@ -493,7 +493,7 @@ checkTopModules ::
   Sem r (NonEmpty (Module 'Scoped 'ModuleTop), HashSet NameId)
 checkTopModules modules = do
   r <- checkTopModule (head modules)
-  mods <- (:|) (r ^. moduleRefModule) <$> mapM checkTopModule_ (NonEmpty.tail modules)
+  mods <- (r ^. moduleRefModule :|) <$> mapM checkTopModule_ (NonEmpty.tail modules)
   return (mods, createExportsTable (r ^. moduleExportInfo))
 
 checkTopModule_ ::

@@ -19,22 +19,27 @@ data DependencyInfo n = DependencyInfo
 
 makeLenses ''DependencyInfo
 
-createDependencyInfo :: (Hashable n, Ord n) => HashMap n (HashSet n) -> HashSet n -> DependencyInfo n
+createDependencyInfo :: forall n. (Hashable n, Ord n) => HashMap n (HashSet n) -> HashSet n -> DependencyInfo n
 createDependencyInfo edges startNames =
   DependencyInfo
     { _depInfoGraph = graph,
-      _depInfoNodeFromVertex = \v -> case nodeFromVertex v of (_, x, y) -> (x, HashSet.fromList y),
+      _depInfoNodeFromVertex = \v -> let (_, x, y) = nodeFromVertex v in (x, HashSet.fromList y),
       _depInfoVertexFromName = vertexFromName,
       _depInfoReachable = reachableNames
     }
   where
+    graph :: Graph
+    nodeFromVertex :: Vertex -> (n, n, [n])
+    vertexFromName :: n -> Maybe Vertex
     (graph, nodeFromVertex, vertexFromName) =
       Graph.graphFromEdges $
         map (\(x, y) -> (x, x, HashSet.toList y)) (HashMap.toList edges)
+    reachableNames :: HashSet n
     reachableNames =
       HashSet.fromList $
         map (\v -> case nodeFromVertex v of (_, x, _) -> x) $
           concatMap (Graph.reachable graph) startVertices
+    startVertices :: [Vertex]
     startVertices = mapMaybe vertexFromName (HashSet.toList startNames)
 
 nameFromVertex :: DependencyInfo n -> Vertex -> n
