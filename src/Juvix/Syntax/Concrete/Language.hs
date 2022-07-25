@@ -187,6 +187,7 @@ instance HasLoc OperatorSyntaxDef where
 data TypeSignature (s :: Stage) = TypeSignature
   { _sigName :: FunctionName s,
     _sigType :: ExpressionType s,
+    _sigDoc :: Maybe (Judoc s),
     _sigBuiltin :: Maybe BuiltinFunction,
     _sigTerminating :: Bool
   }
@@ -897,7 +898,30 @@ data ExpressionAtoms (s :: Stage) = ExpressionAtoms
     _expressionAtomsLoc :: Interval
   }
 
+newtype Judoc (s :: Stage) = Judoc {
+  _block :: [JudocAtom s]
+  }
+  deriving newtype (Semigroup, Monoid)
+
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (Judoc s)
+
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Judoc s)
+
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Judoc s)
+
+data JudocAtom (s :: Stage) =
+  JudocExpression (ExpressionType s)
+  | JudocText Text
+  | JudocNewline
+
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocAtom s)
+
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocAtom s)
+
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocAtom s)
+
 makeLenses ''PatternArg
+makeLenses ''Judoc
 makeLenses ''Function
 makeLenses ''InductiveDef
 makeLenses ''PostfixApplication

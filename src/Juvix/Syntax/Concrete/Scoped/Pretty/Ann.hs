@@ -6,6 +6,7 @@ import Juvix.Syntax.Concrete.Scoped.Name qualified as S
 data Ann
   = AnnKind S.NameKind
   | AnnKeyword
+  | AnnComment
   | AnnDelimiter
   | AnnLiteralString
   | AnnLiteralInteger

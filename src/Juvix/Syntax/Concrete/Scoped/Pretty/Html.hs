@@ -1,4 +1,4 @@
-module Juvix.Syntax.Concrete.Scoped.Pretty.Html (genHtml, Theme (..)) where
+module Juvix.Syntax.Concrete.Scoped.Pretty.Html (genHtml, Theme (..), ppCodeHtml) where
 
 import Data.ByteString qualified as BS
 import Data.Text qualified as Text
@@ -7,6 +7,7 @@ import Data.Text.Lazy (toStrict)
 import Data.Time.Clock
 import Data.Time.Format
 import Juvix.Prelude
+import Juvix.Prelude.Html
 import Juvix.Syntax.Concrete.Language
 import Juvix.Syntax.Concrete.Scoped.Name qualified as S
 import Juvix.Syntax.Concrete.Scoped.Pretty.Base
@@ -58,10 +59,8 @@ genHtml opts recursive theme outputDir printMetadata entry = do
       where
         htmlFile = topModulePathToDottedPath (m ^. modulePath . S.nameConcrete) <.> ".html"
 
-genModule :: Options -> Bool -> UTCTime -> Theme -> Module 'Scoped 'ModuleTop -> Text
-genModule opts printMetadata utc theme m =
-  toStrict $
-    Html.renderHtml $
+genModuleHtml :: Options -> Bool -> UTCTime -> Theme -> Module 'Scoped 'ModuleTop -> Html
+genModuleHtml opts printMetadata utc theme m =
       docTypeHtml ! Attr.xmlns "http://www.w3.org/1999/xhtml" $
         mhead
           <> mbody
@@ -75,9 +74,7 @@ genModule opts printMetadata utc theme m =
     prettySrc :: Html
     prettySrc =
       (pre ! Attr.id "src-content") $
-        renderTree $
-          treeForm $
-            docStream' opts m
+        ppCodeHtml' opts m
 
     mheader :: Html
     mheader =
@@ -109,11 +106,22 @@ genModule opts printMetadata utc theme m =
 
         formattedTime = formatTime defaultTimeLocale "%Y-%m-%d %-H:%M %Z" utc
 
-docStream' :: Options -> Module 'Scoped 'ModuleTop -> SimpleDocStream Ann
+genModule :: Options -> Bool -> UTCTime -> Theme -> Module 'Scoped 'ModuleTop -> Text
+genModule opts printMetadata utc theme =
+  toStrict .
+    Html.renderHtml . genModuleHtml opts printMetadata utc theme
+
+docStream' :: PrettyCode a => Options -> a -> SimpleDocStream Ann
 docStream' opts m = layoutPretty defaultLayoutOptions (runPrettyCode opts m)
 
 renderTree :: SimpleDocTree Ann -> Html
 renderTree = go
+
+ppCodeHtml' :: PrettyCode a => Options -> a -> Html
+ppCodeHtml' opts = renderTree . treeForm . docStream' opts
+
+ppCodeHtml :: PrettyCode a => a -> Html
+ppCodeHtml = ppCodeHtml' defaultOptions
 
 go :: SimpleDocTree Ann -> Html
 go sdt = case sdt of
@@ -134,6 +142,7 @@ putTag ann x = case ann of
   AnnLiteralString -> Html.span ! Attr.class_ "ju-string" $ x
   AnnKeyword -> Html.span ! Attr.class_ "ju-keyword" $ x
   AnnUnkindedSym -> Html.span ! Attr.class_ "ju-var" $ x
+  AnnComment -> Html.span ! Attr.class_ "ju-var" $ x -- TODO add comment class
   AnnDelimiter -> Html.span ! Attr.class_ "ju-delimiter" $ x
   AnnDef tmp ni -> tagDef tmp ni
   AnnRef tmp ni -> tagRef tmp ni
@@ -166,26 +175,3 @@ nameIdAttr (S.NameId k) = fromString . show $ k
 nameIdAttrRef :: TopModulePath -> S.NameId -> AttributeValue
 nameIdAttrRef tp s =
   topModulePathToDottedPath tp <> ".html" <> preEscapedToValue '#' <> nameIdAttr s
-
-cssLink :: AttributeValue -> Html
-cssLink css =
-  link
-    ! Attr.href css
-    ! Attr.rel "stylesheet"
-    ! Attr.type_ "text/css"
-
-ayuCss :: Html
-ayuCss = cssLink "assets/source-ayu-light.css"
-
-nordCss :: Html
-nordCss = cssLink "assets/source-nord.css"
-
-highlightJs :: Html
-highlightJs =
-  script
-    ! Attr.src "assets/highlight.js"
-    ! Attr.type_ "text/javascript"
-    $ mempty
-
-metaUtf8 :: Html
-metaUtf8 = meta ! Attr.charset "UTF-8"

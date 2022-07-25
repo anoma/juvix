@@ -8,6 +8,9 @@ module_ = "module"
 axiom :: IsString s => s
 axiom = "axiom"
 
+judocStart :: IsString s => s
+judocStart = "---"
+
 end :: IsString s => s
 end = "end"
 

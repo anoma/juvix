@@ -531,13 +531,43 @@ instance SingI s => PrettyCode (OpenModule s) where
         Public -> Just kwPublic
         NoPublic -> Nothing
 
+instance SingI s => PrettyCode (Judoc s) where
+  ppCode :: forall r. Members '[Reader Options] r => Judoc s -> Sem r (Doc Ann)
+  ppCode (Judoc blck) =
+    mconcatMapM ppLine (linesBy isNewLine blck)
+    where
+    isNewLine :: JudocAtom s -> Bool
+    isNewLine = \case
+      JudocNewline -> True
+      _ -> False
+    ppLine :: [JudocAtom s] -> Sem r (Doc Ann)
+    ppLine atoms = do
+      atoms' <- mconcatMapM ppCode atoms
+      let prefix = pretty (Str.judocStart :: Text) :: Doc Ann
+      return $ prefix <> atoms' <> line
+
+instance SingI s => PrettyCode (JudocAtom s) where
+  ppCode :: forall r. (Members '[Reader Options] r) => JudocAtom s -> Sem r (Doc Ann)
+  ppCode = \case
+    JudocNewline -> return "\n"
+    JudocExpression e -> goExpression e
+    JudocText t -> return (annotate AnnComment (pretty t))
+    where
+    goExpression :: ExpressionType s -> Sem r (Doc Ann)
+    goExpression e = do
+      e' <- ppExpression e
+      return $ semiDelim e'
+    semiDelim :: Doc Ann -> Doc Ann
+    semiDelim = enclose1 (annotate AnnComment ";")
+
 instance SingI s => PrettyCode (TypeSignature s) where
   ppCode TypeSignature {..} = do
     let sigTerminating' = if _sigTerminating then kwTerminating <> line else mempty
     sigName' <- annDef _sigName <$> ppSymbol _sigName
     sigType' <- ppExpression _sigType
     builtin' <- traverse ppCode _sigBuiltin
-    return $ builtin' <?+> sigTerminating' <> sigName' <+> kwColon <+> sigType'
+    doc' <- mapM ppCode _sigDoc
+    return $ doc' <?+> builtin' <?+> sigTerminating' <> sigName' <+> kwColon <+> sigType'
 
 instance SingI s => PrettyCode (Function s) where
   ppCode :: forall r. Members '[Reader Options] r => Function s -> Sem r (Doc Ann)

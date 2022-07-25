@@ -16,6 +16,7 @@ fromScopedAnn s = case s of
   S.AnnKind nk -> Just (AnnKind nk)
   S.AnnKeyword -> Nothing
   S.AnnDelimiter -> Nothing
+  S.AnnComment -> Nothing
   S.AnnUnkindedSym -> Nothing
   S.AnnDef {} -> Nothing
   S.AnnRef {} -> Nothing

@@ -3,9 +3,7 @@ module MiniTicTacToe;
 open import Stdlib.Data.Nat.Ord;
 open import Stdlib.Prelude;
 
---------------------------------------------------------------------------------
 -- Render Utils
---------------------------------------------------------------------------------
 
 infixr 5 ++str;
 axiom ++str : String → String → String;
@@ -13,6 +11,8 @@ compile ++str {
   c ↦ "concat";
 };
 
+--- Concatenates a list of strings
+--- ;concat ("a" ∷ nil) ("b ∷ nil"); evaluates to ;"a" ∷ "b" ∷ nil;
 concat : List String → String;
 concat ≔ foldl (++str) "";
 
@@ -22,12 +22,11 @@ surround x xs ≔ (x ∷ intersperse x xs) ++ (x ∷ nil);
 intercalate : String → List String → String;
 intercalate sep xs ≔ concat (intersperse sep xs);
 
+--- Joins a list of strings with the newline character
 unlines : List String → String;
 unlines ≔ intercalate "\n";
 
---------------------------------------------------------------------------------
 -- Symbol
---------------------------------------------------------------------------------
 
 inductive Symbol {
   O : Symbol;
@@ -47,9 +46,7 @@ showSymbol : Symbol → String;
 showSymbol O ≔ "O";
 showSymbol X ≔ "X";
 
---------------------------------------------------------------------------------
 -- Square
---------------------------------------------------------------------------------
 
 inductive Square {
   empty : ℕ → Square;
@@ -65,9 +62,7 @@ showSquare : Square → String;
 showSquare (empty n) ≔ " " ++str natToStr n ++str " ";
 showSquare (occupied s) ≔ " " ++str showSymbol s ++str " ";
 
---------------------------------------------------------------------------------
 -- Board
---------------------------------------------------------------------------------
 
 inductive Board {
   board : List (List Square) → Board;
@@ -96,9 +91,7 @@ showRow xs ≔ concat (surround "|" (map showSquare xs));
 showBoard : Board → String;
 showBoard (board squares) ≔ unlines (surround "+---+---+---+" (map showRow squares));
 
---------------------------------------------------------------------------------
 -- Error
---------------------------------------------------------------------------------
 
 inductive Error {
   noError : Error;
@@ -106,9 +99,7 @@ inductive Error {
   terminate : String → Error;
 };
 
---------------------------------------------------------------------------------
 -- GameState
---------------------------------------------------------------------------------
 
 inductive GameState {
   state : Board → Symbol → Error → GameState;
@@ -132,9 +123,7 @@ won (state (board squares) _ _) ≔ any full (diagonals squares ++ rows squares 
 draw : GameState → Bool;
 draw (state (board squares) _ _) ≔ null (possibleMoves (flatten squares));
 
---------------------------------------------------------------------------------
 -- Move
---------------------------------------------------------------------------------
 
 replace : Symbol → ℕ → Square → Square;
 replace player k (empty n) ≔ if (n Stdlib.Data.Nat.Ord.== k) (occupied player) (empty n);
@@ -158,9 +147,7 @@ playMove (just k) (state (board s) player e) ≔
                            (switch player)
                            noError));
 
---------------------------------------------------------------------------------
 -- IO Utils
---------------------------------------------------------------------------------
 
 axiom readline : String;
 compile readline {
@@ -173,9 +160,7 @@ compile parsePositiveInt {
   c ↦ "parsePositiveInt";
 };
 
---------------------------------------------------------------------------------
 -- IO
---------------------------------------------------------------------------------
 
 validMove : ℕ → Maybe ℕ;
 validMove n ≔ if ((n <= nine) && (n >= one)) (just n) nothing;

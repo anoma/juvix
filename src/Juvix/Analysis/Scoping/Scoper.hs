@@ -409,7 +409,8 @@ checkTypeSignature ::
 checkTypeSignature TypeSignature {..} = do
   sigType' <- checkParseExpressionAtoms _sigType
   sigName' <- bindFunctionSymbol _sigName
-  registerFunction' TypeSignature {_sigName = sigName', _sigType = sigType', ..}
+  sigDoc' <- mapM checkJudoc _sigDoc
+  registerFunction' TypeSignature {_sigName = sigName', _sigType = sigType', _sigDoc = sigDoc', ..}
 
 checkConstructorDef ::
   Members '[Error ScoperError, Reader LocalVars, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
@@ -1210,6 +1211,19 @@ checkExpressionAtoms ::
   Sem r (ExpressionAtoms 'Scoped)
 checkExpressionAtoms (ExpressionAtoms l i) = do
   (`ExpressionAtoms` i) <$> mapM checkExpressionAtom l
+
+checkJudoc ::
+  Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
+  Judoc 'Parsed -> Sem r (Judoc 'Scoped)
+checkJudoc (Judoc atoms) = Judoc <$> mapM checkJudocAtom atoms
+
+checkJudocAtom ::
+  Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
+  JudocAtom 'Parsed -> Sem r (JudocAtom 'Scoped)
+checkJudocAtom = \case
+  JudocText t -> return (JudocText t)
+  JudocNewline -> return JudocNewline
+  JudocExpression e -> JudocExpression <$> checkParseExpressionAtoms e
 
 checkParseExpressionAtoms ::
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>

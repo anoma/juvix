@@ -9,6 +9,7 @@ stylize :: Ann -> AnsiStyle
 stylize a = case a of
   AnnKind k -> nameKindAnsi k
   AnnDelimiter -> colorDull White
+  AnnComment -> colorDull Cyan
   AnnKeyword -> colorDull Blue
   AnnDef {} -> mempty
   AnnRef {} -> mempty

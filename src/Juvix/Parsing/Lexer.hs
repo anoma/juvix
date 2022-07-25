@@ -23,13 +23,26 @@ makeLenses ''ParserParams
 space :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 space = L.space space1 lineComment block
   where
+    skipLineComment :: ParsecS r ()
+    skipLineComment = do
+      notFollowedBy (P.chunk Str.judocStart)
+      void (P.chunk "--")
+      void (P.takeWhileP Nothing (/= '\n'))
+
     lineComment :: ParsecS r ()
-    lineComment =
-      interval (L.skipLineComment "--") >>= lift . registerComment . snd
+    lineComment = comment_ skipLineComment
 
     block :: ParsecS r ()
-    block =
-      interval (L.skipBlockComment "{-" "-}") >>= lift . registerComment . snd
+    block = comment_ (L.skipBlockComment "{-" "-}")
+
+comment :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r a
+comment c = do
+  (a, i) <- interval c
+  P.lift (registerComment i)
+  return a
+
+comment_ :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r ()
+comment_ = void . comment
 
 lexeme :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r a
 lexeme = L.lexeme space

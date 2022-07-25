@@ -278,8 +278,7 @@ infixl 7 <+?>
 (<+?>) :: Doc ann -> Maybe (Doc ann) -> Doc ann
 (<+?>) a = maybe a (a <+>)
 
-infixl 7 <?+>
-
+infixr 7 <?+>
 (<?+>) :: Maybe (Doc ann) -> Doc ann -> Doc ann
 (<?+>) = \case
   Nothing -> id
