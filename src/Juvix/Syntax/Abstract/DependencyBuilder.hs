@@ -45,8 +45,8 @@ checkStartNode :: Members '[Reader ExportsTable, State StartNodes] r => Name -> 
 checkStartNode n = do
   tab <- ask
   if
-    | HashSet.member (n ^. nameId) tab -> addStartNode n
-    | otherwise -> return ()
+      | HashSet.member (n ^. nameId) tab -> addStartNode n
+      | otherwise -> return ()
 
 guardNotVisited :: Member (State VisitedModules) r => Name -> Sem r () -> Sem r ()
 guardNotVisited n cont = do

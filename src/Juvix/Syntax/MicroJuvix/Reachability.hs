@@ -1,7 +1,7 @@
 module Juvix.Syntax.MicroJuvix.Reachability where
 
-import Juvix.Syntax.Abstract.NameDependencyInfo
 import Juvix.Prelude
+import Juvix.Syntax.Abstract.NameDependencyInfo
 import Juvix.Syntax.MicroJuvix.Language
 import Juvix.Syntax.MicroJuvix.MicroJuvixArityResult qualified as MicroArity
 import Juvix.Syntax.MicroJuvix.MicroJuvixResult

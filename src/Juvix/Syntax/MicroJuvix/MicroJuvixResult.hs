@@ -5,9 +5,9 @@ module Juvix.Syntax.MicroJuvix.MicroJuvixResult
 where
 
 import Juvix.Pipeline.EntryPoint qualified as E
-import Juvix.Syntax.Abstract.NameDependencyInfo qualified as DepInfo
 import Juvix.Prelude
 import Juvix.Syntax.Abstract.AbstractResult qualified as Abstract
+import Juvix.Syntax.Abstract.NameDependencyInfo qualified as DepInfo
 import Juvix.Syntax.MicroJuvix.InfoTable
 import Juvix.Syntax.MicroJuvix.Language
 
