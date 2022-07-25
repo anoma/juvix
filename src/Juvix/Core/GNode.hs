@@ -5,6 +5,7 @@ module Juvix.Core.GNode where
   general recursors on it.
 -}
 
+import Data.Functor.Identity
 import Juvix.Prelude
 
 {---------------------------------------------------------------------------------}
@@ -20,7 +21,7 @@ type Symbol = Word
 type Tag = Word
 
 -- de Bruijn index
-type Index = Word
+type Index = Int
 
 -- `GNode i` is the type of nodes in the program graph, where `i` is the info
 -- type. `GNode` itself contains only runtime-relevant information.
@@ -39,7 +40,7 @@ data GNode i
     -- them and can treat them specially.
     Builtin !i !Symbol
   | Literal !i {-# UNPACK #-} !Constant
-  | App !i !(GNode i) ![GNode i]
+  | App !i !(GNode i) !(GNode i)
   | Lambda !i !(GNode i)
   | -- `let x := value in body` is not reducible to lambda + application for the purposes
     -- of ML-polymorphic / dependent type checking or code generation!
@@ -77,85 +78,108 @@ data CaseBranch i = CaseBranch !Tag !(GNode i)
 {---------------------------------------------------------------------------------}
 {- General recursors on GNode  -}
 
--- i: info type
--- a: top-down accumulator type
--- b: result type (bottom-up accumulator)
-data GNodeSig i a b = GNodeSig
-  { _fVar :: a -> i -> Index -> b,
-    _fIdent :: a -> i -> Symbol -> b,
-    _fBuiltin :: a -> i -> Symbol -> b,
-    _fConstInteger :: a -> i -> Integer -> b,
-    _fConstBool :: a -> i -> Bool -> b,
-    _fConstHole :: a -> i -> b,
-    _fApp :: a -> i -> GNode i -> b -> [GNode i] -> [b] -> b,
-    _fLambda :: a -> i -> GNode i -> b -> b,
-    _fLetIn :: a -> i -> GNode i -> b -> GNode i -> b -> b,
-    _fData :: a -> i -> Tag -> [GNode i] -> [b] -> b,
-    _fCase :: a -> i -> GNode i -> b -> [CaseBranch i] -> [b] -> b,
-    _fLambdaClosure :: a -> i -> [GNode i] -> [b] -> GNode i -> b -> b
+-- a collector collects information top-down on a single path in the program
+-- tree
+data Collector a c = Collector
+  {
+    _cEmpty :: c,
+    _cCollect :: a -> c -> c
   }
 
-makeLenses ''GNodeSig
+makeLenses ''Collector
 
--- `recurse f sig acc` recurses through the graph, using `sig` to accumulate
--- results bottom-up, `f` to accumulate values top-down on the current path with
--- `a` the initial top-down accumulator value
-recurse :: GNodeSig i a b -> (a -> GNode i -> a) -> a -> GNode i -> b
-recurse sig f a n = case n of
-  Var i idx -> (sig ^. fVar) a i idx
-  Ident i sym -> (sig ^. fIdent) a i sym
-  Builtin i sym -> (sig ^. fBuiltin) a i sym
-  Literal i (ConstInteger int) -> (sig ^. fConstInteger) a i int
-  Literal i (ConstBool b) -> (sig ^. fConstBool) a i b
-  Literal i ConstHole -> (sig ^. fConstHole) a i
-  App i l args -> (sig ^. fApp) a i l (goRec l) args (map goRec args)
-  Lambda i body -> (sig ^. fLambda) a i body (goRec body)
-  LetIn i value body -> (sig ^. fLetIn) a i value (goRec value) body (goRec body)
-  Data i tag args -> (sig ^. fData) a i tag args (map goRec args)
-  Case i value branches -> (sig ^. fCase) a i value (goRec value) branches (map (\(CaseBranch _ br) -> goRec br) branches)
-  LambdaClosure i env body -> (sig ^. fLambdaClosure) a i env (map goRec env) body (goRec body)
+unitCollector :: Collector a ()
+unitCollector = Collector () (\_ _ -> ())
+
+bindingCollector :: Collector i c -> Collector (GNode i) c
+bindingCollector coll = Collector (coll ^. cEmpty) collect
   where
-    goRec = recurse sig f (f a n)
+    collect n c = case n of
+      Lambda i _ -> (coll ^. cCollect) i c
+      LetIn i _ _ -> (coll ^. cCollect) i c
+      LambdaClosure i _ _ -> (coll ^. cCollect) i c
+      _ -> c
 
--- recurse with binding info
-recurseWithBindingInfo :: i' -> (i -> i' -> i') -> GNodeSig i (i', a) b -> (i' -> a -> GNode i -> a) -> a -> GNode i -> b
-recurseWithBindingInfo nil cs sig f acc = recurse sig f' (nil, acc)
+-- `umapG` maps the nodes bottom-up, i.e., when invoking the mapper function the
+-- recursive subnodes have already been mapped
+umapG :: Monad m => Collector (GNode i) c -> (c -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+umapG coll f = go (coll ^. cEmpty)
   where
-    f' (is, a) n = case n of
-      Lambda i _ -> (cs i is, f is a n)
-      LetIn i _ _ -> (cs i is, f is a n)
-      LambdaClosure i _ _ -> (cs i is, f is a n)
-      _ -> (is, f is a n)
+    go c n = case n of
+      App i l r -> f c =<< (App i <$> go c' l <*> go c' r)
+      Lambda i body -> f c . Lambda i =<< go c' body
+      LetIn i value body -> f c =<< (LetIn i <$> go c' value <*> go c' body)
+      Data i tag args -> f c . Data i tag =<< mapM (go c') args
+      Case i value bs -> f c =<< (Case i <$> go c' value <*> mapM (\(CaseBranch tag br) -> CaseBranch tag <$> go c' br) bs)
+      LambdaClosure i env body -> f c =<< (LambdaClosure i <$> mapM (go c') env <*> go c' body)
+      _ -> f c n
+      where
+        c' = (coll ^. cCollect) n c
 
-recurseB :: GNodeSig i ([i], a) b -> ([i] -> a -> GNode i -> a) -> a -> GNode i -> b
-recurseB = recurseWithBindingInfo [] (:)
+umapM :: Monad m => (GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+umapM f = umapG unitCollector (const f)
 
-recurseN :: GNodeSig i (Int, a) b -> (Int -> a -> GNode i -> a) -> a -> GNode i -> b
-recurseN = recurseWithBindingInfo 0 (const (+ 1))
+umapMB :: Monad m => ([i] -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+umapMB f = umapG (bindingCollector (Collector [] (:))) f
 
-nmapSig :: (a -> GNode i -> GNode i) -> GNodeSig i a (GNode i)
-nmapSig f =
-  GNodeSig
-    {
-      _fVar = \a i idx -> f a (Var i idx),
-      _fIdent = \a i sym -> f a (Ident i sym),
-      _fBuiltin = \a i sym -> f a (Ident i sym),
-      _fConstInteger = \a i int -> f a (Literal i (ConstInteger int)),
-      _fConstBool = \a i b -> f a (Literal i (ConstBool b)),
-      _fConstHole = \a i -> f a (Literal i ConstHole),
-      _fApp = \a i _ l' _ args' -> f a (App i l' args'),
-      _fLambda = \a i _ body' -> f a (Lambda i body'),
-      _fLetIn = \a i _ value' _ body' -> f a (LetIn i value' body'),
-      _fData = \a i tag _ args' -> f a (Data i tag args'),
-      _fCase = \a i _ value' bs bs' -> f a (Case i value' (zipWithExact (\(CaseBranch tag _) br' -> CaseBranch tag br') bs bs')),
-      _fLambdaClosure = \a i _ env' _ body' -> f a (LambdaClosure i env' body')
-    }
+umapMN :: Monad m => (Index -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+umapMN f = umapG (bindingCollector (Collector 0 (const (+ 1)))) f
 
-nmap :: (GNode i -> GNode i) -> GNode i -> GNode i
-nmap f = recurse (nmapSig (const f)) (\_ _ -> ()) ()
+umap :: (GNode i -> GNode i) -> GNode i -> GNode i
+umap f n = runIdentity $ umapM (return . f) n
 
-nmapB :: ([i] -> GNode i -> GNode i) -> GNode i -> GNode i
-nmapB f = recurseB (nmapSig (f . fst)) (\_ _ _ -> ()) ()
+umapB :: ([i] -> GNode i -> GNode i) -> GNode i -> GNode i
+umapB f n = runIdentity $ umapMB (\is -> return . f is) n
 
-nmapN :: (Int -> GNode i -> GNode i) -> GNode i -> GNode i
-nmapN f = recurseN (nmapSig (f . fst)) (\_ _ _ -> ()) ()
+umapN :: (Index -> GNode i -> GNode i) -> GNode i -> GNode i
+umapN f n = runIdentity $ umapMN (\idx -> return . f idx) n
+
+-- `dmapG` maps the nodes top-down
+dmapG :: Monad m => Collector (GNode i) c -> (c -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+dmapG coll f = go (coll ^. cEmpty)
+  where
+    go c n = do
+      n' <- f c n
+      let c' = (coll ^. cCollect) n' c
+      case n' of
+        App i l r -> App i <$> go c' l <*> go c' r
+        Lambda i body -> Lambda i <$> go c' body
+        LetIn i value body -> LetIn i <$> go c' value <*> go c' body
+        Data i tag args -> Data i tag <$> mapM (go c') args
+        Case i value bs -> Case i <$> go c' value <*> mapM (\(CaseBranch tag br) -> CaseBranch tag <$> go c' br) bs
+        LambdaClosure i env body -> LambdaClosure i <$> mapM (go c') env <*> go c' body
+        _ -> return n'
+
+dmapM :: Monad m => (GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+dmapM f = dmapG unitCollector (const f)
+
+dmapMB :: Monad m => ([i] -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+dmapMB f = dmapG (bindingCollector (Collector [] (:))) f
+
+dmapMN :: Monad m => (Index -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+dmapMN f = dmapG (bindingCollector (Collector 0 (const (+ 1)))) f
+
+dmap :: (GNode i -> GNode i) -> GNode i -> GNode i
+dmap f n = runIdentity $ dmapM (return . f) n
+
+dmapB :: ([i] -> GNode i -> GNode i) -> GNode i -> GNode i
+dmapB f n = runIdentity $ dmapMB (\is -> return . f is) n
+
+dmapN :: (Index -> GNode i -> GNode i) -> GNode i -> GNode i
+dmapN f n = runIdentity $ dmapMN (\idx -> return . f idx) n
+
+-- `ufoldG` folds the tree bottom-up; `uplus` combines the values - it should be
+-- commutative and associative
+ufoldG :: Monad m => Collector (GNode i) c -> (a -> a -> a) -> (c -> GNode i -> m a) -> GNode i -> m a
+ufoldG coll uplus f = go (coll ^. cEmpty)
+  where
+    go c n = case n of
+      App _ l r -> uplus <$> f c n <*> (uplus <$> go c' l <*> go c' r)
+      Lambda _ body -> uplus <$> f c n <*> go c' body
+      LetIn _ value body -> uplus <$> f c n <*> (uplus <$> go c' value <*> go c' body)
+      Data _ _ args -> foldr (liftM2 uplus . go c') (f c n) args
+      Case _ value bs -> uplus <$> f c n <*> foldr (liftM2 uplus . (\(CaseBranch _ br) -> go c' br)) (go c' value) bs
+      LambdaClosure _ env body -> uplus <$> f c n <*> foldr (liftM2 uplus . go c') (go c' body) env
+      _ -> f c n
+      where
+        c' = (coll ^. cCollect) n c
