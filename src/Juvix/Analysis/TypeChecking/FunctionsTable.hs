@@ -1,4 +1,4 @@
-module Juvix.Syntax.MicroJuvix.TypeChecker.FunctionsTable where
+module Juvix.Analysis.TypeChecking.FunctionsTable where
 
 import Juvix.Prelude
 import Juvix.Syntax.MicroJuvix.Language

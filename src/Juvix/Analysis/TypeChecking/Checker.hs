@@ -17,6 +17,7 @@ import Juvix.Syntax.MicroJuvix.Language.Extra
 import Juvix.Syntax.MicroJuvix.LocalVars
 import Juvix.Syntax.MicroJuvix.MicroJuvixArityResult
 import Juvix.Syntax.MicroJuvix.MicroJuvixTypedResult
+import Juvix.Syntax.MicroJuvix.Pretty
 
 registerConstructor :: Members '[State TypesTable, Reader InfoTable] r => InductiveConstructorDef -> Sem r ()
 registerConstructor ctr = do

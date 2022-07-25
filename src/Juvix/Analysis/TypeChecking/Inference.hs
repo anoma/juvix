@@ -1,16 +1,15 @@
-module Juvix.Syntax.MicroJuvix.TypeChecker.Inference
-  ( module Juvix.Syntax.MicroJuvix.TypeChecker.Inference,
-    module Juvix.Syntax.MicroJuvix.TypeChecker.FunctionsTable,
+module Juvix.Analysis.TypeChecking.Inference
+  ( module Juvix.Analysis.TypeChecking.Inference,
+    module Juvix.Analysis.TypeChecking.FunctionsTable,
   )
 where
-module Juvix.Analysis.TypeChecking.Inference where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Analysis.TypeChecking.FunctionsTable
 import Juvix.Prelude hiding (fromEither)
 import Juvix.Syntax.MicroJuvix.Error
 import Juvix.Syntax.MicroJuvix.Language.Extra
 import Juvix.Syntax.MicroJuvix.MicroJuvixTypedResult
-import Juvix.Syntax.MicroJuvix.TypeChecker.FunctionsTable
 
 data MetavarState
   = Fresh
