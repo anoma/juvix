@@ -1,8 +1,8 @@
 module Juvix.Syntax.Concrete.Scoped.Highlight where
 
 import Juvix.Internal.Strings qualified as Str
+import Juvix.Parsing.ParsedItem
 import Juvix.Prelude
-import Juvix.Syntax.Concrete.Parser.ParsedItem
 import Juvix.Syntax.Concrete.Scoped.Name
 import Prettyprinter
 import Prettyprinter.Render.Text

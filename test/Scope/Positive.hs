@@ -2,13 +2,13 @@ module Scope.Positive where
 
 import Base
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Analysis.Scoping.Scoper qualified as Scoper
 import Juvix.Internal.NameIdGen
+import Juvix.Parsing.Parser qualified as Parser
 import Juvix.Pipeline
 import Juvix.Pipeline.Setup
 import Juvix.Prelude.Pretty
-import Juvix.Syntax.Concrete.Parser qualified as Parser
 import Juvix.Syntax.Concrete.Scoped.Pretty qualified as M
-import Juvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
 import Juvix.Syntax.Concrete.Scoped.Utils
 
 data PosTest = PosTest

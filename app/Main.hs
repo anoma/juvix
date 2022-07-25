@@ -6,24 +6,24 @@ import Commands.Internal.Termination as Termination
 import Control.Exception qualified as IO
 import Control.Monad.Extra
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Analysis.Scoping.Scoper qualified as Scoper
+import Juvix.Analysis.Termination qualified as Termination
+import Juvix.Analysis.TypeChecking qualified as MicroTyped
+import Juvix.Parsing.Parser qualified as Parser
 import Juvix.Pipeline
 import Juvix.Prelude hiding (Doc)
 import Juvix.Prelude.Pretty hiding (Doc)
 import Juvix.Syntax.Abstract.InfoTable qualified as Abstract
 import Juvix.Syntax.Abstract.Language qualified as Abstract
 import Juvix.Syntax.Abstract.Pretty qualified as Abstract
-import Juvix.Syntax.Concrete.Parser qualified as Parser
 import Juvix.Syntax.Concrete.Scoped.Highlight qualified as Highlight
 import Juvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoper
 import Juvix.Syntax.Concrete.Scoped.Pretty qualified as Scoper
 import Juvix.Syntax.Concrete.Scoped.Pretty.Html
-import Juvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
 import Juvix.Syntax.MicroJuvix.MicroJuvixArityResult qualified as MicroArity
 import Juvix.Syntax.MicroJuvix.Pretty qualified as Micro
-import Juvix.Syntax.MicroJuvix.TypeChecker qualified as MicroTyped
 import Juvix.Syntax.MiniHaskell.Pretty qualified as MiniHaskell
 import Juvix.Syntax.MonoJuvix.Pretty qualified as Mono
-import Juvix.Termination qualified as Termination
 import Juvix.Translation.AbstractToMicroJuvix qualified as Micro
 import Juvix.Translation.MicroJuvixToMiniC qualified as MiniC
 import Juvix.Translation.MicroJuvixToMonoJuvix qualified as Mono

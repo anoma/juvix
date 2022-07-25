@@ -4,12 +4,12 @@ module Juvix.Syntax.Abstract.AbstractResult
   )
 where
 
+import Juvix.Analysis.Scoping.ScoperResult
+import Juvix.Parsing.ParserResult
 import Juvix.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude
 import Juvix.Syntax.Abstract.InfoTable
 import Juvix.Syntax.Abstract.Language
-import Juvix.Syntax.Concrete.Parser.ParserResult
-import Juvix.Syntax.Concrete.Scoped.Scoper.ScoperResult
 
 data AbstractResult = AbstractResult
   { _resultScoper :: ScoperResult,

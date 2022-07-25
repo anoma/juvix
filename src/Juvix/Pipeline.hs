@@ -4,18 +4,17 @@ module Juvix.Pipeline
   )
 where
 
+import Juvix.Analysis.Arity qualified as MicroJuvix
+import Juvix.Analysis.Scoping qualified as Scoper
+import Juvix.Analysis.TypeChecking qualified as MicroJuvix
 import Juvix.Builtins
 import Juvix.Internal.NameIdGen
+import Juvix.Parsing.Parser qualified as Parser
 import Juvix.Pipeline.EntryPoint
 import Juvix.Pipeline.Setup qualified as Setup
 import Juvix.Prelude
 import Juvix.Syntax.Abstract.AbstractResult qualified as Abstract
-import Juvix.Syntax.Concrete.Parser qualified as Parser
-import Juvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
-import Juvix.Syntax.MicroJuvix.ArityChecker qualified as MicroJuvix
 import Juvix.Syntax.MicroJuvix.MicroJuvixResult qualified as MicroJuvix
-import Juvix.Syntax.MicroJuvix.MicroJuvixTypedResult qualified as MicroJuvix
-import Juvix.Syntax.MicroJuvix.TypeChecker qualified as MicroJuvix
 import Juvix.Translation.AbstractToMicroJuvix qualified as MicroJuvix
 import Juvix.Translation.MicroJuvixToMiniC qualified as MiniC
 import Juvix.Translation.MicroJuvixToMonoJuvix qualified as MonoJuvix

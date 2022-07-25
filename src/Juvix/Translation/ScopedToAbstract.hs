@@ -5,6 +5,7 @@ module Juvix.Translation.ScopedToAbstract
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Analysis.Scoping.Scoper qualified as Scoper
 import Juvix.Builtins
 import Juvix.Internal.NameIdGen
 import Juvix.Prelude
@@ -16,7 +17,6 @@ import Juvix.Syntax.Concrete.Language qualified as Concrete
 import Juvix.Syntax.Concrete.Scoped.Error
 import Juvix.Syntax.Concrete.Scoped.Name qualified as S
 import Juvix.Syntax.Concrete.Scoped.Name.NameKind
-import Juvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
 
 newtype ModulesCache = ModulesCache
   {_cachedModules :: HashMap S.NameId Abstract.TopModule}

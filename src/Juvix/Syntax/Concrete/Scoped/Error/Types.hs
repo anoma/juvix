@@ -8,15 +8,15 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty.Extra qualified as NonEmpty
+import Juvix.Analysis.Scoping.Scope
+import Juvix.Parsing.Error qualified as Parser
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 import Juvix.Syntax.Concrete.Language
 import Juvix.Syntax.Concrete.Language qualified as L
-import Juvix.Syntax.Concrete.Parser.Error qualified as Parser
 import Juvix.Syntax.Concrete.Scoped.Error.Ann
 import Juvix.Syntax.Concrete.Scoped.Error.Pretty
 import Juvix.Syntax.Concrete.Scoped.Name qualified as S
-import Juvix.Syntax.Concrete.Scoped.Scope
 
 data MultipleDeclarations = MultipleDeclarations
   { _multipleDeclEntry :: SymbolEntry,

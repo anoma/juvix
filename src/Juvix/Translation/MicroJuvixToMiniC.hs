@@ -5,6 +5,7 @@ module Juvix.Translation.MicroJuvixToMiniC
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Analysis.Scoping.Scoper qualified as Scoper
 import Juvix.Builtins
 import Juvix.Internal.Strings qualified as Str
 import Juvix.Prelude
@@ -13,7 +14,6 @@ import Juvix.Syntax.Backends
 import Juvix.Syntax.Concrete.Language qualified as C
 import Juvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoper
 import Juvix.Syntax.Concrete.Scoped.Name qualified as Scoper
-import Juvix.Syntax.Concrete.Scoped.Scoper qualified as Scoper
 import Juvix.Syntax.ForeignBlock
 import Juvix.Syntax.MicroJuvix.Language.Extra (mkPolyType')
 import Juvix.Syntax.MicroJuvix.Language.Extra qualified as Micro

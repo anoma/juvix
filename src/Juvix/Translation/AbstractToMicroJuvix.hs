@@ -1,11 +1,12 @@
 module Juvix.Translation.AbstractToMicroJuvix
   ( module Juvix.Translation.AbstractToMicroJuvix,
     module Juvix.Syntax.MicroJuvix.MicroJuvixResult,
-    module Juvix.Termination.Checker,
+    module Juvix.Analysis.Termination.Checker,
   )
 where
 
 import Data.HashSet qualified as HashSet
+import Juvix.Analysis.Termination.Checker
 import Juvix.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude
 import Juvix.Syntax.Abstract.AbstractResult qualified as Abstract
@@ -15,7 +16,6 @@ import Juvix.Syntax.MicroJuvix.Language
 import Juvix.Syntax.MicroJuvix.Language.Extra
 import Juvix.Syntax.MicroJuvix.MicroJuvixResult
 import Juvix.Syntax.Usage
-import Juvix.Termination.Checker
 
 newtype TranslationState = TranslationState
   { -- | Top modules are supposed to be included at most once.

@@ -3,12 +3,12 @@ module Juvix.Analysis.Positivity.Checker where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Juvix.Analysis.TypeChecking.Inference
 import Juvix.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude hiding (fromEither)
 import Juvix.Syntax.MicroJuvix.Error
 import Juvix.Syntax.MicroJuvix.InfoTable
 import Juvix.Syntax.MicroJuvix.Language.Extra
-import Juvix.Syntax.MicroJuvix.TypeChecker.Inference
 
 type NegativeTypeParameters = HashSet VarName
 
