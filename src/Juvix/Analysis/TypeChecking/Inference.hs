@@ -3,6 +3,7 @@ module Juvix.Analysis.TypeChecking.Inference
     module Juvix.Analysis.TypeChecking.FunctionsTable,
   )
 where
+module Juvix.Analysis.TypeChecking.Inference where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Analysis.TypeChecking.FunctionsTable
