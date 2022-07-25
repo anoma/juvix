@@ -6,7 +6,6 @@ where
 
 import Juvix.Analysis.Arity qualified as MicroJuvix
 import Juvix.Analysis.Scoping qualified as Scoper
-import Juvix.Syntax.Concrete.Scoped.Error qualified as Scoper
 import Juvix.Analysis.TypeChecking qualified as MicroJuvix
 import Juvix.Builtins
 import Juvix.Internal.NameIdGen
