@@ -308,7 +308,7 @@ viewConstructorType :: Abstract.Expression -> Sem r ([Expression], Expression)
 viewConstructorType = \case
   Abstract.ExpressionFunction f -> first toList <$> viewFunctionType f
   Abstract.ExpressionIden i -> return ([], ExpressionIden (goTypeIden i))
-  Abstract.ExpressionHole {} -> unsupported "holes in constructor type"
+  Abstract.ExpressionHole h -> return ([], ExpressionHole h)
   Abstract.ExpressionApplication a -> do
     a' <- goTypeApplication a
     return ([], ExpressionApplication a')

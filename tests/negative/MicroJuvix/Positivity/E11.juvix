@@ -1,0 +1,14 @@
+module E11;
+
+inductive T0 (A : Type) {
+t : (A -> T0 A) -> T0 _;
+};
+
+alias : Type -> Type -> Type;
+alias A B := A -> B;
+
+inductive T1 {
+  c : alias T1 T1 -> _;
+};
+
+end;
