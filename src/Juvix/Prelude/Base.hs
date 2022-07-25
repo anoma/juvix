@@ -67,7 +67,7 @@ module Juvix.Prelude.Base
 where
 
 import Control.Applicative
-import Control.Monad.Extra
+import Control.Monad.Extra hiding (fail)
 import Control.Monad.Fix
 import Data.Bifunctor hiding (first, second)
 import Data.Bitraversable
