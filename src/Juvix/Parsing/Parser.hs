@@ -456,6 +456,7 @@ inductiveDef :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r =
 inductiveDef _inductiveBuiltin = do
   _inductivePositive <- isJust <$> optional kwPositive
   kwInductive
+  _inductiveDoc <- P.lift getJudoc
   _inductiveName <- symbol
   _inductiveParameters <- P.many inductiveParam
   _inductiveType <- optional (kwColon >> parseExpressionAtoms)

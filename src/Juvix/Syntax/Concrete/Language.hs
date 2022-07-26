@@ -246,6 +246,7 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Ind
 
 data InductiveDef (s :: Stage) = InductiveDef
   { _inductiveBuiltin :: Maybe BuiltinInductive,
+    _inductiveDoc :: Maybe (Judoc s),
     _inductiveName :: InductiveName s,
     _inductiveParameters :: [InductiveParameter s],
     _inductiveType :: Maybe (ExpressionType s),

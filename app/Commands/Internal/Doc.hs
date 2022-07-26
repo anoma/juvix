@@ -16,7 +16,7 @@ parseDoc = do
       str
       ( long "output-dir"
           <> metavar "DIR"
-          <> value "html"
+          <> value "doc"
           <> showDefault
           <> help "html output directory"
           <> action "directory"

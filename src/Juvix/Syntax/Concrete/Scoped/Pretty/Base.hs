@@ -377,7 +377,7 @@ instance (SingI s, SingI t) => PrettyCode (Module s t) where
           <> moduleBody'
           <> line
           <> kwEnd
-      <?> lastSemicolon
+      <>? lastSemicolon
     where
       lastSemicolon = case sing :: SModuleIsTop t of
         SModuleLocal -> Nothing
@@ -448,9 +448,10 @@ instance PrettyCode (Doc Ann) where
 instance SingI s => PrettyCode (InductiveDef s) where
   ppCode :: forall r. Members '[Reader Options] r => InductiveDef s -> Sem r (Doc Ann)
   ppCode d@InductiveDef {..} = do
+    doc' <- mapM ppCode _inductiveDoc
     sig' <- ppInductiveSignature d
     inductiveConstructors' <- ppBlock _inductiveConstructors
-    return $ sig' <+> inductiveConstructors'
+    return $ doc' ?<> sig' <+> inductiveConstructors'
 
 dotted :: Foldable f => f (Doc Ann) -> Doc Ann
 dotted = concatWith (surround kwDot)
@@ -499,7 +500,7 @@ instance PrettyCode n => PrettyCode (S.Name' n) where
   ppCode S.Name' {..} = do
     nameConcrete' <- annotateKind _nameKind <$> ppCode _nameConcrete
     uid <- nameIdSuffix _nameId
-    return $ annSRef (nameConcrete' <?> uid)
+    return $ annSRef (nameConcrete' <>? uid)
     where
       annSRef :: Doc Ann -> Doc Ann
       annSRef = annotate (AnnRef (_nameDefinedIn ^. S.absTopModulePath) _nameId)
@@ -579,7 +580,7 @@ instance SingI s => PrettyCode (TypeSignature s) where
     sigType' <- ppExpression _sigType
     builtin' <- traverse ppCode _sigBuiltin
     doc' <- mapM ppCode _sigDoc
-    return $ doc' <?+> builtin' <?+> sigTerminating' <> sigName' <+> kwColon <+> sigType'
+    return $ doc' ?<> builtin' <?+> sigTerminating' <> sigName' <+> kwColon <+> sigType'
 
 instance SingI s => PrettyCode (Function s) where
   ppCode :: forall r. Members '[Reader Options] r => Function s -> Sem r (Doc Ann)
@@ -875,7 +876,7 @@ ppHole w = case sing :: SStage s of
 instance PrettyCode Hole where
   ppCode h = do
     suff <- nameIdSuffix (h ^. holeId)
-    return (kwWildcard <?> suff)
+    return (kwWildcard <>? suff)
 
 instance SingI s => PrettyCode (ExpressionAtom s) where
   ppCode = \case

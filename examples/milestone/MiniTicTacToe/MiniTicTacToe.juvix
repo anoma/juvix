@@ -36,6 +36,7 @@ unlines ≔ intercalate "\n";
 
 -- Symbol
 
+--- A symbol represents a token that can be placed in a square
 inductive Symbol {
   O : Symbol;
   X : Symbol;

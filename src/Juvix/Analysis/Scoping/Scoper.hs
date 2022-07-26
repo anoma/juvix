@@ -465,11 +465,13 @@ checkInductiveDef ::
 checkInductiveDef ty@InductiveDef {..} = do
   withParams _inductiveParameters $ \inductiveParameters' -> do
     inductiveType' <- mapM checkParseExpressionAtoms _inductiveType
+    inductiveDoc' <- mapM checkJudoc _inductiveDoc
     inductiveName' <- bindInductiveSymbol _inductiveName
     inductiveConstructors' <- mapM checkConstructorDef _inductiveConstructors
     registerInductive'
       InductiveDef
         { _inductiveName = inductiveName',
+          _inductiveDoc = inductiveDoc',
           _inductiveBuiltin = _inductiveBuiltin,
           _inductiveParameters = inductiveParameters',
           _inductiveType = inductiveType',

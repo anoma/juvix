@@ -260,7 +260,7 @@ instance ToGenericError NotInScope where
     where
       msg =
         "Symbol not in scope:" <+> ppCode _notInScopeSymbol
-          <?> ((line <>) <$> suggestion)
+          <>? ((line <>) <$> suggestion)
       suggestion :: Maybe (Doc a)
       suggestion
         | null suggestions = Nothing

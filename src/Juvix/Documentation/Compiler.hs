@@ -214,7 +214,7 @@ goAxiom axiom = do
 goInductive :: forall r. Members '[Reader HtmlOptions] r => InductiveDef 'Scoped -> Sem r Html
 goInductive def = do
   header' <- inductiveHeader
-  defHeader tmp uid header' Nothing
+  defHeader tmp uid header' (def ^. inductiveDoc)
   where
     uid :: NameId
     uid = def ^. inductiveName . S.nameId

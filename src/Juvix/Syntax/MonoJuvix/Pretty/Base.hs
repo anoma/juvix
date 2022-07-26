@@ -42,7 +42,7 @@ instance PrettyCode Name where
     return
       $ annotate (AnnKind (n ^. nameKind))
       $ pretty (n ^. nameText)
-      <?> uid
+      <>? uid
 
 instance PrettyCode Iden where
   ppCode :: Member (Reader Options) r => Iden -> Sem r (Doc Ann)

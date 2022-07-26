@@ -285,12 +285,15 @@ infixr 7 <?+>
   Nothing -> id
   Just a -> (a <+>)
 
-infixl 7 <?>
+infixr 7 ?<>
 
-(<?>) :: Semigroup m => m -> Maybe m -> m
-(<?>) a = maybe a (a <>)
+(?<>) :: Semigroup m => Maybe m -> m -> m
+(?<>) = maybe id (<>)
 
---------------------------------------------------------------------------------
+infixl 7 <>?
+
+(<>?) :: Semigroup m => m -> Maybe m -> m
+(<>?) a = maybe a (a <>)
 
 data Indexed a = Indexed
   { _indexedIx :: Int,
