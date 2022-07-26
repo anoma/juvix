@@ -1,9 +1,8 @@
 module Juvix.Documentation.Compiler where
 
+import Data.ByteString qualified as BS
 import Data.ByteString.Builder qualified as Builder
 import Data.Time.Clock
-import Juvix.Utils.Paths
-import Data.ByteString qualified as BS
 import Juvix.Documentation.Extra
 import Juvix.Prelude
 import Juvix.Prelude qualified as Prelude
@@ -15,6 +14,7 @@ import Juvix.Syntax.Concrete.Scoped.Pretty
 import Juvix.Syntax.Concrete.Scoped.Pretty.Html
 import Juvix.Syntax.Concrete.Scoped.Utils
 import Juvix.Syntax.NameId
+import Juvix.Utils.Paths
 import Text.Blaze.Html.Renderer.Utf8 qualified as Html
 -- import Data.HashMap.Strict    qualified          as HashMap
 import Text.Blaze.Html5 as Html hiding (map)
@@ -139,16 +139,18 @@ goTopModule m = do
           rightMenu' <- rightMenu
           return $
             Html.div ! Attr.id "package-header" $
-              (Html.span ! Attr.class_ "caption" $
-                "package name - version")
+              ( Html.span ! Attr.class_ "caption" $
+                  "package name - version"
+              )
                 <> rightMenu'
-              where
-              rightMenu :: Sem s Html
-              rightMenu = do
-                sourceRef' <- local (set htmlOptionsKind HtmlSrc) (nameIdAttrRef tmp Nothing)
-                return $ ul ! Attr.id "page-menu" ! Attr.class_ "links" $
-                 li (a ! Attr.href sourceRef' $ "Source")
-                 <> li (a ! Attr.href (preEscapedToValue '#') $ "Index")
+          where
+            rightMenu :: Sem s Html
+            rightMenu = do
+              sourceRef' <- local (set htmlOptionsKind HtmlSrc) (nameIdAttrRef tmp Nothing)
+              return $
+                ul ! Attr.id "page-menu" ! Attr.class_ "links" $
+                  li (a ! Attr.href sourceRef' $ "Source")
+                    <> li (a ! Attr.href (preEscapedToValue '#') $ "Index")
 
         mfooter :: Html
         mfooter = mempty
