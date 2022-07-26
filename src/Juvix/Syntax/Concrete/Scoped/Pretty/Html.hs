@@ -26,12 +26,12 @@ data Theme
   | Ayu
   deriving stock (Show)
 
-data HtmlKind =
-  HtmlDoc
+data HtmlKind
+  = HtmlDoc
   | HtmlSrc
 
-newtype HtmlOptions = HtmlOptions {
-  _htmlOptionsKind :: HtmlKind
+newtype HtmlOptions = HtmlOptions
+  { _htmlOptionsKind :: HtmlKind
   }
 
 makeLenses ''HtmlOptions
@@ -82,9 +82,10 @@ genModuleHtml opts printMetadata utc theme m =
       Nord -> nordCss
 
     htmlOpts :: HtmlOptions
-    htmlOpts = HtmlOptions {
-      _htmlOptionsKind = HtmlSrc
-      }
+    htmlOpts =
+      HtmlOptions
+        { _htmlOptionsKind = HtmlSrc
+        }
 
     pp :: PrettyCode a => a -> Html
     pp = ppCodeHtml' htmlOpts opts
@@ -170,14 +171,16 @@ putTag ann x = case ann of
   where
     tagDef :: TopModulePath -> S.NameId -> Sem r Html
     tagDef tmp nid =
-      Html.span ! Attr.id (nameIdAttr nid) <$>
-        tagRef tmp nid
+      Html.span ! Attr.id (nameIdAttr nid)
+        <$> tagRef tmp nid
 
     tagRef :: TopModulePath -> S.NameId -> Sem r Html
     tagRef tmp ni = do
       pth <- nameIdAttrRef tmp ni
-      return $ Html.span ! Attr.class_ "annot" $
-        a ! Attr.href pth $ x
+      return $
+        Html.span ! Attr.class_ "annot" $
+          a ! Attr.href pth $
+            x
 
     tagKind k =
       Html.span
@@ -196,5 +199,6 @@ nameIdAttr :: S.NameId -> AttributeValue
 nameIdAttr (S.NameId k) = fromString . show $ k
 
 nameIdAttrRef :: TopModulePath -> S.NameId -> Sem r AttributeValue
-nameIdAttrRef tp s = return $
-  topModulePathToDottedPath tp <> ".html" <> preEscapedToValue '#' <> nameIdAttr s
+nameIdAttrRef tp s =
+  return $
+    topModulePathToDottedPath tp <> ".html" <> preEscapedToValue '#' <> nameIdAttr s

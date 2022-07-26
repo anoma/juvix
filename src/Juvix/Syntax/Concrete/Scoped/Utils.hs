@@ -16,7 +16,8 @@ getAllModules m = HashMap.fromList (fst (run (runOutputList (getAllModules' m)))
 getAllModules' ::
   forall r.
   Member (Output (S.NameId, Module 'Scoped 'ModuleTop)) r =>
-  Module 'Scoped 'ModuleTop -> Sem r ()
+  Module 'Scoped 'ModuleTop ->
+  Sem r ()
 getAllModules' m = recordModule m
   where
     recordModule :: Module 'Scoped 'ModuleTop -> Sem r ()
