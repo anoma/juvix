@@ -519,7 +519,7 @@ instance SingI s => PrettyCode (OpenModule s) where
     openParameters' <- ppOpenParams
     let openPublic' = ppPublic
         import_
-          | _openModuleImport = Just Str.import_
+          | _openModuleImport = Just kwImport
           | otherwise = Nothing
     return $ kwOpen <+?> import_ <+> openModuleName' <+?> openParameters' <+?> openUsingHiding' <+?> openPublic'
     where

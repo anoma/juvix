@@ -187,7 +187,7 @@ putTag ann x = case ann of
 
     tagRef :: TopModulePath -> S.NameId -> Sem r Html
     tagRef tmp ni = do
-      pth <- nameIdAttrRef tmp ni
+      pth <- nameIdAttrRef tmp (Just ni)
       return $
         Html.span ! Attr.class_ "annot" $
           a ! Attr.href pth $
@@ -217,7 +217,7 @@ moduleDocRelativePath m = do
     joinDot :: FilePath -> FilePath -> FilePath
     joinDot l r = l <.> r
 
-nameIdAttrRef :: Members '[Reader HtmlOptions] r => TopModulePath -> S.NameId -> Sem r AttributeValue
+nameIdAttrRef :: Members '[Reader HtmlOptions] r => TopModulePath -> Maybe S.NameId -> Sem r AttributeValue
 nameIdAttrRef tp s = do
   pth <- moduleDocRelativePath tp
-  return (fromString pth <> preEscapedToValue '#' <> nameIdAttr s)
+  return (fromString pth <> preEscapedToValue '#' <>? (nameIdAttr <$> s))

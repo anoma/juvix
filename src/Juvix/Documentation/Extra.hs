@@ -46,10 +46,3 @@ sourceCss =
     ! Attr.href "assets/source.css"
     ! Attr.rel "stylesheet"
     ! Attr.type_ "text/css"
-
-highlightJs :: Html
-highlightJs =
-  script
-    ! Attr.src "assets/highlight.js"
-    ! Attr.type_ "text/javascript"
-    $ mempty

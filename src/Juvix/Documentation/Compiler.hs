@@ -2,6 +2,8 @@ module Juvix.Documentation.Compiler where
 
 import Data.ByteString.Builder qualified as Builder
 import Data.Time.Clock
+import Juvix.Utils.Paths
+import Data.ByteString qualified as BS
 import Juvix.Documentation.Extra
 import Juvix.Prelude
 import Juvix.Prelude qualified as Prelude
@@ -59,6 +61,7 @@ goTopModule ::
   Module 'Scoped 'ModuleTop ->
   Sem r ()
 goTopModule m = do
+  copyAssets
   runReader htmlOpts $ do
     fpath <- moduleDocPath m
     Prelude.embed (putStrLn ("processing " <> pack fpath))
@@ -68,6 +71,21 @@ goTopModule m = do
     fpath <- moduleDocPath m
     srcHtml >>= writeHtml fpath
   where
+    copyAssets :: Sem r ()
+    copyAssets = do
+      toAssetsDir <- (</> "assets") <$> asks (^. docOutputDir)
+      let writeAsset :: (FilePath, BS.ByteString) -> Sem r ()
+          writeAsset (filePath, fileContents) =
+            Prelude.embed $ BS.writeFile (toAssetsDir </> takeFileName filePath) fileContents
+      Prelude.embed (createDirectoryIfMissing True toAssetsDir)
+      mapM_ writeAsset assetFiles
+      where
+        assetFiles :: [(FilePath, BS.ByteString)]
+        assetFiles = $(assetsDir)
+
+    tmp :: TopModulePath
+    tmp = m ^. modulePath . S.nameConcrete
+
     srcHtml :: forall s. Members '[Reader HtmlOptions, Embed IO] s => Sem s Html
     srcHtml = do
       utc <- Prelude.embed getCurrentTime
@@ -88,7 +106,7 @@ goTopModule m = do
             <> body'
       where
         titleStr :: Html
-        titleStr = "Documentation"
+        titleStr = "Juvix Documentation"
 
         mhead :: Html
         mhead =
@@ -101,6 +119,7 @@ goTopModule m = do
                 ! Attr.name "viewport"
                 ! Attr.content "width=device-width, initial-scale=1"
               <> mathJaxCdn
+              -- <> highlightJs
               <> livejs
               <> ayuCss
               <> linuwialCss
@@ -108,15 +127,32 @@ goTopModule m = do
         mbody :: Sem s Html
         mbody = do
           content' <- content
+          pkgHeader' <- packageHeader
           return $
             body ! Attr.class_ "js-enabled" $
-              packageHeader
+              pkgHeader'
                 <> content'
                 <> mfooter
-        packageHeader :: Html
-        packageHeader = mempty
+
+        packageHeader :: Sem s Html
+        packageHeader = do
+          rightMenu' <- rightMenu
+          return $
+            Html.div ! Attr.id "package-header" $
+              (Html.span ! Attr.class_ "caption" $
+                "package name - version")
+                <> rightMenu'
+              where
+              rightMenu :: Sem s Html
+              rightMenu = do
+                sourceRef' <- local (set htmlOptionsKind HtmlSrc) (nameIdAttrRef tmp Nothing)
+                return $ ul ! Attr.id "page-menu" ! Attr.class_ "links" $
+                 li (a ! Attr.href sourceRef' $ "Source")
+                 <> li (a ! Attr.href (preEscapedToValue '#') $ "Index")
+
         mfooter :: Html
         mfooter = mempty
+
         content :: Sem s Html
         content = do
           preface' <- docPreface
@@ -128,6 +164,7 @@ goTopModule m = do
                 <> preface'
                 <> synopsis
                 <> interface'
+
         synopsis :: Html
         synopsis =
           Html.div ! Attr.id "synopsis" $
@@ -138,6 +175,7 @@ goTopModule m = do
                        ! dataAttribute "details-id" "syn"
                        $ "Synopsis"
                    )
+
         docPreface :: Sem s Html
         docPreface = do
           pref <- goJudocMay (m ^. moduleDoc)
@@ -164,9 +202,6 @@ goTopModule m = do
         moduleHeader =
           Html.div ! Attr.id "module-header" $
             (p ! Attr.class_ "caption" $ toHtml (prettyText tmp))
-          where
-            tmp :: TopModulePath
-            tmp = m ^. modulePath . S.nameConcrete
 
         interface :: Sem s Html
         interface = do
@@ -288,7 +323,7 @@ goTypeSignature sig = do
 
 sourceAndSelfLink :: Members '[Reader HtmlOptions] r => TopModulePath -> NameId -> Sem r Html
 sourceAndSelfLink tmp name = do
-  ref' <- local (set htmlOptionsKind HtmlSrc) (nameIdAttrRef tmp name)
+  ref' <- local (set htmlOptionsKind HtmlSrc) (nameIdAttrRef tmp (Just name))
   return $
     ( a
         ! Attr.href ref'
