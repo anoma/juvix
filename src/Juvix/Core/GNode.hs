@@ -17,10 +17,10 @@ import Juvix.Prelude
 type Symbol = Word
 
 -- Tag of a constructor, uniquely identifying it. Tag values are consecutive and
--- separate from symbol IDs. We might need fixed special tag values in Core for
--- common "builtin" constructors, e.g., unit, lists, pairs, so that the code generator
--- can treat them specially.
-type Tag = Word
+-- separate from symbol IDs. We might need fixed special tags in Core for common
+-- "builtin" constructors, e.g., unit, nat, lists, pairs, so that the code
+-- generator can treat them specially.
+data Tag = BuiltinTag BuiltinDataTag | UserTag Word
 
 -- de Bruijn index
 type Index = Int
@@ -39,7 +39,11 @@ data GNode i
     -- and the code generator. For example, basic arithmetic operations go into
     -- `Builtin`.
     Builtin !i !BuiltinOp
-  | Literal !i {-# UNPACK #-} !Constant
+  | ConstValue !i {-# UNPACK #-} !Constant
+  | -- A hole. It's a unit for the purposes of evaluation.
+    Hole !i
+  | -- An axiom. Computationally a unit.
+    Axiom !i
   | App !i !(GNode i) !(GNode i)
   | Lambda !i !(GNode i)
   | -- `let x := value in body` is not reducible to lambda + application for the purposes
@@ -55,9 +59,9 @@ data GNode i
     LambdaClosure !i ![GNode i] !(GNode i)
 
 -- Other things we might need in the future:
--- - laziness annotations (converting these to closures should be done further
---   down the pipeline)
--- - primitive record projections (efficiency of evaluation / code generation)
+-- - laziness annotations (converting these to closures/thunks should be done
+--   further down the pipeline)
+-- - primitive record projections (efficiency of evaluation / generated code)
 -- - Fix and CoFix (anonymous recursion / co-recursion)
 -- - with dependent types, it might actually be more reasonable to have Pi as
 --   another node (because it's a binder); computationally it would be a unit,
@@ -69,16 +73,58 @@ data GNode i
 data Constant
   = ConstInteger !Integer
   | ConstBool !Bool
-  | -- A hole. It's a unit for the purposes of evaluation.
-    ConstHole
 
 -- Other things we might need in the future:
 -- - ConstFloat
 -- - ConstString
--- - ConstType: computationally a unit, corresponds to a type argument; the
---   attached info stores the type information; erased further down the pipeline
 
 data CaseBranch i = CaseBranch !Tag !(GNode i)
+
+{---------------------------------------------------------------------------------}
+{- Info -}
+
+getInfo :: GNode i -> i
+getInfo = \case
+  Var i _ -> i
+  Ident i _ -> i
+  Builtin i _ -> i
+  ConstValue i _ -> i
+  Hole i -> i
+  Axiom i -> i
+  App i _ _ -> i
+  Lambda i _ -> i
+  LetIn i _ _ -> i
+  Data i _ _ -> i
+  Case i _ _ -> i
+  LambdaClosure i _ _ -> i
+
+modifyInfoM :: Applicative m => (i -> m i) -> GNode i -> m (GNode i)
+modifyInfoM f = \case
+  Var i idx -> Var <$> f i <*> pure idx
+  Ident i sym -> Ident <$> f i <*> pure sym
+  Builtin i op -> Builtin <$> f i <*> pure op
+  ConstValue i v -> ConstValue <$> f i <*> pure v
+  Hole i -> Hole <$> f i
+  Axiom i -> Axiom <$> f i
+  App i l r -> App <$> f i <*> pure l <*> pure r
+  Lambda i b -> Lambda <$> f i <*> pure b
+  LetIn i v b -> LetIn <$> f i <*> pure v <*> pure b
+  Data i tag args -> Data <$> f i <*> pure tag <*> pure args
+  Case i v bs -> Case <$> f i <*> pure v <*> pure bs
+  LambdaClosure i env b -> LambdaClosure <$> f i <*> pure env <*> pure b
+
+modifyInfo :: (i -> i) -> GNode i -> GNode i
+modifyInfo f n = runIdentity $ modifyInfoM (pure . f) n
+
+-- The info type should be functorial in GNode (especially with dependent types,
+-- we will want to store nodes inside the info annotations).
+class GNodeFunctor i where
+  nmapM :: (GNode i -> m (GNode i)) -> i -> m i
+
+class GNodeFoldable i where
+  nfoldM :: (a -> a -> a) -> (GNode i -> m a) -> i -> m a
+
+class (GNodeFunctor i, GNodeFoldable i) => GNodeInfo i
 
 {---------------------------------------------------------------------------------}
 {- General recursors on GNode  -}
@@ -106,44 +152,64 @@ bindingCollector coll = Collector (coll ^. cEmpty) collect
 
 -- `umapG` maps the nodes bottom-up, i.e., when invoking the mapper function the
 -- recursive subnodes have already been mapped
-umapG :: Monad m => Collector (GNode i) c -> (c -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+umapG ::
+  forall i c m.
+  (Monad m, GNodeFunctor i) =>
+  Collector (GNode i) c ->
+  (c -> GNode i -> m (GNode i)) ->
+  GNode i ->
+  m (GNode i)
 umapG coll f = go (coll ^. cEmpty)
   where
-    go c n = case n of
-      App i l r -> f c =<< (App i <$> go c' l <*> go c' r)
-      Lambda i body -> f c . Lambda i =<< go c' body
-      LetIn i value body -> f c =<< (LetIn i <$> go c' value <*> go c' body)
-      Data i tag args -> f c . Data i tag =<< mapM (go c') args
-      Case i value bs -> f c =<< (Case i <$> go c' value <*> mapM (\(CaseBranch tag br) -> CaseBranch tag <$> go c' br) bs)
-      LambdaClosure i env body -> f c =<< (LambdaClosure i <$> mapM (go c') env <*> go c' body)
-      _ -> f c n
+    go :: c -> GNode i -> m (GNode i)
+    go c n = do
+      n' <- modifyInfoM (nmapM (go c)) n
+      case n' of
+        App i l r -> f c =<< (App i <$> go c' l <*> go c' r)
+        Lambda i body -> f c . Lambda i =<< go c' body
+        LetIn i value body -> f c =<< (LetIn i <$> go c' value <*> go c' body)
+        Data i tag args -> f c . Data i tag =<< mapM (go c') args
+        Case i value bs -> f c =<< (Case i <$> go c' value <*> mapM (\(CaseBranch tag br) -> CaseBranch tag <$> go c' br) bs)
+        LambdaClosure i env body -> f c =<< (LambdaClosure i <$> mapM (go c') env <*> go c' body)
+        _ -> f c n'
       where
         c' = (coll ^. cCollect) n c
 
-umapM :: Monad m => (GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+-- should there be n' here?
+
+umapM :: (Monad m, GNodeFunctor i) => (GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
 umapM f = umapG unitCollector (const f)
 
-umapMB :: Monad m => ([i] -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+umapMB :: (Monad m, GNodeFunctor i) => ([i] -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
 umapMB f = umapG (bindingCollector (Collector [] (:))) f
 
-umapMN :: Monad m => (Index -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+umapMN :: (Monad m, GNodeFunctor i) => (Index -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
 umapMN f = umapG (bindingCollector (Collector 0 (const (+ 1)))) f
 
-umap :: (GNode i -> GNode i) -> GNode i -> GNode i
+umap :: GNodeFunctor i => (GNode i -> GNode i) -> GNode i -> GNode i
 umap f n = runIdentity $ umapM (return . f) n
 
-umapB :: ([i] -> GNode i -> GNode i) -> GNode i -> GNode i
+umapB :: GNodeFunctor i => ([i] -> GNode i -> GNode i) -> GNode i -> GNode i
 umapB f n = runIdentity $ umapMB (\is -> return . f is) n
 
-umapN :: (Index -> GNode i -> GNode i) -> GNode i -> GNode i
+umapN :: GNodeFunctor i => (Index -> GNode i -> GNode i) -> GNode i -> GNode i
 umapN f n = runIdentity $ umapMN (\idx -> return . f idx) n
 
 -- `dmapG` maps the nodes top-down
-dmapG :: Monad m => Collector (GNode i) c -> (c -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+dmapG ::
+  forall i c m.
+  (Monad m, GNodeFunctor i) =>
+  Collector (GNode i) c ->
+  ( c ->
+    GNode i ->
+    m (GNode i)
+  ) ->
+  GNode i ->
+  m (GNode i)
 dmapG coll f = go (coll ^. cEmpty)
   where
     go c n = do
-      n' <- f c n
+      n' <- modifyInfoM (nmapM (go c)) =<< f c n
       let c' = (coll ^. cCollect) n' c
       case n' of
         App i l r -> App i <$> go c' l <*> go c' r
@@ -154,80 +220,89 @@ dmapG coll f = go (coll ^. cEmpty)
         LambdaClosure i env body -> LambdaClosure i <$> mapM (go c') env <*> go c' body
         _ -> return n'
 
-dmapM :: Monad m => (GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+dmapM :: (Monad m, GNodeFunctor i) => (GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
 dmapM f = dmapG unitCollector (const f)
 
-dmapMB :: Monad m => ([i] -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+dmapMB :: (Monad m, GNodeFunctor i) => ([i] -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
 dmapMB f = dmapG (bindingCollector (Collector [] (:))) f
 
-dmapMN :: Monad m => (Index -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+dmapMN :: (Monad m, GNodeFunctor i) => (Index -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
 dmapMN f = dmapG (bindingCollector (Collector 0 (const (+ 1)))) f
 
-dmap :: (GNode i -> GNode i) -> GNode i -> GNode i
+dmap :: GNodeFunctor i => (GNode i -> GNode i) -> GNode i -> GNode i
 dmap f n = runIdentity $ dmapM (return . f) n
 
-dmapB :: ([i] -> GNode i -> GNode i) -> GNode i -> GNode i
+dmapB :: GNodeFunctor i => ([i] -> GNode i -> GNode i) -> GNode i -> GNode i
 dmapB f n = runIdentity $ dmapMB (\is -> return . f is) n
 
-dmapN :: (Index -> GNode i -> GNode i) -> GNode i -> GNode i
+dmapN :: GNodeFunctor i => (Index -> GNode i -> GNode i) -> GNode i -> GNode i
 dmapN f n = runIdentity $ dmapMN (\idx -> return . f idx) n
 
 -- `ufoldG` folds the tree bottom-up; `uplus` combines the values - it should be
 -- commutative and associative
-ufoldG :: Monad m => Collector (GNode i) c -> (a -> a -> a) -> (c -> GNode i -> m a) -> GNode i -> m a
+ufoldG ::
+  forall i c a m.
+  (Monad m, GNodeFoldable i) =>
+  Collector (GNode i) c ->
+  (a -> a -> a) ->
+  (c -> GNode i -> m a) ->
+  GNode i ->
+  m a
 ufoldG coll uplus f = go (coll ^. cEmpty)
   where
+    go :: c -> GNode i -> m a
     go c n = case n of
-      App _ l r -> uplus <$> f c n <*> (uplus <$> go c' l <*> go c' r)
-      Lambda _ body -> uplus <$> f c n <*> go c' body
-      LetIn _ value body -> uplus <$> f c n <*> (uplus <$> go c' value <*> go c' body)
-      Data _ _ args -> foldr (liftM2 uplus . go c') (f c n) args
-      Case _ value bs -> uplus <$> f c n <*> foldr (liftM2 uplus . (\(CaseBranch _ br) -> go c' br)) (go c' value) bs
-      LambdaClosure _ env body -> uplus <$> f c n <*> foldr (liftM2 uplus . go c') (go c' body) env
-      _ -> f c n
+      App _ l r -> uplus <$> ma <*> (uplus <$> go c' l <*> go c' r)
+      Lambda _ body -> uplus <$> ma <*> go c' body
+      LetIn _ value body -> uplus <$> ma <*> (uplus <$> go c' value <*> go c' body)
+      Data _ _ args -> foldr (liftM2 uplus . go c') ma args
+      Case _ value bs -> uplus <$> ma <*> foldr (liftM2 uplus . (\(CaseBranch _ br) -> go c' br)) (go c' value) bs
+      LambdaClosure _ env body -> uplus <$> ma <*> foldr (liftM2 uplus . go c') (go c' body) env
+      _ -> ma
       where
         c' = (coll ^. cCollect) n c
+        ma = uplus <$> f c n <*> nfoldM uplus (go c) (getInfo n)
 
-ufoldM :: Monad m => (a -> a -> a) -> (GNode i -> m a) -> GNode i -> m a
+ufoldM :: (Monad m, GNodeFoldable i) => (a -> a -> a) -> (GNode i -> m a) -> GNode i -> m a
 ufoldM uplus f = ufoldG unitCollector uplus (const f)
 
-ufoldMB :: Monad m => (a -> a -> a) -> ([i] -> GNode i -> m a) -> GNode i -> m a
+ufoldMB :: (Monad m, GNodeFoldable i) => (a -> a -> a) -> ([i] -> GNode i -> m a) -> GNode i -> m a
 ufoldMB uplus f = ufoldG (bindingCollector (Collector [] (:))) uplus f
 
-ufoldMN :: Monad m => (a -> a -> a) -> (Index -> GNode i -> m a) -> GNode i -> m a
+ufoldMN :: (Monad m, GNodeFoldable i) => (a -> a -> a) -> (Index -> GNode i -> m a) -> GNode i -> m a
 ufoldMN uplus f = ufoldG (bindingCollector (Collector 0 (const (+ 1)))) uplus f
 
-ufold :: (a -> a -> a) -> (GNode i -> a) -> GNode i -> a
+ufold :: GNodeFoldable i => (a -> a -> a) -> (GNode i -> a) -> GNode i -> a
 ufold uplus f n = runIdentity $ ufoldM uplus (return . f) n
 
-ufoldB :: (a -> a -> a) -> ([i] -> GNode i -> a) -> GNode i -> a
+ufoldB :: GNodeFoldable i => (a -> a -> a) -> ([i] -> GNode i -> a) -> GNode i -> a
 ufoldB uplus f n = runIdentity $ ufoldMB uplus (\is -> return . f is) n
 
-ufoldN :: (a -> a -> a) -> (Index -> GNode i -> a) -> GNode i -> a
+ufoldN :: GNodeFoldable i => (a -> a -> a) -> (Index -> GNode i -> a) -> GNode i -> a
 ufoldN uplus f n = runIdentity $ ufoldMN uplus (\idx -> return . f idx) n
 
-walk :: Monad m => (GNode i -> m ()) -> GNode i -> m ()
+walk :: (Monad m, GNodeFoldable i) => (GNode i -> m ()) -> GNode i -> m ()
 walk = ufoldM mappend
 
-walkB :: Monad m => ([i] -> GNode i -> m ()) -> GNode i -> m ()
+walkB :: (Monad m, GNodeFoldable i) => ([i] -> GNode i -> m ()) -> GNode i -> m ()
 walkB = ufoldMB mappend
 
-walkN :: Monad m => (Index -> GNode i -> m ()) -> GNode i -> m ()
+walkN :: (Monad m, GNodeFoldable i) => (Index -> GNode i -> m ()) -> GNode i -> m ()
 walkN = ufoldMN mappend
 
-gather :: (a -> GNode i -> a) -> a -> GNode i -> a
+gather :: GNodeFoldable i => (a -> GNode i -> a) -> a -> GNode i -> a
 gather f acc n = fst $ run $ runState acc (walk (\n' -> modify (`f` n')) n)
 
-gatherB :: ([i] -> a -> GNode i -> a) -> a -> GNode i -> a
+gatherB :: GNodeFoldable i => ([i] -> a -> GNode i -> a) -> a -> GNode i -> a
 gatherB f acc n = fst $ run $ runState acc (walkB (\is n' -> modify (\a -> f is a n')) n)
 
-gatherN :: (Index -> a -> GNode i -> a) -> a -> GNode i -> a
+gatherN :: GNodeFoldable i => (Index -> a -> GNode i -> a) -> a -> GNode i -> a
 gatherN f acc n = fst $ run $ runState acc (walkN (\idx n' -> modify (\a -> f idx a n')) n)
 
 {---------------------------------------------------------------------------}
 {- useful functions implemented using general recursors -}
 
-isClosed :: GNode i -> Bool
+isClosed :: GNodeInfo i => GNode i -> Bool
 isClosed = ufoldN (&&) go
   where
     go :: Index -> GNode i -> Bool
@@ -235,7 +310,7 @@ isClosed = ufoldN (&&) go
       Var _ idx | idx >= k -> False
       _ -> True
 
-getFreeVars :: GNode i -> HashSet Index
+getFreeVars :: GNodeInfo i => GNode i -> HashSet Index
 getFreeVars = gatherN go HashSet.empty
   where
     go :: Index -> HashSet Index -> GNode i -> HashSet Index
@@ -243,7 +318,7 @@ getFreeVars = gatherN go HashSet.empty
       Var _ idx | idx >= k -> HashSet.insert (idx - k) acc
       _ -> acc
 
-getIdents :: GNode i -> HashSet Symbol
+getIdents :: GNodeInfo i => GNode i -> HashSet Symbol
 getIdents = gather go HashSet.empty
   where
     go :: HashSet Symbol -> GNode i -> HashSet Symbol
@@ -251,7 +326,7 @@ getIdents = gather go HashSet.empty
       Ident _ sym -> HashSet.insert sym acc
       _ -> acc
 
-countFreeVarOccurrences :: Index -> GNode i -> Int
+countFreeVarOccurrences :: GNodeInfo i => Index -> GNode i -> Int
 countFreeVarOccurrences idx = gatherN go 0
   where
     go k acc = \case
@@ -259,7 +334,7 @@ countFreeVarOccurrences idx = gatherN go 0
       _ -> acc
 
 -- increase all free variable indices by a given value
-shift :: Index -> GNode i -> GNode i
+shift :: GNodeInfo i => Index -> GNode i -> GNode i
 shift m = umapN go
   where
     go k n = case n of
@@ -268,19 +343,35 @@ shift m = umapN go
 
 -- substitute a term t for the free variable with de Bruijn index 0, avoiding
 -- variable capture
-subst :: GNode i -> GNode i -> GNode i
+subst :: GNodeInfo i => GNode i -> GNode i -> GNode i
 subst t = umapN go
   where
     go k n = case n of
       Var _ idx | idx == k -> shift k t
       _ -> n
 
--- reduce all beta redexes present in a term (newly created redexes are not
--- recursively reduced)
-reduceBeta :: GNode i -> GNode i
+-- reduce all beta redexes present in a term and a the ones created upwards
+-- (i.e., a "beta-development")
+reduceBeta :: forall i. GNodeInfo i => GNode i -> GNode i
 reduceBeta = umap go
   where
     go :: GNode i -> GNode i
     go n = case n of
       App _ (Lambda _ body) arg -> subst arg body
+      _ -> n
+
+-- substitution of all free variables for values in a closed environment
+substEnv :: GNodeInfo i => [GNode i] -> GNode i -> GNode i
+substEnv env = umapN go
+  where
+    go k n = case n of
+      Var _ idx | idx >= k -> env !! k
+      _ -> n
+
+removeClosures :: forall i. GNodeInfo i => GNode i -> GNode i
+removeClosures = umap go
+  where
+    go :: GNode i -> GNode i
+    go n = case n of
+      LambdaClosure i env b -> substEnv env (Lambda i b)
       _ -> n
