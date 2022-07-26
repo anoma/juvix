@@ -186,9 +186,6 @@ goTopModule m = do
               Html.div ! Attr.class_ "doc" $
                 pref
 
-        tocEntries :: Html
-        tocEntries = mempty
-
         toc :: Html
         toc =
           Html.div ! Attr.id "table-of-contents" $
@@ -199,6 +196,12 @@ goTopModule m = do
                   $ "Contents"
               )
                 <> tocEntries
+          where
+            tocEntries :: Html
+            tocEntries =
+              ul $
+                li (a ! Attr.href "#description" $ "Description")
+                  <> li (a ! Attr.href "#interface" $ "Definitions")
 
         moduleHeader :: Html
         moduleHeader =

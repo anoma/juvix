@@ -49,6 +49,7 @@ inductive Symbol {
 ==Symbol X X ≔ true;
 ==Symbol _ _ ≔ false;
 
+--- Turns ;O; into ;X; and ;X; into ;O;
 switch : Symbol → Symbol;
 switch O ≔ X;
 switch X ≔ O;
@@ -64,6 +65,7 @@ inductive Square {
   occupied : Symbol → Square;
 };
 
+--- Equality for ;Square;s
 ==Square : Square → Square → Bool;
 ==Square (empty m) (empty n) ≔ m == n;
 ==Square (occupied s) (occupied t) ≔ ==Symbol s t;
@@ -124,6 +126,7 @@ showGameState (state b _ _) ≔ showBoard b;
 player : GameState → Symbol;
 player (state _ p _) ≔ p;
 
+--- initial ;GameState;
 beginState : GameState;
 beginState ≔ state
      (board (map (map empty) ((one ∷ two ∷ three ∷ nil) ∷ (four ∷ five ∷ six ∷ nil) ∷ (seven ∷ eight ∷ nine ∷ nil) ∷ nil)))
