@@ -1,10 +1,10 @@
 module SimpleFungibleToken;
 
-import Anoma.Base;
-open Anoma.Base;
-
-import Prelude;
-open Prelude;
+open import Anoma.Base;
+open import Stdlib.Prelude;
+import Stdlib.Data.String.Ord;
+open import Data.Int;
+import Data.Int.Ops;
 
 --------------------------------------------------------------------------------
 -- Misc
@@ -18,15 +18,15 @@ pair-from-optionString ≔ maybe (0 , false);
 --------------------------------------------------------------------------------
 
 change-from-key : String → Int;
-change-from-key key ≔ unwrap-default (read-post key) - unwrap-default (read-pre key);
+change-from-key key ≔ unwrap-default (read-post key) Data.Int.Ops.- unwrap-default (read-pre key);
 
 check-vp : List String → String → Int → String → Int × Bool;
 check-vp verifiers key change owner ≔
     if
-        (change-from-key key < 0)
+        (change-from-key key Data.Int.Ops.< 0)
         -- make sure the spender approved the transaction
-        (change + (change-from-key key), elem (==String) owner verifiers)
-        (change + (change-from-key key),  true);
+        (change Data.Int.Ops.+ (change-from-key key), elem (Stdlib.Data.String.Ord.==) owner verifiers)
+        (change Data.Int.Ops.+ (change-from-key key),  true);
 
 check-keys : String → List String → Int × Bool → String → Int × Bool;
 check-keys token verifiers (change , is-success) key ≔
@@ -36,7 +36,7 @@ check-keys token verifiers (change , is-success) key ≔
         (0 , false);
 
 check-result : Int × Bool → Bool;
-check-result (change , all-checked) ≔ (change ==Int 0) && all-checked;
+check-result (change , all-checked) ≔ (change Data.Int.Ops.== 0) && all-checked;
 
 vp : String → List String → List String → Bool;
 vp token keys-changed verifiers ≔

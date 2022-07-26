@@ -36,7 +36,7 @@ allTests =
 
 tests :: [ExampleTest]
 tests =
-  [ ExampleTest "Validity Predicate example" "ValidityPredicates" "Tests.juvix" "ValidityPredicates" "" StdlibExclude,
+  [ ExampleTest "Validity Predicate example" "ValidityPredicates" "Tests.juvix" "ValidityPredicates" "" StdlibInclude,
     ExampleTest "MiniTicTacToe example" "MiniTicTacToe" "MiniTicTacToe.juvix" "MiniTicTacToe" "aaa\n0\n10\n1\n2\n3\n3\n4\n5\n6\n7\n8\n9\n" StdlibInclude,
     ExampleTest "Fibonacci example" "Fibonacci" "Fibonacci.juvix" "Fibonacci" "" StdlibInclude,
     ExampleTest "Collatz sequence generator" "Collatz" "Collatz.juvix" "Collatz" "123\n" StdlibInclude
