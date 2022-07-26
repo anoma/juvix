@@ -2,7 +2,7 @@ module Juvix.Syntax.Concrete.Name where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
+import Juvix.Prelude.Pretty as Pretty
 import Juvix.Syntax.Loc
 
 type Symbol = WithLoc Text
@@ -70,6 +70,10 @@ data TopModulePath = TopModulePath
 
 makeLenses ''TopModulePath
 
+instance Pretty TopModulePath where
+  pretty (TopModulePath path name) =
+    mconcat (punctuate Pretty.dot (map pretty (snoc path name)))
+
 instance HasLoc TopModulePath where
   getLoc TopModulePath {..} =
     case _modulePathDir of
@@ -79,13 +83,13 @@ instance HasLoc TopModulePath where
 topModulePathToFilePath :: FilePath -> TopModulePath -> FilePath
 topModulePathToFilePath = topModulePathToFilePath' (Just ".juvix")
 
-topModulePathToRelativeFilePath :: Maybe String -> (FilePath -> FilePath -> FilePath) -> TopModulePath -> FilePath
-topModulePathToRelativeFilePath ext joinpath mp = relFilePath
+topModulePathToRelativeFilePath :: Maybe String -> String -> (FilePath -> FilePath -> FilePath) -> TopModulePath -> FilePath
+topModulePathToRelativeFilePath ext suffix joinpath mp = relFilePath
   where
     relDirPath :: FilePath
     relDirPath = foldr (joinpath . toPath) mempty (mp ^. modulePathDir)
     relFilePath :: FilePath
-    relFilePath = addExt (relDirPath `joinpath'` toPath (mp ^. modulePathName))
+    relFilePath = addExt (relDirPath `joinpath'` toPath (mp ^. modulePathName) <> suffix)
     joinpath' :: FilePath -> FilePath -> FilePath
     joinpath' l r
       | null l = r
@@ -100,7 +104,7 @@ topModulePathToFilePath' ::
   Maybe String -> FilePath -> TopModulePath -> FilePath
 topModulePathToFilePath' ext root mp =
   normalise
-    (root </> topModulePathToRelativeFilePath ext (</>) mp)
+    (root </> topModulePathToRelativeFilePath ext "" (</>) mp)
 
 topModulePathToDottedPath :: IsString s => TopModulePath -> s
 topModulePathToDottedPath (TopModulePath l r) =

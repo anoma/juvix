@@ -39,6 +39,10 @@ body {
     color: #000000;
 }
 
+.ju-define {
+    font-weight: bold;
+}
+
 a:hover, a.hover-highlight {
     background-color: #dadbdc ;
 }

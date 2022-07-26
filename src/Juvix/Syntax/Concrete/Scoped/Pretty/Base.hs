@@ -319,7 +319,12 @@ instance PrettyCode BackendItem where
       backend <+> kwMapsto <+> ppStringLit _backendItemCode
 
 ppStringLit :: Text -> Doc Ann
-ppStringLit = annotate AnnLiteralString . doubleQuotes . pretty
+ppStringLit = annotate AnnLiteralString . doubleQuotes . escaped
+  where
+    showChar :: Char -> String
+    showChar c = showLitChar c ("" :: String)
+    escaped :: Text -> Doc a
+    escaped = mconcatMap (pretty . showChar) . unpack
 
 ppTopModulePath ::
   forall s r.
@@ -419,26 +424,33 @@ instance PrettyCode BuiltinFunction where
 instance PrettyCode BuiltinAxiom where
   ppCode i = return (kwBuiltin <+> keyword' i)
 
+ppInductiveSignature :: forall r s. (SingI s, Members '[Reader Options] r) => InductiveDef s -> Sem r (Doc Ann)
+ppInductiveSignature InductiveDef {..} = do
+  inductivebuiltin' <- traverse ppCode _inductiveBuiltin
+  inductiveName' <- annDef _inductiveName <$> ppSymbol _inductiveName
+  inductiveParameters' <- ppInductiveParameters _inductiveParameters
+  inductiveType' <- ppTypeType
+  return $
+    inductivebuiltin'
+      <?+> kwInductive
+      <+> inductiveName'
+      <+?> inductiveParameters'
+      <+?> inductiveType'
+  where
+    ppTypeType :: Sem r (Maybe (Doc Ann))
+    ppTypeType = case _inductiveType of
+      Nothing -> return Nothing
+      Just e -> Just . (kwColon <+>) <$> ppExpression e
+
+instance PrettyCode (Doc Ann) where
+  ppCode d = return d
+
 instance SingI s => PrettyCode (InductiveDef s) where
   ppCode :: forall r. Members '[Reader Options] r => InductiveDef s -> Sem r (Doc Ann)
-  ppCode InductiveDef {..} = do
-    inductiveName' <- annDef _inductiveName <$> ppSymbol _inductiveName
-    inductiveParameters' <- ppInductiveParameters _inductiveParameters
-    inductiveType' <- ppTypeType
+  ppCode d@InductiveDef {..} = do
+    sig' <- ppInductiveSignature d
     inductiveConstructors' <- ppBlock _inductiveConstructors
-    inductivebuiltin' <- traverse ppCode _inductiveBuiltin
-    return $
-      inductivebuiltin'
-        <?+> kwInductive
-        <+> inductiveName'
-        <+?> inductiveParameters'
-        <+?> inductiveType'
-        <+> inductiveConstructors'
-    where
-      ppTypeType :: Sem r (Maybe (Doc Ann))
-      ppTypeType = case _inductiveType of
-        Nothing -> return Nothing
-        Just e -> Just . (kwColon <+>) <$> ppExpression e
+    return $ sig' <+> inductiveConstructors'
 
 dotted :: Foldable f => f (Doc Ann) -> Doc Ann
 dotted = concatWith (surround kwDot)
@@ -654,7 +666,7 @@ instance SingI s => PrettyCode (WhereClause s) where
 
 instance SingI s => PrettyCode (AxiomDef s) where
   ppCode AxiomDef {..} = do
-    axiomName' <- ppSymbol _axiomName
+    axiomName' <- annDef _axiomName <$> ppSymbol _axiomName
     axiomType' <- ppExpression _axiomType
     builtin' <- traverse ppCode _axiomBuiltin
     return $ builtin' <?+> kwAxiom <+> axiomName' <+> kwColon <+> axiomType'

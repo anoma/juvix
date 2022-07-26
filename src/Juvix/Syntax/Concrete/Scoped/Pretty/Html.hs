@@ -36,6 +36,11 @@ newtype HtmlOptions = HtmlOptions
 
 makeLenses ''HtmlOptions
 
+kindSuffix :: HtmlKind -> String
+kindSuffix = \case
+  HtmlDoc -> ""
+  HtmlSrc -> "-src"
+
 genHtml :: Options -> Bool -> Theme -> FilePath -> Bool -> Module 'Scoped 'ModuleTop -> IO ()
 genHtml opts recursive theme outputDir printMetadata entry = do
   createDirectoryIfMissing True outputDir
@@ -157,7 +162,7 @@ go sdt = case sdt of
     textSpaces :: Int -> Text
     textSpaces n = Text.replicate n (Text.singleton ' ')
 
-putTag :: forall r. Ann -> Html -> Sem r Html
+putTag :: forall r. Members '[Reader HtmlOptions] r => Ann -> Html -> Sem r Html
 putTag ann x = case ann of
   AnnKind k -> return (tagKind k x)
   AnnLiteralInteger -> return (Html.span ! Attr.class_ "ju-number" $ x)
@@ -166,9 +171,15 @@ putTag ann x = case ann of
   AnnUnkindedSym -> return (Html.span ! Attr.class_ "ju-var" $ x)
   AnnComment -> return (Html.span ! Attr.class_ "ju-var" $ x) -- TODO add comment class
   AnnDelimiter -> return (Html.span ! Attr.class_ "ju-delimiter" $ x)
-  AnnDef tmp ni -> tagDef tmp ni
+  AnnDef tmp ni -> boldDefine <*> tagDef tmp ni
   AnnRef tmp ni -> tagRef tmp ni
   where
+    boldDefine :: Sem r (Html -> Html)
+    boldDefine =
+      asks (^. htmlOptionsKind) <&> \case
+        HtmlDoc -> Html.span ! Attr.class_ "ju-define"
+        HtmlSrc -> id
+
     tagDef :: TopModulePath -> S.NameId -> Sem r Html
     tagDef tmp nid =
       Html.span ! Attr.id (nameIdAttr nid)
@@ -198,7 +209,15 @@ putTag ann x = case ann of
 nameIdAttr :: S.NameId -> AttributeValue
 nameIdAttr (S.NameId k) = fromString . show $ k
 
-nameIdAttrRef :: TopModulePath -> S.NameId -> Sem r AttributeValue
-nameIdAttrRef tp s =
-  return $
-    topModulePathToDottedPath tp <> ".html" <> preEscapedToValue '#' <> nameIdAttr s
+moduleDocRelativePath :: Members '[Reader HtmlOptions] r => TopModulePath -> Sem r FilePath
+moduleDocRelativePath m = do
+  suff <- kindSuffix <$> asks (^. htmlOptionsKind)
+  return (topModulePathToRelativeFilePath (Just "html") suff joinDot m)
+  where
+    joinDot :: FilePath -> FilePath -> FilePath
+    joinDot l r = l <.> r
+
+nameIdAttrRef :: Members '[Reader HtmlOptions] r => TopModulePath -> S.NameId -> Sem r AttributeValue
+nameIdAttrRef tp s = do
+  pth <- moduleDocRelativePath tp
+  return (fromString pth <> preEscapedToValue '#' <> nameIdAttr s)

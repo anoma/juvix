@@ -39,6 +39,10 @@ body {
     color: #d8dee9
 }
 
+.ju-defined {
+    font-weight: bold;
+}
+
 a:link, a:visited {
   text-decoration: none;
 }

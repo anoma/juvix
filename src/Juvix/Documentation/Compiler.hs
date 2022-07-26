@@ -1,6 +1,7 @@
 module Juvix.Documentation.Compiler where
 
 import Data.ByteString.Builder qualified as Builder
+import Data.Time.Clock
 import Juvix.Documentation.Extra
 import Juvix.Prelude
 import Juvix.Prelude qualified as Prelude
@@ -8,6 +9,7 @@ import Juvix.Prelude.Html
 import Juvix.Prelude.Pretty
 import Juvix.Syntax.Concrete.Language
 import Juvix.Syntax.Concrete.Scoped.Name qualified as S
+import Juvix.Syntax.Concrete.Scoped.Pretty
 import Juvix.Syntax.Concrete.Scoped.Pretty.Html
 import Juvix.Syntax.Concrete.Scoped.Utils
 import Juvix.Syntax.NameId
@@ -44,26 +46,36 @@ writeHtml f h = Prelude.embed $ do
     dir :: FilePath
     dir = takeDirectory f
 
-moduleDocPath :: Members '[Reader DocParams] r => Module 'Scoped 'ModuleTop -> Sem r FilePath
+moduleDocPath :: Members '[Reader HtmlOptions, Reader DocParams] r => Module 'Scoped 'ModuleTop -> Sem r FilePath
 moduleDocPath m = do
+  relPath <- moduleDocRelativePath (m ^. modulePath . S.nameConcrete)
   outDir <- asks (^. docOutputDir)
   return (outDir </> relPath)
-  where
-    relPath :: FilePath
-    relPath = topModulePathToRelativeFilePath (Just "html") joinDot (m ^. modulePath . S.nameConcrete)
-    joinDot :: FilePath -> FilePath -> FilePath
-    joinDot l r = l <.> r
 
 -- | This function compiles a datalang module into Html documentation.
 goTopModule ::
+  forall r.
   Members '[Reader DocParams, Embed IO] r =>
   Module 'Scoped 'ModuleTop ->
   Sem r ()
 goTopModule m = do
-  fpath <- moduleDocPath m
-  Prelude.embed $ putStrLn ("processing " <> pack fpath)
-  writeHtml fpath (run (runReader htmlOpts docHtml))
+  runReader htmlOpts $ do
+    fpath <- moduleDocPath m
+    Prelude.embed (putStrLn ("processing " <> pack fpath))
+    docHtml >>= writeHtml fpath
+
+  runReader srcHtmlOpts $ do
+    fpath <- moduleDocPath m
+    srcHtml >>= writeHtml fpath
   where
+    srcHtml :: forall s. Members '[Reader HtmlOptions, Embed IO] s => Sem s Html
+    srcHtml = do
+      utc <- Prelude.embed getCurrentTime
+      return (genModuleHtml defaultOptions True utc Ayu m)
+
+    srcHtmlOpts :: HtmlOptions
+    srcHtmlOpts = HtmlOptions HtmlSrc
+
     htmlOpts :: HtmlOptions
     htmlOpts = HtmlOptions HtmlDoc
 
@@ -136,6 +148,7 @@ goTopModule m = do
 
         tocEntries :: Html
         tocEntries = mempty
+
         toc :: Html
         toc =
           Html.div ! Attr.id "table-of-contents" $
@@ -146,15 +159,14 @@ goTopModule m = do
                   $ "Contents"
               )
                 <> tocEntries
+
         moduleHeader :: Html
         moduleHeader =
           Html.div ! Attr.id "module-header" $
-            ( table ! Attr.class_ "info"
-              -- \$ tbody (mconcatMap (uncurry metaLine) (HashMap.toList _meta)))
-              $
-                tbody mempty
-            )
-              <> (p ! Attr.class_ "caption" $ titleStr)
+            (p ! Attr.class_ "caption" $ toHtml (prettyText tmp))
+          where
+            tmp :: TopModulePath
+            tmp = m ^. modulePath . S.nameConcrete
 
         interface :: Sem s Html
         interface = do
@@ -183,10 +195,37 @@ goJudoc (Judoc atoms) = mconcatMapM goParagraph paragraphs
 goStatement :: Members '[Reader HtmlOptions] r => Statement 'Scoped -> Sem r Html
 goStatement = \case
   StatementTypeSignature t -> goTypeSignature t
+  StatementAxiom t -> goAxiom t
+  StatementInductive t -> goInductive t
   _ -> mempty
 
-goTypeSignature :: forall r. Members '[Reader HtmlOptions] r => TypeSignature 'Scoped -> Sem r Html
-goTypeSignature sig = do
+goAxiom :: forall r. Members '[Reader HtmlOptions] r => AxiomDef 'Scoped -> Sem r Html
+goAxiom axiom = do
+  header' <- axiomHeader
+  defHeader tmp uid header' Nothing
+  where
+    uid :: NameId
+    uid = axiom ^. axiomName . S.nameId
+    tmp :: TopModulePath
+    tmp = axiom ^. axiomName . S.nameDefinedIn . S.absTopModulePath
+    axiomHeader :: Sem r Html
+    axiomHeader = ppCodeHtml axiom
+
+goInductive :: forall r. Members '[Reader HtmlOptions] r => InductiveDef 'Scoped -> Sem r Html
+goInductive def = do
+  header' <- inductiveHeader
+  defHeader tmp uid header' Nothing
+  where
+    uid :: NameId
+    uid = def ^. inductiveName . S.nameId
+    tmp :: TopModulePath
+    tmp = def ^. inductiveName . S.nameDefinedIn . S.absTopModulePath
+    inductiveHeader :: Sem r Html
+    inductiveHeader =
+      runReader defaultOptions (ppInductiveSignature def) >>= ppCodeHtml
+
+defHeader :: forall r. Members '[Reader HtmlOptions] r => TopModulePath -> NameId -> Html -> Maybe (Judoc 'Scoped) -> Sem r Html
+defHeader tmp uid sig mjudoc = do
   funHeader' <- functionHeader
   judoc' <- judoc
   return $
@@ -196,38 +235,43 @@ goTypeSignature sig = do
   where
     judoc :: Sem r Html
     judoc = do
-      judoc' <- goJudocMay (sig ^. sigDoc)
+      judoc' <- goJudocMay mjudoc
       return (Html.div ! Attr.class_ "doc" $ judoc')
 
     functionHeader :: Sem r Html
     functionHeader = do
-      typeSig' <- typeSig
+      sourceLink' <- sourceAndSelfLink tmp uid
       return $
         p ! Attr.class_ "src" $
-          typeSig'
-            <> sourceAndSelfLink (sig ^. sigName . S.nameId)
-      where
-        typeSig :: Sem r Html
-        typeSig = ppCodeHtml (set sigDoc Nothing sig)
+          sig
+            <> sourceLink'
 
-sourceAndSelfLink :: NameId -> Html
-sourceAndSelfLink name =
-  ( a
-      ! Attr.href (linkSrcName name)
-      ! Attr.class_ "link"
-      $ "Source"
-  )
-    <> ( a
-           ! Attr.href (selfLinkName name)
-           ! Attr.class_ "selflink"
-           $ "#"
-       )
-
-linkSrcName :: IsString a => NameId -> a
-linkSrcName x = fromText $ (fromString baseName <> "-src.html#") <> prettyText x
+goTypeSignature :: forall r. Members '[Reader HtmlOptions] r => TypeSignature 'Scoped -> Sem r Html
+goTypeSignature sig = do
+  sig' <- typeSig
+  defHeader tmp uid sig' (sig ^. sigDoc)
   where
-    baseName :: String
-    baseName = "test"
+    tmp :: TopModulePath
+    tmp = sig ^. sigName . S.nameDefinedIn . S.absTopModulePath
+    uid :: NameId
+    uid = sig ^. sigName . S.nameId
+    typeSig :: Sem r Html
+    typeSig = ppCodeHtml (set sigDoc Nothing sig)
+
+sourceAndSelfLink :: Members '[Reader HtmlOptions] r => TopModulePath -> NameId -> Sem r Html
+sourceAndSelfLink tmp name = do
+  ref' <- local (set htmlOptionsKind HtmlSrc) (nameIdAttrRef tmp name)
+  return $
+    ( a
+        ! Attr.href ref'
+        ! Attr.class_ "link"
+        $ "Source"
+    )
+      <> ( a
+             ! Attr.href (selfLinkName name)
+             ! Attr.class_ "selflink"
+             $ "#"
+         )
 
 tagIden :: IsString a => NameId -> a
 tagIden x = fromText $ "t:" <> prettyText x

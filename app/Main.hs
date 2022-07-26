@@ -20,7 +20,7 @@ import Juvix.Syntax.Abstract.Pretty qualified as Abstract
 import Juvix.Syntax.Concrete.Scoped.Highlight qualified as Highlight
 import Juvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoper
 import Juvix.Syntax.Concrete.Scoped.Pretty qualified as Scoper
-import Juvix.Syntax.Concrete.Scoped.Pretty.Html
+import Juvix.Syntax.Concrete.Scoped.Pretty.Html qualified as Html
 import Juvix.Syntax.MicroJuvix.MicroJuvixArityResult qualified as MicroArity
 import Juvix.Syntax.MicroJuvix.Pretty qualified as Micro
 import Juvix.Syntax.MiniHaskell.Pretty qualified as MiniHaskell
@@ -107,7 +107,7 @@ runCommand cmdWithOpts = do
               Html HtmlOptions {..} -> do
                 res <- runPipeline (upToScoping entryPoint)
                 let m = head (res ^. Scoper.resultModules)
-                embed (genHtml Scoper.defaultOptions _htmlRecursive _htmlTheme _htmlOutputDir _htmlPrintMetadata m)
+                embed (Html.genHtml Scoper.defaultOptions _htmlRecursive _htmlTheme _htmlOutputDir _htmlPrintMetadata m)
               (Internal cmd') -> case cmd' of
                 Highlight -> do
                   res <- runPipelineEither (upToScoping entryPoint)
