@@ -1,9 +1,9 @@
 module Juvix.Core.Context where
 
 import Juvix.Core.GNode
+import Juvix.Core.Name
 import Juvix.Core.Type
 import Juvix.Prelude
-import Juvix.Syntax.Abstract.Name
 
 type IdentContext i = HashMap Symbol (GNode i)
 

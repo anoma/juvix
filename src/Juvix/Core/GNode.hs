@@ -128,13 +128,19 @@ modifyInfo f n = runIdentity $ modifyInfoM (pure . f) n
 
 -- The info type should be functorial in GNode (especially with dependent types,
 -- we will want to store nodes inside the info annotations).
-class GNodeFunctor i where
-  nmapM :: (GNode i -> m (GNode i)) -> i -> m i
+class GNodeFunctor i j where
+  nmapM :: Monad m => (GNode j -> m (GNode j)) -> i -> m i
 
-class GNodeFoldable i where
-  nfoldM :: (a -> a -> a) -> (GNode i -> m a) -> i -> m a
+class GNodeFoldable i j where
+  nfoldM :: Monad m => (a -> a -> a) -> m a -> (GNode j -> m a) -> i -> m a
 
-class (Monoid i, GNodeFunctor i, GNodeFoldable i) => GNodeInfo i
+class GNodeEmpty i where
+  iempty :: i
+
+class (GNodeFunctor i i, GNodeFoldable i i, GNodeEmpty i) => GNodeInfo i
+
+class GNodeInfoFunctor i j i' where
+  nmapInfoM :: Monad m => (GNode j -> m i') -> i -> m i'
 
 {---------------------------------------------------------------------------------}
 {- simple helper functions -}
@@ -142,8 +148,8 @@ class (Monoid i, GNodeFunctor i, GNodeFoldable i) => GNodeInfo i
 mkApp :: GNode i -> [(i, GNode i)] -> GNode i
 mkApp = foldl' (\acc (i, n) -> App i acc n)
 
-mkApp' :: Monoid i => GNode i -> [GNode i] -> GNode i
-mkApp' = foldl' (App mempty)
+mkApp' :: GNodeInfo i => GNode i -> [GNode i] -> GNode i
+mkApp' = foldl' (App iempty)
 
 unfoldApp :: forall i. GNode i -> (GNode i, [(i, GNode i)])
 unfoldApp = go []
@@ -181,7 +187,7 @@ bindingCollector coll = Collector (coll ^. cEmpty) collect
 -- recursive subnodes have already been mapped
 umapG ::
   forall i c m.
-  (Monad m, GNodeFunctor i) =>
+  (Monad m, GNodeFunctor i i) =>
   Collector (GNode i) c ->
   (c -> GNode i -> m (GNode i)) ->
   GNode i ->
@@ -203,28 +209,28 @@ umapG coll f = go (coll ^. cEmpty)
       where
         c' = (coll ^. cCollect) n c
 
-umapM :: (Monad m, GNodeFunctor i) => (GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+umapM :: (Monad m, GNodeFunctor i i) => (GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
 umapM f = umapG unitCollector (const f)
 
-umapMB :: (Monad m, GNodeFunctor i) => ([i] -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+umapMB :: (Monad m, GNodeFunctor i i) => ([i] -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
 umapMB f = umapG (bindingCollector (Collector [] (:))) f
 
-umapMN :: (Monad m, GNodeFunctor i) => (Index -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+umapMN :: (Monad m, GNodeFunctor i i) => (Index -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
 umapMN f = umapG (bindingCollector (Collector 0 (const (+ 1)))) f
 
-umap :: GNodeFunctor i => (GNode i -> GNode i) -> GNode i -> GNode i
+umap :: GNodeFunctor i i => (GNode i -> GNode i) -> GNode i -> GNode i
 umap f n = runIdentity $ umapM (return . f) n
 
-umapB :: GNodeFunctor i => ([i] -> GNode i -> GNode i) -> GNode i -> GNode i
+umapB :: GNodeFunctor i i => ([i] -> GNode i -> GNode i) -> GNode i -> GNode i
 umapB f n = runIdentity $ umapMB (\is -> return . f is) n
 
-umapN :: GNodeFunctor i => (Index -> GNode i -> GNode i) -> GNode i -> GNode i
+umapN :: GNodeFunctor i i => (Index -> GNode i -> GNode i) -> GNode i -> GNode i
 umapN f n = runIdentity $ umapMN (\idx -> return . f idx) n
 
 -- `dmapG` maps the nodes top-down
 dmapG ::
   forall i c m.
-  (Monad m, GNodeFunctor i) =>
+  (Monad m, GNodeFunctor i i) =>
   Collector (GNode i) c ->
   ( c ->
     GNode i ->
@@ -234,6 +240,7 @@ dmapG ::
   m (GNode i)
 dmapG coll f = go (coll ^. cEmpty)
   where
+    go :: c -> GNode i -> m (GNode i)
     go c n = do
       n' <- modifyInfoM (nmapM (go c)) =<< f c n
       let c' = (coll ^. cCollect) n' c
@@ -247,29 +254,29 @@ dmapG coll f = go (coll ^. cEmpty)
         Suspended i t -> Suspended i <$> go c' t
         _ -> return n'
 
-dmapM :: (Monad m, GNodeFunctor i) => (GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+dmapM :: (Monad m, GNodeFunctor i i) => (GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
 dmapM f = dmapG unitCollector (const f)
 
-dmapMB :: (Monad m, GNodeFunctor i) => ([i] -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+dmapMB :: (Monad m, GNodeFunctor i i) => ([i] -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
 dmapMB f = dmapG (bindingCollector (Collector [] (:))) f
 
-dmapMN :: (Monad m, GNodeFunctor i) => (Index -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
+dmapMN :: (Monad m, GNodeFunctor i i) => (Index -> GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
 dmapMN f = dmapG (bindingCollector (Collector 0 (const (+ 1)))) f
 
-dmap :: GNodeFunctor i => (GNode i -> GNode i) -> GNode i -> GNode i
+dmap :: GNodeFunctor i i => (GNode i -> GNode i) -> GNode i -> GNode i
 dmap f n = runIdentity $ dmapM (return . f) n
 
-dmapB :: GNodeFunctor i => ([i] -> GNode i -> GNode i) -> GNode i -> GNode i
+dmapB :: GNodeFunctor i i => ([i] -> GNode i -> GNode i) -> GNode i -> GNode i
 dmapB f n = runIdentity $ dmapMB (\is -> return . f is) n
 
-dmapN :: GNodeFunctor i => (Index -> GNode i -> GNode i) -> GNode i -> GNode i
+dmapN :: GNodeFunctor i i => (Index -> GNode i -> GNode i) -> GNode i -> GNode i
 dmapN f n = runIdentity $ dmapMN (\idx -> return . f idx) n
 
 -- `ufoldG` folds the tree bottom-up; `uplus` combines the values - it should be
 -- commutative and associative
 ufoldG ::
   forall i c a m.
-  (Monad m, GNodeFoldable i) =>
+  (Monad m, GNodeFoldable i i) =>
   Collector (GNode i) c ->
   (a -> a -> a) ->
   (c -> GNode i -> m a) ->
@@ -289,42 +296,42 @@ ufoldG coll uplus f = go (coll ^. cEmpty)
       _ -> ma
       where
         c' = (coll ^. cCollect) n c
-        ma = uplus <$> f c n <*> nfoldM uplus (go c) (getInfo n)
+        ma = nfoldM uplus (f c n) (go c) (getInfo n)
 
-ufoldM :: (Monad m, GNodeFoldable i) => (a -> a -> a) -> (GNode i -> m a) -> GNode i -> m a
+ufoldM :: (Monad m, GNodeFoldable i i) => (a -> a -> a) -> (GNode i -> m a) -> GNode i -> m a
 ufoldM uplus f = ufoldG unitCollector uplus (const f)
 
-ufoldMB :: (Monad m, GNodeFoldable i) => (a -> a -> a) -> ([i] -> GNode i -> m a) -> GNode i -> m a
+ufoldMB :: (Monad m, GNodeFoldable i i) => (a -> a -> a) -> ([i] -> GNode i -> m a) -> GNode i -> m a
 ufoldMB uplus f = ufoldG (bindingCollector (Collector [] (:))) uplus f
 
-ufoldMN :: (Monad m, GNodeFoldable i) => (a -> a -> a) -> (Index -> GNode i -> m a) -> GNode i -> m a
+ufoldMN :: (Monad m, GNodeFoldable i i) => (a -> a -> a) -> (Index -> GNode i -> m a) -> GNode i -> m a
 ufoldMN uplus f = ufoldG (bindingCollector (Collector 0 (const (+ 1)))) uplus f
 
-ufold :: GNodeFoldable i => (a -> a -> a) -> (GNode i -> a) -> GNode i -> a
+ufold :: GNodeFoldable i i => (a -> a -> a) -> (GNode i -> a) -> GNode i -> a
 ufold uplus f n = runIdentity $ ufoldM uplus (return . f) n
 
-ufoldB :: GNodeFoldable i => (a -> a -> a) -> ([i] -> GNode i -> a) -> GNode i -> a
+ufoldB :: GNodeFoldable i i => (a -> a -> a) -> ([i] -> GNode i -> a) -> GNode i -> a
 ufoldB uplus f n = runIdentity $ ufoldMB uplus (\is -> return . f is) n
 
-ufoldN :: GNodeFoldable i => (a -> a -> a) -> (Index -> GNode i -> a) -> GNode i -> a
+ufoldN :: GNodeFoldable i i => (a -> a -> a) -> (Index -> GNode i -> a) -> GNode i -> a
 ufoldN uplus f n = runIdentity $ ufoldMN uplus (\idx -> return . f idx) n
 
-walk :: (Monad m, GNodeFoldable i) => (GNode i -> m ()) -> GNode i -> m ()
+walk :: (Monad m, GNodeFoldable i i) => (GNode i -> m ()) -> GNode i -> m ()
 walk = ufoldM mappend
 
-walkB :: (Monad m, GNodeFoldable i) => ([i] -> GNode i -> m ()) -> GNode i -> m ()
+walkB :: (Monad m, GNodeFoldable i i) => ([i] -> GNode i -> m ()) -> GNode i -> m ()
 walkB = ufoldMB mappend
 
-walkN :: (Monad m, GNodeFoldable i) => (Index -> GNode i -> m ()) -> GNode i -> m ()
+walkN :: (Monad m, GNodeFoldable i i) => (Index -> GNode i -> m ()) -> GNode i -> m ()
 walkN = ufoldMN mappend
 
-gather :: GNodeFoldable i => (a -> GNode i -> a) -> a -> GNode i -> a
+gather :: GNodeFoldable i i => (a -> GNode i -> a) -> a -> GNode i -> a
 gather f acc n = fst $ run $ runState acc (walk (\n' -> modify (`f` n')) n)
 
-gatherB :: GNodeFoldable i => ([i] -> a -> GNode i -> a) -> a -> GNode i -> a
+gatherB :: GNodeFoldable i i => ([i] -> a -> GNode i -> a) -> a -> GNode i -> a
 gatherB f acc n = fst $ run $ runState acc (walkB (\is n' -> modify (\a -> f is a n')) n)
 
-gatherN :: GNodeFoldable i => (Index -> a -> GNode i -> a) -> a -> GNode i -> a
+gatherN :: GNodeFoldable i i => (Index -> a -> GNode i -> a) -> a -> GNode i -> a
 gatherN f acc n = fst $ run $ runState acc (walkN (\idx n' -> modify (\a -> f idx a n')) n)
 
 {---------------------------------------------------------------------------}

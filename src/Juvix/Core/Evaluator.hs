@@ -8,7 +8,7 @@ import Juvix.Prelude
 
 -- `eval ctx env n` evalues a node `n` whose all free variables point into
 -- `env`. All nodes in `ctx` and `env` are closed.
-eval :: forall i. Monoid i => IdentContext i -> [GNode i] -> GNode i -> GNode i
+eval :: forall i. GNodeInfo i => IdentContext i -> [GNode i] -> GNode i -> GNode i
 eval !ctx = eval'
   where
     unimplemented :: a
@@ -71,8 +71,8 @@ eval !ctx = eval'
       Builtin {} -> unimplemented
       ConstValue {} -> evalError
       Data {} -> evalError
-      Hole {} -> Suspended mempty (mkApp' n (map (eval' env) args))
-      Axiom {} -> Suspended mempty (mkApp' n (map (eval' env) args))
+      Hole {} -> Suspended iempty (mkApp' n (map (eval' env) args))
+      Axiom {} -> Suspended iempty (mkApp' n (map (eval' env) args))
       _ -> push env env' (eval' env' n) a args
 
     push' :: [GNode i] -> [GNode i] -> GNode i -> [GNode i] -> GNode i
