@@ -144,7 +144,8 @@ runCommand cmdWithOpts = do
                       <$> runPipeline
                         (upToScoping entryPoint)
                   say "Judoc: generating documentation..."
-                  Doc.compileModuleHtmlText "doc" "proj" l
+                  let docDir = localOpts ^. docOutputDir
+                  Doc.compileModuleHtmlText docDir "proj" l
                 MicroJuvix Pretty -> do
                   micro <-
                     head . (^. Micro.resultModules)

@@ -3,6 +3,7 @@ module Commands.Internal
     module Commands.Internal.MicroJuvix,
     module Commands.Internal.Parse,
     module Commands.Internal.Scope,
+    module Commands.Internal.Doc,
     module Commands.Internal.Termination,
   )
 where
