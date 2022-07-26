@@ -1,4 +1,4 @@
-module Juvix.Syntax.Concrete.Scoped.Pretty.Html (genHtml, Theme (..), ppCodeHtml) where
+module Juvix.Syntax.Concrete.Scoped.Pretty.Html where
 
 import Data.ByteString qualified as BS
 import Data.Text qualified as Text
@@ -25,6 +25,16 @@ data Theme
   = Nord
   | Ayu
   deriving stock (Show)
+
+data HtmlKind =
+  HtmlDoc
+  | HtmlSrc
+
+newtype HtmlOptions = HtmlOptions {
+  _htmlOptionsKind :: HtmlKind
+  }
+
+makeLenses ''HtmlOptions
 
 genHtml :: Options -> Bool -> Theme -> FilePath -> Bool -> Module 'Scoped 'ModuleTop -> IO ()
 genHtml opts recursive theme outputDir printMetadata entry = do
@@ -71,10 +81,18 @@ genModuleHtml opts printMetadata utc theme m =
       Ayu -> ayuCss
       Nord -> nordCss
 
+    htmlOpts :: HtmlOptions
+    htmlOpts = HtmlOptions {
+      _htmlOptionsKind = HtmlSrc
+      }
+
+    pp :: PrettyCode a => a -> Html
+    pp = ppCodeHtml' htmlOpts opts
+
     prettySrc :: Html
     prettySrc =
       (pre ! Attr.id "src-content") $
-        ppCodeHtml' opts m
+        pp m
 
     mheader :: Html
     mheader =
@@ -115,48 +133,52 @@ genModule opts printMetadata utc theme =
 docStream' :: PrettyCode a => Options -> a -> SimpleDocStream Ann
 docStream' opts m = layoutPretty defaultLayoutOptions (runPrettyCode opts m)
 
-renderTree :: SimpleDocTree Ann -> Html
+renderTree :: Members '[Reader HtmlOptions] r => SimpleDocTree Ann -> Sem r Html
 renderTree = go
 
-ppCodeHtml' :: PrettyCode a => Options -> a -> Html
-ppCodeHtml' opts = renderTree . treeForm . docStream' opts
+ppCodeHtml' :: PrettyCode a => HtmlOptions -> Options -> a -> Html
+ppCodeHtml' htmlOpts opts = run . runReader htmlOpts . renderTree . treeForm . docStream' opts
 
-ppCodeHtml :: PrettyCode a => a -> Html
-ppCodeHtml = ppCodeHtml' defaultOptions
+ppCodeHtml :: (Members '[Reader HtmlOptions] r, PrettyCode a) => a -> Sem r Html
+ppCodeHtml x = do
+  o <- ask
+  return (ppCodeHtml' o defaultOptions x)
 
-go :: SimpleDocTree Ann -> Html
+go :: Members '[Reader HtmlOptions] r => SimpleDocTree Ann -> Sem r Html
 go sdt = case sdt of
-  STEmpty -> mempty
-  STChar c -> toHtml c
-  STText _ t -> toHtml t
-  STLine s -> "\n" <> toHtml (textSpaces s)
-  STAnn ann content -> putTag ann (go content)
+  STEmpty -> return mempty
+  STChar c -> return (toHtml c)
+  STText _ t -> return (toHtml t)
+  STLine s -> return ("\n" <> toHtml (textSpaces s))
+  STAnn ann content -> go content >>= putTag ann
   STConcat l -> mconcatMap go l
   where
     textSpaces :: Int -> Text
     textSpaces n = Text.replicate n (Text.singleton ' ')
 
-putTag :: Ann -> Html -> Html
+putTag :: forall r. Ann -> Html -> Sem r Html
 putTag ann x = case ann of
-  AnnKind k -> tagKind k x
-  AnnLiteralInteger -> Html.span ! Attr.class_ "ju-number" $ x
-  AnnLiteralString -> Html.span ! Attr.class_ "ju-string" $ x
-  AnnKeyword -> Html.span ! Attr.class_ "ju-keyword" $ x
-  AnnUnkindedSym -> Html.span ! Attr.class_ "ju-var" $ x
-  AnnComment -> Html.span ! Attr.class_ "ju-var" $ x -- TODO add comment class
-  AnnDelimiter -> Html.span ! Attr.class_ "ju-delimiter" $ x
+  AnnKind k -> return (tagKind k x)
+  AnnLiteralInteger -> return (Html.span ! Attr.class_ "ju-number" $ x)
+  AnnLiteralString -> return (Html.span ! Attr.class_ "ju-string" $ x)
+  AnnKeyword -> return (Html.span ! Attr.class_ "ju-keyword" $ x)
+  AnnUnkindedSym -> return (Html.span ! Attr.class_ "ju-var" $ x)
+  AnnComment -> return (Html.span ! Attr.class_ "ju-var" $ x) -- TODO add comment class
+  AnnDelimiter -> return (Html.span ! Attr.class_ "ju-delimiter" $ x)
   AnnDef tmp ni -> tagDef tmp ni
   AnnRef tmp ni -> tagRef tmp ni
   where
-    tagDef :: TopModulePath -> S.NameId -> Html
+    tagDef :: TopModulePath -> S.NameId -> Sem r Html
     tagDef tmp nid =
-      Html.span ! Attr.id (nameIdAttr nid) $
+      Html.span ! Attr.id (nameIdAttr nid) <$>
         tagRef tmp nid
 
-    tagRef tmp ni =
-      Html.span ! Attr.class_ "annot" $
-        a ! Attr.href (nameIdAttrRef tmp ni) $
-          x
+    tagRef :: TopModulePath -> S.NameId -> Sem r Html
+    tagRef tmp ni = do
+      pth <- nameIdAttrRef tmp ni
+      return $ Html.span ! Attr.class_ "annot" $
+        a ! Attr.href pth $ x
+
     tagKind k =
       Html.span
         ! Attr.class_
@@ -173,6 +195,6 @@ putTag ann x = case ann of
 nameIdAttr :: S.NameId -> AttributeValue
 nameIdAttr (S.NameId k) = fromString . show $ k
 
-nameIdAttrRef :: TopModulePath -> S.NameId -> AttributeValue
-nameIdAttrRef tp s =
+nameIdAttrRef :: TopModulePath -> S.NameId -> Sem r AttributeValue
+nameIdAttrRef tp s = return $
   topModulePathToDottedPath tp <> ".html" <> preEscapedToValue '#' <> nameIdAttr s

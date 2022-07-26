@@ -143,9 +143,8 @@ runCommand cmdWithOpts = do
                     (^. Scoper.mainModule)
                       <$> runPipeline
                         (upToScoping entryPoint)
-                  say "TODO"
-                  let txt = Doc.compileModuleHtmlText "test" l
-                  embed (writeFile "documentation.html" txt)
+                  say "Judoc: generating documentation..."
+                  Doc.compileModuleHtmlText "doc" "proj" l
                 MicroJuvix Pretty -> do
                   micro <-
                     head . (^. Micro.resultModules)
