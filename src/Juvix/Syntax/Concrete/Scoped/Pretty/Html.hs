@@ -181,9 +181,9 @@ putTag ann x = case ann of
         HtmlSrc -> id
 
     tagDef :: TopModulePath -> S.NameId -> Sem r Html
-    tagDef tmp nid =
-      Html.span ! Attr.id (nameIdAttr nid)
-        <$> tagRef tmp nid
+    tagDef tmp nid = do
+      ref' <- tagRef tmp nid
+      return $ (Html.span ! Attr.id (nameIdAttr nid)) ref'
 
     tagRef :: TopModulePath -> S.NameId -> Sem r Html
     tagRef tmp ni = do

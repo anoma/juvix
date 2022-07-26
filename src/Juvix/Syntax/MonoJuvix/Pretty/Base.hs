@@ -39,10 +39,10 @@ instance PrettyCode Name where
       if
           | showNameId -> Just . ("@" <>) <$> ppCode (n ^. nameId)
           | otherwise -> return Nothing
-    return
-      $ annotate (AnnKind (n ^. nameKind))
-      $ pretty (n ^. nameText)
-      <>? uid
+    return $
+      annotate (AnnKind (n ^. nameKind)) $
+        pretty (n ^. nameText)
+          <>? uid
 
 instance PrettyCode Iden where
   ppCode :: Member (Reader Options) r => Iden -> Sem r (Doc Ann)

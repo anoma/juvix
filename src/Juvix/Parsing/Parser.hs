@@ -332,8 +332,8 @@ universe = do
         Just (lvl, i') -> Universe (Just lvl) (i <> i')
     )
 
-getJudoc :: Members '[JudocStash] r => Sem r (Maybe (Judoc 'Parsed))
-getJudoc = do
+getJudoc :: Members '[JudocStash] r => ParsecS r (Maybe (Judoc 'Parsed))
+getJudoc = P.lift $ do
   j <- get
   put (Nothing @(Judoc 'Parsed))
   return j
@@ -347,7 +347,7 @@ typeSignature ::
 typeSignature _sigTerminating _sigName _sigBuiltin = do
   kwColon
   _sigType <- parseExpressionAtoms
-  _sigDoc <- P.lift getJudoc
+  _sigDoc <- getJudoc
   return TypeSignature {..}
 
 -- | Used to minimize the amount of required @P.try@s.
@@ -456,7 +456,7 @@ inductiveDef :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r =
 inductiveDef _inductiveBuiltin = do
   _inductivePositive <- isJust <$> optional kwPositive
   kwInductive
-  _inductiveDoc <- P.lift getJudoc
+  _inductiveDoc <- getJudoc
   _inductiveName <- symbol
   _inductiveParameters <- P.many inductiveParam
   _inductiveType <- optional (kwColon >> parseExpressionAtoms)
@@ -472,6 +472,7 @@ inductiveParam = parens $ do
 
 constructorDef :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (InductiveConstructorDef 'Parsed)
 constructorDef = do
+  _constructorDoc <- optional judocBlock >> getJudoc
   _constructorName <- symbol
   kwColon
   _constructorType <- parseExpressionAtoms
@@ -520,7 +521,7 @@ pmodulePath = case sing :: SModuleIsTop t of
 moduleDef :: (SingI t, Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r) => ParsecS r (Module 'Parsed t)
 moduleDef = do
   kwModule
-  _moduleDoc <- P.lift getJudoc
+  _moduleDoc <- getJudoc
   _modulePath <- pmodulePath
   _moduleParameters <- many inductiveParam
   kwSemicolon

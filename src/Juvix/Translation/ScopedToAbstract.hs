@@ -265,7 +265,7 @@ goConstructorDef ::
   Member (Error ScoperError) r =>
   InductiveConstructorDef 'Scoped ->
   Sem r Abstract.InductiveConstructorDef
-goConstructorDef (InductiveConstructorDef c ty) =
+goConstructorDef (InductiveConstructorDef c _ ty) =
   Abstract.InductiveConstructorDef (goSymbol c) <$> goExpression ty
 
 goExpression ::

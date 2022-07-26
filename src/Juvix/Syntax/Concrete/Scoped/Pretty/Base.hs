@@ -368,8 +368,8 @@ instance (SingI s, SingI t) => PrettyCode (Module s t) where
     moduleBody' <- ppCode _moduleBody >>= indented
     modulePath' <- ppModulePathType _modulePath
     moduleParameters' <- ppInductiveParameters _moduleParameters
-    return
-      $ kwModule
+    return $
+      kwModule
         <+> modulePath'
         <+?> moduleParameters'
           <> kwSemicolon
@@ -377,7 +377,7 @@ instance (SingI s, SingI t) => PrettyCode (Module s t) where
           <> moduleBody'
           <> line
           <> kwEnd
-      <>? lastSemicolon
+          <>? lastSemicolon
     where
       lastSemicolon = case sing :: SModuleIsTop t of
         SModuleLocal -> Nothing
@@ -413,7 +413,8 @@ instance SingI s => PrettyCode (InductiveConstructorDef s) where
   ppCode InductiveConstructorDef {..} = do
     constructorName' <- annDef _constructorName <$> ppSymbol _constructorName
     constructorType' <- ppExpression _constructorType
-    return $ constructorName' <+> kwColon <+> constructorType'
+    doc' <- mapM ppCode _constructorDoc
+    return $ doc' ?<> constructorName' <+> kwColon <+> constructorType'
 
 instance PrettyCode BuiltinInductive where
   ppCode i = return (kwBuiltin <+> keyword' i)

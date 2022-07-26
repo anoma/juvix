@@ -224,6 +224,7 @@ type InductiveName s = SymbolType s
 
 data InductiveConstructorDef (s :: Stage) = InductiveConstructorDef
   { _constructorName :: InductiveConstructorName s,
+    _constructorDoc :: Maybe (Judoc s),
     _constructorType :: ExpressionType s
   }
 

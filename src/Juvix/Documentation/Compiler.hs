@@ -213,8 +213,10 @@ goAxiom axiom = do
 
 goInductive :: forall r. Members '[Reader HtmlOptions] r => InductiveDef 'Scoped -> Sem r Html
 goInductive def = do
-  header' <- inductiveHeader
-  defHeader tmp uid header' (def ^. inductiveDoc)
+  sig' <- inductiveHeader
+  header' <- defHeader tmp uid sig' (def ^. inductiveDoc)
+  body' <- goConstructors (def ^. inductiveConstructors)
+  return (header' <> body')
   where
     uid :: NameId
     uid = def ^. inductiveName . S.nameId
@@ -223,6 +225,32 @@ goInductive def = do
     inductiveHeader :: Sem r Html
     inductiveHeader =
       runReader defaultOptions (ppInductiveSignature def) >>= ppCodeHtml
+
+goConstructors :: forall r. Members '[Reader HtmlOptions] r => [InductiveConstructorDef 'Scoped] -> Sem r Html
+goConstructors cc = do
+  tbl' <- table . tbody <$> mconcatMapM goConstructor cc
+  return $
+    Html.div ! Attr.class_ "subs constructors" $
+      (p ! Attr.class_ "caption" $ "Constructors")
+        <> tbl'
+  where
+    goConstructor :: InductiveConstructorDef 'Scoped -> Sem r Html
+    goConstructor c = do
+      src' <- srcPart
+      doc' <- docPart
+      return (tr (src' <> doc'))
+      where
+        docPart :: Sem r Html
+        docPart = do
+          td ! Attr.class_ "doc"
+            <$> goJudocMay (c ^. constructorDoc)
+
+        srcPart :: Sem r Html
+        srcPart = do
+          sig' <- ppCodeHtml (set constructorDoc Nothing c)
+          return $
+            td ! Attr.class_ "src" $
+              sig'
 
 defHeader :: forall r. Members '[Reader HtmlOptions] r => TopModulePath -> NameId -> Html -> Maybe (Judoc 'Scoped) -> Sem r Html
 defHeader tmp uid sig mjudoc = do

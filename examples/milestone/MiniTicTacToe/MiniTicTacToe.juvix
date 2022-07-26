@@ -38,7 +38,9 @@ unlines ≔ intercalate "\n";
 
 --- A symbol represents a token that can be placed in a square
 inductive Symbol {
+--- The circle token
   O : Symbol;
+--- The cross token
   X : Symbol;
 };
 
@@ -56,7 +58,7 @@ showSymbol O ≔ "O";
 showSymbol X ≔ "X";
 
 -- Square
-
+--- A square is each of the holes in a board
 inductive Square {
   empty : ℕ → Square;
   occupied : Symbol → Square;
@@ -71,8 +73,7 @@ showSquare : Square → String;
 showSquare (empty n) ≔ " " ++str natToStr n ++str " ";
 showSquare (occupied s) ≔ " " ++str showSymbol s ++str " ";
 
--- Board
-
+--- A grid of squares
 inductive Board {
   board : List (List Square) → Board;
 };
@@ -103,8 +104,11 @@ showBoard (board squares) ≔ unlines (surround "+---+---+---+" (map showRow squ
 -- Error
 
 inductive Error {
+--- no error occurred
   noError : Error;
+--- a non-fatal error occurred
   continue : String → Error;
+--- a fatal occurred
   terminate : String → Error;
 };
 

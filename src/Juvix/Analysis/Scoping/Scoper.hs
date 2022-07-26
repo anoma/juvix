@@ -419,10 +419,12 @@ checkConstructorDef ::
 checkConstructorDef InductiveConstructorDef {..} = do
   constructorType' <- checkParseExpressionAtoms _constructorType
   constructorName' <- bindConstructorSymbol _constructorName
+  doc' <- mapM checkJudoc _constructorDoc
   registerConstructor'
     InductiveConstructorDef
       { _constructorName = constructorName',
-        _constructorType = constructorType'
+        _constructorType = constructorType',
+        _constructorDoc = doc'
       }
 
 withParams ::
