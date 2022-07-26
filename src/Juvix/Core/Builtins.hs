@@ -1,5 +1,7 @@
 module Juvix.Core.Builtins where
 
+import Juvix.Prelude
+
 -- Builtin operations which the evaluator and the code generator treat
 -- specially.
 data BuiltinOp
@@ -18,6 +20,7 @@ data BuiltinOp
   | OpListTail
   | OpPairFst
   | OpPairSnd
+  deriving stock (Eq)
 
 -- Builtin data tags
 data BuiltinDataTag =
@@ -27,3 +30,4 @@ data BuiltinDataTag =
   | TagNil
   | TagCons
   | TagPair
+  deriving stock (Eq)

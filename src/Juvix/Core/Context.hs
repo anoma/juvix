@@ -24,6 +24,8 @@ data IdentInfo = IdentInfo
   { _identName :: Name,
     _identSymbol :: Symbol,
     _identType :: Type,
+    _identArgsNum :: Int,
+    -- _identArgsNum will be used often enough to justify avoiding recomputation
     _identArgsInfo :: [ArgumentInfo]
   }
 

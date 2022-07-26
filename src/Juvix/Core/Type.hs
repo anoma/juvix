@@ -12,14 +12,14 @@ data Atom = Atom
 
 makeLenses ''Atom
 
--- destructs a type into the target and the arguments (left-to-right)
-destructType :: Type -> (Type, [Type])
-destructType ty = case ty of
-  Fun l r -> let (tgt, args) = destructType r in (tgt, l:args)
+-- unfold a type into the target and the arguments (left-to-right)
+unfoldType :: Type -> (Type, [Type])
+unfoldType ty = case ty of
+  Fun l r -> let (tgt, args) = unfoldType r in (tgt, l:args)
   _ -> (ty, [])
 
 getTarget :: Type -> Type
-getTarget = fst . destructType
+getTarget = fst . unfoldType
 
 getArgs :: Type -> [Type]
-getArgs = snd . destructType
+getArgs = snd . unfoldType

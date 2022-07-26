@@ -21,6 +21,7 @@ type Symbol = Word
 -- "builtin" constructors, e.g., unit, nat, lists, pairs, so that the code
 -- generator can treat them specially.
 data Tag = BuiltinTag BuiltinDataTag | UserTag Word
+  deriving stock (Eq)
 
 -- de Bruijn index
 type Index = Int
@@ -39,6 +40,8 @@ data GNode i
     -- and the code generator. For example, basic arithmetic operations go into
     -- `Builtin`.
     Builtin !i !BuiltinOp
+  | -- A data constructor (the function that creates the data).
+    Constructor !i !Tag
   | ConstValue !i {-# UNPACK #-} !Constant
   | -- A hole. It's a unit for the purposes of evaluation.
     Hole !i
@@ -49,14 +52,17 @@ data GNode i
   | -- `let x := value in body` is not reducible to lambda + application for the purposes
     -- of ML-polymorphic / dependent type checking or code generation!
     LetIn !i !(GNode i) !(GNode i)
-  | -- Data constructor.
-    Data !i !Tag ![GNode i]
   | -- One-level case matching on the tag of a data constructor: `Case value
     -- branches`. `Case` is lazy: only the selected branch is evaluated. Lazy `if`
     -- can be implemented by a case on a boolean.
     Case !i !(GNode i) ![CaseBranch i]
-  | -- Execution only: `LambdaClosure env body`
+  | -- Evaluation only: evaluated data constructor (the actual data).
+    Data !i !Tag ![GNode i]
+  | -- Evaluation only: `LambdaClosure env body`
     LambdaClosure !i ![GNode i] !(GNode i)
+  | -- Evaluation only: a suspended term value which cannot be evaluated further,
+    -- e.g., a hole applied to some arguments.
+    Suspended !i !(GNode i)
 
 -- Other things we might need in the future:
 -- - laziness annotations (converting these to closures/thunks should be done
@@ -88,30 +94,34 @@ getInfo = \case
   Var i _ -> i
   Ident i _ -> i
   Builtin i _ -> i
+  Constructor i _ -> i
   ConstValue i _ -> i
   Hole i -> i
   Axiom i -> i
   App i _ _ -> i
   Lambda i _ -> i
   LetIn i _ _ -> i
-  Data i _ _ -> i
   Case i _ _ -> i
+  Data i _ _ -> i
   LambdaClosure i _ _ -> i
+  Suspended i _ -> i
 
 modifyInfoM :: Applicative m => (i -> m i) -> GNode i -> m (GNode i)
 modifyInfoM f = \case
   Var i idx -> Var <$> f i <*> pure idx
   Ident i sym -> Ident <$> f i <*> pure sym
   Builtin i op -> Builtin <$> f i <*> pure op
+  Constructor i tag -> Constructor <$> f i <*> pure tag
   ConstValue i v -> ConstValue <$> f i <*> pure v
   Hole i -> Hole <$> f i
   Axiom i -> Axiom <$> f i
   App i l r -> App <$> f i <*> pure l <*> pure r
   Lambda i b -> Lambda <$> f i <*> pure b
   LetIn i v b -> LetIn <$> f i <*> pure v <*> pure b
-  Data i tag args -> Data <$> f i <*> pure tag <*> pure args
   Case i v bs -> Case <$> f i <*> pure v <*> pure bs
+  Data i tag args -> Data <$> f i <*> pure tag <*> pure args
   LambdaClosure i env b -> LambdaClosure <$> f i <*> pure env <*> pure b
+  Suspended i t -> Suspended <$> f i <*> pure t
 
 modifyInfo :: (i -> i) -> GNode i -> GNode i
 modifyInfo f n = runIdentity $ modifyInfoM (pure . f) n
@@ -124,7 +134,24 @@ class GNodeFunctor i where
 class GNodeFoldable i where
   nfoldM :: (a -> a -> a) -> (GNode i -> m a) -> i -> m a
 
-class (GNodeFunctor i, GNodeFoldable i) => GNodeInfo i
+class (Monoid i, GNodeFunctor i, GNodeFoldable i) => GNodeInfo i
+
+{---------------------------------------------------------------------------------}
+{- simple helper functions -}
+
+mkApp :: GNode i -> [(i, GNode i)] -> GNode i
+mkApp = foldl' (\acc (i, n) -> App i acc n)
+
+mkApp' :: Monoid i => GNode i -> [GNode i] -> GNode i
+mkApp' = foldl' (App mempty)
+
+unfoldApp :: forall i. GNode i -> (GNode i, [(i, GNode i)])
+unfoldApp = go []
+  where
+    go :: [(i, GNode i)] -> GNode i -> (GNode i, [(i, GNode i)])
+    go acc n = case n of
+      App i l r -> go ((i, r) : acc) l
+      _ -> (n, acc)
 
 {---------------------------------------------------------------------------------}
 {- General recursors on GNode  -}
@@ -168,14 +195,13 @@ umapG coll f = go (coll ^. cEmpty)
         App i l r -> f c =<< (App i <$> go c' l <*> go c' r)
         Lambda i body -> f c . Lambda i =<< go c' body
         LetIn i value body -> f c =<< (LetIn i <$> go c' value <*> go c' body)
-        Data i tag args -> f c . Data i tag =<< mapM (go c') args
         Case i value bs -> f c =<< (Case i <$> go c' value <*> mapM (\(CaseBranch tag br) -> CaseBranch tag <$> go c' br) bs)
+        Data i tag args -> f c . Data i tag =<< mapM (go c') args
         LambdaClosure i env body -> f c =<< (LambdaClosure i <$> mapM (go c') env <*> go c' body)
+        Suspended i t -> f c . Suspended i =<< go c' t
         _ -> f c n'
       where
         c' = (coll ^. cCollect) n c
-
--- should there be n' here?
 
 umapM :: (Monad m, GNodeFunctor i) => (GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
 umapM f = umapG unitCollector (const f)
@@ -215,9 +241,10 @@ dmapG coll f = go (coll ^. cEmpty)
         App i l r -> App i <$> go c' l <*> go c' r
         Lambda i body -> Lambda i <$> go c' body
         LetIn i value body -> LetIn i <$> go c' value <*> go c' body
-        Data i tag args -> Data i tag <$> mapM (go c') args
         Case i value bs -> Case i <$> go c' value <*> mapM (\(CaseBranch tag br) -> CaseBranch tag <$> go c' br) bs
+        Data i tag args -> Data i tag <$> mapM (go c') args
         LambdaClosure i env body -> LambdaClosure i <$> mapM (go c') env <*> go c' body
+        Suspended i t -> Suspended i <$> go c' t
         _ -> return n'
 
 dmapM :: (Monad m, GNodeFunctor i) => (GNode i -> m (GNode i)) -> GNode i -> m (GNode i)
@@ -255,9 +282,10 @@ ufoldG coll uplus f = go (coll ^. cEmpty)
       App _ l r -> uplus <$> ma <*> (uplus <$> go c' l <*> go c' r)
       Lambda _ body -> uplus <$> ma <*> go c' body
       LetIn _ value body -> uplus <$> ma <*> (uplus <$> go c' value <*> go c' body)
-      Data _ _ args -> foldr (liftM2 uplus . go c') ma args
       Case _ value bs -> uplus <$> ma <*> foldr (liftM2 uplus . (\(CaseBranch _ br) -> go c' br)) (go c' value) bs
+      Data _ _ args -> foldr (liftM2 uplus . go c') ma args
       LambdaClosure _ env body -> uplus <$> ma <*> foldr (liftM2 uplus . go c') (go c' body) env
+      Suspended _ t -> uplus <$> ma <*> go c' t
       _ -> ma
       where
         c' = (coll ^. cCollect) n c
@@ -350,7 +378,7 @@ subst t = umapN go
       Var _ idx | idx == k -> shift k t
       _ -> n
 
--- reduce all beta redexes present in a term and a the ones created upwards
+-- reduce all beta redexes present in a term and the ones created upwards
 -- (i.e., a "beta-development")
 reduceBeta :: forall i. GNodeInfo i => GNode i -> GNode i
 reduceBeta = umap go
