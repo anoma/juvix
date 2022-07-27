@@ -2,6 +2,7 @@ module Juvix.Documentation.Compiler where
 
 import Data.ByteString qualified as BS
 import Data.ByteString.Builder qualified as Builder
+import Data.HashMap.Strict qualified as HashMap
 import Data.Time.Clock
 import Juvix.Documentation.Extra
 import Juvix.Prelude
@@ -53,28 +54,80 @@ indexTree = foldr insertModule emptyTree
     emptyTree :: Tree Symbol (Maybe TopModulePath)
     emptyTree = Tree Nothing mempty
 
-createIndex ::
+indexFileName :: FilePath
+indexFileName = "index.html"
+
+createIndexFile ::
   forall r.
   Members '[Reader DocParams, Embed IO, Reader HtmlOptions] r =>
   [TopModulePath] ->
   Sem r ()
-createIndex ps = do
+createIndexFile ps = do
   outDir <- asks (^. docOutputDir)
-  writeHtml (outDir </> "index.html") indexHtml
+  indexHtml >>= writeHtml (outDir </> indexFileName) . template mempty
   where
-    indexHtml :: Html
-    indexHtml =
-      Html.div ! Attr.id "module-list" $
-        (p ! Attr.class_ "caption" $ "Modules")
-          <> ul mempty
+    indexHtml :: Sem r Html
+    indexHtml = do
+      tree' <- root tree
+      return $
+        Html.div ! Attr.id "content" $
+          Html.div ! Attr.id "module-list" $
+            (p ! Attr.class_ "caption" $ "Modules")
+              <> tree'
     tree :: ModuleTree
     tree = indexTree ps
+    root :: ModuleTree -> Sem r Html
+    root (Tree _ t) = do
+      c' <- mconcatMapM (uncurry goChild) (HashMap.toList t)
+      return $ ul c'
+
+    goChild :: Symbol -> ModuleTree -> Sem r Html
+    goChild s (Tree lbl children) = node
+      where
+        nodeRow :: Sem r Html
+        nodeRow = case lbl of
+          Nothing ->
+            return $
+              Html.span ! Attr.class_ attrBare $
+                toHtml (prettyText s)
+          Just lbl' -> do
+            lnk <- nameIdAttrRef lbl' Nothing
+            return $
+              Html.span ! Attr.class_ attrBare $
+                (a ! Attr.href lnk $ toHtml (prettyText lbl'))
+        attrBase :: Html.AttributeValue
+        attrBase = "details-toggle-control details-toggle collapser"
+        -- dataDetailsId :: AttributeValue -> Attribute
+        -- dataDetailsId = Html.dataAttribute "details-id"
+        attrBare :: Html.AttributeValue
+        attrBare = attrBase <> "module"
+        -- attr :: Html.AttributeValue
+        -- attr = case lbl of
+        --   Nothing -> attrBare
+        --   Just {} -> attrBase
+        node :: Sem r Html
+        node = do
+          row' <- nodeRow
+          childs' <- childs
+          return (row' <>? childs')
+          where
+            childs :: Sem r (Maybe Html)
+            childs
+              | null children = return Nothing
+              | otherwise = do
+                  c' <- mapM (uncurry goChild) (HashMap.toList children)
+                  return $
+                    Just $
+                      details ! Attr.open "open" $
+                        -- (summary ! Attr.class_ "hide-when-js-enabled" $ "Submodules")
+                        summary "Submodules"
+                          <> ul (mconcatMap li c')
 
 compileModuleHtmlText :: Members '[Embed IO] r => FilePath -> Text -> Module 'Scoped 'ModuleTop -> Sem r ()
 compileModuleHtmlText dir baseName m = runReader params $ do
   copyAssets
   mapM_ goTopModule topModules
-  runReader srcHtmlOpts (createIndex (map topModulePath (toList topModules)))
+  runReader docHtmlOpts (createIndexFile (map topModulePath (toList topModules)))
   where
     copyAssets :: forall s. Members '[Embed IO, Reader DocParams] s => Sem s ()
     copyAssets = do
@@ -118,6 +171,58 @@ topModulePath = (^. modulePath . S.nameConcrete)
 srcHtmlOpts :: HtmlOptions
 srcHtmlOpts = HtmlOptions HtmlSrc
 
+docHtmlOpts :: HtmlOptions
+docHtmlOpts = HtmlOptions HtmlDoc
+
+template :: Html -> Html -> Html
+template rightMenu' content' = do
+  docTypeHtml (mhead <> body')
+  where
+    mhead :: Html
+    mhead =
+      Html.head $
+        title titleStr
+          <> Html.meta
+            ! Attr.httpEquiv "Content-Type"
+            ! Attr.content "text/html; charset=UTF-8"
+          <> Html.meta
+            ! Attr.name "viewport"
+            ! Attr.content "width=device-width, initial-scale=1"
+          <> mathJaxCdn
+          -- <> highlightJs
+          <> livejs
+          <> ayuCss
+          <> linuwialCss
+
+    titleStr :: Html
+    titleStr = "Juvix Documentation"
+
+    packageHeader :: Html
+    packageHeader =
+      Html.div ! Attr.id "package-header" $
+        ( Html.span ! Attr.class_ "caption" $
+            "package name - version"
+        )
+          <> rightMenu'
+
+    body' :: Html
+    body' =
+      body ! Attr.class_ "js-enabled" $
+        packageHeader
+          <> content'
+          <> mfooter
+
+    mfooter :: Html
+    mfooter =
+      Html.div ! Attr.id "footer" $
+        ( p
+            ( "Build by "
+                <> (Html.a ! Attr.href "https://juvix.org/" $ "Juvix")
+                <> " version "
+                <> toHtml versionDoc
+            )
+        )
+
 -- | This function compiles a datalang module into Html documentation.
 goTopModule ::
   forall r.
@@ -125,7 +230,7 @@ goTopModule ::
   Module 'Scoped 'ModuleTop ->
   Sem r ()
 goTopModule m = do
-  runReader htmlOpts $ do
+  runReader docHtmlOpts $ do
     fpath <- moduleDocPath m
     Prelude.embed (putStrLn ("processing " <> pack fpath))
     docHtml >>= writeHtml fpath
@@ -142,74 +247,19 @@ goTopModule m = do
       utc <- Prelude.embed getCurrentTime
       return (genModuleHtml defaultOptions True utc Ayu m)
 
-    htmlOpts :: HtmlOptions
-    htmlOpts = HtmlOptions HtmlDoc
-
     docHtml :: forall s. Members '[Reader HtmlOptions] s => Sem s Html
     docHtml = do
-      body' <- mbody
-      return $
-        docTypeHtml $
-          mhead
-            <> body'
+      content' <- content
+      rightMenu' <- rightMenu
+      return (template rightMenu' content')
       where
-        titleStr :: Html
-        titleStr = "Juvix Documentation"
-
-        mhead :: Html
-        mhead =
-          Html.head $
-            title titleStr
-              <> Html.meta
-                ! Attr.httpEquiv "Content-Type"
-                ! Attr.content "text/html; charset=UTF-8"
-              <> Html.meta
-                ! Attr.name "viewport"
-                ! Attr.content "width=device-width, initial-scale=1"
-              <> mathJaxCdn
-              -- <> highlightJs
-              <> livejs
-              <> ayuCss
-              <> linuwialCss
-
-        mbody :: Sem s Html
-        mbody = do
-          content' <- content
-          pkgHeader' <- packageHeader
+        rightMenu :: Sem s Html
+        rightMenu = do
+          sourceRef' <- local (set htmlOptionsKind HtmlSrc) (nameIdAttrRef tmp Nothing)
           return $
-            body ! Attr.class_ "js-enabled" $
-              pkgHeader'
-                <> content'
-                <> mfooter
-
-        packageHeader :: Sem s Html
-        packageHeader = do
-          rightMenu' <- rightMenu
-          return $
-            Html.div ! Attr.id "package-header" $
-              ( Html.span ! Attr.class_ "caption" $
-                  "package name - version"
-              )
-                <> rightMenu'
-          where
-            rightMenu :: Sem s Html
-            rightMenu = do
-              sourceRef' <- local (set htmlOptionsKind HtmlSrc) (nameIdAttrRef tmp Nothing)
-              return $
-                ul ! Attr.id "page-menu" ! Attr.class_ "links" $
-                  li (a ! Attr.href sourceRef' $ "Source")
-                    <> li (a ! Attr.href (preEscapedToValue '#') $ "Index")
-
-        mfooter :: Html
-        mfooter =
-          Html.div ! Attr.id "footer" $
-            ( p
-                ( "Build by "
-                    <> (Html.a ! Attr.href "https://juvix.org/" $ "Juvix")
-                    <> " version "
-                    <> toHtml versionDoc
-                )
-            )
+            ul ! Attr.id "page-menu" ! Attr.class_ "links" $
+              li (a ! Attr.href sourceRef' $ "Source")
+                <> li (a ! Attr.href (fromString indexFileName) $ "Index")
 
         content :: Sem s Html
         content = do
@@ -222,17 +272,6 @@ goTopModule m = do
                 <> preface'
                 -- <> synopsis
                 <> interface'
-
-        -- synopsis :: Html
-        -- synopsis =
-        --   Html.div ! Attr.id "synopsis" $
-        --     details ! Attr.id "syn" $
-        --       summary "Synopsis"
-        --         <> ( ul
-        --                ! Attr.class_ "details.toggle"
-        --                ! dataAttribute "details-id" "syn"
-        --                $ "Synopsis"
-        --            )
 
         docPreface :: Sem s Html
         docPreface = do
@@ -310,7 +349,7 @@ goAxiom axiom = do
     tmp :: TopModulePath
     tmp = axiom ^. axiomName . S.nameDefinedIn . S.absTopModulePath
     axiomHeader :: Sem r Html
-    axiomHeader = ppCodeHtml axiom
+    axiomHeader = ppCodeHtml (set axiomDoc Nothing axiom)
 
 goInductive :: forall r. Members '[Reader HtmlOptions] r => InductiveDef 'Scoped -> Sem r Html
 goInductive def = do
