@@ -73,7 +73,7 @@ entryMiniC i = MiniCResult . serialize <$> cunitResult
       let buildTable = Micro.buildTable [m]
       let defs =
             genStructDefs m
-              <> run (runReader compileInfo (genAxioms m))
+              <> run (runReader compileInfo (runReader buildTable (genAxioms m)))
               <> run (runReader buildTable (genCTypes m))
               <> run (runReader buildTable (runReader typesTable (genFunctionSigs m)))
               <> run (runReader buildTable (runReader typesTable (genClosures m)))
@@ -94,7 +94,7 @@ genStructDefs Micro.Module {..} =
         concatMap go (i ^. Micro.includeModule . Micro.moduleBody . Micro.moduleStatements)
       _ -> []
 
-genAxioms :: forall r. Members '[Reader CompileInfoTable] r => Micro.Module -> Sem r [CCode]
+genAxioms :: forall r. Members '[Reader Micro.InfoTable, Reader CompileInfoTable] r => Micro.Module -> Sem r [CCode]
 genAxioms Micro.Module {..} =
   concatMapM go (_moduleBody ^. Micro.moduleStatements)
   where
@@ -441,15 +441,17 @@ goLiteral l = case l ^. C.withLocParam of
   C.LitInteger i -> LiteralInt i
 
 goAxiom ::
-  Member (Reader CompileInfoTable) r =>
+  Members [Reader Micro.InfoTable, Reader CompileInfoTable] r =>
   Micro.AxiomDef ->
   Sem r [CCode]
 goAxiom a
   | isJust (a ^. Micro.axiomBuiltin) = return []
   | otherwise = do
-      backends <- lookupBackends (axiomName ^. Micro.nameId)
-      case firstJust getCode backends of
-        Nothing -> error ("C backend does not support this axiom:" <> show (axiomName ^. Micro.nameText))
+      backend <- runFail (lookupBackends (axiomName ^. Micro.nameId) >>= firstBackendMatch)
+      case backend of
+        Nothing -> do
+          sig <- ExternalFuncSig <$> (cFunTypeToFunSig defineName <$> typeToFunType (mkPolyType' (a ^. Micro.axiomType)))
+          return [sig]
         Just defineBody ->
           return
             [ ExternalMacro
@@ -471,11 +473,16 @@ goAxiom a
       guard (BackendC == b ^. backendItemBackend)
         $> b
         ^. backendItemCode
+    firstBackendMatch ::
+      Member Fail r =>
+      [BackendItem] ->
+      Sem r Text
+    firstBackendMatch = failMaybe . firstJust getCode
     lookupBackends ::
-      Member (Reader CompileInfoTable) r =>
+      Members '[Fail, Reader CompileInfoTable] r =>
       NameId ->
       Sem r [BackendItem]
-    lookupBackends f = (^. Scoper.compileInfoBackendItems) . HashMap.lookupDefault impossible f <$> ask
+    lookupBackends f = ask >>= failMaybe . fmap (^. Scoper.compileInfoBackendItems) . HashMap.lookup f
 
 goForeign :: ForeignBlock -> [CCode]
 goForeign b = case b ^. foreignBackend of

@@ -51,5 +51,6 @@ tests =
     PosTest "Mutually recursive function" "MutuallyRecursive" StdlibExclude,
     PosTest "Nested List type" "NestedList" StdlibExclude,
     PosTest "Builtin types and functions" "Builtins" StdlibExclude,
-    PosTest "Import from embedded standard library" "StdlibImport" StdlibInclude
+    PosTest "Import from embedded standard library" "StdlibImport" StdlibInclude,
+    PosTest "Axiom without a compile block" "AxiomNoCompile" StdlibInclude
   ]
