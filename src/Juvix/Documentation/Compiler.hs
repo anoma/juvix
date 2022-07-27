@@ -337,7 +337,13 @@ goStatement = \case
   StatementTypeSignature t -> goTypeSignature t
   StatementAxiom t -> goAxiom t
   StatementInductive t -> goInductive t
+  StatementOpenModule t -> goOpen t
   _ -> mempty
+
+goOpen :: forall r. Members '[Reader HtmlOptions] r => OpenModule 'Scoped -> Sem r Html
+goOpen op
+  | Public <- op ^. openPublic = noDefHeader <$> ppCodeHtml op
+  | otherwise = mempty
 
 goAxiom :: forall r. Members '[Reader HtmlOptions] r => AxiomDef 'Scoped -> Sem r Html
 goAxiom axiom = do
@@ -392,6 +398,9 @@ goConstructors cc = do
             td ! Attr.class_ "src" $
               sig'
 
+noDefHeader :: Html -> Html
+noDefHeader = p ! Attr.class_ "src"
+
 defHeader :: forall r. Members '[Reader HtmlOptions] r => TopModulePath -> NameId -> Html -> Maybe (Judoc 'Scoped) -> Sem r Html
 defHeader tmp uid sig mjudoc = do
   funHeader' <- functionHeader
@@ -409,10 +418,7 @@ defHeader tmp uid sig mjudoc = do
     functionHeader :: Sem r Html
     functionHeader = do
       sourceLink' <- sourceAndSelfLink tmp uid
-      return $
-        p ! Attr.class_ "src" $
-          sig
-            <> sourceLink'
+      return $ noDefHeader (sig <> sourceLink')
 
 goTypeSignature :: forall r. Members '[Reader HtmlOptions] r => TypeSignature 'Scoped -> Sem r Html
 goTypeSignature sig = do
