@@ -203,7 +203,8 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Typ
 -------------------------------------------------------------------------------
 
 data AxiomDef (s :: Stage) = AxiomDef
-  { _axiomName :: SymbolType s,
+  { _axiomDoc :: Maybe (Judoc s),
+    _axiomName :: SymbolType s,
     _axiomBuiltin :: Maybe BuiltinAxiom,
     _axiomType :: ExpressionType s
   }

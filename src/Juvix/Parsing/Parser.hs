@@ -366,6 +366,7 @@ axiomDef ::
   ParsecS r (AxiomDef 'Parsed)
 axiomDef _axiomBuiltin = do
   kwAxiom
+  _axiomDoc <- getJudoc
   _axiomName <- symbol
   kwColon
   _axiomType <- parseExpressionAtoms

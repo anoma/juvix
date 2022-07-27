@@ -368,16 +368,18 @@ instance (SingI s, SingI t) => PrettyCode (Module s t) where
     moduleBody' <- ppCode _moduleBody >>= indented
     modulePath' <- ppModulePathType _modulePath
     moduleParameters' <- ppInductiveParameters _moduleParameters
+    moduleDoc' <- mapM ppCode _moduleDoc
     return $
-      kwModule
+      moduleDoc'
+        ?<> kwModule
         <+> modulePath'
         <+?> moduleParameters'
-          <> kwSemicolon
-          <> line
-          <> moduleBody'
-          <> line
-          <> kwEnd
-          <>? lastSemicolon
+        <> kwSemicolon
+        <> line
+        <> moduleBody'
+        <> line
+        <> kwEnd
+        <>? lastSemicolon
     where
       lastSemicolon = case sing :: SModuleIsTop t of
         SModuleLocal -> Nothing
@@ -669,9 +671,10 @@ instance SingI s => PrettyCode (WhereClause s) where
 instance SingI s => PrettyCode (AxiomDef s) where
   ppCode AxiomDef {..} = do
     axiomName' <- annDef _axiomName <$> ppSymbol _axiomName
+    axiomDoc' <- mapM ppCode _axiomDoc
     axiomType' <- ppExpression _axiomType
     builtin' <- traverse ppCode _axiomBuiltin
-    return $ builtin' <?+> kwAxiom <+> axiomName' <+> kwColon <+> axiomType'
+    return $ axiomDoc' ?<> builtin' <?+> kwAxiom <+> axiomName' <+> kwColon <+> axiomType'
 
 instance SingI s => PrettyCode (Import s) where
   ppCode :: forall r. Members '[Reader Options] r => Import s -> Sem r (Doc Ann)

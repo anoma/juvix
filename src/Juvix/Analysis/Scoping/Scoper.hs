@@ -853,7 +853,8 @@ checkAxiomDef ::
 checkAxiomDef AxiomDef {..} = do
   axiomType' <- localScope (checkParseExpressionAtoms _axiomType)
   axiomName' <- bindAxiomSymbol _axiomName
-  registerAxiom' AxiomDef {_axiomName = axiomName', _axiomType = axiomType', ..}
+  axiomDoc' <- localScope (mapM checkJudoc _axiomDoc)
+  registerAxiom' AxiomDef {_axiomName = axiomName', _axiomType = axiomType', _axiomDoc = axiomDoc', ..}
 
 checkCompile ::
   Members '[InfoTableBuilder, Error ScoperError, State Scope, Reader LocalVars, State ScoperState] r =>

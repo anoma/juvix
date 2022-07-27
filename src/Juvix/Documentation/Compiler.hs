@@ -11,10 +11,11 @@ import Juvix.Prelude.Pretty
 import Juvix.Syntax.Concrete.Language
 import Juvix.Syntax.Concrete.Scoped.Name qualified as S
 import Juvix.Syntax.Concrete.Scoped.Pretty
-import Juvix.Syntax.Concrete.Scoped.Pretty.Html
+import Juvix.Syntax.Concrete.Scoped.Pretty.Html hiding (go)
 import Juvix.Syntax.Concrete.Scoped.Utils
 import Juvix.Syntax.NameId
 import Juvix.Utils.Paths
+import Juvix.Utils.Version
 import Text.Blaze.Html.Renderer.Utf8 qualified as Html
 -- import Data.HashMap.Strict    qualified          as HashMap
 import Text.Blaze.Html5 as Html hiding (map)
@@ -27,10 +28,66 @@ data DocParams = DocParams
 
 makeLenses ''DocParams
 
-compileModuleHtmlText :: Members '[Embed IO] r => FilePath -> Text -> Module 'Scoped 'ModuleTop -> Sem r ()
-compileModuleHtmlText dir baseName m =
-  runReader params (mapM_ goTopModule topModules)
+data Tree k a = Tree
+  { _treeLabel :: a,
+    _treeChildren :: HashMap k (Tree k a)
+  }
+
+makeLenses ''Tree
+
+type ModuleTree = Tree Symbol (Maybe TopModulePath)
+
+indexTree :: [TopModulePath] -> Tree Symbol (Maybe TopModulePath)
+indexTree = foldr insertModule emptyTree
   where
+    insertModule :: TopModulePath -> ModuleTree -> ModuleTree
+    insertModule m@(TopModulePath ps s) t = go (Just t) (snoc ps s)
+      where
+        go :: Maybe ModuleTree -> [Symbol] -> ModuleTree
+        go tree = \case
+          [] -> set treeLabel (Just m) t'
+          (k : ks) -> over (treeChildren . at k) (Just . flip go ks) t'
+          where
+            t' :: ModuleTree
+            t' = fromMaybe emptyTree tree
+    emptyTree :: Tree Symbol (Maybe TopModulePath)
+    emptyTree = Tree Nothing mempty
+
+createIndex ::
+  forall r.
+  Members '[Reader DocParams, Embed IO, Reader HtmlOptions] r =>
+  [TopModulePath] ->
+  Sem r ()
+createIndex ps = do
+  outDir <- asks (^. docOutputDir)
+  writeHtml (outDir </> "index.html") indexHtml
+  where
+    indexHtml :: Html
+    indexHtml =
+      Html.div ! Attr.id "module-list" $
+        (p ! Attr.class_ "caption" $ "Modules")
+          <> ul mempty
+    tree :: ModuleTree
+    tree = indexTree ps
+
+compileModuleHtmlText :: Members '[Embed IO] r => FilePath -> Text -> Module 'Scoped 'ModuleTop -> Sem r ()
+compileModuleHtmlText dir baseName m = runReader params $ do
+  copyAssets
+  mapM_ goTopModule topModules
+  runReader srcHtmlOpts (createIndex (map topModulePath (toList topModules)))
+  where
+    copyAssets :: forall s. Members '[Embed IO, Reader DocParams] s => Sem s ()
+    copyAssets = do
+      toAssetsDir <- (</> "assets") <$> asks (^. docOutputDir)
+      let writeAsset :: (FilePath, BS.ByteString) -> Sem s ()
+          writeAsset (filePath, fileContents) =
+            Prelude.embed $ BS.writeFile (toAssetsDir </> takeFileName filePath) fileContents
+      Prelude.embed (createDirectoryIfMissing True toAssetsDir)
+      mapM_ writeAsset assetFiles
+      where
+        assetFiles :: [(FilePath, BS.ByteString)]
+        assetFiles = $(assetsDir)
+
     params :: DocParams
     params =
       DocParams
@@ -54,6 +111,13 @@ moduleDocPath m = do
   outDir <- asks (^. docOutputDir)
   return (outDir </> relPath)
 
+topModulePath ::
+  Module 'Scoped 'ModuleTop -> TopModulePath
+topModulePath = (^. modulePath . S.nameConcrete)
+
+srcHtmlOpts :: HtmlOptions
+srcHtmlOpts = HtmlOptions HtmlSrc
+
 -- | This function compiles a datalang module into Html documentation.
 goTopModule ::
   forall r.
@@ -61,7 +125,6 @@ goTopModule ::
   Module 'Scoped 'ModuleTop ->
   Sem r ()
 goTopModule m = do
-  copyAssets
   runReader htmlOpts $ do
     fpath <- moduleDocPath m
     Prelude.embed (putStrLn ("processing " <> pack fpath))
@@ -71,18 +134,6 @@ goTopModule m = do
     fpath <- moduleDocPath m
     srcHtml >>= writeHtml fpath
   where
-    copyAssets :: Sem r ()
-    copyAssets = do
-      toAssetsDir <- (</> "assets") <$> asks (^. docOutputDir)
-      let writeAsset :: (FilePath, BS.ByteString) -> Sem r ()
-          writeAsset (filePath, fileContents) =
-            Prelude.embed $ BS.writeFile (toAssetsDir </> takeFileName filePath) fileContents
-      Prelude.embed (createDirectoryIfMissing True toAssetsDir)
-      mapM_ writeAsset assetFiles
-      where
-        assetFiles :: [(FilePath, BS.ByteString)]
-        assetFiles = $(assetsDir)
-
     tmp :: TopModulePath
     tmp = m ^. modulePath . S.nameConcrete
 
@@ -90,9 +141,6 @@ goTopModule m = do
     srcHtml = do
       utc <- Prelude.embed getCurrentTime
       return (genModuleHtml defaultOptions True utc Ayu m)
-
-    srcHtmlOpts :: HtmlOptions
-    srcHtmlOpts = HtmlOptions HtmlSrc
 
     htmlOpts :: HtmlOptions
     htmlOpts = HtmlOptions HtmlDoc
@@ -153,7 +201,15 @@ goTopModule m = do
                     <> li (a ! Attr.href (preEscapedToValue '#') $ "Index")
 
         mfooter :: Html
-        mfooter = mempty
+        mfooter =
+          Html.div ! Attr.id "footer" $
+            ( p
+                ( "Build by "
+                    <> (Html.a ! Attr.href "https://juvix.org/" $ "Juvix")
+                    <> " version "
+                    <> toHtml versionDoc
+                )
+            )
 
         content :: Sem s Html
         content = do
@@ -167,16 +223,16 @@ goTopModule m = do
                 -- <> synopsis
                 <> interface'
 
-        synopsis :: Html
-        synopsis =
-          Html.div ! Attr.id "synopsis" $
-            details ! Attr.id "syn" $
-              summary "Synopsis"
-                <> ( ul
-                       ! Attr.class_ "details.toggle"
-                       ! dataAttribute "details-id" "syn"
-                       $ "Synopsis"
-                   )
+        -- synopsis :: Html
+        -- synopsis =
+        --   Html.div ! Attr.id "synopsis" $
+        --     details ! Attr.id "syn" $
+        --       summary "Synopsis"
+        --         <> ( ul
+        --                ! Attr.class_ "details.toggle"
+        --                ! dataAttribute "details-id" "syn"
+        --                $ "Synopsis"
+        --            )
 
         docPreface :: Sem s Html
         docPreface = do
