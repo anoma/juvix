@@ -448,7 +448,7 @@ sourceAndSelfLink tmp name = do
          )
 
 tagIden :: IsString a => NameId -> a
-tagIden x = fromText $ "t:" <> prettyText x
+tagIden x = fromText $ prettyText x
 
 selfLinkName :: IsString a => NameId -> a
 selfLinkName x = fromText $ "#" <> tagIden x
