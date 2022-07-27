@@ -1,0 +1,14 @@
+module Input;
+
+open import Stdlib.Prelude;
+
+inductive Unit {
+  unit : Unit;
+};
+
+axiom ignore : Unit -> Unit;
+
+main : IO;
+main ≔ putStrLn "Hello";
+
+end;
