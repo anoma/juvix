@@ -164,7 +164,7 @@ goTopModule m = do
               moduleHeader
                 <> toc
                 <> preface'
-                <> synopsis
+                -- <> synopsis
                 <> interface'
 
         synopsis :: Html
@@ -184,7 +184,10 @@ goTopModule m = do
           return $
             Html.div ! Attr.id "description" $
               Html.div ! Attr.class_ "doc" $
-                pref
+                ( a ! Attr.id "sec:description" ! Attr.href "sec:description" $
+                    h1 "Description"
+                )
+                  <> pref
 
         toc :: Html
         toc =
@@ -200,8 +203,8 @@ goTopModule m = do
             tocEntries :: Html
             tocEntries =
               ul $
-                li (a ! Attr.href "#description" $ "Description")
-                  <> li (a ! Attr.href "#interface" $ "Definitions")
+                li (a ! Attr.href "#sec:description" $ "Description")
+                  <> li (a ! Attr.href "#sec:interface" $ "Definitions")
 
         moduleHeader :: Html
         moduleHeader =
@@ -213,7 +216,9 @@ goTopModule m = do
           sigs' <- mconcatMapM goStatement (m ^. moduleBody)
           return $
             Html.div ! Attr.id "interface" $
-              Html.h1 "Definitions"
+              ( a ! Attr.id "sec:interface" ! Attr.href "sec:interface" $
+                  h1 "Definitions"
+              )
                 <> sigs'
 
 goJudocMay :: Members '[Reader HtmlOptions] r => Maybe (Judoc 'Scoped) -> Sem r Html
