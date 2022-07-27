@@ -3,7 +3,7 @@ module Juvix.Core.Builtins where
 import Juvix.Prelude
 
 -- Builtin operations which the evaluator and the code generator treat
--- specially.
+-- specially and non-uniformly.
 data BuiltinOp
   = OpIntAdd
   | OpIntSub

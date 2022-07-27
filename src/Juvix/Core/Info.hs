@@ -1,100 +1,68 @@
-{-# LANGUAGE UndecidableInstances #-}
-
 module Juvix.Core.Info where
 
-import Juvix.Core.GNode
-import Juvix.Core.Location
-import Juvix.Core.Name
-import Juvix.Core.Type
+import Data.Dynamic
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Prelude
 
-data Info i = Info
-  { _infoName :: Maybe Name,
-    _infoType :: Maybe Type,
-    _infoLoc :: Maybe Location,
-    _infoBinding :: Maybe BindingInfo,
-    _infoMore :: i
-    -- much more will be added here by further phases of the pipeline (program
-    -- transformations on Core)
+newtype Info = Info
+  { _infoMap :: HashMap TypeRep Dynamic
   }
 
-data BindingInfo = BindingInfo
-  { _bindingName :: Name,
-    _bindingType :: Type
-  }
+type Key = Proxy
 
 makeLenses ''Info
-makeLenses ''BindingInfo
 
-type Node' i = GNode (Info i)
+empty :: Info
+empty = Info HashMap.empty
 
-data NoInfo = NoInfo
+member :: Typeable a => Key a -> Info -> Bool
+member k i = HashMap.member (typeRep k) (i ^. infoMap)
 
-type Node = Node' NoInfo
+lookup :: Typeable a => Key a -> Info -> Maybe a
+lookup k i = case HashMap.lookup (typeRep k) (i ^. infoMap) of
+  Just a -> fromDyn a impossible
+  Nothing -> Nothing
 
-instance GNodeFunctor i j => GNodeFunctor (Info i) j where
-  nmapM :: Monad m => (GNode j -> m (GNode j)) -> Info i -> m (Info i)
-  nmapM f i = do
-    i' <- nmapM f (i ^. infoMore)
-    return i {_infoMore = i'}
+lookupDefault :: Typeable a => a -> Info -> a
+lookupDefault a i =
+  fromDyn (HashMap.lookupDefault (toDyn a) (typeOf a) (i ^. infoMap)) impossible
 
-instance GNodeFoldable i j => GNodeFoldable (Info i) j where
-  nfoldM :: Monad m => (a -> a -> a) -> m a -> (GNode j -> m a) -> Info i -> m a
-  nfoldM uplus a f i = nfoldM uplus a f (i ^. infoMore)
+(!) :: Typeable a => Key a -> Info -> a
+(!) k i = fromJust (Juvix.Core.Info.lookup k i)
 
-instance GNodeEmpty i => GNodeEmpty (Info i) where
-  iempty :: Info i
-  iempty =
-    Info
-      { _infoName = Nothing,
-        _infoType = Nothing,
-        _infoLoc = Nothing,
-        _infoBinding = Nothing,
-        _infoMore = iempty
-      }
+insert :: Typeable a => a -> Info -> Info
+insert a i = Info (HashMap.insert (typeOf a) (toDyn a) (i ^. infoMap))
 
-instance
-  ( GNodeEmpty i,
-    GNodeFunctor i (Info i),
-    GNodeFoldable i (Info i)
-  ) =>
-  GNodeInfo (Info i)
+insertWith :: Typeable a => (a -> a -> a) -> a -> Info -> Info
+insertWith f a i = Info (HashMap.insertWith f' (typeOf a) (toDyn a) (i ^. infoMap))
+  where
+    f' x1 x2 = toDyn (f (fromDyn x1 impossible) (fromDyn x2 impossible))
 
-instance GNodeFunctor NoInfo j where
-  nmapM :: Monad m => (GNode j -> m (GNode j)) -> NoInfo -> m NoInfo
-  nmapM _ i = return i
+delete :: Typeable a => Key a -> Info -> Info
+delete k i = Info (HashMap.delete (typeRep k) (i ^. infoMap))
 
-instance GNodeFoldable NoInfo j where
-  nfoldM :: (a -> a -> a) -> m a -> (GNode j -> m a) -> NoInfo -> m a
-  nfoldM _ a _ _ = a
+adjust :: forall a. Typeable a => (a -> a) -> Info -> Info
+adjust f i =
+  Info $
+    HashMap.adjust
+      (\x -> toDyn $ f $ fromDyn x impossible)
+      (typeRep (Proxy :: Proxy a))
+      (i ^. infoMap)
 
-instance GNodeEmpty NoInfo where
-  iempty :: NoInfo
-  iempty = NoInfo
+update :: forall a. Typeable a => (a -> Maybe a) -> Info -> Info
+update f i = Info (HashMap.update f' (typeRep (Proxy :: Proxy a)) (i ^. infoMap))
+  where
+    f' x = case f (fromDyn x impossible) of
+      Just y -> Just (toDyn y)
+      Nothing -> Nothing
 
-testFun :: Node -> Node
-testFun = removeClosures
-
-hasNameInfo :: Info i -> Bool
-hasNameInfo i = isJust (i ^. infoName)
-
-getNameInfo :: Info i -> Name
-getNameInfo i = fromMaybe impossible (i ^. infoName)
-
-hasTypeInfo :: Info i -> Bool
-hasTypeInfo i = isJust (i ^. infoType)
-
-getTypeInfo :: Info i -> Type
-getTypeInfo i = fromMaybe impossible (i ^. infoType)
-
-hasLocInfo :: Info i -> Bool
-hasLocInfo i = isJust (i ^. infoLoc)
-
-getLocInfo :: Info i -> Location
-getLocInfo i = fromMaybe impossible (i ^. infoLoc)
-
-hasBindingInfo :: Info i -> Bool
-hasBindingInfo i = isJust (i ^. infoBinding)
-
-getBindingInfo :: Info i -> BindingInfo
-getBindingInfo i = fromMaybe impossible (i ^. infoBinding)
+alter :: forall a. Typeable a => (Maybe a -> Maybe a) -> Info -> Info
+alter f i = Info (HashMap.alter f' (typeRep (Proxy :: Proxy a)) (i ^. infoMap))
+  where
+    f' x = case y of
+      Just y' -> Just (toDyn y')
+      Nothing -> Nothing
+      where
+        y = case x of
+          Just x' -> f (fromDyn x' impossible)
+          Nothing -> f Nothing

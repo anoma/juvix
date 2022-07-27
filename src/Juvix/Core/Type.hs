@@ -1,7 +1,6 @@
 module Juvix.Core.Type where
 
-import Juvix.Prelude
-import Juvix.Syntax.Abstract.Name
+import Juvix.Core.Prelude
 
 data Type = Atomic Atom | Fun Type Type | Universe
 

@@ -1,14 +1,14 @@
 module Juvix.Core.Evaluator where
 
 import Data.HashMap.Strict ((!))
-import Juvix.Core.Builtins
+import Juvix.Core.Info qualified as Info
 import Juvix.Core.Context
-import Juvix.Core.GNode
-import Juvix.Prelude
+import Juvix.Core.Node
+import Juvix.Core.Prelude
 
 -- `eval ctx env n` evalues a node `n` whose all free variables point into
 -- `env`. All nodes in `ctx` and `env` are closed.
-eval :: forall i. GNodeInfo i => IdentContext i -> [GNode i] -> GNode i -> GNode i
+eval :: IdentContext -> Env -> Node -> Node
 eval !ctx = eval'
   where
     unimplemented :: a
@@ -17,13 +17,13 @@ eval !ctx = eval'
     evalError :: a
     evalError = error "evaluation error"
 
-    mkBuiltinClosure :: [GNode i] -> BuiltinOp -> GNode i
+    mkBuiltinClosure :: Env -> BuiltinOp -> Node
     mkBuiltinClosure = unimplemented
 
-    mkConstructorClosure :: [GNode i] -> Tag -> GNode i
+    mkConstructorClosure :: Env -> Tag -> Node
     mkConstructorClosure = unimplemented
 
-    eval' :: [GNode i] -> GNode i -> GNode i
+    eval' :: Env -> Node -> Node
     eval' !env !n = case n of
       Var _ idx -> env !! idx
       Ident _ sym -> ctx ! sym
@@ -56,14 +56,14 @@ eval !ctx = eval'
       LambdaClosure {} -> n
       Suspended {} -> n
 
-    apply :: [GNode i] -> GNode i -> GNode i -> [GNode i] -> GNode i
+    apply :: Env -> Node -> Node -> [Node] -> Node
     apply !env !n !a !args = case n of
       App _ l r -> apply env l r (a : args)
       _ -> push env env n a args
 
     -- In `push env env' n args`, `a` is the first argument, `env` is the
     -- environment of `a` and `args`, `env'` the environment of `n`.
-    push :: [GNode i] -> [GNode i] -> GNode i -> GNode i -> [GNode i] -> GNode i
+    push :: Env -> Env -> Node -> Node -> [Node] -> Node
     push !env !env' !n !a !args = case n of
       Lambda _ b -> push' env (eval' env a : env') b args
       LambdaClosure _ env'' b -> push' env (eval' env a : env'') b args
@@ -71,16 +71,16 @@ eval !ctx = eval'
       Builtin {} -> unimplemented
       ConstValue {} -> evalError
       Data {} -> evalError
-      Hole {} -> Suspended iempty (mkApp' n (map (eval' env) args))
-      Axiom {} -> Suspended iempty (mkApp' n (map (eval' env) args))
+      Hole {} -> Suspended Info.empty (mkApp' n (map (eval' env) args))
+      Axiom {} -> Suspended Info.empty (mkApp' n (map (eval' env) args))
       _ -> push env env' (eval' env' n) a args
 
-    push' :: [GNode i] -> [GNode i] -> GNode i -> [GNode i] -> GNode i
+    push' :: Env -> Env -> Node -> [Node] -> Node
     push' !env !env' !n !args = case args of
-      a:args' -> push env env' n a args'
+      a : args' -> push env env' n a args'
       [] -> eval' env' n
 
-    branch :: [GNode i] -> Tag -> [CaseBranch i] -> GNode i
+    branch :: Env -> Tag -> [CaseBranch] -> Node
     branch !env !tag = \case
       (CaseBranch tag' b) : _ | tag' == tag -> eval' env b
       _ : bs' -> branch env tag bs'

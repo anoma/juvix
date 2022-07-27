@@ -1,14 +1,13 @@
 module Juvix.Core.Context where
 
-import Juvix.Core.GNode
-import Juvix.Core.Name
+import Juvix.Core.Node
+import Juvix.Core.Prelude
 import Juvix.Core.Type
-import Juvix.Prelude
 
-type IdentContext i = HashMap Symbol (GNode i)
+type IdentContext = HashMap Symbol Node
 
-data Context i = Context
-  { _identContext :: IdentContext i,
+data Context = Context
+  { _identContext :: IdentContext,
     _identInfo :: HashMap Symbol IdentInfo,
     -- We reuse `Name` for runtime-irrelevant identifiers (inductive type names,
     -- axiom names, etc). We shouldn't do this for Symbol and Tag, because we
