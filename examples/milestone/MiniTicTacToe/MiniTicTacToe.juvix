@@ -167,7 +167,7 @@ compile readline {
   c ↦ "readline()";
 };
 
-axiom parsePositiveInt : String → Int;
+axiom parsePositiveInt : String → ℕ;
 
 compile parsePositiveInt {
   c ↦ "parsePositiveInt";
@@ -181,7 +181,7 @@ validMove : ℕ → Maybe ℕ;
 validMove n ≔ if ((n <= nine) && (n >= one)) (just n) nothing;
 
 getMove : Maybe ℕ;
-getMove ≔ validMove (from-backendNat (parsePositiveInt (readline)));
+getMove ≔ validMove (parsePositiveInt (readline));
 
 do : IO × GameState -> GameState;
 do (_ , s) ≔ playMove getMove s;

@@ -1,10 +1,7 @@
 module Tests;
 
-import Prelude;
-open Prelude;
-
-import SimpleFungibleToken;
-open SimpleFungibleToken;
+open import Stdlib.Prelude;
+open import SimpleFungibleToken;
 
 --------------------------------------------------------------------------------
 -- Testing VP
@@ -28,7 +25,11 @@ verifiers ≔ owner-address ∷ nil;
 keys-changed : List String;
 keys-changed ≔ change1-key ∷ change2-key ∷ nil;
 
-main : Action;
+show-result : Bool → String;
+show-result true ≔ "OK";
+show-result false ≔ "FAIL";
+
+main : IO;
 main ≔
     (putStr "VP Status: ")
     >> (putStrLn (show-result (vp token keys-changed verifiers)));

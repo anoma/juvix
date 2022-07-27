@@ -2,15 +2,15 @@ $ juvix html
 > /Provide.*/
 >= 1
 
-$ cd examples/milestone/ValidityPredicates/ && juvix html --no-stdlib SimpleFungibleToken.juvix && cat html/SimpleFungibleToken.html
+$ cd examples/milestone/ValidityPredicates/ && juvix html SimpleFungibleToken.juvix && cat html/SimpleFungibleToken.html
 > /<!DOCTYPE HTML>.*/
 >= 0
 
-$ rm -rf examples/html && juvix html --no-stdlib examples/milestone/ValidityPredicates/SimpleFungibleToken.juvix --output-dir=./../../html && [ -d examples/html/assets ] && [ -f examples/html/SimpleFungibleToken.html ]
+$ rm -rf examples/html && juvix html examples/milestone/ValidityPredicates/SimpleFungibleToken.juvix --output-dir=./../../html && [ -d examples/html/assets ] && [ -f examples/html/SimpleFungibleToken.html ]
 > 
 Writing SimpleFungibleToken.html
 >= 0
 
-$ rm -rf examples/html && juvix html --no-stdlib examples/milestone/ValidityPredicates/SimpleFungibleToken.juvix --recursive --output-dir=./../../html && (ls examples/html | wc -l) && cd examples/html && [ -f Data.String.html ] && [ -f Data.Maybe.html ] && [ -f Data.Int.html ] && [ -f System.IO.html ] && [ -f Data.List.html ] && [ -f Data.Nat.html ] && [ -f Data.Pair.html ] && [ -f Data.Bool.html ] && [ -f Prelude.html ]&& [ -f Anoma.Base.html ] && [ -f SimpleFungibleToken.html ] && [ -f assets/highlight.js   ] && [ -f assets/source-ayu-light.css ] && [ -f assets/source-nord.css ]
+$ rm -rf examples/html && juvix html examples/milestone/ValidityPredicates/SimpleFungibleToken.juvix --recursive --output-dir=./../../html && (ls examples/html | wc -l) && cd examples/html && [ -f Stdlib.Data.String.html ] && [ -f Stdlib.Data.Maybe.html ] && [ -f Data.Int.html ] && [ -f Stdlib.System.IO.html ] && [ -f Stdlib.Data.List.html ] && [ -f Stdlib.Data.Nat.html ] && [ -f Stdlib.Data.Product.html ] && [ -f Stdlib.Data.Bool.html ] && [ -f Stdlib.Prelude.html ] && [ -f Anoma.Base.html ] && [ -f SimpleFungibleToken.html ] && [ -f assets/highlight.js   ] && [ -f assets/source-ayu-light.css ] && [ -f assets/source-nord.css ]
 > /Writing.*/
 >= 0
