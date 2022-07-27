@@ -82,17 +82,17 @@ showSquare (empty n) ≔ " " ++str natToStr n ++str " ";
 showSquare (occupied s) ≔ " " ++str showSymbol s ++str " ";
 
 -- A row in a board implemented as ;List Square;
-Row : Type;
-Row ≔ List Square;
+-- Row : Type;
+-- Row ≔ List Square;
 
 -- A column in a board implemented as ;List Square;
-Column : Type;
-Column ≔ Row;
+-- Column : Type;
+-- Column ≔ Row;
 
 -- TODO use a type alias?
 --- A grid of squares
 inductive Board {
-  board : List Row → Board;
+  board : List (List Square) → Board;
 };
 
 --- Returns the list of numbers corresponding to the empty ;Square;s
@@ -108,14 +108,14 @@ full (a ∷ b ∷ c ∷ nil) ≔ (==Square a b) && (==Square b c);
 diagonals : List (List Square) → List (List Square);
 diagonals ((a1 ∷ _ ∷ b1 ∷ nil) ∷ (_ ∷ c ∷ _ ∷ nil) ∷ (b2 ∷ _ ∷ a2 ∷ nil) ∷ nil) ≔ (a1 ∷ c ∷ a2 ∷ nil) ∷ (b1 ∷ c ∷ b2 ∷ nil) ∷ nil;
 
-columns : List Row → List Column;
+columns : List (List Square) → List (List Square);
 columns ≔ transpose;
 
-rows : List Row → List Row;
+rows : List (List Square) → List (List Square);
 rows ≔ id;
 
---- Textual representation of a ;Row;
-showRow : Row → String;
+--- Textual representation of a ;(List Square);
+showRow : (List Square) → String;
 showRow xs ≔ concat (surround "|" (map showSquare xs));
 
 showBoard : Board → String;
