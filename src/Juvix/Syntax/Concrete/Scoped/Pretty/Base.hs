@@ -319,7 +319,12 @@ instance PrettyCode BackendItem where
       backend <+> kwMapsto <+> ppStringLit _backendItemCode
 
 ppStringLit :: Text -> Doc Ann
-ppStringLit = annotate AnnLiteralString . doubleQuotes . pretty
+ppStringLit = annotate AnnLiteralString . doubleQuotes . escaped
+  where
+    showChar :: Char -> String
+    showChar c = showLitChar c ("" :: String)
+    escaped :: Text -> Doc a
+    escaped = mconcatMap (pretty . showChar) . unpack
 
 ppTopModulePath ::
   forall s r.
@@ -363,16 +368,18 @@ instance (SingI s, SingI t) => PrettyCode (Module s t) where
     moduleBody' <- ppCode _moduleBody >>= indented
     modulePath' <- ppModulePathType _modulePath
     moduleParameters' <- ppInductiveParameters _moduleParameters
-    return
-      $ kwModule
+    moduleDoc' <- mapM ppCode _moduleDoc
+    return $
+      moduleDoc'
+        ?<> kwModule
         <+> modulePath'
         <+?> moduleParameters'
-          <> kwSemicolon
-          <> line
-          <> moduleBody'
-          <> line
-          <> kwEnd
-      <?> lastSemicolon
+        <> kwSemicolon
+        <> line
+        <> moduleBody'
+        <> line
+        <> kwEnd
+        <>? lastSemicolon
     where
       lastSemicolon = case sing :: SModuleIsTop t of
         SModuleLocal -> Nothing
@@ -408,7 +415,8 @@ instance SingI s => PrettyCode (InductiveConstructorDef s) where
   ppCode InductiveConstructorDef {..} = do
     constructorName' <- annDef _constructorName <$> ppSymbol _constructorName
     constructorType' <- ppExpression _constructorType
-    return $ constructorName' <+> kwColon <+> constructorType'
+    doc' <- mapM ppCode _constructorDoc
+    return $ doc' ?<> constructorName' <+> kwColon <+> constructorType'
 
 instance PrettyCode BuiltinInductive where
   ppCode i = return (kwBuiltin <+> keyword' i)
@@ -419,26 +427,34 @@ instance PrettyCode BuiltinFunction where
 instance PrettyCode BuiltinAxiom where
   ppCode i = return (kwBuiltin <+> keyword' i)
 
+ppInductiveSignature :: forall r s. (SingI s, Members '[Reader Options] r) => InductiveDef s -> Sem r (Doc Ann)
+ppInductiveSignature InductiveDef {..} = do
+  inductivebuiltin' <- traverse ppCode _inductiveBuiltin
+  inductiveName' <- annDef _inductiveName <$> ppSymbol _inductiveName
+  inductiveParameters' <- ppInductiveParameters _inductiveParameters
+  inductiveType' <- ppTypeType
+  return $
+    inductivebuiltin'
+      <?+> kwInductive
+      <+> inductiveName'
+      <+?> inductiveParameters'
+      <+?> inductiveType'
+  where
+    ppTypeType :: Sem r (Maybe (Doc Ann))
+    ppTypeType = case _inductiveType of
+      Nothing -> return Nothing
+      Just e -> Just . (kwColon <+>) <$> ppExpression e
+
+instance PrettyCode (Doc Ann) where
+  ppCode d = return d
+
 instance SingI s => PrettyCode (InductiveDef s) where
   ppCode :: forall r. Members '[Reader Options] r => InductiveDef s -> Sem r (Doc Ann)
-  ppCode InductiveDef {..} = do
-    inductiveName' <- annDef _inductiveName <$> ppSymbol _inductiveName
-    inductiveParameters' <- ppInductiveParameters _inductiveParameters
-    inductiveType' <- ppTypeType
+  ppCode d@InductiveDef {..} = do
+    doc' <- mapM ppCode _inductiveDoc
+    sig' <- ppInductiveSignature d
     inductiveConstructors' <- ppBlock _inductiveConstructors
-    inductivebuiltin' <- traverse ppCode _inductiveBuiltin
-    return $
-      inductivebuiltin'
-        <?+> kwInductive
-        <+> inductiveName'
-        <+?> inductiveParameters'
-        <+?> inductiveType'
-        <+> inductiveConstructors'
-    where
-      ppTypeType :: Sem r (Maybe (Doc Ann))
-      ppTypeType = case _inductiveType of
-        Nothing -> return Nothing
-        Just e -> Just . (kwColon <+>) <$> ppExpression e
+    return $ doc' ?<> sig' <+> inductiveConstructors'
 
 dotted :: Foldable f => f (Doc Ann) -> Doc Ann
 dotted = concatWith (surround kwDot)
@@ -487,7 +503,7 @@ instance PrettyCode n => PrettyCode (S.Name' n) where
   ppCode S.Name' {..} = do
     nameConcrete' <- annotateKind _nameKind <$> ppCode _nameConcrete
     uid <- nameIdSuffix _nameId
-    return $ annSRef (nameConcrete' <?> uid)
+    return $ annSRef (nameConcrete' <>? uid)
     where
       annSRef :: Doc Ann -> Doc Ann
       annSRef = annotate (AnnRef (_nameDefinedIn ^. S.absTopModulePath) _nameId)
@@ -505,7 +521,7 @@ instance SingI s => PrettyCode (OpenModule s) where
     openParameters' <- ppOpenParams
     let openPublic' = ppPublic
         import_
-          | _openModuleImport = Just Str.import_
+          | _openModuleImport = Just kwImport
           | otherwise = Nothing
     return $ kwOpen <+?> import_ <+> openModuleName' <+?> openParameters' <+?> openUsingHiding' <+?> openPublic'
     where
@@ -531,13 +547,43 @@ instance SingI s => PrettyCode (OpenModule s) where
         Public -> Just kwPublic
         NoPublic -> Nothing
 
+instance SingI s => PrettyCode (Judoc s) where
+  ppCode :: forall r. Members '[Reader Options] r => Judoc s -> Sem r (Doc Ann)
+  ppCode (Judoc blck) =
+    mconcatMapM ppLine (linesBy isNewLine blck)
+    where
+      isNewLine :: JudocAtom s -> Bool
+      isNewLine = \case
+        JudocNewline -> True
+        _ -> False
+      ppLine :: [JudocAtom s] -> Sem r (Doc Ann)
+      ppLine atoms = do
+        atoms' <- mconcatMapM ppCode atoms
+        let prefix = pretty (Str.judocStart :: Text) :: Doc Ann
+        return $ prefix <> atoms' <> line
+
+instance SingI s => PrettyCode (JudocAtom s) where
+  ppCode :: forall r. (Members '[Reader Options] r) => JudocAtom s -> Sem r (Doc Ann)
+  ppCode = \case
+    JudocNewline -> return "\n"
+    JudocExpression e -> goExpression e
+    JudocText t -> return (annotate AnnComment (pretty t))
+    where
+      goExpression :: ExpressionType s -> Sem r (Doc Ann)
+      goExpression e = do
+        e' <- ppExpression e
+        return $ semiDelim e'
+      semiDelim :: Doc Ann -> Doc Ann
+      semiDelim = enclose1 (annotate AnnComment ";")
+
 instance SingI s => PrettyCode (TypeSignature s) where
   ppCode TypeSignature {..} = do
     let sigTerminating' = if _sigTerminating then kwTerminating <> line else mempty
     sigName' <- annDef _sigName <$> ppSymbol _sigName
     sigType' <- ppExpression _sigType
     builtin' <- traverse ppCode _sigBuiltin
-    return $ builtin' <?+> sigTerminating' <> sigName' <+> kwColon <+> sigType'
+    doc' <- mapM ppCode _sigDoc
+    return $ doc' ?<> builtin' <?+> sigTerminating' <> sigName' <+> kwColon <+> sigType'
 
 instance SingI s => PrettyCode (Function s) where
   ppCode :: forall r. Members '[Reader Options] r => Function s -> Sem r (Doc Ann)
@@ -624,10 +670,11 @@ instance SingI s => PrettyCode (WhereClause s) where
 
 instance SingI s => PrettyCode (AxiomDef s) where
   ppCode AxiomDef {..} = do
-    axiomName' <- ppSymbol _axiomName
+    axiomName' <- annDef _axiomName <$> ppSymbol _axiomName
+    axiomDoc' <- mapM ppCode _axiomDoc
     axiomType' <- ppExpression _axiomType
     builtin' <- traverse ppCode _axiomBuiltin
-    return $ builtin' <?+> kwAxiom <+> axiomName' <+> kwColon <+> axiomType'
+    return $ axiomDoc' ?<> builtin' <?+> kwAxiom <+> axiomName' <+> kwColon <+> axiomType'
 
 instance SingI s => PrettyCode (Import s) where
   ppCode :: forall r. Members '[Reader Options] r => Import s -> Sem r (Doc Ann)
@@ -833,7 +880,7 @@ ppHole w = case sing :: SStage s of
 instance PrettyCode Hole where
   ppCode h = do
     suff <- nameIdSuffix (h ^. holeId)
-    return (kwWildcard <?> suff)
+    return (kwWildcard <>? suff)
 
 instance SingI s => PrettyCode (ExpressionAtom s) where
   ppCode = \case

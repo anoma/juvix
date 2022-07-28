@@ -2,7 +2,7 @@ module Juvix.Syntax.Concrete.Name where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
+import Juvix.Prelude.Pretty as Pretty
 import Juvix.Syntax.Loc
 
 type Symbol = WithLoc Text
@@ -70,6 +70,10 @@ data TopModulePath = TopModulePath
 
 makeLenses ''TopModulePath
 
+instance Pretty TopModulePath where
+  pretty (TopModulePath path name) =
+    mconcat (punctuate Pretty.dot (map pretty (snoc path name)))
+
 instance HasLoc TopModulePath where
   getLoc TopModulePath {..} =
     case _modulePathDir of
@@ -79,17 +83,28 @@ instance HasLoc TopModulePath where
 topModulePathToFilePath :: FilePath -> TopModulePath -> FilePath
 topModulePathToFilePath = topModulePathToFilePath' (Just ".juvix")
 
+topModulePathToRelativeFilePath :: Maybe String -> String -> (FilePath -> FilePath -> FilePath) -> TopModulePath -> FilePath
+topModulePathToRelativeFilePath ext suffix joinpath mp = relFilePath
+  where
+    relDirPath :: FilePath
+    relDirPath = foldr (joinpath . toPath) mempty (mp ^. modulePathDir)
+    relFilePath :: FilePath
+    relFilePath = addExt (relDirPath `joinpath'` toPath (mp ^. modulePathName) <> suffix)
+    joinpath' :: FilePath -> FilePath -> FilePath
+    joinpath' l r
+      | null l = r
+      | otherwise = joinpath l r
+    addExt = case ext of
+      Nothing -> id
+      Just e -> (<.> e)
+    toPath :: Symbol -> FilePath
+    toPath s = unpack (s ^. symbolText)
+
 topModulePathToFilePath' ::
   Maybe String -> FilePath -> TopModulePath -> FilePath
-topModulePathToFilePath' ext root mp = normalise absPath
-  where
-    relDirPath = foldr ((</>) . toPath) mempty (mp ^. modulePathDir)
-    relFilePath = relDirPath </> toPath (mp ^. modulePathName)
-    absPath = case ext of
-      Nothing -> root </> relFilePath
-      Just e -> root </> relFilePath <.> e
-    toPath :: Symbol -> FilePath
-    toPath s = unpack (s ^. withLocParam)
+topModulePathToFilePath' ext root mp =
+  normalise
+    (root </> topModulePathToRelativeFilePath ext "" (</>) mp)
 
 topModulePathToDottedPath :: IsString s => TopModulePath -> s
 topModulePathToDottedPath (TopModulePath l r) =

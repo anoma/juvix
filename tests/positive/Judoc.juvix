@@ -1,0 +1,21 @@
+module Judoc;
+
+axiom A : Type;
+axiom b : Type;
+
+inductive T {
+
+};
+
+--- he ;id A; and ;A A id T A id; this is another ;id id id; example
+--- hahahah
+--- and another one ;T;
+id : {A : Type} → A → A;
+id a ≔ a;
+
+--- hellowww
+id2 : {A : Type} → A → A;
+id2 a ≔ a;
+
+
+end;

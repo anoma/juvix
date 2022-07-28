@@ -9,6 +9,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Analysis.Scoping.Scoper qualified as Scoper
 import Juvix.Analysis.Termination qualified as Termination
 import Juvix.Analysis.TypeChecking qualified as MicroTyped
+import Juvix.Documentation.Compiler qualified as Doc
 import Juvix.Parsing.Parser qualified as Parser
 import Juvix.Pipeline
 import Juvix.Prelude hiding (Doc)
@@ -19,7 +20,7 @@ import Juvix.Syntax.Abstract.Pretty qualified as Abstract
 import Juvix.Syntax.Concrete.Scoped.Highlight qualified as Highlight
 import Juvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoper
 import Juvix.Syntax.Concrete.Scoped.Pretty qualified as Scoper
-import Juvix.Syntax.Concrete.Scoped.Pretty.Html
+import Juvix.Syntax.Concrete.Scoped.Pretty.Html qualified as Html
 import Juvix.Syntax.MicroJuvix.MicroJuvixArityResult qualified as MicroArity
 import Juvix.Syntax.MicroJuvix.Pretty qualified as Micro
 import Juvix.Syntax.MiniHaskell.Pretty qualified as MiniHaskell
@@ -32,6 +33,7 @@ import Juvix.Translation.ScopedToAbstract qualified as Abstract
 import Juvix.Utils.Version (runDisplayVersion)
 import Options.Applicative
 import System.Environment (getProgName)
+import System.Process qualified as Process
 import Text.Show.Pretty hiding (Html)
 
 juvixYamlFile :: FilePath
@@ -106,7 +108,7 @@ runCommand cmdWithOpts = do
               Html HtmlOptions {..} -> do
                 res <- runPipeline (upToScoping entryPoint)
                 let m = head (res ^. Scoper.resultModules)
-                embed (genHtml Scoper.defaultOptions _htmlRecursive _htmlTheme _htmlOutputDir _htmlPrintMetadata m)
+                embed (Html.genHtml Scoper.defaultOptions _htmlRecursive _htmlTheme _htmlOutputDir _htmlPrintMetadata m)
               (Internal cmd') -> case cmd' of
                 Highlight -> do
                   res <- runPipelineEither (upToScoping entryPoint)
@@ -137,6 +139,14 @@ runCommand cmdWithOpts = do
                         (upToScoping entryPoint)
                   forM_ l $ \s -> do
                     renderStdOut (Scoper.ppOut (mkScopePrettyOptions globalOpts localOpts) s)
+                Doc localOpts -> do
+                  l <-
+                    (^. Scoper.mainModule)
+                      <$> runPipeline
+                        (upToScoping entryPoint)
+                  let docDir = localOpts ^. docOutputDir
+                  Doc.compileModuleHtmlText docDir "proj" l
+                  embed (when (localOpts ^. docOpen) (Process.callProcess "xdg-open" [docDir </> Doc.indexFileName]))
                 MicroJuvix Pretty -> do
                   micro <-
                     head . (^. Micro.resultModules)

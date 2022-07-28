@@ -409,7 +409,8 @@ checkTypeSignature ::
 checkTypeSignature TypeSignature {..} = do
   sigType' <- checkParseExpressionAtoms _sigType
   sigName' <- bindFunctionSymbol _sigName
-  registerFunction' TypeSignature {_sigName = sigName', _sigType = sigType', ..}
+  sigDoc' <- mapM checkJudoc _sigDoc
+  registerFunction' TypeSignature {_sigName = sigName', _sigType = sigType', _sigDoc = sigDoc', ..}
 
 checkConstructorDef ::
   Members '[Error ScoperError, Reader LocalVars, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r =>
@@ -418,10 +419,12 @@ checkConstructorDef ::
 checkConstructorDef InductiveConstructorDef {..} = do
   constructorType' <- checkParseExpressionAtoms _constructorType
   constructorName' <- bindConstructorSymbol _constructorName
+  doc' <- mapM checkJudoc _constructorDoc
   registerConstructor'
     InductiveConstructorDef
       { _constructorName = constructorName',
-        _constructorType = constructorType'
+        _constructorType = constructorType',
+        _constructorDoc = doc'
       }
 
 withParams ::
@@ -464,11 +467,13 @@ checkInductiveDef ::
 checkInductiveDef ty@InductiveDef {..} = do
   withParams _inductiveParameters $ \inductiveParameters' -> do
     inductiveType' <- mapM checkParseExpressionAtoms _inductiveType
+    inductiveDoc' <- mapM checkJudoc _inductiveDoc
     inductiveName' <- bindInductiveSymbol _inductiveName
     inductiveConstructors' <- mapM checkConstructorDef _inductiveConstructors
     registerInductive'
       InductiveDef
         { _inductiveName = inductiveName',
+          _inductiveDoc = inductiveDoc',
           _inductiveBuiltin = _inductiveBuiltin,
           _inductiveParameters = inductiveParameters',
           _inductiveType = inductiveType',
@@ -508,7 +513,7 @@ checkTopModule ::
   Members '[Error ScoperError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
-checkTopModule m@(Module path params body) = do
+checkTopModule m@(Module path params doc body) = do
   checkPath
   r <- checkedModule
   modify (over (scoperModulesCache . cachedModules) (HashMap.insert path r))
@@ -554,11 +559,13 @@ checkTopModule m@(Module path params body) = do
         localScope $
           withParams params $ \params' -> do
             (_moduleExportInfo, body') <- checkModuleBody body
+            doc' <- mapM checkJudoc doc
             let _moduleRefModule =
                   Module
                     { _modulePath = path',
                       _moduleParameters = params',
-                      _moduleBody = body'
+                      _moduleBody = body',
+                      _moduleDoc = doc'
                     }
                 _moduleRefName = set S.nameConcrete () path'
             return ModuleRef'' {..}
@@ -588,12 +595,13 @@ checkLocalModule ::
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
-  (_moduleExportInfo, moduleBody', moduleParameters') <-
+  (_moduleExportInfo, moduleBody', moduleParameters', moduleDoc') <-
     withScope $
       withParams _moduleParameters $ \p' -> do
         inheritScope
         (e, b) <- checkModuleBody _moduleBody
-        return (e, b, p')
+        doc' <- mapM checkJudoc _moduleDoc
+        return (e, b, p', doc')
   _modulePath' <- reserveSymbolOf S.KNameLocalModule _modulePath
   let moduleId = _modulePath' ^. S.nameId
       _moduleRefName = set S.nameConcrete () _modulePath'
@@ -601,7 +609,8 @@ checkLocalModule Module {..} = do
         Module
           { _modulePath = _modulePath',
             _moduleParameters = moduleParameters',
-            _moduleBody = moduleBody'
+            _moduleBody = moduleBody',
+            _moduleDoc = moduleDoc'
           }
       entry :: ModuleRef' 'S.NotConcrete
       entry = mkModuleRef' @'ModuleLocal ModuleRef'' {..}
@@ -844,7 +853,8 @@ checkAxiomDef ::
 checkAxiomDef AxiomDef {..} = do
   axiomType' <- localScope (checkParseExpressionAtoms _axiomType)
   axiomName' <- bindAxiomSymbol _axiomName
-  registerAxiom' AxiomDef {_axiomName = axiomName', _axiomType = axiomType', ..}
+  axiomDoc' <- localScope (mapM checkJudoc _axiomDoc)
+  registerAxiom' AxiomDef {_axiomName = axiomName', _axiomType = axiomType', _axiomDoc = axiomDoc', ..}
 
 checkCompile ::
   Members '[InfoTableBuilder, Error ScoperError, State Scope, Reader LocalVars, State ScoperState] r =>
@@ -1210,6 +1220,21 @@ checkExpressionAtoms ::
   Sem r (ExpressionAtoms 'Scoped)
 checkExpressionAtoms (ExpressionAtoms l i) = do
   (`ExpressionAtoms` i) <$> mapM checkExpressionAtom l
+
+checkJudoc ::
+  Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
+  Judoc 'Parsed ->
+  Sem r (Judoc 'Scoped)
+checkJudoc (Judoc atoms) = Judoc <$> mapM checkJudocAtom atoms
+
+checkJudocAtom ::
+  Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
+  JudocAtom 'Parsed ->
+  Sem r (JudocAtom 'Scoped)
+checkJudocAtom = \case
+  JudocText t -> return (JudocText t)
+  JudocNewline -> return JudocNewline
+  JudocExpression e -> JudocExpression <$> checkParseExpressionAtoms e
 
 checkParseExpressionAtoms ::
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>

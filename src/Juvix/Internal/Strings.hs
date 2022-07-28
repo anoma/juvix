@@ -8,6 +8,9 @@ module_ = "module"
 axiom :: IsString s => s
 axiom = "axiom"
 
+judocStart :: IsString s => s
+judocStart = "---"
+
 end :: IsString s => s
 end = "end"
 
@@ -235,3 +238,6 @@ putStrLn_ = "putStrLn"
 
 juvixFunctionT :: IsString s => s
 juvixFunctionT = "juvix_function_t"
+
+juvixDotOrg :: IsString s => s
+juvixDotOrg = "https://juvix.org"

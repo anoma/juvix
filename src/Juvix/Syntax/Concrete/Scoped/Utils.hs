@@ -18,8 +18,7 @@ getAllModules' ::
   Member (Output (S.NameId, Module 'Scoped 'ModuleTop)) r =>
   Module 'Scoped 'ModuleTop ->
   Sem r ()
-getAllModules' m = do
-  recordModule m
+getAllModules' m = recordModule m
   where
     recordModule :: Module 'Scoped 'ModuleTop -> Sem r ()
     recordModule n = do

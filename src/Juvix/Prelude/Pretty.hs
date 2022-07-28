@@ -78,6 +78,9 @@ vsep2 = concatWith (\a b -> a <> line <> line <> b)
 hsep :: Foldable f => f (Doc a) -> Doc a
 hsep = PP.hsep . toList
 
+enclose1 :: Doc a -> Doc a -> Doc a
+enclose1 delim = enclose delim delim
+
 vsepMaybe :: Foldable f => f (Doc a) -> Maybe (Doc a)
 vsepMaybe l
   | null l = Nothing

@@ -278,19 +278,22 @@ infixl 7 <+?>
 (<+?>) :: Doc ann -> Maybe (Doc ann) -> Doc ann
 (<+?>) a = maybe a (a <+>)
 
-infixl 7 <?+>
+infixr 7 <?+>
 
 (<?+>) :: Maybe (Doc ann) -> Doc ann -> Doc ann
 (<?+>) = \case
   Nothing -> id
   Just a -> (a <+>)
 
-infixl 7 <?>
+infixr 7 ?<>
 
-(<?>) :: Semigroup m => m -> Maybe m -> m
-(<?>) a = maybe a (a <>)
+(?<>) :: Semigroup m => Maybe m -> m -> m
+(?<>) = maybe id (<>)
 
---------------------------------------------------------------------------------
+infixl 7 <>?
+
+(<>?) :: Semigroup m => m -> Maybe m -> m
+(<>?) a = maybe a (a <>)
 
 data Indexed a = Indexed
   { _indexedIx :: Int,

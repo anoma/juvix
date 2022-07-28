@@ -187,6 +187,7 @@ instance HasLoc OperatorSyntaxDef where
 data TypeSignature (s :: Stage) = TypeSignature
   { _sigName :: FunctionName s,
     _sigType :: ExpressionType s,
+    _sigDoc :: Maybe (Judoc s),
     _sigBuiltin :: Maybe BuiltinFunction,
     _sigTerminating :: Bool
   }
@@ -202,7 +203,8 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Typ
 -------------------------------------------------------------------------------
 
 data AxiomDef (s :: Stage) = AxiomDef
-  { _axiomName :: SymbolType s,
+  { _axiomDoc :: Maybe (Judoc s),
+    _axiomName :: SymbolType s,
     _axiomBuiltin :: Maybe BuiltinAxiom,
     _axiomType :: ExpressionType s
   }
@@ -223,6 +225,7 @@ type InductiveName s = SymbolType s
 
 data InductiveConstructorDef (s :: Stage) = InductiveConstructorDef
   { _constructorName :: InductiveConstructorName s,
+    _constructorDoc :: Maybe (Judoc s),
     _constructorType :: ExpressionType s
   }
 
@@ -245,6 +248,7 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Ind
 
 data InductiveDef (s :: Stage) = InductiveDef
   { _inductiveBuiltin :: Maybe BuiltinInductive,
+    _inductiveDoc :: Maybe (Judoc s),
     _inductiveName :: InductiveName s,
     _inductiveParameters :: [InductiveParameter s],
     _inductiveType :: Maybe (ExpressionType s),
@@ -383,6 +387,7 @@ type LocalModuleName s = SymbolType s
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
   { _modulePath :: ModulePathType s t,
     _moduleParameters :: [InductiveParameter s],
+    _moduleDoc :: Maybe (Judoc s),
     _moduleBody :: [Statement s]
   }
 
@@ -897,7 +902,30 @@ data ExpressionAtoms (s :: Stage) = ExpressionAtoms
     _expressionAtomsLoc :: Interval
   }
 
+newtype Judoc (s :: Stage) = Judoc
+  { _block :: [JudocAtom s]
+  }
+  deriving newtype (Semigroup, Monoid)
+
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (Judoc s)
+
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Judoc s)
+
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Judoc s)
+
+data JudocAtom (s :: Stage)
+  = JudocExpression (ExpressionType s)
+  | JudocText Text
+  | JudocNewline
+
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocAtom s)
+
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocAtom s)
+
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocAtom s)
+
 makeLenses ''PatternArg
+makeLenses ''Judoc
 makeLenses ''Function
 makeLenses ''InductiveDef
 makeLenses ''PostfixApplication

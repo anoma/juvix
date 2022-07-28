@@ -8,6 +8,7 @@ where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Singletons
+import Juvix.Internal.Strings qualified as Str
 import Juvix.Parsing.Error
 import Juvix.Parsing.InfoTable
 import Juvix.Parsing.InfoTableBuilder
@@ -16,12 +17,11 @@ import Juvix.Parsing.ParserResult
 import Juvix.Pipeline.EntryPoint
 import Juvix.Prelude
 import Juvix.Prelude.Pretty (Pretty, prettyText)
+import Juvix.Syntax.Concrete.Base (MonadParsec (takeWhile1P))
 import Juvix.Syntax.Concrete.Base qualified as P
 import Juvix.Syntax.Concrete.Language
 
---------------------------------------------------------------------------------
--- Running the parser
---------------------------------------------------------------------------------
+type JudocStash = State (Maybe (Judoc 'Parsed))
 
 entryParser ::
   Members '[Files, Error ParserError] r =>
@@ -46,7 +46,11 @@ entryParser e = do
 -- an empty string.
 runModuleParser :: FilePath -> FilePath -> Text -> Either ParserError (InfoTable, Module 'Parsed 'ModuleTop)
 runModuleParser root fileName input =
-  case run $ runInfoTableBuilder $ runReader params $ P.runParserT topModuleDef fileName input of
+  case run $
+    runInfoTableBuilder $
+      runReader params $
+        evalState (Nothing @(Judoc 'Parsed)) $
+          P.runParserT topModuleDef fileName input of
     (_, Left err) -> Left (ParserError err)
     (tbl, Right r) -> return (tbl, r)
   where
@@ -56,32 +60,29 @@ runModuleParser root fileName input =
         }
 
 top ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r =>
   ParsecS r a ->
   ParsecS r a
 top p = space >> p <* (optional kwSemicolon >> P.eof)
 
 topModuleDef ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r =>
   ParsecS r (Module 'Parsed 'ModuleTop)
-topModuleDef = top moduleDef
-
-topStatement ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
-  ParsecS r (Statement 'Parsed)
-topStatement = top statement
+topModuleDef = do
+  void (optional judocBlock)
+  top moduleDef
 
 --------------------------------------------------------------------------------
 -- Symbols and names
 --------------------------------------------------------------------------------
 
-symbol :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r Symbol
+symbol :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r Symbol
 symbol = uncurry (flip WithLoc) <$> identifierL
 
-dottedSymbol :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (NonEmpty Symbol)
+dottedSymbol :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (NonEmpty Symbol)
 dottedSymbol = fmap (uncurry (flip WithLoc)) <$> dottedIdentifier
 
-name :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r Name
+name :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r Name
 name = do
   parts <- dottedSymbol
   return $ case nonEmptyUnsnoc parts of
@@ -91,18 +92,19 @@ name = do
 mkTopModulePath :: NonEmpty Symbol -> TopModulePath
 mkTopModulePath l = TopModulePath (NonEmpty.init l) (NonEmpty.last l)
 
-symbolList :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (NonEmpty Symbol)
+symbolList :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (NonEmpty Symbol)
 symbolList = braces (P.sepBy1 symbol kwSemicolon)
 
-topModulePath :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r TopModulePath
+topModulePath :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r TopModulePath
 topModulePath = mkTopModulePath <$> dottedSymbol
 
 --------------------------------------------------------------------------------
 -- Top level statement
 --------------------------------------------------------------------------------
 
-statement :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Statement 'Parsed)
-statement =
+statement :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (Statement 'Parsed)
+statement = do
+  void (optional judocBlock)
   (StatementOperator <$> operatorSyntaxDef)
     <|> (StatementOpenModule <$> openModule)
     <|> (StatementImport <$> import_)
@@ -116,17 +118,46 @@ statement =
             <$> auxTypeSigFunClause
         )
 
-builtinInductive :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r BuiltinInductive
+judocBlock :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r ()
+judocBlock = do
+  b :: Judoc 'Parsed <- mconcat . toList <$> P.some judocLine
+  P.lift (modify (<> Just b))
+
+judocLine :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (Judoc 'Parsed)
+judocLine = lexeme $ do
+  comment_ (P.chunk Str.judocStart)
+  ln <- Judoc . (`snoc` JudocNewline) <$> many judocAtom
+  P.newline
+  return ln
+
+judocAtom :: forall r. Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (JudocAtom 'Parsed)
+judocAtom =
+  JudocText <$> judocText
+    <|> JudocExpression <$> judocExpression
+  where
+    judocText :: ParsecS r Text
+    judocText = comment (takeWhile1P Nothing isValidText)
+      where
+        isValidText :: Char -> Bool
+        isValidText = (`notElem` ['\n', ';'])
+    judocExpression :: ParsecS r (ExpressionAtoms 'Parsed)
+    judocExpression = do
+      comment_ (P.char ';')
+      e <- parseExpressionAtoms
+      comment_ (P.char ';')
+      return e
+
+builtinInductive :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r BuiltinInductive
 builtinInductive = builtinHelper
 
-builtinFunction :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r BuiltinFunction
+builtinFunction :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r BuiltinFunction
 builtinFunction = builtinHelper
 
-builtinAxiom :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r BuiltinAxiom
+builtinAxiom :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r BuiltinAxiom
 builtinAxiom = builtinHelper
 
 builtinHelper ::
-  (Members '[Reader ParserParams, InfoTableBuilder] r, Bounded a, Enum a, Pretty a) =>
+  (Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r, Bounded a, Enum a, Pretty a) =>
   ParsecS r a
 builtinHelper =
   P.choice
@@ -134,24 +165,24 @@ builtinHelper =
       | a <- allElements
     ]
 
-builtinInductiveDef :: Members '[Reader ParserParams, InfoTableBuilder] r => BuiltinInductive -> ParsecS r (InductiveDef 'Parsed)
+builtinInductiveDef :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => BuiltinInductive -> ParsecS r (InductiveDef 'Parsed)
 builtinInductiveDef = inductiveDef . Just
 
 builtinAxiomDef ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r =>
   BuiltinAxiom ->
   ParsecS r (AxiomDef 'Parsed)
 builtinAxiomDef = axiomDef . Just
 
 builtinTypeSig ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r =>
   BuiltinFunction ->
   ParsecS r (TypeSignature 'Parsed)
 builtinTypeSig b = do
   fun <- symbol
   typeSignature False fun (Just b)
 
-builtinStatement :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Statement 'Parsed)
+builtinStatement :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (Statement 'Parsed)
 builtinStatement = do
   kwBuiltin
   (builtinInductive >>= fmap StatementInductive . builtinInductiveDef)
@@ -162,7 +193,7 @@ builtinStatement = do
 -- Compile
 --------------------------------------------------------------------------------
 
-compileBlock :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Compile 'Parsed)
+compileBlock :: forall r. Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (Compile 'Parsed)
 compileBlock = do
   kwCompile
   _compileName <- symbol
@@ -181,10 +212,10 @@ compileBlock = do
 -- Foreign
 --------------------------------------------------------------------------------
 
-backend :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r Backend
+backend :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r Backend
 backend = ghc $> BackendGhc <|> cBackend $> BackendC
 
-foreignBlock :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ForeignBlock
+foreignBlock :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r ForeignBlock
 foreignBlock = do
   kwForeign
   _foreignBackend <- backend
@@ -195,10 +226,10 @@ foreignBlock = do
 -- Operator syntax declaration
 --------------------------------------------------------------------------------
 
-precedence :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r Precedence
+precedence :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r Precedence
 precedence = PrecNat <$> (fst <$> decimal)
 
-operatorSyntaxDef :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r OperatorSyntaxDef
+operatorSyntaxDef :: forall r. Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r OperatorSyntaxDef
 operatorSyntaxDef = do
   _fixityArity <- arity
   _fixityPrecedence <- precedence
@@ -218,7 +249,7 @@ operatorSyntaxDef = do
 -- Import statement
 --------------------------------------------------------------------------------
 
-import_ :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Import 'Parsed)
+import_ :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (Import 'Parsed)
 import_ = do
   kwImport
   _importModule <- topModulePath
@@ -228,7 +259,7 @@ import_ = do
 -- Expression
 --------------------------------------------------------------------------------
 
-expressionAtom :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (ExpressionAtom 'Parsed)
+expressionAtom :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (ExpressionAtom 'Parsed)
 expressionAtom =
   AtomLiteral <$> P.try literal
     <|> (AtomIdentifier <$> name)
@@ -242,7 +273,7 @@ expressionAtom =
     <|> braces (AtomBraces <$> withLoc parseExpressionAtoms)
 
 parseExpressionAtoms ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r =>
   ParsecS r (ExpressionAtoms 'Parsed)
 parseExpressionAtoms = do
   (_expressionAtoms, _expressionAtomsLoc) <- interval (P.some expressionAtom)
@@ -252,38 +283,34 @@ parseExpressionAtoms = do
 -- Holes
 --------------------------------------------------------------------------------
 
-hole :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (HoleType 'Parsed)
+hole :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (HoleType 'Parsed)
 hole = snd <$> interval kwHole
 
 --------------------------------------------------------------------------------
 -- Literals
 --------------------------------------------------------------------------------
 
-literalInteger :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r LiteralLoc
+literalInteger :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r LiteralLoc
 literalInteger = do
   (x, loc) <- integer
   return (WithLoc loc (LitInteger x))
 
-literalString :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r LiteralLoc
+literalString :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r LiteralLoc
 literalString = do
   (x, loc) <- string
   return (WithLoc loc (LitString x))
 
-literal :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r LiteralLoc
+literal :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r LiteralLoc
 literal = do
   l <-
     literalInteger
       <|> literalString
   P.lift (registerLiteral l)
 
---------------------------------------------------------------------------------
--- Let expression
---------------------------------------------------------------------------------
-
-letClause :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (LetClause 'Parsed)
+letClause :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (LetClause 'Parsed)
 letClause = either LetTypeSig LetFunClause <$> auxTypeSigFunClause
 
-letBlock :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (LetBlock 'Parsed)
+letBlock :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (LetBlock 'Parsed)
 letBlock = do
   kwLet
   _letClauses <- braces (P.sepEndBy letClause kwSemicolon)
@@ -295,7 +322,7 @@ letBlock = do
 -- Universe expression
 --------------------------------------------------------------------------------
 
-universe :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r Universe
+universe :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r Universe
 universe = do
   i <- snd <$> interval kwType
   uni <- optional decimal
@@ -305,12 +332,14 @@ universe = do
         Just (lvl, i') -> Universe (Just lvl) (i <> i')
     )
 
--------------------------------------------------------------------------------
--- Type signature declaration
--------------------------------------------------------------------------------
+getJudoc :: Members '[JudocStash] r => ParsecS r (Maybe (Judoc 'Parsed))
+getJudoc = P.lift $ do
+  j <- get
+  put (Nothing @(Judoc 'Parsed))
+  return j
 
 typeSignature ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r =>
   Bool ->
   Symbol ->
   Maybe BuiltinFunction ->
@@ -318,11 +347,12 @@ typeSignature ::
 typeSignature _sigTerminating _sigName _sigBuiltin = do
   kwColon
   _sigType <- parseExpressionAtoms
+  _sigDoc <- getJudoc
   return TypeSignature {..}
 
 -- | Used to minimize the amount of required @P.try@s.
 auxTypeSigFunClause ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r =>
   ParsecS r (Either (TypeSignature 'Parsed) (FunctionClause 'Parsed))
 auxTypeSigFunClause = do
   terminating <- isJust <$> optional kwTerminating
@@ -330,16 +360,13 @@ auxTypeSigFunClause = do
   (Left <$> typeSignature terminating sym Nothing)
     <|> (Right <$> functionClause sym)
 
--------------------------------------------------------------------------------
--- Axioms
--------------------------------------------------------------------------------
-
 axiomDef ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r =>
   Maybe BuiltinAxiom ->
   ParsecS r (AxiomDef 'Parsed)
 axiomDef _axiomBuiltin = do
   kwAxiom
+  _axiomDoc <- getJudoc
   _axiomName <- symbol
   kwColon
   _axiomType <- parseExpressionAtoms
@@ -349,17 +376,17 @@ axiomDef _axiomBuiltin = do
 -- Function expression
 --------------------------------------------------------------------------------
 
-implicitOpen :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r IsImplicit
+implicitOpen :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r IsImplicit
 implicitOpen =
   lbrace $> Implicit
     <|> lparen $> Explicit
 
-implicitClose :: Members '[Reader ParserParams, InfoTableBuilder] r => IsImplicit -> ParsecS r ()
+implicitClose :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => IsImplicit -> ParsecS r ()
 implicitClose = \case
   Implicit -> rbrace
   Explicit -> rparen
 
-functionParam :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (FunctionParameter 'Parsed)
+functionParam :: forall r. Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (FunctionParameter 'Parsed)
 functionParam = do
   (_paramName, _paramUsage, _paramImplicit) <- P.try $ do
     impl <- implicitOpen
@@ -381,7 +408,7 @@ functionParam = do
         <|> (Just UsageOmega <$ kwColonOmega)
         <|> (Nothing <$ kwColon)
 
-function :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Function 'Parsed)
+function :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (Function 'Parsed)
 function = do
   _funParameter <- functionParam
   kwRightArrow
@@ -392,12 +419,12 @@ function = do
 -- Where block clauses
 --------------------------------------------------------------------------------
 
-whereBlock :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (WhereBlock 'Parsed)
+whereBlock :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (WhereBlock 'Parsed)
 whereBlock = do
   kwWhere
   WhereBlock <$> braces (P.sepEndBy1 whereClause kwSemicolon)
 
-whereClause :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (WhereClause 'Parsed)
+whereClause :: forall r. Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (WhereClause 'Parsed)
 whereClause =
   (WhereOpenModule <$> openModule)
     <|> sigOrFun
@@ -409,14 +436,14 @@ whereClause =
 -- Lambda expression
 --------------------------------------------------------------------------------
 
-lambdaClause :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (LambdaClause 'Parsed)
+lambdaClause :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (LambdaClause 'Parsed)
 lambdaClause = do
   lambdaParameters <- P.some patternAtom
   kwMapsTo
   lambdaBody <- parseExpressionAtoms
   return LambdaClause {..}
 
-lambda :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Lambda 'Parsed)
+lambda :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (Lambda 'Parsed)
 lambda = do
   kwLambda
   _lambdaClauses <- braces (P.sepEndBy lambdaClause kwSemicolon)
@@ -426,45 +453,47 @@ lambda = do
 -- Data type construction declaration
 -------------------------------------------------------------------------------
 
-inductiveDef :: Members '[Reader ParserParams, InfoTableBuilder] r => Maybe BuiltinInductive -> ParsecS r (InductiveDef 'Parsed)
+inductiveDef :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => Maybe BuiltinInductive -> ParsecS r (InductiveDef 'Parsed)
 inductiveDef _inductiveBuiltin = do
   _inductivePositive <- isJust <$> optional kwPositive
   kwInductive
+  _inductiveDoc <- getJudoc
   _inductiveName <- symbol
   _inductiveParameters <- P.many inductiveParam
   _inductiveType <- optional (kwColon >> parseExpressionAtoms)
   _inductiveConstructors <- braces $ P.sepEndBy constructorDef kwSemicolon
   return InductiveDef {..}
 
-inductiveParam :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (InductiveParameter 'Parsed)
+inductiveParam :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (InductiveParameter 'Parsed)
 inductiveParam = parens $ do
   _inductiveParameterName <- symbol
   kwColon
   _inductiveParameterType <- parseExpressionAtoms
   return InductiveParameter {..}
 
-constructorDef :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (InductiveConstructorDef 'Parsed)
+constructorDef :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (InductiveConstructorDef 'Parsed)
 constructorDef = do
+  _constructorDoc <- optional judocBlock >> getJudoc
   _constructorName <- symbol
   kwColon
   _constructorType <- parseExpressionAtoms
   return InductiveConstructorDef {..}
 
-wildcard :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r Wildcard
+wildcard :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r Wildcard
 wildcard = Wildcard . snd <$> interval kwWildcard
 
 --------------------------------------------------------------------------------
 -- Pattern section
 --------------------------------------------------------------------------------
 
-patternAtom :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (PatternAtom 'Parsed)
+patternAtom :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (PatternAtom 'Parsed)
 patternAtom =
   PatternAtomIden <$> name
     <|> PatternAtomWildcard <$> wildcard
     <|> (PatternAtomParens <$> parens parsePatternAtoms)
     <|> (PatternAtomBraces <$> braces parsePatternAtoms)
 
-parsePatternAtoms :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (PatternAtoms 'Parsed)
+parsePatternAtoms :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (PatternAtoms 'Parsed)
 parsePatternAtoms = do
   (_patternAtoms, _patternAtomsLoc) <- interval (P.some patternAtom)
   return PatternAtoms {..}
@@ -473,7 +502,7 @@ parsePatternAtoms = do
 -- Function binding declaration
 --------------------------------------------------------------------------------
 
-functionClause :: Members '[Reader ParserParams, InfoTableBuilder] r => Symbol -> ParsecS r (FunctionClause 'Parsed)
+functionClause :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => Symbol -> ParsecS r (FunctionClause 'Parsed)
 functionClause _clauseOwnerFunction = do
   _clausePatterns <- P.many patternAtom
   kwAssignment
@@ -485,14 +514,15 @@ functionClause _clauseOwnerFunction = do
 -- Module declaration
 --------------------------------------------------------------------------------
 
-pmodulePath :: forall t r. (SingI t, Members '[Reader ParserParams, InfoTableBuilder] r) => ParsecS r (ModulePathType 'Parsed t)
+pmodulePath :: forall t r. (SingI t, Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r) => ParsecS r (ModulePathType 'Parsed t)
 pmodulePath = case sing :: SModuleIsTop t of
   SModuleTop -> topModulePath
   SModuleLocal -> symbol
 
-moduleDef :: (SingI t, Members '[Reader ParserParams, InfoTableBuilder] r) => ParsecS r (Module 'Parsed t)
+moduleDef :: (SingI t, Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r) => ParsecS r (Module 'Parsed t)
 moduleDef = do
   kwModule
+  _moduleDoc <- getJudoc
   _modulePath <- pmodulePath
   _moduleParameters <- many inductiveParam
   kwSemicolon
@@ -501,7 +531,7 @@ moduleDef = do
   return Module {..}
 
 -- | An ExpressionAtom which is a valid expression on its own.
-atomicExpression :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (ExpressionAtoms 'Parsed)
+atomicExpression :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (ExpressionAtoms 'Parsed)
 atomicExpression = do
   (atom, loc) <- interval expressionAtom
   case atom of
@@ -509,7 +539,7 @@ atomicExpression = do
     _ -> return ()
   return $ ExpressionAtoms (NonEmpty.singleton atom) loc
 
-openModule :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (OpenModule 'Parsed)
+openModule :: forall r. Members '[Reader ParserParams, InfoTableBuilder, JudocStash] r => ParsecS r (OpenModule 'Parsed)
 openModule = do
   kwOpen
   _openModuleImport <- isJust <$> optional kwImport

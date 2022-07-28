@@ -3,10 +3,12 @@ module Commands.Internal
     module Commands.Internal.MicroJuvix,
     module Commands.Internal.Parse,
     module Commands.Internal.Scope,
+    module Commands.Internal.Doc,
     module Commands.Internal.Termination,
   )
 where
 
+import Commands.Internal.Doc
 import Commands.Internal.MicroJuvix
 import Commands.Internal.Parse
 import Commands.Internal.Scope
@@ -24,6 +26,7 @@ data InternalCommand
   | Parse ParseOptions
   | Scope ScopeOptions
   | Termination TerminationCommand
+  | Doc DocOptions
 
 parseInternalCommand :: Parser InternalCommand
 parseInternalCommand =
@@ -35,11 +38,19 @@ parseInternalCommand =
           commandMiniHaskell,
           commandMonoJuvix,
           commandParse,
+          commandDoc,
           commandScope,
           commandShowRoot,
           commandTermination
         ]
     )
+
+commandDoc :: Mod CommandFields InternalCommand
+commandDoc =
+  command "doc" $
+    info
+      (Doc <$> parseDoc)
+      (progDesc "Generate documentation")
 
 commandHighlight :: Mod CommandFields InternalCommand
 commandHighlight =
