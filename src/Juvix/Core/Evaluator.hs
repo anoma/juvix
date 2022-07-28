@@ -9,7 +9,7 @@ import Juvix.Core.Prelude
 -- `eval ctx env n` evalues a node `n` whose all free variables point into
 -- `env`. All nodes in `ctx` and `env` are closed.
 eval :: IdentContext -> Env -> Node -> Node
-eval !ctx = eval'
+eval !ctx !env0 = removeRuntimeNodes . eval' env0
   where
     unimplemented :: a
     unimplemented = error "not yet implemented"

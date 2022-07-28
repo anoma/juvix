@@ -33,7 +33,6 @@ data ArgumentInfo = ArgumentInfo
   { _argName :: Name,
     _argType :: Type,
     _argIsImplicit :: Bool
-    -- future: _argIsLazy :: Bool
   }
 
 data InductiveInfo = InductiveInfo

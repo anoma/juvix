@@ -28,12 +28,10 @@ computeIdentInfo = umap go
           fvi =
             IdentInfo $
               HashMap.unions
-                ( map
-                    ( \n' ->
-                        Info.lookupDefault
-                          (IdentInfo mempty)
-                          (getInfo n')
-                          ^. infoIdents
-                    )
-                    (children n)
-                )
+                (map ((^. infoIdents) . getIdentInfo) (children n))
+
+getIdentInfo :: Node -> IdentInfo
+getIdentInfo = Info.lookupDefault (IdentInfo mempty) . getInfo
+
+identOccurrences :: Symbol -> Node -> Int
+identOccurrences sym = fromMaybe 0 . HashMap.lookup sym . (^. infoIdents) . getIdentInfo
