@@ -1,7 +1,7 @@
 module Juvix.Core.Node where
 
 {-
-  This file defines the graph representation of JuvixCore (Node datatype) and
+  This file defines the tree representation of JuvixCore (Node datatype) and
   general recursors on it.
 -}
 
@@ -12,7 +12,7 @@ import Juvix.Core.Info.BinderInfo
 import Juvix.Core.Prelude
 
 {---------------------------------------------------------------------------------}
-{- Program graph datatype -}
+{- Program tree datatype -}
 
 -- Consecutive symbol IDs for reachable user functions.
 type Symbol = Word
@@ -27,7 +27,7 @@ data Tag = BuiltinTag BuiltinDataTag | UserTag Word
 -- de Bruijn index
 type Index = Int
 
--- `Node` is the type of nodes in the program graph. The nodes themselves
+-- `Node` is the type of nodes in the program tree. The nodes themselves
 -- contain only runtime-relevant information. Runtime-irrelevant annotations
 -- (including all type information) are stored in the infos associated with each
 -- each.
@@ -43,7 +43,7 @@ data Node
     Builtin !Info !BuiltinOp
   | -- A data constructor (the function that creates the data).
     Constructor !Info !Tag
-  | ConstValue !Info {-# UNPACK #-} !Constant
+  | ConstValue !Info !Constant
   | -- A hole. It's a unit for the purposes of evaluation.
     Hole !Info
   | -- An axiom. Computationally a unit.
@@ -120,6 +120,8 @@ unfoldLambdas = go []
       Lambda i b -> go (i : acc) b
       _ -> (acc, n)
 
+-- `NodeInfo` is a convenience datatype which provides the most commonly needed
+-- information about a node in a generic fashion.
 data NodeInfo = NodeInfo
   { -- `nodeInfo` is the info associated with the node,
     _nodeInfo :: Info,
@@ -127,10 +129,10 @@ data NodeInfo = NodeInfo
     -- recursive occurrences of Node
     _nodeChildren :: [Node],
     -- `nodeChildBindersNum` is the number of binders introduced for each child
-    -- in the parent node
+    -- in the parent node. Same length and order as in `nodeChildren`.
     _nodeChildBindersNum :: [Int],
     -- `nodeChildBindersInfo` is information about binders for each child, if
-    -- present.
+    -- present. Same length and order as in `nodeChildren`.
     _nodeChildBindersInfo :: [Maybe [BinderInfo]],
     -- `nodeReassemble` reassembles the node from the info and the children
     -- (which should be in the same fixed order as in the `nodeChildren`
@@ -326,8 +328,8 @@ dmapB f n = runIdentity $ dmapMB (\is -> return . f is) n
 dmapN :: (Index -> Node -> Node) -> Node -> Node
 dmapN f n = runIdentity $ dmapMN (\idx -> return . f idx) n
 
--- `ufoldG` folds the tree bottom-up; `uplus` combines the values - it should be
--- commutative and associative
+-- `ufoldG` folds the tree bottom-up. The `uplus` argument combines the values -
+-- it should be commutative and associative.
 ufoldG ::
   forall c a m.
   Monad m =>
@@ -456,29 +458,29 @@ substEnv env = umapN go
       Var _ idx | idx >= k -> env !! k
       _ -> n
 
-removeClosures :: Node -> Node
-removeClosures = umap go
+convertClosures :: Node -> Node
+convertClosures = umap go
   where
     go :: Node -> Node
     go n = case n of
       LambdaClosure i env b -> substEnv env (Lambda i b)
       _ -> n
 
-removeData :: Node -> Node
-removeData = umap go
+convertData :: Node -> Node
+convertData = umap go
   where
     go :: Node -> Node
     go n = case n of
       Data i tag args -> mkApp' (Constructor i tag) args
       _ -> n
 
-removeSuspended :: Node -> Node
-removeSuspended = umap go
+convertSuspended :: Node -> Node
+convertSuspended = umap go
   where
     go :: Node -> Node
     go n = case n of
       Suspended _ t -> t
       _ -> n
 
-removeRuntimeNodes :: Node -> Node
-removeRuntimeNodes = removeSuspended . removeData . removeClosures
+convertRuntimeNodes :: Node -> Node
+convertRuntimeNodes = convertSuspended . convertData . convertClosures
