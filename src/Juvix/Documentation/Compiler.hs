@@ -5,6 +5,7 @@ import Data.ByteString.Builder qualified as Builder
 import Data.HashMap.Strict qualified as HashMap
 import Data.Time.Clock
 import Juvix.Documentation.Extra
+import Juvix.Internal.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude qualified as Prelude
 import Juvix.Prelude.Html
@@ -120,7 +121,7 @@ createIndexFile ps = do
                     Just $
                       details ! Attr.open "open" $
                         -- (summary ! Attr.class_ "hide-when-js-enabled" $ "Submodules")
-                        summary "Submodules"
+                        summary "Subtree"
                           <> ul (mconcatMap li c')
 
 compileModuleHtmlText :: Members '[Embed IO] r => FilePath -> Text -> Module 'Scoped 'ModuleTop -> Sem r ()
@@ -217,11 +218,17 @@ template rightMenu' content' = do
       Html.div ! Attr.id "footer" $
         ( p
             ( "Build by "
-                <> (Html.a ! Attr.href "https://juvix.org/" $ "Juvix")
+                <> (Html.a ! Attr.href Str.juvixDotOrg $ "Juvix")
                 <> " version "
                 <> toHtml versionDoc
             )
         )
+          <> ( Html.a ! Attr.href Str.juvixDotOrg $
+                 Html.img
+                   ! Attr.id "tara"
+                   ! Attr.src "assets/Seating_Tara_smiling.svg"
+                   ! Attr.alt "Tara"
+             )
 
 -- | This function compiles a datalang module into Html documentation.
 goTopModule ::

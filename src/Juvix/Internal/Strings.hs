@@ -238,3 +238,6 @@ putStrLn_ = "putStrLn"
 
 juvixFunctionT :: IsString s => s
 juvixFunctionT = "juvix_function_t"
+
+juvixDotOrg :: IsString s => s
+juvixDotOrg = "https://juvix.org"
