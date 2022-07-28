@@ -6,6 +6,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.Time.Clock
 import Juvix.Documentation.Extra
 import Juvix.Internal.Strings qualified as Str
+import Juvix.Pipeline.EntryPoint
 import Juvix.Prelude
 import Juvix.Prelude qualified as Prelude
 import Juvix.Prelude.Html
@@ -60,12 +61,12 @@ indexFileName = "index.html"
 
 createIndexFile ::
   forall r.
-  Members '[Reader DocParams, Embed IO, Reader HtmlOptions] r =>
+  Members '[Reader DocParams, Embed IO, Reader HtmlOptions, Reader EntryPoint] r =>
   [TopModulePath] ->
   Sem r ()
 createIndexFile ps = do
   outDir <- asks (^. docOutputDir)
-  indexHtml >>= writeHtml (outDir </> indexFileName) . template mempty
+  indexHtml >>= (template mempty >=> writeHtml (outDir </> indexFileName))
   where
     indexHtml :: Sem r Html
     indexHtml = do
@@ -124,7 +125,7 @@ createIndexFile ps = do
                         summary "Subtree"
                           <> ul (mconcatMap li c')
 
-compileModuleHtmlText :: Members '[Embed IO] r => FilePath -> Text -> Module 'Scoped 'ModuleTop -> Sem r ()
+compileModuleHtmlText :: Members '[Embed IO, Reader EntryPoint] r => FilePath -> Text -> Module 'Scoped 'ModuleTop -> Sem r ()
 compileModuleHtmlText dir baseName m = runReader params $ do
   copyAssets
   mapM_ goTopModule topModules
@@ -175,9 +176,10 @@ srcHtmlOpts = HtmlOptions HtmlSrc
 docHtmlOpts :: HtmlOptions
 docHtmlOpts = HtmlOptions HtmlDoc
 
-template :: Html -> Html -> Html
+template :: forall r. Members '[Reader EntryPoint] r => Html -> Html -> Sem r Html
 template rightMenu' content' = do
-  docTypeHtml (mhead <> body')
+  body' <- mbody
+  return (docTypeHtml (mhead <> body'))
   where
     mhead :: Html
     mhead =
@@ -198,20 +200,25 @@ template rightMenu' content' = do
     titleStr :: Html
     titleStr = "Juvix Documentation"
 
-    packageHeader :: Html
-    packageHeader =
-      Html.div ! Attr.id "package-header" $
-        ( Html.span ! Attr.class_ "caption" $
-            "package name - version"
-        )
-          <> rightMenu'
+    packageHeader :: Sem r Html
+    packageHeader = do
+      pkgName' <- toHtml <$> asks (^. entryPointPackage . packageName')
+      version' <- toHtml <$> asks (^. entryPointPackage . packageVersion')
+      return $
+        Html.div ! Attr.id "package-header" $
+          ( Html.span ! Attr.class_ "caption" $
+              pkgName' <> " - " <> version'
+          )
+            <> rightMenu'
 
-    body' :: Html
-    body' =
-      body ! Attr.class_ "js-enabled" $
-        packageHeader
-          <> content'
-          <> mfooter
+    mbody :: Sem r Html
+    mbody = do
+      bodyHeader' <- packageHeader
+      return $
+        body ! Attr.class_ "js-enabled" $
+          bodyHeader'
+            <> content'
+            <> mfooter
 
     mfooter :: Html
     mfooter =
@@ -233,7 +240,7 @@ template rightMenu' content' = do
 -- | This function compiles a datalang module into Html documentation.
 goTopModule ::
   forall r.
-  Members '[Reader DocParams, Embed IO] r =>
+  Members '[Reader DocParams, Embed IO, Reader EntryPoint] r =>
   Module 'Scoped 'ModuleTop ->
   Sem r ()
 goTopModule m = do
@@ -254,11 +261,11 @@ goTopModule m = do
       utc <- Prelude.embed getCurrentTime
       return (genModuleHtml defaultOptions True utc Ayu m)
 
-    docHtml :: forall s. Members '[Reader HtmlOptions] s => Sem s Html
+    docHtml :: forall s. Members '[Reader HtmlOptions, Reader EntryPoint] s => Sem s Html
     docHtml = do
       content' <- content
       rightMenu' <- rightMenu
-      return (template rightMenu' content')
+      template rightMenu' content'
       where
         rightMenu :: Sem s Html
         rightMenu = do

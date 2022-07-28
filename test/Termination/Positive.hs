@@ -44,6 +44,7 @@ testDescrFlag N.NegTest {..} =
                       _entryPointNoTermination = True,
                       _entryPointNoPositivity = False,
                       _entryPointNoStdlib = True,
+                      _entryPointPackage = emptyPackage,
                       _entryPointModulePaths = pure _file
                     }
 
