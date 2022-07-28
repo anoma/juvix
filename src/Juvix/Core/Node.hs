@@ -30,14 +30,14 @@ type Index = Int
 -- `Node` is the type of nodes in the program tree. The nodes themselves
 -- contain only runtime-relevant information. Runtime-irrelevant annotations
 -- (including all type information) are stored in the infos associated with each
--- each.
+-- node.
 data Node
   = -- De Bruijn index of a locally lambda-bound variable.
     Var !Info !Index
-  | -- Global identifier of a function (with corresponding `GNode` in the global
+  | -- Global identifier of a function (with corresponding `Node` in the global
     -- context).
     Ident !Info !Symbol
-  | -- A builtin with no corresponding GNode, treated specially by the evaluator
+  | -- A builtin with no corresponding Node, treated specially by the evaluator
     -- and the code generator. For example, basic arithmetic operations go into
     -- `Builtin`.
     Builtin !Info !BuiltinOp
@@ -54,9 +54,11 @@ data Node
     -- of ML-polymorphic / dependent type checking or code generation!
     LetIn !Info !Node !Node
   | -- One-level case matching on the tag of a data constructor: `Case value
-    -- branches`. `Case` is lazy: only the selected branch is evaluated. Lazy `if`
-    -- can be implemented by a case on a boolean.
-    Case !Info !Node ![CaseBranch]
+    -- branches default`. `Case` is lazy: only the selected branch is evaluated.
+    Case !Info !Node ![CaseBranch] !(Maybe Node)
+  | -- Lazy `if` on booleans. It is reasonable to separate booleans from general
+    -- datatypes for the purposes of evaluation and code generation.
+    If !Info !Node !Node !Node
   | -- Evaluation only: evaluated data constructor (the actual data). Arguments
     -- order: right to left.
     Data !Info !Tag ![Node]
@@ -155,7 +157,7 @@ destruct = \case
   App i l r -> NodeInfo i [l, r] [0, 0] [Nothing, Nothing] (\i' args' -> App i' (hd args') (args' !! 1))
   Lambda i b -> NodeInfo i [b] [1] [fetchBinderInfo i] (\i' args' -> Lambda i' (hd args'))
   LetIn i v b -> NodeInfo i [v, b] [0, 1] [Nothing, fetchBinderInfo i] (\i' args' -> LetIn i' (hd args') (args' !! 1))
-  Case i v bs ->
+  Case i v bs Nothing ->
     NodeInfo
       i
       (v : map (\(CaseBranch _ _ br) -> br) bs)
@@ -170,8 +172,34 @@ destruct = \case
                 bs
                 (tl args')
             )
+            Nothing
       )
-  Data i tag args -> NodeInfo i args (map (const 0) args) [] (`Data` tag)
+  Case i v bs (Just def) ->
+    NodeInfo
+      i
+      (v : def : map (\(CaseBranch _ _ br) -> br) bs)
+      (0 : 0 : map (\(CaseBranch _ k _) -> k) bs)
+      (Nothing : Nothing : fetchCaseBinderInfo i (replicate (length bs) Nothing))
+      ( \i' args' ->
+          Case
+            i'
+            (hd args')
+            ( zipWithExact
+                (\(CaseBranch tag k _) br' -> CaseBranch tag k br')
+                bs
+                (tl (tl args'))
+            )
+            (Just (hd (tl args')))
+      )
+  If i v b1 b2 ->
+    NodeInfo
+      i
+      [v, b1, b2]
+      [0, 0, 0]
+      [Nothing, Nothing, Nothing]
+      (\i' args' -> If i' (hd args') (args' !! 1) (args' !! 2))
+  Data i tag args ->
+    NodeInfo i args (map (const 0) args) (map (const Nothing) args) (`Data` tag)
   LambdaClosure i env b ->
     NodeInfo
       i
@@ -179,7 +207,7 @@ destruct = \case
       (1 : map (const 0) env)
       [fetchBinderInfo i]
       (\i' args' -> LambdaClosure i' (tl args') (hd args'))
-  Suspended i t -> NodeInfo i [t] [0] [] (\i' args' -> Suspended i' (hd args'))
+  Suspended i t -> NodeInfo i [t] [0] [Nothing] (\i' args' -> Suspended i' (hd args'))
   where
     fetchBinderInfo :: Info -> Maybe [BinderInfo]
     fetchBinderInfo i = case Info.lookup kBinderInfo i of

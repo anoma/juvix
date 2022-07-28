@@ -47,9 +47,14 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
         apply env l r []
       Lambda i b -> LambdaClosure i env b
       LetIn _ v b -> let !v' = eval' env v in eval' (v' : env) b
-      Case _ v bs ->
+      Case _ v bs def ->
         case eval' env v of
-          Data _ tag args -> branch (args ++ env) tag bs
+          Data _ tag args -> branch env (args ++ env) tag def bs
+          _ -> evalError
+      If _ v b1 b2 ->
+        case eval' env v of
+          ConstValue _ (ConstBool True) -> eval' env b1
+          ConstValue _ (ConstBool False) -> eval' env b2
           _ -> evalError
       Data {} -> n
       LambdaClosure {} -> n
@@ -79,8 +84,10 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       a : args' -> push env env' n a args'
       [] -> eval' env' n
 
-    branch :: Env -> Tag -> [CaseBranch] -> Node
-    branch !env !tag = \case
+    branch :: Env -> Env -> Tag -> Maybe Node -> [CaseBranch] -> Node
+    branch !denv !env !tag !def = \case
       (CaseBranch tag' _ b) : _ | tag' == tag -> eval' env b
-      _ : bs' -> branch env tag bs'
-      [] -> evalError
+      _ : bs' -> branch denv env tag def bs'
+      [] -> case def of
+        Just b -> eval' denv b
+        Nothing -> evalError
