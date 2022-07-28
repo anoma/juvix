@@ -8,7 +8,7 @@ module Juvix.Core.Node where
 import Data.Functor.Identity
 import Data.HashSet qualified as HashSet
 import Juvix.Core.Info qualified as Info
-import Juvix.Core.Info.BindingInfo
+import Juvix.Core.Info.BinderInfo
 import Juvix.Core.Prelude
 
 {---------------------------------------------------------------------------------}
@@ -57,7 +57,8 @@ data Node
     -- branches`. `Case` is lazy: only the selected branch is evaluated. Lazy `if`
     -- can be implemented by a case on a boolean.
     Case !Info !Node ![CaseBranch]
-  | -- Evaluation only: evaluated data constructor (the actual data).
+  | -- Evaluation only: evaluated data constructor (the actual data). Arguments
+    -- order: right to left.
     Data !Info !Tag ![Node]
   | -- Evaluation only: `LambdaClosure env body`
     LambdaClosure !Info !Env !Node
@@ -85,51 +86,14 @@ data Constant
 -- - ConstFloat
 -- - ConstString
 
-data CaseBranch = CaseBranch !Tag !Node
+-- `CaseBranch tag argsNum branch`
+-- - `argsNum` is the number of arguments of the constructor tagged with `tag`,
+--   equal to the number of implicit binders above `branch`
+data CaseBranch = CaseBranch !Tag !Int !Node
 
 -- all nodes in an environment must be closed (no free variables, i.e., de
 -- Bruijn indices pointing outside the term)
 type Env = [Node]
-
-{---------------------------------------------------------------------------------}
-{- Info -}
-
-getInfo :: Node -> Info
-getInfo = \case
-  Var i _ -> i
-  Ident i _ -> i
-  Builtin i _ -> i
-  Constructor i _ -> i
-  ConstValue i _ -> i
-  Hole i -> i
-  Axiom i -> i
-  App i _ _ -> i
-  Lambda i _ -> i
-  LetIn i _ _ -> i
-  Case i _ _ -> i
-  Data i _ _ -> i
-  LambdaClosure i _ _ -> i
-  Suspended i _ -> i
-
-modifyInfoM :: Applicative m => (Info -> m Info) -> Node -> m Node
-modifyInfoM f = \case
-  Var i idx -> Var <$> f i <*> pure idx
-  Ident i sym -> Ident <$> f i <*> pure sym
-  Builtin i op -> Builtin <$> f i <*> pure op
-  Constructor i tag -> Constructor <$> f i <*> pure tag
-  ConstValue i v -> ConstValue <$> f i <*> pure v
-  Hole i -> Hole <$> f i
-  Axiom i -> Axiom <$> f i
-  App i l r -> App <$> f i <*> pure l <*> pure r
-  Lambda i b -> Lambda <$> f i <*> pure b
-  LetIn i v b -> LetIn <$> f i <*> pure v <*> pure b
-  Case i v bs -> Case <$> f i <*> pure v <*> pure bs
-  Data i tag args -> Data <$> f i <*> pure tag <*> pure args
-  LambdaClosure i env b -> LambdaClosure <$> f i <*> pure env <*> pure b
-  Suspended i t -> Suspended <$> f i <*> pure t
-
-modifyInfo :: (Info -> Info) -> Node -> Node
-modifyInfo f n = runIdentity $ modifyInfoM (pure . f) n
 
 {---------------------------------------------------------------------------------}
 {- simple helper functions -}
@@ -148,43 +112,115 @@ unfoldApp = go []
       App i l r -> go ((i, r) : acc) l
       _ -> (n, acc)
 
+unfoldLambdas :: Node -> ([Info], Node)
+unfoldLambdas = go []
+  where
+    go :: [Info] -> Node -> ([Info], Node)
+    go acc n = case n of
+      Lambda i b -> go (i : acc) b
+      _ -> (acc, n)
+
+data NodeInfo = NodeInfo
+  { -- `nodeInfo` is the info associated with the node,
+    _nodeInfo :: Info,
+    -- `nodeChildren` are the children, in a fixed order, i.e., the immediate
+    -- recursive occurrences of Node
+    _nodeChildren :: [Node],
+    -- `nodeChildBindersNum` is the number of binders introduced for each child
+    -- in the parent node
+    _nodeChildBindersNum :: [Int],
+    -- `nodeChildBindersInfo` is information about binders for each child, if
+    -- present.
+    _nodeChildBindersInfo :: [Maybe [BinderInfo]],
+    -- `nodeReassemble` reassembles the node from the info and the children
+    -- (which should be in the same fixed order as in the `nodeChildren`
+    -- component).
+    _nodeReassemble :: Info -> [Node] -> Node
+  }
+
+makeLenses ''NodeInfo
+
+-- destruct a node into NodeInfo
+destruct :: Node -> NodeInfo
+destruct = \case
+  Var i idx -> NodeInfo i [] [] [] (\i' _ -> Var i' idx)
+  Ident i sym -> NodeInfo i [] [] [] (\i' _ -> Ident i' sym)
+  Builtin i op -> NodeInfo i [] [] [] (\i' _ -> Builtin i' op)
+  Constructor i tag -> NodeInfo i [] [] [] (\i' _ -> Constructor i' tag)
+  ConstValue i c -> NodeInfo i [] [] [] (\i' _ -> ConstValue i' c)
+  Hole i -> NodeInfo i [] [] [] (\i' _ -> Hole i')
+  Axiom i -> NodeInfo i [] [] [] (\i' _ -> Axiom i')
+  App i l r -> NodeInfo i [l, r] [0, 0] [Nothing, Nothing] (\i' args' -> App i' (hd args') (args' !! 1))
+  Lambda i b -> NodeInfo i [b] [1] [fetchBinderInfo i] (\i' args' -> Lambda i' (hd args'))
+  LetIn i v b -> NodeInfo i [v, b] [0, 1] [Nothing, fetchBinderInfo i] (\i' args' -> LetIn i' (hd args') (args' !! 1))
+  Case i v bs ->
+    NodeInfo
+      i
+      (v : map (\(CaseBranch _ _ br) -> br) bs)
+      (0 : map (\(CaseBranch _ k _) -> k) bs)
+      (Nothing : fetchCaseBinderInfo i (replicate (length bs) Nothing))
+      ( \i' args' ->
+          Case
+            i'
+            (hd args')
+            ( zipWithExact
+                (\(CaseBranch tag k _) br' -> CaseBranch tag k br')
+                bs
+                (tl args')
+            )
+      )
+  Data i tag args -> NodeInfo i args (map (const 0) args) [] (`Data` tag)
+  LambdaClosure i env b ->
+    NodeInfo
+      i
+      (b : env)
+      (1 : map (const 0) env)
+      [fetchBinderInfo i]
+      (\i' args' -> LambdaClosure i' (tl args') (hd args'))
+  Suspended i t -> NodeInfo i [t] [0] [] (\i' args' -> Suspended i' (hd args'))
+  where
+    fetchBinderInfo :: Info -> Maybe [BinderInfo]
+    fetchBinderInfo i = case Info.lookup kBinderInfo i of
+      Just bi -> Just [bi]
+      Nothing -> Nothing
+
+    fetchCaseBinderInfo :: Info -> [Maybe [BinderInfo]] -> [Maybe [BinderInfo]]
+    fetchCaseBinderInfo i d = case Info.lookup kCaseBinderInfo i of
+      Just cbi -> map Just (cbi ^. infoBranchBinders)
+      Nothing -> d
+
 children :: Node -> [Node]
-children = \case
-  App _ l r -> [l, r]
-  Lambda _ b -> [b]
-  LetIn _ v b -> [v, b]
-  Case _ v bs -> v : map (\(CaseBranch _ br) -> br) bs
-  Data _ _ args -> args
-  LambdaClosure _ env b -> b : env
-  Suspended _ t -> [t]
-  _ -> []
+children = (^. nodeChildren) . destruct
 
--- children not under binder
+-- children together with the number of binders
+bchildren :: Node -> [(Int, Node)]
+bchildren n =
+  let ni = destruct n
+   in zipExact (ni ^. nodeChildBindersNum) (ni ^. nodeChildren)
+
+-- shallow children: not under binders
 schildren :: Node -> [Node]
-schildren = \case
-  App _ l r -> [l, r]
-  LetIn _ v _ -> [v]
-  Case _ v bs -> v : map (\(CaseBranch _ br) -> br) bs
-  Data _ _ args -> args
-  LambdaClosure _ env _ -> env
-  Suspended _ t -> [t]
-  _ -> []
+schildren = map snd . filter (\p -> fst p == 0) . bchildren
 
--- children under binder
-bchildren :: Node -> [Node]
-bchildren = \case
-  Lambda _ b -> [b]
-  LetIn _ _ b -> [b]
-  LambdaClosure _ _ b -> [b]
-  _ -> []
+getInfo :: Node -> Info
+getInfo = (^. nodeInfo) . destruct
+
+modifyInfoM :: Applicative m => (Info -> m Info) -> Node -> m Node
+modifyInfoM f n =
+  let ni = destruct n
+   in do
+        i' <- f (ni ^. nodeInfo)
+        return ((ni ^. nodeReassemble) i' (ni ^. nodeChildren))
+
+modifyInfo :: (Info -> Info) -> Node -> Node
+modifyInfo f n = runIdentity $ modifyInfoM (pure . f) n
 
 {---------------------------------------------------------------------------------}
 {- General recursors on Node  -}
 
 -- Note: In the (distant) future, with dependent types, the type information
 -- will contain Nodes. Then mapping/folding needs to be performed also on the
--- Nodes stored as type information. This will require modifying type
--- information in the recursors below.
+-- Nodes stored as type information.
 
 -- a collector collects information top-down on a single path in the program
 -- tree
@@ -198,63 +234,52 @@ makeLenses ''Collector
 unitCollector :: Collector a ()
 unitCollector = Collector () (\_ _ -> ())
 
-bindingCollector :: Collector Info c -> Collector Node c
-bindingCollector coll = Collector (coll ^. cEmpty) collect
-  where
-    collect n c = case n of
-      Lambda i _ -> (coll ^. cCollect) i c
-      LetIn i _ _ -> (coll ^. cCollect) i c
-      LambdaClosure i _ _ -> (coll ^. cCollect) i c
-      _ -> c
+binderInfoCollector :: Collector (Int, Maybe [BinderInfo]) [Maybe BinderInfo]
+binderInfoCollector =
+  Collector
+    []
+    (\(k, bi) c -> if k == 0 then c else map Just (fromJust bi) ++ c)
 
-bindingInfoCollector :: Collector Node [Maybe BindingInfo]
-bindingInfoCollector =
-  bindingCollector
-    ( Collector
-        []
-        (\i c -> Info.lookup kBindingInfo i : c)
-    )
-
-bindingNumCollector :: Collector Node Index
-bindingNumCollector = bindingCollector (Collector 0 (const (+ 1)))
+binderNumCollector :: Collector (Int, Maybe [BinderInfo]) Index
+binderNumCollector = Collector 0 (\(k, _) c -> c + k)
 
 -- `umapG` maps the nodes bottom-up, i.e., when invoking the mapper function the
 -- recursive subnodes have already been mapped
 umapG ::
   forall c m.
   Monad m =>
-  Collector Node c ->
+  Collector (Int, Maybe [BinderInfo]) c ->
   (c -> Node -> m Node) ->
   Node ->
   m Node
 umapG coll f = go (coll ^. cEmpty)
   where
     go :: c -> Node -> m Node
-    go c n = case n of
-      App i l r -> f c =<< (App i <$> go c' l <*> go c' r)
-      Lambda i body -> f c . Lambda i =<< go c' body
-      LetIn i value body -> f c =<< (LetIn i <$> go c' value <*> go c' body)
-      Case i value bs -> f c =<< (Case i <$> go c' value <*> mapM (\(CaseBranch tag br) -> CaseBranch tag <$> go c' br) bs)
-      Data i tag args -> f c . Data i tag =<< mapM (go c') args
-      LambdaClosure i env body -> f c =<< (LambdaClosure i <$> mapM (go c') env <*> go c' body)
-      Suspended i t -> f c . Suspended i =<< go c' t
-      _ -> f c n
-      where
-        c' = (coll ^. cCollect) n c
+    go c n =
+      let ni = destruct n
+       in do
+            ns <-
+              sequence $
+                zipWith3Exact
+                  (\n' k bis -> go ((coll ^. cCollect) (k, bis) c) n')
+                  (ni ^. nodeChildren)
+                  (ni ^. nodeChildBindersNum)
+                  (ni ^. nodeChildBindersInfo)
+            f c ((ni ^. nodeReassemble) (ni ^. nodeInfo) ns)
 
 umapM :: Monad m => (Node -> m Node) -> Node -> m Node
 umapM f = umapG unitCollector (const f)
 
-umapMB :: Monad m => ([Maybe BindingInfo] -> Node -> m Node) -> Node -> m Node
-umapMB f = umapG bindingInfoCollector f
+umapMB :: Monad m => ([Maybe BinderInfo] -> Node -> m Node) -> Node -> m Node
+umapMB f = umapG binderInfoCollector f
 
 umapMN :: Monad m => (Index -> Node -> m Node) -> Node -> m Node
-umapMN f = umapG bindingNumCollector f
+umapMN f = umapG binderNumCollector f
 
 umap :: (Node -> Node) -> Node -> Node
 umap f n = runIdentity $ umapM (return . f) n
 
-umapB :: ([Maybe BindingInfo] -> Node -> Node) -> Node -> Node
+umapB :: ([Maybe BinderInfo] -> Node -> Node) -> Node -> Node
 umapB f n = runIdentity $ umapMB (\is -> return . f is) n
 
 umapN :: (Index -> Node -> Node) -> Node -> Node
@@ -264,11 +289,8 @@ umapN f n = runIdentity $ umapMN (\idx -> return . f idx) n
 dmapG ::
   forall c m.
   Monad m =>
-  Collector Node c ->
-  ( c ->
-    Node ->
-    m Node
-  ) ->
+  Collector (Int, Maybe [BinderInfo]) c ->
+  (c -> Node -> m Node) ->
   Node ->
   m Node
 dmapG coll f = go (coll ^. cEmpty)
@@ -276,30 +298,29 @@ dmapG coll f = go (coll ^. cEmpty)
     go :: c -> Node -> m Node
     go c n = do
       n' <- f c n
-      let c' = (coll ^. cCollect) n' c
-      case n' of
-        App i l r -> App i <$> go c' l <*> go c' r
-        Lambda i body -> Lambda i <$> go c' body
-        LetIn i value body -> LetIn i <$> go c' value <*> go c' body
-        Case i value bs -> Case i <$> go c' value <*> mapM (\(CaseBranch tag br) -> CaseBranch tag <$> go c' br) bs
-        Data i tag args -> Data i tag <$> mapM (go c') args
-        LambdaClosure i env body -> LambdaClosure i <$> mapM (go c') env <*> go c' body
-        Suspended i t -> Suspended i <$> go c' t
-        _ -> return n'
+      let ni = destruct n'
+      ns <-
+        sequence $
+          zipWith3Exact
+            (\n'' k bis -> go ((coll ^. cCollect) (k, bis) c) n'')
+            (ni ^. nodeChildren)
+            (ni ^. nodeChildBindersNum)
+            (ni ^. nodeChildBindersInfo)
+      return ((ni ^. nodeReassemble) (ni ^. nodeInfo) ns)
 
 dmapM :: Monad m => (Node -> m Node) -> Node -> m Node
 dmapM f = dmapG unitCollector (const f)
 
-dmapMB :: Monad m => ([Maybe BindingInfo] -> Node -> m Node) -> Node -> m Node
-dmapMB f = dmapG bindingInfoCollector f
+dmapMB :: Monad m => ([Maybe BinderInfo] -> Node -> m Node) -> Node -> m Node
+dmapMB f = dmapG binderInfoCollector f
 
 dmapMN :: Monad m => (Index -> Node -> m Node) -> Node -> m Node
-dmapMN f = dmapG bindingNumCollector f
+dmapMN f = dmapG binderNumCollector f
 
 dmap :: (Node -> Node) -> Node -> Node
 dmap f n = runIdentity $ dmapM (return . f) n
 
-dmapB :: ([Maybe BindingInfo] -> Node -> Node) -> Node -> Node
+dmapB :: ([Maybe BinderInfo] -> Node -> Node) -> Node -> Node
 dmapB f n = runIdentity $ dmapMB (\is -> return . f is) n
 
 dmapN :: (Index -> Node -> Node) -> Node -> Node
@@ -310,7 +331,7 @@ dmapN f n = runIdentity $ dmapMN (\idx -> return . f idx) n
 ufoldG ::
   forall c a m.
   Monad m =>
-  Collector Node c ->
+  Collector (Int, Maybe [BinderInfo]) c ->
   (a -> a -> a) ->
   (c -> Node -> m a) ->
   Node ->
@@ -318,31 +339,31 @@ ufoldG ::
 ufoldG coll uplus f = go (coll ^. cEmpty)
   where
     go :: c -> Node -> m a
-    go c n = case n of
-      App _ l r -> uplus <$> f c n <*> (uplus <$> go c' l <*> go c' r)
-      Lambda _ body -> uplus <$> f c n <*> go c' body
-      LetIn _ value body -> uplus <$> f c n <*> (uplus <$> go c' value <*> go c' body)
-      Case _ value bs -> uplus <$> f c n <*> foldr (liftM2 uplus . (\(CaseBranch _ br) -> go c' br)) (go c' value) bs
-      Data _ _ args -> foldr (liftM2 uplus . go c') (f c n) args
-      LambdaClosure _ env body -> uplus <$> f c n <*> foldr (liftM2 uplus . go c') (go c' body) env
-      Suspended _ t -> uplus <$> f c n <*> go c' t
-      _ -> f c n
+    go c n = foldr (liftM2 uplus) (f c n) mas
       where
-        c' = (coll ^. cCollect) n c
+        ni :: NodeInfo
+        ni = destruct n
+        mas :: [m a]
+        mas =
+          zipWith3Exact
+            (\n' k bis -> go ((coll ^. cCollect) (k, bis) c) n')
+            (ni ^. nodeChildren)
+            (ni ^. nodeChildBindersNum)
+            (ni ^. nodeChildBindersInfo)
 
 ufoldM :: Monad m => (a -> a -> a) -> (Node -> m a) -> Node -> m a
 ufoldM uplus f = ufoldG unitCollector uplus (const f)
 
-ufoldMB :: Monad m => (a -> a -> a) -> ([Maybe BindingInfo] -> Node -> m a) -> Node -> m a
-ufoldMB uplus f = ufoldG bindingInfoCollector uplus f
+ufoldMB :: Monad m => (a -> a -> a) -> ([Maybe BinderInfo] -> Node -> m a) -> Node -> m a
+ufoldMB uplus f = ufoldG binderInfoCollector uplus f
 
 ufoldMN :: Monad m => (a -> a -> a) -> (Index -> Node -> m a) -> Node -> m a
-ufoldMN uplus f = ufoldG bindingNumCollector uplus f
+ufoldMN uplus f = ufoldG binderNumCollector uplus f
 
 ufold :: (a -> a -> a) -> (Node -> a) -> Node -> a
 ufold uplus f n = runIdentity $ ufoldM uplus (return . f) n
 
-ufoldB :: (a -> a -> a) -> ([Maybe BindingInfo] -> Node -> a) -> Node -> a
+ufoldB :: (a -> a -> a) -> ([Maybe BinderInfo] -> Node -> a) -> Node -> a
 ufoldB uplus f n = runIdentity $ ufoldMB uplus (\is -> return . f is) n
 
 ufoldN :: (a -> a -> a) -> (Index -> Node -> a) -> Node -> a
@@ -351,7 +372,7 @@ ufoldN uplus f n = runIdentity $ ufoldMN uplus (\idx -> return . f idx) n
 walk :: Monad m => (Node -> m ()) -> Node -> m ()
 walk = ufoldM mappend
 
-walkB :: Monad m => ([Maybe BindingInfo] -> Node -> m ()) -> Node -> m ()
+walkB :: Monad m => ([Maybe BinderInfo] -> Node -> m ()) -> Node -> m ()
 walkB = ufoldMB mappend
 
 walkN :: Monad m => (Index -> Node -> m ()) -> Node -> m ()
@@ -360,7 +381,7 @@ walkN = ufoldMN mappend
 gather :: (a -> Node -> a) -> a -> Node -> a
 gather f acc n = fst $ run $ runState acc (walk (\n' -> modify (`f` n')) n)
 
-gatherB :: ([Maybe BindingInfo] -> a -> Node -> a) -> a -> Node -> a
+gatherB :: ([Maybe BinderInfo] -> a -> Node -> a) -> a -> Node -> a
 gatherB f acc n = fst $ run $ runState acc (walkB (\is n' -> modify (\a -> f is a n')) n)
 
 gatherN :: (Index -> a -> Node -> a) -> a -> Node -> a
@@ -442,3 +463,22 @@ removeClosures = umap go
     go n = case n of
       LambdaClosure i env b -> substEnv env (Lambda i b)
       _ -> n
+
+removeData :: Node -> Node
+removeData = umap go
+  where
+    go :: Node -> Node
+    go n = case n of
+      Data i tag args -> mkApp' (Constructor i tag) args
+      _ -> n
+
+removeSuspended :: Node -> Node
+removeSuspended = umap go
+  where
+    go :: Node -> Node
+    go n = case n of
+      Suspended _ t -> t
+      _ -> n
+
+removeRuntimeNodes :: Node -> Node
+removeRuntimeNodes = removeSuspended . removeData . removeClosures

@@ -1,8 +1,8 @@
 module Juvix.Core.Evaluator where
 
 import Data.HashMap.Strict ((!))
-import Juvix.Core.Info qualified as Info
 import Juvix.Core.Context
+import Juvix.Core.Info qualified as Info
 import Juvix.Core.Node
 import Juvix.Core.Prelude
 
@@ -48,10 +48,9 @@ eval !ctx = eval'
       Lambda i b -> LambdaClosure i env b
       LetIn _ v b -> let !v' = eval' env v in eval' (v' : env) b
       Case _ v bs ->
-        let !v' = eval' env v
-         in case v' of
-              Data _ tag args -> branch (args ++ env) tag bs
-              _ -> evalError
+        case eval' env v of
+          Data _ tag args -> branch (args ++ env) tag bs
+          _ -> evalError
       Data {} -> n
       LambdaClosure {} -> n
       Suspended {} -> n
@@ -82,6 +81,6 @@ eval !ctx = eval'
 
     branch :: Env -> Tag -> [CaseBranch] -> Node
     branch !env !tag = \case
-      (CaseBranch tag' b) : _ | tag' == tag -> eval' env b
+      (CaseBranch tag' _ b) : _ | tag' == tag -> eval' env b
       _ : bs' -> branch env tag bs'
       [] -> evalError

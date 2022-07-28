@@ -25,7 +25,8 @@ data IdentInfo = IdentInfo
     _identType :: Type,
     _identArgsNum :: Int,
     -- _identArgsNum will be used often enough to justify avoiding recomputation
-    _identArgsInfo :: [ArgumentInfo]
+    _identArgsInfo :: [ArgumentInfo],
+    _identIsExported :: Bool
   }
 
 data ArgumentInfo = ArgumentInfo
