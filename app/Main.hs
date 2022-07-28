@@ -144,7 +144,6 @@ runCommand cmdWithOpts = do
                     (^. Scoper.mainModule)
                       <$> runPipeline
                         (upToScoping entryPoint)
-                  say "Judoc: generating documentation..."
                   let docDir = localOpts ^. docOutputDir
                   Doc.compileModuleHtmlText docDir "proj" l
                   embed (when (localOpts ^. docOpen) (Process.callProcess "xdg-open" [docDir </> Doc.indexFileName]))
