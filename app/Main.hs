@@ -33,6 +33,7 @@ import Juvix.Translation.ScopedToAbstract qualified as Abstract
 import Juvix.Utils.Version (runDisplayVersion)
 import Options.Applicative
 import System.Environment (getProgName)
+import System.Process qualified as Process
 import Text.Show.Pretty hiding (Html)
 
 juvixYamlFile :: FilePath
@@ -146,6 +147,7 @@ runCommand cmdWithOpts = do
                   say "Judoc: generating documentation..."
                   let docDir = localOpts ^. docOutputDir
                   Doc.compileModuleHtmlText docDir "proj" l
+                  embed (when (localOpts ^. docOpen) (Process.callProcess "xdg-open" [docDir </> Doc.indexFileName]))
                 MicroJuvix Pretty -> do
                   micro <-
                     head . (^. Micro.resultModules)
