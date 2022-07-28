@@ -49,8 +49,8 @@ dd {
 }
 
 a { text-decoration: none; }
-a[href]:link { color: #9E358F; }
-a[href]:visited {color: #6F5F9C; }
+a[href]:link { color: #D54E54; }
+a[href]:visited {color: #802e31; }
 a[href]:hover { text-decoration:underline; }
 
 a[href].def:link, a[href].def:visited { color: rgba(69, 59, 97, 0.8); }
@@ -292,7 +292,7 @@ pre, code, kbd, samp, tt, .src {
 
 .caption, h1, h2, h3, h4, h5, h6, summary {
   font-weight: bold;
-  color: #5E5184;
+  color: #D84E53;
   margin: 1.5em 0 1em 0;
 }
 
@@ -433,7 +433,7 @@ blockquote {
 }
 
 #package-header {
-  background: #5E5184;
+  background: #803353;
   border-bottom: 5px solid rgba(69, 59, 97, 0.5);
   color: #ddd;
   position: relative;
