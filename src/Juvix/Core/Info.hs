@@ -1,5 +1,10 @@
 module Juvix.Core.Info where
 
+{-
+  This file defines the type of Info stored in JuvixCore Nodes. The Info data
+  structure maps an info type to an info of that type.
+-}
+
 import Data.Dynamic
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Prelude

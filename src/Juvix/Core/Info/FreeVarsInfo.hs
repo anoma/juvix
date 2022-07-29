@@ -1,9 +1,5 @@
 module Juvix.Core.Info.FreeVarsInfo where
 
--- NOTE: IntMap could be better here and in other places in terms of performance
--- (by a constant factor). This might matter (but not very much) in the future -
--- we will be running these transformations on core representations of entire
--- Juvix functions (or even bigger units of compilation).
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Core.Info qualified as Info
 import Juvix.Core.Node

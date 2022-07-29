@@ -64,13 +64,14 @@ data Node
     Data !Info !Tag ![Node]
   | -- Evaluation only: `LambdaClosure env body`
     LambdaClosure !Info !Env !Node
-  | -- Evaluation only: a suspended term value which cannot be evaluated further,
-    -- e.g., a hole applied to some arguments.
+  | -- Evaluation only: a suspended term value which cannot be evaluated
+    -- further, e.g., a hole applied to some arguments. The suspended term must
+    -- be closed.
     Suspended !Info !Node
 
 -- Other things we might need in the future:
--- - laziness annotations (converting these to closures/thunks should be done
---   further down the pipeline)
+-- - laziness annotations (converting these to closure/thunk creation should be
+--   done further down the pipeline)
 -- - primitive record projections (efficiency of evaluation / generated code)
 -- - Fix and CoFix (anonymous recursion / co-recursion)
 -- - with dependent types, it might actually be more reasonable to have Pi as
@@ -93,7 +94,7 @@ data Constant
 --   equal to the number of implicit binders above `branch`
 data CaseBranch = CaseBranch !Tag !Int !Node
 
--- all nodes in an environment must be closed (no free variables, i.e., de
+-- all nodes in an environment must be closed (no free variables, i.e., no de
 -- Bruijn indices pointing outside the term)
 type Env = [Node]
 
@@ -205,9 +206,10 @@ destruct = \case
       i
       (b : env)
       (1 : map (const 0) env)
-      [fetchBinderInfo i]
+      (fetchBinderInfo i : map (const Nothing) env)
       (\i' args' -> LambdaClosure i' (tl args') (hd args'))
-  Suspended i t -> NodeInfo i [t] [0] [Nothing] (\i' args' -> Suspended i' (hd args'))
+  Suspended i t ->
+    NodeInfo i [t] [0] [Nothing] (\i' args' -> Suspended i' (hd args'))
   where
     fetchBinderInfo :: Info -> Maybe [BinderInfo]
     fetchBinderInfo i = case Info.lookup kBinderInfo i of
