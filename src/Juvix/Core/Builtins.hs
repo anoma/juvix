@@ -23,8 +23,8 @@ data BuiltinOp
   deriving stock (Eq)
 
 -- Builtin data tags
-data BuiltinDataTag =
-    TagZero
+data BuiltinDataTag
+  = TagZero
   | TagSucc
   | TagUnit
   | TagNil

@@ -14,7 +14,7 @@ makeLenses ''Atom
 -- unfold a type into the target and the arguments (left-to-right)
 unfoldType :: Type -> (Type, [Type])
 unfoldType ty = case ty of
-  Fun l r -> let (tgt, args) = unfoldType r in (tgt, l:args)
+  Fun l r -> let (tgt, args) = unfoldType r in (tgt, l : args)
   _ -> (ty, [])
 
 getTarget :: Type -> Type
