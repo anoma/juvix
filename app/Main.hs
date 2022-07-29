@@ -5,6 +5,7 @@ import CLI
 import Commands.Internal.Termination as Termination
 import Control.Exception qualified as IO
 import Control.Monad.Extra
+import Data.ByteString qualified as ByteString
 import Data.HashMap.Strict qualified as HashMap
 import Data.Yaml
 import Juvix.Analysis.Scoping.Scoper qualified as Scoper
@@ -65,8 +66,13 @@ findRoot copts = do
       case l of
         Nothing -> return (c, emptyPackage)
         Just yaml -> do
-          package <- decodeFileThrow yaml
-          return (takeDirectory yaml, package)
+          bs <- ByteString.readFile yaml
+          let isEmpty = ByteString.null bs
+          pkg <-
+            if
+                | isEmpty -> return emptyPackage
+                | otherwise -> decodeThrow bs
+          return (takeDirectory yaml, pkg)
 
 getEntryPoint :: FilePath -> Package -> GlobalOptions -> Maybe EntryPoint
 getEntryPoint r pkg opts = nonEmpty (opts ^. globalInputFiles) >>= Just <$> entryPoint
