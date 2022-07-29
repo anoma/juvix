@@ -277,7 +277,7 @@ goFunctionDef d@(Micro.FunctionDef {..})
       StatementCompound
         [ StatementExpr
             ( functionCall
-                (ExpressionVar Str.putStrLn_)
+                (ExpressionVar Str.debug_)
                 [ ExpressionLiteral
                     ( LiteralString
                         ( "Error: Pattern match(es) are non-exhaustive in "

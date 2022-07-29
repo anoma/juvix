@@ -236,6 +236,9 @@ minicRuntime = "minic-runtime.h"
 putStrLn_ :: IsString s => s
 putStrLn_ = "putStrLn"
 
+debug_ :: IsString s => s
+debug_ = "debug"
+
 juvixFunctionT :: IsString s => s
 juvixFunctionT = "juvix_function_t"
 

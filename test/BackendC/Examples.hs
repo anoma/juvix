@@ -10,7 +10,7 @@ data ExampleTest = ExampleTest
     _mainFile :: FilePath,
     _expectedDir :: FilePath,
     _stdinText :: Text,
-    _stdlibMode :: StdlibMode
+    _compileMode :: CompileMode
   }
 
 makeLenses ''ExampleTest
@@ -25,7 +25,9 @@ testDescr ExampleTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = mainRoot,
-          _testAssertion = Steps $ clangAssertion _stdlibMode _mainFile expectedFile _stdinText
+          _testAssertion = case _compileMode of
+            WASI stdlibMode -> Steps $ wasiClangAssertion stdlibMode _mainFile expectedFile _stdinText
+            WASM i -> Steps $ wasmClangAssertion i _mainFile expectedFile
         }
 
 allTests :: TestTree
@@ -36,8 +38,8 @@ allTests =
 
 tests :: [ExampleTest]
 tests =
-  [ ExampleTest "Validity Predicate example" "ValidityPredicates" "Tests.juvix" "ValidityPredicates" "" StdlibInclude,
-    ExampleTest "MiniTicTacToe example" "MiniTicTacToe" "MiniTicTacToe.juvix" "MiniTicTacToe" "aaa\n0\n10\n1\n2\n3\n3\n4\n5\n6\n7\n8\n9\n" StdlibInclude,
-    ExampleTest "Fibonacci example" "Fibonacci" "Fibonacci.juvix" "Fibonacci" "" StdlibInclude,
-    ExampleTest "Collatz sequence generator" "Collatz" "Collatz.juvix" "Collatz" "123\n" StdlibInclude
+  [ ExampleTest "Validity Predicate example" "ValidityPredicates" "Tests.juvix" "ValidityPredicates" "" (WASI StdlibInclude),
+    ExampleTest "MiniTicTacToe example" "MiniTicTacToe" "MiniTicTacToe.juvix" "MiniTicTacToe" "aaa\n0\n10\n1\n2\n3\n3\n4\n5\n6\n7\n8\n9\n" (WASI StdlibInclude),
+    ExampleTest "Fibonacci example" "Fibonacci" "Fibonacci.juvix" "Fibonacci" "" (WASI StdlibInclude),
+    ExampleTest "Collatz sequence generator" "Collatz" "Collatz.juvix" "Collatz" "123\n" (WASI StdlibInclude)
   ]

@@ -93,6 +93,10 @@ int putStrLn(const char* str) {
     return fflush(stdout);
 }
 
+int debug(const char* str) {
+    return putStrLn(str);
+}
+
 prim_io prim_printNat(prim_nat n) {
     return putStrLn(intToStr(n));
 }
