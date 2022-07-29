@@ -1,9 +1,11 @@
-module Juvix.Core.Info.TypeInfo where
+module Juvix.Core.Language.Info.TypeInfo where
 
 import Juvix.Core.Prelude
-import Juvix.Core.Type
+import Juvix.Core.Language.Type
 
 newtype TypeInfo = TypeInfo {_infoType :: Type}
+
+instance IsInfo TypeInfo
 
 kTypeInfo :: Key TypeInfo
 kTypeInfo = Proxy

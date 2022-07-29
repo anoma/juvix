@@ -1,4 +1,4 @@
-module Juvix.Core.Builtins where
+module Juvix.Core.Language.Builtins where
 
 import Juvix.Prelude
 
@@ -16,8 +16,6 @@ data BuiltinOp
   | OpIntGe
   | OpBoolAnd
   | OpBoolOr
-  | OpListHead
-  | OpListTail
   | OpPairFst
   | OpPairSnd
   deriving stock (Eq)

@@ -1,27 +1,17 @@
 module Juvix.Core.Prelude
-  ( module Juvix.Core.Builtins,
-    Info,
+  ( Info,
     Key,
+    IsInfo,
     module Juvix.Prelude,
     module Juvix.Prelude.Loc,
     module Juvix.Syntax.Abstract.Name,
-    Location,
-    hd,
-    tl,
+    Location
   )
 where
 
-import Data.List qualified as List
-import Juvix.Core.Builtins
-import Juvix.Core.Info (Info, Key)
+import Juvix.Core.Language.Info (Info, Key, IsInfo)
 import Juvix.Prelude
 import Juvix.Prelude.Loc
 import Juvix.Syntax.Abstract.Name
 
 type Location = Interval
-
-hd :: [a] -> a
-hd = List.head
-
-tl :: [a] -> [a]
-tl = List.tail

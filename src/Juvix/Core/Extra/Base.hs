@@ -1,0 +1,177 @@
+module Juvix.Core.Extra.Base where
+
+import Data.Functor.Identity
+import Data.List qualified as List
+import Juvix.Core.Language
+import Juvix.Core.Language.Info qualified as Info
+import Juvix.Core.Language.Info.BinderInfo
+import Juvix.Core.Language.Type
+
+{------------------------------------------------------------------------}
+{- functions on Type -}
+
+-- unfold a type into the target and the arguments (left-to-right)
+unfoldType :: Type -> (Type, [Type])
+unfoldType ty = case ty of
+  Fun l r -> let (tgt, args) = unfoldType r in (tgt, l : args)
+  _ -> (ty, [])
+
+getTarget :: Type -> Type
+getTarget = fst . unfoldType
+
+getArgs :: Type -> [Type]
+getArgs = snd . unfoldType
+
+{------------------------------------------------------------------------}
+{- functions on Node -}
+
+mkApp :: Node -> [(Info, Node)] -> Node
+mkApp = foldl' (\acc (i, n) -> App i acc n)
+
+mkApp' :: Node -> [Node] -> Node
+mkApp' = foldl' (App Info.empty)
+
+unfoldApp :: Node -> (Node, [(Info, Node)])
+unfoldApp = go []
+  where
+    go :: [(Info, Node)] -> Node -> (Node, [(Info, Node)])
+    go acc n = case n of
+      App i l r -> go ((i, r) : acc) l
+      _ -> (n, acc)
+
+unfoldLambdas :: Node -> ([Info], Node)
+unfoldLambdas = go []
+  where
+    go :: [Info] -> Node -> ([Info], Node)
+    go acc n = case n of
+      Lambda i b -> go (i : acc) b
+      _ -> (acc, n)
+
+-- `NodeDetails` is a convenience datatype which provides the most commonly needed
+-- information about a node in a generic fashion.
+data NodeDetails = NodeDetails
+  { -- `nodeInfo` is the info associated with the node,
+    _nodeInfo :: Info,
+    -- `nodeChildren` are the children, in a fixed order, i.e., the immediate
+    -- recursive subnodes
+    _nodeChildren :: [Node],
+    -- `nodeChildBindersNum` is the number of binders introduced for each child
+    -- in the parent node. Same length and order as in `nodeChildren`.
+    _nodeChildBindersNum :: [Int],
+    -- `nodeChildBindersInfo` is information about binders for each child, if
+    -- present. Same length and order as in `nodeChildren`.
+    _nodeChildBindersInfo :: [Maybe [BinderInfo]],
+    -- `nodeReassemble` reassembles the node from the info and the children
+    -- (which should be in the same fixed order as in the `nodeChildren`
+    -- component).
+    _nodeReassemble :: Info -> [Node] -> Node
+  }
+
+makeLenses ''NodeDetails
+
+-- destruct a node into NodeDetails
+destruct :: Node -> NodeDetails
+destruct = \case
+  Var i idx -> NodeDetails i [] [] [] (\i' _ -> Var i' idx)
+  Ident i sym -> NodeDetails i [] [] [] (\i' _ -> Ident i' sym)
+  Builtin i op -> NodeDetails i [] [] [] (\i' _ -> Builtin i' op)
+  Constructor i tag -> NodeDetails i [] [] [] (\i' _ -> Constructor i' tag)
+  ConstValue i c -> NodeDetails i [] [] [] (\i' _ -> ConstValue i' c)
+  Axiom i -> NodeDetails i [] [] [] (\i' _ -> Axiom i')
+  App i l r -> NodeDetails i [l, r] [0, 0] [Nothing, Nothing] (\i' args' -> App i' (hd args') (args' !! 1))
+  Lambda i b -> NodeDetails i [b] [1] [fetchBinderInfo i] (\i' args' -> Lambda i' (hd args'))
+  LetIn i v b -> NodeDetails i [v, b] [0, 1] [Nothing, fetchBinderInfo i] (\i' args' -> LetIn i' (hd args') (args' !! 1))
+  Case i v bs Nothing ->
+    NodeDetails
+      i
+      (v : map (\(CaseBranch _ _ br) -> br) bs)
+      (0 : map (\(CaseBranch _ k _) -> k) bs)
+      (Nothing : fetchCaseBinderInfo i (replicate (length bs) Nothing))
+      ( \i' args' ->
+          Case
+            i'
+            (hd args')
+            ( zipWithExact
+                (\(CaseBranch tag k _) br' -> CaseBranch tag k br')
+                bs
+                (tl args')
+            )
+            Nothing
+      )
+  Case i v bs (Just def) ->
+    NodeDetails
+      i
+      (v : def : map (\(CaseBranch _ _ br) -> br) bs)
+      (0 : 0 : map (\(CaseBranch _ k _) -> k) bs)
+      (Nothing : Nothing : fetchCaseBinderInfo i (replicate (length bs) Nothing))
+      ( \i' args' ->
+          Case
+            i'
+            (hd args')
+            ( zipWithExact
+                (\(CaseBranch tag k _) br' -> CaseBranch tag k br')
+                bs
+                (tl (tl args'))
+            )
+            (Just (hd (tl args')))
+      )
+  If i v b1 b2 ->
+    NodeDetails
+      i
+      [v, b1, b2]
+      [0, 0, 0]
+      [Nothing, Nothing, Nothing]
+      (\i' args' -> If i' (hd args') (args' !! 1) (args' !! 2))
+  Data i tag args ->
+    NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`Data` tag)
+  LambdaClosure i env b ->
+    NodeDetails
+      i
+      (b : env)
+      (1 : map (const 0) env)
+      (fetchBinderInfo i : map (const Nothing) env)
+      (\i' args' -> LambdaClosure i' (tl args') (hd args'))
+  Suspended i t ->
+    NodeDetails i [t] [0] [Nothing] (\i' args' -> Suspended i' (hd args'))
+  where
+    fetchBinderInfo :: Info -> Maybe [BinderInfo]
+    fetchBinderInfo i = case Info.lookup kBinderInfo i of
+      Just bi -> Just [bi]
+      Nothing -> Nothing
+
+    fetchCaseBinderInfo :: Info -> [Maybe [BinderInfo]] -> [Maybe [BinderInfo]]
+    fetchCaseBinderInfo i d = case Info.lookup kCaseBinderInfo i of
+      Just cbi -> map Just (cbi ^. infoBranchBinders)
+      Nothing -> d
+
+    hd :: [a] -> a
+    hd = List.head
+
+    tl :: [a] -> [a]
+    tl = List.tail
+
+children :: Node -> [Node]
+children = (^. nodeChildren) . destruct
+
+-- children together with the number of binders
+bchildren :: Node -> [(Int, Node)]
+bchildren n =
+  let ni = destruct n
+   in zipExact (ni ^. nodeChildBindersNum) (ni ^. nodeChildren)
+
+-- shallow children: not under binders
+schildren :: Node -> [Node]
+schildren = map snd . filter (\p -> fst p == 0) . bchildren
+
+getInfo :: Node -> Info
+getInfo = (^. nodeInfo) . destruct
+
+modifyInfoM :: Applicative m => (Info -> m Info) -> Node -> m Node
+modifyInfoM f n =
+  let ni = destruct n
+   in do
+        i' <- f (ni ^. nodeInfo)
+        return ((ni ^. nodeReassemble) i' (ni ^. nodeChildren))
+
+modifyInfo :: (Info -> Info) -> Node -> Node
+modifyInfo f n = runIdentity $ modifyInfoM (pure . f) n

@@ -1,14 +1,16 @@
-module Juvix.Core.Info.FreeVarsInfo where
+module Juvix.Core.Language.Info.FreeVarsInfo where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Core.Info qualified as Info
-import Juvix.Core.Node
-import Juvix.Core.Prelude
+import Juvix.Core.Language.Info qualified as Info
+import Juvix.Core.Language
+import Juvix.Core.Extra
 
 newtype FreeVarsInfo = FreeVarsInfo
   { -- map free variables to the number of their occurrences
     _infoFreeVars :: HashMap Index Int
   }
+
+instance IsInfo FreeVarsInfo
 
 kFreeVarsInfo :: Key FreeVarsInfo
 kFreeVarsInfo = Proxy

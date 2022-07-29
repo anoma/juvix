@@ -1,14 +1,16 @@
-module Juvix.Core.Info.IdentInfo where
+module Juvix.Core.Language.Info.IdentInfo where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Core.Info qualified as Info
-import Juvix.Core.Node
-import Juvix.Core.Prelude
+import Juvix.Core.Language.Info qualified as Info
+import Juvix.Core.Language
+import Juvix.Core.Extra
 
 newtype IdentInfo = IdentInfo
   { -- map symbols to the number of their occurrences
     _infoIdents :: HashMap Symbol Int
   }
+
+instance IsInfo IdentInfo
 
 kIdentInfo :: Key IdentInfo
 kIdentInfo = Proxy

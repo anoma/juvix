@@ -2,12 +2,12 @@ module Juvix.Core.Evaluator where
 
 import Data.HashMap.Strict ((!))
 import Juvix.Core.Context
-import Juvix.Core.Info qualified as Info
-import Juvix.Core.Node
-import Juvix.Core.Prelude
+import Juvix.Core.Language.Info qualified as Info
+import Juvix.Core.Language
+import Juvix.Core.Extra
 
 -- `eval ctx env n` evalues a node `n` whose all free variables point into
--- `env`. All nodes in `ctx` and `env` are closed.
+-- `env`. All nodes in `ctx` and `env` are closed and already evaluated.
 eval :: IdentContext -> Env -> Node -> Node
 eval !ctx !env0 = convertRuntimeNodes . eval' env0
   where
@@ -30,7 +30,6 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       Builtin _ op -> mkBuiltinClosure env op
       Constructor _ tag -> mkConstructorClosure env tag
       ConstValue _ _ -> n
-      Hole _ -> n
       Axiom _ -> n
       App _ l r ->
         -- The semantics for evaluating application (App l r) is:
@@ -75,7 +74,6 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       Builtin {} -> unimplemented
       ConstValue {} -> evalError
       Data {} -> evalError
-      Hole {} -> Suspended Info.empty (mkApp' n (map (eval' env) args))
       Axiom {} -> Suspended Info.empty (mkApp' n (map (eval' env) args))
       _ -> push env env' (eval' env' n) a args
 

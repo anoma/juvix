@@ -1,19 +1,13 @@
 module Juvix.Core.Context where
 
-import Juvix.Core.Node
-import Juvix.Core.Prelude
-import Juvix.Core.Type
+import Juvix.Core.Language
+import Juvix.Core.Language.Type
 
 type IdentContext = HashMap Symbol Node
 
 data Context = Context
   { _identContext :: IdentContext,
     _identInfo :: HashMap Symbol IdentInfo,
-    -- We reuse `Name` from Juvix.Syntax.Abstract for runtime-irrelevant
-    -- identifiers (inductive type names, axiom names, etc). We shouldn't do
-    -- this for Symbol and Tag, because we need them "small", consecutive and
-    -- separate for the code generator. Discuss: advantages/disadvantages of
-    -- doing this separation later in the pipeline.
     _inductiveInfo :: HashMap Name InductiveInfo,
     _constructorInfo :: HashMap Tag ConstructorInfo,
     _axiomInfo :: HashMap Name AxiomInfo
