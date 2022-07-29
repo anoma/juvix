@@ -5,6 +5,7 @@ module Juvix.Translation.MicroJuvixToMiniC
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.Text qualified as T
 import Juvix.Analysis.Scoping.Scoper qualified as Scoper
 import Juvix.Builtins
 import Juvix.Internal.Strings qualified as Str
@@ -122,7 +123,18 @@ genCTypes Micro.Module {..} =
 
 genFunctionSigs :: forall r. Members '[Reader Micro.InfoTable, Reader Micro.TypesTable] r => Micro.Module -> Sem r [CCode]
 genFunctionSigs Micro.Module {..} =
-  concatMapM (applyOnFunStatement genFunctionSig) (_moduleBody ^. Micro.moduleStatements)
+  concatMapM (applyOnFunStatement genFunctionDef) (_moduleBody ^. Micro.moduleStatements)
+  where
+    genFunctionDef :: Micro.FunctionDef -> Sem r [CCode]
+    genFunctionDef d
+      | T.all isAlphaNum nameText = (ExternalAttribute (ExportName nameText) :) <$> sig
+      | otherwise = sig
+      where
+        nameText :: Text
+        nameText = d ^. Micro.funDefName . Micro.nameText
+
+        sig :: Sem r [CCode]
+        sig = genFunctionSig d
 
 genFunctionDefs ::
   Members '[Reader Micro.InfoTable, Reader Micro.TypesTable, Builtins] r =>

@@ -9,6 +9,7 @@ newtype CCodeUnit = CCodeUnit
 data CCode
   = ExternalDecl Declaration
   | ExternalFunc Function
+  | ExternalAttribute Attribute
   | ExternalFuncSig FunctionSig
   | ExternalMacro Cpp
   | Verbatim Text
@@ -76,6 +77,12 @@ data Qualifier
   = StaticInline
   | None
   deriving stock (Eq)
+
+--------------------------------------------------------------------------------
+-- Attributes
+--------------------------------------------------------------------------------
+
+newtype Attribute = ExportName Text
 
 --------------------------------------------------------------------------------
 -- Types
