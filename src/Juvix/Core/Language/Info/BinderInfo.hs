@@ -1,6 +1,6 @@
 module Juvix.Core.Language.Info.BinderInfo where
 
-import Juvix.Core.Prelude
+import Juvix.Core.Language.Base
 import Juvix.Core.Language.Type
 
 data BinderInfo = BinderInfo

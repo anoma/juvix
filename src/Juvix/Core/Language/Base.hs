@@ -1,4 +1,4 @@
-module Juvix.Core.Prelude
+module Juvix.Core.Language.Base
   ( Info,
     Key,
     IsInfo,

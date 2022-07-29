@@ -1,6 +1,6 @@
 module Juvix.Core.Language.Info.NameInfo where
 
-import Juvix.Core.Prelude
+import Juvix.Core.Language.Base
 
 newtype NameInfo = NameInfo {_infoName :: Name}
 

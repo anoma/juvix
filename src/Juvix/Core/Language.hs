@@ -6,7 +6,7 @@
 module Juvix.Core.Language (
   module Juvix.Core.Language,
   module Juvix.Core.Language.Builtins,
-  module Juvix.Core.Prelude
+  module Juvix.Core.Language.Base
 ) where
 
 {-
@@ -15,7 +15,7 @@ module Juvix.Core.Language (
 -}
 
 import Juvix.Core.Language.Builtins
-import Juvix.Core.Prelude
+import Juvix.Core.Language.Base
 
 {---------------------------------------------------------------------------------}
 {- Program tree datatype -}
