@@ -1,8 +1,8 @@
 module Juvix.Core.Info where
 
 {-
-  This file defines the type of Info stored in JuvixCore Nodes. The Info data
-  structure maps an info type to an info of that type.
+  This file defines Infos stored in JuvixCore Nodes. The Info data structure
+  maps an info type to an info of that type.
 -}
 
 import Data.Dynamic
