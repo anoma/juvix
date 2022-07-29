@@ -1,9 +1,9 @@
 module Juvix.Core.Language.Info.FreeVarsInfo where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Core.Language.Info qualified as Info
-import Juvix.Core.Language
 import Juvix.Core.Extra
+import Juvix.Core.Language
+import Juvix.Core.Language.Info qualified as Info
 
 newtype FreeVarsInfo = FreeVarsInfo
   { -- map free variables to the number of their occurrences

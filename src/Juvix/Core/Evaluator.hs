@@ -2,9 +2,9 @@ module Juvix.Core.Evaluator where
 
 import Data.HashMap.Strict ((!))
 import Juvix.Core.Context
-import Juvix.Core.Language.Info qualified as Info
-import Juvix.Core.Language
 import Juvix.Core.Extra
+import Juvix.Core.Language
+import Juvix.Core.Language.Info qualified as Info
 
 -- `eval ctx env n` evalues a node `n` whose all free variables point into
 -- `env`. All nodes in `ctx` and `env` are closed and already evaluated.

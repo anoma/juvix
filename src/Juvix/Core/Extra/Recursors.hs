@@ -1,9 +1,9 @@
 module Juvix.Core.Extra.Recursors where
 
 import Data.Functor.Identity
+import Juvix.Core.Extra.Base
 import Juvix.Core.Language
 import Juvix.Core.Language.Info.BinderInfo
-import Juvix.Core.Extra.Base
 
 {---------------------------------------------------------------------------------}
 {- General recursors on Node  -}

@@ -5,11 +5,11 @@ module Juvix.Core.Language.Base
     module Juvix.Prelude,
     module Juvix.Prelude.Loc,
     module Juvix.Syntax.Abstract.Name,
-    Location
+    Location,
   )
 where
 
-import Juvix.Core.Language.Info (Info, Key, IsInfo)
+import Juvix.Core.Language.Info (Info, IsInfo, Key)
 import Juvix.Prelude
 import Juvix.Prelude.Loc
 import Juvix.Syntax.Abstract.Name
