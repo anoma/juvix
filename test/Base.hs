@@ -28,7 +28,8 @@ data TestDescr = TestDescr
 
 data WASMInfo = WASMInfo
   { _wasmInfoFunctionName :: Text,
-    _wasmInfoFunctionArgs :: [Text]}
+    _wasmInfoFunctionArgs :: [Text]
+  }
 
 makeLenses ''TestDescr
 

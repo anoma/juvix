@@ -120,11 +120,14 @@ prepareRuntime projRoot o = do
     builtinCRuntimeDir :: [(FilePath, BS.ByteString)]
     builtinCRuntimeDir = $(FE.makeRelativeToProject "minic-runtime/builtins" >>= FE.embedDir)
 
+    wallocDir :: [(FilePath, BS.ByteString)]
+    wallocDir = $(FE.makeRelativeToProject "minic-runtime/walloc" >>= FE.embedDir)
+
     runtimeProjectDir :: [(FilePath, BS.ByteString)]
     runtimeProjectDir = case o ^. compileRuntime of
-      RuntimeWasiStandalone -> wasiStandaloneRuntimeDir <> builtinCRuntimeDir
+      RuntimeWasiStandalone -> wasiStandaloneRuntimeDir <> builtinCRuntimeDir <> wallocDir
       RuntimeWasiLibC -> wasiLibCRuntimeDir <> builtinCRuntimeDir
-      RuntimeStandalone -> standaloneRuntimeDir <> builtinCRuntimeDir
+      RuntimeStandalone -> standaloneRuntimeDir <> builtinCRuntimeDir <> wallocDir
 
     writeRuntime :: (FilePath, BS.ByteString) -> IO ()
     writeRuntime (filePath, contents) =

@@ -41,11 +41,12 @@ wasmClangAssertion WASMInfo {..} mainFile expectedFile step = do
   expected <- TIO.readFile expectedFile
 
   let execute :: FilePath -> IO Text
-      execute outputFile = pack <$>
-        P.readProcess
-        "wasmer"
-        (["run", outputFile, "--invoke", unpack _wasmInfoFunctionName] <> (unpack <$> _wasmInfoFunctionArgs))
-        ""
+      execute outputFile =
+        pack
+          <$> P.readProcess
+            "wasmer"
+            (["run", outputFile, "--invoke", unpack _wasmInfoFunctionName] <> (unpack <$> _wasmInfoFunctionArgs))
+            ""
 
   step "Compile C with wasm standalone runtime"
   actualStandalone <- clangCompile standaloneArgs p execute step
@@ -108,8 +109,7 @@ standaloneArgs wasmOutputFile cOutputFile =
     minicRuntime :: FilePath
     minicRuntime = $(makeRelativeToProject "minic-runtime/standalone/minic-runtime.h" >>= strToExp)
     wallocPath :: FilePath
-    wallocPath = $(makeRelativeToProject "minic-runtime/standalone/walloc.c" >>= strToExp)
-
+    wallocPath = $(makeRelativeToProject "minic-runtime/walloc/walloc.c" >>= strToExp)
 
 wasiStandaloneArgs :: FilePath -> FilePath -> FilePath -> [String]
 wasiStandaloneArgs sysrootPath wasmOutputFile cOutputFile =
@@ -133,7 +133,7 @@ wasiStandaloneArgs sysrootPath wasmOutputFile cOutputFile =
     minicRuntime :: FilePath
     minicRuntime = $(makeRelativeToProject "minic-runtime/wasi-standalone/minic-runtime.h" >>= strToExp)
     wallocPath :: FilePath
-    wallocPath = $(makeRelativeToProject "minic-runtime/wasi-standalone/walloc.c" >>= strToExp)
+    wallocPath = $(makeRelativeToProject "minic-runtime/walloc/walloc.c" >>= strToExp)
 
 libcArgs :: FilePath -> FilePath -> FilePath -> [String]
 libcArgs sysrootPath wasmOutputFile cOutputFile =
