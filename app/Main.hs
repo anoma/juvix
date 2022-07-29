@@ -5,7 +5,9 @@ import CLI
 import Commands.Internal.Termination as Termination
 import Control.Exception qualified as IO
 import Control.Monad.Extra
+import Data.ByteString qualified as ByteString
 import Data.HashMap.Strict qualified as HashMap
+import Data.Yaml
 import Juvix.Analysis.Scoping.Scoper qualified as Scoper
 import Juvix.Analysis.Termination qualified as Termination
 import Juvix.Analysis.TypeChecking qualified as MicroTyped
@@ -39,19 +41,17 @@ import Text.Show.Pretty hiding (Html)
 juvixYamlFile :: FilePath
 juvixYamlFile = "juvix.yaml"
 
-findRoot :: CommandGlobalOptions -> IO FilePath
+findRoot :: CommandGlobalOptions -> IO (FilePath, Package)
 findRoot copts = do
   let dir :: Maybe FilePath
       dir = takeDirectory <$> commandFirstFile copts
   whenJust dir setCurrentDirectory
-  r <- IO.try go :: IO (Either IO.SomeException FilePath)
+  r <- IO.try go
   case r of
-    Left err -> do
+    Left (err :: IO.SomeException) -> do
       putStrLn "Something went wrong when figuring out the root of the project."
       putStrLn (pack (IO.displayException err))
-      cur <- getCurrentDirectory
-      putStrLn ("I will try to use the current directory: " <> pack cur)
-      return cur
+      exitFailure
     Right root -> return root
   where
     possiblePaths :: FilePath -> [FilePath]
@@ -59,16 +59,23 @@ findRoot copts = do
       where
         aux f = f : aux (takeDirectory f)
 
-    go :: IO FilePath
+    go :: IO (FilePath, Package)
     go = do
       c <- getCurrentDirectory
       l <- findFile (possiblePaths c) juvixYamlFile
       case l of
-        Nothing -> return c
-        Just yaml -> return (takeDirectory yaml)
+        Nothing -> return (c, emptyPackage)
+        Just yaml -> do
+          bs <- ByteString.readFile yaml
+          let isEmpty = ByteString.null bs
+          pkg <-
+            if
+                | isEmpty -> return emptyPackage
+                | otherwise -> decodeThrow bs
+          return (takeDirectory yaml, pkg)
 
-getEntryPoint :: FilePath -> GlobalOptions -> Maybe EntryPoint
-getEntryPoint r opts = nonEmpty (opts ^. globalInputFiles) >>= Just <$> entryPoint
+getEntryPoint :: FilePath -> Package -> GlobalOptions -> Maybe EntryPoint
+getEntryPoint r pkg opts = nonEmpty (opts ^. globalInputFiles) >>= Just <$> entryPoint
   where
     entryPoint :: NonEmpty FilePath -> EntryPoint
     entryPoint l =
@@ -77,6 +84,7 @@ getEntryPoint r opts = nonEmpty (opts ^. globalInputFiles) >>= Just <$> entryPoi
           _entryPointNoTermination = opts ^. globalNoTermination,
           _entryPointNoPositivity = opts ^. globalNoPositivity,
           _entryPointNoStdlib = opts ^. globalNoStdlib,
+          _entryPointPackage = pkg,
           _entryPointModulePaths = l
         }
 
@@ -86,12 +94,12 @@ runCommand cmdWithOpts = do
       globalOpts = cmdWithOpts ^. cliGlobalOptions
       toAnsiText' :: forall a. (HasAnsiBackend a, HasTextBackend a) => a -> Text
       toAnsiText' = toAnsiText (not (globalOpts ^. globalNoColors))
-  root <- embed (findRoot cmdWithOpts)
+  (root, pkg) <- embed (findRoot cmdWithOpts)
   case cmd of
     (Internal DisplayRoot) -> say (pack root)
     _ -> do
       -- Other commands require an entry point:
-      case getEntryPoint root globalOpts of
+      case getEntryPoint root pkg globalOpts of
         Nothing -> printFailureExit "Provide a Juvix file to run this command\nUse --help to see all the options"
         Just entryPoint -> commandHelper cmd
           where
@@ -145,7 +153,7 @@ runCommand cmdWithOpts = do
                       <$> runPipeline
                         (upToScoping entryPoint)
                   let docDir = localOpts ^. docOutputDir
-                  Doc.compileModuleHtmlText docDir "proj" l
+                  runReader entryPoint (Doc.compileModuleHtmlText docDir "proj" l)
                   embed (when (localOpts ^. docOpen) (Process.callProcess "xdg-open" [docDir </> Doc.indexFileName]))
                 MicroJuvix Pretty -> do
                   micro <-
