@@ -40,13 +40,40 @@ void* realloc(void *ptr, size_t n) {
 }
 
 /**
+ * WASI Definitions
+ */
+
+typedef struct Ciovec {
+    uint8_t *buf;
+    uint32_t buf_len;
+} Ciovec_t;
+
+uint16_t fd_write(uint32_t fd, Ciovec_t *iovs_ptr, uint32_t iovs_len, uint32_t *nwritten)
+    __attribute__((
+                __import_module__("wasi_snapshot_preview1"),
+                __import_name__("fd_write"),
+                   ));
+
+uint16_t fd_read(uint32_t fd, Ciovec_t *iovs_ptr, uint32_t iovs_len, uint32_t *read)
+    __attribute__((
+                __import_module__("wasi_snapshot_preview1"),
+                __import_name__("fd_read"),
+                   ));
+
+_Noreturn void proc_exit(uint32_t rval)
+    __attribute__((
+                __import_module__("wasi_snapshot_preview1"),
+                __import_name__("proc_exit"),
+                   ));
+
+/**
  * stdlib.h
  */
 
 #define EXIT_FAILURE 1
 
 _Noreturn void exit(int rval) {
-    __builtin_trap();
+    proc_exit(rval);
 }
 
 /**
@@ -148,8 +175,22 @@ int strToInt(char *str)
   return (result * puiss);
 }
 
+int putStr(const char* str) {
+    size_t n = strlen(str);
+    Ciovec_t vec = {.buf = (uint8_t*)str, .buf_len=(uint32_t)n};
+    return fd_write(1, &vec, 1, 0);
+}
+
+int putStrLn(const char* str) {
+    return putStr(str) || putStr("\n");
+}
+
+int debug(const char* str) {
+    return putStrLn(str);
+}
+
 prim_io prim_printNat(prim_nat n) {
-    exit(1);
+    return putStrLn(intToStr(n));
 }
 
 // Tries to parse str as a positive integer.
@@ -188,8 +229,38 @@ char* concat(const char* s1, const char* s2) {
     return result;
 }
 
-int debug(const char* str) {
-    return 0;
+int getchar() {
+    int ch;
+    Ciovec_t v = {.buf = (uint8_t*) &ch, .buf_len=1};
+    if (fd_read(0, &v, 1, 0) != 0) return -1;
+    return ch;
+}
+
+char* readline() {
+    int i = 0, bytesAlloced = 64;
+    char* buffer = (char*) malloc(bytesAlloced);
+    int bufferSize = bytesAlloced;
+
+    for (;;++i) {
+        int ch;
+
+        if (i == bufferSize - 1) {
+            bytesAlloced += bytesAlloced;
+            buffer = (char*) realloc(buffer, bytesAlloced);
+            bufferSize = bytesAlloced;
+        }
+
+        ch = getchar();
+        if (ch == -1) {
+            free(buffer);
+            return 0;
+        }
+        if (ch == '\n') break;
+        buffer[i] = ch;
+    }
+
+    buffer[i] = '\0';
+    return buffer;
 }
 
 #endif // MINIC_RUNTIME_H_

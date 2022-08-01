@@ -11,10 +11,10 @@ import System.Process qualified as P
 clangCompile ::
   (FilePath -> FilePath -> [String]) ->
   MiniC.MiniCResult ->
-  Text ->
+  (FilePath -> IO Text) ->
   (String -> IO ()) ->
   IO Text
-clangCompile mkClangArgs cResult stdinText step =
+clangCompile mkClangArgs cResult execute step =
   withTempDir
     ( \dirPath -> do
         let cOutputFile = dirPath </> "out.c"
@@ -25,11 +25,36 @@ clangCompile mkClangArgs cResult stdinText step =
           "clang"
           (mkClangArgs wasmOutputFile cOutputFile)
         step "WASM execution"
-        pack <$> P.readProcess "wasmer" [wasmOutputFile] (unpack stdinText)
+        execute wasmOutputFile
     )
 
-clangAssertion :: StdlibMode -> FilePath -> FilePath -> Text -> ((String -> IO ()) -> Assertion)
-clangAssertion stdlibMode mainFile expectedFile stdinText step = do
+wasmClangAssertion :: WASMInfo -> FilePath -> FilePath -> ((String -> IO ()) -> Assertion)
+wasmClangAssertion WASMInfo {..} mainFile expectedFile step = do
+  step "Check clang and wasmer are on path"
+  assertCmdExists "clang"
+  assertCmdExists "wasmer"
+
+  step "C Generation"
+  let entryPoint = defaultEntryPoint mainFile
+  p :: MiniC.MiniCResult <- runIO (upToMiniC entryPoint)
+
+  expected <- TIO.readFile expectedFile
+
+  let execute :: FilePath -> IO Text
+      execute outputFile =
+        pack
+          <$> P.readProcess
+            "wasmer"
+            (["run", outputFile, "--invoke", unpack _wasmInfoFunctionName] <> (unpack <$> _wasmInfoFunctionArgs))
+            ""
+
+  step "Compile C with wasm standalone runtime"
+  actualStandalone <- clangCompile standaloneArgs p execute step
+  step "Compare expected and actual program output"
+  assertEqDiff ("Check: WASM output = " <> expectedFile) actualStandalone expected
+
+wasiClangAssertion :: StdlibMode -> FilePath -> FilePath -> Text -> ((String -> IO ()) -> Assertion)
+wasiClangAssertion stdlibMode mainFile expectedFile stdinText step = do
   step "Check clang and wasmer are on path"
   assertCmdExists "clang"
   assertCmdExists "wasmer"
@@ -46,21 +71,48 @@ clangAssertion stdlibMode mainFile expectedFile stdinText step = do
 
   expected <- TIO.readFile expectedFile
 
+  let execute :: FilePath -> IO Text
+      execute outputFile = pack <$> P.readProcess "wasmer" [outputFile] (unpack stdinText)
+
   step "Compile C with standalone runtime"
-  actualStandalone <- clangCompile (standaloneArgs sysrootPath) p stdinText step
+  actualStandalone <- clangCompile (wasiStandaloneArgs sysrootPath) p execute step
   step "Compare expected and actual program output"
   assertEqDiff ("check: WASM output = " <> expectedFile) actualStandalone expected
 
   step "Compile C with libc runtime"
-  actualLibc <- clangCompile (libcArgs sysrootPath) p stdinText step
+  actualLibc <- clangCompile (libcArgs sysrootPath) p execute step
   step "Compare expected and actual program output"
   assertEqDiff ("check: WASM output = " <> expectedFile) actualLibc expected
 
 builtinRuntime :: FilePath
 builtinRuntime = $(makeRelativeToProject "minic-runtime/builtins" >>= strToExp)
 
-standaloneArgs :: FilePath -> FilePath -> FilePath -> [String]
-standaloneArgs sysrootPath wasmOutputFile cOutputFile =
+standaloneArgs :: FilePath -> FilePath -> [String]
+standaloneArgs wasmOutputFile cOutputFile =
+  [ "-nodefaultlibs",
+    "-std=c99",
+    "-Oz",
+    "-I",
+    takeDirectory minicRuntime,
+    "-I",
+    builtinRuntime,
+    "-Werror",
+    "--target=wasm32",
+    "-nostartfiles",
+    "-Wl,--no-entry",
+    "-o",
+    wasmOutputFile,
+    wallocPath,
+    cOutputFile
+  ]
+  where
+    minicRuntime :: FilePath
+    minicRuntime = $(makeRelativeToProject "minic-runtime/standalone/minic-runtime.h" >>= strToExp)
+    wallocPath :: FilePath
+    wallocPath = $(makeRelativeToProject "minic-runtime/walloc/walloc.c" >>= strToExp)
+
+wasiStandaloneArgs :: FilePath -> FilePath -> FilePath -> [String]
+wasiStandaloneArgs sysrootPath wasmOutputFile cOutputFile =
   [ "-nodefaultlibs",
     "-std=c99",
     "-Oz",
@@ -79,9 +131,9 @@ standaloneArgs sysrootPath wasmOutputFile cOutputFile =
   ]
   where
     minicRuntime :: FilePath
-    minicRuntime = $(makeRelativeToProject "minic-runtime/standalone/minic-runtime.h" >>= strToExp)
+    minicRuntime = $(makeRelativeToProject "minic-runtime/wasi-standalone/minic-runtime.h" >>= strToExp)
     wallocPath :: FilePath
-    wallocPath = $(makeRelativeToProject "minic-runtime/standalone/walloc.c" >>= strToExp)
+    wallocPath = $(makeRelativeToProject "minic-runtime/walloc/walloc.c" >>= strToExp)
 
 libcArgs :: FilePath -> FilePath -> FilePath -> [String]
 libcArgs sysrootPath wasmOutputFile cOutputFile =
@@ -103,4 +155,4 @@ libcArgs sysrootPath wasmOutputFile cOutputFile =
   ]
   where
     minicRuntime :: FilePath
-    minicRuntime = $(makeRelativeToProject "minic-runtime/libc/minic-runtime.h" >>= strToExp)
+    minicRuntime = $(makeRelativeToProject "minic-runtime/wasi-libc/minic-runtime.h" >>= strToExp)

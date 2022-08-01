@@ -26,10 +26,17 @@ data TestDescr = TestDescr
     _testAssertion :: AssertionDescr
   }
 
+data WASMInfo = WASMInfo
+  { _wasmInfoFunctionName :: Text,
+    _wasmInfoFunctionArgs :: [Text]
+  }
+
 makeLenses ''TestDescr
 
 data StdlibMode = StdlibInclude | StdlibExclude
   deriving stock (Show, Eq)
+
+data CompileMode = WASI StdlibMode | WASM WASMInfo
 
 mkTest :: TestDescr -> TestTree
 mkTest TestDescr {..} = case _testAssertion of

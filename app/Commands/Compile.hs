@@ -14,7 +14,10 @@ juvixBuildDir = ".juvix-build"
 data CompileTarget = TargetC | TargetWasm
   deriving stock (Show)
 
-data CompileRuntime = RuntimeStandalone | RuntimeLibC
+data CompileRuntime
+  = RuntimeWasiStandalone
+  | RuntimeWasiLibC
+  | RuntimeStandalone
   deriving stock (Show)
 
 data CompileOptions = CompileOptions
@@ -44,9 +47,9 @@ parseCompile = do
       ( long "runtime"
           <> short 'r'
           <> metavar "RUNTIME"
-          <> value RuntimeStandalone
+          <> value RuntimeWasiStandalone
           <> showDefaultWith runtimeShow
-          <> help "select a runtime: standalone, libc"
+          <> help "select a runtime: wasi-standalone, wasi-libc, standalone"
       )
 
   _compileOutputFile <-
@@ -74,14 +77,16 @@ parseCompile = do
 
     parseRuntime :: String -> Either String CompileRuntime
     parseRuntime = \case
+      "wasi-standalone" -> Right RuntimeWasiStandalone
+      "wasi-libc" -> Right RuntimeWasiLibC
       "standalone" -> Right RuntimeStandalone
-      "libc" -> Right RuntimeLibC
       s -> Left $ "unrecognised runtime: " <> s
 
     runtimeShow :: CompileRuntime -> String
     runtimeShow = \case
+      RuntimeWasiStandalone -> "wasi-standalone"
+      RuntimeWasiLibC -> "wasi-libc"
       RuntimeStandalone -> "standalone"
-      RuntimeLibC -> "libc"
 
 inputCFile :: FilePath -> FilePath -> FilePath
 inputCFile projRoot compileInputFile =
@@ -96,86 +101,114 @@ runCompile projRoot compileInputFile o minic = do
   TIO.writeFile (inputCFile projRoot compileInputFile) minic
   prepareRuntime projRoot o
   case o ^. compileTarget of
-    TargetWasm -> clangCompile projRoot compileInputFile o
+    TargetWasm -> runM (runError (clangCompile projRoot compileInputFile o))
     TargetC -> return (Right ())
 
 prepareRuntime :: FilePath -> CompileOptions -> IO ()
 prepareRuntime projRoot o = do
   mapM_ writeRuntime runtimeProjectDir
   where
+    wasiStandaloneRuntimeDir :: [(FilePath, BS.ByteString)]
+    wasiStandaloneRuntimeDir = $(FE.makeRelativeToProject "minic-runtime/wasi-standalone" >>= FE.embedDir)
+
     standaloneRuntimeDir :: [(FilePath, BS.ByteString)]
     standaloneRuntimeDir = $(FE.makeRelativeToProject "minic-runtime/standalone" >>= FE.embedDir)
 
-    libCRuntimeDir :: [(FilePath, BS.ByteString)]
-    libCRuntimeDir = $(FE.makeRelativeToProject "minic-runtime/libc" >>= FE.embedDir)
+    wasiLibCRuntimeDir :: [(FilePath, BS.ByteString)]
+    wasiLibCRuntimeDir = $(FE.makeRelativeToProject "minic-runtime/wasi-libc" >>= FE.embedDir)
 
     builtinCRuntimeDir :: [(FilePath, BS.ByteString)]
     builtinCRuntimeDir = $(FE.makeRelativeToProject "minic-runtime/builtins" >>= FE.embedDir)
 
+    wallocDir :: [(FilePath, BS.ByteString)]
+    wallocDir = $(FE.makeRelativeToProject "minic-runtime/walloc" >>= FE.embedDir)
+
     runtimeProjectDir :: [(FilePath, BS.ByteString)]
     runtimeProjectDir = case o ^. compileRuntime of
-      RuntimeStandalone -> standaloneRuntimeDir <> builtinCRuntimeDir
-      RuntimeLibC -> libCRuntimeDir <> builtinCRuntimeDir
+      RuntimeWasiStandalone -> wasiStandaloneRuntimeDir <> builtinCRuntimeDir <> wallocDir
+      RuntimeWasiLibC -> wasiLibCRuntimeDir <> builtinCRuntimeDir
+      RuntimeStandalone -> standaloneRuntimeDir <> builtinCRuntimeDir <> wallocDir
 
     writeRuntime :: (FilePath, BS.ByteString) -> IO ()
     writeRuntime (filePath, contents) =
       BS.writeFile (projRoot </> juvixBuildDir </> takeFileName filePath) contents
 
-clangCompile :: FilePath -> FilePath -> CompileOptions -> IO (Either Text ())
-clangCompile projRoot compileInputFile o = do
-  v <- sysrootEnvVar
-  case v of
-    Left s -> return (Left s)
-    Right sysrootPath -> withSysrootPath sysrootPath
+clangCompile ::
+  forall r.
+  Members '[Embed IO, Error Text] r =>
+  FilePath ->
+  FilePath ->
+  CompileOptions ->
+  Sem r ()
+clangCompile projRoot compileInputFile o = clangArgs >>= runClang
   where
-    sysrootEnvVar :: IO (Either Text String)
+    clangArgs :: Sem r [String]
+    clangArgs = case o ^. compileRuntime of
+      RuntimeStandalone ->
+        return (standaloneLibArgs projRoot outputFile inputFile)
+      RuntimeWasiStandalone -> wasiStandaloneArgs projRoot outputFile inputFile <$> sysrootEnvVar
+      RuntimeWasiLibC -> wasiLibcArgs outputFile inputFile <$> sysrootEnvVar
+
+    outputFile :: FilePath
+    outputFile = fromMaybe (takeBaseName compileInputFile <> ".wasm") (o ^. compileOutputFile)
+
+    inputFile :: FilePath
+    inputFile = inputCFile projRoot compileInputFile
+
+    sysrootEnvVar :: Sem r String
     sysrootEnvVar =
-      maybeToEither "Missing environment variable WASI_SYSROOT_PATH"
-        <$> lookupEnv "WASI_SYSROOT_PATH"
-
-    withSysrootPath :: String -> IO (Either Text ())
-    withSysrootPath sysrootPath = runClang clangArgs
+      fromMaybeM (throw msg) (embed (lookupEnv "WASI_SYSROOT_PATH"))
       where
-        clangArgs :: [String]
-        clangArgs = case o ^. compileRuntime of
-          RuntimeStandalone -> standaloneArgs projRoot sysrootPath outputFile inputFile
-          RuntimeLibC -> libcArgs sysrootPath outputFile inputFile
+        msg :: Text
+        msg = "Missing environment variable WASI_SYSROOT_PATH"
 
-        outputFile :: FilePath
-        outputFile = fromMaybe (takeBaseName compileInputFile <> ".wasm") (o ^. compileOutputFile)
-
-        inputFile :: FilePath
-        inputFile = inputCFile projRoot compileInputFile
-
-standaloneArgs :: FilePath -> FilePath -> FilePath -> FilePath -> [String]
-standaloneArgs projRoot sysrootPath wasmOutputFile inputFile =
-  commonArgs sysrootPath wasmOutputFile
-    <> [projRoot </> juvixBuildDir </> "walloc.c", inputFile]
-
-libcArgs :: FilePath -> FilePath -> FilePath -> [String]
-libcArgs sysrootPath wasmOutputFile inputFile =
-  commonArgs sysrootPath wasmOutputFile
-    <> ["-lc", inputFile]
-
-commonArgs :: FilePath -> FilePath -> [String]
-commonArgs sysrootPath wasmOutputFile =
+commonArgs :: FilePath -> [String]
+commonArgs wasmOutputFile =
   [ "-nodefaultlibs",
     "-std=c99",
     "-Oz",
     "-I",
     juvixBuildDir,
-    "--target=wasm32-wasi",
-    "--sysroot",
-    sysrootPath,
     "-o",
     wasmOutputFile
   ]
 
+standaloneLibArgs :: FilePath -> FilePath -> FilePath -> [String]
+standaloneLibArgs projRoot wasmOutputFile inputFile =
+  commonArgs wasmOutputFile
+    <> [ "--target=wasm32",
+         "-nostartfiles",
+         "-Wl,--no-entry",
+         projRoot </> juvixBuildDir </> "walloc.c",
+         inputFile
+       ]
+
+wasiStandaloneArgs :: FilePath -> FilePath -> FilePath -> FilePath -> [String]
+wasiStandaloneArgs projRoot wasmOutputFile inputFile sysrootPath =
+  wasiCommonArgs sysrootPath wasmOutputFile
+    <> [ projRoot </> juvixBuildDir </> "walloc.c",
+         inputFile
+       ]
+
+wasiLibcArgs :: FilePath -> FilePath -> FilePath -> [String]
+wasiLibcArgs wasmOutputFile inputFile sysrootPath =
+  wasiCommonArgs sysrootPath wasmOutputFile
+    <> ["-lc", inputFile]
+
+wasiCommonArgs :: FilePath -> FilePath -> [String]
+wasiCommonArgs sysrootPath wasmOutputFile =
+  commonArgs wasmOutputFile
+    <> [ "--target=wasm32-wasi",
+         "--sysroot",
+         sysrootPath
+       ]
+
 runClang ::
+  Members '[Embed IO, Error Text] r =>
   [String] ->
-  IO (Either Text ())
+  Sem r ()
 runClang args = do
-  (exitCode, _, err) <- P.readProcessWithExitCode "clang" args ""
+  (exitCode, _, err) <- embed (P.readProcessWithExitCode "clang" args "")
   case exitCode of
-    ExitSuccess -> return (Right ())
-    _ -> return (Left (pack err))
+    ExitSuccess -> return ()
+    _ -> throw (pack err)

@@ -1,0 +1,8 @@
+module Input;
+
+open import Stdlib.Prelude;
+
+fun : ℕ → ℕ;
+fun _ ≔ three;
+
+end;

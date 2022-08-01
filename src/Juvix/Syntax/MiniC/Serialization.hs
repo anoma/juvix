@@ -27,9 +27,14 @@ prettyCpp = \case
     prettyDefine :: Text -> HP.Doc -> HP.Doc
     prettyDefine n body = "#define" HP.<+> prettyText n HP.<+> body
 
+prettyAttribute :: Attribute -> HP.Doc
+prettyAttribute = \case
+  ExportName n -> "__attribute__" HP.<> HP.parens (HP.parens ("export_name" HP.<> HP.parens (HP.doubleQuotes (prettyText n))))
+
 prettyCCode :: CCode -> HP.Doc
 prettyCCode = \case
   ExternalDecl decl -> P.pretty (CDeclExt (mkCDecl decl))
+  ExternalAttribute a -> prettyAttribute a
   ExternalFuncSig funSig -> P.pretty (CDeclExt (mkCFunSig funSig))
   ExternalFunc fun -> P.pretty (CFDefExt (mkCFunDef fun))
   ExternalMacro m -> prettyCpp m
