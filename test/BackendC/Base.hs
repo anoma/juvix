@@ -18,7 +18,7 @@ clangCompile mkClangArgs cResult execute step =
   withTempDir
     ( \dirPath -> do
         let cOutputFile = dirPath </> "out.c"
-            wasmOutputFile = dirPath </> "out.wasm"
+            wasmOutputFile = dirPath </> "Input.wasm"
         TIO.writeFile cOutputFile (cResult ^. MiniC.resultCCode)
         step "WASM generation"
         P.callProcess

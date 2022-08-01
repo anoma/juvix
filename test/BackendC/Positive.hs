@@ -32,13 +32,17 @@ actualCallExport funName funArgs outputFile =
 actualCallNode :: FilePath -> FilePath -> IO Text
 actualCallNode jsFile outputFile = do
   assertCmdExists "node"
-  let outputJsFile = takeDirectory outputFile </> jsFile
+  let outputDir = takeDirectory outputFile
+      outputJsFile = outputDir </> jsFile
   copyFile jsFile outputJsFile
-  pack
-    <$> P.readProcess
-      "node"
-      [outputJsFile]
-      ""
+  withCurrentDirectory
+    outputDir
+    ( pack
+        <$> P.readProcess
+          "node"
+          [outputJsFile]
+          ""
+    )
 
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
