@@ -76,11 +76,11 @@ destruct = \case
   Ident i sym -> NodeDetails i [] [] [] (\i' _ -> Ident i' sym)
   Builtin i op -> NodeDetails i [] [] [] (\i' _ -> Builtin i' op)
   Constructor i tag -> NodeDetails i [] [] [] (\i' _ -> Constructor i' tag)
-  ConstValue i c -> NodeDetails i [] [] [] (\i' _ -> ConstValue i' c)
+  Constant i c -> NodeDetails i [] [] [] (\i' _ -> Constant i' c)
   Axiom i -> NodeDetails i [] [] [] (\i' _ -> Axiom i')
   App i l r -> NodeDetails i [l, r] [0, 0] [Nothing, Nothing] (\i' args' -> App i' (hd args') (args' !! 1))
   Lambda i b -> NodeDetails i [b] [1] [fetchBinderInfo i] (\i' args' -> Lambda i' (hd args'))
-  LetIn i v b -> NodeDetails i [v, b] [0, 1] [Nothing, fetchBinderInfo i] (\i' args' -> LetIn i' (hd args') (args' !! 1))
+  Let i v b -> NodeDetails i [v, b] [0, 1] [Nothing, fetchBinderInfo i] (\i' args' -> Let i' (hd args') (args' !! 1))
   Case i v bs Nothing ->
     NodeDetails
       i
@@ -124,13 +124,13 @@ destruct = \case
       (\i' args' -> If i' (hd args') (args' !! 1) (args' !! 2))
   Data i tag args ->
     NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`Data` tag)
-  LambdaClosure i env b ->
+  Closure i env b ->
     NodeDetails
       i
       (b : env)
       (1 : map (const 0) env)
       (fetchBinderInfo i : map (const Nothing) env)
-      (\i' args' -> LambdaClosure i' (tl args') (hd args'))
+      (\i' args' -> Closure i' (tl args') (hd args'))
   Suspended i t ->
     NodeDetails i [t] [0] [Nothing] (\i' args' -> Suspended i' (hd args'))
   where

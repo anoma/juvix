@@ -81,7 +81,7 @@ convertClosures = umap go
   where
     go :: Node -> Node
     go n = case n of
-      LambdaClosure i env b -> substEnv env (Lambda i b)
+      Closure i env b -> substEnv env (Lambda i b)
       _ -> n
 
 convertData :: Node -> Node

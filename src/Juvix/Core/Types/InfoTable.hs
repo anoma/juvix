@@ -1,11 +1,11 @@
-module Juvix.Core.Context where
+module Juvix.Core.Types.InfoTable where
 
 import Juvix.Core.Language
 import Juvix.Core.Language.Type
 
 type IdentContext = HashMap Symbol Node
 
-data Context = Context
+data InfoTable = InfoTable
   { _identContext :: IdentContext,
     _identInfo :: HashMap Symbol IdentInfo,
     _inductiveInfo :: HashMap Name InductiveInfo,
@@ -54,7 +54,7 @@ data AxiomInfo = AxiomInfo
     _axiomType :: Type
   }
 
-makeLenses ''Context
+makeLenses ''InfoTable
 makeLenses ''IdentInfo
 makeLenses ''ArgumentInfo
 makeLenses ''InductiveInfo

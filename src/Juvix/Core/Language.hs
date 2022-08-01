@@ -50,14 +50,14 @@ data Node
     Builtin {builtinInfo :: !Info, builtinOp :: !BuiltinOp}
   | -- A data constructor (the function that creates the data).
     Constructor {constructorInfo :: !Info, constructorTag :: !Tag}
-  | ConstValue {constantInfo :: !Info, constantValue :: !Constant}
+  | Constant {constantInfo :: !Info, constantValue :: !ConstantValue}
   | -- An axiom. Computationally a unit.
     Axiom {axiomInfo :: !Info}
   | App {appInfo :: !Info, appLeft :: !Node, appRight :: !Node}
   | Lambda {lambdaInfo :: !Info, lambdaBody :: !Node}
   | -- `let x := value in body` is not reducible to lambda + application for the purposes
     -- of ML-polymorphic / dependent type checking or code generation!
-    LetIn {letInfo :: !Info, letValue :: !Node, letBody :: !Node}
+    Let {letInfo :: !Info, letValue :: !Node, letBody :: !Node}
   | -- One-level case matching on the tag of a data constructor: `Case value
     -- branches default`. `Case` is lazy: only the selected branch is evaluated.
     Case
@@ -75,17 +75,17 @@ data Node
         ifFalseBranch :: !Node
       }
   | -- Evaluation only: evaluated data constructor (the actual data). Arguments
-    -- order: right to left. Arguments are closed values.
+    -- order: right to left. Arguments are values (see below).
     Data {dataInfo :: !Info, dataTag :: !Tag, dataArgs :: ![Node]}
-  | -- Evaluation only: `LambdaClosure env body`
-    LambdaClosure
+  | -- Evaluation only: `Closure env body`
+    Closure
       { closureInfo :: !Info,
         closureEnv :: !Env,
         closureBody :: !Node
       }
   | -- Evaluation only: a suspended term value which cannot be evaluated
     -- further, e.g., a hole applied to some arguments. The suspended term must
-    -- be closed.
+    -- be closed (but need not be a value -- see below).
     Suspended {suspendedInfo :: !Info, suspendedNode :: !Node}
 
 -- Other things we might need in the future:
@@ -98,7 +98,7 @@ data Node
 --   TypeIdent (named type identifier available in the global context, e.g.,
 --   inductive type), Universe
 
-data Constant
+data ConstantValue
   = ConstInteger !Integer
   | ConstBool !Bool
 
@@ -111,6 +111,15 @@ data Constant
 --   equal to the number of implicit binders above `branch`
 data CaseBranch = CaseBranch {caseTag :: !Tag, caseBindersNum :: !Int, caseBranch :: !Node}
 
--- all nodes in an environment must be closed values (no free variables, i.e.,
--- no de Bruijn indices pointing outside the term)
+-- Values are closed nodes (no free variables, i.e., no de Bruijn indices
+-- pointing outside the term) of the following kinds:
+-- - Constant
+-- - Data
+-- - Closure
+-- - Suspended
+--
+-- Whether something is a value matters only for evaluation semantics. It
+-- doesn't matter much outside the evaluator.
+
+-- all nodes in an environment must be values
 type Env = [Node]
