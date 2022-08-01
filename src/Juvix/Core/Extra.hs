@@ -10,6 +10,8 @@ import Juvix.Core.Extra.Base
 import Juvix.Core.Extra.Recursors
 import Juvix.Core.Language
 
+-- `isClosed` may short-circuit evaluation due to the use of `&&`, so it's not
+-- entirely reducible to `getFreeVars` in terms of computation time.
 isClosed :: Node -> Bool
 isClosed = ufoldN (&&) go
   where
@@ -89,7 +91,7 @@ convertData = umap go
   where
     go :: Node -> Node
     go n = case n of
-      Data i tag args -> mkApp' (Constructor i tag) args
+      Data i tag args -> ConstructorApp i tag args
       _ -> n
 
 convertSuspended :: Node -> Node
@@ -102,3 +104,23 @@ convertSuspended = umap go
 
 convertRuntimeNodes :: Node -> Node
 convertRuntimeNodes = convertSuspended . convertData . convertClosures
+
+etaExpandBuiltins :: Node -> Node
+etaExpandBuiltins = umap go
+  where
+    go :: Node -> Node
+    go n = case n of
+      BuiltinApp {..}
+        | builtinOpArgsNum builtinOp > length builtinArgs ->
+            etaExpand (builtinOpArgsNum builtinOp - length builtinArgs) n
+      _ -> n
+
+etaExpandConstructors :: (Tag -> Int) -> Node -> Node
+etaExpandConstructors argsNum = umap go
+  where
+    go :: Node -> Node
+    go n = case n of
+      ConstructorApp {..}
+        | argsNum constructorTag > length constructorArgs ->
+            etaExpand (argsNum constructorTag - length constructorArgs) n
+      _ -> n

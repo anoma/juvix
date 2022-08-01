@@ -11,13 +11,9 @@ data BuiltinOp
   | OpIntDiv
   | OpIntEq
   | OpIntLt
-  | OpIntGt
   | OpIntLe
-  | OpIntGe
   | OpBoolAnd
   | OpBoolOr
-  | OpPairFst
-  | OpPairSnd
   deriving stock (Eq)
 
 -- Builtin data tags
@@ -28,4 +24,27 @@ data BuiltinDataTag
   | TagNil
   | TagCons
   | TagPair
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
+
+instance Hashable BuiltinDataTag
+
+builtinOpArgsNum :: BuiltinOp -> Int
+builtinOpArgsNum = \case
+  OpIntAdd -> 2
+  OpIntSub -> 2
+  OpIntMul -> 2
+  OpIntDiv -> 2
+  OpIntEq -> 2
+  OpIntLt -> 2
+  OpIntLe -> 2
+  OpBoolAnd -> 2
+  OpBoolOr -> 2
+
+builtinConstrArgsNum :: BuiltinDataTag -> Int
+builtinConstrArgsNum = \case
+  TagZero -> 0
+  TagSucc -> 1
+  TagUnit -> 0
+  TagNil -> 0
+  TagCons -> 2
+  TagPair -> 2

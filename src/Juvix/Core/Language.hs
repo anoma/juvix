@@ -11,8 +11,7 @@ module Juvix.Core.Language
 where
 
 {-
-  This file defines the tree representation of JuvixCore (Node datatype) and
-  general recursors on it.
+  This file defines the tree representation of JuvixCore (Node datatype).
 -}
 
 import Juvix.Core.Language.Base
@@ -29,7 +28,9 @@ type Symbol = Word
 -- "builtin" constructors, e.g., unit, nat, lists, pairs, so that the code
 -- generator can treat them specially.
 data Tag = BuiltinTag BuiltinDataTag | UserTag Word
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
+
+instance Hashable Tag
 
 -- de Bruijn index
 type Index = Int
@@ -44,16 +45,25 @@ data Node
   | -- Global identifier of a function (with corresponding `Node` in the global
     -- context).
     Ident {identInfo :: !Info, identSymbol :: !Symbol}
-  | -- A builtin with no corresponding Node, treated specially by the evaluator
-    -- and the code generator. For example, basic arithmetic operations go into
-    -- `Builtin`.
-    Builtin {builtinInfo :: !Info, builtinOp :: !BuiltinOp}
-  | -- A data constructor (the function that creates the data).
-    Constructor {constructorInfo :: !Info, constructorTag :: !Tag}
   | Constant {constantInfo :: !Info, constantValue :: !ConstantValue}
   | -- An axiom. Computationally a unit.
     Axiom {axiomInfo :: !Info}
   | App {appInfo :: !Info, appLeft :: !Node, appRight :: !Node}
+  | -- A builtin application. A builtin has no corresponding Node. It is treated
+    -- specially by the evaluator and the code generator. For example, basic
+    -- arithmetic operations go into `Builtin`. The number of arguments supplied
+    -- must be equal to the number of arguments expected by the builtin
+    -- operation (this simplifies evaluation and code generation). If you need
+    -- partial application, eta-expand with lambdas, e.g., eta-expand `(+) 2` to
+    -- `\x -> (+) 2 x`. See `etaExpand` in Extra/Base.hs and `etaExpand*` in Extra.hs.
+    BuiltinApp {builtinInfo :: !Info, builtinOp :: !BuiltinOp, builtinArgs :: ![Node]}
+  | -- A data constructor application. The number of arguments supplied must be
+    -- equal to the number of arguments expected by the constructor.
+    ConstructorApp
+      { constructorInfo :: !Info,
+        constructorTag :: !Tag,
+        constructorArgs :: ![Node]
+      }
   | Lambda {lambdaInfo :: !Info, lambdaBody :: !Node}
   | -- `let x := value in body` is not reducible to lambda + application for the purposes
     -- of ML-polymorphic / dependent type checking or code generation!
@@ -114,6 +124,7 @@ data CaseBranch = CaseBranch {caseTag :: !Tag, caseBindersNum :: !Int, caseBranc
 -- Values are closed nodes (no free variables, i.e., no de Bruijn indices
 -- pointing outside the term) of the following kinds:
 -- - Constant
+-- - Axiom
 -- - Data
 -- - Closure
 -- - Suspended

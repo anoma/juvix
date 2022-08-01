@@ -39,6 +39,12 @@ unfoldApp = go []
       App i l r -> go ((i, r) : acc) l
       _ -> (n, acc)
 
+mkLambdas :: [Info] -> Node -> Node
+mkLambdas is n = foldr Lambda n is
+
+mkLambdas' :: Int -> Node -> Node
+mkLambdas' k = mkLambdas (replicate k Info.empty)
+
 unfoldLambdas :: Node -> ([Info], Node)
 unfoldLambdas = go []
   where
@@ -46,6 +52,9 @@ unfoldLambdas = go []
     go acc n = case n of
       Lambda i b -> go (i : acc) b
       _ -> (acc, n)
+
+etaExpand :: Int -> Node -> Node
+etaExpand k n = mkLambdas' k (mkApp' n (map (Var Info.empty) [0 .. k - 1]))
 
 -- `NodeDetails` is a convenience datatype which provides the most commonly needed
 -- information about a node in a generic fashion.
@@ -74,11 +83,11 @@ destruct :: Node -> NodeDetails
 destruct = \case
   Var i idx -> NodeDetails i [] [] [] (\i' _ -> Var i' idx)
   Ident i sym -> NodeDetails i [] [] [] (\i' _ -> Ident i' sym)
-  Builtin i op -> NodeDetails i [] [] [] (\i' _ -> Builtin i' op)
-  Constructor i tag -> NodeDetails i [] [] [] (\i' _ -> Constructor i' tag)
   Constant i c -> NodeDetails i [] [] [] (\i' _ -> Constant i' c)
   Axiom i -> NodeDetails i [] [] [] (\i' _ -> Axiom i')
   App i l r -> NodeDetails i [l, r] [0, 0] [Nothing, Nothing] (\i' args' -> App i' (hd args') (args' !! 1))
+  BuiltinApp i op args -> NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`BuiltinApp` op)
+  ConstructorApp i tag args -> NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`ConstructorApp` tag)
   Lambda i b -> NodeDetails i [b] [1] [fetchBinderInfo i] (\i' args' -> Lambda i' (hd args'))
   Let i v b -> NodeDetails i [v, b] [0, 1] [Nothing, fetchBinderInfo i] (\i' args' -> Let i' (hd args') (args' !! 1))
   Case i v bs Nothing ->
