@@ -82,7 +82,7 @@ data Qualifier
 -- Attributes
 --------------------------------------------------------------------------------
 
-newtype Attribute = ExportName Text
+data Attribute = ExportName Text | ImportName Text
 
 --------------------------------------------------------------------------------
 -- Types

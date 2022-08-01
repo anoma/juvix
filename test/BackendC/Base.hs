@@ -40,16 +40,8 @@ wasmClangAssertion WASMInfo {..} mainFile expectedFile step = do
 
   expected <- TIO.readFile expectedFile
 
-  let execute :: FilePath -> IO Text
-      execute outputFile =
-        pack
-          <$> P.readProcess
-            "wasmer"
-            (["run", outputFile, "--invoke", unpack _wasmInfoFunctionName] <> (unpack <$> _wasmInfoFunctionArgs))
-            ""
-
   step "Compile C with wasm standalone runtime"
-  actualStandalone <- clangCompile standaloneArgs p execute step
+  actualStandalone <- clangCompile standaloneArgs p _wasmInfoActual step
   step "Compare expected and actual program output"
   assertEqDiff ("Check: WASM output = " <> expectedFile) actualStandalone expected
 

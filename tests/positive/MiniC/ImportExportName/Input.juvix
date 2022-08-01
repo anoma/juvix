@@ -1,0 +1,16 @@
+module Input;
+
+open import Stdlib.Prelude;
+
+axiom Void : Type;
+
+compile Void {
+  c ↦ "void";
+};
+
+axiom hostDisplayString : String → Void;
+
+juvixRender : Void;
+juvixRender ≔ hostDisplayString "Hello World from Juvix!";
+
+end;

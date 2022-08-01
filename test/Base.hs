@@ -26,9 +26,8 @@ data TestDescr = TestDescr
     _testAssertion :: AssertionDescr
   }
 
-data WASMInfo = WASMInfo
-  { _wasmInfoFunctionName :: Text,
-    _wasmInfoFunctionArgs :: [Text]
+newtype WASMInfo = WASMInfo
+  { _wasmInfoActual :: FilePath -> IO Text
   }
 
 makeLenses ''TestDescr

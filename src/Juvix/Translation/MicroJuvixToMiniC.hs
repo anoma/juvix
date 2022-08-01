@@ -463,7 +463,7 @@ goAxiom a
       case backend of
         Nothing -> do
           sig <- ExternalFuncSig <$> (cFunTypeToFunSig defineName <$> typeToFunType (mkPolyType' (a ^. Micro.axiomType)))
-          return [sig]
+          return [ExternalAttribute (ImportName (axiomName ^. Micro.nameText)), sig]
         Just defineBody ->
           return
             [ ExternalMacro
