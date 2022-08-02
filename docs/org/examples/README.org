@@ -7,3 +7,9 @@ The following links are clickable versions of their corresponding Juvix programs
 - [[https://docs.juvix.org/examples/html/Collatz/Collatz.html][Collatz.juvix]]
 - [[https://docs.juvix.org/examples/html/Fibonacci/Fibonacci.html][Fibonacci.juvix]]
 - [[https://docs.juvix.org/examples/html/TicTacToe/CLI/TicTacToe.html][TicTacToe.juvix]]
+
+** Example Juvix Web apps
+
+The following links navigate to example Juvix programs running as Web apps:
+
+- [[https://docs.juvix.org/examples/webapp/TicTacToe/Web/][WebTicTacToe]]
