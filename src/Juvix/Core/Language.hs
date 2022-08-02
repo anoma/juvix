@@ -60,9 +60,9 @@ data Node
   | -- A data constructor application. The number of arguments supplied must be
     -- equal to the number of arguments expected by the constructor.
     ConstrApp
-      { constructorInfo :: !Info,
-        constructorTag :: !Tag,
-        constructorArgs :: ![Node]
+      { constrInfo :: !Info,
+        constrTag :: !Tag,
+        constrArgs :: ![Node]
       }
   | Lambda {lambdaInfo :: !Info, lambdaBody :: !Node}
   | -- `let x := value in body` is not reducible to lambda + application for the purposes

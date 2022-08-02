@@ -121,6 +121,6 @@ etaExpandConstrs argsNum = umap go
     go :: Node -> Node
     go n = case n of
       ConstrApp {..}
-        | argsNum constructorTag > length constructorArgs ->
-            etaExpand (argsNum constructorTag - length constructorArgs) n
+        | argsNum constrTag > length constrArgs ->
+            etaExpand (argsNum constrTag - length constrArgs) n
       _ -> n
