@@ -13,7 +13,7 @@ MDFILES:=$(patsubst docs/org/%,docs/md/%,$(ORGFILES:.org=.md))
 EXAMPLEMILESTONE=examples/milestone
 EXAMPLEHTMLOUTPUT=_docs/examples/html
 EXAMPLES=ValidityPredicates/SimpleFungibleToken.juvix \
-			MiniTicTacToe/MiniTicTacToe.juvix \
+			TicTacToe/CLI/TicTacToe.juvix \
 			Fibonacci/Fibonacci.juvix \
 			Collatz/Collatz.juvix
 

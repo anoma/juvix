@@ -1,0 +1,151 @@
+--- Tic-tac-toe is a paper-and-pencil game for two players who take turns marking the spaces
+--- in a three-by-three grid with X or O.
+---
+--- The player who succeeds in placing three of their marks in a horizontal, vertical, or
+--- diagonal row is the winner. It is a solved game, with a forced draw assuming best play from both players.
+---
+--- The module Logic.Game contains the game logic.
+module Web.TicTacToe;
+
+open import Stdlib.Data.Nat.Ord;
+open import Stdlib.Prelude;
+open import Logic.Game;
+
+-- Functions provided by the host
+
+axiom hostLog : String → IO;
+
+-- XCoord → YCoord → Width → Height → Color → IO
+axiom hostFillRect : ℕ → ℕ → ℕ → ℕ → String → IO;
+
+-- XCoord → YCoord → Text → Size → Color → Align → IO
+axiom hostFillText : ℕ → ℕ → String → ℕ → String → ℕ → IO;
+
+-- Nat extension
+
+foreign c {
+  int div(n, d) {
+    return n/d;
+  \}
+};
+
+infixl 7 div;
+axiom div : ℕ → ℕ → ℕ;
+
+compile div {
+  c ↦ "div";
+};
+
+-- List extensions
+
+zip : {A : Type} → {B : Type} → List A → List B → List (A × B);
+zip (a ∷ as) (b ∷ bs) ≔ (a , b) ∷ zip as bs;
+zip _ _ ≔ nil;
+
+rangeAux : ℕ → ℕ → List ℕ;
+rangeAux _ zero ≔ nil;
+rangeAux m (suc n) ≔ m ∷ rangeAux (suc m) n;
+
+range : ℕ → List ℕ;
+range n ≔ rangeAux zero n;
+
+enumerate : {A : Type} → List A → List (ℕ × A);
+enumerate l ≔ zip (range (length l)) l;
+
+-- Formatting constants
+
+squareWidth : ℕ;
+squareWidth ≔ 100;
+
+textSize : ℕ;
+textSize ≔ 30;
+
+xTextOffset : ℕ;
+xTextOffset ≔ 50;
+
+yTextOffset : ℕ;
+yTextOffset ≔ 60;
+
+canvasPadding : ℕ;
+canvasPadding ≔ 8;
+
+textColor : String;
+textColor ≔ "#000000";
+
+backgroundColor : String;
+backgroundColor ≔ "#c4434e";
+
+lightBackgroundColor : String;
+lightBackgroundColor ≔ "#c7737a";
+
+-- Rendering
+
+inductive Align {
+  left : Align;
+  right : Align;
+  center : Align;
+};
+
+alignNum : Align → ℕ;
+alignNum left ≔ zero;
+alignNum right ≔ one;
+alignNum center ≔ two;
+
+renderText : String → ℕ → ℕ → Align → IO;
+renderText t row col a ≔ hostFillText ((squareWidth * row) + xTextOffset) ((squareWidth * col) + yTextOffset) t textSize textColor (alignNum a);
+
+renderSymbol : Symbol → ℕ → ℕ → IO;
+renderSymbol s row col ≔ renderText (showSymbol s) row col center;
+
+renderNumber : ℕ → ℕ → ℕ → IO;
+renderNumber n row col ≔ renderText (natToStr n) row col center;
+
+renderSquare : ℕ → ℕ → Square → IO;
+renderSquare row col (occupied s) ≔
+    hostFillRect (squareWidth * row) (squareWidth * col) squareWidth squareWidth backgroundColor
+    >> renderSymbol s row col;
+renderSquare row col (empty n) ≔
+    hostFillRect (squareWidth * row) (squareWidth * col) squareWidth squareWidth lightBackgroundColor
+    >> renderNumber n row col;
+
+renderRowAux : ℕ → (ℕ × Square) → IO;
+renderRowAux col (row , s) ≔ renderSquare row col s;
+
+renderRow : ℕ × (List Square) → IO;
+renderRow (n , xs) ≔ foldr (>>) 0 (map (renderRowAux n) (enumerate xs));
+
+renderBoard : Board → IO;
+renderBoard (board squares) ≔ foldr (>>) 0 (map renderRow (enumerate squares));
+
+renderFooterText : String → IO;
+renderFooterText msg ≔ renderText msg 0 3 left;
+
+nextPlayerText : Symbol → String;
+nextPlayerText s ≔ "Next player: " ++str (showSymbol s);
+
+renderError : Error → IO;
+renderError noError ≔ 0;
+renderError (continue msg) ≔ renderText msg 0 3 left;
+renderError (terminate msg) ≔ renderText msg 0 3 left;
+
+renderGameState : GameState → IO;
+renderGameState (state b _ (terminate msg)) ≔ renderBoard b >> renderFooterText msg;
+renderGameState (state b p (continue msg)) ≔ renderBoard b >> renderFooterText (nextPlayerText p) >> renderText (msg) 0 4 left;
+renderGameState (state b p _) ≔ renderBoard b >> renderFooterText (nextPlayerText p);
+
+renderAndReturn : GameState → GameState;
+renderAndReturn s ≔ const s (renderGameState s);
+
+selectedSquare : ℕ → ℕ → ℕ;
+selectedSquare row col ≔ 3 * (col div squareWidth) + (row div squareWidth) + 1;
+
+-- API
+
+initGame : GameState;
+initGame ≔ const beginState (renderGameState beginState >> renderText "Click on a square to make a move" 0 4 left);
+
+move : GameState → ℕ → ℕ → GameState;
+move (state b p (terminate e)) x y ≔ renderAndReturn (state b p (terminate e));
+move s x y ≔ renderAndReturn (playMove (validMove (selectedSquare x y)) s);
+
+end;

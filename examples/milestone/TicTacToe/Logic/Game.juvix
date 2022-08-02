@@ -4,8 +4,7 @@
 --- The player who succeeds in placing three of their marks in a horizontal, vertical, or
 --- diagonal row is the winner. It is a solved game, with a forced draw assuming best play from both players.
 ---
---- The function ;run; contains the game logic.
-module MiniTicTacToe;
+module Logic.Game;
 
 open import Stdlib.Data.Nat.Ord;
 open import Stdlib.Prelude;
@@ -185,44 +184,7 @@ playMove (just k) (state (board s) player e) ≔
                            (switch player)
                            noError));
 
--- IO Utils
-
-axiom readline : String;
-compile readline {
-  c ↦ "readline()";
-};
-
-axiom parsePositiveInt : String → ℕ;
-
-compile parsePositiveInt {
-  c ↦ "parsePositiveInt";
-};
-
--- IO
-
 validMove : ℕ → Maybe ℕ;
 validMove n ≔ if ((n <= nine) && (n >= one)) (just n) nothing;
 
-getMove : Maybe ℕ;
-getMove ≔ validMove (parsePositiveInt (readline));
-
-do : IO × GameState -> GameState;
-do (_ , s) ≔ playMove getMove s;
-
-prompt : GameState → String;
-prompt x ≔ "\n" ++str (showGameState x) ++str "\nPlayer " ++str showSymbol (player x) ++str ": ";
-
-terminating
-run : (IO × GameState → GameState) → GameState → IO;
-run _ (state b p (terminate msg)) ≔ putStrLn ("\n" ++str (showGameState (state b p noError)) ++str "\n" ++str msg);
-run f (state b p (continue msg)) ≔ run f (f (putStr (msg ++str prompt (state b p noError)) , state b p noError));
-run f x ≔ run f (f (putStr (prompt x) , x));
-
---- The welcome message
-welcome : String;
-welcome ≔ "MiniTicTacToe\n-------------\n\nType a number then ENTER to make a move";
-
---- The entry point of the program
-main : IO;
-main ≔ putStrLn welcome >> run do beginState;
 end;
