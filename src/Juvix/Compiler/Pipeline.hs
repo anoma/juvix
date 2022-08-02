@@ -55,24 +55,16 @@ toC ::
   Members PipelineEff r =>
   EntryPoint ->
   Sem r C.MiniCResult
-toC = do
-  typechecking >=> C.fromInternal
+toC = typechecking >=> C.fromInternal
 
 toHaskell ::
   Members PipelineEff r =>
   EntryPoint ->
   Sem r Haskell.Context
-toHaskell =
-  do
-    typechecking
+toHaskell = do
+  typechecking
     >=> Mono.fromInternal
     >=> Haskell.fromMono
-
--- typechecking >=> Mono.fromInternal >=> Haskell.fromMono
--- typechecking >=> C.fromInternal
--- html =  Concrete.fromSource
---     >=> Abstract.fromConcrete
---     >=> Html.fromConcrete
 
 --------------------------------------------------------------------------------
 
@@ -86,10 +78,6 @@ runIO = runIOEither >=> mayThrow
     mayThrow = \case
       Left err -> printErrorAnsiSafe err >> exitFailure
       Right r -> return r
-
--- main :: Members PipelineEff r =>
---   EntryPoint -> Sem r Internal.InternalResult
--- main = undefined
 
 upToSetup ::
   Member Files r =>
