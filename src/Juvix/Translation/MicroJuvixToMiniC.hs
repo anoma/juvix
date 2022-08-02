@@ -461,9 +461,7 @@ goAxiom a
   | otherwise = do
       backend <- runFail (lookupBackends (axiomName ^. Micro.nameId) >>= firstBackendMatch)
       case backend of
-        Nothing -> do
-          sig <- ExternalFuncSig <$> (cFunTypeToFunSig defineName <$> typeToFunType (mkPolyType' (a ^. Micro.axiomType)))
-          return [sig]
+        Nothing -> genFunctionDef a
         Just defineBody ->
           return
             [ ExternalMacro
@@ -495,6 +493,22 @@ goAxiom a
       NameId ->
       Sem r [BackendItem]
     lookupBackends f = ask >>= failMaybe . fmap (^. Scoper.compileInfoBackendItems) . HashMap.lookup f
+    genFunctionDef ::
+      forall r.
+      Members [Reader Micro.InfoTable, Reader CompileInfoTable] r =>
+      Micro.AxiomDef ->
+      Sem r [CCode]
+    genFunctionDef d
+      | T.all isAlphaNum nameText = (ExternalAttribute (ImportName (axiomName ^. Micro.nameText)) :) <$> sig
+      | otherwise = sig
+      where
+        nameText :: Text
+        nameText = axiomName ^. Micro.nameText
+
+        sig :: Sem r [CCode]
+        sig = do
+          s <- cFunTypeToFunSig defineName <$> typeToFunType (mkPolyType' (d ^. Micro.axiomType))
+          return [ExternalFuncSig s]
 
 goForeign :: ForeignBlock -> [CCode]
 goForeign b = case b ^. foreignBackend of

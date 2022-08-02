@@ -6,6 +6,8 @@
   - [[./getting-started/quick-start.md][Quick start]]
   - [[./getting-started/dependencies.md][Installing dependencies]]
 - [[./examples/README.md][Juvix Examples]]
+- [[./tutorials/README.md][Tutorials]]
+  - [[./tutorials/nodejs-interop.md][NodeJS Interop]]
 
 - [[./language-reference/README.md][Language reference]]
   - [[./language-reference/comments.md][Comments]]

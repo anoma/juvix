@@ -29,7 +29,11 @@ prettyCpp = \case
 
 prettyAttribute :: Attribute -> HP.Doc
 prettyAttribute = \case
-  ExportName n -> "__attribute__" HP.<> HP.parens (HP.parens ("export_name" HP.<> HP.parens (HP.doubleQuotes (prettyText n))))
+  ExportName n -> attr "export_name" n
+  ImportName n -> attr "import_name" n
+  where
+    attr :: Text -> Text -> HP.Doc
+    attr n v = "__attribute__" HP.<> HP.parens (HP.parens (prettyText n HP.<> HP.parens (HP.doubleQuotes (prettyText v))))
 
 prettyCCode :: CCode -> HP.Doc
 prettyCCode = \case

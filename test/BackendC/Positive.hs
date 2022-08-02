@@ -2,6 +2,7 @@ module BackendC.Positive where
 
 import BackendC.Base
 import Base
+import System.Process qualified as P
 
 data PosTest = PosTest
   { _name :: String,
@@ -19,6 +20,29 @@ mainFile = "Input.juvix"
 
 expectedFile :: FilePath
 expectedFile = "expected.golden"
+
+actualCallExport :: Text -> [Text] -> FilePath -> IO Text
+actualCallExport funName funArgs outputFile =
+  pack
+    <$> P.readProcess
+      "wasmer"
+      (["run", outputFile, "--invoke", unpack funName] <> (unpack <$> funArgs))
+      ""
+
+actualCallNode :: FilePath -> FilePath -> IO Text
+actualCallNode jsFile outputFile = do
+  assertCmdExists "node"
+  let outputDir = takeDirectory outputFile
+      outputJsFile = outputDir </> jsFile
+  copyFile jsFile outputJsFile
+  withCurrentDirectory
+    outputDir
+    ( pack
+        <$> P.readProcess
+          "node"
+          [outputJsFile]
+          ""
+    )
 
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
@@ -55,6 +79,7 @@ tests =
     PosTest "Builtin types and functions" "Builtins" (WASI StdlibExclude),
     PosTest "Import from embedded standard library" "StdlibImport" (WASI StdlibInclude),
     PosTest "Axiom without a compile block" "AxiomNoCompile" (WASI StdlibInclude),
-    PosTest "Invoke a function using exported name" "ExportName" (WASM (WASMInfo "fun" [])),
-    PosTest "Invoke a function using exported name with args" "ExportNameArgs" (WASM (WASMInfo "fun" ["0"]))
+    PosTest "Invoke a function using exported name" "ExportName" (WASM (WASMInfo (actualCallExport "fun" []))),
+    PosTest "Invoke a function using exported name with args" "ExportNameArgs" (WASM (WASMInfo (actualCallExport "fun" ["0"]))),
+    PosTest "Invoke an imported function in Juvix and exported function in JS" "ImportExportName" (WASM (WASMInfo (actualCallNode "input.js")))
   ]
