@@ -29,6 +29,7 @@ data Theme
 data HtmlKind
   = HtmlDoc
   | HtmlSrc
+  | HtmlOnly
 
 newtype HtmlOptions = HtmlOptions
   { _htmlOptionsKind :: HtmlKind
@@ -40,6 +41,7 @@ kindSuffix :: HtmlKind -> String
 kindSuffix = \case
   HtmlDoc -> ""
   HtmlSrc -> "-src"
+  HtmlOnly -> ""
 
 genHtml :: Options -> Bool -> Theme -> FilePath -> Bool -> Module 'Scoped 'ModuleTop -> IO ()
 genHtml opts recursive theme outputDir printMetadata entry = do
@@ -70,12 +72,12 @@ genHtml opts recursive theme outputDir printMetadata entry = do
       createDirectoryIfMissing True (takeDirectory htmlFile)
       putStrLn $ "Writing " <> pack htmlFile
       utc <- getCurrentTime
-      Text.writeFile htmlFile (genModule opts printMetadata utc theme m)
+      Text.writeFile htmlFile (genModule opts HtmlOnly printMetadata utc theme m)
       where
         htmlFile = topModulePathToDottedPath (m ^. modulePath . S.nameConcrete) <.> ".html"
 
-genModuleHtml :: Options -> Bool -> UTCTime -> Theme -> Module 'Scoped 'ModuleTop -> Html
-genModuleHtml opts printMetadata utc theme m =
+genModuleHtml :: Options -> HtmlKind -> Bool -> UTCTime -> Theme -> Module 'Scoped 'ModuleTop -> Html
+genModuleHtml opts htmlKind printMetadata utc theme m =
   docTypeHtml ! Attr.xmlns "http://www.w3.org/1999/xhtml" $
     mhead
       <> mbody
@@ -89,7 +91,7 @@ genModuleHtml opts printMetadata utc theme m =
     htmlOpts :: HtmlOptions
     htmlOpts =
       HtmlOptions
-        { _htmlOptionsKind = HtmlSrc
+        { _htmlOptionsKind = htmlKind
         }
 
     pp :: PrettyCode a => a -> Html
@@ -130,11 +132,11 @@ genModuleHtml opts printMetadata utc theme m =
 
         formattedTime = formatTime defaultTimeLocale "%Y-%m-%d %-H:%M %Z" utc
 
-genModule :: Options -> Bool -> UTCTime -> Theme -> Module 'Scoped 'ModuleTop -> Text
-genModule opts printMetadata utc theme =
+genModule :: Options -> HtmlKind -> Bool -> UTCTime -> Theme -> Module 'Scoped 'ModuleTop -> Text
+genModule opts htmlKind printMetadata utc theme =
   toStrict
     . Html.renderHtml
-    . genModuleHtml opts printMetadata utc theme
+    . genModuleHtml opts htmlKind printMetadata utc theme
 
 docStream' :: PrettyCode a => Options -> a -> SimpleDocStream Ann
 docStream' opts m = layoutPretty defaultLayoutOptions (runPrettyCode opts m)
@@ -179,6 +181,7 @@ putTag ann x = case ann of
       asks (^. htmlOptionsKind) <&> \case
         HtmlDoc -> Html.span ! Attr.class_ "ju-define"
         HtmlSrc -> id
+        HtmlOnly -> id
 
     tagDef :: TopModulePath -> S.NameId -> Sem r Html
     tagDef tmp nid = do

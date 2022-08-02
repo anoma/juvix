@@ -259,7 +259,7 @@ goTopModule m = do
     srcHtml :: forall s. Members '[Reader HtmlOptions, Embed IO] s => Sem s Html
     srcHtml = do
       utc <- Prelude.embed getCurrentTime
-      return (genModuleHtml defaultOptions True utc Ayu m)
+      return (genModuleHtml defaultOptions HtmlSrc True utc Ayu m)
 
     docHtml :: forall s. Members '[Reader HtmlOptions, Reader EntryPoint] s => Sem s Html
     docHtml = do
