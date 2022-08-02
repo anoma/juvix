@@ -109,19 +109,19 @@ prepareRuntime projRoot o = do
   mapM_ writeRuntime runtimeProjectDir
   where
     wasiStandaloneRuntimeDir :: [(FilePath, BS.ByteString)]
-    wasiStandaloneRuntimeDir = $(FE.makeRelativeToProject "minic-runtime/wasi-standalone" >>= FE.embedDir)
+    wasiStandaloneRuntimeDir = $(FE.makeRelativeToProject "c-runtime/wasi-standalone" >>= FE.embedDir)
 
     standaloneRuntimeDir :: [(FilePath, BS.ByteString)]
-    standaloneRuntimeDir = $(FE.makeRelativeToProject "minic-runtime/standalone" >>= FE.embedDir)
+    standaloneRuntimeDir = $(FE.makeRelativeToProject "c-runtime/standalone" >>= FE.embedDir)
 
     wasiLibCRuntimeDir :: [(FilePath, BS.ByteString)]
-    wasiLibCRuntimeDir = $(FE.makeRelativeToProject "minic-runtime/wasi-libc" >>= FE.embedDir)
+    wasiLibCRuntimeDir = $(FE.makeRelativeToProject "c-runtime/wasi-libc" >>= FE.embedDir)
 
     builtinCRuntimeDir :: [(FilePath, BS.ByteString)]
-    builtinCRuntimeDir = $(FE.makeRelativeToProject "minic-runtime/builtins" >>= FE.embedDir)
+    builtinCRuntimeDir = $(FE.makeRelativeToProject "c-runtime/builtins" >>= FE.embedDir)
 
     wallocDir :: [(FilePath, BS.ByteString)]
-    wallocDir = $(FE.makeRelativeToProject "minic-runtime/walloc" >>= FE.embedDir)
+    wallocDir = $(FE.makeRelativeToProject "c-runtime/walloc" >>= FE.embedDir)
 
     runtimeProjectDir :: [(FilePath, BS.ByteString)]
     runtimeProjectDir = case o ^. compileRuntime of

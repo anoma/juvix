@@ -6,24 +6,24 @@ $ juvix typecheck --help
 > /Usage: juvix typecheck \[JUVIX\_FILE\].*/
 >= 0
 
-$ juvix typecheck tests/positive/MicroJuvix/Simple.juvix
+$ juvix typecheck tests/positive/Internal/Simple.juvix
 >
 Well done! It type checks
 >= 0
 
-$ juvix --only-errors typecheck tests/positive/MicroJuvix/Simple.juvix
+$ juvix --only-errors typecheck tests/positive/Internal/Simple.juvix
 >
 >= 0
 
-$ juvix typecheck --only-errors tests/positive/MicroJuvix/Simple.juvix
+$ juvix typecheck --only-errors tests/positive/Internal/Simple.juvix
 >
 >= 0
 
-$ juvix typecheck tests/positive/MicroJuvix/Simple.juvix --only-errors
+$ juvix typecheck tests/positive/Internal/Simple.juvix --only-errors
 >
 >= 0
 
-$ juvix typecheck tests/negative/MicroJuvix/MultiWrongType.juvix --no-colors
+$ juvix typecheck tests/negative/Internal/MultiWrongType.juvix --no-colors
 >2 /(.+)\/([^\/]+)\.juvix\:11\:7\-8\: error.*
 .*/
 >= 1

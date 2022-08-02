@@ -3,14 +3,14 @@ module Command
     module Commands.Extra,
     module Commands.Html,
     module Commands.Compile,
-    module Commands.Internal,
+    module Commands.Dev,
   )
 where
 
 import Commands.Compile
+import Commands.Dev
 import Commands.Extra
 import Commands.Html
-import Commands.Internal
 import GlobalOptions
 import Juvix.Prelude hiding (Doc)
 import Options.Applicative
@@ -19,7 +19,7 @@ data Command
   = Check
   | Compile CompileOptions
   | Html HtmlOptions
-  | Internal InternalCommand
+  | Dev InternalCommand
 
 data CommandGlobalOptions = CommandGlobalOptions
   { _cliCommand :: Command,
@@ -37,7 +37,7 @@ parseCommandGlobalOptions = do
           [ commandCheck,
             commandCompile,
             commandHtml,
-            commandInternal
+            commandDev
           ]
       )
   return (cmd {_cliGlobalOptions = opts <> cmd ^. cliGlobalOptions})
@@ -63,11 +63,11 @@ commandHtml =
       (addGlobalOptions (Html <$> parseHtml))
       (progDesc "Generate HTML for a Juvix file")
 
-commandInternal :: Mod CommandFields CommandGlobalOptions
-commandInternal =
+commandDev :: Mod CommandFields CommandGlobalOptions
+commandDev =
   command "internal" $
     info
-      (addGlobalOptions (Internal <$> parseInternalCommand))
+      (addGlobalOptions (Dev <$> parseInternalCommand))
       (progDesc "Internal subcommands")
 
 --------------------------------------------------------------------------------

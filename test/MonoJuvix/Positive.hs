@@ -1,7 +1,7 @@
 module MonoJuvix.Positive where
 
 import Base
-import Juvix.Pipeline
+import Juvix.Compiler.Pipeline
 
 data PosTest = PosTest
   { _name :: String,

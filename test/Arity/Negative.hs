@@ -1,8 +1,8 @@
 module Arity.Negative (allTests) where
 
 import Base
-import Juvix.Analysis.Arity.Error
-import Juvix.Pipeline
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error
+import Juvix.Compiler.Pipeline
 
 type FailMsg = String
 
@@ -21,7 +21,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint = defaultEntryPoint _file
-            result <- runIOEither (upToMicroJuvixArity entryPoint)
+            result <- runIOEither (upToInternalArity entryPoint)
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
               Left Nothing -> assertFailure "The arity checker did not find an error."
@@ -44,42 +44,42 @@ tests :: [NegTest]
 tests =
   [ NegTest
       "Too many arguments in expression"
-      "MicroJuvix"
+      "Internal"
       "TooManyArguments.juvix"
       $ \case
         ErrTooManyArguments {} -> Nothing
         _ -> wrongError,
     NegTest
       "Pattern match a function type"
-      "MicroJuvix"
+      "Internal"
       "FunctionPattern.juvix"
       $ \case
         ErrPatternFunction {} -> Nothing
         _ -> wrongError,
     NegTest
       "Function type (* → *) application"
-      "MicroJuvix"
+      "Internal"
       "FunctionApplied.juvix"
       $ \case
         ErrFunctionApplied {} -> Nothing
         _ -> wrongError,
     NegTest
       "Expected explicit pattern"
-      "MicroJuvix"
+      "Internal"
       "ExpectedExplicitPattern.juvix"
       $ \case
         ErrWrongPatternIsImplicit {} -> Nothing
         _ -> wrongError,
     NegTest
       "Expected explicit argument"
-      "MicroJuvix"
+      "Internal"
       "ExpectedExplicitArgument.juvix"
       $ \case
         ErrExpectedExplicitArgument {} -> Nothing
         _ -> wrongError,
     NegTest
       "Function clause with two many patterns in the lhs"
-      "MicroJuvix"
+      "Internal"
       "LhsTooManyPatterns.juvix"
       $ \case
         ErrLhsTooManyPatterns {} -> Nothing

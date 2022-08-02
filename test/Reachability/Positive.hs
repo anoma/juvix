@@ -2,9 +2,9 @@ module Reachability.Positive where
 
 import Base
 import Data.HashSet qualified as HashSet
-import Juvix.Pipeline
-import Juvix.Syntax.MicroJuvix.Language qualified as Micro
-import Juvix.Syntax.MicroJuvix.MicroJuvixTypedResult qualified as Micro
+import Juvix.Compiler.Internal.Language qualified as Micro
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Micro
+import Juvix.Compiler.Pipeline
 
 data PosTest = PosTest
   { _name :: String,
@@ -40,7 +40,7 @@ testDescr PosTest {..} =
                     }
 
             step "Pipeline up to reachability"
-            p :: Micro.MicroJuvixTypedResult <- runIO (upToMicroJuvixReachability entryPoint)
+            p :: Micro.InternalTypedResult <- runIO (upToInternalReachability entryPoint)
 
             step "Check reachability results"
             let names = concatMap getNames (p ^. Micro.resultModules)

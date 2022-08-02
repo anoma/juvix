@@ -1,8 +1,8 @@
 module TypeCheck.Negative where
 
 import Base
-import Juvix.Pipeline
-import Juvix.Syntax.MicroJuvix.Error
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
+import Juvix.Compiler.Pipeline
 
 type FailMsg = String
 
@@ -21,7 +21,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint = defaultEntryPoint _file
-            result <- runIOEither (upToMicroJuvixTyped entryPoint)
+            result <- runIOEither (upToInternalTyped entryPoint)
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
               Left Nothing -> assertFailure "The type checker did not find an error."
@@ -50,7 +50,7 @@ tests :: [NegTest]
 tests =
   [ NegTest
       "Constructor in pattern type error"
-      "MicroJuvix"
+      "Internal"
       "PatternConstructor.juvix"
       $ \case
         ErrWrongConstructorType {} -> Nothing
@@ -64,28 +64,28 @@ tests =
         _ -> wrongError,
     NegTest
       "Type vs inferred type mismatch"
-      "MicroJuvix"
+      "Internal"
       "WrongType.juvix"
       $ \case
         ErrWrongType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Function application with non-function type"
-      "MicroJuvix"
+      "Internal"
       "ExpectedFunctionType.juvix"
       $ \case
         ErrExpectedFunctionType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Unsolved hole"
-      "MicroJuvix"
+      "Internal"
       "UnsolvedMeta.juvix"
       $ \case
         ErrUnsolvedMeta {} -> Nothing
         _ -> wrongError,
     NegTest
       "Multiple type errors are captured"
-      "MicroJuvix"
+      "Internal"
       "MultiWrongType.juvix"
       $ \case
         ErrWrongType {} -> Nothing
@@ -99,21 +99,21 @@ tests =
         _ -> wrongError,
     NegTest
       "Wrong return type name for a constructor of a simple data type"
-      "MicroJuvix"
+      "Internal"
       "WrongReturnType.juvix"
       $ \case
         ErrWrongReturnType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Too few arguments for the return type of a constructor"
-      "MicroJuvix"
+      "Internal"
       "WrongReturnTypeTooFewArguments.juvix"
       $ \case
         ErrWrongType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Too many arguments for the return type of a constructor"
-      "MicroJuvix"
+      "Internal"
       "WrongReturnTypeTooManyArguments.juvix"
       $ \case
         ErrExpectedFunctionType {} -> Nothing
@@ -122,39 +122,39 @@ tests =
 
 negPositivityTests :: [NegTest]
 negPositivityTests =
-  [ NegTest "E1" "MicroJuvix/Positivity" "E1.juvix" $
+  [ NegTest "E1" "Internal/Positivity" "E1.juvix" $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E2" "MicroJuvix/Positivity" "E2.juvix" $
+    NegTest "E2" "Internal/Positivity" "E2.juvix" $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E3" "MicroJuvix/Positivity" "E3.juvix" $
+    NegTest "E3" "Internal/Positivity" "E3.juvix" $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E4" "MicroJuvix/Positivity" "E4.juvix" $
+    NegTest "E4" "Internal/Positivity" "E4.juvix" $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E5" "MicroJuvix/Positivity" "E5.juvix" $
+    NegTest "E5" "Internal/Positivity" "E5.juvix" $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E6" "MicroJuvix/Positivity" "E6.juvix" $
+    NegTest "E6" "Internal/Positivity" "E6.juvix" $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E7" "MicroJuvix/Positivity" "E7.juvix" $
+    NegTest "E7" "Internal/Positivity" "E7.juvix" $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E8" "MicroJuvix/Positivity" "E8.juvix" $
+    NegTest "E8" "Internal/Positivity" "E8.juvix" $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E9" "MicroJuvix/Positivity" "E9.juvix" $
+    NegTest "E9" "Internal/Positivity" "E9.juvix" $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError

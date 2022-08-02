@@ -14,24 +14,24 @@ $ juvix internal microjuvix typecheck
 > /Provide.*/
 >= 1
 
-$ juvix internal microjuvix typecheck tests/positive/MicroJuvix/Simple.juvix
+$ juvix internal microjuvix typecheck tests/positive/Internal/Simple.juvix
 >
 Well done! It type checks
 >= 0
 
-$ juvix internal --only-errors microjuvix typecheck tests/positive/MicroJuvix/Simple.juvix
+$ juvix internal --only-errors microjuvix typecheck tests/positive/Internal/Simple.juvix
 >
 >= 0
 
-$ juvix internal microjuvix typecheck --only-errors tests/positive/MicroJuvix/Simple.juvix
+$ juvix internal microjuvix typecheck --only-errors tests/positive/Internal/Simple.juvix
 >
 >= 0
 
-$ juvix internal microjuvix typecheck tests/positive/MicroJuvix/Simple.juvix --only-errors
+$ juvix internal microjuvix typecheck tests/positive/Internal/Simple.juvix --only-errors
 >
 >= 0
 
-$ juvix internal microjuvix typecheck tests/negative/MicroJuvix/MultiWrongType.juvix --no-colors
+$ juvix internal microjuvix typecheck tests/negative/Internal/MultiWrongType.juvix --no-colors
 >2 /(.+)\/([^\/]+)\.juvix\:11\:7\-8\: error.*
 .*/
 >= 1
