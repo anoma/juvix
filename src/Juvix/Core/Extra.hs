@@ -9,6 +9,7 @@ import Data.HashSet qualified as HashSet
 import Juvix.Core.Extra.Base
 import Juvix.Core.Extra.Recursors
 import Juvix.Core.Language
+import Juvix.Core.Language.Info qualified as Info
 
 -- `isClosed` may short-circuit evaluation due to the use of `&&`, so it's not
 -- entirely reducible to `getFreeVars` in terms of computation time.
@@ -124,3 +125,6 @@ etaExpandConstrs argsNum = umap go
         | argsNum constrTag > length constrArgs ->
             etaExpand (argsNum constrTag - length constrArgs) n
       _ -> n
+
+removeInfo :: IsInfo i => Key i -> Node -> Node
+removeInfo k = umap (modifyInfo (Info.delete k))

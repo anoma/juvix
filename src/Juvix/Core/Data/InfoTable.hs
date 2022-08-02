@@ -1,4 +1,4 @@
-module Juvix.Core.Types.InfoTable where
+module Juvix.Core.Data.InfoTable where
 
 import Juvix.Core.Language
 import Juvix.Core.Language.Type

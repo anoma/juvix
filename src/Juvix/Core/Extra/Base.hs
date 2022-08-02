@@ -25,36 +25,42 @@ getArgs = snd . unfoldType
 {------------------------------------------------------------------------}
 {- functions on Node -}
 
-mkApp :: Node -> [(Info, Node)] -> Node
-mkApp = foldl' (\acc (i, n) -> App i acc n)
+mkApp' :: Node -> [(Info, Node)] -> Node
+mkApp' = foldl' (\acc (i, n) -> App i acc n)
 
-mkApp' :: Node -> [Node] -> Node
-mkApp' = foldl' (App Info.empty)
+mkApp :: Node -> [Node] -> Node
+mkApp = foldl' (App Info.empty)
 
-unfoldApp :: Node -> (Node, [(Info, Node)])
-unfoldApp = go []
+unfoldApp' :: Node -> (Node, [(Info, Node)])
+unfoldApp' = go []
   where
     go :: [(Info, Node)] -> Node -> (Node, [(Info, Node)])
     go acc n = case n of
       App i l r -> go ((i, r) : acc) l
       _ -> (n, acc)
 
-mkLambdas :: [Info] -> Node -> Node
-mkLambdas is n = foldr Lambda n is
+unfoldApp :: Node -> (Node, [Node])
+unfoldApp = second (map snd) . unfoldApp'
 
-mkLambdas' :: Int -> Node -> Node
-mkLambdas' k = mkLambdas (replicate k Info.empty)
+mkLambdas' :: [Info] -> Node -> Node
+mkLambdas' is n = foldr Lambda n is
 
-unfoldLambdas :: Node -> ([Info], Node)
-unfoldLambdas = go []
+mkLambdas :: Int -> Node -> Node
+mkLambdas k = mkLambdas' (replicate k Info.empty)
+
+unfoldLambdas' :: Node -> ([Info], Node)
+unfoldLambdas' = go []
   where
     go :: [Info] -> Node -> ([Info], Node)
     go acc n = case n of
       Lambda i b -> go (i : acc) b
       _ -> (acc, n)
 
+unfoldLambdas :: Node -> (Int, Node)
+unfoldLambdas = first length . unfoldLambdas'
+
 etaExpand :: Int -> Node -> Node
-etaExpand k n = mkLambdas' k (mkApp' n (map (Var Info.empty) [0 .. k - 1]))
+etaExpand k n = mkLambdas k (mkApp n (map (Var Info.empty) [0 .. k - 1]))
 
 -- `NodeDetails` is a convenience datatype which provides the most commonly needed
 -- information about a node in a generic fashion.

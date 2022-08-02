@@ -12,7 +12,7 @@ import GHC.Show
 import Juvix.Core.Extra
 import Juvix.Core.Language
 import Juvix.Core.Language.Info qualified as Info
-import Juvix.Core.Types.InfoTable
+import Juvix.Core.Data.InfoTable
 
 newtype EvalError = EvalError String
 
