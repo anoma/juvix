@@ -87,7 +87,7 @@ destruct = \case
   Axiom i -> NodeDetails i [] [] [] (\i' _ -> Axiom i')
   App i l r -> NodeDetails i [l, r] [0, 0] [Nothing, Nothing] (\i' args' -> App i' (hd args') (args' !! 1))
   BuiltinApp i op args -> NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`BuiltinApp` op)
-  ConstructorApp i tag args -> NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`ConstructorApp` tag)
+  ConstrApp i tag args -> NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`ConstrApp` tag)
   Lambda i b -> NodeDetails i [b] [1] [fetchBinderInfo i] (\i' args' -> Lambda i' (hd args'))
   Let i v b -> NodeDetails i [v, b] [0, 1] [Nothing, fetchBinderInfo i] (\i' args' -> Let i' (hd args') (args' !! 1))
   Case i v bs Nothing ->

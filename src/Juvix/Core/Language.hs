@@ -59,7 +59,7 @@ data Node
     BuiltinApp {builtinInfo :: !Info, builtinOp :: !BuiltinOp, builtinArgs :: ![Node]}
   | -- A data constructor application. The number of arguments supplied must be
     -- equal to the number of arguments expected by the constructor.
-    ConstructorApp
+    ConstrApp
       { constructorInfo :: !Info,
         constructorTag :: !Tag,
         constructorArgs :: ![Node]

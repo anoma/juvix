@@ -91,7 +91,7 @@ convertData = umap go
   where
     go :: Node -> Node
     go n = case n of
-      Data i tag args -> ConstructorApp i tag args
+      Data i tag args -> ConstrApp i tag args
       _ -> n
 
 convertSuspended :: Node -> Node
@@ -115,12 +115,12 @@ etaExpandBuiltins = umap go
             etaExpand (builtinOpArgsNum builtinOp - length builtinArgs) n
       _ -> n
 
-etaExpandConstructors :: (Tag -> Int) -> Node -> Node
-etaExpandConstructors argsNum = umap go
+etaExpandConstrs :: (Tag -> Int) -> Node -> Node
+etaExpandConstrs argsNum = umap go
   where
     go :: Node -> Node
     go n = case n of
-      ConstructorApp {..}
+      ConstrApp {..}
         | argsNum constructorTag > length constructorArgs ->
             etaExpand (argsNum constructorTag - length constructorArgs) n
       _ -> n
