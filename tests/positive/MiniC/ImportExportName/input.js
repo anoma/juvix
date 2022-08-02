@@ -11,7 +11,8 @@ function cstrlen(mem, ptr) {
     return len;
 }
 
-function ptrToCstr(wasmMemory, ptr) {
+function ptrToCstr(ptr) {
+    const wasmMemory = wasmModule.instance.exports.memory.buffer;
     const mem = new Uint8Array(wasmMemory);
     const len = cstrlen(mem, ptr);
     const bytes = new Uint8Array(wasmMemory, ptr, len);
@@ -19,8 +20,7 @@ function ptrToCstr(wasmMemory, ptr) {
 }
 
 function hostDisplayString(strPtr) {
-    const wasmMemory = wasmModule.instance.exports.memory.buffer;
-    const text = ptrToCstr(wasmMemory, strPtr);
+    const text = ptrToCstr(strPtr);
     console.log(text);
 }
 
