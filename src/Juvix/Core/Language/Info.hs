@@ -22,7 +22,7 @@ makeLenses ''Info
 empty :: Info
 empty = Info HashMap.empty
 
-member :: IsInfo a => Key a -> Info -> Bool
+member :: forall a. IsInfo a => Key a -> Info -> Bool
 member k i = HashMap.member (typeRep k) (i ^. infoMap)
 
 lookup :: IsInfo a => Key a -> Info -> Maybe a

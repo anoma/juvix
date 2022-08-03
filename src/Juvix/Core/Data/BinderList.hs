@@ -39,7 +39,7 @@ extend a bl =
     (HashMap.insert (bl ^. blLength) a (bl ^. blMap))
 
 map :: (a -> b) -> BinderList a -> BinderList b
-map f bl = bl{_blMap = HashMap.map f (bl ^. blMap)}
+map f bl = bl {_blMap = HashMap.map f (bl ^. blMap)}
 
 prepend :: [a] -> BinderList a -> BinderList a
 prepend l bl = foldr extend bl l

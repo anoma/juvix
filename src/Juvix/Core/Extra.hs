@@ -126,5 +126,8 @@ etaExpandConstrs argsNum = umap go
             etaExpand (argsNum constrTag - length constrArgs) n
       _ -> n
 
+mapInfo :: (Info -> Info) -> Node -> Node
+mapInfo f = umap (modifyInfo f)
+
 removeInfo :: IsInfo i => Key i -> Node -> Node
-removeInfo k = umap (modifyInfo (Info.delete k))
+removeInfo k = mapInfo (Info.delete k)
