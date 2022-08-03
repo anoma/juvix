@@ -9,10 +9,10 @@ module Juvix.Core.Evaluator where
 import Control.Exception qualified as Exception
 import Data.HashMap.Strict ((!))
 import GHC.Show
+import Juvix.Core.Data.InfoTable
 import Juvix.Core.Extra
 import Juvix.Core.Language
 import Juvix.Core.Language.Info qualified as Info
-import Juvix.Core.Data.InfoTable
 
 newtype EvalError = EvalError String
 
