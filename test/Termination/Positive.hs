@@ -1,7 +1,7 @@
 module Termination.Positive where
 
 import Base
-import Juvix.Pipeline
+import Juvix.Compiler.Pipeline
 import Termination.Negative qualified as N
 
 data PosTest = PosTest
@@ -21,7 +21,7 @@ testDescr PosTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint = (defaultEntryPoint _file) {_entryPointNoStdlib = True}
-            (void . runIO) (upToMicroJuvix entryPoint)
+            (void . runIO) (upToInternal entryPoint)
         }
 
 --------------------------------------------------------------------------------
@@ -48,7 +48,7 @@ testDescrFlag N.NegTest {..} =
                       _entryPointModulePaths = pure _file
                     }
 
-            (void . runIO) (upToMicroJuvix entryPoint)
+            (void . runIO) (upToInternal entryPoint)
         }
 
 --------------------------------------------------------------------------------

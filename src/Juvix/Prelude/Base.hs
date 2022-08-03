@@ -159,34 +159,6 @@ import Text.Show (Show)
 import Text.Show qualified as Show
 
 --------------------------------------------------------------------------------
--- High-level syntax sugar.
---------------------------------------------------------------------------------
-
--- Lift a map.
-(|<<) ::
-  forall a b f.
-  (Functor f) =>
-  (a -> b) ->
-  -----------
-  f a ->
-  f b
-(|<<) = fmap
-
-infixr 1 |<<
-
--- Apply a lifted map.
-(>>|) :: forall a b f. (Functor f) => f a -> (a -> b) -> f b
-(>>|) = flip fmap
-
-infixl 1 >>|
-
--- Postfix funciton application.
-(|>) :: a -> (a -> b) -> b
-(|>) = (&)
-
-infixl 1 |>
-
---------------------------------------------------------------------------------
 
 traverseM ::
   (Monad m, Traversable m, Applicative f) =>

@@ -1,8 +1,8 @@
 module Scope.Negative (allTests) where
 
 import Base
-import Juvix.Pipeline
-import Juvix.Syntax.Concrete.Scoped.Error
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
+import Juvix.Compiler.Pipeline
 
 type FailMsg = String
 

@@ -1,7 +1,7 @@
 module Commands.Html where
 
+import Juvix.Compiler.Backend.Html.Data.Theme
 import Juvix.Prelude hiding (Doc)
-import Juvix.Syntax.Concrete.Scoped.Pretty.Html hiding (HtmlOptions)
 import Options.Applicative
 
 data HtmlOptions = HtmlOptions

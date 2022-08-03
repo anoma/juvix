@@ -2,14 +2,14 @@ module Scope.Positive where
 
 import Base
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Analysis.Scoping.Scoper qualified as Scoper
-import Juvix.Internal.NameIdGen
-import Juvix.Parsing.Parser qualified as Parser
-import Juvix.Pipeline
-import Juvix.Pipeline.Setup
+import Juvix.Compiler.Concrete qualified as Concrete
+import Juvix.Compiler.Concrete.Extra
+import Juvix.Compiler.Concrete.Pretty qualified as M
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
+import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
+import Juvix.Compiler.Pipeline
+import Juvix.Compiler.Pipeline.Setup
 import Juvix.Prelude.Pretty
-import Juvix.Syntax.Concrete.Scoped.Pretty qualified as M
-import Juvix.Syntax.Concrete.Scoped.Utils
 
 data PosTest = PosTest
   { _name :: String,
@@ -62,7 +62,7 @@ testDescr PosTest {..} =
               runIO
                 ( do
                     void (entrySetup entryPoint)
-                    pipelineScoper p
+                    Concrete.fromParsed p
                 )
 
             let s2 = head (s ^. Scoper.resultModules)

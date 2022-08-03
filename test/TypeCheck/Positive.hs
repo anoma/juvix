@@ -1,7 +1,7 @@
 module TypeCheck.Positive where
 
 import Base
-import Juvix.Pipeline
+import Juvix.Compiler.Pipeline
 import TypeCheck.Negative qualified as N
 
 data PosTest = PosTest
@@ -21,7 +21,7 @@ testDescr PosTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint = defaultEntryPoint _file
-            (void . runIO) (upToMicroJuvixTyped entryPoint)
+            (void . runIO) (upToInternalTyped entryPoint)
         }
 
 --------------------------------------------------------------------------------
@@ -48,7 +48,7 @@ testNoPositivityFlag N.NegTest {..} =
                       _entryPointModulePaths = pure _file
                     }
 
-            (void . runIO) (upToMicroJuvix entryPoint)
+            (void . runIO) (upToInternal entryPoint)
         }
 
 negPositivityTests :: [N.NegTest]
@@ -58,7 +58,7 @@ testPositivityKeyword :: [PosTest]
 testPositivityKeyword =
   [ PosTest
       "Mark T0 data type as strictly positive"
-      "MicroJuvix/Positivity"
+      "Internal/Positivity"
       "E5.juvix"
   ]
 
@@ -90,19 +90,19 @@ tests :: [PosTest]
 tests =
   [ PosTest
       "Simple"
-      "MicroJuvix"
+      "Internal"
       "Simple.juvix",
     PosTest
       "Literal String matches any type"
-      "MicroJuvix"
+      "Internal"
       "LiteralString.juvix",
     PosTest
       "Box type"
-      "MicroJuvix"
+      "Internal"
       "Box.juvix",
     PosTest
       "Literal Int matches any type"
-      "MicroJuvix"
+      "Internal"
       "LiteralInt.juvix",
     PosTest
       "GHC backend Hello World"
@@ -130,7 +130,7 @@ tests =
       "Operators.juvix",
     PosTest
       "Holes in type signature"
-      "MicroJuvix"
+      "Internal"
       "HoleInSignature.juvix",
     PosTest
       "Polymorphism and higher rank functions"
@@ -142,7 +142,7 @@ tests =
       "PolymorphismHoles.juvix",
     PosTest
       "Implicit arguments"
-      "MicroJuvix"
+      "Internal"
       "Implicit.juvix",
     PosTest
       "Simple type alias"

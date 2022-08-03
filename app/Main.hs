@@ -2,37 +2,37 @@ module Main (main) where
 
 import App
 import CLI
-import Commands.Internal.Termination as Termination
+import Commands.Dev.Termination as Termination
 import Control.Exception qualified as IO
 import Control.Monad.Extra
 import Data.ByteString qualified as ByteString
 import Data.HashMap.Strict qualified as HashMap
 import Data.Yaml
-import Juvix.Analysis.Scoping.Scoper qualified as Scoper
-import Juvix.Analysis.Termination qualified as Termination
-import Juvix.Analysis.TypeChecking qualified as MicroTyped
-import Juvix.Documentation.Compiler qualified as Doc
-import Juvix.Parsing.Parser qualified as Parser
-import Juvix.Pipeline
+import Juvix.Compiler.Abstract.Data.InfoTable qualified as Abstract
+import Juvix.Compiler.Abstract.Language qualified as Abstract
+import Juvix.Compiler.Abstract.Pretty qualified as Abstract
+import Juvix.Compiler.Abstract.Translation.FromConcrete qualified as Abstract
+import Juvix.Compiler.Backend.C.Translation.FromInternal qualified as MiniC
+import Juvix.Compiler.Backend.Haskell.Pretty qualified as MiniHaskell
+import Juvix.Compiler.Backend.Haskell.Translation.FromMono qualified as MiniHaskell
+import Juvix.Compiler.Backend.Html.Translation.FromScoped qualified as Doc
+import Juvix.Compiler.Backend.Html.Translation.FromScoped qualified as Html
+import Juvix.Compiler.Concrete.Data.Highlight qualified as Highlight
+import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoper
+import Juvix.Compiler.Concrete.Pretty qualified as Scoper
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
+import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
+import Juvix.Compiler.Internal.Pretty qualified as Micro
+import Juvix.Compiler.Internal.Translation.FromAbstract qualified as Micro
+import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination qualified as Termination
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as MicroArity
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as MicroTyped
+import Juvix.Compiler.Mono.Pretty qualified as Mono
+import Juvix.Compiler.Mono.Translation.FromInternal qualified as Mono
+import Juvix.Compiler.Pipeline
+import Juvix.Extra.Version (runDisplayVersion)
 import Juvix.Prelude hiding (Doc)
 import Juvix.Prelude.Pretty hiding (Doc)
-import Juvix.Syntax.Abstract.InfoTable qualified as Abstract
-import Juvix.Syntax.Abstract.Language qualified as Abstract
-import Juvix.Syntax.Abstract.Pretty qualified as Abstract
-import Juvix.Syntax.Concrete.Scoped.Highlight qualified as Highlight
-import Juvix.Syntax.Concrete.Scoped.InfoTable qualified as Scoper
-import Juvix.Syntax.Concrete.Scoped.Pretty qualified as Scoper
-import Juvix.Syntax.Concrete.Scoped.Pretty.Html qualified as Html
-import Juvix.Syntax.MicroJuvix.MicroJuvixArityResult qualified as MicroArity
-import Juvix.Syntax.MicroJuvix.Pretty qualified as Micro
-import Juvix.Syntax.MiniHaskell.Pretty qualified as MiniHaskell
-import Juvix.Syntax.MonoJuvix.Pretty qualified as Mono
-import Juvix.Translation.AbstractToMicroJuvix qualified as Micro
-import Juvix.Translation.MicroJuvixToMiniC qualified as MiniC
-import Juvix.Translation.MicroJuvixToMonoJuvix qualified as Mono
-import Juvix.Translation.MonoJuvixToMiniHaskell qualified as MiniHaskell
-import Juvix.Translation.ScopedToAbstract qualified as Abstract
-import Juvix.Utils.Version (runDisplayVersion)
 import Options.Applicative
 import System.Environment (getProgName)
 import System.Process qualified as Process
@@ -96,7 +96,7 @@ runCommand cmdWithOpts = do
       toAnsiText' = toAnsiText (not (globalOpts ^. globalNoColors))
   (root, pkg) <- embed (findRoot cmdWithOpts)
   case cmd of
-    (Internal DisplayRoot) -> say (pack root)
+    (Dev DisplayRoot) -> say (pack root)
     _ -> do
       -- Other commands require an entry point:
       case getEntryPoint root pkg globalOpts of
@@ -105,7 +105,7 @@ runCommand cmdWithOpts = do
           where
             commandHelper = \case
               -- Visible commands
-              Check -> commandHelper (Internal (MicroJuvix (TypeCheck mempty)))
+              Check -> commandHelper (Dev (Internal (TypeCheck mempty)))
               Compile localOpts -> do
                 miniC <- (^. MiniC.resultCCode) <$> runPipeline (upToMiniC entryPoint)
                 let inputFile = entryPoint ^. mainModulePath
@@ -117,7 +117,7 @@ runCommand cmdWithOpts = do
                 res <- runPipeline (upToScoping entryPoint)
                 let m = head (res ^. Scoper.resultModules)
                 embed (Html.genHtml Scoper.defaultOptions _htmlRecursive _htmlTheme _htmlOutputDir _htmlPrintMetadata m)
-              (Internal cmd') -> case cmd' of
+              (Dev cmd') -> case cmd' of
                 Highlight -> do
                   res <- runPipelineEither (upToScoping entryPoint)
                   case res of
@@ -155,20 +155,20 @@ runCommand cmdWithOpts = do
                   let docDir = localOpts ^. docOutputDir
                   runReader entryPoint (Doc.compileModuleHtmlText docDir "proj" l)
                   embed (when (localOpts ^. docOpen) (Process.callProcess "xdg-open" [docDir </> Doc.indexFileName]))
-                MicroJuvix Pretty -> do
+                Internal Pretty -> do
                   micro <-
                     head . (^. Micro.resultModules)
-                      <$> runPipeline (upToMicroJuvix entryPoint)
+                      <$> runPipeline (upToInternal entryPoint)
                   let ppOpts =
                         Micro.defaultOptions
                           { Micro._optShowNameIds = globalOpts ^. globalShowNameIds
                           }
                   App.renderStdOut (Micro.ppOut ppOpts micro)
-                MicroJuvix Arity -> do
-                  micro <- head . (^. MicroArity.resultModules) <$> runPipeline (upToMicroJuvixArity entryPoint)
+                Internal Arity -> do
+                  micro <- head . (^. MicroArity.resultModules) <$> runPipeline (upToInternalArity entryPoint)
                   App.renderStdOut (Micro.ppOut Micro.defaultOptions micro)
-                MicroJuvix (TypeCheck localOpts) -> do
-                  res <- runPipeline (upToMicroJuvixTyped entryPoint)
+                Internal (TypeCheck localOpts) -> do
+                  res <- runPipeline (upToInternalTyped entryPoint)
                   say "Well done! It type checks"
                   when (localOpts ^. microJuvixTypePrint) $ do
                     let ppOpts =

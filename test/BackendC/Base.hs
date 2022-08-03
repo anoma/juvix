@@ -3,8 +3,8 @@ module BackendC.Base where
 import Base
 import Data.FileEmbed
 import Data.Text.IO qualified as TIO
-import Juvix.Pipeline
-import Juvix.Translation.MicroJuvixToMiniC as MiniC
+import Juvix.Compiler.Backend.C.Translation.FromInternal as MiniC
+import Juvix.Compiler.Pipeline
 import System.IO.Extra (withTempDir)
 import System.Process qualified as P
 
@@ -77,7 +77,7 @@ wasiClangAssertion stdlibMode mainFile expectedFile stdinText step = do
   assertEqDiff ("check: WASM output = " <> expectedFile) actualLibc expected
 
 builtinRuntime :: FilePath
-builtinRuntime = $(makeRelativeToProject "minic-runtime/builtins" >>= strToExp)
+builtinRuntime = $(makeRelativeToProject "c-runtime/builtins" >>= strToExp)
 
 standaloneArgs :: FilePath -> FilePath -> [String]
 standaloneArgs wasmOutputFile cOutputFile =
@@ -99,9 +99,9 @@ standaloneArgs wasmOutputFile cOutputFile =
   ]
   where
     minicRuntime :: FilePath
-    minicRuntime = $(makeRelativeToProject "minic-runtime/standalone/minic-runtime.h" >>= strToExp)
+    minicRuntime = $(makeRelativeToProject "c-runtime/standalone/c-runtime.h" >>= strToExp)
     wallocPath :: FilePath
-    wallocPath = $(makeRelativeToProject "minic-runtime/walloc/walloc.c" >>= strToExp)
+    wallocPath = $(makeRelativeToProject "c-runtime/walloc/walloc.c" >>= strToExp)
 
 wasiStandaloneArgs :: FilePath -> FilePath -> FilePath -> [String]
 wasiStandaloneArgs sysrootPath wasmOutputFile cOutputFile =
@@ -123,9 +123,9 @@ wasiStandaloneArgs sysrootPath wasmOutputFile cOutputFile =
   ]
   where
     minicRuntime :: FilePath
-    minicRuntime = $(makeRelativeToProject "minic-runtime/wasi-standalone/minic-runtime.h" >>= strToExp)
+    minicRuntime = $(makeRelativeToProject "c-runtime/wasi-standalone/c-runtime.h" >>= strToExp)
     wallocPath :: FilePath
-    wallocPath = $(makeRelativeToProject "minic-runtime/walloc/walloc.c" >>= strToExp)
+    wallocPath = $(makeRelativeToProject "c-runtime/walloc/walloc.c" >>= strToExp)
 
 libcArgs :: FilePath -> FilePath -> FilePath -> [String]
 libcArgs sysrootPath wasmOutputFile cOutputFile =
@@ -147,4 +147,4 @@ libcArgs sysrootPath wasmOutputFile cOutputFile =
   ]
   where
     minicRuntime :: FilePath
-    minicRuntime = $(makeRelativeToProject "minic-runtime/wasi-libc/minic-runtime.h" >>= strToExp)
+    minicRuntime = $(makeRelativeToProject "c-runtime/wasi-libc/c-runtime.h" >>= strToExp)

@@ -1,9 +1,9 @@
 module App where
 
 import GlobalOptions
-import Juvix.Pipeline
+import Juvix.Compiler.Pipeline
+import Juvix.Data.Error qualified as Error
 import Juvix.Prelude hiding (Doc)
-import Juvix.Prelude.Error qualified as Error
 import Juvix.Prelude.Pretty hiding (Doc)
 import System.Console.ANSI qualified as Ansi
 
