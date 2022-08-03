@@ -17,6 +17,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
+env:
+  STACKFLAGS: --pedantic
+
 jobs:
   ormolu:
     runs-on: ubuntu-latest
@@ -115,7 +118,7 @@ jobs:
       - name: Build Haskell Project
         run: |
           cd main
-          make ci-build
+          make build
 
   test:
     needs: build
@@ -173,7 +176,7 @@ jobs:
         id: test
         run: |
           cd main
-          make ci-test
+          make test
       - name : Shell tests
         id: shell-tests
         if: matrix.os == 'ubuntu-latest'
@@ -181,7 +184,7 @@ jobs:
           cd main
           echo "$GITHUB_WORKSPACE/.local/bin" >> $GITHUB_PATH
           make install
-          make install-shelltest
+          make install-shelltestrunner
           make test-shell
   docs:
     needs: build
