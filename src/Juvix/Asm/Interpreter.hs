@@ -8,7 +8,7 @@ import Juvix.Asm.Interpreter.Runtime
 import Juvix.Asm.Language
 
 -- The returned Val is the value on top of the value stack at exit, i.e., when
--- executing a toplevel Return. Results in a runtime error if at exit the value
+-- executing a toplevel Return. Throws a runtime error if at exit the value
 -- stack has more than one element.
 runCode :: InfoTable -> Code -> Val
 runCode infoTable = run . evalRuntime . goToplevel
@@ -52,18 +52,32 @@ runCode infoTable = run . evalRuntime . goToplevel
         args <- replicateM allocClosureArgsNum popValueStack
         pushValueStack (ValClosure (Closure allocClosureFunSymbol (reverse args)))
         goCode cont
+      ExtendClosure {..} -> do
+        v <- popValueStack
+        case v of
+          ValClosure cl -> do
+            args <- replicateM extendClosureArgsNum popValueStack
+            pushValueStack
+              ( ValClosure
+                  ( Closure
+                      (cl ^. closureSymbol)
+                      (cl ^. closureArgs ++ reverse args)
+                  )
+              )
+            goCode cont
+          _ -> error "invalid closure extension: expected closure on top of value stack"
       Branch {..} -> do
         v <- popValueStack
         case v of
           ValBool True -> goCode branchTrue
           ValBool False -> goCode branchFalse
-          _ -> error "branch on a non-boolean"
+          _ -> error "branch on non-boolean"
         goCode cont
       Case {..} -> do
         v <- popValueStack
         case v of
           ValConstr c -> branch (c ^. constrTag) caseBranches caseDefault
-          _ -> error "case on a non-data"
+          _ -> error "case on non-data"
         goCode cont
         where
           branch :: Member Runtime r => Tag -> [CaseBranch] -> Maybe Code -> Sem r ()

@@ -1,8 +1,8 @@
 module Juvix.Asm.Translation.Extra.InfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Asm.Language
 import Juvix.Asm.Data.InfoTable
+import Juvix.Asm.Language
 
 data InfoTableBuilder m a where
   RegisterFunction :: FunctionInfo -> InfoTableBuilder m ()

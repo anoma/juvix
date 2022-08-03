@@ -81,8 +81,6 @@ data Continuation = Continuation
     _contCode :: Code
   }
 
-
-
 {-
   The following types of values may be stored in the heap or an activation
   frame.

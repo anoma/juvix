@@ -86,6 +86,13 @@ data Instruction
     -- arguments are popped from the stack and stored in the closure at
     -- _decreasing_ offsets. The result is pushed on top of the stack.
     AllocClosure {allocClosureFunSymbol :: Symbol, allocClosureArgsNum :: Int}
+  | -- Extend a closure on top of the stack with more arguments. n =
+    -- extendClosureArgsNum indicates the number of arguments to extend the
+    -- closure with -- it must be less than the number of arguments expected by
+    -- the closure. Pops the closure from the stack, pops n additional arguments
+    -- from the stack and extends the closure with them in _decreasing_ order,
+    -- then pushes the extended closure on top of the stack.
+    ExtendClosure {extendClosureArgsNum :: Int}
   | -- Branch based on a boolean value on top of the stack, pop the stack.
     Branch {branchTrue :: Code, branchFalse :: Code}
   | -- Branch based on the tag of the constructor data on top of the stack, pop
