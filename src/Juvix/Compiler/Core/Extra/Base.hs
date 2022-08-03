@@ -1,11 +1,11 @@
-module Juvix.Core.Extra.Base where
+module Juvix.Compiler.Core.Extra.Base where
 
 import Data.Functor.Identity
 import Data.List qualified as List
-import Juvix.Core.Language
-import Juvix.Core.Language.Info qualified as Info
-import Juvix.Core.Language.Info.BinderInfo
-import Juvix.Core.Language.Type
+import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Language.Info qualified as Info
+import Juvix.Compiler.Core.Language.Info.BinderInfo
+import Juvix.Compiler.Core.Language.Type
 
 {------------------------------------------------------------------------}
 {- functions on Type -}

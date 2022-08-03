@@ -1,11 +1,10 @@
-module Juvix.Core.Language.Base
+module Juvix.Compiler.Core.Language.Base
   ( Info,
     Key,
     IsInfo,
-    module Juvix.Core.Language.Builtins,
+    module Juvix.Compiler.Core.Language.Builtins,
     module Juvix.Prelude,
-    module Juvix.Prelude.Loc,
-    module Juvix.Syntax.Abstract.Name,
+    module Juvix.Compiler.Abstract.Data.Name,
     Location,
     Symbol,
     Tag,
@@ -13,11 +12,10 @@ module Juvix.Core.Language.Base
   )
 where
 
-import Juvix.Core.Language.Builtins
-import Juvix.Core.Language.Info (Info, IsInfo, Key)
+import Juvix.Compiler.Abstract.Data.Name
+import Juvix.Compiler.Core.Language.Builtins
+import Juvix.Compiler.Core.Language.Info (Info, IsInfo, Key)
 import Juvix.Prelude
-import Juvix.Prelude.Loc
-import Juvix.Syntax.Abstract.Name
 
 type Location = Interval
 

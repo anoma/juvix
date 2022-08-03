@@ -1,6 +1,6 @@
-module Juvix.Core.Language.Info.ArgsNumInfo where
+module Juvix.Compiler.Core.Language.Info.ArgsNumInfo where
 
-import Juvix.Core.Language.Base
+import Juvix.Compiler.Core.Language.Base
 
 newtype ArgsNumInfo = ArgsNumInfo
   { _infoArgsNum :: Int

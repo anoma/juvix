@@ -1,15 +1,15 @@
-module Juvix.Core.Extra.Recursors
-  ( module Juvix.Core.Extra.Recursors,
+module Juvix.Compiler.Core.Extra.Recursors
+  ( module Juvix.Compiler.Core.Extra.Recursors,
     BinderList,
   )
 where
 
 import Data.Functor.Identity
-import Juvix.Core.Data.BinderList (BinderList)
-import Juvix.Core.Data.BinderList qualified as BL
-import Juvix.Core.Extra.Base
-import Juvix.Core.Language
-import Juvix.Core.Language.Info.BinderInfo
+import Juvix.Compiler.Core.Data.BinderList (BinderList)
+import Juvix.Compiler.Core.Data.BinderList qualified as BL
+import Juvix.Compiler.Core.Extra.Base
+import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Language.Info.BinderInfo
 
 {---------------------------------------------------------------------------------}
 {- General recursors on Node  -}

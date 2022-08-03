@@ -1,7 +1,7 @@
-module Juvix.Core.Language.Info.BinderInfo where
+module Juvix.Compiler.Core.Language.Info.BinderInfo where
 
-import Juvix.Core.Language.Base
-import Juvix.Core.Language.Type
+import Juvix.Compiler.Core.Language.Base
+import Juvix.Compiler.Core.Language.Type
 
 data BinderInfo = BinderInfo
   { _infoName :: Name,

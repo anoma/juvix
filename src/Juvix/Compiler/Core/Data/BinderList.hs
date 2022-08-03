@@ -1,8 +1,8 @@
-module Juvix.Core.Data.BinderList where
+module Juvix.Compiler.Core.Data.BinderList where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.List qualified as List
-import Juvix.Core.Language.Base
+import Juvix.Compiler.Core.Language.Base
 
 data BinderList a = BinderList
   { _blLength :: Int,

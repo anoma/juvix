@@ -1,15 +1,15 @@
-module Juvix.Core.Extra
-  ( module Juvix.Core.Extra,
-    module Juvix.Core.Extra.Base,
-    module Juvix.Core.Extra.Recursors,
+module Juvix.Compiler.Core.Extra
+  ( module Juvix.Compiler.Core.Extra,
+    module Juvix.Compiler.Core.Extra.Base,
+    module Juvix.Compiler.Core.Extra.Recursors,
   )
 where
 
 import Data.HashSet qualified as HashSet
-import Juvix.Core.Extra.Base
-import Juvix.Core.Extra.Recursors
-import Juvix.Core.Language
-import Juvix.Core.Language.Info qualified as Info
+import Juvix.Compiler.Core.Extra.Base
+import Juvix.Compiler.Core.Extra.Recursors
+import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Language.Info qualified as Info
 
 -- `isClosed` may short-circuit evaluation due to the use of `&&`, so it's not
 -- entirely reducible to `getFreeVars` in terms of computation time.

@@ -1,7 +1,7 @@
-module Juvix.Core.Data.InfoTable where
+module Juvix.Compiler.Core.Data.InfoTable where
 
-import Juvix.Core.Language
-import Juvix.Core.Language.Type
+import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Language.Type
 
 type IdentContext = HashMap Symbol Node
 

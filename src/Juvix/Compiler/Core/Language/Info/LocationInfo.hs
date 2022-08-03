@@ -1,6 +1,6 @@
-module Juvix.Core.Language.Info.LocationInfo where
+module Juvix.Compiler.Core.Language.Info.LocationInfo where
 
-import Juvix.Core.Language.Base
+import Juvix.Compiler.Core.Language.Base
 
 newtype LocationInfo = LocationInfo {_infoLocation :: Location}
 

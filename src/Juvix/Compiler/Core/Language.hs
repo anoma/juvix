@@ -3,9 +3,9 @@
 
 {-# HLINT ignore "Avoid restricted flags" #-}
 
-module Juvix.Core.Language
-  ( module Juvix.Core.Language,
-    module Juvix.Core.Language.Base,
+module Juvix.Compiler.Core.Language
+  ( module Juvix.Compiler.Core.Language,
+    module Juvix.Compiler.Core.Language.Base,
   )
 where
 
@@ -13,7 +13,7 @@ where
   This file defines the tree representation of JuvixCore (Node datatype).
 -}
 
-import Juvix.Core.Language.Base
+import Juvix.Compiler.Core.Language.Base
 
 {---------------------------------------------------------------------------------}
 {- Program tree datatype -}

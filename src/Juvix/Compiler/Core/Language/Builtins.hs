@@ -1,4 +1,4 @@
-module Juvix.Core.Language.Builtins where
+module Juvix.Compiler.Core.Language.Builtins where
 
 import Juvix.Prelude
 

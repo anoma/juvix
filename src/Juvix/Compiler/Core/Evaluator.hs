@@ -4,15 +4,15 @@
 {-# HLINT ignore "Avoid restricted extensions" #-}
 {-# HLINT ignore "Avoid restricted flags" #-}
 
-module Juvix.Core.Evaluator where
+module Juvix.Compiler.Core.Evaluator where
 
 import Control.Exception qualified as Exception
 import Data.HashMap.Strict ((!))
 import GHC.Show
-import Juvix.Core.Data.InfoTable
-import Juvix.Core.Extra
-import Juvix.Core.Language
-import Juvix.Core.Language.Info qualified as Info
+import Juvix.Compiler.Core.Data.InfoTable
+import Juvix.Compiler.Core.Extra
+import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Language.Info qualified as Info
 
 newtype EvalError = EvalError String
 
