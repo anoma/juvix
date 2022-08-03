@@ -116,10 +116,4 @@ data CaseBranch = CaseBranch {caseTag :: !Tag, caseBindersNum :: !Int, caseBranc
 -- doesn't matter much outside the evaluator.
 
 -- All nodes in an environment must be values.
---
--- Strictly speaking, representing the environment by a list may result in
--- quadratic complexity in the evaluator if there are many binders. However,
--- this is typically the fastest way in practice. If this ever becomes an issue,
--- we can change Env to use Core.Data.BinderList which has O(1) lookup
--- complexity but larger constant factor.
 type Env = [Node]
