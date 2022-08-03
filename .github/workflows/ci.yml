@@ -81,6 +81,7 @@ jobs:
 
   build:
     runs-on: ${{ matrix.os }}
+    if: ${{ false }}
     strategy:
       matrix:
         os: [ubuntu-latest , macOS-latest]
@@ -122,6 +123,7 @@ jobs:
 
   test:
     needs: build
+    if: ${{ false }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -185,7 +187,7 @@ jobs:
           echo "$GITHUB_WORKSPACE/.local/bin" >> $GITHUB_PATH
           make test-shell
   docs:
-    needs: build
+    #needs: build
     #if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
