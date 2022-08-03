@@ -1,14 +1,14 @@
-module Juvix.Asm.Translation.FromCore where
+module Juvix.Compiler.Asm.Translation.FromCore where
 
 import Data.DList qualified as DL
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Asm.Language
-import Juvix.Core.Data.BinderList qualified as BL
-import Juvix.Core.Data.InfoTable qualified as Core
-import Juvix.Core.Extra qualified as Core
-import Juvix.Core.Language qualified as Core
-import Juvix.Core.Language.Info qualified as Info
-import Juvix.Core.Language.Info.ArgsNumInfo
+import Juvix.Compiler.Asm.Language
+import Juvix.Compiler.Core.Data.BinderList qualified as BL
+import Juvix.Compiler.Core.Data.InfoTable qualified as Core
+import Juvix.Compiler.Core.Extra qualified as Core
+import Juvix.Compiler.Core.Language qualified as Core
+import Juvix.Compiler.Core.Language.Info qualified as Info
+import Juvix.Compiler.Core.Language.Info.ArgsNumInfo
 
 type BinderList = BL.BinderList
 

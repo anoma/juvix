@@ -1,6 +1,6 @@
-module Juvix.Asm.Data.InfoTable where
+module Juvix.Compiler.Asm.Data.InfoTable where
 
-import Juvix.Asm.Language
+import Juvix.Compiler.Asm.Language
 
 data InfoTable = InfoTable
   { _infoFunctions :: HashMap Symbol FunctionInfo,

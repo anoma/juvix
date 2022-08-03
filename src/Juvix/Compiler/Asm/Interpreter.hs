@@ -1,11 +1,11 @@
-module Juvix.Asm.Interpreter where
+module Juvix.Compiler.Asm.Interpreter where
 
 import Control.Monad
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Asm.Data.InfoTable
-import Juvix.Asm.Interpreter.Extra
-import Juvix.Asm.Interpreter.Runtime
-import Juvix.Asm.Language
+import Juvix.Compiler.Asm.Data.InfoTable
+import Juvix.Compiler.Asm.Interpreter.Extra
+import Juvix.Compiler.Asm.Interpreter.Runtime
+import Juvix.Compiler.Asm.Language
 
 -- The returned Val is the value on top of the value stack at exit, i.e., when
 -- executing a toplevel Return. Throws a runtime error if at exit the value

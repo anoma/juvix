@@ -1,8 +1,8 @@
-module Juvix.Asm.Interpreter.Extra where
+module Juvix.Compiler.Asm.Interpreter.Extra where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Asm.Data.InfoTable
-import Juvix.Asm.Interpreter.Runtime
+import Juvix.Compiler.Asm.Data.InfoTable
+import Juvix.Compiler.Asm.Interpreter.Runtime
 import Juvix.Prelude
 
 frameFromFunctionInfo :: FunctionInfo -> [Val] -> Frame

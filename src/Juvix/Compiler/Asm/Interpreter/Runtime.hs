@@ -1,7 +1,7 @@
-module Juvix.Asm.Interpreter.Runtime where
+module Juvix.Compiler.Asm.Interpreter.Runtime where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Asm.Language
+import Juvix.Compiler.Asm.Language
 
 {-
 Memory consists of:

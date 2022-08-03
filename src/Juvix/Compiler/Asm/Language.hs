@@ -2,13 +2,13 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Avoid restricted flags" #-}
-module Juvix.Asm.Language
-  ( module Juvix.Asm.Language,
-    module Juvix.Core.Language.Base,
+module Juvix.Compiler.Asm.Language
+  ( module Juvix.Compiler.Asm.Language,
+    module Juvix.Compiler.Core.Language.Base,
   )
 where
 
-import Juvix.Core.Language.Base
+import Juvix.Compiler.Core.Language.Base
 
 {-
 A JuvixAsm program is a set of JuvixAsm functions. Every function has an
