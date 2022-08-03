@@ -126,8 +126,6 @@ createIndexFile ps = do
                     Just $
                       details ! Attr.open "open" $
                         -- (summary ! Attr.class_ "hide-when-js-enabled" $ "Submodules")
-
-                        -- (summary ! Attr.class_ "hide-when-js-enabled" $ "Submodules")
                         summary "Subtree"
                           <> ul (mconcatMap li c')
 
