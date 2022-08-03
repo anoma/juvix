@@ -62,7 +62,7 @@ $(WEBAPP_EXAMPLES):
 	$(eval OUTPUTDIR=$(EXAMPLE_WEBAPP_OUTPUT)/$(dir $@))
 	mkdir -p ${OUTPUTDIR}
 	juvix compile -r standalone $(EXAMPLEMILESTONE)/$@
-    ls $(dir $(EXAMPLEMILESTONE)/$@)*
+	ls $(dir $(EXAMPLEMILESTONE)/$@)*
 	ls $(dir $(EXAMPLEMILESTONE)/$@)*.{wasm,js,html}
 	cp $(dir $(EXAMPLEMILESTONE)/$@){*.wasm,*.js,*.html} ${OUTPUTDIR}
 
