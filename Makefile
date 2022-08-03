@@ -53,7 +53,16 @@ html-examples: $(EXAMPLES)
 $(EXAMPLES):
 	$(eval OUTPUTDIR=$(EXAMPLEHTMLOUTPUT)/$(dir $@))
 	@mkdir -p ${OUTPUTDIR}
-	@juvix html $(EXAMPLEMILESTONE)/$@ --recursive --output-dir=./../../../${OUTPUTDIR} --print-metadata
+	@juvix html $(EXAMPLEMILESTONE)/$@ --recursive --output-dir=$(CURDIR)/${OUTPUTDIR} --print-metadata
+
+.PHONY: webapp-examples
+webapp-examples: $(WEBAPP_EXAMPLES)
+
+$(WEBAPP_EXAMPLES):
+	$(eval OUTPUTDIR=$(EXAMPLE_WEBAPP_OUTPUT)/$(dir $@))
+	@mkdir -p ${OUTPUTDIR}
+	@juvix compile -r standalone $(EXAMPLEMILESTONE)/$@
+	@cp $(dir $(EXAMPLEMILESTONE)/$@)*.{wasm,js,html} ${OUTPUTDIR}
 
 # -- MDBook
 
@@ -116,15 +125,6 @@ hlint :
 	@hlint src app test ${HLINTQUIET}
 
 PRECOMMIT := $(shell command -v pre-commit 2> /dev/null)
-
-.PHONY: webapp-examples
-webapp-examples: $(WEBAPP_EXAMPLES)
-
-$(WEBAPP_EXAMPLES):
-	$(eval OUTPUTDIR=$(EXAMPLE_WEBAPP_OUTPUT)/$(dir $@))
-	mkdir -p ${OUTPUTDIR}
-	juvix compile -r standalone $(EXAMPLEMILESTONE)/$@
-	cp $(dir $(EXAMPLEMILESTONE)/$@)*.{wasm,js,html} ${OUTPUTDIR}
 
 .PHONY : install-pre-commit
 install-pre-commit :
