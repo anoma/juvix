@@ -186,7 +186,7 @@ jobs:
           make test-shell
   docs:
     needs: build
-    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
+    #if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -215,6 +215,26 @@ jobs:
         uses: peaceiris/actions-mdbook@v1
         with:
           mdbook-version: 'latest'
+
+      - name: Setup Stack GHC
+        run : |
+          cd main
+          stack setup
+
+      - name: Cache LLVM and Clang
+        id: cache-llvm
+        uses: actions/cache@v3
+        with:
+          path: |
+            C:/Program Files/LLVM
+            ./llvm
+          key: ${{ runner.os }}-llvm-13
+
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: "13.0"
+          cached: ${{ steps.cache-llvm.outputs.cache-hit }}
 
       - name: Generate Markdown files for each Org file
         run: |
