@@ -18,9 +18,6 @@ import Juvix.Core.Language.Base
 {---------------------------------------------------------------------------------}
 {- Program tree datatype -}
 
--- de Bruijn index
-type Index = Int
-
 -- `Node` is the type of nodes in the program tree. The nodes themselves
 -- contain only runtime-relevant information. Runtime-irrelevant annotations
 -- (including all type information) are stored in the infos associated with each
@@ -118,5 +115,11 @@ data CaseBranch = CaseBranch {caseTag :: !Tag, caseBindersNum :: !Int, caseBranc
 -- Whether something is a value matters only for evaluation semantics. It
 -- doesn't matter much outside the evaluator.
 
--- all nodes in an environment must be values
+-- All nodes in an environment must be values.
+--
+-- Strictly speaking, representing the environment by a list may result in
+-- quadratic complexity in the evaluator if there are many binders. However,
+-- this is typically the fastest way in practice. If this ever becomes an issue,
+-- we can change Env to use Core.Data.BinderList which has O(1) lookup
+-- complexity but larger constant factor.
 type Env = [Node]

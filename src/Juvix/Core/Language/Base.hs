@@ -9,6 +9,7 @@ module Juvix.Core.Language.Base
     Location,
     Symbol,
     Tag,
+    Index,
   )
 where
 
@@ -31,3 +32,6 @@ data Tag = BuiltinTag BuiltinDataTag | UserTag Word
   deriving stock (Eq, Generic)
 
 instance Hashable Tag
+
+-- de Bruijn index
+type Index = Int
