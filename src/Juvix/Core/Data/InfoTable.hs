@@ -7,10 +7,10 @@ type IdentContext = HashMap Symbol Node
 
 data InfoTable = InfoTable
   { _identContext :: IdentContext,
-    _identInfo :: HashMap Symbol IdentInfo,
-    _inductiveInfo :: HashMap Name InductiveInfo,
-    _constructorInfo :: HashMap Tag ConstructorInfo,
-    _axiomInfo :: HashMap Name AxiomInfo
+    _infoIdents :: HashMap Symbol IdentInfo,
+    _infoInductives :: HashMap Name InductiveInfo,
+    _infoConstructors :: HashMap Tag ConstructorInfo,
+    _infoAxioms :: HashMap Name AxiomInfo
   }
 
 data IdentInfo = IdentInfo
@@ -24,9 +24,9 @@ data IdentInfo = IdentInfo
   }
 
 data ArgumentInfo = ArgumentInfo
-  { _argName :: Name,
-    _argType :: Type,
-    _argIsImplicit :: Bool
+  { _argumentName :: Name,
+    _argumentType :: Type,
+    _argumentIsImplicit :: Bool
   }
 
 data InductiveInfo = InductiveInfo
