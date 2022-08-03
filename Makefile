@@ -3,16 +3,19 @@ PREFIX="$(PWD)/.stack-work/prefix"
 UNAME := $(shell uname)
 HLINTQUIET :=
 
+ASSETS = seating-mascot.051c86a.svg \
+				 Seating_Tara_smiling.svg \
+				 teaching-mascot.f828959.svg
+
 ORGFILES = $(shell find docs/org -type f -name '*.org')
 MDFILES:=$(patsubst docs/org/%,docs/md/%,$(ORGFILES:.org=.md))
-ASSETS = seating-mascot.051c86a.svg Seating_Tara_smiling.svg teaching-mascot.f828959.svg
 
 EXAMPLEMILESTONE=examples/milestone
 EXAMPLEHTMLOUTPUT=_docs/examples/html
 EXAMPLES=ValidityPredicates/SimpleFungibleToken.juvix \
-		  MiniTicTacToe/MiniTicTacToe.juvix \
-		  Fibonacci/Fibonacci.juvix \
-		  Collatz/Collatz.juvix
+			MiniTicTacToe/MiniTicTacToe.juvix \
+			Fibonacci/Fibonacci.juvix \
+			Collatz/Collatz.juvix
 
 ORGTOMDPRG ?=pandoc
 ORGOPTS=--from org --to markdown_strict -s -o $@
@@ -25,8 +28,31 @@ else
 	THREADS := $(shell echo %NUMBER_OF_PROCESSORS%)
 endif
 
-all:
-	make pre-commit
+all: install
+
+clean:
+	@stack clean --full
+	@rm -rf .hie
+	@rm -rf _docs
+
+repl:
+	@stack ghci Juvix:lib
+
+# ------------------------------------------------------------------------------
+# -- The Juvix Book
+# ------------------------------------------------------------------------------
+
+# -- EXAMPLES
+
+.PHONY: html-examples
+html-examples: $(EXAMPLES)
+
+$(EXAMPLES):
+	$(eval OUTPUTDIR=$(EXAMPLEHTMLOUTPUT)/$(dir $@))
+	@mkdir -p ${OUTPUTDIR}
+	@juvix html $(EXAMPLEMILESTONE)/$@ --recursive --output-dir=./../../../${OUTPUTDIR} --print-metadata
+
+# -- MDBook
 
 docs/md/README.md :
 	@mkdir -p docs/md
@@ -46,135 +72,108 @@ markdown-docs: docs/md/README.md docs/md/changelog.md $(MDFILES)
 	@echo "copying assets ..."
 	@mkdir -p docs/md/assets
 	@cp -v $(addprefix assets/,$(ASSETS)) docs/md/assets
-	mdbook build
+	@mdbook build
 
 .PHONY: serve-docs
 serve-docs: $(MDFILES)
-	mdbook serve --open
+	@mdbook serve --open
 
-.PHONY : checklines
-checklines :
-	@grep '.\{81,\}' \
-		--exclude=*.org \
-		-l --recursive src; \
-		status=$$?; \
-		if [ $$status = 0 ] ; \
-		then echo "Lines were found with more than 80 characters!" >&2 ; \
-		else echo "Succeed!"; \
-		fi
+# -- Codebase Documentation
+
+.PHONY : haddock
+haddock :
+	@cabal --docdir=docs/ --htmldir=docs/ haddock --enable-documentation
+
+# ------------------------------------------------------------------------------
+# -- Codebase Health
+# ------------------------------------------------------------------------------
+
+ORMOLUFILES = $(shell git ls-files '*.hs' '*.hs-boot' | grep -v '^contrib/')
+ORMOLUFLAGS?=--no-cabal
+ORMOLUMODE?=inplace
+
+format:
+	@stack exec -- ormolu ${ORMOLUFLAGS} \
+		--ghc-opt -XStandaloneDeriving \
+		--ghc-opt -XUnicodeSyntax \
+		--ghc-opt -XDerivingStrategies \
+		--ghc-opt -XMultiParamTypeClasses  \
+		--ghc-opt -XTemplateHaskell \
+		--ghc-opt -XImportQualifiedPost \
+			--mode ${ORMOLUMODE} \
+		$(ORMOLUFILES)
+
+.PHONY: check-ormolu
+check-ormolu: export ORMOLUMODE = check
+check-ormolu:
+	make format
 
 .PHONY : hlint
 hlint :
 	@hlint src app test ${HLINTQUIET}
 
-.PHONY : haddock
-haddock :
-	cabal --docdir=docs/ --htmldir=docs/ haddock --enable-documentation
-
-.PHONY : docs
-docs :
-	cd docs ; \
-	sh conv.sh
-
-.PHONY: ci
-ci:
-	make ci-build
-	make install
-	make ci-test
-	make test-shell
-
-.PHONY : build
-build:
-	stack build --fast --jobs $(THREADS)
-
-.PHONY : ci-build
-ci-build:
-	stack build --fast --jobs $(THREADS) --pedantic
-
-build-watch:
-	stack build --fast --file-watch
-
-.PHONY : cabal
-cabal :
-	cabal build all
-
-clean:
-	cabal clean
-	stack clean
-
-clean-full:
-	stack clean --full
-	rm -rf .hie
-	rm -rf _docs
-
-.PHONY : test
-test:
-	stack test --fast --jobs $(THREADS)
-
-.PHONY : ci-test
-ci-test:
-	stack test --fast --jobs $(THREADS) --pedantic
-
-.PHONY : test-skip-slow
-test-skip-slow:
-	stack test --fast --jobs $(THREADS) --ta '-p "! /slow tests/"'
-
-.PHONY : test-watch
-test-watch:
-	stack test --fast --jobs $(THREADS) --file-watch
-
-.PHONY : install-shelltest
-install-shelltest:
-	stack install shelltestrunner
-
-.PHONY : test-shell
-test-shell :
-	shelltest --color --diff -a -j8 tests
-
-format:
-	@find . -name "*.hs" -exec ormolu --mode inplace {} --ghc-opt -XStandaloneDeriving --ghc-opt -XUnicodeSyntax --ghc-opt -XDerivingStrategies --ghc-opt -XMultiParamTypeClasses  --ghc-opt  -XTemplateHaskell --ghc-opt -XImportQualifiedPost \;
-
-.PHONY: check-ormolu
-check-ormolu:
-	@find . -name "*.hs" -exec ormolu --mode check {} --ghc-opt -XStandaloneDeriving --ghc-opt -XUnicodeSyntax --ghc-opt -XDerivingStrategies --ghc-opt -XMultiParamTypeClasses  --ghc-opt  -XTemplateHaskell --ghc-opt -XImportQualifiedPost \;
-
-.PHONY : install
-install:
-	stack install --fast --jobs $(THREADS)
-
-.PHONY : install-watch
-install-watch:
-	stack install --fast --jobs $(THREADS) --file-watch
-
-repl:
-	stack ghci Juvix:lib
-
-.PHONY: html-examples
-html-examples: $(EXAMPLES)
-
-$(EXAMPLES):
-	$(eval OUTPUTDIR=$(EXAMPLEHTMLOUTPUT)/$(dir $@))
-	mkdir -p ${OUTPUTDIR}
-	juvix html $(EXAMPLEMILESTONE)/$@ --recursive --output-dir=./../../../${OUTPUTDIR} --print-metadata
+PRECOMMIT := $(shell command -v pre-commit 2> /dev/null)
 
 .PHONY : install-pre-commit
-install-pre-commit:
-	pip install pre-commit
-	pre-commit install
+install-pre-commit :
+	@$(if $(PRECOMMIT),, pip install pre-commit)
 
 .PHONY : pre-commit
 pre-commit :
-	pre-commit run --all-files
+	@pre-commit run --all-files
 
-.PHONY : update-submodules
-update-submodules :
-	git submodule foreach git pull origin main
+# ------------------------------------------------------------------------------
+# -- Build-Install-Test-Release
+# ------------------------------------------------------------------------------
 
-.PHONY : juvix-stdlib
-juvix-stdlib:
-	git submodule update --init juvix-stdlib
+STACKFLAGS?=--fast --jobs $(THREADS)
 
-.PHONY : get-changelog-updates
-get-changelog-updates :
-	@github_changelog_generator --since-tag $(shell git describe --tags $(shell git rev-list --tags --max-count=1)) 1> /dev/null
-	pandoc CHANGELOG.md --from markdown --to org -o UPDATES-FOR-CHANGELOG.org
+.PHONY: check
+check:
+	@make build
+	@make install
+	@make test
+	@make test-shell
+	@make format
+	@make pre-commit
+
+# -- Build requirements
+
+.PHONY: submodules
+submodules:
+	@git submodule sync
+	@git submodule update --init --recursive
+
+.PHONY : build
+build: submodules
+	stack build ${STACKFLAGS}
+
+# -- Install
+
+.PHONY : install
+install: submodules
+	@stack install ${STACKFLAGS}
+
+# -- Testing
+
+.PHONY : test
+test: build
+	@stack test ${STACKFLAGS}
+
+.PHONY : test-skip-slow
+test-skip-slow:
+	@stack test ${STACKFLAGS} --ta '-p "! /slow tests/"'
+
+SHELLTEST := $(shell command -v shelltest 2> /dev/null)
+
+.PHONY : test-shell
+test-shell : install
+	@$(if $(SHELLTEST),, stack install shelltestrunner)
+	shelltest --color --diff -a -j8 tests
+
+# -- Release
+
+.PHONY : changelog-updates
+changelog-updates :
+	@github_changelog_generator
+	@pandoc CHANGELOG.md --from markdown --to org -o UPDATES-FOR-CHANGELOG.org
