@@ -167,7 +167,7 @@ test-skip-slow:
 SHELLTEST := $(shell command -v shelltest 2> /dev/null)
 
 .PHONY : test-shell
-test-shell :
+test-shell : install
 	@$(if $(SHELLTEST),, stack install shelltestrunner)
 	shelltest --color --diff -a -j8 tests
 

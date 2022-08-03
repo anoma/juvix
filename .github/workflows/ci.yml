@@ -183,8 +183,6 @@ jobs:
         run : |
           cd main
           echo "$GITHUB_WORKSPACE/.local/bin" >> $GITHUB_PATH
-          make install
-          make install-shelltestrunner
           make test-shell
   docs:
     needs: build
