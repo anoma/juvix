@@ -16,6 +16,7 @@ data CLI
   = DisplayVersion
   | DisplayHelp
   | Command CommandGlobalOptions
+  | Doctor
 
 parseDisplayVersion :: Parser CLI
 parseDisplayVersion =
@@ -29,6 +30,10 @@ parseDisplayHelp =
     DisplayHelp
     (long "help" <> short 'h' <> help "Show the help text" <> noGlobal)
 
+parseDoctor :: Parser CLI
+parseDoctor =
+  hsubparser (command "doctor" (info (pure CLI.Doctor) (progDesc "Perform checks on your Juvix development environment")))
+
 parseCommand :: Parser CLI
 parseCommand = Command <$> parseCommandGlobalOptions
 
@@ -37,6 +42,7 @@ parseCLI =
   parseDisplayVersion
     <|> parseDisplayHelp
     <|> parseCommand
+    <|> parseDoctor
 
 commandFirstFile :: CommandGlobalOptions -> Maybe FilePath
 commandFirstFile CommandGlobalOptions {_cliGlobalOptions = GlobalOptions {..}} =

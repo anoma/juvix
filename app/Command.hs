@@ -4,6 +4,7 @@ module Command
     module Commands.Html,
     module Commands.Compile,
     module Commands.Dev,
+    module Commands.Doctor
   )
 where
 
@@ -11,6 +12,7 @@ import Commands.Compile
 import Commands.Dev
 import Commands.Extra
 import Commands.Html
+import Commands.Doctor
 import GlobalOptions
 import Juvix.Prelude hiding (Doc)
 import Options.Applicative
