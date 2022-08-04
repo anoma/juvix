@@ -36,7 +36,9 @@ parseCommandGlobalOptions = do
   cmd <-
     hsubparser
       ( mconcat
-          [ commandCheck,
+          [ commandGroup "Compiler commands:",
+            metavar "COMPILER_CMD",
+            commandCheck,
             commandCompile,
             commandHtml,
             commandDev

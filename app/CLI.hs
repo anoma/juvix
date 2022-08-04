@@ -32,7 +32,18 @@ parseDisplayHelp =
 
 parseDoctor :: Parser CLI
 parseDoctor =
-  hsubparser (command "doctor" (info (pure CLI.Doctor) (progDesc "Perform checks on your Juvix development environment")))
+  hsubparser
+    ( mconcat
+        [ commandGroup "Troubleshooting commands:",
+          metavar "TROUBLESHOOTING_CMD",
+          command
+            "doctor"
+            ( info
+                (pure CLI.Doctor)
+                (progDesc "Perform checks on your Juvix development environment")
+            )
+        ]
+    )
 
 parseCommand :: Parser CLI
 parseCommand = Command <$> parseCommandGlobalOptions
