@@ -86,21 +86,27 @@ jobs:
         os: [ubuntu-latest , macOS-latest]
         ghc: ["9.2.3"]
     steps:
-      - uses: actions/cache@v3
-        name: Cache Stack
-        id: cache
-        env:
-          cache-name: cache-env
+      - name: Checkout our repository
+        uses: actions/checkout@v2
         with:
-          path: |
-            ~/.stack
-            main/.stack-work
-            main/.hie
-          key: ${{ runner.os }}-v1-build-${{ matrix.ghc }}-${{ hashFiles('main/src/**/*.hs', 'main/app/**/*.hs',  'main/test/**/*.hs', 'main/package.yaml', 'main/stack.yaml') }}
+          path: main
+          submodules: true
+
+      - uses: actions/cache@v3
+        name: Cache ~/.stack
+        with:
+          path: ~/.stack
+          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-global-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-v1-build-${{ matrix.ghc }}-
-            ${{ runner.os }}-v1-build-
-            ${{ runner.os }}-v1-
+            ${{ runner.os }}-${{ matrix.ghc }}-stack-global-
+
+      - uses: actions/cache@v3
+        name: Cache .stack-work
+        with:
+          path: main/.stack-work
+          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-work-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}-${{ hashFiles('main/**/*.hs') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
 
       - uses: haskell/actions/setup@v1
         name: Setup Haskell
@@ -108,12 +114,6 @@ jobs:
           ghc-version: ${{ matrix.ghc }}
           enable-stack: true
           stack-version: 'latest'
-
-      - name: Checkout our repository
-        uses: actions/checkout@v2
-        with:
-          path: main
-          submodules: true
 
       - name: Build Haskell Project
         run: |
@@ -128,19 +128,25 @@ jobs:
         os: [ubuntu-latest , macOS-latest]
         ghc: ["9.2.3"]
     steps:
-      - uses: actions/cache@v3
-        id: cache-build
-        with:
-          path: |
-            ~/.stack
-            main/.stack-work/
-            main/.hie
-          key: ${{ runner.os }}-v1-build-${{ matrix.ghc }}-
       - name: Checkout the main repository
         uses: actions/checkout@v2
         with:
           path: main
           submodules: recursive
+      - uses: actions/cache@v3
+        name: Cache ~/.stack
+        with:
+          path: ~/.stack
+          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-global-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.ghc }}-stack-global-
+      - uses: actions/cache@v3
+        name: Cache .stack-work
+        with:
+          path: main/.stack-work
+          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-work-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}-${{ hashFiles('main/**/*.hs') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
       - name: Setup Stack GHC
         run : |
           cd main
@@ -193,19 +199,27 @@ jobs:
         ghc: ["9.2.3"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/cache@v3
-        id: cache-build
-        with:
-          path: |
-            ~/.stack
-            main/.stack-work/
-            main/.hie
-          key: ${{ runner.os }}-v1-build-${{ matrix.ghc }}-
       - name: Checkout our repository
         uses: actions/checkout@v2
         with:
           path: main
           submodules: recursive
+
+      - uses: actions/cache@v3
+        name: Cache ~/.stack
+        with:
+          path: ~/.stack
+          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-global-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.ghc }}-stack-global-
+
+      - uses: actions/cache@v3
+        name: Cache .stack-work
+        with:
+          path: main/.stack-work
+          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-work-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}-${{ hashFiles('main/**/*.hs') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
 
       - uses: r-lib/actions/setup-pandoc@v1
         with:
