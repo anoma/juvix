@@ -1,22 +1,50 @@
 * Function declaration
 
-In Juvix, a function declaration is a type signature /and/ a group
-of definitions called /function clauses/.
+A function declaration is a type signature /and/ a group of definitions called
+/function clauses/.
+
+In the following example we define a function called =multiplyByTwo=. The first
+line =multiplyByTwo : ℕ -> ℕ;= is the type signature and the second line
+~multiplyByTwo n := 2 * n;~ is a function clause.
 
 #+begin_example
-fun : A → B;
-fun case1 := ...;
-fun case2 := ...;
-fun case3 := ...;
+open import Stdlib.Prelude;
+
+multiplyByTwo : ℕ -> ℕ;
+multiplyByTwo n := 2 * n;
 #+end_example
 
-** Mutual recursive functions
+A function may have more than one function clause. When a function is called,
+the first clause that matches the argument is used.
+
+The following function has two clauses.
 
 #+begin_example
+open import Stdlib.Prelude;
 
-f : A -> A -> A;
-g : A -> A -> A;
+neg : Bool -> Bool;
+neg true := false;
+neg false := true;
+#+end_example
 
-g x y := f x x;
-f x y := g x (f x x);
+When =neg= is called with =true= the first clause is used and the function
+returns =false=. Similarly, when =neg= is called with =false= the second clause
+is used and the function returns =true=.
+
+** Mutually recursive functions
+
+Function declarations can depend on others recursively. In the following example we define a function that checks if a number is =even= by calling a function that checks if a number is =odd=.
+
+#+begin_example
+open import Stdlib.Prelude;
+
+odd : Nat → Bool;
+
+even : Nat → Bool;
+
+odd zero ≔ false;
+odd (suc n) ≔ even n;
+
+even zero ≔ true;
+even (suc n) ≔ odd n;
 #+end_example

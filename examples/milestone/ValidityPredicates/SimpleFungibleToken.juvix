@@ -6,16 +6,12 @@ import Stdlib.Data.String.Ord;
 open import Data.Int;
 import Data.Int.Ops;
 
---------------------------------------------------------------------------------
 -- Misc
---------------------------------------------------------------------------------
 
 pair-from-optionString : (String → Int × Bool) → Maybe String → Int × Bool;
 pair-from-optionString ≔ maybe (0 , false);
 
---------------------------------------------------------------------------------
 -- Validity Predicate
---------------------------------------------------------------------------------
 
 change-from-key : String → Int;
 change-from-key key ≔ unwrap-default (read-post key) Data.Int.Ops.- unwrap-default (read-pre key);
