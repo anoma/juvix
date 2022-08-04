@@ -16,7 +16,7 @@ clauses pass the termination checker's criterion. To skip the termination
 checker for mutual recursive functions, all the functions involved must be
 annotated as =terminating=.
 
-- Using the CLI global flag =--no=terminating=.
+- Using the CLI global flag =--no-termination=.
 
 
 #+begin_example
