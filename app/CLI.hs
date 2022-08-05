@@ -34,8 +34,8 @@ parseDoctor :: Parser CLI
 parseDoctor =
   hsubparser
     ( mconcat
-        [ commandGroup "Troubleshooting commands:",
-          metavar "TROUBLESHOOTING_CMD",
+        [ commandGroup "Utility commands:",
+          metavar "UTILITY_CMD",
           command
             "doctor"
             ( info

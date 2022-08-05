@@ -2,7 +2,7 @@ $ juvix --help
 > /Usage: juvix \(\(\-v\|\-\-version\) \| \(\-h\|\-\-help\) \| \[\-\-no\-colors\] \[\-\-show\-name\-ids\] 
                \[\-\-only\-errors\] \[\-\-no\-termination\] \[\-\-no\-positivity\] 
                \[\-\-no\-stdlib\] COMPILER_CMD \|
-               TROUBLESHOOTING_CMD.*/
+               UTILITY_CMD.*/
 >= 0
 
 
