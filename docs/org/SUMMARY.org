@@ -23,6 +23,7 @@
   - [[./tooling/CLI.md][Command line interface]]
   - [[./tooling/emacs-mode.md][Emacs mode]]
   - [[./tooling/testing.md][Haskell test suite]]
+  - [[./tooling/doctor.md][Doctor]]
 
 - [[./notes/README.md][Notes]]
   - [[./examples/validity-predicates/README.md][Validity predicates]]

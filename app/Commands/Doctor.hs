@@ -6,9 +6,9 @@ import Juvix.Extra.Version qualified as V
 import Juvix.Prelude
 import Network.HTTP.Simple
 import Options.Applicative
+import Safe (headMay)
 import System.Environment qualified as E
 import System.Process qualified as P
-import Safe (headMay)
 import Text.Read (readMaybe)
 
 newtype GithubRelease = GithubRelease {_githubReleaseTagName :: Maybe Text}
@@ -59,7 +59,7 @@ checkClangTargetSupported target errMsg = do
 
 checkClangVersion :: Members DoctorEff r => Integer -> Text -> Sem r ()
 checkClangVersion expectedVersion errMsg = do
-  versionString <- embed ( P.readProcess "clang" ["-dumpversion"] "")
+  versionString <- embed (P.readProcess "clang" ["-dumpversion"] "")
   case headMay (splitOn "." versionString) >>= readMaybe of
     Just majorVersion -> unless (majorVersion >= expectedVersion) (log errMsg)
     Nothing -> log "  ! Could not determine clang version"
