@@ -142,8 +142,8 @@ Additionally, the foreign and compile blocks syntax enable developers to compile
 
 For the language:
 
-- lambda expressions 
-- =let= expressions 
+- lambda expressions
+- =let= expressions
 - tail call optimization
 - inference for mutually recursive functions
 - compilation to circuits
@@ -157,9 +157,9 @@ For the compiler:
 
 - Init command
 - New documentation tool. Currently available as an internal command:
-    
+
     #+begin_src shell
-       juvix internal doc MyFile.juvix 
+       juvix internal doc MyFile.juvix
     #+end_src
 
 ** Community
