@@ -904,18 +904,19 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Judoc 
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Judoc s)
 
-data Example (s :: Stage) = Example {
-  _exampleId :: NameId,
-  _exampleExpression :: ExpressionType s
+data Example (s :: Stage) = Example
+  { _exampleId :: NameId,
+    _exampleExpression :: ExpressionType s
   }
+
 deriving stock instance Show (ExpressionType s) => Show (Example s)
 
 deriving stock instance Eq (ExpressionType s) => Eq (Example s)
 
 deriving stock instance Ord (ExpressionType s) => Ord (Example s)
 
-data JudocBlock (s :: Stage) =
-  JudocParagraph (NonEmpty (JudocParagraphLine s))
+data JudocBlock (s :: Stage)
+  = JudocParagraph (NonEmpty (JudocParagraphLine s))
   | JudocExample (Example s)
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocBlock s)
@@ -924,8 +925,8 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocB
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocBlock s)
 
-newtype JudocParagraphLine (s :: Stage) =
-   JudocParagraphLine (NonEmpty (JudocAtom s))
+newtype JudocParagraphLine (s :: Stage)
+  = JudocParagraphLine (NonEmpty (JudocAtom s))
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocParagraphLine s)
 
@@ -1194,11 +1195,11 @@ entryIsExpression = \case
 
 judocExamples :: Judoc s -> [Example s]
 judocExamples (Judoc bs) = concatMap go bs
- where
- go :: JudocBlock s -> [Example s]
- go = \case
-   JudocExample e -> [e]
-   _ -> mempty
+  where
+    go :: JudocBlock s -> [Example s]
+    go = \case
+      JudocExample e -> [e]
+      _ -> mempty
 
 instance HasLoc SymbolEntry where
   getLoc = (^. S.nameDefined) . entryName

@@ -22,11 +22,11 @@ import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoper
 import Juvix.Compiler.Concrete.Pretty qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
-import Juvix.Compiler.Internal.Pretty qualified as Micro
-import Juvix.Compiler.Internal.Translation.FromAbstract qualified as Micro
+import Juvix.Compiler.Internal.Pretty qualified as Internal
+import Juvix.Compiler.Internal.Translation.FromAbstract qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination qualified as Termination
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as MicroArity
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as MicroTyped
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as InternalArity
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Compiler.Mono.Pretty qualified as Mono
 import Juvix.Compiler.Mono.Translation.FromInternal qualified as Mono
 import Juvix.Compiler.Pipeline
@@ -148,41 +148,48 @@ runCommand cmdWithOpts = do
                   forM_ l $ \s -> do
                     renderStdOut (Scoper.ppOut (mkScopePrettyOptions globalOpts localOpts) s)
                 Doc localOpts -> do
-                  l <-
-                    (^. Scoper.mainModule)
-                      <$> runPipeline
-                        (upToScoping entryPoint)
-                  let docDir = localOpts ^. docOutputDir
-                  runReader entryPoint (Doc.compileModuleHtmlText docDir "proj" l)
-                  embed (when (localOpts ^. docOpen) (Process.callProcess "xdg-open" [docDir </> Doc.indexFileName]))
+                  ctx :: InternalTyped.InternalTypedResult <-
+                    runPipeline
+                      (upToInternalTyped entryPoint)
+                  let mainMod =
+                        ctx
+                          ^. InternalTyped.resultInternalArityResult
+                          . InternalArity.resultInternalResult
+                          . Internal.resultAbstract
+                          . Abstract.resultScoper
+                          . Scoper.mainModule
+                      docDir = localOpts ^. docOutputDir
+                      normalized = ctx ^. InternalTyped.resultNormalized
+                  runReader normalized (runReader entryPoint (Doc.compileModule docDir "proj" mainMod))
+                  embed (when (localOpts ^. docOpen) (void (Process.spawnProcess "xdg-open" [docDir </> Doc.indexFileName])))
                 Internal Pretty -> do
                   micro <-
-                    head . (^. Micro.resultModules)
+                    head . (^. Internal.resultModules)
                       <$> runPipeline (upToInternal entryPoint)
                   let ppOpts =
-                        Micro.defaultOptions
-                          { Micro._optShowNameIds = globalOpts ^. globalShowNameIds
+                        Internal.defaultOptions
+                          { Internal._optShowNameIds = globalOpts ^. globalShowNameIds
                           }
-                  App.renderStdOut (Micro.ppOut ppOpts micro)
+                  App.renderStdOut (Internal.ppOut ppOpts micro)
                 Internal Arity -> do
-                  micro <- head . (^. MicroArity.resultModules) <$> runPipeline (upToInternalArity entryPoint)
-                  App.renderStdOut (Micro.ppOut Micro.defaultOptions micro)
+                  micro <- head . (^. InternalArity.resultModules) <$> runPipeline (upToInternalArity entryPoint)
+                  App.renderStdOut (Internal.ppOut Internal.defaultOptions micro)
                 Internal (TypeCheck localOpts) -> do
                   res <- runPipeline (upToInternalTyped entryPoint)
                   say "Well done! It type checks"
                   when (localOpts ^. microJuvixTypePrint) $ do
                     let ppOpts =
-                          Micro.defaultOptions
-                            { Micro._optShowNameIds = globalOpts ^. globalShowNameIds
+                          Internal.defaultOptions
+                            { Internal._optShowNameIds = globalOpts ^. globalShowNameIds
                             }
-                        checkedModule = head (res ^. MicroTyped.resultModules)
-                    renderStdOut (Micro.ppOut ppOpts checkedModule)
+                        checkedModule = head (res ^. InternalTyped.resultModules)
+                    renderStdOut (Internal.ppOut ppOpts checkedModule)
                     newline
                     let typeCalls = Mono.buildTypeCallMap res
-                    renderStdOut (Micro.ppOut ppOpts typeCalls)
+                    renderStdOut (Internal.ppOut ppOpts typeCalls)
                     newline
                     let concreteTypeCalls = Mono.collectTypeCalls res
-                    renderStdOut (Micro.ppOut ppOpts concreteTypeCalls)
+                    renderStdOut (Internal.ppOut ppOpts concreteTypeCalls)
                 MonoJuvix -> do
                   let ppOpts =
                         Mono.defaultOptions

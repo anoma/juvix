@@ -1217,14 +1217,16 @@ checkJudoc ::
   Sem r (Judoc 'Scoped)
 checkJudoc (Judoc atoms) = Judoc <$> mapM checkJudocBlock atoms
 
-checkJudocBlock :: Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
+checkJudocBlock ::
+  Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
   JudocBlock 'Parsed ->
   Sem r (JudocBlock 'Scoped)
 checkJudocBlock = \case
   JudocParagraph l -> JudocParagraph <$> mapM checkJudocLine l
   JudocExample e -> JudocExample <$> traverseOf exampleExpression checkParseExpressionAtoms e
 
-checkJudocLine :: Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
+checkJudocLine ::
+  Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
   JudocParagraphLine 'Parsed ->
   Sem r (JudocParagraphLine 'Scoped)
 checkJudocLine (JudocParagraphLine atoms) = JudocParagraphLine <$> mapM checkJudocAtom atoms

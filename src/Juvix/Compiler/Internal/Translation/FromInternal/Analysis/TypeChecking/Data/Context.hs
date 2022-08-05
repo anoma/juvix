@@ -16,7 +16,7 @@ type NormalizedTable = HashMap NameId Expression
 data InternalTypedResult = InternalTypedResult
   { _resultInternalArityResult :: InternalArityResult,
     _resultModules :: NonEmpty Module,
-   _resultNormalized :: NormalizedTable,
+    _resultNormalized :: NormalizedTable,
     _resultIdenTypes :: TypesTable
   }
 

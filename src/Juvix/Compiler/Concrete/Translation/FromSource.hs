@@ -118,6 +118,7 @@ statement = do
     <|> ( either StatementTypeSignature StatementFunctionClause
             <$> auxTypeSigFunClause
         )
+
 stashJudoc :: forall r. Members '[Reader ParserParams, InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r ()
 stashJudoc = do
   b <- judocBlocks

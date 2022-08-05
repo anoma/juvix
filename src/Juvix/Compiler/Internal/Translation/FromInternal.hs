@@ -4,15 +4,15 @@ module Juvix.Compiler.Internal.Translation.FromInternal
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as ArityChecking
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.Effect.NameIdGen
-import Juvix.Compiler.Internal.Language
 import Juvix.Prelude hiding (fromEither)
-import Data.HashMap.Strict qualified as HashMap
 
 arityChecking ::
   Members '[Error JuvixError, NameIdGen] r =>

@@ -49,9 +49,9 @@ data Statement
   | StatementAxiom AxiomDef
   deriving stock (Eq, Show)
 
-data Example = Example {
-  _exampleId :: NameId,
-  _exampleExpression :: Expression
+data Example = Example
+  { _exampleId :: NameId,
+    _exampleExpression :: Expression
   }
   deriving stock (Eq, Show)
 

@@ -234,13 +234,14 @@ instance HasExpressions FunctionDef where
     clauses' <- traverse (leafExpressions f) _funDefClauses
     ty' <- leafExpressions f _funDefType
     examples' <- traverse (leafExpressions f) _funDefExamples
-    pure FunctionDef {
-      _funDefClauses = clauses',
-      _funDefType = ty',
-      _funDefExamples = examples',
-      _funDefName,
-      _funDefBuiltin
-      }
+    pure
+      FunctionDef
+        { _funDefClauses = clauses',
+          _funDefType = ty',
+          _funDefExamples = examples',
+          _funDefName,
+          _funDefBuiltin
+        }
 
 instance HasExpressions InductiveParameter where
   leafExpressions _ param@(InductiveParameter _) = do

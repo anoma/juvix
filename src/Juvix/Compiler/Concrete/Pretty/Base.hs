@@ -554,7 +554,7 @@ ppJudocExampleStart :: Doc Ann
 ppJudocExampleStart = pretty (Str.judocExample :: Text)
 
 instance SingI s => PrettyCode (Example s) where
-  ppCode e =  do
+  ppCode e = do
     e' <- ppExpression (e ^. exampleExpression)
     return (ppJudocStart <+> ppJudocExampleStart <+> e' <> kwSemicolon <> line)
 

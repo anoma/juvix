@@ -96,9 +96,9 @@ data Expression
 
 instance Hashable Expression
 
-data Example = Example {
-  _exampleId :: NameId
-  , _exampleExpression :: Expression
+data Example = Example
+  { _exampleId :: NameId,
+    _exampleExpression :: Expression
   }
 
 data Lambda = Lambda

@@ -165,10 +165,11 @@ goFunctionDef f = do
 goExample :: Abstract.Example -> Sem r Example
 goExample e = do
   e' <- goExpression (e ^. Abstract.exampleExpression)
-  return Example {
-    _exampleExpression = e',
-    _exampleId = e ^. Abstract.exampleId
-  }
+  return
+    Example
+      { _exampleExpression = e',
+        _exampleId = e ^. Abstract.exampleId
+      }
 
 goFunctionClause :: Name -> Abstract.FunctionClause -> Sem r FunctionClause
 goFunctionClause n c = do

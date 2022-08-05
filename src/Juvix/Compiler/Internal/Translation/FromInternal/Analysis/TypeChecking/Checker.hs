@@ -22,7 +22,7 @@ registerConstructor ctr = do
   modify (HashMap.insert (ctr ^. inductiveConstructorName) ty)
 
 checkModule ::
-  Members '[Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable] r =>
+  Members '[Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example] r =>
   Module ->
   Sem r Module
 checkModule Module {..} = do
@@ -35,7 +35,7 @@ checkModule Module {..} = do
       }
 
 checkModuleBody ::
-  Members '[Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable] r =>
+  Members '[Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example] r =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -46,13 +46,13 @@ checkModuleBody ModuleBody {..} = do
       }
 
 checkInclude ::
-  Members '[Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable] r =>
+  Members '[Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example] r =>
   Include ->
   Sem r Include
 checkInclude = traverseOf includeModule checkModule
 
 checkStatement ::
-  Members '[Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable] r =>
+  Members '[Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example] r =>
   Statement ->
   Sem r Statement
 checkStatement s = case s of
@@ -106,7 +106,7 @@ checkInductiveDef (InductiveDef name built params constrs pos) = runInferenceDef
             )
 
 checkFunctionDef ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example] r =>
   FunctionDef ->
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
@@ -121,7 +121,7 @@ checkFunctionDef FunctionDef {..} = do
           ..
         }
   registerFunctionDef funDef
-  return funDef
+  readerState @FunctionsTable (runReader emptyLocalVars (traverseOf funDefExamples (mapM checkExample) funDef))
 
 checkIsType ::
   Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
@@ -142,6 +142,15 @@ checkFunctionDefType ty = do
     loc = getLoc ty
     go :: Hole -> Sem r ()
     go h = freshMetavar h
+
+checkExample ::
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Output Example, State TypesTable] r =>
+  Example ->
+  Sem r Example
+checkExample e = do
+  e' <- runInferenceDef (traverseOf exampleExpression (inferExpression >=> strongNormalize) e)
+  output e'
+  return e'
 
 checkExpression ::
   Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>

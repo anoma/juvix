@@ -306,9 +306,11 @@ typeArity = go
             _functionArityRight = r'
           }
 
-checkExample ::  forall r.
+checkExample ::
+  forall r.
   Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, Reader LocalVars] r =>
-  Example -> Sem r Example
+  Example ->
+  Sem r Example
 checkExample = traverseOf exampleExpression (checkExpression ArityUnknown)
 
 checkExpression ::
