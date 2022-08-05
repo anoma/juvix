@@ -52,33 +52,31 @@ The [[https://anoma.github.io/juvix-stdlib/][Juvix standard library]] contains c
 
 *** Installing Juvix on MacOS
 
-The easiest way to install Juvix on MacOS is by using or [[Homebrew][https://brew.sh]].
-Run the following commands on your machine.
+The easiest way to install Juvix on MacOS is by using [[https://brew.sh][Homebrew]]. Run the following commands on your machine.
 
-To install the [[https://github.com/anoma/homebrew-juvix][homebrew-juvix tap]]:
+To install the [[https://github.com/anoma/homebrew-juvix][homebrew-juvix tap]], run:
 
 #+begin_src shell
 brew tap anoma/juvix
 #+end_src
 
-To install Juvix:
+To install Juvix, run:
 
 #+begin_src shell
 brew install juvix
 #+end_src
 
-After installing Juvix, you might to try:
+After installing Juvix, you might want to try our doctor to check your system setup:
 
 #+begin_src shell
 juvix doctor
 #+end_src
 
-Helpful information on the shell can be obtained by running:
+Helpful information on the shell can also be obtained by running:
 
 #+begin_src shell
 brew info juvix
 #+end_src
-
 
 *** Building Juvix from the sources
 
