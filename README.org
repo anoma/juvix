@@ -46,13 +46,15 @@ The following links are clickable versions of their corresponding Juvix programs
 - [[https://docs.juvix.org/examples/html/TicTacToe/CLI/CLI.TicTacToe.html][TicTacToe.juvix]]
 - [[https://docs.juvix.org/examples/html/ValidityPredicates/SimpleFungibleToken.html][SimpleFungibleToken.juvix]]
 
-The [[https://anoma.github.io/juvix-stdlib/][Juvix standard library]] contains common functions that can be used in Juvix programs.
+The [[https://anoma.github.io/juvix-stdlib/][Juvix standard library]] contains
+common functions that can be used in Juvix programs.
 
 ** Quick Start
 
 *** Installing Juvix on MacOS
 
-The easiest way to install Juvix on MacOS is by using [[https://brew.sh][Homebrew]]. Run the following commands on your machine.
+The easiest way to install Juvix on MacOS is by using
+[[https://brew.sh][Homebrew]]. Run the following commands on your machine.
 
 To install the [[https://github.com/anoma/homebrew-juvix][homebrew-juvix tap]], run:
 
@@ -66,7 +68,8 @@ To install Juvix, run:
 brew install juvix
 #+end_src
 
-After installing Juvix, you might want to try our doctor to check your system setup:
+After installing Juvix, you might want to try our doctor to check your system
+setup:
 
 #+begin_src shell
 juvix doctor
@@ -81,9 +84,9 @@ brew info juvix
 *** Building Juvix from the sources
 
 To install Juvix from the sources, you must download the
-[[https://github.com/anoma/juvix.git][Github repository]]. Then, the
-program can be downloaded and installed with the following commands. You
-will need to have [[https://haskellstack.org][Stack]] installed.
+[[https://github.com/anoma/juvix.git][Github repository]]. Then, the program can
+be downloaded and installed with the following commands. You will need to have
+[[https://haskellstack.org][Stack]] installed.
 
 #+begin_src shell
 git clone --recursive https://github.com/anoma/juvix.git
@@ -91,11 +94,12 @@ cd juvix
 stack install
 #+end_src
 
-If the installation succeeds, you must be able to run the Juvix
-command from any location. To get the complete list of commands, please
-run =juvix --help=.
+If the installation succeeds, you must be able to run the Juvix command from any
+location. To get the complete list of commands, please run =juvix --help=.
 
-On MacOS, you can alternatively run the following command for [[Homebrew][https://brew.sh]]. The option =--HEAD= below is optional, used to build the latest version on the =main= branch on the Juvix's Github.
+On MacOS, you can alternatively run the following command for
+[[Homebrew][https://brew.sh]]. The option =--HEAD= below is optional, used to
+build the latest version on the =main= branch on the Juvix's Github.
 
 #+begin_src shell
 brew install --build-from-source --HEAD juvix --verbose
@@ -104,11 +108,13 @@ brew install --build-from-source --HEAD juvix --verbose
 ** Usage Example
 
 In the following example a Juvix file is compiled using the C backend. The
-result is compiled to WASM using [[https://llvm.org][Clang]] and then executed using [[https://wasmer.io][wasmer]].
+result is compiled to WASM using [[https://llvm.org][Clang]] and then executed
+using [[https://wasmer.io][wasmer]].
 
 NB: Set the =WASI_SYSROOT_PATH= environment variable to the root of the WASI
-sysroot. See [[https://anoma.github.io/juvix/getting-started/dependencies.html][Installing dependencies]] for instructions on how to install the
-sysroot.
+sysroot. See
+[[https://anoma.github.io/juvix/getting-started/dependencies.html][Installing
+dependencies]] for instructions on how to install the sysroot.
 
 #+begin_src shell
 cd tests/positive/MiniC/HelloWorld
@@ -120,9 +126,12 @@ You should see the output: =hello world!=
 
 ** The Juvix programming language
 
-Juvix allows us to write programs with a high degree of assurance.
-The Juvix compiler runs several static analyses during the compilation phase
-to guarantee no runtime errors. Analyses permormed during this phase include scope, termination, arity, and type checkiqng. As a result, functional programs, especially validity predicates, can be written with greater confidence that they will be free of runtime errors.
+Juvix allows us to write programs with a high degree of assurance. The Juvix
+compiler runs several static analyses during the compilation phase to guarantee
+no runtime errors. Analyses permormed during this phase include scope,
+termination, arity, and type checkiqng. As a result, functional programs,
+especially validity predicates, can be written with greater confidence that they
+will be free of runtime errors.
 
 Some of the language features in Juvix include:
 
@@ -134,7 +143,14 @@ Some of the language features in Juvix include:
 - holes in expressions
 - axioms for non-computable terms
 
-Additionally, the foreign and compile blocks syntax enable developers to compile a program to different backends including the =C= language. The Juvix module system further permits splitting programs into several modules to build libraries which can be later documented by generating HTML files based on the codebase, see for example, [[https://anoma.github.io/juvix-stdlib/][the Juvix standard library's website]]. For futher details, please refer to [[https://anoma.github.io/juvix/][the Juvix book]] which includes our [[https://anoma.github.io/juvix/introduction/changelog.html][latest updates]].
+Additionally, the foreign and compile blocks syntax enable developers to compile
+a program to different backends including the =C= language. The Juvix module
+system further permits splitting programs into several modules to build
+libraries which can be later documented by generating HTML files based on the
+codebase, see for example, [[https://anoma.github.io/juvix-stdlib/][the Juvix
+standard library's website]]. For futher details, please refer to
+[[https://anoma.github.io/juvix/][the Juvix book]] which includes our
+[[https://anoma.github.io/juvix/introduction/changelog.html][latest updates]].
 
 ** Coming soon
 
