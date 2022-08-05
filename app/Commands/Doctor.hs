@@ -8,6 +8,8 @@ import Network.HTTP.Simple
 import Options.Applicative
 import System.Environment qualified as E
 import System.Process qualified as P
+import Safe (headMay)
+import Text.Read (readMaybe)
 
 newtype GithubRelease = GithubRelease {_githubReleaseTagName :: Maybe Text}
   deriving stock (Eq, Show, Generic)
@@ -37,6 +39,9 @@ parseDoctorOptions = do
 
 type DoctorEff = '[Log, Embed IO]
 
+minimumClangVersion :: Integer
+minimumClangVersion = 13
+
 checkCmdOnPath :: Members DoctorEff r => String -> Text -> Sem r ()
 checkCmdOnPath cmd errMsg =
   whenM (isNothing <$> embed (findExecutable cmd)) (log errMsg)
@@ -52,6 +57,13 @@ checkClangTargetSupported target errMsg = do
       )
   unless (code == ExitSuccess) (log errMsg)
 
+checkClangVersion :: Members DoctorEff r => Integer -> Text -> Sem r ()
+checkClangVersion expectedVersion errMsg = do
+  versionString <- embed ( P.readProcess "clang" ["-dumpversion"] "")
+  case headMay (splitOn "." versionString) >>= readMaybe of
+    Just majorVersion -> unless (majorVersion >= expectedVersion) (log errMsg)
+    Nothing -> log "  ! Could not determine clang version"
+
 checkEnvVarSet :: Members DoctorEff r => String -> Text -> Sem r ()
 checkEnvVarSet var errMsg = do
   whenM (isNothing <$> embed (E.lookupEnv var)) (log errMsg)
@@ -65,7 +77,7 @@ getLatestRelease = do
 
 checkVersion :: Members DoctorEff r => Sem r ()
 checkVersion = do
-  log "> Checking latest Juvix release on Github"
+  log "> Checking latest Juvix release on Github..."
   let tagName = "v" <> V.versionDoc
   response <- runFail getLatestRelease
   case response of
@@ -78,11 +90,15 @@ checkClang :: Members DoctorEff r => Sem r ()
 checkClang = do
   log "> Checking for clang..."
   checkCmdOnPath "clang" "  ! Could not find the clang command"
+  log "> Checking clang version..."
+  checkClangVersion minimumClangVersion ("  ! Clang version " <> show minimumClangVersion <> " or newer required")
+  log "> Checking for wasm-ld..."
+  checkCmdOnPath "wasm-ld" "  ! Could not find the wasm-ld command"
   log "> Checking that clang supports wasm32..."
   checkClangTargetSupported "wasm32" "  ! Clang does not support the wasm32 target"
   log "> Checking that clang supports wasm32-wasi..."
   checkClangTargetSupported "wasm32-wasi" "  ! Clang does not support the wasm32-wasi target"
-  log "> Checking that WASI_SYSROOT_PATH is set"
+  log "> Checking that WASI_SYSROOT_PATH is set..."
   checkEnvVarSet "WASI_SYSROOT_PATH" "  ! Environment variable WASI_SYSROOT_PATH is missing"
 
 checkWasmer :: Members DoctorEff r => Sem r ()
