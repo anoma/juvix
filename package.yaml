@@ -105,6 +105,7 @@ executables:
     dependencies:
     - juvix
     - optparse-applicative == 0.17.*
+    - http-conduit == 2.3.*
     verbatim:
       default-language: GHC2021
 

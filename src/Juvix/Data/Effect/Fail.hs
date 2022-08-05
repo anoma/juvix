@@ -1,6 +1,7 @@
 -- | An effect similar to Polysemy Fail but wihout an error message
 module Juvix.Data.Effect.Fail where
 
+import Control.Exception qualified as X
 import Juvix.Prelude.Base
 
 data Fail m a = Fail
@@ -18,3 +19,13 @@ failMaybe :: Member Fail r => Maybe a -> Sem r a
 failMaybe = \case
   Nothing -> fail
   Just x -> return x
+
+failFromException ::
+  Members '[Fail, Embed IO] r =>
+  IO a ->
+  Sem r a
+failFromException m = do
+  r <- embed (X.try @X.SomeException m)
+  case r of
+    Left {} -> fail
+    Right a -> return a

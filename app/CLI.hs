@@ -16,7 +16,7 @@ data CLI
   = DisplayVersion
   | DisplayHelp
   | Command CommandGlobalOptions
-  | Doctor
+  | Doctor DoctorOptions
 
 parseDisplayVersion :: Parser CLI
 parseDisplayVersion =
@@ -39,7 +39,7 @@ parseDoctor =
           command
             "doctor"
             ( info
-                (pure CLI.Doctor)
+                (CLI.Doctor <$> parseDoctorOptions)
                 (progDesc "Perform checks on your Juvix development environment")
             )
         ]

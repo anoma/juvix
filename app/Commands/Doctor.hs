@@ -1,7 +1,39 @@
 module Commands.Doctor where
 
+import Data.Aeson
+import Data.Aeson.TH
+import Juvix.Extra.Version qualified as V
 import Juvix.Prelude
+import Network.HTTP.Simple
+import Options.Applicative
+import System.Environment qualified as E
 import System.Process qualified as P
+
+newtype GithubRelease = GithubRelease {_githubReleaseTagName :: Maybe Text}
+  deriving stock (Eq, Show, Generic)
+
+$( deriveFromJSON
+     defaultOptions
+       { fieldLabelModifier = camelTo2 '_' . dropPrefix "_githubRelease"
+       }
+     ''GithubRelease
+ )
+
+newtype DoctorOptions = DoctorOptions
+  { _doctorOffline :: Bool
+  }
+
+makeLenses ''GithubRelease
+makeLenses ''DoctorOptions
+
+parseDoctorOptions :: Parser DoctorOptions
+parseDoctorOptions = do
+  _doctorOffline <-
+    switch
+      ( long "offline"
+          <> help "Run the doctor offline"
+      )
+  pure DoctorOptions {..}
 
 type DoctorEff = '[Log, Embed IO]
 
@@ -20,6 +52,28 @@ checkClangTargetSupported target errMsg = do
       )
   unless (code == ExitSuccess) (log errMsg)
 
+checkEnvVarSet :: Members DoctorEff r => String -> Text -> Sem r ()
+checkEnvVarSet var errMsg = do
+  whenM (isNothing <$> embed (E.lookupEnv var)) (log errMsg)
+
+getLatestRelease :: Members '[Embed IO, Fail] r => Sem r GithubRelease
+getLatestRelease = do
+  request' <- failFromException (parseRequest "https://api.github.com/repos/anoma/juvix/releases/latest")
+  let request = setRequestHeaders [("user-agent", "curl/7.79.1"), ("Accept", "application/vnd.github+json")] request'
+  response <- failFromException (httpJSON request)
+  return (getResponseBody response)
+
+checkVersion :: Members DoctorEff r => Sem r ()
+checkVersion = do
+  log "> Checking latest Juvix release on Github"
+  let tagName = "v" <> V.versionDoc
+  response <- runFail getLatestRelease
+  case response of
+    Just release -> case release ^. githubReleaseTagName of
+      Just latestTagName -> unless (tagName == latestTagName) (log ("  ! Newer Juvix version is available from https://github.com/anoma/juvix/releases/tag/" <> latestTagName))
+      Nothing -> log "  ! Tag name is not present in release JSON from Github API"
+    Nothing -> log "  ! Network error when fetching data from Github API"
+
 checkClang :: Members DoctorEff r => Sem r ()
 checkClang = do
   log "> Checking for clang..."
@@ -28,8 +82,16 @@ checkClang = do
   checkClangTargetSupported "wasm32" "  ! Clang does not support the wasm32 target"
   log "> Checking that clang supports wasm32-wasi..."
   checkClangTargetSupported "wasm32-wasi" "  ! Clang does not support the wasm32-wasi target"
+  log "> Checking that WASI_SYSROOT_PATH is set"
+  checkEnvVarSet "WASI_SYSROOT_PATH" "  ! Environment variable WASI_SYSROOT_PATH is missing"
 
-doctor :: Members DoctorEff r => Sem r ()
-doctor = do
-  log "Juvix doctor"
+checkWasmer :: Members DoctorEff r => Sem r ()
+checkWasmer = do
+  log "> Checking for wasmer..."
+  checkCmdOnPath "wasmer" "  ! Could not find the wasmer command"
+
+doctor :: Members DoctorEff r => DoctorOptions -> Sem r ()
+doctor opts = do
   checkClang
+  checkWasmer
+  unless (opts ^. doctorOffline) checkVersion
