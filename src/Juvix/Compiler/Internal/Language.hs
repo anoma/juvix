@@ -50,6 +50,7 @@ data AxiomDef = AxiomDef
 data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
     _funDefType :: Expression,
+    _funDefExamples :: [Example],
     _funDefClauses :: NonEmpty FunctionClause,
     _funDefBuiltin :: Maybe BuiltinFunction
   }
@@ -94,6 +95,11 @@ data Expression
   deriving stock (Eq, Generic)
 
 instance Hashable Expression
+
+data Example = Example {
+  _exampleId :: NameId
+  , _exampleExpression :: Expression
+  }
 
 data Lambda = Lambda
   { _lambdaVar :: VarName,
@@ -172,6 +178,7 @@ data Function = Function
 instance Hashable Function
 
 makeLenses ''Module
+makeLenses ''Example
 makeLenses ''PatternArg
 makeLenses ''Include
 makeLenses ''FunctionDef

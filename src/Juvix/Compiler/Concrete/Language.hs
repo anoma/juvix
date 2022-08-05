@@ -894,7 +894,7 @@ data ExpressionAtoms (s :: Stage) = ExpressionAtoms
   }
 
 newtype Judoc (s :: Stage) = Judoc
-  { _block :: [JudocAtom s]
+  { _block :: [JudocBlock s]
   }
   deriving newtype (Semigroup, Monoid)
 
@@ -904,10 +904,38 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Judoc 
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Judoc s)
 
+data Example (s :: Stage) = Example {
+  _exampleId :: NameId,
+  _exampleExpression :: ExpressionType s
+  }
+deriving stock instance Show (ExpressionType s) => Show (Example s)
+
+deriving stock instance Eq (ExpressionType s) => Eq (Example s)
+
+deriving stock instance Ord (ExpressionType s) => Ord (Example s)
+
+data JudocBlock (s :: Stage) =
+  JudocParagraph (NonEmpty (JudocParagraphLine s))
+  | JudocExample (Example s)
+
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocBlock s)
+
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocBlock s)
+
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocBlock s)
+
+newtype JudocParagraphLine (s :: Stage) =
+   JudocParagraphLine (NonEmpty (JudocAtom s))
+
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocParagraphLine s)
+
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocParagraphLine s)
+
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocParagraphLine s)
+
 data JudocAtom (s :: Stage)
   = JudocExpression (ExpressionType s)
   | JudocText Text
-  | JudocNewline
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocAtom s)
 
@@ -916,6 +944,7 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocA
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocAtom s)
 
 makeLenses ''PatternArg
+makeLenses ''Example
 makeLenses ''Judoc
 makeLenses ''Function
 makeLenses ''InductiveDef
@@ -1162,6 +1191,14 @@ entryIsExpression = \case
   EntryFunction {} -> True
   EntryConstructor {} -> True
   EntryModule {} -> False
+
+judocExamples :: Judoc s -> [Example s]
+judocExamples (Judoc bs) = concatMap go bs
+ where
+ go :: JudocBlock s -> [Example s]
+ go = \case
+   JudocExample e -> [e]
+   _ -> mempty
 
 instance HasLoc SymbolEntry where
   getLoc = (^. S.nameDefined) . entryName

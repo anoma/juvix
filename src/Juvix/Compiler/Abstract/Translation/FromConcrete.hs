@@ -16,6 +16,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
+import Juvix.Compiler.Abstract.Language (FunctionDef(_funDefExamples))
 
 newtype ModulesCache = ModulesCache
   {_cachedModules :: HashMap S.NameId Abstract.TopModule}
@@ -172,9 +173,20 @@ goFunctionDef TypeSignature {..} clauses = do
       _funDefBuiltin = _sigBuiltin
   _funDefClauses <- mapM goFunctionClause clauses
   _funDefTypeSig <- goExpression _sigType
+  _funDefExamples <- maybe (return []) (mapM goExample . judocExamples) _sigDoc
   let fun = Abstract.FunctionDef {..}
   whenJust _sigBuiltin (registerBuiltinFunction fun)
   registerFunction' fun
+
+goExample ::   Member (Error ScoperError) r =>
+  Example 'Scoped ->
+  Sem r Abstract.Example
+goExample ex = do
+  e' <- goExpression (ex ^. exampleExpression)
+  return Abstract.Example {
+    _exampleExpression = e',
+    _exampleId = ex ^. exampleId
+                          }
 
 goFunctionClause ::
   Member (Error ScoperError) r =>

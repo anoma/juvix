@@ -547,25 +547,35 @@ instance SingI s => PrettyCode (OpenModule s) where
         Public -> Just kwPublic
         NoPublic -> Nothing
 
+ppJudocStart :: Doc Ann
+ppJudocStart = pretty (Str.judocStart :: Text)
+
+ppJudocExampleStart :: Doc Ann
+ppJudocExampleStart = pretty (Str.judocExample :: Text)
+
+instance SingI s => PrettyCode (Example s) where
+  ppCode e =  do
+    e' <- ppExpression (e ^. exampleExpression)
+    return (ppJudocStart <+> ppJudocExampleStart <+> e' <> kwSemicolon <> line)
+
+instance SingI s => PrettyCode (JudocBlock s) where
+  ppCode = \case
+    JudocParagraph l -> vsep <$> mapM ppCode l
+    JudocExample e -> ppCode e
+
+instance SingI s => PrettyCode (JudocParagraphLine s) where
+  ppCode (JudocParagraphLine atoms) = do
+    atoms' <- mconcatMap ppCode atoms
+    let prefix = pretty (Str.judocStart :: Text) :: Doc Ann
+    return (prefix <> atoms' <> line)
+
 instance SingI s => PrettyCode (Judoc s) where
   ppCode :: forall r. Members '[Reader Options] r => Judoc s -> Sem r (Doc Ann)
-  ppCode (Judoc blck) =
-    mconcatMapM ppLine (linesBy isNewLine blck)
-    where
-      isNewLine :: JudocAtom s -> Bool
-      isNewLine = \case
-        JudocNewline -> True
-        _ -> False
-      ppLine :: [JudocAtom s] -> Sem r (Doc Ann)
-      ppLine atoms = do
-        atoms' <- mconcatMapM ppCode atoms
-        let prefix = pretty (Str.judocStart :: Text) :: Doc Ann
-        return $ prefix <> atoms' <> line
+  ppCode (Judoc blocks) = mconcatMapM ppCode blocks
 
 instance SingI s => PrettyCode (JudocAtom s) where
   ppCode :: forall r. (Members '[Reader Options] r) => JudocAtom s -> Sem r (Doc Ann)
   ppCode = \case
-    JudocNewline -> return "\n"
     JudocExpression e -> goExpression e
     JudocText t -> return (annotate AnnComment (pretty t))
     where

@@ -149,16 +149,26 @@ goFunctionDef :: Abstract.FunctionDef -> Sem r FunctionDef
 goFunctionDef f = do
   _funDefClauses' <- mapM (goFunctionClause _funDefName') (f ^. Abstract.funDefClauses)
   _funDefType' <- goType (f ^. Abstract.funDefTypeSig)
+  _funDefExamples' <- mapM goExample (f ^. Abstract.funDefExamples)
   return
     FunctionDef
       { _funDefName = _funDefName',
         _funDefType = _funDefType',
         _funDefClauses = _funDefClauses',
+        _funDefExamples = _funDefExamples',
         _funDefBuiltin = f ^. Abstract.funDefBuiltin
       }
   where
     _funDefName' :: Name
     _funDefName' = f ^. Abstract.funDefName
+
+goExample :: Abstract.Example -> Sem r Example
+goExample e = do
+  e' <- goExpression (e ^. Abstract.exampleExpression)
+  return Example {
+    _exampleExpression = e',
+    _exampleId = e ^. Abstract.exampleId
+  }
 
 goFunctionClause :: Name -> Abstract.FunctionClause -> Sem r FunctionClause
 goFunctionClause n c = do

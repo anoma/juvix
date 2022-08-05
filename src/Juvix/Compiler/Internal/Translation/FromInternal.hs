@@ -10,7 +10,9 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Data.Effect.NameIdGen
+import Juvix.Compiler.Internal.Language
 import Juvix.Prelude hiding (fromEither)
+import Data.HashMap.Strict qualified as HashMap
 
 arityChecking ::
   Members '[Error JuvixError, NameIdGen] r =>
@@ -34,8 +36,9 @@ typeChecking ::
   Sem r InternalTypedResult
 typeChecking res@ArityChecking.InternalArityResult {..} =
   mapError (JuvixError @TypeCheckerError) $ do
-    (idens, r) <-
-      runState (mempty :: TypesTable)
+    (normalized, (idens, r)) <-
+      runOutputList
+        . runState (mempty :: TypesTable)
         . runReader entryPoint
         . evalState (mempty :: FunctionsTable)
         . runReader table
@@ -44,6 +47,7 @@ typeChecking res@ArityChecking.InternalArityResult {..} =
       InternalTypedResult
         { _resultInternalArityResult = res,
           _resultModules = r,
+          _resultNormalized = HashMap.fromList [(e ^. exampleId, e ^. exampleExpression) | e <- normalized],
           _resultIdenTypes = idens
         }
   where

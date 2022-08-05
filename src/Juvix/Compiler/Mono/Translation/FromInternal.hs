@@ -414,6 +414,7 @@ goFunctionDefPoly def poly
         (Just funName)
         Micro.FunctionDef
           { _funDefName = impossible,
+            _funDefExamples = mempty,
             _funDefType = sig' ^. Micro.unconcreteType,
             _funDefClauses = _funDefClauses,
             _funDefBuiltin = def ^. Micro.funDefBuiltin

@@ -11,9 +11,12 @@ import Juvix.Prelude
 
 type TypesTable = HashMap Name Expression
 
+type NormalizedTable = HashMap NameId Expression
+
 data InternalTypedResult = InternalTypedResult
   { _resultInternalArityResult :: InternalArityResult,
     _resultModules :: NonEmpty Module,
+   _resultNormalized :: NormalizedTable,
     _resultIdenTypes :: TypesTable
   }
 

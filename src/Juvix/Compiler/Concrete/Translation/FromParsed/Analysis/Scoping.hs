@@ -356,14 +356,15 @@ exportScope Scope {..} = do
                 )
 
 readParseModule ::
-  Members '[Error ScoperError, Reader ScopeParameters, Files, Parser.InfoTableBuilder] r =>
+  Members '[Error ScoperError, Reader ScopeParameters, Files, Parser.InfoTableBuilder, NameIdGen] r =>
   TopModulePath ->
   Sem r (Module 'Parsed 'ModuleTop)
 readParseModule mp = do
   path <- modulePathToFilePath mp
   txt <- readFile' path
   root <- asks (^. scopeRootPath)
-  case runModuleParser root path txt of
+  pr <- runModuleParser root path txt
+  case pr of
     Left err -> throw (ErrParser (MegaParsecError err))
     Right (tbl, m) -> Parser.mergeTable tbl $> m
 
@@ -1214,7 +1215,19 @@ checkJudoc ::
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
   Judoc 'Parsed ->
   Sem r (Judoc 'Scoped)
-checkJudoc (Judoc atoms) = Judoc <$> mapM checkJudocAtom atoms
+checkJudoc (Judoc atoms) = Judoc <$> mapM checkJudocBlock atoms
+
+checkJudocBlock :: Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
+  JudocBlock 'Parsed ->
+  Sem r (JudocBlock 'Scoped)
+checkJudocBlock = \case
+  JudocParagraph l -> JudocParagraph <$> mapM checkJudocLine l
+  JudocExample e -> JudocExample <$> traverseOf exampleExpression checkParseExpressionAtoms e
+
+checkJudocLine :: Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
+  JudocParagraphLine 'Parsed ->
+  Sem r (JudocParagraphLine 'Scoped)
+checkJudocLine (JudocParagraphLine atoms) = JudocParagraphLine <$> mapM checkJudocAtom atoms
 
 checkJudocAtom ::
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
@@ -1222,7 +1235,6 @@ checkJudocAtom ::
   Sem r (JudocAtom 'Scoped)
 checkJudocAtom = \case
   JudocText t -> return (JudocText t)
-  JudocNewline -> return JudocNewline
   JudocExpression e -> JudocExpression <$> checkParseExpressionAtoms e
 
 checkParseExpressionAtoms ::

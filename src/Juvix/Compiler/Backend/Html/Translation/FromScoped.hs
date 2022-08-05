@@ -337,17 +337,24 @@ goJudocMay :: Members '[Reader HtmlOptions] r => Maybe (Judoc 'Scoped) -> Sem r 
 goJudocMay = maybe (return mempty) goJudoc
 
 goJudoc :: forall r. Members '[Reader HtmlOptions] r => Judoc 'Scoped -> Sem r Html
-goJudoc (Judoc atoms) = mconcatMapM goParagraph paragraphs
+goJudoc (Judoc bs) = mconcatMapM goBlock bs
   where
-    goParagraph :: [JudocAtom 'Scoped] -> Sem r Html
-    goParagraph = fmap p . mconcatMapM goAtom
+    goBlock :: JudocBlock 'Scoped -> Sem r Html
+    goBlock = \case
+      JudocParagraph ls -> mconcatMapM goLine (toList ls)
+      JudocExample e -> goExample e
+    goLine :: JudocParagraphLine 'Scoped -> Sem r Html
+    goLine (JudocParagraphLine atoms) = mconcatMapM goAtom (toList atoms)
+    goExample :: Example 'Scoped  -> Sem r Html
+    goExample e = do
+      e' <- ppCodeHtml (e ^. exampleExpression)
+      return $ Html.pre ! Attr.class_ "screen" $
+        (Html.code ! Attr.class_ "prompt" $ Str.judocExample)
+         <> " " <> e'
     goAtom :: JudocAtom 'Scoped -> Sem r Html
     goAtom = \case
-      JudocNewline -> return " "
       JudocExpression e -> ppCodeHtml e
       JudocText txt -> return (toHtml txt)
-    paragraphs :: [[JudocAtom 'Scoped]]
-    paragraphs = splitOn [JudocNewline, JudocNewline] atoms
 
 goStatement :: Members '[Reader HtmlOptions] r => Statement 'Scoped -> Sem r Html
 goStatement = \case

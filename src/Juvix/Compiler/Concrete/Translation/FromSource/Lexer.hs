@@ -90,6 +90,15 @@ string =
   lexemeInterval $
     pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
+judocExampleStart :: ParsecS r ()
+judocExampleStart = P.chunk Str.judocExample >> hspace
+
+judocStart :: ParsecS r ()
+judocStart = P.chunk Str.judocStart >> hspace
+
+judocEmptyLine :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
+judocEmptyLine = lexeme (void (P.try (judocStart >> P.newline)))
+
 curLoc :: Member (Reader ParserParams) r => ParsecS r Loc
 curLoc = do
   sp <- getSourcePos
