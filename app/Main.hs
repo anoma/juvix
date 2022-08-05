@@ -15,8 +15,8 @@ import Juvix.Compiler.Abstract.Translation.FromConcrete qualified as Abstract
 import Juvix.Compiler.Backend.C.Translation.FromInternal qualified as MiniC
 import Juvix.Compiler.Backend.Haskell.Pretty qualified as MiniHaskell
 import Juvix.Compiler.Backend.Haskell.Translation.FromMono qualified as MiniHaskell
-import Juvix.Compiler.Backend.Html.Translation.FromScoped qualified as Doc
-import Juvix.Compiler.Backend.Html.Translation.FromScoped qualified as Html
+import Juvix.Compiler.Backend.Html.Translation.FromTyped qualified as Doc
+import Juvix.Compiler.Backend.Html.Translation.FromTyped qualified as Html
 import Juvix.Compiler.Concrete.Data.Highlight qualified as Highlight
 import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoper
 import Juvix.Compiler.Concrete.Pretty qualified as Scoper
@@ -151,16 +151,8 @@ runCommand cmdWithOpts = do
                   ctx :: InternalTyped.InternalTypedResult <-
                     runPipeline
                       (upToInternalTyped entryPoint)
-                  let mainMod =
-                        ctx
-                          ^. InternalTyped.resultInternalArityResult
-                          . InternalArity.resultInternalResult
-                          . Internal.resultAbstract
-                          . Abstract.resultScoper
-                          . Scoper.mainModule
-                      docDir = localOpts ^. docOutputDir
-                      normalized = ctx ^. InternalTyped.resultNormalized
-                  runReader normalized (runReader entryPoint (Doc.compileModule docDir "proj" mainMod))
+                  let docDir = localOpts ^. docOutputDir
+                  Doc.compile docDir "proj" ctx
                   embed (when (localOpts ^. docOpen) (void (Process.spawnProcess "xdg-open" [docDir </> Doc.indexFileName])))
                 Internal Pretty -> do
                   micro <-

@@ -55,4 +55,4 @@ typeChecking res@ArityChecking.InternalArityResult {..} =
     table = buildTable _resultModules
 
     entryPoint :: EntryPoint
-    entryPoint = res ^. ArityChecking.microJuvixArityResultEntryPoint
+    entryPoint = res ^. ArityChecking.internalArityResultEntryPoint

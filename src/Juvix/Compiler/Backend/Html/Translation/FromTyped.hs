@@ -1,6 +1,6 @@
-module Juvix.Compiler.Backend.Html.Translation.FromScoped
-  ( module Juvix.Compiler.Backend.Html.Translation.FromScoped,
-    module Juvix.Compiler.Backend.Html.Translation.FromScoped.Generation,
+module Juvix.Compiler.Backend.Html.Translation.FromTyped
+  ( module Juvix.Compiler.Backend.Html.Translation.FromTyped,
+    module Juvix.Compiler.Backend.Html.Translation.FromTyped.Source,
     module Juvix.Compiler.Backend.Html.Data,
   )
 where
@@ -9,13 +9,18 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Builder qualified as Builder
 import Data.HashMap.Strict qualified as HashMap
 import Data.Time.Clock
+import Juvix.Compiler.Abstract.Translation.FromConcrete qualified as Abstract
 import Juvix.Compiler.Backend.Html.Data
 import Juvix.Compiler.Backend.Html.Extra
-import Juvix.Compiler.Backend.Html.Translation.FromScoped.Generation hiding (go)
+import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source hiding (go)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoped
+import Juvix.Compiler.Internal.Translation.FromAbstract qualified as Internal
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as InternalArity
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Extra.Paths
@@ -130,12 +135,25 @@ createIndexFile ps = do
                         summary "Subtree"
                           <> ul (mconcatMap li c')
 
-compileModule :: Members '[Embed IO, Reader EntryPoint, Reader NormalizedTable] r => FilePath -> Text -> Module 'Scoped 'ModuleTop -> Sem r ()
-compileModule dir baseName m = runReader params $ do
+compile :: Members '[Embed IO] r => FilePath -> Text -> InternalTypedResult -> Sem r ()
+compile dir baseName ctx = runReader params . runReader normTable . runReader entry $ do
   copyAssets
   mapM_ goTopModule topModules
   runReader docHtmlOpts (createIndexFile (map topModulePath (toList topModules)))
   where
+    entry :: EntryPoint
+    entry = ctx ^. InternalTyped.internalTypedResultEntryPoint
+    normTable :: InternalTyped.NormalizedTable
+    normTable = ctx ^. InternalTyped.resultNormalized
+
+    mainMod :: Module 'Scoped 'ModuleTop
+    mainMod =
+      ctx
+        ^. InternalTyped.resultInternalArityResult
+        . InternalArity.resultInternalResult
+        . Internal.resultAbstract
+        . Abstract.resultScoper
+        . Scoped.mainModule
     copyAssets :: forall s. Members '[Embed IO, Reader DocParams] s => Sem s ()
     copyAssets = do
       toAssetsDir <- (</> "assets") <$> asks (^. docOutputDir)
@@ -155,7 +173,7 @@ compileModule dir baseName m = runReader params $ do
           _docOutputDir = dir
         }
     topModules :: HashMap NameId (Module 'Scoped 'ModuleTop)
-    topModules = getAllModules m
+    topModules = getAllModules mainMod
 
 writeHtml :: Members '[Embed IO] r => FilePath -> Html -> Sem r ()
 writeHtml f h = Prelude.embed $ do

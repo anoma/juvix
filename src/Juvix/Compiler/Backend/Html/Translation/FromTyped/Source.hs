@@ -1,4 +1,4 @@
-module Juvix.Compiler.Backend.Html.Translation.FromScoped.Generation where
+module Juvix.Compiler.Backend.Html.Translation.FromTyped.Source where
 
 import Data.ByteString qualified as BS
 import Data.Text qualified as Text
