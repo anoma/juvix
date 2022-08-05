@@ -97,9 +97,9 @@ stack install
 If the installation succeeds, you must be able to run the Juvix command from any
 location. To get the complete list of commands, please run =juvix --help=.
 
-On MacOS, you can alternatively run the following command for
-[[Homebrew][https://brew.sh]]. The option =--HEAD= below is optional, used to
-build the latest version on the =main= branch on the Juvix's Github.
+On MacOS, you can alternatively run the following command for Homebrew. The flag
+=--HEAD= used below is optional, mostly to build the latest version of Juvix in
+the =main= branch on Github.
 
 #+begin_src shell
 brew install --build-from-source --HEAD juvix --verbose
