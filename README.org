@@ -85,7 +85,7 @@ brew info juvix
 
 To install Juvix from the sources, you must download the
 [[https://github.com/anoma/juvix.git][Github repository]]. Then, the program can
-be downloaded and installed with the following commands. You will need to have
+be installed with the following commands. We assume have
 [[https://haskellstack.org][Stack]] installed.
 
 #+begin_src shell
