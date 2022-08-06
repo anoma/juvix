@@ -24,6 +24,12 @@ NB: The distribution of Clang that comes with XCode does not support the =Wasm= 
 sudo apt install clang lldb lld
 #+end_src
 
+*** Arch Linux
+
+#+begin_src shell
+sudo pacman -S llvm lld
+#+end_src
+
 ** Could not find the wasm-ld command
 
 The Juvix compiler required =wasm-ld= (the Wasm linker) to produce =Wasm= binaries.
@@ -42,6 +48,12 @@ brew install llvm
 
 #+begin_src shell
 sudo apt install lldb lld
+#+end_src
+
+*** Arch Linux
+
+#+begin_src shell
+sudo pacman -S lld
 #+end_src
 
 ** Newer Clang version required
