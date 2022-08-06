@@ -4,11 +4,13 @@ module Command
     module Commands.Html,
     module Commands.Compile,
     module Commands.Dev,
+    module Commands.Doctor,
   )
 where
 
 import Commands.Compile
 import Commands.Dev
+import Commands.Doctor
 import Commands.Extra
 import Commands.Html
 import GlobalOptions
@@ -34,7 +36,9 @@ parseCommandGlobalOptions = do
   cmd <-
     hsubparser
       ( mconcat
-          [ commandCheck,
+          [ commandGroup "Compiler commands:",
+            metavar "COMPILER_CMD",
+            commandCheck,
             commandCompile,
             commandHtml,
             commandDev

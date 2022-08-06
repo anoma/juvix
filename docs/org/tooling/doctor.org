@@ -1,0 +1,93 @@
+* Juvix Doctor
+
+The =juvix doctor= command can help you to troubleshoot problems with your development environment. For each problem the doctor finds they'll be a link to a section on this page to help you fix it.
+
+** Could not find the clang command
+
+The Juvix compiler uses the [[https://clang.llvm.org][Clang compiler]] version 13 or later to generate binaries. You need to have Clang available on your system =$PATH=.
+
+Recommended installation method:
+
+*** MacOS
+
+Use [[https://brew.sh][Homebrew]]:
+
+#+begin_src shell
+brew install llvm
+#+end_src
+
+NB: The distribution of Clang that comes with XCode does not support the =Wasm= target so you must install the standard Clang distribution.
+
+*** Debian / Ubuntu Linux
+
+#+begin_src shell
+sudo apt install clang lldb lld
+#+end_src
+
+*** Arch Linux
+
+#+begin_src shell
+sudo pacman -S llvm lld
+#+end_src
+
+** Could not find the wasm-ld command
+
+The Juvix compiler required =wasm-ld= (the Wasm linker) to produce =Wasm= binaries.
+
+Recommened installation method:
+
+*** MacOS
+
+=wasm-ld= is included in the [[https://brew.sh][Homebrew]] llvm distribution:
+
+#+begin_src shell
+brew install llvm
+#+end_src
+
+*** Debian / Ubuntu Linux
+
+#+begin_src shell
+sudo apt install lldb lld
+#+end_src
+
+*** Arch Linux
+
+#+begin_src shell
+sudo pacman -S lld
+#+end_src
+
+** Newer Clang version required
+
+Juvix requires Clang version 13 or above. See the documentation on [[./doctor.md#could-not-find-the-clang-command][installing Clang]].
+
+** Clang does not support the wasm32 target
+
+Juvix requires Clang version 13 or above. See the documentation on [[./doctor.md#could-not-find-the-clang-command][installing Clang]].
+
+** Clang does not support the wasm32-wasi target
+
+Juvix uses [[https://wasi.dev][WASI - The Wasm System Interface]] to produce binaries that can be executed using a Wasm runtime. The files necessary to setup Clang with =wasm32-wasi= support are available at [[https://github.com/WebAssembly/wasi-sdk/releases][wasi-sdk]].
+
+To install the =wasm32-wasi= target for Clang you need to do two things:
+
+*** Install =libclang_rt.builtins-wasm32.a= into your Clang distribution
+
+1. Obtain =libclang_rt.builtins-wasm32-wasi-16.0.tar.gz= from the [[https://github.com/WebAssembly/wasi-sdk/releases][wasi-sdk releases]] page.
+2. Untar the file and place the file =lib/wasi/libclang_rt.builtins-wasm32.a= into your Clang distribution directory.
+
+   On MacOS, if you installed llvm using homebrew you can find the Clang distribution directory using =brew --prefix llvm=. You should then place the builtins file at =`brew --prefix llvm`/lib/wasi/libclang_rt.builtins-wasm32.a=.
+
+   On Linux the Clang distribution directory will be something like =/usr/lib/clang/13.0.1= where =13.0.1= is the version of Clang that you have installed. You should then place the builtins file at =/usr/lib/clang/13.0.1/lib/wasi/libclang_rt.builtins-wasm32=.
+
+*** Download the WASI sysroot and set =WASI_SYSROOT_PATH=
+
+1. Obtain =wasi-sysroot-16.0.tar.gz= from the [[https://github.com/WebAssembly/wasi-sdk/releases][wasi-sdk releases]] page.
+2. Untar the file and set the environment variable =WASI_SYSROOT_PATH= to that location.
+
+**  Environment variable =WASI_SYSROOT_PATH= is not set
+
+Set the =WASI_SYSROOT_PATH= to the directory where you installed the =wasi-sdk= sysroot files. See [[./doctor.md#download-the-wasi-sysroot-and-set-wasi_sysroot_path][installing the WASI sysroot]].
+
+**  Could not find the wasmer command
+
+The Juvix test suite uses [[https://wasmer.io][Wasmer]] as a Wasm runtime to execute compiled Wasm binaries. See [[https://docs.wasmer.io/ecosystem/wasmer/getting-started][the Wasmer documentation]] to see how to install it.

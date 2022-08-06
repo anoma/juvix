@@ -270,3 +270,4 @@ main = do
     DisplayVersion -> runDisplayVersion
     DisplayHelp -> showHelpText p
     Command cmd -> runM (runAppIO (cmd ^. cliGlobalOptions) (runCommand cmd))
+    Doctor opts -> runM (runLogIO (doctor opts))

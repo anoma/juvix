@@ -1,3 +1,4 @@
-- [[./tools/CLI.md][Command line Interface]]
-- [[./tools/emacs-mode.md][Writting Juvix programs with Emacs Mode]]
-- [[./tools/testing.md][Test Suite]]
+- [[./CLI.md][Command line Interface]]
+- [[./emacs-mode.md][Writting Juvix programs with Emacs Mode]]
+- [[./testing.md][Test Suite]]
+- [[./doctor.md][Doctor]]
