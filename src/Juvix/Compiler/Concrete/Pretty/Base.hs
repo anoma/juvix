@@ -1,6 +1,6 @@
 module Juvix.Compiler.Concrete.Pretty.Base
   ( module Juvix.Compiler.Concrete.Pretty.Base,
-    module Juvix.Compiler.Concrete.Pretty.Ann,
+    module Juvix.Data.CodeAnn,
     module Juvix.Compiler.Concrete.Pretty.Options,
   )
 where
@@ -10,8 +10,8 @@ import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Pretty.Ann
 import Juvix.Compiler.Concrete.Pretty.Options
+import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.Pretty hiding (braces, parens)

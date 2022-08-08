@@ -1,14 +1,14 @@
 module Juvix.Compiler.Backend.Haskell.Pretty.Base
   ( module Juvix.Compiler.Backend.Haskell.Pretty.Base,
-    module Juvix.Compiler.Backend.Haskell.Pretty.Ann,
+    module Juvix.Data.CodeAnn,
     module Juvix.Compiler.Backend.Haskell.Pretty.Options,
   )
 where
 
 import Juvix.Compiler.Backend.Haskell.Language
-import Juvix.Compiler.Backend.Haskell.Pretty.Ann
 import Juvix.Compiler.Backend.Haskell.Pretty.Options
 import Juvix.Compiler.Concrete.Data.Literal
+import Juvix.Data.CodeAnn
 import Juvix.Data.Fixity
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude

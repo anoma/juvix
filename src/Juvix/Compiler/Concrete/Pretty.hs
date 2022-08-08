@@ -5,8 +5,6 @@ module Juvix.Compiler.Concrete.Pretty
   )
 where
 
-import Juvix.Compiler.Concrete.Pretty.Ann
-import Juvix.Compiler.Concrete.Pretty.Ansi qualified as Ansi
 import Juvix.Compiler.Concrete.Pretty.Base
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Prelude
@@ -21,8 +19,8 @@ ppOut :: PrettyCode c => Options -> c -> AnsiText
 ppOut o = AnsiText . PPOutput . doc o
 
 instance HasAnsiBackend PPOutput where
-  toAnsiStream (PPOutput o) = reAnnotateS Ansi.stylize (layoutPretty defaultLayoutOptions o)
-  toAnsiDoc (PPOutput o) = reAnnotate Ansi.stylize o
+  toAnsiStream (PPOutput o) = reAnnotateS stylize (layoutPretty defaultLayoutOptions o)
+  toAnsiDoc (PPOutput o) = reAnnotate stylize o
 
 instance HasTextBackend PPOutput where
   toTextDoc (PPOutput o) = unAnnotate o

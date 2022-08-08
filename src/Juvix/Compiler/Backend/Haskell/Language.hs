@@ -1,14 +1,14 @@
 module Juvix.Compiler.Backend.Haskell.Language
   ( module Juvix.Compiler.Backend.Haskell.Language,
-    module Juvix.Compiler.Concrete.Data.NameKind,
+    module Juvix.Data.NameKind,
     module Juvix.Data.NameId,
   )
 where
 
-import Juvix.Compiler.Concrete.Data.NameKind
 import Juvix.Compiler.Concrete.Language qualified as C
 import Juvix.Data.Fixity
 import Juvix.Data.NameId
+import Juvix.Data.NameKind
 import Juvix.Prelude
 
 type FunctionName = Name

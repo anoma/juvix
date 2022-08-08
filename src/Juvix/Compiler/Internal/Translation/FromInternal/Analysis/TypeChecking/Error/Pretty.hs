@@ -1,34 +1,33 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
   ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty,
-    module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty.Ann,
+    module Juvix.Data.CodeAnn,
     module Juvix.Prelude.Pretty,
   )
 where
 
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty.Base qualified as Micro
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty.Ann
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty.Ansi qualified as Ansi
+import Juvix.Data.CodeAnn
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
-ppCode :: Micro.PrettyCode c => c -> Doc Eann
+ppCode :: Micro.PrettyCode c => c -> Doc Ann
 ppCode = runPP . Micro.ppCode
 
-ppAtom :: (Micro.PrettyCode c, HasAtomicity c) => c -> Doc Eann
+ppAtom :: (Micro.PrettyCode c, HasAtomicity c) => c -> Doc Ann
 ppAtom = runPP . Micro.ppCodeAtom
 
-runPP :: Sem '[Reader Micro.Options] (Doc Micro.Ann) -> Doc Eann
-runPP = highlight_ . reAnnotate MicroAnn . run . runReader Micro.defaultOptions
+runPP :: Sem '[Reader Micro.Options] (Doc Micro.Ann) -> Doc Ann
+runPP = highlight_ . run . runReader Micro.defaultOptions
 
-newtype PPOutput = PPOutput (Doc Eann)
+newtype PPOutput = PPOutput (Doc Ann)
 
-prettyError :: Doc Eann -> AnsiText
+prettyError :: Doc Ann -> AnsiText
 prettyError = AnsiText . PPOutput
 
 instance HasAnsiBackend PPOutput where
-  toAnsiStream (PPOutput o) = reAnnotateS Ansi.stylize (layoutPretty defaultLayoutOptions o)
-  toAnsiDoc (PPOutput o) = reAnnotate Ansi.stylize o
+  toAnsiStream (PPOutput o) = reAnnotateS stylize (layoutPretty defaultLayoutOptions o)
+  toAnsiDoc (PPOutput o) = reAnnotate stylize o
 
 instance HasTextBackend PPOutput where
   toTextDoc (PPOutput o) = unAnnotate o
@@ -37,14 +36,14 @@ instance HasTextBackend PPOutput where
 indent' :: Doc ann -> Doc ann
 indent' = indent 2
 
-highlight_ :: Doc Eann -> Doc Eann
-highlight_ = annotate Highlight
+highlight_ :: Doc Ann -> Doc Ann
+highlight_ = annotate AnnCode
 
-ppApp :: (Expression, [(IsImplicit, Expression)]) -> Doc Eann
+ppApp :: (Expression, [(IsImplicit, Expression)]) -> Doc Ann
 ppApp (fun, args) =
   hsep (ppAtom fun : map (uncurry ppArg) args)
 
-ppArg :: IsImplicit -> Expression -> Doc Eann
+ppArg :: IsImplicit -> Expression -> Doc Ann
 ppArg im arg = case im of
   Implicit -> braces (ppCode arg)
   Explicit -> ppAtom arg

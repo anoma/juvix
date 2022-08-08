@@ -23,7 +23,7 @@ instance ToGenericError NoLexOrder where
       name = _noLexOrderFun
       i = getLoc name
 
-      msg :: Doc Eann
+      msg :: Doc Ann
       msg =
         "The function"
           <+> highlight (pretty name)

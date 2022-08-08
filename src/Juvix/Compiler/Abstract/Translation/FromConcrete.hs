@@ -10,11 +10,11 @@ import Juvix.Compiler.Abstract.Language (FunctionDef (_funDefExamples))
 import Juvix.Compiler.Abstract.Language qualified as Abstract
 import Juvix.Compiler.Abstract.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Builtins
-import Juvix.Compiler.Concrete.Data.NameKind
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
+import Juvix.Data.NameKind
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 

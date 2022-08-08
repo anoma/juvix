@@ -1,14 +1,14 @@
 module Juvix.Compiler.Internal.Pretty.Base
   ( module Juvix.Compiler.Internal.Pretty.Base,
-    module Juvix.Compiler.Internal.Pretty.Ann,
+    module Juvix.Data.CodeAnn,
     module Juvix.Compiler.Internal.Pretty.Options,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Extra
-import Juvix.Compiler.Internal.Pretty.Ann
 import Juvix.Compiler.Internal.Pretty.Options
+import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.Pretty

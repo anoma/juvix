@@ -1,14 +1,14 @@
 module Juvix.Compiler.Abstract.Pretty.Base
   ( module Juvix.Compiler.Abstract.Pretty.Base,
-    module Juvix.Compiler.Abstract.Pretty.Ann,
+    module Juvix.Data.CodeAnn,
     module Juvix.Compiler.Abstract.Pretty.Options,
   )
 where
 
 import Juvix.Compiler.Abstract.Extra
-import Juvix.Compiler.Abstract.Pretty.Ann
 import Juvix.Compiler.Abstract.Pretty.Options
 import Juvix.Compiler.Concrete.Pretty.Base qualified as S
+import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Prettyprinter
@@ -32,7 +32,7 @@ class PrettyCode c where
 ppSCode :: (Members '[Reader Options] r, S.PrettyCode c) => c -> Sem r (Doc Ann)
 ppSCode c = do
   opts <- asks toSOptions
-  return $ alterAnnotations (maybeToList . fromScopedAnn) (S.runPrettyCode opts c)
+  return $ S.runPrettyCode opts c
 
 ppDefault :: PrettyCode c => c -> Doc Ann
 ppDefault = runPrettyCode defaultOptions

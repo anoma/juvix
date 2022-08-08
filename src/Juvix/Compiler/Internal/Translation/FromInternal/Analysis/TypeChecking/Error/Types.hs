@@ -123,7 +123,7 @@ instance ToGenericError WrongConstructorAppArgs where
       numTypes :: Doc ann
       numTypes = pat (length (e ^. wrongCtorAppTypes))
 
-      ctorName :: Doc Eann
+      ctorName :: Doc Ann
       ctorName = ppCode (e ^. wrongCtorAppApp . constrAppConstructor)
 
       pat :: Int -> Doc ann

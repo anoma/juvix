@@ -12,8 +12,8 @@ data AlreadyDefined = AlreadyDefined
 
 makeLenses ''AlreadyDefined
 
-hh :: Doc Eann -> Doc Eann
-hh = annotate Highlight
+hh :: Doc Ann -> Doc Ann
+hh = annotate AnnCode
 
 instance ToGenericError AlreadyDefined where
   genericError e =

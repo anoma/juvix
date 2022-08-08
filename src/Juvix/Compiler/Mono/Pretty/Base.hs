@@ -1,12 +1,13 @@
 module Juvix.Compiler.Mono.Pretty.Base
   ( module Juvix.Compiler.Mono.Pretty.Base,
     module Juvix.Compiler.Mono.Pretty.Options,
+    module Juvix.Data.CodeAnn,
   )
 where
 
 import Juvix.Compiler.Mono.Language
-import Juvix.Compiler.Mono.Pretty.Ann
 import Juvix.Compiler.Mono.Pretty.Options
+import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
