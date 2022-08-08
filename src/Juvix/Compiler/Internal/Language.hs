@@ -23,6 +23,7 @@ import Juvix.Prelude
 
 data Module = Module
   { _moduleName :: Name,
+    _moduleExamples :: [Example],
     _moduleBody :: ModuleBody
   }
 
@@ -149,6 +150,7 @@ newtype InductiveParameter = InductiveParameter
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
     _inductiveBuiltin :: Maybe BuiltinInductive,
+    _inductiveExamples :: [Example],
     _inductiveParameters :: [InductiveParameter],
     _inductiveConstructors :: [InductiveConstructorDef],
     _inductivePositive :: Bool
@@ -157,6 +159,7 @@ data InductiveDef = InductiveDef
 data InductiveConstructorDef = InductiveConstructorDef
   { _inductiveConstructorName :: ConstrName,
     _inductiveConstructorParameters :: [Expression],
+    _inductiveConstructorExamples :: [Example],
     _inductiveConstructorReturnType :: Expression
   }
 

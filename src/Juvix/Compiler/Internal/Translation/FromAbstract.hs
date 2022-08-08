@@ -67,9 +67,11 @@ goModule ::
   Sem r Module
 goModule m = do
   _moduleBody' <- goModuleBody (m ^. Abstract.moduleBody)
+  examples' <- mapM goExample (m ^. Abstract.moduleExamples)
   return
     Module
       { _moduleName = m ^. Abstract.moduleName,
+        _moduleExamples = examples',
         _moduleBody = _moduleBody'
       }
 
@@ -290,22 +292,26 @@ goInductiveDef i =
             mapM
               goConstructorDef
               (i ^. Abstract.inductiveConstructors)
+          examples' <- mapM goExample (i ^. Abstract.inductiveExamples)
           return
             InductiveDef
               { _inductiveName = indTypeName,
                 _inductiveParameters = inductiveParameters',
                 _inductiveBuiltin = i ^. Abstract.inductiveBuiltin,
                 _inductiveConstructors = inductiveConstructors',
+                _inductiveExamples = examples',
                 _inductivePositive = i ^. Abstract.inductivePositive
               }
   where
     goConstructorDef :: Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
     goConstructorDef c = do
       (cParams, cReturnType) <- viewConstructorType (c ^. Abstract.constructorType)
+      examples' <- mapM goExample (c ^. Abstract.constructorExamples)
       return
         InductiveConstructorDef
           { _inductiveConstructorName = c ^. Abstract.constructorName,
             _inductiveConstructorParameters = cParams,
+            _inductiveConstructorExamples = examples',
             _inductiveConstructorReturnType = cReturnType
           }
 

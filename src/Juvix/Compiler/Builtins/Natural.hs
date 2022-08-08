@@ -17,13 +17,17 @@ registerNaturalDef d = do
     _ -> error "Natural numbers should have exactly two constructors"
 
 registerZero :: Member Builtins r => InductiveConstructorDef -> Sem r ()
-registerZero d@(InductiveConstructorDef zero ty) = do
+registerZero d@InductiveConstructorDef {..} = do
+  let zero = _constructorName
+      ty = _constructorType
   nat <- getBuiltinName (getLoc d) BuiltinNatural
   unless (ty === nat) (error $ "zero has the wrong type " <> ppTrace ty <> " | " <> ppTrace nat)
   registerBuiltin BuiltinNaturalZero zero
 
 registerSuc :: Member Builtins r => InductiveConstructorDef -> Sem r ()
-registerSuc d@(InductiveConstructorDef suc ty) = do
+registerSuc d@InductiveConstructorDef {..} = do
+  let suc = _constructorName
+      ty = _constructorType
   nat <- getBuiltinName (getLoc d) BuiltinNatural
   unless (ty === (nat --> nat)) (error "suc has the wrong type")
   registerBuiltin BuiltinNaturalSuc suc

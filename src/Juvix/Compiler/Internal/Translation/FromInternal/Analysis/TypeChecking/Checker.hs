@@ -66,44 +66,65 @@ checkStatement s = case s of
 
 checkInductiveDef ::
   forall r.
-  Members '[Reader EntryPoint, Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, State NegativeTypeParameters] r =>
+  Members '[Reader EntryPoint, Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, State NegativeTypeParameters, Output Example] r =>
   InductiveDef ->
   Sem r InductiveDef
-checkInductiveDef (InductiveDef name built params constrs pos) = runInferenceDef $ do
-  constrs' <- mapM goConstructor constrs
-  ty <- inductiveType name
-  modify (HashMap.insert name ty)
-  let d = InductiveDef name built params constrs' pos
+-- checkInductiveDef (InductiveDef name built params constrs pos) = runInferenceDef $ do
+checkInductiveDef InductiveDef {..} = runInferenceDef $ do
+  constrs' <- mapM goConstructor _inductiveConstructors
+  ty <- inductiveType _inductiveName
+  modify (HashMap.insert _inductiveName ty)
+  examples' <- mapM checkExample _inductiveExamples
+  let d =
+        InductiveDef
+          { _inductiveConstructors = constrs',
+            _inductiveExamples = examples',
+            _inductiveName,
+            _inductiveBuiltin,
+            _inductivePositive,
+            _inductiveParameters
+          }
   checkPositivity d
   return d
   where
     paramLocals :: LocalVars
     paramLocals =
       LocalVars
-        { _localTypes = HashMap.fromList [(p ^. inductiveParamName, smallUniverseE (getLoc p)) | p <- params],
+        { _localTypes = HashMap.fromList [(p ^. inductiveParamName, smallUniverseE (getLoc p)) | p <- _inductiveParameters],
           _localTyMap = mempty
         }
     goConstructor :: InductiveConstructorDef -> Sem (Inference ': r) InductiveConstructorDef
-    goConstructor (InductiveConstructorDef n cty ret) = do
-      expectedRetTy <- constructorReturnType n
+    goConstructor (InductiveConstructorDef {..}) = do
+      expectedRetTy <- constructorReturnType _inductiveConstructorName
       cty' <- runReader paramLocals $ do
         void (checkIsType (getLoc ret) ret)
-        mapM (checkIsType (getLoc n)) cty
+        mapM (checkIsType (getLoc _inductiveConstructorName)) _inductiveConstructorParameters
+      examples' <- mapM checkExample _inductiveConstructorExamples
       whenJustM (matchTypes expectedRetTy ret) (const (errRet expectedRetTy))
-      let c' = InductiveConstructorDef n cty' ret
+      let c' =
+            InductiveConstructorDef
+              { _inductiveConstructorParameters = cty',
+                _inductiveConstructorExamples = examples',
+                _inductiveConstructorReturnType,
+                _inductiveConstructorName
+              }
       registerConstructor c'
       return c'
       where
+        ret = _inductiveConstructorReturnType
         errRet :: Expression -> Sem (Inference ': r) a
         errRet expected =
           throw
             ( ErrWrongReturnType
                 WrongReturnType
-                  { _wrongReturnTypeConstructorName = n,
+                  { _wrongReturnTypeConstructorName = _inductiveConstructorName,
                     _wrongReturnTypeExpected = expected,
                     _wrongReturnTypeActual = ret
                   }
             )
+
+withEmptyVars :: Sem (Reader LocalVars : r) a -> Sem r a
+withEmptyVars = runReader emptyLocalVars
 
 checkFunctionDef ::
   Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example] r =>
@@ -111,7 +132,7 @@ checkFunctionDef ::
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
   funDef <- readerState @FunctionsTable $ runInferenceDef $ do
-    _funDefType' <- runReader emptyLocalVars (checkFunctionDefType _funDefType)
+    _funDefType' <- withEmptyVars (checkFunctionDefType _funDefType)
     registerIden _funDefName _funDefType'
     _funDefClauses' <- mapM (checkFunctionClause _funDefType') _funDefClauses
     return
@@ -121,7 +142,7 @@ checkFunctionDef FunctionDef {..} = do
           ..
         }
   registerFunctionDef funDef
-  readerState @FunctionsTable (runReader emptyLocalVars (traverseOf funDefExamples (mapM checkExample) funDef))
+  readerState @FunctionsTable (traverseOf funDefExamples (mapM checkExample) funDef)
 
 checkIsType ::
   Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
@@ -144,11 +165,11 @@ checkFunctionDefType ty = do
     go h = freshMetavar h
 
 checkExample ::
-  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Output Example, State TypesTable] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Output Example, State TypesTable] r =>
   Example ->
   Sem r Example
 checkExample e = do
-  e' <- runInferenceDef (traverseOf exampleExpression (inferExpression >=> strongNormalize) e)
+  e' <- withEmptyVars (runInferenceDef (traverseOf exampleExpression (inferExpression >=> strongNormalize) e))
   output e'
   return e'
 

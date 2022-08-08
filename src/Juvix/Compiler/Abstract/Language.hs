@@ -31,6 +31,7 @@ type TopModuleName = Name
 
 data Module = Module
   { _moduleName :: Name,
+    _moduleExamples :: [Example],
     _moduleBody :: ModuleBody
   }
   deriving stock (Eq, Show)
@@ -181,6 +182,7 @@ data InductiveDef = InductiveDef
     _inductiveBuiltin :: Maybe BuiltinInductive,
     _inductiveParameters :: [FunctionParameter],
     _inductiveType :: Expression,
+    _inductiveExamples :: [Example],
     _inductiveConstructors :: [InductiveConstructorDef],
     _inductivePositive :: Bool
   }
@@ -188,6 +190,7 @@ data InductiveDef = InductiveDef
 
 data InductiveConstructorDef = InductiveConstructorDef
   { _constructorName :: ConstrName,
+    _constructorExamples :: [Example],
     _constructorType :: Expression
   }
   deriving stock (Eq, Show)
