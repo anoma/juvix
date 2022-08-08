@@ -1,0 +1,9 @@
+-- HelloWorld.juvix
+module HelloWorld;
+
+open import Stdlib.Prelude;
+
+main : IO;
+main ≔ putStrLn "hello world!";
+
+end;

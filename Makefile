@@ -3,19 +3,20 @@ PREFIX="$(PWD)/.stack-work/prefix"
 UNAME := $(shell uname)
 HLINTQUIET :=
 
-ASSETS = seating-mascot.051c86a.svg \
-				 Seating_Tara_smiling.svg \
-				 teaching-mascot.f828959.svg
+ASSETS = 	seating-mascot.051c86a.svg \
+			Seating_Tara_smiling.svg \
+			teaching-mascot.f828959.svg
 
 ORGFILES = $(shell find docs/org -type f -name '*.org')
 MDFILES:=$(patsubst docs/org/%,docs/md/%,$(ORGFILES:.org=.md))
 
 EXAMPLEMILESTONE=examples/milestone
 EXAMPLEHTMLOUTPUT=_docs/examples/html
-EXAMPLES=ValidityPredicates/SimpleFungibleToken.juvix \
-			TicTacToe/CLI/TicTacToe.juvix \
+EXAMPLES= 	HelloWorld/HelloWorld.juvix \
+			Collatz/Collatz.juvix \
 			Fibonacci/Fibonacci.juvix \
-			Collatz/Collatz.juvix
+			TicTacToe/CLI/TicTacToe.juvix \
+			ValidityPredicates/SimpleFungibleToken.juvix
 
 EXAMPLE_WEBAPP_OUTPUT=_docs/examples/webapp
 WEBAPP_EXAMPLES=TicTacToe/Web/TicTacToe.juvix
@@ -66,11 +67,11 @@ $(WEBAPP_EXAMPLES):
 
 # -- MDBook
 
-docs/md/README.md :
+docs/md/README.md : README.org
 	@mkdir -p docs/md
 	@${ORGTOMDPRG} README.org ${ORGOPTS}
 
-docs/md/changelog.md :
+docs/md/changelog.md : changelog.org
 	@mkdir -p docs/md
 	@${ORGTOMDPRG} changelog.org ${ORGOPTS}
 
@@ -79,15 +80,18 @@ docs/md/%.md : docs/org/%.org
 	@mkdir -p $(dir $@)
 	${ORGTOMDPRG} $? ${ORGOPTS}
 
+.PHONY: markdown-files
+markdown-files: docs/md/README.md docs/md/changelog.md $(MDFILES)
+
 .PHONY: markdown-docs
-markdown-docs: docs/md/README.md docs/md/changelog.md $(MDFILES)
+markdown-docs: markdown-files
 	@echo "copying assets ..."
 	@mkdir -p docs/md/assets
 	@cp -v $(addprefix assets/,$(ASSETS)) docs/md/assets
 	@mdbook build
 
 .PHONY: serve-docs
-serve-docs: $(MDFILES)
+serve-docs: markdown-files
 	@mdbook serve --open
 
 # -- Codebase Documentation
