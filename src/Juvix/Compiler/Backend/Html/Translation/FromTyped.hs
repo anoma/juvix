@@ -30,7 +30,6 @@ import Juvix.Prelude
 import Juvix.Prelude qualified as Prelude
 import Juvix.Prelude.Pretty
 import Text.Blaze.Html.Renderer.Utf8 qualified as Html
--- import Data.HashMap.Strict    qualified          as HashMap
 import Text.Blaze.Html5 as Html hiding (map)
 import Text.Blaze.Html5.Attributes qualified as Attr
 
@@ -109,14 +108,8 @@ createIndexFile ps = do
                 (a ! Attr.href lnk $ toHtml (prettyText lbl'))
         attrBase :: Html.AttributeValue
         attrBase = "details-toggle-control details-toggle collapser"
-        -- dataDetailsId :: AttributeValue -> Attribute
-        -- dataDetailsId = Html.dataAttribute "details-id"
         attrBare :: Html.AttributeValue
         attrBare = attrBase <> "module"
-        -- attr :: Html.AttributeValue
-        -- attr = case lbl of
-        --   Nothing -> attrBare
-        --   Just {} -> attrBase
         node :: Sem r Html
         node = do
           row' <- nodeRow
@@ -131,7 +124,6 @@ createIndexFile ps = do
                   return $
                     Just $
                       details ! Attr.open "open" $
-                        -- (summary ! Attr.class_ "hide-when-js-enabled" $ "Submodules")
                         summary "Subtree"
                           <> ul (mconcatMap li c')
 
@@ -215,7 +207,6 @@ template rightMenu' content' = do
             ! Attr.name "viewport"
             ! Attr.content "width=device-width, initial-scale=1"
           <> mathJaxCdn
-          -- <> highlightJs
           <> livejs
           <> ayuCss
           <> linuwialCss
@@ -360,7 +351,7 @@ goJudoc (Judoc bs) = mconcatMapM goBlock bs
   where
     goBlock :: JudocBlock 'Scoped -> Sem r Html
     goBlock = \case
-      JudocParagraph ls -> mconcatMapM goLine (toList ls)
+      JudocParagraph ls -> concatWith (\l r -> l <> " " <> r) <$> mapM goLine (toList ls)
       JudocExample e -> goExample e
     goLine :: JudocParagraphLine 'Scoped -> Sem r Html
     goLine (JudocParagraphLine atoms) = mconcatMapM goAtom (toList atoms)

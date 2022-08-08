@@ -12,8 +12,8 @@ import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Data.Fixity
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 import Juvix.Prelude.Pretty qualified as PP
-import Prettyprinter
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
 doc opts =
