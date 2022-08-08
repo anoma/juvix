@@ -30,6 +30,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qu
 import Juvix.Compiler.Mono.Pretty qualified as Mono
 import Juvix.Compiler.Mono.Translation.FromInternal qualified as Mono
 import Juvix.Compiler.Pipeline
+import Juvix.Extra.Process
 import Juvix.Extra.Version (runDisplayVersion)
 import Juvix.Prelude hiding (Doc)
 import Juvix.Prelude.Pretty hiding (Doc)
@@ -153,7 +154,9 @@ runCommand cmdWithOpts = do
                       (upToInternalTyped entryPoint)
                   let docDir = localOpts ^. docOutputDir
                   Doc.compile docDir "proj" ctx
-                  embed (when (localOpts ^. docOpen) (void (Process.spawnProcess "xdg-open" [docDir </> Doc.indexFileName])))
+                  when (localOpts ^. docOpen) $ case openCmd of
+                    Nothing -> say "Could not recognize the 'open' command for your OS"
+                    Just opencmd -> embed (void (Process.spawnProcess opencmd [docDir </> Doc.indexFileName]))
                 Internal Pretty -> do
                   micro <-
                     head . (^. Internal.resultModules)
