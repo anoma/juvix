@@ -82,8 +82,6 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
     applyBuiltin env OpIntEq [l, r] = nodeFromBool (integerFromNode (eval' env l) == integerFromNode (eval' env r))
     applyBuiltin env OpIntLt [l, r] = nodeFromBool (integerFromNode (eval' env l) < integerFromNode (eval' env r))
     applyBuiltin env OpIntLe [l, r] = nodeFromBool (integerFromNode (eval' env l) <= integerFromNode (eval' env r))
-    applyBuiltin env OpBoolAnd [l, r] = nodeFromBool (boolFromNode (eval' env l) && boolFromNode (eval' env r))
-    applyBuiltin env OpBoolOr [l, r] = nodeFromBool (boolFromNode (eval' env l) || boolFromNode (eval' env r))
     applyBuiltin _ _ _ = evalError "invalid builtin application"
 
     nodeFromInteger :: Integer -> Node
@@ -96,8 +94,3 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
     integerFromNode = \case
       Constant _ (ConstInteger int) -> int
       _ -> evalError "not an integer"
-
-    boolFromNode :: Node -> Bool
-    boolFromNode = \case
-      Constant _ (ConstBool b) -> b
-      _ -> evalError "not a boolean"

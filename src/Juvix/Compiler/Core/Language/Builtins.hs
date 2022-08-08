@@ -12,8 +12,6 @@ data BuiltinOp
   | OpIntEq
   | OpIntLt
   | OpIntLe
-  | OpBoolAnd
-  | OpBoolOr
   deriving stock (Eq)
 
 -- Builtin data tags
@@ -37,8 +35,6 @@ builtinOpArgsNum = \case
   OpIntEq -> 2
   OpIntLt -> 2
   OpIntLe -> 2
-  OpBoolAnd -> 2
-  OpBoolOr -> 2
 
 builtinConstrArgsNum :: BuiltinDataTag -> Int
 builtinConstrArgsNum = \case
