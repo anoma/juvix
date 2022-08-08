@@ -165,26 +165,19 @@ instance PrettyCode InductiveConstructorDef where
     constructorParameters' <- mapM ppCodeAtom (c ^. inductiveConstructorParameters)
     return (hsep $ constructorName' : constructorParameters')
 
-indent' :: Member (Reader Options) r => Doc a -> Sem r (Doc a)
-indent' d = do
-  i <- asks (^. optIndent)
-  return $ indent i d
-
 ppBlock ::
   (PrettyCode a, Members '[Reader Options] r, Traversable t) =>
   t a ->
   Sem r (Doc Ann)
-ppBlock items = mapM ppCode items >>= bracesIndent . vsep . toList
+ppBlock items = bracesIndent . vsep . toList <$> mapM ppCode items
 
 implicitDelim :: IsImplicit -> Doc Ann -> Doc Ann
 implicitDelim = \case
   Implicit -> braces
   Explicit -> parens
 
-bracesIndent :: Members '[Reader Options] r => Doc Ann -> Sem r (Doc Ann)
-bracesIndent d = do
-  d' <- indent' d
-  return $ braces (line <> d' <> line)
+bracesIndent :: Doc Ann -> Doc Ann
+bracesIndent d = braces (line <> indent' d <> line)
 
 instance PrettyCode InductiveParameter where
   ppCode (InductiveParameter v) = do
@@ -196,7 +189,7 @@ instance PrettyCode InductiveDef where
     inductiveName' <- ppCode (d ^. inductiveName)
     params <- hsepMaybe <$> mapM ppCode (d ^. inductiveParameters)
     inductiveConstructors' <- mapM ppCode (d ^. inductiveConstructors)
-    rhs <- indent' $ align $ concatWith (\a b -> a <> line <> kwPipe <+> b) inductiveConstructors'
+    let rhs = indent' $ align $ concatWith (\a b -> a <> line <> kwPipe <+> b) inductiveConstructors'
     return $ kwData <+> inductiveName' <+?> params <+> kwEquals <> line <> rhs
 
 instance PrettyCode PatternArg where

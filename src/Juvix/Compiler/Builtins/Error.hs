@@ -4,6 +4,7 @@ import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Error.Pretty
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
+import Juvix.Data.PPOutput
 
 data AlreadyDefined = AlreadyDefined
   { _alreadyDefinedBuiltin :: BuiltinPrim,
@@ -19,7 +20,7 @@ instance ToGenericError AlreadyDefined where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
@@ -37,7 +38,7 @@ instance ToGenericError NotDefined where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where

@@ -92,16 +92,11 @@ instance PrettyCode InductiveConstructorDef where
     constructorParameters' <- mapM ppCode (c ^. constructorParameters)
     return (hsep $ constructorName' : constructorParameters')
 
-indent' :: Member (Reader Options) r => Doc a -> Sem r (Doc a)
-indent' d = do
-  i <- asks (^. optIndent)
-  return $ indent i d
-
 instance PrettyCode InductiveDef where
   ppCode d = do
     inductiveName' <- ppCode (d ^. inductiveName)
     inductiveConstructors' <- mapM ppCode (d ^. inductiveConstructors)
-    rhs <- indent' $ align $ concatWith (\a b -> a <> line <> kwPipe <+> b) inductiveConstructors'
+    let rhs = indent' $ align $ concatWith (\a b -> a <> line <> kwPipe <+> b) inductiveConstructors'
     return $ kwData <+> inductiveName' <+> kwEquals <> line <> rhs
 
 instance PrettyCode ConstructorApp where

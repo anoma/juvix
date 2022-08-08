@@ -8,7 +8,6 @@ where
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty.Base qualified as Micro
 import Juvix.Data.CodeAnn
-import Juvix.Data.PPOutput
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
@@ -20,12 +19,6 @@ ppAtom = runPP . Micro.ppCodeAtom
 
 runPP :: Sem '[Reader Micro.Options] (Doc Micro.Ann) -> Doc Ann
 runPP = highlight_ . run . runReader Micro.defaultOptions
-
-prettyError :: Doc Ann -> AnsiText
-prettyError = AnsiText . PPOutput
-
-indent' :: Doc ann -> Doc ann
-indent' = indent 2
 
 highlight_ :: Doc Ann -> Doc Ann
 highlight_ = annotate AnnCode

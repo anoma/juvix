@@ -5,6 +5,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.E
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
 import Juvix.Prelude
+import Juvix.Data.PPOutput
 
 data WrongConstructorAppLength = WrongConstructorAppLength
   { _wrongConstructorAppLength :: ConstructorApp,
@@ -17,7 +18,7 @@ instance ToGenericError WrongConstructorAppLength where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
@@ -49,7 +50,7 @@ instance ToGenericError LhsTooManyPatterns where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
@@ -76,7 +77,7 @@ instance ToGenericError WrongPatternIsImplicit where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
@@ -103,7 +104,7 @@ instance ToGenericError ExpectedExplicitArgument where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
@@ -134,7 +135,7 @@ instance ToGenericError PatternFunction where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
@@ -155,7 +156,7 @@ instance ToGenericError TooManyArguments where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
@@ -195,7 +196,7 @@ instance ToGenericError FunctionApplied where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where

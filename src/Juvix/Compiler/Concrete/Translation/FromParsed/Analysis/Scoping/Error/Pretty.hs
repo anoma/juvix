@@ -26,9 +26,6 @@ highlight = annotate AnnCode
 ppSymbolT :: Text -> Doc Ann
 ppSymbolT = highlight . pretty
 
-indent' :: Doc ann -> Doc ann
-indent' = indent 2
-
 textDistance :: Text -> Text -> Int
 textDistance a b =
   restrictedDamerauLevenshteinDistance
