@@ -5,21 +5,12 @@ module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Err
 where
 
 import Juvix.Data.CodeAnn
+import Juvix.Data.PPOutput
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
-newtype PPOutput = PPOutput (Doc Ann)
-
 prettyError :: Doc Ann -> AnsiText
 prettyError = AnsiText . PPOutput
-
-instance HasAnsiBackend PPOutput where
-  toAnsiStream (PPOutput o) = reAnnotateS stylize (layoutPretty defaultLayoutOptions o)
-  toAnsiDoc (PPOutput o) = reAnnotate stylize o
-
-instance HasTextBackend PPOutput where
-  toTextDoc (PPOutput o) = unAnnotate o
-  toTextStream (PPOutput o) = unAnnotateS (layoutPretty defaultLayoutOptions o)
 
 indent' :: Doc ann -> Doc ann
 indent' = indent 2
