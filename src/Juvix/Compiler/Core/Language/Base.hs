@@ -7,7 +7,7 @@ module Juvix.Compiler.Core.Language.Base
     module Juvix.Compiler.Abstract.Data.Name,
     Location,
     Symbol,
-    Tag,
+    Tag (..),
     Index,
   )
 where

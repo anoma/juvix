@@ -117,3 +117,23 @@ data CaseBranch = CaseBranch {caseTag :: !Tag, caseBindersNum :: !Int, caseBranc
 
 -- All nodes in an environment must be values.
 type Env = [Node]
+
+instance HasAtomicity Node where
+  atomicity = \case
+    Var {} -> Atom
+    Ident {} -> Atom
+    Constant {} -> Atom
+    Axiom {} -> Atom
+    App {} -> Aggregate appFixity
+    BuiltinApp {..} | null builtinArgs -> Atom
+    BuiltinApp {} -> Aggregate appFixity
+    ConstrApp {..} | null constrArgs -> Atom
+    ConstrApp {} -> Aggregate appFixity
+    -- TODO: the fixities need to be fixed
+    Lambda {} -> Aggregate appFixity
+    Let {} -> Aggregate appFixity
+    Case {} -> Aggregate appFixity
+    If {} -> Aggregate appFixity
+    Data {} -> Aggregate appFixity
+    Closure {} -> Aggregate appFixity
+    Suspended {} -> Aggregate appFixity

@@ -128,8 +128,20 @@ pipe = "|"
 equal :: IsString s => s
 equal = "="
 
+less :: IsString s => s
+less = "<"
+
+lessEqual :: IsString s => s
+lessEqual = "<="
+
 data_ :: IsString s => s
 data_ = "data"
+
+deBruijnVar :: IsString s => s
+deBruijnVar = "$"
+
+exclamation :: IsString s => s
+exclamation = "!"
 
 lambdaUnicode :: IsString s => s
 lambdaUnicode = "λ"
@@ -241,6 +253,60 @@ putStrLn_ = "putStrLn"
 
 debug_ :: IsString s => s
 debug_ = "debug"
+
+plus :: IsString s => s
+plus = "+"
+
+minus :: IsString s => s
+minus = "-"
+
+mul :: IsString s => s
+mul = "*"
+
+div :: IsString s => s
+div = "/"
+
+if_ :: IsString s => s
+if_ = "if"
+
+then_ :: IsString s => s
+then_ = "then"
+
+else_ :: IsString s => s
+else_ = "else"
+
+zero :: IsString s => s
+zero = "0"
+
+succ :: IsString s => s
+succ = "S"
+
+unit :: IsString s => s
+unit = "unit"
+
+nil :: IsString s => s
+nil = "nil"
+
+cons :: IsString s => s
+cons = "cons"
+
+pair :: IsString s => s
+pair = "pair"
+
+case_ :: IsString s => s
+case_ = "case"
+
+of_ :: IsString s => s
+of_ = "of"
+
+closure :: IsString s => s
+closure = "<closure>"
+
+suspended :: IsString s => s
+suspended = "<suspended>"
+
+constrData :: IsString s => s
+constrData = "<data>"
 
 juvixFunctionT :: IsString s => s
 juvixFunctionT = "juvix_function_t"
