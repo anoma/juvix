@@ -146,8 +146,6 @@ genCode infoTable = DL.toList . goToplevel
       Core.OpIntEq -> IntEq
       Core.OpIntLt -> IntLt
       Core.OpIntLe -> IntLe
-      Core.OpBoolAnd -> BoolAnd
-      Core.OpBoolOr -> BoolOr
 
     snocReturn :: Bool -> Code' -> Code'
     snocReturn True code = DL.snoc code Return

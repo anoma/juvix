@@ -32,8 +32,6 @@ runCode infoTable = run . evalRuntime . goToplevel
       IntEq -> goIntBinOp (\x y -> ValBool (x == y)) >> goCode cont
       IntLt -> goIntBinOp (\x y -> ValBool (x < y)) >> goCode cont
       IntLe -> goIntBinOp (\x y -> ValBool (x <= y)) >> goCode cont
-      BoolAnd -> goBoolBinOp (\x y -> ValBool (x && y)) >> goCode cont
-      BoolOr -> goBoolBinOp (\x y -> ValBool (x || y)) >> goCode cont
       Push ref -> do
         v <- getVal ref
         pushValueStack v
@@ -113,14 +111,6 @@ runCode infoTable = run . evalRuntime . goToplevel
       case (v1, v2) of
         (ValInteger i1, ValInteger i2) -> pushValueStack (op i1 i2)
         _ -> error "invalid operation: expected two integers on value stack"
-
-    goBoolBinOp :: Member Runtime r => (Bool -> Bool -> Val) -> Sem r ()
-    goBoolBinOp op = do
-      v2 <- popValueStack
-      v1 <- popValueStack
-      case (v1, v2) of
-        (ValBool b1, ValBool b2) -> pushValueStack (op b1 b2)
-        _ -> error "invalid operation: expected two booleans on value stack"
 
     getVal :: Member Runtime r => Value -> Sem r Val
     getVal = \case

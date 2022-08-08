@@ -64,8 +64,6 @@ data Instruction
   | IntEq
   | IntLt
   | IntLe
-  | BoolAnd
-  | BoolOr
   | -- Push a value on top of the stack.
     Push Value
   | -- Pop the stack.
