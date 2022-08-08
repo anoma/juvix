@@ -19,6 +19,7 @@ type Code' = DL.DList Instruction
 --
 -- Assumptions:
 -- - lambda-lifted, i.e., lambdas occur only at the top,
+-- - eta-expanded at the top,
 -- - well-typed (no illegal applications),
 -- - no evaluation-only nodes,
 -- - no axioms,
@@ -39,7 +40,11 @@ genCode infoTable = DL.toList . goToplevel
       Core.Var {..} ->
         snocReturn isTail $ DL.singleton (Push (BL.lookup varIndex refs))
       Core.Ident {..} ->
-        snocReturn isTail $ DL.singleton (AllocClosure identSymbol 0)
+        if
+            | getArgsNum identSymbol == 0 ->
+              DL.singleton ((if isTail then TailCall else Call) (CallFun identSymbol))
+            | otherwise ->
+              snocReturn isTail $ DL.singleton (AllocClosure identSymbol 0)
       Core.Constant _ (Core.ConstInteger i) ->
         snocReturn isTail $ DL.singleton (Push (ConstInt i))
       Core.Constant _ (Core.ConstBool b) ->
@@ -60,11 +65,7 @@ genCode infoTable = DL.toList . goToplevel
                           ((if isTail then TailCall else Call) (CallFun identSymbol))
                     | otherwise -> impossible
                 where
-                  argsNum =
-                    fromMaybe
-                      impossible
-                      (HashMap.lookup identSymbol (infoTable ^. Core.infoIdents))
-                      ^. Core.identArgsNum
+                  argsNum = getArgsNum identSymbol
               Core.Var {..} ->
                 if
                     | argsNum > length args ->
@@ -146,6 +147,13 @@ genCode infoTable = DL.toList . goToplevel
       Core.OpIntEq -> IntEq
       Core.OpIntLt -> IntLt
       Core.OpIntLe -> IntLe
+
+    getArgsNum :: Symbol -> Int
+    getArgsNum sym =
+      fromMaybe
+        impossible
+        (HashMap.lookup sym (infoTable ^. Core.infoIdents))
+        ^. Core.identArgsNum
 
     snocReturn :: Bool -> Code' -> Code'
     snocReturn True code = DL.snoc code Return
