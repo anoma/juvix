@@ -24,7 +24,7 @@ Memory consists of:
   - holds temporary values
   - referenced with TempRef
   - constant size (depends on the function)
-  - write-once: it is an error to have to  write at the same offset in the
+  - write-once: it is an error to write at the same offset in the
     temporary area within a single function invocation
   - Core.Let is compiled to store the value in the local temporary area
   - Core.Case is compiled to store the value in the local temporary area,
@@ -35,6 +35,10 @@ Memory consists of:
   - one value stack per each function invocation, not shared among functions
     (or different invocations of the same function)
   - maximum constant height of a local value stack (depends on the function)
+  - current height of the local value stack is known at compile-time for each
+    intruction; a program violating this assumption (e.g. by having a `Branch`
+    instruction whose two branches result in different stack heights) is
+    errorneous
   - compiled to a constant number of local variables / registers (unless the
     target IR itself is a stack machine)
 -}
