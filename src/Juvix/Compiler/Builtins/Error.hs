@@ -1,10 +1,8 @@
 module Juvix.Compiler.Builtins.Error where
 
 import Juvix.Compiler.Concrete.Data.Builtins
-import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Error.Pretty
-import Juvix.Prelude
-import Juvix.Prelude.Pretty
 import Juvix.Data.PPOutput
+import Juvix.Prelude
 
 data AlreadyDefined = AlreadyDefined
   { _alreadyDefinedBuiltin :: BuiltinPrim,
@@ -12,9 +10,6 @@ data AlreadyDefined = AlreadyDefined
   }
 
 makeLenses ''AlreadyDefined
-
-hh :: Doc Ann -> Doc Ann
-hh = annotate AnnCode
 
 instance ToGenericError AlreadyDefined where
   genericError e =
@@ -25,7 +20,7 @@ instance ToGenericError AlreadyDefined where
       }
     where
       i = e ^. alreadyDefinedLoc
-      msg = "The builtin" <+> hh (pretty (e ^. alreadyDefinedBuiltin)) <+> "has already been defined"
+      msg = "The builtin" <+> code (pretty (e ^. alreadyDefinedBuiltin)) <+> "has already been defined"
 
 data NotDefined = NotDefined
   { _notDefinedBuiltin :: BuiltinPrim,
@@ -43,4 +38,4 @@ instance ToGenericError NotDefined where
       }
     where
       i = e ^. notDefinedLoc
-      msg = "The builtin" <+> hh (pretty (e ^. notDefinedBuiltin)) <+> "has not been defined"
+      msg = "The builtin" <+> code (pretty (e ^. notDefinedBuiltin)) <+> "has not been defined"

@@ -27,16 +27,6 @@ class PrettyCode a where
 runPrettyCode :: PrettyCode c => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
-indented :: Members '[Reader Options] r => Doc Ann -> Sem r (Doc Ann)
-indented d = do
-  ind <- asks (^. optIndent)
-  return (indent ind d)
-
-bracesIndent :: Members '[Reader Options] r => Doc Ann -> Sem r (Doc Ann)
-bracesIndent d = do
-  d' <- indented d
-  return $ braces (line <> d' <> line)
-
 ppModulePathType ::
   forall t s r.
   (SingI t, SingI s, Members '[Reader Options] r) =>
@@ -171,14 +161,6 @@ instance PrettyCode BackendItem where
     return $
       backend <+> kwMapsto <+> ppStringLit _backendItemCode
 
-ppStringLit :: Text -> Doc Ann
-ppStringLit = annotate AnnLiteralString . doubleQuotes . escaped
-  where
-    showChar :: Char -> String
-    showChar c = showLitChar c ("" :: String)
-    escaped :: Text -> Doc a
-    escaped = mconcatMap (pretty . showChar) . unpack
-
 ppTopModulePath ::
   forall s r.
   (SingI s, Members '[Reader Options] r) =>
@@ -218,7 +200,7 @@ ppInductiveParameters ps
 
 instance (SingI s, SingI t) => PrettyCode (Module s t) where
   ppCode Module {..} = do
-    moduleBody' <- ppCode _moduleBody >>= indented
+    moduleBody' <- indent' <$> ppCode _moduleBody
     modulePath' <- ppModulePathType _modulePath
     moduleParameters' <- ppInductiveParameters _moduleParameters
     moduleDoc' <- mapM ppCode _moduleDoc
@@ -494,7 +476,7 @@ instance SingI s => PrettyCode (LetClause s) where
     LetFunClause cl -> ppCode cl
 
 ppBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
-ppBlock items = mapM (fmap endSemicolon . ppCode) items >>= bracesIndent . vsep . toList
+ppBlock items = bracesIndent . vsep . toList <$> mapM (fmap endSemicolon . ppCode) items
 
 instance SingI s => PrettyCode (LambdaClause s) where
   ppCode LambdaClause {..} = do
@@ -523,7 +505,7 @@ instance SingI s => PrettyCode (FunctionClause s) where
         <+?> ((line <>) <$> clauseWhere')
 
 instance SingI s => PrettyCode (WhereBlock s) where
-  ppCode WhereBlock {..} = ppBlock whereClauses >>= indented . (kwWhere <+>)
+  ppCode WhereBlock {..} = indent' . (kwWhere <+>) <$> ppBlock whereClauses
 
 instance SingI s => PrettyCode (WhereClause s) where
   ppCode c = case c of
@@ -557,7 +539,7 @@ instance SingI s => PrettyCode (Import s) where
         if b
           then case sing :: SStage s of
             SParsed -> return Nothing
-            SScoped -> ppCode m >>= fmap (Just . braces . jumpLines) . indented
+            SScoped -> Just . braces . jumpLines . indent' <$> ppCode m
           else return Nothing
 
 instance PrettyCode PatternScopedIden where
@@ -695,9 +677,6 @@ instance PrettyCode Pattern where
         patPostfixConstructor' <- ppCode _patPostfixConstructor
         patPostfixParameter' <- ppLeftExpression (getFixity p) _patPostfixParameter
         return $ patPostfixParameter' <+> patPostfixConstructor'
-
-parensCond :: Bool -> Doc Ann -> Doc Ann
-parensCond t d = if t then parens d else d
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

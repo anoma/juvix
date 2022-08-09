@@ -10,7 +10,6 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
 doc opts =
@@ -107,14 +106,6 @@ ppBlock ::
   Sem r (Doc Ann)
 ppBlock items = bracesIndent . vsep . toList <$> mapM ppCode items
 
-implicitDelim :: IsImplicit -> Doc Ann -> Doc Ann
-implicitDelim = \case
-  Implicit -> braces
-  Explicit -> parens
-
-bracesIndent :: Doc Ann -> Doc Ann
-bracesIndent d = braces (line <> indent' d <> line)
-
 instance PrettyCode InductiveParameter where
   ppCode (InductiveParameter v) = do
     v' <- ppCode v
@@ -131,7 +122,7 @@ instance PrettyCode InductiveDef where
 instance PrettyCode PatternArg where
   ppCode a = do
     p <- ppCode (a ^. patternArgPattern)
-    return (bracesIf (Implicit == a ^. patternArgIsImplicit) p)
+    return (bracesCond (Implicit == a ^. patternArgIsImplicit) p)
 
 instance PrettyCode ConstructorApp where
   ppCode c = do
@@ -260,12 +251,6 @@ instance PrettyCode TypeCalls where
     elems' <- mapM ppCode elems
     return $ title <> line <> vsep elems' <> line
 
-parensIf :: Bool -> Doc Ann -> Doc Ann
-parensIf t = if t then parens else id
-
-bracesIf :: Bool -> Doc Ann -> Doc Ann
-bracesIf t = if t then braces else id
-
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
   Fixity ->
@@ -294,7 +279,7 @@ ppLRExpression ::
   a ->
   Sem r (Doc Ann)
 ppLRExpression associates fixlr e =
-  parensIf (atomParens associates (atomicity e) fixlr)
+  parensCond (atomParens associates (atomicity e) fixlr)
     <$> ppCode e
 
 ppCodeAtom :: (HasAtomicity c, PrettyCode c, Members '[Reader Options] r) => c -> Sem r (Doc Ann)

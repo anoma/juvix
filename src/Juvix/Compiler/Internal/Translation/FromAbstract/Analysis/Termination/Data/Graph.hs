@@ -9,8 +9,7 @@ import Juvix.Compiler.Abstract.Pretty.Base
 import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data.FunctionCall
 import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data.SizeRelation
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
-import Prettyprinter as PP
+import Prettyprinter qualified as PP
 
 type Graph = HashMap (FunctionName, FunctionName) Edge
 

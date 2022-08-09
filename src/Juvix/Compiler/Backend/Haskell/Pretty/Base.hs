@@ -45,15 +45,6 @@ instance PrettyCode Expression where
 kwHaskellArrow :: Doc Ann
 kwHaskellArrow = keyword Str.toAscii
 
-kwData :: Doc Ann
-kwData = keyword Str.data_
-
-kwEquals :: Doc Ann
-kwEquals = keyword Str.equal
-
-kwColonColon :: Doc Ann
-kwColonColon = keyword (Str.colon <> Str.colon)
-
 instance PrettyCode Function where
   ppCode (Function l r) = do
     l' <- ppLeftExpression funFixity l
@@ -129,12 +120,6 @@ instance PrettyCode Literal where
     LitInteger n -> return $ annotate AnnLiteralInteger (pretty n)
     LitString s -> return $ ppStringLit s
 
-doubleQuotes :: Doc Ann -> Doc Ann
-doubleQuotes = enclose kwDQuote kwDQuote
-
-ppStringLit :: Text -> Doc Ann
-ppStringLit = annotate AnnLiteralString . doubleQuotes . pretty
-
 instance PrettyCode Module where
   ppCode m = do
     name' <- ppCode (m ^. moduleName)
@@ -147,9 +132,6 @@ instance PrettyCode Module where
           <> line
           <> body'
           <> line
-
-parensCond :: Bool -> Doc Ann -> Doc Ann
-parensCond t d = if t then parens d else d
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

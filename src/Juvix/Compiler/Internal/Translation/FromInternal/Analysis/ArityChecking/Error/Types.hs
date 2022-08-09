@@ -4,8 +4,8 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.E
 
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
-import Juvix.Prelude
 import Juvix.Data.PPOutput
+import Juvix.Prelude
 
 data WrongConstructorAppLength = WrongConstructorAppLength
   { _wrongConstructorAppLength :: ConstructorApp,

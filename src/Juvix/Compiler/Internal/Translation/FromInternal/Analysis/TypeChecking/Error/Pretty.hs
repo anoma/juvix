@@ -1,7 +1,6 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
   ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty,
     module Juvix.Data.CodeAnn,
-    module Juvix.Prelude.Pretty,
   )
 where
 
@@ -9,7 +8,6 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty.Base qualified as Micro
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
 
 ppCode :: Micro.PrettyCode c => c -> Doc Ann
 ppCode = runPP . Micro.ppCode

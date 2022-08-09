@@ -10,7 +10,6 @@ import Juvix.Compiler.Internal.Pretty.Base
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Data.PPOutput
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
 import Prettyprinter.Render.Terminal qualified as Ansi
 
 ppOutDefault :: PrettyCode c => c -> AnsiText

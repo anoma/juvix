@@ -14,16 +14,13 @@ ppCode :: Scoped.PrettyCode c => c -> Doc Ann
 ppCode = runPP . Scoped.ppCode
 
 runPP :: Sem '[Reader Scoped.Options] (Doc Scoped.Ann) -> Doc Ann
-runPP = highlight . run . runReader Scoped.defaultOptions
+runPP = code . run . runReader Scoped.defaultOptions
 
 prettyError :: Doc Ann -> AnsiText
 prettyError = AnsiText . PPOutput
 
-highlight :: Doc Ann -> Doc Ann
-highlight = annotate AnnCode
-
 ppSymbolT :: Text -> Doc Ann
-ppSymbolT = highlight . pretty
+ppSymbolT = code . pretty
 
 textDistance :: Text -> Text -> Int
 textDistance a b =

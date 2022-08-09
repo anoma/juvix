@@ -92,9 +92,6 @@ instance PrettyCode InductiveConstructorDef where
 ppBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
 ppBlock items = bracesIndent . vsep . toList <$> mapM ppCode items
 
-bracesIndent :: Doc Ann -> Doc Ann
-bracesIndent d = braces (line <> indent' d <> line)
-
 instance PrettyCode InductiveDef where
   ppCode d = do
     inductiveName' <- ppCode (d ^. inductiveName)
@@ -180,9 +177,6 @@ instance PrettyCode Module where
           <> line
           <> body'
           <> line
-
-parensCond :: Bool -> Doc Ann -> Doc Ann
-parensCond t d = if t then parens d else d
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

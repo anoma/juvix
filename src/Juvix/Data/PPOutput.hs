@@ -1,4 +1,8 @@
-module Juvix.Data.PPOutput where
+module Juvix.Data.PPOutput
+  ( module Juvix.Data.PPOutput,
+    module Juvix.Data.CodeAnn,
+  )
+where
 
 import Juvix.Data.CodeAnn
 import Juvix.Prelude

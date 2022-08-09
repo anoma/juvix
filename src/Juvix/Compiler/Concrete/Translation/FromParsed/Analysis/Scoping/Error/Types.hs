@@ -16,7 +16,6 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pre
 import Juvix.Compiler.Concrete.Translation.FromSource.Error qualified as Parser
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
 
 data MultipleDeclarations = MultipleDeclarations
   { _multipleDeclEntry :: SymbolEntry,
@@ -568,7 +567,7 @@ instance ToGenericError DoubleBracesPattern where
       i = getLoc pat
       msg =
         "Double braces are not valid:"
-          <+> highlight (braces (ppCode pat))
+          <+> code (braces (ppCode pat))
 
 newtype ImplicitPatternLeftApplication = ImplicitPatternLeftApplication
   { _implicitPatternLeftApplication :: PatternApp

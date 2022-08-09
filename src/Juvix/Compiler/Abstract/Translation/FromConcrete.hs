@@ -16,7 +16,6 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Data.NameKind
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
 
 newtype ModulesCache = ModulesCache
   {_cachedModules :: HashMap S.NameId Abstract.TopModule}

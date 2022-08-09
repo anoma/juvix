@@ -8,7 +8,6 @@ import Juvix.Compiler.Abstract.Pretty.Base
 import Juvix.Compiler.Abstract.Pretty.Options
 import Juvix.Data.PPOutput
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
 
 ppOutDefault :: PrettyCode c => c -> AnsiText
 ppOutDefault = AnsiText . PPOutput . doc defaultOptions

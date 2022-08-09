@@ -2,8 +2,8 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Er
 
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
-import Juvix.Prelude
 import Juvix.Data.PPOutput
+import Juvix.Prelude
 
 -- | the type of the constructor used in a pattern does
 -- not match the type of the inductive being matched

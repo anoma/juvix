@@ -1,13 +1,14 @@
-module Juvix.Data.CodeAnn (
-module Juvix.Data.CodeAnn ,
-module Juvix.Prelude.Pretty,
-                          ) where
+module Juvix.Data.CodeAnn
+  ( module Juvix.Data.CodeAnn,
+    module Juvix.Prelude.Pretty,
+  )
+where
 
 import Juvix.Compiler.Concrete.Data
-import Juvix.Prelude
-import Juvix.Prelude.Pretty hiding (parens, braces)
-import Prettyprinter.Render.Terminal
 import Juvix.Extra.Strings qualified as Str
+import Juvix.Prelude
+import Juvix.Prelude.Pretty hiding (braces, parens)
+import Prettyprinter.Render.Terminal (Color (..), bold, colorDull)
 
 type Ann = CodeAnn
 
@@ -191,6 +192,9 @@ kwDQuote = pretty ("\"" :: Text)
 kwDot :: Doc Ann
 kwDot = delimiter "."
 
+code :: Doc Ann -> Doc Ann
+code = annotate AnnCode
+
 braces :: Doc Ann -> Doc Ann
 braces = enclose kwBraceL kwBraceR
 
@@ -207,3 +211,20 @@ doubleQuotes = enclose kwDQuote kwDQuote
 
 annotateKind :: NameKind -> Doc Ann -> Doc Ann
 annotateKind = annotate . AnnKind
+
+parensCond :: Bool -> Doc Ann -> Doc Ann
+parensCond t d = if t then parens d else d
+
+bracesCond :: Bool -> Doc Ann -> Doc Ann
+bracesCond t d = if t then braces d else d
+
+ppStringLit :: Text -> Doc Ann
+ppStringLit = annotate AnnLiteralString . doubleQuotes . escaped
+  where
+    showChar :: Char -> String
+    showChar c = showLitChar c ("" :: String)
+    escaped :: Text -> Doc a
+    escaped = mconcatMap (pretty . showChar) . unpack
+
+bracesIndent :: Doc Ann -> Doc Ann
+bracesIndent d = braces (line <> indent' d <> line)

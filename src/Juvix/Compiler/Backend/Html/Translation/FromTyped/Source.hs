@@ -16,7 +16,6 @@ import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Extra.Paths
 import Juvix.Extra.Version
 import Juvix.Prelude
-import Prettyprinter
 import Prettyprinter.Render.Util.SimpleDocTree
 import Text.Blaze.Html
 import Text.Blaze.Html.Renderer.Text qualified as Html

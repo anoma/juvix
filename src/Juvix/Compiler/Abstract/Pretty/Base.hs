@@ -45,9 +45,6 @@ kwQuestion = keyword Str.questionMark
 kwWaveArrow :: Doc Ann
 kwWaveArrow = keyword Str.waveArrow
 
-parensCond :: Bool -> Doc Ann -> Doc Ann
-parensCond t d = if t then parens d else d
-
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
   Fixity ->
