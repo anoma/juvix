@@ -69,11 +69,11 @@ inductive Square {
   occupied : Symbol → Square;
 };
 
---- A row in a board implemented as ;List Square;
----
---- >>> Row;
-Row : Type;
-Row ≔ List Square;
+-- --- A row in a board implemented as ;List Square;
+-- ---
+-- --- >>> Row;
+-- Row : Type;
+-- Row ≔ List Square;
 
 -- A column in a board implemented as ;List Square;
 -- Column : Type;
