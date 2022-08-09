@@ -21,8 +21,7 @@ doc opts =
 toSOptions :: Options -> S.Options
 toSOptions Options {..} =
   S.defaultOptions
-    { S._optShowNameIds = _optShowNameIds,
-      S._optIndent = _optIndent
+    { S._optShowNameIds = _optShowNameIds
     }
 
 class PrettyCode c where
