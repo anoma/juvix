@@ -31,6 +31,7 @@ type TopModuleName = Name
 
 data Module = Module
   { _moduleName :: Name,
+    _moduleExamples :: [Example],
     _moduleBody :: ModuleBody
   }
   deriving stock (Eq, Show)
@@ -49,9 +50,16 @@ data Statement
   | StatementAxiom AxiomDef
   deriving stock (Eq, Show)
 
+data Example = Example
+  { _exampleId :: NameId,
+    _exampleExpression :: Expression
+  }
+  deriving stock (Eq, Show)
+
 data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
     _funDefTypeSig :: Expression,
+    _funDefExamples :: [Example],
     _funDefClauses :: NonEmpty FunctionClause,
     _funDefBuiltin :: Maybe BuiltinFunction,
     _funDefTerminating :: Bool
@@ -174,6 +182,7 @@ data InductiveDef = InductiveDef
     _inductiveBuiltin :: Maybe BuiltinInductive,
     _inductiveParameters :: [FunctionParameter],
     _inductiveType :: Expression,
+    _inductiveExamples :: [Example],
     _inductiveConstructors :: [InductiveConstructorDef],
     _inductivePositive :: Bool
   }
@@ -181,6 +190,7 @@ data InductiveDef = InductiveDef
 
 data InductiveConstructorDef = InductiveConstructorDef
   { _constructorName :: ConstrName,
+    _constructorExamples :: [Example],
     _constructorType :: Expression
   }
   deriving stock (Eq, Show)
@@ -193,6 +203,7 @@ data AxiomDef = AxiomDef
   deriving stock (Eq, Show)
 
 makeLenses ''Module
+makeLenses ''Example
 makeLenses ''PatternArg
 makeLenses ''FunctionParameter
 makeLenses ''Function

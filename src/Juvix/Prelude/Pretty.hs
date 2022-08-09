@@ -6,7 +6,7 @@ module Juvix.Prelude.Pretty
 where
 
 import Juvix.Prelude.Base
-import Prettyprinter hiding (hsep, vsep)
+import Prettyprinter hiding (concatWith, hsep, vsep)
 import Prettyprinter qualified as PP
 import Prettyprinter.Render.Terminal (AnsiStyle)
 import Prettyprinter.Render.Terminal qualified as Ansi

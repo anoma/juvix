@@ -225,27 +225,56 @@ instance HasExpressions FunctionClause where
     b' <- leafExpressions f b
     pure (FunctionClause n ps b')
 
+instance HasExpressions Example where
+  leafExpressions f = traverseOf exampleExpression (leafExpressions f)
+
 instance HasExpressions FunctionDef where
-  leafExpressions f (FunctionDef name ty clauses bi) = do
-    clauses' <- traverse (leafExpressions f) clauses
-    ty' <- leafExpressions f ty
-    pure (FunctionDef name ty' clauses' bi)
+  -- leafExpressions f (FunctionDef name ty clauses bi) = do
+  leafExpressions f FunctionDef {..} = do
+    clauses' <- traverse (leafExpressions f) _funDefClauses
+    ty' <- leafExpressions f _funDefType
+    examples' <- traverse (leafExpressions f) _funDefExamples
+    pure
+      FunctionDef
+        { _funDefClauses = clauses',
+          _funDefType = ty',
+          _funDefExamples = examples',
+          _funDefName,
+          _funDefBuiltin
+        }
 
 instance HasExpressions InductiveParameter where
   leafExpressions _ param@(InductiveParameter _) = do
     pure param
 
 instance HasExpressions InductiveDef where
-  leafExpressions f (InductiveDef name built params constrs pos) = do
-    params' <- traverse (leafExpressions f) params
-    constrs' <- traverse (leafExpressions f) constrs
-    pure (InductiveDef name built params' constrs' pos)
+  leafExpressions f InductiveDef {..} = do
+    params' <- traverse (leafExpressions f) _inductiveParameters
+    constrs' <- traverse (leafExpressions f) _inductiveConstructors
+    examples' <- traverse (leafExpressions f) _inductiveExamples
+    pure
+      InductiveDef
+        { _inductiveParameters = params',
+          _inductiveConstructors = constrs',
+          _inductiveExamples = examples',
+          _inductiveName,
+          _inductiveBuiltin,
+          _inductivePositive
+        }
 
 instance HasExpressions InductiveConstructorDef where
-  leafExpressions f (InductiveConstructorDef c args ret) = do
-    args' <- traverse (leafExpressions f) args
-    ret' <- leafExpressions f ret
-    pure (InductiveConstructorDef c args' ret')
+  -- leafExpressions f InductiveConstructorDef c args ret = do
+  leafExpressions f InductiveConstructorDef {..} = do
+    args' <- traverse (leafExpressions f) _inductiveConstructorParameters
+    ret' <- leafExpressions f _inductiveConstructorReturnType
+    examples' <- traverse (leafExpressions f) _inductiveConstructorExamples
+    pure
+      InductiveConstructorDef
+        { _inductiveConstructorExamples = examples',
+          _inductiveConstructorParameters = args',
+          _inductiveConstructorReturnType = ret',
+          _inductiveConstructorName
+        }
 
 fillHolesFunctionDef :: HashMap Hole Expression -> FunctionDef -> FunctionDef
 fillHolesFunctionDef = subsHoles

@@ -4,6 +4,8 @@ module Juvix.Compiler.Internal.Translation.FromInternal
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as ArityChecking
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability
@@ -34,8 +36,9 @@ typeChecking ::
   Sem r InternalTypedResult
 typeChecking res@ArityChecking.InternalArityResult {..} =
   mapError (JuvixError @TypeCheckerError) $ do
-    (idens, r) <-
-      runState (mempty :: TypesTable)
+    (normalized, (idens, r)) <-
+      runOutputList
+        . runState (mempty :: TypesTable)
         . runReader entryPoint
         . evalState (mempty :: FunctionsTable)
         . runReader table
@@ -44,6 +47,7 @@ typeChecking res@ArityChecking.InternalArityResult {..} =
       InternalTypedResult
         { _resultInternalArityResult = res,
           _resultModules = r,
+          _resultNormalized = HashMap.fromList [(e ^. exampleId, e ^. exampleExpression) | e <- normalized],
           _resultIdenTypes = idens
         }
   where
@@ -51,4 +55,4 @@ typeChecking res@ArityChecking.InternalArityResult {..} =
     table = buildTable _resultModules
 
     entryPoint :: EntryPoint
-    entryPoint = res ^. ArityChecking.microJuvixArityResultEntryPoint
+    entryPoint = res ^. ArityChecking.internalArityResultEntryPoint

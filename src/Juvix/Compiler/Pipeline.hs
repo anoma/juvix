@@ -86,7 +86,7 @@ upToSetup ::
 upToSetup = Setup.entrySetup
 
 upToParsing ::
-  Members '[Files, Error JuvixError] r =>
+  Members '[Files, Error JuvixError, NameIdGen] r =>
   EntryPoint ->
   Sem r Parser.ParserResult
 upToParsing = upToSetup >=> Parser.fromSource

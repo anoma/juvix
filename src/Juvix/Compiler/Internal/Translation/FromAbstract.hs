@@ -67,9 +67,11 @@ goModule ::
   Sem r Module
 goModule m = do
   _moduleBody' <- goModuleBody (m ^. Abstract.moduleBody)
+  examples' <- mapM goExample (m ^. Abstract.moduleExamples)
   return
     Module
       { _moduleName = m ^. Abstract.moduleName,
+        _moduleExamples = examples',
         _moduleBody = _moduleBody'
       }
 
@@ -149,16 +151,27 @@ goFunctionDef :: Abstract.FunctionDef -> Sem r FunctionDef
 goFunctionDef f = do
   _funDefClauses' <- mapM (goFunctionClause _funDefName') (f ^. Abstract.funDefClauses)
   _funDefType' <- goType (f ^. Abstract.funDefTypeSig)
+  _funDefExamples' <- mapM goExample (f ^. Abstract.funDefExamples)
   return
     FunctionDef
       { _funDefName = _funDefName',
         _funDefType = _funDefType',
         _funDefClauses = _funDefClauses',
+        _funDefExamples = _funDefExamples',
         _funDefBuiltin = f ^. Abstract.funDefBuiltin
       }
   where
     _funDefName' :: Name
     _funDefName' = f ^. Abstract.funDefName
+
+goExample :: Abstract.Example -> Sem r Example
+goExample e = do
+  e' <- goExpression (e ^. Abstract.exampleExpression)
+  return
+    Example
+      { _exampleExpression = e',
+        _exampleId = e ^. Abstract.exampleId
+      }
 
 goFunctionClause :: Name -> Abstract.FunctionClause -> Sem r FunctionClause
 goFunctionClause n c = do
@@ -279,22 +292,26 @@ goInductiveDef i =
             mapM
               goConstructorDef
               (i ^. Abstract.inductiveConstructors)
+          examples' <- mapM goExample (i ^. Abstract.inductiveExamples)
           return
             InductiveDef
               { _inductiveName = indTypeName,
                 _inductiveParameters = inductiveParameters',
                 _inductiveBuiltin = i ^. Abstract.inductiveBuiltin,
                 _inductiveConstructors = inductiveConstructors',
+                _inductiveExamples = examples',
                 _inductivePositive = i ^. Abstract.inductivePositive
               }
   where
     goConstructorDef :: Abstract.InductiveConstructorDef -> Sem r InductiveConstructorDef
     goConstructorDef c = do
       (cParams, cReturnType) <- viewConstructorType (c ^. Abstract.constructorType)
+      examples' <- mapM goExample (c ^. Abstract.constructorExamples)
       return
         InductiveConstructorDef
           { _inductiveConstructorName = c ^. Abstract.constructorName,
             _inductiveConstructorParameters = cParams,
+            _inductiveConstructorExamples = examples',
             _inductiveConstructorReturnType = cReturnType
           }
 

@@ -23,6 +23,7 @@ import Juvix.Prelude
 
 data Module = Module
   { _moduleName :: Name,
+    _moduleExamples :: [Example],
     _moduleBody :: ModuleBody
   }
 
@@ -50,6 +51,7 @@ data AxiomDef = AxiomDef
 data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
     _funDefType :: Expression,
+    _funDefExamples :: [Example],
     _funDefClauses :: NonEmpty FunctionClause,
     _funDefBuiltin :: Maybe BuiltinFunction
   }
@@ -94,6 +96,11 @@ data Expression
   deriving stock (Eq, Generic)
 
 instance Hashable Expression
+
+data Example = Example
+  { _exampleId :: NameId,
+    _exampleExpression :: Expression
+  }
 
 data Lambda = Lambda
   { _lambdaVar :: VarName,
@@ -143,6 +150,7 @@ newtype InductiveParameter = InductiveParameter
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
     _inductiveBuiltin :: Maybe BuiltinInductive,
+    _inductiveExamples :: [Example],
     _inductiveParameters :: [InductiveParameter],
     _inductiveConstructors :: [InductiveConstructorDef],
     _inductivePositive :: Bool
@@ -151,6 +159,7 @@ data InductiveDef = InductiveDef
 data InductiveConstructorDef = InductiveConstructorDef
   { _inductiveConstructorName :: ConstrName,
     _inductiveConstructorParameters :: [Expression],
+    _inductiveConstructorExamples :: [Example],
     _inductiveConstructorReturnType :: Expression
   }
 
@@ -172,6 +181,7 @@ data Function = Function
 instance Hashable Function
 
 makeLenses ''Module
+makeLenses ''Example
 makeLenses ''PatternArg
 makeLenses ''Include
 makeLenses ''FunctionDef

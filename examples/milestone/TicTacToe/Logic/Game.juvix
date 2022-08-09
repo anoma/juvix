@@ -69,6 +69,16 @@ inductive Square {
   occupied : Symbol → Square;
 };
 
+-- --- A row in a board implemented as ;List Square;
+-- ---
+-- --- >>> Row;
+-- Row : Type;
+-- Row ≔ List Square;
+
+-- A column in a board implemented as ;List Square;
+-- Column : Type;
+-- Column ≔ Row;
+
 --- Equality for ;Square;s
 ==Square : Square → Square → Bool;
 ==Square (empty m) (empty n) ≔ m == n;
@@ -79,14 +89,6 @@ inductive Square {
 showSquare : Square → String;
 showSquare (empty n) ≔ " " ++str natToStr n ++str " ";
 showSquare (occupied s) ≔ " " ++str showSymbol s ++str " ";
-
--- A row in a board implemented as ;List Square;
--- Row : Type;
--- Row ≔ List Square;
-
--- A column in a board implemented as ;List Square;
--- Column : Type;
--- Column ≔ Row;
 
 -- TODO use a type alias?
 --- A grid of squares

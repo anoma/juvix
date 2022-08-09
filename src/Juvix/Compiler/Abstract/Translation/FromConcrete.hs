@@ -6,6 +6,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Abstract.Data.InfoTableBuilder
+import Juvix.Compiler.Abstract.Language (FunctionDef (_funDefExamples))
 import Juvix.Compiler.Abstract.Language qualified as Abstract
 import Juvix.Compiler.Abstract.Translation.FromConcrete.Data.Context
 import Juvix.Compiler.Builtins
@@ -65,14 +66,22 @@ goModule m = case sing :: SModuleIsTop t of
   SModuleLocal -> goModule' m
   where
     goModule' :: Module 'Scoped t -> Sem r Abstract.Module
-    goModule' (Module n par _ b) = case par of
-      [] -> Abstract.Module modName <$> goModuleBody b
-      _ -> unsupported "Module parameters"
+    goModule' Module {..}
+      | null _moduleParameters = do
+          body' <- goModuleBody _moduleBody
+          examples' <- goExamples _moduleDoc
+          return
+            Abstract.Module
+              { _moduleName = name',
+                _moduleBody = body',
+                _moduleExamples = examples'
+              }
+      | otherwise = unsupported "Module parameters"
       where
-        modName :: Abstract.Name
-        modName = case sing :: SModuleIsTop t of
-          SModuleTop -> goSymbol (S.topModulePathName n)
-          SModuleLocal -> goSymbol n
+        name' :: Abstract.Name
+        name' = case sing :: SModuleIsTop t of
+          SModuleTop -> goSymbol (S.topModulePathName _modulePath)
+          SModuleLocal -> goSymbol _modulePath
 
 goName :: S.Name -> Abstract.Name
 goName name =
@@ -172,9 +181,26 @@ goFunctionDef TypeSignature {..} clauses = do
       _funDefBuiltin = _sigBuiltin
   _funDefClauses <- mapM goFunctionClause clauses
   _funDefTypeSig <- goExpression _sigType
+  _funDefExamples <- goExamples _sigDoc
   let fun = Abstract.FunctionDef {..}
   whenJust _sigBuiltin (registerBuiltinFunction fun)
   registerFunction' fun
+
+goExamples ::
+  forall r.
+  Member (Error ScoperError) r =>
+  Maybe (Judoc 'Scoped) ->
+  Sem r [Abstract.Example]
+goExamples = mapM goExample . maybe [] judocExamples
+  where
+    goExample :: Example 'Scoped -> Sem r Abstract.Example
+    goExample ex = do
+      e' <- goExpression (ex ^. exampleExpression)
+      return
+        Abstract.Example
+          { _exampleExpression = e',
+            _exampleId = ex ^. exampleId
+          }
 
 goFunctionClause ::
   Member (Error ScoperError) r =>
@@ -246,14 +272,16 @@ goInductive ty@InductiveDef {..} = do
   _inductiveParameters' <- mapM goInductiveParameter _inductiveParameters
   _inductiveType' <- mapM goExpression _inductiveType
   _inductiveConstructors' <- mapM goConstructorDef _inductiveConstructors
+  _inductiveExamples' <- goExamples _inductiveDoc
   let loc = getLoc _inductiveName
-  let indDef =
+      indDef =
         Abstract.InductiveDef
           { _inductiveParameters = _inductiveParameters',
             _inductiveBuiltin = _inductiveBuiltin,
             _inductiveName = goSymbol _inductiveName,
             _inductiveType = fromMaybe (Abstract.ExpressionUniverse (smallUniverse loc)) _inductiveType',
             _inductiveConstructors = _inductiveConstructors',
+            _inductiveExamples = _inductiveExamples',
             _inductivePositive = ty ^. inductivePositive
           }
   whenJust _inductiveBuiltin (registerBuiltinInductive indDef)
@@ -265,8 +293,15 @@ goConstructorDef ::
   Member (Error ScoperError) r =>
   InductiveConstructorDef 'Scoped ->
   Sem r Abstract.InductiveConstructorDef
-goConstructorDef (InductiveConstructorDef c _ ty) =
-  Abstract.InductiveConstructorDef (goSymbol c) <$> goExpression ty
+goConstructorDef InductiveConstructorDef {..} = do
+  ty' <- goExpression _constructorType
+  examples' <- goExamples _constructorDoc
+  return
+    Abstract.InductiveConstructorDef
+      { _constructorType = ty',
+        _constructorExamples = examples',
+        _constructorName = goSymbol _constructorName
+      }
 
 goExpression ::
   forall r.

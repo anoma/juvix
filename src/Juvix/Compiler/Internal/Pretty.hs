@@ -1,5 +1,6 @@
 module Juvix.Compiler.Internal.Pretty
   ( module Juvix.Compiler.Internal.Pretty,
+    module Juvix.Compiler.Internal.Pretty.Base,
     module Juvix.Compiler.Internal.Pretty.Options,
   )
 where

@@ -15,5 +15,5 @@ makeLenses ''InternalArityResult
 mainModule :: Lens' InternalArityResult Module
 mainModule = resultModules . _head
 
-microJuvixArityResultEntryPoint :: Lens' InternalArityResult E.EntryPoint
-microJuvixArityResultEntryPoint = resultInternalResult . M.microJuvixResultEntryPoint
+internalArityResultEntryPoint :: Lens' InternalArityResult E.EntryPoint
+internalArityResultEntryPoint = resultInternalResult . M.microJuvixResultEntryPoint

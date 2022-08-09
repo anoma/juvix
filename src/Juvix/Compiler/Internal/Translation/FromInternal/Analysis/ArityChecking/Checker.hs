@@ -59,9 +59,11 @@ checkFunctionDef ::
 checkFunctionDef FunctionDef {..} = do
   arity <- typeArity _funDefType
   _funDefClauses' <- mapM (checkFunctionClause arity) _funDefClauses
+  _funDefExamples' <- withEmptyLocalVars (mapM checkExample _funDefExamples)
   return
     FunctionDef
       { _funDefClauses = _funDefClauses',
+        _funDefExamples = _funDefExamples',
         ..
       }
 
@@ -87,6 +89,9 @@ checkFunctionClause ari cl = do
 lambda :: a
 lambda = error "lambda expressions are not supported by the arity checker"
 
+withEmptyLocalVars :: Sem (Reader LocalVars : r) a -> Sem r a
+withEmptyLocalVars = runReader emptyLocalVars
+
 guessArity ::
   forall r.
   Members '[Reader InfoTable] r =>
@@ -104,7 +109,7 @@ guessArity = \case
     idenHelper :: Iden -> Sem r (Maybe Arity)
     idenHelper i = case i of
       IdenVar {} -> return Nothing
-      _ -> Just <$> runReader (LocalVars mempty) (idenArity i)
+      _ -> Just <$> withEmptyLocalVars (idenArity i)
 
     appHelper :: Application -> Sem r (Maybe Arity)
     appHelper a = do
@@ -300,6 +305,13 @@ typeArity = go
           { _functionArityLeft = l',
             _functionArityRight = r'
           }
+
+checkExample ::
+  forall r.
+  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, Reader LocalVars] r =>
+  Example ->
+  Sem r Example
+checkExample = traverseOf exampleExpression (checkExpression ArityUnknown)
 
 checkExpression ::
   forall r.

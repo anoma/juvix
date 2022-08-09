@@ -11,6 +11,9 @@ axiom = "axiom"
 judocStart :: IsString s => s
 judocStart = "---"
 
+judocExample :: IsString s => s
+judocExample = ">>>"
+
 end :: IsString s => s
 end = "end"
 

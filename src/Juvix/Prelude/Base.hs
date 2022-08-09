@@ -185,6 +185,12 @@ toUpperFirst (x : xs) = Char.toUpper x : xs
 mconcatMap :: (Monoid c, Foldable t) => (a -> c) -> t a -> c
 mconcatMap f = List.mconcatMap f . toList
 
+concatWith :: (Foldable t, Monoid a) => (a -> a -> a) -> t a -> a
+concatWith f ds
+  | null ds = mempty
+  | otherwise = foldr1 f ds
+{-# INLINE concatWith #-}
+
 --------------------------------------------------------------------------------
 -- HashMap
 --------------------------------------------------------------------------------

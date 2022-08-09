@@ -1,4 +1,4 @@
-module Juvix.Compiler.Backend.Html.Translation.FromScoped.Generation where
+module Juvix.Compiler.Backend.Html.Translation.FromTyped.Source where
 
 import Data.ByteString qualified as BS
 import Data.Text qualified as Text
@@ -12,6 +12,7 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Base
+import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Extra.Paths
 import Juvix.Extra.Version
 import Juvix.Prelude
@@ -142,6 +143,22 @@ ppCodeHtml :: (Members '[Reader HtmlOptions] r, PrettyCode a) => a -> Sem r Html
 ppCodeHtml x = do
   o <- ask
   return (ppCodeHtml' o defaultOptions x)
+
+ppCodeHtmlInternal :: (Members '[Reader HtmlOptions] r, Internal.PrettyCode a) => a -> Sem r Html
+ppCodeHtmlInternal x = do
+  o <- ask
+  return (ppCodeHtmlInternal' o Internal.defaultOptions x)
+  where
+    ppCodeHtmlInternal' :: Internal.PrettyCode a => HtmlOptions -> Internal.Options -> a -> Html
+    ppCodeHtmlInternal' htmlOpts opts = run . runReader htmlOpts . renderTree . treeForm . docStreamInternal' opts
+    docStreamInternal' :: Internal.PrettyCode a => Internal.Options -> a -> SimpleDocStream Ann
+    docStreamInternal' opts m = goTag <$> layoutPretty defaultLayoutOptions (Internal.runPrettyCode opts m)
+    goTag :: Internal.Ann -> Ann
+    goTag = \case
+      Internal.AnnKind k -> AnnKind k
+      Internal.AnnKeyword -> AnnKeyword
+      Internal.AnnLiteralInteger -> AnnLiteralInteger
+      Internal.AnnLiteralString -> AnnLiteralString
 
 go :: Members '[Reader HtmlOptions] r => SimpleDocTree Ann -> Sem r Html
 go sdt = case sdt of
