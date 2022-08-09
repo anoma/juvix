@@ -8,7 +8,6 @@ import Juvix.Compiler.Concrete.Pretty.Base qualified as Scoped
 import Juvix.Data.CodeAnn
 import Juvix.Data.PPOutput
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
 import Text.EditDistance
 
 ppCode :: Scoped.PrettyCode c => c -> Doc Ann

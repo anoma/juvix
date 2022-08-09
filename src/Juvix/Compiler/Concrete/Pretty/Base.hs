@@ -14,7 +14,6 @@ import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
-import Juvix.Prelude.Pretty hiding (braces, parens)
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
 doc opts =
@@ -28,135 +27,6 @@ class PrettyCode a where
 runPrettyCode :: PrettyCode c => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
-keyword' :: Pretty a => a -> Doc Ann
-keyword' = annotate AnnKeyword . pretty
-
-keyword :: Text -> Doc Ann
-keyword = keyword'
-
-delimiter :: Text -> Doc Ann
-delimiter = annotate AnnDelimiter . pretty
-
-kwModule :: Doc Ann
-kwModule = keyword Str.module_
-
-kwEnd :: Doc Ann
-kwEnd = keyword Str.end
-
-kwBuiltin :: Doc Ann
-kwBuiltin = keyword Str.builtin
-
-kwNatural :: Doc Ann
-kwNatural = keyword Str.natural
-
-kwInductive :: Doc Ann
-kwInductive = keyword Str.inductive
-
-kwType :: Doc Ann
-kwType = keyword Str.type_
-
-kwColon :: Doc Ann
-kwColon = keyword Str.colon
-
-kwArrowR :: Doc Ann
-kwArrowR = keyword Str.toUnicode
-
-kwLambda :: Doc Ann
-kwLambda = keyword Str.lambdaUnicode
-
-kwGhc :: Doc Ann
-kwGhc = keyword Str.ghc
-
-kwC :: Doc Ann
-kwC = keyword Str.cBackend
-
-kwWhere :: Doc Ann
-kwWhere = keyword Str.where_
-
-kwLet :: Doc Ann
-kwLet = keyword Str.let_
-
-kwIn :: Doc Ann
-kwIn = keyword Str.in_
-
-kwPublic :: Doc Ann
-kwPublic = keyword Str.public
-
-kwWildcard :: Doc Ann
-kwWildcard = keyword Str.underscore
-
-kwPostfix :: Doc Ann
-kwPostfix = keyword Str.postfix
-
-kwInfixr :: Doc Ann
-kwInfixr = keyword Str.infixr_
-
-kwInfixl :: Doc Ann
-kwInfixl = keyword Str.infixl_
-
-kwInfix :: Doc Ann
-kwInfix = keyword Str.infix_
-
-kwAssignment :: Doc Ann
-kwAssignment = keyword Str.assignUnicode
-
-kwMapsto :: Doc Ann
-kwMapsto = keyword Str.mapstoUnicode
-
-kwColonZero :: Doc Ann
-kwColonZero = keyword Str.colonZero
-
-kwColonOne :: Doc Ann
-kwColonOne = keyword Str.colonOne
-
-kwColonOmega :: Doc Ann
-kwColonOmega = keyword Str.colonOmegaUnicode
-
-kwAxiom :: Doc Ann
-kwAxiom = keyword Str.axiom
-
-kwOpen :: Doc Ann
-kwOpen = keyword Str.open
-
-kwUsing :: Doc Ann
-kwUsing = keyword Str.using
-
-kwHiding :: Doc Ann
-kwHiding = keyword Str.hiding
-
-kwImport :: Doc Ann
-kwImport = keyword Str.import_
-
-kwSemicolon :: Doc Ann
-kwSemicolon = delimiter Str.semicolon
-
-kwCompile :: Doc Ann
-kwCompile = keyword Str.compile
-
-kwForeign :: Doc Ann
-kwForeign = keyword Str.foreign_
-
-kwTerminating :: Doc Ann
-kwTerminating = keyword Str.terminating
-
-kwBraceL :: Doc Ann
-kwBraceL = delimiter "{"
-
-kwBraceR :: Doc Ann
-kwBraceR = delimiter "}"
-
-kwParenL :: Doc Ann
-kwParenL = delimiter "("
-
-kwParenR :: Doc Ann
-kwParenR = delimiter ")"
-
-kwDQuote :: Doc Ann
-kwDQuote = pretty ("\"" :: Text)
-
-kwDot :: Doc Ann
-kwDot = delimiter "."
-
 indented :: Members '[Reader Options] r => Doc Ann -> Sem r (Doc Ann)
 indented d = do
   ind <- asks (^. optIndent)
@@ -166,23 +36,6 @@ bracesIndent :: Members '[Reader Options] r => Doc Ann -> Sem r (Doc Ann)
 bracesIndent d = do
   d' <- indented d
   return $ braces (line <> d' <> line)
-
-braces :: Doc Ann -> Doc Ann
-braces = enclose kwBraceL kwBraceR
-
-parens :: Doc Ann -> Doc Ann
-parens = enclose kwParenL kwParenR
-
-implicitDelim :: IsImplicit -> Doc Ann -> Doc Ann
-implicitDelim = \case
-  Implicit -> braces
-  Explicit -> parens
-
-doubleQuotes :: Doc Ann -> Doc Ann
-doubleQuotes = enclose kwDQuote kwDQuote
-
-annotateKind :: S.NameKind -> Doc Ann -> Doc Ann
-annotateKind = annotate . AnnKind
 
 ppModulePathType ::
   forall t s r.
@@ -419,13 +272,13 @@ instance SingI s => PrettyCode (InductiveConstructorDef s) where
     return $ doc' ?<> constructorName' <+> kwColon <+> constructorType'
 
 instance PrettyCode BuiltinInductive where
-  ppCode i = return (kwBuiltin <+> keyword' i)
+  ppCode i = return (kwBuiltin <+> keyword (prettyText i))
 
 instance PrettyCode BuiltinFunction where
-  ppCode i = return (kwBuiltin <+> keyword' i)
+  ppCode i = return (kwBuiltin <+> keyword (prettyText i))
 
 instance PrettyCode BuiltinAxiom where
-  ppCode i = return (kwBuiltin <+> keyword' i)
+  ppCode i = return (kwBuiltin <+> keyword (prettyText i))
 
 ppInductiveSignature :: forall r s. (SingI s, Members '[Reader Options] r) => InductiveDef s -> Sem r (Doc Ann)
 ppInductiveSignature InductiveDef {..} = do

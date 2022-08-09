@@ -11,7 +11,6 @@ import Juvix.Compiler.Concrete.Pretty.Base qualified as S
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
-import Prettyprinter
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
 doc opts =
@@ -40,40 +39,14 @@ ppDefault = runPrettyCode defaultOptions
 runPrettyCode :: PrettyCode c => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
-keyword :: Text -> Doc Ann
-keyword = annotate AnnKeyword . pretty
-
-kwType :: Doc Ann
-kwType = keyword Str.type_
-
 kwQuestion :: Doc Ann
 kwQuestion = keyword Str.questionMark
 
 kwWaveArrow :: Doc Ann
 kwWaveArrow = keyword Str.waveArrow
 
-kwColon :: Doc Ann
-kwColon = keyword Str.colon
-
-kwTo :: Doc Ann
-kwTo = keyword Str.toUnicode
-
-kwColonZero :: Doc Ann
-kwColonZero = keyword Str.colonZero
-
-kwColonOne :: Doc Ann
-kwColonOne = keyword Str.colonOne
-
-kwColonOmega :: Doc Ann
-kwColonOmega = keyword Str.colonOmegaUnicode
-
 parensCond :: Bool -> Doc Ann -> Doc Ann
 parensCond t d = if t then parens d else d
-
-implicitDelim :: IsImplicit -> Doc Ann -> Doc Ann
-implicitDelim = \case
-  Implicit -> braces
-  Explicit -> parens
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
@@ -165,7 +138,7 @@ instance PrettyCode Function where
   ppCode Function {..} = do
     funParameter' <- ppCode _funParameter
     funReturn' <- ppRightExpression funFixity _funReturn
-    return $ funParameter' <+> kwTo <+> funReturn'
+    return $ funParameter' <+> kwArrow <+> funReturn'
 
 instance PrettyCode FunctionRef where
   ppCode FunctionRef {..} = ppCode _functionRefName

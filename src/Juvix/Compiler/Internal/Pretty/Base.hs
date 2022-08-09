@@ -9,7 +9,6 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Data.CodeAnn
-import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
@@ -71,69 +70,6 @@ instance PrettyCode Expression where
     ExpressionUniverse u -> ppCode u
     ExpressionLiteral l -> return (pretty l)
     ExpressionLambda l -> ppCode l
-
-keyword :: Text -> Doc Ann
-keyword = annotate AnnKeyword . pretty
-
-kwLambda :: Doc Ann
-kwLambda = keyword Str.lambdaUnicode
-
-kwInclude :: Doc Ann
-kwInclude = keyword Str.include
-
-kwArrow :: Doc Ann
-kwArrow = keyword Str.toUnicode
-
-kwMapsto :: Doc Ann
-kwMapsto = keyword Str.mapstoUnicode
-
-kwForeign :: Doc Ann
-kwForeign = keyword Str.foreign_
-
-kwCompile :: Doc Ann
-kwCompile = keyword Str.compile
-
-kwC :: Doc Ann
-kwC = keyword Str.cBackend
-
-kwGhc :: Doc Ann
-kwGhc = keyword Str.ghc
-
-kwColon :: Doc Ann
-kwColon = keyword Str.colon
-
-kwData :: Doc Ann
-kwData = keyword Str.data_
-
-kwAssign :: Doc Ann
-kwAssign = keyword Str.assignUnicode
-
-kwEquals :: Doc Ann
-kwEquals = keyword Str.equal
-
-kwColonColon :: Doc Ann
-kwColonColon = keyword (Str.colon <> Str.colon)
-
-kwPipe :: Doc Ann
-kwPipe = keyword Str.pipe
-
-kwHole :: Doc Ann
-kwHole = keyword Str.underscore
-
-kwAxiom :: Doc Ann
-kwAxiom = keyword Str.axiom
-
-kwWhere :: Doc Ann
-kwWhere = keyword Str.where_
-
-kwModule :: Doc Ann
-kwModule = keyword Str.module_
-
-kwType :: Doc Ann
-kwType = keyword Str.type_
-
-kwWildcard :: Doc Ann
-kwWildcard = keyword Str.underscore
 
 instance PrettyCode BackendItem where
   ppCode BackendItem {..} = do

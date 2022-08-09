@@ -12,7 +12,6 @@ import Juvix.Data.CodeAnn
 import Juvix.Data.Fixity
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
 import Juvix.Prelude.Pretty qualified as PP
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
@@ -43,11 +42,8 @@ instance PrettyCode Expression where
     ExpressionVerbatim c -> return (pretty c)
     ExpressionLiteral l -> ppCode (l ^. withLocParam)
 
-keyword :: Text -> Doc Ann
-keyword = annotate AnnKeyword . pretty
-
-kwArrow :: Doc Ann
-kwArrow = keyword Str.toAscii
+kwHaskellArrow :: Doc Ann
+kwHaskellArrow = keyword Str.toAscii
 
 kwData :: Doc Ann
 kwData = keyword Str.data_
@@ -58,23 +54,11 @@ kwEquals = keyword Str.equal
 kwColonColon :: Doc Ann
 kwColonColon = keyword (Str.colon <> Str.colon)
 
-kwPipe :: Doc Ann
-kwPipe = keyword Str.pipe
-
-kwWhere :: Doc Ann
-kwWhere = keyword Str.where_
-
-kwModule :: Doc Ann
-kwModule = keyword Str.module_
-
-kwWildcard :: Doc Ann
-kwWildcard = keyword Str.underscore
-
 instance PrettyCode Function where
   ppCode (Function l r) = do
     l' <- ppLeftExpression funFixity l
     r' <- ppRightExpression funFixity r
-    return $ l' <+> kwArrow <+> r'
+    return $ l' <+> kwHaskellArrow <+> r'
 
 instance PrettyCode TypeIden where
   ppCode = \case
@@ -147,9 +131,6 @@ instance PrettyCode Literal where
 
 doubleQuotes :: Doc Ann -> Doc Ann
 doubleQuotes = enclose kwDQuote kwDQuote
-
-kwDQuote :: Doc Ann
-kwDQuote = pretty ("\"" :: Text)
 
 ppStringLit :: Text -> Doc Ann
 ppStringLit = annotate AnnLiteralString . doubleQuotes . pretty
