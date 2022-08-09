@@ -1,0 +1,53 @@
+module PascalsTriangle;
+
+open import Stdlib.Prelude;
+
+zipWith : {A : Type} → {B : Type} → {C : Type} → (A → B → C) -> List A → List B → List C;
+zipWith f nil _ ≔ nil;
+zipWith f _ nil ≔ nil;
+zipWith f (x ∷ xs) (y ∷ ys) ≔ f x y ∷ zipWith f xs ys;
+
+--- Return a list of repeated applications of a given function
+iterate : {A : Type} → ℕ → (A → A) → A → List A;
+iterate zero _ _ ≔ nil;
+iterate (suc n) f a ≔ a ∷ iterate n f (f a);
+
+--- Produce a singleton List
+singleton : {A : Type} → A → List A;
+singleton a ≔ a ∷ nil;
+
+--- Concatenation of ;String;s
+infixr 5 ++str;
+axiom ++str : String → String → String;
+compile ++str {
+  c ↦ "concat";
+};
+
+--- Concatenates a list of strings
+---
+--- ;concat (("a" ∷ nil) ∷ ("b" ∷ nil)); evaluates to ;"a" ∷ "b" ∷ nil;
+concat : List String → String;
+concat ≔ foldl (++str) "";
+
+intercalate : String → List String → String;
+intercalate sep xs ≔ concat (intersperse sep xs);
+
+--- Joins a list of strings with the newline character
+unlines : List String → String;
+unlines ≔ intercalate "\n";
+
+showList : List ℕ → String;
+showList xs ≔ "[" ++str intercalate "," (map natToStr xs) ++str "]";
+
+--- Compute the next row of Pascal's triangle
+pascalNextRow : List ℕ → List ℕ;
+pascalNextRow row ≔ zipWith (+) (singleton zero ++ row) (row ++ singleton zero);
+
+--- Produce Pascal's triangle to a given depth
+pascal : ℕ → List (List ℕ);
+pascal rows ≔ iterate rows pascalNextRow (singleton one);
+
+main : IO;
+main ≔ putStrLn (unlines (map showList (pascal 10)));
+
+end;
