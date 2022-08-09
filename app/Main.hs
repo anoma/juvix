@@ -3,6 +3,7 @@ module Main (main) where
 import App
 import CLI
 import Commands.Dev.Termination as Termination
+import Commands.Init qualified as Init
 import Control.Exception qualified as IO
 import Control.Monad.Extra
 import Data.ByteString qualified as ByteString
@@ -271,3 +272,4 @@ main = do
     DisplayHelp -> showHelpText p
     Command cmd -> runM (runAppIO (cmd ^. cliGlobalOptions) (runCommand cmd))
     Doctor opts -> runM (runLogIO (doctor opts))
+    Init -> runM (runLogIO Init.init)

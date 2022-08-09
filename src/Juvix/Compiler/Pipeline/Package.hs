@@ -10,7 +10,7 @@ data Package = Package
   }
   deriving stock (Eq, Show, Generic)
 
-$( deriveFromJSON
+$( deriveJSON
      defaultOptions
        { fieldLabelModifier = over Lens._head toLower . dropPrefix "_package",
          rejectUnknownFields = True

@@ -51,6 +51,7 @@ dependencies:
 - text == 1.2.*
 - th-utilities == 0.2.*
 - unordered-containers == 0.2.*
+- versions == 5.0.*
 - yaml == 0.11.*
 
 # the tasty dependencies are here to avoid having to recompile
