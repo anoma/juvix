@@ -171,10 +171,10 @@ walkN :: Monad m => (Index -> Node -> m ()) -> Node -> m ()
 walkN = ufoldMN mappend
 
 gather :: (a -> Node -> a) -> a -> Node -> a
-gather f acc n = run $ execState acc (walk (\n' -> modify (`f` n')) n)
+gather f acc n = run $ execState acc (walk (\n' -> modify' (`f` n')) n)
 
 gatherB :: (BinderList (Maybe BinderInfo) -> a -> Node -> a) -> a -> Node -> a
-gatherB f acc n = run $ execState acc (walkB (\is n' -> modify (\a -> f is a n')) n)
+gatherB f acc n = run $ execState acc (walkB (\is n' -> modify' (\a -> f is a n')) n)
 
 gatherN :: (Index -> a -> Node -> a) -> a -> Node -> a
-gatherN f acc n = run $ execState acc (walkN (\idx n' -> modify (\a -> f idx a n')) n)
+gatherN f acc n = run $ execState acc (walkN (\idx n' -> modify' (\a -> f idx a n')) n)

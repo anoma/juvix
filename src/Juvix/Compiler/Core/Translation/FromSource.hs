@@ -9,6 +9,7 @@ import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Info qualified as Info
 import Juvix.Compiler.Core.Language.Info.BinderInfo as BinderInfo
+import Juvix.Compiler.Core.Language.Info.BranchInfo as BranchInfo
 import Juvix.Compiler.Core.Language.Info.LocationInfo as LocationInfo
 import Juvix.Compiler.Core.Language.Info.NameInfo as NameInfo
 import Juvix.Compiler.Core.Language.Type
@@ -35,7 +36,7 @@ runParser root fileName tab input =
         }
 
 freshName ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   NameKind ->
   Text ->
   Interval ->
@@ -50,6 +51,15 @@ freshName kind txt i = do
         _namePretty = txt,
         _nameLoc = i
       }
+
+guardSymbolNotDefined ::
+  Member InfoTableBuilder r =>
+  Symbol ->
+  ParsecS r () ->
+  ParsecS r ()
+guardSymbolNotDefined sym err = do
+  b <- lift $ checkSymbolDefined sym
+  when b err
 
 parseToplevel ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -73,9 +83,8 @@ statementDef = do
   r <- lift (getIdent txt)
   case r of
     Just (Left sym) -> do
-      tab <- lift getInfoTable
-      when
-        (HashMap.member sym (tab ^. identContext))
+      guardSymbolNotDefined
+        sym
         (parseFailure ("duplicate definition of: " ++ fromText txt))
       parseDefinition sym
     Just (Right {}) ->
@@ -165,7 +174,12 @@ cmpExpr' ::
   Node ->
   ParsecS r Node
 cmpExpr' varsNum vars node =
-  eqExpr' varsNum vars node <|> ltExpr' varsNum vars node <|> leExpr' varsNum vars node <|> return node
+  eqExpr' varsNum vars node
+    <|> ltExpr' varsNum vars node
+    <|> leExpr' varsNum vars node
+    <|> gtExpr' varsNum vars node
+    <|> geExpr' varsNum vars node
+    <|> return node
 
 eqExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -236,7 +250,9 @@ arithExpr' ::
   Node ->
   ParsecS r Node
 arithExpr' varsNum vars node =
-  plusExpr' varsNum vars node <|> minusExpr' varsNum vars node <|> return node
+  plusExpr' varsNum vars node
+    <|> minusExpr' varsNum vars node
+    <|> return node
 
 plusExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -274,7 +290,9 @@ multExpr' ::
   Node ->
   ParsecS r Node
 multExpr' varsNum vars node =
-  mulExpr' varsNum vars node <|> divExpr' varsNum vars node <|> return node
+  mulExpr' varsNum vars node
+    <|> divExpr' varsNum vars node
+    <|> return node
 
 mulExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -443,12 +461,24 @@ exprCase' value varsNum vars = do
   bs <- P.sepEndBy (caseBranch varsNum vars) kwSemicolon
   rbrace
   let bs' = map fromLeft' $ filter isLeft bs
+  let bss = map fst bs'
+  let bsns = map snd bs'
   let def' = map fromRight' $ filter isRight bs
+  let bi = CaseBinderInfo $ map (map (`BinderInfo` Star)) bsns
+  bri <-
+    CaseBranchInfo
+      <$> mapM
+        ( \(CaseBranch tag _ _) -> do
+            ci <- lift $ getConstructorInfo tag
+            return $ BranchInfo (ci ^. constructorName)
+        )
+        bss
+  let info = Info.insert bri (Info.singleton bi)
   case def' of
     [def] ->
-      return $ Case Info.empty value bs' (Just def)
+      return $ Case info value bss (Just def)
     [] ->
-      return $ Case Info.empty value bs' Nothing
+      return $ Case info value bss Nothing
     _ ->
       parseFailure "multiple default branches"
 
@@ -456,7 +486,7 @@ caseBranch ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Index ->
-  ParsecS r (Either CaseBranch Node)
+  ParsecS r (Either (CaseBranch, [Name]) Node)
 caseBranch varsNum vars =
   (defaultBranch varsNum vars <&> Right)
     <|> (matchingBranch varsNum vars <&> Left)
@@ -475,7 +505,7 @@ matchingBranch ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Index ->
-  ParsecS r CaseBranch
+  ParsecS r (CaseBranch, [Name])
 matchingBranch varsNum vars = do
   txt <- identifier
   r <- lift (getIdent txt)
@@ -485,9 +515,9 @@ matchingBranch varsNum vars = do
     Just (Right tag) -> do
       ns <- P.many parseLocalName
       let bindersNum = length ns
-      tab <- lift getInfoTable
+      ci <- lift $ getConstructorInfo tag
       when
-        (fromJust (HashMap.lookup tag (tab ^. infoConstructors)) ^. constructorArgsNum /= bindersNum)
+        (ci ^. constructorArgsNum /= bindersNum)
         (parseFailure "wrong number of constructor arguments")
       kwMapsTo
       let vars' =
@@ -499,7 +529,7 @@ matchingBranch varsNum vars = do
                 (vars, varsNum)
                 ns
       br <- expr (varsNum + bindersNum) vars'
-      return $ CaseBranch tag bindersNum br
+      return (CaseBranch tag bindersNum br, ns)
     Nothing ->
       parseFailure ("undeclared identifier: " ++ fromText txt)
 

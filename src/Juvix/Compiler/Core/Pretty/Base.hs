@@ -119,7 +119,7 @@ instance PrettyCode Node where
           Nothing -> mapM (\(CaseBranch _ n _) -> replicateM n (return kwQuestion)) caseBranches
       cns <-
         case Info.lookup kCaseBranchInfo caseInfo of
-          Just ci -> mapM (ppCode . (^. BranchInfo.infoName)) (ci ^. infoBranches)
+          Just ci -> mapM (ppCode . (^. BranchInfo.infoTagName)) (ci ^. infoBranches)
           Nothing -> mapM (\(CaseBranch tag _ _) -> ppCode tag) caseBranches
       let bs = map (\(CaseBranch _ _ br) -> br) caseBranches
       v <- ppCode caseValue

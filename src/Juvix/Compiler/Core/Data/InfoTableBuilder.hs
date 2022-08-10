@@ -23,6 +23,16 @@ hasIdent txt = do
     Just _ -> return True
     Nothing -> return False
 
+getConstructorInfo :: Member InfoTableBuilder r => Tag -> Sem r ConstructorInfo
+getConstructorInfo tag = do
+  tab <- getInfoTable
+  return $ fromJust (HashMap.lookup tag (tab ^. infoConstructors))
+
+checkSymbolDefined :: Member InfoTableBuilder r => Symbol -> Sem r Bool
+checkSymbolDefined sym = do
+  tab <- getInfoTable
+  return $ HashMap.member sym (tab ^. identContext)
+
 data BuilderState = BuilderState
   { _stateNextSymbol :: Word,
     _stateNextUserTag :: Word,
