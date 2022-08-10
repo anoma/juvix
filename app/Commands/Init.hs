@@ -4,6 +4,7 @@ import Data.Text qualified as Text
 import Data.Versions
 import Data.Yaml (encodeFile)
 import Juvix.Compiler.Pipeline.Package
+import Juvix.Extra.Paths
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 import Text.Megaparsec (Parsec)
@@ -24,13 +25,13 @@ init = do
   say "✨ Your next Juvix adventure is about to begin! ✨"
   say "I will help you set it up"
   pkg <- getPackage
-  say "creating juvix.yaml..."
-  embed (encodeFile "juvix.yaml" pkg)
+  say ("creating " <> pack juvixYamlFile)
+  embed (encodeFile juvixYamlFile pkg)
   say "yo are all set"
 
 checkNotInProject :: forall r. Members '[Embed IO] r => Sem r ()
 checkNotInProject =
-  whenM (embed (doesFileExist "juvix.yaml")) err
+  whenM (embed (doesFileExist juvixYamlFile)) err
   where
     err :: Sem r ()
     err = do
