@@ -15,6 +15,8 @@ EXAMPLEHTMLOUTPUT=_docs/examples/html
 EXAMPLES= 	HelloWorld/HelloWorld.juvix \
 			Collatz/Collatz.juvix \
 			Fibonacci/Fibonacci.juvix \
+            Hanoi/Hanoi.juvix \
+            PascalsTriangle/PascalsTriangle.juvix \
 			TicTacToe/CLI/TicTacToe.juvix \
 			ValidityPredicates/SimpleFungibleToken.juvix
 

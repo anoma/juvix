@@ -1,3 +1,10 @@
+--- Pascal's triangle is the arrangement of binomial coefficients in a triangular array.
+---
+--- The rows of the triangle are staggered so that each number can be computed as the
+--- sum of the numbers to the left and right in the previous row.
+---
+--- The function ;pascal; produces the triangle to a given depth.
+
 module PascalsTriangle;
 
 open import Stdlib.Prelude;
