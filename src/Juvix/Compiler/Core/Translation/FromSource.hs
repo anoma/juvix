@@ -241,7 +241,7 @@ arithExpr ::
   Index ->
   HashMap Text Index ->
   ParsecS r Node
-arithExpr varsNum vars = multExpr varsNum vars >>= arithExpr' varsNum vars
+arithExpr varsNum vars = factorExpr varsNum vars >>= arithExpr' varsNum vars
 
 arithExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -262,7 +262,7 @@ plusExpr' ::
   ParsecS r Node
 plusExpr' varsNum vars node = do
   kwPlus
-  node' <- multExpr varsNum vars
+  node' <- factorExpr varsNum vars
   arithExpr' varsNum vars (BuiltinApp Info.empty OpIntAdd [node, node'])
 
 minusExpr' ::
@@ -273,23 +273,23 @@ minusExpr' ::
   ParsecS r Node
 minusExpr' varsNum vars node = do
   kwMinus
-  node' <- multExpr varsNum vars
+  node' <- factorExpr varsNum vars
   arithExpr' varsNum vars (BuiltinApp Info.empty OpIntSub [node, node'])
 
-multExpr ::
+factorExpr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Index ->
   ParsecS r Node
-multExpr varsNum vars = appExpr varsNum vars >>= multExpr' varsNum vars
+factorExpr varsNum vars = appExpr varsNum vars >>= factorExpr' varsNum vars
 
-multExpr' ::
+factorExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Index ->
   Node ->
   ParsecS r Node
-multExpr' varsNum vars node =
+factorExpr' varsNum vars node =
   mulExpr' varsNum vars node
     <|> divExpr' varsNum vars node
     <|> return node
@@ -303,7 +303,7 @@ mulExpr' ::
 mulExpr' varsNum vars node = do
   kwMul
   node' <- appExpr varsNum vars
-  multExpr' varsNum vars (BuiltinApp Info.empty OpIntMul [node, node'])
+  factorExpr' varsNum vars (BuiltinApp Info.empty OpIntMul [node, node'])
 
 divExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -314,7 +314,7 @@ divExpr' ::
 divExpr' varsNum vars node = do
   kwDiv
   node' <- appExpr varsNum vars
-  multExpr' varsNum vars (BuiltinApp Info.empty OpIntDiv [node, node'])
+  factorExpr' varsNum vars (BuiltinApp Info.empty OpIntDiv [node, node'])
 
 appExpr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
