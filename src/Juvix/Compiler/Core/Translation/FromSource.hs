@@ -155,7 +155,9 @@ expression = expr 0 mempty
 
 expr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  -- current de Bruijn index, i.e., the number of binders upwards
   Index ->
+  -- reverse de Bruijn indices
   HashMap Text Index ->
   ParsecS r Node
 expr varsNum vars = cmpExpr varsNum vars
@@ -351,9 +353,7 @@ atoms varsNum vars = do
 
 atom ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
-  -- current de Bruijn index, i.e., the number of binders upwards
   Index ->
-  -- reverse de Bruijn indices
   HashMap Text Index ->
   ParsecS r Node
 atom varsNum vars =
