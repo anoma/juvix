@@ -7,18 +7,31 @@ type IdentContext = HashMap Symbol Node
 
 data InfoTable = InfoTable
   { _identContext :: IdentContext,
+    -- `_identMap` is needed only for REPL
+    _identMap :: HashMap Text (Either Symbol Tag),
     _infoIdents :: HashMap Symbol IdentInfo,
     _infoInductives :: HashMap Name InductiveInfo,
     _infoConstructors :: HashMap Tag ConstructorInfo,
     _infoAxioms :: HashMap Name AxiomInfo
   }
 
+emptyInfoTable :: InfoTable
+emptyInfoTable =
+  InfoTable
+    { _identContext = mempty,
+      _identMap = mempty,
+      _infoIdents = mempty,
+      _infoInductives = mempty,
+      _infoConstructors = mempty,
+      _infoAxioms = mempty
+    }
+
 data IdentInfo = IdentInfo
   { _identName :: Name,
     _identSymbol :: Symbol,
     _identType :: Type,
-    _identArgsNum :: Int,
     -- _identArgsNum will be used often enough to justify avoiding recomputation
+    _identArgsNum :: Int,
     _identArgsInfo :: [ArgumentInfo],
     _identIsExported :: Bool
   }
@@ -40,7 +53,8 @@ data InductiveInfo = InductiveInfo
 data ConstructorInfo = ConstructorInfo
   { _constructorName :: Name,
     _constructorTag :: Tag,
-    _constructorType :: Type
+    _constructorType :: Type,
+    _constructorArgsNum :: Int
   }
 
 data ParameterInfo = ParameterInfo

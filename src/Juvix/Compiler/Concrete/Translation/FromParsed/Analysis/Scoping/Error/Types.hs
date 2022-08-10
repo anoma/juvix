@@ -13,7 +13,6 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Language qualified as L
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
-import Juvix.Compiler.Concrete.Translation.FromSource.Error qualified as Parser
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 

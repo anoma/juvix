@@ -22,6 +22,9 @@ makeLenses ''Info
 empty :: Info
 empty = Info HashMap.empty
 
+singleton :: forall a. IsInfo a => a -> Info
+singleton a = Juvix.Compiler.Core.Language.Info.insert a Juvix.Compiler.Core.Language.Info.empty
+
 member :: forall a. IsInfo a => Key a -> Info -> Bool
 member k i = HashMap.member (typeRep k) (i ^. infoMap)
 

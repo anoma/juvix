@@ -1,9 +1,9 @@
-module Juvix.Compiler.Concrete.Translation.FromSource.Error where
+module Juvix.Parser.Error where
 
-import Juvix.Compiler.Concrete.Extra (errorOffset)
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 import Text.Megaparsec qualified as M
+import Text.Megaparsec.Error (errorOffset)
 
 newtype ParserError = ParserError
   { _parseError :: M.ParseErrorBundle Text Void

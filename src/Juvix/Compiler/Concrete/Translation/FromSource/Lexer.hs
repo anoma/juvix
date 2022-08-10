@@ -1,38 +1,20 @@
-module Juvix.Compiler.Concrete.Translation.FromSource.Lexer where
+module Juvix.Compiler.Concrete.Translation.FromSource.Lexer
+  ( module Juvix.Compiler.Concrete.Translation.FromSource.Lexer,
+    module Juvix.Parser.Lexer,
+  )
+where
 
 import Data.Text qualified as Text
 import GHC.Unicode
 import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
-import Juvix.Compiler.Concrete.Extra hiding (Pos, space)
+import Juvix.Compiler.Concrete.Extra hiding (Pos, space, string')
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Extra.Strings qualified as Str
+import Juvix.Parser.Lexer
 import Juvix.Prelude
 import Text.Megaparsec.Char.Lexer qualified as L
 
 type OperatorSym = Text
-
-type ParsecS r = ParsecT Void Text (Sem r)
-
-newtype ParserParams = ParserParams
-  { _parserParamsRoot :: FilePath
-  }
-
-makeLenses ''ParserParams
-
-space :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
-space = L.space space1 lineComment block
-  where
-    skipLineComment :: ParsecS r ()
-    skipLineComment = do
-      notFollowedBy (P.chunk Str.judocStart)
-      void (P.chunk "--")
-      void (P.takeWhileP Nothing (/= '\n'))
-
-    lineComment :: ParsecS r ()
-    lineComment = comment_ skipLineComment
-
-    block :: ParsecS r ()
-    block = comment_ (L.skipBlockComment "{-" "-}")
 
 comment :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r a
 comment c = do
@@ -42,6 +24,9 @@ comment c = do
 
 comment_ :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r ()
 comment_ = void . comment
+
+space :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
+space = space' True comment_
 
 lexeme :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r a
 lexeme = L.lexeme space
@@ -62,13 +47,7 @@ identifierL :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (
 identifierL = lexeme bareIdentifier
 
 integer :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Integer, Interval)
-integer = do
-  minus <- optional (char '-')
-  (nat, i) <- decimal
-  let nat' = case minus of
-        Nothing -> nat
-        _ -> (-nat)
-  return (nat', i)
+integer = integer' decimal
 
 bracedString :: forall e m. MonadParsec e Text m => m Text
 bracedString =
@@ -86,9 +65,7 @@ bracedString =
       char '}'
 
 string :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Text, Interval)
-string =
-  lexemeInterval $
-    pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
+string = lexemeInterval string'
 
 judocExampleStart :: ParsecS r ()
 judocExampleStart = P.chunk Str.judocExample >> hspace
@@ -99,51 +76,14 @@ judocStart = P.chunk Str.judocStart >> hspace
 judocEmptyLine :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 judocEmptyLine = lexeme (void (P.try (judocStart >> P.newline)))
 
-curLoc :: Member (Reader ParserParams) r => ParsecS r Loc
-curLoc = do
-  sp <- getSourcePos
-  offset <- getOffset
-  root <- lift (asks (^. parserParamsRoot))
-  return (mkLoc root offset sp)
-
-interval :: Member (Reader ParserParams) r => ParsecS r a -> ParsecS r (a, Interval)
-interval ma = do
-  start <- curLoc
-  res <- ma
-  end <- curLoc
-  return (res, mkInterval start end)
-
-withLoc :: Member (Reader ParserParams) r => ParsecS r a -> ParsecS r (WithLoc a)
-withLoc ma = do
-  (a, i) <- interval ma
-  return (WithLoc i a)
-
 keyword :: Members '[Reader ParserParams, InfoTableBuilder] r => Text -> ParsecS r ()
 keyword kw = do
-  l <- P.try $ do
-    i <- snd <$> interval (P.chunk kw)
-    notFollowedBy (satisfy validTailChar)
-    space
-    return i
+  l <- keywordL' space kw
   lift (registerKeyword l)
 
 -- | Same as @identifier@ but does not consume space after it.
 bareIdentifier :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Text, Interval)
-bareIdentifier = interval $ do
-  notFollowedBy (choice allKeywords)
-  h <- P.satisfy validFirstChar
-  t <- P.takeWhileP Nothing validTailChar
-  return (Text.cons h t)
-
-validTailChar :: Char -> Bool
-validTailChar c =
-  isAlphaNum c || validFirstChar c
-
-reservedSymbols :: [Char]
-reservedSymbols = "\";(){}[].≔λ\\"
-
-validFirstChar :: Char -> Bool
-validFirstChar c = not $ isNumber c || isSpace c || (c `elem` reservedSymbols)
+bareIdentifier = interval $ rawIdentifier allKeywords
 
 dot :: forall e m. MonadParsec e Text m => m Char
 dot = P.char '.'

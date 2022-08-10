@@ -77,7 +77,7 @@ data Node
         closureBody :: !Node
       }
   | -- Evaluation only: a suspended term value which cannot be evaluated
-    -- further, e.g., a hole applied to some arguments. The suspended term must
+    -- further, e.g., a hole applied to some arguments. `suspendedNode` must
     -- be closed (but need not be a value -- see below).
     Suspended {suspendedInfo :: !Info, suspendedNode :: !Node}
 
@@ -112,7 +112,7 @@ data CaseBranch = CaseBranch {caseTag :: !Tag, caseBindersNum :: !Int, caseBranc
 -- - Closure
 -- - Suspended
 --
--- Whether something is a value matters only for evaluation semantics. It
+-- Whether something is a value matters only for the evaluation semantics. It
 -- doesn't matter much outside the evaluator.
 
 -- All nodes in an environment must be values.

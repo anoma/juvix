@@ -41,6 +41,9 @@ function = "function"
 constructor :: IsString s => s
 constructor = "constructor"
 
+constr :: IsString s => s
+constr = "constr"
+
 topModule :: IsString s => s
 topModule = "top module"
 
@@ -133,6 +136,12 @@ less = "<"
 
 lessEqual :: IsString s => s
 lessEqual = "<="
+
+greater :: IsString s => s
+greater = ">"
+
+greaterEqual :: IsString s => s
+greaterEqual = ">="
 
 data_ :: IsString s => s
 data_ = "data"
@@ -239,6 +248,9 @@ sizeof = "sizeof"
 true_ :: IsString s => s
 true_ = "true"
 
+false_ :: IsString s => s
+false_ = "false"
+
 tag :: IsString s => s
 tag = "tag"
 
@@ -274,6 +286,9 @@ then_ = "then"
 
 else_ :: IsString s => s
 else_ = "else"
+
+def :: IsString s => s
+def = "def"
 
 zero :: IsString s => s
 zero = "0"
