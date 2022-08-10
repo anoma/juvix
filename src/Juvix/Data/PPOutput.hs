@@ -5,7 +5,7 @@ module Juvix.Data.PPOutput
 where
 
 import Juvix.Data.CodeAnn
-import Juvix.Prelude
+import Juvix.Prelude.Base
 
 newtype PPOutput = PPOutput (Doc Ann)
 

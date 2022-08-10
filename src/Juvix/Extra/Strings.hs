@@ -1,6 +1,6 @@
 module Juvix.Extra.Strings where
 
-import Juvix.Prelude
+import Juvix.Prelude.Base
 
 module_ :: IsString s => s
 module_ = "module"

@@ -2,7 +2,7 @@ module Juvix.Data
   ( module Juvix.Data.Backends,
     module Juvix.Data.Effect,
     module Juvix.Data.Error,
-    -- module Juvix.Data.Fixity,
+    module Juvix.Data.Fixity,
     module Juvix.Data.ForeignBlock,
     module Juvix.Data.Hole,
     module Juvix.Data.IsImplicit,
@@ -17,11 +17,10 @@ module Juvix.Data
 where
 
 import Juvix.Data.Backends
--- import Juvix.Data.Fixity
-
 import Juvix.Data.DependencyInfo
 import Juvix.Data.Effect
 import Juvix.Data.Error
+import Juvix.Data.Fixity
 import Juvix.Data.ForeignBlock
 import Juvix.Data.Hole
 import Juvix.Data.IsImplicit
