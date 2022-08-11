@@ -48,7 +48,7 @@ parseUtility =
         "init"
         ( info
             (pure Init)
-            (progDesc "Initialize a juvix project in the current directory")
+            (progDesc "Interactively initialize a juvix project in the current directory")
         )
     cmdDoctor :: Mod CommandFields CLI
     cmdDoctor =
