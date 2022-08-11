@@ -70,10 +70,10 @@ commandHighlight =
         option
           (eitherReader parseBackend)
           ( long "format"
-              <> metavar "THEME"
+              <> metavar "FORMAT"
               <> value Emacs
               <> showDefault
-              <> help "selects a backend: emacs | json"
+              <> help "selects a backend. FORMAT = emacs | json"
           )
       pure HighlightOptions {..}
     parseBackend :: String -> Either String HighlightBackend
