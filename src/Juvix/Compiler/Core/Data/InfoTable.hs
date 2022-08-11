@@ -9,6 +9,7 @@ data InfoTable = InfoTable
   { _identContext :: IdentContext,
     -- `_identMap` is needed only for REPL
     _identMap :: HashMap Text (Either Symbol Tag),
+    _infoMain :: Maybe Symbol,
     _infoIdents :: HashMap Symbol IdentInfo,
     _infoInductives :: HashMap Name InductiveInfo,
     _infoConstructors :: HashMap Tag ConstructorInfo,
@@ -20,6 +21,7 @@ emptyInfoTable =
   InfoTable
     { _identContext = mempty,
       _identMap = mempty,
+      _infoMain = Nothing,
       _infoIdents = mempty,
       _infoInductives = mempty,
       _infoConstructors = mempty,

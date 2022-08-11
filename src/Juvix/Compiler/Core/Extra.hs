@@ -77,7 +77,7 @@ substEnv :: Env -> Node -> Node
 substEnv env = umapN go
   where
     go k n = case n of
-      Var _ idx | idx >= k -> env !! k
+      Var _ idx | idx >= k -> env !! (idx - k)
       _ -> n
 
 convertClosures :: Node -> Node
@@ -106,23 +106,3 @@ convertSuspended = umap go
 
 convertRuntimeNodes :: Node -> Node
 convertRuntimeNodes = convertSuspended . convertData . convertClosures
-
-etaExpandBuiltins :: Node -> Node
-etaExpandBuiltins = umap go
-  where
-    go :: Node -> Node
-    go n = case n of
-      BuiltinApp {..}
-        | builtinOpArgsNum builtinOp > length builtinArgs ->
-            etaExpand (builtinOpArgsNum builtinOp - length builtinArgs) n
-      _ -> n
-
-etaExpandConstrs :: (Tag -> Int) -> Node -> Node
-etaExpandConstrs argsNum = umap go
-  where
-    go :: Node -> Node
-    go n = case n of
-      ConstrApp {..}
-        | argsNum constrTag > length constrArgs ->
-            etaExpand (argsNum constrTag - length constrArgs) n
-      _ -> n

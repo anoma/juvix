@@ -13,6 +13,7 @@ import Juvix.Compiler.Core.Language.Info.BranchInfo as BranchInfo
 import Juvix.Compiler.Core.Language.Info.LocationInfo as LocationInfo
 import Juvix.Compiler.Core.Language.Info.NameInfo as NameInfo
 import Juvix.Compiler.Core.Language.Type
+import Juvix.Compiler.Core.Transformation.Eta
 import Juvix.Compiler.Core.Translation.FromSource.Lexer
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
@@ -153,7 +154,10 @@ statementConstr = do
 expression ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   ParsecS r Node
-expression = expr 0 mempty
+expression = do
+  node <- expr 0 mempty
+  tab <- lift getInfoTable
+  return $ etaExpandApps tab node
 
 expr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>

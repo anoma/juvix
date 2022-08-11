@@ -38,7 +38,7 @@ data Node
     -- must be equal to the number of arguments expected by the builtin
     -- operation (this simplifies evaluation and code generation). If you need
     -- partial application, eta-expand with lambdas, e.g., eta-expand `(+) 2` to
-    -- `\x -> (+) 2 x`. See `etaExpand` in Extra/Base.hs and `etaExpand*` in Extra.hs.
+    -- `\x -> (+) 2 x`. See Transformation/Eta.hs.
     BuiltinApp {builtinInfo :: !Info, builtinOp :: !BuiltinOp, builtinArgs :: ![Node]}
   | -- A data constructor application. The number of arguments supplied must be
     -- equal to the number of arguments expected by the constructor.
@@ -129,11 +129,13 @@ instance HasAtomicity Node where
     BuiltinApp {} -> Aggregate appFixity
     ConstrApp {..} | null constrArgs -> Atom
     ConstrApp {} -> Aggregate appFixity
-    -- TODO: the fixities need to be fixed
-    Lambda {} -> Aggregate appFixity
-    Let {} -> Aggregate appFixity
-    Case {} -> Aggregate appFixity
-    If {} -> Aggregate appFixity
+    Lambda {} -> Aggregate lambdaFixity
+    Let {} -> Aggregate lambdaFixity
+    Case {} -> Aggregate lambdaFixity
+    If {} -> Aggregate lambdaFixity
     Data {} -> Aggregate appFixity
-    Closure {} -> Aggregate appFixity
+    Closure {} -> Aggregate lambdaFixity
     Suspended {} -> Aggregate appFixity
+
+lambdaFixity :: Fixity
+lambdaFixity = Fixity (PrecNat 0) (Unary AssocPostfix)
