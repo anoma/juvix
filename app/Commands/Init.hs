@@ -4,6 +4,7 @@ import Data.Text qualified as Text
 import Data.Versions
 import Data.Yaml (encodeFile)
 import Juvix.Compiler.Pipeline.Package
+import Juvix.Data.Effect.Fail.Extra qualified as Fail
 import Juvix.Extra.Paths
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
@@ -27,7 +28,7 @@ init = do
   pkg <- getPackage
   say ("creating " <> pack juvixYamlFile)
   embed (encodeFile juvixYamlFile pkg)
-  say "yo are all set"
+  say "you are all set"
 
 checkNotInProject :: forall r. Members '[Embed IO] r => Sem r ()
 checkNotInProject =
@@ -40,9 +41,8 @@ checkNotInProject =
 
 getPackage :: forall r. Members '[Embed IO] r => Sem r Package
 getPackage = do
-  say "Tell me the name of your project (lower case letters, numbers and dashes are allowed): "
   tproj <- getProjName
-  say "Tell me the version of your project (leave empty for 0.0.0)"
+  say "Tell me the version of your project [leave empty for 0.0.0]"
   tversion <- getVersion
   return
     Package
@@ -52,21 +52,45 @@ getPackage = do
 
 getProjName :: forall r. Members '[Embed IO] r => Sem r Text
 getProjName = do
-  txt <- embed getLine
-  case parse projectNameParser txt of
-    Right p
-      | Text.length p <= projextNameMaxLength -> return p
-      | otherwise -> do
-          say ("The project name cannot exceed " <> prettyText projextNameMaxLength <> " characters")
-          retry
-    Left err -> do
-      say err
-      retry
+  d <- getDefault
+  let defMsg :: Text
+      defMsg = case d of
+        Nothing -> mempty
+        Just d' -> " [leave empty for '" <> d' <> "']"
+  say
+    ( "Tell me the name of your project"
+        <> defMsg
+        <> " (lower case letters, numbers and dashes are allowed): "
+    )
+  readName d
   where
-    retry :: Sem r Text
-    retry = do
-      tryAgain
-      getProjName
+    getDefault :: Sem r (Maybe Text)
+    getDefault = runFail $ do
+      dir <- map toLower <$> (embed getCurrentDirectory >>= Fail.last . splitDirectories)
+      Fail.fromRight (parse projectNameParser (pack dir))
+    readName :: Maybe Text -> Sem r Text
+    readName def = go
+      where
+        go :: Sem r Text
+        go = do
+          txt <- embed getLine
+          if
+              | Text.null txt, Just def' <- def -> return def'
+              | otherwise ->
+                  case parse projectNameParser txt of
+                    Right p
+                      | Text.length p <= projextNameMaxLength -> return p
+                      | otherwise -> do
+                          say ("The project name cannot exceed " <> prettyText projextNameMaxLength <> " characters")
+                          retry
+                    Left err -> do
+                      say err
+                      retry
+          where
+            retry :: Sem r Text
+            retry = do
+              tryAgain
+              go
 
 say :: Members '[Embed IO] r => Text -> Sem r ()
 say = embed . putStrLn
