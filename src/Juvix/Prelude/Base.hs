@@ -72,7 +72,7 @@ import Control.Monad.Fix
 import Data.Bifunctor hiding (first, second)
 import Data.Bitraversable
 import Data.Bool
-import Data.ByteString.Lazy (ByteString)
+import Data.ByteString (ByteString)
 import Data.Char
 import Data.Char qualified as Char
 import Data.Data

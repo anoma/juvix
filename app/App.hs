@@ -1,5 +1,6 @@
 module App where
 
+import Data.ByteString qualified as ByteString
 import GlobalOptions
 import Juvix.Compiler.Pipeline
 import Juvix.Data.Error qualified as Error
@@ -14,6 +15,7 @@ data App m a where
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
   RunPipelineEither :: Sem PipelineEff a -> App m (Either JuvixError a)
   Say :: Text -> App m ()
+  Raw :: ByteString -> App m ()
 
 makeSem ''App
 
@@ -33,6 +35,7 @@ runAppIO g = interpret $ \case
     (embed . hPutStrLn stderr . Error.render (not (g ^. globalNoColors)) (g ^. globalOnlyErrors)) e
     embed exitFailure
   ExitMsg exitCode t -> embed (putStrLn t >> exitWith exitCode)
+  Raw b -> embed (ByteString.putStr b)
 
 runPipeline :: Member App r => Sem PipelineEff a -> Sem r a
 runPipeline p = do

@@ -134,7 +134,7 @@ runCommand cmdWithOpts = do
                                 { _highlightNames = names,
                                   _highlightParsed = items
                                 }
-                      say (Highlight.go hinput)
+                      raw (Highlight.go Highlight.Json hinput)
                 Parse localOpts -> do
                   m <-
                     head . (^. Parser.resultModules)
