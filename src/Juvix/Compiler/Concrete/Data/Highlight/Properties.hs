@@ -8,10 +8,6 @@ import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Lens.Micro.Platform qualified as Lens
 
-data HighlightBackend
-  = Emacs
-  | Json
-
 data Face
   = FaceConstructor
   | FaceInductive
@@ -59,6 +55,11 @@ data Properties = Properties
     _propertiesFace :: [PropertyFace]
   }
 
+data RawProperties = RawProperties
+  { _rawPropertiesFace :: [RawFace],
+    _rawPropertiesGoto :: [RawGoto]
+  }
+
 -- | (File, Row, Col, Length)
 type RawInterval = (FilePath, Int, Int, Int)
 
@@ -66,11 +67,6 @@ type RawFace = (RawInterval, Face)
 
 -- | (Interval, TargetFile, TargetLine, TargetColumn)
 type RawGoto = (RawInterval, FilePath, Int, Int)
-
-data RawProperties = RawProperties
-  { _rawPropertiesFace :: [RawFace],
-    _rawPropertiesGoto :: [RawGoto]
-  }
 
 $( deriveToJSON
      defaultOptions

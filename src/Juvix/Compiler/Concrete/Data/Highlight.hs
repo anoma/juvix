@@ -12,7 +12,17 @@ import Juvix.Compiler.Concrete.Data.Highlight.Input
 import Juvix.Compiler.Concrete.Data.Highlight.Properties
 import Juvix.Compiler.Concrete.Data.Highlight.SExp
 import Juvix.Compiler.Concrete.Data.ScopedName
-import Juvix.Prelude
+import Juvix.Prelude as Prelude hiding (show)
+import Prelude qualified
+
+data HighlightBackend
+  = Emacs
+  | Json
+
+instance Show HighlightBackend where
+  show = \case
+    Emacs -> "emacs"
+    Json -> "json"
 
 go :: HighlightBackend -> HighlightInput -> ByteString
 go = \case
