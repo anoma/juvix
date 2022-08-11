@@ -67,7 +67,7 @@ parseToplevel ::
   ParsecS r (Maybe Node)
 parseToplevel = do
   space
-  P.sepEndBy statement kwSemicolon
+  P.endBy statement kwSemicolon
   r <- optional expression
   P.eof
   return r
@@ -345,7 +345,7 @@ builtinAppExpr varsNum vars = do
       <|> (kwMinus >> return OpIntSub)
       <|> (kwDiv >> return OpIntDiv)
       <|> (kwMul >> return OpIntMul)
-  args <- P.some (atom varsNum vars)
+  args <- P.many (atom varsNum vars)
   return $ BuiltinApp Info.empty op args
 
 atoms ::
@@ -411,11 +411,18 @@ exprConstBool = P.try $ do
   return $ Constant (Info.singleton (LocationInfo i)) (ConstBool b)
 
 parseLocalName ::
+  forall r.
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   ParsecS r Name
-parseLocalName = do
-  (txt, i) <- identifierL
-  freshName KNameLocal txt i
+parseLocalName =
+  parseWildcardName <|> do
+    (txt, i) <- identifierL
+    freshName KNameLocal txt i
+  where
+    parseWildcardName :: ParsecS r Name
+    parseWildcardName = do
+      ((), i) <- interval kwWildcard
+      freshName KNameLocal "_" i
 
 exprLambda ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
