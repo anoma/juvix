@@ -2,14 +2,9 @@ module Juvix.Compiler.Backend.Haskell.Pretty.Options where
 
 import Juvix.Prelude
 
-newtype Options = Options
-  { _optIndent :: Int
-  }
+data Options = Options
 
 defaultOptions :: Options
-defaultOptions =
-  Options
-    { _optIndent = 2
-    }
+defaultOptions = Options
 
 makeLenses ''Options

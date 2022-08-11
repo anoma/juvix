@@ -1,17 +1,15 @@
 module Juvix.Compiler.Internal.Pretty.Base
   ( module Juvix.Compiler.Internal.Pretty.Base,
-    module Juvix.Compiler.Internal.Pretty.Ann,
+    module Juvix.Data.CodeAnn,
     module Juvix.Compiler.Internal.Pretty.Options,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Extra
-import Juvix.Compiler.Internal.Pretty.Ann
 import Juvix.Compiler.Internal.Pretty.Options
-import Juvix.Extra.Strings qualified as Str
+import Juvix.Data.CodeAnn
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
 doc opts =
@@ -72,69 +70,6 @@ instance PrettyCode Expression where
     ExpressionLiteral l -> return (pretty l)
     ExpressionLambda l -> ppCode l
 
-keyword :: Text -> Doc Ann
-keyword = annotate AnnKeyword . pretty
-
-kwLambda :: Doc Ann
-kwLambda = keyword Str.lambdaUnicode
-
-kwInclude :: Doc Ann
-kwInclude = keyword Str.include
-
-kwArrow :: Doc Ann
-kwArrow = keyword Str.toUnicode
-
-kwMapsto :: Doc Ann
-kwMapsto = keyword Str.mapstoUnicode
-
-kwForeign :: Doc Ann
-kwForeign = keyword Str.foreign_
-
-kwCompile :: Doc Ann
-kwCompile = keyword Str.compile
-
-kwC :: Doc Ann
-kwC = keyword Str.cBackend
-
-kwGhc :: Doc Ann
-kwGhc = keyword Str.ghc
-
-kwColon :: Doc Ann
-kwColon = keyword Str.colon
-
-kwData :: Doc Ann
-kwData = keyword Str.data_
-
-kwAssign :: Doc Ann
-kwAssign = keyword Str.assignUnicode
-
-kwEquals :: Doc Ann
-kwEquals = keyword Str.equal
-
-kwColonColon :: Doc Ann
-kwColonColon = keyword (Str.colon <> Str.colon)
-
-kwPipe :: Doc Ann
-kwPipe = keyword Str.pipe
-
-kwHole :: Doc Ann
-kwHole = keyword Str.underscore
-
-kwAxiom :: Doc Ann
-kwAxiom = keyword Str.axiom
-
-kwWhere :: Doc Ann
-kwWhere = keyword Str.where_
-
-kwModule :: Doc Ann
-kwModule = keyword Str.module_
-
-kwType :: Doc Ann
-kwType = keyword Str.type_
-
-kwWildcard :: Doc Ann
-kwWildcard = keyword Str.underscore
-
 instance PrettyCode BackendItem where
   ppCode BackendItem {..} = do
     backend <- ppCode _backendItemBackend
@@ -165,26 +100,11 @@ instance PrettyCode InductiveConstructorDef where
     constructorParameters' <- mapM ppCodeAtom (c ^. inductiveConstructorParameters)
     return (hsep $ constructorName' : constructorParameters')
 
-indent' :: Member (Reader Options) r => Doc a -> Sem r (Doc a)
-indent' d = do
-  i <- asks (^. optIndent)
-  return $ indent i d
-
 ppBlock ::
   (PrettyCode a, Members '[Reader Options] r, Traversable t) =>
   t a ->
   Sem r (Doc Ann)
-ppBlock items = mapM ppCode items >>= bracesIndent . vsep . toList
-
-implicitDelim :: IsImplicit -> Doc Ann -> Doc Ann
-implicitDelim = \case
-  Implicit -> braces
-  Explicit -> parens
-
-bracesIndent :: Members '[Reader Options] r => Doc Ann -> Sem r (Doc Ann)
-bracesIndent d = do
-  d' <- indent' d
-  return $ braces (line <> d' <> line)
+ppBlock items = bracesIndent . vsep . toList <$> mapM ppCode items
 
 instance PrettyCode InductiveParameter where
   ppCode (InductiveParameter v) = do
@@ -196,13 +116,13 @@ instance PrettyCode InductiveDef where
     inductiveName' <- ppCode (d ^. inductiveName)
     params <- hsepMaybe <$> mapM ppCode (d ^. inductiveParameters)
     inductiveConstructors' <- mapM ppCode (d ^. inductiveConstructors)
-    rhs <- indent' $ align $ concatWith (\a b -> a <> line <> kwPipe <+> b) inductiveConstructors'
+    let rhs = indent' $ align $ concatWith (\a b -> a <> line <> kwPipe <+> b) inductiveConstructors'
     return $ kwData <+> inductiveName' <+?> params <+> kwEquals <> line <> rhs
 
 instance PrettyCode PatternArg where
   ppCode a = do
     p <- ppCode (a ^. patternArgPattern)
-    return (bracesIf (Implicit == a ^. patternArgIsImplicit) p)
+    return (bracesCond (Implicit == a ^. patternArgIsImplicit) p)
 
 instance PrettyCode ConstructorApp where
   ppCode c = do
@@ -331,12 +251,6 @@ instance PrettyCode TypeCalls where
     elems' <- mapM ppCode elems
     return $ title <> line <> vsep elems' <> line
 
-parensIf :: Bool -> Doc Ann -> Doc Ann
-parensIf t = if t then parens else id
-
-bracesIf :: Bool -> Doc Ann -> Doc Ann
-bracesIf t = if t then braces else id
-
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
   Fixity ->
@@ -365,7 +279,7 @@ ppLRExpression ::
   a ->
   Sem r (Doc Ann)
 ppLRExpression associates fixlr e =
-  parensIf (atomParens associates (atomicity e) fixlr)
+  parensCond (atomParens associates (atomicity e) fixlr)
     <$> ppCode e
 
 ppCodeAtom :: (HasAtomicity c, PrettyCode c, Members '[Reader Options] r) => c -> Sem r (Doc Ann)

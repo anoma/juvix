@@ -1,6 +1,6 @@
 module Juvix.Compiler.Concrete.Pretty.Base
   ( module Juvix.Compiler.Concrete.Pretty.Base,
-    module Juvix.Compiler.Concrete.Pretty.Ann,
+    module Juvix.Data.CodeAnn,
     module Juvix.Compiler.Concrete.Pretty.Options,
   )
 where
@@ -10,11 +10,10 @@ import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Pretty.Ann
 import Juvix.Compiler.Concrete.Pretty.Options
+import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
-import Juvix.Prelude.Pretty hiding (braces, parens)
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
 doc opts =
@@ -27,162 +26,6 @@ class PrettyCode a where
 
 runPrettyCode :: PrettyCode c => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
-
-keyword' :: Pretty a => a -> Doc Ann
-keyword' = annotate AnnKeyword . pretty
-
-keyword :: Text -> Doc Ann
-keyword = keyword'
-
-delimiter :: Text -> Doc Ann
-delimiter = annotate AnnDelimiter . pretty
-
-kwModule :: Doc Ann
-kwModule = keyword Str.module_
-
-kwEnd :: Doc Ann
-kwEnd = keyword Str.end
-
-kwBuiltin :: Doc Ann
-kwBuiltin = keyword Str.builtin
-
-kwNatural :: Doc Ann
-kwNatural = keyword Str.natural
-
-kwInductive :: Doc Ann
-kwInductive = keyword Str.inductive
-
-kwType :: Doc Ann
-kwType = keyword Str.type_
-
-kwColon :: Doc Ann
-kwColon = keyword Str.colon
-
-kwArrowR :: Doc Ann
-kwArrowR = keyword Str.toUnicode
-
-kwLambda :: Doc Ann
-kwLambda = keyword Str.lambdaUnicode
-
-kwGhc :: Doc Ann
-kwGhc = keyword Str.ghc
-
-kwC :: Doc Ann
-kwC = keyword Str.cBackend
-
-kwWhere :: Doc Ann
-kwWhere = keyword Str.where_
-
-kwLet :: Doc Ann
-kwLet = keyword Str.let_
-
-kwIn :: Doc Ann
-kwIn = keyword Str.in_
-
-kwPublic :: Doc Ann
-kwPublic = keyword Str.public
-
-kwWildcard :: Doc Ann
-kwWildcard = keyword Str.underscore
-
-kwPostfix :: Doc Ann
-kwPostfix = keyword Str.postfix
-
-kwInfixr :: Doc Ann
-kwInfixr = keyword Str.infixr_
-
-kwInfixl :: Doc Ann
-kwInfixl = keyword Str.infixl_
-
-kwInfix :: Doc Ann
-kwInfix = keyword Str.infix_
-
-kwAssignment :: Doc Ann
-kwAssignment = keyword Str.assignUnicode
-
-kwMapsto :: Doc Ann
-kwMapsto = keyword Str.mapstoUnicode
-
-kwColonZero :: Doc Ann
-kwColonZero = keyword Str.colonZero
-
-kwColonOne :: Doc Ann
-kwColonOne = keyword Str.colonOne
-
-kwColonOmega :: Doc Ann
-kwColonOmega = keyword Str.colonOmegaUnicode
-
-kwAxiom :: Doc Ann
-kwAxiom = keyword Str.axiom
-
-kwOpen :: Doc Ann
-kwOpen = keyword Str.open
-
-kwUsing :: Doc Ann
-kwUsing = keyword Str.using
-
-kwHiding :: Doc Ann
-kwHiding = keyword Str.hiding
-
-kwImport :: Doc Ann
-kwImport = keyword Str.import_
-
-kwSemicolon :: Doc Ann
-kwSemicolon = delimiter Str.semicolon
-
-kwCompile :: Doc Ann
-kwCompile = keyword Str.compile
-
-kwForeign :: Doc Ann
-kwForeign = keyword Str.foreign_
-
-kwTerminating :: Doc Ann
-kwTerminating = keyword Str.terminating
-
-kwBraceL :: Doc Ann
-kwBraceL = delimiter "{"
-
-kwBraceR :: Doc Ann
-kwBraceR = delimiter "}"
-
-kwParenL :: Doc Ann
-kwParenL = delimiter "("
-
-kwParenR :: Doc Ann
-kwParenR = delimiter ")"
-
-kwDQuote :: Doc Ann
-kwDQuote = pretty ("\"" :: Text)
-
-kwDot :: Doc Ann
-kwDot = delimiter "."
-
-indented :: Members '[Reader Options] r => Doc Ann -> Sem r (Doc Ann)
-indented d = do
-  ind <- asks (^. optIndent)
-  return (indent ind d)
-
-bracesIndent :: Members '[Reader Options] r => Doc Ann -> Sem r (Doc Ann)
-bracesIndent d = do
-  d' <- indented d
-  return $ braces (line <> d' <> line)
-
-braces :: Doc Ann -> Doc Ann
-braces = enclose kwBraceL kwBraceR
-
-parens :: Doc Ann -> Doc Ann
-parens = enclose kwParenL kwParenR
-
-implicitDelim :: IsImplicit -> Doc Ann -> Doc Ann
-implicitDelim = \case
-  Implicit -> braces
-  Explicit -> parens
-
-doubleQuotes :: Doc Ann -> Doc Ann
-doubleQuotes = enclose kwDQuote kwDQuote
-
-annotateKind :: S.NameKind -> Doc Ann -> Doc Ann
-annotateKind = annotate . AnnKind
 
 ppModulePathType ::
   forall t s r.
@@ -318,14 +161,6 @@ instance PrettyCode BackendItem where
     return $
       backend <+> kwMapsto <+> ppStringLit _backendItemCode
 
-ppStringLit :: Text -> Doc Ann
-ppStringLit = annotate AnnLiteralString . doubleQuotes . escaped
-  where
-    showChar :: Char -> String
-    showChar c = showLitChar c ("" :: String)
-    escaped :: Text -> Doc a
-    escaped = mconcatMap (pretty . showChar) . unpack
-
 ppTopModulePath ::
   forall s r.
   (SingI s, Members '[Reader Options] r) =>
@@ -365,7 +200,7 @@ ppInductiveParameters ps
 
 instance (SingI s, SingI t) => PrettyCode (Module s t) where
   ppCode Module {..} = do
-    moduleBody' <- ppCode _moduleBody >>= indented
+    moduleBody' <- indent' <$> ppCode _moduleBody
     modulePath' <- ppModulePathType _modulePath
     moduleParameters' <- ppInductiveParameters _moduleParameters
     moduleDoc' <- mapM ppCode _moduleDoc
@@ -419,13 +254,13 @@ instance SingI s => PrettyCode (InductiveConstructorDef s) where
     return $ doc' ?<> constructorName' <+> kwColon <+> constructorType'
 
 instance PrettyCode BuiltinInductive where
-  ppCode i = return (kwBuiltin <+> keyword' i)
+  ppCode i = return (kwBuiltin <+> keyword (prettyText i))
 
 instance PrettyCode BuiltinFunction where
-  ppCode i = return (kwBuiltin <+> keyword' i)
+  ppCode i = return (kwBuiltin <+> keyword (prettyText i))
 
 instance PrettyCode BuiltinAxiom where
-  ppCode i = return (kwBuiltin <+> keyword' i)
+  ppCode i = return (kwBuiltin <+> keyword (prettyText i))
 
 ppInductiveSignature :: forall r s. (SingI s, Members '[Reader Options] r) => InductiveDef s -> Sem r (Doc Ann)
 ppInductiveSignature InductiveDef {..} = do
@@ -641,7 +476,7 @@ instance SingI s => PrettyCode (LetClause s) where
     LetFunClause cl -> ppCode cl
 
 ppBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
-ppBlock items = mapM (fmap endSemicolon . ppCode) items >>= bracesIndent . vsep . toList
+ppBlock items = bracesIndent . vsep . toList <$> mapM (fmap endSemicolon . ppCode) items
 
 instance SingI s => PrettyCode (LambdaClause s) where
   ppCode LambdaClause {..} = do
@@ -670,7 +505,7 @@ instance SingI s => PrettyCode (FunctionClause s) where
         <+?> ((line <>) <$> clauseWhere')
 
 instance SingI s => PrettyCode (WhereBlock s) where
-  ppCode WhereBlock {..} = ppBlock whereClauses >>= indented . (kwWhere <+>)
+  ppCode WhereBlock {..} = indent' . (kwWhere <+>) <$> ppBlock whereClauses
 
 instance SingI s => PrettyCode (WhereClause s) where
   ppCode c = case c of
@@ -704,7 +539,7 @@ instance SingI s => PrettyCode (Import s) where
         if b
           then case sing :: SStage s of
             SParsed -> return Nothing
-            SScoped -> ppCode m >>= fmap (Just . braces . jumpLines) . indented
+            SScoped -> Just . braces . jumpLines . indent' <$> ppCode m
           else return Nothing
 
 instance PrettyCode PatternScopedIden where
@@ -842,9 +677,6 @@ instance PrettyCode Pattern where
         patPostfixConstructor' <- ppCode _patPostfixConstructor
         patPostfixParameter' <- ppLeftExpression (getFixity p) _patPostfixParameter
         return $ patPostfixParameter' <+> patPostfixConstructor'
-
-parensCond :: Bool -> Doc Ann -> Doc Ann
-parensCond t d = if t then parens d else d
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

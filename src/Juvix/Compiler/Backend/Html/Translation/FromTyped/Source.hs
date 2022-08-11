@@ -16,7 +16,6 @@ import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Extra.Paths
 import Juvix.Extra.Version
 import Juvix.Prelude
-import Prettyprinter
 import Prettyprinter.Render.Util.SimpleDocTree
 import Text.Blaze.Html
 import Text.Blaze.Html.Renderer.Text qualified as Html
@@ -152,13 +151,7 @@ ppCodeHtmlInternal x = do
     ppCodeHtmlInternal' :: Internal.PrettyCode a => HtmlOptions -> Internal.Options -> a -> Html
     ppCodeHtmlInternal' htmlOpts opts = run . runReader htmlOpts . renderTree . treeForm . docStreamInternal' opts
     docStreamInternal' :: Internal.PrettyCode a => Internal.Options -> a -> SimpleDocStream Ann
-    docStreamInternal' opts m = goTag <$> layoutPretty defaultLayoutOptions (Internal.runPrettyCode opts m)
-    goTag :: Internal.Ann -> Ann
-    goTag = \case
-      Internal.AnnKind k -> AnnKind k
-      Internal.AnnKeyword -> AnnKeyword
-      Internal.AnnLiteralInteger -> AnnLiteralInteger
-      Internal.AnnLiteralString -> AnnLiteralString
+    docStreamInternal' opts m = layoutPretty defaultLayoutOptions (Internal.runPrettyCode opts m)
 
 go :: Members '[Reader HtmlOptions] r => SimpleDocTree Ann -> Sem r Html
 go sdt = case sdt of
@@ -183,6 +176,8 @@ putTag ann x = case ann of
   AnnDelimiter -> return (Html.span ! Attr.class_ "ju-delimiter" $ x)
   AnnDef tmp ni -> boldDefine <*> tagDef tmp ni
   AnnRef tmp ni -> tagRef tmp ni
+  AnnCode -> return x
+  AnnImportant -> return x
   where
     boldDefine :: Sem r (Html -> Html)
     boldDefine =

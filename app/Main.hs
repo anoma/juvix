@@ -30,6 +30,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qu
 import Juvix.Compiler.Mono.Pretty qualified as Mono
 import Juvix.Compiler.Mono.Translation.FromInternal qualified as Mono
 import Juvix.Compiler.Pipeline
+import Juvix.Extra.Paths qualified as Paths
 import Juvix.Extra.Process
 import Juvix.Extra.Version (runDisplayVersion)
 import Juvix.Prelude hiding (Doc)
@@ -38,9 +39,6 @@ import Options.Applicative
 import System.Environment (getProgName)
 import System.Process qualified as Process
 import Text.Show.Pretty hiding (Html)
-
-juvixYamlFile :: FilePath
-juvixYamlFile = "juvix.yaml"
 
 findRoot :: CommandGlobalOptions -> IO (FilePath, Package)
 findRoot copts = do
@@ -63,7 +61,7 @@ findRoot copts = do
     go :: IO (FilePath, Package)
     go = do
       c <- getCurrentDirectory
-      l <- findFile (possiblePaths c) juvixYamlFile
+      l <- findFile (possiblePaths c) Paths.juvixYamlFile
       case l of
         Nothing -> return (c, emptyPackage)
         Just yaml -> do

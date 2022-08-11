@@ -24,7 +24,7 @@ import Juvix.Compiler.Internal.Translation.FromAbstract qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as Micro1
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Micro
 import Juvix.Extra.Strings qualified as Str
-import Juvix.Prelude
+import Juvix.Prelude hiding (Binary, Unary)
 
 type CompileInfoTable = HashMap Scoper.NameId Scoper.CompileInfo
 

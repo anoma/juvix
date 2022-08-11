@@ -28,7 +28,6 @@ import Juvix.Extra.Strings qualified as Str
 import Juvix.Extra.Version
 import Juvix.Prelude
 import Juvix.Prelude qualified as Prelude
-import Juvix.Prelude.Pretty
 import Text.Blaze.Html.Renderer.Utf8 qualified as Html
 import Text.Blaze.Html5 as Html hiding (map)
 import Text.Blaze.Html5.Attributes qualified as Attr

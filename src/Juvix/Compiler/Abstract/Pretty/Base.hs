@@ -1,17 +1,16 @@
 module Juvix.Compiler.Abstract.Pretty.Base
   ( module Juvix.Compiler.Abstract.Pretty.Base,
-    module Juvix.Compiler.Abstract.Pretty.Ann,
+    module Juvix.Data.CodeAnn,
     module Juvix.Compiler.Abstract.Pretty.Options,
   )
 where
 
 import Juvix.Compiler.Abstract.Extra
-import Juvix.Compiler.Abstract.Pretty.Ann
 import Juvix.Compiler.Abstract.Pretty.Options
 import Juvix.Compiler.Concrete.Pretty.Base qualified as S
+import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
-import Prettyprinter
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
 doc opts =
@@ -22,8 +21,7 @@ doc opts =
 toSOptions :: Options -> S.Options
 toSOptions Options {..} =
   S.defaultOptions
-    { S._optShowNameIds = _optShowNameIds,
-      S._optIndent = _optIndent
+    { S._optShowNameIds = _optShowNameIds
     }
 
 class PrettyCode c where
@@ -32,7 +30,7 @@ class PrettyCode c where
 ppSCode :: (Members '[Reader Options] r, S.PrettyCode c) => c -> Sem r (Doc Ann)
 ppSCode c = do
   opts <- asks toSOptions
-  return $ alterAnnotations (maybeToList . fromScopedAnn) (S.runPrettyCode opts c)
+  return $ S.runPrettyCode opts c
 
 ppDefault :: PrettyCode c => c -> Doc Ann
 ppDefault = runPrettyCode defaultOptions
@@ -40,40 +38,11 @@ ppDefault = runPrettyCode defaultOptions
 runPrettyCode :: PrettyCode c => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
-keyword :: Text -> Doc Ann
-keyword = annotate AnnKeyword . pretty
-
-kwType :: Doc Ann
-kwType = keyword Str.type_
-
 kwQuestion :: Doc Ann
 kwQuestion = keyword Str.questionMark
 
 kwWaveArrow :: Doc Ann
 kwWaveArrow = keyword Str.waveArrow
-
-kwColon :: Doc Ann
-kwColon = keyword Str.colon
-
-kwTo :: Doc Ann
-kwTo = keyword Str.toUnicode
-
-kwColonZero :: Doc Ann
-kwColonZero = keyword Str.colonZero
-
-kwColonOne :: Doc Ann
-kwColonOne = keyword Str.colonOne
-
-kwColonOmega :: Doc Ann
-kwColonOmega = keyword Str.colonOmegaUnicode
-
-parensCond :: Bool -> Doc Ann -> Doc Ann
-parensCond t d = if t then parens d else d
-
-implicitDelim :: IsImplicit -> Doc Ann -> Doc Ann
-implicitDelim = \case
-  Implicit -> braces
-  Explicit -> parens
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
@@ -165,7 +134,7 @@ instance PrettyCode Function where
   ppCode Function {..} = do
     funParameter' <- ppCode _funParameter
     funReturn' <- ppRightExpression funFixity _funReturn
-    return $ funParameter' <+> kwTo <+> funReturn'
+    return $ funParameter' <+> kwArrow <+> funReturn'
 
 instance PrettyCode FunctionRef where
   ppCode FunctionRef {..} = ppCode _functionRefName

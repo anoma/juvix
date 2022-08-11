@@ -2,16 +2,14 @@ module Juvix.Compiler.Mono.Pretty.Options where
 
 import Juvix.Prelude
 
-data Options = Options
-  { _optIndent :: Int,
-    _optShowNameIds :: Bool
+newtype Options = Options
+  { _optShowNameIds :: Bool
   }
 
 defaultOptions :: Options
 defaultOptions =
   Options
-    { _optIndent = 2,
-      _optShowNameIds = False
+    { _optShowNameIds = False
     }
 
 makeLenses ''Options

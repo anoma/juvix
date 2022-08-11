@@ -1,9 +1,8 @@
 module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Error.Types where
 
 import Juvix.Compiler.Abstract.Language
-import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Error.Pretty
+import Juvix.Data.PPOutput
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
 
 newtype NoLexOrder = NoLexOrder
   { _noLexOrderFun :: Name
@@ -16,15 +15,15 @@ instance ToGenericError NoLexOrder where
   genericError NoLexOrder {..} =
     GenericError
       { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
       name = _noLexOrderFun
       i = getLoc name
 
-      msg :: Doc Eann
+      msg :: Doc Ann
       msg =
         "The function"
-          <+> highlight (pretty name)
+          <+> code (pretty name)
           <+> "fails the termination checker."

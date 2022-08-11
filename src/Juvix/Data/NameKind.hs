@@ -1,4 +1,4 @@
-module Juvix.Compiler.Concrete.Data.NameKind where
+module Juvix.Data.NameKind where
 
 import Juvix.Prelude
 import Juvix.Prelude.Pretty

@@ -1,7 +1,7 @@
 module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Types
   ( module Juvix.Compiler.Concrete.Language,
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Types,
-    module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Ann,
+    module Juvix.Data.CodeAnn,
   )
 where
 
@@ -12,11 +12,10 @@ import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Language qualified as L
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Ann
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
 import Juvix.Compiler.Concrete.Translation.FromSource.Error qualified as Parser
+import Juvix.Data.CodeAnn
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
 
 data MultipleDeclarations = MultipleDeclarations
   { _multipleDeclEntry :: SymbolEntry,
@@ -58,7 +57,7 @@ instance ToGenericError InfixError where
       }
     where
       i = getLoc _infixErrorAtoms
-      msg :: Doc Eann
+      msg :: Doc Ann
       msg =
         "Error solving infixities"
           <> line
@@ -79,7 +78,7 @@ instance ToGenericError InfixErrorP where
       }
     where
       i = getLoc _infixErrorAtomsP
-      msg :: Doc Eann
+      msg :: Doc Ann
       msg =
         "Error solving infixities:"
           <> line
@@ -146,7 +145,7 @@ instance ToGenericError ImportCycle where
           <> line
           <> indent' (vsep (intersperse "⇓" (map pp (toList (tie _importCycleImports)))))
 
-      pp :: Import 'Parsed -> Doc Eann
+      pp :: Import 'Parsed -> Doc Ann
       pp t = ppCode t <+> parens ("at" <+> pretty (getLoc t))
 
       tie :: NonEmpty a -> NonEmpty a
@@ -504,7 +503,7 @@ instance ToGenericError WrongKindExpressionCompileBlock where
           <+> "is not a constructor, inductive data type, axiom nor a function."
             <> "Thus, it cannot have a compile rule."
 
-infixErrorAux :: Doc Eann -> Doc Eann -> Doc Eann
+infixErrorAux :: Doc Ann -> Doc Ann -> Doc Ann
 infixErrorAux kind pp =
   "Error while resolving infixities in the"
     <+> kind
@@ -512,7 +511,7 @@ infixErrorAux kind pp =
       <> line
       <> indent' pp
 
-ambiguousMessage :: Name -> [SymbolEntry] -> Doc Eann
+ambiguousMessage :: Name -> [SymbolEntry] -> Doc Ann
 ambiguousMessage n es =
   "The symbol"
     <+> ppCode n
@@ -568,7 +567,7 @@ instance ToGenericError DoubleBracesPattern where
       i = getLoc pat
       msg =
         "Double braces are not valid:"
-          <+> highlight (braces (ppCode pat))
+          <+> code (braces (ppCode pat))
 
 newtype ImplicitPatternLeftApplication = ImplicitPatternLeftApplication
   { _implicitPatternLeftApplication :: PatternApp

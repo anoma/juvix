@@ -1,11 +1,9 @@
 module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Error
   ( module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Error,
-    module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Error.Pretty,
     module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Error.Types,
   )
 where
 
-import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Error.Pretty
 import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Error.Types
 import Juvix.Prelude
 

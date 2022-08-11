@@ -91,6 +91,9 @@ hsepMaybe l
   | null l = Nothing
   | otherwise = Just (hsep l)
 
+indent' :: Doc ann -> Doc ann
+indent' = indent 2
+
 ordinal :: Int -> Doc a
 ordinal = \case
   1 -> "first"

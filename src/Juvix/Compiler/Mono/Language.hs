@@ -1,6 +1,6 @@
 module Juvix.Compiler.Mono.Language
   ( module Juvix.Compiler.Mono.Language,
-    module Juvix.Compiler.Concrete.Data.NameKind,
+    module Juvix.Data.NameKind,
     module Juvix.Compiler.Concrete.Data.ScopedName,
     module Juvix.Compiler.Abstract.Data.Name,
     module Juvix.Compiler.Concrete.Data.Builtins,
@@ -9,9 +9,9 @@ where
 
 import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Concrete.Data.Builtins
-import Juvix.Compiler.Concrete.Data.NameKind
 import Juvix.Compiler.Concrete.Data.ScopedName (NameId (..))
 import Juvix.Compiler.Concrete.Language qualified as C
+import Juvix.Data.NameKind
 import Juvix.Prelude
 
 data Module = Module

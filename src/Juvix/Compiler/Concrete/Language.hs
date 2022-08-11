@@ -19,7 +19,6 @@ import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
 import Juvix.Compiler.Concrete.Data.Name
-import Juvix.Compiler.Concrete.Data.NameKind
 import Juvix.Compiler.Concrete.Data.NameRef
 import Juvix.Compiler.Concrete.Data.PublicAnn
 import Juvix.Compiler.Concrete.Data.ScopedName (unqualifiedSymbol)
@@ -27,6 +26,7 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Data
 import Juvix.Data.Fixity
+import Juvix.Data.NameKind
 import Juvix.Prelude hiding (show)
 import Prelude (show)
 

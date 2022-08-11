@@ -2,6 +2,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Er
 
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
+import Juvix.Data.PPOutput
 import Juvix.Prelude
 
 -- | the type of the constructor used in a pattern does
@@ -19,7 +20,7 @@ instance ToGenericError WrongConstructorType where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
@@ -48,7 +49,7 @@ instance ToGenericError WrongReturnType where
   genericError e =
     GenericError
       { _genericErrorLoc = j,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i, j]
       }
     where
@@ -77,7 +78,7 @@ instance ToGenericError UnsolvedMeta where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
@@ -99,7 +100,7 @@ instance ToGenericError WrongConstructorAppArgs where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
@@ -123,7 +124,7 @@ instance ToGenericError WrongConstructorAppArgs where
       numTypes :: Doc ann
       numTypes = pat (length (e ^. wrongCtorAppTypes))
 
-      ctorName :: Doc Eann
+      ctorName :: Doc Ann
       ctorName = ppCode (e ^. wrongCtorAppApp . constrAppConstructor)
 
       pat :: Int -> Doc ann
@@ -142,7 +143,7 @@ instance ToGenericError WrongType where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
@@ -179,7 +180,7 @@ instance ToGenericError ExpectedFunctionType where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
@@ -213,7 +214,7 @@ instance ToGenericError WrongNumberArgumentsIndType where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
@@ -248,7 +249,7 @@ instance ToGenericError ImpracticalPatternMatching where
   genericError e =
     GenericError
       { _genericErrorLoc = i,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
@@ -272,7 +273,7 @@ instance ToGenericError NoPositivity where
   genericError e =
     GenericError
       { _genericErrorLoc = j,
-        _genericErrorMessage = prettyError msg,
+        _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i, j]
       }
     where

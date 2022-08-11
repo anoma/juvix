@@ -2,7 +2,7 @@ module Juvix.Compiler.Backend.C.Extra.Serialization where
 
 import Juvix.Compiler.Backend.C.Language
 import Juvix.Extra.Strings qualified as Str
-import Juvix.Prelude
+import Juvix.Prelude hiding (Binary, Unary)
 import Language.C qualified as C
 import Language.C.Data.Ident qualified as C
 import Language.C.Pretty qualified as P

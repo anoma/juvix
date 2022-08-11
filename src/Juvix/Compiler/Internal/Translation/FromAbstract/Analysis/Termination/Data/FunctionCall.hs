@@ -5,7 +5,6 @@ import Juvix.Compiler.Abstract.Language
 import Juvix.Compiler.Abstract.Pretty.Base
 import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data.SizeRelation
 import Juvix.Prelude
-import Prettyprinter as PP
 
 newtype CallMap = CallMap
   { _callMap :: HashMap FunctionRef (HashMap FunctionRef [FunCall])

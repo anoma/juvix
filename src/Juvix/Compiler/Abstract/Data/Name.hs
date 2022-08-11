@@ -1,14 +1,14 @@
 module Juvix.Compiler.Abstract.Data.Name
   ( module Juvix.Compiler.Abstract.Data.Name,
-    module Juvix.Compiler.Concrete.Data.NameKind,
+    module Juvix.Data.NameKind,
     module Juvix.Data.NameId,
     module Juvix.Data.Fixity,
   )
 where
 
-import Juvix.Compiler.Concrete.Data.NameKind
 import Juvix.Data.Fixity
 import Juvix.Data.NameId
+import Juvix.Data.NameKind
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 

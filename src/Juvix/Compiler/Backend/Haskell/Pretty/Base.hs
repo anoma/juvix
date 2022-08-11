@@ -1,18 +1,17 @@
 module Juvix.Compiler.Backend.Haskell.Pretty.Base
   ( module Juvix.Compiler.Backend.Haskell.Pretty.Base,
-    module Juvix.Compiler.Backend.Haskell.Pretty.Ann,
+    module Juvix.Data.CodeAnn,
     module Juvix.Compiler.Backend.Haskell.Pretty.Options,
   )
 where
 
 import Juvix.Compiler.Backend.Haskell.Language
-import Juvix.Compiler.Backend.Haskell.Pretty.Ann
 import Juvix.Compiler.Backend.Haskell.Pretty.Options
 import Juvix.Compiler.Concrete.Data.Literal
+import Juvix.Data.CodeAnn
 import Juvix.Data.Fixity
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
 import Juvix.Prelude.Pretty qualified as PP
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
@@ -43,38 +42,14 @@ instance PrettyCode Expression where
     ExpressionVerbatim c -> return (pretty c)
     ExpressionLiteral l -> ppCode (l ^. withLocParam)
 
-keyword :: Text -> Doc Ann
-keyword = annotate AnnKeyword . pretty
-
-kwArrow :: Doc Ann
-kwArrow = keyword Str.toAscii
-
-kwData :: Doc Ann
-kwData = keyword Str.data_
-
-kwEquals :: Doc Ann
-kwEquals = keyword Str.equal
-
-kwColonColon :: Doc Ann
-kwColonColon = keyword (Str.colon <> Str.colon)
-
-kwPipe :: Doc Ann
-kwPipe = keyword Str.pipe
-
-kwWhere :: Doc Ann
-kwWhere = keyword Str.where_
-
-kwModule :: Doc Ann
-kwModule = keyword Str.module_
-
-kwWildcard :: Doc Ann
-kwWildcard = keyword Str.underscore
+kwHaskellArrow :: Doc Ann
+kwHaskellArrow = keyword Str.toAscii
 
 instance PrettyCode Function where
   ppCode (Function l r) = do
     l' <- ppLeftExpression funFixity l
     r' <- ppRightExpression funFixity r
-    return $ l' <+> kwArrow <+> r'
+    return $ l' <+> kwHaskellArrow <+> r'
 
 instance PrettyCode TypeIden where
   ppCode = \case
@@ -92,16 +67,11 @@ instance PrettyCode InductiveConstructorDef where
     constructorParameters' <- mapM ppCode (c ^. constructorParameters)
     return (hsep $ constructorName' : constructorParameters')
 
-indent' :: Member (Reader Options) r => Doc a -> Sem r (Doc a)
-indent' d = do
-  i <- asks (^. optIndent)
-  return $ indent i d
-
 instance PrettyCode InductiveDef where
   ppCode d = do
     inductiveName' <- ppCode (d ^. inductiveName)
     inductiveConstructors' <- mapM ppCode (d ^. inductiveConstructors)
-    rhs <- indent' $ align $ concatWith (\a b -> a <> line <> kwPipe <+> b) inductiveConstructors'
+    let rhs = indent' $ align $ concatWith (\a b -> a <> line <> kwPipe <+> b) inductiveConstructors'
     return $ kwData <+> inductiveName' <+> kwEquals <> line <> rhs
 
 instance PrettyCode ConstructorApp where
@@ -150,15 +120,6 @@ instance PrettyCode Literal where
     LitInteger n -> return $ annotate AnnLiteralInteger (pretty n)
     LitString s -> return $ ppStringLit s
 
-doubleQuotes :: Doc Ann -> Doc Ann
-doubleQuotes = enclose kwDQuote kwDQuote
-
-kwDQuote :: Doc Ann
-kwDQuote = pretty ("\"" :: Text)
-
-ppStringLit :: Text -> Doc Ann
-ppStringLit = annotate AnnLiteralString . doubleQuotes . pretty
-
 instance PrettyCode Module where
   ppCode m = do
     name' <- ppCode (m ^. moduleName)
@@ -171,9 +132,6 @@ instance PrettyCode Module where
           <> line
           <> body'
           <> line
-
-parensCond :: Bool -> Doc Ann -> Doc Ann
-parensCond t d = if t then parens d else d
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
