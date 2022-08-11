@@ -4,11 +4,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "nat.h"
 #include "io.h"
-
-typedef __UINTPTR_TYPE__ uintptr_t;
 
 typedef struct juvix_function {
     uintptr_t fun;

@@ -81,5 +81,6 @@ tests =
     PosTest "Axiom without a compile block" "AxiomNoCompile" (WASI StdlibInclude),
     PosTest "Invoke a function using exported name" "ExportName" (WASM (WASMInfo (actualCallExport "fun" []))),
     PosTest "Invoke a function using exported name with args" "ExportNameArgs" (WASM (WASMInfo (actualCallExport "fun" ["0"]))),
-    PosTest "Invoke an imported function in Juvix and exported function in JS" "ImportExportName" (WASM (WASMInfo (actualCallNode "input.js")))
+    PosTest "Invoke an imported function in Juvix and exported function in JS" "ImportExportName" (WASM (WASMInfo (actualCallNode "input.js"))),
+    PosTest "Invoke an exported function using Anoma _validate_tx signature" "AlwaysValidVP" (WASM (WASMInfo (actualCallNode "input.js")))
   ]

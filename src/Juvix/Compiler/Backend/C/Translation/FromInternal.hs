@@ -85,6 +85,9 @@ fromInternal i = MiniCResult . serialize <$> cunitResult
     cmodules :: Sem r [CCode]
     cmodules = concatMapM cmodule (toList (i ^. Micro.resultModules))
 
+validWasmIdent :: Text -> Bool
+validWasmIdent = T.all (\c -> c == '_' || isAlphaNum c)
+
 genStructDefs :: Micro.Module -> [CCode]
 genStructDefs Micro.Module {..} =
   concatMap go (_moduleBody ^. Micro.moduleStatements)
@@ -128,7 +131,7 @@ genFunctionSigs Micro.Module {..} =
   where
     genFunctionDef :: Micro.FunctionDef -> Sem r [CCode]
     genFunctionDef d
-      | T.all isAlphaNum nameText = (ExternalAttribute (ExportName nameText) :) <$> sig
+      | validWasmIdent nameText = (ExternalAttribute (ExportName nameText) :) <$> sig
       | otherwise = sig
       where
         nameText :: Text
@@ -500,7 +503,7 @@ goAxiom a
       Micro.AxiomDef ->
       Sem r [CCode]
     genFunctionDef d
-      | T.all isAlphaNum nameText = (ExternalAttribute (ImportName (axiomName ^. Micro.nameText)) :) <$> sig
+      | validWasmIdent nameText = (ExternalAttribute (ImportName (axiomName ^. Micro.nameText)) :) <$> sig
       | otherwise = sig
       where
         nameText :: Text
