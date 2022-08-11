@@ -68,5 +68,5 @@ goGotoProperty :: AName -> PropertyGoto
 goGotoProperty (AName n) = PropertyGoto {..}
   where
     _gotoInterval = getLoc n
-    _gotoPos = succ (n ^. nameDefined . intervalStart . locOffset . unPos)
+    _gotoPos = n ^. nameDefined . intervalStart
     _gotoFile = n ^. nameDefined . intervalFile

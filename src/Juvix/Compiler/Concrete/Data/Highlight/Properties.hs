@@ -1,12 +1,11 @@
 module Juvix.Compiler.Concrete.Data.Highlight.Properties where
 
-import Juvix.Compiler.Concrete.Data.Highlight.SExp
-import Juvix.Prelude.Pretty
-import Juvix.Prelude
-import Juvix.Extra.Strings qualified as Str
-import Data.Aeson.TH
-import Data.Aeson qualified as Aeson
 import Data.Aeson (ToJSON)
+import Data.Aeson qualified as Aeson
+import Data.Aeson.TH
+import Juvix.Compiler.Concrete.Data.Highlight.SExp
+import Juvix.Extra.Strings qualified as Str
+import Juvix.Prelude
 import Lens.Micro.Platform qualified as Lens
 
 data HighlightBackend
@@ -47,7 +46,7 @@ instance ToJSON Face where
 data PropertyGoto = PropertyGoto
   { _gotoInterval :: Interval,
     _gotoFile :: FilePath,
-    _gotoPos :: Word64
+    _gotoPos :: FileLoc
   }
 
 data PropertyFace = PropertyFace
@@ -60,31 +59,50 @@ data Properties = Properties
     _propertiesFace :: [PropertyFace]
   }
 
-type RawInterval = (FilePath, Word64, Word64)
-type RawFace = (RawInterval, Face)
-type RawGoto = (RawInterval, FilePath, Word64)
+-- | (File, Row, Col, Length)
+type RawInterval = (FilePath, Int, Int, Int)
 
-data RawProperties = RawProperties {
-     _rawPropertiesFace :: [RawFace],
-     _rawPropertiesGoto :: [RawGoto]
+type RawFace = (RawInterval, Face)
+
+-- | (Interval, TargetFile, TargetLine, TargetColumn)
+type RawGoto = (RawInterval, FilePath, Int, Int)
+
+data RawProperties = RawProperties
+  { _rawPropertiesFace :: [RawFace],
+    _rawPropertiesGoto :: [RawGoto]
   }
 
-$(deriveToJSON defaultOptions{fieldLabelModifier = over Lens._head toLower . dropPrefix "_rawProperties",
-                             constructorTagModifier = map toLower} ''RawProperties)
-
+$( deriveToJSON
+     defaultOptions
+       { fieldLabelModifier = over Lens._head toLower . dropPrefix "_rawProperties",
+         constructorTagModifier = map toLower
+       }
+     ''RawProperties
+ )
 
 rawProperties :: Properties -> RawProperties
-rawProperties Properties {..} = RawProperties {
-  _rawPropertiesGoto = map rawGoto _propertiesGoto,
-  _rawPropertiesFace = map rawFace _propertiesFace
-                                              }
+rawProperties Properties {..} =
+  RawProperties
+    { _rawPropertiesGoto = map rawGoto _propertiesGoto,
+      _rawPropertiesFace = map rawFace _propertiesFace
+    }
   where
-  rawInterval :: Interval -> RawInterval
-  rawInterval i = (i ^. intervalFile, i ^. intervalStart . locOffset . unPos, i ^. intervalEnd . locOffset . unPos)
-  rawFace :: PropertyFace -> RawFace
-  rawFace PropertyFace {..} = (rawInterval _faceInterval, _faceFace)
-  rawGoto :: PropertyGoto -> RawGoto
-  rawGoto PropertyGoto {..} = (rawInterval _gotoInterval, _gotoFile, _gotoPos)
+    rawInterval :: Interval -> RawInterval
+    rawInterval i =
+      ( i ^. intervalFile,
+        fromIntegral (i ^. intervalStart . locLine),
+        fromIntegral (i ^. intervalStart . locCol),
+        intervalLength i
+      )
+    rawFace :: PropertyFace -> RawFace
+    rawFace PropertyFace {..} = (rawInterval _faceInterval, _faceFace)
+    rawGoto :: PropertyGoto -> RawGoto
+    rawGoto PropertyGoto {..} =
+      ( rawInterval _gotoInterval,
+        _gotoFile,
+        fromIntegral (_gotoPos ^. locLine),
+        fromIntegral (_gotoPos ^. locCol)
+      )
 
 -- | Example instruction:
 -- (add-text-properties 20 28
@@ -111,7 +129,7 @@ instance ToSexp PropertyGoto where
       pos l = Int (succ (l ^. locOffset . unPos))
       start = pos (i ^. intervalStart)
       end = pos (i ^. intervalEnd)
-      gotoPair = Pair (String targetFile) (Int targetPos)
+      gotoPair = Pair (String targetFile) (Int (targetPos ^. locOffset . to (succ . fromIntegral)))
 
 instance ToSexp Properties where
   toSexp Properties {..} =

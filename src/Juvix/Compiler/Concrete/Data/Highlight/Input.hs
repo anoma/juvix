@@ -1,11 +1,12 @@
-module Juvix.Compiler.Concrete.Data.Highlight.Input (
-module Juvix.Compiler.Concrete.Data.Highlight.Input,
-module Juvix.Compiler.Concrete.Data.ParsedItem,
-                                                    ) where
+module Juvix.Compiler.Concrete.Data.Highlight.Input
+  ( module Juvix.Compiler.Concrete.Data.Highlight.Input,
+    module Juvix.Compiler.Concrete.Data.ParsedItem,
+  )
+where
 
-import Juvix.Prelude
 import Juvix.Compiler.Concrete.Data.ParsedItem
 import Juvix.Compiler.Concrete.Data.ScopedName
+import Juvix.Prelude
 
 data HighlightInput = HighlightInput
   { _highlightParsed :: [ParsedItem],
