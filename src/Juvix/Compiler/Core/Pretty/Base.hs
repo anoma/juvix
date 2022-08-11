@@ -58,20 +58,24 @@ instance PrettyCode BuiltinDataTag where
 instance PrettyCode Tag where
   ppCode = \case
     BuiltinTag tag -> ppCode tag
-    UserTag tag -> return $ kwUnnamedConstr <+> pretty tag
+    UserTag tag -> return $ kwUnnamedConstr <> pretty tag
 
 instance PrettyCode Node where
   ppCode node = case node of
     Var {..} ->
       case Info.lookup kNameInfo varInfo of
         Just ni -> ppCode (ni ^. NameInfo.infoName)
-        Nothing -> return $ kwDeBruijnVar <+> pretty varIndex
+        Nothing -> return $ kwDeBruijnVar <> pretty varIndex
     Ident {..} ->
       case Info.lookup kNameInfo identInfo of
         Just ni -> ppCode (ni ^. NameInfo.infoName)
-        Nothing -> return $ kwUnnamedIdent <+> pretty identSymbol
-    Constant _ (ConstInteger int) -> return $ pretty int
-    Constant _ (ConstBool b) -> return $ pretty b
+        Nothing -> return $ kwUnnamedIdent <> pretty identSymbol
+    Constant _ (ConstInteger int) ->
+      return $ annotate AnnLiteralInteger (pretty int)
+    Constant _ (ConstBool True) ->
+      return $ annotate (AnnKind KNameConstructor) (pretty ("true" :: String))
+    Constant _ (ConstBool False) ->
+      return $ annotate (AnnKind KNameConstructor) (pretty ("false" :: String))
     Axiom {..} ->
       case Info.lookup kNameInfo axiomInfo of
         Just ni -> ppCode (ni ^. NameInfo.infoName)
@@ -95,15 +99,15 @@ instance PrettyCode Node where
       let (infos, body) = unfoldLambdas' node
       pplams <- mapM ppLam infos
       b <- ppCode body
-      return $ foldr (<+>) (braces b) pplams
+      return $ foldl (flip (<+>)) (braces b) pplams
       where
         ppLam :: Member (Reader Options) r => Info -> Sem r (Doc Ann)
         ppLam i =
           case Info.lookup kBinderInfo i of
             Just bi -> do
               n <- ppCode (bi ^. BinderInfo.infoName)
-              return $ kwLambda <+> n
-            Nothing -> return $ kwLambda <+> kwQuestion
+              return $ kwLambda <> n
+            Nothing -> return $ kwLambda <> kwQuestion
     Let {..} -> do
       n' <-
         case Info.lookup kBinderInfo letInfo of

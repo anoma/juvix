@@ -67,7 +67,9 @@ parseToplevel ::
 parseToplevel = do
   space
   P.sepEndBy statement kwSemicolon
-  optional expression
+  r <- optional expression
+  P.eof
+  return r
 
 statement ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>

@@ -1,5 +1,6 @@
 module Commands.Dev
   ( module Commands.Dev,
+    module Commands.Dev.Core,
     module Commands.Dev.Internal,
     module Commands.Dev.Parse,
     module Commands.Dev.Scope,
@@ -8,6 +9,7 @@ module Commands.Dev
   )
 where
 
+import Commands.Dev.Core
 import Commands.Dev.Doc
 import Commands.Dev.Internal
 import Commands.Dev.Parse
@@ -21,6 +23,7 @@ data InternalCommand
   = DisplayRoot
   | Highlight HighlightOptions
   | Internal MicroCommand
+  | Core CoreCommand
   | MiniC
   | MiniHaskell
   | MonoJuvix
@@ -39,6 +42,7 @@ parseInternalCommand =
     ( mconcat
         [ commandHighlight,
           commandInternal,
+          commandCore,
           commandMiniC,
           commandMiniHaskell,
           commandMonoJuvix,
@@ -95,6 +99,13 @@ commandInternal =
     info
       (Internal <$> parseMicroCommand)
       (progDesc "Subcommands related to Internal")
+
+commandCore :: Mod CommandFields InternalCommand
+commandCore =
+  command "core" $
+    info
+      (Core <$> parseCoreCommand)
+      (progDesc "Subcommands related to JuvixCore")
 
 commandMiniHaskell :: Mod CommandFields InternalCommand
 commandMiniHaskell =

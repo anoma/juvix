@@ -77,6 +77,12 @@ keywordL' spc kw = do
     spc
     return i
 
+rawKeyword' :: ParsecS r () -> Text -> ParsecS r ()
+rawKeyword' spc kw = do
+  P.try $ do
+    void (P.chunk kw)
+    spc
+
 rawIdentifier :: [ParsecS r ()] -> ParsecS r Text
 rawIdentifier allKeywords = do
   notFollowedBy (choice allKeywords)

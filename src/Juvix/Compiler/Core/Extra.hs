@@ -2,14 +2,15 @@ module Juvix.Compiler.Core.Extra
   ( module Juvix.Compiler.Core.Extra,
     module Juvix.Compiler.Core.Extra.Base,
     module Juvix.Compiler.Core.Extra.Recursors,
+    module Juvix.Compiler.Core.Extra.Info,
   )
 where
 
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Core.Extra.Base
+import Juvix.Compiler.Core.Extra.Info
 import Juvix.Compiler.Core.Extra.Recursors
 import Juvix.Compiler.Core.Language
-import Juvix.Compiler.Core.Language.Info qualified as Info
 
 -- `isClosed` may short-circuit evaluation due to the use of `&&`, so it's not
 -- entirely reducible to `getFreeVars` in terms of computation time.
@@ -125,9 +126,3 @@ etaExpandConstrs argsNum = umap go
         | argsNum constrTag > length constrArgs ->
             etaExpand (argsNum constrTag - length constrArgs) n
       _ -> n
-
-mapInfo :: (Info -> Info) -> Node -> Node
-mapInfo f = umap (modifyInfo f)
-
-removeInfo :: IsInfo i => Key i -> Node -> Node
-removeInfo k = mapInfo (Info.delete k)

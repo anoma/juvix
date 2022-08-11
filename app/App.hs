@@ -11,6 +11,7 @@ import System.Console.ANSI qualified as Ansi
 data App m a where
   ExitMsg :: ExitCode -> Text -> App m ()
   ExitJuvixError :: JuvixError -> App m a
+  PrintJuvixError :: JuvixError -> App m ()
   ReadGlobalOptions :: App m GlobalOptions
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
   RunPipelineEither :: Sem PipelineEff a -> App m (Either JuvixError a)
@@ -31,11 +32,16 @@ runAppIO g = interpret $ \case
   Say t
     | g ^. globalOnlyErrors -> return ()
     | otherwise -> embed (putStrLn t)
+  PrintJuvixError e -> do
+    printErr e
   ExitJuvixError e -> do
-    (embed . hPutStrLn stderr . Error.render (not (g ^. globalNoColors)) (g ^. globalOnlyErrors)) e
+    printErr e
     embed exitFailure
   ExitMsg exitCode t -> embed (putStrLn t >> exitWith exitCode)
   Raw b -> embed (ByteString.putStr b)
+  where
+    printErr e =
+      (embed . hPutStrLn stderr . Error.render (not (g ^. globalNoColors)) (g ^. globalOnlyErrors)) e
 
 runPipeline :: Member App r => Sem PipelineEff a -> Sem r a
 runPipeline p = do

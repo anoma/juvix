@@ -38,7 +38,10 @@ boolean :: Member (Reader ParserParams) r => ParsecS r (Bool, Interval)
 boolean = interval (kwTrue >> return True) <|> interval (kwFalse >> return False)
 
 keyword :: Text -> ParsecS r ()
-keyword = void . keyword' space
+keyword = keyword' space
+
+rawKeyword :: Text -> ParsecS r ()
+rawKeyword = rawKeyword' space
 
 identifier :: ParsecS r Text
 identifier = lexeme bareIdentifier
@@ -109,7 +112,7 @@ kwInductive :: ParsecS r ()
 kwInductive = keyword Str.inductive
 
 kwLambda :: ParsecS r ()
-kwLambda = keyword Str.lambdaUnicode <|> keyword Str.lambdaAscii
+kwLambda = rawKeyword Str.lambdaUnicode <|> rawKeyword Str.lambdaAscii
 
 kwLet :: ParsecS r ()
 kwLet = keyword Str.let_

@@ -30,7 +30,7 @@ member k i = HashMap.member (typeRep k) (i ^. infoMap)
 
 lookup :: IsInfo a => Key a -> Info -> Maybe a
 lookup k i = case HashMap.lookup (typeRep k) (i ^. infoMap) of
-  Just a -> fromDyn a impossible
+  Just a -> Just $ fromDyn a impossible
   Nothing -> Nothing
 
 lookupDefault :: IsInfo a => a -> Info -> a
