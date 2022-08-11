@@ -24,7 +24,8 @@ type Code' = DL.DList Instruction
 -- - no evaluation-only nodes,
 -- - no axioms,
 -- - fully applied constructors and builtins,
--- - ArgsNumInfo available for each Var node.
+-- - squashed constructor and builtin applications,
+-- - ArgsNumInfo available for each Var node in function position.
 genCode :: Core.InfoTable -> Core.Node -> Code
 genCode infoTable = DL.toList . goToplevel
   where
