@@ -14,6 +14,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Language qualified as L
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
 import Juvix.Data.CodeAnn
+import Juvix.Parser.Error qualified as Parser
 import Juvix.Prelude
 
 data MultipleDeclarations = MultipleDeclarations

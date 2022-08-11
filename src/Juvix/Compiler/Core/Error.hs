@@ -2,7 +2,6 @@ module Juvix.Compiler.Core.Error where
 
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Pretty
-import Juvix.Prelude.Pretty
 
 data CoreError = CoreError
   { _coreErrorMsg :: Text,

@@ -1,6 +1,6 @@
 module Juvix.Compiler.Core.Pretty.Base
   ( module Juvix.Compiler.Core.Pretty.Base,
-    module Juvix.Compiler.Core.Pretty.Ann,
+    module Juvix.Data.CodeAnn,
     module Juvix.Compiler.Core.Pretty.Options,
   )
 where
@@ -11,10 +11,9 @@ import Juvix.Compiler.Core.Language.Info qualified as Info
 import Juvix.Compiler.Core.Language.Info.BinderInfo as BinderInfo
 import Juvix.Compiler.Core.Language.Info.BranchInfo as BranchInfo
 import Juvix.Compiler.Core.Language.Info.NameInfo as NameInfo
-import Juvix.Compiler.Core.Pretty.Ann
 import Juvix.Compiler.Core.Pretty.Options
+import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
-import Juvix.Prelude.Pretty
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
 doc opts =
@@ -134,7 +133,7 @@ instance PrettyCode Node where
             d' <- ppCode def
             return $ bs' ++ [kwDefault <+> kwArrow <+> d']
           Nothing -> return bs'
-      bss <- bracesIndent $ align $ concatWith (\a b -> a <> line <> b <> kwSemicolon) bs''
+      let bss = bracesIndent $ align $ concatWith (\a b -> a <> line <> b <> kwSemicolon) bs''
       return $ kwCase <+> v <+> kwOf <> bss
     If {..} -> do
       v <- ppCode ifValue
@@ -147,7 +146,7 @@ instance PrettyCode Node where
         case Info.lookup kNameInfo dataInfo of
           Just ni -> ppCode (ni ^. NameInfo.infoName)
           Nothing -> ppCode dataTag
-      return $ kwData <+> foldl (<+>) n' args'
+      return $ kwConstrData <+> foldl (<+>) n' args'
     Closure {} -> return kwClosure
     Suspended {..} -> (<+>) kwSuspended <$> ppCode suspendedNode
 
@@ -158,16 +157,6 @@ instance PrettyCode a => PrettyCode (NonEmpty a) where
 
 {--------------------------------------------------------------------------------}
 {- helper functions -}
-
-indent' :: Member (Reader Options) r => Doc a -> Sem r (Doc a)
-indent' d = do
-  i <- asks (^. optIndent)
-  return $ indent i d
-
-bracesIndent :: Members '[Reader Options] r => Doc Ann -> Sem r (Doc Ann)
-bracesIndent d = do
-  d' <- indent' d
-  return $ braces (line <> d' <> line)
 
 parensIf :: Bool -> Doc Ann -> Doc Ann
 parensIf t = if t then parens else id
@@ -206,9 +195,6 @@ ppLRExpression associates fixlr e =
 {--------------------------------------------------------------------------------}
 {- keywords -}
 
-keyword :: Text -> Doc Ann
-keyword = annotate AnnKeyword . pretty
-
 kwDeBruijnVar :: Doc Ann
 kwDeBruijnVar = keyword Str.deBruijnVar
 
@@ -221,29 +207,11 @@ kwUnnamedConstr = keyword Str.exclamation
 kwQuestion :: Doc Ann
 kwQuestion = keyword Str.questionMark
 
-kwLambda :: Doc Ann
-kwLambda = keyword Str.lambdaUnicode
-
-kwArrow :: Doc Ann
-kwArrow = keyword Str.toUnicode
-
-kwAssign :: Doc Ann
-kwAssign = keyword Str.assignUnicode
-
-kwEquals :: Doc Ann
-kwEquals = keyword Str.equal
-
 kwLess :: Doc Ann
 kwLess = keyword Str.less
 
 kwLessEquals :: Doc Ann
 kwLessEquals = keyword Str.lessEqual
-
-kwLet :: Doc Ann
-kwLet = keyword Str.let_
-
-kwIn :: Doc Ann
-kwIn = keyword Str.in_
 
 kwPlus :: Doc Ann
 kwPlus = keyword Str.plus
@@ -284,9 +252,6 @@ kwOf = keyword Str.of_
 kwDefault :: Doc Ann
 kwDefault = keyword Str.underscore
 
-kwSemicolon :: Doc Ann
-kwSemicolon = keyword Str.semicolon
-
 kwIf :: Doc Ann
 kwIf = keyword Str.if_
 
@@ -296,8 +261,8 @@ kwThen = keyword Str.then_
 kwElse :: Doc Ann
 kwElse = keyword Str.else_
 
-kwData :: Doc Ann
-kwData = keyword Str.constrData
+kwConstrData :: Doc Ann
+kwConstrData = keyword Str.constrData
 
 kwClosure :: Doc Ann
 kwClosure = keyword Str.closure

@@ -4,8 +4,8 @@ module Juvix.Compiler.Core.Transformation.LambdaLifting
   )
 where
 
-import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Data.InfoTableBuilder
+import Juvix.Compiler.Core.Transformation.Base
 
 lambdaLiftNode :: Member InfoTableBuilder r => Node -> Sem r Node
 lambdaLiftNode _ = do
