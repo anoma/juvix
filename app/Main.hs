@@ -118,7 +118,7 @@ runCommand cmdWithOpts = do
                 let m = head (res ^. Scoper.resultModules)
                 embed (Html.genHtml Scoper.defaultOptions _htmlRecursive _htmlTheme _htmlOutputDir _htmlPrintMetadata m)
               (Dev cmd') -> case cmd' of
-                Highlight -> do
+                Highlight HighlightOptions {..} -> do
                   res <- runPipelineEither (upToScoping entryPoint)
                   case res of
                     Left err -> say (Highlight.goError (errorIntervals err))
@@ -134,7 +134,7 @@ runCommand cmdWithOpts = do
                                 { _highlightNames = names,
                                   _highlightParsed = items
                                 }
-                      say (Highlight.go hinput)
+                      raw (Highlight.go _highlightBackend hinput)
                 Parse localOpts -> do
                   m <-
                     head . (^. Parser.resultModules)

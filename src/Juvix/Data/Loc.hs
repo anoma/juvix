@@ -6,7 +6,7 @@ import Text.Megaparsec qualified as M
 
 newtype Pos = Pos {_unPos :: Word64}
   deriving stock (Show, Eq, Ord)
-  deriving newtype (Hashable)
+  deriving newtype (Hashable, Num, Enum, Real, Integral)
 
 instance Semigroup Pos where
   Pos x <> Pos y = Pos (x + y)
@@ -83,6 +83,9 @@ singletonInterval l =
       _intervalStart = l ^. locFileLoc,
       _intervalEnd = l ^. locFileLoc
     }
+
+intervalLength :: Interval -> Int
+intervalLength i = fromIntegral (i ^. intervalEnd . locOffset - i ^. intervalStart . locOffset) + 1
 
 intervalStartLoc :: Interval -> Loc
 intervalStartLoc i =

@@ -13,12 +13,13 @@ import Commands.Dev.Internal
 import Commands.Dev.Parse
 import Commands.Dev.Scope
 import Commands.Dev.Termination
+import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Prelude
 import Options.Applicative
 
 data InternalCommand
   = DisplayRoot
-  | Highlight
+  | Highlight HighlightOptions
   | Internal MicroCommand
   | MiniC
   | MiniHaskell
@@ -27,6 +28,10 @@ data InternalCommand
   | Scope ScopeOptions
   | Termination TerminationCommand
   | Doc DocOptions
+
+newtype HighlightOptions = HighlightOptions
+  { _highlightBackend :: HighlightBackend
+  }
 
 parseInternalCommand :: Parser InternalCommand
 parseInternalCommand =
@@ -56,8 +61,26 @@ commandHighlight :: Mod CommandFields InternalCommand
 commandHighlight =
   command "highlight" $
     info
-      (pure Highlight)
+      (Highlight <$> parseHighlight)
       (progDesc "Highlight a Juvix file")
+  where
+    parseHighlight :: Parser HighlightOptions
+    parseHighlight = do
+      _highlightBackend <-
+        option
+          (eitherReader parseBackend)
+          ( long "format"
+              <> metavar "FORMAT"
+              <> value Emacs
+              <> showDefault
+              <> help "selects a backend. FORMAT = emacs | json"
+          )
+      pure HighlightOptions {..}
+    parseBackend :: String -> Either String HighlightBackend
+    parseBackend s = case s of
+      "emacs" -> Right Emacs
+      "json" -> Right Json
+      _ -> Left $ "unrecognised theme: " <> s
 
 commandMiniC :: Mod CommandFields InternalCommand
 commandMiniC =
