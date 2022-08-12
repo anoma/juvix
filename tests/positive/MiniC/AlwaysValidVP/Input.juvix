@@ -1,0 +1,28 @@
+module Input;
+
+open import Stdlib.Prelude;
+
+axiom AnomaPtr : Type;
+compile AnomaPtr {
+  c ↦ "uint64_t";
+};
+
+axiom AnomaSize : Type;
+compile AnomaSize {
+  c ↦ "uint64_t";
+};
+
+axiom AnomaBool : Type;
+compile AnomaBool {
+  c ↦ "uint64_t";
+};
+
+encodeBool : Bool → AnomaBool;
+encodeBool true ≔ 1;
+encodeBool false ≔ 0;
+
+--- The module entrypoint callable by wasm runtime
+_validate_tx : AnomaPtr → AnomaSize → AnomaPtr → AnomaSize → AnomaPtr → AnomaSize → AnomaPtr → AnomaSize → AnomaBool;
+_validate_tx _ _ _ _ _ _ _ _  ≔ encodeBool true;
+
+end;
