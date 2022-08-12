@@ -17,9 +17,19 @@ compile AnomaBool {
   c ↦ "uint64_t";
 };
 
+axiom AnomaBool_true : AnomaBool;
+compile AnomaBool_true {
+  c ↦ "1";
+};
+
+axiom AnomaBool_false : AnomaBool;
+compile AnomaBool_false {
+  c ↦ "0";
+};
+
 encodeBool : Bool → AnomaBool;
-encodeBool true ≔ 1;
-encodeBool false ≔ 0;
+encodeBool true ≔ AnomaBool_true;
+encodeBool false ≔ AnomaBool_false;
 
 --- The module entrypoint callable by wasm runtime
 _validate_tx : AnomaPtr → AnomaSize → AnomaPtr → AnomaSize → AnomaPtr → AnomaSize → AnomaPtr → AnomaSize → AnomaBool;

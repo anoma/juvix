@@ -1,4 +1,5 @@
 module LiteralInt;
+  open import Stdlib.Prelude;
   inductive A {
     a : A;
   };
@@ -7,6 +8,6 @@ module LiteralInt;
     b : B;
   };
 
-  f : A;
+  f : ℕ;
   f ≔ 1;
 end;

@@ -5,6 +5,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Ch
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
@@ -22,7 +23,7 @@ registerConstructor ctr = do
   modify (HashMap.insert (ctr ^. inductiveConstructorName) ty)
 
 checkModule ::
-  Members '[Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example] r =>
+  Members '[Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r =>
   Module ->
   Sem r Module
 checkModule Module {..} = do
@@ -35,7 +36,7 @@ checkModule Module {..} = do
       }
 
 checkModuleBody ::
-  Members '[Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example] r =>
+  Members '[Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -46,13 +47,13 @@ checkModuleBody ModuleBody {..} = do
       }
 
 checkInclude ::
-  Members '[Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example] r =>
+  Members '[Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r =>
   Include ->
   Sem r Include
 checkInclude = traverseOf includeModule checkModule
 
 checkStatement ::
-  Members '[Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example] r =>
+  Members '[Reader EntryPoint, State NegativeTypeParameters, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r =>
   Statement ->
   Sem r Statement
 checkStatement s = case s of
@@ -66,7 +67,7 @@ checkStatement s = case s of
 
 checkInductiveDef ::
   forall r.
-  Members '[Reader EntryPoint, Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, State NegativeTypeParameters, Output Example] r =>
+  Members '[Reader EntryPoint, Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, State NegativeTypeParameters, Output Example, Builtins] r =>
   InductiveDef ->
   Sem r InductiveDef
 -- checkInductiveDef (InductiveDef name built params constrs pos) = runInferenceDef $ do
@@ -127,7 +128,7 @@ withEmptyVars :: Sem (Reader LocalVars : r) a -> Sem r a
 withEmptyVars = runReader emptyLocalVars
 
 checkFunctionDef ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r =>
   FunctionDef ->
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
@@ -145,7 +146,7 @@ checkFunctionDef FunctionDef {..} = do
   readerState @FunctionsTable (traverseOf funDefExamples (mapM checkExample) funDef)
 
 checkIsType ::
-  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins] r =>
   Interval ->
   Expression ->
   Sem r Expression
@@ -153,7 +154,7 @@ checkIsType = checkExpression . smallUniverseE
 
 checkFunctionDefType ::
   forall r.
-  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins] r =>
   Expression ->
   Sem r Expression
 checkFunctionDefType ty = do
@@ -165,7 +166,7 @@ checkFunctionDefType ty = do
     go h = freshMetavar h
 
 checkExample ::
-  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Output Example, State TypesTable] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Output Example, State TypesTable] r =>
   Example ->
   Sem r Example
 checkExample e = do
@@ -174,7 +175,7 @@ checkExample e = do
   return e'
 
 checkExpression ::
-  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Reader LocalVars, Inference] r =>
   Expression ->
   Expression ->
   Sem r Expression
@@ -194,20 +195,12 @@ checkExpression expectedTy e = do
         )
 
 checkFunctionParameter ::
-  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins] r =>
   FunctionParameter ->
   Sem r FunctionParameter
 checkFunctionParameter (FunctionParameter mv i e) = do
   e' <- checkIsType (getLoc e) e
   return (FunctionParameter mv i e')
-
--- checkInductiveDef ::
---   Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters, Reader EntryPoint] r =>
---   InductiveDef ->
---   Sem r ()
--- checkInductiveDef ty@InductiveDef {..} = do
---   checkPositivity ty
---   mapM_ (checkConstructorDef ty) _inductiveConstructors
 
 checkConstructorDef ::
   Members
@@ -251,7 +244,7 @@ checkConstructorReturnType indType ctor = do
     )
 
 inferExpression ::
-  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Builtins, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
   Expression ->
   Sem r Expression
 inferExpression = fmap (^. typedExpression) . inferExpression'
@@ -262,7 +255,7 @@ lookupVar v = HashMap.lookupDefault err v <$> asks (^. localTypes)
     err = error $ "internal error: could not find var " <> ppTrace v
 
 checkFunctionClauseBody ::
-  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Inference] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Builtins, Inference] r =>
   LocalVars ->
   Expression ->
   Expression ->
@@ -272,7 +265,7 @@ checkFunctionClauseBody locals expectedTy body =
 
 checkFunctionClause ::
   forall r.
-  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Inference] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Builtins, Inference] r =>
   Expression ->
   FunctionClause ->
   Sem r FunctionClause
@@ -457,9 +450,20 @@ freshHole l = do
   freshMetavar h
   return h
 
+literalType :: Members '[NameIdGen, Builtins] r => LiteralLoc -> Sem r TypedExpression
+literalType lit@(WithLoc i l) = case l of
+  LitInteger {} -> do
+    nat <- getBuiltinName i BuiltinNatural
+    return
+      TypedExpression
+        { _typedExpression = ExpressionLiteral lit,
+          _typedType = ExpressionIden (IdenInductive nat)
+        }
+  LitString {} -> literalMagicType lit
+
 -- | Returns {A : Expression} → A
-literalType :: Members '[NameIdGen] r => LiteralLoc -> Sem r TypedExpression
-literalType l = do
+literalMagicType :: Members '[NameIdGen] r => LiteralLoc -> Sem r TypedExpression
+literalMagicType l = do
   uid <- freshNameId
   let strA :: Text
       strA = "A"
@@ -491,7 +495,7 @@ literalType l = do
 
 inferExpression' ::
   forall r.
-  Members '[Reader InfoTable, Reader FunctionsTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Builtins] r =>
   Expression ->
   Sem r TypedExpression
 inferExpression' e = case e of

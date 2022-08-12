@@ -152,7 +152,7 @@ pipelineAbstract ::
 pipelineAbstract = mapError (JuvixError @Scoper.ScoperError) . Abstract.fromConcrete
 
 pipelineInternalTyped ::
-  Members '[Files, NameIdGen, Error JuvixError] r =>
+  Members '[Files, NameIdGen, Error JuvixError, Builtins] r =>
   Internal.InternalArityResult ->
   Sem r Internal.InternalTypedResult
 pipelineInternalTyped =

@@ -4,9 +4,18 @@ open import Data.IO;
 open import Data.String;
 
 axiom Int : Type;
-
 compile Int {
   c ↦ "int";
+};
+
+axiom Int_0 : Int;
+compile Int_0 {
+  c ↦ "0";
+};
+
+axiom Int_1 : Int;
+compile Int_1 {
+  c ↦ "1";
 };
 
 axiom to-str : Int → String;
@@ -37,8 +46,8 @@ nplus zero n ≔ n;
 nplus (suc m) n ≔ suc (nplus m n);
 
 nplus-to-int : Nat → Int;
-nplus-to-int zero ≔ 0;
-nplus-to-int (suc n) ≔ plus 1 (nplus-to-int n);
+nplus-to-int zero ≔ Int_0;
+nplus-to-int (suc n) ≔ plus Int_1 (nplus-to-int n);
 
 nOne : Nat;
 nOne ≔ suc zero;
@@ -46,14 +55,17 @@ nOne ≔ suc zero;
 nplusOne : Nat → Nat → Nat;
 nplusOne n ≔ nplus nOne;
 
+plusOneInt : Int → Int;
+plusOneInt ≔ plus Int_1;
+
 one : Int;
-one ≔ 1;
+one ≔ Int_1;
 
 two : Int;
-two ≔ 2;
+two ≔ plusOneInt one;
 
 three : Int;
-three ≔ 3;
+three ≔ plusOneInt two;
 
 plusXIgnore2 : Int → Int → Int → Int → Int;
 plusXIgnore2 _ _ ≔ plus;

@@ -5,6 +5,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as ArityChecking
@@ -31,7 +32,7 @@ arityChecking res@InternalResult {..} =
     table = buildTable _resultModules
 
 typeChecking ::
-  Members '[Error JuvixError, NameIdGen] r =>
+  Members '[Error JuvixError, NameIdGen, Builtins] r =>
   ArityChecking.InternalArityResult ->
   Sem r InternalTypedResult
 typeChecking res@ArityChecking.InternalArityResult {..} =

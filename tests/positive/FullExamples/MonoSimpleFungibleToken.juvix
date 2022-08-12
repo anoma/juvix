@@ -69,6 +69,11 @@ compile Int {
   ghc ↦ "Int";
 };
 
+axiom Int_0 : Int;
+compile Int_0 {
+  ghc ↦ "0";
+};
+
 axiom lt : Int → Int → BackendBool;
 compile lt {
   ghc ↦ "(<)";
@@ -156,7 +161,7 @@ if-optionInt true x _ ≔ x;
 if-optionInt false _ y ≔ y;
 
 from-int : Int → OptionInt;
-from-int i ≔ if-optionInt (i < 0) NothingInt (JustInt i);
+from-int i ≔ if-optionInt (i < Int_0) NothingInt (JustInt i);
 
 maybe-int : Int → OptionInt → Int;
 maybe-int d NothingInt ≔ d;
@@ -175,7 +180,7 @@ from-string : String → OptionString;
 from-string s ≔ if-optionString (s ==String "") NothingString (JustString s);
 
 pair-from-optionString : (String → PairIntBool) → OptionString → PairIntBool;
-pair-from-optionString _ NothingString ≔ MakePair 0 false;
+pair-from-optionString _ NothingString ≔ MakePair Int_0 false;
 pair-from-optionString f (JustString o) ≔ f o;
 
 --------------------------------------------------------------------------------
@@ -215,7 +220,7 @@ is-balance-key : String → String → OptionString;
 is-balance-key token key ≔ from-string (isBalanceKey token key);
 
 unwrap-default : OptionInt → Int;
-unwrap-default o ≔ maybe-int 0 o;
+unwrap-default o ≔ maybe-int Int_0 o;
 
 --------------------------------------------------------------------------------
 -- Validity Predicate
@@ -227,7 +232,7 @@ change-from-key key ≔ unwrap-default (read-post key) - unwrap-default (read-pr
 check-vp : ListString → String → Int → String → PairIntBool;
 check-vp verifiers key change owner ≔
     if-pairIntBool
-        (change-from-key key < 0)
+        (change-from-key key < Int_0)
         -- make sure the spender approved the transaction
         (MakePair (change + (change-from-key key)) (elem owner verifiers))
         (MakePair (change + (change-from-key key)) true);
@@ -237,17 +242,17 @@ check-keys token verifiers (MakePair change is-success) key ≔
     if-pairIntBool
         is-success
         (pair-from-optionString (check-vp verifiers key change) (is-balance-key token key))
-        (MakePair 0 false);
+        (MakePair Int_0 false);
 
 check-result : PairIntBool → Bool;
-check-result (MakePair change all-checked) ≔ (change ==Int 0) && all-checked;
+check-result (MakePair change all-checked) ≔ (change ==Int Int_0) && all-checked;
 
 vp : String → ListString → ListString → Bool;
 vp token keys-changed verifiers ≔
     check-result
         (foldl
             (check-keys token verifiers)
-            (MakePair 0 true)
+            (MakePair Int_0 true)
             keys-changed);
 
 --------------------------------------------------------------------------------

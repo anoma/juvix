@@ -22,8 +22,8 @@ compile natInd {
 };
 
 natToInt : Nat → Int;
-natToInt zero ≔ 0;
-natToInt (suc n) ≔ 1 + (natToInt n);
+natToInt zero ≔ Int_0;
+natToInt (suc n) ≔ Int_1 + (natToInt n);
 
 natToStr : Nat → String;
 natToStr n ≔ intToStr (natToInt n);

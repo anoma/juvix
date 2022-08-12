@@ -4,9 +4,23 @@ open import Data.IO;
 open import Data.String;
 
 axiom Int : Type;
-
 compile Int {
   c ↦ "int";
+};
+
+axiom Int_0 : Int;
+compile Int_0 {
+  c ↦ "0";
+};
+
+axiom Int_1 : Int;
+compile Int_1 {
+  c ↦ "1";
+};
+
+axiom Int_2 : Int;
+compile Int_2 {
+  c ↦ "2";
 };
 
 axiom to-str : Int → String;
@@ -46,8 +60,8 @@ apply-nat2 : (Nat → Nat → Nat) → Nat → Nat → Nat;
 apply-nat2 f a b ≔ f a b;
 
 nat-to-int : Nat → Int;
-nat-to-int zero ≔ 0;
-nat-to-int (suc n) ≔ plus 1 (nat-to-int n);
+nat-to-int zero ≔ Int_0;
+nat-to-int (suc n) ≔ plus Int_1 (nat-to-int n);
 
 one : Nat;
 one ≔ suc zero;
@@ -60,7 +74,7 @@ two ≔ suc one;
 
 main : Action;
 main ≔ put-str "plus 1 2: "
-        >> put-str-ln (to-str (apply plus 1 2))
+        >> put-str-ln (to-str (apply plus Int_1 Int_2))
         >> put-str "suc one: "
         >> put-str-ln (to-str (nat-to-int (apply-nat suc one)))
         >> put-str "plus-nat 1 2: "

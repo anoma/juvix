@@ -6,4 +6,14 @@ compile Int {
   c ↦ "int";
 };
 
+axiom Int_0 : Int;
+compile Int_0 {
+  c ↦ "0";
+};
+
+axiom Int_1 : Int;
+compile Int_1 {
+  c ↦ "1";
+};
+
 end;

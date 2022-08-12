@@ -20,7 +20,12 @@ compile Action {
   c ↦ "int";
 };
 
+axiom Int_0 : Action;
+compile Int_0 {
+  c ↦ "0";
+};
+
 main : Action;
-main := 0;
+main := Int_0;
 
 end;
