@@ -68,10 +68,19 @@ bool-to-str false ≔ "False";
 --------------------------------------------------------------------------------
 
 axiom Int : Type;
-
 compile Int {
   ghc ↦ "Int";
   c ↦ "int";
+};
+
+axiom Int_0 : Int;
+compile Int_0 {
+  c ↦ "0";
+};
+
+axiom Int_1 : Int;
+compile Int_1 {
+  c ↦ "1";
 };
 
 foreign c {
@@ -121,8 +130,8 @@ infix 4 ==Nat;
 ==Nat _ _ ≔ false;
 
 to-int : Nat → Int;
-to-int zero ≔ 0;
-to-int (suc n) ≔ 1 +int (to-int n);
+to-int zero ≔ Int_0;
+to-int (suc n) ≔ Int_1 +int (to-int n);
 
 nat-to-str : Nat → String;
 nat-to-str n ≔ to-str (to-int n);

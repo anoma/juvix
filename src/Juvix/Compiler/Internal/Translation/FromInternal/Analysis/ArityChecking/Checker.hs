@@ -100,7 +100,7 @@ guessArity ::
 guessArity = \case
   ExpressionHole {} -> return Nothing
   ExpressionFunction {} -> return (Just ArityUnit)
-  ExpressionLiteral {} -> return (Just arityLiteral)
+  ExpressionLiteral l -> return (Just (arityLiteral l))
   ExpressionApplication a -> appHelper a
   ExpressionIden i -> idenHelper i
   ExpressionUniverse {} -> return (Just arityUniverse)
@@ -133,18 +133,20 @@ guessArity = \case
           ExpressionUniverse {} -> return (Just arityUniverse)
           ExpressionApplication {} -> impossible
           ExpressionFunction {} -> return (Just ArityUnit)
-          ExpressionLiteral {} -> return (Just arityLiteral)
+          ExpressionLiteral l -> return (Just (arityLiteral l))
           ExpressionIden i -> idenHelper i
           ExpressionLambda {} -> lambda
 
 -- | The arity of all literals is assumed to be: {} -> 1
-arityLiteral :: Arity
-arityLiteral =
-  ArityFunction
-    FunctionArity
-      { _functionArityLeft = ParamImplicit,
-        _functionArityRight = ArityUnit
-      }
+arityLiteral :: LiteralLoc -> Arity
+arityLiteral (WithLoc _ l) = case l of
+  LitInteger {} -> ArityUnit
+  LitString {} ->
+    ArityFunction
+      FunctionArity
+        { _functionArityLeft = ParamImplicit,
+          _functionArityRight = ArityUnit
+        }
 
 arityUniverse :: Arity
 arityUniverse = ArityUnit
@@ -336,7 +338,7 @@ checkExpression hintArity expr = case expr of
       args' :: [(IsImplicit, Expression)] <- case fun of
         ExpressionHole {} -> mapM (secondM (checkExpression ArityUnknown)) args
         ExpressionIden i -> idenArity i >>= helper (getLoc i)
-        ExpressionLiteral l -> helper (getLoc l) arityLiteral
+        ExpressionLiteral l -> helper (getLoc l) (arityLiteral l)
         ExpressionUniverse l -> helper (getLoc l) arityUniverse
         ExpressionLambda {} -> lambda
         ExpressionFunction f ->

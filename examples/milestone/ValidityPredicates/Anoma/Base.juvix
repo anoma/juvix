@@ -36,7 +36,7 @@ open import Data.Int.Ops;
 import Stdlib.Data.String.Ord;
 
 from-int : Int → Maybe Int;
-from-int i ≔ if (i < 0) nothing (just i);
+from-int i ≔ if (i < Int_0) nothing (just i);
 
 from-string : String → Maybe String;
 from-string s ≔ if (s Stdlib.Data.String.Ord.== "") nothing (just s);
@@ -73,6 +73,6 @@ is-balance-key : String → String → Maybe String;
 is-balance-key token key ≔ from-string (isBalanceKey token key);
 
 unwrap-default : Maybe Int → Int;
-unwrap-default ≔ maybe 0 id;
+unwrap-default ≔ maybe Int_0 id;
 
 end;

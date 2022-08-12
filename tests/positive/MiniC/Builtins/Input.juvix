@@ -19,6 +19,9 @@ mult (suc n) m ≔ m + (mult n m);
 plusOne : ℕ → ℕ;
 plusOne ≔ suc;
 
+someLiteral : _;
+someLiteral ≔ 123;
+
 builtin IO axiom IO : Type;
 
 infixl 1 >>;

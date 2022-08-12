@@ -9,7 +9,7 @@ import Data.Int.Ops;
 -- Misc
 
 pair-from-optionString : (String → Int × Bool) → Maybe String → Int × Bool;
-pair-from-optionString ≔ maybe (0 , false);
+pair-from-optionString ≔ maybe (Int_0 , false);
 
 -- Validity Predicate
 
@@ -19,7 +19,7 @@ change-from-key key ≔ unwrap-default (read-post key) Data.Int.Ops.- unwrap-def
 check-vp : List String → String → Int → String → Int × Bool;
 check-vp verifiers key change owner ≔
     if
-        (change-from-key key Data.Int.Ops.< 0)
+        (change-from-key key Data.Int.Ops.< Int_0)
         -- make sure the spender approved the transaction
         (change Data.Int.Ops.+ (change-from-key key), elem (Stdlib.Data.String.Ord.==) owner verifiers)
         (change Data.Int.Ops.+ (change-from-key key),  true);
@@ -29,16 +29,16 @@ check-keys token verifiers (change , is-success) key ≔
     if
         is-success
         (pair-from-optionString (check-vp verifiers key change) (is-balance-key token key))
-        (0 , false);
+        (Int_0 , false);
 
 check-result : Int × Bool → Bool;
-check-result (change , all-checked) ≔ (change Data.Int.Ops.== 0) && all-checked;
+check-result (change , all-checked) ≔ (change Data.Int.Ops.== Int_0) && all-checked;
 
 vp : String → List String → List String → Bool;
 vp token keys-changed verifiers ≔
     check-result
         (foldl
             (check-keys token verifiers)
-            (0 , true)
+            (Int_0 , true)
             keys-changed);
 end;
