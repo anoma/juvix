@@ -1,0 +1,32 @@
+module Logic.Square;
+
+open import Stdlib.Prelude;
+open import Logic.Symbol;
+open import Stdlib.Data.Nat.Ord;
+open import Logic.Extra;
+
+--- A square is each of the holes in a board
+inductive Square {
+  --- An empty square has a ;ℕ; that uniquely identifies it
+  empty : ℕ → Square;
+  --- An occupied square has a ;Symbol; in it
+  occupied : Symbol → Square;
+};
+
+--- Equality for ;Square;s
+==Square : Square → Square → Bool;
+==Square (empty m) (empty n) ≔ m == n;
+==Square (occupied s) (occupied t) ≔ ==Symbol s t;
+==Square _ _ ≔ false;
+
+--- Textual representation of a ;Square;
+showSquare : Square → String;
+showSquare (empty n) ≔ " " ++str natToStr n ++str " ";
+showSquare (occupied s) ≔ " " ++str showSymbol s ++str " ";
+
+replace : Symbol → ℕ → Square → Square;
+replace player k (empty n) ≔ if (n Stdlib.Data.Nat.Ord.== k) (occupied player) (empty n);
+replace _ _ s ≔ s;
+
+
+end;

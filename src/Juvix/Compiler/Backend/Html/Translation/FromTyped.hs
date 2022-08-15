@@ -386,7 +386,7 @@ goOpen op
 goAxiom :: forall r. Members '[Reader HtmlOptions, Reader NormalizedTable] r => AxiomDef 'Scoped -> Sem r Html
 goAxiom axiom = do
   header' <- axiomHeader
-  defHeader tmp uid header' Nothing
+  defHeader tmp uid header' (axiom ^. axiomDoc)
   where
     uid :: NameId
     uid = axiom ^. axiomName . S.nameId
