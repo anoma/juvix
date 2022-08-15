@@ -56,12 +56,12 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       Ident _ sym -> eval' [] (lookupContext n sym)
       Constant {} -> n
       Axiom {} -> n
-      App _ l r ->
+      App i l r ->
         case eval' env l of
           Closure _ env' b -> let !v = eval' env r in eval' (v : env') b
           a@(Axiom {}) -> Suspended Info.empty (App Info.empty a (eval' env r))
-          Suspended i t -> Suspended i (App Info.empty t (eval' env r))
-          v -> evalError "invalid application" v
+          Suspended i' t -> Suspended i' (App Info.empty t (eval' env r))
+          v -> evalError "invalid application" (App i v (substEnv env r))
       BuiltinApp _ op args -> applyBuiltin n env op args
       ConstrApp i tag args -> Data i tag (map (eval' env) args)
       Lambda i b -> Closure i env b
@@ -91,7 +91,10 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
     applyBuiltin _ env OpIntAdd [l, r] = nodeFromInteger (integerFromNode (eval' env l) + integerFromNode (eval' env r))
     applyBuiltin _ env OpIntSub [l, r] = nodeFromInteger (integerFromNode (eval' env l) - integerFromNode (eval' env r))
     applyBuiltin _ env OpIntMul [l, r] = nodeFromInteger (integerFromNode (eval' env l) * integerFromNode (eval' env r))
-    applyBuiltin _ env OpIntDiv [l, r] = nodeFromInteger (div (integerFromNode (eval' env l)) (integerFromNode (eval' env r)))
+    applyBuiltin n env OpIntDiv [l, r] =
+      case integerFromNode (eval' env r) of
+        0 -> evalError "division by zero" (substEnv env n)
+        k -> nodeFromInteger (div (integerFromNode (eval' env l)) k)
     applyBuiltin _ env OpIntEq [l, r] = nodeFromBool (integerFromNode (eval' env l) == integerFromNode (eval' env r))
     applyBuiltin _ env OpIntLt [l, r] = nodeFromBool (integerFromNode (eval' env l) < integerFromNode (eval' env r))
     applyBuiltin _ env OpIntLe [l, r] = nodeFromBool (integerFromNode (eval' env l) <= integerFromNode (eval' env r))

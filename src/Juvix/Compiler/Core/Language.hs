@@ -68,7 +68,7 @@ data Node
         ifFalseBranch :: !Node
       }
   | -- Evaluation only: evaluated data constructor (the actual data). Arguments
-    -- order: right to left. Arguments are values (see below).
+    -- order: left to right. Arguments are values (see below).
     Data {dataInfo :: !Info, dataTag :: !Tag, dataArgs :: ![Node]}
   | -- Evaluation only: `Closure env body`
     Closure
@@ -104,8 +104,10 @@ data ConstantValue
 --   equal to the number of implicit binders above `branch`
 data CaseBranch = CaseBranch {caseTag :: !Tag, caseBindersNum :: !Int, caseBranch :: !Node}
 
--- Values are closed nodes (no free variables, i.e., no de Bruijn indices
--- pointing outside the term) of the following kinds:
+-- A node (term) is closed if it has no free variables, i.e., no de Bruijn
+-- indices pointing outside the term.
+
+-- Values are closed nodes of the following kinds:
 -- - Constant
 -- - Axiom
 -- - Data

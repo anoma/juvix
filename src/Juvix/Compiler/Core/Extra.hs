@@ -62,8 +62,8 @@ subst t = umapN go
       Var _ idx | idx == k -> shift k t
       _ -> n
 
--- reduce all beta redexes present in a term and the ones created downwards
--- (i.e., a "beta-development")
+-- reduce all beta redexes present in a term and the ones created immediately
+-- downwards (i.e., a "beta-development")
 developBeta :: Node -> Node
 developBeta = umap go
   where
@@ -74,7 +74,7 @@ developBeta = umap go
 
 -- substitution of all free variables for values in a closed environment
 substEnv :: Env -> Node -> Node
-substEnv env = umapN go
+substEnv env = if null env then id else umapN go
   where
     go k n = case n of
       Var _ idx | idx >= k -> env !! (idx - k)
