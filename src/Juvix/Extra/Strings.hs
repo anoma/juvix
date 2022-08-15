@@ -146,6 +146,9 @@ greaterEqual = ">="
 bind :: IsString s => s
 bind = ">>="
 
+seq_ :: IsString s => s
+seq_ = ">>"
+
 data_ :: IsString s => s
 data_ = "data"
 

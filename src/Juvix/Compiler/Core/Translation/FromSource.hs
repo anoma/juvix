@@ -209,7 +209,9 @@ bindExpr ::
   ParsecS r Node
 bindExpr varsNum vars = do
   node <- cmpExpr varsNum vars
-  bindExpr' varsNum vars node <|> return node
+  bindExpr' varsNum vars node
+    <|> seqExpr' varsNum vars node
+    <|> return node
 
 bindExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -221,6 +223,22 @@ bindExpr' varsNum vars node = do
   kwBind
   node' <- bindExpr varsNum vars
   return $ ConstrApp Info.empty (BuiltinTag TagBind) [node, node']
+
+seqExpr' ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Index ->
+  HashMap Text Index ->
+  Node ->
+  ParsecS r Node
+seqExpr' varsNum vars node = do
+  ((), i) <- interval kwSeq
+  node' <- bindExpr (varsNum + 1) vars
+  name <- lift $ freshName KNameLocal "_" i
+  return $
+    ConstrApp
+      Info.empty
+      (BuiltinTag TagBind)
+      [node, Lambda (Info.singleton (BinderInfo name Star)) node']
 
 cmpExpr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -477,15 +495,17 @@ parseLocalName ::
   forall r.
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   ParsecS r Name
-parseLocalName =
-  parseWildcardName <|> do
-    (txt, i) <- identifierL
-    lift $ freshName KNameLocal txt i
+parseLocalName = parseWildcardName <|> parseIdentName
   where
     parseWildcardName :: ParsecS r Name
     parseWildcardName = do
       ((), i) <- interval kwWildcard
       lift $ freshName KNameLocal "_" i
+
+    parseIdentName :: ParsecS r Name
+    parseIdentName = do
+      (txt, i) <- identifierL
+      lift $ freshName KNameLocal txt i
 
 exprLambda ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>

@@ -82,7 +82,8 @@ allKeywords =
     kwLe,
     kwGt,
     kwGe,
-    kwBind
+    kwBind,
+    kwSeq
   ]
 
 lbrace :: ParsecS r ()
@@ -189,3 +190,6 @@ kwGe = keyword Str.greaterEqual
 
 kwBind :: ParsecS r ()
 kwBind = keyword Str.bind
+
+kwSeq :: ParsecS r ()
+kwSeq = keyword Str.seq_

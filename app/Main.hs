@@ -378,6 +378,9 @@ runCoreCommand globalOpts = \case
           r <- doEval (opts ^. coreEvalNoIO) defaultLoc tab node
           case r of
             Left err -> exitJuvixError (JuvixError err)
+            Right node'
+              | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
+                  return ()
             Right node' -> do
               renderStdOut (Core.ppOutDefault node')
               embed (putStrLn "")
