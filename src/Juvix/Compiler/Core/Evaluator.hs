@@ -120,23 +120,24 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
 -- Evaluate `node` and interpret the builtin IO actions.
 evalIO :: IdentContext -> Env -> Node -> IO Node
 evalIO ctx env node =
-  case eval ctx env node of
-    ConstrApp _ (BuiltinTag TagReturn) [x] ->
-      return x
-    ConstrApp _ (BuiltinTag TagBind) [x, f] -> do
-      x' <- evalIO ctx env x
-      evalIO ctx env (App Info.empty f x')
-    ConstrApp _ (BuiltinTag TagWrite) [Constant _ (ConstString s)] -> do
-      putStr s
-      return unitNode
-    ConstrApp _ (BuiltinTag TagWrite) [arg] -> do
-      putStr (ppPrint arg)
-      return unitNode
-    ConstrApp _ (BuiltinTag TagReadLn) [] -> do
-      hFlush stdout
-      Constant Info.empty . ConstString <$> getLine
-    _ ->
-      return node
+  let node' = eval ctx env node
+   in case node' of
+        ConstrApp _ (BuiltinTag TagReturn) [x] ->
+          return x
+        ConstrApp _ (BuiltinTag TagBind) [x, f] -> do
+          x' <- evalIO ctx env x
+          evalIO ctx env (App Info.empty f x')
+        ConstrApp _ (BuiltinTag TagWrite) [Constant _ (ConstString s)] -> do
+          putStr s
+          return unitNode
+        ConstrApp _ (BuiltinTag TagWrite) [arg] -> do
+          putStr (ppPrint arg)
+          return unitNode
+        ConstrApp _ (BuiltinTag TagReadLn) [] -> do
+          hFlush stdout
+          Constant Info.empty . ConstString <$> getLine
+        _ ->
+          return node'
   where
     unitNode = ConstrApp (Info.singleton (NoDisplayInfo ())) (BuiltinTag TagNil) []
 
