@@ -366,6 +366,7 @@ atom varsNum vars =
   exprNamed varsNum vars
     <|> exprConstInt
     <|> exprConstBool
+    <|> exprConstString
     <|> exprLambda varsNum vars
     <|> exprLet varsNum vars
     <|> exprCase varsNum vars
@@ -409,6 +410,13 @@ exprConstBool ::
 exprConstBool = P.try $ do
   (b, i) <- boolean
   return $ Constant (Info.singleton (LocationInfo i)) (ConstBool b)
+
+exprConstString ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  ParsecS r Node
+exprConstString = P.try $ do
+  (s, i) <- string
+  return $ Constant (Info.singleton (LocationInfo i)) (ConstString s)
 
 parseLocalName ::
   forall r.

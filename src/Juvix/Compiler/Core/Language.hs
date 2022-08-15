@@ -94,10 +94,10 @@ data Node
 data ConstantValue
   = ConstInteger !Integer
   | ConstBool !Bool
+  | ConstString !Text
 
 -- Other things we might need in the future:
--- - ConstString
--- - ConstFixedPoint
+-- - ConstFloat
 
 -- `CaseBranch tag argsNum branch`
 -- - `argsNum` is the number of arguments of the constructor tagged with `tag`,

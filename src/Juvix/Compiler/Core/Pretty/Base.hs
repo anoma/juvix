@@ -75,6 +75,8 @@ instance PrettyCode Node where
       return $ annotate (AnnKind KNameConstructor) (pretty ("true" :: String))
     Constant _ (ConstBool False) ->
       return $ annotate (AnnKind KNameConstructor) (pretty ("false" :: String))
+    Constant _ (ConstString txt) ->
+      return $ annotate AnnLiteralString (pretty ("\"" ++ fromText txt ++ "\""))
     Axiom {..} ->
       case Info.lookup kNameInfo axiomInfo of
         Just ni -> ppCode (ni ^. NameInfo.infoName)

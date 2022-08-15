@@ -31,8 +31,8 @@ integer = integer' decimal
 number :: Member (Reader ParserParams) r => Int -> Int -> ParsecS r (Int, Interval)
 number = number' integer
 
-string :: ParsecS r Text
-string = string'
+string :: Member (Reader ParserParams) r => ParsecS r (Text, Interval)
+string = lexemeInterval string'
 
 boolean :: Member (Reader ParserParams) r => ParsecS r (Bool, Interval)
 boolean = interval (kwTrue >> return True) <|> interval (kwFalse >> return False)
