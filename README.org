@@ -35,7 +35,13 @@ alt="pages-build-deployment" /></a>
 
 Juvix is a research programming language created by [[https://heliax.dev/][Heliax]] as a first step toward creating more robust and reliable alternatives for formally verified smart contracts than existing languages. The Juvix language is constantly evolving, open-source, functional, and statically typed with special support for compiling [[https://anoma.network/blog/validity-predicates/][validity predicates]] to the =C= language, which can be deployed to various distributed ledgers including [[https://anoma.net/][Anoma]].
 
-The Juvix language and related tools are documented in [[https://anoma.github.io/juvix/][the Juvix book]].
+The Juvix language and related tools are documented in
+[[https://anoma.github.io/juvix/][the Juvix book]]. To write and test Juvix
+programs, you can use your favorite text editor and the =juvix= command line
+tool. However, we recommend using the =juvix-mode= in
+[[https://docs.juvix.org/tooling/emacs-mode.html][Emacs]] or the
+plugin in
+[[https://marketplace.visualstudio.com/items?itemName=heliax.juvix-mode][VSCode]].
 
 ** [[https://github.com/anoma/juvix/tree/main/examples/milestone][First examples of programs written in Juvix]]
 
@@ -57,7 +63,7 @@ common functions that can be used in Juvix programs.
 *** Installing Juvix on MacOS
 
 The easiest way to install Juvix on MacOS is by using
-[[https://brew.sh][Homebrew]]. Run the following commands on your machine.
+[[https://brew.sh][Homebrew]].
 
 To install the [[https://github.com/anoma/homebrew-juvix][homebrew-juvix tap]], run:
 
@@ -174,15 +180,10 @@ For the language:
 - compilation to circuits
 - coverage checking (i.e. exhaustiveness and useless clauses)
 
-For the emacs mode:
-
-- jump back to errors
-
 For the compiler:
 
 - Init command
-- New documentation tool: =juvix internal doc MyFile.juvix=
-#+end_src
+- Better documentation tool: =juvix doc MyFile.juvix=
 
 ** Community
 

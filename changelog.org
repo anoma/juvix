@@ -6,6 +6,97 @@
 </a>
 #+end_html
 
+** [[https://github.com/anoma/juvix/tree/v0.2.3][v0.2.3]] (2022-08-15)
+   :PROPERTIES:
+   :CUSTOM_ID: v0.2.3-2022-08-15
+   :END:
+[[https://github.com/anoma/juvix/compare/v0.2.2...v0.2.3][Full
+Changelog]]
+
+*Implemented enhancements:*
+
+- add =name= and =version= to =juvix.yaml=
+  [[https://github.com/anoma/juvix/pull/1422][#1422]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+
+*Fixed bugs:*
+
+- Properly handle paragraphs in judoc
+  [[https://github.com/anoma/juvix/pull/1447][#1447]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+
+*Merged pull requests:*
+
+- Give a proper type to literal natural numbers
+  [[https://github.com/anoma/juvix/pull/1453][#1453]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Add the option to output json in the =juvix internal highlight=
+  command [[https://github.com/anoma/juvix/pull/1450][#1450]] ([[https://github.com/janmasrovira][janmasrovira]]) for supporting the new [[https://marketplace.visualstudio.com/items?itemName=heliax.juvix-mode][Juvix Mode for Visual Studio Code]] ([[https://github.com/anoma/vscode-juvix][jonaprieto]])
+- Allow _ in Wasm exported names to support Anoma signature
+  [[https://github.com/anoma/juvix/pull/1449][#1449]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Add Towers of Hanoi and Pascal triangle examples
+  [[https://github.com/anoma/juvix/pull/1446][#1446]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Add =juvix init= command
+  [[https://github.com/anoma/juvix/pull/1445][#1445]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Refactor pretty to reduce duplication
+  [[https://github.com/anoma/juvix/pull/1443][#1443]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Add initial support for examples in Html documentation
+  [[https://github.com/anoma/juvix/pull/1442][#1442]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Add revisions to README
+  [[https://github.com/anoma/juvix/pull/1440][#1440]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- CI: Run build on push to main
+  [[https://github.com/anoma/juvix/pull/1437][#1437]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Add doctor subcommand
+  [[https://github.com/anoma/juvix/pull/1436][#1436]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- CI checkout repo before cache and use recommended cache strategy
+  [[https://github.com/anoma/juvix/pull/1435][#1435]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Various documentation adjustments
+  [[https://github.com/anoma/juvix/pull/1434][#1434]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Setup Clang before building docs in CI
+  [[https://github.com/anoma/juvix/pull/1433][#1433]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Major revisions to Makefile
+  [[https://github.com/anoma/juvix/pull/1431][#1431]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Do not add =-src= suffix to links in HTML when running =juvix html=
+  [[https://github.com/anoma/juvix/pull/1429][#1429]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Add a Web version of TicTacToe
+  [[https://github.com/anoma/juvix/pull/1427][#1427]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- WASM import all non-compile axioms with alphanum names in entrypoint
+  [[https://github.com/anoma/juvix/pull/1426][#1426]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Export all functions with alpha numeric names from entrypoint module
+  [[https://github.com/anoma/juvix/pull/1425][#1425]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Refactor [[https://github.com/anoma/juvix/pull/1420][#1420]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Permit axiom without a compile block
+  [[https://github.com/anoma/juvix/pull/1418][#1418]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Implement an html documentation generator similar to haddock (#1413)
+  [[https://github.com/anoma/juvix/pull/1416][#1416]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Fix version shell test for 0.2.2
+  [[https://github.com/anoma/juvix/pull/1415][#1415]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Remove Int from stdlib and update SimpleFungibleToken example
+  [[https://github.com/anoma/juvix/pull/1414][#1414]]
+  ([[https://github.com/paulcadman][paulcadman]])
+
+
+
 ** [[https://github.com/anoma/juvix/tree/v0.2.2][v0.2.2]] (2022-07-25)
    :PROPERTIES:
    :CUSTOM_ID: v0.2.2-2022-07-25

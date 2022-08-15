@@ -3,4 +3,4 @@ project=juvix
 issues=false
 pulls=true
 user=anoma
-verbose=false
+verbose=true

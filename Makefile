@@ -40,6 +40,7 @@ clean:
 	@stack clean --full
 	@rm -rf .hie
 	@rm -rf _docs
+	@rm -rf docs/md
 
 repl:
 	@stack ghci Juvix:lib
