@@ -126,16 +126,16 @@ instance HasAtomicity Node where
     Axiom {} -> Atom
     App {} -> Aggregate appFixity
     BuiltinApp {..} | null builtinArgs -> Atom
-    BuiltinApp {} -> Aggregate appFixity
+    BuiltinApp {} -> Aggregate lambdaFixity
     ConstrApp {..} | null constrArgs -> Atom
-    ConstrApp {} -> Aggregate appFixity
+    ConstrApp {} -> Aggregate lambdaFixity
     Lambda {} -> Aggregate lambdaFixity
     Let {} -> Aggregate lambdaFixity
     Case {} -> Aggregate lambdaFixity
     If {} -> Aggregate lambdaFixity
-    Data {} -> Aggregate appFixity
+    Data {} -> Aggregate lambdaFixity
     Closure {} -> Aggregate lambdaFixity
-    Suspended {} -> Aggregate appFixity
+    Suspended {} -> Aggregate lambdaFixity
 
 lambdaFixity :: Fixity
 lambdaFixity = Fixity (PrecNat 0) (Unary AssocPostfix)

@@ -98,7 +98,7 @@ instance PrettyCode Node where
       let (infos, body) = unfoldLambdas' node
       pplams <- mapM ppLam infos
       b <- ppCode body
-      return $ foldl (flip (<+>)) (braces b) pplams
+      return $ foldl (flip (<+>)) b pplams
       where
         ppLam :: Member (Reader Options) r => Info -> Sem r (Doc Ann)
         ppLam i =
