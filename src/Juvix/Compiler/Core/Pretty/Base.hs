@@ -47,12 +47,8 @@ instance PrettyCode BuiltinOp where
 
 instance PrettyCode BuiltinDataTag where
   ppCode = \case
-    TagZero -> return kwZero
-    TagSucc -> return kwSucc
-    TagUnit -> return kwUnit
-    TagNil -> return kwNil
-    TagCons -> return kwCons
-    TagPair -> return kwPair
+    TagNil -> return $ annotate (AnnKind KNameConstructor) (pretty ("nil" :: String))
+    TagCons -> return $ annotate (AnnKind KNameConstructor) (pretty ("cons" :: String))
 
 instance PrettyCode Tag where
   ppCode = \case
@@ -226,24 +222,6 @@ kwMul = keyword Str.mul
 
 kwDiv :: Doc Ann
 kwDiv = keyword Str.div
-
-kwZero :: Doc Ann
-kwZero = keyword Str.zero
-
-kwSucc :: Doc Ann
-kwSucc = keyword Str.succ
-
-kwUnit :: Doc Ann
-kwUnit = keyword Str.unit
-
-kwNil :: Doc Ann
-kwNil = keyword Str.nil
-
-kwCons :: Doc Ann
-kwCons = keyword Str.cons
-
-kwPair :: Doc Ann
-kwPair = keyword Str.pair
 
 kwCase :: Doc Ann
 kwCase = keyword Str.case_

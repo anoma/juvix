@@ -41,9 +41,9 @@ freshName ::
   NameKind ->
   Text ->
   Interval ->
-  ParsecS r Name
+  Sem r Name
 freshName kind txt i = do
-  nid <- lift freshNameId
+  nid <- freshNameId
   return $
     Name
       { _nameText = txt,
@@ -52,6 +52,23 @@ freshName kind txt i = do
         _namePretty = txt,
         _nameLoc = i
       }
+
+declareBuiltinConstr ::
+  Members '[InfoTableBuilder, NameIdGen] r =>
+  BuiltinDataTag ->
+  Text ->
+  Interval ->
+  Sem r ()
+declareBuiltinConstr btag nameTxt i = do
+  name <- freshName KNameConstructor nameTxt i
+  registerConstructor
+    ( ConstructorInfo
+        { _constructorName = name,
+          _constructorTag = BuiltinTag btag,
+          _constructorType = Star,
+          _constructorArgsNum = builtinConstrArgsNum btag
+        }
+    )
 
 guardSymbolNotDefined ::
   Member InfoTableBuilder r =>
@@ -62,10 +79,18 @@ guardSymbolNotDefined sym err = do
   b <- lift $ checkSymbolDefined sym
   when b err
 
+declareBuiltins :: Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r => ParsecS r ()
+declareBuiltins = do
+  loc <- curLoc
+  let i = mkInterval loc loc
+  lift $ declareBuiltinConstr TagNil "nil" i
+  lift $ declareBuiltinConstr TagCons "cons" i
+
 parseToplevel ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   ParsecS r (Maybe Node)
 parseToplevel = do
+  declareBuiltins
   space
   P.endBy statement kwSemicolon
   r <- optional expression
@@ -94,7 +119,7 @@ statementDef = do
       parseFailure ("duplicate identifier: " ++ fromText txt)
     Nothing -> do
       sym <- lift freshSymbol
-      name <- freshName KNameFunction txt i
+      name <- lift $ freshName KNameFunction txt i
       let info =
             IdentInfo
               { _identName = name,
@@ -141,7 +166,7 @@ statementConstr = do
     dupl
     (parseFailure ("duplicate identifier: " ++ fromText txt))
   tag <- lift freshTag
-  name <- freshName KNameConstructor txt i
+  name <- lift $ freshName KNameConstructor txt i
   let info =
         ConstructorInfo
           { _constructorName = name,
@@ -383,16 +408,16 @@ exprNamed varsNum vars = do
   (txt, i) <- identifierL
   case HashMap.lookup txt vars of
     Just k -> do
-      name <- freshName KNameLocal txt i
+      name <- lift $ freshName KNameLocal txt i
       return $ Var (Info.singleton (NameInfo name)) (varsNum - k - 1)
     Nothing -> do
       r <- lift (getIdent txt)
       case r of
         Just (Left sym) -> do
-          name <- freshName KNameFunction txt i
+          name <- lift $ freshName KNameFunction txt i
           return $ Ident (Info.singleton (NameInfo name)) sym
         Just (Right tag) -> do
-          name <- freshName KNameConstructor txt i
+          name <- lift $ freshName KNameConstructor txt i
           return $ ConstrApp (Info.singleton (NameInfo name)) tag []
         Nothing ->
           parseFailure ("undeclared identifier: " ++ fromText txt)
@@ -425,12 +450,12 @@ parseLocalName ::
 parseLocalName =
   parseWildcardName <|> do
     (txt, i) <- identifierL
-    freshName KNameLocal txt i
+    lift $ freshName KNameLocal txt i
   where
     parseWildcardName :: ParsecS r Name
     parseWildcardName = do
       ((), i) <- interval kwWildcard
-      freshName KNameLocal "_" i
+      lift $ freshName KNameLocal "_" i
 
 exprLambda ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>

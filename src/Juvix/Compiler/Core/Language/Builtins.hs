@@ -16,12 +16,8 @@ data BuiltinOp
 
 -- Builtin data tags
 data BuiltinDataTag
-  = TagZero
-  | TagSucc
-  | TagUnit
-  | TagNil
+  = TagNil
   | TagCons
-  | TagPair
   deriving stock (Eq, Generic)
 
 instance Hashable BuiltinDataTag
@@ -38,9 +34,5 @@ builtinOpArgsNum = \case
 
 builtinConstrArgsNum :: BuiltinDataTag -> Int
 builtinConstrArgsNum = \case
-  TagZero -> 0
-  TagSucc -> 1
-  TagUnit -> 0
   TagNil -> 0
   TagCons -> 2
-  TagPair -> 2
