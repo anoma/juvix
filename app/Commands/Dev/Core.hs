@@ -4,7 +4,7 @@ import Juvix.Prelude hiding (Doc)
 import Options.Applicative
 
 data CoreCommand
-  = Repl CoreEvalOptions
+  = Repl
   | Eval CoreEvalOptions
 
 newtype CoreEvalOptions = CoreEvalOptions
@@ -36,7 +36,7 @@ parseCoreCommand =
     replInfo :: ParserInfo CoreCommand
     replInfo =
       info
-        (Repl <$> parseCoreEvalOptions)
+        (pure Repl)
         (progDesc "Start an interactive session of the JuvixCore evaluator")
 
     evalInfo :: ParserInfo CoreCommand

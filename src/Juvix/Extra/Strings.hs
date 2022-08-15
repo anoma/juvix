@@ -143,6 +143,9 @@ greater = ">"
 greaterEqual :: IsString s => s
 greaterEqual = ">="
 
+bind :: IsString s => s
+bind = ">>="
+
 data_ :: IsString s => s
 data_ = "data"
 

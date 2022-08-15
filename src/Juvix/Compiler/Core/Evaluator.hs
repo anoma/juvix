@@ -8,17 +8,18 @@ module Juvix.Compiler.Core.Evaluator where
 
 import Control.Exception qualified as Exception
 import Data.HashMap.Strict qualified as HashMap
-import GHC.Show
+import GHC.Show as S
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Info qualified as Info
+import Juvix.Compiler.Core.Language.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Pretty
 
 data EvalError = EvalError
-  { _evalErrorMsg :: Text,
-    _evalErrorNode :: Node
+  { _evalErrorMsg :: !Text,
+    _evalErrorNode :: !Node
   }
 
 makeLenses ''EvalError
@@ -47,7 +48,7 @@ eval :: IdentContext -> Env -> Node -> Node
 eval !ctx !env0 = convertRuntimeNodes . eval' env0
   where
     evalError :: Text -> Node -> a
-    evalError msg node = Exception.throw (EvalError msg node)
+    evalError !msg !node = Exception.throw (EvalError msg node)
 
     eval' :: Env -> Node -> Node
     eval' !env !n = case n of
@@ -113,18 +114,47 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
         Just n' -> n'
         Nothing -> Suspended Info.empty n
 
+-- Evaluate `node` and interpret the builtin IO actions.
+evalIO :: IdentContext -> Env -> Node -> IO Node
+evalIO ctx env node =
+  case eval ctx env node of
+    ConstrApp _ (BuiltinTag TagReturn) [x] ->
+      return x
+    ConstrApp _ (BuiltinTag TagBind) [x, f] -> do
+      x' <- evalIO ctx env x
+      evalIO ctx env (App Info.empty f x')
+    ConstrApp _ (BuiltinTag TagWrite) [Constant _ (ConstString s)] -> do
+      putStr s
+      return unitNode
+    ConstrApp _ (BuiltinTag TagWrite) [arg] -> do
+      putStr (ppPrint arg)
+      return unitNode
+    ConstrApp _ (BuiltinTag TagReadLn) [] -> do
+      hFlush stdout
+      Constant Info.empty . ConstString <$> getLine
+    _ ->
+      return node
+  where
+    unitNode = ConstrApp (Info.singleton (NoDisplayInfo ())) (BuiltinTag TagNil) []
+
 -- Catch EvalError and convert it to CoreError. Needs a default location in case
 -- no location is available in EvalError.
 catchEvalError :: Location -> a -> IO (Either CoreError a)
-catchEvalError loc a = do
+catchEvalError loc a =
   Exception.catch
-    (return (Right a))
-    (\(ex :: EvalError) -> return (Left (toCoreError ex)))
-  where
-    toCoreError :: EvalError -> CoreError
-    toCoreError (EvalError {..}) =
-      CoreError
-        { _coreErrorMsg = _evalErrorMsg,
-          _coreErrorNode = Just _evalErrorNode,
-          _coreErrorLoc = fromMaybe loc (lookupLocation _evalErrorNode)
-        }
+    (Exception.evaluate a <&> Right)
+    (\(ex :: EvalError) -> return (Left (toCoreError loc ex)))
+
+catchEvalErrorIO :: Location -> IO a -> IO (Either CoreError a)
+catchEvalErrorIO loc ma =
+  Exception.catch
+    (Exception.evaluate ma >>= \ma' -> ma' <&> Right)
+    (\(ex :: EvalError) -> return (Left (toCoreError loc ex)))
+
+toCoreError :: Location -> EvalError -> CoreError
+toCoreError loc (EvalError {..}) =
+  CoreError
+    { _coreErrorMsg = mappend "evaluation error: " _evalErrorMsg,
+      _coreErrorNode = Just _evalErrorNode,
+      _coreErrorLoc = fromMaybe loc (lookupLocation _evalErrorNode)
+    }

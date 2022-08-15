@@ -26,6 +26,9 @@ import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Error qualified as Core
 import Juvix.Compiler.Core.Evaluator qualified as Core
+import Juvix.Compiler.Core.Extra.Base qualified as Core
+import Juvix.Compiler.Core.Language.Info qualified as Info
+import Juvix.Compiler.Core.Language.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
@@ -274,20 +277,20 @@ runCommand cmdWithOpts = do
 
 runCoreCommand :: Members '[Embed IO, App] r => GlobalOptions -> CoreCommand -> Sem r ()
 runCoreCommand globalOpts = \case
-  Repl opts -> do
+  Repl -> do
     embed showReplWelcome
-    runRepl opts Core.emptyInfoTable
-  Eval _ ->
+    runRepl Core.emptyInfoTable
+  Eval opts ->
     case globalOpts ^. globalInputFiles of
       [] -> printFailureExit "Provide a JuvixCore file to run this command\nUse --help to see all the options"
-      files -> mapM_ evalFile files
+      files -> mapM_ (evalFile opts) files
   where
     runRepl ::
+      forall r.
       Members '[Embed IO, App] r =>
-      CoreEvalOptions ->
       Core.InfoTable ->
       Sem r ()
-    runRepl opts tab = do
+    runRepl tab = do
       embed (putStr "> ")
       embed (hFlush stdout)
       done <- embed isEOF
@@ -297,37 +300,53 @@ runCoreCommand globalOpts = \case
           ":q" -> return ()
           ":h" -> do
             embed showReplHelp
-            runRepl opts tab
+            runRepl tab
           ':' : 'p' : ' ' : s' ->
             case Core.parseText tab (fromString s') of
               Left err -> do
                 printJuvixError (JuvixError err)
-                runRepl opts tab
+                runRepl tab
               Right (tab', Just node) -> do
                 renderStdOut (Core.ppOutDefault node)
                 embed (putStrLn "")
-                runRepl opts tab'
+                runRepl tab'
               Right (tab', Nothing) ->
-                runRepl opts tab'
+                runRepl tab'
+          ':' : 'e' : ' ' : s' ->
+            case Core.parseText tab (fromString s') of
+              Left err -> do
+                printJuvixError (JuvixError err)
+                runRepl tab
+              Right (tab', Just node) ->
+                replEval True tab' node
+              Right (tab', Nothing) ->
+                runRepl tab'
           _ ->
             case Core.parseText tab s of
               Left err -> do
                 printJuvixError (JuvixError err)
-                runRepl opts tab
-              Right (tab', Just node) -> do
-                r <- doEval defaultLoc tab' node
-                case r of
-                  Left err -> do
-                    printJuvixError (JuvixError err)
-                    runRepl opts tab'
-                  Right node' -> do
-                    renderStdOut (Core.ppOutDefault node')
-                    embed (putStrLn "")
-                    runRepl opts tab'
+                runRepl tab
+              Right (tab', Just node) ->
+                replEval False tab' node
               Right (tab', Nothing) ->
-                runRepl opts tab'
+                runRepl tab'
       where
-        defaultLoc = singletonInterval (mkLoc "stdin" 0 (M.initialPos "stdin"))
+        replEval :: Bool -> Core.InfoTable -> Core.Node -> Sem r ()
+        replEval noIO tab' node = do
+          r <- doEval noIO defaultLoc tab' node
+          case r of
+            Left err -> do
+              printJuvixError (JuvixError err)
+              runRepl tab'
+            Right node'
+              | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
+                  runRepl tab'
+            Right node' -> do
+              renderStdOut (Core.ppOutDefault node')
+              embed (putStrLn "")
+              runRepl tab'
+          where
+            defaultLoc = singletonInterval (mkLoc "stdin" 0 (M.initialPos "stdin"))
 
     showReplWelcome :: IO ()
     showReplWelcome = do
@@ -342,18 +361,21 @@ runCoreCommand globalOpts = \case
       putStrLn "JuvixCore REPL"
       putStrLn ""
       putStrLn "Type in a JuvixCore program to evaluate."
-      putStrLn "Type \":q\" to quit."
-      putStrLn "Type \":p expr\" to pretty print \"expr\"."
-      putStrLn "Type \":h\" to display this help message."
+      putStrLn ""
+      putStrLn "Available commands:"
+      putStrLn ":p expr               Pretty print \"expr\"."
+      putStrLn ":e expr               Evaluate \"expr\" without interpreting IO actions."
+      putStrLn ":q                    Quit."
+      putStrLn ":h                    Display this help message."
       putStrLn ""
 
-    evalFile :: Members '[Embed IO, App] r => FilePath -> Sem r ()
-    evalFile f = do
+    evalFile :: Members '[Embed IO, App] r => CoreEvalOptions -> FilePath -> Sem r ()
+    evalFile opts f = do
       s <- embed (readFile f)
       case Core.runParser "" f Core.emptyInfoTable s of
         Left err -> exitJuvixError (JuvixError err)
         Right (tab, Just node) -> do
-          r <- doEval defaultLoc tab node
+          r <- doEval (opts ^. coreEvalNoIO) defaultLoc tab node
           case r of
             Left err -> exitJuvixError (JuvixError err)
             Right node' -> do
@@ -365,12 +387,15 @@ runCoreCommand globalOpts = \case
 
     doEval ::
       Members '[Embed IO, App] r =>
+      Bool ->
       Interval ->
       Core.InfoTable ->
       Core.Node ->
       Sem r (Either Core.CoreError Core.Node)
-    doEval loc tab node =
-      embed (Core.catchEvalError loc (Core.eval (tab ^. Core.identContext) [] node))
+    doEval noIO loc tab node =
+      if noIO
+        then embed $ Core.catchEvalError loc (Core.eval (tab ^. Core.identContext) [] node)
+        else embed $ Core.catchEvalErrorIO loc (Core.evalIO (tab ^. Core.identContext) [] node)
 
 showHelpText :: ParserPrefs -> IO ()
 showHelpText p = do

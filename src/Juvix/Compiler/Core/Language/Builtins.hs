@@ -18,6 +18,10 @@ data BuiltinOp
 data BuiltinDataTag
   = TagNil
   | TagCons
+  | TagReturn
+  | TagBind
+  | TagWrite
+  | TagReadLn
   deriving stock (Eq, Generic)
 
 instance Hashable BuiltinDataTag
@@ -36,3 +40,7 @@ builtinConstrArgsNum :: BuiltinDataTag -> Int
 builtinConstrArgsNum = \case
   TagNil -> 0
   TagCons -> 2
+  TagReturn -> 1
+  TagBind -> 2
+  TagWrite -> 1
+  TagReadLn -> 0

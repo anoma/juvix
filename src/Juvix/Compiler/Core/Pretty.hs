@@ -20,3 +20,6 @@ ppOut o = AnsiText . PPOutput . doc o
 
 ppTrace :: PrettyCode c => c -> Text
 ppTrace = Ansi.renderStrict . reAnnotateS stylize . layoutPretty defaultLayoutOptions . doc defaultOptions
+
+ppPrint :: PrettyCode c => c -> Text
+ppPrint = show . ppOutDefault

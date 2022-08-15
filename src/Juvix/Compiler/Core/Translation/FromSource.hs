@@ -85,6 +85,10 @@ declareBuiltins = do
   let i = mkInterval loc loc
   lift $ declareBuiltinConstr TagNil "nil" i
   lift $ declareBuiltinConstr TagCons "cons" i
+  lift $ declareBuiltinConstr TagReturn "return" i
+  lift $ declareBuiltinConstr TagBind "bind" i
+  lift $ declareBuiltinConstr TagWrite "write" i
+  lift $ declareBuiltinConstr TagReadLn "readLn" i
 
 parseToplevel ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -193,7 +197,27 @@ expr ::
   -- reverse de Bruijn indices
   HashMap Text Index ->
   ParsecS r Node
-expr varsNum vars = cmpExpr varsNum vars
+expr varsNum vars = bindExpr varsNum vars
+
+bindExpr ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Index ->
+  HashMap Text Index ->
+  ParsecS r Node
+bindExpr varsNum vars = do
+  node <- cmpExpr varsNum vars
+  bindExpr' varsNum vars node <|> return node
+
+bindExpr' ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Index ->
+  HashMap Text Index ->
+  Node ->
+  ParsecS r Node
+bindExpr' varsNum vars node = do
+  kwBind
+  node' <- bindExpr varsNum vars
+  return $ ConstrApp Info.empty (BuiltinTag TagBind) [node, node']
 
 cmpExpr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>

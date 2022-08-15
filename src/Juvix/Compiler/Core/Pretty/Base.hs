@@ -49,6 +49,10 @@ instance PrettyCode BuiltinDataTag where
   ppCode = \case
     TagNil -> return $ annotate (AnnKind KNameConstructor) (pretty ("nil" :: String))
     TagCons -> return $ annotate (AnnKind KNameConstructor) (pretty ("cons" :: String))
+    TagReturn -> return $ annotate (AnnKind KNameConstructor) (pretty ("return" :: String))
+    TagBind -> return $ annotate (AnnKind KNameConstructor) (pretty ("bind" :: String))
+    TagWrite -> return $ annotate (AnnKind KNameConstructor) (pretty ("write" :: String))
+    TagReadLn -> return $ annotate (AnnKind KNameConstructor) (pretty ("readLn" :: String))
 
 instance PrettyCode Tag where
   ppCode = \case
@@ -72,7 +76,7 @@ instance PrettyCode Node where
     Constant _ (ConstBool False) ->
       return $ annotate (AnnKind KNameConstructor) (pretty ("false" :: String))
     Constant _ (ConstString txt) ->
-      return $ annotate AnnLiteralString (pretty ("\"" ++ fromText txt ++ "\""))
+      return $ annotate AnnLiteralString (pretty (show txt :: String))
     Axiom {..} ->
       case Info.lookup kNameInfo axiomInfo of
         Just ni -> ppCode (ni ^. NameInfo.infoName)
