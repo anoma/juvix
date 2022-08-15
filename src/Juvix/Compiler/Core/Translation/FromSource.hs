@@ -107,16 +107,17 @@ statementDef ::
   ParsecS r ()
 statementDef = do
   kwDef
+  off <- P.getOffset
   (txt, i) <- identifierL
   r <- lift (getIdent txt)
   case r of
     Just (Left sym) -> do
       guardSymbolNotDefined
         sym
-        (parseFailure ("duplicate definition of: " ++ fromText txt))
+        (parseFailure off ("duplicate definition of: " ++ fromText txt))
       parseDefinition sym
     Just (Right {}) ->
-      parseFailure ("duplicate identifier: " ++ fromText txt)
+      parseFailure off ("duplicate identifier: " ++ fromText txt)
     Nothing -> do
       sym <- lift freshSymbol
       name <- lift $ freshName KNameFunction txt i
@@ -159,12 +160,13 @@ statementConstr ::
   ParsecS r ()
 statementConstr = do
   kwConstr
+  off <- P.getOffset
   (txt, i) <- identifierL
   (argsNum, _) <- number 0 128
   dupl <- lift (hasIdent txt)
   when
     dupl
-    (parseFailure ("duplicate identifier: " ++ fromText txt))
+    (parseFailure off ("duplicate identifier: " ++ fromText txt))
   tag <- lift freshTag
   name <- lift $ freshName KNameConstructor txt i
   let info =
@@ -405,6 +407,7 @@ exprNamed ::
   HashMap Text Index ->
   ParsecS r Node
 exprNamed varsNum vars = do
+  off <- P.getOffset
   (txt, i) <- identifierL
   case HashMap.lookup txt vars of
     Just k -> do
@@ -420,7 +423,7 @@ exprNamed varsNum vars = do
           name <- lift $ freshName KNameConstructor txt i
           return $ ConstrApp (Info.singleton (NameInfo name)) tag []
         Nothing ->
-          parseFailure ("undeclared identifier: " ++ fromText txt)
+          parseFailure off ("undeclared identifier: " ++ fromText txt)
 
 exprConstInt ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -465,7 +468,6 @@ exprLambda ::
 exprLambda varsNum vars = do
   kwLambda
   name <- parseLocalName
-  optional kwMapsTo
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- expr (varsNum + 1) vars'
   return $ Lambda (Info.singleton (BinderInfo name Star)) body
@@ -491,19 +493,21 @@ exprCase ::
   HashMap Text Index ->
   ParsecS r Node
 exprCase varsNum vars = do
+  off <- P.getOffset
   kwCase
   value <- expr varsNum vars
   kwOf
-  braces (exprCase' value varsNum vars)
-    <|> exprCase' value varsNum vars
+  braces (exprCase' off value varsNum vars)
+    <|> exprCase' off value varsNum vars
 
 exprCase' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Int ->
   Node ->
   Index ->
   HashMap Text Index ->
   ParsecS r Node
-exprCase' value varsNum vars = do
+exprCase' off value varsNum vars = do
   bs <- P.sepEndBy (caseBranch varsNum vars) kwSemicolon
   rbrace
   let bs' = map fromLeft' $ filter isLeft bs
@@ -526,7 +530,7 @@ exprCase' value varsNum vars = do
     [] ->
       return $ Case info value bss Nothing
     _ ->
-      parseFailure "multiple default branches"
+      parseFailure off "multiple default branches"
 
 caseBranch ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -553,18 +557,19 @@ matchingBranch ::
   HashMap Text Index ->
   ParsecS r (CaseBranch, [Name])
 matchingBranch varsNum vars = do
+  off <- P.getOffset
   txt <- identifier
   r <- lift (getIdent txt)
   case r of
     Just (Left {}) ->
-      parseFailure ("not a constructor: " ++ fromText txt)
+      parseFailure off ("not a constructor: " ++ fromText txt)
     Just (Right tag) -> do
       ns <- P.many parseLocalName
       let bindersNum = length ns
       ci <- lift $ getConstructorInfo tag
       when
         (ci ^. constructorArgsNum /= bindersNum)
-        (parseFailure "wrong number of constructor arguments")
+        (parseFailure off "wrong number of constructor arguments")
       kwMapsTo
       let vars' =
             fst $
@@ -577,7 +582,7 @@ matchingBranch varsNum vars = do
       br <- expr (varsNum + bindersNum) vars'
       return (CaseBranch tag bindersNum br, ns)
     Nothing ->
-      parseFailure ("undeclared identifier: " ++ fromText txt)
+      parseFailure off ("undeclared identifier: " ++ fromText txt)
 
 exprIf ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>

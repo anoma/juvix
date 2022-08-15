@@ -25,8 +25,8 @@ newtype ParserParams = ParserParams
 
 makeLenses ''ParserParams
 
-parseFailure :: String -> ParsecS r a
-parseFailure str = P.fancyFailure $ Set.singleton (P.ErrorFail str)
+parseFailure :: Int -> String -> ParsecS r a
+parseFailure off str = P.parseError $ P.FancyError off (Set.singleton (P.ErrorFail str))
 
 space' :: forall r. Bool -> (forall a. ParsecS r a -> ParsecS r ()) -> ParsecS r ()
 space' judoc comment_ = L.space space1 lineComment block
@@ -53,10 +53,11 @@ integer' dec = do
 
 number' :: ParsecS r (Integer, Interval) -> Int -> Int -> ParsecS r (Int, Interval)
 number' int mn mx = do
+  off <- getOffset
   (n, i) <- int
   when
     (n < fromIntegral mn || n > fromIntegral mx)
-    (parseFailure ("number out of bounds: " ++ show n))
+    (parseFailure off ("number out of bounds: " ++ show n))
   return (fromInteger n, i)
 
 string' :: ParsecS r Text
