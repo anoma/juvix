@@ -36,6 +36,19 @@ compile div {
   c ↦ "div";
 };
 
+-- IO extensions
+
+axiom IOUnit : IO;
+compile IOUnit {
+  c ↦ "0";
+};
+
+sequenceIO : List IO → IO;
+sequenceIO ≔ foldr (>>) IOUnit;
+
+mapIO : {A : Type} → (A → IO) → List A → IO;
+mapIO f xs ≔ sequenceIO (map f xs);
+
 -- List extensions
 
 zip : {A : Type} → {B : Type} → List A → List B → List (A × B);
@@ -112,10 +125,10 @@ renderRowAux : ℕ → (ℕ × Square) → IO;
 renderRowAux col (row , s) ≔ renderSquare row col s;
 
 renderRow : ℕ × (List Square) → IO;
-renderRow (n , xs) ≔ foldr (>>) 0 (map (renderRowAux n) (enumerate xs));
+renderRow (n , xs) ≔ mapIO (renderRowAux n) (enumerate xs);
 
 renderBoard : Board → IO;
-renderBoard (board squares) ≔ foldr (>>) 0 (map renderRow (enumerate squares));
+renderBoard (board squares) ≔ mapIO renderRow (enumerate squares);
 
 renderFooterText : String → IO;
 renderFooterText msg ≔ renderText msg 0 3 left;
@@ -124,7 +137,7 @@ nextPlayerText : Symbol → String;
 nextPlayerText s ≔ "Next player: " ++str (showSymbol s);
 
 renderError : Error → IO;
-renderError noError ≔ 0;
+renderError noError ≔ IOUnit;
 renderError (continue msg) ≔ renderText msg 0 3 left;
 renderError (terminate msg) ≔ renderText msg 0 3 left;
 
