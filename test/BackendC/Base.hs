@@ -28,6 +28,12 @@ clangCompile mkClangArgs cResult execute step =
         execute wasmOutputFile
     )
 
+wasmClangAssertionCGenOnly :: FilePath -> ((String -> IO ()) -> Assertion)
+wasmClangAssertionCGenOnly mainFile step = do
+  step "C Generation"
+  let entryPoint = defaultEntryPoint mainFile
+  (void . runIO) (upToMiniC entryPoint)
+
 wasmClangAssertion :: WASMInfo -> FilePath -> FilePath -> ((String -> IO ()) -> Assertion)
 wasmClangAssertion WASMInfo {..} mainFile expectedFile step = do
   step "Check clang and wasmer are on path"
