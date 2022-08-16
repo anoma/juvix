@@ -68,7 +68,7 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       Let _ v b -> let !v' = eval' env v in eval' (v' : env) b
       Case _ v bs def ->
         case eval' env v of
-          Data _ tag args -> branch n env (args ++ env) tag def bs
+          Data _ tag args -> branch n env (revAppend args env) tag def bs
           v' -> evalError "matching on non-data" v'
       If _ v b1 b2 ->
         case eval' env v of
@@ -116,6 +116,10 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       case HashMap.lookup sym ctx of
         Just n' -> n'
         Nothing -> Suspended Info.empty n
+
+    revAppend :: [a] -> [a] -> [a]
+    revAppend [] ys = ys
+    revAppend (x : xs) ys = revAppend xs (x : ys)
 
 -- Evaluate `node` and interpret the builtin IO actions.
 evalIO :: IdentContext -> Env -> Node -> IO Node

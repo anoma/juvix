@@ -128,15 +128,15 @@ instance PrettyCode Node where
           Nothing -> mapM (\(CaseBranch tag _ _) -> ppCode tag) caseBranches
       let bs = map (\(CaseBranch _ _ br) -> br) caseBranches
       v <- ppCode caseValue
-      bs' <- sequence $ zipWith3Exact (\cn bn br -> ppCode br >>= \br' -> return $ foldl (<+>) cn bn <+> kwArrow <+> br') cns bns bs
+      bs' <- sequence $ zipWith3Exact (\cn bn br -> ppCode br >>= \br' -> return $ foldl (<+>) cn bn <+> kwMapsto <+> br') cns bns bs
       bs'' <-
         case caseDefault of
           Just def -> do
             d' <- ppCode def
-            return $ bs' ++ [kwDefault <+> kwArrow <+> d']
+            return $ bs' ++ [kwDefault <+> kwMapsto <+> d']
           Nothing -> return bs'
-      let bss = bracesIndent $ align $ concatWith (\a b -> a <> line <> b <> kwSemicolon) bs''
-      return $ kwCase <+> v <+> kwOf <> bss
+      let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs''
+      return $ kwCase <+> v <+> kwOf <+> bss
     If {..} -> do
       v <- ppCode ifValue
       b1 <- ppCode ifTrueBranch

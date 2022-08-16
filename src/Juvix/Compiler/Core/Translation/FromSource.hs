@@ -556,7 +556,6 @@ exprCase' ::
   ParsecS r Node
 exprCase' off value varsNum vars = do
   bs <- P.sepEndBy (caseBranch varsNum vars) kwSemicolon
-  rbrace
   let bs' = map fromLeft' $ filter isLeft bs
   let bss = map fst bs'
   let bsns = map snd bs'
