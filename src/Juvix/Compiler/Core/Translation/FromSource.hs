@@ -68,7 +68,7 @@ declareBuiltinConstr btag nameTxt i = do
     ( ConstructorInfo
         { _constructorName = name,
           _constructorTag = BuiltinTag btag,
-          _constructorType = Star,
+          _constructorType = TyVar 0,
           _constructorArgsNum = builtinConstrArgsNum btag
         }
     )
@@ -132,7 +132,7 @@ statementDef = do
             IdentInfo
               { _identName = name,
                 _identSymbol = sym,
-                _identType = Star,
+                _identType = TyVar 0,
                 _identArgsNum = 0,
                 _identArgsInfo = [],
                 _identIsExported = False
@@ -180,7 +180,7 @@ statementConstr = do
         ConstructorInfo
           { _constructorName = name,
             _constructorTag = tag,
-            _constructorType = Star,
+            _constructorType = TyVar 0,
             _constructorArgsNum = argsNum
           }
   lift $ registerConstructor info
@@ -238,7 +238,7 @@ seqExpr' varsNum vars node = do
     ConstrApp
       Info.empty
       (BuiltinTag TagBind)
-      [node, Lambda (Info.singleton (BinderInfo name Star)) node']
+      [node, Lambda (Info.singleton (BinderInfo name (TyVar 0))) node']
 
 cmpExpr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -517,7 +517,7 @@ exprLambda varsNum vars = do
   name <- parseLocalName
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- expr (varsNum + 1) vars'
-  return $ Lambda (Info.singleton (BinderInfo name Star)) body
+  return $ Lambda (Info.singleton (BinderInfo name (TyVar 0))) body
 
 exprLet ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -532,7 +532,7 @@ exprLet varsNum vars = do
   kwIn
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- expr (varsNum + 1) vars'
-  return $ Let (Info.singleton (BinderInfo name Star)) value body
+  return $ Let (Info.singleton (BinderInfo name (TyVar 0))) value body
 
 exprCase ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -561,7 +561,7 @@ exprCase' off value varsNum vars = do
   let bss = map fst bs'
   let bsns = map snd bs'
   let def' = map fromRight' $ filter isRight bs
-  let bi = CaseBinderInfo $ map (map (`BinderInfo` Star)) bsns
+  let bi = CaseBinderInfo $ map (map (`BinderInfo` TyVar 0)) bsns
   bri <-
     CaseBranchInfo
       <$> mapM

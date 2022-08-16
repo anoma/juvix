@@ -2,8 +2,11 @@ module Juvix.Compiler.Core.Language.Type where
 
 import Juvix.Compiler.Core.Language.Base
 
--- Star (*) allows to specify the type partially, e.g.: * -> * -> *.
-data Type = Atomic Atom | Fun Type Type | Universe | Star
+{-
+- TyVar indicates a polymorphic type variable
+- Atomic indicates an atom: e.g. an inductive type applied to type arguments
+-}
+data Type = TyVar Int | Universe Int | Atomic Atom | Fun Type Type
 
 data Atom = Atom
   { _atomHead :: Name,
