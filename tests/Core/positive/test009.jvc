@@ -1,0 +1,28 @@
+-- tail recursion
+
+def sum' := \x \acc if x = 0 then acc else sum' (x - 1) (x + acc);
+def sum := \x sum' x 0;
+
+{-
+
+def sum := \x0 loop (x := x0) (acc := 0) {
+  if x = 0 then acc else next (x - 1) (x + acc)
+};
+
+def sum := loop x (acc := 0) {
+  if x = 0 then acc else next (x - 1) (x + acc)
+};
+
+def sum :=
+  let rec next := \x \acc
+    if x = 0 then acc else next (x - 1) (x + acc)
+  in
+  \x next x 0
+
+-}
+
+def writeLn := \x write x >> write "\n";
+
+writeLn (sum 10000) >>
+writeLn (sum 100000) >>
+writeLn (sum 1000000)
