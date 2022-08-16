@@ -1,0 +1,20 @@
+-- case
+
+def hd := \x case x of { cons x' _ -> x' };
+def tl := \x case x of { cons _ x' -> x' };
+def null := \x case x of { nil -> true; _ -> false };
+
+def map := \f \x case x of { nil -> nil; cons h t -> cons (f h) (map f t) };
+def map' := \f \x if null x then nil else cons (f (hd x)) (map' f (tl x));
+
+def lst := cons 0 (cons 1 nil);
+
+def writeLn := \x write x >> write "\n";
+
+writeLn (null lst) >>
+writeLn (null nil) >>
+writeLn (hd lst) >>
+writeLn (tl lst) >>
+writeLn (hd (tl lst)) >>
+writeLn (map (+ 1) lst) >>
+writeLn (map' (+ 1) lst)

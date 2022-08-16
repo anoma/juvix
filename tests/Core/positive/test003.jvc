@@ -1,0 +1,9 @@
+-- Empty file with comments
+
+{-
+
+Multiline comment
+
+{- nested comments don't work -- }
+
+-}

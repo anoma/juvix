@@ -1,0 +1,5 @@
+-- if then else
+
+def loop := loop;
+
+if 3 > 0 then 1 else loop
