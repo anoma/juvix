@@ -284,6 +284,9 @@ mul = "*"
 div :: IsString s => s
 div = "/"
 
+mod :: IsString s => s
+mod = "%"
+
 if_ :: IsString s => s
 if_ = "if"
 

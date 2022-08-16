@@ -372,6 +372,7 @@ factorExpr' ::
 factorExpr' varsNum vars node =
   mulExpr' varsNum vars node
     <|> divExpr' varsNum vars node
+    <|> modExpr' varsNum vars node
     <|> return node
 
 mulExpr' ::
@@ -395,6 +396,17 @@ divExpr' varsNum vars node = do
   kwDiv
   node' <- appExpr varsNum vars
   factorExpr' varsNum vars (BuiltinApp Info.empty OpIntDiv [node, node'])
+
+modExpr' ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Index ->
+  HashMap Text Index ->
+  Node ->
+  ParsecS r Node
+modExpr' varsNum vars node = do
+  kwMod
+  node' <- appExpr varsNum vars
+  factorExpr' varsNum vars (BuiltinApp Info.empty OpIntMod [node, node'])
 
 appExpr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>

@@ -9,6 +9,7 @@ data BuiltinOp
   | OpIntSub
   | OpIntMul
   | OpIntDiv
+  | OpIntMod
   | OpIntEq
   | OpIntLt
   | OpIntLe
@@ -32,6 +33,7 @@ builtinOpArgsNum = \case
   OpIntSub -> 2
   OpIntMul -> 2
   OpIntDiv -> 2
+  OpIntMod -> 2
   OpIntEq -> 2
   OpIntLt -> 2
   OpIntLe -> 2

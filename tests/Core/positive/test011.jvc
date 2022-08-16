@@ -1,4 +1,4 @@
--- tail recursion: compute n-th Fibonacci number in O(n)
+-- tail recursion: compute the n-th Fibonacci number in O(n)
 
 def fib' := \n \x \y if n = 0 then x else fib' (n - 1) y (x + y);
 def fib := \n fib' n 0 1;

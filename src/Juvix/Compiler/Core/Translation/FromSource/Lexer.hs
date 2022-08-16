@@ -77,6 +77,7 @@ allKeywords =
     kwMinus,
     kwMul,
     kwDiv,
+    kwMod,
     kwEq,
     kwLt,
     kwLe,
@@ -172,6 +173,9 @@ kwMul = keyword Str.mul
 
 kwDiv :: ParsecS r ()
 kwDiv = keyword Str.div
+
+kwMod :: ParsecS r ()
+kwMod = keyword Str.mod
 
 kwEq :: ParsecS r ()
 kwEq = keyword Str.equal
