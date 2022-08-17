@@ -574,14 +574,6 @@ inferExpression' e = case e of
           ExpressionFunction (Function (FunctionParameter paraName ifun funL) funR) -> do
             r' <- checkExpression funL r
             unless (iapp == ifun) (error "implicitness mismatch")
-            -- case l' ^. typedExpression of
-            --   ExpressionLambda (Lambda lamVar _ lamBody) ->
-            --     return
-            --       TypedExpression
-            --         { _typedExpression = substitutionE (HashMap.singleton lamVar r') lamBody,
-            --           _typedType = substitutionApp (paraName, r') funR
-            --         }
-            --   _ ->
             return
               TypedExpression
                 { _typedExpression =
