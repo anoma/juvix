@@ -1,0 +1,39 @@
+module Logic.Board;
+
+open import Stdlib.Prelude;
+open import Logic.Square public;
+open import Logic.Symbol public;
+open import Logic.Extra;
+
+--- A 3x3 grid of ;Square;s
+inductive Board {
+  board : List (List Square) → Board;
+};
+
+--- Returns the list of numbers corresponding to the empty ;Square;s
+possibleMoves : List Square → List ℕ;
+possibleMoves nil ≔ nil;
+possibleMoves ((empty n) ∷ xs) ≔ n ∷ possibleMoves xs;
+possibleMoves (_ ∷ xs) ≔ possibleMoves xs;
+
+--- ;true; if all the ;Square;s in the list are equal
+full : List Square → Bool;
+full (a ∷ b ∷ c ∷ nil) ≔ (==Square a b) && (==Square b c);
+
+diagonals : List (List Square) → List (List Square);
+diagonals ((a1 ∷ _ ∷ b1 ∷ nil) ∷ (_ ∷ c ∷ _ ∷ nil) ∷ (b2 ∷ _ ∷ a2 ∷ nil) ∷ nil) ≔ (a1 ∷ c ∷ a2 ∷ nil) ∷ (b1 ∷ c ∷ b2 ∷ nil) ∷ nil;
+
+columns : List (List Square) → List (List Square);
+columns ≔ transpose;
+
+rows : List (List Square) → List (List Square);
+rows ≔ id;
+
+--- Textual representation of a ;List Square;
+showRow : List Square → String;
+showRow xs ≔ concat (surround "|" (map showSquare xs));
+
+showBoard : Board → String;
+showBoard (board squares) ≔ unlines (surround "+---+---+---+" (map showRow squares));
+
+end;

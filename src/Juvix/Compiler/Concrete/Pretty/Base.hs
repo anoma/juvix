@@ -402,7 +402,7 @@ instance SingI s => PrettyCode (JudocParagraphLine s) where
   ppCode (JudocParagraphLine atoms) = do
     atoms' <- mconcatMap ppCode atoms
     let prefix = pretty (Str.judocStart :: Text) :: Doc Ann
-    return (prefix <> atoms' <> line)
+    return (prefix <+> atoms' <> line)
 
 instance SingI s => PrettyCode (Judoc s) where
   ppCode :: forall r. Members '[Reader Options] r => Judoc s -> Sem r (Doc Ann)

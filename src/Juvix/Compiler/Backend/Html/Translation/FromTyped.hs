@@ -98,7 +98,7 @@ createIndexFile ps = do
         nodeRow = case lbl of
           Nothing ->
             return $
-              Html.span ! Attr.class_ attrBare $
+              Html.p ! Attr.class_ attrBare $
                 toHtml (prettyText s)
           Just lbl' -> do
             lnk <- nameIdAttrRef lbl' Nothing
@@ -106,9 +106,9 @@ createIndexFile ps = do
               Html.span ! Attr.class_ attrBare $
                 (a ! Attr.href lnk $ toHtml (prettyText lbl'))
         attrBase :: Html.AttributeValue
-        attrBase = "details-toggle-control details-toggle collapser"
+        attrBase = "details-toggle-control details-toggle"
         attrBare :: Html.AttributeValue
-        attrBare = attrBase <> "module"
+        attrBare = attrBase <> " directory"
         node :: Sem r Html
         node = do
           row' <- nodeRow
@@ -386,7 +386,7 @@ goOpen op
 goAxiom :: forall r. Members '[Reader HtmlOptions, Reader NormalizedTable] r => AxiomDef 'Scoped -> Sem r Html
 goAxiom axiom = do
   header' <- axiomHeader
-  defHeader tmp uid header' Nothing
+  defHeader tmp uid header' (axiom ^. axiomDoc)
   where
     uid :: NameId
     uid = axiom ^. axiomName . S.nameId
