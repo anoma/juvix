@@ -1,3 +1,4 @@
+--- This module defines the ;Symbol; type and some helper functions.
 module Logic.Symbol;
 
 open import Stdlib.Prelude;

@@ -12,7 +12,7 @@ open import Logic.Extra public;
 open import Logic.Board public;
 open import Logic.GameState public;
 
--- | Checks if we reached the end of the game.
+--- Checks if we reached the end of the game.
 checkState : GameState → GameState;
 checkState (state b p e) ≔
   if (won (state b p e))
@@ -21,7 +21,7 @@ checkState (state b p e) ≔
          (state b p (terminate "It's a draw!"))
          (state b p e));
 
--- | Given a player attempted move, updates the state accordingly.
+--- Given a player attempted move, updates the state accordingly.
 playMove : Maybe ℕ → GameState → GameState;
 playMove nothing (state b p _) ≔
     state b p (continue "\nInvalid number, try again\n");
@@ -32,7 +32,7 @@ playMove (just k) (state (board s) player e) ≔
                            (switch player)
                            noError));
 
---- | Returns ;just; if the given ;ℕ; is in range of 1..9
+--- Returns ;just; if the given ;ℕ; is in range of 1..9
 validMove : ℕ → Maybe ℕ;
 validMove n ≔ if ((n <= nine) && (n >= one)) (just n) nothing;
 
