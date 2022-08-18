@@ -200,15 +200,22 @@ expr ::
   -- reverse de Bruijn indices
   HashMap Text Index ->
   ParsecS r Node
-expr varsNum vars = bindExpr varsNum vars
+expr varsNum vars = ioExpr varsNum vars
 
-bindExpr ::
+ioExpr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Index ->
   ParsecS r Node
-bindExpr varsNum vars = do
-  node <- cmpExpr varsNum vars
+ioExpr varsNum vars = cmpExpr varsNum vars >>= ioExpr' varsNum vars
+
+ioExpr' ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Index ->
+  HashMap Text Index ->
+  Node ->
+  ParsecS r Node
+ioExpr' varsNum vars node = do
   bindExpr' varsNum vars node
     <|> seqExpr' varsNum vars node
     <|> return node
@@ -221,8 +228,8 @@ bindExpr' ::
   ParsecS r Node
 bindExpr' varsNum vars node = do
   kwBind
-  node' <- bindExpr varsNum vars
-  return $ ConstrApp Info.empty (BuiltinTag TagBind) [node, node']
+  node' <- cmpExpr varsNum vars
+  ioExpr' varsNum vars (ConstrApp Info.empty (BuiltinTag TagBind) [node, node'])
 
 seqExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -232,9 +239,9 @@ seqExpr' ::
   ParsecS r Node
 seqExpr' varsNum vars node = do
   ((), i) <- interval kwSeq
-  node' <- bindExpr (varsNum + 1) vars
+  node' <- cmpExpr (varsNum + 1) vars
   name <- lift $ freshName KNameLocal "_" i
-  return $
+  ioExpr' varsNum vars $
     ConstrApp
       Info.empty
       (BuiltinTag TagBind)
