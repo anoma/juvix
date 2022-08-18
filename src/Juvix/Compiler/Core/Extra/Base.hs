@@ -90,7 +90,6 @@ destruct = \case
   Var i idx -> NodeDetails i [] [] [] (\i' _ -> Var i' idx)
   Ident i sym -> NodeDetails i [] [] [] (\i' _ -> Ident i' sym)
   Constant i c -> NodeDetails i [] [] [] (\i' _ -> Constant i' c)
-  Axiom i -> NodeDetails i [] [] [] (\i' _ -> Axiom i')
   App i l r -> NodeDetails i [l, r] [0, 0] [Nothing, Nothing] (\i' args' -> App i' (hd args') (args' !! 1))
   BuiltinApp i op args -> NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`BuiltinApp` op)
   ConstrApp i tag args -> NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`ConstrApp` tag)
@@ -146,8 +145,6 @@ destruct = \case
       (1 : map (const 0) env)
       (fetchBinderInfo i : map (const Nothing) env)
       (\i' args' -> Closure i' (tl args') (hd args'))
-  Suspended i t ->
-    NodeDetails i [t] [0] [Nothing] (\i' args' -> Suspended i' (hd args'))
   where
     fetchBinderInfo :: Info -> Maybe [BinderInfo]
     fetchBinderInfo i = case Info.lookup kBinderInfo i of

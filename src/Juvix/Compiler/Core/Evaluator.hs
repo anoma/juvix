@@ -55,12 +55,9 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       Var _ idx -> env !! idx
       Ident _ sym -> eval' [] (lookupContext n sym)
       Constant {} -> n
-      Axiom {} -> n
       App i l r ->
         case eval' env l of
           Closure _ env' b -> let !v = eval' env r in eval' (v : env') b
-          a@(Axiom {}) -> Suspended Info.empty (App Info.empty a (eval' env r))
-          Suspended i' t -> Suspended i' (App Info.empty t (eval' env r))
           v -> evalError "invalid application" (App i v (substEnv env r))
       BuiltinApp _ op args -> applyBuiltin n env op args
       ConstrApp i tag args -> Data i tag (map (eval' env) args)
@@ -77,7 +74,6 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
           v' -> evalError "conditional branch on a non-boolean" (substEnv env (If i v' b1 b2))
       Data {} -> n
       Closure {} -> n
-      Suspended {} -> n
 
     branch :: Node -> Env -> Env -> Tag -> Maybe Node -> [CaseBranch] -> Node
     branch n !denv !env !tag !def = \case
@@ -119,7 +115,7 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
     lookupContext n sym =
       case HashMap.lookup sym ctx of
         Just n' -> n'
-        Nothing -> Suspended Info.empty n
+        Nothing -> evalError "symbol not defined" n
 
     revAppend :: [a] -> [a] -> [a]
     revAppend [] ys = ys

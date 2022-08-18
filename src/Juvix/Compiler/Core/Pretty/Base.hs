@@ -78,10 +78,6 @@ instance PrettyCode Node where
       return $ annotate (AnnKind KNameConstructor) (pretty ("false" :: String))
     Constant _ (ConstString txt) ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
-    Axiom {..} ->
-      case Info.lookup kNameInfo axiomInfo of
-        Just ni -> ppCode (ni ^. NameInfo.infoName)
-        Nothing -> return kwQuestion
     App {..} -> do
       l' <- ppLeftExpression appFixity appLeft
       r' <- ppRightExpression appFixity appRight
@@ -145,7 +141,6 @@ instance PrettyCode Node where
       return $ kwIf <+> v <+> kwThen <+> b1 <+> kwElse <+> b2
     Data {..} -> ppCode (ConstrApp dataInfo dataTag dataArgs)
     Closure {..} -> ppCode (substEnv closureEnv closureBody)
-    Suspended {..} -> ppCode suspendedNode
 
 instance PrettyCode a => PrettyCode (NonEmpty a) where
   ppCode x = do

@@ -29,8 +29,6 @@ data Node
     -- context).
     Ident {identInfo :: !Info, identSymbol :: !Symbol}
   | Constant {constantInfo :: !Info, constantValue :: !ConstantValue}
-  | -- An axiom. Computationally a unit.
-    Axiom {axiomInfo :: !Info}
   | App {appInfo :: !Info, appLeft :: !Node, appRight :: !Node}
   | -- A builtin application. A builtin has no corresponding Node. It is treated
     -- specially by the evaluator and the code generator. For example, basic
@@ -76,10 +74,6 @@ data Node
         closureEnv :: !Env,
         closureBody :: !Node
       }
-  | -- Evaluation only: a suspended term value which cannot be evaluated
-    -- further, e.g., a hole applied to some arguments. `suspendedNode` must
-    -- be closed (but need not be a value -- see below).
-    Suspended {suspendedInfo :: !Info, suspendedNode :: !Node}
 
 -- Other things we might need in the future:
 -- - laziness annotations (converting these to closure/thunk creation should be
@@ -127,7 +121,6 @@ instance HasAtomicity Node where
     Var {} -> Atom
     Ident {} -> Atom
     Constant {} -> Atom
-    Axiom {} -> Atom
     App {} -> Aggregate appFixity
     BuiltinApp {..} | null builtinArgs -> Atom
     BuiltinApp {} -> Aggregate lambdaFixity
@@ -139,7 +132,6 @@ instance HasAtomicity Node where
     If {} -> Aggregate lambdaFixity
     Data {} -> Aggregate lambdaFixity
     Closure {} -> Aggregate lambdaFixity
-    Suspended {} -> Aggregate lambdaFixity
 
 lambdaFixity :: Fixity
 lambdaFixity = Fixity (PrecNat 0) (Unary AssocPostfix)
@@ -149,7 +141,6 @@ instance Eq Node where
   Var _ idx1 == Var _ idx2 = idx1 == idx2
   Ident _ sym1 == Ident _ sym2 = sym1 == sym2
   Constant _ v1 == Constant _ v2 = v1 == v2
-  Axiom _ == Axiom _ = True
   App _ l1 r1 == App _ l2 r2 = l1 == l2 && r1 == r2
   BuiltinApp _ op1 args1 == BuiltinApp _ op2 args2 = op1 == op2 && args1 == args2
   ConstrApp _ tag1 args1 == ConstrApp _ tag2 args2 = tag1 == tag2 && args1 == args2
@@ -159,5 +150,4 @@ instance Eq Node where
   If _ v1 tb1 fb1 == If _ v2 tb2 fb2 = v1 == v2 && tb1 == tb2 && fb1 == fb2
   Data _ tag1 args1 == Data _ tag2 args2 = tag1 == tag2 && args1 == args2
   Closure _ env1 b1 == Closure _ env2 b2 = env1 == env2 && b1 == b2
-  Suspended _ b1 == Suspended _ b2 = b1 == b2
   _ == _ = False

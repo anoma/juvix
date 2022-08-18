@@ -96,13 +96,5 @@ convertData = umap go
       Data i tag args -> ConstrApp i tag args
       _ -> n
 
-convertSuspended :: Node -> Node
-convertSuspended = umap go
-  where
-    go :: Node -> Node
-    go n = case n of
-      Suspended _ t -> t
-      _ -> n
-
 convertRuntimeNodes :: Node -> Node
-convertRuntimeNodes = convertSuspended . convertData . convertClosures
+convertRuntimeNodes = convertData . convertClosures
