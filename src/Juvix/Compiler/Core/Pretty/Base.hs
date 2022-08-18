@@ -42,9 +42,9 @@ instance PrettyCode BuiltinOp where
     OpIntMul -> return kwMul
     OpIntDiv -> return kwDiv
     OpIntMod -> return kwMod
-    OpIntEq -> return kwEquals
     OpIntLt -> return kwLess
     OpIntLe -> return kwLessEquals
+    OpEq -> return kwEquals
 
 instance PrettyCode BuiltinDataTag where
   ppCode = \case

@@ -10,9 +10,9 @@ data BuiltinOp
   | OpIntMul
   | OpIntDiv
   | OpIntMod
-  | OpIntEq
   | OpIntLt
   | OpIntLe
+  | OpEq
   deriving stock (Eq)
 
 -- Builtin data tags
@@ -34,9 +34,9 @@ builtinOpArgsNum = \case
   OpIntMul -> 2
   OpIntDiv -> 2
   OpIntMod -> 2
-  OpIntEq -> 2
   OpIntLt -> 2
   OpIntLe -> 2
+  OpEq -> 2
 
 builtinConstrArgsNum :: BuiltinDataTag -> Int
 builtinConstrArgsNum = \case

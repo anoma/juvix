@@ -99,9 +99,9 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       case integerFromNode (eval' env r) of
         0 -> evalError "division by zero" (substEnv env n)
         k -> nodeFromInteger (mod (integerFromNode (eval' env l)) k)
-    applyBuiltin _ env OpIntEq [l, r] = nodeFromBool (integerFromNode (eval' env l) == integerFromNode (eval' env r))
     applyBuiltin _ env OpIntLt [l, r] = nodeFromBool (integerFromNode (eval' env l) < integerFromNode (eval' env r))
     applyBuiltin _ env OpIntLe [l, r] = nodeFromBool (integerFromNode (eval' env l) <= integerFromNode (eval' env r))
+    applyBuiltin _ env OpEq [l, r] = nodeFromBool (eval' env l == eval' env r)
     applyBuiltin n env _ _ = evalError "invalid builtin application" (substEnv env n)
 
     nodeFromInteger :: Integer -> Node

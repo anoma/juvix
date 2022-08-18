@@ -277,7 +277,7 @@ eqExpr' ::
 eqExpr' varsNum vars node = do
   kwEq
   node' <- arithExpr varsNum vars
-  return $ BuiltinApp Info.empty OpIntEq [node, node']
+  return $ BuiltinApp Info.empty OpEq [node, node']
 
 ltExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -429,7 +429,7 @@ builtinAppExpr ::
   ParsecS r Node
 builtinAppExpr varsNum vars = do
   op <-
-    (kwEq >> return OpIntEq)
+    (kwEq >> return OpEq)
       <|> (kwLt >> return OpIntLt)
       <|> (kwLe >> return OpIntLe)
       <|> (kwPlus >> return OpIntAdd)

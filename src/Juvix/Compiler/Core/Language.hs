@@ -95,6 +95,7 @@ data ConstantValue
   = ConstInteger !Integer
   | ConstBool !Bool
   | ConstString !Text
+  deriving stock (Eq)
 
 -- Other things we might need in the future:
 -- - ConstFloat
@@ -103,6 +104,7 @@ data ConstantValue
 -- - `argsNum` is the number of arguments of the constructor tagged with `tag`,
 --   equal to the number of implicit binders above `branch`
 data CaseBranch = CaseBranch {caseTag :: !Tag, caseBindersNum :: !Int, caseBranch :: !Node}
+  deriving stock (Eq)
 
 -- A node (term) is closed if it has no free variables, i.e., no de Bruijn
 -- indices pointing outside the term.
@@ -141,3 +143,21 @@ instance HasAtomicity Node where
 
 lambdaFixity :: Fixity
 lambdaFixity = Fixity (PrecNat 0) (Unary AssocPostfix)
+
+instance Eq Node where
+  (==) :: Node -> Node -> Bool
+  Var _ idx1 == Var _ idx2 = idx1 == idx2
+  Ident _ sym1 == Ident _ sym2 = sym1 == sym2
+  Constant _ v1 == Constant _ v2 = v1 == v2
+  Axiom _ == Axiom _ = True
+  App _ l1 r1 == App _ l2 r2 = l1 == l2 && r1 == r2
+  BuiltinApp _ op1 args1 == BuiltinApp _ op2 args2 = op1 == op2 && args1 == args2
+  ConstrApp _ tag1 args1 == ConstrApp _ tag2 args2 = tag1 == tag2 && args1 == args2
+  Lambda _ b1 == Lambda _ b2 = b1 == b2
+  Let _ v1 b1 == Let _ v2 b2 = v1 == v2 && b1 == b2
+  Case _ v1 bs1 def1 == Case _ v2 bs2 def2 = v1 == v2 && bs1 == bs2 && def1 == def2
+  If _ v1 tb1 fb1 == If _ v2 tb2 fb2 = v1 == v2 && tb1 == tb2 && fb1 == fb2
+  Data _ tag1 args1 == Data _ tag2 args2 = tag1 == tag2 && args1 == args2
+  Closure _ env1 b1 == Closure _ env2 b2 = env1 == env2 && b1 == b2
+  Suspended _ b1 == Suspended _ b2 = b1 == b2
+  _ == _ = False

@@ -1,0 +1,12 @@
+-- structural equality
+
+def writeLn := \x write x >> write "\n";
+
+writeLn (1 = 1) >>
+writeLn (0 = 1) >>
+writeLn (nil = nil) >>
+writeLn (cons 1 nil = nil) >>
+writeLn (cons 1 nil = cons 2 nil) >>
+writeLn (cons 1 nil = cons 1 nil) >>
+writeLn (cons 1 nil = cons 1 (cons 2 nil)) >>
+writeLn (cons 1 (cons 2 nil) = cons 1 (cons 2 nil))
