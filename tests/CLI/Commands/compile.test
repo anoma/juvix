@@ -6,3 +6,7 @@ $ juvix compile --help
 $ cd tests/positive/MiniC/HelloWorld && juvix compile Input.juvix -o hello.wasm
 >
 >= 0
+
+$ cd examples/milestone/HelloWorld && juvix compile -t native HelloWorld.juvix && ./HelloWorld
+hello world!
+>= 0

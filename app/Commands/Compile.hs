@@ -11,7 +11,7 @@ import System.Process qualified as P
 juvixBuildDir :: FilePath
 juvixBuildDir = ".juvix-build"
 
-data CompileTarget = TargetC | TargetWasm
+data CompileTarget = TargetC | TargetWasm | TargetNative
   deriving stock (Show)
 
 data CompileRuntime
@@ -38,7 +38,7 @@ parseCompile = do
           <> metavar "TARGET"
           <> value TargetWasm
           <> showDefaultWith targetShow
-          <> help "select a target: wasm, c"
+          <> help "select a target: wasm, c, native"
       )
 
   _compileRuntime <-
@@ -68,12 +68,14 @@ parseCompile = do
     parseTarget = \case
       "wasm" -> Right TargetWasm
       "c" -> Right TargetC
+      "native" -> Right TargetNative
       s -> Left $ "unrecognised target: " <> s
 
     targetShow :: CompileTarget -> String
     targetShow = \case
       TargetC -> "c"
       TargetWasm -> "wasm"
+      TargetNative -> "native"
 
     parseRuntime :: String -> Either String CompileRuntime
     parseRuntime = \case
@@ -103,6 +105,7 @@ runCompile projRoot compileInputFile o minic = do
   case o ^. compileTarget of
     TargetWasm -> runM (runError (clangCompile projRoot compileInputFile o))
     TargetC -> return (Right ())
+    TargetNative -> runM (runError (clangNativeCompile projRoot compileInputFile o))
 
 prepareRuntime :: FilePath -> CompileOptions -> IO ()
 prepareRuntime projRoot o = do
@@ -123,15 +126,35 @@ prepareRuntime projRoot o = do
     wallocDir :: [(FilePath, BS.ByteString)]
     wallocDir = $(FE.makeRelativeToProject "c-runtime/walloc" >>= FE.embedDir)
 
+    libcRuntime :: [(FilePath, BS.ByteString)]
+    libcRuntime = wasiLibCRuntimeDir <> builtinCRuntimeDir
+
     runtimeProjectDir :: [(FilePath, BS.ByteString)]
-    runtimeProjectDir = case o ^. compileRuntime of
-      RuntimeWasiStandalone -> wasiStandaloneRuntimeDir <> builtinCRuntimeDir <> wallocDir
-      RuntimeWasiLibC -> wasiLibCRuntimeDir <> builtinCRuntimeDir
-      RuntimeStandalone -> standaloneRuntimeDir <> builtinCRuntimeDir <> wallocDir
+    runtimeProjectDir = case o ^. compileTarget of
+      TargetNative -> libcRuntime
+      _ -> case o ^. compileRuntime of
+        RuntimeWasiStandalone -> wasiStandaloneRuntimeDir <> builtinCRuntimeDir <> wallocDir
+        RuntimeWasiLibC -> libcRuntime
+        RuntimeStandalone -> standaloneRuntimeDir <> builtinCRuntimeDir <> wallocDir
 
     writeRuntime :: (FilePath, BS.ByteString) -> IO ()
     writeRuntime (filePath, contents) =
       BS.writeFile (projRoot </> juvixBuildDir </> takeFileName filePath) contents
+
+clangNativeCompile ::
+  forall r.
+  Members '[Embed IO, Error Text] r =>
+  FilePath ->
+  FilePath ->
+  CompileOptions ->
+  Sem r ()
+clangNativeCompile projRoot compileInputFile o = runClang (nativeArgs outputFile inputFile)
+  where
+    outputFile :: FilePath
+    outputFile = fromMaybe (takeBaseName compileInputFile) (o ^. compileOutputFile)
+
+    inputFile :: FilePath
+    inputFile = inputCFile projRoot compileInputFile
 
 clangCompile ::
   forall r.
@@ -164,8 +187,7 @@ clangCompile projRoot compileInputFile o = clangArgs >>= runClang
 
 commonArgs :: FilePath -> [String]
 commonArgs wasmOutputFile =
-  [ "-nodefaultlibs",
-    "-std=c99",
+  [ "-std=c99",
     "-Oz",
     "-I",
     juvixBuildDir,
@@ -195,10 +217,15 @@ wasiLibcArgs wasmOutputFile inputFile sysrootPath =
   wasiCommonArgs sysrootPath wasmOutputFile
     <> ["-lc", inputFile]
 
+nativeArgs :: FilePath -> FilePath -> [String]
+nativeArgs outputFile inputFile =
+  commonArgs outputFile <> [inputFile]
+
 wasiCommonArgs :: FilePath -> FilePath -> [String]
 wasiCommonArgs sysrootPath wasmOutputFile =
   commonArgs wasmOutputFile
-    <> [ "--target=wasm32-wasi",
+    <> [ "-nodefaultlibs",
+         "--target=wasm32-wasi",
          "--sysroot",
          sysrootPath
        ]
