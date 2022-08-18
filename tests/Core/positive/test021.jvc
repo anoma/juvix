@@ -1,0 +1,26 @@
+-- higher-order recursive functions test
+
+def not := \x if x then false else true;
+
+def writeLn := \x write x >> write "\n";
+
+def f0 := \f \g \x {
+  writeLn 6 >>
+  writeLn x >>
+  writeLn 7 >>
+  if (not (x = 0)) then {
+    writeLn 9 >>
+    g x >>= \y
+    f f g y
+  } else
+    writeLn "end"
+};
+
+def g := \x {
+   writeLn (10 * x) >>
+   return (x - 1)
+};
+
+def f := f0 f0 g;
+
+f 4

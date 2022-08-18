@@ -1,0 +1,29 @@
+-- trees
+
+constr node1 1;
+constr node2 2;
+constr node3 3;
+constr leaf 0;
+
+def gen := \n
+  if n = 0 then
+    leaf
+  else if n % 3 = 0 then
+    node1 (gen (n - 1))
+  else if n % 3 = 1 then
+    node2 (gen (n - 1)) (gen (n - 1))
+  else
+    node3 (gen (n - 1)) (gen (n - 1)) (gen (n - 1));
+
+def preorder := \t case t of {
+  node1 c -> write 1 >> preorder c;
+  node2 l r -> write 2 >> preorder l >> preorder r;
+  node3 l m r -> write 3 >> preorder l >> preorder m >> preorder r;
+  leaf -> write 0;
+};
+
+preorder (gen 3) >> write "\n" >>
+preorder (gen 4) >> write "\n" >>
+preorder (gen 5) >> write "\n" >>
+preorder (gen 6) >> write "\n" >>
+preorder (gen 7) >> write "\n"

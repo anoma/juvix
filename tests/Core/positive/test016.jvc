@@ -1,0 +1,6 @@
+-- recursion through higher-order functions
+
+def g := \f \x if x = 0 then 0 else f (x - 1);
+def f := \x x + g f x;
+
+f 10 -- 55
