@@ -157,13 +157,9 @@ checkFunctionDefType ::
   Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins] r =>
   Expression ->
   Sem r Expression
-checkFunctionDefType ty = do
-  traverseOf_ (leafExpressions . _ExpressionHole) go ty
-  checkIsType loc ty
+checkFunctionDefType ty = checkIsType loc ty
   where
     loc = getLoc ty
-    go :: Hole -> Sem r ()
-    go h = freshMetavar h
 
 checkExample ::
   Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Output Example, State TypesTable] r =>
@@ -182,15 +178,15 @@ checkExpression ::
 checkExpression expectedTy e = do
   e' <- inferExpression' e
   let inferredType = e' ^. typedType
-  whenJustM (matchTypes expectedTy inferredType) (throw . err)
+  whenJustM (matchTypes expectedTy inferredType) (throw . const (err inferredType))
   return (e' ^. typedExpression)
   where
-    err matchErr =
+    err inferred =
       ErrWrongType
         ( WrongType
             { _wrongTypeThing = Left e,
-              _wrongTypeActual = matchErr ^. matchErrorRight,
-              _wrongTypeExpected = matchErr ^. matchErrorLeft
+              _wrongTypeActual = inferred,
+              _wrongTypeExpected = expectedTy
             }
         )
 
@@ -290,7 +286,6 @@ checkFunctionClause clauseType FunctionClause {..} = do
           case s of
             Just h' -> go pats h'
             Nothing -> do
-              freshMetavar h
               l <- ExpressionHole <$> freshHole (getLoc h)
               r <- ExpressionHole <$> freshHole (getLoc h)
               let fun = ExpressionFunction (Function (unnamedParameter l) r)
@@ -301,9 +296,6 @@ checkFunctionClause clauseType FunctionClause {..} = do
           (par : pars, ret) -> do
             checkPattern _clauseName par p
             go ps (foldFunType pars ret)
-
-typeOfArg :: FunctionParameter -> Expression
-typeOfArg = (^. paramType)
 
 matchIsImplicit :: Member (Error TypeCheckerError) r => IsImplicit -> PatternArg -> Sem r ()
 matchIsImplicit expected actual =
@@ -333,7 +325,7 @@ checkPattern funName = go
     go argTy patArg = do
       matchIsImplicit (argTy ^. paramImplicit) patArg
       tyVarMap <- fmap (ExpressionIden . IdenVar) . (^. localTyMap) <$> get
-      let ty = substitutionE tyVarMap (typeOfArg argTy)
+      let ty = substitutionE tyVarMap (argTy ^. paramType)
           pat = patArg ^. patternArgPattern
       case pat of
         PatternWildcard {} -> return ()
@@ -341,8 +333,7 @@ checkPattern funName = go
           modify (addType v ty)
           registerIden v ty
           case argTy ^. paramName of
-            Just v' -> do
-              modify (over localTyMap (HashMap.insert v' v))
+            Just v' -> modify (over localTyMap (HashMap.insert v' v))
             _ -> return ()
         PatternConstructorApp a -> do
           s <- checkSaturatedInductive ty
@@ -406,6 +397,7 @@ checkPattern funName = go
                     }
                 )
             )
+
     checkSaturatedInductive :: Expression -> Sem r (Either Hole (InductiveName, [(InductiveParameter, Expression)]))
     checkSaturatedInductive ty = do
       i <- viewInductiveApp ty
@@ -566,6 +558,7 @@ inferExpression' e = case e of
       IdenInductive v -> do
         kind <- inductiveType v
         return (TypedExpression kind (ExpressionIden i))
+
     inferApplication :: Application -> Sem r TypedExpression
     inferApplication (Application l r iapp) = inferExpression' l >>= helper
       where
@@ -619,6 +612,7 @@ inferExpression' e = case e of
                         _expectedFunctionTypeType = l' ^. typedType
                       }
                   )
+
 
 viewInductiveApp ::
   Members '[Error TypeCheckerError, Inference] r =>
