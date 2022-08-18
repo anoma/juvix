@@ -66,15 +66,15 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       ConstrApp i tag args -> Data i tag (map (eval' env) args)
       Lambda i b -> Closure i env b
       Let _ v b -> let !v' = eval' env v in eval' (v' : env) b
-      Case _ v bs def ->
+      Case i v bs def ->
         case eval' env v of
           Data _ tag args -> branch n env (revAppend args env) tag def bs
-          v' -> evalError "matching on non-data" v'
-      If _ v b1 b2 ->
+          v' -> evalError "matching on non-data" (substEnv env (Case i v' bs def))
+      If i v b1 b2 ->
         case eval' env v of
           Constant _ (ConstBool True) -> eval' env b1
           Constant _ (ConstBool False) -> eval' env b2
-          v' -> evalError "conditional branch on a non-boolean" v'
+          v' -> evalError "conditional branch on a non-boolean" (substEnv env (If i v' b1 b2))
       Data {} -> n
       Closure {} -> n
       Suspended {} -> n

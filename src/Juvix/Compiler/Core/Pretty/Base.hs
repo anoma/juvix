@@ -41,6 +41,7 @@ instance PrettyCode BuiltinOp where
     OpIntSub -> return kwMinus
     OpIntMul -> return kwMul
     OpIntDiv -> return kwDiv
+    OpIntMod -> return kwMod
     OpIntEq -> return kwEquals
     OpIntLt -> return kwLess
     OpIntLe -> return kwLessEquals
@@ -142,15 +143,9 @@ instance PrettyCode Node where
       b1 <- ppCode ifTrueBranch
       b2 <- ppCode ifFalseBranch
       return $ kwIf <+> v <+> kwThen <+> b1 <+> kwElse <+> b2
-    Data {..} -> do
-      args' <- mapM (ppRightExpression appFixity) dataArgs
-      n' <-
-        case Info.lookup kNameInfo dataInfo of
-          Just ni -> ppCode (ni ^. NameInfo.infoName)
-          Nothing -> ppCode dataTag
-      return $ kwConstrData <+> foldl (<+>) n' args'
-    Closure {} -> return kwClosure
-    Suspended {..} -> (<+>) kwSuspended <$> ppCode suspendedNode
+    Data {..} -> ppCode (ConstrApp dataInfo dataTag dataArgs)
+    Closure {..} -> ppCode (substEnv closureEnv closureBody)
+    Suspended {..} -> ppCode suspendedNode
 
 instance PrettyCode a => PrettyCode (NonEmpty a) where
   ppCode x = do
@@ -227,6 +222,9 @@ kwMul = keyword Str.mul
 kwDiv :: Doc Ann
 kwDiv = keyword Str.div
 
+kwMod :: Doc Ann
+kwMod = keyword Str.mod
+
 kwCase :: Doc Ann
 kwCase = keyword Str.case_
 
@@ -244,12 +242,3 @@ kwThen = keyword Str.then_
 
 kwElse :: Doc Ann
 kwElse = keyword Str.else_
-
-kwConstrData :: Doc Ann
-kwConstrData = keyword Str.constrData
-
-kwClosure :: Doc Ann
-kwClosure = keyword Str.closure
-
-kwSuspended :: Doc Ann
-kwSuspended = keyword Str.suspended

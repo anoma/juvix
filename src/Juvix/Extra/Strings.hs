@@ -323,15 +323,6 @@ case_ = "case"
 of_ :: IsString s => s
 of_ = "of"
 
-closure :: IsString s => s
-closure = "<closure>"
-
-suspended :: IsString s => s
-suspended = "<suspended>"
-
-constrData :: IsString s => s
-constrData = "<data>"
-
 juvixFunctionT :: IsString s => s
 juvixFunctionT = "juvix_function_t"
 
