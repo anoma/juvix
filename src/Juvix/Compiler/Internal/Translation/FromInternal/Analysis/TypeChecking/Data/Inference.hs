@@ -306,7 +306,7 @@ re = reinterpret $ \case
                               (Just v1, Just v2) -> local (HashMap.insert v1 v2)
                               _ -> id
                         bicheck (go l1 l2) (local' (go r1 r2))
-                    | otherwise = ok
+                    | otherwise = err
 
 runInferenceDef ::
   (Members '[Error TypeCheckerError, Reader FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
