@@ -14,6 +14,7 @@ data EntryPoint = EntryPoint
     _entryPointNoPositivity :: Bool,
     _entryPointNoStdlib :: Bool,
     _entryPointPackage :: Package,
+    _entryPointStdin :: Maybe Text,
     _entryPointModulePaths :: NonEmpty FilePath
   }
   deriving stock (Eq, Show)
@@ -25,6 +26,7 @@ defaultEntryPoint mainFile =
       _entryPointNoTermination = False,
       _entryPointNoPositivity = False,
       _entryPointNoStdlib = False,
+      _entryPointStdin = Nothing,
       _entryPointPackage = emptyPackage,
       _entryPointModulePaths = pure mainFile
     }

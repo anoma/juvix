@@ -11,6 +11,7 @@ data GlobalOptions = GlobalOptions
   { _globalNoColors :: Bool,
     _globalShowNameIds :: Bool,
     _globalOnlyErrors :: Bool,
+    _globalStdin :: Bool,
     _globalNoTermination :: Bool,
     _globalNoPositivity :: Bool,
     _globalNoStdlib :: Bool,
@@ -27,6 +28,7 @@ defaultGlobalOptions =
       _globalShowNameIds = False,
       _globalOnlyErrors = False,
       _globalNoTermination = False,
+      _globalStdin = False,
       _globalNoPositivity = False,
       _globalNoStdlib = False,
       _globalInputFiles = []
@@ -38,6 +40,7 @@ instance Semigroup GlobalOptions where
       { _globalNoColors = o1 ^. globalNoColors || o2 ^. globalNoColors,
         _globalShowNameIds = o1 ^. globalShowNameIds || o2 ^. globalShowNameIds,
         _globalOnlyErrors = o1 ^. globalOnlyErrors || o2 ^. globalOnlyErrors,
+        _globalStdin = o1 ^. globalStdin || o2 ^. globalStdin,
         _globalNoTermination = o1 ^. globalNoTermination || o2 ^. globalNoTermination,
         _globalNoPositivity = o1 ^. globalNoPositivity || o2 ^. globalNoPositivity,
         _globalNoStdlib = o1 ^. globalNoStdlib || o2 ^. globalNoStdlib,
@@ -62,6 +65,12 @@ parseGlobalFlags b = do
     switch
       ( long "show-name-ids"
           <> help "Show the unique number of each identifier when pretty printing"
+          <> hidden b
+      )
+  _globalStdin <-
+    switch
+      ( long "stdin"
+          <> help "Read from Stdin"
           <> hidden b
       )
   _globalOnlyErrors <-

@@ -39,13 +39,10 @@ testDescrFlag N.NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint =
-                  EntryPoint
+                  (defaultEntryPoint _file)
                     { _entryPointRoot = ".",
                       _entryPointNoTermination = True,
-                      _entryPointNoPositivity = False,
-                      _entryPointNoStdlib = True,
-                      _entryPointPackage = emptyPackage,
-                      _entryPointModulePaths = pure _file
+                      _entryPointNoStdlib = True
                     }
 
             (void . runIO) (upToInternal entryPoint)
