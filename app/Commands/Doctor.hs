@@ -31,7 +31,6 @@ data DocumentedWarning
   | NoWasmLd
   | NoWasm32Target
   | NoWasm32WasiTarget
-  | NoSysroot
   | NoWasmer
 
 data DocumentedMessage = DocumentedMessage
@@ -65,7 +64,6 @@ documentedMessage w = uncurry DocumentedMessage (first (baseUrl <>) warningInfo)
       NoWasmLd -> ("could-not-find-the-wasm-ld-command", "Could not find the wasm-ld command")
       NoWasm32Target -> ("clang-does-not-support-the-wasm32-target", "Clang does not support the wasm32 target")
       NoWasm32WasiTarget -> ("clang-does-not-support-the-wasm32-wasi-target", "Clang does not support the wasm32-wasi target")
-      NoSysroot -> ("environment-variable-wasi_sysroot_path-is-not-set", "Environment variable WASI_SYSROOT_PATH is missing")
       NoWasmer -> ("could-not-find-the-wasmer-command", "Could not find the wasmer command")
 
     baseUrl :: Text
@@ -144,8 +142,6 @@ checkClang = do
   documentedCheck (checkClangTargetSupported "wasm32") NoWasm32Target
   heading "Checking that clang supports wasm32-wasi..."
   documentedCheck (checkClangTargetSupported "wasm32-wasi") NoWasm32WasiTarget
-  heading "Checking that WASI_SYSROOT_PATH is set..."
-  documentedCheck (checkEnvVarSet "WASI_SYSROOT_PATH") NoSysroot
 
 checkWasmer :: Members DoctorEff r => Sem r ()
 checkWasmer = do

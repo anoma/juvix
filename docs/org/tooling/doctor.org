@@ -84,10 +84,6 @@ To install the =wasm32-wasi= target for Clang you need to do two things:
 1. Obtain =wasi-sysroot-16.0.tar.gz= from the [[https://github.com/WebAssembly/wasi-sdk/releases][wasi-sdk releases]] page.
 2. Untar the file and set the environment variable =WASI_SYSROOT_PATH= to that location.
 
-**  Environment variable =WASI_SYSROOT_PATH= is not set
-
-Set the =WASI_SYSROOT_PATH= to the directory where you installed the =wasi-sdk= sysroot files. See [[./doctor.md#download-the-wasi-sysroot-and-set-wasi_sysroot_path][installing the WASI sysroot]].
-
 **  Could not find the wasmer command
 
 The Juvix test suite uses [[https://wasmer.io][Wasmer]] as a Wasm runtime to execute compiled Wasm binaries. See [[https://docs.wasmer.io/ecosystem/wasmer/getting-started][the Wasmer documentation]] to see how to install it.

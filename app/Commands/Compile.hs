@@ -5,7 +5,6 @@ import Data.FileEmbed qualified as FE
 import Data.Text.IO qualified as TIO
 import Juvix.Prelude hiding (Doc)
 import Options.Applicative
-import System.Environment
 import System.Process qualified as P
 
 juvixBuildDir :: FilePath
@@ -163,27 +162,19 @@ clangCompile ::
   FilePath ->
   CompileOptions ->
   Sem r ()
-clangCompile projRoot compileInputFile o = clangArgs >>= runClang
+clangCompile projRoot compileInputFile o = runClang clangArgs
   where
-    clangArgs :: Sem r [String]
+    clangArgs :: [String]
     clangArgs = case o ^. compileRuntime of
-      RuntimeStandalone ->
-        return (standaloneLibArgs projRoot outputFile inputFile)
-      RuntimeWasiStandalone -> wasiStandaloneArgs projRoot outputFile inputFile <$> sysrootEnvVar
-      RuntimeWasiLibC -> wasiLibcArgs outputFile inputFile <$> sysrootEnvVar
+      RuntimeStandalone -> standaloneLibArgs projRoot outputFile inputFile
+      RuntimeWasiStandalone -> wasiStandaloneArgs projRoot outputFile inputFile
+      RuntimeWasiLibC -> wasiLibcArgs outputFile inputFile
 
     outputFile :: FilePath
     outputFile = fromMaybe (takeBaseName compileInputFile <> ".wasm") (o ^. compileOutputFile)
 
     inputFile :: FilePath
     inputFile = inputCFile projRoot compileInputFile
-
-    sysrootEnvVar :: Sem r String
-    sysrootEnvVar =
-      fromMaybeM (throw msg) (embed (lookupEnv "WASI_SYSROOT_PATH"))
-      where
-        msg :: Text
-        msg = "Missing environment variable WASI_SYSROOT_PATH"
 
 commonArgs :: FilePath -> [String]
 commonArgs wasmOutputFile =
@@ -206,29 +197,27 @@ standaloneLibArgs projRoot wasmOutputFile inputFile =
          inputFile
        ]
 
-wasiStandaloneArgs :: FilePath -> FilePath -> FilePath -> FilePath -> [String]
-wasiStandaloneArgs projRoot wasmOutputFile inputFile sysrootPath =
-  wasiCommonArgs sysrootPath wasmOutputFile
+wasiStandaloneArgs :: FilePath -> FilePath -> FilePath -> [String]
+wasiStandaloneArgs projRoot wasmOutputFile inputFile =
+  wasiCommonArgs wasmOutputFile
     <> [ projRoot </> juvixBuildDir </> "walloc.c",
          inputFile
        ]
 
-wasiLibcArgs :: FilePath -> FilePath -> FilePath -> [String]
-wasiLibcArgs wasmOutputFile inputFile sysrootPath =
-  wasiCommonArgs sysrootPath wasmOutputFile
+wasiLibcArgs :: FilePath -> FilePath -> [String]
+wasiLibcArgs wasmOutputFile inputFile =
+  wasiCommonArgs wasmOutputFile
     <> ["-lc", inputFile]
 
 nativeArgs :: FilePath -> FilePath -> [String]
 nativeArgs outputFile inputFile =
   commonArgs outputFile <> [inputFile]
 
-wasiCommonArgs :: FilePath -> FilePath -> [String]
-wasiCommonArgs sysrootPath wasmOutputFile =
+wasiCommonArgs :: FilePath -> [String]
+wasiCommonArgs wasmOutputFile =
   commonArgs wasmOutputFile
     <> [ "-nodefaultlibs",
-         "--target=wasm32-wasi",
-         "--sysroot",
-         sysrootPath
+         "--target=wasm32-wasi"
        ]
 
 runClang ::

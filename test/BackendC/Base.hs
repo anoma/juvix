@@ -57,12 +57,6 @@ wasiClangAssertion stdlibMode mainFile expectedFile stdinText step = do
   assertCmdExists "clang"
   assertCmdExists "wasmer"
 
-  step "Lookup WASI_SYSROOT_PATH"
-  sysrootPath <-
-    assertEnvVar
-      "Env var WASI_SYSROOT_PATH missing. Set to the location of the wasi-clib sysroot"
-      "WASI_SYSROOT_PATH"
-
   step "C Generation"
   let entryPoint = (defaultEntryPoint mainFile) {_entryPointNoStdlib = stdlibMode == StdlibExclude}
   p :: MiniC.MiniCResult <- runIO (upToMiniC entryPoint)
@@ -73,12 +67,12 @@ wasiClangAssertion stdlibMode mainFile expectedFile stdinText step = do
       execute outputFile = pack <$> P.readProcess "wasmer" [outputFile] (unpack stdinText)
 
   step "Compile C with standalone runtime"
-  actualStandalone <- clangCompile (wasiStandaloneArgs sysrootPath) p execute step
+  actualStandalone <- clangCompile wasiStandaloneArgs p execute step
   step "Compare expected and actual program output"
   assertEqDiff ("check: WASM output = " <> expectedFile) actualStandalone expected
 
   step "Compile C with libc runtime"
-  actualLibc <- clangCompile (libcArgs sysrootPath) p execute step
+  actualLibc <- clangCompile libcArgs p execute step
   step "Compare expected and actual program output"
   assertEqDiff ("check: WASM output = " <> expectedFile) actualLibc expected
 
@@ -109,8 +103,8 @@ standaloneArgs wasmOutputFile cOutputFile =
     wallocPath :: FilePath
     wallocPath = $(makeRelativeToProject "c-runtime/walloc/walloc.c" >>= strToExp)
 
-wasiStandaloneArgs :: FilePath -> FilePath -> FilePath -> [String]
-wasiStandaloneArgs sysrootPath wasmOutputFile cOutputFile =
+wasiStandaloneArgs :: FilePath -> FilePath -> [String]
+wasiStandaloneArgs wasmOutputFile cOutputFile =
   [ "-nodefaultlibs",
     "-std=c99",
     "-Oz",
@@ -120,8 +114,6 @@ wasiStandaloneArgs sysrootPath wasmOutputFile cOutputFile =
     builtinRuntime,
     "-Werror",
     "--target=wasm32-wasi",
-    "--sysroot",
-    sysrootPath,
     "-o",
     wasmOutputFile,
     wallocPath,
@@ -133,8 +125,8 @@ wasiStandaloneArgs sysrootPath wasmOutputFile cOutputFile =
     wallocPath :: FilePath
     wallocPath = $(makeRelativeToProject "c-runtime/walloc/walloc.c" >>= strToExp)
 
-libcArgs :: FilePath -> FilePath -> FilePath -> [String]
-libcArgs sysrootPath wasmOutputFile cOutputFile =
+libcArgs :: FilePath -> FilePath -> [String]
+libcArgs wasmOutputFile cOutputFile =
   [ "-nodefaultlibs",
     "-std=c99",
     "-Oz",
@@ -145,8 +137,6 @@ libcArgs sysrootPath wasmOutputFile cOutputFile =
     "-Werror",
     "-lc",
     "--target=wasm32-wasi",
-    "--sysroot",
-    sysrootPath,
     "-o",
     wasmOutputFile,
     cOutputFile

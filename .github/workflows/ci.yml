@@ -154,31 +154,24 @@ jobs:
         run : |
           cd main
           stack setup
-      - name: Cache LLVM and Clang
-        id: cache-llvm
-        uses: actions/cache@v3
-        with:
-          path: |
-            C:/Program Files/LLVM
-            ./llvm
-          key: ${{ runner.os }}-llvm-13
-      - name: Install LLVM and Clang
-        uses: KyleMayes/install-llvm-action@v1
-        with:
-          version: "13.0"
-          cached: ${{ steps.cache-llvm.outputs.cache-hit }}
-      - name: Download and extract wasi-sysroot
+      - name: Download WASI-SDK Linux
+        if: matrix.os == 'ubuntu-latest'
         run: |
-          curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/wasi-sysroot-15.0.tar.gz -OL
-          tar xfv wasi-sysroot-15.0.tar.gz
-      - name: Download and extract libclang_rt.builtins-wasm32-wasi
+          curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-16/wasi-sdk-16.0-linux.tar.gz -OL
+          mkdir $GITHUB_WORKSPACE/llvm
+          tar xvf wasi-sdk-16.0-linux.tar.gz --strip-components=1 -C llvm
+          echo "$GITHUB_WORKSPACE/llvm/bin" >> $GITHUB_PATH
+          echo "$GITHUB_PATH"
+          which clang
+      - name: Download WASI-SDK mac
+        if: matrix.os == 'macOS-latest'
         run: |
-          curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/libclang_rt.builtins-wasm32-wasi-15.0.tar.gz -OL
-          tar xfv libclang_rt.builtins-wasm32-wasi-15.0.tar.gz
-        working-directory: ${{ env.LLVM_PATH }}
-      - name: Set WASI_SYSROOT_PATH
-        run: |
-          echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
+          curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-16/wasi-sdk-16.0-macos.tar.gz -OL
+          mkdir $GITHUB_WORKSPACE/llvm
+          tar xvf wasi-sdk-16.0-macos.tar.gz --strip-components=1 -C llvm
+          echo "$GITHUB_WORKSPACE/llvm/bin" >> $GITHUB_PATH
+          echo "$GITHUB_PATH"
+          which clang
       - name: Setup Wasmer
         uses: wasmerio/setup-wasmer@v1
       - name: Test suite
@@ -238,20 +231,24 @@ jobs:
           cd main
           stack setup
 
-      - name: Cache LLVM and Clang
-        id: cache-llvm
-        uses: actions/cache@v3
-        with:
-          path: |
-            C:/Program Files/LLVM
-            ./llvm
-          key: ${{ runner.os }}-llvm-13
-
-      - name: Install LLVM and Clang
-        uses: KyleMayes/install-llvm-action@v1
-        with:
-          version: "13.0"
-          cached: ${{ steps.cache-llvm.outputs.cache-hit }}
+      - name: Download WASI-SDK Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-16/wasi-sdk-16.0-linux.tar.gz -OL
+          mkdir $GITHUB_WORKSPACE/llvm
+          tar xvf wasi-sdk-16.0-linux.tar.gz --strip-components=1 -C llvm
+          echo "$GITHUB_WORKSPACE/llvm/bin" >> $GITHUB_PATH
+          echo "$GITHUB_PATH"
+          which clang
+      - name: Download WASI-SDK mac
+        if: matrix.os == 'macOS-latest'
+        run: |
+          curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-16/wasi-sdk-16.0-macos.tar.gz -OL
+          mkdir $GITHUB_WORKSPACE/llvm
+          tar xvf wasi-sdk-16.0-macos.tar.gz --strip-components=1 -C llvm
+          echo "$GITHUB_WORKSPACE/llvm/bin" >> $GITHUB_PATH
+          echo "$GITHUB_PATH"
+          which clang
 
       - name: Generate Markdown files for each Org file
         run: |
