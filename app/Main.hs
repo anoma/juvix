@@ -74,19 +74,25 @@ findRoot copts = do
                 | otherwise -> decodeThrow bs
           return (takeDirectory yaml, pkg)
 
-getEntryPoint :: FilePath -> Package -> GlobalOptions -> Maybe EntryPoint
+getEntryPoint :: FilePath -> Package -> GlobalOptions -> Maybe (IO EntryPoint)
 getEntryPoint r pkg opts = nonEmpty (opts ^. globalInputFiles) >>= Just <$> entryPoint
   where
-    entryPoint :: NonEmpty FilePath -> EntryPoint
-    entryPoint l =
-      EntryPoint
-        { _entryPointRoot = r,
-          _entryPointNoTermination = opts ^. globalNoTermination,
-          _entryPointNoPositivity = opts ^. globalNoPositivity,
-          _entryPointNoStdlib = opts ^. globalNoStdlib,
-          _entryPointPackage = pkg,
-          _entryPointModulePaths = l
-        }
+    entryPoint :: NonEmpty FilePath -> IO EntryPoint
+    entryPoint l
+      | opts ^. globalStdin = aux . Just <$> getContents
+      | otherwise = return (aux Nothing)
+      where
+        aux :: Maybe Text -> EntryPoint
+        aux _entryPointStdin =
+          EntryPoint
+            { _entryPointRoot = r,
+              _entryPointNoTermination = opts ^. globalNoTermination,
+              _entryPointNoPositivity = opts ^. globalNoPositivity,
+              _entryPointNoStdlib = opts ^. globalNoStdlib,
+              _entryPointPackage = pkg,
+              _entryPointModulePaths = l,
+              _entryPointStdin
+            }
 
 runCommand :: Members '[Embed IO, App] r => CommandGlobalOptions -> Sem r ()
 runCommand cmdWithOpts = do
@@ -101,11 +107,13 @@ runCommand cmdWithOpts = do
       -- Other commands require an entry point:
       case getEntryPoint root pkg globalOpts of
         Nothing -> printFailureExit "Provide a Juvix file to run this command\nUse --help to see all the options"
-        Just entryPoint -> commandHelper cmd
+        Just ioEntryPoint -> do
+          e <- embed ioEntryPoint
+          commandHelper e cmd
           where
-            commandHelper = \case
+            commandHelper entryPoint = \case
               -- Visible commands
-              Check -> commandHelper (Dev (Internal (TypeCheck mempty)))
+              Check -> commandHelper entryPoint (Dev (Internal (TypeCheck mempty)))
               Compile localOpts -> do
                 miniC <- (^. MiniC.resultCCode) <$> runPipeline (upToMiniC entryPoint)
                 let inputFile = entryPoint ^. mainModulePath

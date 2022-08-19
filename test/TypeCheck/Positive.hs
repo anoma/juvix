@@ -39,13 +39,8 @@ testNoPositivityFlag N.NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint =
-                  EntryPoint
-                    { _entryPointRoot = ".",
-                      _entryPointNoTermination = False,
-                      _entryPointNoPositivity = True,
-                      _entryPointNoStdlib = False,
-                      _entryPointPackage = emptyPackage,
-                      _entryPointModulePaths = pure _file
+                  (defaultEntryPoint _file)
+                    { _entryPointNoPositivity = True
                     }
 
             (void . runIO) (upToInternal entryPoint)

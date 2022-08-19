@@ -32,15 +32,23 @@ fromSource e = mapError (JuvixError @ParserError) $ do
   return ParserResult {..}
   where
     goFile ::
+      forall r.
       Members '[Files, Error ParserError, InfoTableBuilder, NameIdGen] r =>
       FilePath ->
       Sem r (Module 'Parsed 'ModuleTop)
     goFile fileName = do
-      input <- readFile' fileName
+      input <- getFileContents fileName
       mp <- runModuleParser (e ^. entryPointRoot) fileName input
       case mp of
         Left er -> throw er
         Right (tbl, m) -> mergeTable tbl $> m
+      where
+        getFileContents :: FilePath -> Sem r Text
+        getFileContents fp
+          | fp == e ^. mainModulePath,
+            Just txt <- e ^. entryPointStdin =
+              return txt
+          | otherwise = readFile' fp
 
 -- | The fileName is only used for reporting errors. It is safe to pass
 -- an empty string.

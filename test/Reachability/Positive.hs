@@ -30,13 +30,9 @@ testDescr PosTest {..} =
             entryFile <- canonicalizePath _file
             let noStdlib = _stdlibMode == StdlibExclude
                 entryPoint =
-                  EntryPoint
+                  (defaultEntryPoint entryFile)
                     { _entryPointRoot = cwd,
-                      _entryPointNoTermination = False,
-                      _entryPointNoPositivity = False,
-                      _entryPointPackage = emptyPackage,
-                      _entryPointNoStdlib = noStdlib,
-                      _entryPointModulePaths = pure entryFile
+                      _entryPointNoStdlib = noStdlib
                     }
 
             step "Pipeline up to reachability"
