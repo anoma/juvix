@@ -194,7 +194,7 @@ queryMetavar' h = do
     Just (Refined e) -> return (Just e)
 
 re ::
-  Members '[Error TypeCheckerError, Reader FunctionsTable] r =>
+  Members '[Reader FunctionsTable] r =>
   Sem (Inference ': r) a ->
   Sem (State InferenceState ': r) a
 re = reinterpret $ \case
@@ -206,29 +206,15 @@ re = reinterpret $ \case
     registerIden' :: Members '[State InferenceState] r => Name -> Expression -> Sem r ()
     registerIden' i ty = modify (over inferenceIdens (HashMap.insert i ty))
 
-    refineFreshMetavar ::
-      Members '[Error TypeCheckerError, State InferenceState] r =>
-      Hole ->
-      Expression ->
-      Sem r ()
-    refineFreshMetavar h t
-      | ExpressionHole h' <- t, h' == h = return ()
-      | otherwise =
-          do
-            s <- gets (fromJust . (^. inferenceMap . at h))
-            case s of
-              Fresh -> modify (over inferenceMap (HashMap.insert h (Refined t)))
-              Refined {} -> impossible
-
     -- Supports alpha equivalence.
-    matchTypes' :: Members '[Error TypeCheckerError, State InferenceState, Reader FunctionsTable] r => Expression -> Expression -> Sem r (Maybe MatchError)
+    matchTypes' :: Members '[State InferenceState, Reader FunctionsTable] r => Expression -> Expression -> Sem r (Maybe MatchError)
     matchTypes' ty = runReader ini . go ty
       where
         ini :: HashMap VarName VarName
         ini = mempty
         go ::
           forall r.
-          Members '[Error TypeCheckerError, State InferenceState, Reader (HashMap VarName VarName), Reader FunctionsTable] r =>
+          Members '[State InferenceState, Reader (HashMap VarName VarName), Reader FunctionsTable] r =>
           Expression ->
           Expression ->
           Sem r (Maybe MatchError)
@@ -275,6 +261,17 @@ re = reinterpret $ \case
                   case r of
                     Nothing -> refineFreshMetavar h t $> Nothing
                     Just ht -> matchTypes' t ht
+                  where
+                    refineFreshMetavar :: Hole -> Expression -> Sem r ()
+                    refineFreshMetavar hol holTy
+                      | ExpressionHole h' <- holTy, h' == hol = return ()
+                      | otherwise =
+                          do
+                            s <- gets (fromJust . (^. inferenceMap . at hol))
+                            case s of
+                              Fresh -> modify (over inferenceMap (HashMap.insert hol (Refined holTy)))
+                              Refined {} -> impossible
+
                 goIden :: Iden -> Iden -> Sem r (Maybe MatchError)
                 goIden ia ib = case (ia, ib) of
                   (IdenInductive a, IdenInductive b) -> check (a == b)
@@ -309,7 +306,7 @@ re = reinterpret $ \case
                               (Just v1, Just v2) -> local (HashMap.insert v1 v2)
                               _ -> id
                         bicheck (go l1 l2) (local' (go r1 r2))
-                    | otherwise = ok
+                    | otherwise = err
 
 runInferenceDef ::
   (Members '[Error TypeCheckerError, Reader FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
