@@ -613,7 +613,6 @@ inferExpression' e = case e of
                       }
                   )
 
-
 viewInductiveApp ::
   Members '[Error TypeCheckerError, Inference] r =>
   Expression ->

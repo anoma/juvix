@@ -261,16 +261,16 @@ re = reinterpret $ \case
                   case r of
                     Nothing -> refineFreshMetavar h t $> Nothing
                     Just ht -> matchTypes' t ht
-                    where
-                      refineFreshMetavar :: Hole -> Expression -> Sem r ()
-                      refineFreshMetavar hol holTy
-                          | ExpressionHole h' <- holTy, h' == hol = return ()
-                          | otherwise =
-                              do
-                                s <- gets (fromJust . (^. inferenceMap . at hol))
-                                case s of
-                                  Fresh -> modify (over inferenceMap (HashMap.insert hol (Refined holTy)))
-                                  Refined {} -> impossible
+                  where
+                    refineFreshMetavar :: Hole -> Expression -> Sem r ()
+                    refineFreshMetavar hol holTy
+                      | ExpressionHole h' <- holTy, h' == hol = return ()
+                      | otherwise =
+                          do
+                            s <- gets (fromJust . (^. inferenceMap . at hol))
+                            case s of
+                              Fresh -> modify (over inferenceMap (HashMap.insert hol (Refined holTy)))
+                              Refined {} -> impossible
 
                 goIden :: Iden -> Iden -> Sem r (Maybe MatchError)
                 goIden ia ib = case (ia, ib) of
