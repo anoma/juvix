@@ -1,0 +1,11 @@
+-- global variables and forward declarations
+
+def x := (\x x) 5;
+
+def g;
+
+def f := \a \b g a + b;
+
+def g := \y x * y;
+
+f 2 3

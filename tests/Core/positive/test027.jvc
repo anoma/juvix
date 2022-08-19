@@ -1,0 +1,18 @@
+-- Euclid's algorithm
+
+def gcd := \a \b {
+  if a > b then
+    gcd b a
+  else if a = 0 then
+    b
+  else
+    gcd (b % a) a
+};
+
+def writeLn := \x write x >> write "\n";
+
+writeLn (gcd (3 * 7 * 2) (7 * 2)) >>
+writeLn (gcd (3 * 7 * 2 * 11 * 5) (7 * 2 * 5)) >>
+writeLn (gcd 3 7) >>
+writeLn (gcd 7 3) >>
+writeLn (gcd (11 * 7 * 3) (2 * 5 * 13))

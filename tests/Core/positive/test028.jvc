@@ -1,0 +1,39 @@
+-- functional queues
+
+def hd := \l case l of { cons x _ -> x };
+def tl := \l case l of { cons _ x -> x };
+
+def rev' := \l \acc case l of {
+  nil -> acc;
+  cons h t -> rev' t (cons h acc)
+};
+
+def rev := \l rev' l nil;
+
+constr queue 2;
+
+def fst := \q case q of { queue x _ -> x };
+def snd := \q case q of { queue _ x -> x };
+
+def front := \q hd (fst q);
+
+def pop_front := \q \x
+  let q' := queue (tl (fst q)) (snd q) in
+  case fst q' of {
+    nil -> queue (rev (snd q')) nil;
+    _ -> q'
+  };
+
+def push_back := \q \x queue (fst q) (cons x (snd q));
+
+def is_empty := \q case fst q of {
+  nil -> case snd q of { nil -> true; _ -> false };
+  _ -> false
+};
+
+def empty := queue nil nil;
+
+def g := \q \acc if is_empty q then acc else g (pop_front q) (cons (front q) acc);
+def f := \n \q if n = 0 then g q nil else f (n - 1) (push_back q n);
+
+f 100 empty
