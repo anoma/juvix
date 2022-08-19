@@ -9,9 +9,10 @@
 
 (flycheck-define-checker juvix
   "A Juvix syntax checker."
-  :command ("juvix" "internal" "microjuvix" "typecheck" "--only-errors" "--no-colors"
+  :command ("juvix" "internal" "microjuvix" "typecheck" "--only-errors" "--no-colors" "--stdin"
             (option-flag "--no-stdlib" juvix-disable-embedded-stdlib)
             source-original)
+  :standard-input t
   :error-patterns
     (
      (error line-start (file-name) ":" line ":" column ": error:" (message (one-or-more (not "ת"))))
