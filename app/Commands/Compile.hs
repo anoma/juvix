@@ -199,6 +199,7 @@ standaloneLibArgs :: FilePath -> FilePath -> FilePath -> [String]
 standaloneLibArgs projRoot wasmOutputFile inputFile =
   commonArgs wasmOutputFile
     <> [ "--target=wasm32",
+         "-nodefaultlibs",
          "-nostartfiles",
          "-Wl,--no-entry",
          projRoot </> juvixBuildDir </> "walloc.c",
