@@ -65,7 +65,7 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       Let _ v b -> let !v' = eval' env v in eval' (v' : env) b
       Case i v bs def ->
         case eval' env v of
-          Data _ tag args -> branch n env (revAppend args env) tag def bs
+          Data _ tag args -> branch n env args tag def bs
           v' -> evalError "matching on non-data" (substEnv env (Case i v' bs def))
       If i v b1 b2 ->
         case eval' env v of
@@ -75,13 +75,13 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       Data {} -> n
       Closure {} -> n
 
-    branch :: Node -> Env -> Env -> Tag -> Maybe Node -> [CaseBranch] -> Node
-    branch n !denv !env !tag !def = \case
-      (CaseBranch tag' _ b) : _ | tag' == tag -> eval' env b
-      _ : bs' -> branch n denv env tag def bs'
+    branch :: Node -> Env -> [Node] -> Tag -> Maybe Node -> [CaseBranch] -> Node
+    branch n !env !args !tag !def = \case
+      (CaseBranch tag' _ b) : _ | tag' == tag -> eval' (revAppend args env) b
+      _ : bs' -> branch n env args tag def bs'
       [] -> case def of
-        Just b -> eval' denv b
-        Nothing -> evalError "no matching case branch" (substEnv denv n)
+        Just b -> eval' env b
+        Nothing -> evalError "no matching case branch" (substEnv env n)
 
     applyBuiltin :: Node -> Env -> BuiltinOp -> [Node] -> Node
     applyBuiltin _ env OpIntAdd [l, r] = nodeFromInteger (integerFromNode (eval' env l) + integerFromNode (eval' env r))

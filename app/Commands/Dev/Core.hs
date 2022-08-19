@@ -4,13 +4,18 @@ import Juvix.Prelude hiding (Doc)
 import Options.Applicative
 
 data CoreCommand
-  = Repl
+  = Repl CoreReplOptions
   | Eval CoreEvalOptions
+
+newtype CoreReplOptions = CoreReplOptions
+  { _coreReplShowDeBruijn :: Bool
+  }
 
 newtype CoreEvalOptions = CoreEvalOptions
   { _coreEvalNoIO :: Bool
   }
 
+makeLenses ''CoreReplOptions
 makeLenses ''CoreEvalOptions
 
 defaultCoreEvalOptions :: CoreEvalOptions
@@ -36,7 +41,7 @@ parseCoreCommand =
     replInfo :: ParserInfo CoreCommand
     replInfo =
       info
-        (pure Repl)
+        (Repl <$> parseCoreReplOptions)
         (progDesc "Start an interactive session of the JuvixCore evaluator")
 
     evalInfo :: ParserInfo CoreCommand
@@ -53,3 +58,12 @@ parseCoreEvalOptions = do
           <> help "Don't interpret the IO effects"
       )
   pure CoreEvalOptions {..}
+
+parseCoreReplOptions :: Parser CoreReplOptions
+parseCoreReplOptions = do
+  _coreReplShowDeBruijn <-
+    switch
+      ( long "show-de-bruijn"
+          <> help "Show variable de Bruijn indices"
+      )
+  pure CoreReplOptions {..}

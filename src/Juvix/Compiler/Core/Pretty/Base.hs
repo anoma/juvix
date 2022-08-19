@@ -64,7 +64,13 @@ instance PrettyCode Node where
   ppCode node = case node of
     Var {..} ->
       case Info.lookup kNameInfo varInfo of
-        Just ni -> ppCode (ni ^. NameInfo.infoName)
+        Just ni -> do
+          showDeBruijn <- asks (^. optShowDeBruijnIndices)
+          n <- ppCode (ni ^. NameInfo.infoName)
+          if showDeBruijn then
+            return $ n <> kwDeBruijnVar <> pretty varIndex
+          else
+            return n
         Nothing -> return $ kwDeBruijnVar <> pretty varIndex
     Ident {..} ->
       case Info.lookup kNameInfo identInfo of
