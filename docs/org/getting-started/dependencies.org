@@ -10,29 +10,31 @@ The following dependencies are only required for compiling to WASM.
 - [[https://lld.llvm.org][wasm-ld]] - the LLVM linker for WASM (NB: On linux you may need to install the
   =lld= package, on macOS this is installed as part of =llvm=).
 
-To install =wasi-sdk= you need to download =libclang_rt= and =wasi-sysroot=
-precompiled archives from the [[https://github.com/WebAssembly/wasi-sdk/releases/][wasi-sdk release page]] and:
+To install =wasi-sdk= you need to download a [[https://github.com/WebAssembly/wasi-sdk/releases][release archive]], untar it on your system and add its =bin= directory to your system PATH:
 
-1. Extract the =libclang_rt.builtins-wasm32-wasi-*.tar.gz= archive in the
-   =clang= installation root (for example =/usr/lib/clang/13= on Ubuntu or
-   =`brew --prefix llvm`= on macos).
+** Install WASI-SDK
+1. Download a release of [[https://github.com/WebAssembly/wasi-sdk/releases][wasi-sdk]] for your system, choose either =wasi-sdk-16.0-linux.tar.gz= or =wasi-sdk-16.0-macos.tar.gz=.
+2. Untar the release file and add the location of the embedded =wasi-sdk-16.0/bin= directory to your system =PATH=.
+3. Run =which clang= and check that the result is located in the =wasi-sdk-16.0/bin= directory.
 
-        For example on macos with homebrew clang:
+On Linux:
 
-        #+begin_src shell
-        cd `brew --prefix llvm`
-        curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/libclang_rt.builtins-wasm32-wasi-15.0.tar.gz -OL
-        tar xf libclang_rt.builtins-wasm32-wasi-15.0.tar.gz
-        #+end_src
+#+begin_src shell
+cd ~
+mkdir .wasi-sdk
+cd .wasi-sdk
+curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-16/wasi-sdk-16.0-linux.tar.gz -OL
+tar xf wasi-sdk-16.0-linux.tar.gz --strip-components=1
+export PATH=$HOME/.wasi-sdk/bin:$PATH
+#+end_src
 
-2. Extract the =wasi-sysroot-*.tar.gz= archive on your local system and set
-   =WASI_SYSROOT_PATH= to its path.
+On macOS:
 
-        For example:
-
-        #+begin_src shell
-        cd ~
-        curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/wasi-sysroot-15.0.tar.gz -OL
-        tar xf wasi-sysroot-15.0.tar.gz
-        export WASI_SYSROOT_PATH=~/wasi-sysroot
-        #+end_src
+#+begin_src shell
+cd ~
+mkdir .wasi-sdk
+cd .wasi-sdk
+curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-16/wasi-sdk-16.0-macos.tar.gz -OL
+tar xf wasi-sdk-16.0-macos.tar.gz --strip-components=1
+export PATH=$HOME/.wasi-sdk/bin:$PATH
+#+end_src

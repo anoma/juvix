@@ -68,21 +68,32 @@ Juvix requires Clang version 13 or above. See the documentation on [[./doctor.md
 
 Juvix uses [[https://wasi.dev][WASI - The Wasm System Interface]] to produce binaries that can be executed using a Wasm runtime. The files necessary to setup Clang with =wasm32-wasi= support are available at [[https://github.com/WebAssembly/wasi-sdk/releases][wasi-sdk]].
 
-To install the =wasm32-wasi= target for Clang you need to do two things:
+*** Install WASI-SDK
+1. Download a release of [[https://github.com/WebAssembly/wasi-sdk/releases][wasi-sdk]] for your system, choose either =wasi-sdk-16.0-linux.tar.gz= or =wasi-sdk-16.0-macos.tar.gz=.
+2. Untar the release file and add the location of the embedded =wasi-sdk-16.0/bin= directory to your system =PATH=.
+3. Run =which clang= and check that the result is located in the =wasi-sdk-16.0/bin= directory.
 
-*** Install =libclang_rt.builtins-wasm32.a= into your Clang distribution
+On Linux:
 
-1. Obtain =libclang_rt.builtins-wasm32-wasi-16.0.tar.gz= from the [[https://github.com/WebAssembly/wasi-sdk/releases][wasi-sdk releases]] page.
-2. Untar the file and place the file =lib/wasi/libclang_rt.builtins-wasm32.a= into your Clang distribution directory.
+#+begin_src shell
+cd ~
+mkdir .wasi-sdk
+cd .wasi-sdk
+curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-16/wasi-sdk-16.0-linux.tar.gz -OL
+tar xf wasi-sdk-16.0-linux.tar.gz --strip-components=1
+export PATH=$HOME/.wasi-sdk/bin:$PATH
+#+end_src
 
-   On MacOS, if you installed llvm using homebrew you can find the Clang distribution directory using =brew --prefix llvm=. You should then place the builtins file at =`brew --prefix llvm`/lib/wasi/libclang_rt.builtins-wasm32.a=.
+On macOS:
 
-   On Linux the Clang distribution directory will be something like =/usr/lib/clang/13.0.1= where =13.0.1= is the version of Clang that you have installed. You should then place the builtins file at =/usr/lib/clang/13.0.1/lib/wasi/libclang_rt.builtins-wasm32=.
-
-*** Download the WASI sysroot and set =WASI_SYSROOT_PATH=
-
-1. Obtain =wasi-sysroot-16.0.tar.gz= from the [[https://github.com/WebAssembly/wasi-sdk/releases][wasi-sdk releases]] page.
-2. Untar the file and set the environment variable =WASI_SYSROOT_PATH= to that location.
+#+begin_src shell
+cd ~
+mkdir .wasi-sdk
+cd .wasi-sdk
+curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-16/wasi-sdk-16.0-macos.tar.gz -OL
+tar xf wasi-sdk-16.0-macos.tar.gz --strip-components=1
+export PATH=$HOME/.wasi-sdk/bin:$PATH
+#+end_src
 
 **  Could not find the wasmer command
 
