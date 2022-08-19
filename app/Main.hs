@@ -328,7 +328,7 @@ runCoreCommand globalOpts = \case
                 printJuvixError (JuvixError err)
                 runRepl tab
               Right (tab', Just node) ->
-                replEval True tab' node
+                replEval False tab' node
               Right (tab', Nothing) ->
                 runRepl tab'
           ":r" ->
