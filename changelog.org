@@ -6,6 +6,44 @@
 </a>
 #+end_html
 
+** [[https://github.com/anoma/juvix/tree/v0.2.4][v0.2.4]] (2022-08-19)
+   :PROPERTIES:
+   :CUSTOM_ID: v0.2.4-2022-08-19
+   :END:
+[[https://github.com/anoma/juvix/compare/v0.2.3...v0.2.4][Full
+Changelog]]
+
+(Special version for Heliax's retreat in Italy)
+
+*Implemented enhancements:*
+
+- Add --stdin flag [[https://github.com/anoma/juvix/pull/1459][#1459]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+
+*Fixed bugs:*
+
+- Fix typechecker [[https://github.com/anoma/juvix/pull/1458][#1458]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+
+*Merged pull requests:*
+
+- use --stdin in flycheck mode
+  [[https://github.com/anoma/juvix/pull/1460][#1460]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Add a native compile target for demos
+  [[https://github.com/anoma/juvix/pull/1457][#1457]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Small changes for the presentation
+  [[https://github.com/anoma/juvix/pull/1456][#1456]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Fixes TicTacToe Web example
+  [[https://github.com/anoma/juvix/pull/1454][#1454]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Upgrade to ghc-9.2.4
+  [[https://github.com/anoma/juvix/pull/1451][#1451]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+
+
 ** [[https://github.com/anoma/juvix/tree/v0.2.3][v0.2.3]] (2022-08-15)
    :PROPERTIES:
    :CUSTOM_ID: v0.2.3-2022-08-15
