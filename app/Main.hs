@@ -321,6 +321,18 @@ runCoreCommand globalOpts = \case
                 replEval True tab' node
               Right (tab', Nothing) ->
                 runRepl tab'
+          ':' : 'l' : ' ' : f -> do
+            s' <- embed (readFile f)
+            case Core.runParser "" f Core.emptyInfoTable s' of
+              Left err -> do
+                printJuvixError (JuvixError err)
+                runRepl tab
+              Right (tab', Just node) ->
+                replEval True tab' node
+              Right (tab', Nothing) ->
+                runRepl tab'
+          ":r" ->
+            runRepl Core.emptyInfoTable
           _ ->
             case Core.parseText tab s of
               Left err -> do
@@ -365,6 +377,8 @@ runCoreCommand globalOpts = \case
       putStrLn "Available commands:"
       putStrLn ":p expr               Pretty print \"expr\"."
       putStrLn ":e expr               Evaluate \"expr\" without interpreting IO actions."
+      putStrLn ":l file               Load and evaluate \"file\". Resets REPL state."
+      putStrLn ":r                    Reset REPL state."
       putStrLn ":q                    Quit."
       putStrLn ":h                    Display this help message."
       putStrLn ""
