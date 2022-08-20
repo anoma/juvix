@@ -22,6 +22,11 @@ compile parsePositiveInt {
   c ↦ "parsePositiveInt";
 };
 
+axiom clear : IO;
+compile clear {
+  c ↦ "system(\"clear\")";
+};
+
 -- | Reads a ;ℕ; from stdin
 getMove : Maybe ℕ;
 getMove ≔ validMove (parsePositiveInt (readline));
@@ -36,9 +41,11 @@ prompt x ≔ "\n" ++str (showGameState x) ++str "\nPlayer " ++str showSymbol (pl
 -- | Main loop
 terminating
 run : (IO × GameState → GameState) → GameState → IO;
-run _ (state b p (terminate msg)) ≔ putStrLn ("\n" ++str (showGameState (state b p noError)) ++str "\n" ++str msg);
-run f (state b p (continue msg)) ≔ run f (f (putStr (msg ++str prompt (state b p noError)) , state b p noError));
-run f x ≔ run f (f (putStr (prompt x) , x));
+run _ (state b p (terminate msg)) ≔
+  clear >>
+  putStrLn ("\n" ++str (showGameState (state b p noError)) ++str "\n" ++str msg);
+run f (state b p (continue msg)) ≔ run f (f ((clear >> putStr (msg ++str prompt (state b p noError))), state b p noError));
+run f x ≔ run f (f ((clear >> putStr (prompt x)), x));
 
 --- The welcome message
 welcome : String;
