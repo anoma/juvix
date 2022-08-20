@@ -152,6 +152,10 @@ tests =
       "265"
       "M.juvix",
     PosTest
+      "Pattern match type synonym"
+      "issue1466"
+      "M.juvix",
+    PosTest
       "Import a builtin multiple times"
       "BuiltinsMultiImport"
       "Input.juvix",

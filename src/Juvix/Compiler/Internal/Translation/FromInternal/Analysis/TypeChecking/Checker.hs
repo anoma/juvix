@@ -314,7 +314,7 @@ matchIsImplicit expected actual =
 
 checkPattern ::
   forall r.
-  Members '[Reader InfoTable, Error TypeCheckerError, State LocalVars, Inference, NameIdGen] r =>
+  Members '[Reader InfoTable, Error TypeCheckerError, State LocalVars, Inference, NameIdGen, Reader FunctionsTable] r =>
   FunctionName ->
   FunctionParameter ->
   PatternArg ->
@@ -614,22 +614,23 @@ inferExpression' e = case e of
                   )
 
 viewInductiveApp ::
-  Members '[Error TypeCheckerError, Inference] r =>
+  Members '[Error TypeCheckerError, Inference, Reader FunctionsTable] r =>
   Expression ->
   Sem r (Either Hole (InductiveName, [Expression]))
-viewInductiveApp ty = case t of
-  ExpressionIden (IdenInductive n) -> return (Right (n, as))
-  ExpressionHole h -> do
-    r <- queryMetavar h
-    case r of
-      Just h' -> viewInductiveApp h'
-      Nothing -> return (Left h)
-  _ -> throw (ErrImpracticalPatternMatching (ImpracticalPatternMatching ty))
+viewInductiveApp ty = do
+  ty' <- weakNormalize ty
+  let (t, as) = viewTypeApp ty'
+  case t of
+    ExpressionIden (IdenInductive n) -> return (Right (n, as))
+    ExpressionHole h -> do
+      r <- queryMetavar h
+      case r of
+        Just h' -> viewInductiveApp h'
+        Nothing -> return (Left h)
+    _ -> throw (ErrImpracticalPatternMatching (ImpracticalPatternMatching ty))
   where
-    (t, as) = viewTypeApp ty
-
-viewTypeApp :: Expression -> (Expression, [Expression])
-viewTypeApp t = case t of
-  ExpressionApplication (Application l r _) ->
-    second (`snoc` r) (viewTypeApp l)
-  _ -> (t, [])
+    viewTypeApp :: Expression -> (Expression, [Expression])
+    viewTypeApp tyapp = case tyapp of
+      ExpressionApplication (Application l r _) ->
+        second (`snoc` r) (viewTypeApp l)
+      _ -> (tyapp, [])

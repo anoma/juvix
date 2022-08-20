@@ -29,6 +29,7 @@ data Inference m a where
   QueryMetavar :: Hole -> Inference m (Maybe Expression)
   RegisterIden :: Name -> Expression -> Inference m ()
   StrongNormalize :: Expression -> Inference m Expression
+  WeakNormalize :: Expression -> Inference m Expression
 
 makeSem ''Inference
 
@@ -202,6 +203,7 @@ re = reinterpret $ \case
   QueryMetavar h -> queryMetavar' h
   RegisterIden i ty -> registerIden' i ty
   StrongNormalize ty -> strongNormalize' ty
+  WeakNormalize ty -> weakNormalize' ty
   where
     registerIden' :: Members '[State InferenceState] r => Name -> Expression -> Sem r ()
     registerIden' i ty = modify (over inferenceIdens (HashMap.insert i ty))
