@@ -65,6 +65,12 @@ data Node
         ifTrueBranch :: !Node,
         ifFalseBranch :: !Node
       }
+  | -- Dependent Pi-type. Compilation-time only.
+    Pi {piInfo :: !Info, piType :: !Type, piBody :: !Type}
+  | -- Universe. Compilation-time only.
+    Univ {univInfo :: !Info, univLevel :: !Int}
+  | -- Type application. Compilation-time only.
+    TypeApp {typeInfo :: !Info, typeSymbol :: !Symbol, typeArgs :: ![Node]}
   | -- Evaluation only: `Closure env body`
     Closure
       { closureInfo :: !Info,
@@ -75,12 +81,6 @@ data Node
 -- Other things we might need in the future:
 -- - laziness annotations (converting these to closure/thunk creation should be
 --   done further down the pipeline)
--- - with dependent types, it might actually be more reasonable to have Pi as
---   another node (because it's a binder); computationally it would be a unit,
---   erased in further stages of the pipeline
--- - with Pi a node, other basic type constructors should also be nodes:
---   TypeIdent (named type identifier available in the global context, e.g.,
---   inductive type), Universe
 
 data ConstantValue
   = ConstInteger !Integer
@@ -111,6 +111,8 @@ data CaseBranch = CaseBranch {caseTag :: !Tag, caseBindersNum :: !Int, caseBranc
 -- All nodes in an environment must be values.
 type Env = [Node]
 
+type Type = Node
+
 instance HasAtomicity Node where
   atomicity = \case
     Var {} -> Atom
@@ -125,6 +127,9 @@ instance HasAtomicity Node where
     Let {} -> Aggregate lambdaFixity
     Case {} -> Aggregate lambdaFixity
     If {} -> Aggregate lambdaFixity
+    Pi {} -> Aggregate lambdaFixity
+    Univ {} -> Atom
+    TypeApp {} -> Aggregate appFixity
     Closure {} -> Aggregate lambdaFixity
 
 lambdaFixity :: Fixity
@@ -142,5 +147,8 @@ instance Eq Node where
   Let _ v1 b1 == Let _ v2 b2 = v1 == v2 && b1 == b2
   Case _ v1 bs1 def1 == Case _ v2 bs2 def2 = v1 == v2 && bs1 == bs2 && def1 == def2
   If _ v1 tb1 fb1 == If _ v2 tb2 fb2 = v1 == v2 && tb1 == tb2 && fb1 == fb2
+  Pi _ ty1 b1 == Pi _ ty2 b2 = ty1 == ty2 && b1 == b2
+  Univ _ l1 == Univ _ l2 = l1 == l2
+  TypeApp _ sym1 args1 == TypeApp _ sym2 args2 = sym1 == sym2 && args1 == args2
   Closure _ env1 b1 == Closure _ env2 b2 = env1 == env2 && b1 == b2
   _ == _ = False

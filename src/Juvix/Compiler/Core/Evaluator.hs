@@ -72,6 +72,9 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
           Constant _ (ConstBool True) -> eval' env b1
           Constant _ (ConstBool False) -> eval' env b2
           v' -> evalError "conditional branch on a non-boolean" (substEnv env (If i v' b1 b2))
+      Pi {} -> substEnv env n -- this might need to be implemented more efficiently
+      Univ {} -> n
+      TypeApp i sym args -> TypeApp i sym (map (eval' env) args)
       Closure {} -> n
 
     branch :: Node -> Env -> [Node] -> Tag -> Maybe Node -> [CaseBranch] -> Node

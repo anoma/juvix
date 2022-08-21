@@ -5,22 +5,15 @@ import Data.List qualified as List
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Info qualified as Info
 import Juvix.Compiler.Core.Language.Info.BinderInfo
-import Juvix.Compiler.Core.Language.Type
 
 {------------------------------------------------------------------------}
 {- functions on Type -}
 
 -- unfold a type into the target and the arguments (left-to-right)
-unfoldType :: Type -> (Type, [Type])
-unfoldType ty = case ty of
-  Fun l r -> let (tgt, args) = unfoldType r in (tgt, l : args)
+unfoldType' :: Type -> (Type, [(Info, Type)])
+unfoldType' ty = case ty of
+  Pi i l r -> let (tgt, args) = unfoldType' r in (tgt, (i, l) : args)
   _ -> (ty, [])
-
-getTarget :: Type -> Type
-getTarget = fst . unfoldType
-
-getArgs :: Type -> [Type]
-getArgs = snd . unfoldType
 
 {------------------------------------------------------------------------}
 {- functions on Node -}
@@ -84,7 +77,8 @@ data NodeDetails = NodeDetails
 
 makeLenses ''NodeDetails
 
--- destruct a node into NodeDetails
+-- Destruct a node into NodeDetails. This is an ugly internal function used to
+-- implement more high-level accessors and recursors.
 destruct :: Node -> NodeDetails
 destruct = \case
   Var i idx -> NodeDetails i [] [] [] (\i' _ -> Var i' idx)
@@ -136,6 +130,12 @@ destruct = \case
       [0, 0, 0]
       [Nothing, Nothing, Nothing]
       (\i' args' -> If i' (hd args') (args' !! 1) (args' !! 2))
+  Pi i ty b ->
+    NodeDetails i [ty, b] [0, 1] [Nothing, fetchBinderInfo i] (\i' args' -> Pi i' (hd args') (args' !! 1))
+  Univ i l ->
+    NodeDetails i [] [] [] (\i' _ -> Univ i' l)
+  TypeApp i sym args ->
+    NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`TypeApp` sym)
   Closure i env b ->
     NodeDetails
       i

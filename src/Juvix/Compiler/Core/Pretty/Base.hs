@@ -145,7 +145,26 @@ instance PrettyCode Node where
       b1 <- ppCode ifTrueBranch
       b2 <- ppCode ifFalseBranch
       return $ kwIf <+> v <+> kwThen <+> b1 <+> kwElse <+> b2
-    Closure {..} -> ppCode (substEnv closureEnv (Lambda closureInfo closureBody))
+    Pi {..} ->
+      case Info.lookup kBinderInfo piInfo of
+        Just bi -> do
+          n <- ppCode (bi ^. BinderInfo.infoName)
+          b <- ppCode piBody
+          return $ kwLambda <> n <+> b
+        Nothing -> do
+          b <- ppCode piBody
+          return $ kwLambda <> kwQuestion <+> b
+    Univ {..} ->
+      return $ kwType <+> pretty univLevel
+    TypeApp {..} -> do
+      args' <- mapM (ppRightExpression appFixity) typeArgs
+      n' <-
+        case Info.lookup kNameInfo typeInfo of
+          Just ni -> ppCode (ni ^. NameInfo.infoName)
+          Nothing -> return $ kwUnnamedIdent <> pretty typeSymbol
+      return $ foldl (<+>) n' args'
+    Closure {..} ->
+      ppCode (substEnv closureEnv (Lambda closureInfo closureBody))
 
 instance PrettyCode a => PrettyCode (NonEmpty a) where
   ppCode x = do
@@ -242,3 +261,6 @@ kwThen = keyword Str.then_
 
 kwElse :: Doc Ann
 kwElse = keyword Str.else_
+
+kwPi :: Doc Ann
+kwPi = keyword Str.pi_

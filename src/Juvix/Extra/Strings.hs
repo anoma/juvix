@@ -296,6 +296,9 @@ then_ = "then"
 else_ :: IsString s => s
 else_ = "else"
 
+pi_ :: IsString s => s
+pi_ = "pi"
+
 def :: IsString s => s
 def = "def"
 

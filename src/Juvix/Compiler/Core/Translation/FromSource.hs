@@ -12,7 +12,6 @@ import Juvix.Compiler.Core.Language.Info.BinderInfo as BinderInfo
 import Juvix.Compiler.Core.Language.Info.BranchInfo as BranchInfo
 import Juvix.Compiler.Core.Language.Info.LocationInfo as LocationInfo
 import Juvix.Compiler.Core.Language.Info.NameInfo as NameInfo
-import Juvix.Compiler.Core.Language.Type
 import Juvix.Compiler.Core.Transformation.Eta
 import Juvix.Compiler.Core.Translation.FromSource.Lexer
 import Juvix.Parser.Error
@@ -38,6 +37,9 @@ runParser root fileName tab input =
       ParserParams
         { _parserParamsRoot = root
         }
+
+starType :: Type
+starType = Pi Info.empty (Univ Info.empty 0) (Var Info.empty 0)
 
 freshName ::
   Members '[InfoTableBuilder, NameIdGen] r =>
@@ -68,7 +70,7 @@ declareBuiltinConstr btag nameTxt i = do
     ( ConstructorInfo
         { _constructorName = name,
           _constructorTag = BuiltinTag btag,
-          _constructorType = TyVar 0,
+          _constructorType = starType,
           _constructorArgsNum = builtinConstrArgsNum btag
         }
     )
@@ -132,7 +134,7 @@ statementDef = do
             IdentInfo
               { _identName = name,
                 _identSymbol = sym,
-                _identType = TyVar 0,
+                _identType = starType,
                 _identArgsNum = 0,
                 _identArgsInfo = [],
                 _identIsExported = False
@@ -180,7 +182,7 @@ statementConstr = do
         ConstructorInfo
           { _constructorName = name,
             _constructorTag = tag,
-            _constructorType = TyVar 0,
+            _constructorType = starType,
             _constructorArgsNum = argsNum
           }
   lift $ registerConstructor info
@@ -245,7 +247,7 @@ seqExpr' varsNum vars node = do
     Constr
       Info.empty
       (BuiltinTag TagBind)
-      [node, Lambda (Info.singleton (BinderInfo name (TyVar 0))) node']
+      [node, Lambda (Info.singleton (BinderInfo name starType)) node']
 
 cmpExpr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -536,7 +538,7 @@ exprLambda varsNum vars = do
   name <- parseLocalName
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- expr (varsNum + 1) vars'
-  return $ Lambda (Info.singleton (BinderInfo name (TyVar 0))) body
+  return $ Lambda (Info.singleton (BinderInfo name starType)) body
 
 exprLet ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -551,7 +553,7 @@ exprLet varsNum vars = do
   kwIn
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- expr (varsNum + 1) vars'
-  return $ Let (Info.singleton (BinderInfo name (TyVar 0))) value body
+  return $ Let (Info.singleton (BinderInfo name starType)) value body
 
 exprCase ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -579,7 +581,7 @@ exprCase' off value varsNum vars = do
   let bss = map fst bs'
   let bsns = map snd bs'
   let def' = map fromRight' $ filter isRight bs
-  let bi = CaseBinderInfo $ map (map (`BinderInfo` TyVar 0)) bsns
+  let bi = CaseBinderInfo $ map (map (`BinderInfo` starType)) bsns
   bri <-
     CaseBranchInfo
       <$> mapM

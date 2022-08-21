@@ -1,7 +1,6 @@
 module Juvix.Compiler.Core.Language.Info.TypeInfo where
 
-import Juvix.Compiler.Core.Language.Base
-import Juvix.Compiler.Core.Language.Type
+import Juvix.Compiler.Core.Language
 
 newtype TypeInfo = TypeInfo {_infoType :: Type}
 
