@@ -146,7 +146,7 @@ instance PrettyCode Node where
       b2 <- ppCode ifFalseBranch
       return $ kwIf <+> v <+> kwThen <+> b1 <+> kwElse <+> b2
     Data {..} -> ppCode (ConstrApp dataInfo dataTag dataArgs)
-    Closure {..} -> ppCode (substEnv closureEnv closureBody)
+    Closure {..} -> ppCode (substEnv closureEnv (Lambda closureInfo closureBody))
 
 instance PrettyCode a => PrettyCode (NonEmpty a) where
   ppCode x = do
