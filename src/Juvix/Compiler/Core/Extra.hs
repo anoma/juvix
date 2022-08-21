@@ -72,7 +72,7 @@ developBeta = umap go
       App _ (Lambda _ body) arg -> subst arg body
       _ -> n
 
--- substitution of all free variables for values in a closed environment
+-- substitution of all free variables for values in an environment
 substEnv :: Env -> Node -> Node
 substEnv env = if null env then id else umapN go
   where

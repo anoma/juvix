@@ -117,10 +117,6 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
         Just n' -> n'
         Nothing -> evalError "symbol not defined" n
 
-    revAppend :: [a] -> [a] -> [a]
-    revAppend [] ys = ys
-    revAppend (x : xs) ys = revAppend xs (x : ys)
-
 -- Evaluate `node` and interpret the builtin IO actions.
 evalIO :: IdentContext -> Env -> Node -> IO Node
 evalIO ctx env node =

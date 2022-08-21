@@ -105,10 +105,8 @@ data CaseBranch = CaseBranch {caseTag :: !Tag, caseBindersNum :: !Int, caseBranc
 
 -- Values are closed nodes of the following kinds:
 -- - Constant
--- - Axiom
 -- - Data
 -- - Closure
--- - Suspended
 --
 -- Whether something is a value matters only for the evaluation semantics. It
 -- doesn't matter much outside the evaluator.
