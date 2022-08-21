@@ -92,7 +92,7 @@ instance PrettyCode Node where
       args' <- mapM (ppRightExpression appFixity) builtinArgs
       op' <- ppCode builtinOp
       return $ foldl (<+>) op' args'
-    ConstrApp {..} -> do
+    Constr {..} -> do
       args' <- mapM (ppRightExpression appFixity) constrArgs
       n' <-
         case Info.lookup kNameInfo constrInfo of
@@ -145,7 +145,6 @@ instance PrettyCode Node where
       b1 <- ppCode ifTrueBranch
       b2 <- ppCode ifFalseBranch
       return $ kwIf <+> v <+> kwThen <+> b1 <+> kwElse <+> b2
-    Data {..} -> ppCode (ConstrApp dataInfo dataTag dataArgs)
     Closure {..} -> ppCode (substEnv closureEnv (Lambda closureInfo closureBody))
 
 instance PrettyCode a => PrettyCode (NonEmpty a) where

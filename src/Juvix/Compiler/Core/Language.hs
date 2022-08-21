@@ -40,7 +40,7 @@ data Node
     BuiltinApp {builtinInfo :: !Info, builtinOp :: !BuiltinOp, builtinArgs :: ![Node]}
   | -- A data constructor application. The number of arguments supplied must be
     -- equal to the number of arguments expected by the constructor.
-    ConstrApp
+    Constr
       { constrInfo :: !Info,
         constrTag :: !Tag,
         constrArgs :: ![Node]
@@ -65,9 +65,6 @@ data Node
         ifTrueBranch :: !Node,
         ifFalseBranch :: !Node
       }
-  | -- Evaluation only: evaluated data constructor (the actual data). Arguments
-    -- order: left to right. Arguments are values (see below).
-    Data {dataInfo :: !Info, dataTag :: !Tag, dataArgs :: ![Node]}
   | -- Evaluation only: `Closure env body`
     Closure
       { closureInfo :: !Info,
@@ -105,7 +102,7 @@ data CaseBranch = CaseBranch {caseTag :: !Tag, caseBindersNum :: !Int, caseBranc
 
 -- Values are closed nodes of the following kinds:
 -- - Constant
--- - Data
+-- - Constr if all arguments are values
 -- - Closure
 --
 -- Whether something is a value matters only for the evaluation semantics. It
@@ -122,13 +119,12 @@ instance HasAtomicity Node where
     App {} -> Aggregate appFixity
     BuiltinApp {..} | null builtinArgs -> Atom
     BuiltinApp {} -> Aggregate lambdaFixity
-    ConstrApp {..} | null constrArgs -> Atom
-    ConstrApp {} -> Aggregate lambdaFixity
+    Constr {..} | null constrArgs -> Atom
+    Constr {} -> Aggregate lambdaFixity
     Lambda {} -> Aggregate lambdaFixity
     Let {} -> Aggregate lambdaFixity
     Case {} -> Aggregate lambdaFixity
     If {} -> Aggregate lambdaFixity
-    Data {} -> Aggregate lambdaFixity
     Closure {} -> Aggregate lambdaFixity
 
 lambdaFixity :: Fixity
@@ -141,11 +137,10 @@ instance Eq Node where
   Constant _ v1 == Constant _ v2 = v1 == v2
   App _ l1 r1 == App _ l2 r2 = l1 == l2 && r1 == r2
   BuiltinApp _ op1 args1 == BuiltinApp _ op2 args2 = op1 == op2 && args1 == args2
-  ConstrApp _ tag1 args1 == ConstrApp _ tag2 args2 = tag1 == tag2 && args1 == args2
+  Constr _ tag1 args1 == Constr _ tag2 args2 = tag1 == tag2 && args1 == args2
   Lambda _ b1 == Lambda _ b2 = b1 == b2
   Let _ v1 b1 == Let _ v2 b2 = v1 == v2 && b1 == b2
   Case _ v1 bs1 def1 == Case _ v2 bs2 def2 = v1 == v2 && bs1 == bs2 && def1 == def2
   If _ v1 tb1 fb1 == If _ v2 tb2 fb2 = v1 == v2 && tb1 == tb2 && fb1 == fb2
-  Data _ tag1 args1 == Data _ tag2 args2 = tag1 == tag2 && args1 == args2
   Closure _ env1 b1 == Closure _ env2 b2 = env1 == env2 && b1 == b2
   _ == _ = False

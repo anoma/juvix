@@ -23,7 +23,7 @@ etaExpandConstrs argsNum = umap go
   where
     go :: Node -> Node
     go n = case n of
-      ConstrApp {..}
+      Constr {..}
         | k > length constrArgs ->
             etaExpand (k - length constrArgs) n
         where
@@ -37,7 +37,7 @@ squashApps = dmap go
     go n =
       let (l, args) = unfoldApp n
        in case l of
-            ConstrApp i tag args' -> ConstrApp i tag (args' ++ args)
+            Constr i tag args' -> Constr i tag (args' ++ args)
             BuiltinApp i op args' -> BuiltinApp i op (args' ++ args)
             _ -> n
 

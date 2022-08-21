@@ -92,7 +92,7 @@ destruct = \case
   Constant i c -> NodeDetails i [] [] [] (\i' _ -> Constant i' c)
   App i l r -> NodeDetails i [l, r] [0, 0] [Nothing, Nothing] (\i' args' -> App i' (hd args') (args' !! 1))
   BuiltinApp i op args -> NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`BuiltinApp` op)
-  ConstrApp i tag args -> NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`ConstrApp` tag)
+  Constr i tag args -> NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`Constr` tag)
   Lambda i b -> NodeDetails i [b] [1] [fetchBinderInfo i] (\i' args' -> Lambda i' (hd args'))
   Let i v b -> NodeDetails i [v, b] [0, 1] [Nothing, fetchBinderInfo i] (\i' args' -> Let i' (hd args') (args' !! 1))
   Case i v bs Nothing ->
@@ -136,8 +136,6 @@ destruct = \case
       [0, 0, 0]
       [Nothing, Nothing, Nothing]
       (\i' args' -> If i' (hd args') (args' !! 1) (args' !! 2))
-  Data i tag args ->
-    NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`Data` tag)
   Closure i env b ->
     NodeDetails
       i

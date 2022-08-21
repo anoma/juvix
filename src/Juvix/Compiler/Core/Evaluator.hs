@@ -60,19 +60,18 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
           Closure _ env' b -> let !v = eval' env r in eval' (v : env') b
           v -> evalError "invalid application" (App i v (substEnv env r))
       BuiltinApp _ op args -> applyBuiltin n env op args
-      ConstrApp i tag args -> Data i tag (map (eval' env) args)
+      Constr i tag args -> Constr i tag (map (eval' env) args)
       Lambda i b -> Closure i env b
       Let _ v b -> let !v' = eval' env v in eval' (v' : env) b
       Case i v bs def ->
         case eval' env v of
-          Data _ tag args -> branch n env args tag def bs
+          Constr _ tag args -> branch n env args tag def bs
           v' -> evalError "matching on non-data" (substEnv env (Case i v' bs def))
       If i v b1 b2 ->
         case eval' env v of
           Constant _ (ConstBool True) -> eval' env b1
           Constant _ (ConstBool False) -> eval' env b2
           v' -> evalError "conditional branch on a non-boolean" (substEnv env (If i v' b1 b2))
-      Data {} -> n
       Closure {} -> n
 
     branch :: Node -> Env -> [Node] -> Tag -> Maybe Node -> [CaseBranch] -> Node
@@ -122,24 +121,24 @@ evalIO :: IdentContext -> Env -> Node -> IO Node
 evalIO ctx env node =
   let node' = eval ctx env node
    in case node' of
-        ConstrApp _ (BuiltinTag TagReturn) [x] ->
+        Constr _ (BuiltinTag TagReturn) [x] ->
           return x
-        ConstrApp _ (BuiltinTag TagBind) [x, f] -> do
+        Constr _ (BuiltinTag TagBind) [x, f] -> do
           x' <- evalIO ctx env x
           evalIO ctx env (App Info.empty f x')
-        ConstrApp _ (BuiltinTag TagWrite) [Constant _ (ConstString s)] -> do
+        Constr _ (BuiltinTag TagWrite) [Constant _ (ConstString s)] -> do
           putStr s
           return unitNode
-        ConstrApp _ (BuiltinTag TagWrite) [arg] -> do
+        Constr _ (BuiltinTag TagWrite) [arg] -> do
           putStr (ppPrint arg)
           return unitNode
-        ConstrApp _ (BuiltinTag TagReadLn) [] -> do
+        Constr _ (BuiltinTag TagReadLn) [] -> do
           hFlush stdout
           Constant Info.empty . ConstString <$> getLine
         _ ->
           return node'
   where
-    unitNode = ConstrApp (Info.singleton (NoDisplayInfo ())) (BuiltinTag TagNil) []
+    unitNode = Constr (Info.singleton (NoDisplayInfo ())) (BuiltinTag TagNil) []
 
 -- Catch EvalError and convert it to CoreError. Needs a default location in case
 -- no location is available in EvalError.

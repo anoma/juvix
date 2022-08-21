@@ -88,13 +88,5 @@ convertClosures = umap go
       Closure i env b -> substEnv env (Lambda i b)
       _ -> n
 
-convertData :: Node -> Node
-convertData = umap go
-  where
-    go :: Node -> Node
-    go n = case n of
-      Data i tag args -> ConstrApp i tag args
-      _ -> n
-
 convertRuntimeNodes :: Node -> Node
-convertRuntimeNodes = convertData . convertClosures
+convertRuntimeNodes = convertClosures

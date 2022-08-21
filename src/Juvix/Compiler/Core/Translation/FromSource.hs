@@ -229,7 +229,7 @@ bindExpr' ::
 bindExpr' varsNum vars node = do
   kwBind
   node' <- cmpExpr varsNum vars
-  ioExpr' varsNum vars (ConstrApp Info.empty (BuiltinTag TagBind) [node, node'])
+  ioExpr' varsNum vars (Constr Info.empty (BuiltinTag TagBind) [node, node'])
 
 seqExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -242,7 +242,7 @@ seqExpr' varsNum vars node = do
   node' <- cmpExpr (varsNum + 1) vars
   name <- lift $ freshName KNameLocal "_" i
   ioExpr' varsNum vars $
-    ConstrApp
+    Constr
       Info.empty
       (BuiltinTag TagBind)
       [node, Lambda (Info.singleton (BinderInfo name (TyVar 0))) node']
@@ -485,7 +485,7 @@ exprNamed varsNum vars = do
           return $ Ident (Info.singleton (NameInfo name)) sym
         Just (Right tag) -> do
           name <- lift $ freshName KNameConstructor txt i
-          return $ ConstrApp (Info.singleton (NameInfo name)) tag []
+          return $ Constr (Info.singleton (NameInfo name)) tag []
         Nothing ->
           parseFailure off ("undeclared identifier: " ++ fromText txt)
 
