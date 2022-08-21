@@ -70,7 +70,7 @@ data Node
   | -- Universe. Compilation-time only.
     Univ {univInfo :: !Info, univLevel :: !Int}
   | -- Type application. Compilation-time only.
-    TypeApp {typeInfo :: !Info, typeSymbol :: !Symbol, typeArgs :: ![Node]}
+    TypeApp {typeInfo :: !Info, typeSymbol :: !Symbol, typeArgs :: ![Type]}
   | -- Evaluation only: `Closure env body`
     Closure
       { closureInfo :: !Info,
