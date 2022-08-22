@@ -8,6 +8,7 @@ module Juvix.Compiler.Core.Evaluator where
 
 import Control.Exception qualified as Exception
 import Data.HashMap.Strict qualified as HashMap
+import Debug.Trace qualified as Debug
 import GHC.Show as S
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Error
@@ -19,7 +20,7 @@ import Juvix.Compiler.Core.Pretty
 
 data EvalError = EvalError
   { _evalErrorMsg :: !Text,
-    _evalErrorNode :: !Node
+    _evalErrorNode :: !(Maybe Node)
   }
 
 makeLenses ''EvalError
@@ -29,8 +30,9 @@ instance Show EvalError where
   show (EvalError {..}) =
     "evaluation error: "
       ++ fromText _evalErrorMsg
-      ++ ": "
-      ++ fromText (ppTrace _evalErrorNode)
+      ++ case _evalErrorNode of
+        Nothing -> ""
+        Just node -> ": " ++ fromText (ppTrace node)
 
 -- We definitely do _not_ want to wrap the evaluator in an exception monad / the
 -- polysemy effects! This would almost double the execution time (whether an
@@ -48,7 +50,7 @@ eval :: IdentContext -> Env -> Node -> Node
 eval !ctx !env0 = convertRuntimeNodes . eval' env0
   where
     evalError :: Text -> Node -> a
-    evalError !msg !node = Exception.throw (EvalError msg node)
+    evalError !msg !node = Exception.throw (EvalError msg (Just node))
 
     eval' :: Env -> Node -> Node
     eval' !env !n = case n of
@@ -100,6 +102,9 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
     applyBuiltin _ env OpIntLt [l, r] = nodeFromBool (integerFromNode (eval' env l) < integerFromNode (eval' env r))
     applyBuiltin _ env OpIntLe [l, r] = nodeFromBool (integerFromNode (eval' env l) <= integerFromNode (eval' env r))
     applyBuiltin _ env OpEq [l, r] = nodeFromBool (eval' env l == eval' env r)
+    applyBuiltin _ env OpTrace [msg, x] = Debug.trace (printNode (eval' env msg)) (eval' env x)
+    applyBuiltin _ env OpFail [msg] =
+      Exception.throw (EvalError (fromString ("failure: " ++ printNode (eval' env msg))) Nothing)
     applyBuiltin n env _ _ = evalError "invalid builtin application" (substEnv env n)
 
     nodeFromInteger :: Integer -> Node
@@ -112,6 +117,11 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
     integerFromNode = \case
       Constant _ (ConstInteger int) -> int
       v -> evalError "not an integer" v
+
+    printNode :: Node -> String
+    printNode = \case
+      Constant _ (ConstString s) -> fromText s
+      v -> fromText $ ppPrint v
 
     lookupContext :: Node -> Symbol -> Node
     lookupContext n sym =
@@ -164,6 +174,6 @@ toCoreError :: Location -> EvalError -> CoreError
 toCoreError loc (EvalError {..}) =
   CoreError
     { _coreErrorMsg = mappend "evaluation error: " _evalErrorMsg,
-      _coreErrorNode = Just _evalErrorNode,
-      _coreErrorLoc = fromMaybe loc (lookupLocation _evalErrorNode)
+      _coreErrorNode = _evalErrorNode,
+      _coreErrorLoc = fromMaybe loc (lookupLocation =<< _evalErrorNode)
     }

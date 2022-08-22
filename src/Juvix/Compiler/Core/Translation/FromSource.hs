@@ -442,6 +442,8 @@ builtinAppExpr varsNum vars = do
       <|> (kwMinus >> return OpIntSub)
       <|> (kwDiv >> return OpIntDiv)
       <|> (kwMul >> return OpIntMul)
+      <|> (kwTrace >> return OpTrace)
+      <|> (kwFail >> return OpFail)
   args <- P.many (atom varsNum vars)
   return $ BuiltinApp Info.empty op args
 

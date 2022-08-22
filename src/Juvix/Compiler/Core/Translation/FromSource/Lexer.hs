@@ -84,7 +84,9 @@ allKeywords =
     kwGt,
     kwGe,
     kwBind,
-    kwSeq
+    kwSeq,
+    kwTrace,
+    kwFail
   ]
 
 lbrace :: ParsecS r ()
@@ -197,3 +199,9 @@ kwBind = keyword Str.bind
 
 kwSeq :: ParsecS r ()
 kwSeq = keyword Str.seq_
+
+kwTrace :: ParsecS r ()
+kwTrace = keyword Str.trace_
+
+kwFail :: ParsecS r ()
+kwFail = keyword Str.fail_

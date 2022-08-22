@@ -149,6 +149,12 @@ bind = ">>="
 seq_ :: IsString s => s
 seq_ = ">>"
 
+trace_ :: IsString s => s
+trace_ = "trace"
+
+fail_ :: IsString s => s
+fail_ = "fail"
+
 data_ :: IsString s => s
 data_ = "data"
 

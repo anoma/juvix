@@ -45,6 +45,8 @@ instance PrettyCode BuiltinOp where
     OpIntLt -> return kwLess
     OpIntLe -> return kwLessEquals
     OpEq -> return kwEquals
+    OpTrace -> return kwTrace
+    OpFail -> return kwFail
 
 instance PrettyCode BuiltinDataTag where
   ppCode = \case
@@ -264,3 +266,9 @@ kwElse = keyword Str.else_
 
 kwPi :: Doc Ann
 kwPi = keyword Str.pi_
+
+kwTrace :: Doc Ann
+kwTrace = keyword Str.trace_
+
+kwFail :: Doc Ann
+kwFail = keyword Str.fail_
