@@ -11,6 +11,7 @@ import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Info
 import Juvix.Compiler.Core.Extra.Recursors
 import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Language.Info qualified as Info
 
 -- `isClosed` may short-circuit evaluation due to the use of `&&`, so it's not
 -- entirely reducible to `getFreeVars` in terms of computation time.
@@ -47,6 +48,7 @@ countFreeVarOccurrences idx = gatherN go 0
 
 -- increase all free variable indices by a given value
 shift :: Index -> Node -> Node
+shift 0 = id
 shift m = umapN go
   where
     go k n = case n of
@@ -71,6 +73,10 @@ developBeta = umap go
     go n = case n of
       App _ (Lambda _ body) arg -> subst arg body
       _ -> n
+
+etaExpand :: Int -> Node -> Node
+etaExpand 0 n = n
+etaExpand k n = mkLambdas k (mkApp (shift k n) (map (Var Info.empty) (reverse [0 .. k - 1])))
 
 -- substitution of all free variables for values in an environment
 substEnv :: Env -> Node -> Node

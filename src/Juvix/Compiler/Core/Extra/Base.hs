@@ -52,9 +52,6 @@ unfoldLambdas' = go []
 unfoldLambdas :: Node -> (Int, Node)
 unfoldLambdas = first length . unfoldLambdas'
 
-etaExpand :: Int -> Node -> Node
-etaExpand k n = mkLambdas k (mkApp n (map (Var Info.empty) (reverse [0 .. k - 1])))
-
 -- `NodeDetails` is a convenience datatype which provides the most commonly needed
 -- information about a node in a generic fashion.
 data NodeDetails = NodeDetails
