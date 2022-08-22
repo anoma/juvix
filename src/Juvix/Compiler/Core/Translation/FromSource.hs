@@ -1,4 +1,8 @@
-module Juvix.Compiler.Core.Translation.FromSource where
+module Juvix.Compiler.Core.Translation.FromSource
+  ( module Juvix.Compiler.Core.Translation.FromSource,
+    module Juvix.Parser.Error,
+  )
+where
 
 import Control.Monad.Trans.Class (lift)
 import Data.HashMap.Strict qualified as HashMap

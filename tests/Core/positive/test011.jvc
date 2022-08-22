@@ -3,20 +3,6 @@
 def fib' := \n \x \y if n = 0 then x else fib' (n - 1) y (x + y);
 def fib := \n fib' n 0 1;
 
-{-
-
-def fib := loop n (x := 0) (y := 1) {
-  if n = 0 then x else next (n - 1) y (x + y)
-};
-
-def fib :=
-  let rec next := \n \x \y
-    if n = 0 then x else next (n - 1) y (x + y)
-  in
-  \n next n 0 1
-
--}
-
 def writeLn := \x write x >> write "\n";
 
 writeLn (fib 10) >>

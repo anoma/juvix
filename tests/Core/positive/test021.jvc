@@ -1,4 +1,4 @@
--- higher-order recursive functions test
+-- higher-order recursive functions
 
 def not := \x if x then false else true;
 

@@ -1,4 +1,4 @@
--- higher-order functions & local function definitions
+-- local functions with free variables
 
 def f := \x {
   let g := \y x + y in

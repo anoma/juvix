@@ -17,14 +17,17 @@ def snd := \q case q of { queue _ x -> x };
 
 def front := \q hd (fst q);
 
-def pop_front := \q \x
+def pop_front := \q
   let q' := queue (tl (fst q)) (snd q) in
   case fst q' of {
     nil -> queue (rev (snd q')) nil;
     _ -> q'
   };
 
-def push_back := \q \x queue (fst q) (cons x (snd q));
+def push_back := \q \x case fst q of {
+  nil -> queue (cons x nil) (snd q);
+  _ -> queue (fst q) (cons x (snd q))
+};
 
 def is_empty := \q case fst q of {
   nil -> case snd q of { nil -> true; _ -> false };

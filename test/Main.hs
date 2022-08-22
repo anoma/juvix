@@ -3,6 +3,7 @@ module Main (main) where
 import Arity qualified
 import BackendC qualified
 import Base
+import Core qualified
 import MonoJuvix qualified
 import Reachability qualified
 import Scope qualified
@@ -13,7 +14,9 @@ slowTests :: TestTree
 slowTests =
   testGroup
     "Juvix slow tests"
-    [BackendC.allTests]
+    [ BackendC.allTests,
+      Core.allTests
+    ]
 
 fastTests :: TestTree
 fastTests =

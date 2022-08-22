@@ -120,28 +120,31 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
         Nothing -> evalError "symbol not defined" n
 
 -- Evaluate `node` and interpret the builtin IO actions.
-evalIO :: IdentContext -> Env -> Node -> IO Node
-evalIO ctx env node =
+hEvalIO :: Handle -> Handle -> IdentContext -> Env -> Node -> IO Node
+hEvalIO hin hout ctx env node =
   let node' = eval ctx env node
    in case node' of
         Constr _ (BuiltinTag TagReturn) [x] ->
           return x
         Constr _ (BuiltinTag TagBind) [x, f] -> do
-          x' <- evalIO ctx env x
-          evalIO ctx env (App Info.empty f x')
+          x' <- hEvalIO hin hout ctx env x
+          hEvalIO hin hout ctx env (App Info.empty f x')
         Constr _ (BuiltinTag TagWrite) [Constant _ (ConstString s)] -> do
-          putStr s
+          hPutStr hout s
           return unitNode
         Constr _ (BuiltinTag TagWrite) [arg] -> do
-          putStr (ppPrint arg)
+          hPutStr hout (ppPrint arg)
           return unitNode
         Constr _ (BuiltinTag TagReadLn) [] -> do
-          hFlush stdout
-          Constant Info.empty . ConstString <$> getLine
+          hFlush hout
+          Constant Info.empty . ConstString <$> hGetLine hin
         _ ->
           return node'
   where
     unitNode = Constr (Info.singleton (NoDisplayInfo ())) (BuiltinTag TagNil) []
+
+evalIO :: IdentContext -> Env -> Node -> IO Node
+evalIO = hEvalIO stdin stdout
 
 -- Catch EvalError and convert it to CoreError. Needs a default location in case
 -- no location is available in EvalError.

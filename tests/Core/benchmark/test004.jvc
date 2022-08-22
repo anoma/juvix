@@ -11,17 +11,9 @@ def filter := \p \s \_
         force (filter p t)
   };
 
-def take := \n \s
-  if n = 0 then
-    nil
-  else
-    case force s of {
-      cons h t -> cons h (take (n - 1) t)
-    };
-
 def nth := \n \s
   case force s of {
-    cons h t -> if n = 0 then h else nth (n - 1) t
+    cons h t -> if n = 1 then h else nth (n - 1) t
   };
 
 def numbers := \n \_ cons n (numbers (n + 1));
@@ -36,6 +28,7 @@ def primes := eratostenes (numbers 2);
 
 def writeLn := \x write x >> write "\n";
 
-writeLn (take 10 primes) >>
 writeLn (nth 100 primes) >>
-writeLn (nth 200 primes)
+writeLn (nth 1000 primes) >>
+writeLn (nth 10000 primes) >>
+writeLn (nth 20000 primes)

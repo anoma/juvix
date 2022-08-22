@@ -1,0 +1,3 @@
+cons 2 (cons 3 (cons 5 (cons 7 (cons 11 (cons 13 (cons 17 (cons 19 (cons 23 (cons 29 nil)))))))))
+547
+1229
