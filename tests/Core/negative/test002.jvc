@@ -1,0 +1,5 @@
+-- arithmetic operations on non-numbers
+
+def y := 3 + \x x;
+
+y

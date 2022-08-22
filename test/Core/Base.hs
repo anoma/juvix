@@ -46,6 +46,25 @@ coreEvalAssertion mainFile expectedFile step = do
                 assertEqDiff ("Check: EVAL output = " <> expectedFile) actualOutput expected
         )
 
+coreEvalErrorAssertion :: FilePath -> (String -> IO ()) -> Assertion
+coreEvalErrorAssertion mainFile step = do
+  step "Parse"
+  r <- parseFile mainFile
+  case r of
+    Left _ -> assertBool "" True
+    Right (_, Nothing) -> assertFailure "no error"
+    Right (tab, Just node) -> do
+      withTempDir
+        ( \dirPath -> do
+            let outputFile = dirPath </> "out.out"
+            hout <- openFile outputFile WriteMode
+            step "Evaluate"
+            r' <- doEval mainFile hout tab node
+            case r' of
+              Left _ -> assertBool "" True
+              Right _ -> assertFailure "no error"
+        )
+
 parseFile :: FilePath -> IO (Either ParserError (InfoTable, Maybe Node))
 parseFile f = do
   s <- readFile f

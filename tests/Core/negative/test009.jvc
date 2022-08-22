@@ -1,0 +1,34 @@
+-- erroneous Church numerals
+
+constr pair 2;
+
+def fst := \p case p of { pair x _ -> x };
+def snd := \p case p of { pair _ x -> x };
+
+def compose := \f \g \x f (g x);
+
+def zero := \f \x x;
+
+def num := \n
+  if n = 0 then
+    zero
+  else
+    \f compose f (num (n - 1) f);
+
+def succ := \n \f compose f n; -- wrong
+
+def isZero := \n n (\_ false) true;
+
+def pred := \n
+  fst (
+    n (\x
+        if isZero (snd x) then
+          pair (fst x) (succ (snd x))
+        else
+          pair (succ (fst x)) (succ (snd x)))
+      (pair zero zero)
+  );
+
+def toInt := \n n (+ 1) 0;
+
+toInt (pred (num 7))
