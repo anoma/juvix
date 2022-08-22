@@ -19,7 +19,8 @@ testDescr PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ coreEvalAssertion _file _expectedFile }
+          _testAssertion = Steps $ coreEvalAssertion _file _expectedFile
+        }
 
 allTests :: TestTree
 allTests =
@@ -194,11 +195,11 @@ tests =
       "."
       "test033.jvc"
       "out/test033.out",
-{-    PosTest
-      "Evaluation order"
-      "."
-      "test034.jvc"
-      "out/test034.out", -}
+    {-    PosTest
+          "Evaluation order"
+          "."
+          "test034.jvc"
+          "out/test034.out", -}
     PosTest
       "Merge sort"
       "."

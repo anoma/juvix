@@ -18,7 +18,8 @@ testDescr NegTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ coreEvalErrorAssertion _file }
+          _testAssertion = Steps $ coreEvalErrorAssertion _file
+        }
 
 allTests :: TestTree
 allTests =
