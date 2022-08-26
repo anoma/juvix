@@ -8,8 +8,8 @@ import Data.Functor.Identity
 import Juvix.Compiler.Core.Data.BinderList (BinderList)
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra.Base
+import Juvix.Compiler.Core.Info.BinderInfo
 import Juvix.Compiler.Core.Language
-import Juvix.Compiler.Core.Language.Info.BinderInfo
 
 {---------------------------------------------------------------------------------}
 {- General recursors on Node  -}

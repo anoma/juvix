@@ -62,7 +62,7 @@ tests =
       "."
       "test008.jvc",
     NegTest
-      "Erroneous Chruch numerals"
+      "Erroneous Church numerals"
       "."
       "test009.jvc"
   ]

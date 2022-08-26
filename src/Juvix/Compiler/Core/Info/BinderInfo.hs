@@ -1,4 +1,4 @@
-module Juvix.Compiler.Core.Language.Info.BinderInfo where
+module Juvix.Compiler.Core.Info.BinderInfo where
 
 import Juvix.Compiler.Core.Language
 

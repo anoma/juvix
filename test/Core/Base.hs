@@ -6,9 +6,9 @@ import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Evaluator
 import Juvix.Compiler.Core.Extra
+import Juvix.Compiler.Core.Info qualified as Info
+import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Language
-import Juvix.Compiler.Core.Language.Info qualified as Info
-import Juvix.Compiler.Core.Language.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Translation.FromSource
 import System.IO.Extra (withTempDir)

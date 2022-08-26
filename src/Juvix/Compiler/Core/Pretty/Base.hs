@@ -6,11 +6,11 @@ module Juvix.Compiler.Core.Pretty.Base
 where
 
 import Juvix.Compiler.Core.Extra
+import Juvix.Compiler.Core.Info qualified as Info
+import Juvix.Compiler.Core.Info.BinderInfo as BinderInfo
+import Juvix.Compiler.Core.Info.BranchInfo as BranchInfo
+import Juvix.Compiler.Core.Info.NameInfo as NameInfo
 import Juvix.Compiler.Core.Language
-import Juvix.Compiler.Core.Language.Info qualified as Info
-import Juvix.Compiler.Core.Language.Info.BinderInfo as BinderInfo
-import Juvix.Compiler.Core.Language.Info.BranchInfo as BranchInfo
-import Juvix.Compiler.Core.Language.Info.NameInfo as NameInfo
 import Juvix.Compiler.Core.Pretty.Options
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str

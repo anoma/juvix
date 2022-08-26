@@ -13,8 +13,8 @@ module Juvix.Compiler.Core.Language.Base
 where
 
 import Juvix.Compiler.Abstract.Data.Name
+import Juvix.Compiler.Core.Info (Info, IsInfo, Key)
 import Juvix.Compiler.Core.Language.Builtins
-import Juvix.Compiler.Core.Language.Info (Info, IsInfo, Key)
 import Juvix.Prelude
 
 type Location = Interval

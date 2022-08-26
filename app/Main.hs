@@ -27,9 +27,9 @@ import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Error qualified as Core
 import Juvix.Compiler.Core.Evaluator qualified as Core
 import Juvix.Compiler.Core.Extra.Base qualified as Core
+import Juvix.Compiler.Core.Info qualified as Info
+import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Language qualified as Core
-import Juvix.Compiler.Core.Language.Info qualified as Info
-import Juvix.Compiler.Core.Language.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 import Juvix.Compiler.Internal.Pretty qualified as Internal

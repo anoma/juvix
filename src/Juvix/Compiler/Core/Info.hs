@@ -1,4 +1,4 @@
-module Juvix.Compiler.Core.Language.Info where
+module Juvix.Compiler.Core.Info where
 
 {-
   This file defines Infos stored in JuvixCore Nodes. The Info data structure
@@ -23,7 +23,7 @@ empty :: Info
 empty = Info HashMap.empty
 
 singleton :: forall a. IsInfo a => a -> Info
-singleton a = Juvix.Compiler.Core.Language.Info.insert a Juvix.Compiler.Core.Language.Info.empty
+singleton a = Juvix.Compiler.Core.Info.insert a Juvix.Compiler.Core.Info.empty
 
 member :: forall a. IsInfo a => Key a -> Info -> Bool
 member k i = HashMap.member (typeRep k) (i ^. infoMap)
@@ -38,7 +38,7 @@ lookupDefault a i =
   fromDyn (HashMap.lookupDefault (toDyn a) (typeOf a) (i ^. infoMap)) impossible
 
 (!) :: IsInfo a => Key a -> Info -> a
-(!) k i = fromJust (Juvix.Compiler.Core.Language.Info.lookup k i)
+(!) k i = fromJust (Juvix.Compiler.Core.Info.lookup k i)
 
 insert :: IsInfo a => a -> Info -> Info
 insert a i = Info (HashMap.insert (typeOf a) (toDyn a) (i ^. infoMap))

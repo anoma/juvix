@@ -1,4 +1,4 @@
-module Juvix.Compiler.Core.Language.Info.NameInfo where
+module Juvix.Compiler.Core.Info.NameInfo where
 
 import Juvix.Compiler.Core.Language.Base
 

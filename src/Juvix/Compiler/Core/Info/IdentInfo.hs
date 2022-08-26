@@ -1,9 +1,9 @@
-module Juvix.Compiler.Core.Language.Info.IdentInfo where
+module Juvix.Compiler.Core.Info.IdentInfo where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Extra
+import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Language
-import Juvix.Compiler.Core.Language.Info qualified as Info
 
 newtype IdentInfo = IdentInfo
   { -- map symbols to the number of their occurrences

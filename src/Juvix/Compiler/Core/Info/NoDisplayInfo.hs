@@ -1,4 +1,4 @@
-module Juvix.Compiler.Core.Language.Info.NoDisplayInfo where
+module Juvix.Compiler.Core.Info.NoDisplayInfo where
 
 import Juvix.Compiler.Core.Language.Base
 
