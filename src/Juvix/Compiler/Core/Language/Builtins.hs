@@ -19,7 +19,8 @@ data BuiltinOp
 
 -- Builtin data tags
 data BuiltinDataTag
-  = TagVoid
+  = TagTrue
+  | TagFalse
   | TagReturn
   | TagBind
   | TagWrite
@@ -43,7 +44,8 @@ builtinOpArgsNum = \case
 
 builtinConstrArgsNum :: BuiltinDataTag -> Int
 builtinConstrArgsNum = \case
-  TagVoid -> 0
+  TagTrue -> 0
+  TagFalse -> 0
   TagReturn -> 1
   TagBind -> 2
   TagWrite -> 1

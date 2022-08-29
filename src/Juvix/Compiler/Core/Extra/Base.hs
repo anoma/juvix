@@ -18,6 +18,9 @@ unfoldType' ty = case ty of
 {------------------------------------------------------------------------}
 {- functions on Node -}
 
+mkIf :: Info -> Node -> Node -> Node -> Node
+mkIf i v b1 b2 = Case i v [CaseBranch (BuiltinTag TagTrue) 0 b1] (Just b2)
+
 mkApp' :: Node -> [(Info, Node)] -> Node
 mkApp' = foldl' (\acc (i, n) -> App i acc n)
 
@@ -120,13 +123,6 @@ destruct = \case
             )
             (Just (hd (tl args')))
       )
-  If i v b1 b2 ->
-    NodeDetails
-      i
-      [v, b1, b2]
-      [0, 0, 0]
-      [Nothing, Nothing, Nothing]
-      (\i' args' -> If i' (hd args') (args' !! 1) (args' !! 2))
   Pi i ty b ->
     NodeDetails i [ty, b] [0, 1] [Nothing, fetchBinderInfo i] (\i' args' -> Pi i' (hd args') (args' !! 1))
   Univ i l ->

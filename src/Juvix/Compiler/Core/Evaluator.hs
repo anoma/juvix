@@ -69,11 +69,6 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
         case eval' env v of
           Constr _ tag args -> branch n env args tag def bs
           v' -> evalError "matching on non-data" (substEnv env (Case i v' bs def))
-      If i v b1 b2 ->
-        case eval' env v of
-          Constant _ (ConstBool True) -> eval' env b1
-          Constant _ (ConstBool False) -> eval' env b2
-          v' -> evalError "conditional branch on a non-boolean" (substEnv env (If i v' b1 b2))
       Pi {} -> substEnv env n -- this might need to be implemented more efficiently later
       Univ {} -> n
       TypeApp i sym args -> TypeApp i sym (map (eval' env) args)
@@ -111,7 +106,8 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
     nodeFromInteger !int = Constant Info.empty (ConstInteger int)
 
     nodeFromBool :: Bool -> Node
-    nodeFromBool !b = Constant Info.empty (ConstBool b)
+    nodeFromBool True = Constr Info.empty (BuiltinTag TagTrue) []
+    nodeFromBool False = Constr Info.empty (BuiltinTag TagFalse) []
 
     integerFromNode :: Node -> Integer
     integerFromNode = \case
@@ -151,7 +147,7 @@ hEvalIO hin hout ctx env node =
         _ ->
           return node'
   where
-    unitNode = Constr (Info.singleton (NoDisplayInfo ())) (BuiltinTag TagVoid) []
+    unitNode = Constr (Info.singleton (NoDisplayInfo ())) (BuiltinTag TagTrue) []
 
 evalIO :: IdentContext -> Env -> Node -> IO Node
 evalIO = hEvalIO stdin stdout

@@ -50,7 +50,8 @@ instance PrettyCode BuiltinOp where
 
 instance PrettyCode BuiltinDataTag where
   ppCode = \case
-    TagVoid -> return $ annotate (AnnKind KNameConstructor) (pretty ("void" :: String))
+    TagTrue -> return $ annotate (AnnKind KNameConstructor) (pretty ("true" :: String))
+    TagFalse -> return $ annotate (AnnKind KNameConstructor) (pretty ("false" :: String))
     TagReturn -> return $ annotate (AnnKind KNameConstructor) (pretty ("return" :: String))
     TagBind -> return $ annotate (AnnKind KNameConstructor) (pretty ("bind" :: String))
     TagWrite -> return $ annotate (AnnKind KNameConstructor) (pretty ("write" :: String))
@@ -78,10 +79,6 @@ instance PrettyCode Node where
         Nothing -> return $ kwUnnamedIdent <> pretty identSymbol
     Constant _ (ConstInteger int) ->
       return $ annotate AnnLiteralInteger (pretty int)
-    Constant _ (ConstBool True) ->
-      return $ annotate (AnnKind KNameConstructor) (pretty ("true" :: String))
-    Constant _ (ConstBool False) ->
-      return $ annotate (AnnKind KNameConstructor) (pretty ("false" :: String))
     Constant _ (ConstString txt) ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
     App {..} -> do
@@ -140,11 +137,6 @@ instance PrettyCode Node where
           Nothing -> return bs'
       let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs''
       return $ kwCase <+> v <+> kwOf <+> bss
-    If {..} -> do
-      v <- ppCode ifValue
-      b1 <- ppCode ifTrueBranch
-      b2 <- ppCode ifFalseBranch
-      return $ kwIf <+> v <+> kwThen <+> b1 <+> kwElse <+> b2
     Pi {..} ->
       case Info.lookup kBinderInfo piInfo of
         Just bi -> do
@@ -252,15 +244,6 @@ kwOf = keyword Str.of_
 
 kwDefault :: Doc Ann
 kwDefault = keyword Str.underscore
-
-kwIf :: Doc Ann
-kwIf = keyword Str.if_
-
-kwThen :: Doc Ann
-kwThen = keyword Str.then_
-
-kwElse :: Doc Ann
-kwElse = keyword Str.else_
 
 kwPi :: Doc Ann
 kwPi = keyword Str.pi_

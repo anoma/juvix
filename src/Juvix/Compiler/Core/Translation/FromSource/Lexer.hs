@@ -34,9 +34,6 @@ number = number' integer
 string :: Member (Reader ParserParams) r => ParsecS r (Text, Interval)
 string = lexemeInterval string'
 
-boolean :: Member (Reader ParserParams) r => ParsecS r (Bool, Interval)
-boolean = interval (kwTrue >> return True) <|> interval (kwFalse >> return False)
-
 keyword :: Text -> ParsecS r ()
 keyword = keyword' space
 
@@ -66,8 +63,6 @@ allKeywords =
     kwIf,
     kwThen,
     kwElse,
-    kwTrue,
-    kwFalse,
     kwDef,
     kwMapsTo,
     kwRightArrow,
@@ -142,12 +137,6 @@ kwThen = keyword Str.then_
 
 kwElse :: ParsecS r ()
 kwElse = keyword Str.else_
-
-kwTrue :: ParsecS r ()
-kwTrue = keyword Str.true_
-
-kwFalse :: ParsecS r ()
-kwFalse = keyword Str.false_
 
 kwDef :: ParsecS r ()
 kwDef = keyword Str.def

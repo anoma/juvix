@@ -57,14 +57,6 @@ data Node
         caseBranches :: ![CaseBranch],
         caseDefault :: !(Maybe Node)
       }
-  | -- Lazy `if` on booleans. It is reasonable to separate booleans from general
-    -- datatypes for the purposes of evaluation and code generation.
-    If
-      { ifInfo :: !Info,
-        ifValue :: !Node,
-        ifTrueBranch :: !Node,
-        ifFalseBranch :: !Node
-      }
   | -- Dependent Pi-type. Compilation-time only.
     Pi {piInfo :: !Info, piType :: !Type, piBody :: !Type}
   | -- Universe. Compilation-time only.
@@ -84,7 +76,6 @@ data Node
 
 data ConstantValue
   = ConstInteger !Integer
-  | ConstBool !Bool
   | ConstString !Text
   deriving stock (Eq)
 
@@ -126,7 +117,6 @@ instance HasAtomicity Node where
     Lambda {} -> Aggregate lambdaFixity
     Let {} -> Aggregate lambdaFixity
     Case {} -> Aggregate lambdaFixity
-    If {} -> Aggregate lambdaFixity
     Pi {} -> Aggregate lambdaFixity
     Univ {} -> Atom
     TypeApp {} -> Aggregate appFixity
@@ -146,7 +136,6 @@ instance Eq Node where
   Lambda _ b1 == Lambda _ b2 = b1 == b2
   Let _ v1 b1 == Let _ v2 b2 = v1 == v2 && b1 == b2
   Case _ v1 bs1 def1 == Case _ v2 bs2 def2 = v1 == v2 && bs1 == bs2 && def1 == def2
-  If _ v1 tb1 fb1 == If _ v2 tb2 fb2 = v1 == v2 && tb1 == tb2 && fb1 == fb2
   Pi _ ty1 b1 == Pi _ ty2 b2 = ty1 == ty2 && b1 == b2
   Univ _ l1 == Univ _ l2 = l1 == l2
   TypeApp _ sym1 args1 == TypeApp _ sym2 args2 = sym1 == sym2 && args1 == args2

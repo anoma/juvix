@@ -92,6 +92,8 @@ declareBuiltins :: Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r
 declareBuiltins = do
   loc <- curLoc
   let i = mkInterval loc loc
+  lift $ declareBuiltinConstr TagTrue "true" i
+  lift $ declareBuiltinConstr TagFalse "false" i
   lift $ declareBuiltinConstr TagReturn "return" i
   lift $ declareBuiltinConstr TagBind "bind" i
   lift $ declareBuiltinConstr TagWrite "write" i
@@ -462,7 +464,6 @@ atom ::
 atom varsNum vars =
   exprNamed varsNum vars
     <|> exprConstInt
-    <|> exprConstBool
     <|> exprConstString
     <|> exprLambda varsNum vars
     <|> exprLet varsNum vars
@@ -501,13 +502,6 @@ exprConstInt ::
 exprConstInt = P.try $ do
   (n, i) <- integer
   return $ Constant (Info.singleton (LocationInfo i)) (ConstInteger n)
-
-exprConstBool ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
-  ParsecS r Node
-exprConstBool = P.try $ do
-  (b, i) <- boolean
-  return $ Constant (Info.singleton (LocationInfo i)) (ConstBool b)
 
 exprConstString ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -667,4 +661,4 @@ exprIf varsNum vars = do
   br1 <- expr varsNum vars
   kwElse
   br2 <- expr varsNum vars
-  return $ If Info.empty value br1 br2
+  return $ mkIf Info.empty value br1 br2
