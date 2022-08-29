@@ -24,12 +24,12 @@ import Juvix.Compiler.Core.Language.Base
 -- node.
 data Node
   = -- De Bruijn index of a locally bound variable.
-    Var {varInfo :: !Info, varIndex :: !Index}
+    Var {_varInfo :: !Info, _varIndex :: !Index}
   | -- Global identifier of a function (with corresponding `Node` in the global
     -- context).
-    Ident {identInfo :: !Info, identSymbol :: !Symbol}
-  | Constant {constantInfo :: !Info, constantValue :: !ConstantValue}
-  | App {appInfo :: !Info, appLeft :: !Node, appRight :: !Node}
+    Ident {_identInfo :: !Info, _identSymbol :: !Symbol}
+  | Constant {_constantInfo :: !Info, _constantValue :: !ConstantValue}
+  | App {_appInfo :: !Info, _appLeft :: !Node, _appRight :: !Node}
   | -- A builtin application. A builtin has no corresponding Node. It is treated
     -- specially by the evaluator and the code generator. For example, basic
     -- arithmetic operations go into `Builtin`. The number of arguments supplied
@@ -37,37 +37,41 @@ data Node
     -- operation (this simplifies evaluation and code generation). If you need
     -- partial application, eta-expand with lambdas, e.g., eta-expand `(+) 2` to
     -- `\x -> (+) 2 x`. See Transformation/Eta.hs.
-    BuiltinApp {builtinInfo :: !Info, builtinOp :: !BuiltinOp, builtinArgs :: ![Node]}
+    BuiltinApp {_builtinInfo :: !Info, _builtinOp :: !BuiltinOp, _builtinArgs :: ![Node]}
   | -- A data constructor application. The number of arguments supplied must be
     -- equal to the number of arguments expected by the constructor.
     Constr
-      { constrInfo :: !Info,
-        constrTag :: !Tag,
-        constrArgs :: ![Node]
+      { _constrInfo :: !Info,
+        _constrTag :: !Tag,
+        _constrArgs :: ![Node]
       }
-  | Lambda {lambdaInfo :: !Info, lambdaBody :: !Node}
+  | Lambda {_lambdaInfo :: !Info, _lambdaBody :: !Node}
   | -- `let x := value in body` is not reducible to lambda + application for the purposes
     -- of ML-polymorphic / dependent type checking or code generation!
-    Let {letInfo :: !Info, letValue :: !Node, letBody :: !Node}
+    Let {_letInfo :: !Info, _letValue :: !Node, _letBody :: !Node}
   | -- One-level case matching on the tag of a data constructor: `Case value
     -- branches default`. `Case` is lazy: only the selected branch is evaluated.
     Case
-      { caseInfo :: !Info,
-        caseValue :: !Node,
-        caseBranches :: ![CaseBranch],
-        caseDefault :: !(Maybe Node)
+      { _caseInfo :: !Info,
+        _caseValue :: !Node,
+        _caseBranches :: ![CaseBranch],
+        _caseDefault :: !(Maybe Node)
       }
-  | -- Dependent Pi-type. Compilation-time only.
-    Pi {piInfo :: !Info, piType :: !Type, piBody :: !Type}
+  | -- Dependent Pi-type. Compilation-time only. Pi implicitly introduces a binder
+    -- in the body, exactly like Lambda. So `Pi info ty body` is `Pi x : ty .
+    -- body` in more familiar notation, but references to `x` in `body` are via de
+    -- Bruijn index. For example, Pi A : Type . A -> A translates to (omitting
+    -- Infos): Pi (Univ level) (Pi (Var 0) (Var 1)).
+    Pi {_piInfo :: !Info, _piType :: !Type, _piBody :: !Type}
   | -- Universe. Compilation-time only.
-    Univ {univInfo :: !Info, univLevel :: !Int}
-  | -- Type application. Compilation-time only.
-    TypeApp {typeInfo :: !Info, typeSymbol :: !Symbol, typeArgs :: ![Type]}
+    Univ {_univInfo :: !Info, _univLevel :: !Int}
+  | -- Type constructor application. Compilation-time only.
+    TypeConstr {_typeConstrInfo :: !Info, _typeConstrSymbol :: !Symbol, _typeConstrArgs :: ![Type]}
   | -- Evaluation only: `Closure env body`
     Closure
-      { closureInfo :: !Info,
-        closureEnv :: !Env,
-        closureBody :: !Node
+      { _closureInfo :: !Info,
+        _closureEnv :: !Env,
+        _closureBody :: !Node
       }
 
 -- Other things we might need in the future:
@@ -85,7 +89,7 @@ data ConstantValue
 -- `CaseBranch tag argsNum branch`
 -- - `argsNum` is the number of arguments of the constructor tagged with `tag`,
 --   equal to the number of implicit binders above `branch`
-data CaseBranch = CaseBranch {caseTag :: !Tag, caseBindersNum :: !Int, caseBranch :: !Node}
+data CaseBranch = CaseBranch {_caseTag :: !Tag, _caseBindersNum :: !Int, _caseBranch :: !Node}
   deriving stock (Eq)
 
 -- A node (term) is closed if it has no free variables, i.e., no de Bruijn
@@ -110,16 +114,16 @@ instance HasAtomicity Node where
     Ident {} -> Atom
     Constant {} -> Atom
     App {} -> Aggregate appFixity
-    BuiltinApp {..} | null builtinArgs -> Atom
+    BuiltinApp {..} | null _builtinArgs -> Atom
     BuiltinApp {} -> Aggregate lambdaFixity
-    Constr {..} | null constrArgs -> Atom
+    Constr {..} | null _constrArgs -> Atom
     Constr {} -> Aggregate lambdaFixity
     Lambda {} -> Aggregate lambdaFixity
     Let {} -> Aggregate lambdaFixity
     Case {} -> Aggregate lambdaFixity
     Pi {} -> Aggregate lambdaFixity
     Univ {} -> Atom
-    TypeApp {} -> Aggregate appFixity
+    TypeConstr {} -> Aggregate appFixity
     Closure {} -> Aggregate lambdaFixity
 
 lambdaFixity :: Fixity
@@ -138,6 +142,6 @@ instance Eq Node where
   Case _ v1 bs1 def1 == Case _ v2 bs2 def2 = v1 == v2 && bs1 == bs2 && def1 == def2
   Pi _ ty1 b1 == Pi _ ty2 b2 = ty1 == ty2 && b1 == b2
   Univ _ l1 == Univ _ l2 = l1 == l2
-  TypeApp _ sym1 args1 == TypeApp _ sym2 args2 = sym1 == sym2 && args1 == args2
+  TypeConstr _ sym1 args1 == TypeConstr _ sym2 args2 = sym1 == sym2 && args1 == args2
   Closure _ env1 b1 == Closure _ env2 b2 = env1 == env2 && b1 == b2
   _ == _ = False

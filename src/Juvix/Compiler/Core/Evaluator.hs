@@ -71,7 +71,7 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
           v' -> evalError "matching on non-data" (substEnv env (Case i v' bs def))
       Pi {} -> substEnv env n -- this might need to be implemented more efficiently later
       Univ {} -> n
-      TypeApp i sym args -> TypeApp i sym (map (eval' env) args)
+      TypeConstr i sym args -> TypeConstr i sym (map (eval' env) args)
       Closure {} -> n
 
     branch :: Node -> Env -> [Node] -> Tag -> Maybe Node -> [CaseBranch] -> Node

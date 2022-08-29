@@ -127,8 +127,8 @@ destruct = \case
     NodeDetails i [ty, b] [0, 1] [Nothing, fetchBinderInfo i] (\i' args' -> Pi i' (hd args') (args' !! 1))
   Univ i l ->
     NodeDetails i [] [] [] (\i' _ -> Univ i' l)
-  TypeApp i sym args ->
-    NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`TypeApp` sym)
+  TypeConstr i sym args ->
+    NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`TypeConstr` sym)
   Closure i env b ->
     NodeDetails
       i

@@ -14,8 +14,8 @@ etaExpandBuiltins = umap go
     go :: Node -> Node
     go n = case n of
       BuiltinApp {..}
-        | builtinOpArgsNum builtinOp > length builtinArgs ->
-            etaExpand (builtinOpArgsNum builtinOp - length builtinArgs) n
+        | builtinOpArgsNum _builtinOp > length _builtinArgs ->
+            etaExpand (builtinOpArgsNum _builtinOp - length _builtinArgs) n
       _ -> n
 
 etaExpandConstrs :: (Tag -> Int) -> Node -> Node
@@ -24,10 +24,10 @@ etaExpandConstrs argsNum = umap go
     go :: Node -> Node
     go n = case n of
       Constr {..}
-        | k > length constrArgs ->
-            etaExpand (k - length constrArgs) n
+        | k > length _constrArgs ->
+            etaExpand (k - length _constrArgs) n
         where
-          k = argsNum constrTag
+          k = argsNum _constrTag
       _ -> n
 
 squashApps :: Node -> Node
