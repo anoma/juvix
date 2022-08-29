@@ -88,19 +88,19 @@ instance PrettyCode Node where
     BuiltinApp {..} -> do
       args' <- mapM (ppRightExpression appFixity) _builtinArgs
       op' <- ppCode _builtinOp
-      return $ foldl (<+>) op' args'
+      return $ foldl' (<+>) op' args'
     Constr {..} -> do
       args' <- mapM (ppRightExpression appFixity) _constrArgs
       n' <-
         case Info.lookup kNameInfo _constrInfo of
           Just ni -> ppCode (ni ^. NameInfo.infoName)
           Nothing -> ppCode _constrTag
-      return $ foldl (<+>) n' args'
+      return $ foldl' (<+>) n' args'
     Lambda {} -> do
       let (infos, body) = unfoldLambdas' node
       pplams <- mapM ppLam infos
       b <- ppCode body
-      return $ foldl (flip (<+>)) b pplams
+      return $ foldl' (flip (<+>)) b pplams
       where
         ppLam :: Member (Reader Options) r => Info -> Sem r (Doc Ann)
         ppLam i =
@@ -128,7 +128,7 @@ instance PrettyCode Node where
           Nothing -> mapM (\(CaseBranch tag _ _) -> ppCode tag) _caseBranches
       let bs = map (\(CaseBranch _ _ br) -> br) _caseBranches
       v <- ppCode _caseValue
-      bs' <- sequence $ zipWith3Exact (\cn bn br -> ppCode br >>= \br' -> return $ foldl (<+>) cn bn <+> kwMapsto <+> br') cns bns bs
+      bs' <- sequence $ zipWith3Exact (\cn bn br -> ppCode br >>= \br' -> return $ foldl' (<+>) cn bn <+> kwMapsto <+> br') cns bns bs
       bs'' <-
         case _caseDefault of
           Just def -> do
@@ -154,7 +154,7 @@ instance PrettyCode Node where
         case Info.lookup kNameInfo _typeConstrInfo of
           Just ni -> ppCode (ni ^. NameInfo.infoName)
           Nothing -> return $ kwUnnamedIdent <> pretty _typeConstrSymbol
-      return $ foldl (<+>) n' args'
+      return $ foldl' (<+>) n' args'
     Closure {..} ->
       ppCode (substEnv _closureEnv (Lambda _closureInfo _closureBody))
 
