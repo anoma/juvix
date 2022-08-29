@@ -3,6 +3,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.E
 -- import  Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
 
 import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Pretty (fromGenericOptions)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
 import Juvix.Data.PPOutput
 import Juvix.Prelude
@@ -15,17 +16,18 @@ data WrongConstructorAppLength = WrongConstructorAppLength
 makeLenses ''WrongConstructorAppLength
 
 instance ToGenericError WrongConstructorAppLength where
-  genericError e =
+  genericError opts e =
     GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
+      opts' = fromGenericOptions opts
       i = getLoc (e ^. wrongConstructorAppLength)
       msg =
         "The constructor"
-          <+> ppCode (e ^. wrongConstructorAppLength . constrAppConstructor)
+          <+> ppCode opts' (e ^. wrongConstructorAppLength . constrAppConstructor)
           <+> "should have"
           <+> arguments (e ^. wrongConstructorAppLengthExpected)
             <> ", but has been given"
@@ -47,7 +49,7 @@ newtype LhsTooManyPatterns = LhsTooManyPatterns
 makeLenses ''LhsTooManyPatterns
 
 instance ToGenericError LhsTooManyPatterns where
-  genericError e =
+  genericError _ e =
     GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = ppOutput msg,
@@ -74,13 +76,14 @@ data WrongPatternIsImplicit = WrongPatternIsImplicit
 makeLenses ''WrongPatternIsImplicit
 
 instance ToGenericError WrongPatternIsImplicit where
-  genericError e =
+  genericError opts e =
     GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
+      opts' = fromGenericOptions opts
       i = getLoc (e ^. wrongPatternIsImplicitActual)
       expec = e ^. wrongPatternIsImplicitExpected
       found = e ^. wrongPatternIsImplicitActual . patternArgIsImplicit
@@ -91,7 +94,7 @@ instance ToGenericError WrongPatternIsImplicit where
           <+> "pattern but found an"
           <+> pretty found
           <+> "pattern:"
-          <+> ppCode pat
+          <+> ppCode opts' pat
 
 data ExpectedExplicitArgument = ExpectedExplicitArgument
   { _expectedExplicitArgumentApp :: (Expression, [(IsImplicit, Expression)]),
@@ -101,13 +104,14 @@ data ExpectedExplicitArgument = ExpectedExplicitArgument
 makeLenses ''ExpectedExplicitArgument
 
 instance ToGenericError ExpectedExplicitArgument where
-  genericError e =
+  genericError opts e =
     GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
+      opts' = fromGenericOptions opts
       app@(f, args) = e ^. expectedExplicitArgumentApp
       idx = e ^. expectedExplicitArgumentIx
       arg :: Expression
@@ -117,13 +121,13 @@ instance ToGenericError ExpectedExplicitArgument where
         "Expected an explicit argument as the"
           <+> ordinal (succ idx)
           <+> "argument of"
-          <+> ppCode f
+          <+> ppCode opts' f
           <+> "but found"
-          <+> ppArg Implicit arg
+          <+> ppArg opts' Implicit arg
             <> "."
             <> softline
             <> "In the application"
-          <+> ppApp app
+          <+> ppApp opts' app
 
 newtype PatternFunction = PatternFunction
   { _patternFunction :: ConstructorApp
@@ -132,17 +136,18 @@ newtype PatternFunction = PatternFunction
 makeLenses ''PatternFunction
 
 instance ToGenericError PatternFunction where
-  genericError e =
+  genericError opts e =
     GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
+      opts' = fromGenericOptions opts
       i = getLoc (e ^. patternFunction)
       msg =
         "Invalid pattern"
-          <+> ppCode (e ^. patternFunction) <> "."
+          <+> ppCode opts' (e ^. patternFunction) <> "."
           <+> "Function types cannot be pattern matched"
 
 data TooManyArguments = TooManyArguments
@@ -153,25 +158,26 @@ data TooManyArguments = TooManyArguments
 makeLenses ''TooManyArguments
 
 instance ToGenericError TooManyArguments where
-  genericError e =
+  genericError opts e =
     GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
+      opts' = fromGenericOptions opts
       i = getLocSpan (fromJust (nonEmpty (map snd unexpectedArgs)))
       (fun, args) = e ^. tooManyArgumentsApp
       numUnexpected :: Int
       numUnexpected = e ^. tooManyArgumentsUnexpected
       unexpectedArgs :: [(IsImplicit, Expression)]
       unexpectedArgs = reverse . take numUnexpected . reverse $ args
-      ppUnexpectedArgs = hsep (map (uncurry ppArg) unexpectedArgs)
+      ppUnexpectedArgs = hsep (map (uncurry (ppArg opts')) unexpectedArgs)
       app :: Expression
       app = foldApplication fun args
       msg =
         "Too many arguments in the application"
-          <+> ppCode app <> "."
+          <+> ppCode opts' app <> "."
           <+> "The last"
           <+> numArguments
             <> ", namely"
@@ -193,13 +199,14 @@ data FunctionApplied = FunctionApplied
 makeLenses ''FunctionApplied
 
 instance ToGenericError FunctionApplied where
-  genericError e =
+  genericError opts e =
     GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
+      opts' = fromGenericOptions opts
       i = getLocSpan (fun :| map snd args)
       args = e ^. functionAppliedArguments
       fun = ExpressionFunction (e ^. functionAppliedFunction)
@@ -207,4 +214,4 @@ instance ToGenericError FunctionApplied where
         "A function type cannot be applied."
           <> softline
           <> "In the application"
-          <+> ppApp (fun, args)
+          <+> ppApp opts' (fun, args)

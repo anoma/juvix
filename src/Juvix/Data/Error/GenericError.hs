@@ -16,6 +16,10 @@ data GenericError = GenericError
     _genericErrorIntervals :: [Interval]
   }
 
+newtype GenericOptions = GenericOptions
+  { _optShowNameIds :: Bool
+  }
+
 makeLenses ''GenericError
 
 instance Pretty GenericError where
@@ -34,13 +38,13 @@ genericErrorHeader g =
       <> line
 
 class ToGenericError a where
-  genericError :: a -> GenericError
+  genericError :: GenericOptions -> a -> GenericError
 
-errorIntervals :: ToGenericError e => e -> [Interval]
-errorIntervals = (^. genericErrorIntervals) . genericError
+errorIntervals :: ToGenericError e => GenericOptions -> e -> [Interval]
+errorIntervals opts = (^. genericErrorIntervals) . genericError opts
 
-render :: ToGenericError e => Bool -> Bool -> e -> Text
-render ansi endChar err
+render :: ToGenericError e => GenericOptions -> Bool -> Bool -> e -> Text
+render opts ansi endChar err
   | ansi = helper Ansi.renderStrict (toAnsiDoc gMsg)
   | otherwise = helper renderStrict (toTextDoc gMsg)
   where
@@ -48,7 +52,7 @@ render ansi endChar err
     helper f x = (f . layoutPretty defaultLayoutOptions) (header <> x <> lastChar)
 
     g :: GenericError
-    g = genericError err
+    g = genericError opts err
 
     gMsg :: AnsiText
     gMsg = g ^. genericErrorMessage
@@ -62,32 +66,33 @@ render ansi endChar err
       | otherwise = ""
 
 -- | Render the error to Text.
-renderText :: ToGenericError e => e -> Text
-renderText = render False False
+renderText :: ToGenericError e => GenericOptions -> e -> Text
+renderText opts = render opts False False
 
 -- | Render the error with Ansi formatting (if any).
-renderAnsiText :: ToGenericError e => e -> Text
-renderAnsiText = render True False
+renderAnsiText :: ToGenericError e => GenericOptions -> e -> Text
+renderAnsiText opts = render opts True False
 
-printErrorAnsi :: ToGenericError e => e -> IO ()
-printErrorAnsi = hPutStrLn stderr . renderAnsiText
+printErrorAnsi :: ToGenericError e => GenericOptions -> e -> IO ()
+printErrorAnsi opts = hPutStrLn stderr . renderAnsiText opts
 
 -- | Print the error to stderr without formatting.
-printErrorText :: ToGenericError e => e -> IO ()
-printErrorText = hPutStrLn stderr . renderText
+printErrorText :: ToGenericError e => GenericOptions -> e -> IO ()
+printErrorText opts = hPutStrLn stderr . renderText opts
 
-printErrorAnsiSafe :: ToGenericError e => e -> IO ()
-printErrorAnsiSafe e =
+printErrorAnsiSafe :: ToGenericError e => GenericOptions -> e -> IO ()
+printErrorAnsiSafe opts e =
   ifM
     (Ansi.hSupportsANSI stderr)
-    (printErrorAnsi e)
-    (printErrorText e)
+    (printErrorAnsi opts e)
+    (printErrorText opts e)
 
 runErrorIO ::
   (ToGenericError a, Member (Embed IO) r) =>
+  GenericOptions ->
   Sem (Error a ': r) b ->
   Sem r b
-runErrorIO =
+runErrorIO opts =
   runError >=> \case
-    Left err -> embed (printErrorAnsiSafe err >> exitFailure)
+    Left err -> embed (printErrorAnsiSafe opts err >> exitFailure)
     Right a -> return a

@@ -9,23 +9,23 @@ import Juvix.Compiler.Internal.Pretty.Base qualified as Micro
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
-ppCode :: Micro.PrettyCode c => c -> Doc Ann
-ppCode = runPP . Micro.ppCode
+ppCode :: Micro.PrettyCode c => Micro.Options -> c -> Doc Ann
+ppCode opts = runPP opts . Micro.ppCode
 
-ppAtom :: (Micro.PrettyCode c, HasAtomicity c) => c -> Doc Ann
-ppAtom = runPP . Micro.ppCodeAtom
+ppAtom :: (Micro.PrettyCode c, HasAtomicity c) => Micro.Options -> c -> Doc Ann
+ppAtom opts = runPP opts . Micro.ppCodeAtom
 
-runPP :: Sem '[Reader Micro.Options] (Doc Micro.Ann) -> Doc Ann
-runPP = highlight_ . run . runReader Micro.defaultOptions
+runPP :: Micro.Options -> Sem '[Reader Micro.Options] (Doc Micro.Ann) -> Doc Ann
+runPP opts = highlight_ . run . runReader opts
 
 highlight_ :: Doc Ann -> Doc Ann
 highlight_ = annotate AnnCode
 
-ppApp :: (Expression, [(IsImplicit, Expression)]) -> Doc Ann
-ppApp (fun, args) =
-  hsep (ppAtom fun : map (uncurry ppArg) args)
+ppApp :: Micro.Options -> (Expression, [(IsImplicit, Expression)]) -> Doc Ann
+ppApp opts (fun, args) =
+  hsep (ppAtom opts fun : map (uncurry (ppArg opts)) args)
 
-ppArg :: IsImplicit -> Expression -> Doc Ann
-ppArg im arg = case im of
-  Implicit -> braces (ppCode arg)
-  Explicit -> ppAtom arg
+ppArg :: Micro.Options -> IsImplicit -> Expression -> Doc Ann
+ppArg opts im arg = case im of
+  Implicit -> braces (ppCode opts arg)
+  Explicit -> ppAtom opts arg

@@ -17,12 +17,12 @@ data ArityCheckerError
   | ErrFunctionApplied FunctionApplied
 
 instance ToGenericError ArityCheckerError where
-  genericError :: ArityCheckerError -> GenericError
-  genericError = \case
-    ErrWrongConstructorAppLength e -> genericError e
-    ErrLhsTooManyPatterns e -> genericError e
-    ErrWrongPatternIsImplicit e -> genericError e
-    ErrExpectedExplicitArgument e -> genericError e
-    ErrPatternFunction e -> genericError e
-    ErrTooManyArguments e -> genericError e
-    ErrFunctionApplied e -> genericError e
+  genericError :: GenericOptions -> ArityCheckerError -> GenericError
+  genericError opts = \case
+    ErrWrongConstructorAppLength e -> genericError opts e
+    ErrLhsTooManyPatterns e -> genericError opts e
+    ErrWrongPatternIsImplicit e -> genericError opts e
+    ErrExpectedExplicitArgument e -> genericError opts e
+    ErrPatternFunction e -> genericError opts e
+    ErrTooManyArguments e -> genericError opts e
+    ErrFunctionApplied e -> genericError opts e

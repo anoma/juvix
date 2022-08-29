@@ -40,30 +40,30 @@ data ScoperError
   deriving stock (Show)
 
 instance ToGenericError ScoperError where
-  genericError = \case
-    ErrParser e -> genericError e
-    ErrInfixParser e -> genericError e
-    ErrAppLeftImplicit e -> genericError e
-    ErrInfixPattern e -> genericError e
-    ErrMultipleDeclarations e -> genericError e
-    ErrLacksTypeSig e -> genericError e
-    ErrImportCycle e -> genericError e
-    ErrSymNotInScope e -> genericError e
-    ErrQualSymNotInScope e -> genericError e
-    ErrModuleNotInScope e -> genericError e
-    ErrBindGroup e -> genericError e
-    ErrDuplicateFixity e -> genericError e
-    ErrMultipleExport e -> genericError e
-    ErrAmbiguousSym e -> genericError e
-    ErrWrongTopModuleName e -> genericError e
-    ErrAmbiguousModuleSym e -> genericError e
-    ErrUnusedOperatorDef e -> genericError e
-    ErrLacksFunctionClause e -> genericError e
-    ErrWrongLocationCompileBlock e -> genericError e
-    ErrMultipleCompileBlockSameName e -> genericError e
-    ErrMultipleCompileRuleSameBackend e -> genericError e
-    ErrWrongKindExpressionCompileBlock e -> genericError e
-    ErrDuplicateInductiveParameterName e -> genericError e
-    ErrDoubleBracesPattern e -> genericError e
-    ErrImplicitPatternLeftApplication e -> genericError e
-    ErrConstructorExpectedLeftApplication e -> genericError e
+  genericError opts = \case
+    ErrParser e -> genericError opts e
+    ErrInfixParser e -> genericError opts e
+    ErrAppLeftImplicit e -> genericError opts e
+    ErrInfixPattern e -> genericError opts e
+    ErrMultipleDeclarations e -> genericError opts e
+    ErrLacksTypeSig e -> genericError opts e
+    ErrImportCycle e -> genericError opts e
+    ErrSymNotInScope e -> genericError opts e
+    ErrQualSymNotInScope e -> genericError opts e
+    ErrModuleNotInScope e -> genericError opts e
+    ErrBindGroup e -> genericError opts e
+    ErrDuplicateFixity e -> genericError opts e
+    ErrMultipleExport e -> genericError opts e
+    ErrAmbiguousSym e -> genericError opts e
+    ErrWrongTopModuleName e -> genericError opts e
+    ErrAmbiguousModuleSym e -> genericError opts e
+    ErrUnusedOperatorDef e -> genericError opts e
+    ErrLacksFunctionClause e -> genericError opts e
+    ErrWrongLocationCompileBlock e -> genericError opts e
+    ErrMultipleCompileBlockSameName e -> genericError opts e
+    ErrMultipleCompileRuleSameBackend e -> genericError opts e
+    ErrWrongKindExpressionCompileBlock e -> genericError opts e
+    ErrDuplicateInductiveParameterName e -> genericError opts e
+    ErrDoubleBracesPattern e -> genericError opts e
+    ErrImplicitPatternLeftApplication e -> genericError opts e
+    ErrConstructorExpectedLeftApplication e -> genericError opts e
