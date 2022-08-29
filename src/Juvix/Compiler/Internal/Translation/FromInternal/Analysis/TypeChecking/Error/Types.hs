@@ -1,6 +1,7 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Types where
 
 import Juvix.Compiler.Internal.Language
+import Juvix.Compiler.Internal.Pretty (fromGenericOptions)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
 import Juvix.Data.PPOutput
 import Juvix.Prelude
@@ -17,25 +18,26 @@ data WrongConstructorType = WrongConstructorType
 makeLenses ''WrongConstructorType
 
 instance ToGenericError WrongConstructorType where
-  genericError e =
+  genericError opts e =
     GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
+      opts' = fromGenericOptions opts
       ctorName = e ^. wrongCtorTypeName
       i = getLoc ctorName
       msg =
         "The constructor"
-          <+> ppCode ctorName
+          <+> ppCode opts' ctorName
           <+> "belongs to the inductive type:"
             <> line
-            <> indent' (ppCode (e ^. wrongCtorTypeActual))
+            <> indent' (ppCode opts' (e ^. wrongCtorTypeActual))
             <> line
             <> "but is expected to belong to the inductive type:"
             <> line
-            <> indent' (ppCode (e ^. wrongCtorTypeExpected))
+            <> indent' (ppCode opts' (e ^. wrongCtorTypeExpected))
 
 data WrongReturnType = WrongReturnType
   { _wrongReturnTypeConstructorName :: Name,
@@ -46,27 +48,28 @@ data WrongReturnType = WrongReturnType
 makeLenses ''WrongReturnType
 
 instance ToGenericError WrongReturnType where
-  genericError e =
+  genericError opts e =
     GenericError
       { _genericErrorLoc = j,
         _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i, j]
       }
     where
+      opts' = fromGenericOptions opts
       ctorName = e ^. wrongReturnTypeConstructorName
       i = getLoc ctorName
       ty = e ^. wrongReturnTypeActual
       j = getLoc ty
       msg =
         "The constructor"
-          <+> ppCode ctorName
+          <+> ppCode opts' ctorName
           <+> "has the wrong return type:"
             <> line
-            <> indent' (ppCode ty)
+            <> indent' (ppCode opts' ty)
             <> line
             <> "but is expected to have type:"
             <> line
-            <> indent' (ppCode (e ^. wrongReturnTypeExpected))
+            <> indent' (ppCode opts' (e ^. wrongReturnTypeExpected))
 
 newtype UnsolvedMeta = UnsolvedMeta
   { _unsolvedMeta :: Hole
@@ -75,7 +78,7 @@ newtype UnsolvedMeta = UnsolvedMeta
 makeLenses ''UnsolvedMeta
 
 instance ToGenericError UnsolvedMeta where
-  genericError e =
+  genericError _ e =
     GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = ppOutput msg,
@@ -97,13 +100,14 @@ data WrongConstructorAppArgs = WrongConstructorAppArgs
 makeLenses ''WrongConstructorAppArgs
 
 instance ToGenericError WrongConstructorAppArgs where
-  genericError e =
+  genericError opts e =
     GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
+      opts' = fromGenericOptions opts
       i = getLoc (e ^. wrongCtorAppApp . constrAppConstructor)
       msg =
         "The constructor:"
@@ -112,20 +116,20 @@ instance ToGenericError WrongConstructorAppArgs where
           <+> numPats
             <> ":"
             <> line
-            <> indent' (ppCode (e ^. wrongCtorAppApp))
+            <> indent' (ppCode opts' (e ^. wrongCtorAppApp))
             <> line
             <> "but is expected to be matched against"
           <+> numTypes
           <+> "with the following types:"
             <> line
-            <> indent' (hsep (ctorName : (ppCode <$> (e ^. wrongCtorAppTypes))))
+            <> indent' (hsep (ctorName : (ppCode opts' <$> (e ^. wrongCtorAppTypes))))
       numPats :: Doc ann
       numPats = pat (length (e ^. wrongCtorAppApp . constrAppParameters))
       numTypes :: Doc ann
       numTypes = pat (length (e ^. wrongCtorAppTypes))
 
       ctorName :: Doc Ann
-      ctorName = ppCode (e ^. wrongCtorAppApp . constrAppConstructor)
+      ctorName = ppCode opts' (e ^. wrongCtorAppApp . constrAppConstructor)
 
       pat :: Int -> Doc ann
       pat n = pretty n <+> plural "pattern" "patterns" n
@@ -140,25 +144,26 @@ data WrongType = WrongType
 makeLenses ''WrongType
 
 instance ToGenericError WrongType where
-  genericError e =
+  genericError opts e =
     GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
+      opts' = fromGenericOptions opts
       i = either getLoc getLoc (e ^. wrongTypeThing)
       msg =
         "The"
           <+> thing
-          <+> either ppCode ppCode subjectThing
+          <+> either (ppCode opts') (ppCode opts') subjectThing
           <+> "has type:"
             <> line
-            <> indent' (ppCode (e ^. wrongTypeActual))
+            <> indent' (ppCode opts' (e ^. wrongTypeActual))
             <> line
             <> "but is expected to have type:"
             <> line
-            <> indent' (ppCode (e ^. wrongTypeExpected))
+            <> indent' (ppCode opts' (e ^. wrongTypeExpected))
       thing :: Doc a
       thing = case subjectThing of
         Left {} -> "expression"
@@ -177,13 +182,14 @@ data ExpectedFunctionType = ExpectedFunctionType
 makeLenses ''ExpectedFunctionType
 
 instance ToGenericError ExpectedFunctionType where
-  genericError e =
+  genericError opts e =
     GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
+      opts' = fromGenericOptions opts
       i = getLoc (e ^. expectedFunctionTypeExpression)
       msg =
         "Type error near"
@@ -192,13 +198,13 @@ instance ToGenericError ExpectedFunctionType where
             <> line
             <> "In the expression:"
             <> line
-            <> indent' (ppCode (e ^. expectedFunctionTypeExpression))
+            <> indent' (ppCode opts' (e ^. expectedFunctionTypeExpression))
             <> line
             <> "the expression"
-          <+> ppCode (e ^. expectedFunctionTypeApp)
+          <+> ppCode opts' (e ^. expectedFunctionTypeApp)
           <+> "is expected to have a function type but has type:"
             <> line
-            <> indent' (ppCode (e ^. expectedFunctionTypeType))
+            <> indent' (ppCode opts' (e ^. expectedFunctionTypeType))
       subjectExpr :: Expression
       subjectExpr = e ^. expectedFunctionTypeExpression
 
@@ -211,20 +217,21 @@ data WrongNumberArgumentsIndType = WrongNumberArgumentsIndType
 makeLenses ''WrongNumberArgumentsIndType
 
 instance ToGenericError WrongNumberArgumentsIndType where
-  genericError e =
+  genericError opts e =
     GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
+      opts' = fromGenericOptions opts
       ty = e ^. wrongNumberArgumentsIndTypeActualType
       i = getLoc ty
       expectedNumArgs = e ^. wrongNumberArgumentsIndTypeExpectedNumArgs
       actualNumArgs = e ^. wrongNumberArgumentsIndTypeActualNumArgs
       msg =
         "The type"
-          <+> ppCode ty
+          <+> ppCode opts' ty
           <+> "expects"
           <+> ( if
                     | expectedNumArgs == 0 -> "no arguments"
@@ -246,18 +253,19 @@ newtype ImpracticalPatternMatching = ImpracticalPatternMatching
 makeLenses ''ImpracticalPatternMatching
 
 instance ToGenericError ImpracticalPatternMatching where
-  genericError e =
+  genericError opts e =
     GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
       }
     where
+      opts' = fromGenericOptions opts
       ty = e ^. impracticalPatternMatchingType
       i = getLoc ty
       msg =
         "The type"
-          <+> ppCode ty
+          <+> ppCode opts' ty
           <+> "is not an inductive data type."
           <+> "Therefore, pattern-matching is not available here"
 
@@ -270,13 +278,14 @@ data NoPositivity = NoPositivity
 makeLenses ''NoPositivity
 
 instance ToGenericError NoPositivity where
-  genericError e =
+  genericError opts e =
     GenericError
       { _genericErrorLoc = j,
         _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i, j]
       }
     where
+      opts' = fromGenericOptions opts
       ty = e ^. noStrictPositivityType
       ctor = e ^. noStrictPositivityConstructor
       arg = e ^. noStrictPositivityArgument
@@ -284,8 +293,8 @@ instance ToGenericError NoPositivity where
       j = getLoc arg
       msg =
         "The type"
-          <+> ppCode ty
+          <+> ppCode opts' ty
           <+> "is not strictly positive."
             <> line
             <> "It appears at a negative position in one of the arguments of the constructor"
-          <+> ppCode ctor <> "."
+          <+> ppCode opts' ctor <> "."

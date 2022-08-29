@@ -12,7 +12,7 @@ newtype NoLexOrder = NoLexOrder
 makeLenses 'NoLexOrder
 
 instance ToGenericError NoLexOrder where
-  genericError NoLexOrder {..} =
+  genericError _ NoLexOrder {..} =
     GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = ppOutput msg,
