@@ -1,5 +1,8 @@
 -- functional queues
 
+constr nil 0;
+constr cons 2;
+
 def hd := \l case l of { cons x _ -> x };
 def tl := \l case l of { cons _ x -> x };
 

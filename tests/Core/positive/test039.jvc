@@ -1,5 +1,7 @@
 -- eta-expansion of builtins and constructors
 
+constr cons 2;
+
 def f := \g g 2;
 def f' := \x f (+ x);
 

@@ -1,5 +1,8 @@
 -- nested lists
 
+constr nil 0;
+constr cons 2;
+
 def mklst := \n if n = 0 then nil else cons n (mklst (n - 1));
 def mklst2 := \n if n = 0 then nil else cons (mklst n) (mklst2 (n - 1));
 

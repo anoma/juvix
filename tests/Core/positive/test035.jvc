@@ -1,5 +1,8 @@
 -- merge sort
 
+constr nil 0;
+constr cons 2;
+
 constr pair 2;
 
 def length := \xs case xs of {
@@ -15,8 +18,8 @@ def split := \n \xs
       nil -> pair nil nil;
       cons x xs' ->
         case split (n - 1) xs' of {
-	  pair l1 l2 -> pair (cons x l1) l2
-	}
+          pair l1 l2 -> pair (cons x l1) l2
+        }
     };
 
 def merge := \xs \ys case xs of {

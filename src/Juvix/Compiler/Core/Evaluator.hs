@@ -151,7 +151,7 @@ hEvalIO hin hout ctx env node =
         _ ->
           return node'
   where
-    unitNode = Constr (Info.singleton (NoDisplayInfo ())) (BuiltinTag TagNil) []
+    unitNode = Constr (Info.singleton (NoDisplayInfo ())) (BuiltinTag TagVoid) []
 
 evalIO :: IdentContext -> Env -> Node -> IO Node
 evalIO = hEvalIO stdin stdout

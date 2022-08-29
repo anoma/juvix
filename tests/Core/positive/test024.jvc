@@ -1,5 +1,8 @@
 -- structural equality
 
+constr nil 0;
+constr cons 2;
+
 def writeLn := \x write x >> write "\n";
 
 writeLn (1 = 1) >>

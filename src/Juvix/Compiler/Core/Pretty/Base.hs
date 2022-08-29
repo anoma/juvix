@@ -50,8 +50,7 @@ instance PrettyCode BuiltinOp where
 
 instance PrettyCode BuiltinDataTag where
   ppCode = \case
-    TagNil -> return $ annotate (AnnKind KNameConstructor) (pretty ("nil" :: String))
-    TagCons -> return $ annotate (AnnKind KNameConstructor) (pretty ("cons" :: String))
+    TagVoid -> return $ annotate (AnnKind KNameConstructor) (pretty ("void" :: String))
     TagReturn -> return $ annotate (AnnKind KNameConstructor) (pretty ("return" :: String))
     TagBind -> return $ annotate (AnnKind KNameConstructor) (pretty ("bind" :: String))
     TagWrite -> return $ annotate (AnnKind KNameConstructor) (pretty ("write" :: String))

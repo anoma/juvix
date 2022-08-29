@@ -92,8 +92,6 @@ declareBuiltins :: Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r
 declareBuiltins = do
   loc <- curLoc
   let i = mkInterval loc loc
-  lift $ declareBuiltinConstr TagNil "nil" i
-  lift $ declareBuiltinConstr TagCons "cons" i
   lift $ declareBuiltinConstr TagReturn "return" i
   lift $ declareBuiltinConstr TagBind "bind" i
   lift $ declareBuiltinConstr TagWrite "write" i
