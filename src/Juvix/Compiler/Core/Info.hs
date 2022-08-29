@@ -37,8 +37,11 @@ lookupDefault :: IsInfo a => a -> Info -> a
 lookupDefault a i =
   fromDyn (HashMap.lookupDefault (toDyn a) (typeOf a) (i ^. infoMap)) impossible
 
+lookup' :: IsInfo a => Key a -> Info -> a
+lookup' k i = fromMaybe impossible (Juvix.Compiler.Core.Info.lookup k i)
+
 (!) :: IsInfo a => Key a -> Info -> a
-(!) k i = fromJust (Juvix.Compiler.Core.Info.lookup k i)
+(!) = lookup'
 
 insert :: IsInfo a => a -> Info -> Info
 insert a i = Info (HashMap.insert (typeOf a) (toDyn a) (i ^. infoMap))
