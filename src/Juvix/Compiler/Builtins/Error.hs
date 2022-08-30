@@ -13,11 +13,12 @@ makeLenses ''AlreadyDefined
 
 instance ToGenericError AlreadyDefined where
   genericError e =
-    return GenericError
-      { _genericErrorLoc = i,
-        _genericErrorMessage = ppOutput msg,
-        _genericErrorIntervals = [i]
-      }
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = ppOutput msg,
+          _genericErrorIntervals = [i]
+        }
     where
       i = e ^. alreadyDefinedLoc
       msg = "The builtin" <+> code (pretty (e ^. alreadyDefinedBuiltin)) <+> "has already been defined"
@@ -31,11 +32,12 @@ makeLenses ''NotDefined
 
 instance ToGenericError NotDefined where
   genericError e =
-    return GenericError
-      { _genericErrorLoc = i,
-        _genericErrorMessage = ppOutput msg,
-        _genericErrorIntervals = [i]
-      }
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = ppOutput msg,
+          _genericErrorIntervals = [i]
+        }
     where
       i = e ^. notDefinedLoc
       msg = "The builtin" <+> code (pretty (e ^. notDefinedBuiltin)) <+> "has not been defined"

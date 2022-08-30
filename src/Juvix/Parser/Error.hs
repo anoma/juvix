@@ -12,11 +12,12 @@ newtype ParserError = ParserError
 
 instance ToGenericError ParserError where
   genericError e =
-    return GenericError
-      { _genericErrorLoc = i,
-        _genericErrorMessage = AnsiText $ pretty @_ @AnsiStyle e,
-        _genericErrorIntervals = [i]
-      }
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = AnsiText $ pretty @_ @AnsiStyle e,
+          _genericErrorIntervals = [i]
+        }
     where
       i = getLoc e
 

@@ -27,11 +27,12 @@ data MultipleDeclarations = MultipleDeclarations
 
 instance ToGenericError MultipleDeclarations where
   genericError MultipleDeclarations {..} =
-    return GenericError
-      { _genericErrorLoc = i1,
-        _genericErrorMessage = prettyError msg,
-        _genericErrorIntervals = [i1, _multipleDeclSecond]
-      }
+    return
+      GenericError
+        { _genericErrorLoc = i1,
+          _genericErrorMessage = prettyError msg,
+          _genericErrorIntervals = [i1, _multipleDeclSecond]
+        }
     where
       i1 :: Interval
       i1 = entryName _multipleDeclEntry ^. S.nameDefined
@@ -53,11 +54,12 @@ instance ToGenericError InfixError where
   genericError InfixError {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = getLoc _infixErrorAtoms
@@ -77,11 +79,12 @@ instance ToGenericError InfixErrorP where
   genericError InfixErrorP {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = getLoc _infixErrorAtomsP
@@ -101,11 +104,12 @@ instance ToGenericError LacksTypeSig where
   genericError LacksTypeSig {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = _lacksTypeSigClause ^. clauseOwnerFunction . symbolLoc
@@ -124,11 +128,12 @@ instance ToGenericError LacksFunctionClause where
   genericError LacksFunctionClause {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = getLoc (_lacksFunctionClause ^. sigName)
@@ -147,11 +152,12 @@ instance ToGenericError ImportCycle where
   genericError ImportCycle {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           h = head _importCycleImports
@@ -176,11 +182,12 @@ instance ToGenericError QualSymNotInScope where
   genericError QualSymNotInScope {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = getLoc _qualSymNotInScope
@@ -196,11 +203,12 @@ instance ToGenericError BindGroupConflict where
   genericError BindGroupConflict {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i2,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i1, i2]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i2,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i1, i2]
+            }
         where
           opts' = fromGenericOptions opts
           i1 = getLoc _bindGroupFirst
@@ -223,11 +231,12 @@ instance ToGenericError DuplicateFixity where
   genericError DuplicateFixity {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i2,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i1, i2]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i2,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i1, i2]
+            }
         where
           opts' = fromGenericOptions opts
           i1 = getLoc _dupFixityFirst
@@ -254,11 +263,12 @@ instance ToGenericError MultipleExportConflict where
   genericError MultipleExportConflict {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = getLoc _multipleExportModule
@@ -281,11 +291,12 @@ instance ToGenericError NotInScope where
   genericError e@NotInScope {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = e ^. notInScopeSymbol . symbolLoc,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [e ^. notInScopeSymbol . symbolLoc]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = e ^. notInScopeSymbol . symbolLoc,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [e ^. notInScopeSymbol . symbolLoc]
+            }
         where
           opts' = fromGenericOptions opts
           msg =
@@ -325,11 +336,12 @@ instance ToGenericError AppLeftImplicit where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = getLoc (e ^. appLeftImplicit)
@@ -351,11 +363,12 @@ instance ToGenericError ModuleNotInScope where
   genericError e@ModuleNotInScope {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = getLoc (e ^. moduleNotInScopeName)
@@ -378,11 +391,12 @@ instance ToGenericError UnusedOperatorDef where
   genericError UnusedOperatorDef {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = getLoc _unusedOperatorDef
@@ -402,11 +416,12 @@ instance ToGenericError WrongTopModuleName where
   genericError WrongTopModuleName {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = getLoc _wrongTopModuleNameActualName
@@ -431,11 +446,12 @@ instance ToGenericError AmbiguousSym where
   genericError AmbiguousSym {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = i : is
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = i : is
+            }
         where
           opts' = fromGenericOptions opts
           i = getLoc _ambiguousSymName
@@ -452,11 +468,12 @@ instance ToGenericError AmbiguousModuleSym where
   genericError AmbiguousModuleSym {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = i : is
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = i : is
+            }
         where
           opts' = fromGenericOptions opts
           i = getLoc _ambiguousModName
@@ -473,11 +490,12 @@ instance ToGenericError WrongLocationCompileBlock where
   genericError WrongLocationCompileBlock {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           name = _wrongLocationCompileBlockName
@@ -496,14 +514,15 @@ data MultipleCompileBlockSameName = MultipleCompileBlockSameName
   deriving stock (Show)
 
 instance ToGenericError MultipleCompileBlockSameName where
-  genericError MultipleCompileBlockSameName {..} =ask >>= generr
+  genericError MultipleCompileBlockSameName {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i2,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i1, i2]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i2,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i1, i2]
+            }
         where
           opts' = fromGenericOptions opts
           i1 = _multipleCompileBlockFirstDefined
@@ -522,11 +541,12 @@ instance ToGenericError MultipleCompileRuleSameBackend where
   genericError MultipleCompileRuleSameBackend {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           backend = _multipleCompileRuleSameBackendBackendItem ^. backendItemBackend
@@ -550,11 +570,12 @@ instance ToGenericError WrongKindExpressionCompileBlock where
   genericError WrongKindExpressionCompileBlock {..} = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = getLoc _wrongKindExpressionCompileBlockSym
@@ -595,11 +616,12 @@ instance ToGenericError DuplicateInductiveParameterName where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           param = e ^. duplicateInductiveParameterName
@@ -622,11 +644,12 @@ instance ToGenericError DoubleBracesPattern where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           pat :: PatternArg
@@ -647,11 +670,12 @@ instance ToGenericError ImplicitPatternLeftApplication where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           pat :: PatternApp
@@ -672,11 +696,12 @@ instance ToGenericError ConstructorExpectedLeftApplication where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = prettyError msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           pat :: Pattern

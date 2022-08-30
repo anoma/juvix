@@ -57,8 +57,8 @@ render ansi endChar err = do
   let header = genericErrorHeader g
   let helper f x = (f . layoutPretty defaultLayoutOptions) (header <> x <> lastChar)
   if
-    | ansi -> return $ helper Ansi.renderStrict (toAnsiDoc gMsg)
-    | otherwise -> return $ helper renderStrict (toTextDoc gMsg)
+      | ansi -> return $ helper Ansi.renderStrict (toAnsiDoc gMsg)
+      | otherwise -> return $ helper renderStrict (toTextDoc gMsg)
   where
     lastChar :: Doc a
     lastChar

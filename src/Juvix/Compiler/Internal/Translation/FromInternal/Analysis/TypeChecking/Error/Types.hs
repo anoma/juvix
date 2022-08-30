@@ -21,11 +21,12 @@ instance ToGenericError WrongConstructorType where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = ppOutput msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           ctorName = e ^. wrongCtorTypeName
@@ -53,11 +54,12 @@ instance ToGenericError WrongReturnType where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = j,
-            _genericErrorMessage = ppOutput msg,
-            _genericErrorIntervals = [i, j]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = j,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i, j]
+            }
         where
           opts' = fromGenericOptions opts
           ctorName = e ^. wrongReturnTypeConstructorName
@@ -83,11 +85,12 @@ makeLenses ''UnsolvedMeta
 
 instance ToGenericError UnsolvedMeta where
   genericError e =
-    return GenericError
-      { _genericErrorLoc = i,
-        _genericErrorMessage = ppOutput msg,
-        _genericErrorIntervals = [i]
-      }
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = ppOutput msg,
+          _genericErrorIntervals = [i]
+        }
     where
       i = getLoc (e ^. unsolvedMeta)
       msg :: Doc a
@@ -107,11 +110,12 @@ instance ToGenericError WrongConstructorAppArgs where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = ppOutput msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = getLoc (e ^. wrongCtorAppApp . constrAppConstructor)
@@ -153,11 +157,12 @@ instance ToGenericError WrongType where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = ppOutput msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = either getLoc getLoc (e ^. wrongTypeThing)
@@ -193,11 +198,12 @@ instance ToGenericError ExpectedFunctionType where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = ppOutput msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = getLoc (e ^. expectedFunctionTypeExpression)
@@ -230,11 +236,12 @@ instance ToGenericError WrongNumberArgumentsIndType where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = ppOutput msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           ty = e ^. wrongNumberArgumentsIndTypeActualType
@@ -268,11 +275,12 @@ instance ToGenericError ImpracticalPatternMatching where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = ppOutput msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           ty = e ^. impracticalPatternMatchingType
@@ -295,11 +303,12 @@ instance ToGenericError NoPositivity where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = j,
-            _genericErrorMessage = ppOutput msg,
-            _genericErrorIntervals = [i, j]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = j,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i, j]
+            }
         where
           opts' = fromGenericOptions opts
           ty = e ^. noStrictPositivityType
