@@ -1,7 +1,5 @@
 module Juvix.Compiler.Core.Extra.Recursors.Collector where
 
--- import Juvix.Compiler.Core.Extra.Recursors.Base
-
 import Juvix.Compiler.Core.Data.BinderList (BinderList)
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Info.BinderInfo
