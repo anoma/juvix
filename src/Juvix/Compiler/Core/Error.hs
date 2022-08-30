@@ -12,7 +12,7 @@ data CoreError = CoreError
 makeLenses ''CoreError
 
 instance ToGenericError CoreError where
-  genericError e =
+  genericError _ e =
     GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = AnsiText $ pretty @_ @AnsiStyle e,
