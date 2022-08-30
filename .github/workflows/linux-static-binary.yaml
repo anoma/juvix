@@ -32,7 +32,7 @@ jobs:
         run: "chown -R $(id -un):$(id -gn) ~"
 
       - name: build Juvix
-        run: stack install --system-ghc --ghc-options='-split-sections -optl-static'
+        run: stack install --allow-different-user --system-ghc --ghc-options='-split-sections -optl-static'
 
       - run: echo "HOME=$HOME" >> $GITHUB_ENV
         shell: bash
