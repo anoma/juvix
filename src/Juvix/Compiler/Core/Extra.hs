@@ -56,12 +56,14 @@ shift m = umapN go
       _ -> n
 
 -- substitute a term t for the free variable with de Bruijn index 0, avoiding
--- variable capture
+-- variable capture; shifts all free variabes with de Bruijn index > 0 by -1 (as
+-- if the topmost binder was removed)
 subst :: Node -> Node -> Node
 subst t = umapN go
   where
     go k n = case n of
       Var _ idx | idx == k -> shift k t
+      Var i idx | idx > k -> Var i (idx - 1)
       _ -> n
 
 -- reduce all beta redexes present in a term and the ones created immediately
