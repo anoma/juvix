@@ -28,6 +28,9 @@ jobs:
         run: echo "$HOME/.local/bin" >> $GITHUB_PATH
         shell: bash
 
+      - name: Stack permissions bug workaround
+        run: "chown -R $(id -un):$(id -gn) ~"
+
       - name: build Juvix
         run: stack install --system-ghc --ghc-options='-split-sections -optl-static'
 
