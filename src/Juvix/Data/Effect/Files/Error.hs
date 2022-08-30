@@ -15,8 +15,8 @@ data FilesError = FilesError
   deriving stock (Show)
 
 instance ToGenericError FilesError where
-  genericError _ FilesError {..} =
-    GenericError
+  genericError FilesError {..} =
+    return GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = AnsiText (pretty @_ @AnsiStyle msg),
         _genericErrorIntervals = [i]

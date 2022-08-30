@@ -11,8 +11,8 @@ newtype ParserError = ParserError
   deriving stock (Show)
 
 instance ToGenericError ParserError where
-  genericError _ e =
-    GenericError
+  genericError e =
+    return GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = AnsiText $ pretty @_ @AnsiStyle e,
         _genericErrorIntervals = [i]

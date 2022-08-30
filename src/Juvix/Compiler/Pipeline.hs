@@ -101,7 +101,7 @@ runIO opts = runIOEither >=> mayThrow
   where
     mayThrow :: Either JuvixError r -> IO r
     mayThrow = \case
-      Left err -> printErrorAnsiSafe opts err >> exitFailure
+      Left err -> runM $ runReader opts $ printErrorAnsiSafe err >> embed exitFailure
       Right r -> return r
 
 runIO' :: Sem PipelineEff a -> IO a

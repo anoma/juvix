@@ -12,8 +12,8 @@ data CoreError = CoreError
 makeLenses ''CoreError
 
 instance ToGenericError CoreError where
-  genericError _ e =
-    GenericError
+  genericError e =
+    return GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = AnsiText $ pretty @_ @AnsiStyle e,
         _genericErrorIntervals = [i]
