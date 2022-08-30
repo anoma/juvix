@@ -1,0 +1,28 @@
+FROM alpine:3.12
+
+RUN apk upgrade --no-cache &&\
+    apk add --no-cache curl gcc g++ gmp-dev ncurses-dev libffi-dev make xz gzip tar perl git bash sudo binutils-gold lld &&\
+    apk add --no-cache zlib zlib-dev zlib-static gmp gmp-dev ncurses-static xz
+
+RUN curl https://downloads.haskell.org/~ghc/8.10-latest/ghc-8.10.2-x86_64-alpine3.10-linux-integer-simple.tar.xz -OL
+
+RUN tar xf ghc-8.10.2-x86_64-alpine3.10-linux-integer-simple.tar.xz
+
+RUN cd ghc-8.10.2-x86_64-unknown-linux && ./configure --prefix /opt && make install
+
+RUN curl https://downloads.haskell.org/~ghc/9.2.4/ghc-9.2.4-src.tar.xz -OL
+
+RUN tar xf ghc-9.2.4-src.tar.xz
+
+WORKDIR /ghc-9.2.4
+
+RUN GHC=/opt/bin/ghc ./configure --prefix /usr/local
+
+RUN make -j
+RUN make install
+
+WORKDIR /
+
+RUN curl https://get.haskellstack.org/stable/linux-x86_64.tar.gz -OL
+RUN tar xf linux-x86_64.tar.gz
+RUN cp stack-2.7.5-linux-x86_64/stack /usr/local/bin

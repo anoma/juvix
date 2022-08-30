@@ -1,0 +1,41 @@
+name: Build Linux static binary
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'the repository ref to build'
+        required: true
+        default: 'main'
+
+jobs:
+  build:
+    name: Build static binary
+    runs-on: ubuntu-latest
+    container: ghcr.io/paulcadman/ghc-alpine:9.2.4
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: create ~/.local/bin
+        run: mkdir -p "$HOME/.local/bin"
+        shell: bash
+
+      - name: Add ~/.local/bin to PATH
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+        shell: bash
+
+      - name: build Juvix
+        run: stack install --system-ghc --ghc-options='-split-sections -optl-static'
+
+      - run: echo "HOME=$HOME" >> $GITHUB_ENV
+        shell: bash
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: juvix-linux_x86_64-${{ github.event.inputs.ref }}
+          path: ${{ env.HOME }}/.local/bin/juvix
