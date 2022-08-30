@@ -12,14 +12,20 @@ data CoreError = CoreError
 makeLenses ''CoreError
 
 instance ToGenericError CoreError where
-  genericError e =
-    return GenericError
-      { _genericErrorLoc = i,
-        _genericErrorMessage = AnsiText $ pretty @_ @AnsiStyle e,
-        _genericErrorIntervals = [i]
-      }
+  genericError e = ask >>= generr
     where
-      i = getLoc e
+      generr opts =
+        return GenericError
+          { _genericErrorLoc = i,
+            _genericErrorMessage = ppOutput msg,
+            _genericErrorIntervals = [i]
+          }
+        where
+          i = getLoc e
+          opts' = fromGenericOptions opts
+          msg = case e ^. coreErrorNode of
+            Just node -> pretty (e ^. coreErrorMsg) <> colon <> space <> pretty (ppTrace' opts' node)
+            Nothing -> pretty (e ^. coreErrorMsg)
 
 instance Pretty CoreError where
   pretty (CoreError {..}) = case _coreErrorNode of
