@@ -107,4 +107,4 @@ parseGlobalOptions b = do
   return opts {_globalInputFiles = files}
 
 genericFromGlobalOptions :: GlobalOptions -> E.GenericOptions
-genericFromGlobalOptions GlobalOptions {..} = E.GenericOptions {E._optShowNameIds = _globalShowNameIds}
+genericFromGlobalOptions GlobalOptions {..} = E.GenericOptions {E._showNameIds = _globalShowNameIds}

@@ -17,13 +17,14 @@ data GenericError = GenericError
   }
 
 newtype GenericOptions = GenericOptions
-  { _optShowNameIds :: Bool
+  { _showNameIds :: Bool
   }
 
 makeLenses ''GenericError
+makeLenses ''GenericOptions
 
 defaultGenericOptions :: GenericOptions
-defaultGenericOptions = GenericOptions {_optShowNameIds = False}
+defaultGenericOptions = GenericOptions {_showNameIds = False}
 
 instance Pretty GenericError where
   pretty :: GenericError -> Doc a

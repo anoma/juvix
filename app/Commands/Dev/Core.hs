@@ -11,8 +11,9 @@ newtype CoreReplOptions = CoreReplOptions
   { _coreReplShowDeBruijn :: Bool
   }
 
-newtype CoreEvalOptions = CoreEvalOptions
-  { _coreEvalNoIO :: Bool
+data CoreEvalOptions = CoreEvalOptions
+  { _coreEvalShowDeBruijn :: Bool,
+    _coreEvalNoIO :: Bool
   }
 
 makeLenses ''CoreReplOptions
@@ -21,7 +22,8 @@ makeLenses ''CoreEvalOptions
 defaultCoreEvalOptions :: CoreEvalOptions
 defaultCoreEvalOptions =
   CoreEvalOptions
-    { _coreEvalNoIO = False
+    { _coreEvalShowDeBruijn = False,
+      _coreEvalNoIO = False
     }
 
 parseCoreCommand :: Parser CoreCommand
@@ -52,6 +54,11 @@ parseCoreCommand =
 
 parseCoreEvalOptions :: Parser CoreEvalOptions
 parseCoreEvalOptions = do
+  _coreEvalShowDeBruijn <-
+    switch
+      ( long "show-de-bruijn"
+          <> help "Show variable de Bruijn indices"
+      )
   _coreEvalNoIO <-
     switch
       ( long "no-io"

@@ -17,4 +17,4 @@ defaultOptions =
 makeLenses ''Options
 
 fromGenericOptions :: GenericOptions -> Options
-fromGenericOptions GenericOptions {..} = set optShowNameIds _optShowNameIds defaultOptions
+fromGenericOptions GenericOptions {..} = set optShowNameIds _showNameIds defaultOptions
