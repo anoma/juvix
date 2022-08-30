@@ -1,0 +1,18 @@
+-- Ackermann function
+
+def ack := \m \n
+  if m = 0 then
+    n + 1
+  else if n = 0 then
+    ack (m - 1) 1
+  else
+    ack (m - 1) (ack m (n - 1));
+
+def writeLn := \x write x >> write "\n";
+
+writeLn (ack 0 7) >>
+writeLn (ack 1 7) >>
+writeLn (ack 1 13) >>
+writeLn (ack 2 7) >>
+writeLn (ack 2 13) >>
+writeLn (ack 3 7)

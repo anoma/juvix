@@ -2,7 +2,7 @@ module Juvix.Compiler.Concrete.Translation.FromSource
   ( module Juvix.Compiler.Concrete.Translation.FromSource,
     module Juvix.Compiler.Concrete.Translation.FromSource.Data.Context,
     module Juvix.Compiler.Concrete.Data.ParsedInfoTable,
-    module Juvix.Compiler.Concrete.Translation.FromSource.Error,
+    module Juvix.Parser.Error,
   )
 where
 
@@ -14,9 +14,9 @@ import Juvix.Compiler.Concrete.Extra (MonadParsec (takeWhile1P))
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
-import Juvix.Compiler.Concrete.Translation.FromSource.Error
 import Juvix.Compiler.Concrete.Translation.FromSource.Lexer hiding (symbol)
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Parser.Error
 import Juvix.Prelude
 import Juvix.Prelude.Pretty (Pretty, prettyText)
 

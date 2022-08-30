@@ -1,0 +1,14 @@
+-- Test IO builtins
+
+write 1 >>
+write 2 >>
+write 3 >>
+write 4 >>
+write 5 >>
+write "\n" >>
+return 1 >>= write >>
+return 2 >>= write >>
+return 3 >>= write >>
+return 4 >>= write >>
+return 5 >>= write >>
+return "\n" >>= write

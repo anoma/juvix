@@ -1,0 +1,25 @@
+-- Ackermann function (higher-order definition)
+
+def compose := \f \g \x g (f x);
+
+def iterate := \f \n
+  if n = 0 then
+    \x x
+  else
+    compose f (iterate f (n - 1));
+
+def plus := iterate (+ 1);
+
+def mult := \m \n iterate (plus n) m 0;
+
+def exp := \m \n iterate (mult m) n 1;
+
+def ackermann := \m
+  iterate (\f \n iterate f (n + 1) 1) m (+ 1);
+
+def writeLn := \x write x >> write "\n";
+
+writeLn (plus 3 7) >>
+writeLn (mult 3 7) >>
+writeLn (exp 3 7) >>
+writeLn (ackermann 3 7)

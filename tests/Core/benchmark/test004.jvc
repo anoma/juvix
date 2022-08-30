@@ -1,0 +1,37 @@
+-- streams without memoization
+
+constr nil 0;
+constr cons 2;
+
+def force := \f f nil;
+
+def filter := \p \s \_
+  case force s of {
+    cons h t ->
+      if p h then
+        cons h (filter p t)
+      else
+        force (filter p t)
+  };
+
+def nth := \n \s
+  case force s of {
+    cons h t -> if n = 1 then h else nth (n - 1) t
+  };
+
+def numbers := \n \_ cons n (numbers (n + 1));
+
+def indivisible := \n \x if x % n = 0 then false else true;
+def eratostenes := \s \_
+  case force s of {
+    cons n t ->
+      cons n (eratostenes (filter (indivisible n) t))
+  };
+def primes := eratostenes (numbers 2);
+
+def writeLn := \x write x >> write "\n";
+
+writeLn (nth 100 primes) >>
+writeLn (nth 1000 primes) >>
+writeLn (nth 10000 primes) >>
+writeLn (nth 20000 primes)

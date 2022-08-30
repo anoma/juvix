@@ -1,0 +1,56 @@
+-- Church numerals
+
+constr pair 2;
+
+def fst := \p case p of { pair x _ -> x };
+def snd := \p case p of { pair _ x -> x };
+
+def compose := \f \g \x f (g x);
+
+def zero := \f \x x;
+
+def num := \n
+  if n = 0 then
+    zero
+  else
+    \f compose f (num (n - 1) f);
+
+def succ := \n \f compose f (n f);
+
+def add := \n \m \f compose (n f) (m f);
+
+def mul := \n \m \f n (m f);
+
+def isZero := \n n (\_ false) true;
+
+def pred := \n
+  fst (
+    n (\x
+        if isZero (snd x) then
+          pair (fst x) (succ (snd x))
+        else
+          pair (succ (fst x)) (succ (snd x)))
+      (pair zero zero)
+  );
+
+def toInt := \n n (+ 1) 0;
+
+def writeLn := \x write x >> write "\n";
+
+def fib := \n
+  if isZero n then
+    zero
+  else
+    let n' := pred n in
+    if isZero n' then
+      succ zero
+    else
+      add (fib n') (fib (pred n'));
+
+writeLn (toInt (num 7)) >>
+writeLn (toInt (mul (num 7) (num 3))) >>
+writeLn (toInt (pred (num 7))) >>
+writeLn (toInt (fib (num 5))) >>
+writeLn (toInt (fib (num 6))) >>
+writeLn (toInt (fib (num 7))) >>
+writeLn (toInt (fib (num 8)))

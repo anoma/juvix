@@ -1,0 +1,7 @@
+-- no matching case branch
+
+constr cons 2;
+
+case cons 1 2 of {
+  nil -> true
+}

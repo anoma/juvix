@@ -1,0 +1,14 @@
+-- functions returning functions with variable capture
+
+def f := \x
+  if x = 6 then \x 0
+  else if x = 5 then \x 1
+  else if x = 10 then \y (\x x) 2
+  else \x x;
+
+def writeLn := \x write x >> write "\n";
+
+writeLn (f 5 6) >>
+writeLn (f 6 5) >>
+writeLn (f 10 5) >>
+writeLn (f 11 5)

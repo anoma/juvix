@@ -1,0 +1,22 @@
+-- eta-expansion of builtins and constructors
+
+constr cons 2;
+
+def f := \g g 2;
+def f' := \x f (+ x);
+
+def g := \f f 2;
+def g' := \x g (cons x);
+
+def f1 := \g g 2;
+def f1' := \x \y f (+ (x / y));
+
+def g1 := \f f 2;
+def g1' := \x \y g (cons (x / y));
+
+def writeLn := \x write x >> write "\n";
+
+writeLn (f' 7) >>
+writeLn (g' 7) >>
+writeLn (f1' 7 2) >>
+writeLn (g1' 7 2)

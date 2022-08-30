@@ -1,0 +1,15 @@
+-- tail recursion
+
+def sum' := \x \acc if x = 0 then acc else sum' (x - 1) (x + acc);
+def sum := \x sum' x 0;
+
+def fact' := \x \acc if x = 0 then acc else fact' (x - 1) (acc * x);
+def fact := \x fact' x 1;
+
+def writeLn := \x write x >> write "\n";
+
+writeLn (sum 10000) >>
+writeLn (sum 100000) >>
+writeLn (fact 5) >>
+writeLn (fact 10) >>
+writeLn (fact 100)

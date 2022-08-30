@@ -1,0 +1,20 @@
+-- recursive functions
+
+-- McCarthy's 91 function
+def f91 := \n if n > 100 then n - 10 else f91 (f91 (n + 11));
+
+-- subtraction by increments
+def subp := \i \j if i = j then 0 else subp i (j + 1) + 1;
+
+def writeLn := \x write x >> write "\n";
+
+writeLn (f91 101) >>
+writeLn (f91 95) >>
+writeLn (f91 16) >>
+writeLn (f91 5) >>
+
+writeLn (subp 101 1) >>
+writeLn (subp 11 5) >>
+writeLn (subp 10 4) >>
+writeLn (subp 1000 600) >>
+writeLn (subp 10000 6000)

@@ -1,0 +1,16 @@
+-- evaluation order
+
+def g := \x trace x g;
+
+def f := \x \y
+  if x = 0 then
+    9
+  else
+    trace 1 (f (x - 1) (y 0));
+
+def h := \x trace 8 (trace x (x + x));
+
+trace ((\x \y \z x + y + z) (trace "1" 1) (trace "2" 2) (trace "3" 3)) (
+trace (f 5 g) (trace 7 (
+h (trace 2 3)
+)))

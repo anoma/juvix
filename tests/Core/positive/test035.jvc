@@ -1,0 +1,83 @@
+-- merge sort
+
+constr nil 0;
+constr cons 2;
+
+constr pair 2;
+
+def length := \xs case xs of {
+  nil -> 0;
+  cons _ xs' -> length xs' + 1
+};
+
+def split := \n \xs
+  if n = 0 then
+    pair nil xs
+  else
+    case xs of {
+      nil -> pair nil nil;
+      cons x xs' ->
+        case split (n - 1) xs' of {
+          pair l1 l2 -> pair (cons x l1) l2
+        }
+    };
+
+def merge := \xs \ys case xs of {
+  nil -> ys;
+  cons x xs' -> case ys of {
+    nil -> xs;
+    cons y ys' ->
+      if x <= y then
+        cons x (merge xs' ys)
+      else
+        cons y (merge xs ys')
+  }
+};
+
+def sort := \xs
+  let n := length xs in
+  if n <= 1 then
+    xs
+  else
+    case split (length xs / 2) xs of {
+      pair l1 l2 -> merge (sort l1) (sort l2)
+    };
+
+def uniq := \xs case xs of {
+  nil -> nil;
+  cons x xs' -> case xs' of {
+    nil -> xs;
+    cons x' _ ->
+      if x = x' then
+        uniq xs'
+      else
+        cons x (uniq xs')
+  }
+};
+
+def append := \xs \ys case xs of {
+  nil -> ys;
+  cons x xs' -> cons x (append xs' ys);
+};
+
+def flatten := \xs case xs of {
+  nil -> nil;
+  cons x xs' -> append x (flatten xs');
+};
+
+def take := \n \xs
+  if n = 0 then
+    nil
+  else
+    case xs of {
+      cons x xs' -> cons x (take (n - 1) xs')
+    };
+
+def gen := \n \f \acc if n = 0 then acc else gen (n - 1) f (cons (f n) acc);
+def gen2 := \m \n \acc if n = 0 then acc else gen2 m (n - 1) (cons (gen m (+ n) nil) acc);
+
+def writeLn := \x write x >> write "\n";
+
+writeLn (take 10 (uniq (sort (flatten (gen2 6 40 nil))))) >>
+writeLn (take 10 (uniq (sort (flatten (gen2 9 80 nil))))) >>
+writeLn (take 10 (uniq (sort (flatten (gen2 6 80 nil)))))

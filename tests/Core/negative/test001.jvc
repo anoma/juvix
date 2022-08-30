@@ -1,0 +1,5 @@
+-- division by zero
+
+def f := \x 2 / x;
+
+f 0

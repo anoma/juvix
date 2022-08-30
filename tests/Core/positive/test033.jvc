@@ -1,0 +1,22 @@
+-- nested lists
+
+constr nil 0;
+constr cons 2;
+
+def mklst := \n if n = 0 then nil else cons n (mklst (n - 1));
+def mklst2 := \n if n = 0 then nil else cons (mklst n) (mklst2 (n - 1));
+
+def append := \xs \ys case xs of {
+  nil -> ys;
+  cons x xs' -> cons x (append xs' ys);
+};
+
+def flatten := \xs case xs of {
+  nil -> nil;
+  cons x xs' -> append x (flatten xs');
+};
+
+def writeLn := \x write x >> write "\n";
+
+writeLn (mklst2 4) >>
+writeLn (flatten (mklst2 4))

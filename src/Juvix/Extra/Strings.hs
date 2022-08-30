@@ -41,6 +41,9 @@ function = "function"
 constructor :: IsString s => s
 constructor = "constructor"
 
+constr :: IsString s => s
+constr = "constr"
+
 topModule :: IsString s => s
 topModule = "top module"
 
@@ -128,8 +131,38 @@ pipe = "|"
 equal :: IsString s => s
 equal = "="
 
+less :: IsString s => s
+less = "<"
+
+lessEqual :: IsString s => s
+lessEqual = "<="
+
+greater :: IsString s => s
+greater = ">"
+
+greaterEqual :: IsString s => s
+greaterEqual = ">="
+
+bind :: IsString s => s
+bind = ">>="
+
+seq_ :: IsString s => s
+seq_ = ">>"
+
+trace_ :: IsString s => s
+trace_ = "trace"
+
+fail_ :: IsString s => s
+fail_ = "fail"
+
 data_ :: IsString s => s
 data_ = "data"
+
+deBruijnVar :: IsString s => s
+deBruijnVar = "$"
+
+exclamation :: IsString s => s
+exclamation = "!"
 
 lambdaUnicode :: IsString s => s
 lambdaUnicode = "λ"
@@ -227,6 +260,9 @@ sizeof = "sizeof"
 true_ :: IsString s => s
 true_ = "true"
 
+false_ :: IsString s => s
+false_ = "false"
+
 tag :: IsString s => s
 tag = "tag"
 
@@ -241,6 +277,60 @@ putStrLn_ = "putStrLn"
 
 debug_ :: IsString s => s
 debug_ = "debug"
+
+plus :: IsString s => s
+plus = "+"
+
+minus :: IsString s => s
+minus = "-"
+
+mul :: IsString s => s
+mul = "*"
+
+div :: IsString s => s
+div = "/"
+
+mod :: IsString s => s
+mod = "%"
+
+if_ :: IsString s => s
+if_ = "if"
+
+then_ :: IsString s => s
+then_ = "then"
+
+else_ :: IsString s => s
+else_ = "else"
+
+pi_ :: IsString s => s
+pi_ = "pi"
+
+def :: IsString s => s
+def = "def"
+
+zero :: IsString s => s
+zero = "0"
+
+succ :: IsString s => s
+succ = "S"
+
+unit :: IsString s => s
+unit = "unit"
+
+nil :: IsString s => s
+nil = "nil"
+
+cons :: IsString s => s
+cons = "cons"
+
+pair :: IsString s => s
+pair = "pair"
+
+case_ :: IsString s => s
+case_ = "case"
+
+of_ :: IsString s => s
+of_ = "of"
 
 juvixFunctionT :: IsString s => s
 juvixFunctionT = "juvix_function_t"

@@ -1,0 +1,21 @@
+-- local functions with free variables
+
+def f := \x {
+  let g := \y x + y in
+  if x = 0 then f 10
+  else if x < 10 then \y g (f (x - 1) y)
+  else g
+};
+
+def g := \x \h x + h x;
+
+def h := \x if x = 0 then 0 else g (x - 1) h;
+
+def writeLn := \x write x >> write "\n";
+
+writeLn (f 100 500) >> -- 600
+writeLn (f 5 0) >> -- 25
+writeLn (f 5 5) >> -- 30
+writeLn (h 10) >> -- 45
+writeLn (g 10 h) >> -- 55
+writeLn (g 3 (f 10)) -- 16

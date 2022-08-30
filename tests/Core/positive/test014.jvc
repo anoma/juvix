@@ -1,0 +1,23 @@
+-- arithmetic
+
+def writeLn := \x write x >> write "\n";
+
+def f := \x \y writeLn (x + y);
+
+def g := \x \y (x + 1) - (y * 7);
+
+def h := \f \y \z f y y * z;
+
+def x := 5;
+def y := 17;
+def func := \x x + 4;
+def z := 0;
+
+def vx := 30; def vy := 7;
+
+writeLn (func (y / x)) >> -- 17 div 5 + 4 = 7
+writeLn (+ (* z x) y) >> -- 17
+
+writeLn (+ vx (* vy (+ z 1))) >> -- 37
+
+f (h g 2 3) 4 -- (g 2 2) * 3 + 4 = (2+1-2*7)*3 + 4 = -11*3 + 4 = -33+4 = -29

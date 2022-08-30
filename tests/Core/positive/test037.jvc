@@ -1,0 +1,13 @@
+-- global variables
+
+constr nil 0;
+
+def x := 3 + 4;
+
+def f := \y x;
+
+def g := \y \z x;
+
+write (f nil) >>
+write (g nil nil) >>
+write "\n"

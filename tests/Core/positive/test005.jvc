@@ -1,0 +1,7 @@
+-- Higher-order functions
+
+def S := \x \y \z x z (y z);
+def K := \x \y x;
+def I := S K K;
+
+I 1 + I I 1 + I (I 1) + I I I 1 + I (I I) I (I I I) 1 + I I I (I I I (I I)) I (I I) I I I 1

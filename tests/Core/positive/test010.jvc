@@ -1,0 +1,8 @@
+-- let
+
+let x := 1 in
+let x := x + let x := 2 in x in
+let x := x * x in
+let y := x + 2 in
+let z := x + y in
+x + y + z

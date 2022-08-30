@@ -1,0 +1,31 @@
+-- mutual recursion
+
+def g;
+
+def f := \x {
+  if x < 1 then
+    1
+  else
+    x * g (x - 1)
+};
+
+def h;
+
+def g := \x {
+  if x < 1 then
+    1
+  else
+    x * h (x - 1)
+};
+
+def h := \x {
+  if x < 1 then
+    1
+  else
+    x * f (x - 1)
+};
+
+def writeLn := \x write x >> write "\n";
+
+writeLn (f 5) >>
+writeLn (f 10)
