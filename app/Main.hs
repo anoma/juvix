@@ -101,6 +101,7 @@ getEntryPoint r pkg opts = nonEmpty (opts ^. globalInputFiles) >>= Just <$> entr
               _entryPointNoStdlib = opts ^. globalNoStdlib,
               _entryPointPackage = pkg,
               _entryPointModulePaths = l,
+              _entryPointGenericOptions = genericFromGlobalOptions opts,
               _entryPointStdin
             }
 
@@ -108,7 +109,6 @@ runCommand :: Members '[Embed IO, App] r => CommandGlobalOptions -> Sem r ()
 runCommand cmdWithOpts = do
   let cmd = cmdWithOpts ^. cliCommand
       globalOpts = cmdWithOpts ^. cliGlobalOptions
-      genericOpts = genericFromGlobalOptions globalOpts
       toAnsiText' :: forall a. (HasAnsiBackend a, HasTextBackend a) => a -> Text
       toAnsiText' = toAnsiText (not (globalOpts ^. globalNoColors))
   (root, pkg) <- embed (findRoot cmdWithOpts)
@@ -127,21 +127,21 @@ runCommand cmdWithOpts = do
               -- Visible commands
               Check -> commandHelper entryPoint (Dev (Internal (TypeCheck mempty)))
               Compile localOpts -> do
-                miniC <- (^. MiniC.resultCCode) <$> runPipeline genericOpts (upToMiniC entryPoint)
+                miniC <- (^. MiniC.resultCCode) <$> runPipeline (entryPoint ^. entryPointGenericOptions) (upToMiniC entryPoint)
                 let inputFile = entryPoint ^. mainModulePath
                 result <- embed (runCompile root inputFile localOpts miniC)
                 case result of
                   Left err -> printFailureExit err
                   _ -> return ()
               Html HtmlOptions {..} -> do
-                res <- runPipeline genericOpts (upToScoping entryPoint)
+                res <- runPipeline (entryPoint ^. entryPointGenericOptions) (upToScoping entryPoint)
                 let m = head (res ^. Scoper.resultModules)
                 embed (Html.genHtml Scoper.defaultOptions _htmlRecursive _htmlTheme _htmlOutputDir _htmlPrintMetadata m)
               (Dev cmd') -> case cmd' of
                 Highlight HighlightOptions {..} -> do
                   res <- runPipelineEither (upToScoping entryPoint)
                   case res of
-                    Left err -> say (Highlight.goError (run $ runReader genericOpts $ errorIntervals err))
+                    Left err -> say (Highlight.goError (run $ runReader (entryPoint ^. entryPointGenericOptions) $ errorIntervals err))
                     Right r -> do
                       let tbl = r ^. Scoper.resultParserTable
                           items = tbl ^. Parser.infoParsedItems
@@ -158,20 +158,20 @@ runCommand cmdWithOpts = do
                 Parse localOpts -> do
                   m <-
                     head . (^. Parser.resultModules)
-                      <$> runPipeline genericOpts (upToParsing entryPoint)
+                      <$> runPipeline (entryPoint ^. entryPointGenericOptions) (upToParsing entryPoint)
                   if localOpts ^. parseNoPrettyShow then say (show m) else say (pack (ppShow m))
                 Scope localOpts -> do
                   l <-
                     (^. Scoper.resultModules)
                       <$> runPipeline
-                        genericOpts
+                        (entryPoint ^. entryPointGenericOptions)
                         (upToScoping entryPoint)
                   forM_ l $ \s -> do
                     renderStdOut (Scoper.ppOut (mkScopePrettyOptions globalOpts localOpts) s)
                 Doc localOpts -> do
                   ctx :: InternalTyped.InternalTypedResult <-
                     runPipeline
-                      genericOpts
+                      (entryPoint ^. entryPointGenericOptions)
                       (upToInternalTyped entryPoint)
                   let docDir = localOpts ^. docOutputDir
                   Doc.compile docDir "proj" ctx
@@ -181,17 +181,17 @@ runCommand cmdWithOpts = do
                 Internal Pretty -> do
                   micro <-
                     head . (^. Internal.resultModules)
-                      <$> runPipeline genericOpts (upToInternal entryPoint)
+                      <$> runPipeline (entryPoint ^. entryPointGenericOptions) (upToInternal entryPoint)
                   let ppOpts =
                         Internal.defaultOptions
                           { Internal._optShowNameIds = globalOpts ^. globalShowNameIds
                           }
                   App.renderStdOut (Internal.ppOut ppOpts micro)
                 Internal Arity -> do
-                  micro <- head . (^. InternalArity.resultModules) <$> runPipeline genericOpts (upToInternalArity entryPoint)
+                  micro <- head . (^. InternalArity.resultModules) <$> runPipeline (entryPoint ^. entryPointGenericOptions) (upToInternalArity entryPoint)
                   App.renderStdOut (Internal.ppOut Internal.defaultOptions micro)
                 Internal (TypeCheck localOpts) -> do
-                  res <- runPipeline genericOpts (upToInternalTyped entryPoint)
+                  res <- runPipeline (entryPoint ^. entryPointGenericOptions) (upToInternalTyped entryPoint)
                   say "Well done! It type checks"
                   when (localOpts ^. microJuvixTypePrint) $ do
                     let ppOpts =
@@ -211,18 +211,18 @@ runCommand cmdWithOpts = do
                         Mono.defaultOptions
                           { Mono._optShowNameIds = globalOpts ^. globalShowNameIds
                           }
-                  monojuvix <- head . (^. Mono.resultModules) <$> runPipeline genericOpts (upToMonoJuvix entryPoint)
+                  monojuvix <- head . (^. Mono.resultModules) <$> runPipeline (entryPoint ^. entryPointGenericOptions) (upToMonoJuvix entryPoint)
                   renderStdOut (Mono.ppOut ppOpts monojuvix)
                 MiniHaskell -> do
                   minihaskell <-
                     head . (^. MiniHaskell.resultModules)
-                      <$> runPipeline genericOpts (upToMiniHaskell entryPoint)
+                      <$> runPipeline (entryPoint ^. entryPointGenericOptions) (upToMiniHaskell entryPoint)
                   renderStdOut (MiniHaskell.ppOutDefault minihaskell)
                 MiniC -> do
-                  miniC <- (^. MiniC.resultCCode) <$> runPipeline genericOpts (upToMiniC entryPoint)
+                  miniC <- (^. MiniC.resultCCode) <$> runPipeline (entryPoint ^. entryPointGenericOptions) (upToMiniC entryPoint)
                   say miniC
                 Termination (Calls localOpts@CallsOptions {..}) -> do
-                  results <- runPipeline genericOpts (upToAbstract entryPoint)
+                  results <- runPipeline (entryPoint ^. entryPointGenericOptions) (upToAbstract entryPoint)
                   let topModule = head (results ^. Abstract.resultModules)
                       infotable = results ^. Abstract.resultTable
                       callMap0 = Termination.buildCallMap infotable topModule
@@ -233,7 +233,7 @@ runCommand cmdWithOpts = do
                   renderStdOut (Abstract.ppOut localOpts' callMap)
                   newline
                 Termination (CallGraph CallGraphOptions {..}) -> do
-                  results <- runPipeline genericOpts (upToAbstract entryPoint)
+                  results <- runPipeline (entryPoint ^. entryPointGenericOptions) (upToAbstract entryPoint)
                   let topModule = head (results ^. Abstract.resultModules)
                       infotable = results ^. Abstract.resultTable
                       callMap = Termination.buildCallMap infotable topModule

@@ -15,11 +15,12 @@ instance ToGenericError CoreError where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = ppOutput msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
         where
           i = getLoc e
           opts' = fromGenericOptions opts

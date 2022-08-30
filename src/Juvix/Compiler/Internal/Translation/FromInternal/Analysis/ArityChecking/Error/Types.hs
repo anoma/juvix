@@ -17,11 +17,12 @@ instance ToGenericError WrongConstructorAppLength where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = ppOutput msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = getLoc (e ^. wrongConstructorAppLength)
@@ -50,11 +51,12 @@ makeLenses ''LhsTooManyPatterns
 
 instance ToGenericError LhsTooManyPatterns where
   genericError e =
-    return GenericError
-      { _genericErrorLoc = i,
-        _genericErrorMessage = ppOutput msg,
-        _genericErrorIntervals = [i]
-      }
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = ppOutput msg,
+          _genericErrorIntervals = [i]
+        }
     where
       i = getLocSpan (e ^. lhsTooManyPatternsRemaining)
       n = length (e ^. lhsTooManyPatternsRemaining)
@@ -79,11 +81,12 @@ instance ToGenericError WrongPatternIsImplicit where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = ppOutput msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = getLoc (e ^. wrongPatternIsImplicitActual)
@@ -109,11 +112,12 @@ instance ToGenericError ExpectedExplicitArgument where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = ppOutput msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           app@(f, args) = e ^. expectedExplicitArgumentApp
@@ -143,11 +147,12 @@ instance ToGenericError PatternFunction where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = ppOutput msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = getLoc (e ^. patternFunction)
@@ -167,11 +172,12 @@ instance ToGenericError TooManyArguments where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = ppOutput msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = getLocSpan (fromJust (nonEmpty (map snd unexpectedArgs)))
@@ -210,11 +216,12 @@ instance ToGenericError FunctionApplied where
   genericError e = ask >>= generr
     where
       generr opts =
-        return GenericError
-          { _genericErrorLoc = i,
-            _genericErrorMessage = ppOutput msg,
-            _genericErrorIntervals = [i]
-          }
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
         where
           opts' = fromGenericOptions opts
           i = getLocSpan (fun :| map snd args)

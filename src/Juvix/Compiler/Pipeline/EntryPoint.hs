@@ -15,7 +15,7 @@ data EntryPoint = EntryPoint
     _entryPointNoStdlib :: Bool,
     _entryPointPackage :: Package,
     _entryPointStdin :: Maybe Text,
-    _entryPointPrettyOptions :: GenericOptions,
+    _entryPointGenericOptions :: GenericOptions,
     _entryPointModulePaths :: NonEmpty FilePath
   }
   deriving stock (Eq, Show)
@@ -29,7 +29,7 @@ defaultEntryPoint mainFile =
       _entryPointNoStdlib = False,
       _entryPointStdin = Nothing,
       _entryPointPackage = emptyPackage,
-      _entryPointPrettyOptions = defaultGenericOptions,
+      _entryPointGenericOptions = defaultGenericOptions,
       _entryPointModulePaths = pure mainFile
     }
 
