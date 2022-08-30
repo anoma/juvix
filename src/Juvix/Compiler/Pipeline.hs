@@ -79,6 +79,9 @@ runIO opts = runIOEither >=> mayThrow
       Left err -> printErrorAnsiSafe opts err >> exitFailure
       Right r -> return r
 
+runIO' :: Sem PipelineEff a -> IO a
+runIO' = runIO defaultGenericOptions
+
 upToSetup ::
   Member Files r =>
   EntryPoint ->

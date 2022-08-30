@@ -20,7 +20,7 @@ testDescr PosTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint = defaultEntryPoint _file
-            (void . runIO) (upToMonoJuvix entryPoint)
+            (void . runIO') (upToMonoJuvix entryPoint)
         }
 
 allTests :: TestTree
