@@ -17,6 +17,11 @@ unfoldType' ty = case ty of
 
 {------------------------------------------------------------------------}
 {- functions on Node -}
+mkIdent :: Symbol -> Node
+mkIdent = Ident Info.empty
+
+mkVar :: Index -> Node
+mkVar = Var Info.empty
 
 mkIf :: Info -> Node -> Node -> Node -> Node
 mkIf i v b1 b2 = Case i v [CaseBranch (BuiltinTag TagTrue) 0 b1] (Just b2)
@@ -42,7 +47,9 @@ mkLambdas' :: [Info] -> Node -> Node
 mkLambdas' is n = foldr Lambda n is
 
 mkLambdas :: Int -> Node -> Node
-mkLambdas k = mkLambdas' (replicate k Info.empty)
+mkLambdas k
+  | k < 0 = impossible
+  | otherwise = mkLambdas' (replicate k Info.empty)
 
 unfoldLambdas' :: Node -> ([Info], Node)
 unfoldLambdas' = go []
@@ -152,6 +159,11 @@ destruct = \case
 
     tl :: [a] -> [a]
     tl = List.tail
+
+reassemble :: Node -> [Node] -> Node
+reassemble n = (d ^. nodeReassemble) (d ^. nodeInfo)
+  where
+    d = destruct n
 
 children :: Node -> [Node]
 children = (^. nodeChildren) . destruct
