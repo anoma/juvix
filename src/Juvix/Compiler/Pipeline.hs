@@ -103,3 +103,6 @@ runIO opts = runIOEither >=> mayThrow
     mayThrow = \case
       Left err -> printErrorAnsiSafe opts err >> exitFailure
       Right r -> return r
+
+runIO' :: Sem PipelineEff a -> IO a
+runIO' = runIO defaultGenericOptions

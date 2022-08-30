@@ -22,6 +22,9 @@ newtype GenericOptions = GenericOptions
 
 makeLenses ''GenericError
 
+defaultGenericOptions :: GenericOptions
+defaultGenericOptions = GenericOptions {_optShowNameIds = False}
+
 instance Pretty GenericError where
   pretty :: GenericError -> Doc a
   pretty g = genericErrorHeader g <> pretty (g ^. genericErrorMessage)
@@ -96,3 +99,9 @@ runErrorIO opts =
   runError >=> \case
     Left err -> embed (printErrorAnsiSafe opts err >> exitFailure)
     Right a -> return a
+
+runErrorIO' ::
+  (ToGenericError a, Member (Embed IO) r) =>
+  Sem (Error a ': r) b ->
+  Sem r b
+runErrorIO' = runErrorIO defaultGenericOptions
