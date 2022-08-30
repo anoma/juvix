@@ -12,8 +12,8 @@ data AlreadyDefined = AlreadyDefined
 makeLenses ''AlreadyDefined
 
 instance ToGenericError AlreadyDefined where
-  genericError _ e =
-    GenericError
+  genericError e =
+    return GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]
@@ -30,8 +30,8 @@ data NotDefined = NotDefined
 makeLenses ''NotDefined
 
 instance ToGenericError NotDefined where
-  genericError _ e =
-    GenericError
+  genericError e =
+    return GenericError
       { _genericErrorLoc = i,
         _genericErrorMessage = ppOutput msg,
         _genericErrorIntervals = [i]

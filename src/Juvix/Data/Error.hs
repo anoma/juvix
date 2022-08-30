@@ -13,7 +13,7 @@ data JuvixError
   = forall a. (ToGenericError a, Typeable a) => JuvixError a
 
 instance ToGenericError JuvixError where
-  genericError opts (JuvixError e) = genericError opts e
+  genericError (JuvixError e) = genericError e
 
 fromJuvixError :: Typeable a => JuvixError -> Maybe a
 fromJuvixError (JuvixError e) = cast e

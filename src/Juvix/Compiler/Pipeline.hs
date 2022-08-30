@@ -4,8 +4,6 @@ module Juvix.Compiler.Pipeline
   )
 where
 
--- import Juvix.Compiler.Abstract.Translation.FromConcrete qualified as Abstract
-
 import Juvix.Compiler.Abstract.Translation qualified as Abstract
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.C.Translation.FromInternal qualified as MiniC
@@ -76,7 +74,7 @@ runIO opts = runIOEither >=> mayThrow
   where
     mayThrow :: Either JuvixError r -> IO r
     mayThrow = \case
-      Left err -> printErrorAnsiSafe opts err >> exitFailure
+      Left err -> runM $ runReader opts $ printErrorAnsiSafe err >> embed exitFailure
       Right r -> return r
 
 runIO' :: Sem PipelineEff a -> IO a

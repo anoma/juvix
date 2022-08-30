@@ -24,15 +24,15 @@ data TypeCheckerError
   | ErrNoPositivity NoPositivity
 
 instance ToGenericError TypeCheckerError where
-  genericError :: GenericOptions -> TypeCheckerError -> GenericError
-  genericError opts = \case
-    ErrWrongConstructorType e -> genericError opts e
-    ErrWrongReturnType e -> genericError opts e
-    ErrArity e -> genericError opts e
-    ErrWrongType e -> genericError opts e
-    ErrUnsolvedMeta e -> genericError opts e
-    ErrExpectedFunctionType e -> genericError opts e
-    ErrTooManyArgumentsIndType e -> genericError opts e
-    ErrTooFewArgumentsIndType e -> genericError opts e
-    ErrImpracticalPatternMatching e -> genericError opts e
-    ErrNoPositivity e -> genericError opts e
+  genericError :: Member (Reader GenericOptions) r => TypeCheckerError -> Sem r GenericError
+  genericError = \case
+    ErrWrongConstructorType e -> genericError e
+    ErrWrongReturnType e -> genericError e
+    ErrArity e -> genericError e
+    ErrWrongType e -> genericError e
+    ErrUnsolvedMeta e -> genericError e
+    ErrExpectedFunctionType e -> genericError e
+    ErrTooManyArgumentsIndType e -> genericError e
+    ErrTooFewArgumentsIndType e -> genericError e
+    ErrImpracticalPatternMatching e -> genericError e
+    ErrNoPositivity e -> genericError e

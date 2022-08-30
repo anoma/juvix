@@ -141,7 +141,7 @@ runCommand cmdWithOpts = do
                 Highlight HighlightOptions {..} -> do
                   res <- runPipelineEither (upToScoping entryPoint)
                   case res of
-                    Left err -> say (Highlight.goError (errorIntervals genericOpts err))
+                    Left err -> say (Highlight.goError (run $ runReader genericOpts $ errorIntervals err))
                     Right r -> do
                       let tbl = r ^. Scoper.resultParserTable
                           items = tbl ^. Parser.infoParsedItems
