@@ -19,6 +19,7 @@ data GenericError = GenericError
 newtype GenericOptions = GenericOptions
   { _showNameIds :: Bool
   }
+  deriving stock (Eq, Show)
 
 makeLenses ''GenericError
 makeLenses ''GenericOptions
