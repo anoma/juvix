@@ -13,31 +13,29 @@ import Juvix.Compiler.Core.Extra.Recursors
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Language
 
--- `isClosed` may short-circuit evaluation due to the use of `&&`, so it's not
--- entirely reducible to `getFreeVars` in terms of computation time.
 isClosed :: Node -> Bool
-isClosed = ufoldN (&&) go
-  where
-    go :: Index -> Node -> Bool
-    go k = \case
-      Var _ idx | idx >= k -> False
-      _ -> True
+isClosed = not . has freeVars
 
 getFreeVars :: Node -> HashSet Index
-getFreeVars = gatherN go HashSet.empty
+getFreeVars n = HashSet.fromList (n ^.. freeVars)
+
+freeVars :: SimpleFold Node Index
+freeVars f = ufoldAN' reassemble go
   where
-    go :: Index -> HashSet Index -> Node -> HashSet Index
-    go k acc = \case
-      Var _ idx | idx >= k -> HashSet.insert (idx - k) acc
-      _ -> acc
+    go k = \case
+      Var i idx
+        | idx >= k -> Var i <$> f (idx - k)
+      n -> pure n
 
 getIdents :: Node -> HashSet Symbol
-getIdents = gather go HashSet.empty
+getIdents n = HashSet.fromList (n ^.. nodeIdents)
+
+nodeIdents :: Traversal' Node Symbol
+nodeIdents f = umapLeaves go
   where
-    go :: HashSet Symbol -> Node -> HashSet Symbol
-    go acc = \case
-      Ident _ sym -> HashSet.insert sym acc
-      _ -> acc
+    go = \case
+      Ident i d -> Ident i <$> f d
+      n -> pure n
 
 countFreeVarOccurrences :: Index -> Node -> Int
 countFreeVarOccurrences idx = gatherN go 0
@@ -46,7 +44,7 @@ countFreeVarOccurrences idx = gatherN go 0
       Var _ idx' | idx' == idx + k -> acc + 1
       _ -> acc
 
--- increase all free variable indices by a given value
+-- | increase all free variable indices by a given value
 shift :: Index -> Node -> Node
 shift 0 = id
 shift m = umapN go
@@ -55,7 +53,7 @@ shift m = umapN go
       Var i idx | idx >= k -> Var i (idx + m)
       _ -> n
 
--- substitute a term t for the free variable with de Bruijn index 0, avoiding
+-- | substitute a term t for the free variable with de Bruijn index 0, avoiding
 -- variable capture; shifts all free variabes with de Bruijn index > 0 by -1 (as
 -- if the topmost binder was removed)
 subst :: Node -> Node -> Node
@@ -66,7 +64,7 @@ subst t = umapN go
       Var i idx | idx > k -> Var i (idx - 1)
       _ -> n
 
--- reduce all beta redexes present in a term and the ones created immediately
+-- | reduce all beta redexes present in a term and the ones created immediately
 -- downwards (i.e., a "beta-development")
 developBeta :: Node -> Node
 developBeta = umap go
@@ -80,9 +78,11 @@ etaExpand :: Int -> Node -> Node
 etaExpand 0 n = n
 etaExpand k n = mkLambdas k (mkApp (shift k n) (map (Var Info.empty) (reverse [0 .. k - 1])))
 
--- substitution of all free variables for values in an environment
+-- | substitution of all free variables for values in an environment
 substEnv :: Env -> Node -> Node
-substEnv env = if null env then id else umapN go
+substEnv env
+  | null env = id
+  | otherwise = umapN go
   where
     go k n = case n of
       Var _ idx | idx >= k -> env !! (idx - k)
