@@ -288,6 +288,9 @@ runCoreCommand globalOpts = \case
       [] -> printFailureExit "Provide a JuvixCore file to run this command\nUse --help to see all the options"
       files -> mapM_ (evalFile opts) files
   where
+    genericOpts :: GenericOptions
+    genericOpts = genericFromGlobalOptions globalOpts
+
     runRepl ::
       forall r.
       Members '[Embed IO, App] r =>
@@ -308,7 +311,7 @@ runCoreCommand globalOpts = \case
           ':' : 'p' : ' ' : s' ->
             case Core.parseText tab (fromString s') of
               Left err -> do
-                printJuvixError (JuvixError err)
+                printJuvixError genericOpts (JuvixError err)
                 runRepl opts tab
               Right (tab', Just node) -> do
                 renderStdOut (Core.ppOutDefault node)
@@ -319,7 +322,7 @@ runCoreCommand globalOpts = \case
           ':' : 'e' : ' ' : s' ->
             case Core.parseText tab (fromString s') of
               Left err -> do
-                printJuvixError (JuvixError err)
+                printJuvixError genericOpts (JuvixError err)
                 runRepl opts tab
               Right (tab', Just node) ->
                 replEval True tab' node
@@ -329,7 +332,7 @@ runCoreCommand globalOpts = \case
             s' <- embed (readFile f)
             case Core.runParser "" f Core.emptyInfoTable s' of
               Left err -> do
-                printJuvixError (JuvixError err)
+                printJuvixError genericOpts (JuvixError err)
                 runRepl opts tab
               Right (tab', Just node) ->
                 replEval False tab' node
@@ -340,7 +343,7 @@ runCoreCommand globalOpts = \case
           _ ->
             case Core.parseText tab s of
               Left err -> do
-                printJuvixError (JuvixError err)
+                printJuvixError genericOpts (JuvixError err)
                 runRepl opts tab
               Right (tab', Just node) ->
                 replEval False tab' node
@@ -352,7 +355,7 @@ runCoreCommand globalOpts = \case
           r <- doEval noIO defaultLoc tab' node
           case r of
             Left err -> do
-              printJuvixError (JuvixError err)
+              printJuvixError genericOpts (JuvixError err)
               runRepl opts tab'
             Right node'
               | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
@@ -392,11 +395,11 @@ runCoreCommand globalOpts = \case
     evalFile opts f = do
       s <- embed (readFile f)
       case Core.runParser "" f Core.emptyInfoTable s of
-        Left err -> exitJuvixError (JuvixError err)
+        Left err -> exitJuvixError genericOpts (JuvixError err)
         Right (tab, Just node) -> do
           r <- doEval (opts ^. coreEvalNoIO) defaultLoc tab node
           case r of
-            Left err -> exitJuvixError (JuvixError err)
+            Left err -> exitJuvixError genericOpts (JuvixError err)
             Right node'
               | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
                   return ()
