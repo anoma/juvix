@@ -10,8 +10,8 @@ import System.Console.ANSI qualified as Ansi
 
 data App m a where
   ExitMsg :: ExitCode -> Text -> App m ()
-  ExitJuvixError :: GenericOptions -> JuvixError -> App m a
-  PrintJuvixError :: GenericOptions -> JuvixError -> App m ()
+  ExitJuvixError :: JuvixError -> App m a
+  PrintJuvixError :: JuvixError -> App m ()
   ReadGlobalOptions :: App m GlobalOptions
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
   RunPipelineEither :: Sem PipelineEff a -> App m (Either JuvixError a)
@@ -32,22 +32,22 @@ runAppIO g = interpret $ \case
   Say t
     | g ^. globalOnlyErrors -> return ()
     | otherwise -> embed (putStrLn t)
-  PrintJuvixError opts e -> do
-    printErr opts e
-  ExitJuvixError opts e -> do
-    printErr opts e
+  PrintJuvixError e -> do
+    printErr e
+  ExitJuvixError e -> do
+    printErr e
     embed exitFailure
   ExitMsg exitCode t -> embed (putStrLn t >> exitWith exitCode)
   Raw b -> embed (ByteString.putStr b)
   where
-    printErr opts e =
-      embed $ hPutStrLn stderr $ run $ runReader opts $ Error.render (not (g ^. globalNoColors)) (g ^. globalOnlyErrors) e
+    printErr e =
+      embed $ hPutStrLn stderr $ run $ runReader (genericFromGlobalOptions g) $ Error.render (not (g ^. globalNoColors)) (g ^. globalOnlyErrors) e
 
-runPipeline :: Member App r => GenericOptions -> Sem PipelineEff a -> Sem r a
-runPipeline opts p = do
+runPipeline :: Member App r => Sem PipelineEff a -> Sem r a
+runPipeline p = do
   r <- runPipelineEither p
   case r of
-    Left err -> exitJuvixError opts err
+    Left err -> exitJuvixError err
     Right res -> return res
 
 newline :: Member App r => Sem r ()

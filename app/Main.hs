@@ -127,14 +127,14 @@ runCommand cmdWithOpts = do
               -- Visible commands
               Check -> commandHelper entryPoint (Dev (Internal (TypeCheck mempty)))
               Compile localOpts -> do
-                miniC <- (^. MiniC.resultCCode) <$> runPipeline (entryPoint ^. entryPointGenericOptions) (upToMiniC entryPoint)
+                miniC <- (^. MiniC.resultCCode) <$> runPipeline (upToMiniC entryPoint)
                 let inputFile = entryPoint ^. mainModulePath
                 result <- embed (runCompile root inputFile localOpts miniC)
                 case result of
                   Left err -> printFailureExit err
                   _ -> return ()
               Html HtmlOptions {..} -> do
-                res <- runPipeline (entryPoint ^. entryPointGenericOptions) (upToScoping entryPoint)
+                res <- runPipeline (upToScoping entryPoint)
                 let m = head (res ^. Scoper.resultModules)
                 embed (Html.genHtml Scoper.defaultOptions _htmlRecursive _htmlTheme _htmlOutputDir _htmlPrintMetadata m)
               (Dev cmd') -> case cmd' of
@@ -158,21 +158,17 @@ runCommand cmdWithOpts = do
                 Parse localOpts -> do
                   m <-
                     head . (^. Parser.resultModules)
-                      <$> runPipeline (entryPoint ^. entryPointGenericOptions) (upToParsing entryPoint)
+                      <$> runPipeline (upToParsing entryPoint)
                   if localOpts ^. parseNoPrettyShow then say (show m) else say (pack (ppShow m))
                 Scope localOpts -> do
                   l <-
                     (^. Scoper.resultModules)
-                      <$> runPipeline
-                        (entryPoint ^. entryPointGenericOptions)
-                        (upToScoping entryPoint)
+                      <$> runPipeline (upToScoping entryPoint)
                   forM_ l $ \s -> do
                     renderStdOut (Scoper.ppOut (mkScopePrettyOptions globalOpts localOpts) s)
                 Doc localOpts -> do
                   ctx :: InternalTyped.InternalTypedResult <-
-                    runPipeline
-                      (entryPoint ^. entryPointGenericOptions)
-                      (upToInternalTyped entryPoint)
+                    runPipeline (upToInternalTyped entryPoint)
                   let docDir = localOpts ^. docOutputDir
                   Doc.compile docDir "proj" ctx
                   when (localOpts ^. docOpen) $ case openCmd of
@@ -181,17 +177,17 @@ runCommand cmdWithOpts = do
                 Internal Pretty -> do
                   micro <-
                     head . (^. Internal.resultModules)
-                      <$> runPipeline (entryPoint ^. entryPointGenericOptions) (upToInternal entryPoint)
+                      <$> runPipeline (upToInternal entryPoint)
                   let ppOpts =
                         Internal.defaultOptions
                           { Internal._optShowNameIds = globalOpts ^. globalShowNameIds
                           }
                   App.renderStdOut (Internal.ppOut ppOpts micro)
                 Internal Arity -> do
-                  micro <- head . (^. InternalArity.resultModules) <$> runPipeline (entryPoint ^. entryPointGenericOptions) (upToInternalArity entryPoint)
+                  micro <- head . (^. InternalArity.resultModules) <$> runPipeline (upToInternalArity entryPoint)
                   App.renderStdOut (Internal.ppOut Internal.defaultOptions micro)
                 Internal (TypeCheck localOpts) -> do
-                  res <- runPipeline (entryPoint ^. entryPointGenericOptions) (upToInternalTyped entryPoint)
+                  res <- runPipeline (upToInternalTyped entryPoint)
                   say "Well done! It type checks"
                   when (localOpts ^. microJuvixTypePrint) $ do
                     let ppOpts =
@@ -211,18 +207,18 @@ runCommand cmdWithOpts = do
                         Mono.defaultOptions
                           { Mono._optShowNameIds = globalOpts ^. globalShowNameIds
                           }
-                  monojuvix <- head . (^. Mono.resultModules) <$> runPipeline (entryPoint ^. entryPointGenericOptions) (upToMonoJuvix entryPoint)
+                  monojuvix <- head . (^. Mono.resultModules) <$> runPipeline (upToMonoJuvix entryPoint)
                   renderStdOut (Mono.ppOut ppOpts monojuvix)
                 MiniHaskell -> do
                   minihaskell <-
                     head . (^. MiniHaskell.resultModules)
-                      <$> runPipeline (entryPoint ^. entryPointGenericOptions) (upToMiniHaskell entryPoint)
+                      <$> runPipeline (upToMiniHaskell entryPoint)
                   renderStdOut (MiniHaskell.ppOutDefault minihaskell)
                 MiniC -> do
-                  miniC <- (^. MiniC.resultCCode) <$> runPipeline (entryPoint ^. entryPointGenericOptions) (upToMiniC entryPoint)
+                  miniC <- (^. MiniC.resultCCode) <$> runPipeline (upToMiniC entryPoint)
                   say miniC
                 Termination (Calls localOpts@CallsOptions {..}) -> do
-                  results <- runPipeline (entryPoint ^. entryPointGenericOptions) (upToAbstract entryPoint)
+                  results <- runPipeline (upToAbstract entryPoint)
                   let topModule = head (results ^. Abstract.resultModules)
                       infotable = results ^. Abstract.resultTable
                       callMap0 = Termination.buildCallMap infotable topModule
@@ -233,7 +229,7 @@ runCommand cmdWithOpts = do
                   renderStdOut (Abstract.ppOut localOpts' callMap)
                   newline
                 Termination (CallGraph CallGraphOptions {..}) -> do
-                  results <- runPipeline (entryPoint ^. entryPointGenericOptions) (upToAbstract entryPoint)
+                  results <- runPipeline (upToAbstract entryPoint)
                   let topModule = head (results ^. Abstract.resultModules)
                       infotable = results ^. Abstract.resultTable
                       callMap = Termination.buildCallMap infotable topModule
@@ -314,7 +310,7 @@ runCoreCommand globalOpts = \case
           ':' : 'p' : ' ' : s' ->
             case Core.parseText tab (fromString s') of
               Left err -> do
-                printJuvixError genericOpts (JuvixError err)
+                printJuvixError (JuvixError err)
                 runRepl opts tab
               Right (tab', Just node) -> do
                 renderStdOut (Core.ppOut (docOpts (opts ^. coreReplShowDeBruijn)) node)
@@ -325,7 +321,7 @@ runCoreCommand globalOpts = \case
           ':' : 'e' : ' ' : s' ->
             case Core.parseText tab (fromString s') of
               Left err -> do
-                printJuvixError genericOpts (JuvixError err)
+                printJuvixError (JuvixError err)
                 runRepl opts tab
               Right (tab', Just node) ->
                 replEval True tab' node
@@ -335,7 +331,7 @@ runCoreCommand globalOpts = \case
             s' <- embed (readFile f)
             case Core.runParser "" f Core.emptyInfoTable s' of
               Left err -> do
-                printJuvixError genericOpts (JuvixError err)
+                printJuvixError (JuvixError err)
                 runRepl opts tab
               Right (tab', Just node) ->
                 replEval False tab' node
@@ -346,7 +342,7 @@ runCoreCommand globalOpts = \case
           _ ->
             case Core.parseText tab s of
               Left err -> do
-                printJuvixError genericOpts (JuvixError err)
+                printJuvixError (JuvixError err)
                 runRepl opts tab
               Right (tab', Just node) ->
                 replEval False tab' node
@@ -360,7 +356,7 @@ runCoreCommand globalOpts = \case
           r <- doEval noIO defaultLoc tab' node
           case r of
             Left err -> do
-              printJuvixError genericOpts (JuvixError err)
+              printJuvixError (JuvixError err)
               runRepl opts tab'
             Right node'
               | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
@@ -397,11 +393,11 @@ runCoreCommand globalOpts = \case
     evalFile opts f = do
       s <- embed (readFile f)
       case Core.runParser "" f Core.emptyInfoTable s of
-        Left err -> exitJuvixError genericOpts (JuvixError err)
+        Left err -> exitJuvixError (JuvixError err)
         Right (tab, Just node) -> do
           r <- doEval (opts ^. coreEvalNoIO) defaultLoc tab node
           case r of
-            Left err -> exitJuvixError genericOpts (JuvixError err)
+            Left err -> exitJuvixError (JuvixError err)
             Right node'
               | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
                   return ()
