@@ -60,7 +60,7 @@ mkLet' = mkLet Info.empty
 mkCase :: Info -> Node -> [CaseBranch] -> Maybe Node -> Node
 mkCase i v bs def = NCase (Case i v bs def)
 
-mkCase':: Node -> [CaseBranch] -> Maybe Node -> Node
+mkCase' :: Node -> [CaseBranch] -> Maybe Node -> Node
 mkCase' = mkCase Info.empty
 
 mkIf :: Info -> Node -> Node -> Node -> Node
