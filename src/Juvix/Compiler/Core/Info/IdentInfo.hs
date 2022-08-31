@@ -22,7 +22,7 @@ computeIdentInfo = umap go
   where
     go :: Node -> Node
     go n = case n of
-      Ident i sym -> Ident (Info.insert fvi i) sym
+      NIdt (Ident i sym) -> mkIdent (Info.insert fvi i) sym
         where
           fvi = IdentInfo (HashMap.singleton sym 1)
       _ -> modifyInfo (Info.insert fvi) n

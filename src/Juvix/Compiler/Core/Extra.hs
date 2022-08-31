@@ -10,7 +10,6 @@ import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Info
 import Juvix.Compiler.Core.Extra.Recursors
-import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Language
 
 isClosed :: Node -> Bool
@@ -23,8 +22,8 @@ freeVars :: SimpleFold Node Index
 freeVars f = ufoldAN' reassemble go
   where
     go k = \case
-      Var i idx
-        | idx >= k -> Var i <$> f (idx - k)
+      NVar (Var i idx)
+        | idx >= k -> mkVar i <$> f (idx - k)
       n -> pure n
 
 getIdents :: Node -> HashSet Symbol
@@ -34,14 +33,14 @@ nodeIdents :: Traversal' Node Symbol
 nodeIdents f = umapLeaves go
   where
     go = \case
-      Ident i d -> Ident i <$> f d
+      NIdt (Ident i d) -> mkIdent i <$> f d
       n -> pure n
 
 countFreeVarOccurrences :: Index -> Node -> Int
 countFreeVarOccurrences idx = gatherN go 0
   where
     go k acc = \case
-      Var _ idx' | idx' == idx + k -> acc + 1
+      NVar (Var _ idx') | idx' == idx + k -> acc + 1
       _ -> acc
 
 -- | increase all free variable indices by a given value
@@ -50,7 +49,7 @@ shift 0 = id
 shift m = umapN go
   where
     go k n = case n of
-      Var i idx | idx >= k -> Var i (idx + m)
+      NVar (Var i idx) | idx >= k -> mkVar i (idx + m)
       _ -> n
 
 -- | substitute a term t for the free variable with de Bruijn index 0, avoiding
@@ -60,8 +59,8 @@ subst :: Node -> Node -> Node
 subst t = umapN go
   where
     go k n = case n of
-      Var _ idx | idx == k -> shift k t
-      Var i idx | idx > k -> Var i (idx - 1)
+      NVar (Var _ idx) | idx == k -> shift k t
+      NVar (Var i idx) | idx > k -> mkVar i (idx - 1)
       _ -> n
 
 -- | reduce all beta redexes present in a term and the ones created immediately
@@ -71,12 +70,12 @@ developBeta = umap go
   where
     go :: Node -> Node
     go n = case n of
-      App _ (Lambda _ body) arg -> subst arg body
+      NApp (App _ (NLam (Lambda _ body)) arg) -> subst arg body
       _ -> n
 
 etaExpand :: Int -> Node -> Node
 etaExpand 0 n = n
-etaExpand k n = mkLambdas k (mkApp (shift k n) (map (Var Info.empty) (reverse [0 .. k - 1])))
+etaExpand k n = mkLambdas' k (mkApps' (shift k n) (map mkVar' (reverse [0 .. k - 1])))
 
 -- | substitution of all free variables for values in an environment
 substEnv :: Env -> Node -> Node
@@ -85,7 +84,7 @@ substEnv env
   | otherwise = umapN go
   where
     go k n = case n of
-      Var _ idx | idx >= k -> env !! (idx - k)
+      NVar (Var _ idx) | idx >= k -> env !! (idx - k)
       _ -> n
 
 convertClosures :: Node -> Node
@@ -93,7 +92,7 @@ convertClosures = umap go
   where
     go :: Node -> Node
     go n = case n of
-      Closure i env b -> substEnv env (Lambda i b)
+      Closure i env b -> substEnv env (mkLambda i b)
       _ -> n
 
 convertRuntimeNodes :: Node -> Node

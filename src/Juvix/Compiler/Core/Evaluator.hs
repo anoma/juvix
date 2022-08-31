@@ -54,24 +54,24 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
 
     eval' :: Env -> Node -> Node
     eval' !env !n = case n of
-      Var _ idx -> env !! idx
-      Ident _ sym -> eval' [] (lookupContext n sym)
-      Constant {} -> n
-      App i l r ->
+      NVar (Var _ idx) -> env !! idx
+      NIdt (Ident _ sym) -> eval' [] (lookupContext n sym)
+      NCst {} -> n
+      NApp (App i l r) ->
         case eval' env l of
           Closure _ env' b -> let !v = eval' env r in eval' (v : env') b
-          v -> evalError "invalid application" (App i v (substEnv env r))
-      BuiltinApp _ op args -> applyBuiltin n env op args
-      Constr i tag args -> Constr i tag (map (eval' env) args)
-      Lambda i b -> Closure i env b
-      Let _ v b -> let !v' = eval' env v in eval' (v' : env) b
-      Case i v bs def ->
+          v -> evalError "invalid application" (mkApp i v (substEnv env r))
+      NBlt (BuiltinApp _ op args) -> applyBuiltin n env op args
+      NCtr (Constr i tag args) -> mkConstr i tag (map (eval' env) args)
+      NLam (Lambda i b) -> Closure i env b
+      NLet (Let _ v b) -> let !v' = eval' env v in eval' (v' : env) b
+      NCase (Case i v bs def) ->
         case eval' env v of
-          Constr _ tag args -> branch n env args tag def bs
-          v' -> evalError "matching on non-data" (substEnv env (Case i v' bs def))
-      Pi {} -> substEnv env n
-      Univ {} -> n
-      TypeConstr i sym args -> TypeConstr i sym (map (eval' env) args)
+          NCtr (Constr _ tag args) -> branch n env args tag def bs
+          v' -> evalError "matching on non-data" (substEnv env (mkCase i v' bs def))
+      NPi {} -> substEnv env n
+      NUniv {} -> n
+      NTyp (TypeConstr i sym args) -> mkTypeConstr i sym (map (eval' env) args)
       Closure {} -> n
 
     branch :: Node -> Env -> [Node] -> Tag -> Maybe Node -> [CaseBranch] -> Node
@@ -103,20 +103,20 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
     applyBuiltin n env _ _ = evalError "invalid builtin application" (substEnv env n)
 
     nodeFromInteger :: Integer -> Node
-    nodeFromInteger !int = Constant Info.empty (ConstInteger int)
+    nodeFromInteger !int = mkConstant' (ConstInteger int)
 
     nodeFromBool :: Bool -> Node
-    nodeFromBool True = Constr Info.empty (BuiltinTag TagTrue) []
-    nodeFromBool False = Constr Info.empty (BuiltinTag TagFalse) []
+    nodeFromBool True = mkConstr' (BuiltinTag TagTrue) []
+    nodeFromBool False = mkConstr' (BuiltinTag TagFalse) []
 
     integerFromNode :: Node -> Integer
     integerFromNode = \case
-      Constant _ (ConstInteger int) -> int
+      NCst (Constant _ (ConstInteger int)) -> int
       v -> evalError "not an integer" v
 
     printNode :: Node -> String
     printNode = \case
-      Constant _ (ConstString s) -> fromText s
+      NCst (Constant _ (ConstString s)) -> fromText s
       v -> fromText $ ppPrint v
 
     lookupContext :: Node -> Symbol -> Node
@@ -130,24 +130,24 @@ hEvalIO :: Handle -> Handle -> IdentContext -> Env -> Node -> IO Node
 hEvalIO hin hout ctx env node =
   let node' = eval ctx env node
    in case node' of
-        Constr _ (BuiltinTag TagReturn) [x] ->
+        NCtr (Constr _ (BuiltinTag TagReturn) [x]) ->
           return x
-        Constr _ (BuiltinTag TagBind) [x, f] -> do
+        NCtr (Constr _ (BuiltinTag TagBind) [x, f]) -> do
           x' <- hEvalIO hin hout ctx env x
-          hEvalIO hin hout ctx env (App Info.empty f x')
-        Constr _ (BuiltinTag TagWrite) [Constant _ (ConstString s)] -> do
+          hEvalIO hin hout ctx env (mkApp Info.empty f x')
+        NCtr (Constr _ (BuiltinTag TagWrite) [NCst (Constant _ (ConstString s))]) -> do
           hPutStr hout s
           return unitNode
-        Constr _ (BuiltinTag TagWrite) [arg] -> do
+        NCtr (Constr _ (BuiltinTag TagWrite) [arg]) -> do
           hPutStr hout (ppPrint arg)
           return unitNode
-        Constr _ (BuiltinTag TagReadLn) [] -> do
+        NCtr (Constr _ (BuiltinTag TagReadLn) []) -> do
           hFlush hout
-          Constant Info.empty . ConstString <$> hGetLine hin
+          mkConstant Info.empty . ConstString <$> hGetLine hin
         _ ->
           return node'
   where
-    unitNode = Constr (Info.singleton (NoDisplayInfo ())) (BuiltinTag TagTrue) []
+    unitNode = mkConstr (Info.singleton (NoDisplayInfo ())) (BuiltinTag TagTrue) []
 
 evalIO :: IdentContext -> Env -> Node -> IO Node
 evalIO = hEvalIO stdin stdout
