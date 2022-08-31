@@ -20,12 +20,15 @@ Memory consists of:
   - local to one function invocation (activation frame)
   - referenced with ArgRef
   - constant number of arguments (depends on the function)
-\* local temporary area
+\* local temporary stack
   - holds temporary values
   - referenced with TempRef
-  - constant size (depends on the function)
-  - write-once: it is an error to write at the same offset in the
-    temporary area within a single function invocation
+  - constant maximum height (depends on the function)
+  - current height of the local temporary stack is known at compile-time for each
+    intruction; a program violating this assumption (e.g. by having a `Branch`
+    instruction whose two branches result in different stack heights) is
+    errorneous
+  - compiled to a constant number of local variables / registers
   - Core.Let is compiled to store the value in the local temporary area
   - Core.Case is compiled to store the value in the local temporary area,
     to enable accessing constructor arguments in the branches
@@ -36,9 +39,7 @@ Memory consists of:
     (or different invocations of the same function)
   - maximum constant height of a local value stack (depends on the function)
   - current height of the local value stack is known at compile-time for each
-    intruction; a program violating this assumption (e.g. by having a `Branch`
-    instruction whose two branches result in different stack heights) is
-    errorneous
+    intruction; a program violating this assumption is errorneous
   - compiled to a constant number of local variables / registers (unless the
     target IR itself is a stack machine)
 -}
@@ -100,16 +101,19 @@ data Val
   | ValBool Bool
   | ValConstr Constr
   | ValClosure Closure
+  deriving stock (Eq)
 
 data Constr = Constr
   { _constrTag :: Tag,
     _constrArgs :: [Val]
   }
+  deriving stock (Eq)
 
 data Closure = Closure
   { _closureSymbol :: Symbol,
     _closureArgs :: [Val]
   }
+  deriving stock (Eq)
 
 -- JuvixAsm runtime state
 data RuntimeState = RuntimeState

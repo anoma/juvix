@@ -13,6 +13,9 @@ import Juvix.Compiler.Asm.Language
 runCode :: InfoTable -> Code -> Val
 runCode infoTable = run . evalRuntime . goToplevel
   where
+    unimplemented :: forall a. a
+    unimplemented = error "not yet implemented"
+
     goToplevel :: Member Runtime r => Code -> Sem r Val
     goToplevel code = do
       goCode code
@@ -29,18 +32,16 @@ runCode infoTable = run . evalRuntime . goToplevel
       IntSub -> goIntBinOp (\x y -> ValInteger (x - y)) >> goCode cont
       IntMul -> goIntBinOp (\x y -> ValInteger (x * y)) >> goCode cont
       IntDiv -> goIntBinOp (\x y -> ValInteger (x `div` y)) >> goCode cont
-      IntEq -> goIntBinOp (\x y -> ValBool (x == y)) >> goCode cont
       IntLt -> goIntBinOp (\x y -> ValBool (x < y)) >> goCode cont
       IntLe -> goIntBinOp (\x y -> ValBool (x <= y)) >> goCode cont
+      ValEq -> goBinOp (\x y -> ValBool (x == y)) >> goCode cont
       Push ref -> do
         v <- getVal ref
         pushValueStack v
         goCode cont
       Pop -> void popValueStack
-      Store off -> do
-        v <- topValueStack
-        writeTemp off v
-        goCode cont
+      PushTemp -> unimplemented
+      PopTemp -> unimplemented
       AllocConstr tag -> do
         let ci = getConstrInfo tag
         args <- replicateM (ci ^. constrInfoArgsNum) popValueStack
@@ -93,6 +94,8 @@ runCode infoTable = run . evalRuntime . goToplevel
         (code, frm) <- getCallDetails callType
         replaceFrame frm
         goCode code
+      CallClosures _ -> unimplemented
+      TailCallClosures _ -> unimplemented
       Return -> do
         isToplevel <- fmap not hasCaller
         if
@@ -104,12 +107,16 @@ runCode infoTable = run . evalRuntime . goToplevel
                 pushValueStack v
                 goCode (cont' ^. contCode)
 
-    goIntBinOp :: Member Runtime r => (Integer -> Integer -> Val) -> Sem r ()
-    goIntBinOp op = do
+    goBinOp :: Member Runtime r => (Val -> Val -> Val) -> Sem r ()
+    goBinOp op = do
       v2 <- popValueStack
       v1 <- popValueStack
+      pushValueStack (op v1 v2)
+
+    goIntBinOp :: Member Runtime r => (Integer -> Integer -> Val) -> Sem r ()
+    goIntBinOp op = goBinOp $ \v1 v2 ->
       case (v1, v2) of
-        (ValInteger i1, ValInteger i2) -> pushValueStack (op i1 i2)
+        (ValInteger i1, ValInteger i2) -> op i1 i2
         _ -> error "invalid operation: expected two integers on value stack"
 
     getVal :: Member Runtime r => Value -> Sem r Val

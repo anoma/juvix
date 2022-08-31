@@ -61,18 +61,19 @@ data Instruction
     IntSub
   | IntMul
   | IntDiv
-  | IntEq
   | IntLt
   | IntLe
+  | -- Compare the two top stack cells with structural equality, pop the stack
+    -- by two, and push the result.
+    ValEq
   | -- Push a value on top of the stack.
     Push Value
   | -- Pop the stack.
     Pop
-  | -- Store the top of the stack at a given offset in the temporary area. The
-    -- temporary area is write-once: it is an error to write at the same offset
-    -- twice within a single function invocation. Does _not_ pop the stack. Used
-    -- to implement Core.Let and Core.Case.
-    Store Offset
+  | -- Push the top of the value stack onto the temporary stack, pop the value
+    -- stack. Used to implement Core.Let and Core.Case.
+    PushTemp
+  | PopTemp
   | -- Allocate constructor data with a given tag. The n arguments (the number n
     -- determined by the constant tag) are popped from the stack and stored at
     -- _decreasing_ offsets (stack[0]: field n-1, stack[1]: field n-2, ...,
@@ -93,8 +94,8 @@ data Instruction
     ExtendClosure {extendClosureArgsNum :: Int}
   | -- Branch based on a boolean value on top of the stack, pop the stack.
     Branch {branchTrue :: Code, branchFalse :: Code}
-  | -- Branch based on the tag of the constructor data on top of the stack, pop
-    -- the stack. The second argument is the optional default branch.
+  | -- Branch based on the tag of the constructor data on top of the stack. Does
+    -- _not_ pop the stack. The second argument is the optional default branch.
     Case {caseBranches :: [CaseBranch], caseDefault :: Maybe Code}
   | -- Call a function given by an immediate constant Symbol or a closure on top
     -- of the stack. Creates a new activation frame for the function. The n
@@ -110,6 +111,15 @@ data Instruction
   | -- Same as `Call`, but does not push the call stack, discarding the current
     -- activation frame instead.
     TailCall CallType
+  | -- `CallClosures` and `TailCallClosures` are like `Call` and `TailCall`
+    -- except that they determine the number of arguments N for the closure at
+    -- runtime. If N is smaller than the supplied number of arguments (*argsNum
+    -- field in the instruction), then the result of the call must be another
+    -- closure and this closure is called with the remaining arguments or
+    -- extended with them (if there are not enough remaining arguments for the
+    -- call). The process is repeated until we run out of supplied arguments.
+    CallClosures {callClosureArgsNum :: Int}
+  | TailCallClosures {tailCallClosureArgsNum :: Int}
   | -- Pushes the top of the current value stack on top of the calling function
     -- value stack, discards the current activation frame, transfers control to
     -- the address at the top of the global call stack, and pops the call stack.
