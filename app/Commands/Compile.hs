@@ -36,7 +36,7 @@ parseCompile = do
       ( long "target"
           <> short 't'
           <> metavar "TARGET"
-          <> value TargetWasm
+          <> value TargetNative
           <> showDefaultWith targetShow
           <> help "select a target: wasm, c, native"
       )

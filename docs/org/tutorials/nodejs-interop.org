@@ -37,7 +37,7 @@ end;
 The Juvix module can be compiled using the following command:
 
 #+begin_src
-juvix compile -r standalone NodeJsInterop.juvix
+juvix compile -t wasm -r standalone NodeJsInterop.juvix
 #+end_src
 
 This will create a file containing a Wasm module called =NodeJsInterop.wasm=.
@@ -55,7 +55,7 @@ The functions =ptrToCstr= and =cstrlen= are necessary to convert the =char=
 pointer passed from Juvix to a JS =String=.
 
 #+begin_src
--- NodeJSInterop.js
+// NodeJSInterop.js
 const fs = require('fs');
 let wasmModule = null;
 
