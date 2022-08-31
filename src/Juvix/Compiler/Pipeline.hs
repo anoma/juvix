@@ -9,8 +9,6 @@ where
 import Juvix.Compiler.Abstract.Translation qualified as Abstract
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.C.Translation.FromInternal qualified as MiniC
-import Juvix.Compiler.Backend.Haskell qualified as Haskell
-import Juvix.Compiler.Backend.Haskell.Translation.FromMono qualified as MiniHaskell
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete qualified as Concrete
 --------------------------------------------------------------------------------
@@ -27,7 +25,6 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Ch
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
   ( InternalTypedResult,
   )
-import Juvix.Compiler.Mono qualified as Mono
 import Juvix.Compiler.Mono.Translation.FromInternal qualified as MonoJuvix
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Setup qualified as Setup
@@ -56,15 +53,6 @@ toC ::
   EntryPoint ->
   Sem r C.MiniCResult
 toC = typechecking >=> C.fromInternal
-
-toHaskell ::
-  Members PipelineEff r =>
-  EntryPoint ->
-  Sem r Haskell.Context
-toHaskell = do
-  typechecking
-    >=> Mono.fromInternal
-    >=> Haskell.fromMono
 
 --------------------------------------------------------------------------------
 
@@ -133,12 +121,6 @@ upToMonoJuvix ::
   Sem r MonoJuvix.MonoJuvixResult
 upToMonoJuvix = upToInternalTyped >=> pipelineMonoJuvix
 
-upToMiniHaskell ::
-  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
-  EntryPoint ->
-  Sem r MiniHaskell.Context
-upToMiniHaskell = upToMonoJuvix >=> pipelineMiniHaskell
-
 upToMiniC ::
   Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
   EntryPoint ->
@@ -166,11 +148,6 @@ pipelineMonoJuvix ::
   Internal.InternalTypedResult ->
   Sem r MonoJuvix.MonoJuvixResult
 pipelineMonoJuvix = MonoJuvix.fromInternal
-
-pipelineMiniHaskell ::
-  MonoJuvix.MonoJuvixResult ->
-  Sem r MiniHaskell.Context
-pipelineMiniHaskell = MiniHaskell.fromMono
 
 pipelineMiniC ::
   Member Builtins r =>

@@ -25,7 +25,6 @@ data InternalCommand
   | Internal MicroCommand
   | Core CoreCommand
   | MiniC
-  | MiniHaskell
   | MonoJuvix
   | Parse ParseOptions
   | Scope ScopeOptions
@@ -44,7 +43,6 @@ parseInternalCommand =
           commandInternal,
           commandCore,
           commandMiniC,
-          commandMiniHaskell,
           commandMonoJuvix,
           commandParse,
           commandDoc,
@@ -106,13 +104,6 @@ commandCore =
     info
       (Core <$> parseCoreCommand)
       (progDesc "Subcommands related to JuvixCore")
-
-commandMiniHaskell :: Mod CommandFields InternalCommand
-commandMiniHaskell =
-  command "minihaskell" $
-    info
-      (pure MiniHaskell)
-      (progDesc "Translate a Juvix file to MiniHaskell")
 
 commandMonoJuvix :: Mod CommandFields InternalCommand
 commandMonoJuvix =

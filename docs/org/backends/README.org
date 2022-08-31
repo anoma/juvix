@@ -1,2 +1,1 @@
 - [[./minic.md][MiniC backend]]
-- [[./minihaskell.md][MiniHaskell backend]]
