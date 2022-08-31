@@ -1,10 +1,10 @@
 ** Emacs Mode
 
-
 There is an Emacs mode available for Juvix. Currently, it
 supports syntax highlighting for well-scoped modules.
 
-To install it add the following lines to your Emacs configuration file:
+To install it add the following lines to your
+Emacs configuration file:
 
 #+begin_src elisp
 (push "/path/to/juvix/juvix-mode/" load-path)
@@ -20,3 +20,25 @@ The Juvix major mode will be activated automatically for =.juvix= files.
   | Key       | Function Name    | Description                                           |
   |-----------+------------------+-------------------------------------------------------|
   | =C-c C-l= | =juvix-load= | Runs the scoper and adds semantic syntax highlighting |
+
+*** Emacs installation
+
+Most Linux distributions contain an Emacs package which can be
+installed with your package manager (=sudo apt install emacs= on
+Ubuntu). On macOS, it is recommended to install Emacs Plus via
+Homebrew: =brew install emacs-plus=. Using the Emacs Homebrew casks is
+not recommended.
+
+*** Common problems
+
+- Error "Symbol's value as variable is void: sh:1:"
+
+  Make sure the juvix executable is on the Emacs' =exec-path=. Note
+  that =exec-path= may be different from your shell's =PATH=.  This is
+  particularly common on macOS with Emacs launched from GUI instead of
+  the terminal.
+
+  The easiest way to resolve this issue is to install the
+  [[https://github.com/purcell/exec-path-from-shell][exec-path-from-shell]] package (available on MELPA). Alternatively,
+  one may set =exec-path= to match shell =PATH= by following the
+  instructions from [[https://www.emacswiki.org/emacs/ExecPath][EmacsWiki]].
