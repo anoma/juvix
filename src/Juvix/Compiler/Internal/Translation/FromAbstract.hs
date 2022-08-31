@@ -1,7 +1,9 @@
 module Juvix.Compiler.Internal.Translation.FromAbstract
-  ( module Juvix.Compiler.Internal.Translation.FromAbstract,
-    module Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context,
+  ( module Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context,
     module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination,
+    TranslationState,
+    iniState,
+    fromAbstract,
   )
 where
 
