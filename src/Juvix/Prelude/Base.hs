@@ -223,8 +223,7 @@ tableNestedInsert k1 k2 = tableInsert (HashMap.singleton k2) (HashMap.insert k2)
 --------------------------------------------------------------------------------
 
 revAppend :: [a] -> [a] -> [a]
-revAppend [] ys = ys
-revAppend (x : xs) ys = revAppend xs (x : ys)
+revAppend xs ys = foldl (flip (:)) ys xs
 
 --------------------------------------------------------------------------------
 -- NonEmpty
