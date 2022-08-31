@@ -136,7 +136,6 @@ pipelineInternalTyped =
 pipelineInternalReachability :: Internal.InternalTypedResult -> Sem r Internal.InternalTypedResult
 pipelineInternalReachability = return . FromInternal.filterUnreachable
 
-
 pipelineMiniC ::
   Member Builtins r =>
   Internal.InternalTypedResult ->
