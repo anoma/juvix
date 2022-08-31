@@ -1,6 +1,7 @@
 module Juvix.Compiler.Internal.Translation.FromInternal
-  ( module Juvix.Compiler.Internal.Translation.FromInternal,
-    module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability,
+  ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability,
+    arityChecking,
+    typeChecking,
   )
 where
 

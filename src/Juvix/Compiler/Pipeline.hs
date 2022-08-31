@@ -4,29 +4,15 @@ module Juvix.Compiler.Pipeline
   )
 where
 
--- import Juvix.Compiler.Abstract.Translation.FromConcrete qualified as Abstract
-
 import Juvix.Compiler.Abstract.Translation qualified as Abstract
 import Juvix.Compiler.Backend.C qualified as C
-import Juvix.Compiler.Backend.C.Translation.FromInternal qualified as MiniC
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete qualified as Concrete
---------------------------------------------------------------------------------
-
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
-import Juvix.Compiler.Internal.Translation.FromAbstract qualified as Internal
-import Juvix.Compiler.Internal.Translation.FromInternal qualified as FromInternal
-import Juvix.Compiler.Internal.Translation.FromInternal qualified as Internal
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking qualified as Internal
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Checker qualified as Internal
-  ( TypeCheckerError,
-  )
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
-  ( InternalTypedResult,
-  )
+import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Compiler.Pipeline.Setup qualified as Setup
+import Juvix.Compiler.Pipeline.Setup
 import Juvix.Prelude
 
 type PipelineEff = '[Files, NameIdGen, Builtins, Error JuvixError, Embed IO]
@@ -35,11 +21,11 @@ type PipelineEff = '[Files, NameIdGen, Builtins, Error JuvixError, Embed IO]
 -- Workflows
 --------------------------------------------------------------------------------
 
-typechecking ::
+typecheck ::
   Members PipelineEff r =>
   EntryPoint ->
   Sem r Internal.InternalTypedResult
-typechecking =
+typecheck =
   do
     Concrete.fromSource
     >=> Abstract.fromConcrete
@@ -47,11 +33,63 @@ typechecking =
     >=> Internal.arityChecking
     >=> Internal.typeChecking
 
-toC ::
+compile ::
   Members PipelineEff r =>
   EntryPoint ->
   Sem r C.MiniCResult
-toC = typechecking >=> C.fromInternal
+compile = typecheck >=> C.fromInternal
+
+--------------------------------------------------------------------------------
+
+upToParsing ::
+  Members '[Files, Error JuvixError, NameIdGen] r =>
+  EntryPoint ->
+  Sem r Parser.ParserResult
+upToParsing = entrySetup >=> Parser.fromSource
+
+upToScoping ::
+  Members '[Files, NameIdGen, Error JuvixError] r =>
+  EntryPoint ->
+  Sem r Scoper.ScoperResult
+upToScoping = upToParsing >=> Scoper.fromParsed
+
+upToAbstract ::
+  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
+  EntryPoint ->
+  Sem r Abstract.AbstractResult
+upToAbstract = upToScoping >=> Abstract.fromConcrete
+
+upToInternal ::
+  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
+  EntryPoint ->
+  Sem r Internal.InternalResult
+upToInternal = upToAbstract >=> Internal.fromAbstract
+
+upToInternalArity ::
+  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
+  EntryPoint ->
+  Sem r Internal.InternalArityResult
+upToInternalArity = upToInternal >=> Internal.arityChecking
+
+upToInternalTyped ::
+  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
+  EntryPoint ->
+  Sem r Internal.InternalTypedResult
+upToInternalTyped = upToInternalArity >=> Internal.typeChecking
+
+upToInternalReachability ::
+  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
+  EntryPoint ->
+  Sem r Internal.InternalTypedResult
+upToInternalReachability =
+  upToInternalTyped
+    >=> return . Internal.filterUnreachable
+
+upToMiniC ::
+  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
+  EntryPoint ->
+  Sem r C.MiniCResult
+upToMiniC = upToInternalReachability >=> C.fromInternal
 
 --------------------------------------------------------------------------------
 
@@ -65,79 +103,3 @@ runIO = runIOEither >=> mayThrow
     mayThrow = \case
       Left err -> printErrorAnsiSafe err >> exitFailure
       Right r -> return r
-
-upToSetup ::
-  Member Files r =>
-  EntryPoint ->
-  Sem r EntryPoint
-upToSetup = Setup.entrySetup
-
-upToParsing ::
-  Members '[Files, Error JuvixError, NameIdGen] r =>
-  EntryPoint ->
-  Sem r Parser.ParserResult
-upToParsing = upToSetup >=> Parser.fromSource
-
-upToScoping ::
-  Members '[Files, NameIdGen, Error JuvixError] r =>
-  EntryPoint ->
-  Sem r Scoper.ScoperResult
-upToScoping = upToParsing >=> Scoper.fromParsed
-
-upToAbstract ::
-  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
-  EntryPoint ->
-  Sem r Abstract.AbstractResult
-upToAbstract = upToScoping >=> pipelineAbstract
-
-upToInternal ::
-  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
-  EntryPoint ->
-  Sem r Internal.InternalResult
-upToInternal = upToAbstract >=> Internal.fromAbstract
-
-upToInternalArity ::
-  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
-  EntryPoint ->
-  Sem r Internal.InternalArityResult
-upToInternalArity = upToInternal >=> FromInternal.arityChecking
-
-upToInternalTyped ::
-  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
-  EntryPoint ->
-  Sem r Internal.InternalTypedResult
-upToInternalTyped = upToInternalArity >=> pipelineInternalTyped
-
-upToInternalReachability ::
-  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
-  EntryPoint ->
-  Sem r Internal.InternalTypedResult
-upToInternalReachability = upToInternalTyped >=> pipelineInternalReachability
-
-upToMiniC ::
-  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
-  EntryPoint ->
-  Sem r MiniC.MiniCResult
-upToMiniC = upToInternalReachability >=> pipelineMiniC
-
-pipelineAbstract ::
-  Members '[Error JuvixError, Builtins, NameIdGen] r =>
-  Scoper.ScoperResult ->
-  Sem r Abstract.AbstractResult
-pipelineAbstract = mapError (JuvixError @Scoper.ScoperError) . Abstract.fromConcrete
-
-pipelineInternalTyped ::
-  Members '[Files, NameIdGen, Error JuvixError, Builtins] r =>
-  Internal.InternalArityResult ->
-  Sem r Internal.InternalTypedResult
-pipelineInternalTyped =
-  mapError (JuvixError @Internal.TypeCheckerError) . FromInternal.typeChecking
-
-pipelineInternalReachability :: Internal.InternalTypedResult -> Sem r Internal.InternalTypedResult
-pipelineInternalReachability = return . FromInternal.filterUnreachable
-
-pipelineMiniC ::
-  Member Builtins r =>
-  Internal.InternalTypedResult ->
-  Sem r MiniC.MiniCResult
-pipelineMiniC = MiniC.fromInternal
