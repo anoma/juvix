@@ -100,10 +100,6 @@ tests =
       "Internal"
       "LiteralInt.juvix",
     PosTest
-      "GHC backend Hello World"
-      "MiniHaskell"
-      "HelloWorld.juvix",
-    PosTest
       "PolySimpleFungibleToken"
       "FullExamples"
       "SimpleFungibleTokenImplicit.juvix",

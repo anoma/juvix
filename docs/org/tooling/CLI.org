@@ -54,8 +54,6 @@ juvix internal COMMAND
   Translate a Juvix file to MonoJuvix
 - =microjuvix=
   Subcommands related to MicroJuvix
-- =minihaskell=
-  Translate a Juvix file to MiniHaskell
 - =minic=
   Translate a Juvix file to MiniC
 
