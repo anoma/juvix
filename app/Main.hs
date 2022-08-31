@@ -14,8 +14,6 @@ import Juvix.Compiler.Abstract.Language qualified as Abstract
 import Juvix.Compiler.Abstract.Pretty qualified as Abstract
 import Juvix.Compiler.Abstract.Translation.FromConcrete qualified as Abstract
 import Juvix.Compiler.Backend.C.Translation.FromInternal qualified as MiniC
-import Juvix.Compiler.Backend.Haskell.Pretty qualified as MiniHaskell
-import Juvix.Compiler.Backend.Haskell.Translation.FromMono qualified as MiniHaskell
 import Juvix.Compiler.Backend.Html.Translation.FromTyped qualified as Doc
 import Juvix.Compiler.Backend.Html.Translation.FromTyped qualified as Html
 import Juvix.Compiler.Concrete.Data.Highlight qualified as Highlight
@@ -210,11 +208,6 @@ runCommand cmdWithOpts = do
                           }
                   monojuvix <- head . (^. Mono.resultModules) <$> runPipeline (upToMonoJuvix entryPoint)
                   renderStdOut (Mono.ppOut ppOpts monojuvix)
-                MiniHaskell -> do
-                  minihaskell <-
-                    head . (^. MiniHaskell.resultModules)
-                      <$> runPipeline (upToMiniHaskell entryPoint)
-                  renderStdOut (MiniHaskell.ppOutDefault minihaskell)
                 MiniC -> do
                   miniC <- (^. MiniC.resultCCode) <$> runPipeline (upToMiniC entryPoint)
                   say miniC
