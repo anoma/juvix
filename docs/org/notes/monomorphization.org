@@ -1,6 +1,6 @@
 #+author: Jan Mas Rovira
 
-* Monomorphization 
+* Monomorphization
 
 (Removed in v0.2.5)
 
