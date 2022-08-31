@@ -25,7 +25,6 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Ch
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
   ( InternalTypedResult,
   )
-import Juvix.Compiler.Mono.Translation.FromInternal qualified as MonoJuvix
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Setup qualified as Setup
 import Juvix.Prelude
@@ -115,12 +114,6 @@ upToInternalReachability ::
   Sem r Internal.InternalTypedResult
 upToInternalReachability = upToInternalTyped >=> pipelineInternalReachability
 
-upToMonoJuvix ::
-  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
-  EntryPoint ->
-  Sem r MonoJuvix.MonoJuvixResult
-upToMonoJuvix = upToInternalTyped >=> pipelineMonoJuvix
-
 upToMiniC ::
   Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
   EntryPoint ->
@@ -143,11 +136,6 @@ pipelineInternalTyped =
 pipelineInternalReachability :: Internal.InternalTypedResult -> Sem r Internal.InternalTypedResult
 pipelineInternalReachability = return . FromInternal.filterUnreachable
 
-pipelineMonoJuvix ::
-  Members '[Files, NameIdGen] r =>
-  Internal.InternalTypedResult ->
-  Sem r MonoJuvix.MonoJuvixResult
-pipelineMonoJuvix = MonoJuvix.fromInternal
 
 pipelineMiniC ::
   Member Builtins r =>

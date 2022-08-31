@@ -35,8 +35,6 @@ import Juvix.Compiler.Internal.Translation.FromAbstract qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination qualified as Termination
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as InternalArity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
-import Juvix.Compiler.Mono.Pretty qualified as Mono
-import Juvix.Compiler.Mono.Translation.FromInternal qualified as Mono
 import Juvix.Compiler.Pipeline
 import Juvix.Extra.Paths qualified as Paths
 import Juvix.Extra.Process
@@ -195,19 +193,6 @@ runCommand cmdWithOpts = do
                             }
                         checkedModule = head (res ^. InternalTyped.resultModules)
                     renderStdOut (Internal.ppOut ppOpts checkedModule)
-                    newline
-                    let typeCalls = Mono.buildTypeCallMap res
-                    renderStdOut (Internal.ppOut ppOpts typeCalls)
-                    newline
-                    let concreteTypeCalls = Mono.collectTypeCalls res
-                    renderStdOut (Internal.ppOut ppOpts concreteTypeCalls)
-                MonoJuvix -> do
-                  let ppOpts =
-                        Mono.defaultOptions
-                          { Mono._optShowNameIds = globalOpts ^. globalShowNameIds
-                          }
-                  monojuvix <- head . (^. Mono.resultModules) <$> runPipeline (upToMonoJuvix entryPoint)
-                  renderStdOut (Mono.ppOut ppOpts monojuvix)
                 MiniC -> do
                   miniC <- (^. MiniC.resultCCode) <$> runPipeline (upToMiniC entryPoint)
                   say miniC
