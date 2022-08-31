@@ -380,7 +380,7 @@ runCoreCommand globalOpts = \case
               | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
                   return ()
             Right node' -> do
-              renderStdOut (Core.ppOut (docOpts (opts ^. coreEvalShowDeBruijn)) node')
+              renderStdOut (Core.ppOut (docOpts False) node')
               embed (putStrLn "")
         Right (_, Nothing) -> return ()
       where
