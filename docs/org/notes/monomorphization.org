@@ -2,6 +2,8 @@
 
 * Monomorphization
 
+(Removed in v0.2.5)
+
  Monomorphization refers to the process of converting polymorphic code to
  monomorphic code (no type variables) through static analysis.
 

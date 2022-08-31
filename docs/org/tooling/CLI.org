@@ -50,8 +50,6 @@ juvix internal COMMAND
   Parse and scope a Juvix file
 - =termination=
   Subcommands related to termination checking
-- =monojuvix=
-  Translate a Juvix file to MonoJuvix
 - =microjuvix=
   Subcommands related to MicroJuvix
 - =minic=

@@ -337,34 +337,6 @@ inductiveTypeVarsAssoc def l
     vars :: [VarName]
     vars = def ^.. inductiveParameters . each . inductiveParamName
 
--- TODO remove this after monojuvix is gone
-functionTypeVarsAssoc :: forall a f. Foldable f => FunctionDef -> f a -> HashMap VarName a
-functionTypeVarsAssoc def l = sig <> mconcatMap clause (def ^. funDefClauses)
-  where
-    n = length l
-    zipl :: [Maybe VarName] -> HashMap VarName a
-    zipl x = HashMap.fromList (mapMaybe aux (zip x (toList l)))
-      where
-        aux :: (Maybe x, y) -> Maybe (x, y)
-        aux = \case
-          (Just a, b) -> Just (a, b)
-          _ -> Nothing
-    sig
-      | length tyVars < n = impossible
-      | otherwise = zipl (map Just tyVars)
-      where
-        tyVars = fst (unfoldTypeAbsType (def ^. funDefType))
-    clause :: FunctionClause -> HashMap VarName a
-    clause c = zipl clauseVars
-      where
-        clauseVars :: [Maybe VarName]
-        clauseVars = take n (map patternVar (c ^. clausePatterns))
-          where
-            patternVar :: PatternArg -> Maybe VarName
-            patternVar a = case a ^. patternArgPattern of
-              PatternVariable v -> Just v
-              _ -> Nothing
-
 substitutionConcrete :: ConcreteSubs -> Expression -> ConcreteType
 substitutionConcrete m = mkConcreteType' . substitutionE ((^. unconcreteType) <$> m)
 
