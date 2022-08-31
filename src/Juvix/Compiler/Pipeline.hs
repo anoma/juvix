@@ -25,7 +25,6 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Ch
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
   ( InternalTypedResult,
   )
-import Juvix.Compiler.Mono qualified as Mono
 import Juvix.Compiler.Mono.Translation.FromInternal qualified as MonoJuvix
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Setup qualified as Setup
