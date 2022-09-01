@@ -7,7 +7,7 @@ import Juvix.Compiler.Core.Extra.Recursors.Base
 umapLeavesG ::
   forall c f.
   Applicative f =>
-  Collector (Int, Maybe [BinderInfo]) c ->
+  Collector (Int, [Info]) c ->
   (c -> Node -> f Node) ->
   Node ->
   f Node
@@ -31,7 +31,7 @@ umapLeavesG coll f = go (coll ^. cEmpty)
 ufoldG' ::
   forall c a f.
   Applicative f =>
-  Collector (Int, Maybe [BinderInfo]) c ->
+  Collector (Int, [Info]) c ->
   (a -> [a] -> a) ->
   (c -> Node -> f a) ->
   Node ->
@@ -59,7 +59,7 @@ ufoldG' coll uplus f = go (coll ^. cEmpty)
 ufoldG ::
   forall c a f.
   Applicative f =>
-  Collector (Int, Maybe [BinderInfo]) c ->
+  Collector (Int, [Info]) c ->
   (a -> a -> a) ->
   (c -> Node -> f a) ->
   Node ->
@@ -72,7 +72,7 @@ ufoldG coll uplus = ufoldG' coll uplus'
 ufoldA :: Applicative f => (a -> a -> a) -> (Node -> f a) -> Node -> f a
 ufoldA uplus f = ufoldG unitCollector uplus (const f)
 
-ufoldAB :: Applicative f => (a -> a -> a) -> (BinderList (Maybe BinderInfo) -> Node -> f a) -> Node -> f a
+ufoldAB :: Applicative f => (a -> a -> a) -> (BinderList Info -> Node -> f a) -> Node -> f a
 ufoldAB uplus f = ufoldG binderInfoCollector uplus f
 
 ufoldAN :: Applicative f => (a -> a -> a) -> (Index -> Node -> f a) -> Node -> f a
@@ -87,7 +87,7 @@ walk = ufoldA mappend
 walkN :: Applicative f => (Index -> Node -> f ()) -> Node -> f ()
 walkN = ufoldAN mappend
 
-walkB :: Applicative f => (BinderList (Maybe BinderInfo) -> Node -> f ()) -> Node -> f ()
+walkB :: Applicative f => (BinderList Info -> Node -> f ()) -> Node -> f ()
 walkB = ufoldAB mappend
 
 umapLeavesN :: Applicative f => (Index -> Node -> f Node) -> Node -> f Node
