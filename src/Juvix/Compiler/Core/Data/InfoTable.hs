@@ -38,8 +38,8 @@ data IdentInfo = IdentInfo
   }
 
 data ArgumentInfo = ArgumentInfo
-  { _argumentName :: Name,
-    _argumentType :: Type,
+  { _argumentName :: Maybe Name,
+    _argumentType :: Maybe Type,
     _argumentIsImplicit :: Bool
   }
 

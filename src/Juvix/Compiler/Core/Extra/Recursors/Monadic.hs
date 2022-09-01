@@ -8,7 +8,7 @@ import Juvix.Compiler.Core.Extra.Recursors.Base
 umapG ::
   forall c m.
   Monad m =>
-  Collector (Int, Maybe [BinderInfo]) c ->
+  Collector (Int, [Info]) c ->
   (c -> Node -> m Node) ->
   Node ->
   m Node
@@ -30,7 +30,7 @@ umapG coll f = go (coll ^. cEmpty)
 umapM :: Monad m => (Node -> m Node) -> Node -> m Node
 umapM f = umapG unitCollector (const f)
 
-umapMB :: Monad m => (BinderList (Maybe BinderInfo) -> Node -> m Node) -> Node -> m Node
+umapMB :: Monad m => (BinderList Info -> Node -> m Node) -> Node -> m Node
 umapMB f = umapG binderInfoCollector f
 
 umapMN :: Monad m => (Index -> Node -> m Node) -> Node -> m Node
@@ -40,7 +40,7 @@ umapMN f = umapG binderNumCollector f
 dmapG ::
   forall c m.
   Monad m =>
-  Collector (Int, Maybe [BinderInfo]) c ->
+  Collector (Int, [Info]) c ->
   (c -> Node -> m Node) ->
   Node ->
   m Node
@@ -62,7 +62,7 @@ dmapG coll f = go (coll ^. cEmpty)
 dmapM :: Monad m => (Node -> m Node) -> Node -> m Node
 dmapM f = dmapG unitCollector (const f)
 
-dmapMB :: Monad m => (BinderList (Maybe BinderInfo) -> Node -> m Node) -> Node -> m Node
+dmapMB :: Monad m => (BinderList Info -> Node -> m Node) -> Node -> m Node
 dmapMB f = dmapG binderInfoCollector f
 
 dmapMN :: Monad m => (Index -> Node -> m Node) -> Node -> m Node

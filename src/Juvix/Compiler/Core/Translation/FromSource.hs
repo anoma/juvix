@@ -15,6 +15,7 @@ import Juvix.Compiler.Core.Info.BinderInfo as BinderInfo
 import Juvix.Compiler.Core.Info.BranchInfo as BranchInfo
 import Juvix.Compiler.Core.Info.LocationInfo as LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo as NameInfo
+import Juvix.Compiler.Core.Info.TypeInfo as TypeInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Transformation.Eta
 import Juvix.Compiler.Core.Translation.FromSource.Lexer
@@ -44,6 +45,10 @@ runParser root fileName tab input =
 
 starType :: Type
 starType = Pi Info.empty (Univ Info.empty 0) (Var Info.empty 0)
+
+binderNameInfo :: Name -> Info
+binderNameInfo name =
+  Info.singleton (BinderInfo (Info.singleton (NameInfo name)))
 
 freshName ::
   Members '[InfoTableBuilder, NameIdGen] r =>
@@ -159,14 +164,13 @@ parseDefinition sym = do
   where
     toArgumentInfo :: Info -> ArgumentInfo
     toArgumentInfo i =
-      case Info.lookup kBinderInfo i of
-        Just bi ->
-          ArgumentInfo
-            { _argumentName = bi ^. BinderInfo.infoName,
-              _argumentType = bi ^. BinderInfo.infoType,
-              _argumentIsImplicit = False
-            }
-        Nothing -> error "missing binder info"
+      ArgumentInfo
+        { _argumentName = getInfoName bi,
+          _argumentType = getInfoType bi,
+          _argumentIsImplicit = False
+        }
+      where
+        bi = getInfoBinder i
 
 statementConstr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -251,7 +255,7 @@ seqExpr' varsNum vars node = do
     Constr
       Info.empty
       (BuiltinTag TagBind)
-      [node, Lambda (Info.singleton (BinderInfo name starType)) node']
+      [node, Lambda (binderNameInfo name) node']
 
 cmpExpr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -536,7 +540,7 @@ exprLambda varsNum vars = do
   name <- parseLocalName
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- expr (varsNum + 1) vars'
-  return $ Lambda (Info.singleton (BinderInfo name starType)) body
+  return $ Lambda (binderNameInfo name) body
 
 exprLet ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -551,7 +555,7 @@ exprLet varsNum vars = do
   kwIn
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- expr (varsNum + 1) vars'
-  return $ Let (Info.singleton (BinderInfo name starType)) value body
+  return $ Let (binderNameInfo name) value body
 
 exprCase ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -579,7 +583,7 @@ exprCase' off value varsNum vars = do
   let bss = map fst bs'
   let bsns = map snd bs'
   let def' = map fromRight' $ filter isRight bs
-  let bi = CaseBinderInfo $ map (map (`BinderInfo` starType)) bsns
+  let bi = CaseBinderInfo $ map (map (Info.singleton . NameInfo)) bsns
   bri <-
     CaseBranchInfo
       <$> mapM

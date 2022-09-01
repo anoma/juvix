@@ -104,15 +104,15 @@ instance PrettyCode Node where
       where
         ppLam :: Member (Reader Options) r => Info -> Sem r (Doc Ann)
         ppLam i =
-          case Info.lookup kBinderInfo i of
-            Just bi -> do
-              n <- ppCode (bi ^. BinderInfo.infoName)
+          case getInfoName (getInfoBinder i) of
+            Just name -> do
+              n <- ppCode name
               return $ kwLambda <> n
             Nothing -> return $ kwLambda <> kwQuestion
     Let {..} -> do
       n' <-
-        case Info.lookup kBinderInfo _letInfo of
-          Just bi -> ppCode (bi ^. BinderInfo.infoName)
+        case getInfoName (getInfoBinder _letInfo) of
+          Just name -> ppCode name
           Nothing -> return kwQuestion
       v' <- ppCode _letValue
       b' <- ppCode _letBody
@@ -120,7 +120,7 @@ instance PrettyCode Node where
     Case {..} -> do
       bns <-
         case Info.lookup kCaseBinderInfo _caseInfo of
-          Just ci -> mapM (mapM (ppCode . (^. BinderInfo.infoName))) (ci ^. infoBranchBinders)
+          Just ci -> mapM (mapM (maybe (return kwQuestion) ppCode . getInfoName)) (ci ^. infoBranchBinders)
           Nothing -> mapM (\(CaseBranch _ n _) -> replicateM n (return kwQuestion)) _caseBranches
       cns <-
         case Info.lookup kCaseBranchInfo _caseInfo of
@@ -138,9 +138,9 @@ instance PrettyCode Node where
       let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs''
       return $ kwCase <+> v <+> kwOf <+> bss
     Pi {..} ->
-      case Info.lookup kBinderInfo _piInfo of
-        Just bi -> do
-          n <- ppCode (bi ^. BinderInfo.infoName)
+      case getInfoName $ getInfoBinder _piInfo of
+        Just name -> do
+          n <- ppCode name
           b <- ppCode _piBody
           return $ kwLambda <> n <+> b
         Nothing -> do

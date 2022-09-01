@@ -75,7 +75,7 @@ data NodeDetails = NodeDetails
     _nodeChildBindersNum :: [Int],
     -- `nodeChildBindersInfo` is information about binders for each child, if
     -- present. Same length and order as in `nodeChildren`.
-    _nodeChildBindersInfo :: [Maybe [BinderInfo]],
+    _nodeChildBindersInfo :: [[Info]],
     -- `nodeReassemble` reassembles the node from the info and the children
     -- (which should be in the same fixed order as in the `nodeChildren`
     -- component).
@@ -91,67 +91,67 @@ destruct = \case
   Var i idx -> NodeDetails i [] [] [] (\i' _ -> Var i' idx)
   Ident i sym -> NodeDetails i [] [] [] (\i' _ -> Ident i' sym)
   Constant i c -> NodeDetails i [] [] [] (\i' _ -> Constant i' c)
-  App i l r -> NodeDetails i [l, r] [0, 0] [Nothing, Nothing] (\i' args' -> App i' (hd args') (args' !! 1))
-  BuiltinApp i op args -> NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`BuiltinApp` op)
-  Constr i tag args -> NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`Constr` tag)
+  App i l r -> NodeDetails i [l, r] [0, 0] [[], []] (\i' args' -> App i' (hd args') (args' !! 1))
+  BuiltinApp i op args -> NodeDetails i args (map (const 0) args) (map (const []) args) (`BuiltinApp` op)
+  Constr i tag args -> NodeDetails i args (map (const 0) args) (map (const []) args) (`Constr` tag)
   Lambda i b -> NodeDetails i [b] [1] [fetchBinderInfo i] (\i' args' -> Lambda i' (hd args'))
-  Let i v b -> NodeDetails i [v, b] [0, 1] [Nothing, fetchBinderInfo i] (\i' args' -> Let i' (hd args') (args' !! 1))
+  Let i v b -> NodeDetails i [v, b] [0, 1] [[], fetchBinderInfo i] (\i' args' -> Let i' (hd args') (args' !! 1))
   Case i v bs Nothing ->
-    NodeDetails
-      i
-      (v : map (\(CaseBranch _ _ br) -> br) bs)
-      (0 : map (\(CaseBranch _ k _) -> k) bs)
-      (Nothing : fetchCaseBinderInfo i (replicate (length bs) Nothing))
-      ( \i' args' ->
-          Case
-            i'
-            (hd args')
-            ( zipWithExact
-                (\(CaseBranch tag k _) br' -> CaseBranch tag k br')
-                bs
-                (tl args')
-            )
-            Nothing
-      )
+    let branchBinderNums = map (\(CaseBranch _ k _) -> k) bs
+     in NodeDetails
+          i
+          (v : map (\(CaseBranch _ _ br) -> br) bs)
+          (0 : branchBinderNums)
+          ([] : fetchCaseBinderInfo i (map (`replicate` Info.empty) branchBinderNums))
+          ( \i' args' ->
+              Case
+                i'
+                (hd args')
+                ( zipWithExact
+                    (\(CaseBranch tag k _) br' -> CaseBranch tag k br')
+                    bs
+                    (tl args')
+                )
+                Nothing
+          )
   Case i v bs (Just def) ->
-    NodeDetails
-      i
-      (v : def : map (\(CaseBranch _ _ br) -> br) bs)
-      (0 : 0 : map (\(CaseBranch _ k _) -> k) bs)
-      (Nothing : Nothing : fetchCaseBinderInfo i (replicate (length bs) Nothing))
-      ( \i' args' ->
-          Case
-            i'
-            (hd args')
-            ( zipWithExact
-                (\(CaseBranch tag k _) br' -> CaseBranch tag k br')
-                bs
-                (tl (tl args'))
-            )
-            (Just (hd (tl args')))
-      )
+    let branchBinderNums = map (\(CaseBranch _ k _) -> k) bs
+     in NodeDetails
+          i
+          (v : def : map (\(CaseBranch _ _ br) -> br) bs)
+          (0 : 0 : branchBinderNums)
+          ([] : [] : fetchCaseBinderInfo i (map (`replicate` Info.empty) branchBinderNums))
+          ( \i' args' ->
+              Case
+                i'
+                (hd args')
+                ( zipWithExact
+                    (\(CaseBranch tag k _) br' -> CaseBranch tag k br')
+                    bs
+                    (tl (tl args'))
+                )
+                (Just (hd (tl args')))
+          )
   Pi i ty b ->
-    NodeDetails i [ty, b] [0, 1] [Nothing, fetchBinderInfo i] (\i' args' -> Pi i' (hd args') (args' !! 1))
+    NodeDetails i [ty, b] [0, 1] [[], fetchBinderInfo i] (\i' args' -> Pi i' (hd args') (args' !! 1))
   Univ i l ->
     NodeDetails i [] [] [] (\i' _ -> Univ i' l)
   TypeConstr i sym args ->
-    NodeDetails i args (map (const 0) args) (map (const Nothing) args) (`TypeConstr` sym)
+    NodeDetails i args (map (const 0) args) (map (const []) args) (`TypeConstr` sym)
   Closure i env b ->
     NodeDetails
       i
       (b : env)
       (1 : map (const 0) env)
-      (fetchBinderInfo i : map (const Nothing) env)
+      (fetchBinderInfo i : map (const []) env)
       (\i' args' -> Closure i' (tl args') (hd args'))
   where
-    fetchBinderInfo :: Info -> Maybe [BinderInfo]
-    fetchBinderInfo i = case Info.lookup kBinderInfo i of
-      Just bi -> Just [bi]
-      Nothing -> Nothing
+    fetchBinderInfo :: Info -> [Info]
+    fetchBinderInfo i = [getInfoBinder i]
 
-    fetchCaseBinderInfo :: Info -> [Maybe [BinderInfo]] -> [Maybe [BinderInfo]]
+    fetchCaseBinderInfo :: Info -> [[Info]] -> [[Info]]
     fetchCaseBinderInfo i d = case Info.lookup kCaseBinderInfo i of
-      Just cbi -> map Just (cbi ^. infoBranchBinders)
+      Just cbi -> cbi ^. infoBranchBinders
       Nothing -> d
 
     hd :: [a] -> a
