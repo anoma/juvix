@@ -11,6 +11,6 @@ structEq (NCtr (Constr _ tag1 args1)) (NCtr (Constr _ tag2 args2)) =
   where
     argsEq :: [Node] -> [Node] -> Bool
     argsEq [] [] = True
-    argsEq (x:xs) (y:ys) | structEq x y = argsEq xs ys
+    argsEq (x : xs) (y : ys) | structEq x y = argsEq xs ys
     argsEq _ _ = False
 structEq x y = x == y
