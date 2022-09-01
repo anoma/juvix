@@ -93,7 +93,7 @@ mkTypeConstr' = mkTypeConstr Info.empty
 {------------------------------------------------------------------------}
 {- functions on Type -}
 
--- unfold a type into the target and the arguments (left-to-right)
+-- | Unfold a type into the target and the arguments (left-to-right)
 unfoldType' :: Type -> (Type, [(Info, Type)])
 unfoldType' ty = case ty of
   NPi (Pi i l r) -> let (tgt, args) = unfoldType' r in (tgt, (i, l) : args)
@@ -138,7 +138,7 @@ unfoldLambdas = go []
 unfoldLambdas' :: Node -> (Int, Node)
 unfoldLambdas' = first length . unfoldLambdas
 
--- `NodeDetails` is a convenience datatype which provides the most commonly needed
+-- | `NodeDetails` is a convenience datatype which provides the most commonly needed
 -- information about a node in a generic fashion.
 data NodeDetails = NodeDetails
   { -- `nodeInfo` is the info associated with the node,
@@ -214,13 +214,13 @@ destruct = \case
     NodeDetails i [] [] [] (\i' _ -> mkUniv i' l)
   NTyp (TypeConstr i sym args) ->
     NodeDetails i args (map (const 0) args) (map (const []) args) (`mkTypeConstr` sym)
-  Closure i env b ->
+  Closure env (Lambda i b) ->
     NodeDetails
       i
       (b : env)
       (1 : map (const 0) env)
       (fetchBinderInfo i : map (const []) env)
-      (\i' args' -> Closure i' (tl args') (hd args'))
+      (\i' args' -> Closure (tl args') (Lambda i' (hd args')))
   where
     fetchBinderInfo :: Info -> [Info]
     fetchBinderInfo i = [getInfoBinder i]

@@ -3,11 +3,13 @@ module Juvix.Compiler.Core.Extra
     module Juvix.Compiler.Core.Extra.Base,
     module Juvix.Compiler.Core.Extra.Recursors,
     module Juvix.Compiler.Core.Extra.Info,
+    module Juvix.Compiler.Core.Extra.Equality,
   )
 where
 
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Core.Extra.Base
+import Juvix.Compiler.Core.Extra.Equality
 import Juvix.Compiler.Core.Extra.Info
 import Juvix.Compiler.Core.Extra.Recursors
 import Juvix.Compiler.Core.Language
@@ -92,7 +94,7 @@ convertClosures = umap go
   where
     go :: Node -> Node
     go n = case n of
-      Closure i env b -> substEnv env (mkLambda i b)
+      Closure env (Lambda i b) -> substEnv env (mkLambda i b)
       _ -> n
 
 convertRuntimeNodes :: Node -> Node

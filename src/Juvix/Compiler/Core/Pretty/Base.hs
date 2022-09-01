@@ -155,8 +155,8 @@ instance PrettyCode Node where
           Just ni -> ppCode (ni ^. NameInfo.infoName)
           Nothing -> return $ kwUnnamedIdent <> pretty _typeConstrSymbol
       return $ foldl' (<+>) n' args'
-    Closure {..} ->
-      ppCode (substEnv _closureEnv (mkLambda _closureInfo _closureBody))
+    Closure env l@Lambda {} ->
+      ppCode (substEnv env (NLam l))
 
 instance PrettyCode a => PrettyCode (NonEmpty a) where
   ppCode x = do

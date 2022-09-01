@@ -43,7 +43,7 @@ instance Show EvalError where
 
 instance Exception.Exception EvalError
 
--- `eval ctx env n` evalues a node `n` whose all free variables point into
+-- | `eval ctx env n` evalues a node `n` whose all free variables point into
 -- `env`. All nodes in `ctx` must be closed. All nodes in `env` must be values.
 -- Invariant for values v: eval ctx env v = v
 eval :: IdentContext -> Env -> Node -> Node
@@ -59,11 +59,11 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       NCst {} -> n
       NApp (App i l r) ->
         case eval' env l of
-          Closure _ env' b -> let !v = eval' env r in eval' (v : env') b
+          Closure env' (Lambda _ b) -> let !v = eval' env r in eval' (v : env') b
           v -> evalError "invalid application" (mkApp i v (substEnv env r))
       NBlt (BuiltinApp _ op args) -> applyBuiltin n env op args
       NCtr (Constr i tag args) -> mkConstr i tag (map (eval' env) args)
-      NLam (Lambda i b) -> Closure i env b
+      NLam l@Lambda {} -> Closure env l
       NLet (Let _ v b) -> let !v' = eval' env v in eval' (v' : env) b
       NCase (Case i v bs def) ->
         case eval' env v of
@@ -96,7 +96,7 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
         k -> nodeFromInteger (mod (integerFromNode (eval' env l)) k)
     applyBuiltin _ env OpIntLt [l, r] = nodeFromBool (integerFromNode (eval' env l) < integerFromNode (eval' env r))
     applyBuiltin _ env OpIntLe [l, r] = nodeFromBool (integerFromNode (eval' env l) <= integerFromNode (eval' env r))
-    applyBuiltin _ env OpEq [l, r] = nodeFromBool (eval' env l == eval' env r)
+    applyBuiltin _ env OpEq [l, r] = nodeFromBool (structEq (eval' env l) (eval' env r))
     applyBuiltin _ env OpTrace [msg, x] = Debug.trace (printNode (eval' env msg)) (eval' env x)
     applyBuiltin _ env OpFail [msg] =
       Exception.throw (EvalError (fromString ("failure: " ++ printNode (eval' env msg))) Nothing)
@@ -152,7 +152,7 @@ hEvalIO hin hout ctx env node =
 evalIO :: IdentContext -> Env -> Node -> IO Node
 evalIO = hEvalIO stdin stdout
 
--- Catch EvalError and convert it to CoreError. Needs a default location in case
+-- | Catch EvalError and convert it to CoreError. Needs a default location in case
 -- no location is available in EvalError.
 catchEvalError :: Location -> a -> IO (Either CoreError a)
 catchEvalError loc a =
