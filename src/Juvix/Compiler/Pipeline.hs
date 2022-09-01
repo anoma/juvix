@@ -96,10 +96,13 @@ upToMiniC = upToInternalReachability >=> C.fromInternal
 runIOEither :: Sem PipelineEff a -> IO (Either JuvixError a)
 runIOEither = runM . runError . runBuiltins . runNameIdGen . mapError (JuvixError @FilesError) . runFilesIO
 
-runIO :: Sem PipelineEff a -> IO a
-runIO = runIOEither >=> mayThrow
+runIO :: GenericOptions -> Sem PipelineEff a -> IO a
+runIO opts = runIOEither >=> mayThrow
   where
     mayThrow :: Either JuvixError r -> IO r
     mayThrow = \case
-      Left err -> printErrorAnsiSafe err >> exitFailure
+      Left err -> runM $ runReader opts $ printErrorAnsiSafe err >> embed exitFailure
       Right r -> return r
+
+runIO' :: Sem PipelineEff a -> IO a
+runIO' = runIO defaultGenericOptions

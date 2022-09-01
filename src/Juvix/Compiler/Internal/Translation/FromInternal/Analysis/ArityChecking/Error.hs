@@ -17,7 +17,7 @@ data ArityCheckerError
   | ErrFunctionApplied FunctionApplied
 
 instance ToGenericError ArityCheckerError where
-  genericError :: ArityCheckerError -> GenericError
+  genericError :: Member (Reader GenericOptions) r => ArityCheckerError -> Sem r GenericError
   genericError = \case
     ErrWrongConstructorAppLength e -> genericError e
     ErrLhsTooManyPatterns e -> genericError e

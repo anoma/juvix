@@ -97,6 +97,7 @@ getEntryPoint r pkg opts = nonEmpty (opts ^. globalInputFiles) >>= Just <$> entr
               _entryPointNoStdlib = opts ^. globalNoStdlib,
               _entryPointPackage = pkg,
               _entryPointModulePaths = l,
+              _entryPointGenericOptions = genericFromGlobalOptions opts,
               _entryPointStdin
             }
 
@@ -136,7 +137,7 @@ runCommand cmdWithOpts = do
                 Highlight HighlightOptions {..} -> do
                   res <- runPipelineEither (upToScoping entryPoint)
                   case res of
-                    Left err -> say (Highlight.goError (errorIntervals err))
+                    Left err -> say (Highlight.goError (run $ runReader (entryPoint ^. entryPointGenericOptions) $ errorIntervals err))
                     Right r -> do
                       let tbl = r ^. Scoper.resultParserTable
                           items = tbl ^. Parser.infoParsedItems
@@ -158,14 +159,12 @@ runCommand cmdWithOpts = do
                 Scope localOpts -> do
                   l <-
                     (^. Scoper.resultModules)
-                      <$> runPipeline
-                        (upToScoping entryPoint)
+                      <$> runPipeline (upToScoping entryPoint)
                   forM_ l $ \s -> do
                     renderStdOut (Scoper.ppOut (mkScopePrettyOptions globalOpts localOpts) s)
                 Doc localOpts -> do
                   ctx :: InternalTyped.InternalTypedResult <-
-                    runPipeline
-                      (upToInternalTyped entryPoint)
+                    runPipeline (upToInternalTyped entryPoint)
                   let docDir = localOpts ^. docOutputDir
                   Doc.compile docDir "proj" ctx
                   when (localOpts ^. docOpen) $ case openCmd of
@@ -263,6 +262,12 @@ runCoreCommand globalOpts = \case
       [] -> printFailureExit "Provide a JuvixCore file to run this command\nUse --help to see all the options"
       files -> mapM_ (evalFile opts) files
   where
+    genericOpts :: GenericOptions
+    genericOpts = genericFromGlobalOptions globalOpts
+
+    docOpts :: Bool -> Core.Options
+    docOpts showDeBruijn = set Core.optShowNameIds (genericOpts ^. showNameIds) (set Core.optShowDeBruijnIndices showDeBruijn Core.defaultOptions)
+
     runRepl ::
       forall r.
       Members '[Embed IO, App] r =>
@@ -286,7 +291,7 @@ runCoreCommand globalOpts = \case
                 printJuvixError (JuvixError err)
                 runRepl opts tab
               Right (tab', Just node) -> do
-                renderStdOut (Core.ppOutDefault node)
+                renderStdOut (Core.ppOut (docOpts (opts ^. coreReplShowDeBruijn)) node)
                 embed (putStrLn "")
                 runRepl opts tab'
               Right (tab', Nothing) ->
@@ -322,6 +327,8 @@ runCoreCommand globalOpts = \case
               Right (tab', Nothing) ->
                 runRepl opts tab'
       where
+        defaultLoc = singletonInterval (mkLoc "stdin" 0 (M.initialPos "stdin"))
+
         replEval :: Bool -> Core.InfoTable -> Core.Node -> Sem r ()
         replEval noIO tab' node = do
           r <- doEval noIO defaultLoc tab' node
@@ -333,12 +340,9 @@ runCoreCommand globalOpts = \case
               | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
                   runRepl opts tab'
             Right node' -> do
-              renderStdOut (Core.ppOut docOpts node')
+              renderStdOut (Core.ppOut (docOpts (opts ^. coreReplShowDeBruijn)) node')
               embed (putStrLn "")
               runRepl opts tab'
-          where
-            defaultLoc = singletonInterval (mkLoc "stdin" 0 (M.initialPos "stdin"))
-            docOpts = set Core.optShowDeBruijnIndices (opts ^. coreReplShowDeBruijn) Core.defaultOptions
 
     showReplWelcome :: IO ()
     showReplWelcome = do
@@ -376,7 +380,7 @@ runCoreCommand globalOpts = \case
               | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
                   return ()
             Right node' -> do
-              renderStdOut (Core.ppOutDefault node')
+              renderStdOut (Core.ppOut (docOpts (opts ^. coreEvalShowDeBruijn)) node')
               embed (putStrLn "")
         Right (_, Nothing) -> return ()
       where

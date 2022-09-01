@@ -10,11 +10,11 @@ import Juvix.Data.PPOutput
 import Juvix.Prelude
 import Text.EditDistance
 
-ppCode :: Scoped.PrettyCode c => c -> Doc Ann
-ppCode = runPP . Scoped.ppCode
+ppCode :: Scoped.PrettyCode c => Scoped.Options -> c -> Doc Ann
+ppCode opts = runPP opts . Scoped.ppCode
 
-runPP :: Sem '[Reader Scoped.Options] (Doc Scoped.Ann) -> Doc Ann
-runPP = code . run . runReader Scoped.defaultOptions
+runPP :: Scoped.Options -> Sem '[Reader Scoped.Options] (Doc Scoped.Ann) -> Doc Ann
+runPP opts = code . run . runReader opts
 
 prettyError :: Doc Ann -> AnsiText
 prettyError = AnsiText . PPOutput

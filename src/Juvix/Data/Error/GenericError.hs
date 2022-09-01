@@ -16,7 +16,16 @@ data GenericError = GenericError
     _genericErrorIntervals :: [Interval]
   }
 
+newtype GenericOptions = GenericOptions
+  { _showNameIds :: Bool
+  }
+  deriving stock (Eq, Show)
+
 makeLenses ''GenericError
+makeLenses ''GenericOptions
+
+defaultGenericOptions :: GenericOptions
+defaultGenericOptions = GenericOptions {_showNameIds = False}
 
 instance Pretty GenericError where
   pretty :: GenericError -> Doc a
@@ -34,60 +43,61 @@ genericErrorHeader g =
       <> line
 
 class ToGenericError a where
-  genericError :: a -> GenericError
+  genericError :: Member (Reader GenericOptions) r => a -> Sem r GenericError
 
-errorIntervals :: ToGenericError e => e -> [Interval]
-errorIntervals = (^. genericErrorIntervals) . genericError
+errorIntervals :: (ToGenericError e, Member (Reader GenericOptions) r) => e -> Sem r [Interval]
+errorIntervals e = do
+  e' <- genericError e
+  return (e' ^. genericErrorIntervals)
 
-render :: ToGenericError e => Bool -> Bool -> e -> Text
-render ansi endChar err
-  | ansi = helper Ansi.renderStrict (toAnsiDoc gMsg)
-  | otherwise = helper renderStrict (toTextDoc gMsg)
+render :: (ToGenericError e, Member (Reader GenericOptions) r) => Bool -> Bool -> e -> Sem r Text
+render ansi endChar err = do
+  g <- genericError err
+  let gMsg = g ^. genericErrorMessage
+  let header = genericErrorHeader g
+  let helper f x = (f . layoutPretty defaultLayoutOptions) (header <> x <> lastChar)
+  if
+      | ansi -> return $ helper Ansi.renderStrict (toAnsiDoc gMsg)
+      | otherwise -> return $ helper renderStrict (toTextDoc gMsg)
   where
-    helper :: (SimpleDocStream a -> Text) -> Doc a -> Text
-    helper f x = (f . layoutPretty defaultLayoutOptions) (header <> x <> lastChar)
-
-    g :: GenericError
-    g = genericError err
-
-    gMsg :: AnsiText
-    gMsg = g ^. genericErrorMessage
-
-    header :: Doc a
-    header = genericErrorHeader g
-
     lastChar :: Doc a
     lastChar
       | endChar = "ת"
       | otherwise = ""
 
 -- | Render the error to Text.
-renderText :: ToGenericError e => e -> Text
+renderText :: (ToGenericError e, Member (Reader GenericOptions) r) => e -> Sem r Text
 renderText = render False False
 
 -- | Render the error with Ansi formatting (if any).
-renderAnsiText :: ToGenericError e => e -> Text
+renderAnsiText :: (ToGenericError e, Member (Reader GenericOptions) r) => e -> Sem r Text
 renderAnsiText = render True False
 
-printErrorAnsi :: ToGenericError e => e -> IO ()
-printErrorAnsi = hPutStrLn stderr . renderAnsiText
+printErrorAnsi :: (ToGenericError e, Members '[Embed IO, Reader GenericOptions] r) => e -> Sem r ()
+printErrorAnsi e = renderAnsiText e >>= \txt -> embed (hPutStrLn stderr txt)
 
 -- | Print the error to stderr without formatting.
-printErrorText :: ToGenericError e => e -> IO ()
-printErrorText = hPutStrLn stderr . renderText
+printErrorText :: (ToGenericError e, Members '[Embed IO, Reader GenericOptions] r) => e -> Sem r ()
+printErrorText e = renderText e >>= \txt -> embed (hPutStrLn stderr txt)
 
-printErrorAnsiSafe :: ToGenericError e => e -> IO ()
+printErrorAnsiSafe :: (ToGenericError e, Members '[Embed IO, Reader GenericOptions] r) => e -> Sem r ()
 printErrorAnsiSafe e =
   ifM
-    (Ansi.hSupportsANSI stderr)
+    (embed (Ansi.hSupportsANSI stderr))
     (printErrorAnsi e)
     (printErrorText e)
 
 runErrorIO ::
-  (ToGenericError a, Member (Embed IO) r) =>
+  (ToGenericError a, Members '[Embed IO, Reader GenericOptions] r) =>
   Sem (Error a ': r) b ->
   Sem r b
 runErrorIO =
   runError >=> \case
-    Left err -> embed (printErrorAnsiSafe err >> exitFailure)
+    Left err -> printErrorAnsiSafe err >> embed exitFailure
     Right a -> return a
+
+runErrorIO' ::
+  (ToGenericError a, Member (Embed IO) r) =>
+  Sem (Error a ': Reader GenericOptions : r) b ->
+  Sem r b
+runErrorIO' = runReader defaultGenericOptions . runErrorIO

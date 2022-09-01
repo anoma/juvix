@@ -4,6 +4,7 @@ module GlobalOptions
 where
 
 import Commands.Extra
+import Juvix.Data.Error.GenericError qualified as E
 import Juvix.Prelude
 import Options.Applicative hiding (hidden)
 
@@ -104,3 +105,6 @@ parseGlobalOptions b = do
   opts <- parseGlobalFlags b
   files <- parserInputFiles
   return opts {_globalInputFiles = files}
+
+genericFromGlobalOptions :: GlobalOptions -> E.GenericOptions
+genericFromGlobalOptions GlobalOptions {..} = E.GenericOptions {E._showNameIds = _globalShowNameIds}

@@ -16,11 +16,12 @@ data FilesError = FilesError
 
 instance ToGenericError FilesError where
   genericError FilesError {..} =
-    GenericError
-      { _genericErrorLoc = i,
-        _genericErrorMessage = AnsiText (pretty @_ @AnsiStyle msg),
-        _genericErrorIntervals = [i]
-      }
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = AnsiText (pretty @_ @AnsiStyle msg),
+          _genericErrorIntervals = [i]
+        }
     where
       i :: Interval
       i =

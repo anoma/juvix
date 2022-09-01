@@ -12,6 +12,6 @@ newtype TerminationError
   deriving stock (Show)
 
 instance ToGenericError TerminationError where
-  genericError :: TerminationError -> GenericError
+  genericError :: Member (Reader GenericOptions) r => TerminationError -> Sem r GenericError
   genericError = \case
     ErrNoLexOrder e -> genericError e

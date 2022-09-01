@@ -41,7 +41,7 @@ runAppIO g = interpret $ \case
   Raw b -> embed (ByteString.putStr b)
   where
     printErr e =
-      (embed . hPutStrLn stderr . Error.render (not (g ^. globalNoColors)) (g ^. globalOnlyErrors)) e
+      embed $ hPutStrLn stderr $ run $ runReader (genericFromGlobalOptions g) $ Error.render (not (g ^. globalNoColors)) (g ^. globalOnlyErrors) e
 
 runPipeline :: Member App r => Sem PipelineEff a -> Sem r a
 runPipeline p = do

@@ -1,8 +1,7 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error.Types where
 
--- import  Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
-
 import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Pretty (fromGenericOptions)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
 import Juvix.Data.PPOutput
 import Juvix.Prelude
@@ -15,30 +14,34 @@ data WrongConstructorAppLength = WrongConstructorAppLength
 makeLenses ''WrongConstructorAppLength
 
 instance ToGenericError WrongConstructorAppLength where
-  genericError e =
-    GenericError
-      { _genericErrorLoc = i,
-        _genericErrorMessage = ppOutput msg,
-        _genericErrorIntervals = [i]
-      }
+  genericError e = ask >>= generr
     where
-      i = getLoc (e ^. wrongConstructorAppLength)
-      msg =
-        "The constructor"
-          <+> ppCode (e ^. wrongConstructorAppLength . constrAppConstructor)
-          <+> "should have"
-          <+> arguments (e ^. wrongConstructorAppLengthExpected)
-            <> ", but has been given"
-          <+> pretty actual
-
-      actual :: Int
-      actual = length (e ^. wrongConstructorAppLength . constrAppParameters)
-      arguments :: Int -> Doc ann
-      arguments n = num <+> plural "argument" "arguments" n
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
         where
-          num
-            | n == 0 = "no"
-            | otherwise = pretty n
+          opts' = fromGenericOptions opts
+          i = getLoc (e ^. wrongConstructorAppLength)
+          msg =
+            "The constructor"
+              <+> ppCode opts' (e ^. wrongConstructorAppLength . constrAppConstructor)
+              <+> "should have"
+              <+> arguments (e ^. wrongConstructorAppLengthExpected)
+                <> ", but has been given"
+              <+> pretty actual
+
+          actual :: Int
+          actual = length (e ^. wrongConstructorAppLength . constrAppParameters)
+          arguments :: Int -> Doc ann
+          arguments n = num <+> plural "argument" "arguments" n
+            where
+              num
+                | n == 0 = "no"
+                | otherwise = pretty n
 
 newtype LhsTooManyPatterns = LhsTooManyPatterns
   { _lhsTooManyPatternsRemaining :: NonEmpty PatternArg
@@ -48,11 +51,12 @@ makeLenses ''LhsTooManyPatterns
 
 instance ToGenericError LhsTooManyPatterns where
   genericError e =
-    GenericError
-      { _genericErrorLoc = i,
-        _genericErrorMessage = ppOutput msg,
-        _genericErrorIntervals = [i]
-      }
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = ppOutput msg,
+          _genericErrorIntervals = [i]
+        }
     where
       i = getLocSpan (e ^. lhsTooManyPatternsRemaining)
       n = length (e ^. lhsTooManyPatternsRemaining)
@@ -74,24 +78,28 @@ data WrongPatternIsImplicit = WrongPatternIsImplicit
 makeLenses ''WrongPatternIsImplicit
 
 instance ToGenericError WrongPatternIsImplicit where
-  genericError e =
-    GenericError
-      { _genericErrorLoc = i,
-        _genericErrorMessage = ppOutput msg,
-        _genericErrorIntervals = [i]
-      }
+  genericError e = ask >>= generr
     where
-      i = getLoc (e ^. wrongPatternIsImplicitActual)
-      expec = e ^. wrongPatternIsImplicitExpected
-      found = e ^. wrongPatternIsImplicitActual . patternArgIsImplicit
-      pat = e ^. wrongPatternIsImplicitActual
-      msg =
-        "Expected an"
-          <+> pretty expec
-          <+> "pattern but found an"
-          <+> pretty found
-          <+> "pattern:"
-          <+> ppCode pat
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = getLoc (e ^. wrongPatternIsImplicitActual)
+          expec = e ^. wrongPatternIsImplicitExpected
+          found = e ^. wrongPatternIsImplicitActual . patternArgIsImplicit
+          pat = e ^. wrongPatternIsImplicitActual
+          msg =
+            "Expected an"
+              <+> pretty expec
+              <+> "pattern but found an"
+              <+> pretty found
+              <+> "pattern:"
+              <+> ppCode opts' pat
 
 data ExpectedExplicitArgument = ExpectedExplicitArgument
   { _expectedExplicitArgumentApp :: (Expression, [(IsImplicit, Expression)]),
@@ -101,29 +109,33 @@ data ExpectedExplicitArgument = ExpectedExplicitArgument
 makeLenses ''ExpectedExplicitArgument
 
 instance ToGenericError ExpectedExplicitArgument where
-  genericError e =
-    GenericError
-      { _genericErrorLoc = i,
-        _genericErrorMessage = ppOutput msg,
-        _genericErrorIntervals = [i]
-      }
+  genericError e = ask >>= generr
     where
-      app@(f, args) = e ^. expectedExplicitArgumentApp
-      idx = e ^. expectedExplicitArgumentIx
-      arg :: Expression
-      arg = snd (toList args !! idx)
-      i = getLoc arg
-      msg =
-        "Expected an explicit argument as the"
-          <+> ordinal (succ idx)
-          <+> "argument of"
-          <+> ppCode f
-          <+> "but found"
-          <+> ppArg Implicit arg
-            <> "."
-            <> softline
-            <> "In the application"
-          <+> ppApp app
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          app@(f, args) = e ^. expectedExplicitArgumentApp
+          idx = e ^. expectedExplicitArgumentIx
+          arg :: Expression
+          arg = snd (toList args !! idx)
+          i = getLoc arg
+          msg =
+            "Expected an explicit argument as the"
+              <+> ordinal (succ idx)
+              <+> "argument of"
+              <+> ppCode opts' f
+              <+> "but found"
+              <+> ppArg opts' Implicit arg
+                <> "."
+                <> softline
+                <> "In the application"
+              <+> ppApp opts' app
 
 newtype PatternFunction = PatternFunction
   { _patternFunction :: ConstructorApp
@@ -132,18 +144,22 @@ newtype PatternFunction = PatternFunction
 makeLenses ''PatternFunction
 
 instance ToGenericError PatternFunction where
-  genericError e =
-    GenericError
-      { _genericErrorLoc = i,
-        _genericErrorMessage = ppOutput msg,
-        _genericErrorIntervals = [i]
-      }
+  genericError e = ask >>= generr
     where
-      i = getLoc (e ^. patternFunction)
-      msg =
-        "Invalid pattern"
-          <+> ppCode (e ^. patternFunction) <> "."
-          <+> "Function types cannot be pattern matched"
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = getLoc (e ^. patternFunction)
+          msg =
+            "Invalid pattern"
+              <+> ppCode opts' (e ^. patternFunction) <> "."
+              <+> "Function types cannot be pattern matched"
 
 data TooManyArguments = TooManyArguments
   { _tooManyArgumentsApp :: (Expression, [(IsImplicit, Expression)]),
@@ -153,37 +169,41 @@ data TooManyArguments = TooManyArguments
 makeLenses ''TooManyArguments
 
 instance ToGenericError TooManyArguments where
-  genericError e =
-    GenericError
-      { _genericErrorLoc = i,
-        _genericErrorMessage = ppOutput msg,
-        _genericErrorIntervals = [i]
-      }
+  genericError e = ask >>= generr
     where
-      i = getLocSpan (fromJust (nonEmpty (map snd unexpectedArgs)))
-      (fun, args) = e ^. tooManyArgumentsApp
-      numUnexpected :: Int
-      numUnexpected = e ^. tooManyArgumentsUnexpected
-      unexpectedArgs :: [(IsImplicit, Expression)]
-      unexpectedArgs = reverse . take numUnexpected . reverse $ args
-      ppUnexpectedArgs = hsep (map (uncurry ppArg) unexpectedArgs)
-      app :: Expression
-      app = foldApplication fun args
-      msg =
-        "Too many arguments in the application"
-          <+> ppCode app <> "."
-          <+> "The last"
-          <+> numArguments
-            <> ", namely"
-          <+> ppUnexpectedArgs
-            <> ","
-          <+> wasNotExpected
-      numArguments :: Doc ann
-      numArguments = plural "argument" (pretty numUnexpected <+> "arguments") numUnexpected
-      wasNotExpected :: Doc ann
-      wasNotExpected
-        | numUnexpected == 1 = "was not expected"
-        | otherwise = "were not expected"
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = getLocSpan (fromJust (nonEmpty (map snd unexpectedArgs)))
+          (fun, args) = e ^. tooManyArgumentsApp
+          numUnexpected :: Int
+          numUnexpected = e ^. tooManyArgumentsUnexpected
+          unexpectedArgs :: [(IsImplicit, Expression)]
+          unexpectedArgs = reverse . take numUnexpected . reverse $ args
+          ppUnexpectedArgs = hsep (map (uncurry (ppArg opts')) unexpectedArgs)
+          app :: Expression
+          app = foldApplication fun args
+          msg =
+            "Too many arguments in the application"
+              <+> ppCode opts' app <> "."
+              <+> "The last"
+              <+> numArguments
+                <> ", namely"
+              <+> ppUnexpectedArgs
+                <> ","
+              <+> wasNotExpected
+          numArguments :: Doc ann
+          numArguments = plural "argument" (pretty numUnexpected <+> "arguments") numUnexpected
+          wasNotExpected :: Doc ann
+          wasNotExpected
+            | numUnexpected == 1 = "was not expected"
+            | otherwise = "were not expected"
 
 data FunctionApplied = FunctionApplied
   { _functionAppliedFunction :: Function,
@@ -193,18 +213,22 @@ data FunctionApplied = FunctionApplied
 makeLenses ''FunctionApplied
 
 instance ToGenericError FunctionApplied where
-  genericError e =
-    GenericError
-      { _genericErrorLoc = i,
-        _genericErrorMessage = ppOutput msg,
-        _genericErrorIntervals = [i]
-      }
+  genericError e = ask >>= generr
     where
-      i = getLocSpan (fun :| map snd args)
-      args = e ^. functionAppliedArguments
-      fun = ExpressionFunction (e ^. functionAppliedFunction)
-      msg =
-        "A function type cannot be applied."
-          <> softline
-          <> "In the application"
-          <+> ppApp (fun, args)
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = getLocSpan (fun :| map snd args)
+          args = e ^. functionAppliedArguments
+          fun = ExpressionFunction (e ^. functionAppliedFunction)
+          msg =
+            "A function type cannot be applied."
+              <> softline
+              <> "In the application"
+              <+> ppApp opts' (fun, args)
