@@ -1,0 +1,4 @@
+#+title: Readme
+
+We copied the CSS style from the [[https://github.com/haskell/haddock][Haddock project]] and adapted it for our
+documentation generator.

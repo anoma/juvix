@@ -59,7 +59,6 @@ TAGS
 _build/
 *.agdai
 .agda/
-agda/
 agda2hs/
 docs/*.html
 *.cabal
