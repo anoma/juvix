@@ -173,41 +173,41 @@ destruct = \case
   NLam (Lambda i b) -> NodeDetails i [b] [1] [fetchBinderInfo i] (\i' args' -> mkLambda i' (hd args'))
   NLet (Let i v b) -> NodeDetails i [v, b] [0, 1] [[], fetchBinderInfo i] (\i' args' -> mkLet i' (hd args') (args' !! 1))
   NCase (Case i v bs Nothing) ->
-    let branchBinderNums = map (\(CaseBranch _ k _) -> k) bs in
-    NodeDetails
-      i
-      (v : map (\(CaseBranch _ _ br) -> br) bs)
-      (0 : branchBinderNums)
-      ([] : fetchCaseBinderInfo i (map (`replicate` Info.empty) branchBinderNums))
-      ( \i' args' ->
-          mkCase
-            i'
-            (hd args')
-            ( zipWithExact
-                (\(CaseBranch tag k _) br' -> CaseBranch tag k br')
-                bs
-                (tl args')
-            )
-            Nothing
-      )
+    let branchBinderNums = map (\(CaseBranch _ k _) -> k) bs
+     in NodeDetails
+          i
+          (v : map (\(CaseBranch _ _ br) -> br) bs)
+          (0 : branchBinderNums)
+          ([] : fetchCaseBinderInfo i (map (`replicate` Info.empty) branchBinderNums))
+          ( \i' args' ->
+              mkCase
+                i'
+                (hd args')
+                ( zipWithExact
+                    (\(CaseBranch tag k _) br' -> CaseBranch tag k br')
+                    bs
+                    (tl args')
+                )
+                Nothing
+          )
   NCase (Case i v bs (Just def)) ->
-    let branchBinderNums = map (\(CaseBranch _ k _) -> k) bs in
-    NodeDetails
-      i
-      (v : def : map (\(CaseBranch _ _ br) -> br) bs)
-      (0 : 0 : branchBinderNums)
-      ([] : [] : fetchCaseBinderInfo i (map (`replicate` Info.empty) branchBinderNums))
-      ( \i' args' ->
-          mkCase
-            i'
-            (hd args')
-            ( zipWithExact
-                (\(CaseBranch tag k _) br' -> CaseBranch tag k br')
-                bs
-                (tl (tl args'))
-            )
-            (Just (hd (tl args')))
-      )
+    let branchBinderNums = map (\(CaseBranch _ k _) -> k) bs
+     in NodeDetails
+          i
+          (v : def : map (\(CaseBranch _ _ br) -> br) bs)
+          (0 : 0 : branchBinderNums)
+          ([] : [] : fetchCaseBinderInfo i (map (`replicate` Info.empty) branchBinderNums))
+          ( \i' args' ->
+              mkCase
+                i'
+                (hd args')
+                ( zipWithExact
+                    (\(CaseBranch tag k _) br' -> CaseBranch tag k br')
+                    bs
+                    (tl (tl args'))
+                )
+                (Just (hd (tl args')))
+          )
   NPi (Pi i ty b) ->
     NodeDetails i [ty, b] [0, 1] [[], fetchBinderInfo i] (\i' args' -> mkPi i' (hd args') (args' !! 1))
   NUniv (Univ i l) ->
