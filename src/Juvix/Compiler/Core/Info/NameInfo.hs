@@ -1,7 +1,7 @@
 module Juvix.Compiler.Core.Info.NameInfo where
 
-import Juvix.Compiler.Core.Language.Base
 import Juvix.Compiler.Core.Info qualified as Info
+import Juvix.Compiler.Core.Language.Base
 
 newtype NameInfo = NameInfo {_infoName :: Name}
 
