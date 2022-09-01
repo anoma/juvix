@@ -24,3 +24,35 @@ command from any location.
 
 
 To get the complete list of commands, please run =juvix --help=.
+
+** CLI Usage Examples
+
+Create a new package:
+
+#+begin_src shell
+juvix init
+#+end_src
+
+Compile a source file into an executable:
+
+#+begin_src shell
+juvix compile path/to/source.juvix
+#+end_src
+
+Compile a source file into a WebAssembly binary:
+
+#+begin_src shell
+juvix compile -t wasm path/to/source.juvix
+#+end_src
+
+Typecheck a source file:
+
+#+begin_src shell
+juvix typecheck path/to/source.juvix
+#+end_src
+
+Generate HTML representations of a source file and its imports:
+
+#+begin_src shell
+juvix html --recursive path/to/source.juvix
+#+end_src
