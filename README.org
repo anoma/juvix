@@ -35,13 +35,10 @@ alt="pages-build-deployment" /></a>
 
 Juvix is a research programming language created by [[https://heliax.dev/][Heliax]] as a first step toward creating more robust and reliable alternatives for formally verified smart contracts than existing languages. The Juvix language is constantly evolving, open-source, functional, and statically typed with special support for compiling [[https://anoma.network/blog/validity-predicates/][validity predicates]] to the =C= language, which can be deployed to various distributed ledgers including [[https://anoma.net/][Anoma]].
 
-The Juvix language and related tools are documented in
-[[https://anoma.github.io/juvix/][the Juvix book]]. To write and test Juvix
-programs, you can use your favorite text editor and the =juvix= command line
-tool. However, we recommend using the =juvix-mode= in
-[[https://docs.juvix.org/tooling/emacs-mode.html][Emacs]] or the
-plugin in
-[[https://marketplace.visualstudio.com/items?itemName=heliax.juvix-mode][VSCode]].
+The Juvix language and related tools are documented in [[https://anoma.github.io/juvix/][the Juvix book]]. To write
+and test Juvix programs, you can use your favorite text editor and the =juvix=
+command line tool. However, we recommend using the =juvix-mode= in [[https://docs.juvix.org/tooling/emacs-mode.html][Emacs]] or the
+plugin in [[https://marketplace.visualstudio.com/items?itemName=heliax.juvix-mode][VSCode]].
 
 ** [[https://github.com/anoma/juvix/tree/main/examples/milestone][First examples of programs written in Juvix]]
 
@@ -58,12 +55,11 @@ The following links are clickable versions of their corresponding Juvix programs
 The [[https://anoma.github.io/juvix-stdlib/][Juvix standard library]] contains
 common functions that can be used in Juvix programs.
 
-** Quick Start
+** Installation
 
-*** Installing Juvix on MacOS
+*** MacOS
 
-The easiest way to install Juvix on MacOS is by using
-[[https://brew.sh][Homebrew]].
+The easiest way to install Juvix on MacOS is by using [[https://brew.sh][Homebrew]].
 
 To install the [[https://github.com/anoma/homebrew-juvix][homebrew-juvix tap]], run:
 
@@ -77,12 +73,6 @@ To install Juvix, run:
 brew install juvix
 #+end_src
 
-After installing Juvix, you might want to try our doctor to check your system
-setup:
-
-#+begin_src shell
-juvix doctor
-#+end_src
 
 Helpful information on the shell can also be obtained by running:
 
@@ -90,12 +80,15 @@ Helpful information on the shell can also be obtained by running:
 brew info juvix
 #+end_src
 
-*** Building Juvix from the sources
+*** Linux x86_64
 
-To install Juvix from the sources, you must download the
-[[https://github.com/anoma/juvix.git][Github repository]]. Then, the program can
-be installed with the following commands. We assume have
-[[https://haskellstack.org][Stack]] installed.
+A binary executable is available on the [[https://github.com/anoma/juvix/releases/latest][Juvix release page]].
+
+*** Building Juvix from source
+
+To install Juvix from source you must clone the [[https://github.com/anoma/juvix.git][Github repository]]. Then Juvix
+can be installed with the following commands. We assume you have [[https://haskellstack.org][Stack]]
+installed.
 
 #+begin_src shell
 git clone --recursive https://github.com/anoma/juvix.git
@@ -103,18 +96,26 @@ cd juvix
 stack install
 #+end_src
 
-If the installation succeeds, you must be able to run the Juvix command from any
-location. To get the complete list of commands, please run =juvix --help=.
-
-On MacOS, you can alternatively run the following command for Homebrew. The flag
-=--HEAD= used below is optional, mostly to build the latest version of Juvix in
+On MacOS you can alternatively run the following command for Homebrew. The flag
+=--HEAD= used below is optional, use it to build the latest version of Juvix in
 the =main= branch on Github.
 
 #+begin_src shell
 brew install --build-from-source --HEAD juvix --verbose
 #+end_src
 
-** The Hello World Example
+**  Quick Start
+
+After installation run =juvix --help= to see the list of commands available. See
+[[https://docs.juvix.org/getting-started/quick-start.html#cli-usage-examples][CLI usage examples]] for descriptions of common tasks.
+
+Run Juvix doctor to check your system setup:
+
+#+begin_src shell
+juvix doctor
+#+end_src
+
+*** The Hello World example
 
 This is the Juvix source code of the traditional Hello World program.
 
