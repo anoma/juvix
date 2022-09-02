@@ -44,7 +44,7 @@ runParser root fileName tab input =
         }
 
 starType :: Type
-starType = Pi Info.empty (Univ Info.empty 0) (Var Info.empty 0)
+starType = mkPi Info.empty (mkUniv Info.empty 0) (mkVar Info.empty 0)
 
 binderNameInfo :: Name -> Info
 binderNameInfo name =
@@ -140,13 +140,13 @@ statementDef = do
       sym <- lift freshSymbol
       name <- lift $ freshName KNameFunction txt i
       let info =
-            IdentInfo
-              { _identName = name,
-                _identSymbol = sym,
-                _identType = starType,
-                _identArgsNum = 0,
-                _identArgsInfo = [],
-                _identIsExported = False
+            IdentifierInfo
+              { _identifierName = name,
+                _identifierSymbol = sym,
+                _identifierType = starType,
+                _identifierArgsNum = 0,
+                _identifierArgsInfo = [],
+                _identifierIsExported = False
               }
       lift $ registerIdent info
       void $ optional (parseDefinition sym)
@@ -159,7 +159,7 @@ parseDefinition sym = do
   kwAssignment
   node <- expression
   lift $ registerIdentNode sym node
-  let (is, _) = unfoldLambdas' node
+  let (is, _) = unfoldLambdas node
   lift $ setIdentArgsInfo sym (map toArgumentInfo is)
   where
     toArgumentInfo :: Info -> ArgumentInfo
@@ -239,7 +239,7 @@ bindExpr' ::
 bindExpr' varsNum vars node = do
   kwBind
   node' <- cmpExpr varsNum vars
-  ioExpr' varsNum vars (Constr Info.empty (BuiltinTag TagBind) [node, node'])
+  ioExpr' varsNum vars (mkConstr Info.empty (BuiltinTag TagBind) [node, node'])
 
 seqExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -252,10 +252,10 @@ seqExpr' varsNum vars node = do
   node' <- cmpExpr (varsNum + 1) vars
   name <- lift $ freshName KNameLocal "_" i
   ioExpr' varsNum vars $
-    Constr
+    mkConstr
       Info.empty
       (BuiltinTag TagBind)
-      [node, Lambda (binderNameInfo name) node']
+      [node, mkLambda (binderNameInfo name) node']
 
 cmpExpr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -287,7 +287,7 @@ eqExpr' ::
 eqExpr' varsNum vars node = do
   kwEq
   node' <- arithExpr varsNum vars
-  return $ BuiltinApp Info.empty OpEq [node, node']
+  return $ mkBuiltinApp' OpEq [node, node']
 
 ltExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -298,7 +298,7 @@ ltExpr' ::
 ltExpr' varsNum vars node = do
   kwLt
   node' <- arithExpr varsNum vars
-  return $ BuiltinApp Info.empty OpIntLt [node, node']
+  return $ mkBuiltinApp' OpIntLt [node, node']
 
 leExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -309,7 +309,7 @@ leExpr' ::
 leExpr' varsNum vars node = do
   kwLe
   node' <- arithExpr varsNum vars
-  return $ BuiltinApp Info.empty OpIntLe [node, node']
+  return $ mkBuiltinApp' OpIntLe [node, node']
 
 gtExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -320,7 +320,7 @@ gtExpr' ::
 gtExpr' varsNum vars node = do
   kwGt
   node' <- arithExpr varsNum vars
-  return $ BuiltinApp Info.empty OpIntLt [node', node]
+  return $ mkBuiltinApp' OpIntLt [node', node]
 
 geExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -331,7 +331,7 @@ geExpr' ::
 geExpr' varsNum vars node = do
   kwGe
   node' <- arithExpr varsNum vars
-  return $ BuiltinApp Info.empty OpIntLe [node', node]
+  return $ mkBuiltinApp' OpIntLe [node', node]
 
 arithExpr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -360,7 +360,7 @@ plusExpr' ::
 plusExpr' varsNum vars node = do
   kwPlus
   node' <- factorExpr varsNum vars
-  arithExpr' varsNum vars (BuiltinApp Info.empty OpIntAdd [node, node'])
+  arithExpr' varsNum vars (mkBuiltinApp' OpIntAdd [node, node'])
 
 minusExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -371,7 +371,7 @@ minusExpr' ::
 minusExpr' varsNum vars node = do
   kwMinus
   node' <- factorExpr varsNum vars
-  arithExpr' varsNum vars (BuiltinApp Info.empty OpIntSub [node, node'])
+  arithExpr' varsNum vars (mkBuiltinApp' OpIntSub [node, node'])
 
 factorExpr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -401,7 +401,7 @@ mulExpr' ::
 mulExpr' varsNum vars node = do
   kwMul
   node' <- appExpr varsNum vars
-  factorExpr' varsNum vars (BuiltinApp Info.empty OpIntMul [node, node'])
+  factorExpr' varsNum vars (mkBuiltinApp' OpIntMul [node, node'])
 
 divExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -412,7 +412,7 @@ divExpr' ::
 divExpr' varsNum vars node = do
   kwDiv
   node' <- appExpr varsNum vars
-  factorExpr' varsNum vars (BuiltinApp Info.empty OpIntDiv [node, node'])
+  factorExpr' varsNum vars (mkBuiltinApp' OpIntDiv [node, node'])
 
 modExpr' ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -423,7 +423,7 @@ modExpr' ::
 modExpr' varsNum vars node = do
   kwMod
   node' <- appExpr varsNum vars
-  factorExpr' varsNum vars (BuiltinApp Info.empty OpIntMod [node, node'])
+  factorExpr' varsNum vars (mkBuiltinApp' OpIntMod [node, node'])
 
 appExpr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -449,7 +449,7 @@ builtinAppExpr varsNum vars = do
       <|> (kwTrace >> return OpTrace)
       <|> (kwFail >> return OpFail)
   args <- P.many (atom varsNum vars)
-  return $ BuiltinApp Info.empty op args
+  return $ mkBuiltinApp' op args
 
 atoms ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -458,7 +458,7 @@ atoms ::
   ParsecS r Node
 atoms varsNum vars = do
   es <- P.some (atom varsNum vars)
-  return $ mkApp (List.head es) (List.tail es)
+  return $ mkApps' (List.head es) (List.tail es)
 
 atom ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -487,16 +487,16 @@ exprNamed varsNum vars = do
   case HashMap.lookup txt vars of
     Just k -> do
       name <- lift $ freshName KNameLocal txt i
-      return $ Var (Info.singleton (NameInfo name)) (varsNum - k - 1)
+      return $ mkVar (Info.singleton (NameInfo name)) (varsNum - k - 1)
     Nothing -> do
       r <- lift (getIdent txt)
       case r of
         Just (Left sym) -> do
           name <- lift $ freshName KNameFunction txt i
-          return $ Ident (Info.singleton (NameInfo name)) sym
+          return $ mkIdent (Info.singleton (NameInfo name)) sym
         Just (Right tag) -> do
           name <- lift $ freshName KNameConstructor txt i
-          return $ Constr (Info.singleton (NameInfo name)) tag []
+          return $ mkConstr (Info.singleton (NameInfo name)) tag []
         Nothing ->
           parseFailure off ("undeclared identifier: " ++ fromText txt)
 
@@ -505,14 +505,14 @@ exprConstInt ::
   ParsecS r Node
 exprConstInt = P.try $ do
   (n, i) <- integer
-  return $ Constant (Info.singleton (LocationInfo i)) (ConstInteger n)
+  return $ mkConstant (Info.singleton (LocationInfo i)) (ConstInteger n)
 
 exprConstString ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   ParsecS r Node
 exprConstString = P.try $ do
   (s, i) <- string
-  return $ Constant (Info.singleton (LocationInfo i)) (ConstString s)
+  return $ mkConstant (Info.singleton (LocationInfo i)) (ConstString s)
 
 parseLocalName ::
   forall r.
@@ -540,7 +540,7 @@ exprLambda varsNum vars = do
   name <- parseLocalName
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- expr (varsNum + 1) vars'
-  return $ Lambda (binderNameInfo name) body
+  return $ mkLambda (binderNameInfo name) body
 
 exprLet ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -555,7 +555,7 @@ exprLet varsNum vars = do
   kwIn
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- expr (varsNum + 1) vars'
-  return $ Let (binderNameInfo name) value body
+  return $ mkLet (binderNameInfo name) value body
 
 exprCase ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -578,7 +578,7 @@ exprCase' ::
   HashMap Text Index ->
   ParsecS r Node
 exprCase' off value varsNum vars = do
-  bs <- P.sepEndBy (caseBranch varsNum vars) kwSemicolon
+  bs <- P.sepEndBy (caseBranchP varsNum vars) kwSemicolon
   let bs' = map fromLeft' $ filter isLeft bs
   let bss = map fst bs'
   let bsns = map snd bs'
@@ -595,18 +595,18 @@ exprCase' off value varsNum vars = do
   let info = Info.insert bri (Info.singleton bi)
   case def' of
     [def] ->
-      return $ Case info value bss (Just def)
+      return $ mkCase info value bss (Just def)
     [] ->
-      return $ Case info value bss Nothing
+      return $ mkCase info value bss Nothing
     _ ->
       parseFailure off "multiple default branches"
 
-caseBranch ::
+caseBranchP ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Index ->
   ParsecS r (Either (CaseBranch, [Name]) Node)
-caseBranch varsNum vars =
+caseBranchP varsNum vars =
   (defaultBranch varsNum vars <&> Right)
     <|> (matchingBranch varsNum vars <&> Left)
 

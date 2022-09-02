@@ -13,9 +13,9 @@ etaExpandBuiltins = umap go
   where
     go :: Node -> Node
     go n = case n of
-      BuiltinApp {..}
-        | builtinOpArgsNum _builtinOp > length _builtinArgs ->
-            etaExpand (builtinOpArgsNum _builtinOp - length _builtinArgs) n
+      NBlt BuiltinApp {..}
+        | builtinOpArgsNum _builtinAppOp > length _builtinAppArgs ->
+            etaExpand (builtinOpArgsNum _builtinAppOp - length _builtinAppArgs) n
       _ -> n
 
 etaExpandConstrs :: (Tag -> Int) -> Node -> Node
@@ -23,7 +23,7 @@ etaExpandConstrs argsNum = umap go
   where
     go :: Node -> Node
     go n = case n of
-      Constr {..}
+      NCtr Constr {..}
         | k > length _constrArgs ->
             etaExpand (k - length _constrArgs) n
         where
@@ -35,10 +35,10 @@ squashApps = dmap go
   where
     go :: Node -> Node
     go n =
-      let (l, args) = unfoldApp n
+      let (l, args) = unfoldApps' n
        in case l of
-            Constr i tag args' -> Constr i tag (args' ++ args)
-            BuiltinApp i op args' -> BuiltinApp i op (args' ++ args)
+            NCtr (Constr i tag args') -> mkConstr i tag (args' ++ args)
+            NBlt (BuiltinApp i op args') -> mkBuiltinApp i op (args' ++ args)
             _ -> n
 
 etaExpandApps :: InfoTable -> Node -> Node

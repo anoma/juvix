@@ -64,7 +64,7 @@ instance PrettyCode Tag where
 
 instance PrettyCode Node where
   ppCode node = case node of
-    Var {..} ->
+    NVar Var {..} ->
       case Info.lookup kNameInfo _varInfo of
         Just ni -> do
           showDeBruijn <- asks (^. optShowDeBruijnIndices)
@@ -73,31 +73,31 @@ instance PrettyCode Node where
             then return $ n <> kwDeBruijnVar <> pretty _varIndex
             else return n
         Nothing -> return $ kwDeBruijnVar <> pretty _varIndex
-    Ident {..} ->
+    NIdt Ident {..} ->
       case Info.lookup kNameInfo _identInfo of
         Just ni -> ppCode (ni ^. NameInfo.infoName)
         Nothing -> return $ kwUnnamedIdent <> pretty _identSymbol
-    Constant _ (ConstInteger int) ->
+    NCst (Constant _ (ConstInteger int)) ->
       return $ annotate AnnLiteralInteger (pretty int)
-    Constant _ (ConstString txt) ->
+    NCst (Constant _ (ConstString txt)) ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
-    App {..} -> do
+    NApp App {..} -> do
       l' <- ppLeftExpression appFixity _appLeft
       r' <- ppRightExpression appFixity _appRight
       return $ l' <+> r'
-    BuiltinApp {..} -> do
-      args' <- mapM (ppRightExpression appFixity) _builtinArgs
-      op' <- ppCode _builtinOp
+    NBlt BuiltinApp {..} -> do
+      args' <- mapM (ppRightExpression appFixity) _builtinAppArgs
+      op' <- ppCode _builtinAppOp
       return $ foldl' (<+>) op' args'
-    Constr {..} -> do
+    NCtr Constr {..} -> do
       args' <- mapM (ppRightExpression appFixity) _constrArgs
       n' <-
         case Info.lookup kNameInfo _constrInfo of
           Just ni -> ppCode (ni ^. NameInfo.infoName)
           Nothing -> ppCode _constrTag
       return $ foldl' (<+>) n' args'
-    Lambda {} -> do
-      let (infos, body) = unfoldLambdas' node
+    NLam Lambda {} -> do
+      let (infos, body) = unfoldLambdas node
       pplams <- mapM ppLam infos
       b <- ppCode body
       return $ foldl' (flip (<+>)) b pplams
@@ -109,7 +109,7 @@ instance PrettyCode Node where
               n <- ppCode name
               return $ kwLambda <> n
             Nothing -> return $ kwLambda <> kwQuestion
-    Let {..} -> do
+    NLet Let {..} -> do
       n' <-
         case getInfoName (getInfoBinder _letInfo) of
           Just name -> ppCode name
@@ -117,7 +117,7 @@ instance PrettyCode Node where
       v' <- ppCode _letValue
       b' <- ppCode _letBody
       return $ kwLet <+> n' <+> kwAssign <+> v' <+> kwIn <+> b'
-    Case {..} -> do
+    NCase Case {..} -> do
       bns <-
         case Info.lookup kCaseBinderInfo _caseInfo of
           Just ci -> mapM (mapM (maybe (return kwQuestion) ppCode . getInfoName)) (ci ^. infoBranchBinders)
@@ -137,7 +137,7 @@ instance PrettyCode Node where
           Nothing -> return bs'
       let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs''
       return $ kwCase <+> v <+> kwOf <+> bss
-    Pi {..} ->
+    NPi Pi {..} ->
       case getInfoName $ getInfoBinder _piInfo of
         Just name -> do
           n <- ppCode name
@@ -146,17 +146,17 @@ instance PrettyCode Node where
         Nothing -> do
           b <- ppCode _piBody
           return $ kwLambda <> kwQuestion <+> b
-    Univ {..} ->
+    NUniv Univ {..} ->
       return $ kwType <+> pretty _univLevel
-    TypeConstr {..} -> do
+    NTyp TypeConstr {..} -> do
       args' <- mapM (ppRightExpression appFixity) _typeConstrArgs
       n' <-
         case Info.lookup kNameInfo _typeConstrInfo of
           Just ni -> ppCode (ni ^. NameInfo.infoName)
           Nothing -> return $ kwUnnamedIdent <> pretty _typeConstrSymbol
       return $ foldl' (<+>) n' args'
-    Closure {..} ->
-      ppCode (substEnv _closureEnv (Lambda _closureInfo _closureBody))
+    Closure env l@Lambda {} ->
+      ppCode (substEnv env (NLam l))
 
 instance PrettyCode a => PrettyCode (NonEmpty a) where
   ppCode x = do

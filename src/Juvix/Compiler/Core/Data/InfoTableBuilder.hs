@@ -7,7 +7,7 @@ import Juvix.Compiler.Core.Language
 data InfoTableBuilder m a where
   FreshSymbol :: InfoTableBuilder m Symbol
   FreshTag :: InfoTableBuilder m Tag
-  RegisterIdent :: IdentInfo -> InfoTableBuilder m ()
+  RegisterIdent :: IdentifierInfo -> InfoTableBuilder m ()
   RegisterConstructor :: ConstructorInfo -> InfoTableBuilder m ()
   RegisterIdentNode :: Symbol -> Node -> InfoTableBuilder m ()
   SetIdentArgsInfo :: Symbol -> [ArgumentInfo] -> InfoTableBuilder m ()
@@ -44,7 +44,7 @@ makeLenses ''BuilderState
 initBuilderState :: InfoTable -> BuilderState
 initBuilderState tab =
   BuilderState
-    { _stateNextSymbol = fromIntegral $ HashMap.size (tab ^. infoIdents),
+    { _stateNextSymbol = fromIntegral $ HashMap.size (tab ^. infoIdentifiers),
       _stateNextUserTag = fromIntegral $ HashMap.size (tab ^. infoConstructors),
       _stateInfoTable = tab
     }
@@ -66,16 +66,16 @@ runInfoTableBuilder tab =
         s <- get
         return (UserTag (s ^. stateNextUserTag - 1))
       RegisterIdent ii -> do
-        modify' (over stateInfoTable (over infoIdents (HashMap.insert (ii ^. identSymbol) ii)))
-        modify' (over stateInfoTable (over identMap (HashMap.insert (ii ^. (identName . nameText)) (Left (ii ^. identSymbol)))))
+        modify' (over stateInfoTable (over infoIdentifiers (HashMap.insert (ii ^. identifierSymbol) ii)))
+        modify' (over stateInfoTable (over identMap (HashMap.insert (ii ^. (identifierName . nameText)) (Left (ii ^. identifierSymbol)))))
       RegisterConstructor ci -> do
         modify' (over stateInfoTable (over infoConstructors (HashMap.insert (ci ^. constructorTag) ci)))
         modify' (over stateInfoTable (over identMap (HashMap.insert (ci ^. (constructorName . nameText)) (Right (ci ^. constructorTag)))))
       RegisterIdentNode sym node ->
         modify' (over stateInfoTable (over identContext (HashMap.insert sym node)))
       SetIdentArgsInfo sym argsInfo -> do
-        modify' (over stateInfoTable (over infoIdents (HashMap.adjust (set identArgsInfo argsInfo) sym)))
-        modify' (over stateInfoTable (over infoIdents (HashMap.adjust (set identArgsNum (length argsInfo)) sym)))
+        modify' (over stateInfoTable (over infoIdentifiers (HashMap.adjust (set identifierArgsInfo argsInfo) sym)))
+        modify' (over stateInfoTable (over infoIdentifiers (HashMap.adjust (set identifierArgsNum (length argsInfo)) sym)))
       GetIdent txt -> do
         s <- get
         return $ HashMap.lookup txt (s ^. (stateInfoTable . identMap))

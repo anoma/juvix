@@ -22,7 +22,7 @@ computeFreeVarsInfo = umapN go
   where
     go :: Index -> Node -> Node
     go k n = case n of
-      Var i idx | idx >= k -> Var (Info.insert fvi i) idx
+      NVar (Var i idx) | idx >= k -> mkVar (Info.insert fvi i) idx
         where
           fvi = FreeVarsInfo (HashMap.singleton (idx - k) 1)
       _ -> modifyInfo (Info.insert fvi) n

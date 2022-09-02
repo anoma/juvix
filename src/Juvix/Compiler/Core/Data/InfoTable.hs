@@ -9,7 +9,7 @@ data InfoTable = InfoTable
     -- `_identMap` is needed only for REPL
     _identMap :: HashMap Text (Either Symbol Tag),
     _infoMain :: Maybe Symbol,
-    _infoIdents :: HashMap Symbol IdentInfo,
+    _infoIdentifiers :: HashMap Symbol IdentifierInfo,
     _infoInductives :: HashMap Name InductiveInfo,
     _infoConstructors :: HashMap Tag ConstructorInfo,
     _infoAxioms :: HashMap Name AxiomInfo
@@ -21,20 +21,20 @@ emptyInfoTable =
     { _identContext = mempty,
       _identMap = mempty,
       _infoMain = Nothing,
-      _infoIdents = mempty,
+      _infoIdentifiers = mempty,
       _infoInductives = mempty,
       _infoConstructors = mempty,
       _infoAxioms = mempty
     }
 
-data IdentInfo = IdentInfo
-  { _identName :: Name,
-    _identSymbol :: Symbol,
-    _identType :: Type,
-    -- _identArgsNum will be used often enough to justify avoiding recomputation
-    _identArgsNum :: Int,
-    _identArgsInfo :: [ArgumentInfo],
-    _identIsExported :: Bool
+data IdentifierInfo = IdentifierInfo
+  { _identifierName :: Name,
+    _identifierSymbol :: Symbol,
+    _identifierType :: Type,
+    -- _identifierArgsNum will be used often enough to justify avoiding recomputation
+    _identifierArgsNum :: Int,
+    _identifierArgsInfo :: [ArgumentInfo],
+    _identifierIsExported :: Bool
   }
 
 data ArgumentInfo = ArgumentInfo
@@ -70,7 +70,7 @@ data AxiomInfo = AxiomInfo
   }
 
 makeLenses ''InfoTable
-makeLenses ''IdentInfo
+makeLenses ''IdentifierInfo
 makeLenses ''ArgumentInfo
 makeLenses ''InductiveInfo
 makeLenses ''ConstructorInfo
