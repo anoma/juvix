@@ -6,7 +6,7 @@ def f := \x {
   if x < 1 then
     1
   else
-    x * g (x - 1)
+    2 * x + g (x - 1)
 };
 
 def h;
@@ -15,7 +15,7 @@ def g := \x {
   if x < 1 then
     1
   else
-    x * h (x - 1)
+    x + h (x - 1)
 };
 
 def h := \x {
@@ -28,4 +28,5 @@ def h := \x {
 def writeLn := \x write x >> write "\n";
 
 writeLn (f 5) >>
-writeLn (f 10)
+writeLn (f 10) >>
+writeLn (f 100)

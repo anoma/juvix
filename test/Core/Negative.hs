@@ -64,5 +64,9 @@ tests =
     NegTest
       "Erroneous Church numerals"
       "."
-      "test009.jvc"
+      "test009.jvc",
+    NegTest
+      "Empty letrec"
+      "."
+      "test010.jvc"
   ]

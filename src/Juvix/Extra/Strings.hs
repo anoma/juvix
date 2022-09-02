@@ -71,6 +71,9 @@ print = "print"
 let_ :: IsString s => s
 let_ = "let"
 
+letrec_ :: IsString s => s
+letrec_ = "letrec"
+
 public :: IsString s => s
 public = "public"
 

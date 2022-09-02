@@ -1,5 +1,6 @@
 module Juvix.Compiler.Core.Data.InfoTableBuilder where
 
+import Data.HashSet qualified as HashSet
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Language
@@ -10,18 +11,14 @@ data InfoTableBuilder m a where
   RegisterIdent :: IdentifierInfo -> InfoTableBuilder m ()
   RegisterConstructor :: ConstructorInfo -> InfoTableBuilder m ()
   RegisterIdentNode :: Symbol -> Node -> InfoTableBuilder m ()
+  RegisterForward :: ForwardInfo -> InfoTableBuilder m ()
+  GetForwards :: InfoTableBuilder m [ForwardInfo]
+  ClearForwards :: InfoTableBuilder m ()
   SetIdentArgsInfo :: Symbol -> [ArgumentInfo] -> InfoTableBuilder m ()
-  GetIdent :: Text -> InfoTableBuilder m (Maybe (Either Symbol Tag))
+  GetIdent :: Text -> InfoTableBuilder m (Maybe IdentKind)
   GetInfoTable :: InfoTableBuilder m InfoTable
 
 makeSem ''InfoTableBuilder
-
-hasIdent :: Member InfoTableBuilder r => Text -> Sem r Bool
-hasIdent txt = do
-  i <- getIdent txt
-  case i of
-    Just _ -> return True
-    Nothing -> return False
 
 getConstructorInfo :: Member InfoTableBuilder r => Tag -> Sem r ConstructorInfo
 getConstructorInfo tag = do
@@ -36,6 +33,7 @@ checkSymbolDefined sym = do
 data BuilderState = BuilderState
   { _stateNextSymbol :: Word,
     _stateNextUserTag :: Word,
+    _stateForwards :: HashSet Text,
     _stateInfoTable :: InfoTable
   }
 
@@ -46,6 +44,7 @@ initBuilderState tab =
   BuilderState
     { _stateNextSymbol = fromIntegral $ HashMap.size (tab ^. infoIdentifiers),
       _stateNextUserTag = fromIntegral $ HashMap.size (tab ^. infoConstructors),
+      _stateForwards = HashSet.empty,
       _stateInfoTable = tab
     }
 
@@ -67,12 +66,24 @@ runInfoTableBuilder tab =
         return (UserTag (s ^. stateNextUserTag - 1))
       RegisterIdent ii -> do
         modify' (over stateInfoTable (over infoIdentifiers (HashMap.insert (ii ^. identifierSymbol) ii)))
-        modify' (over stateInfoTable (over identMap (HashMap.insert (ii ^. (identifierName . nameText)) (Left (ii ^. identifierSymbol)))))
+        modify' (over stateInfoTable (over identMap (HashMap.insert (ii ^. (identifierName . nameText)) (IdentSym (ii ^. identifierSymbol)))))
       RegisterConstructor ci -> do
         modify' (over stateInfoTable (over infoConstructors (HashMap.insert (ci ^. constructorTag) ci)))
-        modify' (over stateInfoTable (over identMap (HashMap.insert (ci ^. (constructorName . nameText)) (Right (ci ^. constructorTag)))))
+        modify' (over stateInfoTable (over identMap (HashMap.insert (ci ^. (constructorName . nameText)) (IdentTag (ci ^. constructorTag)))))
       RegisterIdentNode sym node ->
         modify' (over stateInfoTable (over identContext (HashMap.insert sym node)))
+      RegisterForward fi -> do
+        modify' (over stateForwards (HashSet.insert (fi ^. forwardName)))
+        modify' (over stateInfoTable (over identMap (HashMap.insert (fi ^. forwardName) (IdentForward fi))))
+      GetForwards -> do
+        s <- get
+        return $ map (getForwardInfo s) (toList (s ^. stateForwards))
+        where
+          getForwardInfo s txt = case HashMap.lookup txt (s ^. (stateInfoTable . identMap)) of
+            Just (IdentForward fi@ForwardInfo {}) -> fi
+            _ -> error $ fromString ("InfoTableBuilder inconsistency: a forward identifier '" ++ fromText txt ++ "'does not point to ForwardInfo")
+      ClearForwards ->
+        modify' (set stateForwards HashSet.empty)
       SetIdentArgsInfo sym argsInfo -> do
         modify' (over stateInfoTable (over infoIdentifiers (HashMap.adjust (set identifierArgsInfo argsInfo) sym)))
         modify' (over stateInfoTable (over infoIdentifiers (HashMap.adjust (set identifierArgsNum (length argsInfo)) sym)))

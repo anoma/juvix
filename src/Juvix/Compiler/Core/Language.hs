@@ -56,6 +56,15 @@ data Lambda = Lambda {_lambdaInfo :: !Info, _lambdaBody :: !Node}
 -- purposes of ML-polymorphic / dependent type checking or code generation!
 data Let = Let {_letInfo :: !Info, _letValue :: !Node, _letBody :: !Node}
 
+-- | Represents a block of mutually recursive local definitions. Both in the
+-- body and in the values `length _letRecValues` implicit binders are introduced
+-- which hold the functions/values being defined.
+data LetRec = LetRec
+  { _letRecInfo :: !Info,
+    _letRecValues :: !(NonEmpty Node),
+    _letRecBody :: !Node
+  }
+
 -- | One-level case matching on the tag of a data constructor: `Case value
 -- branches default`. `Case` is lazy: only the selected branch is evaluated.
 data Case = Case
@@ -100,14 +109,16 @@ data Node
   | NCtr {-# UNPACK #-} !Constr
   | NLam {-# UNPACK #-} !Lambda
   | NLet {-# UNPACK #-} !Let
+  | NRec {-# UNPACK #-} !LetRec
   | NCase {-# UNPACK #-} !Case
   | NPi {-# UNPACK #-} !Pi
   | NUniv {-# UNPACK #-} !Univ
   | NTyp {-# UNPACK #-} !TypeConstr
   | NDyn !Dynamic -- Dynamic is already a newtype, so it's unpacked.
-  | -- Evaluation only: `Closure env body`
+  | -- Evaluation only: `Closure env body`. _closureEnv is intentionally lazy
+    -- to be able to implement LetRec in the evaluator.
     Closure
-      { _closureEnv :: !Env,
+      { _closureEnv :: Env,
         _closureLambda :: {-# UNPACK #-} !Lambda
       }
   deriving stock (Eq)
@@ -174,6 +185,9 @@ instance HasAtomicity Lambda where
 instance HasAtomicity Let where
   atomicity _ = Aggregate lambdaFixity
 
+instance HasAtomicity LetRec where
+  atomicity _ = Aggregate lambdaFixity
+
 instance HasAtomicity Case where
   atomicity _ = Aggregate lambdaFixity
 
@@ -199,6 +213,7 @@ instance HasAtomicity Node where
     NCtr x -> atomicity x
     NLam x -> atomicity x
     NLet x -> atomicity x
+    NRec x -> atomicity x
     NCase x -> atomicity x
     NPi x -> atomicity x
     NUniv x -> atomicity x
@@ -233,6 +248,9 @@ instance Eq Lambda where
 instance Eq Let where
   (Let _ v1 b1) == (Let _ v2 b2) = v1 == v2 && b1 == b2
 
+instance Eq LetRec where
+  (LetRec _ vs1 b1) == (LetRec _ vs2 b2) = vs1 == vs2 && b1 == b2
+
 instance Eq Case where
   (Case _ v1 bs1 def1) == (Case _ v2 bs2 def2) = v1 == v2 && bs1 == bs2 && def1 == def2
 
@@ -255,6 +273,7 @@ makeLenses ''App
 makeLenses ''BuiltinApp
 makeLenses ''Constr
 makeLenses ''Let
+makeLenses ''LetRec
 makeLenses ''Case
 makeLenses ''Pi
 makeLenses ''Univ

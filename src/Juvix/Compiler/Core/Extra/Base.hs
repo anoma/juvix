@@ -5,6 +5,7 @@ import Data.List qualified as List
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.BinderInfo
 import Juvix.Compiler.Core.Language
+import Data.List.NonEmpty (fromList)
 
 {------------------------------------------------------------------------}
 {- Node constructors -}
@@ -56,6 +57,12 @@ mkLet i v b = NLet (Let i v b)
 
 mkLet' :: Node -> Node -> Node
 mkLet' = mkLet Info.empty
+
+mkLetRec :: Info -> NonEmpty Node -> Node -> Node
+mkLetRec i vs b = NRec (LetRec i vs b)
+
+mkLetRec' :: NonEmpty Node -> Node -> Node
+mkLetRec' = mkLetRec Info.empty
 
 mkCase :: Info -> Node -> [CaseBranch] -> Maybe Node -> Node
 mkCase i v bs def = NCase (Case i v bs def)
@@ -178,6 +185,14 @@ destruct = \case
   NCtr (Constr i tag args) -> NodeDetails i args (map (const 0) args) (map (const []) args) (`mkConstr` tag)
   NLam (Lambda i b) -> NodeDetails i [b] [1] [fetchBinderInfo i] (\i' args' -> mkLambda i' (hd args'))
   NLet (Let i v b) -> NodeDetails i [v, b] [0, 1] [[], fetchBinderInfo i] (\i' args' -> mkLet i' (hd args') (args' !! 1))
+  NRec (LetRec i vs b) ->
+    let n = length vs in
+    NodeDetails
+      i
+      (b : toList vs)
+      (replicate (n + 1) n)
+      (replicate (n + 1) (getInfoBinders n i))
+      (\i' args' -> mkLetRec i' (fromList (tl args')) (hd args'))
   NCase (Case i v bs Nothing) ->
     let branchBinderNums = map (\(CaseBranch _ k _) -> k) bs
      in NodeDetails

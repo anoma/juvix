@@ -6,10 +6,12 @@ where
 
 import Control.Monad.Trans.Class (lift)
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Data.List qualified as List
+import Data.List.NonEmpty (fromList)
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.InfoTableBuilder
-import Juvix.Compiler.Core.Extra.Base
+import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.BinderInfo as BinderInfo
 import Juvix.Compiler.Core.Info.BranchInfo as BranchInfo
@@ -101,6 +103,14 @@ declareBuiltins = do
   lift $ declareBuiltinConstr TagWrite "write" i
   lift $ declareBuiltinConstr TagReadLn "readLn" i
 
+checkUndeclaredIdentifiers :: Member InfoTableBuilder r => [Text] -> ParsecS r ()
+checkUndeclaredIdentifiers declared = do
+  let declaredSet = HashSet.fromList declared
+  fwds <- lift getForwards
+  let fwds' = filter (not . flip HashSet.member declaredSet . (^. forwardName)) fwds
+  mapM_ (\fi -> parseFailure (fi ^. forwardOffset) ("undeclared identifier: " ++ fromText (fi ^. forwardName))) fwds'
+  lift clearForwards
+
 parseToplevel ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   ParsecS r (Maybe Node)
@@ -126,13 +136,15 @@ statementDef = do
   (txt, i) <- identifierL
   r <- lift (getIdent txt)
   case r of
-    Just (Left sym) -> do
+    Just (IdentSym sym) -> do
       guardSymbolNotDefined
         sym
         (parseFailure off ("duplicate definition of: " ++ fromText txt))
       parseDefinition sym
-    Just (Right {}) ->
+    Just (IdentTag {}) ->
       parseFailure off ("duplicate identifier: " ++ fromText txt)
+    Just (IdentForward ForwardInfo {..}) ->
+      parseFailure _forwardOffset ("undeclared identifier: " ++ fromText _forwardName)
     Nothing -> do
       sym <- lift freshSymbol
       name <- lift $ freshName KNameFunction txt i
@@ -177,10 +189,16 @@ statementConstr = do
   off <- P.getOffset
   (txt, i) <- identifierL
   (argsNum, _) <- number 0 128
-  dupl <- lift (hasIdent txt)
-  when
-    dupl
-    (parseFailure off ("duplicate identifier: " ++ fromText txt))
+  r <- lift (getIdent txt)
+  case r of
+    Just (IdentSym _) ->
+      parseFailure off ("duplicate identifier: " ++ fromText txt)
+    Just (IdentTag _) ->
+      parseFailure off ("duplicate identifier: " ++ fromText txt)
+    Just (IdentForward ForwardInfo {..}) ->
+      parseFailure _forwardOffset ("undeclared identifier: " ++ fromText _forwardName)
+    Nothing ->
+      return ()
   tag <- lift freshTag
   name <- lift $ freshName KNameConstructor txt i
   let info =
@@ -197,6 +215,7 @@ expression ::
   ParsecS r Node
 expression = do
   node <- expr 0 mempty
+  checkUndeclaredIdentifiers []
   tab <- lift getInfoTable
   return $ etaExpandApps tab node
 
@@ -467,6 +486,7 @@ atom varsNum vars =
     <|> exprConstInt
     <|> exprConstString
     <|> exprLambda varsNum vars
+    <|> exprLetRec varsNum vars
     <|> exprLet varsNum vars
     <|> exprCase varsNum vars
     <|> exprIf varsNum vars
@@ -488,14 +508,24 @@ exprNamed varsNum vars = do
     Nothing -> do
       r <- lift (getIdent txt)
       case r of
-        Just (Left sym) -> do
+        Just (IdentSym sym) -> do
           name <- lift $ freshName KNameFunction txt i
           return $ mkIdent (Info.singleton (NameInfo name)) sym
-        Just (Right tag) -> do
+        Just (IdentTag tag) -> do
           name <- lift $ freshName KNameConstructor txt i
           return $ mkConstr (Info.singleton (NameInfo name)) tag []
-        Nothing ->
-          parseFailure off ("undeclared identifier: " ++ fromText txt)
+        Just (IdentForward ForwardInfo {..}) ->
+          return $ mkIdent' _forwardSymbol
+        Nothing -> do
+          sym <- lift freshSymbol
+          lift $
+            registerForward $
+              ForwardInfo
+                { _forwardName = txt,
+                  _forwardOffset = off,
+                  _forwardSymbol = sym
+                }
+          return $ mkIdent' sym
 
 exprConstInt ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -553,6 +583,65 @@ exprLet varsNum vars = do
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- expr (varsNum + 1) vars'
   return $ mkLet (binderNameInfo name) value body
+
+exprLetRec ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Index ->
+  HashMap Text Index ->
+  ParsecS r Node
+exprLetRec varsNum vars = do
+  off <- P.getOffset
+  kwLetRec
+  defs <-
+    braces (exprLetRecDefs varsNum vars)
+      <|> exprLetRecDefs varsNum vars
+  kwIn
+  when (null defs) $
+    parseFailure off "letrec block must contain at least one definition"
+  let defNames = map ((^. nameText) . fst) defs
+  let (vars', _) = foldl' (\(vs, k) txt -> (HashMap.insert txt k vs, k + 1)) (vars, varsNum) defNames
+  body <- expr (varsNum + length defs) vars'
+  checkUndeclaredIdentifiers defNames
+  syms <-
+    mapM
+      ( \txt -> do
+          r <- lift $ getIdent txt
+          case r of
+            Just (IdentSym sym) -> return sym
+            Just (IdentForward ForwardInfo {..}) -> return _forwardSymbol
+            _ -> lift freshSymbol
+      )
+      defNames
+  let infos = map (Info.singleton . NameInfo . fst) defs
+  let fwdMap = HashMap.fromList $ zip (reverse syms) (zip [0 ..] (reverse infos))
+  let values = map (umapN (go fwdMap) . shift (length defs) . snd) defs
+  return $ mkLetRec (Info.singleton (BindersInfo infos)) (fromList values) body
+  where
+    go :: HashMap Symbol (Index, Info) -> Int -> Node -> Node
+    go fwdMap k = \case
+      NIdt (Ident {..})
+        | Just (idx, info) <- HashMap.lookup _identSymbol fwdMap ->
+            mkVar info (idx + k)
+      node -> node
+
+exprLetRecDefs ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Index ->
+  HashMap Text Index ->
+  ParsecS r [(Name, Node)]
+exprLetRecDefs varsNum vars = P.sepEndBy (exprLetRecDef varsNum vars) kwSemicolon
+
+exprLetRecDef ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Index ->
+  HashMap Text Index ->
+  ParsecS r (Name, Node)
+exprLetRecDef varsNum vars = do
+  (txt, i) <- identifierL
+  name <- lift $ freshName KNameLocal txt i
+  kwAssignment
+  v <- expr varsNum vars
+  return (name, v)
 
 exprCase ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -627,9 +716,11 @@ matchingBranch varsNum vars = do
   txt <- identifier
   r <- lift (getIdent txt)
   case r of
-    Just (Left {}) ->
+    Just (IdentSym {}) ->
       parseFailure off ("not a constructor: " ++ fromText txt)
-    Just (Right tag) -> do
+    Just (IdentForward {}) ->
+      parseFailure off ("not a constructor: " ++ fromText txt)
+    Just (IdentTag tag) -> do
       ns <- P.many parseLocalName
       let bindersNum = length ns
       ci <- lift $ getConstructorInfo tag

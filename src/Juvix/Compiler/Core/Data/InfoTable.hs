@@ -7,7 +7,7 @@ type IdentContext = HashMap Symbol Node
 data InfoTable = InfoTable
   { _identContext :: IdentContext,
     -- `_identMap` is needed only for REPL
-    _identMap :: HashMap Text (Either Symbol Tag),
+    _identMap :: HashMap Text IdentKind,
     _infoMain :: Maybe Symbol,
     _infoIdentifiers :: HashMap Symbol IdentifierInfo,
     _infoInductives :: HashMap Name InductiveInfo,
@@ -26,6 +26,14 @@ emptyInfoTable =
       _infoConstructors = mempty,
       _infoAxioms = mempty
     }
+
+data IdentKind = IdentSym Symbol | IdentTag Tag | IdentForward ForwardInfo
+
+data ForwardInfo = ForwardInfo
+  { _forwardName :: Text,
+    _forwardSymbol :: Symbol,
+    _forwardOffset :: Int
+  }
 
 data IdentifierInfo = IdentifierInfo
   { _identifierName :: Name,
@@ -70,6 +78,7 @@ data AxiomInfo = AxiomInfo
   }
 
 makeLenses ''InfoTable
+makeLenses ''ForwardInfo
 makeLenses ''IdentifierInfo
 makeLenses ''ArgumentInfo
 makeLenses ''InductiveInfo

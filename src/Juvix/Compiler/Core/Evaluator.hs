@@ -53,7 +53,7 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
     evalError !msg !node = Exception.throw (EvalError msg (Just node))
 
     eval' :: Env -> Node -> Node
-    eval' !env !n = case n of
+    eval' env !n = case n of
       NVar (Var _ idx) -> env !! idx
       NIdt (Ident _ sym) -> eval' [] (lookupContext n sym)
       NCst {} -> n
@@ -65,6 +65,11 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       NCtr (Constr i tag args) -> mkConstr i tag (map' (eval' env) args)
       NLam l@Lambda {} -> Closure env l
       NLet (Let _ v b) -> let !v' = eval' env v in eval' (v' : env) b
+      NRec (LetRec _ vs b) ->
+        -- laziness is intentional here
+        let vs' = map (eval' env') (toList vs)
+            env' = revAppend vs' env
+         in eval' env' b
       NCase (Case i v bs def) ->
         case eval' env v of
           NCtr (Constr _ tag args) -> branch n env args tag def bs
@@ -77,7 +82,10 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
 
     branch :: Node -> Env -> [Node] -> Tag -> Maybe Node -> [CaseBranch] -> Node
     branch n !env !args !tag !def = \case
-      (CaseBranch tag' _ b) : _ | tag' == tag -> eval' (revAppend args env) b
+      (CaseBranch tag' _ b) : _
+        | tag' == tag ->
+            let !env' = revAppend args env
+             in eval' env' b
       _ : bs' -> branch n env args tag def bs'
       [] -> case def of
         Just b -> eval' env b

@@ -63,6 +63,7 @@ instance PrettyCode Tag where
     UserTag tag -> return $ kwUnnamedConstr <> pretty tag
 
 instance PrettyCode Node where
+  ppCode :: forall r. Member (Reader Options) r => Node -> Sem r (Doc Ann)
   ppCode node = case node of
     NVar Var {..} ->
       case Info.lookup kNameInfo _varInfo of
@@ -102,7 +103,7 @@ instance PrettyCode Node where
       b <- ppCode body
       return $ foldl' (flip (<+>)) b pplams
       where
-        ppLam :: Member (Reader Options) r => Info -> Sem r (Doc Ann)
+        ppLam :: Info -> Sem r (Doc Ann)
         ppLam i =
           case getInfoName (getInfoBinder i) of
             Just name -> do
@@ -117,6 +118,23 @@ instance PrettyCode Node where
       v' <- ppCode _letValue
       b' <- ppCode _letBody
       return $ kwLet <+> n' <+> kwAssign <+> v' <+> kwIn <+> b'
+    NRec LetRec {..} -> do
+      let n = length _letRecValues
+      ns <- mapM getName (getInfoBinders n _letRecInfo)
+      vs <- mapM ppCode _letRecValues
+      b' <- ppCode _letRecBody
+      let bss =
+            bracesIndent $
+              align $
+                concatWith (\a b -> a <> kwSemicolon <> line <> b) $
+                  zipWithExact (\name val -> name <+> kwAssign <+> val) ns (toList vs)
+      return $ kwLetRec <+> bss <+> kwIn <> line <> b'
+      where
+        getName :: Info -> Sem r (Doc Ann)
+        getName i =
+          case getInfoName i of
+            Just name -> ppCode name
+            Nothing -> return kwQuestion
     NCase Case {..} -> do
       bns <-
         case Info.lookup kCaseBinderInfo _caseInfo of
@@ -236,6 +254,9 @@ kwDiv = keyword Str.div
 
 kwMod :: Doc Ann
 kwMod = keyword Str.mod
+
+kwLetRec :: Doc Ann
+kwLetRec = keyword Str.letrec_
 
 kwCase :: Doc Ann
 kwCase = keyword Str.case_

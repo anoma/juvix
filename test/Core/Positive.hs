@@ -224,5 +224,10 @@ tests =
       "Eta-expansion of builtins and constructors"
       "."
       "test039.jvc"
-      "out/test039.out"
+      "out/test039.out",
+    PosTest
+      "Letrec"
+      "."
+      "test040.jvc"
+      "out/test040.out"
   ]
