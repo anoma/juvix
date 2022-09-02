@@ -1,7 +1,7 @@
 module Juvix.Compiler.Core.Data.InfoTableBuilder where
 
-import Data.HashSet qualified as HashSet
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Language
 

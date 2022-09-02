@@ -2,10 +2,10 @@ module Juvix.Compiler.Core.Extra.Base where
 
 import Data.Functor.Identity
 import Data.List qualified as List
+import Data.List.NonEmpty (fromList)
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.BinderInfo
 import Juvix.Compiler.Core.Language
-import Data.List.NonEmpty (fromList)
 
 {------------------------------------------------------------------------}
 {- Node constructors -}
@@ -186,13 +186,13 @@ destruct = \case
   NLam (Lambda i b) -> NodeDetails i [b] [1] [fetchBinderInfo i] (\i' args' -> mkLambda i' (hd args'))
   NLet (Let i v b) -> NodeDetails i [v, b] [0, 1] [[], fetchBinderInfo i] (\i' args' -> mkLet i' (hd args') (args' !! 1))
   NRec (LetRec i vs b) ->
-    let n = length vs in
-    NodeDetails
-      i
-      (b : toList vs)
-      (replicate (n + 1) n)
-      (replicate (n + 1) (getInfoBinders n i))
-      (\i' args' -> mkLetRec i' (fromList (tl args')) (hd args'))
+    let n = length vs
+     in NodeDetails
+          i
+          (b : toList vs)
+          (replicate (n + 1) n)
+          (replicate (n + 1) (getInfoBinders n i))
+          (\i' args' -> mkLetRec i' (fromList (tl args')) (hd args'))
   NCase (Case i v bs Nothing) ->
     let branchBinderNums = map (\(CaseBranch _ k _) -> k) bs
      in NodeDetails
