@@ -90,6 +90,12 @@ mkTypeConstr i sym args = NTyp (TypeConstr i sym args)
 mkTypeConstr' :: Symbol -> [Type] -> Type
 mkTypeConstr' = mkTypeConstr Info.empty
 
+mkDynamic :: Info -> Type
+mkDynamic i = NDyn (Dynamic i)
+
+mkDynamic' :: Type
+mkDynamic' = mkDynamic Info.empty
+
 {------------------------------------------------------------------------}
 {- functions on Type -}
 
@@ -214,6 +220,8 @@ destruct = \case
     NodeDetails i [] [] [] (\i' _ -> mkUniv i' l)
   NTyp (TypeConstr i sym args) ->
     NodeDetails i args (map (const 0) args) (map (const []) args) (`mkTypeConstr` sym)
+  NDyn (Dynamic i) ->
+    NodeDetails i [] [] [] (\i' _ -> mkDynamic i')
   Closure env (Lambda i b) ->
     NodeDetails
       i

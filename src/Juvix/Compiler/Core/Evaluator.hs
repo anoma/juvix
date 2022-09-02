@@ -72,6 +72,7 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       NPi {} -> substEnv env n
       NUniv {} -> n
       NTyp (TypeConstr i sym args) -> mkTypeConstr i sym (map' (eval' env) args)
+      NDyn {} -> n
       Closure {} -> n
 
     branch :: Node -> Env -> [Node] -> Tag -> Maybe Node -> [CaseBranch] -> Node
