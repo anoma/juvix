@@ -104,7 +104,7 @@ data Node
   | NPi {-# UNPACK #-} !Pi
   | NUniv {-# UNPACK #-} !Univ
   | NTyp {-# UNPACK #-} !TypeConstr
-  | NDyn {-# UNPACK #-} !Dynamic
+  | NDyn !Dynamic -- Dynamic is already a newtype, so it's unpacked.
   | -- Evaluation only: `Closure env body`
     Closure
       { _closureEnv :: !Env,
