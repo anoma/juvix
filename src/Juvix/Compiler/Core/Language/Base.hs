@@ -5,10 +5,7 @@ module Juvix.Compiler.Core.Language.Base
     module Juvix.Compiler.Core.Language.Builtins,
     module Juvix.Prelude,
     module Juvix.Compiler.Abstract.Data.Name,
-    Location,
-    Symbol,
-    Tag (..),
-    Index,
+    module Juvix.Compiler.Core.Language.Base,
   )
 where
 
