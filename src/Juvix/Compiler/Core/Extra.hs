@@ -4,6 +4,8 @@ module Juvix.Compiler.Core.Extra
     module Juvix.Compiler.Core.Extra.Recursors,
     module Juvix.Compiler.Core.Extra.Info,
     module Juvix.Compiler.Core.Extra.Equality,
+    module Juvix.Compiler.Core.Extra.Recursors.Fold.Named,
+    module Juvix.Compiler.Core.Extra.Recursors.Map.Named,
   )
 where
 
@@ -12,30 +14,32 @@ import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Equality
 import Juvix.Compiler.Core.Extra.Info
 import Juvix.Compiler.Core.Extra.Recursors
+import Juvix.Compiler.Core.Extra.Recursors.Fold.Named
+import Juvix.Compiler.Core.Extra.Recursors.Map.Named
 import Juvix.Compiler.Core.Language
 
 isClosed :: Node -> Bool
 isClosed = not . has freeVars
 
-getFreeVars :: Node -> HashSet Index
+getFreeVars :: Node -> HashSet Var
 getFreeVars n = HashSet.fromList (n ^.. freeVars)
 
-freeVars :: SimpleFold Node Index
-freeVars f = ufoldAN' reassemble go
+freeVars :: SimpleFold Node Var
+freeVars f = ufoldAN reassemble go
   where
     go k = \case
-      NVar (Var i idx)
-        | idx >= k -> mkVar i <$> f (idx - k)
+      NVar var@(Var _ idx)
+        | idx >= k -> NVar <$> f var
       n -> pure n
 
-getIdents :: Node -> HashSet Symbol
+getIdents :: Node -> HashSet Ident
 getIdents n = HashSet.fromList (n ^.. nodeIdents)
 
-nodeIdents :: Traversal' Node Symbol
-nodeIdents f = umapLeaves go
+nodeIdents :: Traversal' Node Ident
+nodeIdents f = ufoldA reassemble go
   where
     go = \case
-      NIdt (Ident i d) -> mkIdent i <$> f d
+      NIdt i -> NIdt <$> f i
       n -> pure n
 
 countFreeVarOccurrences :: Index -> Node -> Int

@@ -220,3 +220,9 @@ makeLenses ''Univ'
 makeLenses ''TypeConstr'
 makeLenses ''Dynamic'
 makeLenses ''CaseBranch'
+
+instance Hashable (Ident' i) where
+  hashWithSalt s = hashWithSalt s . (^. identSymbol)
+
+instance Hashable (Var' i) where
+  hashWithSalt s = hashWithSalt s . (^. varIndex)
