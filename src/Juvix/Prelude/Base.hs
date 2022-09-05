@@ -235,6 +235,7 @@ revAppend (x : xs) !ys = revAppend xs (x : ys)
 map' :: (a -> b) -> [a] -> [b]
 map' _ [] = []
 map' f (h : t) =
+  -- keeping the lets separate ensures that `v` is evaluated before `vs`
   let !v = f h
    in let !vs = map' f t
        in v : vs
