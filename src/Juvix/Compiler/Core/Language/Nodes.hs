@@ -1,7 +1,7 @@
 module Juvix.Compiler.Core.Language.Nodes where
 
-import Juvix.Compiler.Core.Language.Base
 import Data.Kind qualified as GHC
+import Juvix.Compiler.Core.Language.Base
 
 data Stage = Main | Stripped
 
@@ -38,6 +38,11 @@ data App' i a = App {_appInfo :: i, _appLeft :: !a, _appRight :: !a}
 
 type FApp :: Stage -> GHC.Type
 type family FApp s
+
+data Apps' f i a = Apps {_appsInfo :: i, _appsFun :: !f, _appsArgs :: ![a]}
+
+type FApps :: Stage -> GHC.Type
+type family FApps s
 
 -- | A builtin application. A builtin has no corresponding Node. It is treated
 -- specially by the evaluator and the code generator. For example, basic
@@ -157,6 +162,9 @@ instance HasAtomicity (Constant' i) where
 instance HasAtomicity (App' i a) where
   atomicity _ = Aggregate appFixity
 
+instance HasAtomicity (Apps' f i a) where
+  atomicity _ = Aggregate appFixity
+
 instance HasAtomicity (BuiltinApp' i a) where
   atomicity BuiltinApp {..}
     | null _builtinAppArgs = Atom
@@ -205,6 +213,9 @@ instance Eq (Constant' i) where
 
 instance Eq a => Eq (App' i a) where
   (App _ l1 r1) == (App _ l2 r2) = l1 == l2 && r1 == r2
+
+instance (Eq f, Eq a) => Eq (Apps' f i a) where
+  (Apps _ op1 args1) == (Apps _ op2 args2) = op1 == op2 && args1 == args2
 
 instance Eq a => Eq (BuiltinApp' i a) where
   (BuiltinApp _ op1 args1) == (BuiltinApp _ op2 args2) = op1 == op2 && args1 == args2

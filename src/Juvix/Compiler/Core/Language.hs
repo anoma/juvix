@@ -13,39 +13,68 @@ import Juvix.Compiler.Core.Language.Base
 import Juvix.Compiler.Core.Language.Nodes
 
 {---------------------------------------------------------------------------------}
-{- Program tree datatype -}
 
 type instance FVar 'Main = Var' Info
+
 type instance FIdent 'Main = Ident' Info
+
 type instance FConstant 'Main = Constant' Info
+
 type instance FApp 'Main = App' Info Node
+
 type instance FBuiltinApp 'Main = BuiltinApp' Info Node
+
 type instance FConstr 'Main = Constr' Info Node
+
 type instance FLambda 'Main = Lambda' Info Node
+
 type instance FLet 'Main = Let' Info Node
+
 type instance FLetRec 'Main = LetRec' Info Node
+
 type instance FCase 'Main = Case' Info Node
+
 type instance FPi 'Main = Pi' Info Node
+
 type instance FUniv 'Main = Univ' Info
+
 type instance FTypeConstr 'Main = TypeConstr' Info Node
+
 type instance FDynamic 'Main = Dynamic' Info
 
+{---------------------------------------------------------------------------------}
+
 type Var = FVar 'Main
+
 type Ident = FIdent 'Main
+
 type Constant = FConstant 'Main
+
 type App = FApp 'Main
+
 type BuiltinApp = FBuiltinApp 'Main
+
 type Constr = FConstr 'Main
+
 type Lambda = FLambda 'Main
+
 type Let = FLet 'Main
+
 type LetRec = FLetRec 'Main
+
 type Case = FCase 'Main
+
 type Pi = FPi 'Main
+
 type Univ = FUniv 'Main
+
 type TypeConstr = FTypeConstr 'Main
+
 type Dynamic = FDynamic 'Main
 
 type CaseBranch = CaseBranch' Node
+
+{---------------------------------------------------------------------------------}
 
 -- | `Node` is the type of nodes in the program tree. The nodes themselves
 -- contain only runtime-relevant information. Runtime-irrelevant annotations

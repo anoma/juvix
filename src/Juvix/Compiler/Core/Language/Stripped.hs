@@ -1,34 +1,79 @@
-module Juvix.Compiler.Core.Language.Stripped where
+module Juvix.Compiler.Core.Language.Stripped
+  ( module Juvix.Compiler.Core.Language.Base,
+    module Juvix.Compiler.Core.Language.Nodes,
+    module Juvix.Compiler.Core.Language.Stripped.Type,
+    module Juvix.Compiler.Core.Language.Stripped,
+  )
+where
+
+{- Stripped program tree datatype -}
 
 import Juvix.Compiler.Core.Language.Base
 import Juvix.Compiler.Core.Language.Nodes
+import Juvix.Compiler.Core.Language.Stripped.Type
 
 {---------------------------------------------------------------------------------}
-{- Stripped program tree datatype -}
 
-type instance FVar 'Stripped = Var' Info
-type instance FIdent 'Stripped = Ident' Info
-type instance FConstant 'Stripped = Constant' Info
-type instance FApp 'Stripped = App' Info Node
-type instance FBuiltinApp 'Stripped = BuiltinApp' Info Node
-type instance FConstr 'Stripped = Constr' Info Node
-type instance FLet 'Stripped = Let' Info Node
-type instance FCase 'Stripped = Case' Info Node
+data VarInfo = VarInfo
+  { _varInfoName :: Maybe Name,
+    _varInfoType :: Type
+  }
+
+data IdentInfo = IdentInfo
+  { _identInfoName :: Maybe Name,
+    _identInfoType :: Type
+  }
+
+data Fun = FunVar Var | FunIdent Ident
+  deriving stock (Eq)
+
+{---------------------------------------------------------------------------------}
+
+type instance FVar 'Stripped = Var' VarInfo
+
+type instance FIdent 'Stripped = Ident' IdentInfo
+
+type instance FConstant 'Stripped = Constant' ()
+
+type instance FApps 'Stripped = Apps' Fun () Node
+
+type instance FBuiltinApp 'Stripped = BuiltinApp' () Node
+
+type instance FConstr 'Stripped = Constr' () Node
+
+type instance FLet 'Stripped = Let' () Node
+
+type instance FCase 'Stripped = Case' () Node
+
+type instance FNode 'Stripped = Node
+
+{---------------------------------------------------------------------------------}
 
 type Var = FVar 'Stripped
+
 type Ident = FIdent 'Stripped
+
 type Constant = FConstant 'Stripped
-type App = FApp 'Stripped
+
+type Apps = FApps 'Stripped
+
 type BuiltinApp = FBuiltinApp 'Stripped
+
 type Constr = FConstr 'Stripped
+
 type Let = FLet 'Stripped
+
 type Case = FCase 'Stripped
+
+type CaseBranch = CaseBranch' Node
+
+{---------------------------------------------------------------------------------}
 
 data Node
   = NVar Var
   | NIdt Ident
   | NCst Constant
-  | NApp App
+  | NApp Apps
   | NBlt BuiltinApp
   | NCtr Constr
   | NLet Let
