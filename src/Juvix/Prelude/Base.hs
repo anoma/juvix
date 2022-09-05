@@ -1,3 +1,9 @@
+{-# LANGUAGE BangPatterns #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Avoid restricted extensions" #-}
+{-# HLINT ignore "Avoid restricted flags" #-}
+
 module Juvix.Prelude.Base
   ( module Juvix.Prelude.Base,
     module Control.Applicative,
@@ -223,8 +229,16 @@ tableNestedInsert k1 k2 = tableInsert (HashMap.singleton k2) (HashMap.insert k2)
 --------------------------------------------------------------------------------
 
 revAppend :: [a] -> [a] -> [a]
-revAppend [] ys = ys
-revAppend (x : xs) ys = revAppend xs (x : ys)
+revAppend [] !ys = ys
+revAppend (x : xs) !ys = revAppend xs (x : ys)
+
+map' :: (a -> b) -> [a] -> [b]
+map' _ [] = []
+map' f (h : t) =
+  -- keeping the lets separate ensures that `v` is evaluated before `vs`
+  let !v = f h
+   in let !vs = map' f t
+       in v : vs
 
 --------------------------------------------------------------------------------
 -- NonEmpty

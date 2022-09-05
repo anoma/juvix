@@ -10,7 +10,14 @@ def f := \x \y
 
 def h := \x trace 8 (trace x (x + x));
 
+def const := \x \y x;
+
+constr nil 0;
+constr cons 2;
+
+trace (const 0 (trace "!" 1)) (
+trace (const 0 (cons (trace "a" 1) (trace "b" (cons (trace "c" 1) (trace "d" nil))))) (
 trace ((\x \y \z x + y + z) (trace "1" 1) (trace "2" 2) (trace "3" 3)) (
 trace (f 5 g) (trace 7 (
 h (trace 2 3)
-)))
+)))))

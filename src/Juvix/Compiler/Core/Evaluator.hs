@@ -62,7 +62,7 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
           Closure env' (Lambda _ b) -> let !v = eval' env r in eval' (v : env') b
           v -> evalError "invalid application" (mkApp i v (substEnv env r))
       NBlt (BuiltinApp _ op args) -> applyBuiltin n env op args
-      NCtr (Constr i tag args) -> mkConstr i tag (map (eval' env) args)
+      NCtr (Constr i tag args) -> mkConstr i tag (map' (eval' env) args)
       NLam l@Lambda {} -> Closure env l
       NLet (Let _ v b) -> let !v' = eval' env v in eval' (v' : env) b
       NCase (Case i v bs def) ->
@@ -71,7 +71,7 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
           v' -> evalError "matching on non-data" (substEnv env (mkCase i v' bs def))
       NPi {} -> substEnv env n
       NUniv {} -> n
-      NTyp (TypeConstr i sym args) -> mkTypeConstr i sym (map (eval' env) args)
+      NTyp (TypeConstr i sym args) -> mkTypeConstr i sym (map' (eval' env) args)
       Closure {} -> n
 
     branch :: Node -> Env -> [Node] -> Tag -> Maybe Node -> [CaseBranch] -> Node
@@ -87,13 +87,15 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
     applyBuiltin _ env OpIntSub [l, r] = nodeFromInteger (integerFromNode (eval' env l) - integerFromNode (eval' env r))
     applyBuiltin _ env OpIntMul [l, r] = nodeFromInteger (integerFromNode (eval' env l) * integerFromNode (eval' env r))
     applyBuiltin n env OpIntDiv [l, r] =
-      case integerFromNode (eval' env r) of
-        0 -> evalError "division by zero" (substEnv env n)
-        k -> nodeFromInteger (div (integerFromNode (eval' env l)) k)
+      let !vl = eval' env l
+       in case integerFromNode (eval' env r) of
+            0 -> evalError "division by zero" (substEnv env n)
+            k -> nodeFromInteger (div (integerFromNode vl) k)
     applyBuiltin n env OpIntMod [l, r] =
-      case integerFromNode (eval' env r) of
-        0 -> evalError "division by zero" (substEnv env n)
-        k -> nodeFromInteger (mod (integerFromNode (eval' env l)) k)
+      let !vl = eval' env l
+       in case integerFromNode (eval' env r) of
+            0 -> evalError "division by zero" (substEnv env n)
+            k -> nodeFromInteger (mod (integerFromNode vl) k)
     applyBuiltin _ env OpIntLt [l, r] = nodeFromBool (integerFromNode (eval' env l) < integerFromNode (eval' env r))
     applyBuiltin _ env OpIntLe [l, r] = nodeFromBool (integerFromNode (eval' env l) <= integerFromNode (eval' env r))
     applyBuiltin _ env OpEq [l, r] = nodeFromBool (structEq (eval' env l) (eval' env r))
