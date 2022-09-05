@@ -223,8 +223,15 @@ tableNestedInsert k1 k2 = tableInsert (HashMap.singleton k2) (HashMap.insert k2)
 --------------------------------------------------------------------------------
 
 revAppend :: [a] -> [a] -> [a]
-revAppend [] ys = ys
-revAppend (x : xs) ys = revAppend xs (x : ys)
+revAppend [] !ys = ys
+revAppend (x : xs) !ys = revAppend xs (x : ys)
+
+map' :: (a -> b) -> [a] -> [b]
+map' _ [] = []
+map' f (h : t) =
+  let !v = f h
+   in let !vs = map' f t
+       in v : vs
 
 --------------------------------------------------------------------------------
 -- NonEmpty
