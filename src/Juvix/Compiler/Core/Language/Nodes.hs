@@ -3,7 +3,10 @@ module Juvix.Compiler.Core.Language.Nodes where
 import Juvix.Compiler.Core.Language.Base
 import Data.Kind qualified as GHC
 
-data Stage = Core | Stripped
+data Stage = Main | Stripped
+
+type FNode :: Stage -> GHC.Type
+type family FNode s
 
 {-------------------------------------------------------------------}
 {- Polymorphic Node types -}
@@ -138,6 +141,9 @@ newtype Dynamic' i = Dynamic {_dynamicInfo :: i}
 
 type FDynamic :: Stage -> GHC.Type
 type family FDynamic s
+
+{-------------------------------------------------------------------}
+{- Typeclass instances -}
 
 instance HasAtomicity (Var' i) where
   atomicity _ = Atom

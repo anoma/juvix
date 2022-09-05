@@ -15,35 +15,35 @@ import Juvix.Compiler.Core.Language.Nodes
 {---------------------------------------------------------------------------------}
 {- Program tree datatype -}
 
-type instance FVar 'Core = Var' Info
-type instance FIdent 'Core = Ident' Info
-type instance FConstant 'Core = Constant' Info
-type instance FApp 'Core = App' Info Node
-type instance FBuiltinApp 'Core = BuiltinApp' Info Node
-type instance FConstr 'Core = Constr' Info Node
-type instance FLambda 'Core = Lambda' Info Node
-type instance FLet 'Core = Let' Info Node
-type instance FLetRec 'Core = LetRec' Info Node
-type instance FCase 'Core = Case' Info Node
-type instance FPi 'Core = Pi' Info Node
-type instance FUniv 'Core = Univ' Info
-type instance FTypeConstr 'Core = TypeConstr' Info Node
-type instance FDynamic 'Core = Dynamic' Info
+type instance FVar 'Main = Var' Info
+type instance FIdent 'Main = Ident' Info
+type instance FConstant 'Main = Constant' Info
+type instance FApp 'Main = App' Info Node
+type instance FBuiltinApp 'Main = BuiltinApp' Info Node
+type instance FConstr 'Main = Constr' Info Node
+type instance FLambda 'Main = Lambda' Info Node
+type instance FLet 'Main = Let' Info Node
+type instance FLetRec 'Main = LetRec' Info Node
+type instance FCase 'Main = Case' Info Node
+type instance FPi 'Main = Pi' Info Node
+type instance FUniv 'Main = Univ' Info
+type instance FTypeConstr 'Main = TypeConstr' Info Node
+type instance FDynamic 'Main = Dynamic' Info
 
-type Var = FVar 'Core
-type Ident = FIdent 'Core
-type Constant = FConstant 'Core
-type App = FApp 'Core
-type BuiltinApp = FBuiltinApp 'Core
-type Constr = FConstr 'Core
-type Lambda = FLambda 'Core
-type Let = FLet 'Core
-type LetRec = FLetRec 'Core
-type Case = FCase 'Core
-type Pi = FPi 'Core
-type Univ = FUniv 'Core
-type TypeConstr = FTypeConstr 'Core
-type Dynamic = FDynamic 'Core
+type Var = FVar 'Main
+type Ident = FIdent 'Main
+type Constant = FConstant 'Main
+type App = FApp 'Main
+type BuiltinApp = FBuiltinApp 'Main
+type Constr = FConstr 'Main
+type Lambda = FLambda 'Main
+type Let = FLet 'Main
+type LetRec = FLetRec 'Main
+type Case = FCase 'Main
+type Pi = FPi 'Main
+type Univ = FUniv 'Main
+type TypeConstr = FTypeConstr 'Main
+type Dynamic = FDynamic 'Main
 
 type CaseBranch = CaseBranch' Node
 
