@@ -5,6 +5,7 @@ module Juvix.Compiler.Core.Pretty.Base
   )
 where
 
+import Data.List qualified as List
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.BinderInfo as BinderInfo
@@ -123,12 +124,17 @@ instance PrettyCode Node where
       ns <- mapM getName (getInfoBinders n _letRecInfo)
       vs <- mapM ppCode _letRecValues
       b' <- ppCode _letRecBody
-      let bss =
-            bracesIndent $
-              align $
-                concatWith (\a b -> a <> kwSemicolon <> line <> b) $
-                  zipWithExact (\name val -> name <+> kwAssign <+> val) ns (toList vs)
-      return $ kwLetRec <+> bss <+> kwIn <> line <> b'
+      if
+          | length ns == 1 ->
+              return $ kwLetRec <+> List.head ns <+> kwAssign <+> head vs <+> kwIn <+> b'
+          | otherwise ->
+              let bss =
+                    indent' $
+                      align $
+                        concatWith (\a b -> a <> kwSemicolon <> line <> b) $
+                          zipWithExact (\name val -> name <+> kwAssign <+> val) ns (toList vs)
+                  nss = enclose kwSquareL kwSquareR (concatWith (<+>) ns)
+               in return $ kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
       where
         getName :: Info -> Sem r (Doc Ann)
         getName i =
@@ -221,6 +227,12 @@ ppLRExpression associates fixlr e =
 
 {--------------------------------------------------------------------------------}
 {- keywords -}
+
+kwSquareL :: Doc Ann
+kwSquareL = delimiter "["
+
+kwSquareR :: Doc Ann
+kwSquareR = delimiter "]"
 
 kwDeBruijnVar :: Doc Ann
 kwDeBruijnVar = keyword Str.deBruijnVar

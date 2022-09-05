@@ -191,6 +191,9 @@ foreign_ = "foreign"
 compile :: IsString s => s
 compile = "compile"
 
+comma :: IsString s => s
+comma = ","
+
 semicolon :: IsString s => s
 semicolon = ";"
 

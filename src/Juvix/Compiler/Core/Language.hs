@@ -118,7 +118,7 @@ data Node
   | -- Evaluation only: `Closure env body`. _closureEnv is intentionally lazy
     -- to be able to implement LetRec in the evaluator.
     Closure
-      { _closureEnv :: Env,
+      { _closureEnv :: !Env,
         _closureLambda :: {-# UNPACK #-} !Lambda
       }
   deriving stock (Eq)

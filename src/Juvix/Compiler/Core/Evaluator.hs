@@ -9,6 +9,7 @@ module Juvix.Compiler.Core.Evaluator where
 import Control.Exception qualified as Exception
 import Data.HashMap.Strict qualified as HashMap
 import Debug.Trace qualified as Debug
+import GHC.Base qualified as GHC
 import GHC.Show as S
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Error
@@ -50,10 +51,10 @@ eval :: IdentContext -> Env -> Node -> Node
 eval !ctx !env0 = convertRuntimeNodes . eval' env0
   where
     evalError :: Text -> Node -> a
-    evalError !msg !node = Exception.throw (EvalError msg (Just node))
+    evalError msg node = Exception.throw (EvalError msg (Just node))
 
     eval' :: Env -> Node -> Node
-    eval' env !n = case n of
+    eval' !env !n = case n of
       NVar (Var _ idx) -> env !! idx
       NIdt (Ident _ sym) -> eval' [] (lookupContext n sym)
       NCst {} -> n
@@ -66,10 +67,9 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       NLam l@Lambda {} -> Closure env l
       NLet (Let _ v b) -> let !v' = eval' env v in eval' (v' : env) b
       NRec (LetRec _ vs b) ->
-        -- laziness is intentional here
-        let vs' = map (eval' env') (toList vs)
-            env' = revAppend vs' env
-         in eval' env' b
+        let !vs' = map (eval' env') (toList vs)
+            !env' = revAppend vs' env
+         in foldr GHC.seq (eval' env' b) vs'
       NCase (Case i v bs def) ->
         case eval' env v of
           NCtr (Constr _ tag args) -> branch n env args tag def bs

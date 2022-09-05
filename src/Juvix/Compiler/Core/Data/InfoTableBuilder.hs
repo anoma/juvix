@@ -1,7 +1,6 @@
 module Juvix.Compiler.Core.Data.InfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
-import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Language
 
@@ -11,9 +10,6 @@ data InfoTableBuilder m a where
   RegisterIdent :: IdentifierInfo -> InfoTableBuilder m ()
   RegisterConstructor :: ConstructorInfo -> InfoTableBuilder m ()
   RegisterIdentNode :: Symbol -> Node -> InfoTableBuilder m ()
-  RegisterForward :: ForwardInfo -> InfoTableBuilder m ()
-  GetForwards :: InfoTableBuilder m [ForwardInfo]
-  ClearForwards :: InfoTableBuilder m ()
   SetIdentArgsInfo :: Symbol -> [ArgumentInfo] -> InfoTableBuilder m ()
   GetIdent :: Text -> InfoTableBuilder m (Maybe IdentKind)
   GetInfoTable :: InfoTableBuilder m InfoTable
@@ -33,7 +29,6 @@ checkSymbolDefined sym = do
 data BuilderState = BuilderState
   { _stateNextSymbol :: Word,
     _stateNextUserTag :: Word,
-    _stateForwards :: HashSet Text,
     _stateInfoTable :: InfoTable
   }
 
@@ -44,7 +39,6 @@ initBuilderState tab =
   BuilderState
     { _stateNextSymbol = fromIntegral $ HashMap.size (tab ^. infoIdentifiers),
       _stateNextUserTag = fromIntegral $ HashMap.size (tab ^. infoConstructors),
-      _stateForwards = HashSet.empty,
       _stateInfoTable = tab
     }
 
@@ -72,18 +66,6 @@ runInfoTableBuilder tab =
         modify' (over stateInfoTable (over identMap (HashMap.insert (ci ^. (constructorName . nameText)) (IdentTag (ci ^. constructorTag)))))
       RegisterIdentNode sym node ->
         modify' (over stateInfoTable (over identContext (HashMap.insert sym node)))
-      RegisterForward fi -> do
-        modify' (over stateForwards (HashSet.insert (fi ^. forwardName)))
-        modify' (over stateInfoTable (over identMap (HashMap.insert (fi ^. forwardName) (IdentForward fi))))
-      GetForwards -> do
-        s <- get
-        return $ map (getForwardInfo s) (toList (s ^. stateForwards))
-        where
-          getForwardInfo s txt = case HashMap.lookup txt (s ^. (stateInfoTable . identMap)) of
-            Just (IdentForward fi@ForwardInfo {}) -> fi
-            _ -> error $ fromString ("InfoTableBuilder inconsistency: a forward identifier '" ++ fromText txt ++ "'does not point to ForwardInfo")
-      ClearForwards ->
-        modify' (set stateForwards HashSet.empty)
       SetIdentArgsInfo sym argsInfo -> do
         modify' (over stateInfoTable (over infoIdentifiers (HashMap.adjust (set identifierArgsInfo argsInfo) sym)))
         modify' (over stateInfoTable (over infoIdentifiers (HashMap.adjust (set identifierArgsNum (length argsInfo)) sym)))

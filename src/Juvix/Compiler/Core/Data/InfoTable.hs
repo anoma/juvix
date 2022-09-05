@@ -27,13 +27,7 @@ emptyInfoTable =
       _infoAxioms = mempty
     }
 
-data IdentKind = IdentSym Symbol | IdentTag Tag | IdentForward ForwardInfo
-
-data ForwardInfo = ForwardInfo
-  { _forwardName :: Text,
-    _forwardSymbol :: Symbol,
-    _forwardOffset :: Int
-  }
+data IdentKind = IdentSym Symbol | IdentTag Tag
 
 data IdentifierInfo = IdentifierInfo
   { _identifierName :: Name,
@@ -78,7 +72,6 @@ data AxiomInfo = AxiomInfo
   }
 
 makeLenses ''InfoTable
-makeLenses ''ForwardInfo
 makeLenses ''IdentifierInfo
 makeLenses ''ArgumentInfo
 makeLenses ''InductiveInfo
