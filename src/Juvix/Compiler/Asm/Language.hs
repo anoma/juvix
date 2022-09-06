@@ -5,7 +5,7 @@
 module Juvix.Compiler.Asm.Language
   ( module Juvix.Compiler.Asm.Language,
     module Juvix.Compiler.Core.Language.Base,
-    module Juvix.Compiler.Core.Language.Stripped.Type
+    module Juvix.Compiler.Core.Language.Stripped.Type,
   )
 where
 
