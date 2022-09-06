@@ -72,13 +72,15 @@ declareBuiltinConstr ::
   Interval ->
   Sem r ()
 declareBuiltinConstr btag nameTxt i = do
+  sym <- freshSymbol
   name <- freshName KNameConstructor nameTxt i
   registerConstructor
     ( ConstructorInfo
         { _constructorName = name,
           _constructorTag = BuiltinTag btag,
           _constructorType = mkDynamic',
-          _constructorArgsNum = builtinConstrArgsNum btag
+          _constructorArgsNum = builtinConstrArgsNum btag,
+          _constructorInductive = sym
         }
     )
 
@@ -187,13 +189,15 @@ statementConstr = do
     Nothing ->
       return ()
   tag <- lift freshTag
+  sym <- lift freshSymbol
   name <- lift $ freshName KNameConstructor txt i
   let info =
         ConstructorInfo
           { _constructorName = name,
             _constructorTag = tag,
             _constructorType = mkDynamic',
-            _constructorArgsNum = argsNum
+            _constructorArgsNum = argsNum,
+            _constructorInductive = sym
           }
   lift $ registerConstructor info
 
@@ -652,25 +656,13 @@ exprCase' ::
   ParsecS r Node
 exprCase' off value varsNum vars = do
   bs <- P.sepEndBy (caseBranchP varsNum vars) kwSemicolon
-  let bs' = map fromLeft' $ filter isLeft bs
-  let bss = map fst bs'
-  let bsns = map snd bs'
+  let bss = map fromLeft' $ filter isLeft bs
   let def' = map fromRight' $ filter isRight bs
-  let bi = CaseBinderInfo $ map (map (Info.singleton . NameInfo)) bsns
-  bri <-
-    CaseBranchInfo
-      <$> mapM
-        ( \(CaseBranch tag _ _) -> do
-            ci <- lift $ getConstructorInfo tag
-            return $ BranchInfo (ci ^. constructorName)
-        )
-        bss
-  let info = Info.insert bri (Info.singleton bi)
   case def' of
     [def] ->
-      return $ mkCase info value bss (Just def)
+      return $ mkCase' value bss (Just def)
     [] ->
-      return $ mkCase info value bss Nothing
+      return $ mkCase' value bss Nothing
     _ ->
       parseFailure off "multiple default branches"
 
@@ -678,7 +670,7 @@ caseBranchP ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Index ->
-  ParsecS r (Either (CaseBranch, [Name]) Node)
+  ParsecS r (Either CaseBranch Node)
 caseBranchP varsNum vars =
   (defaultBranch varsNum vars <&> Right)
     <|> (matchingBranch varsNum vars <&> Left)
@@ -697,7 +689,7 @@ matchingBranch ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Index ->
-  ParsecS r (CaseBranch, [Name])
+  ParsecS r CaseBranch
 matchingBranch varsNum vars = do
   off <- P.getOffset
   txt <- identifier
@@ -722,7 +714,8 @@ matchingBranch varsNum vars = do
                 (vars, varsNum)
                 ns
       br <- expr (varsNum + bindersNum) vars'
-      return (CaseBranch tag bindersNum br, ns)
+      let info = setInfoTagName (ci ^. constructorName) $ setInfoBinders (map (Info.singleton . NameInfo) ns) Info.empty
+      return $ CaseBranch info tag bindersNum br
     Nothing ->
       parseFailure off ("undeclared identifier: " ++ fromText txt)
 

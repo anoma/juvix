@@ -10,7 +10,7 @@ data InfoTable = InfoTable
     _identMap :: HashMap Text IdentKind,
     _infoMain :: Maybe Symbol,
     _infoIdentifiers :: HashMap Symbol IdentifierInfo,
-    _infoInductives :: HashMap Name InductiveInfo,
+    _infoInductives :: HashMap Symbol InductiveInfo,
     _infoConstructors :: HashMap Tag ConstructorInfo,
     _infoAxioms :: HashMap Name AxiomInfo
   }
@@ -57,7 +57,8 @@ data ConstructorInfo = ConstructorInfo
   { _constructorName :: Name,
     _constructorTag :: Tag,
     _constructorType :: Type,
-    _constructorArgsNum :: Int
+    _constructorArgsNum :: Int,
+    _constructorInductive :: Symbol
   }
 
 data ParameterInfo = ParameterInfo

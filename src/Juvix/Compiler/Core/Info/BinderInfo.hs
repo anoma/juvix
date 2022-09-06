@@ -19,17 +19,8 @@ instance IsInfo BindersInfo
 kBindersInfo :: Key BindersInfo
 kBindersInfo = Proxy
 
-newtype CaseBinderInfo = CaseBinderInfo
-  { _infoBranchBinders :: [[Info]]
-  }
-
-instance IsInfo CaseBinderInfo
-
-kCaseBinderInfo :: Key CaseBinderInfo
-kCaseBinderInfo = Proxy
-
 makeLenses ''BinderInfo
-makeLenses ''CaseBinderInfo
+makeLenses ''BindersInfo
 
 getInfoBinder :: Info -> Info
 getInfoBinder i =
@@ -42,3 +33,6 @@ getInfoBinders n i =
   case Info.lookup kBindersInfo i of
     Just (BindersInfo {..}) -> _infoBinders
     Nothing -> replicate n Info.empty
+
+setInfoBinders :: [Info] -> Info -> Info
+setInfoBinders = Info.insert . BindersInfo

@@ -71,7 +71,7 @@ mkCase' :: Node -> [CaseBranch] -> Maybe Node -> Node
 mkCase' = mkCase Info.empty
 
 mkIf :: Info -> Node -> Node -> Node -> Node
-mkIf i v b1 b2 = mkCase i v [CaseBranch (BuiltinTag TagTrue) 0 b1] (Just b2)
+mkIf i v b1 b2 = mkCase i v [CaseBranch Info.empty (BuiltinTag TagTrue) 0 b1] (Just b2)
 
 mkIf' :: Node -> Node -> Node -> Node
 mkIf' = mkIf Info.empty
@@ -194,36 +194,38 @@ destruct = \case
           (replicate (n + 1) (getInfoBinders n i))
           (\i' args' -> mkLetRec i' (fromList (tl args')) (hd args'))
   NCase (Case i v bs Nothing) ->
-    let branchBinderNums = map (\(CaseBranch _ k _) -> k) bs
+    let branchBinderNums = map (\(CaseBranch _ _ k _) -> k) bs
+        branchBinderInfos = map (\(CaseBranch bi _ k _) -> getInfoBinders k bi) bs
      in NodeDetails
           i
-          (v : map (\(CaseBranch _ _ br) -> br) bs)
+          (v : map (\(CaseBranch _ _ _ br) -> br) bs)
           (0 : branchBinderNums)
-          ([] : fetchCaseBinderInfo i (map (`replicate` Info.empty) branchBinderNums))
+          ([] : branchBinderInfos)
           ( \i' args' ->
               mkCase
                 i'
                 (hd args')
                 ( zipWithExact
-                    (\(CaseBranch tag k _) br' -> CaseBranch tag k br')
+                    (\(CaseBranch bi tag k _) br' -> CaseBranch bi tag k br')
                     bs
                     (tl args')
                 )
                 Nothing
           )
   NCase (Case i v bs (Just def)) ->
-    let branchBinderNums = map (\(CaseBranch _ k _) -> k) bs
+    let branchBinderNums = map (\(CaseBranch _ _ k _) -> k) bs
+        branchBinderInfos = map (\(CaseBranch bi _ k _) -> getInfoBinders k bi) bs
      in NodeDetails
           i
-          (v : def : map (\(CaseBranch _ _ br) -> br) bs)
+          (v : def : map (\(CaseBranch _ _ _ br) -> br) bs)
           (0 : 0 : branchBinderNums)
-          ([] : [] : fetchCaseBinderInfo i (map (`replicate` Info.empty) branchBinderNums))
+          ([] : [] : branchBinderInfos)
           ( \i' args' ->
               mkCase
                 i'
                 (hd args')
                 ( zipWithExact
-                    (\(CaseBranch tag k _) br' -> CaseBranch tag k br')
+                    (\(CaseBranch bi tag k _) br' -> CaseBranch bi tag k br')
                     bs
                     (tl (tl args'))
                 )
@@ -247,11 +249,6 @@ destruct = \case
   where
     fetchBinderInfo :: Info -> [Info]
     fetchBinderInfo i = [getInfoBinder i]
-
-    fetchCaseBinderInfo :: Info -> [[Info]] -> [[Info]]
-    fetchCaseBinderInfo i d = case Info.lookup kCaseBinderInfo i of
-      Just cbi -> cbi ^. infoBranchBinders
-      Nothing -> d
 
     hd :: [a] -> a
     hd = List.head

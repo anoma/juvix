@@ -82,10 +82,7 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
 
     branch :: Node -> Env -> [Node] -> Tag -> Maybe Node -> [CaseBranch] -> Node
     branch n !env !args !tag !def = \case
-      (CaseBranch tag' _ b) : _
-        | tag' == tag ->
-            let !env' = revAppend args env
-             in eval' env' b
+      (CaseBranch _ tag' _ b) : _ | tag' == tag -> eval' (revAppend args env) b
       _ : bs' -> branch n env args tag def bs'
       [] -> case def of
         Just b -> eval' env b
