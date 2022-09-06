@@ -4,7 +4,6 @@ module Juvix.Compiler.Core.Transformation.LambdaLifting
   )
 where
 
-import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
 lambdaLiftNode :: Node -> Sem r Node
