@@ -1,4 +1,4 @@
-module Core.Base where
+module Core.Eval.Base where
 
 import Base
 import Data.Text.IO qualified as TIO

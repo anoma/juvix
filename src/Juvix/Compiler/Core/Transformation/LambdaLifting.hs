@@ -4,13 +4,10 @@ module Juvix.Compiler.Core.Transformation.LambdaLifting
   )
 where
 
-import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Transformation.Base
 
-lambdaLiftNode :: Member InfoTableBuilder r => Node -> Sem r Node
-lambdaLiftNode _ = do
-  void freshSymbol
-  error "not yet implemented"
+lambdaLiftNode :: Node -> Sem r Node
+lambdaLiftNode = return
 
-lambdaLifting :: Transformation
+lambdaLifting :: InfoTable -> InfoTable
 lambdaLifting = run . mapT' lambdaLiftNode

@@ -1,7 +1,7 @@
-module Core.Positive where
+module Core.Eval.Positive where
 
 import Base
-import Core.Base
+import Core.Eval.Base
 
 data PosTest = PosTest
   { _name :: String,
@@ -226,7 +226,7 @@ tests =
       "test039.jvc"
       "out/test039.out",
     PosTest
-      "Letrec"
+      "LetRec"
       "."
       "test040.jvc"
       "out/test040.out"

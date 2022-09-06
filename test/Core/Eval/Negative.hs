@@ -1,7 +1,7 @@
-module Core.Negative where
+module Core.Eval.Negative where
 
 import Base
-import Core.Base
+import Core.Eval.Base
 
 data NegTest = NegTest
   { _name :: String,

@@ -13,7 +13,7 @@ data InternalArityResult = InternalArityResult
 makeLenses ''InternalArityResult
 
 mainModule :: Lens' InternalArityResult Module
-mainModule = resultModules . _head
+mainModule = resultModules . _head1
 
 internalArityResultEntryPoint :: Lens' InternalArityResult E.EntryPoint
 internalArityResultEntryPoint = resultInternalResult . M.microJuvixResultEntryPoint
