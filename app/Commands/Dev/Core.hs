@@ -1,29 +1,42 @@
 module Commands.Dev.Core where
 
+import Juvix.Compiler.Core.Data.TransformationId.Parser
 import Juvix.Prelude hiding (Doc)
 import Options.Applicative
 
 data CoreCommand
   = Repl CoreReplOptions
   | Eval CoreEvalOptions
+  | Read CoreReadOptions
 
 newtype CoreReplOptions = CoreReplOptions
   { _coreReplShowDeBruijn :: Bool
   }
 
-data CoreEvalOptions = CoreEvalOptions
-  { _coreEvalShowDeBruijn :: Bool,
-    _coreEvalNoIO :: Bool
+newtype CoreEvalOptions = CoreEvalOptions
+  { _coreEvalNoIO :: Bool
+  }
+
+data CoreReadOptions = CoreReadOptions
+  { _coreReadTransformations :: [TransformationId],
+    _coreReadShowDeBruijn :: Bool
   }
 
 makeLenses ''CoreReplOptions
 makeLenses ''CoreEvalOptions
+makeLenses ''CoreReadOptions
 
 defaultCoreEvalOptions :: CoreEvalOptions
 defaultCoreEvalOptions =
   CoreEvalOptions
-    { _coreEvalShowDeBruijn = False,
-      _coreEvalNoIO = False
+    { _coreEvalNoIO = False
+    }
+
+defaultCoreReadOptions :: CoreReadOptions
+defaultCoreReadOptions =
+  CoreReadOptions
+    { _coreReadTransformations = mempty,
+      _coreReadShowDeBruijn = False
     }
 
 parseCoreCommand :: Parser CoreCommand
@@ -31,7 +44,8 @@ parseCoreCommand =
   hsubparser $
     mconcat
       [ commandRepl,
-        commandEval
+        commandEval,
+        commandRead
       ]
   where
     commandRepl :: Mod CommandFields CoreCommand
@@ -39,6 +53,9 @@ parseCoreCommand =
 
     commandEval :: Mod CommandFields CoreCommand
     commandEval = command "eval" evalInfo
+
+    commandRead :: Mod CommandFields CoreCommand
+    commandRead = command "read" readInfo
 
     replInfo :: ParserInfo CoreCommand
     replInfo =
@@ -52,13 +69,31 @@ parseCoreCommand =
         (Eval <$> parseCoreEvalOptions)
         (progDesc "Evaluate a JuvixCore file and pretty print the result")
 
+    readInfo :: ParserInfo CoreCommand
+    readInfo =
+      info
+        (Read <$> parseCoreReadOptions)
+        (progDesc "Read a JuvixCore file, transform it, and pretty print it")
+
+parseCoreReadOptions :: Parser CoreReadOptions
+parseCoreReadOptions = do
+  _coreReadShowDeBruijn <- deBruijnOpt
+  _coreReadTransformations <-
+    option
+      (eitherReader parseTransf)
+      ( long "transforms"
+          <> short 't'
+          <> value mempty
+          <> metavar "[Transform]"
+          <> help "comma sep list of transformations. Available: lifting"
+      )
+  pure CoreReadOptions {..}
+  where
+    parseTransf :: String -> Either String [TransformationId]
+    parseTransf = mapLeft unpack . parseTransformations . pack
+
 parseCoreEvalOptions :: Parser CoreEvalOptions
 parseCoreEvalOptions = do
-  _coreEvalShowDeBruijn <-
-    switch
-      ( long "show-de-bruijn"
-          <> help "Show variable de Bruijn indices"
-      )
   _coreEvalNoIO <-
     switch
       ( long "no-io"
@@ -66,11 +101,14 @@ parseCoreEvalOptions = do
       )
   pure CoreEvalOptions {..}
 
+deBruijnOpt :: Parser Bool
+deBruijnOpt =
+  switch
+    ( long "show-de-bruijn"
+        <> help "Show variable de Bruijn indices"
+    )
+
 parseCoreReplOptions :: Parser CoreReplOptions
 parseCoreReplOptions = do
-  _coreReplShowDeBruijn <-
-    switch
-      ( long "show-de-bruijn"
-          <> help "Show variable de Bruijn indices"
-      )
+  _coreReplShowDeBruijn <- deBruijnOpt
   pure CoreReplOptions {..}

@@ -49,13 +49,13 @@ testDescr PosTest {..} =
                   | otherwise = HashMap.union fs stdlibMap
 
             step "Parsing"
-            p :: Parser.ParserResult <- runIO' (upToParsing entryPoint)
+            p :: Parser.ParserResult <- runIO (upToParsing entryPoint)
 
             let p2 = head (p ^. Parser.resultModules)
 
             step "Scoping"
             s :: Scoper.ScoperResult <-
-              runIO'
+              runIO
                 ( do
                     void (entrySetup entryPoint)
                     Concrete.fromParsed p
@@ -78,18 +78,18 @@ testDescr PosTest {..} =
             step "Parsing pretty scoped"
             let fs2 = unionStdlib (HashMap.singleton entryFile scopedPretty)
             p' :: Parser.ParserResult <-
-              (runM . runErrorIO' @JuvixError . runNameIdGen . runFilesPure fs2)
+              (runM . runErrorIO @JuvixError . runNameIdGen . runFilesPure fs2)
                 (upToParsing entryPoint)
 
             step "Parsing pretty parsed"
             let fs3 = unionStdlib (HashMap.singleton entryFile parsedPretty)
             parsedPretty' :: Parser.ParserResult <-
-              (runM . runErrorIO' @JuvixError . runNameIdGen . runFilesPure fs3)
+              (runM . runErrorIO @JuvixError . runNameIdGen . runFilesPure fs3)
                 (upToParsing entryPoint)
 
             step "Scoping the scoped"
             s' :: Scoper.ScoperResult <-
-              (runM . runErrorIO' @JuvixError . runNameIdGen . runFilesPure fs)
+              (runM . runErrorIO @JuvixError . runNameIdGen . runFilesPure fs)
                 (upToScoping entryPoint)
 
             step "Checks"

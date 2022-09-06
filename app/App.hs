@@ -9,7 +9,7 @@ import Juvix.Prelude.Pretty hiding (Doc)
 import System.Console.ANSI qualified as Ansi
 
 data App m a where
-  ExitMsg :: ExitCode -> Text -> App m ()
+  ExitMsg :: ExitCode -> Text -> App m a
   ExitJuvixError :: JuvixError -> App m a
   PrintJuvixError :: JuvixError -> App m ()
   ReadGlobalOptions :: App m GlobalOptions
@@ -53,8 +53,20 @@ runPipeline p = do
 newline :: Member App r => Sem r ()
 newline = say ""
 
-printSuccessExit :: Member App r => Text -> Sem r ()
+printSuccessExit :: Member App r => Text -> Sem r a
 printSuccessExit = exitMsg ExitSuccess
 
-printFailureExit :: Member App r => Text -> Sem r ()
+printFailureExit :: Member App r => Text -> Sem r a
 printFailureExit = exitMsg (ExitFailure 1)
+
+getRight :: (Members '[App] r, AppError e) => Either e a -> Sem r a
+getRight = either appError return
+
+instance AppError Text where
+  appError = printFailureExit
+
+instance AppError JuvixError where
+  appError = exitJuvixError
+
+class AppError e where
+  appError :: Members '[App] r => e -> Sem r a

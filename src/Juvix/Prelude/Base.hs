@@ -132,7 +132,7 @@ import GHC.Num
 import GHC.Real
 import GHC.Stack.Types
 import Language.Haskell.TH.Syntax (Lift)
-import Lens.Micro.Platform hiding (both, _head)
+import Lens.Micro.Platform hiding (both)
 import Polysemy
 import Polysemy.Embed
 import Polysemy.Error hiding (fromEither)

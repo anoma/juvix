@@ -25,7 +25,7 @@ data InternalTypedResult = InternalTypedResult
 makeLenses ''InternalTypedResult
 
 mainModule :: Lens' InternalTypedResult Module
-mainModule = resultModules . _head
+mainModule = resultModules . _head1
 
 internalTypedResultEntryPoint :: Lens' InternalTypedResult E.EntryPoint
 internalTypedResultEntryPoint = resultInternalArityResult . Arity.internalArityResultEntryPoint

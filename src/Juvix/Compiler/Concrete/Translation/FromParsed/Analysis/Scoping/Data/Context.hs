@@ -17,4 +17,4 @@ data ScoperResult = ScoperResult
 makeLenses ''ScoperResult
 
 mainModule :: Lens' ScoperResult (Module 'Scoped 'ModuleTop)
-mainModule = resultModules . _head
+mainModule = resultModules . _head1

@@ -36,4 +36,4 @@ defaultEntryPoint mainFile =
 makeLenses ''EntryPoint
 
 mainModulePath :: Lens' EntryPoint FilePath
-mainModulePath = entryPointModulePaths . _head
+mainModulePath = entryPointModulePaths . _head1

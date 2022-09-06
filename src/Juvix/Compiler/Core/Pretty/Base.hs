@@ -5,10 +5,11 @@ module Juvix.Compiler.Core.Pretty.Base
   )
 where
 
-import Data.List qualified as List
+import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
-import Juvix.Compiler.Core.Info.BinderInfo as BinderInfo
+import Juvix.Compiler.Core.Info.BinderInfo
 import Juvix.Compiler.Core.Info.BranchInfo as BranchInfo
 import Juvix.Compiler.Core.Info.NameInfo as NameInfo
 import Juvix.Compiler.Core.Language
@@ -62,6 +63,23 @@ instance PrettyCode Tag where
   ppCode = \case
     BuiltinTag tag -> ppCode tag
     UserTag tag -> return $ kwUnnamedConstr <> pretty tag
+
+instance PrettyCode InfoTable where
+  ppCode :: forall r. Member (Reader Options) r => InfoTable -> Sem r (Doc Ann)
+  ppCode tbl = do
+    ctx' <- ppContext (tbl ^. identContext)
+    return ("-- IdentContext" <> line <> ctx' <> line)
+    where
+      ppContext :: IdentContext -> Sem r (Doc Ann)
+      ppContext ctx = do
+        defs <- mapM (uncurry ppDef) (HashMap.toList ctx)
+        return (vsep defs)
+        where
+          ppDef :: Symbol -> Node -> Sem r (Doc Ann)
+          ppDef s n = do
+            sym' <- maybe (return (pretty s)) ppCode (tbl ^? infoIdentifiers . at s . _Just . identifierName)
+            body' <- ppCode n
+            return (kwDef <+> sym' <+> kwAssign <+> body')
 
 instance PrettyCode Node where
   ppCode :: forall r. Member (Reader Options) r => Node -> Sem r (Doc Ann)
@@ -124,17 +142,16 @@ instance PrettyCode Node where
       ns <- mapM getName (getInfoBinders n _letRecInfo)
       vs <- mapM ppCode _letRecValues
       b' <- ppCode _letRecBody
-      if
-          | length ns == 1 ->
-              return $ kwLetRec <+> List.head ns <+> kwAssign <+> head vs <+> kwIn <+> b'
-          | otherwise ->
-              let bss =
-                    indent' $
-                      align $
-                        concatWith (\a b -> a <> kwSemicolon <> line <> b) $
-                          zipWithExact (\name val -> name <+> kwAssign <+> val) ns (toList vs)
-                  nss = enclose kwSquareL kwSquareR (concatWith (<+>) ns)
-               in return $ kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
+      case listToMaybe ns of
+        Just hns -> return $ kwLetRec <+> hns <+> kwAssign <+> head vs <+> kwIn <+> b'
+        Nothing ->
+          let bss =
+                indent' $
+                  align $
+                    concatWith (\a b -> a <> kwSemicolon <> line <> b) $
+                      zipWithExact (\name val -> name <+> kwAssign <+> val) ns (toList vs)
+              nss = enclose kwSquareL kwSquareR (concatWith (<+>) ns)
+            in return $ kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
       where
         getName :: Info -> Sem r (Doc Ann)
         getName i =
@@ -281,6 +298,9 @@ kwDefault = keyword Str.underscore
 
 kwPi :: Doc Ann
 kwPi = keyword Str.pi_
+
+kwDef :: Doc Ann
+kwDef = keyword Str.def
 
 kwTrace :: Doc Ann
 kwTrace = keyword Str.trace_

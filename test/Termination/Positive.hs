@@ -21,7 +21,7 @@ testDescr PosTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint = (defaultEntryPoint _file) {_entryPointNoStdlib = True}
-            (void . runIO') (upToInternal entryPoint)
+            (void . runIO) (upToInternal entryPoint)
         }
 
 --------------------------------------------------------------------------------
@@ -45,7 +45,7 @@ testDescrFlag N.NegTest {..} =
                       _entryPointNoStdlib = True
                     }
 
-            (void . runIO') (upToInternal entryPoint)
+            (void . runIO) (upToInternal entryPoint)
         }
 
 --------------------------------------------------------------------------------
