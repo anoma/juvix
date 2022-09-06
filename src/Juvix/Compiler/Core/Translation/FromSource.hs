@@ -7,9 +7,10 @@ where
 import Control.Monad.Trans.Class (lift)
 import Data.HashMap.Strict qualified as HashMap
 import Data.List qualified as List
+import Data.List.NonEmpty (fromList)
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.InfoTableBuilder
-import Juvix.Compiler.Core.Extra.Base
+import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.BinderInfo as BinderInfo
 import Juvix.Compiler.Core.Info.BranchInfo as BranchInfo
@@ -126,12 +127,12 @@ statementDef = do
   (txt, i) <- identifierL
   r <- lift (getIdent txt)
   case r of
-    Just (Left sym) -> do
+    Just (IdentSym sym) -> do
       guardSymbolNotDefined
         sym
         (parseFailure off ("duplicate definition of: " ++ fromText txt))
       parseDefinition sym
-    Just (Right {}) ->
+    Just (IdentTag {}) ->
       parseFailure off ("duplicate identifier: " ++ fromText txt)
     Nothing -> do
       sym <- lift freshSymbol
@@ -177,10 +178,14 @@ statementConstr = do
   off <- P.getOffset
   (txt, i) <- identifierL
   (argsNum, _) <- number 0 128
-  dupl <- lift (hasIdent txt)
-  when
-    dupl
-    (parseFailure off ("duplicate identifier: " ++ fromText txt))
+  r <- lift (getIdent txt)
+  case r of
+    Just (IdentSym _) ->
+      parseFailure off ("duplicate identifier: " ++ fromText txt)
+    Just (IdentTag _) ->
+      parseFailure off ("duplicate identifier: " ++ fromText txt)
+    Nothing ->
+      return ()
   tag <- lift freshTag
   name <- lift $ freshName KNameConstructor txt i
   let info =
@@ -467,6 +472,8 @@ atom varsNum vars =
     <|> exprConstInt
     <|> exprConstString
     <|> exprLambda varsNum vars
+    <|> exprLetrecMany varsNum vars
+    <|> exprLetrecOne varsNum vars
     <|> exprLet varsNum vars
     <|> exprCase varsNum vars
     <|> exprIf varsNum vars
@@ -488,10 +495,10 @@ exprNamed varsNum vars = do
     Nothing -> do
       r <- lift (getIdent txt)
       case r of
-        Just (Left sym) -> do
+        Just (IdentSym sym) -> do
           name <- lift $ freshName KNameFunction txt i
           return $ mkIdent (Info.singleton (NameInfo name)) sym
-        Just (Right tag) -> do
+        Just (IdentTag tag) -> do
           name <- lift $ freshName KNameConstructor txt i
           return $ mkConstr (Info.singleton (NameInfo name)) tag []
         Nothing ->
@@ -538,6 +545,75 @@ exprLambda varsNum vars = do
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- expr (varsNum + 1) vars'
   return $ mkLambda (binderNameInfo name) body
+
+exprLetrecOne ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Index ->
+  HashMap Text Index ->
+  ParsecS r Node
+exprLetrecOne varsNum vars = do
+  kwLetRec
+  name <- parseLocalName
+  kwAssignment
+  let vars' = HashMap.insert (name ^. nameText) varsNum vars
+  value <- expr (varsNum + 1) vars'
+  kwIn
+  body <- expr (varsNum + 1) vars'
+  return $ mkLetRec (Info.singleton (BindersInfo [Info.singleton (NameInfo name)])) (fromList [value]) body
+
+exprLetrecMany ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Index ->
+  HashMap Text Index ->
+  ParsecS r Node
+exprLetrecMany varsNum vars = do
+  off <- P.getOffset
+  defNames <- P.try (kwLetRec >> letrecNames)
+  when (null defNames) $
+    parseFailure off "expected at least one identifier name in letrec signature"
+  let (vars', varsNum') = foldl' (\(vs, k) txt -> (HashMap.insert txt k vs, k + 1)) (vars, varsNum) defNames
+  defs <- letrecDefs defNames varsNum' vars'
+  body <- expr varsNum' vars'
+  let infos = map (Info.singleton . NameInfo . fst) defs
+  let values = map snd defs
+  return $ mkLetRec (Info.singleton (BindersInfo infos)) (fromList values) body
+
+letrecNames :: ParsecS r [Text]
+letrecNames = P.between (symbol "[") (symbol "]") (P.many identifier)
+
+letrecDefs ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  [Text] ->
+  Index ->
+  HashMap Text Index ->
+  ParsecS r [(Name, Node)]
+letrecDefs names varsNum vars = case names of
+  [] -> return []
+  n : names' -> do
+    off <- P.getOffset
+    (txt, i) <- identifierL
+    when (n /= txt) $
+      parseFailure off "identifier name doesn't match letrec signature"
+    name <- lift $ freshName KNameLocal txt i
+    kwAssignment
+    v <- expr varsNum vars
+    if
+        | null names' -> optional kwSemicolon >> kwIn
+        | otherwise -> kwSemicolon
+    rest <- letrecDefs names' varsNum vars
+    return $ (name, v) : rest
+
+letrecDef ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Index ->
+  HashMap Text Index ->
+  ParsecS r (Name, Node)
+letrecDef varsNum vars = do
+  (txt, i) <- identifierL
+  name <- lift $ freshName KNameLocal txt i
+  kwAssignment
+  v <- expr varsNum vars
+  return (name, v)
 
 exprLet ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -627,9 +703,9 @@ matchingBranch varsNum vars = do
   txt <- identifier
   r <- lift (getIdent txt)
   case r of
-    Just (Left {}) ->
+    Just (IdentSym {}) ->
       parseFailure off ("not a constructor: " ++ fromText txt)
-    Just (Right tag) -> do
+    Just (IdentTag tag) -> do
       ns <- P.many parseLocalName
       let bindersNum = length ns
       ci <- lift $ getConstructorInfo tag

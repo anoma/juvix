@@ -11,17 +11,10 @@ data InfoTableBuilder m a where
   RegisterConstructor :: ConstructorInfo -> InfoTableBuilder m ()
   RegisterIdentNode :: Symbol -> Node -> InfoTableBuilder m ()
   SetIdentArgsInfo :: Symbol -> [ArgumentInfo] -> InfoTableBuilder m ()
-  GetIdent :: Text -> InfoTableBuilder m (Maybe (Either Symbol Tag))
+  GetIdent :: Text -> InfoTableBuilder m (Maybe IdentKind)
   GetInfoTable :: InfoTableBuilder m InfoTable
 
 makeSem ''InfoTableBuilder
-
-hasIdent :: Member InfoTableBuilder r => Text -> Sem r Bool
-hasIdent txt = do
-  i <- getIdent txt
-  case i of
-    Just _ -> return True
-    Nothing -> return False
 
 getConstructorInfo :: Member InfoTableBuilder r => Tag -> Sem r ConstructorInfo
 getConstructorInfo tag = do
@@ -67,10 +60,10 @@ runInfoTableBuilder tab =
         return (UserTag (s ^. stateNextUserTag - 1))
       RegisterIdent ii -> do
         modify' (over stateInfoTable (over infoIdentifiers (HashMap.insert (ii ^. identifierSymbol) ii)))
-        modify' (over stateInfoTable (over identMap (HashMap.insert (ii ^. (identifierName . nameText)) (Left (ii ^. identifierSymbol)))))
+        modify' (over stateInfoTable (over identMap (HashMap.insert (ii ^. (identifierName . nameText)) (IdentSym (ii ^. identifierSymbol)))))
       RegisterConstructor ci -> do
         modify' (over stateInfoTable (over infoConstructors (HashMap.insert (ci ^. constructorTag) ci)))
-        modify' (over stateInfoTable (over identMap (HashMap.insert (ci ^. (constructorName . nameText)) (Right (ci ^. constructorTag)))))
+        modify' (over stateInfoTable (over identMap (HashMap.insert (ci ^. (constructorName . nameText)) (IdentTag (ci ^. constructorTag)))))
       RegisterIdentNode sym node ->
         modify' (over stateInfoTable (over identContext (HashMap.insert sym node)))
       SetIdentArgsInfo sym argsInfo -> do

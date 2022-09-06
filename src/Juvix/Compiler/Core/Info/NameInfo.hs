@@ -17,3 +17,6 @@ getInfoName i =
   case Info.lookup kNameInfo i of
     Just (NameInfo {..}) -> Just _infoName
     Nothing -> Nothing
+
+setInfoName :: Name -> Info -> Info
+setInfoName = Info.insert . NameInfo

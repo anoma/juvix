@@ -9,9 +9,10 @@ module Juvix.Compiler.Core.Evaluator where
 import Control.Exception qualified as Exception
 import Data.HashMap.Strict qualified as HashMap
 import Debug.Trace qualified as Debug
+import GHC.Conc qualified as GHC
 import GHC.Show as S
 import Juvix.Compiler.Core.Data.InfoTable
-import Juvix.Compiler.Core.Error
+import Juvix.Compiler.Core.Error (CoreError (..))
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
@@ -50,7 +51,7 @@ eval :: IdentContext -> Env -> Node -> Node
 eval !ctx !env0 = convertRuntimeNodes . eval' env0
   where
     evalError :: Text -> Node -> a
-    evalError !msg !node = Exception.throw (EvalError msg (Just node))
+    evalError msg node = Exception.throw (EvalError msg (Just node))
 
     eval' :: Env -> Node -> Node
     eval' !env !n = case n of
@@ -65,6 +66,10 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       NCtr (Constr i tag args) -> mkConstr i tag (map' (eval' env) args)
       NLam l@Lambda {} -> Closure env l
       NLet (Let _ v b) -> let !v' = eval' env v in eval' (v' : env) b
+      NRec (LetRec _ vs b) ->
+        let !vs' = map (eval' env') (toList vs)
+            !env' = revAppend vs' env
+         in foldr GHC.pseq (eval' env' b) vs'
       NCase (Case i v bs def) ->
         case eval' env v of
           NCtr (Constr _ tag args) -> branch n env args tag def bs
@@ -77,7 +82,10 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
 
     branch :: Node -> Env -> [Node] -> Tag -> Maybe Node -> [CaseBranch] -> Node
     branch n !env !args !tag !def = \case
-      (CaseBranch tag' _ b) : _ | tag' == tag -> eval' (revAppend args env) b
+      (CaseBranch tag' _ b) : _
+        | tag' == tag ->
+            let !env' = revAppend args env
+             in eval' env' b
       _ : bs' -> branch n env args tag def bs'
       [] -> case def of
         Just b -> eval' env b

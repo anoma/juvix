@@ -71,6 +71,9 @@ print = "print"
 let_ :: IsString s => s
 let_ = "let"
 
+letrec_ :: IsString s => s
+letrec_ = "letrec"
+
 public :: IsString s => s
 public = "public"
 
@@ -187,6 +190,9 @@ foreign_ = "foreign"
 
 compile :: IsString s => s
 compile = "compile"
+
+comma :: IsString s => s
+comma = ","
 
 semicolon :: IsString s => s
 semicolon = ";"

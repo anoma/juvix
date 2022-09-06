@@ -17,3 +17,6 @@ getInfoType i =
   case Info.lookup kTypeInfo i of
     Just (TypeInfo {..}) -> Just _infoType
     Nothing -> Nothing
+
+setInfoType :: Type -> Info -> Info
+setInfoType = Info.insert . TypeInfo

@@ -56,6 +56,7 @@ allKeywords =
     kwColon,
     kwLambda,
     kwLet,
+    kwLetRec,
     kwIn,
     kwConstr,
     kwCase,
@@ -116,6 +117,9 @@ kwLambda = rawKeyword Str.lambdaUnicode <|> rawKeyword Str.lambdaAscii
 
 kwLet :: ParsecS r ()
 kwLet = keyword Str.let_
+
+kwLetRec :: ParsecS r ()
+kwLetRec = keyword Str.letrec_
 
 kwIn :: ParsecS r ()
 kwIn = keyword Str.in_

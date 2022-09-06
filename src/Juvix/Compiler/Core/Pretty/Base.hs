@@ -5,6 +5,7 @@ module Juvix.Compiler.Core.Pretty.Base
   )
 where
 
+import Data.List qualified as List
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.BinderInfo as BinderInfo
@@ -63,6 +64,7 @@ instance PrettyCode Tag where
     UserTag tag -> return $ kwUnnamedConstr <> pretty tag
 
 instance PrettyCode Node where
+  ppCode :: forall r. Member (Reader Options) r => Node -> Sem r (Doc Ann)
   ppCode node = case node of
     NVar Var {..} ->
       case Info.lookup kNameInfo _varInfo of
@@ -102,7 +104,7 @@ instance PrettyCode Node where
       b <- ppCode body
       return $ foldl' (flip (<+>)) b pplams
       where
-        ppLam :: Member (Reader Options) r => Info -> Sem r (Doc Ann)
+        ppLam :: Info -> Sem r (Doc Ann)
         ppLam i =
           case getInfoName (getInfoBinder i) of
             Just name -> do
@@ -117,6 +119,28 @@ instance PrettyCode Node where
       v' <- ppCode _letValue
       b' <- ppCode _letBody
       return $ kwLet <+> n' <+> kwAssign <+> v' <+> kwIn <+> b'
+    NRec LetRec {..} -> do
+      let n = length _letRecValues
+      ns <- mapM getName (getInfoBinders n _letRecInfo)
+      vs <- mapM ppCode _letRecValues
+      b' <- ppCode _letRecBody
+      if
+          | length ns == 1 ->
+              return $ kwLetRec <+> List.head ns <+> kwAssign <+> head vs <+> kwIn <+> b'
+          | otherwise ->
+              let bss =
+                    indent' $
+                      align $
+                        concatWith (\a b -> a <> kwSemicolon <> line <> b) $
+                          zipWithExact (\name val -> name <+> kwAssign <+> val) ns (toList vs)
+                  nss = enclose kwSquareL kwSquareR (concatWith (<+>) ns)
+               in return $ kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
+      where
+        getName :: Info -> Sem r (Doc Ann)
+        getName i =
+          case getInfoName i of
+            Just name -> ppCode name
+            Nothing -> return kwQuestion
     NCase Case {..} -> do
       bns <-
         case Info.lookup kCaseBinderInfo _caseInfo of
@@ -204,6 +228,12 @@ ppLRExpression associates fixlr e =
 {--------------------------------------------------------------------------------}
 {- keywords -}
 
+kwSquareL :: Doc Ann
+kwSquareL = delimiter "["
+
+kwSquareR :: Doc Ann
+kwSquareR = delimiter "]"
+
 kwDeBruijnVar :: Doc Ann
 kwDeBruijnVar = keyword Str.deBruijnVar
 
@@ -236,6 +266,9 @@ kwDiv = keyword Str.div
 
 kwMod :: Doc Ann
 kwMod = keyword Str.mod
+
+kwLetRec :: Doc Ann
+kwLetRec = keyword Str.letrec_
 
 kwCase :: Doc Ann
 kwCase = keyword Str.case_
