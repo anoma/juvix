@@ -131,11 +131,6 @@ instance EmbedIdentity Node where
 instance EmbedIdentity Recur where
   embedIden = Identity
 
-type KEmbedIden :: Monadic -> GHC.Type -> GHC.Constraint
-type family KEmbedIden mon ty = res where
-  KEmbedIden 'Monadic ty = ty ~ ty
-  KEmbedIden 'NonMonadic ty = EmbedIdentity ty
-
 type KDefaultIdentity :: Monadic -> (GHC.Type -> GHC.Type) -> GHC.Constraint
 type family KDefaultIdentity mon m = res | res -> m where
   KDefaultIdentity 'Monadic m = m ~ m
@@ -149,7 +144,6 @@ type family KCompatibleDir dir r = res where
 nodeMapE ::
   forall (dir :: Direction) (mon :: Monadic) (i :: CollectorIni) (x :: Ctx) (r :: Ret) m.
   ( Monad m,
-    KEmbedIden mon (NodeMapArg m dir mon i x r),
     KDefaultIdentity mon m,
     KCompatibleDir dir r
   ) =>
@@ -223,7 +217,6 @@ nodeMapI ::
     SingI x,
     SingI r,
     Monad m,
-    KEmbedIden mon (NodeMapArg m dir mon i x r),
     KDefaultIdentity mon m,
     KCompatibleDir dir r
   ) =>
