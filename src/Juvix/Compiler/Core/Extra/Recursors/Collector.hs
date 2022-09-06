@@ -20,7 +20,7 @@ binderInfoCollector :: Collector (Int, [Info]) (BinderList Info)
 binderInfoCollector =
   Collector
     BL.empty
-    (\(k, bi) c -> if k == 0 then c else BL.prepend bi c)
+    (\(k, bi) c -> if k == 0 then c else BL.prepend (reverse bi) c)
 
 binderNumCollector :: Collector (Int, [Info]) Index
 binderNumCollector = Collector 0 (\(k, _) c -> c + k)
