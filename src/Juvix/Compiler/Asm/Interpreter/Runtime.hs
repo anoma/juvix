@@ -1,6 +1,7 @@
 module Juvix.Compiler.Asm.Interpreter.Runtime where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Asm.Data.Stack qualified as Stack
 import Juvix.Compiler.Asm.Language
 
 {-
@@ -56,20 +57,17 @@ data ArgumentArea = ArgumentArea
     _argumentAreaSize :: Int
   }
 
-data TemporaryArea = TemporaryArea
-  { _temporaryArea :: HashMap Offset Val,
-    _temporaryAreaSize :: Int
-  }
+newtype TemporaryStack = TemporaryStack {_temporaryStack :: Stack Val}
 
 newtype ValueStack = ValueStack
   { _valueStack :: [Val]
   }
 
 -- An activation frame contains the function-local memory (local argument area,
--- temporary area, value stack) for a single function invocation.
+-- temporary stack, value stack) for a single function invocation.
 data Frame = Frame
   { _frameArgs :: ArgumentArea,
-    _frameTemp :: TemporaryArea,
+    _frameTemp :: TemporaryStack,
     _frameStack :: ValueStack
   }
 
@@ -77,7 +75,7 @@ emptyFrame :: Frame
 emptyFrame =
   Frame
     { _frameArgs = ArgumentArea mempty 0,
-      _frameTemp = TemporaryArea mempty 0,
+      _frameTemp = TemporaryStack Stack.empty,
       _frameStack = ValueStack []
     }
 
@@ -124,7 +122,7 @@ data RuntimeState = RuntimeState
 makeLenses ''CallStack
 makeLenses ''Continuation
 makeLenses ''ArgumentArea
-makeLenses ''TemporaryArea
+makeLenses ''TemporaryStack
 makeLenses ''ValueStack
 makeLenses ''Frame
 makeLenses ''Constr
@@ -142,7 +140,8 @@ data Runtime m a where
   ReplaceFrame :: Frame -> Runtime m ()
   ReadArg :: Offset -> Runtime m Val
   ReadTemp :: Offset -> Runtime m Val
-  WriteTemp :: Offset -> Val -> Runtime m ()
+  PushTempStack :: Val -> Runtime m ()
+  PopTempStack :: Runtime m ()
 
 makeSem ''Runtime
 
@@ -190,25 +189,11 @@ runRuntime = runState (RuntimeState (CallStack []) emptyFrame) . interp
             (HashMap.lookup off (s ^. (runtimeFrame . frameArgs . argumentArea)))
       ReadTemp off -> do
         s <- get
-        return $
-          fromMaybe
-            (error "invalid temporary area read")
-            (HashMap.lookup off (s ^. (runtimeFrame . frameTemp . temporaryArea)))
-      WriteTemp off val ->
-        modify'
-          ( over
-              runtimeFrame
-              ( over
-                  frameTemp
-                  ( \(TemporaryArea a n) ->
-                      if
-                          | off < n && not (HashMap.member off a) ->
-                              TemporaryArea (HashMap.insert off val a) n
-                          | otherwise ->
-                              error "invalid temporary area write"
-                  )
-              )
-          )
+        return $ Stack.nth off (s ^. (runtimeFrame . frameTemp . temporaryStack))
+      PushTempStack val ->
+        modify' (over runtimeFrame (over frameTemp (over temporaryStack (Stack.push val))))
+      PopTempStack ->
+        modify' (over runtimeFrame (over frameTemp (over temporaryStack Stack.pop)))
 
 evalRuntime :: forall r a. Sem (Runtime ': r) a -> Sem r a
 evalRuntime = fmap snd . runRuntime

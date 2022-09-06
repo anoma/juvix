@@ -6,9 +6,11 @@ module Juvix.Compiler.Asm.Language
   ( module Juvix.Compiler.Asm.Language,
     module Juvix.Compiler.Core.Language.Base,
     module Juvix.Compiler.Core.Language.Stripped.Type,
+    Stack,
   )
 where
 
+import Juvix.Compiler.Asm.Data.Stack (Stack)
 import Juvix.Compiler.Core.Language.Base
 import Juvix.Compiler.Core.Language.Stripped.Type
 
