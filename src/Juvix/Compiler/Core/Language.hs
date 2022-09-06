@@ -32,7 +32,7 @@ type instance FLet 'Main = Let' Info Node
 
 type instance FLetRec 'Main = LetRec' Info Node
 
-type instance FCase 'Main = Case' Info Node
+type instance FCase 'Main = Case' Info Info Node
 
 type instance FPi 'Main = Pi' Info Node
 
@@ -72,7 +72,7 @@ type TypeConstr = FTypeConstr 'Main
 
 type Dynamic = FDynamic 'Main
 
-type CaseBranch = CaseBranch' Node
+type CaseBranch = CaseBranch' Info Node
 
 {---------------------------------------------------------------------------------}
 

@@ -13,6 +13,7 @@ import Juvix.Compiler.Core.Info.BinderInfo
 import Juvix.Compiler.Core.Info.BranchInfo as BranchInfo
 import Juvix.Compiler.Core.Info.NameInfo as NameInfo
 import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Language.Stripped qualified as Stripped
 import Juvix.Compiler.Core.Pretty.Options
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
@@ -81,41 +82,118 @@ instance PrettyCode InfoTable where
             body' <- ppCode n
             return (kwDef <+> sym' <+> kwAssign <+> body')
 
+-- unfortunately, type classes don't work well with type synonyms, so we cannot
+-- write a generic instance of PrettyCode for FVar
+ppCodeVar :: forall s r. (SingI s, Member (Reader Options) r) => FVar s -> Sem r (Doc Ann)
+ppCodeVar v =
+  let name :: Maybe Name = case sing :: SStage s of
+        SMain -> getInfoName (v ^. varInfo)
+        SStripped -> v ^. (varInfo . Stripped.varInfoName)
+      idx :: Index = case sing :: SStage s of
+        SMain -> v ^. varIndex
+        SStripped -> v ^. varIndex
+   in case name of
+        Just nm -> do
+          showDeBruijn <- asks (^. optShowDeBruijnIndices)
+          n <- ppCode nm
+          if showDeBruijn
+            then return $ n <> kwDeBruijnVar <> pretty idx
+            else return n
+        Nothing -> return $ kwDeBruijnVar <> pretty idx
+
+ppCodeIdent :: forall s r. (SingI s, Member (Reader Options) r) => FIdent s -> Sem r (Doc Ann)
+ppCodeIdent idt =
+  let name :: Maybe Name = case sing :: SStage s of
+        SMain -> getInfoName (idt ^. identInfo)
+        SStripped -> idt ^. (identInfo . Stripped.identInfoName)
+      sym :: Symbol = case sing :: SStage s of
+        SMain -> idt ^. identSymbol
+        SStripped -> idt ^. identSymbol
+   in case name of
+        Just nm -> ppCode nm
+        Nothing -> return $ kwUnnamedIdent <> pretty sym
+
+instance PrettyCode (Constant' i) where
+  ppCode = \case
+    Constant _ (ConstInteger int) ->
+      return $ annotate AnnLiteralInteger (pretty int)
+    Constant _ (ConstString txt) ->
+      return $ annotate AnnLiteralString (pretty (show txt :: String))
+
+instance (PrettyCode a, HasAtomicity a) => PrettyCode (App' i a) where
+  ppCode App {..} = do
+    l' <- ppLeftExpression appFixity _appLeft
+    r' <- ppRightExpression appFixity _appRight
+    return $ l' <+> r'
+
+instance PrettyCode Stripped.Fun where
+  ppCode = \case
+    Stripped.FunVar x -> ppCodeVar x
+    Stripped.FunIdent x -> ppCodeIdent x
+
+instance (PrettyCode f, PrettyCode a, HasAtomicity a) => PrettyCode (Apps' f i a) where
+  ppCode Apps {..} = do
+    args' <- mapM (ppRightExpression appFixity) _appsArgs
+    n' <- ppCode _appsFun
+    return $ foldl' (<+>) n' args'
+
+instance (PrettyCode a, HasAtomicity a) => PrettyCode (BuiltinApp' i a) where
+  ppCode BuiltinApp {..} = do
+    args' <- mapM (ppRightExpression appFixity) _builtinAppArgs
+    op' <- ppCode _builtinAppOp
+    return $ foldl' (<+>) op' args'
+
+ppCodeConstr :: forall s r. (SingI s, Member (Reader Options) r) => FConstr s -> Sem r (Doc Ann)
+ppCodeConstr c = do
+  let name :: Maybe Name = case sing :: SStage s of
+        SMain -> getInfoName (c ^. constrInfo)
+        SStripped -> c ^. (constrInfo . Stripped.constrInfoName)
+  let tag :: Tag = case sing :: SStage s of
+        SMain -> c ^. constrTag
+        SStripped -> c ^. constrTag
+  args' :: [Doc Ann] <- case sing :: SStage s of
+    SMain -> mapM (ppRightExpression appFixity) (c ^. constrArgs)
+    SStripped -> mapM (ppRightExpression appFixity) (c ^. constrArgs)
+  n' <- case name of
+    Just nm -> ppCode nm
+    Nothing -> ppCode tag
+  return $ foldl' (<+>) n' args'
+
+ppCodeLet' :: (PrettyCode a, Member (Reader Options) r) => Maybe Name -> Let' i a -> Sem r (Doc Ann)
+ppCodeLet' name lt = do
+  n' <- case name of
+    Just nm -> ppCode nm
+    Nothing -> return kwQuestion
+  v' <- ppCode (lt ^. letValue)
+  b' <- ppCode (lt ^. letBody)
+  return $ kwLet <+> n' <+> kwAssign <+> v' <+> kwIn <+> b'
+
+ppCodeCase' :: (PrettyCode a, Member (Reader Options) r) => [[Maybe Name]] -> [Maybe Name] -> Case' i bi a -> Sem r (Doc Ann)
+ppCodeCase' branchBinderNames branchTagNames Case {..} = do
+  let branchTags = map (\(CaseBranch _ tag _ _) -> tag) _caseBranches
+  let branchBodies = map (\(CaseBranch _ _ _ b) -> b) _caseBranches
+  bns <- mapM (mapM (maybe (return kwQuestion) ppCode)) branchBinderNames
+  cns <- zipWithM (\tag -> maybe (ppCode tag) ppCode) branchTags branchTagNames
+  v <- ppCode _caseValue
+  bs' <- sequence $ zipWith3Exact (\cn bn br -> ppCode br >>= \br' -> return $ foldl' (<+>) cn bn <+> kwMapsto <+> br') cns bns branchBodies
+  bs'' <-
+    case _caseDefault of
+      Just def -> do
+        d' <- ppCode def
+        return $ bs' ++ [kwDefault <+> kwMapsto <+> d']
+      Nothing -> return bs'
+  let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs''
+  return $ kwCase <+> v <+> kwOf <+> bss
+
 instance PrettyCode Node where
   ppCode :: forall r. Member (Reader Options) r => Node -> Sem r (Doc Ann)
   ppCode node = case node of
-    NVar Var {..} ->
-      case Info.lookup kNameInfo _varInfo of
-        Just ni -> do
-          showDeBruijn <- asks (^. optShowDeBruijnIndices)
-          n <- ppCode (ni ^. NameInfo.infoName)
-          if showDeBruijn
-            then return $ n <> kwDeBruijnVar <> pretty _varIndex
-            else return n
-        Nothing -> return $ kwDeBruijnVar <> pretty _varIndex
-    NIdt Ident {..} ->
-      case Info.lookup kNameInfo _identInfo of
-        Just ni -> ppCode (ni ^. NameInfo.infoName)
-        Nothing -> return $ kwUnnamedIdent <> pretty _identSymbol
-    NCst (Constant _ (ConstInteger int)) ->
-      return $ annotate AnnLiteralInteger (pretty int)
-    NCst (Constant _ (ConstString txt)) ->
-      return $ annotate AnnLiteralString (pretty (show txt :: String))
-    NApp App {..} -> do
-      l' <- ppLeftExpression appFixity _appLeft
-      r' <- ppRightExpression appFixity _appRight
-      return $ l' <+> r'
-    NBlt BuiltinApp {..} -> do
-      args' <- mapM (ppRightExpression appFixity) _builtinAppArgs
-      op' <- ppCode _builtinAppOp
-      return $ foldl' (<+>) op' args'
-    NCtr Constr {..} -> do
-      args' <- mapM (ppRightExpression appFixity) _constrArgs
-      n' <-
-        case Info.lookup kNameInfo _constrInfo of
-          Just ni -> ppCode (ni ^. NameInfo.infoName)
-          Nothing -> ppCode _constrTag
-      return $ foldl' (<+>) n' args'
+    NVar x -> ppCodeVar x
+    NIdt x -> ppCodeIdent x
+    NCst x -> ppCode x
+    NApp x -> ppCode x
+    NBlt x -> ppCode x
+    NCtr x -> ppCodeConstr x
     NLam Lambda {} -> do
       let (infos, body) = unfoldLambdas node
       pplams <- mapM ppLam infos
@@ -129,14 +207,9 @@ instance PrettyCode Node where
               n <- ppCode name
               return $ kwLambda <> n
             Nothing -> return $ kwLambda <> kwQuestion
-    NLet Let {..} -> do
-      n' <-
-        case getInfoName (getInfoBinder _letInfo) of
-          Just name -> ppCode name
-          Nothing -> return kwQuestion
-      v' <- ppCode _letValue
-      b' <- ppCode _letBody
-      return $ kwLet <+> n' <+> kwAssign <+> v' <+> kwIn <+> b'
+    NLet x ->
+      let name = getInfoName (getInfoBinder (x ^. letInfo))
+       in ppCodeLet' name x
     NRec LetRec {..} -> do
       let n = length _letRecValues
       ns <- mapM getName (getInfoBinders n _letRecInfo)
@@ -158,26 +231,10 @@ instance PrettyCode Node where
           case getInfoName i of
             Just name -> ppCode name
             Nothing -> return kwQuestion
-    NCase Case {..} -> do
-      bns <-
-        case Info.lookup kCaseBinderInfo _caseInfo of
-          Just ci -> mapM (mapM (maybe (return kwQuestion) ppCode . getInfoName)) (ci ^. infoBranchBinders)
-          Nothing -> mapM (\(CaseBranch _ n _) -> replicateM n (return kwQuestion)) _caseBranches
-      cns <-
-        case Info.lookup kCaseBranchInfo _caseInfo of
-          Just ci -> mapM (ppCode . (^. BranchInfo.infoTagName)) (ci ^. infoBranches)
-          Nothing -> mapM (\(CaseBranch tag _ _) -> ppCode tag) _caseBranches
-      let bs = map (\(CaseBranch _ _ br) -> br) _caseBranches
-      v <- ppCode _caseValue
-      bs' <- sequence $ zipWith3Exact (\cn bn br -> ppCode br >>= \br' -> return $ foldl' (<+>) cn bn <+> kwMapsto <+> br') cns bns bs
-      bs'' <-
-        case _caseDefault of
-          Just def -> do
-            d' <- ppCode def
-            return $ bs' ++ [kwDefault <+> kwMapsto <+> d']
-          Nothing -> return bs'
-      let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs''
-      return $ kwCase <+> v <+> kwOf <+> bss
+    NCase x@Case {..} ->
+      let branchBinderNames = map (\(CaseBranch bi _ k _) -> map getInfoName (getInfoBinders k bi)) _caseBranches
+          branchTagNames = map (\(CaseBranch bi _ _ _) -> getInfoTagName bi) _caseBranches
+       in ppCodeCase' branchBinderNames branchTagNames x
     NPi Pi {..} ->
       case getInfoName $ getInfoBinder _piInfo of
         Just name -> do
@@ -199,6 +256,22 @@ instance PrettyCode Node where
     NDyn {} -> return kwDynamic
     Closure env l@Lambda {} ->
       ppCode (substEnv env (NLam l))
+
+instance PrettyCode Stripped.Node where
+  ppCode = \case
+    Stripped.NVar x -> ppCodeVar x
+    Stripped.NIdt x -> ppCodeIdent x
+    Stripped.NCst x -> ppCode x
+    Stripped.NApp x -> ppCode x
+    Stripped.NBlt x -> ppCode x
+    Stripped.NCtr x -> ppCodeConstr x
+    Stripped.NLet x ->
+      let name = x ^. (letInfo . Stripped.letInfoBinderName)
+       in ppCodeLet' name x
+    Stripped.NCase x@Stripped.Case {..} ->
+      let branchBinderNames = map (\(Stripped.CaseBranch bi _ _ _) -> bi ^. Stripped.caseBranchInfoBinderNames) _caseBranches
+          branchTagNames = map (\(Stripped.CaseBranch bi _ _ _) -> bi ^. Stripped.caseBranchInfoConstrName) _caseBranches
+       in ppCodeCase' branchBinderNames branchTagNames x
 
 instance PrettyCode a => PrettyCode (NonEmpty a) where
   ppCode x = do

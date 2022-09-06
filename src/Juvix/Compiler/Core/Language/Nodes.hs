@@ -3,10 +3,15 @@ module Juvix.Compiler.Core.Language.Nodes where
 import Data.Kind qualified as GHC
 import Juvix.Compiler.Core.Language.Base
 
-data Stage = Main | Stripped
+data Stage
+  = Main
+  | Stripped
+  deriving stock (Eq, Show)
+
+$(genSingletons [''Stage])
 
 type FNode :: Stage -> GHC.Type
-type family FNode s
+type family FNode s = res | res -> s
 
 {-------------------------------------------------------------------}
 {- Polymorphic Node types -}
@@ -15,19 +20,19 @@ type family FNode s
 data Var' i = Var {_varInfo :: i, _varIndex :: !Index}
 
 type FVar :: Stage -> GHC.Type
-type family FVar s
+type family FVar s = res | res -> s
 
 -- | Global identifier of a function (with corresponding `Node` in the global
 -- context).
 data Ident' i = Ident {_identInfo :: i, _identSymbol :: !Symbol}
 
 type FIdent :: Stage -> GHC.Type
-type family FIdent s
+type family FIdent s = res | res -> s
 
 data Constant' i = Constant {_constantInfo :: i, _constantValue :: !ConstantValue}
 
 type FConstant :: Stage -> GHC.Type
-type family FConstant s
+type family FConstant s = res | res -> s
 
 data ConstantValue
   = ConstInteger !Integer
@@ -37,12 +42,12 @@ data ConstantValue
 data App' i a = App {_appInfo :: i, _appLeft :: !a, _appRight :: !a}
 
 type FApp :: Stage -> GHC.Type
-type family FApp s
+type family FApp s = res | res -> s
 
 data Apps' f i a = Apps {_appsInfo :: i, _appsFun :: !f, _appsArgs :: ![a]}
 
 type FApps :: Stage -> GHC.Type
-type family FApps s
+type family FApps s = res | res -> s
 
 -- | A builtin application. A builtin has no corresponding Node. It is treated
 -- specially by the evaluator and the code generator. For example, basic
@@ -58,7 +63,7 @@ data BuiltinApp' i a = BuiltinApp
   }
 
 type FBuiltinApp :: Stage -> GHC.Type
-type family FBuiltinApp s
+type family FBuiltinApp s = res | res -> s
 
 -- | A data constructor application. The number of arguments supplied must be
 -- equal to the number of arguments expected by the constructor.
@@ -69,19 +74,19 @@ data Constr' i a = Constr
   }
 
 type FConstr :: Stage -> GHC.Type
-type family FConstr s
+type family FConstr s = res | res -> s
 
 data Lambda' i a = Lambda {_lambdaInfo :: i, _lambdaBody :: !a}
 
 type FLambda :: Stage -> GHC.Type
-type family FLambda s
+type family FLambda s = res | res -> s
 
 -- | `let x := value in body` is not reducible to lambda + application for the
 -- purposes of ML-polymorphic / dependent type checking or code generation!
 data Let' i a = Let {_letInfo :: i, _letValue :: !a, _letBody :: !a}
 
 type FLet :: Stage -> GHC.Type
-type family FLet s
+type family FLet s = res | res -> s
 
 -- | Represents a block of mutually recursive local definitions. Both in the
 -- body and in the values `length _letRecValues` implicit binders are introduced
@@ -97,21 +102,25 @@ type family FLetRec s
 
 -- | One-level case matching on the tag of a data constructor: `Case value
 -- branches default`. `Case` is lazy: only the selected branch is evaluated.
-data Case' i a = Case
+data Case' i bi a = Case
   { _caseInfo :: i,
     _caseValue :: !a,
-    _caseBranches :: ![CaseBranch' a],
+    _caseBranches :: ![CaseBranch' bi a],
     _caseDefault :: !(Maybe a)
   }
 
 type FCase :: Stage -> GHC.Type
-type family FCase s
+type family FCase s = res | res -> s
 
 -- | `CaseBranch tag argsNum branch`
 -- - `argsNum` is the number of arguments of the constructor tagged with `tag`,
 --   equal to the number of implicit binders above `branch`
-data CaseBranch' a = CaseBranch {_caseTag :: !Tag, _caseBindersNum :: !Int, _caseBranch :: !a}
-  deriving stock (Eq)
+data CaseBranch' i a = CaseBranch
+  { _caseBranchInfo :: i,
+    _caseBranchTag :: !Tag,
+    _caseBranchBindersNum :: !Int,
+    _caseBranchBody :: !a
+  }
 
 -- | Dependent Pi-type. Compilation-time only. Pi implicitly introduces a binder
 -- in the body, exactly like Lambda. So `Pi info ty body` is `Pi x : ty .
@@ -121,13 +130,13 @@ data CaseBranch' a = CaseBranch {_caseTag :: !Tag, _caseBindersNum :: !Int, _cas
 data Pi' i a = Pi {_piInfo :: i, _piType :: !a, _piBody :: !a}
 
 type FPi :: Stage -> GHC.Type
-type family FPi s
+type family FPi s = res | res -> s
 
 -- | Universe. Compilation-time only.
 data Univ' i = Univ {_univInfo :: i, _univLevel :: !Int}
 
 type FUniv :: Stage -> GHC.Type
-type family FUniv s
+type family FUniv s = res | res -> s
 
 -- | GHC.Type constructor application. Compilation-time only.
 data TypeConstr' i a = TypeConstr
@@ -137,7 +146,7 @@ data TypeConstr' i a = TypeConstr
   }
 
 type FTypeConstr :: Stage -> GHC.Type
-type family FTypeConstr s
+type family FTypeConstr s = res | res -> s
 
 -- | Dynamic type. A Node with a dynamic type has an unknown type. Useful
 -- for transformations that introduce partial type information, e.g., one can
@@ -184,7 +193,7 @@ instance HasAtomicity (Let' i a) where
 instance HasAtomicity (LetRec' i a) where
   atomicity _ = Aggregate lambdaFixity
 
-instance HasAtomicity (Case' i a) where
+instance HasAtomicity (Case' i bi a) where
   atomicity _ = Aggregate lambdaFixity
 
 instance HasAtomicity (Pi' i a) where
@@ -232,8 +241,11 @@ instance Eq a => Eq (Let' i a) where
 instance Eq a => Eq (LetRec' i a) where
   (LetRec _ vs1 b1) == (LetRec _ vs2 b2) = vs1 == vs2 && b1 == b2
 
-instance Eq a => Eq (Case' i a) where
+instance Eq a => Eq (Case' i bi a) where
   (Case _ v1 bs1 def1) == (Case _ v2 bs2 def2) = v1 == v2 && bs1 == bs2 && def1 == def2
+
+instance Eq a => Eq (CaseBranch' i a) where
+  (CaseBranch _ tag1 n1 b1) == (CaseBranch _ tag2 n2 b2) = tag1 == tag2 && n1 == n2 && b1 == b2
 
 instance Eq a => Eq (Pi' i a) where
   (Pi _ ty1 b1) == (Pi _ ty2 b2) = ty1 == ty2 && b1 == b2

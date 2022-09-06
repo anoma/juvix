@@ -16,7 +16,7 @@ import Juvix.Compiler.Core.Language.Stripped.Type
 
 data VarInfo = VarInfo
   { _varInfoName :: Maybe Name,
-    _varInfoType :: Type
+    _varInfoType :: Type -- TyDynamic if not available
   }
 
 data IdentInfo = IdentInfo
@@ -24,8 +24,22 @@ data IdentInfo = IdentInfo
     _identInfoType :: Type
   }
 
-data Fun = FunVar Var | FunIdent Ident
-  deriving stock (Eq)
+data ConstrInfo = ConstrInfo
+  { _constrInfoName :: Maybe Name,
+    _constrInfoType :: Type
+  }
+
+data LetInfo = LetInfo
+  { _letInfoBinderName :: Maybe Name,
+    _letInfoBinderType :: Type
+  }
+
+data CaseBranchInfo = CaseBranchInfo
+  { _caseBranchInfoBinderNames :: [Maybe Name],
+    _caseBranchInfoBinderTypes :: [Type],
+    _caseBranchInfoConstrName :: Maybe Name,
+    _caseBranchInfoConstrType :: Type
+  }
 
 {---------------------------------------------------------------------------------}
 
@@ -37,13 +51,16 @@ type instance FConstant 'Stripped = Constant' ()
 
 type instance FApps 'Stripped = Apps' Fun () Node
 
+data Fun = FunVar Var | FunIdent Ident
+  deriving stock (Eq)
+
 type instance FBuiltinApp 'Stripped = BuiltinApp' () Node
 
-type instance FConstr 'Stripped = Constr' () Node
+type instance FConstr 'Stripped = Constr' ConstrInfo Node
 
-type instance FLet 'Stripped = Let' () Node
+type instance FLet 'Stripped = Let' LetInfo Node
 
-type instance FCase 'Stripped = Case' () Node
+type instance FCase 'Stripped = Case' () CaseBranchInfo Node
 
 type instance FNode 'Stripped = Node
 
@@ -65,7 +82,7 @@ type Let = FLet 'Stripped
 
 type Case = FCase 'Stripped
 
-type CaseBranch = CaseBranch' Node
+type CaseBranch = CaseBranch' CaseBranchInfo Node
 
 {---------------------------------------------------------------------------------}
 
@@ -90,3 +107,9 @@ instance HasAtomicity Node where
     NCtr x -> atomicity x
     NLet x -> atomicity x
     NCase x -> atomicity x
+
+makeLenses ''VarInfo
+makeLenses ''IdentInfo
+makeLenses ''ConstrInfo
+makeLenses ''LetInfo
+makeLenses ''CaseBranchInfo

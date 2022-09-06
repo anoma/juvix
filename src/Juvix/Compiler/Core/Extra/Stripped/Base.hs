@@ -26,11 +26,17 @@ mkApps l r = NApp (Apps () l r)
 mkBuiltinApp :: BuiltinOp -> [Node] -> Node
 mkBuiltinApp op args = NBlt (BuiltinApp () op args)
 
-mkConstr :: Tag -> [Node] -> Node
-mkConstr tag args = NCtr (Constr () tag args)
+mkConstr :: ConstrInfo -> Tag -> [Node] -> Node
+mkConstr i tag args = NCtr (Constr i tag args)
 
-mkLet :: Node -> Node -> Node
-mkLet v b = NLet (Let () v b)
+mkConstr' :: Tag -> [Node] -> Node
+mkConstr' = mkConstr (ConstrInfo Nothing TyDynamic)
+
+mkLet :: LetInfo -> Node -> Node -> Node
+mkLet i v b = NLet (Let i v b)
+
+mkLet' :: Node -> Node -> Node
+mkLet' = mkLet (LetInfo Nothing TyDynamic)
 
 mkCase :: Node -> [CaseBranch] -> Maybe Node -> Node
 mkCase v bs def = NCase (Case () v bs def)

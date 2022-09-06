@@ -2,12 +2,12 @@ module Juvix.Compiler.Core.Data.Stripped.InfoTable where
 
 import Juvix.Compiler.Core.Language.Stripped
 
-data InfoTable = InfoTable {
-  _infoMain :: Maybe Symbol,
-  _infoFunctions :: HashMap Symbol FunctionInfo,
-  _infoInductives :: HashMap Name InductiveInfo,
-  _infoConstructors :: HashMap Tag ConstructorInfo
-}
+data InfoTable = InfoTable
+  { _infoMain :: Maybe Symbol,
+    _infoFunctions :: HashMap Symbol FunctionInfo,
+    _infoInductives :: HashMap Name InductiveInfo,
+    _infoConstructors :: HashMap Tag ConstructorInfo
+  }
 
 data FunctionInfo = FunctionInfo
   { _functionName :: Maybe Name,
