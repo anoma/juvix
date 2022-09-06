@@ -7,9 +7,9 @@
 module Juvix.Compiler.Core.Evaluator where
 
 import Control.Exception qualified as Exception
+import Control.Parallel (pseq)
 import Data.HashMap.Strict qualified as HashMap
 import Debug.Trace qualified as Debug
-import GHC.Base qualified as GHC
 import GHC.Show as S
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Error
@@ -69,7 +69,7 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       NRec (LetRec _ vs b) ->
         let !vs' = map (eval' env') (toList vs)
             !env' = revAppend vs' env
-         in foldr GHC.seq (eval' env' b) vs'
+         in foldr pseq (eval' env' b) vs'
       NCase (Case i v bs def) ->
         case eval' env v of
           NCtr (Constr _ tag args) -> branch n env args tag def bs

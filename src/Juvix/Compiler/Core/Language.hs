@@ -115,8 +115,7 @@ data Node
   | NUniv {-# UNPACK #-} !Univ
   | NTyp {-# UNPACK #-} !TypeConstr
   | NDyn !Dynamic -- Dynamic is already a newtype, so it's unpacked.
-  | -- Evaluation only: `Closure env body`. _closureEnv is intentionally lazy
-    -- to be able to implement LetRec in the evaluator.
+  | -- Evaluation only: `Closure env body`.
     Closure
       { _closureEnv :: !Env,
         _closureLambda :: {-# UNPACK #-} !Lambda

@@ -4,7 +4,7 @@ license:         GPL-3.0-only
 license-file:    LICENSE
 copyright:       (c) 2022- Heliax AG.
 maintainer:      The PLT Team at Heliax AG <hello@heliax.dev>
-author:          [ Jonathan Prieto-Cubides , Jan Mas Rovira , Paul Cadman , Github's contributors ]
+author:          [ Jonathan Prieto-Cubides , Jan Mas Rovira , Paul Cadman , Lukasz Czajka , Github's contributors ]
 tested-with:     ghc == 9.2.4
 homepage:        https://juvix.org
 bug-reports:     https://github.com/anoma/juvix/issues
@@ -34,6 +34,7 @@ dependencies:
 - language-c == 0.9.*
 - megaparsec == 9.2.*
 - microlens-platform == 0.4.*
+- parallel == 3.2.*
 - parser-combinators == 1.3.*
 - polysemy == 1.7.*
 - polysemy-plugin == 0.4.*
