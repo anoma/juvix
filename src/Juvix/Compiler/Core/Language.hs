@@ -82,6 +82,11 @@ data TypeConstr = TypeConstr
     _typeConstrArgs :: ![Type]
   }
 
+-- | Dynamic type. A Node with a dynamic type has an unknown type. Useful
+-- for transformations that introduce partial type information, e.g., one can
+-- have types `* -> *` and `* -> * -> Nat` where `*` is the dynamic type.
+newtype Dynamic = Dynamic {_dynamicInfo :: Info}
+
 -- | `Node` is the type of nodes in the program tree. The nodes themselves
 -- contain only runtime-relevant information. Runtime-irrelevant annotations
 -- (including all type information) are stored in the infos associated with each
@@ -99,6 +104,7 @@ data Node
   | NPi {-# UNPACK #-} !Pi
   | NUniv {-# UNPACK #-} !Univ
   | NTyp {-# UNPACK #-} !TypeConstr
+  | NDyn !Dynamic -- Dynamic is already a newtype, so it's unpacked.
   | -- Evaluation only: `Closure env body`
     Closure
       { _closureEnv :: !Env,
@@ -180,6 +186,9 @@ instance HasAtomicity Univ where
 instance HasAtomicity TypeConstr where
   atomicity _ = Aggregate lambdaFixity
 
+instance HasAtomicity Dynamic where
+  atomicity _ = Atom
+
 instance HasAtomicity Node where
   atomicity = \case
     NVar x -> atomicity x
@@ -194,6 +203,7 @@ instance HasAtomicity Node where
     NPi x -> atomicity x
     NUniv x -> atomicity x
     NTyp x -> atomicity x
+    NDyn x -> atomicity x
     Closure {} -> Aggregate lambdaFixity
 
 lambdaFixity :: Fixity
@@ -234,6 +244,9 @@ instance Eq Univ where
 
 instance Eq TypeConstr where
   (TypeConstr _ sym1 args1) == (TypeConstr _ sym2 args2) = sym1 == sym2 && args1 == args2
+
+instance Eq Dynamic where
+  Dynamic _ == Dynamic _ = True
 
 makeLenses ''Var
 makeLenses ''Ident

@@ -155,6 +155,7 @@ instance PrettyCode Node where
           Just ni -> ppCode (ni ^. NameInfo.infoName)
           Nothing -> return $ kwUnnamedIdent <> pretty _typeConstrSymbol
       return $ foldl' (<+>) n' args'
+    NDyn {} -> return kwDynamic
     Closure env l@Lambda {} ->
       ppCode (substEnv env (NLam l))
 
@@ -253,3 +254,6 @@ kwTrace = keyword Str.trace_
 
 kwFail :: Doc Ann
 kwFail = keyword Str.fail_
+
+kwDynamic :: Doc Ann
+kwDynamic = keyword Str.mul

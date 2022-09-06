@@ -43,9 +43,6 @@ runParser root fileName tab input =
         { _parserParamsRoot = root
         }
 
-starType :: Type
-starType = mkPi Info.empty (mkUniv Info.empty 0) (mkVar Info.empty 0)
-
 binderNameInfo :: Name -> Info
 binderNameInfo name =
   Info.singleton (BinderInfo (Info.singleton (NameInfo name)))
@@ -79,7 +76,7 @@ declareBuiltinConstr btag nameTxt i = do
     ( ConstructorInfo
         { _constructorName = name,
           _constructorTag = BuiltinTag btag,
-          _constructorType = starType,
+          _constructorType = mkDynamic',
           _constructorArgsNum = builtinConstrArgsNum btag
         }
     )
@@ -143,7 +140,7 @@ statementDef = do
             IdentifierInfo
               { _identifierName = name,
                 _identifierSymbol = sym,
-                _identifierType = starType,
+                _identifierType = mkDynamic',
                 _identifierArgsNum = 0,
                 _identifierArgsInfo = [],
                 _identifierIsExported = False
@@ -190,7 +187,7 @@ statementConstr = do
         ConstructorInfo
           { _constructorName = name,
             _constructorTag = tag,
-            _constructorType = starType,
+            _constructorType = mkDynamic',
             _constructorArgsNum = argsNum
           }
   lift $ registerConstructor info
