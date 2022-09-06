@@ -19,7 +19,7 @@ unitCollector = Collector () (\_ _ -> ())
 binderInfoCollector :: Collector (Int, [Info]) (BinderList Info)
 binderInfoCollector =
   Collector
-    BL.empty
+    mempty
     (\(k, bi) c -> if k == 0 then c else BL.prepend (reverse bi) c)
 
 binderNumCollector :: Collector (Int, [Info]) Index
