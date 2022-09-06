@@ -43,44 +43,24 @@ data CaseBranchInfo = CaseBranchInfo
 
 {---------------------------------------------------------------------------------}
 
-type instance FVar 'Stripped = Var' VarInfo
+type Var = Var' VarInfo
 
-type instance FIdent 'Stripped = Ident' IdentInfo
+type Ident = Ident' IdentInfo
 
-type instance FConstant 'Stripped = Constant' ()
+type Constant = Constant' ()
 
-type instance FApps 'Stripped = Apps' Fun () Node
+type Apps = Apps' Fun () Node
 
 data Fun = FunVar Var | FunIdent Ident
   deriving stock (Eq)
 
-type instance FBuiltinApp 'Stripped = BuiltinApp' () Node
+type BuiltinApp = BuiltinApp' () Node
 
-type instance FConstr 'Stripped = Constr' ConstrInfo Node
+type Constr = Constr' ConstrInfo Node
 
-type instance FLet 'Stripped = Let' LetInfo Node
+type Let = Let' LetInfo Node
 
-type instance FCase 'Stripped = Case' () CaseBranchInfo Node
-
-type instance FNode 'Stripped = Node
-
-{---------------------------------------------------------------------------------}
-
-type Var = FVar 'Stripped
-
-type Ident = FIdent 'Stripped
-
-type Constant = FConstant 'Stripped
-
-type Apps = FApps 'Stripped
-
-type BuiltinApp = FBuiltinApp 'Stripped
-
-type Constr = FConstr 'Stripped
-
-type Let = FLet 'Stripped
-
-type Case = FCase 'Stripped
+type Case = Case' () CaseBranchInfo Node
 
 type CaseBranch = CaseBranch' CaseBranchInfo Node
 

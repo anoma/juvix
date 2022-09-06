@@ -1,17 +1,6 @@
 module Juvix.Compiler.Core.Language.Nodes where
 
-import Data.Kind qualified as GHC
 import Juvix.Compiler.Core.Language.Base
-
-data Stage
-  = Main
-  | Stripped
-  deriving stock (Eq, Show)
-
-$(genSingletons [''Stage])
-
-type FNode :: Stage -> GHC.Type
-type family FNode s = res | res -> s
 
 {-------------------------------------------------------------------}
 {- Polymorphic Node types -}
@@ -19,20 +8,11 @@ type family FNode s = res | res -> s
 -- | De Bruijn index of a locally bound variable.
 data Var' i = Var {_varInfo :: i, _varIndex :: !Index}
 
-type FVar :: Stage -> GHC.Type
-type family FVar s = res | res -> s
-
 -- | Global identifier of a function (with corresponding `Node` in the global
 -- context).
 data Ident' i = Ident {_identInfo :: i, _identSymbol :: !Symbol}
 
-type FIdent :: Stage -> GHC.Type
-type family FIdent s = res | res -> s
-
 data Constant' i = Constant {_constantInfo :: i, _constantValue :: !ConstantValue}
-
-type FConstant :: Stage -> GHC.Type
-type family FConstant s = res | res -> s
 
 data ConstantValue
   = ConstInteger !Integer
@@ -41,13 +21,7 @@ data ConstantValue
 
 data App' i a = App {_appInfo :: i, _appLeft :: !a, _appRight :: !a}
 
-type FApp :: Stage -> GHC.Type
-type family FApp s = res | res -> s
-
 data Apps' f i a = Apps {_appsInfo :: i, _appsFun :: !f, _appsArgs :: ![a]}
-
-type FApps :: Stage -> GHC.Type
-type family FApps s = res | res -> s
 
 -- | A builtin application. A builtin has no corresponding Node. It is treated
 -- specially by the evaluator and the code generator. For example, basic
@@ -62,9 +36,6 @@ data BuiltinApp' i a = BuiltinApp
     _builtinAppArgs :: ![a]
   }
 
-type FBuiltinApp :: Stage -> GHC.Type
-type family FBuiltinApp s = res | res -> s
-
 -- | A data constructor application. The number of arguments supplied must be
 -- equal to the number of arguments expected by the constructor.
 data Constr' i a = Constr
@@ -73,20 +44,11 @@ data Constr' i a = Constr
     _constrArgs :: ![a]
   }
 
-type FConstr :: Stage -> GHC.Type
-type family FConstr s = res | res -> s
-
 data Lambda' i a = Lambda {_lambdaInfo :: i, _lambdaBody :: !a}
-
-type FLambda :: Stage -> GHC.Type
-type family FLambda s = res | res -> s
 
 -- | `let x := value in body` is not reducible to lambda + application for the
 -- purposes of ML-polymorphic / dependent type checking or code generation!
 data Let' i a = Let {_letInfo :: i, _letValue :: !a, _letBody :: !a}
-
-type FLet :: Stage -> GHC.Type
-type family FLet s = res | res -> s
 
 -- | Represents a block of mutually recursive local definitions. Both in the
 -- body and in the values `length _letRecValues` implicit binders are introduced
@@ -97,9 +59,6 @@ data LetRec' i a = LetRec
     _letRecBody :: !a
   }
 
-type FLetRec :: Stage -> GHC.Type
-type family FLetRec s
-
 -- | One-level case matching on the tag of a data constructor: `Case value
 -- branches default`. `Case` is lazy: only the selected branch is evaluated.
 data Case' i bi a = Case
@@ -108,9 +67,6 @@ data Case' i bi a = Case
     _caseBranches :: ![CaseBranch' bi a],
     _caseDefault :: !(Maybe a)
   }
-
-type FCase :: Stage -> GHC.Type
-type family FCase s = res | res -> s
 
 -- | `CaseBranch tag argsNum branch`
 -- - `argsNum` is the number of arguments of the constructor tagged with `tag`,
@@ -129,14 +85,8 @@ data CaseBranch' i a = CaseBranch
 -- Infos): Pi (Univ level) (Pi (Var 0) (Var 1)).
 data Pi' i a = Pi {_piInfo :: i, _piType :: !a, _piBody :: !a}
 
-type FPi :: Stage -> GHC.Type
-type family FPi s = res | res -> s
-
 -- | Universe. Compilation-time only.
 data Univ' i = Univ {_univInfo :: i, _univLevel :: !Int}
-
-type FUniv :: Stage -> GHC.Type
-type family FUniv s = res | res -> s
 
 -- | GHC.Type constructor application. Compilation-time only.
 data TypeConstr' i a = TypeConstr
@@ -145,16 +95,10 @@ data TypeConstr' i a = TypeConstr
     _typeConstrArgs :: ![a]
   }
 
-type FTypeConstr :: Stage -> GHC.Type
-type family FTypeConstr s = res | res -> s
-
 -- | Dynamic type. A Node with a dynamic type has an unknown type. Useful
 -- for transformations that introduce partial type information, e.g., one can
 -- have types `* -> *` and `* -> * -> Nat` where `*` is the dynamic type.
 newtype Dynamic' i = Dynamic {_dynamicInfo :: i}
-
-type FDynamic :: Stage -> GHC.Type
-type family FDynamic s
 
 {-------------------------------------------------------------------}
 {- Typeclass instances -}

@@ -14,63 +14,33 @@ import Juvix.Compiler.Core.Language.Nodes
 
 {---------------------------------------------------------------------------------}
 
-type instance FVar 'Main = Var' Info
+type Var = Var' Info
 
-type instance FIdent 'Main = Ident' Info
+type Ident = Ident' Info
 
-type instance FConstant 'Main = Constant' Info
+type Constant = Constant' Info
 
-type instance FApp 'Main = App' Info Node
+type App = App' Info Node
 
-type instance FBuiltinApp 'Main = BuiltinApp' Info Node
+type BuiltinApp = BuiltinApp' Info Node
 
-type instance FConstr 'Main = Constr' Info Node
+type Constr = Constr' Info Node
 
-type instance FLambda 'Main = Lambda' Info Node
+type Lambda = Lambda' Info Node
 
-type instance FLet 'Main = Let' Info Node
+type Let = Let' Info Node
 
-type instance FLetRec 'Main = LetRec' Info Node
+type LetRec = LetRec' Info Node
 
-type instance FCase 'Main = Case' Info Info Node
+type Case = Case' Info Info Node
 
-type instance FPi 'Main = Pi' Info Node
+type Pi = Pi' Info Node
 
-type instance FUniv 'Main = Univ' Info
+type Univ = Univ' Info
 
-type instance FTypeConstr 'Main = TypeConstr' Info Node
+type TypeConstr = TypeConstr' Info Node
 
-type instance FDynamic 'Main = Dynamic' Info
-
-{---------------------------------------------------------------------------------}
-
-type Var = FVar 'Main
-
-type Ident = FIdent 'Main
-
-type Constant = FConstant 'Main
-
-type App = FApp 'Main
-
-type BuiltinApp = FBuiltinApp 'Main
-
-type Constr = FConstr 'Main
-
-type Lambda = FLambda 'Main
-
-type Let = FLet 'Main
-
-type LetRec = FLetRec 'Main
-
-type Case = FCase 'Main
-
-type Pi = FPi 'Main
-
-type Univ = FUniv 'Main
-
-type TypeConstr = FTypeConstr 'Main
-
-type Dynamic = FDynamic 'Main
+type Dynamic = Dynamic' Info
 
 type CaseBranch = CaseBranch' Info Node
 

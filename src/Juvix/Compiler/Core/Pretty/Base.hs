@@ -82,36 +82,22 @@ instance PrettyCode InfoTable where
             body' <- ppCode n
             return (kwDef <+> sym' <+> kwAssign <+> body')
 
--- unfortunately, type classes don't work well with type synonyms, so we cannot
--- write a generic instance of PrettyCode for FVar
-ppCodeVar :: forall s r. (SingI s, Member (Reader Options) r) => FVar s -> Sem r (Doc Ann)
-ppCodeVar v =
-  let name :: Maybe Name = case sing :: SStage s of
-        SMain -> getInfoName (v ^. varInfo)
-        SStripped -> v ^. (varInfo . Stripped.varInfoName)
-      idx :: Index = case sing :: SStage s of
-        SMain -> v ^. varIndex
-        SStripped -> v ^. varIndex
-   in case name of
-        Just nm -> do
-          showDeBruijn <- asks (^. optShowDeBruijnIndices)
-          n <- ppCode nm
-          if showDeBruijn
-            then return $ n <> kwDeBruijnVar <> pretty idx
-            else return n
-        Nothing -> return $ kwDeBruijnVar <> pretty idx
+ppCodeVar' :: Member (Reader Options) r => Maybe Name -> Var' i -> Sem r (Doc Ann)
+ppCodeVar' name v =
+  case name of
+    Just nm -> do
+      showDeBruijn <- asks (^. optShowDeBruijnIndices)
+      n <- ppCode nm
+      if showDeBruijn
+        then return $ n <> kwDeBruijnVar <> pretty (v ^. varIndex)
+        else return n
+    Nothing -> return $ kwDeBruijnVar <> pretty (v ^. varIndex)
 
-ppCodeIdent :: forall s r. (SingI s, Member (Reader Options) r) => FIdent s -> Sem r (Doc Ann)
-ppCodeIdent idt =
-  let name :: Maybe Name = case sing :: SStage s of
-        SMain -> getInfoName (idt ^. identInfo)
-        SStripped -> idt ^. (identInfo . Stripped.identInfoName)
-      sym :: Symbol = case sing :: SStage s of
-        SMain -> idt ^. identSymbol
-        SStripped -> idt ^. identSymbol
-   in case name of
-        Just nm -> ppCode nm
-        Nothing -> return $ kwUnnamedIdent <> pretty sym
+ppCodeIdent' :: Member (Reader Options) r => Maybe Name -> Ident' i -> Sem r (Doc Ann)
+ppCodeIdent' name idt =
+  case name of
+    Just nm -> ppCode nm
+    Nothing -> return $ kwUnnamedIdent <> pretty (idt ^. identSymbol)
 
 instance PrettyCode (Constant' i) where
   ppCode = \case
@@ -128,8 +114,8 @@ instance (PrettyCode a, HasAtomicity a) => PrettyCode (App' i a) where
 
 instance PrettyCode Stripped.Fun where
   ppCode = \case
-    Stripped.FunVar x -> ppCodeVar x
-    Stripped.FunIdent x -> ppCodeIdent x
+    Stripped.FunVar x -> ppCodeVar' (x ^. (varInfo . Stripped.varInfoName)) x
+    Stripped.FunIdent x -> ppCodeIdent' (x ^. (identInfo . Stripped.identInfoName)) x
 
 instance (PrettyCode f, PrettyCode a, HasAtomicity a) => PrettyCode (Apps' f i a) where
   ppCode Apps {..} = do
@@ -143,20 +129,12 @@ instance (PrettyCode a, HasAtomicity a) => PrettyCode (BuiltinApp' i a) where
     op' <- ppCode _builtinAppOp
     return $ foldl' (<+>) op' args'
 
-ppCodeConstr :: forall s r. (SingI s, Member (Reader Options) r) => FConstr s -> Sem r (Doc Ann)
-ppCodeConstr c = do
-  let name :: Maybe Name = case sing :: SStage s of
-        SMain -> getInfoName (c ^. constrInfo)
-        SStripped -> c ^. (constrInfo . Stripped.constrInfoName)
-  let tag :: Tag = case sing :: SStage s of
-        SMain -> c ^. constrTag
-        SStripped -> c ^. constrTag
-  args' :: [Doc Ann] <- case sing :: SStage s of
-    SMain -> mapM (ppRightExpression appFixity) (c ^. constrArgs)
-    SStripped -> mapM (ppRightExpression appFixity) (c ^. constrArgs)
+ppCodeConstr' :: (PrettyCode a, HasAtomicity a, Member (Reader Options) r) => Maybe Name -> Constr' i a -> Sem r (Doc Ann)
+ppCodeConstr' name c = do
+  args' <- mapM (ppRightExpression appFixity) (c ^. constrArgs)
   n' <- case name of
     Just nm -> ppCode nm
-    Nothing -> ppCode tag
+    Nothing -> ppCode (c ^. constrTag)
   return $ foldl' (<+>) n' args'
 
 ppCodeLet' :: (PrettyCode a, Member (Reader Options) r) => Maybe Name -> Let' i a -> Sem r (Doc Ann)
@@ -188,12 +166,18 @@ ppCodeCase' branchBinderNames branchTagNames Case {..} = do
 instance PrettyCode Node where
   ppCode :: forall r. Member (Reader Options) r => Node -> Sem r (Doc Ann)
   ppCode node = case node of
-    NVar x -> ppCodeVar x
-    NIdt x -> ppCodeIdent x
+    NVar x ->
+      let name = getInfoName (x ^. varInfo)
+       in ppCodeVar' name x
+    NIdt x ->
+      let name = getInfoName (x ^. identInfo)
+       in ppCodeIdent' name x
     NCst x -> ppCode x
     NApp x -> ppCode x
     NBlt x -> ppCode x
-    NCtr x -> ppCodeConstr x
+    NCtr x ->
+      let name = getInfoName (x ^. constrInfo)
+       in ppCodeConstr' name x
     NLam Lambda {} -> do
       let (infos, body) = unfoldLambdas node
       pplams <- mapM ppLam infos
@@ -259,12 +243,18 @@ instance PrettyCode Node where
 
 instance PrettyCode Stripped.Node where
   ppCode = \case
-    Stripped.NVar x -> ppCodeVar x
-    Stripped.NIdt x -> ppCodeIdent x
+    Stripped.NVar x ->
+      let name = x ^. (varInfo . Stripped.varInfoName)
+       in ppCodeVar' name x
+    Stripped.NIdt x ->
+      let name = x ^. (identInfo . Stripped.identInfoName)
+       in ppCodeIdent' name x
     Stripped.NCst x -> ppCode x
     Stripped.NApp x -> ppCode x
     Stripped.NBlt x -> ppCode x
-    Stripped.NCtr x -> ppCodeConstr x
+    Stripped.NCtr x ->
+      let name = x ^. (constrInfo . Stripped.constrInfoName)
+       in ppCodeConstr' name x
     Stripped.NLet x ->
       let name = x ^. (letInfo . Stripped.letInfoBinderName)
        in ppCodeLet' name x
