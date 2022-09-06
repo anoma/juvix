@@ -76,9 +76,6 @@ data Node
 -- - laziness annotations (converting these to closure/thunk creation should be
 --   done further down the pipeline)
 
--- Other things we might need in the future:
--- - ConstFloat or ConstFixedPoint
-
 -- A node (term) is closed if it has no free variables, i.e., no de Bruijn
 -- indices pointing outside the term.
 

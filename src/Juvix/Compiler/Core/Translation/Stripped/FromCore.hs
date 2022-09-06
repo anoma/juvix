@@ -1,4 +1,4 @@
-module Juvix.Compiler.Core.Translation.Stripped.FromMain where
+module Juvix.Compiler.Core.Translation.Stripped.FromCore where
 
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped

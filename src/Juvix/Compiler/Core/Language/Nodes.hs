@@ -19,6 +19,9 @@ data ConstantValue
   | ConstString !Text
   deriving stock (Eq)
 
+-- Other things we might need in the future:
+-- - ConstFloat or ConstFixedPoint
+
 data App' i a = App {_appInfo :: i, _appLeft :: !a, _appRight :: !a}
 
 data Apps' f i a = Apps {_appsInfo :: i, _appsFun :: !f, _appsArgs :: ![a]}
