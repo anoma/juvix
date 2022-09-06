@@ -26,7 +26,8 @@ data IdentInfo = IdentInfo
 
 data ConstrInfo = ConstrInfo
   { _constrInfoName :: Maybe Name,
-    _constrInfoType :: Type
+    _constrInfoType :: Type,
+    _constrInfoInductive :: Symbol
   }
 
 data LetInfo = LetInfo

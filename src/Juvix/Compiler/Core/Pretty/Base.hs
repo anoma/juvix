@@ -7,6 +7,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.InfoTable
+import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.BinderInfo
@@ -64,23 +65,6 @@ instance PrettyCode Tag where
   ppCode = \case
     BuiltinTag tag -> ppCode tag
     UserTag tag -> return $ kwUnnamedConstr <> pretty tag
-
-instance PrettyCode InfoTable where
-  ppCode :: forall r. Member (Reader Options) r => InfoTable -> Sem r (Doc Ann)
-  ppCode tbl = do
-    ctx' <- ppContext (tbl ^. identContext)
-    return ("-- IdentContext" <> line <> ctx' <> line)
-    where
-      ppContext :: IdentContext -> Sem r (Doc Ann)
-      ppContext ctx = do
-        defs <- mapM (uncurry ppDef) (HashMap.toList ctx)
-        return (vsep defs)
-        where
-          ppDef :: Symbol -> Node -> Sem r (Doc Ann)
-          ppDef s n = do
-            sym' <- maybe (return (pretty s)) ppCode (tbl ^? infoIdentifiers . at s . _Just . identifierName)
-            body' <- ppCode n
-            return (kwDef <+> sym' <+> kwAssign <+> body')
 
 ppCodeVar' :: Member (Reader Options) r => Maybe Name -> Var' i -> Sem r (Doc Ann)
 ppCodeVar' name v =
@@ -262,6 +246,40 @@ instance PrettyCode Stripped.Node where
       let branchBinderNames = map (\(Stripped.CaseBranch bi _ _ _) -> bi ^. Stripped.caseBranchInfoBinderNames) _caseBranches
           branchTagNames = map (\(Stripped.CaseBranch bi _ _ _) -> bi ^. Stripped.caseBranchInfoConstrName) _caseBranches
        in ppCodeCase' branchBinderNames branchTagNames x
+
+instance PrettyCode InfoTable where
+  ppCode :: forall r. Member (Reader Options) r => InfoTable -> Sem r (Doc Ann)
+  ppCode tbl = do
+    ctx' <- ppContext (tbl ^. identContext)
+    return ("-- IdentContext" <> line <> ctx' <> line)
+    where
+      ppContext :: IdentContext -> Sem r (Doc Ann)
+      ppContext ctx = do
+        defs <- mapM (uncurry ppDef) (HashMap.toList ctx)
+        return (vsep defs)
+        where
+          ppDef :: Symbol -> Node -> Sem r (Doc Ann)
+          ppDef s n = do
+            sym' <- maybe (return (pretty s)) ppCode (tbl ^? infoIdentifiers . at s . _Just . identifierName)
+            body' <- ppCode n
+            return (kwDef <+> sym' <+> kwAssign <+> body')
+
+instance PrettyCode Stripped.InfoTable where
+  ppCode :: forall r. Member (Reader Options) r => Stripped.InfoTable -> Sem r (Doc Ann)
+  ppCode tbl = do
+    ctx' <- ppFunctions (tbl ^. Stripped.infoFunctions)
+    return ("-- Functions" <> line <> ctx' <> line)
+    where
+      ppFunctions :: HashMap Symbol Stripped.FunctionInfo -> Sem r (Doc Ann)
+      ppFunctions ctx = do
+        defs <- mapM (uncurry ppDef) (HashMap.toList ctx)
+        return (vsep defs)
+        where
+          ppDef :: Symbol -> Stripped.FunctionInfo -> Sem r (Doc Ann)
+          ppDef s fi = do
+            sym' <- maybe (return (pretty s)) ppCode (fi ^. Stripped.functionName)
+            body' <- ppCode (fi ^. Stripped.functionBody)
+            return (kwDef <+> sym' <+> kwAssign <+> body')
 
 instance PrettyCode a => PrettyCode (NonEmpty a) where
   ppCode x = do

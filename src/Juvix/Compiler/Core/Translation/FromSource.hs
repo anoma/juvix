@@ -72,13 +72,15 @@ declareBuiltinConstr ::
   Interval ->
   Sem r ()
 declareBuiltinConstr btag nameTxt i = do
+  sym <- freshSymbol
   name <- freshName KNameConstructor nameTxt i
   registerConstructor
     ( ConstructorInfo
         { _constructorName = name,
           _constructorTag = BuiltinTag btag,
           _constructorType = mkDynamic',
-          _constructorArgsNum = builtinConstrArgsNum btag
+          _constructorArgsNum = builtinConstrArgsNum btag,
+          _constructorInductive = sym
         }
     )
 
@@ -187,13 +189,15 @@ statementConstr = do
     Nothing ->
       return ()
   tag <- lift freshTag
+  sym <- lift freshSymbol
   name <- lift $ freshName KNameConstructor txt i
   let info =
         ConstructorInfo
           { _constructorName = name,
             _constructorTag = tag,
             _constructorType = mkDynamic',
-            _constructorArgsNum = argsNum
+            _constructorArgsNum = argsNum,
+            _constructorInductive = sym
           }
   lift $ registerConstructor info
 

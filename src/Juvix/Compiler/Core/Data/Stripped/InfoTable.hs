@@ -5,16 +5,16 @@ import Juvix.Compiler.Core.Language.Stripped
 data InfoTable = InfoTable
   { _infoMain :: Maybe Symbol,
     _infoFunctions :: HashMap Symbol FunctionInfo,
-    _infoInductives :: HashMap Name InductiveInfo,
+    _infoInductives :: HashMap Symbol InductiveInfo,
     _infoConstructors :: HashMap Tag ConstructorInfo
   }
 
 data FunctionInfo = FunctionInfo
   { _functionName :: Maybe Name,
     _functionSymbol :: Symbol,
-    -- _functionNode has `_functionArgsNum` free variables corresponding to the
+    -- _functionBody has `_functionArgsNum` free variables corresponding to the
     -- function arguments
-    _functionNode :: Node,
+    _functionBody :: Node,
     _functionType :: Type,
     -- a function can have 0 arguments
     _functionArgsNum :: Int,
@@ -31,8 +31,7 @@ data InductiveInfo = InductiveInfo
   { _inductiveName :: Name,
     _inductiveKind :: Type,
     _inductiveConstructors :: [ConstructorInfo],
-    _inductiveParams :: [ParameterInfo],
-    _inductivePositive :: Bool
+    _inductiveParams :: [ParameterInfo]
   }
 
 data ConstructorInfo = ConstructorInfo

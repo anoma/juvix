@@ -29,8 +29,8 @@ mkBuiltinApp op args = NBlt (BuiltinApp () op args)
 mkConstr :: ConstrInfo -> Tag -> [Node] -> Node
 mkConstr i tag args = NCtr (Constr i tag args)
 
-mkConstr' :: Tag -> [Node] -> Node
-mkConstr' = mkConstr (ConstrInfo Nothing TyDynamic)
+mkConstr' :: Symbol -> Tag -> [Node] -> Node
+mkConstr' sym = mkConstr (ConstrInfo Nothing TyDynamic sym)
 
 mkLet :: LetInfo -> Node -> Node -> Node
 mkLet i v b = NLet (Let i v b)
