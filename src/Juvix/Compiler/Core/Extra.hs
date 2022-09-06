@@ -25,7 +25,7 @@ getFreeVars :: Node -> HashSet Var
 getFreeVars n = HashSet.fromList (n ^.. freeVars)
 
 freeVars :: SimpleFold Node Var
-freeVars f = ufoldAN reassemble go
+freeVars f = ufoldNA reassemble go
   where
     go k = \case
       NVar var@(Var _ idx)

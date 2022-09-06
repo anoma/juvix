@@ -17,25 +17,25 @@ walk :: Applicative f => (Node -> f ()) -> Node -> f ()
 walk = ufoldA (foldr mappend)
 
 walkN :: Applicative f => (Index -> Node -> f ()) -> Node -> f ()
-walkN = ufoldAN (foldr mappend)
+walkN = ufoldNA (foldr mappend)
 
 walkL :: Applicative f => (BinderList Info -> Node -> f ()) -> Node -> f ()
-walkL = ufoldAB (foldr mappend)
+walkL = ufoldLA (foldr mappend)
 
 ufold :: (a -> [a] -> a) -> (Node -> a) -> Node -> a
 ufold uplus f = runIdentity . ufoldA uplus (return . f)
 
 ufoldL :: (a -> [a] -> a) -> (BinderList Info -> Node -> a) -> Node -> a
-ufoldL uplus f = runIdentity . ufoldAB uplus (\is -> return . f is)
+ufoldL uplus f = runIdentity . ufoldLA uplus (\is -> return . f is)
 
 ufoldN :: (a -> [a] -> a) -> (Index -> Node -> a) -> Node -> a
-ufoldN uplus f = runIdentity . ufoldAN uplus (\idx -> return . f idx)
+ufoldN uplus f = runIdentity . ufoldNA uplus (\idx -> return . f idx)
 
 gather :: (a -> Node -> a) -> a -> Node -> a
 gather f acc = run . execState acc . walk (\n' -> modify' (`f` n'))
 
 gatherL :: (BinderList Info -> a -> Node -> a) -> a -> Node -> a
-gatherL f acc = run . execState acc . walkB (\is n' -> modify' (\a -> f is a n'))
+gatherL f acc = run . execState acc . walkL (\is n' -> modify' (\a -> f is a n'))
 
 gatherN :: (Index -> a -> Node -> a) -> a -> Node -> a
 gatherN f acc = run . execState acc . walkN (\idx n' -> modify' (\a -> f idx a n'))
