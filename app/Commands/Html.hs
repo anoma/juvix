@@ -28,6 +28,7 @@ parseHtml = do
           <> value Ayu
           <> showDefault
           <> help "selects a theme: ayu (light); nord (dark)"
+          <> completeWith (map show allThemes)
       )
   _htmlOutputDir <-
     option
@@ -46,8 +47,10 @@ parseHtml = do
       )
   pure HtmlOptions {..}
   where
+    allThemes :: [Theme]
+    allThemes = allElements
     parseTheme :: String -> Either String Theme
-    parseTheme s = case s of
+    parseTheme s = case map toLower s of
       "nord" -> Right Nord
       "ayu" -> Right Ayu
       _ -> Left $ "unrecognised theme: " <> s
