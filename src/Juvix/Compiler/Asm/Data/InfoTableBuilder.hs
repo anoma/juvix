@@ -6,7 +6,7 @@ import Juvix.Compiler.Asm.Language
 
 data InfoTableBuilder m a where
   RegisterFunction :: FunctionInfo -> InfoTableBuilder m ()
-  RegisterConstr :: ConstrInfo -> InfoTableBuilder m ()
+  RegisterConstr :: ConstructorInfo -> InfoTableBuilder m ()
 
 makeSem ''InfoTableBuilder
 
@@ -16,6 +16,6 @@ runInfoTableBuilder = runState emptyInfoTable . toState
     toState :: Sem (InfoTableBuilder ': r) a -> Sem (State InfoTable ': r) a
     toState = reinterpret $ \case
       RegisterFunction fi ->
-        modify (over infoFunctions (HashMap.insert (fi ^. functionInfoSymbol) fi))
+        modify (over infoFunctions (HashMap.insert (fi ^. functionSymbol) fi))
       RegisterConstr ci ->
-        modify (over infoConstrs (HashMap.insert (ci ^. constrInfoTag) ci))
+        modify (over infoConstrs (HashMap.insert (ci ^. constructorTag) ci))

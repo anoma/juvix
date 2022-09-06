@@ -44,7 +44,7 @@ runCode infoTable = run . evalRuntime . goToplevel
       PopTemp -> unimplemented
       AllocConstr tag -> do
         let ci = getConstrInfo tag
-        args <- replicateM (ci ^. constrInfoArgsNum) popValueStack
+        args <- replicateM (ci ^. constructorArgsNum) popValueStack
         pushValueStack (ValConstr (Constr tag (reverse args)))
         goCode cont
       AllocClosure {..} -> do
@@ -154,8 +154,8 @@ runCode infoTable = run . evalRuntime . goToplevel
     getCallDetails = \case
       CallFun sym -> do
         let fi = getFunInfo sym
-        args <- replicateM (fi ^. functionInfoArgsNum) popValueStack
-        return (fi ^. functionInfoCode, frameFromFunctionInfo fi (reverse args))
+        args <- replicateM (fi ^. functionArgsNum) popValueStack
+        return (fi ^. functionCode, frameFromFunctionInfo fi (reverse args))
       CallClosure -> do
         v <- popValueStack
         case v of
@@ -163,11 +163,11 @@ runCode infoTable = run . evalRuntime . goToplevel
             let fi = getFunInfo (cl ^. closureSymbol)
             let n = length (cl ^. closureArgs)
             when
-              (n >= fi ^. functionInfoArgsNum)
+              (n >= fi ^. functionArgsNum)
               (error "invalid closure: too many arguments")
-            args' <- replicateM (fi ^. functionInfoArgsNum - n) popValueStack
+            args' <- replicateM (fi ^. functionArgsNum - n) popValueStack
             return
-              ( fi ^. functionInfoCode,
+              ( fi ^. functionCode,
                 frameFromFunctionInfo fi ((cl ^. closureArgs) ++ reverse args')
               )
           _ -> error "invalid indirect call: expected closure on top of value stack"
@@ -175,5 +175,5 @@ runCode infoTable = run . evalRuntime . goToplevel
     getFunInfo :: Symbol -> FunctionInfo
     getFunInfo sym = fromMaybe (error "invalid function symbol") (HashMap.lookup sym (infoTable ^. infoFunctions))
 
-    getConstrInfo :: Tag -> ConstrInfo
+    getConstrInfo :: Tag -> ConstructorInfo
     getConstrInfo tag = fromMaybe (error "invalid constructor tag") (HashMap.lookup tag (infoTable ^. infoConstrs))

@@ -4,31 +4,41 @@ import Juvix.Compiler.Asm.Language
 
 data InfoTable = InfoTable
   { _infoFunctions :: HashMap Symbol FunctionInfo,
-    _infoConstrs :: HashMap Tag ConstrInfo
+    _infoConstrs :: HashMap Tag ConstructorInfo,
+    _infoInductives :: HashMap Symbol InductiveInfo
   }
 
 data FunctionInfo = FunctionInfo
-  { _functionInfoName :: Name,
-    _functionInfoSymbol :: Symbol,
-    _functionInfoArgsNum :: Int,
-    _functionInfoTempSize :: Int,
-    _functionInfoStackSize :: Int,
-    _functionInfoCode :: Code
+  { _functionName :: Maybe Name,
+    _functionSymbol :: Symbol,
+    _functionArgsNum :: Int,
+    _functionType :: Type,
+    _functionCode :: Code
   }
 
-data ConstrInfo = ConstrInfo
-  { _constrInfoName :: Name,
-    _constrInfoTag :: Tag,
-    _constrInfoArgsNum :: Int
+data ConstructorInfo = ConstructorInfo
+  { _constructorName :: Maybe Name,
+    _constructorTag :: Tag,
+    _constructorArgsNum :: Int,
+    _constructorType :: Type,
+    _constructorInductive :: Symbol
+  }
+
+data InductiveInfo = InductiveInfo
+  { _inductiveName :: Maybe Name,
+    _inductiveKind :: Type,
+    _inductiveConstructors :: [ConstructorInfo]
   }
 
 makeLenses ''InfoTable
 makeLenses ''FunctionInfo
-makeLenses ''ConstrInfo
+makeLenses ''ConstructorInfo
+makeLenses ''InductiveInfo
 
 emptyInfoTable :: InfoTable
 emptyInfoTable =
   InfoTable
     { _infoFunctions = mempty,
-      _infoConstrs = mempty
+      _infoConstrs = mempty,
+      _infoInductives = mempty
     }

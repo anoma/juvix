@@ -5,10 +5,12 @@
 module Juvix.Compiler.Asm.Language
   ( module Juvix.Compiler.Asm.Language,
     module Juvix.Compiler.Core.Language.Base,
+    module Juvix.Compiler.Core.Language.Stripped.Type
   )
 where
 
 import Juvix.Compiler.Core.Language.Base
+import Juvix.Compiler.Core.Language.Stripped.Type
 
 {-
 A JuvixAsm program is a set of JuvixAsm functions. Every function has an

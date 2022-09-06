@@ -11,12 +11,12 @@ frameFromFunctionInfo fi args =
     { _frameArgs =
         ArgumentArea
           { _argumentArea = HashMap.fromList (zip [0 ..] args),
-            _argumentAreaSize = fi ^. functionInfoArgsNum
+            _argumentAreaSize = fi ^. functionArgsNum
           },
       _frameTemp =
         TemporaryArea
           { _temporaryArea = mempty,
-            _temporaryAreaSize = fi ^. functionInfoTempSize
+            _temporaryAreaSize = 0 -- TODO
           },
       _frameStack = ValueStack []
     }
