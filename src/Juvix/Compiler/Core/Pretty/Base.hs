@@ -151,7 +151,7 @@ instance PrettyCode Node where
                     concatWith (\a b -> a <> kwSemicolon <> line <> b) $
                       zipWithExact (\name val -> name <+> kwAssign <+> val) ns (toList vs)
               nss = enclose kwSquareL kwSquareR (concatWith (<+>) ns)
-            in return $ kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
+           in return $ kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
       where
         getName :: Info -> Sem r (Doc Ann)
         getName i =
