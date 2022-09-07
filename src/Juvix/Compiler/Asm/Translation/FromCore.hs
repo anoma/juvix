@@ -63,7 +63,7 @@ genCode infoTable fi =
           | getArgsNum _identSymbol == 0 ->
               DL.singleton $
                 mkInstr $
-                  (if isTail then TailCall else Call) (CallFun _identSymbol)
+                  (if isTail then TailCall else Call) (InstrCall (CallFun _identSymbol) 0)
           | otherwise ->
               snocReturn isTail $
                 DL.singleton $
@@ -92,7 +92,7 @@ genCode infoTable fi =
               | argsNum == length _appsArgs ->
                   DL.snoc
                     (DL.concat (map (go False tempSize refs) _appsArgs))
-                    (mkInstr $ (if isTail then TailCall else Call) (CallFun _identSymbol))
+                    (mkInstr $ (if isTail then TailCall else Call) (InstrCall (CallFun _identSymbol) argsNum))
               | otherwise ->
                   -- If more arguments are supplied (_appsArgs) than the function
                   -- eats up (argsNum), then the function returns a closure. We
@@ -118,11 +118,13 @@ genCode infoTable fi =
                         (DL.concat (map (go False tempSize refs) _appsArgs))
                         (mkInstr $ Push (BL.lookup _varIndex refs))
                     )
-                    (mkInstr $ (if isTail then TailCall else Call) CallClosure)
-              | otherwise -> unimplemented
+                    (mkInstr $ (if isTail then TailCall else Call) (InstrCall CallClosure argsNum))
+              | otherwise ->
+                -- Here use CallClosures or TailCallClosures.
+                unimplemented
           where
             -- If the number of arguments is not available (the target of the
-            -- valriable's type is dynamic), then we should use CallClosures or
+            -- variable's type is dynamic), then we should use CallClosures or
             -- TailCallClosures.
             argsNum :: Int
             argsNum = unimplemented

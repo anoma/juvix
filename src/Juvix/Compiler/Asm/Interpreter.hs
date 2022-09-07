@@ -3,6 +3,7 @@ module Juvix.Compiler.Asm.Interpreter where
 import Control.Monad
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable
+import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Interpreter.Extra
 import Juvix.Compiler.Asm.Interpreter.Runtime
 import Juvix.Compiler.Asm.Language
@@ -13,9 +14,6 @@ import Juvix.Compiler.Asm.Language
 runCode :: InfoTable -> Code -> Val
 runCode infoTable = run . evalRuntime . goToplevel
   where
-    unimplemented :: forall a. a
-    unimplemented = error "not yet implemented"
-
     goToplevel :: Member Runtime r => Code -> Sem r Val
     goToplevel code = do
       goCode code
@@ -28,7 +26,8 @@ runCode infoTable = run . evalRuntime . goToplevel
 
     goCommand :: Member Runtime r => Command -> Code -> Sem r ()
     goCommand cmd cont = case cmd of
-      Instr (CmdInstr {..}) -> goInstr _cmdInstrInstruction cont
+      Instr (CmdInstr {..}) ->
+        goInstr _cmdInstrInstruction cont
       Branch (CmdBranch {..}) -> do
         v <- popValueStack
         case v of
@@ -71,10 +70,12 @@ runCode infoTable = run . evalRuntime . goToplevel
         goCode cont
       Pop ->
         popValueStack >> goCode cont
-      PushTemp ->
-        unimplemented
+      PushTemp -> do
+        v <- popValueStack
+        pushTempStack v
+        goCode cont
       PopTemp ->
-        unimplemented
+        popTempStack >> goCode cont
       AllocConstr tag -> do
         let ci = getConstrInfo tag
         args <- replicateM (ci ^. constructorArgsNum) popValueStack
@@ -88,31 +89,25 @@ runCode infoTable = run . evalRuntime . goToplevel
         v <- popValueStack
         case v of
           ValClosure cl -> do
-            args <- replicateM _extendClosureArgsNum popValueStack
-            pushValueStack
-              ( ValClosure
-                  ( Closure
-                      (cl ^. closureSymbol)
-                      (cl ^. closureArgs ++ reverse args)
-                  )
-              )
+            extendClosure cl _extendClosureArgsNum
             goCode cont
           _ -> error "invalid closure extension: expected closure on top of value stack"
-      Call callType -> do
-        (code, frm) <- getCallDetails callType
+      Call ic -> do
+        (code, frm) <- getCallDetails ic
         pushCallStack cont
         replaceFrame frm
         goCode code
-      TailCall callType -> do
+      TailCall ic -> do
         unless (null cont) (error "invalid tail call")
-        (code, frm) <- getCallDetails callType
+        (code, frm) <- getCallDetails ic
         replaceFrame frm
         goCode code
-      CallClosures _ ->
-        unimplemented
-      TailCallClosures _ ->
-        unimplemented
+      CallClosures (InstrCallClosures {..}) ->
+        callClosures False _callClosuresArgsNum cont
+      TailCallClosures (InstrCallClosures {..}) ->
+        callClosures True _callClosuresArgsNum cont
       Return -> do
+        unless (null cont) (error "invalid return")
         isToplevel <- fmap not hasCaller
         if
             | isToplevel -> return ()
@@ -166,10 +161,13 @@ runCode infoTable = run . evalRuntime . goToplevel
         (error "value stack not empty on function return")
       return v
 
-    getCallDetails :: Member Runtime r => CallType -> Sem r (Code, Frame)
-    getCallDetails = \case
+    getCallDetails :: Member Runtime r => InstrCall -> Sem r (Code, Frame)
+    getCallDetails InstrCall {..} = case _callType of
       CallFun sym -> do
         let fi = getFunInfo sym
+        when
+          (_callArgsNum /= fi ^. functionArgsNum)
+          (error "invalid indirect call: supplied arguments number not equal to expected arguments number")
         args <- replicateM (fi ^. functionArgsNum) popValueStack
         return (fi ^. functionCode, frameFromFunctionInfo fi (reverse args))
       CallClosure -> do
@@ -181,12 +179,59 @@ runCode infoTable = run . evalRuntime . goToplevel
             when
               (n >= fi ^. functionArgsNum)
               (error "invalid closure: too many arguments")
-            args' <- replicateM (fi ^. functionArgsNum - n) popValueStack
-            return
-              ( fi ^. functionCode,
-                frameFromFunctionInfo fi ((cl ^. closureArgs) ++ reverse args')
-              )
+            when
+              (_callArgsNum /= fi ^. functionArgsNum - n)
+              (error "invalid indirect call: supplied arguments number not equal to expected arguments number")
+            frm <- getCallFrame cl fi _callArgsNum
+            return (fi ^. functionCode, frm)
           _ -> error "invalid indirect call: expected closure on top of value stack"
+
+    getCallFrame :: Member Runtime r => Closure -> FunctionInfo -> Int -> Sem r Frame
+    getCallFrame cl fi argsNum = do
+      args <- replicateM argsNum popValueStack
+      return $ frameFromFunctionInfo fi ((cl ^. closureArgs) ++ reverse args)
+
+    extendClosure :: Member Runtime r => Closure -> Int -> Sem r ()
+    extendClosure cl n = do
+      args <- replicateM n popValueStack
+      pushValueStack
+        ( ValClosure
+            ( Closure
+                (cl ^. closureSymbol)
+                (cl ^. closureArgs ++ reverse args)
+            )
+        )
+
+    callClosures :: Member Runtime r => Bool -> Int -> Code -> Sem r ()
+    callClosures isTail argsNum cont = do
+      v <- popValueStack
+      case v of
+        ValClosure cl -> do
+          let fi = getFunInfo (cl ^. closureSymbol)
+          let n = fi ^. functionArgsNum - length (cl ^. closureArgs)
+          when
+            (n < 0)
+            (error "invalid closure: too many arguments")
+          if
+              | n > argsNum -> do
+                  extendClosure cl argsNum
+                  if
+                      | isTail -> goInstr Return cont
+                      | otherwise -> goCode cont
+              | n == argsNum -> do
+                  frm <- getCallFrame cl fi n
+                  unless isTail $ do
+                    unless (null cont) (error "invalid tail call")
+                    pushCallStack cont
+                  replaceFrame frm
+                  goCode (fi ^. functionCode)
+              | otherwise -> do
+                  let instr = mkInstr ((if isTail then TailCallClosures else CallClosures) (InstrCallClosures (argsNum - n)))
+                  frm <- getCallFrame cl fi n
+                  pushCallStack (instr : cont)
+                  replaceFrame frm
+                  goCode (fi ^. functionCode)
+        _ -> error "invalid indirect call: expected closure on top of value stack"
 
     getFunInfo :: Symbol -> FunctionInfo
     getFunInfo sym = fromMaybe (error "invalid function symbol") (HashMap.lookup sym (infoTable ^. infoFunctions))
