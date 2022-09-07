@@ -22,8 +22,8 @@ liftTest _testName _testCoreFile _testExpectedFile =
         _testName,
         _testAssertion = assertExpectedOutput expectedFile
       }
-      where
-      expectedFile = dir </> _testExpectedFile
+  where
+    expectedFile = dir </> _testExpectedFile
 
 tests :: [TestTree]
 tests =
