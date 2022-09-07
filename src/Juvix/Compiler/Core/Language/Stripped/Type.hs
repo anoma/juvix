@@ -1,8 +1,9 @@
 module Juvix.Compiler.Core.Language.Stripped.Type where
 
 import Juvix.Compiler.Core.Language.Base
+import Juvix.Compiler.Core.Language.Primitives
 
-data Type = TyDynamic | TyApp TypeApp | TyFun TypeFun
+data Type = TyDynamic | TyPrim Primitive | TyApp TypeApp | TyFun TypeFun
   deriving stock (Eq)
 
 data TypeApp = TypeApp

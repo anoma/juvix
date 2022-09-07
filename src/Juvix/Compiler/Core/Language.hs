@@ -1,6 +1,5 @@
 module Juvix.Compiler.Core.Language
   ( module Juvix.Compiler.Core.Language,
-    module Juvix.Compiler.Core.Language.Base,
     module Juvix.Compiler.Core.Language.Nodes,
   )
 where
@@ -9,7 +8,6 @@ where
   This file defines the tree representation of JuvixCore (Node datatype).
 -}
 
-import Juvix.Compiler.Core.Language.Base
 import Juvix.Compiler.Core.Language.Nodes
 
 {---------------------------------------------------------------------------------}
@@ -40,6 +38,8 @@ type Univ = Univ' Info
 
 type TypeConstr = TypeConstr' Info Node
 
+type TypePrim = TypePrim' Info
+
 type Dynamic = Dynamic' Info
 
 type CaseBranch = CaseBranch' Info Node
@@ -64,6 +64,7 @@ data Node
   | NPi {-# UNPACK #-} !Pi
   | NUniv {-# UNPACK #-} !Univ
   | NTyp {-# UNPACK #-} !TypeConstr
+  | NPrim {-# UNPACK #-} !TypePrim
   | NDyn !Dynamic -- Dynamic is already a newtype, so it's unpacked.
   | -- Evaluation only: `Closure env body`.
     Closure
@@ -107,5 +108,6 @@ instance HasAtomicity Node where
     NPi x -> atomicity x
     NUniv x -> atomicity x
     NTyp x -> atomicity x
+    NPrim x -> atomicity x
     NDyn x -> atomicity x
     Closure {} -> Aggregate lambdaFixity
