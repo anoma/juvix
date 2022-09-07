@@ -93,7 +93,13 @@ genCode infoTable fi =
                   DL.snoc
                     (DL.concat (map (go False tempSize refs) _appsArgs))
                     (mkInstr $ (if isTail then TailCall else Call) (CallFun _identSymbol))
-              | otherwise -> unimplemented
+              | otherwise ->
+                  -- If more arguments are supplied (_appsArgs) than the function
+                  -- eats up (argsNum), then the function returns a closure. We
+                  -- should first call the function (with Call) and then use
+                  -- CallClosures or TailCallClosures on the result with the
+                  -- remaining arguments.
+                  unimplemented
           where
             argsNum = getArgsNum _identSymbol
         Core.FunVar (Core.Var {..}) ->
@@ -105,7 +111,7 @@ genCode infoTable fi =
                           (DL.concat (map (go False tempSize refs) _appsArgs))
                           (mkInstr $ Push (BL.lookup _varIndex refs))
                       )
-                      (mkInstr $ ExtendClosure (length _appsArgs))
+                      (mkInstr $ ExtendClosure (InstrExtendClosure (length _appsArgs)))
               | argsNum == length _appsArgs ->
                   DL.snoc
                     ( DL.snoc
@@ -115,11 +121,11 @@ genCode infoTable fi =
                     (mkInstr $ (if isTail then TailCall else Call) CallClosure)
               | otherwise -> unimplemented
           where
+            -- If the number of arguments is not available (the target of the
+            -- valriable's type is dynamic), then we should use CallClosures or
+            -- TailCallClosures.
             argsNum :: Int
             argsNum = unimplemented
-    -- if the number of arguments is not available (the target of the
-    -- type is dynamic), then we should use CallClosures or
-    -- TailCallClosures
 
     goBuiltinApp :: Bool -> Int -> BinderList Value -> Core.BuiltinApp -> Code'
     goBuiltinApp isTail tempSize refs (Core.BuiltinApp {..}) =

@@ -95,7 +95,7 @@ data Instruction
     -- the closure. Pops the closure from the stack, pops n additional arguments
     -- from the stack and extends the closure with them in _decreasing_ order,
     -- then pushes the extended closure on top of the stack.
-    ExtendClosure {_extendClosureArgsNum :: Int}
+    ExtendClosure InstrExtendClosure
   | -- Call a function given by an immediate constant Symbol or a closure on top
     -- of the stack. Creates a new activation frame for the function. The n
     -- function arguments are popped from the stack and stored at _decreasing_
@@ -112,13 +112,14 @@ data Instruction
     TailCall CallType
   | -- `CallClosures` and `TailCallClosures` are like `Call` and `TailCall`
     -- except that they determine the number of arguments N for the closure at
-    -- runtime. If N is smaller than the supplied number of arguments (*argsNum
-    -- field in the instruction), then the result of the call must be another
-    -- closure and this closure is called with the remaining arguments or
-    -- extended with them (if there are not enough remaining arguments for the
-    -- call). The process is repeated until we run out of supplied arguments.
-    CallClosures {_callClosureArgsNum :: Int}
-  | TailCallClosures {_tailCallClosureArgsNum :: Int}
+    -- runtime. If N is smaller than the supplied number of arguments
+    -- (callClosuresArgsNum field in the instruction), then the result of the
+    -- call must be another closure and this closure is called with the
+    -- remaining arguments or extended with them (if there are not enough
+    -- remaining arguments for the call). The process is repeated until we run
+    -- out of supplied arguments.
+    CallClosures InstrCallClosures
+  | TailCallClosures InstrCallClosures
   | -- Pushes the top of the current value stack on top of the calling function
     -- value stack, discards the current activation frame, transfers control to
     -- the address at the top of the global call stack, and pops the call stack.
@@ -129,10 +130,18 @@ data InstrAllocClosure = InstrAllocClosure
     _allocClosureArgsNum :: Int
   }
 
+newtype InstrExtendClosure = InstrExtendClosure
+  { _extendClosureArgsNum :: Int
+  }
+
+newtype InstrCallClosures = InstrCallClosures
+  { _callClosuresArgsNum :: Int
+  }
+
 -- `Command` consists of a single non-branching instruction or a single branching
 -- command together with the branches.
 data Command
-  = -- A single non-branching instruction
+  = -- A single non-branching instruction.
     Instr CmdInstr
   | -- Branch based on a boolean value on top of the stack, pop the stack.
     Branch CmdBranch

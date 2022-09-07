@@ -51,30 +51,40 @@ runCode infoTable = run . evalRuntime . goToplevel
 
     goInstr :: Member Runtime r => Instruction -> Code -> Sem r ()
     goInstr instr cont = case instr of
-      IntAdd -> goIntBinOp (\x y -> ValInteger (x + y)) >> goCode cont
-      IntSub -> goIntBinOp (\x y -> ValInteger (x - y)) >> goCode cont
-      IntMul -> goIntBinOp (\x y -> ValInteger (x * y)) >> goCode cont
-      IntDiv -> goIntBinOp (\x y -> ValInteger (x `div` y)) >> goCode cont
-      IntLt -> goIntBinOp (\x y -> ValBool (x < y)) >> goCode cont
-      IntLe -> goIntBinOp (\x y -> ValBool (x <= y)) >> goCode cont
-      ValEq -> goBinOp (\x y -> ValBool (x == y)) >> goCode cont
+      IntAdd ->
+        goIntBinOp (\x y -> ValInteger (x + y)) >> goCode cont
+      IntSub ->
+        goIntBinOp (\x y -> ValInteger (x - y)) >> goCode cont
+      IntMul ->
+        goIntBinOp (\x y -> ValInteger (x * y)) >> goCode cont
+      IntDiv ->
+        goIntBinOp (\x y -> ValInteger (x `div` y)) >> goCode cont
+      IntLt ->
+        goIntBinOp (\x y -> ValBool (x < y)) >> goCode cont
+      IntLe ->
+        goIntBinOp (\x y -> ValBool (x <= y)) >> goCode cont
+      ValEq ->
+        goBinOp (\x y -> ValBool (x == y)) >> goCode cont
       Push ref -> do
         v <- getVal ref
         pushValueStack v
         goCode cont
-      Pop -> void popValueStack
-      PushTemp -> unimplemented
-      PopTemp -> unimplemented
+      Pop ->
+        popValueStack >> goCode cont
+      PushTemp ->
+        unimplemented
+      PopTemp ->
+        unimplemented
       AllocConstr tag -> do
         let ci = getConstrInfo tag
         args <- replicateM (ci ^. constructorArgsNum) popValueStack
         pushValueStack (ValConstr (Constr tag (reverse args)))
         goCode cont
-      AllocClosure (InstrAllocClosure {..}) -> do
+      AllocClosure InstrAllocClosure {..} -> do
         args <- replicateM _allocClosureArgsNum popValueStack
         pushValueStack (ValClosure (Closure _allocClosureFunSymbol (reverse args)))
         goCode cont
-      ExtendClosure {..} -> do
+      ExtendClosure InstrExtendClosure {..} -> do
         v <- popValueStack
         case v of
           ValClosure cl -> do
@@ -98,8 +108,10 @@ runCode infoTable = run . evalRuntime . goToplevel
         (code, frm) <- getCallDetails callType
         replaceFrame frm
         goCode code
-      CallClosures _ -> unimplemented
-      TailCallClosures _ -> unimplemented
+      CallClosures _ ->
+        unimplemented
+      TailCallClosures _ ->
+        unimplemented
       Return -> do
         isToplevel <- fmap not hasCaller
         if
