@@ -141,7 +141,7 @@ statementDef = do
       name <- lift $ freshName KNameFunction txt i
       let info =
             IdentifierInfo
-              { _identifierName = name,
+              { _identifierName = Just name,
                 _identifierSymbol = sym,
                 _identifierType = mkDynamic',
                 _identifierArgsNum = 0,

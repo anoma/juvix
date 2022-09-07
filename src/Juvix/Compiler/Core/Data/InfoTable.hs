@@ -30,7 +30,7 @@ emptyInfoTable =
 data IdentKind = IdentSym Symbol | IdentTag Tag
 
 data IdentifierInfo = IdentifierInfo
-  { _identifierName :: Name,
+  { _identifierName :: Maybe Name,
     _identifierSymbol :: Symbol,
     _identifierType :: Type,
     -- _identifierArgsNum will be used often enough to justify avoiding recomputation

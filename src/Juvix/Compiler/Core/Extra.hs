@@ -10,6 +10,7 @@ module Juvix.Compiler.Core.Extra
 where
 
 import Data.HashSet qualified as HashSet
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Equality
 import Juvix.Compiler.Core.Extra.Info
@@ -57,6 +58,36 @@ shift m = umapN go
     go k n = case n of
       NVar (Var i idx) | idx >= k -> mkVar i (idx + m)
       _ -> n
+
+-- | Prism for NLam
+_NLam :: SimpleFold Node Lambda
+_NLam f = \case
+    NLam l -> NLam <$> f l
+    n -> pure n
+
+-- | Fold over all of the transitive descendants of a Node, including itself.
+cosmos :: SimpleFold Node Node
+cosmos f = ufoldA reassemble f
+
+-- | The list should not contain repeated indices. The 'Info' corresponds to the
+-- binder of the variable.
+captureFreeVars :: [(Index, Info)] -> Node -> Node
+captureFreeVars fv
+  | n == 0 = id
+  | otherwise = mkLambdas infos . mapFreeVars
+  where
+    (indices, infos) = unzip fv
+    n = length fv
+    s :: HashMap Index Index
+    s = HashMap.fromList (zip indices [0 ..])
+    mapFreeVars :: Node -> Node
+    mapFreeVars = dmapNR go
+      where
+        go :: Index -> Node -> Recur
+        go k = \case
+          NVar (Var i u)
+            | Just v <- s ^. at (u - k) -> End (NVar (Var i (v + k)))
+          m -> Recur m
 
 -- | substitute a term t for the free variable with de Bruijn index 0, avoiding
 -- variable capture; shifts all free variabes with de Bruijn index > 0 by -1 (as
