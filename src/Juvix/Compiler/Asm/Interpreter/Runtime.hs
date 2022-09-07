@@ -90,6 +90,7 @@ data Continuation = Continuation
 
   - Integer (arbitrary precision)
   - Boolean
+  - String
   - Constructor data
   - Closure
 -}
@@ -97,6 +98,7 @@ data Continuation = Continuation
 data Val
   = ValInteger Integer
   | ValBool Bool
+  | ValString Text
   | ValConstr Constr
   | ValClosure Closure
   deriving stock (Eq)

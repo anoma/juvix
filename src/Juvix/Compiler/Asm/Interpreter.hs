@@ -134,6 +134,7 @@ runCode infoTable = run . evalRuntime . goToplevel
     getVal = \case
       ConstInt i -> return (ValInteger i)
       ConstBool b -> return (ValBool b)
+      ConstString s -> return (ValString s)
       Ref r -> getMemVal r
 
     getMemVal :: Member Runtime r => MemValue -> Sem r Val

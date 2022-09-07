@@ -32,7 +32,7 @@ memory layout.
 type Offset = Int
 
 -- Values reference readable values (constant or value stored in memory).
-data Value = ConstInt Integer | ConstBool Bool | Ref MemValue
+data Value = ConstInt Integer | ConstBool Bool | ConstString Text | Ref MemValue
 
 {-
 - MemValues are references to values stored in random-access memory.
@@ -55,7 +55,7 @@ makeLenses ''Field
 -- Function call type
 data CallType = CallFun Symbol | CallClosure
 
--- `Instruction` is a single non-branching instruction, i.e., with no control
+-- | `Instruction` is a single non-branching instruction, i.e., with no control
 -- transfer.
 data Instruction
   = -- | Add two integers from two top stack cells, pop the stack by two, and push
@@ -122,7 +122,7 @@ data Instruction
     -- extensions, then an implicit Return is executed after it.
     CallClosures InstrCallClosures
   | TailCallClosures InstrCallClosures
-  | -- Pushes the top of the current value stack on top of the calling function
+  | -- | Pushes the top of the current value stack on top of the calling function
     -- value stack, discards the current activation frame, transfers control to
     -- the address at the top of the global call stack, and pops the call stack.
     Return
@@ -145,14 +145,14 @@ newtype InstrCallClosures = InstrCallClosures
   { _callClosuresArgsNum :: Int
   }
 
--- `Command` consists of a single non-branching instruction or a single branching
+-- | `Command` consists of a single non-branching instruction or a single branching
 -- command together with the branches.
 data Command
-  = -- A single non-branching instruction.
+  = -- | A single non-branching instruction.
     Instr CmdInstr
-  | -- Branch based on a boolean value on top of the stack, pop the stack.
+  | -- | Branch based on a boolean value on top of the stack, pop the stack.
     Branch CmdBranch
-  | -- Branch based on the tag of the constructor data on top of the stack. Does
+  | -- | Branch based on the tag of the constructor data on top of the stack. Does
     -- _not_ pop the stack. The second argument is the optional default branch.
     Case CmdCase
 
