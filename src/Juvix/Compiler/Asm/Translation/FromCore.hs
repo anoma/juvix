@@ -120,8 +120,8 @@ genCode infoTable fi =
                     )
                     (mkInstr $ (if isTail then TailCall else Call) (InstrCall CallClosure argsNum))
               | otherwise ->
-                -- Here use CallClosures or TailCallClosures.
-                unimplemented
+                  -- Here use CallClosures or TailCallClosures.
+                  unimplemented
           where
             -- If the number of arguments is not available (the target of the
             -- variable's type is dynamic), then we should use CallClosures or
