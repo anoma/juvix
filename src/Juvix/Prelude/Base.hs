@@ -330,3 +330,13 @@ allElements = [minBound .. maxBound]
 
 readerState :: forall a r x. (Member (State a) r) => Sem (Reader a ': r) x -> Sem r x
 readerState m = get >>= (`runReader` m)
+
+infixr 3 .&&.
+
+(.&&.) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
+(a .&&. b) c = a c && b c
+
+infixr 2 .||.
+
+(.||.) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
+(a .||. b) c = a c || b c

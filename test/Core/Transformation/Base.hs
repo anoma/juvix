@@ -32,8 +32,14 @@ coreTransAssertion :: Test -> Assertion
 coreTransAssertion Test {..} = do
   r <- applyTransformations [LambdaLifting] <$> parseFile _testCoreFile
   expected <- readFile _testExpectedFile
-  let actualOutput = Text.renderStrict (toTextStream (ppOutDefault r))
-  assertEqDiff ("Check: EVAL output = " <> _testExpectedFile) actualOutput expected
+  let actualOutput = Text.renderStrict (toTextStream (ppOut opts r))
+  assertEqDiff ("Check: output = " <> _testExpectedFile) actualOutput expected
+  where
+    opts :: Options
+    opts =
+      defaultOptions
+        { _optShowDeBruijnIndices = True
+        }
 
 parseFile :: FilePath -> IO InfoTable
 parseFile f = fst <$> fromRightIO show (runParser "" f emptyInfoTable <$> readFile f)

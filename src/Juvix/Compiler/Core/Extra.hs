@@ -9,8 +9,8 @@ module Juvix.Compiler.Core.Extra
   )
 where
 
-import Data.HashSet qualified as HashSet
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Equality
 import Juvix.Compiler.Core.Extra.Info
@@ -50,20 +50,24 @@ countFreeVarOccurrences idx = gatherN go 0
       NVar (Var _ idx') | idx' == idx + k -> acc + 1
       _ -> acc
 
+shiftVar :: Index -> Var -> Var
+shiftVar m = over varIndex (+ m)
+
 -- | increase all free variable indices by a given value
 shift :: Index -> Node -> Node
 shift 0 = id
 shift m = umapN go
   where
-    go k n = case n of
-      NVar (Var i idx) | idx >= k -> mkVar i (idx + m)
-      _ -> n
+    go k = \case
+      NVar v
+        | v ^. varIndex >= k -> NVar (shiftVar m v)
+      n -> n
 
 -- | Prism for NLam
 _NLam :: SimpleFold Node Lambda
 _NLam f = \case
-    NLam l -> NLam <$> f l
-    n -> pure n
+  NLam l -> NLam <$> f l
+  n -> pure n
 
 -- | Fold over all of the transitive descendants of a Node, including itself.
 cosmos :: SimpleFold Node Node

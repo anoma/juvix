@@ -1,1 +1,1 @@
-def t1 := \g \f f (\x g x);
+def t1 := \g \f f (\x \y \z g x);

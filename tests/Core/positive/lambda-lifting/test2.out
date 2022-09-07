@@ -1,6 +1,6 @@
 -- IdentContext
-def t2 ≔ λr λs r (!4 $0)
-def 1 ≔ λx λw w x
-def 2 ≔ λx λy λe y e x y
-def 3 ≔ λx λy λz z y x (!1 $2) (!2 $1 $2)
-def 4 ≔ λs λx λy s y (!3 $0 $1)
+def 1 ≔ λx λw w$0 x$1
+def 2 ≔ λy λx λe y$2 e$0 x$1 y$2
+def 3 ≔ λy λx λz z$0 y$2 x$1 (!1 x$1) (!2 x$1 y$2)
+def 4 ≔ λs λx λy s$2 y$0 (!3 x$1 y$0)
+def t2 ≔ λr λs r$1 (!4 s$0)
