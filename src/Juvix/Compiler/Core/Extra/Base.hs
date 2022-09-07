@@ -183,31 +183,88 @@ makeLenses ''NodeDetails
 -- implement more high-level accessors and recursors.
 destruct :: Node -> NodeDetails
 destruct = \case
-  NVar (Var i idx) -> NodeDetails i [] [] [] (\i' _ -> mkVar i' idx)
-  NIdt (Ident i sym) -> NodeDetails i [] [] [] (\i' _ -> mkIdent i' sym)
-  NCst (Constant i c) -> NodeDetails i [] [] [] (\i' _ -> mkConstant i' c)
-  NApp (App i l r) -> NodeDetails i [l, r] [0, 0] [[], []] (\i' args' -> mkApp i' (hd args') (args' !! 1))
-  NBlt (BuiltinApp i op args) -> NodeDetails i args (map (const 0) args) (map (const []) args) (`mkBuiltinApp` op)
-  NCtr (Constr i tag args) -> NodeDetails i args (map (const 0) args) (map (const []) args) (`mkConstr` tag)
-  NLam (Lambda i b) -> NodeDetails i [b] [1] [fetchBinderInfo i] (\i' args' -> mkLambda i' (hd args'))
-  NLet (Let i v b) -> NodeDetails i [v, b] [0, 1] [[], fetchBinderInfo i] (\i' args' -> mkLet i' (hd args') (args' !! 1))
+  NVar (Var i idx) ->
+    NodeDetails
+      { _nodeInfo = i,
+        _nodeChildren = [],
+        _nodeChildBindersNum = [],
+        _nodeChildBindersInfo = [],
+        _nodeReassemble = \i' _ -> mkVar i' idx
+      }
+  NIdt (Ident i sym) ->
+    NodeDetails
+      { _nodeInfo = i,
+        _nodeChildren = [],
+        _nodeChildBindersNum = [],
+        _nodeChildBindersInfo = [],
+        _nodeReassemble = \i' _ -> mkIdent i' sym
+      }
+  NCst (Constant i c) ->
+    NodeDetails
+      { _nodeInfo = i,
+        _nodeChildren = [],
+        _nodeChildBindersNum = [],
+        _nodeChildBindersInfo = [],
+        _nodeReassemble = \i' _ -> mkConstant i' c
+      }
+  NApp (App i l r) ->
+    NodeDetails
+      { _nodeInfo = i,
+        _nodeChildren = [l, r],
+        _nodeChildBindersNum = [0, 0],
+        _nodeChildBindersInfo = [[], []],
+        _nodeReassemble = \i' args' -> mkApp i' (hd args') (args' !! 1)
+      }
+  NBlt (BuiltinApp i op args) ->
+    NodeDetails
+      { _nodeInfo = i,
+        _nodeChildren = args,
+        _nodeChildBindersNum = map (const 0) args,
+        _nodeChildBindersInfo = map (const []) args,
+        _nodeReassemble = (`mkBuiltinApp` op)
+      }
+  NCtr (Constr i tag args) ->
+    NodeDetails
+      { _nodeInfo = i,
+        _nodeChildren = args,
+        _nodeChildBindersNum = map (const 0) args,
+        _nodeChildBindersInfo = map (const []) args,
+        _nodeReassemble = (`mkConstr` tag)
+      }
+  NLam (Lambda i b) ->
+    NodeDetails
+      { _nodeInfo = i,
+        _nodeChildren = [b],
+        _nodeChildBindersNum = [1],
+        _nodeChildBindersInfo = [fetchBinderInfo i],
+        _nodeReassemble = \i' args' -> mkLambda i' (hd args')
+      }
+  NLet (Let i v b) ->
+    NodeDetails
+      { _nodeInfo = i,
+        _nodeChildren = [v, b],
+        _nodeChildBindersNum = [0, 1],
+        _nodeChildBindersInfo = [[], fetchBinderInfo i],
+        _nodeReassemble = \i' args' -> mkLet i' (hd args') (args' !! 1)
+      }
   NRec (LetRec i vs b) ->
     let n = length vs
      in NodeDetails
-          i
-          (b : toList vs)
-          (replicate (n + 1) n)
-          (replicate (n + 1) (getInfoBinders n i))
-          (\i' args' -> mkLetRec i' (fromList (tl args')) (hd args'))
+          { _nodeInfo = i,
+            _nodeChildren = b : toList vs,
+            _nodeChildBindersNum = replicate (n + 1) n,
+            _nodeChildBindersInfo = replicate (n + 1) (getInfoBinders n i),
+            _nodeReassemble = \i' args' -> mkLetRec i' (fromList (tl args')) (hd args')
+          }
   NCase (Case i v bs Nothing) ->
     let branchBinderNums = map (\(CaseBranch _ _ k _) -> k) bs
         branchBinderInfos = map (\(CaseBranch bi _ k _) -> getInfoBinders k bi) bs
      in NodeDetails
-          i
-          (v : map (\(CaseBranch _ _ _ br) -> br) bs)
-          (0 : branchBinderNums)
-          ([] : branchBinderInfos)
-          ( \i' args' ->
+          { _nodeInfo = i,
+            _nodeChildren = v : map (\(CaseBranch _ _ _ br) -> br) bs,
+            _nodeChildBindersNum = 0 : branchBinderNums,
+            _nodeChildBindersInfo = [] : branchBinderInfos,
+            _nodeReassemble = \i' args' ->
               mkCase
                 i'
                 (hd args')
@@ -217,16 +274,16 @@ destruct = \case
                     (tl args')
                 )
                 Nothing
-          )
+          }
   NCase (Case i v bs (Just def)) ->
     let branchBinderNums = map (\(CaseBranch _ _ k _) -> k) bs
         branchBinderInfos = map (\(CaseBranch bi _ k _) -> getInfoBinders k bi) bs
      in NodeDetails
-          i
-          (v : def : map (\(CaseBranch _ _ _ br) -> br) bs)
-          (0 : 0 : branchBinderNums)
-          ([] : [] : branchBinderInfos)
-          ( \i' args' ->
+          { _nodeInfo = i,
+            _nodeChildren = v : def : map (\(CaseBranch _ _ _ br) -> br) bs,
+            _nodeChildBindersNum = 0 : 0 : branchBinderNums,
+            _nodeChildBindersInfo = [] : [] : branchBinderInfos,
+            _nodeReassemble = \i' args' ->
               mkCase
                 i'
                 (hd args')
@@ -236,24 +293,55 @@ destruct = \case
                     (tl (tl args'))
                 )
                 (Just (hd (tl args')))
-          )
+          }
   NPi (Pi i ty b) ->
-    NodeDetails i [ty, b] [0, 1] [[], fetchBinderInfo i] (\i' args' -> mkPi i' (hd args') (args' !! 1))
+    NodeDetails
+      { _nodeInfo = i,
+        _nodeChildren = [ty, b],
+        _nodeChildBindersNum = [0, 1],
+        _nodeChildBindersInfo = [[], fetchBinderInfo i],
+        _nodeReassemble = \i' args' -> mkPi i' (hd args') (args' !! 1)
+      }
   NUniv (Univ i l) ->
-    NodeDetails i [] [] [] (\i' _ -> mkUniv i' l)
+    NodeDetails
+      { _nodeInfo = i,
+        _nodeChildren = [],
+        _nodeChildBindersNum = [],
+        _nodeChildBindersInfo = [],
+        _nodeReassemble = \i' _ -> mkUniv i' l
+      }
   NTyp (TypeConstr i sym args) ->
-    NodeDetails i args (map (const 0) args) (map (const []) args) (`mkTypeConstr` sym)
+    NodeDetails
+      { _nodeInfo = i,
+        _nodeChildren = args,
+        _nodeChildBindersNum = map (const 0) args,
+        _nodeChildBindersInfo = map (const []) args,
+        _nodeReassemble = (`mkTypeConstr` sym)
+      }
   NPrim (TypePrim i prim) ->
-    NodeDetails i [] [] [] (\i' _ -> mkTypePrim i' prim)
+    NodeDetails
+      { _nodeInfo = i,
+        _nodeChildren = [],
+        _nodeChildBindersNum = [],
+        _nodeChildBindersInfo = [],
+        _nodeReassemble = \i' _ -> mkTypePrim i' prim
+      }
   NDyn (Dynamic i) ->
-    NodeDetails i [] [] [] (\i' _ -> mkDynamic i')
+    NodeDetails
+      { _nodeInfo = i,
+        _nodeChildren = [],
+        _nodeChildBindersNum = [],
+        _nodeChildBindersInfo = [],
+        _nodeReassemble = \i' _ -> mkDynamic i'
+      }
   Closure env (Lambda i b) ->
     NodeDetails
-      i
-      (b : env)
-      (1 : map (const 0) env)
-      (fetchBinderInfo i : map (const []) env)
-      (\i' args' -> Closure (tl args') (Lambda i' (hd args')))
+      { _nodeInfo = i,
+        _nodeChildren = b : env,
+        _nodeChildBindersNum = 1 : map (const 0) env,
+        _nodeChildBindersInfo = fetchBinderInfo i : map (const []) env,
+        _nodeReassemble = \i' args' -> Closure (tl args') (Lambda i' (hd args'))
+      }
   where
     fetchBinderInfo :: Info -> [Info]
     fetchBinderInfo i = [getInfoBinder i]
