@@ -4,6 +4,7 @@ import Arity qualified
 import BackendC qualified
 import Base
 import Core qualified
+import Parsing qualified
 import Reachability qualified
 import Scope qualified
 import Termination qualified
@@ -21,7 +22,8 @@ fastTests :: TestTree
 fastTests =
   testGroup
     "Juvix fast tests"
-    [ Scope.allTests,
+    [ Parsing.allTests,
+      Scope.allTests,
       Termination.allTests,
       Arity.allTests,
       TypeCheck.allTests,
