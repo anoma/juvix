@@ -10,7 +10,7 @@ import Prettyprinter.Render.Text qualified as Text
 data Test = Test
   { _testName :: String,
     _testCoreFile :: FilePath,
-    _testExpectedFile :: FilePath,
+    _testAssertion :: InfoTable -> Assertion,
     _testTransformations :: [TransformationId]
   }
 
@@ -28,18 +28,22 @@ toTestDescr t@Test {..} =
       _testAssertion = Single (coreTransAssertion t)
     }
 
-coreTransAssertion :: Test -> Assertion
-coreTransAssertion Test {..} = do
-  r <- applyTransformations [LambdaLifting] <$> parseFile _testCoreFile
-  expected <- readFile _testExpectedFile
+assertExpectedOutput :: FilePath -> InfoTable -> Assertion
+assertExpectedOutput testExpectedFile r = do
+  expected <- readFile testExpectedFile
   let actualOutput = Text.renderStrict (toTextStream (ppOut opts r))
-  assertEqDiff ("Check: output = " <> _testExpectedFile) actualOutput expected
+  assertEqDiff ("Check: output = " <> testExpectedFile) actualOutput expected
   where
     opts :: Options
     opts =
       defaultOptions
         { _optShowDeBruijnIndices = True
         }
+
+coreTransAssertion :: Test -> Assertion
+coreTransAssertion Test {..} = do
+  r <- applyTransformations [LambdaLifting] <$> parseFile _testCoreFile
+  _testAssertion r
 
 parseFile :: FilePath -> IO InfoTable
 parseFile f = fst <$> fromRightIO show (runParser "" f emptyInfoTable <$> readFile f)

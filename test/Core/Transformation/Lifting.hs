@@ -20,8 +20,10 @@ liftTest _testName _testCoreFile _testExpectedFile =
       { _testTransformations = pipe,
         _testCoreFile = dir </> _testCoreFile,
         _testName,
-        _testExpectedFile = dir </> _testExpectedFile
+        _testAssertion = assertExpectedOutput expectedFile
       }
+      where
+      expectedFile = dir </> _testExpectedFile
 
 tests :: [TestTree]
 tests =
