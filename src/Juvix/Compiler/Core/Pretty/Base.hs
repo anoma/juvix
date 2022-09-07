@@ -66,6 +66,12 @@ instance PrettyCode Tag where
     BuiltinTag tag -> ppCode tag
     UserTag tag -> return $ kwUnnamedConstr <> pretty tag
 
+instance PrettyCode Primitive where
+  ppCode = \case
+    PrimInteger _ -> return $ annotate (AnnKind KNameInductive) (pretty ("integer" :: String))
+    PrimBool _ -> return $ annotate (AnnKind KNameInductive) (pretty ("bool" :: String))
+    PrimString -> return $ annotate (AnnKind KNameInductive) (pretty ("string" :: String))
+
 ppCodeVar' :: Member (Reader Options) r => Maybe Name -> Var' i -> Sem r (Doc Ann)
 ppCodeVar' name v =
   case name of
@@ -214,6 +220,7 @@ instance PrettyCode Node where
           return $ kwLambda <> kwQuestion <+> b
     NUniv Univ {..} ->
       return $ kwType <+> pretty _univLevel
+    NPrim TypePrim {..} -> ppCode _typePrimPrimitive
     NTyp TypeConstr {..} -> do
       args' <- mapM (ppRightExpression appFixity) _typeConstrArgs
       n' <-

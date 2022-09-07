@@ -1,6 +1,12 @@
-module Juvix.Compiler.Core.Language.Nodes where
+module Juvix.Compiler.Core.Language.Nodes
+  ( module Juvix.Compiler.Core.Language.Base,
+    module Juvix.Compiler.Core.Language.Primitives,
+    module Juvix.Compiler.Core.Language.Nodes,
+  )
+where
 
 import Juvix.Compiler.Core.Language.Base
+import Juvix.Compiler.Core.Language.Primitives
 
 {-------------------------------------------------------------------}
 {- Polymorphic Node types -}
@@ -98,6 +104,11 @@ data TypeConstr' i a = TypeConstr
     _typeConstrArgs :: ![a]
   }
 
+data TypePrim' i = TypePrim
+  { _typePrimInfo :: i,
+    _typePrimPrimitive :: Primitive
+  }
+
 -- | Dynamic type. A Node with a dynamic type has an unknown type. Useful
 -- for transformations that introduce partial type information, e.g., one can
 -- have types `* -> *` and `* -> * -> Nat` where `*` is the dynamic type.
@@ -147,6 +158,9 @@ instance HasAtomicity (Pi' i a) where
   atomicity _ = Aggregate lambdaFixity
 
 instance HasAtomicity (Univ' i) where
+  atomicity _ = Atom
+
+instance HasAtomicity (TypePrim' i) where
   atomicity _ = Atom
 
 instance HasAtomicity (TypeConstr' i a) where
@@ -202,6 +216,9 @@ instance Eq (Univ' i) where
 
 instance Eq a => Eq (TypeConstr' i a) where
   (TypeConstr _ sym1 args1) == (TypeConstr _ sym2 args2) = sym1 == sym2 && args1 == args2
+
+instance Eq (TypePrim' i) where
+  (TypePrim _ p1) == (TypePrim _ p2) = p1 == p2
 
 instance Eq (Dynamic' i) where
   (Dynamic _) == (Dynamic _) = True
