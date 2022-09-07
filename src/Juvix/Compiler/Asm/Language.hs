@@ -4,15 +4,15 @@
 {-# HLINT ignore "Avoid restricted flags" #-}
 module Juvix.Compiler.Asm.Language
   ( module Juvix.Compiler.Asm.Language,
+    module Juvix.Compiler.Asm.Language.Type,
     module Juvix.Compiler.Core.Language.Base,
-    module Juvix.Compiler.Core.Language.Stripped.Type,
     Stack,
   )
 where
 
 import Juvix.Compiler.Asm.Data.Stack (Stack)
+import Juvix.Compiler.Asm.Language.Type
 import Juvix.Compiler.Core.Language.Base
-import Juvix.Compiler.Core.Language.Stripped.Type
 
 {-
 A JuvixAsm program is a set of JuvixAsm functions. Every function has an
@@ -25,23 +25,23 @@ memory layout.
 -}
 
 -- In what follows, when referring to the stack we mean the current local value
--- stack, unless otherwise stated. By stack[n] we denote the n-th cell  from the
+-- stack, unless otherwise stated. By stack[n] we denote the n-th cell from the
 -- top in the value stack.
 
--- Offset of a data field or an argument
+-- | Offset of a data field or an argument
 type Offset = Int
 
--- Values reference readable values (constant or value stored in memory).
+-- | Values reference readable values (constant or value stored in memory).
 data Value = ConstInt Integer | ConstBool Bool | ConstString Text | Ref MemValue
 
 {-
 - MemValues are references to values stored in random-access memory.
 - StackRef references the top of the stack.
 - ArgRef references an argument in the argument area: offset n references the
-  (n+1)th arguments.
+  (n+1)th argument.
 - TempRef references a value in the temporary area.
 - ConstrRef references a field (argument) of a constructor: field k holds the
-  (k+1)th argument
+  (k+1)th argument.
 -}
 data MemValue = StackRef | ArgRef Offset | TempRef Offset | ConstrRef Field
 
@@ -52,21 +52,24 @@ data Field = Field
 
 makeLenses ''Field
 
--- Function call type
+-- | Function call type
 data CallType = CallFun Symbol | CallClosure
 
 -- | `Instruction` is a single non-branching instruction, i.e., with no control
 -- transfer.
 data Instruction
-  = -- | Add two integers from two top stack cells, pop the stack by two, and push
-    -- the result.
+  = -- | Add stack[1] - stack[0], pop the stack by two, and push the result.
     IntAdd
   | -- | Subtract stack[1] - stack[0], pop the stack by two, and push the result.
     IntSub
-  | IntMul
-  | IntDiv
-  | IntLt
-  | IntLe
+  | -- | Multiply stack[1] * stack[0], pop the stack by two, and push the result.
+    IntMul
+  | -- | Divide stack[1] / stack[0], pop the stack by two, and push the result.
+    IntDiv
+  | -- | Compare stack[1] < stack[0], pop the stack by two, and push the result.
+    IntLt
+  | -- | Compare stack[1] <= stack[0], pop the stack by two, and push the result.
+    IntLe
   | -- | Compare the two top stack cells with structural equality, pop the stack
     -- by two, and push the result.
     ValEq
@@ -185,7 +188,7 @@ data CaseBranch = CaseBranch
     _caseBranchCode :: Code
   }
 
--- `Code` corresponds to JuvixAsm code for a single function.
+-- | `Code` corresponds to JuvixAsm code for a single function.
 type Code = [Command]
 
 makeLenses ''InstrAllocClosure

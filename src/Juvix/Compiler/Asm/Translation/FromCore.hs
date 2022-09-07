@@ -30,7 +30,7 @@ genCode infoTable fi =
         { _functionName = fi ^. Core.functionName,
           _functionSymbol = fi ^. Core.functionSymbol,
           _functionArgsNum = fi ^. Core.functionArgsNum,
-          _functionType = fi ^. Core.functionType,
+          _functionType = convertType (fi ^. Core.functionType),
           _functionCode = code
         }
   where
@@ -229,3 +229,6 @@ genCode infoTable fi =
     snocReturn :: Bool -> Code' -> Code'
     snocReturn True code = DL.snoc code (mkInstr Return)
     snocReturn False code = code
+
+    convertType :: Core.Type -> Type
+    convertType = unimplemented
