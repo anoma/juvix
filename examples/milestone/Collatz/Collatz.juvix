@@ -11,7 +11,7 @@ div2 zero ≔ just zero;
 div2 (suc (suc n)) ≔ mapMaybe suc (div2 n);
 div2 _ ≔ nothing;
 
-collatzNext : ℕ → ℕ;
+collatzNext : ℕ → ℕ;
 collatzNext n ≔ fromMaybe (suc (3 * n)) (div2 n);
 
 collatz : ℕ → ℕ;
