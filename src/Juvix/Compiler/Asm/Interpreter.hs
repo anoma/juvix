@@ -23,8 +23,31 @@ runCode infoTable = run . evalRuntime . goToplevel
 
     goCode :: Member Runtime r => Code -> Sem r ()
     goCode = \case
-      instr : cont -> goInstr instr cont
+      cmd : cont -> goCommand cmd cont
       [] -> return ()
+
+    goCommand :: Member Runtime r => Command -> Code -> Sem r ()
+    goCommand cmd cont = case cmd of
+      Instr (CmdInstr {..}) -> goInstr _cmdInstrInstruction cont
+      Branch (CmdBranch {..}) -> do
+        v <- popValueStack
+        case v of
+          ValBool True -> goCode _cmdBranchTrue
+          ValBool False -> goCode _cmdBranchFalse
+          _ -> error "branch on non-boolean"
+        goCode cont
+      Case (CmdCase {..}) -> do
+        v <- popValueStack
+        case v of
+          ValConstr c -> branch (c ^. constrTag) _cmdCaseBranches _cmdCaseDefault
+          _ -> error "case on non-data"
+        goCode cont
+        where
+          branch :: Member Runtime r => Tag -> [CaseBranch] -> Maybe Code -> Sem r ()
+          branch tag bs def = case bs of
+            (CaseBranch {..}) : _ | _caseBranchTag == tag -> goCode _caseBranchCode
+            _ : bs' -> branch tag bs' def
+            _ -> goCode $ fromMaybe (error "no matching branch") def
 
     goInstr :: Member Runtime r => Instruction -> Code -> Sem r ()
     goInstr instr cont = case instr of
@@ -47,15 +70,15 @@ runCode infoTable = run . evalRuntime . goToplevel
         args <- replicateM (ci ^. constructorArgsNum) popValueStack
         pushValueStack (ValConstr (Constr tag (reverse args)))
         goCode cont
-      AllocClosure {..} -> do
-        args <- replicateM allocClosureArgsNum popValueStack
-        pushValueStack (ValClosure (Closure allocClosureFunSymbol (reverse args)))
+      AllocClosure (InstrAllocClosure {..}) -> do
+        args <- replicateM _allocClosureArgsNum popValueStack
+        pushValueStack (ValClosure (Closure _allocClosureFunSymbol (reverse args)))
         goCode cont
       ExtendClosure {..} -> do
         v <- popValueStack
         case v of
           ValClosure cl -> do
-            args <- replicateM extendClosureArgsNum popValueStack
+            args <- replicateM _extendClosureArgsNum popValueStack
             pushValueStack
               ( ValClosure
                   ( Closure
@@ -65,25 +88,6 @@ runCode infoTable = run . evalRuntime . goToplevel
               )
             goCode cont
           _ -> error "invalid closure extension: expected closure on top of value stack"
-      Branch {..} -> do
-        v <- popValueStack
-        case v of
-          ValBool True -> goCode branchTrue
-          ValBool False -> goCode branchFalse
-          _ -> error "branch on non-boolean"
-        goCode cont
-      Case {..} -> do
-        v <- popValueStack
-        case v of
-          ValConstr c -> branch (c ^. constrTag) caseBranches caseDefault
-          _ -> error "case on non-data"
-        goCode cont
-        where
-          branch :: Member Runtime r => Tag -> [CaseBranch] -> Maybe Code -> Sem r ()
-          branch tag bs def = case bs of
-            (CaseBranch {..}) : _ | _caseBranchTag == tag -> goCode _caseBranchCode
-            _ : bs' -> branch tag bs' def
-            _ -> goCode $ fromMaybe (error "no matching branch") def
       Call callType -> do
         (code, frm) <- getCallDetails callType
         pushCallStack cont

@@ -3,6 +3,7 @@ module Juvix.Compiler.Asm.Translation.FromCore where
 import Data.DList qualified as DL
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable
+import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Core
@@ -11,7 +12,7 @@ import Juvix.Compiler.Core.Language.Stripped qualified as Core
 type BinderList = BL.BinderList
 
 -- DList for O(1) snoc and append
-type Code' = DL.DList Instruction
+type Code' = DL.DList Command
 
 -- Generate code for a single function.
 genCode :: Core.InfoTable -> Core.FunctionInfo -> FunctionInfo
@@ -40,119 +41,174 @@ genCode infoTable fi =
     -- (directly or indirectly).
     go :: Bool -> Int -> BinderList Value -> Core.Node -> Code'
     go isTail tempSize refs node = case node of
-      Core.NVar (Core.Var {..}) ->
-        snocReturn isTail $ DL.singleton (Push (BL.lookup _varIndex refs))
-      Core.NIdt (Core.Ident {..}) ->
-        if
-            | getArgsNum _identSymbol == 0 ->
-                DL.singleton ((if isTail then TailCall else Call) (CallFun _identSymbol))
-            | otherwise ->
-                snocReturn isTail $ DL.singleton (AllocClosure _identSymbol 0)
-      Core.NCst (Core.Constant _ (Core.ConstInteger i)) ->
-        snocReturn isTail $ DL.singleton (Push (ConstInt i))
-      Core.NCtr (Core.Constr _ (Core.BuiltinTag Core.TagTrue) _) ->
-        snocReturn isTail $ DL.singleton (Push (ConstBool True))
-      Core.NCtr (Core.Constr _ (Core.BuiltinTag Core.TagFalse) _) ->
-        snocReturn isTail $ DL.singleton (Push (ConstBool False))
-      Core.NApp (Core.Apps {..}) ->
-        case _appsFun of
-          Core.FunIdent (Core.Ident {..}) ->
-            if
-                | argsNum > length _appsArgs ->
-                    snocReturn isTail $
-                      DL.snoc
-                        (DL.concat (map (go False tempSize refs) _appsArgs))
-                        (AllocClosure _identSymbol (length _appsArgs))
-                | argsNum == length _appsArgs ->
+      Core.NVar v@Core.Var {} -> goVar isTail refs v
+      Core.NIdt idt@Core.Ident {} -> goIdent isTail idt
+      Core.NCst cst@Core.Constant {} -> goConstant isTail cst
+      Core.NApp apps@Core.Apps {} -> goApps isTail tempSize refs apps
+      Core.NBlt blt@Core.BuiltinApp {} -> goBuiltinApp isTail tempSize refs blt
+      Core.NCtr ctr@Core.Constr {} -> goConstr isTail tempSize refs ctr
+      Core.NLet lt@Core.Let {} -> goLet isTail tempSize refs lt
+      Core.NCase c@Core.Case {} -> goCase isTail tempSize refs c
+
+    goVar :: Bool -> BinderList Value -> Core.Var -> Code'
+    goVar isTail refs (Core.Var {..}) =
+      snocReturn isTail $
+        DL.singleton $
+          mkInstr $
+            Push (BL.lookup _varIndex refs)
+
+    goIdent :: Bool -> Core.Ident -> Code'
+    goIdent isTail (Core.Ident {..}) =
+      if
+          | getArgsNum _identSymbol == 0 ->
+              DL.singleton $
+                mkInstr $
+                  (if isTail then TailCall else Call) (CallFun _identSymbol)
+          | otherwise ->
+              snocReturn isTail $
+                DL.singleton $
+                  mkInstr $
+                    AllocClosure (InstrAllocClosure _identSymbol 0)
+
+    goConstant :: Bool -> Core.Constant -> Code'
+    goConstant isTail = \case
+      Core.Constant _ (Core.ConstInteger i) ->
+        snocReturn isTail $
+          DL.singleton $
+            mkInstr $
+              Push (ConstInt i)
+      _ -> unimplemented
+
+    goApps :: Bool -> Int -> BinderList Value -> Core.Apps -> Code'
+    goApps isTail tempSize refs (Core.Apps {..}) =
+      case _appsFun of
+        Core.FunIdent (Core.Ident {..}) ->
+          if
+              | argsNum > length _appsArgs ->
+                  snocReturn isTail $
                     DL.snoc
                       (DL.concat (map (go False tempSize refs) _appsArgs))
-                      ((if isTail then TailCall else Call) (CallFun _identSymbol))
-                | otherwise -> unimplemented
-            where
-              argsNum = getArgsNum _identSymbol
-          Core.FunVar (Core.Var {..}) ->
-            if
-                | argsNum > length _appsArgs ->
-                    snocReturn isTail $
-                      DL.snoc
-                        ( DL.snoc
-                            (DL.concat (map (go False tempSize refs) _appsArgs))
-                            (Push (BL.lookup _varIndex refs))
-                        )
-                        (ExtendClosure (length _appsArgs))
-                | argsNum == length _appsArgs ->
+                      (mkInstr $ AllocClosure (InstrAllocClosure _identSymbol (length _appsArgs)))
+              | argsNum == length _appsArgs ->
+                  DL.snoc
+                    (DL.concat (map (go False tempSize refs) _appsArgs))
+                    (mkInstr $ (if isTail then TailCall else Call) (CallFun _identSymbol))
+              | otherwise -> unimplemented
+          where
+            argsNum = getArgsNum _identSymbol
+        Core.FunVar (Core.Var {..}) ->
+          if
+              | argsNum > length _appsArgs ->
+                  snocReturn isTail $
                     DL.snoc
                       ( DL.snoc
                           (DL.concat (map (go False tempSize refs) _appsArgs))
-                          (Push (BL.lookup _varIndex refs))
+                          (mkInstr $ Push (BL.lookup _varIndex refs))
                       )
-                      ((if isTail then TailCall else Call) CallClosure)
-                | otherwise -> unimplemented
-            where
-              argsNum :: Int
-              argsNum = unimplemented
-      Core.NBlt (Core.BuiltinApp {..}) ->
+                      (mkInstr $ ExtendClosure (length _appsArgs))
+              | argsNum == length _appsArgs ->
+                  DL.snoc
+                    ( DL.snoc
+                        (DL.concat (map (go False tempSize refs) _appsArgs))
+                        (mkInstr $ Push (BL.lookup _varIndex refs))
+                    )
+                    (mkInstr $ (if isTail then TailCall else Call) CallClosure)
+              | otherwise -> unimplemented
+          where
+            argsNum :: Int
+            argsNum = unimplemented
+    -- if the number of arguments is not available (the target of the
+    -- type is dynamic), then we should use CallClosures or
+    -- TailCallClosures
+
+    goBuiltinApp :: Bool -> Int -> BinderList Value -> Core.BuiltinApp -> Code'
+    goBuiltinApp isTail tempSize refs (Core.BuiltinApp {..}) =
+      snocReturn isTail $
+        DL.snoc
+          (DL.concat (map (go False tempSize refs) _builtinAppArgs))
+          (genOp _builtinAppOp)
+
+    goConstr :: Bool -> Int -> BinderList Value -> Core.Constr -> Code'
+    goConstr isTail tempSize refs = \case
+      Core.Constr _ (Core.BuiltinTag Core.TagTrue) _ ->
         snocReturn isTail $
-          DL.snoc
-            (DL.concat (map (go False tempSize refs) _builtinAppArgs))
-            (genOp _builtinAppOp)
-      Core.NCtr (Core.Constr {..}) ->
+          DL.singleton $
+            mkInstr $
+              Push (ConstBool True)
+      Core.Constr _ (Core.BuiltinTag Core.TagFalse) _ ->
+        snocReturn isTail $
+          DL.singleton $
+            mkInstr $
+              Push (ConstBool False)
+      Core.Constr {..} ->
         snocReturn isTail $
           DL.snoc
             (DL.concat (map (go False tempSize refs) _constrArgs))
-            (AllocConstr _constrTag)
-      Core.NLet (Core.Let {..}) ->
-        DL.append
-          (DL.snoc (go False tempSize refs _letValue) PushTemp)
-          (go isTail (tempSize + 1) (BL.extend (Ref (TempRef tempSize)) refs) _letBody)
-      Core.NCase (Core.Case {..}) ->
-        -- TODO: special case for if-then-else
-        DL.snoc
-          (go False tempSize refs _caseValue)
-          ( Case
-              ( map
-                  ( \(Core.CaseBranch {..}) ->
-                      if
-                          | _caseBranchBindersNum == 0 ->
-                              CaseBranch
-                                _caseBranchTag
-                                ( DL.toList $
-                                    DL.cons Pop $
-                                      go isTail tempSize refs _caseBranchBody
-                                )
-                          | otherwise ->
-                              CaseBranch
-                                _caseBranchTag
-                                ( DL.toList $
-                                    DL.cons PushTemp $
-                                      go
-                                        isTail
-                                        (tempSize + 1)
-                                        ( BL.prepend
-                                            ( map
-                                                (Ref . ConstrRef . Field (TempRef tempSize))
-                                                (reverse [0 .. _caseBranchBindersNum - 1])
-                                            )
-                                            refs
-                                        )
-                                        _caseBranchBody
-                                )
-                  )
-                  _caseBranches
-              )
-              (fmap (DL.toList . DL.cons Pop . go isTail (tempSize + 1) refs) _caseDefault)
-          )
-      _ -> unimplemented
+            (mkInstr $ AllocConstr _constrTag)
 
-    genOp :: Core.BuiltinOp -> Instruction
+    goLet :: Bool -> Int -> BinderList Value -> Core.Let -> Code'
+    goLet isTail tempSize refs (Core.Let {..}) =
+      DL.append
+        (DL.snoc (go False tempSize refs _letValue) (mkInstr PushTemp))
+        (go isTail (tempSize + 1) (BL.extend (Ref (TempRef tempSize)) refs) _letBody)
+
+    goCase :: Bool -> Int -> BinderList Value -> Core.Case -> Code'
+    goCase isTail tempSize refs (Core.Case {..}) =
+      -- TODO: special case for if-then-else
+      DL.snoc
+        (go False tempSize refs _caseValue)
+        ( Case $
+            CmdCase
+              { _cmdCaseInfo = emptyInfo,
+                _cmdCaseBranches =
+                  map
+                    ( \(Core.CaseBranch {..}) ->
+                        if
+                            | _caseBranchBindersNum == 0 ->
+                                CaseBranch
+                                  _caseBranchTag
+                                  ( DL.toList $
+                                      DL.cons (mkInstr Pop) $
+                                        go isTail tempSize refs _caseBranchBody
+                                  )
+                            | otherwise ->
+                                CaseBranch
+                                  _caseBranchTag
+                                  ( DL.toList $
+                                      DL.cons (mkInstr PushTemp) $
+                                        go
+                                          isTail
+                                          (tempSize + 1)
+                                          ( BL.prepend
+                                              ( map
+                                                  (Ref . ConstrRef . Field (TempRef tempSize))
+                                                  (reverse [0 .. _caseBranchBindersNum - 1])
+                                              )
+                                              refs
+                                          )
+                                          _caseBranchBody
+                                  )
+                    )
+                    _caseBranches,
+                _cmdCaseDefault =
+                  fmap
+                    ( DL.toList
+                        . DL.cons (mkInstr Pop)
+                        . go isTail (tempSize + 1) refs
+                    )
+                    _caseDefault
+              }
+        )
+
+    genOp :: Core.BuiltinOp -> Command
     genOp = \case
-      Core.OpIntAdd -> IntAdd
-      Core.OpIntSub -> IntSub
-      Core.OpIntMul -> IntMul
-      Core.OpIntDiv -> IntDiv
-      Core.OpIntLt -> IntLt
-      Core.OpIntLe -> IntLe
-      Core.OpEq -> ValEq
+      Core.OpIntAdd -> mkInstr IntAdd
+      Core.OpIntSub -> mkInstr IntSub
+      Core.OpIntMul -> mkInstr IntMul
+      Core.OpIntDiv -> mkInstr IntDiv
+      Core.OpIntLt -> mkInstr IntLt
+      Core.OpIntLe -> mkInstr IntLe
+      Core.OpEq -> mkInstr ValEq
       _ -> unimplemented
 
     getArgsNum :: Symbol -> Int
@@ -163,5 +219,5 @@ genCode infoTable fi =
         ^. Core.functionArgsNum
 
     snocReturn :: Bool -> Code' -> Code'
-    snocReturn True code = DL.snoc code Return
+    snocReturn True code = DL.snoc code (mkInstr Return)
     snocReturn False code = code

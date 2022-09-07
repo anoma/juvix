@@ -88,19 +88,14 @@ data Instruction
     -- the number of arguments expected by the function). The n function
     -- arguments are popped from the stack and stored in the closure at
     -- _decreasing_ offsets. The result is pushed on top of the stack.
-    AllocClosure {allocClosureFunSymbol :: Symbol, allocClosureArgsNum :: Int}
+    AllocClosure InstrAllocClosure
   | -- Extend a closure on top of the stack with more arguments. n =
     -- extendClosureArgsNum indicates the number of arguments to extend the
     -- closure with -- it must be less than the number of arguments expected by
     -- the closure. Pops the closure from the stack, pops n additional arguments
     -- from the stack and extends the closure with them in _decreasing_ order,
     -- then pushes the extended closure on top of the stack.
-    ExtendClosure {extendClosureArgsNum :: Int}
-  | -- Branch based on a boolean value on top of the stack, pop the stack.
-    Branch {branchTrue :: Code, branchFalse :: Code}
-  | -- Branch based on the tag of the constructor data on top of the stack. Does
-    -- _not_ pop the stack. The second argument is the optional default branch.
-    Case {caseBranches :: [CaseBranch], caseDefault :: Maybe Code}
+    ExtendClosure {_extendClosureArgsNum :: Int}
   | -- Call a function given by an immediate constant Symbol or a closure on top
     -- of the stack. Creates a new activation frame for the function. The n
     -- function arguments are popped from the stack and stored at _decreasing_
@@ -122,12 +117,52 @@ data Instruction
     -- closure and this closure is called with the remaining arguments or
     -- extended with them (if there are not enough remaining arguments for the
     -- call). The process is repeated until we run out of supplied arguments.
-    CallClosures {callClosureArgsNum :: Int}
-  | TailCallClosures {tailCallClosureArgsNum :: Int}
+    CallClosures {_callClosureArgsNum :: Int}
+  | TailCallClosures {_tailCallClosureArgsNum :: Int}
   | -- Pushes the top of the current value stack on top of the calling function
     -- value stack, discards the current activation frame, transfers control to
     -- the address at the top of the global call stack, and pops the call stack.
     Return
+
+data InstrAllocClosure = InstrAllocClosure
+  { _allocClosureFunSymbol :: Symbol,
+    _allocClosureArgsNum :: Int
+  }
+
+-- `Command` consists of a single non-branching instruction or a single branching
+-- command together with the branches.
+data Command
+  = -- A single non-branching instruction
+    Instr CmdInstr
+  | -- Branch based on a boolean value on top of the stack, pop the stack.
+    Branch CmdBranch
+  | -- Branch based on the tag of the constructor data on top of the stack. Does
+    -- _not_ pop the stack. The second argument is the optional default branch.
+    Case CmdCase
+
+newtype CommandInfo = CommandInfo
+  { _commandInfoLocation :: Maybe Location
+  }
+
+emptyInfo :: CommandInfo
+emptyInfo = CommandInfo Nothing
+
+data CmdInstr = CmdInstr
+  { _cmdInstrInfo :: CommandInfo,
+    _cmdInstrInstruction :: Instruction
+  }
+
+data CmdBranch = CmdBranch
+  { _cmdBranchInfo :: CommandInfo,
+    _cmdBranchTrue :: Code,
+    _cmdBranchFalse :: Code
+  }
+
+data CmdCase = CmdCase
+  { _cmdCaseInfo :: CommandInfo,
+    _cmdCaseBranches :: [CaseBranch],
+    _cmdCaseDefault :: Maybe Code
+  }
 
 data CaseBranch = CaseBranch
   { _caseBranchTag :: Tag,
@@ -135,6 +170,11 @@ data CaseBranch = CaseBranch
   }
 
 -- `Code` corresponds to JuvixAsm code for a single function.
-type Code = [Instruction]
+type Code = [Command]
 
+makeLenses ''InstrAllocClosure
+makeLenses ''CommandInfo
+makeLenses ''CmdInstr
+makeLenses ''CmdBranch
+makeLenses ''CmdCase
 makeLenses ''CaseBranch
