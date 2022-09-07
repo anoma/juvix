@@ -4,7 +4,6 @@ import Base
 import Juvix.Compiler.Pipeline
 import Juvix.Parser.Error
 
-
 root :: FilePath
 root = "tests/negative"
 

@@ -1,6 +1,5 @@
 -- | This module contains lexing functions common to all parsers in the pipeline
 -- (Juvix, JuvixCore, JuvixAsm).
-
 module Juvix.Parser.Lexer where
 
 import Control.Monad.Trans.Class (lift)
@@ -27,8 +26,8 @@ parseFailure off str = P.parseError $ P.FancyError off (Set.singleton (P.ErrorFa
 space1 :: (MonadParsec e s m, Token s ~ Char) => m ()
 space1 = void $ takeWhile1P (Just "white space (only spaces and newlines allowed)") isWhiteSpace
   where
-  isWhiteSpace :: Char -> Bool
-  isWhiteSpace = (`elem` [' ', '\n'])
+    isWhiteSpace :: Char -> Bool
+    isWhiteSpace = (`elem` [' ', '\n'])
 
 space' :: forall r. Bool -> (forall a. ParsecS r a -> ParsecS r ()) -> ParsecS r ()
 space' judoc comment_ = L.space space1 lineComment block
