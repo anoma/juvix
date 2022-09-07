@@ -53,6 +53,7 @@ testDescrFlag N.NegTest {..} =
 tests :: [PosTest]
 tests =
   [ PosTest "Ackerman nice def. is terminating" "." "Ack.juvix",
+    PosTest "Fibonacci with nested pattern" "." "Fib.juvix",
     PosTest "Recursive functions on Lists" "." "Data/List.juvix"
   ]
 

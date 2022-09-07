@@ -1,13 +1,12 @@
 module Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data.SizeInfo where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Abstract.Extra
 import Juvix.Prelude
 
 -- | i = SizeInfo [v] ⇔ v is smaller than argument i of the caller function.
 -- Indexes are 0 based
 data SizeInfo = SizeInfo
-  { _sizeSmaller :: HashMap VarName Int,
+  { _sizeSmaller :: [[Pattern]],
     _sizeEqual :: [Pattern]
   }
 
@@ -21,15 +20,12 @@ emptySizeInfo =
     }
 
 mkSizeInfo :: [PatternArg] -> SizeInfo
-mkSizeInfo ps = SizeInfo {..}
+mkSizeInfo args = SizeInfo {..}
   where
-    ps' :: [Pattern]
-    ps' = map (^. patternArgPattern) (filter (not . isBrace) ps)
+    ps :: [Pattern]
+    ps = map (^. patternArgPattern) (filter (not . isBrace) args)
     isBrace :: PatternArg -> Bool
     isBrace = (== Implicit) . (^. patternArgIsImplicit)
-    _sizeEqual = map (^. patternArgPattern) ps
-    _sizeSmaller :: HashMap VarName Int
-    _sizeSmaller =
-      HashMap.fromList
-        [ (v, i) | (i, p) <- zip [0 ..] ps', v <- p ^.. smallerPatternVariables
-        ]
+    _sizeEqual = ps
+    _sizeSmaller :: [[Pattern]]
+    _sizeSmaller = map (^.. patternSubCosmos) ps
