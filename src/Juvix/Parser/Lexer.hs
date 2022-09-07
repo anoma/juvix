@@ -1,11 +1,7 @@
+-- | This module contains lexing functions common to all parsers in the pipeline
+-- (Juvix, JuvixCore, JuvixAsm).
+
 module Juvix.Parser.Lexer where
-
-{-
-
-This module contains lexing functions common to all parsers in the pipeline
-(Juvix, JuvixCore, JuvixAsm).
-
--}
 
 import Control.Monad.Trans.Class (lift)
 import Data.Set qualified as Set
@@ -14,7 +10,7 @@ import GHC.Unicode
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Text.Megaparsec as P hiding (sepBy1, sepEndBy1, some)
-import Text.Megaparsec.Char hiding (space)
+import Text.Megaparsec.Char hiding (space, space1)
 import Text.Megaparsec.Char.Lexer qualified as L
 
 type ParsecS r = ParsecT Void Text (Sem r)
@@ -27,6 +23,12 @@ makeLenses ''ParserParams
 
 parseFailure :: Int -> String -> ParsecS r a
 parseFailure off str = P.parseError $ P.FancyError off (Set.singleton (P.ErrorFail str))
+
+space1 :: (MonadParsec e s m, Token s ~ Char) => m ()
+space1 = void $ takeWhile1P (Just "white space (only spaces and newlines allowed)") isWhiteSpace
+  where
+  isWhiteSpace :: Char -> Bool
+  isWhiteSpace = (`elem` [' ', '\n'])
 
 space' :: forall r. Bool -> (forall a. ParsecS r a -> ParsecS r ()) -> ParsecS r ()
 space' judoc comment_ = L.space space1 lineComment block
@@ -99,7 +101,7 @@ reservedSymbols :: [Char]
 reservedSymbols = "\";(){}[].≔λ\\"
 
 validFirstChar :: Char -> Bool
-validFirstChar c = not $ isNumber c || isSpace c || (c `elem` reservedSymbols)
+validFirstChar c = not (isNumber c || isSpace c || (c `elem` reservedSymbols))
 
 curLoc :: Member (Reader ParserParams) r => ParsecS r Loc
 curLoc = do
