@@ -24,10 +24,12 @@ data TypeBool = TypeBool
   { _typeBoolTrueTag :: Tag,
     _typeBoolFalseTag :: Tag
   }
-  deriving stock (Eq)
+
+instance Eq TypeBool where
+  _ == _ = True
 
 newtype TypeInductive = TypeInductive
-  { _typeInductiveInductive :: Symbol
+  { _typeInductiveSymbol :: Symbol
   }
   deriving stock (Eq)
 
@@ -36,36 +38,11 @@ data TypeConstr = TypeConstr
     _typeConstrTag :: Tag,
     _typeConstrFields :: [Type]
   }
-  deriving stock (Eq)
+
+instance Eq TypeConstr where
+  (TypeConstr _ tag1 _) == (TypeConstr _ tag2 _) = tag1 == tag2
 
 makeLenses ''TypeInteger
 makeLenses ''TypeBool
 makeLenses ''TypeInductive
 makeLenses ''TypeConstr
-
-unfoldType :: Type -> (Type, [Type])
-unfoldType = \case
-  TyFun l r ->
-    let (tgt, args) = unfoldType r
-     in (tgt, l : args)
-  ty -> (ty, [])
-
-typeArgs :: Type -> [Type]
-typeArgs = snd . unfoldType
-
-typeTarget :: Type -> Type
-typeTarget = fst . unfoldType
-
-unifyTypes :: Type -> Type -> Type
-unifyTypes TyDynamic x = x
-unifyTypes x TyDynamic = x
-unifyTypes x@(TyInductive TypeInductive {..}) (TyConstr TypeConstr {..})
-  | _typeInductiveInductive == _typeConstrInductive = x
-unifyTypes y@TyConstr {} x@TyInductive {} = unifyTypes x y
-unifyTypes (TyConstr c1) (TyConstr c2)
-  | c1 ^. typeConstrInductive == c2 ^. typeConstrInductive
-      && c1 ^. typeConstrTag /= c2 ^. typeConstrTag =
-      TyInductive (TypeInductive (c1 ^. typeConstrInductive))
-unifyTypes (TyFun l1 r1) (TyFun l2 r2) = TyFun (unifyTypes l1 l2) (unifyTypes r1 r2)
-unifyTypes x y | x == y = x
-unifyTypes _ _ = error "not unifiable"

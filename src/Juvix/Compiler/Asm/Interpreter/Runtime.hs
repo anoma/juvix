@@ -1,6 +1,7 @@
 module Juvix.Compiler.Asm.Interpreter.Runtime where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Asm.Data.Stack (Stack)
 import Juvix.Compiler.Asm.Data.Stack qualified as Stack
 import Juvix.Compiler.Asm.Language
 
@@ -63,7 +64,7 @@ newtype ValueStack = ValueStack
   { _valueStack :: [Val]
   }
 
--- An activation frame contains the function-local memory (local argument area,
+-- | An activation frame contains the function-local memory (local argument area,
 -- temporary stack, value stack) for a single function invocation.
 data Frame = Frame
   { _frameArgs :: ArgumentArea,
@@ -115,7 +116,7 @@ data Closure = Closure
   }
   deriving stock (Eq)
 
--- JuvixAsm runtime state
+-- | JuvixAsm runtime state
 data RuntimeState = RuntimeState
   { _runtimeCallStack :: CallStack, -- global call stack
     _runtimeFrame :: Frame -- current frame
@@ -191,7 +192,10 @@ runRuntime = runState (RuntimeState (CallStack []) emptyFrame) . interp
             (HashMap.lookup off (s ^. (runtimeFrame . frameArgs . argumentArea)))
       ReadTemp off -> do
         s <- get
-        return $ Stack.nth off (s ^. (runtimeFrame . frameTemp . temporaryStack))
+        return $
+          fromMaybe
+            (error "invalid temporary stack read")
+            (Stack.nthFromBottom off (s ^. (runtimeFrame . frameTemp . temporaryStack)))
       PushTempStack val ->
         modify' (over runtimeFrame (over frameTemp (over temporaryStack (Stack.push val))))
       PopTempStack ->

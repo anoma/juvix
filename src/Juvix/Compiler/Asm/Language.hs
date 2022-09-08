@@ -4,14 +4,10 @@
 {-# HLINT ignore "Avoid restricted flags" #-}
 module Juvix.Compiler.Asm.Language
   ( module Juvix.Compiler.Asm.Language,
-    module Juvix.Compiler.Asm.Language.Type,
-    module Juvix.Compiler.Core.Language.Base,
-    Stack,
+    module Juvix.Compiler.Core.Language.Base
   )
 where
 
-import Juvix.Compiler.Asm.Data.Stack (Stack)
-import Juvix.Compiler.Asm.Language.Type
 import Juvix.Compiler.Core.Language.Base
 
 {-

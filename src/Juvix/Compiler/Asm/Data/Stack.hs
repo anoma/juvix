@@ -1,7 +1,7 @@
 module Juvix.Compiler.Asm.Data.Stack where
 
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Prelude
+import Juvix.Prelude hiding (empty)
 
 data Stack a = Stack
   { _stackValues :: HashMap Int a,
@@ -13,11 +13,21 @@ makeLenses ''Stack
 empty :: Stack a
 empty = Stack {_stackValues = mempty, _stackHeight = 0}
 
-height :: Stack a -> Int
-height = (^. stackHeight)
+fromList :: [a] -> Stack a
+fromList = foldl' (flip push) empty
 
-null :: Stack a -> Bool
-null s = height s == 0
+instance Foldable Stack where
+  foldr :: (a -> b -> b) -> b -> Stack a -> b
+  foldr f x = foldr f x . toList
+
+  toList :: Stack a -> [a]
+  toList = map snd . sortBy (\x y -> compare (fst x) (fst y)) . HashMap.toList . (^. stackValues)
+
+  length :: Stack a -> Int
+  length = (^. stackHeight)
+
+  null :: Stack a -> Bool
+  null s = length s == 0
 
 push :: a -> Stack a -> Stack a
 push a s =
@@ -29,20 +39,22 @@ push a s =
 pop :: Stack a -> Stack a
 pop s =
   if
-      | height s == 0 -> error "popping an empty stack"
+      | null s -> error "popping an empty stack"
       | otherwise ->
           Stack
             { _stackValues = HashMap.delete (s ^. stackHeight - 1) (s ^. stackValues),
               _stackHeight = s ^. stackHeight - 1
             }
 
-top :: Stack a -> a
-top s =
-  fromMaybe (error "accessing an empty stack") $
-    HashMap.lookup (s ^. stackHeight - 1) (s ^. stackValues)
+top :: Stack a -> Maybe a
+top s = HashMap.lookup (s ^. stackHeight - 1) (s ^. stackValues)
 
 -- | Read nth value from the bottom of the stack.
-nth :: Int -> Stack a -> a
-nth idx s =
-  fromMaybe (error "invalid stack index") $
+nthFromBottom :: Int -> Stack a -> Maybe a
+nthFromBottom idx s =
     HashMap.lookup idx (s ^. stackValues)
+
+-- | Read nth value from the top of the stack.
+nthFromTop :: Int -> Stack a -> Maybe a
+nthFromTop idx s =
+    HashMap.lookup (s ^. stackHeight - idx - 1) (s ^. stackValues)
