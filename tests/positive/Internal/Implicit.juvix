@@ -16,25 +16,25 @@ inductive × (A : Type) (B : Type) {
 };
 
 uncurry : {A : Type} → {B : Type} → {C : Type} → (A → B → C) → A × B → C;
-uncurry f (a , b) ≔ f a b;
+uncurry f (a, b) ≔ f a b;
 
 fst : {A : Type} → {B : Type} → A × B → A;
-fst (a , _) ≔ a;
+fst (a, _) ≔ a;
 
 snd : {A : Type} → {B : Type} → A × B → B;
-snd (_ , b) ≔ b;
+snd (_, b) ≔ b;
 
 swap : {A : Type} → {B : Type} → A × B → B × A;
-swap (a , b) ≔ b , a;
+swap (a, b) ≔ b, a;
 
 first : {A : Type} → {B : Type} → {A' : Type} → (A → A') → A × B → A' × B;
-first f (a , b) ≔ f a , b;
+first f (a, b) ≔ f a, b;
 
 second : {A : Type} → {B : Type} → {B' : Type} → (B → B') → A × B → A × B';
-second f (a , b) ≔ a , f b;
+second f (a, b) ≔ a, f b;
 
 both : {A : Type} → {B : Type} → (A → B) → A × A → B × B;
-both f (a , b) ≔ f a , f b;
+both f (a, b) ≔ f a, f b;
 
 inductive Bool {
   true : Bool;
@@ -55,7 +55,7 @@ upToTwo : _;
 upToTwo ≔ zero ∷ suc zero ∷ suc (suc zero) ∷ nil;
 
 p1 : Nat → Nat → Nat × Nat;
-p1 a b ≔ a , b ;
+p1 a b ≔ a, b ;
 
 inductive Proxy (A : Type) {
  proxy : Proxy A;
@@ -96,10 +96,10 @@ f : {A : Type} → {B : Type} → A → B → _;
 f a b ≔ a;
 
 pairEval : {A : Type} → {B : Type} → (A → B) × A → B;
-pairEval (f , x) ≔ f x;
+pairEval (f, x) ≔ f x;
 
 pairEval' : {A : Type} → {B : Type} → ({C : Type} → A → B) × A → B;
-pairEval' (f , x) ≔ f {Nat} x;
+pairEval' (f, x) ≔ f {Nat} x;
 
 foldr : {A : Type} → {B : Type} → (A → B → B) → B → List A → B;
 foldr _ z nil ≔ z;
@@ -116,7 +116,7 @@ filter f (h ∷ hs) ≔ if (f h)
    (filter f hs);
 
 partition : {A : Type} → (A → Bool) → List A → List A × List A;
-partition _ nil ≔ nil , nil;
+partition _ nil ≔ nil, nil;
 partition f (x ∷ xs) ≔ (if (f x) first second) ((∷) x) (partition f xs);
 
 end;

@@ -61,7 +61,7 @@ import Data.Product;
 open Data.Product;
 
 splitAt : (a : Type) → ℕ → List a → List a;
-splitAt a _ (nil _) ≔ nil a , nil a;
+splitAt a _ (nil _) ≔ nil a, nil a;
 splitAt a zero xs ≔ , (List a) (List a) (nil a) xs;
 splitAt a (suc zero) (∷ _ x xs) ≔ , (List a) (List a) (∷ a x (nil a)) xs;
 splitAt a (suc (suc m)) (∷ _ x xs) ≔ match (splitAt a m xs) λ{

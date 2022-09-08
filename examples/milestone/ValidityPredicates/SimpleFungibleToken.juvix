@@ -9,7 +9,7 @@ import Data.Int.Ops;
 -- Misc
 
 pair-from-optionString : (String → Int × Bool) → Maybe String → Int × Bool;
-pair-from-optionString ≔ maybe (Int_0 , false);
+pair-from-optionString ≔ maybe (Int_0, false);
 
 -- Validity Predicate
 
@@ -25,20 +25,20 @@ check-vp verifiers key change owner ≔
         (change Data.Int.Ops.+ (change-from-key key),  true);
 
 check-keys : String → List String → Int × Bool → String → Int × Bool;
-check-keys token verifiers (change , is-success) key ≔
+check-keys token verifiers (change, is-success) key ≔
     if
         is-success
         (pair-from-optionString (check-vp verifiers key change) (is-balance-key token key))
-        (Int_0 , false);
+        (Int_0, false);
 
 check-result : Int × Bool → Bool;
-check-result (change , all-checked) ≔ (change Data.Int.Ops.== Int_0) && all-checked;
+check-result (change, all-checked) ≔ (change Data.Int.Ops.== Int_0) && all-checked;
 
 vp : String → List String → List String → Bool;
 vp token keys-changed verifiers ≔
     check-result
         (foldl
             (check-keys token verifiers)
-            (Int_0 , true)
+            (Int_0, true)
             keys-changed);
 end;
