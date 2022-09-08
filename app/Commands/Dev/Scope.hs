@@ -20,9 +20,9 @@ parseScope = do
       )
   pure ScopeOptions {..}
 
-mkScopePrettyOptions :: GlobalOptions -> ScopeOptions -> Scoper.Options
-mkScopePrettyOptions g ScopeOptions {..} =
-  Scoper.defaultOptions
-    { Scoper._optShowNameIds = g ^. globalShowNameIds,
-      Scoper._optInlineImports = _scopeInlineImports
-    }
+instance CanonicalProjection (GlobalOptions, ScopeOptions) Scoper.Options where
+  project (g, ScopeOptions {..}) =
+    Scoper.defaultOptions
+      { Scoper._optShowNameIds = g ^. globalShowNameIds,
+        Scoper._optInlineImports = _scopeInlineImports
+      }

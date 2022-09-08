@@ -1,6 +1,7 @@
 module Commands.Dev.Core where
 
 import Juvix.Compiler.Core.Data.TransformationId.Parser
+import Juvix.Compiler.Core.Pretty.Options qualified as Core
 import Juvix.Prelude hiding (Doc)
 import Options.Applicative
 
@@ -25,6 +26,18 @@ data CoreReadOptions = CoreReadOptions
 makeLenses ''CoreReplOptions
 makeLenses ''CoreEvalOptions
 makeLenses ''CoreReadOptions
+
+instance CanonicalProjection CoreReplOptions Core.Options where
+  project c =
+    Core.defaultOptions
+      { Core._optShowDeBruijnIndices = c ^. coreReplShowDeBruijn
+      }
+
+instance CanonicalProjection CoreReadOptions Core.Options where
+  project c =
+    Core.defaultOptions
+      { Core._optShowDeBruijnIndices = c ^. coreReadShowDeBruijn
+      }
 
 defaultCoreEvalOptions :: CoreEvalOptions
 defaultCoreEvalOptions =
