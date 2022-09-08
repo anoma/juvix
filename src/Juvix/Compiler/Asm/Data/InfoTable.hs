@@ -9,7 +9,8 @@ data InfoTable = InfoTable
   }
 
 data FunctionInfo = FunctionInfo
-  { _functionName :: Maybe Name,
+  { _functionName :: Text,
+    _functionLocation :: Maybe Location,
     _functionSymbol :: Symbol,
     _functionArgsNum :: Int,
     _functionType :: Type,
@@ -17,7 +18,8 @@ data FunctionInfo = FunctionInfo
   }
 
 data ConstructorInfo = ConstructorInfo
-  { _constructorName :: Maybe Name,
+  { _constructorName :: Text,
+    _constructorLocation :: Maybe Location,
     _constructorTag :: Tag,
     _constructorArgsNum :: Int,
     _constructorType :: Type,
@@ -25,7 +27,8 @@ data ConstructorInfo = ConstructorInfo
   }
 
 data InductiveInfo = InductiveInfo
-  { _inductiveName :: Maybe Name,
+  { _inductiveName :: Text,
+    _inductiveLocation :: Maybe Location,
     _inductiveKind :: Type,
     _inductiveConstructors :: [ConstructorInfo]
   }

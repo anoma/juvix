@@ -27,7 +27,8 @@ genCode infoTable fi =
             )
             (fi ^. Core.functionBody)
    in FunctionInfo
-        { _functionName = fi ^. Core.functionName,
+        { _functionName = maybe "function" (^. nameText) (fi ^. Core.functionName),
+          _functionLocation = fmap (^. nameLoc) (fi ^. Core.functionName),
           _functionSymbol = fi ^. Core.functionSymbol,
           _functionArgsNum = fi ^. Core.functionArgsNum,
           _functionType = convertType (fi ^. Core.functionType),
@@ -162,7 +163,7 @@ genCode infoTable fi =
 
     goCase :: Bool -> Int -> BinderList Value -> Core.Case -> Code'
     goCase isTail tempSize refs (Core.Case {..}) =
-      -- TODO: special case for if-then-else
+      -- TODO: special case for if-then-else (use Branch instead of Case)
       DL.snoc
         (go False tempSize refs _caseValue)
         ( Case $
