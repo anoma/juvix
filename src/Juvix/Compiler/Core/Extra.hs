@@ -30,7 +30,7 @@ freeVars f = ufoldNA reassemble go
   where
     go k = \case
       NVar var@(Var _ idx)
-        | idx >= k -> NVar <$> f var
+        | idx >= k -> NVar <$> f (shiftVar (-k) var)
       n -> pure n
 
 getIdents :: Node -> HashSet Ident
@@ -85,13 +85,13 @@ captureFreeVars fv
     s :: HashMap Index Index
     s = HashMap.fromList (zip indices [0 ..])
     mapFreeVars :: Node -> Node
-    mapFreeVars = dmapNR go
+    mapFreeVars = dmapN go
       where
-        go :: Index -> Node -> Recur
+        go :: Index -> Node -> Node
         go k = \case
           NVar (Var i u)
-            | Just v <- s ^. at (u - k) -> End (NVar (Var i (v + k)))
-          m -> Recur m
+            | Just v <- s ^. at (u - k) -> NVar (Var i (v + k))
+          m -> m
 
 -- | substitute a term t for the free variable with de Bruijn index 0, avoiding
 -- variable capture; shifts all free variabes with de Bruijn index > 0 by -1 (as

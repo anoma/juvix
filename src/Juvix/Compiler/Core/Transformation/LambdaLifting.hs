@@ -39,8 +39,7 @@ lambdaLiftNode aboveBl top =
     go bl = \case
       l@NLam {} -> do
         l' <- lambdaLiftNode bl l
-        let nbinders = fst (unfoldLambdas' l)
-            freevars = map (shiftVar (-nbinders)) (toList (getFreeVars l'))
+        let freevars = toList (getFreeVars l')
             freevarsAssocs :: [(Index, Info)]
             freevarsAssocs = [(i, BL.lookup i bl) | i <- map (^. varIndex) freevars]
             fBody' = captureFreeVars freevarsAssocs l'
