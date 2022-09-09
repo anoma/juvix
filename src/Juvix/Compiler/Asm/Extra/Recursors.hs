@@ -4,14 +4,18 @@ module Juvix.Compiler.Asm.Extra.Recursors
   )
 where
 
+import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Error
+import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Extra.Memory
 import Juvix.Compiler.Asm.Extra.Type
 import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Language.Type
 
+-- | Recursor signature. Contains read-only recursor parameters.
 data RecursorSig r a = RecursorSig
-  { _recurseInstr :: Memory -> CmdInstr -> Sem r a,
+  { _recursorInfoTable :: InfoTable,
+    _recurseInstr :: Memory -> CmdInstr -> Sem r a,
     _recurseBranch :: Memory -> CmdBranch -> a -> a -> Sem r a,
     _recurseCase :: Memory -> CmdCase -> [a] -> Maybe a -> Sem r a
   }
@@ -24,13 +28,20 @@ recurse sig args = fmap snd . recurse' sig (mkMemory args)
 recurse' :: forall r a. Member (Error AsmError) r => RecursorSig r a -> Memory -> Code -> Sem r (Memory, [a])
 recurse' sig = go
   where
+    unimplemented :: forall b. b
+    unimplemented = error "not yet implemented"
+
     go :: Memory -> Code -> Sem r (Memory, [a])
     go mem = \case
       [] -> return (mem, [])
       h : t -> case h of
-        Instr x -> goNextCmd (goInstr mem x) t
-        Branch x -> goNextCmd (goBranch mem x) t
-        Case x -> goNextCmd (goCase mem x) t
+        Instr x -> do
+          checkNextInstr (x ^. cmdInstrInstruction) t
+          goNextCmd (goInstr mem x) t
+        Branch x ->
+          goNextCmd (goBranch mem x) t
+        Case x ->
+          goNextCmd (goCase mem x) t
 
     goNextCmd :: Sem r (Memory, a) -> Code -> Sem r (Memory, [a])
     goNextCmd mp t = do
@@ -38,63 +49,139 @@ recurse' sig = go
       (mem'', rs) <- go mem' t
       return (mem'', r : rs)
 
+    checkNextInstr :: Instruction -> Code -> Sem r ()
+    checkNextInstr = unimplemented
+
     goInstr :: Memory -> CmdInstr -> Sem r (Memory, a)
-    goInstr mem cmd@CmdInstr {..} = case _cmdInstrInstruction of
-      IntAdd -> goIntOp mem cmd
-      IntSub -> goIntOp mem cmd
-      IntMul -> goIntOp mem cmd
-      IntDiv -> goIntOp mem cmd
-      IntLt -> goBinOp mkInteger mkInteger mkBool mem cmd
-      IntLe -> goBinOp mkInteger mkInteger mkBool mem cmd
-      ValEq -> goBinOp TyDynamic TyDynamic mkBool mem cmd
-      Push val -> do
-        ty <- getValueType loc mem val
-        a <- (sig ^. recurseInstr) mem cmd
-        return (pushValueStack ty mem, a)
-      Pop -> do
-        when (null (mem ^. memoryValueStack)) $
-          throw $ AsmError loc "popping empty value stack"
-        a <- (sig ^. recurseInstr) mem cmd
-        return (popValueStack 1 mem, a)
-      PushTemp -> do
-        when (null (mem ^. memoryValueStack)) $
-          throw $ AsmError loc "popping empty value stack"
-        a <- (sig ^. recurseInstr) mem cmd
-        let mem' = pushTempStack (topValueStack' 0 mem) mem
-        return (mem', a)
-      PopTemp -> do
-        when (null (mem ^. memoryTempStack)) $
-          throw $ AsmError loc "popping empty temporary stack"
-        a <- (sig ^. recurseInstr) mem cmd
-        return (popTempStack 1 mem, a)
-      AllocConstr tag -> undefined
-      AllocClosure _ -> undefined
-      ExtendClosure _ -> undefined
-      Call _ -> undefined
-      TailCall _ -> undefined
-      CallClosures _ -> undefined
-      TailCallClosures _ -> undefined
-      Return -> undefined
+    goInstr memory cmd = do
+      a <- (sig ^. recurseInstr) memory cmd
+      mem <- fixMemInstr memory (cmd ^. cmdInstrInstruction)
+      return (mem, a)
       where
-        loc = _cmdInstrInfo ^. commandInfoLocation
+        loc = cmd ^. (cmdInstrInfo . commandInfoLocation)
 
-    goIntOp :: Memory -> CmdInstr -> Sem r (Memory, a)
-    goIntOp = goBinOp mkInteger mkInteger mkInteger
+        fixMemInstr :: Memory -> Instruction -> Sem r Memory
+        fixMemInstr mem instr =
+          case instr of
+            IntAdd ->
+              fixMemIntOp mem
+            IntSub ->
+              fixMemIntOp mem
+            IntMul ->
+              fixMemIntOp mem
+            IntDiv ->
+              fixMemIntOp mem
+            IntLt ->
+              fixMemBinOp mem mkInteger mkInteger mkBool
+            IntLe ->
+              fixMemBinOp mem mkInteger mkInteger mkBool
+            ValEq ->
+              fixMemBinOp mem TyDynamic TyDynamic mkBool
+            Push val -> do
+              ty <- getValueType loc mem val
+              return (pushValueStack ty mem)
+            Pop -> do
+              when (null (mem ^. memoryValueStack)) $
+                throw $
+                  AsmError loc "popping empty value stack"
+              return (popValueStack 1 mem)
+            PushTemp -> do
+              when (null (mem ^. memoryValueStack)) $
+                throw $
+                  AsmError loc "popping empty value stack"
+              return $ pushTempStack (topValueStack' 0 mem) mem
+            PopTemp -> do
+              when (null (mem ^. memoryTempStack)) $
+                throw $
+                  AsmError loc "popping empty temporary stack"
+              return $ popTempStack 1 mem
+            AllocConstr tag -> do
+              let ci = getConstrInfo (sig ^. recursorInfoTable) tag
+              let n = ci ^. constructorArgsNum
+              let tyargs = typeArgs (ci ^. constructorType)
+              checkValueStack loc tyargs mem
+              tys <-
+                zipWithM
+                  (\ty idx -> unifyTypes' loc ty (topValueStack' idx mem))
+                  (reverse tyargs)
+                  [0 ..]
+              return $
+                pushValueStack (mkTypeConstr (ci ^. constructorInductive) tag tys) $
+                  popValueStack n mem
+            AllocClosure InstrAllocClosure {..} -> do
+              let fi = getFunInfo (sig ^. recursorInfoTable) _allocClosureFunSymbol
+              let (tyargs, tgt) = unfoldType (fi ^. functionType)
+              checkValueStack loc (take _allocClosureArgsNum tyargs) mem
+              return $
+                pushValueStack (mkTypeFun (drop _allocClosureArgsNum tyargs) tgt) $
+                  popValueStack _allocClosureArgsNum mem
+            ExtendClosure InstrExtendClosure {..} -> do
+              when (length (mem ^. memoryValueStack) < _extendClosureArgsNum + 1) $
+                throw $
+                  AsmError loc "invalid closure extension: not enough values on the stack"
+              let ty = topValueStack' 0 mem
+              when (ty /= TyDynamic && length (typeArgs ty) < _extendClosureArgsNum) $
+                throw $
+                  AsmError loc "invalid closure extension: too many supplied arguments"
+              fixMemValueStackArgs mem 1 _extendClosureArgsNum ty
+            Call x ->
+              fixMemCall mem x
+            TailCall x ->
+              fixMemCall mem x
+            CallClosures x ->
+              fixMemCallClosures mem x
+            TailCallClosures x ->
+              fixMemCallClosures mem x
+            Return ->
+              return mem
 
-    goBinOp :: Type -> Type -> Type -> Memory -> CmdInstr -> Sem r (Memory, a)
-    goBinOp ty1 ty0 rty mem cmd@CmdInstr {..} = do
-      checkValueStack loc [ty1, ty0] mem
-      a <- (sig ^. recurseInstr) mem cmd
-      let mem' = pushValueStack rty (popValueStack 2 mem)
-      return (mem', a)
-      where
-        loc = _cmdInstrInfo ^. commandInfoLocation
+        fixMemIntOp :: Memory -> Sem r Memory
+        fixMemIntOp mem = fixMemBinOp mem mkInteger mkInteger mkInteger
+
+        fixMemBinOp :: Memory -> Type -> Type -> Type -> Sem r Memory
+        fixMemBinOp mem ty1 ty0 rty = do
+          checkValueStack loc [ty1, ty0] mem
+          return $ pushValueStack rty (popValueStack 2 mem)
+
+        fixMemCall :: Memory -> InstrCall -> Sem r Memory
+        fixMemCall mem InstrCall {..} = do
+          let k = if _callType == CallClosure then 1 else 0
+          when (length (mem ^. memoryValueStack) < _callArgsNum + k) $
+            throw $
+              AsmError loc "invalid call: not enough values on the stack"
+          let ty = case _callType of
+                CallClosure -> topValueStack' 0 mem
+                CallFun sym -> getFunInfo (sig ^. recursorInfoTable) sym ^. functionType
+          when (ty /= TyDynamic && length (typeArgs ty) /= _callArgsNum) $
+            throw $
+              AsmError loc "invalid call: the number of supplied arguments doesn't match the number of expected arguments"
+          fixMemValueStackArgs mem k _callArgsNum ty
+
+        fixMemCallClosures :: Memory -> InstrCallClosures -> Sem r Memory
+        fixMemCallClosures mem InstrCallClosures {..} = do
+          when (null (mem ^. memoryValueStack)) $
+            throw $
+              AsmError loc "invalid closure call: value stack is empty"
+          -- let ty = topValueStack' 0 mem
+          let mem' = popValueStack 1 mem
+          -- TODO: we can do better if ty /= TyDynamic
+          return $ pushValueStack TyDynamic (popValueStack _callClosuresArgsNum mem')
+
+        fixMemValueStackArgs :: Memory -> Int -> Int -> Type -> Sem r Memory
+        fixMemValueStackArgs mem k argsNum ty = do
+          let mem' = popValueStack k mem
+          let tyargs = reverse $ topValuesFromValueStack' argsNum mem'
+          -- `typeArgs ty` may be shorter than `tyargs` only if `ty` is dynamic
+          zipWithM_ (unifyTypes' loc) tyargs (typeArgs ty)
+          return $
+            pushValueStack (mkTypeFun (drop argsNum (typeArgs ty)) ty) $
+              popValueStack argsNum mem'
 
     goBranch :: Memory -> CmdBranch -> Sem r (Memory, a)
-    goBranch mem = undefined
+    goBranch = unimplemented
 
     goCase :: Memory -> CmdCase -> Sem r (Memory, a)
-    goCase mem = undefined
+    goCase = unimplemented
 
     getValueType :: Maybe Location -> Memory -> Value -> Sem r Type
     getValueType loc mem = \case

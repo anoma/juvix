@@ -49,6 +49,10 @@ pop s =
 top :: Stack a -> Maybe a
 top s = HashMap.lookup (s ^. stackHeight - 1) (s ^. stackValues)
 
+-- | Values on top of the stack, in order from top to bottom.
+topValues :: Int -> Stack a -> Maybe [a]
+topValues n s = mapM (`nthFromTop` s) [0..n-1]
+
 -- | Read nth value from the bottom of the stack.
 nthFromBottom :: Int -> Stack a -> Maybe a
 nthFromBottom idx s =

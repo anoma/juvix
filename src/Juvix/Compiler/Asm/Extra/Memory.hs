@@ -43,7 +43,7 @@ pushTempStack ty = over memoryTempStack (Stack.push ty)
 popTempStack :: Int -> Memory -> Memory
 popTempStack n = foldr (.) id (replicate n (over memoryTempStack Stack.pop))
 
--- | Read value stack at index `n` from the top
+-- | Read value stack at index `n` from the top.
 topValueStack :: Int -> Memory -> Maybe Type
 topValueStack n mem = Stack.nthFromTop n (mem ^. memoryValueStack)
 
@@ -52,7 +52,17 @@ topValueStack' n mem =
   fromMaybe (error "invalid value stack access") $
     topValueStack n mem
 
--- | Read temporary stack at index `n` from the bottom
+-- | Values from top of the value stack, in order from top to bottom.
+topValuesFromValueStack :: Int -> Memory -> Maybe [Type]
+topValuesFromValueStack n mem = Stack.topValues n (mem ^. memoryValueStack)
+
+-- | Values from top of the value stack, in order from top to bottom.
+topValuesFromValueStack' :: Int -> Memory -> [Type]
+topValuesFromValueStack' n mem =
+  fromMaybe (error "invalid value stack access") $
+    Stack.topValues n (mem ^. memoryValueStack)
+
+-- | Read temporary stack at index `n` from the bottom.
 bottomTempStack :: Int -> Memory -> Maybe Type
 bottomTempStack n mem = Stack.nthFromBottom n (mem ^. memoryTempStack)
 

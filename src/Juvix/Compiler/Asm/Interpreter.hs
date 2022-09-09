@@ -1,7 +1,6 @@
 module Juvix.Compiler.Asm.Interpreter where
 
 import Control.Monad
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Interpreter.Extra
@@ -77,7 +76,7 @@ runCode infoTable = run . evalRuntime . goToplevel
       PopTemp ->
         popTempStack >> goCode cont
       AllocConstr tag -> do
-        let ci = getConstrInfo tag
+        let ci = getConstrInfo infoTable tag
         args <- replicateM (ci ^. constructorArgsNum) popValueStack
         pushValueStack (ValConstr (Constr tag (reverse args)))
         goCode cont
@@ -165,7 +164,7 @@ runCode infoTable = run . evalRuntime . goToplevel
     getCallDetails :: Member Runtime r => InstrCall -> Sem r (Code, Frame)
     getCallDetails InstrCall {..} = case _callType of
       CallFun sym -> do
-        let fi = getFunInfo sym
+        let fi = getFunInfo infoTable sym
         when
           (_callArgsNum /= fi ^. functionArgsNum)
           (error "invalid indirect call: supplied arguments number not equal to expected arguments number")
@@ -175,7 +174,7 @@ runCode infoTable = run . evalRuntime . goToplevel
         v <- popValueStack
         case v of
           ValClosure cl -> do
-            let fi = getFunInfo (cl ^. closureSymbol)
+            let fi = getFunInfo infoTable (cl ^. closureSymbol)
             let n = length (cl ^. closureArgs)
             when
               (n >= fi ^. functionArgsNum)
@@ -208,7 +207,7 @@ runCode infoTable = run . evalRuntime . goToplevel
       v <- popValueStack
       case v of
         ValClosure cl -> do
-          let fi = getFunInfo (cl ^. closureSymbol)
+          let fi = getFunInfo infoTable (cl ^. closureSymbol)
           let n = fi ^. functionArgsNum - length (cl ^. closureArgs)
           when
             (n < 0)
@@ -233,9 +232,3 @@ runCode infoTable = run . evalRuntime . goToplevel
                   replaceFrame frm
                   goCode (fi ^. functionCode)
         _ -> error "invalid indirect call: expected closure on top of value stack"
-
-    getFunInfo :: Symbol -> FunctionInfo
-    getFunInfo sym = fromMaybe (error "invalid function symbol") (HashMap.lookup sym (infoTable ^. infoFunctions))
-
-    getConstrInfo :: Tag -> ConstructorInfo
-    getConstrInfo tag = fromMaybe (error "invalid constructor tag") (HashMap.lookup tag (infoTable ^. infoConstrs))

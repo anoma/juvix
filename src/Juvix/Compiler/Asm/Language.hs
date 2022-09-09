@@ -1,10 +1,6 @@
-{-# OPTIONS_GHC -Wno-partial-fields #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Avoid restricted flags" #-}
 module Juvix.Compiler.Asm.Language
   ( module Juvix.Compiler.Asm.Language,
-    module Juvix.Compiler.Core.Language.Base
+    module Juvix.Compiler.Core.Language.Base,
   )
 where
 
@@ -50,6 +46,7 @@ makeLenses ''Field
 
 -- | Function call type
 data CallType = CallFun Symbol | CallClosure
+  deriving stock (Eq)
 
 -- | `Instruction` is a single non-branching instruction, i.e., with no control
 -- transfer.
@@ -109,16 +106,16 @@ data Instruction
   | -- | Same as `Call`, but does not push the call stack, discarding the current
     -- activation frame instead.
     TailCall InstrCall
-  | -- | `CallClosures` and `TailCallClosures` are like `Call` and `TailCall`
-    -- with `CallClosure` call type, except that (1) they either call or extend
+  | -- | 'CallClosures' and 'TailCallClosures' are like 'Call' and 'TailCall'
+    -- with 'CallClosure' call type, except that (1) they either call or extend
     -- the closure depending on the number of supplied arguments
     -- (callClosureArgsNum) vs the number of expected arguments fetched at
     -- runtime from the closure, and (2) if the number of expected arguments is
     -- smaller than the number of supplied arguments, then the result of the
     -- call must be another closure and the process is repeated until we run out
-    -- of supplied arguments. With `TailCallClosures`, if the last operation is
+    -- of supplied arguments. With 'TailCallClosures', if the last operation is
     -- a call then it is a tail call, and if the last operation is a closure
-    -- extensions, then an implicit Return is executed after it.
+    -- extension, then an implicit 'Return' is executed after it.
     CallClosures InstrCallClosures
   | TailCallClosures InstrCallClosures
   | -- | Pushes the top of the current value stack on top of the calling function
@@ -128,20 +125,24 @@ data Instruction
 
 data InstrAllocClosure = InstrAllocClosure
   { _allocClosureFunSymbol :: Symbol,
+    -- | The number of supplied arguments to be stored in the closure.
     _allocClosureArgsNum :: Int
   }
 
 newtype InstrExtendClosure = InstrExtendClosure
-  { _extendClosureArgsNum :: Int
+  { -- | The number of supplied arguments by which the closure is to be extended.
+    _extendClosureArgsNum :: Int
   }
 
 data InstrCall = InstrCall
   { _callType :: CallType,
+    -- | The number of arguments supplied to the call.
     _callArgsNum :: Int
   }
 
 newtype InstrCallClosures = InstrCallClosures
-  { _callClosuresArgsNum :: Int
+  { -- | The number of arguments supplied to the call.
+    _callClosuresArgsNum :: Int
   }
 
 -- | `Command` consists of a single non-branching instruction or a single branching
