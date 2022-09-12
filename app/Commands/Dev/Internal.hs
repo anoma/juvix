@@ -1,5 +1,6 @@
 module Commands.Dev.Internal where
 
+import Commands.Dev.Internal.Typecheck.Options
 import Juvix.Prelude hiding (Doc)
 import Options.Applicative
 
@@ -7,28 +8,6 @@ data MicroCommand
   = Pretty
   | TypeCheck InternalTypeOptions
   | Arity
-
-newtype InternalTypeOptions = InternalTypeOptions
-  { _microJuvixTypePrint :: Bool
-  }
-
-makeLenses ''InternalTypeOptions
-
-defaultInternalTypeOptions :: InternalTypeOptions
-defaultInternalTypeOptions =
-  InternalTypeOptions
-    { _microJuvixTypePrint = False
-    }
-
-instance Semigroup InternalTypeOptions where
-  o1 <> o2 =
-    InternalTypeOptions
-      { _microJuvixTypePrint = (o1 ^. microJuvixTypePrint) || (o2 ^. microJuvixTypePrint)
-      }
-
-instance Monoid InternalTypeOptions where
-  mempty = defaultInternalTypeOptions
-  mappend = (<>)
 
 parseMicroCommand :: Parser MicroCommand
 parseMicroCommand =
@@ -65,12 +44,3 @@ parseMicroCommand =
       info
         (TypeCheck <$> parseInternalType)
         (progDesc "Translate a Juvix file to Internal and typecheck the result")
-
-parseInternalType :: Parser InternalTypeOptions
-parseInternalType = do
-  _microJuvixTypePrint <-
-    switch
-      ( long "print-result"
-          <> help "Print the type checked module if successful"
-      )
-  pure InternalTypeOptions {..}

@@ -18,6 +18,7 @@ import Prelude qualified
 data HighlightBackend
   = Emacs
   | Json
+  deriving stock (Bounded, Enum)
 
 instance Show HighlightBackend where
   show = \case

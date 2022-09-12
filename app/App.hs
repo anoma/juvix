@@ -12,7 +12,7 @@ data App m a where
   ExitMsg :: ExitCode -> Text -> App m a
   ExitJuvixError :: JuvixError -> App m a
   PrintJuvixError :: JuvixError -> App m ()
-  ReadGlobalOptions :: App m GlobalOptions
+  AskGlobalOptions :: App m GlobalOptions
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
   RunPipelineEither :: Sem PipelineEff a -> App m (Either JuvixError a)
   Say :: Text -> App m ()
@@ -27,7 +27,7 @@ runAppIO g = interpret $ \case
     | otherwise -> embed $ do
         sup <- Ansi.hSupportsANSI stdout
         renderIO (not (g ^. globalNoColors) && sup) t
-  ReadGlobalOptions -> return g
+  AskGlobalOptions -> return g
   RunPipelineEither p -> embed (runIOEither p)
   Say t
     | g ^. globalOnlyErrors -> return ()

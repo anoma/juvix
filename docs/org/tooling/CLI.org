@@ -38,10 +38,10 @@ juvix [Global options]  ((-v|--version) | --show-root | COMMAND)
 - =compile=
   Compile a Juvix file
 
-** Internal Commands
+** Dev Commands
 
 #+begin_src shell
-juvix internal COMMAND
+juvix dev COMMAND
 #+end_src
 
 - =parse=
@@ -50,8 +50,8 @@ juvix internal COMMAND
   Parse and scope a Juvix file
 - =termination=
   Subcommands related to termination checking
-- =microjuvix=
-  Subcommands related to MicroJuvix
+- =internal=
+  Subcommands related to Internal
 - =minic=
   Translate a Juvix file to MiniC
 

@@ -1,132 +1,35 @@
 module Commands.Dev
   ( module Commands.Dev,
-    module Commands.Dev.Core,
-    module Commands.Dev.Internal,
-    module Commands.Dev.Parse,
-    module Commands.Dev.Scope,
-    module Commands.Dev.Doc,
-    module Commands.Dev.Termination,
+    module Commands.Dev.Options,
   )
 where
 
-import Commands.Dev.Core
-import Commands.Dev.Doc
-import Commands.Dev.Internal
-import Commands.Dev.Parse
-import Commands.Dev.Scope
-import Commands.Dev.Termination
-import Juvix.Compiler.Concrete.Data.Highlight
-import Juvix.Prelude
-import Options.Applicative
+import Commands.Base
+import Commands.Dev.Doc qualified as Doc
+import Commands.Dev.Highlight qualified as Highlight
+import Commands.Dev.Internal.Arity qualified as Arity
+import Commands.Dev.Internal.Pretty qualified as InternalPretty
+import Commands.Dev.Internal.Typecheck qualified as InternalTypecheck
+import Commands.Dev.MiniC qualified as MiniC
+import Commands.Dev.Options
+import Commands.Dev.Parse qualified as Parse
+import Commands.Dev.Scope qualified as Scope
+import Commands.Dev.Termination.CallGraph qualified as TerminationCallGraph
+import Commands.Dev.Termination.Calls qualified as TerminationCalls
 
-data InternalCommand
-  = DisplayRoot
-  | Highlight HighlightOptions
-  | Internal MicroCommand
-  | Core CoreCommand
-  | MiniC
-  | Parse ParseOptions
-  | Scope ScopeOptions
-  | Termination TerminationCommand
-  | Doc DocOptions
-
-newtype HighlightOptions = HighlightOptions
-  { _highlightBackend :: HighlightBackend
-  }
-
-parseInternalCommand :: Parser InternalCommand
-parseInternalCommand =
-  hsubparser
-    ( mconcat
-        [ commandHighlight,
-          commandInternal,
-          commandCore,
-          commandMiniC,
-          commandParse,
-          commandDoc,
-          commandScope,
-          commandShowRoot,
-          commandTermination
-        ]
-    )
-
-commandDoc :: Mod CommandFields InternalCommand
-commandDoc =
-  command "doc" $
-    info
-      (Doc <$> parseDoc)
-      (progDesc "Generate documentation")
-
-commandHighlight :: Mod CommandFields InternalCommand
-commandHighlight =
-  command "highlight" $
-    info
-      (Highlight <$> parseHighlight)
-      (progDesc "Highlight a Juvix file")
-  where
-    parseHighlight :: Parser HighlightOptions
-    parseHighlight = do
-      _highlightBackend <-
-        option
-          (eitherReader parseBackend)
-          ( long "format"
-              <> metavar "FORMAT"
-              <> value Emacs
-              <> showDefault
-              <> help "selects a backend. FORMAT = emacs | json"
-          )
-      pure HighlightOptions {..}
-    parseBackend :: String -> Either String HighlightBackend
-    parseBackend s = case s of
-      "emacs" -> Right Emacs
-      "json" -> Right Json
-      _ -> Left $ "unrecognised theme: " <> s
-
-commandMiniC :: Mod CommandFields InternalCommand
-commandMiniC =
-  command "minic" $
-    info
-      (pure MiniC)
-      (progDesc "Translate a Juvix file to MiniC")
-
-commandInternal :: Mod CommandFields InternalCommand
-commandInternal =
-  command "microjuvix" $
-    info
-      (Internal <$> parseMicroCommand)
-      (progDesc "Subcommands related to Internal")
-
-commandCore :: Mod CommandFields InternalCommand
-commandCore =
-  command "core" $
-    info
-      (Core <$> parseCoreCommand)
-      (progDesc "Subcommands related to JuvixCore")
-
-commandParse :: Mod CommandFields InternalCommand
-commandParse =
-  command "parse" $
-    info
-      (Parse <$> parseParse)
-      (progDesc "Parse a Juvix file")
-
-commandScope :: Mod CommandFields InternalCommand
-commandScope =
-  command "scope" $
-    info
-      (Scope <$> parseScope)
-      (progDesc "Parse and scope a Juvix file")
-
-commandShowRoot :: Mod CommandFields InternalCommand
-commandShowRoot =
-  command "root" $
-    info
-      (pure DisplayRoot)
-      (progDesc "Show the root path for a Juvix project")
-
-commandTermination :: Mod CommandFields InternalCommand
-commandTermination =
-  command "termination" $
-    info
-      (Termination <$> parseTerminationCommand)
-      (progDesc "Subcommands related to termination checking")
+runCommand :: Members '[Embed IO, App] r => EntryPoint -> DevCommand -> Sem r ()
+runCommand entryPoint cmd = do
+  case cmd of
+    Highlight localOpts -> Highlight.runCommand entryPoint localOpts
+    Parse localOpts -> Parse.runCommand entryPoint localOpts
+    Scope localOpts -> Scope.runCommand entryPoint localOpts
+    Doc localOpts -> Doc.runCommand entryPoint localOpts
+    Internal i -> case i of
+      Pretty -> InternalPretty.runCommand entryPoint
+      Arity -> Arity.runCommand entryPoint
+      TypeCheck localOpts -> InternalTypecheck.runCommand entryPoint localOpts
+    MiniC -> MiniC.runCommand entryPoint
+    Termination t -> case t of
+      Calls localOpts -> TerminationCalls.runCommand entryPoint localOpts
+      CallGraph localOpts -> TerminationCallGraph.runCommand entryPoint localOpts
+    _ -> impossible -- do not require entrypoint

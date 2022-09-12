@@ -1,111 +1,44 @@
 module Commands.Compile where
 
+import Commands.Base
+import Commands.Compile.Options
 import Data.ByteString qualified as BS
 import Data.FileEmbed qualified as FE
 import Data.Text.IO qualified as TIO
-import Juvix.Prelude hiding (Doc)
-import Options.Applicative
+import Juvix.Compiler.Backend.C.Translation.FromInternal qualified as MiniC
 import System.Environment
 import System.Process qualified as P
+
+runCommand :: Members '[Embed IO, App] r => EntryPoint -> CompileOptions -> Sem r ()
+runCommand entryPoint localOpts = do
+  miniC <- (^. MiniC.resultCCode) <$> runPipeline (upToMiniC entryPoint)
+  let inputFile = entryPoint ^. mainModulePath
+  result <- embed (runCompile root inputFile localOpts miniC)
+  case result of
+    Left err -> printFailureExit err
+    _ -> return ()
+  where
+    root = entryPoint ^. entryPointRoot
 
 juvixBuildDir :: FilePath
 juvixBuildDir = ".juvix-build"
 
-data CompileTarget = TargetC | TargetWasm | TargetNative
-  deriving stock (Show)
-
-data CompileRuntime
-  = RuntimeWasiStandalone
-  | RuntimeWasiLibC
-  | RuntimeStandalone
-  deriving stock (Show)
-
-data CompileOptions = CompileOptions
-  { _compileTarget :: CompileTarget,
-    _compileRuntime :: CompileRuntime,
-    _compileOutputFile :: Maybe FilePath
-  }
-
-makeLenses ''CompileOptions
-
-parseCompile :: Parser CompileOptions
-parseCompile = do
-  _compileTarget <-
-    option
-      (eitherReader parseTarget)
-      ( long "target"
-          <> short 't'
-          <> metavar "TARGET"
-          <> value TargetNative
-          <> showDefaultWith targetShow
-          <> help "select a target: wasm, c, native"
-      )
-
-  _compileRuntime <-
-    option
-      (eitherReader parseRuntime)
-      ( long "runtime"
-          <> short 'r'
-          <> metavar "RUNTIME"
-          <> value RuntimeWasiStandalone
-          <> showDefaultWith runtimeShow
-          <> help "select a runtime: wasi-standalone, wasi-libc, standalone"
-      )
-
-  _compileOutputFile <-
-    optional $
-      option
-        str
-        ( long "output"
-            <> short 'o'
-            <> metavar "OUTPUT_FILE"
-            <> help "Path to output file"
-            <> action "file"
-        )
-  pure CompileOptions {..}
-  where
-    parseTarget :: String -> Either String CompileTarget
-    parseTarget = \case
-      "wasm" -> Right TargetWasm
-      "c" -> Right TargetC
-      "native" -> Right TargetNative
-      s -> Left $ "unrecognised target: " <> s
-
-    targetShow :: CompileTarget -> String
-    targetShow = \case
-      TargetC -> "c"
-      TargetWasm -> "wasm"
-      TargetNative -> "native"
-
-    parseRuntime :: String -> Either String CompileRuntime
-    parseRuntime = \case
-      "wasi-standalone" -> Right RuntimeWasiStandalone
-      "wasi-libc" -> Right RuntimeWasiLibC
-      "standalone" -> Right RuntimeStandalone
-      s -> Left $ "unrecognised runtime: " <> s
-
-    runtimeShow :: CompileRuntime -> String
-    runtimeShow = \case
-      RuntimeWasiStandalone -> "wasi-standalone"
-      RuntimeWasiLibC -> "wasi-libc"
-      RuntimeStandalone -> "standalone"
-
 inputCFile :: FilePath -> FilePath -> FilePath
-inputCFile projRoot compileInputFile =
+inputCFile projRoot inputFileCompile =
   projRoot </> juvixBuildDir </> outputMiniCFile
   where
     outputMiniCFile :: FilePath
-    outputMiniCFile = takeBaseName compileInputFile <> ".c"
+    outputMiniCFile = takeBaseName inputFileCompile <> ".c"
 
 runCompile :: FilePath -> FilePath -> CompileOptions -> Text -> IO (Either Text ())
-runCompile projRoot compileInputFile o minic = do
+runCompile projRoot inputFileCompile o minic = do
   createDirectoryIfMissing True (projRoot </> juvixBuildDir)
-  TIO.writeFile (inputCFile projRoot compileInputFile) minic
+  TIO.writeFile (inputCFile projRoot inputFileCompile) minic
   prepareRuntime projRoot o
   case o ^. compileTarget of
-    TargetWasm -> runM (runError (clangCompile projRoot compileInputFile o))
+    TargetWasm -> runM (runError (clangCompile projRoot inputFileCompile o))
     TargetC -> return (Right ())
-    TargetNative -> runM (runError (clangNativeCompile projRoot compileInputFile o))
+    TargetNative -> runM (runError (clangNativeCompile projRoot inputFileCompile o))
 
 prepareRuntime :: FilePath -> CompileOptions -> IO ()
 prepareRuntime projRoot o = do
@@ -148,13 +81,13 @@ clangNativeCompile ::
   FilePath ->
   CompileOptions ->
   Sem r ()
-clangNativeCompile projRoot compileInputFile o = runClang (nativeArgs outputFile inputFile)
+clangNativeCompile projRoot inputFileCompile o = runClang (nativeArgs outputFile inputFile)
   where
     outputFile :: FilePath
-    outputFile = fromMaybe (takeBaseName compileInputFile) (o ^. compileOutputFile)
+    outputFile = fromMaybe (takeBaseName inputFileCompile) (o ^. compileOutputFile)
 
     inputFile :: FilePath
-    inputFile = inputCFile projRoot compileInputFile
+    inputFile = inputCFile projRoot inputFileCompile
 
 clangCompile ::
   forall r.
@@ -163,7 +96,7 @@ clangCompile ::
   FilePath ->
   CompileOptions ->
   Sem r ()
-clangCompile projRoot compileInputFile o = clangArgs >>= runClang
+clangCompile projRoot inputFileCompile o = clangArgs >>= runClang
   where
     clangArgs :: Sem r [String]
     clangArgs = case o ^. compileRuntime of
@@ -173,10 +106,10 @@ clangCompile projRoot compileInputFile o = clangArgs >>= runClang
       RuntimeWasiLibC -> wasiLibcArgs outputFile inputFile <$> sysrootEnvVar
 
     outputFile :: FilePath
-    outputFile = fromMaybe (takeBaseName compileInputFile <> ".wasm") (o ^. compileOutputFile)
+    outputFile = fromMaybe (takeBaseName inputFileCompile <> ".wasm") (o ^. compileOutputFile)
 
     inputFile :: FilePath
-    inputFile = inputCFile projRoot compileInputFile
+    inputFile = inputCFile projRoot inputFileCompile
 
     sysrootEnvVar :: Sem r String
     sysrootEnvVar =

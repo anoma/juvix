@@ -15,7 +15,7 @@ import Options.Applicative.Help.Pretty
 data CLI
   = DisplayVersion
   | DisplayHelp
-  | Command CommandGlobalOptions
+  | Command Command
   | Doctor DoctorOptions
   | Init
 
@@ -60,7 +60,7 @@ parseUtility =
         )
 
 parseCompiler :: Parser CLI
-parseCompiler = Command <$> parseCommandGlobalOptions
+parseCompiler = Command <$> parseCompilerCommand
 
 parseCLI :: Parser CLI
 parseCLI =
@@ -69,25 +69,23 @@ parseCLI =
     <|> parseCompiler
     <|> parseUtility
 
-commandFirstFile :: CommandGlobalOptions -> Maybe FilePath
-commandFirstFile CommandGlobalOptions {_cliGlobalOptions = GlobalOptions {..}} =
-  listToMaybe _globalInputFiles
-
 makeAbsPaths :: CLI -> IO CLI
 makeAbsPaths cli = case cli of
-  Command cmd -> do
-    nOpts <- traverseOf globalInputFiles (mapM canonicalizePath) (cmd ^. cliGlobalOptions)
-    return (Command (set cliGlobalOptions nOpts cmd))
+  Command {} -> do
+    putStrLn "TODO make abspaths"
+    return cli
   _ -> return cli
 
-descr :: ParserInfo CLI
+descr :: ParserInfo (GlobalOptions, CLI)
 descr =
-  info
-    parseCLI
+  info (do
+    cli <- parseCLI
+    opts <- parseGlobalFlags
+    return (opts, cli))
     ( fullDesc
-        <> progDesc "The Juvix compiler."
-        <> footerDoc (Just foot)
-    )
+          <> progDesc "The Juvix compiler."
+          <> footerDoc (Just foot)
+      )
   where
     foot :: Doc
     foot = bold "maintainers: " <> "The Juvix Team"

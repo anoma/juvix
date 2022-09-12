@@ -3,7 +3,6 @@ module GlobalOptions
   )
 where
 
-import Commands.Extra
 import Juvix.Compiler.Abstract.Pretty.Options qualified as Abstract
 import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
 import Juvix.Data.Error.GenericError qualified as E
@@ -68,57 +67,48 @@ instance Monoid GlobalOptions where
 
 -- | Get a parser for global flags which can be hidden or not depending on
 -- the input boolean
-parseGlobalFlags :: Bool -> Parser GlobalOptions
-parseGlobalFlags b = do
+parseGlobalFlags :: Parser GlobalOptions
+parseGlobalFlags = do
   _globalNoColors <-
     switch
       ( long "no-colors"
           <> help "Disable ANSI formatting"
-          <> hidden b
       )
   _globalShowNameIds <-
     switch
       ( long "show-name-ids"
           <> help "Show the unique number of each identifier when pretty printing"
-          <> hidden b
       )
   _globalStdin <-
     switch
       ( long "stdin"
           <> help "Read from Stdin"
-          <> hidden b
       )
   _globalOnlyErrors <-
     switch
       ( long "only-errors"
           <> help "Only print errors in a uniform format (used by juvix-mode)"
-          <> hidden b
       )
   _globalNoTermination <-
     switch
       ( long "no-termination"
           <> help "Disable termination checking"
-          <> hidden b
       )
   _globalNoPositivity <-
     switch
       ( long "no-positivity"
           <> help "Disable positivity checking for inductive types"
-          <> hidden b
       )
   _globalNoStdlib <-
     switch
       ( long "no-stdlib"
           <> help "Do not use the standard library"
-          <> hidden b
       )
   return GlobalOptions {_globalInputFiles = [], ..}
 
-parseGlobalOptions :: Bool -> Parser GlobalOptions
-parseGlobalOptions b = do
-  opts <- parseGlobalFlags b
-  files <- parserInputFiles
-  return opts {_globalInputFiles = files}
-
 genericFromGlobalOptions :: GlobalOptions -> E.GenericOptions
 genericFromGlobalOptions GlobalOptions {..} = E.GenericOptions {E._showNameIds = _globalShowNameIds}
+
+commandFirstFile :: GlobalOptions -> Maybe FilePath
+commandFirstFile GlobalOptions {..} =
+  listToMaybe _globalInputFiles
