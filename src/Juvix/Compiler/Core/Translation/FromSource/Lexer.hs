@@ -61,6 +61,8 @@ allKeywords =
     kwConstr,
     kwCase,
     kwOf,
+    kwMatch,
+    kwWith,
     kwIf,
     kwThen,
     kwElse,
@@ -131,6 +133,12 @@ kwCase = keyword Str.case_
 
 kwOf :: ParsecS r ()
 kwOf = keyword Str.of_
+
+kwMatch :: ParsecS r ()
+kwMatch = keyword Str.match_
+
+kwWith :: ParsecS r ()
+kwWith = keyword Str.with_
 
 kwIf :: ParsecS r ()
 kwIf = keyword Str.if_

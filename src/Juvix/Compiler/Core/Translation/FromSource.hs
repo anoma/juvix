@@ -13,7 +13,6 @@ import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.BinderInfo as BinderInfo
-import Juvix.Compiler.Core.Info.BranchInfo as BranchInfo
 import Juvix.Compiler.Core.Info.LocationInfo as LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo as NameInfo
 import Juvix.Compiler.Core.Info.TypeInfo as TypeInfo
@@ -672,25 +671,25 @@ caseBranchP ::
   HashMap Text Index ->
   ParsecS r (Either CaseBranch Node)
 caseBranchP varsNum vars =
-  (defaultBranch varsNum vars <&> Right)
-    <|> (matchingBranch varsNum vars <&> Left)
+  (caseDefaultBranch varsNum vars <&> Right)
+    <|> (caseMatchingBranch varsNum vars <&> Left)
 
-defaultBranch ::
+caseDefaultBranch ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Index ->
   ParsecS r Node
-defaultBranch varsNum vars = do
+caseDefaultBranch varsNum vars = do
   kwWildcard
   kwAssign
   expr varsNum vars
 
-matchingBranch ::
+caseMatchingBranch ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Index ->
   ParsecS r CaseBranch
-matchingBranch varsNum vars = do
+caseMatchingBranch varsNum vars = do
   off <- P.getOffset
   txt <- identifier
   r <- lift (getIdent txt)
@@ -714,7 +713,7 @@ matchingBranch varsNum vars = do
                 (vars, varsNum)
                 ns
       br <- expr (varsNum + bindersNum) vars'
-      let info = setInfoTagName (ci ^. constructorName) $ setInfoBinders (map (Info.singleton . NameInfo) ns) Info.empty
+      let info = setInfoName (ci ^. constructorName) $ setInfoBinders (map (Info.singleton . NameInfo) ns) Info.empty
       return $ CaseBranch info tag bindersNum br
     Nothing ->
       parseFailure off ("undeclared identifier: " ++ fromText txt)
@@ -732,3 +731,79 @@ exprIf varsNum vars = do
   kwElse
   br2 <- expr varsNum vars
   return $ mkIf Info.empty value br1 br2
+
+exprMatch ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Index ->
+  HashMap Text Index ->
+  ParsecS r Node
+exprMatch varsNum vars = do
+  kwMatch
+  values <- P.some (expr varsNum vars)
+  kwWith
+  braces (exprMatch' values varsNum vars)
+    <|> exprMatch' values varsNum vars
+
+exprMatch' ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  [Node] ->
+  Index ->
+  HashMap Text Index ->
+  ParsecS r Node
+exprMatch' values varsNum vars = do
+  bs <- P.sepEndBy (matchBranch (length values) varsNum vars) kwSemicolon
+  return $ mkMatch' (fromList values) bs
+
+matchBranch ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Int ->
+  Index ->
+  HashMap Text Index ->
+  ParsecS r MatchBranch
+matchBranch patsNum varsNum vars = do
+  off <- P.getOffset
+  pats <- P.some branchPattern
+  kwMapsTo
+  unless (length pats == patsNum) $
+    parseFailure off "wrong number of patterns"
+  let pis = concatMap (reverse . getBinderPatternInfos) pats
+  let (vars', varsNum') =
+        foldl'
+          ( \(vs, k) name ->
+              (HashMap.insert (name ^. nameText) k vs, k + 1)
+          )
+          (vars, varsNum)
+          (map (fromJust . getInfoName) pis)
+  br <- expr varsNum' vars'
+  return $ MatchBranch Info.empty (fromList pats) br
+
+branchPattern ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  ParsecS r Pattern
+branchPattern =
+  wildcardPattern
+    <|> parens wildcardPattern
+    <|> parens binderOrConstrPattern
+    <|> binderOrConstrPattern
+
+wildcardPattern :: ParsecS r Pattern
+wildcardPattern = do
+  kwWildcard
+  return $ PatWildcard (PatternWildcard Info.empty)
+
+binderOrConstrPattern ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  ParsecS r Pattern
+binderOrConstrPattern = do
+  (txt, i) <- identifierL
+  r <- lift (getIdent txt)
+  case r of
+    Just (IdentTag tag) -> do
+      ps <- P.many branchPattern
+      ci <- lift $ getConstructorInfo tag
+      kwMapsTo
+      let info = setInfoName (ci ^. constructorName) Info.empty
+      return $ PatConstr (PatternConstr info tag ps)
+    _ -> do
+      n <- lift $ freshName KNameLocal txt i
+      return $ PatBinder (PatternBinder (setInfoName n Info.empty))

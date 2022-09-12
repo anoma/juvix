@@ -338,6 +338,12 @@ case_ = "case"
 of_ :: IsString s => s
 of_ = "of"
 
+match_ :: IsString s => s
+match_ = "match"
+
+with_ :: IsString s => s
+with_ = "with"
+
 juvixFunctionT :: IsString s => s
 juvixFunctionT = "juvix_function_t"
 

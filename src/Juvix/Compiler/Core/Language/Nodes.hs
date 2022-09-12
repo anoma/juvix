@@ -87,23 +87,63 @@ data CaseBranch' i a = CaseBranch
     _caseBranchBody :: !a
   }
 
+-- | Complex pattern match. `Match` is lazy: only the selected branch is evaluated.
+data Match' i a = Match
+  { _matchInfo :: i,
+    _matchValues :: !(NonEmpty a),
+    _matchBranches :: ![MatchBranch' i a]
+  }
+
+-- | The patterns introduce binders from left to right, e.g., matching on the
+-- patterns '(C (D x) y) (E _ z)' with body 'f x y z' may be represented by a
+-- 'MatchBranch' with '_matchBranchPatterns' equal to '[PatConstr Ctag
+-- [PatConstr Dtag [PatBinder], PatBinder], PatConstr Etag [PatWildcard,
+-- PatBinder]]' and '_matchBranchBody' equal to 'App (App (App (Ident f) (Var
+-- 2)) (Var 1)) (Var 0)'. So the de Bruijn indices increase from right to left.
+data MatchBranch' i a = MatchBranch
+  { _matchBranchInfo :: i,
+    _matchBranchPatterns :: !(NonEmpty (Pattern' i)),
+    _matchBranchBody :: !a
+  }
+
+data Pattern' i
+  = PatWildcard (PatternWildcard' i)
+  | PatBinder (PatternBinder' i)
+  | PatConstr (PatternConstr' i)
+  deriving stock (Eq)
+
+newtype PatternWildcard' i = PatternWildcard
+  { _patternWildcardInfo :: i
+  }
+
+newtype PatternBinder' i = PatternBinder
+  { _patternBinderInfo :: i
+  }
+
+data PatternConstr' i = PatternConstr
+  { _patternConstrInfo :: i,
+    _patternConstrTag :: !Tag,
+    _patternConstrArgs :: ![Pattern' i]
+  }
+
 -- | Dependent Pi-type. Compilation-time only. Pi implicitly introduces a binder
 -- in the body, exactly like Lambda. So `Pi info ty body` is `Pi x : ty .
 -- body` in more familiar notation, but references to `x` in `body` are via de
--- Bruijn index. For example, Pi A : GHC.Type . A -> A translates to (omitting
+-- Bruijn index. For example, Pi A : Type . A -> A translates to (omitting
 -- Infos): Pi (Univ level) (Pi (Var 0) (Var 1)).
 data Pi' i a = Pi {_piInfo :: i, _piType :: !a, _piBody :: !a}
 
 -- | Universe. Compilation-time only.
 data Univ' i = Univ {_univInfo :: i, _univLevel :: !Int}
 
--- | GHC.Type constructor application. Compilation-time only.
+-- | Type constructor application. Compilation-time only.
 data TypeConstr' i a = TypeConstr
   { _typeConstrInfo :: i,
     _typeConstrSymbol :: !Symbol,
     _typeConstrArgs :: ![a]
   }
 
+-- | A primitive type.
 data TypePrim' i = TypePrim
   { _typePrimInfo :: i,
     _typePrimPrimitive :: Primitive
@@ -153,6 +193,24 @@ instance HasAtomicity (LetRec' i a) where
 
 instance HasAtomicity (Case' i bi a) where
   atomicity _ = Aggregate lambdaFixity
+
+instance HasAtomicity (Match' i a) where
+  atomicity _ = Aggregate lambdaFixity
+
+instance HasAtomicity (PatternWildcard' i) where
+  atomicity _ = Atom
+
+instance HasAtomicity (PatternBinder' i) where
+  atomicity _ = Atom
+
+instance HasAtomicity (PatternConstr' i) where
+  atomicity _ = Aggregate appFixity
+
+instance HasAtomicity (Pattern' i) where
+  atomicity = \case
+    PatWildcard x -> atomicity x
+    PatBinder x -> atomicity x
+    PatConstr x -> atomicity x
 
 instance HasAtomicity (Pi' i a) where
   atomicity _ = Aggregate lambdaFixity
@@ -208,6 +266,21 @@ instance Eq a => Eq (Case' i bi a) where
 instance Eq a => Eq (CaseBranch' i a) where
   (CaseBranch _ tag1 n1 b1) == (CaseBranch _ tag2 n2 b2) = tag1 == tag2 && n1 == n2 && b1 == b2
 
+instance Eq a => Eq (Match' i a) where
+  (Match _ vs1 bs1) == (Match _ vs2 bs2) = vs1 == vs2 && bs1 == bs2
+
+instance Eq a => Eq (MatchBranch' i a) where
+  (MatchBranch _ pats1 b1) == (MatchBranch _ pats2 b2) = pats1 == pats2 && b1 == b2
+
+instance Eq (PatternWildcard' i) where
+  _ == _ = True
+
+instance Eq (PatternBinder' i) where
+  _ == _ = True
+
+instance Eq (PatternConstr' i) where
+  (PatternConstr _ tag1 ps1) == (PatternConstr _ tag2 ps2) = tag1 == tag2 && ps1 == ps2
+
 instance Eq a => Eq (Pi' i a) where
   (Pi _ ty1 b1) == (Pi _ ty2 b2) = ty1 == ty2 && b1 == b2
 
@@ -232,11 +305,16 @@ makeLenses ''Constr'
 makeLenses ''Let'
 makeLenses ''LetRec'
 makeLenses ''Case'
+makeLenses ''CaseBranch'
+makeLenses ''Match'
+makeLenses ''MatchBranch'
+makeLenses ''PatternWildcard'
+makeLenses ''PatternBinder'
+makeLenses ''PatternConstr'
 makeLenses ''Pi'
 makeLenses ''Univ'
 makeLenses ''TypeConstr'
 makeLenses ''Dynamic'
-makeLenses ''CaseBranch'
 
 instance Hashable (Ident' i) where
   hashWithSalt s = hashWithSalt s . (^. identSymbol)

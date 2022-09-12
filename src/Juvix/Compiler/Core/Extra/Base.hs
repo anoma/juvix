@@ -70,6 +70,12 @@ mkCase i v bs def = NCase (Case i v bs def)
 mkCase' :: Node -> [CaseBranch] -> Maybe Node -> Node
 mkCase' = mkCase Info.empty
 
+mkMatch :: Info -> NonEmpty Node -> [MatchBranch] -> Node
+mkMatch i vs bs = NMatch (Match i vs bs)
+
+mkMatch' :: NonEmpty Node -> [MatchBranch] -> Node
+mkMatch' = mkMatch Info.empty
+
 mkIf :: Info -> Node -> Node -> Node -> Node
 mkIf i v b1 b2 = mkCase i v [CaseBranch Info.empty (BuiltinTag TagTrue) 0 b1] (Just b2)
 
@@ -156,6 +162,30 @@ unfoldLambdas = go []
 
 unfoldLambdas' :: Node -> (Int, Node)
 unfoldLambdas' = first length . unfoldLambdas
+
+getBinderPatternInfos :: Pattern -> [Info]
+getBinderPatternInfos = go []
+  where
+    go :: [Info] -> Pattern -> [Info]
+    go acc = \case
+      PatConstr (PatternConstr {..}) ->
+        foldl' go acc _patternConstrArgs
+      PatBinder (PatternBinder {..}) ->
+        _patternBinderInfo : acc
+      PatWildcard {} ->
+        acc
+
+getPatternInfos :: Pattern -> [Info]
+getPatternInfos = go []
+  where
+    go :: [Info] -> Pattern -> [Info]
+    go acc = \case
+      PatConstr (PatternConstr {..}) ->
+        foldl' go (_patternConstrInfo : acc) _patternConstrArgs
+      PatBinder (PatternBinder {..}) ->
+        _patternBinderInfo : acc
+      PatWildcard (PatternWildcard {..}) ->
+        _patternWildcardInfo : acc
 
 -- | `NodeDetails` is a convenience datatype which provides the most commonly needed
 -- information about a node in a generic fashion.
@@ -257,11 +287,11 @@ destruct = \case
             _nodeReassemble = \i' args' -> mkLetRec i' (fromList (tl args')) (hd args')
           }
   NCase (Case i v bs Nothing) ->
-    let branchBinderNums = map (\(CaseBranch _ _ k _) -> k) bs
-        branchBinderInfos = map (\(CaseBranch bi _ k _) -> getInfoBinders k bi) bs
+    let branchBinderNums = map (^. caseBranchBindersNum) bs
+        branchBinderInfos = map (\(CaseBranch {..}) -> getInfoBinders _caseBranchBindersNum _caseBranchInfo) bs
      in NodeDetails
           { _nodeInfo = i,
-            _nodeChildren = v : map (\(CaseBranch _ _ _ br) -> br) bs,
+            _nodeChildren = v : map (^. caseBranchBody) bs,
             _nodeChildBindersNum = 0 : branchBinderNums,
             _nodeChildBindersInfo = [] : branchBinderInfos,
             _nodeReassemble = \i' args' ->
@@ -269,18 +299,18 @@ destruct = \case
                 i'
                 (hd args')
                 ( zipWithExact
-                    (\(CaseBranch bi tag k _) br' -> CaseBranch bi tag k br')
+                    (\br body' -> br {_caseBranchBody = body'})
                     bs
                     (tl args')
                 )
                 Nothing
           }
   NCase (Case i v bs (Just def)) ->
-    let branchBinderNums = map (\(CaseBranch _ _ k _) -> k) bs
-        branchBinderInfos = map (\(CaseBranch bi _ k _) -> getInfoBinders k bi) bs
+    let branchBinderNums = map (^. caseBranchBindersNum) bs
+        branchBinderInfos = map (\(CaseBranch {..}) -> getInfoBinders _caseBranchBindersNum _caseBranchInfo) bs
      in NodeDetails
           { _nodeInfo = i,
-            _nodeChildren = v : def : map (\(CaseBranch _ _ _ br) -> br) bs,
+            _nodeChildren = v : def : map (^. caseBranchBody) bs,
             _nodeChildBindersNum = 0 : 0 : branchBinderNums,
             _nodeChildBindersInfo = [] : [] : branchBinderInfos,
             _nodeReassemble = \i' args' ->
@@ -288,11 +318,37 @@ destruct = \case
                 i'
                 (hd args')
                 ( zipWithExact
-                    (\(CaseBranch bi tag k _) br' -> CaseBranch bi tag k br')
+                    (\br body' -> br {_caseBranchBody = body'})
                     bs
                     (tl (tl args'))
                 )
                 (Just (hd (tl args')))
+          }
+  NMatch (Match i vs bs) ->
+    let branchBinderInfos =
+          map
+            ( \br ->
+                concatMap
+                  getBinderPatternInfos
+                  (reverse (toList (br ^. matchBranchPatterns)))
+            )
+            bs
+        branchBinderNums = map length branchBinderInfos
+        n = length vs
+     in NodeDetails
+          { _nodeInfo = i,
+            _nodeChildren = toList vs ++ map (^. matchBranchBody) bs,
+            _nodeChildBindersNum = replicate n 0 ++ branchBinderNums,
+            _nodeChildBindersInfo = replicate n [] ++ branchBinderInfos,
+            _nodeReassemble = \i' args' ->
+              mkMatch
+                i'
+                (fromList $ List.take n args')
+                ( zipWithExact
+                    (\br body' -> br {_matchBranchBody = body'})
+                    bs
+                    (drop n args')
+                )
           }
   NPi (Pi i ty b) ->
     NodeDetails
