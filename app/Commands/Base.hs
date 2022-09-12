@@ -8,7 +8,7 @@ module Commands.Base
 where
 
 import App
+import CommonOptions
 import GlobalOptions
 import Juvix.Compiler.Pipeline
 import Juvix.Prelude
-import CommonOptions

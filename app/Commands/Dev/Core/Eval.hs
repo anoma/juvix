@@ -13,18 +13,20 @@ import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 import Text.Megaparsec.Pos qualified as M
 
-doEval :: forall r. Members '[Embed IO, App] r =>
- Bool ->
- Interval ->
- Core.InfoTable ->
- Core.Node ->
- Sem r (Either Core.CoreError Core.Node)
+doEval ::
+  forall r.
+  Members '[Embed IO, App] r =>
+  Bool ->
+  Interval ->
+  Core.InfoTable ->
+  Core.Node ->
+  Sem r (Either Core.CoreError Core.Node)
 doEval noIO loc tab node
   | noIO = embed $ Core.catchEvalError loc (Core.eval (tab ^. Core.identContext) [] node)
   | otherwise = embed $ Core.catchEvalErrorIO loc (Core.evalIO (tab ^. Core.identContext) [] node)
 
 runCommand :: forall r. Members '[Embed IO, App] r => CoreEvalOptions -> Sem r ()
-runCommand  opts = do
+runCommand opts = do
   s <- embed (readFile f)
   case Core.runParser "" f Core.emptyInfoTable s of
     Left err -> exitJuvixError (JuvixError err)

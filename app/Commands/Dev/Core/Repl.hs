@@ -1,16 +1,16 @@
 module Commands.Dev.Core.Repl where
 
-import Commands.Dev.Core.Eval (doEval)
 import Commands.Base
+import Commands.Dev.Core.Eval (doEval)
+import Commands.Dev.Core.Repl.Options
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Extra.Base qualified as Core
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
-import Text.Megaparsec.Pos qualified as M
-import Commands.Dev.Core.Repl.Options
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
+import Text.Megaparsec.Pos qualified as M
 
 runCommand :: forall r. Members '[Embed IO, App] r => CoreReplOptions -> Sem r ()
 runCommand opts = do

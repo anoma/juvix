@@ -51,13 +51,13 @@ commandDev =
 
 parseCompilerCommand :: Parser Command
 parseCompilerCommand =
-    hsubparser
-      ( mconcat
-          [ commandGroup "Compiler commands:",
-            metavar "COMPILER_CMD",
-            commandCheck,
-            commandCompile,
-            commandHtml,
-            commandDev
-          ]
-      )
+  hsubparser
+    ( mconcat
+        [ commandGroup "Compiler commands:",
+          metavar "COMPILER_CMD",
+          commandCheck,
+          commandCompile,
+          commandHtml,
+          commandDev
+        ]
+    )

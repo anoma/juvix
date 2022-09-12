@@ -5,9 +5,9 @@ module CLI
   )
 where
 
-import Data.Generics.Uniplate.Data
 import Command
 import CommonOptions hiding (Doc)
+import Data.Generics.Uniplate.Data
 import GlobalOptions
 import Options.Applicative.Help.Pretty
 
@@ -23,17 +23,19 @@ parseDisplayVersion :: Parser CLI
 parseDisplayVersion =
   flag'
     DisplayVersion
-    (long "version"
-     <> short 'v'
-     <> help "Show the version")
+    ( long "version"
+        <> short 'v'
+        <> help "Show the version"
+    )
 
 parseDisplayHelp :: Parser CLI
 parseDisplayHelp =
   flag'
     DisplayHelp
-    (long "help"
-     <> short 'h'
-     <> help "Show the help text")
+    ( long "help"
+        <> short 'h'
+        <> help "Show the help text"
+    )
 
 parseUtility :: Parser CLI
 parseUtility =
@@ -77,19 +79,21 @@ parseCLI =
 makeAbsPaths :: Biplate from Path => from -> IO from
 makeAbsPaths = transformBiM go
   where
-  go :: Path -> IO Path
-  go = traverseOf unPath canonicalizePath
+    go :: Path -> IO Path
+    go = traverseOf unPath canonicalizePath
 
 descr :: ParserInfo (GlobalOptions, CLI)
 descr =
-  info (do
-    cli <- parseCLI
-    opts <- parseGlobalFlags
-    return (opts, cli))
+  info
+    ( do
+        cli <- parseCLI
+        opts <- parseGlobalFlags
+        return (opts, cli)
+    )
     ( fullDesc
-          <> progDesc "The Juvix compiler."
-          <> footerDoc (Just foot)
-      )
+        <> progDesc "The Juvix compiler."
+        <> footerDoc (Just foot)
+    )
   where
     foot :: Doc
     foot = bold "maintainers: " <> "The Juvix Team"

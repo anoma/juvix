@@ -1,18 +1,19 @@
 -- | Contains common options reused in several commands.
-module CommonOptions (
-  module CommonOptions,
-  module Juvix.Prelude,
-  module Options.Applicative,
-                     ) where
+module CommonOptions
+  ( module CommonOptions,
+    module Juvix.Prelude,
+    module Options.Applicative,
+  )
+where
 
-import Juvix.Prelude
 import Control.Exception qualified as GHC
+import Juvix.Prelude
 import Options.Applicative
 import System.Process
 
-
 newtype Path = Path {_unPath :: FilePath}
   deriving stock (Data)
+
 makeLenses ''Path
 
 instance IsString Path where
@@ -35,30 +36,25 @@ juvixCompleter = mkCompleter $ \word -> do
 
 requote :: String -> String
 requote s =
-  let
-    -- Bash doesn't appear to allow "mixed" escaping
-    -- in bash completions. So we don't have to really
-    -- worry about people swapping between strong and
-    -- weak quotes.
-    unescaped =
-      case s of
-        -- It's already strongly quoted, so we
-        -- can use it mostly as is, but we must
-        -- ensure it's closed off at the end and
-        -- there's no single quotes in the
-        -- middle which might confuse bash.
-        ('\'': rs) -> unescapeN rs
-
-        -- We're weakly quoted.
-        ('"': rs)  -> unescapeD rs
-
-        -- We're not quoted at all.
-        -- We need to unescape some characters like
-        -- spaces and quotation marks.
-        elsewise   -> unescapeU elsewise
-  in
-    strong unescaped
-
+  let -- Bash doesn't appear to allow "mixed" escaping
+      -- in bash completions. So we don't have to really
+      -- worry about people swapping between strong and
+      -- weak quotes.
+      unescaped =
+        case s of
+          -- It's already strongly quoted, so we
+          -- can use it mostly as is, but we must
+          -- ensure it's closed off at the end and
+          -- there's no single quotes in the
+          -- middle which might confuse bash.
+          ('\'' : rs) -> unescapeN rs
+          -- We're weakly quoted.
+          ('"' : rs) -> unescapeD rs
+          -- We're not quoted at all.
+          -- We need to unescape some characters like
+          -- spaces and quotation marks.
+          elsewise -> unescapeU elsewise
+   in strong unescaped
   where
     strong :: String -> String
     strong ss = '\'' : foldr go "'" ss
@@ -67,7 +63,7 @@ requote s =
         -- command: exit from the strong quote and
         -- emit it the quote escaped, then resume.
         go '\'' t = "'\\''" ++ t
-        go h t    = h : t
+        go h t = h : t
 
     -- Unescape a strongly quoted string
     -- We have two recursive functions, as we
@@ -102,14 +98,14 @@ requote s =
           | otherwise = '\\' : x : goX xs
         -- We've ended quoted section, so we
         -- don't recurse on goX, it's done.
-        goX ('"' : xs)
-          = xs
+        goX ('"' : xs) =
+          xs
         -- Not done, but not a special character
         -- just continue the fold.
-        goX (x : xs)
-          = x : goX xs
-        goX []
-          = []
+        goX (x : xs) =
+          x : goX xs
+        goX [] =
+          []
 
 class HasPaths a where
   paths :: Traversal' a FilePath

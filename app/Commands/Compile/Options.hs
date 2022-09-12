@@ -1,8 +1,8 @@
 module Commands.Compile.Options where
 
+import CommonOptions
 import Juvix.Prelude
 import Options.Applicative
-import CommonOptions
 
 data CompileTarget = TargetC | TargetWasm | TargetNative
   deriving stock (Show, Data)
