@@ -80,10 +80,12 @@ data Instruction
     -- stack[n-1]: field 0). The data is pushed on top of the stack.
     AllocConstr Tag
   | -- | Allocate a closure for the given function symbol. n = allocClosureArgsNum
-    -- indicates the number of function arguments available (strictly less than
-    -- the number of arguments expected by the function). The n function
-    -- arguments are popped from the stack and stored in the closure at
-    -- _decreasing_ offsets. The result is pushed on top of the stack.
+    -- indicates the number of function arguments available (greater than 0 and
+    -- strictly less than the number of arguments expected by the function --
+    -- known functions can take zero arguments, but closures are required to
+    -- take at least one). The n function arguments are popped from the stack
+    -- and stored in the closure at _decreasing_ offsets. The result is pushed
+    -- on top of the stack.
     AllocClosure InstrAllocClosure
   | -- | Extend a closure on top of the stack with more arguments. n =
     -- extendClosureArgsNum indicates the number of arguments to extend the

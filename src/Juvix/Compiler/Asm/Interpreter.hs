@@ -81,6 +81,8 @@ runCode infoTable = run . evalRuntime . goToplevel
         pushValueStack (ValConstr (Constr tag (reverse args)))
         goCode cont
       AllocClosure InstrAllocClosure {..} -> do
+        unless (_allocClosureArgsNum > 0) $
+          error "invalid closure allocation: the number of supplied arguments must be greater than 0"
         args <- replicateM _allocClosureArgsNum popValueStack
         pushValueStack (ValClosure (Closure _allocClosureFunSymbol (reverse args)))
         goCode cont
@@ -88,6 +90,8 @@ runCode infoTable = run . evalRuntime . goToplevel
         v <- popValueStack
         case v of
           ValClosure cl -> do
+            unless (_extendClosureArgsNum > 0) $
+              error "invalid closure extension: the number of supplied arguments must be greater than 0"
             extendClosure cl _extendClosureArgsNum
             goCode cont
           _ -> error "invalid closure extension: expected closure on top of value stack"

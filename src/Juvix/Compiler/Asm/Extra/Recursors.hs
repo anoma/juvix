@@ -36,7 +36,7 @@ recurse' sig = go
       [] -> return (mem, [])
       h : t -> case h of
         Instr x -> do
-          checkNextInstr (x ^. cmdInstrInstruction) t
+          checkNextInstr (x ^. (cmdInstrInfo . commandInfoLocation)) (x ^. cmdInstrInstruction) t
           goNextCmd (goInstr mem x) t
         Branch x ->
           goNextCmd (goBranch mem x) t
@@ -49,8 +49,13 @@ recurse' sig = go
       (mem'', rs) <- go mem' t
       return (mem'', r : rs)
 
-    checkNextInstr :: Instruction -> Code -> Sem r ()
-    checkNextInstr = unimplemented
+    checkNextInstr :: Maybe Location -> Instruction -> Code -> Sem r ()
+    checkNextInstr loc instr code =
+      if
+          | isFinalInstr instr && not (null code) ->
+              throw $ AsmError loc "unreachable code"
+          | otherwise ->
+              return ()
 
     goInstr :: Memory -> CmdInstr -> Sem r (Memory, a)
     goInstr memory cmd = do
@@ -115,15 +120,8 @@ recurse' sig = go
               return $
                 pushValueStack (mkTypeFun (drop _allocClosureArgsNum tyargs) tgt) $
                   popValueStack _allocClosureArgsNum mem
-            ExtendClosure InstrExtendClosure {..} -> do
-              when (length (mem ^. memoryValueStack) < _extendClosureArgsNum + 1) $
-                throw $
-                  AsmError loc "invalid closure extension: not enough values on the stack"
-              let ty = topValueStack' 0 mem
-              when (ty /= TyDynamic && length (typeArgs ty) < _extendClosureArgsNum) $
-                throw $
-                  AsmError loc "invalid closure extension: too many supplied arguments"
-              fixMemValueStackArgs mem 1 _extendClosureArgsNum ty
+            ExtendClosure x ->
+              fixMemExtendClosure mem x
             Call x ->
               fixMemCall mem x
             TailCall x ->
@@ -143,6 +141,18 @@ recurse' sig = go
           checkValueStack loc [ty1, ty0] mem
           return $ pushValueStack rty (popValueStack 2 mem)
 
+        fixMemExtendClosure :: Memory -> InstrExtendClosure -> Sem r Memory
+        fixMemExtendClosure mem InstrExtendClosure {..} = do
+          when (length (mem ^. memoryValueStack) < _extendClosureArgsNum + 1) $
+            throw $
+              AsmError loc "invalid closure extension: not enough values on the stack"
+          let ty = topValueStack' 0 mem
+          checkFunType ty
+          when (ty /= TyDynamic && length (typeArgs ty) < _extendClosureArgsNum) $
+            throw $
+              AsmError loc "invalid closure extension: too many supplied arguments"
+          fixMemValueStackArgs mem 1 _extendClosureArgsNum ty
+
         fixMemCall :: Memory -> InstrCall -> Sem r Memory
         fixMemCall mem InstrCall {..} = do
           let k = if _callType == CallClosure then 1 else 0
@@ -152,6 +162,7 @@ recurse' sig = go
           let ty = case _callType of
                 CallClosure -> topValueStack' 0 mem
                 CallFun sym -> getFunInfo (sig ^. recursorInfoTable) sym ^. functionType
+          checkFunType ty
           when (ty /= TyDynamic && length (typeArgs ty) /= _callArgsNum) $
             throw $
               AsmError loc "invalid call: the number of supplied arguments doesn't match the number of expected arguments"
@@ -162,10 +173,22 @@ recurse' sig = go
           when (null (mem ^. memoryValueStack)) $
             throw $
               AsmError loc "invalid closure call: value stack is empty"
-          -- let ty = topValueStack' 0 mem
-          let mem' = popValueStack 1 mem
-          -- TODO: we can do better if ty /= TyDynamic
-          return $ pushValueStack TyDynamic (popValueStack _callClosuresArgsNum mem')
+          let ty = topValueStack' 0 mem
+          checkFunType ty
+          if
+              | ty == TyDynamic -> do
+                  let mem' = popValueStack 1 mem
+                  return $ pushValueStack TyDynamic (popValueStack _callClosuresArgsNum mem')
+              | length (typeArgs ty) < _callClosuresArgsNum -> do
+                  let n = length (typeArgs ty)
+                  mem' <- fixMemCall mem (InstrCall CallClosure n)
+                  fixMemCallClosures mem' (InstrCallClosures (_callClosuresArgsNum - n))
+              | length (typeArgs ty) > _callClosuresArgsNum -> do
+                  let n = length (typeArgs ty)
+                  mem' <- fixMemExtendClosure mem (InstrExtendClosure n)
+                  fixMemCallClosures mem' (InstrCallClosures (_callClosuresArgsNum - n))
+              | otherwise ->
+                fixMemCall mem (InstrCall CallClosure (length (typeArgs ty)))
 
         fixMemValueStackArgs :: Memory -> Int -> Int -> Type -> Sem r Memory
         fixMemValueStackArgs mem k argsNum ty = do
@@ -176,6 +199,9 @@ recurse' sig = go
           return $
             pushValueStack (mkTypeFun (drop argsNum (typeArgs ty)) ty) $
               popValueStack argsNum mem'
+
+        checkFunType :: Type -> Sem r ()
+        checkFunType ty = void $ unifyTypes' loc ty (mkTypeFun [TyDynamic] TyDynamic)
 
     goBranch :: Memory -> CmdBranch -> Sem r (Memory, a)
     goBranch = unimplemented
