@@ -84,7 +84,7 @@ clangNativeCompile ::
 clangNativeCompile projRoot inputFileCompile o = runClang (nativeArgs outputFile inputFile)
   where
     outputFile :: FilePath
-    outputFile = fromMaybe (takeBaseName inputFileCompile) (fmap (^. unPath) (o ^. compileOutputFile))
+    outputFile = fromMaybe (takeBaseName inputFileCompile) (fmap (^. pathPath) (o ^. compileOutputFile))
 
     inputFile :: FilePath
     inputFile = inputCFile projRoot inputFileCompile
@@ -106,7 +106,7 @@ clangCompile projRoot inputFileCompile o = clangArgs >>= runClang
       RuntimeWasiLibC -> wasiLibcArgs outputFile inputFile <$> sysrootEnvVar
 
     outputFile :: FilePath
-    outputFile = fromMaybe (takeBaseName inputFileCompile <> ".wasm") (fmap (^. unPath) (o ^. compileOutputFile))
+    outputFile = fromMaybe (takeBaseName inputFileCompile <> ".wasm") (fmap (^. pathPath) (o ^. compileOutputFile))
 
     inputFile :: FilePath
     inputFile = inputCFile projRoot inputFileCompile

@@ -1,8 +1,6 @@
 module Commands.Compile.Options where
 
 import CommonOptions
-import Juvix.Prelude
-import Options.Applicative
 
 data CompileTarget = TargetC | TargetWasm | TargetNative
   deriving stock (Show, Data)
@@ -45,16 +43,7 @@ parseCompile = do
           <> showDefaultWith runtimeShow
           <> help "select a runtime: wasi-standalone, wasi-libc, standalone"
       )
-  _compileOutputFile <-
-    optional $
-      option
-        str
-        ( long "output"
-            <> short 'o'
-            <> metavar "OUTPUT_FILE"
-            <> help "Path to output file"
-            <> action "file"
-        )
+  _compileOutputFile <- optional parseGenericOutputFile
   _compileInputFile <- parseInputJuvixFile
   pure CompileOptions {..}
   where

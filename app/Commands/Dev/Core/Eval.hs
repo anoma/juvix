@@ -46,4 +46,4 @@ runCommand opts = do
     docOpts = Core.defaultOptions
     defaultLoc = singletonInterval (mkLoc f 0 (M.initialPos f))
     f :: FilePath
-    f = opts ^. coreEvalInputFile . unPath
+    f = opts ^. coreEvalInputFile . pathPath

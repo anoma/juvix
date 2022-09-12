@@ -16,8 +16,7 @@ data GlobalOptions = GlobalOptions
     _globalStdin :: Bool,
     _globalNoTermination :: Bool,
     _globalNoPositivity :: Bool,
-    _globalNoStdlib :: Bool,
-    _globalInputFiles :: [FilePath]
+    _globalNoStdlib :: Bool
   }
   deriving stock (Eq, Show, Data)
 
@@ -35,6 +34,9 @@ instance CanonicalProjection GlobalOptions Abstract.Options where
       { Abstract._optShowNameIds = g ^. globalShowNameIds
       }
 
+instance CanonicalProjection GlobalOptions E.GenericOptions where
+  project GlobalOptions {..} = E.GenericOptions {E._showNameIds = _globalShowNameIds}
+
 defaultGlobalOptions :: GlobalOptions
 defaultGlobalOptions =
   GlobalOptions
@@ -44,26 +46,8 @@ defaultGlobalOptions =
       _globalNoTermination = False,
       _globalStdin = False,
       _globalNoPositivity = False,
-      _globalNoStdlib = False,
-      _globalInputFiles = []
+      _globalNoStdlib = False
     }
-
-instance Semigroup GlobalOptions where
-  o1 <> o2 =
-    GlobalOptions
-      { _globalNoColors = o1 ^. globalNoColors || o2 ^. globalNoColors,
-        _globalShowNameIds = o1 ^. globalShowNameIds || o2 ^. globalShowNameIds,
-        _globalOnlyErrors = o1 ^. globalOnlyErrors || o2 ^. globalOnlyErrors,
-        _globalStdin = o1 ^. globalStdin || o2 ^. globalStdin,
-        _globalNoTermination = o1 ^. globalNoTermination || o2 ^. globalNoTermination,
-        _globalNoPositivity = o1 ^. globalNoPositivity || o2 ^. globalNoPositivity,
-        _globalNoStdlib = o1 ^. globalNoStdlib || o2 ^. globalNoStdlib,
-        _globalInputFiles = o1 ^. globalInputFiles ++ o2 ^. globalInputFiles
-      }
-
-instance Monoid GlobalOptions where
-  mempty = defaultGlobalOptions
-  mappend = (<>)
 
 -- | Get a parser for global flags which can be hidden or not depending on
 -- the input boolean
@@ -104,11 +88,4 @@ parseGlobalFlags = do
       ( long "no-stdlib"
           <> help "Do not use the standard library"
       )
-  return GlobalOptions {_globalInputFiles = [], ..}
-
-genericFromGlobalOptions :: GlobalOptions -> E.GenericOptions
-genericFromGlobalOptions GlobalOptions {..} = E.GenericOptions {E._showNameIds = _globalShowNameIds}
-
-commandFirstFile :: GlobalOptions -> Maybe FilePath
-commandFirstFile GlobalOptions {..} =
-  listToMaybe _globalInputFiles
+  return GlobalOptions {..}

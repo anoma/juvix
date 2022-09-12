@@ -11,22 +11,35 @@ import Juvix.Prelude
 import Options.Applicative
 import System.Process
 
-newtype Path = Path {_unPath :: FilePath}
+-- | Paths that are input are used to detect the root of the project.
+data Path = Path {
+  _pathPath :: FilePath,
+  _pathIsInput :: Bool
+  }
   deriving stock (Data)
 
 makeLenses ''Path
 
-instance IsString Path where
-  fromString = Path
-
 parseInputJuvixFile :: Parser Path
-parseInputJuvixFile =
-  argument
+parseInputJuvixFile = do
+  _pathPath <- argument
     str
     ( metavar "JUVIX_FILE"
         <> help "Path to a .juvix file"
         <> completer juvixCompleter
     )
+  pure Path {_pathIsInput = True, ..}
+
+parseGenericOutputFile :: Parser Path
+parseGenericOutputFile = do
+  _pathPath <- option str
+        ( long "output"
+            <> short 'o'
+            <> metavar "OUTPUT_FILE"
+            <> help "Path to output file"
+            <> action "file"
+        )
+  pure Path {_pathIsInput = False, ..}
 
 juvixCompleter :: Completer
 juvixCompleter = mkCompleter $ \word -> do

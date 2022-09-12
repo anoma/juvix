@@ -14,4 +14,4 @@ runCommand opts = do
   renderStdOut (Core.ppOut opts tab')
   where
     f :: FilePath
-    f = opts ^. coreReadInputFile . unPath
+    f = opts ^. coreReadInputFile . pathPath

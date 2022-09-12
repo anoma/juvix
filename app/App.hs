@@ -12,6 +12,8 @@ data App m a where
   ExitMsg :: ExitCode -> Text -> App m a
   ExitJuvixError :: JuvixError -> App m a
   PrintJuvixError :: JuvixError -> App m ()
+  AskRoot :: App m FilePath
+  AskPackage :: App m Package
   AskGlobalOptions :: App m GlobalOptions
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
   RunPipelineEither :: Sem PipelineEff a -> App m (Either JuvixError a)
@@ -20,14 +22,16 @@ data App m a where
 
 makeSem ''App
 
-runAppIO :: forall r a. Member (Embed IO) r => GlobalOptions -> Sem (App ': r) a -> Sem r a
-runAppIO g = interpret $ \case
+runAppIO :: forall r a. Member (Embed IO) r => GlobalOptions -> FilePath -> Package -> Sem (App ': r) a -> Sem r a
+runAppIO g root pkg = interpret $ \case
   RenderStdOut t
     | g ^. globalOnlyErrors -> return ()
     | otherwise -> embed $ do
         sup <- Ansi.hSupportsANSI stdout
         renderIO (not (g ^. globalNoColors) && sup) t
   AskGlobalOptions -> return g
+  AskPackage -> return pkg
+  AskRoot -> return root
   RunPipelineEither p -> embed (runIOEither p)
   Say t
     | g ^. globalOnlyErrors -> return ()
@@ -41,7 +45,7 @@ runAppIO g = interpret $ \case
   Raw b -> embed (ByteString.putStr b)
   where
     printErr e =
-      embed $ hPutStrLn stderr $ run $ runReader (genericFromGlobalOptions g) $ Error.render (not (g ^. globalNoColors)) (g ^. globalOnlyErrors) e
+      embed $ hPutStrLn stderr $ run $ runReader (project' @GenericOptions g) $ Error.render (not (g ^. globalNoColors)) (g ^. globalOnlyErrors) e
 
 runPipeline :: Member App r => Sem PipelineEff a -> Sem r a
 runPipeline p = do

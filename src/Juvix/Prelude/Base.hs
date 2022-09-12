@@ -346,3 +346,7 @@ class CanonicalProjection a b where
 
 instance CanonicalProjection a a where
   project = id
+
+-- | 'project' with type arguments swapped. Useful for type application
+project' :: forall b a. CanonicalProjection a b => a -> b
+project' = project

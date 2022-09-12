@@ -17,8 +17,8 @@ import Juvix.Prelude
 import Options.Applicative
 import System.Environment (getProgName)
 
-findRoot :: GlobalOptions -> IO (FilePath, Package)
-findRoot copts = do
+findRoot :: CLI -> GlobalOptions -> IO (FilePath, Package)
+findRoot cli copts = do
   let dir :: Maybe FilePath
       dir = takeDirectory <$> commandFirstFile copts
   whenJust dir setCurrentDirectory
@@ -50,7 +50,7 @@ findRoot copts = do
                 | otherwise -> decodeThrow bs
           return (takeDirectory yaml, pkg)
 
-getEntryPoint :: FilePath -> Package -> GlobalOptions -> Maybe (IO EntryPoint)
+getEntryPoint :: Members '[App] r => Sem r EntryPoint
 getEntryPoint r pkg opts = nonEmpty (opts ^. globalInputFiles) >>= Just <$> entryPoint
   where
     entryPoint :: NonEmpty FilePath -> IO EntryPoint
@@ -67,14 +67,21 @@ getEntryPoint r pkg opts = nonEmpty (opts ^. globalInputFiles) >>= Just <$> entr
               _entryPointNoStdlib = opts ^. globalNoStdlib,
               _entryPointPackage = pkg,
               _entryPointModulePaths = l,
-              _entryPointGenericOptions = genericFromGlobalOptions opts,
+              _entryPointGenericOptions = project opts,
               _entryPointStdin
             }
 
-runCommand :: forall r. Members '[Embed IO, App] r => Command -> Sem r ()
-runCommand cmd = do
+runCLI :: forall r. Members '[Embed IO, App] r => CLI -> Sem r ()
+runCLI = \case
+  DisplayVersion -> embed runDisplayVersion
+  DisplayHelp -> embed (showHelpText p)
+  Command cmd -> runTopComand cmd
+  Doctor opts -> embed (runLogIO (doctor opts))
+  Init -> embed (runLogIO Init.init)
+
+runTopCommand :: forall r. Members '[Embed IO, App] r => Command -> Sem r ()
+runTopCommand cmd = do
   globalOpts <- askGlobalOptions
-  (root, pkg) <- embed (findRoot globalOpts)
   case cmd of
     (Dev DisplayRoot) -> say (pack root)
     (Dev (Core cmd')) -> Core.runCommand cmd'
@@ -104,9 +111,5 @@ main :: IO ()
 main = do
   let p = prefs showHelpOnEmpty
   (global, cli) <- customExecParser p descr >>= secondM makeAbsPaths
-  case cli of
-    DisplayVersion -> runDisplayVersion
-    DisplayHelp -> showHelpText p
-    Command cmd -> runM (runAppIO global (runCommand cmd))
-    Doctor opts -> runM (runLogIO (doctor opts))
-    Init -> runM (runLogIO Init.init)
+  (root, pkg) <- findRoot cli global
+  runM (runAppIO global root pkg (runCLI cli))

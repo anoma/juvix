@@ -80,7 +80,7 @@ makeAbsPaths :: Biplate from Path => from -> IO from
 makeAbsPaths = transformBiM go
   where
     go :: Path -> IO Path
-    go = traverseOf unPath canonicalizePath
+    go = traverseOf pathPath canonicalizePath
 
 descr :: ParserInfo (GlobalOptions, CLI)
 descr =
