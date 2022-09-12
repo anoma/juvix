@@ -34,12 +34,26 @@ idenName = \case
   IdenInductive (InductiveRef i) -> i
   IdenAxiom (AxiomRef a) -> a
 
-smallerPatternVariables :: Traversal' Pattern VarName
-smallerPatternVariables f p = case p of
+-- | A fold over all transitive children, including self
+patternCosmos :: SimpleFold Pattern Pattern
+patternCosmos f p = case p of
+  PatternVariable {} -> f p
+  PatternWildcard {} -> f p
+  PatternEmpty {} -> f p
+  PatternConstructorApp (ConstructorApp r args) ->
+    f p *> do
+      args' <- traverse (traverseOf patternArgPattern (patternCosmos f)) args
+      pure (PatternConstructorApp (ConstructorApp r args'))
+
+-- | A fold over all transitive children, excluding self
+patternSubCosmos :: SimpleFold Pattern Pattern
+patternSubCosmos f p = case p of
   PatternVariable {} -> pure p
   PatternWildcard {} -> pure p
   PatternEmpty {} -> pure p
-  PatternConstructorApp app -> PatternConstructorApp <$> appVariables f app
+  PatternConstructorApp (ConstructorApp r args) -> do
+    args' <- traverse (traverseOf patternArgPattern (patternCosmos f)) args
+    pure (PatternConstructorApp (ConstructorApp r args'))
 
 viewApp :: Expression -> (Expression, [ApplicationArg])
 viewApp e =
