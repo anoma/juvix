@@ -60,7 +60,8 @@ runInfoTableBuilder tab =
         return (UserTag (s ^. stateNextUserTag - 1))
       RegisterIdent ii -> do
         modify' (over stateInfoTable (over infoIdentifiers (HashMap.insert (ii ^. identifierSymbol) ii)))
-        modify' (over stateInfoTable (over identMap (HashMap.insert (ii ^. (identifierName . nameText)) (IdentSym (ii ^. identifierSymbol)))))
+        whenJust (ii ^? identifierName . _Just . nameText) $ \name ->
+          modify' (over stateInfoTable (over identMap (HashMap.insert name (IdentSym (ii ^. identifierSymbol)))))
       RegisterConstructor ci -> do
         modify' (over stateInfoTable (over infoConstructors (HashMap.insert (ci ^. constructorTag) ci)))
         modify' (over stateInfoTable (over identMap (HashMap.insert (ci ^. (constructorName . nameText)) (IdentTag (ci ^. constructorTag)))))

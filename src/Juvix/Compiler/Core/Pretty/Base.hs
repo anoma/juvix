@@ -267,7 +267,7 @@ instance PrettyCode InfoTable where
         where
           ppDef :: Symbol -> Node -> Sem r (Doc Ann)
           ppDef s n = do
-            sym' <- maybe (return (pretty s)) ppCode (tbl ^? infoIdentifiers . at s . _Just . identifierName)
+            sym' <- maybe (return (pretty s)) ppCode (tbl ^? infoIdentifiers . at s . _Just . identifierName . _Just)
             body' <- ppCode n
             return (kwDef <+> sym' <+> kwAssign <+> body')
 

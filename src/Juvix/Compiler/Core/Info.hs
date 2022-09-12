@@ -1,9 +1,6 @@
+-- | This file defines Infos stored in JuvixCore Nodes. The Info data structure
+--  maps an info type to an info of that type.
 module Juvix.Compiler.Core.Info where
-
-{-
-  This file defines Infos stored in JuvixCore Nodes. The Info data structure
-  maps an info type to an info of that type.
--}
 
 import Data.Dynamic
 import Data.HashMap.Strict qualified as HashMap
@@ -14,6 +11,7 @@ class Typeable a => IsInfo a
 newtype Info = Info
   { _infoMap :: HashMap TypeRep Dynamic
   }
+  deriving newtype (Semigroup, Monoid)
 
 type Key = Proxy
 

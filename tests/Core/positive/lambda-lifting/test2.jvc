@@ -1,0 +1,1 @@
+def t2 := \r \s r (\x \y s y (\z z y x (\w w x) (\e y e x y)));
