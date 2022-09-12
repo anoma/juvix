@@ -13,10 +13,10 @@ stdlibDir =
    in filter isMjuvixFile stdlibFiles
 
 entrySetup ::
-  Member Files r =>
-  EntryPoint ->
+  Members '[Reader EntryPoint, Files] r =>
   Sem r EntryPoint
-entrySetup e = do
+entrySetup = do
+  e <- ask
   let root = e ^. entryPointRoot
   unless (e ^. entryPointNoStdlib) (registerStdlib (first (root </>) <$> stdlibDir))
   return e

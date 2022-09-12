@@ -1,10 +1,10 @@
 module Commands.Dev.Parse.Options where
 
-import Juvix.Prelude hiding (Doc)
-import Options.Applicative
+import CommonOptions
 
-newtype ParseOptions = ParseOptions
-  { _parseNoPrettyShow :: Bool
+data ParseOptions = ParseOptions
+  { _parseNoPrettyShow :: Bool,
+    _parseInputFile :: Path
   }
   deriving stock (Data)
 
@@ -17,4 +17,5 @@ parseParse = do
       ( long "no-pretty-show"
           <> help "Disable formatting of the Haskell AST"
       )
+  _parseInputFile <- parseInputJuvixFile
   pure ParseOptions {..}

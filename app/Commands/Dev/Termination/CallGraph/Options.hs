@@ -1,11 +1,11 @@
 module Commands.Dev.Termination.CallGraph.Options where
 
 import Data.Text qualified as Text
-import Juvix.Prelude
-import Options.Applicative
+import CommonOptions
 
-newtype CallGraphOptions = CallGraphOptions
-  { _graphFunctionNameFilter :: Maybe (NonEmpty Text)
+data CallGraphOptions = CallGraphOptions
+  { _graphFunctionNameFilter :: Maybe (NonEmpty Text),
+    _graphInputFile :: Path
   }
   deriving stock (Data)
 
@@ -22,4 +22,5 @@ parseCallGraph = do
               <> short 'f'
               <> help "Only shows the specified function"
           )
+  _graphInputFile <- parseInputJuvixFile
   pure CallGraphOptions {..}

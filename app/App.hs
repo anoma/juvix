@@ -2,9 +2,9 @@ module App where
 
 import Data.ByteString qualified as ByteString
 import GlobalOptions
+import CommonOptions
 import Juvix.Compiler.Pipeline
 import Juvix.Data.Error qualified as Error
-import Juvix.Prelude hiding (Doc)
 import Juvix.Prelude.Pretty hiding (Doc)
 import System.Console.ANSI qualified as Ansi
 
@@ -16,7 +16,7 @@ data App m a where
   AskPackage :: App m Package
   AskGlobalOptions :: App m GlobalOptions
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
-  RunPipelineEither :: Sem PipelineEff a -> App m (Either JuvixError a)
+  RunPipelineEither :: Path -> Sem PipelineEff a -> App m (Either JuvixError a)
   Say :: Text -> App m ()
   Raw :: ByteString -> App m ()
 
@@ -32,7 +32,9 @@ runAppIO g root pkg = interpret $ \case
   AskGlobalOptions -> return g
   AskPackage -> return pkg
   AskRoot -> return root
-  RunPipelineEither p -> embed (runIOEither p)
+  RunPipelineEither input p -> do
+    entry <- embed (getEntryPoint' g root pkg input)
+    embed (runIOEither entry p)
   Say t
     | g ^. globalOnlyErrors -> return ()
     | otherwise -> embed (putStrLn t)
@@ -47,9 +49,32 @@ runAppIO g root pkg = interpret $ \case
     printErr e =
       embed $ hPutStrLn stderr $ run $ runReader (project' @GenericOptions g) $ Error.render (not (g ^. globalNoColors)) (g ^. globalOnlyErrors) e
 
-runPipeline :: Member App r => Sem PipelineEff a -> Sem r a
-runPipeline p = do
-  r <- runPipelineEither p
+getEntryPoint' :: GlobalOptions -> FilePath -> Package -> Path -> IO EntryPoint
+getEntryPoint' opts root pkg inputFile = do
+  estdin <- if
+    | opts ^. globalStdin -> Just <$> getContents
+    | otherwise -> return Nothing
+  return EntryPoint
+      { _entryPointRoot = root,
+        _entryPointNoTermination = opts ^. globalNoTermination,
+        _entryPointNoPositivity = opts ^. globalNoPositivity,
+        _entryPointNoStdlib = opts ^. globalNoStdlib,
+        _entryPointPackage = pkg,
+        _entryPointModulePaths = pure (inputFile ^. pathPath),
+        _entryPointGenericOptions = project opts,
+        _entryPointStdin = estdin
+      }
+
+getEntryPoint :: Members '[Embed IO, App] r => Path -> Sem r EntryPoint
+getEntryPoint inputFile = do
+  opts <- askGlobalOptions
+  root <- askRoot
+  pkg <- askPackage
+  embed (getEntryPoint' opts root pkg inputFile)
+
+runPipeline :: Member App r => Path -> Sem PipelineEff a -> Sem r a
+runPipeline input p = do
+  r <- runPipelineEither input p
   case r of
     Left err -> exitJuvixError err
     Right res -> return res

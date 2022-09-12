@@ -3,12 +3,12 @@ module Commands.Dev.Termination.Calls.Options where
 import Data.Text qualified as Text
 import GlobalOptions
 import Juvix.Compiler.Abstract.Pretty.Base qualified as Abstract
-import Juvix.Prelude
-import Options.Applicative
+import CommonOptions
 
 data CallsOptions = CallsOptions
   { _callsFunctionNameFilter :: Maybe (NonEmpty Text),
-    _callsShowDecreasingArgs :: Abstract.ShowDecrArgs
+    _callsShowDecreasingArgs :: Abstract.ShowDecrArgs,
+    _callsInputFile :: Path
   }
   deriving stock (Data)
 
@@ -34,6 +34,7 @@ parseCalls = do
           <> value Abstract.ArgRel
           <> help "possible values: argument, relation, both"
       )
+  _callsInputFile <- parseInputJuvixFile
   pure CallsOptions {..}
   where
     decrArgsParser :: ReadM Abstract.ShowDecrArgs

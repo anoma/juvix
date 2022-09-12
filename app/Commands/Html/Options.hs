@@ -1,13 +1,13 @@
 module Commands.Html.Options where
 
 import Juvix.Compiler.Backend.Html.Data.Theme
-import Juvix.Prelude hiding (Doc)
-import Options.Applicative
+import CommonOptions
 
 data HtmlOptions = HtmlOptions
   { _htmlRecursive :: Bool,
     _htmlTheme :: Theme,
-    _htmlOutputDir :: FilePath,
+    _htmlOutputDir :: Path,
+    _htmlInputFile :: Path,
     _htmlPrintMetadata :: Bool
   }
   deriving stock (Data)
@@ -31,12 +31,9 @@ parseHtml = do
           <> help "selects a theme: ayu (light); nord (dark)"
           <> completeWith (map show allThemes)
       )
-  _htmlOutputDir <-
-    option
-      str
-      ( long "output-dir"
-          <> metavar "DIR"
-          <> value "html"
+  _htmlOutputDir <- parseGenericOutputDir
+      (
+          value "html"
           <> showDefault
           <> help "html output directory"
           <> action "directory"
@@ -46,6 +43,7 @@ parseHtml = do
       ( long "print-metadata"
           <> help "Add HTML footer with metadata"
       )
+  _htmlInputFile <- parseInputJuvixFile
   pure HtmlOptions {..}
   where
     allThemes :: [Theme]

@@ -2,11 +2,11 @@ module Commands.Dev.Scope.Options where
 
 import GlobalOptions
 import Juvix.Compiler.Concrete.Pretty qualified as Scoper
-import Juvix.Prelude
-import Options.Applicative
+import CommonOptions
 
-newtype ScopeOptions = ScopeOptions
-  { _scopeInlineImports :: Bool
+data ScopeOptions = ScopeOptions
+  { _scopeInlineImports :: Bool,
+    _scopeInputFile :: Path
   }
   deriving stock (Data)
 
@@ -19,6 +19,7 @@ parseScope = do
       ( long "inline-imports"
           <> help "Show the code of imported modules next to the import statement"
       )
+  _scopeInputFile <- parseInputJuvixFile
   pure ScopeOptions {..}
 
 instance CanonicalProjection (GlobalOptions, ScopeOptions) Scoper.Options where

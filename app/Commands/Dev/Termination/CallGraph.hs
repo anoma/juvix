@@ -9,10 +9,10 @@ import Juvix.Compiler.Abstract.Translation.FromConcrete qualified as Abstract
 import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination qualified as Termination
 import Juvix.Prelude.Pretty
 
-runCommand :: Members '[Embed IO, App] r => EntryPoint -> CallGraphOptions -> Sem r ()
-runCommand entryPoint CallGraphOptions {..} = do
+runCommand :: Members '[Embed IO, App] r => CallGraphOptions -> Sem r ()
+runCommand CallGraphOptions {..} = do
   globalOpts <- askGlobalOptions
-  results <- runPipeline (upToAbstract entryPoint)
+  results <- runPipeline _graphInputFile upToAbstract
   let topModule = head (results ^. Abstract.resultModules)
       toAnsiText' :: forall a. (HasAnsiBackend a, HasTextBackend a) => a -> Text
       toAnsiText' = toAnsiText (not (globalOpts ^. globalNoColors))

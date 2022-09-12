@@ -50,27 +50,6 @@ findRoot cli copts = do
                 | otherwise -> decodeThrow bs
           return (takeDirectory yaml, pkg)
 
-getEntryPoint :: Members '[App] r => Sem r EntryPoint
-getEntryPoint r pkg opts = nonEmpty (opts ^. globalInputFiles) >>= Just <$> entryPoint
-  where
-    entryPoint :: NonEmpty FilePath -> IO EntryPoint
-    entryPoint l
-      | opts ^. globalStdin = aux . Just <$> getContents
-      | otherwise = return (aux Nothing)
-      where
-        aux :: Maybe Text -> EntryPoint
-        aux _entryPointStdin =
-          EntryPoint
-            { _entryPointRoot = r,
-              _entryPointNoTermination = opts ^. globalNoTermination,
-              _entryPointNoPositivity = opts ^. globalNoPositivity,
-              _entryPointNoStdlib = opts ^. globalNoStdlib,
-              _entryPointPackage = pkg,
-              _entryPointModulePaths = l,
-              _entryPointGenericOptions = project opts,
-              _entryPointStdin
-            }
-
 runCLI :: forall r. Members '[Embed IO, App] r => CLI -> Sem r ()
 runCLI = \case
   DisplayVersion -> embed runDisplayVersion

@@ -8,6 +8,7 @@ where
 
 import Control.Exception qualified as GHC
 import Juvix.Prelude
+import Prelude (show)
 import Options.Applicative
 import System.Process
 
@@ -19,6 +20,9 @@ data Path = Path {
   deriving stock (Data)
 
 makeLenses ''Path
+
+instance Show Path where
+  show = (^. pathPath)
 
 parseInputJuvixFile :: Parser Path
 parseInputJuvixFile = do
@@ -38,6 +42,17 @@ parseGenericOutputFile = do
             <> metavar "OUTPUT_FILE"
             <> help "Path to output file"
             <> action "file"
+        )
+  pure Path {_pathIsInput = False, ..}
+
+parseGenericOutputDir :: Mod OptionFields FilePath -> Parser Path
+parseGenericOutputDir m = do
+  _pathPath <- option str
+        ( long "output-dir"
+            <> metavar "OUTPUT_DIR"
+            <> help "Path to output directory"
+            <> action "directory"
+            <> m
         )
   pure Path {_pathIsInput = False, ..}
 
