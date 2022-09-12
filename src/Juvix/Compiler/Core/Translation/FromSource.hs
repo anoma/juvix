@@ -25,7 +25,7 @@ import Text.Megaparsec qualified as P
 parseText :: InfoTable -> Text -> Either ParserError (InfoTable, Maybe Node)
 parseText = runParser "" ""
 
--- Note: only new symbols and tags that are not in the InfoTable already will be
+-- | Note: only new symbols and tags that are not in the InfoTable already will be
 -- generated during parsing, but nameIds are generated starting from 0
 -- regardless of the names already in the InfoTable
 runParser :: FilePath -> FilePath -> InfoTable -> Text -> Either ParserError (InfoTable, Maybe Node)

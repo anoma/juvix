@@ -36,7 +36,7 @@ umapG coll f = go (coll ^. cEmpty)
                   (ni ^. nodeChildren)
                   (ni ^. nodeChildBindersNum)
                   (ni ^. nodeChildBindersInfo)
-            f c ((ni ^. nodeReassemble) (ni ^. nodeInfo) ns)
+            f c ((ni ^. nodeReassemble) (ni ^. nodeInfo) (ni ^. nodeSubinfos) ns)
 
 dmapG ::
   forall c m.
@@ -61,7 +61,7 @@ dmapG coll f = go (coll ^. cEmpty)
                 (ni ^. nodeChildren)
                 (ni ^. nodeChildBindersNum)
                 (ni ^. nodeChildBindersInfo)
-          return ((ni ^. nodeReassemble) (ni ^. nodeInfo) ns)
+          return ((ni ^. nodeReassemble) (ni ^. nodeInfo) (ni ^. nodeSubinfos) ns)
       where
         goChild :: Node -> Int -> [Info] -> m Node
         goChild n'' k bis = go ((coll ^. cCollect) (k, bis) c) n''
