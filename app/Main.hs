@@ -2,7 +2,6 @@ module Main (main) where
 
 import App
 import CLI
-import Commands.Dev.Termination as Termination
 import Commands.Init qualified as Init
 import Control.Exception qualified as IO
 import Data.ByteString qualified as ByteString
@@ -161,7 +160,7 @@ runCommand cmdWithOpts = do
                     (^. Scoper.resultModules)
                       <$> runPipeline (upToScoping entryPoint)
                   forM_ l $ \s -> do
-                    renderStdOut (Scoper.ppOut (mkScopePrettyOptions globalOpts localOpts) s)
+                    renderStdOut (Scoper.ppOut (globalOpts, localOpts) s)
                 Doc localOpts -> do
                   ctx :: InternalTyped.InternalTypedResult <-
                     runPipeline (upToInternalTyped entryPoint)
@@ -174,24 +173,16 @@ runCommand cmdWithOpts = do
                   micro <-
                     head . (^. Internal.resultModules)
                       <$> runPipeline (upToInternal entryPoint)
-                  let ppOpts =
-                        Internal.defaultOptions
-                          { Internal._optShowNameIds = globalOpts ^. globalShowNameIds
-                          }
-                  App.renderStdOut (Internal.ppOut ppOpts micro)
+                  App.renderStdOut (Internal.ppOut globalOpts micro)
                 Internal Arity -> do
                   micro <- head . (^. InternalArity.resultModules) <$> runPipeline (upToInternalArity entryPoint)
-                  App.renderStdOut (Internal.ppOut Internal.defaultOptions micro)
+                  App.renderStdOut (Internal.ppOut globalOpts micro)
                 Internal (TypeCheck localOpts) -> do
                   res <- runPipeline (upToInternalTyped entryPoint)
                   say "Well done! It type checks"
                   when (localOpts ^. microJuvixTypePrint) $ do
-                    let ppOpts =
-                          Internal.defaultOptions
-                            { Internal._optShowNameIds = globalOpts ^. globalShowNameIds
-                            }
-                        checkedModule = head (res ^. InternalTyped.resultModules)
-                    renderStdOut (Internal.ppOut ppOpts checkedModule)
+                    let checkedModule = head (res ^. InternalTyped.resultModules)
+                    renderStdOut (Internal.ppOut globalOpts checkedModule)
                 MiniC -> do
                   miniC <- (^. MiniC.resultCCode) <$> runPipeline (upToMiniC entryPoint)
                   say miniC
@@ -203,18 +194,13 @@ runCommand cmdWithOpts = do
                       callMap = case _callsFunctionNameFilter of
                         Nothing -> callMap0
                         Just f -> Termination.filterCallMap f callMap0
-                      localOpts' = Termination.callsPrettyOptions globalOpts localOpts
-                  renderStdOut (Abstract.ppOut localOpts' callMap)
+                  renderStdOut (Abstract.ppOut (globalOpts, localOpts) callMap)
                   newline
                 Termination (CallGraph CallGraphOptions {..}) -> do
                   results <- runPipeline (upToAbstract entryPoint)
                   let topModule = head (results ^. Abstract.resultModules)
                       infotable = results ^. Abstract.resultTable
                       callMap = Termination.buildCallMap infotable topModule
-                      localOpts' =
-                        Abstract.defaultOptions
-                          { Abstract._optShowNameIds = globalOpts ^. globalShowNameIds
-                          }
                       completeGraph = Termination.completeCallGraph callMap
                       filteredGraph =
                         maybe
@@ -223,7 +209,7 @@ runCommand cmdWithOpts = do
                           _graphFunctionNameFilter
                       rEdges = Termination.reflexiveEdges filteredGraph
                       recBehav = map Termination.recursiveBehaviour rEdges
-                  App.renderStdOut (Abstract.ppOut localOpts' filteredGraph)
+                  App.renderStdOut (Abstract.ppOut globalOpts filteredGraph)
                   newline
                   forM_ recBehav $ \r -> do
                     let funName = r ^. Termination.recursiveBehaviourFun
@@ -234,12 +220,8 @@ runCommand cmdWithOpts = do
                             funRef
                             (infotable ^. Abstract.infoFunctions)
                         markedTerminating = funInfo ^. (Abstract.functionInfoDef . Abstract.funDefTerminating)
-                        ppOpts =
-                          Abstract.defaultOptions
-                            { Abstract._optShowNameIds = globalOpts ^. globalShowNameIds
-                            }
-                        n = toAnsiText' (Abstract.ppOut ppOpts funName)
-                    App.renderStdOut (Abstract.ppOut localOpts' r)
+                        n = toAnsiText' (Abstract.ppOut globalOpts funName)
+                    App.renderStdOut (Abstract.ppOut globalOpts r)
                     newline
                     if
                         | markedTerminating ->
@@ -270,10 +252,7 @@ runCoreCommand globalOpts = \case
       s' <- embed (readFile f)
       tab <- getRight (fst <$> mapLeft JuvixError (Core.runParser "" f Core.emptyInfoTable s'))
       let tab' = Core.applyTransformations (opts ^. coreReadTransformations) tab
-      renderStdOut (Core.ppOut docOpts tab')
-      where
-        docOpts :: Core.Options
-        docOpts = set Core.optShowDeBruijnIndices (opts ^. coreReadShowDeBruijn) Core.defaultOptions
+      renderStdOut (Core.ppOut opts tab')
 
     runRepl :: CoreReplOptions -> Core.InfoTable -> Sem r ()
     runRepl opts tab = do
@@ -293,7 +272,7 @@ runCoreCommand globalOpts = \case
                 printJuvixError (JuvixError err)
                 runRepl opts tab
               Right (tab', Just node) -> do
-                renderStdOut (Core.ppOut docOpts node)
+                renderStdOut (Core.ppOut opts node)
                 embed (putStrLn "")
                 runRepl opts tab'
               Right (tab', Nothing) ->
@@ -328,8 +307,6 @@ runCoreCommand globalOpts = \case
               Right (tab', Nothing) ->
                 runRepl opts tab'
       where
-        docOpts :: Core.Options
-        docOpts = set Core.optShowDeBruijnIndices (opts ^. coreReplShowDeBruijn) Core.defaultOptions
         replEval :: Bool -> Core.InfoTable -> Core.Node -> Sem r ()
         replEval noIO tab' node = do
           r <- doEval noIO defaultLoc tab' node
@@ -340,7 +317,7 @@ runCoreCommand globalOpts = \case
             Right node'
               | Info.member Info.kNoDisplayInfo (Core.getInfo node') -> runRepl opts tab'
               | otherwise -> do
-                  renderStdOut (Core.ppOut docOpts node')
+                  renderStdOut (Core.ppOut opts node')
                   embed (putStrLn "")
                   runRepl opts tab'
           where

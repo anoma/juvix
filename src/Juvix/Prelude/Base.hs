@@ -330,3 +330,9 @@ allElements = [minBound .. maxBound]
 
 readerState :: forall a r x. (Member (State a) r) => Sem (Reader a ': r) x -> Sem r x
 readerState m = get >>= (`runReader` m)
+
+class CanonicalProjection a b where
+  project :: a -> b
+
+instance CanonicalProjection a a where
+  project = id
