@@ -6,6 +6,7 @@ import Options.Applicative
 newtype ParseOptions = ParseOptions
   { _parseNoPrettyShow :: Bool
   }
+  deriving stock (Data)
 
 makeLenses ''ParseOptions
 

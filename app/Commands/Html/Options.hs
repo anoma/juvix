@@ -10,6 +10,7 @@ data HtmlOptions = HtmlOptions
     _htmlOutputDir :: FilePath,
     _htmlPrintMetadata :: Bool
   }
+  deriving stock (Data)
 
 makeLenses ''HtmlOptions
 

@@ -11,6 +11,7 @@ import Options.Applicative
 newtype HighlightOptions = HighlightOptions
   { _highlightBackend :: HighlightBackend
   }
+  deriving stock (Data)
 
 parseHighlight :: Parser HighlightOptions
 parseHighlight = do

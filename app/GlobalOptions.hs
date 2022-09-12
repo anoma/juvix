@@ -19,7 +19,7 @@ data GlobalOptions = GlobalOptions
     _globalNoStdlib :: Bool,
     _globalInputFiles :: [FilePath]
   }
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Data)
 
 makeLenses ''GlobalOptions
 

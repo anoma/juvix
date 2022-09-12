@@ -8,6 +8,7 @@ import Options.Applicative
 newtype ScopeOptions = ScopeOptions
   { _scopeInlineImports :: Bool
   }
+  deriving stock (Data)
 
 makeLenses ''ScopeOptions
 

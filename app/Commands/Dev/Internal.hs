@@ -4,13 +4,14 @@ import Commands.Dev.Internal.Typecheck.Options
 import Juvix.Prelude hiding (Doc)
 import Options.Applicative
 
-data MicroCommand
+data InternalCommand
   = Pretty
   | TypeCheck InternalTypeOptions
   | Arity
+  deriving stock (Data)
 
-parseMicroCommand :: Parser MicroCommand
-parseMicroCommand =
+parseInternalCommand :: Parser InternalCommand
+parseInternalCommand =
   hsubparser $
     mconcat
       [ commandPretty,
@@ -18,28 +19,28 @@ parseMicroCommand =
         commandTypeCheck
       ]
   where
-    commandArity :: Mod CommandFields MicroCommand
+    commandArity :: Mod CommandFields InternalCommand
     commandArity = command "arity" arityInfo
 
-    commandPretty :: Mod CommandFields MicroCommand
+    commandPretty :: Mod CommandFields InternalCommand
     commandPretty = command "pretty" prettyInfo
 
-    commandTypeCheck :: Mod CommandFields MicroCommand
+    commandTypeCheck :: Mod CommandFields InternalCommand
     commandTypeCheck = command "typecheck" typeCheckInfo
 
-    arityInfo :: ParserInfo MicroCommand
+    arityInfo :: ParserInfo InternalCommand
     arityInfo =
       info
         (pure Arity)
         (progDesc "Translate a Juvix file to Internal and insert holes")
 
-    prettyInfo :: ParserInfo MicroCommand
+    prettyInfo :: ParserInfo InternalCommand
     prettyInfo =
       info
         (pure Pretty)
         (progDesc "Translate a Juvix file to Internal and pretty print the result")
 
-    typeCheckInfo :: ParserInfo MicroCommand
+    typeCheckInfo :: ParserInfo InternalCommand
     typeCheckInfo =
       info
         (TypeCheck <$> parseInternalType)

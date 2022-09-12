@@ -23,13 +23,14 @@ import Options.Applicative
 data DevCommand
   = DisplayRoot
   | Highlight HighlightOptions
-  | Internal MicroCommand
+  | Internal InternalCommand
   | Core CoreCommand
   | MiniC
   | Parse ParseOptions
   | Scope ScopeOptions
   | Termination TerminationCommand
   | Doc DocOptions
+  deriving stock (Data)
 
 parseDevCommand :: Parser DevCommand
 parseDevCommand =
@@ -72,7 +73,7 @@ commandInternal :: Mod CommandFields DevCommand
 commandInternal =
   command "internal" $
     info
-      (Internal <$> parseMicroCommand)
+      (Internal <$> parseInternalCommand)
       (progDesc "Subcommands related to Internal")
 
 commandCore :: Mod CommandFields DevCommand

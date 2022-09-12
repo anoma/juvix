@@ -1,13 +1,25 @@
-module Commands.Extra where
+-- | Contains common options reused in several commands.
+module CommonOptions (
+  module CommonOptions,
+  module Juvix.Prelude,
+  module Options.Applicative,
+                     ) where
 
-import Juvix.Prelude hiding (Doc)
+import Juvix.Prelude
 import Control.Exception qualified as GHC
-import Options.Applicative hiding (hidden)
-import Options.Applicative.Types
+import Options.Applicative
 import System.Process
 
-parseInputFile :: Parser FilePath
-parseInputFile =
+
+newtype Path = Path {_unPath :: FilePath}
+  deriving stock (Data)
+makeLenses ''Path
+
+instance IsString Path where
+  fromString = Path
+
+parseInputJuvixFile :: Parser Path
+parseInputJuvixFile =
   argument
     str
     ( metavar "JUVIX_FILE"
@@ -15,11 +27,8 @@ parseInputFile =
         <> completer juvixCompleter
     )
 
-parserInputFiles :: Parser [FilePath]
-parserInputFiles = many parseInputFile
-
 juvixCompleter :: Completer
-juvixCompleter = Completer $ \word -> do
+juvixCompleter = mkCompleter $ \word -> do
   let cmd = unwords ["compgen", "-o", "plusdirs", "-f", "-X", "!*.juvix", "--", requote word]
   result <- GHC.try @GHC.SomeException $ readProcess "bash" ["-c", cmd] ""
   return . lines . fromRight [] $ result
@@ -101,3 +110,13 @@ requote s =
           = x : goX xs
         goX []
           = []
+
+class HasPaths a where
+  paths :: Traversal' a FilePath
+
+optDeBruijn :: Parser Bool
+optDeBruijn =
+  switch
+    ( long "show-de-bruijn"
+        <> help "Show variable de Bruijn indices"
+    )

@@ -2,23 +2,24 @@ module Commands.Compile.Options where
 
 import Juvix.Prelude
 import Options.Applicative
-import Commands.Extra (parseInputFile)
+import CommonOptions
 
 data CompileTarget = TargetC | TargetWasm | TargetNative
-  deriving stock (Show)
+  deriving stock (Show, Data)
 
 data CompileRuntime
   = RuntimeWasiStandalone
   | RuntimeWasiLibC
   | RuntimeStandalone
-  deriving stock (Show)
+  deriving stock (Show, Data)
 
 data CompileOptions = CompileOptions
   { _compileTarget :: CompileTarget,
     _compileRuntime :: CompileRuntime,
-    _compileOutputFile :: Maybe FilePath,
-    _compileInputFile :: FilePath
+    _compileOutputFile :: Maybe Path,
+    _compileInputFile :: Path
   }
+  deriving stock (Data)
 
 makeLenses ''CompileOptions
 
@@ -34,7 +35,6 @@ parseCompile = do
           <> showDefaultWith targetShow
           <> help "select a target: wasm, c, native"
       )
-
   _compileRuntime <-
     option
       (eitherReader parseRuntime)
@@ -45,7 +45,6 @@ parseCompile = do
           <> showDefaultWith runtimeShow
           <> help "select a runtime: wasi-standalone, wasi-libc, standalone"
       )
-
   _compileOutputFile <-
     optional $
       option
@@ -56,7 +55,7 @@ parseCompile = do
             <> help "Path to output file"
             <> action "file"
         )
-  _compileInputFile <- parseInputFile
+  _compileInputFile <- parseInputJuvixFile
   pure CompileOptions {..}
   where
     parseTarget :: String -> Either String CompileTarget

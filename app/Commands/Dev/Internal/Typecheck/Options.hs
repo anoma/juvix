@@ -6,6 +6,7 @@ import Options.Applicative
 newtype InternalTypeOptions = InternalTypeOptions
   { _microJuvixTypePrint :: Bool
   }
+  deriving stock (Data)
 
 makeLenses ''InternalTypeOptions
 

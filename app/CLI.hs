@@ -5,11 +5,10 @@ module CLI
   )
 where
 
+import Data.Generics.Uniplate.Data
 import Command
+import CommonOptions hiding (Doc)
 import GlobalOptions
-import Juvix.Prelude hiding (Doc)
-import Options.Applicative
-import Options.Applicative.Builder.Internal
 import Options.Applicative.Help.Pretty
 
 data CLI
@@ -18,18 +17,23 @@ data CLI
   | Command Command
   | Doctor DoctorOptions
   | Init
+  deriving stock (Data)
 
 parseDisplayVersion :: Parser CLI
 parseDisplayVersion =
   flag'
     DisplayVersion
-    (long "version" <> short 'v' <> help "Show the version" <> noGlobal)
+    (long "version"
+     <> short 'v'
+     <> help "Show the version")
 
 parseDisplayHelp :: Parser CLI
 parseDisplayHelp =
   flag'
     DisplayHelp
-    (long "help" <> short 'h' <> help "Show the help text" <> noGlobal)
+    (long "help"
+     <> short 'h'
+     <> help "Show the help text")
 
 parseUtility :: Parser CLI
 parseUtility =
@@ -69,12 +73,12 @@ parseCLI =
     <|> parseCompiler
     <|> parseUtility
 
-makeAbsPaths :: CLI -> IO CLI
-makeAbsPaths cli = case cli of
-  Command {} -> do
-    putStrLn "TODO make abspaths"
-    return cli
-  _ -> return cli
+-- TODO: chage 'from' -> 'CLI'
+makeAbsPaths :: Biplate from Path => from -> IO from
+makeAbsPaths = transformBiM go
+  where
+  go :: Path -> IO Path
+  go = traverseOf unPath canonicalizePath
 
 descr :: ParserInfo (GlobalOptions, CLI)
 descr =

@@ -7,6 +7,7 @@ data DocOptions = DocOptions
   { _docOutputDir :: FilePath,
     _docOpen :: Bool
   }
+  deriving stock (Data)
 
 makeLenses ''DocOptions
 

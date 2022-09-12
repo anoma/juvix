@@ -10,6 +10,7 @@ data CallsOptions = CallsOptions
   { _callsFunctionNameFilter :: Maybe (NonEmpty Text),
     _callsShowDecreasingArgs :: Abstract.ShowDecrArgs
   }
+  deriving stock (Data)
 
 makeLenses ''CallsOptions
 

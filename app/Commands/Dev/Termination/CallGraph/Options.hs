@@ -7,6 +7,7 @@ import Options.Applicative
 newtype CallGraphOptions = CallGraphOptions
   { _graphFunctionNameFilter :: Maybe (NonEmpty Text)
   }
+  deriving stock (Data)
 
 makeLenses ''CallGraphOptions
 

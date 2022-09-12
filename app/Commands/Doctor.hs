@@ -24,6 +24,7 @@ $( deriveFromJSON
 newtype DoctorOptions = DoctorOptions
   { _doctorOffline :: Bool
   }
+  deriving stock (Data)
 
 data DocumentedWarning
   = NoClang

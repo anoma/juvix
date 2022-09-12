@@ -1,6 +1,5 @@
 module Command
   ( module Command,
-    module Commands.Extra,
     module Commands.Html.Options,
     module Commands.Compile.Options,
     module Commands.Dev.Options,
@@ -11,9 +10,8 @@ where
 import Commands.Compile.Options
 import Commands.Dev.Options
 import Commands.Doctor
-import Commands.Extra
 import Commands.Html.Options
-import Juvix.Prelude hiding (Doc)
+import Juvix.Prelude
 import Options.Applicative
 
 data Command
@@ -21,6 +19,7 @@ data Command
   | Compile CompileOptions
   | Html HtmlOptions
   | Dev DevCommand
+  deriving stock (Data)
 
 commandCheck :: Mod CommandFields Command
 commandCheck =
