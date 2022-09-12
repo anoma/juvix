@@ -52,7 +52,7 @@ mapIO f xs ≔ sequenceIO (map f xs);
 -- List extensions
 
 zip : {A : Type} → {B : Type} → List A → List B → List (A × B);
-zip (a ∷ as) (b ∷ bs) ≔ (a , b) ∷ zip as bs;
+zip (a ∷ as) (b ∷ bs) ≔ (a, b) ∷ zip as bs;
 zip _ _ ≔ nil;
 
 rangeAux : ℕ → ℕ → List ℕ;
@@ -122,10 +122,10 @@ renderSquare row col (empty n) ≔
     >> renderNumber n row col;
 
 renderRowAux : ℕ → (ℕ × Square) → IO;
-renderRowAux col (row , s) ≔ renderSquare row col s;
+renderRowAux col (row, s) ≔ renderSquare row col s;
 
 renderRow : ℕ × (List Square) → IO;
-renderRow (n , xs) ≔ mapIO (renderRowAux n) (enumerate xs);
+renderRow (n, xs) ≔ mapIO (renderRowAux n) (enumerate xs);
 
 renderBoard : Board → IO;
 renderBoard (board squares) ≔ mapIO renderRow (enumerate squares);

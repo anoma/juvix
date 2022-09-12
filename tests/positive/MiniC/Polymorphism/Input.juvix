@@ -70,10 +70,10 @@ inductive × (A : Type) (B : Type) {
 };
 
 fst : {A : Type} → {B : Type} → A × B → A;
-fst (a , b) ≔ a;
+fst (a, b) ≔ a;
 
 id' : {A : Type} → A → A;
-id' a ≔ fst (a , a);
+id' a ≔ fst (a, a);
 
 --------------------------------------------------------------------------------
 -- Main
@@ -81,7 +81,7 @@ id' a ≔ fst (a , a);
 
 fst-of-pair : Action;
 fst-of-pair ≔ (put-str "fst (True, False) = ")
-               >> put-str-ln (bool-to-str (fst (true , false)));
+               >> put-str-ln (bool-to-str (fst (true, false)));
 
 main : Action;
 main ≔ fst-of-pair >> put-str-ln (bool-to-str (id' false));
