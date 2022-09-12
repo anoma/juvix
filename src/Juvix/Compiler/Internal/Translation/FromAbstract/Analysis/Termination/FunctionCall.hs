@@ -22,20 +22,20 @@ viewCall = \case
     where
       callArg :: Sem r (CallRow, Expression)
       callArg = do
-        lt <- lessThan
-        eq <- equalTo
-        return (CallRow ((lt ^. callRow) `mplus` (eq ^. callRow)), x)
+        lt <- (^. callRow) <$> lessThan
+        eq <- (^. callRow) <$> equalTo
+        return (CallRow (lt `mplus` eq), x)
         where
           lessThan :: Sem r CallRow
-          lessThan = case x of
-            ExpressionIden (IdenVar v) -> do
-              s :: Maybe Int <- asks (HashMap.lookup v . (^. sizeSmaller))
+          lessThan = case viewExpressionAsPattern x of
+            Nothing -> return (CallRow Nothing)
+            Just x' -> do
+              s <- asks (findIndex (elem x') . (^. sizeSmaller))
               return $ case s of
                 Nothing -> CallRow Nothing
                 Just s' -> CallRow (Just (s', RLe))
-            _ -> return (CallRow Nothing)
           equalTo :: Sem r CallRow
-          equalTo = do
+          equalTo =
             case viewExpressionAsPattern x of
               Just x' -> do
                 s <- asks (elemIndex x' . (^. sizeEqual))

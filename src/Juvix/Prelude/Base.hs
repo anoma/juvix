@@ -340,3 +340,9 @@ infixr 2 .||.
 
 (.||.) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
 (a .||. b) c = a c || b c
+
+class CanonicalProjection a b where
+  project :: a -> b
+
+instance CanonicalProjection a a where
+  project = id

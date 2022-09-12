@@ -38,7 +38,7 @@ getInitial : ℕ;
 getInitial ≔ parsePositiveInt (readline);
 
 output : ℕ → ℕ × IO;
-output n ≔ (n , putStrLn (natToStr n));
+output n ≔ (n, putStrLn (natToStr n));
 
 terminating
 run : (ℕ → ℕ) → ℕ → IO;

@@ -4,6 +4,8 @@ module GlobalOptions
 where
 
 import Commands.Extra
+import Juvix.Compiler.Abstract.Pretty.Options qualified as Abstract
+import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
 import Juvix.Data.Error.GenericError qualified as E
 import Juvix.Prelude
 import Options.Applicative hiding (hidden)
@@ -21,6 +23,18 @@ data GlobalOptions = GlobalOptions
   deriving stock (Eq, Show)
 
 makeLenses ''GlobalOptions
+
+instance CanonicalProjection GlobalOptions Internal.Options where
+  project g =
+    Internal.Options
+      { Internal._optShowNameIds = g ^. globalShowNameIds
+      }
+
+instance CanonicalProjection GlobalOptions Abstract.Options where
+  project g =
+    Abstract.defaultOptions
+      { Abstract._optShowNameIds = g ^. globalShowNameIds
+      }
 
 defaultGlobalOptions :: GlobalOptions
 defaultGlobalOptions =

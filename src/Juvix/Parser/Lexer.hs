@@ -94,7 +94,10 @@ rawIdentifier allKeywords = do
 
 validTailChar :: Char -> Bool
 validTailChar c =
-  isAlphaNum c || validFirstChar c
+  isAlphaNum c || (validFirstChar c && notElem c delimiterSymbols)
+
+delimiterSymbols :: [Char]
+delimiterSymbols = ","
 
 reservedSymbols :: [Char]
 reservedSymbols = "\";(){}[].≔λ\\"
