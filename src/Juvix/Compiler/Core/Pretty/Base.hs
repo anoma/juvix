@@ -157,10 +157,15 @@ instance PrettyCode PatternWildcard where
   ppCode _ = return kwWildcard
 
 instance PrettyCode PatternBinder where
-  ppCode PatternBinder {..} =
-    case getInfoName _patternBinderInfo of
+  ppCode PatternBinder {..} = do
+    n <- case getInfoName _patternBinderInfo of
       Just name -> ppCode name
       Nothing -> return kwQuestion
+    case _patternBinderPattern of
+      PatWildcard {} -> return n
+      _ -> do
+        pat <- ppRightExpression appFixity _patternBinderPattern
+        return $ n <> kwAt <> pat
 
 instance PrettyCode PatternConstr where
   ppCode PatternConstr {..} = do
@@ -366,6 +371,9 @@ ppLRExpression associates fixlr e =
 
 {--------------------------------------------------------------------------------}
 {- keywords -}
+
+kwAt :: Doc Ann
+kwAt = delimiter "@"
 
 kwSquareL :: Doc Ann
 kwSquareL = delimiter "["

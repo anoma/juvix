@@ -200,6 +200,9 @@ semicolon = ";"
 underscore :: IsString s => s
 underscore = "_"
 
+at_ :: IsString s => s
+at_ = "@"
+
 colon :: IsString s => s
 colon = ":"
 

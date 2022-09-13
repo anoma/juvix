@@ -54,6 +54,7 @@ allKeywords :: [ParsecS r ()]
 allKeywords =
   [ kwAssign,
     kwColon,
+    kwAt,
     kwLambda,
     kwLet,
     kwLetRec,
@@ -167,6 +168,9 @@ kwComma = keyword Str.comma
 
 kwWildcard :: ParsecS r ()
 kwWildcard = keyword Str.underscore
+
+kwAt :: ParsecS r ()
+kwAt = keyword Str.at_
 
 kwPlus :: ParsecS r ()
 kwPlus = keyword Str.plus

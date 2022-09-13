@@ -116,8 +116,9 @@ newtype PatternWildcard' i = PatternWildcard
   { _patternWildcardInfo :: i
   }
 
-newtype PatternBinder' i = PatternBinder
-  { _patternBinderInfo :: i
+data PatternBinder' i = PatternBinder
+  { _patternBinderInfo :: i,
+    _patternBinderPattern :: Pattern' i
   }
 
 data PatternConstr' i = PatternConstr
@@ -276,7 +277,7 @@ instance Eq (PatternWildcard' i) where
   _ == _ = True
 
 instance Eq (PatternBinder' i) where
-  _ == _ = True
+  (PatternBinder _ p1) == (PatternBinder _ p2) = p1 == p2
 
 instance Eq (PatternConstr' i) where
   (PatternConstr _ tag1 ps1) == (PatternConstr _ tag2 ps2) = tag1 == tag2 && ps1 == ps2

@@ -783,7 +783,7 @@ branchPattern ::
   ParsecS r Pattern
 branchPattern =
   wildcardPattern
-    <|> binderOrConstrPattern
+    <|> binderOrConstrPattern True
     <|> parens branchPattern
 
 wildcardPattern :: ParsecS r Pattern
@@ -793,16 +793,28 @@ wildcardPattern = do
 
 binderOrConstrPattern ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Bool ->
   ParsecS r Pattern
-binderOrConstrPattern = do
+binderOrConstrPattern parseArgs = do
   (txt, i) <- identifierL
   r <- lift (getIdent txt)
   case r of
     Just (IdentTag tag) -> do
-      ps <- P.many branchPattern
+      ps <- if parseArgs then P.many branchPattern else return []
       ci <- lift $ getConstructorInfo tag
       let info = setInfoName (ci ^. constructorName) Info.empty
       return $ PatConstr (PatternConstr info tag ps)
     _ -> do
       n <- lift $ freshName KNameLocal txt i
-      return $ PatBinder (PatternBinder (setInfoName n Info.empty))
+      mp <- optional binderPattern
+      let pat = fromMaybe (PatWildcard (PatternWildcard Info.empty)) mp
+      return $ PatBinder (PatternBinder (setInfoName n Info.empty) pat)
+
+binderPattern ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  ParsecS r Pattern
+binderPattern = do
+  kwAt
+  wildcardPattern
+    <|> binderOrConstrPattern False
+    <|> parens branchPattern
