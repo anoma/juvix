@@ -37,6 +37,9 @@ string = lexemeInterval string'
 keyword :: Text -> ParsecS r ()
 keyword = keyword' space
 
+keywordSymbol :: Text -> ParsecS r ()
+keywordSymbol = keywordSymbol' space
+
 identifier :: ParsecS r Text
 identifier = lexeme bareIdentifier
 
@@ -155,7 +158,7 @@ kwSemicolon :: ParsecS r ()
 kwSemicolon = keyword Str.semicolon
 
 kwComma :: ParsecS r ()
-kwComma = keyword Str.comma
+kwComma = keywordSymbol Str.comma
 
 kwWildcard :: ParsecS r ()
 kwWildcard = keyword Str.underscore

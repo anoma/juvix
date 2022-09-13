@@ -5,7 +5,6 @@ module Juvix.Compiler.Core.Pretty.Base
   )
 where
 
-import Data.Functor
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
