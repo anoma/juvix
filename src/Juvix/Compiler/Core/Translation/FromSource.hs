@@ -479,6 +479,7 @@ atom varsNum vars =
     <|> exprLetrecOne varsNum vars
     <|> exprLet varsNum vars
     <|> exprCase varsNum vars
+    <|> exprMatch varsNum vars
     <|> exprIf varsNum vars
     <|> parens (expr varsNum vars)
     <|> braces (expr varsNum vars)
@@ -739,7 +740,7 @@ exprMatch ::
   ParsecS r Node
 exprMatch varsNum vars = do
   kwMatch
-  values <- P.some (expr varsNum vars)
+  values <- P.sepBy (expr varsNum vars) kwComma
   kwWith
   braces (exprMatch' values varsNum vars)
     <|> exprMatch' values varsNum vars
@@ -762,7 +763,7 @@ matchBranch ::
   ParsecS r MatchBranch
 matchBranch patsNum varsNum vars = do
   off <- P.getOffset
-  pats <- P.some branchPattern
+  pats <- P.sepBy branchPattern kwComma
   kwMapsTo
   unless (length pats == patsNum) $
     parseFailure off "wrong number of patterns"
@@ -782,9 +783,8 @@ branchPattern ::
   ParsecS r Pattern
 branchPattern =
   wildcardPattern
-    <|> parens wildcardPattern
-    <|> parens binderOrConstrPattern
     <|> binderOrConstrPattern
+    <|> parens branchPattern
 
 wildcardPattern :: ParsecS r Pattern
 wildcardPattern = do
@@ -801,7 +801,6 @@ binderOrConstrPattern = do
     Just (IdentTag tag) -> do
       ps <- P.many branchPattern
       ci <- lift $ getConstructorInfo tag
-      kwMapsTo
       let info = setInfoName (ci ^. constructorName) Info.empty
       return $ PatConstr (PatternConstr info tag ps)
     _ -> do

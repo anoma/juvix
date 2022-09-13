@@ -175,7 +175,9 @@ instance PrettyCode Pattern where
     PatConstr x -> ppCode x
 
 ppPatterns :: Member (Reader Options) r => NonEmpty Pattern -> Sem r (Doc Ann)
-ppPatterns pats = mapM (ppRightExpression appFixity) pats <&> hsep
+ppPatterns pats = do
+  ps' <- mapM ppCode pats
+  return $ hsep (punctuate comma (toList ps'))
 
 instance PrettyCode Node where
   ppCode :: forall r. Member (Reader Options) r => Node -> Sem r (Doc Ann)
@@ -240,7 +242,7 @@ instance PrettyCode Node where
       vs <- mapM ppCode _matchValues
       bs <- sequence $ zipWithExact (\ps br -> ppCode br >>= \br' -> return $ ps <+> kwMapsto <+> br') pats branchBodies
       let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs
-      return $ kwMatch <+> hsep vs <+> kwWith <+> bss
+      return $ kwMatch <+> hsep (punctuate comma (toList vs)) <+> kwWith <+> bss
     NPi Pi {..} ->
       case getInfoName $ getInfoBinder _piInfo of
         Just name -> do

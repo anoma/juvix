@@ -69,6 +69,7 @@ allKeywords =
     kwDef,
     kwRightArrow,
     kwSemicolon,
+    kwComma,
     kwWildcard,
     kwPlus,
     kwMinus,
@@ -160,6 +161,9 @@ kwRightArrow = keyword Str.toUnicode <|> keyword Str.toAscii
 
 kwSemicolon :: ParsecS r ()
 kwSemicolon = keyword Str.semicolon
+
+kwComma :: ParsecS r ()
+kwComma = keyword Str.comma
 
 kwWildcard :: ParsecS r ()
 kwWildcard = keyword Str.underscore
