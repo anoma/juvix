@@ -1,36 +1,21 @@
 module Commands.Dev.Internal.Typecheck.Options where
 
-import Juvix.Prelude
-import Options.Applicative
+import CommonOptions
 
-newtype InternalTypeOptions = InternalTypeOptions
-  { _microJuvixTypePrint :: Bool
+data InternalTypeOptions = InternalTypeOptions
+  { _internalTypePrint :: Bool,
+    _internalTypeInputFile :: Path
   }
   deriving stock (Data)
 
 makeLenses ''InternalTypeOptions
 
-defaultInternalTypeOptions :: InternalTypeOptions
-defaultInternalTypeOptions =
-  InternalTypeOptions
-    { _microJuvixTypePrint = False
-    }
-
-instance Semigroup InternalTypeOptions where
-  o1 <> o2 =
-    InternalTypeOptions
-      { _microJuvixTypePrint = (o1 ^. microJuvixTypePrint) || (o2 ^. microJuvixTypePrint)
-      }
-
-instance Monoid InternalTypeOptions where
-  mempty = defaultInternalTypeOptions
-  mappend = (<>)
-
 parseInternalType :: Parser InternalTypeOptions
 parseInternalType = do
-  _microJuvixTypePrint <-
+  _internalTypePrint <-
     switch
       ( long "print-result"
           <> help "Print the type checked module if successful"
       )
+  _internalTypeInputFile <- parseInputJuvixFile
   pure InternalTypeOptions {..}

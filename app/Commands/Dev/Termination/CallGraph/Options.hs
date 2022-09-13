@@ -1,7 +1,7 @@
 module Commands.Dev.Termination.CallGraph.Options where
 
-import Data.Text qualified as Text
 import CommonOptions
+import Data.Text qualified as Text
 
 data CallGraphOptions = CallGraphOptions
   { _graphFunctionNameFilter :: Maybe (NonEmpty Text),

@@ -8,14 +8,14 @@ where
 
 import Control.Exception qualified as GHC
 import Juvix.Prelude
-import Prelude (show)
 import Options.Applicative
 import System.Process
+import Prelude (show)
 
 -- | Paths that are input are used to detect the root of the project.
-data Path = Path {
-  _pathPath :: FilePath,
-  _pathIsInput :: Bool
+data Path = Path
+  { _pathPath :: FilePath,
+    _pathIsInput :: Bool
   }
   deriving stock (Data)
 
@@ -26,34 +26,39 @@ instance Show Path where
 
 parseInputJuvixFile :: Parser Path
 parseInputJuvixFile = do
-  _pathPath <- argument
-    str
-    ( metavar "JUVIX_FILE"
-        <> help "Path to a .juvix file"
-        <> completer juvixCompleter
-    )
+  _pathPath <-
+    argument
+      str
+      ( metavar "JUVIX_FILE"
+          <> help "Path to a .juvix file"
+          <> completer juvixCompleter
+      )
   pure Path {_pathIsInput = True, ..}
 
 parseGenericOutputFile :: Parser Path
 parseGenericOutputFile = do
-  _pathPath <- option str
-        ( long "output"
-            <> short 'o'
-            <> metavar "OUTPUT_FILE"
-            <> help "Path to output file"
-            <> action "file"
-        )
+  _pathPath <-
+    option
+      str
+      ( long "output"
+          <> short 'o'
+          <> metavar "OUTPUT_FILE"
+          <> help "Path to output file"
+          <> action "file"
+      )
   pure Path {_pathIsInput = False, ..}
 
 parseGenericOutputDir :: Mod OptionFields FilePath -> Parser Path
 parseGenericOutputDir m = do
-  _pathPath <- option str
-        ( long "output-dir"
-            <> metavar "OUTPUT_DIR"
-            <> help "Path to output directory"
-            <> action "directory"
-            <> m
-        )
+  _pathPath <-
+    option
+      str
+      ( long "output-dir"
+          <> metavar "OUTPUT_DIR"
+          <> help "Path to output directory"
+          <> action "directory"
+          <> m
+      )
   pure Path {_pathIsInput = False, ..}
 
 juvixCompleter :: Completer

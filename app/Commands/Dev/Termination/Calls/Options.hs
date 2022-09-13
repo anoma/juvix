@@ -1,9 +1,9 @@
 module Commands.Dev.Termination.Calls.Options where
 
+import CommonOptions
 import Data.Text qualified as Text
 import GlobalOptions
 import Juvix.Compiler.Abstract.Pretty.Base qualified as Abstract
-import CommonOptions
 
 data CallsOptions = CallsOptions
   { _callsFunctionNameFilter :: Maybe (NonEmpty Text),

@@ -1,11 +1,11 @@
 module Commands.Doctor where
 
+import Commands.Doctor.Options
 import Data.Aeson
 import Data.Aeson.TH
 import Juvix.Extra.Version qualified as V
 import Juvix.Prelude
 import Network.HTTP.Simple
-import Options.Applicative
 import Safe (headMay)
 import System.Environment qualified as E
 import System.Process qualified as P
@@ -20,11 +20,6 @@ $( deriveFromJSON
        }
      ''GithubRelease
  )
-
-newtype DoctorOptions = DoctorOptions
-  { _doctorOffline :: Bool
-  }
-  deriving stock (Data)
 
 data DocumentedWarning
   = NoClang
@@ -43,15 +38,6 @@ data DocumentedMessage = DocumentedMessage
 makeLenses ''GithubRelease
 makeLenses ''DoctorOptions
 makeLenses ''DocumentedMessage
-
-parseDoctorOptions :: Parser DoctorOptions
-parseDoctorOptions = do
-  _doctorOffline <-
-    switch
-      ( long "offline"
-          <> help "Run the doctor offline"
-      )
-  pure DoctorOptions {..}
 
 minimumClangVersion :: Integer
 minimumClangVersion = 13
@@ -153,8 +139,8 @@ checkWasmer = do
   heading "Checking for wasmer..."
   documentedCheck (checkCmdOnPath "wasmer") NoWasmer
 
-doctor :: Members DoctorEff r => DoctorOptions -> Sem r ()
-doctor opts = do
+runCommand :: Members DoctorEff r => DoctorOptions -> Sem r ()
+runCommand opts = do
   checkClang
   checkWasmer
   unless (opts ^. doctorOffline) checkVersion

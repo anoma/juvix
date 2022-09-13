@@ -1,8 +1,8 @@
 module App where
 
+import CommonOptions
 import Data.ByteString qualified as ByteString
 import GlobalOptions
-import CommonOptions
 import Juvix.Compiler.Pipeline
 import Juvix.Data.Error qualified as Error
 import Juvix.Prelude.Pretty hiding (Doc)
@@ -51,10 +51,12 @@ runAppIO g root pkg = interpret $ \case
 
 getEntryPoint' :: GlobalOptions -> FilePath -> Package -> Path -> IO EntryPoint
 getEntryPoint' opts root pkg inputFile = do
-  estdin <- if
-    | opts ^. globalStdin -> Just <$> getContents
-    | otherwise -> return Nothing
-  return EntryPoint
+  estdin <-
+    if
+        | opts ^. globalStdin -> Just <$> getContents
+        | otherwise -> return Nothing
+  return
+    EntryPoint
       { _entryPointRoot = root,
         _entryPointNoTermination = opts ^. globalNoTermination,
         _entryPointNoPositivity = opts ^. globalNoPositivity,
@@ -64,6 +66,9 @@ getEntryPoint' opts root pkg inputFile = do
         _entryPointGenericOptions = project opts,
         _entryPointStdin = estdin
       }
+
+askGenericOptions :: Members '[App] r => Sem r GenericOptions
+askGenericOptions = project <$> askGlobalOptions
 
 getEntryPoint :: Members '[Embed IO, App] r => Path -> Sem r EntryPoint
 getEntryPoint inputFile = do

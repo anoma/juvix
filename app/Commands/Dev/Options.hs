@@ -1,7 +1,7 @@
 module Commands.Dev.Options
   ( module Commands.Dev.Options,
     module Commands.Dev.Core.Options,
-    module Commands.Dev.Internal,
+    module Commands.Dev.Internal.Options,
     module Commands.Dev.Parse.Options,
     module Commands.Dev.Highlight.Options,
     module Commands.Dev.Scope.Options,
@@ -13,19 +13,19 @@ where
 import Commands.Dev.Core.Options
 import Commands.Dev.Doc.Options
 import Commands.Dev.Highlight.Options
-import Commands.Dev.Internal
+import Commands.Dev.Internal.Options
+import Commands.Dev.MiniC.Options
 import Commands.Dev.Parse.Options
 import Commands.Dev.Scope.Options
 import Commands.Dev.Termination.Options
-import Juvix.Prelude
-import Options.Applicative
+import CommonOptions
 
 data DevCommand
   = DisplayRoot
   | Highlight HighlightOptions
   | Internal InternalCommand
   | Core CoreCommand
-  | MiniC
+  | MiniC MiniCOptions
   | Parse ParseOptions
   | Scope ScopeOptions
   | Termination TerminationCommand
@@ -66,7 +66,7 @@ commandMiniC :: Mod CommandFields DevCommand
 commandMiniC =
   command "minic" $
     info
-      (pure MiniC)
+      (MiniC <$> parseMiniC)
       (progDesc "Translate a Juvix file to MiniC")
 
 commandInternal :: Mod CommandFields DevCommand

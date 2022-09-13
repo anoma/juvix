@@ -1,8 +1,8 @@
 module Commands.Dev.Scope.Options where
 
+import CommonOptions
 import GlobalOptions
 import Juvix.Compiler.Concrete.Pretty qualified as Scoper
-import CommonOptions
 
 data ScopeOptions = ScopeOptions
   { _scopeInlineImports :: Bool,

@@ -82,8 +82,13 @@ upToMiniC = upToInternalReachability >>= C.fromInternal
 
 runIOEither :: EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError a)
 runIOEither entry =
-  runM . runError . runBuiltins . runNameIdGen . mapError (JuvixError @FilesError) . runFilesIO
-  . runReader entry
+  runM
+    . runError
+    . runBuiltins
+    . runNameIdGen
+    . mapError (JuvixError @FilesError)
+    . runFilesIO
+    . runReader entry
 
 runIO :: GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO a
 runIO opts entry = runIOEither entry >=> mayThrow

@@ -1,11 +1,11 @@
 module Commands.Dev.Doc.Options where
 
-import Juvix.Prelude hiding (Doc)
-import Options.Applicative
+import CommonOptions
 
 data DocOptions = DocOptions
-  { _docOutputDir :: FilePath,
-    _docOpen :: Bool
+  { _docOutputDir :: Path,
+    _docOpen :: Bool,
+    _docInputFile :: Path
   }
   deriving stock (Data)
 
@@ -14,18 +14,15 @@ makeLenses ''DocOptions
 parseDoc :: Parser DocOptions
 parseDoc = do
   _docOutputDir <-
-    option
-      str
-      ( long "output-dir"
-          <> metavar "DIR"
-          <> value "doc"
+    parseGenericOutputDir
+      ( value "doc"
           <> showDefault
           <> help "html output directory"
-          <> action "directory"
       )
   _docOpen <-
     switch
       ( long "open"
           <> help "open the documentation after generating it"
       )
+  _docInputFile <- parseInputJuvixFile
   pure DocOptions {..}

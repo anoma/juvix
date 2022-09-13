@@ -1,26 +1,26 @@
 module Main (main) where
 
 import App
-import CLI
-import Commands.Compile qualified as Compile
-import Commands.Dev qualified as Dev
-import Commands.Dev.Core qualified as Core
-import Commands.Html qualified as Html
-import Commands.Init qualified as Init
+import CommonOptions
 import Control.Exception qualified as IO
 import Data.ByteString qualified as ByteString
 import Data.Yaml
 import Juvix.Compiler.Pipeline
 import Juvix.Extra.Paths qualified as Paths
-import Juvix.Extra.Version (runDisplayVersion)
-import Juvix.Prelude
-import Options.Applicative
-import System.Environment (getProgName)
+import TopCommand
+import TopCommand.Options
 
-findRoot :: CLI -> GlobalOptions -> IO (FilePath, Package)
-findRoot cli copts = do
+main :: IO ()
+main = do
+  let p = prefs showHelpOnEmpty
+  (global, cli) <- customExecParser p descr >>= secondM makeAbsPaths
+  (root, pkg) <- findRoot cli
+  runM (runAppIO global root pkg (runTopCommand cli))
+
+findRoot :: TopCommand -> IO (FilePath, Package)
+findRoot cli = do
   let dir :: Maybe FilePath
-      dir = takeDirectory <$> commandFirstFile copts
+      dir = takeDirectory <$> topCommandInputFile cli
   whenJust dir setCurrentDirectory
   r <- IO.try go
   case r of
@@ -49,46 +49,3 @@ findRoot cli copts = do
                 | isEmpty -> return emptyPackage
                 | otherwise -> decodeThrow bs
           return (takeDirectory yaml, pkg)
-
-runCLI :: forall r. Members '[Embed IO, App] r => CLI -> Sem r ()
-runCLI = \case
-  DisplayVersion -> embed runDisplayVersion
-  DisplayHelp -> embed (showHelpText p)
-  Command cmd -> runTopComand cmd
-  Doctor opts -> embed (runLogIO (doctor opts))
-  Init -> embed (runLogIO Init.init)
-
-runTopCommand :: forall r. Members '[Embed IO, App] r => Command -> Sem r ()
-runTopCommand cmd = do
-  globalOpts <- askGlobalOptions
-  case cmd of
-    (Dev DisplayRoot) -> say (pack root)
-    (Dev (Core cmd')) -> Core.runCommand cmd'
-    _ -> do
-      -- Other commands require an entry point:
-      case getEntryPoint root pkg globalOpts of
-        Nothing -> printFailureExit "Provide a Juvix file to run this command\nUse --help to see all the options"
-        Just ioEntryPoint -> do
-          e <- embed ioEntryPoint
-          commandHelper e cmd
-          where
-            commandHelper :: EntryPoint -> Command -> Sem r ()
-            commandHelper entryPoint = \case
-              Check -> commandHelper entryPoint (Dev (Internal (TypeCheck mempty)))
-              Compile localOpts -> Compile.runCommand entryPoint localOpts
-              Html localOpts -> Html.runCommand entryPoint localOpts
-              Dev dev -> Dev.runCommand entryPoint dev
-
-showHelpText :: ParserPrefs -> IO ()
-showHelpText p = do
-  progn <- getProgName
-  let helpText = parserFailure p descr (ShowHelpText Nothing) []
-  let (msg, _) = renderFailure helpText progn
-  putStrLn (pack msg)
-
-main :: IO ()
-main = do
-  let p = prefs showHelpOnEmpty
-  (global, cli) <- customExecParser p descr >>= secondM makeAbsPaths
-  (root, pkg) <- findRoot cli global
-  runM (runAppIO global root pkg (runCLI cli))

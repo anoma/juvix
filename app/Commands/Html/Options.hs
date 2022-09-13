@@ -1,7 +1,7 @@
 module Commands.Html.Options where
 
-import Juvix.Compiler.Backend.Html.Data.Theme
 import CommonOptions
+import Juvix.Compiler.Backend.Html.Data.Theme
 
 data HtmlOptions = HtmlOptions
   { _htmlRecursive :: Bool,
@@ -31,9 +31,9 @@ parseHtml = do
           <> help "selects a theme: ayu (light); nord (dark)"
           <> completeWith (map show allThemes)
       )
-  _htmlOutputDir <- parseGenericOutputDir
-      (
-          value "html"
+  _htmlOutputDir <-
+    parseGenericOutputDir
+      ( value "html"
           <> showDefault
           <> help "html output directory"
           <> action "directory"

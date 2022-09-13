@@ -1,47 +1,13 @@
 module Commands.Dev.Internal where
 
-import Commands.Dev.Internal.Typecheck.Options
-import Juvix.Prelude hiding (Doc)
-import Options.Applicative
+import Commands.Base
+import Commands.Dev.Internal.Arity qualified as Arity
+import Commands.Dev.Internal.Options
+import Commands.Dev.Internal.Pretty qualified as InternalPretty
+import Commands.Dev.Internal.Typecheck qualified as InternalTypecheck
 
-data InternalCommand
-  = Pretty
-  | TypeCheck InternalTypeOptions
-  | Arity
-  deriving stock (Data)
-
-parseInternalCommand :: Parser InternalCommand
-parseInternalCommand =
-  hsubparser $
-    mconcat
-      [ commandPretty,
-        commandArity,
-        commandTypeCheck
-      ]
-  where
-    commandArity :: Mod CommandFields InternalCommand
-    commandArity = command "arity" arityInfo
-
-    commandPretty :: Mod CommandFields InternalCommand
-    commandPretty = command "pretty" prettyInfo
-
-    commandTypeCheck :: Mod CommandFields InternalCommand
-    commandTypeCheck = command "typecheck" typeCheckInfo
-
-    arityInfo :: ParserInfo InternalCommand
-    arityInfo =
-      info
-        (pure Arity)
-        (progDesc "Translate a Juvix file to Internal and insert holes")
-
-    prettyInfo :: ParserInfo InternalCommand
-    prettyInfo =
-      info
-        (pure Pretty)
-        (progDesc "Translate a Juvix file to Internal and pretty print the result")
-
-    typeCheckInfo :: ParserInfo InternalCommand
-    typeCheckInfo =
-      info
-        (TypeCheck <$> parseInternalType)
-        (progDesc "Translate a Juvix file to Internal and typecheck the result")
+runCommand :: Members '[Embed IO, App] r => InternalCommand -> Sem r ()
+runCommand = \case
+  Pretty opts -> InternalPretty.runCommand opts
+  Arity opts -> Arity.runCommand opts
+  TypeCheck opts -> InternalTypecheck.runCommand opts

@@ -4,12 +4,12 @@ module Commands.Dev.Highlight.Options
   )
 where
 
+import CommonOptions
 import Juvix.Compiler.Concrete.Data.Highlight
-import Juvix.Prelude
-import Options.Applicative
 
-newtype HighlightOptions = HighlightOptions
-  { _highlightBackend :: HighlightBackend
+data HighlightOptions = HighlightOptions
+  { _highlightBackend :: HighlightBackend,
+    _highlightInputFile :: Path
   }
   deriving stock (Data)
 
@@ -25,6 +25,8 @@ parseHighlight = do
           <> help "selects a backend. FORMAT = emacs | json"
           <> completeWith (map show allBackends)
       )
+
+  _highlightInputFile <- parseInputJuvixFile
   pure HighlightOptions {..}
   where
     allBackends :: [HighlightBackend]

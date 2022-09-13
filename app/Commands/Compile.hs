@@ -9,16 +9,15 @@ import Juvix.Compiler.Backend.C.Translation.FromInternal qualified as MiniC
 import System.Environment
 import System.Process qualified as P
 
-runCommand :: Members '[Embed IO, App] r => EntryPoint -> CompileOptions -> Sem r ()
-runCommand entryPoint localOpts = do
-  miniC <- (^. MiniC.resultCCode) <$> runPipeline (upToMiniC entryPoint)
-  let inputFile = entryPoint ^. mainModulePath
-  result <- embed (runCompile root inputFile localOpts miniC)
+runCommand :: Members '[Embed IO, App] r => CompileOptions -> Sem r ()
+runCommand opts@CompileOptions {..} = do
+  root <- askRoot
+  miniC <- (^. MiniC.resultCCode) <$> runPipeline _compileInputFile upToMiniC
+  let inputFile = _compileInputFile ^. pathPath
+  result <- embed (runCompile root inputFile opts miniC)
   case result of
     Left err -> printFailureExit err
     _ -> return ()
-  where
-    root = entryPoint ^. entryPointRoot
 
 juvixBuildDir :: FilePath
 juvixBuildDir = ".juvix-build"
