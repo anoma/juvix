@@ -171,7 +171,7 @@ instance PrettyCode PatternConstr where
   ppCode PatternConstr {..} = do
     n <- maybe (ppCode _patternConstrTag) ppCode (getInfoName _patternConstrInfo)
     args <- mapM (ppRightExpression appFixity) _patternConstrArgs
-    return $ n <+> hsep args
+    return $ foldl' (<+>) n args
 
 instance PrettyCode Pattern where
   ppCode = \case

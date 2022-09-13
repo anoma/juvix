@@ -205,7 +205,9 @@ instance HasAtomicity (PatternBinder' i) where
   atomicity _ = Atom
 
 instance HasAtomicity (PatternConstr' i) where
-  atomicity _ = Aggregate appFixity
+  atomicity PatternConstr {..}
+    | null _patternConstrArgs = Atom
+    | otherwise = Aggregate appFixity
 
 instance HasAtomicity (Pattern' i) where
   atomicity = \case

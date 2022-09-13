@@ -544,7 +544,7 @@ exprLambda ::
   HashMap Text Index ->
   ParsecS r Node
 exprLambda varsNum vars = do
-  kwLambda
+  lambda
   name <- parseLocalName
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- expr (varsNum + 1) vars'
@@ -796,12 +796,16 @@ binderOrConstrPattern ::
   Bool ->
   ParsecS r Pattern
 binderOrConstrPattern parseArgs = do
+  off <- P.getOffset
   (txt, i) <- identifierL
   r <- lift (getIdent txt)
   case r of
     Just (IdentTag tag) -> do
       ps <- if parseArgs then P.many branchPattern else return []
       ci <- lift $ getConstructorInfo tag
+      when
+        (ci ^. constructorArgsNum /= length ps)
+        (parseFailure off "wrong number of constructor arguments")
       let info = setInfoName (ci ^. constructorName) Info.empty
       return $ PatConstr (PatternConstr info tag ps)
     _ -> do
@@ -814,7 +818,7 @@ binderPattern ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   ParsecS r Pattern
 binderPattern = do
-  kwAt
+  symbolAt
   wildcardPattern
     <|> binderOrConstrPattern False
     <|> parens branchPattern

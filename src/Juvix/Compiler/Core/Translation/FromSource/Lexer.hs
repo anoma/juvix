@@ -37,9 +37,6 @@ string = lexemeInterval string'
 keyword :: Text -> ParsecS r ()
 keyword = keyword' space
 
-rawKeyword :: Text -> ParsecS r ()
-rawKeyword = rawKeyword' space
-
 identifier :: ParsecS r Text
 identifier = lexeme bareIdentifier
 
@@ -53,9 +50,6 @@ bareIdentifier = rawIdentifier allKeywords
 allKeywords :: [ParsecS r ()]
 allKeywords =
   [ kwAssign,
-    kwColon,
-    kwAt,
-    kwLambda,
     kwLet,
     kwLetRec,
     kwIn,
@@ -88,6 +82,12 @@ allKeywords =
     kwFail
   ]
 
+symbolAt :: ParsecS r ()
+symbolAt = symbol Str.at_
+
+lambda :: ParsecS r ()
+lambda = symbol Str.lambdaUnicode <|> symbol Str.lambdaAscii
+
 lbrace :: ParsecS r ()
 lbrace = symbol "{"
 
@@ -108,15 +108,6 @@ braces = between (symbol "{") (symbol "}")
 
 kwAssign :: ParsecS r ()
 kwAssign = keyword Str.assignUnicode <|> keyword Str.assignAscii
-
-kwColon :: ParsecS r ()
-kwColon = keyword Str.colon
-
-kwInductive :: ParsecS r ()
-kwInductive = keyword Str.inductive
-
-kwLambda :: ParsecS r ()
-kwLambda = rawKeyword Str.lambdaUnicode <|> rawKeyword Str.lambdaAscii
 
 kwLet :: ParsecS r ()
 kwLet = keyword Str.let_
@@ -168,9 +159,6 @@ kwComma = keyword Str.comma
 
 kwWildcard :: ParsecS r ()
 kwWildcard = keyword Str.underscore
-
-kwAt :: ParsecS r ()
-kwAt = keyword Str.at_
 
 kwPlus :: ParsecS r ()
 kwPlus = keyword Str.plus
