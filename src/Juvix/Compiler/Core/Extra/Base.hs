@@ -174,7 +174,7 @@ getBinderPatternInfos = go []
       PatConstr (PatternConstr {..}) ->
         foldl' go acc _patternConstrArgs
       PatBinder (PatternBinder {..}) ->
-        _patternBinderInfo : acc
+        go (_patternBinderInfo : acc) _patternBinderPattern
       PatWildcard {} ->
         acc
 
@@ -186,7 +186,7 @@ getPatternInfos = go []
       PatConstr (PatternConstr {..}) ->
         foldl' go (_patternConstrInfo : acc) _patternConstrArgs
       PatBinder (PatternBinder {..}) ->
-        _patternBinderInfo : acc
+        go (_patternBinderInfo : acc) _patternBinderPattern
       PatWildcard (PatternWildcard {..}) ->
         _patternWildcardInfo : acc
 
