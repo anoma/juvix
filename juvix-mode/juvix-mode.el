@@ -52,8 +52,7 @@
   (save-buffer)
   (juvix-clear-annotations)
   (eval (read (shell-command-to-string
-               (concat "juvix internal highlight "
-                       (if juvix-disable-embedded-stdlib "--no-stdlib " "")
+               (concat "juvix " (if juvix-disable-embedded-stdlib "--no-stdlib " "") "dev highlight "
                        (buffer-file-name)))))
   (save-buffer))
 

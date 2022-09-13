@@ -81,7 +81,7 @@ commandCheck =
   command "typecheck" $
     info
       (Typecheck <$> parseTypecheck)
-      (progDesc "Type check a Juvix file")
+      (progDesc "Typecheck a Juvix file")
 
 commandCompile :: Mod CommandFields TopCommand
 commandCompile =
