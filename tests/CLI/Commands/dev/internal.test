@@ -6,32 +6,16 @@ $ juvix dev internal --help
 > /Usage: juvix dev internal COMMAND.*/
 >= 0
 
-$ juvix dev internal pretty
-> /Provide.*/
->= 1
-
-$ juvix dev internal typecheck
-> /Provide.*/
->= 1
-
 $ juvix dev internal typecheck tests/positive/Internal/Simple.juvix
 >
 Well done! It type checks
 >= 0
 
-$ juvix dev --only-errors internal typecheck tests/positive/Internal/Simple.juvix
+$ juvix --only-errors dev internal typecheck tests/positive/Internal/Simple.juvix
 >
 >= 0
 
-$ juvix dev internal typecheck --only-errors tests/positive/Internal/Simple.juvix
->
->= 0
-
-$ juvix dev internal typecheck tests/positive/Internal/Simple.juvix --only-errors
->
->= 0
-
-$ juvix dev internal typecheck tests/negative/Internal/MultiWrongType.juvix --no-colors
+$ juvix --no-colors dev internal typecheck tests/negative/Internal/MultiWrongType.juvix
 >2 /(.+)\/([^\/]+)\.juvix\:11\:7\-8\: error.*
 .*/
 >= 1

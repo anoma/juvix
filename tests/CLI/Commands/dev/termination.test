@@ -2,17 +2,6 @@ $ juvix dev termination
 >2 /Usage: juvix dev termination COMMAND.*/
 >= 1
 
-$ juvix dev termination calls
-> /Provide.*/
->2
->=1
-
-$ juvix dev termination graph
-> /Provide.*/
->2
->= 1
-
-
 $ juvix dev termination calls --help
 > /Usage: juvix dev termination calls
          \[\-f|\-\-function fun1 fun2 ...] \[\-d|\-\-show\-decreasing\-args ARG].*/

@@ -1,7 +1,3 @@
-$ juvix dev parse
-> /Provide.*/
->= 1
-
 $ juvix dev parse tests/positive/Axiom.juvix
 > /Module
 */
