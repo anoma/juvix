@@ -105,9 +105,9 @@ executables:
     source-dirs: app
     dependencies:
     - juvix
+    - http-conduit == 2.3.*
     - optparse-applicative == 0.17.*
     - uniplate == 1.6.*
-    - http-conduit == 2.3.*
     verbatim:
       default-language: GHC2021
 
