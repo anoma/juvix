@@ -51,17 +51,17 @@ data CallType = CallFun Symbol | CallClosure
 -- | `Instruction` is a single non-branching instruction, i.e., with no control
 -- transfer.
 data Instruction
-  = -- | Add stack[1] - stack[0], pop the stack by two, and push the result.
+  = -- | Add stack[0] + stack[1], pop the stack by two, and push the result.
     IntAdd
-  | -- | Subtract stack[1] - stack[0], pop the stack by two, and push the result.
+  | -- | Subtract stack[0] - stack[1], pop the stack by two, and push the result.
     IntSub
-  | -- | Multiply stack[1] * stack[0], pop the stack by two, and push the result.
+  | -- | Multiply stack[0] * stack[1], pop the stack by two, and push the result.
     IntMul
-  | -- | Divide stack[1] / stack[0], pop the stack by two, and push the result.
+  | -- | Divide stack[0] / stack[1], pop the stack by two, and push the result.
     IntDiv
-  | -- | Compare stack[1] < stack[0], pop the stack by two, and push the result.
+  | -- | Compare stack[0] < stack[1], pop the stack by two, and push the result.
     IntLt
-  | -- | Compare stack[1] <= stack[0], pop the stack by two, and push the result.
+  | -- | Compare stack[0] <= stack[1], pop the stack by two, and push the result.
     IntLe
   | -- | Compare the two top stack cells with structural equality, pop the stack
     -- by two, and push the result.
@@ -76,34 +76,34 @@ data Instruction
   | PopTemp
   | -- | Allocate constructor data with a given tag. The n arguments (the number n
     -- determined by the constant tag) are popped from the stack and stored at
-    -- _decreasing_ offsets (stack[0]: field n-1, stack[1]: field n-2, ...,
-    -- stack[n-1]: field 0). The data is pushed on top of the stack.
+    -- increasing offsets (stack[0]: field 0, stack[1]: field 1, ...,
+    -- stack[n-1]: field n-1). The data is pushed on top of the stack.
     AllocConstr Tag
   | -- | Allocate a closure for the given function symbol. n = allocClosureArgsNum
     -- indicates the number of function arguments available (greater than 0 and
     -- strictly less than the number of arguments expected by the function --
     -- known functions can take zero arguments, but closures are required to
     -- take at least one). The n function arguments are popped from the stack
-    -- and stored in the closure at _decreasing_ offsets. The result is pushed
-    -- on top of the stack.
+    -- and stored in the closure at increasing offsets. The result is pushed on
+    -- top of the stack.
     AllocClosure InstrAllocClosure
   | -- | Extend a closure on top of the stack with more arguments. n =
     -- extendClosureArgsNum indicates the number of arguments to extend the
     -- closure with -- it must be less than the number of arguments expected by
     -- the closure. Pops the closure from the stack, pops n additional arguments
-    -- from the stack and extends the closure with them in _decreasing_ order,
+    -- from the stack and extends the closure with them in increasing order,
     -- then pushes the extended closure on top of the stack.
     ExtendClosure InstrExtendClosure
   | -- | Call a function given by an immediate constant Symbol or a closure on top
     -- of the stack. Creates a new activation frame for the function. The n =
     -- callArgsNum function arguments are popped from the stack and stored at
-    -- _decreasing_ offsets (offset n-1: top of stack) in the argument area. The
+    -- increasing offsets (offset 0: top of stack) in the argument area. The
     -- return address is pushed on the global call stack. If the callType is
     -- CallClosure, then the closure is fetched from the top of the stack, the
     -- arguments stored in the closure are transferred to the argument area in
-    -- _increasing_ offset order, and then the supplied callArgsNum arguments
-    -- are popped from the stack and transferred to the argument area in
-    -- _decreasing_ order.
+    -- increasing offset order, and then the supplied callArgsNum arguments are
+    -- popped from the stack and transferred to the argument area in increasing
+    -- order.
     Call InstrCall
   | -- | Same as `Call`, but does not push the call stack, discarding the current
     -- activation frame instead.

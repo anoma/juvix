@@ -108,7 +108,7 @@ recurse' sig = go
               tys <-
                 zipWithM
                   (\ty idx -> unifyTypes' loc ty (topValueStack' idx mem))
-                  (reverse tyargs)
+                  tyargs
                   [0 ..]
               return $
                 pushValueStack (mkTypeConstr (ci ^. constructorInductive) tag tys) $
@@ -137,8 +137,8 @@ recurse' sig = go
         fixMemIntOp mem = fixMemBinOp mem mkInteger mkInteger mkInteger
 
         fixMemBinOp :: Memory -> Type -> Type -> Type -> Sem r Memory
-        fixMemBinOp mem ty1 ty0 rty = do
-          checkValueStack loc [ty1, ty0] mem
+        fixMemBinOp mem ty0 ty1 rty = do
+          checkValueStack loc [ty0, ty1] mem
           return $ pushValueStack rty (popValueStack 2 mem)
 
         fixMemExtendClosure :: Memory -> InstrExtendClosure -> Sem r Memory
@@ -193,7 +193,7 @@ recurse' sig = go
         fixMemValueStackArgs :: Memory -> Int -> Int -> Type -> Sem r Memory
         fixMemValueStackArgs mem k argsNum ty = do
           let mem' = popValueStack k mem
-          let tyargs = reverse $ topValuesFromValueStack' argsNum mem'
+          let tyargs = topValuesFromValueStack' argsNum mem'
           -- `typeArgs ty` may be shorter than `tyargs` only if `ty` is dynamic
           zipWithM_ (unifyTypes' loc) tyargs (typeArgs ty)
           return $

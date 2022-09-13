@@ -94,7 +94,7 @@ getMemValueType val mem = case val of
         Nothing
 
 -- | Check if the values on top of the value stack have the given types (the
--- last element of the list corresponds to the top of the stack)
+-- first element of the list corresponds to the top of the stack)
 checkValueStack :: Member (Error AsmError) r => Maybe Location -> [Type] -> Memory -> Sem r ()
 checkValueStack loc tys mem = do
   unless (length (mem ^. memoryValueStack) >= length tys) $
@@ -116,4 +116,4 @@ checkValueStack loc tys mem = do
               fromString $
                 "type mismatch on value stack cell " ++ show idx ++ " from top"
     )
-    (zip (reverse tys) [0 ..])
+    (zip tys [0 ..])

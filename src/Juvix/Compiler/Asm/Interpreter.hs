@@ -7,9 +7,10 @@ import Juvix.Compiler.Asm.Interpreter.Extra
 import Juvix.Compiler.Asm.Interpreter.Runtime
 import Juvix.Compiler.Asm.Language
 
--- The returned Val is the value on top of the value stack at exit, i.e., when
--- executing a toplevel Return. Throws a runtime error if at exit the value
--- stack has more than one element.
+-- | Interpret JuvixAsm code for a single function. The returned Val is the
+-- value on top of the value stack at exit, i.e., when executing a toplevel
+-- Return. Throws a runtime error if at exit the value stack has more than one
+-- element.
 runCode :: InfoTable -> Code -> Val
 runCode infoTable = run . evalRuntime . goToplevel
   where
@@ -78,13 +79,13 @@ runCode infoTable = run . evalRuntime . goToplevel
       AllocConstr tag -> do
         let ci = getConstrInfo infoTable tag
         args <- replicateM (ci ^. constructorArgsNum) popValueStack
-        pushValueStack (ValConstr (Constr tag (reverse args)))
+        pushValueStack (ValConstr (Constr tag args))
         goCode cont
       AllocClosure InstrAllocClosure {..} -> do
         unless (_allocClosureArgsNum > 0) $
           error "invalid closure allocation: the number of supplied arguments must be greater than 0"
         args <- replicateM _allocClosureArgsNum popValueStack
-        pushValueStack (ValClosure (Closure _allocClosureFunSymbol (reverse args)))
+        pushValueStack (ValClosure (Closure _allocClosureFunSymbol args))
         goCode cont
       ExtendClosure InstrExtendClosure {..} -> do
         v <- popValueStack
@@ -123,8 +124,8 @@ runCode infoTable = run . evalRuntime . goToplevel
 
     goBinOp :: Member Runtime r => (Val -> Val -> Val) -> Sem r ()
     goBinOp op = do
-      v2 <- popValueStack
       v1 <- popValueStack
+      v2 <- popValueStack
       pushValueStack (op v1 v2)
 
     goIntBinOp :: Member Runtime r => (Integer -> Integer -> Val) -> Sem r ()
@@ -173,7 +174,7 @@ runCode infoTable = run . evalRuntime . goToplevel
           (_callArgsNum /= fi ^. functionArgsNum)
           (error "invalid indirect call: supplied arguments number not equal to expected arguments number")
         args <- replicateM (fi ^. functionArgsNum) popValueStack
-        return (fi ^. functionCode, frameFromFunctionInfo fi (reverse args))
+        return (fi ^. functionCode, frameFromFunctionInfo fi args)
       CallClosure -> do
         v <- popValueStack
         case v of
@@ -193,7 +194,7 @@ runCode infoTable = run . evalRuntime . goToplevel
     getCallFrame :: Member Runtime r => Closure -> FunctionInfo -> Int -> Sem r Frame
     getCallFrame cl fi argsNum = do
       args <- replicateM argsNum popValueStack
-      return $ frameFromFunctionInfo fi ((cl ^. closureArgs) ++ reverse args)
+      return $ frameFromFunctionInfo fi ((cl ^. closureArgs) ++ args)
 
     extendClosure :: Member Runtime r => Closure -> Int -> Sem r ()
     extendClosure cl n = do
@@ -202,7 +203,7 @@ runCode infoTable = run . evalRuntime . goToplevel
         ( ValClosure
             ( Closure
                 (cl ^. closureSymbol)
-                (cl ^. closureArgs ++ reverse args)
+                (cl ^. closureArgs ++ args)
             )
         )
 

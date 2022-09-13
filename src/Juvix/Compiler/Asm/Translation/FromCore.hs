@@ -83,59 +83,62 @@ genCode infoTable fi =
 
     goApps :: Bool -> Int -> BinderList Value -> Core.Apps -> Code'
     goApps isTail tempSize refs (Core.Apps {..}) =
-      case _appsFun of
-        Core.FunIdent (Core.Ident {..}) ->
-          if
-              | argsNum > length _appsArgs ->
-                  snocReturn isTail $
-                    DL.snoc
-                      (DL.concat (map (go False tempSize refs) _appsArgs))
-                      (mkInstr $ AllocClosure (InstrAllocClosure _identSymbol (length _appsArgs)))
-              | argsNum == length _appsArgs ->
-                  DL.snoc
-                    (DL.concat (map (go False tempSize refs) _appsArgs))
-                    (mkInstr $ (if isTail then TailCall else Call) (InstrCall (CallFun _identSymbol) argsNum))
-              | otherwise ->
-                  -- If more arguments are supplied (_appsArgs) than the function
-                  -- eats up (argsNum), then the function returns a closure. We
-                  -- should first call the function (with Call) and then use
-                  -- CallClosures or TailCallClosures on the result with the
-                  -- remaining arguments.
-                  unimplemented
-          where
-            argsNum = getArgsNum _identSymbol
-        Core.FunVar (Core.Var {..}) ->
-          if
-              | argsNum > length _appsArgs ->
-                  snocReturn isTail $
-                    DL.snoc
-                      ( DL.snoc
-                          (DL.concat (map (go False tempSize refs) _appsArgs))
-                          (mkInstr $ Push (BL.lookup _varIndex refs))
-                      )
-                      (mkInstr $ ExtendClosure (InstrExtendClosure (length _appsArgs)))
-              | argsNum == length _appsArgs ->
-                  DL.snoc
-                    ( DL.snoc
-                        (DL.concat (map (go False tempSize refs) _appsArgs))
-                        (mkInstr $ Push (BL.lookup _varIndex refs))
-                    )
-                    (mkInstr $ (if isTail then TailCall else Call) (InstrCall CallClosure argsNum))
-              | otherwise ->
-                  -- Here use CallClosures or TailCallClosures.
-                  unimplemented
-          where
-            -- If the number of arguments is not available (the target of the
-            -- variable's type is dynamic), then we should use CallClosures or
-            -- TailCallClosures.
-            argsNum :: Int
-            argsNum = unimplemented
+      let suppliedArgs = reverse _appsArgs
+          suppliedArgsNum = length suppliedArgs
+       in case _appsFun of
+            Core.FunIdent (Core.Ident {..}) ->
+              if
+                  | argsNum > suppliedArgsNum ->
+                      snocReturn isTail $
+                        DL.snoc
+                          (DL.concat (map (go False tempSize refs) suppliedArgs))
+                          (mkInstr $ AllocClosure (InstrAllocClosure _identSymbol suppliedArgsNum))
+                  | argsNum == suppliedArgsNum ->
+                      DL.snoc
+                        (DL.concat (map (go False tempSize refs) suppliedArgs))
+                        (mkInstr $ (if isTail then TailCall else Call) (InstrCall (CallFun _identSymbol) argsNum))
+                  | otherwise ->
+                      -- If more arguments are supplied (suppliedArgsNum) than
+                      -- the function eats up (argsNum), then the function
+                      -- returns a closure. We should first call the function
+                      -- (with Call) and then use CallClosures or
+                      -- TailCallClosures on the result with the remaining
+                      -- arguments.
+                      unimplemented
+              where
+                argsNum = getArgsNum _identSymbol
+            Core.FunVar (Core.Var {..}) ->
+              if
+                  | argsNum > suppliedArgsNum ->
+                      snocReturn isTail $
+                        DL.snoc
+                          ( DL.snoc
+                              (DL.concat (map (go False tempSize refs) suppliedArgs))
+                              (mkInstr $ Push (BL.lookup _varIndex refs))
+                          )
+                          (mkInstr $ ExtendClosure (InstrExtendClosure suppliedArgsNum))
+                  | argsNum == suppliedArgsNum ->
+                      DL.snoc
+                        ( DL.snoc
+                            (DL.concat (map (go False tempSize refs) suppliedArgs))
+                            (mkInstr $ Push (BL.lookup _varIndex refs))
+                        )
+                        (mkInstr $ (if isTail then TailCall else Call) (InstrCall CallClosure argsNum))
+                  | otherwise ->
+                      -- Here use CallClosures or TailCallClosures.
+                      unimplemented
+              where
+                -- If the number of arguments is not available (the target of the
+                -- variable's type is dynamic), then we should use CallClosures or
+                -- TailCallClosures.
+                argsNum :: Int
+                argsNum = unimplemented
 
     goBuiltinApp :: Bool -> Int -> BinderList Value -> Core.BuiltinApp -> Code'
     goBuiltinApp isTail tempSize refs (Core.BuiltinApp {..}) =
       snocReturn isTail $
         DL.snoc
-          (DL.concat (map (go False tempSize refs) _builtinAppArgs))
+          (DL.concat (map (go False tempSize refs) (reverse _builtinAppArgs)))
           (genOp _builtinAppOp)
 
     goConstr :: Bool -> Int -> BinderList Value -> Core.Constr -> Code'
@@ -153,7 +156,7 @@ genCode infoTable fi =
       Core.Constr {..} ->
         snocReturn isTail $
           DL.snoc
-            (DL.concat (map (go False tempSize refs) _constrArgs))
+            (DL.concat (map (go False tempSize refs) (reverse _constrArgs)))
             (mkInstr $ AllocConstr _constrTag)
 
     goLet :: Bool -> Int -> BinderList Value -> Core.Let -> Code'
