@@ -36,7 +36,7 @@ testDescr PosTest {..} =
                     }
 
             step "Pipeline up to reachability"
-            p :: Micro.InternalTypedResult <- runIO' (upToInternalReachability entryPoint)
+            p :: Micro.InternalTypedResult <- runIO' entryPoint upToInternalReachability
 
             step "Check reachability results"
             let names = concatMap getNames (p ^. Micro.resultModules)

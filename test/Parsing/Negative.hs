@@ -21,7 +21,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint = defaultEntryPoint _file
-            res <- runIOEither (upToParsing entryPoint)
+            res <- runIOEither entryPoint upToParsing
             case mapLeft fromJuvixError res of
               Left (Just (_ :: ParserError)) -> return ()
               Left Nothing -> assertFailure "The parser did not find an error."

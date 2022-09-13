@@ -21,7 +21,7 @@ testDescr PosTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint = defaultEntryPoint _file
-            (void . runIO') (upToInternalTyped entryPoint)
+            (void . runIO' entryPoint) upToInternalTyped
         }
 
 --------------------------------------------------------------------------------
@@ -43,7 +43,7 @@ testNoPositivityFlag N.NegTest {..} =
                     { _entryPointNoPositivity = True
                     }
 
-            (void . runIO') (upToInternal entryPoint)
+            (void . runIO' entryPoint) upToInternal
         }
 
 negPositivityTests :: [N.NegTest]
