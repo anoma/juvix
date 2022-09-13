@@ -36,14 +36,14 @@ unifyTypes x TyDynamic =
   return x
 unifyTypes x@(TyInductive TypeInductive {..}) (TyConstr TypeConstr {..})
   | _typeInductiveSymbol == _typeConstrInductive =
-    return x
+      return x
 unifyTypes y@TyConstr {} x@TyInductive {} =
   unifyTypes x y
 unifyTypes (TyConstr c1) (TyConstr c2)
   | c1 ^. typeConstrInductive == c2 ^. typeConstrInductive
       && c1 ^. typeConstrTag == c2 ^. typeConstrTag = do
-        flds <- zipWithM unifyTypes (c1 ^. typeConstrFields) (c2 ^. typeConstrFields)
-        return $ TyConstr (set typeConstrFields flds c1)
+      flds <- zipWithM unifyTypes (c1 ^. typeConstrFields) (c2 ^. typeConstrFields)
+      return $ TyConstr (set typeConstrFields flds c1)
 unifyTypes (TyConstr c1) (TyConstr c2)
   | c1 ^. typeConstrInductive == c2 ^. typeConstrInductive =
       return $ TyInductive (TypeInductive (c1 ^. typeConstrInductive))
@@ -56,8 +56,9 @@ unifyTypes (TyInteger (TypeInteger l1 u1)) (TyInteger (TypeInteger l2 u2)) =
     unifyBounds _ Nothing _ = Nothing
     unifyBounds _ _ Nothing = Nothing
     unifyBounds f (Just x) (Just y) = Just (f x y)
-unifyTypes x y | x == y =
-  return x
+unifyTypes x y
+  | x == y =
+      return x
 unifyTypes _ _ = do
   loc <- ask
   throw $ AsmError loc "not unifiable"

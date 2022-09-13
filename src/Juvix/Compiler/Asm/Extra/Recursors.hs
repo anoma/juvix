@@ -188,7 +188,7 @@ recurse' sig = go
                   mem' <- fixMemExtendClosure mem (InstrExtendClosure n)
                   fixMemCallClosures mem' (InstrCallClosures (_callClosuresArgsNum - n))
               | otherwise ->
-                fixMemCall mem (InstrCall CallClosure (length (typeArgs ty)))
+                  fixMemCall mem (InstrCall CallClosure (length (typeArgs ty)))
 
         fixMemValueStackArgs :: Memory -> Int -> Int -> Type -> Sem r Memory
         fixMemValueStackArgs mem k argsNum ty = do

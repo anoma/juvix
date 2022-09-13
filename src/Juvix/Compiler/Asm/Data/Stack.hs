@@ -51,14 +51,14 @@ top s = HashMap.lookup (s ^. stackHeight - 1) (s ^. stackValues)
 
 -- | Values on top of the stack, in order from top to bottom.
 topValues :: Int -> Stack a -> Maybe [a]
-topValues n s = mapM (`nthFromTop` s) [0..n-1]
+topValues n s = mapM (`nthFromTop` s) [0 .. n - 1]
 
 -- | Read nth value from the bottom of the stack.
 nthFromBottom :: Int -> Stack a -> Maybe a
 nthFromBottom idx s =
-    HashMap.lookup idx (s ^. stackValues)
+  HashMap.lookup idx (s ^. stackValues)
 
 -- | Read nth value from the top of the stack.
 nthFromTop :: Int -> Stack a -> Maybe a
 nthFromTop idx s =
-    HashMap.lookup (s ^. stackHeight - idx - 1) (s ^. stackValues)
+  HashMap.lookup (s ^. stackHeight - idx - 1) (s ^. stackValues)
