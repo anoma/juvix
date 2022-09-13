@@ -52,7 +52,7 @@ bareIdentifier = rawIdentifier allKeywords
 
 allKeywords :: [ParsecS r ()]
 allKeywords =
-  [ kwAssignment,
+  [ kwAssign,
     kwColon,
     kwLambda,
     kwLet,
@@ -65,7 +65,6 @@ allKeywords =
     kwThen,
     kwElse,
     kwDef,
-    kwMapsTo,
     kwRightArrow,
     kwSemicolon,
     kwWildcard,
@@ -103,8 +102,8 @@ parens = between lparen rparen
 braces :: ParsecS r a -> ParsecS r a
 braces = between (symbol "{") (symbol "}")
 
-kwAssignment :: ParsecS r ()
-kwAssignment = keyword Str.assignUnicode <|> keyword Str.assignAscii
+kwAssign :: ParsecS r ()
+kwAssign = keyword Str.assignUnicode <|> keyword Str.assignAscii
 
 kwColon :: ParsecS r ()
 kwColon = keyword Str.colon

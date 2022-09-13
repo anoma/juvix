@@ -3,11 +3,11 @@
 constr nil 0;
 constr cons 2;
 
-def hd := \x case x of { cons x' _ -> x' };
-def tl := \x case x of { cons _ x' -> x' };
-def null := \x case x of { nil -> true; _ -> false };
+def hd := \x case x of { cons x' _ := x' };
+def tl := \x case x of { cons _ x' := x' };
+def null := \x case x of { nil := true; _ := false };
 
-def map := \f \x case x of { nil -> nil; cons h t -> cons (f h) (map f t) };
+def map := \f \x case x of { nil := nil; cons h t := cons (f h) (map f t) };
 def map' := \f \x if null x then nil else cons (f (hd x)) (map' f (tl x));
 
 def lst := cons 0 (cons 1 nil);

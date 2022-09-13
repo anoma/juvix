@@ -482,7 +482,7 @@ instance SingI s => PrettyCode (LambdaClause s) where
   ppCode LambdaClause {..} = do
     lambdaParameters' <- hsep . toList <$> mapM ppPatternAtom lambdaParameters
     lambdaBody' <- ppExpression lambdaBody
-    return $ lambdaParameters' <+> kwMapsto <+> lambdaBody'
+    return $ lambdaParameters' <+> kwAssign <+> lambdaBody'
 
 instance SingI s => PrettyCode (Lambda s) where
   ppCode Lambda {..} = do

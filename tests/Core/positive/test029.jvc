@@ -2,8 +2,8 @@
 
 constr pair 2;
 
-def fst := \p case p of { pair x _ -> x };
-def snd := \p case p of { pair _ x -> x };
+def fst := \p case p of { pair x _ := x };
+def snd := \p case p of { pair _ x := x };
 
 def compose := \f \g \x f (g x);
 

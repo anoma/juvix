@@ -3,16 +3,16 @@
 constr nil 0;
 constr cons 2;
 
-def head := \l case l of { cons h _ -> h };
-def tail := \l case l of { cons _ t -> t };
-def null := \l case l of { nil -> true; cons _ _ -> false };
-def map := \f \l case l of { nil -> nil; cons h t -> cons (f h) (map f t) };
-def foldl := \f \acc \l case l of { nil -> acc; cons h t -> foldl f (f acc h) t };
-def foldr := \f \acc \l case l of { nil -> acc; cons h t -> f h (foldr f acc t) };
+def head := \l case l of { cons h _ := h };
+def tail := \l case l of { cons _ t := t };
+def null := \l case l of { nil := true; cons _ _ := false };
+def map := \f \l case l of { nil := nil; cons h t := cons (f h) (map f t) };
+def foldl := \f \acc \l case l of { nil := acc; cons h t := foldl f (f acc h) t };
+def foldr := \f \acc \l case l of { nil := acc; cons h t := f h (foldr f acc t) };
 def filter := \f \l
   case l of {
-    nil -> nil;
-    cons h t ->
+    nil := nil;
+    cons h t :=
       if f h then
         cons h (filter f t)
       else

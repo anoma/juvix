@@ -3,38 +3,38 @@
 constr nil 0;
 constr cons 2;
 
-def hd := \l case l of { cons x _ -> x };
-def tl := \l case l of { cons _ x -> x };
+def hd := \l case l of { cons x _ := x };
+def tl := \l case l of { cons _ x := x };
 
 def rev' := \l \acc case l of {
-  nil -> acc;
-  cons h t -> rev' t (cons h acc)
+  nil := acc;
+  cons h t := rev' t (cons h acc)
 };
 
 def rev := \l rev' l nil;
 
 constr queue 2;
 
-def fst := \q case q of { queue x _ -> x };
-def snd := \q case q of { queue _ x -> x };
+def fst := \q case q of { queue x _ := x };
+def snd := \q case q of { queue _ x := x };
 
 def front := \q hd (fst q);
 
 def pop_front := \q
   let q' := queue (tl (fst q)) (snd q) in
   case fst q' of {
-    nil -> queue (rev (snd q')) nil;
-    _ -> q'
+    nil := queue (rev (snd q')) nil;
+    _ := q'
   };
 
 def push_back := \q \x case fst q of {
-  nil -> queue (cons x nil) (snd q);
-  _ -> queue (fst q) (cons x (snd q))
+  nil := queue (cons x nil) (snd q);
+  _ := queue (fst q) (cons x (snd q))
 };
 
 def is_empty := \q case fst q of {
-  nil -> case snd q of { nil -> true; _ -> false };
-  _ -> false
+  nil := case snd q of { nil := true; _ := false };
+  _ := false
 };
 
 def empty := queue nil nil;

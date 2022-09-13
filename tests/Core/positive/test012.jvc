@@ -16,10 +16,10 @@ def gen := \n
     node3 (gen (n - 1)) (gen (n - 1)) (gen (n - 1));
 
 def preorder := \t case t of {
-  node1 c -> write 1 >> preorder c;
-  node2 l r -> write 2 >> preorder l >> preorder r;
-  node3 l m r -> write 3 >> preorder l >> preorder m >> preorder r;
-  leaf -> write 0;
+  node1 c := write 1 >> preorder c;
+  node2 l r := write 2 >> preorder l >> preorder r;
+  node3 l m r := write 3 >> preorder l >> preorder m >> preorder r;
+  leaf := write 0;
 };
 
 preorder (gen 3) >> write "\n" >>
