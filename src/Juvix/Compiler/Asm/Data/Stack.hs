@@ -21,7 +21,12 @@ instance Foldable Stack where
   foldr f x = foldr f x . toList
 
   toList :: Stack a -> [a]
-  toList = map snd . sortBy (\x y -> compare (fst x) (fst y)) . HashMap.toList . (^. stackValues)
+  toList =
+    reverse
+      . map snd
+      . sortBy (\x y -> compare (fst x) (fst y))
+      . HashMap.toList
+      . (^. stackValues)
 
   length :: Stack a -> Int
   length = (^. stackHeight)

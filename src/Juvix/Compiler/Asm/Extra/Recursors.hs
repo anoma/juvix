@@ -16,8 +16,8 @@ import Juvix.Compiler.Asm.Language.Type
 data RecursorSig r a = RecursorSig
   { _recursorInfoTable :: InfoTable,
     _recurseInstr :: Memory -> CmdInstr -> Sem r a,
-    _recurseBranch :: Memory -> CmdBranch -> a -> a -> Sem r a,
-    _recurseCase :: Memory -> CmdCase -> [a] -> Maybe a -> Sem r a
+    _recurseBranch :: Memory -> CmdBranch -> [a] -> [a] -> Sem r a,
+    _recurseCase :: Memory -> CmdCase -> [[a]] -> Maybe [a] -> Sem r a
   }
 
 makeLenses ''RecursorSig
@@ -28,9 +28,6 @@ recurse sig args = fmap snd . recurse' sig (mkMemory args)
 recurse' :: forall r a. Member (Error AsmError) r => RecursorSig r a -> Memory -> Code -> Sem r (Memory, [a])
 recurse' sig = go
   where
-    unimplemented :: forall b. b
-    unimplemented = error "not yet implemented"
-
     go :: Memory -> Code -> Sem r (Memory, [a])
     go mem = \case
       [] -> return (mem, [])
@@ -204,10 +201,43 @@ recurse' sig = go
         checkFunType ty = void $ unifyTypes' loc ty (mkTypeFun [TyDynamic] TyDynamic)
 
     goBranch :: Memory -> CmdBranch -> Sem r (Memory, a)
-    goBranch = unimplemented
+    goBranch mem cmd@CmdBranch {..} = do
+      (mem1, as1) <- go mem _cmdBranchTrue
+      (mem2, as2) <- go mem _cmdBranchFalse
+      a' <- (sig ^. recurseBranch) mem cmd as1 as2
+      mem' <- unifyMemory loc mem1 mem2
+      checkBranchInvariant loc mem mem'
+      return (mem', a')
+      where
+        loc = cmd ^. (cmdBranchInfo . commandInfoLocation)
 
     goCase :: Memory -> CmdCase -> Sem r (Memory, a)
-    goCase = unimplemented
+    goCase mem cmd@CmdCase {..} = do
+      rs <- mapM (go mem . (^. caseBranchCode)) _cmdCaseBranches
+      let mems = map fst rs
+      let ass = map snd rs
+      rd <- maybe (return Nothing) (fmap Just . go mem) _cmdCaseDefault
+      let md = fmap fst rd
+      let ad = fmap snd rd
+      a' <- (sig ^. recurseCase) mem cmd ass ad
+      mem' <- foldr (\m rm -> rm >>= unifyMemory loc m) (return mem) mems
+      mem'' <- maybe (return mem') (unifyMemory loc mem') md
+      checkBranchInvariant loc mem mem''
+      return (mem'', a')
+      where
+        loc = cmd ^. (cmdCaseInfo . commandInfoLocation)
+
+    checkBranchInvariant :: Maybe Location -> Memory -> Memory -> Sem r ()
+    checkBranchInvariant loc mem mem' = do
+      unless
+        ( length (mem' ^. memoryValueStack) == length (mem ^. memoryValueStack)
+            || length (mem' ^. memoryValueStack) == length (mem ^. memoryValueStack) + 1
+        )
+        $ throw
+        $ AsmError loc "wrong value stack height after branching (can increase by at most 1)"
+      unless (length (mem' ^. memoryTempStack) == length (mem ^. memoryTempStack)) $
+        throw $
+          AsmError loc "temporary stack height changed after branching"
 
     getValueType :: Maybe Location -> Memory -> Value -> Sem r Type
     getValueType loc mem = \case
