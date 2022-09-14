@@ -97,6 +97,10 @@ recurse' sig = go
                 throw $
                   AsmError loc "popping empty temporary stack"
               return $ popTempStack 1 mem
+            Trace ->
+              return mem
+            Failure ->
+              return mem
             AllocConstr tag -> do
               let ci = getConstrInfo (sig ^. recursorInfoTable) tag
               let n = ci ^. constructorArgsNum

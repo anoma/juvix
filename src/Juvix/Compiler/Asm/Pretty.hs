@@ -2,7 +2,6 @@ module Juvix.Compiler.Asm.Pretty
   ( module Juvix.Compiler.Asm.Pretty,
     module Juvix.Compiler.Asm.Pretty.Base,
     module Juvix.Compiler.Asm.Pretty.Options,
-    module Juvix.Data.PPOutput,
   )
 where
 

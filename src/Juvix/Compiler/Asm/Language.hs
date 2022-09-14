@@ -74,6 +74,12 @@ data Instruction
     -- stack. Used to implement Core.Let and Core.Case.
     PushTemp
   | PopTemp
+  | -- | Print a debug log of the object on top of the stack. Does not pop the
+    -- stack.
+    Trace
+  | -- | Interrupt execution with a runtime error printing the value on top of
+    -- the stack.
+    Failure
   | -- | Allocate constructor data with a given tag. The n arguments (the number n
     -- determined by the constant tag) are popped from the stack and stored at
     -- increasing offsets (stack[0]: field 0, stack[1]: field 1, ...,

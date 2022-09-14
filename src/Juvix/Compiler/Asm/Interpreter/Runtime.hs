@@ -1,6 +1,8 @@
 module Juvix.Compiler.Asm.Interpreter.Runtime where
 
 import Data.HashMap.Strict qualified as HashMap
+import Debug.Trace qualified as Debug
+import GHC.Base qualified as GHC
 import Juvix.Compiler.Asm.Data.Stack (Stack)
 import Juvix.Compiler.Asm.Data.Stack qualified as Stack
 import Juvix.Compiler.Asm.Language
@@ -118,8 +120,12 @@ data Closure = Closure
 
 -- | JuvixAsm runtime state
 data RuntimeState = RuntimeState
-  { _runtimeCallStack :: CallStack, -- global call stack
-    _runtimeFrame :: Frame -- current frame
+  { -- | global call stack
+    _runtimeCallStack :: CallStack,
+    -- | current frame
+    _runtimeFrame :: Frame,
+    -- | debug messages generated so far
+    _runtimeMessages :: [Text]
   }
 
 makeLenses ''CallStack
@@ -165,11 +171,21 @@ data Runtime m a where
   ReadTemp :: Offset -> Runtime m Val
   PushTempStack :: Val -> Runtime m ()
   PopTempStack :: Runtime m ()
+  LogMessage :: Text -> Runtime m ()
+  GetLogs :: Runtime m [Text]
+  RuntimeError :: Text -> Runtime m a
 
 makeSem ''Runtime
 
+-- | Throws a runtime error. TODO: print stacktrace
+throwRuntimeError :: RuntimeState -> Text -> a
+throwRuntimeError s msg =
+  let logs = reverse (s ^. runtimeMessages)
+   in map (\x -> Debug.trace (fromText x) ()) logs `GHC.seq`
+        error msg
+
 runRuntime :: forall r a. Sem (Runtime ': r) a -> Sem r (RuntimeState, a)
-runRuntime = runState (RuntimeState (CallStack []) emptyFrame) . interp
+runRuntime = runState (RuntimeState (CallStack []) emptyFrame []) . interp
   where
     interp :: Sem (Runtime ': r) a -> Sem (State RuntimeState ': r) a
     interp = reinterpret $ \case
@@ -185,7 +201,7 @@ runRuntime = runState (RuntimeState (CallStack []) emptyFrame) . interp
           h : t -> do
             modify' (over runtimeCallStack (set callStack t))
             return h
-          [] -> error "popping empty call stack"
+          [] -> throwRuntimeError s "popping empty call stack"
       PushValueStack val ->
         modify' (over runtimeFrame (over frameStack (over valueStack (val :))))
       PopValueStack -> do
@@ -194,12 +210,12 @@ runRuntime = runState (RuntimeState (CallStack []) emptyFrame) . interp
           v : vs -> do
             modify' (over runtimeFrame (over frameStack (set valueStack vs)))
             return v
-          [] -> error "popping empty value stack"
+          [] -> throwRuntimeError s "popping empty value stack"
       TopValueStack -> do
         s <- get
         case s ^. (runtimeFrame . frameStack . valueStack) of
           v : _ -> return v
-          [] -> error "accessing top of empty value stack"
+          [] -> throwRuntimeError s "accessing top of empty value stack"
       NullValueStack ->
         get >>= \s -> return $ null $ s ^. (runtimeFrame . frameStack . valueStack)
       ReplaceFrame frm ->
@@ -208,18 +224,32 @@ runRuntime = runState (RuntimeState (CallStack []) emptyFrame) . interp
         s <- get
         return $
           fromMaybe
-            (error "invalid argument area read")
+            (throwRuntimeError s "invalid argument area read")
             (HashMap.lookup off (s ^. (runtimeFrame . frameArgs . argumentArea)))
       ReadTemp off -> do
         s <- get
         return $
           fromMaybe
-            (error "invalid temporary stack read")
+            (throwRuntimeError s "invalid temporary stack read")
             (Stack.nthFromBottom off (s ^. (runtimeFrame . frameTemp . temporaryStack)))
       PushTempStack val ->
         modify' (over runtimeFrame (over frameTemp (over temporaryStack (Stack.push val))))
       PopTempStack ->
         modify' (over runtimeFrame (over frameTemp (over temporaryStack Stack.pop)))
+      LogMessage msg ->
+        modify' (over runtimeMessages (msg :))
+      GetLogs -> do
+        s <- get
+        return $ reverse (s ^. runtimeMessages)
+      RuntimeError msg -> do
+        s <- get
+        throwRuntimeError s msg
 
-evalRuntime :: forall r a. Sem (Runtime ': r) a -> Sem r a
-evalRuntime = fmap snd . runRuntime
+hEvalRuntime :: forall r a. Member (Embed IO) r => Handle -> Sem (Runtime ': r) a -> Sem r a
+hEvalRuntime h r = do
+  (s, a) <- runRuntime r
+  mapM_ (embed . hPutStrLn h) (reverse (s ^. runtimeMessages))
+  return a
+
+evalRuntime :: forall r a. Member (Embed IO) r => Sem (Runtime ': r) a -> Sem r a
+evalRuntime = hEvalRuntime stdin

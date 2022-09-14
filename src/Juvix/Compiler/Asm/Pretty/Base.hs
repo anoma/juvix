@@ -1,6 +1,5 @@
 module Juvix.Compiler.Asm.Pretty.Base
   ( module Juvix.Compiler.Asm.Pretty.Base,
-    module Juvix.Data.CodeAnn,
     module Juvix.Compiler.Asm.Pretty.Options,
   )
 where

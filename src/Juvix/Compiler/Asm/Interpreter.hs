@@ -6,13 +6,14 @@ import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Interpreter.Extra
 import Juvix.Compiler.Asm.Interpreter.Runtime
 import Juvix.Compiler.Asm.Language
+import Juvix.Compiler.Asm.Pretty
 
 -- | Interpret JuvixAsm code for a single function. The returned Val is the
 -- value on top of the value stack at exit, i.e., when executing a toplevel
--- Return. Throws a runtime error if at exit the value stack has more than one
+-- Return. Throws a runtime runtimeError if at exit the value stack has more than one
 -- element.
-runCode :: InfoTable -> Code -> Val
-runCode infoTable = run . evalRuntime . goToplevel
+runCode :: InfoTable -> Code -> IO Val
+runCode infoTable = runM . evalRuntime . goToplevel
   where
     goToplevel :: Member Runtime r => Code -> Sem r Val
     goToplevel code = do
@@ -33,20 +34,22 @@ runCode infoTable = run . evalRuntime . goToplevel
         case v of
           ValBool True -> goCode _cmdBranchTrue
           ValBool False -> goCode _cmdBranchFalse
-          _ -> error "branch on non-boolean"
+          _ -> runtimeError "branch on non-boolean"
         goCode cont
       Case (CmdCase {..}) -> do
         v <- topValueStack
         case v of
           ValConstr c -> branch (c ^. constrTag) _cmdCaseBranches _cmdCaseDefault
-          _ -> error "case on non-data"
+          _ -> runtimeError "case on non-data"
         goCode cont
         where
           branch :: Member Runtime r => Tag -> [CaseBranch] -> Maybe Code -> Sem r ()
           branch tag bs def = case bs of
             (CaseBranch {..}) : _ | _caseBranchTag == tag -> goCode _caseBranchCode
             _ : bs' -> branch tag bs' def
-            _ -> goCode $ fromMaybe (error "no matching branch") def
+            _ -> case def of
+              Just x -> goCode x
+              Nothing -> runtimeError "no matching branch"
 
     goInstr :: Member Runtime r => Instruction -> Code -> Sem r ()
     goInstr instr cont = case instr of
@@ -76,6 +79,12 @@ runCode infoTable = run . evalRuntime . goToplevel
         goCode cont
       PopTemp ->
         popTempStack >> goCode cont
+      Trace -> do
+        v <- topValueStack
+        logMessage (printVal v)
+      Failure -> do
+        v <- topValueStack
+        runtimeError $ mappend "failure: " (printVal v)
       AllocConstr tag -> do
         let ci = getConstrInfo infoTable tag
         args <- replicateM (ci ^. constructorArgsNum) popValueStack
@@ -83,7 +92,7 @@ runCode infoTable = run . evalRuntime . goToplevel
         goCode cont
       AllocClosure InstrAllocClosure {..} -> do
         unless (_allocClosureArgsNum > 0) $
-          error "invalid closure allocation: the number of supplied arguments must be greater than 0"
+          runtimeError "invalid closure allocation: the number of supplied arguments must be greater than 0"
         args <- replicateM _allocClosureArgsNum popValueStack
         pushValueStack (ValClosure (Closure _allocClosureFunSymbol args))
         goCode cont
@@ -92,17 +101,17 @@ runCode infoTable = run . evalRuntime . goToplevel
         case v of
           ValClosure cl -> do
             unless (_extendClosureArgsNum > 0) $
-              error "invalid closure extension: the number of supplied arguments must be greater than 0"
+              runtimeError "invalid closure extension: the number of supplied arguments must be greater than 0"
             extendClosure cl _extendClosureArgsNum
             goCode cont
-          _ -> error "invalid closure extension: expected closure on top of value stack"
+          _ -> runtimeError "invalid closure extension: expected closure on top of value stack"
       Call ic -> do
         (code, frm) <- getCallDetails ic
         pushCallStack cont
         replaceFrame frm
         goCode code
       TailCall ic -> do
-        unless (null cont) (error "invalid tail call")
+        unless (null cont) (runtimeError "invalid tail call")
         (code, frm) <- getCallDetails ic
         replaceFrame frm
         goCode code
@@ -111,7 +120,7 @@ runCode infoTable = run . evalRuntime . goToplevel
       TailCallClosures (InstrCallClosures {..}) ->
         callClosures True _callClosuresArgsNum cont
       Return -> do
-        unless (null cont) (error "invalid return")
+        unless (null cont) (runtimeError "invalid return")
         isToplevel <- fmap not hasCaller
         if
             | isToplevel -> return ()
@@ -122,17 +131,21 @@ runCode infoTable = run . evalRuntime . goToplevel
                 pushValueStack v
                 goCode (cont' ^. contCode)
 
-    goBinOp :: Member Runtime r => (Val -> Val -> Val) -> Sem r ()
-    goBinOp op = do
+    goBinOp' :: Member Runtime r => (Val -> Val -> Sem r Val) -> Sem r ()
+    goBinOp' op = do
       v1 <- popValueStack
       v2 <- popValueStack
-      pushValueStack (op v1 v2)
+      v <- op v1 v2
+      pushValueStack v
+
+    goBinOp :: Member Runtime r => (Val -> Val -> Val) -> Sem r ()
+    goBinOp op = goBinOp' (\x y -> return (op x y))
 
     goIntBinOp :: Member Runtime r => (Integer -> Integer -> Val) -> Sem r ()
-    goIntBinOp op = goBinOp $ \v1 v2 ->
+    goIntBinOp op = goBinOp' $ \v1 v2 ->
       case (v1, v2) of
-        (ValInteger i1, ValInteger i2) -> op i1 i2
-        _ -> error "invalid operation: expected two integers on value stack"
+        (ValInteger i1, ValInteger i2) -> return $ op i1 i2
+        _ -> runtimeError "invalid operation: expected two integers on value stack"
 
     getVal :: Member Runtime r => Value -> Sem r Val
     getVal = \case
@@ -154,8 +167,8 @@ runCode infoTable = run . evalRuntime . goToplevel
                 | cr ^. fieldOffset < length (ctr ^. constrArgs) ->
                     return $ (ctr ^. constrArgs) !! (cr ^. fieldOffset)
                 | otherwise ->
-                    error "invalid constructor field access"
-          _ -> error "invalid memory access: expected a constructor"
+                    runtimeError "invalid constructor field access"
+          _ -> runtimeError "invalid memory access: expected a constructor"
 
     popLastValueStack :: Member Runtime r => Sem r Val
     popLastValueStack = do
@@ -163,7 +176,7 @@ runCode infoTable = run . evalRuntime . goToplevel
       isNull <- nullValueStack
       unless
         isNull
-        (error "value stack not empty on function return")
+        (runtimeError "value stack not empty on function return")
       return v
 
     getCallDetails :: Member Runtime r => InstrCall -> Sem r (Code, Frame)
@@ -172,7 +185,7 @@ runCode infoTable = run . evalRuntime . goToplevel
         let fi = getFunInfo infoTable sym
         when
           (_callArgsNum /= fi ^. functionArgsNum)
-          (error "invalid indirect call: supplied arguments number not equal to expected arguments number")
+          (runtimeError "invalid indirect call: supplied arguments number not equal to expected arguments number")
         args <- replicateM (fi ^. functionArgsNum) popValueStack
         return (fi ^. functionCode, frameFromFunctionInfo fi args)
       CallClosure -> do
@@ -183,13 +196,13 @@ runCode infoTable = run . evalRuntime . goToplevel
             let n = length (cl ^. closureArgs)
             when
               (n >= fi ^. functionArgsNum)
-              (error "invalid closure: too many arguments")
+              (runtimeError "invalid closure: too many arguments")
             when
               (_callArgsNum /= fi ^. functionArgsNum - n)
-              (error "invalid indirect call: supplied arguments number not equal to expected arguments number")
+              (runtimeError "invalid indirect call: supplied arguments number not equal to expected arguments number")
             frm <- getCallFrame cl fi _callArgsNum
             return (fi ^. functionCode, frm)
-          _ -> error "invalid indirect call: expected closure on top of value stack"
+          _ -> runtimeError "invalid indirect call: expected closure on top of value stack"
 
     getCallFrame :: Member Runtime r => Closure -> FunctionInfo -> Int -> Sem r Frame
     getCallFrame cl fi argsNum = do
@@ -216,7 +229,7 @@ runCode infoTable = run . evalRuntime . goToplevel
           let n = fi ^. functionArgsNum - length (cl ^. closureArgs)
           when
             (n < 0)
-            (error "invalid closure: too many arguments")
+            (runtimeError "invalid closure: too many arguments")
           if
               | n > argsNum -> do
                   extendClosure cl argsNum
@@ -226,7 +239,7 @@ runCode infoTable = run . evalRuntime . goToplevel
               | n == argsNum -> do
                   frm <- getCallFrame cl fi n
                   unless isTail $ do
-                    unless (null cont) (error "invalid tail call")
+                    unless (null cont) (runtimeError "invalid tail call")
                     pushCallStack cont
                   replaceFrame frm
                   goCode (fi ^. functionCode)
@@ -236,4 +249,9 @@ runCode infoTable = run . evalRuntime . goToplevel
                   pushCallStack (instr : cont)
                   replaceFrame frm
                   goCode (fi ^. functionCode)
-        _ -> error "invalid indirect call: expected closure on top of value stack"
+        _ -> runtimeError "invalid indirect call: expected closure on top of value stack"
+
+    printVal :: Val -> Text
+    printVal = \case
+      ValString s -> s
+      v -> ppPrint infoTable v
