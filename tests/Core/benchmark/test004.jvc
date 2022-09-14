@@ -7,7 +7,7 @@ def force := \f f nil;
 
 def filter := \p \s \_
   case force s of {
-    cons h t ->
+    cons h t :=
       if p h then
         cons h (filter p t)
       else
@@ -16,7 +16,7 @@ def filter := \p \s \_
 
 def nth := \n \s
   case force s of {
-    cons h t -> if n = 1 then h else nth (n - 1) t
+    cons h t := if n = 1 then h else nth (n - 1) t
   };
 
 def numbers := \n \_ cons n (numbers (n + 1));
@@ -24,7 +24,7 @@ def numbers := \n \_ cons n (numbers (n + 1));
 def indivisible := \n \x if x % n = 0 then false else true;
 def eratostenes := \s \_
   case force s of {
-    cons n t ->
+    cons n t :=
       cons n (eratostenes (filter (indivisible n) t))
   };
 def primes := eratostenes (numbers 2);
