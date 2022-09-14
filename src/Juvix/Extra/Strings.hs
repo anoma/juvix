@@ -200,6 +200,9 @@ semicolon = ";"
 underscore :: IsString s => s
 underscore = "_"
 
+at_ :: IsString s => s
+at_ = "@"
+
 colon :: IsString s => s
 colon = ":"
 
@@ -337,6 +340,12 @@ case_ = "case"
 
 of_ :: IsString s => s
 of_ = "of"
+
+match_ :: IsString s => s
+match_ = "match"
+
+with_ :: IsString s => s
+with_ = "with"
 
 juvixFunctionT :: IsString s => s
 juvixFunctionT = "juvix_function_t"

@@ -32,6 +32,20 @@ type LetRec = LetRec' Info Node
 
 type Case = Case' Info Info Node
 
+type CaseBranch = CaseBranch' Info Node
+
+type Match = Match' Info Node
+
+type MatchBranch = MatchBranch' Info Node
+
+type PatternWildcard = PatternWildcard' Info
+
+type PatternBinder = PatternBinder' Info
+
+type PatternConstr = PatternConstr' Info
+
+type Pattern = Pattern' Info
+
 type Pi = Pi' Info Node
 
 type Univ = Univ' Info
@@ -41,8 +55,6 @@ type TypeConstr = TypeConstr' Info Node
 type TypePrim = TypePrim' Info
 
 type Dynamic = Dynamic' Info
-
-type CaseBranch = CaseBranch' Info Node
 
 {---------------------------------------------------------------------------------}
 
@@ -61,6 +73,7 @@ data Node
   | NLet {-# UNPACK #-} !Let
   | NRec {-# UNPACK #-} !LetRec
   | NCase {-# UNPACK #-} !Case
+  | NMatch {-# UNPACK #-} !Match
   | NPi {-# UNPACK #-} !Pi
   | NUniv {-# UNPACK #-} !Univ
   | NTyp {-# UNPACK #-} !TypeConstr
@@ -105,6 +118,7 @@ instance HasAtomicity Node where
     NLet x -> atomicity x
     NRec x -> atomicity x
     NCase x -> atomicity x
+    NMatch x -> atomicity x
     NPi x -> atomicity x
     NUniv x -> atomicity x
     NTyp x -> atomicity x

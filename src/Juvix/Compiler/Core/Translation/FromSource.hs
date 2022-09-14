@@ -13,7 +13,6 @@ import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.BinderInfo as BinderInfo
-import Juvix.Compiler.Core.Info.BranchInfo as BranchInfo
 import Juvix.Compiler.Core.Info.LocationInfo as LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo as NameInfo
 import Juvix.Compiler.Core.Info.TypeInfo as TypeInfo
@@ -26,7 +25,7 @@ import Text.Megaparsec qualified as P
 parseText :: InfoTable -> Text -> Either ParserError (InfoTable, Maybe Node)
 parseText = runParser "" ""
 
--- Note: only new symbols and tags that are not in the InfoTable already will be
+-- | Note: only new symbols and tags that are not in the InfoTable already will be
 -- generated during parsing, but nameIds are generated starting from 0
 -- regardless of the names already in the InfoTable
 runParser :: FilePath -> FilePath -> InfoTable -> Text -> Either ParserError (InfoTable, Maybe Node)
@@ -480,6 +479,7 @@ atom varsNum vars =
     <|> exprLetrecOne varsNum vars
     <|> exprLet varsNum vars
     <|> exprCase varsNum vars
+    <|> exprMatch varsNum vars
     <|> exprIf varsNum vars
     <|> parens (expr varsNum vars)
     <|> braces (expr varsNum vars)
@@ -544,7 +544,7 @@ exprLambda ::
   HashMap Text Index ->
   ParsecS r Node
 exprLambda varsNum vars = do
-  kwLambda
+  lambda
   name <- parseLocalName
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- expr (varsNum + 1) vars'
@@ -672,25 +672,25 @@ caseBranchP ::
   HashMap Text Index ->
   ParsecS r (Either CaseBranch Node)
 caseBranchP varsNum vars =
-  (defaultBranch varsNum vars <&> Right)
-    <|> (matchingBranch varsNum vars <&> Left)
+  (caseDefaultBranch varsNum vars <&> Right)
+    <|> (caseMatchingBranch varsNum vars <&> Left)
 
-defaultBranch ::
+caseDefaultBranch ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Index ->
   ParsecS r Node
-defaultBranch varsNum vars = do
+caseDefaultBranch varsNum vars = do
   kwWildcard
   kwAssign
   expr varsNum vars
 
-matchingBranch ::
+caseMatchingBranch ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Index ->
   ParsecS r CaseBranch
-matchingBranch varsNum vars = do
+caseMatchingBranch varsNum vars = do
   off <- P.getOffset
   txt <- identifier
   r <- lift (getIdent txt)
@@ -714,7 +714,7 @@ matchingBranch varsNum vars = do
                 (vars, varsNum)
                 ns
       br <- expr (varsNum + bindersNum) vars'
-      let info = setInfoTagName (ci ^. constructorName) $ setInfoBinders (map (Info.singleton . NameInfo) ns) Info.empty
+      let info = setInfoName (ci ^. constructorName) $ setInfoBinders (map (Info.singleton . NameInfo) ns) Info.empty
       return $ CaseBranch info tag bindersNum br
     Nothing ->
       parseFailure off ("undeclared identifier: " ++ fromText txt)
@@ -732,3 +732,93 @@ exprIf varsNum vars = do
   kwElse
   br2 <- expr varsNum vars
   return $ mkIf Info.empty value br1 br2
+
+exprMatch ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Index ->
+  HashMap Text Index ->
+  ParsecS r Node
+exprMatch varsNum vars = do
+  kwMatch
+  values <- P.sepBy (expr varsNum vars) kwComma
+  kwWith
+  braces (exprMatch' values varsNum vars)
+    <|> exprMatch' values varsNum vars
+
+exprMatch' ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  [Node] ->
+  Index ->
+  HashMap Text Index ->
+  ParsecS r Node
+exprMatch' values varsNum vars = do
+  bs <- P.sepEndBy (matchBranch (length values) varsNum vars) kwSemicolon
+  return $ mkMatch' (fromList values) bs
+
+matchBranch ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Int ->
+  Index ->
+  HashMap Text Index ->
+  ParsecS r MatchBranch
+matchBranch patsNum varsNum vars = do
+  off <- P.getOffset
+  pats <- P.sepBy branchPattern kwComma
+  kwAssign
+  unless (length pats == patsNum) $
+    parseFailure off "wrong number of patterns"
+  let pis = concatMap (reverse . getBinderPatternInfos) pats
+  let (vars', varsNum') =
+        foldl'
+          ( \(vs, k) name ->
+              (HashMap.insert (name ^. nameText) k vs, k + 1)
+          )
+          (vars, varsNum)
+          (map (fromJust . getInfoName) pis)
+  br <- expr varsNum' vars'
+  return $ MatchBranch Info.empty (fromList pats) br
+
+branchPattern ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  ParsecS r Pattern
+branchPattern =
+  wildcardPattern
+    <|> binderOrConstrPattern True
+    <|> parens branchPattern
+
+wildcardPattern :: ParsecS r Pattern
+wildcardPattern = do
+  kwWildcard
+  return $ PatWildcard (PatternWildcard Info.empty)
+
+binderOrConstrPattern ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Bool ->
+  ParsecS r Pattern
+binderOrConstrPattern parseArgs = do
+  off <- P.getOffset
+  (txt, i) <- identifierL
+  r <- lift (getIdent txt)
+  case r of
+    Just (IdentTag tag) -> do
+      ps <- if parseArgs then P.many branchPattern else return []
+      ci <- lift $ getConstructorInfo tag
+      when
+        (ci ^. constructorArgsNum /= length ps)
+        (parseFailure off "wrong number of constructor arguments")
+      let info = setInfoName (ci ^. constructorName) Info.empty
+      return $ PatConstr (PatternConstr info tag ps)
+    _ -> do
+      n <- lift $ freshName KNameLocal txt i
+      mp <- optional binderPattern
+      let pat = fromMaybe (PatWildcard (PatternWildcard Info.empty)) mp
+      return $ PatBinder (PatternBinder (setInfoName n Info.empty) pat)
+
+binderPattern ::
+  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  ParsecS r Pattern
+binderPattern = do
+  symbolAt
+  wildcardPattern
+    <|> binderOrConstrPattern False
+    <|> parens branchPattern

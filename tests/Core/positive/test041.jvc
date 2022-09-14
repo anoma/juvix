@@ -1,0 +1,49 @@
+-- match
+
+constr cons 2;
+constr nil 0;
+
+def lgen := \n if n = 0 then nil else cons n (lgen (n - 1));
+
+def sum2 := \x {
+  match x with {
+    cons x y@(cons z _) := cons (x + z) (sum2 y);
+    _ := x
+  }
+};
+
+constr leaf 0;
+constr node 2;
+
+def gen := \n if n <= 0 then leaf else node (gen (n - 2)) (gen (n - 1));
+
+def g;
+
+def f := \t match t with {
+  leaf := 1;
+  node l r :=
+    match g l, g r with {
+      leaf, leaf := 0 - 6;
+      node l r, leaf := (f l + f r) * 2;
+      node l1 r1, node l2 r2 := (f l1 + f r1) * (f l2 + f r2);
+      _, node l r := (f l + f r) * (0 - 3)
+    }
+};
+
+def g := \t {
+  match t with {
+    leaf := t;
+    node (node _ _) r := r;
+    node l r := node r l;
+  }
+};
+
+def writeLn := \x write x >> write "\n";
+
+writeLn (sum2 (lgen 5)) >>
+writeLn (f (gen 10)) >>
+writeLn (f (gen 15)) >>
+writeLn (f (gen 16)) >>
+writeLn (f (gen 17)) >>
+writeLn (f (gen 18)) >>
+writeLn (f (gen 20))

@@ -229,5 +229,10 @@ tests =
       "LetRec"
       "."
       "test040.jvc"
-      "out/test040.out"
+      "out/test040.out",
+    PosTest
+      "Match with complex patterns"
+      "."
+      "test041.jvc"
+      "out/test041.out"
   ]

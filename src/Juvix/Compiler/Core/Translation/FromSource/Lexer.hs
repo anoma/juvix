@@ -37,8 +37,8 @@ string = lexemeInterval string'
 keyword :: Text -> ParsecS r ()
 keyword = keyword' space
 
-rawKeyword :: Text -> ParsecS r ()
-rawKeyword = rawKeyword' space
+keywordSymbol :: Text -> ParsecS r ()
+keywordSymbol = keywordSymbol' space
 
 identifier :: ParsecS r Text
 identifier = lexeme bareIdentifier
@@ -53,20 +53,21 @@ bareIdentifier = rawIdentifier allKeywords
 allKeywords :: [ParsecS r ()]
 allKeywords =
   [ kwAssign,
-    kwColon,
-    kwLambda,
     kwLet,
     kwLetRec,
     kwIn,
     kwConstr,
     kwCase,
     kwOf,
+    kwMatch,
+    kwWith,
     kwIf,
     kwThen,
     kwElse,
     kwDef,
     kwRightArrow,
     kwSemicolon,
+    kwComma,
     kwWildcard,
     kwPlus,
     kwMinus,
@@ -83,6 +84,12 @@ allKeywords =
     kwTrace,
     kwFail
   ]
+
+symbolAt :: ParsecS r ()
+symbolAt = symbol Str.at_
+
+lambda :: ParsecS r ()
+lambda = symbol Str.lambdaUnicode <|> symbol Str.lambdaAscii
 
 lbrace :: ParsecS r ()
 lbrace = symbol "{"
@@ -105,15 +112,6 @@ braces = between (symbol "{") (symbol "}")
 kwAssign :: ParsecS r ()
 kwAssign = keyword Str.assignUnicode <|> keyword Str.assignAscii
 
-kwColon :: ParsecS r ()
-kwColon = keyword Str.colon
-
-kwInductive :: ParsecS r ()
-kwInductive = keyword Str.inductive
-
-kwLambda :: ParsecS r ()
-kwLambda = rawKeyword Str.lambdaUnicode <|> rawKeyword Str.lambdaAscii
-
 kwLet :: ParsecS r ()
 kwLet = keyword Str.let_
 
@@ -132,6 +130,12 @@ kwCase = keyword Str.case_
 kwOf :: ParsecS r ()
 kwOf = keyword Str.of_
 
+kwMatch :: ParsecS r ()
+kwMatch = keyword Str.match_
+
+kwWith :: ParsecS r ()
+kwWith = keyword Str.with_
+
 kwIf :: ParsecS r ()
 kwIf = keyword Str.if_
 
@@ -144,14 +148,14 @@ kwElse = keyword Str.else_
 kwDef :: ParsecS r ()
 kwDef = keyword Str.def
 
-kwMapsTo :: ParsecS r ()
-kwMapsTo = keyword Str.mapstoUnicode <|> keyword Str.mapstoAscii
-
 kwRightArrow :: ParsecS r ()
 kwRightArrow = keyword Str.toUnicode <|> keyword Str.toAscii
 
 kwSemicolon :: ParsecS r ()
 kwSemicolon = keyword Str.semicolon
+
+kwComma :: ParsecS r ()
+kwComma = keywordSymbol Str.comma
 
 kwWildcard :: ParsecS r ()
 kwWildcard = keyword Str.underscore

@@ -79,10 +79,10 @@ keywordL' spc kw = do
     spc
     return i
 
-rawKeyword' :: ParsecS r () -> Text -> ParsecS r ()
-rawKeyword' spc kw = do
+keywordSymbol' :: ParsecS r () -> Text -> ParsecS r ()
+keywordSymbol' spc kw = do
   P.try $ do
-    void (P.chunk kw)
+    void $ P.chunk kw
     spc
 
 rawIdentifier :: [ParsecS r ()] -> ParsecS r Text
@@ -100,7 +100,7 @@ delimiterSymbols :: [Char]
 delimiterSymbols = ","
 
 reservedSymbols :: [Char]
-reservedSymbols = "\";(){}[].≔λ\\"
+reservedSymbols = "@\";(){}[].≔λ\\"
 
 validFirstChar :: Char -> Bool
 validFirstChar c = not (isNumber c || isSpace c || (c `elem` reservedSymbols))

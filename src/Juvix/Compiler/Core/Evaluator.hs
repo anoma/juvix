@@ -74,6 +74,9 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
         case eval' env v of
           NCtr (Constr _ tag args) -> branch n env args tag def bs
           v' -> evalError "matching on non-data" (substEnv env (mkCase i v' bs def))
+      NMatch (Match _ vs bs) ->
+        let !vs' = map' (eval' env) (toList vs)
+         in match n env vs' bs
       NPi {} -> substEnv env n
       NUniv {} -> n
       NTyp (TypeConstr i sym args) -> mkTypeConstr i sym (map' (eval' env) args)
@@ -88,6 +91,35 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       [] -> case def of
         Just b -> eval' env b
         Nothing -> evalError "no matching case branch" (substEnv env n)
+
+    match :: Node -> Env -> [Node] -> [MatchBranch] -> Node
+    match n env vs = \case
+      br : brs ->
+        case matchPatterns [] vs (toList (br ^. matchBranchPatterns)) of
+          Just args -> eval' (args ++ env) (br ^. matchBranchBody)
+          Nothing -> match n env vs brs
+        where
+          matchPatterns :: [Node] -> [Node] -> [Pattern] -> Maybe [Node]
+          matchPatterns acc (v : vs') (p : ps') =
+            case patmatch acc v p of
+              Just acc' -> matchPatterns acc' vs' ps'
+              Nothing -> Nothing
+          matchPatterns acc [] [] =
+            Just acc
+          matchPatterns _ _ _ =
+            evalError "the number of patterns doesn't match the number of arguments" (substEnv env n)
+
+          patmatch :: [Node] -> Node -> Pattern -> Maybe [Node]
+          patmatch acc _ PatWildcard {} =
+            Just acc
+          patmatch acc v (PatBinder PatternBinder {..}) =
+            patmatch (v : acc) v _patternBinderPattern
+          patmatch acc (NCtr (Constr _ tag args)) (PatConstr PatternConstr {..})
+            | tag == _patternConstrTag =
+                matchPatterns acc args _patternConstrArgs
+          patmatch _ _ _ = Nothing
+      [] ->
+        evalError "no matching pattern" (substEnv env n)
 
     applyBuiltin :: Node -> Env -> BuiltinOp -> [Node] -> Node
     applyBuiltin _ env OpIntAdd [l, r] = nodeFromInteger (integerFromNode (eval' env l) + integerFromNode (eval' env r))

@@ -11,7 +11,6 @@ import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.BinderInfo
-import Juvix.Compiler.Core.Info.BranchInfo as BranchInfo
 import Juvix.Compiler.Core.Info.NameInfo as NameInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Stripped qualified as Stripped
@@ -138,8 +137,8 @@ ppCodeLet' name lt = do
 
 ppCodeCase' :: (PrettyCode a, Member (Reader Options) r) => [[Maybe Name]] -> [Maybe Name] -> Case' i bi a -> Sem r (Doc Ann)
 ppCodeCase' branchBinderNames branchTagNames Case {..} = do
-  let branchTags = map (\(CaseBranch _ tag _ _) -> tag) _caseBranches
-  let branchBodies = map (\(CaseBranch _ _ _ b) -> b) _caseBranches
+  let branchTags = map (^. caseBranchTag) _caseBranches
+  let branchBodies = map (^. caseBranchBody) _caseBranches
   bns <- mapM (mapM (maybe (return kwQuestion) ppCode)) branchBinderNames
   cns <- zipWithM (\tag -> maybe (ppCode tag) ppCode) branchTags branchTagNames
   v <- ppCode _caseValue
@@ -152,6 +151,37 @@ ppCodeCase' branchBinderNames branchTagNames Case {..} = do
       Nothing -> return bs'
   let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs''
   return $ kwCase <+> v <+> kwOf <+> bss
+
+instance PrettyCode PatternWildcard where
+  ppCode _ = return kwWildcard
+
+instance PrettyCode PatternBinder where
+  ppCode PatternBinder {..} = do
+    n <- case getInfoName _patternBinderInfo of
+      Just name -> ppCode name
+      Nothing -> return kwQuestion
+    case _patternBinderPattern of
+      PatWildcard {} -> return n
+      _ -> do
+        pat <- ppRightExpression appFixity _patternBinderPattern
+        return $ n <> kwAt <> pat
+
+instance PrettyCode PatternConstr where
+  ppCode PatternConstr {..} = do
+    n <- maybe (ppCode _patternConstrTag) ppCode (getInfoName _patternConstrInfo)
+    args <- mapM (ppRightExpression appFixity) _patternConstrArgs
+    return $ foldl' (<+>) n args
+
+instance PrettyCode Pattern where
+  ppCode = \case
+    PatWildcard x -> ppCode x
+    PatBinder x -> ppCode x
+    PatConstr x -> ppCode x
+
+ppPatterns :: Member (Reader Options) r => NonEmpty Pattern -> Sem r (Doc Ann)
+ppPatterns pats = do
+  ps' <- mapM ppCode pats
+  return $ hsep (punctuate comma (toList ps'))
 
 instance PrettyCode Node where
   ppCode :: forall r. Member (Reader Options) r => Node -> Sem r (Doc Ann)
@@ -206,9 +236,17 @@ instance PrettyCode Node where
             Just name -> ppCode name
             Nothing -> return kwQuestion
     NCase x@Case {..} ->
-      let branchBinderNames = map (\(CaseBranch bi _ k _) -> map getInfoName (getInfoBinders k bi)) _caseBranches
-          branchTagNames = map (\(CaseBranch bi _ _ _) -> getInfoTagName bi) _caseBranches
+      let branchBinderNames = map (\(CaseBranch {..}) -> map getInfoName (getInfoBinders _caseBranchBindersNum _caseBranchInfo)) _caseBranches
+          branchTagNames = map (\(CaseBranch {..}) -> getInfoName _caseBranchInfo) _caseBranches
        in ppCodeCase' branchBinderNames branchTagNames x
+    NMatch Match {..} -> do
+      let branchPatterns = map (^. matchBranchPatterns) _matchBranches
+      let branchBodies = map (^. matchBranchBody) _matchBranches
+      pats <- mapM ppPatterns branchPatterns
+      vs <- mapM ppCode _matchValues
+      bs <- sequence $ zipWithExact (\ps br -> ppCode br >>= \br' -> return $ ps <+> kwMapsto <+> br') pats branchBodies
+      let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs
+      return $ kwMatch <+> hsep (punctuate comma (toList vs)) <+> kwWith <+> bss
     NPi Pi {..} ->
       case getInfoName $ getInfoBinder _piInfo of
         Just name -> do
@@ -250,8 +288,8 @@ instance PrettyCode Stripped.Node where
       let name = x ^. (letInfo . Stripped.letInfoBinderName)
        in ppCodeLet' name x
     Stripped.NCase x@Stripped.Case {..} ->
-      let branchBinderNames = map (\(Stripped.CaseBranch bi _ _ _) -> bi ^. Stripped.caseBranchInfoBinderNames) _caseBranches
-          branchTagNames = map (\(Stripped.CaseBranch bi _ _ _) -> bi ^. Stripped.caseBranchInfoConstrName) _caseBranches
+      let branchBinderNames = map (^. (caseBranchInfo . Stripped.caseBranchInfoBinderNames)) _caseBranches
+          branchTagNames = map (^. (caseBranchInfo . Stripped.caseBranchInfoConstrName)) _caseBranches
        in ppCodeCase' branchBinderNames branchTagNames x
 
 instance PrettyCode InfoTable where
@@ -333,6 +371,9 @@ ppLRExpression associates fixlr e =
 {--------------------------------------------------------------------------------}
 {- keywords -}
 
+kwAt :: Doc Ann
+kwAt = delimiter "@"
+
 kwSquareL :: Doc Ann
 kwSquareL = delimiter "["
 
@@ -380,6 +421,12 @@ kwCase = keyword Str.case_
 
 kwOf :: Doc Ann
 kwOf = keyword Str.of_
+
+kwMatch :: Doc Ann
+kwMatch = keyword Str.match_
+
+kwWith :: Doc Ann
+kwWith = keyword Str.with_
 
 kwDefault :: Doc Ann
 kwDefault = keyword Str.underscore
