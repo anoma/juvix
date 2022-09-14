@@ -204,7 +204,7 @@ kwLet :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwLet = keyword Str.let_
 
 kwMapsTo :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
-kwMapsTo = keywordUnicode  Str.mapstoAscii Str.mapstoUnicode
+kwMapsTo = keywordUnicode Str.mapstoAscii Str.mapstoUnicode
 
 kwModule :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwModule = keyword Str.module_

@@ -292,17 +292,18 @@ import_ = do
 --------------------------------------------------------------------------------
 
 expressionAtom :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (ExpressionAtom 'Parsed)
-expressionAtom = P.label "<expression>" $
-  AtomLiteral <$> P.try literal
-    <|> (AtomIdentifier <$> name)
-    <|> (AtomUniverse <$> universe)
-    <|> (AtomLambda <$> lambda)
-    <|> (AtomFunction <$> function)
-    <|> (AtomLetBlock <$> letBlock)
-    <|> (AtomFunArrow <$ kwRightArrow)
-    <|> (AtomHole <$> hole)
-    <|> parens (AtomParens <$> parseExpressionAtoms)
-    <|> braces (AtomBraces <$> withLoc parseExpressionAtoms)
+expressionAtom =
+  P.label "<expression>" $
+    AtomLiteral <$> P.try literal
+      <|> (AtomIdentifier <$> name)
+      <|> (AtomUniverse <$> universe)
+      <|> (AtomLambda <$> lambda)
+      <|> (AtomFunction <$> function)
+      <|> (AtomLetBlock <$> letBlock)
+      <|> (AtomFunArrow <$ kwRightArrow)
+      <|> (AtomHole <$> hole)
+      <|> parens (AtomParens <$> parseExpressionAtoms)
+      <|> braces (AtomBraces <$> withLoc parseExpressionAtoms)
 
 parseExpressionAtoms ::
   Members '[Reader ParserParams, InfoTableBuilder, JudocStash, NameIdGen] r =>
@@ -519,11 +520,12 @@ wildcard = Wildcard . snd <$> interval kwWildcard
 --------------------------------------------------------------------------------
 
 patternAtom :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (PatternAtom 'Parsed)
-patternAtom = P.label "<pattern>" $
-  PatternAtomIden <$> name
-    <|> PatternAtomWildcard <$> wildcard
-    <|> (PatternAtomParens <$> parens parsePatternAtoms)
-    <|> (PatternAtomBraces <$> braces parsePatternAtoms)
+patternAtom =
+  P.label "<pattern>" $
+    PatternAtomIden <$> name
+      <|> PatternAtomWildcard <$> wildcard
+      <|> (PatternAtomParens <$> parens parsePatternAtoms)
+      <|> (PatternAtomBraces <$> braces parsePatternAtoms)
 
 parsePatternAtoms :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (PatternAtoms 'Parsed)
 parsePatternAtoms = do
