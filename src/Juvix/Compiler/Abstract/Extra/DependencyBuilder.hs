@@ -109,10 +109,10 @@ goPattern n p = case p ^. patternArgPattern of
   PatternEmpty -> return ()
   PatternConstructorApp a -> goApp a
   where
-  goApp :: ConstructorApp -> Sem r ()
-  goApp (ConstructorApp ctr ps) = do
-    addEdge n (ctr ^. constructorRefName)
-    mapM_ (goPattern n) ps
+    goApp :: ConstructorApp -> Sem r ()
+    goApp (ConstructorApp ctr ps) = do
+      addEdge n (ctr ^. constructorRefName)
+      mapM_ (goPattern n) ps
 
 goExpression :: forall r. Member (State DependencyGraph) r => Name -> Expression -> Sem r ()
 goExpression p e = case e of
