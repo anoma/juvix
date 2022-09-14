@@ -36,7 +36,7 @@ runCode infoTable = run . evalRuntime . goToplevel
           _ -> error "branch on non-boolean"
         goCode cont
       Case (CmdCase {..}) -> do
-        v <- popValueStack
+        v <- topValueStack
         case v of
           ValConstr c -> branch (c ^. constrTag) _cmdCaseBranches _cmdCaseDefault
           _ -> error "case on non-data"
