@@ -148,9 +148,6 @@ kwElse = keyword Str.else_
 kwDef :: ParsecS r ()
 kwDef = keyword Str.def
 
-kwMapsTo :: ParsecS r ()
-kwMapsTo = keyword Str.mapstoUnicode <|> keyword Str.mapstoAscii
-
 kwRightArrow :: ParsecS r ()
 kwRightArrow = keyword Str.toUnicode <|> keyword Str.toAscii
 

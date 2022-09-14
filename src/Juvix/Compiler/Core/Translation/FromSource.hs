@@ -764,7 +764,7 @@ matchBranch ::
 matchBranch patsNum varsNum vars = do
   off <- P.getOffset
   pats <- P.sepBy branchPattern kwComma
-  kwMapsTo
+  kwAssign
   unless (length pats == patsNum) $
     parseFailure off "wrong number of patterns"
   let pis = concatMap (reverse . getBinderPatternInfos) pats
