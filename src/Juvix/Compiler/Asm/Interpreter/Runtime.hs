@@ -132,6 +132,26 @@ makeLenses ''Constr
 makeLenses ''Closure
 makeLenses ''RuntimeState
 
+instance HasAtomicity Constr where
+  atomicity Constr {..} =
+    if
+        | null _constrArgs -> Atom
+        | otherwise -> Aggregate appFixity
+
+instance HasAtomicity Closure where
+  atomicity Closure {..} =
+    if
+        | null _closureArgs -> Atom
+        | otherwise -> Aggregate appFixity
+
+instance HasAtomicity Val where
+  atomicity = \case
+    ValInteger {} -> Atom
+    ValBool {} -> Atom
+    ValString {} -> Atom
+    ValConstr c -> atomicity c
+    ValClosure cl -> atomicity cl
+
 data Runtime m a where
   HasCaller :: Runtime m Bool -- is the call stack non-empty?
   PushCallStack :: Code -> Runtime m ()
