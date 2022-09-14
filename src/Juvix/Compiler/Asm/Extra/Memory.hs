@@ -93,10 +93,28 @@ getMemValueType val mem = case val of
       _ ->
         Nothing
 
+getValueType' :: Member (Error AsmError) r => Maybe Location -> Memory -> Value -> Sem r Type
+getValueType' loc mem = \case
+  ConstInt _ -> return mkInteger
+  ConstBool _ -> return mkBool
+  ConstString _ -> return TyString
+  Ref val -> case getMemValueType val mem of
+    Just ty -> return ty
+    Nothing -> throw $ AsmError loc "invalid memory reference"
+
+getValueType :: Memory -> Value -> Maybe Type
+getValueType mem val =
+  case run (runError ty0) of
+    Left _ -> Nothing
+    Right ty -> Just ty
+  where
+    ty0 :: Sem '[Error AsmError] Type
+    ty0 = getValueType' Nothing mem val
+
 -- | Check if the values on top of the value stack have the given types (the
 -- first element of the list corresponds to the top of the stack)
-checkValueStack :: Member (Error AsmError) r => Maybe Location -> [Type] -> Memory -> Sem r ()
-checkValueStack loc tys mem = do
+checkValueStack' :: Member (Error AsmError) r => Maybe Location -> [Type] -> Memory -> Sem r ()
+checkValueStack' loc tys mem = do
   unless (length (mem ^. memoryValueStack) >= length tys) $
     throw $
       AsmError
@@ -118,9 +136,8 @@ checkValueStack loc tys mem = do
     )
     (zip tys [0 ..])
 
--- | Unify two memories.
-unifyMemory :: Member (Error AsmError) r => Maybe Location -> Memory -> Memory -> Sem r Memory
-unifyMemory loc mem1 mem2 = do
+unifyMemory' :: Member (Error AsmError) r => Maybe Location -> Memory -> Memory -> Sem r Memory
+unifyMemory' loc mem1 mem2 = do
   unless (length (mem1 ^. memoryValueStack) == length (mem2 ^. memoryValueStack)) $
     throw $
       AsmError loc "value stack height mismatch"

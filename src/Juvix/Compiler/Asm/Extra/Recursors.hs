@@ -80,7 +80,7 @@ recurse' sig = go
             ValEq ->
               fixMemBinOp mem TyDynamic TyDynamic mkBool
             Push val -> do
-              ty <- getValueType loc mem val
+              ty <- getValueType' loc mem val
               return (pushValueStack ty mem)
             Pop -> do
               when (null (mem ^. memoryValueStack)) $
@@ -101,7 +101,7 @@ recurse' sig = go
               let ci = getConstrInfo (sig ^. recursorInfoTable) tag
               let n = ci ^. constructorArgsNum
               let tyargs = typeArgs (ci ^. constructorType)
-              checkValueStack loc tyargs mem
+              checkValueStack' loc tyargs mem
               tys <-
                 zipWithM
                   (\ty idx -> unifyTypes' loc ty (topValueStack' idx mem))
@@ -113,7 +113,7 @@ recurse' sig = go
             AllocClosure InstrAllocClosure {..} -> do
               let fi = getFunInfo (sig ^. recursorInfoTable) _allocClosureFunSymbol
               let (tyargs, tgt) = unfoldType (fi ^. functionType)
-              checkValueStack loc (take _allocClosureArgsNum tyargs) mem
+              checkValueStack' loc (take _allocClosureArgsNum tyargs) mem
               return $
                 pushValueStack (mkTypeFun (drop _allocClosureArgsNum tyargs) tgt) $
                   popValueStack _allocClosureArgsNum mem
@@ -135,7 +135,7 @@ recurse' sig = go
 
         fixMemBinOp :: Memory -> Type -> Type -> Type -> Sem r Memory
         fixMemBinOp mem ty0 ty1 rty = do
-          checkValueStack loc [ty0, ty1] mem
+          checkValueStack' loc [ty0, ty1] mem
           return $ pushValueStack rty (popValueStack 2 mem)
 
         fixMemExtendClosure :: Memory -> InstrExtendClosure -> Sem r Memory
@@ -205,7 +205,7 @@ recurse' sig = go
       (mem1, as1) <- go mem _cmdBranchTrue
       (mem2, as2) <- go mem _cmdBranchFalse
       a' <- (sig ^. recurseBranch) mem cmd as1 as2
-      mem' <- unifyMemory loc mem1 mem2
+      mem' <- unifyMemory' loc mem1 mem2
       checkBranchInvariant loc mem mem'
       return (mem', a')
       where
@@ -220,8 +220,8 @@ recurse' sig = go
       let md = fmap fst rd
       let ad = fmap snd rd
       a' <- (sig ^. recurseCase) mem cmd ass ad
-      mem' <- foldr (\m rm -> rm >>= unifyMemory loc m) (return mem) mems
-      mem'' <- maybe (return mem') (unifyMemory loc mem') md
+      mem' <- foldr (\m rm -> rm >>= unifyMemory' loc m) (return mem) mems
+      mem'' <- maybe (return mem') (unifyMemory' loc mem') md
       checkBranchInvariant loc mem mem''
       return (mem'', a')
       where
@@ -238,12 +238,3 @@ recurse' sig = go
       unless (length (mem' ^. memoryTempStack) == length (mem ^. memoryTempStack)) $
         throw $
           AsmError loc "temporary stack height changed after branching"
-
-    getValueType :: Maybe Location -> Memory -> Value -> Sem r Type
-    getValueType loc mem = \case
-      ConstInt _ -> return mkInteger
-      ConstBool _ -> return mkBool
-      ConstString _ -> return TyString
-      Ref val -> case getMemValueType val mem of
-        Just ty -> return ty
-        Nothing -> throw $ AsmError loc "invalid memory reference"
