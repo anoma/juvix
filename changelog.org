@@ -6,6 +6,127 @@
 </a>
 #+end_html
 
+* Changelog
+** [[https://github.com/anoma/juvix/tree/v0.2.5][v0.2.5]] (2022-09-14)
+[[https://github.com/anoma/juvix/compare/v0.2.4...v0.2.5][Full
+Changelog]]
+
+*Fixed bugs:*
+
+- Properly type check patterns that need normalization
+  [[https://github.com/anoma/juvix/pull/1472][#1472]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Detect nested patterns as smaller in the termination checker
+  [[https://github.com/anoma/juvix/pull/1524][#1524]]
+- Fix developBeta in Core/Extra.hs
+  [[https://github.com/anoma/juvix/pull/1487][#1487]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Core/Extra/Recursors/Collector bugfix
+  [[https://github.com/anoma/juvix/pull/1510][#1510]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+
+*Merged pull requests:*
+
+- Replace -> by := in lambda syntax
+  [[https://github.com/anoma/juvix/pull/1533][#1533]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- 'Match' with complex patterns in Core
+  [[https://github.com/anoma/juvix/pull/1530][#1530]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Refactor CLI [[https://github.com/anoma/juvix/pull/1527][#1527]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Add CanonicalProjection
+  [[https://github.com/anoma/juvix/pull/1526][#1526]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Make comma a delimiter
+  [[https://github.com/anoma/juvix/pull/1525][#1525]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Detect nested patterns as smaller in the termination checker
+  [[https://github.com/anoma/juvix/pull/1524][#1524]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Disallow tab characters as spaces
+  [[https://github.com/anoma/juvix/pull/1523][#1523]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Refactor =destruct= in Core/Extra/Base
+  [[https://github.com/anoma/juvix/pull/1522][#1522]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- JuvixCore primitive types
+  [[https://github.com/anoma/juvix/pull/1521][#1521]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Enable autocompletion for the --theme flag
+  [[https://github.com/anoma/juvix/pull/1519][#1519]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Stripped version of Core Node datatype
+  [[https://github.com/anoma/juvix/pull/1518][#1518]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Add =internal core read= command
+  [[https://github.com/anoma/juvix/pull/1517][#1517]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Implement some instances for BinderList
+  [[https://github.com/anoma/juvix/pull/1515][#1515]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Back recursor types with type families
+  [[https://github.com/anoma/juvix/pull/1514][#1514]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Eager evaluation of Constr arguments
+  [[https://github.com/anoma/juvix/pull/1513][#1513]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Dynamic type in Core
+  [[https://github.com/anoma/juvix/pull/1508][#1508]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- LetRec in Core [[https://github.com/anoma/juvix/pull/1507][#1507]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Add Haddock and Agda licenses
+  [[https://github.com/anoma/juvix/pull/1506][#1506]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Fix docs webapp examples CI build
+  [[https://github.com/anoma/juvix/pull/1505][#1505]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Add CLI usage examples doc and integrate with README
+  [[https://github.com/anoma/juvix/pull/1504][#1504]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Refactor BinderInfo
+  [[https://github.com/anoma/juvix/pull/1503][#1503]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Make =juvix compile= default to native target
+  [[https://github.com/anoma/juvix/pull/1502][#1502]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Refactor Node datatype
+  [[https://github.com/anoma/juvix/pull/1501][#1501]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Clean up import list in Pipeline
+  [[https://github.com/anoma/juvix/pull/1499][#1499]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Remove mono [[https://github.com/anoma/juvix/pull/1497][#1497]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Remove Haskell support
+  [[https://github.com/anoma/juvix/pull/1496][#1496]]
+  ([[https://github.com/jonaprieto][jonaprieto]])
+- Implement lambda lifting
+  [[https://github.com/anoma/juvix/pull/1494][#1494]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Document Emacs installation and the 'exec-path' problem
+  [[https://github.com/anoma/juvix/pull/1493][#1493]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Add --allow-different-user to workflow stack command
+  [[https://github.com/anoma/juvix/pull/1492][#1492]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Stack with github actions permissions workaround
+  [[https://github.com/anoma/juvix/pull/1490][#1490]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Restructure recursors and add some lens interfaces
+  [[https://github.com/anoma/juvix/pull/1489][#1489]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Add a github action to build a static linux binary
+  [[https://github.com/anoma/juvix/pull/1488][#1488]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Fix developBeta in Core/Extra.hs
+  [[https://github.com/anoma/juvix/pull/1487][#1487]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Add an option to show name ids in errors
+  [[https://github.com/anoma/juvix/pull/1486][#1486]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+
 ** [[https://github.com/anoma/juvix/tree/v0.2.4][v0.2.4]] (2022-08-19)
    :PROPERTIES:
    :CUSTOM_ID: v0.2.4-2022-08-19
