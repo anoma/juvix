@@ -91,11 +91,11 @@ goStatement mn = \case
     mapM_ (goConstructorDef (i ^. inductiveName)) (i ^. inductiveConstructors)
 
 -- constructors of an inductive type depend on the inductive type, not the other
--- way round
+-- way round; an inductive type depends on the types of its constructors
 goConstructorDef :: Member (State DependencyGraph) r => Name -> InductiveConstructorDef -> Sem r ()
 goConstructorDef indName c = do
   addEdge (c ^. constructorName) indName
-  goExpression (c ^. constructorName) (c ^. constructorType)
+  goExpression indName (c ^. constructorType)
 
 goFunctionClause :: Member (State DependencyGraph) r => Name -> FunctionClause -> Sem r ()
 goFunctionClause p c = do
