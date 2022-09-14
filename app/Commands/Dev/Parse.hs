@@ -1,19 +1,13 @@
 module Commands.Dev.Parse where
 
-import Juvix.Prelude hiding (Doc)
-import Options.Applicative
+import Commands.Base
+import Commands.Dev.Parse.Options
+import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
+import Text.Show.Pretty (ppShow)
 
-newtype ParseOptions = ParseOptions
-  { _parseNoPrettyShow :: Bool
-  }
-
-makeLenses ''ParseOptions
-
-parseParse :: Parser ParseOptions
-parseParse = do
-  _parseNoPrettyShow <-
-    switch
-      ( long "no-pretty-show"
-          <> help "Disable formatting of the Haskell AST"
-      )
-  pure ParseOptions {..}
+runCommand :: Members '[Embed IO, App] r => ParseOptions -> Sem r ()
+runCommand opts = do
+  m <-
+    head . (^. Parser.resultModules)
+      <$> runPipeline (opts ^. parseInputFile) upToParsing
+  if opts ^. parseNoPrettyShow then say (show m) else say (pack (ppShow m))

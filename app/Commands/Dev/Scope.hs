@@ -1,28 +1,15 @@
 module Commands.Dev.Scope where
 
-import GlobalOptions
+import Commands.Base
+import Commands.Dev.Scope.Options
 import Juvix.Compiler.Concrete.Pretty qualified as Scoper
-import Juvix.Prelude hiding (Doc)
-import Options.Applicative
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 
-newtype ScopeOptions = ScopeOptions
-  { _scopeInlineImports :: Bool
-  }
-
-makeLenses ''ScopeOptions
-
-parseScope :: Parser ScopeOptions
-parseScope = do
-  _scopeInlineImports <-
-    switch
-      ( long "inline-imports"
-          <> help "Show the code of imported modules next to the import statement"
-      )
-  pure ScopeOptions {..}
-
-instance CanonicalProjection (GlobalOptions, ScopeOptions) Scoper.Options where
-  project (g, ScopeOptions {..}) =
-    Scoper.defaultOptions
-      { Scoper._optShowNameIds = g ^. globalShowNameIds,
-        Scoper._optInlineImports = _scopeInlineImports
-      }
+runCommand :: Members '[Embed IO, App] r => ScopeOptions -> Sem r ()
+runCommand opts = do
+  globalOpts <- askGlobalOptions
+  l <-
+    (^. Scoper.resultModules)
+      <$> runPipeline (opts ^. scopeInputFile) upToScoping
+  forM_ l $ \s -> do
+    renderStdOut (Scoper.ppOut (globalOpts, opts) s)

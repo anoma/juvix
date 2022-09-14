@@ -24,7 +24,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint = defaultEntryPoint _file
-            res <- runIOEither (upToAbstract entryPoint)
+            res <- runIOEither entryPoint upToAbstract
             case mapLeft fromJuvixError res of
               Left (Just err) -> whenJust (_checkErr err) assertFailure
               Left Nothing -> assertFailure "The scope checker did not find an error."

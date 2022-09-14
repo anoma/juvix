@@ -346,3 +346,13 @@ class CanonicalProjection a b where
 
 instance CanonicalProjection a a where
   project = id
+
+instance CanonicalProjection Void a where
+  project = absurd
+
+instance CanonicalProjection a () where
+  project = const ()
+
+-- | 'project' with type arguments swapped. Useful for type application
+project' :: forall b a. CanonicalProjection a b => a -> b
+project' = project

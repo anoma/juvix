@@ -1,9 +1,5 @@
-$ juvix typecheck
-> /Provide.*/
->= 1
-
 $ juvix typecheck --help
-> /Usage: juvix typecheck \[JUVIX\_FILE\].*/
+> /Usage: juvix typecheck JUVIX\_FILE.*/
 >= 0
 
 $ juvix typecheck tests/positive/Internal/Simple.juvix
@@ -15,15 +11,15 @@ $ juvix --only-errors typecheck tests/positive/Internal/Simple.juvix
 >
 >= 0
 
-$ juvix typecheck --only-errors tests/positive/Internal/Simple.juvix
+$ juvix --only-errors typecheck tests/positive/Internal/Simple.juvix
 >
 >= 0
 
-$ juvix typecheck tests/positive/Internal/Simple.juvix --only-errors
+$ juvix --only-errors typecheck tests/positive/Internal/Simple.juvix
 >
 >= 0
 
-$ juvix typecheck tests/negative/Internal/MultiWrongType.juvix --no-colors
+$ juvix --no-colors typecheck tests/negative/Internal/MultiWrongType.juvix
 >2 /(.+)\/([^\/]+)\.juvix\:11\:7\-8\: error.*
 .*/
 >= 1

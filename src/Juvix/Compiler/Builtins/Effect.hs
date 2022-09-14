@@ -9,7 +9,6 @@ import Juvix.Prelude
 
 data Builtins m a where
   GetBuiltinName' :: Interval -> BuiltinPrim -> Builtins m Name
-  -- GetBuiltin :: Name -> Builtins m (Maybe BuiltinPrims)
   RegisterBuiltin' :: BuiltinPrim -> Name -> Builtins m ()
 
 makeSem ''Builtins

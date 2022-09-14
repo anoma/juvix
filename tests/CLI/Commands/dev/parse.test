@@ -1,0 +1,10 @@
+$ juvix dev parse tests/positive/Axiom.juvix
+> /Module
+*/
+>2
+>= 0
+
+$ juvix dev parse --no-pretty-show tests/positive/Axiom.juvix
+> /Module \{.*/
+>2
+>= 0

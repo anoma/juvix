@@ -15,7 +15,7 @@ import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Setup
 import Juvix.Prelude
 
-type PipelineEff = '[Files, NameIdGen, Builtins, Error JuvixError, Embed IO]
+type PipelineEff = '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, Embed IO]
 
 --------------------------------------------------------------------------------
 -- Workflows
@@ -39,70 +39,64 @@ compile ::
   Sem r C.MiniCResult
 compile = typecheck >=> C.fromInternal
 
---------------------------------------------------------------------------------
-
 upToParsing ::
-  Members '[Files, Error JuvixError, NameIdGen] r =>
-  EntryPoint ->
+  Members '[Reader EntryPoint, Files, Error JuvixError, NameIdGen] r =>
   Sem r Parser.ParserResult
-upToParsing = entrySetup >=> Parser.fromSource
+upToParsing = entrySetup >>= Parser.fromSource
 
 upToScoping ::
-  Members '[Files, NameIdGen, Error JuvixError] r =>
-  EntryPoint ->
+  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError] r =>
   Sem r Scoper.ScoperResult
-upToScoping = upToParsing >=> Scoper.fromParsed
+upToScoping = upToParsing >>= Scoper.fromParsed
 
 upToAbstract ::
-  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
-  EntryPoint ->
+  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
   Sem r Abstract.AbstractResult
-upToAbstract = upToScoping >=> Abstract.fromConcrete
+upToAbstract = upToScoping >>= Abstract.fromConcrete
 
 upToInternal ::
-  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
-  EntryPoint ->
+  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
   Sem r Internal.InternalResult
-upToInternal = upToAbstract >=> Internal.fromAbstract
+upToInternal = upToAbstract >>= Internal.fromAbstract
 
 upToInternalArity ::
-  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
-  EntryPoint ->
+  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
   Sem r Internal.InternalArityResult
-upToInternalArity = upToInternal >=> Internal.arityChecking
+upToInternalArity = upToInternal >>= Internal.arityChecking
 
 upToInternalTyped ::
-  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
-  EntryPoint ->
+  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
   Sem r Internal.InternalTypedResult
-upToInternalTyped = upToInternalArity >=> Internal.typeChecking
+upToInternalTyped = upToInternalArity >>= Internal.typeChecking
 
 upToInternalReachability ::
-  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
-  EntryPoint ->
+  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
   Sem r Internal.InternalTypedResult
 upToInternalReachability =
-  upToInternalTyped
-    >=> return . Internal.filterUnreachable
+  Internal.filterUnreachable <$> upToInternalTyped
 
 upToMiniC ::
-  Members '[Files, NameIdGen, Builtins, Error JuvixError] r =>
-  EntryPoint ->
+  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
   Sem r C.MiniCResult
-upToMiniC = upToInternalReachability >=> C.fromInternal
+upToMiniC = upToInternalReachability >>= C.fromInternal
 
---------------------------------------------------------------------------------
+runIOEither :: EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError a)
+runIOEither entry =
+  runM
+    . runError
+    . runBuiltins
+    . runNameIdGen
+    . mapError (JuvixError @FilesError)
+    . runFilesIO
+    . runReader entry
 
-runIOEither :: Sem PipelineEff a -> IO (Either JuvixError a)
-runIOEither = runM . runError . runBuiltins . runNameIdGen . mapError (JuvixError @FilesError) . runFilesIO
-
-runIO :: GenericOptions -> Sem PipelineEff a -> IO a
-runIO opts = runIOEither >=> mayThrow
+runIO :: GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO a
+runIO opts entry = runIOEither entry >=> mayThrow
   where
     mayThrow :: Either JuvixError r -> IO r
     mayThrow = \case
       Left err -> runM $ runReader opts $ printErrorAnsiSafe err >> embed exitFailure
       Right r -> return r
 
-runIO' :: Sem PipelineEff a -> IO a
+runIO' :: EntryPoint -> Sem PipelineEff a -> IO a
 runIO' = runIO defaultGenericOptions

@@ -8,6 +8,7 @@ data Options = Options
   }
 
 data ShowDecrArgs = OnlyArg | OnlyRel | ArgRel
+  deriving stock (Data)
 
 defaultOptions :: Options
 defaultOptions =

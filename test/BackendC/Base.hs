@@ -32,7 +32,7 @@ wasmClangAssertionCGenOnly :: FilePath -> ((String -> IO ()) -> Assertion)
 wasmClangAssertionCGenOnly mainFile step = do
   step "C Generation"
   let entryPoint = defaultEntryPoint mainFile
-  (void . runIO') (upToMiniC entryPoint)
+  (void . runIO' entryPoint) upToMiniC
 
 wasmClangAssertion :: WASMInfo -> FilePath -> FilePath -> ((String -> IO ()) -> Assertion)
 wasmClangAssertion WASMInfo {..} mainFile expectedFile step = do
@@ -42,7 +42,7 @@ wasmClangAssertion WASMInfo {..} mainFile expectedFile step = do
 
   step "C Generation"
   let entryPoint = defaultEntryPoint mainFile
-  p :: MiniC.MiniCResult <- runIO' (upToMiniC entryPoint)
+  p :: MiniC.MiniCResult <- runIO' entryPoint upToMiniC
 
   expected <- TIO.readFile expectedFile
 
@@ -65,7 +65,7 @@ wasiClangAssertion stdlibMode mainFile expectedFile stdinText step = do
 
   step "C Generation"
   let entryPoint = (defaultEntryPoint mainFile) {_entryPointNoStdlib = stdlibMode == StdlibExclude}
-  p :: MiniC.MiniCResult <- runIO' (upToMiniC entryPoint)
+  p :: MiniC.MiniCResult <- runIO' entryPoint upToMiniC
 
   expected <- TIO.readFile expectedFile
 

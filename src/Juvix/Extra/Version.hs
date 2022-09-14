@@ -39,7 +39,7 @@ progNameVersionTag = do
   progNameV <- progNameVersion
   return (progNameV <> "-" <> shortHash)
 
-infoVersionRepo :: IO (Doc Text)
+infoVersionRepo :: IO (Doc a)
 infoVersionRepo = do
   pNameTag <- progNameVersionTag
   return

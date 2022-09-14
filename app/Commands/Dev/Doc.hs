@@ -1,30 +1,16 @@
 module Commands.Dev.Doc where
 
-import Juvix.Prelude hiding (Doc)
-import Options.Applicative
+import Commands.Base
+import Commands.Dev.Doc.Options
+import Juvix.Compiler.Backend.Html.Translation.FromTyped qualified as Doc
+import Juvix.Extra.Process
+import System.Process qualified as Process
 
-data DocOptions = DocOptions
-  { _docOutputDir :: FilePath,
-    _docOpen :: Bool
-  }
-
-makeLenses ''DocOptions
-
-parseDoc :: Parser DocOptions
-parseDoc = do
-  _docOutputDir <-
-    option
-      str
-      ( long "output-dir"
-          <> metavar "DIR"
-          <> value "doc"
-          <> showDefault
-          <> help "html output directory"
-          <> action "directory"
-      )
-  _docOpen <-
-    switch
-      ( long "open"
-          <> help "open the documentation after generating it"
-      )
-  pure DocOptions {..}
+runCommand :: Members '[Embed IO, App] r => DocOptions -> Sem r ()
+runCommand DocOptions {..} = do
+  ctx <- runPipeline _docInputFile upToInternalTyped
+  let docDir = _docOutputDir ^. pathPath
+  Doc.compile docDir "proj" ctx
+  when _docOpen $ case openCmd of
+    Nothing -> say "Could not recognize the 'open' command for your OS"
+    Just opencmd -> embed (void (Process.spawnProcess opencmd [docDir </> Doc.indexFileName]))

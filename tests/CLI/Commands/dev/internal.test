@@ -1,0 +1,21 @@
+$ juvix dev internal
+>2 /Usage: juvix dev internal.*/
+>= 1
+
+$ juvix dev internal --help
+> /Usage: juvix dev internal COMMAND.*/
+>= 0
+
+$ juvix dev internal typecheck tests/positive/Internal/Simple.juvix
+>
+Well done! It type checks
+>= 0
+
+$ juvix --only-errors dev internal typecheck tests/positive/Internal/Simple.juvix
+>
+>= 0
+
+$ juvix --no-colors dev internal typecheck tests/negative/Internal/MultiWrongType.juvix
+>2 /(.+)\/([^\/]+)\.juvix\:11\:7\-8\: error.*
+.*/
+>= 1
