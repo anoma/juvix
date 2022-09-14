@@ -156,7 +156,7 @@ parseDefinition ::
   Symbol ->
   ParsecS r ()
 parseDefinition sym = do
-  kwAssignment
+  kwAssign
   node <- expression
   lift $ registerIdentNode sym node
   let (is, _) = unfoldLambdas node
@@ -558,7 +558,7 @@ exprLetrecOne ::
 exprLetrecOne varsNum vars = do
   kwLetRec
   name <- parseLocalName
-  kwAssignment
+  kwAssign
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   value <- expr (varsNum + 1) vars'
   kwIn
@@ -599,7 +599,7 @@ letrecDefs names varsNum vars = case names of
     when (n /= txt) $
       parseFailure off "identifier name doesn't match letrec signature"
     name <- lift $ freshName KNameLocal txt i
-    kwAssignment
+    kwAssign
     v <- expr varsNum vars
     if
         | null names' -> optional kwSemicolon >> kwIn
@@ -615,7 +615,7 @@ letrecDef ::
 letrecDef varsNum vars = do
   (txt, i) <- identifierL
   name <- lift $ freshName KNameLocal txt i
-  kwAssignment
+  kwAssign
   v <- expr varsNum vars
   return (name, v)
 
@@ -627,7 +627,7 @@ exprLet ::
 exprLet varsNum vars = do
   kwLet
   name <- parseLocalName
-  kwAssignment
+  kwAssign
   value <- expr varsNum vars
   kwIn
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
@@ -682,7 +682,7 @@ defaultBranch ::
   ParsecS r Node
 defaultBranch varsNum vars = do
   kwWildcard
-  kwMapsTo
+  kwAssign
   expr varsNum vars
 
 matchingBranch ::
@@ -704,7 +704,7 @@ matchingBranch varsNum vars = do
       when
         (ci ^. constructorArgsNum /= bindersNum)
         (parseFailure off "wrong number of constructor arguments")
-      kwMapsTo
+      kwAssign
       let vars' =
             fst $
               foldl'

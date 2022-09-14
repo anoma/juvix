@@ -44,7 +44,7 @@ instance PrettyCode Lambda where
   ppCode l = do
     b' <- ppCode (l ^. lambdaBody)
     v' <- ppCode (l ^. lambdaVar)
-    return $ kwLambda <+> braces (v' <+> kwMapsto <+> b')
+    return $ kwLambda <+> braces (v' <+> kwAssign <+> b')
 
 instance PrettyCode Application where
   ppCode a = do

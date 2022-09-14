@@ -471,7 +471,7 @@ whereClause =
 lambdaClause :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (LambdaClause 'Parsed)
 lambdaClause = do
   lambdaParameters <- P.some patternAtom
-  kwMapsTo
+  kwAssign
   lambdaBody <- parseExpressionAtoms
   return LambdaClause {..}
 
@@ -537,7 +537,7 @@ parsePatternAtoms = do
 functionClause :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash, NameIdGen] r => Symbol -> ParsecS r (FunctionClause 'Parsed)
 functionClause _clauseOwnerFunction = do
   _clausePatterns <- P.many patternAtom
-  kwAssignment
+  kwAssign
   _clauseBody <- parseExpressionAtoms
   _clauseWhere <- optional whereBlock
   return FunctionClause {..}

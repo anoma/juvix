@@ -6,8 +6,8 @@ constr cons 2;
 constr pair 2;
 
 def length := \xs case xs of {
-  nil -> 0;
-  cons _ xs' -> length xs' + 1
+  nil := 0;
+  cons _ xs' := length xs' + 1
 };
 
 def split := \n \xs
@@ -15,18 +15,18 @@ def split := \n \xs
     pair nil xs
   else
     case xs of {
-      nil -> pair nil nil;
-      cons x xs' ->
+      nil := pair nil nil;
+      cons x xs' :=
         case split (n - 1) xs' of {
-          pair l1 l2 -> pair (cons x l1) l2
+          pair l1 l2 := pair (cons x l1) l2
         }
     };
 
 def merge := \xs \ys case xs of {
-  nil -> ys;
-  cons x xs' -> case ys of {
-    nil -> xs;
-    cons y ys' ->
+  nil := ys;
+  cons x xs' := case ys of {
+    nil := xs;
+    cons y ys' :=
       if x <= y then
         cons x (merge xs' ys)
       else
@@ -40,14 +40,14 @@ def sort := \xs
     xs
   else
     case split (length xs / 2) xs of {
-      pair l1 l2 -> merge (sort l1) (sort l2)
+      pair l1 l2 := merge (sort l1) (sort l2)
     };
 
 def uniq := \xs case xs of {
-  nil -> nil;
-  cons x xs' -> case xs' of {
-    nil -> xs;
-    cons x' _ ->
+  nil := nil;
+  cons x xs' := case xs' of {
+    nil := xs;
+    cons x' _ :=
       if x = x' then
         uniq xs'
       else
@@ -56,13 +56,13 @@ def uniq := \xs case xs of {
 };
 
 def append := \xs \ys case xs of {
-  nil -> ys;
-  cons x xs' -> cons x (append xs' ys);
+  nil := ys;
+  cons x xs' := cons x (append xs' ys);
 };
 
 def flatten := \xs case xs of {
-  nil -> nil;
-  cons x xs' -> append x (flatten xs');
+  nil := nil;
+  cons x xs' := append x (flatten xs');
 };
 
 def take := \n \xs
@@ -70,7 +70,7 @@ def take := \n \xs
     nil
   else
     case xs of {
-      cons x xs' -> cons x (take (n - 1) xs')
+      cons x xs' := cons x (take (n - 1) xs')
     };
 
 def gen := \n \f \acc if n = 0 then acc else gen (n - 1) f (cons (f n) acc);

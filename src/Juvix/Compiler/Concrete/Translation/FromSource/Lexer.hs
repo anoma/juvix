@@ -93,7 +93,7 @@ dottedIdentifier = lexeme $ P.sepBy1 bareIdentifier dot
 
 allKeywords :: Members '[Reader ParserParams, InfoTableBuilder] r => [ParsecS r ()]
 allKeywords =
-  [ kwAssignment,
+  [ kwAssign,
     kwAxiom,
     kwColon,
     kwColonOmega,
@@ -112,7 +112,6 @@ allKeywords =
     kwInfixr,
     kwLambda,
     kwLet,
-    kwMapsTo,
     kwModule,
     kwOpen,
     kwPostfix,
@@ -146,8 +145,8 @@ braces = between (symbol "{") (symbol "}")
 kwBuiltin :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwBuiltin = keyword Str.builtin
 
-kwAssignment :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
-kwAssignment = keyword Str.assignUnicode <|> keyword Str.assignAscii
+kwAssign :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
+kwAssign = keyword Str.assignUnicode <|> keyword Str.assignAscii
 
 kwAxiom :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwAxiom = keyword Str.axiom

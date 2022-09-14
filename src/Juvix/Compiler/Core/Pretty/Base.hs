@@ -143,12 +143,12 @@ ppCodeCase' branchBinderNames branchTagNames Case {..} = do
   bns <- mapM (mapM (maybe (return kwQuestion) ppCode)) branchBinderNames
   cns <- zipWithM (\tag -> maybe (ppCode tag) ppCode) branchTags branchTagNames
   v <- ppCode _caseValue
-  bs' <- sequence $ zipWith3Exact (\cn bn br -> ppCode br >>= \br' -> return $ foldl' (<+>) cn bn <+> kwMapsto <+> br') cns bns branchBodies
+  bs' <- sequence $ zipWith3Exact (\cn bn br -> ppCode br >>= \br' -> return $ foldl' (<+>) cn bn <+> kwAssign <+> br') cns bns branchBodies
   bs'' <-
     case _caseDefault of
       Just def -> do
         d' <- ppCode def
-        return $ bs' ++ [kwDefault <+> kwMapsto <+> d']
+        return $ bs' ++ [kwDefault <+> kwAssign <+> d']
       Nothing -> return bs'
   let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs''
   return $ kwCase <+> v <+> kwOf <+> bss
