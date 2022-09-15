@@ -1,6 +1,7 @@
 module Commands.Dev.Internal.Options where
 
 import Commands.Dev.Internal.Arity.Options
+import Commands.Dev.Internal.CoreEval.Options
 import Commands.Dev.Internal.Pretty.Options
 import Commands.Dev.Internal.Typecheck.Options
 import CommonOptions
@@ -9,6 +10,7 @@ data InternalCommand
   = Pretty InternalPrettyOptions
   | TypeCheck InternalTypeOptions
   | Arity InternalArityOptions
+  | CoreEval InternalCoreEvalOptions
   deriving stock (Data)
 
 parseInternalCommand :: Parser InternalCommand
@@ -17,7 +19,8 @@ parseInternalCommand =
     mconcat
       [ commandPretty,
         commandArity,
-        commandTypeCheck
+        commandTypeCheck,
+        commandCoreEval
       ]
   where
     commandArity :: Mod CommandFields InternalCommand
@@ -28,6 +31,9 @@ parseInternalCommand =
 
     commandTypeCheck :: Mod CommandFields InternalCommand
     commandTypeCheck = command "typecheck" typeCheckInfo
+
+    commandCoreEval :: Mod CommandFields InternalCommand
+    commandCoreEval = command "core-eval" coreEvalInfo
 
     arityInfo :: ParserInfo InternalCommand
     arityInfo =
@@ -46,3 +52,9 @@ parseInternalCommand =
       info
         (TypeCheck <$> parseInternalType)
         (progDesc "Translate a Juvix file to Internal and typecheck the result")
+
+    coreEvalInfo :: ParserInfo InternalCommand
+    coreEvalInfo =
+      info
+        (CoreEval <$> parseInternalCoreEval)
+        (progDesc "Translate a Juvix file to Core and evaluate the result")

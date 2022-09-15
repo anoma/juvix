@@ -10,6 +10,7 @@ import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
+import Juvix.Compiler.Core.Translation qualified as Core
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Setup
@@ -74,6 +75,12 @@ upToInternalReachability ::
   Sem r Internal.InternalTypedResult
 upToInternalReachability =
   Internal.filterUnreachable <$> upToInternalTyped
+
+upToCore ::
+  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
+  Sem r Core.CoreResult
+upToCore =
+  upToInternalReachability >>= Core.fromInternal
 
 upToMiniC ::
   Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
