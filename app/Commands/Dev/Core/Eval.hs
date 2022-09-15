@@ -38,12 +38,11 @@ runCommand opts = do
           | Info.member Info.kNoDisplayInfo (Core.getInfo node') ->
               return ()
         Right node' -> do
-          renderStdOut (Core.ppOut docOpts node')
+          renderStdOut (Core.ppOut opts node')
           embed (putStrLn "")
     Right (_, Nothing) -> return ()
   where
-    docOpts :: Core.Options
-    docOpts = Core.defaultOptions
+    defaultLoc :: Interval
     defaultLoc = singletonInterval (mkLoc f 0 (M.initialPos f))
     f :: FilePath
     f = opts ^. coreEvalInputFile . pathPath
