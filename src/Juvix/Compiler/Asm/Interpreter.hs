@@ -158,11 +158,9 @@ runCodeR infoTable code0 = goCode code0 >> popLastValueStack
 
     getMemVal :: Member Runtime r => MemValue -> Sem r Val
     getMemVal = \case
-      StackRef -> topValueStack
-      ArgRef off -> readArg off
-      TempRef off -> readTemp off
+      DRef dr -> getDirectRef dr
       ConstrRef cr -> do
-        v <- getMemVal (cr ^. fieldValue)
+        v <- getDirectRef (cr ^. fieldRef)
         case v of
           ValConstr ctr ->
             if
@@ -171,6 +169,12 @@ runCodeR infoTable code0 = goCode code0 >> popLastValueStack
                 | otherwise ->
                     runtimeError "invalid constructor field access"
           _ -> runtimeError "invalid memory access: expected a constructor"
+
+    getDirectRef :: Member Runtime r => DirectRef -> Sem r Val
+    getDirectRef = \case
+      StackRef -> topValueStack
+      ArgRef off -> readArg off
+      TempRef off -> readTemp off
 
     popLastValueStack :: Member Runtime r => Sem r Val
     popLastValueStack = do

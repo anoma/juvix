@@ -76,14 +76,9 @@ getArgumentType off mem = HashMap.lookup off (mem ^. memoryArgumentArea)
 
 getMemValueType :: MemValue -> Memory -> Maybe Type
 getMemValueType val mem = case val of
-  StackRef ->
-    topValueStack 0 mem
-  ArgRef off ->
-    getArgumentType off mem
-  TempRef off ->
-    bottomTempStack off mem
+  DRef dr -> getDirectRefType dr mem
   ConstrRef fld ->
-    case getMemValueType (fld ^. fieldValue) mem of
+    case getDirectRefType (fld ^. fieldRef) mem of
       Just TyDynamic ->
         Just TyDynamic
       Just (TyInductive _) ->
@@ -92,6 +87,15 @@ getMemValueType val mem = case val of
         atMay _typeConstrFields (fld ^. fieldOffset)
       _ ->
         Nothing
+
+getDirectRefType :: DirectRef -> Memory -> Maybe Type
+getDirectRefType dr mem = case dr of
+  StackRef ->
+    topValueStack 0 mem
+  ArgRef off ->
+    getArgumentType off mem
+  TempRef off ->
+    bottomTempStack off mem
 
 getValueType' :: Member (Error AsmError) r => Maybe Location -> Memory -> Value -> Sem r Type
 getValueType' loc mem = \case

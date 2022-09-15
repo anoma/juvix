@@ -26,20 +26,26 @@ type Offset = Int
 -- | Values reference readable values (constant or value stored in memory).
 data Value = ConstInt Integer | ConstBool Bool | ConstString Text | ConstUnit | Ref MemValue
 
-{-
-- MemValues are references to values stored in random-access memory.
-- StackRef references the top of the stack.
-- ArgRef references an argument in the argument area: offset n references the
-  (n+1)th argument.
-- TempRef references a value in the temporary area.
-- ConstrRef references a field (argument) of a constructor: field k holds the
-  (k+1)th argument.
+{- | MemValues are references to values stored in random-access memory.
+- DirectRef is a direct memory reference.
+- ConstrRef references is an indirect reference to a field (argument) of a
+  constructor: field k holds the (k+1)th argument.
 -}
-data MemValue = StackRef | ArgRef Offset | TempRef Offset | ConstrRef Field
+data MemValue = DRef DirectRef | ConstrRef Field
+
+{- | DirectRef is a direct memory reference.
+- StackRef references the top of the stack.
+- ArgRef references an argument in the argument area (0-based offsets).
+- TempRef references a value in the temporary area (0-based offsets).
+-}
+data DirectRef = StackRef | ArgRef Offset | TempRef Offset
 
 data Field = Field
-  { _fieldValue :: MemValue, -- location where the data is stored
-    _fieldOffset :: Offset -- field offset
+  { -- | tag of the constructor being referenced
+    _fieldTag :: Tag,
+    -- | location where the data is stored
+    _fieldRef :: DirectRef,
+    _fieldOffset :: Offset
   }
 
 makeLenses ''Field

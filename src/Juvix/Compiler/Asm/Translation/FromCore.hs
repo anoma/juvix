@@ -24,7 +24,7 @@ genCode infoTable fi =
             True
             0
             ( BL.fromList $
-                reverse (map (Ref . ArgRef) [0 .. fi ^. Core.functionArgsNum - 1])
+                reverse (map (Ref . DRef . ArgRef) [0 .. fi ^. Core.functionArgsNum - 1])
             )
             (fi ^. Core.functionBody)
    in FunctionInfo
@@ -163,7 +163,7 @@ genCode infoTable fi =
     goLet isTail tempSize refs (Core.Let {..}) =
       DL.append
         (DL.snoc (go False tempSize refs _letValue) (mkInstr PushTemp))
-        (go isTail (tempSize + 1) (BL.extend (Ref (TempRef tempSize)) refs) _letBody)
+        (go isTail (tempSize + 1) (BL.extend (Ref (DRef (TempRef tempSize))) refs) _letBody)
 
     goCase :: Bool -> Int -> BinderList Value -> Core.Case -> Code'
     goCase isTail tempSize refs (Core.Case {..}) =
@@ -194,7 +194,7 @@ genCode infoTable fi =
                                           (tempSize + 1)
                                           ( BL.prepend
                                               ( map
-                                                  (Ref . ConstrRef . Field (TempRef tempSize))
+                                                  (Ref . ConstrRef . Field _caseBranchTag (TempRef tempSize))
                                                   (reverse [0 .. _caseBranchBindersNum - 1])
                                               )
                                               refs
