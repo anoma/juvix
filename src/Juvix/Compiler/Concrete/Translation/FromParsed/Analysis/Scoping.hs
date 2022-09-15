@@ -1017,12 +1017,12 @@ checkLambdaClause ::
   LambdaClause 'Parsed ->
   Sem r (LambdaClause 'Scoped)
 checkLambdaClause LambdaClause {..} = do
-  lambdaParameters' <- mapM checkParsePatternAtom lambdaParameters
-  lambdaBody' <- withBindCurrentGroup (checkParseExpressionAtoms lambdaBody)
+  lambdaParameters' <- mapM checkParsePatternAtom _lambdaParameters
+  lambdaBody' <- withBindCurrentGroup (checkParseExpressionAtoms _lambdaBody)
   return
     LambdaClause
-      { lambdaParameters = lambdaParameters',
-        lambdaBody = lambdaBody'
+      { _lambdaParameters = lambdaParameters',
+        _lambdaBody = lambdaBody'
       }
 
 scopedVar ::

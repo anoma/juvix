@@ -90,10 +90,20 @@ checkExpression e =
     Nothing -> case e of
       ExpressionApplication a -> checkApplication a
       ExpressionFunction f -> checkFunction f
+      ExpressionLambda l -> checkLambda l
       ExpressionIden {} -> return ()
       ExpressionHole {} -> return ()
       ExpressionUniverse {} -> return ()
       ExpressionLiteral {} -> return ()
+
+checkLambda :: forall r.
+  Members '[State CallMap, Reader FunctionRef, Reader InfoTable, Reader SizeInfo] r =>
+  Lambda ->
+  Sem r ()
+checkLambda (Lambda cl) = mapM_ checkClause cl
+  where
+  checkClause :: LambdaClause -> Sem r ()
+  checkClause LambdaClause {..} = checkExpression _lambdaBody
 
 checkApplication ::
   Members '[State CallMap, Reader FunctionRef, Reader InfoTable, Reader SizeInfo] r =>

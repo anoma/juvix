@@ -139,7 +139,7 @@ newtype Lambda = Lambda
   deriving stock (Eq, Show)
 
 data LambdaClause = LambdaClause
-  { _lambdaParameters :: NonEmpty Pattern,
+  { _lambdaParameters :: NonEmpty PatternArg,
     _lambdaBody :: Expression
   }
   deriving stock (Eq, Show)

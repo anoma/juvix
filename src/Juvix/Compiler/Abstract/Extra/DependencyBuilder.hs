@@ -126,6 +126,7 @@ goExpression p e = case e of
     goExpression p r
   ExpressionLiteral {} -> return ()
   ExpressionHole {} -> return ()
+  ExpressionLambda l -> goLambda l
   where
   goLambda :: Lambda -> Sem r ()
   goLambda (Lambda clauses) = mapM_ goClause clauses

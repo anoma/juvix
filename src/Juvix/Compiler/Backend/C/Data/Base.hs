@@ -95,6 +95,7 @@ goType t = case t ^. Micro.unpolyType of
   Micro.ExpressionApplication a -> goType (mkPolyType' (fst (Micro.unfoldApplication a)))
   Micro.ExpressionLiteral {} -> impossible
   Micro.ExpressionHole {} -> impossible
+  Micro.ExpressionSimpleLambda {} -> impossible
   Micro.ExpressionLambda {} -> impossible
   where
     getMicroType :: Micro.Iden -> Sem r CDeclType

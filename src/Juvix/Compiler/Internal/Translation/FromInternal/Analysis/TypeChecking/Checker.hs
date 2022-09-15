@@ -497,7 +497,7 @@ inferExpression' e = case e of
   ExpressionFunction f -> goFunction f
   ExpressionHole h -> inferHole h
   ExpressionUniverse u -> goUniverse u
-  ExpressionLambda l -> goLambda l
+  ExpressionSimpleLambda l -> goSimpleLambda l
   where
     inferHole :: Hole -> Sem r TypedExpression
     inferHole h = do
@@ -508,8 +508,8 @@ inferExpression' e = case e of
             _typedType = ExpressionUniverse (SmallUniverse (getLoc h))
           }
 
-    goLambda :: Lambda -> Sem r TypedExpression
-    goLambda (Lambda v ty b) = do
+    goSimpleLambda :: SimpleLambda -> Sem r TypedExpression
+    goSimpleLambda (SimpleLambda v ty b) = do
       b' <- inferExpression' b
       let smallUni = smallUniverseE (getLoc ty)
       ty' <- checkExpression smallUni ty
@@ -517,7 +517,7 @@ inferExpression' e = case e of
       return
         TypedExpression
           { _typedType = ExpressionFunction fun,
-            _typedExpression = ExpressionLambda (Lambda v ty' (b' ^. typedExpression))
+            _typedExpression = ExpressionSimpleLambda (SimpleLambda v ty' (b' ^. typedExpression))
           }
 
     goUniverse :: SmallUniverse -> Sem r TypedExpression

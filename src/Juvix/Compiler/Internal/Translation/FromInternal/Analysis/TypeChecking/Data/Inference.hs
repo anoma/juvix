@@ -98,13 +98,22 @@ strongNormalize' = go
       ExpressionHole h -> goHole h
       ExpressionUniverse {} -> return e
       ExpressionFunction f -> ExpressionFunction <$> goFunction f
+      ExpressionSimpleLambda l -> ExpressionSimpleLambda <$> goSimpleLambda l
       ExpressionLambda l -> ExpressionLambda <$> goLambda l
 
+    goClause :: LambdaClause -> Sem r LambdaClause
+    goClause (LambdaClause p b) = do
+      b' <- go b
+      return (LambdaClause p b')
+
     goLambda :: Lambda -> Sem r Lambda
-    goLambda (Lambda lamVar lamTy lamBody) = do
+    goLambda (Lambda cl) = Lambda <$> mapM goClause cl
+
+    goSimpleLambda :: SimpleLambda -> Sem r SimpleLambda
+    goSimpleLambda (SimpleLambda lamVar lamTy lamBody) = do
       lamTy' <- go lamTy
       lamBody' <- go lamBody
-      return (Lambda lamVar lamTy' lamBody')
+      return (SimpleLambda lamVar lamTy' lamBody')
 
     goFunctionParam :: FunctionParameter -> Sem r FunctionParameter
     goFunctionParam (FunctionParameter mvar i ty) = do
@@ -128,7 +137,7 @@ strongNormalize' = go
     goApp (Application l r i) = do
       l' <- go l
       case l' of
-        ExpressionLambda (Lambda lamVar _ lamBody) -> do
+        ExpressionSimpleLambda (SimpleLambda lamVar _ lamBody) -> do
           go (substitutionE (HashMap.singleton lamVar r) lamBody)
         _ -> do
           r' <- go r
@@ -156,6 +165,7 @@ weakNormalize' = go
       ExpressionLiteral {} -> return e
       ExpressionUniverse {} -> return e
       ExpressionFunction {} -> return e
+      ExpressionSimpleLambda {} -> return e
       ExpressionLambda {} -> return e
     goIden :: Iden -> Sem r Expression
     goIden i = case i of
@@ -171,7 +181,7 @@ weakNormalize' = go
     goApp (Application l r i) = do
       l' <- go l
       case l' of
-        ExpressionLambda (Lambda lamVar _ lamBody) -> do
+        ExpressionSimpleLambda (SimpleLambda lamVar _ lamBody) -> do
           go (substitutionE (HashMap.singleton lamVar r) lamBody)
         _ -> return (ExpressionApplication (Application l' r i))
     goHole :: Hole -> Sem r Expression
@@ -232,11 +242,12 @@ re = reinterpret $ \case
                 (ExpressionApplication a, ExpressionApplication b) -> goApplication a b
                 (ExpressionFunction a, ExpressionFunction b) -> goFunction a b
                 (ExpressionUniverse u, ExpressionUniverse u') -> check (u == u')
+                (ExpressionSimpleLambda a, ExpressionSimpleLambda b) -> goSimpleLambda a b
                 (ExpressionLambda a, ExpressionLambda b) -> goLambda a b
                 (ExpressionHole h, a) -> goHole h a
                 (a, ExpressionHole h) -> goHole h a
-                (ExpressionLambda {}, _) -> err
-                (_, ExpressionLambda {}) -> err
+                (ExpressionSimpleLambda {}, _) -> err
+                (_, ExpressionSimpleLambda {}) -> err
                 (ExpressionIden {}, _) -> err
                 (_, ExpressionIden {}) -> err
                 (ExpressionApplication {}, _) -> err
@@ -245,6 +256,8 @@ re = reinterpret $ \case
                 (_, ExpressionFunction {}) -> err
                 (ExpressionUniverse {}, _) -> err
                 (_, ExpressionUniverse {}) -> err
+                (ExpressionLambda {}, _) -> err
+                (_, ExpressionLambda {}) -> err
                 (ExpressionLiteral l, ExpressionLiteral l') -> check (l == l')
               where
                 ok :: Sem r (Maybe MatchError)
@@ -291,13 +304,16 @@ re = reinterpret $ \case
                   (IdenVar {}, _) -> err
                   (IdenConstructor {}, _) -> err
                   (_, IdenConstructor {}) -> err
+
                 goApplication :: Application -> Application -> Sem r (Maybe MatchError)
                 goApplication (Application f x _) (Application f' x' _) = bicheck (go f f') (go x x')
-                goLambda :: Lambda -> Lambda -> Sem r (Maybe MatchError)
-                goLambda (Lambda v1 ty1 b1) (Lambda v2 ty2 b2) = do
+
+                goSimpleLambda :: SimpleLambda -> SimpleLambda -> Sem r (Maybe MatchError)
+                goSimpleLambda (SimpleLambda v1 ty1 b1) (SimpleLambda v2 ty2 b2) = do
                   let local' :: Sem r x -> Sem r x
                       local' = local (HashMap.insert v1 v2)
                   bicheck (go ty1 ty2) (local' (go b1 b2))
+
                 goFunction :: Function -> Function -> Sem r (Maybe MatchError)
                 goFunction
                   (Function (FunctionParameter m1 i1 l1) r1)
@@ -309,6 +325,50 @@ re = reinterpret $ \case
                               _ -> id
                         bicheck (go l1 l2) (local' (go r1 r2))
                     | otherwise = err
+
+                goLambda :: Lambda -> Lambda -> Sem r (Maybe MatchError)
+                goLambda (Lambda l1) (Lambda l2) = case zipExactMay (toList l1) (toList l2) of
+                  Just z -> asum <$> mapM (uncurry goClause) z
+                  _ -> err
+                 where
+                  goClause :: LambdaClause -> LambdaClause -> Sem r (Maybe MatchError)
+                  goClause (LambdaClause p1 b1) (LambdaClause p2 b2) =
+                    case zipExactMay (toList p1) (toList p2) of
+                    Nothing -> err
+                    Just z -> do
+                      m <- ask @(HashMap VarName VarName)
+                      (m', patMatch) <- runState m (mapM (uncurry matchPatterns) z)
+                      if
+                        | and patMatch -> local (const m') (go b1 b2)
+                        | otherwise -> err
+
+matchPatterns :: forall r.
+          Members '[State InferenceState, State (HashMap VarName VarName), Reader FunctionsTable] r =>
+          Pattern -> Pattern -> Sem r Bool
+matchPatterns p1 p2 = case (p1, p2) of
+  (PatternWildcard {}, PatternWildcard {}) -> ok
+  (PatternVariable v1, PatternVariable v2) -> modify (HashMap.insert v1 v2) $> True
+  (PatternConstructorApp c1, PatternConstructorApp c2) -> goConstructor c1 c2
+  (PatternWildcard {}, _) -> err
+  (_, PatternWildcard {}) -> err
+  (PatternVariable {}, _) -> err
+  (_, PatternVariable {}) -> err
+  where
+  goConstructor :: ConstructorApp -> ConstructorApp -> Sem r Bool
+  goConstructor (ConstructorApp c1 args1) (ConstructorApp c2 args2)
+    | c1 /= c2 = err
+    | otherwise = case zipExactMay args1 args2 of
+        Nothing -> err
+        Just z -> allM (uncurry goArg) z
+  goArg :: PatternArg -> PatternArg -> Sem r Bool
+  goArg (PatternArg i1 a1) (PatternArg i2 a2)
+   | i1 /= i2 = err
+   | otherwise = matchPatterns a1 a2
+
+  ok :: Sem r Bool
+  ok = return True
+  err :: Sem r Bool
+  err = return False
 
 runInferenceDef ::
   (Members '[Error TypeCheckerError, Reader FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
@@ -361,7 +421,7 @@ functionDefEval = runFail . goTop
               _ -> fail
             goPattern :: (Pattern, Expression) -> Expression -> Sem r Expression
             goPattern (p, ty) = case p of
-              PatternVariable v -> return . ExpressionLambda . Lambda v ty
+              PatternVariable v -> return . ExpressionSimpleLambda . SimpleLambda v ty
               _ -> const fail
             go :: [(PatternArg, Expression)] -> Sem r Expression
             go = \case

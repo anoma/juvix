@@ -201,6 +201,9 @@ braces = enclose kwBraceL kwBraceR
 parens :: Doc Ann -> Doc Ann
 parens = enclose kwParenL kwParenR
 
+bracesIf :: Bool -> Doc Ann -> Doc Ann
+bracesIf t = if t then braces else id
+
 implicitDelim :: IsImplicit -> Doc Ann -> Doc Ann
 implicitDelim = \case
   Implicit -> braces
@@ -217,6 +220,9 @@ parensCond t d = if t then parens d else d
 
 bracesCond :: Bool -> Doc Ann -> Doc Ann
 bracesCond t d = if t then braces d else d
+
+endSemicolon :: Doc Ann -> Doc Ann
+endSemicolon x = x <> kwSemicolon
 
 ppStringLit :: Text -> Doc Ann
 ppStringLit = annotate AnnLiteralString . doubleQuotes . escaped

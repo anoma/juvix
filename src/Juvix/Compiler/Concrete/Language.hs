@@ -707,8 +707,8 @@ deriving stock instance
   Ord (Lambda s)
 
 data LambdaClause (s :: Stage) = LambdaClause
-  { lambdaParameters :: NonEmpty (PatternType s),
-    lambdaBody :: ExpressionType s
+  { _lambdaParameters :: NonEmpty (PatternType s),
+    _lambdaBody :: ExpressionType s
   }
 
 deriving stock instance

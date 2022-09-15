@@ -95,10 +95,11 @@ mkConcreteType = fmap ConcreteType . go
         r' <- go r
         return (ExpressionApplication (Application l' r' i))
       ExpressionUniverse {} -> return t
-      ExpressionLambda (Lambda v ty b) -> do
+      ExpressionSimpleLambda (SimpleLambda v ty b) -> do
         b' <- go b
         ty' <- go ty
-        return (ExpressionLambda (Lambda v ty' b'))
+        return (ExpressionSimpleLambda (SimpleLambda v ty' b'))
+      ExpressionLambda (Lambda c) -> ExpressionLambda . Lambda <$> mapM goClause c
       ExpressionFunction (Function l r) -> do
         l' <- goParam l
         r' <- go r
@@ -111,6 +112,10 @@ mkConcreteType = fmap ConcreteType . go
         IdenConstructor {} -> return t
         IdenAxiom {} -> return t
         IdenVar {} -> Nothing
+    goClause :: LambdaClause -> Maybe LambdaClause
+    goClause (LambdaClause ps b) = do
+      b' <- go b
+      return (LambdaClause ps b')
     goParam :: FunctionParameter -> Maybe FunctionParameter
     goParam (FunctionParameter m i e) = do
       guard (isNothing m)
@@ -129,7 +134,7 @@ mkPolyType' =
   fromMaybe (error "the given type contains holes")
     . mkPolyType
 
--- mkPolyType removes all named function parameters; currently the assumption in
+-- | mkPolyType removes all named function parameters; currently the assumption in
 -- InternalToMiniC.hs is that these coincide with type parameters
 mkPolyType :: Expression -> Maybe PolyType
 mkPolyType = fmap PolyType . go
@@ -154,29 +159,42 @@ mkPolyType = fmap PolyType . go
       ExpressionIden IdenConstructor {} -> return t
       ExpressionIden IdenAxiom {} -> return t
       ExpressionIden IdenVar {} -> return t
-      ExpressionLambda (Lambda v ty b) -> do
+      ExpressionLambda (Lambda c) -> ExpressionLambda . Lambda <$> mapM goClause c
+      ExpressionSimpleLambda (SimpleLambda v ty b) -> do
         b' <- go b
         ty' <- go ty
-        return (ExpressionLambda (Lambda v ty' b'))
+        return (ExpressionSimpleLambda (SimpleLambda v ty' b'))
+      where
+      goClause :: LambdaClause -> Maybe LambdaClause
+      goClause (LambdaClause ps b) = do
+        b' <- go b
+        return (LambdaClause ps b')
 
 class HasExpressions a where
   leafExpressions :: Traversal' a Expression
+
+instance HasExpressions LambdaClause where
+  leafExpressions f (LambdaClause ps b) = LambdaClause ps <$> leafExpressions f b
+
+instance HasExpressions Lambda where
+  leafExpressions f = traverseOf lambdaClauses (traverse (leafExpressions f))
 
 instance HasExpressions Expression where
   leafExpressions f e = case e of
     ExpressionIden {} -> f e
     ExpressionApplication a -> ExpressionApplication <$> leafExpressions f a
     ExpressionFunction fun -> ExpressionFunction <$> leafExpressions f fun
+    ExpressionSimpleLambda l -> ExpressionSimpleLambda <$> leafExpressions f l
     ExpressionLambda l -> ExpressionLambda <$> leafExpressions f l
     ExpressionLiteral {} -> f e
     ExpressionUniverse {} -> f e
     ExpressionHole {} -> f e
 
-instance HasExpressions Lambda where
-  leafExpressions f (Lambda v ty b) = do
+instance HasExpressions SimpleLambda where
+  leafExpressions f (SimpleLambda v ty b) = do
     b' <- leafExpressions f b
     ty' <- leafExpressions f ty
-    pure (Lambda v ty' b')
+    pure (SimpleLambda v ty' b')
 
 instance HasExpressions FunctionParameter where
   leafExpressions f (FunctionParameter m i e) = do
@@ -198,13 +216,8 @@ instance HasExpressions Application where
 -- | Prism
 _ExpressionHole :: Traversal' Expression Hole
 _ExpressionHole f e = case e of
-  ExpressionIden {} -> pure e
-  ExpressionApplication {} -> pure e
-  ExpressionFunction {} -> pure e
-  ExpressionLiteral {} -> pure e
-  ExpressionUniverse {} -> pure e
   ExpressionHole h -> ExpressionHole <$> f h
-  ExpressionLambda {} -> pure e
+  _ -> pure e
 
 holes :: HasExpressions a => Traversal' a Hole
 holes = leafExpressions . _ExpressionHole
