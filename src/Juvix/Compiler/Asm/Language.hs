@@ -18,7 +18,7 @@ memory layout.
 
 -- In what follows, when referring to the stack we mean the current local value
 -- stack, unless otherwise stated. By stack[n] we denote the n-th cell from the
--- top in the value stack.
+-- top in the value stack (0-based).
 
 -- | Offset of a data field or an argument
 type Offset = Int

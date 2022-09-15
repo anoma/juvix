@@ -36,6 +36,7 @@ data ConstructorInfo = ConstructorInfo
 data InductiveInfo = InductiveInfo
   { _inductiveName :: Text,
     _inductiveLocation :: Maybe Location,
+    _inductiveSymbol :: Symbol,
     _inductiveKind :: Type,
     _inductiveConstructors :: [ConstructorInfo]
   }

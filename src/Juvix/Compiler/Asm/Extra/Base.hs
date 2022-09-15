@@ -7,6 +7,9 @@ import Juvix.Compiler.Asm.Language
 mkInstr :: Instruction -> Command
 mkInstr = Instr . CmdInstr emptyInfo
 
+mkInstr' :: Maybe Location -> Instruction -> Command
+mkInstr' loc = Instr . CmdInstr (CommandInfo loc)
+
 getFunInfo :: InfoTable -> Symbol -> FunctionInfo
 getFunInfo infoTable sym = fromMaybe (error "invalid function symbol") (HashMap.lookup sym (infoTable ^. infoFunctions))
 

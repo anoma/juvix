@@ -4,7 +4,6 @@ module Juvix.Compiler.Asm.Extra
     module Juvix.Compiler.Asm.Extra.Type,
     module Juvix.Compiler.Asm.Extra.Recursors,
     module Juvix.Compiler.Asm.Error,
-    module Juvix.Compiler.Asm.Language,
   )
 where
 

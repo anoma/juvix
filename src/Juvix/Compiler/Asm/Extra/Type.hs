@@ -13,6 +13,9 @@ mkBool = TyBool (TypeBool (BuiltinTag TagTrue) (BuiltinTag TagFalse))
 mkTypeConstr :: Symbol -> Tag -> [Type] -> Type
 mkTypeConstr ind tag argTypes = TyConstr (TypeConstr ind tag argTypes)
 
+mkTypeInductive :: Symbol -> Type
+mkTypeInductive ind = TyInductive (TypeInductive ind)
+
 mkTypeFun :: [Type] -> Type -> Type
 mkTypeFun = flip (foldr TyFun)
 

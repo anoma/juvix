@@ -203,6 +203,9 @@ underscore = "_"
 at_ :: IsString s => s
 at_ = "@"
 
+dot :: IsString s => s
+dot = "."
+
 colon :: IsString s => s
 colon = ":"
 
@@ -346,6 +349,9 @@ match_ = "match"
 
 with_ :: IsString s => s
 with_ = "with"
+
+fun_ :: IsString s => s
+fun_ = "fun"
 
 juvixFunctionT :: IsString s => s
 juvixFunctionT = "juvix_function_t"
