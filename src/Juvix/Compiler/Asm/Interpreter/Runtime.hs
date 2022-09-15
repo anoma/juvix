@@ -252,4 +252,4 @@ hEvalRuntime h r = do
   return a
 
 evalRuntime :: forall r a. Member (Embed IO) r => Sem (Runtime ': r) a -> Sem r a
-evalRuntime = hEvalRuntime stdin
+evalRuntime = hEvalRuntime stdout

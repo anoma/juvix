@@ -13,7 +13,10 @@ import Juvix.Compiler.Asm.Pretty
 -- Return. Throws a runtime runtimeError if at exit the value stack has more than one
 -- element.
 runCode :: InfoTable -> Code -> IO Val
-runCode infoTable = runM . evalRuntime . goToplevel
+runCode = hRunCode stdout
+
+hRunCode :: Handle -> InfoTable -> Code -> IO Val
+hRunCode h infoTable = runM . hEvalRuntime h . goToplevel
   where
     goToplevel :: Member Runtime r => Code -> Sem r Val
     goToplevel code = do
