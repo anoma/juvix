@@ -26,5 +26,5 @@ parseCoreEvalOptions = do
           <> help "Don't interpret the IO effects"
       )
   _coreEvalShowDeBruijn <- optDeBruijn
-  _coreEvalInputFile <- parseInputJuvixFile
+  _coreEvalInputFile <- parseInputJuvixCoreFile
   pure CoreEvalOptions {..}

@@ -31,7 +31,7 @@ parseCoreReadOptions = do
           <> metavar "[Transform]"
           <> help "comma sep list of transformations. Available: lifting"
       )
-  _coreReadInputFile <- parseInputJuvixFile
+  _coreReadInputFile <- parseInputJuvixCoreFile
   pure CoreReadOptions {..}
   where
     parseTransf :: String -> Either String [TransformationId]
