@@ -80,7 +80,7 @@ recurse' sig = go
             ValEq ->
               fixMemBinOp mem TyDynamic TyDynamic mkBool
             Push val -> do
-              ty <- getValueType' loc mem val
+              ty <- getValueType' loc (sig ^. recursorInfoTable) mem val
               return (pushValueStack ty mem)
             Pop -> do
               when (null (mem ^. memoryValueStack)) $

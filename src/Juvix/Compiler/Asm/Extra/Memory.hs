@@ -1,9 +1,11 @@
 module Juvix.Compiler.Asm.Extra.Memory where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Data.Stack (Stack)
 import Juvix.Compiler.Asm.Data.Stack qualified as Stack
 import Juvix.Compiler.Asm.Error
+import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Extra.Type
 import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Language.Type
@@ -74,19 +76,13 @@ bottomTempStack' n mem =
 getArgumentType :: Offset -> Memory -> Maybe Type
 getArgumentType off mem = HashMap.lookup off (mem ^. memoryArgumentArea)
 
-getMemValueType :: MemValue -> Memory -> Maybe Type
-getMemValueType val mem = case val of
+getMemValueType :: InfoTable -> MemValue -> Memory -> Maybe Type
+getMemValueType tab val mem = case val of
   DRef dr -> getDirectRefType dr mem
   ConstrRef fld ->
-    case getDirectRefType (fld ^. fieldRef) mem of
-      Just TyDynamic ->
-        Just TyDynamic
-      Just (TyInductive _) ->
-        Just TyDynamic
-      Just (TyConstr TypeConstr {..}) ->
-        atMay _typeConstrFields (fld ^. fieldOffset)
-      _ ->
-        Nothing
+    let ci = getConstrInfo tab (fld ^. fieldTag)
+        tyargs = typeArgs (ci ^. constructorType)
+     in atMay tyargs (fld ^. fieldOffset)
 
 getDirectRefType :: DirectRef -> Memory -> Maybe Type
 getDirectRefType dr mem = case dr of
@@ -97,24 +93,24 @@ getDirectRefType dr mem = case dr of
   TempRef off ->
     bottomTempStack off mem
 
-getValueType' :: Member (Error AsmError) r => Maybe Location -> Memory -> Value -> Sem r Type
-getValueType' loc mem = \case
+getValueType' :: Member (Error AsmError) r => Maybe Location -> InfoTable -> Memory -> Value -> Sem r Type
+getValueType' loc tab mem = \case
   ConstInt _ -> return mkInteger
   ConstBool _ -> return mkBool
   ConstString _ -> return TyString
   ConstUnit -> return TyUnit
-  Ref val -> case getMemValueType val mem of
+  Ref val -> case getMemValueType tab val mem of
     Just ty -> return ty
     Nothing -> throw $ AsmError loc "invalid memory reference"
 
-getValueType :: Memory -> Value -> Maybe Type
-getValueType mem val =
+getValueType :: InfoTable -> Memory -> Value -> Maybe Type
+getValueType tab mem val =
   case run (runError ty0) of
     Left _ -> Nothing
     Right ty -> Just ty
   where
     ty0 :: Sem '[Error AsmError] Type
-    ty0 = getValueType' Nothing mem val
+    ty0 = getValueType' Nothing tab mem val
 
 -- | Check if the values on top of the value stack have the given types (the
 -- first element of the list corresponds to the top of the stack)
