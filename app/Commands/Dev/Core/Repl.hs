@@ -1,8 +1,8 @@
 module Commands.Dev.Core.Repl where
 
 import Commands.Base
-import Commands.Dev.Core.Eval (doEval)
 import Commands.Dev.Core.Repl.Options
+import Evaluator
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Extra.Base qualified as Core
 import Juvix.Compiler.Core.Info qualified as Info
