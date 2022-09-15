@@ -7,6 +7,7 @@ data Type
   | TyInteger TypeInteger
   | TyBool TypeBool
   | TyString
+  | TyUnit
   | TyInductive TypeInductive
   | -- | TyConstr represents the type of a specific constructor. It is a subtype
     -- of an appropriate TyInductive.

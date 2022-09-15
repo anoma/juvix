@@ -74,6 +74,8 @@ instance PrettyCode Val where
       return $ annotate (AnnKind KNameConstructor) (pretty ("false" :: String))
     ValString txt ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
+    ValUnit {} ->
+      return $ annotate (AnnKind KNameConstructor) (pretty ("unit" :: String))
     ValConstr c ->
       ppCode c
     ValClosure cl ->

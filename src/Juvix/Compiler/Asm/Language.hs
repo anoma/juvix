@@ -24,7 +24,7 @@ memory layout.
 type Offset = Int
 
 -- | Values reference readable values (constant or value stored in memory).
-data Value = ConstInt Integer | ConstBool Bool | ConstString Text | Ref MemValue
+data Value = ConstInt Integer | ConstBool Bool | ConstString Text | ConstUnit | Ref MemValue
 
 {-
 - MemValues are references to values stored in random-access memory.

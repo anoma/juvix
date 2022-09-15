@@ -16,13 +16,11 @@ runCode :: InfoTable -> Code -> IO Val
 runCode = hRunCode stdout
 
 hRunCode :: Handle -> InfoTable -> Code -> IO Val
-hRunCode h infoTable = runM . hEvalRuntime h . goToplevel
-  where
-    goToplevel :: Member Runtime r => Code -> Sem r Val
-    goToplevel code = do
-      goCode code
-      popLastValueStack
+hRunCode h infoTable = runM . hEvalRuntime h . runCodeR infoTable
 
+runCodeR :: Member Runtime r => InfoTable -> Code -> Sem r Val
+runCodeR infoTable code0 = goCode code0 >> popLastValueStack
+  where
     goCode :: Member Runtime r => Code -> Sem r ()
     goCode = \case
       cmd : cont -> goCommand cmd cont
@@ -155,6 +153,7 @@ hRunCode h infoTable = runM . hEvalRuntime h . goToplevel
       ConstInt i -> return (ValInteger i)
       ConstBool b -> return (ValBool b)
       ConstString s -> return (ValString s)
+      ConstUnit -> return (ValUnit (Unit True))
       Ref r -> getMemVal r
 
     getMemVal :: Member Runtime r => MemValue -> Sem r Val
@@ -258,3 +257,35 @@ hRunCode h infoTable = runM . hEvalRuntime h . goToplevel
     printVal = \case
       ValString s -> s
       v -> ppPrint infoTable v
+
+-- | Interpret JuvixAsm code and the resulting IO actions.
+hRunCodeIO :: Handle -> Handle -> InfoTable -> Code -> IO Val
+hRunCodeIO hin hout infoTable code = do
+  v <- hRunCode hout infoTable code
+  hRunIO hin hout infoTable v
+
+-- | Interpret IO actions.
+hRunIO :: Handle -> Handle -> InfoTable -> Val -> IO Val
+hRunIO hin hout infoTable = \case
+  ValConstr (Constr (BuiltinTag TagReturn) [x]) -> return x
+  ValConstr (Constr (BuiltinTag TagBind) [x, f]) -> do
+    x' <- hRunIO hin hout infoTable x
+    let code = [Instr (CmdInstr (CommandInfo Nothing) (Call (InstrCall CallClosure 1)))]
+    let r =
+          pushValueStack x'
+            >> pushValueStack f
+            >> runCodeR infoTable code
+    x'' <- runM (hEvalRuntime hout r)
+    hRunIO hin hout infoTable x''
+  ValConstr (Constr (BuiltinTag TagWrite) [ValString s]) -> do
+    hPutStr hout s
+    return $ ValUnit (Unit False)
+  ValConstr (Constr (BuiltinTag TagWrite) [arg]) -> do
+    hPutStr hout (ppPrint infoTable arg)
+    return $ ValUnit (Unit False)
+  ValConstr (Constr (BuiltinTag TagReadLn) []) -> do
+    hFlush hout
+    s <- hGetLine hin
+    return (ValString s)
+  val ->
+    return val
