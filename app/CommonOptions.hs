@@ -35,6 +35,17 @@ parseInputJuvixFile = do
       )
   pure Path {_pathIsInput = True, ..}
 
+parseInputJuvixCoreFile :: Parser Path
+parseInputJuvixCoreFile = do
+  _pathPath <-
+    argument
+      str
+      ( metavar "JUVIX_CORE_FILE"
+          <> help "Path to a .jvc file"
+          <> completer juvixCoreCompleter
+      )
+  pure Path {_pathIsInput = True, ..}
+
 parseGenericOutputFile :: Parser Path
 parseGenericOutputFile = do
   _pathPath <-
@@ -61,11 +72,17 @@ parseGenericOutputDir m = do
       )
   pure Path {_pathIsInput = False, ..}
 
-juvixCompleter :: Completer
-juvixCompleter = mkCompleter $ \word -> do
-  let cmd = unwords ["compgen", "-o", "plusdirs", "-f", "-X", "!*.juvix", "--", requote word]
+extCompleter :: String -> Completer
+extCompleter ext = mkCompleter $ \word -> do
+  let cmd = unwords ["compgen", "-o", "plusdirs", "-f", "-X", "!*." <> ext, "--", requote word]
   result <- GHC.try @GHC.SomeException $ readProcess "bash" ["-c", cmd] ""
   return . lines . fromRight [] $ result
+
+juvixCompleter :: Completer
+juvixCompleter = extCompleter "juvix"
+
+juvixCoreCompleter :: Completer
+juvixCoreCompleter = extCompleter "jvc"
 
 requote :: String -> String
 requote s =
