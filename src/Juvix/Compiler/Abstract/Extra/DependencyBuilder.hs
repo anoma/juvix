@@ -98,9 +98,23 @@ goConstructorDef indName c = do
   goExpression (c ^. constructorName) (c ^. constructorType)
 
 goFunctionClause :: Member (State DependencyGraph) r => Name -> FunctionClause -> Sem r ()
-goFunctionClause p c = goExpression p (c ^. clauseBody)
+goFunctionClause p c = do
+  mapM_ (goPattern p) (c ^. clausePatterns)
+  goExpression p (c ^. clauseBody)
 
-goExpression :: Member (State DependencyGraph) r => Name -> Expression -> Sem r ()
+goPattern :: forall r. Member (State DependencyGraph) r => Name -> PatternArg -> Sem r ()
+goPattern n p = case p ^. patternArgPattern of
+  PatternVariable {} -> return ()
+  PatternWildcard {} -> return ()
+  PatternEmpty -> return ()
+  PatternConstructorApp a -> goApp a
+  where
+    goApp :: ConstructorApp -> Sem r ()
+    goApp (ConstructorApp ctr ps) = do
+      addEdge n (ctr ^. constructorRefName)
+      mapM_ (goPattern n) ps
+
+goExpression :: forall r. Member (State DependencyGraph) r => Name -> Expression -> Sem r ()
 goExpression p e = case e of
   ExpressionIden i -> addEdge p (idenName i)
   ExpressionUniverse {} -> return ()
