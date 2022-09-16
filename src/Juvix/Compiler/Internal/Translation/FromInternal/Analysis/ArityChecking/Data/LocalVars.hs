@@ -12,7 +12,10 @@ newtype LocalVars = LocalVars
 makeLenses ''LocalVars
 
 addArity :: Member (State LocalVars) r => VarName -> Arity -> Sem r ()
-addArity v t = modify (over localArities (HashMap.insert v t))
+addArity v t = modify (withArity v t)
+
+withArity :: VarName -> Arity -> LocalVars -> LocalVars
+withArity v t = over localArities (HashMap.insert v t)
 
 getLocalArity :: Member (Reader LocalVars) r => VarName -> Sem r Arity
 getLocalArity v = fromJust <$> asks (^. localArities . at v)

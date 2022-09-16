@@ -266,14 +266,25 @@ checkFunctionClause ::
   FunctionClause ->
   Sem r FunctionClause
 checkFunctionClause clauseType FunctionClause {..} = do
-  (locals, bodyTy) <- helper _clausePatterns clauseType
-  let bodyTy' = substitutionE (localsToSubsE locals) bodyTy
-  _clauseBody' <- checkFunctionClauseBody locals bodyTy' _clauseBody
+  body' <- checkClause clauseType _clausePatterns _clauseBody
   return
     FunctionClause
-      { _clauseBody = _clauseBody',
+      { _clauseBody = body',
         ..
       }
+
+-- | helper function for function clauses and lambda functions
+checkClause ::
+  forall r.
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Builtins, Inference] r =>
+  Expression -> -- ^ Type
+  [PatternArg] -> -- ^ Arguments
+  Expression -> -- ^ Body
+  Sem r Expression -- Checked body
+checkClause clauseType clausePats body = do
+  (locals, bodyTy) <- helper clausePats clauseType
+  let bodyTy' = substitutionE (localsToSubsE locals) bodyTy
+  checkFunctionClauseBody locals bodyTy' body
   where
     helper :: [PatternArg] -> Expression -> Sem r (LocalVars, Expression)
     helper pats ty = runState emptyLocalVars (go pats ty)
@@ -282,20 +293,30 @@ checkFunctionClause clauseType FunctionClause {..} = do
       [] -> return bodyTy
       (p : ps) -> case bodyTy of
         ExpressionHole h -> do
-          s <- queryMetavar h
-          case s of
-            Just h' -> go pats h'
-            Nothing -> do
-              l <- ExpressionHole <$> freshHole (getLoc h)
-              r <- ExpressionHole <$> freshHole (getLoc h)
-              let fun = ExpressionFunction (Function (unnamedParameter l) r)
-              whenJustM (matchTypes (ExpressionHole h) fun) impossible
-              go pats fun
+          fun <- holeRefineToFunction h
+          go pats (ExpressionFunction fun)
         _ -> case unfoldFunType bodyTy of
           ([], _) -> error "too many patterns"
           (par : pars, ret) -> do
-            checkPattern _clauseName par p
+            checkPattern par p
             go ps (foldFunType pars ret)
+
+
+-- | Refines a hole into a function type. I.e. '_@1' is matched with '_@fresh → _@fresh'
+holeRefineToFunction :: Members '[Inference, NameIdGen] r => Hole -> Sem r Function
+holeRefineToFunction h = do
+  s <- queryMetavar h
+  case s of
+    Just h' -> case h' of
+      ExpressionFunction f -> return f
+      ExpressionHole h'' -> holeRefineToFunction h''
+      _ -> error "cannot refine hole to function"
+    Nothing -> do
+      l <- ExpressionHole <$> freshHole (getLoc h)
+      r <- ExpressionHole <$> freshHole (getLoc h)
+      let fun = Function (unnamedParameter l) r
+      whenJustM (matchTypes (ExpressionHole h) (ExpressionFunction fun)) impossible
+      return fun
 
 matchIsImplicit :: Member (Error TypeCheckerError) r => IsImplicit -> PatternArg -> Sem r ()
 matchIsImplicit expected actual =
@@ -315,11 +336,10 @@ matchIsImplicit expected actual =
 checkPattern ::
   forall r.
   Members '[Reader InfoTable, Error TypeCheckerError, State LocalVars, Inference, NameIdGen, Reader FunctionsTable] r =>
-  FunctionName ->
   FunctionParameter ->
   PatternArg ->
   Sem r ()
-checkPattern funName = go
+checkPattern = go
   where
     go :: FunctionParameter -> PatternArg -> Sem r ()
     go argTy patArg = do
@@ -372,8 +392,7 @@ checkPattern funName = go
                         WrongConstructorType
                           { _wrongCtorTypeName = constrName,
                             _wrongCtorTypeExpected = ind,
-                            _wrongCtorTypeActual = constrIndName,
-                            _wrongCtorTypeFunName = funName
+                            _wrongCtorTypeActual = constrIndName
                           }
                     )
                 )
@@ -498,6 +517,7 @@ inferExpression' e = case e of
   ExpressionHole h -> inferHole h
   ExpressionUniverse u -> goUniverse u
   ExpressionSimpleLambda l -> goSimpleLambda l
+  ExpressionLambda l -> goLambda l
   where
     inferHole :: Hole -> Sem r TypedExpression
     inferHole h = do
@@ -520,6 +540,21 @@ inferExpression' e = case e of
             _typedExpression = ExpressionSimpleLambda (SimpleLambda v ty' (b' ^. typedExpression))
           }
 
+    goLambda :: Lambda -> Sem r TypedExpression
+    goLambda l@(Lambda cl) = do
+      h <- freshHole (getLoc l)
+      l' <- Lambda <$> mapM (goClause h) cl
+      return TypedExpression {
+        _typedType = ExpressionHole h,
+        _typedExpression = ExpressionLambda l'
+        }
+      where
+      goClause :: Hole -> LambdaClause -> Sem r LambdaClause
+      goClause h (LambdaClause pats body) = do
+        let patArgs = map (PatternArg Explicit) (toList pats)
+        body' <- checkClause (ExpressionHole h) patArgs body
+        return (LambdaClause pats body')
+
     goUniverse :: SmallUniverse -> Sem r TypedExpression
     goUniverse u =
       return
@@ -527,6 +562,7 @@ inferExpression' e = case e of
           { _typedType = ExpressionUniverse u,
             _typedExpression = ExpressionUniverse u
           }
+
     goFunction :: Function -> Sem r TypedExpression
     goFunction (Function l r) = do
       let uni = smallUniverseE (getLoc l)

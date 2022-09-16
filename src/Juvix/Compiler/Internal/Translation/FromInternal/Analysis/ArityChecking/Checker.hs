@@ -57,7 +57,7 @@ checkFunctionDef ::
   FunctionDef ->
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
-  arity <- typeArity _funDefType
+  arity <- withEmptyLocalVars (typeArity _funDefType)
   _funDefClauses' <- mapM (checkFunctionClause arity) _funDefClauses
   _funDefExamples' <- withEmptyLocalVars (mapM checkExample _funDefExamples)
   return
@@ -243,7 +243,7 @@ checkConstructorApp ::
   Sem r ConstructorApp
 checkConstructorApp ca@(ConstructorApp c ps) = do
   args <- (^. constructorInfoArgs) <$> lookupConstructor c
-  arities <- mapM typeArity args
+  arities <- withEmptyLocalVars (mapM typeArity args)
   let n = length arities
       lps = length ps
   when
@@ -266,34 +266,39 @@ checkLambda ari (Lambda cl) = Lambda <$> mapM goClause cl
   goClause :: LambdaClause -> Sem r LambdaClause
   goClause (LambdaClause ps b) = do
     locals <- ask
-    let uari = unfoldArity' ari
-        params = uari ^. ufoldArityParams
-    (locals', (ps', rest)) <- runState locals (helper (toList ps) params)
+    let uari@UnfoldedArity{..} = unfoldArity' ari
+    (locals', (ps', rest)) <- runState locals (helper _ufoldArityRest (toList ps) _ufoldArityParams)
     let ariBody = foldArity (set ufoldArityParams rest uari)
     b' <- local (const locals') (checkExpression ariBody b)
     return (LambdaClause (fromJust (nonEmpty ps')) b')
     where
     -- returns the adjusted patterns and the not consumed arity
-    helper :: [Pattern] -> [ArityParameter] -> Sem (State LocalVars ': r) ([Pattern], [ArityParameter])
-    helper pats as = case (pats, as) of
-      ([], _) -> return ([], as)
-      (p : ps', ParamExplicit paramAri : as') -> do
-        p' <- (^. patternArgPattern) <$> checkPattern paramAri (PatternArg Explicit p)
-        first (p':) <$> helper ps' as'
-      (_ : _, ParamImplicit {} : _) -> error "unsupported implicit patterns"
-      (_ : _, []) -> error "todo!"
+    helper :: ArityRest -> [Pattern] -> [ArityParameter] -> Sem (State LocalVars ': r) ([Pattern], [ArityParameter])
+    helper rest = go
+      where
+       go :: [Pattern] -> [ArityParameter] -> Sem (State LocalVars ': r) ([Pattern], [ArityParameter])
+       go pats as =
+        case (pats, as) of
+          ([], _) -> return ([], as)
+          (p : ps', ParamExplicit paramAri : as') -> do
+            p' <- (^. patternArgPattern) <$> checkPattern paramAri (PatternArg Explicit p)
+            first (p':) <$> go ps' as'
+          (_ : _, ParamImplicit {} : _) -> error "unsupported implicit patterns"
+          (_ : _, []) -> case rest of
+            ArityRestUnit -> error "too many patterns in lambda"
+            ArityRestUnknown -> return (pats, [])
 
 idenArity :: Members '[Reader LocalVars, Reader InfoTable] r => Iden -> Sem r Arity
 idenArity = \case
+  IdenVar v -> getLocalArity v
+  IdenInductive i -> inductiveType i >>= typeArity
   IdenFunction f -> lookupFunction f >>= typeArity . (^. functionInfoDef . funDefType)
   IdenConstructor c -> constructorType c >>= typeArity
-  IdenVar v -> getLocalArity v
   IdenAxiom a -> lookupAxiom a >>= typeArity . (^. axiomInfoType)
-  IdenInductive i -> inductiveType i >>= typeArity
 
 -- | let x be some expression of type T. The argument of this function is T and it returns
 -- the arity of x.
-typeArity :: forall r. Members '[Reader InfoTable] r => Expression -> Sem r Arity
+typeArity :: forall r. Members '[Reader InfoTable, Reader LocalVars] r => Expression -> Sem r Arity
 typeArity = go
   where
     go :: Expression -> Sem r Arity
@@ -301,7 +306,7 @@ typeArity = go
       ExpressionIden i -> goIden i
       ExpressionApplication {} -> return ArityUnit
       ExpressionLiteral {} -> return ArityUnknown
-      ExpressionFunction f -> ArityFunction <$> goFun2 f
+      ExpressionFunction f -> ArityFunction <$> goFun f
       ExpressionHole {} -> return ArityUnknown
       ExpressionLambda {} -> return ArityUnknown
       ExpressionUniverse {} -> return ArityUnit
@@ -309,22 +314,32 @@ typeArity = go
 
     goIden :: Iden -> Sem r Arity
     goIden = \case
-      IdenVar {} -> return ArityUnknown
+      IdenVar v -> getLocalArity v
+      -- IdenVar {} -> return ArityUnit
       IdenInductive {} -> return ArityUnit
       IdenFunction {} -> return ArityUnknown -- we need normalization to determine the arity
       IdenConstructor {} -> return ArityUnknown -- will be a type error
       IdenAxiom ax -> lookupAxiom ax >>= go . (^. axiomInfoType)
 
-    goParam :: FunctionParameter -> Sem r ArityParameter
-    goParam (FunctionParameter _ i e) =
-      case i of
-        Implicit -> return ParamImplicit
-        Explicit -> ParamExplicit <$> go e
+    goParam :: FunctionParameter -> Sem r (ArityParameter, LocalVars -> LocalVars)
+    goParam (FunctionParameter v i e) = do
+        param' <- param
+        return (param', scopeChange)
+        where
+        param =       case i of
+          Implicit -> return ParamImplicit
+          Explicit -> ParamExplicit <$> go e
 
-    goFun2 :: Function -> Sem r FunctionArity
-    goFun2 (Function l r) = do
-      l' <- goParam l
-      r' <- go r
+        scopeChange :: LocalVars -> LocalVars
+        scopeChange = case (v, e) of
+          (Just v', ExpressionUniverse {}) -> withArity v' ArityUnit
+          _ -> id
+
+    -- TODO if the argument is (A : Type) we know A has arity unit.
+    goFun :: Function -> Sem r FunctionArity
+    goFun (Function l r) = do
+      (l', loc) <- goParam l
+      r' <- local loc (go r)
       return
         FunctionArity
           { _functionArityLeft = l',
