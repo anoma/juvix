@@ -148,7 +148,8 @@ arityLiteral (WithLoc _ l) = case l of
 arityUniverse :: Arity
 arityUniverse = ArityUnit
 
--- | currently we do not try to infer lambda arity
+-- | currently we do not try to infer lambda arity.
+-- Since lambdas cannot yet have implicit arguments, this is fine.
 arityLambda :: Lambda -> Arity
 arityLambda = const ArityUnknown
 

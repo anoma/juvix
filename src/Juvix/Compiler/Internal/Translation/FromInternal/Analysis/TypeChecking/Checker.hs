@@ -170,7 +170,8 @@ checkExample e = do
   output e'
   return e'
 
-checkExpression :: forall r.
+checkExpression ::
+  forall r.
   Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Reader LocalVars, Inference] r =>
   Expression ->
   Expression ->
@@ -185,13 +186,14 @@ checkExpression expectedTy e = do
     err inferred = do
       inferred' <- strongNormalize inferred
       expected' <- strongNormalize expectedTy
-      throw $ ErrWrongType
-        ( WrongType
-            { _wrongTypeThing = Left e,
-              _wrongTypeActual = inferred',
-              _wrongTypeExpected = expected'
-            }
-        )
+      throw $
+        ErrWrongType
+          ( WrongType
+              { _wrongTypeThing = Left e,
+                _wrongTypeActual = inferred',
+                _wrongTypeExpected = expected'
+              }
+          )
 
 checkFunctionParameter ::
   Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins] r =>
@@ -252,15 +254,6 @@ lookupVar :: Member (Reader LocalVars) r => Name -> Sem r Expression
 lookupVar v = HashMap.lookupDefault err v <$> asks (^. localTypes)
   where
     err = error $ "internal error: could not find var " <> ppTrace v
-
--- checkClauseBody ::
---   Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Builtins, Inference] r =>
---   LocalVars ->
---   Expression ->
---   Expression ->
---   Sem r Expression
--- checkClauseBody locals expectedTy body =
---   runReader locals (checkExpression expectedTy body)
 
 checkFunctionClause ::
   forall r.
@@ -622,6 +615,10 @@ inferExpression' e = case e of
                         },
                   _typedType = substitutionApp (paraName, r') funR
                 }
+          ExpressionHole h -> do
+            fun <- ExpressionFunction <$> holeRefineToFunction h
+            helper (set typedType fun l')
+          -- OLD
           -- When we have have an application with a hole on the left: '_@1 x'
           -- We assume that it is a type application and thus 'x' must be a type.
           -- Not sure if this is always desirable.
@@ -630,6 +627,7 @@ inferExpression' e = case e of
             case q of
               Just ty -> helper (set typedType ty l')
               Nothing -> do
+                -- TODO INCORRECT
                 r' <- checkExpression (smallUniverseE (getLoc h)) r
                 h' <- freshHole (getLoc h)
                 let fun = Function (unnamedParameter r') (ExpressionHole h')
