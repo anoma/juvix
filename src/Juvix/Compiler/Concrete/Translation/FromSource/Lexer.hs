@@ -76,6 +76,10 @@ judocStart = P.chunk Str.judocStart >> hspace
 judocEmptyLine :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 judocEmptyLine = lexeme (void (P.try (judocStart >> P.newline)))
 
+-- | We use the ascii version in the label so it shows in the error messages.
+keywordUnicode :: Members '[Reader ParserParams, InfoTableBuilder] r => Text -> Text -> ParsecS r ()
+keywordUnicode ascii unic = P.label (unpack ascii) (keyword ascii <|> keyword unic)
+
 keyword :: Members '[Reader ParserParams, InfoTableBuilder] r => Text -> ParsecS r ()
 keyword kw = do
   l <- keywordL' space kw
@@ -146,7 +150,7 @@ kwBuiltin :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwBuiltin = keyword Str.builtin
 
 kwAssign :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
-kwAssign = keyword Str.assignUnicode <|> keyword Str.assignAscii
+kwAssign = keywordUnicode Str.assignAscii Str.assignUnicode
 
 kwAxiom :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwAxiom = keyword Str.axiom
@@ -155,7 +159,7 @@ kwColon :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwColon = keyword Str.colon
 
 kwColonOmega :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
-kwColonOmega = keyword Str.colonOmegaUnicode <|> keyword Str.colonOmegaAscii
+kwColonOmega = keywordUnicode Str.colonOmegaAscii Str.colonOmegaUnicode
 
 kwColonOne :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwColonOne = keyword Str.colonOne
@@ -194,13 +198,13 @@ kwInfixr :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwInfixr = keyword Str.infixr_
 
 kwLambda :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
-kwLambda = keyword Str.lambdaUnicode <|> keyword Str.lambdaAscii
+kwLambda = keywordUnicode Str.lambdaAscii Str.lambdaUnicode
 
 kwLet :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwLet = keyword Str.let_
 
 kwMapsTo :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
-kwMapsTo = keyword Str.mapstoUnicode <|> keyword Str.mapstoAscii
+kwMapsTo = keywordUnicode Str.mapstoAscii Str.mapstoUnicode
 
 kwModule :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwModule = keyword Str.module_
@@ -215,7 +219,7 @@ kwPublic :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwPublic = keyword Str.public
 
 kwRightArrow :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
-kwRightArrow = keyword Str.toUnicode <|> keyword Str.toAscii
+kwRightArrow = keywordUnicode Str.toAscii Str.toUnicode
 
 kwSemicolon :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwSemicolon = keyword Str.semicolon

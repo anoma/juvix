@@ -112,7 +112,7 @@ topModulePath = mkTopModulePath <$> dottedSymbol
 --------------------------------------------------------------------------------
 
 statement :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (Statement 'Parsed)
-statement = do
+statement = P.label "<top level statement>" $ do
   void (optional stashJudoc)
   (StatementOperator <$> operatorSyntaxDef)
     <|> (StatementOpenModule <$> openModule)
@@ -293,16 +293,17 @@ import_ = do
 
 expressionAtom :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (ExpressionAtom 'Parsed)
 expressionAtom =
-  AtomLiteral <$> P.try literal
-    <|> (AtomIdentifier <$> name)
-    <|> (AtomUniverse <$> universe)
-    <|> (AtomLambda <$> lambda)
-    <|> (AtomFunction <$> function)
-    <|> (AtomLetBlock <$> letBlock)
-    <|> (AtomFunArrow <$ kwRightArrow)
-    <|> (AtomHole <$> hole)
-    <|> parens (AtomParens <$> parseExpressionAtoms)
-    <|> braces (AtomBraces <$> withLoc parseExpressionAtoms)
+  P.label "<expression>" $
+    AtomLiteral <$> P.try literal
+      <|> (AtomIdentifier <$> name)
+      <|> (AtomUniverse <$> universe)
+      <|> (AtomLambda <$> lambda)
+      <|> (AtomFunction <$> function)
+      <|> (AtomLetBlock <$> letBlock)
+      <|> (AtomFunArrow <$ kwRightArrow)
+      <|> (AtomHole <$> hole)
+      <|> parens (AtomParens <$> parseExpressionAtoms)
+      <|> braces (AtomBraces <$> withLoc parseExpressionAtoms)
 
 parseExpressionAtoms ::
   Members '[Reader ParserParams, InfoTableBuilder, JudocStash, NameIdGen] r =>
@@ -520,10 +521,11 @@ wildcard = Wildcard . snd <$> interval kwWildcard
 
 patternAtom :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (PatternAtom 'Parsed)
 patternAtom =
-  PatternAtomIden <$> name
-    <|> PatternAtomWildcard <$> wildcard
-    <|> (PatternAtomParens <$> parens parsePatternAtoms)
-    <|> (PatternAtomBraces <$> braces parsePatternAtoms)
+  P.label "<pattern>" $
+    PatternAtomIden <$> name
+      <|> PatternAtomWildcard <$> wildcard
+      <|> (PatternAtomParens <$> parens parsePatternAtoms)
+      <|> (PatternAtomBraces <$> braces parsePatternAtoms)
 
 parsePatternAtoms :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (PatternAtoms 'Parsed)
 parsePatternAtoms = do
@@ -552,7 +554,7 @@ pmodulePath = case sing :: SModuleIsTop t of
   SModuleLocal -> symbol
 
 moduleDef :: (SingI t, Members '[Reader ParserParams, InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (Module 'Parsed t)
-moduleDef = do
+moduleDef = P.label "<module definition>" $ do
   kwModule
   _moduleDoc <- getJudoc
   _modulePath <- pmodulePath
