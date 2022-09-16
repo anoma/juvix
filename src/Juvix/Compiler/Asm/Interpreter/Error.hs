@@ -1,8 +1,8 @@
 module Juvix.Compiler.Asm.Interpreter.Error where
 
-import Juvix.Prelude
-import GHC.Show
 import Control.Exception qualified as Exception
+import GHC.Show
+import Juvix.Prelude
 
 newtype RunError = RunError
   { _runErrorMsg :: Text

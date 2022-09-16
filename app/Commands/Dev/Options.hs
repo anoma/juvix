@@ -10,8 +10,8 @@ module Commands.Dev.Options
   )
 where
 
-import Commands.Dev.Core.Options
 import Commands.Dev.Asm.Options
+import Commands.Dev.Core.Options
 import Commands.Dev.Doc.Options
 import Commands.Dev.Highlight.Options
 import Commands.Dev.Internal.Options

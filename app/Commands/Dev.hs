@@ -5,8 +5,8 @@ module Commands.Dev
 where
 
 import Commands.Base
-import Commands.Dev.Core qualified as Core
 import Commands.Dev.Asm qualified as Asm
+import Commands.Dev.Core qualified as Core
 import Commands.Dev.DisplayRoot qualified as DisplayRoot
 import Commands.Dev.Doc qualified as Doc
 import Commands.Dev.Highlight qualified as Highlight
