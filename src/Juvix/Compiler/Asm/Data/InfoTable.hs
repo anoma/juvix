@@ -6,7 +6,8 @@ import Juvix.Compiler.Asm.Language.Type
 data InfoTable = InfoTable
   { _infoFunctions :: HashMap Symbol FunctionInfo,
     _infoConstrs :: HashMap Tag ConstructorInfo,
-    _infoInductives :: HashMap Symbol InductiveInfo
+    _infoInductives :: HashMap Symbol InductiveInfo,
+    _infoMainFunction :: Maybe Symbol
   }
 
 data FunctionInfo = FunctionInfo
@@ -51,5 +52,6 @@ emptyInfoTable =
   InfoTable
     { _infoFunctions = mempty,
       _infoConstrs = mempty,
-      _infoInductives = mempty
+      _infoInductives = mempty,
+      _infoMainFunction = Nothing
     }

@@ -1,7 +1,9 @@
 module Juvix.Compiler.Asm.Interpreter where
 
+import Control.Exception qualified as Exception
 import Control.Monad
 import Juvix.Compiler.Asm.Data.InfoTable
+import Juvix.Compiler.Asm.Error
 import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Interpreter.Extra
 import Juvix.Compiler.Asm.Interpreter.Runtime
@@ -263,6 +265,9 @@ runCodeR infoTable code0 = goCode code0 >> popLastValueStack
       v -> ppPrint infoTable v
 
 -- | Interpret JuvixAsm code and the resulting IO actions.
+runCodeIO :: InfoTable -> Code -> IO Val
+runCodeIO = hRunCodeIO stdin stdout
+
 hRunCodeIO :: Handle -> Handle -> InfoTable -> Code -> IO Val
 hRunCodeIO hin hout infoTable code = do
   v <- hRunCode hout infoTable code
@@ -293,3 +298,16 @@ hRunIO hin hout infoTable = \case
     return (ValString s)
   val ->
     return val
+
+catchRunErrorIO :: IO a -> IO (Either AsmError a)
+catchRunErrorIO ma =
+  Exception.catch
+    (Exception.evaluate ma >>= \ma' -> ma' <&> Right)
+    (\(ex :: RunError) -> return (Left (toAsmError ex)))
+
+toAsmError :: RunError -> AsmError
+toAsmError (RunError {..}) =
+  AsmError
+    { _asmErrorMsg = mappend "runtime error: " _runErrorMsg,
+      _asmErrorLoc = Nothing
+    }

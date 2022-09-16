@@ -1,10 +1,15 @@
-module Juvix.Compiler.Asm.Interpreter.Runtime where
+module Juvix.Compiler.Asm.Interpreter.Runtime
+  ( module Juvix.Compiler.Asm.Interpreter.Runtime,
+    module Juvix.Compiler.Asm.Interpreter.Error,
+  )
+where
 
 import Data.HashMap.Strict qualified as HashMap
 import Debug.Trace qualified as Debug
 import GHC.Base qualified as GHC
 import Juvix.Compiler.Asm.Data.Stack (Stack)
 import Juvix.Compiler.Asm.Data.Stack qualified as Stack
+import Juvix.Compiler.Asm.Interpreter.Error
 import Juvix.Compiler.Asm.Language
 
 {-
@@ -184,13 +189,6 @@ data Runtime m a where
 
 makeSem ''Runtime
 
--- | Throws a runtime error. TODO: print stacktrace
-throwRuntimeError :: RuntimeState -> Text -> a
-throwRuntimeError s msg =
-  let logs = reverse (s ^. runtimeMessages)
-   in map (\x -> Debug.trace (fromText x) ()) logs `GHC.seq`
-        error msg
-
 runRuntime :: forall r a. Sem (Runtime ': r) a -> Sem r (RuntimeState, a)
 runRuntime = runState (RuntimeState (CallStack []) emptyFrame []) . interp
   where
@@ -251,6 +249,12 @@ runRuntime = runState (RuntimeState (CallStack []) emptyFrame []) . interp
       RuntimeError msg -> do
         s <- get
         throwRuntimeError s msg
+
+    throwRuntimeError :: forall b. RuntimeState -> Text -> b
+    throwRuntimeError s msg =
+      let logs = reverse (s ^. runtimeMessages)
+      in map (\x -> Debug.trace (fromText x) ()) logs `GHC.seq`
+            throwRunError msg -- TODO: print stacktrace
 
 hEvalRuntime :: forall r a. Member (Embed IO) r => Handle -> Sem (Runtime ': r) a -> Sem r a
 hEvalRuntime h r = do
