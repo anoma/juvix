@@ -275,6 +275,12 @@ true_ = "true"
 false_ :: IsString s => s
 false_ = "false"
 
+arg_ :: IsString s => s
+arg_ = "arg"
+
+tmp_ :: IsString s => s
+tmp_ = "tmp"
+
 tag :: IsString s => s
 tag = "tag"
 
@@ -304,6 +310,9 @@ div = "/"
 
 mod :: IsString s => s
 mod = "%"
+
+dollar :: IsString s => s
+dollar = "$"
 
 if_ :: IsString s => s
 if_ = "if"
@@ -351,7 +360,10 @@ with_ :: IsString s => s
 with_ = "with"
 
 fun_ :: IsString s => s
-fun_ = "fun"
+fun_ = "function"
+
+fwd_ :: IsString s => s
+fwd_ = "forward"
 
 juvixFunctionT :: IsString s => s
 juvixFunctionT = "juvix_function_t"

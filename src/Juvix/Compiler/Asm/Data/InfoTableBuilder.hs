@@ -2,6 +2,7 @@ module Juvix.Compiler.Asm.Data.InfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable
+import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Language
 
 data IdentKind = IdentFun Symbol | IdentFwd Symbol | IdentInd Symbol | IdentConstr Tag
@@ -14,6 +15,7 @@ data InfoTableBuilder m a where
   RegisterInductive :: InductiveInfo -> InfoTableBuilder m ()
   RegisterForward :: Text -> Symbol -> InfoTableBuilder m ()
   GetIdent :: Text -> InfoTableBuilder m (Maybe IdentKind)
+  GetFunctionInfo :: Symbol -> InfoTableBuilder m FunctionInfo
 
 makeSem ''InfoTableBuilder
 
@@ -65,3 +67,6 @@ runInfoTableBuilder =
       GetIdent txt -> do
         s <- get
         return $ HashMap.lookup txt (s ^. stateIdents)
+      GetFunctionInfo sym -> do
+        s <- get
+        return (getFunInfo (s ^. stateInfoTable) sym)

@@ -85,12 +85,7 @@ parseToplevel = do
 statement ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r ()
-statement = statementForward <|> statementFunction <|> statementInductive
-
-statementForward ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
-  ParsecS r ()
-statementForward = undefined
+statement = statementFunction <|> statementInductive
 
 statementFunction ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
@@ -104,41 +99,89 @@ statementFunction = do
     Nothing -> lift freshSymbol
     Just (IdentFwd sym) -> return sym
     _ -> parseFailure off ("duplicate identifier: " ++ fromText txt)
-  args <- functionArguments
+  argtys <- functionArguments
   mrty <- optional typeAnnotation
   let rty = fromMaybe TyDynamic mrty
-  code <- braces parseCode
-  lift $ registerFunction
-    FunctionInfo {
-      _functionName = txt,
-      _functionSymbol = sym,
-      _functionLocation = Just i,
-      _functionCode = code,
-      _functionArgsNum = length args,
-      _functionType = mkTypeFun (map snd args) rty
-    }
+  mcode <- optional (braces parseCode)
+  let fi =
+        FunctionInfo
+          { _functionName = txt,
+            _functionSymbol = sym,
+            _functionLocation = Just i,
+            _functionCode = fromMaybe [] mcode,
+            _functionArgsNum = length argtys,
+            _functionType = mkTypeFun argtys rty
+          }
+  case idt of
+    Just (IdentFwd _) -> do
+      when (isNothing mcode) $
+        parseFailure off ("duplicate forward declaration of " ++ fromText txt)
+      fi' <- lift $ getFunctionInfo sym
+      unless
+        ( fi' ^. functionArgsNum == fi ^. functionArgsNum
+            && isSubtype (fi' ^. functionType) (fi ^. functionType)
+        )
+        $ parseFailure off "function definition does not match earlier declaration"
+      lift $ registerFunction fi
+    _ -> do
+      lift $ registerFunction fi
+      when (isNothing mcode) $
+        lift (registerForward txt sym)
 
 statementInductive ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r ()
-statementInductive = undefined
+statementInductive = do
+  kwInductive
+  off <- P.getOffset
+  (txt, i) <- identifierL
+  idt <- lift $ getIdent txt
+  when (isJust idt) $
+    parseFailure off ("duplicate identifier: " ++ fromText txt)
+  sym <- lift freshSymbol
+  ctrs <- braces $ P.sepEndBy (constrDecl sym) kwSemicolon
+  lift $
+    registerInductive
+      InductiveInfo
+        { _inductiveName = txt,
+          _inductiveLocation = Just i,
+          _inductiveSymbol = sym,
+          _inductiveKind = TyDynamic,
+          _inductiveConstructors = ctrs
+        }
 
 functionArguments ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
-  ParsecS r [(Text, Type)]
+  ParsecS r [Type]
 functionArguments = do
   lparen
-  args <- P.sepBy functionArgument comma
+  args <- P.sepBy parseType comma
   rparen
   return args
 
-functionArgument ::
+constrDecl ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
-  ParsecS r (Text, Type)
-functionArgument = do
-  txt <- identifier
-  mty <- optional typeAnnotation
-  return (txt, fromMaybe TyDynamic mty)
+  Symbol ->
+  ParsecS r ConstructorInfo
+constrDecl symInd = do
+  off <- P.getOffset
+  (txt, i) <- identifierL
+  idt <- lift $ getIdent txt
+  when (isJust idt) $
+    parseFailure off ("duplicate identifier: " ++ fromText txt)
+  tag <- lift freshTag
+  ty <- typeAnnotation
+  let ci =
+        ConstructorInfo
+          { _constructorName = txt,
+            _constructorLocation = Just i,
+            _constructorTag = tag,
+            _constructorArgsNum = length (typeArgs ty),
+            _constructorType = ty,
+            _constructorInductive = symInd
+          }
+  lift $ registerConstr ci
+  return ci
 
 typeAnnotation ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
@@ -236,62 +279,189 @@ command = do
       mkInstr' loc . TailCallClosures <$> instrCallClosures
     "ret" ->
       return $ mkInstr' loc Return
-    "br" -> do -- hlint is stupid here
+    "br" -> do
+      -- hlint is stupid here
       br1 <- trueBranch
       Branch . CmdBranch (CommandInfo loc) br1 <$> falseBranch
     "case" -> do
+      sym <- indSymbol
       brs <- P.many caseBranch
       def <- optional defaultBranch
-      return $ Case (CmdCase (CommandInfo loc) brs def)
+      return $ Case (CmdCase (CommandInfo loc) sym brs def)
     _ ->
       parseFailure off ("unknown instruction: " ++ fromText txt)
 
 value ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r Value
-value = undefined
+value = integerValue <|> boolValue <|> stringValue <|> unitValue <|> memValue
+
+integerValue ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  ParsecS r Value
+integerValue = do
+  (i, _) <- integer
+  return $ ConstInt i
+
+boolValue :: ParsecS r Value
+boolValue =
+  (kwTrue >> return (ConstBool True))
+    <|> (kwFalse >> return (ConstBool False))
+
+stringValue ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  ParsecS r Value
+stringValue = do
+  (s, _) <- string
+  return $ ConstString s
+
+unitValue :: ParsecS r Value
+unitValue = kwUnit >> return ConstUnit
+
+memValue ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  ParsecS r Value
+memValue = do
+  r <- directRef
+  parseField r <|> return (Ref (DRef r))
+
+directRef ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  ParsecS r DirectRef
+directRef = stackRef <|> argRef <|> tempRef
+
+stackRef :: ParsecS r DirectRef
+stackRef = kwDollar >> return StackRef
+
+argRef ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  ParsecS r DirectRef
+argRef = do
+  kwArg
+  (off, _) <- brackets integer
+  return $ ArgRef (fromInteger off)
+
+tempRef ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  ParsecS r DirectRef
+tempRef = do
+  kwTmp
+  (off, _) <- brackets integer
+  return $ TempRef (fromInteger off)
+
+parseField ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  DirectRef ->
+  ParsecS r Value
+parseField dref = do
+  dot
+  tag <- constrTag
+  (off, _) <- brackets integer
+  return $ Ref (ConstrRef (Field tag dref (fromInteger off)))
 
 constrTag ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r Tag
-constrTag = undefined
+constrTag = do
+  off <- P.getOffset
+  txt <- identifier
+  idt <- lift $ getIdent txt
+  case idt of
+    Just (IdentConstr tag) -> return tag
+    _ -> parseFailure off "expected a constructor"
+
+indSymbol ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  ParsecS r Symbol
+indSymbol = do
+  off <- P.getOffset
+  txt <- identifier
+  idt <- lift $ getIdent txt
+  case idt of
+    Just (IdentInd sym) -> return sym
+    _ -> parseFailure off "expected an inductive type"
+
+funSymbol ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  ParsecS r Symbol
+funSymbol = do
+  off <- P.getOffset
+  txt <- identifier
+  idt <- lift $ getIdent txt
+  case idt of
+    Just (IdentFwd sym) -> return sym
+    Just (IdentFun sym) -> return sym
+    _ -> parseFailure off "expected a function"
 
 instrAllocClosure ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r InstrAllocClosure
-instrAllocClosure = undefined
+instrAllocClosure = do
+  sym <- funSymbol
+  (argsNum, _) <- integer
+  return $ InstrAllocClosure sym (fromInteger argsNum)
 
 instrExtendClosure ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r InstrExtendClosure
-instrExtendClosure = undefined
+instrExtendClosure = do
+  (argsNum, _) <- integer
+  return $ InstrExtendClosure (fromInteger argsNum)
 
 instrCall ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r InstrCall
-instrCall = undefined
+instrCall = do
+  ct <- parseCallType
+  argsNum <- case ct of
+    CallFun sym -> do
+      fi <- lift $ getFunctionInfo sym
+      return (fi ^. functionArgsNum)
+    CallClosure -> do
+      (n, _) <- integer
+      return (fromInteger n)
+  return (InstrCall ct argsNum)
+
+parseCallType ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  ParsecS r CallType
+parseCallType = (kwDollar >> return CallClosure) <|> (CallFun <$> funSymbol)
 
 instrCallClosures ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r InstrCallClosures
-instrCallClosures = undefined
+instrCallClosures = do
+  (argsNum, _) <- integer
+  return (InstrCallClosures (fromInteger argsNum))
+
+branchCode ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  ParsecS r Code
+branchCode = braces parseCode <|> (command >>= \x -> return [x])
 
 trueBranch ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r Code
-trueBranch = undefined
+trueBranch = do
+  symbol "true:"
+  branchCode
 
 falseBranch ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r Code
-falseBranch = undefined
+falseBranch = do
+  symbol "false:"
+  branchCode
 
 caseBranch ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r CaseBranch
-caseBranch = undefined
+caseBranch = do
+  tag <- P.try constrTag
+  kwColon
+  CaseBranch tag <$> branchCode
 
 defaultBranch ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r Code
-defaultBranch = undefined
+defaultBranch = symbol "default:" >> branchCode

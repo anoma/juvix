@@ -188,6 +188,7 @@ data CmdBranch = CmdBranch
 
 data CmdCase = CmdCase
   { _cmdCaseInfo :: CommandInfo,
+    _cmdCaseInductive :: Symbol,
     _cmdCaseBranches :: [CaseBranch],
     _cmdCaseDefault :: Maybe Code
   }

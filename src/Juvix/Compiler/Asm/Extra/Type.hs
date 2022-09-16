@@ -75,7 +75,7 @@ isSubtype TyDynamic _ =
 isSubtype _ TyDynamic =
   True
 isSubtype (TyConstr TypeConstr {..}) (TyInductive TypeInductive {..}) =
-  _typeInductiveSymbol == _typeConstrInductive
+  _typeConstrInductive == _typeInductiveSymbol
 isSubtype (TyConstr c1) (TyConstr c2) =
   c1 ^. typeConstrInductive == c2 ^. typeConstrInductive
     && c1 ^. typeConstrTag == c2 ^. typeConstrTag

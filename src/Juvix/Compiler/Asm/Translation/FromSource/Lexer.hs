@@ -58,10 +58,16 @@ allKeywords =
     kwInductive,
     kwColon,
     kwSemicolon,
-    kwDot,
     kwStar,
-    kwArrow
+    kwArrow,
+    kwTrue,
+    kwFalse,
+    kwArg,
+    kwTmp
   ]
+
+dot :: ParsecS r ()
+dot = symbol "."
 
 comma :: ParsecS r ()
 comma = symbol ","
@@ -105,11 +111,26 @@ kwColon = keyword Str.colon
 kwSemicolon :: ParsecS r ()
 kwSemicolon = keyword Str.semicolon
 
-kwDot :: ParsecS r ()
-kwDot = keyword Str.dot
-
 kwStar :: ParsecS r ()
 kwStar = keyword Str.mul
 
+kwDollar :: ParsecS r ()
+kwDollar = keyword Str.dollar
+
 kwArrow :: ParsecS r ()
 kwArrow = keyword Str.toAscii <|> keyword Str.toUnicode
+
+kwTrue :: ParsecS r ()
+kwTrue = keyword Str.true_
+
+kwFalse :: ParsecS r ()
+kwFalse = keyword Str.false_
+
+kwUnit :: ParsecS r ()
+kwUnit = keyword Str.unit
+
+kwArg :: ParsecS r ()
+kwArg = keyword Str.arg_
+
+kwTmp :: ParsecS r ()
+kwTmp = keyword Str.tmp_

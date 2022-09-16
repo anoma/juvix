@@ -217,6 +217,7 @@ recurse' sig = go
 
     goCase :: Memory -> CmdCase -> Sem r (Memory, a)
     goCase mem cmd@CmdCase {..} = do
+      checkValueStack' loc [mkTypeInductive _cmdCaseInductive] mem
       rs <- mapM (go mem . (^. caseBranchCode)) _cmdCaseBranches
       let mems = map fst rs
       let ass = map snd rs
