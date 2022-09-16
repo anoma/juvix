@@ -9,6 +9,9 @@ data LocalVars = LocalVars
     _localTyMap :: HashMap VarName VarName
   }
 
+instance Semigroup LocalVars where
+  (LocalVars a b) <> (LocalVars a' b') = LocalVars (a <> a') (b <> b')
+
 makeLenses ''LocalVars
 
 addType :: VarName -> Expression -> LocalVars -> LocalVars

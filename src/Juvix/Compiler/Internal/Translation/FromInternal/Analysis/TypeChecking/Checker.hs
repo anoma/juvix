@@ -170,7 +170,7 @@ checkExample e = do
   output e'
   return e'
 
-checkExpression ::
+checkExpression :: forall r.
   Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, Builtins, NameIdGen, Reader LocalVars, Inference] r =>
   Expression ->
   Expression ->
@@ -178,15 +178,18 @@ checkExpression ::
 checkExpression expectedTy e = do
   e' <- inferExpression' e
   let inferredType = e' ^. typedType
-  whenJustM (matchTypes expectedTy inferredType) (throw . const (err inferredType))
+  whenJustM (matchTypes expectedTy inferredType) (const (err inferredType))
   return (e' ^. typedExpression)
   where
-    err inferred =
-      ErrWrongType
+    err :: Expression -> Sem r a
+    err inferred = do
+      inferred' <- strongNormalize inferred
+      expected' <- strongNormalize expectedTy
+      throw $ ErrWrongType
         ( WrongType
             { _wrongTypeThing = Left e,
-              _wrongTypeActual = inferred,
-              _wrongTypeExpected = expectedTy
+              _wrongTypeActual = inferred',
+              _wrongTypeExpected = expected'
             }
         )
 
@@ -250,14 +253,14 @@ lookupVar v = HashMap.lookupDefault err v <$> asks (^. localTypes)
   where
     err = error $ "internal error: could not find var " <> ppTrace v
 
-checkFunctionClauseBody ::
-  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Builtins, Inference] r =>
-  LocalVars ->
-  Expression ->
-  Expression ->
-  Sem r Expression
-checkFunctionClauseBody locals expectedTy body =
-  runReader locals (checkExpression expectedTy body)
+-- checkClauseBody ::
+--   Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Builtins, Inference] r =>
+--   LocalVars ->
+--   Expression ->
+--   Expression ->
+--   Sem r Expression
+-- checkClauseBody locals expectedTy body =
+--   runReader locals (checkExpression expectedTy body)
 
 checkFunctionClause ::
   forall r.
@@ -266,7 +269,7 @@ checkFunctionClause ::
   FunctionClause ->
   Sem r FunctionClause
 checkFunctionClause clauseType FunctionClause {..} = do
-  body' <- checkClause clauseType _clausePatterns _clauseBody
+  body' <- runReader emptyLocalVars (checkClause clauseType _clausePatterns _clauseBody)
   return
     FunctionClause
       { _clauseBody = body',
@@ -276,7 +279,7 @@ checkFunctionClause clauseType FunctionClause {..} = do
 -- | helper function for function clauses and lambda functions
 checkClause ::
   forall r.
-  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Builtins, Inference] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Builtins, Inference] r =>
   -- | Type
   Expression ->
   -- | Arguments
@@ -285,9 +288,11 @@ checkClause ::
   Expression ->
   Sem r Expression -- Checked body
 checkClause clauseType clausePats body = do
-  (locals, bodyTy) <- helper clausePats clauseType
-  let bodyTy' = substitutionE (localsToSubsE locals) bodyTy
-  checkFunctionClauseBody locals bodyTy' body
+  locals0 <- ask
+  (localsPats, bodyTy) <- helper clausePats clauseType
+  let locals' = locals0 <> localsPats
+      bodyTy' = substitutionE (localsToSubsE locals') bodyTy
+  local (const locals') (checkExpression bodyTy' body)
   where
     helper :: [PatternArg] -> Expression -> Sem r (LocalVars, Expression)
     helper pats ty = runState emptyLocalVars (go pats ty)

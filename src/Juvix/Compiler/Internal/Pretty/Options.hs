@@ -12,6 +12,12 @@ defaultOptions =
     { _optShowNameIds = False
     }
 
+traceOptions :: Options
+traceOptions =
+  Options
+    { _optShowNameIds = True
+    }
+
 makeLenses ''Options
 
 fromGenericOptions :: GenericOptions -> Options

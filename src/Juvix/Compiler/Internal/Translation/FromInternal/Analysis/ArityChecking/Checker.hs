@@ -148,6 +148,10 @@ arityLiteral (WithLoc _ l) = case l of
 arityUniverse :: Arity
 arityUniverse = ArityUnit
 
+-- | currently we do not try to infer lambda arity
+arityLambda :: Lambda -> Arity
+arityLambda = const ArityUnknown
+
 checkLhs ::
   forall r.
   Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r =>
@@ -318,8 +322,8 @@ typeArity = go
 
     goIden :: Iden -> Sem r Arity
     goIden = \case
-      IdenVar v -> getLocalArity v
-      -- IdenVar {} -> return ArityUnit
+      -- IdenVar v -> getLocalArity v -- does not work!
+      IdenVar {} -> return ArityUnknown
       IdenInductive {} -> return ArityUnit
       IdenFunction {} -> return ArityUnknown -- we need normalization to determine the arity
       IdenConstructor {} -> return ArityUnknown -- will be a type error
@@ -393,7 +397,7 @@ checkExpression hintArity expr = case expr of
                   }
             )
         ExpressionApplication {} -> impossible
-        ExpressionLambda {} -> impossible
+        ExpressionLambda l -> helper (getLoc l) (arityLambda l)
       return (foldApplication fun args')
       where
         helper :: Interval -> Arity -> Sem r [(IsImplicit, Expression)]

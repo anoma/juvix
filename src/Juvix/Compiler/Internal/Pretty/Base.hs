@@ -73,7 +73,7 @@ instance PrettyCode Expression where
 
 instance PrettyCode LambdaClause where
   ppCode LambdaClause {..} = do
-    lambdaParameters' <- hsep <$> mapM ppCode _lambdaPatterns
+    lambdaParameters' <- hsep <$> mapM ppCodeAtom _lambdaPatterns
     lambdaBody' <- ppCode _lambdaBody
     return $ lambdaParameters' <+> kwAssign <+> lambdaBody'
 
@@ -163,9 +163,9 @@ instance PrettyCode FunctionDef where
 instance PrettyCode FunctionClause where
   ppCode c = do
     funName <- ppCode (c ^. clauseName)
-    clausePatterns' <- mapM ppCodeAtom (c ^. clausePatterns)
+    clausePatterns' <- hsepMaybe <$> mapM ppCodeAtom (c ^. clausePatterns)
     clauseBody' <- ppCode (c ^. clauseBody)
-    return $ funName <+> hsep clausePatterns' <+> kwAssign <+> clauseBody'
+    return $ funName <+?> clausePatterns' <+> kwAssign <+> clauseBody'
 
 instance PrettyCode Backend where
   ppCode = \case
