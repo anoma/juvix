@@ -14,6 +14,7 @@ data InfoTableBuilder m a where
   RegisterConstr :: ConstructorInfo -> InfoTableBuilder m ()
   RegisterInductive :: InductiveInfo -> InfoTableBuilder m ()
   RegisterForward :: Text -> Symbol -> InfoTableBuilder m ()
+  RegisterMain :: Symbol -> InfoTableBuilder m ()
   GetIdent :: Text -> InfoTableBuilder m (Maybe IdentKind)
   GetFunctionInfo :: Symbol -> InfoTableBuilder m FunctionInfo
 
@@ -64,6 +65,8 @@ runInfoTableBuilder =
         modify' (over stateIdents (HashMap.insert (ii ^. inductiveName) (IdentInd (ii ^. inductiveSymbol))))
       RegisterForward txt sym ->
         modify' (over stateIdents (HashMap.insert txt (IdentFwd sym)))
+      RegisterMain sym ->
+        modify' (over stateInfoTable (set infoMainFunction (Just sym)))
       GetIdent txt -> do
         s <- get
         return $ HashMap.lookup txt (s ^. stateIdents)
