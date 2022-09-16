@@ -1,0 +1,8 @@
+module LiteralStringMain;
+
+open import Stdlib.Prelude;
+
+main : ℕ;
+main ≔ 123;
+
+end;

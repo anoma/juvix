@@ -5,8 +5,7 @@ import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Prelude
 
 data CoreResult = CoreResult
-  { _coreResultTable :: Core.InfoTable,
-    _coreResultNode :: [Core.Node]
+  { _coreResultTable :: Core.InfoTable
   }
 
 makeLenses ''CoreResult

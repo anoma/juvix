@@ -10,6 +10,7 @@ data InfoTableBuilder m a where
   RegisterIdent :: IdentifierInfo -> InfoTableBuilder m ()
   RegisterConstructor :: ConstructorInfo -> InfoTableBuilder m ()
   RegisterIdentNode :: Symbol -> Node -> InfoTableBuilder m ()
+  RegisterMain :: Symbol -> InfoTableBuilder m ()
   SetIdentArgsInfo :: Symbol -> [ArgumentInfo] -> InfoTableBuilder m ()
   GetIdent :: Text -> InfoTableBuilder m (Maybe IdentKind)
   GetInfoTable :: InfoTableBuilder m InfoTable
@@ -50,6 +51,8 @@ runInfoTableBuilder tab =
         modify' (over identMap (HashMap.insert (ci ^. (constructorName . nameText)) (IdentTag (ci ^. constructorTag))))
       RegisterIdentNode sym node ->
         modify' (over identContext (HashMap.insert sym node))
+      RegisterMain sym -> do
+        modify' (set infoMain (Just sym))
       SetIdentArgsInfo sym argsInfo -> do
         modify' (set (infoIdentifiers . at sym . _Just . identifierArgsInfo) argsInfo)
         modify' (set (infoIdentifiers . at sym . _Just . identifierArgsNum) (length argsInfo))
