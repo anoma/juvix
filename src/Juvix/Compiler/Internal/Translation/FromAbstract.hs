@@ -239,16 +239,16 @@ goLambda (Abstract.Lambda cl) = case nonEmpty cl of
   Nothing -> unsupported "empty lambda"
   Just cl' -> Lambda <$> mapM goClause cl'
   where
-  goClause :: Abstract.LambdaClause -> Sem r LambdaClause
-  goClause (Abstract.LambdaClause ps b) = do
-    ps' <- mapM (goPattern . explicit) ps
-    b' <- goExpression b
-    return (LambdaClause ps' b')
-    where
-    explicit :: Abstract.PatternArg -> Abstract.Pattern
-    explicit (Abstract.PatternArg i p) = case i of
-      Explicit -> p
-      _ -> unsupported "implicit patterns in lambda"
+    goClause :: Abstract.LambdaClause -> Sem r LambdaClause
+    goClause (Abstract.LambdaClause ps b) = do
+      ps' <- mapM (goPattern . explicit) ps
+      b' <- goExpression b
+      return (LambdaClause ps' b')
+      where
+        explicit :: Abstract.PatternArg -> Abstract.Pattern
+        explicit (Abstract.PatternArg i p) = case i of
+          Explicit -> p
+          _ -> unsupported "implicit patterns in lambda"
 
 goApplication :: Abstract.Application -> Sem r Application
 goApplication (Abstract.Application f x i) = do

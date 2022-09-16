@@ -165,10 +165,10 @@ mkPolyType = fmap PolyType . go
         ty' <- go ty
         return (ExpressionSimpleLambda (SimpleLambda v ty' b'))
       where
-      goClause :: LambdaClause -> Maybe LambdaClause
-      goClause (LambdaClause ps b) = do
-        b' <- go b
-        return (LambdaClause ps b')
+        goClause :: LambdaClause -> Maybe LambdaClause
+        goClause (LambdaClause ps b) = do
+          b' <- go b
+          return (LambdaClause ps b')
 
 class HasExpressions a where
   leafExpressions :: Traversal' a Expression

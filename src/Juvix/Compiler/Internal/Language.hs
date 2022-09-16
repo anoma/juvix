@@ -110,14 +110,14 @@ data SimpleLambda = SimpleLambda
   }
   deriving stock (Eq, Generic)
 
-newtype Lambda = Lambda {
-  _lambdaClauses :: NonEmpty LambdaClause
+newtype Lambda = Lambda
+  { _lambdaClauses :: NonEmpty LambdaClause
   }
   deriving stock (Eq, Generic)
 
-data LambdaClause = LambdaClause {
-  _lambdaPatterns :: NonEmpty Pattern, -- only explicit patterns are allowed
-  _lambdaBody :: Expression -- only explicit patterns are allowed,
+data LambdaClause = LambdaClause
+  { _lambdaPatterns :: NonEmpty Pattern, -- only explicit patterns are allowed
+    _lambdaBody :: Expression -- only explicit patterns are allowed,
   }
   deriving stock (Eq, Generic)
 

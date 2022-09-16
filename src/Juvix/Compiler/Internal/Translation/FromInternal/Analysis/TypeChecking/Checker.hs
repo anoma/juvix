@@ -277,9 +277,12 @@ checkFunctionClause clauseType FunctionClause {..} = do
 checkClause ::
   forall r.
   Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Builtins, Inference] r =>
-  Expression -> -- ^ Type
-  [PatternArg] -> -- ^ Arguments
-  Expression -> -- ^ Body
+  -- | Type
+  Expression ->
+  -- | Arguments
+  [PatternArg] ->
+  -- | Body
+  Expression ->
   Sem r Expression -- Checked body
 checkClause clauseType clausePats body = do
   (locals, bodyTy) <- helper clausePats clauseType
@@ -300,7 +303,6 @@ checkClause clauseType clausePats body = do
           (par : pars, ret) -> do
             checkPattern par p
             go ps (foldFunType pars ret)
-
 
 -- | Refines a hole into a function type. I.e. '_@1' is matched with '_@fresh → _@fresh'
 holeRefineToFunction :: Members '[Inference, NameIdGen] r => Hole -> Sem r Function
@@ -544,16 +546,17 @@ inferExpression' e = case e of
     goLambda l@(Lambda cl) = do
       h <- freshHole (getLoc l)
       l' <- Lambda <$> mapM (goClause h) cl
-      return TypedExpression {
-        _typedType = ExpressionHole h,
-        _typedExpression = ExpressionLambda l'
-        }
+      return
+        TypedExpression
+          { _typedType = ExpressionHole h,
+            _typedExpression = ExpressionLambda l'
+          }
       where
-      goClause :: Hole -> LambdaClause -> Sem r LambdaClause
-      goClause h (LambdaClause pats body) = do
-        let patArgs = map (PatternArg Explicit) (toList pats)
-        body' <- checkClause (ExpressionHole h) patArgs body
-        return (LambdaClause pats body')
+        goClause :: Hole -> LambdaClause -> Sem r LambdaClause
+        goClause h (LambdaClause pats body) = do
+          let patArgs = map (PatternArg Explicit) (toList pats)
+          body' <- checkClause (ExpressionHole h) patArgs body
+          return (LambdaClause pats body')
 
     goUniverse :: SmallUniverse -> Sem r TypedExpression
     goUniverse u =

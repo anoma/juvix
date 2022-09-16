@@ -14,14 +14,14 @@ data FunctionArity = FunctionArity
   }
   deriving stock (Eq)
 
-data ArityRest =
-  ArityRestUnit
+data ArityRest
+  = ArityRestUnit
   | ArityRestUnknown
   deriving stock (Eq)
 
-data UnfoldedArity = UnfoldedArity {
-  _ufoldArityParams :: [ArityParameter],
-  _ufoldArityRest :: ArityRest
+data UnfoldedArity = UnfoldedArity
+  { _ufoldArityParams :: [ArityParameter],
+    _ufoldArityRest :: ArityRest
   }
   deriving stock (Eq)
 
@@ -40,19 +40,21 @@ arityParameter = \case
 arityCommonPrefix :: Arity -> Arity -> [ArityParameter]
 arityCommonPrefix p1 p2 = commonPrefix u1 u2
   where
-  u1 = unfoldArity p1
-  u2 = unfoldArity p2
+    u1 = unfoldArity p1
+    u2 = unfoldArity p2
 
 unfoldArity' :: Arity -> UnfoldedArity
 unfoldArity' = \case
-  ArityUnit -> UnfoldedArity {
-    _ufoldArityParams = [],
-    _ufoldArityRest = ArityRestUnit
-    }
-  ArityUnknown -> UnfoldedArity {
-    _ufoldArityParams = [],
-    _ufoldArityRest = ArityRestUnknown
-    }
+  ArityUnit ->
+    UnfoldedArity
+      { _ufoldArityParams = [],
+        _ufoldArityRest = ArityRestUnit
+      }
+  ArityUnknown ->
+    UnfoldedArity
+      { _ufoldArityParams = [],
+        _ufoldArityRest = ArityRestUnknown
+      }
   ArityFunction (FunctionArity l r) ->
     over ufoldArityParams (l :) (unfoldArity' r)
 

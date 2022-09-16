@@ -125,11 +125,11 @@ guessArity = \case
         refine :: [IsImplicit] -> [ArityParameter] -> Maybe [ArityParameter]
         refine as ps = case (as, ps) of
           (Explicit : as', ParamExplicit {} : ps') -> refine as' ps'
-          (Implicit : as' , ParamImplicit {} : ps') -> refine as' ps'
-          ( as'@(Explicit : _), ParamImplicit {} : ps') -> refine as' ps'
+          (Implicit : as', ParamImplicit {} : ps') -> refine as' ps'
+          (as'@(Explicit : _), ParamImplicit {} : ps') -> refine as' ps'
           (Implicit : _, ParamExplicit {} : _) -> Nothing
           ([], ps') -> Just ps'
-          ( _ : _, []) -> Nothing
+          (_ : _, []) -> Nothing
 
         arif :: Sem r Arity
         arif = guessArity f
@@ -259,34 +259,38 @@ checkConstructorApp ca@(ConstructorApp c ps) = do
   ps' <- zipWithM checkPattern arities ps
   return (ConstructorApp c ps')
 
-checkLambda :: forall r. Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r
-   => Arity -> Lambda -> Sem r Lambda
+checkLambda ::
+  forall r.
+  Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r =>
+  Arity ->
+  Lambda ->
+  Sem r Lambda
 checkLambda ari (Lambda cl) = Lambda <$> mapM goClause cl
   where
-  goClause :: LambdaClause -> Sem r LambdaClause
-  goClause (LambdaClause ps b) = do
-    locals <- ask
-    let uari@UnfoldedArity{..} = unfoldArity' ari
-    (locals', (ps', rest)) <- runState locals (helper _ufoldArityRest (toList ps) _ufoldArityParams)
-    let ariBody = foldArity (set ufoldArityParams rest uari)
-    b' <- local (const locals') (checkExpression ariBody b)
-    return (LambdaClause (fromJust (nonEmpty ps')) b')
-    where
-    -- returns the adjusted patterns and the not consumed arity
-    helper :: ArityRest -> [Pattern] -> [ArityParameter] -> Sem (State LocalVars ': r) ([Pattern], [ArityParameter])
-    helper rest = go
+    goClause :: LambdaClause -> Sem r LambdaClause
+    goClause (LambdaClause ps b) = do
+      locals <- ask
+      let uari@UnfoldedArity {..} = unfoldArity' ari
+      (locals', (ps', rest)) <- runState locals (helper _ufoldArityRest (toList ps) _ufoldArityParams)
+      let ariBody = foldArity (set ufoldArityParams rest uari)
+      b' <- local (const locals') (checkExpression ariBody b)
+      return (LambdaClause (fromJust (nonEmpty ps')) b')
       where
-       go :: [Pattern] -> [ArityParameter] -> Sem (State LocalVars ': r) ([Pattern], [ArityParameter])
-       go pats as =
-        case (pats, as) of
-          ([], _) -> return ([], as)
-          (p : ps', ParamExplicit paramAri : as') -> do
-            p' <- (^. patternArgPattern) <$> checkPattern paramAri (PatternArg Explicit p)
-            first (p':) <$> go ps' as'
-          (_ : _, ParamImplicit {} : _) -> error "unsupported implicit patterns"
-          (_ : _, []) -> case rest of
-            ArityRestUnit -> error "too many patterns in lambda"
-            ArityRestUnknown -> return (pats, [])
+        -- returns the adjusted patterns and the not consumed arity
+        helper :: ArityRest -> [Pattern] -> [ArityParameter] -> Sem (State LocalVars ': r) ([Pattern], [ArityParameter])
+        helper rest = go
+          where
+            go :: [Pattern] -> [ArityParameter] -> Sem (State LocalVars ': r) ([Pattern], [ArityParameter])
+            go pats as =
+              case (pats, as) of
+                ([], _) -> return ([], as)
+                (p : ps', ParamExplicit paramAri : as') -> do
+                  p' <- (^. patternArgPattern) <$> checkPattern paramAri (PatternArg Explicit p)
+                  first (p' :) <$> go ps' as'
+                (_ : _, ParamImplicit {} : _) -> error "unsupported implicit patterns"
+                (_ : _, []) -> case rest of
+                  ArityRestUnit -> error "too many patterns in lambda"
+                  ArityRestUnknown -> return (pats, [])
 
 idenArity :: Members '[Reader LocalVars, Reader InfoTable] r => Iden -> Sem r Arity
 idenArity = \case
@@ -323,10 +327,10 @@ typeArity = go
 
     goParam :: FunctionParameter -> Sem r (ArityParameter, LocalVars -> LocalVars)
     goParam (FunctionParameter v i e) = do
-        param' <- param
-        return (param', scopeChange)
-        where
-        param =       case i of
+      param' <- param
+      return (param', scopeChange)
+      where
+        param = case i of
           Implicit -> return ParamImplicit
           Explicit -> ParamExplicit <$> go e
 

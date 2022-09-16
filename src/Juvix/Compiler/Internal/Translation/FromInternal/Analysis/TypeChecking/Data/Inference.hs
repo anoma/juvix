@@ -330,21 +330,24 @@ re = reinterpret $ \case
                 goLambda (Lambda l1) (Lambda l2) = case zipExactMay (toList l1) (toList l2) of
                   Just z -> asum <$> mapM (uncurry goClause) z
                   _ -> err
-                 where
-                  goClause :: LambdaClause -> LambdaClause -> Sem r (Maybe MatchError)
-                  goClause (LambdaClause p1 b1) (LambdaClause p2 b2) =
-                    case zipExactMay (toList p1) (toList p2) of
-                    Nothing -> err
-                    Just z -> do
-                      m <- ask @(HashMap VarName VarName)
-                      (m', patMatch) <- runState m (mapM (uncurry matchPatterns) z)
-                      if
-                        | and patMatch -> local (const m') (go b1 b2)
-                        | otherwise -> err
+                  where
+                    goClause :: LambdaClause -> LambdaClause -> Sem r (Maybe MatchError)
+                    goClause (LambdaClause p1 b1) (LambdaClause p2 b2) =
+                      case zipExactMay (toList p1) (toList p2) of
+                        Nothing -> err
+                        Just z -> do
+                          m <- ask @(HashMap VarName VarName)
+                          (m', patMatch) <- runState m (mapM (uncurry matchPatterns) z)
+                          if
+                              | and patMatch -> local (const m') (go b1 b2)
+                              | otherwise -> err
 
-matchPatterns :: forall r.
-          Members '[State InferenceState, State (HashMap VarName VarName), Reader FunctionsTable] r =>
-          Pattern -> Pattern -> Sem r Bool
+matchPatterns ::
+  forall r.
+  Members '[State InferenceState, State (HashMap VarName VarName), Reader FunctionsTable] r =>
+  Pattern ->
+  Pattern ->
+  Sem r Bool
 matchPatterns p1 p2 = case (p1, p2) of
   (PatternWildcard {}, PatternWildcard {}) -> ok
   (PatternVariable v1, PatternVariable v2) -> modify (HashMap.insert v1 v2) $> True
@@ -354,21 +357,21 @@ matchPatterns p1 p2 = case (p1, p2) of
   (PatternVariable {}, _) -> err
   (_, PatternVariable {}) -> err
   where
-  goConstructor :: ConstructorApp -> ConstructorApp -> Sem r Bool
-  goConstructor (ConstructorApp c1 args1) (ConstructorApp c2 args2)
-    | c1 /= c2 = err
-    | otherwise = case zipExactMay args1 args2 of
-        Nothing -> err
-        Just z -> allM (uncurry goArg) z
-  goArg :: PatternArg -> PatternArg -> Sem r Bool
-  goArg (PatternArg i1 a1) (PatternArg i2 a2)
-   | i1 /= i2 = err
-   | otherwise = matchPatterns a1 a2
+    goConstructor :: ConstructorApp -> ConstructorApp -> Sem r Bool
+    goConstructor (ConstructorApp c1 args1) (ConstructorApp c2 args2)
+      | c1 /= c2 = err
+      | otherwise = case zipExactMay args1 args2 of
+          Nothing -> err
+          Just z -> allM (uncurry goArg) z
+    goArg :: PatternArg -> PatternArg -> Sem r Bool
+    goArg (PatternArg i1 a1) (PatternArg i2 a2)
+      | i1 /= i2 = err
+      | otherwise = matchPatterns a1 a2
 
-  ok :: Sem r Bool
-  ok = return True
-  err :: Sem r Bool
-  err = return False
+    ok :: Sem r Bool
+    ok = return True
+    err :: Sem r Bool
+    err = return False
 
 runInferenceDef ::
   (Members '[Error TypeCheckerError, Reader FunctionsTable, State TypesTable] r, HasExpressions funDef) =>

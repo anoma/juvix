@@ -120,10 +120,10 @@ instance PrettyCode ConstructorApp where
   ppCode (ConstructorApp ctr args) = do
     ctr' <- ppCode ctr
     if
-      | null args -> do
-          args' <- hsep <$> mapM ppCode args
-          return (parens (ctr' <+> args'))
-      | otherwise -> return ctr'
+        | null args -> do
+            args' <- hsep <$> mapM ppCode args
+            return (parens (ctr' <+> args'))
+        | otherwise -> return ctr'
 
 instance PrettyCode Pattern where
   ppCode = \case

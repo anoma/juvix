@@ -356,11 +356,11 @@ goExpression = \case
 goLambda :: forall r. Member (Error ScoperError) r => Lambda 'Scoped -> Sem r Abstract.Lambda
 goLambda (Lambda cl) = Abstract.Lambda <$> mapM goClause cl
   where
-  goClause :: LambdaClause 'Scoped -> Sem r Abstract.LambdaClause
-  goClause (LambdaClause ps b) = do
-    ps' <- mapM goPatternArg ps
-    b' <- goExpression b
-    return (Abstract.LambdaClause ps' b')
+    goClause :: LambdaClause 'Scoped -> Sem r Abstract.LambdaClause
+    goClause (LambdaClause ps b) = do
+      ps' <- mapM goPatternArg ps
+      b' <- goExpression b
+      return (Abstract.LambdaClause ps' b')
 
 goUniverse :: Universe -> Universe
 goUniverse = id

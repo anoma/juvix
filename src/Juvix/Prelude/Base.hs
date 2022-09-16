@@ -244,11 +244,11 @@ map' f (h : t) =
 commonPrefix :: forall a. Eq a => [a] -> [a] -> [a]
 commonPrefix a b = reverse (go [] a b)
   where
-  go :: [a] -> [a] -> [a] -> [a]
-  go ac x y = case (x, y) of
-    (x' : xs, y' : ys)
-     | x' == y' -> go (x' : ac) xs ys
-    _ -> ac
+    go :: [a] -> [a] -> [a] -> [a]
+    go ac x y = case (x, y) of
+      (x' : xs, y' : ys)
+        | x' == y' -> go (x' : ac) xs ys
+      _ -> ac
 
 --------------------------------------------------------------------------------
 -- NonEmpty

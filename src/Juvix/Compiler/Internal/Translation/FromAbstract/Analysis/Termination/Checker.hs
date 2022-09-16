@@ -96,14 +96,15 @@ checkExpression e =
       ExpressionUniverse {} -> return ()
       ExpressionLiteral {} -> return ()
 
-checkLambda :: forall r.
+checkLambda ::
+  forall r.
   Members '[State CallMap, Reader FunctionRef, Reader InfoTable, Reader SizeInfo] r =>
   Lambda ->
   Sem r ()
 checkLambda (Lambda cl) = mapM_ checkClause cl
   where
-  checkClause :: LambdaClause -> Sem r ()
-  checkClause LambdaClause {..} = checkExpression _lambdaBody
+    checkClause :: LambdaClause -> Sem r ()
+    checkClause LambdaClause {..} = checkExpression _lambdaBody
 
 checkApplication ::
   Members '[State CallMap, Reader FunctionRef, Reader InfoTable, Reader SizeInfo] r =>

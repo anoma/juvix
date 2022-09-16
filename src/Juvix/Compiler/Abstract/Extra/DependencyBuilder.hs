@@ -128,14 +128,13 @@ goExpression p e = case e of
   ExpressionHole {} -> return ()
   ExpressionLambda l -> goLambda l
   where
-  goLambda :: Lambda -> Sem r ()
-  goLambda (Lambda clauses) = mapM_ goClause clauses
-    where
-    goClause :: LambdaClause -> Sem r ()
-    goClause (LambdaClause {..}) = do
-      goExpression p _lambdaBody
-      mapM_ (goPattern p) _lambdaParameters
-
+    goLambda :: Lambda -> Sem r ()
+    goLambda (Lambda clauses) = mapM_ goClause clauses
+      where
+        goClause :: LambdaClause -> Sem r ()
+        goClause (LambdaClause {..}) = do
+          goExpression p _lambdaBody
+          mapM_ (goPattern p) _lambdaParameters
 
 goFunctionParameter :: Member (State DependencyGraph) r => Name -> FunctionParameter -> Sem r ()
 goFunctionParameter p param = goExpression p (param ^. paramType)
