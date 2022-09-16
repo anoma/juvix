@@ -618,31 +618,6 @@ inferExpression' e = case e of
           ExpressionHole h -> do
             fun <- ExpressionFunction <$> holeRefineToFunction h
             helper (set typedType fun l')
-          -- OLD
-          -- When we have have an application with a hole on the left: '_@1 x'
-          -- We assume that it is a type application and thus 'x' must be a type.
-          -- Not sure if this is always desirable.
-          ExpressionHole h -> do
-            q <- queryMetavar h
-            case q of
-              Just ty -> helper (set typedType ty l')
-              Nothing -> do
-                -- TODO INCORRECT
-                r' <- checkExpression (smallUniverseE (getLoc h)) r
-                h' <- freshHole (getLoc h)
-                let fun = Function (unnamedParameter r') (ExpressionHole h')
-                whenJustM (matchTypes (ExpressionHole h) (ExpressionFunction fun)) impossible
-                return
-                  TypedExpression
-                    { _typedType = ExpressionHole h',
-                      _typedExpression =
-                        ExpressionApplication
-                          Application
-                            { _appLeft = l' ^. typedExpression,
-                              _appRight = r',
-                              _appImplicit = iapp
-                            }
-                    }
           _ -> throw tyErr
             where
               tyErr :: TypeCheckerError
