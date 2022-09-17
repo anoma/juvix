@@ -8,7 +8,7 @@ import Parsing qualified
 import Reachability qualified
 import Scope qualified
 import Termination qualified
-import TypeCheck qualified
+import Typecheck qualified
 
 slowTests :: TestTree
 slowTests =
@@ -26,7 +26,7 @@ fastTests =
       Scope.allTests,
       Termination.allTests,
       Arity.allTests,
-      TypeCheck.allTests,
+      Typecheck.allTests,
       Reachability.allTests
     ]
 

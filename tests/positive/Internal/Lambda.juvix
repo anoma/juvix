@@ -1,0 +1,114 @@
+module Lambda;
+
+infixr 9 ∘;
+∘ : {A : Type} → {B : Type} → {C : Type} → (B → C) → (A → B) → A → C;
+∘ {_} {B} {_} := λ {f g x ≔ f (g x)};
+
+inductive Nat {
+  zero : Nat;
+  suc : Nat → Nat;
+};
+
+infixr 2 ×;
+infixr 4 ,;
+inductive × (A : Type) (B : Type) {
+  , : A → B → A × B;
+};
+
+id : {A : Type} → A → A;
+id {A} := λ {a := a};
+
+id' : (A : Type) → A → A;
+id' := λ {A a := a};
+
+id'' : (A : Type) → A → A;
+id'' := λ {A := λ {a := a}};
+
+uncurry : {A : Type} → {B : Type} → {C : Type} → (A → B → C) → A × B → C;
+uncurry {A} {B} {C} := λ {f (a, b) := f a b};
+
+inductive Box (A : Type) {
+  box : A → Box A;
+};
+
+idB : {A : Type} → A → A;
+idB {A} a ≔ λ { a := a} a;
+
+mapB : {A : Type} → (A → A) → A → A;
+mapB {A} ≔ λ { f a := f a};
+
+terminating add : Nat → Nat → Nat;
+add := λ {zero n := n; (suc n) := λ {m := suc (add n m) }};
+
+fst : {A : Type} → {B : Type} → A × B → A;
+fst {_} {_} := λ {(a, _) ≔ a};
+
+swap : {A : Type} → {B : Type} → A × B → B × A;
+swap {_} {_} := λ {(a, b) ≔ b, a};
+
+first : {A : Type} → {B : Type} → {A' : Type} → (A → A') → A × B → A' × B;
+first {_} {_} {_} := λ {f (a, b) ≔ f a, b};
+
+second : {A : Type} → {B : Type} → {B' : Type} → (B → B') → A × B → A × B';
+second f (a , b) ≔ a , f b;
+
+both : {A : Type} → {B : Type} → (A → B) → A × A → B × B;
+both {_} {_} := λ {f (a, b) ≔ f a, f b};
+
+infixr 5 ∷;
+inductive List (a : Type) {
+  nil : List a;
+  ∷ : a → List a → List a;
+};
+
+terminating
+map : {A : Type} → {B : Type} → (A → B) → List A → List B;
+map {_} {_} := λ {f nil ≔ nil;
+                  f (x ∷ xs) ≔ f x ∷ map f xs};
+
+pairEval : {A : Type} → {B : Type} → (A → B) × A → B;
+pairEval {_} {_} := λ {(f, x) ≔ f x};
+
+terminating
+foldr : {A : Type} → {B : Type} → (A → B → B) → B → List A → B;
+foldr {_} {_} := λ {_ z nil ≔ z;
+                    f z (h ∷ hs) ≔ f h (foldr f z hs)};
+
+terminating
+foldl : {A : Type} → {B : Type} → (B → A → B) → B → List A → B;
+foldl {_} {_} := λ {f z nil ≔ z ;
+    f z (h ∷ hs) ≔ foldl f (f z h) hs};
+
+inductive Bool {
+  true : Bool;
+  false : Bool;
+};
+
+if : {A : Type} → Bool → A → A → A;
+if true a _ ≔ a;
+if false _ b ≔ b;
+
+terminating
+filter : {A : Type} → (A → Bool) → List A → List A;
+filter {_} := λ {_ nil ≔ nil;
+   f (h ∷ hs) ≔ if (f h)
+     (h ∷ filter f hs)
+     (filter f hs)};
+
+terminating
+partition : {A : Type} → (A → Bool) → List A → List A × List A;
+partition {_} := λ {_ nil ≔ nil, nil;
+    f (x ∷ xs) ≔ (if (f x) first second) ((∷) x) (partition f xs)};
+
+terminating
+zipWith : {A : Type} → {B : Type} → {C : Type} → (_ → _ → _) → List A → List B → List C;
+zipWith {_} {_} {_} := λ {_ nil _ := nil;
+    _ _ nil := nil;
+    f (x ∷ xs) (y ∷ ys) := f x y ∷ zipWith f xs ys
+   };
+
+t : {A : Type} → {B : Type} → ({X : Type} → List X) → List A × List B;
+t {A} {B} := id {({X : Type} → List X) → _} λ { f ≔ f {A} , f {B}};
+
+
+end;

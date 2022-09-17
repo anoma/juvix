@@ -323,7 +323,6 @@ typeArity = go
 
     goIden :: Iden -> Sem r Arity
     goIden = \case
-      -- IdenVar v -> getLocalArity v -- does not work!
       IdenVar {} -> return ArityUnknown
       IdenInductive {} -> return ArityUnit
       IdenFunction {} -> return ArityUnknown -- we need normalization to determine the arity

@@ -219,15 +219,15 @@ isSmallType e = case e of
 isSmallUni :: Universe -> Bool
 isSmallUni u = 0 == fromMaybe 0 (u ^. universeLevel)
 
-goTypeUniverse :: Universe -> Expression
-goTypeUniverse u
-  | isSmallUni u = smallUniverseE (getLoc u)
+goUniverse :: Universe -> SmallUniverse
+goUniverse u
+  | isSmallUni u = SmallUniverse (getLoc u)
   | otherwise = unsupported "big universes"
 
 goType :: Abstract.Expression -> Sem r Expression
 goType e = case e of
   Abstract.ExpressionIden i -> return (ExpressionIden (goTypeIden i))
-  Abstract.ExpressionUniverse u -> return (goTypeUniverse u)
+  Abstract.ExpressionUniverse u -> return (ExpressionUniverse (goUniverse u))
   Abstract.ExpressionApplication a -> ExpressionApplication <$> goTypeApplication a
   Abstract.ExpressionFunction f -> ExpressionFunction <$> goFunction f
   Abstract.ExpressionLiteral {} -> unsupported "literals in types"
@@ -280,7 +280,7 @@ goExpressionFunction f = do
 goExpression :: Abstract.Expression -> Sem r Expression
 goExpression e = case e of
   Abstract.ExpressionIden i -> return (ExpressionIden (goIden i))
-  Abstract.ExpressionUniverse {} -> unsupported "universes in expression"
+  Abstract.ExpressionUniverse u -> return (ExpressionUniverse (goUniverse u))
   Abstract.ExpressionFunction f -> ExpressionFunction <$> goExpressionFunction f
   Abstract.ExpressionApplication a -> ExpressionApplication <$> goApplication a
   Abstract.ExpressionLambda l -> ExpressionLambda <$> goLambda l
