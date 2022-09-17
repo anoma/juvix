@@ -86,8 +86,8 @@ checkFunctionClause ari cl = do
     name = cl ^. clauseName
     loc = getLoc name
 
-lambda :: a
-lambda = error "lambda expressions are not supported by the arity checker"
+simplelambda :: a
+simplelambda = error "simple lambda expressions are not supported by the arity checker"
 
 withEmptyLocalVars :: Sem (Reader LocalVars : r) a -> Sem r a
 withEmptyLocalVars = runReader emptyLocalVars
@@ -104,7 +104,7 @@ guessArity = \case
   ExpressionApplication a -> appHelper a
   ExpressionIden i -> idenHelper i
   ExpressionUniverse {} -> return arityUniverse
-  ExpressionSimpleLambda {} -> lambda
+  ExpressionSimpleLambda {} -> simplelambda
   ExpressionLambda {} -> return ArityUnknown
   where
     idenHelper :: Iden -> Sem r Arity
@@ -319,7 +319,7 @@ typeArity = go
       ExpressionHole {} -> return ArityUnknown
       ExpressionLambda {} -> return ArityUnknown
       ExpressionUniverse {} -> return ArityUnit
-      ExpressionSimpleLambda {} -> lambda
+      ExpressionSimpleLambda {} -> simplelambda
 
     goIden :: Iden -> Sem r Arity
     goIden = \case
@@ -374,7 +374,7 @@ checkExpression hintArity expr = case expr of
   ExpressionFunction {} -> return expr
   ExpressionUniverse {} -> return expr
   ExpressionHole {} -> return expr
-  ExpressionSimpleLambda {} -> lambda
+  ExpressionSimpleLambda {} -> simplelambda
   ExpressionLambda l -> ExpressionLambda <$> checkLambda hintArity l
   where
     goApp :: Application -> Sem r Expression
@@ -387,7 +387,7 @@ checkExpression hintArity expr = case expr of
         ExpressionIden i -> idenArity i >>= helper (getLoc i)
         ExpressionLiteral l -> helper (getLoc l) (arityLiteral l)
         ExpressionUniverse l -> helper (getLoc l) arityUniverse
-        ExpressionSimpleLambda {} -> lambda
+        ExpressionSimpleLambda {} -> simplelambda
         ExpressionFunction f ->
           throw
             ( ErrFunctionApplied
