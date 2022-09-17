@@ -105,7 +105,7 @@ guessArity = \case
   ExpressionIden i -> idenHelper i
   ExpressionUniverse {} -> return arityUniverse
   ExpressionSimpleLambda {} -> simplelambda
-  ExpressionLambda {} -> return ArityUnknown
+  ExpressionLambda l -> return (arityLambda l)
   where
     idenHelper :: Iden -> Sem r Arity
     idenHelper i = case i of
@@ -134,10 +134,10 @@ guessArity = \case
         arif :: Sem r Arity
         arif = guessArity f
 
--- | The arity of all literals is assumed to be: {} -> 1
 arityLiteral :: LiteralLoc -> Arity
 arityLiteral (WithLoc _ l) = case l of
   LitInteger {} -> ArityUnit
+  -- The arity of all strings is assumed to be: {} -> 1
   LitString {} ->
     ArityFunction
       FunctionArity
@@ -148,10 +148,19 @@ arityLiteral (WithLoc _ l) = case l of
 arityUniverse :: Arity
 arityUniverse = ArityUnit
 
--- | currently we do not try to infer lambda arity.
--- Since lambdas cannot yet have implicit arguments, this is fine.
+-- | Lambdas can only have explicit arguments. Since we do not have dependent
+-- types, it is ok to (partially) infer the arity of the lambda from the clause
+-- with the most patterns.
 arityLambda :: Lambda -> Arity
-arityLambda = const ArityUnknown
+arityLambda (Lambda cl) =
+  foldArity
+    UnfoldedArity
+      { _ufoldArityParams = replicate (maximum1 (fmap numPatterns cl)) (ParamExplicit ArityUnknown),
+        _ufoldArityRest = ArityRestUnknown
+      }
+  where
+    numPatterns :: LambdaClause -> Int
+    numPatterns (LambdaClause ps _) = length ps
 
 checkLhs ::
   forall r.
@@ -161,7 +170,7 @@ checkLhs ::
   Arity ->
   [PatternArg] ->
   Sem r ([PatternArg], LocalVars, Arity)
-checkLhs loc hint ariSignature pats = do
+checkLhs loc guessedBody ariSignature pats = do
   (locals, (pats', bodyAri)) <- runState emptyLocalVars (goLhs ariSignature pats)
   return (pats', locals, bodyAri)
   where
@@ -171,7 +180,7 @@ checkLhs loc hint ariSignature pats = do
     -- between explicit parameters already in the pattern.
     goLhs :: Arity -> [PatternArg] -> Sem (State LocalVars ': r) ([PatternArg], Arity)
     goLhs a = \case
-      [] -> return $ case tailHelper a hint of
+      [] -> return $ case tailHelper a of
         Nothing -> ([], a)
         Just tailUnderscores ->
           let a' = foldArity (over ufoldArityParams (drop tailUnderscores) (unfoldArity' a))
@@ -209,13 +218,26 @@ checkLhs loc hint ariSignature pats = do
         wildcard :: PatternArg
         wildcard = PatternArg Implicit (PatternWildcard (Wildcard loc))
 
-    tailHelper :: Arity -> Arity -> Maybe Int
-    tailHelper a target
-      | notNull a' && all (== ParamImplicit) a' = Just (length a')
+    -- This is an heuristic and it can have an undesired result.
+    -- Sometimes the outcome may even be confusing.
+    tailHelper :: Arity -> Maybe Int
+    tailHelper a
+      | 0 < pref = Just pref
       | otherwise = Nothing
       where
-        a' = dropSuffix target' (unfoldArity a)
-        target' = unfoldArity target
+        pref :: Int
+        pref = aI - targetI
+        preceedingImplicits :: Arity -> Int
+        preceedingImplicits = length . takeWhile isImplicit . unfoldArity
+          where
+            isImplicit :: ArityParameter -> Bool
+            isImplicit = \case
+              ParamExplicit {} -> False
+              ParamImplicit -> True
+        aI :: Int
+        aI = preceedingImplicits a
+        targetI :: Int
+        targetI = preceedingImplicits guessedBody
 
 checkPattern ::
   forall r.
@@ -292,7 +314,10 @@ checkLambda ari (Lambda cl) = Lambda <$> mapM goClause cl
                 (p : ps', ParamExplicit paramAri : as') -> do
                   p' <- (^. patternArgPattern) <$> checkPattern paramAri (PatternArg Explicit p)
                   first (p' :) <$> go ps' as'
-                (_ : _, ParamImplicit {} : _) -> error "unsupported implicit patterns"
+                (_ : _, ParamImplicit {} : _) ->
+                  -- The lambda is expected to have an implicit argument but it cannot have one.
+                  -- TODO. think what to do in this case
+                  return (pats, as)
                 (_ : _, []) -> case rest of
                   ArityRestUnit -> error "too many patterns in lambda"
                   ArityRestUnknown -> return (pats, [])
@@ -331,18 +356,17 @@ typeArity = go
 
     goParam :: FunctionParameter -> ArityParameter
     goParam (FunctionParameter _ i e) = case i of
-          Implicit -> ParamImplicit
-          Explicit -> ParamExplicit (go e)
+      Implicit -> ParamImplicit
+      Explicit -> ParamExplicit (go e)
 
     goFun :: Function -> FunctionArity
     goFun (Function l r) =
       let l' = goParam l
           r' = go r
-      in
-        FunctionArity
-          { _functionArityLeft = l',
-            _functionArityRight = r'
-          }
+       in FunctionArity
+            { _functionArityLeft = l',
+              _functionArityRight = r'
+            }
 
 checkExample ::
   forall r.
