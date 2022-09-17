@@ -57,7 +57,7 @@ checkFunctionDef ::
   FunctionDef ->
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
-  arity <- withEmptyLocalVars (typeArity _funDefType)
+  let arity = typeArity _funDefType
   _funDefClauses' <- mapM (checkFunctionClause arity) _funDefClauses
   _funDefExamples' <- withEmptyLocalVars (mapM checkExample _funDefExamples)
   return
@@ -248,8 +248,8 @@ checkConstructorApp ::
   Sem r ConstructorApp
 checkConstructorApp ca@(ConstructorApp c ps) = do
   args <- (^. constructorInfoArgs) <$> lookupConstructor c
-  arities <- withEmptyLocalVars (mapM typeArity args)
-  let n = length arities
+  let arities = map typeArity args
+      n = length arities
       lps = length ps
   when
     (n /= lps)
@@ -300,55 +300,45 @@ checkLambda ari (Lambda cl) = Lambda <$> mapM goClause cl
 idenArity :: Members '[Reader LocalVars, Reader InfoTable] r => Iden -> Sem r Arity
 idenArity = \case
   IdenVar v -> getLocalArity v
-  IdenInductive i -> inductiveType i >>= typeArity
-  IdenFunction f -> lookupFunction f >>= typeArity . (^. functionInfoDef . funDefType)
-  IdenConstructor c -> constructorType c >>= typeArity
-  IdenAxiom a -> lookupAxiom a >>= typeArity . (^. axiomInfoType)
+  IdenInductive i -> typeArity <$> inductiveType i
+  IdenFunction f -> typeArity . (^. functionInfoDef . funDefType) <$> lookupFunction f
+  IdenConstructor c -> typeArity <$> constructorType c
+  IdenAxiom a -> typeArity . (^. axiomInfoType) <$> lookupAxiom a
 
 -- | let x be some expression of type T. The argument of this function is T and it returns
--- the arity of x.
-typeArity :: forall r. Members '[Reader InfoTable, Reader LocalVars] r => Expression -> Sem r Arity
+-- the arity of x. In other words, given (T : Type), it returns the arity of the elements of T.
+typeArity :: Expression -> Arity
 typeArity = go
   where
-    go :: Expression -> Sem r Arity
+    go :: Expression -> Arity
     go = \case
       ExpressionIden i -> goIden i
-      ExpressionApplication {} -> return ArityUnit
-      ExpressionLiteral {} -> return ArityUnknown
-      ExpressionFunction f -> ArityFunction <$> goFun f
-      ExpressionHole {} -> return ArityUnknown
-      ExpressionLambda {} -> return ArityUnknown
-      ExpressionUniverse {} -> return ArityUnit
+      ExpressionApplication {} -> ArityUnit
+      ExpressionLiteral {} -> ArityUnknown
+      ExpressionFunction f -> ArityFunction (goFun f)
+      ExpressionHole {} -> ArityUnknown
+      ExpressionLambda {} -> ArityUnknown
+      ExpressionUniverse {} -> ArityUnit
       ExpressionSimpleLambda {} -> simplelambda
 
-    goIden :: Iden -> Sem r Arity
+    goIden :: Iden -> Arity
     goIden = \case
-      IdenVar {} -> return ArityUnknown
-      IdenInductive {} -> return ArityUnit
-      IdenFunction {} -> return ArityUnknown -- we need normalization to determine the arity
-      IdenConstructor {} -> return ArityUnknown -- will be a type error
-      IdenAxiom ax -> lookupAxiom ax >>= go . (^. axiomInfoType)
+      IdenVar {} -> ArityUnknown
+      IdenInductive {} -> ArityUnit
+      IdenFunction {} -> ArityUnknown -- we need normalization to determine the arity
+      IdenConstructor {} -> ArityUnknown -- will be a type error
+      IdenAxiom {} -> ArityUnknown
 
-    goParam :: FunctionParameter -> Sem r (ArityParameter, LocalVars -> LocalVars)
-    goParam (FunctionParameter v i e) = do
-      param' <- param
-      return (param', scopeChange)
-      where
-        param = case i of
-          Implicit -> return ParamImplicit
-          Explicit -> ParamExplicit <$> go e
+    goParam :: FunctionParameter -> ArityParameter
+    goParam (FunctionParameter _ i e) = case i of
+          Implicit -> ParamImplicit
+          Explicit -> ParamExplicit (go e)
 
-        scopeChange :: LocalVars -> LocalVars
-        scopeChange = case (v, e) of
-          (Just v', ExpressionUniverse {}) -> withArity v' ArityUnit
-          _ -> id
-
-    -- TODO if the argument is (A : Type) we know A has arity unit.
-    goFun :: Function -> Sem r FunctionArity
-    goFun (Function l r) = do
-      (l', loc) <- goParam l
-      r' <- local loc (go r)
-      return
+    goFun :: Function -> FunctionArity
+    goFun (Function l r) =
+      let l' = goParam l
+          r' = go r
+      in
         FunctionArity
           { _functionArityLeft = l',
             _functionArityRight = r'
