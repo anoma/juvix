@@ -166,7 +166,7 @@ checkExample ::
   Example ->
   Sem r Example
 checkExample e = do
-  e' <- withEmptyVars (runInferenceDef (traverseOf exampleExpression (inferExpression >=> strongNormalize) e))
+  e' <- withEmptyVars (runInferenceDef (traverseOf exampleExpression (inferExpression Nothing >=> strongNormalize) e))
   output e'
   return e'
 
@@ -177,7 +177,7 @@ checkExpression ::
   Expression ->
   Sem r Expression
 checkExpression expectedTy e = do
-  e' <- inferExpression' e
+  e' <- inferExpression' (Just expectedTy) e
   let inferredType = e' ^. typedType
   whenJustM (matchTypes expectedTy inferredType) (const (err inferredType))
   return (e' ^. typedExpression)
@@ -246,9 +246,10 @@ checkConstructorReturnType indType ctor = do
 
 inferExpression ::
   Members '[Reader InfoTable, Reader FunctionsTable, Builtins, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
+  Maybe Expression -> -- type hint
   Expression ->
   Sem r Expression
-inferExpression = fmap (^. typedExpression) . inferExpression'
+inferExpression hint = fmap (^. typedExpression) . inferExpression' hint
 
 lookupVar :: Member (Reader LocalVars) r => Name -> Sem r Expression
 lookupVar v = HashMap.lookupDefault err v <$> asks (^. localTypes)
@@ -507,20 +508,21 @@ literalMagicType l = do
 inferExpression' ::
   forall r.
   Members '[Reader InfoTable, Reader FunctionsTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Builtins] r =>
+  Maybe Expression ->
   Expression ->
   Sem r TypedExpression
-inferExpression' e = case e of
-  ExpressionIden i -> inferIden i
-  ExpressionApplication a -> inferApplication a
+inferExpression' hint e = case e of
+  ExpressionIden i -> goIden i
+  ExpressionApplication a -> goApplication a
   ExpressionLiteral l -> goLiteral l
   ExpressionFunction f -> goFunction f
-  ExpressionHole h -> inferHole h
+  ExpressionHole h -> goHole h
   ExpressionUniverse u -> goUniverse u
   ExpressionSimpleLambda l -> goSimpleLambda l
   ExpressionLambda l -> goLambda l
   where
-    inferHole :: Hole -> Sem r TypedExpression
-    inferHole h = do
+    goHole :: Hole -> Sem r TypedExpression
+    goHole h = do
       freshMetavar h
       return
         TypedExpression
@@ -530,7 +532,7 @@ inferExpression' e = case e of
 
     goSimpleLambda :: SimpleLambda -> Sem r TypedExpression
     goSimpleLambda (SimpleLambda v ty b) = do
-      b' <- inferExpression' b
+      b' <- inferExpression' Nothing b
       let smallUni = smallUniverseE (getLoc ty)
       ty' <- checkExpression smallUni ty
       let fun = Function (unnamedParameter smallUni) (b' ^. typedType)
@@ -542,18 +544,20 @@ inferExpression' e = case e of
 
     goLambda :: Lambda -> Sem r TypedExpression
     goLambda l@(Lambda cl) = do
-      h <- freshHole (getLoc l)
-      l' <- Lambda <$> mapM (goClause h) cl
+      ty <- case hint of
+        Just hi -> return hi
+        Nothing -> ExpressionHole <$> freshHole (getLoc l)
+      l' <- Lambda <$> mapM (goClause ty) cl
       return
         TypedExpression
-          { _typedType = ExpressionHole h,
+          { _typedType = ty,
             _typedExpression = ExpressionLambda l'
           }
       where
-        goClause :: Hole -> LambdaClause -> Sem r LambdaClause
-        goClause h (LambdaClause pats body) = do
+        goClause :: Expression -> LambdaClause -> Sem r LambdaClause
+        goClause ty (LambdaClause pats body) = do
           let patArgs = map (PatternArg Explicit) (toList pats)
-          body' <- checkClause (ExpressionHole h) patArgs body
+          body' <- checkClause ty patArgs body
           return (LambdaClause pats body')
 
     goUniverse :: SmallUniverse -> Sem r TypedExpression
@@ -578,8 +582,8 @@ inferExpression' e = case e of
     goLiteral :: LiteralLoc -> Sem r TypedExpression
     goLiteral = literalType
 
-    inferIden :: Iden -> Sem r TypedExpression
-    inferIden i = case i of
+    goIden :: Iden -> Sem r TypedExpression
+    goIden i = case i of
       IdenFunction fun -> do
         info <- lookupFunction fun
         return (TypedExpression (info ^. functionInfoDef . funDefType) (ExpressionIden i))
@@ -596,8 +600,8 @@ inferExpression' e = case e of
         kind <- inductiveType v
         return (TypedExpression kind (ExpressionIden i))
 
-    inferApplication :: Application -> Sem r TypedExpression
-    inferApplication (Application l r iapp) = inferExpression' l >>= helper
+    goApplication :: Application -> Sem r TypedExpression
+    goApplication (Application l r iapp) = inferExpression' Nothing l >>= helper
       where
         helper :: TypedExpression -> Sem r TypedExpression
         helper l' = case l' ^. typedType of
