@@ -1,4 +1,4 @@
-module Juvix.Compiler.Abstract.Extra.DependencyBuilder (buildDependencyInfo) where
+module Juvix.Compiler.Abstract.Extra.DependencyBuilder (buildDependencyInfo, ExportsTable) where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet

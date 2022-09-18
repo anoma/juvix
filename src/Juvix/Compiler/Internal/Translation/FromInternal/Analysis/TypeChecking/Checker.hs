@@ -57,7 +57,7 @@ checkStatement ::
   Statement ->
   Sem r Statement
 checkStatement s = case s of
-  StatementFunction fun -> StatementFunction <$> checkFunctionDef fun
+  StatementFunction funs -> StatementFunction <$> checkMutualBlock funs
   StatementForeign {} -> return s
   StatementInductive ind -> StatementInductive <$> readerState @FunctionsTable (checkInductiveDef ind)
   StatementInclude i -> StatementInclude <$> checkInclude i
@@ -70,7 +70,6 @@ checkInductiveDef ::
   Members '[Reader EntryPoint, Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, State NegativeTypeParameters, Output Example, Builtins] r =>
   InductiveDef ->
   Sem r InductiveDef
--- checkInductiveDef (InductiveDef name built params constrs pos) = runInferenceDef $ do
 checkInductiveDef InductiveDef {..} = runInferenceDef $ do
   constrs' <- mapM goConstructor _inductiveConstructors
   ty <- inductiveType _inductiveName
@@ -127,12 +126,20 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
 withEmptyVars :: Sem (Reader LocalVars : r) a -> Sem r a
 withEmptyVars = runReader emptyLocalVars
 
-checkFunctionDef ::
+checkMutualBlock ::
   Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r =>
+  MutualBlock ->
+  Sem r MutualBlock
+checkMutualBlock (MutualBlock ds) =
+  readerState @FunctionsTable $
+    MutualBlock <$> runInferenceDefs (mapM checkFunctionDef ds)
+
+checkFunctionDef ::
+  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Inference] r =>
   FunctionDef ->
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
-  funDef <- readerState @FunctionsTable $ runInferenceDef $ do
+  funDef <- readerState @FunctionsTable $ do
     _funDefType' <- withEmptyVars (checkFunctionDefType _funDefType)
     registerIden _funDefName _funDefType'
     _funDefClauses' <- mapM (checkFunctionClause _funDefType') _funDefClauses

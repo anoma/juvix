@@ -47,11 +47,17 @@ checkStatement ::
   Statement ->
   Sem r Statement
 checkStatement s = case s of
-  StatementFunction fun -> StatementFunction <$> checkFunctionDef fun
+  StatementFunction b -> StatementFunction <$> checkMutualBlock b
   StatementInclude i -> StatementInclude <$> checkInclude i
   StatementForeign {} -> return s
   StatementInductive {} -> return s
   StatementAxiom {} -> return s
+
+checkMutualBlock ::
+  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r =>
+  MutualBlock ->
+  Sem r MutualBlock
+checkMutualBlock (MutualBlock funs) = MutualBlock <$> mapM checkFunctionDef funs
 
 checkFunctionDef ::
   Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r =>

@@ -37,10 +37,14 @@ newtype ModuleBody = ModuleBody
 
 data Statement
   = StatementInductive InductiveDef
-  | StatementFunction FunctionDef
+  | StatementFunction MutualBlock
   | StatementForeign ForeignBlock
   | StatementAxiom AxiomDef
   | StatementInclude Include
+
+newtype MutualBlock = MutualBlock
+  { _mutualFunctions :: NonEmpty FunctionDef
+  }
 
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,

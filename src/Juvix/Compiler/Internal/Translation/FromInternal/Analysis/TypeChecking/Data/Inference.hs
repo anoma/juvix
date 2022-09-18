@@ -373,15 +373,21 @@ matchPatterns p1 p2 = case (p1, p2) of
     err :: Sem r Bool
     err = return False
 
+runInferenceDefs ::
+  (Members '[Error TypeCheckerError, Reader FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
+  Sem (Inference ': r) (NonEmpty funDef) ->
+  Sem r (NonEmpty funDef)
+runInferenceDefs a = do
+  ((subs, idens), expr) <- runState iniState (re a) >>= firstM closeState
+  let idens' = fillHoles subs <$> idens
+  addIdens idens'
+  return (subsHoles subs <$> expr)
+
 runInferenceDef ::
   (Members '[Error TypeCheckerError, Reader FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
   Sem (Inference ': r) funDef ->
   Sem r funDef
-runInferenceDef a = do
-  ((subs, idens), expr) <- runState iniState (re a) >>= firstM closeState
-  let idens' = fillHoles subs <$> idens
-  addIdens idens'
-  return (subsHoles subs expr)
+runInferenceDef = fmap head . runInferenceDefs . fmap pure
 
 addIdens :: Member (State TypesTable) r => TypesTable -> Sem r ()
 addIdens idens = modify (HashMap.union idens)

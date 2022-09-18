@@ -14,45 +14,45 @@ import Juvix.Compiler.Backend.C.Data.CNames
 import Juvix.Compiler.Backend.C.Data.Types
 import Juvix.Compiler.Backend.C.Language
 import Juvix.Compiler.Internal.Extra (mkPolyType')
-import Juvix.Compiler.Internal.Extra qualified as Micro
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Micro
+import Juvix.Compiler.Internal.Extra qualified as Internal
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 
 unsupported :: Text -> a
-unsupported msg = error (msg <> " Micro to C: not yet supported")
+unsupported msg = error (msg <> " Internal to C: not yet supported")
 
--- The direct use of Micro.PolyType is safe here
-unfoldFunType :: Micro.PolyType -> ([Micro.PolyType], Micro.PolyType)
-unfoldFunType t = (map (Micro.PolyType . (^. Micro.paramType)) params, Micro.PolyType ret)
+-- The direct use of Internal.PolyType is safe here
+unfoldFunType :: Internal.PolyType -> ([Internal.PolyType], Internal.PolyType)
+unfoldFunType t = (map (Internal.PolyType . (^. Internal.paramType)) params, Internal.PolyType ret)
   where
-    (params, ret) = Micro.unfoldFunType (t ^. Micro.unpolyType)
+    (params, ret) = Internal.unfoldFunType (t ^. Internal.unpolyType)
 
-unfoldPolyApp :: Member (Reader Micro.TypesTable) r => Micro.Application -> Sem r (Micro.Expression, [Micro.Expression])
+unfoldPolyApp :: Member (Reader Internal.TypesTable) r => Internal.Application -> Sem r (Internal.Expression, [Internal.Expression])
 unfoldPolyApp a =
-  let (f, args) = Micro.unfoldApplication a
+  let (f, args) = Internal.unfoldApplication a
    in case f of
-        Micro.ExpressionLiteral {} -> return (f, toList args)
-        Micro.ExpressionIden iden -> do
-          args' <- filterCompileTimeArgsOrPatterns (Micro.getName iden) (toList args)
+        Internal.ExpressionLiteral {} -> return (f, toList args)
+        Internal.ExpressionIden iden -> do
+          args' <- filterCompileTimeArgsOrPatterns (Internal.getName iden) (toList args)
           return (f, args')
         _ -> impossible
 
-filterCompileTimeArgsOrPatterns :: Member (Reader Micro.TypesTable) r => Micro.Name -> [a] -> Sem r [a]
+filterCompileTimeArgsOrPatterns :: Member (Reader Internal.TypesTable) r => Internal.Name -> [a] -> Sem r [a]
 filterCompileTimeArgsOrPatterns idenName lst = do
   tab <- ask
   return $
     map fst $
       filter (not . isUniverse . snd) $
-        zip lst (map (^. Micro.paramType) (fst (Micro.unfoldFunType (ty tab))))
+        zip lst (map (^. Internal.paramType) (fst (Internal.unfoldFunType (ty tab))))
   where
     ty = HashMap.lookupDefault impossible idenName
-    isUniverse :: Micro.Expression -> Bool
+    isUniverse :: Internal.Expression -> Bool
     isUniverse = \case
-      (Micro.ExpressionUniverse {}) -> True
+      (Internal.ExpressionUniverse {}) -> True
       _ -> False
 
-mkName :: Micro.Name -> Text
+mkName :: Internal.Name -> Text
 mkName n =
   adaptFirstLetter lexeme <> nameTextSuffix
   where
@@ -60,7 +60,7 @@ mkName n =
       | T.null lexeme' = "v"
       | otherwise = lexeme'
       where
-        lexeme' = T.filter isValidChar (n ^. Micro.nameText)
+        lexeme' = T.filter isValidChar (n ^. Internal.nameText)
     isValidChar :: Char -> Bool
     isValidChar c = isLetter c && isAscii c
     adaptFirstLetter :: Text -> Text
@@ -72,43 +72,43 @@ mkName n =
         capitalize
           | capital = toUpper
           | otherwise = toLower
-        capital = case n ^. Micro.nameKind of
-          Micro.KNameConstructor -> True
-          Micro.KNameInductive -> True
-          Micro.KNameTopModule -> True
-          Micro.KNameLocalModule -> True
+        capital = case n ^. Internal.nameKind of
+          Internal.KNameConstructor -> True
+          Internal.KNameInductive -> True
+          Internal.KNameTopModule -> True
+          Internal.KNameLocalModule -> True
           _ -> False
     nameTextSuffix :: Text
-    nameTextSuffix = case n ^. Micro.nameKind of
-      Micro.KNameTopModule -> mempty
-      Micro.KNameFunction ->
-        if n ^. Micro.nameText == Str.main then mempty else idSuffix
+    nameTextSuffix = case n ^. Internal.nameKind of
+      Internal.KNameTopModule -> mempty
+      Internal.KNameFunction ->
+        if n ^. Internal.nameText == Str.main then mempty else idSuffix
       _ -> idSuffix
     idSuffix :: Text
-    idSuffix = "_" <> show (n ^. Micro.nameId . Micro.unNameId)
+    idSuffix = "_" <> show (n ^. Internal.nameId . Internal.unNameId)
 
-goType :: forall r. Member (Reader Micro.InfoTable) r => Micro.PolyType -> Sem r CDeclType
-goType t = case t ^. Micro.unpolyType of
-  Micro.ExpressionIden ti -> getMicroType ti
-  Micro.ExpressionFunction {} -> return declFunctionPtrType
-  Micro.ExpressionUniverse {} -> unsupported "TypeUniverse"
-  Micro.ExpressionApplication a -> goType (mkPolyType' (fst (Micro.unfoldApplication a)))
-  Micro.ExpressionLiteral {} -> impossible
-  Micro.ExpressionHole {} -> impossible
-  Micro.ExpressionSimpleLambda {} -> impossible
-  Micro.ExpressionLambda {} -> impossible
+goType :: forall r. Member (Reader Internal.InfoTable) r => Internal.PolyType -> Sem r CDeclType
+goType t = case t ^. Internal.unpolyType of
+  Internal.ExpressionIden ti -> getInternalType ti
+  Internal.ExpressionFunction {} -> return declFunctionPtrType
+  Internal.ExpressionUniverse {} -> unsupported "TypeUniverse"
+  Internal.ExpressionApplication a -> goType (mkPolyType' (fst (Internal.unfoldApplication a)))
+  Internal.ExpressionLiteral {} -> impossible
+  Internal.ExpressionHole {} -> impossible
+  Internal.ExpressionSimpleLambda {} -> impossible
+  Internal.ExpressionLambda {} -> impossible
   where
-    getMicroType :: Micro.Iden -> Sem r CDeclType
-    getMicroType = \case
-      Micro.IdenInductive mn -> getInductiveCType mn
-      Micro.IdenAxiom mn -> do
+    getInternalType :: Internal.Iden -> Sem r CDeclType
+    getInternalType = \case
+      Internal.IdenInductive mn -> getInductiveCType mn
+      Internal.IdenAxiom mn -> do
         axiomName <- getAxiomCName mn
         return
           CDeclType
             { _typeDeclType = DeclTypeDefType axiomName,
               _typeIsPtr = False
             }
-      Micro.IdenVar {} ->
+      Internal.IdenVar {} ->
         return
           CDeclType
             { _typeDeclType = uIntPtrType,
@@ -116,7 +116,7 @@ goType t = case t ^. Micro.unpolyType of
             }
       _ -> impossible
 
-typeToFunType :: Member (Reader Micro.InfoTable) r => Micro.PolyType -> Sem r CFunType
+typeToFunType :: Member (Reader Internal.InfoTable) r => Internal.PolyType -> Sem r CFunType
 typeToFunType t = do
   let (args, ret) = unfoldFunType t
   _cFunArgTypes <- mapM goType args
@@ -124,42 +124,42 @@ typeToFunType t = do
   return CFunType {..}
 
 applyOnFunStatement ::
-  forall a. Monoid a => (Micro.FunctionDef -> a) -> Micro.Statement -> a
+  forall a. Monoid a => (Internal.FunctionDef -> a) -> Internal.Statement -> a
 applyOnFunStatement f = \case
-  Micro.StatementFunction x -> f x
-  Micro.StatementForeign {} -> mempty
-  Micro.StatementAxiom {} -> mempty
-  Micro.StatementInductive {} -> mempty
-  Micro.StatementInclude i -> mconcat $ map (applyOnFunStatement f) (i ^. Micro.includeModule . Micro.moduleBody . Micro.moduleStatements)
+  Internal.StatementFunction (Internal.MutualBlock x) -> mconcatMap f x
+  Internal.StatementForeign {} -> mempty
+  Internal.StatementAxiom {} -> mempty
+  Internal.StatementInductive {} -> mempty
+  Internal.StatementInclude i -> mconcat $ map (applyOnFunStatement f) (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
 
-getConstructorCName :: Members '[Reader Micro.InfoTable] r => Micro.Name -> Sem r Text
+getConstructorCName :: Members '[Reader Internal.InfoTable] r => Internal.Name -> Sem r Text
 getConstructorCName n = do
-  ctorInfo <- HashMap.lookupDefault impossible n <$> asks (^. Micro.infoConstructors)
+  ctorInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoConstructors)
   return
-    ( case ctorInfo ^. Micro.constructorInfoBuiltin of
+    ( case ctorInfo ^. Internal.constructorInfoBuiltin of
         Just builtin -> fromJust (builtinConstructorName builtin)
         Nothing -> mkName n
     )
 
-getAxiomCName :: Members '[Reader Micro.InfoTable] r => Micro.Name -> Sem r Text
+getAxiomCName :: Members '[Reader Internal.InfoTable] r => Internal.Name -> Sem r Text
 getAxiomCName n = do
-  axiomInfo <- HashMap.lookupDefault impossible n <$> asks (^. Micro.infoAxioms)
+  axiomInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoAxioms)
   return
-    ( case axiomInfo ^. Micro.axiomInfoBuiltin of
+    ( case axiomInfo ^. Internal.axiomInfoBuiltin of
         Just builtin -> fromJust (builtinAxiomName builtin)
         Nothing -> mkName n
     )
 
-getInductiveCName :: Members '[Reader Micro.InfoTable] r => Micro.Name -> Sem r (Bool, Text)
+getInductiveCName :: Members '[Reader Internal.InfoTable] r => Internal.Name -> Sem r (Bool, Text)
 getInductiveCName n = do
-  inductiveInfo <- HashMap.lookupDefault impossible n <$> asks (^. Micro.infoInductives)
+  inductiveInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoInductives)
   return
-    ( case inductiveInfo ^. (Micro.inductiveInfoDef . Micro.inductiveBuiltin) of
+    ( case inductiveInfo ^. (Internal.inductiveInfoDef . Internal.inductiveBuiltin) of
         Just builtin -> (False, fromJust (builtinInductiveName builtin))
         Nothing -> (True, asTypeDef (mkName n))
     )
 
-getInductiveCType :: Member (Reader Micro.InfoTable) r => Micro.Name -> Sem r CDeclType
+getInductiveCType :: Member (Reader Internal.InfoTable) r => Internal.Name -> Sem r CDeclType
 getInductiveCType n = do
   (isPtr, name) <- getInductiveCName n
   return
@@ -169,35 +169,35 @@ getInductiveCType n = do
         }
     )
 
-typeOfConstructor :: Member (Reader Micro.InfoTable) r => Micro.Name -> Sem r CDeclType
+typeOfConstructor :: Member (Reader Internal.InfoTable) r => Internal.Name -> Sem r CDeclType
 typeOfConstructor name = do
-  info <- Micro.lookupConstructor name
-  getInductiveCType (info ^. Micro.constructorInfoInductive)
+  info <- Internal.lookupConstructor name
+  getInductiveCType (info ^. Internal.constructorInfoInductive)
 
-getClausePatterns :: Member (Reader Micro.TypesTable) r => Micro.FunctionClause -> Sem r [Micro.Pattern]
+getClausePatterns :: Member (Reader Internal.TypesTable) r => Internal.FunctionClause -> Sem r [Internal.Pattern]
 getClausePatterns c =
   filterCompileTimeArgsOrPatterns
-    (c ^. Micro.clauseName)
+    (c ^. Internal.clauseName)
     ( c
-        ^.. Micro.clausePatterns
+        ^.. Internal.clausePatterns
           . each
-          . Micro.patternArgPattern
+          . Internal.patternArgPattern
     )
 
-functionInfoPatternsNum :: Member (Reader Micro.TypesTable) r => Micro.FunctionInfo -> Sem r Int
+functionInfoPatternsNum :: Member (Reader Internal.TypesTable) r => Internal.FunctionInfo -> Sem r Int
 functionInfoPatternsNum fInfo = do
-  let c = head (fInfo ^. (Micro.functionInfoDef . Micro.funDefClauses))
+  let c = head (fInfo ^. (Internal.functionInfoDef . Internal.funDefClauses))
   pats <- getClausePatterns c
   return (length pats)
 
-buildPatternInfoTable :: forall r. Members '[Reader Micro.InfoTable, Reader Micro.TypesTable] r => [Micro.PolyType] -> Micro.FunctionClause -> Sem r PatternInfoTable
+buildPatternInfoTable :: forall r. Members '[Reader Internal.InfoTable, Reader Internal.TypesTable] r => [Internal.PolyType] -> Internal.FunctionClause -> Sem r PatternInfoTable
 buildPatternInfoTable argTyps c =
   PatternInfoTable . HashMap.fromList <$> patBindings
   where
     funArgBindings :: Sem r [(Expression, CFunType)]
     funArgBindings = mapM (bimapM (return . ExpressionVar) typeToFunType) (zip funArgs argTyps)
 
-    patArgBindings :: Sem r [(Micro.Pattern, (Expression, CFunType))]
+    patArgBindings :: Sem r [(Internal.Pattern, (Expression, CFunType))]
     patArgBindings = do
       pats <- getClausePatterns c
       zip pats <$> funArgBindings
@@ -205,28 +205,28 @@ buildPatternInfoTable argTyps c =
     patBindings :: Sem r [(Text, BindingInfo)]
     patBindings = patArgBindings >>= concatMapM go
 
-    go :: (Micro.Pattern, (Expression, CFunType)) -> Sem r [(Text, BindingInfo)]
+    go :: (Internal.Pattern, (Expression, CFunType)) -> Sem r [(Text, BindingInfo)]
     go (p, (exp, typ)) = case p of
-      Micro.PatternVariable v ->
+      Internal.PatternVariable v ->
         return
-          [(v ^. Micro.nameText, BindingInfo {_bindingInfoExpr = exp, _bindingInfoType = typ})]
-      Micro.PatternConstructorApp Micro.ConstructorApp {..} ->
-        goConstructorApp exp _constrAppConstructor (_constrAppParameters ^.. each . Micro.patternArgPattern)
-      Micro.PatternWildcard {} -> return []
+          [(v ^. Internal.nameText, BindingInfo {_bindingInfoExpr = exp, _bindingInfoType = typ})]
+      Internal.PatternConstructorApp Internal.ConstructorApp {..} ->
+        goConstructorApp exp _constrAppConstructor (_constrAppParameters ^.. each . Internal.patternArgPattern)
+      Internal.PatternWildcard {} -> return []
 
-    goConstructorApp :: Expression -> Micro.Name -> [Micro.Pattern] -> Sem r [(Text, BindingInfo)]
+    goConstructorApp :: Expression -> Internal.Name -> [Internal.Pattern] -> Sem r [(Text, BindingInfo)]
     goConstructorApp exp constructorName ps = do
       ctorInfo' <- ctorInfo
       let ctorArgBindings :: Sem r [(Expression, CFunType)] =
             mapM (bimapM asConstructor typeToFunType) (zip ctorArgs ctorInfo')
-          patternCtorArgBindings :: Sem r [(Micro.Pattern, (Expression, CFunType))] = zip ps <$> ctorArgBindings
+          patternCtorArgBindings :: Sem r [(Internal.Pattern, (Expression, CFunType))] = zip ps <$> ctorArgBindings
       patternCtorArgBindings >>= concatMapM go
       where
-        ctorInfo :: Sem r [Micro.PolyType]
+        ctorInfo :: Sem r [Internal.PolyType]
         ctorInfo = do
-          p' :: HashMap Micro.Name Micro.ConstructorInfo <- asks (^. Micro.infoConstructors)
+          p' :: HashMap Internal.Name Internal.ConstructorInfo <- asks (^. Internal.infoConstructors)
           let fInfo = HashMap.lookupDefault impossible constructorName p'
-          return $ map mkPolyType' (fInfo ^. Micro.constructorInfoArgs)
+          return $ map mkPolyType' (fInfo ^. Internal.constructorInfoArgs)
 
         asConstructor :: Text -> Sem r Expression
         asConstructor ctorArg = do
@@ -235,19 +235,19 @@ buildPatternInfoTable argTyps c =
           return (functionCall (ExpressionVar (asProjName ctorArg name)) [castToType ty exp])
 
 getType ::
-  Members '[Reader Micro.InfoTable, Reader Micro.TypesTable, Reader PatternInfoTable] r =>
-  Micro.Iden ->
+  Members '[Reader Internal.InfoTable, Reader Internal.TypesTable, Reader PatternInfoTable] r =>
+  Internal.Iden ->
   Sem r (CFunType, CArity)
 getType = \case
-  Micro.IdenFunction n -> do
-    fInfo <- HashMap.lookupDefault impossible n <$> asks (^. Micro.infoFunctions)
-    funTyp <- typeToFunType (mkPolyType' (fInfo ^. (Micro.functionInfoDef . Micro.funDefType)))
+  Internal.IdenFunction n -> do
+    fInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoFunctions)
+    funTyp <- typeToFunType (mkPolyType' (fInfo ^. (Internal.functionInfoDef . Internal.funDefType)))
     nPatterns <- functionInfoPatternsNum fInfo
     return (funTyp, nPatterns)
-  Micro.IdenConstructor n -> do
-    fInfo <- HashMap.lookupDefault impossible n <$> asks (^. Micro.infoConstructors)
-    argTypes <- mapM (goType . mkPolyType') (fInfo ^. Micro.constructorInfoArgs)
-    typ <- goType $ mkPolyType' (Micro.ExpressionIden (Micro.IdenInductive (fInfo ^. Micro.constructorInfoInductive)))
+  Internal.IdenConstructor n -> do
+    fInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoConstructors)
+    argTypes <- mapM (goType . mkPolyType') (fInfo ^. Internal.constructorInfoArgs)
+    typ <- goType $ mkPolyType' (Internal.ExpressionIden (Internal.IdenInductive (fInfo ^. Internal.constructorInfoInductive)))
     return
       ( CFunType
           { _cFunArgTypes = argTypes,
@@ -255,11 +255,11 @@ getType = \case
           },
         length argTypes
       )
-  Micro.IdenAxiom n -> do
-    fInfo <- HashMap.lookupDefault impossible n <$> asks (^. Micro.infoAxioms)
-    t <- typeToFunType (mkPolyType' (fInfo ^. Micro.axiomInfoType))
+  Internal.IdenAxiom n -> do
+    fInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoAxioms)
+    t <- typeToFunType (mkPolyType' (fInfo ^. Internal.axiomInfoType))
     return (t, length (t ^. cFunArgTypes))
-  Micro.IdenVar n -> do
-    t <- (^. bindingInfoType) . HashMap.lookupDefault impossible (n ^. Micro.nameText) <$> asks (^. patternBindings)
+  Internal.IdenVar n -> do
+    t <- (^. bindingInfoType) . HashMap.lookupDefault impossible (n ^. Internal.nameText) <$> asks (^. patternBindings)
     return (t, length (t ^. cFunArgTypes))
-  Micro.IdenInductive _ -> impossible
+  Internal.IdenInductive _ -> impossible
