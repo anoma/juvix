@@ -102,6 +102,8 @@ statementFunction = do
   when (txt == "main") $
     lift (registerMain sym)
   argtys <- functionArguments
+  when (txt == "main" && not (null argtys)) $
+    parseFailure off "the 'main' function must take zero arguments"
   mrty <- optional typeAnnotation
   let rty = fromMaybe TyDynamic mrty
   mcode <- optional (braces parseCode)

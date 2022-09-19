@@ -11,15 +11,6 @@ import Juvix.Compiler.Asm.Language qualified as Asm
 import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 
-doRun ::
-  forall r.
-  Members '[Embed IO, App] r =>
-  Asm.InfoTable ->
-  Asm.Code ->
-  Sem r (Either Asm.AsmError Asm.Val)
-doRun tab code =
-  embed $ Asm.catchRunErrorIO (Asm.runCodeIO tab code)
-
 runCommand :: forall r. Members '[Embed IO, App] r => AsmRunOptions -> Sem r ()
 runCommand opts = do
   s <- embed (readFile file)
@@ -44,7 +35,14 @@ runCommand opts = do
                       renderStdOut (Asm.ppOut (Asm.defaultOptions tab) val)
                       embed (putStrLn "")
                 Nothing ->
-                  exitMsg (ExitFailure 1) "no main function"
+                  exitMsg (ExitFailure 1) "no 'main' function"
   where
     file :: FilePath
     file = opts ^. asmRunInputFile . pathPath
+
+    doRun ::
+      Asm.InfoTable ->
+      Asm.Code ->
+      Sem r (Either Asm.AsmError Asm.Val)
+    doRun tab code =
+      embed $ Asm.catchRunErrorIO (Asm.runCodeIO tab code)
