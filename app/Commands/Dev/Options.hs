@@ -1,5 +1,6 @@
 module Commands.Dev.Options
   ( module Commands.Dev.Options,
+    module Commands.Dev.Asm.Options,
     module Commands.Dev.Core.Options,
     module Commands.Dev.Internal.Options,
     module Commands.Dev.Parse.Options,
@@ -41,6 +42,7 @@ parseDevCommand =
         [ commandHighlight,
           commandInternal,
           commandCore,
+          commandAsm,
           commandMiniC,
           commandParse,
           commandDoc,
@@ -84,6 +86,13 @@ commandCore =
     info
       (Core <$> parseCoreCommand)
       (progDesc "Subcommands related to JuvixCore")
+
+commandAsm :: Mod CommandFields DevCommand
+commandAsm =
+  command "asm" $
+    info
+      (Asm <$> parseAsmCommand)
+      (progDesc "Subcommands related to JuvixAsm")
 
 commandParse :: Mod CommandFields DevCommand
 commandParse =

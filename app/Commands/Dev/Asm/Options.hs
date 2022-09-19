@@ -12,10 +12,10 @@ data AsmCommand
 parseAsmCommand :: Parser AsmCommand
 parseAsmCommand =
   hsubparser $
-    mconcat [
-      commandRun,
-      commandValidate
-    ]
+    mconcat
+      [ commandRun,
+        commandValidate
+      ]
   where
     commandRun :: Mod CommandFields AsmCommand
     commandRun = command "run" runInfo
@@ -34,4 +34,3 @@ parseAsmCommand =
       info
         (Validate <$> parseAsmValidateOptions)
         (progDesc "Validate a JuvixAsm file")
-
