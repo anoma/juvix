@@ -26,20 +26,25 @@ runCommand opts = do
   case Asm.runParser "" file s of
     Left err -> exitJuvixError (JuvixError err)
     Right tab ->
-      case tab ^. Asm.infoMainFunction of
-        Just sym -> do
-          let code = Asm.getFunInfo tab sym ^. Asm.functionCode
-          r <- doRun tab code
-          case r of
-            Left err ->
+      let v = if opts ^. asmRunNoValidate then Nothing else Asm.validate tab
+       in case v of
+            Just err ->
               exitJuvixError (JuvixError err)
-            Right (Asm.ValUnit (Asm.Unit False)) ->
-              return ()
-            Right val -> do
-              renderStdOut (Asm.ppOut (Asm.defaultOptions tab) val)
-              embed (putStrLn "")
-        Nothing ->
-          exitMsg (ExitFailure 1) "no main function"
+            Nothing ->
+              case tab ^. Asm.infoMainFunction of
+                Just sym -> do
+                  let code = Asm.getFunInfo tab sym ^. Asm.functionCode
+                  r <- doRun tab code
+                  case r of
+                    Left err ->
+                      exitJuvixError (JuvixError err)
+                    Right (Asm.ValUnit (Asm.Unit False)) ->
+                      return ()
+                    Right val -> do
+                      renderStdOut (Asm.ppOut (Asm.defaultOptions tab) val)
+                      embed (putStrLn "")
+                Nothing ->
+                  exitMsg (ExitFailure 1) "no main function"
   where
     file :: FilePath
     file = opts ^. asmRunInputFile . pathPath

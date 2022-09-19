@@ -99,6 +99,8 @@ statementFunction = do
     Nothing -> lift freshSymbol
     Just (IdentFwd sym) -> return sym
     _ -> parseFailure off ("duplicate identifier: " ++ fromText txt)
+  when (txt == "main") $
+    lift (registerMain sym)
   argtys <- functionArguments
   mrty <- optional typeAnnotation
   let rty = fromMaybe TyDynamic mrty

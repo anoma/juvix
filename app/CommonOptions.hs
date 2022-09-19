@@ -46,6 +46,17 @@ parseInputJuvixCoreFile = do
       )
   pure Path {_pathIsInput = True, ..}
 
+parseInputJuvixAsmFile :: Parser Path
+parseInputJuvixAsmFile = do
+  _pathPath <-
+    argument
+      str
+      ( metavar "JUVIX_ASM_FILE"
+          <> help "Path to a .jva file"
+          <> completer juvixCoreCompleter
+      )
+  pure Path {_pathIsInput = True, ..}
+
 parseGenericOutputFile :: Parser Path
 parseGenericOutputFile = do
   _pathPath <-
