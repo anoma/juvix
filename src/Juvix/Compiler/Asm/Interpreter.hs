@@ -157,6 +157,7 @@ runCodeR infoTable code0 = goCode code0 >> popLastValueStack
       ConstBool b -> return (ValBool b)
       ConstString s -> return (ValString s)
       ConstUnit -> return (ValUnit (Unit True))
+      ConstVoid -> return (ValUnit (Unit False))
       Ref r -> getMemVal r
 
     getMemVal :: Member Runtime r => MemValue -> Sem r Val

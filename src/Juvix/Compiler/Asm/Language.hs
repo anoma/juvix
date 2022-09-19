@@ -23,8 +23,9 @@ memory layout.
 -- | Offset of a data field or an argument
 type Offset = Int
 
--- | Values reference readable values (constant or value stored in memory).
-data Value = ConstInt Integer | ConstBool Bool | ConstString Text | ConstUnit | Ref MemValue
+-- | Values reference readable values (constant or value stored in memory). Void
+-- is an unprintable unit.
+data Value = ConstInt Integer | ConstBool Bool | ConstString Text | ConstUnit | ConstVoid | Ref MemValue
 
 -- | MemValues are references to values stored in random-access memory.
 -- - DirectRef is a direct memory reference.

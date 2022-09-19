@@ -129,6 +129,9 @@ kwFalse = keyword Str.false_
 kwUnit :: ParsecS r ()
 kwUnit = keyword Str.unit
 
+kwVoid :: ParsecS r ()
+kwVoid = keyword Str.void
+
 kwArg :: ParsecS r ()
 kwArg = keyword Str.arg_
 

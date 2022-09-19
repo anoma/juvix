@@ -338,6 +338,9 @@ succ = "S"
 unit :: IsString s => s
 unit = "unit"
 
+void :: IsString s => s
+void = "void"
+
 nil :: IsString s => s
 nil = "nil"
 

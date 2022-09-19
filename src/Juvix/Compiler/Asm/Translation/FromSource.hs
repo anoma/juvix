@@ -298,7 +298,7 @@ command = do
 value ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r Value
-value = integerValue <|> boolValue <|> stringValue <|> unitValue <|> memValue
+value = integerValue <|> boolValue <|> stringValue <|> unitValue <|> voidValue <|> memValue
 
 integerValue ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
@@ -321,6 +321,9 @@ stringValue = do
 
 unitValue :: ParsecS r Value
 unitValue = kwUnit >> return ConstUnit
+
+voidValue :: ParsecS r Value
+voidValue = kwVoid >> return ConstVoid
 
 memValue ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>

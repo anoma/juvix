@@ -99,6 +99,7 @@ getValueType' loc tab mem = \case
   ConstBool _ -> return mkBool
   ConstString _ -> return TyString
   ConstUnit -> return TyUnit
+  ConstVoid -> return TyUnit
   Ref val -> case getMemValueType tab val mem of
     Just ty -> return ty
     Nothing -> throw $ AsmError loc "invalid memory reference"
