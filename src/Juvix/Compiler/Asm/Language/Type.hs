@@ -47,3 +47,26 @@ makeLenses ''TypeInteger
 makeLenses ''TypeBool
 makeLenses ''TypeInductive
 makeLenses ''TypeConstr
+
+instance HasAtomicity TypeInteger where
+  atomicity _ = Atom
+
+instance HasAtomicity TypeBool where
+  atomicity _ = Atom
+
+instance HasAtomicity TypeInductive where
+  atomicity _ = Atom
+
+instance HasAtomicity TypeConstr where
+  atomicity _ = Atom
+
+instance HasAtomicity Type where
+  atomicity = \case
+    TyDynamic -> Atom
+    TyInteger x -> atomicity x
+    TyBool x -> atomicity x
+    TyString -> Atom
+    TyUnit -> Atom
+    TyInductive x -> atomicity x
+    TyConstr x -> atomicity x
+    TyFun _ _ -> Aggregate funFixity

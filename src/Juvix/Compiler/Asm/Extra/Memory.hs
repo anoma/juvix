@@ -137,16 +137,16 @@ checkValueStack' loc tys mem = do
     )
     (zip tys [0 ..])
 
-unifyMemory' :: Member (Error AsmError) r => Maybe Location -> Memory -> Memory -> Sem r Memory
-unifyMemory' loc mem1 mem2 = do
+unifyMemory' :: Member (Error AsmError) r => Maybe Location -> InfoTable -> Memory -> Memory -> Sem r Memory
+unifyMemory' loc tab mem1 mem2 = do
   unless (length (mem1 ^. memoryValueStack) == length (mem2 ^. memoryValueStack)) $
     throw $
       AsmError loc "value stack height mismatch"
-  vs <- zipWithM (unifyTypes' loc) (toList (mem1 ^. memoryValueStack)) (toList (mem2 ^. memoryValueStack))
+  vs <- zipWithM (unifyTypes' loc tab) (toList (mem1 ^. memoryValueStack)) (toList (mem2 ^. memoryValueStack))
   unless (length (mem1 ^. memoryTempStack) == length (mem2 ^. memoryTempStack)) $
     throw $
       AsmError loc "temporary stack height mismatch"
-  ts <- zipWithM (unifyTypes' loc) (toList (mem1 ^. memoryTempStack)) (toList (mem2 ^. memoryTempStack))
+  ts <- zipWithM (unifyTypes' loc tab) (toList (mem1 ^. memoryTempStack)) (toList (mem2 ^. memoryTempStack))
   unless
     ( length (mem1 ^. memoryArgumentArea) == length (mem2 ^. memoryArgumentArea)
         && mem1 ^. memoryArgsNum == mem2 ^. memoryArgsNum
@@ -159,6 +159,7 @@ unifyMemory' loc mem1 mem2 = do
       ( \off ->
           unifyTypes'
             loc
+            tab
             (fromJust $ HashMap.lookup off (mem1 ^. memoryArgumentArea))
             (fromJust $ HashMap.lookup off (mem1 ^. memoryArgumentArea))
       )

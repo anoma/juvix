@@ -6,8 +6,10 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable
+import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Interpreter.Runtime
 import Juvix.Compiler.Asm.Language
+import Juvix.Compiler.Asm.Language.Type
 import Juvix.Compiler.Asm.Pretty.Options
 import Juvix.Compiler.Core.Pretty.Base qualified as Core
 import Juvix.Data.CodeAnn
@@ -80,6 +82,44 @@ instance PrettyCode Val where
       ppCode c
     ValClosure cl ->
       ppCode cl
+
+instance PrettyCode TypeInductive where
+  ppCode TypeInductive {..} = do
+    opts <- ask
+    let ii = getInductiveInfo (opts ^. optInfoTable) _typeInductiveSymbol
+    return $ annotate (AnnKind KNameInductive) (pretty (ii ^. inductiveName))
+
+instance PrettyCode TypeConstr where
+  ppCode TypeConstr {..} = do
+    opts <- ask
+    let tab = opts ^. optInfoTable
+    let ii = getInductiveInfo tab _typeConstrInductive
+    let iname = annotate (AnnKind KNameInductive) (pretty (ii ^. inductiveName))
+    let ci = getConstrInfo tab _typeConstrTag
+    let cname = annotate (AnnKind KNameConstructor) (pretty (ci ^. constructorName))
+    args <- mapM ppCode _typeConstrFields
+    return $ iname <> kwColon <> cname <> encloseSep "(" ")" ", " args
+
+instance PrettyCode Type where
+  ppCode = \case
+    TyDynamic ->
+      return $ annotate (AnnKind KNameInductive) (pretty ("*" :: String))
+    TyInteger {} ->
+      return $ annotate (AnnKind KNameInductive) (pretty ("integer" :: String))
+    TyBool {} ->
+      return $ annotate (AnnKind KNameInductive) (pretty ("bool" :: String))
+    TyString ->
+      return $ annotate (AnnKind KNameInductive) (pretty ("string" :: String))
+    TyUnit ->
+      return $ annotate (AnnKind KNameInductive) (pretty ("unit" :: String))
+    TyInductive x ->
+      ppCode x
+    TyConstr x ->
+      ppCode x
+    TyFun ty1 ty2 -> do
+      l <- ppLeftExpression funFixity ty1
+      r <- ppRightExpression funFixity ty2
+      return $ l <+> kwArrow <+> r
 
 {--------------------------------------------------------------------------------}
 {- helper functions -}

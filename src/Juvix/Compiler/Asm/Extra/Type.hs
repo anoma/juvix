@@ -1,8 +1,10 @@
 module Juvix.Compiler.Asm.Extra.Type where
 
+import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Error
 import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Language.Type
+import Juvix.Compiler.Asm.Pretty
 
 mkInteger :: Type
 mkInteger = TyInteger (TypeInteger Nothing Nothing)
@@ -32,7 +34,7 @@ typeArgs = fst . unfoldType
 typeTarget :: Type -> Type
 typeTarget = snd . unfoldType
 
-unifyTypes :: Members '[Error AsmError, Reader (Maybe Location)] r => Type -> Type -> Sem r Type
+unifyTypes :: Members '[Error AsmError, Reader (Maybe Location), Reader InfoTable] r => Type -> Type -> Sem r Type
 unifyTypes TyDynamic x =
   return x
 unifyTypes x TyDynamic =
@@ -62,12 +64,13 @@ unifyTypes (TyInteger (TypeInteger l1 u1)) (TyInteger (TypeInteger l2 u2)) =
 unifyTypes x y
   | x == y =
       return x
-unifyTypes _ _ = do
+unifyTypes ty1 ty2 = do
   loc <- ask
-  throw $ AsmError loc "not unifiable"
+  tab <- ask
+  throw $ AsmError loc ("not unifiable: " `mappend` ppTrace tab ty1 `mappend` ", " `mappend` ppTrace tab ty2)
 
-unifyTypes' :: Member (Error AsmError) r => Maybe Location -> Type -> Type -> Sem r Type
-unifyTypes' loc ty1 ty2 = runReader loc $ unifyTypes ty1 ty2
+unifyTypes' :: Member (Error AsmError) r => Maybe Location -> InfoTable -> Type -> Type -> Sem r Type
+unifyTypes' loc tab ty1 ty2 = runReader loc $ runReader tab $ unifyTypes ty1 ty2
 
 isSubtype :: Type -> Type -> Bool
 isSubtype TyDynamic _ =

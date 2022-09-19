@@ -110,7 +110,7 @@ recurse' sig = go True
               checkValueStack' loc tyargs mem
               tys <-
                 zipWithM
-                  (\ty idx -> unifyTypes' loc ty (topValueStack' idx mem))
+                  (\ty idx -> unifyTypes' loc (sig ^. recursorInfoTable) ty (topValueStack' idx mem))
                   tyargs
                   [0 ..]
               return $
@@ -198,20 +198,20 @@ recurse' sig = go True
           let mem' = popValueStack k mem
           let tyargs = topValuesFromValueStack' argsNum mem'
           -- `typeArgs ty` may be shorter than `tyargs` only if `ty` is dynamic
-          zipWithM_ (unifyTypes' loc) tyargs (typeArgs ty)
+          zipWithM_ (unifyTypes' loc (sig ^. recursorInfoTable)) tyargs (typeArgs ty)
           return $
             pushValueStack (mkTypeFun (drop argsNum (typeArgs ty)) ty) $
               popValueStack argsNum mem'
 
         checkFunType :: Type -> Sem r ()
-        checkFunType ty = void $ unifyTypes' loc ty (mkTypeFun [TyDynamic] TyDynamic)
+        checkFunType ty = void $ unifyTypes' loc (sig ^. recursorInfoTable) ty (mkTypeFun [TyDynamic] TyDynamic)
 
     goBranch :: Bool -> Memory -> CmdBranch -> Sem r (Memory, a)
     goBranch isTail mem cmd@CmdBranch {..} = do
       (mem1, as1) <- go isTail mem _cmdBranchTrue
       (mem2, as2) <- go isTail mem _cmdBranchFalse
       a' <- (sig ^. recurseBranch) mem cmd as1 as2
-      mem' <- unifyMemory' loc mem1 mem2
+      mem' <- unifyMemory' loc (sig ^. recursorInfoTable) mem1 mem2
       checkBranchInvariant loc mem mem'
       return (mem', a')
       where
@@ -227,8 +227,8 @@ recurse' sig = go True
       let md = fmap fst rd
       let ad = fmap snd rd
       a' <- (sig ^. recurseCase) mem cmd ass ad
-      mem' <- foldr (\m rm -> rm >>= unifyMemory' loc m) (return mem) mems
-      mem'' <- maybe (return mem') (unifyMemory' loc mem') md
+      mem' <- foldr (\m rm -> rm >>= unifyMemory' loc (sig ^. recursorInfoTable) m) (return mem) mems
+      mem'' <- maybe (return mem') (unifyMemory' loc (sig ^. recursorInfoTable) mem') md
       checkBranchInvariant loc mem mem''
       return (mem'', a')
       where

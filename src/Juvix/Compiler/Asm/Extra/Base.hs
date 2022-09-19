@@ -16,6 +16,9 @@ getFunInfo infoTable sym = fromMaybe (error "invalid function symbol") (HashMap.
 getConstrInfo :: InfoTable -> Tag -> ConstructorInfo
 getConstrInfo infoTable tag = fromMaybe (error "invalid constructor tag") (HashMap.lookup tag (infoTable ^. infoConstrs))
 
+getInductiveInfo :: InfoTable -> Symbol -> InductiveInfo
+getInductiveInfo infoTable sym = fromMaybe (error "invalid inductive symbol") (HashMap.lookup sym (infoTable ^. infoInductives))
+
 isFinalInstr :: Instruction -> Bool
 isFinalInstr = \case
   Return -> True
