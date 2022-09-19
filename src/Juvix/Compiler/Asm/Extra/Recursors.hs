@@ -200,7 +200,7 @@ recurse' sig = go True
           -- `typeArgs ty` may be shorter than `tyargs` only if `ty` is dynamic
           zipWithM_ (unifyTypes' loc (sig ^. recursorInfoTable)) tyargs (typeArgs ty)
           return $
-            pushValueStack (mkTypeFun (drop argsNum (typeArgs ty)) ty) $
+            pushValueStack (mkTypeFun (drop argsNum (typeArgs ty)) (typeTarget ty)) $
               popValueStack argsNum mem'
 
         checkFunType :: Type -> Sem r ()

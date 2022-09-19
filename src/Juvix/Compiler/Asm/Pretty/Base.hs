@@ -121,6 +121,36 @@ instance PrettyCode Type where
       r <- ppRightExpression funFixity ty2
       return $ l <+> kwArrow <+> r
 
+instance PrettyCode Instruction where
+  -- TODO: properly handle the arguments
+  ppCode = \case
+    IntAdd -> return $ pretty ("add" :: String)
+    IntSub -> return $ pretty ("sub" :: String)
+    IntMul -> return $ pretty ("mul" :: String)
+    IntDiv -> return $ pretty ("div" :: String)
+    IntLt -> return $ pretty ("lt" :: String)
+    IntLe -> return $ pretty ("le" :: String)
+    ValEq -> return $ pretty ("eq" :: String)
+    Push {} -> return $ pretty ("push" :: String)
+    Pop -> return $ pretty ("pop" :: String)
+    PushTemp -> return $ pretty ("pusht" :: String)
+    PopTemp -> return $ pretty ("popt" :: String)
+    Trace -> return $ pretty ("trace" :: String)
+    Failure -> return $ pretty ("fail" :: String)
+    AllocConstr {} -> return $ pretty ("alloc" :: String)
+    AllocClosure {} -> return $ pretty ("calloc" :: String)
+    ExtendClosure {} -> return $ pretty ("cextend" :: String)
+    Call {} -> return $ pretty ("call" :: String)
+    TailCall {} -> return $ pretty ("tcall" :: String)
+    CallClosures {} -> return $ pretty ("ccall" :: String)
+    TailCallClosures {} -> return $ pretty ("tccall" :: String)
+    Return -> return $ pretty ("ret" :: String)
+
+instance PrettyCode a => PrettyCode [a] where
+  ppCode x = do
+    cs <- mapM ppCode x
+    return $ encloseSep "[" "]" ", " cs
+
 {--------------------------------------------------------------------------------}
 {- helper functions -}
 
