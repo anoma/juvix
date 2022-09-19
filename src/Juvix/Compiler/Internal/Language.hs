@@ -210,6 +210,7 @@ data Function = Function
 instance Hashable Function
 
 makeLenses ''Module
+makeLenses ''MutualBlock
 makeLenses ''Example
 makeLenses ''PatternArg
 makeLenses ''Include

@@ -85,7 +85,9 @@ closeState = \case
               e -> return e
 
 getMetavar :: Member (State InferenceState) r => Hole -> Sem r MetavarState
-getMetavar h = gets (fromJust . (^. inferenceMap . at h))
+getMetavar h = do
+  void (queryMetavar' h)
+  gets (fromJust . (^. inferenceMap . at h))
 
 strongNormalize' :: forall r. Members '[Reader FunctionsTable, State InferenceState] r => Expression -> Sem r Expression
 strongNormalize' = go
@@ -191,6 +193,7 @@ weakNormalize' = go
         Fresh -> return (ExpressionHole h)
         Refined r -> go r
 
+-- TODO remove usages of freshMetavar. Those are no longer needed
 freshMetavar :: Members '[Inference] r => Hole -> Sem r ()
 freshMetavar = void . queryMetavar
 
