@@ -34,15 +34,17 @@ recurse' sig = go True
       h : t -> case h of
         Instr x -> do
           checkNextInstr isTail (x ^. (cmdInstrInfo . commandInfoLocation)) (x ^. cmdInstrInstruction) t
-          goNextCmd isTail (goInstr mem x) t
+          goNextCmd isTail (x ^. (cmdInstrInfo . commandInfoLocation)) (goInstr mem x) t
         Branch x ->
-          goNextCmd isTail (goBranch (null t) mem x) t
+          goNextCmd isTail (x ^. (cmdBranchInfo . commandInfoLocation)) (goBranch (null t) mem x) t
         Case x ->
-          goNextCmd isTail (goCase (null t) mem x) t
+          goNextCmd isTail (x ^. (cmdCaseInfo . commandInfoLocation)) (goCase (null t) mem x) t
 
-    goNextCmd :: Bool -> Sem r (Memory, a) -> Code -> Sem r (Memory, [a])
-    goNextCmd isTail mp t = do
+    goNextCmd :: Bool -> Maybe Location -> Sem r (Memory, a) -> Code -> Sem r (Memory, [a])
+    goNextCmd isTail loc mp t = do
       (mem', r) <- mp
+      when (isTail && null t && length (mem' ^. memoryValueStack) /= 1) $
+          throw $ AsmError loc "expected value stack height 1 on function exit"
       (mem'', rs) <- go isTail mem' t
       return (mem'', r : rs)
 
