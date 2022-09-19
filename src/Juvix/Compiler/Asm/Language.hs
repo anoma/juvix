@@ -101,12 +101,12 @@ data Instruction
     -- opcode: 'alloc <tag>'.
     AllocConstr Tag
   | -- | Allocate a closure for the given function symbol. n = allocClosureArgsNum
-    -- indicates the number of function arguments available (greater than 0 and
-    -- strictly less than the number of arguments expected by the function --
-    -- known functions can take zero arguments, but closures are required to
-    -- take at least one). The n function arguments are popped from the stack
-    -- and stored in the closure at increasing offsets. The result is pushed on
-    -- top of the stack. JVA opcode: 'calloc <fun> <int>'.
+    -- indicates the number of function arguments available (strictly less than
+    -- the number of arguments expected by the function -- known functions can
+    -- take zero arguments, but closures are required to take at least one). The
+    -- n function arguments are popped from the stack and stored in the closure
+    -- at increasing offsets. The result is pushed on top of the stack. JVA
+    -- opcode: 'calloc <fun> <int>'.
     AllocClosure InstrAllocClosure
   | -- | Extend a closure on top of the stack with more arguments. n =
     -- extendClosureArgsNum indicates the number of arguments to extend the

@@ -95,8 +95,6 @@ runCodeR infoTable code0 = goCode code0 >> popLastValueStack
         pushValueStack (ValConstr (Constr tag args))
         goCode cont
       AllocClosure InstrAllocClosure {..} -> do
-        unless (_allocClosureArgsNum > 0) $
-          runtimeError "invalid closure allocation: the number of supplied arguments must be greater than 0"
         args <- replicateM _allocClosureArgsNum popValueStack
         pushValueStack (ValClosure (Closure _allocClosureFunSymbol args))
         goCode cont
