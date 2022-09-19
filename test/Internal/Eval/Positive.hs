@@ -1,0 +1,38 @@
+module Internal.Eval.Positive where
+
+import Base
+import Internal.Eval.Base
+
+data PosTest = PosTest
+  { _name :: String,
+    _relDir :: FilePath,
+    _file :: FilePath,
+    _expectedFile :: FilePath
+  }
+
+root :: FilePath
+root = "tests/Internal/positive"
+
+testDescr :: PosTest -> TestDescr
+testDescr PosTest {..} =
+  let tRoot = root </> _relDir
+   in TestDescr
+        { _testName = _name,
+          _testRoot = tRoot,
+          _testAssertion = Steps $ internalCoreAssertion _file _expectedFile
+        }
+
+allTests :: TestTree
+allTests =
+  testGroup
+    "Internal to Core positive tests"
+    (map (mkTest . testDescr) tests)
+
+tests :: [PosTest]
+tests =
+  [ PosTest
+      "A integer literal"
+      "."
+      "IntegerLiteral.juvix"
+      "out/IntegerLiteral.out"
+  ]

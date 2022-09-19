@@ -5,6 +5,7 @@ import Asm qualified
 import BackendC qualified
 import Base
 import Core qualified
+import Internal qualified
 import Parsing qualified
 import Reachability qualified
 import Scope qualified
@@ -17,7 +18,8 @@ slowTests =
     "Juvix slow tests"
     [ BackendC.allTests,
       Core.allTests,
-      Asm.allTests
+      Asm.allTests,
+      Internal.allTests
     ]
 
 fastTests :: TestTree
