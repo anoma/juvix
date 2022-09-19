@@ -26,31 +26,33 @@ recurse :: Member (Error AsmError) r => RecursorSig r a -> Arguments -> Code -> 
 recurse sig args = fmap snd . recurse' sig (mkMemory args)
 
 recurse' :: forall r a. Member (Error AsmError) r => RecursorSig r a -> Memory -> Code -> Sem r (Memory, [a])
-recurse' sig = go
+recurse' sig = go True
   where
-    go :: Memory -> Code -> Sem r (Memory, [a])
-    go mem = \case
+    go :: Bool -> Memory -> Code -> Sem r (Memory, [a])
+    go isTail mem = \case
       [] -> return (mem, [])
       h : t -> case h of
         Instr x -> do
-          checkNextInstr (x ^. (cmdInstrInfo . commandInfoLocation)) (x ^. cmdInstrInstruction) t
-          goNextCmd (goInstr mem x) t
+          checkNextInstr isTail (x ^. (cmdInstrInfo . commandInfoLocation)) (x ^. cmdInstrInstruction) t
+          goNextCmd isTail (goInstr mem x) t
         Branch x ->
-          goNextCmd (goBranch mem x) t
+          goNextCmd isTail (goBranch (null t) mem x) t
         Case x ->
-          goNextCmd (goCase mem x) t
+          goNextCmd isTail (goCase (null t) mem x) t
 
-    goNextCmd :: Sem r (Memory, a) -> Code -> Sem r (Memory, [a])
-    goNextCmd mp t = do
+    goNextCmd :: Bool -> Sem r (Memory, a) -> Code -> Sem r (Memory, [a])
+    goNextCmd isTail mp t = do
       (mem', r) <- mp
-      (mem'', rs) <- go mem' t
+      (mem'', rs) <- go isTail mem' t
       return (mem'', r : rs)
 
-    checkNextInstr :: Maybe Location -> Instruction -> Code -> Sem r ()
-    checkNextInstr loc instr code =
+    checkNextInstr :: Bool -> Maybe Location -> Instruction -> Code -> Sem r ()
+    checkNextInstr isTail loc instr code =
       if
           | isFinalInstr instr && not (null code) ->
               throw $ AsmError loc "unreachable code"
+          | isTail && null code && not (isFinalInstr instr) ->
+              throw $ AsmError loc "expected a return or a tail call"
           | otherwise ->
               return ()
 
@@ -204,10 +206,10 @@ recurse' sig = go
         checkFunType :: Type -> Sem r ()
         checkFunType ty = void $ unifyTypes' loc ty (mkTypeFun [TyDynamic] TyDynamic)
 
-    goBranch :: Memory -> CmdBranch -> Sem r (Memory, a)
-    goBranch mem cmd@CmdBranch {..} = do
-      (mem1, as1) <- go mem _cmdBranchTrue
-      (mem2, as2) <- go mem _cmdBranchFalse
+    goBranch :: Bool -> Memory -> CmdBranch -> Sem r (Memory, a)
+    goBranch isTail mem cmd@CmdBranch {..} = do
+      (mem1, as1) <- go isTail mem _cmdBranchTrue
+      (mem2, as2) <- go isTail mem _cmdBranchFalse
       a' <- (sig ^. recurseBranch) mem cmd as1 as2
       mem' <- unifyMemory' loc mem1 mem2
       checkBranchInvariant loc mem mem'
@@ -215,13 +217,13 @@ recurse' sig = go
       where
         loc = cmd ^. (cmdBranchInfo . commandInfoLocation)
 
-    goCase :: Memory -> CmdCase -> Sem r (Memory, a)
-    goCase mem cmd@CmdCase {..} = do
+    goCase :: Bool -> Memory -> CmdCase -> Sem r (Memory, a)
+    goCase isTail mem cmd@CmdCase {..} = do
       checkValueStack' loc [mkTypeInductive _cmdCaseInductive] mem
-      rs <- mapM (go mem . (^. caseBranchCode)) _cmdCaseBranches
+      rs <- mapM (go isTail mem . (^. caseBranchCode)) _cmdCaseBranches
       let mems = map fst rs
       let ass = map snd rs
-      rd <- maybe (return Nothing) (fmap Just . go mem) _cmdCaseDefault
+      rd <- maybe (return Nothing) (fmap Just . go isTail mem) _cmdCaseDefault
       let md = fmap fst rd
       let ad = fmap snd rd
       a' <- (sig ^. recurseCase) mem cmd ass ad
