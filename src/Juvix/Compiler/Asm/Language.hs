@@ -33,11 +33,14 @@ data Value = ConstInt Integer | ConstBool Bool | ConstString Text | ConstUnit | 
 data MemValue = DRef DirectRef | ConstrRef Field
 
 -- | DirectRef is a direct memory reference.
--- - StackRef references the top of the stack.
--- - ArgRef references an argument in the argument area (0-based offsets).
--- - TempRef references a value in the temporary area (0-based offsets).
+-- - StackRef references the top of the stack. JVA code: '$'.
+-- - ArgRef references an argument in the argument area (0-based offsets). JVA
+--   code: 'arg[<offset>]'.
+-- - TempRef references a value in the temporary area (0-based offsets). JVA
+--   code: 'tmp[<offset>]'.
 data DirectRef = StackRef | ArgRef Offset | TempRef Offset
 
+-- | Constructor field reference. JVA code: '<dref>.<tag>[<offset>]'
 data Field = Field
   { -- | tag of the constructor being referenced
     _fieldTag :: Tag,
@@ -55,39 +58,46 @@ data CallType = CallFun Symbol | CallClosure
 -- | `Instruction` is a single non-branching instruction, i.e., with no control
 -- transfer.
 data Instruction
-  = -- | Add stack[0] + stack[1], pop the stack by two, and push the result.
+  = -- | Add stack[0] + stack[1], pop the stack by two, and push the result. JVA
+    -- opcode: 'add'.
     IntAdd
-  | -- | Subtract stack[0] - stack[1], pop the stack by two, and push the result.
+  | -- | Subtract stack[0] - stack[1], pop the stack by two, and push the
+    -- result. JVA opcode: 'sub'.
     IntSub
-  | -- | Multiply stack[0] * stack[1], pop the stack by two, and push the result.
+  | -- | Multiply stack[0] * stack[1], pop the stack by two, and push the
+    -- result. JVA opcode 'mul'.
     IntMul
   | -- | Divide stack[0] / stack[1], pop the stack by two, and push the result.
+    -- JVA opcode: 'div'.
     IntDiv
   | -- | Compare stack[0] < stack[1], pop the stack by two, and push the result.
+    -- JVA opcode: 'lt'.
     IntLt
-  | -- | Compare stack[0] <= stack[1], pop the stack by two, and push the result.
+  | -- | Compare stack[0] <= stack[1], pop the stack by two, and push the
+    -- result. JVA opcode: 'le'.
     IntLe
   | -- | Compare the two top stack cells with structural equality, pop the stack
-    -- by two, and push the result.
+    -- by two, and push the result. JVA opcode: 'eq'.
     ValEq
-  | -- | Push a value on top of the stack.
+  | -- | Push a value on top of the stack. JVA opcode: 'push <val>'.
     Push Value
-  | -- | Pop the stack.
+  | -- | Pop the stack. JVA opcode: 'pop'.
     Pop
   | -- | Push the top of the value stack onto the temporary stack, pop the value
-    -- stack. Used to implement Core.Let and Core.Case.
+    -- stack. Used to implement Core.Let and Core.Case. JVA opcodes: 'pusht', 'popt'.
     PushTemp
   | PopTemp
   | -- | Print a debug log of the object on top of the stack. Does not pop the
-    -- stack.
+    -- stack. JVA opcode: 'trace'.
     Trace
   | -- | Interrupt execution with a runtime error printing the value on top of
-    -- the stack.
+    -- the stack. JVA opcode: 'fail'.
     Failure
   | -- | Allocate constructor data with a given tag. The n arguments (the number n
     -- determined by the constant tag) are popped from the stack and stored at
     -- increasing offsets (stack[0]: field 0, stack[1]: field 1, ...,
-    -- stack[n-1]: field n-1). The data is pushed on top of the stack.
+    -- stack[n-1]: field n-1). The data is pushed on top of the stack. JVA
+    -- opcode: 'alloc <tag>'.
     AllocConstr Tag
   | -- | Allocate a closure for the given function symbol. n = allocClosureArgsNum
     -- indicates the number of function arguments available (greater than 0 and
@@ -95,14 +105,15 @@ data Instruction
     -- known functions can take zero arguments, but closures are required to
     -- take at least one). The n function arguments are popped from the stack
     -- and stored in the closure at increasing offsets. The result is pushed on
-    -- top of the stack.
+    -- top of the stack. JVA opcode: 'calloc <fun> <int>'.
     AllocClosure InstrAllocClosure
   | -- | Extend a closure on top of the stack with more arguments. n =
     -- extendClosureArgsNum indicates the number of arguments to extend the
     -- closure with -- it must be less than the number of arguments expected by
     -- the closure. Pops the closure from the stack, pops n additional arguments
     -- from the stack and extends the closure with them in increasing order,
-    -- then pushes the extended closure on top of the stack.
+    -- then pushes the extended closure on top of the stack. JVA opcode:
+    -- 'cextend <int>'.
     ExtendClosure InstrExtendClosure
   | -- | Call a function given by an immediate constant Symbol or a closure on top
     -- of the stack. Creates a new activation frame for the function. The n =
@@ -113,10 +124,10 @@ data Instruction
     -- arguments stored in the closure are transferred to the argument area in
     -- increasing offset order, and then the supplied callArgsNum arguments are
     -- popped from the stack and transferred to the argument area in increasing
-    -- order.
+    -- order. JVA opcode: 'call <fun>' or 'call $ <int>'
     Call InstrCall
   | -- | Same as `Call`, but does not push the call stack, discarding the current
-    -- activation frame instead.
+    -- activation frame instead. JVA opcode: 'tcall <fun>' or 'tcall $ <int>'
     TailCall InstrCall
   | -- | 'CallClosures' and 'TailCallClosures' are like 'Call' and 'TailCall'
     -- with 'CallClosure' call type, except that (1) they either call or extend
@@ -127,12 +138,14 @@ data Instruction
     -- call must be another closure and the process is repeated until we run out
     -- of supplied arguments. With 'TailCallClosures', if the last operation is
     -- a call then it is a tail call, and if the last operation is a closure
-    -- extension, then an implicit 'Return' is executed after it.
+    -- extension, then an implicit 'Return' is executed after it. JVA opcodes:
+    -- 'ccall <int>', 'tccall <int>'.
     CallClosures InstrCallClosures
   | TailCallClosures InstrCallClosures
   | -- | Pushes the top of the current value stack on top of the calling function
     -- value stack, discards the current activation frame, transfers control to
     -- the address at the top of the global call stack, and pops the call stack.
+    -- JVA opcode: 'ret'.
     Return
 
 data InstrAllocClosure = InstrAllocClosure
@@ -162,10 +175,13 @@ newtype InstrCallClosures = InstrCallClosures
 data Command
   = -- | A single non-branching instruction.
     Instr CmdInstr
-  | -- | Branch based on a boolean value on top of the stack, pop the stack.
+  | -- | Branch based on a boolean value on top of the stack, pop the stack. JVA
+    -- code: 'br true: {<code>} false: {<code>}'.
     Branch CmdBranch
   | -- | Branch based on the tag of the constructor data on top of the stack. Does
     -- _not_ pop the stack. The second argument is the optional default branch.
+    -- JVA code: 'case <tag>: {<code>} ... <tag>: {<code>} default: {<code>}'
+    -- (any branch may be omitted).
     Case CmdCase
 
 newtype CommandInfo = CommandInfo
