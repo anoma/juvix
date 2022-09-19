@@ -85,6 +85,7 @@ runCodeR infoTable code0 = goCode code0 >> popLastValueStack
       Trace -> do
         v <- topValueStack
         logMessage (printVal v)
+        goCode cont
       Failure -> do
         v <- topValueStack
         runtimeError $ mappend "failure: " (printVal v)
