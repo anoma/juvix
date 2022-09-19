@@ -44,7 +44,8 @@ recurse' sig = go True
     goNextCmd isTail loc mp t = do
       (mem', r) <- mp
       when (isTail && null t && length (mem' ^. memoryValueStack) /= 1) $
-          throw $ AsmError loc "expected value stack height 1 on function exit"
+        throw $
+          AsmError loc "expected value stack height 1 on function exit"
       (mem'', rs) <- go isTail mem' t
       return (mem'', r : rs)
 
