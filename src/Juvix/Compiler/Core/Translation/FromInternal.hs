@@ -6,6 +6,7 @@ import Juvix.Compiler.Core.Data
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.LocationInfo
+import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Translation.FromInternal.Data
 import Juvix.Compiler.Internal.Translation qualified as Internal
@@ -69,13 +70,25 @@ goFunctionClause sym clause = do
   registerIdentNode sym body
 
 goExpression ::
+  Members '[InfoTableBuilder] r =>
   Index ->
   HashMap Text Index ->
   Internal.Expression ->
   Sem r Node
 goExpression _ _ = \case
   Internal.ExpressionLiteral l -> return (goLiteral l)
-  x -> unsupported ("non-literal expressions" <> show (getLoc x))
+  Internal.ExpressionIden i -> case i of
+    Internal.IdenFunction n -> do
+      m <- getIdent txt
+      return $ case m of
+        Just (IdentSym sym) -> mkIdent (Info.singleton (NameInfo n)) sym
+        Just (IdentTag {}) -> error ("internal to core: not a function: " <> txt)
+        Nothing -> error ("internal to core: undeclared identifier: " <> txt)
+    x -> unsupported ("non-function literal expression: " <> show (getLoc x))
+    where
+      txt :: Text
+      txt = Internal.getName i ^. Internal.nameText
+  x -> unsupported ("literal expression: " <> show (getLoc x))
 
 goLiteral :: LiteralLoc -> Node
 goLiteral l = case l ^. withLocParam of

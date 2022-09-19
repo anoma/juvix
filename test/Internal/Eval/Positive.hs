@@ -31,8 +31,13 @@ allTests =
 tests :: [PosTest]
 tests =
   [ PosTest
-      "A integer literal"
+      "An integer literal"
       "."
       "IntegerLiteral.juvix"
-      "out/IntegerLiteral.out"
+      "out/IntegerLiteral.out",
+    PosTest
+      "A zero argument function"
+      "."
+      "IdenFunctionIntegerLiteral.juvix"
+      "out/IdenFunctionIntegerLiteral.out"
   ]

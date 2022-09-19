@@ -1,0 +1,11 @@
+module IdenFunctionIntegerLiteral;
+
+open import Stdlib.Prelude;
+
+f : ℕ;
+f ≔ 1;
+
+main : ℕ;
+main ≔ f;
+
+end;
