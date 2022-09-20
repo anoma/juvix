@@ -96,7 +96,7 @@ recurse' sig = go True
               when (null (mem ^. memoryValueStack)) $
                 throw $
                   AsmError loc "popping empty value stack"
-              return $ pushTempStack (topValueStack' 0 mem) mem
+              return $ pushTempStack (topValueStack' 0 mem) (popValueStack 1 mem)
             PopTemp -> do
               when (null (mem ^. memoryTempStack)) $
                 throw $
