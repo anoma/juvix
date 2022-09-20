@@ -232,10 +232,13 @@ recurse' sig = go True
       let md = fmap fst rd
       let ad = fmap snd rd
       a' <- (sig ^. recurseCase) mem cmd ass ad
-      mem' <- foldr (\m rm -> rm >>= unifyMemory' loc (sig ^. recursorInfoTable) m) (return mem) mems
-      mem'' <- maybe (return mem') (unifyMemory' loc (sig ^. recursorInfoTable) mem') md
-      checkBranchInvariant loc mem mem''
-      return (mem'', a')
+      case mems of
+        [] -> return (fromMaybe mem md, a')
+        mem0 : mems' -> do
+          mem' <- foldr (\m rm -> rm >>= unifyMemory' loc (sig ^. recursorInfoTable) m) (return mem0) mems'
+          mem'' <- maybe (return mem') (unifyMemory' loc (sig ^. recursorInfoTable) mem') md
+          checkBranchInvariant loc mem mem''
+          return (mem'', a')
       where
         loc = cmd ^. (cmdCaseInfo . commandInfoLocation)
 
