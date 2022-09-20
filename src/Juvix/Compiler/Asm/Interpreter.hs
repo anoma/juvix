@@ -14,14 +14,14 @@ import Juvix.Compiler.Asm.Pretty
 -- value on top of the value stack at exit, i.e., when executing a toplevel
 -- Return. Throws a runtime runtimeError if at exit the value stack has more than one
 -- element.
-runCode :: InfoTable -> Code -> IO Val
+runCode :: InfoTable -> FunctionInfo -> IO Val
 runCode = hRunCode stdout
 
-hRunCode :: Handle -> InfoTable -> Code -> IO Val
+hRunCode :: Handle -> InfoTable -> FunctionInfo -> IO Val
 hRunCode h infoTable = runM . hEvalRuntime h . runCodeR infoTable
 
-runCodeR :: Member Runtime r => InfoTable -> Code -> Sem r Val
-runCodeR infoTable code0 = goCode code0 >> popLastValueStack
+runCodeR :: Member Runtime r => InfoTable -> FunctionInfo -> Sem r Val
+runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueStack
   where
     goCode :: Member Runtime r => Code -> Sem r ()
     goCode = \case
@@ -266,27 +266,27 @@ runCodeR infoTable code0 = goCode code0 >> popLastValueStack
       v -> ppPrint infoTable v
 
 -- | Interpret JuvixAsm code and the resulting IO actions.
-runCodeIO :: InfoTable -> Code -> IO Val
+runCodeIO :: InfoTable -> FunctionInfo -> IO Val
 runCodeIO = hRunCodeIO stdin stdout
 
-hRunCodeIO :: Handle -> Handle -> InfoTable -> Code -> IO Val
-hRunCodeIO hin hout infoTable code = do
-  v <- hRunCode hout infoTable code
-  hRunIO hin hout infoTable v
+hRunCodeIO :: Handle -> Handle -> InfoTable -> FunctionInfo -> IO Val
+hRunCodeIO hin hout infoTable funInfo = do
+  v <- hRunCode hout infoTable funInfo
+  hRunIO hin hout infoTable funInfo v
 
 -- | Interpret IO actions.
-hRunIO :: Handle -> Handle -> InfoTable -> Val -> IO Val
-hRunIO hin hout infoTable = \case
+hRunIO :: Handle -> Handle -> InfoTable -> FunctionInfo -> Val -> IO Val
+hRunIO hin hout infoTable funInfo = \case
   ValConstr (Constr (BuiltinTag TagReturn) [x]) -> return x
   ValConstr (Constr (BuiltinTag TagBind) [x, f]) -> do
-    x' <- hRunIO hin hout infoTable x
+    x' <- hRunIO hin hout infoTable funInfo x
     let code = [Instr (CmdInstr (CommandInfo Nothing) (Call (InstrCall CallClosure 1)))]
     let r =
           pushValueStack x'
             >> pushValueStack f
-            >> runCodeR infoTable code
+            >> runCodeR infoTable funInfo {_functionCode = code}
     x'' <- runM (hEvalRuntime hout r)
-    hRunIO hin hout infoTable x''
+    hRunIO hin hout infoTable funInfo x''
   ValConstr (Constr (BuiltinTag TagWrite) [ValString s]) -> do
     hPutStr hout s
     return $ ValUnit (Unit False)

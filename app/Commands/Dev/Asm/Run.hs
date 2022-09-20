@@ -7,7 +7,6 @@ import Juvix.Compiler.Asm.Error qualified as Asm
 import Juvix.Compiler.Asm.Extra qualified as Asm
 import Juvix.Compiler.Asm.Interpreter qualified as Asm
 import Juvix.Compiler.Asm.Interpreter.Runtime qualified as Asm
-import Juvix.Compiler.Asm.Language qualified as Asm
 import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 
@@ -24,8 +23,7 @@ runCommand opts = do
             Nothing ->
               case tab ^. Asm.infoMainFunction of
                 Just sym -> do
-                  let code = Asm.getFunInfo tab sym ^. Asm.functionCode
-                  r <- doRun tab code
+                  r <- doRun tab (Asm.getFunInfo tab sym)
                   case r of
                     Left err ->
                       exitJuvixError (JuvixError err)
@@ -42,7 +40,7 @@ runCommand opts = do
 
     doRun ::
       Asm.InfoTable ->
-      Asm.Code ->
+      Asm.FunctionInfo ->
       Sem r (Either Asm.AsmError Asm.Val)
-    doRun tab code =
-      embed $ Asm.catchRunErrorIO (Asm.runCodeIO tab code)
+    doRun tab funInfo =
+      embed $ Asm.catchRunErrorIO (Asm.runCodeIO tab funInfo)
