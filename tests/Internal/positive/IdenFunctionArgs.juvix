@@ -1,0 +1,11 @@
+module IdenFunctionArgs;
+
+open import Stdlib.Prelude;
+
+f : ℕ → ℕ → ℕ;
+f x y ≔ x;
+
+main : ℕ;
+main ≔ f 100 200;
+
+end;

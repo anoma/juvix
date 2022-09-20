@@ -39,5 +39,10 @@ tests =
       "A zero argument function"
       "."
       "IdenFunctionIntegerLiteral.juvix"
-      "out/IdenFunctionIntegerLiteral.out"
+      "out/IdenFunctionIntegerLiteral.out",
+    PosTest
+      "A one argument function"
+      "."
+      "IdenFunctionArgs.juvix"
+      "out/IdenFunctionArgs.out"
   ]
