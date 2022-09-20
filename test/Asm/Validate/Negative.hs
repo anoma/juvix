@@ -1,8 +1,7 @@
 module Asm.Validate.Negative where
 
-
-import Base
 import Asm.Validate.Base
+import Base
 
 data NegTest = NegTest
   { _name :: String,
