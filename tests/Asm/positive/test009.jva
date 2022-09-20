@@ -1,0 +1,113 @@
+-- case
+
+inductive list {
+  nil : list;
+  cons : * -> list -> list;
+}
+
+function hd(list) : * {
+  push arg[0].cons[0];
+  ret;
+}
+
+function tl(list) : list {
+  push arg[0].cons[1];
+  ret;
+}
+
+function null(list) : bool {
+  push arg[0];
+  case list {
+    nil: { pop; push true; ret; }
+    default: { pop; push false; ret; }
+  };
+}
+
+function map(* -> *, list) : list {
+  push arg[1];
+  case list {
+    nil: ret
+    cons: {
+      pusht;
+      push tmp[0].cons[1];
+      push arg[0];
+      call map;
+      push tmp[0].cons[0];
+      push arg[0];
+      call $ 1;
+      alloc cons;
+      popt;
+      ret;
+    }
+  };
+}
+
+function map'(* -> *, list) : list {
+  push arg[1];
+  call null;
+  br {
+    true: {
+      alloc nil;
+      ret;
+    }
+    false: {
+      push arg[1];
+      call tl;
+      push arg[0];
+      call map';
+      push arg[1];
+      call hd;
+      push arg[0];
+      call $ 1;
+      alloc cons;
+      ret;
+    }
+  };
+}
+
+function add_one(integer) : integer {
+  push arg[0];
+  push 1;
+  add;
+  ret;
+}
+
+function main() {
+  alloc nil;
+  push 1;
+  alloc cons;
+  push 0;
+  alloc cons;
+  pusht;
+  push tmp[0];
+  call null;
+  trace;
+  pop;
+  alloc nil;
+  call null;
+  trace;
+  pop;
+  push tmp[0];
+  call hd;
+  trace;
+  pop;
+  push tmp[0];
+  call tl;
+  trace;
+  pop;
+  push tmp[0];
+  call tl;
+  call hd;
+  trace;
+  pop;
+  push tmp[0];
+  calloc add_one 0;
+  call map;
+  trace;
+  pop;
+  push tmp[0];
+  calloc add_one 0;
+  call map';
+  popt;
+  ret;
+}

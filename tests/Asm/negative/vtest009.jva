@@ -1,0 +1,15 @@
+-- case type mismatch
+
+inductive list {
+  nil : list;
+  cons : * -> list -> list;
+}
+
+function main() {
+  alloc nil;
+  case list {
+    nil: { pop; push "a"; }
+    cons: { pop; push 1; }
+  };
+  ret;
+}

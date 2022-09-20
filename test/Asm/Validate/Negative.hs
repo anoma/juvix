@@ -48,5 +48,21 @@ tests =
     NegTest
       "Missing return"
       "."
-      "vtest005.jva"
+      "vtest005.jva",
+    NegTest
+      "Branch stack height mismatch"
+      "."
+      "vtest006.jva",
+    NegTest
+      "Branch type mismatch"
+      "."
+      "vtest007.jva",
+    NegTest
+      "Case stack height mismatch"
+      "."
+      "vtest008.jva",
+    NegTest
+      "Case type mismatch"
+      "."
+      "vtest009.jva"
   ]

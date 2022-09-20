@@ -1,0 +1,7 @@
+false
+true
+0
+cons 1 nil
+1
+cons 1 (cons 2 nil)
+cons 1 (cons 2 nil)

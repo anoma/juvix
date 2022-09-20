@@ -1,0 +1,10 @@
+-- branch stack height mismatch
+
+function main() {
+  push true;
+  br {
+    true: { push 1; push 2; }
+    false: { push 1; }
+  };
+  ret;
+}

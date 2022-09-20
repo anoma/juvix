@@ -66,8 +66,13 @@ tests =
       "test007.jva"
       "out/test007.out",
     PosTest
-      "If-then-else"
+      "Branch"
       "."
       "test008.jva"
-      "out/test008.out"
+      "out/test008.out",
+    PosTest
+      "Case"
+      "."
+      "test009.jva"
+      "out/test009.out"
   ]

@@ -28,7 +28,7 @@ asmRunAssertion mainFile expectedFile step = do
                 ( \dirPath -> do
                     let outputFile = dirPath </> "out.out"
                     hout <- openFile outputFile WriteMode
-                    step "Evaluate"
+                    step "Interpret"
                     r' <- doRun hout tab (getFunInfo tab sym)
                     case r' of
                       Left err -> do
@@ -63,7 +63,7 @@ asmRunErrorAssertion mainFile step = do
                 ( \dirPath -> do
                     let outputFile = dirPath </> "out.out"
                     hout <- openFile outputFile WriteMode
-                    step "Evaluate"
+                    step "Interpret"
                     r' <- doRun hout tab (getFunInfo tab sym)
                     hClose hout
                     case r' of
