@@ -223,8 +223,8 @@ typeNamed = do
   off <- P.getOffset
   txt <- identifier
   case txt of
-    "integer" -> return mkInteger
-    "bool" -> return mkBool
+    "integer" -> return mkTypeInteger
+    "bool" -> return mkTypeBool
     "string" -> return TyString
     _ -> do
       idt <- lift $ getIdent txt

@@ -95,8 +95,8 @@ getDirectRefType dr mem = case dr of
 
 getValueType' :: Member (Error AsmError) r => Maybe Location -> InfoTable -> Memory -> Value -> Sem r Type
 getValueType' loc tab mem = \case
-  ConstInt _ -> return mkInteger
-  ConstBool _ -> return mkBool
+  ConstInt _ -> return mkTypeInteger
+  ConstBool _ -> return mkTypeBool
   ConstString _ -> return TyString
   ConstUnit -> return TyUnit
   ConstVoid -> return TyUnit

@@ -6,11 +6,11 @@ import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Language.Type
 import Juvix.Compiler.Asm.Pretty
 
-mkInteger :: Type
-mkInteger = TyInteger (TypeInteger Nothing Nothing)
+mkTypeInteger :: Type
+mkTypeInteger = TyInteger (TypeInteger Nothing Nothing)
 
-mkBool :: Type
-mkBool = TyBool (TypeBool (BuiltinTag TagTrue) (BuiltinTag TagFalse))
+mkTypeBool :: Type
+mkTypeBool = TyBool (TypeBool (BuiltinTag TagTrue) (BuiltinTag TagFalse))
 
 mkTypeConstr :: Symbol -> Tag -> [Type] -> Type
 mkTypeConstr ind tag argTypes = TyConstr (TypeConstr ind tag argTypes)

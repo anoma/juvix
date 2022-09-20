@@ -36,9 +36,9 @@ recurse' sig = go True
           checkNextInstr isTail (x ^. (cmdInstrInfo . commandInfoLocation)) (x ^. cmdInstrInstruction) t
           goNextCmd isTail (x ^. (cmdInstrInfo . commandInfoLocation)) (goInstr mem x) t
         Branch x ->
-          goNextCmd isTail (x ^. (cmdBranchInfo . commandInfoLocation)) (goBranch (null t) mem x) t
+          goNextCmd isTail (x ^. (cmdBranchInfo . commandInfoLocation)) (goBranch (isTail && null t) mem x) t
         Case x ->
-          goNextCmd isTail (x ^. (cmdCaseInfo . commandInfoLocation)) (goCase (null t) mem x) t
+          goNextCmd isTail (x ^. (cmdCaseInfo . commandInfoLocation)) (goCase (isTail && null t) mem x) t
 
     goNextCmd :: Bool -> Maybe Location -> Sem r (Memory, a) -> Code -> Sem r (Memory, [a])
     goNextCmd isTail loc mp t = do
@@ -79,11 +79,11 @@ recurse' sig = go True
             IntDiv ->
               fixMemIntOp mem
             IntLt ->
-              fixMemBinOp mem mkInteger mkInteger mkBool
+              fixMemBinOp mem mkTypeInteger mkTypeInteger mkTypeBool
             IntLe ->
-              fixMemBinOp mem mkInteger mkInteger mkBool
+              fixMemBinOp mem mkTypeInteger mkTypeInteger mkTypeBool
             ValEq ->
-              fixMemBinOp mem TyDynamic TyDynamic mkBool
+              fixMemBinOp mem TyDynamic TyDynamic mkTypeBool
             Push val -> do
               ty <- getValueType' loc (sig ^. recursorInfoTable) mem val
               return (pushValueStack ty mem)
@@ -140,7 +140,7 @@ recurse' sig = go True
               return mem
 
         fixMemIntOp :: Memory -> Sem r Memory
-        fixMemIntOp mem = fixMemBinOp mem mkInteger mkInteger mkInteger
+        fixMemIntOp mem = fixMemBinOp mem mkTypeInteger mkTypeInteger mkTypeInteger
 
         fixMemBinOp :: Memory -> Type -> Type -> Type -> Sem r Memory
         fixMemBinOp mem ty0 ty1 rty = do
@@ -211,11 +211,13 @@ recurse' sig = go True
 
     goBranch :: Bool -> Memory -> CmdBranch -> Sem r (Memory, a)
     goBranch isTail mem cmd@CmdBranch {..} = do
-      (mem1, as1) <- go isTail mem _cmdBranchTrue
-      (mem2, as2) <- go isTail mem _cmdBranchFalse
+      checkValueStack' loc [mkTypeBool] mem
+      let mem0 = popValueStack 1 mem
+      (mem1, as1) <- go isTail mem0 _cmdBranchTrue
+      (mem2, as2) <- go isTail mem0 _cmdBranchFalse
       a' <- (sig ^. recurseBranch) mem cmd as1 as2
       mem' <- unifyMemory' loc (sig ^. recursorInfoTable) mem1 mem2
-      checkBranchInvariant loc mem mem'
+      checkBranchInvariant loc mem0 mem'
       return (mem', a')
       where
         loc = cmd ^. (cmdBranchInfo . commandInfoLocation)
