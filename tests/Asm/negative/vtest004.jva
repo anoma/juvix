@@ -1,0 +1,13 @@
+-- not enough function arguments
+
+function f(*, *) {
+  push arg[0];
+  push arg[1];
+  add;
+  ret;
+}
+
+function main() {
+  push 1;
+  tcall f;
+}

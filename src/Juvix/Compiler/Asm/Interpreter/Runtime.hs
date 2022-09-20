@@ -9,8 +9,8 @@ import Debug.Trace qualified as Debug
 import GHC.Base qualified as GHC
 import Juvix.Compiler.Asm.Data.Stack (Stack)
 import Juvix.Compiler.Asm.Data.Stack qualified as Stack
+import Juvix.Compiler.Asm.Interpreter.Base
 import Juvix.Compiler.Asm.Interpreter.Error
-import Juvix.Compiler.Asm.Language
 
 {-
 Memory consists of:
@@ -92,43 +92,6 @@ data Continuation = Continuation
     _contCode :: Code
   }
 
-{-
-  The following types of values may be stored in the heap or an activation
-  frame.
-
-  - Integer (arbitrary precision)
-  - Boolean
-  - String
-  - Constructor data
-  - Closure
--}
-
-data Val
-  = ValInteger Integer
-  | ValBool Bool
-  | ValString Text
-  | ValUnit Unit
-  | ValConstr Constr
-  | ValClosure Closure
-  deriving stock (Eq)
-
-newtype Unit = Unit
-  { _unitDisplay :: Bool
-  }
-  deriving stock (Eq)
-
-data Constr = Constr
-  { _constrTag :: Tag,
-    _constrArgs :: [Val]
-  }
-  deriving stock (Eq)
-
-data Closure = Closure
-  { _closureSymbol :: Symbol,
-    _closureArgs :: [Val]
-  }
-  deriving stock (Eq)
-
 -- | JuvixAsm runtime state
 data RuntimeState = RuntimeState
   { -- | global call stack
@@ -145,30 +108,7 @@ makeLenses ''ArgumentArea
 makeLenses ''TemporaryStack
 makeLenses ''ValueStack
 makeLenses ''Frame
-makeLenses ''Constr
-makeLenses ''Closure
 makeLenses ''RuntimeState
-
-instance HasAtomicity Constr where
-  atomicity Constr {..} =
-    if
-        | null _constrArgs -> Atom
-        | otherwise -> Aggregate appFixity
-
-instance HasAtomicity Closure where
-  atomicity Closure {..} =
-    if
-        | null _closureArgs -> Atom
-        | otherwise -> Aggregate appFixity
-
-instance HasAtomicity Val where
-  atomicity = \case
-    ValInteger {} -> Atom
-    ValBool {} -> Atom
-    ValString {} -> Atom
-    ValUnit {} -> Atom
-    ValConstr c -> atomicity c
-    ValClosure cl -> atomicity cl
 
 data Runtime m a where
   HasCaller :: Runtime m Bool -- is the call stack non-empty?

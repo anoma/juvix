@@ -27,6 +27,9 @@ instance ToGenericError AsmError where
           i = getLoc e
           msg = pretty (e ^. asmErrorMsg)
 
+instance Pretty AsmError where
+  pretty (AsmError {..}) = pretty _asmErrorMsg
+
 instance HasLoc AsmError where
   getLoc (AsmError {..}) = fromMaybe defaultLoc _asmErrorLoc
     where

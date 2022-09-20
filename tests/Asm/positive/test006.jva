@@ -1,0 +1,57 @@
+-- IO builtins
+
+function const(*, *) {
+  push arg[0];
+  ret;
+}
+
+function print(*) : IO {
+  push arg[0];
+  alloc write;
+  ret;
+}
+
+function sequence(IO, IO) : IO {
+  push arg[1];
+  calloc const 1;
+  push arg[0];
+  alloc bind;
+  ret;
+}
+
+function main () {
+  push "\n";
+  alloc write;
+  push 5;
+  alloc write;
+  push 4;
+  alloc write;
+  call sequence;
+  push 3;
+  alloc write;
+  push 2;
+  alloc write;
+  push 1;
+  alloc write;
+  call sequence;
+  call sequence;
+  call sequence;
+  call sequence;
+
+  calloc print 0;
+  push "\n";
+  alloc return;
+  alloc bind;
+  calloc print 0;
+  push 2;
+  alloc return;
+  alloc bind;
+  call sequence;
+  calloc print 0;
+  push 1;
+  alloc return;
+  alloc bind;
+  call sequence;
+
+  tcall sequence;
+}

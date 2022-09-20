@@ -1,0 +1,32 @@
+-- if then else
+
+function loop() {
+  tcall loop;
+}
+
+function main() {
+  push 3;
+  push 0;
+  lt;
+  br {
+    true: push 1
+    false: call loop
+  };
+  push 1;
+  push 2;
+  le;
+  br {
+    true: call loop
+    false: {
+      push 7;
+      push 8;
+      le;
+      br {
+        true: call loop
+        false: push 1
+      };
+    }
+  };
+  add;
+  ret;
+}

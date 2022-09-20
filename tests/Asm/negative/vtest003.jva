@@ -1,0 +1,12 @@
+-- function type mismatch
+
+function f(integer -> integer) : integer {
+  push 0;
+  push arg[0];
+  tcall $ 1;
+}
+
+function main() {
+  calloc f 0;
+  tcall f;
+}

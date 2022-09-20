@@ -1,0 +1,13 @@
+-- arithmetic type mismatch
+
+function f(integer) : integer {
+  push "a";
+  push arg[0];
+  add;
+  ret;
+}
+
+function main() {
+  push 1;
+  tcall f;
+}

@@ -7,8 +7,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Extra.Base
-import Juvix.Compiler.Asm.Interpreter.Runtime
-import Juvix.Compiler.Asm.Language
+import Juvix.Compiler.Asm.Interpreter.Base
 import Juvix.Compiler.Asm.Language.Type
 import Juvix.Compiler.Asm.Pretty.Options
 import Juvix.Compiler.Core.Pretty.Base qualified as Core

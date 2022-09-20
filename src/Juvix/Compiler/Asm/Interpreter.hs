@@ -1,13 +1,17 @@
-module Juvix.Compiler.Asm.Interpreter where
+module Juvix.Compiler.Asm.Interpreter
+  ( module Juvix.Compiler.Asm.Interpreter,
+    module Juvix.Compiler.Asm.Interpreter.Base,
+  )
+where
 
 import Control.Exception qualified as Exception
 import Control.Monad
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Error
 import Juvix.Compiler.Asm.Extra.Base
+import Juvix.Compiler.Asm.Interpreter.Base
 import Juvix.Compiler.Asm.Interpreter.Extra
 import Juvix.Compiler.Asm.Interpreter.Runtime
-import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Pretty
 
 -- | Interpret JuvixAsm code for a single function. The returned Val is the

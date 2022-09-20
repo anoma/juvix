@@ -6,7 +6,6 @@ import Juvix.Compiler.Asm.Data.InfoTable qualified as Asm
 import Juvix.Compiler.Asm.Error qualified as Asm
 import Juvix.Compiler.Asm.Extra qualified as Asm
 import Juvix.Compiler.Asm.Interpreter qualified as Asm
-import Juvix.Compiler.Asm.Interpreter.Runtime qualified as Asm
 import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 

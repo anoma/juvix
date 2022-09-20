@@ -1,0 +1,20 @@
+-- Tracing IO
+
+function main () {
+  push 1;
+  trace;
+  push 2;
+  trace;
+  trace;
+  push "seven";
+  trace;
+  pop;
+  pop;
+  pop;
+  push unit;
+  trace;
+  pop;
+  push void;
+  trace;
+  ret;
+}
