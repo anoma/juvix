@@ -1,7 +1,7 @@
 module Asm.Run.Positive where
 
-import Base
 import Asm.Run.Base
+import Base
 
 data PosTest = PosTest
   { _name :: String,
