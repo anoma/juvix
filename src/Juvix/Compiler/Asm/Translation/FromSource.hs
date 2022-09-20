@@ -286,13 +286,17 @@ command = do
     "ret" ->
       return $ mkInstr' loc Return
     "br" -> do
-      -- hlint is stupid here
+      lbracket
       br1 <- trueBranch
-      Branch . CmdBranch (CommandInfo loc) br1 <$> falseBranch
+      br2 <- falseBranch
+      rbracket
+      return $ Branch $ CmdBranch (CommandInfo loc) br1 br2
     "case" -> do
       sym <- indSymbol
+      lbracket
       brs <- P.many caseBranch
       def <- optional defaultBranch
+      rbracket
       return $ Case (CmdCase (CommandInfo loc) sym brs def)
     _ ->
       parseFailure off ("unknown instruction: " ++ fromText txt)

@@ -177,11 +177,11 @@ data Command
   = -- | A single non-branching instruction.
     Instr CmdInstr
   | -- | Branch based on a boolean value on top of the stack, pop the stack. JVA
-    -- code: 'br true: {<code>} false: {<code>}'.
+    -- code: 'br { true: {<code>} false: {<code>} }'.
     Branch CmdBranch
   | -- | Branch based on the tag of the constructor data on top of the stack. Does
     -- _not_ pop the stack. The second argument is the optional default branch.
-    -- JVA code: 'case <tag>: {<code>} ... <tag>: {<code>} default: {<code>}'
+    -- JVA code: 'case <ind> { <tag>: {<code>} ... <tag>: {<code>} default: {<code>} }'
     -- (any branch may be omitted).
     Case CmdCase
 
