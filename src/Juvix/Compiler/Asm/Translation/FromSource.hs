@@ -108,16 +108,18 @@ statementFunction = do
     parseFailure off "the 'main' function must take zero arguments"
   mrty <- optional typeAnnotation
   let rty = fromMaybe TyDynamic mrty
-  mcode <- optional (braces parseCode)
-  let fi =
+  let fi0 =
         FunctionInfo
           { _functionName = txt,
             _functionSymbol = sym,
             _functionLocation = Just i,
-            _functionCode = fromMaybe [] mcode,
+            _functionCode = [],
             _functionArgsNum = length argtys,
             _functionType = mkTypeFun argtys rty
           }
+  lift $ registerFunction fi0
+  mcode <- optional (braces parseCode)
+  let fi = fi0 {_functionCode = fromMaybe [] mcode}
   case idt of
     Just (IdentFwd _) -> do
       when (isNothing mcode) $
@@ -286,17 +288,17 @@ command = do
     "ret" ->
       return $ mkInstr' loc Return
     "br" -> do
-      lbracket
+      lbrace
       br1 <- trueBranch
       br2 <- falseBranch
-      rbracket
+      rbrace
       return $ Branch $ CmdBranch (CommandInfo loc) br1 br2
     "case" -> do
       sym <- indSymbol
-      lbracket
+      lbrace
       brs <- P.many caseBranch
       def <- optional defaultBranch
-      rbracket
+      rbrace
       return $ Case (CmdCase (CommandInfo loc) sym brs def)
     _ ->
       parseFailure off ("unknown instruction: " ++ fromText txt)
