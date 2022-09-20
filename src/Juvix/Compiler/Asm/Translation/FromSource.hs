@@ -37,15 +37,16 @@ createBuiltinConstr ::
   Symbol ->
   BuiltinDataTag ->
   Text ->
+  Type ->
   Interval ->
   ConstructorInfo
-createBuiltinConstr sym btag name i =
+createBuiltinConstr sym btag name ty i =
   let n = builtinConstrArgsNum btag
    in ConstructorInfo
         { _constructorName = name,
           _constructorLocation = Just i,
           _constructorTag = BuiltinTag btag,
-          _constructorType = mkTypeFun (replicate n TyDynamic) (mkTypeInductive sym),
+          _constructorType = ty,
           _constructorArgsNum = n,
           _constructorInductive = sym
         }
@@ -55,11 +56,12 @@ declareBuiltins = do
   loc <- curLoc
   let i = mkInterval loc loc
   sym <- lift freshSymbol
+  let tyio = mkTypeInductive sym
   let constrs =
-        [ createBuiltinConstr sym TagReturn "return" i,
-          createBuiltinConstr sym TagBind "bind" i,
-          createBuiltinConstr sym TagWrite "write" i,
-          createBuiltinConstr sym TagReadLn "readLn" i
+        [ createBuiltinConstr sym TagReturn "return" (mkTypeFun [TyDynamic] tyio) i,
+          createBuiltinConstr sym TagBind "bind" (mkTypeFun [tyio, mkTypeFun [TyDynamic] tyio] tyio) i,
+          createBuiltinConstr sym TagWrite "write" (mkTypeFun [TyDynamic] tyio) i,
+          createBuiltinConstr sym TagReadLn "readLn" tyio i
         ]
   lift $
     registerInductive
