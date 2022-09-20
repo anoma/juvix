@@ -253,7 +253,7 @@ runRuntime = runState (RuntimeState (CallStack []) emptyFrame []) . interp
     throwRuntimeError :: forall b. RuntimeState -> Text -> b
     throwRuntimeError s msg =
       let logs = reverse (s ^. runtimeMessages)
-       in map (\x -> Debug.trace (fromText x) ()) logs `GHC.seq`
+       in map' (\x -> Debug.trace (fromText x) ()) logs `GHC.seq`
             throwRunError msg -- TODO: print stacktrace
 
 hEvalRuntime :: forall r a. Member (Embed IO) r => Handle -> Sem (Runtime ': r) a -> Sem r a
