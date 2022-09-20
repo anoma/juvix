@@ -246,9 +246,10 @@ runCodeR infoTable code0 = goCode code0 >> popLastValueStack
                       | otherwise -> goCode cont
               | n == argsNum -> do
                   frm <- getCallFrame cl fi n
-                  unless isTail $ do
-                    unless (null cont) (runtimeError "invalid tail call")
+                  unless isTail $
                     pushCallStack cont
+                  when (isTail && not (null cont)) $
+                    runtimeError "invalid tail call"
                   replaceFrame frm
                   goCode (fi ^. functionCode)
               | otherwise -> do
