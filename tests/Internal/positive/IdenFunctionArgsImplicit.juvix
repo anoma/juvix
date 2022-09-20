@@ -1,0 +1,11 @@
+module IdenFunctionArgsImplicit;
+
+open import Stdlib.Prelude;
+
+f : {A : Type} → ℕ → A → ℕ;
+f x y ≔ x;
+
+main : ℕ;
+main ≔ f 100 200;
+
+end;

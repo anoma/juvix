@@ -41,8 +41,13 @@ tests =
       "IdenFunctionIntegerLiteral.juvix"
       "out/IdenFunctionIntegerLiteral.out",
     PosTest
-      "A one argument function"
+      "A two argument function"
       "."
       "IdenFunctionArgs.juvix"
-      "out/IdenFunctionArgs.out"
+      "out/IdenFunctionArgs.out",
+    PosTest
+      "A function with implicit arguments"
+      "."
+      "IdenFunctionArgsImplicit.juvix"
+      "out/IdenFunctionArgsImplicit.out"
   ]
