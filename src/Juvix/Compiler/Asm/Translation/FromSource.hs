@@ -147,16 +147,17 @@ statementInductive = do
   when (isJust idt) $
     parseFailure off ("duplicate identifier: " ++ fromText txt)
   sym <- lift freshSymbol
+  let ii =
+        InductiveInfo
+          { _inductiveName = txt,
+            _inductiveLocation = Just i,
+            _inductiveSymbol = sym,
+            _inductiveKind = TyDynamic,
+            _inductiveConstructors = []
+          }
+  lift $ registerInductive ii
   ctrs <- braces $ P.sepEndBy (constrDecl sym) kwSemicolon
-  lift $
-    registerInductive
-      InductiveInfo
-        { _inductiveName = txt,
-          _inductiveLocation = Just i,
-          _inductiveSymbol = sym,
-          _inductiveKind = TyDynamic,
-          _inductiveConstructors = ctrs
-        }
+  lift $ registerInductive ii {_inductiveConstructors = ctrs}
 
 functionArguments ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
