@@ -173,6 +173,7 @@ instance PrettyCode Instruction where
     IntSub -> return $ pretty ("sub" :: String)
     IntMul -> return $ pretty ("mul" :: String)
     IntDiv -> return $ pretty ("div" :: String)
+    IntMod -> return $ pretty ("mod" :: String)
     IntLt -> return $ pretty ("lt" :: String)
     IntLe -> return $ pretty ("le" :: String)
     ValEq -> return $ pretty ("eq" :: String)

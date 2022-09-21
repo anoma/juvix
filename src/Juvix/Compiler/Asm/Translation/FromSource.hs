@@ -254,6 +254,8 @@ command = do
       return $ mkInstr' loc IntMul
     "div" ->
       return $ mkInstr' loc IntDiv
+    "mod" ->
+      return $ mkInstr' loc IntMod
     "lt" ->
       return $ mkInstr' loc IntLt
     "le" ->

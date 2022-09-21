@@ -77,6 +77,14 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
                   | otherwise -> return $ ValInteger (x `div` y)
           )
         goCode cont
+      IntMod -> do
+        goIntBinOp'
+          ( \x y ->
+              if
+                  | y == 0 -> runtimeError "division by zero"
+                  | otherwise -> return $ ValInteger (x `mod` y)
+          )
+        goCode cont
       IntLt ->
         goIntBinOp (\x y -> ValBool (x < y)) >> goCode cont
       IntLe ->

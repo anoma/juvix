@@ -1,0 +1,44 @@
+-- tail recursion: compute the n-th Fibonacci number in O(n)
+
+function fib'(integer, integer, integer) : integer {
+  push arg[0];
+  push 0;
+  eq;
+  br {
+    true: { push arg[1]; ret; }
+    false: {
+      push arg[2];
+      push arg[1];
+      add;
+      push arg[2];
+      push 1;
+      push arg[0];
+      sub;
+      tcall fib';
+    }
+  };
+}
+
+function fib(integer) : integer {
+  push 1;
+  push 0;
+  push arg[0];
+  tcall fib';
+}
+
+function main() {
+  push 10;
+  call fib;
+  trace;
+  pop;
+  push 100;
+  call fib;
+  trace;
+  pop;
+  push 1000;
+  call fib;
+  trace;
+  pop;
+  push void;
+  ret;
+}

@@ -79,6 +79,8 @@ recurse' sig = go True
               fixMemIntOp mem
             IntDiv ->
               fixMemIntOp mem
+            IntMod ->
+              fixMemIntOp mem
             IntLt ->
               fixMemBinOp mem mkTypeInteger mkTypeInteger mkTypeBool
             IntLe ->

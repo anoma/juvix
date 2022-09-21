@@ -1,0 +1,129 @@
+-- trees
+
+inductive tree {
+  node1 : tree -> tree;
+  node2 : tree -> tree -> tree;
+  node3 : tree -> tree -> tree -> tree;
+  leaf : tree;
+}
+
+function gen(integer) : tree {
+  push arg[0];
+  push 0;
+  eq;
+  br {
+    true: { alloc leaf; ret; }
+    false: {
+      push 3;
+      push arg[0];
+      mod;
+      pusht;
+      push tmp[0];
+      push 0;
+      eq;
+      br {
+        true: {
+          push 1;
+          push arg[0];
+          sub;
+          call gen;
+          alloc node1;
+          ret;
+        }
+        false: {
+          push tmp[0];
+          push 1;
+          eq;
+          br {
+            true: {
+              push 1;
+              push arg[0];
+              sub;
+              pusht;
+              push tmp[1];
+              call gen;
+              push tmp[1];
+              call gen;
+              alloc node2;
+              ret;
+            }
+            false: {
+              push 1;
+              push arg[0];
+              sub;
+              pusht;
+              push tmp[1];
+              call gen;
+              push tmp[1];
+              call gen;
+              push tmp[1];
+              call gen;
+              alloc node3;
+              ret;
+            }
+          };
+        }
+      };
+    }
+  };
+}
+
+function preorder(tree) {
+  push arg[0];
+  case tree {
+    node1: {
+      pop;
+      push 1;
+      trace;
+      pop;
+      push arg[0].node1[0];
+      tcall preorder;
+    }
+    node2: {
+      pop;
+      push 2;
+      trace;
+      pop;
+      push arg[0].node2[0];
+      call preorder;
+      pop;
+      push arg[0].node2[1];
+      tcall preorder;
+    }
+    node3: {
+      pop;
+      push 3;
+      trace;
+      pop;
+      push arg[0].node3[0];
+      call preorder;
+      pop;
+      push arg[0].node3[1];
+      call preorder;
+      pop;
+      push arg[0].node3[2];
+      tcall preorder;
+    }
+    leaf: {
+      pop;
+      push 0;
+      trace;
+      pop;
+      push void;
+      ret;
+    }
+  };
+}
+
+function main() {
+  push 3;
+  call gen;
+  call preorder;
+  pop;
+  push "X";
+  trace;
+  pop;
+  push 7;
+  call gen;
+  tcall preorder;
+}

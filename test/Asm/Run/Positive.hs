@@ -84,5 +84,20 @@ tests =
       "Tail recursion"
       "."
       "test011.jva"
-      "out/test011.out"
+      "out/test011.out",
+    PosTest
+      "Temporary stack"
+      "."
+      "test012.jva"
+      "out/test012.out",
+    PosTest
+      "Fibonacci numbers in linear time"
+      "."
+      "test013.jva"
+      "out/test013.out",
+    PosTest
+      "Trees"
+      "."
+      "test014.jva"
+      "out/test014.out"
   ]

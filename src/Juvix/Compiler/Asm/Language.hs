@@ -71,6 +71,9 @@ data Instruction
   | -- | Divide stack[0] / stack[1], pop the stack by two, and push the result.
     -- JVA opcode: 'div'.
     IntDiv
+  | -- | Calculate modulus stack[0] % stack[1], pop the stack by two, and push
+    -- the result. JVA opcode: 'mod'.
+    IntMod
   | -- | Compare stack[0] < stack[1], pop the stack by two, and push the result.
     -- JVA opcode: 'lt'.
     IntLt
