@@ -64,5 +64,10 @@ tests =
       "Zero is the constant 0"
       "."
       "FunctionReturnZero.juvix"
-      "out/FunctionReturnZero.out"
+      "out/FunctionReturnZero.out",
+    PosTest
+      "Suc returns a constant integer"
+      "."
+      "FunctionReturnSuc.juvix"
+      "out/FunctionReturnSuc.out"
   ]

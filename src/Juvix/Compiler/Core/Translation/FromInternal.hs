@@ -220,8 +220,21 @@ goApplication ::
   Sem r Node
 goApplication varsNum vars a = do
   (f, args) <- Internal.unfoldPolyApplication a
-  fExpr <- goExpression varsNum vars f
-  mkApps' fExpr . toList <$> mapM (goExpression varsNum vars) args
+  let exprArgs :: Sem r [Node]
+      exprArgs = mapM (goExpression varsNum vars) args
+      app :: Sem r Node
+      app = do
+        fExpr <- goExpression varsNum vars f
+        mkApps' fExpr <$> exprArgs
+  case f of
+    Internal.ExpressionIden (Internal.IdenConstructor n) -> do
+      ctorInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoConstructors)
+      case ctorInfo ^. Internal.constructorInfoBuiltin of
+        Just Internal.BuiltinNaturalSuc -> do
+          as <- exprArgs
+          return $ mkBuiltinApp' OpIntAdd (mkConstant Info.empty (ConstInteger 1) : as)
+        _ -> app
+    _ -> app
 
 goLiteral :: LiteralLoc -> Node
 goLiteral l = case l ^. withLocParam of
