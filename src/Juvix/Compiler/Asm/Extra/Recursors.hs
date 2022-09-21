@@ -5,6 +5,7 @@ module Juvix.Compiler.Asm.Extra.Recursors
 where
 
 import Juvix.Compiler.Asm.Data.InfoTable
+import Juvix.Compiler.Asm.Data.Stack qualified as Stack
 import Juvix.Compiler.Asm.Error
 import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Extra.Memory
@@ -131,13 +132,13 @@ recurse' sig = go True
             Call x ->
               fixMemCall mem x
             TailCall x ->
-              fixMemCall mem x
+              fixMemCall (dropTempStack mem) x
             CallClosures x ->
               fixMemCallClosures mem x
             TailCallClosures x ->
-              fixMemCallClosures mem x
+              fixMemCallClosures (dropTempStack mem) x
             Return ->
-              return mem
+              return (dropTempStack mem)
 
         fixMemIntOp :: Memory -> Sem r Memory
         fixMemIntOp mem = fixMemBinOp mem mkTypeInteger mkTypeInteger mkTypeInteger
@@ -206,6 +207,9 @@ recurse' sig = go True
             pushValueStack (mkTypeFun (drop argsNum (typeArgs ty)) (typeTarget ty)) $
               popValueStack argsNum mem'
 
+        dropTempStack :: Memory -> Memory
+        dropTempStack mem = mem {_memoryTempStack = Stack.empty}
+
         checkFunType :: Type -> Sem r ()
         checkFunType ty = void $ unifyTypes' loc (sig ^. recursorInfoTable) ty (mkTypeFun [TyDynamic] TyDynamic)
 
@@ -250,6 +254,9 @@ recurse' sig = go True
         )
         $ throw
         $ AsmError loc "wrong value stack height after branching (can increase by at most 1)"
-      unless (length (mem' ^. memoryTempStack) == length (mem ^. memoryTempStack)) $
-        throw $
-          AsmError loc "temporary stack height changed after branching"
+      unless
+        ( null (mem' ^. memoryTempStack)
+            || length (mem' ^. memoryTempStack) == length (mem ^. memoryTempStack)
+        )
+        $ throw
+        $ AsmError loc "temporary stack height changed after branching"

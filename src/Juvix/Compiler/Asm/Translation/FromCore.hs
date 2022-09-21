@@ -163,7 +163,7 @@ genCode infoTable fi =
     goLet isTail tempSize refs (Core.Let {..}) =
       DL.append
         (DL.snoc (go False tempSize refs _letValue) (mkInstr PushTemp))
-        (go isTail (tempSize + 1) (BL.extend (Ref (DRef (TempRef tempSize))) refs) _letBody)
+        (snocPopTemp isTail $ go isTail (tempSize + 1) (BL.extend (Ref (DRef (TempRef tempSize))) refs) _letBody)
 
     goCase :: Bool -> Int -> BinderList Value -> Core.Case -> Code'
     goCase isTail tempSize refs (Core.Case {..}) =
@@ -190,17 +190,18 @@ genCode infoTable fi =
                                   _caseBranchTag
                                   ( DL.toList $
                                       DL.cons (mkInstr PushTemp) $
-                                        go
-                                          isTail
-                                          (tempSize + 1)
-                                          ( BL.prepend
-                                              ( map
-                                                  (Ref . ConstrRef . Field _caseBranchTag (TempRef tempSize))
-                                                  (reverse [0 .. _caseBranchBindersNum - 1])
-                                              )
-                                              refs
-                                          )
-                                          _caseBranchBody
+                                        snocPopTemp isTail $
+                                          go
+                                            isTail
+                                            (tempSize + 1)
+                                            ( BL.prepend
+                                                ( map
+                                                    (Ref . ConstrRef . Field _caseBranchTag (TempRef tempSize))
+                                                    (reverse [0 .. _caseBranchBindersNum - 1])
+                                                )
+                                                refs
+                                            )
+                                            _caseBranchBody
                                   )
                     )
                     _caseBranches,
@@ -208,7 +209,7 @@ genCode infoTable fi =
                   fmap
                     ( DL.toList
                         . DL.cons (mkInstr Pop)
-                        . go isTail (tempSize + 1) refs
+                        . go isTail tempSize refs
                     )
                     _caseDefault
               }
@@ -235,6 +236,10 @@ genCode infoTable fi =
     snocReturn :: Bool -> Code' -> Code'
     snocReturn True code = DL.snoc code (mkInstr Return)
     snocReturn False code = code
+
+    snocPopTemp :: Bool -> Code' -> Code'
+    snocPopTemp False code = DL.snoc code (mkInstr PopTemp)
+    snocPopTemp True code = code
 
     convertType :: Core.Type -> Type
     convertType = unimplemented
