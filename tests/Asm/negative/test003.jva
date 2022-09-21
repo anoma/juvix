@@ -1,0 +1,18 @@
+-- no matching case branch
+
+inductive list {
+  nil : list;
+  cons : * -> list -> list;
+}
+
+function f(list) {
+  push arg[0];
+  case list {
+    cons: ret
+  };
+}
+
+function main() {
+  alloc nil;
+  tcall f;
+}

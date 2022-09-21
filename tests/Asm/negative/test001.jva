@@ -1,0 +1,22 @@
+-- division by zero
+
+function f(integer) {
+  push 7;
+  push arg[0];
+  push 100;
+  div;
+  mul;
+  ret;
+}
+
+function g(*) {
+  push arg[0];
+  call f;
+  ret;
+}
+
+function main() {
+  push 0;
+  call g;
+  ret;
+}
