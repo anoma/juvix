@@ -74,5 +74,15 @@ tests =
       "Case"
       "."
       "test009.jva"
-      "out/test009.out"
+      "out/test009.out",
+    PosTest
+      "Recursion"
+      "."
+      "test010.jva"
+      "out/test010.out",
+    PosTest
+      "Tail recursion"
+      "."
+      "test011.jva"
+      "out/test011.out"
   ]
