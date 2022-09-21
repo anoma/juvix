@@ -182,6 +182,7 @@ instance PrettyCode Instruction where
     PushTemp -> return $ pretty ("pusht" :: String)
     PopTemp -> return $ pretty ("popt" :: String)
     Trace -> return $ pretty ("trace" :: String)
+    Dump -> return $ pretty ("dump" :: String)
     Failure -> return $ pretty ("fail" :: String)
     AllocConstr {} -> return $ pretty ("alloc" :: String)
     AllocClosure {} -> return $ pretty ("calloc" :: String)

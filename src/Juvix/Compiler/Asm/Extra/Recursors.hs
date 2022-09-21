@@ -107,6 +107,8 @@ recurse' sig = go True
               return $ popTempStack 1 mem
             Trace ->
               return mem
+            Dump ->
+              return mem
             Failure ->
               return mem
             AllocConstr tag -> do

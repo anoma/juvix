@@ -272,6 +272,8 @@ command = do
       return $ mkInstr' loc PopTemp
     "trace" ->
       return $ mkInstr' loc Trace
+    "dump" ->
+      return $ mkInstr' loc Dump
     "fail" ->
       return $ mkInstr' loc Failure
     "alloc" ->

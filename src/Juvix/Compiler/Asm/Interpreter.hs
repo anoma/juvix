@@ -107,6 +107,9 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
         v <- topValueStack
         logMessage (printVal v)
         goCode cont
+      Dump -> do
+        dumpState
+        goCode cont
       Failure -> do
         v <- topValueStack
         runtimeError $ mappend "failure: " (printVal v)
