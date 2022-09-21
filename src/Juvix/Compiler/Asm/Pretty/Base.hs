@@ -4,10 +4,12 @@ module Juvix.Compiler.Asm.Pretty.Base
   )
 where
 
+import Data.Foldable
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Interpreter.Base
+import Juvix.Compiler.Asm.Interpreter.RuntimeState
 import Juvix.Compiler.Asm.Language.Type
 import Juvix.Compiler.Asm.Pretty.Options
 import Juvix.Compiler.Core.Pretty.Base qualified as Core
@@ -53,15 +55,21 @@ instance PrettyCode Constr where
     args' <- mapM (ppRightExpression appFixity) args
     return $ foldl' (<+>) n' args'
 
+ppFunName :: Member (Reader Options) r => Symbol -> Sem r (Doc Ann)
+ppFunName sym = do
+  opts <- ask
+  let tab = opts ^. optInfoTable
+  maybe
+    ( return $
+        annotate (AnnKind KNameFunction) $
+          pretty ("unnamed_function_" ++ show sym :: String)
+    )
+    (\fi -> return $ annotate (AnnKind KNameFunction) (pretty (fi ^. functionName)))
+    (HashMap.lookup sym (tab ^. infoFunctions))
+
 instance PrettyCode Closure where
   ppCode (Closure sym args) = do
-    opts <- ask
-    let tab = opts ^. optInfoTable
-    n' <-
-      maybe
-        (return $ annotate (AnnKind KNameFunction) (pretty ("unnamed_function_" ++ show sym :: String)))
-        (\fi -> return $ annotate (AnnKind KNameFunction) (pretty (fi ^. functionName)))
-        (HashMap.lookup sym (tab ^. infoFunctions))
+    n' <- ppFunName sym
     args' <- mapM (ppRightExpression appFixity) args
     return $ foldl' (<+>) n' args'
 
@@ -81,6 +89,44 @@ instance PrettyCode Val where
       ppCode c
     ValClosure cl ->
       ppCode cl
+
+instance PrettyCode ArgumentArea where
+  ppCode ArgumentArea {..} =
+    ppCode $ map snd $ sortBy (\x y -> compare (fst x) (fst y)) $ HashMap.toList _argumentArea
+
+instance PrettyCode TemporaryStack where
+  ppCode TemporaryStack {..} =
+    ppCode $ toList _temporaryStack
+
+instance PrettyCode ValueStack where
+  ppCode ValueStack {..} =
+    ppCode _valueStack
+
+instance PrettyCode Frame where
+  ppCode Frame {..} = do
+    n <- maybe (return $ annotate (AnnKind KNameFunction) $ pretty ("main" :: String)) ppFunName _frameFunction
+    let header =
+          pretty ("function" :: String)
+            <+> n
+              <> maybe mempty (\loc -> pretty (" called at" :: String) <+> pretty loc) _frameCallLocation
+    args <- ppCode _frameArgs
+    temp <- ppCode _frameTemp
+    stack <- ppCode _frameStack
+    return $
+      header
+        <> line
+        <> indent' (pretty ("arguments = " :: String) <> args)
+        <> line
+        <> indent' (pretty ("temporaries = " :: String) <> temp)
+        <> line
+        <> indent' (pretty ("value stack = " :: String) <> stack)
+        <> line
+
+instance PrettyCode RuntimeState where
+  ppCode RuntimeState {..} = do
+    frm <- ppCode _runtimeFrame
+    calls <- mapM (ppCode . (^. contFrame)) (_runtimeCallStack ^. callStack)
+    return $ frm <> fold calls
 
 instance PrettyCode TypeInductive where
   ppCode TypeInductive {..} = do

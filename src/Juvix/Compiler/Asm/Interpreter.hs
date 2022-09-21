@@ -22,7 +22,7 @@ runCode :: InfoTable -> FunctionInfo -> IO Val
 runCode = hRunCode stdout
 
 hRunCode :: Handle -> InfoTable -> FunctionInfo -> IO Val
-hRunCode h infoTable = runM . hEvalRuntime h . runCodeR infoTable
+hRunCode h infoTable = runM . hEvalRuntime h infoTable . runCodeR infoTable
 
 runCodeR :: Member Runtime r => InfoTable -> FunctionInfo -> Sem r Val
 runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueStack
@@ -34,9 +34,11 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
 
     goCommand :: Member Runtime r => Command -> Code -> Sem r ()
     goCommand cmd cont = case cmd of
-      Instr (CmdInstr {..}) ->
-        goInstr _cmdInstrInstruction cont
+      Instr (CmdInstr {..}) -> do
+        registerLocation (_cmdInstrInfo ^. commandInfoLocation)
+        goInstr (_cmdInstrInfo ^. commandInfoLocation) _cmdInstrInstruction cont
       Branch (CmdBranch {..}) -> do
+        registerLocation (_cmdBranchInfo ^. commandInfoLocation)
         v <- popValueStack
         case v of
           ValBool True -> goCode _cmdBranchTrue
@@ -44,6 +46,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
           _ -> runtimeError "branch on non-boolean"
         goCode cont
       Case (CmdCase {..}) -> do
+        registerLocation (_cmdCaseInfo ^. commandInfoLocation)
         v <- topValueStack
         case v of
           ValConstr c -> branch (c ^. constrTag) _cmdCaseBranches _cmdCaseDefault
@@ -58,16 +61,22 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
               Just x -> goCode x
               Nothing -> runtimeError "no matching branch"
 
-    goInstr :: Member Runtime r => Instruction -> Code -> Sem r ()
-    goInstr instr cont = case instr of
+    goInstr :: Member Runtime r => Maybe Location -> Instruction -> Code -> Sem r ()
+    goInstr loc instr cont = case instr of
       IntAdd ->
         goIntBinOp (\x y -> ValInteger (x + y)) >> goCode cont
       IntSub ->
         goIntBinOp (\x y -> ValInteger (x - y)) >> goCode cont
       IntMul ->
         goIntBinOp (\x y -> ValInteger (x * y)) >> goCode cont
-      IntDiv ->
-        goIntBinOp (\x y -> ValInteger (x `div` y)) >> goCode cont
+      IntDiv -> do
+        goIntBinOp'
+          ( \x y ->
+              if
+                  | y == 0 -> runtimeError "division by zero"
+                  | otherwise -> return $ ValInteger (x `div` y)
+          )
+        goCode cont
       IntLt ->
         goIntBinOp (\x y -> ValBool (x < y)) >> goCode cont
       IntLe ->
@@ -112,19 +121,19 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
             goCode cont
           _ -> runtimeError "invalid closure extension: expected closure on top of value stack"
       Call ic -> do
-        (code, frm) <- getCallDetails ic
+        (code, frm) <- getCallDetails loc ic
         pushCallStack cont
         replaceFrame frm
         goCode code
       TailCall ic -> do
         unless (null cont) (runtimeError "invalid tail call")
-        (code, frm) <- getCallDetails ic
-        replaceFrame frm
+        (code, frm) <- getCallDetails loc ic
+        replaceTailFrame frm
         goCode code
       CallClosures (InstrCallClosures {..}) ->
-        callClosures False _callClosuresArgsNum cont
+        callClosures loc False _callClosuresArgsNum cont
       TailCallClosures (InstrCallClosures {..}) ->
-        callClosures True _callClosuresArgsNum cont
+        callClosures loc True _callClosuresArgsNum cont
       Return -> do
         unless (null cont) (runtimeError "invalid return")
         isToplevel <- fmap not hasCaller
@@ -147,11 +156,14 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
     goBinOp :: Member Runtime r => (Val -> Val -> Val) -> Sem r ()
     goBinOp op = goBinOp' (\x y -> return (op x y))
 
-    goIntBinOp :: Member Runtime r => (Integer -> Integer -> Val) -> Sem r ()
-    goIntBinOp op = goBinOp' $ \v1 v2 ->
+    goIntBinOp' :: Member Runtime r => (Integer -> Integer -> Sem r Val) -> Sem r ()
+    goIntBinOp' op = goBinOp' $ \v1 v2 ->
       case (v1, v2) of
-        (ValInteger i1, ValInteger i2) -> return $ op i1 i2
+        (ValInteger i1, ValInteger i2) -> op i1 i2
         _ -> runtimeError "invalid operation: expected two integers on value stack"
+
+    goIntBinOp :: Member Runtime r => (Integer -> Integer -> Val) -> Sem r ()
+    goIntBinOp op = goIntBinOp' (\v1 v2 -> return (op v1 v2))
 
     getVal :: Member Runtime r => Value -> Sem r Val
     getVal = \case
@@ -191,15 +203,15 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
         (runtimeError "value stack not empty on function return")
       return v
 
-    getCallDetails :: Member Runtime r => InstrCall -> Sem r (Code, Frame)
-    getCallDetails InstrCall {..} = case _callType of
+    getCallDetails :: Member Runtime r => Maybe Location -> InstrCall -> Sem r (Code, Frame)
+    getCallDetails loc InstrCall {..} = case _callType of
       CallFun sym -> do
         let fi = getFunInfo infoTable sym
         when
           (_callArgsNum /= fi ^. functionArgsNum)
           (runtimeError "invalid indirect call: supplied arguments number not equal to expected arguments number")
         args <- replicateM (fi ^. functionArgsNum) popValueStack
-        return (fi ^. functionCode, frameFromFunctionInfo fi args)
+        return (fi ^. functionCode, frameFromFunctionInfo loc fi args)
       CallClosure -> do
         v <- popValueStack
         case v of
@@ -212,14 +224,14 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
             when
               (_callArgsNum /= fi ^. functionArgsNum - n)
               (runtimeError "invalid indirect call: supplied arguments number not equal to expected arguments number")
-            frm <- getCallFrame cl fi _callArgsNum
+            frm <- getCallFrame loc cl fi _callArgsNum
             return (fi ^. functionCode, frm)
           _ -> runtimeError "invalid indirect call: expected closure on top of value stack"
 
-    getCallFrame :: Member Runtime r => Closure -> FunctionInfo -> Int -> Sem r Frame
-    getCallFrame cl fi argsNum = do
+    getCallFrame :: Member Runtime r => Maybe Location -> Closure -> FunctionInfo -> Int -> Sem r Frame
+    getCallFrame loc cl fi argsNum = do
       args <- replicateM argsNum popValueStack
-      return $ frameFromFunctionInfo fi ((cl ^. closureArgs) ++ args)
+      return $ frameFromFunctionInfo loc fi ((cl ^. closureArgs) ++ args)
 
     extendClosure :: Member Runtime r => Closure -> Int -> Sem r ()
     extendClosure cl n = do
@@ -232,8 +244,8 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
             )
         )
 
-    callClosures :: Member Runtime r => Bool -> Int -> Code -> Sem r ()
-    callClosures isTail argsNum cont = do
+    callClosures :: Member Runtime r => Maybe Location -> Bool -> Int -> Code -> Sem r ()
+    callClosures loc isTail argsNum cont = do
       v <- popValueStack
       case v of
         ValClosure cl -> do
@@ -246,19 +258,22 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
               | n > argsNum -> do
                   extendClosure cl argsNum
                   if
-                      | isTail -> goInstr Return cont
+                      | isTail -> goInstr loc Return cont
                       | otherwise -> goCode cont
               | n == argsNum -> do
-                  frm <- getCallFrame cl fi n
-                  unless isTail $
-                    pushCallStack cont
-                  when (isTail && not (null cont)) $
-                    runtimeError "invalid tail call"
-                  replaceFrame frm
+                  frm <- getCallFrame loc cl fi n
+                  if
+                      | isTail -> do
+                          unless (null cont) $
+                            runtimeError "invalid tail call"
+                          replaceTailFrame frm
+                      | otherwise -> do
+                          pushCallStack cont
+                          replaceFrame frm
                   goCode (fi ^. functionCode)
               | otherwise -> do
                   let instr = mkInstr ((if isTail then TailCallClosures else CallClosures) (InstrCallClosures (argsNum - n)))
-                  frm <- getCallFrame cl fi n
+                  frm <- getCallFrame loc cl fi n
                   pushCallStack (instr : cont)
                   replaceFrame frm
                   goCode (fi ^. functionCode)
@@ -289,7 +304,7 @@ hRunIO hin hout infoTable funInfo = \case
           pushValueStack x'
             >> pushValueStack f
             >> runCodeR infoTable funInfo {_functionCode = code}
-    x'' <- runM (hEvalRuntime hout r)
+    x'' <- runM (hEvalRuntime hout infoTable r)
     hRunIO hin hout infoTable funInfo x''
   ValConstr (Constr (BuiltinTag TagWrite) [ValString s]) -> do
     hPutStr hout s
@@ -313,6 +328,10 @@ catchRunErrorIO ma =
 toAsmError :: RunError -> AsmError
 toAsmError (RunError {..}) =
   AsmError
-    { _asmErrorMsg = mappend "runtime error: " _runErrorMsg,
-      _asmErrorLoc = Nothing
+    { _asmErrorMsg =
+        "runtime error: "
+          `mappend` _runErrorMsg
+          `mappend` "\n\nStacktrace\n----------\n\n"
+          `mappend` ppTrace (_runErrorState ^. runtimeInfoTable) _runErrorState,
+      _asmErrorLoc = _runErrorState ^. runtimeLocation
     }

@@ -2,10 +2,11 @@ module Juvix.Compiler.Asm.Interpreter.Error where
 
 import Control.Exception qualified as Exception
 import GHC.Show
-import Juvix.Prelude
+import Juvix.Compiler.Asm.Interpreter.RuntimeState
 
-newtype RunError = RunError
-  { _runErrorMsg :: Text
+data RunError = RunError
+  { _runErrorMsg :: Text,
+    _runErrorState :: RuntimeState
   }
 
 makeLenses ''RunError
@@ -18,5 +19,5 @@ instance Show RunError where
 
 instance Exception.Exception RunError
 
-throwRunError :: Text -> a
-throwRunError msg = Exception.throw (RunError msg)
+throwRunError :: RuntimeState -> Text -> a
+throwRunError st msg = Exception.throw (RunError msg st)

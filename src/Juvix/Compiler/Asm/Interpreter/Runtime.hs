@@ -1,5 +1,6 @@
 module Juvix.Compiler.Asm.Interpreter.Runtime
   ( module Juvix.Compiler.Asm.Interpreter.Runtime,
+    module Juvix.Compiler.Asm.Interpreter.RuntimeState,
     module Juvix.Compiler.Asm.Interpreter.Error,
   )
 where
@@ -7,108 +8,11 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Debug.Trace qualified as Debug
 import GHC.Base qualified as GHC
-import Juvix.Compiler.Asm.Data.Stack (Stack)
+import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Data.Stack qualified as Stack
-import Juvix.Compiler.Asm.Interpreter.Base
 import Juvix.Compiler.Asm.Interpreter.Error
-
-{-
-Memory consists of:
-\* global heap
-  - holds constructor data
-  - shared between functions
-  - referenced with ConstrRef
-  - unbounded (theoretically)
-\* global call stack
-  - holds return addresses for recursive function invocations
-  - manipulated by the Call and Return instructions (accessible only
-    implicitly through these)
-  - unbounded (theoretically)
-\* local argument area
-  - holds function arguments
-  - local to one function invocation (activation frame)
-  - referenced with ArgRef
-  - constant number of arguments (depends on the function)
-\* local temporary stack
-  - holds temporary values
-  - referenced with TempRef
-  - constant maximum height (depends on the function)
-  - current height of the local temporary stack is known at compile-time for each
-    intruction; a program violating this assumption (e.g. by having a `Branch`
-    instruction whose two branches result in different stack heights) is
-    errorneous
-  - compiled to a constant number of local variables / registers
-  - Core.Let is compiled to store the value in the local temporary area
-  - Core.Case is compiled to store the value in the local temporary area,
-    to enable accessing constructor arguments in the branches
-\* local value stack
-  - holds temporary values
-  - JuvixAsm instructions manipulate the current local value stack
-  - one value stack per each function invocation, not shared among functions
-    (or different invocations of the same function)
-  - maximum constant height of a local value stack (depends on the function)
-  - current height of the local value stack is known at compile-time for each
-    intruction; a program violating this assumption is errorneous
-  - compiled to a constant number of local variables / registers (unless the
-    target IR itself is a stack machine)
--}
-
--- The heap does not need to be modelled explicitly. Heap values are simply
--- stored in the `Val` datastructure. Pointers are implicit.
-
-newtype CallStack = CallStack
-  { _callStack :: [Continuation]
-  }
-
-data ArgumentArea = ArgumentArea
-  { _argumentArea :: HashMap Offset Val,
-    _argumentAreaSize :: Int
-  }
-
-newtype TemporaryStack = TemporaryStack {_temporaryStack :: Stack Val}
-
-newtype ValueStack = ValueStack
-  { _valueStack :: [Val]
-  }
-
--- | An activation frame contains the function-local memory (local argument area,
--- temporary stack, value stack) for a single function invocation.
-data Frame = Frame
-  { _frameArgs :: ArgumentArea,
-    _frameTemp :: TemporaryStack,
-    _frameStack :: ValueStack
-  }
-
-emptyFrame :: Frame
-emptyFrame =
-  Frame
-    { _frameArgs = ArgumentArea mempty 0,
-      _frameTemp = TemporaryStack Stack.empty,
-      _frameStack = ValueStack []
-    }
-
-data Continuation = Continuation
-  { _contFrame :: Frame,
-    _contCode :: Code
-  }
-
--- | JuvixAsm runtime state
-data RuntimeState = RuntimeState
-  { -- | global call stack
-    _runtimeCallStack :: CallStack,
-    -- | current frame
-    _runtimeFrame :: Frame,
-    -- | debug messages generated so far
-    _runtimeMessages :: [Text]
-  }
-
-makeLenses ''CallStack
-makeLenses ''Continuation
-makeLenses ''ArgumentArea
-makeLenses ''TemporaryStack
-makeLenses ''ValueStack
-makeLenses ''Frame
-makeLenses ''RuntimeState
+import Juvix.Compiler.Asm.Interpreter.RuntimeState
+import Juvix.Compiler.Asm.Pretty
 
 data Runtime m a where
   HasCaller :: Runtime m Bool -- is the call stack non-empty?
@@ -119,18 +23,21 @@ data Runtime m a where
   TopValueStack :: Runtime m Val
   NullValueStack :: Runtime m Bool
   ReplaceFrame :: Frame -> Runtime m ()
+  ReplaceTailFrame :: Frame -> Runtime m ()
   ReadArg :: Offset -> Runtime m Val
   ReadTemp :: Offset -> Runtime m Val
   PushTempStack :: Val -> Runtime m ()
   PopTempStack :: Runtime m ()
   LogMessage :: Text -> Runtime m ()
-  GetLogs :: Runtime m [Text]
+  FlushLogs :: Runtime m ()
+  DumpState :: Runtime m ()
+  RegisterLocation :: Maybe Location -> Runtime m ()
   RuntimeError :: Text -> Runtime m a
 
 makeSem ''Runtime
 
-runRuntime :: forall r a. Sem (Runtime ': r) a -> Sem r (RuntimeState, a)
-runRuntime = runState (RuntimeState (CallStack []) emptyFrame []) . interp
+runRuntime :: forall r a. InfoTable -> Sem (Runtime ': r) a -> Sem r (RuntimeState, a)
+runRuntime tab = runState (RuntimeState (CallStack []) emptyFrame [] Nothing tab) . interp
   where
     interp :: Sem (Runtime ': r) a -> Sem (State RuntimeState ': r) a
     interp = reinterpret $ \case
@@ -165,6 +72,9 @@ runRuntime = runState (RuntimeState (CallStack []) emptyFrame []) . interp
         get >>= \s -> return $ null $ s ^. (runtimeFrame . frameStack . valueStack)
       ReplaceFrame frm ->
         modify' (set runtimeFrame frm)
+      ReplaceTailFrame frm -> do
+        s <- get
+        modify' (set runtimeFrame frm {_frameCallLocation = s ^. runtimeFrame . frameCallLocation})
       ReadArg off -> do
         s <- get
         return $
@@ -183,24 +93,32 @@ runRuntime = runState (RuntimeState (CallStack []) emptyFrame []) . interp
         modify' (over runtimeFrame (over frameTemp (over temporaryStack Stack.pop)))
       LogMessage msg ->
         modify' (over runtimeMessages (msg :))
-      GetLogs -> do
-        s <- get
-        return $ reverse (s ^. runtimeMessages)
+      FlushLogs ->
+        doFlushLogs <$> get
+      DumpState -> do
+        s :: RuntimeState <- get
+        Debug.trace (fromText $ ppTrace (s ^. runtimeInfoTable) s) $ return ()
+      RegisterLocation loc ->
+        modify' (set runtimeLocation loc)
       RuntimeError msg -> do
         s <- get
         throwRuntimeError s msg
 
     throwRuntimeError :: forall b. RuntimeState -> Text -> b
     throwRuntimeError s msg =
-      let logs = reverse (s ^. runtimeMessages)
-       in map' (\x -> Debug.trace (fromText x) ()) logs `GHC.seq`
-            throwRunError msg -- TODO: print stacktrace
+      doFlushLogs s `GHC.seq`
+        throwRunError s msg
 
-hEvalRuntime :: forall r a. Member (Embed IO) r => Handle -> Sem (Runtime ': r) a -> Sem r a
-hEvalRuntime h r = do
-  (s, a) <- runRuntime r
+    doFlushLogs :: RuntimeState -> ()
+    doFlushLogs s =
+      let logs = reverse (s ^. runtimeMessages)
+       in map' (\x -> Debug.trace (fromText x) ()) logs `GHC.seq` ()
+
+hEvalRuntime :: forall r a. Member (Embed IO) r => Handle -> InfoTable -> Sem (Runtime ': r) a -> Sem r a
+hEvalRuntime h tab r = do
+  (s, a) <- runRuntime tab r
   mapM_ (embed . hPutStrLn h) (reverse (s ^. runtimeMessages))
   return a
 
-evalRuntime :: forall r a. Member (Embed IO) r => Sem (Runtime ': r) a -> Sem r a
+evalRuntime :: forall r a. Member (Embed IO) r => InfoTable -> Sem (Runtime ': r) a -> Sem r a
 evalRuntime = hEvalRuntime stdout

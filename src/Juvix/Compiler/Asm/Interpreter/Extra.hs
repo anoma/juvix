@@ -6,8 +6,8 @@ import Juvix.Compiler.Asm.Data.Stack qualified as Stack
 import Juvix.Compiler.Asm.Interpreter.Base
 import Juvix.Compiler.Asm.Interpreter.Runtime
 
-frameFromFunctionInfo :: FunctionInfo -> [Val] -> Frame
-frameFromFunctionInfo fi args =
+frameFromFunctionInfo :: Maybe Location -> FunctionInfo -> [Val] -> Frame
+frameFromFunctionInfo loc fi args =
   Frame
     { _frameArgs =
         ArgumentArea
@@ -15,5 +15,7 @@ frameFromFunctionInfo fi args =
             _argumentAreaSize = fi ^. functionArgsNum
           },
       _frameTemp = TemporaryStack Stack.empty,
-      _frameStack = ValueStack []
+      _frameStack = ValueStack [],
+      _frameFunction = Just $ fi ^. functionSymbol,
+      _frameCallLocation = loc
     }
