@@ -1,0 +1,8 @@
+module FunctionReturnZero;
+
+open import Stdlib.Prelude;
+
+main : ℕ;
+main ≔ zero;
+
+end;

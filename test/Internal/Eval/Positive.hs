@@ -59,5 +59,10 @@ tests =
       "A constructor valued function"
       "."
       "FunctionReturnConstructor.juvix"
-      "out/FunctionReturnConstructor.out"
+      "out/FunctionReturnConstructor.out",
+    PosTest
+      "Zero is the constant 0"
+      "."
+      "FunctionReturnZero.juvix"
+      "out/FunctionReturnZero.out"
   ]
