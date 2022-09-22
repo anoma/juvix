@@ -5,6 +5,7 @@ module Juvix.Compiler.Asm.Translation.FromSource
 where
 
 import Control.Monad.Trans.Class (lift)
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Data.InfoTableBuilder
 import Juvix.Compiler.Asm.Extra.Base
@@ -180,13 +181,14 @@ constrDecl symInd = do
     parseFailure off ("duplicate identifier: " ++ fromText txt)
   tag <- lift freshTag
   ty <- typeAnnotation
+  let ty' = uncurryType ty
   let ci =
         ConstructorInfo
           { _constructorName = txt,
             _constructorLocation = Just i,
             _constructorTag = tag,
-            _constructorArgsNum = length (typeArgs ty),
-            _constructorType = ty,
+            _constructorArgsNum = length (typeArgs ty'),
+            _constructorType = ty',
             _constructorInductive = symInd
           }
   lift $ registerConstr ci
@@ -203,16 +205,29 @@ parseType ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r Type
 parseType = do
-  ty <- typeDynamic <|> typeNamed
-  typeFun' ty <|> return ty
+  tys <- typeArguments
+  off <- P.getOffset
+  typeFun' tys
+    <|> do
+      unless (null (NonEmpty.tail tys)) $
+        parseFailure off "expected \"->\""
+      return (head tys)
 
 typeFun' ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
-  Type ->
+  NonEmpty Type ->
   ParsecS r Type
-typeFun' ty = do
+typeFun' tyargs = do
   kwArrow
-  TyFun ty <$> parseType
+  TyFun . TypeFun tyargs <$> parseType
+
+typeArguments ::
+  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  ParsecS r (NonEmpty Type)
+typeArguments = do
+  parens (P.sepBy1 parseType comma <&> NonEmpty.fromList)
+    <|> (typeDynamic <&> NonEmpty.singleton)
+    <|> (typeNamed <&> NonEmpty.singleton)
 
 typeDynamic :: ParsecS r Type
 typeDynamic = kwStar >> return TyDynamic

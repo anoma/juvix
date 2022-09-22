@@ -6,6 +6,7 @@ where
 
 import Data.Foldable
 import Data.HashMap.Strict qualified as HashMap
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Interpreter.Base
@@ -145,6 +146,18 @@ instance PrettyCode TypeConstr where
     args <- mapM ppCode _typeConstrFields
     return $ iname <> kwColon <> cname <> encloseSep "(" ")" ", " args
 
+instance PrettyCode TypeFun where
+  ppCode TypeFun {..} = do
+    l <-
+      if
+          | null (NonEmpty.tail _typeFunArgs) ->
+              ppLeftExpression funFixity (head _typeFunArgs)
+          | otherwise -> do
+              args <- mapM ppCode _typeFunArgs
+              return $ encloseSep "(" ")" ", " (toList args)
+    r <- ppRightExpression funFixity _typeFunTarget
+    return $ l <+> kwArrow <+> r
+
 instance PrettyCode Type where
   ppCode = \case
     TyDynamic ->
@@ -161,10 +174,8 @@ instance PrettyCode Type where
       ppCode x
     TyConstr x ->
       ppCode x
-    TyFun ty1 ty2 -> do
-      l <- ppLeftExpression funFixity ty1
-      r <- ppRightExpression funFixity ty2
-      return $ l <+> kwArrow <+> r
+    TyFun x ->
+      ppCode x
 
 instance PrettyCode Instruction where
   -- TODO: properly handle the arguments

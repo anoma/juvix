@@ -12,7 +12,7 @@ data Type
   | -- | TyConstr represents the type of a specific constructor. It is a subtype
     -- of an appropriate TyInductive.
     TyConstr TypeConstr
-  | TyFun Type Type
+  | TyFun TypeFun
   deriving stock (Eq)
 
 data TypeInteger = TypeInteger
@@ -43,10 +43,17 @@ data TypeConstr = TypeConstr
 instance Eq TypeConstr where
   (TypeConstr _ tag1 _) == (TypeConstr _ tag2 _) = tag1 == tag2
 
+data TypeFun = TypeFun
+  { _typeFunArgs :: NonEmpty Type,
+    _typeFunTarget :: Type
+  }
+  deriving stock (Eq)
+
 makeLenses ''TypeInteger
 makeLenses ''TypeBool
 makeLenses ''TypeInductive
 makeLenses ''TypeConstr
+makeLenses ''TypeFun
 
 instance HasAtomicity TypeInteger where
   atomicity _ = Atom
@@ -60,6 +67,9 @@ instance HasAtomicity TypeInductive where
 instance HasAtomicity TypeConstr where
   atomicity _ = Atom
 
+instance HasAtomicity TypeFun where
+  atomicity _ = Aggregate funFixity
+
 instance HasAtomicity Type where
   atomicity = \case
     TyDynamic -> Atom
@@ -69,4 +79,4 @@ instance HasAtomicity Type where
     TyUnit -> Atom
     TyInductive x -> atomicity x
     TyConstr x -> atomicity x
-    TyFun _ _ -> Aggregate funFixity
+    TyFun x -> atomicity x

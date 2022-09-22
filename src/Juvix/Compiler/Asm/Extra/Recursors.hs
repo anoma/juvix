@@ -12,6 +12,7 @@ import Juvix.Compiler.Asm.Extra.Memory
 import Juvix.Compiler.Asm.Extra.Type
 import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Language.Type
+import Juvix.Compiler.Asm.Pretty
 
 -- | Recursor signature. Contains read-only recursor parameters.
 data RecursorSig r a = RecursorSig
@@ -174,15 +175,9 @@ recurse' sig = go True
                 CallClosure -> topValueStack' 0 mem
                 CallFun sym -> getFunInfo (sig ^. recursorInfoTable) sym ^. functionType
           checkFunType ty
-          case _callType of
-            CallClosure ->
-              when (ty /= TyDynamic && length (typeArgs ty) /= _callArgsNum) $
-                throw $
-                  AsmError loc "invalid indirect call: the number of supplied arguments doesn't match the number of expected arguments"
-            CallFun sym ->
-              when (getFunInfo (sig ^. recursorInfoTable) sym ^. functionArgsNum /= _callArgsNum) $
-                throw $
-                  AsmError loc "invalid direct call: the number of supplied arguments doesn't match the number of expected arguments"
+          when (ty /= TyDynamic && length (typeArgs ty) /= _callArgsNum) $
+            throw $
+              AsmError loc "invalid call: the number of supplied arguments doesn't match the number of expected arguments"
           fixMemValueStackArgs mem k _callArgsNum ty
 
         fixMemCallClosures :: Memory -> InstrCallClosures -> Sem r Memory
@@ -221,7 +216,16 @@ recurse' sig = go True
         dropTempStack mem = mem {_memoryTempStack = Stack.empty}
 
         checkFunType :: Type -> Sem r ()
-        checkFunType ty = void $ unifyTypes' loc (sig ^. recursorInfoTable) ty (mkTypeFun [TyDynamic] TyDynamic)
+        checkFunType = \case
+          TyDynamic -> return ()
+          TyFun {} -> return ()
+          ty ->
+            throw $
+              AsmError
+                loc
+                ( "expected a function, got value of type "
+                    `mappend` ppTrace (sig ^. recursorInfoTable) ty
+                )
 
     goBranch :: Bool -> Memory -> CmdBranch -> Sem r (Memory, a)
     goBranch isTail mem cmd@CmdBranch {..} = do

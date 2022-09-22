@@ -1,5 +1,6 @@
 module Juvix.Compiler.Asm.Extra.Type where
 
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Error
 import Juvix.Compiler.Asm.Language
@@ -19,20 +20,30 @@ mkTypeInductive :: Symbol -> Type
 mkTypeInductive ind = TyInductive (TypeInductive ind)
 
 mkTypeFun :: [Type] -> Type -> Type
-mkTypeFun = flip (foldr TyFun)
-
-unfoldType :: Type -> ([Type], Type)
-unfoldType = \case
-  TyFun l r ->
-    let (args, tgt) = unfoldType r
-     in (l : args, tgt)
-  ty -> ([], ty)
+mkTypeFun args tgt = case args of
+  [] -> tgt
+  a : args' -> TyFun (TypeFun (a :| args') tgt)
 
 typeArgs :: Type -> [Type]
-typeArgs = fst . unfoldType
+typeArgs = \case
+  TyFun x -> toList (x ^. typeFunArgs)
+  _ -> []
 
 typeTarget :: Type -> Type
-typeTarget = snd . unfoldType
+typeTarget ty = case ty of
+  TyFun x -> x ^. typeFunTarget
+  _ -> ty
+
+unfoldType :: Type -> ([Type], Type)
+unfoldType ty = (typeArgs ty, typeTarget ty)
+
+uncurryType :: Type -> Type
+uncurryType ty = case typeArgs ty of
+  [] ->
+    ty
+  tyargs ->
+    let ty' = uncurryType (typeTarget ty)
+     in mkTypeFun (tyargs ++ typeArgs ty') (typeTarget ty')
 
 unifyTypes :: Members '[Error AsmError, Reader (Maybe Location), Reader InfoTable] r => Type -> Type -> Sem r Type
 unifyTypes TyDynamic x =
@@ -52,8 +63,11 @@ unifyTypes (TyConstr c1) (TyConstr c2)
 unifyTypes (TyConstr c1) (TyConstr c2)
   | c1 ^. typeConstrInductive == c2 ^. typeConstrInductive =
       return $ TyInductive (TypeInductive (c1 ^. typeConstrInductive))
-unifyTypes (TyFun l1 r1) (TyFun l2 r2) =
-  TyFun <$> unifyTypes l1 l2 <*> unifyTypes r1 r2
+unifyTypes (TyFun t1) (TyFun t2)
+  | length (t1 ^. typeFunArgs) == length (t2 ^. typeFunArgs) = do
+      args <- zipWithM unifyTypes (toList (t1 ^. typeFunArgs)) (toList (t2 ^. typeFunArgs))
+      tgt <- unifyTypes (t1 ^. typeFunTarget) (t2 ^. typeFunTarget)
+      return $ TyFun (TypeFun (NonEmpty.fromList args) tgt)
 unifyTypes (TyInteger (TypeInteger l1 u1)) (TyInteger (TypeInteger l2 u2)) =
   return $ TyInteger (TypeInteger (unifyBounds min l1 l2) (unifyBounds max u1 u2))
   where
@@ -83,8 +97,12 @@ isSubtype (TyConstr c1) (TyConstr c2) =
   c1 ^. typeConstrInductive == c2 ^. typeConstrInductive
     && c1 ^. typeConstrTag == c2 ^. typeConstrTag
     && all (uncurry isSubtype) (zip (c1 ^. typeConstrFields) (c2 ^. typeConstrFields))
-isSubtype (TyFun l1 r1) (TyFun l2 r2) =
-  isSubtype l2 l1 && isSubtype r1 r2
+isSubtype (TyFun t1) (TyFun t2) =
+  let l1 = toList (t1 ^. typeFunArgs)
+      l2 = toList (t2 ^. typeFunArgs)
+      r1 = t1 ^. typeFunTarget
+      r2 = t2 ^. typeFunTarget
+   in length l1 == length l2 && all (uncurry isSubtype) (zip l2 l1) && isSubtype r1 r2
 isSubtype (TyInteger (TypeInteger l1 u1)) (TyInteger (TypeInteger l2 u2)) =
   checkBounds (>=) l1 l2 && checkBounds (<=) u1 u2
   where

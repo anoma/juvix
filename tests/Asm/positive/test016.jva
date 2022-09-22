@@ -19,7 +19,7 @@ function g(integer, integer) : integer {
   ret;
 }
 
-function h(integer -> integer -> integer, integer, integer) : integer {
+function h((integer, integer) -> integer, integer, integer) : integer {
   push arg[2];
   push arg[1];
   push $;
