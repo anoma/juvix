@@ -116,4 +116,7 @@ inductive Box (A : Type) {
 x : Box ((A : Type) → A → A);
 x := b λ {A a := a};
 
+t1 :  {A : Type} → Box ((A : Type) → A → A) → A → A;
+t1 {A} := λ {(b f) := f A};
+
 end;
