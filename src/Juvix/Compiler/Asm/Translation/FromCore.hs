@@ -128,11 +128,10 @@ genCode infoTable fi =
                       -- Here use CallClosures or TailCallClosures.
                       unimplemented
               where
-                -- If the number of arguments is not available (the target of the
-                -- variable's type is dynamic), then we should use CallClosures or
-                -- TailCallClosures.
                 argsNum :: Int
-                argsNum = unimplemented
+                argsNum = case _varInfo ^. Core.varInfoType of
+                  Core.TyDynamic -> -1
+                  ty -> Core.typeArgsNum ty
 
     goBuiltinApp :: Bool -> Int -> BinderList Value -> Core.BuiltinApp -> Code'
     goBuiltinApp isTail tempSize refs (Core.BuiltinApp {..}) =

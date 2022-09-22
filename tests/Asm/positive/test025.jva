@@ -15,14 +15,14 @@ function app(integer -> integer, integer) : integer {
   tcall $ 1;
 }
 
-function g(* -> *) {
+function g(*) {
   push 1;
   push 2;
   push arg[0];
   tccall 2;
 }
 
-function h(* -> *, *) {
+function h(*, *) {
   push arg[1];
   push arg[0];
   tccall 1;
