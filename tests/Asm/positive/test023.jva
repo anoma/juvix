@@ -1,0 +1,43 @@
+-- McCarthy's 91 function
+
+function f91(integer) : integer {
+  push arg[0];
+  push 100;
+  lt;
+  br {
+    true: {
+      push 10;
+      push arg[0];
+      sub;
+      ret;
+    }
+    false: {
+      push 11;
+      push arg[0];
+      add;
+      call f91;
+      tcall f91;
+    }
+  };
+}
+
+function main() {
+  push 101;
+  call f91;
+  trace;
+  pop;
+  push 95;
+  call f91;
+  trace;
+  pop;
+  push 16;
+  call f91;
+  trace;
+  pop;
+  push 5;
+  call f91;
+  trace;
+  pop;
+  push void;
+  ret;
+}

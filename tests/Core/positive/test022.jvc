@@ -10,19 +10,6 @@ def power' := \a \b \acc
 
 def power := \a \b power' a b 1;
 
-{-
-
-def power := loop a b (acc := 1) {
-  if b = 0 then
-    acc
-  else if b % 2 = 0 then
-    next (a * a) (b / 2) acc
-  else
-    next (a * a) (b / 2) (acc * a)
-};
-
--}
-
 def writeLn := \x write x >> write "\n";
 
 writeLn (power 2 3) >>

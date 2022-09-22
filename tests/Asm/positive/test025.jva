@@ -1,0 +1,63 @@
+-- dynamic closure extension
+
+function f(integer, integer, integer) : integer {
+  push arg[0];
+  push arg[1];
+  push arg[2];
+  add;
+  mul;
+  ret;
+}
+
+function app(integer -> integer, integer) : integer {
+  push arg[1];
+  push arg[0];
+  tcall $ 1;
+}
+
+function g(* -> *) {
+  push 1;
+  push 2;
+  push arg[0];
+  tccall 2;
+}
+
+function h(* -> *, *) {
+  push arg[1];
+  push arg[0];
+  tccall 1;
+}
+
+function inc(integer) : integer {
+  push arg[0];
+  push 1;
+  add;
+  ret;
+}
+
+function main() {
+  push 10;
+  push 2;
+  push 3;
+  calloc f 0;
+  ccall 2;
+  calloc app 0;
+  ccall 2;
+  trace; -- 36
+  pop;
+  push 10;
+  calloc f 0;
+  calloc g 0;
+  ccall 2;
+  trace; -- 22
+  pop;
+  push 7;
+  calloc inc 0;
+  calloc app 0;
+  call h;
+  ccall 1;
+  trace; -- 8
+  pop;
+  push void;
+  ret;
+}

@@ -1,0 +1,34 @@
+-- recursion through higher-order functions
+
+function g(integer -> integer, integer) : integer {
+  push arg[1];
+  push 0;
+  eq;
+  br {
+    true: {
+      push 0;
+      ret;
+    }
+    false: {
+      push 1;
+      push arg[1];
+      sub;
+      push arg[0];
+      tcall $ 1;
+    }
+  };
+}
+
+function f(integer) : integer {
+  push arg[0];
+  calloc f 0;
+  call g;
+  push arg[0];
+  add;
+  ret;
+}
+
+function main() {
+  push 10;
+  tcall f;
+}

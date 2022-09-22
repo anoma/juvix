@@ -1,0 +1,19 @@
+-- self-application
+
+function sapp(* -> *) {
+  push arg[0];
+  push $;
+  tcall $ 1;
+}
+
+function id(*) {
+  push arg[0];
+  ret;
+}
+
+function main() {
+  push 7;
+  calloc id 0;
+  calloc sapp 0;
+  tccall 2;
+}

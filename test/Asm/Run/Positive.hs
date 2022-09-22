@@ -114,5 +114,45 @@ tests =
       "Closures as arguments"
       "."
       "test017.jva"
-      "out/test017.out"
+      "out/test017.out",
+    PosTest
+      "Closure extension"
+      "."
+      "test018.jva"
+      "out/test018.out",
+    PosTest
+      "Recursion through higher-order functions"
+      "."
+      "test019.jva"
+      "out/test019.out",
+    PosTest
+      "Tail recursion through higher-order functions"
+      "."
+      "test020.jva"
+      "out/test020.out",
+    PosTest
+      "Higher-order functions and recursion"
+      "."
+      "test021.jva"
+      "out/test021.out",
+    PosTest
+      "Self-application"
+      "."
+      "test022.jva"
+      "out/test022.out",
+    PosTest
+      "McCarthy's 91 function"
+      "."
+      "test023.jva"
+      "out/test023.out",
+    PosTest
+      "Higher-order recursive functions"
+      "."
+      "test024.jva"
+      "out/test024.out",
+    PosTest
+      "Dynamic closure extension"
+      "."
+      "test025.jva"
+      "out/test025.out"
   ]

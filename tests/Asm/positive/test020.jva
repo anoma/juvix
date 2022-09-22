@@ -1,0 +1,41 @@
+-- tail recursion through higher-order functions
+
+function sumb((integer, integer) -> integer, integer, integer) : integer {
+  push arg[1];
+  push 0;
+  eq;
+  br {
+    true: {
+      push arg[2];
+      ret;
+    }
+    false: {
+      push arg[2];
+      push 1;
+      push arg[1];
+      sub;
+      push arg[0];
+      tcall $ 2;
+    }
+  };
+}
+
+function sum'(integer, integer) : integer {
+  push arg[1];
+  push arg[0];
+  add;
+  push arg[0];
+  calloc sum' 0;
+  tcall sumb;
+}
+
+function sum(integer) : integer {
+  push 0;
+  push arg[0];
+  tcall sum';
+}
+
+function main() {
+  push 1000;
+  tcall sum;
+}

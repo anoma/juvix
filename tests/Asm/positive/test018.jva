@@ -1,0 +1,58 @@
+-- closure extensions
+
+function ext_10((integer, integer) -> integer) : integer -> integer {
+  push 10;
+  push arg[0];
+  cextend 1;
+  ret;
+}
+
+function app_0(integer -> integer) : integer {
+  push 1;
+  push arg[0];
+  tcall $ 1;
+}
+
+function f((integer, integer) -> integer) : integer {
+  push arg[0];
+  call ext_10;
+  tcall app_0;
+}
+
+function plus(integer, integer) : integer {
+  push arg[1];
+  push arg[0];
+  add;
+  ret;
+}
+
+function minus(integer, integer) : integer {
+  push arg[1];
+  push arg[0];
+  sub;
+  ret;
+}
+
+function mult(integer, integer) : integer {
+  push arg[1];
+  push arg[0];
+  mul;
+  ret;
+}
+
+function main() {
+  calloc plus 0;
+  call f;
+  trace; -- 11
+  pop;
+  calloc minus 0;
+  call f;
+  trace; -- 9
+  pop;
+  calloc mult 0;
+  call f;
+  trace; -- 10
+  pop;
+  push void;
+  ret;
+}

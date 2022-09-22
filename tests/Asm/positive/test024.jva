@@ -1,0 +1,56 @@
+-- higher-order recursive functions
+
+function f((*, integer -> integer, integer) -> *, integer -> integer, integer) {
+  push 6;
+  trace;
+  pop;
+  push arg[2];
+  trace;
+  pop;
+  push 7;
+  trace;
+  pop;
+  push arg[2];
+  push 0;
+  eq;
+  br {
+    true: {
+      push "end";
+      trace;
+      pop;
+      push void;
+      ret;
+    }
+    false: {
+      push 9;
+      trace;
+      pop;
+      push arg[2];
+      push arg[1];
+      call $ 1;
+      push arg[1];
+      push arg[0];
+      push $;
+      tcall $ 3;
+    }
+  };
+}
+
+function g(integer) : integer {
+  push arg[0];
+  push 10;
+  mul;
+  trace;
+  pop;
+  push 1;
+  push arg[0];
+  sub;
+  ret;
+}
+
+function main() {
+  push 4;
+  calloc g 0;
+  calloc f 0;
+  tcall f;
+}

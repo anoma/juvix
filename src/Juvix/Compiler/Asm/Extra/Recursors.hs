@@ -195,10 +195,8 @@ recurse' sig = go True
                   let n = length (typeArgs ty)
                   mem' <- fixMemCall mem (InstrCall CallClosure n)
                   fixMemCallClosures mem' (InstrCallClosures (_callClosuresArgsNum - n))
-              | length (typeArgs ty) > _callClosuresArgsNum -> do
-                  let n = length (typeArgs ty)
-                  mem' <- fixMemExtendClosure mem (InstrExtendClosure n)
-                  fixMemCallClosures mem' (InstrCallClosures (_callClosuresArgsNum - n))
+              | length (typeArgs ty) > _callClosuresArgsNum ->
+                  fixMemExtendClosure mem (InstrExtendClosure _callClosuresArgsNum)
               | otherwise ->
                   fixMemCall mem (InstrCall CallClosure (length (typeArgs ty)))
 

@@ -94,7 +94,7 @@ data Instruction
   | -- | Print a debug log of the object on top of the stack. Does not pop the
     -- stack. JVA opcode: 'trace'.
     Trace
-  | -- | Dump the stacktrace.
+  | -- | Dump the stacktrace. JVA opcode: 'dump'.
     Dump
   | -- | Interrupt execution with a runtime error printing the value on top of
     -- the stack. JVA opcode: 'fail'.

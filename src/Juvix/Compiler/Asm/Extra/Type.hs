@@ -64,10 +64,25 @@ unifyTypes (TyConstr c1) (TyConstr c2)
   | c1 ^. typeConstrInductive == c2 ^. typeConstrInductive =
       return $ TyInductive (TypeInductive (c1 ^. typeConstrInductive))
 unifyTypes (TyFun t1) (TyFun t2)
-  | length (t1 ^. typeFunArgs) == length (t2 ^. typeFunArgs) = do
-      args <- zipWithM unifyTypes (toList (t1 ^. typeFunArgs)) (toList (t2 ^. typeFunArgs))
-      tgt <- unifyTypes (t1 ^. typeFunTarget) (t2 ^. typeFunTarget)
-      return $ TyFun (TypeFun (NonEmpty.fromList args) tgt)
+  | (length (t1 ^. typeFunArgs) == length (t2 ^. typeFunArgs))
+        -- auto currying for dynamic targets: `(*, B) -> C` unifies with
+        -- `A -> *` giving `(A, B) -> C`
+      || ( length (t1 ^. typeFunArgs) > length (t2 ^. typeFunArgs)
+             && t2 ^. typeFunTarget == TyDynamic
+         )
+      || ( length (t2 ^. typeFunArgs) > length (t1 ^. typeFunArgs)
+             && t1 ^. typeFunTarget == TyDynamic
+         ) =
+      do
+        let args1 = toList (t1 ^. typeFunArgs)
+        let args2 = toList (t2 ^. typeFunArgs)
+        let n1 = length args1
+        let n2 = length args2
+        let tgt1 = mkTypeFun (drop n2 args1) (t1 ^. typeFunTarget)
+        let tgt2 = mkTypeFun (drop n1 args2) (t2 ^. typeFunTarget)
+        args <- zipWithM unifyTypes args1 args2
+        tgt <- unifyTypes tgt1 tgt2
+        return $ TyFun (TypeFun (NonEmpty.fromList (args ++ typeArgs tgt)) (typeTarget tgt))
 unifyTypes (TyInteger (TypeInteger l1 u1)) (TyInteger (TypeInteger l2 u2)) =
   return $ TyInteger (TypeInteger (unifyBounds min l1 l2) (unifyBounds max u1 u2))
   where
@@ -102,7 +117,13 @@ isSubtype (TyFun t1) (TyFun t2) =
       l2 = toList (t2 ^. typeFunArgs)
       r1 = t1 ^. typeFunTarget
       r2 = t2 ^. typeFunTarget
-   in length l1 == length l2 && all (uncurry isSubtype) (zip l2 l1) && isSubtype r1 r2
+   in
+    if
+      | t1 ^. typeFunTarget == TyDynamic || t2 ^. typeFunTarget == TyDynamic ->
+        -- auto currying for dynamic targets: e.g. `(A, B) -> C` is a subtype of `A -> *`
+        all (uncurry isSubtype) (zip l2 l1)
+      | otherwise ->
+        length l1 == length l2 && all (uncurry isSubtype) (zip l2 l1) && isSubtype r1 r2
 isSubtype (TyInteger (TypeInteger l1 u1)) (TyInteger (TypeInteger l2 u2)) =
   checkBounds (>=) l1 l2 && checkBounds (<=) u1 u2
   where
