@@ -114,6 +114,6 @@ inductive Box (A : Type) {
 };
 
 x : Box ((A : Type) → A → A);
-x := b (λ {A a := a});
+x := b λ {A a := a};
 
 end;
