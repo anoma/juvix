@@ -174,9 +174,15 @@ recurse' sig = go True
                 CallClosure -> topValueStack' 0 mem
                 CallFun sym -> getFunInfo (sig ^. recursorInfoTable) sym ^. functionType
           checkFunType ty
-          when (ty /= TyDynamic && length (typeArgs ty) /= _callArgsNum) $
-            throw $
-              AsmError loc "invalid call: the number of supplied arguments doesn't match the number of expected arguments"
+          case _callType of
+            CallClosure ->
+              when (ty /= TyDynamic && length (typeArgs ty) /= _callArgsNum) $
+                throw $
+                  AsmError loc "invalid indirect call: the number of supplied arguments doesn't match the number of expected arguments"
+            CallFun sym ->
+              when (getFunInfo (sig ^. recursorInfoTable) sym ^. functionArgsNum /= _callArgsNum) $
+                throw $
+                  AsmError loc "invalid direct call: the number of supplied arguments doesn't match the number of expected arguments"
           fixMemValueStackArgs mem k _callArgsNum ty
 
         fixMemCallClosures :: Memory -> InstrCallClosures -> Sem r Memory

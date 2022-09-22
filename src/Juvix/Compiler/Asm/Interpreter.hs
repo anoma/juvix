@@ -220,7 +220,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
         let fi = getFunInfo infoTable sym
         when
           (_callArgsNum /= fi ^. functionArgsNum)
-          (runtimeError "invalid indirect call: supplied arguments number not equal to expected arguments number")
+          (runtimeError "invalid direct call: supplied arguments number not equal to expected arguments number")
         args <- replicateM (fi ^. functionArgsNum) popValueStack
         return (fi ^. functionCode, frameFromFunctionInfo loc fi args)
       CallClosure -> do
