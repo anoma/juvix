@@ -65,13 +65,13 @@ unifyTypes (TyConstr c1) (TyConstr c2)
       return $ TyInductive (TypeInductive (c1 ^. typeConstrInductive))
 unifyTypes (TyFun t1) (TyFun t2)
   | length (t1 ^. typeFunArgs) == length (t2 ^. typeFunArgs) = do
-        let args1 = toList (t1 ^. typeFunArgs)
-        let args2 = toList (t2 ^. typeFunArgs)
-        let tgt1 = t1 ^. typeFunTarget
-        let tgt2 = t2 ^. typeFunTarget
-        args <- zipWithM unifyTypes args1 args2
-        tgt <- unifyTypes tgt1 tgt2
-        return $ TyFun (TypeFun (NonEmpty.fromList args) tgt)
+      let args1 = toList (t1 ^. typeFunArgs)
+      let args2 = toList (t2 ^. typeFunArgs)
+      let tgt1 = t1 ^. typeFunTarget
+      let tgt2 = t2 ^. typeFunTarget
+      args <- zipWithM unifyTypes args1 args2
+      tgt <- unifyTypes tgt1 tgt2
+      return $ TyFun (TypeFun (NonEmpty.fromList args) tgt)
 unifyTypes (TyInteger (TypeInteger l1 u1)) (TyInteger (TypeInteger l2 u2)) =
   return $ TyInteger (TypeInteger (unifyBounds min l1 l2) (unifyBounds max u1 u2))
   where
