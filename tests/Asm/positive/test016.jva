@@ -1,0 +1,72 @@
+-- arithmetic
+
+function f(integer, integer) {
+  push arg[0];
+  push arg[1];
+  add;
+  trace;
+  ret;
+}
+
+function g(integer, integer) : integer {
+  push arg[1];
+  push 7;
+  mul;
+  push arg[0];
+  push 1;
+  add;
+  sub;
+  ret;
+}
+
+function h(integer -> integer -> integer, integer, integer) : integer {
+  push arg[2];
+  push arg[1];
+  push $;
+  push arg[0];
+  call $ 2;
+  mul;
+  ret;
+}
+
+function func(integer) : integer {
+  push 4;
+  push arg[0];
+  add;
+  ret;
+}
+
+function main() {
+  push 5;
+  push 17;
+  div;
+  call func;
+  trace; -- 7
+  pop;
+  push 17;
+  push 5;
+  push 0;
+  mul;
+  add;
+  trace; -- 17
+  pop;
+  push 1;
+  push 0;
+  add;
+  push 7;
+  mul;
+  push 30;
+  add;
+  trace; -- 37
+  pop;
+  push 4;
+  push 3;
+  push 2;
+  calloc g 0;
+  call h;
+  call f; -- prints -29
+  trace; -- -29
+  pop;
+  push void;
+  ret;
+}

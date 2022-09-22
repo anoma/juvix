@@ -1,0 +1,117 @@
+-- closures as arguments
+
+function g(integer, integer) : integer {
+  push arg[0];
+  push arg[1];
+  add;
+  ret;
+}
+
+function h(integer -> integer, integer -> integer, integer) : integer {
+  push arg[2];
+  push arg[1];
+  call $ 1;
+  push arg[0];
+  tcall $ 1;
+}
+
+function f(integer) : integer -> integer {
+  push arg[0];
+  calloc g 1;
+  pusht;
+  push arg[0];
+  push 0;
+  eq;
+  br {
+    true: {
+      push 10;
+      tcall f;
+    }
+    false: {
+      push 10;
+      push arg[0];
+      lt;
+      br {
+        true: {
+          push 1;
+          push arg[0];
+          sub;
+          call f;
+          push tmp[0];
+          calloc h 2;
+          ret;
+        }
+        false: {
+          push tmp[0];
+          ret;
+        }
+      };
+    }
+  };
+}
+
+function g'(integer, integer -> integer) : integer {
+  push arg[0];
+  push arg[1];
+  call $ 1;
+  push arg[0];
+  add;
+  ret;
+}
+
+function h'(integer) : integer {
+  push arg[0];
+  push 0;
+  eq;
+  br {
+    true: {
+      push 0;
+      ret;
+    }
+    false: {
+      calloc h' 0;
+      push 1;
+      push arg[0];
+      sub;
+      tcall g';
+    }
+  };
+}
+
+function main() {
+  push 500;
+  push 100;
+  call f;
+  call $ 1;
+  trace; -- 600
+  pop;
+  push 0;
+  push 5;
+  call f;
+  call $ 1;
+  trace; -- 25
+  pop;
+  push 5;
+  push 5;
+  call f;
+  call $ 1;
+  trace; -- 30
+  pop;
+  push 10;
+  call h';
+  trace; -- 45
+  pop;
+  calloc h' 0;
+  push 10;
+  call g';
+  trace; -- 55
+  pop;
+  push 10;
+  call f;
+  push 3;
+  call g';
+  trace; -- 16
+  pop;
+  push void;
+  ret;
+}

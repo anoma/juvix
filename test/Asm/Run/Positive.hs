@@ -99,5 +99,20 @@ tests =
       "Trees"
       "."
       "test014.jva"
-      "out/test014.out"
+      "out/test014.out",
+    PosTest
+      "Functions returning functions"
+      "."
+      "test015.jva"
+      "out/test015.out",
+    PosTest
+      "Arithmetic"
+      "."
+      "test016.jva"
+      "out/test016.out",
+    PosTest
+      "Closures as arguments"
+      "."
+      "test017.jva"
+      "out/test017.out"
   ]
