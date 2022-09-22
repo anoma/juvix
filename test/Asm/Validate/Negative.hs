@@ -64,5 +64,9 @@ tests =
     NegTest
       "Case type mismatch"
       "."
-      "vtest009.jva"
+      "vtest009.jva",
+    NegTest
+      "Value stack type mismatch"
+      "."
+      "vtest010.jva"
   ]

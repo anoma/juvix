@@ -32,7 +32,7 @@ genCode infoTable fi =
           _functionLocation = fmap (^. nameLoc) (fi ^. Core.functionName),
           _functionSymbol = fi ^. Core.functionSymbol,
           _functionArgsNum = fi ^. Core.functionArgsNum,
-          _functionType = convertType (fi ^. Core.functionType),
+          _functionType = convertType (fi ^. Core.functionArgsNum) (fi ^. Core.functionType),
           _functionCode = code
         }
   where
@@ -240,5 +240,9 @@ genCode infoTable fi =
     snocPopTemp False code = DL.snoc code (mkInstr PopTemp)
     snocPopTemp True code = code
 
-    convertType :: Core.Type -> Type
+    convertType :: Int -> Core.Type -> Type
     convertType = unimplemented
+
+-- Be mindful that JuvixAsm types are explicitly uncurried, while
+-- Core.Stripped types are always curried. If a function takes `n` arguments
+-- then the first `n` arguments should be uncurried in its JuvixAsm type.
