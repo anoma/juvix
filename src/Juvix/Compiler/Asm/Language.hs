@@ -9,7 +9,7 @@ import Juvix.Compiler.Core.Language.Base
 {-
 A JuvixAsm program is a set of JuvixAsm functions. Every function has an
 associated Symbol, a fixed (i.e., known at compile time) number of arguments, a
-fixed temporary area size, and a fixed maximum local value stack height (see
+fixed temporary stack size, and a fixed maximum local value stack height (see
 Interpreter/RuntimeState.hs).
 
 See the file Interpreter/RuntimeState.hs for a description of JuvixAsm runtime and

@@ -154,5 +154,10 @@ tests =
       "Dynamic closure extension"
       "."
       "test025.jva"
-      "out/test025.out"
+      "out/test025.out",
+    PosTest
+      "Currying & uncurrying"
+      "."
+      "test026.jva"
+      "out/test026.out"
   ]
