@@ -1,4 +1,4 @@
--- closure extensions
+-- closure extension
 
 function ext_10((integer, integer) -> integer) : integer -> integer {
   push 10;

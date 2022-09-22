@@ -9,6 +9,7 @@ import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Extra.Type
 import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Asm.Language.Type
+import Juvix.Compiler.Asm.Pretty
 import Safe (atMay)
 
 type Arguments = HashMap Offset Type
@@ -113,28 +114,37 @@ getValueType tab mem val =
     ty0 :: Sem '[Error AsmError] Type
     ty0 = getValueType' Nothing tab mem val
 
--- | Check if the values on top of the value stack have the given types (the
--- first element of the list corresponds to the top of the stack)
-checkValueStack' :: Member (Error AsmError) r => Maybe Location -> [Type] -> Memory -> Sem r ()
-checkValueStack' loc tys mem = do
-  unless (length (mem ^. memoryValueStack) >= length tys) $
+-- | Check if the value stack has at least the given height
+checkValueStackHeight' :: Member (Error AsmError) r => Maybe Location -> Int -> Memory -> Sem r ()
+checkValueStackHeight' loc n mem = do
+  unless (length (mem ^. memoryValueStack) >= n) $
     throw $
       AsmError
         loc
         ( fromString $
             "wrong value stack height: expected at least "
-              ++ show (length tys)
+              ++ show n
               ++ ", but the height is "
               ++ show (length (mem ^. memoryValueStack))
         )
+
+-- | Check if the values on top of the value stack have the given types (the
+-- first element of the list corresponds to the top of the stack)
+checkValueStack' :: Member (Error AsmError) r => Maybe Location -> InfoTable -> [Type] -> Memory -> Sem r ()
+checkValueStack' loc tab tys mem = do
+  checkValueStackHeight' loc (length tys) mem
   mapM_
     ( \(ty, idx) -> do
         let ty' = fromJust $ topValueStack idx mem
         unless (isSubtype ty' ty) $
           throw $
             AsmError loc $
-              fromString $
-                "type mismatch on value stack cell " ++ show idx ++ " from top"
+              "type mismatch on value stack cell "
+                `mappend` show idx
+                `mappend` " from top: expected "
+                `mappend` ppTrace tab ty
+                `mappend` " but got "
+                `mappend` ppTrace tab ty'
     )
     (zip tys [0 ..])
 

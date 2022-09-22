@@ -116,7 +116,7 @@ recurse' sig = go True
               let ci = getConstrInfo (sig ^. recursorInfoTable) tag
               let n = ci ^. constructorArgsNum
               let tyargs = typeArgs (ci ^. constructorType)
-              checkValueStack' loc tyargs mem
+              checkValueStack' loc (sig ^. recursorInfoTable) tyargs mem
               tys <-
                 zipWithM
                   (\ty idx -> unifyTypes' loc (sig ^. recursorInfoTable) ty (topValueStack' idx mem))
@@ -128,7 +128,7 @@ recurse' sig = go True
             AllocClosure InstrAllocClosure {..} -> do
               let fi = getFunInfo (sig ^. recursorInfoTable) _allocClosureFunSymbol
               let (tyargs, tgt) = unfoldType (fi ^. functionType)
-              checkValueStack' loc (take _allocClosureArgsNum tyargs) mem
+              checkValueStack' loc (sig ^. recursorInfoTable) (take _allocClosureArgsNum tyargs) mem
               return $
                 pushValueStack (mkTypeFun (drop _allocClosureArgsNum tyargs) tgt) $
                   popValueStack _allocClosureArgsNum mem
@@ -150,7 +150,7 @@ recurse' sig = go True
 
         fixMemBinOp :: Memory -> Type -> Type -> Type -> Sem r Memory
         fixMemBinOp mem ty0 ty1 rty = do
-          checkValueStack' loc [ty0, ty1] mem
+          checkValueStack' loc (sig ^. recursorInfoTable) [ty0, ty1] mem
           return $ pushValueStack rty (popValueStack 2 mem)
 
         fixMemExtendClosure :: Memory -> InstrExtendClosure -> Sem r Memory
@@ -202,7 +202,10 @@ recurse' sig = go True
 
         fixMemValueStackArgs :: Memory -> Int -> Int -> Type -> Sem r Memory
         fixMemValueStackArgs mem k argsNum ty = do
+          checkValueStackHeight' loc (argsNum + k) mem
           let mem' = popValueStack k mem
+          unless (ty == TyDynamic) $
+            checkValueStack' loc (sig ^. recursorInfoTable) (take argsNum (typeArgs ty)) mem'
           let tyargs = topValuesFromValueStack' argsNum mem'
           -- `typeArgs ty` may be shorter than `tyargs` only if `ty` is dynamic
           zipWithM_ (unifyTypes' loc (sig ^. recursorInfoTable)) tyargs (typeArgs ty)
@@ -227,7 +230,7 @@ recurse' sig = go True
 
     goBranch :: Bool -> Memory -> CmdBranch -> Sem r (Memory, a)
     goBranch isTail mem cmd@CmdBranch {..} = do
-      checkValueStack' loc [mkTypeBool] mem
+      checkValueStack' loc (sig ^. recursorInfoTable) [mkTypeBool] mem
       let mem0 = popValueStack 1 mem
       (mem1, as1) <- go isTail mem0 _cmdBranchTrue
       (mem2, as2) <- go isTail mem0 _cmdBranchFalse
@@ -240,7 +243,7 @@ recurse' sig = go True
 
     goCase :: Bool -> Memory -> CmdCase -> Sem r (Memory, a)
     goCase isTail mem cmd@CmdCase {..} = do
-      checkValueStack' loc [mkTypeInductive _cmdCaseInductive] mem
+      checkValueStack' loc (sig ^. recursorInfoTable) [mkTypeInductive _cmdCaseInductive] mem
       rs <- mapM (go isTail mem . (^. caseBranchCode)) _cmdCaseBranches
       let mems = map fst rs
       let ass = map snd rs
