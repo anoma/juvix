@@ -4,7 +4,7 @@ import Juvix.Compiler.Abstract.Extra
 import Juvix.Prelude
 
 -- | i = SizeInfo [v] ⇔ v is smaller than argument i of the caller function.
--- Indexes are 0 based
+-- The first (leftmost) argument has index 0
 data SizeInfo = SizeInfo
   { _sizeSmaller :: [[Pattern]],
     _sizeEqual :: [Pattern]
@@ -23,9 +23,9 @@ mkSizeInfo :: [PatternArg] -> SizeInfo
 mkSizeInfo args = SizeInfo {..}
   where
     ps :: [Pattern]
-    ps = map (^. patternArgPattern) (filter (not . isBrace) args)
-    isBrace :: PatternArg -> Bool
-    isBrace = (== Implicit) . (^. patternArgIsImplicit)
+    ps = map (^. patternArgPattern) (filter (not . isImplicit) args)
+    isImplicit :: PatternArg -> Bool
+    isImplicit = (== Implicit) . (^. patternArgIsImplicit)
     _sizeEqual = ps
     _sizeSmaller :: [[Pattern]]
     _sizeSmaller = map (^.. patternSubCosmos) ps
