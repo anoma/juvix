@@ -65,8 +65,8 @@ unifyTypes (TyConstr c1) (TyConstr c2)
       return $ TyInductive (TypeInductive (c1 ^. typeConstrInductive))
 unifyTypes (TyFun t1) (TyFun t2)
   | (length (t1 ^. typeFunArgs) == length (t2 ^. typeFunArgs))
-        -- auto currying for dynamic targets: `(*, B) -> C` unifies with
-        -- `A -> *` giving `(A, B) -> C`
+      -- auto currying for dynamic targets: `(*, B) -> C` unifies with
+      -- `A -> *` giving `(A, B) -> C`
       || ( length (t1 ^. typeFunArgs) > length (t2 ^. typeFunArgs)
              && t2 ^. typeFunTarget == TyDynamic
          )
@@ -117,13 +117,12 @@ isSubtype (TyFun t1) (TyFun t2) =
       l2 = toList (t2 ^. typeFunArgs)
       r1 = t1 ^. typeFunTarget
       r2 = t2 ^. typeFunTarget
-   in
-    if
-      | t1 ^. typeFunTarget == TyDynamic || t2 ^. typeFunTarget == TyDynamic ->
-        -- auto currying for dynamic targets: e.g. `(A, B) -> C` is a subtype of `A -> *`
-        all (uncurry isSubtype) (zip l2 l1)
-      | otherwise ->
-        length l1 == length l2 && all (uncurry isSubtype) (zip l2 l1) && isSubtype r1 r2
+   in if
+          | t1 ^. typeFunTarget == TyDynamic || t2 ^. typeFunTarget == TyDynamic ->
+              -- auto currying for dynamic targets: e.g. `(A, B) -> C` is a subtype of `A -> *`
+              all (uncurry isSubtype) (zip l2 l1)
+          | otherwise ->
+              length l1 == length l2 && all (uncurry isSubtype) (zip l2 l1) && isSubtype r1 r2
 isSubtype (TyInteger (TypeInteger l1 u1)) (TyInteger (TypeInteger l2 u2)) =
   checkBounds (>=) l1 l2 && checkBounds (<=) u1 u2
   where
