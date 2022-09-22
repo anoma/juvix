@@ -1,6 +1,7 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types where
 
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 
 data Arity
   = ArityUnit
@@ -74,3 +75,32 @@ foldArity UnfoldedArity {..} = go _ufoldArityParams
           l = case a of
             ParamExplicit e -> ParamExplicit e
             ParamImplicit -> ParamImplicit
+
+instance HasAtomicity FunctionArity where
+  atomicity = const (Aggregate funFixity)
+
+instance HasAtomicity Arity where
+  atomicity = \case
+    ArityUnit -> Atom
+    ArityUnknown -> Atom
+    ArityFunction f -> atomicity f
+
+instance Pretty ArityParameter where
+  pretty = \case
+    ParamImplicit -> "{𝟙}"
+    ParamExplicit f -> pretty f
+
+instance Pretty FunctionArity where
+  pretty f@(FunctionArity l r) =
+    parensCond (atomParens (const True) (atomicity f) funFixity) (pretty l)
+      <> " → "
+      <> pretty r
+    where
+      parensCond :: Bool -> Doc a -> Doc a
+      parensCond t d = if t then parens d else d
+
+instance Pretty Arity where
+  pretty = \case
+    ArityUnit -> "𝟙"
+    ArityUnknown -> "?"
+    ArityFunction f -> pretty f

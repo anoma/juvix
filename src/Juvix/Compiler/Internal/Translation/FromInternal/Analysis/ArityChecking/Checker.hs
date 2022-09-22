@@ -5,6 +5,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.C
 where
 
 import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.LocalVars
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types
@@ -319,7 +320,7 @@ checkLambda ari (Lambda cl) = Lambda <$> mapM goClause cl
                   -- TODO. think what to do in this case
                   return (pats, as)
                 (_ : _, []) -> case rest of
-                  ArityRestUnit -> error "too many patterns in lambda"
+                  ArityRestUnit -> error ("too many patterns in lambda: " <> ppTrace (Lambda cl) <> "\n" <> prettyText ari)
                   ArityRestUnknown -> return (pats, [])
 
 idenArity :: Members '[Reader LocalVars, Reader InfoTable] r => Iden -> Sem r Arity
@@ -381,15 +382,16 @@ checkExpression ::
   Arity ->
   Expression ->
   Sem r Expression
-checkExpression hintArity expr = case expr of
-  ExpressionIden {} -> appHelper expr []
-  ExpressionApplication a -> goApp a
-  ExpressionLiteral {} -> appHelper expr []
-  ExpressionFunction {} -> return expr
-  ExpressionUniverse {} -> return expr
-  ExpressionHole {} -> return expr
-  ExpressionSimpleLambda {} -> simplelambda
-  ExpressionLambda l -> ExpressionLambda <$> checkLambda hintArity l
+checkExpression hintArity expr =
+  case expr of
+    ExpressionIden {} -> appHelper expr []
+    ExpressionApplication a -> goApp a
+    ExpressionLiteral {} -> appHelper expr []
+    ExpressionFunction {} -> return expr
+    ExpressionUniverse {} -> return expr
+    ExpressionHole {} -> return expr
+    ExpressionSimpleLambda {} -> simplelambda
+    ExpressionLambda l -> ExpressionLambda <$> checkLambda hintArity l
   where
     goApp :: Application -> Sem r Expression
     goApp = uncurry appHelper . second toList . unfoldApplication'
@@ -422,10 +424,10 @@ checkExpression hintArity expr = case expr of
               toArity = \case
                 ParamExplicit a -> a
                 ParamImplicit -> ArityUnit
-          mapM
-            (secondM (uncurry checkExpression))
-            [(i', (a, e')) | (a, (i', e')) <- zip (argsAris ++ repeat ArityUnknown) args]
-            >>= addHoles i hintArity ari
+          argsWithHoles :: [(IsImplicit, Expression)] <- addHoles i hintArity ari args
+          let argsWithAris :: [(IsImplicit, (Arity, Expression))]
+              argsWithAris = [(i', (a, e')) | (a, (i', e')) <- zip (argsAris ++ repeat ArityUnknown) argsWithHoles]
+          mapM (secondM (uncurry checkExpression)) argsWithAris
         addHoles ::
           Interval ->
           Arity ->
