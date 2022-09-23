@@ -382,8 +382,7 @@ checkExpression ::
   Arity ->
   Expression ->
   Sem r Expression
-checkExpression hintArity expr =
-  case expr of
+checkExpression hintArity expr = case expr of
     ExpressionIden {} -> appHelper expr []
     ExpressionApplication a -> goApp a
     ExpressionLiteral {} -> appHelper expr []
