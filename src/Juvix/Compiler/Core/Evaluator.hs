@@ -141,11 +141,13 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
         unary op = \case
           [arg] -> op arg
           _ -> err "wrong number of arguments for unary operator"
+        {-# INLINE unary #-}
 
         binary :: (Node -> Node -> Node) -> [Node] -> Node
         binary op = \case
           [l, r] -> op l r
           _ -> err "wrong number of arguments for binary operator"
+        {-# INLINE binary #-}
 
         divOp :: (Integer -> Integer -> Integer) -> [Node] -> Node
         divOp op = binary $ \l r ->
@@ -153,18 +155,24 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
            in case integerFromNode (eval' env r) of
                 0 -> evalError "division by zero" (substEnv env n)
                 k -> nodeFromInteger (op (integerFromNode vl) k)
+        {-# INLINE divOp #-}
 
         binOp :: (b -> Node) -> (Node -> a) -> (a -> a -> b) -> [Node] -> Node
         binOp toNode toA op = binary $ \l r -> toNode (toA (eval' env l) `op` toA (eval' env r))
+        {-# INLINE binOp #-}
 
         binNumCmpOp :: (Integer -> Integer -> Bool) -> [Node] -> Node
         binNumCmpOp = binOp nodeFromBool integerFromNode
+        {-# INLINE binNumCmpOp #-}
 
         binNumOp :: (Integer -> Integer -> Integer) -> [Node] -> Node
         binNumOp = binOp nodeFromInteger integerFromNode
+        {-# INLINE binNumOp #-}
+    {-# INLINE applyBuiltin #-}
 
     nodeFromInteger :: Integer -> Node
     nodeFromInteger !int = mkConstant' (ConstInteger int)
+    {-# INLINE nodeFromInteger #-}
 
     nodeFromBool :: Bool -> Node
     nodeFromBool b = mkConstr' (BuiltinTag tag) []
@@ -172,11 +180,13 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
         !tag
           | b = TagTrue
           | otherwise = TagFalse
+    {-# INLINE nodeFromBool #-}
 
     integerFromNode :: Node -> Integer
     integerFromNode = \case
       NCst (Constant _ (ConstInteger int)) -> int
       v -> evalError "not an integer" v
+    {-# INLINE integerFromNode #-}
 
     printNode :: Node -> String
     printNode = \case
@@ -188,6 +198,7 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       case HashMap.lookup sym ctx of
         Just n' -> n'
         Nothing -> evalError "symbol not defined" n
+    {-# INLINE lookupContext #-}
 
 -- Evaluate `node` and interpret the builtin IO actions.
 hEvalIO :: Handle -> Handle -> IdentContext -> Env -> Node -> IO Node
