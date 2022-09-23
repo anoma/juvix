@@ -67,12 +67,19 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
       ExpressionLiteral {} -> return ()
       ExpressionHole {} -> return ()
       ExpressionUniverse {} -> return ()
+      ExpressionSimpleLambda l -> helperSimpleLambda l
       ExpressionLambda l -> helperLambda l
       where
-        helperLambda :: Lambda -> Sem r ()
-        helperLambda (Lambda _ lamVarTy lamBody) = do
+        helperSimpleLambda :: SimpleLambda -> Sem r ()
+        helperSimpleLambda (SimpleLambda _ lamVarTy lamBody) = do
           helper inside lamVarTy
           helper inside lamBody
+
+        helperLambda :: Lambda -> Sem r ()
+        helperLambda (Lambda cl) = mapM_ goClause cl
+          where
+            goClause :: LambdaClause -> Sem r ()
+            goClause (LambdaClause _ b) = helper inside b
 
         helperIden :: Iden -> Sem r ()
         helperIden = \case

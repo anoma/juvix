@@ -471,9 +471,9 @@ whereClause =
 
 lambdaClause :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (LambdaClause 'Parsed)
 lambdaClause = do
-  lambdaParameters <- P.some patternAtom
+  _lambdaParameters <- P.some patternAtom
   kwAssign
-  lambdaBody <- parseExpressionAtoms
+  _lambdaBody <- parseExpressionAtoms
   return LambdaClause {..}
 
 lambda :: Members '[Reader ParserParams, InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (Lambda 'Parsed)

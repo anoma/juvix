@@ -97,6 +97,41 @@ instance PrettyCode Application where
 instance PrettyCode Universe where
   ppCode (Universe n _) = return $ kwType <+?> (pretty <$> n)
 
+instance PrettyCode PatternArg where
+  ppCode a = do
+    p <- ppCode (a ^. patternArgPattern)
+    return (bracesIf (Implicit == a ^. patternArgIsImplicit) p)
+
+instance PrettyCode LambdaClause where
+  ppCode LambdaClause {..} = do
+    lambdaParameters' <- hsep . toList <$> mapM ppCode _lambdaParameters
+    lambdaBody' <- ppCode _lambdaBody
+    return $ lambdaParameters' <+> kwAssign <+> lambdaBody'
+
+instance PrettyCode Lambda where
+  ppCode Lambda {..} = do
+    lambdaClauses' <- ppBlock _lambdaClauses
+    return $ kwLambda <+> lambdaClauses'
+
+ppBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
+ppBlock items = bracesIndent . vsep . toList <$> mapM (fmap endSemicolon . ppCode) items
+
+instance PrettyCode ConstructorApp where
+  ppCode (ConstructorApp ctr args) = do
+    ctr' <- ppCode ctr
+    if
+        | null args -> do
+            args' <- hsep <$> mapM ppCode args
+            return (parens (ctr' <+> args'))
+        | otherwise -> return ctr'
+
+instance PrettyCode Pattern where
+  ppCode = \case
+    PatternVariable v -> ppCode v
+    PatternWildcard {} -> return kwWildcard
+    PatternEmpty {} -> return $ parens mempty
+    PatternConstructorApp constr -> ppCode constr
+
 instance PrettyCode Expression where
   ppCode e = case e of
     ExpressionIden i -> ppCode i
@@ -105,6 +140,7 @@ instance PrettyCode Expression where
     ExpressionFunction f -> ppCode f
     ExpressionLiteral l -> ppSCode l
     ExpressionHole h -> ppSCode h
+    ExpressionLambda l -> ppCode l
 
 instance PrettyCode Usage where
   ppCode u = return $ case u of

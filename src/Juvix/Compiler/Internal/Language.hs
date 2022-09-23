@@ -92,6 +92,7 @@ data Expression
   | ExpressionLiteral LiteralLoc
   | ExpressionHole Hole
   | ExpressionUniverse SmallUniverse
+  | ExpressionSimpleLambda SimpleLambda
   | ExpressionLambda Lambda
   deriving stock (Eq, Generic)
 
@@ -102,14 +103,29 @@ data Example = Example
     _exampleExpression :: Expression
   }
 
-data Lambda = Lambda
-  { _lambdaVar :: VarName,
-    _lambdaVarType :: Expression,
-    _lambdaBody :: Expression
+data SimpleLambda = SimpleLambda
+  { _slambdaVar :: VarName,
+    _slambdaVarType :: Expression,
+    _slambdaBody :: Expression
+  }
+  deriving stock (Eq, Generic)
+
+newtype Lambda = Lambda
+  { _lambdaClauses :: NonEmpty LambdaClause
+  }
+  deriving stock (Eq, Generic)
+
+data LambdaClause = LambdaClause
+  { _lambdaPatterns :: NonEmpty Pattern, -- only explicit patterns are allowed
+    _lambdaBody :: Expression -- only explicit patterns are allowed,
   }
   deriving stock (Eq, Generic)
 
 instance Hashable Lambda
+
+instance Hashable LambdaClause
+
+instance Hashable SimpleLambda
 
 data Application = Application
   { _appLeft :: Expression,
@@ -131,16 +147,25 @@ data ConstructorApp = ConstructorApp
   { _constrAppConstructor :: Name,
     _constrAppParameters :: [PatternArg]
   }
+  deriving stock (Eq, Generic)
+
+instance Hashable ConstructorApp
 
 data PatternArg = PatternArg
   { _patternArgIsImplicit :: IsImplicit,
     _patternArgPattern :: Pattern
   }
+  deriving stock (Eq, Generic)
+
+instance Hashable PatternArg
 
 data Pattern
   = PatternVariable VarName
   | PatternConstructorApp ConstructorApp
   | PatternWildcard Wildcard
+  deriving stock (Eq, Generic)
+
+instance Hashable Pattern
 
 newtype InductiveParameter = InductiveParameter
   { _inductiveParamName :: VarName
@@ -192,6 +217,7 @@ makeLenses ''ModuleBody
 makeLenses ''Application
 makeLenses ''TypedExpression
 makeLenses ''Function
+makeLenses ''SimpleLambda
 makeLenses ''Lambda
 makeLenses ''FunctionParameter
 makeLenses ''InductiveParameter
@@ -200,6 +226,9 @@ makeLenses ''ConstructorApp
 
 instance HasAtomicity Application where
   atomicity = const (Aggregate appFixity)
+
+instance HasAtomicity SimpleLambda where
+  atomicity = const Atom
 
 instance HasAtomicity Lambda where
   atomicity = const Atom
@@ -212,6 +241,7 @@ instance HasAtomicity Expression where
     ExpressionHole {} -> Atom
     ExpressionUniverse u -> atomicity u
     ExpressionFunction f -> atomicity f
+    ExpressionSimpleLambda l -> atomicity l
     ExpressionLambda l -> atomicity l
 
 instance HasAtomicity Function where
@@ -249,8 +279,14 @@ instance HasLoc Function where
 instance HasLoc Application where
   getLoc (Application l r _) = getLoc l <> getLoc r
 
+instance HasLoc SimpleLambda where
+  getLoc l = getLoc (l ^. slambdaVar) <> getLoc (l ^. slambdaBody)
+
+instance HasLoc LambdaClause where
+  getLoc (LambdaClause ps e) = getLocSpan ps <> getLoc e
+
 instance HasLoc Lambda where
-  getLoc l = getLoc (l ^. lambdaVar) <> getLoc (l ^. lambdaBody)
+  getLoc l = getLocSpan (l ^. lambdaClauses)
 
 instance HasLoc Expression where
   getLoc = \case
@@ -260,6 +296,7 @@ instance HasLoc Expression where
     ExpressionHole h -> getLoc h
     ExpressionUniverse u -> getLoc u
     ExpressionFunction u -> getLoc u
+    ExpressionSimpleLambda l -> getLoc l
     ExpressionLambda l -> getLoc l
 
 instance HasLoc Iden where

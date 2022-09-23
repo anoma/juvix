@@ -64,8 +64,9 @@ instance Hashable Interval
 class HasLoc t where
   getLoc :: t -> Interval
 
+-- | The items are assumed to be in order with respect to their location.
 getLocSpan :: HasLoc t => NonEmpty t -> Interval
-getLocSpan = foldr1 (<>) . fmap getLoc
+getLocSpan l = getLoc (head l) <> getLoc (last l)
 
 -- | Assumes the file is the same
 instance Semigroup Interval where

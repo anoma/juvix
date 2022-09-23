@@ -170,9 +170,6 @@ ppTopModulePath = case sing :: SStage s of
   SParsed -> ppCode
   SScoped -> ppCode
 
-endSemicolon :: Doc Ann -> Doc Ann
-endSemicolon x = x <> kwSemicolon
-
 instance SingI s => PrettyCode (InductiveParameter s) where
   ppCode InductiveParameter {..} = do
     inductiveParameterName' <- annDef _inductiveParameterName <$> ppSymbol _inductiveParameterName
@@ -298,9 +295,6 @@ instance PrettyCode QualifiedName where
   ppCode QualifiedName {..} = do
     let symbols = _qualifiedPath ^. pathParts NonEmpty.|> _qualifiedSymbol
     dotted <$> mapM ppSymbol symbols
-
-bracesIf :: Bool -> Doc Ann -> Doc Ann
-bracesIf t = if t then braces else id
 
 ppName :: forall s r. (SingI s, Members '[Reader Options] r) => IdentifierType s -> Sem r (Doc Ann)
 ppName = case sing :: SStage s of
@@ -476,12 +470,12 @@ instance SingI s => PrettyCode (LetClause s) where
     LetFunClause cl -> ppCode cl
 
 ppBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
-ppBlock items = bracesIndent . vsep . toList <$> mapM (fmap endSemicolon . ppCode) items
+ppBlock items = bracesIndent . vsep <$> mapM (fmap endSemicolon . ppCode) items
 
 instance SingI s => PrettyCode (LambdaClause s) where
   ppCode LambdaClause {..} = do
-    lambdaParameters' <- hsep . toList <$> mapM ppPatternAtom lambdaParameters
-    lambdaBody' <- ppExpression lambdaBody
+    lambdaParameters' <- hsep <$> mapM ppPatternAtom _lambdaParameters
+    lambdaBody' <- ppExpression _lambdaBody
     return $ lambdaParameters' <+> kwAssign <+> lambdaBody'
 
 instance SingI s => PrettyCode (Lambda s) where
@@ -494,7 +488,7 @@ instance SingI s => PrettyCode (FunctionClause s) where
     clauseOwnerFunction' <- ppSymbol _clauseOwnerFunction
     clausePatterns' <- case nonEmpty _clausePatterns of
       Nothing -> return Nothing
-      Just ne -> Just . hsep . toList <$> mapM ppPatternAtom ne
+      Just ne -> Just . hsep <$> mapM ppPatternAtom ne
     clauseBody' <- ppExpression _clauseBody
     clauseWhere' <- mapM ppCode _clauseWhere
     return $
@@ -574,7 +568,7 @@ instance SingI s => PrettyCode (PatternAtom s) where
     PatternAtomBraces p -> braces <$> ppPatternParenType p
 
 instance SingI s => PrettyCode (PatternAtoms s) where
-  ppCode (PatternAtoms ps _) = hsep . toList <$> mapM ppCode ps
+  ppCode (PatternAtoms ps _) = hsep <$> mapM ppCode ps
 
 ppPattern :: forall s r. (SingI s, Members '[Reader Options] r) => PatternType s -> Sem r (Doc Ann)
 ppPattern = case sing :: SStage s of
@@ -653,7 +647,7 @@ instance PrettyCode Expression where
 
 instance PrettyCode Pattern where
   ppCode :: forall r. Members '[Reader Options] r => Pattern -> Sem r (Doc Ann)
-  ppCode pat = case pat of
+  ppCode = \case
     PatternVariable v -> annDef v <$> ppCode v
     PatternApplication (PatternApp l r) -> do
       l' <- ppLeftExpression appFixity l
@@ -738,7 +732,7 @@ instance SingI s => PrettyCode (ExpressionAtom s) where
     AtomHole w -> ppHole w
 
 instance SingI s => PrettyCode (ExpressionAtoms s) where
-  ppCode as = hsep . toList <$> mapM ppCode (as ^. expressionAtoms)
+  ppCode as = hsep <$> mapM ppCode (as ^. expressionAtoms)
 
 ppExpression :: forall s r. (SingI s, Members '[Reader Options] r) => ExpressionType s -> Sem r (Doc Ann)
 ppExpression = case sing :: SStage s of

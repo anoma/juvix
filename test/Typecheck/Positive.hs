@@ -1,8 +1,8 @@
-module TypeCheck.Positive where
+module Typecheck.Positive where
 
 import Base
 import Juvix.Compiler.Pipeline
-import TypeCheck.Negative qualified as N
+import Typecheck.Negative qualified as N
 
 data PosTest = PosTest
   { _name :: String,
@@ -155,6 +155,10 @@ tests =
       "Import a builtin multiple times"
       "BuiltinsMultiImport"
       "Input.juvix",
+    PosTest
+      "Basic lambda functions"
+      "Internal"
+      "Lambda.juvix",
     PosTest
       "open import a builtin multiple times"
       "BuiltinsMultiOpenImport"

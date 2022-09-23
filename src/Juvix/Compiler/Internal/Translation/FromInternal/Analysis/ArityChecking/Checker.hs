@@ -57,7 +57,7 @@ checkFunctionDef ::
   FunctionDef ->
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
-  arity <- typeArity _funDefType
+  let arity = typeArity _funDefType
   _funDefClauses' <- mapM (checkFunctionClause arity) _funDefClauses
   _funDefExamples' <- withEmptyLocalVars (mapM checkExample _funDefExamples)
   return
@@ -86,8 +86,8 @@ checkFunctionClause ari cl = do
     name = cl ^. clauseName
     loc = getLoc name
 
-lambda :: a
-lambda = error "lambda expressions are not supported by the arity checker"
+simplelambda :: a
+simplelambda = error "simple lambda expressions are not supported by the arity checker"
 
 withEmptyLocalVars :: Sem (Reader LocalVars : r) a -> Sem r a
 withEmptyLocalVars = runReader emptyLocalVars
@@ -96,51 +96,48 @@ guessArity ::
   forall r.
   Members '[Reader InfoTable] r =>
   Expression ->
-  Sem r (Maybe Arity)
+  Sem r Arity
 guessArity = \case
-  ExpressionHole {} -> return Nothing
-  ExpressionFunction {} -> return (Just ArityUnit)
-  ExpressionLiteral l -> return (Just (arityLiteral l))
+  ExpressionHole {} -> return ArityUnknown
+  ExpressionFunction {} -> return ArityUnit
+  ExpressionLiteral l -> return (arityLiteral l)
   ExpressionApplication a -> appHelper a
   ExpressionIden i -> idenHelper i
-  ExpressionUniverse {} -> return (Just arityUniverse)
-  ExpressionLambda {} -> lambda
+  ExpressionUniverse {} -> return arityUniverse
+  ExpressionSimpleLambda {} -> simplelambda
+  ExpressionLambda l -> return (arityLambda l)
   where
-    idenHelper :: Iden -> Sem r (Maybe Arity)
+    idenHelper :: Iden -> Sem r Arity
     idenHelper i = case i of
-      IdenVar {} -> return Nothing
-      _ -> Just <$> withEmptyLocalVars (idenArity i)
+      IdenVar {} -> return ArityUnknown
+      _ -> withEmptyLocalVars (idenArity i)
 
-    appHelper :: Application -> Sem r (Maybe Arity)
+    appHelper :: Application -> Sem r Arity
     appHelper a = do
       f' <- arif
-      return (f' >>= \f'' -> foldArity <$> refine (unfoldArity f'') args)
+      let u = unfoldArity' f'
+      return $ case refine args (u ^. ufoldArityParams) of
+        Nothing -> ArityUnknown
+        Just a' -> foldArity (set ufoldArityParams a' u)
       where
         (f, args) = second (map fst . toList) (unfoldApplication' a)
 
-        refine :: [ArityParameter] -> [IsImplicit] -> Maybe [ArityParameter]
-        refine ps as = case (ps, as) of
-          (ParamExplicit {} : ps', Explicit : as') -> refine ps' as'
-          (ParamImplicit {} : ps', Implicit : as') -> refine ps' as'
-          (ParamImplicit {} : ps', as'@(Explicit : _)) -> refine ps' as'
-          (ParamExplicit {} : _, Implicit : _) -> Nothing
-          (ps', []) -> Just ps'
-          ([], _ : _) -> Nothing
+        refine :: [IsImplicit] -> [ArityParameter] -> Maybe [ArityParameter]
+        refine as ps = case (as, ps) of
+          (Explicit : as', ParamExplicit {} : ps') -> refine as' ps'
+          (Implicit : as', ParamImplicit {} : ps') -> refine as' ps'
+          (as'@(Explicit : _), ParamImplicit {} : ps') -> refine as' ps'
+          (Implicit : _, ParamExplicit {} : _) -> Nothing
+          ([], ps') -> Just ps'
+          (_ : _, []) -> Nothing
 
-        arif :: Sem r (Maybe Arity)
-        arif = case f of
-          ExpressionHole {} -> return Nothing
-          ExpressionUniverse {} -> return (Just arityUniverse)
-          ExpressionApplication {} -> impossible
-          ExpressionFunction {} -> return (Just ArityUnit)
-          ExpressionLiteral l -> return (Just (arityLiteral l))
-          ExpressionIden i -> idenHelper i
-          ExpressionLambda {} -> lambda
+        arif :: Sem r Arity
+        arif = guessArity f
 
--- | The arity of all literals is assumed to be: {} -> 1
 arityLiteral :: LiteralLoc -> Arity
 arityLiteral (WithLoc _ l) = case l of
   LitInteger {} -> ArityUnit
+  -- The arity of all strings is assumed to be: {} -> 1
   LitString {} ->
     ArityFunction
       FunctionArity
@@ -151,15 +148,29 @@ arityLiteral (WithLoc _ l) = case l of
 arityUniverse :: Arity
 arityUniverse = ArityUnit
 
+-- | Lambdas can only have explicit arguments. Since we do not have dependent
+-- types, it is ok to (partially) infer the arity of the lambda from the clause
+-- with the most patterns.
+arityLambda :: Lambda -> Arity
+arityLambda (Lambda cl) =
+  foldArity
+    UnfoldedArity
+      { _ufoldArityParams = replicate (maximum1 (fmap numPatterns cl)) (ParamExplicit ArityUnknown),
+        _ufoldArityRest = ArityRestUnknown
+      }
+  where
+    numPatterns :: LambdaClause -> Int
+    numPatterns (LambdaClause ps _) = length ps
+
 checkLhs ::
   forall r.
   Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r =>
   Interval ->
-  Maybe Arity ->
+  Arity ->
   Arity ->
   [PatternArg] ->
   Sem r ([PatternArg], LocalVars, Arity)
-checkLhs loc hint ariSignature pats = do
+checkLhs loc guessedBody ariSignature pats = do
   (locals, (pats', bodyAri)) <- runState emptyLocalVars (goLhs ariSignature pats)
   return (pats', locals, bodyAri)
   where
@@ -169,10 +180,10 @@ checkLhs loc hint ariSignature pats = do
     -- between explicit parameters already in the pattern.
     goLhs :: Arity -> [PatternArg] -> Sem (State LocalVars ': r) ([PatternArg], Arity)
     goLhs a = \case
-      [] -> return $ case hint >>= tailHelper a of
+      [] -> return $ case tailHelper a of
         Nothing -> ([], a)
         Just tailUnderscores ->
-          let a' = foldArity (drop tailUnderscores (unfoldArity a))
+          let a' = foldArity (over ufoldArityParams (drop tailUnderscores) (unfoldArity' a))
            in (replicate tailUnderscores wildcard, a')
       lhs@(p : ps) -> case a of
         ArityUnit ->
@@ -207,13 +218,26 @@ checkLhs loc hint ariSignature pats = do
         wildcard :: PatternArg
         wildcard = PatternArg Implicit (PatternWildcard (Wildcard loc))
 
-    tailHelper :: Arity -> Arity -> Maybe Int
-    tailHelper a target
-      | notNull a' && all (== ParamImplicit) a' = Just (length a')
+    -- This is an heuristic and it can have an undesired result.
+    -- Sometimes the outcome may even be confusing.
+    tailHelper :: Arity -> Maybe Int
+    tailHelper a
+      | 0 < pref = Just pref
       | otherwise = Nothing
       where
-        a' = dropSuffix target' (unfoldArity a)
-        target' = unfoldArity target
+        pref :: Int
+        pref = aI - targetI
+        preceedingImplicits :: Arity -> Int
+        preceedingImplicits = length . takeWhile isImplicit . unfoldArity
+          where
+            isImplicit :: ArityParameter -> Bool
+            isImplicit = \case
+              ParamExplicit {} -> False
+              ParamImplicit -> True
+        aI :: Int
+        aI = preceedingImplicits a
+        targetI :: Int
+        targetI = preceedingImplicits guessedBody
 
 checkPattern ::
   forall r.
@@ -238,6 +262,7 @@ checkPattern ari = traverseOf patternArgPattern helper
                   }
             )
 
+-- | TODO: insert holes for constructor implicit arguments
 checkConstructorApp ::
   forall r.
   Members '[Reader InfoTable, Error ArityCheckerError, State LocalVars] r =>
@@ -245,8 +270,8 @@ checkConstructorApp ::
   Sem r ConstructorApp
 checkConstructorApp ca@(ConstructorApp c ps) = do
   args <- (^. constructorInfoArgs) <$> lookupConstructor c
-  arities <- mapM typeArity args
-  let n = length arities
+  let arities = map typeArity args
+      n = length arities
       lps = length ps
   when
     (n /= lps)
@@ -261,52 +286,87 @@ checkConstructorApp ca@(ConstructorApp c ps) = do
   ps' <- zipWithM checkPattern arities ps
   return (ConstructorApp c ps')
 
+checkLambda ::
+  forall r.
+  Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r =>
+  Arity ->
+  Lambda ->
+  Sem r Lambda
+checkLambda ari (Lambda cl) = Lambda <$> mapM goClause cl
+  where
+    goClause :: LambdaClause -> Sem r LambdaClause
+    goClause (LambdaClause ps b) = do
+      locals <- ask
+      let uari@UnfoldedArity {..} = unfoldArity' ari
+      (locals', (ps', rest)) <- runState locals (helper _ufoldArityRest (toList ps) _ufoldArityParams)
+      let ariBody = foldArity (set ufoldArityParams rest uari)
+      b' <- local (const locals') (checkExpression ariBody b)
+      return (LambdaClause (fromJust (nonEmpty ps')) b')
+      where
+        -- returns the adjusted patterns and the not consumed arity
+        helper :: ArityRest -> [Pattern] -> [ArityParameter] -> Sem (State LocalVars ': r) ([Pattern], [ArityParameter])
+        helper rest = go
+          where
+            go :: [Pattern] -> [ArityParameter] -> Sem (State LocalVars ': r) ([Pattern], [ArityParameter])
+            go pats as =
+              case (pats, as) of
+                ([], _) -> return ([], as)
+                (p : ps', ParamExplicit paramAri : as') -> do
+                  p' <- (^. patternArgPattern) <$> checkPattern paramAri (PatternArg Explicit p)
+                  first (p' :) <$> go ps' as'
+                (_ : _, ParamImplicit {} : _) ->
+                  -- The lambda is expected to have an implicit argument but it cannot have one.
+                  -- TODO. think what to do in this case
+                  return (pats, as)
+                (_ : _, []) -> case rest of
+                  ArityRestUnit -> error "too many patterns in lambda"
+                  ArityRestUnknown -> return (pats, [])
+
 idenArity :: Members '[Reader LocalVars, Reader InfoTable] r => Iden -> Sem r Arity
 idenArity = \case
-  IdenFunction f -> lookupFunction f >>= typeArity . (^. functionInfoDef . funDefType)
-  IdenConstructor c -> constructorType c >>= typeArity
   IdenVar v -> getLocalArity v
-  IdenAxiom a -> lookupAxiom a >>= typeArity . (^. axiomInfoType)
-  IdenInductive i -> inductiveType i >>= typeArity
+  IdenInductive i -> typeArity <$> inductiveType i
+  IdenFunction f -> typeArity . (^. functionInfoDef . funDefType) <$> lookupFunction f
+  IdenConstructor c -> typeArity <$> constructorType c
+  IdenAxiom a -> typeArity . (^. axiomInfoType) <$> lookupAxiom a
 
 -- | let x be some expression of type T. The argument of this function is T and it returns
--- the arity of x.
-typeArity :: forall r. Members '[Reader InfoTable] r => Expression -> Sem r Arity
+-- the arity of x. In other words, given (T : Type), it returns the arity of the elements of T.
+typeArity :: Expression -> Arity
 typeArity = go
   where
-    go :: Expression -> Sem r Arity
+    go :: Expression -> Arity
     go = \case
       ExpressionIden i -> goIden i
-      ExpressionApplication {} -> return ArityUnit
-      ExpressionLiteral {} -> return ArityUnknown
-      ExpressionFunction f -> ArityFunction <$> goFun2 f
-      ExpressionHole {} -> return ArityUnknown
-      ExpressionUniverse {} -> return ArityUnit
-      ExpressionLambda {} -> lambda
+      ExpressionApplication {} -> ArityUnit
+      ExpressionLiteral {} -> ArityUnknown
+      ExpressionFunction f -> ArityFunction (goFun f)
+      ExpressionHole {} -> ArityUnknown
+      ExpressionLambda {} -> ArityUnknown
+      ExpressionUniverse {} -> ArityUnit
+      ExpressionSimpleLambda {} -> simplelambda
 
-    goIden :: Iden -> Sem r Arity
+    goIden :: Iden -> Arity
     goIden = \case
-      IdenVar {} -> return ArityUnknown
-      IdenInductive {} -> return ArityUnit
-      IdenFunction {} -> return ArityUnknown -- we need normalization to determine the arity
-      IdenConstructor {} -> return ArityUnknown -- will be a type error
-      IdenAxiom ax -> lookupAxiom ax >>= go . (^. axiomInfoType)
+      IdenVar {} -> ArityUnknown
+      IdenInductive {} -> ArityUnit
+      IdenFunction {} -> ArityUnknown -- we need normalization to determine the arity
+      IdenConstructor {} -> ArityUnknown -- will be a type error
+      IdenAxiom {} -> ArityUnknown
 
-    goParam :: FunctionParameter -> Sem r ArityParameter
-    goParam (FunctionParameter _ i e) =
-      case i of
-        Implicit -> return ParamImplicit
-        Explicit -> ParamExplicit <$> go e
+    goParam :: FunctionParameter -> ArityParameter
+    goParam (FunctionParameter _ i e) = case i of
+      Implicit -> ParamImplicit
+      Explicit -> ParamExplicit (go e)
 
-    goFun2 :: Function -> Sem r FunctionArity
-    goFun2 (Function l r) = do
-      l' <- goParam l
-      r' <- go r
-      return
-        FunctionArity
-          { _functionArityLeft = l',
-            _functionArityRight = r'
-          }
+    goFun :: Function -> FunctionArity
+    goFun (Function l r) =
+      let l' = goParam l
+          r' = go r
+       in FunctionArity
+            { _functionArityLeft = l',
+              _functionArityRight = r'
+            }
 
 checkExample ::
   forall r.
@@ -328,7 +388,8 @@ checkExpression hintArity expr = case expr of
   ExpressionFunction {} -> return expr
   ExpressionUniverse {} -> return expr
   ExpressionHole {} -> return expr
-  ExpressionLambda {} -> lambda
+  ExpressionSimpleLambda {} -> simplelambda
+  ExpressionLambda l -> ExpressionLambda <$> checkLambda hintArity l
   where
     goApp :: Application -> Sem r Expression
     goApp = uncurry appHelper . second toList . unfoldApplication'
@@ -340,7 +401,7 @@ checkExpression hintArity expr = case expr of
         ExpressionIden i -> idenArity i >>= helper (getLoc i)
         ExpressionLiteral l -> helper (getLoc l) (arityLiteral l)
         ExpressionUniverse l -> helper (getLoc l) arityUniverse
-        ExpressionLambda {} -> lambda
+        ExpressionSimpleLambda {} -> simplelambda
         ExpressionFunction f ->
           throw
             ( ErrFunctionApplied
@@ -350,6 +411,7 @@ checkExpression hintArity expr = case expr of
                   }
             )
         ExpressionApplication {} -> impossible
+        ExpressionLambda l -> helper (getLoc l) (arityLambda l)
       return (foldApplication fun args')
       where
         helper :: Interval -> Arity -> Sem r [(IsImplicit, Expression)]

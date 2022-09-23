@@ -108,7 +108,7 @@ data Expression
   | ExpressionFunction Function
   | ExpressionLiteral LiteralLoc
   | ExpressionHole Hole
-  ---  ExpressionLambda Lambda not supported yet
+  | ExpressionLambda Lambda
   deriving stock (Eq, Show)
 
 instance HasAtomicity Expression where
@@ -119,6 +119,7 @@ instance HasAtomicity Expression where
     ExpressionApplication a -> atomicity a
     ExpressionFunction f -> atomicity f
     ExpressionLiteral f -> atomicity f
+    ExpressionLambda l -> atomicity l
 
 data Application = Application
   { _appLeft :: Expression,
@@ -130,12 +131,15 @@ data Application = Application
 instance HasAtomicity Application where
   atomicity = const (Aggregate appFixity)
 
+instance HasAtomicity Lambda where
+  atomicity = const Atom
+
 newtype Lambda = Lambda
   {_lambdaClauses :: [LambdaClause]}
   deriving stock (Eq, Show)
 
 data LambdaClause = LambdaClause
-  { _lambdaParameters :: NonEmpty Pattern,
+  { _lambdaParameters :: NonEmpty PatternArg,
     _lambdaBody :: Expression
   }
   deriving stock (Eq, Show)

@@ -40,10 +40,10 @@ instance PrettyCode Iden where
     IdenAxiom a -> ppCode a
     IdenInductive a -> ppCode a
 
-instance PrettyCode Lambda where
+instance PrettyCode SimpleLambda where
   ppCode l = do
-    b' <- ppCode (l ^. lambdaBody)
-    v' <- ppCode (l ^. lambdaVar)
+    b' <- ppCode (l ^. slambdaBody)
+    v' <- ppCode (l ^. slambdaVar)
     return $ kwLambda <+> braces (v' <+> kwAssign <+> b')
 
 instance PrettyCode Application where
@@ -68,7 +68,19 @@ instance PrettyCode Expression where
     ExpressionFunction f -> ppCode f
     ExpressionUniverse u -> ppCode u
     ExpressionLiteral l -> return (pretty l)
+    ExpressionSimpleLambda l -> ppCode l
     ExpressionLambda l -> ppCode l
+
+instance PrettyCode LambdaClause where
+  ppCode LambdaClause {..} = do
+    lambdaParameters' <- hsep <$> mapM ppCodeAtom _lambdaPatterns
+    lambdaBody' <- ppCode _lambdaBody
+    return $ lambdaParameters' <+> kwAssign <+> lambdaBody'
+
+instance PrettyCode Lambda where
+  ppCode Lambda {..} = do
+    lambdaClauses' <- ppBlock _lambdaClauses
+    return $ kwLambda <+> lambdaClauses'
 
 instance PrettyCode BackendItem where
   ppCode BackendItem {..} = do
@@ -151,9 +163,9 @@ instance PrettyCode FunctionDef where
 instance PrettyCode FunctionClause where
   ppCode c = do
     funName <- ppCode (c ^. clauseName)
-    clausePatterns' <- mapM ppCodeAtom (c ^. clausePatterns)
+    clausePatterns' <- hsepMaybe <$> mapM ppCodeAtom (c ^. clausePatterns)
     clauseBody' <- ppCode (c ^. clauseBody)
-    return $ funName <+> hsep clausePatterns' <+> kwAssign <+> clauseBody'
+    return $ funName <+?> clausePatterns' <+> kwAssign <+> clauseBody'
 
 instance PrettyCode Backend where
   ppCode = \case

@@ -314,7 +314,7 @@ goExpression = \case
   ExpressionInfixApplication ia -> Abstract.ExpressionApplication <$> goInfix ia
   ExpressionPostfixApplication pa -> Abstract.ExpressionApplication <$> goPostfix pa
   ExpressionLiteral l -> return (Abstract.ExpressionLiteral l)
-  ExpressionLambda {} -> unsupported "Lambda"
+  ExpressionLambda l -> Abstract.ExpressionLambda <$> goLambda l
   ExpressionBraces b -> throw (ErrAppLeftImplicit (AppLeftImplicit b))
   ExpressionLetBlock {} -> unsupported "Let Block"
   ExpressionUniverse uni -> return (Abstract.ExpressionUniverse (goUniverse uni))
@@ -352,6 +352,15 @@ goExpression = \case
           l'' = Abstract.ExpressionApplication (Abstract.Application op' l' Explicit)
       r' <- goExpression r
       return (Abstract.Application l'' r' Explicit)
+
+goLambda :: forall r. Member (Error ScoperError) r => Lambda 'Scoped -> Sem r Abstract.Lambda
+goLambda (Lambda cl) = Abstract.Lambda <$> mapM goClause cl
+  where
+    goClause :: LambdaClause 'Scoped -> Sem r Abstract.LambdaClause
+    goClause (LambdaClause ps b) = do
+      ps' <- mapM goPatternArg ps
+      b' <- goExpression b
+      return (Abstract.LambdaClause ps' b')
 
 goUniverse :: Universe -> Universe
 goUniverse = id

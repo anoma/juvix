@@ -146,6 +146,10 @@ matchExpressions = go
         goApp ia ib
       (ExpressionApplication {}, _) -> err
       (_, ExpressionApplication {}) -> err
+      (ExpressionLambda ia, ExpressionLambda ib) ->
+        goLambda ia ib
+      (ExpressionLambda {}, _) -> err
+      (_, ExpressionLambda {}) -> err
       (ExpressionUniverse ia, ExpressionUniverse ib) ->
         unless (ia == ib) err
       (ExpressionUniverse {}, _) -> err
@@ -163,6 +167,8 @@ matchExpressions = go
     addIfFreeVar va vb = whenM (isSoftFreeVar va) (addName va vb)
     err :: Sem r a
     err = throw @Text "Expression missmatch"
+    goLambda :: Lambda -> Lambda -> Sem r ()
+    goLambda = error "TODO not implemented yet"
     goApp :: Application -> Application -> Sem r ()
     goApp (Application al ar aim) (Application bl br bim) = do
       unless (aim == bim) err

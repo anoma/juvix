@@ -240,6 +240,16 @@ map' f (h : t) =
    in let !vs = map' f t
        in v : vs
 
+-- | longest common prefix
+commonPrefix :: forall a. Eq a => [a] -> [a] -> [a]
+commonPrefix a b = reverse (go [] a b)
+  where
+    go :: [a] -> [a] -> [a] -> [a]
+    go ac x y = case (x, y) of
+      (x' : xs, y' : ys)
+        | x' == y' -> go (x' : ac) xs ys
+      _ -> ac
+
 --------------------------------------------------------------------------------
 -- NonEmpty
 --------------------------------------------------------------------------------

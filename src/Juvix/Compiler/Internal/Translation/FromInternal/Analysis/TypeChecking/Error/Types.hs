@@ -11,8 +11,7 @@ import Juvix.Prelude
 data WrongConstructorType = WrongConstructorType
   { _wrongCtorTypeName :: Name,
     _wrongCtorTypeExpected :: InductiveName,
-    _wrongCtorTypeActual :: InductiveName,
-    _wrongCtorTypeFunName :: Name
+    _wrongCtorTypeActual :: InductiveName
   }
 
 makeLenses ''WrongConstructorType

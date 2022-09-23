@@ -219,19 +219,36 @@ isSmallType e = case e of
 isSmallUni :: Universe -> Bool
 isSmallUni u = 0 == fromMaybe 0 (u ^. universeLevel)
 
-goTypeUniverse :: Universe -> Expression
-goTypeUniverse u
-  | isSmallUni u = smallUniverseE (getLoc u)
+goUniverse :: Universe -> SmallUniverse
+goUniverse u
+  | isSmallUni u = SmallUniverse (getLoc u)
   | otherwise = unsupported "big universes"
 
 goType :: Abstract.Expression -> Sem r Expression
 goType e = case e of
   Abstract.ExpressionIden i -> return (ExpressionIden (goTypeIden i))
-  Abstract.ExpressionUniverse u -> return (goTypeUniverse u)
+  Abstract.ExpressionUniverse u -> return (ExpressionUniverse (goUniverse u))
   Abstract.ExpressionApplication a -> ExpressionApplication <$> goTypeApplication a
   Abstract.ExpressionFunction f -> ExpressionFunction <$> goFunction f
   Abstract.ExpressionLiteral {} -> unsupported "literals in types"
   Abstract.ExpressionHole h -> return (ExpressionHole h)
+  Abstract.ExpressionLambda {} -> unsupported "lambda in types"
+
+goLambda :: forall r. Abstract.Lambda -> Sem r Lambda
+goLambda (Abstract.Lambda cl) = case nonEmpty cl of
+  Nothing -> unsupported "empty lambda"
+  Just cl' -> Lambda <$> mapM goClause cl'
+  where
+    goClause :: Abstract.LambdaClause -> Sem r LambdaClause
+    goClause (Abstract.LambdaClause ps b) = do
+      ps' <- mapM (goPattern . explicit) ps
+      b' <- goExpression b
+      return (LambdaClause ps' b')
+      where
+        explicit :: Abstract.PatternArg -> Abstract.Pattern
+        explicit (Abstract.PatternArg i p) = case i of
+          Explicit -> p
+          _ -> unsupported "implicit patterns in lambda"
 
 goApplication :: Abstract.Application -> Sem r Application
 goApplication (Abstract.Application f x i) = do
@@ -263,9 +280,10 @@ goExpressionFunction f = do
 goExpression :: Abstract.Expression -> Sem r Expression
 goExpression e = case e of
   Abstract.ExpressionIden i -> return (ExpressionIden (goIden i))
-  Abstract.ExpressionUniverse {} -> unsupported "universes in expression"
+  Abstract.ExpressionUniverse u -> return (ExpressionUniverse (goUniverse u))
   Abstract.ExpressionFunction f -> ExpressionFunction <$> goExpressionFunction f
   Abstract.ExpressionApplication a -> ExpressionApplication <$> goApplication a
+  Abstract.ExpressionLambda l -> ExpressionLambda <$> goLambda l
   Abstract.ExpressionLiteral l -> return (ExpressionLiteral l)
   Abstract.ExpressionHole h -> return (ExpressionHole h)
 
@@ -333,6 +351,7 @@ viewConstructorType = \case
     return ([], ExpressionApplication a')
   Abstract.ExpressionUniverse u -> return ([], smallUniverseE (getLoc u))
   Abstract.ExpressionLiteral {} -> unsupported "literal in a type"
+  Abstract.ExpressionLambda {} -> unsupported "lambda in a constructor type"
   where
     viewFunctionType :: Abstract.Function -> Sem r (NonEmpty Expression, Expression)
     viewFunctionType (Abstract.Function p r) = do

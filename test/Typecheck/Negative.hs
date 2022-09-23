@@ -1,4 +1,4 @@
-module TypeCheck.Negative where
+module Typecheck.Negative where
 
 import Base
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
