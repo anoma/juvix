@@ -169,7 +169,7 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
     nodeFromBool :: Bool -> Node
     nodeFromBool b = mkConstr' (BuiltinTag tag) []
       where
-        tag
+        !tag
           | b = TagTrue
           | otherwise = TagFalse
 
