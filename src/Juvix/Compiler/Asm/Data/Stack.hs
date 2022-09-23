@@ -14,7 +14,7 @@ empty :: Stack a
 empty = Stack {_stackValues = mempty, _stackHeight = 0}
 
 fromList :: [a] -> Stack a
-fromList = foldl' (flip push) empty
+fromList = foldr push empty
 
 instance Foldable Stack where
   foldr :: (a -> b -> b) -> b -> Stack a -> b

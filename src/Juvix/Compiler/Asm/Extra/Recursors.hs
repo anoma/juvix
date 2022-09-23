@@ -236,7 +236,7 @@ recurse' sig = go True
       (mem2, as2) <- go isTail mem0 _cmdBranchFalse
       a' <- (sig ^. recurseBranch) mem cmd as1 as2
       mem' <- unifyMemory' loc (sig ^. recursorInfoTable) mem1 mem2
-      checkBranchInvariant loc mem0 mem'
+      checkBranchInvariant 1 loc mem0 mem'
       return (mem', a')
       where
         loc = cmd ^. (cmdBranchInfo . commandInfoLocation)
@@ -256,19 +256,16 @@ recurse' sig = go True
         mem0 : mems' -> do
           mem' <- foldr (\m rm -> rm >>= unifyMemory' loc (sig ^. recursorInfoTable) m) (return mem0) mems'
           mem'' <- maybe (return mem') (unifyMemory' loc (sig ^. recursorInfoTable) mem') md
-          checkBranchInvariant loc mem mem''
+          checkBranchInvariant 0 loc mem mem''
           return (mem'', a')
       where
         loc = cmd ^. (cmdCaseInfo . commandInfoLocation)
 
-    checkBranchInvariant :: Maybe Location -> Memory -> Memory -> Sem r ()
-    checkBranchInvariant loc mem mem' = do
-      unless
-        ( length (mem' ^. memoryValueStack) == length (mem ^. memoryValueStack)
-            || length (mem' ^. memoryValueStack) == length (mem ^. memoryValueStack) + 1
-        )
-        $ throw
-        $ AsmError loc "wrong value stack height after branching (can increase by at most 1)"
+    checkBranchInvariant :: Int -> Maybe Location -> Memory -> Memory -> Sem r ()
+    checkBranchInvariant k loc mem mem' = do
+      unless (length (mem' ^. memoryValueStack) == length (mem ^. memoryValueStack) + k) $
+        throw $
+          AsmError loc ("wrong value stack height after branching (must increase by " `mappend` show k `mappend` ")")
       unless
         ( null (mem' ^. memoryTempStack)
             || length (mem' ^. memoryTempStack) == length (mem ^. memoryTempStack)

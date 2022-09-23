@@ -1,0 +1,166 @@
+-- Temporary stack with branching
+
+inductive tree {
+  leaf : tree;
+  node : tree -> tree -> tree;
+}
+
+function gen(integer) : tree {
+  push 0;
+  push arg[0];
+  le;
+  br {
+    true: {
+      alloc leaf;
+      ret;
+    }
+    false: {
+      push 1;
+      push arg[0];
+      sub;
+      call gen;
+      push 2;
+      push arg[0];
+      sub;
+      call gen;
+      alloc node;
+      ret;
+    }
+  };
+}
+
+function g(tree) : tree;
+
+function f(tree) : integer {
+  push arg[0];
+  case tree {
+    leaf: {
+      pop;
+      push 1;
+      ret;
+    }
+    node: {
+      pusht;
+      push tmp[0].node[0];
+      call g;
+      pusht;
+      push tmp[0].node[1];
+      call g;
+      pusht;
+      push tmp[1];
+      case tree {
+        leaf: {
+          pop;
+          push 3;
+          push 0;
+          sub;
+        }
+        node: {
+          pusht;
+          push tmp[3].node[1];
+          call f;
+          push tmp[3].node[0];
+          call f;
+          add;
+          popt;
+        }
+      };
+      pusht;
+      push tmp[2];
+      case tree {
+        node: {
+          pusht;
+          push tmp[4].node[1];
+          call f;
+          push tmp[4].node[0];
+          call f;
+          add;
+          popt;
+        }
+        default: {
+          pop;
+          push 2;
+        }
+      };
+      pusht;
+      push tmp[3];
+      push tmp[4];
+      mul;
+      ret;
+    }
+  };
+}
+
+function isNode(tree) : bool {
+  push arg[0];
+  case tree {
+    node: { pop; push true; ret; }
+    default: { pop; push false; ret; }
+  };
+}
+
+function isLeaf(tree) : bool {
+  push arg[0];
+  case tree {
+    leaf: { pop; push true; ret; }
+    default: { pop; push false; ret; }
+  };
+}
+
+function g(tree) : tree {
+  push arg[0];
+  call isLeaf;
+  br {
+    true: {
+      push arg[0];
+      ret;
+    }
+    false: {
+      push arg[0];
+      case tree {
+        node: {
+          pusht;
+          push tmp[0].node[0];
+          call isNode;
+          br {
+            true: {
+              push tmp[0].node[1];
+              ret;
+            }
+            false: {
+              push tmp[0].node[1];
+              push tmp[0].node[0];
+              alloc node;
+              ret;
+            }
+          };
+        }
+      };
+    }
+  };
+}
+
+function main() {
+  push 10;
+  call gen;
+  call f;
+  trace;
+  pop;
+  push 15;
+  call gen;
+  call f;
+  trace;
+  pop;
+  push 16;
+  call gen;
+  call f;
+  trace;
+  pop;
+  push 17;
+  call gen;
+  call f;
+  trace;
+  pop;
+  push void;
+  ret;
+}

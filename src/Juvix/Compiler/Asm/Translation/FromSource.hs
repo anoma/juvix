@@ -119,7 +119,7 @@ statementFunction = do
             _functionType = mkTypeFun argtys rty
           }
   lift $ registerFunction fi0
-  mcode <- optional (braces parseCode)
+  mcode <- (kwSemicolon >> return Nothing) <|> optional (braces parseCode)
   let fi = fi0 {_functionCode = fromMaybe [] mcode}
   case idt of
     Just (IdentFwd _) -> do

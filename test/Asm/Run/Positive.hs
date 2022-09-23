@@ -159,5 +159,30 @@ tests =
       "Currying & uncurrying"
       "."
       "test026.jva"
-      "out/test026.out"
+      "out/test026.out",
+    PosTest
+      "Fast exponentiation"
+      "."
+      "test027.jva"
+      "out/test027.out",
+    PosTest
+      "Lists"
+      "."
+      "test028.jva"
+      "out/test028.out",
+    PosTest
+      "Structural equality"
+      "."
+      "test029.jva"
+      "out/test029.out",
+    PosTest
+      "Mutual recursion"
+      "."
+      "test030.jva"
+      "out/test030.out",
+    PosTest
+      "Temporary stack with branching"
+      "."
+      "test031.jva"
+      "out/test031.out"
   ]

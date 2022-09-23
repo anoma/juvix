@@ -1,0 +1,71 @@
+-- fast exponentiation
+
+function power'(integer, integer, integer) : integer {
+  push arg[1];
+  push 0;
+  eq;
+  br {
+    true: {
+      push arg[2];
+      ret;
+    }
+    false: {
+      push 2;
+      push arg[1];
+      mod;
+      push 0;
+      eq;
+      br {
+        true: {
+          push arg[2];
+          push 2;
+          push arg[1];
+          div;
+          push arg[0];
+          push $;
+          mul;
+          tcall power';
+        }
+        false: {
+          push arg[2];
+          push arg[0];
+          mul;
+          push 2;
+          push arg[1];
+          div;
+          push arg[0];
+          push $;
+          mul;
+          tcall power';
+        }
+      };
+    }
+  };
+}
+
+function power(integer, integer) : integer {
+  push 1;
+  push arg[1];
+  push arg[0];
+  tcall power';
+}
+
+function main() {
+  push 3;
+  push 2;
+  call power;
+  trace;
+  pop;
+  push 7;
+  push 3;
+  call power;
+  trace;
+  pop;
+  push 21;
+  push 5;
+  call power;
+  trace;
+  pop;
+  push void;
+  ret;
+}

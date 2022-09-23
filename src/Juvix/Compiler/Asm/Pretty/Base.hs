@@ -97,11 +97,11 @@ instance PrettyCode ArgumentArea where
 
 instance PrettyCode TemporaryStack where
   ppCode TemporaryStack {..} =
-    ppCode $ toList _temporaryStack
+    ppCode $ reverse $ toList _temporaryStack
 
 instance PrettyCode ValueStack where
   ppCode ValueStack {..} =
-    ppCode _valueStack
+    ppCode $ reverse _valueStack
 
 instance PrettyCode Frame where
   ppCode Frame {..} = do
