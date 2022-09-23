@@ -1,0 +1,243 @@
+-- Church numerals
+
+inductive Pair {
+  pair : * -> * -> Pair;
+}
+
+function fst(Pair) {
+  push arg[0].pair[0];
+  ret;
+}
+
+function snd(Pair) {
+  push arg[0].pair[1];
+  ret;
+}
+
+function compose(* -> *, * -> *, *) : * {
+  push arg[2];
+  push arg[1];
+  call $ 1;
+  push arg[0];
+  tcall $ 1;
+}
+
+function zero(* -> *, *) {
+  push arg[1];
+  ret;
+}
+
+function num(integer, * -> *, *) {
+  push arg[0];
+  push 0;
+  eq;
+  br {
+    true: {
+      push arg[2];
+      push arg[1];
+      tcall zero;
+    }
+    false: {
+      push arg[2];
+      push arg[1];
+      push 1;
+      push arg[0];
+      sub;
+      calloc num 2;
+      push arg[1];
+      tcall compose;
+    }
+  };
+}
+
+function succ((* -> *, *) -> *, * -> *) : * -> * {
+  push arg[1];
+  push arg[0];
+  cextend 1;
+  push arg[1];
+  calloc compose 2;
+  ret;
+}
+
+function add((* -> *, *) -> *, (* -> *, *) -> *, * -> *) : * -> * {
+  push arg[2];
+  push arg[1];
+  cextend 1;
+  push arg[2];
+  push arg[0];
+  cextend 1;
+  calloc compose 2;
+  ret;
+}
+
+function mul((* -> *, *) -> *, (* -> *, *) -> *, * -> *) : * -> * {
+  push arg[2];
+  push arg[1];
+  cextend 1;
+  push arg[0];
+  cextend 1;
+  ret;
+}
+
+function const(*, *) {
+  push arg[0];
+  ret;
+}
+
+function isZero((* -> *, *) -> *) : bool {
+  push true;
+  push false;
+  calloc const 1;
+  push arg[0];
+  tcall $ 2;
+}
+
+function uncurry(*, * -> *, *) {
+  push arg[2];
+  push arg[1];
+  push arg[0];
+  tccall 2;
+}
+
+function pred_step(Pair) : (* -> *, *) -> * {
+  push arg[0].pair[1];
+  call isZero;
+  br {
+    true: {
+      push arg[0].pair[1];
+      calloc succ 1;
+      calloc uncurry 1;
+      push arg[0].pair[0];
+      alloc pair;
+      ret;
+    }
+    false: {
+      push arg[0].pair[1];
+      calloc succ 1;
+      calloc uncurry 1;
+      push arg[0].pair[0];
+      calloc succ 1;
+      calloc uncurry 1;
+      alloc pair;
+      ret;
+    }
+  };
+}
+
+function pred((* -> *, *) -> *) : (* -> *, *) -> * {
+  calloc zero 0;
+  push $;
+  alloc pair;
+  calloc pred_step 0;
+  push arg[0];
+  call $ 2;
+  pusht;
+  push tmp[0].pair[0];
+  ret;
+}
+
+function inc(integer) : integer {
+  push arg[0];
+  push 1;
+  add;
+  ret;
+}
+
+function toInt((* -> *, *) -> *) : integer {
+  push 0;
+  calloc inc 0;
+  push arg[0];
+  tcall $ 2;
+}
+
+function fib((* -> *, *) -> *) : (* -> *, *) -> * {
+  push arg[0];
+  call isZero;
+  br {
+    true: {
+      calloc zero 0;
+      ret;
+    }
+    false: {
+      push arg[0];
+      call pred;
+      pusht;
+      push tmp[0];
+      call isZero;
+      br {
+        true: {
+          calloc zero 0;
+          calloc succ 1;
+          calloc uncurry 1;
+          ret;
+        }
+        false: {
+          push tmp[0];
+          call pred;
+          call fib;
+          push tmp[0];
+          call fib;
+          calloc add 2;
+          calloc uncurry 1;
+          ret;
+        }
+      };
+    }
+  };
+}
+
+function main() {
+  push 7;
+  calloc num 1;
+  call toInt;
+  trace;
+  pop;
+
+  push 3;
+  calloc num 1;
+  push 7;
+  calloc num 1;
+  calloc mul 2;
+  calloc uncurry 1;
+  call toInt;
+  trace;
+  pop;
+
+  push 7;
+  calloc num 1;
+  call pred;
+  call toInt;
+  trace;
+  pop;
+
+  push 5;
+  calloc num 1;
+  call fib;
+  call toInt;
+  trace;
+  pop;
+
+  push 6;
+  calloc num 1;
+  call fib;
+  call toInt;
+  trace;
+  pop;
+
+  push 7;
+  calloc num 1;
+  call fib;
+  call toInt;
+  trace;
+  pop;
+
+  push 8;
+  calloc num 1;
+  call fib;
+  call toInt;
+  trace;
+  pop;
+
+  push void;
+  ret;
+}

@@ -184,5 +184,10 @@ tests =
       "Temporary stack with branching"
       "."
       "test031.jva"
-      "out/test031.out"
+      "out/test031.out",
+    PosTest
+      "Church numerals"
+      "."
+      "test032.jva"
+      "out/test032.out"
   ]
