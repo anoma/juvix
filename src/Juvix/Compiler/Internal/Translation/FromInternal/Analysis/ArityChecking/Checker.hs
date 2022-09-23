@@ -383,14 +383,14 @@ checkExpression ::
   Expression ->
   Sem r Expression
 checkExpression hintArity expr = case expr of
-    ExpressionIden {} -> appHelper expr []
-    ExpressionApplication a -> goApp a
-    ExpressionLiteral {} -> appHelper expr []
-    ExpressionFunction {} -> return expr
-    ExpressionUniverse {} -> return expr
-    ExpressionHole {} -> return expr
-    ExpressionSimpleLambda {} -> simplelambda
-    ExpressionLambda l -> ExpressionLambda <$> checkLambda hintArity l
+  ExpressionIden {} -> appHelper expr []
+  ExpressionApplication a -> goApp a
+  ExpressionLiteral {} -> appHelper expr []
+  ExpressionFunction {} -> return expr
+  ExpressionUniverse {} -> return expr
+  ExpressionHole {} -> return expr
+  ExpressionSimpleLambda {} -> simplelambda
+  ExpressionLambda l -> ExpressionLambda <$> checkLambda hintArity l
   where
     goApp :: Application -> Sem r Expression
     goApp = uncurry appHelper . second toList . unfoldApplication'
