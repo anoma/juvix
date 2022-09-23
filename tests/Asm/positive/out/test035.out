@@ -1,0 +1,2 @@
+cons (cons 4 (cons 3 (cons 2 (cons 1 nil)))) (cons (cons 3 (cons 2 (cons 1 nil))) (cons (cons 2 (cons 1 nil)) (cons (cons 1 nil) nil)))
+cons 4 (cons 3 (cons 2 (cons 1 (cons 3 (cons 2 (cons 1 (cons 2 (cons 1 (cons 1 nil)))))))))

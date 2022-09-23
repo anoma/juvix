@@ -14,9 +14,9 @@ data FunctionInfo = FunctionInfo
   { _functionName :: Text,
     _functionLocation :: Maybe Location,
     _functionSymbol :: Symbol,
-    -- | `_functionArgsNum` should always be equal to `length (typeArgs
-    -- (_functionType))`. It is stored separately mainly for the benefit of the
-    -- interpreter (so it does not have to recompute it every time).
+    -- | `_functionArgsNum` may be different from `length (typeArgs
+    -- (_functionType))` only if it is 0 (the "function" takes zero arguments)
+    -- and the result is a function.
     _functionArgsNum :: Int,
     _functionType :: Type,
     _functionCode :: Code

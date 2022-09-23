@@ -242,6 +242,7 @@ typeNamed = do
     "integer" -> return mkTypeInteger
     "bool" -> return mkTypeBool
     "string" -> return TyString
+    "unit" -> return TyUnit
     _ -> do
       idt <- lift $ getIdent txt
       case idt of

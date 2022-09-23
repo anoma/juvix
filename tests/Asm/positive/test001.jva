@@ -1,10 +1,20 @@
 -- Arithmetic opcodes
 
 function main () {
+  push 12;
   push 5;
   push 3;
   push 2;
   mul;
   add;
+  push 15;
+  sub;
+  push 9;
+  div;
+  push 7;
+  mul;
+  push 25;
+  sub;
+  mod;
   ret;
 }

@@ -1,0 +1,113 @@
+-- streams without memoization
+
+inductive stream {
+  cons : integer -> (unit -> stream) -> stream;
+}
+
+function force(unit -> stream) : stream {
+  push unit;
+  push arg[0];
+  tcall $ 1;
+}
+
+function filter(integer -> bool, unit -> stream, unit) : stream {
+  push arg[1];
+  call force;
+  pusht;
+  push tmp[0].cons[0];
+  push arg[0];
+  call $ 1;
+  br {
+    true: {
+      push tmp[0].cons[1];
+      push arg[0];
+      calloc filter 2;
+      push tmp[0].cons[0];
+      alloc cons;
+      ret;
+    }
+    false: {
+      push unit;
+      push tmp[0].cons[1];
+      push arg[0];
+      tcall filter;
+    }
+  };
+}
+
+function nth(integer, unit -> stream) : integer {
+  push arg[1];
+  call force;
+  pusht;
+  push arg[0];
+  push 0;
+  eq;
+  br {
+    true: { push tmp[0].cons[0]; ret; }
+    false: {
+      push tmp[0].cons[1];
+      push 1;
+      push arg[0];
+      sub;
+      tcall nth;
+    }
+  };
+}
+
+function numbers(integer, unit) : stream {
+  push arg[0];
+  push 1;
+  add;
+  calloc numbers 1;
+  push arg[0];
+  alloc cons;
+  ret;
+}
+
+function indivisible(integer, integer) : bool {
+  push arg[0];
+  push arg[1];
+  mod;
+  push 0;
+  eq;
+  br {
+    true: { push false; ret; }
+    false: { push true; ret; }
+  };
+}
+
+function eratostenes(unit -> stream, unit) : stream {
+  push arg[0];
+  call force;
+  pusht;
+  push tmp[0].cons[1];
+  push tmp[0].cons[0];
+  calloc indivisible 1;
+  calloc filter 2;
+  calloc eratostenes 1;
+  push tmp[0].cons[0];
+  alloc cons;
+  ret;
+}
+
+function primes() : unit -> stream {
+  push 2;
+  calloc numbers 1;
+  calloc eratostenes 1;
+  ret;
+}
+
+function main() {
+  call primes;
+  push 10;
+  call nth;
+  trace;
+  pop;
+  call primes;
+  push 50;
+  call nth;
+  trace;
+  pop;
+  push void;
+  ret;
+}

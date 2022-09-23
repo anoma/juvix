@@ -174,8 +174,11 @@ recurse' sig = go True
           let ty = case _callType of
                 CallClosure -> topValueStack' 0 mem
                 CallFun sym -> getFunInfo (sig ^. recursorInfoTable) sym ^. functionType
+          let argsNum = case _callType of
+                CallClosure -> length (typeArgs ty)
+                CallFun sym -> getFunInfo (sig ^. recursorInfoTable) sym ^. functionArgsNum
           checkFunType ty
-          when (ty /= TyDynamic && length (typeArgs ty) /= _callArgsNum) $
+          when (ty /= TyDynamic && argsNum /= _callArgsNum) $
             throw $
               AsmError loc "invalid call: the number of supplied arguments doesn't match the number of expected arguments"
           fixMemValueStackArgs mem k _callArgsNum ty

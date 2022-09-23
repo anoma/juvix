@@ -1,0 +1,81 @@
+-- Ackermann function
+
+function ack(integer, integer) : integer {
+  push 0;
+  push arg[0];
+  eq;
+  br {
+    true: {
+      push 1;
+      push arg[1];
+      add;
+      ret;
+    }
+    false: {
+      push 0;
+      push arg[1];
+      eq;
+      br {
+        true: {
+          push 1;
+          push 1;
+          push arg[0];
+          sub;
+          tcall ack;
+        }
+        false: {
+          push 1;
+          push arg[1];
+          sub;
+          push arg[0];
+          call ack;
+          push 1;
+          push arg[0];
+          sub;
+          tcall ack;
+        }
+      };
+    }
+  };
+}
+
+function main() {
+  push 7;
+  push 0;
+  call ack;
+  trace;
+  pop;
+
+  push 7;
+  push 1;
+  call ack;
+  trace;
+  pop;
+
+  push 13;
+  push 1;
+  call ack;
+  trace;
+  pop;
+
+  push 7;
+  push 2;
+  call ack;
+  trace;
+  pop;
+
+  push 13;
+  push 2;
+  call ack;
+  trace;
+  pop;
+
+  push 4;
+  push 3;
+  call ack;
+  trace;
+  pop;
+
+  push void;
+  ret;
+}

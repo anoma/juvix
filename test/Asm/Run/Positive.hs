@@ -189,5 +189,25 @@ tests =
       "Church numerals"
       "."
       "test032.jva"
-      "out/test032.out"
+      "out/test032.out",
+    PosTest
+      "Ackermann function"
+      "."
+      "test033.jva"
+      "out/test033.out",
+    PosTest
+      "Higher-order function composition"
+      "."
+      "test034.jva"
+      "out/test034.out",
+    PosTest
+      "Nested lists"
+      "."
+      "test035.jva"
+      "out/test035.out",
+    PosTest
+      "Streams without memoization"
+      "."
+      "test036.jva"
+      "out/test036.out"
   ]
