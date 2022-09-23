@@ -122,38 +122,71 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
         evalError "no matching pattern" (substEnv env n)
 
     applyBuiltin :: Node -> Env -> BuiltinOp -> [Node] -> Node
-    applyBuiltin _ env OpIntAdd [l, r] = nodeFromInteger (integerFromNode (eval' env l) + integerFromNode (eval' env r))
-    applyBuiltin _ env OpIntSub [l, r] = nodeFromInteger (integerFromNode (eval' env l) - integerFromNode (eval' env r))
-    applyBuiltin _ env OpIntMul [l, r] = nodeFromInteger (integerFromNode (eval' env l) * integerFromNode (eval' env r))
-    applyBuiltin n env OpIntDiv [l, r] =
-      let !vl = eval' env l
-       in case integerFromNode (eval' env r) of
-            0 -> evalError "division by zero" (substEnv env n)
-            k -> nodeFromInteger (div (integerFromNode vl) k)
-    applyBuiltin n env OpIntMod [l, r] =
-      let !vl = eval' env l
-       in case integerFromNode (eval' env r) of
-            0 -> evalError "division by zero" (substEnv env n)
-            k -> nodeFromInteger (mod (integerFromNode vl) k)
-    applyBuiltin _ env OpIntLt [l, r] = nodeFromBool (integerFromNode (eval' env l) < integerFromNode (eval' env r))
-    applyBuiltin _ env OpIntLe [l, r] = nodeFromBool (integerFromNode (eval' env l) <= integerFromNode (eval' env r))
-    applyBuiltin _ env OpEq [l, r] = nodeFromBool (structEq (eval' env l) (eval' env r))
-    applyBuiltin _ env OpTrace [msg, x] = Debug.trace (printNode (eval' env msg)) (eval' env x)
-    applyBuiltin _ env OpFail [msg] =
-      Exception.throw (EvalError (fromString ("failure: " ++ printNode (eval' env msg))) Nothing)
-    applyBuiltin n env _ _ = evalError "invalid builtin application" (substEnv env n)
+    applyBuiltin n env = \case
+      OpIntAdd -> binNumOp (+)
+      OpIntSub -> binNumOp (-)
+      OpIntMul -> binNumOp (*)
+      OpIntLt -> binNumCmpOp (<)
+      OpIntLe -> binNumCmpOp (<=)
+      OpEq -> binOp nodeFromBool id structEq
+      OpIntDiv -> divOp div
+      OpIntMod -> divOp mod
+      OpFail -> unary $ \msg -> Exception.throw (EvalError (fromString ("failure: " ++ printNode (eval' env msg))) Nothing)
+      OpTrace -> binary $ \msg x -> Debug.trace (printNode (eval' env msg)) (eval' env x)
+      where
+        err :: Text -> a
+        err msg = evalError msg n
+
+        unary :: (Node -> Node) -> [Node] -> Node
+        unary op = \case
+          [arg] -> op arg
+          _ -> err "wrong number of arguments for unary operator"
+        {-# INLINE unary #-}
+
+        binary :: (Node -> Node -> Node) -> [Node] -> Node
+        binary op = \case
+          [l, r] -> op l r
+          _ -> err "wrong number of arguments for binary operator"
+        {-# INLINE binary #-}
+
+        divOp :: (Integer -> Integer -> Integer) -> [Node] -> Node
+        divOp op = binary $ \l r ->
+          let !vl = eval' env l
+           in case integerFromNode (eval' env r) of
+                0 -> evalError "division by zero" (substEnv env n)
+                k -> nodeFromInteger (op (integerFromNode vl) k)
+        {-# INLINE divOp #-}
+
+        binOp :: (b -> Node) -> (Node -> a) -> (a -> a -> b) -> [Node] -> Node
+        binOp toNode toA op = binary $ \l r -> toNode (toA (eval' env l) `op` toA (eval' env r))
+        {-# INLINE binOp #-}
+
+        binNumCmpOp :: (Integer -> Integer -> Bool) -> [Node] -> Node
+        binNumCmpOp = binOp nodeFromBool integerFromNode
+        {-# INLINE binNumCmpOp #-}
+
+        binNumOp :: (Integer -> Integer -> Integer) -> [Node] -> Node
+        binNumOp = binOp nodeFromInteger integerFromNode
+        {-# INLINE binNumOp #-}
+    {-# INLINE applyBuiltin #-}
 
     nodeFromInteger :: Integer -> Node
     nodeFromInteger !int = mkConstant' (ConstInteger int)
+    {-# INLINE nodeFromInteger #-}
 
     nodeFromBool :: Bool -> Node
-    nodeFromBool True = mkConstr' (BuiltinTag TagTrue) []
-    nodeFromBool False = mkConstr' (BuiltinTag TagFalse) []
+    nodeFromBool b = mkConstr' (BuiltinTag tag) []
+      where
+        !tag
+          | b = TagTrue
+          | otherwise = TagFalse
+    {-# INLINE nodeFromBool #-}
 
     integerFromNode :: Node -> Integer
     integerFromNode = \case
       NCst (Constant _ (ConstInteger int)) -> int
       v -> evalError "not an integer" v
+    {-# INLINE integerFromNode #-}
 
     printNode :: Node -> String
     printNode = \case
@@ -165,6 +198,7 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       case HashMap.lookup sym ctx of
         Just n' -> n'
         Nothing -> evalError "symbol not defined" n
+    {-# INLINE lookupContext #-}
 
 -- Evaluate `node` and interpret the builtin IO actions.
 hEvalIO :: Handle -> Handle -> IdentContext -> Env -> Node -> IO Node
