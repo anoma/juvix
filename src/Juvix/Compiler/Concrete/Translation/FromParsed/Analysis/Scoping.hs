@@ -1477,18 +1477,12 @@ makePatternTable ::
 makePatternTable (PatternAtoms latoms _) = [appOp] : operators
   where
     getConstructorRef :: PatternAtom 'Scoped -> Maybe ConstructorRef
-    getConstructorRef s = case s of
-      PatternAtomIden iden -> case iden of
-        PatternScopedConstructor r -> Just r
-        PatternScopedVar {} -> Nothing
-      _ -> Nothing
-    operators = mkSymbolTable (mapMaybe constructorRefs (toList latoms))
-    constructorRefs :: PatternAtom 'Scoped -> Maybe ConstructorRef
-    constructorRefs = \case
+    getConstructorRef = \case
       PatternAtomIden i -> case i of
         PatternScopedConstructor c -> Just c
         _ -> Nothing
       _ -> Nothing
+    operators = mkSymbolTable (mapMaybe getConstructorRef (toList latoms))
     mkSymbolTable :: [ConstructorRef] -> [[P.Operator ParsePat PatternArg]]
     mkSymbolTable = reverse . map (map snd) . groupSortOn' fst . mapMaybe unqualifiedSymbolOp
       where
