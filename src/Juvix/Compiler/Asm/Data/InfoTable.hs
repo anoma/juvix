@@ -63,8 +63,8 @@ data MemRep
     -- constructors in its inductive type (in Haskell, such types are
     -- `newtypes`), then it can be unpacked and represented by the value of its
     -- field. If the tags are globally unique, this can be applied even if there
-    -- are other constructors, as long as no more than one unpacked value has an
-    -- untagged representation (integer, unit or tuple).
+    -- are other constructors, as long as no more than one unpacked value has
+    -- the same type.
     MemRepUnpacked
 
 makeLenses ''InfoTable
