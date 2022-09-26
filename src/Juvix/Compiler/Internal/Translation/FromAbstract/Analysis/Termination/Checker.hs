@@ -72,11 +72,19 @@ checkTypeSignature ::
 checkTypeSignature = runReader (emptySizeInfo :: SizeInfo) . checkExpression
 
 checkFunctionClause ::
+  forall r.
   Members '[State CallMap, Reader FunctionRef, Reader InfoTable] r =>
   FunctionClause ->
   Sem r ()
-checkFunctionClause FunctionClause {..} =
-  runReader (mkSizeInfo _clausePatterns) $ checkExpression _clauseBody
+checkFunctionClause FunctionClause {..} = go (reverse _clausePatterns) _clauseBody
+  where
+    go :: [PatternArg] -> Expression -> Sem r ()
+    go revArgs body = case body of
+      ExpressionLambda (Lambda cl) -> mapM_ goClause cl
+      _ -> runReader (mkSizeInfo (reverse revArgs)) (checkExpression body)
+      where
+        goClause :: LambdaClause -> Sem r ()
+        goClause (LambdaClause pats clBody) = go (reverse (toList pats) ++ revArgs) clBody
 
 checkExpression ::
   Members '[State CallMap, Reader FunctionRef, Reader InfoTable, Reader SizeInfo] r =>

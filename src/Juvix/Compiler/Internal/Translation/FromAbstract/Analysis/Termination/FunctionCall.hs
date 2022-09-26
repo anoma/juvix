@@ -14,7 +14,7 @@ viewCall ::
   Expression ->
   Sem r (Maybe FunCall)
 viewCall = \case
-  ExpressionApplication (Application f _ Implicit) -> viewCall f
+  ExpressionApplication (Application f _ Implicit) -> viewCall f -- implicit arguments are ignored
   ExpressionApplication (Application f x Explicit) -> do
     c <- viewCall f
     x' <- callArg

@@ -36,7 +36,7 @@ idB a ≔ λ { a := a} a;
 mapB : {A : Type} → (A → A) → A → A;
 mapB ≔ λ { f a := f a};
 
-terminating add : Nat → Nat → Nat;
+add : Nat → Nat → Nat;
 add := λ {zero n := n; (suc n) := λ {m := suc (add n m) }};
 
 fst : {A : Type} → {B : Type} → A × B → A;
@@ -60,7 +60,6 @@ inductive List (a : Type) {
   :: : a → List a → List a;
 };
 
-terminating
 map : {A : Type} → {B : Type} → (A → B) → List A → List B;
 map {_} := λ {f nil := nil;
               f (x :: xs) := f x :: map f xs};
@@ -68,12 +67,10 @@ map {_} := λ {f nil := nil;
 pairEval : {A : Type} → {B : Type} → (A → B) × A → B;
 pairEval := λ {(f, x) := f x};
 
-terminating
 foldr : {A : Type} → {B : Type} → (A → B → B) → B → List A → B;
 foldr := λ {_ z nil := z;
             f z (h :: hs) := f h (foldr f z hs)};
 
-terminating
 foldl : {A : Type} → {B : Type} → (B → A → B) → B → List A → B;
 foldl := λ {f z nil := z;
             f z (h :: hs) := foldl f (f z h) hs};
@@ -87,19 +84,16 @@ if : {A : Type} → Bool → A → A → A;
 if := λ {true a _ := a;
          false _ b := b};
 
-terminating
 filter : {A : Type} → (A → Bool) → List A → List A;
 filter := λ {_ nil := nil;
              f (h :: hs) := if (f h)
                             (h :: filter f hs)
                             (filter f hs)};
 
-terminating
 partition : {A : Type} → (A → Bool) → List A → List A × List A;
 partition := λ {_ nil := nil, nil;
                 f (x :: xs) := (if (f x) first second) ((::) x) (partition f xs)};
 
-terminating
 zipWith : {A : Type} → {B : Type} → {C : Type} → (_ → _ → _) → List A → List B → List C;
 zipWith := λ {_ nil _ := nil;
               _ _ nil := nil;
