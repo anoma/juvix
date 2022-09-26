@@ -465,9 +465,7 @@ checkPattern = go
 freshHole :: Members '[Inference, NameIdGen] r => Interval -> Sem r Hole
 freshHole l = do
   uid <- freshNameId
-  let h = Hole uid l
-  freshMetavar h
-  return h
+  return (Hole uid l)
 
 literalType :: Members '[NameIdGen, Builtins] r => LiteralLoc -> Sem r TypedExpression
 literalType lit@(WithLoc i l) = case l of
@@ -529,8 +527,7 @@ inferExpression' hint e = case e of
   ExpressionLambda l -> goLambda l
   where
     goHole :: Hole -> Sem r TypedExpression
-    goHole h = do
-      freshMetavar h
+    goHole h =
       return
         TypedExpression
           { _typedExpression = ExpressionHole h,

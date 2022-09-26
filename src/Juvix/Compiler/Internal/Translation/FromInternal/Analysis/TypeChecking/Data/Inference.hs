@@ -193,10 +193,6 @@ weakNormalize' = go
         Fresh -> return (ExpressionHole h)
         Refined r -> go r
 
--- TODO remove usages of freshMetavar. Those are no longer needed
-freshMetavar :: Members '[Inference] r => Hole -> Sem r ()
-freshMetavar = void . queryMetavar
-
 queryMetavar' :: Members '[State InferenceState] r => Hole -> Sem r (Maybe Expression)
 queryMetavar' h = do
   m <- gets (^. inferenceMap . at h)
