@@ -1,6 +1,12 @@
-module Juvix.Compiler.Asm.Data.InfoTable where
+module Juvix.Compiler.Asm.Data.InfoTable
+  ( module Juvix.Compiler.Asm.Data.InfoTable,
+    module Juvix.Compiler.Asm.Language.Rep,
+    module Juvix.Compiler.Asm.Language.Type,
+  )
+where
 
 import Juvix.Compiler.Asm.Language
+import Juvix.Compiler.Asm.Language.Rep
 import Juvix.Compiler.Asm.Language.Type
 
 data InfoTable = InfoTable
@@ -44,30 +50,6 @@ data InductiveInfo = InductiveInfo
     _inductiveKind :: Type,
     _inductiveConstructors :: [ConstructorInfo]
   }
-
--- | Memory representation of a constructor.
-data MemRep
-  = -- | Standard representation of a constructor: [tag, field 0, .., field n]
-    MemRepConstr
-  | -- | A constructor with zero fields (arguments) can be represented as an
-    -- unboxed tag.
-    MemRepTag
-  | -- | If a constructor is the only non-zero-field constructor in its inductive
-    -- type, then it can be represented as a tagless tuple (the tag is not needed
-    -- to distinguish from other unboxed tag constructors)
-    MemRepTuple
-  | -- | If a zero-field constructor is the only constructor in its inductive
-    -- type, then it's a unit and can be omitted altogether.
-    MemRepUnit
-  | -- | If a constructor has exactly one field and there are no other
-    -- constructors in its inductive type (in Haskell, such types are
-    -- "newtypes"), then it can be unpacked and represented by the value of its
-    -- field. If the tags are globally unique, this can be applied even if there
-    -- are other constructors, as long as no two unpacked fields have the same
-    -- type or an untagged representation (we can't distinguish between tuples
-    -- representing constructors of different inductive types because they have
-    -- no tag).
-    MemRepUnpacked
 
 makeLenses ''InfoTable
 makeLenses ''FunctionInfo

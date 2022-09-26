@@ -11,7 +11,6 @@ import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Interpreter.Base
 import Juvix.Compiler.Asm.Interpreter.RuntimeState
-import Juvix.Compiler.Asm.Language.Type
 import Juvix.Compiler.Asm.Pretty.Options
 import Juvix.Compiler.Core.Pretty.Base qualified as Core
 import Juvix.Data.CodeAnn

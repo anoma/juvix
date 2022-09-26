@@ -8,7 +8,6 @@ import Juvix.Compiler.Asm.Error
 import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Extra.Type
 import Juvix.Compiler.Asm.Language
-import Juvix.Compiler.Asm.Language.Type
 import Juvix.Compiler.Asm.Pretty
 import Safe (atMay)
 

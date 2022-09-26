@@ -5,7 +5,6 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Language
-import Juvix.Compiler.Asm.Language.Type
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Core
 import Juvix.Compiler.Core.Language.Stripped qualified as Core
