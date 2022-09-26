@@ -33,7 +33,8 @@ data ConstructorInfo = ConstructorInfo
     -- | Constructor types are assumed to be fully uncurried, i.e., `uncurryType
     -- _constructorType == _constructorType`
     _constructorType :: Type,
-    _constructorInductive :: Symbol
+    _constructorInductive :: Symbol,
+    _constructorRepresentation :: MemRep
   }
 
 data InductiveInfo = InductiveInfo
@@ -43,6 +44,28 @@ data InductiveInfo = InductiveInfo
     _inductiveKind :: Type,
     _inductiveConstructors :: [ConstructorInfo]
   }
+
+-- | Memory representation of a constructor.
+data MemRep
+  = -- | Standard representation of a constructor: [tag, field 0, .., field n]
+    MemRepConstr
+  | -- | A constructor with zero fields (arguments) can be represented as an
+    -- unboxed tag.
+    MemRepTag
+  | -- | If a constructor is the only non-zero-field constructor in its inductive
+    -- type, then it can be represented as a tagless tuple (the tag is not needed
+    -- to distinguish from other unboxed tag constructors)
+    MemRepTuple
+  | -- | If a zero-field constructor is the only constructor in its inductive
+    -- type, then it's a unit and can be omitted altogether.
+    MemRepUnit
+  | -- If a constructor has exaclty one field and there are no other
+    -- constructors in its inductive type (in Haskell, such types are
+    -- `newtypes`), then it can be unpacked and represented by the value of its
+    -- field. If the tags are globally unique, this can be applied even if there
+    -- are other constructors, as long as no more than one unpacked value has an
+    -- untagged representation (integer, unit or tuple).
+    MemRepUnpacked
 
 makeLenses ''InfoTable
 makeLenses ''FunctionInfo
