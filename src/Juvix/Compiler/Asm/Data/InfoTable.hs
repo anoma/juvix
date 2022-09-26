@@ -59,12 +59,14 @@ data MemRep
   | -- | If a zero-field constructor is the only constructor in its inductive
     -- type, then it's a unit and can be omitted altogether.
     MemRepUnit
-  | -- If a constructor has exaclty one field and there are no other
+  | -- | If a constructor has exactly one field and there are no other
     -- constructors in its inductive type (in Haskell, such types are
-    -- `newtypes`), then it can be unpacked and represented by the value of its
+    -- "newtypes"), then it can be unpacked and represented by the value of its
     -- field. If the tags are globally unique, this can be applied even if there
-    -- are other constructors, as long as no more than one unpacked value has
-    -- the same type.
+    -- are other constructors, as long as no two unpacked fields have the same
+    -- type or an untagged representation (we can't distinguish between tuples
+    -- representing constructors of different inductive types because they have
+    -- no tag).
     MemRepUnpacked
 
 makeLenses ''InfoTable
