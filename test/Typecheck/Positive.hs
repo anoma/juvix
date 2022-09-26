@@ -160,6 +160,10 @@ tests =
       "Internal"
       "Lambda.juvix",
     PosTest
+      "Simple mutual inference"
+      "Internal"
+      "Mutual.juvix",
+    PosTest
       "open import a builtin multiple times"
       "BuiltinsMultiOpenImport"
       "Input.juvix"

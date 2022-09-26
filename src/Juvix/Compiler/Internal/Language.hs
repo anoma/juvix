@@ -37,10 +37,14 @@ newtype ModuleBody = ModuleBody
 
 data Statement
   = StatementInductive InductiveDef
-  | StatementFunction FunctionDef
+  | StatementFunction MutualBlock
   | StatementForeign ForeignBlock
   | StatementAxiom AxiomDef
   | StatementInclude Include
+
+newtype MutualBlock = MutualBlock
+  { _mutualFunctions :: NonEmpty FunctionDef
+  }
 
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
@@ -206,6 +210,7 @@ data Function = Function
 instance Hashable Function
 
 makeLenses ''Module
+makeLenses ''MutualBlock
 makeLenses ''Example
 makeLenses ''PatternArg
 makeLenses ''Include

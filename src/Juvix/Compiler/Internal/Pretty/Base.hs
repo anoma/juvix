@@ -195,6 +195,10 @@ instance PrettyCode AxiomDef where
     axiomType' <- ppCode _axiomType
     return $ kwAxiom <+> axiomName' <+> kwColon <+> axiomType'
 
+instance PrettyCode MutualBlock where
+  ppCode (MutualBlock funs) =
+    vsep2 <$> mapM ppCode funs
+
 instance PrettyCode Statement where
   ppCode = \case
     StatementForeign f -> ppCode f

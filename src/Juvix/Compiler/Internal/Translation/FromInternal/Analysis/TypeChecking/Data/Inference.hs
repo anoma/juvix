@@ -85,7 +85,9 @@ closeState = \case
               e -> return e
 
 getMetavar :: Member (State InferenceState) r => Hole -> Sem r MetavarState
-getMetavar h = gets (fromJust . (^. inferenceMap . at h))
+getMetavar h = do
+  void (queryMetavar' h)
+  gets (fromJust . (^. inferenceMap . at h))
 
 strongNormalize' :: forall r. Members '[Reader FunctionsTable, State InferenceState] r => Expression -> Sem r Expression
 strongNormalize' = go
@@ -190,9 +192,6 @@ weakNormalize' = go
       case s of
         Fresh -> return (ExpressionHole h)
         Refined r -> go r
-
-freshMetavar :: Members '[Inference] r => Hole -> Sem r ()
-freshMetavar = void . queryMetavar
 
 queryMetavar' :: Members '[State InferenceState] r => Hole -> Sem r (Maybe Expression)
 queryMetavar' h = do
@@ -373,15 +372,21 @@ matchPatterns p1 p2 = case (p1, p2) of
     err :: Sem r Bool
     err = return False
 
+runInferenceDefs ::
+  (Members '[Error TypeCheckerError, Reader FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
+  Sem (Inference ': r) (NonEmpty funDef) ->
+  Sem r (NonEmpty funDef)
+runInferenceDefs a = do
+  ((subs, idens), expr) <- runState iniState (re a) >>= firstM closeState
+  let idens' = fillHoles subs <$> idens
+  addIdens idens'
+  return (subsHoles subs <$> expr)
+
 runInferenceDef ::
   (Members '[Error TypeCheckerError, Reader FunctionsTable, State TypesTable] r, HasExpressions funDef) =>
   Sem (Inference ': r) funDef ->
   Sem r funDef
-runInferenceDef a = do
-  ((subs, idens), expr) <- runState iniState (re a) >>= firstM closeState
-  let idens' = fillHoles subs <$> idens
-  addIdens idens'
-  return (subsHoles subs expr)
+runInferenceDef = fmap head . runInferenceDefs . fmap pure
 
 addIdens :: Member (State TypesTable) r => TypesTable -> Sem r ()
 addIdens idens = modify (HashMap.union idens)

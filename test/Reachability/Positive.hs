@@ -2,8 +2,8 @@ module Reachability.Positive where
 
 import Base
 import Data.HashSet qualified as HashSet
-import Juvix.Compiler.Internal.Language qualified as Micro
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Micro
+import Juvix.Compiler.Internal.Language qualified as Internal
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
 import Juvix.Compiler.Pipeline
 
 data PosTest = PosTest
@@ -36,25 +36,25 @@ testDescr PosTest {..} =
                     }
 
             step "Pipeline up to reachability"
-            p :: Micro.InternalTypedResult <- runIO' entryPoint upToInternalReachability
+            p :: Internal.InternalTypedResult <- runIO' entryPoint upToInternalReachability
 
             step "Check reachability results"
-            let names = concatMap getNames (p ^. Micro.resultModules)
+            let names = concatMap getNames (p ^. Internal.resultModules)
             mapM_ check names
         }
   where
     check n = assertBool ("unreachable not filtered: " ++ unpack n) (HashSet.member (unpack n) _reachable)
 
-getNames :: Micro.Module -> [Text]
-getNames m = concatMap getDeclName (m ^. (Micro.moduleBody . Micro.moduleStatements))
+getNames :: Internal.Module -> [Text]
+getNames m = concatMap getDeclName (m ^. (Internal.moduleBody . Internal.moduleStatements))
   where
-    getDeclName :: Micro.Statement -> [Text]
+    getDeclName :: Internal.Statement -> [Text]
     getDeclName = \case
-      Micro.StatementInductive i -> [i ^. (Micro.inductiveName . Micro.nameText)]
-      Micro.StatementFunction f -> [f ^. (Micro.funDefName . Micro.nameText)]
-      Micro.StatementForeign {} -> []
-      Micro.StatementAxiom ax -> [ax ^. (Micro.axiomName . Micro.nameText)]
-      Micro.StatementInclude i -> getNames (i ^. Micro.includeModule)
+      Internal.StatementInductive i -> [i ^. (Internal.inductiveName . Internal.nameText)]
+      Internal.StatementFunction (Internal.MutualBlock f) -> map (^. Internal.funDefName . Internal.nameText) (toList f)
+      Internal.StatementForeign {} -> []
+      Internal.StatementAxiom ax -> [ax ^. (Internal.axiomName . Internal.nameText)]
+      Internal.StatementInclude i -> getNames (i ^. Internal.includeModule)
 
 allTests :: TestTree
 allTests =

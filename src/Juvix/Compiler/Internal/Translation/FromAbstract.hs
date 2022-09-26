@@ -7,12 +7,16 @@ module Juvix.Compiler.Internal.Translation.FromAbstract
   )
 where
 
+import Data.Graph
+import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Juvix.Compiler.Abstract.Data.NameDependencyInfo qualified as Abstract
 import Juvix.Compiler.Abstract.Extra.DependencyBuilder
+import Juvix.Compiler.Abstract.Extra.DependencyBuilder qualified as Abstract
 import Juvix.Compiler.Abstract.Language qualified as Abstract
 import Juvix.Compiler.Abstract.Translation.FromConcrete.Data.Context qualified as Abstract
 import Juvix.Compiler.Internal.Extra
-import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination
+import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination hiding (Graph)
 import Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude
@@ -41,13 +45,16 @@ fromAbstract abstractResults = do
         (JuvixError @TerminationError)
         (checkTermination topModule infoTable)
     )
+  let abstractModules = abstractResults ^. Abstract.resultModules
+      exportsTbl = abstractResults ^. Abstract.resultExports
   _resultModules' <-
-    evalState
-      iniState
-      ( mapM
-          goModule
-          (abstractResults ^. Abstract.resultModules)
-      )
+    runReader exportsTbl $
+      evalState
+        iniState
+        ( mapM
+            goModule
+            abstractModules
+        )
   return
     InternalResult
       { _resultAbstract = abstractResults,
@@ -64,11 +71,14 @@ fromAbstract abstractResults = do
     depInfo = buildDependencyInfo (abstractResults ^. Abstract.resultModules) (abstractResults ^. Abstract.resultExports)
 
 goModule ::
-  Members '[State TranslationState] r =>
+  Members '[Reader ExportsTable, State TranslationState] r =>
   Abstract.TopModule ->
   Sem r Module
 goModule m = do
-  _moduleBody' <- goModuleBody (m ^. Abstract.moduleBody)
+  expTbl <- ask
+  let mutualBlocks :: [NonEmpty Abstract.FunctionDef]
+      mutualBlocks = buildMutualBlocks expTbl
+  _moduleBody' <- goModuleBody mutualBlocks (m ^. Abstract.moduleBody)
   examples' <- mapM goExample (m ^. Abstract.moduleExamples)
   return
     Module
@@ -76,14 +86,44 @@ goModule m = do
         _moduleExamples = examples',
         _moduleBody = _moduleBody'
       }
+  where
+    funsByName :: HashMap Abstract.FunctionName Abstract.FunctionDef
+    funsByName =
+      HashMap.fromList
+        [ (d ^. Abstract.funDefName, d)
+          | Abstract.StatementFunction d <- m ^. Abstract.moduleBody . Abstract.moduleStatements
+        ]
+    getFun :: Abstract.FunctionName -> Maybe Abstract.FunctionDef
+    getFun n = funsByName ^. at n
+    buildMutualBlocks :: Abstract.ExportsTable -> [NonEmpty Abstract.FunctionDef]
+    buildMutualBlocks expTbl = mapMaybe (nonEmpty . mapMaybe getFun . toList . fromNonEmptyTree) scomponents
+      where
+        fromNonEmptyTree :: Tree a -> NonEmpty a
+        fromNonEmptyTree = fromJust . nonEmpty . toList
+        depInfo :: Abstract.NameDependencyInfo
+        depInfo = Abstract.buildDependencyInfo (pure m) expTbl
+        graph :: Graph
+        graph = Abstract.buildDependencyInfo (pure m) expTbl ^. Abstract.depInfoGraph
+        scomponents :: [Tree Abstract.Name]
+        scomponents = fmap (Abstract.nameFromVertex depInfo) <$> scc graph
 
 unsupported :: Text -> a
 unsupported thing = error ("Abstract to Internal: Not yet supported: " <> thing)
 
-goModuleBody :: Members '[State TranslationState] r => Abstract.ModuleBody -> Sem r ModuleBody
-goModuleBody b = ModuleBody <$> mapMaybeM goStatement (b ^. Abstract.moduleStatements)
+goModuleBody ::
+  Members '[Reader ExportsTable, State TranslationState] r =>
+  [NonEmpty Abstract.FunctionDef] ->
+  Abstract.ModuleBody ->
+  Sem r ModuleBody
+goModuleBody mutualBlocks b = do
+  mutualBlocks' <- mapM (fmap (StatementFunction . MutualBlock) . mapM goFunctionDef) mutualBlocks
+  statements' <- mapMaybeM goStatement (b ^. Abstract.moduleStatements)
+  return
+    ModuleBody
+      { _moduleStatements = statements' <> mutualBlocks'
+      }
 
-goImport :: Members '[State TranslationState] r => Abstract.TopModule -> Sem r (Maybe Include)
+goImport :: Members '[Reader ExportsTable, State TranslationState] r => Abstract.TopModule -> Sem r (Maybe Include)
 goImport m = do
   inc <- gets (HashSet.member (m ^. Abstract.moduleName) . (^. translationStateIncluded))
   if
@@ -99,13 +139,13 @@ goImport m = do
             )
 
 goStatement ::
-  Members '[State TranslationState] r =>
+  Members '[Reader ExportsTable, State TranslationState] r =>
   Abstract.Statement ->
   Sem r (Maybe Statement)
 goStatement = \case
   Abstract.StatementAxiom d -> Just . StatementAxiom <$> goAxiomDef d
   Abstract.StatementForeign f -> return (Just (StatementForeign f))
-  Abstract.StatementFunction f -> Just . StatementFunction <$> goFunctionDef f
+  Abstract.StatementFunction {} -> return Nothing
   Abstract.StatementImport i -> fmap StatementInclude <$> goImport i
   Abstract.StatementLocalModule {} -> unsupported "local modules"
   Abstract.StatementInductive i -> Just . StatementInductive <$> goInductiveDef i

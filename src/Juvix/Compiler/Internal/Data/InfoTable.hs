@@ -86,7 +86,8 @@ buildTable1 m = InfoTable {..} <> buildTable (map (^. includeModule) includes)
     _infoFunctions =
       HashMap.fromList
         [ (f ^. funDefName, FunctionInfo f)
-          | StatementFunction f <- ss
+          | StatementFunction (MutualBlock b) <- ss,
+            f <- toList b
         ]
     _infoAxioms :: HashMap Name AxiomInfo
     _infoAxioms =

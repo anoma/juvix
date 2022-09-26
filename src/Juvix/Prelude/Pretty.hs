@@ -72,7 +72,7 @@ prettyText = Text.renderStrict . layoutPretty defaultLayoutOptions . pretty
 vsep :: Foldable f => f (Doc a) -> Doc a
 vsep = PP.vsep . toList
 
-vsep2 :: [Doc a] -> Doc a
+vsep2 :: Foldable f => f (Doc a) -> Doc a
 vsep2 = concatWith (\a b -> a <> line <> line <> b)
 
 hsep :: Foldable f => f (Doc a) -> Doc a
