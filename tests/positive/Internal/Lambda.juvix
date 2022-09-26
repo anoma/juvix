@@ -109,4 +109,14 @@ zipWith := λ {_ nil _ := nil;
 t : {A : Type} → {B : Type} → ({X : Type} → List X) → List A × List B;
 t := id {({X : Type} → List X) → _} λ { f := f {_} , f {_} };
 
+inductive Box (A : Type) {
+  b : A → Box A;
+};
+
+x : Box ((A : Type) → A → A);
+x := b λ {A a := a};
+
+t1 : {A : Type} → Box ((A : Type) → A → A) → A → A;
+t1 {A} := λ {(b f) := f A};
+
 end;
