@@ -6,18 +6,6 @@ where
 
 import Juvix.Compiler.Reg.Language.Base
 
-data Type
-  = -- | Unboxed integer or pointer to boxed integer.
-    TyInteger
-  | -- | Unboxed boolean.
-    TyBool
-  | -- | Pointer to a string.
-    TyString
-  | -- | A raw word with arbitrary bit pattern.
-    TyWord
-  | -- | A pointer to a constructor.
-    TyPtr
-
 data Value
   = ConstInt Integer
   | ConstBool Bool
@@ -44,12 +32,12 @@ data VarGroup = VarGroupArgs | VarGroupStack | VarGroupTemp
 
 data VarRef = VarRef
   { _varRefGroup :: VarGroup,
-    _varRefIndex :: Index,
-    _varRefType :: Type
+    _varRefIndex :: Index
   }
 
 data Instruction
-  = Binop BinaryOp
+  = Nop -- no operation
+  | Binop BinaryOp
   | Assign InstrAssign
   | Trace InstrTrace
   | Dump
@@ -113,6 +101,7 @@ data InstrAllocClosure = InstrAllocClosure
 
 data InstrExtendClosure = InstrExtendClosure
   { _instrExtendClosureResult :: VarRef,
+    _instrExtendClosureValue :: VarRef,
     _instrExtendClosureArgs :: [Value],
     _instrExtendClosureLiveVars :: [VarRef]
   }
@@ -132,8 +121,8 @@ data InstrCall = InstrCall
 
 data InstrCallClosures = InstrCallClosures
   { _instrCallClosuresResult :: VarRef,
-    _instrCallClosuresClosure :: VarRef,
     _instrCallClosuresIsTail :: Bool,
+    _instrCallClosuresValue :: VarRef,
     _instrCallClosuresArgs :: [Value],
     _instrCallClosuresLiveVars :: [VarRef]
   }

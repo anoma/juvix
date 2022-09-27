@@ -32,7 +32,9 @@ genCode infoTable fi =
           _functionSymbol = fi ^. Core.functionSymbol,
           _functionArgsNum = fi ^. Core.functionArgsNum,
           _functionType = convertType (fi ^. Core.functionArgsNum) (fi ^. Core.functionType),
-          _functionCode = code
+          _functionCode = code,
+          _functionMaxTempStackHeight = -1, -- computed later
+          _functionMaxValueStackHeight = -1
         }
   where
     unimplemented :: forall a. a

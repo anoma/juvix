@@ -13,6 +13,11 @@ import Safe (atMay)
 
 type Arguments = HashMap Offset Type
 
+argumentsFromFunctionInfo :: FunctionInfo -> Arguments
+argumentsFromFunctionInfo fi =
+  HashMap.fromList $
+    zip [0 ..] (take (fi ^. functionArgsNum) (typeArgs (fi ^. functionType)))
+
 -- | A static representation of JuvixAsm memory providing type information for
 -- memory locations.
 data Memory = Memory
@@ -39,11 +44,17 @@ pushValueStack ty = over memoryValueStack (Stack.push ty)
 popValueStack :: Int -> Memory -> Memory
 popValueStack n = iterateN n (over memoryValueStack Stack.pop)
 
+valueStackHeight :: Memory -> Int
+valueStackHeight mem = length (mem ^. memoryValueStack)
+
 pushTempStack :: Type -> Memory -> Memory
 pushTempStack ty = over memoryTempStack (Stack.push ty)
 
 popTempStack :: Int -> Memory -> Memory
 popTempStack n = iterateN n (over memoryTempStack Stack.pop)
+
+tempStackHeight :: Memory -> Int
+tempStackHeight mem = length (mem ^. memoryTempStack)
 
 -- | Read value stack at index `n` from the top.
 topValueStack :: Int -> Memory -> Maybe Type
