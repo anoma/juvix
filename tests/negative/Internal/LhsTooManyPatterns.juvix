@@ -4,5 +4,5 @@ module LhsTooManyPatterns;
   };
 
   f : T → T;
-  f A x ≔ A;
+  f A x := A;
 end;

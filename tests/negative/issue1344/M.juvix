@@ -6,6 +6,6 @@ module M;
   };
 
   u : Other.Unit;
-  u ≔ t;
+  u := t;
 
 end;

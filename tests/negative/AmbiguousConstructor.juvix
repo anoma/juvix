@@ -15,5 +15,5 @@ module AmbiguousConstructor;
   open N;
 
   f : T1 -> T2;
-  f A ≔ N.A;
+  f A := N.A;
 end;

@@ -9,5 +9,5 @@ module LiteralInt;
   };
 
   f : ℕ;
-  f ≔ 1;
+  f := 1;
 end;

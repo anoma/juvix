@@ -5,7 +5,7 @@ inductive Pair (A : Type) (B : Type) {
 };
 
 fst : (A : Type) → (B : Type) → Pair A B → A;
-fst _ _ (mkPair a b) ≔ a;
+fst _ _ (mkPair a b) := a;
 
 
 end;

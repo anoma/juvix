@@ -8,8 +8,8 @@ module MultiWrongType;
   };
 
   f : A;
-  f ≔ b;
+  f := b;
 
   g : B;
-  g ≔ a;
+  g := a;
 end;

@@ -19,8 +19,8 @@ Juvix has support for the built-in natural type and a few functions that are com
    inifl 6 +;
    builtin natural-plus
    + : Nat → Nat → Nat;
-   + zero b ≔ b;
-   + (suc a) b ≔ suc (a + b);
+   + zero b := b;
+   + (suc a) b := suc (a + b);
    #+end_example
 
 3. Builtin axiom definitions.

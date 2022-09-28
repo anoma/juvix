@@ -25,22 +25,22 @@ compile ++str {
 ---
 --- ;concat (("a" ∷ nil) ∷ ("b" ∷ nil)); evaluates to ;"a" ∷ "b" ∷ nil;
 concat : List String → String;
-concat ≔ foldl (++str) "";
+concat := foldl (++str) "";
 
 intercalate : String → List String → String;
-intercalate sep xs ≔ concat (intersperse sep xs);
+intercalate sep xs := concat (intersperse sep xs);
 
 --- Joins a list of strings with the newline character
 unlines : List String → String;
-unlines ≔ intercalate "\n";
+unlines := intercalate "\n";
 
 --- Produce a singleton List
 singleton : {A : Type} → A → List A;
-singleton a ≔ a ∷ nil;
+singleton a := a ∷ nil;
 
 --- Produce a ;String; representation of a ;List ℕ;
 showList : List ℕ → String;
-showList xs ≔ "[" ++str intercalate "," (map natToStr xs) ++str "]";
+showList xs := "[" ++str intercalate "," (map natToStr xs) ++str "]";
 
 --- A Peg represents a peg in the towers of Hanoi game
 inductive Peg {
@@ -50,9 +50,9 @@ inductive Peg {
 };
 
 showPeg : Peg → String;
-showPeg left ≔ "left";
-showPeg middle ≔ "middle";
-showPeg right ≔ "right";
+showPeg left := "left";
+showPeg middle := "middle";
+showPeg right := "right";
 
 
 --- A Move represents a move between pegs
@@ -61,14 +61,14 @@ inductive Move {
 };
 
 showMove : Move → String;
-showMove (move from to) ≔ showPeg from ++str " -> " ++str showPeg to;
+showMove (move from to) := showPeg from ++str " -> " ++str showPeg to;
 
 --- Produce a list of ;Move;s that solves the towers of Hanoi game
 hanoi : ℕ → Peg → Peg → Peg → List Move;
-hanoi zero _ _ _ ≔ nil;
-hanoi (suc n) p1 p2 p3 ≔ hanoi n p1 p3 p2 ++ singleton (move p1 p2) ++ hanoi n p3 p2 p1;
+hanoi zero _ _ _ := nil;
+hanoi (suc n) p1 p2 p3 := hanoi n p1 p3 p2 ++ singleton (move p1 p2) ++ hanoi n p3 p2 p1;
 
 main : IO;
-main ≔ putStrLn (unlines (map showMove (hanoi 5 left middle right)));
+main := putStrLn (unlines (map showMove (hanoi 5 left middle right)));
 
 end;

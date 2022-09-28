@@ -7,6 +7,6 @@ module InfixErrorP;
   };
 
   fst : Pair → Type;
-  fst (x , ) ≔ x;
+  fst (x , ) := x;
 
 end;

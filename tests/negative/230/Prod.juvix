@@ -5,6 +5,6 @@ open import Foo;
      import Foo.Data.Bool;
 
 fi : Foo.Data.Bool;
-fi ≔ Foo.Data.Bool.false;
+fi := Foo.Data.Bool.false;
 
 end;

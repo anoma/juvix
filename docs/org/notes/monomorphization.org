@@ -10,22 +10,22 @@
  Example:
  #+begin_src juvix
  id : (A : Type) → A → A;
- id _ a ≔ a;
+ id _ a := a;
 
  b : Bool;
- b ≔ id Bool true;
+ b := id Bool true;
 
  n : Nat;
- n ≔ id Nat zero;
+ n := id Nat zero;
  #+end_src
 
  Is translated into:
  #+begin_src juvix
  id_Bool : Bool → Bool;
- id_Bool a ≔ a;
+ id_Bool a := a;
 
  id_Nat : Nat → Nat;
- id_Nat a ≔ a;
+ id_Nat a := a;
  #+end_src
 
 * More examples
@@ -37,14 +37,14 @@ inductive List (A : Type) {
 };
 
 even : (A : Type) → List A → Bool;
-even A nil ≔ true ;
-even A (cons _ xs) ≔ not (odd A xs) ;
+even A nil := true ;
+even A (cons _ xs) := not (odd A xs) ;
 
 odd : (A : Type) → List A → Bool;
-odd A nil ≔ false ;
-odd A (cons _ xs) ≔ not (even A xs) ;
+odd A nil := false ;
+odd A (cons _ xs) := not (even A xs) ;
 
--- main ≔ even Bool ..  odd Nat;
+-- main := even Bool ..  odd Nat;
 #+end_src
 
 * Collection algorithm
@@ -158,7 +158,7 @@ list of concrete type applications involving =f=: =f â₁, …, f âₙ=.
  be the variables bound in =pₘ₊₁, …, pₖ=. Let =w'₁, …, w'ₛ= be fresh variables.
  Then let =δ = {w₁ ↦ w'₁, …, wₛ ↦ w'ₛ}=.
 
- Now let =𝒞'= have patterns =δ(pₘ₊₁), …, δ(pₖ)= and let =e' ≔ (σ ∪ δ)(e)=. It
+ Now let =𝒞'= have patterns =δ(pₘ₊₁), …, δ(pₖ)= and let =e' := (σ ∪ δ)(e)=. It
  should be clear that =e'= has no type variables in it and that all local
  variable references in =e'= are among =w'₁, …, w'ₛ=. Note that =e'= is not yet
  monomorphized. Proceed to the next step to achieve that.
@@ -172,7 +172,7 @@ list of concrete type applications involving =f=: =f â₁, …, f âₙ=.
  view of the application: =f a₁ … aₘ=. Then, if =f= is either a constructor, or
  a function, let =A₁, …, Aₖ= with =k ≤ m= be the list of type parameters of =f=.
  - If =f= is a function and =f a₁ … aₖ ∉ ℒ= then recurse normally, otherwise,
-   let =â ≔ a₁ … aₖ= and replace the original expression =f a₁ … aₘ=, by =⋆(f â)
+   let =â := a₁ … aₖ= and replace the original expression =f a₁ … aₘ=, by =⋆(f â)
    aₖ₊₁' … aₘ'= where =aₖ₊₁' … aₘ'= are the monomorphization of =aₖ₊₁ … aₘ=
    respectively.
  - If =f= is a constructor, let =d= be its inductive type. Then check =d a₁ … aₖ

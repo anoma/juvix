@@ -22,13 +22,13 @@ compile natInd {
 };
 
 natToInt : Nat → Int;
-natToInt zero ≔ 0;
-natToInt (suc n) ≔ 1 + (natToInt n);
+natToInt zero := 0;
+natToInt (suc n) := 1 + (natToInt n);
 
 natToStr : Nat → String;
-natToStr n ≔ intToStr (natToInt n);
+natToStr n := intToStr (natToInt n);
 
 intToNat : Int → Nat;
-intToNat x ≔ natInd x zero suc;
+intToNat x := natInd x zero suc;
 
 end;

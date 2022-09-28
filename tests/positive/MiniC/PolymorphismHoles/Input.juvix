@@ -60,8 +60,8 @@ compile put-str-ln {
 };
 
 bool-to-str : Bool → String;
-bool-to-str true ≔ "True";
-bool-to-str false ≔ "False";
+bool-to-str true := "True";
+bool-to-str false := "False";
 
 
 --------------------------------------------------------------------------------
@@ -73,17 +73,17 @@ inductive Pair (A : Type) (B : Type) {
 };
 
 fst : {A : Type} → {B : Type} → Pair A B → A;
-fst (mkPair a b) ≔ a;
+fst (mkPair a b) := a;
 
 --------------------------------------------------------------------------------
 -- Main
 --------------------------------------------------------------------------------
 
 fst-of-pair : Action;
-fst-of-pair ≔ (put-str "fst (True, False) = ")
+fst-of-pair := (put-str "fst (True, False) = ")
                >> put-str-ln (bool-to-str (fst (mkPair true false)));
 
 main : Action;
-main ≔ fst-of-pair;
+main := fst-of-pair;
 
 end;

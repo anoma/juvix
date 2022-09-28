@@ -5,6 +5,6 @@ open import Stdlib.Prelude;
 axiom hostDisplayString : String → IO;
 
 juvixRender : IO;
-juvixRender ≔ hostDisplayString "Hello World from Juvix!";
+juvixRender := hostDisplayString "Hello World from Juvix!";
 
 end;

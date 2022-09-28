@@ -3,13 +3,13 @@ module Fibonacci;
 open import Stdlib.Prelude;
 
 fib : ℕ → ℕ → ℕ → ℕ;
-fib zero x1 _ ≔ x1;
-fib (suc n) x1 x2 ≔ fib n x2 (x1 + x2);
+fib zero x1 _ := x1;
+fib (suc n) x1 x2 := fib n x2 (x1 + x2);
 
 fibonacci : ℕ → ℕ;
-fibonacci n ≔ fib n 0 1;
+fibonacci n := fib n 0 1;
 
 main : IO;
-main ≔ putStrLn (natToStr (fibonacci 25));
+main := putStrLn (natToStr (fibonacci 25));
 
 end;

@@ -10,7 +10,7 @@ inductive Pair (A : Type) (B : Type) {
 };
 
 f : _ → _;
-f (mkPair false true) ≔ true;
-f true ≔ false;
+f (mkPair false true) := true;
+f true := false;
 
 end;

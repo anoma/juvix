@@ -9,12 +9,12 @@ module Box;
    };
 
 b : Box _;
-b ≔ box t;
+b := box t;
 
 id : {A : Type} → A → A;
-id x ≔ x;
+id x := x;
 
 tt : _;
-tt ≔ id t
+tt := id t
 
 end;

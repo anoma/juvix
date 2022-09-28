@@ -229,7 +229,7 @@ order for the change to take effect."
 
   ;; Equality and similar symbols.
 
-  ("eq"  . ,(juvix-input-to-string-list "=∼∽≈≋∻∾∿≀≃⋍≂≅ ≌≊≡≣≐≑≒≓≔≕≖≗≘≙≚≛≜≝≞≟≍≎≏≬⋕"))
+  ("eq"  . ,(juvix-input-to-string-list "=∼∽≈≋∻∾∿≀≃⋍≂≅ ≌≊≡≣≐≑≒≓:=≕≖≗≘≙≚≛≜≝≞≟≍≎≏≬⋕"))
   ("eqn" . ,(juvix-input-to-string-list "≠≁ ≉     ≄  ≇≆  ≢                 ≭    "))
 
                     ("=n"  . ("≠"))
@@ -244,7 +244,7 @@ order for the change to take effect."
   ("=="   . ("≡"))  ("==n" . ("≢"))
   ("==="  . ("≣"))
   (".="   . ("≐"))  (".=." . ("≑"))
-  (":="   . ("≔"))  ("=:"  . ("≕"))
+  (":="   . (":="))  ("=:"  . ("≕"))
   ("=o"   . ("≗"))
   ("(="   . ("≘"))
   ("and=" . ("≙"))  ("or=" . ("≚"))

@@ -7,6 +7,6 @@ open import Stdlib.Data.Nat;
 open import Stdlib.System.IO;
 
 main : IO;
-main ≔ putStrLn (natToStr (two + three));
+main := putStrLn (natToStr (two + three));
 
 end;

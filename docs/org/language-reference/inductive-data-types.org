@@ -30,8 +30,8 @@ Let us define, for example, the function for adding two natural numbers.
 #+begin_src text
 inifl 6 +;
 + : Nat → Nat → Nat;
-+ zero b ≔ b;
-+ (suc a) b ≔ suc (a + b);
++ zero b := b;
++ (suc a) b := suc (a + b);
 #+end_src
 
 As mentioned earlier, an inductive type may have type parameters. The canonical
@@ -49,8 +49,8 @@ inductive List (A : Type) {
 };
 
 elem : {A : Type} → (A → A → Bool) → A → List A → Bool;
-elem _ _ nil ≔ false;
-elem eq s (x ∷ xs) ≔ eq s x || elem eq s xs;
+elem _ _ nil := false;
+elem eq s (x ∷ xs) := eq s x || elem eq s xs;
 #+end_example
 
 To see more examples of inductive types and how to use them, please check out

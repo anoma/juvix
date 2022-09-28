@@ -19,25 +19,25 @@ inductive GameState {
 
 --- Textual representation of a ;GameState;
 showGameState : GameState → String;
-showGameState (state b _ _) ≔ showBoard b;
+showGameState (state b _ _) := showBoard b;
 
 --- Projects the player
 player : GameState → Symbol;
-player (state _ p _) ≔ p;
+player (state _ p _) := p;
 
 --- initial ;GameState;
 beginState : GameState;
-beginState ≔ state
+beginState := state
      (board (map (map empty) ((one ∷ two ∷ three ∷ nil) ∷ (four ∷ five ∷ six ∷ nil) ∷ (seven ∷ eight ∷ nine ∷ nil) ∷ nil)))
      X
      noError;
 
 --- ;true; if some player has won the game
 won : GameState → Bool;
-won (state (board squares) _ _) ≔ any full (diagonals squares ++ rows squares ++ columns squares);
+won (state (board squares) _ _) := any full (diagonals squares ++ rows squares ++ columns squares);
 
 --- ;true; if there is a draw
 draw : GameState → Bool;
-draw (state (board squares) _ _) ≔ null (possibleMoves (flatten squares));
+draw (state (board squares) _ _) := null (possibleMoves (flatten squares));
 
 end;

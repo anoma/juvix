@@ -8,5 +8,5 @@ module LiteralString;
   };
 
   f : A;
-  f ≔ "a";
+  f := "a";
 end;

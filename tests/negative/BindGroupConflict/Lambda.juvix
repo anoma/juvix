@@ -5,6 +5,6 @@ module Lambda;
   };
 
   fst : (a : Type) → (b : Type) → Pair a b → a ;
-  fst ≔ λ { _ _ (mkPair _ _ x x) := x };
+  fst := λ { _ _ (mkPair _ _ x x) := x };
 
 end;

@@ -22,8 +22,8 @@ of definitions:
    inifl 6 +;
    builtin natural-plus
    + : Nat → Nat → Nat;
-   + zero b ≔ b;
-   + (suc a) b ≔ suc (a + b);
+   + zero b := b;
+   + (suc a) b := suc (a + b);
    #+end_src
 
 3. Builtin axiom definitions. For example:

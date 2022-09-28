@@ -96,24 +96,24 @@ inductive Nat {
 
 infixl 6 +;
 + : Nat → Nat → Nat;
-+ zero n ≔ n;
-+ (suc m) n ≔ suc (m + n);
++ zero n := n;
++ (suc m) n := suc (m + n);
 
 to-int : Nat → Int;
-to-int zero ≔ Int_0;
-to-int (suc n) ≔ Int_1 +int (to-int n);
+to-int zero := Int_0;
+to-int (suc n) := Int_1 +int (to-int n);
 
 nat-to-str : Nat → String;
-nat-to-str n ≔ to-str (to-int n);
+nat-to-str n := to-str (to-int n);
 
 one : Nat;
-one ≔ suc zero;
+one := suc zero;
 
 two : Nat;
-two ≔ suc one;
+two := suc one;
 
 three : Nat;
-three ≔ suc two;
+three := suc two;
 
 --------------------------------------------------------------------------------
 -- Lists
@@ -125,20 +125,20 @@ inductive ListNat {
 };
 
 foldl : (Nat → Nat → Nat) → Nat → ListNat → Nat;
-foldl _ z null ≔ z;
-foldl f z (cons n hs) ≔ foldl f (f z n) hs;
+foldl _ z null := z;
+foldl f z (cons n hs) := foldl f (f z n) hs;
 
 l : ListNat;
-l ≔ cons one (cons two null);
+l := cons one (cons two null);
 
 sum : ListNat → Nat;
-sum l ≔ foldl (+) zero l;
+sum l := foldl (+) zero l;
 
 sum-is-three : Action;
-sum-is-three ≔ put-str "list sum is: "
+sum-is-three := put-str "list sum is: "
                 >> put-str-ln (nat-to-str (sum l));
 
 main : Action;
-main ≔ sum-is-three
+main := sum-is-three
 
 end;

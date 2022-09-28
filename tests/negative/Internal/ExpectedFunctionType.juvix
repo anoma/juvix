@@ -8,5 +8,5 @@ module ExpectedFunctionType;
   };
 
   f : Pair B → Pair B;
-  f (mkPair a b) ≔ a b;
+  f (mkPair a b) := a b;
 end;

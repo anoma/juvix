@@ -11,16 +11,16 @@ inductive Nat {
 };
 
 not : _;
-not false ≔ true;
-not true ≔ false;
+not false := true;
+not true := false;
 
 odd : _;
 even : _;
 
-odd zero ≔ false;
-odd (suc n) ≔ even n;
+odd zero := false;
+odd (suc n) := even n;
 
-even zero ≔ true;
-even (suc n) ≔ odd n;
+even zero := true;
+even (suc n) := odd n;
 
 end;

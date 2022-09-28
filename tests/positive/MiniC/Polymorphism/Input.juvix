@@ -60,8 +60,8 @@ compile put-str-ln {
 };
 
 bool-to-str : Bool → String;
-bool-to-str true ≔ "True";
-bool-to-str false ≔ "False";
+bool-to-str true := "True";
+bool-to-str false := "False";
 
 infixr 2 ×;
 infixr 4 ,;
@@ -70,20 +70,20 @@ inductive × (A : Type) (B : Type) {
 };
 
 fst : {A : Type} → {B : Type} → A × B → A;
-fst (a, b) ≔ a;
+fst (a, b) := a;
 
 id' : {A : Type} → A → A;
-id' a ≔ fst (a, a);
+id' a := fst (a, a);
 
 --------------------------------------------------------------------------------
 -- Main
 --------------------------------------------------------------------------------
 
 fst-of-pair : Action;
-fst-of-pair ≔ (put-str "fst (True, False) = ")
+fst-of-pair := (put-str "fst (True, False) = ")
                >> put-str-ln (bool-to-str (fst (true, false)));
 
 main : Action;
-main ≔ fst-of-pair >> put-str-ln (bool-to-str (id' false));
+main := fst-of-pair >> put-str-ln (bool-to-str (id' false));
 
 end;

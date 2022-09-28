@@ -15,18 +15,18 @@ inductive Square {
 
 --- Equality for ;Square;s
 ==Square : Square → Square → Bool;
-==Square (empty m) (empty n) ≔ m == n;
-==Square (occupied s) (occupied t) ≔ ==Symbol s t;
-==Square _ _ ≔ false;
+==Square (empty m) (empty n) := m == n;
+==Square (occupied s) (occupied t) := ==Symbol s t;
+==Square _ _ := false;
 
 --- Textual representation of a ;Square;
 showSquare : Square → String;
-showSquare (empty n) ≔ " " ++str natToStr n ++str " ";
-showSquare (occupied s) ≔ " " ++str showSymbol s ++str " ";
+showSquare (empty n) := " " ++str natToStr n ++str " ";
+showSquare (occupied s) := " " ++str showSymbol s ++str " ";
 
 replace : Symbol → ℕ → Square → Square;
-replace player k (empty n) ≔ if (n Stdlib.Data.Nat.Ord.== k) (occupied player) (empty n);
-replace _ _ s ≔ s;
+replace player k (empty n) := if (n Stdlib.Data.Nat.Ord.== k) (occupied player) (empty n);
+replace _ _ s := s;
 
 
 end;

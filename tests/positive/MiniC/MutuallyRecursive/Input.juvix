@@ -6,23 +6,23 @@ odd : Nat → Bool;
 
 even : Nat → Bool;
 
-odd zero ≔ false;
-odd (suc n) ≔ even n;
+odd zero := false;
+odd (suc n) := even n;
 
-even zero ≔ true;
-even (suc n) ≔ odd n;
+even zero := true;
+even (suc n) := odd n;
 
 check : (Nat → Bool) → Int → String;
-check f x ≔ boolToStr (f (intToNat x));
+check f x := boolToStr (f (intToNat x));
 
 checkEven : Int → String;
-checkEven ≔ check even;
+checkEven := check even;
 
 checkOdd : Int → String;
-checkOdd ≔ check odd;
+checkOdd := check odd;
 
 main : Action;
-main ≔ put-str "even 1: " >> put-str-ln (checkEven Int_1)
+main := put-str "even 1: " >> put-str-ln (checkEven Int_1)
         >> put-str "even 4: " >> put-str-ln (checkEven Int_4)
         >> put-str "even 9: " >> put-str-ln (checkEven Int_9)
         >> put-str "odd 1: " >> put-str-ln (checkOdd Int_1)
