@@ -14,6 +14,8 @@ import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Extra.Strings qualified as Str
+import Data.List.NonEmpty (fromList)
+import Juvix.Compiler.Core.Translation.FromSource (freshName)
 
 unsupported :: Text -> a
 unsupported thing = error ("Internal to Core: Not yet supported: " <> thing)
@@ -28,7 +30,7 @@ fromInternal i = do
         coreModule :: Internal.Module -> Sem r ()
         coreModule m = do
           registerInductiveDefs m
-          runReader (Internal.buildTable [m]) (registerFunctionDefs m)
+          runReader (Internal.buildTable [m]) (runNameIdGen (registerFunctionDefs m))
 
 registerInductiveDefs ::
   forall r.
@@ -55,14 +57,14 @@ registerInductiveDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
 
 registerFunctionDefs ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, NameIdGen] r =>
   Internal.Module ->
   Sem r ()
 registerFunctionDefs m = registerFunctionDefsBody (m ^. Internal.moduleBody)
 
 registerFunctionDefsBody ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, NameIdGen] r =>
   Internal.ModuleBody ->
   Sem r ()
 registerFunctionDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
@@ -75,7 +77,7 @@ registerFunctionDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
 
 goMutualBlock ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, NameIdGen] r =>
   Internal.MutualBlock ->
   Sem r ()
 goMutualBlock m = mapM_ goFunctionDef (m ^. Internal.mutualFunctions)
@@ -121,7 +123,7 @@ goConstructor sym ctor = do
 
 goFunctionDef ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, NameIdGen] r =>
   Internal.FunctionDef ->
   Sem r ()
 goFunctionDef f
@@ -139,7 +141,33 @@ goFunctionDef f
               }
       registerIdent info
       when (f ^. Internal.funDefName . Internal.nameText == Str.main) (registerMain sym)
-      mapM_ (goFunctionClause sym) (f ^. Internal.funDefClauses)
+
+      body <- if | null patterns -> goExpression 0 HashMap.empty (head (f ^. Internal.funDefClauses) ^. Internal.clauseBody)
+                 | otherwise -> do
+                    let vars :: HashMap Text Index = HashMap.fromList [ (pack (show i), i) | i <- vs ]
+                    let values = mkVar Info.empty <$> vs
+                    ms <- mapM (goFunctionClause' (length patterns) vars) (f ^. Internal.funDefClauses)
+                    let match = mkMatch' (fromList values) (toList ms)
+                    lamArgs' :: [Info] <- lamArgs
+                    return $ foldr mkLambda match lamArgs'
+      registerIdentNode sym body
+
+    where
+      patterns :: [Internal.PatternArg]
+      patterns = head (f ^. Internal.funDefClauses) ^. Internal.clausePatterns
+
+      vs :: [Index]
+      vs = take (length patterns) [0 ..]
+
+      mkName :: Text -> Sem r Name
+      mkName txt = freshName KNameLocal txt (f ^. Internal.funDefName . Internal.nameLoc)
+
+      lamArgs :: Sem r [Info]
+      lamArgs = do
+        ns <- mapM mkName (pack . show <$> vs)
+        return $ binderNameInfo <$> ns
+
+
 
 binderNameInfo :: Name -> Info
 binderNameInfo name =
@@ -167,34 +195,64 @@ fromPattern = \case
         Just (IdentSym {}) -> error ("internal to core: not a constructor " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
 
-goFunctionClause ::
+goFunctionClause' ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
-  Symbol ->
+  Index ->
+  HashMap Text Index ->
   Internal.FunctionClause ->
-  Sem r ()
-goFunctionClause sym clause = do
-  body <- goExpression (length args) vars (clause ^. Internal.clauseBody)
-  registerIdentNode sym (foldr mkLambda body lamArgs)
+  Sem r MatchBranch
+goFunctionClause' varsNum vars clause = do
+  pats <- patterns
+  let pis = concatMap (reverse . getBinderPatternInfos) pats
+      (vars', varsNum') =
+        foldl'
+          ( \(vs, k) name ->
+              (HashMap.insert (name ^. nameText) k vs, k + 1)
+          )
+          (vars, varsNum)
+          (map (fromJust . getInfoName) pis)
+  body <- goExpression varsNum' vars' (clause ^. Internal.clauseBody)
+  return $ MatchBranch Info.empty (fromList pats) body
   where
-    args :: [Internal.Pattern]
-    args = (^. Internal.patternArgPattern) <$> filter (\p -> p ^. Internal.patternArgIsImplicit == Internal.Explicit) (clause ^. Internal.clausePatterns)
+    patterns :: Sem r [Pattern]
+    patterns = mapM fromPattern ((^. Internal.patternArgPattern) <$> filter argIsImplicit (clause ^. Internal.clausePatterns))
 
-    vars :: HashMap Text Index
-    vars = HashMap.fromList $ do
-      a <- zip [0 ..] args
-      case a of
-        (varNum, Internal.PatternVariable n) -> [(n ^. Internal.nameText, varNum)]
-        (_, Internal.PatternConstructorApp {}) -> []
-        (_, Internal.PatternWildcard Wildcard {}) -> []
+    argIsImplicit :: Internal.PatternArg -> Bool
+    argIsImplicit = (== Internal.Explicit) . (^. Internal.patternArgIsImplicit)
 
-    lamArgs :: [Info]
-    lamArgs = toBinderInfo <$> args
-      where
-        toBinderInfo :: Internal.Pattern -> Info
-        toBinderInfo = \case
-          Internal.PatternVariable n -> binderNameInfo n
-          _ -> Info.empty
+
+-- goFunctionClause ::
+--   forall r.
+--   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
+--   Symbol ->
+--   Internal.FunctionClause ->
+--   Sem r ()
+-- goFunctionClause sym clause = do
+--   pats <- patterns
+--   body <- goExpression (length pats) vars (clause ^. Internal.clauseBody)
+--   registerIdentNode sym (foldr mkLambda body lamArgs)
+--   where
+--     patterns :: Sem r [Pattern]
+--     patterns = do
+--       let pats = (^. Internal.patternArgPattern) <$> filter (\p -> p ^. Internal.patternArgIsImplicit == Internal.Explicit) (clause ^. Internal.clausePatterns)
+--       mapM fromPattern pats
+
+--     vars :: HashMap Text Index
+--     vars = HashMap.fromList $ do
+--       a <- zip [0 ..] args
+--       case a of
+--         (varNum, Internal.PatternVariable n) -> [(n ^. Internal.nameText, varNum)]
+--         (_, Internal.PatternConstructorApp {}) -> []
+--         (_, Internal.PatternWildcard Wildcard {}) -> []
+
+--     lamArgs :: [Info]
+--     lamArgs = toBinderInfo <$> args
+--       where
+--         toBinderInfo :: Internal.Pattern -> Info
+--         toBinderInfo = \case
+--           Internal.PatternVariable n -> binderNameInfo n
+--           _ -> Info.empty
 
 goExpression ::
   forall r.
