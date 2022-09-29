@@ -222,38 +222,6 @@ goFunctionClause' varsNum vars clause = do
     argIsImplicit = (== Internal.Explicit) . (^. Internal.patternArgIsImplicit)
 
 
--- goFunctionClause ::
---   forall r.
---   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
---   Symbol ->
---   Internal.FunctionClause ->
---   Sem r ()
--- goFunctionClause sym clause = do
---   pats <- patterns
---   body <- goExpression (length pats) vars (clause ^. Internal.clauseBody)
---   registerIdentNode sym (foldr mkLambda body lamArgs)
---   where
---     patterns :: Sem r [Pattern]
---     patterns = do
---       let pats = (^. Internal.patternArgPattern) <$> filter (\p -> p ^. Internal.patternArgIsImplicit == Internal.Explicit) (clause ^. Internal.clausePatterns)
---       mapM fromPattern pats
-
---     vars :: HashMap Text Index
---     vars = HashMap.fromList $ do
---       a <- zip [0 ..] args
---       case a of
---         (varNum, Internal.PatternVariable n) -> [(n ^. Internal.nameText, varNum)]
---         (_, Internal.PatternConstructorApp {}) -> []
---         (_, Internal.PatternWildcard Wildcard {}) -> []
-
---     lamArgs :: [Info]
---     lamArgs = toBinderInfo <$> args
---       where
---         toBinderInfo :: Internal.Pattern -> Info
---         toBinderInfo = \case
---           Internal.PatternVariable n -> binderNameInfo n
---           _ -> Info.empty
-
 goExpression ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
