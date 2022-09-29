@@ -5,4 +5,4 @@ module Juvix.Compiler.Reg.Language.Base
 where
 
 import Juvix.Compiler.Asm.Language.Rep
-import Juvix.Compiler.Core.Language.Base hiding (Index, BuiltinOp(..))
+import Juvix.Compiler.Core.Language.Base hiding (BuiltinOp (..), Index)

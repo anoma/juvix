@@ -75,14 +75,7 @@ fromAsmInstr ::
   Sem r Instruction
 fromAsmInstr tab mem Asm.CmdInstr {..} =
   case _cmdInstrInstruction of
-    Asm.IntAdd -> return $ mkBinop OpIntAdd
-    Asm.IntSub -> return $ mkBinop OpIntSub
-    Asm.IntMul -> return $ mkBinop OpIntMul
-    Asm.IntDiv -> return $ mkBinop OpIntDiv
-    Asm.IntMod -> return $ mkBinop OpIntMod
-    Asm.IntLt -> return $ mkBinop OpIntLt
-    Asm.IntLe -> return $ mkBinop OpIntLe
-    Asm.ValEq -> return $ mkBinop OpEq
+    Asm.Binop op -> return $ mkBinop (mkOpcode op)
     Asm.Push val -> return $ mkAssign (VarRef VarGroupStack (n + 1)) (mkValue val)
     Asm.Pop -> return Nop
     Asm.PushTemp ->
@@ -129,6 +122,17 @@ fromAsmInstr tab mem Asm.CmdInstr {..} =
               _binaryOpArg2 = VRef $ VarRef VarGroupStack (n - 1)
             }
         )
+
+    mkOpcode :: Asm.Opcode -> Opcode
+    mkOpcode = \case
+      Asm.IntAdd -> OpIntAdd
+      Asm.IntSub -> OpIntSub
+      Asm.IntMul -> OpIntMul
+      Asm.IntDiv -> OpIntDiv
+      Asm.IntMod -> OpIntMod
+      Asm.IntLt -> OpIntLt
+      Asm.IntLe -> OpIntLe
+      Asm.ValEq -> OpEq
 
     mkAssign :: VarRef -> Value -> Instruction
     mkAssign tgt src = Assign (InstrAssign tgt src)
