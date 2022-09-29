@@ -1,0 +1,8 @@
+module Importee;
+
+open import Stdlib.Prelude;
+
+f : ℕ;
+f ≔ 1;
+
+end;

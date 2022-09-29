@@ -45,6 +45,7 @@ registerFunctionDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
     go :: Internal.Statement -> Sem r ()
     go = \case
       Internal.StatementFunction f -> goMutualBlock f
+      Internal.StatementInclude i -> mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
       _ -> return ()
 
 goMutualBlock ::
