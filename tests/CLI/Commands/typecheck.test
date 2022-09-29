@@ -20,6 +20,6 @@ $ juvix --only-errors typecheck tests/positive/Internal/Simple.juvix
 >= 0
 
 $ juvix --no-colors typecheck tests/negative/Internal/MultiWrongType.juvix
->2 /(.+)\/([^\/]+)\.juvix\:14\:7\-8\: error.*
+>2 /(.+)\/([^\/]+)\.juvix\:[0-9]*\:[0-9]*\-[0-9]*\: error.*
 .*/
 >= 1
