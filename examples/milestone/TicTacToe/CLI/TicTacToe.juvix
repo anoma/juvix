@@ -16,14 +16,14 @@ compile readline {
   c ↦ "readline()";
 };
 
-axiom parsePositiveInt : String → ℕ;
+axiom parsePositiveInt : String → Nat;
 
 compile parsePositiveInt {
   c ↦ "parsePositiveInt";
 };
 
--- | Reads a ;ℕ; from stdin
-getMove : Maybe ℕ;
+-- | Reads a ;Nat; from stdin
+getMove : Maybe Nat;
 getMove := validMove (parsePositiveInt (readline));
 
 do : IO × GameState -> GameState;

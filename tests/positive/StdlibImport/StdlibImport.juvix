@@ -4,7 +4,7 @@ open import Stdlib.Prelude;
 
 import A;
 
-two : ℕ;
+two : Nat;
 two := 1 + 1;
 
 foo : A.Foo;

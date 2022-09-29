@@ -22,7 +22,7 @@ checkState (state b p e) :=
          (state b p e));
 
 --- Given a player attempted move, updates the state accordingly.
-playMove : Maybe ℕ → GameState → GameState;
+playMove : Maybe Nat → GameState → GameState;
 playMove nothing (state b p _) :=
     state b p (continue "\nInvalid number, try again\n");
 playMove (just k) (state (board s) player e) :=
@@ -32,8 +32,8 @@ playMove (just k) (state (board s) player e) :=
                            (switch player)
                            noError));
 
---- Returns ;just; if the given ;ℕ; is in range of 1..9
-validMove : ℕ → Maybe ℕ;
+--- Returns ;just; if the given ;Nat; is in range of 1..9
+validMove : Nat → Maybe Nat;
 validMove n := if ((n <= nine) && (n >= one)) (just n) nothing;
 
 end;

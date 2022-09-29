@@ -16,10 +16,10 @@ open import Logic.Game;
 axiom hostLog : String → IO;
 
 -- XCoord → YCoord → Width → Height → Color → IO
-axiom hostFillRect : ℕ → ℕ → ℕ → ℕ → String → IO;
+axiom hostFillRect : Nat → Nat → Nat → Nat → String → IO;
 
 -- XCoord → YCoord → Text → Size → Color → Align → IO
-axiom hostFillText : ℕ → ℕ → String → ℕ → String → ℕ → IO;
+axiom hostFillText : Nat → Nat → String → Nat → String → Nat → IO;
 
 -- Nat extension
 
@@ -30,7 +30,7 @@ foreign c {
 };
 
 infixl 7 div;
-axiom div : ℕ → ℕ → ℕ;
+axiom div : Nat → Nat → Nat;
 
 compile div {
   c ↦ "div";
@@ -55,31 +55,31 @@ zip : {A : Type} → {B : Type} → List A → List B → List (A × B);
 zip (a ∷ as) (b ∷ bs) := (a, b) ∷ zip as bs;
 zip _ _ := nil;
 
-rangeAux : ℕ → ℕ → List ℕ;
+rangeAux : Nat → Nat → List Nat;
 rangeAux _ zero := nil;
 rangeAux m (suc n) := m ∷ rangeAux (suc m) n;
 
-range : ℕ → List ℕ;
+range : Nat → List Nat;
 range n := rangeAux zero n;
 
-enumerate : {A : Type} → List A → List (ℕ × A);
+enumerate : {A : Type} → List A → List (Nat × A);
 enumerate l := zip (range (length l)) l;
 
 -- Formatting constants
 
-squareWidth : ℕ;
+squareWidth : Nat;
 squareWidth := 100;
 
-textSize : ℕ;
+textSize : Nat;
 textSize := 30;
 
-xTextOffset : ℕ;
+xTextOffset : Nat;
 xTextOffset := 50;
 
-yTextOffset : ℕ;
+yTextOffset : Nat;
 yTextOffset := 60;
 
-canvasPadding : ℕ;
+canvasPadding : Nat;
 canvasPadding := 8;
 
 textColor : String;
@@ -99,21 +99,21 @@ inductive Align {
   center : Align;
 };
 
-alignNum : Align → ℕ;
+alignNum : Align → Nat;
 alignNum left := zero;
 alignNum right := one;
 alignNum center := two;
 
-renderText : String → ℕ → ℕ → Align → IO;
+renderText : String → Nat → Nat → Align → IO;
 renderText t row col a := hostFillText ((squareWidth * row) + xTextOffset) ((squareWidth * col) + yTextOffset) t textSize textColor (alignNum a);
 
-renderSymbol : Symbol → ℕ → ℕ → IO;
+renderSymbol : Symbol → Nat → Nat → IO;
 renderSymbol s row col := renderText (showSymbol s) row col center;
 
-renderNumber : ℕ → ℕ → ℕ → IO;
+renderNumber : Nat → Nat → Nat → IO;
 renderNumber n row col := renderText (natToStr n) row col center;
 
-renderSquare : ℕ → ℕ → Square → IO;
+renderSquare : Nat → Nat → Square → IO;
 renderSquare row col (occupied s) :=
     hostFillRect (squareWidth * row) (squareWidth * col) squareWidth squareWidth backgroundColor
     >> renderSymbol s row col;
@@ -121,10 +121,10 @@ renderSquare row col (empty n) :=
     hostFillRect (squareWidth * row) (squareWidth * col) squareWidth squareWidth lightBackgroundColor
     >> renderNumber n row col;
 
-renderRowAux : ℕ → (ℕ × Square) → IO;
+renderRowAux : Nat → (Nat × Square) → IO;
 renderRowAux col (row, s) := renderSquare row col s;
 
-renderRow : ℕ × (List Square) → IO;
+renderRow : Nat × (List Square) → IO;
 renderRow (n, xs) := mapIO (renderRowAux n) (enumerate xs);
 
 renderBoard : Board → IO;
@@ -149,7 +149,7 @@ renderGameState (state b p _) := renderBoard b >> renderFooterText (nextPlayerTe
 renderAndReturn : GameState → GameState;
 renderAndReturn s := const s (renderGameState s);
 
-selectedSquare : ℕ → ℕ → ℕ;
+selectedSquare : Nat → Nat → Nat;
 selectedSquare row col := 3 * (col div squareWidth) + (row div squareWidth) + 1;
 
 -- API
@@ -157,7 +157,7 @@ selectedSquare row col := 3 * (col div squareWidth) + (row div squareWidth) + 1;
 initGame : GameState;
 initGame := const beginState (renderGameState beginState >> renderText "Click on a square to make a move" 0 4 left);
 
-move : GameState → ℕ → ℕ → GameState;
+move : GameState → Nat → Nat → GameState;
 move (state b p (terminate e)) x y := renderAndReturn (state b p (terminate e));
 move s x y := renderAndReturn (playMove (validMove (selectedSquare x y)) s);
 

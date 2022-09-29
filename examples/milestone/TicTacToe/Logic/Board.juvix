@@ -11,7 +11,7 @@ inductive Board {
 };
 
 --- Returns the list of numbers corresponding to the empty ;Square;s
-possibleMoves : List Square → List ℕ;
+possibleMoves : List Square → List Nat;
 possibleMoves nil := nil;
 possibleMoves ((empty n) ∷ xs) := n ∷ possibleMoves xs;
 possibleMoves (_ ∷ xs) := possibleMoves xs;

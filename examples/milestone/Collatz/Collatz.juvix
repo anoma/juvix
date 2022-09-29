@@ -6,15 +6,15 @@ mapMaybe : {A : Type} → {B : Type} → (A → B) → Maybe A → Maybe B;
 mapMaybe _ nothing := nothing;
 mapMaybe f (just x) := just (f x);
 
-div2 : ℕ → Maybe ℕ;
+div2 : Nat → Maybe Nat;
 div2 zero := just zero;
 div2 (suc (suc n)) := mapMaybe suc (div2 n);
 div2 _ := nothing;
 
-collatzNext : ℕ → ℕ;
+collatzNext : Nat → Nat;
 collatzNext n := fromMaybe (suc (3 * n)) (div2 n);
 
-collatz : ℕ → ℕ;
+collatz : Nat → Nat;
 collatz zero := zero;
 collatz (suc zero) := suc zero;
 collatz (suc (suc n)) := collatzNext (suc (suc n));
@@ -28,20 +28,20 @@ compile readline {
   c ↦ "readline()";
 };
 
-axiom parsePositiveInt : String → ℕ;
+axiom parsePositiveInt : String → Nat;
 
 compile parsePositiveInt {
   c ↦ "parsePositiveInt";
 };
 
-getInitial : ℕ;
+getInitial : Nat;
 getInitial := parsePositiveInt (readline);
 
-output : ℕ → ℕ × IO;
+output : Nat → Nat × IO;
 output n := (n, putStrLn (natToStr n));
 
 terminating
-run : (ℕ → ℕ) → ℕ → IO;
+run : (Nat → Nat) → Nat → IO;
 run _ (suc zero) := putStrLn "Finished!";
 run f n := run f (fst (output (f n)));
 

@@ -38,8 +38,8 @@ unlines := intercalate "\n";
 singleton : {A : Type} → A → List A;
 singleton a := a ∷ nil;
 
---- Produce a ;String; representation of a ;List ℕ;
-showList : List ℕ → String;
+--- Produce a ;String; representation of a ;List Nat;
+showList : List Nat → String;
 showList xs := "[" ++str intercalate "," (map natToStr xs) ++str "]";
 
 --- A Peg represents a peg in the towers of Hanoi game
@@ -64,7 +64,7 @@ showMove : Move → String;
 showMove (move from to) := showPeg from ++str " -> " ++str showPeg to;
 
 --- Produce a list of ;Move;s that solves the towers of Hanoi game
-hanoi : ℕ → Peg → Peg → Peg → List Move;
+hanoi : Nat → Peg → Peg → Peg → List Move;
 hanoi zero _ _ _ := nil;
 hanoi (suc n) p1 p2 p3 := hanoi n p1 p3 p2 ++ singleton (move p1 p2) ++ hanoi n p3 p2 p1;
 

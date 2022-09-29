@@ -15,7 +15,7 @@ zipWith f _ nil := nil;
 zipWith f (x ∷ xs) (y ∷ ys) := f x y ∷ zipWith f xs ys;
 
 --- Return a list of repeated applications of a given function
-iterate : {A : Type} → ℕ → (A → A) → A → List A;
+iterate : {A : Type} → Nat → (A → A) → A → List A;
 iterate zero _ _ := nil;
 iterate (suc n) f a := a ∷ iterate n f (f a);
 
@@ -43,15 +43,15 @@ intercalate sep xs := concat (intersperse sep xs);
 unlines : List String → String;
 unlines := intercalate "\n";
 
-showList : List ℕ → String;
+showList : List Nat → String;
 showList xs := "[" ++str intercalate "," (map natToStr xs) ++str "]";
 
 --- Compute the next row of Pascal's triangle
-pascalNextRow : List ℕ → List ℕ;
+pascalNextRow : List Nat → List Nat;
 pascalNextRow row := zipWith (+) (singleton zero ++ row) (row ++ singleton zero);
 
 --- Produce Pascal's triangle to a given depth
-pascal : ℕ → List (List ℕ);
+pascal : Nat → List (List Nat);
 pascal rows := iterate rows pascalNextRow (singleton one);
 
 main : IO;
