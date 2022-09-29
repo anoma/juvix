@@ -45,17 +45,14 @@ uncurryType ty = case typeArgs ty of
     let ty' = uncurryType (typeTarget ty)
      in mkTypeFun (tyargs ++ typeArgs ty') (typeTarget ty')
 
-unifyTypes :: Members '[Error AsmError, Reader (Maybe Location), Reader InfoTable] r => Type -> Type -> Sem r Type
+unifyTypes :: forall r. Members '[Error AsmError, Reader (Maybe Location), Reader InfoTable] r => Type -> Type -> Sem r Type
 unifyTypes ty1 ty2 = case (ty1, ty2) of
-  (TyDynamic, x) ->
-    return x
-  (x, TyDynamic) ->
-    return x
+  (TyDynamic, x) -> return x
+  (x, TyDynamic) -> return x
   (TyInductive TypeInductive {..}, TyConstr TypeConstr {..})
     | _typeInductiveSymbol == _typeConstrInductive ->
         return ty1
-  (TyConstr {}, TyInductive {}) ->
-    unifyTypes ty2 ty1
+  (TyConstr {}, TyInductive {}) -> unifyTypes ty2 ty1
   (TyConstr c1, TyConstr c2)
     | c1 ^. typeConstrInductive == c2 ^. typeConstrInductive
         && c1 ^. typeConstrTag == c2 ^. typeConstrTag -> do
@@ -67,9 +64,9 @@ unifyTypes ty1 ty2 = case (ty1, ty2) of
   (TyFun t1, TyFun t2)
     | length (t1 ^. typeFunArgs) == length (t2 ^. typeFunArgs) -> do
         let args1 = toList (t1 ^. typeFunArgs)
-        let args2 = toList (t2 ^. typeFunArgs)
-        let tgt1 = t1 ^. typeFunTarget
-        let tgt2 = t2 ^. typeFunTarget
+            args2 = toList (t2 ^. typeFunArgs)
+            tgt1 = t1 ^. typeFunTarget
+            tgt2 = t2 ^. typeFunTarget
         args <- zipWithM unifyTypes args1 args2
         tgt <- unifyTypes tgt1 tgt2
         return $ TyFun (TypeFun (NonEmpty.fromList args) tgt)
@@ -81,16 +78,28 @@ unifyTypes ty1 ty2 = case (ty1, ty2) of
       unifyBounds _ _ Nothing = Nothing
       unifyBounds f (Just x) (Just y) = Just (f x y)
   (TyBool {}, TyBool {})
-    | ty1 == ty2 ->
-        return ty1
-  (TyString, TyString) ->
-    return TyString
-  (TyUnit, TyUnit) ->
-    return TyUnit
+    | ty1 == ty2 -> return ty1
+  (TyString, TyString) -> return TyString
+  (TyUnit, TyUnit) -> return TyUnit
   (TyInductive {}, TyInductive {})
-    | ty1 == ty2 ->
-        return ty1
-  _ -> do
+    | ty1 == ty2 -> return ty1
+
+  (TyUnit, _) -> err
+  (_, TyUnit) -> err
+  (TyInteger {}, _) -> err
+  (_, TyInteger {}) -> err
+  (TyString, _) -> err
+  (_, TyString) -> err
+  (TyBool {}, _) -> err
+  (_, TyBool {}) -> err
+  (TyFun {}, _) -> err
+  (_, TyFun {}) -> err
+  (TyInductive {}, _) -> err
+  (_, TyConstr {}) -> err
+
+  where
+  err :: Sem r a
+  err = do
     loc <- ask
     tab <- ask
     throw $ AsmError loc ("not unifiable: " <> ppTrace tab ty1 <> ", " <> ppTrace tab ty2)
@@ -122,13 +131,19 @@ isSubtype ty1 ty2 = case (ty1, ty2) of
       checkBounds _ Nothing (Just _) = False
       checkBounds _ (Just _) Nothing = True
       checkBounds cmp (Just x) (Just y) = cmp x y
-  (TyBool {}, TyBool {}) ->
-    True
-  (TyString, TyString) ->
-    True
-  (TyUnit, TyUnit) ->
-    True
-  (TyInductive {}, TyInductive {}) ->
-    ty1 == ty2
-  _ ->
-    False
+  (TyBool {}, TyBool {}) -> True
+  (TyString, TyString) -> True
+  (TyUnit, TyUnit) -> True
+  (TyInductive {}, TyInductive {}) -> ty1 == ty2
+
+  (TyUnit, _) -> False
+  (_, TyUnit) -> False
+  (TyInteger {}, _) -> False
+  (_, TyInteger {}) -> False
+  (TyString, _) -> False
+  (_, TyString) -> False
+  (TyBool {}, _) -> False
+  (_, TyBool {}) -> False
+  (TyFun {}, _) -> False
+  (_, TyFun {}) -> False
+  (_, TyConstr {}) -> False
