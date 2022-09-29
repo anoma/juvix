@@ -3,9 +3,11 @@
 module Juvix.Parser.Lexer where
 
 import Control.Monad.Trans.Class (lift)
+import Data.HashSet qualified as HashSet
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import GHC.Unicode
+import Juvix.Data.Keyword
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Text.Megaparsec as P hiding (sepBy1, sepEndBy1, some)
@@ -64,6 +66,7 @@ number' int mn mx = do
 string' :: ParsecS r Text
 string' = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
+-- {-# DEPRECATED use kw' #-}
 keyword' :: ParsecS r () -> Text -> ParsecS r ()
 keyword' spc kw =
   P.try $ do
@@ -84,25 +87,49 @@ keywordSymbol' spc kw = do
     void $ P.chunk kw
     spc
 
-rawIdentifier :: [ParsecS r ()] -> ParsecS r Text
-rawIdentifier allKeywords = rawIdentifier' (const False) allKeywords
+-- | The caller is responsible of consuming space after it
+kw' :: forall r. Member (Reader ParserParams) r => Keyword -> ParsecS r Interval
+kw' k@Keyword {..} = P.label (unpack _keywordAscii) helper
+  where
+    helper :: ParsecS r Interval
+    helper
+      | hasReservedChar _keywordAscii || maybe False hasReservedChar _keywordUnicode =
+          onlyInterval
+            ( P.chunk _keywordAscii
+                <|> maybe empty P.chunk _keywordUnicode
+            )
+      | otherwise = P.try $ do
+          (w, i) <- interval morpheme
+          unless (w `elem` keywordStrings k) (failure Nothing (Set.singleton (Label (fromJust $ nonEmpty $ unpack _keywordAscii))))
+          return i
 
-rawIdentifier' :: (Char -> Bool) -> [ParsecS r ()] -> ParsecS r Text
-rawIdentifier' excludedTailChar allKeywords = do
-  notFollowedBy (choice allKeywords)
-  h <- P.satisfy validFirstChar
-  t <- P.takeWhileP Nothing (validTailChar .&&. not . excludedTailChar)
-  return (Text.cons h t)
+rawIdentifier' :: (Char -> Bool) -> HashSet Text -> ParsecS r Text
+rawIdentifier' excludedTailChar allKeywords = label "<identifier>" $ P.try $ do
+  w <- morpheme' excludedTailChar
+  when (w `HashSet.member` allKeywords) empty
+  return w
+
+rawIdentifier :: HashSet Text -> ParsecS r Text
+rawIdentifier = rawIdentifier' (const False)
 
 validTailChar :: Char -> Bool
-validTailChar c =
-  isAlphaNum c || (validFirstChar c && notElem c delimiterSymbols)
+validTailChar =
+  (`notElem` reservedSymbols)
+    .&&. (isAlphaNum .||. (validFirstChar .&&. (`notElem` delimiterSymbols)))
+
+-- | A word that does not contain reserved symbols. It may be an identifier or a keyword.
+morpheme' :: (Char -> Bool) -> ParsecS r Text
+morpheme' excludedTailChar = do
+  h <- P.satisfy validFirstChar
+  t <- P.takeWhileP Nothing (validTailChar .&&. not . excludedTailChar)
+  let iden = Text.cons h t
+  return iden
+
+morpheme :: ParsecS r Text
+morpheme = morpheme' (const False)
 
 delimiterSymbols :: [Char]
 delimiterSymbols = ","
-
-reservedSymbols :: [Char]
-reservedSymbols = "@\";(){}[]."
 
 validFirstChar :: Char -> Bool
 validFirstChar c = not (isNumber c || isSpace c || (c `elem` reservedSymbols))
