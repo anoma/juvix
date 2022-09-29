@@ -34,10 +34,10 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
 
     goCommand :: Member Runtime r => Command -> Code -> Sem r ()
     goCommand cmd cont = case cmd of
-      Instr (CmdInstr {..}) -> do
+      Instr CmdInstr {..} -> do
         registerLocation (_cmdInstrInfo ^. commandInfoLocation)
         goInstr (_cmdInstrInfo ^. commandInfoLocation) _cmdInstrInstruction cont
-      Branch (CmdBranch {..}) -> do
+      Branch CmdBranch {..} -> do
         registerLocation (_cmdBranchInfo ^. commandInfoLocation)
         v <- popValueStack
         case v of
@@ -45,7 +45,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
           ValBool False -> goCode _cmdBranchFalse
           _ -> runtimeError "branch on non-boolean"
         goCode cont
-      Case (CmdCase {..}) -> do
+      Case CmdCase {..} -> do
         registerLocation (_cmdCaseInfo ^. commandInfoLocation)
         v <- topValueStack
         case v of
@@ -63,13 +63,13 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
 
     goInstr :: Member Runtime r => Maybe Location -> Instruction -> Code -> Sem r ()
     goInstr loc instr cont = case instr of
-      IntAdd ->
+      Binop IntAdd ->
         goIntBinOp (\x y -> ValInteger (x + y)) >> goCode cont
-      IntSub ->
+      Binop IntSub ->
         goIntBinOp (\x y -> ValInteger (x - y)) >> goCode cont
-      IntMul ->
+      Binop IntMul ->
         goIntBinOp (\x y -> ValInteger (x * y)) >> goCode cont
-      IntDiv -> do
+      Binop IntDiv -> do
         goIntBinOp'
           ( \x y ->
               if
@@ -77,7 +77,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
                   | otherwise -> return $ ValInteger (x `div` y)
           )
         goCode cont
-      IntMod -> do
+      Binop IntMod -> do
         goIntBinOp'
           ( \x y ->
               if
@@ -85,11 +85,11 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
                   | otherwise -> return $ ValInteger (x `mod` y)
           )
         goCode cont
-      IntLt ->
+      Binop IntLt ->
         goIntBinOp (\x y -> ValBool (x < y)) >> goCode cont
-      IntLe ->
+      Binop IntLe ->
         goIntBinOp (\x y -> ValBool (x <= y)) >> goCode cont
-      ValEq ->
+      Binop ValEq ->
         goBinOp (\x y -> ValBool (x == y)) >> goCode cont
       Push ref -> do
         v <- getVal ref
@@ -228,7 +228,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
         case v of
           ValClosure cl -> do
             let fi = getFunInfo infoTable (cl ^. closureSymbol)
-            let n = length (cl ^. closureArgs)
+                n = length (cl ^. closureArgs)
             when
               (n >= fi ^. functionArgsNum)
               (runtimeError "invalid closure: too many arguments")
@@ -341,8 +341,8 @@ toAsmError (RunError {..}) =
   AsmError
     { _asmErrorMsg =
         "runtime error: "
-          `mappend` _runErrorMsg
-          `mappend` "\n\nStacktrace\n----------\n\n"
-          `mappend` ppTrace (_runErrorState ^. runtimeInfoTable) _runErrorState,
+          <> _runErrorMsg
+          <> "\n\nStacktrace\n----------\n\n"
+          <> ppTrace (_runErrorState ^. runtimeInfoTable) _runErrorState,
       _asmErrorLoc = _runErrorState ^. runtimeLocation
     }

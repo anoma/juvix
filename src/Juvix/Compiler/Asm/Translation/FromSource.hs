@@ -59,7 +59,7 @@ declareBuiltins = do
   let i = mkInterval loc loc
   sym <- lift freshSymbol
   let tyio = mkTypeInductive sym
-  let constrs =
+      constrs =
         [ createBuiltinConstr sym TagReturn "return" (mkTypeFun [TyDynamic] tyio) i,
           createBuiltinConstr sym TagBind "bind" (mkTypeFun [tyio, mkTypeFun [TyDynamic] tyio] tyio) i,
           createBuiltinConstr sym TagWrite "write" (mkTypeFun [TyDynamic] tyio) i,
@@ -109,7 +109,6 @@ statementFunction = do
   when (txt == "main" && not (null argtys)) $
     parseFailure off "the 'main' function must take zero arguments"
   mrty <- optional typeAnnotation
-  let rty = fromMaybe TyDynamic mrty
   let fi0 =
         FunctionInfo
           { _functionName = txt,
@@ -117,10 +116,10 @@ statementFunction = do
             _functionLocation = Just i,
             _functionCode = [],
             _functionArgsNum = length argtys,
-            _functionType = mkTypeFun argtys rty
+            _functionType = mkTypeFun argtys (fromMaybe TyDynamic mrty)
           }
   lift $ registerFunction fi0
-  mcode <- (kwSemicolon >> return Nothing) <|> optional (braces parseCode)
+  mcode <- (kwSemicolon $> Nothing) <|> optional (braces parseCode)
   let fi = fi0 {_functionCode = fromMaybe [] mcode}
   case idt of
     Just (IdentFwd _) -> do
@@ -232,7 +231,7 @@ typeArguments = do
     <|> (typeNamed <&> NonEmpty.singleton)
 
 typeDynamic :: ParsecS r Type
-typeDynamic = kwStar >> return TyDynamic
+typeDynamic = kwStar $> TyDynamic
 
 typeNamed ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
@@ -265,21 +264,21 @@ command = do
   let loc = Just i
   case txt of
     "add" ->
-      return $ mkInstr' loc IntAdd
+      return $ mkBinop' loc IntAdd
     "sub" ->
-      return $ mkInstr' loc IntSub
+      return $ mkBinop' loc IntSub
     "mul" ->
-      return $ mkInstr' loc IntMul
+      return $ mkBinop' loc IntMul
     "div" ->
-      return $ mkInstr' loc IntDiv
+      return $ mkBinop' loc IntDiv
     "mod" ->
-      return $ mkInstr' loc IntMod
+      return $ mkBinop' loc IntMod
     "lt" ->
-      return $ mkInstr' loc IntLt
+      return $ mkBinop' loc IntLt
     "le" ->
-      return $ mkInstr' loc IntLe
+      return $ mkBinop' loc IntLe
     "eq" ->
-      return $ mkInstr' loc ValEq
+      return $ mkBinop' loc ValEq
     "push" ->
       mkInstr' loc . Push <$> value
     "pop" ->
@@ -340,8 +339,8 @@ integerValue = do
 
 boolValue :: ParsecS r Value
 boolValue =
-  (kwTrue >> return (ConstBool True))
-    <|> (kwFalse >> return (ConstBool False))
+  (kwTrue $> ConstBool True)
+    <|> (kwFalse $> ConstBool False)
 
 stringValue ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
@@ -351,10 +350,10 @@ stringValue = do
   return $ ConstString s
 
 unitValue :: ParsecS r Value
-unitValue = kwUnit >> return ConstUnit
+unitValue = kwUnit $> ConstUnit
 
 voidValue :: ParsecS r Value
-voidValue = kwVoid >> return ConstVoid
+voidValue = kwVoid $> ConstVoid
 
 memValue ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
@@ -369,7 +368,7 @@ directRef ::
 directRef = stackRef <|> argRef <|> tempRef
 
 stackRef :: ParsecS r DirectRef
-stackRef = kwDollar >> return StackRef
+stackRef = kwDollar $> StackRef
 
 argRef ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
@@ -463,7 +462,7 @@ instrCall = do
 parseCallType ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r CallType
-parseCallType = (kwDollar >> return CallClosure) <|> (CallFun <$> funSymbol)
+parseCallType = (kwDollar $> CallClosure) <|> (CallFun <$> funSymbol)
 
 instrCallClosures ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>

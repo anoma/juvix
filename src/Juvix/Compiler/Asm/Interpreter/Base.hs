@@ -48,16 +48,14 @@ makeLenses ''Constr
 makeLenses ''Closure
 
 instance HasAtomicity Constr where
-  atomicity Constr {..} =
-    if
-        | null _constrArgs -> Atom
-        | otherwise -> Aggregate appFixity
+  atomicity Constr {..}
+    | null _constrArgs = Atom
+    | otherwise = Aggregate appFixity
 
 instance HasAtomicity Closure where
-  atomicity Closure {..} =
-    if
-        | null _closureArgs -> Atom
-        | otherwise -> Aggregate appFixity
+  atomicity Closure {..}
+    | null _closureArgs = Atom
+    | otherwise = Aggregate appFixity
 
 instance HasAtomicity Val where
   atomicity = \case

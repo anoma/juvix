@@ -53,7 +53,7 @@ parseInputJuvixAsmFile = do
       str
       ( metavar "JUVIX_ASM_FILE"
           <> help "Path to a .jva file"
-          <> completer juvixCoreCompleter
+          <> completer juvixAsmCompleter
       )
   pure Path {_pathIsInput = True, ..}
 
@@ -94,6 +94,9 @@ juvixCompleter = extCompleter "juvix"
 
 juvixCoreCompleter :: Completer
 juvixCoreCompleter = extCompleter "jvc"
+
+juvixAsmCompleter :: Completer
+juvixAsmCompleter = extCompleter "jva"
 
 requote :: String -> String
 requote s =

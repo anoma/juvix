@@ -1,3 +1,11 @@
+-- |
+-- A JuvixAsm program is a set of JuvixAsm functions. Every function has an
+-- associated Symbol, a fixed (i.e., known at compile time) number of arguments, a
+-- fixed temporary stack size, and a fixed maximum local value stack height (see
+-- Interpreter/RuntimeState.hs).
+--
+-- See the file Interpreter/RuntimeState.hs for a description of JuvixAsm runtime
+-- and memory layout.
 module Juvix.Compiler.Asm.Language
   ( module Juvix.Compiler.Asm.Language,
     module Juvix.Compiler.Core.Language.Base,
@@ -5,16 +13,6 @@ module Juvix.Compiler.Asm.Language
 where
 
 import Juvix.Compiler.Core.Language.Base
-
-{-
-A JuvixAsm program is a set of JuvixAsm functions. Every function has an
-associated Symbol, a fixed (i.e., known at compile time) number of arguments, a
-fixed temporary stack size, and a fixed maximum local value stack height (see
-Interpreter/RuntimeState.hs).
-
-See the file Interpreter/RuntimeState.hs for a description of JuvixAsm runtime and
-memory layout.
--}
 
 -- In what follows, when referring to the stack we mean the current local value
 -- stack, unless otherwise stated. By stack[n] we denote the n-th cell from the
@@ -25,21 +23,32 @@ type Offset = Int
 
 -- | Values reference readable values (constant or value stored in memory). Void
 -- is an unprintable unit.
-data Value = ConstInt Integer | ConstBool Bool | ConstString Text | ConstUnit | ConstVoid | Ref MemValue
+data Value
+  = ConstInt Integer
+  | ConstBool Bool
+  | ConstString Text
+  | ConstUnit
+  | ConstVoid
+  | Ref MemValue
 
 -- | MemValues are references to values stored in random-access memory.
--- - DirectRef is a direct memory reference.
--- - ConstrRef references is an indirect reference to a field (argument) of a
---  constructor: field k holds the (k+1)th argument.
-data MemValue = DRef DirectRef | ConstrRef Field
+data MemValue
+  = -- | A direct memory reference.
+    DRef DirectRef
+  | -- | ConstrRef references is an indirect reference to a field (argument) of
+    --  a constructor: field k holds the (k+1)th argument.
+    ConstrRef Field
 
 -- | DirectRef is a direct memory reference.
--- - StackRef references the top of the stack. JVA code: '$'.
--- - ArgRef references an argument in the argument area (0-based offsets). JVA
---   code: 'arg[<offset>]'.
--- - TempRef references a value in the temporary area (0-based offsets). JVA
---   code: 'tmp[<offset>]'.
-data DirectRef = StackRef | ArgRef Offset | TempRef Offset
+data DirectRef
+  = -- | StackRef references the top of the stack. JVA code: '$'.
+    StackRef
+  | -- | ArgRef references an argument in the argument area (0-based offsets).
+    --   JVA code: 'arg[<offset>]'.
+    ArgRef Offset
+  | -- | TempRef references a value in the temporary area (0-based offsets). JVA
+    --   code: 'tmp[<offset>]'.
+    TempRef Offset
 
 -- | Constructor field reference. JVA code: '<dref>.<tag>[<offset>]'
 data Field = Field
@@ -59,30 +68,9 @@ data CallType = CallFun Symbol | CallClosure
 -- | `Instruction` is a single non-branching instruction, i.e., with no control
 -- transfer.
 data Instruction
-  = -- | Add stack[0] + stack[1], pop the stack by two, and push the result. JVA
-    -- opcode: 'add'.
-    IntAdd
-  | -- | Subtract stack[0] - stack[1], pop the stack by two, and push the
-    -- result. JVA opcode: 'sub'.
-    IntSub
-  | -- | Multiply stack[0] * stack[1], pop the stack by two, and push the
-    -- result. JVA opcode 'mul'.
-    IntMul
-  | -- | Divide stack[0] / stack[1], pop the stack by two, and push the result.
-    -- JVA opcode: 'div'.
-    IntDiv
-  | -- | Calculate modulus stack[0] % stack[1], pop the stack by two, and push
-    -- the result. JVA opcode: 'mod'.
-    IntMod
-  | -- | Compare stack[0] < stack[1], pop the stack by two, and push the result.
-    -- JVA opcode: 'lt'.
-    IntLt
-  | -- | Compare stack[0] <= stack[1], pop the stack by two, and push the
-    -- result. JVA opcode: 'le'.
-    IntLe
-  | -- | Compare the two top stack cells with structural equality, pop the stack
-    -- by two, and push the result. JVA opcode: 'eq'.
-    ValEq
+  = -- | An instruction which takes its operands from the two top stack cells,
+    -- pops the stack by two, and then pushes the result.
+    Binop Opcode
   | -- | Push a value on top of the stack. JVA opcode: 'push <val>'.
     Push Value
   | -- | Pop the stack. JVA opcode: 'pop'.
@@ -153,6 +141,32 @@ data Instruction
     -- the address at the top of the global call stack, and pops the call stack.
     -- JVA opcode: 'ret'.
     Return
+
+data Opcode
+  = -- | Add stack[0] + stack[1], pop the stack by two, and push the result. JVA
+    -- opcode: 'add'.
+    IntAdd
+  | -- | Subtract stack[0] - stack[1], pop the stack by two, and push the
+    -- result. JVA opcode: 'sub'.
+    IntSub
+  | -- | Multiply stack[0] * stack[1], pop the stack by two, and push the
+    -- result. JVA opcode 'mul'.
+    IntMul
+  | -- | Divide stack[0] / stack[1], pop the stack by two, and push the result.
+    -- JVA opcode: 'div'.
+    IntDiv
+  | -- | Calculate modulus stack[0] % stack[1], pop the stack by two, and push
+    -- the result. JVA opcode: 'mod'.
+    IntMod
+  | -- | Compare stack[0] < stack[1], pop the stack by two, and push the result.
+    -- JVA opcode: 'lt'.
+    IntLt
+  | -- | Compare stack[0] <= stack[1], pop the stack by two, and push the
+    -- result. JVA opcode: 'le'.
+    IntLe
+  | -- | Compare the two top stack cells with structural equality, pop the stack
+    -- by two, and push the result. JVA opcode: 'eq'.
+    ValEq
 
 data InstrAllocClosure = InstrAllocClosure
   { _allocClosureFunSymbol :: Symbol,

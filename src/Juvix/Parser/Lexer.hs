@@ -92,7 +92,7 @@ rawIdentifier' :: (Char -> Bool) -> [ParsecS r ()] -> ParsecS r Text
 rawIdentifier' excludedTailChar allKeywords = do
   notFollowedBy (choice allKeywords)
   h <- P.satisfy validFirstChar
-  t <- P.takeWhileP Nothing (\c -> validTailChar c && not (excludedTailChar c))
+  t <- P.takeWhileP Nothing (validTailChar .&&. not . excludedTailChar)
   return (Text.cons h t)
 
 validTailChar :: Char -> Bool

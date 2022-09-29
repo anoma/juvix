@@ -52,14 +52,13 @@ recurse' sig = go True
       return (mem'', r : rs)
 
     checkNextInstr :: Bool -> Maybe Location -> Instruction -> Code -> Sem r ()
-    checkNextInstr isTail loc instr code =
-      if
-          | isFinalInstr instr && not (null code) ->
-              throw $ AsmError loc "unreachable code"
-          | isTail && null code && not (isFinalInstr instr) ->
-              throw $ AsmError loc "expected a return or a tail call"
-          | otherwise ->
-              return ()
+    checkNextInstr isTail loc instr code
+      | isFinalInstr instr && not (null code) =
+          throw $ AsmError loc "unreachable code"
+      | isTail && null code && not (isFinalInstr instr) =
+          throw $ AsmError loc "expected a return or a tail call"
+      | otherwise =
+          return ()
 
     goInstr :: Memory -> CmdInstr -> Sem r (Memory, a)
     goInstr memory cmd = do
@@ -67,26 +66,26 @@ recurse' sig = go True
       mem <- fixMemInstr memory (cmd ^. cmdInstrInstruction)
       return (mem, a)
       where
-        loc = cmd ^. (cmdInstrInfo . commandInfoLocation)
+        loc = cmd ^. cmdInstrInfo . commandInfoLocation
 
         fixMemInstr :: Memory -> Instruction -> Sem r Memory
         fixMemInstr mem instr =
           case instr of
-            IntAdd ->
+            Binop IntAdd ->
               fixMemIntOp mem
-            IntSub ->
+            Binop IntSub ->
               fixMemIntOp mem
-            IntMul ->
+            Binop IntMul ->
               fixMemIntOp mem
-            IntDiv ->
+            Binop IntDiv ->
               fixMemIntOp mem
-            IntMod ->
+            Binop IntMod ->
               fixMemIntOp mem
-            IntLt ->
+            Binop IntLt ->
               fixMemBinOp mem mkTypeInteger mkTypeInteger mkTypeBool
-            IntLe ->
+            Binop IntLe ->
               fixMemBinOp mem mkTypeInteger mkTypeInteger mkTypeBool
-            ValEq ->
+            Binop ValEq ->
               fixMemBinOp mem TyDynamic TyDynamic mkTypeBool
             Push val -> do
               ty <- getValueType' loc (sig ^. recursorInfoTable) mem val
@@ -114,8 +113,8 @@ recurse' sig = go True
               return mem
             AllocConstr tag -> do
               let ci = getConstrInfo (sig ^. recursorInfoTable) tag
-              let n = ci ^. constructorArgsNum
-              let tyargs = typeArgs (ci ^. constructorType)
+                  n = ci ^. constructorArgsNum
+                  tyargs = typeArgs (ci ^. constructorType)
               checkValueStack' loc (sig ^. recursorInfoTable) tyargs mem
               tys <-
                 zipWithM
@@ -127,7 +126,7 @@ recurse' sig = go True
                   popValueStack n mem
             AllocClosure InstrAllocClosure {..} -> do
               let fi = getFunInfo (sig ^. recursorInfoTable) _allocClosureFunSymbol
-              let (tyargs, tgt) = unfoldType (fi ^. functionType)
+                  (tyargs, tgt) = unfoldType (fi ^. functionType)
               checkValueStack' loc (sig ^. recursorInfoTable) (take _allocClosureArgsNum tyargs) mem
               return $
                 pushValueStack (mkTypeFun (drop _allocClosureArgsNum tyargs) tgt) $
@@ -228,7 +227,7 @@ recurse' sig = go True
               AsmError
                 loc
                 ( "expected a function, got value of type "
-                    `mappend` ppTrace (sig ^. recursorInfoTable) ty
+                    <> ppTrace (sig ^. recursorInfoTable) ty
                 )
 
     goBranch :: Bool -> Memory -> CmdBranch -> Sem r (Memory, a)
@@ -242,17 +241,17 @@ recurse' sig = go True
       checkBranchInvariant 1 loc mem0 mem'
       return (mem', a')
       where
-        loc = cmd ^. (cmdBranchInfo . commandInfoLocation)
+        loc = cmd ^. cmdBranchInfo . commandInfoLocation
 
     goCase :: Bool -> Memory -> CmdCase -> Sem r (Memory, a)
     goCase isTail mem cmd@CmdCase {..} = do
       checkValueStack' loc (sig ^. recursorInfoTable) [mkTypeInductive _cmdCaseInductive] mem
       rs <- mapM (go isTail mem . (^. caseBranchCode)) _cmdCaseBranches
       let mems = map fst rs
-      let ass = map snd rs
+          ass = map snd rs
       rd <- maybe (return Nothing) (fmap Just . go isTail mem) _cmdCaseDefault
       let md = fmap fst rd
-      let ad = fmap snd rd
+          ad = fmap snd rd
       a' <- (sig ^. recurseCase) mem cmd ass ad
       case mems of
         [] -> return (fromMaybe mem md, a')
@@ -268,7 +267,7 @@ recurse' sig = go True
     checkBranchInvariant k loc mem mem' = do
       unless (length (mem' ^. memoryValueStack) == length (mem ^. memoryValueStack) + k) $
         throw $
-          AsmError loc ("wrong value stack height after branching (must increase by " `mappend` show k `mappend` ")")
+          AsmError loc ("wrong value stack height after branching (must increase by " <> show k <> ")")
       unless
         ( null (mem' ^. memoryTempStack)
             || length (mem' ^. memoryTempStack) == length (mem ^. memoryTempStack)

@@ -42,34 +42,33 @@ runRuntime tab = runState (RuntimeState (CallStack []) emptyFrame [] Nothing tab
     interp :: Sem (Runtime ': r) a -> Sem (State RuntimeState ': r) a
     interp = reinterpret $ \case
       HasCaller ->
-        get >>= \s -> return (not (null (s ^. (runtimeCallStack . callStack))))
+        not . null . (^. runtimeCallStack . callStack) <$> get
       PushCallStack code -> do
-        s <- get
-        let frm = s ^. runtimeFrame
-        modify' (over runtimeCallStack (over callStack (Continuation frm code :)))
+        frm <- (^. runtimeFrame) <$> get
+        modify' (over (runtimeCallStack . callStack) (Continuation frm code :))
       PopCallStack -> do
         s <- get
-        case s ^. (runtimeCallStack . callStack) of
+        case s ^. runtimeCallStack . callStack of
           h : t -> do
             modify' (over runtimeCallStack (set callStack t))
             return h
           [] -> throwRuntimeError s "popping empty call stack"
       PushValueStack val ->
-        modify' (over runtimeFrame (over frameStack (over valueStack (val :))))
+        modify' (over (runtimeFrame . frameStack) (over valueStack (val :)))
       PopValueStack -> do
         s <- get
-        case s ^. (runtimeFrame . frameStack . valueStack) of
+        case s ^. runtimeFrame . frameStack . valueStack of
           v : vs -> do
-            modify' (over runtimeFrame (over frameStack (set valueStack vs)))
+            modify' (over (runtimeFrame . frameStack) (set valueStack vs))
             return v
           [] -> throwRuntimeError s "popping empty value stack"
       TopValueStack -> do
         s <- get
-        case s ^. (runtimeFrame . frameStack . valueStack) of
+        case s ^. runtimeFrame . frameStack . valueStack of
           v : _ -> return v
           [] -> throwRuntimeError s "accessing top of empty value stack"
       NullValueStack ->
-        get >>= \s -> return $ null $ s ^. (runtimeFrame . frameStack . valueStack)
+        get >>= \s -> return $ null $ s ^. runtimeFrame . frameStack . valueStack
       ReplaceFrame frm ->
         modify' (set runtimeFrame frm)
       ReplaceTailFrame frm -> do
@@ -88,9 +87,9 @@ runRuntime tab = runState (RuntimeState (CallStack []) emptyFrame [] Nothing tab
             (throwRuntimeError s "invalid temporary stack read")
             (Stack.nthFromBottom off (s ^. (runtimeFrame . frameTemp . temporaryStack)))
       PushTempStack val ->
-        modify' (over runtimeFrame (over frameTemp (over temporaryStack (Stack.push val))))
+        modify' (over (runtimeFrame . frameTemp) (over temporaryStack (Stack.push val)))
       PopTempStack ->
-        modify' (over runtimeFrame (over frameTemp (over temporaryStack Stack.pop)))
+        modify' (over (runtimeFrame . frameTemp) (over temporaryStack Stack.pop))
       LogMessage msg ->
         modify' (over runtimeMessages (msg :))
       FlushLogs ->

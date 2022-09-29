@@ -43,14 +43,14 @@ genCode infoTable fi =
     -- (directly or indirectly).
     go :: Bool -> Int -> BinderList Value -> Core.Node -> Code'
     go isTail tempSize refs node = case node of
-      Core.NVar v@Core.Var {} -> goVar isTail refs v
-      Core.NIdt idt@Core.Ident {} -> goIdent isTail idt
-      Core.NCst cst@Core.Constant {} -> goConstant isTail cst
-      Core.NApp apps@Core.Apps {} -> goApps isTail tempSize refs apps
-      Core.NBlt blt@Core.BuiltinApp {} -> goBuiltinApp isTail tempSize refs blt
-      Core.NCtr ctr@Core.Constr {} -> goConstr isTail tempSize refs ctr
-      Core.NLet lt@Core.Let {} -> goLet isTail tempSize refs lt
-      Core.NCase c@Core.Case {} -> goCase isTail tempSize refs c
+      Core.NVar v -> goVar isTail refs v
+      Core.NIdt idt -> goIdent isTail idt
+      Core.NCst cst -> goConstant isTail cst
+      Core.NApp apps -> goApps isTail tempSize refs apps
+      Core.NBlt blt -> goBuiltinApp isTail tempSize refs blt
+      Core.NCtr ctr -> goConstr isTail tempSize refs ctr
+      Core.NLet lt -> goLet isTail tempSize refs lt
+      Core.NCase c -> goCase isTail tempSize refs c
 
     goVar :: Bool -> BinderList Value -> Core.Var -> Code'
     goVar isTail refs (Core.Var {..}) =
@@ -173,56 +173,67 @@ genCode infoTable fi =
             CmdCase
               { _cmdCaseInfo = emptyInfo,
                 _cmdCaseInductive = _caseInfo ^. Core.caseInfoInductive,
-                _cmdCaseBranches =
-                  map
-                    ( \(Core.CaseBranch {..}) ->
-                        if
-                            | _caseBranchBindersNum == 0 ->
-                                CaseBranch
-                                  _caseBranchTag
-                                  ( DL.toList $
-                                      DL.cons (mkInstr Pop) $
-                                        go isTail tempSize refs _caseBranchBody
-                                  )
-                            | otherwise ->
-                                CaseBranch
-                                  _caseBranchTag
-                                  ( DL.toList $
-                                      DL.cons (mkInstr PushTemp) $
-                                        snocPopTemp isTail $
-                                          go
-                                            isTail
-                                            (tempSize + 1)
-                                            ( BL.prepend
-                                                ( map
-                                                    (Ref . ConstrRef . Field _caseBranchTag (TempRef tempSize))
-                                                    (reverse [0 .. _caseBranchBindersNum - 1])
-                                                )
-                                                refs
-                                            )
-                                            _caseBranchBody
-                                  )
-                    )
-                    _caseBranches,
-                _cmdCaseDefault =
-                  fmap
-                    ( DL.toList
-                        . DL.cons (mkInstr Pop)
-                        . go isTail tempSize refs
-                    )
-                    _caseDefault
+                _cmdCaseBranches = compileCaseBranches _caseBranches,
+                _cmdCaseDefault = fmap compileCaseDefault _caseDefault
               }
         )
+      where
+        compileCaseBranches :: [Core.CaseBranch] -> [CaseBranch]
+        compileCaseBranches branches =
+          map
+            ( \(Core.CaseBranch {..}) ->
+                if
+                    | _caseBranchBindersNum == 0 ->
+                        compileCaseBranchNoBinders _caseBranchTag _caseBranchBody
+                    | otherwise ->
+                        compileCaseBranch _caseBranchBindersNum _caseBranchTag _caseBranchBody
+            )
+            branches
+
+        compileCaseBranchNoBinders :: Tag -> Core.Node -> CaseBranch
+        compileCaseBranchNoBinders tag body =
+          CaseBranch
+            tag
+            ( DL.toList $
+                DL.cons (mkInstr Pop) $
+                  go isTail tempSize refs body
+            )
+
+        compileCaseBranch :: Int -> Tag -> Core.Node -> CaseBranch
+        compileCaseBranch bindersNum tag body =
+          CaseBranch
+            tag
+            ( DL.toList $
+                DL.cons (mkInstr PushTemp) $
+                  snocPopTemp isTail $
+                    go
+                      isTail
+                      (tempSize + 1)
+                      ( BL.prepend
+                          ( map
+                              (Ref . ConstrRef . Field tag (TempRef tempSize))
+                              (reverse [0 .. bindersNum - 1])
+                          )
+                          refs
+                      )
+                      body
+            )
+
+        compileCaseDefault :: Core.Node -> Code
+        compileCaseDefault =
+          DL.toList
+            . DL.cons (mkInstr Pop)
+            . go isTail tempSize refs
 
     genOp :: Core.BuiltinOp -> Command
     genOp = \case
-      Core.OpIntAdd -> mkInstr IntAdd
-      Core.OpIntSub -> mkInstr IntSub
-      Core.OpIntMul -> mkInstr IntMul
-      Core.OpIntDiv -> mkInstr IntDiv
-      Core.OpIntLt -> mkInstr IntLt
-      Core.OpIntLe -> mkInstr IntLe
-      Core.OpEq -> mkInstr ValEq
+      Core.OpIntAdd -> mkBinop IntAdd
+      Core.OpIntSub -> mkBinop IntSub
+      Core.OpIntMul -> mkBinop IntMul
+      Core.OpIntDiv -> mkBinop IntDiv
+      Core.OpIntLt -> mkBinop IntLt
+      Core.OpIntLe -> mkBinop IntLe
+      Core.OpEq -> mkBinop ValEq
       _ -> unimplemented
 
     getArgsNum :: Symbol -> Int

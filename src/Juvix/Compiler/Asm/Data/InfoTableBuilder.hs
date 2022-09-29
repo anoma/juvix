@@ -5,7 +5,11 @@ import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Language
 
-data IdentKind = IdentFun Symbol | IdentFwd Symbol | IdentInd Symbol | IdentConstr Tag
+data IdentKind
+  = IdentFun Symbol
+  | IdentFwd Symbol
+  | IdentInd Symbol
+  | IdentConstr Tag
 
 data InfoTableBuilder m a where
   FreshSymbol :: InfoTableBuilder m Symbol
@@ -47,21 +51,21 @@ runInfoTableBuilder =
     interp :: InfoTableBuilder m a -> Sem (State BuilderState : r) a
     interp = \case
       FreshSymbol -> do
-        modify' (over stateNextSymbol (+ 1))
         s <- get
-        return (s ^. stateNextSymbol - 1)
+        modify' (over stateNextSymbol (+ 1))
+        return (s ^. stateNextSymbol)
       FreshTag -> do
         modify' (over stateNextUserTag (+ 1))
         s <- get
         return (UserTag (s ^. stateNextUserTag - 1))
       RegisterFunction fi -> do
-        modify' (over stateInfoTable (over infoFunctions (HashMap.insert (fi ^. functionSymbol) fi)))
+        modify' (over (stateInfoTable . infoFunctions) (HashMap.insert (fi ^. functionSymbol) fi))
         modify' (over stateIdents (HashMap.insert (fi ^. functionName) (IdentFun (fi ^. functionSymbol))))
       RegisterConstr ci -> do
-        modify' (over stateInfoTable (over infoConstrs (HashMap.insert (ci ^. constructorTag) ci)))
+        modify' (over (stateInfoTable . infoConstrs) (HashMap.insert (ci ^. constructorTag) ci))
         modify' (over stateIdents (HashMap.insert (ci ^. constructorName) (IdentConstr (ci ^. constructorTag))))
       RegisterInductive ii -> do
-        modify' (over stateInfoTable (over infoInductives (HashMap.insert (ii ^. inductiveSymbol) ii)))
+        modify' (over (stateInfoTable . infoInductives) (HashMap.insert (ii ^. inductiveSymbol) ii))
         modify' (over stateIdents (HashMap.insert (ii ^. inductiveName) (IdentInd (ii ^. inductiveSymbol))))
       RegisterForward txt sym ->
         modify' (over stateIdents (HashMap.insert txt (IdentFwd sym)))

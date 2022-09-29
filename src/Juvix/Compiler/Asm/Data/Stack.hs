@@ -1,10 +1,11 @@
 module Juvix.Compiler.Asm.Data.Stack where
 
-import Data.HashMap.Strict qualified as HashMap
+import Data.IntMap (IntMap)
+import Data.IntMap qualified as IntMap
 import Juvix.Prelude hiding (empty)
 
 data Stack a = Stack
-  { _stackValues :: HashMap Int a,
+  { _stackValues :: IntMap a,
     _stackHeight :: Int
   }
 
@@ -25,7 +26,7 @@ instance Foldable Stack where
     reverse
       . map snd
       . sortBy (\x y -> compare (fst x) (fst y))
-      . HashMap.toList
+      . IntMap.toList
       . (^. stackValues)
 
   length :: Stack a -> Int
@@ -37,7 +38,7 @@ instance Foldable Stack where
 push :: a -> Stack a -> Stack a
 push a s =
   Stack
-    { _stackValues = HashMap.insert (s ^. stackHeight) a (s ^. stackValues),
+    { _stackValues = IntMap.insert (s ^. stackHeight) a (s ^. stackValues),
       _stackHeight = s ^. stackHeight + 1
     }
 
@@ -47,12 +48,12 @@ pop s =
       | null s -> error "popping an empty stack"
       | otherwise ->
           Stack
-            { _stackValues = HashMap.delete (s ^. stackHeight - 1) (s ^. stackValues),
+            { _stackValues = IntMap.delete (s ^. stackHeight - 1) (s ^. stackValues),
               _stackHeight = s ^. stackHeight - 1
             }
 
 top :: Stack a -> Maybe a
-top s = HashMap.lookup (s ^. stackHeight - 1) (s ^. stackValues)
+top s = IntMap.lookup (s ^. stackHeight - 1) (s ^. stackValues)
 
 -- | Values on top of the stack, in order from top to bottom.
 topValues :: Int -> Stack a -> Maybe [a]
@@ -61,9 +62,9 @@ topValues n s = mapM (`nthFromTop` s) [0 .. n - 1]
 -- | Read nth value from the bottom of the stack.
 nthFromBottom :: Int -> Stack a -> Maybe a
 nthFromBottom idx s =
-  HashMap.lookup idx (s ^. stackValues)
+  IntMap.lookup idx (s ^. stackValues)
 
 -- | Read nth value from the top of the stack.
 nthFromTop :: Int -> Stack a -> Maybe a
 nthFromTop idx s =
-  HashMap.lookup (s ^. stackHeight - idx - 1) (s ^. stackValues)
+  IntMap.lookup (s ^. stackHeight - idx - 1) (s ^. stackValues)

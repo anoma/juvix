@@ -38,13 +38,13 @@ pushValueStack :: Type -> Memory -> Memory
 pushValueStack ty = over memoryValueStack (Stack.push ty)
 
 popValueStack :: Int -> Memory -> Memory
-popValueStack n = foldr (.) id (replicate n (over memoryValueStack Stack.pop))
+popValueStack n = (!! n) . iterate (over memoryValueStack Stack.pop)
 
 pushTempStack :: Type -> Memory -> Memory
 pushTempStack ty = over memoryTempStack (Stack.push ty)
 
 popTempStack :: Int -> Memory -> Memory
-popTempStack n = foldr (.) id (replicate n (over memoryTempStack Stack.pop))
+popTempStack n = (!! n) . iterate (over memoryTempStack Stack.pop)
 
 -- | Read value stack at index `n` from the top.
 topValueStack :: Int -> Memory -> Maybe Type
@@ -140,14 +140,18 @@ checkValueStack' loc tab tys mem = do
           throw $
             AsmError loc $
               "type mismatch on value stack cell "
-                `mappend` show idx
-                `mappend` " from top: expected "
-                `mappend` ppTrace tab ty
-                `mappend` " but got "
-                `mappend` ppTrace tab ty'
+                <> show idx
+                <> " from top: expected "
+                <> ppTrace tab ty
+                <> " but got "
+                <> ppTrace tab ty'
     )
     (zip tys [0 ..])
 
+-- | Unify the types of corresponding memory locations in both memory
+-- representations. Throws an error if some types cannot be unified, or the
+-- heights of the value stacks or the temporary stacks don't match, or the sizes
+-- of the argument areas don't match.
 unifyMemory' :: Member (Error AsmError) r => Maybe Location -> InfoTable -> Memory -> Memory -> Sem r Memory
 unifyMemory' loc tab mem1 mem2 = do
   unless (length (mem1 ^. memoryValueStack) == length (mem2 ^. memoryValueStack)) $

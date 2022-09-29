@@ -180,14 +180,14 @@ instance PrettyCode Type where
 instance PrettyCode Instruction where
   -- TODO: properly handle the arguments
   ppCode = \case
-    IntAdd -> return $ pretty ("add" :: String)
-    IntSub -> return $ pretty ("sub" :: String)
-    IntMul -> return $ pretty ("mul" :: String)
-    IntDiv -> return $ pretty ("div" :: String)
-    IntMod -> return $ pretty ("mod" :: String)
-    IntLt -> return $ pretty ("lt" :: String)
-    IntLe -> return $ pretty ("le" :: String)
-    ValEq -> return $ pretty ("eq" :: String)
+    Binop IntAdd -> return $ pretty ("add" :: String)
+    Binop IntSub -> return $ pretty ("sub" :: String)
+    Binop IntMul -> return $ pretty ("mul" :: String)
+    Binop IntDiv -> return $ pretty ("div" :: String)
+    Binop IntMod -> return $ pretty ("mod" :: String)
+    Binop IntLt -> return $ pretty ("lt" :: String)
+    Binop IntLe -> return $ pretty ("le" :: String)
+    Binop ValEq -> return $ pretty ("eq" :: String)
     Push {} -> return $ pretty ("push" :: String)
     Pop -> return $ pretty ("pop" :: String)
     PushTemp -> return $ pretty ("pusht" :: String)
