@@ -86,10 +86,13 @@ keywordSymbol' spc kw = do
     spc
 
 rawIdentifier :: [ParsecS r ()] -> ParsecS r Text
-rawIdentifier allKeywords = do
+rawIdentifier allKeywords = rawIdentifier' (const False) allKeywords
+
+rawIdentifier' :: (Char -> Bool) -> [ParsecS r ()] -> ParsecS r Text
+rawIdentifier' excludedTailChar allKeywords = do
   notFollowedBy (choice allKeywords)
   h <- P.satisfy validFirstChar
-  t <- P.takeWhileP Nothing validTailChar
+  t <- P.takeWhileP Nothing (validTailChar .&&. not . excludedTailChar)
   return (Text.cons h t)
 
 validTailChar :: Char -> Bool

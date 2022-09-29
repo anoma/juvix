@@ -1,5 +1,6 @@
 module Commands.Dev.Options
   ( module Commands.Dev.Options,
+    module Commands.Dev.Asm.Options,
     module Commands.Dev.Core.Options,
     module Commands.Dev.Internal.Options,
     module Commands.Dev.Parse.Options,
@@ -10,6 +11,7 @@ module Commands.Dev.Options
   )
 where
 
+import Commands.Dev.Asm.Options
 import Commands.Dev.Core.Options
 import Commands.Dev.Doc.Options
 import Commands.Dev.Highlight.Options
@@ -25,6 +27,7 @@ data DevCommand
   | Highlight HighlightOptions
   | Internal InternalCommand
   | Core CoreCommand
+  | Asm AsmCommand
   | MiniC MiniCOptions
   | Parse ParseOptions
   | Scope ScopeOptions
@@ -39,6 +42,7 @@ parseDevCommand =
         [ commandHighlight,
           commandInternal,
           commandCore,
+          commandAsm,
           commandMiniC,
           commandParse,
           commandDoc,
@@ -82,6 +86,13 @@ commandCore =
     info
       (Core <$> parseCoreCommand)
       (progDesc "Subcommands related to JuvixCore")
+
+commandAsm :: Mod CommandFields DevCommand
+commandAsm =
+  command "asm" $
+    info
+      (Asm <$> parseAsmCommand)
+      (progDesc "Subcommands related to JuvixAsm")
 
 commandParse :: Mod CommandFields DevCommand
 commandParse =

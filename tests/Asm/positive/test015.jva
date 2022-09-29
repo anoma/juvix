@@ -1,0 +1,85 @@
+-- functions returning functions
+
+function id(*) {
+  push arg[0];
+  ret;
+}
+
+function const(*, *) {
+  push arg[0];
+  ret;
+}
+
+function g(*) : integer {
+  push 2;
+  tcall id;
+}
+
+function f(integer) : integer -> integer {
+  push arg[0];
+  push 6;
+  eq;
+  br {
+    true: {
+      push 0;
+      calloc const 1;
+      ret;
+    }
+    false: {
+      push arg[0];
+      push 5;
+      eq;
+      br {
+        true: {
+          push 1;
+          calloc const 1;
+          ret;
+        }
+        false: {
+          push arg[0];
+          push 10;
+          eq;
+          br {
+            true: {
+              calloc g 0;
+              ret;
+            }
+            false: {
+              calloc id 0;
+              ret;
+            }
+          };
+        }
+      };
+    }
+  };
+}
+
+function main() {
+  push 6;
+  push 5;
+  call f;
+  call $ 1;
+  trace;
+  pop;
+  push 5;
+  push 6;
+  call f;
+  call $ 1;
+  trace;
+  pop;
+  push 5;
+  push 10;
+  call f;
+  call $ 1;
+  trace;
+  pop;
+  push 5;
+  push 11;
+  call f;
+  call $ 1;
+  trace;
+  pop;
+  push void;
+  ret;
+}

@@ -1,0 +1,90 @@
+-- Nested lists
+
+inductive list {
+  nil : list;
+  cons : * -> list -> list;
+}
+
+function mklst(integer) : list {
+  push 0;
+  push arg[0];
+  eq;
+  br {
+    true: {
+      alloc nil;
+      ret;
+    }
+    false: {
+      push 1;
+      push arg[0];
+      sub;
+      call mklst;
+      push arg[0];
+      alloc cons;
+      ret;
+    }
+  };
+}
+
+function mklst2(integer) : list {
+  push 0;
+  push arg[0];
+  eq;
+  br {
+    true: {
+      alloc nil;
+      ret;
+    }
+    false: {
+      push 1;
+      push arg[0];
+      sub;
+      call mklst2;
+      push arg[0];
+      call mklst;
+      alloc cons;
+      ret;
+    }
+  };
+}
+
+function append(list, list) : list {
+  push arg[0];
+  case list {
+    nil: { pop; push arg[1]; ret; }
+    cons: {
+      pop;
+      push arg[1];
+      push arg[0].cons[1];
+      call append;
+      push arg[0].cons[0];
+      alloc cons;
+      ret;
+    }
+  };
+}
+
+function flatten(list) : list {
+  push arg[0];
+  case list {
+    nil: ret
+    cons: {
+      pop;
+      push arg[0].cons[1];
+      call flatten;
+      push arg[0].cons[0];
+      tcall append;
+    }
+  };
+}
+
+function main() {
+  push 4;
+  call mklst2;
+  trace;
+  call flatten;
+  trace;
+  pop;
+  push void;
+  ret;
+}

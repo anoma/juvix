@@ -1,0 +1,81 @@
+-- currying and uncurrying
+
+function app(* -> *, *) {
+  push arg[1];
+  push arg[0];
+  tcall $ 1;
+}
+
+function app'((integer -> integer, integer) -> integer, integer -> integer, integer) : integer {
+  push arg[2];
+  push arg[1];
+  push arg[0];
+  tcall $ 2;
+}
+
+function inc(integer) : integer {
+  push arg[0];
+  push 1;
+  add;
+  ret;
+}
+
+function h((* -> *, *) -> *) {
+  calloc inc 0;
+  push arg[0];
+  cextend 1;
+  ret;
+}
+
+function capp((*, *) -> *, *) : * -> * {
+  push arg[1];
+  push arg[0];
+  cextend 1;
+  ret;
+}
+
+function curry((*, *) -> *) : * -> * -> * {
+  push arg[0];
+  calloc capp 1;
+  ret;
+}
+
+function uapp(* -> * -> *, *, *) {
+  push arg[2];
+  push arg[1];
+  push arg[0];
+  call $ 1;
+  tcall $ 1;
+}
+
+function uncurry(* -> * -> *) : (*, *) -> * {
+  push arg[0];
+  calloc uapp 1;
+  ret;
+}
+
+function main() {
+  push 5;
+  calloc inc 0;
+  calloc app 0;
+  call app';
+  trace;
+  pop;
+  push 4;
+  calloc app 0;
+  call h;
+  call $ 1;
+  trace;
+  pop;
+  -- uncurry (curry app) inc 7
+  push 7;
+  calloc inc 0;
+  calloc app 0;
+  call curry;
+  call uncurry;
+  call $ 2;
+  trace;
+  pop;
+  push void;
+  ret;
+}

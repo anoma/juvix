@@ -1,0 +1,24 @@
+-- recursion
+
+function sum(integer) : integer {
+  push arg[0];
+  push 0;
+  eq;
+  br {
+    true: push 0
+    false: {
+      push 1;
+      push arg[0];
+      sub;
+      call sum;
+      push arg[0];
+      add;
+    }
+  };
+  ret;
+}
+
+function main() {
+  push 1000;
+  tcall sum;
+}

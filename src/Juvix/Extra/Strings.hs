@@ -203,6 +203,9 @@ underscore = "_"
 at_ :: IsString s => s
 at_ = "@"
 
+dot :: IsString s => s
+dot = "."
+
 colon :: IsString s => s
 colon = ":"
 
@@ -272,6 +275,12 @@ true_ = "true"
 false_ :: IsString s => s
 false_ = "false"
 
+arg_ :: IsString s => s
+arg_ = "arg"
+
+tmp_ :: IsString s => s
+tmp_ = "tmp"
+
 tag :: IsString s => s
 tag = "tag"
 
@@ -302,6 +311,9 @@ div = "/"
 mod :: IsString s => s
 mod = "%"
 
+dollar :: IsString s => s
+dollar = "$"
+
 if_ :: IsString s => s
 if_ = "if"
 
@@ -326,6 +338,9 @@ succ = "S"
 unit :: IsString s => s
 unit = "unit"
 
+void :: IsString s => s
+void = "void"
+
 nil :: IsString s => s
 nil = "nil"
 
@@ -346,6 +361,12 @@ match_ = "match"
 
 with_ :: IsString s => s
 with_ = "with"
+
+fun_ :: IsString s => s
+fun_ = "function"
+
+fwd_ :: IsString s => s
+fwd_ = "forward"
 
 juvixFunctionT :: IsString s => s
 juvixFunctionT = "juvix_function_t"

@@ -1,0 +1,20 @@
+-- Value stack type mismatch
+
+function id(*) {
+  push arg[0];
+  ret;
+}
+
+function app2((integer -> integer, integer) -> integer, integer -> integer, integer) : integer {
+  push arg[2];
+  push arg[1];
+  push arg[0];
+  tcall $ 2;
+}
+
+function main() {
+  push 5;
+  calloc id 0;
+  push $;
+  tcall app2;
+}

@@ -1,0 +1,275 @@
+-- lists
+
+inductive list {
+  nil : list;
+  cons : * -> list -> list;
+}
+
+function head(list) {
+  push arg[0];
+  case list {
+    cons: {
+      pop;
+      push arg[0].cons[0];
+      ret;
+    }
+  };
+}
+
+function tail(list) : list {
+  push arg[0];
+  case list {
+    cons: {
+      pop;
+      push arg[0].cons[1];
+      ret;
+    }
+  };
+}
+
+function null(list) {
+  push arg[0];
+  case list {
+    nil: {
+      pop;
+      push true;
+      ret;
+    }
+    cons: {
+      pop;
+      push false;
+      ret;
+    }
+  };
+}
+
+function map(* -> *, list) : list {
+  push arg[1];
+  case list {
+    nil: {
+      ret;
+    }
+    cons: {
+      pop;
+      push arg[1].cons[1];
+      push arg[0];
+      call map;
+      push arg[1].cons[0];
+      push arg[0];
+      call $ 1;
+      alloc cons;
+      ret;
+    }
+  };
+}
+
+function foldl((*, *) -> *, *, list) : * {
+  push arg[2];
+  case list {
+    nil: {
+      pop;
+      push arg[1];
+      ret;
+    }
+    cons: {
+      pop;
+      push arg[2].cons[1];
+      push arg[2].cons[0];
+      push arg[1];
+      push arg[0];
+      call $ 2;
+      push arg[0];
+      tcall foldl;
+    }
+  };
+}
+
+function foldr((*, *) -> *, *, list) {
+  push arg[2];
+  case list {
+    nil: {
+      pop;
+      push arg[1];
+      ret;
+    }
+    cons: {
+      pop;
+      push arg[2].cons[1];
+      push arg[1];
+      push arg[0];
+      call foldr;
+      push arg[2].cons[0];
+      push arg[0];
+      tcall $ 2;
+    }
+  };
+}
+
+function filter(* -> bool, list) : list {
+  push arg[1];
+  case list {
+    nil: ret
+    cons: {
+      pop;
+      push arg[1].cons[0];
+      push arg[0];
+      call $ 1;
+      br {
+        true: {
+          push arg[1].cons[1];
+          push arg[0];
+          call filter;
+          push arg[1].cons[0];
+          alloc cons;
+          ret;
+        }
+        false: {
+          push arg[1].cons[1];
+          push arg[0];
+          tcall filter;
+        }
+      };
+    }
+  };
+}
+
+function flip_cons(list, *) : list {
+  push arg[0];
+  push arg[1];
+  alloc cons;
+  ret;
+}
+
+function rev(list) : list {
+  push arg[0];
+  alloc nil;
+  calloc flip_cons 0;
+  tcall foldl;
+}
+
+function gen(integer) : list {
+  push arg[0];
+  push 0;
+  eq;
+  br {
+    true: {
+      alloc nil;
+      ret;
+    }
+    false: {
+      push 1;
+      push arg[0];
+      sub;
+      call gen;
+      push arg[0];
+      alloc cons;
+      ret;
+    }
+  };
+}
+
+function plus(integer, integer) : integer {
+  push arg[1];
+  push arg[0];
+  add;
+  ret;
+}
+
+function sum(integer) : integer {
+  push arg[0];
+  call gen;
+  push 0;
+  calloc plus 0;
+  tcall foldl;
+}
+
+function sum'(integer) : integer {
+  push arg[0];
+  call gen;
+  push 0;
+  calloc plus 0;
+  tcall foldr;
+}
+
+function foldl'((*, *) -> *, *, list) {
+  push arg[2];
+  call null;
+  br {
+    true: {
+      push arg[1];
+      ret;
+    }
+    false: {
+      push arg[2];
+      call tail;
+      push arg[2];
+      call head;
+      push arg[1];
+      push arg[0];
+      call $ 2;
+      push arg[0];
+      tcall foldl';
+    }
+  };
+}
+
+function sum''(integer) : integer {
+  push arg[0];
+  call gen;
+  push 0;
+  calloc plus 0;
+  tcall foldl';
+}
+
+function gt5(integer) : bool {
+  push arg[0];
+  push 5;
+  lt;
+  ret;
+}
+
+function dec(integer) : integer {
+  push 1;
+  push arg[0];
+  sub;
+  ret;
+}
+
+function main() {
+  push 10;
+  call gen;
+  trace;
+  pop;
+  push 10;
+  call gen;
+  call rev;
+  trace;
+  pop;
+  push 10;
+  call gen;
+  calloc gt5 0;
+  call filter;
+  trace;
+  pop;
+  push 10;
+  call gen;
+  calloc dec 0;
+  call map;
+  call rev;
+  trace;
+  pop;
+  push 1000;
+  call sum;
+  trace;
+  pop;
+  push 1000;
+  call sum';
+  trace;
+  pop;
+  push 1000;
+  call sum'';
+  trace;
+  pop;
+  push void;
+  ret;
+}

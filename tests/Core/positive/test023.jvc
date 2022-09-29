@@ -38,5 +38,5 @@ writeLn (sum 10000) >>
 writeLn (sum 100000) >>
 writeLn (sum' 10000) >>
 writeLn (sum' 100000) >>
-writeLn (sum' 10000) >>
-writeLn (sum' 100000)
+writeLn (sum'' 10000) >>
+writeLn (sum'' 100000)

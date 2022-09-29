@@ -1,0 +1,10 @@
+-- branch type mismatch
+
+function main() {
+  push true;
+  br {
+    true: { push "a"; }
+    false: { push 1; }
+  };
+  ret;
+}

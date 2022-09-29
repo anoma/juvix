@@ -1,0 +1,31 @@
+-- Tail calls
+
+function multiply(integer, integer) : integer {
+  push arg[0];
+  push arg[1];
+  mul;
+  ret;
+}
+
+function plus(integer, integer) : integer {
+  push arg[0];
+  push arg[1];
+  add;
+  ret;
+}
+
+function calculate(integer, integer, integer) : integer {
+  push arg[0];
+  push arg[1];
+  push arg[2];
+  call multiply;
+  tcall plus;
+}
+
+function main () {
+  push 2;
+  push 3;
+  push 5;
+  calloc calculate 2;
+  tcall $ 1;
+}

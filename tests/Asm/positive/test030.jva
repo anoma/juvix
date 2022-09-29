@@ -1,0 +1,87 @@
+-- mutual recursion
+
+function g(integer) : integer;
+
+function f(integer) : integer {
+  push 1;
+  push arg[0];
+  lt;
+  br {
+    true: {
+      push 1;
+      ret;
+    }
+    false: {
+      push 1;
+      push arg[0];
+      sub;
+      call g;
+      push arg[0];
+      push 2;
+      mul;
+      add;
+      ret;
+    }
+  };
+}
+
+function h(integer) : integer;
+
+function g(integer) : integer {
+  push 1;
+  push arg[0];
+  lt;
+  br {
+    true: {
+      push 1;
+      ret;
+    }
+    false: {
+      push 1;
+      push arg[0];
+      sub;
+      call h;
+      push arg[0];
+      add;
+      ret;
+    }
+  };
+}
+
+function h(integer) : integer {
+  push 1;
+  push arg[0];
+  lt;
+  br {
+    true: {
+      push 1;
+      ret;
+    }
+    false: {
+      push 1;
+      push arg[0];
+      sub;
+      call f;
+      push arg[0];
+      mul;
+      ret;
+    }
+  };
+}
+
+function main() {
+  push 5;
+  call f;
+  trace;
+  pop;
+  push 10;
+  call f;
+  trace;
+  pop;
+  push 100;
+  call f;
+  trace;
+  pop;
+  push void;
+  ret;
+}

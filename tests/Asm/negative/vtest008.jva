@@ -1,0 +1,16 @@
+-- case stack height mismatch
+
+inductive list {
+  nil : list;
+  cons : * -> list -> list;
+}
+
+function main() {
+  alloc nil;
+  case list {
+    nil: { push 1; push 2; }
+    cons: { push 1; }
+  };
+  pop;
+  ret;
+}

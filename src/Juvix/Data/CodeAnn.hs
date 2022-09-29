@@ -180,6 +180,12 @@ kwBraceL = delimiter "{"
 kwBraceR :: Doc Ann
 kwBraceR = delimiter "}"
 
+kwBracketL :: Doc Ann
+kwBracketL = delimiter "["
+
+kwBracketR :: Doc Ann
+kwBracketR = delimiter "]"
+
 kwParenL :: Doc Ann
 kwParenL = delimiter "("
 

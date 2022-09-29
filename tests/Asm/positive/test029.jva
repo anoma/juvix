@@ -1,0 +1,66 @@
+-- structural equality
+
+inductive list {
+  nil : list;
+  cons : * -> list -> list;
+}
+
+function main() {
+  push 1;
+  push 1;
+  eq;
+  trace; -- true
+  pop;
+  push 1;
+  push 0;
+  eq;
+  trace; -- false
+  pop;
+  alloc nil;
+  alloc nil;
+  eq;
+  trace; -- true
+  pop;
+  alloc nil;
+  alloc nil;
+  push 1;
+  alloc cons;
+  eq;
+  trace; -- false
+  pop;
+  alloc nil;
+  push 2;
+  alloc cons;
+  alloc nil;
+  push 1;
+  alloc cons;
+  eq;
+  trace; -- false
+  pop;
+  alloc nil;
+  push 2;
+  alloc cons;
+  push 1;
+  alloc cons;
+  alloc nil;
+  push 1;
+  alloc cons;
+  eq;
+  trace; -- false
+  pop;
+  alloc nil;
+  push 2;
+  alloc cons;
+  push 1;
+  alloc cons;
+  alloc nil;
+  push 2;
+  alloc cons;
+  push 1;
+  alloc cons;
+  eq;
+  trace; -- true
+  pop;
+  push void;
+  ret;
+}

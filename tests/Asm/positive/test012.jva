@@ -1,0 +1,31 @@
+-- temporary stack
+
+function main() {
+  push 1;
+  pusht;
+  push 2;
+  pusht;
+  push tmp[1];
+  popt;
+  push tmp[0];
+  add;
+  pusht;
+  push tmp[1];
+  push tmp[1];
+  mul;
+  pusht;
+  push tmp[2];
+  push 2;
+  add;
+  pusht;
+  push tmp[2];
+  push tmp[3];
+  add;
+  pusht;
+  push tmp[2];
+  push tmp[3];
+  push tmp[4];
+  add;
+  add;
+  ret;
+}

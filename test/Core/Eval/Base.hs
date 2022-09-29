@@ -60,6 +60,7 @@ coreEvalErrorAssertion mainFile step = do
             hout <- openFile outputFile WriteMode
             step "Evaluate"
             r' <- doEval mainFile hout tab node
+            hClose hout
             case r' of
               Left _ -> assertBool "" True
               Right _ -> assertFailure "no error"

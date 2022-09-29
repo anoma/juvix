@@ -1,0 +1,57 @@
+-- Higher-order functions
+
+function S(*, *, *) {
+  push arg[2];
+  push arg[1];
+  ccall 1;
+  push arg[2];
+  push arg[0];
+  tccall 2;
+}
+
+function K(*, *) {
+  push arg[0];
+  ret;
+}
+
+function I(*) {
+  push arg[0];
+  calloc K 0;
+  push $;
+  tcall S;
+}
+
+function main() {
+  push 1;
+  call I;
+  push 1;
+  calloc I 0;
+  call I;
+  call $ 1;
+  add;
+  push 1;
+  calloc I 0;
+  push $;
+  push $;
+  push $;
+  call I;
+  call $ 1;
+  call $ 1;
+  call $ 1;
+  call $ 1;
+  add;
+  push 1;
+  calloc I 0;
+  push $;
+  calloc I 0;
+  push $;
+  push $;
+  push $;
+  push $;
+  push $;
+  push $;
+  call I;
+  ccall 9;
+  add;
+  ret;
+}

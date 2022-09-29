@@ -1,0 +1,7 @@
+-- wrong stack height on exit
+
+function main () {
+  push 1;
+  push 2;
+  ret;
+}

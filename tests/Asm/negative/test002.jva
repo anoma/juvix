@@ -1,0 +1,16 @@
+-- invalid memory access
+
+inductive list {
+  nil : list;
+  cons : * -> list -> list;
+}
+
+function hd(list) {
+  push arg[0].cons[0];
+  ret;
+}
+
+function main() {
+  alloc nil;
+  tcall hd;
+}

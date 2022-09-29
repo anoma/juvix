@@ -1,0 +1,19 @@
+-- Indirect call
+
+function calculate(integer, integer, integer) : integer {
+  push arg[0];
+  push arg[1];
+  push arg[2];
+  mul;
+  add;
+  ret;
+}
+
+function main () {
+  push 2;
+  push 3;
+  push 5;
+  calloc calculate 2;
+  call $ 1;
+  ret;
+}

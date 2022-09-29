@@ -35,6 +35,10 @@ data LetInfo = LetInfo
     _letInfoBinderType :: Type
   }
 
+newtype CaseInfo = CaseInfo
+  { _caseInfoInductive :: Symbol
+  }
+
 data CaseBranchInfo = CaseBranchInfo
   { _caseBranchInfoBinderNames :: [Maybe Name],
     _caseBranchInfoBinderTypes :: [Type],
@@ -61,7 +65,7 @@ type Constr = Constr' ConstrInfo Node
 
 type Let = Let' LetInfo Node
 
-type Case = Case' () CaseBranchInfo Node
+type Case = Case' CaseInfo CaseBranchInfo Node
 
 type CaseBranch = CaseBranch' CaseBranchInfo Node
 
@@ -93,4 +97,5 @@ makeLenses ''VarInfo
 makeLenses ''IdentInfo
 makeLenses ''ConstrInfo
 makeLenses ''LetInfo
+makeLenses ''CaseInfo
 makeLenses ''CaseBranchInfo

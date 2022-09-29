@@ -1,0 +1,89 @@
+-- Higher-order function composition
+
+function compose(* -> *, * -> *, *) : * {
+  push arg[2];
+  push arg[1];
+  call $ 1;
+  push arg[0];
+  tcall $ 1;
+}
+
+function id(*) {
+  push arg[0];
+  ret;
+}
+
+function iterate(* -> *, integer) : * -> * {
+  push 0;
+  push arg[1];
+  eq;
+  br {
+    true: {
+      calloc id 0;
+      ret;
+    }
+    false: {
+      push 1;
+      push arg[1];
+      sub;
+      push arg[0];
+      call iterate;
+      push arg[0];
+      calloc compose 2;
+      ret;
+    }
+  };
+}
+
+function inc(integer) : integer {
+  push 1;
+  push arg[0];
+  add;
+  ret;
+}
+
+function plus(integer, integer) : integer {
+  push arg[1];
+  push arg[0];
+  calloc inc 0;
+  call iterate;
+  tcall $ 1;
+}
+
+function mult(integer, integer) : integer {
+  push 0;
+  push arg[0];
+  push arg[1];
+  calloc plus 1;
+  call iterate;
+  tcall $ 1;
+}
+
+function exp(integer, integer) : integer {
+  push 1;
+  push arg[1];
+  push arg[0];
+  calloc mult 1;
+  call iterate;
+  tcall $ 1;
+}
+
+function main() {
+  push 7;
+  push 3;
+  call plus;
+  trace;
+  pop;
+  push 7;
+  push 3;
+  call mult;
+  trace;
+  pop;
+  push 7;
+  push 3;
+  call exp;
+  trace;
+  pop;
+  push void;
+  ret;
+}
