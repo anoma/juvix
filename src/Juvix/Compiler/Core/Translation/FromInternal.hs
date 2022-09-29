@@ -154,7 +154,7 @@ goFunctionDef f
 
     where
       patterns :: [Internal.PatternArg]
-      patterns = head (f ^. Internal.funDefClauses) ^. Internal.clausePatterns
+      patterns = filter (\p -> p ^. Internal.patternArgIsImplicit == Internal.Explicit) (head (f ^. Internal.funDefClauses) ^. Internal.clausePatterns)
 
       vs :: [Index]
       vs = take (length patterns) [0 ..]
@@ -216,7 +216,7 @@ goFunctionClause' varsNum vars clause = do
   return $ MatchBranch Info.empty (fromList pats) body
   where
     patterns :: Sem r [Pattern]
-    patterns = mapM fromPattern ((^. Internal.patternArgPattern) <$> filter argIsImplicit (clause ^. Internal.clausePatterns))
+    patterns = reverse <$> mapM fromPattern ((^. Internal.patternArgPattern) <$> filter argIsImplicit (clause ^. Internal.clausePatterns))
 
     argIsImplicit :: Internal.PatternArg -> Bool
     argIsImplicit = (== Internal.Explicit) . (^. Internal.patternArgIsImplicit)
