@@ -51,6 +51,7 @@ data ArgumentInfo = ArgumentInfo
 
 data InductiveInfo = InductiveInfo
   { _inductiveName :: Name,
+    _inductiveSymbol :: Symbol,
     _inductiveKind :: Type,
     _inductiveConstructors :: [ConstructorInfo],
     _inductiveParams :: [ParameterInfo],

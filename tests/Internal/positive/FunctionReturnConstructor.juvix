@@ -1,0 +1,10 @@
+module FunctionReturnConstructor;
+
+inductive Foo {
+  foo : Foo;
+};
+
+main : Foo;
+main ≔ foo;
+
+end;

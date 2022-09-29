@@ -54,5 +54,10 @@ tests =
       "A module that imports another"
       "Import"
       "Importer.juvix"
-      "out/Importer.out"
+      "out/Importer.out",
+    PosTest
+      "A constructor valued function"
+      "."
+      "FunctionReturnConstructor.juvix"
+      "out/FunctionReturnConstructor.out"
   ]

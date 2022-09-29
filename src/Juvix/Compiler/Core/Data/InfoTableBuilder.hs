@@ -9,6 +9,7 @@ data InfoTableBuilder m a where
   FreshTag :: InfoTableBuilder m Tag
   RegisterIdent :: IdentifierInfo -> InfoTableBuilder m ()
   RegisterConstructor :: ConstructorInfo -> InfoTableBuilder m ()
+  RegisterInductive :: InductiveInfo -> InfoTableBuilder m ()
   RegisterIdentNode :: Symbol -> Node -> InfoTableBuilder m ()
   RegisterMain :: Symbol -> InfoTableBuilder m ()
   SetIdentArgsInfo :: Symbol -> [ArgumentInfo] -> InfoTableBuilder m ()
@@ -46,6 +47,8 @@ runInfoTableBuilder tab =
         modify' (over infoIdentifiers (HashMap.insert (ii ^. identifierSymbol) ii))
         whenJust (ii ^? identifierName . _Just . nameText) $ \name ->
           modify' (over identMap (HashMap.insert name (IdentSym (ii ^. identifierSymbol))))
+      RegisterInductive i -> do
+        modify' (over infoInductives (HashMap.insert (i ^. inductiveSymbol) i))
       RegisterConstructor ci -> do
         modify' (over infoConstructors (HashMap.insert (ci ^. constructorTag) ci))
         modify' (over identMap (HashMap.insert (ci ^. (constructorName . nameText)) (IdentTag (ci ^. constructorTag))))

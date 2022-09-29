@@ -26,7 +26,32 @@ fromInternal i = do
     f = mapM_ coreModule (toList (i ^. InternalTyped.resultModules))
       where
         coreModule :: Internal.Module -> Sem r ()
-        coreModule m = registerFunctionDefs m
+        coreModule m = do
+          registerInductiveDefs m
+          registerFunctionDefs m
+
+registerInductiveDefs ::
+  forall r.
+  Members '[InfoTableBuilder] r =>
+  Internal.Module ->
+  Sem r ()
+registerInductiveDefs m = registerInductiveDefsBody (m ^. Internal.moduleBody)
+
+registerInductiveDefsBody ::
+  forall r.
+  Members '[InfoTableBuilder] r =>
+  Internal.ModuleBody ->
+  Sem r ()
+registerInductiveDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
+  where
+    go :: Internal.Statement -> Sem r ()
+    go = \case
+      Internal.StatementInductive d -> goInductiveDef d
+      Internal.StatementAxiom {} -> return ()
+      Internal.StatementForeign {} -> return ()
+      Internal.StatementFunction {} -> return ()
+      Internal.StatementInclude i ->
+        mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
 
 registerFunctionDefs ::
   forall r.
@@ -54,6 +79,41 @@ goMutualBlock ::
   Internal.MutualBlock ->
   Sem r ()
 goMutualBlock m = mapM_ goFunctionDef (m ^. Internal.mutualFunctions)
+
+goInductiveDef ::
+  forall r.
+  Members '[InfoTableBuilder] r =>
+  Internal.InductiveDef ->
+  Sem r ()
+goInductiveDef i
+  | isJust (i ^. Internal.inductiveBuiltin) = return ()
+  | otherwise = do
+      sym <- freshSymbol
+      ctorInfos <- mapM (goConstructor sym) (i ^. Internal.inductiveConstructors)
+      let info =
+            InductiveInfo
+              { _inductiveName = i ^. Internal.inductiveName,
+                _inductiveSymbol = sym,
+                _inductiveKind = mkDynamic',
+                _inductiveConstructors = ctorInfos,
+                _inductiveParams = [],
+                _inductivePositive = i ^. Internal.inductivePositive
+              }
+      registerInductive info
+  where
+    goConstructor :: Symbol -> Internal.InductiveConstructorDef -> Sem r ConstructorInfo
+    goConstructor sym ctor = do
+      tag <- freshTag
+      let info =
+            ConstructorInfo
+              { _constructorName = ctor ^. Internal.inductiveConstructorName,
+                _constructorTag = tag,
+                _constructorType = mkDynamic',
+                _constructorArgsNum = length (ctor ^. Internal.inductiveConstructorParameters),
+                _constructorInductive = sym
+              }
+      registerConstructor info
+      return info
 
 goFunctionDef ::
   forall r.
@@ -129,7 +189,14 @@ goExpression varsNum vars = \case
         Just (IdentSym sym) -> mkIdent (Info.singleton (NameInfo n)) sym
         Just (IdentTag {}) -> error ("internal to core: not a function: " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
-    x -> unsupported ("goExpression ExpressionIden: " <> show (getLoc x))
+    Internal.IdenInductive {} -> error "goExpression inductive"
+    Internal.IdenConstructor n -> do
+      m <- getIdent txt
+      return $ case m of
+        Just (IdentTag tag) -> mkConstr (Info.singleton (NameInfo n)) tag []
+        Just (IdentSym {}) -> error ("internal to core: not a constructor " <> txt)
+        Nothing -> error ("internal to core: undeclared identifier: " <> txt)
+    Internal.IdenAxiom {} -> error ("goExpression axiom: " <> txt)
     where
       txt :: Text
       txt = Internal.getName i ^. Internal.nameText
