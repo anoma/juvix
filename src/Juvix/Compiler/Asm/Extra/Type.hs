@@ -83,7 +83,6 @@ unifyTypes ty1 ty2 = case (ty1, ty2) of
   (TyUnit, TyUnit) -> return TyUnit
   (TyInductive {}, TyInductive {})
     | ty1 == ty2 -> return ty1
-
   (TyUnit, _) -> err
   (_, TyUnit) -> err
   (TyInteger {}, _) -> err
@@ -96,13 +95,12 @@ unifyTypes ty1 ty2 = case (ty1, ty2) of
   (_, TyFun {}) -> err
   (TyInductive {}, _) -> err
   (_, TyConstr {}) -> err
-
   where
-  err :: Sem r a
-  err = do
-    loc <- ask
-    tab <- ask
-    throw $ AsmError loc ("not unifiable: " <> ppTrace tab ty1 <> ", " <> ppTrace tab ty2)
+    err :: Sem r a
+    err = do
+      loc <- ask
+      tab <- ask
+      throw $ AsmError loc ("not unifiable: " <> ppTrace tab ty1 <> ", " <> ppTrace tab ty2)
 
 unifyTypes' :: Member (Error AsmError) r => Maybe Location -> InfoTable -> Type -> Type -> Sem r Type
 unifyTypes' loc tab ty1 ty2 = runReader loc $ runReader tab $ unifyTypes ty1 ty2
@@ -135,7 +133,6 @@ isSubtype ty1 ty2 = case (ty1, ty2) of
   (TyString, TyString) -> True
   (TyUnit, TyUnit) -> True
   (TyInductive {}, TyInductive {}) -> ty1 == ty2
-
   (TyUnit, _) -> False
   (_, TyUnit) -> False
   (TyInteger {}, _) -> False
