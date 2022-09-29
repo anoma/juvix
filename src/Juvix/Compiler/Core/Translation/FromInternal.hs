@@ -11,36 +11,12 @@ import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Translation.FromInternal.Data
 import Juvix.Compiler.Internal.Extra qualified as Internal
-import Juvix.Compiler.Internal.Translation qualified as Internal
+import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Extra.Strings qualified as Str
 
 unsupported :: Text -> a
 unsupported thing = error ("Internal to Core: Not yet supported: " <> thing)
-
-unfoldPolyApp :: Member (Reader InternalTyped.TypesTable) r => Internal.Application -> Sem r (Internal.Expression, [Internal.Expression])
-unfoldPolyApp a =
-  let (f, args) = Internal.unfoldApplication a
-   in case f of
-        Internal.ExpressionLiteral {} -> return (f, toList args)
-        Internal.ExpressionIden iden -> do
-          args' <- filterCompileTimeArgsOrPatterns (Internal.getName iden) (toList args)
-          return (f, args')
-        _ -> impossible
-
-filterCompileTimeArgsOrPatterns :: Member (Reader InternalTyped.TypesTable) r => Internal.Name -> [a] -> Sem r [a]
-filterCompileTimeArgsOrPatterns idenName lst = do
-  tab <- ask
-  return $
-    map fst $
-      filter (not . isUniverse . snd) $
-        zip lst (map (^. Internal.paramType) (fst (Internal.unfoldFunType (ty tab))))
-  where
-    ty = HashMap.lookupDefault impossible idenName
-    isUniverse :: Internal.Expression -> Bool
-    isUniverse = \case
-      (Internal.ExpressionUniverse {}) -> True
-      _ -> False
 
 fromInternal :: Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do
@@ -68,8 +44,15 @@ registerFunctionDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
   where
     go :: Internal.Statement -> Sem r ()
     go = \case
-      Internal.StatementFunction f -> goFunctionDef f
+      Internal.StatementFunction f -> goMutualBlock f
       _ -> return ()
+
+goMutualBlock ::
+  forall r.
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r =>
+  Internal.MutualBlock ->
+  Sem r ()
+goMutualBlock m = mapM_ goFunctionDef (m ^. Internal.mutualFunctions)
 
 goFunctionDef ::
   forall r.
@@ -160,7 +143,7 @@ goApplication ::
   Internal.Application ->
   Sem r Node
 goApplication varsNum vars a = do
-  (f, args) <- unfoldPolyApp a
+  (f, args) <- Internal.unfoldPolyApplication a
   fExpr <- goExpression varsNum vars f
   mkApps' fExpr . toList <$> mapM (goExpression varsNum vars) args
 

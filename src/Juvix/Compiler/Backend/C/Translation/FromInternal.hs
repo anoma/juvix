@@ -20,6 +20,7 @@ import Juvix.Compiler.Concrete.Language qualified as C
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Internal.Extra (mkPolyType')
 import Juvix.Compiler.Internal.Extra qualified as Micro
+import Juvix.Compiler.Internal.Translation.Extra qualified as Trans
 import Juvix.Compiler.Internal.Translation.FromAbstract qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as Micro1
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Micro
@@ -400,7 +401,7 @@ goIden = \case
 
 goApplication :: forall r. Members '[Reader PatternInfoTable, Reader Micro.TypesTable, Builtins, Reader Micro.InfoTable] r => Micro.Application -> Sem r Expression
 goApplication a = do
-  (f, args0) <- unfoldPolyApp a
+  (f, args0) <- Trans.unfoldPolyApplication a
   if
       | null args0 -> goExpression f
       | otherwise -> case f of
