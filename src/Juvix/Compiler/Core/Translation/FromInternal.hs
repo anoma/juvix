@@ -75,7 +75,7 @@ registerFunctionDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
 
 goMutualBlock ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Internal.MutualBlock ->
   Sem r ()
 goMutualBlock m = mapM_ goFunctionDef (m ^. Internal.mutualFunctions)
