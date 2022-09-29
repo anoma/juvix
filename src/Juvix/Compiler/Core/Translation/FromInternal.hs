@@ -145,6 +145,28 @@ binderNameInfo :: Name -> Info
 binderNameInfo name =
   Info.singleton (BinderInfo (Info.singleton (NameInfo name)))
 
+fromPattern :: forall r. Members '[InfoTableBuilder] r => Internal.Pattern -> Sem r Pattern
+fromPattern = \case
+  Internal.PatternWildcard {} -> return wildcard
+  Internal.PatternVariable n -> return $ PatBinder (PatternBinder (setInfoName n Info.empty) wildcard)
+  Internal.PatternConstructorApp c -> do
+    let n = c ^. Internal.constrAppConstructor
+    tag <- ctorTag c
+    args <- mapM fromPattern ((^. Internal.patternArgPattern) <$> filter (\p -> p ^. Internal.patternArgIsImplicit == Explicit) (c ^. Internal.constrAppParameters))
+    return $ PatConstr (PatternConstr (setInfoName n Info.empty) tag args)
+  where
+    wildcard :: Pattern
+    wildcard = PatWildcard (PatternWildcard Info.empty)
+
+    ctorTag :: Internal.ConstructorApp -> Sem r Tag
+    ctorTag c = do
+      let txt = c ^. Internal.constrAppConstructor . Internal.nameText
+      i <- getIdent txt
+      return $ case i of
+        Just (IdentTag tag) -> tag
+        Just (IdentSym {}) -> error ("internal to core: not a constructor " <> txt)
+        Nothing -> error ("internal to core: undeclared identifier: " <> txt)
+
 goFunctionClause ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
