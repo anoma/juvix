@@ -3,7 +3,7 @@ module Importer;
 open import Stdlib.Prelude;
 open import Importee;
 
-main : ℕ;
-main ≔ f;
+main : Nat;
+main := f;
 
 end;

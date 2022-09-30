@@ -5,6 +5,6 @@ inductive Foo {
 };
 
 main : Foo;
-main ≔ foo;
+main := foo;
 
 end;

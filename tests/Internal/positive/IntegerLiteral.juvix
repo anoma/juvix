@@ -2,7 +2,7 @@ module IntegerLiteral;
 
 open import Stdlib.Prelude;
 
-main : ℕ;
-main ≔ 1;
+main : Nat;
+main := 1;
 
 end;
