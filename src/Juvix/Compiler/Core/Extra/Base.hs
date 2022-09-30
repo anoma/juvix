@@ -91,6 +91,12 @@ mkPi i ty b = NPi (Pi i ty b)
 mkPi' :: Type -> Type -> Type
 mkPi' = mkPi Info.empty
 
+mkPis :: [(Info, Type)] -> Type -> Type
+mkPis tys ty = foldr (uncurry mkPi) ty tys
+
+mkPis' :: [Type] -> Type -> Type
+mkPis' tys ty = foldr mkPi' ty tys
+
 mkUniv :: Info -> Int -> Type
 mkUniv i l = NUniv (Univ i l)
 
@@ -109,6 +115,24 @@ mkTypePrim i p = NPrim (TypePrim i p)
 mkTypePrim' :: Primitive -> Type
 mkTypePrim' = mkTypePrim Info.empty
 
+mkTypeInteger :: Info -> Type
+mkTypeInteger i = mkTypePrim i (PrimInteger (PrimIntegerInfo Nothing Nothing))
+
+mkTypeInteger' :: Type
+mkTypeInteger' = mkTypeInteger Info.empty
+
+mkTypeBool :: Info -> Type
+mkTypeBool i = mkTypePrim i (PrimBool (PrimBoolInfo (BuiltinTag TagTrue) (BuiltinTag TagFalse)))
+
+mkTypeBool' :: Type
+mkTypeBool' = mkTypeBool Info.empty
+
+mkTypeString :: Info -> Type
+mkTypeString i = mkTypePrim i PrimString
+
+mkTypeString' :: Type
+mkTypeString' = mkTypeString Info.empty
+
 mkDynamic :: Info -> Type
 mkDynamic i = NDyn (Dynamic i)
 
@@ -119,10 +143,32 @@ mkDynamic' = mkDynamic Info.empty
 {- functions on Type -}
 
 -- | Unfold a type into the target and the arguments (left-to-right)
-unfoldType' :: Type -> (Type, [(Info, Type)])
-unfoldType' ty = case ty of
-  NPi (Pi i l r) -> let (tgt, args) = unfoldType' r in (tgt, (i, l) : args)
+unfoldType :: Type -> (Type, [(Info, Type)])
+unfoldType ty = case ty of
+  NPi (Pi i l r) -> let (tgt, args) = unfoldType r in (tgt, (i, l) : args)
   _ -> (ty, [])
+
+typeArgs :: Type -> [Type]
+typeArgs = map snd . snd . unfoldType
+
+typeTarget :: Type -> Type
+typeTarget = fst . unfoldType
+
+isDynamic :: Type -> Bool
+isDynamic = \case
+  NDyn {} -> True
+  _ -> False
+
+expandType :: [Type] -> Type -> Type
+expandType argtys ty =
+  let (tgt, tyargs) = unfoldType ty
+   in if
+          | length tyargs >= length argtys ->
+              ty
+          | isDynamic tgt ->
+              mkPis tyargs (mkPis' (drop (length tyargs) argtys) tgt)
+          | otherwise ->
+              impossible
 
 {------------------------------------------------------------------------}
 {- functions on Node -}

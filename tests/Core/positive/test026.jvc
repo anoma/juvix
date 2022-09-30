@@ -1,7 +1,9 @@
 -- nested case, let & if
 
-constr leaf 0;
-constr node 2;
+inductive tree {
+  leaf : tree;
+  node : tree -> tree -> tree;
+};
 
 def gen := \n if n <= 0 then leaf else node (gen (n - 2)) (gen (n - 1));
 

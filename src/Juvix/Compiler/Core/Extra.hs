@@ -148,7 +148,7 @@ convertRuntimeNodes = convertClosures
 argumentInfoFromInfo :: Info -> ArgumentInfo
 argumentInfoFromInfo i =
   ArgumentInfo
-    { _argumentName = (^. infoName) <$> Info.lookup (Proxy @NameInfo) i,
+    { _argumentName = getInfoName i,
       _argumentType = getInfoType i,
       _argumentIsImplicit = Explicit
     }

@@ -67,7 +67,7 @@ instance PrettyCode Tag where
 
 instance PrettyCode Primitive where
   ppCode = \case
-    PrimInteger _ -> return $ annotate (AnnKind KNameInductive) (pretty ("integer" :: String))
+    PrimInteger _ -> return $ annotate (AnnKind KNameInductive) (pretty ("int" :: String))
     PrimBool _ -> return $ annotate (AnnKind KNameInductive) (pretty ("bool" :: String))
     PrimString -> return $ annotate (AnnKind KNameInductive) (pretty ("string" :: String))
 
@@ -246,11 +246,13 @@ instance PrettyCode Node where
       case getInfoName $ getInfoBinder _piInfo of
         Just name -> do
           n <- ppCode name
+          ty <- ppCode _piType
           b <- ppCode _piBody
-          return $ kwLambda <> n <+> b
+          return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
         Nothing -> do
+          ty <- ppCode _piType
           b <- ppCode _piBody
-          return $ kwLambda <> kwQuestion <+> b
+          return $ kwPi <+> kwQuestion <+> kwColon <+> ty <> comma <+> b
     NUniv Univ {..} ->
       return $ kwType <+> pretty _univLevel
     NPrim TypePrim {..} -> ppCode _typePrimPrimitive
@@ -430,7 +432,7 @@ kwDefault :: Doc Ann
 kwDefault = keyword Str.underscore
 
 kwPi :: Doc Ann
-kwPi = keyword Str.pi_
+kwPi = keyword Str.piUnicode
 
 kwDef :: Doc Ann
 kwDef = keyword Str.def
@@ -445,4 +447,4 @@ kwFail :: Doc Ann
 kwFail = keyword Str.fail_
 
 kwDynamic :: Doc Ann
-kwDynamic = keyword Str.mul
+kwDynamic = keyword Str.any
