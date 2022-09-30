@@ -66,21 +66,22 @@ number' int mn mx = do
 string' :: ParsecS r Text
 string' = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
--- | The caller is responsible of consuming space after it
+-- | The caller is responsible of consuming space after it.
 kw' :: forall r. Member (Reader ParserParams) r => Keyword -> ParsecS r Interval
-kw' k@Keyword {..} = P.label (unpack _keywordAscii) helper
+kw' k@Keyword {..} = P.label (unpack _keywordAscii) (reserved <|> normal)
   where
-    helper :: ParsecS r Interval
-    helper
-      | hasReservedChar _keywordAscii || maybe False hasReservedChar _keywordUnicode =
-          onlyInterval
-            ( P.chunk _keywordAscii
-                <|> maybe empty P.chunk _keywordUnicode
-            )
-      | otherwise = P.try $ do
-          (w, i) <- interval morpheme
-          unless (w `elem` keywordStrings k) (failure Nothing (Set.singleton (Label (fromJust $ nonEmpty $ unpack _keywordAscii))))
-          return i
+    -- If the ascii representation uses reserved symbols, we use chunk so that we parse exactly the keyword
+    -- (if chunk fails it does not consume anything so try is not needed)
+    reserved :: ParsecS r Interval
+    reserved
+      | _keywordHasReserved = onlyInterval (P.chunk _keywordAscii)
+      | otherwise = empty
+    -- we parse the longest valid identifier and then we check if it is the expected keyword
+    normal :: ParsecS r Interval
+    normal = P.try $ do
+      (w, i) <- interval morpheme
+      unless (w `elem` keywordStrings k) (failure Nothing (Set.singleton (Label (fromJust $ nonEmpty $ unpack _keywordAscii))))
+      return i
 
 rawIdentifier' :: (Char -> Bool) -> HashSet Text -> ParsecS r Text
 rawIdentifier' excludedTailChar allKeywords = label "<identifier>" $ P.try $ do

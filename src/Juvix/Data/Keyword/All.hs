@@ -6,7 +6,6 @@ where
 
 import Juvix.Data.Keyword
 import Juvix.Extra.Strings qualified as Str
-import Juvix.Prelude
 
 kwBuiltin :: Keyword
 kwBuiltin = asciiKw Str.builtin
@@ -21,7 +20,7 @@ kwColon :: Keyword
 kwColon = asciiKw Str.colon
 
 kwColonOmega :: Keyword
-kwColonOmega = Keyword Str.colonOmegaAscii (Just Str.colonOmegaUnicode)
+kwColonOmega = unicodeKw Str.colonOmegaAscii Str.colonOmegaUnicode
 
 kwColonOne :: Keyword
 kwColonOne = asciiKw Str.colonOne
@@ -60,13 +59,13 @@ kwInfixr :: Keyword
 kwInfixr = asciiKw Str.infixr_
 
 kwLambda :: Keyword
-kwLambda = Keyword Str.lambdaAscii (Just Str.lambdaUnicode)
+kwLambda = unicodeKw  Str.lambdaAscii Str.lambdaUnicode
 
 kwLet :: Keyword
 kwLet = asciiKw Str.let_
 
 kwMapsTo :: Keyword
-kwMapsTo = Keyword Str.mapstoAscii (Just Str.mapstoUnicode)
+kwMapsTo = unicodeKw Str.mapstoAscii Str.mapstoUnicode
 
 kwModule :: Keyword
 kwModule = asciiKw Str.module_
@@ -81,7 +80,7 @@ kwPublic :: Keyword
 kwPublic = asciiKw Str.public
 
 kwRightArrow :: Keyword
-kwRightArrow = Keyword Str.toAscii (Just Str.toUnicode)
+kwRightArrow = unicodeKw Str.toAscii Str.toUnicode
 
 kwSemicolon :: Keyword
 kwSemicolon = asciiKw Str.semicolon
