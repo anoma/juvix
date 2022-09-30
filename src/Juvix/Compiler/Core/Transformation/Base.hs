@@ -12,8 +12,8 @@ import Juvix.Compiler.Core.Language
 
 type Transformation = InfoTable -> InfoTable
 
-mapT :: (Node -> Node) -> InfoTable -> InfoTable
-mapT f tab = tab {_identContext = HashMap.map f (tab ^. identContext)}
+mapT :: (Symbol -> Node -> Node) -> InfoTable -> InfoTable
+mapT f tab = tab {_identContext = HashMap.mapWithKey f (tab ^. identContext)}
 
 mapT' :: (Node -> Sem (InfoTableBuilder ': r) Node) -> InfoTable -> Sem r InfoTable
 mapT' f tab = fmap fst $ runInfoTableBuilder tab $ do

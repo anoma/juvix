@@ -332,6 +332,10 @@ fromRightIO pp = fromRightIO' (putStrLn . pp)
 -- Misc
 --------------------------------------------------------------------------------
 
+-- | applies a function n times
+iterateN :: Int -> (a -> a) -> a -> a
+iterateN n f = (!! n) . iterate f
+
 nubHashable :: Hashable a => [a] -> [a]
 nubHashable = HashSet.toList . HashSet.fromList
 

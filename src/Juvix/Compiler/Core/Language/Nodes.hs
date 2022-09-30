@@ -1,3 +1,4 @@
+-- | Polymorphic Node types
 module Juvix.Compiler.Core.Language.Nodes
   ( module Juvix.Compiler.Core.Language.Base,
     module Juvix.Compiler.Core.Language.Primitives,
@@ -7,9 +8,6 @@ where
 
 import Juvix.Compiler.Core.Language.Base
 import Juvix.Compiler.Core.Language.Primitives
-
-{-------------------------------------------------------------------}
-{- Polymorphic Node types -}
 
 -- | De Bruijn index of a locally bound variable.
 data Var' i = Var {_varInfo :: i, _varIndex :: !Index}
@@ -28,9 +26,17 @@ data ConstantValue
 -- Other things we might need in the future:
 -- - ConstFloat or ConstFixedPoint
 
-data App' i a = App {_appInfo :: i, _appLeft :: !a, _appRight :: !a}
+data App' i a = App
+  { _appInfo :: i,
+    _appLeft :: !a,
+    _appRight :: !a
+  }
 
-data Apps' f i a = Apps {_appsInfo :: i, _appsFun :: !f, _appsArgs :: ![a]}
+data Apps' f i a = Apps
+  { _appsInfo :: i,
+    _appsFun :: !f,
+    _appsArgs :: ![a]
+  }
 
 -- | A builtin application. A builtin has no corresponding Node. It is treated
 -- specially by the evaluator and the code generator. For example, basic
@@ -53,11 +59,18 @@ data Constr' i a = Constr
     _constrArgs :: ![a]
   }
 
-data Lambda' i a = Lambda {_lambdaInfo :: i, _lambdaBody :: !a}
+data Lambda' i a = Lambda
+  { _lambdaInfo :: i,
+    _lambdaBody :: !a
+  }
 
 -- | `let x := value in body` is not reducible to lambda + application for the
 -- purposes of ML-polymorphic / dependent type checking or code generation!
-data Let' i a = Let {_letInfo :: i, _letValue :: !a, _letBody :: !a}
+data Let' i a = Let
+  { _letInfo :: i,
+    _letValue :: !a,
+    _letBody :: !a
+  }
 
 -- | Represents a block of mutually recursive local definitions. Both in the
 -- body and in the values `length _letRecValues` implicit binders are introduced
@@ -315,6 +328,7 @@ makeLenses ''PatternWildcard'
 makeLenses ''PatternBinder'
 makeLenses ''PatternConstr'
 makeLenses ''Pi'
+makeLenses ''Lambda'
 makeLenses ''Univ'
 makeLenses ''TypeConstr'
 makeLenses ''Dynamic'
