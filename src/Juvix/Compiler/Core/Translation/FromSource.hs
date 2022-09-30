@@ -471,10 +471,10 @@ atom ::
   HashMap Text Index ->
   ParsecS r Node
 atom varsNum vars =
-  exprNamed varsNum vars
+  exprLambda varsNum vars
+    <|> exprNamed varsNum vars
     <|> exprConstInt
     <|> exprConstString
-    <|> exprLambda varsNum vars
     <|> exprLetrecMany varsNum vars
     <|> exprLetrecOne varsNum vars
     <|> exprLet varsNum vars
