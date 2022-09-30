@@ -252,7 +252,7 @@ instance PrettyCode Node where
         Nothing -> do
           ty <- ppCode _piType
           b <- ppCode _piBody
-          return $ kwPi <+> kwQuestion <+> kwColon <+> ty <> comma <+> b
+          return $ ty <+> kwArrow <+> b
     NUniv Univ {..} ->
       return $ kwType <+> pretty _univLevel
     NPrim TypePrim {..} -> ppCode _typePrimPrimitive
