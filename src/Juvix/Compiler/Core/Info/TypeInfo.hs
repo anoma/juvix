@@ -1,5 +1,6 @@
 module Juvix.Compiler.Core.Info.TypeInfo where
 
+import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Language
 
@@ -12,11 +13,8 @@ kTypeInfo = Proxy
 
 makeLenses ''TypeInfo
 
-getInfoType :: Info -> Maybe Type
-getInfoType i =
-  case Info.lookup kTypeInfo i of
-    Just (TypeInfo {..}) -> Just _infoType
-    Nothing -> Nothing
+getInfoType :: Info -> Type
+getInfoType i = maybe mkDynamic' (^. infoType) (Info.lookup kTypeInfo i)
 
 setInfoType :: Type -> Info -> Info
 setInfoType = Info.insert . TypeInfo

@@ -1,12 +1,9 @@
+-- | This file defines the tree representation of JuvixCore (Node datatype).
 module Juvix.Compiler.Core.Language
   ( module Juvix.Compiler.Core.Language,
     module Juvix.Compiler.Core.Language.Nodes,
   )
 where
-
-{-
-  This file defines the tree representation of JuvixCore (Node datatype).
--}
 
 import Juvix.Compiler.Core.Language.Nodes
 

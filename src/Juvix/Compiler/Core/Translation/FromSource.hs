@@ -166,7 +166,7 @@ parseDefinition sym = do
       ArgumentInfo
         { _argumentName = getInfoName bi,
           _argumentType = getInfoType bi,
-          _argumentIsImplicit = False
+          _argumentIsImplicit = Explicit
         }
       where
         bi = getInfoBinder i

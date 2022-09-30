@@ -45,8 +45,8 @@ data IdentifierInfo = IdentifierInfo
 
 data ArgumentInfo = ArgumentInfo
   { _argumentName :: Maybe Name,
-    _argumentType :: Maybe Type,
-    _argumentIsImplicit :: Bool
+    _argumentType :: Type,
+    _argumentIsImplicit :: IsImplicit
   }
 
 data InductiveInfo = InductiveInfo

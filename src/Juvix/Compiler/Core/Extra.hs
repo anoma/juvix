@@ -11,12 +11,16 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Equality
 import Juvix.Compiler.Core.Extra.Info
 import Juvix.Compiler.Core.Extra.Recursors
 import Juvix.Compiler.Core.Extra.Recursors.Fold.Named
 import Juvix.Compiler.Core.Extra.Recursors.Map.Named
+import Juvix.Compiler.Core.Info qualified as Info
+import Juvix.Compiler.Core.Info.NameInfo
+import Juvix.Compiler.Core.Info.TypeInfo
 import Juvix.Compiler.Core.Language
 
 isClosed :: Node -> Bool
@@ -138,3 +142,20 @@ convertClosures = umap go
 
 convertRuntimeNodes :: Node -> Node
 convertRuntimeNodes = convertClosures
+
+argumentInfoFromInfo :: Info -> ArgumentInfo
+argumentInfoFromInfo i =
+  ArgumentInfo
+    { _argumentName = (^. infoName) <$> Info.lookup (Proxy @NameInfo) i,
+      _argumentType = getInfoType i,
+      _argumentIsImplicit = Explicit
+    }
+
+infoFromArgumentInfo :: ArgumentInfo -> Info
+infoFromArgumentInfo arg =
+  setInfoType (arg ^. argumentType) $
+    setName
+      mempty
+  where
+    setName :: Info -> Info
+    setName i = maybe i (`setInfoName` i) (arg ^. argumentName)

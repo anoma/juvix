@@ -8,9 +8,6 @@ import Juvix.Compiler.Core.Data.BinderList (BinderList)
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
-import Juvix.Compiler.Core.Info qualified as Info
-import Juvix.Compiler.Core.Info.NameInfo
-import Juvix.Compiler.Core.Info.TypeInfo
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
@@ -24,17 +21,8 @@ lambdaLiftNode aboveBl top =
     typeFromArgs :: [ArgumentInfo] -> Type
     typeFromArgs = \case
       [] -> mkDynamic' -- change this when we have type info about the body
-      (a : as) -> mkPi' argTy (typeFromArgs as)
-        where
-          argTy = fromMaybe mkDynamic' (a ^. argumentType)
+      (a : as) -> mkPi' (a ^. argumentType) (typeFromArgs as)
     -- extracts the argument info from the binder
-    argInfo :: Info -> ArgumentInfo
-    argInfo i =
-      ArgumentInfo
-        { _argumentName = (^. infoName) <$> Info.lookup (Proxy @NameInfo) i,
-          _argumentType = (^. infoType) <$> Info.lookup (Proxy @TypeInfo) i,
-          _argumentIsImplicit = False
-        }
     go :: BinderList Info -> Node -> Sem r Recur
     go bl = \case
       l@NLam {} -> do
@@ -44,7 +32,7 @@ lambdaLiftNode aboveBl top =
             freevarsAssocs = [(i, BL.lookup i bl) | i <- map (^. varIndex) freevars]
             fBody' = captureFreeVars freevarsAssocs l'
             argsInfo :: [ArgumentInfo]
-            argsInfo = map (argInfo . snd) freevarsAssocs
+            argsInfo = map (argumentInfoFromInfo . snd) freevarsAssocs
         f <- freshSymbol
         registerIdent
           IdentifierInfo
