@@ -1,6 +1,7 @@
 module Juvix.Compiler.Core.Translation.FromInternal where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.List.NonEmpty (fromList)
 import Juvix.Compiler.Concrete.Data.Literal (LiteralLoc)
 import Juvix.Compiler.Core.Data
 import Juvix.Compiler.Core.Extra
@@ -9,13 +10,13 @@ import Juvix.Compiler.Core.Info.BinderInfo
 import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Transformation.Eta (etaExpandApps)
 import Juvix.Compiler.Core.Translation.FromInternal.Data
+import Juvix.Compiler.Core.Translation.FromSource (freshName)
 import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Extra.Strings qualified as Str
-import Data.List.NonEmpty (fromList)
-import Juvix.Compiler.Core.Translation.FromSource (freshName)
 
 unsupported :: Text -> a
 unsupported thing = error ("Internal to Core: Not yet supported: " <> thing)
@@ -142,32 +143,31 @@ goFunctionDef f
       registerIdent info
       when (f ^. Internal.funDefName . Internal.nameText == Str.main) (registerMain sym)
 
-      body <- if | null patterns -> goExpression 0 HashMap.empty (head (f ^. Internal.funDefClauses) ^. Internal.clauseBody)
-                 | otherwise -> do
-                    let vars :: HashMap Text Index = HashMap.fromList [ (pack (show i), i) | i <- vs ]
-                    let values = mkVar Info.empty <$> vs
-                    ms <- mapM (goFunctionClause' (length patterns) vars) (f ^. Internal.funDefClauses)
-                    let match = mkMatch' (fromList values) (toList ms)
-                    lamArgs' :: [Info] <- lamArgs
-                    return $ foldr mkLambda match lamArgs'
+      body <-
+        if
+            | null patterns -> goExpression 0 HashMap.empty (head (f ^. Internal.funDefClauses) ^. Internal.clauseBody)
+            | otherwise -> do
+                let vars :: HashMap Text Index = HashMap.fromList [(pack (show i), i) | i <- vs]
+                let values = mkVar Info.empty <$> vs
+                ms <- mapM (goFunctionClause' (length patterns) vars) (f ^. Internal.funDefClauses)
+                let match = mkMatch' (fromList values) (toList ms)
+                lamArgs' :: [Info] <- lamArgs
+                return $ foldr mkLambda match lamArgs'
       registerIdentNode sym body
+  where
+    patterns :: [Internal.PatternArg]
+    patterns = filter (\p -> p ^. Internal.patternArgIsImplicit == Internal.Explicit) (head (f ^. Internal.funDefClauses) ^. Internal.clausePatterns)
 
-    where
-      patterns :: [Internal.PatternArg]
-      patterns = filter (\p -> p ^. Internal.patternArgIsImplicit == Internal.Explicit) (head (f ^. Internal.funDefClauses) ^. Internal.clausePatterns)
+    vs :: [Index]
+    vs = take (length patterns) [0 ..]
 
-      vs :: [Index]
-      vs = take (length patterns) [0 ..]
+    mkName :: Text -> Sem r Name
+    mkName txt = freshName KNameLocal txt (f ^. Internal.funDefName . Internal.nameLoc)
 
-      mkName :: Text -> Sem r Name
-      mkName txt = freshName KNameLocal txt (f ^. Internal.funDefName . Internal.nameLoc)
-
-      lamArgs :: Sem r [Info]
-      lamArgs = do
-        ns <- mapM mkName (pack . show <$> vs)
-        return $ binderNameInfo <$> ns
-
-
+    lamArgs :: Sem r [Info]
+    lamArgs = do
+      ns <- mapM mkName (pack . show <$> vs)
+      return $ binderNameInfo <$> ns
 
 binderNameInfo :: Name -> Info
 binderNameInfo name =
@@ -221,7 +221,6 @@ goFunctionClause' varsNum vars clause = do
     argIsImplicit :: Internal.PatternArg -> Bool
     argIsImplicit = (== Internal.Explicit) . (^. Internal.patternArgIsImplicit)
 
-
 goExpression ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
@@ -229,7 +228,19 @@ goExpression ::
   HashMap Text Index ->
   Internal.Expression ->
   Sem r Node
-goExpression varsNum vars = \case
+goExpression varsNum vars e = do
+  node <- goExpression' varsNum vars e
+  tab <- getInfoTable
+  return $ etaExpandApps tab node
+
+goExpression' ::
+  forall r.
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
+  Index ->
+  HashMap Text Index ->
+  Internal.Expression ->
+  Sem r Node
+goExpression' varsNum vars = \case
   Internal.ExpressionLiteral l -> return (goLiteral l)
   Internal.ExpressionIden i -> case i of
     Internal.IdenVar n -> do

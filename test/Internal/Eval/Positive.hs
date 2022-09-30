@@ -69,5 +69,10 @@ tests =
       "Suc returns a constant integer"
       "."
       "FunctionReturnSuc.juvix"
-      "out/FunctionReturnSuc.out"
+      "out/FunctionReturnSuc.out",
+    PosTest
+      "Pattern matching on a constructor"
+      "."
+      "MatchConstructor.juvix"
+      "out/MatchConstructor.out"
   ]
