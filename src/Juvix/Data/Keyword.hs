@@ -24,10 +24,11 @@ keywordStrings :: Keyword -> [Text]
 keywordStrings Keyword {..} = maybe id (:) _keywordUnicode [_keywordAscii]
 
 mkKw :: Text -> Maybe Text -> Keyword
-mkKw _keywordAscii _keywordUnicode = Keyword {
-  _keywordHasReserved = hasReservedChar _keywordAscii,
-  ..
-  }
+mkKw _keywordAscii _keywordUnicode =
+  Keyword
+    { _keywordHasReserved = hasReservedChar _keywordAscii,
+      ..
+    }
 
 asciiKw :: Text -> Keyword
 asciiKw ascii = mkKw ascii Nothing

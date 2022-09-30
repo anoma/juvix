@@ -59,7 +59,7 @@ kwInfixr :: Keyword
 kwInfixr = asciiKw Str.infixr_
 
 kwLambda :: Keyword
-kwLambda = unicodeKw  Str.lambdaAscii Str.lambdaUnicode
+kwLambda = unicodeKw Str.lambdaAscii Str.lambdaUnicode
 
 kwLet :: Keyword
 kwLet = asciiKw Str.let_
