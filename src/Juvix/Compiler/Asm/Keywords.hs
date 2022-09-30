@@ -9,8 +9,6 @@ import Juvix.Data.Keyword
 import Juvix.Data.Keyword.All
   ( kwArg,
     kwColon,
-    -- are these different?
-
     kwDollar,
     kwFalse,
     kwFun,
