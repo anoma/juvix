@@ -66,27 +66,6 @@ number' int mn mx = do
 string' :: ParsecS r Text
 string' = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
--- {-# DEPRECATED use kw' #-}
-keyword' :: ParsecS r () -> Text -> ParsecS r ()
-keyword' spc kw =
-  P.try $ do
-    P.chunk kw
-    notFollowedBy (satisfy validTailChar)
-    spc
-
-keywordL' :: Member (Reader ParserParams) r => ParsecS r () -> Text -> ParsecS r Interval
-keywordL' spc kw = P.try $ do
-  i <- onlyInterval (P.chunk kw)
-  notFollowedBy (satisfy validTailChar)
-  spc
-  return i
-
-keywordSymbol' :: ParsecS r () -> Text -> ParsecS r ()
-keywordSymbol' spc kw = do
-  P.try $ do
-    void $ P.chunk kw
-    spc
-
 -- | The caller is responsible of consuming space after it
 kw' :: forall r. Member (Reader ParserParams) r => Keyword -> ParsecS r Interval
 kw' k@Keyword {..} = P.label (unpack _keywordAscii) helper

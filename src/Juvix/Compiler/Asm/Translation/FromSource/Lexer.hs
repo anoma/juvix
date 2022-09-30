@@ -35,14 +35,8 @@ number = number' integer
 string :: Member (Reader ParserParams) r => ParsecS r (Text, Interval)
 string = lexemeInterval string'
 
-keyword :: Text -> ParsecS r ()
-keyword = keyword' space
-
 kw :: Members '[Reader ParserParams] r => Keyword -> ParsecS r ()
 kw k = void $ lexeme $ kw' k
-
-keywordSymbol :: Text -> ParsecS r ()
-keywordSymbol = keywordSymbol' space
 
 identifier :: ParsecS r Text
 identifier = lexeme bareIdentifier

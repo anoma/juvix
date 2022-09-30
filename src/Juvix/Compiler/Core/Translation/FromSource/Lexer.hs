@@ -39,9 +39,6 @@ number = number' integer
 string :: Member (Reader ParserParams) r => ParsecS r (Text, Interval)
 string = lexemeInterval string'
 
-keywordSymbol :: Text -> ParsecS r ()
-keywordSymbol = keywordSymbol' space
-
 identifier :: ParsecS r Text
 identifier = lexeme bareIdentifier
 
