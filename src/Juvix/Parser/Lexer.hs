@@ -102,7 +102,7 @@ delimiterSymbols :: [Char]
 delimiterSymbols = ","
 
 reservedSymbols :: [Char]
-reservedSymbols = "@\";(){}[].λ\\"
+reservedSymbols = "@\";(){}[]."
 
 validFirstChar :: Char -> Bool
 validFirstChar c = not (isNumber c || isSpace c || (c `elem` reservedSymbols))
