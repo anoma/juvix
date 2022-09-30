@@ -122,9 +122,6 @@ using = "using"
 where_ :: IsString s => s
 where_ = "where"
 
-assignUnicode :: IsString s => s
-assignUnicode = "≔"
-
 assignAscii :: IsString s => s
 assignAscii = ":="
 

@@ -4,5 +4,5 @@ module ExpectedExplicitPattern;
   };
 
   f : {A : Type} → T A → A;
-  f {_} {c a} ≔ a;
+  f {_} {c a} := a;
 end;

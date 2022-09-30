@@ -8,6 +8,6 @@ inductive B {
   };
 
   f : A → B;
-  f b ≔ b;
+  f b := b;
 
 end;

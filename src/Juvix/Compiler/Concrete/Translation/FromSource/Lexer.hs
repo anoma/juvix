@@ -150,7 +150,7 @@ kwBuiltin :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwBuiltin = keyword Str.builtin
 
 kwAssign :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
-kwAssign = keywordUnicode Str.assignAscii Str.assignUnicode
+kwAssign = keyword Str.assignAscii
 
 kwAxiom :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
 kwAxiom = keyword Str.axiom

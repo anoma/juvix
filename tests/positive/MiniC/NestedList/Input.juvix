@@ -13,9 +13,9 @@ inductive Foo {
 };
 
 l : List (List Foo) → List (List Foo);
-l ((_ ∷ nil) ∷ nil) ≔ nil ∷ nil;
+l ((_ ∷ nil) ∷ nil) := nil ∷ nil;
 
 main : Action;
-main ≔ put-str-ln "no errors";
+main := put-str-ln "no errors";
 
 end;

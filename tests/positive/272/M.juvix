@@ -15,14 +15,14 @@ inductive Nat {
 };
 
 f : _;
-f false false ≔ true;
-f true _ ≔ false;
+f false false := true;
+f true _ := false;
 
 inductive Pair (A : Type) (B : Type) {
   mkPair : A → B → Pair A B;
 };
 
 g : _;
-g (mkPair (mkPair zero false) true) ≔ mkPair false zero;
+g (mkPair (mkPair zero false) true) := mkPair false zero;
 
 end;

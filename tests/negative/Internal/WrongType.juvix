@@ -8,5 +8,5 @@ module WrongType;
   };
 
   f : A;
-  f ≔ b;
+  f := b;
 end;

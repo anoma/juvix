@@ -4,5 +4,5 @@ module FunctionPattern;
   };
 
   f : (T → T) → T;
-  f A ≔ A;
+  f A := A;
 end;

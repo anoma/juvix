@@ -4,5 +4,5 @@ module WrongConstructorArity;
   };
 
   f : T → T;
-  f (A i x) ≔ i;
+  f (A i x) := i;
 end;

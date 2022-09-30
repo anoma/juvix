@@ -32,5 +32,5 @@ compile <' {
 
 infix 4 <;
 < : Int → Int → Bool;
-< a b ≔ from-backend-bool (a <' b);
+< a b := from-backend-bool (a <' b);
 #+end_example

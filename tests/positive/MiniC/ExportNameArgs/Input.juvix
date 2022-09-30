@@ -2,7 +2,7 @@ module Input;
 
 open import Stdlib.Prelude;
 
-fun : ℕ → ℕ;
-fun _ ≔ three;
+fun : Nat → Nat;
+fun _ := three;
 
 end;

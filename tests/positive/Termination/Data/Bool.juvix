@@ -5,21 +5,21 @@ module Data.Bool;
   };
 
   not : Bool → Bool;
-  not true ≔ false;
-  not false ≔ true;
+  not true := false;
+  not false := true;
 
   infixr 2 ||;
   || : Bool → Bool → Bool;
-  || false a ≔ a;
-  || true _ ≔ true;
+  || false a := a;
+  || true _ := true;
 
   infixr 2 &&;
   && : Bool → Bool → Bool;
-  && false _ ≔ false;
-  && true a ≔ a;
+  && false _ := false;
+  && true a := a;
 
   ite : {a : Type} → Bool → a → a → a;
-  ite true a _ ≔ a;
-  ite false _ b ≔ b;
+  ite true a _ := a;
+  ite false _ b := b;
 
 end;

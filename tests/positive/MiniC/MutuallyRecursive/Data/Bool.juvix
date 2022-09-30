@@ -8,11 +8,11 @@ inductive Bool {
 };
 
 not : Bool → Bool;
-not true ≔ false;
-not false ≔ true;
+not true := false;
+not false := true;
 
 boolToStr : Bool → String;
-boolToStr true ≔ "true";
-boolToStr false ≔ "false";
+boolToStr true := "true";
+boolToStr false := "false";
 
 end;

@@ -1,7 +1,7 @@
 module Parsing;
 
  let' : Type;
- let' ≔ Type;
+ let' := Type;
 
  TypeMine : Type;
  TypeMine := Type;

@@ -25,7 +25,7 @@ compile put-str-ln {
 };
 
 main : Action;
-main ≔ put-str-ln "hello world!";
+main := put-str-ln "hello world!";
 
 end;
 #+end_src

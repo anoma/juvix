@@ -17,5 +17,5 @@ module M;
   open N.O;
 
   fun : T → T;
-  fun A ≔ T;
+  fun A := T;
 end;

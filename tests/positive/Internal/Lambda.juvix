@@ -31,10 +31,10 @@ uncurry : {A : Type} → {B : Type} → {C : Type} → (A → B → C) → A × 
 uncurry := λ {f (a, b) := f a b};
 
 idB : {A : Type} → A → A;
-idB a ≔ λ { a := a} a;
+idB a := λ { a := a} a;
 
 mapB : {A : Type} → (A → A) → A → A;
-mapB ≔ λ { f a := f a};
+mapB := λ { f a := f a};
 
 add : Nat → Nat → Nat;
 add := λ {zero n := n; (suc n) := λ {m := suc (add n m) }};

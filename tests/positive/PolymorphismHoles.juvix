@@ -20,78 +20,78 @@ inductive Bool {
 };
 
 id : (A : Type) → A → A;
-id _ a ≔ a;
+id _ a := a;
 
 terminating
 undefined : (A : Type) → A;
-undefined A ≔ undefined A;
+undefined A := undefined A;
 
 add : Nat → Nat → Nat;
-add zero b ≔ b;
-add (suc a) b ≔ suc (add a b);
+add zero b := b;
+add (suc a) b := suc (add a b);
 
 fst : (A : Type) → (B : Type) → Pair A B → A;
-fst _ _ (mkPair a b) ≔ a;
+fst _ _ (mkPair a b) := a;
 
 p : Pair Bool Bool;
-p ≔ mkPair true false;
+p := mkPair true false;
 
 swap : (A : Type) → (B : Type) → Pair A B → Pair B A;
-swap A B (mkPair a b) ≔ mkPair b a;
+swap A B (mkPair a b) := mkPair b a;
 
 curry : (A : Type) → (B : Type) → (C : Type)
   → (Pair A B → C) → A → B → C;
-curry A B C f a b ≔ f (mkPair a b) ;
+curry A B C f a b := f (mkPair a b) ;
 
 ap : (A : Type) → (B : Type)
   → (A → B) → A → B;
-ap A B f a ≔ f a;
+ap A B f a := f a;
 
 headDef : (A : Type) → A → List A → A;
-headDef _ d nil ≔ d;
-headDef A _ (cons h _) ≔ h;
+headDef _ d nil := d;
+headDef A _ (cons h _) := h;
 
 ite : (A : Type) → Bool → A → A → A;
-ite _ true tt _ ≔ tt;
-ite _ false _ ff ≔ ff;
+ite _ true tt _ := tt;
+ite _ false _ ff := ff;
 
 filter : (A : Type) → (A → Bool) → List A → List A;
-filter _ f nil ≔ nil;
-filter _ f (cons x xs) ≔ ite _ (f x) (cons x (filter _ f xs)) (filter _ f xs);
+filter _ f nil := nil;
+filter _ f (cons x xs) := ite _ (f x) (cons x (filter _ f xs)) (filter _ f xs);
 
 map : (A : Type) → (B : Type) →
   (A → B) → List _ → List _;
-map _ _ f nil ≔ nil;
-map _ _ f (cons x xs) ≔ cons (f x) (map _ _ f xs);
+map _ _ f nil := nil;
+map _ _ f (cons x xs) := cons (f x) (map _ _ f xs);
 
 zip : (A : Type) → (B : Type)
     → List A → List B → List (Pair A B);
-zip A _ nil _ ≔ nil;
-zip _ _ _ nil ≔ nil;
-zip _ _ (cons a as) (cons b bs) ≔ nil;
+zip A _ nil _ := nil;
+zip _ _ _ nil := nil;
+zip _ _ (cons a as) (cons b bs) := nil;
 
 zipWith : (A : Type) → (B : Type) → (C : Type)
   → (A → B → C)
   → List A → List B → List C;
-zipWith _ _ C f nil _ ≔ nil;
-zipWith _ _ C f _ nil ≔ nil;
-zipWith _ _ _ f (cons a as) (cons b bs) ≔ cons (f a b) (zipWith _ _ _ f as bs);
+zipWith _ _ C f nil _ := nil;
+zipWith _ _ C f _ nil := nil;
+zipWith _ _ _ f (cons a as) (cons b bs) := cons (f a b) (zipWith _ _ _ f as bs);
 
 rankn : ((A : Type) → A → A) → Bool → Nat → Pair Bool Nat;
-rankn f b n ≔ mkPair (f _ b) (f _ n);
+rankn f b n := mkPair (f _ b) (f _ n);
 
 -- currying
 trankn : Pair Bool Nat;
-trankn ≔ rankn id false zero;
+trankn := rankn id false zero;
 
 l1 : List Nat;
-l1 ≔ cons zero nil;
+l1 := cons zero nil;
 
 pairEval : (A : Type) → (B : Type) → Pair (A → B) A → B;
-pairEval _ _ (mkPair f x) ≔ f x;
+pairEval _ _ (mkPair f x) := f x;
 
 main : Nat;
-main ≔ headDef _ (pairEval _ _ (mkPair (add zero) zero))
+main := headDef _ (pairEval _ _ (mkPair (add zero) zero))
    (zipWith _ _ _ add l1 l1);
 
 end;

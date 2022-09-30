@@ -76,7 +76,7 @@ kwData :: Doc Ann
 kwData = keyword Str.data_
 
 kwAssign :: Doc Ann
-kwAssign = keyword Str.assignUnicode
+kwAssign = keyword Str.assignAscii
 
 kwEquals :: Doc Ann
 kwEquals = keyword Str.equal
@@ -142,7 +142,7 @@ kwInfix :: Doc Ann
 kwInfix = keyword Str.infix_
 
 kwAssignment :: Doc Ann
-kwAssignment = keyword Str.assignUnicode
+kwAssignment = keyword Str.assignAscii
 
 kwColonZero :: Doc Ann
 kwColonZero = keyword Str.colonZero

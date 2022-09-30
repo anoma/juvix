@@ -65,19 +65,18 @@ string' :: ParsecS r Text
 string' = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
 keyword' :: ParsecS r () -> Text -> ParsecS r ()
-keyword' spc kw = do
+keyword' spc kw =
   P.try $ do
     P.chunk kw
     notFollowedBy (satisfy validTailChar)
     spc
 
 keywordL' :: Member (Reader ParserParams) r => ParsecS r () -> Text -> ParsecS r Interval
-keywordL' spc kw = do
-  P.try $ do
-    i <- snd <$> interval (P.chunk kw)
-    notFollowedBy (satisfy validTailChar)
-    spc
-    return i
+keywordL' spc kw = P.try $ do
+  i <- onlyInterval (P.chunk kw)
+  notFollowedBy (satisfy validTailChar)
+  spc
+  return i
 
 keywordSymbol' :: ParsecS r () -> Text -> ParsecS r ()
 keywordSymbol' spc kw = do
@@ -103,7 +102,7 @@ delimiterSymbols :: [Char]
 delimiterSymbols = ","
 
 reservedSymbols :: [Char]
-reservedSymbols = "@\";(){}[].≔λ\\"
+reservedSymbols = "@\";(){}[].λ\\"
 
 validFirstChar :: Char -> Bool
 validFirstChar c = not (isNumber c || isSpace c || (c `elem` reservedSymbols))
@@ -114,6 +113,9 @@ curLoc = do
   offset <- getOffset
   root <- lift (asks (^. parserParamsRoot))
   return (mkLoc root offset sp)
+
+onlyInterval :: Member (Reader ParserParams) r => ParsecS r a -> ParsecS r Interval
+onlyInterval = fmap snd . interval
 
 interval :: Member (Reader ParserParams) r => ParsecS r a -> ParsecS r (a, Interval)
 interval ma = do

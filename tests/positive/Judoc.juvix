@@ -11,11 +11,11 @@ inductive T {
 --- hahahah
 --- and another one ;T;
 id : {A : Type} → A → A;
-id a ≔ a;
+id a := a;
 
 --- hellowww
 id2 : {A : Type} → A → A;
-id2 a ≔ a;
+id2 a := a;
 
 
 end;

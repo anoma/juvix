@@ -2,30 +2,30 @@ module Symbols;
 
   open import Stdlib.Data.Nat;
 
-  ╘⑽╛ : ℕ;
-  ╘⑽╛ ≔ suc nine;
+  ╘⑽╛ : Nat;
+  ╘⑽╛ := suc nine;
 
    -- no - function!?
-   - : ℕ -> ℕ -> ℕ;
-   - ≔ (+);
+   - : Nat -> Nat -> Nat;
+   - := (+);
 
-  （-） : ℕ -> ℕ -> ℕ;
-  （-） ≔ (-);
+  （-） : Nat -> Nat -> Nat;
+  （-） := (-);
 
-  （*） : ℕ -> ℕ -> ℕ;
-  （*） ≔ (*);
+  （*） : Nat -> Nat -> Nat;
+  （*） := (*);
 
   infixl 6 －;
-  － : ℕ -> ℕ -> ℕ;
-  － ≔ （-）;
+  － : Nat -> Nat -> Nat;
+  － := （-）;
 
   infixl 7 ·;
-  · : ℕ -> ℕ -> ℕ;
-  · ≔ （*）;
+  · : Nat -> Nat -> Nat;
+  · := （*）;
 
-  （0） : ℕ;
-  （0） ≔ ╘⑽╛ － ╘⑽╛ · zero;
+  （0） : Nat;
+  （0） := ╘⑽╛ － ╘⑽╛ · zero;
 
-  主功能 : ℕ;
-  主功能 ≔ （0）;
+  主功能 : Nat;
+  主功能 := （0）;
 end;

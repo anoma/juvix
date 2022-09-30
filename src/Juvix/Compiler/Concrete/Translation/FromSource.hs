@@ -271,8 +271,7 @@ operatorSyntaxDef = do
   where
     arity :: ParsecS r OperatorArity
     arity =
-      do
-        Binary AssocRight <$ kwInfixr
+      Binary AssocRight <$ kwInfixr
         <|> Binary AssocLeft <$ kwInfixl
         <|> Binary AssocNone <$ kwInfix
         <|> Unary AssocPostfix <$ kwPostfix

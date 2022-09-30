@@ -37,17 +37,17 @@ inductive Bool {
 
 infixr 2 ||;
 || : Bool → Bool → Bool;
-|| false a ≔ a;
-|| true _ ≔ true;
+|| false a := a;
+|| true _ := true;
 
 infixr 3 &&;
 && : Bool → Bool → Bool;
-&& false _ ≔ false;
-&& true a ≔ a;
+&& false _ := false;
+&& true a := a;
 
 if : {A : Type} → Bool → A → A → A;
-if true a _ ≔ a;
-if false _ b ≔ b;
+if true a _ := a;
+if false _ b := b;
 
 --------------------------------------------------------------------------------
 -- Backend Booleans
@@ -84,14 +84,14 @@ compile bool {
 };
 
 from-backend-bool : BackendBool → Bool;
-from-backend-bool bb ≔ bool bb true false;
+from-backend-bool bb := bool bb true false;
 
 --------------------------------------------------------------------------------
 -- Functions
 --------------------------------------------------------------------------------
 
 id : {A : Type} → A → A;
-id a ≔ a;
+id a := a;
 
 --------------------------------------------------------------------------------
 -- Integers
@@ -134,10 +134,10 @@ compile <' {
 
 infix 4 <;
 < : Int → Int → Bool;
-< i1 i2 ≔ from-backend-bool (i1 <' i2);
+< i1 i2 := from-backend-bool (i1 <' i2);
 
 isNegative : Int → Bool;
-isNegative n ≔ n < Int_0;
+isNegative n := n < Int_0;
 
 axiom eqInt : Int → Int → BackendBool;
 compile eqInt {
@@ -146,7 +146,7 @@ compile eqInt {
 
 infix 4 ==Int;
 ==Int : Int → Int → Bool;
-==Int i1 i2 ≔ from-backend-bool (eqInt i1 i2);
+==Int i1 i2 := from-backend-bool (eqInt i1 i2);
 
 infixl 6 -;
 axiom - : Int -> Int -> Int;
@@ -182,7 +182,7 @@ compile eqString  {
 
 infix 4 ==String;
 ==String : String → String → Bool;
-==String s1 s2 ≔ from-backend-bool (eqString s1 s2);
+==String s1 s2 := from-backend-bool (eqString s1 s2);
 
 --------------------------------------------------------------------------------
 -- Lists
@@ -195,12 +195,12 @@ inductive List (A : Type) {
 };
 
 elem : {A : Type} → (A → A → Bool) → A → List A → Bool;
-elem _ _ nil ≔ false;
-elem eq s (x ∷ xs) ≔ eq s x || elem eq s xs;
+elem _ _ nil := false;
+elem eq s (x ∷ xs) := eq s x || elem eq s xs;
 
 foldl : {A : Type} → {B : Type} → (B → A → B) → B → List A → B;
-foldl f z nil ≔ z;
-foldl f z (h ∷ hs) ≔ foldl f (f z h) hs;
+foldl f z nil := z;
+foldl f z (h ∷ hs) := foldl f (f z h) hs;
 
 --------------------------------------------------------------------------------
 -- Pair
@@ -222,17 +222,17 @@ inductive Maybe (A : Type) {
 };
 
 from-int : Int → Maybe Int;
-from-int i ≔ if (isNegative i) nothing (just i);
+from-int i := if (isNegative i) nothing (just i);
 
 maybe : {A : Type} → {B : Type} → B → (A → B) → Maybe A → B;
-maybe b _ nothing ≔ b;
-maybe _ f (just x) ≔ f x;
+maybe b _ nothing := b;
+maybe _ f (just x) := f x;
 
 from-string : String → Maybe String;
-from-string s ≔ if (s ==String "") nothing (just s);
+from-string s := if (s ==String "") nothing (just s);
 
 pair-from-optionString : (String → Int × Bool) → Maybe String → Int × Bool;
-pair-from-optionString ≔ maybe (Int_0, false);
+pair-from-optionString := maybe (Int_0, false);
 
 --------------------------------------------------------------------------------
 -- Anoma
@@ -254,26 +254,26 @@ compile isBalanceKey {
 };
 
 read-pre : String → Maybe Int;
-read-pre s ≔ from-int (readPre s);
+read-pre s := from-int (readPre s);
 
 read-post : String → Maybe Int;
-read-post s ≔ from-int (readPost s);
+read-post s := from-int (readPost s);
 
 is-balance-key : String → String → Maybe String;
-is-balance-key token key ≔ from-string (isBalanceKey token key);
+is-balance-key token key := from-string (isBalanceKey token key);
 
 unwrap-default : Maybe Int → Int;
-unwrap-default ≔ maybe Int_0 id;
+unwrap-default := maybe Int_0 id;
 
 --------------------------------------------------------------------------------
 -- Validity Predicate
 --------------------------------------------------------------------------------
 
 change-from-key : String → Int;
-change-from-key key ≔ unwrap-default (read-post key) - unwrap-default (read-pre key);
+change-from-key key := unwrap-default (read-post key) - unwrap-default (read-pre key);
 
 check-vp : List String → String → Int → String → Int × Bool;
-check-vp verifiers key change owner ≔
+check-vp verifiers key change owner :=
     if
         (isNegative (change-from-key key))
         -- make sure the spender approved the transaction
@@ -281,17 +281,17 @@ check-vp verifiers key change owner ≔
         (change + (change-from-key key), true);
 
 check-keys : String → List String → Int × Bool → String → Int × Bool;
-check-keys token verifiers (change, is-success) key ≔
+check-keys token verifiers (change, is-success) key :=
     if
         is-success
         (pair-from-optionString (check-vp verifiers key change) (is-balance-key token key))
         (Int_0, false);
 
 check-result : Int × Bool → Bool;
-check-result (change, all-checked) ≔ (change ==Int Int_0) && all-checked;
+check-result (change, all-checked) := (change ==Int Int_0) && all-checked;
 
 vp : String → List String → List String → Bool;
-vp token keys-changed verifiers ≔
+vp token keys-changed verifiers :=
     check-result
         (foldl
             (check-keys token verifiers)
@@ -330,33 +330,33 @@ compile >> {
 };
 
 show-result : Bool → String;
-show-result true ≔ "OK";
-show-result false ≔ "FAIL";
+show-result true := "OK";
+show-result false := "FAIL";
 
 --------------------------------------------------------------------------------
 -- Testing VP
 --------------------------------------------------------------------------------
 
 token : String;
-token ≔ "owner-token";
+token := "owner-token";
 
 owner-address : String;
-owner-address ≔ "owner-address";
+owner-address := "owner-address";
 
 change1-key : String;
-change1-key ≔ "change1-key";
+change1-key := "change1-key";
 
 change2-key : String;
-change2-key ≔ "change2-key";
+change2-key := "change2-key";
 
 verifiers : List String;
-verifiers ≔ owner-address ∷ nil;
+verifiers := owner-address ∷ nil;
 
 keys-changed : List String;
-keys-changed ≔ change1-key ∷ change2-key ∷ nil;
+keys-changed := change1-key ∷ change2-key ∷ nil;
 
 main : Action;
-main ≔
+main :=
     (putStr "VP Status: ")
     >> (putStrLn (show-result (vp token keys-changed verifiers)));
 

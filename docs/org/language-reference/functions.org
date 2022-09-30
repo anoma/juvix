@@ -42,9 +42,9 @@ odd : Nat → Bool;
 
 even : Nat → Bool;
 
-odd zero ≔ false;
-odd (suc n) ≔ even n;
+odd zero := false;
+odd (suc n) := even n;
 
-even zero ≔ true;
-even (suc n) ≔ odd n;
+even zero := true;
+even (suc n) := odd n;
 #+end_example

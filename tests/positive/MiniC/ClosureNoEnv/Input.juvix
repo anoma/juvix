@@ -42,7 +42,7 @@ compile plus {
 };
 
 apply : (Int → Int → Int) → Int → Int → Int;
-apply f a b ≔ f a b;
+apply f a b := f a b;
 
 inductive Nat {
   zero : Nat;
@@ -50,30 +50,30 @@ inductive Nat {
 };
 
 plus-nat : Nat → Nat → Nat;
-plus-nat zero n ≔ n;
-plus-nat (suc m) n ≔ suc (plus-nat m n);
+plus-nat zero n := n;
+plus-nat (suc m) n := suc (plus-nat m n);
 
 apply-nat : (Nat → Nat) → Nat → Nat;
-apply-nat f a ≔ f a;
+apply-nat f a := f a;
 
 apply-nat2 : (Nat → Nat → Nat) → Nat → Nat → Nat;
-apply-nat2 f a b ≔ f a b;
+apply-nat2 f a b := f a b;
 
 nat-to-int : Nat → Int;
-nat-to-int zero ≔ Int_0;
-nat-to-int (suc n) ≔ plus Int_1 (nat-to-int n);
+nat-to-int zero := Int_0;
+nat-to-int (suc n) := plus Int_1 (nat-to-int n);
 
 one : Nat;
-one ≔ suc zero;
+one := suc zero;
 
 nest-apply : ((Nat → Nat) → Nat → Nat) → (Nat → Nat) → Nat → Nat;
-nest-apply f g x ≔ f g x;
+nest-apply f g x := f g x;
 
 two : Nat;
-two ≔ suc one;
+two := suc one;
 
 main : Action;
-main ≔ put-str "plus 1 2: "
+main := put-str "plus 1 2: "
         >> put-str-ln (to-str (apply plus Int_1 Int_2))
         >> put-str "suc one: "
         >> put-str-ln (to-str (nat-to-int (apply-nat suc one)))

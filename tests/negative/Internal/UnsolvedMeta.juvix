@@ -5,6 +5,6 @@ inductive Proxy (A : Type) {
 };
 
 t : Proxy _;
-t ≔ x;
+t := x;
 
 end;

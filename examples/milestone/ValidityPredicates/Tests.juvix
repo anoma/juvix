@@ -8,29 +8,29 @@ open import SimpleFungibleToken;
 --------------------------------------------------------------------------------
 
 token : String;
-token ≔ "owner-token";
+token := "owner-token";
 
 owner-address : String;
-owner-address ≔ "owner-address";
+owner-address := "owner-address";
 
 change1-key : String;
-change1-key ≔ "change1-key";
+change1-key := "change1-key";
 
 change2-key : String;
-change2-key ≔ "change2-key";
+change2-key := "change2-key";
 
 verifiers : List String;
-verifiers ≔ owner-address ∷ nil;
+verifiers := owner-address ∷ nil;
 
 keys-changed : List String;
-keys-changed ≔ change1-key ∷ change2-key ∷ nil;
+keys-changed := change1-key ∷ change2-key ∷ nil;
 
 show-result : Bool → String;
-show-result true ≔ "OK";
-show-result false ≔ "FAIL";
+show-result true := "OK";
+show-result false := "FAIL";
 
 main : IO;
-main ≔
+main :=
     (putStr "VP Status: ")
     >> (putStrLn (show-result (vp token keys-changed verifiers)));
 

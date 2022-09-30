@@ -29,7 +29,7 @@ compile <' {
 
 infix 4 <;
 < : Int → Int → Bool;
-< i1 i2 ≔ from-backend-bool (i1 <' i2);
+< i1 i2 := from-backend-bool (i1 <' i2);
 
 axiom eqInt : Int → Int → BackendBool;
 compile eqInt {
@@ -38,7 +38,7 @@ compile eqInt {
 
 infix 4 ==;
 == : Int → Int → Bool;
-== i1 i2 ≔ from-backend-bool (eqInt i1 i2);
+== i1 i2 := from-backend-bool (eqInt i1 i2);
 
 infixl 6 -;
 axiom - : Int -> Int -> Int;

@@ -7,8 +7,8 @@ inductive Nat {
 
 infixl 6 +;
 + : Nat → Nat → Nat;
-+ zero b ≔ b;
-+ (suc a) b ≔ suc (a + b);
++ zero b := b;
++ (suc a) b := suc (a + b);
 
 fib : Nat -> Nat;
 fib zero := zero;

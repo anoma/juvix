@@ -9,18 +9,18 @@ inductive ℕ {
 infixl 4 +;
 builtin natural-plus
 + : ℕ → ℕ → ℕ;
-+ zero x ≔ x;
-+ (suc a) b ≔ suc (a + b);
++ zero x := x;
++ (suc a) b := suc (a + b);
 
 mult : ℕ → ℕ → ℕ;
-mult zero _ ≔ zero;
-mult (suc n) m ≔ m + (mult n m);
+mult zero _ := zero;
+mult (suc n) m := m + (mult n m);
 
 plusOne : ℕ → ℕ;
-plusOne ≔ suc;
+plusOne := suc;
 
 someLiteral : _;
-someLiteral ≔ 123;
+someLiteral := 123;
 
 builtin IO axiom IO : Type;
 
@@ -29,6 +29,6 @@ builtin IO-sequence axiom >> : IO → IO → IO;
 builtin natural-print axiom printNat : ℕ → IO;
 
 main : IO;
-main ≔ printNat (mult 3 (2 + 2)) >> printNat 2;
+main := printNat (mult 3 (2 + 2)) >> printNat 2;
 
 end;

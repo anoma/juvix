@@ -13,18 +13,18 @@ inductive Symbol {
 
 --- Equality for ;Symbol;s
 ==Symbol : Symbol → Symbol → Bool;
-==Symbol O O ≔ true;
-==Symbol X X ≔ true;
-==Symbol _ _ ≔ false;
+==Symbol O O := true;
+==Symbol X X := true;
+==Symbol _ _ := false;
 
 --- Turns ;O; into ;X; and ;X; into ;O;
 switch : Symbol → Symbol;
-switch O ≔ X;
-switch X ≔ O;
+switch O := X;
+switch X := O;
 
 --- Textual representation of a ;Symbol;
 showSymbol : Symbol → String;
-showSymbol O ≔ "O";
-showSymbol X ≔ "X";
+showSymbol O := "O";
+showSymbol X := "X";
 
 end;

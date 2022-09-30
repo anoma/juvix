@@ -14,7 +14,7 @@ open import Logic.GameState public;
 
 --- Checks if we reached the end of the game.
 checkState : GameState → GameState;
-checkState (state b p e) ≔
+checkState (state b p e) :=
   if (won (state b p e))
      (state b p (terminate ("Player " ++str (showSymbol (switch p)) ++str " wins!")))
      (if (draw (state b p e))
@@ -22,18 +22,18 @@ checkState (state b p e) ≔
          (state b p e));
 
 --- Given a player attempted move, updates the state accordingly.
-playMove : Maybe ℕ → GameState → GameState;
-playMove nothing (state b p _) ≔
+playMove : Maybe Nat → GameState → GameState;
+playMove nothing (state b p _) :=
     state b p (continue "\nInvalid number, try again\n");
-playMove (just k) (state (board s) player e) ≔
+playMove (just k) (state (board s) player e) :=
     if (not (elem (==) k (possibleMoves (flatten s))))
         (state (board s) player (continue "\nThe square is already occupied, try again\n"))
         (checkState (state (board (map (map (replace player k)) s))
                            (switch player)
                            noError));
 
---- Returns ;just; if the given ;ℕ; is in range of 1..9
-validMove : ℕ → Maybe ℕ;
-validMove n ≔ if ((n <= nine) && (n >= one)) (just n) nothing;
+--- Returns ;just; if the given ;Nat; is in range of 1..9
+validMove : Nat → Maybe Nat;
+validMove n := if ((n <= nine) && (n >= one)) (just n) nothing;
 
 end;

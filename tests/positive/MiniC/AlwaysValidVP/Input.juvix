@@ -28,11 +28,11 @@ compile AnomaBool_false {
 };
 
 encodeBool : Bool → AnomaBool;
-encodeBool true ≔ AnomaBool_true;
-encodeBool false ≔ AnomaBool_false;
+encodeBool true := AnomaBool_true;
+encodeBool false := AnomaBool_false;
 
 --- The module entrypoint callable by wasm runtime
 _validate_tx : AnomaPtr → AnomaSize → AnomaPtr → AnomaSize → AnomaPtr → AnomaSize → AnomaPtr → AnomaSize → AnomaBool;
-_validate_tx _ _ _ _ _ _ _ _  ≔ encodeBool true;
+_validate_tx _ _ _ _ _ _ _ _  := encodeBool true;
 
 end;

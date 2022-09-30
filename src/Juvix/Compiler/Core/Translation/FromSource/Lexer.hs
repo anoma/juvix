@@ -110,7 +110,7 @@ braces :: ParsecS r a -> ParsecS r a
 braces = between (symbol "{") (symbol "}")
 
 kwAssign :: ParsecS r ()
-kwAssign = keyword Str.assignUnicode <|> keyword Str.assignAscii
+kwAssign = keyword Str.assignAscii
 
 kwLet :: ParsecS r ()
 kwLet = keyword Str.let_

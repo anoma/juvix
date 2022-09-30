@@ -9,6 +9,6 @@ inductive Unit {
 axiom ignore : Unit -> Unit;
 
 main : IO;
-main ≔ putStrLn "Hello";
+main := putStrLn "Hello";
 
 end;

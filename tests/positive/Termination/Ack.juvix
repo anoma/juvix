@@ -3,8 +3,8 @@ module Ack;
   open Data.Nat;
 
   ack : ℕ → ℕ → ℕ;
-  ack zero n ≔ suc n;
-  ack (suc m) zero ≔ ack m (suc zero);
-  ack (suc m) (suc n) ≔ ack m (ack (suc m) n);
+  ack zero n := suc n;
+  ack (suc m) zero := ack m (suc zero);
+  ack (suc m) (suc n) := ack m (ack (suc m) n);
 
 end;

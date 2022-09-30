@@ -3,6 +3,6 @@ module D;
   import U;
 
   u : Other.Unit;
-  u ≔ U.t;
+  u := U.t;
 
 end;

@@ -8,6 +8,6 @@ module LiteralInt;
     b : B;
   };
 
-  f : ℕ;
-  f ≔ 1;
+  f : Nat;
+  f := 1;
 end;
