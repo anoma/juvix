@@ -30,4 +30,4 @@ hasReservedChar :: Text -> Bool
 hasReservedChar = any isReservedChar . unpack
 
 reservedSymbols :: [Char]
-reservedSymbols = ";(){}.@\"[]"
+reservedSymbols = ";(){}.@\"[]\\"
