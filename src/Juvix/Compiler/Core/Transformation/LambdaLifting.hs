@@ -52,8 +52,11 @@ lambdaLifting :: InfoTable -> InfoTable
 lambdaLifting = run . mapT' (lambdaLiftNode mempty)
 
 -- | True if lambdas are only found at the top level
-isLifted :: Node -> Bool
-isLifted = not . hasNestedLambdas
+nodeIsLifted :: Node -> Bool
+nodeIsLifted = not . hasNestedLambdas
   where
     hasNestedLambdas :: Node -> Bool
     hasNestedLambdas = has (cosmos . _NLam) . snd . unfoldLambdas'
+
+isLifted :: InfoTable -> Bool
+isLifted = all nodeIsLifted . toList . (^. identContext)
