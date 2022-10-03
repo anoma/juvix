@@ -10,21 +10,30 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Pretty
+import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.FromSource
 import System.IO.Extra (withTempDir)
 import Text.Megaparsec.Pos qualified as M
 
-coreEvalAssertion :: FilePath -> FilePath -> (String -> IO ()) -> Assertion
-coreEvalAssertion mainFile expectedFile step = do
+coreEvalAssertion ::
+  FilePath ->
+  FilePath ->
+  [TransformationId] ->
+  (InfoTable -> Assertion) ->
+  (String -> IO ()) ->
+  Assertion
+coreEvalAssertion mainFile expectedFile trans testTrans step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
     Left err -> assertFailure (show (pretty err))
     Right (_, Nothing) -> do
-      step "Compare expected and actual program output"
+      step "Compare expected an actual program output"
       expected <- TIO.readFile expectedFile
       assertEqDiff ("Check: EVAL output = " <> expectedFile) "" expected
-    Right (tab, Just node) -> do
+    Right (tabIni, Just node) -> do
+      let tab = applyTransformations trans tabIni
+      testTrans tab
       withTempDir
         ( \dirPath -> do
             let outputFile = dirPath </> "out.out"
