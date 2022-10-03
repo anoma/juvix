@@ -1,6 +1,7 @@
 module Core.Transformation.Lifting (allTests) where
 
 import Base
+import Core.Eval.Positive qualified as Eval
 import Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation
 
@@ -18,9 +19,14 @@ liftTest _testName _testCoreFile _testExpectedFile =
   fromTest
     Test
       { _testTransformations = pipe,
-        _testCoreFile = dir </> _testCoreFile,
-        _testName,
-        _testAssertion = assertExpectedOutput expectedFile
+        _testAssertion = assertExpectedOutput expectedFile,
+        _testEval =
+          Eval.PosTest
+            { _name = _testName,
+              _relDir = dir </> _testCoreFile,
+              _file = _testCoreFile,
+              _expectedFile = _testExpectedFile
+            }
       }
   where
     expectedFile = dir </> _testExpectedFile
