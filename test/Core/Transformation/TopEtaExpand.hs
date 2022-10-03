@@ -6,23 +6,16 @@ import Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation
 
 allTests :: TestTree
-allTests = testGroup "Top eta expand" (mapMaybe liftTest Eval.tests)
+allTests = testGroup "Top eta expand" (map liftTest Eval.tests)
 
 pipe :: [TransformationId]
 pipe = [TopEtaExpand]
 
-liftTest :: Eval.PosTest -> Maybe TestTree
-liftTest _testEval@Eval.PosTest {..}
-  | _name `elem` excluded = Nothing
-  | otherwise =
-      Just $
-        fromTest
-          Test
-            { _testTransformations = pipe,
-              _testAssertion = const (return ()),
-              _testEval
-            }
-
-excluded :: [String]
-excluded =
-  []
+liftTest :: Eval.PosTest -> TestTree
+liftTest _testEval =
+  fromTest
+    Test
+      { _testTransformations = pipe,
+        _testAssertion = const (return ()),
+        _testEval
+      }
