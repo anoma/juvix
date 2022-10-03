@@ -38,13 +38,13 @@ pushValueStack :: Type -> Memory -> Memory
 pushValueStack ty = over memoryValueStack (Stack.push ty)
 
 popValueStack :: Int -> Memory -> Memory
-popValueStack n = (!! n) . iterate (over memoryValueStack Stack.pop)
+popValueStack n = iterateN n (over memoryValueStack Stack.pop)
 
 pushTempStack :: Type -> Memory -> Memory
 pushTempStack ty = over memoryTempStack (Stack.push ty)
 
 popTempStack :: Int -> Memory -> Memory
-popTempStack n = (!! n) . iterate (over memoryTempStack Stack.pop)
+popTempStack n = iterateN n (over memoryTempStack Stack.pop)
 
 -- | Read value stack at index `n` from the top.
 topValueStack :: Int -> Memory -> Maybe Type
