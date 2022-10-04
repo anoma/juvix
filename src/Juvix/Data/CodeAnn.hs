@@ -42,6 +42,10 @@ stylize a = case a of
   AnnDef {} -> mempty
   AnnRef {} -> mempty
 
+-- | for builtin stuff
+primitive :: Text -> Doc Ann
+primitive = annotate (AnnKind KNameAxiom) . pretty
+
 keyword :: Text -> Doc Ann
 keyword = annotate AnnKeyword . pretty
 
