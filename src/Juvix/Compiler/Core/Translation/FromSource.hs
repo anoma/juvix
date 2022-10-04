@@ -44,9 +44,14 @@ runParser root fileName tab input =
         { _parserParamsRoot = root
         }
 
+binderNameAndTypeInfo :: Name -> Maybe Type -> Info
+binderNameAndTypeInfo name mty =
+  let info1 = Info.singleton (NameInfo name)
+      info2 = maybe info1 (`setInfoType` info1) mty
+   in Info.singleton (BinderInfo info2)
+
 binderNameInfo :: Name -> Info
-binderNameInfo name =
-  Info.singleton (BinderInfo (Info.singleton (NameInfo name)))
+binderNameInfo name = binderNameAndTypeInfo name Nothing
 
 freshName ::
   Member NameIdGen r =>
@@ -672,10 +677,20 @@ exprLambda ::
   ParsecS r Node
 exprLambda varsNum vars = do
   lambda
-  name <- parseLocalName
+  (name, mty) <- lambdaName
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- bracedExpr (varsNum + 1) vars'
-  return $ mkLambda (binderNameInfo name) body
+  return $ mkLambda (binderNameAndTypeInfo name mty) body
+  where
+    lambdaName =
+      parens
+        ( do
+            n <- parseLocalName
+            kwColon
+            ty <- expr varsNum vars
+            return (n, Just ty)
+        )
+        <|> (parseLocalName >>= \n -> return (n, Nothing))
 
 exprLetrecOne ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
