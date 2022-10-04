@@ -234,5 +234,10 @@ tests =
       "Match with complex patterns"
       "."
       "test041.jvc"
-      "out/test041.out"
+      "out/test041.out",
+    PosTest
+      "Type annotations"
+      "."
+      "test042.jvc"
+      "out/test042.out"
   ]
