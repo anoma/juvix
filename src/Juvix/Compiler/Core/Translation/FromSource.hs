@@ -44,14 +44,10 @@ runParser root fileName tab input =
         { _parserParamsRoot = root
         }
 
-binderNameAndTypeInfo :: Name -> Maybe Type -> Info
-binderNameAndTypeInfo name mty =
-  let info1 = Info.singleton (NameInfo name)
-      info2 = maybe info1 (`setInfoType` info1) mty
-   in Info.singleton (BinderInfo info2)
-
-binderNameInfo :: Name -> Info
-binderNameInfo name = binderNameAndTypeInfo name Nothing
+binderInfo :: Name -> Type -> Info
+binderInfo name ty =
+  let info = setInfoType ty (Info.singleton (NameInfo name))
+   in Info.singleton (BinderInfo info)
 
 freshName ::
   Member NameIdGen r =>
@@ -379,7 +375,7 @@ seqExpr' varsNum vars node = do
     mkConstr
       Info.empty
       (BuiltinTag TagBind)
-      [node, mkLambda (binderNameInfo name) node']
+      [node, mkLambda (binderInfo name mkDynamic') node']
 
 cmpExpr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -668,7 +664,7 @@ exprPi varsNum vars = do
   kw kwComma
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- expr (varsNum + 1) vars'
-  return $ mkPi (binderNameInfo name) ty body
+  return $ mkPi (binderInfo name ty) ty body
 
 exprLambda ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
@@ -680,7 +676,7 @@ exprLambda varsNum vars = do
   (name, mty) <- lambdaName
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- bracedExpr (varsNum + 1) vars'
-  return $ mkLambda (binderNameAndTypeInfo name mty) body
+  return $ mkLambda (binderInfo name (fromMaybe mkDynamic' mty)) body
   where
     lambdaName =
       parens
@@ -769,12 +765,13 @@ exprLet ::
 exprLet varsNum vars = do
   kw kwLet
   name <- parseLocalName
+  mty <- optional (kw kwColon >> expr varsNum vars)
   kw kwAssign
   value <- bracedExpr varsNum vars
   kw kwIn
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- bracedExpr (varsNum + 1) vars'
-  return $ mkLet (binderNameInfo name) value body
+  return $ mkLet (binderInfo name (fromMaybe mkDynamic' mty)) value body
 
 exprCase ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
