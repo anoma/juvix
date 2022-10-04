@@ -1,6 +1,6 @@
 -- IdentContext
-def 1 := λx λw w$0 x$1
-def 2 := λy λx λe y$2 e$0 x$1 y$2
-def 3 := λy λx λz z$0 y$2 x$1 (!1 x$1) (!2 x$1 y$2)
-def 4 := λs λx λy s$2 y$0 (!3 x$1 y$0)
-def t2 := λr λs r$1 (!4 s$0)
+def t2 := λr λs r$1 (!10 s$0)
+def 7 := λx λw w$0 x$1
+def 8 := λy λx λe y$2 e$0 x$1 y$2
+def 9 := λy λx λz z$0 y$2 x$1 (!7 x$1) (!8 x$1 y$2)
+def 10 := λs λx λy s$2 y$0 (!9 x$1 y$0)
