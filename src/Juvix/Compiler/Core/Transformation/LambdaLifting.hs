@@ -44,7 +44,7 @@ lambdaLiftNode aboveBl top =
               _identifierIsExported = False
             }
         registerIdentNode f fBody'
-        let fApp = mkApps' (mkIdent mempty f) (map NVar freevars)
+        let fApp = mkApps' (mkIdent mempty f) (map NVar (reverse freevars))
         return (End fApp)
       m -> return (Recur m)
 
