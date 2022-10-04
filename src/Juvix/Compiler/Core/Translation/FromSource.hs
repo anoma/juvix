@@ -686,7 +686,7 @@ exprLambda varsNum vars = do
       parens
         ( do
             n <- parseLocalName
-            kwColon
+            kw kwColon
             ty <- expr varsNum vars
             return (n, Just ty)
         )
