@@ -38,6 +38,22 @@ def g := \t {
   }
 };
 
+def h := \t {
+  match t with {
+    0 := 100;
+    1 := 200;
+    _ := 300;
+  }
+};
+
+def i := \t {
+  match t with {
+    "aa" := 400;
+    "bb" := 500;
+    _ := 600;
+  }
+};
+
 def writeLn := \x write x >> write "\n";
 
 writeLn (sum2 (lgen 5)) >>
@@ -46,4 +62,10 @@ writeLn (f (gen 15)) >>
 writeLn (f (gen 16)) >>
 writeLn (f (gen 17)) >>
 writeLn (f (gen 18)) >>
-writeLn (f (gen 20))
+writeLn (f (gen 20)) >>
+writeLn (h 0) >>
+writeLn (h 1) >>
+writeLn (h 2) >>
+writeLn (i "aa") >>
+writeLn (i "bb") >>
+writeLn (i "cc")
