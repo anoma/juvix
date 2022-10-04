@@ -35,12 +35,12 @@ runInfoTableBuilder tab =
     interp = \case
       FreshSymbol -> do
         s <- get
-        modify' (over infoSymbolsNum (+ 1))
-        return (s ^. infoSymbolsNum)
+        modify' (over infoNextSymbol (+ 1))
+        return (s ^. infoNextSymbol)
       FreshTag -> do
         s <- get
-        modify' (over infoTagsNum (+ 1))
-        return (UserTag (s ^. infoTagsNum))
+        modify' (over infoNextTag (+ 1))
+        return (UserTag (s ^. infoNextTag))
       RegisterIdent ii -> do
         modify' (over infoIdentifiers (HashMap.insert (ii ^. identifierSymbol) ii))
         whenJust (ii ^? identifierName . _Just . nameText) $ \name ->
@@ -51,8 +51,8 @@ runInfoTableBuilder tab =
       RegisterIdentNode sym node ->
         modify' (over identContext (HashMap.insert sym node))
       SetIdentArgsInfo sym argsInfo -> do
-        modify' (over infoIdentifiers (HashMap.adjust (set identifierArgsInfo argsInfo) sym))
-        modify' (over infoIdentifiers (HashMap.adjust (set identifierArgsNum (length argsInfo)) sym))
+        modify' (set (infoIdentifiers . at sym . _Just . identifierArgsInfo) argsInfo)
+        modify' (set (infoIdentifiers . at sym . _Just . identifierArgsNum) (length argsInfo))
       GetIdent txt -> do
         s <- get
         return $ HashMap.lookup txt (s ^. identMap)
