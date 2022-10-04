@@ -117,6 +117,9 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
           patmatch acc (NCtr (Constr _ tag args)) (PatConstr PatternConstr {..})
             | tag == _patternConstrTag =
                 matchPatterns acc args _patternConstrArgs
+          patmatch acc (NCst (Constant _ v)) (PatConst (PatternConst {..}))
+            | v == _patternConstValue = Just acc
+            | otherwise = Nothing
           patmatch _ _ _ = Nothing
       [] ->
         evalError "no matching pattern" (substEnv env n)

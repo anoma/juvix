@@ -110,6 +110,7 @@ data Pattern' i
   = PatWildcard (PatternWildcard' i)
   | PatBinder (PatternBinder' i)
   | PatConstr (PatternConstr' i)
+  | PatConst (PatternConst' i)
   deriving stock (Eq)
 
 newtype PatternWildcard' i = PatternWildcard
@@ -125,6 +126,11 @@ data PatternConstr' i = PatternConstr
   { _patternConstrInfo :: i,
     _patternConstrTag :: !Tag,
     _patternConstrArgs :: ![Pattern' i]
+  }
+
+data PatternConst' i = PatternConst
+  { _patternConstInfo :: i,
+    _patternConstValue :: ConstantValue
   }
 
 -- | Dependent Pi-type. Compilation-time only. Pi implicitly introduces a binder
@@ -214,6 +220,7 @@ instance HasAtomicity (Pattern' i) where
     PatWildcard x -> atomicity x
     PatBinder x -> atomicity x
     PatConstr x -> atomicity x
+    PatConst {} -> Atom
 
 instance HasAtomicity (Pi' i a) where
   atomicity _ = Aggregate lambdaFixity
@@ -283,6 +290,9 @@ instance Eq (PatternBinder' i) where
 
 instance Eq (PatternConstr' i) where
   (PatternConstr _ tag1 ps1) == (PatternConstr _ tag2 ps2) = tag1 == tag2 && ps1 == ps2
+
+instance Eq (PatternConst' i) where
+  (PatternConst _ c1) == (PatternConst _ c2) = c1 == c2
 
 instance Eq a => Eq (Pi' i a) where
   (Pi _ ty1 b1) == (Pi _ ty2 b2) = ty1 == ty2 && b1 == b2
