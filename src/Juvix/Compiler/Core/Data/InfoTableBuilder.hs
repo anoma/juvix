@@ -28,7 +28,7 @@ checkSymbolDefined sym = do
 
 runInfoTableBuilder :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilder tab =
-      runState tab
+  runState tab
     . reinterpret interp
   where
     interp :: InfoTableBuilder m a -> Sem (State InfoTable : r) a
