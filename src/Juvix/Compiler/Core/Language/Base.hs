@@ -16,10 +16,10 @@ import Juvix.Prelude
 
 type Location = Interval
 
--- Consecutive symbol IDs for reachable user functions.
+-- | Consecutive symbol IDs for reachable user functions.
 type Symbol = Word
 
--- Tag of a constructor, uniquely identifying it. Tag values are consecutive and
+-- | Tag of a constructor, uniquely identifying it. Tag values are consecutive and
 -- separate from symbol IDs. We might need fixed special tags in Core for common
 -- "builtin" constructors, e.g., unit, nat, lists, pairs, so that the code
 -- generator can treat them specially.
@@ -28,5 +28,5 @@ data Tag = BuiltinTag BuiltinDataTag | UserTag Word
 
 instance Hashable Tag
 
--- de Bruijn index
+-- | de Bruijn index
 type Index = Int
