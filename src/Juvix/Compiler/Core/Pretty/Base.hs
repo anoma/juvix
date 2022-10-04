@@ -9,9 +9,9 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
 import Juvix.Compiler.Core.Extra
-import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.BinderInfo
-import Juvix.Compiler.Core.Info.NameInfo as NameInfo
+import Juvix.Compiler.Core.Info.NameInfo
+import Juvix.Compiler.Core.Info.TypeInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Stripped qualified as Stripped
 import Juvix.Compiler.Core.Pretty.Options
@@ -126,14 +126,19 @@ ppCodeConstr' name c = do
     Nothing -> ppCode (c ^. constrTag)
   return $ foldl' (<+>) n' args'
 
-ppCodeLet' :: (PrettyCode a, Member (Reader Options) r) => Maybe Name -> Let' i a -> Sem r (Doc Ann)
-ppCodeLet' name lt = do
+ppCodeLet' :: (PrettyCode a, Member (Reader Options) r) => Maybe Name -> Maybe (Doc Ann) -> Let' i a -> Sem r (Doc Ann)
+ppCodeLet' name mty lt = do
   n' <- case name of
     Just nm -> ppCode nm
     Nothing -> return kwQuestion
   v' <- ppCode (lt ^. letValue)
   b' <- ppCode (lt ^. letBody)
-  return $ kwLet <+> n' <+> kwAssign <+> v' <+> kwIn <+> b'
+  let tty = case mty of
+        Just ty ->
+          mempty <+> kwColon <+> ty
+        Nothing ->
+          mempty
+  return $ kwLet <+> n' <> tty <+> kwAssign <+> v' <+> kwIn <+> b'
 
 ppCodeCase' :: (PrettyCode a, Member (Reader Options) r) => [[Maybe Name]] -> [Maybe Name] -> Case' i bi a -> Sem r (Doc Ann)
 ppCodeCase' branchBinderNames branchTagNames Case {..} = do
@@ -200,15 +205,25 @@ instance PrettyCode Node where
        in ppCodeConstr' name x
     NLam (Lambda i body) -> do
       b <- ppCode body
-      lam <- case getInfoName (getInfoBinder i) of
+      let bi = getInfoBinder i
+      lam <- case getInfoName bi of
         Just name -> do
           n <- ppCode name
-          return $ kwLambda <> n
+          case getInfoType bi of
+            NDyn {} -> return $ kwLambda <> n
+            ty -> do
+              tty <- ppCode ty
+              return $ kwLambda <> parens (n <+> kwColon <+> tty)
         Nothing -> return $ kwLambda <> kwQuestion
       return (lam <+> b)
     NLet x ->
       let name = getInfoName (getInfoBinder (x ^. letInfo))
-       in ppCodeLet' name x
+          ty = getInfoType (getInfoBinder (x ^. letInfo))
+       in do
+            mty <- case ty of
+              NDyn {} -> return Nothing
+              _ -> Just <$> ppCode ty
+            ppCodeLet' name mty x
     NRec LetRec {..} -> do
       let n = length _letRecValues
       ns <- mapM getName (getInfoBinders n _letRecInfo)
@@ -250,8 +265,8 @@ instance PrettyCode Node where
           b <- ppCode _piBody
           return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
         Nothing -> do
-          ty <- ppCode _piType
-          b <- ppCode _piBody
+          ty <- ppLeftExpression funFixity _piType
+          b <- ppRightExpression funFixity _piBody
           return $ ty <+> kwArrow <+> b
     NUniv Univ {..} ->
       return $ kwType <+> pretty _univLevel
@@ -259,13 +274,34 @@ instance PrettyCode Node where
     NTyp TypeConstr {..} -> do
       args' <- mapM (ppRightExpression appFixity) _typeConstrArgs
       n' <-
-        case Info.lookup kNameInfo _typeConstrInfo of
-          Just ni -> ppCode (ni ^. NameInfo.infoName)
+        case getInfoName _typeConstrInfo of
+          Just name -> ppCode name
           Nothing -> return $ kwUnnamedIdent <> pretty _typeConstrSymbol
       return $ foldl' (<+>) n' args'
     NDyn {} -> return kwDynamic
     Closure env l@Lambda {} ->
       ppCode (substEnv env (NLam l))
+
+instance PrettyCode Stripped.TypeApp where
+  ppCode Stripped.TypeApp {..} = do
+    args' <- mapM (ppRightExpression appFixity) _typeAppArgs
+    n' <- case _typeAppName of
+      Just nm -> ppCode nm
+      Nothing -> return $ kwUnnamedIdent <> pretty _typeAppSymbol
+    return $ foldl' (<+>) n' args'
+
+instance PrettyCode Stripped.TypeFun where
+  ppCode Stripped.TypeFun {..} = do
+    l' <- ppLeftExpression funFixity _typeFunLeft
+    r' <- ppRightExpression funFixity _typeFunRight
+    return $ l' <+> kwArrow <+> r'
+
+instance PrettyCode Stripped.Type where
+  ppCode = \case
+    Stripped.TyDynamic -> return kwAny
+    Stripped.TyPrim x -> ppCode x
+    Stripped.TyApp x -> ppCode x
+    Stripped.TyFun x -> ppCode x
 
 instance PrettyCode Stripped.Node where
   ppCode = \case
@@ -283,7 +319,8 @@ instance PrettyCode Stripped.Node where
        in ppCodeConstr' name x
     Stripped.NLet x ->
       let name = x ^. (letInfo . Stripped.letInfoBinderName)
-       in ppCodeLet' name x
+          ty = x ^. (letInfo . Stripped.letInfoBinderType)
+       in ppCode ty >>= \tty -> ppCodeLet' name (Just tty) x
     Stripped.NCase x@Stripped.Case {..} ->
       let branchBinderNames = map (^. (caseBranchInfo . Stripped.caseBranchInfoBinderNames)) _caseBranches
           branchTagNames = map (^. (caseBranchInfo . Stripped.caseBranchInfoConstrName)) _caseBranches
@@ -376,6 +413,9 @@ kwSquareL = delimiter "["
 
 kwSquareR :: Doc Ann
 kwSquareR = delimiter "]"
+
+kwAny :: Doc Ann
+kwAny = keyword Str.any
 
 kwDeBruijnVar :: Doc Ann
 kwDeBruijnVar = keyword Str.deBruijnVar
