@@ -145,7 +145,7 @@ unfoldApps' :: Node -> (Node, [Node])
 unfoldApps' = second (map snd) . unfoldApps
 
 mkLambdas :: [Info] -> Node -> Node
-mkLambdas is n = foldl' (flip mkLambda) n is
+mkLambdas is n = foldl' (flip mkLambda) n (reverse is)
 
 mkLambdas' :: Int -> Node -> Node
 mkLambdas' k
@@ -158,7 +158,7 @@ unfoldLambdas = go []
     go :: [Info] -> Node -> ([Info], Node)
     go acc n = case n of
       NLam (Lambda i b) -> go (i : acc) b
-      _ -> (acc, n)
+      _ -> (reverse acc, n)
 
 unfoldLambdas' :: Node -> (Int, Node)
 unfoldLambdas' = first length . unfoldLambdas
