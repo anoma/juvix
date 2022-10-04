@@ -88,12 +88,15 @@ ppCodeIdent' name idt =
     Just nm -> ppCode nm
     Nothing -> return $ kwUnnamedIdent <> pretty (idt ^. identSymbol)
 
-instance PrettyCode (Constant' i) where
+instance PrettyCode ConstantValue where
   ppCode = \case
-    Constant _ (ConstInteger int) ->
+    ConstInteger int ->
       return $ annotate AnnLiteralInteger (pretty int)
-    Constant _ (ConstString txt) ->
+    ConstString txt ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
+
+instance PrettyCode (Constant' i) where
+  ppCode Constant {..} = ppCode _constantValue
 
 instance (PrettyCode a, HasAtomicity a) => PrettyCode (App' i a) where
   ppCode App {..} = do
@@ -172,11 +175,15 @@ instance PrettyCode PatternConstr where
     args <- mapM (ppRightExpression appFixity) _patternConstrArgs
     return $ foldl' (<+>) n args
 
+instance PrettyCode PatternConst where
+  ppCode PatternConst {..} = ppCode _patternConstValue
+
 instance PrettyCode Pattern where
   ppCode = \case
     PatWildcard x -> ppCode x
     PatBinder x -> ppCode x
     PatConstr x -> ppCode x
+    PatConst x -> ppCode x
 
 ppPatterns :: Member (Reader Options) r => NonEmpty Pattern -> Sem r (Doc Ann)
 ppPatterns pats = do

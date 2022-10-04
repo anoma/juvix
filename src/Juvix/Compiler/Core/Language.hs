@@ -44,6 +44,8 @@ type PatternBinder = PatternBinder' Info
 
 type PatternConstr = PatternConstr' Info
 
+type PatternConst = PatternConst' Info
+
 type Pattern = Pattern' Info
 
 type Pi = Pi' Info Node
