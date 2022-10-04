@@ -13,9 +13,9 @@ pipe = [Identity]
 
 liftTest :: Eval.PosTest -> TestTree
 liftTest _testEval =
-        fromTest
-          Test
-            { _testTransformations = pipe,
-              _testAssertion = const (return ()),
-              _testEval
-            }
+  fromTest
+    Test
+      { _testTransformations = pipe,
+        _testAssertion = const (return ()),
+        _testEval
+      }
