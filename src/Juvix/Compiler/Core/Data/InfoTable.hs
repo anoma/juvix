@@ -12,7 +12,9 @@ data InfoTable = InfoTable
     _infoIdentifiers :: HashMap Symbol IdentifierInfo,
     _infoInductives :: HashMap Symbol InductiveInfo,
     _infoConstructors :: HashMap Tag ConstructorInfo,
-    _infoAxioms :: HashMap Name AxiomInfo
+    _infoAxioms :: HashMap Name AxiomInfo,
+    _infoNextSymbol :: Word,
+    _infoNextTag :: Word
   }
 
 emptyInfoTable :: InfoTable
@@ -24,7 +26,9 @@ emptyInfoTable =
       _infoIdentifiers = mempty,
       _infoInductives = mempty,
       _infoConstructors = mempty,
-      _infoAxioms = mempty
+      _infoAxioms = mempty,
+      _infoNextSymbol = 0,
+      _infoNextTag = 0
     }
 
 data IdentKind = IdentSym Symbol | IdentTag Tag

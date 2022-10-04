@@ -26,52 +26,35 @@ checkSymbolDefined sym = do
   tab <- getInfoTable
   return $ HashMap.member sym (tab ^. identContext)
 
-data BuilderState = BuilderState
-  { _stateNextSymbol :: Word,
-    _stateNextUserTag :: Word,
-    _stateInfoTable :: InfoTable
-  }
-
-makeLenses ''BuilderState
-
-initBuilderState :: InfoTable -> BuilderState
-initBuilderState tab =
-  BuilderState
-    { _stateNextSymbol = fromIntegral $ HashMap.size (tab ^. infoIdentifiers),
-      _stateNextUserTag = fromIntegral $ HashMap.size (tab ^. infoConstructors),
-      _stateInfoTable = tab
-    }
-
 runInfoTableBuilder :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilder tab =
-  fmap (first (^. stateInfoTable))
-    . runState (initBuilderState tab)
+  runState tab
     . reinterpret interp
   where
-    interp :: InfoTableBuilder m a -> Sem (State BuilderState : r) a
+    interp :: InfoTableBuilder m a -> Sem (State InfoTable : r) a
     interp = \case
       FreshSymbol -> do
-        modify' (over stateNextSymbol (+ 1))
         s <- get
-        return (s ^. stateNextSymbol - 1)
+        modify' (over infoNextSymbol (+ 1))
+        return (s ^. infoNextSymbol)
       FreshTag -> do
-        modify' (over stateNextUserTag (+ 1))
         s <- get
-        return (UserTag (s ^. stateNextUserTag - 1))
+        modify' (over infoNextTag (+ 1))
+        return (UserTag (s ^. infoNextTag))
       RegisterIdent ii -> do
-        modify' (over stateInfoTable (over infoIdentifiers (HashMap.insert (ii ^. identifierSymbol) ii)))
+        modify' (over infoIdentifiers (HashMap.insert (ii ^. identifierSymbol) ii))
         whenJust (ii ^? identifierName . _Just . nameText) $ \name ->
-          modify' (over stateInfoTable (over identMap (HashMap.insert name (IdentSym (ii ^. identifierSymbol)))))
+          modify' (over identMap (HashMap.insert name (IdentSym (ii ^. identifierSymbol))))
       RegisterConstructor ci -> do
-        modify' (over stateInfoTable (over infoConstructors (HashMap.insert (ci ^. constructorTag) ci)))
-        modify' (over stateInfoTable (over identMap (HashMap.insert (ci ^. (constructorName . nameText)) (IdentTag (ci ^. constructorTag)))))
+        modify' (over infoConstructors (HashMap.insert (ci ^. constructorTag) ci))
+        modify' (over identMap (HashMap.insert (ci ^. (constructorName . nameText)) (IdentTag (ci ^. constructorTag))))
       RegisterIdentNode sym node ->
-        modify' (over stateInfoTable (over identContext (HashMap.insert sym node)))
+        modify' (over identContext (HashMap.insert sym node))
       SetIdentArgsInfo sym argsInfo -> do
-        modify' (over stateInfoTable (over infoIdentifiers (HashMap.adjust (set identifierArgsInfo argsInfo) sym)))
-        modify' (over stateInfoTable (over infoIdentifiers (HashMap.adjust (set identifierArgsNum (length argsInfo)) sym)))
+        modify' (set (infoIdentifiers . at sym . _Just . identifierArgsInfo) argsInfo)
+        modify' (set (infoIdentifiers . at sym . _Just . identifierArgsNum) (length argsInfo))
       GetIdent txt -> do
         s <- get
-        return $ HashMap.lookup txt (s ^. (stateInfoTable . identMap))
+        return $ HashMap.lookup txt (s ^. identMap)
       GetInfoTable ->
-        get <&> (^. stateInfoTable)
+        get
