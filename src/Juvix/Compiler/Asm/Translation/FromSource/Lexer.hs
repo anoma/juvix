@@ -1,10 +1,11 @@
 module Juvix.Compiler.Asm.Translation.FromSource.Lexer
   ( module Juvix.Compiler.Asm.Translation.FromSource.Lexer,
     module Juvix.Parser.Lexer,
+    module Juvix.Compiler.Asm.Keywords,
   )
 where
 
-import Juvix.Extra.Strings qualified as Str
+import Juvix.Compiler.Asm.Keywords
 import Juvix.Parser.Lexer
 import Juvix.Prelude
 import Text.Megaparsec as P hiding (sepBy1, sepEndBy1, some)
@@ -34,11 +35,8 @@ number = number' integer
 string :: Member (Reader ParserParams) r => ParsecS r (Text, Interval)
 string = lexemeInterval string'
 
-keyword :: Text -> ParsecS r ()
-keyword = keyword' space
-
-keywordSymbol :: Text -> ParsecS r ()
-keywordSymbol = keywordSymbol' space
+kw :: Members '[Reader ParserParams] r => Keyword -> ParsecS r ()
+kw k = void $ lexeme $ kw' k
 
 identifier :: ParsecS r Text
 identifier = lexeme bareIdentifier
@@ -47,24 +45,10 @@ identifierL :: Member (Reader ParserParams) r => ParsecS r (Text, Interval)
 identifierL = lexemeInterval bareIdentifier
 
 bareIdentifier :: ParsecS r Text
-bareIdentifier = rawIdentifier' (`elem` specialSymbols) allKeywords
+bareIdentifier = rawIdentifier' (`elem` specialSymbols) allKeywordStrings
 
 specialSymbols :: [Char]
 specialSymbols = ":"
-
-allKeywords :: [ParsecS r ()]
-allKeywords =
-  [ kwFun,
-    kwInductive,
-    kwColon,
-    kwSemicolon,
-    kwStar,
-    kwArrow,
-    kwTrue,
-    kwFalse,
-    kwArg,
-    kwTmp
-  ]
 
 dot :: ParsecS r ()
 dot = symbol "."
@@ -98,42 +82,3 @@ braces = between (symbol "{") (symbol "}")
 
 brackets :: ParsecS r a -> ParsecS r a
 brackets = between (symbol "[") (symbol "]")
-
-kwFun :: ParsecS r ()
-kwFun = keyword Str.fun_
-
-kwInductive :: ParsecS r ()
-kwInductive = keyword Str.inductive
-
-kwColon :: ParsecS r ()
-kwColon = keyword Str.colon
-
-kwSemicolon :: ParsecS r ()
-kwSemicolon = keyword Str.semicolon
-
-kwStar :: ParsecS r ()
-kwStar = keyword Str.mul
-
-kwDollar :: ParsecS r ()
-kwDollar = keyword Str.dollar
-
-kwArrow :: ParsecS r ()
-kwArrow = keyword Str.toAscii <|> keyword Str.toUnicode
-
-kwTrue :: ParsecS r ()
-kwTrue = keyword Str.true_
-
-kwFalse :: ParsecS r ()
-kwFalse = keyword Str.false_
-
-kwUnit :: ParsecS r ()
-kwUnit = keyword Str.unit
-
-kwVoid :: ParsecS r ()
-kwVoid = keyword Str.void
-
-kwArg :: ParsecS r ()
-kwArg = keyword Str.arg_
-
-kwTmp :: ParsecS r ()
-kwTmp = keyword Str.tmp_

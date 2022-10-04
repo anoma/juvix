@@ -95,7 +95,7 @@ statementFunction ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r ()
 statementFunction = do
-  kwFun
+  kw kwFun
   off <- P.getOffset
   (txt, i) <- identifierL
   idt <- lift $ getIdent txt
@@ -119,7 +119,7 @@ statementFunction = do
             _functionType = mkTypeFun argtys (fromMaybe TyDynamic mrty)
           }
   lift $ registerFunction fi0
-  mcode <- (kwSemicolon $> Nothing) <|> optional (braces parseCode)
+  mcode <- (kw kwSemicolon $> Nothing) <|> optional (braces parseCode)
   let fi = fi0 {_functionCode = fromMaybe [] mcode}
   case idt of
     Just (IdentFwd _) -> do
@@ -141,7 +141,7 @@ statementInductive ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r ()
 statementInductive = do
-  kwInductive
+  kw kwInductive
   off <- P.getOffset
   (txt, i) <- identifierL
   idt <- lift $ getIdent txt
@@ -157,7 +157,7 @@ statementInductive = do
             _inductiveConstructors = []
           }
   lift $ registerInductive ii
-  ctrs <- braces $ P.sepEndBy (constrDecl sym) kwSemicolon
+  ctrs <- braces $ P.sepEndBy (constrDecl sym) (kw kwSemicolon)
   lift $ registerInductive ii {_inductiveConstructors = ctrs}
 
 functionArguments ::
@@ -199,7 +199,7 @@ typeAnnotation ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r Type
 typeAnnotation = do
-  kwColon
+  kw kwColon
   parseType
 
 parseType ::
@@ -219,7 +219,7 @@ typeFun' ::
   NonEmpty Type ->
   ParsecS r Type
 typeFun' tyargs = do
-  kwArrow
+  kw kwRightArrow
   TyFun . TypeFun tyargs <$> parseType
 
 typeArguments ::
@@ -230,8 +230,8 @@ typeArguments = do
     <|> (typeDynamic <&> NonEmpty.singleton)
     <|> (typeNamed <&> NonEmpty.singleton)
 
-typeDynamic :: ParsecS r Type
-typeDynamic = kwStar $> TyDynamic
+typeDynamic :: Members '[Reader ParserParams] r => ParsecS r Type
+typeDynamic = kw kwStar $> TyDynamic
 
 typeNamed ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
@@ -253,7 +253,7 @@ typeNamed = do
 parseCode ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r Code
-parseCode = P.sepEndBy command kwSemicolon
+parseCode = P.sepEndBy command (kw kwSemicolon)
 
 command ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
@@ -337,10 +337,10 @@ integerValue = do
   (i, _) <- integer
   return $ ConstInt i
 
-boolValue :: ParsecS r Value
+boolValue :: Members '[Reader ParserParams] r => ParsecS r Value
 boolValue =
-  (kwTrue $> ConstBool True)
-    <|> (kwFalse $> ConstBool False)
+  (kw kwTrue $> ConstBool True)
+    <|> (kw kwFalse $> ConstBool False)
 
 stringValue ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
@@ -349,11 +349,11 @@ stringValue = do
   (s, _) <- string
   return $ ConstString s
 
-unitValue :: ParsecS r Value
-unitValue = kwUnit $> ConstUnit
+unitValue :: Members '[Reader ParserParams] r => ParsecS r Value
+unitValue = kw kwUnit $> ConstUnit
 
-voidValue :: ParsecS r Value
-voidValue = kwVoid $> ConstVoid
+voidValue :: Members '[Reader ParserParams] r => ParsecS r Value
+voidValue = kw kwVoid $> ConstVoid
 
 memValue ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
@@ -367,14 +367,14 @@ directRef ::
   ParsecS r DirectRef
 directRef = stackRef <|> argRef <|> tempRef
 
-stackRef :: ParsecS r DirectRef
-stackRef = kwDollar $> StackRef
+stackRef :: Members '[Reader ParserParams] r => ParsecS r DirectRef
+stackRef = kw kwDollar $> StackRef
 
 argRef ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r DirectRef
 argRef = do
-  kwArg
+  kw kwArg
   (off, _) <- brackets integer
   return $ ArgRef (fromInteger off)
 
@@ -382,7 +382,7 @@ tempRef ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r DirectRef
 tempRef = do
-  kwTmp
+  kw kwTmp
   (off, _) <- brackets integer
   return $ TempRef (fromInteger off)
 
@@ -462,7 +462,7 @@ instrCall = do
 parseCallType ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
   ParsecS r CallType
-parseCallType = (kwDollar $> CallClosure) <|> (CallFun <$> funSymbol)
+parseCallType = (kw kwDollar $> CallClosure) <|> (CallFun <$> funSymbol)
 
 instrCallClosures ::
   Members '[Reader ParserParams, InfoTableBuilder] r =>
@@ -495,7 +495,7 @@ caseBranch ::
   ParsecS r CaseBranch
 caseBranch = do
   tag <- P.try constrTag
-  kwColon
+  kw kwColon
   CaseBranch tag <$> branchCode
 
 defaultBranch ::

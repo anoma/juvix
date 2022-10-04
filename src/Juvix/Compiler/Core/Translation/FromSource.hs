@@ -109,7 +109,7 @@ parseToplevel ::
 parseToplevel = do
   declareBuiltins
   space
-  P.endBy statement kwSemicolon
+  P.endBy statement (kw kwSemicolon)
   r <- optional expression
   P.eof
   return r
@@ -123,7 +123,7 @@ statementDef ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   ParsecS r ()
 statementDef = do
-  kwDef
+  kw kwDef
   off <- P.getOffset
   (txt, i) <- identifierL
   r <- lift (getIdent txt)
@@ -155,7 +155,7 @@ parseDefinition ::
   Symbol ->
   ParsecS r ()
 parseDefinition sym = do
-  kwAssign
+  kw kwAssign
   node <- expression
   lift $ registerIdentNode sym node
   let (is, _) = unfoldLambdas node
@@ -175,7 +175,7 @@ statementConstr ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   ParsecS r ()
 statementConstr = do
-  kwConstr
+  kw kwConstr
   off <- P.getOffset
   (txt, i) <- identifierL
   (argsNum, _) <- number 0 128
@@ -242,7 +242,7 @@ bindExpr' ::
   Node ->
   ParsecS r Node
 bindExpr' varsNum vars node = do
-  kwBind
+  kw kwBind
   node' <- cmpExpr varsNum vars
   ioExpr' varsNum vars (mkConstr Info.empty (BuiltinTag TagBind) [node, node'])
 
@@ -253,7 +253,7 @@ seqExpr' ::
   Node ->
   ParsecS r Node
 seqExpr' varsNum vars node = do
-  ((), i) <- interval kwSeq
+  ((), i) <- interval (kw kwSeq)
   node' <- cmpExpr (varsNum + 1) vars
   name <- lift $ freshName KNameLocal "_" i
   ioExpr' varsNum vars $
@@ -290,7 +290,7 @@ eqExpr' ::
   Node ->
   ParsecS r Node
 eqExpr' varsNum vars node = do
-  kwEq
+  kw kwEq
   node' <- arithExpr varsNum vars
   return $ mkBuiltinApp' OpEq [node, node']
 
@@ -301,7 +301,7 @@ ltExpr' ::
   Node ->
   ParsecS r Node
 ltExpr' varsNum vars node = do
-  kwLt
+  kw kwLt
   node' <- arithExpr varsNum vars
   return $ mkBuiltinApp' OpIntLt [node, node']
 
@@ -312,7 +312,7 @@ leExpr' ::
   Node ->
   ParsecS r Node
 leExpr' varsNum vars node = do
-  kwLe
+  kw kwLe
   node' <- arithExpr varsNum vars
   return $ mkBuiltinApp' OpIntLe [node, node']
 
@@ -323,7 +323,7 @@ gtExpr' ::
   Node ->
   ParsecS r Node
 gtExpr' varsNum vars node = do
-  kwGt
+  kw kwGt
   node' <- arithExpr varsNum vars
   return $ mkBuiltinApp' OpIntLt [node', node]
 
@@ -334,7 +334,7 @@ geExpr' ::
   Node ->
   ParsecS r Node
 geExpr' varsNum vars node = do
-  kwGe
+  kw kwGe
   node' <- arithExpr varsNum vars
   return $ mkBuiltinApp' OpIntLe [node', node]
 
@@ -363,7 +363,7 @@ plusExpr' ::
   Node ->
   ParsecS r Node
 plusExpr' varsNum vars node = do
-  kwPlus
+  kw kwPlus
   node' <- factorExpr varsNum vars
   arithExpr' varsNum vars (mkBuiltinApp' OpIntAdd [node, node'])
 
@@ -374,7 +374,7 @@ minusExpr' ::
   Node ->
   ParsecS r Node
 minusExpr' varsNum vars node = do
-  kwMinus
+  kw kwMinus
   node' <- factorExpr varsNum vars
   arithExpr' varsNum vars (mkBuiltinApp' OpIntSub [node, node'])
 
@@ -404,7 +404,7 @@ mulExpr' ::
   Node ->
   ParsecS r Node
 mulExpr' varsNum vars node = do
-  kwMul
+  kw kwMul
   node' <- appExpr varsNum vars
   factorExpr' varsNum vars (mkBuiltinApp' OpIntMul [node, node'])
 
@@ -415,7 +415,7 @@ divExpr' ::
   Node ->
   ParsecS r Node
 divExpr' varsNum vars node = do
-  kwDiv
+  kw kwDiv
   node' <- appExpr varsNum vars
   factorExpr' varsNum vars (mkBuiltinApp' OpIntDiv [node, node'])
 
@@ -426,7 +426,7 @@ modExpr' ::
   Node ->
   ParsecS r Node
 modExpr' varsNum vars node = do
-  kwMod
+  kw kwMod
   node' <- appExpr varsNum vars
   factorExpr' varsNum vars (mkBuiltinApp' OpIntMod [node, node'])
 
@@ -444,15 +444,15 @@ builtinAppExpr ::
   ParsecS r Node
 builtinAppExpr varsNum vars = do
   op <-
-    (kwEq >> return OpEq)
-      <|> (kwLt >> return OpIntLt)
-      <|> (kwLe >> return OpIntLe)
-      <|> (kwPlus >> return OpIntAdd)
-      <|> (kwMinus >> return OpIntSub)
-      <|> (kwDiv >> return OpIntDiv)
-      <|> (kwMul >> return OpIntMul)
-      <|> (kwTrace >> return OpTrace)
-      <|> (kwFail >> return OpFail)
+    (kw kwEq >> return OpEq)
+      <|> (kw kwLt >> return OpIntLt)
+      <|> (kw kwLe >> return OpIntLe)
+      <|> (kw kwPlus >> return OpIntAdd)
+      <|> (kw kwMinus >> return OpIntSub)
+      <|> (kw kwDiv >> return OpIntDiv)
+      <|> (kw kwMul >> return OpIntMul)
+      <|> (kw kwTrace >> return OpTrace)
+      <|> (kw kwFail >> return OpFail)
   args <- P.many (atom varsNum vars)
   return $ mkBuiltinApp' op args
 
@@ -530,7 +530,7 @@ parseLocalName = parseWildcardName <|> parseIdentName
   where
     parseWildcardName :: ParsecS r Name
     parseWildcardName = do
-      ((), i) <- interval kwWildcard
+      ((), i) <- interval (kw kwWildcard)
       lift $ freshName KNameLocal "_" i
 
     parseIdentName :: ParsecS r Name
@@ -556,12 +556,12 @@ exprLetrecOne ::
   HashMap Text Index ->
   ParsecS r Node
 exprLetrecOne varsNum vars = do
-  kwLetRec
+  kw kwLetRec
   name <- parseLocalName
-  kwAssign
+  kw kwAssign
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   value <- expr (varsNum + 1) vars'
-  kwIn
+  kw kwIn
   body <- expr (varsNum + 1) vars'
   return $ mkLetRec (Info.singleton (BindersInfo [Info.singleton (NameInfo name)])) (fromList [value]) body
 
@@ -572,7 +572,7 @@ exprLetrecMany ::
   ParsecS r Node
 exprLetrecMany varsNum vars = do
   off <- P.getOffset
-  defNames <- P.try (kwLetRec >> letrecNames)
+  defNames <- P.try (kw kwLetRec >> letrecNames)
   when (null defNames) $
     parseFailure off "expected at least one identifier name in letrec signature"
   let (vars', varsNum') = foldl' (\(vs, k) txt -> (HashMap.insert txt k vs, k + 1)) (vars, varsNum) defNames
@@ -599,11 +599,11 @@ letrecDefs names varsNum vars = case names of
     when (n /= txt) $
       parseFailure off "identifier name doesn't match letrec signature"
     name <- lift $ freshName KNameLocal txt i
-    kwAssign
+    kw kwAssign
     v <- expr varsNum vars
     if
-        | null names' -> optional kwSemicolon >> kwIn
-        | otherwise -> kwSemicolon
+        | null names' -> optional (kw kwSemicolon) >> kw kwIn
+        | otherwise -> kw kwSemicolon
     rest <- letrecDefs names' varsNum vars
     return $ (name, v) : rest
 
@@ -615,7 +615,7 @@ letrecDef ::
 letrecDef varsNum vars = do
   (txt, i) <- identifierL
   name <- lift $ freshName KNameLocal txt i
-  kwAssign
+  kw kwAssign
   v <- expr varsNum vars
   return (name, v)
 
@@ -625,11 +625,11 @@ exprLet ::
   HashMap Text Index ->
   ParsecS r Node
 exprLet varsNum vars = do
-  kwLet
+  kw kwLet
   name <- parseLocalName
-  kwAssign
+  kw kwAssign
   value <- expr varsNum vars
-  kwIn
+  kw kwIn
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
   body <- expr (varsNum + 1) vars'
   return $ mkLet (binderNameInfo name) value body
@@ -641,9 +641,9 @@ exprCase ::
   ParsecS r Node
 exprCase varsNum vars = do
   off <- P.getOffset
-  kwCase
+  kw kwCase
   value <- expr varsNum vars
-  kwOf
+  kw kwOf
   braces (exprCase' off value varsNum vars)
     <|> exprCase' off value varsNum vars
 
@@ -655,7 +655,7 @@ exprCase' ::
   HashMap Text Index ->
   ParsecS r Node
 exprCase' off value varsNum vars = do
-  bs <- P.sepEndBy (caseBranchP varsNum vars) kwSemicolon
+  bs <- P.sepEndBy (caseBranchP varsNum vars) (kw kwSemicolon)
   let bss = map fromLeft' $ filter isLeft bs
   let def' = map fromRight' $ filter isRight bs
   case def' of
@@ -681,8 +681,8 @@ caseDefaultBranch ::
   HashMap Text Index ->
   ParsecS r Node
 caseDefaultBranch varsNum vars = do
-  kwWildcard
-  kwAssign
+  kw kwWildcard
+  kw kwAssign
   expr varsNum vars
 
 caseMatchingBranch ::
@@ -704,7 +704,7 @@ caseMatchingBranch varsNum vars = do
       when
         (ci ^. constructorArgsNum /= bindersNum)
         (parseFailure off "wrong number of constructor arguments")
-      kwAssign
+      kw kwAssign
       let vars' =
             fst $
               foldl'
@@ -725,11 +725,11 @@ exprIf ::
   HashMap Text Index ->
   ParsecS r Node
 exprIf varsNum vars = do
-  kwIf
+  kw kwIf
   value <- expr varsNum vars
-  kwThen
+  kw kwThen
   br1 <- expr varsNum vars
-  kwElse
+  kw kwElse
   br2 <- expr varsNum vars
   return $ mkIf Info.empty value br1 br2
 
@@ -739,9 +739,9 @@ exprMatch ::
   HashMap Text Index ->
   ParsecS r Node
 exprMatch varsNum vars = do
-  kwMatch
-  values <- P.sepBy (expr varsNum vars) kwComma
-  kwWith
+  kw kwMatch
+  values <- P.sepBy (expr varsNum vars) (kw kwComma)
+  kw kwWith
   braces (exprMatch' values varsNum vars)
     <|> exprMatch' values varsNum vars
 
@@ -752,7 +752,7 @@ exprMatch' ::
   HashMap Text Index ->
   ParsecS r Node
 exprMatch' values varsNum vars = do
-  bs <- P.sepEndBy (matchBranch (length values) varsNum vars) kwSemicolon
+  bs <- P.sepEndBy (matchBranch (length values) varsNum vars) (kw kwSemicolon)
   return $ mkMatch' (fromList values) bs
 
 matchBranch ::
@@ -763,8 +763,8 @@ matchBranch ::
   ParsecS r MatchBranch
 matchBranch patsNum varsNum vars = do
   off <- P.getOffset
-  pats <- P.sepBy branchPattern kwComma
-  kwAssign
+  pats <- P.sepBy branchPattern (kw kwComma)
+  kw kwAssign
   unless (length pats == patsNum) $
     parseFailure off "wrong number of patterns"
   let pis = concatMap (reverse . getBinderPatternInfos) pats
@@ -786,9 +786,9 @@ branchPattern =
     <|> binderOrConstrPattern True
     <|> parens branchPattern
 
-wildcardPattern :: ParsecS r Pattern
+wildcardPattern :: Members '[Reader ParserParams] r => ParsecS r Pattern
 wildcardPattern = do
-  kwWildcard
+  kw kwWildcard
   return $ PatWildcard (PatternWildcard Info.empty)
 
 binderOrConstrPattern ::

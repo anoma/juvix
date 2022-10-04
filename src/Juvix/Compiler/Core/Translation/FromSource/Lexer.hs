@@ -1,9 +1,11 @@
 module Juvix.Compiler.Core.Translation.FromSource.Lexer
   ( module Juvix.Compiler.Core.Translation.FromSource.Lexer,
     module Juvix.Parser.Lexer,
+    module Juvix.Compiler.Core.Keywords,
   )
 where
 
+import Juvix.Compiler.Core.Keywords
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Parser.Lexer
 import Juvix.Prelude
@@ -22,6 +24,9 @@ lexemeInterval = lexeme . interval
 symbol :: Text -> ParsecS r ()
 symbol = void . L.symbol space
 
+kw :: Members '[Reader ParserParams] r => Keyword -> ParsecS r ()
+kw = void . lexeme . kw'
+
 decimal :: (Member (Reader ParserParams) r, Num n) => ParsecS r (n, Interval)
 decimal = lexemeInterval L.decimal
 
@@ -34,12 +39,6 @@ number = number' integer
 string :: Member (Reader ParserParams) r => ParsecS r (Text, Interval)
 string = lexemeInterval string'
 
-keyword :: Text -> ParsecS r ()
-keyword = keyword' space
-
-keywordSymbol :: Text -> ParsecS r ()
-keywordSymbol = keywordSymbol' space
-
 identifier :: ParsecS r Text
 identifier = lexeme bareIdentifier
 
@@ -48,42 +47,7 @@ identifierL = lexemeInterval bareIdentifier
 
 -- | Same as @identifier@ but does not consume space after it.
 bareIdentifier :: ParsecS r Text
-bareIdentifier = rawIdentifier allKeywords
-
-allKeywords :: [ParsecS r ()]
-allKeywords =
-  [ kwAssign,
-    kwLet,
-    kwLetRec,
-    kwIn,
-    kwConstr,
-    kwCase,
-    kwOf,
-    kwMatch,
-    kwWith,
-    kwIf,
-    kwThen,
-    kwElse,
-    kwDef,
-    kwRightArrow,
-    kwSemicolon,
-    kwComma,
-    kwWildcard,
-    kwPlus,
-    kwMinus,
-    kwMul,
-    kwDiv,
-    kwMod,
-    kwEq,
-    kwLt,
-    kwLe,
-    kwGt,
-    kwGe,
-    kwBind,
-    kwSeq,
-    kwTrace,
-    kwFail
-  ]
+bareIdentifier = rawIdentifier allKeywordStrings
 
 symbolAt :: ParsecS r ()
 symbolAt = symbol Str.at_
@@ -108,96 +72,3 @@ parens = between lparen rparen
 
 braces :: ParsecS r a -> ParsecS r a
 braces = between (symbol "{") (symbol "}")
-
-kwAssign :: ParsecS r ()
-kwAssign = keyword Str.assignAscii
-
-kwLet :: ParsecS r ()
-kwLet = keyword Str.let_
-
-kwLetRec :: ParsecS r ()
-kwLetRec = keyword Str.letrec_
-
-kwIn :: ParsecS r ()
-kwIn = keyword Str.in_
-
-kwConstr :: ParsecS r ()
-kwConstr = keyword Str.constr
-
-kwCase :: ParsecS r ()
-kwCase = keyword Str.case_
-
-kwOf :: ParsecS r ()
-kwOf = keyword Str.of_
-
-kwMatch :: ParsecS r ()
-kwMatch = keyword Str.match_
-
-kwWith :: ParsecS r ()
-kwWith = keyword Str.with_
-
-kwIf :: ParsecS r ()
-kwIf = keyword Str.if_
-
-kwThen :: ParsecS r ()
-kwThen = keyword Str.then_
-
-kwElse :: ParsecS r ()
-kwElse = keyword Str.else_
-
-kwDef :: ParsecS r ()
-kwDef = keyword Str.def
-
-kwRightArrow :: ParsecS r ()
-kwRightArrow = keyword Str.toUnicode <|> keyword Str.toAscii
-
-kwSemicolon :: ParsecS r ()
-kwSemicolon = keyword Str.semicolon
-
-kwComma :: ParsecS r ()
-kwComma = keywordSymbol Str.comma
-
-kwWildcard :: ParsecS r ()
-kwWildcard = keyword Str.underscore
-
-kwPlus :: ParsecS r ()
-kwPlus = keyword Str.plus
-
-kwMinus :: ParsecS r ()
-kwMinus = keyword Str.minus
-
-kwMul :: ParsecS r ()
-kwMul = keyword Str.mul
-
-kwDiv :: ParsecS r ()
-kwDiv = keyword Str.div
-
-kwMod :: ParsecS r ()
-kwMod = keyword Str.mod
-
-kwEq :: ParsecS r ()
-kwEq = keyword Str.equal
-
-kwLt :: ParsecS r ()
-kwLt = keyword Str.less
-
-kwLe :: ParsecS r ()
-kwLe = keyword Str.lessEqual
-
-kwGt :: ParsecS r ()
-kwGt = keyword Str.greater
-
-kwGe :: ParsecS r ()
-kwGe = keyword Str.greaterEqual
-
-kwBind :: ParsecS r ()
-kwBind = keyword Str.bind
-
-kwSeq :: ParsecS r ()
-kwSeq = keyword Str.seq_
-
-kwTrace :: ParsecS r ()
-kwTrace = keyword Str.trace_
-
-kwFail :: ParsecS r ()
-kwFail = keyword Str.fail_
