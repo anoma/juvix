@@ -128,10 +128,10 @@ unfoldType' ty = case ty of
 {- functions on Node -}
 
 mkApps :: Node -> [(Info, Node)] -> Node
-mkApps = foldl' (\acc (i, n) -> mkApp i acc n)
+mkApps m = foldl' (\acc (i, n) -> mkApp i acc n) m . reverse
 
 mkApps' :: Node -> [Node] -> Node
-mkApps' = foldl' mkApp'
+mkApps' n = foldl' mkApp' n . reverse
 
 unfoldApps :: Node -> (Node, [(Info, Node)])
 unfoldApps = go []
