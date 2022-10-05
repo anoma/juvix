@@ -117,7 +117,7 @@ instance SingI s => PrettyCode [Statement s] where
   ppCode ss = vsep2 <$> mapM (fmap vsep . mapM (fmap endSemicolon . ppCode)) (groupStatements ss)
 
 instance SingI s => PrettyCode (Statement s) where
-  ppCode s = case s of
+  ppCode = \case
     StatementOperator op -> ppCode op
     StatementTypeSignature sig -> ppCode sig
     StatementImport i -> ppCode i
@@ -248,7 +248,7 @@ instance SingI s => PrettyCode (InductiveConstructorDef s) where
     constructorName' <- annDef _constructorName <$> ppSymbol _constructorName
     constructorType' <- ppExpression _constructorType
     doc' <- mapM ppCode _constructorDoc
-    return $ doc' ?<> constructorName' <+> kwColon <+> constructorType'
+    return $ doc' ?<> hang' (constructorName' <+> kwColon <+> constructorType')
 
 instance PrettyCode BuiltinInductive where
   ppCode i = return (kwBuiltin <+> keyword (prettyText i))
@@ -422,7 +422,7 @@ instance SingI s => PrettyCode (TypeSignature s) where
     sigType' <- ppExpression _sigType
     builtin' <- traverse ppCode _sigBuiltin
     doc' <- mapM ppCode _sigDoc
-    return $ doc' ?<> builtin' <?+> sigTerminating' <> sigName' <+> kwColon <+> sigType'
+    return $ doc' ?<> builtin' <?+> sigTerminating' <> hang' (sigName' <+> kwColon <+> sigType')
 
 instance SingI s => PrettyCode (Function s) where
   ppCode :: forall r. Members '[Reader Options] r => Function s -> Sem r (Doc Ann)
@@ -492,11 +492,12 @@ instance SingI s => PrettyCode (FunctionClause s) where
     clauseBody' <- ppExpression _clauseBody
     clauseWhere' <- mapM ppCode _clauseWhere
     return $
-      clauseOwnerFunction'
-        <+?> clausePatterns'
-        <+> kwAssignment
-        <+> clauseBody'
-        <+?> ((line <>) <$> clauseWhere')
+      hang' $
+        clauseOwnerFunction'
+          <+?> clausePatterns'
+          <+> kwAssignment
+          <+> clauseBody'
+          <+?> ((line <>) <$> clauseWhere')
 
 instance SingI s => PrettyCode (WhereBlock s) where
   ppCode WhereBlock {..} = indent' . (kwWhere <+>) <$> ppBlock whereClauses
@@ -513,7 +514,7 @@ instance SingI s => PrettyCode (AxiomDef s) where
     axiomDoc' <- mapM ppCode _axiomDoc
     axiomType' <- ppExpression _axiomType
     builtin' <- traverse ppCode _axiomBuiltin
-    return $ axiomDoc' ?<> builtin' <?+> kwAxiom <+> axiomName' <+> kwColon <+> axiomType'
+    return $ axiomDoc' ?<> builtin' <?+> hang' (kwAxiom <+> axiomName' <+> kwColon <+> axiomType')
 
 instance SingI s => PrettyCode (Import s) where
   ppCode :: forall r. Members '[Reader Options] r => Import s -> Sem r (Doc Ann)
@@ -600,7 +601,7 @@ instance PrettyCode Application where
   ppCode (Application l r) = do
     l' <- ppLeftExpression appFixity l
     r' <- ppRightExpression appFixity r
-    return $ l' <+> r'
+    return $ l' <> softline <> r'
 
 instance PrettyCode Literal where
   ppCode = \case
