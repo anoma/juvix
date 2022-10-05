@@ -25,8 +25,5 @@ liftTest _testEval@Eval.PosTest {..}
 
 excluded :: [String]
 excluded =
-  [ "Functions returning functions with variable capture",
-    "Higher-order recursive functions",
-    "Ackermann function (higher-order definition)",
-    "LetRec"
+  [ "LetRec"
   ]
