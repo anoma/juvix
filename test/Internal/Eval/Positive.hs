@@ -74,5 +74,15 @@ tests =
       "Pattern matching on a constructor"
       "."
       "MatchConstructor.juvix"
-      "out/MatchConstructor.out"
+      "out/MatchConstructor.out",
+    PosTest
+      "Pattern matching Nat under suc"
+      "."
+      "NatMatch1.juvix"
+      "out/NatMatch1.out",
+    PosTest
+      "Pattern matching Nat as binder"
+      "."
+      "NatMatch2.juvix"
+      "out/NatMatch2.out"
   ]

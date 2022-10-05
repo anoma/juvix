@@ -17,6 +17,7 @@ import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Extra.Strings qualified as Str
+import Safe (headMay)
 
 unsupported :: Text -> a
 unsupported thing = error ("Internal to Core: Not yet supported: " <> thing)
@@ -173,15 +174,29 @@ binderNameInfo :: Name -> Info
 binderNameInfo name =
   Info.singleton (BinderInfo (Info.singleton (NameInfo name)))
 
-fromPattern :: forall r. Members '[InfoTableBuilder] r => Internal.Pattern -> Sem r Pattern
+fromPattern ::
+  forall r.
+  Members '[InfoTableBuilder, Reader Internal.InfoTable, State SucState, State SucTable, State SucTable] r =>
+  Internal.Pattern ->
+  Sem r Pattern
 fromPattern = \case
   Internal.PatternWildcard {} -> return wildcard
-  Internal.PatternVariable n -> return $ PatBinder (PatternBinder (setInfoName n Info.empty) wildcard)
+  Internal.PatternVariable n -> do
+    s <- gets (^. sucStateSucs) -- (^. sucTableTable . at (n ^. Internal.nameText))
+    modify (over sucTableTable (HashMap.insert (n ^. Internal.nameText) s))
+    return $ PatBinder (PatternBinder (setInfoName n Info.empty) wildcard)
   Internal.PatternConstructorApp c -> do
     let n = c ^. Internal.constrAppConstructor
-    tag <- ctorTag c
-    args <- mapM fromPattern ((^. Internal.patternArgPattern) <$> filter (\p -> p ^. Internal.patternArgIsImplicit == Explicit) (c ^. Internal.constrAppParameters))
-    return $ PatConstr (PatternConstr (setInfoName n Info.empty) tag args)
+    ctorInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoConstructors)
+    case ctorInfo ^. Internal.constructorInfoBuiltin of
+      Just Internal.BuiltinNaturalZero -> return $ PatConst (PatternConst (setInfoName n Info.empty) (ConstInteger 0))
+      Just Internal.BuiltinNaturalSuc -> do
+        modify (over sucStateSucs (+ 1))
+        fromPattern (fromJust (headMay (c ^. Internal.constrAppParameters)) ^. Internal.patternArgPattern)
+      _ -> do
+        tag <- ctorTag c
+        args <- mapM (evalState emptySucState . fromPattern) ((^. Internal.patternArgPattern) <$> filter (\p -> p ^. Internal.patternArgIsImplicit == Explicit) (c ^. Internal.constrAppParameters))
+        return $ PatConstr (PatternConstr (setInfoName n Info.empty) tag args)
   where
     wildcard :: Pattern
     wildcard = PatWildcard (PatternWildcard Info.empty)
@@ -197,14 +212,15 @@ fromPattern = \case
 
 goFunctionClause' ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, NameIdGen] r =>
   Index ->
   HashMap Text Index ->
   Internal.FunctionClause ->
   Sem r MatchBranch
 goFunctionClause' varsNum vars clause = do
-  pats <- patterns
-  let pis = concatMap (reverse . getBinderPatternInfos) pats
+  (sucTable, pats) <- patterns
+  let sucTable' = HashMap.filter (> 0) (sucTable ^. sucTableTable)
+      pis = concatMap (reverse . getBinderPatternInfos) pats
       (vars', varsNum') =
         foldl'
           ( \(vs, k) name ->
@@ -212,14 +228,45 @@ goFunctionClause' varsNum vars clause = do
           )
           (vars, varsNum)
           (map (fromJust . getInfoName) pis)
-  body <- goExpression varsNum' vars' (clause ^. Internal.clauseBody)
-  return $ MatchBranch Info.empty (fromList pats) body
+      letSpecs = mkLetSpecs vars' sucTable'
+      vars'' = HashMap.union (letVars varsNum' letSpecs) vars'
+
+  body <- goExpression (varsNum' + length sucTable') vars'' (clause ^. Internal.clauseBody)
+  return $ MatchBranch Info.empty (fromList pats) (letNode letSpecs body)
   where
-    patterns :: Sem r [Pattern]
-    patterns = reverse <$> mapM fromPattern ((^. Internal.patternArgPattern) <$> filter argIsImplicit (clause ^. Internal.clausePatterns))
+    patterns :: Sem r (SucTable, [Pattern])
+    patterns =
+      first (over sucTableTable (HashMap.filter (> 0)))
+        <$> runState
+          emptySucTable
+          (reverse <$> mapM (evalState emptySucState . fromPattern) ps)
+
+    ps :: [Internal.Pattern]
+    ps = (^. Internal.patternArgPattern) <$> filter argIsImplicit (clause ^. Internal.clausePatterns)
 
     argIsImplicit :: Internal.PatternArg -> Bool
     argIsImplicit = (== Internal.Explicit) . (^. Internal.patternArgIsImplicit)
+
+    letNode :: [LetSpec] -> Node -> Node
+    letNode specs body = foldr f body specs
+      where
+        f :: LetSpec -> Node -> Node
+        f s b = mkLet Info.empty (subN (s ^. letSpecIndex) (s ^. letSpecSucs)) b
+
+    letVars :: Index -> [LetSpec] -> HashMap Text Index
+    letVars num specs = HashMap.fromList (f <$> zip specs [0 ..])
+      where
+        f :: (LetSpec, Index) -> (Text, Index)
+        f (s, i) = (s ^. letSpecBinder, num + i)
+
+    mkLetSpecs :: HashMap Text Index -> HashMap Text Integer -> [LetSpec]
+    mkLetSpecs vs sucTable = f <$> zip [0 ..] (HashMap.toList sucTable)
+      where
+        f :: (Int, (Text, Integer)) -> LetSpec
+        f (i, (t, sucs)) = LetSpec t sucs (fromJust (HashMap.lookup t vs) + i)
+
+    subN :: Index -> Integer -> Node
+    subN idx n = mkBuiltinApp' OpIntSub [mkVar Info.empty idx, mkConstant Info.empty (ConstInteger n)]
 
 goExpression ::
   forall r.
