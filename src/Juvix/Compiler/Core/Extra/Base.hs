@@ -152,13 +152,16 @@ mkLambdas' k
   | k < 0 = impossible
   | otherwise = mkLambdas (replicate k Info.empty)
 
-unfoldLambdas :: Node -> ([Info], Node)
-unfoldLambdas = go []
+unfoldLambdasRev :: Node -> ([Info], Node)
+unfoldLambdasRev = go []
   where
     go :: [Info] -> Node -> ([Info], Node)
     go acc n = case n of
       NLam (Lambda i b) -> go (i : acc) b
-      _ -> (reverse acc, n)
+      _ -> (acc, n)
+
+unfoldLambdas :: Node -> ([Info], Node)
+unfoldLambdas = first reverse . unfoldLambdasRev
 
 unfoldLambdas' :: Node -> (Int, Node)
 unfoldLambdas' = first length . unfoldLambdas
