@@ -199,7 +199,7 @@ instance PrettyCode Node where
       let name = getInfoName (x ^. constrInfo)
        in ppCodeConstr' name x
     NLam Lambda {} -> do
-      let (infos, body) = unfoldLambdas node
+      let (infos, body) = unfoldLambdasRev node
       pplams <- mapM ppLam infos
       b <- ppCode body
       return $ foldl' (flip (<+>)) b pplams
