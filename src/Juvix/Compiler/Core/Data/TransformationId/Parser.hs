@@ -29,5 +29,4 @@ symbol = void . lexeme . chunk
 transformation :: MonadParsec e Text m => m TransformationId
 transformation =
   symbol "lifting" $> LambdaLifting
-    <|> symbol "eta" $> TopEtaExpand
     <|> symbol "identity" $> Identity
