@@ -19,7 +19,7 @@ liftTest _testEval@Eval.PosTest {..}
         fromTest
           Test
             { _testTransformations = pipe,
-              _testAssertion = \i -> unless (isLifted i) (error ""),
+              _testAssertion = \i -> unless (isLifted i) (error "not lambda lifted"),
               _testEval
             }
 
