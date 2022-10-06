@@ -198,19 +198,14 @@ instance PrettyCode Node where
     NCtr x ->
       let name = getInfoName (x ^. constrInfo)
        in ppCodeConstr' name x
-    NLam Lambda {} -> do
-      let (infos, body) = unfoldLambdasRev node
-      pplams <- mapM ppLam infos
+    NLam (Lambda i body) -> do
       b <- ppCode body
-      return $ foldl' (flip (<+>)) b pplams
-      where
-        ppLam :: Info -> Sem r (Doc Ann)
-        ppLam i =
-          case getInfoName (getInfoBinder i) of
-            Just name -> do
-              n <- ppCode name
-              return $ kwLambda <> n
-            Nothing -> return $ kwLambda <> kwQuestion
+      lam <- case getInfoName (getInfoBinder i) of
+        Just name -> do
+          n <- ppCode name
+          return $ kwLambda <> n
+        Nothing -> return $ kwLambda <> kwQuestion
+      return (lam <+> b)
     NLet x ->
       let name = getInfoName (getInfoBinder (x ^. letInfo))
        in ppCodeLet' name x

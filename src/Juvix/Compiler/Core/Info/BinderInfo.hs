@@ -36,3 +36,9 @@ getInfoBinders n i =
 
 setInfoBinders :: [Info] -> Info -> Info
 setInfoBinders = Info.insert . BindersInfo
+
+setInfoBinder :: Info -> Info -> Info
+setInfoBinder = Info.insert . BinderInfo
+
+singletonInfoBinder :: Info -> Info
+singletonInfoBinder i = setInfoBinder i mempty

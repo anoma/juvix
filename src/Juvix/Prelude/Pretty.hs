@@ -94,6 +94,9 @@ hsepMaybe l
 indent' :: Doc ann -> Doc ann
 indent' = indent 2
 
+hang' :: Doc ann -> Doc ann
+hang' = hang 2
+
 ordinal :: Int -> Doc a
 ordinal = \case
   1 -> "first"

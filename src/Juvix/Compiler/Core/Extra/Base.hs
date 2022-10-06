@@ -128,10 +128,10 @@ unfoldType' ty = case ty of
 {- functions on Node -}
 
 mkApps :: Node -> [(Info, Node)] -> Node
-mkApps m = foldl' (\acc (i, n) -> mkApp i acc n) m . reverse
+mkApps m = foldl' (\acc (i, n) -> mkApp i acc n) m
 
 mkApps' :: Node -> [Node] -> Node
-mkApps' n = foldl' mkApp' n . reverse
+mkApps' n = foldl' mkApp' n
 
 unfoldApps :: Node -> (Node, [(Info, Node)])
 unfoldApps = go []
@@ -146,6 +146,14 @@ unfoldApps' = second (map snd) . unfoldApps
 
 mkLambdas :: [Info] -> Node -> Node
 mkLambdas is n = foldl' (flip mkLambda) n (reverse is)
+
+-- | the given info corresponds to the binder info
+mkLambdaB :: Info -> Node -> Node
+mkLambdaB = mkLambda . singletonInfoBinder
+
+-- | the given infos correspond to the binder infos
+mkLambdasB :: [Info] -> Node -> Node
+mkLambdasB is n = foldl' (flip mkLambdaB) n (reverse is)
 
 mkLambdas' :: Int -> Node -> Node
 mkLambdas' k
