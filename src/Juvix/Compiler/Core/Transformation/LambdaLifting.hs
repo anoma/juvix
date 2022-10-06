@@ -75,9 +75,21 @@ lambdaLiftNode aboveBl top =
         forM_ topSymsAssocs $ \(s, a) -> topBody a >>= registerIdentNode s
         let letdefs' :: NonEmpty Node
             letdefs' = letDef <$> topSyms
-            -- shiftedLetDefs' = zipWith shift [0 ..] letdefs'
+            -- free variables in the lets and the body need to be shifted
+            -- because we are introducing binders.
+            -- the topmost let is shifted 0
+            -- the lowermost is shifted (len - 1)
+            -- the final body is shifted len
+            shiftHelper :: Node -> NonEmpty Node -> Node
+            shiftHelper b = goShift 0
+              where
+              goShift :: Int -> NonEmpty Node -> Node
+              goShift k = \case
+                x :| yys -> case yys of
+                  [] -> shift k (mkLet' x b)
+                  (y : ys) -> mkLet' (shift k x) (goShift (k + 1) (y :| ys))
         let res :: Node
-            res = foldl' (flip mkLet') body' letdefs'
+            res = shiftHelper body' letdefs'
         return (End res)
 
 
