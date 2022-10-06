@@ -2,6 +2,7 @@
 #define JUVIX_OBJECT_H
 
 #include <juvix/defs.h>
+#include <juvix/limits.h>
 
 // The least significant two (or three) bits encode object kind
 #define KIND_MASK 3
@@ -52,9 +53,15 @@ There are special UIDs which imply the existence of certain special fields.
 #define UID_SHIFT 4U
 #define GET_UID(x) (((x)&UID_MASK) >> UID_SHIFT)
 
-#define FIELDS_NUM_MASK 0xFF000000
-#define FIELDS_NUM_SHIFT 24U
-#define GET_FIELDS_NUM(x) (((x)&FIELDS_NUM_MASK) >> FIELDS_NUM_SHIFT)
+#define FIELDS_MASK 0xFF000000
+#define FIELDS_SHIFT 24U
+#define GET_FIELDS(x) (((x)&FIELDS_MASK) >> FIELDS_SHIFT)
+
+static inline word_t make_header(word_t uid, word_t fields) {
+    ASSERT(uid < MAX_UIDS);
+    ASSERT(fields <= MAX_FIELDS);
+    return (fields << FIELDS_SHIFT) | (uid << UID_SHIFT) | KIND3_HEADER;
+}
 
 /*************************************************/
 /* Special UIDs */

@@ -9,7 +9,8 @@
 
 // Maximum number of different UIDs (unique global object identifiers). Make
 // sure this corresponds to the number of bits for the UID field in a header
-// word (see juvix/object.h).
+// word (see juvix/object.h). Note that since UIDs start from 0, an UID cannot
+// have the value MAX_UIDS.
 #define MAX_UIDS 1048576
 
 // Maximum special UIDs which don't correspond to constructor tags.
@@ -20,7 +21,7 @@
 
 // Maximum number of fields. Make sure this corresponds to the number of bits
 // for the FIELDS field in a header word (see juvix/object.h).
-#define MAX_FIELDS 256
+#define MAX_FIELDS 255
 
 #define MAX_CONSTR_ARGS MAX_FIELDS
 #define MAX_FUNCTION_ARGS MAX_FIELDS
