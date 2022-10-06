@@ -10,10 +10,12 @@ import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
+import Juvix.Prelude.Pretty qualified as PP
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
+import Juvix.Compiler.Concrete.Extra (unfoldApplication)
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
 doc opts =
@@ -492,11 +494,10 @@ instance SingI s => PrettyCode (FunctionClause s) where
     clauseBody' <- ppExpression _clauseBody
     clauseWhere' <- mapM ppCode _clauseWhere
     return $
-      hang' $
         clauseOwnerFunction'
           <+?> clausePatterns'
-          <+> kwAssignment
-          <+> clauseBody'
+          <+> kwAssign
+          <> softline <> clauseBody'
           <+?> ((line <>) <$> clauseWhere')
 
 instance SingI s => PrettyCode (WhereBlock s) where
@@ -598,10 +599,11 @@ instance PrettyCode PostfixApplication where
     return $ postfixAppParameter' <+> postfixAppOperator'
 
 instance PrettyCode Application where
-  ppCode (Application l r) = do
-    l' <- ppLeftExpression appFixity l
-    r' <- ppRightExpression appFixity r
-    return $ l' <> softline <> r'
+  ppCode a = do
+    let (f, args) = unfoldApplication a
+    f' <- ppCode f
+    args' <- mapM ppCodeAtom args
+    return $ PP.group $ f' <+> align (vsep args')
 
 instance PrettyCode Literal where
   ppCode = \case

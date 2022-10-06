@@ -4,6 +4,7 @@ module Juvix.Compiler.Concrete.Extra
     getAllModules,
     getModuleFilePath,
     getModuleFileAbsPath,
+    unfoldApplication,
   )
 where
 
@@ -53,3 +54,11 @@ getModuleFilePath m = getLoc (m ^. modulePath) ^. intervalFile
 
 getModuleFileAbsPath :: FilePath -> Module 'Scoped 'ModuleTop -> FilePath
 getModuleFileAbsPath root m = normalise (root </> getModuleFilePath m)
+
+unfoldApplication :: Application -> (Expression, [Expression])
+unfoldApplication (Application l r) = go [r] l
+  where
+    go :: [Expression] -> Expression -> (Expression, [Expression])
+    go ac = \case
+      ExpressionApplication (Application l' r') -> go (r' : ac) l'
+      e -> (e, ac)
