@@ -28,7 +28,7 @@ coreEvalAssertion mainFile expectedFile trans testTrans step = do
   case r of
     Left err -> assertFailure (show (pretty err))
     Right (_, Nothing) -> do
-      step "Compare expected an actual program output"
+      step "Compare expected and actual program output"
       expected <- TIO.readFile expectedFile
       assertEqDiff ("Check: EVAL output = " <> expectedFile) "" expected
     Right (tabIni, Just node) -> do
