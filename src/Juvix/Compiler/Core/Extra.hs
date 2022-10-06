@@ -138,7 +138,7 @@ substEnv env
   where
     go k n = case n of
       NVar (Var _ idx)
-       | idx >= k -> env !! (idx - k)
+        | idx >= k -> env !! (idx - k)
       _ -> n
 
 convertClosures :: Node -> Node

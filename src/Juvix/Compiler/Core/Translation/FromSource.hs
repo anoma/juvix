@@ -463,7 +463,7 @@ atoms ::
   ParsecS r Node
 atoms varsNum vars = do
   es <- P.some (atom varsNum vars)
-  return $ mkApps' (List.head es) (reverse (List.tail es))
+  return $ mkApps' (List.head es) (List.tail es)
 
 atom ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
