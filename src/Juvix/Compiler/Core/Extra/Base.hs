@@ -147,6 +147,14 @@ unfoldApps' = second (map snd) . unfoldApps
 mkLambdas :: [Info] -> Node -> Node
 mkLambdas is n = foldl' (flip mkLambda) n (reverse is)
 
+-- | the given info corresponds to the binder info
+mkLambdaB :: Info -> Node -> Node
+mkLambdaB = mkLambda . singletonInfoBinder
+
+-- | the given infos correspond to the binder infos
+mkLambdasB :: [Info] -> Node -> Node
+mkLambdasB is n = foldl' (flip mkLambdaB) n (reverse is)
+
 mkLambdas' :: Int -> Node -> Node
 mkLambdas' k
   | k < 0 = impossible

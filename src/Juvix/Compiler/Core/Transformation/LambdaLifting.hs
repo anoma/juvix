@@ -25,28 +25,31 @@ lambdaLiftNode aboveBl top =
     -- extracts the argument info from the binder
     go :: BinderList Info -> Node -> Sem r Recur
     go bl = \case
-      l@NLam {} -> do
-        l' <- lambdaLiftNode bl l
-        let freevars = toList (getFreeVars l')
-            freevarsAssocs :: [(Index, Info)]
-            freevarsAssocs = [(i, BL.lookup i bl) | i <- map (^. varIndex) freevars]
-            fBody' = captureFreeVars freevarsAssocs l'
-            argsInfo :: [ArgumentInfo]
-            argsInfo = map (argumentInfoFromInfo . snd) freevarsAssocs
-        f <- freshSymbol
-        registerIdent
-          IdentifierInfo
-            { _identifierSymbol = f,
-              _identifierName = Nothing,
-              _identifierType = typeFromArgs argsInfo,
-              _identifierArgsNum = length freevars,
-              _identifierArgsInfo = argsInfo,
-              _identifierIsExported = False
-            }
-        registerIdentNode f fBody'
-        let fApp = mkApps' (mkIdent mempty f) (reverse (map NVar freevars)) -- TODO suspicious reverse
-        return (End fApp)
+      NLam l -> goLambda l
       m -> return (Recur m)
+      where
+        goLambda :: Lambda -> Sem r Recur
+        goLambda lm = do
+          l' <- lambdaLiftNode bl (NLam lm)
+          let freevars = toList (getFreeVars l')
+              freevarsAssocs :: [(Index, Info)]
+              freevarsAssocs = [(i, BL.lookup i bl) | i <- map (^. varIndex) freevars]
+              fBody' = captureFreeVars freevarsAssocs l'
+              argsInfo :: [ArgumentInfo]
+              argsInfo = map (argumentInfoFromInfo . snd) freevarsAssocs
+          f <- freshSymbol
+          registerIdent
+            IdentifierInfo
+              { _identifierSymbol = f,
+                _identifierName = Nothing,
+                _identifierType = typeFromArgs argsInfo,
+                _identifierArgsNum = length freevars,
+                _identifierArgsInfo = argsInfo,
+                _identifierIsExported = False
+              }
+          registerIdentNode f fBody'
+          let fApp = mkApps' (mkIdent mempty f) (map NVar freevars)
+          return (End fApp)
 
 lambdaLifting :: InfoTable -> InfoTable
 lambdaLifting = run . mapT' (lambdaLiftNode mempty)
