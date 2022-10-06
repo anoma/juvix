@@ -232,7 +232,7 @@ goFunctionClause' varsNum vars clause = do
       vars'' = HashMap.union (letVars varsNum' letSpecs) vars'
 
   body <- goExpression (varsNum' + length sucTable') vars'' (clause ^. Internal.clauseBody)
-  return $ MatchBranch Info.empty (fromList pats) (letNode letSpecs body)
+  MatchBranch Info.empty (fromList pats) <$> letNode letSpecs body
   where
     patterns :: Sem r (SucTable, [Pattern])
     patterns =
@@ -247,11 +247,20 @@ goFunctionClause' varsNum vars clause = do
     argIsImplicit :: Internal.PatternArg -> Bool
     argIsImplicit = (== Internal.Explicit) . (^. Internal.patternArgIsImplicit)
 
-    letNode :: [LetSpec] -> Node -> Node
-    letNode specs body = foldr f body specs
+    letNode :: [LetSpec] -> Node -> Sem r Node
+    letNode specs body = foldrM f body specs
       where
-        f :: LetSpec -> Node -> Node
-        f s b = mkLet Info.empty (subN (s ^. letSpecIndex) (s ^. letSpecSucs)) b
+        f :: LetSpec -> Node -> Sem r Node
+        f s b = do
+          n <- mkName (s ^. letSpecBinder)
+          return $
+            mkLet
+              (binderNameInfo n)
+              ( subN
+                  (s ^. letSpecIndex)
+                  (s ^. letSpecSucs)
+              )
+              b
 
     letVars :: Index -> [LetSpec] -> HashMap Text Index
     letVars num specs = HashMap.fromList (f <$> zip specs [0 ..])
@@ -267,6 +276,9 @@ goFunctionClause' varsNum vars clause = do
 
     subN :: Index -> Integer -> Node
     subN idx n = mkBuiltinApp' OpIntSub [mkVar Info.empty idx, mkConstant Info.empty (ConstInteger n)]
+
+    mkName :: Text -> Sem r Name
+    mkName txt = freshName KNameLocal txt (clause ^. Internal.clauseName . Internal.nameLoc)
 
 goExpression ::
   forall r.
