@@ -25,6 +25,4 @@ liftTest _testEval@Eval.PosTest {..}
 
 excluded :: [String]
 excluded =
-  [
-    -- "LetRec"
-  ]
+  []

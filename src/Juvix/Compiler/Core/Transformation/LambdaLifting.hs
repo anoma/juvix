@@ -8,6 +8,7 @@ import Juvix.Compiler.Core.Data.BinderList (BinderList)
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
+import Juvix.Compiler.Core.Info.BinderInfo qualified as Info
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
@@ -31,7 +32,9 @@ lambdaLiftNode aboveBl top =
       where
         goLambda :: Lambda -> Sem r Recur
         goLambda lm = do
-          l' <- lambdaLiftNode bl (NLam lm)
+          let lambdaBinder :: Info
+              lambdaBinder = Info.getInfoBinder (lm ^. lambdaInfo)
+          l' <- lambdaLiftNode (BL.extend lambdaBinder bl) (NLam lm)
           let freevars = toList (getFreeVars l')
               freevarsAssocs :: [(Index, Info)]
               freevarsAssocs = [(i, BL.lookup i bl) | i <- map (^. varIndex) freevars]
@@ -56,6 +59,10 @@ lambdaLiftNode aboveBl top =
         goLetRec letr = do
           let defs :: NonEmpty Node
               defs = letr ^. letRecValues
+              letRecBinders :: [Info]
+              letRecBinders = Info.getInfoBinders (length defs) (letr ^. letRecInfo)
+              bl' :: BinderList Info
+              bl' = BL.prepend letRecBinders bl
           topSymsAssocs :: NonEmpty (Symbol, Node) <- forM defs $ \d -> do
             s' <- freshSymbol
             return (s', d)
@@ -68,10 +75,10 @@ lambdaLiftNode aboveBl top =
               topBody :: Node -> Sem r Node
               topBody b =
                 captureFreeVars freevarsAssocs . substs (map topCall (toList topSyms))
-                  <$> lambdaLiftNode bl b
+                  <$> lambdaLiftNode bl' b
               letDef :: Symbol -> Node
               letDef s = mkApps' (mkIdent' s) (map NVar freevars)
-          body' <- lambdaLiftNode bl (letr ^. letRecBody)
+          body' <- lambdaLiftNode bl' (letr ^. letRecBody)
           forM_ topSymsAssocs $ \(s, a) -> topBody a >>= registerIdentNode s
           let letdefs' :: NonEmpty Node
               letdefs' = letDef <$> topSyms
@@ -90,7 +97,7 @@ lambdaLiftNode aboveBl top =
                       (y : ys) -> mkLet' (shift k x) (goShift (k + 1) (y :| ys))
           let res :: Node
               res = shiftHelper body' letdefs'
-          return (End res)
+          return (Recur res)
 
 lambdaLifting :: InfoTable -> InfoTable
 lambdaLifting = run . mapT' (lambdaLiftNode mempty)
