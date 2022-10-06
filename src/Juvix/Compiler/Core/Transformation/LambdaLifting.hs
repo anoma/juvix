@@ -65,18 +65,20 @@ lambdaLiftNode aboveBl top =
             freevarsAssocs = [(i, BL.lookup i bl) | i <- map (^. varIndex) freevars]
             topCall :: Symbol -> Node
             topCall s = mkApps' (mkIdent' s) (map NVar freevars)
-            topBody :: Node -> Node
-            topBody = captureFreeVars freevarsAssocs . substs (map topCall (toList topSyms))
+            topBody :: Node -> Sem r Node
+            topBody b =
+                captureFreeVars freevarsAssocs . substs (map topCall (toList topSyms))
+                <$> lambdaLiftNode bl b
             letDef :: Symbol -> Node
             letDef s = mkApps' (mkIdent' s) (map NVar freevars)
         body' <- lambdaLiftNode bl (letr ^. letRecBody)
-        forM_ topSymsAssocs $ \(s, a) -> do registerIdentNode s (topBody a)
+        forM_ topSymsAssocs $ \(s, a) -> topBody a >>= registerIdentNode s
         let letdefs' :: NonEmpty Node
             letdefs' = letDef <$> topSyms
+            -- shiftedLetDefs' = zipWith shift [0 ..] letdefs'
         let res :: Node
             res = foldl' (flip mkLet') body' letdefs'
         return (End res)
-
 
 
 lambdaLifting :: InfoTable -> InfoTable

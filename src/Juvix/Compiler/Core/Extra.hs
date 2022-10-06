@@ -97,7 +97,7 @@ captureFreeVars fv
             | Just v <- s ^. at (u - k) -> NVar (Var i (v + k))
           m -> m
 
--- | removes the top bindings
+-- | subst for multiple bindings
 substs :: [Node] -> Node -> Node
 substs t = umapN go
   where
@@ -111,14 +111,8 @@ substs t = umapN go
 -- | substitute a term t for the free variable with de Bruijn index 0, avoiding
 -- variable capture; shifts all free variabes with de Bruijn index > 0 by -1 (as
 -- if the topmost binder was removed)
--- TODO: write in terms of substs?
 subst :: Node -> Node -> Node
-subst t = umapN go
-  where
-    go k n = case n of
-      NVar (Var _ idx) | idx == k -> shift k t
-      NVar (Var i idx) | idx > k -> mkVar i (idx - 1)
-      _ -> n
+subst t = substs [t]
 
 -- | reduce all beta redexes present in a term and the ones created immediately
 -- downwards (i.e., a "beta-development")
