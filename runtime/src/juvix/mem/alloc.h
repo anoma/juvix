@@ -1,6 +1,12 @@
 #ifndef JUVIX_MEM_ALLOC_H
 #define JUVIX_MEM_ALLOC_H
 
+/*
+ This module provides an allocator for unstructured objects. When using the
+ allocated memory one needs to be mindful of C alignment and aliasing rules:
+ https://en.cppreference.com/w/c/language/object.
+*/
+
 #include <juvix/mem/gens.h>
 
 extern generation_t *alloc_youngest_generation;
@@ -21,11 +27,11 @@ static inline word_t *alloc_free_words_end() {
     return alloc_youngest_generation->words->free_end;
 }
 
-static inline word_t *alloc_free_dwords_begin() {
+static inline dword_t *alloc_free_longs_begin() {
     return alloc_youngest_generation->dwords->free_begin;
 }
 
-static inline word_t *alloc_free_dwords_end() {
+static inline dword_t *alloc_free_longs_end() {
     return alloc_youngest_generation->dwords->free_end;
 }
 

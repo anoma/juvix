@@ -46,18 +46,22 @@ typedef __UINTPTR_TYPE__ uintptr_t;
 #error "Unsupported configuration"
 #endif
 
-// typedefs for word_t and dword_t
+// typedefs for word_t, dword_t, int_t, long_t
 #if defined(BITS32)
 
 typedef uint32_t word_t;
 typedef uint64_t dword_t;
+typedef int32_t int_t;
+typedef int64_t long_t;
 
 #elif defined(BITS64)
 
 typedef uint64_t word_t;
+typedef int64_t int_t;
 
 #ifdef __SIZEOF_INT128__
 typedef unsigned __int128 dword_t;
+typedef __int128 long_t;
 #else
 #error "Unsupported configuration"
 #endif
@@ -75,10 +79,6 @@ typedef unsigned __int128 dword_t;
 #ifndef NULL
 #define NULL ((void *)0)
 #endif
-
-// Static assertions (requires C11)
-#define STATIC_ASSERT(x) _Static_assert((x), "assertion failed")
-#define STATIC_ASSERT_EQ(a, b) STATIC_ASSERT((a) == (b))
 
 /**********************************************/
 /* Basic primitive functions and macros */
@@ -134,6 +134,10 @@ static inline void error_exit_msg(const char *msg) {
     } while (0)
 #endif
 #define ASSERT_EQ(a, b) ASSERT((a) == (b))
+
+// Static assertions (requires C11)
+#define STATIC_ASSERT(x) _Static_assert((x), "assertion failed")
+#define STATIC_ASSERT_EQ(a, b) STATIC_ASSERT((a) == (b))
 
 static inline size_t max(size_t a, size_t b) { return a < b ? b : a; }
 // `alignment` must be a power of 2
