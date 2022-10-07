@@ -6,7 +6,7 @@ LIBFLAGS = csru
 
 WASM32 BUILDDIR = _build.wasm32
 WASM32 LIB = juvix.wasm32
-WASM32 CFLAGS = -Os --target=wasm32 -DARCH_WASM32 -DAPI_WASI
+WASM32 CFLAGS = -Os --target=wasm32 -DARCH_WASM32 -DAPI_NONE
 
 WASM32-WASI BUILDDIR = _build.wasm32-wasi
 WASM32-WASI LIB = juvix.wasm32-wasi
