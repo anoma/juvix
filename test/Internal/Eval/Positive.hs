@@ -94,5 +94,10 @@ tests =
       "Mutually defined functions"
       "."
       "Mutual.juvix"
-      "out/Mutual.out"
+      "out/Mutual.out",
+    PosTest
+      "Calling builtin addition"
+      "."
+      "BuiltinAdd.juvix"
+      "out/BuiltinAdd.out"
   ]

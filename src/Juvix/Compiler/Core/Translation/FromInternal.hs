@@ -2,7 +2,6 @@ module Juvix.Compiler.Core.Translation.FromInternal where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty (fromList)
-import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.Literal (LiteralLoc)
 import Juvix.Compiler.Core.Data
 import Juvix.Compiler.Core.Extra
@@ -125,10 +124,7 @@ goMutualBlock ::
   Internal.MutualBlock ->
   Sem r ()
 goMutualBlock m = do
-  -- TODO: Register built-in functions
-  let funcs :: [Internal.FunctionDef]
-      funcs = NonEmpty.filter (isNothing . (^. Internal.funDefBuiltin)) (m ^. Internal.mutualFunctions)
-  funcsWithSym <- mapM withSym funcs
+  funcsWithSym <- mapM withSym (m ^. Internal.mutualFunctions)
   mapM_ goFunctionDefIden funcsWithSym
   mapM_ goFunctionDef funcsWithSym
   where
