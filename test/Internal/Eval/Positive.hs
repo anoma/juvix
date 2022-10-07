@@ -74,5 +74,15 @@ tests =
       "Pattern matching Nat as binder"
       "."
       "NatMatch2.juvix"
-      "out/NatMatch2.out"
+      "out/NatMatch2.out",
+    PosTest
+      "Literal integer is Core integer"
+      "."
+      "LitInteger.juvix"
+      "out/LitInteger.out",
+    PosTest
+      "Literal integer is Core string"
+      "."
+      "LitString.juvix"
+      "out/LitString.out"
   ]

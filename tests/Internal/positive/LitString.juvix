@@ -1,0 +1,8 @@
+module LitString;
+
+open import Stdlib.Prelude;
+
+main : String;
+main := "hello";
+
+end;

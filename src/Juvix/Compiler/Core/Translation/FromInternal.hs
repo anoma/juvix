@@ -288,10 +288,13 @@ goApplication ::
   Sem r Node
 goApplication varsNum vars a = do
   (f, args) <- Internal.unfoldPolyApplication a
-  let exprArgs :: Sem r [Node]
-      exprArgs = mapM (goExpression varsNum vars) args
   fExpr <- goExpression varsNum vars f
-  mkApps' fExpr <$> exprArgs
+  case a ^. Internal.appImplicit of
+    Internal.Implicit -> return fExpr
+    Internal.Explicit -> do
+      let exprArgs :: Sem r [Node]
+          exprArgs = mapM (goExpression varsNum vars) args
+      mkApps' fExpr <$> exprArgs
 
 goLiteral :: LiteralLoc -> Node
 goLiteral l = case l ^. withLocParam of
