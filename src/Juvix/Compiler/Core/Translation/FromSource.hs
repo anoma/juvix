@@ -488,38 +488,19 @@ exprNamed varsNum vars = do
         Nothing ->
           parseFailure off ("undeclared identifier: " ++ fromText txt)
 
-constInteger ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
-  ParsecS r (ConstantValue, Interval)
-constInteger = do
-  (n, i) <- integer
-  return (ConstInteger n, i)
-
-constString ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
-  ParsecS r (ConstantValue, Interval)
-constString = do
-  (s, i) <- string
-  return (ConstString s, i)
-
-constValue ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
-  ParsecS r (ConstantValue, Interval)
-constValue = constInteger <|> constString
-
 exprConstInt ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   ParsecS r Node
 exprConstInt = P.try $ do
-  (v, i) <- constInteger
-  return $ mkConstant (Info.singleton (LocationInfo i)) v
+  (n, i) <- integer
+  return $ mkConstant (Info.singleton (LocationInfo i)) (ConstInteger n)
 
 exprConstString ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
   ParsecS r Node
 exprConstString = P.try $ do
-  (v, i) <- constString
-  return $ mkConstant (Info.singleton (LocationInfo i)) v
+  (s, i) <- string
+  return $ mkConstant (Info.singleton (LocationInfo i)) (ConstString s)
 
 parseLocalName ::
   forall r.
@@ -783,18 +764,12 @@ branchPattern ::
 branchPattern =
   wildcardPattern
     <|> binderOrConstrPattern True
-    <|> constValuePattern
     <|> parens branchPattern
 
 wildcardPattern :: Members '[Reader ParserParams] r => ParsecS r Pattern
 wildcardPattern = do
   kw kwWildcard
   return $ PatWildcard (PatternWildcard Info.empty)
-
-constValuePattern :: Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r => ParsecS r Pattern
-constValuePattern = do
-  (v, _) <- constValue
-  return $ PatConst (PatternConst Info.empty v)
 
 binderOrConstrPattern ::
   Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
