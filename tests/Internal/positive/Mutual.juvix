@@ -1,0 +1,17 @@
+module Mutual;
+
+open import Stdlib.Prelude;
+
+odd : _;
+even : _;
+
+odd zero := false;
+odd (suc n) := even n;
+
+even zero := true;
+even (suc n) := odd n;
+
+main : Bool;
+main := even (suc (suc (suc zero)));
+
+end;

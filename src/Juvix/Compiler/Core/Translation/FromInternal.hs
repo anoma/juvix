@@ -2,6 +2,7 @@ module Juvix.Compiler.Core.Translation.FromInternal where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty (fromList)
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.Literal (LiteralLoc)
 import Juvix.Compiler.Core.Data
 import Juvix.Compiler.Core.Extra
@@ -76,13 +77,6 @@ registerFunctionDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
       Internal.StatementInclude i -> mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
       _ -> return ()
 
-goMutualBlock ::
-  forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen] r =>
-  Internal.MutualBlock ->
-  Sem r ()
-goMutualBlock m = mapM_ goFunctionDef (m ^. Internal.mutualFunctions)
-
 goInductiveDef ::
   forall r.
   Members '[InfoTableBuilder] r =>
@@ -122,38 +116,59 @@ goConstructor sym ctor = do
   registerConstructor info
   return info
 
+goMutualBlock ::
+  forall r.
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen] r =>
+  Internal.MutualBlock ->
+  Sem r ()
+goMutualBlock m = do
+  -- TODO: Register built-in functions
+  let funcs :: [Internal.FunctionDef]
+      funcs = NonEmpty.filter (isNothing . (^. Internal.funDefBuiltin)) (m ^. Internal.mutualFunctions)
+  funcsWithSym <- mapM withSym funcs
+  mapM_ goFunctionDefIden funcsWithSym
+  mapM_ goFunctionDef funcsWithSym
+  where
+    withSym :: a -> Sem r (a, Symbol)
+    withSym x = do
+      sym <- freshSymbol
+      return (x, sym)
+
+goFunctionDefIden ::
+  forall r.
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen] r =>
+  (Internal.FunctionDef, Symbol) ->
+  Sem r ()
+goFunctionDefIden (f, sym) = do
+  let info =
+        IdentifierInfo
+          { _identifierName = Just (f ^. Internal.funDefName),
+            _identifierSymbol = sym,
+            _identifierType = mkDynamic',
+            _identifierArgsNum = 0,
+            _identifierArgsInfo = [],
+            _identifierIsExported = False
+          }
+  registerIdent info
+  when (f ^. Internal.funDefName . Internal.nameText == Str.main) (registerMain sym)
+
 goFunctionDef ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen] r =>
-  Internal.FunctionDef ->
+  (Internal.FunctionDef, Symbol) ->
   Sem r ()
-goFunctionDef f
-  | isJust (f ^. Internal.funDefBuiltin) = return ()
-  | otherwise = do
-      sym <- freshSymbol
-      let info =
-            IdentifierInfo
-              { _identifierName = Just (f ^. Internal.funDefName),
-                _identifierSymbol = sym,
-                _identifierType = mkDynamic',
-                _identifierArgsNum = 0,
-                _identifierArgsInfo = [],
-                _identifierIsExported = False
-              }
-      registerIdent info
-      when (f ^. Internal.funDefName . Internal.nameText == Str.main) (registerMain sym)
-
-      body <-
-        if
-            | null patterns -> goExpression 0 HashMap.empty (head (f ^. Internal.funDefClauses) ^. Internal.clauseBody)
-            | otherwise -> do
-                let vars :: HashMap Text Index = HashMap.fromList [(pack (show i), i) | i <- vs]
-                let values = mkVar Info.empty <$> vs
-                ms <- mapM (goFunctionClause' (length patterns) vars) (f ^. Internal.funDefClauses)
-                let match = mkMatch' (fromList values) (toList ms)
-                lamArgs' :: [Info] <- lamArgs
-                return $ foldr mkLambda match lamArgs'
-      registerIdentNode sym body
+goFunctionDef (f, sym) = do
+  body <-
+    if
+        | null patterns -> goExpression 0 HashMap.empty (head (f ^. Internal.funDefClauses) ^. Internal.clauseBody)
+        | otherwise -> do
+            let vars :: HashMap Text Index = HashMap.fromList [(pack (show i), i) | i <- vs]
+            let values = mkVar Info.empty <$> vs
+            ms <- mapM (goFunctionClause' (length patterns) vars) (f ^. Internal.funDefClauses)
+            let match = mkMatch' (fromList values) (toList ms)
+            lamArgs' :: [Info] <- lamArgs
+            return $ foldr mkLambda match lamArgs'
+  registerIdentNode sym body
   where
     patterns :: [Internal.PatternArg]
     patterns = filter (\p -> p ^. Internal.patternArgIsImplicit == Internal.Explicit) (head (f ^. Internal.funDefClauses) ^. Internal.clausePatterns)

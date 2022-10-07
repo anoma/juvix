@@ -89,5 +89,10 @@ tests =
       "Literal integer is Core string"
       "."
       "LitString.juvix"
-      "out/LitString.out"
+      "out/LitString.out",
+    PosTest
+      "Mutually defined functions"
+      "."
+      "Mutual.juvix"
+      "out/Mutual.out"
   ]
