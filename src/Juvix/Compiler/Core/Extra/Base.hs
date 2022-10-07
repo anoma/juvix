@@ -175,8 +175,6 @@ getBinderPatternInfos = go []
         foldl' go acc _patternConstrArgs
       PatBinder (PatternBinder {..}) ->
         go (_patternBinderInfo : acc) _patternBinderPattern
-      PatConst (PatternConst {}) ->
-        acc
       PatWildcard {} ->
         acc
 
@@ -189,8 +187,6 @@ getPatternInfos = go []
         foldl' go (_patternConstrInfo : acc) _patternConstrArgs
       PatBinder (PatternBinder {..}) ->
         go (_patternBinderInfo : acc) _patternBinderPattern
-      PatConst (PatternConst {..}) ->
-        _patternConstInfo : acc
       PatWildcard (PatternWildcard {..}) ->
         _patternWildcardInfo : acc
 
@@ -476,8 +472,6 @@ destruct = \case
         (tl is, PatWildcard (x {_patternWildcardInfo = hd is}))
       PatBinder x ->
         (tl is, PatBinder (x {_patternBinderInfo = hd is}))
-      PatConst x ->
-        (tl is, PatConst (x {_patternConstInfo = hd is}))
       PatConstr x ->
         let (is', ps) = setPatternsInfos' (tl is) (x ^. patternConstrArgs)
          in (is', PatConstr (x {_patternConstrInfo = hd is, _patternConstrArgs = ps}))
