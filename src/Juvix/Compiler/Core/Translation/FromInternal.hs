@@ -22,6 +22,9 @@ import Juvix.Extra.Strings qualified as Str
 unsupported :: Text -> a
 unsupported thing = error ("Internal to Core: Not yet supported: " <> thing)
 
+isExplicit :: Internal.PatternArg -> Bool
+isExplicit = (== Internal.Explicit) . (^. Internal.patternArgIsImplicit)
+
 fromInternal :: Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do
   CoreResult . fst <$> runInfoTableBuilder emptyInfoTable (runReader (i ^. InternalTyped.resultIdenTypes) f)
@@ -160,28 +163,30 @@ goFunctionDef ::
 goFunctionDef (f, sym) = do
   body <-
     if
-        | null patterns -> goExpression 0 HashMap.empty (head (f ^. Internal.funDefClauses) ^. Internal.clauseBody)
+        | nExplicitPatterns == 0 -> goExpression 0 HashMap.empty (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody)
         | otherwise -> do
-            let vars :: HashMap Text Index = HashMap.fromList [(pack (show i), i) | i <- vs]
-            let values = mkVar Info.empty <$> vs
-            ms <- mapM (goFunctionClause' (length patterns) vars) (f ^. Internal.funDefClauses)
+            let vars :: HashMap Text Index
+                vars = HashMap.fromList [(show i, i) | i <- vs]
+                values :: [Node]
+                values = mkVar Info.empty <$> vs
+            ms <- mapM (goFunctionClause nExplicitPatterns vars) (f ^. Internal.funDefClauses)
             let match = mkMatch' (fromList values) (toList ms)
-            lamArgs' :: [Info] <- lamArgs
-            return $ foldr mkLambda match lamArgs'
+            foldr mkLambda match <$> lamArgs
   registerIdentNode sym body
   where
-    patterns :: [Internal.PatternArg]
-    patterns = filter (\p -> p ^. Internal.patternArgIsImplicit == Internal.Explicit) (head (f ^. Internal.funDefClauses) ^. Internal.clausePatterns)
+    -- Assumption: All clauses have the same number of patterns
+    nExplicitPatterns :: Int
+    nExplicitPatterns = length $ filter isExplicit (f ^. Internal.funDefClauses . _head1 . Internal.clausePatterns)
 
     vs :: [Index]
-    vs = take (length patterns) [0 ..]
+    vs = take nExplicitPatterns [0 ..]
 
     mkName :: Text -> Sem r Name
     mkName txt = freshName KNameLocal txt (f ^. Internal.funDefName . Internal.nameLoc)
 
     lamArgs :: Sem r [Info]
     lamArgs = do
-      ns <- mapM mkName (pack . show <$> vs)
+      ns <- mapM mkName (show <$> vs)
       return $ binderNameInfo <$> ns
 
 fromPattern ::
@@ -197,7 +202,7 @@ fromPattern = \case
         explicitPatterns =
           (^. Internal.patternArgPattern)
             <$> filter
-              (\p -> p ^. Internal.patternArgIsImplicit == Explicit)
+              isExplicit
               (c ^. Internal.constrAppParameters)
     tag <- ctorTag c
     args <- mapM fromPattern explicitPatterns
@@ -215,14 +220,14 @@ fromPattern = \case
         Just (IdentSym {}) -> error ("internal to core: not a constructor " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
 
-goFunctionClause' ::
+goFunctionClause ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r =>
   Index ->
   HashMap Text Index ->
   Internal.FunctionClause ->
   Sem r MatchBranch
-goFunctionClause' varsNum vars clause = do
+goFunctionClause varsNum vars clause = do
   pats <- patterns
   let pis = concatMap (reverse . getBinderPatternInfos) pats
       (vars', varsNum') =
@@ -240,10 +245,7 @@ goFunctionClause' varsNum vars clause = do
     patterns = reverse <$> mapM fromPattern ps
 
     ps :: [Internal.Pattern]
-    ps = (^. Internal.patternArgPattern) <$> filter argIsImplicit (clause ^. Internal.clausePatterns)
-
-    argIsImplicit :: Internal.PatternArg -> Bool
-    argIsImplicit = (== Internal.Explicit) . (^. Internal.patternArgIsImplicit)
+    ps = (^. Internal.patternArgPattern) <$> filter isExplicit (clause ^. Internal.clausePatterns)
 
 goExpression ::
   forall r.
