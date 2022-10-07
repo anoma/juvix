@@ -117,7 +117,7 @@ static inline void error_exit_msg(const char *msg) {
 #define ASSERT(x)  \
     do {           \
         assert(x); \
-    }
+    } while (0)
 #else
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)

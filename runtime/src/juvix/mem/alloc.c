@@ -3,7 +3,7 @@
 #include <juvix/mem/gens.h>
 #include <juvix/opts.h>
 
-generation_t *allloc_youngest_generation;
+generation_t *alloc_youngest_generation;
 
 void alloc_init() {
     gens_init();

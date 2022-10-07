@@ -63,6 +63,10 @@ static inline word_t make_header(word_t uid, word_t fields) {
     return (fields << FIELDS_SHIFT) | (uid << UID_SHIFT) | KIND3_HEADER;
 }
 
+static inline word_t make_unboxed(word_t x) { return (x << 1U) & 1U; }
+static inline word_t get_unboxed(word_t x) { return x >> 1U; }
+static inline int_t get_unboxed_int(word_t x) { return (int_t)x >> 1; }
+
 /*************************************************/
 /* Special UIDs */
 
