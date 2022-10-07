@@ -15,6 +15,7 @@ import Juvix.Compiler.Core.Translation.FromInternal.Data
 import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
+import Juvix.Data.Loc qualified as Loc
 import Juvix.Extra.Strings qualified as Str
 
 unsupported :: Text -> a
@@ -201,7 +202,7 @@ fromPattern = \case
 
 goFunctionClause' ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r =>
   Index ->
   HashMap Text Index ->
   Internal.FunctionClause ->
@@ -260,19 +261,23 @@ goExpression' varsNum vars = \case
         Just (IdentSym sym) -> mkIdent (Info.singleton (NameInfo n)) sym
         Just (IdentTag {}) -> error ("internal to core: not a function: " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
-    Internal.IdenInductive {} -> error "goExpression inductive"
+    Internal.IdenInductive {} -> unsupported "goExpression inductive"
     Internal.IdenConstructor n -> do
       m <- getIdent txt
       return $ case m of
         Just (IdentTag tag) -> mkConstr (Info.singleton (NameInfo n)) tag []
         Just (IdentSym {}) -> error ("internal to core: not a constructor " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
-    Internal.IdenAxiom {} -> error ("goExpression axiom: " <> txt)
+    Internal.IdenAxiom {} -> unsupported ("goExpression axiom: " <> txt)
     where
       txt :: Text
       txt = Internal.getName i ^. Internal.nameText
   Internal.ExpressionApplication a -> goApplication varsNum vars a
-  x -> unsupported ("goExpression: " <> show (getLoc x))
+  Internal.ExpressionSimpleLambda l -> unsupported ("goExpression simpleLambda: " <> show (Loc.getLoc l))
+  Internal.ExpressionLambda l -> unsupported ("goExpression lambda: " <> show (Loc.getLoc l))
+  Internal.ExpressionFunction f -> unsupported ("goExpression function: " <> show (Loc.getLoc f))
+  Internal.ExpressionHole h -> error ("goExpression hole: " <> show (Loc.getLoc h))
+  Internal.ExpressionUniverse u -> error ("goExpression universe: " <> show (Loc.getLoc u))
 
 goApplication ::
   forall r.
@@ -290,5 +295,8 @@ goApplication varsNum vars a = do
 
 goLiteral :: LiteralLoc -> Node
 goLiteral l = case l ^. withLocParam of
-  Internal.LitString s -> mkConstant (Info.singleton (LocationInfo (l ^. withLocInt))) (ConstString s)
-  Internal.LitInteger i -> mkConstant (Info.singleton (LocationInfo (l ^. withLocInt))) (ConstInteger i)
+  Internal.LitString s -> mkLitConst (ConstString s)
+  Internal.LitInteger i -> mkLitConst (ConstInteger i)
+  where
+    mkLitConst :: ConstantValue -> Node
+    mkLitConst = mkConstant (Info.singleton (LocationInfo (l ^. withLocInt)))
