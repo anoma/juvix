@@ -1,1 +1,1 @@
-3
+suc (suc (suc zero))

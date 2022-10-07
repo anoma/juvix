@@ -6,18 +6,16 @@ import Juvix.Compiler.Concrete.Data.Literal (LiteralLoc)
 import Juvix.Compiler.Core.Data
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
-import Juvix.Compiler.Core.Info.BinderInfo
 import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Transformation.Eta (etaExpandApps)
+import Juvix.Compiler.Core.Translation.Base
 import Juvix.Compiler.Core.Translation.FromInternal.Data
-import Juvix.Compiler.Core.Translation.FromSource (freshName)
 import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Extra.Strings qualified as Str
-import Safe (headMay)
 
 unsupported :: Text -> a
 unsupported thing = error ("Internal to Core: Not yet supported: " <> thing)
@@ -32,7 +30,7 @@ fromInternal i = do
         coreModule :: Internal.Module -> Sem r ()
         coreModule m = do
           registerInductiveDefs m
-          runReader (Internal.buildTable [m]) (runNameIdGen (registerFunctionDefs m))
+          runNameIdGen (registerFunctionDefs m)
 
 registerInductiveDefs ::
   forall r.
@@ -59,14 +57,14 @@ registerInductiveDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
 
 registerFunctionDefs ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, NameIdGen] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen] r =>
   Internal.Module ->
   Sem r ()
 registerFunctionDefs m = registerFunctionDefsBody (m ^. Internal.moduleBody)
 
 registerFunctionDefsBody ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, NameIdGen] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen] r =>
   Internal.ModuleBody ->
   Sem r ()
 registerFunctionDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
@@ -79,7 +77,7 @@ registerFunctionDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
 
 goMutualBlock ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, NameIdGen] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen] r =>
   Internal.MutualBlock ->
   Sem r ()
 goMutualBlock m = mapM_ goFunctionDef (m ^. Internal.mutualFunctions)
@@ -125,7 +123,7 @@ goConstructor sym ctor = do
 
 goFunctionDef ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, NameIdGen] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen] r =>
   Internal.FunctionDef ->
   Sem r ()
 goFunctionDef f
@@ -170,33 +168,24 @@ goFunctionDef f
       ns <- mapM mkName (pack . show <$> vs)
       return $ binderNameInfo <$> ns
 
-binderNameInfo :: Name -> Info
-binderNameInfo name =
-  Info.singleton (BinderInfo (Info.singleton (NameInfo name)))
-
 fromPattern ::
   forall r.
-  Members '[InfoTableBuilder, Reader Internal.InfoTable, State SucState, State SucTable, State SucTable] r =>
+  Members '[InfoTableBuilder] r =>
   Internal.Pattern ->
   Sem r Pattern
 fromPattern = \case
   Internal.PatternWildcard {} -> return wildcard
-  Internal.PatternVariable n -> do
-    s <- gets (^. sucStateSucs) -- (^. sucTableTable . at (n ^. Internal.nameText))
-    modify (over sucTableTable (HashMap.insert (n ^. Internal.nameText) s))
-    return $ PatBinder (PatternBinder (setInfoName n Info.empty) wildcard)
+  Internal.PatternVariable n -> return $ PatBinder (PatternBinder (setInfoName n Info.empty) wildcard)
   Internal.PatternConstructorApp c -> do
     let n = c ^. Internal.constrAppConstructor
-    ctorInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoConstructors)
-    case ctorInfo ^. Internal.constructorInfoBuiltin of
-      Just Internal.BuiltinNaturalZero -> return $ PatConst (PatternConst (setInfoName n Info.empty) (ConstInteger 0))
-      Just Internal.BuiltinNaturalSuc -> do
-        modify (over sucStateSucs (+ 1))
-        fromPattern (fromJust (headMay (c ^. Internal.constrAppParameters)) ^. Internal.patternArgPattern)
-      _ -> do
-        tag <- ctorTag c
-        args <- mapM (evalState emptySucState . fromPattern) ((^. Internal.patternArgPattern) <$> filter (\p -> p ^. Internal.patternArgIsImplicit == Explicit) (c ^. Internal.constrAppParameters))
-        return $ PatConstr (PatternConstr (setInfoName n Info.empty) tag args)
+        explicitPatterns =
+          (^. Internal.patternArgPattern)
+            <$> filter
+              (\p -> p ^. Internal.patternArgIsImplicit == Explicit)
+              (c ^. Internal.constrAppParameters)
+    tag <- ctorTag c
+    args <- mapM fromPattern explicitPatterns
+    return $ PatConstr (PatternConstr (setInfoName n Info.empty) tag args)
   where
     wildcard :: Pattern
     wildcard = PatWildcard (PatternWildcard Info.empty)
@@ -212,15 +201,14 @@ fromPattern = \case
 
 goFunctionClause' ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, NameIdGen] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen] r =>
   Index ->
   HashMap Text Index ->
   Internal.FunctionClause ->
   Sem r MatchBranch
 goFunctionClause' varsNum vars clause = do
-  (sucTable, pats) <- patterns
-  let sucTable' = HashMap.filter (> 0) (sucTable ^. sucTableTable)
-      pis = concatMap (reverse . getBinderPatternInfos) pats
+  pats <- patterns
+  let pis = concatMap (reverse . getBinderPatternInfos) pats
       (vars', varsNum') =
         foldl'
           ( \(vs, k) name ->
@@ -228,18 +216,12 @@ goFunctionClause' varsNum vars clause = do
           )
           (vars, varsNum)
           (map (fromJust . getInfoName) pis)
-      letSpecs = mkLetSpecs vars' sucTable'
-      vars'' = HashMap.union (letVars varsNum' letSpecs) vars'
 
-  body <- goExpression (varsNum' + length sucTable') vars'' (clause ^. Internal.clauseBody)
-  MatchBranch Info.empty (fromList pats) <$> letNode letSpecs body
+  body <- goExpression varsNum' vars' (clause ^. Internal.clauseBody)
+  return $ MatchBranch Info.empty (fromList pats) body
   where
-    patterns :: Sem r (SucTable, [Pattern])
-    patterns =
-      first (over sucTableTable (HashMap.filter (> 0)))
-        <$> runState
-          emptySucTable
-          (reverse <$> mapM (evalState emptySucState . fromPattern) ps)
+    patterns :: Sem r [Pattern]
+    patterns = reverse <$> mapM fromPattern ps
 
     ps :: [Internal.Pattern]
     ps = (^. Internal.patternArgPattern) <$> filter argIsImplicit (clause ^. Internal.clausePatterns)
@@ -247,42 +229,9 @@ goFunctionClause' varsNum vars clause = do
     argIsImplicit :: Internal.PatternArg -> Bool
     argIsImplicit = (== Internal.Explicit) . (^. Internal.patternArgIsImplicit)
 
-    letNode :: [LetSpec] -> Node -> Sem r Node
-    letNode specs body = foldrM f body specs
-      where
-        f :: LetSpec -> Node -> Sem r Node
-        f s b = do
-          n <- mkName (s ^. letSpecBinder)
-          return $
-            mkLet
-              (binderNameInfo n)
-              ( subN
-                  (s ^. letSpecIndex)
-                  (s ^. letSpecSucs)
-              )
-              b
-
-    letVars :: Index -> [LetSpec] -> HashMap Text Index
-    letVars num specs = HashMap.fromList (f <$> zip specs [0 ..])
-      where
-        f :: (LetSpec, Index) -> (Text, Index)
-        f (s, i) = (s ^. letSpecBinder, num + i)
-
-    mkLetSpecs :: HashMap Text Index -> HashMap Text Integer -> [LetSpec]
-    mkLetSpecs vs sucTable = f <$> zip [0 ..] (HashMap.toList sucTable)
-      where
-        f :: (Int, (Text, Integer)) -> LetSpec
-        f (i, (t, sucs)) = LetSpec t sucs (fromJust (HashMap.lookup t vs) + i)
-
-    subN :: Index -> Integer -> Node
-    subN idx n = mkBuiltinApp' OpIntSub [mkVar Info.empty idx, mkConstant Info.empty (ConstInteger n)]
-
-    mkName :: Text -> Sem r Name
-    mkName txt = freshName KNameLocal txt (clause ^. Internal.clauseName . Internal.nameLoc)
-
 goExpression ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r =>
   Index ->
   HashMap Text Index ->
   Internal.Expression ->
@@ -294,7 +243,7 @@ goExpression varsNum vars e = do
 
 goExpression' ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r =>
   Index ->
   HashMap Text Index ->
   Internal.Expression ->
@@ -313,15 +262,11 @@ goExpression' varsNum vars = \case
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenInductive {} -> error "goExpression inductive"
     Internal.IdenConstructor n -> do
-      ctorInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoConstructors)
-      case ctorInfo ^. Internal.constructorInfoBuiltin of
-        Just Internal.BuiltinNaturalZero -> return $ mkConstant (Info.singleton (LocationInfo (getLoc n))) (ConstInteger 0)
-        _ -> do
-          m <- getIdent txt
-          return $ case m of
-            Just (IdentTag tag) -> mkConstr (Info.singleton (NameInfo n)) tag []
-            Just (IdentSym {}) -> error ("internal to core: not a constructor " <> txt)
-            Nothing -> error ("internal to core: undeclared identifier: " <> txt)
+      m <- getIdent txt
+      return $ case m of
+        Just (IdentTag tag) -> mkConstr (Info.singleton (NameInfo n)) tag []
+        Just (IdentSym {}) -> error ("internal to core: not a constructor " <> txt)
+        Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenAxiom {} -> error ("goExpression axiom: " <> txt)
     where
       txt :: Text
@@ -331,7 +276,7 @@ goExpression' varsNum vars = \case
 
 goApplication ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r =>
   Index ->
   HashMap Text Index ->
   Internal.Application ->
@@ -340,19 +285,8 @@ goApplication varsNum vars a = do
   (f, args) <- Internal.unfoldPolyApplication a
   let exprArgs :: Sem r [Node]
       exprArgs = mapM (goExpression varsNum vars) args
-      app :: Sem r Node
-      app = do
-        fExpr <- goExpression varsNum vars f
-        mkApps' fExpr <$> exprArgs
-  case f of
-    Internal.ExpressionIden (Internal.IdenConstructor n) -> do
-      ctorInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoConstructors)
-      case ctorInfo ^. Internal.constructorInfoBuiltin of
-        Just Internal.BuiltinNaturalSuc -> do
-          as <- exprArgs
-          return $ mkBuiltinApp' OpIntAdd (mkConstant Info.empty (ConstInteger 1) : as)
-        _ -> app
-    _ -> app
+  fExpr <- goExpression varsNum vars f
+  mkApps' fExpr <$> exprArgs
 
 goLiteral :: LiteralLoc -> Node
 goLiteral l = case l ^. withLocParam of

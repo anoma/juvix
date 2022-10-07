@@ -3,7 +3,7 @@ module NatMatch2;
 open import Stdlib.Prelude;
 
 f : Nat → Nat → Nat;
-f zero k := 100;
+f zero k := zero;
 f n (suc (suc m)) := n;
 
 n : Nat;

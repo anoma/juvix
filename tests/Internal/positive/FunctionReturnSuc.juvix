@@ -1,8 +1,0 @@
-module FunctionReturnSuc;
-
-open import Stdlib.Prelude;
-
-main : Nat;
-main := suc (suc (suc zero));
-
-end;

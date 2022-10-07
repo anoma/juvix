@@ -1,8 +1,0 @@
-module FunctionReturnZero;
-
-open import Stdlib.Prelude;
-
-main : Nat;
-main := zero;
-
-end;

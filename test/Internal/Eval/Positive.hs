@@ -61,16 +61,6 @@ tests =
       "FunctionReturnConstructor.juvix"
       "out/FunctionReturnConstructor.out",
     PosTest
-      "Zero is the constant 0"
-      "."
-      "FunctionReturnZero.juvix"
-      "out/FunctionReturnZero.out",
-    PosTest
-      "Suc returns a constant integer"
-      "."
-      "FunctionReturnSuc.juvix"
-      "out/FunctionReturnSuc.out",
-    PosTest
       "Pattern matching on a constructor"
       "."
       "MatchConstructor.juvix"

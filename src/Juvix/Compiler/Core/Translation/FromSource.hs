@@ -18,6 +18,7 @@ import Juvix.Compiler.Core.Info.NameInfo as NameInfo
 import Juvix.Compiler.Core.Info.TypeInfo as TypeInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Transformation.Eta
+import Juvix.Compiler.Core.Translation.Base
 import Juvix.Compiler.Core.Translation.FromSource.Lexer
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
@@ -42,27 +43,6 @@ runParser root fileName tab input =
       ParserParams
         { _parserParamsRoot = root
         }
-
-binderNameInfo :: Name -> Info
-binderNameInfo name =
-  Info.singleton (BinderInfo (Info.singleton (NameInfo name)))
-
-freshName ::
-  Members '[InfoTableBuilder, NameIdGen] r =>
-  NameKind ->
-  Text ->
-  Interval ->
-  Sem r Name
-freshName kind txt i = do
-  nid <- freshNameId
-  return $
-    Name
-      { _nameText = txt,
-        _nameId = nid,
-        _nameKind = kind,
-        _namePretty = txt,
-        _nameLoc = i
-      }
 
 declareBuiltinConstr ::
   Members '[InfoTableBuilder, NameIdGen] r =>
