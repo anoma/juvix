@@ -59,7 +59,7 @@ void *palloc(size_t n) {
     if (heap_size - (uintptr_t)heap_end < PAGE_SIZE * n) {
         size_t delta = max(opt_heap_grow_pages, n);
         ASSERT(delta != 0);
-        if (__builtin_wasm_memory_grow(0, delta) == -1) {
+        if (__builtin_wasm_memory_grow(0, delta) == (size_t)-1) {
             error_exit_msg("out of memory");
         }
     }

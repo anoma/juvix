@@ -22,6 +22,8 @@ typedef struct Generation {
     pool_t *dwords;
 } generation_t;
 
+void gens_init();
+
 pool_t *pool_alloc(pool_t *next);
 
 // Allocate a new generation. May merge old generations if generation limit

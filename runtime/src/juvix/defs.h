@@ -27,7 +27,7 @@
 #endif
 
 // typedefs for basic integer types
-#if defined(COMPILER_CLANG) || defined(COMPILER_GCC)
+#if (defined(COMPILER_CLANG) || defined(COMPILER_GCC)) && !defined(API_LIBC)
 
 typedef __SIZE_TYPE__ size_t;
 typedef __UINT8_TYPE__ uint8_t;
@@ -147,6 +147,6 @@ static inline uintptr_t align(uintptr_t val, uintptr_t alignment) {
 static inline void *palign(void *ptr, uintptr_t alignment) {
     return (void *)align((uintptr_t)ptr, alignment);
 }
-#define ASSERT_ALIGNED(x, y) ASSERT((x) == align((x), (y)))
+#define ASSERT_ALIGNED(x, y) ASSERT((x) == palign((x), (y)))
 
 #endif

@@ -7,7 +7,7 @@ stack_segment_t *juvix_global_stack;
 static void seg_init(stack_segment_t *seg) {
     seg->prev = NULL;
     seg->begin = palign((char *)seg + sizeof(stack_segment_t), sizeof(word_t));
-    seg->end = (char *)seg + PAGE_SIZE;
+    seg->end = (word_t *)((char *)seg + PAGE_SIZE);
     seg->pointer = seg->begin;
 }
 

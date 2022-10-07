@@ -57,6 +57,7 @@ TAGS
 .DS_Store
 
 _build/
+_build.*/
 *.agdai
 .agda/
 agda2hs/
