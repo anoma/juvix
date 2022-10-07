@@ -51,6 +51,11 @@ tests =
       "IdenFunctionArgsImplicit.juvix"
       "out/IdenFunctionArgsImplicit.out",
     PosTest
+      "A function with no explicit arguments"
+      "."
+      "IdenFunctionArgsNoExplicit.juvix"
+      "out/IdenFunctionArgsNoExplicit.out",
+    PosTest
       "A module that imports another"
       "Import"
       "Importer.juvix"
