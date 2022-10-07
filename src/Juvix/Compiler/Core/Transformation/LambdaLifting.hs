@@ -66,7 +66,8 @@ lambdaLiftNode aboveBl top =
           topSymsAssocs :: NonEmpty (Symbol, Node) <- forM defs $ \d -> do
             s' <- freshSymbol
             return (s', d)
-          let topSyms :: NonEmpty Symbol = fst <$> topSymsAssocs
+          let topSyms :: NonEmpty Symbol
+              topSyms = fst <$> topSymsAssocs
               freevars = toList (getFreeVars (NRec letr))
               freevarsAssocs :: [(Index, Info)]
               freevarsAssocs = [(i, BL.lookup i bl) | i <- map (^. varIndex) freevars]

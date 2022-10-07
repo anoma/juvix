@@ -1,6 +1,7 @@
 module Commands.Dev.Core.Read where
 
 import Commands.Base
+import Commands.Dev.Core.Eval qualified as Eval
 import Commands.Dev.Core.Read.Options
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation qualified as Core
@@ -11,7 +12,14 @@ runCommand opts = do
   s' <- embed (readFile f)
   tab <- getRight (fst <$> mapLeft JuvixError (Core.runParser "" f Core.emptyInfoTable s'))
   let tab' = Core.applyTransformations (opts ^. coreReadTransformations) tab
-  renderStdOut (Core.ppOut opts tab')
+  unless (opts ^. coreReadNoPrint) (renderStdOut (Core.ppOut opts tab'))
+  doEval
   where
+    doEval :: Sem r ()
+    doEval = when (opts ^. coreReadEval) $ do
+      embed (putStrLn "--------------------------------")
+      embed (putStrLn "|            Eval              |")
+      embed (putStrLn "--------------------------------")
+      Eval.runCommand (project opts)
     f :: FilePath
     f = opts ^. coreReadInputFile . pathPath
