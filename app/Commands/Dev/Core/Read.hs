@@ -10,16 +10,16 @@ import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 runCommand :: forall r. Members '[Embed IO, App] r => CoreReadOptions -> Sem r ()
 runCommand opts = do
   s' <- embed (readFile f)
-  tab <- getRight (fst <$> mapLeft JuvixError (Core.runParser "" f Core.emptyInfoTable s'))
+  (tab, mnode) <- getRight (mapLeft JuvixError (Core.runParser "" f Core.emptyInfoTable s'))
   let tab' = Core.applyTransformations (opts ^. coreReadTransformations) tab
   unless (opts ^. coreReadNoPrint) (renderStdOut (Core.ppOut opts tab'))
-  doEval
+  whenJust mnode $ doEval tab'
   where
-    doEval :: Sem r ()
-    doEval = when (opts ^. coreReadEval) $ do
+    doEval :: Core.InfoTable -> Core.Node -> Sem r ()
+    doEval tab' node = when (opts ^. coreReadEval) $ do
       embed (putStrLn "--------------------------------")
       embed (putStrLn "|            Eval              |")
       embed (putStrLn "--------------------------------")
-      Eval.runCommand (project opts)
+      Eval.evalAndPrint (project opts) tab' node
     f :: FilePath
     f = opts ^. coreReadInputFile . pathPath
