@@ -232,7 +232,7 @@ tableNestedInsert k1 k2 = tableInsert (HashMap.singleton k2) (HashMap.insert k2)
 (!!) l n = case l of
   [] -> error "out of bounds"
   (x : xs)
-    | 0 < n -> error "negative index"
+    | n < 0 -> error "negative index"
     | 0 == n -> x
     | otherwise -> xs !! (n - 1)
 
