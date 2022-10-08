@@ -229,12 +229,10 @@ tableNestedInsert k1 k2 = tableInsert (HashMap.singleton k2) (HashMap.insert k2)
 --------------------------------------------------------------------------------
 
 (!!) :: HasCallStack => [a] -> Int -> a
-(!!) l n = case l of
-  [] -> error "out of bounds"
-  (x : xs)
-    | n < 0 -> error "negative index"
-    | 0 == n -> x
-    | otherwise -> xs !! (n - 1)
+(!!) l n
+  | n < 0 = error ("negative index: " <> show n)
+  | length l <= n = error ("out of bounds: length " <> show (length l) <> "; index " <> show n)
+  | otherwise = l List.!! n
 
 revAppend :: [a] -> [a] -> [a]
 revAppend [] !ys = ys
