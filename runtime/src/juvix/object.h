@@ -72,7 +72,9 @@ static inline word_t make_dword_ptr(word_t x) {
     return x & KIND3_DWORDPTR;
 }
 
-static inline dword_t* get_dword_ptr(word_t x) { return x ^ KIND3_DWORDPTR; }
+static inline dword_t *get_dword_ptr(word_t x) {
+    return (dword_t *)(x ^ KIND3_DWORDPTR);
+}
 
 /*************************************************/
 /* Special UIDs */
