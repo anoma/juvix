@@ -93,7 +93,7 @@ import Data.HashSet (HashSet)
 import Data.HashSet qualified as HashSet
 import Data.Hashable
 import Data.Int
-import Data.List.Extra hiding (groupSortOn, head, last, mconcatMap, (!!))
+import Data.List.Extra hiding (groupSortOn, head, last, mconcatMap)
 import Data.List.Extra qualified as List
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.List.NonEmpty.Extra
@@ -228,11 +228,11 @@ tableNestedInsert k1 k2 = tableInsert (HashMap.singleton k2) (HashMap.insert k2)
 -- List
 --------------------------------------------------------------------------------
 
-(!!) :: HasCallStack => [a] -> Int -> a
-(!!) l n
-  | n < 0 = error ("negative index: " <> show n)
-  | length l <= n = error ("out of bounds: length " <> show (length l) <> "; index " <> show n)
-  | otherwise = l List.!! n
+-- (!!) :: HasCallStack => [a] -> Int -> a
+-- (!!) l n
+--   | n < 0 = error ("negative index: " <> show n)
+--   | length l <= n = error ("out of bounds: length " <> show (length l) <> "; index " <> show n)
+--   | otherwise = l List.!! n
 
 revAppend :: [a] -> [a] -> [a]
 revAppend [] !ys = ys
