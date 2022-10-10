@@ -65,12 +65,8 @@ lambdaLiftNode aboveBl top =
               letRecBinders = Info.getInfoBinders ndefs (letr ^. letRecInfo)
               bl' :: BinderList Info
               bl' = BL.prepend letRecBinders bl
-          topSymsAssocs :: [(Symbol, Node)] <- forM defs $ \d -> do
-            s' <- freshSymbol
-            return (s', d)
-          let topSyms :: [Symbol]
-              topSyms = map fst topSymsAssocs
-              -- free vars in each let
+          topSyms :: [Symbol] <- forM defs (const freshSymbol)
+          let -- free vars in each let
               recItemsFreeVars :: [[(Index, Info)]]
               recItemsFreeVars = mapMaybe helper . toList . freeVarsSet <$> defs
                 where
