@@ -256,12 +256,21 @@ commonPrefix a b = reverse (go [] a b)
         | x' == y' -> go (x' : ac) xs ys
       _ -> ac
 
+zipWithExactM :: Monad m => (a -> b -> m c) -> [a] -> [b] -> m [c]
+zipWithExactM f a b = mapM (uncurry f) (zipExact a b)
+
+zipWithExactM_ :: Monad m => (a -> b -> m c) -> [a] -> [b] -> m ()
+zipWithExactM_ f a b = void (zipWithExactM f a b)
+
 --------------------------------------------------------------------------------
 -- NonEmpty
 --------------------------------------------------------------------------------
 
 nonEmptyUnsnoc :: NonEmpty a -> (Maybe (NonEmpty a), a)
 nonEmptyUnsnoc e = (NonEmpty.nonEmpty (NonEmpty.init e), NonEmpty.last e)
+
+nonEmpty' :: HasCallStack => [a] -> NonEmpty a
+nonEmpty' = fromJust . nonEmpty
 
 _nonEmpty :: Lens' [a] (Maybe (NonEmpty a))
 _nonEmpty f x = maybe [] toList <$> f (nonEmpty x)

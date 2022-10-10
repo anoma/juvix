@@ -35,7 +35,7 @@ lambdaLiftNode aboveBl top =
           let lambdaBinder :: Info
               lambdaBinder = Info.getInfoBinder (lm ^. lambdaInfo)
           l' <- lambdaLiftNode (BL.extend lambdaBinder bl) (NLam lm)
-          let freevars = toList (getFreeVars l')
+          let freevars = toList (freeVarsSet l')
               freevarsAssocs :: [(Index, Info)]
               freevarsAssocs = [(i, BL.lookup i bl) | i <- map (^. varIndex) freevars]
               fBody' = captureFreeVars freevarsAssocs l'
@@ -57,47 +57,77 @@ lambdaLiftNode aboveBl top =
 
         goLetRec :: LetRec -> Sem r Recur
         goLetRec letr = do
-          let defs :: NonEmpty Node
-              defs = letr ^. letRecValues
+          let defs :: [Node]
+              defs = toList (letr ^. letRecValues)
+              ndefs :: Int
+              ndefs = length defs
               letRecBinders :: [Info]
-              letRecBinders = Info.getInfoBinders (length defs) (letr ^. letRecInfo)
+              letRecBinders = Info.getInfoBinders ndefs (letr ^. letRecInfo)
               bl' :: BinderList Info
               bl' = BL.prepend letRecBinders bl
-          topSymsAssocs :: NonEmpty (Symbol, Node) <- forM defs $ \d -> do
+          topSymsAssocs :: [(Symbol, Node)] <- forM defs $ \d -> do
             s' <- freshSymbol
             return (s', d)
-          let topSyms :: NonEmpty Symbol
-              topSyms = fst <$> topSymsAssocs
-              freevars = toList (getFreeVars (NRec letr))
-              freevarsAssocs :: [(Index, Info)]
-              freevarsAssocs = [(i, BL.lookup i bl) | i <- map (^. varIndex) freevars]
-              topCall :: Symbol -> Node
-              topCall s = mkApps' (mkIdent' s) (map NVar freevars)
-              topBody :: Node -> Sem r Node
-              topBody b =
-                captureFreeVars freevarsAssocs . substs (map topCall (toList topSyms))
-                  <$> lambdaLiftNode bl' b
-              letDef :: Symbol -> Node
-              letDef s = mkApps' (mkIdent' s) (map NVar freevars)
+          let topSyms :: [Symbol]
+              topSyms = map fst topSymsAssocs
+              -- free vars in each let
+              recItemsFreeVars :: [[(Index, Info)]]
+              recItemsFreeVars = mapMaybe helper . toList . freeVarsSet <$> defs
+                where
+                  -- throw away variables bound in the letrec and shift others
+                  helper :: Var -> Maybe (Index, Info)
+                  helper v
+                    | idx < ndefs = Nothing
+                    | otherwise =
+                        let idx' = idx - ndefs
+                         in Just (idx', BL.lookup idx' bl)
+                    where
+                      idx = v ^. varIndex
+              -- replace calls to letrec items to a calls to the fresh top symbols
+              subsCalls :: Node -> Node
+              subsCalls =
+                substs
+                  ( reverse
+                      [ mkApps' (mkIdent' sym) (map (mkVar' . fst) fv)
+                        | (sym, fv) <- zipExact topSyms recItemsFreeVars
+                      ]
+                  )
+              declareTopSyms :: Sem r ()
+              declareTopSyms = do
+                tbs <- topBodies
+                zipWithExactM_ registerIdentNode topSyms tbs
+                where
+                  topBodies :: Sem r [Node]
+                  topBodies =
+                    sequence
+                      [ captureFreeVars fv . subsCalls
+                          <$> lambdaLiftNode bl' b
+                        | (b, fv) <- zipExact defs recItemsFreeVars
+                      ]
+              letItems :: [Node]
+              letItems =
+                [ mkApps' (mkIdent' s) (map (mkVar' . fst) fv)
+                  | (s, fv) <- zipExact topSyms recItemsFreeVars
+                ]
+          declareTopSyms
           body' <- lambdaLiftNode bl' (letr ^. letRecBody)
-          forM_ topSymsAssocs $ \(s, a) -> topBody a >>= registerIdentNode s
-          let letdefs' :: NonEmpty Node
-              letdefs' = letDef <$> topSyms
-              -- free variables in the lets and the body need to be shifted
+          let -- free variables in the lets and the body need to be shifted
               -- because we are introducing binders.
               -- the topmost let is shifted 0
               -- the lowermost is shifted (len - 1)
-              -- the final body is shifted len
+              -- the final body is not shifted
               shiftHelper :: Node -> NonEmpty Node -> Node
               shiftHelper b = goShift 0
                 where
                   goShift :: Int -> NonEmpty Node -> Node
                   goShift k = \case
                     x :| yys -> case yys of
-                      [] -> shift k (mkLet' x b)
+                      [] -> mkLet' (shift k x) b
                       (y : ys) -> mkLet' (shift k x) (goShift (k + 1) (y :| ys))
           let res :: Node
-              res = shiftHelper body' letdefs'
+              res = shiftHelper body' (nonEmpty' letItems)
+          -- TODO: if there is a lambda on top of body', I think it is possible to just move it up instead of recursing.
+          -- However, recursing should be ok
           return (Recur res)
 
 lambdaLifting :: InfoTable -> InfoTable

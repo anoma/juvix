@@ -11,6 +11,8 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Juvix.Compiler.Core.Data.BinderList (BinderList)
+import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Equality
@@ -26,8 +28,15 @@ import Juvix.Compiler.Core.Language
 isClosed :: Node -> Bool
 isClosed = not . has freeVars
 
-getFreeVars :: Node -> HashSet Var
-getFreeVars n = HashSet.fromList (n ^.. freeVars)
+freeVarsSet :: Node -> HashSet Var
+freeVarsSet n = HashSet.fromList (n ^.. freeVars)
+
+freeVarsWithInfo :: BinderList Info -> Node -> [(Index, Info)]
+freeVarsWithInfo bl n =
+  [ (i, BL.lookup i bl)
+    | v <- toList (freeVarsSet n),
+      let i = v ^. varIndex
+  ]
 
 freeVars :: SimpleFold Node Var
 freeVars f = ufoldNA reassemble go
