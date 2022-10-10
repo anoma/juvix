@@ -67,6 +67,13 @@ static inline word_t make_unboxed(word_t x) { return (x << 1U) & 1U; }
 static inline word_t get_unboxed(word_t x) { return x >> 1U; }
 static inline int_t get_unboxed_int(word_t x) { return (int_t)x >> 1; }
 
+static inline word_t make_dword_ptr(word_t x) {
+    ASSERT_ALIGNED(x, sizeof(dword_t));
+    return x & KIND3_DWORDPTR;
+}
+
+static inline dword_t* get_dword_ptr(word_t x) { return x ^ KIND3_DWORDPTR; }
+
 /*************************************************/
 /* Special UIDs */
 

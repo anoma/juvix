@@ -4,18 +4,20 @@
 #include <juvix/mem/alloc.h>
 #include <juvix/object.h>
 
-#define INT_REF(var) (*(dword_t *)(var))
+#define INT_REF(var) (*get_dword_ptr(var))
 
 #define ALLOC_INT(var, N, beg, end, SAVE, RESTORE)            \
     do {                                                      \
         DALLOC((dword_t *)(var), 1, beg, end, SAVE, RESTORE); \
-        INT_REF(var) = N;                                     \
+        *(dword_t *)(var) = N;                                \
+        var = make_dword_ptr(var);                            \
     } while (0)
 
 #define INT_OP(OP, vret, var1, var2, beg, end, SAVE, RESTORE) \
     do {                                                      \
         DALLOC((dword_t *)(var), 1, beg, end, SAVE, RESTORE); \
-        INT_REF(vret) = INT_REF(var1) OP INT_REF(var2)        \
+        *(dword_t *)(vret) = INT_REF(var1) OP INT_REF(var2);  \
+        vret = make_dword_ptr(vret);                          \
     } while (0)
 
 #define INT_ADD(vret, var1, var2, beg, end, SAVE, RESTORE) \

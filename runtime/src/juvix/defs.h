@@ -147,6 +147,7 @@ static inline uintptr_t align(uintptr_t val, uintptr_t alignment) {
 static inline void *palign(void *ptr, uintptr_t alignment) {
     return (void *)align((uintptr_t)ptr, alignment);
 }
-#define ASSERT_ALIGNED(x, y) ASSERT((x) == palign((x), (y)))
+#define ASSERT_ALIGNED(x, y) \
+    ASSERT((uintptr_t)(x) == align((uintptr_t)(x), (y)))
 
 #endif
