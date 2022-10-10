@@ -18,37 +18,31 @@ extern stack_segment_t *juvix_global_stack;
 
 // The current stack pointer.
 static inline word_t *stack_pointer() { return juvix_global_stack->pointer; }
-// The beginning of the current stack segment.
-static inline word_t *stack_begin() { return juvix_global_stack->begin; }
-// The end of the current stack segment.
-static inline word_t *stack_end() { return juvix_global_stack->end; }
 
 void stack_init();
-void stack_grow(word_t *sp, size_t n);
-void stack_shrink(word_t *sp, size_t n);
+void stack_grow(word_t *sp);
+void stack_shrink(word_t *sp);
 
-#define STACK_PUSH(sp, n, beg, end)   \
-    do {                              \
-        ASSERT(n <= MAX_STACK_DELTA); \
-        sp += n;                      \
-        if (unlikely(sp > end)) {     \
-            stack_grow(sp - n, n);    \
-            sp = stack_pointer();     \
-            beg = stack_begin();      \
-            end = stack_end();        \
-        }                             \
+#define STACK_ENTER(sp, n)                      \
+    do {                                        \
+        ASSERT(n <= MAX_STACK_DELTA);           \
+        if (unlikely(!SAME_PAGE(sp, sp + n))) { \
+            stack_grow(sp);                     \
+            sp = stack_pointer();               \
+        }                                       \
     } while (0)
 
-#define STACK_POP(sp, n, beg, end)    \
-    do {                              \
-        ASSERT(n <= MAX_STACK_DELTA); \
-        sp -= n;                      \
-        if (unlikely(sp < beg)) {     \
-            stack_shrink(sp + n, n);  \
-            sp = stack_pointer();     \
-            beg = stack_begin();      \
-            end = stack_end();        \
-        }                             \
+#define STACK_LEAVE(sp)                    \
+    do {                                   \
+        if (unlikely(IS_PAGE_START(sp))) { \
+            stack_shrink(sp);              \
+            sp = stack_pointer();          \
+        }                                  \
     } while (0)
+
+#define STACK_PUSH(sp, val) (*sp++ = (word_t)(val))
+#define STACK_POP(sp, var) (var = *--sp)
+
+#define STACK_SAVE(sp) (juvix_global_stack->pointer = sp)
 
 #endif

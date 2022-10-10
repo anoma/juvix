@@ -26,6 +26,10 @@
 #endif
 #endif
 
+#if defined(COMPILER_CLANG) || defined(COMPILER_GCC)
+#define EXT_LABEL_AS_VALUE
+#endif
+
 // typedefs for basic integer types
 #if (defined(COMPILER_CLANG) || defined(COMPILER_GCC)) && !defined(API_LIBC)
 
@@ -70,14 +74,18 @@ typedef __int128 long_t;
 #error "Unsupported configuration"
 #endif
 
-// page size
-#ifndef PAGE_SIZE
 #define PAGE_SIZE 65536
-#endif
+#define PAGE_MASK 0xffff
 
 // NULL
 #ifndef NULL
 #define NULL ((void *)0)
+#endif
+
+#ifdef API_LIBC
+#include <stdbool.h>
+#else
+typedef int bool;
 #endif
 
 /**********************************************/

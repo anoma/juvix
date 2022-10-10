@@ -34,9 +34,9 @@
 A header word consists of (field:bits in lower 32 bits from most to least
 significant):
 
-|FIELDS:8|UID:20|MARK:1|KIND3:3|
+|NFIELDS:8|UID:20|MARK:1|KIND3:3|
 
-- FIELDS specifies the number of fields following the header.
+- NFIELDS specifies the number of fields following the header.
 - UID contains a unique object identifier.
 - MARK is a mark bit used by the GC. It is always 0 when not in GC collection
   phase.
@@ -53,14 +53,14 @@ There are special UIDs which imply the existence of certain special fields.
 #define UID_SHIFT 4U
 #define GET_UID(x) (((x)&UID_MASK) >> UID_SHIFT)
 
-#define FIELDS_MASK 0xFF000000
-#define FIELDS_SHIFT 24U
-#define GET_FIELDS(x) (((x)&FIELDS_MASK) >> FIELDS_SHIFT)
+#define NFIELDS_MASK 0xFF000000
+#define NFIELDS_SHIFT 24U
+#define GET_NFIELDS(x) ((x) >> NFIELDS_SHIFT)
 
-static inline word_t make_header(word_t uid, word_t fields) {
+static inline word_t make_header(word_t uid, word_t nfields) {
     ASSERT(uid < MAX_UIDS);
-    ASSERT(fields <= MAX_FIELDS);
-    return (fields << FIELDS_SHIFT) | (uid << UID_SHIFT) | KIND3_HEADER;
+    ASSERT(nfields <= MAX_FIELDS);
+    return (nfields << NFIELDS_SHIFT) | (uid << UID_SHIFT) | KIND3_HEADER;
 }
 
 static inline word_t make_unboxed(word_t x) { return (x << 1U) & 1U; }
@@ -76,12 +76,21 @@ static inline dword_t *get_dword_ptr(word_t x) {
     return (dword_t *)(x ^ KIND3_DWORDPTR);
 }
 
+#define GET_FIELD(var, n) (((word_t *)(var))[n])
+#define SET_FIELD(var, n, val) (GET_FIELD(var, n) = (val))
+
+static inline size_t get_nfields(word_t ptr) {
+    return GET_NFIELDS(GET_FIELD(ptr, 0));
+}
+
+static inline word_t get_uid(word_t ptr) { return GET_UID(GET_FIELD(ptr, 0)); }
+
 /*************************************************/
 /* Special UIDs */
 
-// A closure has an additional non-garbage-collected function address field
-// immediately after the header. The function address field is not counted in
-// FIELDS.
+// A closure has additional non-garbage-collected closure header and function
+// address fields immediately after the header. The two additional fields are
+// not counted in FIELDS.
 #define UID_CLOSURE 0
 // The header is followed by a zero-terminated string. FIELDS contains the
 // length of the string rounded up to a multiple of word size.

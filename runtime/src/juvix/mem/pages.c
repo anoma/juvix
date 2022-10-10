@@ -7,7 +7,10 @@
 #include <stdlib.h>
 
 void *palloc(size_t n) {
-    void *ptr = malloc(n * PAGE_SIZE);
+    void *ptr = aligned_alloc(PAGE_SIZE, n * PAGE_SIZE);
+    if (ptr == NULL) {
+        error_exit_msg("out of memory");
+    }
     ASSERT_ALIGNED(ptr, sizeof(dword_t));
     return ptr;
 }
@@ -27,6 +30,7 @@ static void *heap_end = NULL;
 static page_t *free_page = NULL;
 
 void *palloc(size_t n) {
+    ASSERT(n > 0);
     page_t *prev = NULL;
     page_t *page = free_page;
     while (page && page->size < n) {
@@ -53,7 +57,7 @@ void *palloc(size_t n) {
     // Allocate `n` pages from WebAssembly
     if (heap_end == NULL) {
         // first-time allocation
-        heap_end = palign(&__heap_base, sizeof(dword_t));
+        heap_end = palign(&__heap_base, PAGE_SIZE);
     }
     uintptr_t heap_size = __builtin_wasm_memory_size(0) * PAGE_SIZE;
     if (heap_size - (uintptr_t)heap_end < PAGE_SIZE * n) {
@@ -65,7 +69,7 @@ void *palloc(size_t n) {
     }
     void *ptr = heap_end;
     heap_end = (char *)heap_end + n * PAGE_SIZE;
-    ASSERT_ALIGNED(ptr, sizeof(dword_t));
+    ASSERT_ALIGNED(ptr, PAGE_SIZE);
     return ptr;
 }
 

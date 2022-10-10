@@ -13,7 +13,7 @@ extern size_t opt_generation_min_pages;
 /* Default values */
 
 #ifndef OPT_HEAP_GROW_PAGES
-#define OPT_HEAP_GROW_PAGES 20
+#define OPT_HEAP_GROW_PAGES 24
 #endif
 
 #ifndef OPT_GENERATION_MIN_PAGES

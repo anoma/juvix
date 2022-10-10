@@ -20,16 +20,22 @@
 // Maximum number of different constructors (globally).
 #define MAX_CONSTR_TAGS (MAX_UIDS - MAX_SPECIAL_UIDS)
 
+// Maximum number of functions (globally). Make sure this corresponds to the
+// number of bits in the FUID field in juvix/closure.h.
+#define MAX_FUNCTIONS 16777216
+
 // Maximum number of fields. Make sure this corresponds to the number of bits
-// for the FIELDS field in a header word (see juvix/object.h).
+// for the NFIELDS field in a header word (see juvix/object.h).
 #define MAX_FIELDS 255
 
 #define MAX_CONSTR_ARGS MAX_FIELDS
 #define MAX_FUNCTION_ARGS MAX_FIELDS
 
+#define MAX_LOCAL_VARS 8192
+
 /*****************************************/
 /* Static asserts */
 
-STATIC_ASSERT(MAX_FUNCTION_ARGS < MAX_STACK_DELTA);
+STATIC_ASSERT(MAX_FUNCTION_ARGS + MAX_LOCAL_VARS + 2 < MAX_STACK_DELTA);
 
 #endif
