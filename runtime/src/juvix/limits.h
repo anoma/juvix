@@ -13,7 +13,8 @@
 // have the value MAX_UIDS.
 #define MAX_UIDS 1048576
 
-// Maximum special UIDs which don't correspond to constructor tags.
+// Maximum special UIDs which don't correspond to constructor tags. UIDs
+// corresponding to constructor tags have values at equal or greater.
 #define MAX_SPECIAL_UIDS 16
 
 // Maximum number of different constructors (globally).
