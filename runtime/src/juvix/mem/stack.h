@@ -23,18 +23,18 @@ void stack_init();
 void stack_grow(word_t *sp);
 void stack_shrink(word_t *sp);
 
-#define STACK_ENTER(sp, n)                      \
-    do {                                        \
-        ASSERT(n <= MAX_STACK_DELTA);           \
-        if (unlikely(!SAME_PAGE(sp, sp + n))) { \
-            stack_grow(sp);                     \
-            sp = stack_pointer();               \
-        }                                       \
+#define STACK_ENTER(sp, n)                         \
+    do {                                           \
+        ASSERT(n <= MAX_STACK_DELTA);              \
+        if (unlikely(!is_same_page(sp, sp + n))) { \
+            stack_grow(sp);                        \
+            sp = stack_pointer();                  \
+        }                                          \
     } while (0)
 
 #define STACK_LEAVE(sp)                    \
     do {                                   \
-        if (unlikely(IS_PAGE_START(sp))) { \
+        if (unlikely(is_page_start(sp))) { \
             stack_shrink(sp);              \
             sp = stack_pointer();          \
         }                                  \
