@@ -27,7 +27,23 @@
 #endif
 
 #if defined(COMPILER_CLANG) || defined(COMPILER_GCC)
-#define EXT_LABEL_AS_VALUE
+#define EXT_LABELS_AS_VALUES
+#endif
+
+#if defined(COMPILER_GCC) || defined(COMPILER_CLANG)
+#define likely(exp) (__builtin_expect((exp), 1))
+#define unlikely(exp) (__builtin_expect((exp), 0))
+#else
+#define likely(exp) (exp)
+#define unlikely(exp) (exp)
+#endif
+
+#if defined(COMPILER_CLANG) || defined(COMPILER_GCC)
+#define UNREACHABLE __builtin_unreachable()
+#else
+#define UNREACHABLE \
+    do {            \
+    } while (0)
 #endif
 
 // typedefs for basic integer types
@@ -109,14 +125,6 @@ static inline void error_exit_msg(const char *msg) {
     print_msg(msg);
     error_exit();
 }
-
-#if defined(COMPILER_GCC) || defined(COMPILER_CLANG)
-#define likely(exp) (__builtin_expect((exp), 1))
-#define unlikely(exp) (__builtin_expect((exp), 0))
-#else
-#define likely(exp) (exp)
-#define unlikely(exp) (exp)
-#endif
 
 // Debug assertions
 #ifdef DEBUG
