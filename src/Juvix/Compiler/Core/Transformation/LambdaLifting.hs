@@ -122,8 +122,6 @@ lambdaLiftNode aboveBl top =
                       (y : ys) -> mkLet' (shift k x) (goShift (k + 1) (y :| ys))
           let res :: Node
               res = shiftHelper body' (nonEmpty' letItems)
-          -- TODO: if there is a lambda on top of body', I think it is possible to just move it up instead of recursing.
-          -- However, recursing should be ok
           return (Recur res)
 
 lambdaLifting :: InfoTable -> InfoTable
