@@ -9,13 +9,13 @@ import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+import Juvix.Compiler.Concrete.Extra (unfoldApplication)
 import Juvix.Compiler.Concrete.Language
-import Juvix.Prelude.Pretty qualified as PP
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
-import Juvix.Compiler.Concrete.Extra (unfoldApplication)
+import Juvix.Prelude.Pretty qualified as PP
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
 doc opts =
@@ -494,11 +494,11 @@ instance SingI s => PrettyCode (FunctionClause s) where
     clauseBody' <- ppExpression _clauseBody
     clauseWhere' <- mapM ppCode _clauseWhere
     return $
-        clauseOwnerFunction'
-          <+?> clausePatterns'
-          <+> kwAssign
-          <+> clauseBody'
-          <+?> ((line <>) <$> clauseWhere')
+      clauseOwnerFunction'
+        <+?> clausePatterns'
+        <+> kwAssign
+        <+> clauseBody'
+        <+?> ((line <>) <$> clauseWhere')
 
 instance SingI s => PrettyCode (WhereBlock s) where
   ppCode WhereBlock {..} = indent' . (kwWhere <+>) <$> ppBlock whereClauses
