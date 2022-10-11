@@ -7,11 +7,12 @@
 #include <stdlib.h>
 
 void *palloc(size_t n) {
+    // `aligned_alloc` requires C11
     void *ptr = aligned_alloc(PAGE_SIZE, n * PAGE_SIZE);
     if (ptr == NULL) {
         error_exit_msg("out of memory");
     }
-    ASSERT_ALIGNED(ptr, sizeof(dword_t));
+    ASSERT_ALIGNED(ptr, PAGE_SIZE);
     return ptr;
 }
 
@@ -21,7 +22,7 @@ void pfree(void *ptr, size_t n) { free(ptr); }
 
 typedef struct Page {
     struct Page *next;
-    size_t size;  // the number of pages
+    size_t size;  // the number of WASM pages
 } page_t;
 
 extern void __heap_base;
@@ -51,6 +52,7 @@ void *palloc(size_t n) {
         } else {
             free_page = next;
         }
+        ASSERT_ALIGNED(page, PAGE_SIZE);
         return page;
     }
 

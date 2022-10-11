@@ -23,4 +23,6 @@
 
 #define CONSTR_ARG(var, n) FIELD(var, (n) + 1)
 
+static inline word_t *get_constr_args(word_t x) { return (word_t *)x + 1; }
+
 #endif

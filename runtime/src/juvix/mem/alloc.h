@@ -42,20 +42,20 @@ static inline dword_t *alloc_longs_memory_pointer() {
 // pointer variable reserved for managing allocator data. `SAVE` and `RESTORE`
 // should save and restore live local variables on the global stack (alloc_words
 // can lauch GC which needs access to these variables).
-#define ALLOC(ptr, n, mp, SAVE, RESTORE)    \
-    XALLOC(ptr, n, mp, {                    \
-        SAVE;                               \
-        alloc_words(mp - n);                \
-        beg = alloc_words_memory_pointer(); \
-        RESTORE;                            \
+#define ALLOC(ptr, n, mp, SAVE, RESTORE)   \
+    XALLOC(ptr, n, mp, {                   \
+        SAVE;                              \
+        alloc_words(mp - n);               \
+        mp = alloc_words_memory_pointer(); \
+        RESTORE;                           \
     })
 
-#define DALLOC(ptr, n, beg, SAVE, RESTORE)   \
-    XALLOC(ptr, n, beg, {                    \
-        SAVE;                                \
-        alloc_dwords(beg - n);               \
-        beg = alloc_dwords_memory_pointer(); \
-        RESTORE;                             \
+#define DALLOC(ptr, n, mp, SAVE, RESTORE)   \
+    XALLOC(ptr, n, mp, {                    \
+        SAVE;                               \
+        alloc_dwords(mp - n);               \
+        mp = alloc_dwords_memory_pointer(); \
+        RESTORE;                            \
     })
 
 #endif

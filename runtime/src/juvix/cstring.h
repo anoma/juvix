@@ -12,6 +12,11 @@ size_t strlen(const char *str);
 char *strcpy(char *restrict dest, const char *restrict src);
 #endif
 
+static inline char *get_cstring(word_t x) {
+    ASSERT(is_cstring(x));
+    return (char *)x + sizeof(word_t);
+}
+
 #define ALLOC_CSTRING(var, str, beg, end, SAVE, RESTORE)                \
     do {                                                                \
         size_t juvix_nfields =                                          \

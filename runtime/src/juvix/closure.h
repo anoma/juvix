@@ -33,6 +33,8 @@ static inline size_t get_closure_fuid(word_t cl) {
 
 static inline void *get_closure_addr(word_t cl) { return (void *)FIELD(cl, 2); }
 
+static inline word_t *get_closure_args(word_t cl) { return (word_t *)cl + 3; }
+
 #define CLOSURE_ARG(var, n) FIELD(var, (n) + 3)
 
 #define ALLOC_CLOSURE(var, fuid, addr, nfields, nargs, mp, SAVE, RESTORE) \
