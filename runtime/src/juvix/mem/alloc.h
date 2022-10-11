@@ -13,7 +13,7 @@ extern generation_t *alloc_youngest_generation;
 
 // Initialise the allocator module.
 void alloc_init();
-// Allocate more memory for words. The argument points to the begging of free
+// Allocate more memory for words. The argument points to the beginning of free
 // pool memory.
 void alloc_words(word_t *beg);
 // Allocate more memory for dwords.
@@ -23,7 +23,7 @@ static inline word_t *alloc_words_memory_pointer() {
     return alloc_youngest_generation->words->free_begin;
 }
 
-static inline dword_t *alloc_longs_memory_pointer() {
+static inline dword_t *alloc_dwords_memory_pointer() {
     return alloc_youngest_generation->dwords->free_begin;
 }
 
