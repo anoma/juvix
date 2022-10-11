@@ -8,7 +8,6 @@ allTests :: TestTree
 allTests =
   testGroup
     "JuvixCore transformations"
-    [
-      Identity.allTests,
+    [ Identity.allTests,
       Lifting.allTests
     ]
