@@ -67,6 +67,7 @@ lambdaLiftNode aboveBl top =
               bl' = BL.prepend letRecBinders bl
           topSyms :: [Symbol] <- forM defs (const freshSymbol)
           liftedDefs <- mapM (lambdaLiftNode bl') defs
+          body' <- lambdaLiftNode bl' (letr ^. letRecBody)
           let -- free vars in each let
               recItemsFreeVars :: [[(Index, Info)]]
               recItemsFreeVars = mapMaybe helper . toList . freeVarsSet <$> liftedDefs
@@ -104,7 +105,6 @@ lambdaLiftNode aboveBl top =
                   | (s, fv) <- zipExact topSyms recItemsFreeVars
                 ]
           declareTopSyms
-          body' <- lambdaLiftNode bl' (letr ^. letRecBody)
           let -- free variables in the lets and the body need to be shifted
               -- because we are introducing binders.
               -- the topmost let is shifted 0
