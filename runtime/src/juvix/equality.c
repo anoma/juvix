@@ -27,9 +27,14 @@ bool juvix_do_equal(word_t x, word_t y) {
             return SND(x) == SND(y);
         }
     case KIND_HEADER_OR_DWORDPTR:
-        ASSERT(is_dword_ptr(x));
-        ASSERT(is_dword_ptr(y));
-        return *get_dword_ptr(x) == *get_dword_ptr(y);
+        if (is_dword_ptr(x)) {
+            ASSERT(is_dword_ptr(y));
+            return *get_dword_ptr(x) == *get_dword_ptr(y);
+        } else {
+            ASSERT(is_header(x));
+            ASSERT(is_header(y));
+            return x == y;
+        }
     default:
         UNREACHABLE;
     }

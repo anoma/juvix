@@ -74,9 +74,7 @@ typedef void *label_addr_t;
 
 #define TAIL_CALL_CLOSURE(cl) goto *get_closure_addr(cl)
 
-#define RETURN(sp) \
-    --sp;          \
-    STORED_GOTO(*(sp + 1));
+#define RETURN(sp) STORED_GOTO(*sp);
 
 /*
     Expected macro sequence for calling the dispatch loop:
@@ -106,7 +104,7 @@ typedef void *label_addr_t;
 /*
     Expected macro sequence for tail-calling the dispatch loop:
 
-    STACK_ENTER(sp, m + DISPATCH_STACK_SIZE);
+    STACK_ENTER(sp, m);
     STACK_PUSH(sp, argm);
     ...
     STACK_PUSH(sp, arg1);

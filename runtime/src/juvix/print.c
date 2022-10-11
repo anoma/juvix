@@ -112,8 +112,17 @@ static size_t print_object(char *buf, size_t n, word_t x) {
         return buf - buf0;
     }
     case KIND_HEADER_OR_DWORDPTR:
-        ASSERT(is_dword_ptr(x));
-        return print_long(buf, n, get_long(x));
+        if (is_dword_ptr(x)) {
+            return print_long(buf, n, get_long(x));
+        } else {
+            ASSERT(is_header(x));
+            char *buf0 = buf;
+            const char *str = juvix_constr_info[GET_UID(x)].name;
+            while (*str) {
+                PUTC(*str++);
+            }
+            return buf - buf0;
+        }
     default:
         UNREACHABLE;
     }
