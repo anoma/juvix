@@ -92,13 +92,23 @@ lambdaLiftNode aboveBl top =
                   )
               declareTopSyms :: Sem r ()
               declareTopSyms =
-                zipWithExactM_ registerIdentNode topSyms topBodies
-                where
-                  topBodies :: [Node]
-                  topBodies =
-                    [ captureFreeVars fv (subsCalls b)
-                      | (b, fv) <- zipExact liftedDefs recItemsFreeVars
-                    ]
+                sequence_
+                  [ do
+                      let topBody = captureFreeVars fv (subsCalls b)
+                          argsInfo :: [ArgumentInfo]
+                          argsInfo = map (argumentInfoFromInfo . snd) fv
+                      registerIdentNode sym topBody
+                      registerIdent
+                        IdentifierInfo
+                          { _identifierSymbol = sym,
+                            _identifierName = Nothing,
+                            _identifierType = typeFromArgs argsInfo,
+                            _identifierArgsNum = length fv,
+                            _identifierArgsInfo = argsInfo,
+                            _identifierIsExported = False
+                          }
+                    | (sym, b, fv) <- zip3Exact topSyms liftedDefs recItemsFreeVars
+                  ]
               letItems :: [Node]
               letItems =
                 [ mkApps' (mkIdent' s) (map (mkVar' . fst) fv)
