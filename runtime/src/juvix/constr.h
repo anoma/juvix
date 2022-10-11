@@ -18,10 +18,9 @@
 #define ALLOC_CONSTR_PAIR(var, mp, SAVE, RESTORE) \
     ALLOC((word_t *)(var), 2, mp, SAVE, RESTORE)
 
-#define GET_FST(var) GET_FIELD(var, 0)
-#define SET_FST(var, val) SET_FIELD(var, 0, val)
+#define FST(var) FIELD(var, 0)
+#define SND(var) FIELD(var, 1)
 
-#define GET_SND(var) GET_FIELD(var, 1)
-#define SET_SND(var, val) SET_FIELD(var, 1, val)
+#define CONSTR_ARG(var, n) FIELD(var, (n) + 1)
 
 #endif

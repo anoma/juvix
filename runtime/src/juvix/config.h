@@ -12,10 +12,10 @@
 
 #if !defined(API_LIBC) && !defined(API_ANOMA) && !defined(API_COSM) && \
     !defined(API_NONE)
-#define API_LIBC
+//#define API_LIBC
 //#define API_ANOMA
 //#define API_COSM
-//#define API_NONE
+#define API_NONE
 #endif
 
 #ifndef NDEBUG

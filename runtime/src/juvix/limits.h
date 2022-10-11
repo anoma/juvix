@@ -29,7 +29,8 @@
 #define MAX_FIELDS 255
 
 #define MAX_CONSTR_ARGS MAX_FIELDS
-#define MAX_FUNCTION_ARGS MAX_FIELDS
+// Max number of fields minus the extra two fields in a closure.
+#define MAX_FUNCTION_ARGS (MAX_FIELDS - 2)
 
 #define MAX_LOCAL_VARS 8192
 

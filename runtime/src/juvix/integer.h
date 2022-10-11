@@ -20,6 +20,8 @@
         vret = make_dword_ptr(vret);                         \
     } while (0)
 
+#define INT_CMP(CMP, vret, var1, var2) (vret = INT_REF(var1) CMP INT_REF(var2))
+
 #define INT_ADD(vret, var1, var2, mp, SAVE, RESTORE) \
     INT_OP(+, vret, var1, var2, mp, SAVE, RESTORE)
 
@@ -34,6 +36,9 @@
 
 #define INT_MOD(vret, var1, var2, mp, SAVE, RESTORE) \
     INT_OP(%, vret, var1, var2, mp, SAVE, RESTORE)
+
+#define INT_LE(vret, var1, var2) INT_CMP(<=, vret, var1, var2)
+#define INT_LT(vret, var1, var2) INT_CMP(<, vret, var1, var2)
 
 #define INT_ADD_NOALLOC(vret, var1, var2)             \
     do {                                              \
