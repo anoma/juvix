@@ -66,9 +66,10 @@ lambdaLiftNode aboveBl top =
               bl' :: BinderList Info
               bl' = BL.prepend letRecBinders bl
           topSyms :: [Symbol] <- forM defs (const freshSymbol)
+          liftedDefs <- mapM (lambdaLiftNode bl') defs
           let -- free vars in each let
               recItemsFreeVars :: [[(Index, Info)]]
-              recItemsFreeVars = mapMaybe helper . toList . freeVarsSet <$> defs
+              recItemsFreeVars = mapMaybe helper . toList . freeVarsSet <$> liftedDefs
                 where
                   -- throw away variables bound in the letrec and shift others
                   helper :: Var -> Maybe (Index, Info)
@@ -89,17 +90,14 @@ lambdaLiftNode aboveBl top =
                       ]
                   )
               declareTopSyms :: Sem r ()
-              declareTopSyms = do
-                tbs <- topBodies
-                zipWithExactM_ registerIdentNode topSyms tbs
+              declareTopSyms =
+                zipWithExactM_ registerIdentNode topSyms topBodies
                 where
-                  topBodies :: Sem r [Node]
+                  topBodies :: [Node]
                   topBodies =
-                    sequence
-                      [ captureFreeVars fv . subsCalls
-                          <$> lambdaLiftNode bl' b
-                        | (b, fv) <- zipExact defs recItemsFreeVars
-                      ]
+                    [ captureFreeVars fv (subsCalls b)
+                      | (b, fv) <- zipExact liftedDefs recItemsFreeVars
+                    ]
               letItems :: [Node]
               letItems =
                 [ mkApps' (mkIdent' s) (map (mkVar' . fst) fv)
