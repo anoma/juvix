@@ -52,7 +52,7 @@ static inline void *get_closure_addr(word_t cl) {
         ASSERT(nargs + n < nfields);                                   \
         SET_FIELD(dest, 1, make_function_header(fuid, nargs + n));     \
         SET_FIELD(dest, 2, GET_FIELD(src, 2));                         \
-        MEMCOPY(dest + 3, src + 3, nargs);                             \
+        memcopy(dest + 3, src + 3, nargs);                             \
     } while (0)
 
 #endif
