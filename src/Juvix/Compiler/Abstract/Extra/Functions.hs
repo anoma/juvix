@@ -21,7 +21,7 @@ patternVariables f p = case p of
   PatternConstructorApp app -> PatternConstructorApp <$> appVariables f app
 
 patternArgVariables :: Traversal' PatternArg VarName
-patternArgVariables f = traverseOf patternArgPattern (patternVariables f)
+patternArgVariables f (PatternArg i n p) = PatternArg i <$> traverse f n <*> patternVariables f p
 
 appVariables :: Traversal' ConstructorApp VarName
 appVariables f = traverseOf constrAppParameters (traverse (patternArgVariables f))
@@ -68,6 +68,7 @@ viewAppArgAsPattern a = do
   return
     ( PatternArg
         { _patternArgIsImplicit = a ^. appArgIsImplicit,
+          _patternArgName = Nothing,
           _patternArgPattern = p'
         }
     )

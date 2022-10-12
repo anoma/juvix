@@ -120,8 +120,8 @@ newtype Lambda = Lambda
   deriving stock (Eq, Generic)
 
 data LambdaClause = LambdaClause
-  { _lambdaPatterns :: NonEmpty Pattern, -- only explicit patterns are allowed
-    _lambdaBody :: Expression -- only explicit patterns are allowed,
+  { _lambdaPatterns :: NonEmpty PatternArg, -- only explicit patterns are allowed
+    _lambdaBody :: Expression
   }
   deriving stock (Eq, Generic)
 
@@ -157,6 +157,7 @@ instance Hashable ConstructorApp
 
 data PatternArg = PatternArg
   { _patternArgIsImplicit :: IsImplicit,
+    _patternArgName :: Maybe VarName,
     _patternArgPattern :: Pattern
   }
   deriving stock (Eq, Generic)
@@ -260,6 +261,7 @@ instance HasAtomicity ConstructorApp where
 instance HasAtomicity PatternArg where
   atomicity p
     | Implicit <- p ^. patternArgIsImplicit = Atom
+    | isJust (p ^. patternArgName) = Atom
     | otherwise = atomicity (p ^. patternArgPattern)
 
 instance HasAtomicity Pattern where
@@ -319,7 +321,7 @@ instance HasLoc Pattern where
     PatternWildcard i -> getLoc i
 
 instance HasLoc PatternArg where
-  getLoc = getLoc . (^. patternArgPattern)
+  getLoc a = fmap getLoc (a ^. patternArgName) ?<> getLoc (a ^. patternArgPattern)
 
 instance HasLoc ConstructorApp where
   getLoc (ConstructorApp c ps) =

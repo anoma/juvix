@@ -512,13 +512,24 @@ wildcard = Wildcard . snd <$> interval (kw kwWildcard)
 -- Pattern section
 --------------------------------------------------------------------------------
 
+patternAtomDelim :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => Maybe (SymbolType 'Parsed) -> ParsecS r (PatternAtom 'Parsed)
+patternAtomDelim n =
+  PatternAtomParens n <$> parens parsePatternAtoms
+    <|> PatternAtomBraces n <$> braces parsePatternAtoms
+
+patternAtomNamed :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (PatternAtom 'Parsed)
+patternAtomNamed = do
+  n <- name
+  case n of
+    NameQualified _ -> return (PatternAtomIden n)
+    NameUnqualified s -> (kw kwAt >> patternAtomDelim (Just s)) <|> return (PatternAtomIden n)
+
 patternAtom :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (PatternAtom 'Parsed)
 patternAtom =
   P.label "<pattern>" $
-    PatternAtomIden <$> name
+    patternAtomNamed
       <|> PatternAtomWildcard <$> wildcard
-      <|> (PatternAtomParens <$> parens parsePatternAtoms)
-      <|> (PatternAtomBraces <$> braces parsePatternAtoms)
+      <|> patternAtomDelim Nothing
 
 parsePatternAtoms :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (PatternAtoms 'Parsed)
 parsePatternAtoms = do

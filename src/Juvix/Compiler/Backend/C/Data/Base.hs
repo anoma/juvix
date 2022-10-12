@@ -174,20 +174,19 @@ typeOfConstructor name = do
   info <- Internal.lookupConstructor name
   getInductiveCType (info ^. Internal.constructorInfoInductive)
 
-getClausePatterns :: Member (Reader Internal.TypesTable) r => Internal.FunctionClause -> Sem r [Internal.Pattern]
-getClausePatterns c =
+getClausePatternArgs :: Member (Reader Internal.TypesTable) r => Internal.FunctionClause -> Sem r [Internal.PatternArg]
+getClausePatternArgs c =
   filterCompileTimeArgsOrPatterns
     (c ^. Internal.clauseName)
-    ( c
-        ^.. Internal.clausePatterns
-          . each
-          . Internal.patternArgPattern
-    )
+    (c ^. Internal.clausePatterns)
+
+getClausePatterns :: Member (Reader Internal.TypesTable) r => Internal.FunctionClause -> Sem r [Internal.Pattern]
+getClausePatterns c = (^.. each . Internal.patternArgPattern) <$> getClausePatternArgs c
 
 functionInfoPatternsNum :: Member (Reader Internal.TypesTable) r => Internal.FunctionInfo -> Sem r Int
 functionInfoPatternsNum fInfo = do
   let c = head (fInfo ^. (Internal.functionInfoDef . Internal.funDefClauses))
-  pats <- getClausePatterns c
+  pats <- getClausePatternArgs c
   return (length pats)
 
 buildPatternInfoTable :: forall r. Members '[Reader Internal.InfoTable, Reader Internal.TypesTable] r => [Internal.PolyType] -> Internal.FunctionClause -> Sem r PatternInfoTable
@@ -197,29 +196,39 @@ buildPatternInfoTable argTyps c =
     funArgBindings :: Sem r [(Expression, CFunType)]
     funArgBindings = mapM (bimapM (return . ExpressionVar) typeToFunType) (zip funArgs argTyps)
 
-    patArgBindings :: Sem r [(Internal.Pattern, (Expression, CFunType))]
+    patArgBindings :: Sem r [(Internal.PatternArg, (Expression, CFunType))]
     patArgBindings = do
-      pats <- getClausePatterns c
+      pats <- getClausePatternArgs c
       zip pats <$> funArgBindings
 
     patBindings :: Sem r [(Text, BindingInfo)]
     patBindings = patArgBindings >>= concatMapM go
 
-    go :: (Internal.Pattern, (Expression, CFunType)) -> Sem r [(Text, BindingInfo)]
-    go (p, (exp, typ)) = case p of
+    go :: (Internal.PatternArg, (Expression, CFunType)) -> Sem r [(Text, BindingInfo)]
+    go p = do
+      r <- goPat p
+      return $ goName p ++ r
+
+    goName :: (Internal.PatternArg, (Expression, CFunType)) -> [(Text, BindingInfo)]
+    goName (p, (exp, typ)) = case p ^. Internal.patternArgName of
+      Just n -> [(n ^. Internal.nameText, BindingInfo {_bindingInfoExpr = exp, _bindingInfoType = typ})]
+      Nothing -> []
+
+    goPat :: (Internal.PatternArg, (Expression, CFunType)) -> Sem r [(Text, BindingInfo)]
+    goPat (p, (exp, typ)) = case p ^. Internal.patternArgPattern of
       Internal.PatternVariable v ->
         return
           [(v ^. Internal.nameText, BindingInfo {_bindingInfoExpr = exp, _bindingInfoType = typ})]
       Internal.PatternConstructorApp Internal.ConstructorApp {..} ->
-        goConstructorApp exp _constrAppConstructor (_constrAppParameters ^.. each . Internal.patternArgPattern)
+        goConstructorApp exp _constrAppConstructor _constrAppParameters
       Internal.PatternWildcard {} -> return []
 
-    goConstructorApp :: Expression -> Internal.Name -> [Internal.Pattern] -> Sem r [(Text, BindingInfo)]
+    goConstructorApp :: Expression -> Internal.Name -> [Internal.PatternArg] -> Sem r [(Text, BindingInfo)]
     goConstructorApp exp constructorName ps = do
       ctorInfo' <- ctorInfo
       let ctorArgBindings :: Sem r [(Expression, CFunType)] =
             mapM (bimapM asConstructor typeToFunType) (zip ctorArgs ctorInfo')
-          patternCtorArgBindings :: Sem r [(Internal.Pattern, (Expression, CFunType))] = zip ps <$> ctorArgBindings
+          patternCtorArgBindings :: Sem r [(Internal.PatternArg, (Expression, CFunType))] = zip ps <$> ctorArgBindings
       patternCtorArgBindings >>= concatMapM go
       where
         ctorInfo :: Sem r [Internal.PolyType]

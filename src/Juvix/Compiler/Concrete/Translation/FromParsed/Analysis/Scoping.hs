@@ -1147,11 +1147,11 @@ checkPatternAtom ::
   PatternAtom 'Parsed ->
   Sem r (PatternAtom 'Scoped)
 checkPatternAtom p = case p of
+  PatternAtomIden n -> PatternAtomIden <$> checkPatternName n
   PatternAtomWildcard i -> return (PatternAtomWildcard i)
   PatternAtomEmpty i -> return (PatternAtomEmpty i)
-  PatternAtomParens e -> PatternAtomParens <$> (checkPatternAtoms e >>= parsePatternAtoms)
-  PatternAtomIden n -> PatternAtomIden <$> checkPatternName n
-  PatternAtomBraces n -> PatternAtomBraces <$> (checkPatternAtoms n >>= parsePatternAtoms)
+  PatternAtomParens n e -> PatternAtomParens <$> traverse groupBindLocalVariable n <*> (checkPatternAtoms e >>= parsePatternAtoms)
+  PatternAtomBraces n a -> PatternAtomBraces <$> traverse groupBindLocalVariable n <*> (checkPatternAtoms a >>= parsePatternAtoms)
 
 checkName ::
   Members '[Error ScoperError, State Scope, Reader LocalVars, State ScoperState, InfoTableBuilder] r =>
@@ -1527,10 +1527,10 @@ makePatternTable (PatternAtoms latoms _) = [appOp] : operators
             )
 
 explicitP :: Pattern -> PatternArg
-explicitP = PatternArg Explicit
+explicitP = PatternArg Explicit Nothing
 
 implicitP :: Pattern -> PatternArg
-implicitP = PatternArg Implicit
+implicitP = PatternArg Implicit Nothing
 
 parsePatternTerm ::
   forall r.
@@ -1591,19 +1591,42 @@ parsePatternTerm = do
       where
         bracesPat :: PatternAtom 'Scoped -> Maybe (Either ScoperError PatternArg)
         bracesPat s = case s of
-          PatternAtomBraces r
-            | Implicit <- r ^. patternArgIsImplicit ->
-                Just (Left (ErrDoubleBracesPattern (DoubleBracesPattern r)))
-            | otherwise -> Just (Right (set patternArgIsImplicit Implicit r))
+          PatternAtomBraces n r -> Just $ case r ^. patternArgIsImplicit of
+            Implicit -> Left (ErrDoubleBracesPattern (DoubleBracesPattern r))
+            Explicit -> case (n, r ^. patternArgName) of
+              (Just n', Just _) -> Left (ErrDoubleBinderPattern (DoubleBinderPattern Implicit n' r))
+              (Just n', Nothing) ->
+                if isConstr (r ^. patternArgPattern)
+                  then Right (PatternArg Implicit (Just n') (r ^. patternArgPattern))
+                  else Left (ErrAliasBinderPattern (AliasBinderPattern Implicit n' r))
+              _ -> Right (set patternArgIsImplicit Implicit r)
           _ -> Nothing
 
     parseParens :: ParsePat PatternArg
-    parseParens = P.token parenPat mempty
+    parseParens = do
+      res <- P.token parenPat mempty
+      case res of
+        Left e -> P.lift (throw e)
+        Right a -> return a
       where
-        parenPat :: PatternAtom 'Scoped -> Maybe PatternArg
+        parenPat :: PatternAtom 'Scoped -> Maybe (Either ScoperError PatternArg)
         parenPat s = case s of
-          PatternAtomParens r -> Just r
+          PatternAtomParens Nothing r -> Just (Right r)
+          PatternAtomParens n@(Just n') r -> Just $ case r ^. patternArgName of
+            Just _ -> Left (ErrDoubleBinderPattern (DoubleBinderPattern Explicit n' r))
+            Nothing ->
+              if isConstr (r ^. patternArgPattern)
+                then Right (set patternArgName n r)
+                else Left (ErrAliasBinderPattern (AliasBinderPattern Explicit n' r))
           _ -> Nothing
+
+    isConstr :: Pattern -> Bool
+    isConstr = \case
+      PatternConstructor {} -> True
+      PatternApplication {} -> True
+      PatternInfixApplication {} -> True
+      PatternPostfixApplication {} -> True
+      _ -> False
 
 mkPatternParser ::
   forall r.
