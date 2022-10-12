@@ -13,6 +13,7 @@ data GlobalOptions = GlobalOptions
   { _globalNoColors :: Bool,
     _globalShowNameIds :: Bool,
     _globalOnlyErrors :: Bool,
+    _globalApe :: Bool,
     _globalStdin :: Bool,
     _globalNoTermination :: Bool,
     _globalNoPositivity :: Bool,
@@ -35,7 +36,11 @@ instance CanonicalProjection GlobalOptions Abstract.Options where
       }
 
 instance CanonicalProjection GlobalOptions E.GenericOptions where
-  project GlobalOptions {..} = E.GenericOptions {E._showNameIds = _globalShowNameIds}
+  project GlobalOptions {..} =
+    E.GenericOptions
+      { E._showNameIds = _globalShowNameIds,
+        E._genericApe = _globalApe
+      }
 
 defaultGlobalOptions :: GlobalOptions
 defaultGlobalOptions =
@@ -43,6 +48,7 @@ defaultGlobalOptions =
     { _globalNoColors = False,
       _globalShowNameIds = False,
       _globalOnlyErrors = False,
+      _globalApe = False,
       _globalNoTermination = False,
       _globalStdin = False,
       _globalNoPositivity = False,
@@ -62,6 +68,11 @@ parseGlobalFlags = do
     switch
       ( long "show-name-ids"
           <> help "Show the unique number of each identifier when pretty printing"
+      )
+  _globalApe <-
+    switch
+      ( long "ape"
+          <> help "Alternative pretty printing algorithm for expressions"
       )
   _globalStdin <-
     switch

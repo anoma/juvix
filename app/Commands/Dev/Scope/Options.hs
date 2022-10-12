@@ -26,5 +26,6 @@ instance CanonicalProjection (GlobalOptions, ScopeOptions) Scoper.Options where
   project (g, ScopeOptions {..}) =
     Scoper.defaultOptions
       { Scoper._optShowNameIds = g ^. globalShowNameIds,
-        Scoper._optInlineImports = _scopeInlineImports
+        Scoper._optInlineImports = _scopeInlineImports,
+        Scoper._optApe = g ^. globalApe
       }

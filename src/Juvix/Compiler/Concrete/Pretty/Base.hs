@@ -12,6 +12,7 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (unfoldApplication)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
+import Juvix.Data.Ape
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
@@ -586,24 +587,37 @@ instance PrettyCode Text where
   ppCode = return . pretty
 
 instance PrettyCode InfixApplication where
-  ppCode i@InfixApplication {..} = do
-    infixAppLeft' <- ppLeftExpression (getFixity i) _infixAppLeft
-    infixAppOperator' <- ppCode _infixAppOperator
-    infixAppRight' <- ppRightExpression (getFixity i) _infixAppRight
-    return $ infixAppLeft' <+> infixAppOperator' <+> infixAppRight'
+  ppCode i@InfixApplication {..} =
+    apeHelper i $ do
+      infixAppLeft' <- ppLeftExpression (getFixity i) _infixAppLeft
+      infixAppOperator' <- ppCode _infixAppOperator
+      infixAppRight' <- ppRightExpression (getFixity i) _infixAppRight
+      return $ infixAppLeft' <+> infixAppOperator' <+> infixAppRight'
 
 instance PrettyCode PostfixApplication where
-  ppCode i@PostfixApplication {..} = do
-    postfixAppParameter' <- ppPostExpression (getFixity i) _postfixAppParameter
-    postfixAppOperator' <- ppCode _postfixAppOperator
-    return $ postfixAppParameter' <+> postfixAppOperator'
+  ppCode i@PostfixApplication {..} =
+    apeHelper i $ do
+      postfixAppParameter' <- ppPostExpression (getFixity i) _postfixAppParameter
+      postfixAppOperator' <- ppCode _postfixAppOperator
+      return $ postfixAppParameter' <+> postfixAppOperator'
 
 instance PrettyCode Application where
-  ppCode a = do
-    let (f, args) = unfoldApplication a
-    f' <- ppCode f
-    args' <- mapM ppCodeAtom args
-    return $ PP.group (f' <+> nest 2 (vsep args'))
+  ppCode a@(Application l r) =
+    apeHelper a $ do
+      l' <- ppLeftExpression appFixity l
+      r' <- ppRightExpression appFixity r
+      return $ l' <+> r'
+
+apeHelper :: (IsApe a Expression, Members '[Reader Options] r) => a -> Sem r (Doc CodeAnn) -> Sem r (Doc CodeAnn)
+apeHelper a alt = do
+  opts <- ask @Options
+  if
+      | opts ^. optApe ->
+          return $
+            let params :: ApeParams Expression
+                params = ApeParams (run . runReader opts . ppCode)
+             in runApe params a
+      | otherwise -> alt
 
 instance PrettyCode Literal where
   ppCode = \case
