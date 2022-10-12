@@ -9,17 +9,18 @@
 
 MAKEFILE := $(lastword $(MAKEFILE_LIST))
 
-WORD := [[:alpha:]]*[[:space:]][[:space:]]*
+WORD := [[:graph:]]*[[:space:]][[:space:]]*
 CAT_PROJECT := (if [ -f PROJECT ]; then cat PROJECT | sed "s/^\#.*//"; else echo ""; fi)
 
 mstrip = $(patsubst [[:space:]]*%[[:space:]]*,%,$(1))
 lsdirs = $(foreach dir,$(2),$(foreach file,$(wildcard $(dir)/*.$(1)),$(file)))
 
 getopt = $(call mstrip,$(shell $(CAT_PROJECT) | sed -n "s/^[[:space:]]*$(1)[[:space:]]*=[[:space:]]*\(.*\)/\1/p"))
-getpopt = $(call mstrip,$(shell $(CAT_PROJECT) | sed -n "s/^[[:space:]]*\($(WORD)\)*$(1)[[:space:]][[:space:]]*\($(WORD)\)*$(2)[[:space:]]*=[[:space:]]*\(.*\)/\3/p"))
+getpopt = $(call mstrip,$(foreach cfg,$(1),$(shell $(CAT_PROJECT) | sed -n "s/^[[:space:]]*\($(WORD)\)*$(cfg)[[:space:]][[:space:]]*\($(WORD)\)*$(2)[[:space:]]*=[[:space:]]*\(.*\)/\3/p")))
 
 # build configuration
 CONFIG   := $(call getopt,CONFIG)
+override CONFIG := $(sort $(strip $(subst +, ,$(CONFIG)) $(CONFIG)))
 ifeq ($(CONFIG),)
 getcopt = $(call getopt,$(1))
 getropt = $(call getopt,$(1))
