@@ -603,7 +603,7 @@ instance PrettyCode Application where
     let (f, args) = unfoldApplication a
     f' <- ppCode f
     args' <- mapM ppCodeAtom args
-    return $ PP.group $ f' <+> align (vsep args')
+    return $ PP.group (f' <+> nest 2 (vsep args'))
 
 instance PrettyCode Literal where
   ppCode = \case
