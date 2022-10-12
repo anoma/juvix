@@ -1,35 +1,29 @@
 module Core.Transformation.Lifting (allTests) where
 
 import Base
+import Core.Eval.Positive qualified as Eval
 import Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation
 
 allTests :: TestTree
-allTests = testGroup "Lambda lifting" tests
+allTests = testGroup "Lambda lifting" (mapMaybe liftTest Eval.tests)
 
 pipe :: [TransformationId]
 pipe = [LambdaLifting]
 
-dir :: FilePath
-dir = "lambda-lifting"
+liftTest :: Eval.PosTest -> Maybe TestTree
+liftTest _testEval@Eval.PosTest {..}
+  | _name `elem` excluded = Nothing
+  | otherwise =
+      Just $
+        fromTest
+          Test
+            { _testTransformations = pipe,
+              _testAssertion = \i -> unless (isLifted i) (error "not lambda lifted"),
+              _testEval
+            }
 
-liftTest :: String -> FilePath -> FilePath -> TestTree
-liftTest _testName _testCoreFile _testExpectedFile =
-  fromTest
-    Test
-      { _testTransformations = pipe,
-        _testCoreFile = dir </> _testCoreFile,
-        _testName,
-        _testAssertion = assertExpectedOutput expectedFile
-      }
-  where
-    expectedFile = dir </> _testExpectedFile
-
-tests :: [TestTree]
-tests =
-  [ liftTest
-      ("Lambda lifting without let rec " <> i)
-      ("test" <> i <> ".jvc")
-      ("test" <> i <> ".out")
-    | i <- map show [1 :: Int .. 3]
+excluded :: [String]
+excluded =
+  [ "LetRec"
   ]

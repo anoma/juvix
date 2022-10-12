@@ -10,6 +10,7 @@ where
 import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Eta
+import Juvix.Compiler.Core.Transformation.Identity
 import Juvix.Compiler.Core.Transformation.LambdaLifting
 
 applyTransformations :: [TransformationId] -> InfoTable -> InfoTable
@@ -18,3 +19,4 @@ applyTransformations ts tbl = foldl' (flip appTrans) tbl ts
     appTrans :: TransformationId -> InfoTable -> InfoTable
     appTrans = \case
       LambdaLifting -> lambdaLifting
+      Identity -> identity

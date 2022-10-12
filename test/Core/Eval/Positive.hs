@@ -19,7 +19,7 @@ testDescr PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ coreEvalAssertion _file _expectedFile
+          _testAssertion = Steps $ coreEvalAssertion _file _expectedFile [] (const (return ()))
         }
 
 allTests :: TestTree

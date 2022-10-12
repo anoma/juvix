@@ -52,4 +52,4 @@ etaExpandApps tab =
         Nothing -> 0
 
 etaExpansionApps :: Transformation
-etaExpansionApps tab = mapT (etaExpandApps tab) tab
+etaExpansionApps tab = mapT (const (etaExpandApps tab)) tab

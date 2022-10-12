@@ -40,16 +40,16 @@ instance PrettyCode Name where
 
 instance PrettyCode BuiltinOp where
   ppCode = \case
-    OpIntAdd -> return kwPlus
-    OpIntSub -> return kwMinus
-    OpIntMul -> return kwMul
-    OpIntDiv -> return kwDiv
-    OpIntMod -> return kwMod
-    OpIntLt -> return kwLess
-    OpIntLe -> return kwLessEquals
-    OpEq -> return kwEquals
-    OpTrace -> return kwTrace
-    OpFail -> return kwFail
+    OpIntAdd -> return primPlus
+    OpIntSub -> return primMinus
+    OpIntMul -> return primMul
+    OpIntDiv -> return primDiv
+    OpIntMod -> return primMod
+    OpIntLt -> return primLess
+    OpIntLe -> return primLessEquals
+    OpEq -> return primEquals
+    OpTrace -> return primTrace
+    OpFail -> return primFail
 
 instance PrettyCode BuiltinDataTag where
   ppCode = \case
@@ -198,19 +198,14 @@ instance PrettyCode Node where
     NCtr x ->
       let name = getInfoName (x ^. constrInfo)
        in ppCodeConstr' name x
-    NLam Lambda {} -> do
-      let (infos, body) = unfoldLambdas node
-      pplams <- mapM ppLam infos
+    NLam (Lambda i body) -> do
       b <- ppCode body
-      return $ foldl' (flip (<+>)) b pplams
-      where
-        ppLam :: Info -> Sem r (Doc Ann)
-        ppLam i =
-          case getInfoName (getInfoBinder i) of
-            Just name -> do
-              n <- ppCode name
-              return $ kwLambda <> n
-            Nothing -> return $ kwLambda <> kwQuestion
+      lam <- case getInfoName (getInfoBinder i) of
+        Just name -> do
+          n <- ppCode name
+          return $ kwLambda <> n
+        Nothing -> return $ kwLambda <> kwQuestion
+      return (lam <+> b)
     NLet x ->
       let name = getInfoName (getInfoBinder (x ^. letInfo))
        in ppCodeLet' name x
@@ -392,26 +387,29 @@ kwUnnamedConstr = keyword Str.exclamation
 kwQuestion :: Doc Ann
 kwQuestion = keyword Str.questionMark
 
-kwLess :: Doc Ann
-kwLess = keyword Str.less
+primLess :: Doc Ann
+primLess = primitive Str.less
 
-kwLessEquals :: Doc Ann
-kwLessEquals = keyword Str.lessEqual
+primLessEquals :: Doc Ann
+primLessEquals = primitive Str.lessEqual
 
-kwPlus :: Doc Ann
-kwPlus = keyword Str.plus
+primPlus :: Doc Ann
+primPlus = primitive Str.plus
 
-kwMinus :: Doc Ann
-kwMinus = keyword Str.minus
+primMinus :: Doc Ann
+primMinus = primitive Str.minus
 
-kwMul :: Doc Ann
-kwMul = keyword Str.mul
+primMul :: Doc Ann
+primMul = primitive Str.mul
 
-kwDiv :: Doc Ann
-kwDiv = keyword Str.div
+primDiv :: Doc Ann
+primDiv = primitive Str.div
 
-kwMod :: Doc Ann
-kwMod = keyword Str.mod
+primMod :: Doc Ann
+primMod = primitive Str.mod
+
+primEquals :: Doc Ann
+primEquals = primitive Str.equal
 
 kwLetRec :: Doc Ann
 kwLetRec = keyword Str.letrec_
@@ -437,8 +435,11 @@ kwPi = keyword Str.pi_
 kwDef :: Doc Ann
 kwDef = keyword Str.def
 
-kwTrace :: Doc Ann
-kwTrace = keyword Str.trace_
+primFail :: Doc Ann
+primFail = primitive Str.fail_
+
+primTrace :: Doc Ann
+primTrace = primitive Str.trace_
 
 kwFail :: Doc Ann
 kwFail = keyword Str.fail_

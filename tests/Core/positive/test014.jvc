@@ -13,7 +13,8 @@ def y := 17;
 def func := \x x + 4;
 def z := 0;
 
-def vx := 30; def vy := 7;
+def vx := 30;
+def vy := 7;
 
 writeLn (func (y / x)) >> -- 17 div 5 + 4 = 7
 writeLn (+ (* z x) y) >> -- 17
