@@ -10,7 +10,7 @@ void *palloc(size_t n);
 void pfree(void *ptr, size_t n);
 
 static inline bool is_same_page(void *p1, void *p2) {
-    return (((uintptr_t)p1) ^ ((uintptr_t)p2) & ~PAGE_MASK) == 0;
+    return ((((uintptr_t)p1) ^ ((uintptr_t)p2)) & ~PAGE_MASK) == 0;
 }
 
 static inline bool is_page_start(void *p) {

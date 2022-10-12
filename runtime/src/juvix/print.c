@@ -73,6 +73,7 @@ static size_t print_object(char *buf, size_t n, word_t x) {
             switch (GET_UID(h)) {
             case UID_CLOSURE: {
                 size_t nargs = get_closure_nargs(x);
+                ASSERT(get_closure_fuid(x) < juvix_functions_num);
                 const char *str = juvix_function_info[get_closure_fuid(x)].name;
                 buf += print_args(buf, n, str, get_closure_args(x), nargs);
                 break;
@@ -86,6 +87,7 @@ static size_t print_object(char *buf, size_t n, word_t x) {
             }
             default: {
                 size_t nargs = GET_NFIELDS(h);
+                ASSERT(GET_UID(x) < juvix_constrs_num);
                 const char *str = juvix_constr_info[GET_UID(h)].name;
                 buf += print_args(buf, n, str, get_constr_args(x), nargs);
                 break;
@@ -117,6 +119,7 @@ static size_t print_object(char *buf, size_t n, word_t x) {
         } else {
             ASSERT(is_header(x));
             char *buf0 = buf;
+            ASSERT(GET_UID(x) < juvix_constrs_num);
             const char *str = juvix_constr_info[GET_UID(x)].name;
             while (*str) {
                 PUTC(*str++);

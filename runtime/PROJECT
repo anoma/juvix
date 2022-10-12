@@ -5,14 +5,23 @@ CFLAGS = -std=c11 -W -Wall -Wno-unused-parameter -Werror
 LIBTOOL = llvm-ar
 LIBFLAGS = csru
 
-WASM32 BUILDDIR = _build.wasm32
-WASM32 LIB = juvix.wasm32
+LIB = juvix
+
+RELEASE CFLAGS = -DNDEBUG
+DEBUG CFLAGS = -DDEBUG
+
+WASM32+RELEASE BUILDDIR = _build.wasm32
+WASM32+DEBUG BUILDDIR = _build.wasm32-debug
 WASM32 CFLAGS = -Os --target=wasm32 -DARCH_WASM32 -DAPI_NONE
 
-WASM32-WASI BUILDDIR = _build.wasm32-wasi
-WASM32-WASI LIB = juvix.wasm32-wasi
+WASM32-WASI+RELEASE BUILDDIR = _build.wasm32-wasi
+WASM32-WASI+DEBUG BUILDDIR = _build.wasm32-wasi-debug
 WASM32-WASI CFLAGS = -Os --target=wasm32-wasi --sysroot $WASI_SYSROOT_PATH -DARCH_WASM32 -DAPI_LIBC
 
-X86_32 BUILDDIR = _build.x86_32
-X86_32 LIB = juvix.x86_32
+NATIVE32+RELEASE BUILDDIR = _build.native32
+NATIVE32+DEBUG BUILDDIR = _build.native32-debug
+NATIVE32 CFLAGS = -O2 -m32 -DARCH_NATIVE32 -DAPI_LIBC
+
+X86_32+RELEASE BUILDDIR = _build.x86_32
+X86_32+DEBUG BUILDDIR = _build.x86_32-debug
 X86_32 CFLAGS = -O2 -fomit-frame-pointer --target=i386 -DARCH_NATIVE32 -DAPI_LIBC

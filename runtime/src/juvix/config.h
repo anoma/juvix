@@ -18,9 +18,9 @@
 #define API_NONE
 #endif
 
-#ifndef NDEBUG
+#if !defined(DEBUG) && !defined(NDEBUG)
 #define DEBUG
+//#define NDEBUG
 #endif
 
-//#define NO_USER_DEBUG
 //#define NO_GC

@@ -66,6 +66,8 @@ typedef __UINTPTR_TYPE__ uintptr_t;
 #error "Unsupported configuration"
 #endif
 
+typedef unsigned uint;
+
 // typedefs for word_t, dword_t, int_t, long_t
 #if defined(BITS32)
 
@@ -106,6 +108,15 @@ typedef int bool;
 #define false 0
 #endif
 
+#ifdef EXT_LABELS_AS_VALUES
+#define LABEL_ADDR(label) &&label
+#define STORED_GOTO(ptr) goto *(ptr)
+typedef void *label_addr_t;
+#else
+#error \
+    "The \"labels as values\" compiler extension is required (use GCC or clang)."
+#endif
+
 /**********************************************/
 /* Basic primitive functions and macros */
 
@@ -130,22 +141,14 @@ static inline void error_exit_msg(const char *msg) {
 
 // Debug assertions
 #ifdef DEBUG
-#ifdef API_LIBC
-#include <assert.h>
-#define ASSERT(x)  \
-    do {           \
-        assert(x); \
-    } while (0)
-#else
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
-#define ASSERT(x)                                                        \
-    do {                                                                 \
-        if (!(x))                                                        \
-            error_exit_msg(__FILE__                                      \
-                           ":" TOSTRING(__LINE__) ": assertion failed"); \
+#define ASSERT(x)                                                      \
+    do {                                                               \
+        if (!(x))                                                      \
+            error_exit_msg(__FILE__ ":" TOSTRING(                      \
+                __LINE__) ": Juvix assertion failed. Please report."); \
     } while (0)
-#endif
 #else
 #define ASSERT(x) \
     do {          \
@@ -167,5 +170,16 @@ static inline void *palign(void *ptr, uintptr_t alignment) {
 }
 #define ASSERT_ALIGNED(x, y) \
     ASSERT((uintptr_t)(x) == align((uintptr_t)(x), (y)))
+
+/*************************************************************************/
+/* Static assertions */
+
+#if defined(BITS32)
+STATIC_ASSERT_EQ(sizeof(void *), 4);
+#elif defined(BITS64)
+STATIC_ASSERT_EQ(sizeof(void *), 8);
+#else
+#error "Unsupported configuration"
+#endif
 
 #endif

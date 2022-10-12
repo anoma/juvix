@@ -3,6 +3,7 @@
 
 #include <juvix/closure.h>
 #include <juvix/mem/stack.h>
+#include <juvix/stacktrace.h>
 
 #define DECL_REG_ARG(k)            \
     register word_t juvix_arg_##k; \
@@ -17,17 +18,8 @@
 #define ARG_TMP(k) juvix_arg_##k
 #define ARG(k) juvix_arg_##k
 
-#ifdef EXT_LABELS_AS_VALUES
-#define LABEL_ADDR(label) &&label
-#define STORED_GOTO(ptr) goto *(ptr)
-typedef void *label_addr_t;
-#else
-#error \
-    "The \"labels as values\" compiler extension is required (use GCC or clang)."
-#endif
-
 /*
-    Expected macro sequence for a function call:
+    Macro sequence for a function call:
 
     STACK_ENTER(sp, n + 1);
     STACK_PUSH(sp, var1);
@@ -39,21 +31,23 @@ typedef void *label_addr_t;
     ARG(0) = arg0;
     ...
     ARG(m) = argm;
-    CALL(function, sp, unique_label);
+    CALL(fuid, function, sp, unique_label);
     STACK_POP(sp, varn);
     ...
     STACK_POP(sp, var1);
     STACK_LEAVE(sp);
 */
 
-#define CALL(fun, sp, label)           \
+#define CALL(fuid, fun, sp, label)     \
+    STACKTRACE_PUSH(fuid);             \
     STACK_PUSH(sp, LABEL_ADDR(label)); \
     goto fun;                          \
     label:                             \
-    --sp;
+    --sp;                              \
+    STACKTRACE_POP;
 
 /*
-    Expected macro sequence for a function tail-call:
+    Macro sequence for a function tail-call:
 
     ARG_TMP(0) = arg0;
     ...
@@ -61,23 +55,29 @@ typedef void *label_addr_t;
     ARG(0) = arg0;
     ...
     ARG(m) = argm;
-    TAIL_CALL(function);
+    TAIL_CALL(fuid, function);
 */
 
-#define TAIL_CALL(fun) goto fun
+#define TAIL_CALL(fuid, fun)  \
+    STACKTRACE_REPLACE(fuid); \
+    goto fun
 
-#define CALL_CLOSURE(cl, sp, label)    \
-    STACK_PUSH(sp, LABEL_ADDR(label)); \
-    STORED_GOTO(get_closure_addr(cl)); \
-    label:                             \
-    --sp;
+#define CALL_CLOSURE(cl, sp, label)        \
+    STACKTRACE_PUSH(get_closure_fuid(cl)); \
+    STACK_PUSH(sp, LABEL_ADDR(label));     \
+    STORED_GOTO(get_closure_addr(cl));     \
+    label:                                 \
+    --sp;                                  \
+    STACKTRACE_POP;
 
-#define TAIL_CALL_CLOSURE(cl) goto *get_closure_addr(cl)
+#define TAIL_CALL_CLOSURE(cl)                 \
+    STACKTRACE_REPLACE(get_closure_fuid(cl)); \
+    goto *get_closure_addr(cl)
 
 #define RETURN(sp) STORED_GOTO(*sp);
 
 /*
-    Expected macro sequence for calling the dispatch loop:
+    Macro sequence for calling the dispatch loop:
 
     STACK_ENTER(sp, n + m + DISPATCH_STACK_SIZE);
     STACK_PUSH(sp, var1);
@@ -102,7 +102,7 @@ typedef void *label_addr_t;
     } while (0)
 
 /*
-    Expected macro sequence for tail-calling the dispatch loop:
+    Macro sequence for tail-calling the dispatch loop:
 
     STACK_ENTER(sp, m);
     STACK_PUSH(sp, argm);
@@ -118,16 +118,16 @@ typedef void *label_addr_t;
         goto juvix_ccl_start;    \
     } while (0)
 
-#define DECL_CALL_CLOSURES(MAX_ARGS, sp, mp)                             \
+#define DECL_CALL_CLOSURES(MAX_ARGS, sp)                                 \
     ASSERT(MAX_ARGS <= MAX_FUNCTION_ARGS);                               \
     label_addr_t juvix_ccl_dispatch[MAX_ARGS];                           \
     label_addr_t juvix_ccl_return;                                       \
     label_addr_t juvix_ccl_addr;                                         \
     word_t *juvix_ccl_sp;                                                \
     size_t juvix_ccl_sargs;                                              \
+    word_t juvix_ccl_closure;                                            \
     juvix_ccl_start:                                                     \
     do {                                                                 \
-        word_t juvix_ccl_closure;                                        \
         STACK_POP(sp, juvix_ccl_closure);                                \
         size_t juvix_ccl_nargs = get_closure_nargs(juvix_ccl_closure);   \
         size_t juvix_ccl_nfields = get_nfields(juvix_ccl_closure);       \
@@ -142,7 +142,7 @@ typedef void *label_addr_t;
             STORED_GOTO(juvix_ccl_dispatch[juvix_ccl_largs]);            \
         } else {                                                         \
             EXTEND_CLOSURE(                                              \
-                juvix_result, juvix_ccl_closure, juvix_ccl_sargs, mp,    \
+                juvix_result, juvix_ccl_closure, juvix_ccl_sargs,        \
                 {                                                        \
                     STACK_SAVE(sp);                                      \
                     STACK_PUSH(sp, juvix_ccl_closure);                   \
@@ -164,31 +164,34 @@ typedef void *label_addr_t;
 
 #define DECL_DISPATCH(N, label) (juvix_ccl_dispatch[N] = LABEL_ADDR(label))
 
-#define DISPATCH(label)                                     \
-    if (juvix_ccl_sargs == 0 && juvix_ccl_return == NULL) { \
-        STACK_LEAVE(sp);                                    \
-        STORED_GOTO(juvix_ccl_addr);                        \
-    } else {                                                \
-        STACK_PUSH(sp, juvix_ccl_return);                   \
-        STACK_PUSH(sp, juvix_ccl_sargs);                    \
-        STACK_PUSH(sp, LABEL_ADDR(label));                  \
-        STORED_GOTO(juvix_ccl_addr);                        \
-    label:                                                  \
-        --sp;                                               \
-        STACK_POP(sp, juvix_ccl_sargs);                     \
-        STACK_POP(sp, juvix_ccl_return);                    \
-        if (juvix_ccl_sargs > 0) {                          \
-            goto juvix_ccl_start;                           \
-        } else {                                            \
-            ASSERT(juvix_ccl_return != NULL);               \
-            STORED_GOTO(juvix_ccl_return);                  \
-        }                                                   \
+#define DISPATCH(label)                                          \
+    if (juvix_ccl_sargs == 0 && juvix_ccl_return == NULL) {      \
+        STACKTRACE_REPLACE(get_closure_fuid(juvix_ccl_closure)); \
+        STACK_LEAVE(sp);                                         \
+        STORED_GOTO(juvix_ccl_addr);                             \
+    } else {                                                     \
+        STACKTRACE_PUSH(get_closure_fuid(juvix_ccl_closure));    \
+        STACK_PUSH(sp, juvix_ccl_return);                        \
+        STACK_PUSH(sp, juvix_ccl_sargs);                         \
+        STACK_PUSH(sp, LABEL_ADDR(label));                       \
+        STORED_GOTO(juvix_ccl_addr);                             \
+    label:                                                       \
+        STACKTRACE_POP;                                          \
+        --sp;                                                    \
+        STACK_POP(sp, juvix_ccl_sargs);                          \
+        STACK_POP(sp, juvix_ccl_return);                         \
+        if (juvix_ccl_sargs > 0) {                               \
+            goto juvix_ccl_start;                                \
+        } else {                                                 \
+            ASSERT(juvix_ccl_return != NULL);                    \
+            STORED_GOTO(juvix_ccl_return);                       \
+        }                                                        \
     }
 
 #define DISPATCH_STACK_SIZE 3
 
 /*
-    Expected macro sequence for argument dispatch declaration:
+    Macro sequence for argument dispatch declaration:
 
     DECL_DISPATCH(N+1, dispatch_label_N);
     DECL_DISPATCH(N, dispatch_label_N-1);
