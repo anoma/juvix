@@ -21,3 +21,6 @@
 #ifndef NDEBUG
 #define DEBUG
 #endif
+
+//#define NO_USER_DEBUG
+//#define NO_GC
