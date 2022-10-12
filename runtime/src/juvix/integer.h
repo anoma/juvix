@@ -6,36 +6,36 @@
 
 #define INT_REF(var) (*get_dword_ptr(var))
 
-#define ALLOC_INT(var, N, mp, SAVE, RESTORE)            \
-    do {                                                \
-        DALLOC((dword_t *)(var), 1, mp, SAVE, RESTORE); \
-        *(dword_t *)(var) = N;                          \
-        var = make_dword_ptr(var);                      \
+#define ALLOC_INT(var, N, SAVE, RESTORE)            \
+    do {                                            \
+        DALLOC((dword_t *)(var), 1, SAVE, RESTORE); \
+        *(dword_t *)(var) = N;                      \
+        var = make_dword_ptr(var);                  \
     } while (0)
 
-#define INT_OP(OP, vret, var1, var2, mp, SAVE, RESTORE)      \
+#define INT_OP(OP, vret, var1, var2, SAVE, RESTORE)          \
     do {                                                     \
-        DALLOC((dword_t *)(var), 1, mp, SAVE, RESTORE);      \
+        DALLOC((dword_t *)(var), 1, SAVE, RESTORE);          \
         *(dword_t *)(vret) = INT_REF(var1) OP INT_REF(var2); \
         vret = make_dword_ptr(vret);                         \
     } while (0)
 
 #define INT_CMP(CMP, vret, var1, var2) (vret = INT_REF(var1) CMP INT_REF(var2))
 
-#define INT_ADD(vret, var1, var2, mp, SAVE, RESTORE) \
-    INT_OP(+, vret, var1, var2, mp, SAVE, RESTORE)
+#define INT_ADD(vret, var1, var2, SAVE, RESTORE) \
+    INT_OP(+, vret, var1, var2, SAVE, RESTORE)
 
-#define INT_SUB(vret, var1, var2, mp, SAVE, RESTORE) \
-    INT_OP(-, vret, var1, var2, mp, SAVE, RESTORE)
+#define INT_SUB(vret, var1, var2, SAVE, RESTORE) \
+    INT_OP(-, vret, var1, var2, SAVE, RESTORE)
 
-#define INT_MUL(vret, var1, var2, mp, SAVE, RESTORE) \
-    INT_OP(*, vret, var1, var2, mp, SAVE, RESTORE)
+#define INT_MUL(vret, var1, var2, SAVE, RESTORE) \
+    INT_OP(*, vret, var1, var2, SAVE, RESTORE)
 
-#define INT_DIV(vret, var1, var2, mp, SAVE, RESTORE) \
-    INT_OP(/, vret, var1, var2, mp, SAVE, RESTORE)
+#define INT_DIV(vret, var1, var2, SAVE, RESTORE) \
+    INT_OP(/, vret, var1, var2, SAVE, RESTORE)
 
-#define INT_MOD(vret, var1, var2, mp, SAVE, RESTORE) \
-    INT_OP(%, vret, var1, var2, mp, SAVE, RESTORE)
+#define INT_MOD(vret, var1, var2, SAVE, RESTORE) \
+    INT_OP(%, vret, var1, var2, SAVE, RESTORE)
 
 #define INT_LE(vret, var1, var2) INT_CMP(<=, vret, var1, var2)
 #define INT_LT(vret, var1, var2) INT_CMP(<, vret, var1, var2)

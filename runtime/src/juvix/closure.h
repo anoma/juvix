@@ -37,25 +37,25 @@ static inline word_t *get_closure_args(word_t cl) { return (word_t *)cl + 3; }
 
 #define CLOSURE_ARG(var, n) FIELD(var, (n) + 3)
 
-#define ALLOC_CLOSURE(var, fuid, addr, nfields, nargs, mp, SAVE, RESTORE) \
-    do {                                                                  \
-        ALLOC(var, (nfields) + 1, mp, SAVE, RESTORE);                     \
-        FIELD(var, 0) = make_header(UID_CLOSURE, nfields);                \
-        FIELD(var, 1) = make_function_header(fuid, nargs);                \
-        FIELD(var, 2) = addr;                                             \
+#define ALLOC_CLOSURE(var, fuid, addr, nfields, nargs, SAVE, RESTORE) \
+    do {                                                              \
+        ALLOC(var, (nfields) + 1, SAVE, RESTORE);                     \
+        FIELD(var, 0) = make_header(UID_CLOSURE, nfields);            \
+        FIELD(var, 1) = make_function_header(fuid, nargs);            \
+        FIELD(var, 2) = addr;                                         \
     } while (0)
 
-#define EXTEND_CLOSURE(dest, src, n, mp, SAVE, RESTORE)                \
-    do {                                                               \
-        word_t juvix_header = FIELD(src, 0);                           \
-        ALLOC(dest, GET_NFIELDS(juvix_header) + 1, mp, SAVE, RESTORE); \
-        FIELD(dest, 0) = juvix_header;                                 \
-        size_t nargs = get_closure_nargs(src);                         \
-        word_t fuid = get_closure_fuid(src);                           \
-        ASSERT(nargs + n < nfields);                                   \
-        FIELD(dest, 1) = make_function_header(fuid, nargs + n);        \
-        FIELD(dest, 2) = FIELD(src, 2);                                \
-        memcopy(dest + 3, src + 3, nargs);                             \
+#define EXTEND_CLOSURE(dest, src, n, SAVE, RESTORE)                \
+    do {                                                           \
+        word_t juvix_header = FIELD(src, 0);                       \
+        ALLOC(dest, GET_NFIELDS(juvix_header) + 1, SAVE, RESTORE); \
+        FIELD(dest, 0) = juvix_header;                             \
+        size_t nargs = get_closure_nargs(src);                     \
+        word_t fuid = get_closure_fuid(src);                       \
+        ASSERT(nargs + n < nfields);                               \
+        FIELD(dest, 1) = make_function_header(fuid, nargs + n);    \
+        FIELD(dest, 2) = FIELD(src, 2);                            \
+        memcopy(dest + 3, src + 3, nargs);                         \
     } while (0)
 
 #endif

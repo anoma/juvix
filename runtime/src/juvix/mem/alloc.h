@@ -23,8 +23,16 @@ static inline word_t *alloc_words_memory_pointer() {
     return alloc_youngest_generation->words->free_begin;
 }
 
+static inline word_t *alloc_words_memory_end() {
+    return alloc_youngest_generation->words->free_end;
+}
+
 static inline dword_t *alloc_dwords_memory_pointer() {
     return alloc_youngest_generation->dwords->free_begin;
+}
+
+static inline dword_t *alloc_dwords_memory_end() {
+    return alloc_youngest_generation->dwords->free_end;
 }
 
 #define XALLOC(ptr, n, mp, ALLOCATE)            \
@@ -38,24 +46,27 @@ static inline dword_t *alloc_dwords_memory_pointer() {
         };                                      \
     } while (0)
 
-// Allocate an n-word object and assign it to `ptr`. `mp` should be a word_t*
-// pointer variable reserved for managing allocator data. `SAVE` and `RESTORE`
-// should save and restore live local variables on the global stack (alloc_words
-// can lauch GC which needs access to these variables).
-#define ALLOC(ptr, n, mp, SAVE, RESTORE)   \
-    XALLOC(ptr, n, mp, {                   \
-        SAVE;                              \
-        alloc_words(mp - n);               \
-        mp = alloc_words_memory_pointer(); \
-        RESTORE;                           \
+// Allocate an n-word object and assign it to `ptr`. `SAVE` and `RESTORE` should
+// save and restore live local variables on the global stack (alloc_words can
+// lauch GC which needs access to these variables).
+#define ALLOC(ptr, n, SAVE, RESTORE)                    \
+    XALLOC(ptr, n, juvix_words_ptr, {                   \
+        SAVE;                                           \
+        alloc_words(juvix_words_ptr - n);               \
+        juvix_words_ptr = alloc_words_memory_pointer(); \
+        RESTORE;                                        \
     })
 
-#define DALLOC(ptr, n, mp, SAVE, RESTORE)   \
-    XALLOC(ptr, n, mp, {                    \
-        SAVE;                               \
-        alloc_dwords(mp - n);               \
-        mp = alloc_dwords_memory_pointer(); \
-        RESTORE;                            \
+#define DALLOC(ptr, n, SAVE, RESTORE)                     \
+    XALLOC(ptr, n, juvix_dwords_ptr, {                    \
+        SAVE;                                             \
+        alloc_dwords(mp - n);                             \
+        juvix_dwords_ptr = alloc_dwords_memory_pointer(); \
+        RESTORE;                                          \
     })
+
+#define DECL_ALLOC_VARS               \
+    register word_t *juvix_words_ptr; \
+    dword_t *juvix_dwords_ptr;
 
 #endif

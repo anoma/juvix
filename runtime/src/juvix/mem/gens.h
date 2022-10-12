@@ -16,10 +16,10 @@ typedef struct Generation {
     struct Generation *prev;
     // Pointer to the next (younger) generation.
     struct Generation *next;
-    size_t pages_num;
-    size_t pages_max;
     pool_t *words;
     pool_t *dwords;
+    size_t pages_num;
+    size_t pages_max;
 } generation_t;
 
 void gens_init();

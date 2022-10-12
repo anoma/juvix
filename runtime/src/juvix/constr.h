@@ -9,14 +9,14 @@
         var = make_header(uid, 0);     \
     } while (0)
 
-#define ALLOC_CONSTR_BOXED(var, uid, nfields, mp, SAVE, RESTORE)  \
-    do {                                                          \
-        ALLOC((word_t *)(var), (nfields) + 1, mp, SAVE, RESTORE); \
-        SET_FIELD(var, 0, make_header(uid, nfields));             \
+#define ALLOC_CONSTR_BOXED(var, uid, nfields, SAVE, RESTORE)  \
+    do {                                                      \
+        ALLOC((word_t *)(var), (nfields) + 1, SAVE, RESTORE); \
+        SET_FIELD(var, 0, make_header(uid, nfields));         \
     } while (0)
 
-#define ALLOC_CONSTR_PAIR(var, mp, SAVE, RESTORE) \
-    ALLOC((word_t *)(var), 2, mp, SAVE, RESTORE)
+#define ALLOC_CONSTR_PAIR(var, SAVE, RESTORE) \
+    ALLOC((word_t *)(var), 2, SAVE, RESTORE)
 
 #define FST(var) FIELD(var, 0)
 #define SND(var) FIELD(var, 1)
