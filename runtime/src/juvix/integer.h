@@ -20,7 +20,8 @@
         vret = make_dword_ptr(vret);                         \
     } while (0)
 
-#define INT_CMP(CMP, vret, var1, var2) (vret = INT_REF(var1) CMP INT_REF(var2))
+#define INT_CMP(CMP, vret, var1, var2) \
+    (vret = make_bool(INT_REF(var1) CMP INT_REF(var2)))
 
 #define INT_ADD(vret, var1, var2, SAVE, RESTORE) \
     INT_OP(+, vret, var1, var2, SAVE, RESTORE)
