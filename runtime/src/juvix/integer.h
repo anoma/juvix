@@ -4,7 +4,7 @@
 #include <juvix/mem/alloc.h>
 #include <juvix/object.h>
 
-#define INT_REF(var) (*get_dword_ptr(var))
+#define INT_REF(var) (*(long_t *)get_dword_ptr(var))
 
 #define ALLOC_INT(var, N, SAVE, RESTORE)            \
     do {                                            \
