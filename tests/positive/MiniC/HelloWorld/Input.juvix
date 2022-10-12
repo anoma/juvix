@@ -19,7 +19,24 @@ compile put-str-ln {
   c ↦ "putStrLn";
 };
 
+infixl 1 >>;
+axiom >> : Action → Action → Action;
+
+compile >> {
+  ghc ↦ "(>>)";
+  c ↦ "sequence";
+};
+
 main : Action;
-main := put-str-ln "hello world!";
+main :=
+ put-str-ln "hello world!"
+ >> put-str-ln "hello world!"
+ >> put-str-ln "hello world!"
+ >> put-str-ln "hello world!"
+ >> put-str-ln "hello world!"
+ >> put-str-ln "hello world!"
+ >> put-str-ln "hello world!"
+ >> put-str-ln "hello world!"
+ >> put-str-ln "hello world!";
 
 end;

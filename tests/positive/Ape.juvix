@@ -1,0 +1,34 @@
+module Ape;
+
+axiom String : Type;
+
+infixl 1 >>;
+axiom >> : String → String → String;
+
+infixr 3 -;
+axiom - : String → String → String;
+
+infixl 2 +;
+axiom + : String → String → String;
+
+t : String;
+t := "Hello"
+ >> "Hello"
+ >> "Hello"
+ >> "Hello"
+ + "Hello"
+ + "Hello"
+ + "Hello"
+ + "Hello"
+ - "Hello"
+ - "Hello"
+ + "Hello"
+ + "Hello"
+ + "Hello"
+ + "Hello"
+ + "Hello"
+ + "Hello"
+ >> "Hello"
+ >> "Hello";
+
+end;

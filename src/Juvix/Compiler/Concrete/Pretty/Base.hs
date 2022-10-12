@@ -9,14 +9,12 @@ import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-import Juvix.Compiler.Concrete.Extra (unfoldApplication)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Data.Ape
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
-import Juvix.Prelude.Pretty qualified as PP
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
 doc opts =

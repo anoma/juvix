@@ -39,20 +39,20 @@ ppCape = \case
 
 ppChain :: forall a r. Members '[Reader (ApeParams a)] r => Chain a -> Sem r (Doc CodeAnn)
 ppChain (Chain fx f links) = do
-  f' <- ppExpression fx f
+  f' <- ppLinkExpr fx f
   args' <- mapM ppLink links
-  return $ PP.group (f' <+> nest 2 (vsep args'))
+  return $ PP.group (f' <> nest 2 (line <> vsep args'))
   where
     ppLink :: (Maybe a, Cape a) -> Sem r (Doc CodeAnn)
     ppLink (op, a) = do
       pp <- asks (^. apePP)
       let op' = pp <$> op
-      a' <- ppExpression fx a
+      a' <- ppLinkExpr fx a
       return (op' <?+> a')
 
-ppExpression ::
+ppLinkExpr ::
   Members '[Reader (ApeParams a)] r => Fixity -> Cape a -> Sem r (Doc CodeAnn)
-ppExpression fixlr e =
+ppLinkExpr fixlr e =
   parensCond (apeParens (atomicity e) fixlr) <$> ppCape e
 
 apeParens :: Atomicity -> Fixity -> Bool
