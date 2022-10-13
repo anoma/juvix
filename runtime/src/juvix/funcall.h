@@ -4,6 +4,8 @@
 #include <juvix/funcall/funcall.h>
 #include <juvix/funcall/stacktrace.h>
 
+#define FUNCALL_DECLS DECL_RESULT
+
 static inline funcall_init() { stacktrace_init(); }
 
 #endif

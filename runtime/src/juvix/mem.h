@@ -12,4 +12,8 @@ static inline void mem_init() {
     stack_init();
 }
 
+#define MEM_DECLS    \
+    DECL_ALLOC_VARS; \
+    DECL_STACK_POINTER
+
 #endif

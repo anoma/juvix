@@ -10,6 +10,10 @@
 #include <juvix/mem/gens.h>
 #include <juvix/mem/pages.h>
 
+#define DECL_ALLOC_VARS                                                        \
+    register word_t *juvix_words_ptr = (word_t *)(PAGE_SIZE - sizeof(word_t)); \
+    dword_t *juvix_dwords_ptr = (dword_t *)(PAGE_SIZE - sizeof(dword_t));
+
 extern generation_t *alloc_youngest_generation;
 
 // Initialise the allocator module.
@@ -24,7 +28,8 @@ static inline word_t *alloc_words_memory_pointer() {
     if (alloc_youngest_generation->words != NULL) {
         return alloc_youngest_generation->words->free_begin;
     } else {
-        return NULL;
+        // The next ALLOC will trigger a full allocation
+        return (word_t *)(PAGE_SIZE - sizeof(word_t));
     }
 }
 
@@ -32,7 +37,8 @@ static inline dword_t *alloc_dwords_memory_pointer() {
     if (alloc_youngest_generation->dwords != NULL) {
         return alloc_youngest_generation->dwords->free_begin;
     } else {
-        return NULL;
+        // The next DALLOC will trigger a full allocation
+        return (dword_t *)(PAGE_SIZE - sizeof(dword_t));
     }
 }
 
@@ -60,10 +66,6 @@ static inline void alloc_save_dwords_memory_pointer(dword_t *ptr) {
             mp += n;                            \
         };                                      \
     } while (0)
-
-#define DECL_ALLOC_VARS                                                        \
-    register word_t *juvix_words_ptr = (word_t *)(PAGE_SIZE - sizeof(word_t)); \
-    dword_t *juvix_dwords_ptr = (dword_t *)(PAGE_SIZE - sizeof(dword_t));
 
 #define SAVE_MEMORY_POINTERS                          \
     alloc_save_words_memory_pointer(juvix_words_ptr); \

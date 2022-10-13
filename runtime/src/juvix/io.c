@@ -33,6 +33,9 @@ void io_flush() {
 }
 
 static void io_write(word_t x) {
+    if (io_buffer == NULL) {
+        io_init();
+    }
     ASSERT(io_index < PAGE_SIZE);
     if (is_cstring(x)) {
         const char *str = get_cstring(x);
@@ -60,6 +63,9 @@ static void io_write(word_t x) {
 }
 
 static word_t io_readln() {
+    if (io_buffer == NULL) {
+        io_init();
+    }
     ASSERT(io_index < PAGE_SIZE);
 #ifdef API_LIBC
     io_flush();
@@ -71,6 +77,12 @@ static word_t io_readln() {
 #else
     error_exit_msg("error: IO read not available");
 #endif
+}
+
+void io_print_toplevel(word_t x) {
+    if (x != OBJ_VOID) {
+        io_write(x);
+    }
 }
 
 bool io_interpret(word_t x, word_t *ret, word_t *arg) {
