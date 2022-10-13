@@ -1,0 +1,9 @@
+module BuiltinsBool;
+
+builtin boolean
+inductive Bool {
+  true : Bool;
+  false : Bool;
+};
+
+end;

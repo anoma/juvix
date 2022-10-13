@@ -1,10 +1,20 @@
 module Input;
 
+builtin boolean
+inductive Bool {
+  true : Bool;
+  false : Bool;
+};
+
 builtin natural
 inductive ℕ {
  zero : ℕ;
  suc : ℕ → ℕ;
 };
+
+boolToNat : Bool → ℕ;
+boolToNat false := zero;
+boolToNat true := suc zero;
 
 infixl 4 +;
 builtin natural-plus
@@ -29,6 +39,9 @@ builtin IO-sequence axiom >> : IO → IO → IO;
 builtin natural-print axiom printNat : ℕ → IO;
 
 main : IO;
-main := printNat (mult 3 (2 + 2)) >> printNat 2;
+main := printNat (boolToNat true)
+     >> printNat (boolToNat false)
+     >> printNat (mult 3 (2 + 2))
+     >> printNat 2;
 
 end;
