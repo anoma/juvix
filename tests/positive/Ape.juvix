@@ -11,9 +11,18 @@ axiom - : String → String → String;
 infixl 2 +;
 axiom + : String → String → String;
 
+axiom f : String → String;
+
 t : String;
-t := "Hello"
- >> "Hello"
+t := f
+( "Hello"
+ + "Hello"
+ + "Hello"
+ + "Hello"
+ + "Hello"
+ + "Hello"
+ + "Hello"
+ + "Hello"
  >> "Hello"
  >> "Hello"
  + "Hello"
@@ -22,13 +31,10 @@ t := "Hello"
  + "Hello"
  - "Hello"
  - "Hello"
- + "Hello"
- + "Hello"
- + "Hello"
- + "Hello"
++ ( "Hello" + "Hello" + "Hello" + "Hello")
  + "Hello"
  + "Hello"
  >> "Hello"
- >> "Hello";
+ >> "Hello");
 
 end;

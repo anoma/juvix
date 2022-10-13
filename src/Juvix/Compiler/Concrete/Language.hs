@@ -1193,7 +1193,6 @@ instance IsApe Expression Expression where
     ExpressionApplication a -> toApe a
     ExpressionInfixApplication a -> toApe a
     ExpressionPostfixApplication a -> toApe a
-    -- ExpressionParensIdentifier a -> toApe a -- TODO
     e ->
       ApeLeaf
         ( Leaf

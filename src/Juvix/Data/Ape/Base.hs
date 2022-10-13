@@ -62,7 +62,7 @@ makeLenses ''Postfix
 toCape :: forall a. Ape a -> Cape a
 toCape = \case
   ApeLeaf l -> CapeLeaf l
-  ApeInfix a -> unfoldInfix a
+  ApeInfix a -> CapeChain (unfoldInfix a)
   ApePostfix p -> CapeUChain (unfoldPostfix p)
   where
     unfoldPostfix :: Postfix a -> UChain a
@@ -80,11 +80,11 @@ toCape = \case
             | fx == fx' -> go (pure op' <> ops) l'
           e -> (toCape e, ops)
 
-    unfoldInfix :: Infix a -> Cape a
+    unfoldInfix :: Infix a -> Chain a
     unfoldInfix (Infix fx l op r)
-      | isLeftAssoc fx = CapeChain leftAssoc
-      | isRightAssoc fx = CapeChain rightAssoc
-      | otherwise = CapeChain noAssoc
+      | isLeftAssoc fx = leftAssoc
+      | isRightAssoc fx = rightAssoc
+      | otherwise = noAssoc
       where
         noAssoc :: Chain a
         noAssoc =
