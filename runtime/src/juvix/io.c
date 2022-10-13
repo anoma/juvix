@@ -1,9 +1,9 @@
 
-#include <juvix/constr.h>
-#include <juvix/cstring.h>
 #include <juvix/io.h>
 #include <juvix/mem/pages.h>
-#include <juvix/print.h>
+#include <juvix/object/constr.h>
+#include <juvix/object/cstring.h>
+#include <juvix/object/print.h>
 
 static char *io_buffer = NULL;
 static uint io_index = 0;
