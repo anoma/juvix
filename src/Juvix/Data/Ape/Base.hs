@@ -84,8 +84,16 @@ toCape = \case
     unfoldInfix (Infix fx l op r)
       | isLeftAssoc fx = CapeChain leftAssoc
       | isRightAssoc fx = CapeChain rightAssoc
-      | otherwise = error "what to do?"
+      | otherwise = CapeChain noAssoc
       where
+        noAssoc :: Chain a
+        noAssoc =
+          Chain
+            { _chainFixity = fx,
+              _chainHead = toCape l,
+              _chainLinks = pure (op, toCape r)
+            }
+
         rightAssoc :: Chain a
         rightAssoc =
           Chain
