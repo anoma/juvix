@@ -11,6 +11,7 @@ class IsApe a e where
 data Ape a
   = ApeLeaf (Leaf a)
   | ApeInfix (Infix a)
+  | ApeApp (App a)
   | ApePostfix (Postfix a)
 
 -- TODO add CapeParens
@@ -19,13 +20,19 @@ data Ape a
 data Cape a
   = CapeLeaf (Leaf a)
   | CapeChain (Chain a)
+  | CapeAppChain (AppChain a)
   | CapeUChain (UChain a)
 
 -- | A binary chain of application with the same fixity
 data Chain a = Chain
   { _chainFixity :: Fixity,
     _chainHead :: Cape a,
-    _chainLinks :: NonEmpty (Maybe a, Cape a)
+    _chainLinks :: NonEmpty (a, Cape a)
+  }
+
+data AppChain a = AppChain
+  { _achainHead :: Cape a,
+    _achainLinks :: NonEmpty (Cape a)
   }
 
 -- | A unary chain of application with the same fixity
@@ -40,10 +47,15 @@ data Leaf a = Leaf
     _leafAtomicity :: Atomicity
   }
 
+data App a = App
+  { _appLeft :: Ape a,
+    _appRight :: Ape a
+  }
+
 data Infix a = Infix
   { _infixFixity :: Fixity,
     _infixLeft :: Ape a,
-    _infixOp :: Maybe a,
+    _infixOp :: a,
     _infixRight :: Ape a
   }
 
@@ -55,6 +67,7 @@ data Postfix a = Postfix
 
 makeLenses ''Leaf
 makeLenses ''Chain
+makeLenses ''AppChain
 makeLenses ''UChain
 makeLenses ''Infix
 makeLenses ''Postfix
@@ -63,6 +76,7 @@ toCape :: forall a. Ape a -> Cape a
 toCape = \case
   ApeLeaf l -> CapeLeaf l
   ApeInfix a -> CapeChain (unfoldInfix a)
+  ApeApp a -> CapeAppChain (unfoldApp a)
   ApePostfix p -> CapeUChain (unfoldPostfix p)
   where
     unfoldPostfix :: Postfix a -> UChain a
@@ -79,6 +93,18 @@ toCape = \case
           ApePostfix (Postfix fx' l' op')
             | fx == fx' -> go (pure op' <> ops) l'
           e -> (toCape e, ops)
+
+    unfoldApp :: App a -> AppChain a
+    unfoldApp (App l r) = go (pure (toCape r)) l
+      where
+        go :: NonEmpty (Cape a) -> Ape a -> AppChain a
+        go ac = \case
+          ApeApp (App l' r') -> go (pure (toCape r') <> ac) l'
+          e ->
+            AppChain
+              { _achainHead = toCape e,
+                _achainLinks = ac
+              }
 
     unfoldInfix :: Infix a -> Chain a
     unfoldInfix (Infix fx l op r)
@@ -102,34 +128,40 @@ toCape = \case
               _chainLinks = go op r
             }
           where
-            go :: Maybe a -> Ape a -> NonEmpty (Maybe a, Cape a)
+            go :: a -> Ape a -> NonEmpty (a, Cape a)
             go prevOp = \case
               ApeInfix (Infix fx' l' op' r')
                 | fx == fx' -> pure (prevOp, toCape l') <> go op' r'
               e -> pure (prevOp, toCape e)
+
         leftAssoc :: Chain a
-        leftAssoc =
-          Chain
-            { _chainFixity = fx,
-              _chainHead,
-              _chainLinks
-            }
+        leftAssoc = go (pure (op, toCape r)) l
           where
-            (_chainHead, _chainLinks) = go (pure (op, toCape r)) l
-            go :: NonEmpty (Maybe a, Cape a) -> Ape a -> (Cape a, NonEmpty (Maybe a, Cape a))
+            go :: NonEmpty (a, Cape a) -> Ape a -> Chain a
             go ac = \case
               ApeInfix (Infix fx' l' op' r')
                 | fx == fx' -> go (pure (op', toCape r') <> ac) l'
-              e -> (toCape e, ac)
+              e ->
+                Chain
+                  { _chainFixity = fx,
+                    _chainHead = toCape e,
+                    _chainLinks = ac
+                  }
 
 instance HasAtomicity (Leaf a) where
   atomicity = (^. leafAtomicity)
+
+instance HasAtomicity (App a) where
+  atomicity = const (Aggregate appFixity)
 
 instance HasAtomicity (Infix a) where
   atomicity = Aggregate . (^. infixFixity)
 
 instance HasAtomicity (Postfix a) where
   atomicity = Aggregate . (^. postfixFixity)
+
+instance HasAtomicity (AppChain a) where
+  atomicity = const (Aggregate appFixity)
 
 instance HasAtomicity (Chain a) where
   atomicity = Aggregate . (^. chainFixity)
@@ -142,9 +174,11 @@ instance HasAtomicity (Ape a) where
     ApeLeaf l -> atomicity l
     ApeInfix a -> atomicity a
     ApePostfix p -> atomicity p
+    ApeApp a -> atomicity a
 
 instance HasAtomicity (Cape a) where
   atomicity = \case
     CapeLeaf l -> atomicity l
     CapeChain c -> atomicity c
     CapeUChain c -> atomicity c
+    CapeAppChain c -> atomicity c

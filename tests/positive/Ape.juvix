@@ -2,39 +2,50 @@ module Ape;
 
 axiom String : Type;
 
-infixl 1 >>;
-axiom >> : String → String → String;
+infixl 7 *;
+axiom * : String → String → String;
 
 infixr 3 -;
 axiom - : String → String → String;
 
-infixl 2 +;
+infixl 1 >>;
+axiom >> : String → String → String;
+
+infixl 6 +;
 axiom + : String → String → String;
+
+infixr 6 ++;
+axiom ++ : String → String → String;
+
 
 axiom f : String → String;
 
 t : String;
 t := f
-( "Hello"
- + "Hello"
- + "Hello"
- + "Hello"
- + "Hello"
- + "Hello"
- + "Hello"
- + "Hello"
- >> "Hello"
- >> "Hello"
- + "Hello"
- + "Hello"
- + "Hello"
- + "Hello"
- - "Hello"
- - "Hello"
-+ ( "Hello" + "Hello" + "Hello" + "Hello")
- + "Hello"
- + "Hello"
- >> "Hello"
- >> "Hello");
+(
+"Hellooooooooo"
+>> "Hellooooooooo"
+>> "Hellooooooooo"
+>> "Hellooooooooo"
+>> "Hellooooooooo"
+>> "Hellooooooooo"
+>> "Hellooooooooo"
+>> "Hellooooooooo"
+ + "Hellooooooooo"
+ + "Hellooooooooo"
+ + ("Hellooooooooo"
+ ++ "Hellooooooooo"
+ ++ "Hellooooooooo"
+ ++ "Hellooooooooo"
+ ++ "Hellooooooooo"
+ ++ "Hellooooooooo")
+ + "Hellooooooooo"
+ + "Hellooooooooo"
+ * "Hellooooooooo"
+ * "Hellooooooooo"
+ * "Hellooooooooo"
+ * "Hellooooooooo"
+ * "Hellooooooooo"
+* "Hellooooooooo") ;
 
 end;

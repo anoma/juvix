@@ -35,27 +35,55 @@ ppCape :: Members '[Reader (ApeParams a)] r => Cape a -> Sem r (Doc CodeAnn)
 ppCape = \case
   CapeLeaf l -> ppLeaf l
   CapeChain c -> ppChain c
+  CapeAppChain c -> ppAppChain c
   CapeUChain {} -> error "todo"
 
-ppChain :: forall a r. Members '[Reader (ApeParams a)] r => Chain a -> Sem r (Doc CodeAnn)
-ppChain (Chain fx f links) = do
+ppAppChain :: forall a r. Members '[Reader (ApeParams a)] r => AppChain a -> Sem r (Doc CodeAnn)
+ppAppChain (AppChain f links) = do
   f' <- ppLinkExpr fx f
-  args' <- mapM ppLink links
+  args' <- mapM (ppLinkExpr fx) links
   return $ PP.group (f' <> nest 2 (line <> vsep args'))
   where
-    ppLink :: (Maybe a, Cape a) -> Sem r (Doc CodeAnn)
+    fx :: Precedence
+    fx = appFixity ^. fixityPrecedence
+
+ppChain :: forall a r. Members '[Reader (ApeParams a)] r => Chain a -> Sem r (Doc CodeAnn)
+ppChain (Chain opFix f links) = do
+  f' <- ppLinkExpr fx f
+  args' <- mapM ppLink links
+  return $ PP.group (f' <> line <> vsep args')
+  where
+    fx :: Precedence
+    fx = opFix ^. fixityPrecedence
+    ppLink :: (a, Cape a) -> Sem r (Doc CodeAnn)
     ppLink (op, a) = do
       pp <- asks (^. apePP)
-      let op' = pp <$> op
+      let op' = pp op
       a' <- ppLinkExpr fx a
-      return (op' <?+> a')
+      return (op' <+> a')
+
+nestIf :: Bool -> Doc a -> Doc a
+nestIf = \case
+  True -> nest 2
+  False -> id
 
 ppLinkExpr ::
-  Members '[Reader (ApeParams a)] r => Fixity -> Cape a -> Sem r (Doc CodeAnn)
-ppLinkExpr fixlr e =
-  parensCond (apeParens (atomicity e) fixlr) <$> ppCape e
+  Members '[Reader (ApeParams a)] r => Precedence -> Cape a -> Sem r (Doc CodeAnn)
+ppLinkExpr opFix e =
+  nestIf (apeNest (atomicity e) opFix)
+    . parensCond cond
+    <$> ppCape e
+  where
+    cond = apeParens (atomicity e) opFix
 
-apeParens :: Atomicity -> Fixity -> Bool
-apeParens argAtom opInf = case argAtom of
+apeNest :: Atomicity -> Precedence -> Bool
+apeNest argAtom opPrec = case argAtom of
+  Atom -> True
+  Aggregate argFix -> argFix ^. fixityPrecedence >= opPrec
+
+apeParens :: Atomicity -> Precedence -> Bool
+apeParens argAtom opPrec = case argAtom of
   Atom -> False
-  Aggregate argInf -> argInf <= opInf
+  -- if the precedences are equal, since they are not part of the same chain it
+  -- means that they do not associate and thus parens are needed.
+  Aggregate argFix -> argFix ^. fixityPrecedence <= opPrec

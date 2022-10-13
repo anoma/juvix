@@ -1161,12 +1161,10 @@ instance
 
 instance IsApe Application Expression where
   toApe (Application l r) =
-    ApeInfix
-      Infix
-        { _infixFixity = appFixity,
-          _infixLeft = toApe l,
-          _infixRight = toApe r,
-          _infixOp = Nothing
+    ApeApp
+      Ape.App
+        { _appLeft = toApe l,
+          _appRight = toApe r
         }
 
 instance IsApe InfixApplication Expression where
@@ -1176,7 +1174,7 @@ instance IsApe InfixApplication Expression where
         { _infixFixity = getFixity i,
           _infixLeft = toApe l,
           _infixRight = toApe r,
-          _infixOp = Just (ExpressionIdentifier op)
+          _infixOp = ExpressionIdentifier op
         }
 
 instance IsApe PostfixApplication Expression where

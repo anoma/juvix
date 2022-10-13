@@ -21,7 +21,10 @@ instance Ord Precedence where
 data UnaryAssoc = AssocPostfix
   deriving stock (Show, Eq, Ord)
 
-data BinaryAssoc = AssocNone | AssocLeft | AssocRight
+data BinaryAssoc
+  = AssocNone
+  | AssocLeft
+  | AssocRight
   deriving stock (Show, Eq, Ord)
 
 data OperatorArity
