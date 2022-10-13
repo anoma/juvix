@@ -34,33 +34,33 @@ static size_t print_long(char *buf, size_t n, long_t x) {
         if (--n == 0) return buf - buf0; \
     } while (0)
 
-static size_t print_object(char *buf, size_t n, word_t x);
+static size_t print_object(bool is_top, char *buf, size_t n, word_t x);
 
-static size_t print_args(char *restrict buf, size_t n, const char *restrict str,
-                         word_t *args, size_t nargs) {
+static size_t print_args(bool is_top, char *restrict buf, size_t n,
+                         const char *restrict str, word_t *args, size_t nargs) {
     char *buf0 = buf;
-    if (nargs > 0) {
-        PUTC(')');
+    if (!is_top && nargs > 0) {
+        PUTC('(');
     }
     while (*str) {
         PUTC(*str++);
     }
     for (size_t i = 0; i < nargs; ++i) {
         PUTC(' ');
-        size_t delta = print_object(buf, n, args[i]);
+        size_t delta = print_object(false, buf, n, args[i]);
         buf += delta;
         n -= delta;
         if (n == 0) {
             return buf - buf0;
         }
     }
-    if (nargs > 0) {
+    if (!is_top && nargs > 0) {
         PUTC(')');
     }
     return buf - buf0;
 }
 
-static size_t print_object(char *buf, size_t n, word_t x) {
+static size_t print_object(bool is_top, char *buf, size_t n, word_t x) {
     switch (GET_KIND(x)) {
     case KIND_UNBOXED0:
     case KIND_UNBOXED1:
@@ -75,7 +75,8 @@ static size_t print_object(char *buf, size_t n, word_t x) {
                 size_t nargs = get_closure_nargs(x);
                 ASSERT(get_closure_fuid(x) < juvix_functions_num);
                 const char *str = juvix_function_info[get_closure_fuid(x)].name;
-                buf += print_args(buf, n, str, get_closure_args(x), nargs);
+                buf +=
+                    print_args(is_top, buf, n, str, get_closure_args(x), nargs);
                 break;
             }
             case UID_CSTRING: {
@@ -89,13 +90,14 @@ static size_t print_object(char *buf, size_t n, word_t x) {
                 size_t nargs = GET_NFIELDS(h);
                 ASSERT(GET_UID(x) < juvix_constrs_num);
                 const char *str = juvix_constr_info[GET_UID(h)].name;
-                buf += print_args(buf, n, str, get_constr_args(x), nargs);
+                buf +=
+                    print_args(is_top, buf, n, str, get_constr_args(x), nargs);
                 break;
             }
             }
         } else {
             PUTC('(');
-            delta = print_object(buf, n, FST(x));
+            delta = print_object(true, buf, n, FST(x));
             n -= delta;
             buf += delta;
             if (n == 0) {
@@ -103,7 +105,7 @@ static size_t print_object(char *buf, size_t n, word_t x) {
             }
             PUTC(',');
             PUTC(' ');
-            delta = print_object(buf, n, SND(x));
+            delta = print_object(true, buf, n, SND(x));
             n -= delta;
             buf += delta;
             if (n == 0) {
@@ -134,7 +136,7 @@ static size_t print_object(char *buf, size_t n, word_t x) {
 #undef PUTC
 
 size_t print_to_buf(char *buf, size_t n, word_t x) {
-    size_t k = print_object(buf, n, x);
+    size_t k = print_object(true, buf, n, x);
     if (k < n) {
         buf[k] = 0;
     }
