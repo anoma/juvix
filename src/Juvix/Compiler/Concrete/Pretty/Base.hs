@@ -9,12 +9,14 @@ import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+import Juvix.Compiler.Concrete.Extra (unfoldApplication)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Data.Ape
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
+import Juvix.Prelude.Pretty qualified as PP
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
 doc opts =
@@ -600,11 +602,12 @@ instance PrettyCode PostfixApplication where
       return $ postfixAppParameter' <+> postfixAppOperator'
 
 instance PrettyCode Application where
-  ppCode a@(Application l r) =
+  ppCode a =
     apeHelper a $ do
-      l' <- ppLeftExpression appFixity l
-      r' <- ppRightExpression appFixity r
-      return $ l' <+> r'
+      let (f, args) = unfoldApplication a
+      f' <- ppCode f
+      args' <- mapM ppCodeAtom args
+      return $ PP.group (f' <+> nest 2 (vsep args'))
 
 apeHelper :: (IsApe a Expression, Members '[Reader Options] r) => a -> Sem r (Doc CodeAnn) -> Sem r (Doc CodeAnn)
 apeHelper a alt = do
