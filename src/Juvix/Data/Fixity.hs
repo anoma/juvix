@@ -75,10 +75,15 @@ atomParens :: (Fixity -> Bool) -> Atomicity -> Fixity -> Bool
 atomParens associates argAtom opInf = case argAtom of
   Atom -> False
   Aggregate argInf
-    | argInf > opInf -> False
-    | argInf < opInf -> True
+    | argPrec > opPrec -> False
+    | argPrec < opPrec -> True
     | associates opInf -> False
     | otherwise -> True
+    where
+      argPrec :: Precedence
+      argPrec = argInf ^. fixityPrecedence
+      opPrec :: Precedence
+      opPrec = opInf ^. fixityPrecedence
 
 isAtomic :: HasAtomicity a => a -> Bool
 isAtomic x = case atomicity x of

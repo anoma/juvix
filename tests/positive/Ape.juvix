@@ -17,8 +17,10 @@ axiom + : String → String → String;
 infixr 6 ++;
 axiom ++ : String → String → String;
 
-
 axiom f : String → String;
+
+x : String;
+x := "" + ("" ++ "");
 
 t : String;
 t := f
