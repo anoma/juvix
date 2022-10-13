@@ -105,9 +105,16 @@ static inline word_t get_uid(word_t ptr) { return GET_UID(FIELD(ptr, 0)); }
 // The header is followed by a zero-terminated string. FIELDS contains the
 // length of the string rounded up to a multiple of word size.
 #define UID_CSTRING 1
-#define UID_UNIT 2
-#define UID_TRUE 3
-#define UID_FALSE 4
+
+// Builtin constructor uids
+#define UID_UNIT (MAX_SPECIAL_UIDS)
+#define UID_VOID (MAX_SPECIAL_UIDS + 1)
+#define UID_TRUE (MAX_SPECIAL_UIDS + 2)
+#define UID_FALSE (MAX_SPECIAL_UIDS + 3)
+#define UID_RETURN (MAX_SPECIAL_UIDS + 4)
+#define UID_BIND (MAX_SPECIAL_UIDS + 5)
+#define UID_WRITE (MAX_SPECIAL_UIDS + 6)
+#define UID_READLN (MAX_SPECIAL_UIDS + 7)
 
 static inline bool is_closure(word_t x) {
     return is_ptr(x) && has_header(x) && get_uid(x) == UID_CLOSURE;
@@ -116,5 +123,8 @@ static inline bool is_closure(word_t x) {
 static inline bool is_cstring(word_t x) {
     return is_ptr(x) && has_header(x) && get_uid(x) == UID_CSTRING;
 }
+
+#define OBJ_UNIT make_header(UID_UNIT, 0)
+#define OBJ_VOID make_header(UID_VOID, 0)
 
 #endif

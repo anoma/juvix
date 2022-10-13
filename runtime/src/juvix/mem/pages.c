@@ -10,7 +10,7 @@ void *palloc(size_t n) {
     // `aligned_alloc` requires C11
     void *ptr = aligned_alloc(PAGE_SIZE, n * PAGE_SIZE);
     if (ptr == NULL) {
-        error_exit_msg("out of memory");
+        error_exit_msg("error: out of memory");
     }
     ASSERT_ALIGNED(ptr, PAGE_SIZE);
     return ptr;
@@ -66,7 +66,7 @@ void *palloc(size_t n) {
         size_t delta = max(opt_heap_grow_pages, n);
         ASSERT(delta != 0);
         if (__builtin_wasm_memory_grow(0, delta) == (size_t)-1) {
-            error_exit_msg("out of memory");
+            error_exit_msg("error: out of memory");
         }
     }
     void *ptr = heap_end;

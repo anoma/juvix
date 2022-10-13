@@ -12,7 +12,7 @@
 #define ALLOC_CONSTR_BOXED(var, uid, nfields, SAVE, RESTORE)  \
     do {                                                      \
         ALLOC((word_t *)(var), (nfields) + 1, SAVE, RESTORE); \
-        SET_FIELD(var, 0, make_header(uid, nfields));         \
+        FIELD(var, 0) = make_header(uid, nfields);            \
     } while (0)
 
 #define ALLOC_CONSTR_PAIR(var, SAVE, RESTORE) \
@@ -23,6 +23,17 @@
 
 #define CONSTR_ARG(var, n) FIELD(var, (n) + 1)
 
+static inline size_t get_constr_nargs(word_t x) { return get_nfields(x); }
 static inline word_t *get_constr_args(word_t x) { return (word_t *)x + 1; }
+
+// Memory pointers (see alloc.h) need to be saved before calling the following
+// functions
+static inline word_t alloc_constr(uint uid, size_t nfields) {
+    word_t var = (word_t)alloc(nfields + 1);
+    FIELD(var, 0) = make_header(uid, nfields);
+    return var;
+}
+
+static inline word_t alloc_pair() { return (word_t)alloc(2); }
 
 #endif

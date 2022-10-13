@@ -126,7 +126,7 @@ static inline void print_msg(const char *msg) {
 #endif
 }
 
-static inline void error_exit() {
+_Noreturn static inline void error_exit() {
 #if defined(API_LIBC)
     abort();
 #elif defined(ARCH_WASM32)
@@ -134,7 +134,7 @@ static inline void error_exit() {
 #endif
 }
 
-static inline void error_exit_msg(const char *msg) {
+_Noreturn static inline void error_exit_msg(const char *msg) {
     print_msg(msg);
     error_exit();
 }

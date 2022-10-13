@@ -18,7 +18,9 @@ typedef struct Generation {
     struct Generation *next;
     pool_t *words;
     pool_t *dwords;
+    // The total number of pages allocated in all pools.
     size_t pages_num;
+    // The threshold number of pages before a new generation is created.
     size_t pages_max;
 } generation_t;
 

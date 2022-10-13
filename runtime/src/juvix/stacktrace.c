@@ -7,27 +7,27 @@
 
 #define BUFFER_SIZE (PAGE_SIZE / sizeof(uint))
 
-static uint *buffer;
-static uint index;
-static uint size;
+static uint *st_buffer;
+static uint st_index;
+static uint st_size;
 
 void stacktrace_init() {
-    buffer = palloc(1);
-    index = 0;
-    size = 0;
+    st_buffer = palloc(1);
+    st_index = 0;
+    st_size = 0;
 }
 
 void stacktrace_push(uint fuid) {
-    buffer[index++] = fuid;
-    ++size;
-    index = index % BUFFER_SIZE;
+    st_buffer[st_index++] = fuid;
+    ++st_size;
+    st_index = st_index % BUFFER_SIZE;
 }
 
 void stacktrace_replace(uint fuid) {
-    if (index > 0) {
-        buffer[index - 1] = fuid;
+    if (st_index > 0) {
+        st_buffer[st_index - 1] = fuid;
     } else {
-        buffer[BUFFER_SIZE - 1] = fuid;
+        st_buffer[BUFFER_SIZE - 1] = fuid;
     }
 }
 
@@ -41,19 +41,19 @@ void stacktrace_replace(uint fuid) {
     } while (0)
 
 void stacktrace_pop() {
-    DEC(index);
-    --size;
+    DEC(st_index);
+    --st_size;
 }
 
 void stacktrace_dump() {
-    uint i = index;
-    uint s = size;
+    uint i = st_index;
+    uint s = st_size;
     print_msg("Stacktrace:\n");
     while (s > 0) {
         DEC(i);
         --s;
-        ASSERT(buffer[i] < juvix_functions_num);
-        print_msg(juvix_function_info[buffer[i]].name);
+        ASSERT(st_buffer[i] < juvix_functions_num);
+        print_msg(juvix_function_info[st_buffer[i]].name);
     }
 }
 

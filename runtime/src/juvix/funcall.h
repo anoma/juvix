@@ -5,17 +5,12 @@
 #include <juvix/mem/stack.h>
 #include <juvix/stacktrace.h>
 
-#define DECL_REG_ARG(k)            \
-    register word_t juvix_arg_##k; \
-    word_t juvix_arg_tmp_##k
-#define DECL_ARG(k)       \
-    word_t juvix_arg_##k; \
-    word_t juvix_arg_tmp_##k
+#define DECL_REG_ARG(k) register word_t juvix_arg_##k
+#define DECL_ARG(k) word_t juvix_arg_##k
 
 // Function result is stored in juvix_result
 #define DECL_RESULT word_t juvix_result
 
-#define ARG_TMP(k) juvix_arg_##k
 #define ARG(k) juvix_arg_##k
 
 /*
@@ -25,9 +20,6 @@
     STACK_PUSH(sp, var1);
     ...
     STACK_PUSH(sp, varn);
-    ARG_TMP(0) = arg0;
-    ...
-    ARG_TMP(m) = argm;
     ARG(0) = arg0;
     ...
     ARG(m) = argm;
@@ -36,6 +28,8 @@
     ...
     STACK_POP(sp, var1);
     STACK_LEAVE(sp);
+
+    arg0, ..., argm cannot contain references to ARG(k) for any k
 */
 
 #define CALL(fuid, fun, sp, label)     \
@@ -49,13 +43,12 @@
 /*
     Macro sequence for a function tail-call:
 
-    ARG_TMP(0) = arg0;
-    ...
-    ARG_TMP(m) = argm;
     ARG(0) = arg0;
     ...
     ARG(m) = argm;
     TAIL_CALL(fuid, function);
+
+    arg0, ..., argm cannot contain references to ARG(k) for any k
 */
 
 #define TAIL_CALL(fuid, fun)  \
@@ -129,10 +122,7 @@
     juvix_ccl_start:                                                     \
     do {                                                                 \
         STACK_POP(sp, juvix_ccl_closure);                                \
-        size_t juvix_ccl_nargs = get_closure_nargs(juvix_ccl_closure);   \
-        size_t juvix_ccl_nfields = get_nfields(juvix_ccl_closure);       \
-        juvix_ccl_addr = get_closure_addr(juvix_ccl_closure);            \
-        size_t juvix_ccl_largs = juvix_ccl_nfields - juvix_ccl_nargs;    \
+        size_t juvix_ccl_largs = get_closure_largs(juvix_ccl_closure);   \
         ASSERT(juvix_ccl_largs <= MAX_ARGS);                             \
         if (juvix_ccl_largs <= juvix_ccl_sargs) {                        \
             juvix_ccl_sargs -= juvix_ccl_largs;                          \
