@@ -30,3 +30,6 @@ instance Hashable Tag
 
 -- | de Bruijn index
 type Index = Int
+
+-- | de Bruijn level (reverse de Bruijn index)
+type Level = Int

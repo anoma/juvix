@@ -159,6 +159,9 @@ isDynamic = \case
   NDyn {} -> True
   _ -> False
 
+-- | `expandType argtys ty` expands the dynamic target of `ty` to match the
+-- number of arguments with types specified by `argstys`. For example,
+-- `expandType [int, string] (int -> any) = int -> string -> any`.
 expandType :: [Type] -> Type -> Type
 expandType argtys ty =
   let (tgt, tyargs) = unfoldType ty
