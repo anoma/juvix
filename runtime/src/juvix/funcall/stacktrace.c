@@ -1,7 +1,7 @@
 
+#include <juvix/funcall/stacktrace.h>
 #include <juvix/info.h>
 #include <juvix/mem/pages.h>
-#include <juvix/stacktrace.h>
 
 #ifdef DEBUG
 
