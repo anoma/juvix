@@ -113,6 +113,9 @@ builtin = "builtin"
 type_ :: IsString s => s
 type_ = "Type"
 
+any :: IsString s => s
+any = "any"
+
 questionMark :: IsString s => s
 questionMark = "?"
 
@@ -322,6 +325,12 @@ then_ = "then"
 
 else_ :: IsString s => s
 else_ = "else"
+
+piUnicode :: IsString s => s
+piUnicode = "Π"
+
+piAscii :: IsString s => s
+piAscii = "Pi"
 
 pi_ :: IsString s => s
 pi_ = "pi"

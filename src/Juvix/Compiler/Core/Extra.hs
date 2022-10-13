@@ -18,7 +18,6 @@ import Juvix.Compiler.Core.Extra.Info
 import Juvix.Compiler.Core.Extra.Recursors
 import Juvix.Compiler.Core.Extra.Recursors.Fold.Named
 import Juvix.Compiler.Core.Extra.Recursors.Map.Named
-import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Info.TypeInfo
 import Juvix.Compiler.Core.Language
@@ -148,7 +147,7 @@ convertRuntimeNodes = convertClosures
 argumentInfoFromInfo :: Info -> ArgumentInfo
 argumentInfoFromInfo i =
   ArgumentInfo
-    { _argumentName = (^. infoName) <$> Info.lookup (Proxy @NameInfo) i,
+    { _argumentName = getInfoName i,
       _argumentType = getInfoType i,
       _argumentIsImplicit = Explicit
     }

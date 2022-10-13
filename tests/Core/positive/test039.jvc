@@ -1,6 +1,8 @@
 -- eta-expansion of builtins and constructors
 
-constr cons 2;
+inductive stream {
+  cons : any -> any -> stream;
+};
 
 def f := \g g 2;
 def f' := \x f (+ x);
