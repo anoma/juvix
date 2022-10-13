@@ -107,6 +107,9 @@ naturalPrint = "natural-print"
 naturalPlus :: IsString s => s
 naturalPlus = "natural-plus"
 
+booleanIf :: IsString s => s
+booleanIf = "boolean-if"
+
 builtin :: IsString s => s
 builtin = "builtin"
 

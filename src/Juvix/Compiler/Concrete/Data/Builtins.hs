@@ -63,6 +63,7 @@ instance Hashable BuiltinConstructor
 
 data BuiltinFunction
   = BuiltinNaturalPlus
+  | BuiltinBooleanIf
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
 
 instance Hashable BuiltinFunction
@@ -70,6 +71,7 @@ instance Hashable BuiltinFunction
 instance Pretty BuiltinFunction where
   pretty = \case
     BuiltinNaturalPlus -> Str.naturalPlus
+    BuiltinBooleanIf -> Str.booleanIf
 
 data BuiltinAxiom
   = BuiltinNaturalPrint

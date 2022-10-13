@@ -253,6 +253,7 @@ registerBuiltinFunction ::
   Sem r ()
 registerBuiltinFunction d = \case
   BuiltinNaturalPlus -> registerNaturalPlus d
+  BuiltinBooleanIf -> registerIf d
 
 registerBuiltinAxiom ::
   Members '[InfoTableBuilder, Error ScoperError, Builtins] r =>

@@ -6,4 +6,9 @@ inductive Bool {
   false : Bool;
 };
 
+builtin boolean-if
+if : {A : Type} → Bool → A → A → A;
+if true t _ := t;
+if false _ e := e;
+
 end;
