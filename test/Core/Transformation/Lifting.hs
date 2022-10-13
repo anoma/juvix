@@ -11,18 +11,11 @@ allTests = testGroup "Lambda lifting" (mapMaybe liftTest Eval.tests)
 pipe :: [TransformationId]
 pipe = [LambdaLifting]
 
-liftTest :: Eval.PosTest -> Maybe TestTree
-liftTest _testEval@Eval.PosTest {..}
-  | _name `elem` excluded = Nothing
-  | otherwise =
-      Just $
-        fromTest
-          Test
-            { _testTransformations = pipe,
-              _testAssertion = \i -> unless (isLifted i) (error "not lambda lifted"),
-              _testEval
-            }
-
-excluded :: [String]
-excluded =
-  []
+liftTest :: Eval.PosTest -> TestTree
+liftTest _testEval@Eval.PosTest {..} =
+  fromTest
+    Test
+      { _testTransformations = pipe,
+        _testAssertion = \i -> unless (isLifted i) (error "not lambda lifted"),
+        _testEval
+      }
