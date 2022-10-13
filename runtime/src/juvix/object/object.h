@@ -1,5 +1,5 @@
-#ifndef JUVIX_OBJECT_H
-#define JUVIX_OBJECT_H
+#ifndef JUVIX_OBJECT_OBJECT_H
+#define JUVIX_OBJECT_OBJECT_H
 
 #include <juvix/defs.h>
 #include <juvix/limits.h>

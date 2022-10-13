@@ -1,9 +1,9 @@
-#ifndef JUVIX_FUNCALL_H
-#define JUVIX_FUNCALL_H
+#ifndef JUVIX_FUNCALL_FUNCALL_H
+#define JUVIX_FUNCALL_FUNCALL_H
 
-#include <juvix/closure.h>
+#include <juvix/funcall/stacktrace.h>
 #include <juvix/mem/stack.h>
-#include <juvix/stacktrace.h>
+#include <juvix/object/closure.h>
 
 #define DECL_REG_ARG(k) register word_t juvix_arg_##k
 #define DECL_ARG(k) word_t juvix_arg_##k

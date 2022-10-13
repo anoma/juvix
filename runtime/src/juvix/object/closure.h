@@ -1,9 +1,9 @@
-#ifndef JUVIX_CLOSURE_H
-#define JUVIX_CLOSURE_H
+#ifndef JUVIX_OBJECT_CLOSURE_H
+#define JUVIX_OBJECT_CLOSURE_H
 
 #include <juvix/mem/alloc.h>
 #include <juvix/mem/mem.h>
-#include <juvix/object.h>
+#include <juvix/object/object.h>
 
 /* Closure header:
   |NARGS:8|FUID:24|

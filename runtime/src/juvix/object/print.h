@@ -1,5 +1,5 @@
-#ifndef JUVIX_PRINT_H
-#define JUVIX_PRINT_H
+#ifndef JUVIX_OBJECT_PRINT_H
+#define JUVIX_OBJECT_PRINT_H
 
 #include <juvix/defs.h>
 

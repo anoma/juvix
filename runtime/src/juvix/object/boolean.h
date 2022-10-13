@@ -1,7 +1,7 @@
-#ifndef JUVIX_BOOLEAN_H
-#define JUVIX_BOOLEAN_H
+#ifndef JUVIX_OBJECT_BOOLEAN_H
+#define JUVIX_OBJECT_BOOLEAN_H
 
-#include <juvix/object.h>
+#include <juvix/object/object.h>
 
 #define BOOL_TRUE make_header(UID_TRUE, 0)
 #define BOOL_FALSE make_header(UID_FALSE, 0)

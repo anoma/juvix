@@ -1,9 +1,9 @@
-#ifndef JUVIX_CSTRING_H
-#define JUVIX_CSTRING_H
+#ifndef JUVIX_OBJECT_CSTRING_H
+#define JUVIX_OBJECT_CSTRING_H
 
 #include <juvix/mem/alloc.h>
 #include <juvix/mem/mem.h>
-#include <juvix/object.h>
+#include <juvix/object/object.h>
 
 #ifdef API_LIBC
 #include <string.h>

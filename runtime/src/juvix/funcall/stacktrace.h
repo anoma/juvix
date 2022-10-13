@@ -1,5 +1,5 @@
-#ifndef JUVIX_STACKTRACE_H
-#define JUVIX_STACKTRACE_H
+#ifndef JUVIX_FUNCALL_STACKTRACE_H
+#define JUVIX_FUNCALL_STACKTRACE_H
 
 #include <juvix/defs.h>
 

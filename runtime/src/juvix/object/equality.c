@@ -1,6 +1,6 @@
 
-#include <juvix/constr.h>
-#include <juvix/equality.h>
+#include <juvix/object/constr.h>
+#include <juvix/object/equality.h>
 
 bool juvix_do_equal(word_t x, word_t y) {
     ASSERT(!is_unboxed(x));

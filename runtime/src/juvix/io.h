@@ -1,7 +1,7 @@
 #ifndef JUVIX_IO_H
 #define JUVIX_IO_H
 
-#include <juvix/funcall.h>
+#include <juvix/funcall/funcall.h>
 
 void io_init();
 void io_flush();

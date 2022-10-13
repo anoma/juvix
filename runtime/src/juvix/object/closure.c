@@ -1,5 +1,5 @@
 
-#include <juvix/closure.h>
+#include <juvix/object/closure.h>
 
 word_t alloc_closure(uint fuid, label_addr_t addr, uint nfields, uint nargs) {
     word_t var = (word_t)alloc(nfields + 1);

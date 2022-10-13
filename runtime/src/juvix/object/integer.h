@@ -1,8 +1,8 @@
-#ifndef JUVIX_INTEGER_H
-#define JUVIX_INTEGER_H
+#ifndef JUVIX_OBJECT_INTEGER_H
+#define JUVIX_OBJECT_INTEGER_H
 
 #include <juvix/mem/alloc.h>
-#include <juvix/object.h>
+#include <juvix/object/object.h>
 
 #define INT_REF(var) (*(long_t *)get_dword_ptr(var))
 

@@ -1,7 +1,7 @@
-#ifndef JUVIX_EQUALITY_H
-#define JUVIX_EQUALITY_H
+#ifndef JUVIX_OBJECT_EQUALITY_H
+#define JUVIX_OBJECT_EQUALITY_H
 
-#include <juvix/object.h>
+#include <juvix/object/object.h>
 
 bool juvix_do_equal(word_t x, word_t y);
 

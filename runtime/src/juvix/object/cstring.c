@@ -1,5 +1,5 @@
 
-#include <juvix/cstring.h>
+#include <juvix/object/cstring.h>
 
 #ifndef API_LIBC
 size_t strlen(const char *str) {

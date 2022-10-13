@@ -1,8 +1,8 @@
-#ifndef JUVIX_CONSTR_H
-#define JUVIX_CONSTR_H
+#ifndef JUVIX_OBJECT_CONSTR_H
+#define JUVIX_OBJECT_CONSTR_H
 
 #include <juvix/mem/alloc.h>
-#include <juvix/object.h>
+#include <juvix/object/object.h>
 
 #define ALLOC_CONSTR_UNBOXED(var, uid) \
     do {                               \

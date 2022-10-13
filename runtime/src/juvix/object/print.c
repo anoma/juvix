@@ -1,11 +1,11 @@
 
-#include <juvix/closure.h>
-#include <juvix/constr.h>
-#include <juvix/cstring.h>
 #include <juvix/info.h>
 #include <juvix/mem/pages.h>
-#include <juvix/object.h>
-#include <juvix/print.h>
+#include <juvix/object/closure.h>
+#include <juvix/object/constr.h>
+#include <juvix/object/cstring.h>
+#include <juvix/object/object.h>
+#include <juvix/object/print.h>
 
 static size_t print_long(char *buf, size_t n, long_t x) {
     if (x == 0) {
