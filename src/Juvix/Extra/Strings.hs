@@ -92,6 +92,9 @@ string = "string"
 natural :: IsString s => s
 natural = "natural"
 
+boolean_ :: IsString s => s
+boolean_ = "boolean"
+
 io :: IsString s => s
 io = "IO"
 

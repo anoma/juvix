@@ -8,10 +8,13 @@ builtinConstructorName :: BuiltinConstructor -> Maybe Text
 builtinConstructorName = \case
   BuiltinNaturalZero -> Just zero
   BuiltinNaturalSuc -> Just suc
+  BuiltinBooleanTrue -> Just true_
+  BuiltinBooleanFalse -> Just false_
 
 builtinInductiveName :: BuiltinInductive -> Maybe Text
 builtinInductiveName = \case
   BuiltinNatural -> Just nat
+  BuiltinBoolean -> Just bool_
 
 builtinAxiomName :: BuiltinAxiom -> Maybe Text
 builtinAxiomName = \case

@@ -38,9 +38,11 @@ instance Pretty BuiltinPrim where
 builtinConstructors :: BuiltinInductive -> [BuiltinConstructor]
 builtinConstructors = \case
   BuiltinNatural -> [BuiltinNaturalZero, BuiltinNaturalSuc]
+  BuiltinBoolean -> [BuiltinBooleanTrue, BuiltinBooleanFalse]
 
 data BuiltinInductive
   = BuiltinNatural
+  | BuiltinBoolean
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
 
 instance Hashable BuiltinInductive
@@ -48,10 +50,13 @@ instance Hashable BuiltinInductive
 instance Pretty BuiltinInductive where
   pretty = \case
     BuiltinNatural -> Str.natural
+    BuiltinBoolean -> Str.boolean_
 
 data BuiltinConstructor
   = BuiltinNaturalZero
   | BuiltinNaturalSuc
+  | BuiltinBooleanTrue
+  | BuiltinBooleanFalse
   deriving stock (Show, Eq, Ord, Generic)
 
 instance Hashable BuiltinConstructor

@@ -1,6 +1,7 @@
 #ifndef C_RUNTIME_H_
 #define C_RUNTIME_H_
 
+#include "bool.h"
 #include "nat.h"
 #include "io.h"
 

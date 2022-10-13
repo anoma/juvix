@@ -244,6 +244,7 @@ registerBuiltinInductive ::
   Sem r ()
 registerBuiltinInductive d = \case
   BuiltinNatural -> registerNaturalDef d
+  BuiltinBoolean -> registerBoolDef d
 
 registerBuiltinFunction ::
   Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r =>
