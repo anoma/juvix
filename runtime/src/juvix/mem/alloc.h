@@ -21,19 +21,19 @@ void alloc_words(bool can_gc);
 void alloc_dwords(bool can_gc);
 
 static inline word_t *alloc_words_memory_pointer() {
-    return alloc_youngest_generation->words->free_begin;
-}
-
-static inline word_t *alloc_words_memory_end() {
-    return alloc_youngest_generation->words->free_end;
+    if (alloc_youngest_generation->words != NULL) {
+        return alloc_youngest_generation->words->free_begin;
+    } else {
+        return NULL;
+    }
 }
 
 static inline dword_t *alloc_dwords_memory_pointer() {
-    return alloc_youngest_generation->dwords->free_begin;
-}
-
-static inline dword_t *alloc_dwords_memory_end() {
-    return alloc_youngest_generation->dwords->free_end;
+    if (alloc_youngest_generation->dwords != NULL) {
+        return alloc_youngest_generation->dwords->free_begin;
+    } else {
+        return NULL;
+    }
 }
 
 static inline void alloc_save_words_memory_pointer(word_t *ptr) {
