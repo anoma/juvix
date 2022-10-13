@@ -20,6 +20,15 @@ io = primPrefix "io"
 nat :: Text
 nat = primPrefix "nat"
 
+bool_ :: Text
+bool_ = primPrefix "bool"
+
+true_ :: Text
+true_ = primPrefix "true"
+
+false_ :: Text
+false_ = primPrefix "false"
+
 int_ :: Text
 int_ = "int"
 
