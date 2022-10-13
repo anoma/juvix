@@ -1,53 +1,5 @@
--- letrec
-
-def sum := letrec sum := \x if x = 0 then 0 else x + sum (x - 1) in sum;
-
-def fact := \x
-  letrec fact' := \x \acc if x = 0 then acc else fact' (x - 1) (acc * x)
-  in fact' x 1;
-
-def fib :=
-  letrec fib' := \n \x \y if n = 0 then x else fib' (n - 1) y (x + y)
-  in \n fib' n 0 1;
-
-def writeLn := \x write x >> write "\n";
-
-def mutrec :=
-  letrec[f g h]
-    f := \x {
-      if x < 1 then
-        1
-      else
-        g (x - 1) + 2 * x
-    };
-    g := \x {
-      if x < 1 then
-        1
-      else
-        x + h (x - 1)
-    };
-    h := \x letrec z := {
-      if x < 1 then
-        1
-      else
-        x * f (x - 1)
-    } in z;
-  in writeLn (f 5) >> writeLn (f 10) >> writeLn (f 100) >> writeLn (g 5) >> writeLn (h 5);
-
-letrec x := 3
-in
-writeLn x >>
-writeLn (sum 10000) >>
-writeLn (fact 5) >>
-writeLn (fact 10) >>
-writeLn (fact 100) >>
-writeLn (fib 10) >>
-writeLn (fib 100) >>
-writeLn (fib 1000) >>
-mutrec >>
-letrec x := 1 in
-letrec x' := x + letrec x := 2 in x in
-letrec x := x' * x' in
-letrec y := x + 2 in
-letrec z := x + y in
-writeLn (x + y + z)
+The following paths are ignored by one of your .gitignore files:
+tests/Core
+hint: Use -f if you really want to add them.
+hint: Turn this message off by running
+hint: "git config advice.addIgnoredFile false"
