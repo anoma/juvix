@@ -1,6 +1,6 @@
 -- letrec
 
-def sum := letrec sum' := \x if x = 0 then 0 else x + sum' (x - 1) in sum';
+def sum := letrec sum := \x if x = 0 then 0 else x + sum (x - 1) in sum;
 
 def fact := \x
   letrec fact' := \x \acc if x = 0 then acc else fact' (x - 1) (acc * x)
