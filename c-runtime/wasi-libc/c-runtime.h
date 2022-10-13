@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdint.h>
 
+#include "bool.h"
 #include "nat.h"
 #include "io.h"
 
