@@ -4,7 +4,8 @@
 /*
  This module provides an allocator for unstructured objects. When using the
  allocated memory one needs to be mindful of C alignment and aliasing rules:
- https://en.cppreference.com/w/c/language/object.
+ https://en.cppreference.com/w/c/language/object
+ https://stefansf.de/post/type-based-alias-analysis/
 */
 
 #include <juvix/mem/gens.h>

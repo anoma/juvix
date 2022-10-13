@@ -118,11 +118,39 @@ typedef void *label_addr_t;
 #endif
 
 /**********************************************/
+/* WASI exports */
+
+#ifdef API_WASI
+typedef struct Ciovec {
+    uint8_t *buf;
+    uint32_t buf_len;
+} ciovec_t;
+
+uint16_t fd_write(uint32_t fd, ciovec_t *iovs_ptr, uint32_t iovs_len,
+                  uint32_t *nwritten)
+    __attribute__((__import_module__("wasi_snapshot_preview1"),
+                   __import_name__("fd_write"), ));
+
+uint16_t fd_read(uint32_t fd, ciovec_t *iovs_ptr, uint32_t iovs_len,
+                 uint32_t *read)
+    __attribute__((__import_module__("wasi_snapshot_preview1"),
+                   __import_name__("fd_read"), ));
+#endif
+
+/**********************************************/
 /* Basic primitive functions and macros */
 
-static inline void print_msg(const char *msg) {
+static void print_msg(const char *msg) {
 #if defined(API_LIBC)
     puts(msg);
+#elif defined(API_WASI)
+    size_t n = 0;
+    while (msg[n]) ++n;
+    ciovec_t vec = {.buf = (uint8_t *)msg, .buf_len = n};
+    fd_write(1, &vec, 1, 0);
+    uint8_t c = '\n';
+    ciovec_t vec1 = {.buf = &c, .buf_len = 1};
+    fd_write(1, &vec1, 1, 0);
 #endif
 }
 

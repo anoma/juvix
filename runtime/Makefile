@@ -1,8 +1,8 @@
 all: release debug
 
-release: wasm32 wasm32-wasi native32
+release: wasm32-wasi native32
 
-debug: wasm32-debug wasm32-wasi-debug native32-debug
+debug: wasm32-wasi-debug native32-debug
 
 wasm32:
 	$(MAKE) -f Makefile.generic CONFIG=WASM32+RELEASE

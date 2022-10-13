@@ -10,12 +10,13 @@
 //#define ARCH_NATIVE64
 #endif
 
-#if !defined(API_LIBC) && !defined(API_ANOMA) && !defined(API_COSM) && \
-    !defined(API_NONE)
+#if !defined(API_LIBC) && !defined(API_WASI) && !defined(API_ANOMA) && \
+    !defined(API_COSM) && !defined(API_NONE)
+#define API_WASI
 //#define API_LIBC
 //#define API_ANOMA
 //#define API_COSM
-#define API_NONE
+//#define API_NONE
 #endif
 
 #if !defined(DEBUG) && !defined(NDEBUG)

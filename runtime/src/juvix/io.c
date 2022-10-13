@@ -62,17 +62,41 @@ static void io_write(word_t x) {
     }
 }
 
+#ifdef API_WASI
+static char getchar() {
+    uint8_t ch;
+    ciovec_t v = {.buf = &ch, .buf_len = 1};
+    if (fd_read(0, &v, 1, 0) != 0) {
+        error_exit_msg("read error");
+    }
+    return ch;
+}
+#endif
+
 static word_t io_readln() {
     if (io_buffer == NULL) {
         io_init();
     }
     ASSERT(io_index < PAGE_SIZE);
-#ifdef API_LIBC
+#if defined(API_LIBC)
     io_flush();
     if (fgets(io_buffer, MAX_CSTRING_LENGTH - 1, stdin) == NULL) {
         error_exit_msg("read error");
     }
     io_buffer[MAX_CSTRING_LENGTH - 1] = 0;
+    return alloc_cstring(io_buffer);
+#elif defined(API_WASI)
+    io_flush();
+    char c = getchar();
+    uint i = 0;
+    while (c != '\n') {
+        if (i == MAX_CSTRING_LENGTH) {
+            error_exit_msg("error: string too long");
+        }
+        io_buffer[i++] = c;
+        c = getchar();
+    }
+    io_buffer[i] = 0;
     return alloc_cstring(io_buffer);
 #else
     error_exit_msg("error: IO read not available");
