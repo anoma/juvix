@@ -20,34 +20,20 @@ static void alloc_prepare(bool can_gc) {
     ++alloc_youngest_generation->pages_num;
 }
 
-void alloc_words(bool can_gc) {
+void alloc_pages(bool can_gc) {
     alloc_prepare(can_gc);
-    pool_t *pool = pool_alloc(alloc_youngest_generation->words);
-    alloc_youngest_generation->words = pool;
-}
-
-void alloc_dwords(bool can_gc) {
-    alloc_prepare(can_gc);
-    pool_t *pool = pool_alloc(alloc_youngest_generation->dwords);
-    alloc_youngest_generation->dwords = pool;
+    alloc_youngest_generation->memory =
+        pool_alloc(alloc_youngest_generation->memory);
 }
 
 word_t *alloc(size_t n) {
-    if (alloc_youngest_generation->words == NULL) {
-        alloc_words(false);
-    }
+    ASSERT(alloc_youngest_generation->memory != NULL);
     word_t *ptr;
-    XALLOC(ptr, n, alloc_youngest_generation->words->free_begin,
-           { alloc_words(false); });
-    return ptr;
-}
-
-dword_t *dalloc(size_t n) {
-    if (alloc_youngest_generation->dwords == NULL) {
-        alloc_dwords(false);
+    ptr = alloc_youngest_generation->memory->free_begin;
+    if (unlikely(!is_same_page(ptr, ptr + n))) {
+        alloc_pages(false);
+        ptr = alloc_youngest_generation->memory->free_begin;
     }
-    dword_t *ptr;
-    XALLOC(ptr, n, alloc_youngest_generation->dwords->free_begin,
-           { alloc_dwords(false); });
+    alloc_youngest_generation->memory->free_begin += n;
     return ptr;
 }

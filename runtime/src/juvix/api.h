@@ -11,8 +11,9 @@ static inline juvix_init() {
     funcall_init();
 }
 
-#define JUVIX_INIT \
-    juvix_init();  \
+#define JUVIX_INIT                                 \
+    juvix_init();                                  \
+    juvix_memory_pointer = alloc_memory_pointer(); \
     juvix_stack_pointer = stack_pointer()
 
 #define JUVIX_PROLOGUE(MAX_ARGS, ARG_DECLS, DISPATCH_DECLS) \
@@ -34,5 +35,12 @@ static inline juvix_init() {
 
 #define DECL_TMP(k) word_t juvix_tmp_##k
 #define TMP(k) juvix_tmp_##k
+
+// Begin a function definition. `n` is the maximum number of words allocated in
+// the function. `SAVE` and `RESTORE` should save and restore function arguments
+// on the global stack.
+#define FUNCTION_BEGIN(label, n, SAVE, RESTORE) \
+    label:                                      \
+    PREALLOC(n, SAVE, RESTORE)
 
 #endif

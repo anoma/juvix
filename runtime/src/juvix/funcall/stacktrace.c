@@ -12,6 +12,7 @@ static uint st_index;
 static uint st_size;
 
 void stacktrace_init() {
+    // TODO: use malloc / realloc once available for all APIs
     st_buffer = palloc(1);
     st_index = 0;
     st_size = 0;

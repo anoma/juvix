@@ -17,12 +17,12 @@ static inline char *get_cstring(word_t x) {
     return (char *)x + sizeof(word_t);
 }
 
-#define ALLOC_CSTRING(var, str, SAVE, RESTORE)                \
-    do {                                                      \
-        size_t juvix_nfields =                                \
-            (strlen(str) + sizeof(word_t)) / sizeof(word_t);  \
-        ALLOC((word_t *)(var), juvix_nfields, SAVE, RESTORE); \
-        strcpy((char *)(var) + sizeof(word_t), str);          \
+#define ALLOC_CSTRING(var, str)                              \
+    do {                                                     \
+        size_t juvix_nfields =                               \
+            (strlen(str) + sizeof(word_t)) / sizeof(word_t); \
+        ALLOC((word_t *)(var), juvix_nfields);               \
+        strcpy((char *)(var) + sizeof(word_t), str);         \
     } while (0)
 // TODO: pad with zero bytes
 

@@ -13,6 +13,11 @@
 
 #define ARG(k) juvix_arg_##k
 
+// TODO: The label on the stack will need to have their least significant bit
+// set for the GC.
+#define STACK_PUSH_ADDR(addr) (STACK_PUSH(addr))
+#define STACK_TOP_ADDR (((label_addr_t)(STACK_TOP)))
+
 /*
     Macro sequence for a function call:
 
@@ -111,46 +116,40 @@
         goto juvix_ccl_start;    \
     } while (0)
 
-#define DECL_CALL_CLOSURES(MAX_ARGS)                                         \
-    ASSERT(MAX_ARGS <= MAX_FUNCTION_ARGS);                                   \
-    label_addr_t juvix_ccl_dispatch[MAX_ARGS];                               \
-    label_addr_t juvix_ccl_return;                                           \
-    label_addr_t juvix_ccl_addr;                                             \
-    word_t *juvix_ccl_sp;                                                    \
-    size_t juvix_ccl_sargs;                                                  \
-    word_t juvix_ccl_closure;                                                \
-    juvix_ccl_start:                                                         \
-    do {                                                                     \
-        STACK_POP(juvix_ccl_closure);                                        \
-        size_t juvix_ccl_largs = get_closure_largs(juvix_ccl_closure);       \
-        ASSERT(juvix_ccl_largs <= MAX_ARGS);                                 \
-        if (juvix_ccl_largs <= juvix_ccl_sargs) {                            \
-            juvix_ccl_sargs -= juvix_ccl_largs;                              \
-            juvix_stack_pointer -= juvix_ccl_largs;                          \
-            ASSERT(is_same_page(juvix_stack_pointer,                         \
-                                juvix_stack_pointer + juvix_ccl_largs));     \
-            juvix_ccl_sp = juvix_stack_pointer;                              \
-            STORED_GOTO(juvix_ccl_dispatch[juvix_ccl_largs]);                \
-        } else {                                                             \
-            EXTEND_CLOSURE(                                                  \
-                juvix_result, juvix_ccl_closure, juvix_ccl_sargs,            \
-                {                                                            \
-                    STACK_SAVE;                                              \
-                    STACK_PUSH(juvix_ccl_closure);                           \
-                },                                                           \
-                { STACK_POP(juvix_ccl_closure); });                          \
-            for (size_t juvix_idx = 0; juvix_idx < juvix_ccl_sargs;          \
-                 ++juvix_idx) {                                              \
-                STACK_POP(                                                   \
-                    CLOSURE_ARG(juvix_result, juvix_ccl_nargs + juvix_idx)); \
-            }                                                                \
-            if (juvix_ccl_return == NULL) {                                  \
-                STACK_LEAVE;                                                 \
-                RETURN;                                                      \
-            } else {                                                         \
-                STORED_GOTO(juvix_ccl_return);                               \
-            }                                                                \
-        }                                                                    \
+#define DECL_CALL_CLOSURES(MAX_ARGS)                                          \
+    ASSERT(MAX_ARGS <= MAX_FUNCTION_ARGS);                                    \
+    label_addr_t juvix_ccl_dispatch[MAX_ARGS];                                \
+    label_addr_t juvix_ccl_return;                                            \
+    label_addr_t juvix_ccl_addr;                                              \
+    word_t *juvix_ccl_sp;                                                     \
+    size_t juvix_ccl_sargs;                                                   \
+    word_t juvix_ccl_closure;                                                 \
+    juvix_ccl_start:                                                          \
+    do {                                                                      \
+        STACK_POP(juvix_ccl_closure);                                         \
+        size_t juvix_ccl_largs = get_closure_largs(juvix_ccl_closure);        \
+        ASSERT(juvix_ccl_largs <= MAX_ARGS);                                  \
+        if (juvix_ccl_largs <= juvix_ccl_sargs) {                             \
+            juvix_ccl_sargs -= juvix_ccl_largs;                               \
+            juvix_stack_pointer -= juvix_ccl_largs;                           \
+            ASSERT(is_same_page(juvix_stack_pointer,                          \
+                                juvix_stack_pointer + juvix_ccl_largs));      \
+            juvix_ccl_sp = juvix_stack_pointer;                               \
+            STORED_GOTO(juvix_ccl_dispatch[juvix_ccl_largs]);                 \
+        } else {                                                              \
+            EXTEND_CLOSURE(juvix_result, juvix_ccl_closure, juvix_ccl_sargs); \
+            for (size_t juvix_idx = 0; juvix_idx < juvix_ccl_sargs;           \
+                 ++juvix_idx) {                                               \
+                STACK_POP(                                                    \
+                    CLOSURE_ARG(juvix_result, juvix_ccl_nargs + juvix_idx));  \
+            }                                                                 \
+            if (juvix_ccl_return == NULL) {                                   \
+                STACK_LEAVE;                                                  \
+                RETURN;                                                       \
+            } else {                                                          \
+                STORED_GOTO(juvix_ccl_return);                                \
+            }                                                                 \
+        }                                                                     \
     } while (0)
 
 #define DECL_DISPATCH(N, label) (juvix_ccl_dispatch[N] = LABEL_ADDR(label))

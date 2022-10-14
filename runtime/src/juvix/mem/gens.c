@@ -49,8 +49,7 @@ generation_t *gen_alloc(generation_t *prev, size_t pages_max) {
     }
     gen->pages_max = pages_max;
     gen->pages_num = 0;
-    gen->words = NULL;
-    gen->dwords = NULL;
+    gen->memory = pool_alloc(NULL);
     if (prev == NULL) {
         oldest_gen = gen;
     }
@@ -63,30 +62,25 @@ void gen_free(generation_t *gen) {
     }
     gen->next = next_free_gen;
     next_free_gen = gen;
-    pools_free(gen->words);
-    pools_free(gen->dwords);
+    pools_free(gen->memory);
 }
 
 static void pool_prepend(pool_t **ppool, pool_t *pool) {
-    if (*ppool == NULL) {
-        *ppool = pool;
+    ASSERT(*ppool != NULL);
+    ASSERT(pool != NULL);
+    pool_t *next = *ppool;
+    *ppool = pool;
+    while (pool->next != NULL) {
+        pool = pool->next;
     }
-    if (pool != NULL) {
-        pool_t *next = *ppool;
-        *ppool = pool;
-        while (pool->next != NULL) {
-            pool = pool->next;
-        }
-        pool->next = next;
-    }
+    pool->next = next;
 }
 
 void gen_merge(generation_t *gen) {
     ASSERT(gen->prev != NULL);
     generation_t *prev = gen->prev;
     prev->next = gen->next;
-    pool_prepend(&prev->words, gen->words);
-    pool_prepend(&prev->dwords, gen->dwords);
+    pool_prepend(&prev->memory, gen->memory);
     prev->pages_num += gen->pages_num;
     gen->next = next_free_gen;
     next_free_gen = gen;

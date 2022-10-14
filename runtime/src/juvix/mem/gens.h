@@ -16,8 +16,7 @@ typedef struct Generation {
     struct Generation *prev;
     // Pointer to the next (younger) generation.
     struct Generation *next;
-    pool_t *words;
-    pool_t *dwords;
+    pool_t *memory;
     // The total number of pages allocated in all pools.
     size_t pages_num;
     // The threshold number of pages before a new generation is created.
