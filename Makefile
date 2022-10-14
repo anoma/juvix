@@ -178,7 +178,7 @@ build: submodules runtime
 
 .PHONY: runtime
 runtime:
-	cd runtime && make -j 4
+	cd runtime && make
 
 # -- Install
 
