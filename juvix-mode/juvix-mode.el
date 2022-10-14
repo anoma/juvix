@@ -38,6 +38,7 @@
      (with-eval-after-load 'evil
        (evil-define-key 'normal juvix-mode-map (kbd "SPC m l") 'juvix-load)
        (evil-define-key 'normal juvix-mode-map (kbd "SPC m g") 'juvix-goto-definition)
+       (evil-define-key 'normal juvix-mode-map (kbd "SPC m f") 'juvix-format-buffer)
        (evil-define-key 'normal juvix-mode-map (kbd "g d") 'juvix-goto-definition)
        (evil-normalize-keymaps)))))
 
