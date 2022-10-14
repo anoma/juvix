@@ -37,12 +37,13 @@ static inline void alloc_save_memory_pointer(word_t *ptr) {
 #define PREALLOC(n, SAVE, RESTORE)                                            \
     if (unlikely(                                                             \
             !is_same_page(juvix_memory_pointer, juvix_memory_pointer + n))) { \
-        ASSERT(n < PAGE_SIZE / 2);                                            \
+        ASSERT(n < MAX_FUNCTION_MEMORY);                                      \
         SAVE;                                                                 \
         SAVE_MEMORY_POINTERS;                                                 \
         alloc_pages(true);                                                    \
         RESTORE_MEMORY_POINTERS;                                              \
         RESTORE;                                                              \
+        ASSERT(is_same_page(juvix_memory_pointer, juvix_memory_pointer + n)); \
     }
 
 // Allocate an n-word object and assign it to `ptr`. Assumes n words have been

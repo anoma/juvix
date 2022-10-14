@@ -2,6 +2,7 @@
 #define JUVIX_MEM_GENS_H
 
 #include <juvix/defs.h>
+#include <juvix/limits.h>
 
 typedef struct Pool {
     struct Pool *next;
@@ -10,6 +11,8 @@ typedef struct Pool {
     void *free_begin;
     void *free_end;
 } pool_t;
+
+STATIC_ASSERT(sizeof(pool_t) <= MAX_MEM_STRUCT_SIZE);
 
 typedef struct Generation {
     // Pointer to the previous (older) generation.

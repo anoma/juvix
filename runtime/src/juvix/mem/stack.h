@@ -16,6 +16,8 @@ typedef struct Stack_segment {
     word_t *end;
 } stack_segment_t;
 
+STATIC_ASSERT(sizeof(stack_segment_t) <= MAX_MEM_STRUCT_SIZE);
+
 extern stack_segment_t *juvix_global_stack;
 
 // The current stack pointer.
