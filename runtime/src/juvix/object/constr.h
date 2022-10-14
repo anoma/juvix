@@ -15,6 +15,13 @@
         FIELD(var, 0) = make_header(uid, nfields); \
     } while (0)
 
+#define ALLOC_CONSTR_BOXED_TAG(var, uid)     \
+    do {                                     \
+        ALLOC((word_t *)(var), 2);           \
+        FIELD(var, 0) = make_header(uid, 1); \
+        FIELD(var, 1) = 1;                   \
+    } while (0)
+
 #define ALLOC_CONSTR_PAIR(var) ALLOC((word_t *)(var), 2)
 
 #define FST(var) FIELD(var, 0)

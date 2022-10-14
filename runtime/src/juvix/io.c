@@ -44,7 +44,7 @@ static void io_write(word_t x) {
             if (io_index == PAGE_SIZE) {
                 io_buffer[PAGE_SIZE - 1] = 0;
                 print_msg(io_buffer);
-                error_exit_msg("error: IO io_buffer overflow");
+                error_exit_msg("error: IO buffer overflow");
             }
             if (io_buffer[io_index - 1] == '\n') {
                 io_buffer[io_index - 1] = 0;
@@ -57,7 +57,7 @@ static void io_write(word_t x) {
         if (io_index >= PAGE_SIZE) {
             io_buffer[PAGE_SIZE - 1] = 0;
             print_msg(io_buffer);
-            error_exit_msg("error: IO io_buffer overflow");
+            error_exit_msg("error: IO buffer overflow");
         }
     }
 }
@@ -106,32 +106,35 @@ static word_t io_readln() {
 void io_print_toplevel(word_t x) {
     if (x != OBJ_VOID) {
         io_write(x);
+        ASSERT(io_index < PAGE_SIZE);
+        io_buffer[io_index] = 0;
+        print_msg(io_buffer);
     }
 }
 
 bool io_interpret(word_t x, word_t *ret, word_t *arg) {
     if (is_ptr(x) && has_header(x)) {
         switch (get_uid(x)) {
-        case UID_RETURN:
-            ASSERT(get_constr_nargs(x) == 1);
-            *ret = CONSTR_ARG(x, 0);
-            return false;
-        case UID_BIND:
-            ASSERT(get_constr_nargs(x) == 2);
-            *ret = CONSTR_ARG(x, 1);
-            *arg = CONSTR_ARG(x, 0);
-            return true;
-        case UID_WRITE:
-            ASSERT(get_constr_nargs(x) == 1);
-            io_write(CONSTR_ARG(x, 0));
-            *ret = OBJ_VOID;
-            return false;
-        case UID_READLN:
-            *ret = io_readln();
-            return false;
-        default:
-            *ret = x;
-            return false;
+            case UID_RETURN:
+                ASSERT(get_constr_nargs(x) == 1);
+                *ret = CONSTR_ARG(x, 0);
+                return false;
+            case UID_BIND:
+                ASSERT(get_constr_nargs(x) == 2);
+                *ret = CONSTR_ARG(x, 1);
+                *arg = CONSTR_ARG(x, 0);
+                return true;
+            case UID_WRITE:
+                ASSERT(get_constr_nargs(x) == 1);
+                io_write(CONSTR_ARG(x, 0));
+                *ret = OBJ_VOID;
+                return false;
+            case UID_READLN:
+                *ret = io_readln();
+                return false;
+            default:
+                *ret = x;
+                return false;
         }
     } else {
         *ret = x;
