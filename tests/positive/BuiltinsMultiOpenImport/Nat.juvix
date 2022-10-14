@@ -1,6 +1,6 @@
 module Nat;
 
-builtin natural
+builtin nat
 inductive Nat {
   zero : Nat;
   suc : Nat → Nat;

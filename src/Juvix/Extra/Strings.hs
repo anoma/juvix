@@ -89,11 +89,11 @@ error = "error"
 string :: IsString s => s
 string = "string"
 
-natural :: IsString s => s
-natural = "natural"
+nat :: IsString s => s
+nat = "nat"
 
-boolean_ :: IsString s => s
-boolean_ = "boolean"
+bool_ :: IsString s => s
+bool_ = "bool"
 
 io :: IsString s => s
 io = "IO"
@@ -101,14 +101,14 @@ io = "IO"
 ioSequence :: IsString s => s
 ioSequence = "IO-sequence"
 
-naturalPrint :: IsString s => s
-naturalPrint = "natural-print"
+natPrint :: IsString s => s
+natPrint = "nat-print"
 
-naturalPlus :: IsString s => s
-naturalPlus = "natural-plus"
+natPlus :: IsString s => s
+natPlus = "nat-plus"
 
-booleanIf :: IsString s => s
-booleanIf = "boolean-if"
+boolIf :: IsString s => s
+boolIf = "bool-if"
 
 builtin :: IsString s => s
 builtin = "builtin"

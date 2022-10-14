@@ -470,7 +470,7 @@ freshHole l = do
 literalType :: Members '[NameIdGen, Builtins] r => LiteralLoc -> Sem r TypedExpression
 literalType lit@(WithLoc i l) = case l of
   LitInteger {} -> do
-    nat <- getBuiltinName i BuiltinNatural
+    nat <- getBuiltinName i BuiltinNat
     return
       TypedExpression
         { _typedExpression = ExpressionLiteral lit,
