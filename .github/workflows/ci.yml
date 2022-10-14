@@ -152,7 +152,7 @@ jobs:
         if: contains(matrix.os, 'macOS')
         run: |
           cd main
-          CFLAGS=-I$LLVM_PATH/lib/clang/13.0.1/include make build
+          CFLAGS=-I`xcrun --sdk macosx --show-sdk-path`/usr/include make build
 
   test:
     needs: build
