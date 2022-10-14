@@ -144,8 +144,7 @@ jobs:
 
       - name: Build Project
         run: |
-          export PATH="${{ env.LLVM_PATH }}/bin:$PATH"
-          echo $PATH
+          clang -v /dev/null -o /dev/null
           cd main
           make build
 
