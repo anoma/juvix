@@ -36,14 +36,14 @@ endif
 
 all: install
 
-clean: runtime-clean
+clean: clean-runtime
 	@stack clean --full
 	@rm -rf .hie
 	@rm -rf _docs
 	@rm -rf docs/md
 
-.PHONY: runtime-clean
-runtime-clean:
+.PHONY: clean-runtime
+clean-runtime:
 	@cd runtime && make clean
 
 repl:

@@ -35,7 +35,7 @@ x86_32-debug:
 	$(MAKE) -f Makefile.generic CONFIG=X86_32+DEBUG
 
 format:
-	clang-format -i `find src -name '*.c' -or -name '*.h'`
+	@clang-format -i `find src -name '*.c' -or -name '*.h'`
 
 clean:
 	@-rm -rf _build*
