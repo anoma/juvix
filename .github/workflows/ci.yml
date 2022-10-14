@@ -139,13 +139,13 @@ jobs:
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
         with:
-          version: "13.0"
+          version: "13.0.1"
           cached: ${{ steps.cache-llvm.outputs.cache-hit }}
 
       - name: Symlink LLVM includes (macOS)
         if: contains(matrix.os, 'macOS')
         run: for f in *; do echo $f; sudo ln -s $f /usr/local/include/$f; done
-        working-directory: ${{ env.LLVM_PATH }}/include
+        working-directory: ${{ env.LLVM_PATH }}/lib/clang/13.0.1/include
 
       - name: Build Project
         run: |
