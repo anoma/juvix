@@ -25,6 +25,7 @@ builtinAxiomName = \case
 builtinFunctionName :: BuiltinFunction -> Maybe Text
 builtinFunctionName = \case
   BuiltinNaturalPlus -> Just natplus
+  BuiltinBooleanIf -> Just boolif
 
 builtinName :: BuiltinPrim -> Maybe Text
 builtinName = \case

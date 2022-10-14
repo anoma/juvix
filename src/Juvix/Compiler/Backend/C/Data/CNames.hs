@@ -38,6 +38,9 @@ ioseq = primPrefix "sequence"
 natplus :: Text
 natplus = primPrefix "natplus"
 
+boolif :: Text
+boolif = primPrefix "if"
+
 funField :: Text
 funField = "fun"
 
