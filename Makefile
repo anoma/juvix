@@ -115,7 +115,8 @@ ORMOLUFILES = $(shell git ls-files '*.hs' '*.hs-boot' | grep -v '^contrib/')
 ORMOLUFLAGS?=--no-cabal
 ORMOLUMODE?=inplace
 
-format:
+.PHONY: format
+format: clang-format
 	@stack exec -- ormolu ${ORMOLUFLAGS} \
 		--ghc-opt -XStandaloneDeriving \
 		--ghc-opt -XUnicodeSyntax \
@@ -125,6 +126,10 @@ format:
 		--ghc-opt -XImportQualifiedPost \
 			--mode ${ORMOLUMODE} \
 		$(ORMOLUFILES)
+
+.PHONY: clang-format
+clang-format:
+	@cd runtime && make format
 
 .PHONY: check-ormolu
 check-ormolu: export ORMOLUMODE = check

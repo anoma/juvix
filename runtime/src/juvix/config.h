@@ -6,22 +6,22 @@
 
 #if !defined(ARCH_WASM32) && !defined(ARCH_NATIVE32) && !defined(ARCH_NATIVE64)
 #define ARCH_WASM32
-//#define ARCH_NATIVE32
-//#define ARCH_NATIVE64
+// #define ARCH_NATIVE32
+// #define ARCH_NATIVE64
 #endif
 
 #if !defined(API_LIBC) && !defined(API_WASI) && !defined(API_ANOMA) && \
     !defined(API_COSM) && !defined(API_NONE)
 #define API_WASI
-//#define API_LIBC
-//#define API_ANOMA
-//#define API_COSM
-//#define API_NONE
+// #define API_LIBC
+// #define API_ANOMA
+// #define API_COSM
+// #define API_NONE
 #endif
 
 #if !defined(DEBUG) && !defined(NDEBUG)
 #define DEBUG
-//#define NDEBUG
+// #define NDEBUG
 #endif
 
-//#define NO_GC
+// #define NO_GC

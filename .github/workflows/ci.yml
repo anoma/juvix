@@ -44,9 +44,8 @@ jobs:
       - uses: actions/checkout@v2
       - uses: jidicula/clang-format-action@v4.9.0
         with:
-          clang-format-version: '13'
+          clang-format-version: '15'
           check-path: 'runtime/src'
-          fallback-style: '{ BasedOnStyle: Google, IndentWidth: 4 }'
 
   hlint:
     runs-on: ubuntu-latest
