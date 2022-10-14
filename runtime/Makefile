@@ -14,7 +14,7 @@ native32:
 	$(MAKE) -f Makefile.generic CONFIG=NATIVE32+RELEASE
 
 native64:
-	make -f Makefile.generic CONFIG=NATIVE64+RELEASE
+	$(MAKE) -f Makefile.generic CONFIG=NATIVE64+RELEASE
 
 x86_32:
 	$(MAKE) -f Makefile.generic CONFIG=X86_32+RELEASE
@@ -29,7 +29,7 @@ native32-debug:
 	$(MAKE) -f Makefile.generic CONFIG=NATIVE32+DEBUG
 
 native64-debug:
-	make -f Makefile.generic CONFIG=NATIVE64+DEBUG
+	$(MAKE) -f Makefile.generic CONFIG=NATIVE64+DEBUG
 
 x86_32-debug:
 	$(MAKE) -f Makefile.generic CONFIG=X86_32+DEBUG

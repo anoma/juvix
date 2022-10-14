@@ -141,6 +141,7 @@ jobs:
       - name: Set WASI_SYSROOT_PATH
         run: |
           echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
+          echo $GITHUB_ENV
 
       - name: Build Project
         run: |
