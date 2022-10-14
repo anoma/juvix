@@ -3,11 +3,10 @@
 
 #include <juvix/object/object.h>
 
-bool juvix_do_equal(word_t x, word_t y);
+bool juvix_constr_equal(word_t x, word_t y);
 
 static inline bool juvix_equal(word_t x, word_t y) {
-    return x == y || (!is_unboxed(x) && GET_KIND(x) == GET_KIND(y) &&
-                      juvix_do_equal(x, y));
+    return x == y || (is_ptr(x) && is_ptr(y) && juvix_constr_equal(x, y));
 }
 
 #endif

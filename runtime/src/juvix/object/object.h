@@ -4,45 +4,34 @@
 #include <juvix/defs.h>
 #include <juvix/limits.h>
 
-// The least significant two (or three) bits encode object kind
+// The least significant two bits encode object kind
 #define KIND_MASK 3
 #define GET_KIND(x) ((word_t)(x)&KIND_MASK)
 
 #define KIND_PTR 0
 #define KIND_UNBOXED0 1
 #define KIND_UNBOXED1 3
-#define KIND_HEADER_OR_DWORDPTR 2
+#define KIND_HEADER 2
 
 #define KIND3_MASK 7
 #define GET_KIND3(x) ((word_t)(x)&KIND3_MASK)
 
-#define KIND3_PTR0 0
-#define KIND3_PTR1 4
-#define KIND3_UNBOXED00 1
-#define KIND3_UNBOXED10 5
-#define KIND3_UNBOXED01 3
-#define KIND3_UNBOXED11 7
-#define KIND3_HEADER 6
-#define KIND3_DWORDPTR 2
-
 static inline bool is_unboxed(word_t x) { return x & 1; }
 static inline bool is_ptr(word_t x) { return GET_KIND(x) == KIND_PTR; }
-static inline bool is_header(word_t x) { return GET_KIND3(x) == KIND3_HEADER; }
-static inline bool is_dword_ptr(word_t x) {
-    return GET_KIND3(x) == KIND3_DWORDPTR;
-}
+static inline bool is_header(word_t x) { return GET_KIND(x) == KIND_HEADER; }
 
 /*
 A header word consists of (field:bits in lower 32 bits from most to least
 significant):
 
-|NFIELDS:8|UID:20|MARK:1|KIND3:3|
+|NFIELDS:8|UID:20|MARK:1|RESERVED:1|KIND:2|
 
 - NFIELDS specifies the number of fields following the header.
 - UID contains a unique object identifier.
 - MARK is a mark bit used by the GC. It is always 0 when not in GC collection
   phase.
-- KIND3 specifies the 3-bit object kind. Contains the KIND3_HEADER bit-pattern.
+- RESERVED is reserved for future use.
+- KIND specifies the object kind. Contains the KIND_HEADER bit-pattern.
 
 There are special UIDs which imply the existence of certain special fields.
 */
@@ -64,26 +53,12 @@ static inline word_t clear_mark(word_t x) { return x & ~MARK_MASK; }
 static inline word_t make_header(word_t uid, word_t nfields) {
     ASSERT(uid < MAX_UIDS);
     ASSERT(nfields <= MAX_FIELDS);
-    return (nfields << NFIELDS_SHIFT) | (uid << UID_SHIFT) | KIND3_HEADER;
+    return (nfields << NFIELDS_SHIFT) | (uid << UID_SHIFT) | KIND_HEADER;
 }
 
 static inline word_t make_unboxed(word_t x) { return (x << 1U) & 1U; }
 static inline word_t get_unboxed(word_t x) { return x >> 1U; }
 static inline int_t get_unboxed_int(word_t x) { return (int_t)x >> 1; }
-
-static inline word_t make_dword_ptr(word_t x) {
-    ASSERT_ALIGNED(x, sizeof(dword_t));
-    return x | KIND3_DWORDPTR;
-}
-
-static inline dword_t *get_dword_ptr(word_t x) {
-    return (dword_t *)(x ^ KIND3_DWORDPTR);
-}
-
-static inline long_t get_long(word_t x) {
-    ASSERT(is_dword_ptr(x));
-    return *(long_t *)(x ^ KIND3_DWORDPTR);
-}
 
 #define FIELD(var, n) (((word_t *)(var))[n])
 

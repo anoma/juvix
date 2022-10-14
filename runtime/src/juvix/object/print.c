@@ -62,63 +62,61 @@ static size_t print_args(bool is_top, char *restrict buf, size_t n,
 
 static size_t print_object(bool is_top, char *buf, size_t n, word_t x) {
     switch (GET_KIND(x)) {
-    case KIND_UNBOXED0:
-    case KIND_UNBOXED1:
-        return print_long(buf, n, get_unboxed_int(x));
-    case KIND_PTR: {
-        char *buf0 = buf;
-        word_t h = get_header(x);
-        size_t delta;
-        if (is_header(h)) {
-            switch (GET_UID(h)) {
-            case UID_CLOSURE: {
-                size_t nargs = get_closure_nargs(x);
-                ASSERT(get_closure_fuid(x) < juvix_functions_num);
-                const char *str = juvix_function_info[get_closure_fuid(x)].name;
-                buf +=
-                    print_args(is_top, buf, n, str, get_closure_args(x), nargs);
-                break;
-            }
-            case UID_CSTRING: {
-                const char *str = get_cstring(x);
-                while (*str) {
-                    PUTC(*str++);
+        case KIND_UNBOXED0:
+        case KIND_UNBOXED1:
+            return print_long(buf, n, get_unboxed_int(x));
+        case KIND_PTR: {
+            char *buf0 = buf;
+            word_t h = get_header(x);
+            size_t delta;
+            if (is_header(h)) {
+                switch (GET_UID(h)) {
+                    case UID_CLOSURE: {
+                        size_t nargs = get_closure_nargs(x);
+                        ASSERT(get_closure_fuid(x) < juvix_functions_num);
+                        const char *str =
+                            juvix_function_info[get_closure_fuid(x)].name;
+                        buf += print_args(is_top, buf, n, str,
+                                          get_closure_args(x), nargs);
+                        break;
+                    }
+                    case UID_CSTRING: {
+                        const char *str = get_cstring(x);
+                        while (*str) {
+                            PUTC(*str++);
+                        }
+                        break;
+                    }
+                    default: {
+                        size_t nargs = GET_NFIELDS(h);
+                        ASSERT(GET_UID(x) < juvix_constrs_num);
+                        const char *str = juvix_constr_info[GET_UID(h)].name;
+                        buf += print_args(is_top, buf, n, str,
+                                          get_constr_args(x), nargs);
+                        break;
+                    }
                 }
-                break;
+            } else {
+                PUTC('(');
+                delta = print_object(true, buf, n, FST(x));
+                n -= delta;
+                buf += delta;
+                if (n == 0) {
+                    return buf - buf0;
+                }
+                PUTC(',');
+                PUTC(' ');
+                delta = print_object(true, buf, n, SND(x));
+                n -= delta;
+                buf += delta;
+                if (n == 0) {
+                    return buf - buf0;
+                }
+                PUTC(')');
             }
-            default: {
-                size_t nargs = GET_NFIELDS(h);
-                ASSERT(GET_UID(x) < juvix_constrs_num);
-                const char *str = juvix_constr_info[GET_UID(h)].name;
-                buf +=
-                    print_args(is_top, buf, n, str, get_constr_args(x), nargs);
-                break;
-            }
-            }
-        } else {
-            PUTC('(');
-            delta = print_object(true, buf, n, FST(x));
-            n -= delta;
-            buf += delta;
-            if (n == 0) {
-                return buf - buf0;
-            }
-            PUTC(',');
-            PUTC(' ');
-            delta = print_object(true, buf, n, SND(x));
-            n -= delta;
-            buf += delta;
-            if (n == 0) {
-                return buf - buf0;
-            }
-            PUTC(')');
+            return buf - buf0;
         }
-        return buf - buf0;
-    }
-    case KIND_HEADER_OR_DWORDPTR:
-        if (is_dword_ptr(x)) {
-            return print_long(buf, n, get_long(x));
-        } else {
+        case KIND_HEADER:
             ASSERT(is_header(x));
             char *buf0 = buf;
             ASSERT(GET_UID(x) < juvix_constrs_num);
@@ -127,9 +125,8 @@ static size_t print_object(bool is_top, char *buf, size_t n, word_t x) {
                 PUTC(*str++);
             }
             return buf - buf0;
-        }
-    default:
-        UNREACHABLE;
+        default:
+            UNREACHABLE;
     }
 }
 
