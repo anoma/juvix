@@ -44,7 +44,7 @@
 
 #define MAX_CSTRING_LENGTH (MAX_FIELDS * sizeof(word_t) - 1)
 
-#define MAX_LOCAL_VARS 8192U
+#define MAX_LOCAL_VARS (PAGE_SIZE / 2 / sizeof(word_t))
 
 /*****************************************/
 /* Static asserts */
