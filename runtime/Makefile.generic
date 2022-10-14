@@ -46,25 +46,25 @@ LEX         := $(call getropt,LEX)
 ifeq ($(LEX),)
 LEX := flex
 endif
-CFLAGS      := $(call getcopt,CFLAGS)
-CXXFLAGS    := $(call getcopt,CXXFLAGS)
-CDEPFLAGS   := $(call getcopt,CDEPFLAGS)
+CFLAGS      := $(call getcopt,CFLAGS) $(CFLAGS)
+CXXFLAGS    := $(call getcopt,CXXFLAGS) $(CXXFLAGS)
+CDEPFLAGS   := $(call getcopt,CDEPFLAGS) $(CDEPFLAGS)
 ifeq ($(strip $(CDEPFLAGS)),)
 CDEPFLAGS   := $(CFLAGS)
 endif
-CXXDEPFLAGS := $(call getcopt,CXXDEPFLAGS)
+CXXDEPFLAGS := $(call getcopt,CXXDEPFLAGS) $(CXXDEPFLAGS)
 ifeq ($(strip $(CXXDEPFLAGS)),)
 CXXDEPFLAGS   := $(CXXFLAGS)
 endif
-LDFLAGS     := $(call getcopt,LDFLAGS)
-CCLDFLAGS   := $(call getcopt,CCLDFLAGS) $(LDFLAGS)
-CXXLDFLAGS  := $(call getcopt,CXXLDFLAGS) $(LDFLAGS)
-YFLAGS      := $(call getcopt,YFLAGS)
+LDFLAGS     := $(call getcopt,LDFLAGS) $(LDFLAGS)
+CCLDFLAGS   := $(call getcopt,CCLDFLAGS) $(LDFLAGS) $(CCLDFLAGS)
+CXXLDFLAGS  := $(call getcopt,CXXLDFLAGS) $(LDFLAGS) $(CXXLDFLAGS)
+YFLAGS      := $(call getcopt,YFLAGS) $(YFLAGS)
 ifeq ($(strip $(YFLAGS)),)
 YFLAGS	    := -d
 endif
-LEXFLAGS    := $(call getcopt,LEXFLAGS)
-LIBFLAGS    := $(call getcopt,LIBFLAGS)
+LEXFLAGS    := $(call getcopt,LEXFLAGS) $(LEXFLAGS)
+LIBFLAGS    := $(call getcopt,LIBFLAGS) $(LIBFLAGS)
 ifeq ($(strip $(LIBFLAGS)),)
 LIBFLAGS := -static -o
 endif
@@ -127,7 +127,7 @@ override SUBDIRS := $(patsubst %,$(SRCDIR)%,$(SUBDIRS))
 # recursive subdirectories of the source directory
 RSUBDIRS     := $(call getcopt,RSUBDIRS)
 override RSUBDIRS := $(patsubst %,$(SRCDIR)%,$(RSUBDIRS))
-override SUBDIRS := $(SUBDIRS) $(foreach dir,$(RSUBDIRS),$(shell find $(dir) -type d))
+override SUBDIRS := $(strip $(SUBDIRS) $(foreach dir,$(RSUBDIRS),$(shell find $(dir) -type d)))
 # files to ignore
 IGNORE	    := $(patsubst %,$(SRCDIR)%,$(call getcopt,IGNORE))
 # source files

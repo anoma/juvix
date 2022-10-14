@@ -1,7 +1,7 @@
 RSUBDIRS = juvix
 
 CC = clang
-CFLAGS = -v -std=c11 -W -Wall -Wno-unused-parameter -Werror
+CFLAGS = -std=c11 -W -Wall -Wno-unused-parameter -Werror
 LIBTOOL = llvm-ar
 LIBFLAGS = csru
 
