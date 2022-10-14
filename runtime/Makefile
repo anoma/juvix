@@ -29,6 +29,6 @@ x86_32-debug:
 	$(MAKE) -f Makefile.generic CONFIG=X86_32+DEBUG
 
 clean:
-	-rm -rf _build*
+	@-rm -rf _build*
 
 .PHONY: release debug wasm32 wasm32-wasi native32 x86_32 wasm32-debug wasm32-wasi-debug native32-debug x86_32-debug clean

@@ -36,11 +36,15 @@ endif
 
 all: install
 
-clean:
+clean: runtime-clean
 	@stack clean --full
 	@rm -rf .hie
 	@rm -rf _docs
 	@rm -rf docs/md
+
+.PHONY: runtime-clean
+runtime-clean:
+	@cd runtime && make clean
 
 repl:
 	@stack ghci Juvix:lib
@@ -145,7 +149,7 @@ pre-commit :
 # -- Build-Install-Test-Release
 # ------------------------------------------------------------------------------
 
-STACKFLAGS?=--fast --jobs $(THREADS)
+STACKFLAGS?=--jobs $(THREADS)
 
 .PHONY: check
 check:
@@ -163,9 +167,13 @@ submodules:
 	@git submodule sync
 	@git submodule update --init --recursive
 
-.PHONY : build
-build: submodules
+.PHONY: build
+build: submodules runtime
 	stack build ${STACKFLAGS}
+
+.PHONY: runtime
+runtime:
+	cd runtime && make -j 4
 
 # -- Install
 
