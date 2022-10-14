@@ -118,6 +118,21 @@ jobs:
           enable-stack: true
           stack-version: 'latest'
 
+      - name: Cache LLVM and Clang
+        id: cache-llvm
+        uses: actions/cache@v3
+        with:
+          path: |
+            C:/Program Files/LLVM
+            ./llvm
+          key: ${{ runner.os }}-llvm-13
+
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: "13.0"
+          cached: ${{ steps.cache-llvm.outputs.cache-hit }}
+
       - name: Build Haskell Project
         run: |
           cd main
