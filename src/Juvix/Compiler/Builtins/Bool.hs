@@ -33,7 +33,7 @@ registerFalse d@InductiveConstructorDef {..} = do
 
 registerIf :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
 registerIf f = do
-  bool <- getBuiltinName (getLoc f) BuiltinBool
+  bool_ <- getBuiltinName (getLoc f) BuiltinBool
   true_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
   false_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
   vart <- freshVar "t"
@@ -41,7 +41,7 @@ registerIf f = do
       ty = f ^. funDefTypeSig
       freeTVars = HashSet.fromList [vart]
       u = ExpressionUniverse (Universe {_universeLevel = Nothing, _universeLoc = error "Universe with no location"})
-  unless (((u <>--> bool --> vart --> vart --> vart) ==% ty) freeTVars) (error "Bool if has the wrong type signature")
+  unless (((u <>--> bool_ --> vart --> vart --> vart) ==% ty) freeTVars) (error "Bool if has the wrong type signature")
   registerBuiltin BuiltinBoolIf if_
   vare <- freshVar "e"
   hole <- freshHole
