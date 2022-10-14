@@ -95,7 +95,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest , macOS-latest]
+        os: [ubuntu-latest]
         ghc: ["9.2.4"]
     steps:
       - name: Checkout our repository
@@ -139,27 +139,20 @@ jobs:
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
         with:
-          version: "13.0.1"
+          version: "13.0"
           cached: ${{ steps.cache-llvm.outputs.cache-hit }}
 
-      - name: Build Project (Linux)
-        if: contains(matrix.os, 'ubuntu')
+      - name: Build Project
         run: |
           cd main
           make build
-
-      - name: Build Project (macOS)
-        if: contains(matrix.os, 'macOS')
-        run: |
-          cd main
-          CFLAGS=-I`xcrun --sdk macosx --show-sdk-path`/usr/include make build
 
   test:
     needs: build
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest , macOS-latest]
+        os: [ubuntu-latest]
         ghc: ["9.2.4"]
     steps:
       - name: Checkout the main repository
