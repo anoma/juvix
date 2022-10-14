@@ -244,7 +244,7 @@ registerBuiltinInductive ::
   Sem r ()
 registerBuiltinInductive d = \case
   BuiltinNat -> registerNatDef d
-  BuiltinBoolean -> registerBoolDef d
+  BuiltinBool -> registerBoolDef d
 
 registerBuiltinFunction ::
   Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r =>
@@ -253,7 +253,7 @@ registerBuiltinFunction ::
   Sem r ()
 registerBuiltinFunction d = \case
   BuiltinNatPlus -> registerNatPlus d
-  BuiltinBooleanIf -> registerIf d
+  BuiltinBoolIf -> registerIf d
 
 registerBuiltinAxiom ::
   Members '[InfoTableBuilder, Error ScoperError, Builtins] r =>

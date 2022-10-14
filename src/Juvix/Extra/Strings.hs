@@ -92,8 +92,8 @@ string = "string"
 nat :: IsString s => s
 nat = "nat"
 
-boolean_ :: IsString s => s
-boolean_ = "boolean"
+bool_ :: IsString s => s
+bool_ = "bool"
 
 io :: IsString s => s
 io = "IO"
@@ -107,8 +107,8 @@ natPrint = "nat-print"
 natPlus :: IsString s => s
 natPlus = "nat-plus"
 
-booleanIf :: IsString s => s
-booleanIf = "boolean-if"
+boolIf :: IsString s => s
+boolIf = "bool-if"
 
 builtin :: IsString s => s
 builtin = "builtin"

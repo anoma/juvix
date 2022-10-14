@@ -205,7 +205,7 @@ tests =
       StdlibInclude
       "Symbols.juvix",
     PosTest
-      "Builtin boolean"
+      "Builtin bool"
       "."
       StdlibExclude
       "BuiltinsBool.juvix"
