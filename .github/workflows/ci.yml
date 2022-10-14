@@ -142,9 +142,9 @@ jobs:
           version: "13.0"
           cached: ${{ steps.cache-llvm.outputs.cache-hit }}
 
-      - name: Symlink libclang.so (macOS)
+      - name: Symlink LLVM includes (macOS)
         if: contains(matrix.os, 'macOS')
-        run: for f in *; do sudo ln -s $f /usr/local/include/$f; done
+        run: for f in *; do echo $f; sudo ln -s $f /usr/local/include/$f; done
         working-directory: ${{ env.LLVM_PATH }}/include
 
       - name: Build Project
