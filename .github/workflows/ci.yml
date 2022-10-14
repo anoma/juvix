@@ -152,7 +152,7 @@ jobs:
         if: contains(matrix.os, 'macOS')
         run: |
           cd main
-          CFLAFGS=-I$LLVM_PATH/lib/clang/13.0.1/include make build
+          CFLAGS=-I$LLVM_PATH/lib/clang/13.0.1/include make build
 
   test:
     needs: build
