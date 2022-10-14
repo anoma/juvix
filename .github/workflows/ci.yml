@@ -133,7 +133,16 @@ jobs:
           version: "13.0"
           cached: ${{ steps.cache-llvm.outputs.cache-hit }}
 
-      - name: Build Haskell Project
+      - name: Download and extract wasi-sysroot
+        run: |
+          curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/wasi-sysroot-15.0.tar.gz -OL
+          tar xfv wasi-sysroot-15.0.tar.gz
+
+      - name: Set WASI_SYSROOT_PATH
+        run: |
+          echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
+
+      - name: Build Project
         run: |
           cd main
           make build
