@@ -498,11 +498,9 @@ instance SingI s => PrettyCode (FunctionClause s) where
       clauseOwnerFunction'
         <+?> clausePatterns'
         <+> kwAssign
-        <+> nest
-          2
-          ( clauseBody'
-              <+?> ((line <>) <$> clauseWhere')
-          )
+        <+> ( clauseBody'
+                <+?> ((line <>) <$> clauseWhere')
+            )
 
 instance SingI s => PrettyCode (WhereBlock s) where
   ppCode WhereBlock {..} = indent' . (kwWhere <+>) <$> ppBlock whereClauses
