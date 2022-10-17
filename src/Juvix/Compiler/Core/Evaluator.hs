@@ -10,7 +10,7 @@ import Control.Exception qualified as Exception
 import Data.HashMap.Strict qualified as HashMap
 import Debug.Trace qualified as Debug
 import GHC.Conc qualified as GHC
-import GHC.Show as S
+import GHC.Show qualified as S
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Error (CoreError (..))
 import Juvix.Compiler.Core.Extra
@@ -55,7 +55,9 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
 
     eval' :: Env -> Node -> Node
     eval' !env !n = case n of
-      NVar (Var _ idx) -> env !! idx
+      NVar (Var _ idx)
+        | idx < length env -> env !! idx
+        | otherwise -> error ("invalid index: " <> show idx <> " (length: " <> show (length env) <> ")")
       NIdt (Ident _ sym) -> eval' [] (lookupContext n sym)
       NCst {} -> n
       NApp (App i l r) ->

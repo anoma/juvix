@@ -337,6 +337,9 @@ fromRightIO' pp = do
 fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
 fromRightIO pp = fromRightIO' (putStrLn . pp)
 
+leftToMaybe :: Either l r -> Maybe l
+leftToMaybe = either Just (const Nothing)
+
 --------------------------------------------------------------------------------
 -- Misc
 --------------------------------------------------------------------------------
