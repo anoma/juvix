@@ -176,6 +176,10 @@ submodules:
 build: submodules runtime
 	stack build ${STACKFLAGS}
 
+.PHONY: fast-build
+fast-build: submodules runtime
+	stack build --fast ${STACKFLAGS}
+
 .PHONY: runtime
 runtime:
 	cd runtime && make -j 4
@@ -186,15 +190,27 @@ runtime:
 install: submodules
 	@stack install ${STACKFLAGS}
 
+.PHONY : fast-install
+fast-install: submodules
+	@stack install --fast ${STACKFLAGS}
+
 # -- Testing
 
 .PHONY : test
 test: build
 	@stack test ${STACKFLAGS}
 
+.PHONY : fast-test
+fast-test: fast-build
+	@stack test --fast ${STACKFLAGS}
+
 .PHONY : test-skip-slow
 test-skip-slow:
 	@stack test ${STACKFLAGS} --ta '-p "! /slow tests/"'
+
+.PHONY : fast-test-skip-slow
+fast-test-skip-slow:
+	@stack test --fast ${STACKFLAGS} --ta '-p "! /slow tests/"'
 
 SHELLTEST := $(shell command -v shelltest 2> /dev/null)
 
