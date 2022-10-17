@@ -6,7 +6,7 @@
 #include <juvix/mem.h>
 #include <juvix/object.h>
 
-static inline juvix_init() {
+static inline void juvix_init() {
     mem_init();
     funcall_init();
 }

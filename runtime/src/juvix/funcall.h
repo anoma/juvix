@@ -6,6 +6,6 @@
 
 #define FUNCALL_DECLS DECL_RESULT
 
-static inline funcall_init() { stacktrace_init(); }
+static inline void funcall_init() { stacktrace_init(); }
 
 #endif

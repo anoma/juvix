@@ -1,8 +1,16 @@
-all: release debug
+all: release debug includes
 
 release: wasm32-wasi native64
 
 debug: wasm32-wasi-debug native64-debug
+
+HEADERS := $(patsubst src/%,include/%,$(shell find src -name '*.h'))
+
+includes: $(HEADERS)
+
+$(HEADERS) : include/%.h : src/%.h
+	@mkdir -p `dirname $@`
+	@cp $< $@
 
 wasm32:
 	$(MAKE) -f Makefile.generic CONFIG=WASM32+RELEASE
@@ -39,5 +47,6 @@ format:
 
 clean:
 	@-rm -rf _build*
+	@-rm -rf include
 
-.PHONY: release debug format wasm32 wasm32-wasi native32 native64 x86_32 wasm32-debug wasm32-wasi-debug native32-debug native64-debug x86_32-debug clean
+.PHONY: release debug includes format wasm32 wasm32-wasi native32 native64 x86_32 wasm32-debug wasm32-wasi-debug native32-debug native64-debug x86_32-debug clean
