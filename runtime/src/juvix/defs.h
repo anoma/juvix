@@ -15,7 +15,11 @@
 /**********************************************/
 /* Basic primitive functions and macros */
 
-static void print_msg(const char *msg) { puts(msg); }
+static void print_msg(const char *msg) {
+#if defined(API_LIBC) || defined(API_WASI)
+    puts(msg);
+#endif
+}
 
 _Noreturn static inline void error_exit() {
 #if defined(API_LIBC)
