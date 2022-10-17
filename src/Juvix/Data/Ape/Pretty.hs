@@ -15,9 +15,6 @@ newtype ApeParams a = ApeParams
   { _apePP :: a -> Doc CodeAnn
   }
 
-refNes :: Int
-refNes = 2
-
 makeLenses ''ApeParams
 
 runApe :: forall a e. IsApe a e => ApeParams e -> a -> Doc CodeAnn
@@ -39,37 +36,13 @@ ppCape = \case
   CapeLeaf l -> ppLeaf l
   CapeChain c -> ppChain c
   CapeAppChain c -> ppAppChain c
-  CapeUChain {} -> error "todo"
-
--- | helper function that cicles the nesting level.
--- If the nesting level is x in the call site, then,
--- it cicles from x + 2 to pagewith.
-adjust :: forall a. Doc a -> Doc a
-adjust d = pageWidth (nesting . helper)
-  where
-    helper :: PageWidth -> Int -> Doc a
-    helper pw _ = case pw of
-      Unbounded -> d
-      AvailablePerLine pwidth _ -> nesting nest'
-        where
-          nest' :: Int -> Doc a
-          nest' curNes = nest offset d
-            where
-              offset :: Int
-              offset = target - curNes
-              minbound, maxbound :: Int
-              (minbound, maxbound) = (refNes + 2, pwidth - 50)
-              target :: Int
-              target = max minbound (curNes `mod` maxbound)
-
-vsep' :: Foldable f => f (Doc a) -> Doc a
-vsep' = adjust . concatWith (\a b -> a <> line <> adjust b)
+  CapeUChain c -> ppUChain c
 
 ppAppChain :: forall a r. Members '[Reader (ApeParams a)] r => AppChain a -> Sem r (Doc CodeAnn)
 ppAppChain (AppChain f links) = do
   f' <- ppLinkExpr fx f
   args' <- mapM (ppLinkExpr fx) links
-  return $ PP.group (vsep' (f' : toList args'))
+  return $ PP.group (vsep (f' : toList args'))
   where
     fx :: Precedence
     fx = appFixity ^. fixityPrecedence
@@ -78,7 +51,7 @@ ppChain :: forall a r. Members '[Reader (ApeParams a)] r => Chain a -> Sem r (Do
 ppChain (Chain opFix f links) = do
   f' <- ppLinkExpr fx f
   args' <- mapM ppLink links
-  return $ PP.group (vsep'(f' : toList args'))
+  return $ PP.group (vsep (f' : toList args'))
   where
     fx :: Precedence
     fx = opFix ^. fixityPrecedence
@@ -88,6 +61,16 @@ ppChain (Chain opFix f links) = do
       let op' = pp op
       a' <- ppLinkExpr fx a
       return (op' <+> a')
+
+ppUChain :: forall a r. Members '[Reader (ApeParams a)] r => UChain a -> Sem r (Doc CodeAnn)
+ppUChain (UChain opFix f links) = do
+  f' <- ppLinkExpr fx f
+  pp <- asks (^. apePP)
+  let args = hsep (fmap pp links)
+  return $ f' <+> args
+  where
+    fx :: Precedence
+    fx = opFix ^. fixityPrecedence
 
 nestIf :: Bool -> Doc a -> Doc a
 nestIf = \case

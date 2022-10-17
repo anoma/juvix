@@ -18,7 +18,7 @@ data GenericError = GenericError
 
 data GenericOptions = GenericOptions
   { _showNameIds :: Bool,
-    _genericApe :: Bool
+    _genericNoApe :: Bool
   }
   deriving stock (Eq, Show)
 
@@ -29,7 +29,7 @@ defaultGenericOptions :: GenericOptions
 defaultGenericOptions =
   GenericOptions
     { _showNameIds = False,
-      _genericApe = False
+      _genericNoApe = False
     }
 
 instance Pretty GenericError where

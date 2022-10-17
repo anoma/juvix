@@ -498,9 +498,11 @@ instance SingI s => PrettyCode (FunctionClause s) where
       clauseOwnerFunction'
         <+?> clausePatterns'
         <+> kwAssign
-        <+> ( clauseBody'
-                <+?> ((line <>) <$> clauseWhere')
-            )
+        <+> nest
+          2
+          ( clauseBody'
+              <+?> ((line <>) <$> clauseWhere')
+          )
 
 instance SingI s => PrettyCode (WhereBlock s) where
   ppCode WhereBlock {..} = indent' . (kwWhere <+>) <$> ppBlock whereClauses
@@ -614,7 +616,7 @@ apeHelper :: (IsApe a Expression, Members '[Reader Options] r) => a -> Sem r (Do
 apeHelper a alt = do
   opts <- ask @Options
   if
-      | opts ^. optApe ->
+      | not (opts ^. optNoApe) ->
           return $
             let params :: ApeParams Expression
                 params = ApeParams (run . runReader opts . ppCode)
