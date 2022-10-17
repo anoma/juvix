@@ -75,7 +75,8 @@ commonArgs outputFile =
 native64Args :: FilePath -> FilePath -> [String]
 native64Args outputFile inputFile =
   commonArgs outputFile
-    <> [ "-DARCH_NATIVE64",
+    <> [ "-v",
+         "-DARCH_NATIVE64",
          "-DAPI_LIBC",
          "-m64",
          "-O3",
