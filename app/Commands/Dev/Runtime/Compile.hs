@@ -121,7 +121,6 @@ commonArgs o outputFile =
          "-Wno-unused-parameter",
          "-Werror",
          "-std=c11",
-         "-static",
          "-I",
          juvixIncludeDir,
          "-o",

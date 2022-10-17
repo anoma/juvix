@@ -3,9 +3,9 @@
 #include <juvix/mem/mem.h>
 #include <juvix/mem/pages.h>
 
-uint seed = 123456789;
+static uint seed = 123456789;
 
-uint myrandom() {
+static uint myrandom() {
     const uint a = 1103515245;
     const uint c = 12345;
     seed = (a * seed + c) >> 31;

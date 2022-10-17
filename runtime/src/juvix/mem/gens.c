@@ -25,7 +25,7 @@ pool_t *pool_alloc(pool_t *next) {
     return pool;
 }
 
-static void pools_free(pool_t *pool) {
+static void pool_free(pool_t *pool) {
     while (pool != NULL) {
         pool_t *next = pool->next;
         pfree(pool, 1);
@@ -62,7 +62,7 @@ void gen_free(generation_t *gen) {
     }
     gen->next = next_free_gen;
     next_free_gen = gen;
-    pools_free(gen->memory);
+    pool_free(gen->memory);
 }
 
 static void pool_prepend(pool_t **ppool, pool_t *pool) {

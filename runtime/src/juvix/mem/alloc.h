@@ -17,6 +17,7 @@ extern generation_t *alloc_youngest_generation;
 
 // Initialise the allocator module.
 void alloc_init();
+void alloc_cleanup();
 // Allocate more memory pages.
 void alloc_pages(bool can_gc);
 

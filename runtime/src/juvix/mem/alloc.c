@@ -10,6 +10,15 @@ void alloc_init() {
     alloc_youngest_generation = gen_alloc(NULL, opt_generation_min_pages);
 }
 
+void alloc_cleanup() {
+    generation_t *gen = alloc_youngest_generation;
+    while (gen != NULL) {
+        generation_t *prev = gen->prev;
+        gen_free(gen);
+        gen = prev;
+    }
+}
+
 static void alloc_prepare(bool can_gc) {
     if (can_gc && alloc_youngest_generation->pages_max <=
                       alloc_youngest_generation->pages_num) {
