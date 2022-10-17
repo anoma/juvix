@@ -37,37 +37,44 @@ instance Pretty BuiltinPrim where
 
 builtinConstructors :: BuiltinInductive -> [BuiltinConstructor]
 builtinConstructors = \case
-  BuiltinNatural -> [BuiltinNaturalZero, BuiltinNaturalSuc]
+  BuiltinNat -> [BuiltinNatZero, BuiltinNatSuc]
+  BuiltinBool -> [BuiltinBoolTrue, BuiltinBoolFalse]
 
 data BuiltinInductive
-  = BuiltinNatural
+  = BuiltinNat
+  | BuiltinBool
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
 
 instance Hashable BuiltinInductive
 
 instance Pretty BuiltinInductive where
   pretty = \case
-    BuiltinNatural -> Str.natural
+    BuiltinNat -> Str.nat
+    BuiltinBool -> Str.bool_
 
 data BuiltinConstructor
-  = BuiltinNaturalZero
-  | BuiltinNaturalSuc
+  = BuiltinNatZero
+  | BuiltinNatSuc
+  | BuiltinBoolTrue
+  | BuiltinBoolFalse
   deriving stock (Show, Eq, Ord, Generic)
 
 instance Hashable BuiltinConstructor
 
 data BuiltinFunction
-  = BuiltinNaturalPlus
+  = BuiltinNatPlus
+  | BuiltinBoolIf
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
 
 instance Hashable BuiltinFunction
 
 instance Pretty BuiltinFunction where
   pretty = \case
-    BuiltinNaturalPlus -> Str.naturalPlus
+    BuiltinNatPlus -> Str.natPlus
+    BuiltinBoolIf -> Str.boolIf
 
 data BuiltinAxiom
-  = BuiltinNaturalPrint
+  = BuiltinNatPrint
   | BuiltinIO
   | BuiltinIOSequence
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
@@ -76,6 +83,6 @@ instance Hashable BuiltinAxiom
 
 instance Pretty BuiltinAxiom where
   pretty = \case
-    BuiltinNaturalPrint -> Str.naturalPrint
+    BuiltinNatPrint -> Str.natPrint
     BuiltinIO -> Str.io
     BuiltinIOSequence -> Str.ioSequence

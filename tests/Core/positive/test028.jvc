@@ -1,7 +1,9 @@
 -- functional queues
 
-constr nil 0;
-constr cons 2;
+inductive list {
+  nil : list;
+  cons : any -> list -> list;
+};
 
 def hd := \l case l of { cons x _ := x };
 def tl := \l case l of { cons _ x := x };
@@ -13,7 +15,9 @@ def rev' := \l \acc case l of {
 
 def rev := \l rev' l nil;
 
-constr queue 2;
+inductive Queue {
+  queue : list -> list -> Queue;
+};
 
 def fst := \q case q of { queue x _ := x };
 def snd := \q case q of { queue _ x := x };

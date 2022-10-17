@@ -6,7 +6,7 @@ Juvix has support for the built-in natural type and a few functions that are com
 1. Built-in inductive definitions.
 
    #+begin_example
-   builtin natural
+   builtin nat
    inductive Nat {
      zero : Nat;
      suc : Nat → Nat;
@@ -17,7 +17,7 @@ Juvix has support for the built-in natural type and a few functions that are com
 
    #+begin_example
    inifl 6 +;
-   builtin natural-plus
+   builtin nat-plus
    + : Nat → Nat → Nat;
    + zero b := b;
    + (suc a) b := suc (a + b);
@@ -26,6 +26,6 @@ Juvix has support for the built-in natural type and a few functions that are com
 3. Builtin axiom definitions.
 
    #+begin_example
-   builtin natural-print
+   builtin nat-print
    axiom printNat : Nat → Action;
    #+end_example

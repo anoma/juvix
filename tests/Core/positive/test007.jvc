@@ -1,7 +1,9 @@
 -- case
 
-constr nil 0;
-constr cons 2;
+inductive list {
+  nil : list;
+  cons : any -> list -> list;
+};
 
 def hd := \x case x of { cons x' _ := x' };
 def tl := \x case x of { cons _ x' := x' };

@@ -1,11 +1,13 @@
 -- trees
 
-constr node1 1;
-constr node2 2;
-constr node3 3;
-constr leaf 0;
+inductive tree : Type {
+  node1 : tree -> tree;
+  node2 : tree -> tree -> tree;
+  node3 : tree -> tree -> tree -> tree;
+  leaf : tree;
+};
 
-def gen := \n
+def gen : int -> tree := \n
   if n = 0 then
     leaf
   else if n % 3 = 0 then
@@ -15,7 +17,7 @@ def gen := \n
   else
     node3 (gen (n - 1)) (gen (n - 1)) (gen (n - 1));
 
-def preorder := \t case t of {
+def preorder : tree -> tree := \t case t of {
   node1 c := write 1 >> preorder c;
   node2 l r := write 2 >> preorder l >> preorder r;
   node3 l m r := write 3 >> preorder l >> preorder m >> preorder r;

@@ -1,9 +1,13 @@
 -- merge sort
 
-constr nil 0;
-constr cons 2;
+inductive list {
+  nil : list;
+  cons : any -> list -> list;
+};
 
-constr pair 2;
+inductive product {
+  pair : any -> any -> product;
+};
 
 def length := \xs case xs of {
   nil := 0;

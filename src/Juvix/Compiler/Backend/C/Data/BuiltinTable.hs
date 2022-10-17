@@ -6,22 +6,26 @@ import Juvix.Prelude
 
 builtinConstructorName :: BuiltinConstructor -> Maybe Text
 builtinConstructorName = \case
-  BuiltinNaturalZero -> Just zero
-  BuiltinNaturalSuc -> Just suc
+  BuiltinNatZero -> Just zero
+  BuiltinNatSuc -> Just suc
+  BuiltinBoolTrue -> Just true_
+  BuiltinBoolFalse -> Just false_
 
 builtinInductiveName :: BuiltinInductive -> Maybe Text
 builtinInductiveName = \case
-  BuiltinNatural -> Just nat
+  BuiltinNat -> Just nat
+  BuiltinBool -> Just bool_
 
 builtinAxiomName :: BuiltinAxiom -> Maybe Text
 builtinAxiomName = \case
-  BuiltinNaturalPrint -> Just printNat
+  BuiltinNatPrint -> Just printNat
   BuiltinIO -> Just io
   BuiltinIOSequence -> Just ioseq
 
 builtinFunctionName :: BuiltinFunction -> Maybe Text
 builtinFunctionName = \case
-  BuiltinNaturalPlus -> Just natplus
+  BuiltinNatPlus -> Just natplus
+  BuiltinBoolIf -> Just boolif
 
 builtinName :: BuiltinPrim -> Maybe Text
 builtinName = \case

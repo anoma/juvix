@@ -208,5 +208,10 @@ tests =
       "Check Valid Symbols"
       ""
       StdlibInclude
-      "Symbols.juvix"
+      "Symbols.juvix",
+    PosTest
+      "Builtin bool"
+      "."
+      StdlibExclude
+      "BuiltinsBool.juvix"
   ]

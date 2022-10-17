@@ -115,8 +115,8 @@ kwEnd = keyword Str.end
 kwBuiltin :: Doc Ann
 kwBuiltin = keyword Str.builtin
 
-kwNatural :: Doc Ann
-kwNatural = keyword Str.natural
+kwNat :: Doc Ann
+kwNat = keyword Str.nat
 
 kwInductive :: Doc Ann
 kwInductive = keyword Str.inductive
