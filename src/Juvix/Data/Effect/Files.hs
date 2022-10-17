@@ -11,6 +11,7 @@ import Juvix.Prelude.Base
 data Files m a where
   ReadFile' :: FilePath -> Files m Text
   EqualPaths' :: FilePath -> FilePath -> Files m (Maybe Bool)
+  GetAbsPath :: FilePath -> Files m FilePath
   RegisterStdlib :: [(FilePath, Text)] -> Files m ()
 
 makeSem ''Files
@@ -51,8 +52,8 @@ seqFst (ma, b) = do
 canonicalizeStdlib :: [(FilePath, Text)] -> IO (HashMap FilePath Text)
 canonicalizeStdlib stdlib = HashMap.fromList <$> mapM seqFst (first canonicalizePath <$> stdlib)
 
-runFilesIO' :: forall r a. Member (Embed IO) r => Sem (Files ': r) a -> Sem (State FilesState ': (Error FilesError ': r)) a
-runFilesIO' = reinterpret2 $ \case
+runFilesIO' :: forall r a. Member (Embed IO) r => FilePath -> Sem (Files ': r) a -> Sem (State FilesState ': (Error FilesError ': r)) a
+runFilesIO' rootPath = reinterpret2 $ \case
   ReadFile' f -> do
     stdlib <- gets (^. stdlibTable)
     readStdlibOrFile f stdlib
@@ -63,15 +64,16 @@ runFilesIO' = reinterpret2 $ \case
   RegisterStdlib stdlib -> do
     s <- embed (FilesState <$> canonicalizeStdlib stdlib)
     put s
+  GetAbsPath f -> embed (canonicalizePath (rootPath </> f))
 
-runFilesIO :: Member (Embed IO) r => Sem (Files ': r) a -> Sem (Error FilesError ': r) a
-runFilesIO = evalState initState . runFilesIO'
+runFilesIO :: Member (Embed IO) r => FilePath -> Sem (Files ': r) a -> Sem (Error FilesError ': r) a
+runFilesIO rootPath = evalState initState . runFilesIO' rootPath
 
-runFilesEmpty :: Sem (Files ': r) a -> Sem r a
-runFilesEmpty = runFilesPure mempty
+runFilesEmpty :: FilePath -> Sem (Files ': r) a -> Sem r a
+runFilesEmpty rootPath = runFilesPure rootPath mempty
 
-runFilesPure :: HashMap FilePath Text -> Sem (Files ': r) a -> Sem r a
-runFilesPure fs = interpret $ \case
+runFilesPure :: FilePath -> HashMap FilePath Text -> Sem (Files ': r) a -> Sem r a
+runFilesPure rootPath fs = interpret $ \case
   ReadFile' f -> case HashMap.lookup f fs of
     Nothing ->
       error $
@@ -84,3 +86,4 @@ runFilesPure fs = interpret $ \case
     Just c -> return c
   EqualPaths' _ _ -> return Nothing
   RegisterStdlib {} -> return ()
+  GetAbsPath f -> return (rootPath </> f)
