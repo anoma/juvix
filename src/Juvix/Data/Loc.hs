@@ -37,9 +37,9 @@ data Loc = Loc
   }
   deriving stock (Show, Eq, Ord)
 
-mkLoc :: FilePath -> Int -> M.SourcePos -> Loc
-mkLoc root offset M.SourcePos {..} =
-  let _locFile = normalise (root </> sourceName)
+mkLoc :: Int -> M.SourcePos -> Loc
+mkLoc offset M.SourcePos {..} =
+  let _locFile = normalise sourceName
    in Loc {..}
   where
     _locOffset = Pos (fromIntegral offset)

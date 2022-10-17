@@ -362,8 +362,7 @@ readParseModule ::
 readParseModule mp = do
   path <- modulePathToFilePath mp
   txt <- readFile' path
-  root <- asks (^. scopeRootPath)
-  pr <- runModuleParser root path txt
+  pr <- runModuleParser path txt
   case pr of
     Left err -> throw (ErrParser (MegaParsecError err))
     Right (tbl, m) -> Parser.mergeTable tbl $> m

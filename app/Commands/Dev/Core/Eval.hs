@@ -28,7 +28,7 @@ doEval noIO loc tab node
 runCommand :: forall r. Members '[Embed IO, App] r => CoreEvalOptions -> Sem r ()
 runCommand opts = do
   s <- embed (readFile f)
-  case Core.runParser "" f Core.emptyInfoTable s of
+  case Core.runParser f Core.emptyInfoTable s of
     Left err -> exitJuvixError (JuvixError err)
     Right (tab, Just node) -> do
       r <- doEval (opts ^. coreEvalNoIO) defaultLoc tab node
@@ -43,6 +43,6 @@ runCommand opts = do
     Right (_, Nothing) -> return ()
   where
     defaultLoc :: Interval
-    defaultLoc = singletonInterval (mkLoc f 0 (M.initialPos f))
+    defaultLoc = singletonInterval (mkLoc 0 (M.initialPos f))
     f :: FilePath
     f = opts ^. coreEvalInputFile . pathPath

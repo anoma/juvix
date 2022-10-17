@@ -2,7 +2,6 @@
 -- (Juvix, JuvixCore, JuvixAsm).
 module Juvix.Parser.Lexer where
 
-import Control.Monad.Trans.Class (lift)
 import Data.HashSet qualified as HashSet
 import Data.Set qualified as Set
 import Data.Text qualified as Text
@@ -15,12 +14,6 @@ import Text.Megaparsec.Char hiding (space, space1)
 import Text.Megaparsec.Char.Lexer qualified as L
 
 type ParsecS r = ParsecT Void Text (Sem r)
-
-newtype ParserParams = ParserParams
-  { _parserParamsRoot :: FilePath
-  }
-
-makeLenses ''ParserParams
 
 parseFailure :: Int -> String -> ParsecS r a
 parseFailure off str = P.parseError $ P.FancyError off (Set.singleton (P.ErrorFail str))
@@ -67,7 +60,7 @@ string' :: ParsecS r Text
 string' = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
 -- | The caller is responsible of consuming space after it.
-kw' :: forall r. Member (Reader ParserParams) r => Keyword -> ParsecS r Interval
+kw' :: Keyword -> ParsecS r Interval
 kw' k@Keyword {..} = P.label (unpack _keywordAscii) (reserved <|> normal)
   where
     -- If the ascii representation uses reserved symbols, we use chunk so that we parse exactly the keyword
@@ -114,24 +107,23 @@ delimiterSymbols = ","
 validFirstChar :: Char -> Bool
 validFirstChar c = not (isNumber c || isSpace c || (c `elem` reservedSymbols))
 
-curLoc :: Member (Reader ParserParams) r => ParsecS r Loc
+curLoc :: ParsecS r Loc
 curLoc = do
   sp <- getSourcePos
   offset <- getOffset
-  root <- lift (asks (^. parserParamsRoot))
-  return (mkLoc root offset sp)
+  return (mkLoc offset sp)
 
-onlyInterval :: Member (Reader ParserParams) r => ParsecS r a -> ParsecS r Interval
+onlyInterval :: ParsecS r a -> ParsecS r Interval
 onlyInterval = fmap snd . interval
 
-interval :: Member (Reader ParserParams) r => ParsecS r a -> ParsecS r (a, Interval)
+interval :: ParsecS r a -> ParsecS r (a, Interval)
 interval ma = do
   start <- curLoc
   res <- ma
   end <- curLoc
   return (res, mkInterval start end)
 
-withLoc :: Member (Reader ParserParams) r => ParsecS r a -> ParsecS r (WithLoc a)
+withLoc :: ParsecS r a -> ParsecS r (WithLoc a)
 withLoc ma = do
   (a, i) <- interval ma
   return (WithLoc i a)
