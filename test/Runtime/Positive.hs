@@ -36,5 +36,15 @@ tests =
       "HelloWorld"
       "."
       "test001.c"
-      "out/test001.out"
+      "out/test001.out",
+    PosTest
+      "Page allocation"
+      "."
+      "test002.c"
+      "out/test002.out",
+    PosTest
+      "Printing of integers"
+      "."
+      "test003.c"
+      "out/test003.out"
   ]

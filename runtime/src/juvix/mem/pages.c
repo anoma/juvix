@@ -2,6 +2,9 @@
 #include <juvix/mem/pages.h>
 #include <juvix/opts.h>
 
+size_t juvix_max_allocated_pages_num = 0;
+size_t juvix_allocated_pages_num = 0;
+
 #if defined(API_LIBC)
 
 #include <stdlib.h>
@@ -13,10 +16,17 @@ void *palloc(size_t n) {
         error_exit_msg("error: out of memory");
     }
     ASSERT_ALIGNED(ptr, PAGE_SIZE);
+    juvix_allocated_pages_num += n;
+    if (juvix_allocated_pages_num > juvix_max_allocated_pages_num) {
+        juvix_max_allocated_pages_num = juvix_allocated_pages_num;
+    }
     return ptr;
 }
 
-void pfree(void *ptr, size_t n) { free(ptr); }
+void pfree(void *ptr, size_t n) {
+    juvix_allocated_pages_num -= n;
+    free(ptr);
+}
 
 #elif defined(ARCH_WASM32)
 
@@ -53,6 +63,10 @@ void *palloc(size_t n) {
             free_page = next;
         }
         ASSERT_ALIGNED(page, PAGE_SIZE);
+        juvix_allocated_pages_num += n;
+        if (juvix_allocated_pages_num > juvix_max_allocated_pages_num) {
+            juvix_max_allocated_pages_num = juvix_allocated_pages_num;
+        }
         return page;
     }
 
@@ -72,6 +86,10 @@ void *palloc(size_t n) {
     void *ptr = heap_end;
     heap_end = (char *)heap_end + n * PAGE_SIZE;
     ASSERT_ALIGNED(ptr, PAGE_SIZE);
+    juvix_allocated_pages_num += n;
+    if (juvix_allocated_pages_num > juvix_max_allocated_pages_num) {
+        juvix_max_allocated_pages_num = juvix_allocated_pages_num;
+    }
     return ptr;
 }
 
@@ -80,6 +98,7 @@ void pfree(void *ptr, size_t n) {
     page->size = n;
     page->next = free_page;
     free_page = page;
+    juvix_allocated_pages_num -= n;
 }
 
 #else

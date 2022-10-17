@@ -3,6 +3,9 @@
 
 #include <juvix/defs.h>
 
+extern size_t juvix_max_allocated_pages_num;
+extern size_t juvix_allocated_pages_num;
+
 // Allocate a continuous block of memory of `n` pages (`n * PAGE_SIZE` bytes).
 // The memory is PAGE_SIZE-aligned.
 void *palloc(size_t n);

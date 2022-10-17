@@ -35,4 +35,10 @@ void memcopy(word_t *restrict dest, const word_t *restrict src, size_t n);
 // Fill `n` words at `dest` with `val`
 void memfill(word_t *dest, word_t val, size_t n);
 
+#ifndef API_LIBC
+void *memset(void *dest, int c, size_t n);
+void *memcpy(void *restrict dest, const void *restrict src, size_t n);
+void *memmove(void *dest, const void *src, size_t n);
+#endif
+
 #endif
