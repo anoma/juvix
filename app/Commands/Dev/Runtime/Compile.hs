@@ -121,6 +121,7 @@ commonArgs o outputFile =
          "-Wno-unused-parameter",
          "-Werror",
          "-std=c11",
+         "-static",
          "-I",
          juvixIncludeDir,
          "-o",
@@ -129,8 +130,7 @@ commonArgs o outputFile =
     <> ( if
              | not (o ^. runtimeCompilePreprocess || o ^. runtimeCompileAssembly) ->
                  [ "-L",
-                   juvixBuildDir,
-                   "-ljuvix"
+                   juvixBuildDir
                  ]
              | otherwise -> []
        )
@@ -144,6 +144,11 @@ native64Args o outputFile inputFile =
          "-O3",
          inputFile
        ]
+    <> ( if
+             | not (o ^. runtimeCompilePreprocess || o ^. runtimeCompileAssembly) ->
+                 ["-ljuvix"]
+             | otherwise -> []
+       )
 
 wasiArgs :: RuntimeCompileOptions -> FilePath -> FilePath -> FilePath -> [String]
 wasiArgs o outputFile inputFile sysrootPath =
@@ -157,6 +162,11 @@ wasiArgs o outputFile inputFile sysrootPath =
          sysrootPath,
          inputFile
        ]
+    <> ( if
+             | not (o ^. runtimeCompilePreprocess || o ^. runtimeCompileAssembly) ->
+                 ["-ljuvix"]
+             | otherwise -> []
+       )
 
 runClang ::
   Members '[Embed IO, Error Text] r =>

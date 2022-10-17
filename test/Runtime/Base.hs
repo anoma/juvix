@@ -75,15 +75,14 @@ commonArgs outputFile =
 native64Args :: FilePath -> FilePath -> [String]
 native64Args outputFile inputFile =
   commonArgs outputFile
-    <> [ "-v",
-         "-DARCH_NATIVE64",
+    <> [ "-DARCH_NATIVE64",
          "-DAPI_LIBC",
          "-m64",
          "-O3",
          "-L",
          juvixLibraryDir,
-         "-ljuvix",
-         inputFile
+         inputFile,
+         "-ljuvix"
        ]
   where
     juvixLibraryDir :: FilePath
@@ -101,8 +100,8 @@ wasiArgs sysrootPath outputFile inputFile =
          sysrootPath,
          "-L",
          juvixLibraryDir,
-         "-ljuvix",
-         inputFile
+         inputFile,
+         "-ljuvix"
        ]
   where
     juvixLibraryDir :: FilePath
