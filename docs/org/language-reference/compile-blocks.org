@@ -3,7 +3,7 @@
 The compile keyword has two arguments:
 
 - A name of an expression to be compiled.
-- A set of compilation rules using the format (=backend= → =string=)
+- A set of compilation rules using the format (=backend= ↦ =string=)
   where the string is the text we inline.
 
 This is an example:
@@ -13,7 +13,7 @@ $ cat tests/positive/HelloWorld
 ...
 axiom Action : Type;
 compile Action {
- ghc ↦ "IO ()";
+  c ↦ "int";
 };
 ...
 #+end_src
@@ -26,8 +26,8 @@ The following Juvix examples are NOT valid.
 ...
 axiom Action : Type;
 compile Action {
- ghc ↦ "IO ()";
- ghc ↦ "IO ()";  --
+ c ↦ "int";
+ c ↦ "int";  --
 };
 ...
 #+end_src
@@ -38,10 +38,10 @@ compile Action {
 ...
 axiom Action : Type;
 compile Action {
- ghc ↦ "IO ()";
+ c ↦ "int";
 };
 compile Action {
- ghc ↦ "IO ()";
+ c ↦ "int";
 };
 ...
 #+end_src
@@ -59,7 +59,7 @@ axiom Action : Type;
 $ cat B.mjuvix
 ...
 compile Action {
- ghc ↦ "IO ()";
+ c ↦ "int";
 };
 ...
 #+end_src
