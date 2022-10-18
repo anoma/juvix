@@ -17,9 +17,10 @@ The Juvix major mode will be activated automatically for =.juvix= files.
 
 *** Keybindings
 
-  | Key       | Function Name    | Description                                           |
-  |-----------+------------------+-------------------------------------------------------|
-  | =C-c C-l= | =juvix-load= | Runs the scoper and adds semantic syntax highlighting |
+  | Key       | Function Name           | Description                                           |
+  |-----------+-------------------------+-------------------------------------------------------|
+  | =C-c C-l= | =juvix-load=            | Runs the scoper and adds semantic syntax highlighting |
+  | =M-.=     | =juvix-goto-definition= | Go to the definition of symbol at point               |
 
 *** Emacs installation
 
