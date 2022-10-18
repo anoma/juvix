@@ -195,6 +195,11 @@ tests =
       StdlibExclude
       "ShadowPublicOpen.juvix",
     PosTest
+      "Infix chains"
+      "."
+      StdlibInclude
+      "Ape.juvix",
+    PosTest
       "Import embedded standard library"
       "StdlibImport"
       StdlibInclude

@@ -9,11 +9,14 @@ import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+import Juvix.Compiler.Concrete.Extra (unfoldApplication)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
+import Juvix.Data.Ape
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
+import Juvix.Prelude.Pretty qualified as PP
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
 doc opts =
@@ -492,12 +495,14 @@ instance SingI s => PrettyCode (FunctionClause s) where
     clauseBody' <- ppExpression _clauseBody
     clauseWhere' <- mapM ppCode _clauseWhere
     return $
-      hang' $
-        clauseOwnerFunction'
-          <+?> clausePatterns'
-          <+> kwAssignment
-          <+> clauseBody'
-          <+?> ((line <>) <$> clauseWhere')
+      clauseOwnerFunction'
+        <+?> clausePatterns'
+        <+> kwAssign
+        <+> nest
+          2
+          ( clauseBody'
+              <+?> ((line <>) <$> clauseWhere')
+          )
 
 instance SingI s => PrettyCode (WhereBlock s) where
   ppCode WhereBlock {..} = indent' . (kwWhere <+>) <$> ppBlock whereClauses
@@ -585,23 +590,38 @@ instance PrettyCode Text where
   ppCode = return . pretty
 
 instance PrettyCode InfixApplication where
-  ppCode i@InfixApplication {..} = do
-    infixAppLeft' <- ppLeftExpression (getFixity i) _infixAppLeft
-    infixAppOperator' <- ppCode _infixAppOperator
-    infixAppRight' <- ppRightExpression (getFixity i) _infixAppRight
-    return $ infixAppLeft' <+> infixAppOperator' <+> infixAppRight'
+  ppCode i@InfixApplication {..} =
+    apeHelper i $ do
+      infixAppLeft' <- ppLeftExpression (getFixity i) _infixAppLeft
+      infixAppOperator' <- ppCode _infixAppOperator
+      infixAppRight' <- ppRightExpression (getFixity i) _infixAppRight
+      return $ infixAppLeft' <+> infixAppOperator' <+> infixAppRight'
 
 instance PrettyCode PostfixApplication where
-  ppCode i@PostfixApplication {..} = do
-    postfixAppParameter' <- ppPostExpression (getFixity i) _postfixAppParameter
-    postfixAppOperator' <- ppCode _postfixAppOperator
-    return $ postfixAppParameter' <+> postfixAppOperator'
+  ppCode i@PostfixApplication {..} =
+    apeHelper i $ do
+      postfixAppParameter' <- ppPostExpression (getFixity i) _postfixAppParameter
+      postfixAppOperator' <- ppCode _postfixAppOperator
+      return $ postfixAppParameter' <+> postfixAppOperator'
 
 instance PrettyCode Application where
-  ppCode (Application l r) = do
-    l' <- ppLeftExpression appFixity l
-    r' <- ppRightExpression appFixity r
-    return $ l' <> softline <> r'
+  ppCode a =
+    apeHelper a $ do
+      let (f, args) = unfoldApplication a
+      f' <- ppCode f
+      args' <- mapM ppCodeAtom args
+      return $ PP.group (f' <+> nest 2 (vsep args'))
+
+apeHelper :: (IsApe a Expression, Members '[Reader Options] r) => a -> Sem r (Doc CodeAnn) -> Sem r (Doc CodeAnn)
+apeHelper a alt = do
+  opts <- ask @Options
+  if
+      | not (opts ^. optNoApe) ->
+          return $
+            let params :: ApeParams Expression
+                params = ApeParams (run . runReader opts . ppCode)
+             in runApe params a
+      | otherwise -> alt
 
 instance PrettyCode Literal where
   ppCode = \case

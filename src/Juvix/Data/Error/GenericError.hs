@@ -16,8 +16,9 @@ data GenericError = GenericError
     _genericErrorIntervals :: [Interval]
   }
 
-newtype GenericOptions = GenericOptions
-  { _showNameIds :: Bool
+data GenericOptions = GenericOptions
+  { _showNameIds :: Bool,
+    _genericNoApe :: Bool
   }
   deriving stock (Eq, Show)
 
@@ -25,7 +26,11 @@ makeLenses ''GenericError
 makeLenses ''GenericOptions
 
 defaultGenericOptions :: GenericOptions
-defaultGenericOptions = GenericOptions {_showNameIds = False}
+defaultGenericOptions =
+  GenericOptions
+    { _showNameIds = False,
+      _genericNoApe = False
+    }
 
 instance Pretty GenericError where
   pretty :: GenericError -> Doc a
@@ -54,8 +59,8 @@ render :: (ToGenericError e, Member (Reader GenericOptions) r) => Bool -> Bool -
 render ansi endChar err = do
   g <- genericError err
   let gMsg = g ^. genericErrorMessage
-  let header = genericErrorHeader g
-  let helper f x = (f . layoutPretty defaultLayoutOptions) (header <> x <> lastChar)
+      header = genericErrorHeader g
+      helper f x = (f . layoutPretty defaultLayoutOptions) (header <> x <> lastChar)
   if
       | ansi -> return $ helper Ansi.renderStrict (toAnsiDoc gMsg)
       | otherwise -> return $ helper renderStrict (toTextDoc gMsg)
