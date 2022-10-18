@@ -5,6 +5,7 @@ module Juvix.Data.Effect.Files
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Juvix.Data.Effect.Files.Error
 import Juvix.Prelude.Base
 
@@ -12,59 +13,90 @@ data Files m a where
   ReadFile' :: FilePath -> Files m Text
   EqualPaths' :: FilePath -> FilePath -> Files m (Maybe Bool)
   GetAbsPath :: FilePath -> Files m FilePath
-  RegisterStdlib :: [(FilePath, Text)] -> Files m ()
+  RegisterStdlib :: FilePath -> Files m ()
 
 makeSem ''Files
 
+data StdlibState = StdlibState
+  { _stdlibRoot :: FilePath,
+    _stdlibFilePaths :: HashSet FilePath
+  }
+
 newtype FilesState = FilesState
-  {_stdlibTable :: HashMap FilePath Text}
+  { _stdlibState :: Maybe StdlibState
+  }
 
 makeLenses ''FilesState
+makeLenses ''StdlibState
 
 initState :: FilesState
-initState = FilesState mempty
+initState = FilesState Nothing
 
-readStdlibOrFile ::
+stdlibOrFile ::
+  forall r.
   Members '[Embed IO, Error FilesError] r =>
   FilePath ->
-  HashMap FilePath Text ->
-  Sem r Text
-readStdlibOrFile f stdlib = do
-  cf <- embed (canonicalizePath f)
-  case HashMap.lookup cf stdlib of
-    Nothing -> embed (readFile f)
-    Just c -> do
+  FilePath ->
+  Maybe StdlibState ->
+  Sem r FilePath
+stdlibOrFile p rootPath Nothing = return (rootPath </> p)
+stdlibOrFile p rootPath (Just s)
+  | HashSet.member (normalise p) (s ^. stdlibFilePaths) =
       ifM
-        (embed (doesFileExist f))
+        isConflict
         ( throw
             FilesError
-              { _filesErrorPath = f,
+              { _filesErrorPath = pAbsPath,
                 _filesErrorCause = StdlibConflict
               }
         )
-        (return c)
+        (return (s ^. stdlibRoot </> p))
+  | otherwise = return pAbsPath
+  where
+    pAbsPath :: FilePath
+    pAbsPath = rootPath </> p
+
+    isConflict :: Sem r Bool
+    isConflict = do
+      cRootPath <- embed (canonicalizePath rootPath)
+      cStdlibPath <- embed (canonicalizePath (s ^. stdlibRoot))
+      andM [return (cRootPath /= cStdlibPath), embed (doesFileExist pAbsPath)]
 
 seqFst :: (IO a, b) -> IO (a, b)
 seqFst (ma, b) = do
   a <- ma
   return (a, b)
 
-canonicalizeStdlib :: [(FilePath, Text)] -> IO (HashMap FilePath Text)
-canonicalizeStdlib stdlib = HashMap.fromList <$> mapM seqFst (first canonicalizePath <$> stdlib)
-
-runFilesIO' :: forall r a. Member (Embed IO) r => FilePath -> Sem (Files ': r) a -> Sem (State FilesState ': (Error FilesError ': r)) a
+runFilesIO' ::
+  forall r a.
+  Member (Embed IO) r =>
+  FilePath ->
+  Sem (Files ': r) a ->
+  Sem (State FilesState ': (Error FilesError ': r)) a
 runFilesIO' rootPath = reinterpret2 $ \case
-  ReadFile' f -> do
-    stdlib <- gets (^. stdlibTable)
-    readStdlibOrFile f stdlib
+  ReadFile' f -> embed (readFile f)
   EqualPaths' f h -> embed $ do
     f' <- canonicalizePath f
     h' <- canonicalizePath h
     return (Just (equalFilePath f' h'))
-  RegisterStdlib stdlib -> do
-    s <- embed (FilesState <$> canonicalizeStdlib stdlib)
-    put s
-  GetAbsPath f -> embed (canonicalizePath (rootPath </> f))
+  RegisterStdlib stdlibRootPath -> do
+    absStdlibRootPath <- embed (makeAbsolute stdlibRootPath)
+    fs <- embed (getFilesRecursive absStdlibRootPath)
+    let paths = normalise . makeRelative absStdlibRootPath <$> fs
+    modify
+      ( set
+          stdlibState
+          ( Just
+              StdlibState
+                { _stdlibRoot = absStdlibRootPath,
+                  _stdlibFilePaths = HashSet.fromList (normalise <$> paths)
+                }
+          )
+      )
+  GetAbsPath f -> do
+    s <- gets (^. stdlibState)
+    p <- stdlibOrFile f rootPath s
+    embed (canonicalizePath p)
 
 runFilesIO :: Member (Embed IO) r => FilePath -> Sem (Files ': r) a -> Sem (Error FilesError ': r) a
 runFilesIO rootPath = evalState initState . runFilesIO' rootPath

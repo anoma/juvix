@@ -9,6 +9,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Setup
+import Juvix.Extra.Stdlib
 import Juvix.Prelude.Pretty
 
 data PosTest = PosTest
@@ -42,7 +43,7 @@ testDescr PosTest {..} =
                       _entryPointNoStdlib = noStdlib
                     }
                 stdlibMap :: HashMap FilePath Text
-                stdlibMap = HashMap.mapKeys (cwd </>) (HashMap.fromList stdlibDir)
+                stdlibMap = HashMap.mapKeys (cwd </>) (HashMap.fromList (second decodeUtf8 <$> stdlibFiles))
                 unionStdlib :: HashMap FilePath Text -> HashMap FilePath Text
                 unionStdlib fs
                   | noStdlib = fs

@@ -40,43 +40,43 @@ compile ::
 compile = typecheck >=> C.fromInternal
 
 upToParsing ::
-  Members '[Reader EntryPoint, Files, Error JuvixError, NameIdGen] r =>
+  Members '[Embed IO, Reader EntryPoint, Files, Error JuvixError, NameIdGen] r =>
   Sem r Parser.ParserResult
 upToParsing = entrySetup >>= Parser.fromSource
 
 upToScoping ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError] r =>
+  Members '[Embed IO, Reader EntryPoint, Files, NameIdGen, Error JuvixError] r =>
   Sem r Scoper.ScoperResult
 upToScoping = upToParsing >>= Scoper.fromParsed
 
 upToAbstract ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
+  Members '[Embed IO, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
   Sem r Abstract.AbstractResult
 upToAbstract = upToScoping >>= Abstract.fromConcrete
 
 upToInternal ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
+  Members '[Embed IO, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
   Sem r Internal.InternalResult
 upToInternal = upToAbstract >>= Internal.fromAbstract
 
 upToInternalArity ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
+  Members '[Embed IO, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
   Sem r Internal.InternalArityResult
 upToInternalArity = upToInternal >>= Internal.arityChecking
 
 upToInternalTyped ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
+  Members '[Embed IO, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
   Sem r Internal.InternalTypedResult
 upToInternalTyped = upToInternalArity >>= Internal.typeChecking
 
 upToInternalReachability ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
+  Members '[Embed IO, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
   Sem r Internal.InternalTypedResult
 upToInternalReachability =
   Internal.filterUnreachable <$> upToInternalTyped
 
 upToMiniC ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
+  Members '[Embed IO, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
   Sem r C.MiniCResult
 upToMiniC = upToInternalReachability >>= C.fromInternal
 

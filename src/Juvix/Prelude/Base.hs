@@ -163,6 +163,8 @@ import System.IO hiding
   )
 import Text.Show (Show)
 import Text.Show qualified as Show
+import Path.IO (listDirRecur)
+import Path (parseAbsDir, toFilePath)
 
 --------------------------------------------------------------------------------
 
@@ -327,6 +329,19 @@ fromRightIO' pp = do
 
 fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
 fromRightIO pp = fromRightIO' (putStrLn . pp)
+
+--------------------------------------------------------------------------------
+-- Files
+--------------------------------------------------------------------------------
+
+-- | Recursively get all files in the given directory.
+--
+-- The function returns absolute paths.
+getFilesRecursive :: FilePath -> IO [FilePath]
+getFilesRecursive p = do
+  pathP <- makeAbsolute p >>= parseAbsDir
+  (_, files) <- listDirRecur pathP
+  return (toFilePath <$> files)
 
 --------------------------------------------------------------------------------
 -- Misc

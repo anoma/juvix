@@ -1,22 +1,27 @@
 module Juvix.Compiler.Pipeline.Setup where
 
-import Data.FileEmbed qualified as FE
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
-
-stdlibDir :: [(FilePath, Text)]
-stdlibDir =
-  let stdlibFiles :: [(FilePath, Text)]
-      stdlibFiles = second decodeUtf8 <$> $(FE.makeRelativeToProject "juvix-stdlib" >>= FE.embedDir)
-      isMjuvixFile :: (FilePath, Text) -> Bool
-      isMjuvixFile (fp, _) = takeExtension fp == ".juvix"
-   in filter isMjuvixFile stdlibFiles
+import Juvix.Extra.Paths
+import Juvix.Extra.Stdlib
 
 entrySetup ::
-  Members '[Reader EntryPoint, Files] r =>
+  Members '[Embed IO, Reader EntryPoint, Files] r =>
   Sem r EntryPoint
 entrySetup = do
   e <- ask
-  let root = e ^. entryPointRoot
-  unless (e ^. entryPointNoStdlib) (registerStdlib (first (root </>) <$> stdlibDir))
+  unless (e ^. entryPointNoStdlib) setupStdlib
   return e
+
+setupStdlib ::
+  Members '[Embed IO, Reader EntryPoint, Files] r =>
+  Sem r ()
+setupStdlib = do
+  e <- ask
+  stdlibRootPath <- case e ^. entryPointStdlibPath of
+    Nothing -> do
+      let d = (e ^. entryPointRoot) </> juvixStdlibDir
+      updateStdlib d
+      return d
+    Just p -> return p
+  registerStdlib stdlibRootPath

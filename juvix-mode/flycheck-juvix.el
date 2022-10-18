@@ -9,8 +9,10 @@
 
 (flycheck-define-checker juvix
   "A Juvix syntax checker."
-  :command ("juvix" "--only-errors" "--no-colors" "--stdin" "typecheck"
+  :command ("juvix" "--only-errors" "--no-colors" "--stdin"
             (option-flag "--no-stdlib" juvix-disable-embedded-stdlib)
+            (option "--stdlib-path" juvix-stdlib-path)
+            "typecheck"
             source-original)
   :standard-input t
   :error-patterns
