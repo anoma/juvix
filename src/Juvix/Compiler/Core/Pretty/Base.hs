@@ -138,7 +138,7 @@ ppCodeLet' name mty lt = do
           mempty <+> kwColon <+> ty
         Nothing ->
           mempty
-  return $ kwLet <+> n' <> tty <+> kwAssign <+> v' <+> kwIn <+> b'
+  return $ kwLet <+> n' <> tty <+> kwAssign <+> v' <+> kwIn <> line <> b'
 
 ppCodeCase' :: (PrettyCode a, Member (Reader Options) r) => [[Maybe Name]] -> [Maybe Name] -> Case' i bi a -> Sem r (Doc Ann)
 ppCodeCase' branchBinderNames branchTagNames Case {..} = do
@@ -188,6 +188,41 @@ ppPatterns pats = do
   ps' <- mapM ppCode pats
   return $ hsep (punctuate comma (toList ps'))
 
+instance PrettyCode Let where
+  ppCode :: forall r. Member (Reader Options) r => Let -> Sem r (Doc Ann)
+  ppCode x = do
+    let name = getInfoName (getInfoBinder (x ^. letInfo))
+        ty = getInfoType (getInfoBinder (x ^. letInfo))
+     in do
+          mty <- case ty of
+            NDyn {} -> return Nothing
+            _ -> Just <$> ppCode ty
+          ppCodeLet' name mty x
+
+instance PrettyCode LetRec where
+  ppCode :: forall r. Member (Reader Options) r => LetRec -> Sem r (Doc Ann)
+  ppCode LetRec {..} = do
+    let n = length _letRecValues
+    ns <- mapM getName (getInfoBinders n _letRecInfo)
+    vs <- mapM ppCode _letRecValues
+    b' <- ppCode _letRecBody
+    return $ case ns of
+      [hns] -> kwLetRec <+> hns <+> kwAssign <+> head vs <+> kwIn <+> b'
+      _ ->
+        let bss =
+              indent' $
+                align $
+                  concatWith (\a b -> a <> kwSemicolon <> line <> b) $
+                    zipWithExact (\name val -> name <+> kwAssign <+> val) ns (toList vs)
+            nss = enclose kwSquareL kwSquareR (concatWith (<+>) ns)
+         in kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
+    where
+      getName :: Info -> Sem r (Doc Ann)
+      getName i =
+        case getInfoName i of
+          Just name -> ppCode name
+          Nothing -> return kwQuestion
+
 instance PrettyCode Node where
   ppCode :: forall r. Member (Reader Options) r => Node -> Sem r (Doc Ann)
   ppCode node = case node of
@@ -216,35 +251,8 @@ instance PrettyCode Node where
               return $ kwLambda <> parens (n <+> kwColon <+> tty)
         Nothing -> return $ kwLambda <> kwQuestion
       return (lam <+> b)
-    NLet x ->
-      let name = getInfoName (getInfoBinder (x ^. letInfo))
-          ty = getInfoType (getInfoBinder (x ^. letInfo))
-       in do
-            mty <- case ty of
-              NDyn {} -> return Nothing
-              _ -> Just <$> ppCode ty
-            ppCodeLet' name mty x
-    NRec LetRec {..} -> do
-      let n = length _letRecValues
-      ns <- mapM getName (getInfoBinders n _letRecInfo)
-      vs <- mapM ppCode _letRecValues
-      b' <- ppCode _letRecBody
-      case listToMaybe ns of
-        Just hns -> return $ kwLetRec <+> hns <+> kwAssign <+> head vs <+> kwIn <+> b'
-        Nothing ->
-          let bss =
-                indent' $
-                  align $
-                    concatWith (\a b -> a <> kwSemicolon <> line <> b) $
-                      zipWithExact (\name val -> name <+> kwAssign <+> val) ns (toList vs)
-              nss = enclose kwSquareL kwSquareR (concatWith (<+>) ns)
-           in return $ kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
-      where
-        getName :: Info -> Sem r (Doc Ann)
-        getName i =
-          case getInfoName i of
-            Just name -> ppCode name
-            Nothing -> return kwQuestion
+    NLet x -> ppCode x
+    NRec l -> ppCode l
     NCase x@Case {..} ->
       let branchBinderNames = map (\(CaseBranch {..}) -> map getInfoName (getInfoBinders _caseBranchBindersNum _caseBranchInfo)) _caseBranches
           branchTagNames = map (\(CaseBranch {..}) -> getInfoName _caseBranchInfo) _caseBranches
@@ -341,7 +349,7 @@ instance PrettyCode InfoTable where
           ppDef s n = do
             sym' <- maybe (return (pretty s)) ppCode (tbl ^? infoIdentifiers . at s . _Just . identifierName . _Just)
             body' <- ppCode n
-            return (kwDef <+> sym' <+> kwAssign <+> body')
+            return (kwDef <+> sym' <+> kwAssign <+> nest 2 body')
 
 instance PrettyCode Stripped.InfoTable where
   ppCode :: forall r. Member (Reader Options) r => Stripped.InfoTable -> Sem r (Doc Ann)
