@@ -9,6 +9,7 @@ import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.BinderInfo qualified as Info
+import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
@@ -69,64 +70,67 @@ lambdaLiftNode aboveBl top =
           liftedDefs <- mapM (lambdaLiftNode bl') defs
           body' <- lambdaLiftNode bl' (letr ^. letRecBody)
           let -- free vars in each let
-              recItemsFreeVars :: [[(Index, Info)]]
-              recItemsFreeVars = mapMaybe helper . toList . freeVarsSet <$> liftedDefs
+              recItemsFreeVars :: [(Var, Info)]
+              recItemsFreeVars = mapMaybe helper (toList (mconcatMap freeVarsSet liftedDefs))
                 where
                   -- throw away variables bound in the letrec and shift others
-                  helper :: Var -> Maybe (Index, Info)
+                  helper :: Var -> Maybe (Var, Info)
                   helper v
                     | idx < ndefs = Nothing
                     | otherwise =
                         let idx' = idx - ndefs
-                         in Just (idx', BL.lookup idx' bl)
+                         in Just (v, BL.lookup idx' bl)
                     where
                       idx = v ^. varIndex
-              -- replace calls to letrec items to a calls to the fresh top symbols
+              -- replace calls to letrec items to a calls to the fresh top
+              -- symbols TODO note that these calls can appear in the
+              -- dynamically created top level nodes created during lambda
+              -- lifting
               subsCalls :: Node -> Node
               subsCalls =
                 substs
                   ( reverse
-                      [ mkApps' (mkIdent' sym) (map (mkVar' . fst) fv)
-                        | (sym, fv) <- zipExact topSyms recItemsFreeVars
+                      [ mkApps' (mkIdent' sym) (map (NVar . fst) fv)
+                        | let fv = recItemsFreeVars, sym <- topSyms
                       ]
                   )
               declareTopSyms :: Sem r ()
               declareTopSyms =
                 sequence_
                   [ do
-                      let topBody = captureFreeVars fv (subsCalls b)
+                      let
+                          fv = recItemsFreeVars
+                          topBody = captureFreeVars (map (first (^. varIndex)) fv) (subsCalls b)
                           argsInfo :: [ArgumentInfo]
                           argsInfo = map (argumentInfoFromInfo . snd) fv
                       registerIdentNode sym topBody
                       registerIdent
                         IdentifierInfo
                           { _identifierSymbol = sym,
-                            _identifierName = Nothing,
+                            _identifierName = getInfoName itemInfo,
                             _identifierType = typeFromArgs argsInfo,
                             _identifierArgsNum = length fv,
                             _identifierArgsInfo = argsInfo,
                             _identifierIsExported = False
                           }
-                    | (sym, b, fv) <- zip3Exact topSyms liftedDefs recItemsFreeVars
+                    | (sym, (itemInfo, b)) <- zipExact topSyms (zipExact letRecBinders liftedDefs)
                   ]
               letItems :: [Node]
-              letItems =
-                [ mkApps' (mkIdent' s) (map (mkVar' . fst) fv)
-                  | (s, fv) <- zipExact topSyms recItemsFreeVars
+              letItems = let fv = recItemsFreeVars in
+                [ mkApps' (mkIdent' s) (map (NVar . fst) fv)
+                  | s <- topSyms
                 ]
           declareTopSyms
-          let -- free variables in the lets and the body need to be shifted
-              -- because we are introducing binders.
-              -- the topmost let is shifted 0
-              -- the lowermost is shifted (len - 1)
-              -- the final body is not shifted
+          let -- TODO it can probably be simplified
               shiftHelper :: Node -> NonEmpty Node -> Node
-              shiftHelper b = goShift 0
+              shiftHelper b = goShift (- ndefs)
                 where
                   goShift :: Int -> NonEmpty Node -> Node
                   goShift k = \case
                     x :| yys -> case yys of
-                      [] -> mkLet' (shift k x) b
+                      []
+                        | k == - 1 -> mkLet' (shift k x) b
+                        | otherwise -> impossible
                       (y : ys) -> mkLet' (shift k x) (goShift (k + 1) (y :| ys))
           let res :: Node
               res = shiftHelper body' (nonEmpty' letItems)

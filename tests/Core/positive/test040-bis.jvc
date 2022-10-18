@@ -1,0 +1,15 @@
+-- letrec 2
+
+def writeLn := \x write x >> write "\n";
+
+def mutrec :=
+  let one := 1 in
+  let two := 2 in
+  let three := 3 in
+  letrec[a b c]
+    a := \x b one;
+    b := \x c two;
+    c := \x three
+  in writeLn (a 5);
+
+letrec x := 3 in mutrec
