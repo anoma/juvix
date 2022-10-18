@@ -133,6 +133,8 @@ import GHC.Real
 import GHC.Stack.Types
 import Language.Haskell.TH.Syntax (Lift)
 import Lens.Micro.Platform hiding (both)
+import Path (parseAbsDir, toFilePath)
+import Path.IO (listDirRecur)
 import Polysemy
 import Polysemy.Embed
 import Polysemy.Error hiding (fromEither)
@@ -163,8 +165,6 @@ import System.IO hiding
   )
 import Text.Show (Show)
 import Text.Show qualified as Show
-import Path.IO (listDirRecur)
-import Path (parseAbsDir, toFilePath)
 
 --------------------------------------------------------------------------------
 
