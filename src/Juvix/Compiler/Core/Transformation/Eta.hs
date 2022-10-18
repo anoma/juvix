@@ -30,6 +30,18 @@ etaExpandConstrs argsNum = umap go
           k = argsNum _constrTag
       _ -> n
 
+etaExpandTypeConstrs :: (Symbol -> Int) -> Node -> Node
+etaExpandTypeConstrs argsNum = umap go
+  where
+    go :: Node -> Node
+    go n = case n of
+      NTyp TypeConstr {..}
+        | k > length _typeConstrArgs ->
+            etaExpand (k - length _typeConstrArgs) n
+        where
+          k = argsNum _typeConstrSymbol
+      _ -> n
+
 squashApps :: Node -> Node
 squashApps = dmap go
   where
@@ -39,16 +51,27 @@ squashApps = dmap go
        in case l of
             NCtr (Constr i tag args') -> mkConstr i tag (args' ++ args)
             NBlt (BuiltinApp i op args') -> mkBuiltinApp i op (args' ++ args)
+            NTyp (TypeConstr i sym args') -> mkTypeConstr i sym (args' ++ args)
             _ -> n
 
 etaExpandApps :: InfoTable -> Node -> Node
 etaExpandApps tab =
-  squashApps . etaExpandConstrs constrArgsNum . etaExpandBuiltins . squashApps
+  squashApps
+    . etaExpandTypeConstrs typeConstrArgsNum
+    . etaExpandConstrs constrArgsNum
+    . etaExpandBuiltins
+    . squashApps
   where
     constrArgsNum :: Tag -> Int
     constrArgsNum tag =
       case HashMap.lookup tag (tab ^. infoConstructors) of
         Just ci -> ci ^. constructorArgsNum
+        Nothing -> 0
+
+    typeConstrArgsNum :: Symbol -> Int
+    typeConstrArgsNum sym =
+      case HashMap.lookup sym (tab ^. infoInductives) of
+        Just ci -> length (ci ^. inductiveParams)
         Nothing -> 0
 
 etaExpansionApps :: Transformation

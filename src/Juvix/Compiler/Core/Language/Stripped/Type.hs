@@ -7,7 +7,8 @@ data Type = TyDynamic | TyPrim Primitive | TyApp TypeApp | TyFun TypeFun
   deriving stock (Eq)
 
 data TypeApp = TypeApp
-  { _typeAppSymbol :: Symbol,
+  { _typeAppName :: Maybe Name,
+    _typeAppSymbol :: Symbol,
     _typeAppArgs :: [Type]
   }
   deriving stock (Eq)
@@ -20,6 +21,21 @@ data TypeFun = TypeFun
 
 makeLenses ''TypeApp
 makeLenses ''TypeFun
+
+instance HasAtomicity TypeApp where
+  atomicity TypeApp {..}
+    | null _typeAppArgs = Atom
+    | otherwise = Aggregate appFixity
+
+instance HasAtomicity TypeFun where
+  atomicity _ = Aggregate funFixity
+
+instance HasAtomicity Type where
+  atomicity = \case
+    TyDynamic -> Atom
+    TyPrim {} -> Atom
+    TyApp x -> atomicity x
+    TyFun x -> atomicity x
 
 unfoldType :: Type -> (Type, [Type])
 unfoldType = \case

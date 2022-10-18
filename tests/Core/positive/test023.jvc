@@ -1,7 +1,9 @@
 -- lists
 
-constr nil 0;
-constr cons 2;
+inductive list {
+  nil : list;
+  cons : any -> list -> list;
+};
 
 def head := \l case l of { cons h _ := h };
 def tail := \l case l of { cons _ t := t };

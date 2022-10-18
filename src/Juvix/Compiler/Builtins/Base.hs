@@ -8,11 +8,11 @@ import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
 data BuiltinsEnum
-  = BuiltinsNatural
+  = BuiltinsNat
   | BuiltinsZero
   | BuiltinsSuc
-  | BuiltinsNaturalPlus
-  | BuiltinsNaturalPrint
+  | BuiltinsNatPlus
+  | BuiltinsNatPrint
   | BuiltinsIO
   | BuiltinsIOSequence
   deriving stock (Show, Eq, Generic)
@@ -21,10 +21,10 @@ instance Hashable BuiltinsEnum
 
 instance Pretty BuiltinsEnum where
   pretty = \case
-    BuiltinsNatural -> Str.natural
+    BuiltinsNat -> Str.nat
     BuiltinsZero -> "zero"
     BuiltinsSuc -> "suc"
-    BuiltinsNaturalPlus -> Str.naturalPlus
-    BuiltinsNaturalPrint -> Str.naturalPrint
+    BuiltinsNatPlus -> Str.natPlus
+    BuiltinsNatPrint -> Str.natPrint
     BuiltinsIO -> Str.io
     BuiltinsIOSequence -> Str.ioSequence

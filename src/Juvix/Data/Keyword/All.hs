@@ -10,6 +10,9 @@ import Juvix.Extra.Strings qualified as Str
 kwBuiltin :: Keyword
 kwBuiltin = asciiKw Str.builtin
 
+kwAny :: Keyword
+kwAny = asciiKw Str.any
+
 kwAssign :: Keyword
 kwAssign = asciiKw Str.assignAscii
 
@@ -60,6 +63,9 @@ kwInfixr = asciiKw Str.infixr_
 
 kwLambda :: Keyword
 kwLambda = unicodeKw Str.lambdaAscii Str.lambdaUnicode
+
+kwPi :: Keyword
+kwPi = unicodeKw Str.piAscii Str.piUnicode
 
 kwLet :: Keyword
 kwLet = asciiKw Str.let_

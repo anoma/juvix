@@ -1,9 +1,14 @@
 module BuiltinsBool;
 
-builtin boolean
+builtin bool
 inductive Bool {
   true : Bool;
   false : Bool;
 };
+
+builtin bool-if
+if : {A : Type} → Bool → A → A → A;
+if true t _ := t;
+if false _ e := e;
 
 end;

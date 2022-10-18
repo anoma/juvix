@@ -7,9 +7,11 @@ where
 
 import Juvix.Data.Keyword
 import Juvix.Data.Keyword.All
-  ( kwAssign,
+  ( kwAny,
+    kwAssign,
     kwBind,
     kwCase,
+    kwColon,
     kwComma,
     kwConstr,
     kwDef,
@@ -21,6 +23,7 @@ import Juvix.Data.Keyword.All
     kwGt,
     kwIf,
     kwIn,
+    kwInductive,
     kwLe,
     kwLet,
     kwLetRec,
@@ -30,12 +33,14 @@ import Juvix.Data.Keyword.All
     kwMod,
     kwMul,
     kwOf,
+    kwPi,
     kwPlus,
     kwRightArrow,
     kwSemicolon,
     kwSeq,
     kwThen,
     kwTrace,
+    kwType,
     kwWildcard,
     kwWith,
   )
@@ -50,7 +55,7 @@ allKeywords =
     kwLet,
     kwLetRec,
     kwIn,
-    kwConstr,
+    kwInductive,
     kwCase,
     kwOf,
     kwMatch,
@@ -60,6 +65,7 @@ allKeywords =
     kwElse,
     kwDef,
     kwRightArrow,
+    kwColon,
     kwSemicolon,
     kwComma,
     kwWildcard,
@@ -76,5 +82,8 @@ allKeywords =
     kwBind,
     kwSeq,
     kwTrace,
-    kwFail
+    kwFail,
+    kwAny,
+    kwPi,
+    kwType
   ]

@@ -86,6 +86,7 @@ data Node
 -- Other things we might need in the future:
 -- - laziness annotations (converting these to closure/thunk creation should be
 --   done further down the pipeline)
+-- - neutral nodes (for evaluating open terms)
 
 -- A node (term) is closed if it has no free variables, i.e., no de Bruijn
 -- indices pointing outside the term.

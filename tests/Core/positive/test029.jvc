@@ -1,6 +1,8 @@
 -- Church numerals
 
-constr pair 2;
+inductive Pair {
+  pair : any -> any -> Pair;
+};
 
 def fst := \p case p of { pair x _ := x };
 def snd := \p case p of { pair _ x := x };

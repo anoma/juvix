@@ -2,6 +2,7 @@ module Juvix.Compiler.Core.Data.InfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.InfoTable
+import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Language
 
 data InfoTableBuilder m a where
@@ -9,6 +10,7 @@ data InfoTableBuilder m a where
   FreshTag :: InfoTableBuilder m Tag
   RegisterIdent :: IdentifierInfo -> InfoTableBuilder m ()
   RegisterConstructor :: ConstructorInfo -> InfoTableBuilder m ()
+  RegisterInductive :: InductiveInfo -> InfoTableBuilder m ()
   RegisterIdentNode :: Symbol -> Node -> InfoTableBuilder m ()
   SetIdentArgsInfo :: Symbol -> [ArgumentInfo] -> InfoTableBuilder m ()
   GetIdent :: Text -> InfoTableBuilder m (Maybe IdentKind)
@@ -44,15 +46,19 @@ runInfoTableBuilder tab =
       RegisterIdent ii -> do
         modify' (over infoIdentifiers (HashMap.insert (ii ^. identifierSymbol) ii))
         whenJust (ii ^? identifierName . _Just . nameText) $ \name ->
-          modify' (over identMap (HashMap.insert name (IdentSym (ii ^. identifierSymbol))))
+          modify' (over identMap (HashMap.insert name (IdentFun (ii ^. identifierSymbol))))
       RegisterConstructor ci -> do
         modify' (over infoConstructors (HashMap.insert (ci ^. constructorTag) ci))
-        modify' (over identMap (HashMap.insert (ci ^. (constructorName . nameText)) (IdentTag (ci ^. constructorTag))))
+        modify' (over identMap (HashMap.insert (ci ^. (constructorName . nameText)) (IdentConstr (ci ^. constructorTag))))
+      RegisterInductive ii -> do
+        modify' (over infoInductives (HashMap.insert (ii ^. inductiveSymbol) ii))
+        modify' (over identMap (HashMap.insert (ii ^. (inductiveName . nameText)) (IdentInd (ii ^. inductiveSymbol))))
       RegisterIdentNode sym node ->
         modify' (over identContext (HashMap.insert sym node))
       SetIdentArgsInfo sym argsInfo -> do
         modify' (set (infoIdentifiers . at sym . _Just . identifierArgsInfo) argsInfo)
         modify' (set (infoIdentifiers . at sym . _Just . identifierArgsNum) (length argsInfo))
+        modify' (over infoIdentifiers (HashMap.adjust (over identifierType (expandType (map (^. argumentType) argsInfo))) sym))
       GetIdent txt -> do
         s <- get
         return $ HashMap.lookup txt (s ^. identMap)

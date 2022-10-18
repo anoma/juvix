@@ -237,27 +237,44 @@ toApplicationArg p =
       PatternVariable v -> ApplicationArg Explicit (toExpression v)
       PatternConstructorApp a -> ApplicationArg Explicit (toExpression a)
       PatternEmpty -> impossible
-      PatternWildcard _ -> error "TODO"
+      PatternWildcard _ ->
+        ApplicationArg
+          Explicit
+          ( ExpressionHole
+              ( Hole
+                  { _holeId = error "hole with no id",
+                    _holeLoc = error "hole with no location"
+                  }
+              )
+          )
 
 clauseLhsAsExpression :: FunctionClause -> Expression
 clauseLhsAsExpression cl =
   foldApplication (toExpression (cl ^. clauseName)) (map toApplicationArg (cl ^. clausePatterns))
 
-infixr 0 -->
-
-(-->) :: (IsExpression a, IsExpression b) => a -> b -> Expression
-(-->) a b =
+expressionArrow :: (IsExpression a, IsExpression b) => IsImplicit -> a -> b -> Expression
+expressionArrow isImplicit a b =
   ExpressionFunction
     ( Function
         ( FunctionParameter
             { _paramName = Nothing,
               _paramUsage = UsageOmega,
-              _paramImplicit = Explicit,
+              _paramImplicit = isImplicit,
               _paramType = toExpression a
             }
         )
         (toExpression b)
     )
+
+infixr 0 <>-->
+
+(<>-->) :: (IsExpression a, IsExpression b) => a -> b -> Expression
+(<>-->) = expressionArrow Implicit
+
+infixr 0 -->
+
+(-->) :: (IsExpression a, IsExpression b) => a -> b -> Expression
+(-->) = expressionArrow Explicit
 
 infix 4 ===
 
@@ -291,3 +308,14 @@ freshVar n = do
         _namePretty = n,
         _nameLoc = error "freshVar with no location"
       }
+
+freshHole :: Member NameIdGen r => Sem r Expression
+freshHole = do
+  uid <- freshNameId
+  return $
+    ExpressionHole
+      ( Hole
+          { _holeId = uid,
+            _holeLoc = error "freshHole with no location"
+          }
+      )
