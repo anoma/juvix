@@ -42,6 +42,9 @@ native64-debug:
 x86_32-debug:
 	$(MAKE) -f Makefile.generic CONFIG=X86_32+DEBUG
 
+asm:
+	$(MAKE) -f Makefile.generic CONFIG=ASM+DEBUG
+
 format:
 	@clang-format -i `find src -name '*.c' -or -name '*.h'`
 
@@ -49,4 +52,4 @@ clean:
 	@-rm -rf _build*
 	@-rm -rf include
 
-.PHONY: release debug includes format wasm32 wasm32-wasi native32 native64 x86_32 wasm32-debug wasm32-wasi-debug native32-debug native64-debug x86_32-debug clean
+.PHONY: release debug includes format wasm32 wasm32-wasi native32 native64 x86_32 wasm32-debug wasm32-wasi-debug native32-debug native64-debug x86_32-debug asm clean

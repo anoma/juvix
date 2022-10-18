@@ -19,9 +19,11 @@ void gens_init() {
 pool_t *pool_alloc(pool_t *next) {
     pool_t *pool = palloc(1);
     pool->next = next;
-    pool->data = palign((char *)pool + sizeof(pool_t), sizeof(dword_t));
+    pool->data = palign((uint8_t *)pool + sizeof(pool_t), sizeof(dword_t));
     pool->free_begin = pool->data;
-    pool->free_end = (char *)pool + PAGE_SIZE;
+    pool->free_end = (uint8_t *)pool + PAGE_SIZE;
+    ASSERT_ALIGNED(pool, PAGE_SIZE);
+    ASSERT_ALIGNED(pool->free_end, PAGE_SIZE);
     return pool;
 }
 

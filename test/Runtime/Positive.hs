@@ -46,5 +46,10 @@ tests =
       "Printing of integers"
       "."
       "test003.c"
-      "out/test003.out"
+      "out/test003.out",
+    PosTest
+      "Allocator for unstructured objects"
+      "."
+      "test004.c"
+      "out/test004.out"
   ]

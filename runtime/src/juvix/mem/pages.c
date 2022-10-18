@@ -37,7 +37,7 @@ typedef struct Page {
 
 extern void __heap_base;
 static void *heap_end = NULL;
-
+static size_t heap_pages_num;
 static page_t *free_page = NULL;
 
 void *palloc(size_t n) {
@@ -51,7 +51,7 @@ void *palloc(size_t n) {
     if (page) {
         page_t *next;
         if (page->size > n) {
-            next = (page_t *)((char *)page + n * PAGE_SIZE);
+            next = (page_t *)((char *)page + (n << PAGE_SIZE_LOG2));
             next->size = page->size - n;
             next->next = page->next;
         } else {
@@ -71,20 +71,22 @@ void *palloc(size_t n) {
     }
 
     // Allocate `n` pages from WebAssembly
+    uintptr_t heap_size = __builtin_wasm_memory_size(0) << PAGE_SIZE_LOG2;
     if (heap_end == NULL) {
         // first-time allocation
         heap_end = palign(&__heap_base, PAGE_SIZE);
+        heap_pages_num = (heap_size - (uintptr_t)heap_end) >> PAGE_SIZE_LOG2;
     }
-    uintptr_t heap_size = __builtin_wasm_memory_size(0) * PAGE_SIZE;
-    if (heap_size - (uintptr_t)heap_end < PAGE_SIZE * n) {
-        size_t delta = max(opt_heap_grow_pages, n);
+    if (heap_size - (uintptr_t)heap_end < (n << PAGE_SIZE_LOG2)) {
+        size_t delta = max(opt_heap_grow_pages, max(n, heap_pages_num / 2));
         ASSERT(delta != 0);
         if (__builtin_wasm_memory_grow(0, delta) == (size_t)-1) {
             error_exit_msg("error: out of memory");
         }
+        heap_pages_num += delta;
     }
     void *ptr = heap_end;
-    heap_end = (char *)heap_end + n * PAGE_SIZE;
+    heap_end = (char *)heap_end + (n << PAGE_SIZE_LOG2);
     ASSERT_ALIGNED(ptr, PAGE_SIZE);
     juvix_allocated_pages_num += n;
     if (juvix_allocated_pages_num > juvix_max_allocated_pages_num) {

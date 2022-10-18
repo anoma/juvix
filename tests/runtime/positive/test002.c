@@ -3,16 +3,13 @@
 #include <juvix/mem/mem.h>
 #include <juvix/mem/pages.h>
 
-static uint seed = 123456789;
+static unsigned long seed = 123456789;
 
 static uint myrandom() {
-    const uint a = 1103515245;
-    const uint c = 12345;
-    seed = (a * seed + c) >> 31;
-    return seed;
+    return ((seed = seed * 214013L + 2531011L) >> 16) & 0x7fff;
 }
 
-#define N 1024
+#define N 256
 #define MAX_SIZE 16
 
 int main() {

@@ -37,12 +37,17 @@ void alloc_pages(bool can_gc) {
 
 word_t *alloc(size_t n) {
     ASSERT(alloc_youngest_generation->memory != NULL);
+    ASSERT(n > 0);
     word_t *ptr;
     ptr = alloc_youngest_generation->memory->free_begin;
     if (unlikely(!is_same_page(ptr, ptr + n))) {
         alloc_pages(false);
         ptr = alloc_youngest_generation->memory->free_begin;
+        ASSERT(is_same_page(ptr, ptr + n));
     }
-    alloc_youngest_generation->memory->free_begin += n;
+    alloc_youngest_generation->memory->free_begin =
+        (word_t *)alloc_youngest_generation->memory->free_begin + n;
+    ASSERT(alloc_youngest_generation->memory->free_begin <
+           alloc_youngest_generation->memory->free_end);
     return ptr;
 }

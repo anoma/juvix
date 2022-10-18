@@ -36,7 +36,7 @@ significant):
 There are special UIDs which imply the existence of certain special fields.
 */
 
-#define MARK_MASK 0x10
+#define MARK_MASK ((word_t)0x10)
 
 static inline bool is_marked(word_t x) { return x & MARK_MASK; }
 static inline word_t set_mark(word_t x) { return x | MARK_MASK; }

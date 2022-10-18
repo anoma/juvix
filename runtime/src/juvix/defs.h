@@ -63,8 +63,15 @@ static inline uintptr_t align(uintptr_t val, uintptr_t alignment) {
 static inline void *palign(void *ptr, uintptr_t alignment) {
     return (void *)align((uintptr_t)ptr, alignment);
 }
-#define ASSERT_ALIGNED(x, y) \
-    ASSERT((uintptr_t)(x) == align((uintptr_t)(x), (y)))
+#define ASSERT_ALIGNED(x, y) ASSERT(((uintptr_t)(x) & ((uintptr_t)(y)-1)) == 0)
+
+#if defined(API_LIBC) && defined(DEBUG)
+#define LOG(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define LOG(...) \
+    do {         \
+    } while (0)
+#endif
 
 /*************************************************************************/
 /* Static assertions */
