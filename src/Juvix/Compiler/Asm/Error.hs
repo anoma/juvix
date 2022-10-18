@@ -3,6 +3,7 @@ module Juvix.Compiler.Asm.Error where
 import Juvix.Compiler.Asm.Language
 import Juvix.Data.PPOutput
 import Text.Megaparsec.Pos qualified as M
+import Text.Show
 
 data AsmError = AsmError
   { _asmErrorLoc :: Maybe Location,
@@ -29,6 +30,9 @@ instance ToGenericError AsmError where
 
 instance Pretty AsmError where
   pretty (AsmError {..}) = pretty _asmErrorMsg
+
+instance Show AsmError where
+  show (AsmError {..}) = fromText _asmErrorMsg
 
 instance HasLoc AsmError where
   getLoc (AsmError {..}) = fromMaybe defaultLoc _asmErrorLoc

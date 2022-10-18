@@ -1,6 +1,6 @@
 module Juvix.Compiler.Asm.Extra.Recursors
   ( module Juvix.Compiler.Asm.Extra.Recursors,
-    Arguments,
+    module Juvix.Compiler.Asm.Extra.Memory,
   )
 where
 
@@ -11,7 +11,6 @@ import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Extra.Memory
 import Juvix.Compiler.Asm.Extra.Type
 import Juvix.Compiler.Asm.Language
-import Juvix.Compiler.Asm.Language.Type
 import Juvix.Compiler.Asm.Pretty
 
 -- | Recursor signature. Contains read-only recursor parameters.
@@ -23,6 +22,9 @@ data RecursorSig r a = RecursorSig
   }
 
 makeLenses ''RecursorSig
+
+recurseFun :: Member (Error AsmError) r => RecursorSig r a -> FunctionInfo -> Sem r [a]
+recurseFun sig fi = recurse sig (argumentsFromFunctionInfo fi) (fi ^. functionCode)
 
 recurse :: Member (Error AsmError) r => RecursorSig r a -> Arguments -> Code -> Sem r [a]
 recurse sig args = fmap snd . recurse' sig (mkMemory args)

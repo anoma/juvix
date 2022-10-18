@@ -5,7 +5,6 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Language
-import Juvix.Compiler.Asm.Language.Type
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Core
 import Juvix.Compiler.Core.Language.Stripped qualified as Core
@@ -33,7 +32,9 @@ genCode infoTable fi =
           _functionSymbol = fi ^. Core.functionSymbol,
           _functionArgsNum = fi ^. Core.functionArgsNum,
           _functionType = convertType (fi ^. Core.functionArgsNum) (fi ^. Core.functionType),
-          _functionCode = code
+          _functionCode = code,
+          _functionMaxTempStackHeight = -1, -- computed later
+          _functionMaxValueStackHeight = -1
         }
   where
     unimplemented :: forall a. a
