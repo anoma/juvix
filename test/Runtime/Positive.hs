@@ -56,5 +56,10 @@ tests =
       "Allocator for unstructured objects (macro API)"
       "."
       "test005.c"
-      "out/test005.out"
+      "out/test005.out",
+    PosTest
+      "Stack"
+      "."
+      "test006.c"
+      "out/test006.out"
   ]

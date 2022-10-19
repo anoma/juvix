@@ -20,4 +20,12 @@ static inline bool is_page_start(void *p) {
     return (((uintptr_t)(p)) & PAGE_MASK) == 0;
 }
 
+static inline bool is_next_page(void *p, uint n) {
+    return ((uintptr_t)p & PAGE_MASK) + n >= PAGE_SIZE;
+}
+
+static inline void *page_start(void *p) {
+    return (void *)((uintptr_t)p & ~(uintptr_t)PAGE_MASK);
+}
+
 #endif

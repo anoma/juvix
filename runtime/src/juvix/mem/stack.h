@@ -6,49 +6,29 @@
 
 #define DECL_STACK_POINTER register word_t *juvix_stack_pointer
 
-typedef struct Stack_segment {
-    struct Stack_segment *prev;
-    // beginning of allocated space
-    word_t *begin;
-    // stack pointer (grows upwards)
-    word_t *pointer;
-    // end of allocated space
-    word_t *end;
-} stack_segment_t;
+// The following functions return the stack pointer
+word_t *stack_init();
+word_t *stack_grow(word_t *sp);
+word_t *stack_shrink(word_t *sp);
 
-STATIC_ASSERT(sizeof(stack_segment_t) <= MAX_MEM_STRUCT_SIZE);
-
-extern stack_segment_t *juvix_global_stack;
-
-// The current stack pointer.
-static inline word_t *stack_pointer() { return juvix_global_stack->pointer; }
-
-void stack_init();
-void stack_grow(word_t *sp);
-void stack_shrink(word_t *sp);
-
-#define STACK_ENTER(n)                                          \
-    do {                                                        \
-        ASSERT(n <= MAX_STACK_DELTA);                           \
-        if (unlikely(!is_same_page(juvix_stack_pointer,         \
-                                   juvix_stack_pointer + n))) { \
-            stack_grow(juvix_stack_pointer);                    \
-            juvix_stack_pointer = stack_pointer();              \
-        }                                                       \
+#define STACK_ENTER(n)                                             \
+    do {                                                           \
+        ASSERT(n <= MAX_STACK_DELTA);                              \
+        if (unlikely(!is_same_page(juvix_stack_pointer,            \
+                                   juvix_stack_pointer + n))) {    \
+            juvix_stack_pointer = stack_grow(juvix_stack_pointer); \
+        }                                                          \
     } while (0)
 
-#define STACK_LEAVE                                         \
-    do {                                                    \
-        if (unlikely(is_page_start(juvix_stack_pointer))) { \
-            stack_shrink(juvix_stack_pointer);              \
-            juvix_stack_pointer = stack_pointer();          \
-        }                                                   \
+#define STACK_LEAVE                                                  \
+    do {                                                             \
+        if (unlikely(is_page_start(juvix_stack_pointer))) {          \
+            juvix_stack_pointer = stack_shrink(juvix_stack_pointer); \
+        }                                                            \
     } while (0)
 
 #define STACK_PUSH(val) (*juvix_stack_pointer++ = (word_t)(val))
 #define STACK_POP(var) (var = *--juvix_stack_pointer)
 #define STACK_TOP (*(juvix_stack_pointer - 1))
-
-#define STACK_SAVE (juvix_global_stack->pointer = juvix_stack_pointer)
 
 #endif

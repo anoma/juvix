@@ -90,7 +90,7 @@ typedef __int128 long_t;
 // PAGE_SIZE_LOG2 must be at least 16
 #define PAGE_SIZE_LOG2 16U
 #define PAGE_SIZE (1U << PAGE_SIZE_LOG2)
-#define PAGE_MASK (PAGE_SIZE - 1)
+#define PAGE_MASK (PAGE_SIZE - 1U)
 
 // NULL
 #ifndef NULL

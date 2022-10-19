@@ -11,7 +11,7 @@
 #include <juvix/mem/gens.h>
 #include <juvix/mem/pages.h>
 
-#define DECL_ALLOC_VARS register word_t *juvix_memory_pointer
+#define DECL_MEMORY_POINTER register word_t *juvix_memory_pointer
 
 extern generation_t *alloc_youngest_generation;
 

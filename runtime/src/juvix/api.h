@@ -6,15 +6,9 @@
 #include <juvix/mem.h>
 #include <juvix/object.h>
 
-static inline void juvix_init() {
-    mem_init();
-    funcall_init();
-}
-
-#define JUVIX_INIT                                 \
-    juvix_init();                                  \
-    juvix_memory_pointer = alloc_memory_pointer(); \
-    juvix_stack_pointer = stack_pointer()
+#define JUVIX_INIT \
+    MEM_INIT;      \
+    funcall_init()
 
 #define JUVIX_PROLOGUE(MAX_ARGS, ARG_DECLS, DISPATCH_DECLS) \
     MEM_DECLS;                                              \

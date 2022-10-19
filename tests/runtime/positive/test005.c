@@ -16,7 +16,7 @@ static uint myrandom() {
 int main() {
     uint s;
     word_t *ptr = NULL;
-    DECL_ALLOC_VARS;
+    DECL_MEMORY_POINTER;
     alloc_init();
     juvix_memory_pointer = alloc_memory_pointer();
     for (uint i = 0; i < PAGE_SIZE / sizeof(word_t); ++i) {

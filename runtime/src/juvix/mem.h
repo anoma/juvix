@@ -7,13 +7,13 @@
 #include <juvix/mem/pages.h>
 #include <juvix/mem/stack.h>
 
-static inline void mem_init() {
-    alloc_init();
-    stack_init();
-}
-
-#define MEM_DECLS    \
-    DECL_ALLOC_VARS; \
+#define MEM_DECLS        \
+    DECL_MEMORY_POINTER; \
     DECL_STACK_POINTER
+
+#define MEM_INIT                                   \
+    alloc_init();                                  \
+    juvix_memory_pointer = alloc_memory_pointer(); \
+    juvix_stack_pointer = stack_init()
 
 #endif

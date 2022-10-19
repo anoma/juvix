@@ -63,6 +63,7 @@ static inline uintptr_t align(uintptr_t val, uintptr_t alignment) {
 static inline void *palign(void *ptr, uintptr_t alignment) {
     return (void *)align((uintptr_t)ptr, alignment);
 }
+// `y` must be a power of 2
 #define ASSERT_ALIGNED(x, y) ASSERT(((uintptr_t)(x) & ((uintptr_t)(y)-1)) == 0)
 
 #if defined(API_LIBC) && defined(DEBUG)

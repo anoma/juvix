@@ -2,37 +2,27 @@
 #include <juvix/mem/pages.h>
 #include <juvix/mem/stack.h>
 
-stack_segment_t *juvix_global_stack;
+#define STACK_PREV(seg) *(word_t **)(seg + PAGE_SIZE / sizeof(word_t) - 1)
 
-static void seg_init(stack_segment_t *seg) {
-    seg->prev = NULL;
-    seg->begin = palign((char *)seg + sizeof(stack_segment_t), sizeof(word_t));
-    seg->end = (word_t *)((char *)seg + PAGE_SIZE);
-    seg->pointer = seg->begin;
+word_t *stack_init() {
+    word_t *seg = palloc(1);
+    STACK_PREV(seg) = NULL;
+    return seg + 1;
 }
 
-void stack_init() {
-    juvix_global_stack = palloc(1);
-    seg_init(juvix_global_stack);
+word_t *stack_grow(word_t *sp) {
+    word_t *seg = palloc(1);
+    STACK_PREV(seg) = sp;
+    return seg;
 }
 
-void stack_grow(word_t *sp) {
-    ASSERT(juvix_global_stack != NULL);
-    ASSERT(sp >= juvix_global_stack->pointer);
-    ASSERT(sp <= juvix_global_stack->end);
-    juvix_global_stack->pointer = sp;
-    stack_segment_t *seg = palloc(1);
-    seg_init(seg);
-    seg->prev = juvix_global_stack;
-    juvix_global_stack = seg;
-}
-
-void stack_shrink(word_t *sp) {
-    ASSERT(juvix_global_stack != NULL);
-    ASSERT(sp >= juvix_global_stack->pointer);
-    ASSERT(sp <= juvix_global_stack->end);
-    stack_segment_t *seg = juvix_global_stack->prev;
+word_t *stack_shrink(word_t *sp) {
+    ASSERT(is_page_start(sp));
+    ASSERT(page_start(sp) == sp);
+    word_t *seg = sp;
     ASSERT(seg != NULL);
-    pfree(juvix_global_stack, 1);
-    juvix_global_stack = seg;
+    word_t *prev = STACK_PREV(seg);
+    ASSERT(prev != NULL);
+    pfree(seg, 1);
+    return prev;
 }
