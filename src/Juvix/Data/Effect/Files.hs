@@ -9,6 +9,7 @@ import Data.HashSet qualified as HashSet
 import Juvix.Data.Effect.Files.Error
 import Juvix.Extra.Stdlib qualified as Stdlib
 import Juvix.Prelude.Base
+import Polysemy.Law (Arbitrary1(liftArbitrary))
 
 data Files m a where
   ReadFile' :: FilePath -> Files m Text
@@ -34,6 +35,13 @@ makeLenses ''StdlibState
 initState :: FilesState
 initState = FilesState Nothing
 
+-- | Try to resolve a filepath `p` to a path within standard library.
+--
+-- When `p` is not a member of the standard library or no stanard library is
+-- registered, resolve `p` to an absolute path based at `rootPath` instead.
+--
+-- This function throws an error if `p` is a member of the standard library and
+-- also present within `rootPath`.
 stdlibOrFile ::
   forall r.
   Members '[Embed IO, Error FilesError] r =>
