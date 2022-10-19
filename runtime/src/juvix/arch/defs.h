@@ -87,9 +87,10 @@ typedef __int128 long_t;
 #error "Unsupported configuration"
 #endif
 
-#define PAGE_SIZE 65536U
+// PAGE_SIZE_LOG2 must be at least 16
 #define PAGE_SIZE_LOG2 16U
-#define PAGE_MASK 0xffffU
+#define PAGE_SIZE (1U << PAGE_SIZE_LOG2)
+#define PAGE_MASK (PAGE_SIZE - 1)
 
 // NULL
 #ifndef NULL

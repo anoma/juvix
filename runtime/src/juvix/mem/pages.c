@@ -30,6 +30,8 @@ void pfree(void *ptr, size_t n) {
 
 #elif defined(ARCH_WASM32)
 
+#define WASM_PAGE_SIZE_LOG2 16U
+
 typedef struct Page {
     struct Page *next;
     size_t size;  // the number of WASM pages
@@ -42,6 +44,7 @@ static page_t *free_page = NULL;
 
 void *palloc(size_t n) {
     ASSERT(n > 0);
+    n = n << (PAGE_SIZE_LOG2 - WASM_PAGE_SIZE_LOG2);
     page_t *prev = NULL;
     page_t *page = free_page;
     while (page && page->size < n) {
@@ -96,6 +99,7 @@ void *palloc(size_t n) {
 }
 
 void pfree(void *ptr, size_t n) {
+    n = n << (PAGE_SIZE_LOG2 - WASM_PAGE_SIZE_LOG2);
     page_t *page = ptr;
     page->size = n;
     page->next = free_page;

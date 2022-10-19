@@ -3,7 +3,7 @@
 #include <juvix/mem/mem.h>
 #include <juvix/mem/pages.h>
 
-static unsigned long seed = 123456789;
+static unsigned long seed = 123456789UL;
 
 static uint myrandom() {
     return ((seed = seed * 214013L + 2531011L) >> 16) & 0x7fff;

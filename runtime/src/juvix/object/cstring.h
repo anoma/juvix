@@ -22,9 +22,9 @@ static inline char *get_cstring(word_t x) {
         size_t juvix_nfields =                               \
             (strlen(str) + sizeof(word_t)) / sizeof(word_t); \
         ALLOC((word_t *)(var), juvix_nfields);               \
+        *(word_t *)(var + juvix_nfields) = 0;                \
         strcpy((char *)(var) + sizeof(word_t), str);         \
     } while (0)
-// TODO: pad with zero bytes
 
 // Memory pointers (see alloc.h) need to be saved before calling this function.
 word_t alloc_cstring(const char *str);
