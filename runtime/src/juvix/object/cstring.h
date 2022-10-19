@@ -21,7 +21,9 @@ static inline char *get_cstring(word_t x) {
     do {                                                     \
         size_t juvix_nfields =                               \
             (strlen(str) + sizeof(word_t)) / sizeof(word_t); \
-        ALLOC((word_t *)(var), juvix_nfields);               \
+        void *tmp;                                           \
+        ALLOC(tmp, juvix_nfields);                           \
+        var = (word_t)tmp;                                   \
         *(word_t *)(var + juvix_nfields) = 0;                \
         strcpy((char *)(var) + sizeof(word_t), str);         \
     } while (0)

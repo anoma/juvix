@@ -57,7 +57,9 @@ static inline word_t *get_closure_args(word_t cl) { return (word_t *)cl + 3; }
 
 #define ALLOC_CLOSURE(var, fuid, addr, nfields, nargs) \
     do {                                               \
-        ALLOC((word_t *)(var), (nfields) + 1);         \
+        word_t *tmp;                                   \
+        ALLOC(tmp, (nfields) + 1);                     \
+        var = (word_t)tmp;                             \
         INIT_CLOSURE(var, fuid, addr, nfields, nargs); \
     } while (0)
 
@@ -72,10 +74,12 @@ static inline word_t *get_closure_args(word_t cl) { return (word_t *)cl + 3; }
         memcopy((word_t *)(dest) + 3, (word_t *)(src) + 3, nargs); \
     } while (0)
 
-#define EXTEND_CLOSURE(dest, src, n)                   \
-    do {                                               \
-        ALLOC((word_t *)(dest), get_nfields(src) + 1); \
-        COPY_EXTEND_CLOSURE(dest, src, n);             \
+#define EXTEND_CLOSURE(dest, src, n)       \
+    do {                                   \
+        void *tmp;                         \
+        ALLOC(tmp, get_nfields(src) + 1);  \
+        dest = (word_t)tmp;                \
+        COPY_EXTEND_CLOSURE(dest, src, n); \
     } while (0)
 
 // Memory pointers (see alloc.h) need to be saved before calling the following

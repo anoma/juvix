@@ -61,5 +61,10 @@ tests =
       "Stack"
       "."
       "test006.c"
-      "out/test006.out"
+      "out/test006.out",
+    PosTest
+      "Prologue and epilogue"
+      "."
+      "test007.c"
+      "out/test007.out"
   ]

@@ -13,9 +13,14 @@
 
 #define ARG(k) juvix_arg_##k
 
-// TODO: The label on the stack will need to have their least significant bit
+// TODO: The labels on the stack will need to have their least significant bit
 // set for the GC.
 #define STACK_PUSH_ADDR(addr) (STACK_PUSH(addr))
+#define STACK_POP_ADDR(var)    \
+    do {                       \
+        var = STACK_TOP_ADDR;  \
+        --juvix_stack_pointer; \
+    } while (0)
 #define STACK_TOP_ADDR (((label_addr_t)(STACK_TOP)))
 
 /*
@@ -120,7 +125,6 @@
     ASSERT(MAX_ARGS <= MAX_FUNCTION_ARGS);                                    \
     label_addr_t juvix_ccl_dispatch[MAX_ARGS];                                \
     label_addr_t juvix_ccl_return;                                            \
-    label_addr_t juvix_ccl_addr;                                              \
     word_t *juvix_ccl_sp;                                                     \
     size_t juvix_ccl_sargs;                                                   \
     word_t juvix_ccl_closure;                                                 \
@@ -140,8 +144,9 @@
             EXTEND_CLOSURE(juvix_result, juvix_ccl_closure, juvix_ccl_sargs); \
             for (size_t juvix_idx = 0; juvix_idx < juvix_ccl_sargs;           \
                  ++juvix_idx) {                                               \
-                STACK_POP(                                                    \
-                    CLOSURE_ARG(juvix_result, juvix_ccl_nargs + juvix_idx));  \
+                STACK_POP(CLOSURE_ARG(                                        \
+                    juvix_result,                                             \
+                    get_closure_nargs(juvix_ccl_closure) + juvix_idx));       \
             }                                                                 \
             if (juvix_ccl_return == NULL) {                                   \
                 STACK_LEAVE;                                                  \
@@ -158,18 +163,18 @@
     if (juvix_ccl_sargs == 0 && juvix_ccl_return == NULL) {      \
         STACKTRACE_REPLACE(get_closure_fuid(juvix_ccl_closure)); \
         STACK_LEAVE;                                             \
-        STORED_GOTO(juvix_ccl_addr);                             \
+        STORED_GOTO(get_closure_addr(juvix_ccl_closure));        \
     } else {                                                     \
         STACKTRACE_PUSH(get_closure_fuid(juvix_ccl_closure));    \
-        STACK_PUSH(juvix_ccl_return);                            \
+        STACK_PUSH_ADDR(juvix_ccl_return);                       \
         STACK_PUSH(juvix_ccl_sargs);                             \
         STACK_PUSH_ADDR(LABEL_ADDR(label));                      \
-        STORED_GOTO(juvix_ccl_addr);                             \
+        STORED_GOTO(get_closure_addr(juvix_ccl_closure));        \
     label:                                                       \
         STACKTRACE_POP;                                          \
         --juvix_stack_pointer;                                   \
         STACK_POP(juvix_ccl_sargs);                              \
-        STACK_POP(juvix_ccl_return);                             \
+        STACK_POP_ADDR(juvix_ccl_return);                        \
         if (juvix_ccl_sargs > 0) {                               \
             goto juvix_ccl_start;                                \
         } else {                                                 \
@@ -181,17 +186,18 @@
 #define DISPATCH_STACK_SIZE 3
 
 /*
-    Macro sequence for argument dispatch declaration:
+    Macro sequence for argument dispatch declaration (N = maximum number of
+    function arguments):
 
-    DECL_DISPATCH(N+1, dispatch_label_N);
-    DECL_DISPATCH(N, dispatch_label_N-1);
+    DECL_DISPATCH(N-1, dispatch_label_N-1);
+    DECL_DISPATCH(N-2, dispatch_label_N-2);
     ...
-    DECL_DISPATCH(1, dispatch_label_0);
+    DECL_DISPATCH(0, dispatch_label_0);
     ...
-dispatch_label_N:
-    ARG(N) = *juvix_ccl_sp++;
 dispatch_label_N-1:
     ARG(N-1) = *juvix_ccl_sp++;
+dispatch_label_N-2:
+    ARG(N-2) = *juvix_ccl_sp++;
     ...
 dispatch_label_0:
     ARG(0) = *juvix_ccl_sp;

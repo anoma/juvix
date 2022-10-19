@@ -11,13 +11,17 @@
 
 #define ALLOC_CONSTR_BOXED(var, uid, nfields)      \
     do {                                           \
-        ALLOC((word_t *)(var), (nfields) + 1);     \
+        void *tmp;                                 \
+        ALLOC(var, (nfields) + 1);                 \
+        var = (word_t)tmp;                         \
         FIELD(var, 0) = make_header(uid, nfields); \
     } while (0)
 
 #define ALLOC_CONSTR_BOXED_TAG(var, uid)     \
     do {                                     \
-        ALLOC((word_t *)(var), 2);           \
+        void *tmp;                           \
+        ALLOC(var, 2);                       \
+        var = (word_t)tmp;                   \
         FIELD(var, 0) = make_header(uid, 1); \
         FIELD(var, 1) = 1;                   \
     } while (0)
