@@ -19,7 +19,7 @@ void alloc_cleanup() {
     }
 }
 
-static void alloc_prepare(bool can_gc) {
+void alloc_pages(bool can_gc) {
     if (can_gc && alloc_youngest_generation->pages_max <=
                       alloc_youngest_generation->pages_num) {
         // TODO: decide on GC collection here
@@ -27,10 +27,6 @@ static void alloc_prepare(bool can_gc) {
             gen_alloc(alloc_youngest_generation, opt_generation_min_pages);
     }
     ++alloc_youngest_generation->pages_num;
-}
-
-void alloc_pages(bool can_gc) {
-    alloc_prepare(can_gc);
     alloc_youngest_generation->memory =
         pool_alloc(alloc_youngest_generation->memory);
 }

@@ -1,6 +1,6 @@
-/* Allocator for unstructured objects */
+/* Allocator for unstructured objects (macro interface) */
 
-#include <juvix/mem/alloc.h>
+#include <juvix/api.h>
 
 static unsigned long seed = 123456789;
 
@@ -16,9 +16,13 @@ static uint myrandom() {
 int main() {
     uint s;
     word_t *ptr = NULL;
+    DECL_ALLOC_VARS;
     alloc_init();
+    juvix_memory_pointer = alloc_memory_pointer();
     for (uint i = 0; i < PAGE_SIZE / sizeof(word_t); ++i) {
-        word_t *next = alloc(1);
+        PREALLOC(1, {}, {});
+        word_t *next;
+        ALLOC(next, 1);
         *next = (word_t)ptr;
         ptr = next;
     }
@@ -32,7 +36,9 @@ int main() {
     ASSERT(s == PAGE_SIZE / sizeof(word_t));
     for (uint i = 0; i < N; ++i) {
         uint n = myrandom() % (MAX_FIELDS + 1) + 1;
-        word_t *next = alloc(n);
+        word_t *next;
+        PREALLOC(n, {}, {});
+        ALLOC(next, n);
         *next = (word_t)ptr;
         ptr = next;
     }

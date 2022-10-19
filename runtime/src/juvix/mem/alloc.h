@@ -29,7 +29,7 @@ static inline void alloc_save_memory_pointer(word_t *ptr) {
     alloc_youngest_generation->memory->free_begin = ptr;
 }
 
-#define SAVE_MEMORY_POINTERS alloc_save_memory_pointer(juvix_words_ptr);
+#define SAVE_MEMORY_POINTERS alloc_save_memory_pointer(juvix_memory_pointer);
 #define RESTORE_MEMORY_POINTERS juvix_memory_pointer = alloc_memory_pointer();
 
 // Preallocate n words. `SAVE` and `RESTORE` should save and restore live local

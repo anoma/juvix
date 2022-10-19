@@ -36,9 +36,11 @@ static void pool_free(pool_t *pool) {
 }
 
 generation_t *gen_alloc(generation_t *prev, size_t pages_max) {
+    ASSERT(prev != next_free_gen);
     if (next_free_gen == NULL) {
         ASSERT(oldest_gen != NULL);
         ASSERT(oldest_gen->next != NULL);
+        ASSERT(oldest_gen->next->prev == oldest_gen);
         gen_merge(oldest_gen->next);
         ASSERT(next_free_gen != NULL);
     }
@@ -60,7 +62,14 @@ generation_t *gen_alloc(generation_t *prev, size_t pages_max) {
 
 void gen_free(generation_t *gen) {
     if (gen == oldest_gen) {
+        ASSERT(gen->prev == NULL);
         oldest_gen = oldest_gen->next;
+    }
+    if (gen->prev != NULL) {
+        gen->prev->next = gen->next;
+    }
+    if (gen->next != NULL) {
+        gen->next->prev = gen->prev;
     }
     gen->next = next_free_gen;
     next_free_gen = gen;
@@ -82,6 +91,9 @@ void gen_merge(generation_t *gen) {
     ASSERT(gen->prev != NULL);
     generation_t *prev = gen->prev;
     prev->next = gen->next;
+    if (gen->next != NULL) {
+        gen->next->prev = prev;
+    }
     pool_prepend(&prev->memory, gen->memory);
     prev->pages_num += gen->pages_num;
     gen->next = next_free_gen;
