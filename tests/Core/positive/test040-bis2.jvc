@@ -2,17 +2,19 @@
 
 def writeLn := \x write x >> write "\n";
 
+-- def mutrec2 :=
+--   let two := 2 in
+--    letrec z2 := {
+--        two
+--     } in z2 + two;
+
 def mutrec :=
-  let one := 1 in
   let two := 2 in
   letrec[f h]
-    f := h one;
-    h := \x letrec z := {
-       f two
-    } in z
-  in writeLn (f 5);
-  -- >> writeLn (f 10) >> writeLn (f 100) >> writeLn (g 5) >> writeLn (h 5);
+    f := h;
+    h := letrec z := {
+       f + two
+    } in z + two
+  in writeLn f;
 
-letrec x := 3
-in
-mutrec
+letrec x := 3 in mutrec

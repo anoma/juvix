@@ -12,4 +12,9 @@ def mutrec :=
     c := \x three
   in writeLn (a 5);
 
+-- bl = [three, two, one]
+-- unfiltered free vars of defs = {one$5, two$4, three$3, b$2, c$1}
+-- filtered free vars of defs = {one$2, two$1, three$0}
+
+
 letrec x := 3 in mutrec

@@ -58,6 +58,7 @@ lambdaLiftNode aboveBl top =
 
         goLetRec :: LetRec -> Sem r Recur
         goLetRec letr = do
+          -- getInfoTable >>= traceM . ppTrace
           let defs :: [Node]
               defs = toList (letr ^. letRecValues)
               ndefs :: Int
@@ -67,40 +68,64 @@ lambdaLiftNode aboveBl top =
               bl' :: BinderList Info
               bl' = BL.prepend letRecBinders bl
           topSyms :: [Symbol] <- forM defs (const freshSymbol)
-          liftedDefs <- mapM (lambdaLiftNode bl') defs
-          body' <- lambdaLiftNode bl' (letr ^. letRecBody)
-          let -- free vars in each let
-              recItemsFreeVars :: [(Var, Info)]
-              recItemsFreeVars = mapMaybe helper (toList (mconcatMap freeVarsSet liftedDefs))
+          let recItemsFreeVars :: [(Var, Info)]
+              recItemsFreeVars = mapMaybe helper (toList (mconcatMap freeVarsSet defs))
                 where
+                  -- free vars in each let
                   -- throw away variables bound in the letrec and shift others
                   helper :: Var -> Maybe (Var, Info)
                   helper v
-                    | idx < ndefs = Nothing
-                    | otherwise =
-                        let idx' = idx - ndefs
-                         in Just (v, BL.lookup idx' bl)
+                    | v ^. varIndex < ndefs = Nothing
+                    | otherwise = Just (set varIndex idx' v, BL.lookup idx' bl)
                     where
-                      idx = v ^. varIndex
-              -- replace calls to letrec items to a calls to the fresh top
-              -- symbols TODO note that these calls can appear in the
-              -- dynamically created top level nodes created during lambda
-              -- lifting
+                      idx' = (v ^. varIndex) - ndefs
+
+              -- FIXME
               subsCalls :: Node -> Node
               subsCalls =
                 substs
                   ( reverse
-                      [ mkApps' (mkIdent' sym) (map (NVar . fst) fv)
-                        | let fv = recItemsFreeVars, sym <- topSyms
+                      [ mkApps' (mkIdent' sym) (map (NVar . fst) recItemsFreeVars)
+                        | sym <- topSyms
                       ]
                   )
+          let fv = recItemsFreeVars
+          -- traceM ("freevars " <> show (length fv) <> " " <> show (map (pretty . getInfoName . snd) fv))
+          liftedDefs <- mapM (lambdaLiftNode bl . subsCalls) defs
+          body' <- lambdaLiftNode bl' (letr ^. letRecBody)
+          let -- free vars in each let
+              -- recItemsFreeVars' :: [(Var, Info)]
+              -- recItemsFreeVars' = mapMaybe helper (toList (mconcatMap freeVarsSet liftedDefs))
+              --   where
+              --     -- throw away variables bound in the letrec and shift others
+
+              --     helper :: Var -> Maybe (Var, Info)
+              --     helper v
+              --       | idx < ndefs = Nothing
+              --       | otherwise =
+              --           let idx' = idx - ndefs
+              --            in Just (v, BL.lookup idx' bl)
+              --       where
+              --         idx = v ^. varIndex
+              -- -- replace calls to letrec items to a calls to the fresh top
+              -- -- symbols.
+              -- -- FIXME note that these calls can appear in the
+              -- -- dynamically created top level nodes in recursive calls to
+              -- -- lambda lifting
+              -- subsCalls' :: Node -> Node
+              -- subsCalls' =
+              --   substs
+              --     ( reverse
+              --         [ mkApps' (mkIdent' sym) (map (NVar . fst) recItemsFreeVars)
+              --           | sym <- topSyms
+              --         ]
+              --     )
               declareTopSyms :: Sem r ()
               declareTopSyms =
                 sequence_
                   [ do
-                      let
-                          fv = recItemsFreeVars
-                          topBody = captureFreeVars (map (first (^. varIndex)) fv) (subsCalls b)
+                      let fv = recItemsFreeVars
+                          topBody = captureFreeVars (map (first (^. varIndex)) fv) b
                           argsInfo :: [ArgumentInfo]
                           argsInfo = map (argumentInfoFromInfo . snd) fv
                       registerIdentNode sym topBody
@@ -116,20 +141,23 @@ lambdaLiftNode aboveBl top =
                     | (sym, (itemInfo, b)) <- zipExact topSyms (zipExact letRecBinders liftedDefs)
                   ]
               letItems :: [Node]
-              letItems = let fv = recItemsFreeVars in
-                [ mkApps' (mkIdent' s) (map (NVar . fst) fv)
-                  | s <- topSyms
-                ]
+              letItems =
+                let fv = recItemsFreeVars
+                 in [ mkApps' (mkIdent' s) (map (NVar . fst) fv)
+                      | s <- topSyms
+                    ]
           declareTopSyms
+
+          -- getInfoTable >>= traceM . ppTrace
           let -- TODO it can probably be simplified
               shiftHelper :: Node -> NonEmpty Node -> Node
-              shiftHelper b = goShift (- ndefs)
+              shiftHelper b = goShift 0
                 where
                   goShift :: Int -> NonEmpty Node -> Node
                   goShift k = \case
                     x :| yys -> case yys of
                       []
-                        | k == - 1 -> mkLet' (shift k x) b
+                        | k == ndefs - 1 -> mkLet' (shift k x) b
                         | otherwise -> impossible
                       (y : ys) -> mkLet' (shift k x) (goShift (k + 1) (y :| ys))
           let res :: Node
