@@ -15,16 +15,19 @@
 // from funcall/funcall.h)
 // DISPATCH_DECLS declares the dispatch for CallClosures, as described in
 // funcall/funcall.h after DISPATCH definition
-#define JUVIX_PROLOGUE(MAX_ARGS, ARG_DECLS, DISPATCH_DECLS) \
-    MEM_DECLS;                                              \
-    ARG_DECLS;                                              \
-    FUNCALL_DECLS;                                          \
-    JUVIX_INIT;                                             \
-    STACK_PUSH_ADDR(LABEL_ADDR(juvix_program_end));         \
-    goto juvix_program_start;                               \
-    DECL_CALL_CLOSURES(MAX_ARGS);                           \
-    DISPATCH_DECLS;                                         \
-    juvix_program_start:
+// DISPATCH_DECLS initializes the dispatch table for CallClosures, as described
+// in funcall/funcall.h after DISPATCH definition
+#define JUVIX_PROLOGUE(MAX_ARGS, ARG_DECLS, DISPATCH_DECLS, DISPATCH_INITS) \
+    MEM_DECLS;                                                              \
+    ARG_DECLS;                                                              \
+    FUNCALL_DECLS;                                                          \
+    JUVIX_INIT;                                                             \
+    STACK_PUSH_ADDR(LABEL_ADDR(juvix_program_end));                         \
+    goto juvix_program_start;                                               \
+    DECL_CALL_CLOSURES(MAX_ARGS);                                           \
+    DISPATCH_DECLS;                                                         \
+    juvix_program_start:                                                    \
+    DISPATCH_INITS
 
 #define JUVIX_EPILOGUE                  \
     juvix_program_end:                  \

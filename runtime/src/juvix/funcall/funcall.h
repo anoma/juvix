@@ -157,7 +157,7 @@
         }                                                                     \
     } while (0)
 
-#define DECL_DISPATCH(N, label) (juvix_ccl_dispatch[N] = LABEL_ADDR(label))
+#define INIT_DISPATCH(N, label) (juvix_ccl_dispatch[N] = LABEL_ADDR(label))
 
 #define DISPATCH(label)                                          \
     if (juvix_ccl_sargs == 0 && juvix_ccl_return == NULL) {      \
@@ -186,14 +186,18 @@
 #define DISPATCH_STACK_SIZE 3
 
 /*
+
+    Macro sequence for argument dispatch initialization (N = maximum number of
+    function arguments):
+
+    INIT_DISPATCH(N-1, dispatch_label_N-1);
+    INIT_DISPATCH(N-2, dispatch_label_N-2);
+    ...
+    INIT_DISPATCH(0, dispatch_label_0);
+
     Macro sequence for argument dispatch declaration (N = maximum number of
     function arguments):
 
-    DECL_DISPATCH(N-1, dispatch_label_N-1);
-    DECL_DISPATCH(N-2, dispatch_label_N-2);
-    ...
-    DECL_DISPATCH(0, dispatch_label_0);
-    ...
 dispatch_label_N-1:
     ARG(N-1) = *juvix_ccl_sp++;
 dispatch_label_N-2:
