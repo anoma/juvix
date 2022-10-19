@@ -1,7 +1,7 @@
 module Juvix.Extra.Paths where
 
 import Data.FileEmbed qualified as FE
-import Juvix.Prelude
+import Juvix.Prelude.Base
 import Language.Haskell.TH.Syntax
 
 assetsDir :: Q Exp

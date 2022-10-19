@@ -3,7 +3,7 @@ module Juvix.Extra.Stdlib where
 import Data.ByteString qualified as BS
 import Juvix.Extra.Paths
 import Juvix.Extra.Version
-import Juvix.Prelude
+import Juvix.Prelude.Base
 
 type RootPath = FilePath
 

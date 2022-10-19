@@ -7,6 +7,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Data.Effect.Files.Error
+import Juvix.Extra.Stdlib qualified as Stdlib
 import Juvix.Prelude.Base
 
 data Files m a where
@@ -14,6 +15,7 @@ data Files m a where
   EqualPaths' :: FilePath -> FilePath -> Files m (Maybe Bool)
   GetAbsPath :: FilePath -> Files m FilePath
   RegisterStdlib :: FilePath -> Files m ()
+  UpdateStdlib :: FilePath -> Files m ()
 
 makeSem ''Files
 
@@ -62,11 +64,6 @@ stdlibOrFile p rootPath (Just s)
       cStdlibPath <- embed (canonicalizePath (s ^. stdlibRoot))
       andM [return (cRootPath /= cStdlibPath), embed (doesFileExist pAbsPath)]
 
-seqFst :: (IO a, b) -> IO (a, b)
-seqFst (ma, b) = do
-  a <- ma
-  return (a, b)
-
 runFilesIO' ::
   forall r a.
   Member (Embed IO) r =>
@@ -93,6 +90,7 @@ runFilesIO' rootPath = reinterpret2 $ \case
                 }
           )
       )
+  UpdateStdlib p -> runReader p Stdlib.updateStdlib
   GetAbsPath f -> do
     s <- gets (^. stdlibState)
     p <- stdlibOrFile f rootPath s
@@ -118,4 +116,5 @@ runFilesPure rootPath fs = interpret $ \case
     Just c -> return c
   EqualPaths' _ _ -> return Nothing
   RegisterStdlib {} -> return ()
+  UpdateStdlib {} -> return ()
   GetAbsPath f -> return (rootPath </> f)
