@@ -51,7 +51,7 @@ runRepl opts tab = do
             runRepl opts tab'
       ':' : 'l' : ' ' : f -> do
         s' <- embed (readFile f)
-        case Core.runParser "" f Core.emptyInfoTable s' of
+        case Core.runParser f Core.emptyInfoTable s' of
           Left err -> do
             printJuvixError (JuvixError err)
             runRepl opts tab
@@ -84,7 +84,7 @@ runRepl opts tab = do
               embed (putStrLn "")
               runRepl opts tab'
       where
-        defaultLoc = singletonInterval (mkLoc "stdin" 0 (M.initialPos "stdin"))
+        defaultLoc = singletonInterval (mkLoc 0 (M.initialPos "stdin"))
 
 showReplWelcome :: Members '[Embed IO, App] r => Sem r ()
 showReplWelcome = embed $ do

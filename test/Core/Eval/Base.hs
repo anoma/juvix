@@ -78,7 +78,7 @@ coreEvalErrorAssertion mainFile step = do
 parseFile :: FilePath -> IO (Either ParserError (InfoTable, Maybe Node))
 parseFile f = do
   s <- readFile f
-  return $ runParser "" f emptyInfoTable s
+  return $ runParser f emptyInfoTable s
 
 doEval ::
   FilePath ->
@@ -89,4 +89,4 @@ doEval ::
 doEval f hout tab node =
   catchEvalErrorIO defaultLoc (hEvalIO stdin hout (tab ^. identContext) [] node)
   where
-    defaultLoc = singletonInterval (mkLoc f 0 (M.initialPos f))
+    defaultLoc = singletonInterval (mkLoc 0 (M.initialPos f))

@@ -75,7 +75,7 @@ asmRunErrorAssertion mainFile step = do
 parseFile :: FilePath -> IO (Either ParserError InfoTable)
 parseFile f = do
   s <- readFile f
-  return $ runParser "" f s
+  return $ runParser f s
 
 doRun ::
   Handle ->

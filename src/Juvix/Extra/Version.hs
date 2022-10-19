@@ -2,7 +2,7 @@ module Juvix.Extra.Version where
 
 import Data.Version (showVersion)
 import Development.GitRev (gitBranch, gitCommitDate, gitHash)
-import Juvix.Prelude hiding (Doc)
+import Juvix.Prelude.Base hiding (Doc)
 import Paths_juvix qualified
 import Prettyprinter as PP
 import Prettyprinter.Render.Text (renderIO)

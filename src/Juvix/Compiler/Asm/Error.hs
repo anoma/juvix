@@ -37,4 +37,4 @@ instance Show AsmError where
 instance HasLoc AsmError where
   getLoc (AsmError {..}) = fromMaybe defaultLoc _asmErrorLoc
     where
-      defaultLoc = singletonInterval (mkLoc "" 0 (M.initialPos ""))
+      defaultLoc = singletonInterval (mkLoc 0 (M.initialPos ""))

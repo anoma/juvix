@@ -9,7 +9,7 @@ import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 runCommand :: forall r. Members '[Embed IO, App] r => CoreReadOptions -> Sem r ()
 runCommand opts = do
   s' <- embed (readFile f)
-  tab <- getRight (fst <$> mapLeft JuvixError (Core.runParser "" f Core.emptyInfoTable s'))
+  tab <- getRight (fst <$> mapLeft JuvixError (Core.runParser f Core.emptyInfoTable s'))
   let tab' = Core.applyTransformations (opts ^. coreReadTransformations) tab
   renderStdOut (Core.ppOut opts tab')
   where
