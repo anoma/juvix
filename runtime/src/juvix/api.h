@@ -35,8 +35,13 @@
     IO_INTERPRET(juvix_io_interpreter); \
     io_print_toplevel(juvix_result);
 
+// Temporary vars
 #define DECL_TMP(k) word_t juvix_tmp_##k
 #define TMP(k) juvix_tmp_##k
+
+// Value stack temporary vars
+#define DECL_STMP(k) word_t juvix_stmp_##k
+#define STMP(k) juvix_stmp_##k
 
 // Begin a function definition. `n` is the maximum number of words allocated in
 // the function. `SAVE` and `RESTORE` should save and restore function arguments
@@ -48,7 +53,11 @@
 /*
     Macro sequence for function definition:
 
-    JUVIX_FUNCTION(label, max_alloc, SAVE, RESTORE);
+closure_label:
+    ARG(0) = CLOSURE_ARG(juvix_closure, 0);
+    ...
+    ARG(m) = CLOSURE_ARG(juvix_closure, m);
+    JUVIX_FUNCTION(function_label, max_alloc, SAVE, RESTORE);
     {
         DECL_TMP(0);
         DECL_TMP(1);
@@ -57,6 +66,10 @@
         <code>
     }
 */
+
+// Begin a non-allocating function
+#define JUVIX_FUNCTION_NOALLOC(label) \
+    label:
 
 #define JUVIX_INT_ADD(var0, var1, var2) (var0 = smallint_add(var1, var2))
 #define JUVIX_INT_SUB(var0, var1, var2) (var0 = smallint_sub(var1, var2))

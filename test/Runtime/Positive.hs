@@ -66,5 +66,20 @@ tests =
       "Prologue and epilogue"
       "."
       "test007.c"
-      "out/test007.out"
+      "out/test007.out",
+    PosTest
+      "Basic arithmetic"
+      "."
+      "test008.c"
+      "out/test008.out",
+    PosTest
+      "Direct call"
+      "."
+      "test009.c"
+      "out/test009.out",
+    PosTest
+      "Indirect call"
+      "."
+      "test010.c"
+      "out/test010.out"
   ]

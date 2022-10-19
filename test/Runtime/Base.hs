@@ -61,6 +61,7 @@ commonArgs outputFile =
     "-W",
     "-Wall",
     "-Wno-unused-parameter",
+    "-Wno-unused-label",
     "-Werror",
     "-std=c11",
     "-I",

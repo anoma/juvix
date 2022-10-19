@@ -10,6 +10,7 @@
 
 // Function result is stored in juvix_result
 #define DECL_RESULT word_t juvix_result
+#define DECL_CLOSURE UNUSED word_t juvix_closure
 
 #define ARG(k) juvix_arg_##k
 
@@ -24,7 +25,7 @@
 #define STACK_TOP_ADDR (((label_addr_t)(STACK_TOP)))
 
 /*
-    Macro sequence for a function call:
+    Macro sequence for a direct function call:
 
     STACK_ENTER(n + 1);
     STACK_PUSH(var1);
@@ -51,7 +52,7 @@
     STACKTRACE_POP;
 
 /*
-    Macro sequence for a function tail-call:
+    Macro sequence for a direct function tail-call:
 
     ARG(0) = arg0;
     ...
@@ -65,9 +66,29 @@
     STACKTRACE_REPLACE(fuid); \
     goto fun
 
+/*
+    Macro sequence for an indirect function call:
+
+    STACK_ENTER(n + 1);
+    STACK_PUSH(var1);
+    ...
+    STACK_PUSH(varn);
+    CLOSURE_ARG(cl, get_closure_nargs(cl)) = arg0;
+    ...
+    CLOSURE_ARG(cl, get_closure_nargs(cl) + m) = argm;
+    CALL_CLOSURE(cl, unique_label);
+    STACK_POP(varn);
+    ...
+    STACK_POP(var1);
+    STACK_LEAVE;
+
+    arg0, ..., argm cannot contain references to ARG(k) for any k
+*/
+
 #define CALL_CLOSURE(cl, label)            \
     STACKTRACE_PUSH(get_closure_fuid(cl)); \
     STACK_PUSH_ADDR(LABEL_ADDR(label));    \
+    juvix_closure = cl;                    \
     STORED_GOTO(get_closure_addr(cl));     \
     label:                                 \
     --juvix_stack_pointer;                 \

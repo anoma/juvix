@@ -52,7 +52,7 @@ static inline word_t *get_closure_args(word_t cl) { return (word_t *)cl + 3; }
     do {                                                   \
         FIELD(var, 0) = make_header(UID_CLOSURE, nfields); \
         FIELD(var, 1) = make_function_header(fuid, nargs); \
-        FIELD(var, 2) = addr;                              \
+        FIELD(var, 2) = (word_t)addr;                      \
     } while (0)
 
 #define ALLOC_CLOSURE(var, fuid, addr, nfields, nargs) \

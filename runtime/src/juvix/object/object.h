@@ -75,9 +75,10 @@ static inline word_t get_uid(word_t ptr) { return GET_UID(FIELD(ptr, 0)); }
 /* Special UIDs */
 
 // A closure has additional non-garbage-collected closure header and function
-// address fields immediately after the header.
+// address fields immediately after the header. The two additional fields are
+// not counted in NFIELDS.
 #define UID_CLOSURE 0
-// The header is followed by a zero-terminated string. FIELDS contains the
+// The header is followed by a zero-terminated string. NFIELDS contains the
 // length of the string rounded up to a multiple of word size.
 #define UID_CSTRING 1
 

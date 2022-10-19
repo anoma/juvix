@@ -41,6 +41,12 @@
     } while (0)
 #endif
 
+#if defined(COMPILER_CLANG) || defined(COMPILER_GCC)
+#define UNUSED __attribute__((unused))
+#else
+#define UNUSED
+#endif
+
 // typedefs for basic integer types
 #if (defined(COMPILER_CLANG) || defined(COMPILER_GCC)) && !defined(API_LIBC)
 
