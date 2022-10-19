@@ -8,9 +8,17 @@
 #include <juvix/object/print.h>
 
 static size_t print_long(char *buf, size_t n, long_t x) {
+    ASSERT(n >= 1);
     if (x == 0) {
         *buf++ = '0';
         return 1;
+    }
+    size_t sign = 0;
+    if (x < 0) {
+        x = -x;
+        *buf++ = '-';
+        --n;
+        sign = 1;
     }
     char *buf0 = buf;
     while (x != 0 && n > 0) {
@@ -25,7 +33,7 @@ static size_t print_long(char *buf, size_t n, long_t x) {
         buf0[i] = *(buf - i - 1);
         *(buf - i - 1) = c;
     }
-    return k;
+    return k + sign;
 }
 
 #define PUTC(c)                          \
@@ -38,6 +46,7 @@ static size_t print_object(bool is_top, char *buf, size_t n, word_t x);
 
 static size_t print_args(bool is_top, char *restrict buf, size_t n,
                          const char *restrict str, word_t *args, size_t nargs) {
+    ASSERT(n >= 1);
     char *buf0 = buf;
     if (!is_top && nargs > 0) {
         PUTC('(');
@@ -61,6 +70,7 @@ static size_t print_args(bool is_top, char *restrict buf, size_t n,
 }
 
 static size_t print_object(bool is_top, char *buf, size_t n, word_t x) {
+    ASSERT(n >= 1);
     switch (GET_KIND(x)) {
         case KIND_UNBOXED0:
         case KIND_UNBOXED1:
@@ -133,6 +143,7 @@ static size_t print_object(bool is_top, char *buf, size_t n, word_t x) {
 #undef PUTC
 
 size_t print_to_buf(char *buf, size_t n, word_t x) {
+    ASSERT(n >= 1);
     size_t k = print_object(true, buf, n, x);
     if (k < n) {
         buf[k] = 0;
