@@ -9,7 +9,6 @@ import Data.HashSet qualified as HashSet
 import Juvix.Data.Effect.Files.Error
 import Juvix.Extra.Stdlib qualified as Stdlib
 import Juvix.Prelude.Base
-import Polysemy.Law (Arbitrary1(liftArbitrary))
 
 data Files m a where
   ReadFile' :: FilePath -> Files m Text
