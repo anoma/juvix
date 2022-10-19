@@ -8,11 +8,15 @@ import Juvix.Compiler.Asm.Error
 import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Extra.Type
 import Juvix.Compiler.Asm.Language
-import Juvix.Compiler.Asm.Language.Type
 import Juvix.Compiler.Asm.Pretty
 import Safe (atMay)
 
 type Arguments = HashMap Offset Type
+
+argumentsFromFunctionInfo :: FunctionInfo -> Arguments
+argumentsFromFunctionInfo fi =
+  HashMap.fromList $
+    zip [0 ..] (take (fi ^. functionArgsNum) (typeArgs (fi ^. functionType)))
 
 -- | A static representation of JuvixAsm memory providing type information for
 -- memory locations.
@@ -38,13 +42,19 @@ pushValueStack :: Type -> Memory -> Memory
 pushValueStack ty = over memoryValueStack (Stack.push ty)
 
 popValueStack :: Int -> Memory -> Memory
-popValueStack n = (!! n) . iterate (over memoryValueStack Stack.pop)
+popValueStack n = iterateN n (over memoryValueStack Stack.pop)
+
+valueStackHeight :: Memory -> Int
+valueStackHeight mem = length (mem ^. memoryValueStack)
 
 pushTempStack :: Type -> Memory -> Memory
 pushTempStack ty = over memoryTempStack (Stack.push ty)
 
 popTempStack :: Int -> Memory -> Memory
-popTempStack n = (!! n) . iterate (over memoryTempStack Stack.pop)
+popTempStack n = iterateN n (over memoryTempStack Stack.pop)
+
+tempStackHeight :: Memory -> Int
+tempStackHeight mem = length (mem ^. memoryTempStack)
 
 -- | Read value stack at index `n` from the top.
 topValueStack :: Int -> Memory -> Maybe Type

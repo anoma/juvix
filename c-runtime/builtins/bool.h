@@ -16,4 +16,6 @@ bool is_prim_false(prim_bool b) {
     return b == prim_false;
 }
 
+#define prim_if(b, ifThen, ifElse) (b ? ifThen : ifElse)
+
 #endif // BOOL_H_

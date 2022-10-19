@@ -11,12 +11,15 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Equality
 import Juvix.Compiler.Core.Extra.Info
 import Juvix.Compiler.Core.Extra.Recursors
 import Juvix.Compiler.Core.Extra.Recursors.Fold.Named
 import Juvix.Compiler.Core.Extra.Recursors.Map.Named
+import Juvix.Compiler.Core.Info.NameInfo
+import Juvix.Compiler.Core.Info.TypeInfo
 import Juvix.Compiler.Core.Language
 
 isClosed :: Node -> Bool
@@ -75,15 +78,17 @@ cosmos f = ufoldA reassemble f
 
 -- | The list should not contain repeated indices. The 'Info' corresponds to the
 -- binder of the variable.
+-- if fv = x1, x2, .., xn
+-- the result is of the form λx1 λx2 .. λ xn b
 captureFreeVars :: [(Index, Info)] -> Node -> Node
 captureFreeVars fv
   | n == 0 = id
-  | otherwise = mkLambdas infos . mapFreeVars
+  | otherwise = mkLambdasB infos . mapFreeVars
   where
     (indices, infos) = unzip fv
     n = length fv
     s :: HashMap Index Index
-    s = HashMap.fromList (zip indices [0 ..])
+    s = HashMap.fromList (zip (reverse indices) [0 ..])
     mapFreeVars :: Node -> Node
     mapFreeVars = dmapN go
       where
@@ -138,3 +143,20 @@ convertClosures = umap go
 
 convertRuntimeNodes :: Node -> Node
 convertRuntimeNodes = convertClosures
+
+argumentInfoFromInfo :: Info -> ArgumentInfo
+argumentInfoFromInfo i =
+  ArgumentInfo
+    { _argumentName = getInfoName i,
+      _argumentType = getInfoType i,
+      _argumentIsImplicit = Explicit
+    }
+
+infoFromArgumentInfo :: ArgumentInfo -> Info
+infoFromArgumentInfo arg =
+  setInfoType (arg ^. argumentType) $
+    setName
+      mempty
+  where
+    setName :: Info -> Info
+    setName i = maybe i (`setInfoName` i) (arg ^. argumentName)

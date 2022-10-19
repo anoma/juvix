@@ -2,6 +2,7 @@ module Juvix.Compiler.Core.Data.InfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.InfoTable
+import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Language
 
 data InfoTableBuilder m a where
@@ -46,12 +47,13 @@ runInfoTableBuilder tab =
       RegisterIdent ii -> do
         modify' (over infoIdentifiers (HashMap.insert (ii ^. identifierSymbol) ii))
         whenJust (ii ^? identifierName . _Just . nameText) $ \name ->
-          modify' (over identMap (HashMap.insert name (IdentSym (ii ^. identifierSymbol))))
-      RegisterInductive i -> do
-        modify' (over infoInductives (HashMap.insert (i ^. inductiveSymbol) i))
+          modify' (over identMap (HashMap.insert name (IdentFun (ii ^. identifierSymbol))))
       RegisterConstructor ci -> do
         modify' (over infoConstructors (HashMap.insert (ci ^. constructorTag) ci))
-        modify' (over identMap (HashMap.insert (ci ^. (constructorName . nameText)) (IdentTag (ci ^. constructorTag))))
+        modify' (over identMap (HashMap.insert (ci ^. (constructorName . nameText)) (IdentConstr (ci ^. constructorTag))))
+      RegisterInductive ii -> do
+        modify' (over infoInductives (HashMap.insert (ii ^. inductiveSymbol) ii))
+        modify' (over identMap (HashMap.insert (ii ^. (inductiveName . nameText)) (IdentInd (ii ^. inductiveSymbol))))
       RegisterIdentNode sym node ->
         modify' (over identContext (HashMap.insert sym node))
       RegisterMain sym -> do
@@ -59,6 +61,7 @@ runInfoTableBuilder tab =
       SetIdentArgsInfo sym argsInfo -> do
         modify' (set (infoIdentifiers . at sym . _Just . identifierArgsInfo) argsInfo)
         modify' (set (infoIdentifiers . at sym . _Just . identifierArgsNum) (length argsInfo))
+        modify' (over infoIdentifiers (HashMap.adjust (over identifierType (expandType (map (^. argumentType) argsInfo))) sym))
       GetIdent txt -> do
         s <- get
         return $ HashMap.lookup txt (s ^. identMap)

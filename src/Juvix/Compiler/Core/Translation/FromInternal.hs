@@ -212,8 +212,8 @@ fromPattern = \case
       let txt = c ^. Internal.constrAppConstructor . Internal.nameText
       i <- getIdent txt
       return $ case i of
-        Just (IdentTag tag) -> tag
-        Just (IdentSym {}) -> error ("internal to core: not a constructor " <> txt)
+        Just (IdentConstr tag) -> tag
+        Just _ -> error ("internal to core: not a constructor " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
 
 goFunctionClause ::
@@ -271,15 +271,15 @@ goExpression' varsNum vars = \case
     Internal.IdenFunction n -> do
       m <- getIdent txt
       return $ case m of
-        Just (IdentSym sym) -> mkIdent (Info.singleton (NameInfo n)) sym
-        Just (IdentTag {}) -> error ("internal to core: not a function: " <> txt)
+        Just (IdentFun sym) -> mkIdent (Info.singleton (NameInfo n)) sym
+        Just _ -> error ("internal to core: not a function: " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenInductive {} -> unsupported "goExpression inductive"
     Internal.IdenConstructor n -> do
       m <- getIdent txt
       return $ case m of
-        Just (IdentTag tag) -> mkConstr (Info.singleton (NameInfo n)) tag []
-        Just (IdentSym {}) -> error ("internal to core: not a constructor " <> txt)
+        Just (IdentConstr tag) -> mkConstr (Info.singleton (NameInfo n)) tag []
+        Just _ -> error ("internal to core: not a constructor " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenAxiom {} -> unsupported ("goExpression axiom: " <> txt)
     where

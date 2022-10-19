@@ -9,7 +9,7 @@ of definitions:
 
 1. Builtin inductive definitions. For example:
    #+begin_example
-   builtin natural
+   builtin nat
    inductive Nat {
      zero : Nat;
      suc : Nat → Nat;
@@ -20,7 +20,7 @@ of definitions:
 2. Builtin function definitions. For example:
    #+begin_src text
    inifl 6 +;
-   builtin natural-plus
+   builtin nat-plus
    + : Nat → Nat → Nat;
    + zero b := b;
    + (suc a) b := suc (a + b);
@@ -28,7 +28,7 @@ of definitions:
 
 3. Builtin axiom definitions. For example:
    #+begin_src text
-   builtin natural-print
+   builtin nat-print
    axiom printNat : Nat → Action;
    #+end_src
 
@@ -40,7 +40,7 @@ collect information about the builtins that have been included in the code and
 what are the terms that refer to them. For instance, imagine that we find this
 definitions in a juvix module:
 #+begin_src text
-builtin natural
+builtin nat
 inductive MyNat {
     z : MyNat;
     s : MyNat → MyNat;

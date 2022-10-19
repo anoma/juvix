@@ -9,9 +9,9 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
 import Juvix.Compiler.Core.Extra
-import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.BinderInfo
-import Juvix.Compiler.Core.Info.NameInfo as NameInfo
+import Juvix.Compiler.Core.Info.NameInfo
+import Juvix.Compiler.Core.Info.TypeInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Stripped qualified as Stripped
 import Juvix.Compiler.Core.Pretty.Options
@@ -40,16 +40,16 @@ instance PrettyCode Name where
 
 instance PrettyCode BuiltinOp where
   ppCode = \case
-    OpIntAdd -> return kwPlus
-    OpIntSub -> return kwMinus
-    OpIntMul -> return kwMul
-    OpIntDiv -> return kwDiv
-    OpIntMod -> return kwMod
-    OpIntLt -> return kwLess
-    OpIntLe -> return kwLessEquals
-    OpEq -> return kwEquals
-    OpTrace -> return kwTrace
-    OpFail -> return kwFail
+    OpIntAdd -> return primPlus
+    OpIntSub -> return primMinus
+    OpIntMul -> return primMul
+    OpIntDiv -> return primDiv
+    OpIntMod -> return primMod
+    OpIntLt -> return primLess
+    OpIntLe -> return primLessEquals
+    OpEq -> return primEquals
+    OpTrace -> return primTrace
+    OpFail -> return primFail
 
 instance PrettyCode BuiltinDataTag where
   ppCode = \case
@@ -67,7 +67,7 @@ instance PrettyCode Tag where
 
 instance PrettyCode Primitive where
   ppCode = \case
-    PrimInteger _ -> return $ annotate (AnnKind KNameInductive) (pretty ("integer" :: String))
+    PrimInteger _ -> return $ annotate (AnnKind KNameInductive) (pretty ("int" :: String))
     PrimBool _ -> return $ annotate (AnnKind KNameInductive) (pretty ("bool" :: String))
     PrimString -> return $ annotate (AnnKind KNameInductive) (pretty ("string" :: String))
 
@@ -126,14 +126,19 @@ ppCodeConstr' name c = do
     Nothing -> ppCode (c ^. constrTag)
   return $ foldl' (<+>) n' args'
 
-ppCodeLet' :: (PrettyCode a, Member (Reader Options) r) => Maybe Name -> Let' i a -> Sem r (Doc Ann)
-ppCodeLet' name lt = do
+ppCodeLet' :: (PrettyCode a, Member (Reader Options) r) => Maybe Name -> Maybe (Doc Ann) -> Let' i a -> Sem r (Doc Ann)
+ppCodeLet' name mty lt = do
   n' <- case name of
     Just nm -> ppCode nm
     Nothing -> return kwQuestion
   v' <- ppCode (lt ^. letValue)
   b' <- ppCode (lt ^. letBody)
-  return $ kwLet <+> n' <+> kwAssign <+> v' <+> kwIn <+> b'
+  let tty = case mty of
+        Just ty ->
+          mempty <+> kwColon <+> ty
+        Nothing ->
+          mempty
+  return $ kwLet <+> n' <> tty <+> kwAssign <+> v' <+> kwIn <> line <> b'
 
 ppCodeCase' :: (PrettyCode a, Member (Reader Options) r) => [[Maybe Name]] -> [Maybe Name] -> Case' i bi a -> Sem r (Doc Ann)
 ppCodeCase' branchBinderNames branchTagNames Case {..} = do
@@ -183,6 +188,41 @@ ppPatterns pats = do
   ps' <- mapM ppCode pats
   return $ hsep (punctuate comma (toList ps'))
 
+instance PrettyCode Let where
+  ppCode :: forall r. Member (Reader Options) r => Let -> Sem r (Doc Ann)
+  ppCode x = do
+    let name = getInfoName (getInfoBinder (x ^. letInfo))
+        ty = getInfoType (getInfoBinder (x ^. letInfo))
+     in do
+          mty <- case ty of
+            NDyn {} -> return Nothing
+            _ -> Just <$> ppCode ty
+          ppCodeLet' name mty x
+
+instance PrettyCode LetRec where
+  ppCode :: forall r. Member (Reader Options) r => LetRec -> Sem r (Doc Ann)
+  ppCode LetRec {..} = do
+    let n = length _letRecValues
+    ns <- mapM getName (getInfoBinders n _letRecInfo)
+    vs <- mapM ppCode _letRecValues
+    b' <- ppCode _letRecBody
+    return $ case ns of
+      [hns] -> kwLetRec <+> hns <+> kwAssign <+> head vs <+> kwIn <+> b'
+      _ ->
+        let bss =
+              indent' $
+                align $
+                  concatWith (\a b -> a <> kwSemicolon <> line <> b) $
+                    zipWithExact (\name val -> name <+> kwAssign <+> val) ns (toList vs)
+            nss = enclose kwSquareL kwSquareR (concatWith (<+>) ns)
+         in kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
+    where
+      getName :: Info -> Sem r (Doc Ann)
+      getName i =
+        case getInfoName i of
+          Just name -> ppCode name
+          Nothing -> return kwQuestion
+
 instance PrettyCode Node where
   ppCode :: forall r. Member (Reader Options) r => Node -> Sem r (Doc Ann)
   ppCode node = case node of
@@ -198,43 +238,21 @@ instance PrettyCode Node where
     NCtr x ->
       let name = getInfoName (x ^. constrInfo)
        in ppCodeConstr' name x
-    NLam Lambda {} -> do
-      let (infos, body) = unfoldLambdas node
-      pplams <- mapM ppLam infos
+    NLam (Lambda i body) -> do
       b <- ppCode body
-      return $ foldl' (flip (<+>)) b pplams
-      where
-        ppLam :: Info -> Sem r (Doc Ann)
-        ppLam i =
-          case getInfoName (getInfoBinder i) of
-            Just name -> do
-              n <- ppCode name
-              return $ kwLambda <> n
-            Nothing -> return $ kwLambda <> kwQuestion
-    NLet x ->
-      let name = getInfoName (getInfoBinder (x ^. letInfo))
-       in ppCodeLet' name x
-    NRec LetRec {..} -> do
-      let n = length _letRecValues
-      ns <- mapM getName (getInfoBinders n _letRecInfo)
-      vs <- mapM ppCode _letRecValues
-      b' <- ppCode _letRecBody
-      case listToMaybe ns of
-        Just hns -> return $ kwLetRec <+> hns <+> kwAssign <+> head vs <+> kwIn <+> b'
-        Nothing ->
-          let bss =
-                indent' $
-                  align $
-                    concatWith (\a b -> a <> kwSemicolon <> line <> b) $
-                      zipWithExact (\name val -> name <+> kwAssign <+> val) ns (toList vs)
-              nss = enclose kwSquareL kwSquareR (concatWith (<+>) ns)
-           in return $ kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
-      where
-        getName :: Info -> Sem r (Doc Ann)
-        getName i =
-          case getInfoName i of
-            Just name -> ppCode name
-            Nothing -> return kwQuestion
+      let bi = getInfoBinder i
+      lam <- case getInfoName bi of
+        Just name -> do
+          n <- ppCode name
+          case getInfoType bi of
+            NDyn {} -> return $ kwLambda <> n
+            ty -> do
+              tty <- ppCode ty
+              return $ kwLambda <> parens (n <+> kwColon <+> tty)
+        Nothing -> return $ kwLambda <> kwQuestion
+      return (lam <+> b)
+    NLet x -> ppCode x
+    NRec l -> ppCode l
     NCase x@Case {..} ->
       let branchBinderNames = map (\(CaseBranch {..}) -> map getInfoName (getInfoBinders _caseBranchBindersNum _caseBranchInfo)) _caseBranches
           branchTagNames = map (\(CaseBranch {..}) -> getInfoName _caseBranchInfo) _caseBranches
@@ -251,24 +269,47 @@ instance PrettyCode Node where
       case getInfoName $ getInfoBinder _piInfo of
         Just name -> do
           n <- ppCode name
+          ty <- ppCode _piType
           b <- ppCode _piBody
-          return $ kwLambda <> n <+> b
+          return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
         Nothing -> do
-          b <- ppCode _piBody
-          return $ kwLambda <> kwQuestion <+> b
+          ty <- ppLeftExpression funFixity _piType
+          b <- ppRightExpression funFixity _piBody
+          return $ ty <+> kwArrow <+> b
     NUniv Univ {..} ->
       return $ kwType <+> pretty _univLevel
     NPrim TypePrim {..} -> ppCode _typePrimPrimitive
     NTyp TypeConstr {..} -> do
       args' <- mapM (ppRightExpression appFixity) _typeConstrArgs
       n' <-
-        case Info.lookup kNameInfo _typeConstrInfo of
-          Just ni -> ppCode (ni ^. NameInfo.infoName)
+        case getInfoName _typeConstrInfo of
+          Just name -> ppCode name
           Nothing -> return $ kwUnnamedIdent <> pretty _typeConstrSymbol
       return $ foldl' (<+>) n' args'
     NDyn {} -> return kwDynamic
     Closure env l@Lambda {} ->
       ppCode (substEnv env (NLam l))
+
+instance PrettyCode Stripped.TypeApp where
+  ppCode Stripped.TypeApp {..} = do
+    args' <- mapM (ppRightExpression appFixity) _typeAppArgs
+    n' <- case _typeAppName of
+      Just nm -> ppCode nm
+      Nothing -> return $ kwUnnamedIdent <> pretty _typeAppSymbol
+    return $ foldl' (<+>) n' args'
+
+instance PrettyCode Stripped.TypeFun where
+  ppCode Stripped.TypeFun {..} = do
+    l' <- ppLeftExpression funFixity _typeFunLeft
+    r' <- ppRightExpression funFixity _typeFunRight
+    return $ l' <+> kwArrow <+> r'
+
+instance PrettyCode Stripped.Type where
+  ppCode = \case
+    Stripped.TyDynamic -> return kwAny
+    Stripped.TyPrim x -> ppCode x
+    Stripped.TyApp x -> ppCode x
+    Stripped.TyFun x -> ppCode x
 
 instance PrettyCode Stripped.Node where
   ppCode = \case
@@ -286,7 +327,8 @@ instance PrettyCode Stripped.Node where
        in ppCodeConstr' name x
     Stripped.NLet x ->
       let name = x ^. (letInfo . Stripped.letInfoBinderName)
-       in ppCodeLet' name x
+          ty = x ^. (letInfo . Stripped.letInfoBinderType)
+       in ppCode ty >>= \tty -> ppCodeLet' name (Just tty) x
     Stripped.NCase x@Stripped.Case {..} ->
       let branchBinderNames = map (^. (caseBranchInfo . Stripped.caseBranchInfoBinderNames)) _caseBranches
           branchTagNames = map (^. (caseBranchInfo . Stripped.caseBranchInfoConstrName)) _caseBranches
@@ -307,7 +349,7 @@ instance PrettyCode InfoTable where
           ppDef s n = do
             sym' <- maybe (return (pretty s)) ppCode (tbl ^? infoIdentifiers . at s . _Just . identifierName . _Just)
             body' <- ppCode n
-            return (kwDef <+> sym' <+> kwAssign <+> body')
+            return (kwDef <+> sym' <+> kwAssign <+> nest 2 body')
 
 instance PrettyCode Stripped.InfoTable where
   ppCode :: forall r. Member (Reader Options) r => Stripped.InfoTable -> Sem r (Doc Ann)
@@ -383,6 +425,9 @@ kwSquareL = delimiter "["
 kwSquareR :: Doc Ann
 kwSquareR = delimiter "]"
 
+kwAny :: Doc Ann
+kwAny = keyword Str.any
+
 kwDeBruijnVar :: Doc Ann
 kwDeBruijnVar = keyword Str.deBruijnVar
 
@@ -395,26 +440,29 @@ kwUnnamedConstr = keyword Str.exclamation
 kwQuestion :: Doc Ann
 kwQuestion = keyword Str.questionMark
 
-kwLess :: Doc Ann
-kwLess = keyword Str.less
+primLess :: Doc Ann
+primLess = primitive Str.less
 
-kwLessEquals :: Doc Ann
-kwLessEquals = keyword Str.lessEqual
+primLessEquals :: Doc Ann
+primLessEquals = primitive Str.lessEqual
 
-kwPlus :: Doc Ann
-kwPlus = keyword Str.plus
+primPlus :: Doc Ann
+primPlus = primitive Str.plus
 
-kwMinus :: Doc Ann
-kwMinus = keyword Str.minus
+primMinus :: Doc Ann
+primMinus = primitive Str.minus
 
-kwMul :: Doc Ann
-kwMul = keyword Str.mul
+primMul :: Doc Ann
+primMul = primitive Str.mul
 
-kwDiv :: Doc Ann
-kwDiv = keyword Str.div
+primDiv :: Doc Ann
+primDiv = primitive Str.div
 
-kwMod :: Doc Ann
-kwMod = keyword Str.mod
+primMod :: Doc Ann
+primMod = primitive Str.mod
+
+primEquals :: Doc Ann
+primEquals = primitive Str.equal
 
 kwLetRec :: Doc Ann
 kwLetRec = keyword Str.letrec_
@@ -435,16 +483,19 @@ kwDefault :: Doc Ann
 kwDefault = keyword Str.underscore
 
 kwPi :: Doc Ann
-kwPi = keyword Str.pi_
+kwPi = keyword Str.piUnicode
 
 kwDef :: Doc Ann
 kwDef = keyword Str.def
 
-kwTrace :: Doc Ann
-kwTrace = keyword Str.trace_
+primFail :: Doc Ann
+primFail = primitive Str.fail_
+
+primTrace :: Doc Ann
+primTrace = primitive Str.trace_
 
 kwFail :: Doc Ann
 kwFail = keyword Str.fail_
 
 kwDynamic :: Doc Ann
-kwDynamic = keyword Str.mul
+kwDynamic = keyword Str.any

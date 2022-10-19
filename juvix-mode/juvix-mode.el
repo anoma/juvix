@@ -38,6 +38,7 @@
      (with-eval-after-load 'evil
        (evil-define-key 'normal juvix-mode-map (kbd "SPC m l") 'juvix-load)
        (evil-define-key 'normal juvix-mode-map (kbd "SPC m g") 'juvix-goto-definition)
+       (evil-define-key 'normal juvix-mode-map (kbd "SPC m f") 'juvix-format-buffer)
        (evil-define-key 'normal juvix-mode-map (kbd "g d") 'juvix-goto-definition)
        (evil-normalize-keymaps)))))
 
@@ -55,6 +56,38 @@
                (concat "juvix " (if juvix-disable-embedded-stdlib "--no-stdlib " "") "dev highlight "
                        (buffer-file-name)))))
   (save-buffer))
+
+(defun juvix-format-buffer ()
+  "Format the current buffer."
+  (interactive)
+  (let ((old-point (point))
+        (buff-name (buffer-file-name))
+        (buff (current-buffer))
+        )
+    (with-temp-buffer
+      (let ((
+             cmd-str (concat "juvix " (if juvix-disable-embedded-stdlib "--no-stdlib " "") "dev scope "
+                             buff-name)
+             ))
+        (if (zerop (call-process-shell-command
+                    cmd-str
+                    nil
+                    t
+                    ))
+            (progn
+              (let
+                  ((text (buffer-string)))
+                (with-current-buffer buff
+                  (erase-buffer)
+                  (insert text)
+                  (goto-char old-point)
+                  (juvix-load)
+                  )
+                )
+              )
+          (message "error formatting the buffer")
+          )
+        ))))
 
 (defun juvix-goto-definition ()
   "Go to the definition of the symbol at point."

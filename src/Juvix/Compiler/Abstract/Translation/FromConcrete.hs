@@ -243,8 +243,8 @@ registerBuiltinInductive ::
   BuiltinInductive ->
   Sem r ()
 registerBuiltinInductive d = \case
-  BuiltinNatural -> registerNaturalDef d
-  BuiltinBoolean -> registerBoolDef d
+  BuiltinNat -> registerNatDef d
+  BuiltinBool -> registerBoolDef d
 
 registerBuiltinFunction ::
   Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r =>
@@ -252,7 +252,8 @@ registerBuiltinFunction ::
   BuiltinFunction ->
   Sem r ()
 registerBuiltinFunction d = \case
-  BuiltinNaturalPlus -> registerNaturalPlus d
+  BuiltinNatPlus -> registerNatPlus d
+  BuiltinBoolIf -> registerIf d
 
 registerBuiltinAxiom ::
   Members '[InfoTableBuilder, Error ScoperError, Builtins] r =>
@@ -262,7 +263,7 @@ registerBuiltinAxiom ::
 registerBuiltinAxiom d = \case
   BuiltinIO -> registerIO d
   BuiltinIOSequence -> registerIOSequence d
-  BuiltinNaturalPrint -> registerNaturalPrint d
+  BuiltinNatPrint -> registerNatPrint d
 
 goInductive ::
   Members '[InfoTableBuilder, Builtins, Error ScoperError] r =>

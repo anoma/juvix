@@ -4,4 +4,5 @@ import Juvix.Prelude
 
 data TransformationId
   = LambdaLifting
+  | Identity
   deriving stock (Data)

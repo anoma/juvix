@@ -31,7 +31,10 @@ emptyInfoTable =
       _infoNextTag = 0
     }
 
-data IdentKind = IdentSym Symbol | IdentTag Tag
+data IdentKind
+  = IdentFun Symbol
+  | IdentInd Symbol
+  | IdentConstr Tag
 
 data IdentifierInfo = IdentifierInfo
   { _identifierName :: Maybe Name,
@@ -45,8 +48,8 @@ data IdentifierInfo = IdentifierInfo
 
 data ArgumentInfo = ArgumentInfo
   { _argumentName :: Maybe Name,
-    _argumentType :: Maybe Type,
-    _argumentIsImplicit :: Bool
+    _argumentType :: Type,
+    _argumentIsImplicit :: IsImplicit
   }
 
 data InductiveInfo = InductiveInfo

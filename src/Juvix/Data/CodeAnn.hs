@@ -42,6 +42,10 @@ stylize a = case a of
   AnnDef {} -> mempty
   AnnRef {} -> mempty
 
+-- | for builtin stuff
+primitive :: Text -> Doc Ann
+primitive = annotate (AnnKind KNameAxiom) . pretty
+
 keyword :: Text -> Doc Ann
 keyword = annotate AnnKeyword . pretty
 
@@ -111,8 +115,8 @@ kwEnd = keyword Str.end
 kwBuiltin :: Doc Ann
 kwBuiltin = keyword Str.builtin
 
-kwNatural :: Doc Ann
-kwNatural = keyword Str.natural
+kwNat :: Doc Ann
+kwNat = keyword Str.nat
 
 kwInductive :: Doc Ann
 kwInductive = keyword Str.inductive
@@ -140,9 +144,6 @@ kwInfixl = keyword Str.infixl_
 
 kwInfix :: Doc Ann
 kwInfix = keyword Str.infix_
-
-kwAssignment :: Doc Ann
-kwAssignment = keyword Str.assignAscii
 
 kwColonZero :: Doc Ann
 kwColonZero = keyword Str.colonZero

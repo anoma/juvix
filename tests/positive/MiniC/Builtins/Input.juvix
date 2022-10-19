@@ -1,12 +1,17 @@
 module Input;
 
-builtin boolean
+builtin bool
 inductive Bool {
   true : Bool;
   false : Bool;
 };
 
-builtin natural
+builtin bool-if
+if : {A : Type} → Bool → A → A → A;
+if true t _ := t;
+if false _ e := e;
+
+builtin nat
 inductive ℕ {
  zero : ℕ;
  suc : ℕ → ℕ;
@@ -17,7 +22,7 @@ boolToNat false := zero;
 boolToNat true := suc zero;
 
 infixl 4 +;
-builtin natural-plus
+builtin nat-plus
 + : ℕ → ℕ → ℕ;
 + zero x := x;
 + (suc a) b := suc (a + b);
@@ -32,16 +37,26 @@ plusOne := suc;
 someLiteral : _;
 someLiteral := 123;
 
+infix 4 ==;
+== : ℕ → ℕ → Bool;
+== zero zero := true;
+== (suc n) (suc m) := n == m;
+== _ _ := false;
+
 builtin IO axiom IO : Type;
 
 infixl 1 >>;
 builtin IO-sequence axiom >> : IO → IO → IO;
-builtin natural-print axiom printNat : ℕ → IO;
+builtin nat-print axiom printNat : ℕ → IO;
 
 main : IO;
 main := printNat (boolToNat true)
      >> printNat (boolToNat false)
      >> printNat (mult 3 (2 + 2))
-     >> printNat 2;
+     >> printNat 2
+     >> printNat (if (1 == 2) 100 200)
+     >> printNat (if (1 == 1) 300 400)
+     >> if (1 == 2) (printNat 500) (printNat 600)
+     >> if (1 == 1) (printNat 700) (printNat 800);
 
 end;

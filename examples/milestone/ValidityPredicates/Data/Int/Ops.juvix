@@ -21,24 +21,22 @@ foreign c {
    \}
 };
 
-infix 4 <';
-axiom <' : Int → Int → BackendBool;
-compile <' {
+infix 4 <;
+axiom < : Int → Int → Bool;
+compile < {
   c ↦ "lessThan";
 };
 
-infix 4 <;
-< : Int → Int → Bool;
-< i1 i2 := from-backend-bool (i1 <' i2);
-
-axiom eqInt : Int → Int → BackendBool;
+axiom eqInt : Int → Int → Bool;
 compile eqInt {
   c ↦ "eqInt";
 };
 
 infix 4 ==;
-== : Int → Int → Bool;
-== i1 i2 := from-backend-bool (eqInt i1 i2);
+axiom == : Int → Int → Bool;
+compile == {
+  c ↦ "eqInt";
+};
 
 infixl 6 -;
 axiom - : Int -> Int -> Int;

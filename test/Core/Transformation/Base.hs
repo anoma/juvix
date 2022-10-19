@@ -1,17 +1,17 @@
 module Core.Transformation.Base where
 
 import Base
+import Core.Eval.Base
+import Core.Eval.Positive qualified as Eval
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation
-import Juvix.Compiler.Core.Translation.FromSource
 import Prettyprinter.Render.Text qualified as Text
 
 data Test = Test
-  { _testName :: String,
-    _testCoreFile :: FilePath,
+  { _testTransformations :: [TransformationId],
     _testAssertion :: InfoTable -> Assertion,
-    _testTransformations :: [TransformationId]
+    _testEval :: Eval.PosTest
   }
 
 fromTest :: Test -> TestTree
@@ -21,12 +21,14 @@ troot :: FilePath
 troot = "tests/Core/positive/"
 
 toTestDescr :: Test -> TestDescr
-toTestDescr t@Test {..} =
-  TestDescr
-    { _testName,
-      _testRoot = troot,
-      _testAssertion = Single (coreTransAssertion t)
-    }
+toTestDescr Test {..} =
+  let Eval.PosTest {..} = _testEval
+      tRoot = troot </> _relDir
+   in TestDescr
+        { _testName = _name,
+          _testRoot = tRoot,
+          _testAssertion = Steps $ coreEvalAssertion _file _expectedFile _testTransformations _testAssertion
+        }
 
 assertExpectedOutput :: FilePath -> InfoTable -> Assertion
 assertExpectedOutput testExpectedFile r = do
@@ -39,11 +41,3 @@ assertExpectedOutput testExpectedFile r = do
       defaultOptions
         { _optShowDeBruijnIndices = True
         }
-
-coreTransAssertion :: Test -> Assertion
-coreTransAssertion Test {..} = do
-  r <- applyTransformations [LambdaLifting] <$> parseFile _testCoreFile
-  _testAssertion r
-
-parseFile :: FilePath -> IO InfoTable
-parseFile f = fst <$> fromRightIO show (runParser "" f emptyInfoTable <$> readFile f)

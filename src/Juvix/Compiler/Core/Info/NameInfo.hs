@@ -15,7 +15,7 @@ makeLenses ''NameInfo
 getInfoName :: Info -> Maybe Name
 getInfoName i =
   case Info.lookup kNameInfo i of
-    Just (NameInfo {..}) -> Just _infoName
+    Just NameInfo {..} -> Just _infoName
     Nothing -> Nothing
 
 setInfoName :: Name -> Info -> Info

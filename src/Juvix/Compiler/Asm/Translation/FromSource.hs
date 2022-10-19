@@ -11,7 +11,6 @@ import Juvix.Compiler.Asm.Data.InfoTableBuilder
 import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Extra.Type
 import Juvix.Compiler.Asm.Language
-import Juvix.Compiler.Asm.Language.Type
 import Juvix.Compiler.Asm.Translation.FromSource.Lexer
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
@@ -72,7 +71,8 @@ declareBuiltins = do
             _inductiveSymbol = sym,
             _inductiveLocation = Just i,
             _inductiveKind = TyDynamic,
-            _inductiveConstructors = constrs
+            _inductiveConstructors = constrs,
+            _inductiveRepresentation = IndRepStandard
           }
       )
   lift $ mapM_ registerConstr constrs
@@ -116,7 +116,9 @@ statementFunction = do
             _functionLocation = Just i,
             _functionCode = [],
             _functionArgsNum = length argtys,
-            _functionType = mkTypeFun argtys (fromMaybe TyDynamic mrty)
+            _functionType = mkTypeFun argtys (fromMaybe TyDynamic mrty),
+            _functionMaxValueStackHeight = -1, -- computed later
+            _functionMaxTempStackHeight = -1
           }
   lift $ registerFunction fi0
   mcode <- (kw kwSemicolon $> Nothing) <|> optional (braces parseCode)
@@ -154,7 +156,8 @@ statementInductive = do
             _inductiveLocation = Just i,
             _inductiveSymbol = sym,
             _inductiveKind = TyDynamic,
-            _inductiveConstructors = []
+            _inductiveConstructors = [],
+            _inductiveRepresentation = IndRepStandard
           }
   lift $ registerInductive ii
   ctrs <- braces $ P.sepEndBy (constrDecl sym) (kw kwSemicolon)

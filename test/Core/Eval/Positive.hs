@@ -19,7 +19,7 @@ testDescr PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ coreEvalAssertion _file _expectedFile
+          _testAssertion = Steps $ coreEvalAssertion _file _expectedFile [] (const (return ()))
         }
 
 allTests :: TestTree
@@ -234,5 +234,10 @@ tests =
       "Match with complex patterns"
       "."
       "test041.jvc"
-      "out/test041.out"
+      "out/test041.out",
+    PosTest
+      "Type annotations"
+      "."
+      "test042.jvc"
+      "out/test042.out"
   ]

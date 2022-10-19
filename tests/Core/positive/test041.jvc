@@ -1,7 +1,9 @@
 -- match
 
-constr cons 2;
-constr nil 0;
+inductive list {
+  cons : any -> list -> list;
+  nil : list;
+};
 
 def lgen := \n if n = 0 then nil else cons n (lgen (n - 1));
 
@@ -12,8 +14,10 @@ def sum2 := \x {
   }
 };
 
-constr leaf 0;
-constr node 2;
+inductive tree {
+  leaf : tree;
+  node : tree -> tree -> tree;
+};
 
 def gen := \n if n <= 0 then leaf else node (gen (n - 2)) (gen (n - 1));
 
