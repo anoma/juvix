@@ -109,7 +109,7 @@ static inline bool is_special_header(word_t x) {
 
 #define RESERVED_MASK 0x00FFFF00
 #define RESERVED_SHIFT 8U
-#define GET_RESERVED(x) ((word_t)(x) >> RESERVED_SHIFT)
+#define GET_RESERVED(x) (((word_t)(x)&RESERVED_MASK) >> RESERVED_SHIFT)
 
 static inline word_t make_special_header(word_t suid, word_t nfields,
                                          word_t skip, word_t reserved) {
