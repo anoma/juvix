@@ -42,7 +42,7 @@
 // on the global stack (for the GC).
 #define JUVIX_FUNCTION(label, n, SAVE, RESTORE) \
     label:                                      \
-    PREALLOC(n, SAVE, RESTORE)
+    PREALLOC((n), SAVE, RESTORE)
 
 /*
     Macro sequence for function definition:

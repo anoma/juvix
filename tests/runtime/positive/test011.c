@@ -1,4 +1,4 @@
-/* Indirect call */
+/* Tail calls */
 
 #include <juvix/api.h>
 
@@ -15,6 +15,18 @@ int main() {
     STACK_LEAVE;
     goto juvix_program_end;
 
+    JUVIX_FUNCTION_NOALLOC(juvix_function_multiply);
+    {
+        JUVIX_INT_MUL(juvix_result, ARG(0), ARG(1));
+        RETURN;
+    }
+
+    JUVIX_FUNCTION_NOALLOC(juvix_function_plus);
+    {
+        JUVIX_INT_ADD(juvix_result, ARG(0), ARG(1));
+        RETURN;
+    }
+
 juvix_closure_calculate:
     ARG(0) = CARG(0);
     ARG(1) = CARG(1);
@@ -22,11 +34,14 @@ juvix_closure_calculate:
 
     JUVIX_FUNCTION_NOALLOC(juvix_function_calculate);
     {
-        DECL_STMP(0);
-        JUVIX_INT_MUL(STMP(0), ARG(2), ARG(1));
-        JUVIX_INT_ADD(STMP(0), STMP(0), ARG(0));
-        juvix_result = STMP(0);
-        RETURN;
+        STACK_ENTER(2);
+        STACK_PUSH(ARG(0));
+        ARG(0) = ARG(2);
+        CALL(0, juvix_function_multiply, juvix_label_1);
+        STACK_POP(ARG(0));
+        STACK_LEAVE;
+        ARG(1) = juvix_result;
+        TAIL_CALL(0, juvix_function_plus);
     }
 
     JUVIX_FUNCTION(juvix_function_main, 3 + CLOSURE_SKIP, {}, {});
@@ -35,12 +50,9 @@ juvix_closure_calculate:
         ALLOC_CLOSURE(STMP(0), 1, LABEL_ADDR(juvix_closure_calculate), 2, 1);
         CLOSURE_ARG(STMP(0), 0) = make_smallint(5);
         CLOSURE_ARG(STMP(0), 1) = make_smallint(3);
-        STACK_ENTER(1);
         ASSIGN_CARGS(STMP(0),
                      { CARG(juvix_closure_nargs) = make_smallint(2); });
-        CALL_CLOSURE(STMP(0), juvix_label_1);
-        STACK_LEAVE;
-        RETURN;
+        TAIL_CALL_CLOSURE(STMP(0));
     }
 
     JUVIX_EPILOGUE;

@@ -81,5 +81,10 @@ tests =
       "Indirect call"
       "."
       "test010.c"
-      "out/test010.out"
+      "out/test010.out",
+    PosTest
+      "Tail calls"
+      "."
+      "test011.c"
+      "out/test011.out"
   ]
