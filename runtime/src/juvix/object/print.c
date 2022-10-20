@@ -97,15 +97,17 @@ static size_t print_object(bool is_top, char *buf, size_t n, word_t x) {
                         }
                         case SUID_CSTRING: {
                             const char *str = get_cstring(x);
+                            PUTC('"');
                             while (*str) {
                                 PUTC(*str++);
                             }
+                            PUTC('"');
                             break;
                         }
                     }
                 } else {
                     size_t nargs = GET_NFIELDS(h);
-                    ASSERT(GET_UID(x) < juvix_constrs_num);
+                    ASSERT(GET_UID(h) < juvix_constrs_num);
                     const char *str = juvix_constr_info[GET_UID(h)].name;
                     buf += print_args(is_top, buf, n, str, get_constr_args(x),
                                       nargs);

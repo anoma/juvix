@@ -18,11 +18,6 @@
 // have the value MAX_UIDS.
 #define MAX_UIDS 1048576U
 
-// Maximum number of builtin constructor uids
-#define MAX_BUILTIN_UIDS 64U
-
-#define FIRST_USER_UID MAX_BUILTIN_UIDS
-
 // Maximum number of different constructors (globally).
 #define MAX_CONSTR_TAGS MAX_UIDS
 

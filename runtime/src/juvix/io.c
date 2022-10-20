@@ -109,6 +109,7 @@ void io_print_toplevel(word_t x) {
         ASSERT(io_index < PAGE_SIZE);
         io_buffer[io_index] = 0;
         print_msg(io_buffer);
+        io_index = 0;
     }
 }
 

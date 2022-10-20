@@ -90,7 +90,7 @@ static inline word_t get_uid(word_t ptr) { return GET_UID(FIELD(ptr, 0)); }
 #define SPECIAL_MASK ((word_t)0x4)
 #define SPECIAL_HEADER_MASK ((word_t)0x7)
 
-#define KIND_SPECIAL_HEADER SPECIAL_MASK
+#define KIND_SPECIAL_HEADER (SPECIAL_MASK | KIND_HEADER)
 
 static inline bool is_special(word_t x) { return x & SPECIAL_MASK; }
 
@@ -144,6 +144,16 @@ static inline word_t get_suid(word_t ptr) { return GET_SUID(FIELD(ptr, 0)); }
 #define UID_BIND 5
 #define UID_WRITE 6
 #define UID_READLN 7
+
+#define BUILTIN_UIDS_NUM 8
+
+#define FIRST_USER_UID BUILTIN_UIDS_NUM
+
+#define BUILTIN_UIDS_INFO                                                     \
+    {"false"}, {"true"}, {"unit"}, {"void"}, {"return"}, {"bind"}, {"write"}, \
+    {                                                                         \
+        "readln"                                                              \
+    }
 
 /*************************************************/
 /* Special UIDs */

@@ -86,5 +86,10 @@ tests =
       "Tail calls"
       "."
       "test011.c"
-      "out/test011.out"
+      "out/test011.out",
+    PosTest
+      "Tracing and strings"
+      "."
+      "test012.c"
+      "out/test012.out"
   ]

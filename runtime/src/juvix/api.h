@@ -2,6 +2,7 @@
 #define JUVIX_API_H
 
 #include <juvix/funcall.h>
+#include <juvix/info.h>
 #include <juvix/io.h>
 #include <juvix/mem.h>
 #include <juvix/object.h>
@@ -92,7 +93,9 @@ closure_label:
 // ALLOC_CONSTR_UNBOXED(var, uid)
 // ALLOC_CONSTR_PAIR(var)
 
-// ALLOC_CLOSURE(var, fuid, addr, nfields, nargs)
+// ALLOC_CSTRING(var, str)
+
+// ALLOC_CLOSURE(var, fuid, addr, nargs, largs)
 // EXTEND_CLOSURE(dest, src, n)
 
 // CALL(fuid, fun_label, return_label)
