@@ -13,10 +13,12 @@ data GlobalOptions = GlobalOptions
   { _globalNoColors :: Bool,
     _globalShowNameIds :: Bool,
     _globalOnlyErrors :: Bool,
+    _globalNoApe :: Bool,
     _globalStdin :: Bool,
     _globalNoTermination :: Bool,
     _globalNoPositivity :: Bool,
-    _globalNoStdlib :: Bool
+    _globalNoStdlib :: Bool,
+    _globalStdlibPath :: Maybe FilePath
   }
   deriving stock (Eq, Show, Data)
 
@@ -35,7 +37,11 @@ instance CanonicalProjection GlobalOptions Abstract.Options where
       }
 
 instance CanonicalProjection GlobalOptions E.GenericOptions where
-  project GlobalOptions {..} = E.GenericOptions {E._showNameIds = _globalShowNameIds}
+  project GlobalOptions {..} =
+    E.GenericOptions
+      { E._showNameIds = _globalShowNameIds,
+        E._genericNoApe = _globalNoApe
+      }
 
 defaultGlobalOptions :: GlobalOptions
 defaultGlobalOptions =
@@ -43,10 +49,12 @@ defaultGlobalOptions =
     { _globalNoColors = False,
       _globalShowNameIds = False,
       _globalOnlyErrors = False,
+      _globalNoApe = False,
       _globalNoTermination = False,
       _globalStdin = False,
       _globalNoPositivity = False,
-      _globalNoStdlib = False
+      _globalNoStdlib = False,
+      _globalStdlibPath = Nothing
     }
 
 -- | Get a parser for global flags which can be hidden or not depending on
@@ -62,6 +70,11 @@ parseGlobalFlags = do
     switch
       ( long "show-name-ids"
           <> help "Show the unique number of each identifier when pretty printing"
+      )
+  _globalNoApe <-
+    switch
+      ( long "no-format"
+          <> help "disable the new pretty printing algorithm"
       )
   _globalStdin <-
     switch
@@ -88,4 +101,14 @@ parseGlobalFlags = do
       ( long "no-stdlib"
           <> help "Do not use the standard library"
       )
+  _globalStdlibPath <-
+    optional
+      ( strOption
+          ( long "stdlib-path"
+              <> metavar "PATH"
+              <> help "Specify path to the standard library"
+              <> action "directory"
+          )
+      )
+
   return GlobalOptions {..}

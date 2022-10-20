@@ -6,12 +6,20 @@ module Juvix.Prelude.Pretty
 where
 
 import Juvix.Prelude.Base
-import Prettyprinter hiding (concatWith, hsep, vsep)
+import Prettyprinter hiding (concatWith, defaultLayoutOptions, hsep, sep, vsep)
 import Prettyprinter qualified as PP
 import Prettyprinter.Render.Terminal (AnsiStyle)
 import Prettyprinter.Render.Terminal qualified as Ansi
 import Prettyprinter.Render.Text qualified as Text
 import Prelude
+
+-- | The page width is 150 with the desired length (not counting indent spaces)
+-- being 150*0.4 = 60
+defaultLayoutOptions :: LayoutOptions
+defaultLayoutOptions =
+  LayoutOptions
+    { layoutPageWidth = AvailablePerLine 150 0.4
+    }
 
 class HasAnsiBackend a where
   toAnsiStream :: a -> SimpleDocStream Ansi.AnsiStyle
@@ -77,6 +85,9 @@ vsep2 = concatWith (\a b -> a <> line <> line <> b)
 
 hsep :: Foldable f => f (Doc a) -> Doc a
 hsep = PP.hsep . toList
+
+sep :: Foldable f => f (Doc a) -> Doc a
+sep = PP.sep . toList
 
 enclose1 :: Doc a -> Doc a -> Doc a
 enclose1 delim = enclose delim delim

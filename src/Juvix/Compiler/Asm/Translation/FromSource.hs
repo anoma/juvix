@@ -11,28 +11,21 @@ import Juvix.Compiler.Asm.Data.InfoTableBuilder
 import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Extra.Type
 import Juvix.Compiler.Asm.Language
-import Juvix.Compiler.Asm.Language.Type
 import Juvix.Compiler.Asm.Translation.FromSource.Lexer
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
 parseText :: Text -> Either ParserError InfoTable
-parseText = runParser "" ""
+parseText = runParser ""
 
-runParser :: FilePath -> FilePath -> Text -> Either ParserError InfoTable
-runParser root fileName input =
+runParser :: FilePath -> Text -> Either ParserError InfoTable
+runParser fileName input =
   case run $
     runInfoTableBuilder $
-      runReader params $
-        runNameIdGen $
-          P.runParserT parseToplevel fileName input of
+      runNameIdGen $
+        P.runParserT parseToplevel fileName input of
     (_, Left err) -> Left (ParserError err)
     (tbl, Right ()) -> Right tbl
-  where
-    params =
-      ParserParams
-        { _parserParamsRoot = root
-        }
 
 createBuiltinConstr ::
   Symbol ->
@@ -53,7 +46,7 @@ createBuiltinConstr sym btag name ty i =
           _constructorRepresentation = MemRepConstr
         }
 
-declareBuiltins :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
+declareBuiltins :: Member InfoTableBuilder r => ParsecS r ()
 declareBuiltins = do
   loc <- curLoc
   let i = mkInterval loc loc
@@ -72,13 +65,14 @@ declareBuiltins = do
             _inductiveSymbol = sym,
             _inductiveLocation = Just i,
             _inductiveKind = TyDynamic,
-            _inductiveConstructors = constrs
+            _inductiveConstructors = constrs,
+            _inductiveRepresentation = IndRepStandard
           }
       )
   lift $ mapM_ registerConstr constrs
 
 parseToplevel ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r ()
 parseToplevel = do
   declareBuiltins
@@ -87,12 +81,12 @@ parseToplevel = do
   P.eof
 
 statement ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r ()
 statement = statementFunction <|> statementInductive
 
 statementFunction ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r ()
 statementFunction = do
   kw kwFun
@@ -116,7 +110,9 @@ statementFunction = do
             _functionLocation = Just i,
             _functionCode = [],
             _functionArgsNum = length argtys,
-            _functionType = mkTypeFun argtys (fromMaybe TyDynamic mrty)
+            _functionType = mkTypeFun argtys (fromMaybe TyDynamic mrty),
+            _functionMaxValueStackHeight = -1, -- computed later
+            _functionMaxTempStackHeight = -1
           }
   lift $ registerFunction fi0
   mcode <- (kw kwSemicolon $> Nothing) <|> optional (braces parseCode)
@@ -138,7 +134,7 @@ statementFunction = do
         lift (registerForward txt sym)
 
 statementInductive ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r ()
 statementInductive = do
   kw kwInductive
@@ -154,14 +150,15 @@ statementInductive = do
             _inductiveLocation = Just i,
             _inductiveSymbol = sym,
             _inductiveKind = TyDynamic,
-            _inductiveConstructors = []
+            _inductiveConstructors = [],
+            _inductiveRepresentation = IndRepStandard
           }
   lift $ registerInductive ii
   ctrs <- braces $ P.sepEndBy (constrDecl sym) (kw kwSemicolon)
   lift $ registerInductive ii {_inductiveConstructors = ctrs}
 
 functionArguments ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r [Type]
 functionArguments = do
   lparen
@@ -170,7 +167,7 @@ functionArguments = do
   return args
 
 constrDecl ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   Symbol ->
   ParsecS r ConstructorInfo
 constrDecl symInd = do
@@ -196,14 +193,14 @@ constrDecl symInd = do
   return ci
 
 typeAnnotation ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r Type
 typeAnnotation = do
   kw kwColon
   parseType
 
 parseType ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r Type
 parseType = do
   tys <- typeArguments
@@ -215,7 +212,7 @@ parseType = do
       return (head tys)
 
 typeFun' ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   NonEmpty Type ->
   ParsecS r Type
 typeFun' tyargs = do
@@ -223,18 +220,18 @@ typeFun' tyargs = do
   TyFun . TypeFun tyargs <$> parseType
 
 typeArguments ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r (NonEmpty Type)
 typeArguments = do
   parens (P.sepBy1 parseType comma <&> NonEmpty.fromList)
     <|> (typeDynamic <&> NonEmpty.singleton)
     <|> (typeNamed <&> NonEmpty.singleton)
 
-typeDynamic :: Members '[Reader ParserParams] r => ParsecS r Type
+typeDynamic :: ParsecS r Type
 typeDynamic = kw kwStar $> TyDynamic
 
 typeNamed ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r Type
 typeNamed = do
   off <- P.getOffset
@@ -251,12 +248,12 @@ typeNamed = do
         _ -> parseFailure off ("not a type: " ++ fromText txt)
 
 parseCode ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r Code
 parseCode = P.sepEndBy command (kw kwSemicolon)
 
 command ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r Command
 command = do
   off <- P.getOffset
@@ -326,68 +323,58 @@ command = do
       parseFailure off ("unknown instruction: " ++ fromText txt)
 
 value ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r Value
 value = integerValue <|> boolValue <|> stringValue <|> unitValue <|> voidValue <|> memValue
 
-integerValue ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
-  ParsecS r Value
+integerValue :: ParsecS r Value
 integerValue = do
   (i, _) <- integer
   return $ ConstInt i
 
-boolValue :: Members '[Reader ParserParams] r => ParsecS r Value
+boolValue :: ParsecS r Value
 boolValue =
   (kw kwTrue $> ConstBool True)
     <|> (kw kwFalse $> ConstBool False)
 
-stringValue ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
-  ParsecS r Value
+stringValue :: ParsecS r Value
 stringValue = do
   (s, _) <- string
   return $ ConstString s
 
-unitValue :: Members '[Reader ParserParams] r => ParsecS r Value
+unitValue :: ParsecS r Value
 unitValue = kw kwUnit $> ConstUnit
 
-voidValue :: Members '[Reader ParserParams] r => ParsecS r Value
+voidValue :: ParsecS r Value
 voidValue = kw kwVoid $> ConstVoid
 
 memValue ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r Value
 memValue = do
   r <- directRef
   parseField r <|> return (Ref (DRef r))
 
-directRef ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
-  ParsecS r DirectRef
+directRef :: ParsecS r DirectRef
 directRef = stackRef <|> argRef <|> tempRef
 
-stackRef :: Members '[Reader ParserParams] r => ParsecS r DirectRef
+stackRef :: ParsecS r DirectRef
 stackRef = kw kwDollar $> StackRef
 
-argRef ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
-  ParsecS r DirectRef
+argRef :: ParsecS r DirectRef
 argRef = do
   kw kwArg
   (off, _) <- brackets integer
   return $ ArgRef (fromInteger off)
 
-tempRef ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
-  ParsecS r DirectRef
+tempRef :: ParsecS r DirectRef
 tempRef = do
   kw kwTmp
   (off, _) <- brackets integer
   return $ TempRef (fromInteger off)
 
 parseField ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   DirectRef ->
   ParsecS r Value
 parseField dref = do
@@ -397,7 +384,7 @@ parseField dref = do
   return $ Ref (ConstrRef (Field tag dref (fromInteger off)))
 
 constrTag ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r Tag
 constrTag = do
   off <- P.getOffset
@@ -408,7 +395,7 @@ constrTag = do
     _ -> parseFailure off "expected a constructor"
 
 indSymbol ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r Symbol
 indSymbol = do
   off <- P.getOffset
@@ -419,7 +406,7 @@ indSymbol = do
     _ -> parseFailure off "expected an inductive type"
 
 funSymbol ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r Symbol
 funSymbol = do
   off <- P.getOffset
@@ -431,22 +418,20 @@ funSymbol = do
     _ -> parseFailure off "expected a function"
 
 instrAllocClosure ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r InstrAllocClosure
 instrAllocClosure = do
   sym <- funSymbol
   (argsNum, _) <- integer
   return $ InstrAllocClosure sym (fromInteger argsNum)
 
-instrExtendClosure ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
-  ParsecS r InstrExtendClosure
+instrExtendClosure :: ParsecS r InstrExtendClosure
 instrExtendClosure = do
   (argsNum, _) <- integer
   return $ InstrExtendClosure (fromInteger argsNum)
 
 instrCall ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r InstrCall
 instrCall = do
   ct <- parseCallType
@@ -460,38 +445,36 @@ instrCall = do
   return (InstrCall ct argsNum)
 
 parseCallType ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r CallType
 parseCallType = (kw kwDollar $> CallClosure) <|> (CallFun <$> funSymbol)
 
-instrCallClosures ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
-  ParsecS r InstrCallClosures
+instrCallClosures :: ParsecS r InstrCallClosures
 instrCallClosures = do
   (argsNum, _) <- integer
   return (InstrCallClosures (fromInteger argsNum))
 
 branchCode ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r Code
 branchCode = braces parseCode <|> (command >>= \x -> return [x])
 
 trueBranch ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r Code
 trueBranch = do
   symbol "true:"
   branchCode
 
 falseBranch ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r Code
 falseBranch = do
   symbol "false:"
   branchCode
 
 caseBranch ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r CaseBranch
 caseBranch = do
   tag <- P.try constrTag
@@ -499,6 +482,6 @@ caseBranch = do
   CaseBranch tag <$> branchCode
 
 defaultBranch ::
-  Members '[Reader ParserParams, InfoTableBuilder] r =>
+  Member InfoTableBuilder r =>
   ParsecS r Code
 defaultBranch = symbol "default:" >> branchCode

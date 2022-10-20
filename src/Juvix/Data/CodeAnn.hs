@@ -145,9 +145,6 @@ kwInfixl = keyword Str.infixl_
 kwInfix :: Doc Ann
 kwInfix = keyword Str.infix_
 
-kwAssignment :: Doc Ann
-kwAssignment = keyword Str.assignAscii
-
 kwColonZero :: Doc Ann
 kwColonZero = keyword Str.colonZero
 

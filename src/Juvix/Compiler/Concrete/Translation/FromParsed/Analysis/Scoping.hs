@@ -29,10 +29,9 @@ import Juvix.Prelude
 scopeCheck ::
   Members '[Files, Error ScoperError, NameIdGen] r =>
   ParserResult ->
-  FilePath ->
   NonEmpty (Module 'Parsed 'ModuleTop) ->
   Sem r ScoperResult
-scopeCheck pr root modules =
+scopeCheck pr modules =
   fmap mkResult $
     Parser.runInfoTableBuilder $
       runInfoTableBuilder $
@@ -59,8 +58,7 @@ scopeCheck pr root modules =
     scopeParameters :: ScopeParameters
     scopeParameters =
       ScopeParameters
-        { _scopeRootPath = root,
-          _scopeFileExtension = ".juvix",
+        { _scopeFileExtension = ".juvix",
           _scopeTopParents = mempty
         }
 
@@ -362,20 +360,18 @@ readParseModule ::
 readParseModule mp = do
   path <- modulePathToFilePath mp
   txt <- readFile' path
-  root <- asks (^. scopeRootPath)
-  pr <- runModuleParser root path txt
+  pr <- runModuleParser path txt
   case pr of
     Left err -> throw (ErrParser (MegaParsecError err))
     Right (tbl, m) -> Parser.mergeTable tbl $> m
 
 modulePathToFilePath ::
-  Members '[Reader ScopeParameters] r =>
+  Members '[Reader ScopeParameters, Files] r =>
   TopModulePath ->
   Sem r FilePath
 modulePathToFilePath mp = do
-  root <- asks (^. scopeRootPath)
   ext <- asks (^. scopeFileExtension)
-  return $ topModulePathToFilePath' (Just ext) root mp
+  topModulePathToFilePath' (Just ext) mp
 
 checkOperatorSyntaxDef ::
   forall r.

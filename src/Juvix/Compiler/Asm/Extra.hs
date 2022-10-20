@@ -28,9 +28,7 @@ validateCode tab args = void . recurse sig args
         }
 
 validateFunction :: Member (Error AsmError) r => InfoTable -> FunctionInfo -> Sem r ()
-validateFunction tab fi = validateCode tab args (fi ^. functionCode)
-  where
-    args = HashMap.fromList $ zip [0 ..] (typeArgs (fi ^. functionType))
+validateFunction tab fi = validateCode tab (argumentsFromFunctionInfo fi) (fi ^. functionCode)
 
 validateInfoTable :: Member (Error AsmError) r => InfoTable -> Sem r ()
 validateInfoTable tab = mapM_ (validateFunction tab) (HashMap.elems (tab ^. infoFunctions))

@@ -9,4 +9,9 @@
   :type 'boolean
   :group 'juvix)
 
+(defcustom juvix-stdlib-path nil
+  "Specify the path to the standard library."
+  :type 'directory
+  :group 'juvix)
+
 (provide 'juvix-customize)

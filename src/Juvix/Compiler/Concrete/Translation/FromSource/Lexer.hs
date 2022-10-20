@@ -20,37 +20,37 @@ import Text.Megaparsec.Char.Lexer qualified as L
 
 type OperatorSym = Text
 
-comment :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r a
+comment :: Members '[InfoTableBuilder] r => ParsecS r a -> ParsecS r a
 comment c = do
   (a, i) <- interval c
   P.lift (registerComment i)
   return a
 
-comment_ :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r ()
+comment_ :: Members '[InfoTableBuilder] r => ParsecS r a -> ParsecS r ()
 comment_ = void . comment
 
-space :: forall r. Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
+space :: forall r. Members '[InfoTableBuilder] r => ParsecS r ()
 space = space' True comment_
 
-lexeme :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r a
+lexeme :: Members '[InfoTableBuilder] r => ParsecS r a -> ParsecS r a
 lexeme = L.lexeme space
 
-symbol :: Members '[Reader ParserParams, InfoTableBuilder] r => Text -> ParsecS r ()
+symbol :: Members '[InfoTableBuilder] r => Text -> ParsecS r ()
 symbol = void . L.symbol space
 
-lexemeInterval :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r (a, Interval)
+lexemeInterval :: Members '[InfoTableBuilder] r => ParsecS r a -> ParsecS r (a, Interval)
 lexemeInterval = lexeme . interval
 
-decimal :: (Members '[Reader ParserParams, InfoTableBuilder] r, Num n) => ParsecS r (n, Interval)
+decimal :: (Members '[InfoTableBuilder] r, Num n) => ParsecS r (n, Interval)
 decimal = lexemeInterval L.decimal
 
-identifier :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r Text
+identifier :: Members '[InfoTableBuilder] r => ParsecS r Text
 identifier = fmap fst identifierL
 
-identifierL :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Text, Interval)
+identifierL :: Members '[InfoTableBuilder] r => ParsecS r (Text, Interval)
 identifierL = lexeme bareIdentifier
 
-integer :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Integer, Interval)
+integer :: Members '[InfoTableBuilder] r => ParsecS r (Integer, Interval)
 integer = integer' decimal
 
 bracedString :: forall e m. MonadParsec e Text m => m Text
@@ -68,7 +68,7 @@ bracedString =
       void (char '\\')
       char '}'
 
-string :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Text, Interval)
+string :: Members '[InfoTableBuilder] r => ParsecS r (Text, Interval)
 string = lexemeInterval string'
 
 judocExampleStart :: ParsecS r ()
@@ -77,36 +77,36 @@ judocExampleStart = P.chunk Str.judocExample >> hspace
 judocStart :: ParsecS r ()
 judocStart = P.chunk Str.judocStart >> hspace
 
-judocEmptyLine :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
+judocEmptyLine :: Members '[InfoTableBuilder] r => ParsecS r ()
 judocEmptyLine = lexeme (void (P.try (judocStart >> P.newline)))
 
-kw :: Members '[Reader ParserParams, InfoTableBuilder] r => Keyword -> ParsecS r ()
+kw :: Member InfoTableBuilder r => Keyword -> ParsecS r ()
 kw k = lexeme $ kw' k >>= P.lift . registerKeyword
 
 -- | Same as @identifier@ but does not consume space after it.
-bareIdentifier :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (Text, Interval)
+bareIdentifier :: ParsecS r (Text, Interval)
 bareIdentifier = interval (rawIdentifier allKeywordStrings)
 
 dot :: forall e m. MonadParsec e Text m => m Char
 dot = P.char '.'
 
-dottedIdentifier :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r (NonEmpty (Text, Interval))
+dottedIdentifier :: Members '[InfoTableBuilder] r => ParsecS r (NonEmpty (Text, Interval))
 dottedIdentifier = lexeme $ P.sepBy1 bareIdentifier dot
 
-lbrace :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
+lbrace :: Members '[InfoTableBuilder] r => ParsecS r ()
 lbrace = symbol "{"
 
-rbrace :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
+rbrace :: Members '[InfoTableBuilder] r => ParsecS r ()
 rbrace = symbol "}"
 
-lparen :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
+lparen :: Members '[InfoTableBuilder] r => ParsecS r ()
 lparen = symbol "("
 
-rparen :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r ()
+rparen :: Members '[InfoTableBuilder] r => ParsecS r ()
 rparen = symbol ")"
 
-parens :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r a
+parens :: Members '[InfoTableBuilder] r => ParsecS r a -> ParsecS r a
 parens = between lparen rparen
 
-braces :: Members '[Reader ParserParams, InfoTableBuilder] r => ParsecS r a -> ParsecS r a
+braces :: Members '[InfoTableBuilder] r => ParsecS r a -> ParsecS r a
 braces = between (symbol "{") (symbol "}")

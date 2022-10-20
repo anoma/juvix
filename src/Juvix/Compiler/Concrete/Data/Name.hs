@@ -79,7 +79,7 @@ instance HasLoc TopModulePath where
       [] -> getLoc _modulePathName
       (x : _) -> getLoc x <> getLoc _modulePathName
 
-topModulePathToFilePath :: FilePath -> TopModulePath -> FilePath
+topModulePathToFilePath :: Member Files r => TopModulePath -> Sem r FilePath
 topModulePathToFilePath = topModulePathToFilePath' (Just ".juvix")
 
 topModulePathToRelativeFilePath :: Maybe String -> String -> (FilePath -> FilePath -> FilePath) -> TopModulePath -> FilePath
@@ -100,10 +100,9 @@ topModulePathToRelativeFilePath ext suffix joinpath mp = relFilePath
     toPath s = unpack (s ^. symbolText)
 
 topModulePathToFilePath' ::
-  Maybe String -> FilePath -> TopModulePath -> FilePath
-topModulePathToFilePath' ext root mp =
-  normalise
-    (root </> topModulePathToRelativeFilePath ext "" (</>) mp)
+  Member Files r => Maybe String -> TopModulePath -> Sem r FilePath
+topModulePathToFilePath' ext mp =
+  getAbsPath (topModulePathToRelativeFilePath ext "" (</>) mp)
 
 topModulePathToDottedPath :: IsString s => TopModulePath -> s
 topModulePathToDottedPath (TopModulePath l r) =

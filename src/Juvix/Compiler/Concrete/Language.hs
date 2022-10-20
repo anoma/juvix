@@ -25,6 +25,7 @@ import Juvix.Compiler.Concrete.Data.ScopedName (unqualifiedSymbol)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Data
+import Juvix.Data.Ape.Base as Ape
 import Juvix.Data.Fixity
 import Juvix.Data.NameKind
 import Juvix.Prelude hiding (show)
@@ -1157,6 +1158,46 @@ instance
   compare = compare `on` (^. expressionAtoms)
 
 --------------------------------------------------------------------------------
+
+instance IsApe Application Expression where
+  toApe (Application l r) =
+    ApeApp
+      Ape.App
+        { _appLeft = toApe l,
+          _appRight = toApe r
+        }
+
+instance IsApe InfixApplication Expression where
+  toApe i@(InfixApplication l op r) =
+    ApeInfix
+      Infix
+        { _infixFixity = getFixity i,
+          _infixLeft = toApe l,
+          _infixRight = toApe r,
+          _infixOp = ExpressionIdentifier op
+        }
+
+instance IsApe PostfixApplication Expression where
+  toApe p@(PostfixApplication l op) =
+    ApePostfix
+      Postfix
+        { _postfixFixity = getFixity p,
+          _postfixLeft = toApe l,
+          _postfixOp = ExpressionIdentifier op
+        }
+
+instance IsApe Expression Expression where
+  toApe = \case
+    ExpressionApplication a -> toApe a
+    ExpressionInfixApplication a -> toApe a
+    ExpressionPostfixApplication a -> toApe a
+    e ->
+      ApeLeaf
+        ( Leaf
+            { _leafAtomicity = atomicity e,
+              _leafExpr = e
+            }
+        )
 
 instance HasAtomicity PatternArg where
   atomicity p

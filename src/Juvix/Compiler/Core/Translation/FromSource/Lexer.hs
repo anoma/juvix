@@ -18,31 +18,31 @@ space = space' False void
 lexeme :: ParsecS r a -> ParsecS r a
 lexeme = L.lexeme space
 
-lexemeInterval :: Member (Reader ParserParams) r => ParsecS r a -> ParsecS r (a, Interval)
+lexemeInterval :: ParsecS r a -> ParsecS r (a, Interval)
 lexemeInterval = lexeme . interval
 
 symbol :: Text -> ParsecS r ()
 symbol = void . L.symbol space
 
-kw :: Members '[Reader ParserParams] r => Keyword -> ParsecS r ()
+kw :: Keyword -> ParsecS r ()
 kw = void . lexeme . kw'
 
-decimal :: (Member (Reader ParserParams) r, Num n) => ParsecS r (n, Interval)
+decimal :: Num n => ParsecS r (n, Interval)
 decimal = lexemeInterval L.decimal
 
-integer :: Member (Reader ParserParams) r => ParsecS r (Integer, Interval)
+integer :: ParsecS r (Integer, Interval)
 integer = integer' decimal
 
-number :: Member (Reader ParserParams) r => Int -> Int -> ParsecS r (Int, Interval)
+number :: Int -> Int -> ParsecS r (Int, Interval)
 number = number' integer
 
-string :: Member (Reader ParserParams) r => ParsecS r (Text, Interval)
+string :: ParsecS r (Text, Interval)
 string = lexemeInterval string'
 
 identifier :: ParsecS r Text
 identifier = lexeme bareIdentifier
 
-identifierL :: Member (Reader ParserParams) r => ParsecS r (Text, Interval)
+identifierL :: ParsecS r (Text, Interval)
 identifierL = lexemeInterval bareIdentifier
 
 -- | Same as @identifier@ but does not consume space after it.

@@ -6,6 +6,7 @@ import Data.ByteString qualified as BS
 import Data.FileEmbed qualified as FE
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Backend.C.Translation.FromInternal qualified as MiniC
+import Juvix.Extra.Paths
 import System.Environment
 import System.Process qualified as P
 
@@ -18,9 +19,6 @@ runCommand opts@CompileOptions {..} = do
   case result of
     Left err -> printFailureExit err
     _ -> return ()
-
-juvixBuildDir :: FilePath
-juvixBuildDir = ".juvix-build"
 
 inputCFile :: FilePath -> FilePath -> FilePath
 inputCFile projRoot inputFileCompile =
