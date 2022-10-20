@@ -13,7 +13,7 @@
 
 // The number of arguments stored in the closure.
 static inline size_t get_closure_nargs(word_t cl) {
-    return get_nfields(cl) - CLOSURE_SKIP - 1;
+    return get_nfields(cl) - CLOSURE_SKIP;
 }
 
 // The number of arguments remaining for a call to the
@@ -34,22 +34,22 @@ static inline word_t *get_closure_args(word_t cl) {
 
 #define CLOSURE_ARG(var, n) FIELD(var, (n) + CLOSURE_SKIP + 1)
 
-#define INIT_CLOSURE0(var, fuid, addr, nargs, largs)                        \
+#define INIT_CLOSURE0(var, addr, nargs, largs)                              \
     FIELD(var, 0) = make_special_header(SUID_CLOSURE, nargs + CLOSURE_SKIP, \
                                         CLOSURE_SKIP, largs);
 
 #ifdef DEBUG
-#define INIT_CLOSURE(var, fuid, addr, nargs, largs)   \
-    do {                                              \
-        INIT_CLOSURE0(var, fuid, addr, nargs, largs); \
-        FIELD(var, 1) = fuid;                         \
-        FIELD(var, 2) = (word_t)addr;                 \
+#define INIT_CLOSURE(var, fuid, addr, nargs, largs) \
+    do {                                            \
+        INIT_CLOSURE0(var, addr, nargs, largs);     \
+        FIELD(var, 1) = fuid;                       \
+        FIELD(var, 2) = (word_t)addr;               \
     } while (0)
 #else
-#define INIT_CLOSURE(var, fuid, addr, nargs, largs)   \
-    do {                                              \
-        INIT_CLOSURE0(var, fuid, addr, nargs, largs); \
-        FIELD(var, 1) = (word_t)addr;                 \
+#define INIT_CLOSURE(var, fuid, addr, nargs, largs) \
+    do {                                            \
+        INIT_CLOSURE0(var, addr, nargs, largs);     \
+        FIELD(var, 1) = (word_t)addr;               \
     } while (0)
 #endif
 

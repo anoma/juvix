@@ -32,7 +32,7 @@ juvix_closure_calculate:
     JUVIX_FUNCTION(juvix_function_main, 6, {}, {});
     {
         DECL_STMP(0);
-        ALLOC_CLOSURE(STMP(0), 1, LABEL_ADDR(juvix_closure_calculate), 3, 2);
+        ALLOC_CLOSURE(STMP(0), 1, LABEL_ADDR(juvix_closure_calculate), 2, 1);
         CLOSURE_ARG(STMP(0), 0) = make_smallint(5);
         CLOSURE_ARG(STMP(0), 1) = make_smallint(3);
         STACK_ENTER(1);
