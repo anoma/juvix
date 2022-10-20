@@ -21,19 +21,35 @@ static inline bool is_ptr(word_t x) { return GET_KIND(x) == KIND_PTR; }
 static inline bool is_header(word_t x) { return GET_KIND(x) == KIND_HEADER; }
 
 /*
-A header word consists of (field:bits in lower 32 bits from most to least
-significant):
+An ordinary header word consists of (field:bits in lower 32 bits from most to
+least significant):
 
-|NFIELDS:8|UID:20|MARK:1|RESERVED:1|KIND:2|
+|NFIELDS:8|UID:20|MARK:1|SPECIAL:1|KIND:2|
 
 - NFIELDS specifies the number of fields following the header.
 - UID contains a unique object identifier.
 - MARK is a mark bit used by the GC. It is always 0 when not in GC collection
   phase.
-- RESERVED is reserved for future use.
+- SPECIAL is set to 0.
 - KIND specifies the object kind. Contains the KIND_HEADER bit-pattern.
 
-There are special UIDs which imply the existence of certain special fields.
+
+A special header word consists of:
+
+|NFIELDS:8|RESERVED:16|SKIP:2|SUID:2|MARK:1|SPECIAL:1|KIND:2|
+
+- NFIELDS specifies the number of fields following the header.
+- RESERVED contains bits reserved for the special object (it depends on the SUID
+  what they signify)
+- SKIP indicates how may fields directly following the header contain
+  non-garbage-collected raw bit patterns. SKIP = SKIP_ALL indicates that all
+  fields contain raw bit patterns. SKIP < SKIP_ALL indicates the actual number
+  of non-garbage collected raw bit-pattern fields.
+- SUID contains the special object identifier.
+- MARK is a mark bit used by the GC. It is always 0 when not in GC collection
+  phase.
+- SPECIAL is set to 1.
+- KIND specifies the object kind. Contains the KIND_HEADER bit-pattern.
 */
 
 #define MARK_MASK ((word_t)0x10)
@@ -42,7 +58,7 @@ static inline bool is_marked(word_t x) { return x & MARK_MASK; }
 static inline word_t set_mark(word_t x) { return x | MARK_MASK; }
 static inline word_t clear_mark(word_t x) { return x & ~MARK_MASK; }
 
-#define UID_MASK 0x00FFFFF0
+#define UID_MASK ((word_t)0x00FFFFF0)
 #define UID_SHIFT 4U
 #define GET_UID(x) (((word_t)(x)&UID_MASK) >> UID_SHIFT)
 
@@ -71,33 +87,83 @@ static inline size_t get_nfields(word_t ptr) {
 
 static inline word_t get_uid(word_t ptr) { return GET_UID(FIELD(ptr, 0)); }
 
+#define SPECIAL_MASK ((word_t)0x4)
+#define SPECIAL_HEADER_MASK ((word_t)0x7)
+
+#define KIND_SPECIAL_HEADER SPECIAL_MASK
+
+static inline bool is_special(word_t x) { return x & SPECIAL_MASK; }
+
+static inline bool is_special_header(word_t x) {
+    return (x & SPECIAL_HEADER_MASK) == KIND_SPECIAL_HEADER;
+}
+
+#define SUID_MASK ((word_t)0x30)
+#define SUID_SHIFT 4U
+#define GET_SUID(x) (((word_t)(x)&SUID_MASK) >> SUID_SHIFT)
+
+#define SKIP_MASK ((word_t)0xC0)
+#define SKIP_SHIFT 6U
+#define GET_SKIP(x) (((word_t)(x)&SKIP_MASK) >> SKIP_SHIFT)
+#define SKIP_ALL 3U
+
+#define RESERVED_MASK 0x00FFFF00
+#define RESERVED_SHIFT 8U
+#define GET_RESERVED(x) ((word_t)(x) >> RESERVED_SHIFT)
+
+static inline word_t make_special_header(word_t suid, word_t nfields,
+                                         word_t skip, word_t reserved) {
+    ASSERT(suid < MAX_SUIDS);
+    ASSERT(nfields <= MAX_FIELDS);
+    ASSERT(skip <= SKIP_ALL);
+    ASSERT(reserved <= (RESERVED_MASK >> RESERVED_SHIFT));
+    return (nfields << NFIELDS_SHIFT) | (reserved << RESERVED_SHIFT) |
+           (skip << SKIP_SHIFT) | (suid << SUID_SHIFT) | KIND_SPECIAL_HEADER;
+}
+
+static inline bool has_special_header(word_t ptr) {
+    return is_special_header(get_header(ptr));
+}
+
+static inline size_t get_skip(word_t ptr) { return GET_SKIP(FIELD(ptr, 0)); }
+
+static inline size_t get_reserved(word_t ptr) {
+    return GET_RESERVED(FIELD(ptr, 0));
+}
+
+static inline word_t get_suid(word_t ptr) { return GET_SUID(FIELD(ptr, 0)); }
+
+/*************************************************/
+/* Builtin constructor UIDs */
+
+#define UID_FALSE 0
+#define UID_TRUE 1
+#define UID_UNIT 2
+#define UID_VOID 3
+#define UID_RETURN 4
+#define UID_BIND 5
+#define UID_WRITE 6
+#define UID_READLN 7
+
 /*************************************************/
 /* Special UIDs */
 
-// A closure has additional non-garbage-collected closure header and function
-// address fields immediately after the header. The two additional fields are
-// not counted in NFIELDS.
-#define UID_CLOSURE 0
+// A closure has a non-garbage-collected function
+// address field immediately after the header. The other fields are closure
+// arguments. The RESERVED bits indicate the number of arguments remaining. In
+// debug mode, there is one more non-garbage-collected field after the header
+// which contains the FUID (function id).
+#define SUID_CLOSURE 0
 // The header is followed by a zero-terminated string. NFIELDS contains the
 // length of the string rounded up to a multiple of word size.
-#define UID_CSTRING 1
-
-// Builtin constructor uids
-#define UID_UNIT (MAX_SPECIAL_UIDS)
-#define UID_VOID (MAX_SPECIAL_UIDS + 1)
-#define UID_TRUE (MAX_SPECIAL_UIDS + 2)
-#define UID_FALSE (MAX_SPECIAL_UIDS + 3)
-#define UID_RETURN (MAX_SPECIAL_UIDS + 4)
-#define UID_BIND (MAX_SPECIAL_UIDS + 5)
-#define UID_WRITE (MAX_SPECIAL_UIDS + 6)
-#define UID_READLN (MAX_SPECIAL_UIDS + 7)
+#define SUID_CSTRING 1
 
 static inline bool is_closure(word_t x) {
-    return is_ptr(x) && has_header(x) && get_uid(x) == UID_CLOSURE;
+    return is_ptr(x) && has_special_header(x) && get_suid(x) == SUID_CLOSURE;
 }
 
 static inline bool is_cstring(word_t x) {
-    return is_ptr(x) && has_header(x) && get_uid(x) == UID_CSTRING;
+    return is_ptr(x) && has_special_header(x) && get_suid(x) == SUID_CSTRING;
 }
 
 #define OBJ_UNIT make_header(UID_UNIT, 0)

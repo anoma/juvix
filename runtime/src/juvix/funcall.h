@@ -4,9 +4,9 @@
 #include <juvix/funcall/funcall.h>
 #include <juvix/funcall/stacktrace.h>
 
-#define FUNCALL_DECLS \
-    DECL_RESULT;      \
-    DECL_CLOSURE
+#define FUNCALL_DECLS(MAX_ARGS) \
+    DECL_RESULT;                \
+    DECL_CARGS(MAX_ARGS)
 
 static inline void funcall_init() { stacktrace_init(); }
 

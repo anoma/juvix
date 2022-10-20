@@ -23,8 +23,7 @@ char *strcpy(char *restrict dest, const char *restrict src) {
 
 word_t alloc_cstring(const char *str) {
     size_t n = (strlen(str) + sizeof(word_t)) / sizeof(word_t);
-    word_t var = (word_t)alloc(n);
-    *(word_t *)(var + n) = 0;
-    strcpy((char *)(var) + sizeof(word_t), str);
+    word_t var = (word_t)alloc(n + 1);
+    INIT_CSTRING(var, str, n);
     return var;
 }

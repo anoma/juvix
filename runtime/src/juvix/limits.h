@@ -18,29 +18,25 @@
 // have the value MAX_UIDS.
 #define MAX_UIDS 1048576U
 
-// Maximum special UIDs which don't correspond to constructor tags. UIDs
-// corresponding to constructor tags have values at equal or greater.
-#define MAX_SPECIAL_UIDS 16U
-
 // Maximum number of builtin constructor uids
 #define MAX_BUILTIN_UIDS 64U
 
-#define FIRST_USER_UID (MAX_SPECIAL_UIDS + MAX_BUILTIN_UIDS)
+#define FIRST_USER_UID MAX_BUILTIN_UIDS
 
 // Maximum number of different constructors (globally).
-#define MAX_CONSTR_TAGS (MAX_UIDS - MAX_SPECIAL_UIDS)
+#define MAX_CONSTR_TAGS MAX_UIDS
 
-// Maximum number of functions (globally). Make sure this corresponds to the
-// number of bits in the FUID field in juvix/closure.h.
-#define MAX_FUNCTIONS 16777216U
+// Maximum number of special UIDs. Make sure this corresponds to the number of
+// bits in the SUID field in a special header word (see: juvix/object.h).
+#define MAX_SUIDS 4U
 
 // Maximum number of fields. Make sure this corresponds to the number of bits
 // for the NFIELDS field in a header word (see juvix/object.h).
 #define MAX_FIELDS 255U
 
 #define MAX_CONSTR_ARGS MAX_FIELDS
-// Max number of fields minus the extra two fields in a closure.
-#define MAX_FUNCTION_ARGS (MAX_FIELDS - 2)
+// Max number of fields minus the extra field in a closure.
+#define MAX_FUNCTION_ARGS (MAX_FIELDS - 1)
 
 #define MAX_CSTRING_LENGTH (MAX_FIELDS * sizeof(word_t) - 1)
 

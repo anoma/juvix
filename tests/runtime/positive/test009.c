@@ -7,23 +7,8 @@
     DECL_ARG(1);        \
     DECL_ARG(2)
 
-#define JUVIX_DECL_DISPATCH   \
-    juvix_dispatch_label_2:   \
-    ARG(2) = *juvix_ccl_sp++; \
-    juvix_dispatch_label_1:   \
-    ARG(1) = *juvix_ccl_sp++; \
-    juvix_dispatch_label_0:   \
-    ARG(0) = *juvix_ccl_sp;   \
-    DISPATCH(juvix_dispatch_label)
-
-#define JUVIX_INIT_DISPATCH                   \
-    INIT_DISPATCH(0, juvix_dispatch_label_0); \
-    INIT_DISPATCH(1, juvix_dispatch_label_1); \
-    INIT_DISPATCH(2, juvix_dispatch_label_2)
-
 int main() {
-    JUVIX_PROLOGUE(3, JUVIX_DECL_ARGS, JUVIX_DECL_DISPATCH,
-                   JUVIX_INIT_DISPATCH);
+    JUVIX_PROLOGUE(3, JUVIX_DECL_ARGS);
 
     STACK_ENTER(1);
     CALL(0, juvix_function_main, juvix_label_0);

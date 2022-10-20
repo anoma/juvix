@@ -17,18 +17,23 @@ static inline char *get_cstring(word_t x) {
     return (char *)x + sizeof(word_t);
 }
 
+#define INIT_CSTRING(var, str, nfields)                                      \
+    FIELD(var, 0) = make_special_header(SUID_CSTRING, nfields, SKIP_ALL, 0); \
+    FIELD(var, nfields) = 0;                                                 \
+    strcpy((char *)(var) + sizeof(word_t), str);
+
 #define ALLOC_CSTRING(var, str)                              \
     do {                                                     \
         size_t juvix_nfields =                               \
             (strlen(str) + sizeof(word_t)) / sizeof(word_t); \
         void *tmp;                                           \
-        ALLOC(tmp, juvix_nfields);                           \
+        ALLOC(tmp, juvix_nfields + 1);                       \
         var = (word_t)tmp;                                   \
-        *(word_t *)(var + juvix_nfields) = 0;                \
-        strcpy((char *)(var) + sizeof(word_t), str);         \
+        INIT_CSTRING(var, str, juvix_nfields);               \
     } while (0)
 
-// Memory pointers (see alloc.h) need to be saved before calling this function.
+// Memory pointers (see alloc.h) need to be saved before calling this
+// function.
 word_t alloc_cstring(const char *str);
 
 #endif

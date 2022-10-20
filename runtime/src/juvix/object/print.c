@@ -80,31 +80,35 @@ static size_t print_object(bool is_top, char *buf, size_t n, word_t x) {
             word_t h = get_header(x);
             size_t delta;
             if (is_header(h)) {
-                switch (GET_UID(h)) {
-                    case UID_CLOSURE: {
-                        size_t nargs = get_closure_nargs(x);
-                        ASSERT(get_closure_fuid(x) < juvix_functions_num);
-                        const char *str =
-                            juvix_function_info[get_closure_fuid(x)].name;
-                        buf += print_args(is_top, buf, n, str,
-                                          get_closure_args(x), nargs);
-                        break;
-                    }
-                    case UID_CSTRING: {
-                        const char *str = get_cstring(x);
-                        while (*str) {
-                            PUTC(*str++);
+                if (is_special(h)) {
+                    switch (GET_SUID(h)) {
+                        case SUID_CLOSURE: {
+                            size_t nargs = get_closure_nargs(x);
+#ifdef DEBUG
+                            ASSERT(get_closure_fuid(x) < juvix_functions_num);
+                            const char *str =
+                                juvix_function_info[get_closure_fuid(x)].name;
+#else
+                            const char *str = "<closure>";
+#endif
+                            buf += print_args(is_top, buf, n, str,
+                                              get_closure_args(x), nargs);
+                            break;
                         }
-                        break;
+                        case SUID_CSTRING: {
+                            const char *str = get_cstring(x);
+                            while (*str) {
+                                PUTC(*str++);
+                            }
+                            break;
+                        }
                     }
-                    default: {
-                        size_t nargs = GET_NFIELDS(h);
-                        ASSERT(GET_UID(x) < juvix_constrs_num);
-                        const char *str = juvix_constr_info[GET_UID(h)].name;
-                        buf += print_args(is_top, buf, n, str,
-                                          get_constr_args(x), nargs);
-                        break;
-                    }
+                } else {
+                    size_t nargs = GET_NFIELDS(h);
+                    ASSERT(GET_UID(x) < juvix_constrs_num);
+                    const char *str = juvix_constr_info[GET_UID(h)].name;
+                    buf += print_args(is_top, buf, n, str, get_constr_args(x),
+                                      nargs);
                 }
             } else {
                 PUTC('(');

@@ -13,21 +13,15 @@
 // MAX_ARGS is the maximum number of function arguments, at least 1.
 // ARG_DECLS declares the argument variables (using DECL_ARG and DECL_REG_ARG
 // from funcall/funcall.h)
-// DISPATCH_DECLS declares the dispatch for CallClosures, as described in
-// funcall/funcall.h after DISPATCH definition
-// DISPATCH_DECLS initializes the dispatch table for CallClosures, as described
-// in funcall/funcall.h after DISPATCH definition
-#define JUVIX_PROLOGUE(MAX_ARGS, ARG_DECLS, DISPATCH_DECLS, DISPATCH_INITS) \
-    MEM_DECLS;                                                              \
-    ARG_DECLS;                                                              \
-    FUNCALL_DECLS;                                                          \
-    JUVIX_INIT;                                                             \
-    STACK_PUSH_ADDR(LABEL_ADDR(juvix_program_end));                         \
-    goto juvix_program_start;                                               \
-    DECL_CALL_CLOSURES(MAX_ARGS);                                           \
-    DISPATCH_DECLS;                                                         \
-    juvix_program_start:                                                    \
-    DISPATCH_INITS
+#define JUVIX_PROLOGUE(MAX_ARGS, ARG_DECLS)         \
+    MEM_DECLS;                                      \
+    ARG_DECLS;                                      \
+    FUNCALL_DECLS(MAX_ARGS);                        \
+    JUVIX_INIT;                                     \
+    STACK_PUSH_ADDR(LABEL_ADDR(juvix_program_end)); \
+    goto juvix_program_start;                       \
+    DECL_CALL_CLOSURES;                             \
+    juvix_program_start:
 
 #define JUVIX_EPILOGUE                  \
     juvix_program_end:                  \
@@ -45,7 +39,7 @@
 
 // Begin a function definition. `n` is the maximum number of words allocated in
 // the function. `SAVE` and `RESTORE` should save and restore function arguments
-// on the global stack.
+// on the global stack (for the GC).
 #define JUVIX_FUNCTION(label, n, SAVE, RESTORE) \
     label:                                      \
     PREALLOC(n, SAVE, RESTORE)
@@ -54,9 +48,9 @@
     Macro sequence for function definition:
 
 closure_label:
-    ARG(0) = CLOSURE_ARG(juvix_closure, 0);
+    ARG(0) = CARG(0);
     ...
-    ARG(m) = CLOSURE_ARG(juvix_closure, m);
+    ARG(m) = CARG(m);
     JUVIX_FUNCTION(function_label, max_alloc, SAVE, RESTORE);
     {
         DECL_TMP(0);
