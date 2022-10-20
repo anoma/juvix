@@ -12,7 +12,7 @@ pipe :: [TransformationId]
 pipe = [LambdaLifting]
 
 liftTest :: Eval.PosTest -> TestTree
-liftTest _testEval@Eval.PosTest {..} =
+liftTest _testEval =
   fromTest
     Test
       { _testTransformations = pipe,
