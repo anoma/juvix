@@ -252,12 +252,6 @@ commonPrefix a b = reverse (go [] a b)
         | x' == y' -> go (x' : ac) xs ys
       _ -> ac
 
-zipWithExactM :: Monad m => (a -> b -> m c) -> [a] -> [b] -> m [c]
-zipWithExactM f a b = mapM (uncurry f) (zipExact a b)
-
-zipWithExactM_ :: Monad m => (a -> b -> m c) -> [a] -> [b] -> m ()
-zipWithExactM_ f a b = void (zipWithExactM f a b)
-
 --------------------------------------------------------------------------------
 -- NonEmpty
 --------------------------------------------------------------------------------
@@ -338,9 +332,6 @@ fromRightIO' pp = do
 
 fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
 fromRightIO pp = fromRightIO' (putStrLn . pp)
-
-leftToMaybe :: Either l r -> Maybe l
-leftToMaybe = either Just (const Nothing)
 
 --------------------------------------------------------------------------------
 -- Files

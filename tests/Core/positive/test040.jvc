@@ -13,26 +13,24 @@ def fib :=
 def writeLn := \x write x >> write "\n";
 
 def mutrec :=
-  let two := 2 in
-  let one := 1 in
   letrec[f g h]
     f := \x {
-      if x < one then
-        one
+      if x < 1 then
+        1
       else
-        g (x - one) + two * x
+        g (x - 1) + 2 * x
     };
     g := \x {
-      if x < one then
-        one
+      if x < 1 then
+        1
       else
-        x + h (x - one)
+        x + h (x - 1)
     };
     h := \x letrec z := {
-      if x < one then
-        one
+      if x < 1 then
+        1
       else
-        x * f (x - one)
+        x * f (x - 1)
     } in z
   in writeLn (f 5) >> writeLn (f 10) >> writeLn (f 100) >> writeLn (g 5) >> writeLn (h 5);
 
