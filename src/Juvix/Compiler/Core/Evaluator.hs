@@ -55,9 +55,9 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
 
     eval' :: Env -> Node -> Node
     eval' !env !n = case n of
-      NVar (Var _ idx)
-        | null (drop idx env) -> error ("invalid index: " <> show idx <> " (length: " <> show (length env) <> ")")
-        | otherwise -> env !! idx
+      NVar (Var _ idx) -> fromMaybe err (listToMaybe (drop idx env))
+        where
+          err = error ("invalid index: " <> show idx <> " (length: " <> show (length env) <> ")")
       NIdt (Ident _ sym) -> eval' [] (lookupContext n sym)
       NCst {} -> n
       NApp (App i l r) ->
