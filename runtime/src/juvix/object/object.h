@@ -66,13 +66,18 @@ static inline word_t clear_mark(word_t x) { return x & ~MARK_MASK; }
 #define NFIELDS_SHIFT 24U
 #define GET_NFIELDS(x) ((word_t)(x) >> NFIELDS_SHIFT)
 
+#define MAKE_HEADER(uid, nfields) \
+    (((nfields) << NFIELDS_SHIFT) | ((uid) << UID_SHIFT) | KIND_HEADER)
+
 static inline word_t make_header(word_t uid, word_t nfields) {
     ASSERT(uid < MAX_UIDS);
     ASSERT(nfields <= MAX_FIELDS);
-    return (nfields << NFIELDS_SHIFT) | (uid << UID_SHIFT) | KIND_HEADER;
+    return MAKE_HEADER(uid, nfields);
 }
 
-static inline word_t make_unboxed(word_t x) { return (x << 1U) | 1U; }
+#define MAKE_UNBOXED(x) (((x) << 1U) | 1U)
+
+static inline word_t make_unboxed(word_t x) { return MAKE_UNBOXED(x); }
 static inline word_t get_unboxed(word_t x) { return x >> 1U; }
 static inline int_t get_unboxed_int(word_t x) { return (int_t)x >> 1; }
 

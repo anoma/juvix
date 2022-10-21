@@ -101,5 +101,10 @@ tests =
       "Higher-order functions"
       "."
       "test014.c"
-      "out/test014.out"
+      "out/test014.out",
+    PosTest
+      "Branching and matching"
+      "."
+      "test015.c"
+      "out/test015.out"
   ]

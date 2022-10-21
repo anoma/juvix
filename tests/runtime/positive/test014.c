@@ -1,4 +1,4 @@
-/* Tail calls */
+/* Higher-order functions */
 
 #include <juvix/api.h>
 
@@ -61,7 +61,6 @@ juvix_closure_I:
         DECL_TMP(0);
         TMP(0) = ARG(0);
         ALLOC_CLOSURE(ARG(0), 0, LABEL_ADDR(juvix_closure_K), 0, 2);
-        STACK_LEAVE;
         ARG(1) = ARG(0);
         ARG(2) = TMP(0);
         TAIL_CALL(0, juvix_function_S);
@@ -105,7 +104,6 @@ juvix_closure_I:
         STACK_POP(TMP(2));
         JUVIX_INT_ADD(TMP(1), juvix_result, TMP(2));
         juvix_result = TMP(1);
-        STACK_LEAVE;
         RETURN;
     }
 

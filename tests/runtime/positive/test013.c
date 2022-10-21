@@ -1,4 +1,4 @@
-/* Tail calls */
+/* IO builtins */
 
 #include <juvix/api.h>
 
