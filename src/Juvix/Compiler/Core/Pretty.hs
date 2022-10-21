@@ -22,7 +22,7 @@ ppTrace' :: (CanonicalProjection a Options, PrettyCode c) => a -> c -> Text
 ppTrace' opts = Ansi.renderStrict . reAnnotateS stylize . layoutPretty defaultLayoutOptions . doc (project opts)
 
 ppTrace :: PrettyCode c => c -> Text
-ppTrace = ppTrace' defaultOptions
+ppTrace = ppTrace' traceOptions
 
 ppPrint :: PrettyCode c => c -> Text
 ppPrint = show . ppOutDefault

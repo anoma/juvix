@@ -259,6 +259,9 @@ commonPrefix a b = reverse (go [] a b)
 nonEmptyUnsnoc :: NonEmpty a -> (Maybe (NonEmpty a), a)
 nonEmptyUnsnoc e = (NonEmpty.nonEmpty (NonEmpty.init e), NonEmpty.last e)
 
+nonEmpty' :: HasCallStack => [a] -> NonEmpty a
+nonEmpty' = fromJust . nonEmpty
+
 _nonEmpty :: Lens' [a] (Maybe (NonEmpty a))
 _nonEmpty f x = maybe [] toList <$> f (nonEmpty x)
 
