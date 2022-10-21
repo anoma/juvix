@@ -4,6 +4,7 @@ import Commands.Compile.Options
 import Commands.Dev.Options
 import Commands.Doctor.Options
 import Commands.Html.Options
+import Commands.Repl.Options
 import Commands.Typecheck.Options
 import CommonOptions hiding (Doc)
 import Data.Generics.Uniplate.Data
@@ -19,6 +20,7 @@ data TopCommand
   | Dev DevCommand
   | Doctor DoctorOptions
   | Init
+  | JuvixRepl ReplOptions
   deriving stock (Data)
 
 topCommandInputFile :: TopCommand -> Maybe FilePath
@@ -55,7 +57,8 @@ parseUtility =
           metavar "UTILITY_CMD",
           commandDoctor,
           commandInit,
-          commandDev
+          commandDev,
+          commandRepl
         ]
     )
   where
@@ -75,6 +78,13 @@ parseUtility =
             (Doctor <$> parseDoctorOptions)
             (progDesc "Perform checks on your Juvix development environment")
         )
+    commandRepl :: Mod CommandFields TopCommand
+    commandRepl =
+      command
+        "repl"
+        ( info
+            (JuvixRepl <$> parseRepl)
+            (progDesc "Run the Juvix REPL"))
 
 commandCheck :: Mod CommandFields TopCommand
 commandCheck =

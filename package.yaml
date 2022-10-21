@@ -109,6 +109,9 @@ executables:
     - http-conduit == 2.3.*
     - optparse-applicative == 0.17.*
     - uniplate == 1.6.*
+    - repline == 0.4.*
+    - haskeline == 0.8.*
+    - mtl == 2.2.*
     verbatim:
       default-language: GHC2021
 
