@@ -28,7 +28,6 @@
 /*
     Macro sequence for a direct function call:
 
-    STACK_ENTER(n + 1);
     STACK_PUSH(var1);
     ...
     STACK_PUSH(varn);
@@ -39,7 +38,6 @@
     STACK_POP(varn);
     ...
     STACK_POP(var1);
-    STACK_LEAVE;
 
     arg0, ..., argm cannot contain references to ARG(k) for any k
 */
@@ -63,9 +61,13 @@
     arg0, ..., argm cannot contain references to ARG(k) for any k
 */
 
-#define TAIL_CALL(fuid, fun)  \
-    STACKTRACE_REPLACE(fuid); \
+#define TAIL_CALL_LEAF(fuid, fun) \
+    STACKTRACE_REPLACE(fuid);     \
     goto fun
+
+#define TAIL_CALL(fuid, fun) \
+    STACK_LEAVE;             \
+    TAIL_CALL_LEAF(fuid, fun)
 
 #define ASSIGN_CARGS(cl, CODE)                                               \
     do {                                                                     \
@@ -80,7 +82,6 @@
 /*
     Macro sequence for an indirect function call:
 
-    STACK_ENTER(n + 1);
     STACK_PUSH(var1);
     ...
     STACK_PUSH(varn);
@@ -93,7 +94,6 @@
     STACK_POP(varn);
     ...
     STACK_POP(var1);
-    STACK_LEAVE;
 
     arg0, ..., argm cannot contain references to CARG(k) for any k
 */
@@ -106,16 +106,22 @@
     STACK_POPT;                            \
     STACKTRACE_POP;
 
-#define TAIL_CALL_CLOSURE(cl)                 \
+#define TAIL_CALL_CLOSURE_LEAF(cl)            \
     STACKTRACE_REPLACE(get_closure_fuid(cl)); \
     goto *get_closure_addr(cl)
 
-#define RETURN STORED_GOTO(STACK_TOP_ADDR);
+#define TAIL_CALL_CLOSURE(cl) \
+    STACK_LEAVE;              \
+    TAIL_CALL_CLOSURE_LEAF(cl)
+
+#define RETURN_LEAF STORED_GOTO(STACK_TOP_ADDR);
+#define RETURN   \
+    STACK_LEAVE; \
+    RETURN_LEAF
 
 /*
     Macro sequence for calling the dispatch loop:
 
-    STACK_ENTER(n + m + DISPATCH_STACK_SIZE);
     STACK_PUSH(var1);
     ...
     STACK_PUSH(varn);
@@ -126,7 +132,6 @@
     STACK_POP(varn);
     ...
     STACK_POP(var1);
-    STACK_LEAVE;
 */
 
 #define CALL_CLOSURES(cl, m, label)       \
@@ -139,7 +144,6 @@
 /*
     Macro sequence for tail-calling the dispatch loop:
 
-    STACK_ENTER(m + DISPATCH_STACK_SIZE);
     STACK_PUSH(argm);
     ...
     STACK_PUSH(arg1);
@@ -197,7 +201,6 @@
                     CLOSURE_ARG(juvix_result, juvix_ccl_nargs + juvix_idx));  \
             }                                                                 \
             if (juvix_ccl_return == NULL) {                                   \
-                STACK_LEAVE;                                                  \
                 RETURN;                                                       \
             } else {                                                          \
                 STORED_GOTO(juvix_ccl_return);                                \

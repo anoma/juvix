@@ -15,15 +15,13 @@ int main() {
     juvix_constrs_num = BUILTIN_UIDS_NUM;
     juvix_constr_info = juvix_constr_info_array;
 
-    STACK_ENTER(1);
     CALL(0, juvix_function_main, juvix_label_0);
-    STACK_LEAVE;
     goto juvix_program_end;
 
 juvix_closure_const:
     ARG(0) = CARG(0);
     ARG(1) = CARG(1);
-    JUVIX_FUNCTION_NOALLOC(juvix_function_const);
+    JUVIX_FUNCTION_LEAF(juvix_function_const);
     {
         juvix_result = ARG(0);
         RETURN;
@@ -32,7 +30,7 @@ juvix_closure_const:
 juvix_closure_print:
     ARG(0) = CARG(0);
     JUVIX_FUNCTION(
-        juvix_function_print, 2, { STACK_PUSH(ARG(0)); },
+        juvix_function_print, 1, 2, { STACK_PUSH(ARG(0)); },
         { STACK_POP(ARG(0)); });
     {
         ALLOC_CONSTR_BOXED(juvix_result, UID_WRITE, 1);
@@ -41,7 +39,7 @@ juvix_closure_print:
     }
 
     JUVIX_FUNCTION(
-        juvix_function_sequence, 2 + CLOSURE_SKIP + 3,
+        juvix_function_sequence, 2, 2 + CLOSURE_SKIP + 3,
         {
             STACK_PUSH(ARG(0));
             STACK_PUSH(ARG(1));
@@ -65,7 +63,7 @@ juvix_closure_print:
 #define RETURN_SIZE 2
 #define BIND_SIZE 3
 
-    JUVIX_FUNCTION(juvix_function_main,
+    JUVIX_FUNCTION(juvix_function_main, MAX_STACK_DELTA,
                    3 * PRINT_CLOSURE_SIZE + 6 * WRITE_SIZE + 3 * RETURN_SIZE +
                        3 * BIND_SIZE + 2,
                    {}, {});
@@ -77,44 +75,34 @@ juvix_closure_print:
         CONSTR_ARG(TMP(0), 0) = make_smallint(1);
         ALLOC_CONSTR_BOXED(TMP(1), UID_WRITE, 1);
         CONSTR_ARG(TMP(1), 0) = make_smallint(2);
-        STACK_ENTER(1);
         ARG(0) = TMP(0);
         ARG(1) = TMP(1);
         CALL(0, juvix_function_sequence, juvix_label_1);
-        STACK_LEAVE;
         TMP(0) = juvix_result;
         ALLOC_CONSTR_BOXED(TMP(1), UID_WRITE, 1);
         CONSTR_ARG(TMP(1), 0) = make_smallint(3);
-        STACK_ENTER(1);
         ARG(0) = TMP(0);
         ARG(1) = TMP(1);
         CALL(0, juvix_function_sequence, juvix_label_2);
-        STACK_LEAVE;
         TMP(0) = juvix_result;
         ALLOC_CONSTR_BOXED(TMP(1), UID_WRITE, 1);
         CONSTR_ARG(TMP(1), 0) = make_smallint(4);
-        STACK_ENTER(1);
         ARG(0) = TMP(0);
         ARG(1) = TMP(1);
         CALL(0, juvix_function_sequence, juvix_label_3);
-        STACK_LEAVE;
         TMP(0) = juvix_result;
         ALLOC_CONSTR_BOXED(TMP(1), UID_WRITE, 1);
         CONSTR_ARG(TMP(1), 0) = make_smallint(5);
-        STACK_ENTER(1);
         ARG(0) = TMP(0);
         ARG(1) = TMP(1);
         CALL(0, juvix_function_sequence, juvix_label_4);
-        STACK_LEAVE;
         TMP(0) = juvix_result;
         ALLOC_CSTRING(TMP(2), "\n");
         ALLOC_CONSTR_BOXED(TMP(1), UID_WRITE, 1);
         CONSTR_ARG(TMP(1), 0) = TMP(2);
-        STACK_ENTER(1);
         ARG(0) = TMP(0);
         ARG(1) = TMP(1);
         CALL(0, juvix_function_sequence, juvix_label_5);
-        STACK_LEAVE;
         TMP(0) = juvix_result;
 
         // TMP(0) is printing "12345\n"
@@ -141,16 +129,12 @@ juvix_closure_print:
         ALLOC_CONSTR_BOXED(TMP(7), UID_BIND, 2);
         CONSTR_ARG(TMP(7), 0) = TMP(4);
         CONSTR_ARG(TMP(7), 1) = TMP(3);
-        STACK_ENTER(1);
         ARG(0) = TMP(6);
         ARG(1) = TMP(5);
         CALL(0, juvix_function_sequence, juvix_label_6);
-        STACK_LEAVE;
-        STACK_ENTER(1);
         ARG(0) = TMP(7);
         ARG(1) = juvix_result;
         CALL(0, juvix_function_sequence, juvix_label_7);
-        STACK_LEAVE;
         ARG(0) = juvix_result;
         ARG(1) = TMP(0);
         TAIL_CALL(0, juvix_function_sequence);

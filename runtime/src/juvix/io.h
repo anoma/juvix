@@ -35,7 +35,7 @@ bool io_interpret(word_t x, word_t *ret, word_t *arg);
             STACK_LEAVE;                                                 \
         } else {                                                         \
             juvix_result = juvix_io_ret;                                 \
-            RETURN;                                                      \
+            RETURN_LEAF;                                                 \
         }                                                                \
     }                                                                    \
     juvix_io_interpret_end:                                              \

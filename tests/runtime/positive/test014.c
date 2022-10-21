@@ -16,13 +16,11 @@ int main() {
     juvix_constrs_num = BUILTIN_UIDS_NUM;
     juvix_constr_info = juvix_constr_info_array;
 
-    STACK_ENTER(1);
     CALL(0, juvix_function_main, juvix_label_0);
-    STACK_LEAVE;
     goto juvix_program_end;
 
     JUVIX_FUNCTION(
-        juvix_function_S, 2 * MAX_DISPATCH_ALLOC,
+        juvix_function_S, 3 + DISPATCH_STACK_SIZE, 2 * MAX_DISPATCH_ALLOC,
         {
             STACK_PUSH(ARG(0));
             STACK_PUSH(ARG(1));
@@ -34,15 +32,12 @@ int main() {
             STACK_POP(ARG(0));
         });
     {
-        STACK_ENTER(3 + DISPATCH_STACK_SIZE);
         STACK_PUSH(ARG(0));
         STACK_PUSH(ARG(2));
         STACK_PUSH(ARG(2));
         CALL_CLOSURES(ARG(1), 1, juvix_label_1);
         STACK_POP(ARG(2));
         STACK_POP(ARG(0));
-        STACK_LEAVE;
-        STACK_ENTER(2 + DISPATCH_STACK_SIZE);
         STACK_PUSH(juvix_result);
         STACK_PUSH(ARG(2));
         TAIL_CALL_CLOSURES(ARG(0), 2);
@@ -51,27 +46,29 @@ int main() {
 juvix_closure_K:
     ARG(0) = CARG(0);
     ARG(1) = CARG(1);
-    JUVIX_FUNCTION_NOALLOC(juvix_function_K);
+    JUVIX_FUNCTION_LEAF(juvix_function_K);
     {
         juvix_result = ARG(0);
-        RETURN;
+        RETURN_LEAF;
     }
 
 juvix_closure_I:
     ARG(0) = CARG(0);
     JUVIX_FUNCTION(
-        juvix_function_I, 1 + CLOSURE_SKIP, { STACK_PUSH(ARG(0)); },
+        juvix_function_I, 1, 1 + CLOSURE_SKIP, { STACK_PUSH(ARG(0)); },
         { STACK_POP(ARG(0)); });
     {
         DECL_TMP(0);
         TMP(0) = ARG(0);
         ALLOC_CLOSURE(ARG(0), 0, LABEL_ADDR(juvix_closure_K), 0, 2);
+        STACK_LEAVE;
         ARG(1) = ARG(0);
         ARG(2) = TMP(0);
         TAIL_CALL(0, juvix_function_S);
     }
 
-    JUVIX_FUNCTION(juvix_function_main, 1 + CLOSURE_SKIP, {}, {});
+    JUVIX_FUNCTION(juvix_function_main, MAX_STACK_DELTA, 1 + CLOSURE_SKIP, {},
+                   {});
     {
         DECL_TMP(0);  // holds 1
         DECL_TMP(1);  // holds calloc I 0
@@ -108,6 +105,7 @@ juvix_closure_I:
         STACK_POP(TMP(2));
         JUVIX_INT_ADD(TMP(1), juvix_result, TMP(2));
         juvix_result = TMP(1);
+        STACK_LEAVE;
         RETURN;
     }
 

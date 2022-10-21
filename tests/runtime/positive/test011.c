@@ -10,21 +10,19 @@
 int main() {
     JUVIX_PROLOGUE(3, JUVIX_DECL_ARGS);
 
-    STACK_ENTER(1);
     CALL(0, juvix_function_main, juvix_label_0);
-    STACK_LEAVE;
     goto juvix_program_end;
 
-    JUVIX_FUNCTION_NOALLOC(juvix_function_multiply);
+    JUVIX_FUNCTION_LEAF(juvix_function_multiply);
     {
         JUVIX_INT_MUL(juvix_result, ARG(0), ARG(1));
-        RETURN;
+        RETURN_LEAF;
     }
 
-    JUVIX_FUNCTION_NOALLOC(juvix_function_plus);
+    JUVIX_FUNCTION_LEAF(juvix_function_plus);
     {
         JUVIX_INT_ADD(juvix_result, ARG(0), ARG(1));
-        RETURN;
+        RETURN_LEAF;
     }
 
 juvix_closure_calculate:
@@ -32,19 +30,17 @@ juvix_closure_calculate:
     ARG(1) = CARG(1);
     ARG(2) = CARG(2);
 
-    JUVIX_FUNCTION_NOALLOC(juvix_function_calculate);
+    JUVIX_FUNCTION_NOALLOC(juvix_function_calculate, 2);
     {
-        STACK_ENTER(2);
         STACK_PUSH(ARG(0));
         ARG(0) = ARG(2);
         CALL(0, juvix_function_multiply, juvix_label_1);
         STACK_POP(ARG(0));
-        STACK_LEAVE;
         ARG(1) = juvix_result;
         TAIL_CALL(0, juvix_function_plus);
     }
 
-    JUVIX_FUNCTION(juvix_function_main, 3 + CLOSURE_SKIP, {}, {});
+    JUVIX_FUNCTION(juvix_function_main, 0, 3 + CLOSURE_SKIP, {}, {});
     {
         DECL_STMP(0);
         ALLOC_CLOSURE(STMP(0), 1, LABEL_ADDR(juvix_closure_calculate), 2, 1);
