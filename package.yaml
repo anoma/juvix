@@ -49,6 +49,7 @@ dependencies:
 - singletons == 3.0.*
 - singletons-th == 3.1.*
 - Stream == 0.4.*
+- strict == 0.4.*
 - time == 1.11.*
 - template-haskell == 2.18.*
 - text == 1.2.*

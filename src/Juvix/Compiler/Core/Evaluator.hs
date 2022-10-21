@@ -8,6 +8,7 @@ module Juvix.Compiler.Core.Evaluator where
 
 import Control.Exception qualified as Exception
 import Data.HashMap.Strict qualified as HashMap
+import Data.Strict.Maybe qualified as Strict
 import Debug.Trace qualified as Debug
 import GHC.Conc qualified as GHC
 import GHC.Show qualified as S
@@ -55,7 +56,7 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
 
     eval' :: Env -> Node -> Node
     eval' !env !n = case n of
-      NVar (Var _ idx) -> fromMaybe err (listToMaybe (drop idx env))
+      NVar (Var _ idx) -> Strict.fromMaybe err (Strict.listToMaybe (drop idx env))
         where
           err = error ("invalid index: " <> show idx <> " (length: " <> show (length env) <> ")")
       NIdt (Ident _ sym) -> eval' [] (lookupContext n sym)
