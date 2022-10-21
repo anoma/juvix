@@ -102,9 +102,49 @@ static size_t print_object(bool is_top, char *buf, size_t n, word_t x) {
                             PUTC('"');
                             while (*str) {
                                 switch (*str) {
+                                    case '\a':
+                                        PUTC('\\');
+                                        PUTC('a');
+                                        ++str;
+                                        break;
+                                    case '\b':
+                                        PUTC('\\');
+                                        PUTC('b');
+                                        ++str;
+                                        break;
+                                    case '\f':
+                                        PUTC('\\');
+                                        PUTC('f');
+                                        ++str;
+                                        break;
                                     case '\n':
                                         PUTC('\\');
                                         PUTC('n');
+                                        ++str;
+                                        break;
+                                    case '\r':
+                                        PUTC('\\');
+                                        PUTC('r');
+                                        ++str;
+                                        break;
+                                    case '\t':
+                                        PUTC('\\');
+                                        PUTC('t');
+                                        ++str;
+                                        break;
+                                    case '\v':
+                                        PUTC('\\');
+                                        PUTC('v');
+                                        ++str;
+                                        break;
+                                    case '\\':
+                                        PUTC('\\');
+                                        PUTC('\\');
+                                        ++str;
+                                        break;
+                                    case '"':
+                                        PUTC('\\');
+                                        PUTC('"');
                                         ++str;
                                         break;
                                     default:
