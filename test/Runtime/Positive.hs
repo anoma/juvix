@@ -91,5 +91,10 @@ tests =
       "Tracing and strings"
       "."
       "test012.c"
-      "out/test012.out"
+      "out/test012.out",
+    PosTest
+      "IO builtins"
+      "."
+      "test013.c"
+      "out/test013.out"
   ]

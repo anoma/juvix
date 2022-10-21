@@ -24,10 +24,10 @@
     DECL_CALL_CLOSURES;                             \
     juvix_program_start:
 
-#define JUVIX_EPILOGUE                  \
-    juvix_program_end:                  \
-    --juvix_stack_pointer;              \
-    IO_INTERPRET(juvix_io_interpreter); \
+#define JUVIX_EPILOGUE     \
+    juvix_program_end:     \
+    --juvix_stack_pointer; \
+    IO_INTERPRET;          \
     io_print_toplevel(juvix_result);
 
 // Temporary vars

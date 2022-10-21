@@ -85,9 +85,11 @@ static size_t print_object(bool is_top, char *buf, size_t n, word_t x) {
                         case SUID_CLOSURE: {
                             size_t nargs = get_closure_nargs(x);
 #ifdef DEBUG
-                            ASSERT(get_closure_fuid(x) < juvix_functions_num);
                             const char *str =
-                                juvix_function_info[get_closure_fuid(x)].name;
+                                get_closure_fuid(x) < juvix_functions_num
+                                    ? juvix_function_info[get_closure_fuid(x)]
+                                          .name
+                                    : "<closure>";
 #else
                             const char *str = "<closure>";
 #endif
@@ -99,7 +101,15 @@ static size_t print_object(bool is_top, char *buf, size_t n, word_t x) {
                             const char *str = get_cstring(x);
                             PUTC('"');
                             while (*str) {
-                                PUTC(*str++);
+                                switch (*str) {
+                                    case '\n':
+                                        PUTC('\\');
+                                        PUTC('n');
+                                        ++str;
+                                        break;
+                                    default:
+                                        PUTC(*str++);
+                                }
                             }
                             PUTC('"');
                             break;
