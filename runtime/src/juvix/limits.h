@@ -37,6 +37,10 @@
 
 #define MAX_LOCAL_VARS (PAGE_SIZE / 2 / sizeof(word_t))
 
+// The maximum number of words that can be allocated on the heap by an
+// invocation of the dispatch loop (CallClosures)
+#define MAX_DISPATCH_ALLOC (MAX_FUNCTION_ARGS + CLOSURE_SKIP + 1)
+
 /*****************************************/
 /* Static asserts */
 

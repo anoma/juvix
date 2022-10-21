@@ -66,7 +66,7 @@ static inline word_t *get_closure_args(word_t cl) {
         ASSERT(n < get_closure_largs(src));                                   \
         FIELD(dest, 0) = make_special_header(                                 \
             SUID_CLOSURE, nfields, CLOSURE_SKIP, get_closure_largs(src) - n); \
-        memcopy((word_t *)(dest) + 1, (word_t *)(src) + 1, nfields);          \
+        memcopy((word_t *)(dest) + 1, (word_t *)(src) + 1, nfields - n);      \
     } while (0)
 
 #define EXTEND_CLOSURE(dest, src, n)                \

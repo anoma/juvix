@@ -101,7 +101,7 @@ clangWasmWasiCompile inputFile o = clangArgs >>= runClang
     defaultOutputFile =
       if
           | o ^. runtimeCompilePreprocess -> takeBaseName inputFile <> ".out.c"
-          | o ^. runtimeCompileAssembly -> takeBaseName inputFile <> ".s"
+          | o ^. runtimeCompileAssembly -> takeBaseName inputFile <> ".wat"
           | otherwise -> takeBaseName inputFile <> ".wasm"
 
     sysrootEnvVar :: Sem r String

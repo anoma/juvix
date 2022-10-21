@@ -96,5 +96,10 @@ tests =
       "IO builtins"
       "."
       "test013.c"
-      "out/test013.out"
+      "out/test013.out",
+    PosTest
+      "Higher-order functions"
+      "."
+      "test014.c"
+      "out/test014.out"
   ]

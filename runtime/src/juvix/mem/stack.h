@@ -30,5 +30,6 @@ word_t *stack_shrink(word_t *sp);
 #define STACK_PUSH(val) (*juvix_stack_pointer++ = (word_t)(val))
 #define STACK_POP(var) (var = *--juvix_stack_pointer)
 #define STACK_TOP (*(juvix_stack_pointer - 1))
+#define STACK_POPT --juvix_stack_pointer
 
 #endif

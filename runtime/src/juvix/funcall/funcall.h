@@ -18,10 +18,10 @@
 // TODO: The labels on the stack will need to have their least significant bit
 // set for the GC.
 #define STACK_PUSH_ADDR(addr) (STACK_PUSH(addr))
-#define STACK_POP_ADDR(var)    \
-    do {                       \
-        var = STACK_TOP_ADDR;  \
-        --juvix_stack_pointer; \
+#define STACK_POP_ADDR(var)   \
+    do {                      \
+        var = STACK_TOP_ADDR; \
+        STACK_POPT;           \
     } while (0)
 #define STACK_TOP_ADDR (((label_addr_t)(STACK_TOP)))
 
@@ -49,7 +49,7 @@
     STACK_PUSH_ADDR(LABEL_ADDR(label)); \
     goto fun;                           \
     label:                              \
-    --juvix_stack_pointer;              \
+    STACK_POPT;                         \
     STACKTRACE_POP;
 
 /*
@@ -89,7 +89,7 @@
       ...
       CARG(juvix_closure_nargs + m) = argm;
     });
-    CALL_CLOSURE(cl, unique_label);
+    CALL_CLOSURE(closure, unique_label);
     STACK_POP(varn);
     ...
     STACK_POP(var1);
@@ -103,7 +103,7 @@
     STACK_PUSH_ADDR(LABEL_ADDR(label));    \
     STORED_GOTO(get_closure_addr(cl));     \
     label:                                 \
-    --juvix_stack_pointer;                 \
+    STACK_POPT;                            \
     STACKTRACE_POP;
 
 #define TAIL_CALL_CLOSURE(cl)                 \
@@ -122,53 +122,53 @@
     STACK_PUSH(argm);
     ...
     STACK_PUSH(arg1);
-    CALL_CLOSURES(m, unique_label);
+    CALL_CLOSURES(closure, m, unique_label);
     STACK_POP(varn);
     ...
     STACK_POP(var1);
     STACK_LEAVE;
 */
 
-#define CALL_CLOSURES(m, label)               \
-    do {                                      \
-        juvix_ccl_sargs = m;                  \
-        juvix_ccl_return = LABEL_ADDR(label); \
-        goto juvix_ccl_start;                 \
-    label:                                    \
-    } while (0)
+#define CALL_CLOSURES(cl, m, label)       \
+    juvix_ccl_sargs = m;                  \
+    juvix_ccl_return = LABEL_ADDR(label); \
+    juvix_ccl_closure = cl;               \
+    goto juvix_ccl_start;                 \
+    label:
 
 /*
     Macro sequence for tail-calling the dispatch loop:
 
-    STACK_ENTER(m);
+    STACK_ENTER(m + DISPATCH_STACK_SIZE);
     STACK_PUSH(argm);
     ...
     STACK_PUSH(arg1);
-    TAIL_CALL_CLOSURES(m);
+    TAIL_CALL_CLOSURES(closure, m);
 */
 
-#define TAIL_CALL_CLOSURES(m)    \
-    do {                         \
-        juvix_ccl_sargs = m;     \
-        juvix_ccl_return = NULL; \
-        goto juvix_ccl_start;    \
-    } while (0)
+#define TAIL_CALL_CLOSURES(cl, m) \
+    juvix_ccl_sargs = m;          \
+    juvix_ccl_return = NULL;      \
+    juvix_ccl_closure = cl;       \
+    goto juvix_ccl_start;
 
 #define DECL_CALL_CLOSURES                                                    \
     label_addr_t juvix_ccl_return;                                            \
     size_t juvix_ccl_sargs;                                                   \
+    word_t juvix_ccl_closure;                                                 \
     juvix_ccl_start:                                                          \
     do {                                                                      \
-        word_t juvix_ccl_closure;                                             \
-        STACK_POP(juvix_ccl_closure);                                         \
         size_t juvix_ccl_largs = get_closure_largs(juvix_ccl_closure);        \
         size_t juvix_ccl_nargs = get_closure_nargs(juvix_ccl_closure);        \
         if (juvix_ccl_largs <= juvix_ccl_sargs) {                             \
             juvix_ccl_sargs -= juvix_ccl_largs;                               \
-            for (size_t juvix_idx = 0; juvix_idx < juvix_ccl_sargs;           \
+            for (size_t juvix_idx = 0; juvix_idx < juvix_ccl_nargs;           \
                  ++juvix_idx) {                                               \
-                STACK_POP(CLOSURE_ARG(juvix_ccl_closure,                      \
-                                      CARG(juvix_ccl_nargs + juvix_idx)));    \
+                CARG(juvix_idx) = CLOSURE_ARG(juvix_ccl_closure, juvix_idx);  \
+            }                                                                 \
+            for (size_t juvix_idx = 0; juvix_idx < juvix_ccl_largs;           \
+                 ++juvix_idx) {                                               \
+                STACK_POP(CARG(juvix_ccl_nargs + juvix_idx));                 \
             }                                                                 \
             if (juvix_ccl_sargs == 0 && juvix_ccl_return == NULL) {           \
                 STACKTRACE_REPLACE(get_closure_fuid(juvix_ccl_closure));      \
@@ -182,6 +182,7 @@
                 STACK_POP(juvix_ccl_sargs);                                   \
                 STACK_POP_ADDR(juvix_ccl_return);                             \
                 if (juvix_ccl_sargs > 0) {                                    \
+                    juvix_ccl_closure = juvix_result;                         \
                     goto juvix_ccl_start;                                     \
                 } else {                                                      \
                     ASSERT(juvix_ccl_return != NULL);                         \

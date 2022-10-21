@@ -186,7 +186,8 @@ data InstrCall = InstrCall
   }
 
 newtype InstrCallClosures = InstrCallClosures
-  { -- | The number of arguments supplied to the call.
+  { -- | The number of arguments supplied to the call. This does not include the
+    -- called closure on top of the stack.
     _callClosuresArgsNum :: Int
   }
 

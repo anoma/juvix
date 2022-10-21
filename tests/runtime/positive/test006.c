@@ -19,7 +19,7 @@ int main() {
     STACK_ENTER(1);
     STACK_PUSH(3);
     ASSERT(STACK_TOP == 3);
-    --juvix_stack_pointer;
+    STACK_POPT;
     STACK_LEAVE;
     ASSERT(juvix_stack_pointer == ptr);
     ASSERT(juvix_allocated_pages_num == 1);
@@ -33,11 +33,11 @@ int main() {
     ASSERT(juvix_allocated_pages_num == 4);
     for (uint i = 0; i < M; ++i) {
         ASSERT(STACK_TOP == 3);
-        --juvix_stack_pointer;
+        STACK_POPT;
         ASSERT(STACK_TOP == 2);
-        --juvix_stack_pointer;
+        STACK_POPT;
         ASSERT(STACK_TOP == 1);
-        --juvix_stack_pointer;
+        STACK_POPT;
         STACK_LEAVE;
     }
     ASSERT(juvix_stack_pointer == ptr);
@@ -51,9 +51,9 @@ int main() {
     ASSERT(juvix_allocated_pages_num == 3);
     for (uint i = 0; i < M; ++i) {
         ASSERT(STACK_TOP == 2);
-        --juvix_stack_pointer;
+        STACK_POPT;
         ASSERT(STACK_TOP == 1);
-        --juvix_stack_pointer;
+        STACK_POPT;
         STACK_LEAVE;
     }
     ASSERT(juvix_stack_pointer == ptr);
