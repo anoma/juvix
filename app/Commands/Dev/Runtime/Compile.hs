@@ -28,15 +28,15 @@ runCompile projRoot inputFile o = do
   createDirectoryIfMissing True (projRoot </> juvixIncludeDir)
   prepareRuntime projRoot o
   case o ^. runtimeCompileTarget of
-    TargetWasmWasi -> runM (runError (clangWasmWasiCompile inputFile o))
+    TargetWasm32Wasi -> runM (runError (clangWasmWasiCompile inputFile o))
     TargetNative64 -> runM (runError (clangNativeCompile inputFile o))
 
 prepareRuntime :: FilePath -> RuntimeCompileOptions -> IO ()
 prepareRuntime projRoot o = do
   mapM_ writeHeader headersDir
   case o ^. runtimeCompileTarget of
-    TargetWasmWasi | o ^. runtimeCompileDebug -> writeRuntime wasiDebugRuntime
-    TargetWasmWasi -> writeRuntime wasiReleaseRuntime
+    TargetWasm32Wasi | o ^. runtimeCompileDebug -> writeRuntime wasiDebugRuntime
+    TargetWasm32Wasi -> writeRuntime wasiReleaseRuntime
     TargetNative64 | o ^. runtimeCompileDebug -> writeRuntime nativeDebugRuntime
     TargetNative64 -> writeRuntime nativeReleaseRuntime
   where

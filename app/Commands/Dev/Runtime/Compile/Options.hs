@@ -2,7 +2,7 @@ module Commands.Dev.Runtime.Compile.Options where
 
 import CommonOptions
 
-data RuntimeCompileTarget = TargetWasmWasi | TargetNative64
+data RuntimeCompileTarget = TargetWasm32Wasi | TargetNative64
   deriving stock (Show, Data)
 
 data RuntimeCompileOptions = RuntimeCompileOptions
@@ -45,7 +45,7 @@ parseRuntimeCompileOptions = do
           <> metavar "TARGET"
           <> value TargetNative64
           <> showDefaultWith targetShow
-          <> help "select a target: wasm-wasi, native"
+          <> help "select a target: wasm32-wasi, native"
       )
   _runtimeCompileOutputFile <- optional parseGenericOutputFile
   _runtimeCompileInputFile <- parseInputCFile
@@ -53,11 +53,11 @@ parseRuntimeCompileOptions = do
   where
     parseTarget :: String -> Either String RuntimeCompileTarget
     parseTarget = \case
-      "wasm-wasi" -> Right TargetWasmWasi
+      "wasm32-wasi" -> Right TargetWasm32Wasi
       "native" -> Right TargetNative64
       s -> Left $ "unrecognised target: " <> s
 
     targetShow :: RuntimeCompileTarget -> String
     targetShow = \case
-      TargetWasmWasi -> "wasm-wasi"
+      TargetWasm32Wasi -> "wasm32-wasi"
       TargetNative64 -> "native"
