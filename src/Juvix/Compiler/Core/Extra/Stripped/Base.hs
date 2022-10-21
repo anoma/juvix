@@ -33,7 +33,20 @@ mkConstr' :: Symbol -> Tag -> [Node] -> Node
 mkConstr' sym = mkConstr (ConstrInfo Nothing TyDynamic sym)
 
 mkLet :: LetInfo -> Node -> Node -> Node
-mkLet i v b = NLet (Let i v b)
+mkLet i v b = NLet (Let i item b)
+  where
+    item :: LetItem
+    item =
+      LetItem
+        { _letItemBinder = error "TODO",
+          _letItemValue = v
+        }
+    binder :: Binder' Type
+    binder =
+      Binder
+        { _binderName = i ^. letInfoBinderName,
+          _binderType = i ^. letInfoBinderType
+        }
 
 mkLet' :: Node -> Node -> Node
 mkLet' = mkLet (LetInfo Nothing TyDynamic)

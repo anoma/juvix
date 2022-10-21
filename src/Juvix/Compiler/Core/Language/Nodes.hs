@@ -23,6 +23,13 @@ data ConstantValue
   | ConstString !Text
   deriving stock (Eq)
 
+-- | Info about a single binder. Associated with Lambda and Pi.
+data Binder' a = Binder
+  {
+   _binderName :: Maybe Name,
+   _binderType :: a
+  }
+
 -- Other things we might need in the future:
 -- - ConstFloat or ConstFixedPoint
 
@@ -59,8 +66,15 @@ data Constr' i a = Constr
     _constrArgs :: ![a]
   }
 
+-- | Useful for unfolding lambdas
+data LambdaLhs' i a = LambdaLhs {
+  _lambdaLhsInfo :: i,
+  _lambdaLhsBinder :: Binder' a
+  }
+
 data Lambda' i a = Lambda
   { _lambdaInfo :: i,
+    _lambdaBinder :: Binder' a,
     _lambdaBody :: !a
   }
 
@@ -68,8 +82,13 @@ data Lambda' i a = Lambda
 -- purposes of ML-polymorphic / dependent type checking or code generation!
 data Let' i a = Let
   { _letInfo :: i,
-    _letValue :: !a,
+    _letItem :: {-# UNPACK #-} !(LetItem' a),
     _letBody :: !a
+  }
+
+data LetItem' a = LetItem {
+  _letItemBinder :: Binder' a,
+  _letItemValue :: a
   }
 
 -- | Represents a block of mutually recursive local definitions. Both in the
@@ -77,7 +96,7 @@ data Let' i a = Let
 -- which hold the functions/values being defined.
 data LetRec' i a = LetRec
   { _letRecInfo :: i,
-    _letRecValues :: !(NonEmpty a),
+    _letRecValues :: !(NonEmpty (LetItem' a)),
     _letRecBody :: !a
   }
 
@@ -115,29 +134,29 @@ data Match' i a = Match
 -- 2)) (Var 1)) (Var 0)'. So the de Bruijn indices increase from right to left.
 data MatchBranch' i a = MatchBranch
   { _matchBranchInfo :: i,
-    _matchBranchPatterns :: !(NonEmpty (Pattern' i)),
+    _matchBranchPatterns :: !(NonEmpty (Pattern' i a)),
     _matchBranchBody :: !a
   }
 
-data Pattern' i
+data Pattern' i a
   = PatWildcard (PatternWildcard' i)
-  | PatBinder (PatternBinder' i)
-  | PatConstr (PatternConstr' i)
-  deriving stock (Eq)
+  | PatBinder (PatternBinder' i a)
+  | PatConstr (PatternConstr' i a)
 
 newtype PatternWildcard' i = PatternWildcard
   { _patternWildcardInfo :: i
   }
 
-data PatternBinder' i = PatternBinder
+data PatternBinder' i a = PatternBinder
   { _patternBinderInfo :: i,
-    _patternBinderPattern :: Pattern' i
+    _patternBinder :: Binder' a,
+    _patternBinderPattern :: Pattern' i a
   }
 
-data PatternConstr' i = PatternConstr
+data PatternConstr' i a = PatternConstr
   { _patternConstrInfo :: i,
     _patternConstrTag :: !Tag,
-    _patternConstrArgs :: ![Pattern' i]
+    _patternConstrArgs :: ![Pattern' i a]
   }
 
 -- | Dependent Pi-type. Compilation-time only. Pi implicitly introduces a binder
@@ -145,10 +164,17 @@ data PatternConstr' i = PatternConstr
 -- body` in more familiar notation, but references to `x` in `body` are via de
 -- Bruijn index. For example, Pi A : Type . A -> A translates to (omitting
 -- Infos): Pi (Univ level) (Pi (Var 0) (Var 1)).
-data Pi' i a = Pi {_piInfo :: i, _piType :: !a, _piBody :: !a}
+data Pi' i a = Pi
+  { _piInfo :: i,
+    _piBinder :: Binder' a,
+    _piBody :: !a
+  }
 
 -- | Universe. Compilation-time only.
-data Univ' i = Univ {_univInfo :: i, _univLevel :: !Int}
+data Univ' i = Univ
+  { _univInfo :: i,
+    _univLevel :: !Int
+  }
 
 -- | Type constructor application. Compilation-time only.
 data TypeConstr' i a = TypeConstr
@@ -214,15 +240,15 @@ instance HasAtomicity (Match' i a) where
 instance HasAtomicity (PatternWildcard' i) where
   atomicity _ = Atom
 
-instance HasAtomicity (PatternBinder' i) where
+instance HasAtomicity (PatternBinder' i a) where
   atomicity _ = Atom
 
-instance HasAtomicity (PatternConstr' i) where
+instance HasAtomicity (PatternConstr' i a) where
   atomicity PatternConstr {..}
     | null _patternConstrArgs = Atom
     | otherwise = Aggregate appFixity
 
-instance HasAtomicity (Pattern' i) where
+instance HasAtomicity (Pattern' i a) where
   atomicity = \case
     PatWildcard x -> atomicity x
     PatBinder x -> atomicity x
@@ -246,6 +272,29 @@ instance HasAtomicity (Dynamic' i) where
 lambdaFixity :: Fixity
 lambdaFixity = Fixity (PrecNat 0) (Unary AssocPostfix)
 
+makeLenses ''Binder'
+makeLenses ''Var'
+makeLenses ''Ident'
+makeLenses ''Constant'
+makeLenses ''App'
+makeLenses ''BuiltinApp'
+makeLenses ''Constr'
+makeLenses ''Let'
+makeLenses ''LetRec'
+makeLenses ''Case'
+makeLenses ''CaseBranch'
+makeLenses ''Match'
+makeLenses ''MatchBranch'
+makeLenses ''PatternWildcard'
+makeLenses ''PatternBinder'
+makeLenses ''PatternConstr'
+makeLenses ''Pi'
+makeLenses ''Lambda'
+makeLenses ''Univ'
+makeLenses ''TypeConstr'
+makeLenses ''Dynamic'
+makeLenses ''LetItem'
+
 instance Eq (Var' i) where
   (Var _ idx1) == (Var _ idx2) = idx1 == idx2
 
@@ -267,15 +316,6 @@ instance Eq a => Eq (BuiltinApp' i a) where
 instance Eq a => Eq (Constr' i a) where
   (Constr _ tag1 args1) == (Constr _ tag2 args2) = tag1 == tag2 && args1 == args2
 
-instance Eq a => Eq (Lambda' i a) where
-  (Lambda _ b1) == (Lambda _ b2) = b1 == b2
-
-instance Eq a => Eq (Let' i a) where
-  (Let _ v1 b1) == (Let _ v2 b2) = v1 == v2 && b1 == b2
-
-instance Eq a => Eq (LetRec' i a) where
-  (LetRec _ vs1 b1) == (LetRec _ vs2 b2) = vs1 == vs2 && b1 == b2
-
 instance Eq a => Eq (Case' i bi a) where
   (Case _ v1 bs1 def1) == (Case _ v2 bs2 def2) = v1 == v2 && bs1 == bs2 && def1 == def2
 
@@ -285,20 +325,8 @@ instance Eq a => Eq (CaseBranch' i a) where
 instance Eq a => Eq (Match' i a) where
   (Match _ vs1 bs1) == (Match _ vs2 bs2) = vs1 == vs2 && bs1 == bs2
 
-instance Eq a => Eq (MatchBranch' i a) where
-  (MatchBranch _ pats1 b1) == (MatchBranch _ pats2 b2) = pats1 == pats2 && b1 == b2
-
 instance Eq (PatternWildcard' i) where
   _ == _ = True
-
-instance Eq (PatternBinder' i) where
-  (PatternBinder _ p1) == (PatternBinder _ p2) = p1 == p2
-
-instance Eq (PatternConstr' i) where
-  (PatternConstr _ tag1 ps1) == (PatternConstr _ tag2 ps2) = tag1 == tag2 && ps1 == ps2
-
-instance Eq a => Eq (Pi' i a) where
-  (Pi _ ty1 b1) == (Pi _ ty2 b2) = ty1 == ty2 && b1 == b2
 
 instance Eq (Univ' i) where
   (Univ _ l1) == (Univ _ l2) = l1 == l2
@@ -312,26 +340,37 @@ instance Eq (TypePrim' i) where
 instance Eq (Dynamic' i) where
   (Dynamic _) == (Dynamic _) = True
 
-makeLenses ''Var'
-makeLenses ''Ident'
-makeLenses ''Constant'
-makeLenses ''App'
-makeLenses ''BuiltinApp'
-makeLenses ''Constr'
-makeLenses ''Let'
-makeLenses ''LetRec'
-makeLenses ''Case'
-makeLenses ''CaseBranch'
-makeLenses ''Match'
-makeLenses ''MatchBranch'
-makeLenses ''PatternWildcard'
-makeLenses ''PatternBinder'
-makeLenses ''PatternConstr'
-makeLenses ''Pi'
-makeLenses ''Lambda'
-makeLenses ''Univ'
-makeLenses ''TypeConstr'
-makeLenses ''Dynamic'
+deriving stock instance Eq a => Eq (Pattern' i a)
+
+instance Eq a => Eq (LetItem' a) where
+  (==) = eqOn (^. letItemValue)
+
+-- | ignores the binder
+instance Eq a => Eq (Lambda' i a) where
+  (==) = eqOn (^. lambdaBody)
+
+-- | ignores the binder
+instance Eq a => Eq (Let' i a) where
+  (==) = eqOn (^. letItem)
+    ..&&.. eqOn (^. letBody)
+
+instance Eq a => Eq (LetRec' i a) where
+  (==) = eqOn (^. letRecBody)
+    ..&&.. eqOn (^. letRecValues)
+
+instance Eq a => Eq (Pi' i a) where
+  (==) = eqOn (^. piBinder . binderType)
+   ..&&.. eqOn (^. piBody)
+
+-- | ignores the binder
+instance Eq a => Eq (PatternBinder' i a) where
+  (==) = eqOn (^. patternBinderPattern)
+
+instance Eq a => Eq (MatchBranch' i a) where
+  (MatchBranch _ pats1 b1) == (MatchBranch _ pats2 b2) = pats1 == pats2 && b1 == b2
+
+instance Eq a => Eq (PatternConstr' i a) where
+  (PatternConstr _ tag1 ps1) == (PatternConstr _ tag2 ps2) = tag1 == tag2 && ps1 == ps2
 
 instance Hashable (Ident' i) where
   hashWithSalt s = hashWithSalt s . (^. identSymbol)

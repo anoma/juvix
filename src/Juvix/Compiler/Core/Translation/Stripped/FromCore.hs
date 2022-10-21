@@ -11,3 +11,6 @@ fromMain = error "not yet implemented"
 
 translateNode :: Node -> Stripped.Node
 translateNode _ = Stripped.mkVar' 0
+
+translateType :: Node -> Stripped.Type
+translateType _ = error "not yet implemented"

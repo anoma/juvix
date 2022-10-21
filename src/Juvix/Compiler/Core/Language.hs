@@ -21,6 +21,10 @@ type BuiltinApp = BuiltinApp' Info Node
 
 type Constr = Constr' Info Node
 
+type Binder = Binder' Node
+
+type LambdaLhs = LambdaLhs' Info Node
+
 type Lambda = Lambda' Info Node
 
 type Let = Let' Info Node
@@ -41,7 +45,7 @@ type PatternBinder = PatternBinder' Info
 
 type PatternConstr = PatternConstr' Info
 
-type Pattern = Pattern' Info
+type Pattern = Pattern' Info Node
 
 type Pi = Pi' Info Node
 
@@ -123,3 +127,10 @@ instance HasAtomicity Node where
     NPrim x -> atomicity x
     NDyn x -> atomicity x
     Closure {} -> Aggregate lambdaFixity
+
+emptyBinder :: Binder
+emptyBinder =
+  Binder
+    { _binderName = Nothing,
+      _binderType = NDyn (Dynamic mempty)
+    }
