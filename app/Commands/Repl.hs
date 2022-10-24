@@ -5,17 +5,15 @@ import Commands.Repl.Options
 import Control.Exception (throwIO)
 import Control.Monad.IO.Class
 import Control.Monad.State.Strict qualified as State
+import Data.HashMap.Strict qualified as HashMap
 import Evaluator
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
-import Juvix.Compiler.Core.Translation
+import Juvix.Compiler.Core.Translation.FromInternal.Data as Core
 import System.Console.Haskeline
 import System.Console.Repline
 import System.Console.Repline qualified as Repline
-import Juvix.Compiler.Core.Translation.FromInternal.Data as Core
-import Juvix.Compiler.Pipeline
-import Data.HashMap.Strict qualified as HashMap
-import qualified Text.Megaparsec as M
-
+import Text.Megaparsec qualified as M
+import qualified Juvix.Compiler.Core.Pretty as Core
 
 data ReplState = ReplState
   { _replStateRoot :: FilePath,
@@ -26,7 +24,7 @@ initReplState :: FilePath -> ReplState
 initReplState root = ReplState root Core.emptyInfoTable
 
 rootEntryPoint :: FilePath -> FilePath -> EntryPoint
-rootEntryPoint mainFile root = (defaultEntryPoint mainFile) { _entryPointRoot = root }
+rootEntryPoint mainFile root = (defaultEntryPoint mainFile) {_entryPointRoot = root}
 
 makeLenses ''ReplState
 
@@ -34,23 +32,30 @@ type ReplS = State.StateT ReplState IO
 
 type ReplT a = HaskelineT ReplS a
 
+helpTxt :: Text
+helpTxt =
+  "Use one of the following commands:\n\
+  \:help\n\
+  \       Print help text and describe options\n\
+  \:multiline\n\
+  \       Start a multi-line input. Submit with <Ctrl-D>\n\
+  \:root\n\
+  \       Print the current project root\n\
+  \:load\n\
+  \       Load a file into the REPL\n\
+  \:idents\n\
+  \       List the identifiers in the environment\n\
+  \:eval\n\
+  \       Evaluate an identifier in the environment\n\
+  \:quit\n\
+  \       Exit the REPL"
+
 runCommand :: Members '[Embed IO, App] r => ReplOptions -> Sem r ()
 runCommand opts = do
-  let helpTxt :: String -> ReplT ()
-      helpTxt _ =
+  let printHelpTxt :: String -> ReplT ()
+      printHelpTxt _ =
         liftIO
-          ( putStrLn
-              "Use one of the following commands:\n\
-              \:help\n\
-              \       Print help text and describe options\n\
-              \:multiline\n\
-              \       Start a multi-line input. Submit with <Ctrl-D>\n\
-              \:root\n\
-              \       Print the current project root\n\
-              \:load\n\
-              \       Load a file into the REPL\n\
-              \:quit\n\
-              \       Exit the REPL"
+          ( putStrLn helpTxt
           )
 
       multilineCmd :: String
@@ -72,21 +77,21 @@ runCommand opts = do
         ctx <- State.gets (^. replStateInfoTable . Core.identMap)
         liftIO $ forM_ (HashMap.keys ctx) putStrLn
 
-      -- eval :: String -> ReplT ()
-      -- eval s = do
-      --   tab <- State.gets (^. replStateInfoTable)
-      --   identMap <- State.gets (^. replStateInfoTable . Core.identMap)
-      --   ctx <- State.gets (^. replStateInfoTable . Core.identContext)
-      --   let k = identMap HashMap.!? pack s
-      --   case k of
-      --     (Just (Core.IdentSym s)) -> do
-      --       let (Just n) = ctx HashMap.!? s
-      --       undefined
-
-      --     _ -> error "sym not found"
-      --   where
-      --     defaultLoc = singletonInterval (mkLoc "stdin" 0 (M.initialPos "stdin"))
-
+      eval :: String -> ReplT ()
+      eval name = do
+        tab <- State.gets (^. replStateInfoTable)
+        identMap <- State.gets (^. replStateInfoTable . Core.identMap)
+        ctx <- State.gets (^. replStateInfoTable . Core.identContext)
+        let  ident = pack name
+             k = identMap HashMap.!? ident
+        case k of
+          (Just (Core.IdentSym s)) -> do
+            let Just n = ctx HashMap.!? s
+            Right n' <- liftIO $ doEvalIO True defaultLoc tab n
+            liftIO $ putStrLn $ Core.ppTrace n'
+          _ -> error "symbol not found"
+        where
+          defaultLoc = singletonInterval (mkLoc "stdin" 0 (M.initialPos "stdin"))
 
       printRoot :: String -> ReplT ()
       printRoot _ = do
@@ -98,14 +103,15 @@ runCommand opts = do
 
       options :: [(String, String -> ReplT ())]
       options =
-        [ ("help", Repline.dontCrash . helpTxt),
+        [ ("help", Repline.dontCrash . printHelpTxt),
           -- `multiline` is included here for auto-completion purposes only.
           -- `repline`'s `multilineCommand` logic overrides this no-op.
           (multilineCmd, Repline.dontCrash . \_ -> return ()),
           ("quit", quit),
-          ("load", loadFile),
+          ("load", Repline.dontCrash . loadFile),
           ("root", printRoot),
-          ("idents", listIdentifiers)
+          ("idents", listIdentifiers),
+          ("eval", Repline.dontCrash . eval)
         ]
 
       defaultMatcher :: [(String, CompletionFunc ReplS)]
