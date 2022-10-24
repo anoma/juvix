@@ -23,21 +23,21 @@ juvix_closure_f:
     ARG(0) = CARG(0);
     ARG(1) = CARG(1);
     ARG(2) = CARG(2);
-    JUVIX_FUNCTION_LEAF(juvix_function_f);
+    JUVIX_FUNCTION_NS(juvix_function_f);
     {
         DECL_TMP(0);
         JUVIX_INT_ADD(TMP(0), ARG(1), ARG(2));
         JUVIX_INT_MUL(juvix_result, ARG(0), TMP(0));
-        RETURN_LEAF;
+        RETURN_NS;
     }
 
 juvix_closure_app:
     ARG(0) = CARG(0);
     ARG(1) = CARG(1);
-    JUVIX_FUNCTION_LEAF(juvix_function_app);
+    JUVIX_FUNCTION_NS(juvix_function_app);
     {
         ASSIGN_CARGS(ARG(0), { CARG(juvix_closure_nargs) = ARG(1); });
-        TAIL_CALL_CLOSURE_LEAF(ARG(0));
+        TAIL_CALL_CLOSURE_NS(ARG(0));
     }
 
 juvix_closure_g:
@@ -57,10 +57,10 @@ juvix_closure_g:
 
 juvix_closure_inc:
     ARG(0) = CARG(0);
-    JUVIX_FUNCTION_LEAF(juvix_function_inc);
+    JUVIX_FUNCTION_NS(juvix_function_inc);
     {
         JUVIX_INT_ADD(juvix_result, ARG(0), make_smallint(1));
-        RETURN_LEAF;
+        RETURN_NS;
     }
 
     JUVIX_FUNCTION(juvix_function_main, MAX_STACK_DELTA);

@@ -35,10 +35,10 @@ int main() {
 juvix_closure_K:
     ARG(0) = CARG(0);
     ARG(1) = CARG(1);
-    JUVIX_FUNCTION_LEAF(juvix_function_K);
+    JUVIX_FUNCTION_NS(juvix_function_K);
     {
         juvix_result = ARG(0);
-        RETURN_LEAF;
+        RETURN_NS;
     }
 
 juvix_closure_I:

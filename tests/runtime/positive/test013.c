@@ -21,7 +21,7 @@ int main() {
 juvix_closure_const:
     ARG(0) = CARG(0);
     ARG(1) = CARG(1);
-    JUVIX_FUNCTION_LEAF(juvix_function_const);
+    JUVIX_FUNCTION_NS(juvix_function_const);
     {
         juvix_result = ARG(0);
         RETURN;

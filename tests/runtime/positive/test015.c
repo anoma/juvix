@@ -25,19 +25,19 @@ int main() {
     CALL(0, juvix_function_main, juvix_label_0);
     goto juvix_program_end;
 
-    JUVIX_FUNCTION_LEAF(juvix_function_hd);
+    JUVIX_FUNCTION_NS(juvix_function_hd);
     {
         juvix_result = CONSTR_ARG(ARG(0), 0);
-        RETURN_LEAF;
+        RETURN_NS;
     }
 
-    JUVIX_FUNCTION_LEAF(juvix_function_tl);
+    JUVIX_FUNCTION_NS(juvix_function_tl);
     {
         juvix_result = CONSTR_ARG(ARG(0), 1);
-        RETURN_LEAF;
+        RETURN_NS;
     }
 
-    JUVIX_FUNCTION_LEAF(juvix_function_null);
+    JUVIX_FUNCTION_NS(juvix_function_null);
     {
         switch (ARG(0)) {
             case CONSTR_NIL:
@@ -47,7 +47,7 @@ int main() {
                 juvix_result = BOOL_FALSE;
                 break;
         }
-        RETURN_LEAF;
+        RETURN_NS;
     }
 
     JUVIX_FUNCTION(juvix_function_map, 3);
@@ -138,10 +138,10 @@ int main() {
 
 juvix_closure_add_one:
     ARG(0) = CARG(0);
-    JUVIX_FUNCTION_LEAF(juvix_function_add_one);
+    JUVIX_FUNCTION_NS(juvix_function_add_one);
     {
         JUVIX_INT_ADD(juvix_result, ARG(0), make_smallint(1));
-        RETURN_LEAF;
+        RETURN_NS;
     }
 
     JUVIX_FUNCTION(juvix_function_gen, 2);
@@ -208,16 +208,16 @@ juvix_closure_add_one:
         }
     }
 
-    JUVIX_FUNCTION_LEAF(juvix_function_length_tail);
+    JUVIX_FUNCTION_NS(juvix_function_length_tail);
     {
         switch (ARG(0)) {
             case CONSTR_NIL:
                 juvix_result = ARG(1);
-                RETURN_LEAF;
+                RETURN_NS;
             default: {
                 ARG(0) = CONSTR_ARG(ARG(0), 1);
                 JUVIX_INT_ADD(ARG(1), ARG(1), make_smallint(1));
-                TAIL_CALL_LEAF(0, juvix_function_length_tail);
+                TAIL_CALL_NS(0, juvix_function_length_tail);
             }
         }
     }

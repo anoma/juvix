@@ -68,13 +68,13 @@
     arg0, ..., argm cannot contain references to ARG(k) for any k
 */
 
-#define TAIL_CALL_LEAF(fuid, fun) \
-    STACKTRACE_REPLACE(fuid);     \
+#define TAIL_CALL_NS(fuid, fun) \
+    STACKTRACE_REPLACE(fuid);   \
     goto fun
 
 #define TAIL_CALL(fuid, fun) \
     STACK_LEAVE;             \
-    TAIL_CALL_LEAF(fuid, fun)
+    TAIL_CALL_NS(fuid, fun)
 
 #define ASSIGN_CARGS(cl, CODE)                                               \
     do {                                                                     \
@@ -113,18 +113,18 @@
     STACK_POPT;                            \
     STACKTRACE_POP;
 
-#define TAIL_CALL_CLOSURE_LEAF(cl)            \
+#define TAIL_CALL_CLOSURE_NS(cl)              \
     STACKTRACE_REPLACE(get_closure_fuid(cl)); \
     goto *get_closure_addr(cl)
 
 #define TAIL_CALL_CLOSURE(cl) \
     STACK_LEAVE;              \
-    TAIL_CALL_CLOSURE_LEAF(cl)
+    TAIL_CALL_CLOSURE_NS(cl)
 
-#define RETURN_LEAF STORED_GOTO(STACK_TOP_ADDR);
+#define RETURN_NS STORED_GOTO(STACK_TOP_ADDR);
 #define RETURN   \
     STACK_LEAVE; \
-    RETURN_LEAF
+    RETURN_NS
 
 /*
     Macro sequence for calling the dispatch loop:

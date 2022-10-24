@@ -71,11 +71,13 @@ static inline word_t *get_closure_args(word_t cl) {
 
 #define EXTEND_CLOSURE(dest, src, n, CODE)                   \
     do {                                                     \
-        void *tmp;                                           \
-        size_t nfields = get_nfields(src) + n;               \
-        ALLOC(tmp, nfields + 1);                             \
-        dest = (word_t)tmp;                                  \
-        COPY_EXTEND_CLOSURE(dest, src, n, nfields);          \
+        {                                                    \
+            void *tmp;                                       \
+            size_t nfields = get_nfields(src) + n;           \
+            ALLOC(tmp, nfields + 1);                         \
+            dest = (word_t)tmp;                              \
+            COPY_EXTEND_CLOSURE(dest, src, n, nfields);      \
+        }                                                    \
         size_t juvix_closure_nargs = get_closure_nargs(src); \
         CODE;                                                \
     } while (0)

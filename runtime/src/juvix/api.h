@@ -61,8 +61,8 @@ closure_label:
     }
 */
 
-// Begin a leaf function (with no stack allocation).
-#define JUVIX_FUNCTION_LEAF(label) \
+// Begin a function with no stack allocation.
+#define JUVIX_FUNCTION_NS(label) \
     label:
 
 #define JUVIX_INT_ADD(var0, var1, var2) (var0 = smallint_add(var1, var2))

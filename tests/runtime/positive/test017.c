@@ -18,7 +18,7 @@ int main() {
     CALL(0, juvix_function_main, juvix_label_0);
     goto juvix_program_end;
 
-    JUVIX_FUNCTION_LEAF(juvix_function_g);
+    JUVIX_FUNCTION_NS(juvix_function_g);
     {
         DECL_TMP(0);
         JUVIX_VAL_EQ(TMP(0), ARG(1), make_smallint(0));
@@ -26,12 +26,12 @@ int main() {
             TMP(0),
             {
                 juvix_result = make_smallint(0);
-                RETURN_LEAF;
+                RETURN_NS;
             },
             {
                 JUVIX_INT_SUB(TMP(0), ARG(1), make_smallint(1));
                 ASSIGN_CARGS(ARG(0), { CARG(juvix_closure_nargs) = TMP(0); });
-                TAIL_CALL_CLOSURE_LEAF(ARG(0));
+                TAIL_CALL_CLOSURE_NS(ARG(0));
             });
     }
 

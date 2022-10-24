@@ -13,13 +13,13 @@ int main() {
     CALL(0, juvix_function_main, juvix_label_0);
     goto juvix_program_end;
 
-    JUVIX_FUNCTION_LEAF(juvix_function_calculate);
+    JUVIX_FUNCTION_NS(juvix_function_calculate);
     {
         DECL_STMP(0);
         JUVIX_INT_MUL(STMP(0), ARG(2), ARG(1));
         JUVIX_INT_ADD(STMP(0), STMP(0), ARG(0));
         juvix_result = STMP(0);
-        RETURN_LEAF;
+        RETURN_NS;
     }
 
     JUVIX_FUNCTION(juvix_function_main, 1);
