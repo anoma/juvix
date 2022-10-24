@@ -36,8 +36,7 @@ static inline void alloc_save_memory_pointer(word_t *ptr) {
 // variables on the global stack (can lauch GC which needs access to these
 // variables).
 #define PREALLOC(n, SAVE, RESTORE)                                            \
-    if (unlikely(                                                             \
-            !is_same_page(juvix_memory_pointer, juvix_memory_pointer + n))) { \
+    if (unlikely(is_next_page(juvix_memory_pointer, n))) {                    \
         ASSERT(n < MAX_FUNCTION_MEMORY);                                      \
         SAVE;                                                                 \
         SAVE_MEMORY_POINTERS;                                                 \

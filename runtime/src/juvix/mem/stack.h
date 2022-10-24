@@ -14,8 +14,7 @@ word_t *stack_shrink(word_t *sp);
 #define STACK_ENTER(n)                                             \
     do {                                                           \
         ASSERT(n <= MAX_STACK_DELTA);                              \
-        if (unlikely(!is_same_page(juvix_stack_pointer,            \
-                                   juvix_stack_pointer + n))) {    \
+        if (unlikely(is_next_page(juvix_stack_pointer, n))) {      \
             juvix_stack_pointer = stack_grow(juvix_stack_pointer); \
         }                                                          \
     } while (0)

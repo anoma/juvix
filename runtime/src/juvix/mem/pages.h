@@ -21,7 +21,7 @@ static inline bool is_page_start(void *p) {
 }
 
 static inline bool is_next_page(void *p, uint n) {
-    return ((uintptr_t)p & PAGE_MASK) + n >= PAGE_SIZE;
+    return ((uintptr_t)p & PAGE_MASK) + n * sizeof(word_t) >= PAGE_SIZE;
 }
 
 static inline void *page_start(void *p) {
