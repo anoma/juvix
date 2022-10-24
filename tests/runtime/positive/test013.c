@@ -29,27 +29,28 @@ juvix_closure_const:
 
 juvix_closure_print:
     ARG(0) = CARG(0);
-    JUVIX_FUNCTION(
-        juvix_function_print, 1, 2, { STACK_PUSH(ARG(0)); },
-        { STACK_POP(ARG(0)); });
+    JUVIX_FUNCTION(juvix_function_print, 1);
     {
+        PREALLOC(
+            2, { STACK_PUSH(ARG(0)); }, { STACK_POP(ARG(0)); });
         ALLOC_CONSTR_BOXED(juvix_result, UID_WRITE, 1);
         CONSTR_ARG(juvix_result, 0) = ARG(0);
         RETURN;
     }
 
-    JUVIX_FUNCTION(
-        juvix_function_sequence, 2, 2 + CLOSURE_SKIP + 3,
-        {
-            STACK_PUSH(ARG(0));
-            STACK_PUSH(ARG(1));
-        },
-        {
-            STACK_POP(ARG(1));
-            STACK_POP(ARG(0));
-        });
+    JUVIX_FUNCTION(juvix_function_sequence, 2);
     {
         DECL_TMP(0);
+        PREALLOC(
+            2 + CLOSURE_SKIP + 3,
+            {
+                STACK_PUSH(ARG(0));
+                STACK_PUSH(ARG(1));
+            },
+            {
+                STACK_POP(ARG(1));
+                STACK_POP(ARG(0));
+            });
         ALLOC_CLOSURE(TMP(0), 0, LABEL_ADDR(juvix_closure_const), 1, 1);
         CLOSURE_ARG(TMP(0), 0) = ARG(1);
         ALLOC_CONSTR_BOXED(juvix_result, UID_BIND, 2);
@@ -63,10 +64,7 @@ juvix_closure_print:
 #define RETURN_SIZE 2
 #define BIND_SIZE 3
 
-    JUVIX_FUNCTION(juvix_function_main, MAX_STACK_DELTA,
-                   3 * PRINT_CLOSURE_SIZE + 6 * WRITE_SIZE + 3 * RETURN_SIZE +
-                       3 * BIND_SIZE + 2,
-                   {}, {});
+    JUVIX_FUNCTION(juvix_function_main, MAX_STACK_DELTA);
     {
         DECL_TMP(0);
         DECL_TMP(1);

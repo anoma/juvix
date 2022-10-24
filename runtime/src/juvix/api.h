@@ -39,13 +39,10 @@
 #define STMP(k) juvix_stmp_##k
 
 // Begin a function definition. `max_stack` is the maximum stack allocation in
-// the function. `max_alloc` is the maximum number of words allocated in the
-// function. `SAVE` and `RESTORE` should save and restore function arguments on
-// the global stack (for the GC).
-#define JUVIX_FUNCTION(label, max_stack, max_alloc, SAVE, RESTORE) \
-    label:                                                         \
-    STACK_ENTER((max_stack));                                      \
-    PREALLOC((max_alloc), SAVE, RESTORE)
+// the function.
+#define JUVIX_FUNCTION(label, max_stack) \
+    label:                               \
+    STACK_ENTER((max_stack))
 
 /*
     Macro sequence for function definition:
@@ -54,7 +51,7 @@ closure_label:
     ARG(0) = CARG(0);
     ...
     ARG(m) = CARG(m);
-    JUVIX_FUNCTION(function_label, max_stack, max_alloc, SAVE, RESTORE);
+    JUVIX_FUNCTION(function_label, max_stack);
     {
         DECL_TMP(0);
         DECL_TMP(1);
@@ -64,12 +61,7 @@ closure_label:
     }
 */
 
-// Begin a non-allocating function.
-#define JUVIX_FUNCTION_NOALLOC(label, max_stack) \
-    label:                                       \
-    STACK_ENTER((max_stack))
-
-// Begin a non-allocating leaf function (with no stack manipulation).
+// Begin a leaf function (with no stack allocation).
 #define JUVIX_FUNCTION_LEAF(label) \
     label:
 
@@ -82,7 +74,8 @@ closure_label:
 #define JUVIX_INT_LT(var0, var1, var2) (var0 = smallint_lt(var1, var2))
 #define JUVIX_INT_LE(var0, var1, var2) (var0 = smallint_le(var1, var2))
 
-#define JUVIX_VAL_EQ(var0, var1, var2) (var0 = juvix_equal(var1, var2))
+#define JUVIX_VAL_EQ(var0, var1, var2) \
+    (var0 = make_bool(juvix_equal(var1, var2)))
 
 #define JUVIX_ASSIGN(var0, val) (var0 = val)
 

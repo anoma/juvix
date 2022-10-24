@@ -22,7 +22,7 @@ int main() {
         RETURN_LEAF;
     }
 
-    JUVIX_FUNCTION_NOALLOC(juvix_function_main, 1);
+    JUVIX_FUNCTION(juvix_function_main, 1);
     {
         ARG(2) = make_smallint(2);
         ARG(1) = make_smallint(3);

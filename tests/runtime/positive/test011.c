@@ -30,7 +30,7 @@ juvix_closure_calculate:
     ARG(1) = CARG(1);
     ARG(2) = CARG(2);
 
-    JUVIX_FUNCTION_NOALLOC(juvix_function_calculate, 2);
+    JUVIX_FUNCTION(juvix_function_calculate, 2);
     {
         STACK_PUSH(ARG(0));
         ARG(0) = ARG(2);
@@ -40,7 +40,7 @@ juvix_closure_calculate:
         TAIL_CALL(0, juvix_function_plus);
     }
 
-    JUVIX_FUNCTION(juvix_function_main, 0, 3 + CLOSURE_SKIP, {}, {});
+    JUVIX_FUNCTION(juvix_function_main, 0);
     {
         DECL_STMP(0);
         ALLOC_CLOSURE(STMP(0), 1, LABEL_ADDR(juvix_closure_calculate), 2, 1);

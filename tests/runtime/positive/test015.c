@@ -1,4 +1,4 @@
-/* Branching & matching */
+/* Branching, matching and recursion on lists */
 
 #include <juvix/api.h>
 
@@ -50,16 +50,7 @@ int main() {
         RETURN_LEAF;
     }
 
-    JUVIX_FUNCTION(
-        juvix_function_map, 3, 3,
-        {
-            STACK_PUSH(ARG(0));
-            STACK_PUSH(ARG(1));
-        },
-        {
-            STACK_POP(ARG(1));
-            STACK_POP(ARG(0));
-        });
+    JUVIX_FUNCTION(juvix_function_map, 3);
     {
         switch (ARG(1)) {
             case CONSTR_NIL:
@@ -84,6 +75,16 @@ int main() {
                 CALL_CLOSURE(TMP(0), juvix_label_2);
                 STACK_POP(TMP(0));
                 TMP(1) = juvix_result;
+                PREALLOC(
+                    3,
+                    {
+                        STACK_PUSH(TMP(0));
+                        STACK_PUSH(TMP(1));
+                    },
+                    {
+                        STACK_POP(TMP(1));
+                        STACK_POP(TMP(0));
+                    });
                 ALLOC_CONSTR_BOXED(juvix_result, UID_CONS, 2);
                 CONSTR_ARG(juvix_result, 0) = TMP(1);
                 CONSTR_ARG(juvix_result, 1) = TMP(0);
@@ -92,16 +93,7 @@ int main() {
         }
     }
 
-    JUVIX_FUNCTION(
-        juvix_function_map_1, 3, 3,
-        {
-            STACK_PUSH(ARG(0));
-            STACK_PUSH(ARG(1));
-        },
-        {
-            STACK_POP(ARG(1));
-            STACK_POP(ARG(0));
-        });
+    JUVIX_FUNCTION(juvix_function_map_1, 3);
     {
         STACK_PUSH(ARG(0));
         STACK_PUSH(ARG(1));
@@ -134,6 +126,8 @@ int main() {
                              { CARG(juvix_closure_nargs) = juvix_result; });
                 CALL_CLOSURE(TMP(0), juvix_label_7);
                 STACK_POP(TMP(1));
+                PREALLOC(
+                    3, { STACK_PUSH(TMP(1)); }, { STACK_POP(TMP(1)); });
                 ALLOC_CONSTR_BOXED(TMP(0), UID_CONS, 2);
                 CONSTR_ARG(TMP(0), 0) = juvix_result;
                 CONSTR_ARG(TMP(0), 1) = TMP(1);
@@ -150,8 +144,71 @@ juvix_closure_add_one:
         RETURN_LEAF;
     }
 
-    JUVIX_FUNCTION(juvix_function_main, MAX_STACK_DELTA, 6 + 1 + CLOSURE_SKIP,
-                   {}, {});
+    JUVIX_FUNCTION(juvix_function_gen, 2);
+    {
+        DECL_TMP(0);
+        JUVIX_VAL_EQ(TMP(0), ARG(0), make_smallint(0));
+        JUVIX_BRANCH(
+            TMP(0),
+            {
+                juvix_result = CONSTR_NIL;
+                RETURN;
+            },
+            {
+                JUVIX_INT_SUB(TMP(0), ARG(0), make_smallint(1));
+                STACK_PUSH(ARG(0));
+                ARG(0) = TMP(0);
+                CALL(0, juvix_function_gen, juvix_label_gen_1);
+                STACK_POP(ARG(0));
+                PREALLOC(
+                    3, { STACK_PUSH(ARG(0)); }, { STACK_POP(ARG(0)); });
+                ALLOC_CONSTR_BOXED(TMP(0), UID_CONS, 2);
+                CONSTR_ARG(TMP(0), 0) = ARG(0);
+                CONSTR_ARG(TMP(0), 1) = juvix_result;
+                juvix_result = TMP(0);
+                RETURN;
+            });
+    }
+
+    JUVIX_FUNCTION(juvix_function_sum, 2);
+    {
+        switch (ARG(0)) {
+            case CONSTR_NIL:
+                juvix_result = make_smallint(0);
+                RETURN;
+            default: {
+                DECL_TMP(0);
+                DECL_TMP(1);
+                TMP(0) = CONSTR_ARG(ARG(0), 0);
+                STACK_PUSH(TMP(0));
+                ARG(0) = CONSTR_ARG(ARG(0), 1);
+                CALL(0, juvix_function_sum, juvix_label_sum_1);
+                STACK_POP(TMP(0));
+                JUVIX_INT_ADD(TMP(1), TMP(0), juvix_result);
+                juvix_result = TMP(1);
+                RETURN;
+            }
+        }
+    }
+
+    JUVIX_FUNCTION(juvix_function_length, 1);
+    {
+        switch (ARG(0)) {
+            case CONSTR_NIL:
+                juvix_result = make_smallint(0);
+                RETURN;
+            default: {
+                DECL_TMP(0);
+                ARG(0) = CONSTR_ARG(ARG(0), 1);
+                CALL(0, juvix_function_length, juvix_label_length_1);
+                JUVIX_INT_ADD(TMP(0), juvix_result, make_smallint(1));
+                juvix_result = TMP(0);
+                RETURN;
+            }
+        }
+    }
+
+    JUVIX_FUNCTION(juvix_function_main, MAX_STACK_DELTA);
     {
         DECL_TMP(0);  // cons 0 (cons 1 nil)
         DECL_TMP(1);  // cons 1 nil
@@ -170,6 +227,22 @@ juvix_closure_add_one:
         ARG(0) = TMP(2);
         ARG(1) = TMP(0);
         CALL(0, juvix_function_map_1, juvix_label_9);
+        JUVIX_TRACE(juvix_result);
+        ARG(0) = make_smallint(10000);
+        CALL(0, juvix_function_gen, juvix_label_10);
+        ARG(0) = TMP(2);
+        ARG(1) = juvix_result;
+        CALL(0, juvix_function_map, juvix_label_11);
+        ARG(0) = juvix_result;
+        CALL(0, juvix_function_sum, juvix_label_12);
+        JUVIX_TRACE(juvix_result);
+        ARG(0) = make_smallint(1000000);
+        CALL(0, juvix_function_gen, juvix_label_13);
+        ARG(0) = TMP(2);
+        ARG(1) = juvix_result;
+        CALL(0, juvix_function_map, juvix_label_14);
+        ARG(0) = juvix_result;
+        CALL(0, juvix_function_length, juvix_label_15);
         RETURN;
     }
 

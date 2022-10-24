@@ -103,7 +103,7 @@ tests =
       "test014.c"
       "out/test014.out",
     PosTest
-      "Branching and matching"
+      "Branching, matching and recursion on lists"
       "."
       "test015.c"
       "out/test015.out"

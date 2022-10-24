@@ -27,7 +27,7 @@ juvix_closure_calculate:
         RETURN_LEAF;
     }
 
-    JUVIX_FUNCTION(juvix_function_main, 1, 3 + CLOSURE_SKIP, {}, {});
+    JUVIX_FUNCTION(juvix_function_main, 1);
     {
         DECL_STMP(0);
         ALLOC_CLOSURE(STMP(0), 1, LABEL_ADDR(juvix_closure_calculate), 2, 1);

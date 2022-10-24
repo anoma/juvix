@@ -19,18 +19,7 @@ int main() {
     CALL(0, juvix_function_main, juvix_label_0);
     goto juvix_program_end;
 
-    JUVIX_FUNCTION(
-        juvix_function_S, 3 + DISPATCH_STACK_SIZE, 2 * MAX_DISPATCH_ALLOC,
-        {
-            STACK_PUSH(ARG(0));
-            STACK_PUSH(ARG(1));
-            STACK_PUSH(ARG(2));
-        },
-        {
-            STACK_POP(ARG(2));
-            STACK_POP(ARG(1));
-            STACK_POP(ARG(0));
-        });
+    JUVIX_FUNCTION(juvix_function_S, 3 + DISPATCH_STACK_SIZE);
     {
         STACK_PUSH(ARG(0));
         STACK_PUSH(ARG(2));
@@ -54,20 +43,17 @@ juvix_closure_K:
 
 juvix_closure_I:
     ARG(0) = CARG(0);
-    JUVIX_FUNCTION(
-        juvix_function_I, 1, 1 + CLOSURE_SKIP, { STACK_PUSH(ARG(0)); },
-        { STACK_POP(ARG(0)); });
+    JUVIX_FUNCTION(juvix_function_I, 2);
     {
-        DECL_TMP(0);
-        TMP(0) = ARG(0);
+        STACK_PUSH(ARG(0));
+        PREALLOC(1 + CLOSURE_SKIP, {}, {});
         ALLOC_CLOSURE(ARG(0), 0, LABEL_ADDR(juvix_closure_K), 0, 2);
         ARG(1) = ARG(0);
-        ARG(2) = TMP(0);
+        STACK_POP(ARG(2));
         TAIL_CALL(0, juvix_function_S);
     }
 
-    JUVIX_FUNCTION(juvix_function_main, MAX_STACK_DELTA, 1 + CLOSURE_SKIP, {},
-                   {});
+    JUVIX_FUNCTION(juvix_function_main, MAX_STACK_DELTA);
     {
         DECL_TMP(0);  // holds 1
         DECL_TMP(1);  // holds calloc I 0
