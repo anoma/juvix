@@ -7,7 +7,7 @@ import Juvix.Compiler.Core.Extra.Recursors.Base
 ufoldG ::
   forall c a f.
   Applicative f =>
-  Collector (Int, [Info]) c ->
+  Collector (Int, [Binder]) c ->
   (a -> [a] -> a) ->
   (c -> Node -> f a) ->
   Node ->

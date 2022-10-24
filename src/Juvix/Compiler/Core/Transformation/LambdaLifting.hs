@@ -11,19 +11,19 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
-lambdaLiftNode :: forall r. Member InfoTableBuilder r => BinderList Info -> Node -> Sem r Node
+lambdaLiftNode :: forall r. Member InfoTableBuilder r => BinderList Binder -> Node -> Sem r Node
 lambdaLiftNode aboveBl top =
-  mkLambdas topArgs <$> dmapLRM' (topArgsBinderList <> aboveBl, go) body
+  reLambdas topArgs <$> dmapLRM' (topArgsBinderList <> aboveBl, go) body
   where
     (topArgs, body) = unfoldLambdas top
-    topArgsBinderList :: BinderList Info
-    topArgsBinderList = BL.fromList topArgs
+    topArgsBinderList :: BinderList Binder
+    topArgsBinderList = BL.fromList (map (^. lambdaLhsBinder) topArgs)
     typeFromArgs :: [ArgumentInfo] -> Type
     typeFromArgs = \case
       [] -> mkDynamic' -- change this when we have type info about the body
       (a : as) -> mkPi' (a ^. argumentType) (typeFromArgs as)
     -- extracts the argument info from the binder
-    go :: BinderList Info -> Node -> Sem r Recur
+    go :: BinderList Binder -> Node -> Sem r Recur
     go bl = \case
       NLam l -> goLambda l
       m -> return (Recur m)
@@ -32,11 +32,11 @@ lambdaLiftNode aboveBl top =
         goLambda lm = do
           l' <- lambdaLiftNode bl (NLam lm)
           let freevars = toList (getFreeVars l')
-              freevarsAssocs :: [(Index, Info)]
-              freevarsAssocs = [(i, BL.lookup i bl) | i <- map (^. varIndex) freevars]
+              freevarsAssocs :: [(Index, Binder)]
+              freevarsAssocs = [(idx, BL.lookup idx bl) | idx <- map (^. varIndex) freevars]
               fBody' = captureFreeVars freevarsAssocs l'
               argsInfo :: [ArgumentInfo]
-              argsInfo = map (argumentInfoFromInfo . snd) freevarsAssocs
+              argsInfo = map (argumentInfoFromBinder . snd) freevarsAssocs
           f <- freshSymbol
           registerIdent
             IdentifierInfo

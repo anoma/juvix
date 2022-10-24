@@ -60,14 +60,14 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       NCst {} -> n
       NApp (App i l r) ->
         case eval' env l of
-          Closure env' (Lambda _ b) -> let !v = eval' env r in eval' (v : env') b
+          Closure env' (Lambda _ _ b) -> let !v = eval' env r in eval' (v : env') b
           v -> evalError "invalid application" (mkApp i v (substEnv env r))
       NBlt (BuiltinApp _ op args) -> applyBuiltin n env op args
       NCtr (Constr i tag args) -> mkConstr i tag (map' (eval' env) args)
       NLam l@Lambda {} -> Closure env l
-      NLet (Let _ v b) -> let !v' = eval' env v in eval' (v' : env) b
+      NLet (Let _ (LetItem _ v) b) -> let !v' = eval' env v in eval' (v' : env) b
       NRec (LetRec _ vs b) ->
-        let !vs' = map (eval' env') (toList vs)
+        let !vs' = map (eval' env' . (^. letItemValue)) (toList vs)
             !env' = revAppend vs' env
          in foldr GHC.pseq (eval' env' b) vs'
       NCase (Case i v bs def) ->
@@ -86,7 +86,7 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
 
     branch :: Node -> Env -> [Node] -> Tag -> Maybe Node -> [CaseBranch] -> Node
     branch n !env !args !tag !def = \case
-      (CaseBranch _ tag' _ b) : _ | tag' == tag -> eval' (revAppend args env) b
+      (CaseBranch _ tag' _ _ b) : _ | tag' == tag -> eval' (revAppend args env) b
       _ : bs' -> branch n env args tag def bs'
       [] -> case def of
         Just b -> eval' env b

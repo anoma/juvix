@@ -27,6 +27,8 @@ type LambdaLhs = LambdaLhs' Info Node
 
 type Lambda = Lambda' Info Node
 
+type LetItem = LetItem' Node
+
 type Let = Let' Info Node
 
 type LetRec = LetRec' Info Node
@@ -41,11 +43,13 @@ type MatchBranch = MatchBranch' Info Node
 
 type PatternWildcard = PatternWildcard' Info
 
-type PatternBinder = PatternBinder' Info
+type PatternBinder = PatternBinder' Info Node
 
-type PatternConstr = PatternConstr' Info
+type PatternConstr = PatternConstr' Info Node
 
 type Pattern = Pattern' Info Node
+
+type PiLhs = PiLhs' Info Node
 
 type Pi = Pi' Info Node
 

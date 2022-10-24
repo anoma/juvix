@@ -56,8 +56,8 @@ type Constant = Constant' ()
 
 type Apps = Apps' Fun () Node
 
-data Fun =
-  FunVar Var
+data Fun
+  = FunVar Var
   | FunIdent Ident
   deriving stock (Eq)
 

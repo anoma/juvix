@@ -131,7 +131,7 @@ ppCodeLet' name mty lt = do
   n' <- case name of
     Just nm -> ppCode nm
     Nothing -> return kwQuestion
-  v' <- ppCode (lt ^. letValue)
+  v' <- ppCode (lt ^. letItem . letItemValue)
   b' <- ppCode (lt ^. letBody)
   let tty = case mty of
         Just ty ->
@@ -162,7 +162,7 @@ instance PrettyCode PatternWildcard where
 
 instance PrettyCode PatternBinder where
   ppCode PatternBinder {..} = do
-    n <- case getInfoName _patternBinderInfo of
+    n <- case _patternBinder ^. binderName of
       Just name -> ppCode name
       Nothing -> return kwQuestion
     case _patternBinderPattern of
@@ -204,7 +204,7 @@ instance PrettyCode LetRec where
   ppCode LetRec {..} = do
     let n = length _letRecValues
     ns <- mapM getName (getInfoBinders n _letRecInfo)
-    vs <- mapM ppCode _letRecValues
+    vs <- mapM (ppCode . (^. letItemValue)) _letRecValues
     b' <- ppCode _letRecBody
     return $ case ns of
       [hns] -> kwLetRec <+> hns <+> kwAssign <+> head vs <+> kwIn <+> b'
@@ -238,13 +238,12 @@ instance PrettyCode Node where
     NCtr x ->
       let name = getInfoName (x ^. constrInfo)
        in ppCodeConstr' name x
-    NLam (Lambda i body) -> do
+    NLam (Lambda _ bi body) -> do
       b <- ppCode body
-      let bi = getInfoBinder i
-      lam <- case getInfoName bi of
+      lam <- case bi ^. binderName of
         Just name -> do
           n <- ppCode name
-          case getInfoType bi of
+          case bi ^. binderType of
             NDyn {} -> return $ kwLambda <> n
             ty -> do
               tty <- ppCode ty
@@ -266,16 +265,17 @@ instance PrettyCode Node where
       let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs
       return $ kwMatch <+> hsep (punctuate comma (toList vs)) <+> kwWith <+> bss
     NPi Pi {..} ->
-      case getInfoName $ getInfoBinder _piInfo of
-        Just name -> do
-          n <- ppCode name
-          ty <- ppCode _piType
-          b <- ppCode _piBody
-          return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
-        Nothing -> do
-          ty <- ppLeftExpression funFixity _piType
-          b <- ppRightExpression funFixity _piBody
-          return $ ty <+> kwArrow <+> b
+      let piType = _piBinder ^. binderType
+       in case getInfoName $ getInfoBinder _piInfo of
+            Just name -> do
+              n <- ppCode name
+              ty <- ppCode piType
+              b <- ppCode _piBody
+              return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
+            Nothing -> do
+              ty <- ppLeftExpression funFixity piType
+              b <- ppRightExpression funFixity _piBody
+              return $ ty <+> kwArrow <+> b
     NUniv Univ {..} ->
       return $ kwType <+> pretty _univLevel
     NPrim TypePrim {..} -> ppCode _typePrimPrimitive

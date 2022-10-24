@@ -80,7 +80,7 @@ cosmos f = ufoldA reassemble f
 -- binder of the variable.
 -- if fv = x1, x2, .., xn
 -- the result is of the form λx1 λx2 .. λ xn b
-captureFreeVars :: [(Index, Info)] -> Node -> Node
+captureFreeVars :: [(Index, Binder)] -> Node -> Node
 captureFreeVars fv
   | n == 0 = id
   | otherwise = mkLambdasB infos . mapFreeVars
@@ -116,7 +116,7 @@ developBeta = umap go
   where
     go :: Node -> Node
     go n = case n of
-      NApp (App _ (NLam (Lambda _ body)) arg) -> subst arg body
+      NApp (App _ (NLam (Lambda {..})) arg) -> subst arg _lambdaBody
       _ -> n
 
 etaExpand :: Int -> Node -> Node
@@ -138,12 +138,21 @@ convertClosures = umap go
   where
     go :: Node -> Node
     go n = case n of
-      Closure env (Lambda i b) -> substEnv env (mkLambda i b)
+      Closure env (Lambda i bi b) -> substEnv env (mkLambda i bi b)
       _ -> n
 
 convertRuntimeNodes :: Node -> Node
 convertRuntimeNodes = convertClosures
 
+argumentInfoFromBinder :: Binder -> ArgumentInfo
+argumentInfoFromBinder i =
+  ArgumentInfo
+    { _argumentName = i ^. binderName,
+      _argumentType = i ^. binderType,
+      _argumentIsImplicit = Explicit
+    }
+
+-- TODO remove ?
 argumentInfoFromInfo :: Info -> ArgumentInfo
 argumentInfoFromInfo i =
   ArgumentInfo

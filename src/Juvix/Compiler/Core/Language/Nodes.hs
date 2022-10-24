@@ -10,13 +10,22 @@ import Juvix.Compiler.Core.Language.Base
 import Juvix.Compiler.Core.Language.Primitives
 
 -- | De Bruijn index of a locally bound variable.
-data Var' i = Var {_varInfo :: i, _varIndex :: !Index}
+data Var' i = Var
+  { _varInfo :: i,
+    _varIndex :: !Index
+  }
 
 -- | Global identifier of a function (with corresponding `Node` in the global
 -- context).
-data Ident' i = Ident {_identInfo :: i, _identSymbol :: !Symbol}
+data Ident' i = Ident
+  { _identInfo :: i,
+    _identSymbol :: !Symbol
+  }
 
-data Constant' i = Constant {_constantInfo :: i, _constantValue :: !ConstantValue}
+data Constant' i = Constant
+  { _constantInfo :: i,
+    _constantValue :: !ConstantValue
+  }
 
 data ConstantValue
   = ConstInteger !Integer
@@ -25,9 +34,8 @@ data ConstantValue
 
 -- | Info about a single binder. Associated with Lambda and Pi.
 data Binder' a = Binder
-  {
-   _binderName :: Maybe Name,
-   _binderType :: a
+  { _binderName :: Maybe Name,
+    _binderType :: a
   }
 
 -- Other things we might need in the future:
@@ -67,9 +75,9 @@ data Constr' i a = Constr
   }
 
 -- | Useful for unfolding lambdas
-data LambdaLhs' i a = LambdaLhs {
-  _lambdaLhsInfo :: i,
-  _lambdaLhsBinder :: Binder' a
+data LambdaLhs' i a = LambdaLhs
+  { _lambdaLhsInfo :: i,
+    _lambdaLhsBinder :: Binder' a
   }
 
 data Lambda' i a = Lambda
@@ -86,9 +94,9 @@ data Let' i a = Let
     _letBody :: !a
   }
 
-data LetItem' a = LetItem {
-  _letItemBinder :: Binder' a,
-  _letItemValue :: a
+data LetItem' a = LetItem
+  { _letItemBinder :: Binder' a,
+    _letItemValue :: a
   }
 
 -- | Represents a block of mutually recursive local definitions. Both in the
@@ -109,12 +117,13 @@ data Case' i bi a = Case
     _caseDefault :: !(Maybe a)
   }
 
--- | `CaseBranch tag argsNum branch`
--- - `argsNum` is the number of arguments of the constructor tagged with `tag`,
---   equal to the number of implicit binders above `branch`
+-- | `CaseBranch tag binders bindersNum branch`
+-- - `binders` are the arguments of the constructor tagged with `tag`,
+--  length of `binders` is equal to `bindersNum`
 data CaseBranch' i a = CaseBranch
   { _caseBranchInfo :: i,
     _caseBranchTag :: !Tag,
+    _caseBranchBinders :: [Binder' a],
     _caseBranchBindersNum :: !Int,
     _caseBranchBody :: !a
   }
@@ -148,8 +157,7 @@ newtype PatternWildcard' i = PatternWildcard
   }
 
 data PatternBinder' i a = PatternBinder
-  { _patternBinderInfo :: i,
-    _patternBinder :: Binder' a,
+  { _patternBinder :: Binder' a,
     _patternBinderPattern :: Pattern' i a
   }
 
@@ -157,6 +165,12 @@ data PatternConstr' i a = PatternConstr
   { _patternConstrInfo :: i,
     _patternConstrTag :: !Tag,
     _patternConstrArgs :: ![Pattern' i a]
+  }
+
+-- | Useful for unfolding Pi
+data PiLhs' i a = PiLhs
+  { _piLhsInfo :: i,
+    _piLhsBinder :: Binder' a
   }
 
 -- | Dependent Pi-type. Compilation-time only. Pi implicitly introduces a binder
@@ -272,6 +286,8 @@ instance HasAtomicity (Dynamic' i) where
 lambdaFixity :: Fixity
 lambdaFixity = Fixity (PrecNat 0) (Unary AssocPostfix)
 
+makeLenses ''LambdaLhs'
+makeLenses ''PiLhs'
 makeLenses ''Binder'
 makeLenses ''Var'
 makeLenses ''Ident'
@@ -320,7 +336,9 @@ instance Eq a => Eq (Case' i bi a) where
   (Case _ v1 bs1 def1) == (Case _ v2 bs2 def2) = v1 == v2 && bs1 == bs2 && def1 == def2
 
 instance Eq a => Eq (CaseBranch' i a) where
-  (CaseBranch _ tag1 n1 b1) == (CaseBranch _ tag2 n2 b2) = tag1 == tag2 && n1 == n2 && b1 == b2
+  (==) =
+    eqOn (^. caseBranchTag)
+      ..&&.. eqOn (^. caseBranchBody)
 
 instance Eq a => Eq (Match' i a) where
   (Match _ vs1 bs1) == (Match _ vs2 bs2) = vs1 == vs2 && bs1 == bs2
@@ -351,16 +369,19 @@ instance Eq a => Eq (Lambda' i a) where
 
 -- | ignores the binder
 instance Eq a => Eq (Let' i a) where
-  (==) = eqOn (^. letItem)
-    ..&&.. eqOn (^. letBody)
+  (==) =
+    eqOn (^. letItem)
+      ..&&.. eqOn (^. letBody)
 
 instance Eq a => Eq (LetRec' i a) where
-  (==) = eqOn (^. letRecBody)
-    ..&&.. eqOn (^. letRecValues)
+  (==) =
+    eqOn (^. letRecBody)
+      ..&&.. eqOn (^. letRecValues)
 
 instance Eq a => Eq (Pi' i a) where
-  (==) = eqOn (^. piBinder . binderType)
-   ..&&.. eqOn (^. piBody)
+  (==) =
+    eqOn (^. piBinder . binderType)
+      ..&&.. eqOn (^. piBody)
 
 -- | ignores the binder
 instance Eq a => Eq (PatternBinder' i a) where
