@@ -111,5 +111,20 @@ tests =
       "Closure extension"
       "."
       "test016.c"
-      "out/test016.out"
+      "out/test016.out",
+    PosTest
+      "Recursion through higher-order functions"
+      "."
+      "test017.c"
+      "out/test017.out",
+    PosTest
+      "Tail recursion through higher-order functions"
+      "."
+      "test018.c"
+      "out/test018.out",
+    PosTest
+      "Dynamic closure extension"
+      "."
+      "test019.c"
+      "out/test019.out"
   ]
