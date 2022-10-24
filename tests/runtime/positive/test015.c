@@ -208,6 +208,20 @@ juvix_closure_add_one:
         }
     }
 
+    JUVIX_FUNCTION_LEAF(juvix_function_length_tail);
+    {
+        switch (ARG(0)) {
+            case CONSTR_NIL:
+                juvix_result = ARG(1);
+                RETURN_LEAF;
+            default: {
+                ARG(0) = CONSTR_ARG(ARG(0), 1);
+                JUVIX_INT_ADD(ARG(1), ARG(1), make_smallint(1));
+                TAIL_CALL_LEAF(0, juvix_function_length_tail);
+            }
+        }
+    }
+
     JUVIX_FUNCTION(juvix_function_main, MAX_STACK_DELTA);
     {
         DECL_TMP(0);  // cons 0 (cons 1 nil)
@@ -238,12 +252,16 @@ juvix_closure_add_one:
         JUVIX_TRACE(juvix_result);
         ARG(0) = make_smallint(1000000);
         CALL(0, juvix_function_gen, juvix_label_13);
+        STACK_PUSH(juvix_result);
         ARG(0) = TMP(2);
         ARG(1) = juvix_result;
         CALL(0, juvix_function_map, juvix_label_14);
         ARG(0) = juvix_result;
         CALL(0, juvix_function_length, juvix_label_15);
-        RETURN;
+        JUVIX_TRACE(juvix_result);
+        STACK_POP(ARG(0));
+        ARG(1) = make_smallint(0);
+        TAIL_CALL(0, juvix_function_length_tail);
     }
 
     JUVIX_EPILOGUE;
