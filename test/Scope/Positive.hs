@@ -9,6 +9,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Setup
+import Juvix.Extra.Stdlib
 import Juvix.Prelude.Pretty
 
 data PosTest = PosTest
@@ -42,7 +43,7 @@ testDescr PosTest {..} =
                       _entryPointNoStdlib = noStdlib
                     }
                 stdlibMap :: HashMap FilePath Text
-                stdlibMap = HashMap.mapKeys (cwd </>) (HashMap.fromList stdlibDir)
+                stdlibMap = HashMap.mapKeys (cwd </>) (HashMap.fromList (second decodeUtf8 <$> stdlibFiles))
                 unionStdlib :: HashMap FilePath Text -> HashMap FilePath Text
                 unionStdlib fs
                   | noStdlib = fs
@@ -79,18 +80,18 @@ testDescr PosTest {..} =
             step "Parsing pretty scoped"
             let fs2 = unionStdlib (HashMap.singleton entryFile scopedPretty)
             p' :: Parser.ParserResult <-
-              (runM . runErrorIO' @JuvixError . runNameIdGen . runFilesPure fs2 . runReader entryPoint)
+              (runM . runErrorIO' @JuvixError . runNameIdGen . runFilesPure cwd fs2 . runReader entryPoint)
                 upToParsing
 
             step "Parsing pretty parsed"
             let fs3 = unionStdlib (HashMap.singleton entryFile parsedPretty)
             parsedPretty' :: Parser.ParserResult <-
-              (runM . runErrorIO' @JuvixError . runNameIdGen . runFilesPure fs3 . runReader entryPoint)
+              (runM . runErrorIO' @JuvixError . runNameIdGen . runFilesPure cwd fs3 . runReader entryPoint)
                 upToParsing
 
             step "Scoping the scoped"
             s' :: Scoper.ScoperResult <-
-              (runM . runErrorIO' @JuvixError . runNameIdGen . runFilesPure fs . runReader entryPoint)
+              (runM . runErrorIO' @JuvixError . runNameIdGen . runFilesPure cwd fs . runReader entryPoint)
                 upToScoping
 
             step "Checks"

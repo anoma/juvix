@@ -25,25 +25,19 @@ import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
 parseText :: InfoTable -> Text -> Either ParserError (InfoTable, Maybe Node)
-parseText = runParser "" ""
+parseText = runParser ""
 
 -- | Note: only new symbols and tags that are not in the InfoTable already will be
 -- generated during parsing, but nameIds are generated starting from 0
 -- regardless of the names already in the InfoTable
-runParser :: FilePath -> FilePath -> InfoTable -> Text -> Either ParserError (InfoTable, Maybe Node)
-runParser root fileName tab input =
+runParser :: FilePath -> InfoTable -> Text -> Either ParserError (InfoTable, Maybe Node)
+runParser fileName tab input =
   case run $
     runInfoTableBuilder tab $
-      runReader params $
-        runNameIdGen $
-          P.runParserT parseToplevel fileName input of
+      runNameIdGen $
+        P.runParserT parseToplevel fileName input of
     (_, Left err) -> Left (ParserError err)
     (tbl, Right r) -> Right (tbl, r)
-  where
-    params =
-      ParserParams
-        { _parserParamsRoot = root
-        }
 
 binderInfo :: Name -> Type -> Info
 binderInfo name ty =
@@ -80,7 +74,7 @@ createBuiltinConstr sym btag nameTxt ty i = do
       }
 
 declareInductiveBuiltins ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Text ->
   [(BuiltinDataTag, Text, Type -> Type)] ->
   ParsecS r ()
@@ -104,7 +98,7 @@ declareInductiveBuiltins indName ctrs = do
       )
   lift $ mapM_ registerConstructor constrs
 
-declareIOBuiltins :: Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r => ParsecS r ()
+declareIOBuiltins :: Members '[InfoTableBuilder, NameIdGen] r => ParsecS r ()
 declareIOBuiltins =
   declareInductiveBuiltins
     "IO"
@@ -114,7 +108,7 @@ declareIOBuiltins =
       (TagReadLn, "readLn", id)
     ]
 
-declareBoolBuiltins :: Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r => ParsecS r ()
+declareBoolBuiltins :: Members '[InfoTableBuilder, NameIdGen] r => ParsecS r ()
 declareBoolBuiltins =
   declareInductiveBuiltins
     "bool"
@@ -123,7 +117,7 @@ declareBoolBuiltins =
     ]
 
 parseToplevel ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   ParsecS r (Maybe Node)
 parseToplevel = do
   declareIOBuiltins
@@ -135,12 +129,12 @@ parseToplevel = do
   return r
 
 statement ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   ParsecS r ()
 statement = statementDef <|> statementInductive
 
 statementDef ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   ParsecS r ()
 statementDef = do
   kw kwDef
@@ -178,7 +172,7 @@ statementDef = do
       void $ optional (parseDefinition sym ty)
 
 parseDefinition ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Symbol ->
   Type ->
   ParsecS r ()
@@ -206,7 +200,7 @@ parseDefinition sym ty = do
         bi = getInfoBinder i
 
 statementInductive ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   ParsecS r ()
 statementInductive = do
   kw kwInductive
@@ -232,7 +226,7 @@ statementInductive = do
   lift $ registerInductive ii {_inductiveConstructors = ctrs}
 
 constrDecl ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Symbol ->
   ParsecS r ConstructorInfo
 constrDecl symInd = do
@@ -256,14 +250,14 @@ constrDecl symInd = do
   return ci
 
 typeAnnotation ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   ParsecS r Type
 typeAnnotation = do
   kw kwColon
   expression
 
 expression ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   ParsecS r Node
 expression = do
   node <- expr 0 mempty
@@ -271,7 +265,7 @@ expression = do
   return $ etaExpandApps tab node
 
 expr ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   -- | current de Bruijn index, i.e., the number of binders upwards
   Index ->
   -- | reverse de Bruijn indices (de Bruijn levels)
@@ -280,21 +274,21 @@ expr ::
 expr varsNum vars = typeExpr varsNum vars
 
 bracedExpr ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
 bracedExpr varsNum vars = braces (expr varsNum vars) <|> expr varsNum vars
 
 typeExpr ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
 typeExpr varsNum vars = ioExpr varsNum vars >>= typeExpr' varsNum vars
 
 typeExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -304,7 +298,7 @@ typeExpr' varsNum vars node =
     <|> return node
 
 typeFunExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -315,14 +309,14 @@ typeFunExpr' varsNum vars l = do
   return $ mkPi' l r
 
 ioExpr ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
 ioExpr varsNum vars = cmpExpr varsNum vars >>= ioExpr' varsNum vars
 
 ioExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -333,7 +327,7 @@ ioExpr' varsNum vars node =
     <|> return node
 
 bindExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -344,7 +338,7 @@ bindExpr' varsNum vars node = do
   ioExpr' varsNum vars (mkConstr Info.empty (BuiltinTag TagBind) [node, node'])
 
 seqExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -360,14 +354,14 @@ seqExpr' varsNum vars node = do
       [node, mkLambda (binderInfo name mkDynamic') node']
 
 cmpExpr ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
 cmpExpr varsNum vars = arithExpr varsNum vars >>= cmpExpr' varsNum vars
 
 cmpExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -381,7 +375,7 @@ cmpExpr' varsNum vars node =
     <|> return node
 
 eqExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -392,7 +386,7 @@ eqExpr' varsNum vars node = do
   return $ mkBuiltinApp' OpEq [node, node']
 
 ltExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -403,7 +397,7 @@ ltExpr' varsNum vars node = do
   return $ mkBuiltinApp' OpIntLt [node, node']
 
 leExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -414,7 +408,7 @@ leExpr' varsNum vars node = do
   return $ mkBuiltinApp' OpIntLe [node, node']
 
 gtExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -425,7 +419,7 @@ gtExpr' varsNum vars node = do
   return $ mkBuiltinApp' OpIntLt [node', node]
 
 geExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -436,14 +430,14 @@ geExpr' varsNum vars node = do
   return $ mkBuiltinApp' OpIntLe [node', node]
 
 arithExpr ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
 arithExpr varsNum vars = factorExpr varsNum vars >>= arithExpr' varsNum vars
 
 arithExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -454,7 +448,7 @@ arithExpr' varsNum vars node =
     <|> return node
 
 plusExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -465,7 +459,7 @@ plusExpr' varsNum vars node = do
   arithExpr' varsNum vars (mkBuiltinApp' OpIntAdd [node, node'])
 
 minusExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -476,14 +470,14 @@ minusExpr' varsNum vars node = do
   arithExpr' varsNum vars (mkBuiltinApp' OpIntSub [node, node'])
 
 factorExpr ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
 factorExpr varsNum vars = appExpr varsNum vars >>= factorExpr' varsNum vars
 
 factorExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -495,7 +489,7 @@ factorExpr' varsNum vars node =
     <|> return node
 
 mulExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -506,7 +500,7 @@ mulExpr' varsNum vars node = do
   factorExpr' varsNum vars (mkBuiltinApp' OpIntMul [node, node'])
 
 divExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -517,7 +511,7 @@ divExpr' varsNum vars node = do
   factorExpr' varsNum vars (mkBuiltinApp' OpIntDiv [node, node'])
 
 modExpr' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -528,14 +522,14 @@ modExpr' varsNum vars node = do
   factorExpr' varsNum vars (mkBuiltinApp' OpIntMod [node, node'])
 
 appExpr ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
 appExpr varsNum vars = builtinAppExpr varsNum vars <|> atoms varsNum vars
 
 builtinAppExpr ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -554,7 +548,7 @@ builtinAppExpr varsNum vars = do
   return $ mkBuiltinApp' op args
 
 atoms ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -563,7 +557,7 @@ atoms varsNum vars = do
   return $ mkApps' (List.head es) (List.tail es)
 
 atom ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -584,29 +578,23 @@ atom varsNum vars =
     <|> parens (expr varsNum vars)
     <|> exprNamed varsNum vars
 
-exprConstInt ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
-  ParsecS r Node
+exprConstInt :: ParsecS r Node
 exprConstInt = P.try $ do
   (n, i) <- integer
   return $ mkConstant (Info.singleton (LocationInfo i)) (ConstInteger n)
 
-exprConstString ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
-  ParsecS r Node
+exprConstString :: ParsecS r Node
 exprConstString = P.try $ do
   (s, i) <- string
   return $ mkConstant (Info.singleton (LocationInfo i)) (ConstString s)
 
-exprUniverse ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
-  ParsecS r Type
+exprUniverse :: ParsecS r Type
 exprUniverse = do
   kw kwType
   level <- optional (number 0 128) -- TODO: global Limits.hs file
   return $ mkUniv' (maybe 0 fst level)
 
-exprDynamic :: Member (Reader ParserParams) r => ParsecS r Type
+exprDynamic :: ParsecS r Type
 exprDynamic = kw kwAny $> mkDynamic'
 
 exprTypePrim :: ParsecS r Type
@@ -619,7 +607,7 @@ exprTypePrim = P.try $ do
 
 parseLocalName ::
   forall r.
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   ParsecS r Name
 parseLocalName = parseWildcardName <|> parseIdentName
   where
@@ -634,7 +622,7 @@ parseLocalName = parseWildcardName <|> parseIdentName
       lift $ freshName KNameLocal txt i
 
 exprPi ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -649,7 +637,7 @@ exprPi varsNum vars = do
   return $ mkPi (binderInfo name ty) ty body
 
 exprLambda ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -671,7 +659,7 @@ exprLambda varsNum vars = do
         <|> (\n -> (n, Nothing)) <$> parseLocalName
 
 exprLetrecOne ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -686,7 +674,7 @@ exprLetrecOne varsNum vars = do
   return $ mkLetRec (Info.singleton (BindersInfo [Info.singleton (NameInfo name)])) (fromList [value]) body
 
 exprLetrecMany ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -706,7 +694,7 @@ letrecNames :: ParsecS r [Text]
 letrecNames = P.between (symbol "[") (symbol "]") (P.many identifier)
 
 letrecDefs ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   [Text] ->
   Index ->
   HashMap Text Level ->
@@ -728,7 +716,7 @@ letrecDefs names varsNum vars = case names of
     return $ (name, v) : rest
 
 letrecDef ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r (Name, Node)
@@ -740,7 +728,7 @@ letrecDef varsNum vars = do
   return (name, v)
 
 exprLet ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -756,7 +744,7 @@ exprLet varsNum vars = do
   return $ mkLet (binderInfo name (fromMaybe mkDynamic' mty)) value body
 
 exprCase ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -769,7 +757,7 @@ exprCase varsNum vars = do
     <|> exprCase' off value varsNum vars
 
 exprCase' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Int ->
   Node ->
   Index ->
@@ -788,7 +776,7 @@ exprCase' off value varsNum vars = do
       parseFailure off "multiple default branches"
 
 caseBranchP ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r (Either CaseBranch Node)
@@ -797,7 +785,7 @@ caseBranchP varsNum vars =
     <|> (caseMatchingBranch varsNum vars <&> Left)
 
 caseDefaultBranch ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -807,7 +795,7 @@ caseDefaultBranch varsNum vars = do
   bracedExpr varsNum vars
 
 caseMatchingBranch ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r CaseBranch
@@ -843,7 +831,7 @@ caseMatchingBranch varsNum vars = do
       parseFailure off ("undeclared identifier: " ++ fromText txt)
 
 exprIf ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -857,7 +845,7 @@ exprIf varsNum vars = do
   return $ mkIf Info.empty value br1 br2
 
 exprMatch ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -869,7 +857,7 @@ exprMatch varsNum vars = do
     <|> exprMatch' values varsNum vars
 
 exprMatch' ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   [Node] ->
   Index ->
   HashMap Text Level ->
@@ -879,7 +867,7 @@ exprMatch' values varsNum vars = do
   return $ mkMatch' (fromList values) bs
 
 matchBranch ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Int ->
   Index ->
   HashMap Text Level ->
@@ -902,20 +890,20 @@ matchBranch patsNum varsNum vars = do
   return $ MatchBranch Info.empty (fromList pats) br
 
 branchPattern ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   ParsecS r Pattern
 branchPattern =
   wildcardPattern
     <|> binderOrConstrPattern True
     <|> parens branchPattern
 
-wildcardPattern :: Members '[Reader ParserParams] r => ParsecS r Pattern
+wildcardPattern :: ParsecS r Pattern
 wildcardPattern = do
   kw kwWildcard
   return $ PatWildcard (PatternWildcard Info.empty)
 
 binderOrConstrPattern ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Bool ->
   ParsecS r Pattern
 binderOrConstrPattern parseArgs = do
@@ -938,7 +926,7 @@ binderOrConstrPattern parseArgs = do
       return $ PatBinder (PatternBinder (setInfoName n Info.empty) pat)
 
 binderPattern ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   ParsecS r Pattern
 binderPattern = do
   symbolAt
@@ -947,7 +935,7 @@ binderPattern = do
     <|> parens branchPattern
 
 exprNamed ::
-  Members '[Reader ParserParams, InfoTableBuilder, NameIdGen] r =>
+  Members '[InfoTableBuilder, NameIdGen] r =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node

@@ -75,6 +75,7 @@ data Let' i a = Let
 -- | Represents a block of mutually recursive local definitions. Both in the
 -- body and in the values `length _letRecValues` implicit binders are introduced
 -- which hold the functions/values being defined.
+-- the last item _letRecValues will have have index $0 in the body.
 data LetRec' i a = LetRec
   { _letRecInfo :: i,
     _letRecValues :: !(NonEmpty a),

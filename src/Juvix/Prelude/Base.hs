@@ -133,6 +133,8 @@ import GHC.Real
 import GHC.Stack.Types
 import Language.Haskell.TH.Syntax (Lift)
 import Lens.Micro.Platform hiding (both)
+import Path (parseAbsDir, toFilePath)
+import Path.IO (listDirRecur)
 import Polysemy
 import Polysemy.Embed
 import Polysemy.Error hiding (fromEither)
@@ -257,6 +259,9 @@ commonPrefix a b = reverse (go [] a b)
 nonEmptyUnsnoc :: NonEmpty a -> (Maybe (NonEmpty a), a)
 nonEmptyUnsnoc e = (NonEmpty.nonEmpty (NonEmpty.init e), NonEmpty.last e)
 
+nonEmpty' :: HasCallStack => [a] -> NonEmpty a
+nonEmpty' = fromJust . nonEmpty
+
 _nonEmpty :: Lens' [a] (Maybe (NonEmpty a))
 _nonEmpty f x = maybe [] toList <$> f (nonEmpty x)
 
@@ -327,6 +332,19 @@ fromRightIO' pp = do
 
 fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
 fromRightIO pp = fromRightIO' (putStrLn . pp)
+
+--------------------------------------------------------------------------------
+-- Files
+--------------------------------------------------------------------------------
+
+-- | Recursively get all files in the given directory.
+--
+-- The function returns absolute paths.
+getFilesRecursive :: FilePath -> IO [FilePath]
+getFilesRecursive p = do
+  pathP <- makeAbsolute p >>= parseAbsDir
+  (_, files) <- listDirRecur pathP
+  return (toFilePath <$> files)
 
 --------------------------------------------------------------------------------
 -- Misc

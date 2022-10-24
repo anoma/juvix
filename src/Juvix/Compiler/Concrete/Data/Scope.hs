@@ -53,9 +53,7 @@ newtype ModulesCache = ModulesCache
 makeLenses ''ModulesCache
 
 data ScopeParameters = ScopeParameters
-  { -- | Root of the project.
-    _scopeRootPath :: FilePath,
-    -- | Usually set to ".juvix".
+  { -- | Usually set to ".juvix".
     _scopeFileExtension :: String,
     -- | Used for import cycle detection.
     _scopeTopParents :: [Import 'Parsed]

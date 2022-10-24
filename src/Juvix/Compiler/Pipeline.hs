@@ -94,7 +94,7 @@ runIOEither entry =
     . runBuiltins
     . runNameIdGen
     . mapError (JuvixError @FilesError)
-    . runFilesIO
+    . runFilesIO (entry ^. entryPointRoot)
     . runReader entry
 
 runIO :: GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO a

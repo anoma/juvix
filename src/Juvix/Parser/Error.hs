@@ -25,7 +25,7 @@ instance Pretty ParserError where
   pretty (ParserError b) = pretty (M.errorBundlePretty b)
 
 instance HasLoc ParserError where
-  getLoc (ParserError b) = singletonInterval (mkLoc "." offset sourcePos)
+  getLoc (ParserError b) = singletonInterval (mkLoc offset sourcePos)
     where
       state :: M.PosState Text
       state = M.bundlePosState b
