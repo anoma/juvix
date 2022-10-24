@@ -9,7 +9,7 @@
 #define DECL_ARG(k) word_t juvix_arg_##k
 
 // Function result is stored in juvix_result
-#define DECL_RESULT word_t juvix_result
+#define DECL_RESULT register word_t juvix_result
 #define DECL_CARGS(MAX_ARGS) word_t juvix_carg[MAX_ARGS]
 
 #define ARG(k) juvix_arg_##k
@@ -24,6 +24,13 @@
         STACK_POPT;           \
     } while (0)
 #define STACK_TOP_ADDR (((label_addr_t)(STACK_TOP)))
+
+#define STACK_PUSH_UINT(num) (STACK_PUSH(make_unboxed(num)))
+#define STACK_POP_UINT(var)           \
+    do {                              \
+        var = get_unboxed(STACK_TOP); \
+        STACK_POPT;                   \
+    } while (0)
 
 /*
     Macro sequence for a direct function call:
@@ -156,58 +163,71 @@
     juvix_ccl_closure = cl;       \
     goto juvix_ccl_start;
 
-#define DECL_CALL_CLOSURES                                                    \
-    label_addr_t juvix_ccl_return;                                            \
-    size_t juvix_ccl_sargs;                                                   \
-    word_t juvix_ccl_closure;                                                 \
-    juvix_ccl_start:                                                          \
-    do {                                                                      \
-        size_t juvix_ccl_largs = get_closure_largs(juvix_ccl_closure);        \
-        size_t juvix_ccl_nargs = get_closure_nargs(juvix_ccl_closure);        \
-        if (juvix_ccl_largs <= juvix_ccl_sargs) {                             \
-            juvix_ccl_sargs -= juvix_ccl_largs;                               \
-            for (size_t juvix_idx = 0; juvix_idx < juvix_ccl_nargs;           \
-                 ++juvix_idx) {                                               \
-                CARG(juvix_idx) = CLOSURE_ARG(juvix_ccl_closure, juvix_idx);  \
-            }                                                                 \
-            for (size_t juvix_idx = 0; juvix_idx < juvix_ccl_largs;           \
-                 ++juvix_idx) {                                               \
-                STACK_POP(CARG(juvix_ccl_nargs + juvix_idx));                 \
-            }                                                                 \
-            if (juvix_ccl_sargs == 0 && juvix_ccl_return == NULL) {           \
-                STACKTRACE_REPLACE(get_closure_fuid(juvix_ccl_closure));      \
-                STACK_LEAVE;                                                  \
-                STORED_GOTO(get_closure_addr(juvix_ccl_closure));             \
-            } else {                                                          \
-                STACK_PUSH_ADDR(juvix_ccl_return);                            \
-                STACK_PUSH(juvix_ccl_sargs);                                  \
-                CALL_CLOSURE(juvix_ccl_closure,                               \
-                             juvix_ccl_return_from_closure);                  \
-                STACK_POP(juvix_ccl_sargs);                                   \
-                STACK_POP_ADDR(juvix_ccl_return);                             \
-                if (juvix_ccl_sargs > 0) {                                    \
-                    juvix_ccl_closure = juvix_result;                         \
-                    goto juvix_ccl_start;                                     \
-                } else {                                                      \
-                    ASSERT(juvix_ccl_return != NULL);                         \
-                    STORED_GOTO(juvix_ccl_return);                            \
-                }                                                             \
-            }                                                                 \
-        } else {                                                              \
-            EXTEND_CLOSURE(juvix_result, juvix_ccl_closure, juvix_ccl_sargs); \
-            for (size_t juvix_idx = 0; juvix_idx < juvix_ccl_sargs;           \
-                 ++juvix_idx) {                                               \
-                STACK_POP(                                                    \
-                    CLOSURE_ARG(juvix_result, juvix_ccl_nargs + juvix_idx));  \
-            }                                                                 \
-            if (juvix_ccl_return == NULL) {                                   \
-                RETURN;                                                       \
-            } else {                                                          \
-                STORED_GOTO(juvix_ccl_return);                                \
-            }                                                                 \
-        }                                                                     \
+#define DECL_CALL_CLOSURES                                                     \
+    label_addr_t juvix_ccl_return;                                             \
+    size_t juvix_ccl_sargs;                                                    \
+    word_t juvix_ccl_closure;                                                  \
+    juvix_ccl_start:                                                           \
+    do {                                                                       \
+        size_t juvix_ccl_largs = get_closure_largs(juvix_ccl_closure);         \
+        size_t juvix_ccl_nargs = get_closure_nargs(juvix_ccl_closure);         \
+        if (juvix_ccl_largs <= juvix_ccl_sargs) {                              \
+            juvix_ccl_sargs -= juvix_ccl_largs;                                \
+            for (size_t juvix_idx = 0; juvix_idx < juvix_ccl_nargs;            \
+                 ++juvix_idx) {                                                \
+                CARG(juvix_idx) = CLOSURE_ARG(juvix_ccl_closure, juvix_idx);   \
+            }                                                                  \
+            for (size_t juvix_idx = 0; juvix_idx < juvix_ccl_largs;            \
+                 ++juvix_idx) {                                                \
+                STACK_POP(CARG(juvix_ccl_nargs + juvix_idx));                  \
+            }                                                                  \
+            if (juvix_ccl_sargs == 0 && juvix_ccl_return == NULL) {            \
+                STACKTRACE_REPLACE(get_closure_fuid(juvix_ccl_closure));       \
+                STACK_LEAVE;                                                   \
+                STORED_GOTO(get_closure_addr(juvix_ccl_closure));              \
+            } else {                                                           \
+                STACK_PUSH_ADDR(juvix_ccl_return);                             \
+                STACK_PUSH_UINT(juvix_ccl_sargs);                              \
+                CALL_CLOSURE(juvix_ccl_closure,                                \
+                             juvix_ccl_return_from_closure);                   \
+                STACK_POP_UINT(juvix_ccl_sargs);                               \
+                STACK_POP_ADDR(juvix_ccl_return);                              \
+                if (juvix_ccl_sargs > 0) {                                     \
+                    juvix_ccl_closure = juvix_result;                          \
+                    goto juvix_ccl_start;                                      \
+                } else {                                                       \
+                    ASSERT(juvix_ccl_return != NULL);                          \
+                    STORED_GOTO(juvix_ccl_return);                             \
+                }                                                              \
+            }                                                                  \
+        } else {                                                               \
+            PREALLOC(                                                          \
+                juvix_ccl_nargs + CLOSURE_SKIP + 1 + juvix_ccl_sargs,          \
+                {                                                              \
+                    STACK_PUSH(juvix_ccl_closure);                             \
+                    STACK_PUSH_ADDR(juvix_ccl_return);                         \
+                    STACK_PUSH_UINT(juvix_ccl_sargs);                          \
+                },                                                             \
+                {                                                              \
+                    STACK_POP_UINT(juvix_ccl_sargs);                           \
+                    STACK_POP_ADDR(juvix_ccl_return);                          \
+                    STACK_POP(juvix_ccl_closure);                              \
+                });                                                            \
+            EXTEND_CLOSURE(juvix_result, juvix_ccl_closure, juvix_ccl_sargs, { \
+                for (size_t juvix_idx = 0; juvix_idx < juvix_ccl_sargs;        \
+                     ++juvix_idx) {                                            \
+                    STACK_POP(CLOSURE_ARG(juvix_result,                        \
+                                          juvix_closure_nargs + juvix_idx));   \
+                }                                                              \
+            });                                                                \
+            if (juvix_ccl_return == NULL) {                                    \
+                RETURN;                                                        \
+            } else {                                                           \
+                STORED_GOTO(juvix_ccl_return);                                 \
+            }                                                                  \
+        }                                                                      \
     } while (0)
 
-#define DISPATCH_STACK_SIZE 3
+#define DISPATCH_STACK_SIZE 4
 
 #endif

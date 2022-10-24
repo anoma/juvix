@@ -106,5 +106,10 @@ tests =
       "Branching, matching and recursion on lists"
       "."
       "test015.c"
-      "out/test015.out"
+      "out/test015.out",
+    PosTest
+      "Closure extension"
+      "."
+      "test016.c"
+      "out/test016.out"
   ]
