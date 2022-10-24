@@ -21,7 +21,7 @@ makeLenses ''EvalOptions
 
 doEval ::
   forall r.
-  Members '[Embed IO, App] r =>
+  Members '[Embed IO] r =>
   Bool ->
   Interval ->
   Core.InfoTable ->
@@ -30,6 +30,14 @@ doEval ::
 doEval noIO loc tab node
   | noIO = embed $ Core.catchEvalError loc (Core.eval (tab ^. Core.identContext) [] node)
   | otherwise = embed $ Core.catchEvalErrorIO loc (Core.evalIO (tab ^. Core.identContext) [] node)
+
+doEvalIO ::
+  Bool ->
+  Interval ->
+  Core.InfoTable ->
+  Core.Node ->
+  IO (Either Core.CoreError Core.Node)
+doEvalIO noIO i tab node = runM (doEval noIO i tab node)
 
 evalNode ::
   forall r a.
