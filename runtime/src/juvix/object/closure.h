@@ -11,6 +11,8 @@
 #define CLOSURE_SKIP 1
 #endif
 
+#define CLOSURE_HEAD_SIZE (CLOSURE_SKIP + 1)
+
 // The number of arguments stored in the closure.
 static inline size_t get_closure_nargs(word_t cl) {
     return get_nfields(cl) - CLOSURE_SKIP;
@@ -81,6 +83,13 @@ static inline word_t *get_closure_args(word_t cl) {
         size_t juvix_closure_nargs = get_closure_nargs(src); \
         CODE;                                                \
     } while (0)
+
+#define DECL_ZEROARG_CLOSURE(name, fuid, largs)                 \
+    word_t juvix_zeroarg_closure_data_##name[1 + CLOSURE_SKIP]; \
+    word_t juvix_zeroarg_closure_##name =                       \
+        (word_t)&juvix_zeroarg_closure_data_##name;             \
+    INIT_CLOSURE(juvix_zeroarg_closure_##name, fuid,            \
+                 LABEL_ADDR(juvix_closure_##name), 0, largs);
 
 // Memory pointers (see alloc.h) need to be saved before calling the following
 // functions (they call alloc).

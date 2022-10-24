@@ -126,5 +126,10 @@ tests =
       "Dynamic closure extension"
       "."
       "test019.c"
-      "out/test019.out"
+      "out/test019.out",
+    PosTest
+      "Higher-order function composition"
+      "."
+      "test020.c"
+      "out/test020.out"
   ]
