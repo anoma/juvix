@@ -10,4 +10,4 @@ import Juvix.Compiler.Core.Translation
 runCommand :: Members '[Embed IO, App] r => InternalCoreEvalOptions -> Sem r ()
 runCommand localOpts = do
   tab <- (^. coreResultTable) <$> runPipeline (localOpts ^. internalCoreEvalInputFile) upToCore
-  forM_ ((tab ^. infoMain) >>= ((tab ^. identContext) HashMap.!?)) (evalNode localOpts tab)
+  forM_ ((tab ^. infoMain) >>= ((tab ^. identContext) HashMap.!?)) (evalAndPrint localOpts tab)

@@ -1,6 +1,7 @@
 module Commands.Dev.Core.Read.Options where
 
 import Commands.Dev.Core.Eval.Options qualified as Eval
+import Evaluator qualified as Evaluator
 import CommonOptions
 import Juvix.Compiler.Core.Data.TransformationId.Parser
 import Juvix.Compiler.Core.Pretty.Options qualified as Core
@@ -29,6 +30,12 @@ instance CanonicalProjection CoreReadOptions Eval.CoreEvalOptions where
         _coreEvalInputFile = c ^. coreReadInputFile,
         _coreEvalShowDeBruijn = c ^. coreReadShowDeBruijn
       }
+
+instance CanonicalProjection CoreReadOptions Evaluator.EvalOptions where
+  project x = Evaluator.EvalOptions {
+    _evalNoIO = False,
+    _evalInputFile = x ^. coreReadInputFile
+}
 
 parseCoreReadOptions :: Parser CoreReadOptions
 parseCoreReadOptions = do

@@ -85,13 +85,13 @@ runCommand opts = do
         let  ident = pack name
              k = identMap HashMap.!? ident
         case k of
-          (Just (Core.IdentSym s)) -> do
-            let Just n = ctx HashMap.!? s
-            Right n' <- liftIO $ doEvalIO True defaultLoc tab n
-            liftIO $ putStrLn $ Core.ppTrace n'
+          -- (Just (Core.IdentSym s)) -> do
+          --   let Just n = ctx HashMap.!? s
+          --   Right n' <- liftIO $ doEvalIO True defaultLoc tab n
+          --   liftIO $ putStrLn $ Core.ppTrace n'
           _ -> error "symbol not found"
         where
-          defaultLoc = singletonInterval (mkLoc "stdin" 0 (M.initialPos "stdin"))
+          defaultLoc = singletonInterval (mkLoc 0 (M.initialPos "stdin"))
 
       printRoot :: String -> ReplT ()
       printRoot _ = do

@@ -39,15 +39,15 @@ doEvalIO ::
   IO (Either Core.CoreError Core.Node)
 doEvalIO noIO i tab node = runM (doEval noIO i tab node)
 
-evalNode ::
+evalAndPrint ::
   forall r a.
-  (Members '[Embed IO, App] r, CanonicalProjection a Core.Options, CanonicalProjection a EvalOptions) =>
+  (Members '[Embed IO, App] r, CanonicalProjection a EvalOptions , CanonicalProjection a Core.Options) =>
   a ->
   Core.InfoTable ->
   Core.Node ->
   Sem r ()
-evalNode opts tab node = do
-  r <- doEval (evalOpts ^. evalNoIO) defaultLoc tab node
+evalAndPrint opts tab node = do
+  r <- doEval (project opts ^. evalNoIO) defaultLoc tab node
   case r of
     Left err -> exitJuvixError (JuvixError err)
     Right node'
@@ -58,8 +58,6 @@ evalNode opts tab node = do
       embed (putStrLn "")
   where
     defaultLoc :: Interval
-    defaultLoc = singletonInterval (mkLoc f 0 (M.initialPos f))
-    evalOpts :: EvalOptions
-    evalOpts = project opts
+    defaultLoc = singletonInterval (mkLoc 0 (M.initialPos f))
     f :: FilePath
-    f = evalOpts ^. evalInputFile . pathPath
+    f = project opts ^. evalInputFile . pathPath
