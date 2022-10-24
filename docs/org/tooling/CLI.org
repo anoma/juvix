@@ -3,7 +3,7 @@
 ** Usage
 
 #+begin_src shell
-juvix [Global options]  ((-v|--version) | --show-root | COMMAND)
+juvix [Global options] ((-v|--version) | (-h|--help) | COMPILER_CMD | UTILITY_CMD)
 #+end_src
 
 ** Informative options
@@ -26,17 +26,28 @@ juvix [Global options]  ((-v|--version) | --show-root | COMMAND)
 - =--only-errors=
   Only print errors in a uniform format (used by
                           juvix-mode)
+- =--no-termination=
+  Disable termination checking
+- =--no-positivity=
+  Disable positivity checking for inductive types
+- =--no-stdlib=
+  Do not use the standard library
 
 ** Main Commands
 
 - =html=
   Generate HTML output from a Juvix file
-
 - =typecheck=
   Typecheck a Juvix file
-
 - =compile=
   Compile a Juvix file
+
+** Utility Commands
+
+- =doctor=
+  Perform checks on your Juvix development environment
+- =init=
+  Interactively initialize a juvix project in the current directory
 
 ** Dev Commands
 
@@ -48,6 +59,16 @@ juvix dev COMMAND
   Parse a Juvix file
 - =scope=
   Parse and scope a Juvix file
+- =highlight=
+  Highlight a Juvix file
+- =core=
+  Subcommands related to JuvixCore
+- =asm=
+  Subcommands related to JuvixAsm
+- =doc=
+  Generate documentation
+- =root=
+  Show the root path for a Juvix project
 - =termination=
   Subcommands related to termination checking
 - =internal=

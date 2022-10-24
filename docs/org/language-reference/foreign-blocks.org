@@ -11,7 +11,7 @@ The following is an example taken from the Juvix standard library.
 module Integers;
 
 axiom Int : Type;
-compile Int {  c ↦ "int" };
+compile Int {  c -> "int" };
 
 foreign c {
    bool lessThan(int l, int r) {
@@ -25,12 +25,12 @@ inductive Bool {
 };
 
 infix 4 <';
-axiom <' : Int → Int → Bool;
+axiom <' : Int -> Int -> Bool;
 compile <' {
-  c ↦ "lessThan";
+  c -> "lessThan";
 };
 
 infix 4 <;
-< : Int → Int → Bool;
+< : Int -> Int -> Bool;
 < a b := from-backend-bool (a <' b);
 #+end_example
