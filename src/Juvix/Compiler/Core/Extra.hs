@@ -159,15 +159,6 @@ argumentInfoFromBinder i =
       _argumentIsImplicit = Explicit
     }
 
--- TODO remove ?
-argumentInfoFromInfo :: Info -> ArgumentInfo
-argumentInfoFromInfo i =
-  ArgumentInfo
-    { _argumentName = getInfoName i,
-      _argumentType = getInfoType i,
-      _argumentIsImplicit = Explicit
-    }
-
 infoFromArgumentInfo :: ArgumentInfo -> Info
 infoFromArgumentInfo arg =
   setInfoType (arg ^. argumentType) $
