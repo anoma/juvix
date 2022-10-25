@@ -44,10 +44,6 @@ mkConstr i tag args = NCtr (Constr i tag args)
 mkConstr' :: Tag -> [Node] -> Node
 mkConstr' = mkConstr Info.empty
 
--- TODO remove
-mkLambdaOld :: Info -> Node -> Node
-mkLambdaOld i b = NLam (Lambda i emptyBinder b)
-
 mkLambda :: Info -> Binder -> Node -> Node
 mkLambda i bi b = NLam (Lambda i bi b)
 
@@ -215,27 +211,22 @@ unfoldApps = go []
 unfoldApps' :: Node -> (Node, [Node])
 unfoldApps' = second (map snd) . unfoldApps
 
-mkLambdas :: [Info] -> Node -> Node
-mkLambdas is n = foldl' (flip mkLambdaOld) n (reverse is)
-
 reLambda :: LambdaLhs -> Node -> Node
 reLambda lhs = mkLambda (lhs ^. lambdaLhsInfo) (lhs ^. lambdaLhsBinder)
 
 reLambdas :: [LambdaLhs] -> Node -> Node
 reLambdas is n = foldl' (flip reLambda) n (reverse is)
 
--- | the given info corresponds to the binder info
 mkLambdaB :: Binder -> Node -> Node
 mkLambdaB = mkLambda mempty
 
--- | the given infos correspond to the binder infos
 mkLambdasB :: [Binder] -> Node -> Node
 mkLambdasB is n = foldl' (flip mkLambdaB) n (reverse is)
 
 mkLambdas' :: Int -> Node -> Node
 mkLambdas' k
   | k < 0 = impossible
-  | otherwise = mkLambdas (replicate k Info.empty)
+  | otherwise = mkLambdasB (replicate k emptyBinder)
 
 unfoldLambdasRev :: Node -> ([LambdaLhs], Node)
 unfoldLambdasRev = go []
