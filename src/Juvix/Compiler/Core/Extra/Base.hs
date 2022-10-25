@@ -430,7 +430,7 @@ destruct = \case
                     i'
                     (hd args')
                     ( zipWith3Exact
-                        ( \br (bis, is) body' ->
+                        ( \br is (bis, body') ->
                             br
                               { _caseBranchInfo = is,
                                 _caseBranchBinders = bis,
@@ -438,8 +438,8 @@ destruct = \case
                               }
                         )
                         brs
-                        (zipExact binders' is')
-                        (tl (tl args'))
+                        is'
+                        (tl (tl (zipExact binders' args')))
                     )
                     (Just (hd (tl args')))
               }
