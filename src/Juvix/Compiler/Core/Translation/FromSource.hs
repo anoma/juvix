@@ -716,8 +716,7 @@ letrecDefs ::
   Index ->
   HashMap Text Level ->
   ParsecS r (NonEmpty LetItem)
-letrecDefs names varsNum vars =
-  mapM letrecItem names
+letrecDefs names varsNum vars = forM names letrecItem
   where
     letrecItem :: Text -> ParsecS r LetItem
     letrecItem n = do
@@ -728,7 +727,6 @@ letrecDefs names varsNum vars =
       name <- lift $ freshName KNameLocal txt i
       kw kwAssign
       v <- bracedExpr varsNum vars
-      -- TODO last semicolon optional
       kw kwSemicolon
       return $ LetItem (Binder (Just name) mkDynamic') v
 

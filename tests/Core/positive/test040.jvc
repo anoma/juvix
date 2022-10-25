@@ -31,7 +31,7 @@ def mutrec :=
         1
       else
         x * f (x - 1)
-    } in z
+    } in z;
   in writeLn (f 5) >> writeLn (f 10) >> writeLn (f 100) >> writeLn (g 5) >> writeLn (h 5);
 
 letrec x := 3
