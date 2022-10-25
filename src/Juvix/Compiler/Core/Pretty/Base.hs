@@ -9,9 +9,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
 import Juvix.Compiler.Core.Extra
-import Juvix.Compiler.Core.Info.BinderInfo
 import Juvix.Compiler.Core.Info.NameInfo
-import Juvix.Compiler.Core.Info.TypeInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Stripped qualified as Stripped
 import Juvix.Compiler.Core.Pretty.Options
@@ -191,8 +189,9 @@ ppPatterns pats = do
 instance PrettyCode Let where
   ppCode :: forall r. Member (Reader Options) r => Let -> Sem r (Doc Ann)
   ppCode x = do
-    let name = getInfoName (getInfoBinder (x ^. letInfo))
-        ty = getInfoType (getInfoBinder (x ^. letInfo))
+    let binder = x ^. letItem . letItemBinder
+        name = binder ^. binderName
+        ty = binder ^. binderType
      in do
           mty <- case ty of
             NDyn {} -> return Nothing
@@ -202,24 +201,23 @@ instance PrettyCode Let where
 instance PrettyCode LetRec where
   ppCode :: forall r. Member (Reader Options) r => LetRec -> Sem r (Doc Ann)
   ppCode LetRec {..} = do
-    let n = length _letRecValues
-    ns <- mapM getName (getInfoBinders n _letRecInfo)
+    names <- mapM (getName . (^. letItemBinder)) _letRecValues
     vs <- mapM (ppCode . (^. letItemValue)) _letRecValues
     b' <- ppCode _letRecBody
-    return $ case ns of
-      [hns] -> kwLetRec <+> hns <+> kwAssign <+> head vs <+> kwIn <+> b'
+    return $ case names of
+      hns :| [] -> kwLetRec <+> hns <+> kwAssign <+> head vs <+> kwIn <+> b'
       _ ->
         let bss =
               indent' $
                 align $
                   concatWith (\a b -> a <> kwSemicolon <> line <> b) $
-                    zipWithExact (\name val -> name <+> kwAssign <+> val) ns (toList vs)
-            nss = enclose kwSquareL kwSquareR (concatWith (<+>) ns)
+                    zipWithExact (\name val -> name <+> kwAssign <+> val) (toList names) (toList vs)
+            nss = enclose kwSquareL kwSquareR (concatWith (<+>) names)
          in kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
     where
-      getName :: Info -> Sem r (Doc Ann)
+      getName :: Binder -> Sem r (Doc Ann)
       getName i =
-        case getInfoName i of
+        case i ^. binderName of
           Just name -> ppCode name
           Nothing -> return kwQuestion
 
@@ -253,12 +251,12 @@ instance PrettyCode Node where
     NLet x -> ppCode x
     NRec l -> ppCode l
     NCase x@Case {..} ->
-      let branchBinderNames = map (\(CaseBranch {..}) -> map getInfoName (getInfoBinders _caseBranchBindersNum _caseBranchInfo)) _caseBranches
-          branchTagNames = map (\(CaseBranch {..}) -> getInfoName _caseBranchInfo) _caseBranches
+      let branchBinderNames = map (\CaseBranch {..} -> map (^. binderName) _caseBranchBinders) _caseBranches
+          branchTagNames = map (\CaseBranch {..} -> getInfoName _caseBranchInfo) _caseBranches
        in ppCodeCase' branchBinderNames branchTagNames x
     NMatch Match {..} -> do
       let branchPatterns = map (^. matchBranchPatterns) _matchBranches
-      let branchBodies = map (^. matchBranchBody) _matchBranches
+          branchBodies = map (^. matchBranchBody) _matchBranches
       pats <- mapM ppPatterns branchPatterns
       vs <- mapM ppCode _matchValues
       bs <- sequence $ zipWithExact (\ps br -> ppCode br >>= \br' -> return $ ps <+> kwMapsto <+> br') pats branchBodies
@@ -266,7 +264,7 @@ instance PrettyCode Node where
       return $ kwMatch <+> hsep (punctuate comma (toList vs)) <+> kwWith <+> bss
     NPi Pi {..} ->
       let piType = _piBinder ^. binderType
-       in case getInfoName $ getInfoBinder _piInfo of
+       in case _piBinder ^. binderName of
             Just name -> do
               n <- ppCode name
               ty <- ppCode piType
