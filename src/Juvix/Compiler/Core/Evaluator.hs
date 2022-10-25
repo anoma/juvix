@@ -10,7 +10,7 @@ import Control.Exception qualified as Exception
 import Data.HashMap.Strict qualified as HashMap
 import Debug.Trace qualified as Debug
 import GHC.Conc qualified as GHC
-import GHC.Show as S
+import GHC.Show qualified as S
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Error (CoreError (..))
 import Juvix.Compiler.Core.Extra

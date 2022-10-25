@@ -20,7 +20,7 @@ by =suc zero= or the number two represented by =suc (suc zero)=, etc.
 #+begin_example
 inductive Nat {
     zero : Nat;
-    suc : Nat → Nat;
+    suc : Nat -> Nat;
 };
 #+end_example
 
@@ -29,7 +29,7 @@ Let us define, for example, the function for adding two natural numbers.
 
 #+begin_src text
 inifl 6 +;
-+ : Nat → Nat → Nat;
++ : Nat -> Nat -> Nat;
 + zero b := b;
 + (suc a) b := suc (a + b);
 #+end_src
@@ -45,10 +45,10 @@ the following type taken from the Juvix standard library:
 infixr 5 ∷;
 inductive List (A : Type) {
   nil : List A;
-  ∷ : A → List A → List A;
+  ∷ : A -> List A -> List A;
 };
 
-elem : {A : Type} → (A → A → Bool) → A → List A → Bool;
+elem : {A : Type} -> (A -> A -> Bool) -> A -> List A -> Bool;
 elem _ _ nil := false;
 elem eq s (x ∷ xs) := eq s x || elem eq s xs;
 #+end_example

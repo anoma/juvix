@@ -22,3 +22,6 @@ mapT' f tab =
       mapM_
         (\(k, v) -> f v >>= registerIdentNode k)
         (HashMap.toList (tab ^. identContext))
+
+walkT :: Applicative f => (Symbol -> Node -> f ()) -> InfoTable -> f ()
+walkT f tab = for_ (HashMap.toList (tab ^. identContext)) (uncurry f)

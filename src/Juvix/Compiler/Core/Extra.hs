@@ -25,8 +25,8 @@ import Juvix.Compiler.Core.Language
 isClosed :: Node -> Bool
 isClosed = not . has freeVars
 
-getFreeVars :: Node -> HashSet Var
-getFreeVars n = HashSet.fromList (n ^.. freeVars)
+freeVarsSet :: Node -> HashSet Var
+freeVarsSet n = HashSet.fromList (n ^.. freeVars)
 
 freeVars :: SimpleFold Node Var
 freeVars f = ufoldNA reassemble go
@@ -98,16 +98,22 @@ captureFreeVars fv
             | Just v <- s ^. at (u - k) -> NVar (Var i (v + k))
           m -> m
 
+-- | subst for multiple bindings
+substs :: [Node] -> Node -> Node
+substs t = umapN go
+  where
+    len = length t
+    go k n = case n of
+      NVar (Var i idx)
+        | idx >= k, idx - k < len -> shift k (t !! (idx - k))
+        | idx > k -> mkVar i (idx - len)
+      _ -> n
+
 -- | substitute a term t for the free variable with de Bruijn index 0, avoiding
 -- variable capture; shifts all free variabes with de Bruijn index > 0 by -1 (as
 -- if the topmost binder was removed)
 subst :: Node -> Node -> Node
-subst t = umapN go
-  where
-    go k n = case n of
-      NVar (Var _ idx) | idx == k -> shift k t
-      NVar (Var i idx) | idx > k -> mkVar i (idx - 1)
-      _ -> n
+subst t = substs [t]
 
 -- | reduce all beta redexes present in a term and the ones created immediately
 -- downwards (i.e., a "beta-development")
@@ -130,7 +136,8 @@ substEnv env
   | otherwise = umapN go
   where
     go k n = case n of
-      NVar (Var _ idx) | idx >= k -> env !! (idx - k)
+      NVar (Var _ idx)
+        | idx >= k -> env !! (idx - k)
       _ -> n
 
 convertClosures :: Node -> Node

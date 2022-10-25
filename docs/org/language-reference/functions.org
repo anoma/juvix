@@ -4,13 +4,13 @@ A function declaration is a type signature /and/ a group of definitions called
 /function clauses/.
 
 In the following example we define a function called =multiplyByTwo=. The first
-line =multiplyByTwo : ℕ -> ℕ;= is the type signature and the second line
+line =multiplyByTwo : Nat -> Nat;= is the type signature and the second line
 ~multiplyByTwo n := 2 * n;~ is a function clause.
 
 #+begin_example
 open import Stdlib.Prelude;
 
-multiplyByTwo : ℕ -> ℕ;
+multiplyByTwo : Nat -> Nat;
 multiplyByTwo n := 2 * n;
 #+end_example
 
