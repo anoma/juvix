@@ -2,6 +2,7 @@ module Scope.Positive where
 
 import Base
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Extra
 import Juvix.Compiler.Concrete.Pretty qualified as M
@@ -50,18 +51,20 @@ testDescr PosTest {..} =
                   | otherwise = HashMap.union fs stdlibMap
 
             step "Parsing"
-            p :: Parser.ParserResult <- runIO' entryPoint upToParsing
+            p :: Parser.ParserResult <- snd <$> runIO' iniState entryPoint upToParsing
 
             let p2 = head (p ^. Parser.resultModules)
 
             step "Scoping"
             s :: Scoper.ScoperResult <-
-              runIO'
-                entryPoint
-                ( do
-                    void entrySetup
-                    Concrete.fromParsed p
-                )
+              snd
+                <$> runIO'
+                  iniState
+                  entryPoint
+                  ( do
+                      void entrySetup
+                      Concrete.fromParsed p
+                  )
 
             let s2 = head (s ^. Scoper.resultModules)
 

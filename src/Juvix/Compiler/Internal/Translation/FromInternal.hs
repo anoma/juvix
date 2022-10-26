@@ -2,6 +2,9 @@ module Juvix.Compiler.Internal.Translation.FromInternal
   ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability,
     arityChecking,
     typeChecking,
+    typeCheckExpression,
+    arityCheckExpression,
+    inferExpressionType,
   )
 where
 
@@ -32,17 +35,61 @@ arityChecking res@InternalResult {..} =
     table :: InfoTable
     table = buildTable _resultModules
 
+arityCheckExpression ::
+  Members '[Error JuvixError, NameIdGen] r =>
+  InternalResult ->
+  Expression ->
+  Sem r Expression
+arityCheckExpression InternalResult {..} exp =
+  mapError (JuvixError @ArityChecking.ArityCheckerError) $
+    runReader table (ArityChecking.withEmptyLocalVars (ArityChecking.checkExpression ArityChecking.ArityUnknown exp))
+  where
+    table :: InfoTable
+    table = buildTable _resultModules
+
+typeCheckExpressionType ::
+  Members '[Error JuvixError, NameIdGen, Builtins] r =>
+  InternalTypedResult ->
+  Expression ->
+  Sem r TypedExpression
+typeCheckExpressionType (InternalTypedResult {..}) exp =
+  mapError (JuvixError @TypeCheckerError)
+    $ do
+      runReader _resultFunctions
+      . evalState _resultIdenTypes
+      . runReader table
+      . withEmptyVars
+      . runInferenceDef
+    $ inferExpression' Nothing exp
+  where
+    table :: InfoTable
+    table = buildTable _resultModules
+
+typeCheckExpression ::
+  Members '[Error JuvixError, NameIdGen, Builtins] r =>
+  InternalTypedResult ->
+  Expression ->
+  Sem r Expression
+typeCheckExpression res exp = fmap (^. typedExpression) (typeCheckExpressionType res exp)
+
+inferExpressionType ::
+  Members '[Error JuvixError, NameIdGen, Builtins] r =>
+  InternalTypedResult ->
+  Expression ->
+  Sem r Expression
+inferExpressionType res exp = fmap (^. typedType) (typeCheckExpressionType res exp)
+
 typeChecking ::
   Members '[Error JuvixError, NameIdGen, Builtins] r =>
   ArityChecking.InternalArityResult ->
   Sem r InternalTypedResult
 typeChecking res@ArityChecking.InternalArityResult {..} =
   mapError (JuvixError @TypeCheckerError) $ do
-    (normalized, (idens, r)) <-
+    (normalized, (idens, (funs, r))) <-
       runOutputList
         . runState (mempty :: TypesTable)
         . runReader entryPoint
-        . evalState (mempty :: FunctionsTable)
+        . runState (mempty :: FunctionsTable)
         . runReader table
         $ mapM checkModule _resultModules
     return
@@ -50,7 +97,8 @@ typeChecking res@ArityChecking.InternalArityResult {..} =
         { _resultInternalArityResult = res,
           _resultModules = r,
           _resultNormalized = HashMap.fromList [(e ^. exampleId, e ^. exampleExpression) | e <- normalized],
-          _resultIdenTypes = idens
+          _resultIdenTypes = idens,
+          _resultFunctions = funs
         }
   where
     table :: InfoTable

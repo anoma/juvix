@@ -16,6 +16,7 @@ import Juvix.Compiler.Concrete.Data.Name qualified as N
 import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder (mergeTable)
 import Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder qualified as Parser
 import Juvix.Compiler.Concrete.Data.Scope
+import Juvix.Compiler.Concrete.Data.Scope qualified as S
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Language
@@ -26,41 +27,69 @@ import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context (ParserResult)
 import Juvix.Prelude
 
+iniScoperState :: ScoperState
+iniScoperState =
+  ScoperState
+    { _scoperModulesCache = ModulesCache mempty,
+      _scoperModules = mempty,
+      _scoperScope = mempty
+    }
+
+iniScopeParameters :: ScopeParameters
+iniScopeParameters =
+  ScopeParameters
+    { _scopeFileExtension = ".juvix",
+      _scopeTopParents = mempty
+    }
+
 scopeCheck ::
   Members '[Files, Error ScoperError, NameIdGen] r =>
   ParserResult ->
+  InfoTable ->
   NonEmpty (Module 'Parsed 'ModuleTop) ->
   Sem r ScoperResult
-scopeCheck pr modules =
+scopeCheck pr tab modules =
   fmap mkResult $
     Parser.runInfoTableBuilder $
-      runInfoTableBuilder $
-        runReader scopeParameters $
-          evalState iniScoperState $ do
+      runInfoTableBuilder tab $
+        runReader iniScopeParameters $
+          runState iniScoperState $ do
             mergeTable (pr ^. Parser.resultTable)
             checkTopModules modules
   where
-    mkResult :: (Parser.InfoTable, (InfoTable, (NonEmpty (Module 'Scoped 'ModuleTop), HashSet NameId))) -> ScoperResult
-    mkResult (pt, (st, (ms, exp))) =
+    mkResult :: (Parser.InfoTable, (InfoTable, (ScoperState, (NonEmpty (Module 'Scoped 'ModuleTop), HashSet NameId)))) -> ScoperResult
+    mkResult (pt, (st, (scoperSt, (ms, exp)))) =
       ScoperResult
         { _resultParserResult = pr,
           _resultParserTable = pt,
           _resultScoperTable = st,
           _resultModules = ms,
-          _resultExports = exp
+          _resultExports = exp,
+          _resultScope = scoperSt ^. scoperScope
         }
-    iniScoperState :: ScoperState
-    iniScoperState =
-      ScoperState
-        { _scoperModulesCache = ModulesCache mempty,
-          _scoperModules = mempty
-        }
-    scopeParameters :: ScopeParameters
-    scopeParameters =
-      ScopeParameters
-        { _scopeFileExtension = ".juvix",
-          _scopeTopParents = mempty
-        }
+
+scopeCheckExpression ::
+  forall r.
+  Members '[Error JuvixError, NameIdGen] r =>
+  InfoTable ->
+  S.Scope ->
+  ExpressionAtoms 'Parsed ->
+  Sem r Expression
+scopeCheckExpression tab scope as = mapError (JuvixError @ScoperError) $ do
+  snd
+    <$> ( runInfoTableBuilder tab $
+            runReader iniScopeParameters $
+              evalState iniScoperState $
+                evalState scope $
+                  localScope $
+                    checkParseExpressionAtoms as
+        )
+
+checkParseExpressionAtoms' ::
+  Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
+  ExpressionAtoms 'Parsed ->
+  Sem r Expression
+checkParseExpressionAtoms' = checkExpressionAtoms >=> parseExpressionAtoms
 
 freshVariable :: Members '[NameIdGen, State Scope] r => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol S.KNameLocal
@@ -283,7 +312,8 @@ lookupQualifiedSymbol (path, sym) = do
     here = lookupSymbolAux path sym
     -- Looks for a top level modules
     there :: Sem r [SymbolEntry]
-    there = concatMapM (fmap maybeToList . uncurry lookInTopModule) allTopPaths
+    there = do
+      concatMapM (fmap maybeToList . uncurry lookInTopModule) allTopPaths
       where
         allTopPaths :: [(TopModulePath, [Symbol])]
         allTopPaths = map (first nonEmptyToTopPath) raw
@@ -540,7 +570,7 @@ checkTopModule m@(Module path params doc body) = do
     iniScope = emptyScope (getTopModulePath m)
     checkedModule :: Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
     checkedModule = do
-      evalState iniScope $ do
+      (s, (m', p)) <- runState iniScope $ do
         path' <- freshTopModulePath
         localScope $
           withParams params $ \params' -> do
@@ -554,7 +584,9 @@ checkTopModule m@(Module path params doc body) = do
                       _moduleDoc = doc'
                     }
                 _moduleRefName = set S.nameConcrete () path'
-            return ModuleRef'' {..}
+            return (ModuleRef'' {..}, path')
+      modify (set (scoperScope . at (p ^. S.nameConcrete)) (Just s))
+      return m'
 
 withScope :: Members '[State Scope] r => Sem r a -> Sem r a
 withScope ma = do
@@ -829,7 +861,7 @@ lookupLocalEntry sym = do
     SymbolInfo {..} <- ms
     HashMap.lookup path _symbolInfo
 
-localScope :: Sem (Reader LocalVars : r) a -> Sem r a
+localScope :: forall r a. Sem (Reader LocalVars : r) a -> Sem r a
 localScope = runReader (LocalVars mempty)
 
 checkAxiomDef ::
@@ -1201,6 +1233,7 @@ checkParens e@(ExpressionAtoms as _) = case as of
   _ -> checkParseExpressionAtoms e
 
 checkExpressionAtoms ::
+  forall r.
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
   ExpressionAtoms 'Parsed ->
   Sem r (ExpressionAtoms 'Scoped)
@@ -1236,6 +1269,7 @@ checkJudocAtom = \case
   JudocExpression e -> JudocExpression <$> checkParseExpressionAtoms e
 
 checkParseExpressionAtoms ::
+  forall r.
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
   ExpressionAtoms 'Parsed ->
   Sem r Expression
@@ -1346,6 +1380,7 @@ makeExpressionTable2 (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ 
                 }
 
 parseExpressionAtoms ::
+  forall r.
   Members '[Error ScoperError, State Scope] r =>
   ExpressionAtoms 'Scoped ->
   Sem r Expression

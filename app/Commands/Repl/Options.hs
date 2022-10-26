@@ -3,7 +3,7 @@ module Commands.Repl.Options where
 import CommonOptions
 
 newtype ReplOptions = ReplOptions
-  { _replInputFile :: Maybe Path }
+  {_replInputFile :: Maybe Path}
   deriving stock (Data)
 
 makeLenses ''ReplOptions

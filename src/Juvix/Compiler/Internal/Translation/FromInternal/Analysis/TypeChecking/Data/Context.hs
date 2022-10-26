@@ -8,6 +8,7 @@ import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context (InternalArityResult)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as Arity
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.FunctionsTable
 import Juvix.Compiler.Pipeline.EntryPoint qualified as E
 import Juvix.Prelude
 
@@ -19,7 +20,8 @@ data InternalTypedResult = InternalTypedResult
   { _resultInternalArityResult :: InternalArityResult,
     _resultModules :: NonEmpty Module,
     _resultNormalized :: NormalizedTable,
-    _resultIdenTypes :: TypesTable
+    _resultIdenTypes :: TypesTable,
+    _resultFunctions :: FunctionsTable
   }
 
 makeLenses ''InternalTypedResult

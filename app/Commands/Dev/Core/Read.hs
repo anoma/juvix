@@ -1,8 +1,8 @@
 module Commands.Dev.Core.Read where
 
 import Commands.Base
-import Evaluator qualified as Eval
 import Commands.Dev.Core.Read.Options
+import Evaluator qualified as Eval
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Scoper qualified as Scoper
 import Juvix.Compiler.Core.Transformation qualified as Core

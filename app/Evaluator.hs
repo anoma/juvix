@@ -41,7 +41,7 @@ doEvalIO noIO i tab node = runM (doEval noIO i tab node)
 
 evalAndPrint ::
   forall r a.
-  (Members '[Embed IO, App] r, CanonicalProjection a EvalOptions , CanonicalProjection a Core.Options) =>
+  (Members '[Embed IO, App] r, CanonicalProjection a EvalOptions, CanonicalProjection a Core.Options) =>
   a ->
   Core.InfoTable ->
   Core.Node ->

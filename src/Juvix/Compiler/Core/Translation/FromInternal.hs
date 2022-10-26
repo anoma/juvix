@@ -26,7 +26,12 @@ isExplicit = (== Internal.Explicit) . (^. Internal.patternArgIsImplicit)
 
 fromInternal :: Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do
-  CoreResult . fst <$> runInfoTableBuilder emptyInfoTable (runReader (i ^. InternalTyped.resultIdenTypes) f)
+  (res, _) <- runInfoTableBuilder emptyInfoTable (runReader (i ^. InternalTyped.resultIdenTypes) f)
+  return $
+    CoreResult
+      { _coreResultTable = res,
+        _coreResultInternalTypedResult = i
+      }
   where
     f :: forall r. Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r => Sem r ()
     f = mapM_ coreModule (toList (i ^. InternalTyped.resultModules))
@@ -35,6 +40,16 @@ fromInternal i = do
         coreModule m = do
           registerInductiveDefs m
           runNameIdGen (registerFunctionDefs m)
+
+fromInternalExpression :: CoreResult -> Internal.Expression -> Sem r Node
+fromInternalExpression res exp = do
+  snd
+    <$> runInfoTableBuilder
+      (res ^. coreResultTable)
+      ( runReader
+          (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
+          (goExpression 0 mempty exp)
+      )
 
 registerInductiveDefs ::
   forall r.

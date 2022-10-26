@@ -1,6 +1,7 @@
 module Arity.Negative (allTests) where
 
 import Base
+import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error
 import Juvix.Compiler.Pipeline
 
@@ -21,7 +22,7 @@ testDescr NegTest {..} =
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint = defaultEntryPoint _file
-            result <- runIOEither entryPoint upToInternalArity
+            result <- runIOEither iniState entryPoint upToInternalArity
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
               Left Nothing -> assertFailure "The arity checker did not find an error."

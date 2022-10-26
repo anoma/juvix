@@ -4,6 +4,7 @@ import Base
 import Core.Eval.Base
 import Data.HashMap.Strict qualified as HashMap
 import Data.Text.IO qualified as TIO
+import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
@@ -17,7 +18,7 @@ internalCoreAssertion :: FilePath -> FilePath -> (String -> IO ()) -> Assertion
 internalCoreAssertion mainFile expectedFile step = do
   step "Translate to Core"
   let entryPoint = defaultEntryPoint mainFile
-  tab <- (^. Core.coreResultTable) <$> runIO' entryPoint upToCore
+  tab <- (^. Core.coreResultTable) . snd <$> runIO' iniState entryPoint upToCore
   case (tab ^. infoMain) >>= ((tab ^. identContext) HashMap.!?) of
     Just node -> do
       withTempDir

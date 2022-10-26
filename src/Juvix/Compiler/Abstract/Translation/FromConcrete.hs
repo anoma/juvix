@@ -34,6 +34,9 @@ fromConcrete _resultScoper =
   where
     ms = _resultScoper ^. Scoper.resultModules
 
+fromConcreteExpression :: Members '[Error JuvixError, NameIdGen] r => Scoper.Expression -> Sem r Abstract.Expression
+fromConcreteExpression = mapError (JuvixError @ScoperError) . goExpression
+
 goTopModule ::
   Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r =>
   Module 'Scoped 'ModuleTop ->

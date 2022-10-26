@@ -52,6 +52,19 @@ fromSource e = mapError (JuvixError @ParserError) $ do
 
 -- | The fileName is only used for reporting errors. It is safe to pass
 -- an empty string.
+expressionFromTextSource ::
+  Members '[Error JuvixError, NameIdGen] r =>
+  FilePath ->
+  Text ->
+  Sem r (ExpressionAtoms 'Parsed)
+expressionFromTextSource fp txt = mapError (JuvixError @ParserError) $ do
+  exp <- runExpressionParser fp txt
+  case exp of
+    Left e -> throw e
+    Right exp' -> return exp'
+
+-- | The fileName is only used for reporting errors. It is safe to pass
+-- an empty string.
 runModuleParser :: Members '[NameIdGen] r => FilePath -> Text -> Sem r (Either ParserError (InfoTable, Module 'Parsed 'ModuleTop))
 runModuleParser fileName input = do
   m <-
@@ -61,6 +74,22 @@ runModuleParser fileName input = do
   case m of
     (_, Left err) -> return (Left (ParserError err))
     (tbl, Right r) -> return (Right (tbl, r))
+
+-- | The fileName is only used for reporting errors. It is safe to pass
+-- an empty string.
+runExpressionParser ::
+  Members '[NameIdGen] r =>
+  FilePath ->
+  Text ->
+  Sem r (Either ParserError (ExpressionAtoms 'Parsed))
+runExpressionParser fileName input = do
+  m <-
+    runInfoTableBuilder $
+      evalState (Nothing @(Judoc 'Parsed)) $
+        P.runParserT parseExpressionAtoms fileName input
+  case m of
+    (_, Left err) -> return (Left (ParserError err))
+    (_, Right r) -> return (Right r)
 
 top ::
   Member InfoTableBuilder r =>

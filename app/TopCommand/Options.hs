@@ -84,7 +84,8 @@ parseUtility =
         "repl"
         ( info
             (JuvixRepl <$> parseRepl)
-            (progDesc "Run the Juvix REPL"))
+            (progDesc "Run the Juvix REPL")
+        )
 
 commandCheck :: Mod CommandFields TopCommand
 commandCheck =
