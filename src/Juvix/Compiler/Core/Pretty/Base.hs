@@ -124,7 +124,7 @@ ppCodeConstr' name c = do
     Nothing -> ppCode (c ^. constrTag)
   return $ foldl' (<+>) n' args'
 
-ppCodeLet' :: (PrettyCode a, Member (Reader Options) r) => Maybe Name -> Maybe (Doc Ann) -> Let' i a -> Sem r (Doc Ann)
+ppCodeLet' :: (PrettyCode a, Member (Reader Options) r) => Maybe Name -> Maybe (Doc Ann) -> Let' i a ty -> Sem r (Doc Ann)
 ppCodeLet' name mty lt = do
   n' <- case name of
     Just nm -> ppCode nm

@@ -33,9 +33,9 @@ data ConstantValue
   deriving stock (Eq)
 
 -- | Info about a single binder. Associated with Lambda and Pi.
-data Binder' a = Binder
+data Binder' ty = Binder
   { _binderName :: Maybe Name,
-    _binderType :: a
+    _binderType :: ty
   }
 
 -- Other things we might need in the future:
@@ -75,27 +75,27 @@ data Constr' i a = Constr
   }
 
 -- | Useful for unfolding lambdas
-data LambdaLhs' i a = LambdaLhs
+data LambdaLhs' i ty = LambdaLhs
   { _lambdaLhsInfo :: i,
-    _lambdaLhsBinder :: Binder' a
+    _lambdaLhsBinder :: Binder' ty
   }
 
-data Lambda' i a = Lambda
+data Lambda' i a ty = Lambda
   { _lambdaInfo :: i,
-    _lambdaBinder :: Binder' a,
+    _lambdaBinder :: Binder' ty,
     _lambdaBody :: !a
   }
 
 -- | `let x := value in body` is not reducible to lambda + application for the
 -- purposes of ML-polymorphic / dependent type checking or code generation!
-data Let' i a = Let
+data Let' i a ty = Let
   { _letInfo :: i,
-    _letItem :: {-# UNPACK #-} !(LetItem' a),
+    _letItem :: {-# UNPACK #-} !(LetItem' a ty),
     _letBody :: !a
   }
 
-data LetItem' a = LetItem
-  { _letItemBinder :: Binder' a,
+data LetItem' a ty = LetItem
+  { _letItemBinder :: Binder' ty,
     _letItemValue :: a
   }
 
@@ -103,9 +103,9 @@ data LetItem' a = LetItem
 -- body and in the values `length _letRecValues` implicit binders are introduced
 -- which hold the functions/values being defined.
 -- the last item _letRecValues will have have index $0 in the body.
-data LetRec' i a = LetRec
+data LetRec' i a ty = LetRec
   { _letRecInfo :: i,
-    _letRecValues :: !(NonEmpty (LetItem' a)),
+    _letRecValues :: !(NonEmpty (LetItem' a ty)),
     _letRecBody :: !a
   }
 
@@ -237,13 +237,13 @@ instance HasAtomicity (Constr' i a) where
     | null _constrArgs = Atom
     | otherwise = Aggregate lambdaFixity
 
-instance HasAtomicity (Lambda' i a) where
+instance HasAtomicity (Lambda' i a ty) where
   atomicity _ = Aggregate lambdaFixity
 
-instance HasAtomicity (Let' i a) where
+instance HasAtomicity (Let' i a ty) where
   atomicity _ = Aggregate lambdaFixity
 
-instance HasAtomicity (LetRec' i a) where
+instance HasAtomicity (LetRec' i a ty) where
   atomicity _ = Aggregate lambdaFixity
 
 instance HasAtomicity (Case' i bi a) where
@@ -361,20 +361,20 @@ instance Eq (Dynamic' i) where
 
 deriving stock instance Eq a => Eq (Pattern' i a)
 
-instance Eq a => Eq (LetItem' a) where
+instance Eq a => Eq (LetItem' a ty) where
   (==) = eqOn (^. letItemValue)
 
 -- | ignores the binder
-instance Eq a => Eq (Lambda' i a) where
+instance Eq a => Eq (Lambda' i a ty) where
   (==) = eqOn (^. lambdaBody)
 
 -- | ignores the binder
-instance Eq a => Eq (Let' i a) where
+instance Eq a => Eq (Let' i a ty) where
   (==) =
     eqOn (^. letItem)
       ..&&.. eqOn (^. letBody)
 
-instance Eq a => Eq (LetRec' i a) where
+instance Eq a => Eq (LetRec' i a ty) where
   (==) =
     eqOn (^. letRecBody)
       ..&&.. eqOn (^. letRecValues)

@@ -65,9 +65,11 @@ type BuiltinApp = BuiltinApp' () Node
 
 type Constr = Constr' ConstrInfo Node
 
-type LetItem = LetItem' Node
+type Binder = Binder' Type
 
-type Let = Let' LetInfo Node
+type LetItem = LetItem' Node Type
+
+type Let = Let' LetInfo Node Type
 
 type Case = Case' CaseInfo CaseBranchInfo Node
 

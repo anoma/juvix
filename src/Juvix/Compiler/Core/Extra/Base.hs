@@ -287,7 +287,6 @@ data NodeDetails = NodeDetails
     -- | 'nodeReassemble' reassembles the node from the info, the subinfos and
     -- the children (which should be in the same fixed order as in the
     -- 'nodeSubinfos' and 'nodeChildren' component).
-    -- TODO can we zip the lists?
     _nodeReassemble :: Info -> [Info] -> [[Binder]] -> [Node] -> Node
   }
 

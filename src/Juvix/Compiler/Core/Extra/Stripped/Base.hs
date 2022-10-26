@@ -35,17 +35,17 @@ mkConstr' sym = mkConstr (ConstrInfo Nothing TyDynamic sym)
 mkLet :: LetInfo -> Node -> Node -> Node
 mkLet i v b = NLet (Let i item b)
   where
-    item :: LetItem
-    item =
-      LetItem
-        { _letItemBinder = error "TODO",
-          _letItemValue = v
-        }
-    binder :: Binder' Type
+    binder :: Binder
     binder =
       Binder
         { _binderName = i ^. letInfoBinderName,
           _binderType = i ^. letInfoBinderType
+        }
+    item :: LetItem
+    item =
+      LetItem
+        { _letItemBinder = binder,
+          _letItemValue = v
         }
 
 mkLet' :: Node -> Node -> Node

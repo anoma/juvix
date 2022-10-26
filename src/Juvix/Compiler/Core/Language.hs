@@ -9,6 +9,8 @@ import Juvix.Compiler.Core.Language.Nodes
 
 {---------------------------------------------------------------------------------}
 
+type Type = Node
+
 type Var = Var' Info
 
 type Ident = Ident' Info
@@ -23,15 +25,15 @@ type Constr = Constr' Info Node
 
 type Binder = Binder' Node
 
-type LambdaLhs = LambdaLhs' Info Node
+type LambdaLhs = LambdaLhs' Info Type
 
-type Lambda = Lambda' Info Node
+type Lambda = Lambda' Info Node Type
 
-type LetItem = LetItem' Node
+type LetItem = LetItem' Node Type
 
-type Let = Let' Info Node
+type Let = Let' Info Node Type
 
-type LetRec = LetRec' Info Node
+type LetRec = LetRec' Info Node Type
 
 type Case = Case' Info Info Node
 
@@ -109,8 +111,6 @@ data Node
 
 -- All nodes in an environment must be values.
 type Env = [Node]
-
-type Type = Node
 
 instance HasAtomicity Node where
   atomicity = \case
