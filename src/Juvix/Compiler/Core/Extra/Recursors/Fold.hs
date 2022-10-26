@@ -24,8 +24,6 @@ ufoldG coll uplus f = go (coll ^. cEmpty)
         ni = destruct n
         mas :: [f a]
         mas =
-          zipWith3Exact
-            (\n' k bis -> go ((coll ^. cCollect) (k, bis) c) n')
+          map
+            (\n' -> go ((coll ^. cCollect) (n' ^. childBindersNum, n' ^. childBinders) c) (n' ^. childNode))
             (ni ^. nodeChildren)
-            (ni ^. nodeChildBindersNum)
-            (ni ^. nodeChildBindersInfo)

@@ -29,14 +29,8 @@ umapG coll f = go (coll ^. cEmpty)
     go c n =
       let ni = destruct n
        in do
-            ns <-
-              sequence $
-                zipWith3Exact
-                  (\n' k bis -> go ((coll ^. cCollect) (k, bis) c) n')
-                  (ni ^. nodeChildren)
-                  (ni ^. nodeChildBindersNum)
-                  (ni ^. nodeChildBindersInfo)
-            f c ((ni ^. nodeReassemble) (ni ^. nodeInfo) (ni ^. nodeSubinfos) (ni ^. nodeChildBindersInfo) ns)
+            ns <- mapM (\n' -> go ((coll ^. cCollect) (n' ^. childBindersNum, n' ^. childBinders) c) (n' ^. childNode)) (ni ^. nodeChildren)
+            f c (reassembleDetails ni ns)
 
 dmapG ::
   forall c m.
@@ -52,19 +46,12 @@ dmapG coll f = go (coll ^. cEmpty)
       r <- f c n
       case r of
         End n' -> return n'
-        Recur n' -> do
+        Recur n' ->
           let ni = destruct n'
-          ns <-
-            sequence $
-              zipWith3Exact
-                goChild
-                (ni ^. nodeChildren)
-                (ni ^. nodeChildBindersNum)
-                (ni ^. nodeChildBindersInfo)
-          return ((ni ^. nodeReassemble) (ni ^. nodeInfo) (ni ^. nodeSubinfos) (ni ^. nodeChildBindersInfo) ns)
+           in reassembleDetails ni <$> mapM goChild (ni ^. nodeChildren)
       where
-        goChild :: Node -> Int -> [Binder] -> m Node
-        goChild n'' k bis = go ((coll ^. cCollect) (k, bis) c) n''
+        goChild :: NodeChild -> m Node
+        goChild ch = go ((coll ^. cCollect) (ch ^. childBindersNum, ch ^. childBinders) c) (ch ^. childNode)
 
 type CtxTy :: Ctx -> GHC.Type
 type family CtxTy x = res | res -> x where
