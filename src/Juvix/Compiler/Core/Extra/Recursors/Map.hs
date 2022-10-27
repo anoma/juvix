@@ -29,7 +29,8 @@ umapG coll f = go (coll ^. cEmpty)
     go c n =
       let ni = destruct n
        in do
-            ns <- mapM (\n' -> go ((coll ^. cCollect) (n' ^. childBindersNum, n' ^. childBinders) c) (n' ^. childNode)) (ni ^. nodeChildren)
+            let h n' = (coll ^. cCollect) (n' ^. childBindersNum, n' ^. childBinders) c
+            ns <- mapM (\n' -> go (h n') (n' ^. childNode)) (ni ^. nodeChildren)
             f c (reassembleDetails ni ns)
 
 dmapG ::

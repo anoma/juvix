@@ -896,7 +896,7 @@ matchBranch patsNum varsNum vars = do
   unless (length pats == patsNum) $
     parseFailure off "wrong number of patterns"
   let pis :: [Binder]
-      pis = concatMap (reverse . getBinderPatternInfos) pats
+      pis = concatMap (reverse . getPatternBinders) pats
       (vars', varsNum') =
         foldl'
           ( \(vs, k) name ->
