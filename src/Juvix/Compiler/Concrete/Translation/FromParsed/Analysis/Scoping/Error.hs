@@ -35,6 +35,8 @@ data ScoperError
   | ErrWrongKindExpressionCompileBlock WrongKindExpressionCompileBlock
   | ErrDuplicateInductiveParameterName DuplicateInductiveParameterName
   | ErrDoubleBracesPattern DoubleBracesPattern
+  | ErrDoubleBinderPattern DoubleBinderPattern
+  | ErrAliasBinderPattern AliasBinderPattern
   | ErrImplicitPatternLeftApplication ImplicitPatternLeftApplication
   | ErrConstructorExpectedLeftApplication ConstructorExpectedLeftApplication
   deriving stock (Show)
@@ -65,5 +67,7 @@ instance ToGenericError ScoperError where
     ErrWrongKindExpressionCompileBlock e -> genericError e
     ErrDuplicateInductiveParameterName e -> genericError e
     ErrDoubleBracesPattern e -> genericError e
+    ErrDoubleBinderPattern e -> genericError e
+    ErrAliasBinderPattern e -> genericError e
     ErrImplicitPatternLeftApplication e -> genericError e
     ErrConstructorExpectedLeftApplication e -> genericError e

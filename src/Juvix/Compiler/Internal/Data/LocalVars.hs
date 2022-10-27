@@ -17,6 +17,9 @@ makeLenses ''LocalVars
 addType :: VarName -> Expression -> LocalVars -> LocalVars
 addType v t = over localTypes (HashMap.insert v t)
 
+addTypeMapping :: VarName -> VarName -> LocalVars -> LocalVars
+addTypeMapping v v' = over localTyMap (HashMap.insert v v')
+
 emptyLocalVars :: LocalVars
 emptyLocalVars =
   LocalVars

@@ -548,9 +548,10 @@ instance PrettyCode PatternScopedIden where
     PatternScopedConstructor c -> ppCode c
 
 instance PrettyCode PatternArg where
-  ppCode a = do
-    p <- ppCode (a ^. patternArgPattern)
-    return (bracesIf (Implicit == a ^. patternArgIsImplicit) p)
+  ppCode (PatternArg i n p) = do
+    n' <- traverse ppCode n
+    p' <- ppCode p
+    return $ (n' <&> (<> kwAt)) ?<> delimIf i (isJust n) p'
 
 instance PrettyCode PatternApp where
   ppCode (PatternApp l r) = do
@@ -570,8 +571,15 @@ instance SingI s => PrettyCode (PatternAtom s) where
       SScoped -> ppCode n
     PatternAtomWildcard {} -> return kwWildcard
     PatternAtomEmpty {} -> return $ parens mempty
-    PatternAtomParens p -> parens <$> ppPatternParenType p
-    PatternAtomBraces p -> braces <$> ppPatternParenType p
+    PatternAtomParens n p -> ppEnclosed parens n p
+    PatternAtomBraces n p -> ppEnclosed braces n p
+    where
+      ppEnclosed :: Member (Reader Options) r => (Doc Ann -> Doc Ann) -> Maybe (SymbolType s) -> PatternParensType s -> Sem r (Doc Ann)
+      ppEnclosed wrap Nothing p = wrap <$> ppPatternParenType p
+      ppEnclosed wrap (Just n) p = do
+        n' <- ppSymbol n
+        p' <- ppPatternParenType p
+        return $ n' <> kwAt <> wrap p'
 
 instance SingI s => PrettyCode (PatternAtoms s) where
   ppCode (PatternAtoms ps _) = hsep <$> mapM ppCode ps

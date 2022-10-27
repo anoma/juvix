@@ -659,6 +659,68 @@ instance ToGenericError DoubleBracesPattern where
             "Double braces are not valid:"
               <+> code (braces (ppCode opts' pat))
 
+data DoubleBinderPattern = DoubleBinderPattern
+  { _doubleBinderPatternIsImplicit :: IsImplicit,
+    _doubleBinderPatternName :: S.Symbol,
+    _doubleBinderPatternArg :: PatternArg
+  }
+  deriving stock (Show)
+
+makeLenses ''DoubleBinderPattern
+
+instance ToGenericError DoubleBinderPattern where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          name = e ^. doubleBinderPatternName
+          implicit = e ^. doubleBinderPatternIsImplicit
+          pat = e ^. doubleBinderPatternArg
+          i = getLoc pat
+          msg =
+            "As-patterns cannot be nested:"
+              <+> code (ppCode opts' name <> kwAt <> implicitDelim implicit (ppCode opts' pat))
+
+data AliasBinderPattern = AliasBinderPattern
+  { _aliasBinderPatternIsImplicit :: IsImplicit,
+    _aliasBinderPatternName :: S.Symbol,
+    _aliasBinderPatternArg :: PatternArg
+  }
+  deriving stock (Show)
+
+makeLenses ''AliasBinderPattern
+
+instance ToGenericError AliasBinderPattern where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          name = e ^. aliasBinderPatternName
+          implicit = e ^. aliasBinderPatternIsImplicit
+          pat = e ^. aliasBinderPatternArg
+          i = getLoc pat
+          wrap = case implicit of
+            Implicit -> "braces"
+            Explicit -> "parentheses"
+          msg =
+            "As-patterns require a constructor inside the"
+              <+> wrap <> ":"
+              <+> code (ppCode opts' name <> kwAt <> implicitDelim implicit (ppCode opts' pat))
+
 newtype ImplicitPatternLeftApplication = ImplicitPatternLeftApplication
   { _implicitPatternLeftApplication :: PatternApp
   }

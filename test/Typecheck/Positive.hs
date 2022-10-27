@@ -166,5 +166,9 @@ tests =
     PosTest
       "open import a builtin multiple times"
       "BuiltinsMultiOpenImport"
-      "Input.juvix"
+      "Input.juvix",
+    PosTest
+      "As Patterns"
+      "Internal"
+      "AsPattern.juvix"
   ]

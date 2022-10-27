@@ -98,9 +98,10 @@ instance PrettyCode Universe where
   ppCode (Universe n _) = return $ kwType <+?> (pretty <$> n)
 
 instance PrettyCode PatternArg where
-  ppCode a = do
-    p <- ppCode (a ^. patternArgPattern)
-    return (bracesIf (Implicit == a ^. patternArgIsImplicit) p)
+  ppCode (PatternArg i n p) = do
+    n' <- traverse ppCode n
+    p' <- ppCode p
+    return $ (n' <&> (<> kwAt)) ?<> delimIf i (isJust n) p'
 
 instance PrettyCode LambdaClause where
   ppCode LambdaClause {..} = do
