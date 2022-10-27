@@ -13,6 +13,7 @@ import Juvix.Data.Keyword.All
     cBackend,
     ghc,
     kwAssign,
+    kwAt,
     kwAxiom,
     kwBuiltin,
     kwColon,
@@ -54,6 +55,7 @@ allKeywordStrings = keywordsStrings allKeywords
 allKeywords :: [Keyword]
 allKeywords =
   [ kwAssign,
+    kwAt,
     kwAxiom,
     kwColon,
     kwColonOmega,

@@ -12,6 +12,7 @@
         (menu-map (make-sparse-keymap "Juvix")))
     (define-key map (kbd "C-c C-l") 'juvix-load)
     (define-key map (kbd "M-.") 'juvix-goto-definition)
+    (define-key map (kbd "C-c C-f") 'juvix-format-buffer)
     map)
   "Keymap for Juvix mode.")
 

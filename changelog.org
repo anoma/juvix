@@ -6,7 +6,102 @@
 </a>
 #+end_html
 
-* Changelog
+** [[https://github.com/anoma/juvix/tree/v0.2.6][v0.2.6]] (2022-10-26)
+[[https://github.com/anoma/juvix/compare/v0.2.5...v0.2.6][Full
+Changelog]]
+
+*Implemented enhancements:*
+
+- Support go to definition for the standard library
+  [[https://github.com/anoma/juvix/pull/1592][#1592]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Add builtin if [[https://github.com/anoma/juvix/pull/1585][#1585]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Add builtin boolean
+  [[https://github.com/anoma/juvix/pull/1582][#1582]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Add lambda expressions to internal and add typechecking support
+  [[https://github.com/anoma/juvix/pull/1538][#1538]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+
+*Fixed bugs:*
+
+- Fix arity checker bug
+  [[https://github.com/anoma/juvix/pull/1546][#1546]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Look in patterns when building the dependency graph
+  [[https://github.com/anoma/juvix/pull/1536][#1536]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+
+*Merged pull requests:*
+
+- Update language reference to match current state of Juvix
+  [[https://github.com/anoma/juvix/pull/1594][#1594]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Fix letrec printing
+  [[https://github.com/anoma/juvix/pull/1591][#1591]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Update stdlib submodule with builtin changes
+  [[https://github.com/anoma/juvix/pull/1589][#1589]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Rename builtin natural to nat and boolean to bool
+  [[https://github.com/anoma/juvix/pull/1588][#1588]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Improve the test for eta-expansion of constructors and builtins
+  [[https://github.com/anoma/juvix/pull/1583][#1583]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Properly newline expressions in the pretty printer
+  [[https://github.com/anoma/juvix/pull/1581][#1581]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Letrec lifting [[https://github.com/anoma/juvix/pull/1579][#1579]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Add softlines between applications and hang definitions
+  [[https://github.com/anoma/juvix/pull/1578][#1578]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Parse optional type info in JVC files
+  [[https://github.com/anoma/juvix/pull/1575][#1575]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Fix symbol numbering bug
+  [[https://github.com/anoma/juvix/pull/1574][#1574]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- 1569 rewrite the test for lambda lifting to use evaluation
+  [[https://github.com/anoma/juvix/pull/1572][#1572]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Remove lambda from reservedSymbols
+  [[https://github.com/anoma/juvix/pull/1568][#1568]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Keywords refactor [[https://github.com/anoma/juvix/pull/1566][#1566]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- remove ≔ from the language and replace it by :=
+  [[https://github.com/anoma/juvix/pull/1563][#1563]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- JuvixReg [[https://github.com/anoma/juvix/pull/1551][#1551]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Remove duplicate function in concrete analysis
+  [[https://github.com/anoma/juvix/pull/1550][#1550]]
+  ([[https://github.com/ii8][ii8]])
+- Evaluator minor style refactor
+  [[https://github.com/anoma/juvix/pull/1547][#1547]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Properly handle top lambdas in the termination checker
+  [[https://github.com/anoma/juvix/pull/1544][#1544]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Mutual inference [[https://github.com/anoma/juvix/pull/1543][#1543]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- Autocomplete ".jvc" input files for core {eval, read} commands
+  [[https://github.com/anoma/juvix/pull/1542][#1542]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Add --show-de-bruijn to =core eval= command
+  [[https://github.com/anoma/juvix/pull/1540][#1540]]
+  ([[https://github.com/paulcadman][paulcadman]])
+- Inductive types should depend on the types of their constructors
+  [[https://github.com/anoma/juvix/pull/1537][#1537]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+- Parser labels [[https://github.com/anoma/juvix/pull/1535][#1535]]
+  ([[https://github.com/janmasrovira][janmasrovira]])
+- JuvixAsm [[https://github.com/anoma/juvix/pull/1432][#1432]]
+  ([[https://github.com/lukaszcz][lukaszcz]])
+
 ** [[https://github.com/anoma/juvix/tree/v0.2.5][v0.2.5]] (2022-09-14)
 [[https://github.com/anoma/juvix/compare/v0.2.4...v0.2.5][Full
 Changelog]]

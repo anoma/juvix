@@ -324,7 +324,7 @@ renameExpression :: Rename -> Expression -> Expression
 renameExpression r = substitutionE (renameToSubsE r)
 
 patternArgVariables :: Traversal' PatternArg VarName
-patternArgVariables f = traverseOf patternArgPattern (patternVariables f)
+patternArgVariables f (PatternArg i n p) = PatternArg i <$> traverse f n <*> patternVariables f p
 
 patternVariables :: Traversal' Pattern VarName
 patternVariables f p = case p of

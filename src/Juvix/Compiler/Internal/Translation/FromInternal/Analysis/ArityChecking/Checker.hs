@@ -223,7 +223,7 @@ checkLhs loc guessedBody ariSignature pats = do
               first (p' :) <$> goLhs r ps
       where
         wildcard :: PatternArg
-        wildcard = PatternArg Implicit (PatternWildcard (Wildcard loc))
+        wildcard = PatternArg Implicit Nothing (PatternWildcard (Wildcard loc))
 
     -- This is an heuristic and it can have an undesired result.
     -- Sometimes the outcome may even be confusing.
@@ -252,10 +252,12 @@ checkPattern ::
   Arity ->
   PatternArg ->
   Sem r PatternArg
-checkPattern ari = traverseOf patternArgPattern helper
+checkPattern ari = traverseOf (patternArgName . each) nameAri >=> traverseOf patternArgPattern patternAri
   where
-    helper :: Pattern -> Sem r Pattern
-    helper = \case
+    nameAri :: VarName -> Sem r VarName
+    nameAri n = addArity n ari $> n
+    patternAri :: Pattern -> Sem r Pattern
+    patternAri = \case
       PatternVariable v -> addArity v ari $> PatternVariable v
       PatternWildcard i -> return (PatternWildcard i)
       PatternConstructorApp c -> case ari of
@@ -311,15 +313,15 @@ checkLambda ari (Lambda cl) = Lambda <$> mapM goClause cl
       return (LambdaClause (fromJust (nonEmpty ps')) b')
       where
         -- returns the adjusted patterns and the not consumed arity
-        helper :: ArityRest -> [Pattern] -> [ArityParameter] -> Sem (State LocalVars ': r) ([Pattern], [ArityParameter])
+        helper :: ArityRest -> [PatternArg] -> [ArityParameter] -> Sem (State LocalVars ': r) ([PatternArg], [ArityParameter])
         helper rest = go
           where
-            go :: [Pattern] -> [ArityParameter] -> Sem (State LocalVars ': r) ([Pattern], [ArityParameter])
+            go :: [PatternArg] -> [ArityParameter] -> Sem (State LocalVars ': r) ([PatternArg], [ArityParameter])
             go pats as =
               case (pats, as) of
                 ([], _) -> return ([], as)
                 (p : ps', ParamExplicit paramAri : as') -> do
-                  p' <- (^. patternArgPattern) <$> checkPattern paramAri (PatternArg Explicit p)
+                  p' <- checkPattern paramAri p
                   first (p' :) <$> go ps' as'
                 (_ : _, ParamImplicit {} : _) ->
                   -- The lambda is expected to have an implicit argument but it cannot have one.

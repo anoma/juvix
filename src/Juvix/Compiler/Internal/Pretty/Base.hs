@@ -132,9 +132,10 @@ instance PrettyCode InductiveDef where
     return $ kwData <+> inductiveName' <+?> params <+> kwEquals <> line <> rhs
 
 instance PrettyCode PatternArg where
-  ppCode a = do
-    p <- ppCode (a ^. patternArgPattern)
-    return (bracesCond (Implicit == a ^. patternArgIsImplicit) p)
+  ppCode (PatternArg i n p) = do
+    n' <- traverse ppCode n
+    p' <- ppCode p
+    return $ (n' <&> (<> kwAt)) ?<> delimIf i (isJust n) p'
 
 instance PrettyCode ConstructorApp where
   ppCode c = do

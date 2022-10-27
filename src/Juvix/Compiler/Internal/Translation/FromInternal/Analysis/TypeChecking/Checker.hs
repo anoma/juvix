@@ -355,14 +355,11 @@ checkPattern = go
       tyVarMap <- fmap (ExpressionIden . IdenVar) . (^. localTyMap) <$> get
       let ty = substitutionE tyVarMap (argTy ^. paramType)
           pat = patArg ^. patternArgPattern
+          name = patArg ^. patternArgName
+      whenJust name (\n -> addVar n ty argTy)
       case pat of
         PatternWildcard {} -> return ()
-        PatternVariable v -> do
-          modify (addType v ty)
-          registerIden v ty
-          case argTy ^. paramName of
-            Just v' -> modify (over localTyMap (HashMap.insert v' v))
-            _ -> return ()
+        PatternVariable v -> addVar v ty argTy
         PatternConstructorApp a -> do
           s <- checkSaturatedInductive ty
           info <- lookupConstructor (a ^. constrAppConstructor)
@@ -406,6 +403,11 @@ checkPattern = go
                 )
               goConstr a tyArgs
       where
+        addVar :: VarName -> Expression -> FunctionParameter -> Sem r ()
+        addVar v ty argType = do
+          modify (addType v ty)
+          registerIden v ty
+          whenJust (argType ^. paramName) (\v' -> modify (addTypeMapping v' v))
         goConstr :: ConstructorApp -> [(InductiveParameter, Expression)] -> Sem r ()
         goConstr app@(ConstructorApp c ps) ctx = do
           (_, psTys) <- constructorArgTypes <$> lookupConstructor c
@@ -560,8 +562,7 @@ inferExpression' hint e = case e of
       where
         goClause :: Expression -> LambdaClause -> Sem r LambdaClause
         goClause ty (LambdaClause pats body) = do
-          let patArgs = map (PatternArg Explicit) (toList pats)
-          body' <- checkClause ty patArgs body
+          body' <- checkClause ty (toList pats) body
           return (LambdaClause pats body')
 
     goUniverse :: SmallUniverse -> Sem r TypedExpression
