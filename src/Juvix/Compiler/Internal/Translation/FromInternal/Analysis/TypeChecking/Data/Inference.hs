@@ -344,28 +344,33 @@ re = reinterpret $ \case
 matchPatterns ::
   forall r.
   Members '[State InferenceState, State (HashMap VarName VarName), Reader FunctionsTable] r =>
-  Pattern ->
-  Pattern ->
+  PatternArg ->
+  PatternArg ->
   Sem r Bool
-matchPatterns p1 p2 = case (p1, p2) of
-  (PatternWildcard {}, PatternWildcard {}) -> ok
-  (PatternVariable v1, PatternVariable v2) -> modify (HashMap.insert v1 v2) $> True
-  (PatternConstructorApp c1, PatternConstructorApp c2) -> goConstructor c1 c2
-  (PatternWildcard {}, _) -> err
-  (_, PatternWildcard {}) -> err
-  (PatternVariable {}, _) -> err
-  (_, PatternVariable {}) -> err
+matchPatterns (PatternArg impl1 name1 pat1) (PatternArg impl2 name2 pat2) =
+  return (impl1 == impl2) &&>= goName name1 name2 &&>= goPattern pat1 pat2
   where
+    (&&>=) :: Monad m => m Bool -> m Bool -> m Bool
+    (&&>=) = liftM2 (&&)
+    goName :: Maybe VarName -> Maybe VarName -> Sem r Bool
+    goName (Just n1) (Just n2) = modify (HashMap.insert n1 n2) $> True
+    goName Nothing Nothing = ok
+    goName _ _ = err
+    goPattern :: Pattern -> Pattern -> Sem r Bool
+    goPattern p1 p2 = case (p1, p2) of
+      (PatternWildcard {}, PatternWildcard {}) -> ok
+      (PatternVariable v1, PatternVariable v2) -> modify (HashMap.insert v1 v2) $> True
+      (PatternConstructorApp c1, PatternConstructorApp c2) -> goConstructor c1 c2
+      (PatternWildcard {}, _) -> err
+      (_, PatternWildcard {}) -> err
+      (PatternVariable {}, _) -> err
+      (_, PatternVariable {}) -> err
     goConstructor :: ConstructorApp -> ConstructorApp -> Sem r Bool
     goConstructor (ConstructorApp c1 args1) (ConstructorApp c2 args2)
       | c1 /= c2 = err
       | otherwise = case zipExactMay args1 args2 of
           Nothing -> err
-          Just z -> allM (uncurry goArg) z
-    goArg :: PatternArg -> PatternArg -> Sem r Bool
-    goArg (PatternArg i1 a1) (PatternArg i2 a2)
-      | i1 /= i2 = err
-      | otherwise = matchPatterns a1 a2
+          Just z -> allM (uncurry matchPatterns) z
 
     ok :: Sem r Bool
     ok = return True

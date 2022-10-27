@@ -199,6 +199,9 @@ kwDQuote = pretty ("\"" :: Text)
 kwDot :: Doc Ann
 kwDot = delimiter "."
 
+kwAt :: Doc Ann
+kwAt = delimiter Str.at_
+
 code :: Doc Ann -> Doc Ann
 code = annotate AnnCode
 
@@ -215,6 +218,11 @@ implicitDelim :: IsImplicit -> Doc Ann -> Doc Ann
 implicitDelim = \case
   Implicit -> braces
   Explicit -> parens
+
+delimIf :: IsImplicit -> Bool -> Doc Ann -> Doc Ann
+delimIf Implicit _ = braces
+delimIf Explicit True = parens
+delimIf Explicit False = id
 
 doubleQuotes :: Doc Ann -> Doc Ann
 doubleQuotes = enclose kwDQuote kwDQuote

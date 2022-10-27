@@ -170,6 +170,7 @@ data ConstructorApp = ConstructorApp
 
 data PatternArg = PatternArg
   { _patternArgIsImplicit :: IsImplicit,
+    _patternArgName :: Maybe VarName,
     _patternArgPattern :: Pattern
   }
   deriving stock (Eq, Show)

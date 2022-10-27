@@ -16,6 +16,9 @@ kwAny = asciiKw Str.any
 kwAssign :: Keyword
 kwAssign = asciiKw Str.assignAscii
 
+kwAt :: Keyword
+kwAt = asciiKw Str.at_
+
 kwAxiom :: Keyword
 kwAxiom = asciiKw Str.axiom
 

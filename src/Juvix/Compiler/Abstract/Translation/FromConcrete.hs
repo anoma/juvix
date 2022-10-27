@@ -449,6 +449,7 @@ goPatternArg p = do
   return
     Abstract.PatternArg
       { _patternArgIsImplicit = p ^. patternArgIsImplicit,
+        _patternArgName = goSymbol <$> p ^. patternArgName,
         _patternArgPattern = pat'
       }
 

@@ -232,6 +232,7 @@ goPatternArg p = do
   return
     PatternArg
       { _patternArgIsImplicit = p ^. Abstract.patternArgIsImplicit,
+        _patternArgName = p ^. Abstract.patternArgName,
         _patternArgPattern = pat'
       }
 
@@ -281,14 +282,14 @@ goLambda (Abstract.Lambda cl) = case nonEmpty cl of
   where
     goClause :: Abstract.LambdaClause -> Sem r LambdaClause
     goClause (Abstract.LambdaClause ps b) = do
-      ps' <- mapM (goPattern . explicit) ps
+      ps' <- mapM (goPatternArg . explicit) ps
       b' <- goExpression b
       return (LambdaClause ps' b')
       where
-        explicit :: Abstract.PatternArg -> Abstract.Pattern
-        explicit (Abstract.PatternArg i p) = case i of
+        explicit :: Abstract.PatternArg -> Abstract.PatternArg
+        explicit p = case p ^. Abstract.patternArgIsImplicit of
           Explicit -> p
-          _ -> unsupported "implicit patterns in lambda"
+          Implicit -> unsupported "implicit patterns in lambda"
 
 goApplication :: Abstract.Application -> Sem r Application
 goApplication (Abstract.Application f x i) = do

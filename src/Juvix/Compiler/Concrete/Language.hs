@@ -285,6 +285,7 @@ instance HasFixity PatternPostfixApp where
 
 data PatternArg = PatternArg
   { _patternArgIsImplicit :: IsImplicit,
+    _patternArgName :: Maybe S.Symbol,
     _patternArgPattern :: Pattern
   }
   deriving stock (Show, Eq, Ord)
@@ -322,8 +323,8 @@ data PatternAtom (s :: Stage)
   = PatternAtomIden (PatternAtomIdenType s)
   | PatternAtomWildcard Wildcard
   | PatternAtomEmpty Interval
-  | PatternAtomParens (PatternParensType s)
-  | PatternAtomBraces (PatternParensType s)
+  | PatternAtomParens (Maybe (SymbolType s)) (PatternParensType s)
+  | PatternAtomBraces (Maybe (SymbolType s)) (PatternParensType s)
 
 data PatternAtoms (s :: Stage) = PatternAtoms
   { _patternAtoms :: NonEmpty (PatternAtom s),
@@ -981,7 +982,8 @@ deriving stock instance
     Show (IdentifierType s),
     Show (PatternAtomIdenType s),
     Show (PatternParensType s),
-    Show (PatternType s)
+    Show (PatternType s),
+    Show (SymbolType s)
   ) =>
   Show (PatternAtom s)
 
@@ -990,7 +992,8 @@ deriving stock instance
     Eq (IdentifierType s),
     Eq (PatternAtomIdenType s),
     Eq (PatternParensType s),
-    Eq (PatternType s)
+    Eq (PatternType s),
+    Eq (SymbolType s)
   ) =>
   Eq (PatternAtom s)
 
@@ -999,7 +1002,8 @@ deriving stock instance
     Ord (IdentifierType s),
     Ord (PatternAtomIdenType s),
     Ord (PatternParensType s),
-    Ord (PatternType s)
+    Ord (PatternType s),
+    Ord (SymbolType s)
   ) =>
   Ord (PatternAtom s)
 
@@ -1008,7 +1012,8 @@ deriving stock instance
     Show (IdentifierType s),
     Show (PatternAtomIdenType s),
     Show (PatternParensType s),
-    Show (PatternType s)
+    Show (PatternType s),
+    Show (SymbolType s)
   ) =>
   Show (PatternAtoms s)
 
@@ -1022,24 +1027,27 @@ instance SingI s => HasLoc (PatternAtom s) where
     PatternAtomIden i -> getLocIden i
     PatternAtomWildcard w -> getLoc w
     PatternAtomEmpty i -> i
-    PatternAtomParens p -> getLocParens p
-    PatternAtomBraces p -> getLocParens p
+    PatternAtomParens n p -> fmap getLocSym n ?<> getLocParens p
+    PatternAtomBraces n p -> fmap getLocSym n ?<> getLocParens p
     where
+      getLocSym :: forall r. SingI r => SymbolType r -> Interval
+      getLocSym p = case sing :: SStage r of
+        SParsed -> getLoc p
+        SScoped -> getLoc p
       getLocIden :: forall r. SingI r => PatternAtomIdenType r -> Interval
       getLocIden p = case sing :: SStage r of
         SParsed -> getLoc p
         SScoped -> getLoc p
       getLocParens :: forall r. SingI r => PatternParensType r -> Interval
-      getLocParens p =
-        case sing :: SStage r of
-          SParsed -> getLoc p
-          SScoped -> getLoc p
+      getLocParens p = case sing :: SStage r of
+        SParsed -> getLoc p
+        SScoped -> getLoc p
 
 instance HasLoc (PatternAtoms s) where
   getLoc = (^. patternAtomsLoc)
 
 instance HasLoc PatternArg where
-  getLoc = getLoc . (^. patternArgPattern)
+  getLoc a = fmap getLoc (a ^. patternArgName) ?<> getLoc (a ^. patternArgPattern)
 
 instance HasLoc PatternInfixApp where
   getLoc (PatternInfixApp l _ r) =
@@ -1066,7 +1074,8 @@ instance
     Eq (IdentifierType s),
     Eq (PatternAtomIdenType s),
     Eq (PatternParensType s),
-    Eq (PatternType s)
+    Eq (PatternType s),
+    Eq (SymbolType s)
   ) =>
   Eq (PatternAtoms s)
   where
@@ -1077,7 +1086,8 @@ instance
     Ord (IdentifierType s),
     Ord (PatternAtomIdenType s),
     Ord (PatternParensType s),
-    Ord (PatternType s)
+    Ord (PatternType s),
+    Ord (SymbolType s)
   ) =>
   Ord (PatternAtoms s)
   where
@@ -1202,6 +1212,7 @@ instance IsApe Expression Expression where
 instance HasAtomicity PatternArg where
   atomicity p
     | Implicit <- p ^. patternArgIsImplicit = Atom
+    | isJust (p ^. patternArgName) = Atom
     | otherwise = atomicity (p ^. patternArgPattern)
 
 idenOverName :: (forall s. S.Name' s -> S.Name' s) -> ScopedIden -> ScopedIden

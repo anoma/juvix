@@ -414,9 +414,6 @@ ppLRExpression associates fixlr e =
 {--------------------------------------------------------------------------------}
 {- keywords -}
 
-kwAt :: Doc Ann
-kwAt = delimiter "@"
-
 kwSquareL :: Doc Ann
 kwSquareL = delimiter "["
 
