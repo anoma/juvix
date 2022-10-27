@@ -431,7 +431,10 @@ destruct = \case
               (binders, values) = unzip [(it ^. letItemBinder, it ^. letItemValue) | it <- toList vs]
            in map (manyBinders binders) (b : values),
         _nodeReassemble = someChildren $ \i' (b' :| values') ->
-          let items' = nonEmpty' [LetItem (hd (ch ^. childBinders)) (ch ^. childNode) | ch <- values']
+          let items' =
+                nonEmpty'
+                  [ LetItem (item ^. letItemBinder) (v' ^. childNode) | (v', item) <- zipExact values' (toList vs)
+                  ]
            in mkLetRec i' items' (b' ^. childNode)
       }
   NCase (Case i v brs mdef) ->
