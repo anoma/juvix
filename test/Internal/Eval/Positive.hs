@@ -99,5 +99,10 @@ tests =
       "Calling builtin addition"
       "."
       "BuiltinAdd.juvix"
-      "out/BuiltinAdd.out"
+      "out/BuiltinAdd.out",
+    PosTest
+      "Builtin bool"
+      "."
+      "BuiltinBool.juvix"
+      "out/BuiltinBool.out"
   ]

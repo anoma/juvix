@@ -1,0 +1,8 @@
+module BuiltinBool;
+
+open import Stdlib.Prelude;
+
+main : Bool;
+main := true || false;
+
+end;

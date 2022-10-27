@@ -33,22 +33,30 @@ fromInternal i = do
         _coreResultInternalTypedResult = i
       }
   where
-    f :: forall r. Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r => Sem r ()
-    f = mapM_ coreModule (toList (i ^. InternalTyped.resultModules))
+    f :: Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r => Sem r ()
+    f = do
+      let resultModules = toList (i ^. InternalTyped.resultModules)
+      runNameIdGen (runReader (Internal.buildTable resultModules) (mapM_ coreModule resultModules))
       where
-        coreModule :: Internal.Module -> Sem r ()
+        coreModule :: Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, NameIdGen] r => Internal.Module -> Sem r ()
         coreModule m = do
+          let modLoc = m ^. Internal.moduleName . Internal.nameLoc
+          registerBoolBuiltins modLoc
           registerInductiveDefs m
-          runNameIdGen (registerFunctionDefs m)
+          registerFunctionDefs m
 
 fromInternalExpression :: CoreResult -> Internal.Expression -> Sem r Node
 fromInternalExpression res exp = do
+  let modules = res ^. coreResultInternalTypedResult . InternalTyped.resultModules
   snd
-    <$> runInfoTableBuilder
-      (res ^. coreResultTable)
-      ( runReader
-          (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
-          (goExpression 0 mempty exp)
+    <$> runReader
+      (Internal.buildTable modules)
+      ( runInfoTableBuilder
+          (res ^. coreResultTable)
+          ( runReader
+              (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
+              (goExpression 0 mempty exp)
+          )
       )
 
 registerInductiveDefs ::
@@ -76,14 +84,14 @@ registerInductiveDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
 
 registerFunctionDefs ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen, Reader Internal.InfoTable] r =>
   Internal.Module ->
   Sem r ()
 registerFunctionDefs m = registerFunctionDefsBody (m ^. Internal.moduleBody)
 
 registerFunctionDefsBody ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen, Reader Internal.InfoTable] r =>
   Internal.ModuleBody ->
   Sem r ()
 registerFunctionDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
@@ -93,6 +101,60 @@ registerFunctionDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
       Internal.StatementFunction f -> goMutualBlock f
       Internal.StatementInclude i -> mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
       _ -> return ()
+
+createBuiltinConstr ::
+  Member NameIdGen r =>
+  Symbol ->
+  BuiltinDataTag ->
+  Text ->
+  Type ->
+  Interval ->
+  Sem r ConstructorInfo
+createBuiltinConstr sym btag nameTxt ty i = do
+  name <- freshName KNameConstructor nameTxt i
+  let n = builtinConstrArgsNum btag
+  return $
+    ConstructorInfo
+      { _constructorName = name,
+        _constructorTag = BuiltinTag btag,
+        _constructorType = ty,
+        _constructorArgsNum = n,
+        _constructorInductive = sym
+      }
+
+registerBoolBuiltins ::
+  Members '[InfoTableBuilder, NameIdGen] r =>
+  Interval ->
+  Sem r ()
+registerBoolBuiltins i =
+  registerInductiveBuiltins
+    i
+    "bool"
+    [ (TagTrue, "true", id),
+      (TagFalse, "false", id)
+    ]
+
+registerInductiveBuiltins ::
+  Members '[InfoTableBuilder, NameIdGen] r =>
+  Interval ->
+  Text ->
+  [(BuiltinDataTag, Text, Type -> Type)] ->
+  Sem r ()
+registerInductiveBuiltins i indName ctrs = do
+  sym <- freshSymbol
+  let ty = mkIdent' sym
+  constrs <- mapM (\(tag, name, fty) -> createBuiltinConstr sym tag name (fty ty) i) ctrs
+  ioname <- freshName KNameInductive indName i
+  registerInductive
+    ( InductiveInfo
+        { _inductiveName = ioname,
+          _inductiveSymbol = sym,
+          _inductiveKind = mkDynamic',
+          _inductiveConstructors = constrs,
+          _inductiveParams = [],
+          _inductivePositive = True
+        }
+    )
 
 goInductiveDef ::
   forall r.
@@ -135,7 +197,7 @@ goConstructor sym ctor = do
 
 goMutualBlock ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen, Reader Internal.InfoTable] r =>
   Internal.MutualBlock ->
   Sem r ()
 goMutualBlock m = do
@@ -168,7 +230,7 @@ goFunctionDefIden (f, sym) = do
 
 goFunctionDef ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen, Reader Internal.InfoTable] r =>
   (Internal.FunctionDef, Symbol) ->
   Sem r ()
 goFunctionDef (f, sym) = do
@@ -202,7 +264,7 @@ goFunctionDef (f, sym) = do
 
 fromPattern ::
   forall r.
-  Members '[InfoTableBuilder] r =>
+  Members '[InfoTableBuilder, Reader Internal.InfoTable] r =>
   Internal.Pattern ->
   Sem r Pattern
 fromPattern = \case
@@ -224,16 +286,22 @@ fromPattern = \case
 
     ctorTag :: Internal.ConstructorApp -> Sem r Tag
     ctorTag c = do
-      let txt = c ^. Internal.constrAppConstructor . Internal.nameText
-      i <- getIdent txt
-      return $ case i of
-        Just (IdentConstr tag) -> tag
-        Just _ -> error ("internal to core: not a constructor " <> txt)
-        Nothing -> error ("internal to core: undeclared identifier: " <> txt)
+      let n = c ^. Internal.constrAppConstructor
+      ctorInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoConstructors)
+      case ctorInfo ^. Internal.constructorInfoBuiltin of
+        Just Internal.BuiltinBoolTrue -> return $ BuiltinTag TagTrue
+        Just Internal.BuiltinBoolFalse -> return $ BuiltinTag TagFalse
+        _ -> do
+          let txt = n ^. Internal.nameText
+          i <- getIdent txt
+          return $ case i of
+            Just (IdentConstr tag) -> tag
+            Just _ -> error ("internal to core: not a constructor " <> txt)
+            Nothing -> error ("internal to core: undeclared identifier: " <> txt)
 
 goFunctionClause ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Index ->
   HashMap Text Index ->
   Internal.FunctionClause ->
@@ -260,7 +328,7 @@ goFunctionClause varsNum vars clause = do
 
 goExpression ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Index ->
   HashMap Text Index ->
   Internal.Expression ->
@@ -272,7 +340,7 @@ goExpression varsNum vars e = do
 
 goExpression' ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Index ->
   HashMap Text Index ->
   Internal.Expression ->
@@ -291,11 +359,16 @@ goExpression' varsNum vars = \case
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenInductive {} -> unsupported "goExpression inductive"
     Internal.IdenConstructor n -> do
-      m <- getIdent txt
-      return $ case m of
-        Just (IdentConstr tag) -> mkConstr (Info.singleton (NameInfo n)) tag []
-        Just _ -> error ("internal to core: not a constructor " <> txt)
-        Nothing -> error ("internal to core: undeclared identifier: " <> txt)
+      ctorInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoConstructors)
+      case ctorInfo ^. Internal.constructorInfoBuiltin of
+        Just Internal.BuiltinBoolTrue -> return (mkConstr (Info.singleton (NameInfo n)) (BuiltinTag TagTrue) [])
+        Just Internal.BuiltinBoolFalse -> return (mkConstr (Info.singleton (NameInfo n)) (BuiltinTag TagFalse) [])
+        _ -> do
+          m <- getIdent txt
+          return $ case m of
+            Just (IdentConstr tag) -> mkConstr (Info.singleton (NameInfo n)) tag []
+            Just _ -> error ("internal to core: not a constructor " <> txt)
+            Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenAxiom {} -> unsupported ("goExpression axiom: " <> txt)
     where
       txt :: Text
@@ -309,7 +382,7 @@ goExpression' varsNum vars = \case
 
 goApplication ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Index ->
   HashMap Text Index ->
   Internal.Application ->
