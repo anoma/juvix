@@ -162,7 +162,7 @@ genCode infoTable fi =
     goLet :: Bool -> Int -> BinderList Value -> Core.Let -> Code'
     goLet isTail tempSize refs (Core.Let {..}) =
       DL.append
-        (DL.snoc (go False tempSize refs _letValue) (mkInstr PushTemp))
+        (DL.snoc (go False tempSize refs (_letItem ^. Core.letItemValue)) (mkInstr PushTemp))
         (snocPopTemp isTail $ go isTail (tempSize + 1) (BL.extend (Ref (DRef (TempRef tempSize))) refs) _letBody)
 
     goCase :: Bool -> Int -> BinderList Value -> Core.Case -> Code'

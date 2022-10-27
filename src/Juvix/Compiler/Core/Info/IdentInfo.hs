@@ -32,7 +32,7 @@ computeIdentInfo = umap go
               foldr
                 (HashMap.unionWith (+) . (^. infoIdents) . getIdentInfo)
                 mempty
-                (children n)
+                (childrenNodes n)
 
 getIdentInfo :: Node -> IdentInfo
 getIdentInfo = Info.lookupDefault (IdentInfo mempty) . getInfo
