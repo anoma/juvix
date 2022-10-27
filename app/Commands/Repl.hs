@@ -16,25 +16,32 @@ import Juvix.Compiler.Core.Error qualified as Core
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data as Core
+import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
+import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Extra.Version
+import Juvix.Prelude.Pretty qualified as P
+import System.Console.ANSI qualified as Ansi
 import System.Console.Haskeline
 import System.Console.Repline
 import System.Console.Repline qualified as Repline
 import Text.Megaparsec qualified as M
 
-data ReplState = ReplState
-  { _replStateRoot :: FilePath,
-    _replStateContext :: Maybe (BuiltinsState, ExpressionContext)
+data ReplContext = ReplContext
+  { _replContextBuiltins :: BuiltinsState,
+    _replContextExpContext :: ExpressionContext,
+    _replContextEntryPoint :: EntryPoint
   }
 
-initReplState :: FilePath -> ReplState
-initReplState root = ReplState root Nothing
-
-rootEntryPoint :: FilePath -> FilePath -> EntryPoint
-rootEntryPoint mainFile root = (defaultEntryPoint mainFile) {_entryPointRoot = root}
+data ReplState = ReplState
+  { _replStateRoot :: FilePath,
+    _replStateContext :: Maybe ReplContext,
+    _replStateGlobalOptions :: GlobalOptions,
+    _replStateMkEntryPoint :: FilePath -> EntryPoint
+  }
 
 makeLenses ''ReplState
+makeLenses ''ReplContext
 
 type ReplS = State.StateT ReplState IO
 
@@ -71,9 +78,6 @@ noFileLoadedMsg = liftIO (putStrLn "No file loaded. Load a file using the `:load
 welcomeMsg :: MonadIO m => m ()
 welcomeMsg = liftIO (putStrLn [i|Juvix REPL version #{versionTag}: https://juvix.org. Run :help for help|])
 
-printError :: MonadIO m => JuvixError -> m ()
-printError e = liftIO (runM (runReader defaultGenericOptions (printErrorAnsiSafe e)))
-
 runCommand :: Members '[Embed IO, App] r => ReplOptions -> Sem r ()
 runCommand opts = do
   let printHelpTxt :: String -> Repl ()
@@ -87,19 +91,30 @@ runCommand opts = do
 
       loadFile :: String -> Repl ()
       loadFile args = do
-        r <- State.gets (^. replStateRoot)
+        mkEntryPoint <- State.gets (^. replStateMkEntryPoint)
         let f = unpack (strip (pack args))
-            entryPoint = rootEntryPoint f r
-        tab <- liftIO (runIO' iniState entryPoint upToCore)
-        State.modify (set replStateContext (Just (second expressionContext tab)))
+            entryPoint = mkEntryPoint f
+        (bs, res) <- liftIO (runIO' iniState entryPoint upToCore)
+        State.modify
+          ( set
+              replStateContext
+              ( Just
+                  ( ReplContext
+                      { _replContextBuiltins = bs,
+                        _replContextExpContext = expressionContext res,
+                        _replContextEntryPoint = entryPoint
+                      }
+                  )
+              )
+          )
         liftIO (putStrLn [i|OK loaded: #{f}|])
 
       listIdentifiers :: String -> Repl ()
       listIdentifiers _ = do
         ctx <- State.gets (^. replStateContext)
         case ctx of
-          Just res -> do
-            let identMap = res ^. _2 . contextCoreResult . Core.coreResultTable . Core.identMap
+          Just ctx' -> do
+            let identMap = ctx' ^. replContextExpContext . contextCoreResult . Core.coreResultTable . Core.identMap
             liftIO $ forM_ (HashMap.keys identMap) putStrLn
           Nothing -> noFileLoadedMsg
 
@@ -111,29 +126,30 @@ runCommand opts = do
       command :: String -> Repl ()
       command input = Repline.dontCrash $ do
         ctx <- State.gets (^. replStateContext)
+        gopts <- State.gets (^. replStateGlobalOptions)
         case ctx of
           Just ctx' -> do
             evalRes <- compileThenEval ctx' input
             case evalRes of
-              Left err -> printError err
-              Right n -> liftIO (putStrLn (Core.ppPrint n))
+              Left err -> printError gopts err
+              Right n -> renderOut gopts (Core.ppOut (ctx' ^. replContextEntryPoint . entryPointGenericOptions) n)
           Nothing -> noFileLoadedMsg
         where
           defaultLoc :: Interval
           defaultLoc = singletonInterval (mkLoc 0 (M.initialPos ""))
 
-          compileThenEval :: (BuiltinsState, ExpressionContext) -> String -> Repl (Either JuvixError Core.Node)
-          compileThenEval (bs, ctx) s = bindEither compileString eval
+          compileThenEval :: ReplContext -> String -> Repl (Either JuvixError Core.Node)
+          compileThenEval ctx s = bindEither compileString eval
             where
               eval :: Core.Node -> Repl (Either JuvixError Core.Node)
               eval n =
                 liftIO $
                   mapLeft
                     (JuvixError @Core.CoreError)
-                    <$> doEvalIO True defaultLoc (ctx ^. contextCoreResult . Core.coreResultTable) n
+                    <$> doEvalIO True defaultLoc (ctx ^. replContextExpContext . contextCoreResult . Core.coreResultTable) n
 
               compileString :: Repl (Either JuvixError Core.Node)
-              compileString = liftIO $ compileExpressionIO "" ctx bs (pack s)
+              compileString = liftIO $ compileExpressionIO' ctx (pack s)
 
               bindEither :: Monad m => m (Either e a) -> (a -> m (Either e b)) -> m (Either e b)
               bindEither x f = join <$> (x >>= mapM f)
@@ -141,23 +157,25 @@ runCommand opts = do
       core :: String -> Repl ()
       core input = Repline.dontCrash $ do
         ctx <- State.gets (^. replStateContext)
+        gopts <- State.gets (^. replStateGlobalOptions)
         case ctx of
-          Just (bs, res) -> do
-            compileRes <- liftIO (compileExpressionIO "" res bs (pack input))
+          Just ctx' -> do
+            compileRes <- liftIO (compileExpressionIO' ctx' (pack input))
             case compileRes of
-              Left err -> printError err
-              Right n -> liftIO (putStrLn (Core.ppPrint n))
+              Left err -> printError gopts err
+              Right n -> renderOut gopts (Core.ppOut (project' @GenericOptions gopts) n)
           Nothing -> noFileLoadedMsg
 
       inferType :: String -> Repl ()
       inferType input = Repline.dontCrash $ do
         ctx <- State.gets (^. replStateContext)
+        gopts <- State.gets (^. replStateGlobalOptions)
         case ctx of
-          Just (bs, res) -> do
-            compileRes <- liftIO (inferExpressionIO "" res bs (pack input))
+          Just ctx' -> do
+            compileRes <- liftIO (inferExpressionIO' ctx' (pack input))
             case compileRes of
-              Left err -> printError err
-              Right n -> liftIO (putStrLn (Internal.ppPrint n))
+              Left err -> printError gopts err
+              Right n -> renderOut gopts (Internal.ppOut (project' @GenericOptions gopts) n)
           Nothing -> noFileLoadedMsg
 
       options :: [(String, String -> Repl ())]
@@ -208,4 +226,48 @@ runCommand opts = do
       replAction = evalReplOpts ReplOpts {..}
 
   root <- askRoot
-  embed (State.evalStateT replAction (initReplState root))
+  globalOptions <- askGlobalOptions
+  embed
+    ( State.evalStateT
+        replAction
+        ( ReplState
+            { _replStateRoot = root,
+              _replStateContext = Nothing,
+              _replStateGlobalOptions = globalOptions,
+              _replStateMkEntryPoint = getReplEntryPoint globalOptions root
+            }
+        )
+    )
+
+getReplEntryPoint :: GlobalOptions -> FilePath -> FilePath -> EntryPoint
+getReplEntryPoint opts root inputFile =
+  EntryPoint
+    { _entryPointRoot = root,
+      _entryPointNoTermination = opts ^. globalNoTermination,
+      _entryPointNoPositivity = opts ^. globalNoPositivity,
+      _entryPointNoStdlib = opts ^. globalNoStdlib,
+      _entryPointStdlibPath = opts ^. globalStdlibPath,
+      _entryPointPackage = emptyPackage,
+      _entryPointModulePaths = pure inputFile,
+      _entryPointGenericOptions = project opts,
+      _entryPointStdin = Nothing
+    }
+
+inferExpressionIO' :: ReplContext -> Text -> IO (Either JuvixError Internal.Expression)
+inferExpressionIO' ctx = inferExpressionIO "" (ctx ^. replContextExpContext) (ctx ^. replContextBuiltins)
+
+compileExpressionIO' :: ReplContext -> Text -> IO (Either JuvixError Core.Node)
+compileExpressionIO' ctx = compileExpressionIO "" (ctx ^. replContextExpContext) (ctx ^. replContextBuiltins)
+
+render' :: (MonadIO m, P.HasAnsiBackend a, P.HasTextBackend a) => GlobalOptions -> a -> m ()
+render' g t = liftIO $ do
+  hasAnsi <- Ansi.hSupportsANSI stdout
+  P.renderIO (not (g ^. globalNoColors) && hasAnsi) t
+
+renderOut :: (MonadIO m, P.HasAnsiBackend a, P.HasTextBackend a) => GlobalOptions -> a -> m ()
+renderOut g t = render' g t >> liftIO (putStrLn "")
+
+printError :: MonadIO m => GlobalOptions -> JuvixError -> m ()
+printError opts e = liftIO $ do
+  hasAnsi <- Ansi.hSupportsANSI stderr
+  liftIO $ hPutStrLn stderr $ run (runReader (project' @GenericOptions opts) (Error.render (not (opts ^. globalNoColors) && hasAnsi) False e))
