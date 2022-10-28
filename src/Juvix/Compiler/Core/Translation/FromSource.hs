@@ -37,11 +37,6 @@ runParser fileName tab input =
     (_, Left err) -> Left (ParserError err)
     (tbl, Right r) -> Right (tbl, r)
 
--- binderInfo :: Name -> Type -> Info
--- binderInfo name ty =
---   let info = setInfoType ty (Info.singleton (NameInfo name))
---    in Info.singleton (BinderInfo info)
-
 freshName ::
   Member NameIdGen r =>
   NameKind ->
