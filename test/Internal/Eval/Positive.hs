@@ -104,5 +104,10 @@ tests =
       "Builtin bool"
       "."
       "BuiltinBool.juvix"
-      "out/BuiltinBool.out"
+      "out/BuiltinBool.out",
+    PosTest
+      "Builtin if"
+      "."
+      "BuiltinIf.juvix"
+      "out/BuiltinIf.out"
   ]

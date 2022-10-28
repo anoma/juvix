@@ -40,8 +40,6 @@ fromInternal i = do
       where
         coreModule :: Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, NameIdGen] r => Internal.Module -> Sem r ()
         coreModule m = do
-          let modLoc = m ^. Internal.moduleName . Internal.nameLoc
-          registerBoolBuiltins modLoc
           registerInductiveDefs m
           registerFunctionDefs m
 
@@ -101,60 +99,6 @@ registerFunctionDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
       Internal.StatementFunction f -> goMutualBlock f
       Internal.StatementInclude i -> mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
       _ -> return ()
-
-createBuiltinConstr ::
-  Member NameIdGen r =>
-  Symbol ->
-  BuiltinDataTag ->
-  Text ->
-  Type ->
-  Interval ->
-  Sem r ConstructorInfo
-createBuiltinConstr sym btag nameTxt ty i = do
-  name <- freshName KNameConstructor nameTxt i
-  let n = builtinConstrArgsNum btag
-  return $
-    ConstructorInfo
-      { _constructorName = name,
-        _constructorTag = BuiltinTag btag,
-        _constructorType = ty,
-        _constructorArgsNum = n,
-        _constructorInductive = sym
-      }
-
-registerBoolBuiltins ::
-  Members '[InfoTableBuilder, NameIdGen] r =>
-  Interval ->
-  Sem r ()
-registerBoolBuiltins i =
-  registerInductiveBuiltins
-    i
-    "bool"
-    [ (TagTrue, "true", id),
-      (TagFalse, "false", id)
-    ]
-
-registerInductiveBuiltins ::
-  Members '[InfoTableBuilder, NameIdGen] r =>
-  Interval ->
-  Text ->
-  [(BuiltinDataTag, Text, Type -> Type)] ->
-  Sem r ()
-registerInductiveBuiltins i indName ctrs = do
-  sym <- freshSymbol
-  let ty = mkIdent' sym
-  constrs <- mapM (\(tag, name, fty) -> createBuiltinConstr sym tag name (fty ty) i) ctrs
-  ioname <- freshName KNameInductive indName i
-  registerInductive
-    ( InductiveInfo
-        { _inductiveName = ioname,
-          _inductiveSymbol = sym,
-          _inductiveKind = mkDynamic',
-          _inductiveConstructors = constrs,
-          _inductiveParams = [],
-          _inductivePositive = True
-        }
-    )
 
 goInductiveDef ::
   forall r.
@@ -235,16 +179,14 @@ goFunctionDef ::
   Sem r ()
 goFunctionDef (f, sym) = do
   body <-
-    if
-        | nExplicitPatterns == 0 -> goExpression 0 HashMap.empty (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody)
-        | otherwise -> do
+    (if nExplicitPatterns == 0 then goExpression 0 HashMap.empty (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody) else (do
             let vars :: HashMap Text Index
                 vars = HashMap.fromList [(show i, i) | i <- vs]
                 values :: [Node]
                 values = mkVar Info.empty <$> vs
             ms <- mapM (goFunctionClause nExplicitPatterns vars) (f ^. Internal.funDefClauses)
             let match = mkMatch' (fromList values) (toList ms)
-            foldr mkLambda match <$> lamArgs
+            foldr mkLambda match <$> lamArgs))
   registerIdentNode sym body
   where
     -- Assumption: All clauses have the same number of patterns
@@ -277,27 +219,12 @@ fromPattern = \case
             <$> filter
               isExplicit
               (c ^. Internal.constrAppParameters)
-    tag <- ctorTag c
+    tag <- ctorTag (c ^. Internal.constrAppConstructor)
     args <- mapM fromPattern explicitPatterns
     return $ PatConstr (PatternConstr (setInfoName n Info.empty) tag args)
   where
     wildcard :: Pattern
     wildcard = PatWildcard (PatternWildcard Info.empty)
-
-    ctorTag :: Internal.ConstructorApp -> Sem r Tag
-    ctorTag c = do
-      let n = c ^. Internal.constrAppConstructor
-      ctorInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoConstructors)
-      case ctorInfo ^. Internal.constructorInfoBuiltin of
-        Just Internal.BuiltinBoolTrue -> return $ BuiltinTag TagTrue
-        Just Internal.BuiltinBoolFalse -> return $ BuiltinTag TagFalse
-        _ -> do
-          let txt = n ^. Internal.nameText
-          i <- getIdent txt
-          return $ case i of
-            Just (IdentConstr tag) -> tag
-            Just _ -> error ("internal to core: not a constructor " <> txt)
-            Nothing -> error ("internal to core: undeclared identifier: " <> txt)
 
 goFunctionClause ::
   forall r.
@@ -352,23 +279,19 @@ goExpression' varsNum vars = \case
       let k = HashMap.lookupDefault impossible txt vars
       return (mkVar (Info.singleton (NameInfo n)) (varsNum - k - 1))
     Internal.IdenFunction n -> do
-      m <- getIdent txt
-      return $ case m of
-        Just (IdentFun sym) -> mkIdent (Info.singleton (NameInfo n)) sym
-        Just _ -> error ("internal to core: not a function: " <> txt)
-        Nothing -> error ("internal to core: undeclared identifier: " <> txt)
-    Internal.IdenInductive {} -> unsupported "goExpression inductive"
-    Internal.IdenConstructor n -> do
-      ctorInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoConstructors)
-      case ctorInfo ^. Internal.constructorInfoBuiltin of
-        Just Internal.BuiltinBoolTrue -> return (mkConstr (Info.singleton (NameInfo n)) (BuiltinTag TagTrue) [])
-        Just Internal.BuiltinBoolFalse -> return (mkConstr (Info.singleton (NameInfo n)) (BuiltinTag TagFalse) [])
+      funInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoFunctions)
+      case funInfo ^. Internal.functionInfoDef . Internal.funDefBuiltin of
+        -- Just Internal.BuiltinBoolIf -> mkIF
         _ -> do
           m <- getIdent txt
           return $ case m of
-            Just (IdentConstr tag) -> mkConstr (Info.singleton (NameInfo n)) tag []
-            Just _ -> error ("internal to core: not a constructor " <> txt)
+            Just (IdentFun sym) -> mkIdent (Info.singleton (NameInfo n)) sym
+            Just _ -> error ("internal to core: not a function: " <> txt)
             Nothing -> error ("internal to core: undeclared identifier: " <> txt)
+    Internal.IdenInductive {} -> unsupported "goExpression inductive"
+    Internal.IdenConstructor n -> do
+      tag <- ctorTag n
+      return (mkConstr (Info.singleton (NameInfo n)) tag [])
     Internal.IdenAxiom {} -> unsupported ("goExpression axiom: " <> txt)
     where
       txt :: Text
@@ -380,6 +303,25 @@ goExpression' varsNum vars = \case
   Internal.ExpressionHole h -> error ("goExpression hole: " <> show (Loc.getLoc h))
   Internal.ExpressionUniverse u -> error ("goExpression universe: " <> show (Loc.getLoc u))
 
+ctorTag ::
+  Members '[InfoTableBuilder, Reader Internal.InfoTable] r =>
+  Internal.Name ->
+  Sem r Tag
+ctorTag n = do
+  ctorInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoConstructors)
+  case ctorInfo ^. Internal.constructorInfoBuiltin of
+    Just Internal.BuiltinBoolTrue -> return (BuiltinTag TagTrue)
+    Just Internal.BuiltinBoolFalse -> return (BuiltinTag TagFalse)
+    _ -> do
+      m <- getIdent txt
+      return $ case m of
+        Just (IdentConstr tag) -> tag
+        Just _ -> error ("internal to core: not a constructor " <> txt)
+        Nothing -> error ("internal to core: undeclared identifier: " <> txt)
+  where
+    txt :: Text
+    txt = n ^. Internal.nameText
+
 goApplication ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
@@ -389,13 +331,28 @@ goApplication ::
   Sem r Node
 goApplication varsNum vars a = do
   (f, args) <- Internal.unfoldPolyApplication a
-  fExpr <- goExpression varsNum vars f
-  case a ^. Internal.appImplicit of
-    Internal.Implicit -> return fExpr
-    Internal.Explicit -> do
-      let exprArgs :: Sem r [Node]
-          exprArgs = mapM (goExpression varsNum vars) args
-      mkApps' fExpr <$> exprArgs
+  let exprArgs :: Sem r [Node]
+      exprArgs = mapM (goExpression varsNum vars) args
+
+      app :: Sem r Node
+      app = do
+        fExpr <- goExpression varsNum vars f
+        case a ^. Internal.appImplicit of
+          Internal.Implicit -> return fExpr
+          Internal.Explicit -> mkApps' fExpr <$> exprArgs
+
+  case f of
+    Internal.ExpressionIden (Internal.IdenFunction n) -> do
+      funInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoFunctions)
+      case funInfo ^. Internal.functionInfoDef . Internal.funDefBuiltin of
+        Just Internal.BuiltinBoolIf -> do
+          as <- exprArgs
+          case as of
+            (v : b1 : b2 : xs) -> return (mkApps' (mkIf' v b1 b2) xs)
+            _ -> app
+        Just Internal.BuiltinNatPlus -> app
+        Nothing -> app
+    _ -> app
 
 goLiteral :: LiteralLoc -> Node
 goLiteral l = case l ^. withLocParam of
