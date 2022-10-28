@@ -14,12 +14,12 @@ type family DirTy d = res | res -> d where
   DirTy 'TopDown = Recur
   DirTy 'BottomUp = Node -- For bottom up maps we never recur on the children
 
--- `umapG` maps the nodes bottom-up, i.e., when invoking the mapper function the
+-- | `umapG` maps the nodes bottom-up, i.e., when invoking the mapper function the
 -- recursive subnodes have already been mapped
 umapG ::
   forall c m.
   Monad m =>
-  Collector (Int, [Info]) c ->
+  Collector (Int, [Binder]) c ->
   (c -> Node -> m Node) ->
   Node ->
   m Node
@@ -29,19 +29,13 @@ umapG coll f = go (coll ^. cEmpty)
     go c n =
       let ni = destruct n
        in do
-            ns <-
-              sequence $
-                zipWith3Exact
-                  (\n' k bis -> go ((coll ^. cCollect) (k, bis) c) n')
-                  (ni ^. nodeChildren)
-                  (ni ^. nodeChildBindersNum)
-                  (ni ^. nodeChildBindersInfo)
-            f c ((ni ^. nodeReassemble) (ni ^. nodeInfo) (ni ^. nodeSubinfos) ns)
+            ns <- mapM (\n' -> go ((coll ^. cCollect) (n' ^. childBindersNum, n' ^. childBinders) c) (n' ^. childNode)) (ni ^. nodeChildren)
+            f c (reassembleDetails ni ns)
 
 dmapG ::
   forall c m.
   Monad m =>
-  Collector (Int, [Info]) c ->
+  Collector (Int, [Binder]) c ->
   (c -> Node -> m Recur) ->
   Node ->
   m Node
@@ -52,23 +46,16 @@ dmapG coll f = go (coll ^. cEmpty)
       r <- f c n
       case r of
         End n' -> return n'
-        Recur n' -> do
+        Recur n' ->
           let ni = destruct n'
-          ns <-
-            sequence $
-              zipWith3Exact
-                goChild
-                (ni ^. nodeChildren)
-                (ni ^. nodeChildBindersNum)
-                (ni ^. nodeChildBindersInfo)
-          return ((ni ^. nodeReassemble) (ni ^. nodeInfo) (ni ^. nodeSubinfos) ns)
+           in reassembleDetails ni <$> mapM goChild (ni ^. nodeChildren)
       where
-        goChild :: Node -> Int -> [Info] -> m Node
-        goChild n'' k bis = go ((coll ^. cCollect) (k, bis) c) n''
+        goChild :: NodeChild -> m Node
+        goChild ch = go ((coll ^. cCollect) (ch ^. childBindersNum, ch ^. childBinders) c) (ch ^. childNode)
 
 type CtxTy :: Ctx -> GHC.Type
 type family CtxTy x = res | res -> x where
-  CtxTy 'CtxBinderList = BinderList Info
+  CtxTy 'CtxBinderList = BinderList Binder
   CtxTy 'CtxBinderNum = Index
   CtxTy 'CtxNone = ()
 
@@ -83,17 +70,17 @@ type family RetTy m dir mon r = res | res -> mon r where
 
 type BodyTy :: (GHC.Type -> GHC.Type) -> Direction -> Monadic -> Ctx -> Ret -> GHC.Type
 type family BodyTy m dir mon x r = res | res -> x r where
-  BodyTy m dir 'Monadic 'CtxBinderList r = BinderList Info -> Node -> RetTy m dir 'Monadic r
+  BodyTy m dir 'Monadic 'CtxBinderList r = BinderList Binder -> Node -> RetTy m dir 'Monadic r
   BodyTy m dir 'Monadic 'CtxBinderNum r = Int -> Node -> RetTy m dir 'Monadic r
   BodyTy m dir 'Monadic 'CtxNone r = Node -> RetTy m dir 'Monadic r
-  BodyTy _ dir 'NonMonadic 'CtxBinderList r = BinderList Info -> Node -> RetTy Identity dir 'NonMonadic r
+  BodyTy _ dir 'NonMonadic 'CtxBinderList r = BinderList Binder -> Node -> RetTy Identity dir 'NonMonadic r
   BodyTy _ dir 'NonMonadic 'CtxBinderNum r = Int -> Node -> RetTy Identity dir 'NonMonadic r
   BodyTy _ dir 'NonMonadic 'CtxNone r = Node -> RetTy Identity dir 'NonMonadic r
 
 type NodeMapArg :: (GHC.Type -> GHC.Type) -> Direction -> Monadic -> CollectorIni -> Ctx -> Ret -> GHC.Type
 type family NodeMapArg m dir mon i x r = res | res -> i x r where
   NodeMapArg m dir mon 'Ini x r = (CtxTy x, BodyTy m dir mon x r)
-  NodeMapArg m dir mon 'NoIni 'CtxBinderList r = BinderList Info -> Node -> RetTy m dir mon r
+  NodeMapArg m dir mon 'NoIni 'CtxBinderList r = BinderList Binder -> Node -> RetTy m dir mon r
   NodeMapArg m dir mon 'NoIni 'CtxBinderNum r = Int -> Node -> RetTy m dir mon r
   NodeMapArg m dir mon 'NoIni 'CtxNone r = Node -> RetTy m dir mon r
 
@@ -106,7 +93,7 @@ type OverIdentity :: GHC.Type -> GHC.Type
 type family OverIdentity t = res where
   OverIdentity (a -> b) = a -> OverIdentity b
   OverIdentity ((), b) = ((), OverIdentity b)
-  OverIdentity (BinderList Info, b) = (BinderList Info, OverIdentity b)
+  OverIdentity (BinderList Binder, b) = (BinderList Binder, OverIdentity b)
   OverIdentity (Index, b) = (Index, OverIdentity b)
   OverIdentity leaf = Identity leaf
 
@@ -122,7 +109,7 @@ instance EmbedIdentity b => EmbedIdentity ((), b) where
 instance EmbedIdentity b => EmbedIdentity (Index, b) where
   embedIden (a, b) = (a, embedIden b)
 
-instance EmbedIdentity b => EmbedIdentity (BinderList Info, b) where
+instance EmbedIdentity b => EmbedIdentity (BinderList Binder, b) where
   embedIden (a, b) = (a, embedIden b)
 
 instance EmbedIdentity Node where
@@ -201,7 +188,7 @@ nodeMapE sdir smon sini sctx sret f = case smon :: SMonadic mon of
     fromSimple :: forall g. Functor g => g Node -> g Recur
     fromSimple = fmap Recur
     nodeMapG' ::
-      Collector (Int, [Info]) c ->
+      Collector (Int, [Binder]) c ->
       (c -> Node -> m (DirTy dir)) ->
       Node ->
       m Node

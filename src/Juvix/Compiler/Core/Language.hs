@@ -9,6 +9,8 @@ import Juvix.Compiler.Core.Language.Nodes
 
 {---------------------------------------------------------------------------------}
 
+type Type = Node
+
 type Var = Var' Info
 
 type Ident = Ident' Info
@@ -21,11 +23,17 @@ type BuiltinApp = BuiltinApp' Info Node
 
 type Constr = Constr' Info Node
 
-type Lambda = Lambda' Info Node
+type Binder = Binder' Node
 
-type Let = Let' Info Node
+type LambdaLhs = LambdaLhs' Info Type
 
-type LetRec = LetRec' Info Node
+type Lambda = Lambda' Info Node Type
+
+type LetItem = LetItem' Node Type
+
+type Let = Let' Info Node Type
+
+type LetRec = LetRec' Info Node Type
 
 type Case = Case' Info Info Node
 
@@ -37,11 +45,13 @@ type MatchBranch = MatchBranch' Info Node
 
 type PatternWildcard = PatternWildcard' Info
 
-type PatternBinder = PatternBinder' Info
+type PatternBinder = PatternBinder' Info Node
 
-type PatternConstr = PatternConstr' Info
+type PatternConstr = PatternConstr' Info Node
 
-type Pattern = Pattern' Info
+type Pattern = Pattern' Info Node
+
+type PiLhs = PiLhs' Info Node
 
 type Pi = Pi' Info Node
 
@@ -102,8 +112,6 @@ data Node
 -- All nodes in an environment must be values.
 type Env = [Node]
 
-type Type = Node
-
 instance HasAtomicity Node where
   atomicity = \case
     NVar x -> atomicity x
@@ -123,3 +131,10 @@ instance HasAtomicity Node where
     NPrim x -> atomicity x
     NDyn x -> atomicity x
     Closure {} -> Aggregate lambdaFixity
+
+emptyBinder :: Binder
+emptyBinder =
+  Binder
+    { _binderName = Nothing,
+      _binderType = NDyn (Dynamic mempty)
+    }

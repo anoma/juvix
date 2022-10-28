@@ -7,7 +7,7 @@ import Juvix.Compiler.Core.Extra.Recursors.Base
 ufoldG ::
   forall c a f.
   Applicative f =>
-  Collector (Int, [Info]) c ->
+  Collector (Int, [Binder]) c ->
   (a -> [a] -> a) ->
   (c -> Node -> f a) ->
   Node ->
@@ -24,8 +24,6 @@ ufoldG coll uplus f = go (coll ^. cEmpty)
         ni = destruct n
         mas :: [f a]
         mas =
-          zipWith3Exact
-            (\n' k bis -> go ((coll ^. cCollect) (k, bis) c) n')
+          map
+            (\n' -> go ((coll ^. cCollect) (n' ^. childBindersNum, n' ^. childBinders) c) (n' ^. childNode))
             (ni ^. nodeChildren)
-            (ni ^. nodeChildBindersNum)
-            (ni ^. nodeChildBindersInfo)

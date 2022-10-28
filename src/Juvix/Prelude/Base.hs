@@ -366,12 +366,20 @@ readerState m = get >>= (`runReader` m)
 infixr 3 .&&.
 
 (.&&.) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
-(a .&&. b) c = a c && b c
+(f .&&. g) a = f a && g a
+
+infixr 3 ..&&..
+
+(..&&..) :: (a -> b -> Bool) -> (a -> b -> Bool) -> (a -> b -> Bool)
+(f ..&&.. g) a = f a .&&. g a
 
 infixr 2 .||.
 
 (.||.) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
 (a .||. b) c = a c || b c
+
+eqOn :: Eq b => (a -> b) -> a -> a -> Bool
+eqOn = ((==) `on`)
 
 class CanonicalProjection a b where
   project :: a -> b

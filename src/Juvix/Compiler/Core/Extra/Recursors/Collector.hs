@@ -16,19 +16,19 @@ makeLenses ''Collector
 unitCollector :: Collector a ()
 unitCollector = Collector () (\_ _ -> ())
 
-binderInfoCollector' :: BinderList Info -> Collector (Int, [Info]) (BinderList Info)
+binderInfoCollector' :: BinderList Binder -> Collector (Int, [Binder]) (BinderList Binder)
 binderInfoCollector' ini = Collector ini collect
   where
-    collect :: (Int, [Info]) -> BinderList Info -> BinderList Info
+    collect :: (Int, [Binder]) -> BinderList Binder -> BinderList Binder
     collect (k, bi) c
       | k == 0 = c
       | otherwise = BL.prepend (reverse bi) c
 
-binderInfoCollector :: Collector (Int, [Info]) (BinderList Info)
+binderInfoCollector :: Collector (Int, [Binder]) (BinderList Binder)
 binderInfoCollector = binderInfoCollector' mempty
 
-binderNumCollector' :: Int -> Collector (Int, [Info]) Index
+binderNumCollector' :: Int -> Collector (Int, [Binder]) Index
 binderNumCollector' ini = Collector ini (\(k, _) c -> c + k)
 
-binderNumCollector :: Collector (Int, [Info]) Index
+binderNumCollector :: Collector (Int, [Binder]) Index
 binderNumCollector = binderNumCollector' 0

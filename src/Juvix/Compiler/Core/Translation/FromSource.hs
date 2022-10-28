@@ -4,19 +4,18 @@ module Juvix.Compiler.Core.Translation.FromSource
   )
 where
 
+import Control.Monad.Combinators.NonEmpty qualified as NonEmpty
 import Control.Monad.Fail qualified as P
 import Control.Monad.Trans.Class (lift)
 import Data.HashMap.Strict qualified as HashMap
-import Data.List qualified as List
 import Data.List.NonEmpty (fromList)
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
-import Juvix.Compiler.Core.Info.BinderInfo as BinderInfo
 import Juvix.Compiler.Core.Info.LocationInfo as LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo as NameInfo
-import Juvix.Compiler.Core.Info.TypeInfo as TypeInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Transformation.Eta
 import Juvix.Compiler.Core.Translation.FromSource.Lexer
@@ -37,11 +36,6 @@ runParser fileName tab input =
         P.runParserT parseToplevel fileName input of
     (_, Left err) -> Left (ParserError err)
     (tbl, Right r) -> Right (tbl, r)
-
-binderInfo :: Name -> Type -> Info
-binderInfo name ty =
-  let info = setInfoType ty (Info.singleton (NameInfo name))
-   in Info.singleton (BinderInfo info)
 
 freshName ::
   Member NameIdGen r =>
@@ -203,17 +197,15 @@ parseDefinition sym ty = do
         && not (isDynamic (typeTarget ty))
     )
     $ parseFailure off "type mismatch: too many lambdas"
-  lift $ setIdentArgsInfo sym (map toArgumentInfo is)
+  lift $ setIdentArgsInfo sym (map (toArgumentInfo . (^. lambdaLhsBinder)) is)
   where
-    toArgumentInfo :: Info -> ArgumentInfo
-    toArgumentInfo i =
+    toArgumentInfo :: Binder -> ArgumentInfo
+    toArgumentInfo bi =
       ArgumentInfo
-        { _argumentName = getInfoName bi,
-          _argumentType = getInfoType bi,
+        { _argumentName = bi ^. binderName,
+          _argumentType = bi ^. binderType,
           _argumentIsImplicit = Explicit
         }
-      where
-        bi = getInfoBinder i
 
 statementInductive ::
   Members '[InfoTableBuilder, NameIdGen] r =>
@@ -367,7 +359,7 @@ seqExpr' varsNum vars node = do
     mkConstr
       Info.empty
       (BuiltinTag TagBind)
-      [node, mkLambda (binderInfo name mkDynamic') node']
+      [node, mkLambda mempty (Binder (Just name) mkDynamic') node']
 
 cmpExpr ::
   Members '[InfoTableBuilder, NameIdGen] r =>
@@ -569,8 +561,8 @@ atoms ::
   HashMap Text Level ->
   ParsecS r Node
 atoms varsNum vars = do
-  es <- P.some (atom varsNum vars)
-  return $ mkApps' (List.head es) (List.tail es)
+  es <- NonEmpty.some (atom varsNum vars)
+  return $ mkApps' (head es) (NonEmpty.tail es)
 
 atom ::
   Members '[InfoTableBuilder, NameIdGen] r =>
@@ -649,8 +641,9 @@ exprPi varsNum vars = do
   ty <- expr varsNum vars
   kw kwComma
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
+      bi = Binder (Just name) ty
   body <- expr (varsNum + 1) vars'
-  return $ mkPi (binderInfo name ty) ty body
+  return $ mkPi mempty bi body
 
 exprLambda ::
   Members '[InfoTableBuilder, NameIdGen] r =>
@@ -661,8 +654,9 @@ exprLambda varsNum vars = do
   lambda
   (name, mty) <- lambdaName
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
+      bi = Binder (Just name) (fromMaybe mkDynamic' mty)
   body <- bracedExpr (varsNum + 1) vars'
-  return $ mkLambda (binderInfo name (fromMaybe mkDynamic' mty)) body
+  return $ mkLambda mempty bi body
   where
     lambdaName =
       parens
@@ -687,7 +681,9 @@ exprLetrecOne varsNum vars = do
   value <- bracedExpr (varsNum + 1) vars'
   kw kwIn
   body <- bracedExpr (varsNum + 1) vars'
-  return $ mkLetRec (Info.singleton (BindersInfo [Info.singleton (NameInfo name)])) (fromList [value]) body
+  let item :: LetItem
+      item = LetItem (Binder (Just name) mkDynamic') value
+  return $ mkLetRec mempty (pure item) body
 
 exprLetrecMany ::
   Members '[InfoTableBuilder, NameIdGen] r =>
@@ -701,35 +697,33 @@ exprLetrecMany varsNum vars = do
     parseFailure off "expected at least one identifier name in letrec signature"
   let (vars', varsNum') = foldl' (\(vs, k) txt -> (HashMap.insert txt k vs, k + 1)) (vars, varsNum) defNames
   defs <- letrecDefs defNames varsNum' vars'
+  kw kwIn
   body <- bracedExpr varsNum' vars'
-  let infos = map (Info.singleton . NameInfo . fst) defs
-  let values = map snd defs
-  return $ mkLetRec (Info.singleton (BindersInfo infos)) (fromList values) body
+  return $ mkLetRec mempty defs body
 
-letrecNames :: ParsecS r [Text]
-letrecNames = P.between (symbol "[") (symbol "]") (P.many identifier)
+letrecNames :: ParsecS r (NonEmpty Text)
+letrecNames = P.between (symbol "[") (symbol "]") (NonEmpty.some identifier)
 
 letrecDefs ::
+  forall r.
   Members '[InfoTableBuilder, NameIdGen] r =>
-  [Text] ->
+  NonEmpty Text ->
   Index ->
   HashMap Text Level ->
-  ParsecS r [(Name, Node)]
-letrecDefs names varsNum vars = case names of
-  [] -> return []
-  n : names' -> do
-    off <- P.getOffset
-    (txt, i) <- identifierL
-    when (n /= txt) $
-      parseFailure off "identifier name doesn't match letrec signature"
-    name <- lift $ freshName KNameLocal txt i
-    kw kwAssign
-    v <- bracedExpr varsNum vars
-    if
-        | null names' -> optional (kw kwSemicolon) >> kw kwIn
-        | otherwise -> kw kwSemicolon
-    rest <- letrecDefs names' varsNum vars
-    return $ (name, v) : rest
+  ParsecS r (NonEmpty LetItem)
+letrecDefs names varsNum vars = forM names letrecItem
+  where
+    letrecItem :: Text -> ParsecS r LetItem
+    letrecItem n = do
+      off <- P.getOffset
+      (txt, i) <- identifierL
+      when (n /= txt) $
+        parseFailure off "identifier name doesn't match letrec signature"
+      name <- lift $ freshName KNameLocal txt i
+      kw kwAssign
+      v <- bracedExpr varsNum vars
+      kw kwSemicolon
+      return $ LetItem (Binder (Just name) mkDynamic') v
 
 letrecDef ::
   Members '[InfoTableBuilder, NameIdGen] r =>
@@ -756,8 +750,9 @@ exprLet varsNum vars = do
   value <- bracedExpr varsNum vars
   kw kwIn
   let vars' = HashMap.insert (name ^. nameText) varsNum vars
+      binder = Binder (Just name) (fromMaybe mkDynamic' mty)
   body <- bracedExpr (varsNum + 1) vars'
-  return $ mkLet (binderInfo name (fromMaybe mkDynamic' mty)) value body
+  return $ mkLet mempty binder value body
 
 exprCase ::
   Members '[InfoTableBuilder, NameIdGen] r =>
@@ -820,12 +815,12 @@ caseMatchingBranch varsNum vars = do
   txt <- identifier
   r <- lift (getIdent txt)
   case r of
-    Just (IdentFun {}) ->
+    Just IdentFun {} ->
       parseFailure off ("not a constructor: " ++ fromText txt)
-    Just (IdentInd {}) ->
+    Just IdentInd {} ->
       parseFailure off ("not a constructor: " ++ fromText txt)
     Just (IdentConstr tag) -> do
-      ns <- P.many parseLocalName
+      ns :: [Name] <- P.many parseLocalName
       let bindersNum = length ns
       ci <- lift $ getConstructorInfo tag
       when
@@ -841,8 +836,9 @@ caseMatchingBranch varsNum vars = do
                 (vars, varsNum)
                 ns
       br <- bracedExpr (varsNum + bindersNum) vars'
-      let info = setInfoName (ci ^. constructorName) $ setInfoBinders (map (Info.singleton . NameInfo) ns) Info.empty
-      return $ CaseBranch info tag bindersNum br
+      let info = setInfoName (ci ^. constructorName) mempty
+          binders = [Binder (Just name) mkDynamic' | name <- ns]
+      return $ CaseBranch info tag binders bindersNum br
     Nothing ->
       parseFailure off ("undeclared identifier: " ++ fromText txt)
 
@@ -894,14 +890,15 @@ matchBranch patsNum varsNum vars = do
   kw kwAssign
   unless (length pats == patsNum) $
     parseFailure off "wrong number of patterns"
-  let pis = concatMap (reverse . getBinderPatternInfos) pats
-  let (vars', varsNum') =
+  let pis :: [Binder]
+      pis = concatMap (reverse . getBinderPatternInfos) pats
+      (vars', varsNum') =
         foldl'
           ( \(vs, k) name ->
               (HashMap.insert (name ^. nameText) k vs, k + 1)
           )
           (vars, varsNum)
-          (map (fromJust . getInfoName) pis)
+          (map (fromJust . (^. binderName)) pis)
   br <- bracedExpr varsNum' vars'
   return $ MatchBranch Info.empty (fromList pats) br
 
@@ -939,7 +936,8 @@ binderOrConstrPattern parseArgs = do
       n <- lift $ freshName KNameLocal txt i
       mp <- optional binderPattern
       let pat = fromMaybe (PatWildcard (PatternWildcard Info.empty)) mp
-      return $ PatBinder (PatternBinder (setInfoName n Info.empty) pat)
+          binder = Binder (Just n) mkDynamic'
+      return $ PatBinder (PatternBinder binder pat)
 
 binderPattern ::
   Members '[InfoTableBuilder, NameIdGen] r =>

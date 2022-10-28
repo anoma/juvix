@@ -30,15 +30,16 @@ computeFreeVarsInfo = umapN go
           fvi =
             FreeVarsInfo $
               foldr
-                ( \(m, n') acc ->
-                    HashMap.unionWith (+) acc $
-                      HashMap.mapKeys (\j -> j - m) $
-                        HashMap.filterWithKey
-                          (\j _ -> j < m)
-                          (getFreeVarsInfo n' ^. infoFreeVars)
+                ( \n' acc ->
+                    let m = n' ^. childBindersNum
+                     in HashMap.unionWith (+) acc $
+                          HashMap.mapKeys (\j -> j - m) $
+                            HashMap.filterWithKey
+                              (\j _ -> j < m)
+                              (getFreeVarsInfo (n' ^. childNode) ^. infoFreeVars)
                 )
                 mempty
-                (bchildren n)
+                (children n)
 
 getFreeVarsInfo :: Node -> FreeVarsInfo
 getFreeVarsInfo = fromJust . Info.lookup kFreeVarsInfo . getInfo
