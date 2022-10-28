@@ -1,7 +1,6 @@
 module Juvix.Compiler.Core.Extra.Base where
 
 import Data.Functor.Identity
-import Data.List qualified as List
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Language
 import Polysemy.Input
@@ -256,7 +255,7 @@ getPatternBinders = go []
       PatWildcard {} -> acc
 
 getPatternInfos :: Pattern -> [Info]
-getPatternInfos = go []
+getPatternInfos = reverse . go []
   where
     go :: [Info] -> Pattern -> [Info]
     go acc = \case
@@ -516,63 +515,68 @@ destruct = \case
                   mkCase i' (v' ^. childNode) (mkBranches is' allNodes') (Just (def' ^. childNode))
               }
   NMatch (Match i vs branches) ->
-    let branchChildren :: [([Binder], NodeChild)]
-        branchChildren =
-          [ (binders, manyBinders binders (br ^. matchBranchBody))
-            | br <- branches,
-              let binders = concatMap getPatternBinders (reverse (toList (br ^. matchBranchPatterns)))
-          ]
-        allNodes :: [NodeChild]
+    let allNodes :: [NodeChild]
         allNodes =
           concat
             [ b : map (noBinders . (^. binderType)) bi
               | (bi, b) <- branchChildren
             ]
-        branchPatternInfos :: [[Info]]
-        branchPatternInfos =
-          [ concatMap
-              (reverse . getPatternInfos)
-              (br ^. matchBranchPatterns)
-            | br <- branches
-          ]
-        numVals = length vs
-        mkBranch :: Info -> MatchBranch -> Sem '[Input (Maybe NodeChild), Input (Maybe [Info])] MatchBranch
-        mkBranch i' br = do
-          b' <- input'
-          is' <- input'
-          let binders' = zipWithExact (set binderType) tys' (b' ^. childBinders)
-          return
-            br
-              { _matchBranchInfo = i',
-                _matchBranchPatterns = nonEmpty' $ setPatternsInfos binders' is' (toList (br ^. matchBranchPatterns)),
-                _matchBranchBody = b' ^. childNode
-              }
-        mkBranches :: Info -> [Info] -> [NodeChild] -> [CaseBranch]
-        mkBranches i' is' allNodes' =
-          run $
-            runInputList branchPatternInfos $
-              runInputList allNodes' $
-                sequence
-                  [ mkBranch ci' num br
-                    | (ci', num, br) <- zip3Exact is' (map (length . fst) branchChildren) branches
-                  ]
+          where
+            branchChildren :: [([Binder], NodeChild)]
+            branchChildren =
+              [ (binders, manyBinders binders (br ^. matchBranchBody))
+                | br <- branches,
+                  let binders = concatMap getPatternBinders (reverse (toList (br ^. matchBranchPatterns)))
+              ]
+        branchInfos :: [Info]
+        branchInfos =
+          concat
+            [ br
+                ^. matchBranchInfo
+                : concatMap getPatternInfos (br ^. matchBranchPatterns)
+              | br <- branches
+            ]
+        setPatternsInfos :: forall r. Members '[Input (Maybe Info), Input (Maybe NodeChild)] r => NonEmpty Pattern -> Sem r (NonEmpty Pattern)
+        setPatternsInfos = mapM goPattern
+          where
+            goPattern :: Pattern -> Sem r Pattern
+            goPattern = \case
+              PatWildcard x -> do
+                i' <- input'
+                return (PatWildcard (set patternWildcardInfo i' x))
+              PatBinder x -> do
+                ty <- (^. childNode) <$> input'
+                return (PatBinder (set (patternBinder . binderType) ty x))
+              PatConstr x -> do
+                i' <- input'
+                args' <- mapM goPattern (x ^. patternConstrArgs)
+                return (PatConstr (set patternConstrInfo i' (set patternConstrArgs args' x)))
      in NodeDetails
           { _nodeInfo = i,
-            _nodeSubinfos = concat branchPatternInfos, -- what about info in the branch
+            _nodeSubinfos = branchInfos,
             _nodeChildren = map noBinders (toList vs) ++ allNodes,
             _nodeReassemble = someChildrenI $ \i' is' chs' ->
-              let values' :: NonEmpty NodeChild
-                  bodies' :: [NodeChild]
-                  (values', bodies') = first nonEmpty' (splitAtExact numVals (toList chs'))
+              let mkBranch :: MatchBranch -> Sem '[Input (Maybe NodeChild), Input (Maybe Info)] MatchBranch
+                  mkBranch br = do
+                    bi' <- input'
+                    b' <- input'
+                    pats' <- setPatternsInfos (br ^. matchBranchPatterns)
+                    return
+                      br
+                        { _matchBranchInfo = bi',
+                          _matchBranchPatterns = pats',
+                          _matchBranchBody = b' ^. childNode
+                        }
+                  numVals = length vs
+                  values' :: NonEmpty NodeChild
+                  branchesChilds' :: [NodeChild]
+                  (values', branchesChilds') = first nonEmpty' (splitAtExact numVals (toList chs'))
                   branches' :: [MatchBranch]
                   branches' =
-                    [ br
-                        { _matchBranchPatterns = nonEmpty' $ setPatternsInfos binders' is' (toList (br ^. matchBranchPatterns)),
-                          _matchBranchBody = body' ^. childNode
-                        }
-                      | (body', br) <- zipExact bodies' branches,
-                        let binders' = body' ^. childBinders
-                    ]
+                    run $
+                      runInputList is' $
+                        runInputList branchesChilds' $
+                          mapM mkBranch branches
                in mkMatch i' (fmap (^. childNode) values') branches'
           }
   NPi (Pi i bi b) ->
@@ -621,32 +625,6 @@ destruct = \case
         _nodeReassemble = someChildren $ \i' (b' :| env') ->
           Closure (map (^. childNode) env') (Lambda i' bi (b' ^. childNode))
       }
-  where
-    setPatternsInfos :: [Binder] -> [Info] -> [Pattern] -> [Pattern]
-    setPatternsInfos binders infos = snd . setPatternsInfos' binders infos
-      where
-        setPatternsInfos' :: [Binder] -> [Info] -> [Pattern] -> (([Binder], [Info]), [Pattern])
-        setPatternsInfos' bs is [] = ((bs, is), [])
-        setPatternsInfos' bs is (p : ps) =
-          let ((bs', is'), p') = setPatInfos bs is p
-              (bis'', ps') = setPatternsInfos' bs' is' ps
-           in (bis'', p' : ps')
-
-        setPatInfos :: [Binder] -> [Info] -> Pattern -> (([Binder], [Info]), Pattern)
-        setPatInfos bs is = \case
-          PatWildcard x ->
-            ((bs, tl is), PatWildcard (x {_patternWildcardInfo = hd is}))
-          PatBinder x ->
-            ((tl bs, is), PatBinder (x {_patternBinder = hd bs}))
-          PatConstr x ->
-            let (bis', ps) = setPatternsInfos' bs (tl is) (x ^. patternConstrArgs)
-             in (bis', PatConstr (x {_patternConstrInfo = hd is, _patternConstrArgs = ps}))
-
-    hd :: [a] -> a
-    hd = List.head
-
-    tl :: [a] -> [a]
-    tl = List.tail
 
 reassembleDetails :: NodeDetails -> [Node] -> Node
 reassembleDetails d ns = (d ^. nodeReassemble) (d ^. nodeInfo) (d ^. nodeSubinfos) children'
