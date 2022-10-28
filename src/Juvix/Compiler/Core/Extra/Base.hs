@@ -246,7 +246,7 @@ unfoldLambdas' = first length . unfoldLambdas
 {- functions on Pattern -}
 
 getPatternBinders :: Pattern -> [Binder]
-getPatternBinders = go []
+getPatternBinders = reverse . go []
   where
     go :: [Binder] -> Pattern -> [Binder]
     go acc = \case
@@ -518,22 +518,24 @@ destruct = \case
     let allNodes :: [NodeChild]
         allNodes =
           concat
-            [ b : map (noBinders . (^. binderType)) bi
-              | (bi, b) <- branchChildren
+            [ b : map (noBinders . (^. binderType)) bis
+              | (bis, b) <- branchChildren
             ]
           where
             branchChildren :: [([Binder], NodeChild)]
             branchChildren =
               [ (binders, manyBinders binders (br ^. matchBranchBody))
                 | br <- branches,
-                  let binders = concatMap getPatternBinders (reverse (toList (br ^. matchBranchPatterns)))
+                  let binders = concatMap getPatternBinders (toList (br ^. matchBranchPatterns))
               ]
         branchInfos :: [Info]
         branchInfos =
           concat
-            [ br
-                ^. matchBranchInfo
-                : concatMap getPatternInfos (br ^. matchBranchPatterns)
+            [
+              -- br
+              --   ^. matchBranchInfo
+              --   :
+                concatMap getPatternInfos (br ^. matchBranchPatterns)
               | br <- branches
             ]
         setPatternsInfos :: forall r. Members '[Input (Maybe Info), Input (Maybe NodeChild)] r => NonEmpty Pattern -> Sem r (NonEmpty Pattern)
@@ -558,12 +560,13 @@ destruct = \case
             _nodeReassemble = someChildrenI $ \i' is' chs' ->
               let mkBranch :: MatchBranch -> Sem '[Input (Maybe NodeChild), Input (Maybe Info)] MatchBranch
                   mkBranch br = do
-                    bi' <- input'
+                    -- bi' <- input'
                     b' <- input'
                     pats' <- setPatternsInfos (br ^. matchBranchPatterns)
                     return
                       br
-                        { _matchBranchInfo = bi',
+                        {
+                          -- _matchBranchInfo = bi',
                           _matchBranchPatterns = pats',
                           _matchBranchBody = b' ^. childNode
                         }
