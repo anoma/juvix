@@ -92,6 +92,9 @@ string = "string"
 nat :: IsString s => s
 nat = "nat"
 
+stringPrint :: IsString s => s
+stringPrint = "string-print"
+
 bool_ :: IsString s => s
 bool_ = "bool"
 

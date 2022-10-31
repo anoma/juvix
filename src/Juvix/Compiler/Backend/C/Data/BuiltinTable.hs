@@ -21,6 +21,8 @@ builtinAxiomName = \case
   BuiltinNatPrint -> Just printNat
   BuiltinIO -> Just io
   BuiltinIOSequence -> Just ioseq
+  BuiltinString -> Just string_
+  BuiltinStringPrint -> Just printString
 
 builtinFunctionName :: BuiltinFunction -> Maybe Text
 builtinFunctionName = \case

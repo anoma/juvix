@@ -4,6 +4,7 @@
 #include "bool.h"
 #include "nat.h"
 #include "io.h"
+#include "juvix_string.h"
 
 typedef __SIZE_TYPE__ size_t;
 typedef __UINT8_TYPE__ uint8_t;

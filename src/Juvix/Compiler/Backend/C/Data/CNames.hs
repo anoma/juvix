@@ -14,8 +14,14 @@ suc = primPrefix "suc"
 printNat :: Text
 printNat = primPrefix "printNat"
 
+printString :: Text
+printString = primPrefix "printString"
+
 io :: Text
 io = primPrefix "io"
+
+string_ :: Text
+string_ = primPrefix "string"
 
 nat :: Text
 nat = primPrefix "nat"

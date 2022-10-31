@@ -179,14 +179,19 @@ goFunctionDef ::
   Sem r ()
 goFunctionDef (f, sym) = do
   body <-
-    (if nExplicitPatterns == 0 then goExpression 0 HashMap.empty (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody) else (do
-            let vars :: HashMap Text Index
-                vars = HashMap.fromList [(show i, i) | i <- vs]
-                values :: [Node]
-                values = mkVar Info.empty <$> vs
-            ms <- mapM (goFunctionClause nExplicitPatterns vars) (f ^. Internal.funDefClauses)
-            let match = mkMatch' (fromList values) (toList ms)
-            foldr mkLambda match <$> lamArgs))
+    ( if nExplicitPatterns == 0
+        then goExpression 0 HashMap.empty (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody)
+        else
+          ( do
+              let vars :: HashMap Text Index
+                  vars = HashMap.fromList [(show i, i) | i <- vs]
+                  values :: [Node]
+                  values = mkVar Info.empty <$> vs
+              ms <- mapM (goFunctionClause nExplicitPatterns vars) (f ^. Internal.funDefClauses)
+              let match = mkMatch' (fromList values) (toList ms)
+              foldr mkLambda match <$> lamArgs
+          )
+      )
   registerIdentNode sym body
   where
     -- Assumption: All clauses have the same number of patterns
@@ -279,15 +284,11 @@ goExpression' varsNum vars = \case
       let k = HashMap.lookupDefault impossible txt vars
       return (mkVar (Info.singleton (NameInfo n)) (varsNum - k - 1))
     Internal.IdenFunction n -> do
-      funInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoFunctions)
-      case funInfo ^. Internal.functionInfoDef . Internal.funDefBuiltin of
-        -- Just Internal.BuiltinBoolIf -> mkIF
-        _ -> do
-          m <- getIdent txt
-          return $ case m of
-            Just (IdentFun sym) -> mkIdent (Info.singleton (NameInfo n)) sym
-            Just _ -> error ("internal to core: not a function: " <> txt)
-            Nothing -> error ("internal to core: undeclared identifier: " <> txt)
+      m <- getIdent txt
+      return $ case m of
+        Just (IdentFun sym) -> mkIdent (Info.singleton (NameInfo n)) sym
+        Just _ -> error ("internal to core: not a function: " <> txt)
+        Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenInductive {} -> unsupported "goExpression inductive"
     Internal.IdenConstructor n -> do
       tag <- ctorTag n
@@ -351,6 +352,21 @@ goApplication varsNum vars a = do
             (v : b1 : b2 : xs) -> return (mkApps' (mkIf' v b1 b2) xs)
             _ -> app
         Just Internal.BuiltinNatPlus -> app
+        Nothing -> app
+    Internal.ExpressionIden (Internal.IdenAxiom n) -> do
+      axiomInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoAxioms)
+      case axiomInfo ^. Internal.axiomInfoBuiltin of
+        Just Internal.BuiltinNatPrint -> mkConstr' (BuiltinTag TagWrite) <$> exprArgs
+        Just Internal.BuiltinIOSequence -> case args of
+          (lft : rgt : xs) -> do
+            lft' <- goExpression varsNum vars lft
+            rgt' <- goExpression (varsNum + 1) vars rgt
+            xs' <- mapM (goExpression varsNum vars) xs
+            return (mkApps' (mkConstr' (BuiltinTag TagBind) [lft', mkLambda' rgt']) xs')
+          _ -> app
+        Just Internal.BuiltinStringPrint -> mkConstr' (BuiltinTag TagWrite) <$> exprArgs
+        Just Internal.BuiltinString -> app
+        Just Internal.BuiltinIO -> app
         Nothing -> app
     _ -> app
 
