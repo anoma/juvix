@@ -17,7 +17,7 @@ sumi [] = 0
 sumi (x : xs) = x + sumi xs
 
 main :: IO ()
-main = putStrLn (show (sumi (mapfun (mapfun (genffs k) (genfs k)) [1..n])))
+main = putStrLn (show (sumi (mapfun (mapfun (genffs k) (genfs k)) [1 .. n])))
   where
     k = 100
     n = 10000

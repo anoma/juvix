@@ -1,7 +1,7 @@
 Benchmarks of the new Juvix runtime
 ====================================
 
-Benchmarked version: commit XXX from 31.11.2022
+Benchmarked version: commit 148ececb4d4259eacbb980f5992073a3ac611d82 from 31.11.2022
 
 Summary
 -------

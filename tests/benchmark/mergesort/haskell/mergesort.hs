@@ -17,7 +17,7 @@ sort [] = []
 sort [x] = [x]
 sort xs =
   let (l1, l2) = split xs
-  in merge (sort l1) (sort l2)
+   in merge (sort l1) (sort l2)
 
 sorted :: [Int] -> Bool
 sorted [] = True
