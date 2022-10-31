@@ -73,6 +73,7 @@ UPDATES-FOR-CHANGELOG.org
 *.out.c
 *.s
 *.wasm
+*.exe
 docs/md/
 _docs
 docs/**/*.md

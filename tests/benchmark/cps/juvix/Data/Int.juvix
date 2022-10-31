@@ -1,0 +1,24 @@
+module Data.Int;
+
+axiom Int : Type;
+
+compile Int {
+  c ↦ "int";
+};
+
+axiom Int_0 : Int;
+compile Int_0 {
+  c ↦ "0";
+};
+
+axiom Int_1 : Int;
+compile Int_1 {
+  c ↦ "1";
+};
+
+axiom Int_2 : Int;
+compile Int_2 {
+  c ↦ "2";
+};
+
+end;

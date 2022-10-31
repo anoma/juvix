@@ -25,10 +25,10 @@ static inline word_t smallint_mod(word_t x, word_t y) {
 }
 
 static inline word_t smallint_lt(word_t x, word_t y) {
-    return make_bool(x < y);
+    return make_bool(get_unboxed_int(x) < get_unboxed_int(y));
 }
 static inline word_t smallint_le(word_t x, word_t y) {
-    return make_bool(x <= y);
+    return make_bool(get_unboxed_int(x) <= get_unboxed_int(y));
 }
 
 #endif

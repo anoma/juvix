@@ -73,6 +73,7 @@ closure_label:
 
 #define JUVIX_INT_LT(var0, var1, var2) (var0 = smallint_lt(var1, var2))
 #define JUVIX_INT_LE(var0, var1, var2) (var0 = smallint_le(var1, var2))
+#define JUVIX_INT_EQ(var0, var1, var2) (var0 = make_bool(var1 == var2))
 
 #define JUVIX_VAL_EQ(var0, var1, var2) \
     (var0 = make_bool(juvix_equal(var1, var2)))

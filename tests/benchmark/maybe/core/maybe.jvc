@@ -1,0 +1,44 @@
+-- optionally sum N integers from a binary tree K times
+
+inductive tree {
+  node : int -> tree -> tree -> tree;
+  leaf : tree;
+};
+
+inductive maybe {
+  just : any -> maybe;
+  nothing : maybe;
+};
+
+def gen := \n if n = 0 then leaf else let t := gen (n - 1) in node n t t;
+
+def sum := \n \t case t of {
+  leaf := just 0;
+  node x l r :=
+    if x = n then
+      nothing
+    else
+      case sum n l of {
+        nothing := nothing;
+        just s1 :=
+          case sum n r of {
+            nothing := nothing;
+            just s2 := just (s1 + s2 + x);
+          };
+       }
+  };
+
+def run := \n \t
+  if n = 0 then
+    sum 0 t
+  else
+    case run (n - 1) t of {
+      nothing := sum n t;
+      just x :=
+        case sum n t of {
+          nothing := nothing;
+          just y := just (y - x);
+        };
+    };
+
+run 101 (gen 20)

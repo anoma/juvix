@@ -1,0 +1,31 @@
+-- map and fold a list of N integers K times
+
+module mapfold;
+
+open import Stdlib.Prelude;
+open import Data.Int;
+open import Data.Int.Ops;
+
+terminating
+run : Int -> Int -> List Int -> Int;
+run n acc lst :=
+  if (n Data.Int.Ops.== Int_0)
+     acc
+     (run (n Data.Int.Ops.- Int_1) (foldl (Data.Int.Ops.+) (Int_0 Data.Int.Ops.- acc) lst) (map ((Data.Int.Ops.+) Int_1) lst));
+
+terminating
+gen : Int -> Int -> List Int;
+gen k n :=
+  if (k == n)
+     (k ∷ nil)
+     (k ∷ gen (k Data.Int.Ops.+ Int_1) n);
+
+axiom Int_10000 : Int;
+compile Int_10000 {
+  c ↦ "10000";
+};
+
+main : IO;
+main := printInt (run Int_10000 Int_0 (gen Int_1 Int_10000));
+
+end;

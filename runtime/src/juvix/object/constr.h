@@ -30,7 +30,7 @@
     do {                       \
         void *tmp;             \
         ALLOC(tmp, 2);         \
-        var = tmp;             \
+        var = (word_t)tmp;     \
     } while (0)
 
 #define FST(var) FIELD(var, 0)

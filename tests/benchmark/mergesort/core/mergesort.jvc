@@ -1,0 +1,54 @@
+-- merge sort
+
+inductive list {
+  nil : list;
+  cons : any -> list -> list;
+};
+
+inductive product {
+  pair : any -> any -> product;
+};
+
+def split' := \xs \ys \zs
+  case xs of {
+    nil := pair ys zs;
+    cons x xs' := split' xs' zs (cons x ys);
+  };
+
+def split := \xs split' xs nil nil;
+
+def merge := \xs \ys case xs of {
+  nil := ys;
+  cons x xs' := case ys of {
+    nil := xs;
+    cons y ys' :=
+      if x <= y then
+        cons x (merge xs' ys)
+      else
+        cons y (merge xs ys')
+  }
+};
+
+def sort := \xs
+  case xs of {
+    nil := xs;
+    cons _ xs' := case xs' of {
+      nil := xs;
+      _ := case split xs of {
+        pair l1 l2 := merge (sort l1) (sort l2)
+      }
+    }
+  };
+
+def sorted := \xs
+  case xs of {
+    nil := true;
+    cons x xs' := case xs' of {
+      nil := true;
+      cons y _ := if x <= y then sorted xs' else false;
+    };
+  };
+
+def gen := \n \acc if n = 0 then acc else gen (n - 1) (cons n acc);
+
+sorted (sort (gen 2000000 nil))

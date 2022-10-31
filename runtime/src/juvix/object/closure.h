@@ -31,10 +31,10 @@ static inline label_addr_t get_closure_addr(word_t cl) {
 }
 
 static inline word_t *get_closure_args(word_t cl) {
-    return (word_t *)cl + CLOSURE_SKIP + 1;
+    return (word_t *)cl + CLOSURE_HEAD_SIZE;
 }
 
-#define CLOSURE_ARG(var, n) FIELD(var, (n) + CLOSURE_SKIP + 1)
+#define CLOSURE_ARG(var, n) FIELD(var, (n) + CLOSURE_HEAD_SIZE)
 
 #define INIT_CLOSURE0(var, addr, nargs, largs)                              \
     FIELD(var, 0) = make_special_header(SUID_CLOSURE, nargs + CLOSURE_SKIP, \
@@ -70,6 +70,15 @@ static inline word_t *get_closure_args(word_t cl) {
             SUID_CLOSURE, nfields, CLOSURE_SKIP, get_closure_largs(src) - n); \
         memcopy((word_t *)(dest) + 1, (word_t *)(src) + 1, nfields - n);      \
     } while (0)
+/*
+
+EXTEND_CLOSURE(dest, src, n, {
+    CLOSURE_ARG(dest, juvix_closure_nargs) = arg1;
+    ...
+    CLOSURE_ARG(dest, juvix_closure_nargs + n - 1) = argn;
+}
+
+*/
 
 #define EXTEND_CLOSURE(dest, src, n, CODE)                   \
     do {                                                     \
@@ -90,6 +99,21 @@ static inline word_t *get_closure_args(word_t cl) {
         (word_t)&juvix_zeroarg_closure_data_##name;             \
     INIT_CLOSURE(juvix_zeroarg_closure_##name, fuid,            \
                  LABEL_ADDR(juvix_closure_##name), 0, largs);
+
+#define CURRY_CLOSURE(var, closure, largs)                                \
+    do {                                                                  \
+        ALLOC_CLOSURE(var, 0, LABEL_ADDR(juvix_curry_##largs), 1, largs); \
+        CLOSURE_ARG(var, 0) = closure;                                    \
+    } while (0)
+
+#define CURRY_CLOSURE_ALLOC_SIZE (CLOSURE_HEAD_SIZE + 1)
+
+#define DECL_CURRY(largs)                                             \
+    juvix_curry_##largs : STACK_ENTER(DISPATCH_STACK_SIZE + (largs)); \
+    for (int i = (largs); i > 0; --i) {                               \
+        STACK_PUSH(CARG(i));                                          \
+    }                                                                 \
+    TAIL_CALL_CLOSURES(CARG(0), largs);
 
 // Memory pointers (see alloc.h) need to be saved before calling the following
 // functions (they call alloc).

@@ -1,0 +1,33 @@
+-- map and fold a list of N integers K times
+
+inductive list {
+  nil : list;
+  cons : any -> list -> list;
+};
+
+def map := \f \lst case lst of {
+  nil := nil;
+  cons h t := cons (f h) (map f t);
+};
+
+def foldl := \f \acc \lst case lst of {
+  nil := acc;
+  cons h t := foldl f (f acc h) t;
+};
+
+def run := \n \acc \lst
+  if n = 0 then
+    acc
+  else
+    run (n - 1) (foldl (+) (0 - acc) lst) (map ((+) 1) lst);
+
+def gen := \k \n
+  if k = n then
+    cons k nil
+  else
+    cons k (gen (k + 1) n);
+
+let k := 10000 in
+let n := 10000 in
+
+run k 0 (gen 1 n)
