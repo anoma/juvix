@@ -224,6 +224,18 @@ makeLenses ''InductiveRef
 makeLenses ''AxiomRef
 makeLenses ''AxiomDef
 
+instance HasAtomicity ConstructorApp where
+  atomicity (ConstructorApp _ ps)
+    | null ps = Atom
+    | otherwise = Aggregate appFixity
+
+instance HasAtomicity Pattern where
+  atomicity = \case
+    PatternVariable {} -> Atom
+    PatternConstructorApp a -> atomicity a
+    PatternWildcard {} -> Atom
+    PatternEmpty -> Atom
+
 instance HasLoc InductiveConstructorDef where
   getLoc = getLoc . (^. constructorName)
 

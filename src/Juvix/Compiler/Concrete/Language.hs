@@ -82,6 +82,11 @@ type family PatternParensType s = res | res -> s where
   PatternParensType 'Parsed = PatternAtoms 'Parsed
   PatternParensType 'Scoped = PatternArg
 
+type PatternAtType :: Stage -> GHC.Type
+type family PatternAtType s = res | res -> s where
+  PatternAtType 'Parsed = PatternBinding
+  PatternAtType 'Scoped = PatternArg
+
 type family ImportType (s :: Stage) :: GHC.Type where
   ImportType 'Parsed = TopModulePath
   ImportType 'Scoped = Module 'Scoped 'ModuleTop
@@ -319,12 +324,18 @@ data PatternScopedIden
   | PatternScopedConstructor ConstructorRef
   deriving stock (Show, Ord, Eq)
 
+data PatternBinding = PatternBinding
+  { _patternBindingName :: Symbol,
+    _patternBindingPattern :: PatternAtom 'Parsed
+  }
+
 data PatternAtom (s :: Stage)
   = PatternAtomIden (PatternAtomIdenType s)
   | PatternAtomWildcard Wildcard
   | PatternAtomEmpty Interval
-  | PatternAtomParens (Maybe (SymbolType s)) (PatternParensType s)
-  | PatternAtomBraces (Maybe (SymbolType s)) (PatternParensType s)
+  | PatternAtomParens (PatternParensType s)
+  | PatternAtomBraces (PatternParensType s)
+  | PatternAtomAt (PatternAtType s)
 
 data PatternAtoms (s :: Stage) = PatternAtoms
   { _patternAtoms :: NonEmpty (PatternAtom s),
@@ -971,6 +982,7 @@ makeLenses ''PatternApp
 makeLenses ''PatternInfixApp
 makeLenses ''PatternPostfixApp
 makeLenses ''Compile
+makeLenses ''PatternBinding
 makeLenses ''PatternAtoms
 makeLenses ''ExpressionAtoms
 
@@ -978,12 +990,30 @@ instance HasAtomicity (PatternAtom 'Parsed) where
   atomicity = const Atom
 
 deriving stock instance
+  ( Show Symbol,
+    Show (PatternAtom 'Parsed)
+  ) =>
+  Show PatternBinding
+
+deriving stock instance
+  ( Eq Symbol,
+    Eq (PatternAtom 'Parsed)
+  ) =>
+  Eq PatternBinding
+
+deriving stock instance
+  ( Ord Symbol,
+    Ord (PatternAtom 'Parsed)
+  ) =>
+  Ord PatternBinding
+
+deriving stock instance
   ( Show (ExpressionType s),
     Show (IdentifierType s),
     Show (PatternAtomIdenType s),
     Show (PatternParensType s),
-    Show (PatternType s),
-    Show (SymbolType s)
+    Show (PatternAtType s),
+    Show (PatternType s)
   ) =>
   Show (PatternAtom s)
 
@@ -992,8 +1022,8 @@ deriving stock instance
     Eq (IdentifierType s),
     Eq (PatternAtomIdenType s),
     Eq (PatternParensType s),
-    Eq (PatternType s),
-    Eq (SymbolType s)
+    Eq (PatternAtType s),
+    Eq (PatternType s)
   ) =>
   Eq (PatternAtom s)
 
@@ -1002,36 +1032,33 @@ deriving stock instance
     Ord (IdentifierType s),
     Ord (PatternAtomIdenType s),
     Ord (PatternParensType s),
-    Ord (PatternType s),
-    Ord (SymbolType s)
+    Ord (PatternAtType s),
+    Ord (PatternType s)
   ) =>
   Ord (PatternAtom s)
 
 deriving stock instance
-  ( Show (ExpressionType s),
-    Show (IdentifierType s),
-    Show (PatternAtomIdenType s),
-    Show (PatternParensType s),
-    Show (PatternType s),
-    Show (SymbolType s)
-  ) =>
-  Show (PatternAtoms s)
+  Show (PatternAtom s) => Show (PatternAtoms s)
 
 instance HasLoc PatternScopedIden where
   getLoc = \case
     PatternScopedVar v -> getLoc v
     PatternScopedConstructor c -> getLoc c
 
+instance HasLoc PatternBinding where
+  getLoc (PatternBinding n p) = getLoc n <> getLoc p
+
 instance SingI s => HasLoc (PatternAtom s) where
   getLoc = \case
     PatternAtomIden i -> getLocIden i
     PatternAtomWildcard w -> getLoc w
     PatternAtomEmpty i -> i
-    PatternAtomParens n p -> fmap getLocSym n ?<> getLocParens p
-    PatternAtomBraces n p -> fmap getLocSym n ?<> getLocParens p
+    PatternAtomParens p -> getLocParens p
+    PatternAtomBraces p -> getLocParens p
+    PatternAtomAt p -> getLocAt p
     where
-      getLocSym :: forall r. SingI r => SymbolType r -> Interval
-      getLocSym p = case sing :: SStage r of
+      getLocAt :: forall r. SingI r => PatternAtType r -> Interval
+      getLocAt p = case sing :: SStage r of
         SParsed -> getLoc p
         SScoped -> getLoc p
       getLocIden :: forall r. SingI r => PatternAtomIdenType r -> Interval
@@ -1069,28 +1096,10 @@ instance HasLoc Pattern where
     PatternInfixApplication i -> getLoc i
     PatternPostfixApplication i -> getLoc i
 
-instance
-  ( Eq (ExpressionType s),
-    Eq (IdentifierType s),
-    Eq (PatternAtomIdenType s),
-    Eq (PatternParensType s),
-    Eq (PatternType s),
-    Eq (SymbolType s)
-  ) =>
-  Eq (PatternAtoms s)
-  where
+instance Eq (PatternAtom s) => Eq (PatternAtoms s) where
   (==) = (==) `on` (^. patternAtoms)
 
-instance
-  ( Ord (ExpressionType s),
-    Ord (IdentifierType s),
-    Ord (PatternAtomIdenType s),
-    Ord (PatternParensType s),
-    Ord (PatternType s),
-    Ord (SymbolType s)
-  ) =>
-  Ord (PatternAtoms s)
-  where
+instance Ord (PatternAtom s) => Ord (PatternAtoms s) where
   compare = compare `on` (^. patternAtoms)
 
 deriving stock instance

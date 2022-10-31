@@ -213,6 +213,20 @@ scoperErrorTests =
         ErrDoubleBracesPattern {} -> Nothing
         _ -> wrongError,
     NegTest
+      "As-Pattern aliasing variable"
+      "."
+      "AsPatternAlias.juvix"
+      $ \case
+        ErrAliasBinderPattern {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Nested As-Patterns"
+      "."
+      "NestedAsPatterns.juvix"
+      $ \case
+        ErrDoubleBinderPattern {} -> Nothing
+        _ -> wrongError,
+    NegTest
       "Pattern matching an implicit argument on the left of an application"
       "."
       "ImplicitPatternLeftApplication.juvix"

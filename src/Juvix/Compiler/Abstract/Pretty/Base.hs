@@ -101,7 +101,7 @@ instance PrettyCode PatternArg where
   ppCode (PatternArg i n p) = do
     n' <- traverse ppCode n
     p' <- ppCode p
-    return $ (n' <&> (<> kwAt)) ?<> delimIf i (isJust n) p'
+    return $ (n' <&> (<> kwAt)) ?<> delimIf i (isJust n && not (isAtomic p)) p'
 
 instance PrettyCode LambdaClause where
   ppCode LambdaClause {..} = do
