@@ -13,6 +13,9 @@ import Evaluator
 import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Error qualified as Core
+import Juvix.Compiler.Core.Extra qualified as Core
+import Juvix.Compiler.Core.Info qualified as Info
+import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data as Core
@@ -132,6 +135,8 @@ runCommand opts = do
             evalRes <- compileThenEval ctx' input
             case evalRes of
               Left err -> printError gopts err
+              Right n
+                | Info.member Info.kNoDisplayInfo (Core.getInfo n) -> return ()
               Right n -> renderOut gopts (Core.ppOut (ctx' ^. replContextEntryPoint . entryPointGenericOptions) n)
           Nothing -> noFileLoadedMsg
         where
@@ -146,7 +151,7 @@ runCommand opts = do
                 liftIO $
                   mapLeft
                     (JuvixError @Core.CoreError)
-                    <$> doEvalIO True defaultLoc (ctx ^. replContextExpContext . contextCoreResult . Core.coreResultTable) n
+                    <$> doEvalIO False defaultLoc (ctx ^. replContextExpContext . contextCoreResult . Core.coreResultTable) n
 
               compileString :: Repl (Either JuvixError Core.Node)
               compileString = liftIO $ compileExpressionIO' ctx (pack s)
