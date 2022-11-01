@@ -56,14 +56,20 @@ type Constant = Constant' ()
 
 type Apps = Apps' Fun () Node
 
-data Fun = FunVar Var | FunIdent Ident
+data Fun
+  = FunVar Var
+  | FunIdent Ident
   deriving stock (Eq)
 
 type BuiltinApp = BuiltinApp' () Node
 
 type Constr = Constr' ConstrInfo Node
 
-type Let = Let' LetInfo Node
+type Binder = Binder' Type
+
+type LetItem = LetItem' Node Type
+
+type Let = Let' LetInfo Node Type
 
 type Case = Case' CaseInfo CaseBranchInfo Node
 

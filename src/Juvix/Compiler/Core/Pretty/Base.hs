@@ -9,9 +9,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
 import Juvix.Compiler.Core.Extra
-import Juvix.Compiler.Core.Info.BinderInfo
 import Juvix.Compiler.Core.Info.NameInfo
-import Juvix.Compiler.Core.Info.TypeInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Language.Stripped qualified as Stripped
 import Juvix.Compiler.Core.Pretty.Options
@@ -126,12 +124,12 @@ ppCodeConstr' name c = do
     Nothing -> ppCode (c ^. constrTag)
   return $ foldl' (<+>) n' args'
 
-ppCodeLet' :: (PrettyCode a, Member (Reader Options) r) => Maybe Name -> Maybe (Doc Ann) -> Let' i a -> Sem r (Doc Ann)
+ppCodeLet' :: (PrettyCode a, Member (Reader Options) r) => Maybe Name -> Maybe (Doc Ann) -> Let' i a ty -> Sem r (Doc Ann)
 ppCodeLet' name mty lt = do
   n' <- case name of
     Just nm -> ppCode nm
     Nothing -> return kwQuestion
-  v' <- ppCode (lt ^. letValue)
+  v' <- ppCode (lt ^. letItem . letItemValue)
   b' <- ppCode (lt ^. letBody)
   let tty = case mty of
         Just ty ->
@@ -162,7 +160,7 @@ instance PrettyCode PatternWildcard where
 
 instance PrettyCode PatternBinder where
   ppCode PatternBinder {..} = do
-    n <- case getInfoName _patternBinderInfo of
+    n <- case _patternBinder ^. binderName of
       Just name -> ppCode name
       Nothing -> return kwQuestion
     case _patternBinderPattern of
@@ -191,8 +189,9 @@ ppPatterns pats = do
 instance PrettyCode Let where
   ppCode :: forall r. Member (Reader Options) r => Let -> Sem r (Doc Ann)
   ppCode x = do
-    let name = getInfoName (getInfoBinder (x ^. letInfo))
-        ty = getInfoType (getInfoBinder (x ^. letInfo))
+    let binder = x ^. letItem . letItemBinder
+        name = binder ^. binderName
+        ty = binder ^. binderType
      in do
           mty <- case ty of
             NDyn {} -> return Nothing
@@ -202,24 +201,23 @@ instance PrettyCode Let where
 instance PrettyCode LetRec where
   ppCode :: forall r. Member (Reader Options) r => LetRec -> Sem r (Doc Ann)
   ppCode LetRec {..} = do
-    let n = length _letRecValues
-    ns <- mapM getName (getInfoBinders n _letRecInfo)
-    vs <- mapM ppCode _letRecValues
+    names <- mapM (getName . (^. letItemBinder)) _letRecValues
+    vs <- mapM (ppCode . (^. letItemValue)) _letRecValues
     b' <- ppCode _letRecBody
-    return $ case ns of
-      [hns] -> kwLetRec <+> hns <+> kwAssign <+> head vs <+> kwIn <+> b'
+    return $ case names of
+      hns :| [] -> kwLetRec <+> hns <+> kwAssign <+> head vs <+> kwIn <+> b'
       _ ->
         let bss =
               indent' $
                 align $
                   concatWith (\a b -> a <> kwSemicolon <> line <> b) $
-                    zipWithExact (\name val -> name <+> kwAssign <+> val) ns (toList vs)
-            nss = enclose kwSquareL kwSquareR (concatWith (<+>) ns)
+                    zipWithExact (\name val -> name <+> kwAssign <+> val) (toList names) (toList vs)
+            nss = enclose kwSquareL kwSquareR (concatWith (<+>) names)
          in kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
     where
-      getName :: Info -> Sem r (Doc Ann)
+      getName :: Binder -> Sem r (Doc Ann)
       getName i =
-        case getInfoName i of
+        case i ^. binderName of
           Just name -> ppCode name
           Nothing -> return kwQuestion
 
@@ -238,13 +236,12 @@ instance PrettyCode Node where
     NCtr x ->
       let name = getInfoName (x ^. constrInfo)
        in ppCodeConstr' name x
-    NLam (Lambda i body) -> do
+    NLam (Lambda _ bi body) -> do
       b <- ppCode body
-      let bi = getInfoBinder i
-      lam <- case getInfoName bi of
+      lam <- case bi ^. binderName of
         Just name -> do
           n <- ppCode name
-          case getInfoType bi of
+          case bi ^. binderType of
             NDyn {} -> return $ kwLambda <> n
             ty -> do
               tty <- ppCode ty
@@ -254,28 +251,29 @@ instance PrettyCode Node where
     NLet x -> ppCode x
     NRec l -> ppCode l
     NCase x@Case {..} ->
-      let branchBinderNames = map (\(CaseBranch {..}) -> map getInfoName (getInfoBinders _caseBranchBindersNum _caseBranchInfo)) _caseBranches
-          branchTagNames = map (\(CaseBranch {..}) -> getInfoName _caseBranchInfo) _caseBranches
+      let branchBinderNames = map (\CaseBranch {..} -> map (^. binderName) _caseBranchBinders) _caseBranches
+          branchTagNames = map (\CaseBranch {..} -> getInfoName _caseBranchInfo) _caseBranches
        in ppCodeCase' branchBinderNames branchTagNames x
     NMatch Match {..} -> do
       let branchPatterns = map (^. matchBranchPatterns) _matchBranches
-      let branchBodies = map (^. matchBranchBody) _matchBranches
+          branchBodies = map (^. matchBranchBody) _matchBranches
       pats <- mapM ppPatterns branchPatterns
       vs <- mapM ppCode _matchValues
       bs <- sequence $ zipWithExact (\ps br -> ppCode br >>= \br' -> return $ ps <+> kwMapsto <+> br') pats branchBodies
       let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs
       return $ kwMatch <+> hsep (punctuate comma (toList vs)) <+> kwWith <+> bss
     NPi Pi {..} ->
-      case getInfoName $ getInfoBinder _piInfo of
-        Just name -> do
-          n <- ppCode name
-          ty <- ppCode _piType
-          b <- ppCode _piBody
-          return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
-        Nothing -> do
-          ty <- ppLeftExpression funFixity _piType
-          b <- ppRightExpression funFixity _piBody
-          return $ ty <+> kwArrow <+> b
+      let piType = _piBinder ^. binderType
+       in case _piBinder ^. binderName of
+            Just name -> do
+              n <- ppCode name
+              ty <- ppCode piType
+              b <- ppCode _piBody
+              return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
+            Nothing -> do
+              ty <- ppLeftExpression funFixity piType
+              b <- ppRightExpression funFixity _piBody
+              return $ ty <+> kwArrow <+> b
     NUniv Univ {..} ->
       return $ kwType <+> pretty _univLevel
     NPrim TypePrim {..} -> ppCode _typePrimPrimitive

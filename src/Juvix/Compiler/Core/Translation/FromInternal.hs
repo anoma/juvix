@@ -10,7 +10,6 @@ import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Transformation.Eta (etaExpandApps)
-import Juvix.Compiler.Core.Translation.Base
 import Juvix.Compiler.Core.Translation.FromInternal.Data
 import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
@@ -185,7 +184,7 @@ goFunctionDefIden (f, sym) = do
 
 goFunctionDef ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   (Internal.FunctionDef, Symbol) ->
   Sem r ()
 goFunctionDef (f, sym) = do
@@ -208,21 +207,13 @@ goFunctionDef (f, sym) = do
                   values = mkVar Info.empty <$> vs
               ms <- mapM (goFunctionClause nExplicitPatterns vars) (f ^. Internal.funDefClauses)
               let match = mkMatch' (fromList values) (toList ms)
-              foldr mkLambda match <$> lamArgs
+              return $ foldr (\_ n -> mkLambda' n) match vs
     -- Assumption: All clauses have the same number of patterns
     nExplicitPatterns :: Int
     nExplicitPatterns = length $ filter isExplicit (f ^. Internal.funDefClauses . _head1 . Internal.clausePatterns)
 
     vs :: [Index]
     vs = take nExplicitPatterns [0 ..]
-
-    mkName :: Text -> Sem r Name
-    mkName txt = freshName KNameLocal txt (f ^. Internal.funDefName . Internal.nameLoc)
-
-    lamArgs :: Sem r [Info]
-    lamArgs = do
-      ns <- mapM mkName (show <$> vs)
-      return $ binderNameInfo <$> ns
 
 goLambda ::
   forall r.
@@ -294,7 +285,7 @@ fromPattern ::
   Sem r Pattern
 fromPattern = \case
   Internal.PatternWildcard {} -> return wildcard
-  Internal.PatternVariable n -> return $ PatBinder (PatternBinder (setInfoName n Info.empty) wildcard)
+  Internal.PatternVariable n -> return $ PatBinder (PatternBinder (Binder (Just n) mkDynamic') wildcard)
   Internal.PatternConstructorApp c -> do
     let n = c ^. Internal.constrAppConstructor
         explicitPatterns =
@@ -333,7 +324,7 @@ goPatterns varsNum vars body ps = do
               (HashMap.insert (name ^. nameText) k vs, k + 1)
           )
           (vars, varsNum)
-          (map (fromJust . getInfoName) pis)
+          (map (fromJust . (^. binderName)) pis)
 
   body' <- goExpression varsNum' vars' body
   return $ MatchBranch Info.empty (fromList pats) body'

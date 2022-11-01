@@ -8,24 +8,22 @@ import Juvix.Compiler.Core.Data.BinderList (BinderList)
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
-import Juvix.Compiler.Core.Info.BinderInfo qualified as Info
-import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
-lambdaLiftNode :: forall r. Member InfoTableBuilder r => BinderList Info -> Node -> Sem r Node
+lambdaLiftNode :: forall r. Member InfoTableBuilder r => BinderList Binder -> Node -> Sem r Node
 lambdaLiftNode aboveBl top =
-  mkLambdas topArgs <$> dmapLRM' (topArgsBinderList <> aboveBl, go) body
+  reLambdas topArgs <$> dmapLRM' (topArgsBinderList <> aboveBl, go) body
   where
     (topArgs, body) = unfoldLambdas top
-    topArgsBinderList :: BinderList Info
-    topArgsBinderList = BL.fromList topArgs
+    topArgsBinderList :: BinderList Binder
+    topArgsBinderList = BL.fromList (map (^. lambdaLhsBinder) topArgs)
     typeFromArgs :: [ArgumentInfo] -> Type
     typeFromArgs = \case
       [] -> mkDynamic' -- change this when we have type info about the body
       (a : as) -> mkPi' (a ^. argumentType) (typeFromArgs as)
     -- extracts the argument info from the binder
-    go :: BinderList Info -> Node -> Sem r Recur
+    go :: BinderList Binder -> Node -> Sem r Recur
     go bl = \case
       NLam l -> goLambda l
       NRec l -> goLetRec l
@@ -33,15 +31,13 @@ lambdaLiftNode aboveBl top =
       where
         goLambda :: Lambda -> Sem r Recur
         goLambda lm = do
-          let lambdaBinder :: Info
-              lambdaBinder = Info.getInfoBinder (lm ^. lambdaInfo)
-          l' <- lambdaLiftNode (BL.extend lambdaBinder bl) (NLam lm)
+          l' <- lambdaLiftNode (BL.extend (lm ^. lambdaBinder) bl) (NLam lm)
           let freevars = toList (freeVarsSet l')
-              freevarsAssocs :: [(Index, Info)]
+              freevarsAssocs :: [(Index, Binder)]
               freevarsAssocs = [(i, BL.lookup i bl) | i <- map (^. varIndex) freevars]
               fBody' = captureFreeVars freevarsAssocs l'
               argsInfo :: [ArgumentInfo]
-              argsInfo = map (argumentInfoFromInfo . snd) freevarsAssocs
+              argsInfo = map (argumentInfoFromBinder . snd) freevarsAssocs
           f <- freshSymbol
           registerIdent
             IdentifierInfo
@@ -59,20 +55,20 @@ lambdaLiftNode aboveBl top =
         goLetRec :: LetRec -> Sem r Recur
         goLetRec letr = do
           let defs :: [Node]
-              defs = toList (letr ^. letRecValues)
+              defs = toList (letr ^.. letRecValues . each . letItemValue)
               ndefs :: Int
               ndefs = length defs
-              letRecBinders :: [Info]
-              letRecBinders = Info.getInfoBinders ndefs (letr ^. letRecInfo)
-              bl' :: BinderList Info
+              letRecBinders :: [Binder]
+              letRecBinders = letr ^.. letRecValues . each . letItemBinder
+              bl' :: BinderList Binder
               bl' = BL.prepend letRecBinders bl
           topSyms :: [Symbol] <- forM defs (const freshSymbol)
-          let recItemsFreeVars :: [(Var, Info)]
+          let recItemsFreeVars :: [(Var, Binder)]
               recItemsFreeVars = mapMaybe helper (toList (mconcatMap freeVarsSet defs))
                 where
                   -- free vars in each let
                   -- throw away variables bound in the letrec and shift others
-                  helper :: Var -> Maybe (Var, Info)
+                  helper :: Var -> Maybe (Var, Binder)
                   helper v
                     | v ^. varIndex < ndefs = Nothing
                     | otherwise = Just (set varIndex idx' v, BL.lookup idx' bl)
@@ -99,18 +95,18 @@ lambdaLiftNode aboveBl top =
                   [ do
                       let topBody = captureFreeVars (map (first (^. varIndex)) recItemsFreeVars) b
                           argsInfo :: [ArgumentInfo]
-                          argsInfo = map (argumentInfoFromInfo . snd) recItemsFreeVars
+                          argsInfo = map (argumentInfoFromBinder . snd) recItemsFreeVars
                       registerIdentNode sym topBody
                       registerIdent
                         IdentifierInfo
                           { _identifierSymbol = sym,
-                            _identifierName = getInfoName itemInfo,
+                            _identifierName = itemBinder ^. binderName,
                             _identifierType = typeFromArgs argsInfo,
                             _identifierArgsNum = length recItemsFreeVars,
                             _identifierArgsInfo = argsInfo,
                             _identifierIsExported = False
                           }
-                    | (sym, (itemInfo, b)) <- zipExact topSyms (zipExact letRecBinders liftedDefs)
+                    | (sym, (itemBinder, b)) <- zipExact topSyms (zipExact letRecBinders liftedDefs)
                   ]
               letItems :: [Node]
               letItems =
