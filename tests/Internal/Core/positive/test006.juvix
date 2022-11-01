@@ -1,0 +1,16 @@
+module test006;
+
+open import Stdlib.Prelude public;
+open import Stdlib.Data.Nat.Ord public;
+
+terminating
+loop : Nat;
+loop := loop;
+
+e : Nat;
+e := (if (three > zero) one loop) + (if (two < one) loop (if (seven >= eight) loop one));
+
+main : IO;
+main := printNatLn e;
+
+end;

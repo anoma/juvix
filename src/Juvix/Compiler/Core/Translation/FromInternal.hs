@@ -188,13 +188,11 @@ goFunctionDef ::
   (Internal.FunctionDef, Symbol) ->
   Sem r ()
 goFunctionDef (f, sym) = do
-  body <- case f ^. Internal.funDefBuiltin of
-    Just Internal.BuiltinBoolIf -> do
-      let b = mkIf' (mkVar' 2) (mkVar' 1) (mkVar' 0)
-      return (mkLambda' (mkLambda' (mkLambda' b)))
-    Just Internal.BuiltinNatPlus -> mkBody
-    Nothing -> mkBody
-  registerIdentNode sym body
+  mbody <- case f ^. Internal.funDefBuiltin of
+    Just Internal.BuiltinBoolIf -> return Nothing
+    Just Internal.BuiltinNatPlus -> Just <$> mkBody
+    Nothing -> Just <$> mkBody
+  forM_ mbody (registerIdentNode sym)
   where
     mkBody :: Sem r Node
     mkBody =
@@ -434,10 +432,25 @@ goApplication varsNum vars a = do
   (f, args) <- Internal.unfoldPolyApplication a
   let exprArgs :: Sem r [Node]
       exprArgs = mapM (goExpression varsNum vars) args
-  fExpr <- goExpression varsNum vars f
-  case a ^. Internal.appImplicit of
-    Internal.Implicit -> return fExpr
-    Internal.Explicit -> mkApps' fExpr <$> exprArgs
+
+      app :: Sem r Node
+      app = do
+        fExpr <- goExpression varsNum vars f
+        case a ^. Internal.appImplicit of
+          Internal.Implicit -> return fExpr
+          Internal.Explicit -> mkApps' fExpr <$> exprArgs
+
+  case f of
+    Internal.ExpressionIden (Internal.IdenFunction n) -> do
+      funInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoFunctions)
+      case funInfo ^. Internal.functionInfoDef . Internal.funDefBuiltin of
+        Just Internal.BuiltinBoolIf -> do
+          as <- exprArgs
+          case as of
+            (v : b1 : b2 : xs) -> return (mkApps' (mkIf' v b1 b2) xs)
+            _ -> error "if must be called with 3 arguments"
+        _ -> app
+    _ -> app
 
 goLiteral :: LiteralLoc -> Node
 goLiteral l = case l ^. withLocParam of

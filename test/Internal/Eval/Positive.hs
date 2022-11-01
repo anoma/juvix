@@ -13,9 +13,12 @@ data PosTest = PosTest
 root :: FilePath
 root = "tests/Internal/positive"
 
-testDescr :: PosTest -> TestDescr
-testDescr PosTest {..} =
-  let tRoot = root </> _relDir
+coreRoot :: FilePath
+coreRoot = "tests/Internal/Core/positive"
+
+testDescr :: FilePath -> PosTest -> TestDescr
+testDescr r PosTest {..} =
+  let tRoot = r </> _relDir
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
@@ -26,7 +29,21 @@ allTests :: TestTree
 allTests =
   testGroup
     "Internal to Core positive tests"
-    (map (mkTest . testDescr) tests)
+    (map (mkTest . testDescr root) tests ++ map (mkTest . testDescr coreRoot) coreTests)
+
+coreTests :: [PosTest]
+coreTests =
+  [ PosTest
+      "If then else"
+      "."
+      "test006.juvix"
+      "out/test006.out",
+    PosTest
+      "Fibonacci"
+      "."
+      "test011.juvix"
+      "out/test011.out"
+  ]
 
 tests :: [PosTest]
 tests =
