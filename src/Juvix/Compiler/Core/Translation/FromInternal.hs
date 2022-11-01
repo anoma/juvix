@@ -359,7 +359,12 @@ goExpression' varsNum vars = \case
         Just (IdentConstr tag) -> return (mkConstr (Info.singleton (NameInfo n)) tag [])
         Just _ -> error ("internal to core: not a constructor " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
-    Internal.IdenAxiom {} -> unsupported ("goExpression axiom: " <> txt)
+    Internal.IdenAxiom n -> do
+      m <- getIdent txt
+      return $ case m of
+        Just (IdentFun sym) -> mkIdent (Info.singleton (NameInfo n)) sym
+        Just _ -> error ("internal to core: not a function: " <> txt)
+        Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     where
       txt :: Text
       txt = Internal.getName i ^. Internal.nameText
