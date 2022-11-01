@@ -249,6 +249,7 @@ goAxiomDef a = case a ^. Internal.axiomBuiltin >>= builtinBody of
     builtinBody = \case
       Internal.BuiltinNatPrint -> Just writeLambda
       Internal.BuiltinStringPrint -> Just writeLambda
+      Internal.BuiltinBoolPrint -> Just writeLambda
       Internal.BuiltinIOSequence ->
         Just
           ( mkLambda'

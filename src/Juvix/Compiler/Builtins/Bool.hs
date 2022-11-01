@@ -64,3 +64,10 @@ registerIf f = do
     Just z -> forM_ z $ \((exLhs, exBody), (lhs, body)) -> do
       unless (exLhs =% lhs) (error "clause lhs does not match")
       unless (exBody =% body) (error $ "clause body does not match " <> ppTrace exBody <> " | " <> ppTrace body)
+
+registerBoolPrint :: Members '[Builtins] r => AxiomDef -> Sem r ()
+registerBoolPrint f = do
+  bool_ <- getBuiltinName (getLoc f) BuiltinBool
+  io <- getBuiltinName (getLoc f) BuiltinIO
+  unless (f ^. axiomType === (bool_ --> io)) (error "Bool print has the wrong type signature")
+  registerBuiltin BuiltinBoolPrint (f ^. axiomName)

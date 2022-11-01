@@ -269,6 +269,7 @@ registerBuiltinAxiom d = \case
   BuiltinNatPrint -> registerNatPrint d
   BuiltinString -> registerString d
   BuiltinStringPrint -> registerStringPrint d
+  BuiltinBoolPrint -> registerBoolPrint d
 
 goInductive ::
   Members '[InfoTableBuilder, Builtins, Error ScoperError] r =>

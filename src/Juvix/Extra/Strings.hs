@@ -101,6 +101,9 @@ bool_ = "bool"
 boolean_ :: IsString s => s
 boolean_ = "boolean"
 
+boolPrint :: IsString s => s
+boolPrint = "bool-print"
+
 io :: IsString s => s
 io = "IO"
 
