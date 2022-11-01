@@ -131,5 +131,10 @@ tests =
       "Lambda"
       "."
       "Lambda.juvix"
-      "out/Lambda.out"
+      "out/Lambda.out",
+    PosTest
+      "Pattern args"
+      "."
+      "PatternArgs.juvix"
+      "out/PatternArgs.out"
   ]

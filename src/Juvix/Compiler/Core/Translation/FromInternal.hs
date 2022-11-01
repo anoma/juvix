@@ -338,10 +338,25 @@ goFunctionClause ::
   Internal.FunctionClause ->
   Sem r MatchBranch
 goFunctionClause varsNum vars clause = do
-  goPatterns varsNum vars (clause ^. Internal.clauseBody) ps
+  goPatterns varsNum (HashMap.union patternArgs vars) (clause ^. Internal.clauseBody) ps
   where
+    explicitPatternArgs :: [Internal.PatternArg]
+    explicitPatternArgs = filter isExplicit (clause ^. Internal.clausePatterns)
+
     ps :: [Internal.Pattern]
-    ps = (^. Internal.patternArgPattern) <$> filter isExplicit (clause ^. Internal.clausePatterns)
+    ps = (^. Internal.patternArgPattern) <$> explicitPatternArgs
+
+    patternArgs :: HashMap Text Index
+    patternArgs = HashMap.fromList (first (^. Internal.nameText) <$> patternArgNames)
+      where
+        patternArgNames :: [(Name, Index)]
+        patternArgNames = catFstMaybes (first (^. Internal.patternArgName) <$> zip explicitPatternArgs [0 ..])
+
+        catFstMaybes :: [(Maybe a, b)] -> [(a, b)]
+        catFstMaybes = mapMaybe f
+          where
+            f :: (Maybe a, b) -> Maybe (a, b)
+            f (x, y) = fmap (\x' -> (x', y)) x
 
 goLambdaClause ::
   forall r.
