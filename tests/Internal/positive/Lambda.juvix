@@ -1,0 +1,28 @@
+module Lambda;
+
+open import Stdlib.Prelude public;
+
+id' : {A : Type} → A → A;
+id' := λ { a := a };
+
+uncurry' : {A : Type} → {B : Type} → {C : Type} → (A → B → C) → A × B → C;
+uncurry' := λ {f (a, b) := f a b};
+
+fst' : {A : Type} → {B : Type} → A × B → A;
+fst' {_} := λ {(a, _) := a};
+
+first' : {A : Type} → {B : Type} → {A' : Type} → (A → A') → A × B → A' × B;
+first' := λ {f (a, b) := f a, b};
+
+foldr' : {A : Type} → {B : Type} → (A → B → B) → B → List A → B;
+foldr' := λ {_ z nil := z;
+             f z (h ∷ hs) := f h (foldr' f z hs)};
+
+main : IO;
+main := printNatLn (id' zero)
+        >> printNatLn (uncurry' (+) (one, one))
+        >> printNatLn (fst' (zero, one))
+        >> printNatLn (fst (first' ((+) one) (one, zero)))
+        >> printNatLn (foldr' (+) zero (one ∷ two ∷ three ∷ nil));
+
+end;

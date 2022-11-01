@@ -18,6 +18,8 @@ unfoldPolyApplication a =
         ExpressionIden iden -> do
           args' <- filterCompileTimeArgsOrPatterns (getName iden) (toList args)
           return (f, args')
+        ExpressionSimpleLambda {} -> return (f, toList args)
+        ExpressionLambda {} -> return (f, toList args)
         _ -> impossible
 
 filterCompileTimeArgsOrPatterns :: Member (Reader TypesTable) r => Name -> [a] -> Sem r [a]

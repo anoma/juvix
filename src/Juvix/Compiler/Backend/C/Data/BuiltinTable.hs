@@ -23,6 +23,7 @@ builtinAxiomName = \case
   BuiltinIOSequence -> Just ioseq
   BuiltinString -> Just string_
   BuiltinStringPrint -> Just printString
+  BuiltinBoolPrint -> Just printBool
 
 builtinFunctionName :: BuiltinFunction -> Maybe Text
 builtinFunctionName = \case

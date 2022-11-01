@@ -109,5 +109,10 @@ tests =
       "Builtin if"
       "."
       "BuiltinIf.juvix"
-      "out/BuiltinIf.out"
+      "out/BuiltinIf.out",
+    PosTest
+      "Lambda"
+      "."
+      "Lambda.juvix"
+      "out/Lambda.out"
   ]

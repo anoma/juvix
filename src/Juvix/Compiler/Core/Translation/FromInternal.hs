@@ -224,9 +224,30 @@ goFunctionDef (f, sym) = do
       ns <- mapM mkName (show <$> vs)
       return $ binderNameInfo <$> ns
 
+goLambda ::
+  forall r.
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
+  Index ->
+  HashMap Text Index ->
+  Internal.Lambda ->
+  Sem r Node
+goLambda varsNum vars l = do
+  ms <- mapM (goLambdaClause (varsNum + nPatterns) vars) (l ^. Internal.lambdaClauses)
+  let match = mkMatch' (fromList values) (toList ms)
+  return $ foldr (\_ n -> mkLambda' n) match vs
+  where
+    nPatterns :: Int
+    nPatterns = length (l ^. Internal.lambdaClauses . _head1 . Internal.lambdaPatterns)
+
+    vs :: [Index]
+    vs = take nPatterns [varsNum ..]
+
+    values :: [Node]
+    values = mkVar' <$> vs
+
 goAxiomDef ::
   forall r.
-  Members '[InfoTableBuilder, NameIdGen, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader Internal.InfoTable] r =>
   Internal.AxiomDef ->
   Sem r ()
 goAxiomDef a = case a ^. Internal.axiomBuiltin >>= builtinBody of
@@ -295,14 +316,15 @@ fromPattern = \case
     wildcard :: Pattern
     wildcard = PatWildcard (PatternWildcard Info.empty)
 
-goFunctionClause ::
+goPatterns ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Index ->
   HashMap Text Index ->
-  Internal.FunctionClause ->
+  Internal.Expression ->
+  [Internal.Pattern] ->
   Sem r MatchBranch
-goFunctionClause varsNum vars clause = do
+goPatterns varsNum vars body ps = do
   pats <- patterns
   let pis = concatMap (reverse . getBinderPatternInfos) pats
       (vars', varsNum') =
@@ -313,14 +335,37 @@ goFunctionClause varsNum vars clause = do
           (vars, varsNum)
           (map (fromJust . getInfoName) pis)
 
-  body <- goExpression varsNum' vars' (clause ^. Internal.clauseBody)
-  return $ MatchBranch Info.empty (fromList pats) body
+  body' <- goExpression varsNum' vars' body
+  return $ MatchBranch Info.empty (fromList pats) body'
   where
     patterns :: Sem r [Pattern]
     patterns = reverse <$> mapM fromPattern ps
 
+goFunctionClause ::
+  forall r.
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
+  Index ->
+  HashMap Text Index ->
+  Internal.FunctionClause ->
+  Sem r MatchBranch
+goFunctionClause varsNum vars clause = do
+  goPatterns varsNum vars (clause ^. Internal.clauseBody) ps
+  where
     ps :: [Internal.Pattern]
     ps = (^. Internal.patternArgPattern) <$> filter isExplicit (clause ^. Internal.clausePatterns)
+
+goLambdaClause ::
+  forall r.
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
+  Index ->
+  HashMap Text Index ->
+  Internal.LambdaClause ->
+  Sem r MatchBranch
+goLambdaClause varsNum vars clause = do
+  goPatterns varsNum vars (clause ^. Internal.lambdaBody) ps
+  where
+    ps :: [Internal.Pattern]
+    ps = (^. Internal.patternArgPattern) <$> toList (clause ^. Internal.lambdaPatterns)
 
 goExpression ::
   forall r.
@@ -370,11 +415,22 @@ goExpression' varsNum vars = \case
       txt :: Text
       txt = Internal.getName i ^. Internal.nameText
   Internal.ExpressionApplication a -> goApplication varsNum vars a
-  Internal.ExpressionSimpleLambda l -> unsupported ("goExpression simpleLambda: " <> show (Loc.getLoc l))
-  Internal.ExpressionLambda l -> unsupported ("goExpression lambda: " <> show (Loc.getLoc l))
+  Internal.ExpressionSimpleLambda l -> goSimpleLambda varsNum vars l
+  Internal.ExpressionLambda l -> goLambda varsNum vars l
   Internal.ExpressionFunction f -> unsupported ("goExpression function: " <> show (Loc.getLoc f))
   Internal.ExpressionHole h -> error ("goExpression hole: " <> show (Loc.getLoc h))
   Internal.ExpressionUniverse u -> error ("goExpression universe: " <> show (Loc.getLoc u))
+
+goSimpleLambda ::
+  forall r.
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
+  Index ->
+  HashMap Text Index ->
+  Internal.SimpleLambda ->
+  Sem r Node
+goSimpleLambda varsNum vars l = do
+  let vars' = HashMap.insert (l ^. Internal.slambdaVar . Internal.nameText) varsNum vars
+  mkLambda' <$> goExpression (varsNum + 1) vars' (l ^. Internal.slambdaBody)
 
 goApplication ::
   forall r.
