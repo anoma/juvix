@@ -187,11 +187,11 @@ runtime:
 # -- Install
 
 .PHONY : install
-install: submodules
+install: runtime submodules
 	@stack install ${STACKFLAGS}
 
 .PHONY : fast-install
-fast-install: submodules
+fast-install: runtime submodules
 	@stack install --fast ${STACKFLAGS}
 
 # -- Testing
