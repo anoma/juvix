@@ -1,0 +1,33 @@
+module QuickSort;
+
+open import Stdlib.Prelude public;
+open import Stdlib.Data.Nat.Ord public;
+open import Stdlib.Data.Ord public;
+
+qsHelper : {A : Type} → A → List A × List A → List A;
+qsHelper a (l , r) := l ++ (a ∷ nil) ++ r;
+
+terminating
+quickSort : {A : Type} → (A → A → Ordering) → List A → List A;
+quickSort _ nil := nil;
+quickSort _ (x ∷ nil) := x ∷ nil;
+quickSort cmp (x ∷ xs) := qsHelper x
+          (both (quickSort cmp) (partition (isGT ∘ cmp x) xs));
+
+uniq : {A : Type} -> (A -> A -> Ordering) -> List A -> List A;
+uniq _ nil := nil;
+uniq _ y@(x ∷ nil) := y;
+uniq cmp (x ∷ x' ∷ xs) := if (isEQ (cmp x x')) (uniq cmp (x' ∷ xs)) (x ∷ (uniq cmp (x' ∷ xs)));
+
+gen : Nat -> (Nat -> Nat) -> List Nat -> List Nat;
+gen zero _ acc := acc;
+gen n@(suc n') f acc := gen n' f (f n ∷ acc);
+
+gen2 : Nat -> Nat -> List (List Nat) -> List (List Nat);
+gen2 _ zero acc := acc;
+gen2 m n@(suc n') acc := gen2 m n' ((gen m ((+) n) nil) ∷ acc);
+
+main : List Nat;
+main := uniq compare (quickSort compare (flatten (gen2 three four nil)));
+
+end;

@@ -136,5 +136,10 @@ tests =
       "Pattern args"
       "."
       "PatternArgs.juvix"
-      "out/PatternArgs.out"
+      "out/PatternArgs.out",
+    PosTest
+      "QuickSort"
+      "."
+      "QuickSort.juvix"
+      "out/QuickSort.out"
   ]
