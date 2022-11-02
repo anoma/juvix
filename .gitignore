@@ -79,4 +79,8 @@ _docs
 docs/**/*.md
 **/html/*
 
+*.cmi
+*.cmx
+*.cmo
+
 docs/org/README.org
