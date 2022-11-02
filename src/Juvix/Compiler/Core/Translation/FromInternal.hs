@@ -52,7 +52,7 @@ fromInternalExpression res exp = do
           (res ^. coreResultTable)
           ( runReader
               (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
-              (goExpression 0 mempty exp)
+              (runReader initIndexTable (goExpression exp))
           )
       )
 
@@ -197,15 +197,17 @@ goFunctionDef (f, sym) = do
     mkBody :: Sem r Node
     mkBody =
       if
-          | nExplicitPatterns == 0 -> goExpression 0 HashMap.empty (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody)
-          | otherwise -> do
-              let vars :: HashMap Internal.NameId Index
-                  vars = mempty
-                  values :: [Node]
-                  values = mkVar Info.empty <$> vs
-              ms <- mapM (goFunctionClause nExplicitPatterns vars) (f ^. Internal.funDefClauses)
-              let match = mkMatch' (fromList values) (toList ms)
-              return $ foldr (\_ n -> mkLambda' n) match vs
+          | nExplicitPatterns == 0 -> runReader initIndexTable (goExpression (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody))
+          | otherwise ->
+              ( do
+                  let values :: [Node]
+                      values = mkVar Info.empty <$> vs
+                      indexTable :: IndexTable
+                      indexTable = IndexTable {_indexTableVarsNum = nExplicitPatterns, _indexTableVars = mempty}
+                  ms <- mapM (runReader indexTable . goFunctionClause) (f ^. Internal.funDefClauses)
+                  let match = mkMatch' (fromList values) (toList ms)
+                  return $ foldr (\_ n -> mkLambda' n) match vs
+              )
     -- Assumption: All clauses have the same number of patterns
     nExplicitPatterns :: Int
     nExplicitPatterns = length $ filter isExplicit (f ^. Internal.funDefClauses . _head1 . Internal.clausePatterns)
@@ -215,24 +217,26 @@ goFunctionDef (f, sym) = do
 
 goLambda ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
-  Index ->
-  HashMap Internal.NameId Index ->
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
   Internal.Lambda ->
   Sem r Node
-goLambda varsNum vars l = do
-  ms <- mapM (goLambdaClause (varsNum + nPatterns) vars) (l ^. Internal.lambdaClauses)
-  let match = mkMatch' (fromList values) (toList ms)
-  return $ foldr (\_ n -> mkLambda' n) match vs
+goLambda l = do
+  ms <-
+    local
+      (over indexTableVarsNum (+ nPatterns))
+      (mapM goLambdaClause (l ^. Internal.lambdaClauses))
+  values' <- values
+  let match = mkMatch' (fromList values') (toList ms)
+  return $ foldr (\_ n -> mkLambda' n) match values'
   where
     nPatterns :: Int
     nPatterns = length (l ^. Internal.lambdaClauses . _head1 . Internal.lambdaPatterns)
 
-    vs :: [Index]
-    vs = take nPatterns [varsNum ..]
-
-    values :: [Node]
-    values = mkVar' <$> vs
+    values :: Sem r [Node]
+    values = do
+      varsNum <- asks (^. indexTableVarsNum)
+      let vs = take nPatterns [varsNum ..]
+      return (mkVar' <$> vs)
 
 goAxiomDef ::
   forall r.
@@ -310,38 +314,42 @@ fromPattern = \case
 
 goPatterns ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
-  Index ->
-  HashMap Internal.NameId Index ->
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
   Internal.Expression ->
   [Internal.Pattern] ->
   Sem r MatchBranch
-goPatterns varsNum vars body ps = do
+goPatterns body ps = do
+  vars <- asks (^. indexTableVars)
+  varsNum <- asks (^. indexTableVarsNum)
   pats <- patterns
-  let pis = concatMap getPatternBinders pats
+  let bs :: [Binder]
+      bs = concatMap getPatternBinders pats
       (vars', varsNum') =
         foldl'
           ( \(vs, k) name ->
               (HashMap.insert (name ^. nameId) k vs, k + 1)
           )
           (vars, varsNum)
-          (map (fromJust . (^. binderName)) pis)
-
-  body' <- goExpression varsNum' vars' body
-  return $ MatchBranch Info.empty (fromList pats) body'
+          (map (fromJust . (^. binderName)) bs)
+      body' :: Sem r Node
+      body' =
+        local
+          (set indexTableVars vars' . set indexTableVarsNum varsNum')
+          (goExpression body)
+  MatchBranch Info.empty (fromList pats) <$> body'
   where
     patterns :: Sem r [Pattern]
     patterns = reverse <$> mapM fromPattern ps
 
 goFunctionClause ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
-  Index ->
-  HashMap Internal.NameId Index ->
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
   Internal.FunctionClause ->
   Sem r MatchBranch
-goFunctionClause varsNum vars clause = do
-  goPatterns varsNum (HashMap.union patternArgs vars) (clause ^. Internal.clauseBody) ps
+goFunctionClause clause =
+  local
+    (over indexTableVars (HashMap.union patternArgs))
+    (goPatterns (clause ^. Internal.clauseBody) ps)
   where
     explicitPatternArgs :: [Internal.PatternArg]
     explicitPatternArgs = filter isExplicit (clause ^. Internal.clausePatterns)
@@ -363,41 +371,35 @@ goFunctionClause varsNum vars clause = do
 
 goLambdaClause ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
-  Index ->
-  HashMap Internal.NameId Index ->
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
   Internal.LambdaClause ->
   Sem r MatchBranch
-goLambdaClause varsNum vars clause = do
-  goPatterns varsNum vars (clause ^. Internal.lambdaBody) ps
+goLambdaClause clause = goPatterns (clause ^. Internal.lambdaBody) ps
   where
     ps :: [Internal.Pattern]
     ps = (^. Internal.patternArgPattern) <$> toList (clause ^. Internal.lambdaPatterns)
 
 goExpression ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
-  Index ->
-  HashMap Internal.NameId Index ->
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
   Internal.Expression ->
   Sem r Node
-goExpression varsNum vars e = do
-  node <- goExpression' varsNum vars e
+goExpression e = do
+  node <- goExpression' e
   tab <- getInfoTable
   return $ etaExpandApps tab node
 
 goExpression' ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
-  Index ->
-  HashMap Internal.NameId Index ->
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
   Internal.Expression ->
   Sem r Node
-goExpression' varsNum vars = \case
+goExpression' = \case
   Internal.ExpressionLiteral l -> return (goLiteral l)
   Internal.ExpressionIden i -> case i of
     Internal.IdenVar n -> do
-      let k = HashMap.lookupDefault impossible id_ vars
+      k <- HashMap.lookupDefault impossible id_ <$> asks (^. indexTableVars)
+      varsNum <- asks (^. indexTableVarsNum)
       return (mkVar (Info.singleton (NameInfo n)) (varsNum - k - 1))
     Internal.IdenFunction n -> do
       m <- getIdent id_
@@ -424,39 +426,45 @@ goExpression' varsNum vars = \case
 
       txt :: Text
       txt = Internal.getName i ^. Internal.nameText
-  Internal.ExpressionApplication a -> goApplication varsNum vars a
-  Internal.ExpressionSimpleLambda l -> goSimpleLambda varsNum vars l
-  Internal.ExpressionLambda l -> goLambda varsNum vars l
+  Internal.ExpressionApplication a -> goApplication a
+  Internal.ExpressionSimpleLambda l -> goSimpleLambda l
+  Internal.ExpressionLambda l -> goLambda l
   Internal.ExpressionFunction f -> unsupported ("goExpression function: " <> show (Loc.getLoc f))
   Internal.ExpressionHole h -> error ("goExpression hole: " <> show (Loc.getLoc h))
   Internal.ExpressionUniverse u -> error ("goExpression universe: " <> show (Loc.getLoc u))
 
 goSimpleLambda ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
-  Index ->
-  HashMap Internal.NameId Index ->
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
   Internal.SimpleLambda ->
   Sem r Node
-goSimpleLambda varsNum vars l = do
-  let vars' = HashMap.insert (l ^. Internal.slambdaVar . Internal.nameId) varsNum vars
-  mkLambda' <$> goExpression (varsNum + 1) vars' (l ^. Internal.slambdaBody)
+goSimpleLambda l = do
+  updateFn <- update
+  local
+    updateFn
+    (mkLambda' <$> goExpression (l ^. Internal.slambdaBody))
+  where
+    update :: Sem r (IndexTable -> IndexTable)
+    update = do
+      idx <- asks (^. indexTableVarsNum)
+      return
+        ( over indexTableVars (HashMap.insert (l ^. Internal.slambdaVar . Internal.nameId) idx)
+            . over indexTableVarsNum (+ 1)
+        )
 
 goApplication ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
-  Index ->
-  HashMap Internal.NameId Index ->
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
   Internal.Application ->
   Sem r Node
-goApplication varsNum vars a = do
+goApplication a = do
   (f, args) <- Internal.unfoldPolyApplication a
   let exprArgs :: Sem r [Node]
-      exprArgs = mapM (goExpression varsNum vars) args
+      exprArgs = mapM goExpression args
 
       app :: Sem r Node
       app = do
-        fExpr <- goExpression varsNum vars f
+        fExpr <- goExpression f
         case a ^. Internal.appImplicit of
           Internal.Implicit -> return fExpr
           Internal.Explicit -> mkApps' fExpr <$> exprArgs
