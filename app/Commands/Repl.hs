@@ -7,11 +7,9 @@ import Commands.Repl.Options
 import Control.Exception (throwIO)
 import Control.Monad.IO.Class
 import Control.Monad.State.Strict qualified as State
-import Data.HashMap.Strict qualified as HashMap
 import Data.String.Interpolate (i, __i)
 import Evaluator
 import Juvix.Compiler.Builtins.Effect
-import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Error qualified as Core
 import Juvix.Compiler.Core.Extra qualified as Core
 import Juvix.Compiler.Core.Info qualified as Info
@@ -112,15 +110,6 @@ runCommand opts = do
           )
         liftIO (putStrLn [i|OK loaded: #{f}|])
 
-      listIdentifiers :: String -> Repl ()
-      listIdentifiers _ = do
-        ctx <- State.gets (^. replStateContext)
-        case ctx of
-          Just ctx' -> do
-            let identMap = ctx' ^. replContextExpContext . contextCoreResult . Core.coreResultTable . Core.identMap
-            liftIO $ forM_ (HashMap.keys identMap) putStrLn
-          Nothing -> noFileLoadedMsg
-
       printRoot :: String -> Repl ()
       printRoot _ = do
         r <- State.gets (^. replStateRoot)
@@ -192,7 +181,6 @@ runCommand opts = do
           ("quit", quit),
           ("load", Repline.dontCrash . loadFile),
           ("root", printRoot),
-          ("idents", listIdentifiers),
           ("type", inferType),
           ("core", core)
         ]

@@ -199,8 +199,8 @@ goFunctionDef (f, sym) = do
       if
           | nExplicitPatterns == 0 -> goExpression 0 HashMap.empty (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody)
           | otherwise -> do
-              let vars :: HashMap Text Index
-                  vars = HashMap.fromList [(show i, i) | i <- vs]
+              let vars :: HashMap Internal.NameId Index
+                  vars = mempty
                   values :: [Node]
                   values = mkVar Info.empty <$> vs
               ms <- mapM (goFunctionClause nExplicitPatterns vars) (f ^. Internal.funDefClauses)
@@ -217,7 +217,7 @@ goLambda ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Index ->
-  HashMap Text Index ->
+  HashMap Internal.NameId Index ->
   Internal.Lambda ->
   Sem r Node
 goLambda varsNum vars l = do
@@ -293,12 +293,15 @@ fromPattern = \case
               (c ^. Internal.constrAppParameters)
 
     args <- mapM fromPattern explicitPatterns
-    m <- getIdent txt
+    m <- getIdent id_
     case m of
       Just (IdentConstr tag) -> return $ PatConstr (PatternConstr (setInfoName n Info.empty) tag args)
       Just _ -> error ("internal to core: not a constructor " <> txt)
       Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     where
+      id_ :: Internal.NameId
+      id_ = c ^. Internal.constrAppConstructor . Internal.nameId
+
       txt :: Text
       txt = c ^. Internal.constrAppConstructor . Internal.nameText
   where
@@ -309,7 +312,7 @@ goPatterns ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Index ->
-  HashMap Text Index ->
+  HashMap Internal.NameId Index ->
   Internal.Expression ->
   [Internal.Pattern] ->
   Sem r MatchBranch
@@ -319,7 +322,7 @@ goPatterns varsNum vars body ps = do
       (vars', varsNum') =
         foldl'
           ( \(vs, k) name ->
-              (HashMap.insert (name ^. nameText) k vs, k + 1)
+              (HashMap.insert (name ^. nameId) k vs, k + 1)
           )
           (vars, varsNum)
           (map (fromJust . (^. binderName)) pis)
@@ -334,7 +337,7 @@ goFunctionClause ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Index ->
-  HashMap Text Index ->
+  HashMap Internal.NameId Index ->
   Internal.FunctionClause ->
   Sem r MatchBranch
 goFunctionClause varsNum vars clause = do
@@ -346,8 +349,8 @@ goFunctionClause varsNum vars clause = do
     ps :: [Internal.Pattern]
     ps = (^. Internal.patternArgPattern) <$> explicitPatternArgs
 
-    patternArgs :: HashMap Text Index
-    patternArgs = HashMap.fromList (first (^. Internal.nameText) <$> patternArgNames)
+    patternArgs :: HashMap Internal.NameId Index
+    patternArgs = HashMap.fromList (first (^. Internal.nameId) <$> patternArgNames)
       where
         patternArgNames :: [(Name, Index)]
         patternArgNames = catFstMaybes (first (^. Internal.patternArgName) <$> zip explicitPatternArgs [0 ..])
@@ -362,7 +365,7 @@ goLambdaClause ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Index ->
-  HashMap Text Index ->
+  HashMap Internal.NameId Index ->
   Internal.LambdaClause ->
   Sem r MatchBranch
 goLambdaClause varsNum vars clause = do
@@ -375,7 +378,7 @@ goExpression ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Index ->
-  HashMap Text Index ->
+  HashMap Internal.NameId Index ->
   Internal.Expression ->
   Sem r Node
 goExpression varsNum vars e = do
@@ -387,35 +390,38 @@ goExpression' ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Index ->
-  HashMap Text Index ->
+  HashMap Internal.NameId Index ->
   Internal.Expression ->
   Sem r Node
 goExpression' varsNum vars = \case
   Internal.ExpressionLiteral l -> return (goLiteral l)
   Internal.ExpressionIden i -> case i of
     Internal.IdenVar n -> do
-      let k = HashMap.lookupDefault impossible txt vars
+      let k = HashMap.lookupDefault impossible id_ vars
       return (mkVar (Info.singleton (NameInfo n)) (varsNum - k - 1))
     Internal.IdenFunction n -> do
-      m <- getIdent txt
+      m <- getIdent id_
       return $ case m of
         Just (IdentFun sym) -> mkIdent (Info.singleton (NameInfo n)) sym
         Just _ -> error ("internal to core: not a function: " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenInductive {} -> unsupported "goExpression inductive"
     Internal.IdenConstructor n -> do
-      m <- getIdent txt
+      m <- getIdent id_
       case m of
         Just (IdentConstr tag) -> return (mkConstr (Info.singleton (NameInfo n)) tag [])
         Just _ -> error ("internal to core: not a constructor " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenAxiom n -> do
-      m <- getIdent txt
+      m <- getIdent id_
       return $ case m of
         Just (IdentFun sym) -> mkIdent (Info.singleton (NameInfo n)) sym
         Just _ -> error ("internal to core: not a function: " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     where
+      id_ :: NameId
+      id_ = Internal.getName i ^. Internal.nameId
+
       txt :: Text
       txt = Internal.getName i ^. Internal.nameText
   Internal.ExpressionApplication a -> goApplication varsNum vars a
@@ -429,18 +435,18 @@ goSimpleLambda ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Index ->
-  HashMap Text Index ->
+  HashMap Internal.NameId Index ->
   Internal.SimpleLambda ->
   Sem r Node
 goSimpleLambda varsNum vars l = do
-  let vars' = HashMap.insert (l ^. Internal.slambdaVar . Internal.nameText) varsNum vars
+  let vars' = HashMap.insert (l ^. Internal.slambdaVar . Internal.nameId) varsNum vars
   mkLambda' <$> goExpression (varsNum + 1) vars' (l ^. Internal.slambdaBody)
 
 goApplication ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Index ->
-  HashMap Text Index ->
+  HashMap Internal.NameId Index ->
   Internal.Application ->
   Sem r Node
 goApplication varsNum vars a = do

@@ -14,7 +14,7 @@ data InfoTableBuilder m a where
   RegisterIdentNode :: Symbol -> Node -> InfoTableBuilder m ()
   RegisterMain :: Symbol -> InfoTableBuilder m ()
   SetIdentArgsInfo :: Symbol -> [ArgumentInfo] -> InfoTableBuilder m ()
-  GetIdent :: Text -> InfoTableBuilder m (Maybe IdentKind)
+  GetIdent :: NameId -> InfoTableBuilder m (Maybe IdentKind)
   GetInfoTable :: InfoTableBuilder m InfoTable
 
 makeSem ''InfoTableBuilder
@@ -46,14 +46,14 @@ runInfoTableBuilder tab =
         return (UserTag (s ^. infoNextTag))
       RegisterIdent ii -> do
         modify' (over infoIdentifiers (HashMap.insert (ii ^. identifierSymbol) ii))
-        whenJust (ii ^? identifierName . _Just . nameText) $ \name ->
-          modify' (over identMap (HashMap.insert name (IdentFun (ii ^. identifierSymbol))))
+        whenJust (ii ^? identifierName . _Just . nameId) $ \id_ ->
+          modify' (over identMap (HashMap.insert id_ (IdentFun (ii ^. identifierSymbol))))
       RegisterConstructor ci -> do
         modify' (over infoConstructors (HashMap.insert (ci ^. constructorTag) ci))
-        modify' (over identMap (HashMap.insert (ci ^. (constructorName . nameText)) (IdentConstr (ci ^. constructorTag))))
+        modify' (over identMap (HashMap.insert (ci ^. (constructorName . nameId)) (IdentConstr (ci ^. constructorTag))))
       RegisterInductive ii -> do
         modify' (over infoInductives (HashMap.insert (ii ^. inductiveSymbol) ii))
-        modify' (over identMap (HashMap.insert (ii ^. (inductiveName . nameText)) (IdentInd (ii ^. inductiveSymbol))))
+        modify' (over identMap (HashMap.insert (ii ^. (inductiveName . nameId)) (IdentInd (ii ^. inductiveSymbol))))
       RegisterIdentNode sym node ->
         modify' (over identContext (HashMap.insert sym node))
       RegisterMain sym -> do
