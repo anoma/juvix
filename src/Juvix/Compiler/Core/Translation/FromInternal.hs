@@ -315,7 +315,7 @@ goPatterns ::
   Sem r MatchBranch
 goPatterns varsNum vars body ps = do
   pats <- patterns
-  let pis = concatMap (reverse . getBinderPatternInfos) pats
+  let pis = concatMap getPatternBinders pats
       (vars', varsNum') =
         foldl'
           ( \(vs, k) name ->
