@@ -4,6 +4,7 @@ import Commands.Base
 import Commands.Dev.Runtime.Compile.Options
 import Data.ByteString qualified as BS
 import Data.FileEmbed qualified as FE
+import Juvix.Extra.Paths
 import System.Environment
 import System.Process qualified as P
 
@@ -15,9 +16,6 @@ runCommand opts = do
   case result of
     Left err -> printFailureExit err
     _ -> return ()
-
-juvixBuildDir :: FilePath
-juvixBuildDir = ".juvix-build"
 
 juvixIncludeDir :: FilePath
 juvixIncludeDir = juvixBuildDir </> "include"
@@ -77,11 +75,10 @@ clangNativeCompile inputFile o =
     outputFile = maybe defaultOutputFile (^. pathPath) (o ^. runtimeCompileOutputFile)
 
     defaultOutputFile :: FilePath
-    defaultOutputFile =
-      if
-          | o ^. runtimeCompilePreprocess -> takeBaseName inputFile <> ".out.c"
-          | o ^. runtimeCompileAssembly -> takeBaseName inputFile <> ".s"
-          | otherwise -> takeBaseName inputFile
+    defaultOutputFile
+      | o ^. runtimeCompilePreprocess = takeBaseName inputFile <> ".out.c"
+      | o ^. runtimeCompileAssembly = takeBaseName inputFile <> ".s"
+      | otherwise = takeBaseName inputFile
 
 clangWasmWasiCompile ::
   forall r.
@@ -98,11 +95,10 @@ clangWasmWasiCompile inputFile o = clangArgs >>= runClang
     outputFile = maybe defaultOutputFile (^. pathPath) (o ^. runtimeCompileOutputFile)
 
     defaultOutputFile :: FilePath
-    defaultOutputFile =
-      if
-          | o ^. runtimeCompilePreprocess -> takeBaseName inputFile <> ".out.c"
-          | o ^. runtimeCompileAssembly -> takeBaseName inputFile <> ".wat"
-          | otherwise -> takeBaseName inputFile <> ".wasm"
+    defaultOutputFile
+      | o ^. runtimeCompilePreprocess = takeBaseName inputFile <> ".out.c"
+      | o ^. runtimeCompileAssembly = takeBaseName inputFile <> ".wat"
+      | otherwise = takeBaseName inputFile <> ".wasm"
 
     sysrootEnvVar :: Sem r String
     sysrootEnvVar =
