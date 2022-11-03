@@ -660,8 +660,7 @@ instance ToGenericError DoubleBracesPattern where
               <+> code (braces (ppCode opts' pat))
 
 data DoubleBinderPattern = DoubleBinderPattern
-  { _doubleBinderPatternIsImplicit :: IsImplicit,
-    _doubleBinderPatternName :: S.Symbol,
+  { _doubleBinderPatternName :: S.Symbol,
     _doubleBinderPatternArg :: PatternArg
   }
   deriving stock (Show)
@@ -681,17 +680,14 @@ instance ToGenericError DoubleBinderPattern where
         where
           opts' = fromGenericOptions opts
           name = e ^. doubleBinderPatternName
-          implicit = e ^. doubleBinderPatternIsImplicit
           pat = e ^. doubleBinderPatternArg
           i = getLoc pat
           msg =
-            "As-patterns cannot be nested:"
-              <+> code (ppCode opts' name <> kwAt <> implicitDelim implicit (ppCode opts' pat))
+            "As-Patterns cannot be nested:"
+              <+> code (ppCode opts' name <> kwAt <> parens (ppCode opts' pat))
 
-data AliasBinderPattern = AliasBinderPattern
-  { _aliasBinderPatternIsImplicit :: IsImplicit,
-    _aliasBinderPatternName :: S.Symbol,
-    _aliasBinderPatternArg :: PatternArg
+newtype AliasBinderPattern = AliasBinderPattern
+  { _aliasBinderPatternArg :: PatternArg
   }
   deriving stock (Show)
 
@@ -709,17 +705,11 @@ instance ToGenericError AliasBinderPattern where
             }
         where
           opts' = fromGenericOptions opts
-          name = e ^. aliasBinderPatternName
-          implicit = e ^. aliasBinderPatternIsImplicit
           pat = e ^. aliasBinderPatternArg
           i = getLoc pat
-          wrap = case implicit of
-            Implicit -> "braces"
-            Explicit -> "parentheses"
           msg =
-            "As-patterns require a constructor inside the"
-              <+> wrap <> ":"
-              <+> code (ppCode opts' name <> kwAt <> implicitDelim implicit (ppCode opts' pat))
+            "As-Patterns cannot be used to alias pattern variables:"
+              <+> code (ppCode opts' pat)
 
 newtype ImplicitPatternLeftApplication = ImplicitPatternLeftApplication
   { _implicitPatternLeftApplication :: PatternApp
