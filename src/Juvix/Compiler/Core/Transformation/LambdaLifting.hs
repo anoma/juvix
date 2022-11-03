@@ -5,6 +5,7 @@ module Juvix.Compiler.Core.Transformation.LambdaLifting
 where
 
 import Data.Map.Strict qualified as Map
+import Data.Set qualified as Set
 import Juvix.Compiler.Core.Data.BinderList (BinderList)
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTableBuilder
@@ -30,45 +31,47 @@ lambdaLiftNode aboveBl top =
       NRec l -> goLetRec l
       m -> return (Recur m)
       where
-        captureFreeVars' :: Node -> Map Index Binder -> Sem r Node
+        captureFreeVars' :: Node -> Set Var -> Sem r ([Var], Node)
         captureFreeVars' n m = do
-          traceM ("pending = " <> ppTrace m)
-          goCapture bl 0 n m
+          runOutputList $ goCapture bl 0 0 n m
           where
-            goCapture :: BinderList Binder -> Int -> Node -> Map Index Binder -> Sem r Node
-            goCapture ctx lastidx body' tbl = case Map.minViewWithKey tbl of
+            goCapture ::
+              BinderList Binder ->
+              Index ->
+              Index ->
+              Node ->
+              Set Var ->
+              Sem (Output Var ': r) Node
+            goCapture ctx lastidx offset body' fv = case Set.minView fv of
               Nothing -> return body'
-              Just ((idx, bi), vs) -> do
-                -- the number of skipped binders
-                let skipped = idx - lastidx
-                traceM ("skipped: " <> prettyText skipped)
+              Just (v, vs) -> do
+                let idx = v ^. varIndex
+                    bi = BL.lookup' idx ctx
+                    -- the number of skipped binders
+                    skipped = idx - lastidx + 1
                 -- traceM ("k: " <> prettyText k)
-                bi' <- traverseOf binderType (lambdaLiftNode ctx) bi
-                let ctx' = BL.tail' ctx
-                    freevarsbi' = freeVarsList (bi' ^. binderType)
-                    fvassocs :: Map Index Binder
-                    fvassocs = Map.fromList [(i, BL.lookup' i ctx') | i <- map (^. varIndex) freevarsbi']
-                    vs' :: Map Index Binder
-                    vs' =
-                      Map.mapKeysMonotonic
-                        (\y -> y - skipped)
-                        (over binderType (shift (-skipped)) <$> vs)
+                let ctx' = BL.drop' skipped ctx
+                bi' <- traverseOf binderType (lambdaLiftNode ctx') bi
+                let freevarsbi' = freeVarsSorted (bi' ^. binderType)
+                    vs' :: Set Var
+                    vs' = Set.mapMonotonic (over varIndex (\y -> y - skipped)) vs
+                output (shiftVar offset v)
                 goCapture
                   ctx'
                   idx
-                  (mkLambdaB bi' (shift (-skipped) body'))
-                  (fvassocs <> vs')
+                  (offset + skipped)
+                  (mkLambdaB bi' (shift (-skipped + 1) body'))
+                  (freevarsbi' <> vs')
 
         goLambda :: Lambda -> Sem r Recur
         goLambda lm = do
           l' <- lambdaLiftNode (BL.extend (lm ^. lambdaBinder) bl) (NLam lm)
-          let freevars = freeVarsList l'
-          forM_ freevars $ \fv -> traceM (ppTrace (NVar fv))
-          traceM ("BinderList: " <> ppTrace bl)
+          let freevars = freeVarsSorted l'
+          -- forM_ freevars $ \fv -> traceM (ppTrace (NVar fv))
+          (allfreevars, fBody') <- captureFreeVars' l' freevars
           let freevarsAssocs :: Map Index Binder
-              freevarsAssocs = Map.fromList [(i, BL.lookup' i bl) | i <- map (^. varIndex) freevars]
-          fBody' <- captureFreeVars' l' freevarsAssocs
-          let argsInfo :: [ArgumentInfo] -- FIXME update
+              freevarsAssocs = Map.fromList [(i, BL.lookup' i bl) | i <- map (^. varIndex) allfreevars]
+          let argsInfo :: [ArgumentInfo]
               argsInfo = map (argumentInfoFromBinder . snd) (Map.toList freevarsAssocs)
           f <- freshSymbol
           registerIdent
@@ -81,7 +84,7 @@ lambdaLiftNode aboveBl top =
                 _identifierIsExported = False
               }
           registerIdentNode f fBody'
-          let fApp = mkApps' (mkIdent mempty f) (map NVar freevars)
+          let fApp = mkApps' (mkIdent mempty f) (map NVar allfreevars)
           return (End fApp)
 
         goLetRec :: LetRec -> Sem r Recur

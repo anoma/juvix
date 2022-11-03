@@ -8,6 +8,7 @@ module Juvix.Prelude.Base
   ( module Juvix.Prelude.Base,
     module Control.Applicative,
     module Data.Map.Strict,
+    module Data.Set,
     module Data.IntMap.Strict,
     module Control.Monad.Extra,
     module Control.Monad.Fix,
@@ -116,6 +117,7 @@ import Data.Maybe
 import Data.Monoid
 import Data.Ord
 import Data.Semigroup (Semigroup, (<>))
+import Data.Set (Set)
 import Data.Singletons hiding ((@@))
 import Data.Singletons.Sigma
 import Data.Singletons.TH (genSingletons, promoteOrdInstances, singOrdInstances)

@@ -11,6 +11,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Data.Set qualified as Set
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Equality
@@ -25,8 +26,8 @@ import Juvix.Compiler.Core.Language
 isClosed :: Node -> Bool
 isClosed = not . has freeVars
 
-freeVarsList :: Node -> [Var]
-freeVarsList n = sortOn (^. varIndex) (toList (HashSet.fromList (n ^.. freeVars)))
+freeVarsSorted :: Node -> Set Var
+freeVarsSorted n = Set.fromList (n ^.. freeVars)
 
 freeVarsSet :: Node -> HashSet Var
 freeVarsSet n = HashSet.fromList (n ^.. freeVars)

@@ -1,17 +1,35 @@
 module Juvix.Compiler.Core.Data.BinderList where
 
-import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Core.Language.Base
+import Juvix.Compiler.Core.Language.Base hiding (uncons)
+import Juvix.Prelude qualified as Prelude
 
 data BinderList a = BinderList
   { _blLength :: Int,
-    _blMap :: HashMap Index a
+    _blMap :: [a]
   }
 
 makeLenses ''BinderList
 
 fromList :: [a] -> BinderList a
-fromList l = BinderList (length l) (HashMap.fromList (zip [0 ..] l))
+fromList l = BinderList (length l) l
+
+drop' :: Int -> BinderList a -> BinderList a
+drop' k (BinderList n l) = BinderList (n - k) (dropExact k l)
+
+tail' :: BinderList a -> BinderList a
+tail' = snd . fromJust . uncons
+
+uncons :: BinderList a -> Maybe (a, BinderList a)
+uncons l = second helper <$> Prelude.uncons (l ^. blMap)
+  where
+    helper m =
+      BinderList
+        { _blLength = l ^. blLength - 1,
+          _blMap = m
+        }
+
+toIndexedList :: BinderList a -> [(Index, a)]
+toIndexedList = zip [0 ..] . toList
 
 instance Foldable BinderList where
   foldr :: (a -> b -> b) -> b -> BinderList a -> b
@@ -24,14 +42,12 @@ instance Foldable BinderList where
   length = (^. blLength)
 
   toList :: BinderList a -> [a]
-  toList bl =
-    map snd $
-      sortBy (compare `on` fst) $
-        HashMap.toList (bl ^. blMap)
+  toList = (^. blMap)
 
 lookup' :: Index -> BinderList a -> a
-lookup' idx bl =
-  fromMaybe err (HashMap.lookup target (bl ^. blMap))
+lookup' idx bl
+  | target < bl ^. blLength = (bl ^. blMap) !! target
+  | otherwise = err
   where
     target = idx
     err :: a
@@ -46,8 +62,9 @@ lookup' idx bl =
         )
 
 lookup :: Index -> BinderList a -> a
-lookup idx bl =
-  fromMaybe err (HashMap.lookup target (bl ^. blMap))
+lookup idx bl
+  | target < bl ^. blLength = (bl ^. blMap) !! target
+  | otherwise = err
   where
     target = bl ^. blLength - 1 - idx
     err :: a
@@ -75,7 +92,7 @@ extend :: a -> BinderList a -> BinderList a
 extend a bl =
   BinderList
     (bl ^. blLength + 1)
-    (HashMap.insert (bl ^. blLength) a (bl ^. blMap))
+    (snoc (bl ^. blMap) a)
 
 instance Functor BinderList where
   fmap :: (a -> b) -> BinderList a -> BinderList b

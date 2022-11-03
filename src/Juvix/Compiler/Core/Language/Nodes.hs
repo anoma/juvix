@@ -315,6 +315,9 @@ makeLenses ''LetItem'
 instance Eq (Var' i) where
   (Var _ idx1) == (Var _ idx2) = idx1 == idx2
 
+instance Ord (Var' i) where
+  compare = compare `on` (^. varIndex)
+
 instance Eq (Ident' i) where
   (Ident _ sym1) == (Ident _ sym2) = sym1 == sym2
 
