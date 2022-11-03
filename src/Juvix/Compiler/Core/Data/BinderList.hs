@@ -29,6 +29,22 @@ instance Foldable BinderList where
       sortBy (compare `on` fst) $
         HashMap.toList (bl ^. blMap)
 
+lookup' :: Index -> BinderList a -> a
+lookup' idx bl =
+  fromMaybe err (HashMap.lookup target (bl ^. blMap))
+  where
+    target = idx
+    err :: a
+    err =
+      error
+        ( "invalid binder lookup. Got index "
+            <> show idx
+            <> " that targets "
+            <> show target
+            <> " and the length is "
+            <> show (bl ^. blLength)
+        )
+
 lookup :: Index -> BinderList a -> a
 lookup idx bl =
   fromMaybe err (HashMap.lookup target (bl ^. blMap))

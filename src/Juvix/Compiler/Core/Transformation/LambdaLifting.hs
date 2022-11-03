@@ -4,6 +4,7 @@ module Juvix.Compiler.Core.Transformation.LambdaLifting
   )
 where
 
+import Data.Map.Strict qualified as Map
 import Juvix.Compiler.Core.Data.BinderList (BinderList)
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTableBuilder
@@ -29,15 +30,46 @@ lambdaLiftNode aboveBl top =
       NRec l -> goLetRec l
       m -> return (Recur m)
       where
+        captureFreeVars' :: Node -> Map Index Binder -> Sem r Node
+        captureFreeVars' n m = do
+          traceM ("pending = " <> ppTrace m)
+          goCapture bl 0 n m
+          where
+            goCapture :: BinderList Binder -> Int -> Node -> Map Index Binder -> Sem r Node
+            goCapture ctx lastidx body' tbl = case Map.minViewWithKey tbl of
+              Nothing -> return body'
+              Just ((idx, bi), vs) -> do
+                -- the number of skipped binders
+                let skipped = idx - lastidx
+                traceM ("skipped: " <> prettyText skipped)
+                -- traceM ("k: " <> prettyText k)
+                bi' <- traverseOf binderType (lambdaLiftNode ctx) bi
+                let ctx' = BL.tail' ctx
+                    freevarsbi' = freeVarsList (bi' ^. binderType)
+                    fvassocs :: Map Index Binder
+                    fvassocs = Map.fromList [(i, BL.lookup' i ctx') | i <- map (^. varIndex) freevarsbi']
+                    vs' :: Map Index Binder
+                    vs' =
+                      Map.mapKeysMonotonic
+                        (\y -> y - skipped)
+                        (over binderType (shift (-skipped)) <$> vs)
+                goCapture
+                  ctx'
+                  idx
+                  (mkLambdaB bi' (shift (-skipped) body'))
+                  (fvassocs <> vs')
+
         goLambda :: Lambda -> Sem r Recur
         goLambda lm = do
           l' <- lambdaLiftNode (BL.extend (lm ^. lambdaBinder) bl) (NLam lm)
-          let freevars = toList (freeVarsSet l')
-              freevarsAssocs :: [(Index, Binder)]
-              freevarsAssocs = [(i, BL.lookup i bl) | i <- map (^. varIndex) freevars]
-              fBody' = captureFreeVars freevarsAssocs l'
-              argsInfo :: [ArgumentInfo]
-              argsInfo = map (argumentInfoFromBinder . snd) freevarsAssocs
+          let freevars = freeVarsList l'
+          forM_ freevars $ \fv -> traceM (ppTrace (NVar fv))
+          traceM ("BinderList: " <> ppTrace bl)
+          let freevarsAssocs :: Map Index Binder
+              freevarsAssocs = Map.fromList [(i, BL.lookup' i bl) | i <- map (^. varIndex) freevars]
+          fBody' <- captureFreeVars' l' freevarsAssocs
+          let argsInfo :: [ArgumentInfo] -- FIXME update
+              argsInfo = map (argumentInfoFromBinder . snd) (Map.toList freevarsAssocs)
           f <- freshSymbol
           registerIdent
             IdentifierInfo

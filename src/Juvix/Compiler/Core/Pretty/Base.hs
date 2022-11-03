@@ -6,6 +6,8 @@ module Juvix.Compiler.Core.Pretty.Base
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.Map.Strict qualified as Map
+import Juvix.Compiler.Core.Data.BinderList as BL
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
 import Juvix.Compiler.Core.Extra
@@ -123,6 +125,38 @@ ppCodeConstr' name c = do
     Just nm -> ppCode nm
     Nothing -> ppCode (c ^. constrTag)
   return $ foldl' (<+>) n' args'
+
+instance (Pretty k, PrettyCode a) => PrettyCode (Map k a) where
+  ppCode m = do
+    m' <-
+      sep . punctuate ","
+        <$> sequence
+          [ do
+              a' <- ppCode a
+              let k' = pretty k
+              return $ k' <+> kwMapsto <+> a'
+            | (k, a) <- Map.toList m
+          ]
+    return $ braces m'
+
+instance PrettyCode a => PrettyCode (BinderList a) where
+  ppCode bl = do
+    m <-
+      sequence
+        [ do
+            v' <- ppCode v
+            return (pretty k <+> kwMapsto <+> v')
+          | (k, v) <- BL.toIndexedList bl
+        ]
+    return $ brackets (hsep $ punctuate "," m)
+
+instance PrettyCode a => PrettyCode (Binder' a) where
+  ppCode (Binder mname ty) = do
+    name' <- case mname of
+      Nothing -> return "_"
+      Just n -> ppCode n
+    ty' <- ppCode ty
+    return (parens (name' <+> kwColon <+> ty'))
 
 ppCodeLet' :: (PrettyCode a, Member (Reader Options) r) => Maybe Name -> Maybe (Doc Ann) -> Let' i a ty -> Sem r (Doc Ann)
 ppCodeLet' name mty lt = do

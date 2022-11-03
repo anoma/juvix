@@ -25,6 +25,9 @@ import Juvix.Compiler.Core.Language
 isClosed :: Node -> Bool
 isClosed = not . has freeVars
 
+freeVarsList :: Node -> [Var]
+freeVarsList n = sortOn (^. varIndex) (toList (HashSet.fromList (n ^.. freeVars)))
+
 freeVarsSet :: Node -> HashSet Var
 freeVarsSet n = HashSet.fromList (n ^.. freeVars)
 
