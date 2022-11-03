@@ -1,0 +1,5 @@
+cons 1 (cons 2 nil)
+cons 1 (cons 2 nil)
+50015000
+1000000
+1000000

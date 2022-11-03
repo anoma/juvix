@@ -1,0 +1,13 @@
+-- count combinations of numbers 1 to N having sum N
+
+def combinations := \n \s
+  if s = 0 then
+    1
+  else if n = 0 then
+    0
+  else if s < 0 then
+    0
+  else
+    combinations n (s - n) + combinations (n - 1) s;
+
+combinations 100 100

@@ -1,0 +1,46 @@
+-- successively map K functions to a list of N integers
+
+inductive list {
+  nil : list;
+  cons : * -> list -> list;
+};
+
+def map := \f \xs case xs of {
+  nil := nil;
+  cons x xs' := cons (f x) (map f xs');
+};
+
+def mapfun := \fs \xs case fs of {
+  nil := xs;
+  cons f fs' := mapfun fs' (map f xs);
+};
+
+def genfs := \n
+  if n = 0 then
+    nil
+  else
+    cons ((-) n) (genfs (n - 1));
+
+def genffs := \n
+  if n = 0 then
+    nil
+  else
+    cons (\f \x f (x + n)) (genffs (n - 1));
+
+def sum := \lst
+  letrec go := \lst \acc case lst of {
+    nil := acc;
+    cons h t := go t (acc + h);
+  } in
+  go lst 0;
+
+def gen := \k \n
+  if k = n then
+    cons k nil
+  else
+    cons k (gen (k + 1) n);
+
+let k := 100 in
+let n := 10000 in
+
+sum (mapfun (mapfun (genffs k) (genfs k)) (gen 1 n))

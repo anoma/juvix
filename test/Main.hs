@@ -7,6 +7,7 @@ import Base
 import Core qualified
 import Parsing qualified
 import Reachability qualified
+import Runtime qualified
 import Scope qualified
 import Termination qualified
 import Typecheck qualified
@@ -17,7 +18,8 @@ slowTests =
     "Juvix slow tests"
     [ BackendC.allTests,
       Core.allTests,
-      Asm.allTests
+      Asm.allTests,
+      Runtime.allTests
     ]
 
 fastTests :: TestTree

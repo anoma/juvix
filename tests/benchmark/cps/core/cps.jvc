@@ -1,0 +1,14 @@
+-- compute the Nth Fibonacci number modulo 2^28 with CPS
+
+def step := \k \n \m \cont
+  if k = 0 then
+    n
+  else
+    cont (k - 1) m ((n + m) % 268435456);
+
+def go := \k \n \m step k n m go;
+
+def fib := \k
+  go k 0 1;
+
+fib 100000000
