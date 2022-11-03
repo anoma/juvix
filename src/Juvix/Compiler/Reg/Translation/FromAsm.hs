@@ -59,7 +59,7 @@ fromAsmFun tab fi =
     Left err -> error (show err)
     Right code -> code
   where
-    sig :: Asm.RecursorSig (Error Asm.AsmError ': r) Instruction
+    sig :: Asm.RecursorSig Asm.Memory (Error Asm.AsmError ': r) Instruction
     sig =
       Asm.RecursorSig
         { _recursorInfoTable = tab,
