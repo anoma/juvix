@@ -1,0 +1,28 @@
+-- Compute the Nth prime
+
+inductive list {
+  nil : list;
+  cons : any -> list -> list;
+};
+
+def checkDivisible := \p \lst {
+  case lst of {
+    nil := false;
+    cons h t := if p % h = 0 then true else checkDivisible p t
+  }
+};
+
+def go := \n \p \lst {
+  if n = 0 then
+    case lst of {
+      cons h _ := h
+    }
+  else if checkDivisible p lst then
+    go n (p + 1) lst
+  else
+    go (n - 1) (p + 1) (cons p lst)
+};
+
+def prime := \n go n 2 nil;
+
+prime (1024 * 16)

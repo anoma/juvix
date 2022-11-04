@@ -1,0 +1,31 @@
+-- count combinations of numbers 1 to N having sum N
+
+module combinations;
+
+open import Stdlib.Prelude;
+open import Data.Int;
+open import Data.Int.Ops;
+
+terminating
+go : Int -> Int -> Int;
+go n s :=
+   if (s Data.Int.Ops.== Int_0)
+      Int_1
+      (if (n Data.Int.Ops.== Int_0)
+          Int_0
+          (if (s Data.Int.Ops.< Int_0)
+              Int_0
+              (go n (s Data.Int.Ops.- n) Data.Int.Ops.+ go (n Data.Int.Ops.- Int_1) s)));
+
+combinations : Int -> Int;
+combinations n := go n n;
+
+axiom Int_100 : Int;
+compile Int_100 {
+  c ↦ "100";
+};
+
+main : IO;
+main := printInt (combinations Int_100);
+
+end;

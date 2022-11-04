@@ -8,6 +8,7 @@ import Core qualified
 import Internal qualified
 import Parsing qualified
 import Reachability qualified
+import Runtime qualified
 import Scope qualified
 import Termination qualified
 import Typecheck qualified
@@ -19,7 +20,8 @@ slowTests =
     [ BackendC.allTests,
       Core.allTests,
       Asm.allTests,
-      Internal.allTests
+      Internal.allTests,
+      Runtime.allTests
     ]
 
 fastTests :: TestTree

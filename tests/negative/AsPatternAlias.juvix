@@ -1,0 +1,6 @@
+module AsPatternAlias;
+
+f : Type -> Type;
+f a@b := b;
+
+end;

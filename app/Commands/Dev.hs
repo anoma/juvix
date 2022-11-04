@@ -14,6 +14,7 @@ import Commands.Dev.Internal qualified as Internal
 import Commands.Dev.MiniC qualified as MiniC
 import Commands.Dev.Options
 import Commands.Dev.Parse qualified as Parse
+import Commands.Dev.Runtime qualified as Runtime
 import Commands.Dev.Scope qualified as Scope
 import Commands.Dev.Termination qualified as Termination
 
@@ -28,4 +29,5 @@ runCommand = \case
   Termination opts -> Termination.runCommand opts
   Core opts -> Core.runCommand opts
   Asm opts -> Asm.runCommand opts
+  Runtime opts -> Runtime.runCommand opts
   DisplayRoot -> DisplayRoot.runCommand

@@ -57,6 +57,17 @@ parseInputJuvixAsmFile = do
       )
   pure Path {_pathIsInput = True, ..}
 
+parseInputCFile :: Parser Path
+parseInputCFile = do
+  _pathPath <-
+    argument
+      str
+      ( metavar "C_FILE"
+          <> help "Path to a .c file"
+          <> completer juvixCCompleter
+      )
+  pure Path {_pathIsInput = True, ..}
+
 parseGenericOutputFile :: Parser Path
 parseGenericOutputFile = do
   _pathPath <-
@@ -97,6 +108,9 @@ juvixCoreCompleter = extCompleter "jvc"
 
 juvixAsmCompleter :: Completer
 juvixAsmCompleter = extCompleter "jva"
+
+juvixCCompleter :: Completer
+juvixCCompleter = extCompleter "c"
 
 requote :: String -> String
 requote s =

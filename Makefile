@@ -36,11 +36,15 @@ endif
 
 all: install
 
-clean:
+clean: clean-runtime
 	@stack clean --full
 	@rm -rf .hie
 	@rm -rf _docs
 	@rm -rf docs/md
+
+.PHONY: clean-runtime
+clean-runtime:
+	@cd runtime && make clean
 
 repl:
 	@stack ghci Juvix:lib
@@ -111,7 +115,8 @@ ORMOLUFILES = $(shell git ls-files '*.hs' '*.hs-boot' | grep -v '^contrib/')
 ORMOLUFLAGS?=--no-cabal
 ORMOLUMODE?=inplace
 
-format:
+.PHONY: format
+format: clang-format
 	@stack exec -- ormolu ${ORMOLUFLAGS} \
 		--ghc-opt -XStandaloneDeriving \
 		--ghc-opt -XUnicodeSyntax \
@@ -121,6 +126,10 @@ format:
 		--ghc-opt -XImportQualifiedPost \
 			--mode ${ORMOLUMODE} \
 		$(ORMOLUFILES)
+
+.PHONY: clang-format
+clang-format:
+	@cd runtime && make format
 
 .PHONY: check-ormolu
 check-ormolu: export ORMOLUMODE = check
@@ -145,7 +154,7 @@ pre-commit :
 # -- Build-Install-Test-Release
 # ------------------------------------------------------------------------------
 
-STACKFLAGS?=--fast --jobs $(THREADS)
+STACKFLAGS?=--jobs $(THREADS)
 
 .PHONY: check
 check:
@@ -163,15 +172,27 @@ submodules:
 	@git submodule sync
 	@git submodule update --init --recursive
 
-.PHONY : build
-build: submodules
+.PHONY: build
+build: submodules runtime
 	stack build ${STACKFLAGS}
+
+.PHONY: fast-build
+fast-build: submodules runtime
+	stack build --fast ${STACKFLAGS}
+
+.PHONY: runtime
+runtime:
+	cd runtime && make -j 4
 
 # -- Install
 
 .PHONY : install
-install: submodules
+install: runtime submodules
 	@stack install ${STACKFLAGS}
+
+.PHONY : fast-install
+fast-install: runtime submodules
+	@stack install --fast ${STACKFLAGS}
 
 # -- Testing
 
@@ -179,9 +200,17 @@ install: submodules
 test: build
 	@stack test ${STACKFLAGS}
 
+.PHONY : fast-test
+fast-test: fast-build
+	@stack test --fast ${STACKFLAGS}
+
 .PHONY : test-skip-slow
 test-skip-slow:
 	@stack test ${STACKFLAGS} --ta '-p "! /slow tests/"'
+
+.PHONY : fast-test-skip-slow
+fast-test-skip-slow:
+	@stack test --fast ${STACKFLAGS} --ta '-p "! /slow tests/"'
 
 SHELLTEST := $(shell command -v shelltest 2> /dev/null)
 

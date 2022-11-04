@@ -551,7 +551,7 @@ instance PrettyCode PatternArg where
   ppCode (PatternArg i n p) = do
     n' <- traverse ppCode n
     p' <- ppCode p
-    return $ (n' <&> (<> kwAt)) ?<> delimIf i (isJust n) p'
+    return $ (n' <&> (<> kwAt)) ?<> delimIf i (isJust n && not (isAtomic p)) p'
 
 instance PrettyCode PatternApp where
   ppCode (PatternApp l r) = do
@@ -564,6 +564,12 @@ ppPatternParenType p = case sing :: SStage s of
   SParsed -> ppCode p
   SScoped -> ppCode p
 
+instance PrettyCode PatternBinding where
+  ppCode (PatternBinding n p) = do
+    n' <- ppSymbol n
+    p' <- ppCode p
+    return $ n' <> kwAt <> p'
+
 instance SingI s => PrettyCode (PatternAtom s) where
   ppCode a = case a of
     PatternAtomIden n -> case sing :: SStage s of
@@ -571,15 +577,11 @@ instance SingI s => PrettyCode (PatternAtom s) where
       SScoped -> ppCode n
     PatternAtomWildcard {} -> return kwWildcard
     PatternAtomEmpty {} -> return $ parens mempty
-    PatternAtomParens n p -> ppEnclosed parens n p
-    PatternAtomBraces n p -> ppEnclosed braces n p
-    where
-      ppEnclosed :: Member (Reader Options) r => (Doc Ann -> Doc Ann) -> Maybe (SymbolType s) -> PatternParensType s -> Sem r (Doc Ann)
-      ppEnclosed wrap Nothing p = wrap <$> ppPatternParenType p
-      ppEnclosed wrap (Just n) p = do
-        n' <- ppSymbol n
-        p' <- ppPatternParenType p
-        return $ n' <> kwAt <> wrap p'
+    PatternAtomParens p -> parens <$> ppPatternParenType p
+    PatternAtomBraces p -> braces <$> ppPatternParenType p
+    PatternAtomAt p -> case sing :: SStage s of
+      SParsed -> ppCode p
+      SScoped -> ppCode p
 
 instance SingI s => PrettyCode (PatternAtoms s) where
   ppCode (PatternAtoms ps _) = hsep <$> mapM ppCode ps

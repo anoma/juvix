@@ -1,1 +1,2 @@
-*.golden	-text
+*.golden    -text
+*.out       -text

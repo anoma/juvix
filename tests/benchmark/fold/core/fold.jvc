@@ -1,0 +1,27 @@
+-- fold a list of N integers
+
+inductive list {
+  nil : list;
+  cons : any -> list -> list;
+};
+
+def plusMod := \x \y (x + y) % 268435456;
+
+def foldl := \f \acc \lst case lst of {
+  nil := acc;
+  cons h t := foldl f (f acc h) t;
+};
+
+def run := \n \acc \lst
+  if n = 0 then
+    foldl plusMod acc lst
+  else
+    run (n - 1) (foldl plusMod (0 - acc) lst) lst;
+
+def gen := \n \acc
+  if n = 0 then
+    acc
+  else
+    gen (n - 1) (cons n acc);
+
+run 1000 0 (gen 100000 nil)

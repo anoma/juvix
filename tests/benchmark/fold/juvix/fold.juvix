@@ -1,0 +1,41 @@
+-- fold a list of N integers
+module fold;
+
+open import Stdlib.Prelude;
+open import Data.Int;
+open import Data.Int.Ops;
+
+axiom Int_268435456 : Int;
+compile Int_268435456 {
+  c ↦ "268435456";
+};
+
+plusMod : Int -> Int -> Int;
+plusMod x y := (x Data.Int.Ops.+ y) Data.Int.Ops.% Int_268435456;
+
+terminating
+run : Int -> Int -> List Int -> Int;
+run n acc lst := if (n Data.Int.Ops.== Int_0)
+                    (foldl plusMod acc lst)
+                    (run (n Data.Int.Ops.- Int_1) (foldl plusMod (Int_0 Data.Int.Ops.- acc) lst) lst);
+
+terminating
+gen : Int -> List Int -> List Int;
+gen n acc := if (n Data.Int.Ops.== Int_0)
+                acc
+                (gen (n Data.Int.Ops.- Int_1) (n ∷ acc));
+
+axiom Int_100000 : Int;
+compile Int_100000 {
+  c ↦ "100000";
+};
+
+axiom Int_1000 : Int;
+compile Int_1000 {
+  c ↦ "1000";
+};
+
+main : IO;
+main := printInt (run Int_1000 Int_0 (gen Int_100000 nil));
+
+end;

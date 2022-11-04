@@ -56,7 +56,9 @@ TAGS
 # other
 .DS_Store
 
+/runtime/include
 _build/
+_build.*/
 *.agdai
 .agda/
 agda2hs/
@@ -68,10 +70,17 @@ UPDATES-FOR-CHANGELOG.org
 .juvix-build
 
 # C Code generation
+*.out.c
+*.s
 *.wasm
+*.exe
 docs/md/
 _docs
 docs/**/*.md
 **/html/*
+
+*.cmi
+*.cmx
+*.cmo
 
 docs/org/README.org
