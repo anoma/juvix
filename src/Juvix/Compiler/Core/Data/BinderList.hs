@@ -3,6 +3,7 @@ module Juvix.Compiler.Core.Data.BinderList where
 import Juvix.Compiler.Core.Language.Base hiding (uncons)
 import Juvix.Prelude qualified as Prelude
 
+-- | if we have \x\y. b, the binderlist in b is [y, x]
 data BinderList a = BinderList
   { _blLength :: Int,
     _blMap :: [a]

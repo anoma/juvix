@@ -31,9 +31,12 @@ lambdaLiftNode aboveBl top =
       NRec l -> goLetRec l
       m -> return (Recur m)
       where
+        -- captures all free variables starting from an initial set.
+        -- it also returns the list of captures variables in left-to-right order:
+        -- if snd is of the form λxλy... then fst is [x, y]
         captureFreeVars' :: Node -> Set Var -> Sem r ([Var], Node)
-        captureFreeVars' n m = do
-          runOutputList $ goCapture bl 0 0 n m
+        captureFreeVars' n =
+          fmap (first reverse) . runOutputList . goCapture bl 0 0 n
           where
             goCapture ::
               BinderList Binder ->
@@ -48,9 +51,9 @@ lambdaLiftNode aboveBl top =
                 let idx = v ^. varIndex
                     bi = BL.lookup' idx ctx
                     -- the number of skipped binders
-                    skipped = idx - lastidx + 1
-                -- traceM ("k: " <> prettyText k)
-                let ctx' = BL.drop' skipped ctx
+                    skipped = idx + 1
+                    -- traceM ("k: " <> prettyText k)
+                    ctx' = BL.drop' skipped ctx
                 bi' <- traverseOf binderType (lambdaLiftNode ctx') bi
                 let freevarsbi' = freeVarsSorted (bi' ^. binderType)
                     vs' :: Set Var
