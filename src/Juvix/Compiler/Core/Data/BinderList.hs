@@ -1,6 +1,6 @@
 module Juvix.Compiler.Core.Data.BinderList where
 
-import Juvix.Compiler.Core.Language.Base hiding (uncons)
+import Juvix.Compiler.Core.Language hiding (uncons, cons, lookup)
 import Juvix.Prelude qualified as Prelude
 
 -- | if we have \x\y. b, the binderlist in b is [y, x]
@@ -45,8 +45,29 @@ instance Foldable BinderList where
   toList :: BinderList a -> [a]
   toList = (^. blMap)
 
-lookup' :: Index -> BinderList a -> a
-lookup' idx bl
+-- | same as `lookupsSortedRev` but the result is in the same order as the input list.
+lookupsSorted :: BinderList a -> [Var' i] -> [(Var' i, a)]
+lookupsSorted bl = reverse . lookupsSortedRev bl
+
+-- | efficient multiple lookups. The input list needs to be in non-decreasing order.
+-- | The result is in reversed order
+lookupsSortedRev :: BinderList a -> [Var' i] -> [(Var' i, a)]
+lookupsSortedRev bl = go [] 0 bl
+  where
+  go :: [(Var' i, a)] -> Index -> BinderList a -> [Var' i] -> [(Var' i, a)]
+  go acc off ctx = \case
+    [] -> acc
+    (v : vs) ->
+      let consumed = v ^. varIndex - off
+          ctx' = drop' consumed ctx
+          off' = off + consumed
+      in go ((v, head' ctx') : acc) off' ctx' vs
+  head' :: BinderList a -> a
+  head' = lookup 0
+
+-- | lookup de Bruijn Index
+lookup :: Index -> BinderList a -> a
+lookup idx bl
   | target < bl ^. blLength = (bl ^. blMap) !! target
   | otherwise = err
   where
@@ -62,8 +83,9 @@ lookup' idx bl
             <> show (bl ^. blLength)
         )
 
-lookup :: Index -> BinderList a -> a
-lookup idx bl
+-- | lookup de Bruijn Level
+lookupLevel :: Index -> BinderList a -> a
+lookupLevel idx bl
   | target < bl ^. blLength = (bl ^. blMap) !! target
   | otherwise = err
   where
@@ -89,15 +111,12 @@ instance Monoid (BinderList a) where
         _blMap = mempty
       }
 
-extend :: a -> BinderList a -> BinderList a
-extend a bl =
-  BinderList
-    (bl ^. blLength + 1)
-    (snoc (bl ^. blMap) a)
+cons :: a -> BinderList a -> BinderList a
+cons a (BinderList l m) = BinderList (l + 1) (a : m)
 
 instance Functor BinderList where
   fmap :: (a -> b) -> BinderList a -> BinderList b
   fmap f = over blMap (fmap f)
 
 prepend :: [a] -> BinderList a -> BinderList a
-prepend l bl = foldr extend bl l
+prepend l bl = foldr cons bl l

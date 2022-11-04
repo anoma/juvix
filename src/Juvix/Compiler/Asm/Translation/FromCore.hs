@@ -54,14 +54,14 @@ genCode infoTable fi =
       Core.NCase c -> goCase isTail tempSize refs c
 
     goVar :: Bool -> BinderList Value -> Core.Var -> Code'
-    goVar isTail refs (Core.Var {..}) =
+    goVar isTail refs Core.Var {..} =
       snocReturn isTail $
         DL.singleton $
           mkInstr $
             Push (BL.lookup _varIndex refs)
 
     goIdent :: Bool -> Core.Ident -> Code'
-    goIdent isTail (Core.Ident {..}) =
+    goIdent isTail Core.Ident {..} =
       if
           | getArgsNum _identSymbol == 0 ->
               DL.singleton $
@@ -108,7 +108,7 @@ genCode infoTable fi =
                       unimplemented
               where
                 argsNum = getArgsNum _identSymbol
-            Core.FunVar (Core.Var {..}) ->
+            Core.FunVar Core.Var {..} ->
               if
                   | argsNum > suppliedArgsNum ->
                       snocReturn isTail $
@@ -163,7 +163,7 @@ genCode infoTable fi =
     goLet isTail tempSize refs (Core.Let {..}) =
       DL.append
         (DL.snoc (go False tempSize refs (_letItem ^. Core.letItemValue)) (mkInstr PushTemp))
-        (snocPopTemp isTail $ go isTail (tempSize + 1) (BL.extend (Ref (DRef (TempRef tempSize))) refs) _letBody)
+        (snocPopTemp isTail $ go isTail (tempSize + 1) (BL.cons (Ref (DRef (TempRef tempSize))) refs) _letBody)
 
     goCase :: Bool -> Int -> BinderList Value -> Core.Case -> Code'
     goCase isTail tempSize refs (Core.Case {..}) =
