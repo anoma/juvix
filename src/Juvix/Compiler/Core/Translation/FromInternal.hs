@@ -23,9 +23,13 @@ unsupported thing = error ("Internal to Core: Not yet supported: " <> thing)
 isExplicit :: Internal.PatternArg -> Bool
 isExplicit = (== Internal.Explicit) . (^. Internal.patternArgIsImplicit)
 
+-- Translation of a Name into the identifier index used in the Core InfoTable
+mkIdentIndex :: Name -> Text
+mkIdentIndex = show . (^. Internal.nameId . Internal.unNameId)
+
 fromInternal :: Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do
-  (res, _) <- runInfoTableBuilder emptyInfoTable (runReader (i ^. InternalTyped.resultIdenTypes) f)
+  (res, _) <- runInfoTableBuilder mkIdentIndex emptyInfoTable (runReader (i ^. InternalTyped.resultIdenTypes) f)
   return $
     CoreResult
       { _coreResultTable = res,
@@ -49,6 +53,7 @@ fromInternalExpression res exp = do
     <$> runReader
       (Internal.buildTable modules)
       ( runInfoTableBuilder
+          mkIdentIndex
           (res ^. coreResultTable)
           ( runReader
               (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
@@ -297,14 +302,14 @@ fromPattern = \case
               (c ^. Internal.constrAppParameters)
 
     args <- mapM fromPattern explicitPatterns
-    m <- getIdent id_
+    m <- getIdent identIndex
     case m of
       Just (IdentConstr tag) -> return $ PatConstr (PatternConstr (setInfoName n Info.empty) tag args)
       Just _ -> error ("internal to core: not a constructor " <> txt)
       Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     where
-      id_ :: Internal.NameId
-      id_ = c ^. Internal.constrAppConstructor . Internal.nameId
+      identIndex :: Text
+      identIndex = mkIdentIndex (c ^. Internal.constrAppConstructor)
 
       txt :: Text
       txt = c ^. Internal.constrAppConstructor . Internal.nameText
@@ -357,8 +362,8 @@ goFunctionClause clause =
     ps :: [Internal.Pattern]
     ps = (^. Internal.patternArgPattern) <$> explicitPatternArgs
 
-    patternArgs :: HashMap Internal.NameId Index
-    patternArgs = HashMap.fromList (first (^. Internal.nameId) <$> patternArgNames)
+    patternArgs :: HashMap NameId Index
+    patternArgs = HashMap.fromList (first (^. nameId) <$> patternArgNames)
       where
         patternArgNames :: [(Name, Index)]
         patternArgNames = catFstMaybes (first (^. Internal.patternArgName) <$> zip explicitPatternArgs [0 ..])
@@ -402,27 +407,30 @@ goExpression' = \case
       varsNum <- asks (^. indexTableVarsNum)
       return (mkVar (Info.singleton (NameInfo n)) (varsNum - k - 1))
     Internal.IdenFunction n -> do
-      m <- getIdent id_
+      m <- getIdent identIndex
       return $ case m of
         Just (IdentFun sym) -> mkIdent (Info.singleton (NameInfo n)) sym
         Just _ -> error ("internal to core: not a function: " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenInductive {} -> unsupported "goExpression inductive"
     Internal.IdenConstructor n -> do
-      m <- getIdent id_
+      m <- getIdent identIndex
       case m of
         Just (IdentConstr tag) -> return (mkConstr (Info.singleton (NameInfo n)) tag [])
         Just _ -> error ("internal to core: not a constructor " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenAxiom n -> do
-      m <- getIdent id_
+      m <- getIdent identIndex
       return $ case m of
         Just (IdentFun sym) -> mkIdent (Info.singleton (NameInfo n)) sym
         Just _ -> error ("internal to core: not a function: " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     where
+      identIndex :: Text
+      identIndex = mkIdentIndex (Internal.getName i)
+
       id_ :: NameId
-      id_ = Internal.getName i ^. Internal.nameId
+      id_ = Internal.getName i ^. nameId
 
       txt :: Text
       txt = Internal.getName i ^. Internal.nameText
@@ -448,7 +456,7 @@ goSimpleLambda l = do
     update = do
       idx <- asks (^. indexTableVarsNum)
       return
-        ( over indexTableVars (HashMap.insert (l ^. Internal.slambdaVar . Internal.nameId) idx)
+        ( over indexTableVars (HashMap.insert (l ^. Internal.slambdaVar . nameId) idx)
             . over indexTableVarsNum (+ 1)
         )
 

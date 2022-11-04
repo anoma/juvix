@@ -18,7 +18,7 @@ mapT f tab = tab {_identContext = HashMap.mapWithKey f (tab ^. identContext)}
 mapT' :: (Node -> Sem (InfoTableBuilder ': r) Node) -> InfoTable -> Sem r InfoTable
 mapT' f tab =
   fmap fst $
-    runInfoTableBuilder tab $
+    runInfoTableBuilder (^. nameText) tab $
       mapM_
         (\(k, v) -> f v >>= registerIdentNode k)
         (HashMap.toList (tab ^. identContext))

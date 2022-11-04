@@ -14,10 +14,12 @@ data InfoTableBuilder m a where
   RegisterIdentNode :: Symbol -> Node -> InfoTableBuilder m ()
   RegisterMain :: Symbol -> InfoTableBuilder m ()
   SetIdentArgsInfo :: Symbol -> [ArgumentInfo] -> InfoTableBuilder m ()
-  GetIdent :: NameId -> InfoTableBuilder m (Maybe IdentKind)
+  GetIdent :: Text -> InfoTableBuilder m (Maybe IdentKind)
   GetInfoTable :: InfoTableBuilder m InfoTable
 
 makeSem ''InfoTableBuilder
+
+type MkIdentIndex = Name -> Text
 
 getConstructorInfo :: Member InfoTableBuilder r => Tag -> Sem r ConstructorInfo
 getConstructorInfo tag = do
@@ -29,8 +31,8 @@ checkSymbolDefined sym = do
   tab <- getInfoTable
   return $ HashMap.member sym (tab ^. identContext)
 
-runInfoTableBuilder :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
-runInfoTableBuilder tab =
+runInfoTableBuilder :: MkIdentIndex -> InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+runInfoTableBuilder mkIdentIndex tab =
   runState tab
     . reinterpret interp
   where
@@ -46,14 +48,14 @@ runInfoTableBuilder tab =
         return (UserTag (s ^. infoNextTag))
       RegisterIdent ii -> do
         modify' (over infoIdentifiers (HashMap.insert (ii ^. identifierSymbol) ii))
-        whenJust (ii ^? identifierName . _Just . nameId) $ \id_ ->
-          modify' (over identMap (HashMap.insert id_ (IdentFun (ii ^. identifierSymbol))))
+        whenJust (ii ^? identifierName . _Just) $ \n ->
+          modify' (over identMap (HashMap.insert (mkIdentIndex n) (IdentFun (ii ^. identifierSymbol))))
       RegisterConstructor ci -> do
         modify' (over infoConstructors (HashMap.insert (ci ^. constructorTag) ci))
-        modify' (over identMap (HashMap.insert (ci ^. (constructorName . nameId)) (IdentConstr (ci ^. constructorTag))))
+        modify' (over identMap (HashMap.insert (mkIdentIndex (ci ^. constructorName)) (IdentConstr (ci ^. constructorTag))))
       RegisterInductive ii -> do
         modify' (over infoInductives (HashMap.insert (ii ^. inductiveSymbol) ii))
-        modify' (over identMap (HashMap.insert (ii ^. (inductiveName . nameId)) (IdentInd (ii ^. inductiveSymbol))))
+        modify' (over identMap (HashMap.insert (mkIdentIndex (ii ^. inductiveName)) (IdentInd (ii ^. inductiveSymbol))))
       RegisterIdentNode sym node ->
         modify' (over identContext (HashMap.insert sym node))
       RegisterMain sym -> do
