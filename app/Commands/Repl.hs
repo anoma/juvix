@@ -58,12 +58,12 @@ helpTxt =
          Print help text and describe options
   :load FILE
          Load a file into the REPL
+  :reload
+         Reload the currently loaded file
   :type EXPRESSION
          Infer the type of an expression
   :core EXPRESSION
          Translate the expression to JuvixCore
-  :idents
-         List the identifiers in the environment
   :multiline
          Start a multi-line input. Submit with <Ctrl-D>
   :root
@@ -90,12 +90,9 @@ runCommand opts = do
       quit :: String -> Repl ()
       quit _ = liftIO (throwIO Interrupt)
 
-      loadFile :: String -> Repl ()
-      loadFile args = do
-        mkEntryPoint <- State.gets (^. replStateMkEntryPoint)
-        let f = unpack (strip (pack args))
-            entryPoint = mkEntryPoint f
-        (bs, res) <- liftIO (runIO' iniState entryPoint upToCore)
+      loadEntryPoint :: EntryPoint -> Repl ()
+      loadEntryPoint ep = do
+        (bs, res) <- liftIO (runIO' iniState ep upToCore)
         State.modify
           ( set
               replStateContext
@@ -103,11 +100,28 @@ runCommand opts = do
                   ( ReplContext
                       { _replContextBuiltins = bs,
                         _replContextExpContext = expressionContext res,
-                        _replContextEntryPoint = entryPoint
+                        _replContextEntryPoint = ep
                       }
                   )
               )
           )
+
+      reloadFile :: String -> Repl ()
+      reloadFile _ = do
+        mentryPoint <- State.gets (fmap (^. replContextEntryPoint) . (^. replStateContext))
+        case mentryPoint of
+          Just entryPoint -> do
+            loadEntryPoint entryPoint
+            let epPath :: FilePath = entryPoint ^. entryPointModulePaths . _head1
+            liftIO (putStrLn [i|OK reloaded: #{epPath}|])
+          Nothing -> noFileLoadedMsg
+
+      loadFile :: String -> Repl ()
+      loadFile args = do
+        mkEntryPoint <- State.gets (^. replStateMkEntryPoint)
+        let f = unpack (strip (pack args))
+            entryPoint = mkEntryPoint f
+        loadEntryPoint entryPoint
         liftIO (putStrLn [i|OK loaded: #{f}|])
 
       printRoot :: String -> Repl ()
@@ -180,6 +194,7 @@ runCommand opts = do
           (multilineCmd, Repline.dontCrash . \_ -> return ()),
           ("quit", quit),
           ("load", Repline.dontCrash . loadFile),
+          ("reload", Repline.dontCrash . reloadFile),
           ("root", printRoot),
           ("type", inferType),
           ("core", core)
