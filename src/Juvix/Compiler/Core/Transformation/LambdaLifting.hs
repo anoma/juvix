@@ -36,41 +36,41 @@ lambdaLiftNode aboveBl top =
         -- if snd is of the form λxλy... then fst is [x, y]
         captureFreeVars' :: Node -> Set Var -> Sem r ([Var], Node)
         captureFreeVars' n =
-          fmap (first reverse) . runOutputList . goCapture bl 0 0 n
+          fmap (first reverse) . runOutputList . goCapture bl 0 n
           where
             goCapture ::
               BinderList Binder ->
               Index ->
-              Index ->
               Node ->
               Set Var ->
               Sem (Output Var ': r) Node
-            goCapture ctx lastidx offset body' fv = case Set.minView fv of
+            goCapture ctx offset body' fv = case Set.minView fv of
               Nothing -> return body'
               Just (v, vs) -> do
                 let idx = v ^. varIndex
                     bi = BL.lookup' idx ctx
-                    -- the number of skipped binders
-                    skipped = idx + 1
-                    -- traceM ("k: " <> prettyText k)
-                    ctx' = BL.drop' skipped ctx
+                    -- the number of consumed binders
+                    consumed = idx + 1
+                    ctx' = BL.drop' consumed ctx
                 bi' <- traverseOf binderType (lambdaLiftNode ctx') bi
                 let freevarsbi' = freeVarsSorted (bi' ^. binderType)
+                    -- shifting existing stack of variables so that they are
+                    -- realtive to ctx'
                     vs' :: Set Var
-                    vs' = Set.mapMonotonic (over varIndex (\y -> y - skipped)) vs
+                    vs' = Set.mapMonotonic (over varIndex (\y -> y - consumed)) vs
                 output (shiftVar offset v)
                 goCapture
                   ctx'
-                  idx
-                  (offset + skipped)
-                  (mkLambdaB bi' (shift (-skipped + 1) body'))
+                  (offset + consumed)
+                  -- shift only the body so that its indices are relatie to ctx'.
+                  -- the +1 is needed because we are under a new lambda.
+                  (mkLambdaB bi' (shift (-consumed + 1) body'))
                   (freevarsbi' <> vs')
 
         goLambda :: Lambda -> Sem r Recur
         goLambda lm = do
           l' <- lambdaLiftNode (BL.extend (lm ^. lambdaBinder) bl) (NLam lm)
           let freevars = freeVarsSorted l'
-          -- forM_ freevars $ \fv -> traceM (ppTrace (NVar fv))
           (allfreevars, fBody') <- captureFreeVars' l' freevars
           let freevarsAssocs :: Map Index Binder
               freevarsAssocs = Map.fromList [(i, BL.lookup' i bl) | i <- map (^. varIndex) allfreevars]
