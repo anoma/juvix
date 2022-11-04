@@ -88,7 +88,7 @@ void *palloc(size_t n) {
             if (__builtin_wasm_memory_grow(0, delta) == (size_t)-1) {
                 error_exit_msg("error: out of memory");
             }
-            heap_size += delta;
+            heap_size += delta << WASM_PAGE_SIZE_LOG2;
             ASSERT((uintptr_t)heap_end <= heap_size);
         }
         heap_pages_num =
