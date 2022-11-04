@@ -31,6 +31,7 @@ void pfree(void *ptr, size_t n) {
 #elif defined(ARCH_WASM32)
 
 #define WASM_PAGE_SIZE_LOG2 16U
+#define WASM_PAGE_SIZE (1U << WASM_PAGE_SIZE_LOG2)
 
 STATIC_ASSERT(PAGE_SIZE_LOG2 >= WASM_PAGE_SIZE_LOG2);
 
@@ -81,11 +82,22 @@ void *palloc(size_t n) {
     if (heap_end == NULL) {
         // first-time allocation
         heap_end = palign(&__heap_base, PAGE_SIZE);
+        if (heap_size < (uintptr_t)heap_end) {
+            size_t delta = ((uintptr_t)heap_end - heap_size + WASM_PAGE_SIZE) >>
+                           WASM_PAGE_SIZE_LOG2;
+            if (__builtin_wasm_memory_grow(0, delta) == (size_t)-1) {
+                error_exit_msg("error: out of memory");
+            }
+            heap_size += delta;
+            ASSERT((uintptr_t)heap_end <= heap_size);
+        }
         heap_pages_num =
             (heap_size - (uintptr_t)heap_end) >> WASM_PAGE_SIZE_LOG2;
     }
     if (heap_size - (uintptr_t)heap_end < (n << WASM_PAGE_SIZE_LOG2)) {
-        size_t delta = max(opt_heap_grow_pages, max(n, heap_pages_num / 2));
+        size_t delta =
+            max(opt_heap_grow_pages << (PAGE_SIZE_LOG2 - WASM_PAGE_SIZE_LOG2),
+                max(n, heap_pages_num / 2));
         ASSERT(delta != 0);
         if (__builtin_wasm_memory_grow(0, delta) == (size_t)-1) {
             error_exit_msg("error: out of memory");
