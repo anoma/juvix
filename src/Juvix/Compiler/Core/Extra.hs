@@ -10,6 +10,7 @@ module Juvix.Compiler.Core.Extra
 where
 
 import Data.HashSet qualified as HashSet
+import Data.HashMap.Strict qualified as HashMap
 import Data.Set qualified as Set
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra.Base
@@ -78,6 +79,27 @@ _NLam f = \case
 -- | Fold over all of the transitive descendants of a Node, including itself.
 cosmos :: SimpleFold Node Node
 cosmos f = ufoldA reassemble f
+
+-- | The list should not contain repeated indices.
+-- if fv = x1, x2, .., xn
+-- the result is of the form λx1 λx2 .. λ xn b
+captureFreeVars :: [(Index, Binder)] -> Node -> Node
+captureFreeVars fv
+  | n == 0 = id
+  | otherwise = mkLambdasB infos . mapFreeVars
+  where
+    (indices, infos) = unzip fv
+    n = length fv
+    s :: HashMap Index Index
+    s = HashMap.fromList (zip (reverse indices) [0 ..])
+    mapFreeVars :: Node -> Node
+    mapFreeVars = dmapN go
+      where
+        go :: Index -> Node -> Node
+        go k = \case
+          NVar (Var i u)
+            | Just v <- s ^. at (u - k) -> NVar (Var i (v + k))
+          m -> m
 
 -- | subst for multiple bindings
 substs :: [Node] -> Node -> Node

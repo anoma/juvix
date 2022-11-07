@@ -12,16 +12,18 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
-
 -- | all free variables, including those appearing in binders of other free variables
 freeVarsAll :: BinderList Binder -> Node -> [(Var, Binder)]
-freeVarsAll ctx = fst . captureFreeVars ctx
+freeVarsAll ctx = fst . captureFreeVars2 ctx
+
+freeVarsAll' :: BinderList Binder -> Node -> [Var]
+freeVarsAll' ctx = map fst . freeVarsAll ctx
 
 -- captures all free variables of a node. It also returns the list of captured
 -- variables in left-to-right order: if snd is of the form λxλy... then fst is
 -- [x, y]
-captureFreeVars :: BinderList Binder -> Node -> ([(Var, Binder)], Node)
-captureFreeVars bl n =
+captureFreeVars2 :: BinderList Binder -> Node -> ([(Var, Binder)], Node)
+captureFreeVars2 bl n =
   first (BL.lookupsSorted bl . reverse) . run . runOutputList $ goCapture bl 0 n (freeVarsSorted n)
   where
     goCapture ::
@@ -54,6 +56,8 @@ captureFreeVars bl n =
           (mkLambdaB bi (shift (-consumed + 1) body'))
           (freevarsbi' <> vs')
 
+lambdaLiftBinder :: Member InfoTableBuilder r => BinderList Binder -> Binder -> Sem r Binder
+lambdaLiftBinder bl = traverseOf binderType (lambdaLiftNode bl)
 
 lambdaLiftNode :: forall r. Member InfoTableBuilder r => BinderList Binder -> Node -> Sem r Node
 lambdaLiftNode aboveBl top =
@@ -75,8 +79,9 @@ lambdaLiftNode aboveBl top =
       where
         goLambda :: Lambda -> Sem r Recur
         goLambda lm = do
-          l' <- lambdaLiftNode (BL.cons (lm ^. lambdaBinder) bl) (NLam lm)
-          let (freevarsAssocs, fBody') = captureFreeVars bl l'
+          bi' <- lambdaLiftBinder bl (lm ^. lambdaBinder)
+          l' <- lambdaLiftNode (BL.cons bi' bl) (NLam lm)
+          let (freevarsAssocs, fBody') = captureFreeVars2 bl l'
               allfreevars :: [Var]
               allfreevars = map fst freevarsAssocs
               argsInfo :: [ArgumentInfo]
@@ -101,24 +106,21 @@ lambdaLiftNode aboveBl top =
               defs = toList (letr ^.. letRecValues . each . letItemValue)
               ndefs :: Int
               ndefs = length defs
-              letRecBinders :: [Binder]
-              letRecBinders = letr ^.. letRecValues . each . letItemBinder
-              bl' :: BinderList Binder
-              bl' = BL.prepend letRecBinders bl
+          letRecBinders' :: [Binder] <- mapM (lambdaLiftBinder bl) (letr ^.. letRecValues . each . letItemBinder)
+          let bl' :: BinderList Binder
+              -- the reverse is necessary because the last item in letRecBinders has index 0
+              bl' = BL.prepend (reverse letRecBinders') bl
           topSyms :: [Symbol] <- forM defs (const freshSymbol)
-          let
 
-              -- recItemsFreeVars :: [(Var, Binder)]
-              -- recItemsFreeVars = mapMaybe helper (toList (mconcatMap freeVarsSet defs))
-              --   where
-              --     -- free vars in each let
-              --     -- throw away variables bound in the letrec and shift others
-              --     helper :: Var -> Maybe (Var, Binder)
-              --     helper v
-              --       | v ^. varIndex < ndefs = Nothing
-              --       | otherwise = Just (set varIndex idx' v, BL.lookup idx' bl)
-              --       where
-              --         idx' = (v ^. varIndex) - ndefs
+          let recItemsFreeVars :: [(Var, Binder)]
+              recItemsFreeVars = mapMaybe helper (concatMap (freeVarsAll' bl') defs)
+                where
+                  helper :: Var -> Maybe (Var, Binder)
+                  helper v
+                    | v ^. varIndex < ndefs = Nothing
+                    | otherwise = Just (set varIndex idx' v, BL.lookup idx' bl)
+                    where
+                      idx' = (v ^. varIndex) - ndefs
 
               subsCalls :: Node -> Node
               subsCalls =
@@ -138,8 +140,8 @@ lambdaLiftNode aboveBl top =
               declareTopSyms =
                 sequence_
                   [ do
-                      (_, topBody) <- captureFreeVars (map (first (^. varIndex)) recItemsFreeVars) b
-                      let argsInfo :: [ArgumentInfo]
+                      let topBody = captureFreeVars (map (first (^. varIndex)) recItemsFreeVars) b
+                          argsInfo :: [ArgumentInfo]
                           argsInfo = map (argumentInfoFromBinder . snd) recItemsFreeVars
                       registerIdentNode sym topBody
                       registerIdent
@@ -151,7 +153,7 @@ lambdaLiftNode aboveBl top =
                             _identifierArgsInfo = argsInfo,
                             _identifierIsExported = False
                           }
-                    | (sym, (itemBinder, b)) <- zipExact topSyms (zipExact letRecBinders liftedDefs)
+                    | (sym, (itemBinder, b)) <- zipExact topSyms (zipExact letRecBinders' liftedDefs)
                   ]
               letItems :: [Node]
               letItems =

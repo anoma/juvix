@@ -84,7 +84,7 @@ lookup idx bl
         )
 
 -- | lookup de Bruijn Level
-lookupLevel :: Index -> BinderList a -> a
+lookupLevel :: Level -> BinderList a -> a
 lookupLevel idx bl
   | target < bl ^. blLength = (bl ^. blMap) !! target
   | otherwise = err
@@ -102,7 +102,10 @@ lookupLevel idx bl
         )
 
 instance Semigroup (BinderList a) where
-  a <> b = prepend (toList a) b
+  (BinderList la ta) <> (BinderList lb tb) = BinderList {
+    _blLength = la + lb,
+    _blMap = ta <> tb
+    }
 
 instance Monoid (BinderList a) where
   mempty =
@@ -111,12 +114,13 @@ instance Monoid (BinderList a) where
         _blMap = mempty
       }
 
-cons :: a -> BinderList a -> BinderList a
-cons a (BinderList l m) = BinderList (l + 1) (a : m)
-
 instance Functor BinderList where
   fmap :: (a -> b) -> BinderList a -> BinderList b
   fmap f = over blMap (fmap f)
 
+cons :: a -> BinderList a -> BinderList a
+cons a (BinderList l m) = BinderList (l + 1) (a : m)
+
+-- | prepend [a,b] [c,d] = [a,b,c,d]
 prepend :: [a] -> BinderList a -> BinderList a
-prepend l bl = foldr cons bl l
+prepend l bl = fromList l <> bl
