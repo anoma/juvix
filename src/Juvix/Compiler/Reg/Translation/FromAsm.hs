@@ -55,25 +55,26 @@ fromAsmFun ::
   Asm.FunctionInfo ->
   Code
 fromAsmFun tab fi =
-  case run $ runError $ Asm.recurseFun sig fi of
+  case run $ runError $ snd <$> Asm.recurseS sig Asm.initialStackInfo (fi ^. Asm.functionCode) of
     Left err -> error (show err)
     Right code -> code
   where
-    sig :: Asm.RecursorSig Asm.Memory (Error Asm.AsmError ': r) Instruction
+    sig :: Asm.RecursorSig Asm.StackInfo (Error Asm.AsmError ': r) Instruction
     sig =
       Asm.RecursorSig
         { _recursorInfoTable = tab,
-          _recurseInstr = fromAsmInstr tab,
+          _recurseInstr = fromAsmInstr fi tab,
           _recurseBranch = fromAsmBranch,
           _recurseCase = fromAsmCase tab
         }
 
 fromAsmInstr ::
+  Asm.FunctionInfo ->
   Asm.InfoTable ->
-  Asm.Memory ->
+  Asm.StackInfo ->
   Asm.CmdInstr ->
   Sem r Instruction
-fromAsmInstr tab mem Asm.CmdInstr {..} =
+fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
   case _cmdInstrInstruction of
     Asm.Binop op -> return $ mkBinop (mkOpcode op)
     Asm.Push val -> return $ mkAssign (VarRef VarGroupStack (n + 1)) (mkValue val)
@@ -81,7 +82,7 @@ fromAsmInstr tab mem Asm.CmdInstr {..} =
     Asm.PushTemp ->
       return $
         mkAssign
-          (VarRef VarGroupTemp (Asm.tempStackHeight mem))
+          (VarRef VarGroupTemp (si ^. Asm.stackInfoTempStackHeight))
           (VRef $ VarRef VarGroupStack n)
     Asm.PopTemp -> return Nop
     Asm.Trace -> return $ Trace $ InstrTrace (VRef $ VarRef VarGroupStack n)
@@ -99,15 +100,15 @@ fromAsmInstr tab mem Asm.CmdInstr {..} =
     -- `n` is the index of the top of the value stack *before* executing the
     -- instruction
     n :: Int
-    n = Asm.valueStackHeight mem - 1
+    n = si ^. Asm.stackInfoValueStackHeight - 1
 
     -- Live variables *after* executing the instruction. TODO: proper liveness
     -- analysis in JuvixAsm.
     liveVars :: Int -> [VarRef]
     liveVars k =
       map (VarRef VarGroupStack) [0 .. n - k]
-        ++ map (VarRef VarGroupTemp) [0 .. Asm.tempStackHeight mem]
-        ++ map (VarRef VarGroupArgs) [0 .. (mem ^. Asm.memoryArgsNum)]
+        ++ map (VarRef VarGroupTemp) [0 .. si ^. Asm.stackInfoTempStackHeight]
+        ++ map (VarRef VarGroupArgs) [0 .. (funInfo ^. Asm.functionArgsNum)]
 
     getArgs :: Int -> Int -> [Value]
     getArgs s k = map (\i -> VRef $ VarRef VarGroupStack (n - i)) [s .. (s + k - 1)]
@@ -229,32 +230,32 @@ fromAsmInstr tab mem Asm.CmdInstr {..} =
           }
 
 fromAsmBranch ::
-  Asm.Memory ->
+  Asm.StackInfo ->
   Asm.CmdBranch ->
   Code ->
   Code ->
   Sem r Instruction
-fromAsmBranch mem Asm.CmdBranch {} codeTrue codeFalse =
+fromAsmBranch si Asm.CmdBranch {} codeTrue codeFalse =
   return $
     Branch $
       InstrBranch
-        { _instrBranchValue = VRef $ VarRef VarGroupStack (Asm.valueStackHeight mem - 1),
+        { _instrBranchValue = VRef $ VarRef VarGroupStack (si ^. Asm.stackInfoValueStackHeight - 1),
           _instrBranchTrue = codeTrue,
           _instrBranchFalse = codeFalse
         }
 
 fromAsmCase ::
   Asm.InfoTable ->
-  Asm.Memory ->
+  Asm.StackInfo ->
   Asm.CmdCase ->
   [Code] ->
   Maybe Code ->
   Sem r Instruction
-fromAsmCase tab mem Asm.CmdCase {..} brs def =
+fromAsmCase tab si Asm.CmdCase {..} brs def =
   return $
     Case $
       InstrCase
-        { _instrCaseValue = VRef $ VarRef VarGroupStack (Asm.valueStackHeight mem - 1),
+        { _instrCaseValue = VRef $ VarRef VarGroupStack (si ^. Asm.stackInfoValueStackHeight - 1),
           _instrCaseInductive = _cmdCaseInductive,
           _instrCaseIndRep = ii ^. inductiveRepresentation,
           _instrCaseBranches =
