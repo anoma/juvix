@@ -9,9 +9,10 @@ module Juvix.Compiler.Core.Extra
   )
 where
 
-import Data.HashSet qualified as HashSet
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Data.Set qualified as Set
+import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Equality
@@ -100,6 +101,44 @@ captureFreeVars fv
           NVar (Var i u)
             | Just v <- s ^. at (u - k) -> NVar (Var i (v + k))
           m -> m
+
+-- captures all free variables of a node. It also returns the list of captured
+-- variables in left-to-right order: if snd is of the form λxλy... then fst is
+-- [x, y]
+captureFreeVarsCtx :: BinderList Binder -> Node -> ([(Var, Binder)], Node)
+captureFreeVarsCtx bl n =
+  let assocs = freeVarsCtx bl n
+   in (assocs, captureFreeVars (map (first (^. varIndex)) assocs) n)
+
+freeVarsCtx' :: BinderList Binder -> Node -> [Var]
+freeVarsCtx' bl = map fst . freeVarsCtx bl
+
+-- | the output list does not contain repeated elements and is sorted by variable index.
+-- TODO it can probably be fore efficient
+freeVarsCtx :: BinderList Binder -> Node -> [(Var, Binder)]
+freeVarsCtx bl n =
+  (BL.lookupsSorted bl . reverse) . run . fmap fst . runOutputList $ goCapture bl 0 (freeVarsSorted n)
+  where
+    goCapture ::
+      BinderList Binder ->
+      Index ->
+      Set Var ->
+      Sem '[Output Var] ()
+    goCapture ctx offset fv = case Set.minView fv of
+      Nothing -> return ()
+      Just (v, vs) -> do
+        let idx = v ^. varIndex
+            bi = BL.lookup idx ctx
+            -- the number of consumed binders
+            consumed = idx + 1
+            ctx' = BL.drop' consumed ctx
+        let freevarsbi' = freeVarsSorted (bi ^. binderType)
+            -- shifting existing stack of variables so that they are
+            -- realtive to ctx'
+            vs' :: Set Var
+            vs' = Set.mapMonotonic (over varIndex (\y -> y - consumed)) vs
+        output (shiftVar offset v)
+        goCapture ctx' (offset + consumed) (freevarsbi' <> vs')
 
 -- | subst for multiple bindings
 substs :: [Node] -> Node -> Node

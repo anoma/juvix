@@ -4,55 +4,11 @@ module Juvix.Compiler.Core.Transformation.LambdaLifting
   )
 where
 
-import Data.Set qualified as Set
-import Juvix.Compiler.Core.Data.BinderList (BinderList)
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
-
--- | all free variables, including those appearing in binders of other free variables
-freeVarsAll :: BinderList Binder -> Node -> [(Var, Binder)]
-freeVarsAll ctx = fst . captureFreeVars2 ctx
-
-freeVarsAll' :: BinderList Binder -> Node -> [Var]
-freeVarsAll' ctx = map fst . freeVarsAll ctx
-
--- captures all free variables of a node. It also returns the list of captured
--- variables in left-to-right order: if snd is of the form λxλy... then fst is
--- [x, y]
-captureFreeVars2 :: BinderList Binder -> Node -> ([(Var, Binder)], Node)
-captureFreeVars2 bl n =
-  first (BL.lookupsSorted bl . reverse) . run . runOutputList $ goCapture bl 0 n (freeVarsSorted n)
-  where
-    goCapture ::
-      BinderList Binder ->
-      Index ->
-      Node ->
-      Set Var ->
-      Sem '[Output Var] Node
-    goCapture ctx offset body' fv = case Set.minView fv of
-      Nothing -> return body'
-      Just (v, vs) -> do
-        let idx = v ^. varIndex
-            bi = BL.lookup idx ctx
-            -- the number of consumed binders
-            consumed = idx + 1
-            ctx' = BL.drop' consumed ctx
-        let freevarsbi' = freeVarsSorted (bi ^. binderType)
-            -- shifting existing stack of variables so that they are
-            -- realtive to ctx'
-            vs' :: Set Var
-            vs' = Set.mapMonotonic (over varIndex (\y -> y - consumed)) vs
-        output (shiftVar offset v)
-        goCapture
-          ctx'
-          (offset + consumed)
-          -- shift only the body so that its indices are relatie to ctx'.
-          -- the +1 is needed because we are under a new lambda.
-          (mkLambdaB bi (shift (-consumed + 1) body'))
-          (freevarsbi' <> vs')
 
 lambdaLiftBinder :: Member InfoTableBuilder r => BinderList Binder -> Binder -> Sem r Binder
 lambdaLiftBinder bl = traverseOf binderType (lambdaLiftNode bl)
@@ -79,7 +35,7 @@ lambdaLiftNode aboveBl top =
         goLambda lm = do
           bi' <- lambdaLiftBinder bl (lm ^. lambdaBinder)
           l' <- lambdaLiftNode (BL.cons bi' bl) (NLam lm)
-          let (freevarsAssocs, fBody') = captureFreeVars2 bl l'
+          let (freevarsAssocs, fBody') = captureFreeVarsCtx bl l'
               allfreevars :: [Var]
               allfreevars = map fst freevarsAssocs
               argsInfo :: [ArgumentInfo]
@@ -111,7 +67,7 @@ lambdaLiftNode aboveBl top =
           topSyms :: [Symbol] <- forM defs (const freshSymbol)
 
           let recItemsFreeVars :: [(Var, Binder)]
-              recItemsFreeVars = mapMaybe helper (concatMap (freeVarsAll' bl') defs)
+              recItemsFreeVars = mapMaybe helper (concatMap (freeVarsCtx' bl') defs)
                 where
                   helper :: Var -> Maybe (Var, Binder)
                   helper v

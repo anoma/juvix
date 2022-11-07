@@ -1,6 +1,6 @@
 module Juvix.Compiler.Core.Data.BinderList where
 
-import Juvix.Compiler.Core.Language hiding (uncons, cons, lookup)
+import Juvix.Compiler.Core.Language hiding (cons, lookup, uncons)
 import Juvix.Prelude qualified as Prelude
 
 -- | if we have \x\y. b, the binderlist in b is [y, x]
@@ -50,20 +50,20 @@ lookupsSorted :: BinderList a -> [Var' i] -> [(Var' i, a)]
 lookupsSorted bl = reverse . lookupsSortedRev bl
 
 -- | efficient multiple lookups. The input list needs to be in non-decreasing order.
--- | The result is in reversed order
+-- | The result is in reversed order (non-increasing order)
 lookupsSortedRev :: BinderList a -> [Var' i] -> [(Var' i, a)]
 lookupsSortedRev bl = go [] 0 bl
   where
-  go :: [(Var' i, a)] -> Index -> BinderList a -> [Var' i] -> [(Var' i, a)]
-  go acc off ctx = \case
-    [] -> acc
-    (v : vs) ->
-      let consumed = v ^. varIndex - off
-          ctx' = drop' consumed ctx
-          off' = off + consumed
-      in go ((v, head' ctx') : acc) off' ctx' vs
-  head' :: BinderList a -> a
-  head' = lookup 0
+    go :: [(Var' i, a)] -> Index -> BinderList a -> [Var' i] -> [(Var' i, a)]
+    go acc off ctx = \case
+      [] -> acc
+      (v : vs) ->
+        let consumed = v ^. varIndex - off
+            ctx' = drop' consumed ctx
+            off' = off + consumed
+         in go ((v, head' ctx') : acc) off' ctx' vs
+    head' :: BinderList a -> a
+    head' = lookup 0
 
 -- | lookup de Bruijn Index
 lookup :: Index -> BinderList a -> a
@@ -102,10 +102,11 @@ lookupLevel idx bl
         )
 
 instance Semigroup (BinderList a) where
-  (BinderList la ta) <> (BinderList lb tb) = BinderList {
-    _blLength = la + lb,
-    _blMap = ta <> tb
-    }
+  (BinderList la ta) <> (BinderList lb tb) =
+    BinderList
+      { _blLength = la + lb,
+        _blMap = ta <> tb
+      }
 
 instance Monoid (BinderList a) where
   mempty =
@@ -129,7 +130,8 @@ prepend l bl = fromList l <> bl
 -- more efficient than 'prepend' since it is tail recursive.
 -- One example use case is prepending a list of binders in a letrec.
 prependRev :: [a] -> BinderList a -> BinderList a
-prependRev l (BinderList s m) = BinderList {
-  _blLength = length l + s,
-  _blMap = foldl' (flip (:)) m l
-  }
+prependRev l (BinderList s m) =
+  BinderList
+    { _blLength = length l + s,
+      _blMap = foldl' (flip (:)) m l
+    }

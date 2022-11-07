@@ -1,6 +1,11 @@
-module Juvix.Compiler.Core.Extra.Base where
+module Juvix.Compiler.Core.Extra.Base
+  ( module Juvix.Compiler.Core.Extra.Base,
+    module Juvix.Compiler.Core.Data.BinderList,
+  )
+where
 
 import Data.Functor.Identity
+import Juvix.Compiler.Core.Data.BinderList (BinderList)
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Language
 import Polysemy.Input

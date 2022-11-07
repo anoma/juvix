@@ -10,6 +10,7 @@ module Juvix.Prelude.Base
     module Data.Map.Strict,
     module Data.Set,
     module Data.IntMap.Strict,
+    module Data.IntSet,
     module Control.Monad.Extra,
     module Control.Monad.Fix,
     module Data.Bitraversable,
@@ -97,6 +98,7 @@ import Data.HashSet qualified as HashSet
 import Data.Hashable
 import Data.Int
 import Data.IntMap.Strict (IntMap)
+import Data.IntSet (IntSet)
 import Data.List.Extra hiding (groupSortOn, head, last, mconcatMap)
 import Data.List.Extra qualified as List
 import Data.List.NonEmpty qualified as NonEmpty
