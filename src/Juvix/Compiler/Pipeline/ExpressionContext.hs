@@ -49,7 +49,7 @@ moduleScope :: ExpressionContext -> C.TopModulePath -> Maybe S.Scope
 moduleScope e p = e ^. contextScoperResult ^?! Scoper.resultScope . at p
 
 mainModuleScope :: ExpressionContext -> S.Scope
-mainModuleScope e = fromJust (moduleScope e mainModulePath)
-  where
-    mainModulePath :: C.TopModulePath
-    mainModulePath = e ^. contextScoperResult . Scoper.mainModule . C.modulePath . S.nameConcrete
+mainModuleScope e = fromJust (moduleScope e (mainModuleTopPath e))
+
+mainModuleTopPath :: ExpressionContext -> C.TopModulePath
+mainModuleTopPath =  (^. contextScoperResult . Scoper.mainModule . C.modulePath . S.nameConcrete)

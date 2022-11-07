@@ -16,7 +16,7 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
-import Juvix.Compiler.Core.Translation.FromInternal.Data as Core
+import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Data.Error.GenericError qualified as Error
@@ -208,7 +208,11 @@ runCommand opts = do
       banner :: MultiLine -> Repl String
       banner = \case
         MultiLine -> return "... "
-        SingleLine -> return "juvix> "
+        SingleLine -> do
+          mctx <- State.gets (fmap (^. replContextExpContext) . (^. replStateContext))
+          case mctx of
+            Just ctx -> return [i|#{unpack (P.prettyText (mainModuleTopPath ctx))}> |]
+            Nothing -> return "juvix> "
 
       prefix :: Maybe Char
       prefix = Just ':'
