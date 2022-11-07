@@ -7,6 +7,7 @@ import Juvix.Compiler.Asm.Error
 import Juvix.Compiler.Asm.Extra
 import Juvix.Compiler.Asm.Interpreter
 import Juvix.Compiler.Asm.Pretty
+import Juvix.Compiler.Asm.Transformation.Validate
 import Juvix.Compiler.Asm.Translation.FromSource
 import Juvix.Data.PPOutput
 import System.IO.Extra (withTempDir)
@@ -19,7 +20,7 @@ asmRunAssertion mainFile expectedFile step = do
     Left err -> assertFailure (show (pretty err))
     Right tab -> do
       step "Validate"
-      case validate tab of
+      case validate' tab of
         Just err -> assertFailure (show (pretty err))
         Nothing ->
           case tab ^. infoMainFunction of
@@ -54,7 +55,7 @@ asmRunErrorAssertion mainFile step = do
     Left _ -> assertBool "" True
     Right tab -> do
       step "Validate"
-      case validate tab of
+      case validate' tab of
         Just _ -> assertBool "" True
         Nothing ->
           case tab ^. infoMainFunction of

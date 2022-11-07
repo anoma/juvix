@@ -113,6 +113,8 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
       Failure -> do
         v <- topValueStack
         runtimeError $ mappend "failure: " (printVal v)
+      Prealloc {} ->
+        goCode cont
       AllocConstr tag -> do
         let ci = getConstrInfo infoTable tag
         args <- replicateM (ci ^. constructorArgsNum) popValueStack

@@ -7,6 +7,7 @@ import Juvix.Compiler.Asm.Error qualified as Asm
 import Juvix.Compiler.Asm.Extra qualified as Asm
 import Juvix.Compiler.Asm.Interpreter qualified as Asm
 import Juvix.Compiler.Asm.Pretty qualified as Asm
+import Juvix.Compiler.Asm.Transformation.Validate qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 
 runCommand :: forall r. Members '[Embed IO, App] r => AsmRunOptions -> Sem r ()
@@ -15,7 +16,7 @@ runCommand opts = do
   case Asm.runParser file s of
     Left err -> exitJuvixError (JuvixError err)
     Right tab ->
-      let v = if opts ^. asmRunNoValidate then Nothing else Asm.validate tab
+      let v = if opts ^. asmRunNoValidate then Nothing else Asm.validate' tab
        in case v of
             Just err ->
               exitJuvixError (JuvixError err)

@@ -194,6 +194,7 @@ instance PrettyCode Instruction where
     Trace -> return $ pretty ("trace" :: String)
     Dump -> return $ pretty ("dump" :: String)
     Failure -> return $ pretty ("fail" :: String)
+    Prealloc {} -> return $ pretty ("prealloc" :: String)
     AllocConstr {} -> return $ pretty ("alloc" :: String)
     AllocClosure {} -> return $ pretty ("calloc" :: String)
     ExtendClosure {} -> return $ pretty ("cextend" :: String)

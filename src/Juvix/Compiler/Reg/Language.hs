@@ -42,6 +42,7 @@ data Instruction
   | Trace InstrTrace
   | Dump
   | Failure InstrFailure
+  | Prealloc InstrPrealloc
   | Alloc InstrAlloc
   | AllocClosure InstrAllocClosure
   | ExtendClosure InstrExtendClosure
@@ -83,27 +84,29 @@ newtype InstrFailure = InstrFailure
   { _instrFailure :: Value
   }
 
+data InstrPrealloc = InstrPrealloc
+  { _instrPreallocWordsNum :: Int,
+    _instrPreallocLiveVars :: [VarRef]
+  }
+
 data InstrAlloc = InstrAlloc
   { _instrAllocResult :: VarRef,
     _instrAllocTag :: Tag,
     _instrAllocMemRep :: MemRep,
-    _instrAllocArgs :: [Value],
-    _instrAllocLiveVars :: [VarRef]
+    _instrAllocArgs :: [Value]
   }
 
 data InstrAllocClosure = InstrAllocClosure
   { _instrAllocClosureResult :: VarRef,
     _instrAllocClosureSymbol :: Symbol,
     _instrAllocClosureExpectedArgsNum :: Int,
-    _instrAllocClosureArgs :: [Value],
-    _instrAllocClosureLiveVars :: [VarRef]
+    _instrAllocClosureArgs :: [Value]
   }
 
 data InstrExtendClosure = InstrExtendClosure
   { _instrExtendClosureResult :: VarRef,
     _instrExtendClosureValue :: VarRef,
-    _instrExtendClosureArgs :: [Value],
-    _instrExtendClosureLiveVars :: [VarRef]
+    _instrExtendClosureArgs :: [Value]
   }
 
 data CallType = CallFun Symbol | CallClosure VarRef

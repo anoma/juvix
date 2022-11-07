@@ -32,3 +32,11 @@ isFinalInstr = \case
   TailCallClosures {} -> True
   Failure -> True
   _ -> False
+
+getConstrSize :: MemRep -> Int -> Int
+getConstrSize rep argsNum = case rep of
+  MemRepConstr -> 1 + argsNum
+  MemRepTag -> 0
+  MemRepTuple -> argsNum
+  MemRepUnit -> 0
+  MemRepUnpacked {} -> 0

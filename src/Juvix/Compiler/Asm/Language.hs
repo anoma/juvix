@@ -35,7 +35,7 @@ data Value
 data MemValue
   = -- | A direct memory reference.
     DRef DirectRef
-  | -- | ConstrRef references is an indirect reference to a field (argument) of
+  | -- | ConstrRef is an indirect reference to a field (argument) of
     --  a constructor: field k holds the (k+1)th argument.
     ConstrRef Field
 
@@ -87,6 +87,9 @@ data Instruction
   | -- | Interrupt execution with a runtime error printing the value on top of
     -- the stack. JVA opcode: 'fail'.
     Failure
+  | -- | Preallocate memory. This instruction is inserted automatically before
+    -- translation to JuvixReg. It does not occur in JVA files.
+    Prealloc InstrPrealloc
   | -- | Allocate constructor data with a given tag. The n arguments (the number n
     -- determined by the constant tag) are popped from the stack and stored at
     -- increasing offsets (stack[0]: field 0, stack[1]: field 1, ...,
@@ -167,6 +170,11 @@ data Opcode
   | -- | Compare the two top stack cells with structural equality, pop the stack
     -- by two, and push the result. JVA opcode: 'eq'.
     ValEq
+
+newtype InstrPrealloc = InstrPrealloc
+  { -- | How many words to preallocate?
+    _preallocWordsNum :: Int
+  }
 
 data InstrAllocClosure = InstrAllocClosure
   { _allocClosureFunSymbol :: Symbol,
