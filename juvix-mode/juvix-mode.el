@@ -2,6 +2,7 @@
 (require 'juvix-highlight)
 (require 'juvix-input)
 (require 'flycheck-juvix)
+(require 'juvix-repl)
 
 (defgroup juvix nil
   "Major mode for Juvix files."
