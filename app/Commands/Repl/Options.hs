@@ -2,8 +2,10 @@ module Commands.Repl.Options where
 
 import CommonOptions
 
-newtype ReplOptions = ReplOptions
-  {_replInputFile :: Maybe Path}
+data ReplOptions = ReplOptions
+  { _replInputFile :: Maybe Path,
+    _replNoPrelude :: Bool
+  }
   deriving stock (Data)
 
 makeLenses ''ReplOptions
@@ -11,4 +13,9 @@ makeLenses ''ReplOptions
 parseRepl :: Parser ReplOptions
 parseRepl = do
   _replInputFile <- optional parseInputJuvixFile
+  _replNoPrelude <-
+    switch
+      ( long "no-prelude"
+          <> help "Do not load the Prelude module on launch"
+      )
   pure ReplOptions {..}

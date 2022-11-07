@@ -16,7 +16,7 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
-import Juvix.Compiler.Core.Translation.FromInternal.Data as Core
+import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Data.Error.GenericError qualified as Error
@@ -53,23 +53,17 @@ helpTxt =
   liftIO
     ( putStrLn
         [__i|
-  Type any expression to evaluate it in the context of the currently loaded module or use one of the following commands:
-  :help
-         Print help text and describe options
-  :load FILE
-         Load a file into the REPL
-  :type EXPRESSION
-         Infer the type of an expression
-  :core EXPRESSION
-         Translate the expression to JuvixCore
-  :idents
-         List the identifiers in the environment
-  :multiline
-         Start a multi-line input. Submit with <Ctrl-D>
-  :root
-         Print the current project root
-  :quit
-         Exit the REPL
+  EXPRESSION                Evaluate an expression in the context of the currently loaded module
+  :help                     Print help text and describe options
+  :load       FILE          Load a file into the REPL
+  :reload                   Reload the currently loaded file
+  :prelude                  Load the Prelude from the standard library
+  :type       EXPRESSION    Infer the type of an expression
+  :core       EXPRESSION    Translate the expression to JuvixCore
+  :multiline                Start a multi-line input. Submit with <Ctrl-D>
+  :root                     Print the current project root
+  :version                  Display the Juvix version
+  :quit                     Exit the REPL
   |]
     )
 
@@ -90,12 +84,9 @@ runCommand opts = do
       quit :: String -> Repl ()
       quit _ = liftIO (throwIO Interrupt)
 
-      loadFile :: String -> Repl ()
-      loadFile args = do
-        mkEntryPoint <- State.gets (^. replStateMkEntryPoint)
-        let f = unpack (strip (pack args))
-            entryPoint = mkEntryPoint f
-        (bs, res) <- liftIO (runIO' iniState entryPoint upToCore)
+      loadEntryPoint :: EntryPoint -> Repl ()
+      loadEntryPoint ep = do
+        (bs, res) <- liftIO (runIO' iniState ep upToCore)
         State.modify
           ( set
               replStateContext
@@ -103,17 +94,44 @@ runCommand opts = do
                   ( ReplContext
                       { _replContextBuiltins = bs,
                         _replContextExpContext = expressionContext res,
-                        _replContextEntryPoint = entryPoint
+                        _replContextEntryPoint = ep
                       }
                   )
               )
           )
+
+      reloadFile :: String -> Repl ()
+      reloadFile _ = do
+        mentryPoint <- State.gets (fmap (^. replContextEntryPoint) . (^. replStateContext))
+        case mentryPoint of
+          Just entryPoint -> do
+            loadEntryPoint entryPoint
+            let epPath :: FilePath = entryPoint ^. entryPointModulePaths . _head1
+            liftIO (putStrLn [i|OK reloaded: #{epPath}|])
+          Nothing -> noFileLoadedMsg
+
+      loadFile :: String -> Repl ()
+      loadFile args = do
+        mkEntryPoint <- State.gets (^. replStateMkEntryPoint)
+        let f = unpack (strip (pack args))
+            entryPoint = mkEntryPoint f
+        loadEntryPoint entryPoint
         liftIO (putStrLn [i|OK loaded: #{f}|])
+
+      loadPrelude :: Repl ()
+      loadPrelude = do
+        mStdlibPath <- State.gets (^. replStateGlobalOptions . globalStdlibPath)
+        r <- State.gets (^. replStateRoot)
+        let stdlibDir = fromMaybe (defaultStdlibPath r) mStdlibPath
+        loadFile (stdlibDir </> "Stdlib" </> "Prelude.juvix")
 
       printRoot :: String -> Repl ()
       printRoot _ = do
         r <- State.gets (^. replStateRoot)
         liftIO $ putStrLn (pack r)
+
+      displayVersion :: String -> Repl ()
+      displayVersion _ = liftIO (putStrLn versionTag)
 
       command :: String -> Repl ()
       command input = Repline.dontCrash $ do
@@ -180,8 +198,11 @@ runCommand opts = do
           (multilineCmd, Repline.dontCrash . \_ -> return ()),
           ("quit", quit),
           ("load", Repline.dontCrash . loadFile),
+          ("reload", Repline.dontCrash . reloadFile),
+          ("prelude", Repline.dontCrash . const loadPrelude),
           ("root", printRoot),
           ("type", inferType),
+          ("version", displayVersion),
           ("core", core)
         ]
 
@@ -196,7 +217,11 @@ runCommand opts = do
       banner :: MultiLine -> Repl String
       banner = \case
         MultiLine -> return "... "
-        SingleLine -> return "juvix> "
+        SingleLine -> do
+          mctx <- State.gets (fmap (^. replContextExpContext) . (^. replStateContext))
+          case mctx of
+            Just ctx -> return [i|#{unpack (P.prettyText (mainModuleTopPath ctx))}> |]
+            Nothing -> return "juvix> "
 
       prefix :: Maybe Char
       prefix = Just ':'
@@ -206,8 +231,11 @@ runCommand opts = do
 
       initialiser :: Repl ()
       initialiser = do
+        gopts <- State.gets (^. replStateGlobalOptions)
         welcomeMsg
-        whenJust ((^. pathPath) <$> (opts ^. replInputFile)) loadFile
+        unless
+          (opts ^. replNoPrelude || gopts ^. globalNoStdlib)
+          (maybe loadPrelude (loadFile . (^. pathPath)) (opts ^. replInputFile))
 
       finaliser :: Repl ExitDecision
       finaliser = return Exit

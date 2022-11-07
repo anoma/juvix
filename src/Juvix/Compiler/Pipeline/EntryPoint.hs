@@ -5,6 +5,7 @@ module Juvix.Compiler.Pipeline.EntryPoint
 where
 
 import Juvix.Compiler.Pipeline.Package
+import Juvix.Extra.Paths (juvixStdlibDir)
 import Juvix.Prelude
 
 -- | The head of _entryModulePaths is assumed to be the Main module
@@ -20,6 +21,9 @@ data EntryPoint = EntryPoint
     _entryPointModulePaths :: NonEmpty FilePath
   }
   deriving stock (Eq, Show)
+
+defaultStdlibPath :: FilePath -> FilePath
+defaultStdlibPath root = root </> juvixStdlibDir
 
 defaultEntryPoint :: FilePath -> EntryPoint
 defaultEntryPoint mainFile =

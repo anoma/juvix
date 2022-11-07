@@ -1,7 +1,6 @@
 module Juvix.Compiler.Pipeline.Setup where
 
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Extra.Paths
 import Juvix.Prelude
 
 entrySetup ::
@@ -19,7 +18,7 @@ setupStdlib = do
   e <- ask
   stdlibRootPath <- case e ^. entryPointStdlibPath of
     Nothing -> do
-      let d = (e ^. entryPointRoot) </> juvixStdlibDir
+      let d = defaultStdlibPath (e ^. entryPointRoot)
       updateStdlib d
       return d
     Just p -> return p
