@@ -40,8 +40,6 @@ captureFreeVars2 bl n =
             -- the number of consumed binders
             consumed = idx + 1
             ctx' = BL.drop' consumed ctx
-        -- TODO is bi lifted already ?
-        unless (nodeIsLifted (bi ^. binderType)) impossible
         let freevarsbi' = freeVarsSorted (bi ^. binderType)
             -- shifting existing stack of variables so that they are
             -- realtive to ctx'
