@@ -124,3 +124,12 @@ cons a (BinderList l m) = BinderList (l + 1) (a : m)
 -- | prepend [a,b] [c,d] = [a,b,c,d]
 prepend :: [a] -> BinderList a -> BinderList a
 prepend l bl = fromList l <> bl
+
+-- | prependRev [a,b] [c,d] = [b,a,c,d]
+-- more efficient than 'prepend' since it is tail recursive.
+-- One example use case is prepending a list of binders in a letrec.
+prependRev :: [a] -> BinderList a -> BinderList a
+prependRev l (BinderList s m) = BinderList {
+  _blLength = length l + s,
+  _blMap = foldl' (flip (:)) m l
+  }
