@@ -53,23 +53,16 @@ helpTxt =
   liftIO
     ( putStrLn
         [__i|
-  Type any expression to evaluate it in the context of the currently loaded module or use one of the following commands:
-  :help
-         Print help text and describe options
-  :load FILE
-         Load a file into the REPL
-  :reload
-         Reload the currently loaded file
-  :type EXPRESSION
-         Infer the type of an expression
-  :core EXPRESSION
-         Translate the expression to JuvixCore
-  :multiline
-         Start a multi-line input. Submit with <Ctrl-D>
-  :root
-         Print the current project root
-  :quit
-         Exit the REPL
+  EXPRESSION                Evaluate an expression in the context of the currently loaded module
+  :help                     Print help text and describe options
+  :load       FILE          Load a file into the REPL
+  :reload                   Reload the currently loaded file
+  :type       EXPRESSION    Infer the type of an expression
+  :core       EXPRESSION    Translate the expression to JuvixCore
+  :multiline                Start a multi-line input. Submit with <Ctrl-D>
+  :root                     Print the current project root
+  :version                  Display the Juvix version
+  :quit                     Exit the REPL
   |]
     )
 
@@ -128,6 +121,9 @@ runCommand opts = do
       printRoot _ = do
         r <- State.gets (^. replStateRoot)
         liftIO $ putStrLn (pack r)
+
+      displayVersion :: String -> Repl ()
+      displayVersion _ = liftIO (putStrLn versionTag)
 
       command :: String -> Repl ()
       command input = Repline.dontCrash $ do
@@ -197,6 +193,7 @@ runCommand opts = do
           ("reload", Repline.dontCrash . reloadFile),
           ("root", printRoot),
           ("type", inferType),
+          ("version", displayVersion),
           ("core", core)
         ]
 
