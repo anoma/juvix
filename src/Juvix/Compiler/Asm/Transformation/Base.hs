@@ -19,3 +19,9 @@ liftFunctionTransformation :: Monad m => (FunctionInfo -> m FunctionInfo) -> Inf
 liftFunctionTransformation f tab = do
   fns <- mapM f (tab ^. infoFunctions)
   return tab {_infoFunctions = fns}
+
+runTransformation :: (InfoTable -> Sem '[Error AsmError] InfoTable) -> InfoTable -> Either AsmError InfoTable
+runTransformation trans tab =
+  case run $ runError $ trans tab of
+    Left err -> Left err
+    Right tab' -> Right tab'

@@ -19,7 +19,7 @@ testDescr PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ asmRunAssertion _file _expectedFile
+          _testAssertion = Steps $ asmRunAssertion _file _expectedFile return (const (return ()))
         }
 
 allTests :: TestTree

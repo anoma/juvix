@@ -370,17 +370,17 @@ recurseS' sig = go
                 stackInfoPopValueStack (_allocClosureArgsNum - 1) si
             ExtendClosure InstrExtendClosure {..} ->
               return $
-                stackInfoPopValueStack (_extendClosureArgsNum - 1) si
+                stackInfoPopValueStack _extendClosureArgsNum si
             Call x ->
               fixStackCall si x
             TailCall x ->
-              fixStackCall si x
+              fixStackCall (dropTempStack si) x
             CallClosures x ->
               fixStackCallClosures si x
             TailCallClosures x ->
-              fixStackCallClosures si x
+              fixStackCallClosures (dropTempStack si) x
             Return ->
-              return si
+              return (dropTempStack si)
 
         fixStackBinOp :: StackInfo -> Sem r StackInfo
         fixStackBinOp si = return $ stackInfoPopValueStack 1 si
@@ -439,6 +439,9 @@ recurseS' sig = go
 
     stackInfoPopTempStack :: Int -> StackInfo -> StackInfo
     stackInfoPopTempStack n si = si {_stackInfoTempStackHeight = si ^. stackInfoTempStackHeight - n}
+
+    dropTempStack :: StackInfo -> StackInfo
+    dropTempStack si = si {_stackInfoTempStackHeight = 0}
 
 -- | Fold signature. Contains read-only fold parameters.
 data FoldSig m r a = FoldSig
