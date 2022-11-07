@@ -6,7 +6,6 @@ module Juvix.Compiler.Asm.Transformation.Base
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Extra
 import Juvix.Compiler.Asm.Language
@@ -18,5 +17,5 @@ liftCodeTransformation f fi = do
 
 liftFunctionTransformation :: Monad m => (FunctionInfo -> m FunctionInfo) -> InfoTable -> m InfoTable
 liftFunctionTransformation f tab = do
-  lst <- mapM (secondM f) (HashMap.toList (tab ^. infoFunctions))
-  return tab {_infoFunctions = HashMap.fromList lst}
+  fns <- mapM f (tab ^. infoFunctions)
+  return tab {_infoFunctions = fns}
