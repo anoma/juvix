@@ -370,8 +370,11 @@ instance PrettyCode Stripped.InfoTable where
             return (kwDef <+> sym' <+> kwAssign <+> body')
 
 instance PrettyCode a => PrettyCode (NonEmpty a) where
+  ppCode x = ppCode (toList x)
+
+instance PrettyCode a => PrettyCode [a] where
   ppCode x = do
-    cs <- mapM ppCode (toList x)
+    cs <- mapM ppCode x
     return $ encloseSep "(" ")" ", " cs
 
 {--------------------------------------------------------------------------------}

@@ -75,6 +75,9 @@ instance Pretty BuiltinFunction where
 
 data BuiltinAxiom
   = BuiltinNatPrint
+  | BuiltinStringPrint
+  | BuiltinBoolPrint
+  | BuiltinString
   | BuiltinIO
   | BuiltinIOSequence
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
@@ -84,5 +87,8 @@ instance Hashable BuiltinAxiom
 instance Pretty BuiltinAxiom where
   pretty = \case
     BuiltinNatPrint -> Str.natPrint
+    BuiltinStringPrint -> Str.stringPrint
+    BuiltinBoolPrint -> Str.boolPrint
     BuiltinIO -> Str.io
+    BuiltinString -> Str.string
     BuiltinIOSequence -> Str.ioSequence

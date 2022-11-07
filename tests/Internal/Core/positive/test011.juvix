@@ -1,0 +1,17 @@
+module test011;
+
+open import Stdlib.Prelude public;
+
+open import Stdlib.Data.Nat.Ord public;
+
+fib' : Nat -> Nat -> Nat -> Nat;
+fib' zero x _ := x;
+fib' (suc n) x y := fib' n y (x + y);
+
+fib : Nat -> Nat;
+fib n := fib' n zero one;
+
+main : IO;
+main := printNatLn (fib nine);
+
+end;

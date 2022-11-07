@@ -15,9 +15,9 @@ runCommand HighlightOptions {..} = do
       genOpts <- askGenericOptions
       say (Highlight.goError (run $ runReader genOpts $ errorIntervals err))
     Right r -> do
-      let tbl = r ^. Scoper.resultParserTable
+      let tbl = r ^. _2 . Scoper.resultParserTable
           items = tbl ^. Parser.infoParsedItems
-          names = r ^. (Scoper.resultScoperTable . Scoper.infoNames)
+          names = r ^. _2 . (Scoper.resultScoperTable . Scoper.infoNames)
           inputFile = _highlightInputFile ^. pathPath
           hinput =
             Highlight.filterInput

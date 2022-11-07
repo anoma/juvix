@@ -4,6 +4,7 @@ module Juvix.Compiler.Internal.Translation.FromAbstract
     TranslationState,
     iniState,
     fromAbstract,
+    fromAbstractExpression,
   )
 where
 
@@ -69,6 +70,11 @@ fromAbstract abstractResults = do
         ^. Abstract.abstractResultEntryPoint
         . E.entryPointNoTermination
     depInfo = buildDependencyInfo (abstractResults ^. Abstract.resultModules) (abstractResults ^. Abstract.resultExports)
+
+fromAbstractExpression ::
+  Abstract.Expression ->
+  Sem r Expression
+fromAbstractExpression = goExpression
 
 goModule ::
   Members '[Reader ExportsTable, State TranslationState] r =>

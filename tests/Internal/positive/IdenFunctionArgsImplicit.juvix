@@ -1,0 +1,11 @@
+module IdenFunctionArgsImplicit;
+
+open import Stdlib.Prelude;
+
+f : {A : Type} → Nat → A → Nat;
+f x y := x;
+
+main : Nat;
+main := f 100 200;
+
+end;

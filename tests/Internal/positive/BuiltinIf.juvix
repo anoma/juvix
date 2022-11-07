@@ -1,0 +1,8 @@
+module BuiltinIf;
+
+open import Stdlib.Prelude;
+
+main : Bool;
+main := if false ((&&) false) ((&&) true) true;
+
+end;

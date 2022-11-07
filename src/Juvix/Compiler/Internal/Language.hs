@@ -225,6 +225,7 @@ makeLenses ''TypedExpression
 makeLenses ''Function
 makeLenses ''SimpleLambda
 makeLenses ''Lambda
+makeLenses ''LambdaClause
 makeLenses ''FunctionParameter
 makeLenses ''InductiveParameter
 makeLenses ''InductiveConstructorDef

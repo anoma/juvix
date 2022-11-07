@@ -1,0 +1,11 @@
+module IdenFunctionArgsNoExplicit;
+
+open import Stdlib.Prelude;
+
+f : {A : Type} → Nat;
+f := zero;
+
+main : Nat;
+main := f;
+
+end;

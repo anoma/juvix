@@ -6,6 +6,7 @@ import Commands.Dev qualified as Dev
 import Commands.Doctor qualified as Doctor
 import Commands.Html qualified as Html
 import Commands.Init qualified as Init
+import Commands.Repl qualified as Repl
 import Commands.Typecheck qualified as Typecheck
 import Juvix.Extra.Version
 import System.Environment (getProgName)
@@ -29,3 +30,4 @@ runTopCommand = \case
   Typecheck opts -> Typecheck.runCommand opts
   Compile opts -> Compile.runCommand opts
   Html opts -> Html.runCommand opts
+  JuvixRepl opts -> Repl.runCommand opts

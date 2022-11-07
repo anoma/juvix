@@ -1,0 +1,12 @@
+module PatternArgs;
+
+open import Stdlib.Prelude public;
+
+f : Nat -> Nat -> Nat;
+f zero zero := zero;
+f n1@(suc m1) n2@(suc m2) := n1 + m1 + (two * (n2 + m2));
+
+main : IO;
+main := printNatLn (f two three)
+
+end;

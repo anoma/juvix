@@ -91,8 +91,8 @@ toState = reinterpret $ \case
      in modify (over infoFunctionClauses (HashMap.insert key value))
   RegisterName n -> modify (over infoNames (cons (S.AName n)))
 
-runInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
-runInfoTableBuilder = runState emptyInfoTable . toState
+runInfoTableBuilder :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+runInfoTableBuilder tab = runState tab . toState
 
 ignoreInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r a
 ignoreInfoTableBuilder = evalState emptyInfoTable . toState

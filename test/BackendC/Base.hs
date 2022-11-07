@@ -4,6 +4,7 @@ import Base
 import Data.FileEmbed
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Backend.C.Translation.FromInternal as MiniC
+import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Pipeline
 import System.IO.Extra (withTempDir)
 import System.Process qualified as P
@@ -32,7 +33,7 @@ wasmClangAssertionCGenOnly :: FilePath -> ((String -> IO ()) -> Assertion)
 wasmClangAssertionCGenOnly mainFile step = do
   step "C Generation"
   let entryPoint = defaultEntryPoint mainFile
-  (void . runIO' entryPoint) upToMiniC
+  (void . runIO' iniState entryPoint) upToMiniC
 
 wasmClangAssertion :: WASMInfo -> FilePath -> FilePath -> ((String -> IO ()) -> Assertion)
 wasmClangAssertion WASMInfo {..} mainFile expectedFile step = do
@@ -42,7 +43,7 @@ wasmClangAssertion WASMInfo {..} mainFile expectedFile step = do
 
   step "C Generation"
   let entryPoint = defaultEntryPoint mainFile
-  p :: MiniC.MiniCResult <- runIO' entryPoint upToMiniC
+  p :: MiniC.MiniCResult <- snd <$> runIO' iniState entryPoint upToMiniC
 
   expected <- TIO.readFile expectedFile
 
@@ -65,7 +66,7 @@ wasiClangAssertion stdlibMode mainFile expectedFile stdinText step = do
 
   step "C Generation"
   let entryPoint = (defaultEntryPoint mainFile) {_entryPointNoStdlib = stdlibMode == StdlibExclude}
-  p :: MiniC.MiniCResult <- runIO' entryPoint upToMiniC
+  p :: MiniC.MiniCResult <- snd <$> runIO' iniState entryPoint upToMiniC
 
   expected <- TIO.readFile expectedFile
 

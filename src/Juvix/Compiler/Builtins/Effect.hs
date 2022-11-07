@@ -59,5 +59,5 @@ re = reinterpret $ \case
                 _alreadyDefinedLoc = getLoc n
               }
 
-runBuiltins :: Member (Error JuvixError) r => Sem (Builtins ': r) a -> Sem r a
-runBuiltins = evalState iniState . re
+runBuiltins :: Member (Error JuvixError) r => BuiltinsState -> Sem (Builtins ': r) a -> Sem r (BuiltinsState, a)
+runBuiltins s = runState s . re

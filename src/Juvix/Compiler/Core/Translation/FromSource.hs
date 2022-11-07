@@ -18,6 +18,7 @@ import Juvix.Compiler.Core.Info.LocationInfo as LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo as NameInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Transformation.Eta
+import Juvix.Compiler.Core.Translation.Base
 import Juvix.Compiler.Core.Translation.FromSource.Lexer
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
@@ -31,28 +32,11 @@ parseText = runParser ""
 runParser :: FilePath -> InfoTable -> Text -> Either ParserError (InfoTable, Maybe Node)
 runParser fileName tab input =
   case run $
-    runInfoTableBuilder tab $
+    runInfoTableBuilder (^. nameText) tab $
       runNameIdGen $
         P.runParserT parseToplevel fileName input of
     (_, Left err) -> Left (ParserError err)
     (tbl, Right r) -> Right (tbl, r)
-
-freshName ::
-  Member NameIdGen r =>
-  NameKind ->
-  Text ->
-  Interval ->
-  Sem r Name
-freshName kind txt i = do
-  nid <- freshNameId
-  return $
-    Name
-      { _nameText = txt,
-        _nameId = nid,
-        _nameKind = kind,
-        _namePretty = txt,
-        _nameLoc = i
-      }
 
 guardSymbolNotDefined ::
   Member InfoTableBuilder r =>

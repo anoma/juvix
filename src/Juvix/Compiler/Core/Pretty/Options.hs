@@ -28,3 +28,6 @@ traceOptions =
 
 fromGenericOptions :: GenericOptions -> Options
 fromGenericOptions GenericOptions {..} = set optShowNameIds _showNameIds defaultOptions
+
+instance CanonicalProjection GenericOptions Options where
+  project = fromGenericOptions

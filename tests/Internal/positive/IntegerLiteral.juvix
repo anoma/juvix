@@ -1,0 +1,8 @@
+module IntegerLiteral;
+
+open import Stdlib.Prelude;
+
+main : Nat;
+main := 1;
+
+end;

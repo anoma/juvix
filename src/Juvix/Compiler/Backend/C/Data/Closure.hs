@@ -5,6 +5,7 @@ import Juvix.Compiler.Backend.C.Language
 import Juvix.Compiler.Concrete.Data.Builtins (IsBuiltin (toBuiltinPrim))
 import Juvix.Compiler.Internal.Extra (mkPolyType')
 import Juvix.Compiler.Internal.Extra qualified as Micro
+import Juvix.Compiler.Internal.Translation.Extra qualified as Micro
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Micro
 import Juvix.Prelude
 
@@ -79,7 +80,7 @@ genClosureExpression funArgTyps = \case
   where
     exprApplication :: Micro.Application -> Sem r [ClosureInfo]
     exprApplication a = do
-      (f0, appArgs) <- unfoldPolyApp a
+      (f0, appArgs) <- Micro.unfoldPolyApplication a
       if
           | null appArgs -> genClosureExpression funArgTyps f0
           | otherwise -> case f0 of

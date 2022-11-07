@@ -190,6 +190,11 @@ instance HasExpressions Expression where
     ExpressionUniverse {} -> f e
     ExpressionHole {} -> f e
 
+instance HasExpressions TypedExpression where
+  leafExpressions f t@TypedExpression {..} = do
+    e' <- leafExpressions f _typedExpression
+    pure (t {_typedExpression = e'})
+
 instance HasExpressions SimpleLambda where
   leafExpressions f (SimpleLambda v ty b) = do
     b' <- leafExpressions f b

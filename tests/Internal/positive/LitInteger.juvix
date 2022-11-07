@@ -1,0 +1,14 @@
+module LitInteger;
+
+open import Stdlib.Prelude public;
+
+main : Nat;
+main := 1;
+
+nilNat : List Nat;
+nilNat := nil;
+
+cons : Nat -> List Nat -> List Nat;
+cons a xs := a ∷ xs;
+
+end;

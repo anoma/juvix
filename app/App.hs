@@ -3,6 +3,7 @@ module App where
 import CommonOptions
 import Data.ByteString qualified as ByteString
 import GlobalOptions
+import Juvix.Compiler.Builtins.Effect
 import Juvix.Compiler.Pipeline
 import Juvix.Data.Error qualified as Error
 import Juvix.Prelude.Pretty hiding (Doc)
@@ -16,7 +17,7 @@ data App m a where
   AskPackage :: App m Package
   AskGlobalOptions :: App m GlobalOptions
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
-  RunPipelineEither :: Path -> Sem PipelineEff a -> App m (Either JuvixError a)
+  RunPipelineEither :: Path -> Sem PipelineEff a -> App m (Either JuvixError (BuiltinsState, a))
   Say :: Text -> App m ()
   Raw :: ByteString -> App m ()
 
@@ -34,7 +35,7 @@ runAppIO g root pkg = interpret $ \case
   AskRoot -> return root
   RunPipelineEither input p -> do
     entry <- embed (getEntryPoint' g root pkg input)
-    embed (runIOEither entry p)
+    embed (runIOEither iniState entry p)
   Say t
     | g ^. globalOnlyErrors -> return ()
     | otherwise -> embed (putStrLn t)
@@ -83,7 +84,7 @@ runPipeline input p = do
   r <- runPipelineEither input p
   case r of
     Left err -> exitJuvixError err
-    Right res -> return res
+    Right res -> return (snd res)
 
 newline :: Member App r => Sem r ()
 newline = say ""

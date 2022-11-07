@@ -252,7 +252,7 @@ checkConstructorReturnType indType ctor = do
     )
 
 inferExpression ::
-  Members '[Reader InfoTable, Reader FunctionsTable, Builtins, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Builtins] r =>
   Maybe Expression -> -- type hint
   Expression ->
   Sem r Expression
@@ -265,7 +265,7 @@ lookupVar v = HashMap.lookupDefault err v <$> asks (^. localTypes)
 
 checkFunctionClause ::
   forall r.
-  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Builtins, Inference] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Inference, Builtins] r =>
   Expression ->
   FunctionClause ->
   Sem r FunctionClause
@@ -280,7 +280,7 @@ checkFunctionClause clauseType FunctionClause {..} = do
 -- | helper function for function clauses and lambda functions
 checkClause ::
   forall r.
-  Members '[Reader InfoTable, Reader FunctionsTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Builtins, Inference] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Builtins] r =>
   -- | Type
   Expression ->
   -- | Arguments

@@ -1,0 +1,11 @@
+module IdenFunctionIntegerLiteral;
+
+open import Stdlib.Prelude;
+
+f : Nat;
+f := 1;
+
+main : Nat;
+main := f;
+
+end;

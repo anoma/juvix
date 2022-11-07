@@ -9,6 +9,7 @@
 #include "bool.h"
 #include "nat.h"
 #include "io.h"
+#include "juvix_string.h"
 
 typedef struct juvix_function {
     uintptr_t fun;

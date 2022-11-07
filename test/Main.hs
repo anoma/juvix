@@ -5,6 +5,7 @@ import Asm qualified
 import BackendC qualified
 import Base
 import Core qualified
+import Internal qualified
 import Parsing qualified
 import Reachability qualified
 import Runtime qualified
@@ -19,6 +20,7 @@ slowTests =
     [ BackendC.allTests,
       Core.allTests,
       Asm.allTests,
+      Internal.allTests,
       Runtime.allTests
     ]
 

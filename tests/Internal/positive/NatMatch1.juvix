@@ -1,0 +1,15 @@
+module NatMatch1;
+
+open import Stdlib.Prelude;
+
+f : Nat → Nat → Nat;
+f zero k := 100;
+f (suc n) (suc (suc m)) := m;
+
+n : Nat;
+n := suc (suc (suc (suc (suc zero))));
+
+main : Nat;
+main := f n n;
+
+end;
