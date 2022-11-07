@@ -71,8 +71,8 @@ computeFunctionStackUsage tab fi = do
 
 computeStackUsage :: Member (Error AsmError) r => InfoTable -> Sem r InfoTable
 computeStackUsage tab = do
-  lst <- mapM (secondM (computeFunctionStackUsage tab)) (HashMap.toList (tab ^. infoFunctions))
-  return tab {_infoFunctions = HashMap.fromList lst}
+  fns <- mapM (computeFunctionStackUsage tab) (tab ^. infoFunctions)
+  return tab {_infoFunctions = fns}
 
 computeStackUsage' :: InfoTable -> Either AsmError InfoTable
 computeStackUsage' tab = run $ runError $ computeStackUsage tab
