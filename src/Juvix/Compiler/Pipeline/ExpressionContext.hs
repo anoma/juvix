@@ -52,4 +52,4 @@ mainModuleScope :: ExpressionContext -> S.Scope
 mainModuleScope e = fromJust (moduleScope e (mainModuleTopPath e))
 
 mainModuleTopPath :: ExpressionContext -> C.TopModulePath
-mainModuleTopPath =  (^. contextScoperResult . Scoper.mainModule . C.modulePath . S.nameConcrete)
+mainModuleTopPath = (^. contextScoperResult . Scoper.mainModule . C.modulePath . S.nameConcrete)

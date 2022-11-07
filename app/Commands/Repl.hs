@@ -57,6 +57,7 @@ helpTxt =
   :help                     Print help text and describe options
   :load       FILE          Load a file into the REPL
   :reload                   Reload the currently loaded file
+  :prelude                  Load the Prelude from the standard library
   :type       EXPRESSION    Infer the type of an expression
   :core       EXPRESSION    Translate the expression to JuvixCore
   :multiline                Start a multi-line input. Submit with <Ctrl-D>
@@ -116,6 +117,13 @@ runCommand opts = do
             entryPoint = mkEntryPoint f
         loadEntryPoint entryPoint
         liftIO (putStrLn [i|OK loaded: #{f}|])
+
+      loadPrelude :: Repl ()
+      loadPrelude = do
+        mStdlibPath <- State.gets (^. replStateGlobalOptions . globalStdlibPath)
+        r <- State.gets (^. replStateRoot)
+        let stdlibDir = fromMaybe (defaultStdlibPath r) mStdlibPath
+        loadFile (stdlibDir </> "Stdlib" </> "Prelude.juvix")
 
       printRoot :: String -> Repl ()
       printRoot _ = do
@@ -191,6 +199,7 @@ runCommand opts = do
           ("quit", quit),
           ("load", Repline.dontCrash . loadFile),
           ("reload", Repline.dontCrash . reloadFile),
+          ("prelude", Repline.dontCrash . const loadPrelude),
           ("root", printRoot),
           ("type", inferType),
           ("version", displayVersion),
@@ -222,8 +231,11 @@ runCommand opts = do
 
       initialiser :: Repl ()
       initialiser = do
+        gopts <- State.gets (^. replStateGlobalOptions)
         welcomeMsg
-        whenJust ((^. pathPath) <$> (opts ^. replInputFile)) loadFile
+        unless
+          (opts ^. replNoPrelude || gopts ^. globalNoStdlib)
+          (maybe loadPrelude (loadFile . (^. pathPath)) (opts ^. replInputFile))
 
       finaliser :: Repl ExitDecision
       finaliser = return Exit
