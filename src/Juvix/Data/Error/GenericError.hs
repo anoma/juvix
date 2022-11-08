@@ -88,7 +88,7 @@ printErrorText e = renderText e >>= \txt -> embed (hPutStrLn stderr txt)
 printErrorAnsiSafe :: (ToGenericError e, Members '[Embed IO, Reader GenericOptions] r) => e -> Sem r ()
 printErrorAnsiSafe e =
   ifM
-    (embed (Ansi.hSupportsANSI stderr))
+    (embed (Ansi.hSupportsANSIColor stderr))
     (printErrorAnsi e)
     (printErrorText e)
 

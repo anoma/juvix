@@ -28,7 +28,7 @@ runAppIO g root pkg = interpret $ \case
   RenderStdOut t
     | g ^. globalOnlyErrors -> return ()
     | otherwise -> embed $ do
-        sup <- Ansi.hSupportsANSI stdout
+        sup <- Ansi.hSupportsANSIColor stdout
         renderIO (not (g ^. globalNoColors) && sup) t
   AskGlobalOptions -> return g
   AskPackage -> return pkg

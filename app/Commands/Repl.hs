@@ -282,7 +282,7 @@ compileExpressionIO' ctx = compileExpressionIO "" (ctx ^. replContextExpContext)
 
 render' :: (MonadIO m, P.HasAnsiBackend a, P.HasTextBackend a) => GlobalOptions -> a -> m ()
 render' g t = liftIO $ do
-  hasAnsi <- Ansi.hSupportsANSI stdout
+  hasAnsi <- Ansi.hSupportsANSIColor stdout
   P.renderIO (not (g ^. globalNoColors) && hasAnsi) t
 
 renderOut :: (MonadIO m, P.HasAnsiBackend a, P.HasTextBackend a) => GlobalOptions -> a -> m ()
@@ -290,5 +290,5 @@ renderOut g t = render' g t >> liftIO (putStrLn "")
 
 printError :: MonadIO m => GlobalOptions -> JuvixError -> m ()
 printError opts e = liftIO $ do
-  hasAnsi <- Ansi.hSupportsANSI stderr
+  hasAnsi <- Ansi.hSupportsANSIColor stderr
   liftIO $ hPutStrLn stderr $ run (runReader (project' @GenericOptions opts) (Error.render (not (opts ^. globalNoColors) && hasAnsi) False e))
