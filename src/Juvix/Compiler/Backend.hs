@@ -12,7 +12,8 @@ data Limits = Limits
     _limitsMaxClosureSize :: Int,
     _limitsClosureHeadSize :: Int,
     _limitsMaxStackDelta :: Int,
-    _limitsMaxFunctionAlloc :: Int
+    _limitsMaxFunctionAlloc :: Int,
+    _limitsDispatchStackSize :: Int
   }
 
 makeLenses ''Limits
@@ -30,7 +31,8 @@ getLimits tgt debug = case tgt of
         _limitsMaxClosureSize = 253 + 3,
         _limitsClosureHeadSize = if debug then 3 else 2,
         _limitsMaxStackDelta = 16368,
-        _limitsMaxFunctionAlloc = 16368
+        _limitsMaxFunctionAlloc = 16368,
+        _limitsDispatchStackSize = 4
       }
   TargetCNative64 ->
     Limits
@@ -41,5 +43,6 @@ getLimits tgt debug = case tgt of
         _limitsMaxClosureSize = 253 + 3,
         _limitsClosureHeadSize = if debug then 3 else 2,
         _limitsMaxStackDelta = 8184,
-        _limitsMaxFunctionAlloc = 8184
+        _limitsMaxFunctionAlloc = 8184,
+        _limitsDispatchStackSize = 4
       }

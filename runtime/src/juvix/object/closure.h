@@ -11,7 +11,7 @@
 #define CLOSURE_SKIP 1
 #endif
 
-#define CLOSURE_HEAD_SIZE (CLOSURE_SKIP + 1)
+STATIC_ASSERT(CLOSURE_HEAD_SIZE == CLOSURE_SKIP + 1);
 
 // The number of arguments stored in the closure.
 static inline size_t get_closure_nargs(word_t cl) {

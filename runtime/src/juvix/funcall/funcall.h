@@ -228,6 +228,4 @@
         }                                                                      \
     } while (0)
 
-#define DISPATCH_STACK_SIZE 4
-
 #endif
