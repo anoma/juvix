@@ -34,7 +34,7 @@
 
 (defun juvix-repl--initialize ()
   "Helper function to initalize juvix-repl."
-  (setq comint-process-echoes t))
+  (setq comint-process-echoes nil))
 
 (define-derived-mode juvix-repl-mode comint-mode "Juvix REPL" "Major mode for juvix-repl")
 
