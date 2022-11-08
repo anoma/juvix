@@ -55,7 +55,7 @@ fromAsmFun ::
   Asm.FunctionInfo ->
   Code
 fromAsmFun tab fi =
-  case run $ runError $ snd <$> Asm.recurseS sig Asm.initialStackInfo (fi ^. Asm.functionCode) of
+  case run $ runError $ Asm.recurseS sig (fi ^. Asm.functionCode) of
     Left err -> error (show err)
     Right code -> code
   where
