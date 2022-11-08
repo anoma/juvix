@@ -51,7 +51,6 @@ lookupsSorted bl = reverse . lookupsSortedRev bl
 
 -- | efficient multiple lookups. The input list needs to be in non-decreasing order.
 -- | The result is in reversed order (non-increasing order)
--- TODO is this ever useful? maybe it should be in the where block of lookupsSorted
 lookupsSortedRev :: BinderList a -> [Var' i] -> [(Var' i, a)]
 lookupsSortedRev bl = go [] 0 bl
   where
