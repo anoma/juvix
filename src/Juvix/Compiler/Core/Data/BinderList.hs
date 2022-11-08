@@ -69,7 +69,6 @@ lookupsSortedRev bl = go [] 0 bl
 lookup :: Index -> BinderList a -> a
 lookup idx bl
   | target < bl ^. blLength = (bl ^. blMap) !! target
-  | target < bl ^. blLength = (bl ^. blMap) !! target
   | otherwise = err
   where
     target = idx
