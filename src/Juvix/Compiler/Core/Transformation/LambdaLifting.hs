@@ -14,17 +14,23 @@ lambdaLiftBinder :: Member InfoTableBuilder r => BinderList Binder -> Binder -> 
 lambdaLiftBinder bl = traverseOf binderType (lambdaLiftNode bl)
 
 lambdaLiftNode :: forall r. Member InfoTableBuilder r => BinderList Binder -> Node -> Sem r Node
-lambdaLiftNode aboveBl top = do
-  reLambdas topArgs <$> dmapLRM' (topArgsBinderList <> aboveBl, go) body
+lambdaLiftNode aboveBl top =
+  let topArgs :: [LambdaLhs]
+      (topArgs, body) = unfoldLambdas top
+   in goTop aboveBl body topArgs
   where
-    topArgs :: [LambdaLhs]
-    (topArgs, body) = unfoldLambdas top
-    topArgsBinderList :: BinderList Binder
-    topArgsBinderList = BL.fromList (map (^. lambdaLhsBinder) topArgs)
     typeFromArgs :: [ArgumentInfo] -> Type
     typeFromArgs = \case
       [] -> mkDynamic' -- change this when we have type info about the body
       (a : as) -> mkPi' (a ^. argumentType) (typeFromArgs as)
+
+    goTop :: BinderList Binder -> Node -> [LambdaLhs] -> Sem r Node
+    goTop bl body = \case
+      [] -> dmapLRM' (bl, go) body
+      l : ls -> do
+        l' <- traverseOf lambdaLhsBinder (lambdaLiftBinder bl) l
+        reLambda l' <$> goTop (BL.cons (l' ^. lambdaLhsBinder) bl) body ls
+
     -- extracts the argument info from the binder
     go :: BinderList Binder -> Node -> Sem r Recur
     go bl = \case

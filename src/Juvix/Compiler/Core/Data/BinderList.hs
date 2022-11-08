@@ -83,7 +83,8 @@ lookup idx bl
             <> show target
             <> " and the length is "
             <> show (bl ^. blLength)
-            <> ". Actual length is " <> show (length ( bl ^. blMap))
+            <> ". Actual length is "
+            <> show (length (bl ^. blMap))
         )
 
 -- | lookup de Bruijn Level

@@ -113,11 +113,10 @@ captureFreeVarsCtx bl n =
 freeVarsCtx' :: BinderList Binder -> Node -> [Var]
 freeVarsCtx' bl = map fst . freeVarsCtx bl
 
--- | the output list does not contain repeated elements and is sorted by variable index.
--- TODO it can probably be more efficient
+-- | the output list does not contain repeated elements and is sorted by *decreasing* variable index.
 freeVarsCtx :: BinderList Binder -> Node -> [(Var, Binder)]
 freeVarsCtx ctx n =
-  (BL.lookupsSorted ctx . reverse) . run . fmap fst . runOutputList $ go (freeVarsSorted n)
+  BL.lookupsSortedRev ctx . run . fmap fst . runOutputList $ go (freeVarsSorted n)
   where
     go ::
       -- set of free variables relative to the original ctx
