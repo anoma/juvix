@@ -114,31 +114,24 @@ freeVarsCtx' :: BinderList Binder -> Node -> [Var]
 freeVarsCtx' bl = map fst . freeVarsCtx bl
 
 -- | the output list does not contain repeated elements and is sorted by variable index.
--- TODO it can probably be fore efficient
+-- TODO it can probably be more efficient
 freeVarsCtx :: BinderList Binder -> Node -> [(Var, Binder)]
-freeVarsCtx bl n =
-  (BL.lookupsSorted bl . reverse) . run . fmap fst . runOutputList $ goCapture bl 0 (freeVarsSorted n)
+freeVarsCtx ctx n =
+  (BL.lookupsSorted ctx . reverse) . run . fmap fst . runOutputList $ go (freeVarsSorted n)
   where
-    goCapture ::
-      BinderList Binder ->
-      Index ->
+    go ::
+      -- set of free variables relative to the original ctx
       Set Var ->
       Sem '[Output Var] ()
-    goCapture ctx offset fv = case Set.minView fv of
+    go fv = case Set.minView fv of
       Nothing -> return ()
       Just (v, vs) -> do
+        output v
         let idx = v ^. varIndex
             bi = BL.lookup idx ctx
-            -- the number of consumed binders
-            consumed = idx + 1
-            ctx' = BL.drop' consumed ctx
-        let freevarsbi' = freeVarsSorted (bi ^. binderType)
-            -- shifting existing stack of variables so that they are
-            -- realtive to ctx'
-            vs' :: Set Var
-            vs' = Set.mapMonotonic (over varIndex (\y -> y - consumed)) vs
-        output (shiftVar offset v)
-        goCapture ctx' (offset + consumed) (freevarsbi' <> vs')
+            freevarsbi' :: Set Var
+            freevarsbi' = Set.mapMonotonic (over varIndex (+ succ idx)) (freeVarsSorted (bi ^. binderType))
+        go (freevarsbi' <> vs)
 
 -- | subst for multiple bindings
 substs :: [Node] -> Node -> Node

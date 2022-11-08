@@ -59,9 +59,9 @@ lookupsSortedRev bl = go [] 0 bl
     go acc off ctx = \case
       [] -> acc
       (v : vs) ->
-        let consumed = v ^. varIndex - off
-            ctx' = drop' consumed ctx
-            off' = off + consumed
+        let skipped = v ^. varIndex - off
+            off' = off + skipped
+            ctx' = drop' skipped ctx
          in go ((v, head' ctx') : acc) off' ctx' vs
     head' :: BinderList a -> a
     head' = lookup 0
@@ -69,6 +69,7 @@ lookupsSortedRev bl = go [] 0 bl
 -- | lookup de Bruijn Index
 lookup :: Index -> BinderList a -> a
 lookup idx bl
+  | target < bl ^. blLength = (bl ^. blMap) !! target
   | target < bl ^. blLength = (bl ^. blMap) !! target
   | otherwise = err
   where
@@ -82,6 +83,7 @@ lookup idx bl
             <> show target
             <> " and the length is "
             <> show (bl ^. blLength)
+            <> ". Actual length is " <> show (length ( bl ^. blMap))
         )
 
 -- | lookup de Bruijn Level

@@ -14,9 +14,10 @@ lambdaLiftBinder :: Member InfoTableBuilder r => BinderList Binder -> Binder -> 
 lambdaLiftBinder bl = traverseOf binderType (lambdaLiftNode bl)
 
 lambdaLiftNode :: forall r. Member InfoTableBuilder r => BinderList Binder -> Node -> Sem r Node
-lambdaLiftNode aboveBl top =
+lambdaLiftNode aboveBl top = do
   reLambdas topArgs <$> dmapLRM' (topArgsBinderList <> aboveBl, go) body
   where
+    topArgs :: [LambdaLhs]
     (topArgs, body) = unfoldLambdas top
     topArgsBinderList :: BinderList Binder
     topArgsBinderList = BL.fromList (map (^. lambdaLhsBinder) topArgs)
@@ -33,8 +34,7 @@ lambdaLiftNode aboveBl top =
       where
         goLambda :: Lambda -> Sem r Recur
         goLambda lm = do
-          bi' <- lambdaLiftBinder bl (lm ^. lambdaBinder)
-          l' <- lambdaLiftNode (BL.cons bi' bl) (NLam lm)
+          l' <- lambdaLiftNode bl (NLam lm)
           let (freevarsAssocs, fBody') = captureFreeVarsCtx bl l'
               allfreevars :: [Var]
               allfreevars = map fst freevarsAssocs
