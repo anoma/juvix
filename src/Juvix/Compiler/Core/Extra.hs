@@ -114,6 +114,7 @@ freeVarsCtx' :: BinderList Binder -> Node -> [Var]
 freeVarsCtx' bl = map fst . freeVarsCtx bl
 
 -- | the output list does not contain repeated elements and is sorted by *decreasing* variable index.
+-- The indices are relative to the given binder list
 freeVarsCtx :: BinderList Binder -> Node -> [(Var, Binder)]
 freeVarsCtx ctx n =
   BL.lookupsSortedRev ctx . run . fmap fst . runOutputList $ go (freeVarsSorted n)
