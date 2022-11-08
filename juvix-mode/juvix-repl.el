@@ -1,11 +1,8 @@
-
-
 (require 'comint)
 
 (defgroup juvix-repl nil
   "Interaction mode for Juvix"
   :group 'juvix)
-
 
 (defvar juvix-repl-program "juvix"
   "The Juvix program.")
@@ -42,5 +39,12 @@
 (define-derived-mode juvix-repl-mode comint-mode "Juvix REPL" "Major mode for juvix-repl")
 
 (add-hook 'juvix-mode-hook 'juvix-repl--initialize)
+
+(defun juvix-repl-load-file (filename)
+  "Load FILENAME into the juvix-repl if it is running."
+  (let* ((buffer (get-buffer juvix-repl-buffer-name))
+         (proc-alive (comint-check-proc buffer)))
+    (when proc-alive
+      (comint-simple-send juvix-repl-buffer-name (concat ":load " filename)))))
 
 (provide 'juvix-repl)
