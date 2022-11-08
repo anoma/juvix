@@ -56,7 +56,7 @@ TAGS
 # other
 .DS_Store
 
-/runtime/include
+/runtime/include/
 _build/
 _build.*/
 *.agdai

@@ -113,6 +113,8 @@ recurse' sig = go True
               return mem
             Failure ->
               return mem
+            Prealloc {} ->
+              return mem
             AllocConstr tag -> do
               let ci = getConstrInfo (sig ^. recursorInfoTable) tag
                   n = ci ^. constructorArgsNum
@@ -294,8 +296,11 @@ initialStackInfo = StackInfo {_stackInfoValueStackHeight = 0, _stackInfoTempStac
 -- program code which need only stack height information. Also, the code using
 -- the simplified recursor can itself be simpler if it doesn't need the extra
 -- info provided by the full recursor.
-recurseS :: forall r a. Member (Error AsmError) r => RecursorSig StackInfo r a -> StackInfo -> Code -> Sem r (StackInfo, [a])
-recurseS sig = go
+recurseS :: forall r a. Member (Error AsmError) r => RecursorSig StackInfo r a -> Code -> Sem r [a]
+recurseS sig code = snd <$> recurseS' sig initialStackInfo code
+
+recurseS' :: forall r a. Member (Error AsmError) r => RecursorSig StackInfo r a -> StackInfo -> Code -> Sem r (StackInfo, [a])
+recurseS' sig = go
   where
     go :: StackInfo -> Code -> Sem r (StackInfo, [a])
     go si = \case
@@ -353,6 +358,8 @@ recurseS sig = go
               return si
             Failure ->
               return si
+            Prealloc {} ->
+              return si
             AllocConstr tag -> do
               let ci = getConstrInfo (sig ^. recursorInfoTable) tag
                   n = ci ^. constructorArgsNum
@@ -363,17 +370,17 @@ recurseS sig = go
                 stackInfoPopValueStack (_allocClosureArgsNum - 1) si
             ExtendClosure InstrExtendClosure {..} ->
               return $
-                stackInfoPopValueStack (_extendClosureArgsNum - 1) si
+                stackInfoPopValueStack _extendClosureArgsNum si
             Call x ->
               fixStackCall si x
             TailCall x ->
-              fixStackCall si x
+              fixStackCall (dropTempStack si) x
             CallClosures x ->
               fixStackCallClosures si x
             TailCallClosures x ->
-              fixStackCallClosures si x
+              fixStackCallClosures (dropTempStack si) x
             Return ->
-              return si
+              return (dropTempStack si)
 
         fixStackBinOp :: StackInfo -> Sem r StackInfo
         fixStackBinOp si = return $ stackInfoPopValueStack 1 si
@@ -432,3 +439,54 @@ recurseS sig = go
 
     stackInfoPopTempStack :: Int -> StackInfo -> StackInfo
     stackInfoPopTempStack n si = si {_stackInfoTempStackHeight = si ^. stackInfoTempStackHeight - n}
+
+    dropTempStack :: StackInfo -> StackInfo
+    dropTempStack si = si {_stackInfoTempStackHeight = 0}
+
+-- | Fold signature. Contains read-only fold parameters.
+data FoldSig m r a = FoldSig
+  { _foldInfoTable :: InfoTable,
+    _foldAdjust :: a -> a,
+    _foldInstr :: m -> CmdInstr -> a -> Sem r a,
+    _foldBranch :: m -> CmdBranch -> a -> a -> a -> Sem r a,
+    _foldCase :: m -> CmdCase -> [a] -> Maybe a -> a -> Sem r a
+  }
+
+makeLenses ''FoldSig
+
+foldS :: forall r a. Member (Error AsmError) r => FoldSig StackInfo r a -> Code -> a -> Sem r a
+foldS sig code a = snd <$> foldS' sig initialStackInfo code a
+
+foldS' :: forall r a. Member (Error AsmError) r => FoldSig StackInfo r a -> StackInfo -> Code -> a -> Sem r (StackInfo, a)
+foldS' sig si code acc = do
+  (si', fs) <- recurseS' sig' si code
+  a' <- compose fs acc
+  return (si', a')
+  where
+    sig' :: RecursorSig StackInfo r (a -> Sem r a)
+    sig' =
+      RecursorSig
+        { _recursorInfoTable = sig ^. foldInfoTable,
+          _recurseInstr = \s cmd -> return ((sig ^. foldInstr) s cmd),
+          _recurseBranch = \s cmd br1 br2 ->
+            return
+              ( \a -> do
+                  let a' = (sig ^. foldAdjust) a
+                  a1 <- compose br1 a'
+                  a2 <- compose br2 a'
+                  (sig ^. foldBranch) s cmd a1 a2 a
+              ),
+          _recurseCase = \s cmd brs md ->
+            return
+              ( \a -> do
+                  let a' = (sig ^. foldAdjust) a
+                  as <- mapM (`compose` a') brs
+                  ad <- case md of
+                    Just d -> Just <$> compose d a'
+                    Nothing -> return Nothing
+                  (sig ^. foldCase) s cmd as ad a
+              )
+        }
+
+    compose :: [a -> Sem r a] -> a -> Sem r a
+    compose lst x = foldr (=<<) (return x) lst

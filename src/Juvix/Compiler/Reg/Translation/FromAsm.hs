@@ -55,7 +55,7 @@ fromAsmFun ::
   Asm.FunctionInfo ->
   Code
 fromAsmFun tab fi =
-  case run $ runError $ snd <$> Asm.recurseS sig Asm.initialStackInfo (fi ^. Asm.functionCode) of
+  case run $ runError $ Asm.recurseS sig (fi ^. Asm.functionCode) of
     Left err -> error (show err)
     Right code -> code
   where
@@ -88,6 +88,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     Asm.Trace -> return $ Trace $ InstrTrace (VRef $ VarRef VarGroupStack n)
     Asm.Dump -> return Dump
     Asm.Failure -> return $ Failure $ InstrFailure (VRef $ VarRef VarGroupStack n)
+    Asm.Prealloc x -> return $ mkPrealloc x
     Asm.AllocConstr tag -> return $ mkAlloc tag
     Asm.AllocClosure x -> return $ mkAllocClosure x
     Asm.ExtendClosure x -> return $ mkExtendClosure x
@@ -102,8 +103,9 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     n :: Int
     n = si ^. Asm.stackInfoValueStackHeight - 1
 
-    -- Live variables *after* executing the instruction. TODO: proper liveness
-    -- analysis in JuvixAsm.
+    -- Live variables *after* executing the instruction. `k` is the number of
+    -- value stack cells that will be popped by the instruction. TODO: proper
+    -- liveness analysis in JuvixAsm.
     liveVars :: Int -> [VarRef]
     liveVars k =
       map (VarRef VarGroupStack) [0 .. n - k]
@@ -164,6 +166,14 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
       Asm.ArgRef idx -> VarRef VarGroupArgs idx
       Asm.TempRef idx -> VarRef VarGroupTemp idx
 
+    mkPrealloc :: Asm.InstrPrealloc -> Instruction
+    mkPrealloc Asm.InstrPrealloc {..} =
+      Prealloc $
+        InstrPrealloc
+          { _instrPreallocWordsNum = _preallocWordsNum,
+            _instrPreallocLiveVars = liveVars 0
+          }
+
     mkAlloc :: Tag -> Instruction
     mkAlloc tag =
       Alloc $
@@ -171,8 +181,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
           { _instrAllocTag = tag,
             _instrAllocResult = VarRef VarGroupStack n,
             _instrAllocArgs = getArgs 0 (ci ^. Asm.constructorArgsNum),
-            _instrAllocMemRep = ci ^. Asm.constructorRepresentation,
-            _instrAllocLiveVars = liveVars (ci ^. Asm.constructorArgsNum)
+            _instrAllocMemRep = ci ^. Asm.constructorRepresentation
           }
       where
         ci = fromJust impossible $ HashMap.lookup tag (tab ^. Asm.infoConstrs)
@@ -184,8 +193,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
           { _instrAllocClosureSymbol = fi ^. Asm.functionSymbol,
             _instrAllocClosureResult = VarRef VarGroupStack n,
             _instrAllocClosureExpectedArgsNum = fi ^. Asm.functionArgsNum,
-            _instrAllocClosureArgs = getArgs 0 _allocClosureArgsNum,
-            _instrAllocClosureLiveVars = liveVars _allocClosureArgsNum
+            _instrAllocClosureArgs = getArgs 0 _allocClosureArgsNum
           }
       where
         fi = fromJust impossible $ HashMap.lookup _allocClosureFunSymbol (tab ^. Asm.infoFunctions)
@@ -196,8 +204,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
         InstrExtendClosure
           { _instrExtendClosureResult = VarRef VarGroupStack n,
             _instrExtendClosureValue = VarRef VarGroupStack n,
-            _instrExtendClosureArgs = getArgs 1 _extendClosureArgsNum,
-            _instrExtendClosureLiveVars = liveVars (_extendClosureArgsNum + 1)
+            _instrExtendClosureArgs = getArgs 1 _extendClosureArgsNum
           }
 
     mkCall :: Bool -> Asm.InstrCall -> Instruction
