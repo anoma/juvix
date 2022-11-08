@@ -130,7 +130,7 @@ freeVarsCtx ctx n =
         let idx = v ^. varIndex
             bi = BL.lookup idx ctx
             freevarsbi' :: Set Var
-            freevarsbi' = Set.mapMonotonic (over varIndex (+ succ idx)) (freeVarsSorted (bi ^. binderType))
+            freevarsbi' = Set.mapMonotonic (over varIndex (+ (idx + 1))) (freeVarsSorted (bi ^. binderType))
         go (freevarsbi' <> vs)
 
 -- | subst for multiple bindings
