@@ -27,6 +27,12 @@ $ juvix repl
 >= 0
 
 <
+:t suc
+$ juvix --stdlib-path juvix-stdlib repl
+> /Nat → Nat/
+>= 0
+
+<
 true && false
 $ juvix repl
 > /false/
@@ -55,21 +61,27 @@ $ juvix repl
 >= 0
 
 <
-:load ReplTest.juvix
+:load tests/Internal/positive/BuiltinBool.juvix
 $ juvix repl
-> /ReplTest> /
+> /BuiltinBool> /
 >= 0
 
 <
-:load    ReplTest.juvix
+:load    tests/Internal/positive/BuiltinBool.juvix
 $ juvix repl
-> /ReplTest> /
+> /BuiltinBool> /
 >= 0
 
 <
-:l ReplTest.juvix
+:l tests/Internal/positive/BuiltinBool.juvix
 main
 $ juvix repl
+> /true/
+>= 0
+
+<
+main
+$ juvix repl tests/Internal/positive/BuiltinBool.juvix
 > /true/
 >= 0
 

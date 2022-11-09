@@ -22,11 +22,16 @@ import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Extra.Version
 import Juvix.Prelude.Pretty qualified as P
+import Root
 import System.Console.ANSI qualified as Ansi
 import System.Console.Haskeline
 import System.Console.Repline
 import System.Console.Repline qualified as Repline
 import Text.Megaparsec qualified as M
+
+type ReplS = State.StateT ReplState IO
+
+type Repl a = HaskelineT ReplS a
 
 data ReplContext = ReplContext
   { _replContextBuiltins :: BuiltinsState,
@@ -35,18 +40,14 @@ data ReplContext = ReplContext
   }
 
 data ReplState = ReplState
-  { _replStateRoot :: FilePath,
+  { _replStateReplRoot :: FilePath,
     _replStateContext :: Maybe ReplContext,
     _replStateGlobalOptions :: GlobalOptions,
-    _replStateMkEntryPoint :: FilePath -> EntryPoint
+    _replStateMkEntryPoint :: FilePath -> Repl EntryPoint
   }
 
 makeLenses ''ReplState
 makeLenses ''ReplContext
-
-type ReplS = State.StateT ReplState IO
-
-type Repl a = HaskelineT ReplS a
 
 helpTxt :: MonadIO m => m ()
 helpTxt =
@@ -72,6 +73,9 @@ noFileLoadedMsg = liftIO (putStrLn "No file loaded. Load a file using the `:load
 
 welcomeMsg :: MonadIO m => m ()
 welcomeMsg = liftIO (putStrLn [i|Juvix REPL version #{versionTag}: https://juvix.org. Run :help for help|])
+
+preludePath :: FilePath
+preludePath = "Stdlib" </> "Prelude.juvix"
 
 runCommand :: Members '[Embed IO, App] r => ReplOptions -> Sem r ()
 runCommand opts = do
@@ -99,6 +103,8 @@ runCommand opts = do
                   )
               )
           )
+        let epPath :: FilePath = ep ^. entryPointModulePaths . _head1
+        liftIO (putStrLn [i|OK loaded: #{epPath}|])
 
       reloadFile :: String -> Repl ()
       reloadFile _ = do
@@ -106,28 +112,30 @@ runCommand opts = do
         case mentryPoint of
           Just entryPoint -> do
             loadEntryPoint entryPoint
-            let epPath :: FilePath = entryPoint ^. entryPointModulePaths . _head1
-            liftIO (putStrLn [i|OK reloaded: #{epPath}|])
           Nothing -> noFileLoadedMsg
 
       loadFile :: String -> Repl ()
       loadFile args = do
         mkEntryPoint <- State.gets (^. replStateMkEntryPoint)
         let f = unpack (strip (pack args))
-            entryPoint = mkEntryPoint f
+        entryPoint <- mkEntryPoint f
         loadEntryPoint entryPoint
-        liftIO (putStrLn [i|OK loaded: #{f}|])
 
       loadPrelude :: Repl ()
       loadPrelude = do
         mStdlibPath <- State.gets (^. replStateGlobalOptions . globalStdlibPath)
-        r <- State.gets (^. replStateRoot)
-        let stdlibDir = fromMaybe (defaultStdlibPath r) mStdlibPath
-        loadFile (stdlibDir </> "Stdlib" </> "Prelude.juvix")
+        case mStdlibPath of
+          Nothing -> loadDefaultPrelude
+          Just stdlibDir -> do
+            absStdlibDir <- liftIO (makeAbsolute stdlibDir)
+            loadFile (absStdlibDir </> preludePath)
+
+      loadDefaultPrelude :: Repl ()
+      loadDefaultPrelude = defaultPreludeEntryPoint >>= loadEntryPoint
 
       printRoot :: String -> Repl ()
       printRoot _ = do
-        r <- State.gets (^. replStateRoot)
+        r <- State.gets (^. replStateReplRoot)
         liftIO $ putStrLn (pack r)
 
       displayVersion :: String -> Repl ()
@@ -136,15 +144,14 @@ runCommand opts = do
       command :: String -> Repl ()
       command input = Repline.dontCrash $ do
         ctx <- State.gets (^. replStateContext)
-        gopts <- State.gets (^. replStateGlobalOptions)
         case ctx of
           Just ctx' -> do
             evalRes <- compileThenEval ctx' input
             case evalRes of
-              Left err -> printError gopts err
+              Left err -> printError err
               Right n
                 | Info.member Info.kNoDisplayInfo (Core.getInfo n) -> return ()
-              Right n -> renderOut gopts (Core.ppOut (ctx' ^. replContextEntryPoint . entryPointGenericOptions) n)
+              Right n -> renderOut (Core.ppOut (ctx' ^. replContextEntryPoint . entryPointGenericOptions) n)
           Nothing -> noFileLoadedMsg
         where
           defaultLoc :: Interval
@@ -174,8 +181,8 @@ runCommand opts = do
           Just ctx' -> do
             compileRes <- liftIO (compileExpressionIO' ctx' (strip (pack input)))
             case compileRes of
-              Left err -> printError gopts err
-              Right n -> renderOut gopts (Core.ppOut (project' @GenericOptions gopts) n)
+              Left err -> printError err
+              Right n -> renderOut (Core.ppOut (project' @GenericOptions gopts) n)
           Nothing -> noFileLoadedMsg
 
       inferType :: String -> Repl ()
@@ -186,8 +193,8 @@ runCommand opts = do
           Just ctx' -> do
             compileRes <- liftIO (inferExpressionIO' ctx' (strip (pack input)))
             case compileRes of
-              Left err -> printError gopts err
-              Right n -> renderOut gopts (Internal.ppOut (project' @GenericOptions gopts) n)
+              Left err -> printError err
+              Right n -> renderOut (Internal.ppOut (project' @GenericOptions gopts) n)
           Nothing -> noFileLoadedMsg
 
       options :: [(String, String -> Repl ())]
@@ -252,27 +259,49 @@ runCommand opts = do
     ( State.evalStateT
         replAction
         ( ReplState
-            { _replStateRoot = root,
+            { _replStateReplRoot = root,
               _replStateContext = Nothing,
               _replStateGlobalOptions = globalOptions,
-              _replStateMkEntryPoint = getReplEntryPoint globalOptions root
+              _replStateMkEntryPoint = getReplEntryPoint
             }
         )
     )
 
-getReplEntryPoint :: GlobalOptions -> FilePath -> FilePath -> EntryPoint
-getReplEntryPoint opts root inputFile =
-  EntryPoint
-    { _entryPointRoot = root,
-      _entryPointNoTermination = opts ^. globalNoTermination,
-      _entryPointNoPositivity = opts ^. globalNoPositivity,
-      _entryPointNoStdlib = opts ^. globalNoStdlib,
-      _entryPointStdlibPath = opts ^. globalStdlibPath,
-      _entryPointPackage = emptyPackage,
-      _entryPointModulePaths = pure inputFile,
-      _entryPointGenericOptions = project opts,
-      _entryPointStdin = Nothing
-    }
+defaultPreludeEntryPoint :: Repl EntryPoint
+defaultPreludeEntryPoint = do
+  opts <- State.gets (^. replStateGlobalOptions)
+  root <- State.gets (^. replStateReplRoot)
+  return $
+    EntryPoint
+      { _entryPointRoot = root,
+        _entryPointNoTermination = opts ^. globalNoTermination,
+        _entryPointNoPositivity = opts ^. globalNoPositivity,
+        _entryPointNoStdlib = opts ^. globalNoStdlib,
+        _entryPointStdlibPath = opts ^. globalStdlibPath,
+        _entryPointPackage = emptyPackage,
+        _entryPointModulePaths = pure (defaultStdlibPath root </> preludePath),
+        _entryPointGenericOptions = project opts,
+        _entryPointStdin = Nothing
+      }
+
+getReplEntryPoint :: FilePath -> Repl EntryPoint
+getReplEntryPoint inputFile = do
+  opts <- State.gets (^. replStateGlobalOptions)
+  absInputFile <- liftIO (makeAbsolute inputFile)
+  absStdlibPath <- liftIO (mapM makeAbsolute (opts ^. globalStdlibPath))
+  (root, package) <- liftIO (findRoot (Just absInputFile))
+  return $
+    EntryPoint
+      { _entryPointRoot = root,
+        _entryPointNoTermination = opts ^. globalNoTermination,
+        _entryPointNoPositivity = opts ^. globalNoPositivity,
+        _entryPointNoStdlib = opts ^. globalNoStdlib,
+        _entryPointStdlibPath = absStdlibPath,
+        _entryPointPackage = package,
+        _entryPointModulePaths = pure absInputFile,
+        _entryPointGenericOptions = project opts,
+        _entryPointStdin = Nothing
+      }
 
 inferExpressionIO' :: ReplContext -> Text -> IO (Either JuvixError Internal.Expression)
 inferExpressionIO' ctx = inferExpressionIO "" (ctx ^. replContextExpContext) (ctx ^. replContextBuiltins)
@@ -280,15 +309,17 @@ inferExpressionIO' ctx = inferExpressionIO "" (ctx ^. replContextExpContext) (ct
 compileExpressionIO' :: ReplContext -> Text -> IO (Either JuvixError Core.Node)
 compileExpressionIO' ctx = compileExpressionIO "" (ctx ^. replContextExpContext) (ctx ^. replContextBuiltins)
 
-render' :: (MonadIO m, P.HasAnsiBackend a, P.HasTextBackend a) => GlobalOptions -> a -> m ()
-render' g t = liftIO $ do
-  hasAnsi <- Ansi.hSupportsANSIColor stdout
-  P.renderIO (not (g ^. globalNoColors) && hasAnsi) t
+render' :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl ()
+render' t = do
+  opts <- State.gets (^. replStateGlobalOptions)
+  hasAnsi <- liftIO (Ansi.hSupportsANSIColor stdout)
+  liftIO (P.renderIO (not (opts ^. globalNoColors) && hasAnsi) t)
 
-renderOut :: (MonadIO m, P.HasAnsiBackend a, P.HasTextBackend a) => GlobalOptions -> a -> m ()
-renderOut g t = render' g t >> liftIO (putStrLn "")
+renderOut :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl ()
+renderOut t = render' t >> liftIO (putStrLn "")
 
-printError :: MonadIO m => GlobalOptions -> JuvixError -> m ()
-printError opts e = liftIO $ do
-  hasAnsi <- Ansi.hSupportsANSIColor stderr
+printError :: JuvixError -> Repl ()
+printError e = do
+  opts <- State.gets (^. replStateGlobalOptions)
+  hasAnsi <- liftIO (Ansi.hSupportsANSIColor stderr)
   liftIO $ hPutStrLn stderr $ run (runReader (project' @GenericOptions opts) (Error.render (not (opts ^. globalNoColors) && hasAnsi) False e))
