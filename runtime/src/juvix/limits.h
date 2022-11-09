@@ -37,6 +37,19 @@
 
 #define MAX_LOCAL_VARS (PAGE_SIZE / 2 / sizeof(word_t))
 
+// The value that should be added to the stack height for the CallClosures
+// invocation.
+#define DISPATCH_STACK_SIZE 4
+
+// The size of a closure is CLOSURE_HEAD_SIZE + arguments number
+#ifdef DEBUG
+#define CLOSURE_HEAD_SIZE 3
+#else
+#define CLOSURE_HEAD_SIZE 2
+#endif
+
+#define MAX_CLOSURE_SIZE (MAX_FUNCTION_ARGS + CLOSURE_HEAD_SIZE)
+
 /*****************************************/
 /* Static asserts */
 

@@ -150,3 +150,18 @@ data CaseBranch = CaseBranch
     _caseBranchMemRep :: MemRep,
     _caseBranchCode :: Code
   }
+
+makeLenses ''ConstrField
+makeLenses ''BinaryOp
+makeLenses ''InstrAssign
+makeLenses ''InstrTrace
+makeLenses ''InstrFailure
+makeLenses ''InstrPrealloc
+makeLenses ''InstrAlloc
+makeLenses ''InstrAllocClosure
+makeLenses ''InstrExtendClosure
+makeLenses ''InstrCall
+makeLenses ''InstrCallClosures
+makeLenses ''InstrBranch
+makeLenses ''InstrCase
+makeLenses ''CaseBranch
