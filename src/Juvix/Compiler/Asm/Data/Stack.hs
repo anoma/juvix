@@ -1,6 +1,5 @@
 module Juvix.Compiler.Asm.Data.Stack where
 
-import Data.IntMap (IntMap)
 import Data.IntMap qualified as IntMap
 import Juvix.Prelude hiding (empty)
 

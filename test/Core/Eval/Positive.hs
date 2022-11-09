@@ -239,5 +239,10 @@ tests =
       "Type annotations"
       "."
       "test042.jvc"
-      "out/test042.out"
+      "out/test042.out",
+    PosTest
+      "Dependent lambda-abstractions"
+      "."
+      "test043.jvc"
+      "out/test043.out"
   ]

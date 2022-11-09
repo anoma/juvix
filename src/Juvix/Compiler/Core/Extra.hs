@@ -11,6 +11,8 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Data.Set qualified as Set
+import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Extra.Equality
@@ -24,6 +26,9 @@ import Juvix.Compiler.Core.Language
 
 isClosed :: Node -> Bool
 isClosed = not . has freeVars
+
+freeVarsSorted :: Node -> Set Var
+freeVarsSorted n = Set.fromList (n ^.. freeVars)
 
 freeVarsSet :: Node -> HashSet Var
 freeVarsSet n = HashSet.fromList (n ^.. freeVars)
@@ -76,8 +81,7 @@ _NLam f = \case
 cosmos :: SimpleFold Node Node
 cosmos f = ufoldA reassemble f
 
--- | The list should not contain repeated indices. The 'Info' corresponds to the
--- binder of the variable.
+-- | The list should not contain repeated indices.
 -- if fv = x1, x2, .., xn
 -- the result is of the form λx1 λx2 .. λ xn b
 captureFreeVars :: [(Index, Binder)] -> Node -> Node
@@ -97,6 +101,37 @@ captureFreeVars fv
           NVar (Var i u)
             | Just v <- s ^. at (u - k) -> NVar (Var i (v + k))
           m -> m
+
+-- captures all free variables of a node. It also returns the list of captured
+-- variables in left-to-right order: if snd is of the form λxλy... then fst is
+-- [x, y]
+captureFreeVarsCtx :: BinderList Binder -> Node -> ([(Var, Binder)], Node)
+captureFreeVarsCtx bl n =
+  let assocs = freeVarsCtx bl n
+   in (assocs, captureFreeVars (map (first (^. varIndex)) assocs) n)
+
+freeVarsCtx' :: BinderList Binder -> Node -> [Var]
+freeVarsCtx' bl = map fst . freeVarsCtx bl
+
+-- | the output list does not contain repeated elements and is sorted by *decreasing* variable index.
+-- The indices are relative to the given binder list
+freeVarsCtx :: BinderList Binder -> Node -> [(Var, Binder)]
+freeVarsCtx ctx n =
+  BL.lookupsSortedRev ctx . run . fmap fst . runOutputList $ go (freeVarsSorted n)
+  where
+    go ::
+      -- set of free variables relative to the original ctx
+      Set Var ->
+      Sem '[Output Var] ()
+    go fv = case Set.minView fv of
+      Nothing -> return ()
+      Just (v, vs) -> do
+        output v
+        let idx = v ^. varIndex
+            bi = BL.lookup idx ctx
+            freevarsbi' :: Set Var
+            freevarsbi' = Set.mapMonotonic (over varIndex (+ (idx + 1))) (freeVarsSorted (bi ^. binderType))
+        go (freevarsbi' <> vs)
 
 -- | subst for multiple bindings
 substs :: [Node] -> Node -> Node

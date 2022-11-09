@@ -1,6 +1,11 @@
-module Juvix.Compiler.Core.Extra.Base where
+module Juvix.Compiler.Core.Extra.Base
+  ( module Juvix.Compiler.Core.Extra.Base,
+    module Juvix.Compiler.Core.Data.BinderList,
+  )
+where
 
 import Data.Functor.Identity
+import Juvix.Compiler.Core.Data.BinderList (BinderList)
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Language
 import Polysemy.Input
@@ -217,6 +222,10 @@ reLambda lhs = mkLambda (lhs ^. lambdaLhsInfo) (lhs ^. lambdaLhsBinder)
 reLambdas :: [LambdaLhs] -> Node -> Node
 reLambdas is n = foldl' (flip reLambda) n (reverse is)
 
+-- | useful with unfoldLambdasRev
+reLambdasRev :: [LambdaLhs] -> Node -> Node
+reLambdasRev is n = foldl' (flip reLambda) n is
+
 mkLambdaB :: Binder -> Node -> Node
 mkLambdaB = mkLambda mempty
 
@@ -228,6 +237,7 @@ mkLambdas' k
   | k < 0 = impossible
   | otherwise = mkLambdasB (replicate k emptyBinder)
 
+-- | \x\y b gives ([y, x], b)
 unfoldLambdasRev :: Node -> ([LambdaLhs], Node)
 unfoldLambdasRev = go []
   where
