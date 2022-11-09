@@ -15,12 +15,12 @@ type Transformation = InfoTable -> InfoTable
 mapT :: (Symbol -> Node -> Node) -> InfoTable -> InfoTable
 mapT f tab = tab {_identContext = HashMap.mapWithKey f (tab ^. identContext)}
 
-mapT' :: (Node -> Sem (InfoTableBuilder ': r) Node) -> InfoTable -> Sem r InfoTable
+mapT' :: (Symbol -> Node -> Sem (InfoTableBuilder ': r) Node) -> InfoTable -> Sem r InfoTable
 mapT' f tab =
   fmap fst $
     runInfoTableBuilder (^. nameText) tab $
       mapM_
-        (\(k, v) -> f v >>= registerIdentNode k)
+        (\(k, v) -> f k v >>= registerIdentNode k)
         (HashMap.toList (tab ^. identContext))
 
 walkT :: Applicative f => (Symbol -> Node -> f ()) -> InfoTable -> f ()

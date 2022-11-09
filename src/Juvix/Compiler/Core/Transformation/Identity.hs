@@ -8,4 +8,4 @@ import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
 identity :: InfoTable -> InfoTable
-identity = run . mapT' return
+identity = run . mapT' (const return)

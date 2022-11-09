@@ -13,7 +13,7 @@ data InfoTableBuilder m a where
   RegisterInductive :: InductiveInfo -> InfoTableBuilder m ()
   RegisterIdentNode :: Symbol -> Node -> InfoTableBuilder m ()
   RegisterMain :: Symbol -> InfoTableBuilder m ()
-  SetIdentArgsInfo :: Symbol -> [ArgumentInfo] -> InfoTableBuilder m ()
+  OverIdentArgsInfo :: Symbol -> ([ArgumentInfo] -> [ArgumentInfo]) -> InfoTableBuilder m ()
   GetIdent :: Text -> InfoTableBuilder m (Maybe IdentKind)
   GetInfoTable :: InfoTableBuilder m InfoTable
 
@@ -31,12 +31,15 @@ checkSymbolDefined sym = do
   tab <- getInfoTable
   return $ HashMap.member sym (tab ^. identContext)
 
-runInfoTableBuilder :: MkIdentIndex -> InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+setIdentArgsInfo :: Member InfoTableBuilder r => Symbol -> [ArgumentInfo] -> Sem r ()
+setIdentArgsInfo sym = overIdentArgsInfo sym . const
+
+runInfoTableBuilder :: forall r a. MkIdentIndex -> InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilder mkIdentIndex tab =
   runState tab
     . reinterpret interp
   where
-    interp :: InfoTableBuilder m a -> Sem (State InfoTable : r) a
+    interp :: InfoTableBuilder m b -> Sem (State InfoTable : r) b
     interp = \case
       FreshSymbol -> do
         s <- get
@@ -60,7 +63,8 @@ runInfoTableBuilder mkIdentIndex tab =
         modify' (over identContext (HashMap.insert sym node))
       RegisterMain sym -> do
         modify' (set infoMain (Just sym))
-      SetIdentArgsInfo sym argsInfo -> do
+      OverIdentArgsInfo sym f -> do
+        argsInfo <- f <$> gets (^. infoIdentifiers . at sym . _Just . identifierArgsInfo)
         modify' (set (infoIdentifiers . at sym . _Just . identifierArgsInfo) argsInfo)
         modify' (set (infoIdentifiers . at sym . _Just . identifierArgsNum) (length argsInfo))
         modify' (over infoIdentifiers (HashMap.adjust (over identifierType (expandType (map (^. argumentType) argsInfo))) sym))
