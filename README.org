@@ -82,7 +82,20 @@ brew info juvix
 
 *** Linux x86_64
 
-A binary executable is available on the [[https://github.com/anoma/juvix/releases/latest][Juvix release page]].
+A Juvix compiler binary executable for Linux x86_64 is available on the [[https://github.com/anoma/juvix/releases/latest][Juvix release page]].
+
+To install this executable, downlaod and unzip the linked file and add move it
+to a directory on your shell's =PATH=.
+
+For example if =~/.local/bin= is on your shell's =PATH= you can install Juvix as
+follows:
+
+#+begin_src shell
+cd /tmp
+curl -OL https://github.com/anoma/juvix/releases/download/v0.2.6/juvix-linux_x86_64-v0.2.6.zip
+unzip juvix-linux_x86_64-v0.2.6.zip
+mv juvix-linux_x86_64-v0.2.6 ~/.local/bin/juvix
+#+end_src
 
 *** Building Juvix from source
 
