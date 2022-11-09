@@ -2,6 +2,7 @@
 (require 'juvix-highlight)
 (require 'juvix-input)
 (require 'flycheck-juvix)
+(require 'juvix-repl)
 
 (defgroup juvix nil
   "Major mode for Juvix files."
@@ -56,7 +57,8 @@
   (eval (read (shell-command-to-string
                (concat "juvix " (if juvix-disable-embedded-stdlib "--no-stdlib " "") (if juvix-stdlib-path (concat "--stdlib-path " juvix-stdlib-path " ") "") "dev highlight "
                        (buffer-file-name)))))
-  (save-buffer))
+  (save-buffer)
+  (juvix-repl-load-file (buffer-file-name)))
 
 (defun juvix-format-buffer ()
   "Format the current buffer."

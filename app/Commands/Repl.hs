@@ -161,7 +161,7 @@ runCommand opts = do
                     <$> doEvalIO False defaultLoc (ctx ^. replContextExpContext . contextCoreResult . Core.coreResultTable) n
 
               compileString :: Repl (Either JuvixError Core.Node)
-              compileString = liftIO $ compileExpressionIO' ctx (pack s)
+              compileString = liftIO $ compileExpressionIO' ctx (strip (pack s))
 
               bindEither :: Monad m => m (Either e a) -> (a -> m (Either e b)) -> m (Either e b)
               bindEither x f = join <$> (x >>= mapM f)
@@ -172,7 +172,7 @@ runCommand opts = do
         gopts <- State.gets (^. replStateGlobalOptions)
         case ctx of
           Just ctx' -> do
-            compileRes <- liftIO (compileExpressionIO' ctx' (pack input))
+            compileRes <- liftIO (compileExpressionIO' ctx' (strip (pack input)))
             case compileRes of
               Left err -> printError gopts err
               Right n -> renderOut gopts (Core.ppOut (project' @GenericOptions gopts) n)
@@ -184,7 +184,7 @@ runCommand opts = do
         gopts <- State.gets (^. replStateGlobalOptions)
         case ctx of
           Just ctx' -> do
-            compileRes <- liftIO (inferExpressionIO' ctx' (pack input))
+            compileRes <- liftIO (inferExpressionIO' ctx' (strip (pack input)))
             case compileRes of
               Left err -> printError gopts err
               Right n -> renderOut gopts (Internal.ppOut (project' @GenericOptions gopts) n)
@@ -282,7 +282,7 @@ compileExpressionIO' ctx = compileExpressionIO "" (ctx ^. replContextExpContext)
 
 render' :: (MonadIO m, P.HasAnsiBackend a, P.HasTextBackend a) => GlobalOptions -> a -> m ()
 render' g t = liftIO $ do
-  hasAnsi <- Ansi.hSupportsANSI stdout
+  hasAnsi <- Ansi.hSupportsANSIColor stdout
   P.renderIO (not (g ^. globalNoColors) && hasAnsi) t
 
 renderOut :: (MonadIO m, P.HasAnsiBackend a, P.HasTextBackend a) => GlobalOptions -> a -> m ()
@@ -290,5 +290,5 @@ renderOut g t = render' g t >> liftIO (putStrLn "")
 
 printError :: MonadIO m => GlobalOptions -> JuvixError -> m ()
 printError opts e = liftIO $ do
-  hasAnsi <- Ansi.hSupportsANSI stderr
+  hasAnsi <- Ansi.hSupportsANSIColor stderr
   liftIO $ hPutStrLn stderr $ run (runReader (project' @GenericOptions opts) (Error.render (not (opts ^. globalNoColors) && hasAnsi) False e))
