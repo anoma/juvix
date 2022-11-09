@@ -161,7 +161,7 @@ runCommand opts = do
                     <$> doEvalIO False defaultLoc (ctx ^. replContextExpContext . contextCoreResult . Core.coreResultTable) n
 
               compileString :: Repl (Either JuvixError Core.Node)
-              compileString = liftIO $ compileExpressionIO' ctx (pack s)
+              compileString = liftIO $ compileExpressionIO' ctx (strip (pack s))
 
               bindEither :: Monad m => m (Either e a) -> (a -> m (Either e b)) -> m (Either e b)
               bindEither x f = join <$> (x >>= mapM f)
@@ -172,7 +172,7 @@ runCommand opts = do
         gopts <- State.gets (^. replStateGlobalOptions)
         case ctx of
           Just ctx' -> do
-            compileRes <- liftIO (compileExpressionIO' ctx' (pack input))
+            compileRes <- liftIO (compileExpressionIO' ctx' (strip (pack input)))
             case compileRes of
               Left err -> printError gopts err
               Right n -> renderOut gopts (Core.ppOut (project' @GenericOptions gopts) n)
@@ -184,7 +184,7 @@ runCommand opts = do
         gopts <- State.gets (^. replStateGlobalOptions)
         case ctx of
           Just ctx' -> do
-            compileRes <- liftIO (inferExpressionIO' ctx' (pack input))
+            compileRes <- liftIO (inferExpressionIO' ctx' (strip (pack input)))
             case compileRes of
               Left err -> printError gopts err
               Right n -> renderOut gopts (Internal.ppOut (project' @GenericOptions gopts) n)
