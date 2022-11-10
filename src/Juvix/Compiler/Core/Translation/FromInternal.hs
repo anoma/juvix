@@ -442,28 +442,31 @@ goExpression' = \case
   Internal.ExpressionApplication a -> goApplication a
   Internal.ExpressionSimpleLambda l -> goSimpleLambda l
   Internal.ExpressionLambda l -> goLambda l
-  Internal.ExpressionFunction f -> unsupported ("goExpression function: " <> show (Loc.getLoc f))
+  e@(Internal.ExpressionFunction {}) -> goFunction (Internal.unfoldFunType e)
   Internal.ExpressionHole h -> error ("goExpression hole: " <> show (Loc.getLoc h))
   Internal.ExpressionUniverse {} -> return (mkUniv' (fromIntegral smallLevel))
+
+goFunction ::
+  forall r.
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
+  ([Internal.FunctionParameter], Internal.Expression) ->
+  Sem r Node
+goFunction (params, returnTypeExpr) = do
+  foldr f (goExpression returnTypeExpr) params
+  where
+    f :: Internal.FunctionParameter -> Sem r Node -> Sem r Node
+    f param acc = do
+      paramBinder <- Binder (param ^. Internal.paramName) <$> goExpression (param ^. Internal.paramType)
+      case param ^. Internal.paramName of
+        Nothing -> mkPi mempty paramBinder <$> acc
+        Just vn -> mkPi mempty paramBinder <$> localAddName vn acc
 
 goSimpleLambda ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
   Internal.SimpleLambda ->
   Sem r Node
-goSimpleLambda l = do
-  updateFn <- update
-  local
-    updateFn
-    (mkLambda' <$> goExpression (l ^. Internal.slambdaBody))
-  where
-    update :: Sem r (IndexTable -> IndexTable)
-    update = do
-      idx <- asks (^. indexTableVarsNum)
-      return
-        ( over indexTableVars (HashMap.insert (l ^. Internal.slambdaVar . nameId) idx)
-            . over indexTableVarsNum (+ 1)
-        )
+goSimpleLambda l = localAddName (l ^. Internal.slambdaVar) (mkLambda' <$> goExpression (l ^. Internal.slambdaBody))
 
 goApplication ::
   forall r.

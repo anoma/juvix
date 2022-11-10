@@ -151,5 +151,10 @@ tests =
       "Inductive type constructor"
       "."
       "Inductive.juvix"
-      "out/Inductive.out"
+      "out/Inductive.out",
+    PosTest
+      "Function type"
+      "."
+      "FunctionType.juvix"
+      "out/FunctionType.out"
   ]

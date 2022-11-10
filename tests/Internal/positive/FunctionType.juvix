@@ -1,0 +1,10 @@
+module FunctionType;
+
+inductive A {
+  a : A;
+};
+
+main : Type;
+main := (A : Type) -> (B : Type) -> A -> B;
+
+end;
