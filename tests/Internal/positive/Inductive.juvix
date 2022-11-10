@@ -1,0 +1,10 @@
+module Inductive;
+
+inductive A (B : Type) {
+  a : A B;
+};
+
+main : Type -> Type;
+main := A;
+
+end;

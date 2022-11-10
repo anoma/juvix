@@ -141,5 +141,15 @@ tests =
       "QuickSort"
       "."
       "QuickSort.juvix"
-      "out/QuickSort.out"
+      "out/QuickSort.out",
+    PosTest
+      "Universe"
+      "."
+      "Universe.juvix"
+      "out/Universe.out",
+    PosTest
+      "Inductive type constructor"
+      "."
+      "Inductive.juvix"
+      "out/Inductive.out"
   ]

@@ -412,7 +412,12 @@ goExpression' = \case
         Just (IdentFun sym) -> mkIdent (Info.singleton (NameInfo n)) sym
         Just _ -> error ("internal to core: not a function: " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
-    Internal.IdenInductive {} -> unsupported "goExpression inductive"
+    Internal.IdenInductive n -> do
+      m <- getIdent identIndex
+      return $ case m of
+        Just (IdentInd sym) -> mkTypeConstr (Info.singleton (NameInfo n)) sym []
+        Just _ -> error ("internal to core: not an inductive: " <> txt)
+        Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenConstructor n -> do
       m <- getIdent identIndex
       case m of
@@ -439,7 +444,7 @@ goExpression' = \case
   Internal.ExpressionLambda l -> goLambda l
   Internal.ExpressionFunction f -> unsupported ("goExpression function: " <> show (Loc.getLoc f))
   Internal.ExpressionHole h -> error ("goExpression hole: " <> show (Loc.getLoc h))
-  Internal.ExpressionUniverse u -> error ("goExpression universe: " <> show (Loc.getLoc u))
+  Internal.ExpressionUniverse {} -> return (mkUniv' (fromIntegral smallLevel))
 
 goSimpleLambda ::
   forall r.

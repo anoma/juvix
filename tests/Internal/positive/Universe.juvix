@@ -1,0 +1,6 @@
+module Universe;
+
+main : Type;
+main := Type;
+
+end;
