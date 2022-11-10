@@ -1,0 +1,92 @@
+$ juvix repl
+> /Stdlib.Prelude> /
+>= 0
+
+<
+:quit
+$ juvix repl
+> /Stdlib.Prelude> /
+>= 0
+
+<
+:type suc
+$ juvix repl
+> /Nat → Nat/
+>= 0
+
+<
+:t suc
+$ juvix repl
+> /Nat → Nat/
+>= 0
+
+<
+:t   suc
+$ juvix repl
+> /Nat → Nat/
+>= 0
+
+<
+:t suc
+$ juvix --stdlib-path juvix-stdlib repl
+> /Nat → Nat/
+>= 0
+
+<
+true && false
+$ juvix repl
+> /false/
+>= 0
+
+<
+   true    &&    false
+$ juvix repl
+> /false/
+>= 0
+
+<
+suc true
+$ juvix repl
+> /Stdlib.Prelude> /
+>2 /The expression true has type:
+  Bool
+but is expected to have type:
+  Nat/
+>= 0
+
+<
+:version
+$ juvix repl
+> /[0-9]+\.[0-9]+\.[0-9]\-[a-z0-9]+/
+>= 0
+
+<
+:load tests/Internal/positive/BuiltinBool.juvix
+$ juvix repl
+> /BuiltinBool> /
+>= 0
+
+<
+:load    tests/Internal/positive/BuiltinBool.juvix
+$ juvix repl
+> /BuiltinBool> /
+>= 0
+
+<
+:l tests/Internal/positive/BuiltinBool.juvix
+main
+$ juvix repl
+> /true/
+>= 0
+
+<
+main
+$ juvix repl tests/Internal/positive/BuiltinBool.juvix
+> /true/
+>= 0
+
+<
+:root
+$ juvix repl
+> /\//
+>= 0
