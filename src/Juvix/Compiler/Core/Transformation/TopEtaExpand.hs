@@ -16,7 +16,6 @@ topEtaExpand info = run (mapT' go info)
             args = fst (unfoldPi (idenInfo ^. identifierType))
          in skipLambdas args body
       where
-        -- skipLambdas :: [(Info, Type)] -> Node -> Sem '[InfoTableBuilder] Node
         skipLambdas :: [PiLhs] -> Node -> Sem '[InfoTableBuilder] Node
         skipLambdas args node = case args of
           [] -> return node
@@ -27,7 +26,6 @@ topEtaExpand info = run (mapT' go info)
                   newArgsInfo = map toArgumentInfo as
               overIdentArgsInfo sym (++ newArgsInfo)
               return (expand node (reverse args))
-        -- toArgumentInfo :: (Info, Type) -> ArgumentInfo
         toArgumentInfo :: PiLhs -> ArgumentInfo
         toArgumentInfo pi =
           ArgumentInfo
