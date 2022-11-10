@@ -20,6 +20,7 @@ import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Data.Error.GenericError qualified as Error
+import Juvix.Extra.Paths
 import Juvix.Extra.Version
 import Juvix.Prelude.Pretty qualified as P
 import Root
@@ -74,9 +75,6 @@ noFileLoadedMsg = liftIO (putStrLn "No file loaded. Load a file using the `:load
 welcomeMsg :: MonadIO m => m ()
 welcomeMsg = liftIO (putStrLn [i|Juvix REPL version #{versionTag}: https://juvix.org. Run :help for help|])
 
-preludePath :: FilePath
-preludePath = "Stdlib" </> "Prelude.juvix"
-
 runCommand :: Members '[Embed IO, App] r => ReplOptions -> Sem r ()
 runCommand opts = do
   let printHelpTxt :: String -> Repl ()
@@ -126,8 +124,8 @@ runCommand opts = do
         mStdlibPath <- State.gets (^. replStateGlobalOptions . globalStdlibPath)
         case mStdlibPath of
           Nothing -> loadDefaultPrelude
-          Just stdlibDir -> do
-            absStdlibDir <- liftIO (makeAbsolute stdlibDir)
+          Just stdlibDir' -> do
+            absStdlibDir <- liftIO (makeAbsolute stdlibDir')
             loadFile (absStdlibDir </> preludePath)
 
       loadDefaultPrelude :: Repl ()

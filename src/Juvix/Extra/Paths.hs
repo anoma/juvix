@@ -18,3 +18,6 @@ juvixBuildDir = ".juvix-build"
 
 juvixStdlibDir :: FilePath
 juvixStdlibDir = juvixBuildDir </> "stdlib"
+
+preludePath :: FilePath
+preludePath = "Stdlib" </> "Prelude.juvix"
