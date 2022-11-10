@@ -2,7 +2,6 @@ module Juvix.Compiler.Core.Transformation.TopEtaExpand where
 
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
-import Juvix.Compiler.Core.Info.NameInfo qualified as Info
 import Juvix.Compiler.Core.Transformation.Base
 
 topEtaExpand :: InfoTable -> InfoTable
@@ -29,7 +28,7 @@ topEtaExpand info = run (mapT' go info)
         toArgumentInfo :: PiLhs -> ArgumentInfo
         toArgumentInfo pi =
           ArgumentInfo
-            { _argumentName = Info.getInfoName (pi ^. piLhsInfo),
+            { _argumentName = pi ^. piLhsBinder . binderName,
               _argumentType = pi ^. piLhsBinder . binderType,
               _argumentIsImplicit = Explicit
             }
