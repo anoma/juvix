@@ -58,7 +58,8 @@ parseCoreReadOptions = do
           <> short 't'
           <> value mempty
           <> metavar "[Transform]"
-          <> help "comma sep list of transformations. Available: lifting, top-eta-expand, identity"
+          <> completer (mkCompleter (return . completionsString))
+          <> help "hint: use autocomplete"
       )
   _coreReadInputFile <- parseInputJuvixCoreFile
   pure CoreReadOptions {..}

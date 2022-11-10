@@ -1,21 +1,49 @@
-module Juvix.Compiler.Core.Data.TransformationId.Parser (parseTransformations, TransformationId (..)) where
+module Juvix.Compiler.Core.Data.TransformationId.Parser (parseTransformations, TransformationId (..), completions, completionsString) where
 
+import Data.Text qualified as Text
 import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Prelude
 import Juvix.Prelude.Pretty hiding (comma)
-import Text.Megaparsec
+import Text.Megaparsec as P
 import Text.Megaparsec.Char qualified as L
 import Text.Megaparsec.Char.Lexer qualified as L
 
-parseTransformations :: Text -> Either Text [TransformationId]
-parseTransformations t = case runParser transformations "<input>" t of
+parseHelper :: Parsec Void Text a -> Text -> Either Text a
+parseHelper p t = case runParser p "<input>" t of
   Left (err :: ParseErrorBundle Text Void) -> Left (prettyText (errorBundlePretty err))
   Right r -> return r
+
+parseTransformations :: Text -> Either Text [TransformationId]
+parseTransformations = parseHelper transformations
+
+completionsString :: String -> [String]
+completionsString = map unpack . completions . pack
+
+completions :: Text -> [Text]
+completions = fromRight [] . parseHelper pcompletions
 
 transformations :: MonadParsec e Text m => m [TransformationId]
 transformations = do
   L.hspace
   sepEndBy transformation comma <* eof
+
+-- | returns a possible list of completions
+pcompletions :: MonadParsec e Text m => m [Text]
+pcompletions = do
+  L.hspace
+  l <- sepEndBy transformation comma
+  rest <- Text.strip <$> takeRest
+  return [ppTransL (notNull l) l <> str | str <- allStrings, Text.isPrefixOf rest str]
+  where
+    ppTransL :: Bool -> [TransformationId] -> Text
+    ppTransL c =
+      let f :: Text -> Text = if c then (<> ",") else id
+       in f . Text.intercalate "," . map ppTrans
+    ppTrans :: TransformationId -> Text
+    ppTrans = \case
+      LambdaLifting -> strLifting
+      TopEtaExpand -> strTopEtaExpand
+      Identity -> strIdentity
 
 lexeme :: MonadParsec e Text m => m a -> m a
 lexeme = L.lexeme L.hspace
@@ -28,6 +56,22 @@ symbol = void . lexeme . chunk
 
 transformation :: MonadParsec e Text m => m TransformationId
 transformation =
-  symbol "lifting" $> LambdaLifting
-    <|> symbol "identity" $> Identity
-    <|> symbol "top-eta-expand" $> TopEtaExpand
+  symbol strLifting $> LambdaLifting
+    <|> symbol strIdentity $> Identity
+    <|> symbol strTopEtaExpand $> TopEtaExpand
+
+allStrings :: [Text]
+allStrings =
+  [ strLifting,
+    strTopEtaExpand,
+    strIdentity
+  ]
+
+strLifting :: Text
+strLifting = "lifting"
+
+strTopEtaExpand :: Text
+strTopEtaExpand = "top-eta-expand"
+
+strIdentity :: Text
+strIdentity = "identity"
