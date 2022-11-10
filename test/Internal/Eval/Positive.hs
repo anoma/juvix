@@ -156,5 +156,10 @@ tests =
       "Function type"
       "."
       "FunctionType.juvix"
-      "out/FunctionType.out"
+      "out/FunctionType.out",
+    PosTest
+      "Builtin Inductive type"
+      "."
+      "BuiltinInductive.juvix"
+      "out/BuiltinInductive.out"
   ]
