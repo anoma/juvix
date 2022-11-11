@@ -499,8 +499,7 @@ goFunction ::
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
   ([Internal.FunctionParameter], Internal.Expression) ->
   Sem r Node
-goFunction (params, returnTypeExpr) = do
-  foldr f (goExpression returnTypeExpr) params
+goFunction (params, returnTypeExpr) = foldr f (goExpression returnTypeExpr) params
   where
     f :: Internal.FunctionParameter -> Sem r Node -> Sem r Node
     f param acc = do
