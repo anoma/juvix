@@ -63,14 +63,14 @@ fromInternalExpression res exp = do
 
 registerInductiveDefs ::
   forall r.
-  Members '[InfoTableBuilder, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Internal.Module ->
   Sem r ()
 registerInductiveDefs m = registerInductiveDefsBody (m ^. Internal.moduleBody)
 
 registerInductiveDefsBody ::
   forall r.
-  Members '[InfoTableBuilder, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Internal.ModuleBody ->
   Sem r ()
 registerInductiveDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
@@ -101,58 +101,70 @@ registerFunctionDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
     go :: Internal.Statement -> Sem r ()
     go = \case
       Internal.StatementFunction f -> goMutualBlock f
-      Internal.StatementAxiom a -> goAxiomDef a
+      Internal.StatementAxiom a -> goAxiomInductive a >> goAxiomDef a
       Internal.StatementInclude i -> mapM_ go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
       _ -> return ()
 
 goInductiveDef ::
   forall r.
-  Members '[InfoTableBuilder, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Internal.InductiveDef ->
   Sem r ()
 goInductiveDef i = do
   sym <- freshSymbol
   ctorInfos <- mapM (goConstructor sym) (i ^. Internal.inductiveConstructors)
-  do
-    let info =
-          InductiveInfo
-            { _inductiveName = i ^. Internal.inductiveName,
-              _inductiveSymbol = sym,
-              _inductiveKind = mkDynamic',
-              _inductiveConstructors = ctorInfos,
-              _inductiveParams = [],
-              _inductivePositive = i ^. Internal.inductivePositive
-            }
-    registerInductive info
+  let info =
+        InductiveInfo
+          { _inductiveName = i ^. Internal.inductiveName,
+            _inductiveSymbol = sym,
+            _inductiveKind = mkDynamic',
+            _inductiveConstructors = ctorInfos,
+            _inductiveParams = [],
+            _inductivePositive = i ^. Internal.inductivePositive
+          }
+  registerInductive info
 
 goConstructor ::
   forall r.
-  Members '[InfoTableBuilder, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable] r =>
   Symbol ->
   Internal.InductiveConstructorDef ->
   Sem r ConstructorInfo
 goConstructor sym ctor = do
-  tag <- ctorTag
+  tag <- mBuiltin >>= ctorTag
+  ty <- ctorType
   let info =
         ConstructorInfo
           { _constructorName = ctor ^. Internal.inductiveConstructorName,
             _constructorTag = tag,
-            _constructorType = mkDynamic',
+            _constructorType = ty,
             _constructorArgsNum = length (ctor ^. Internal.inductiveConstructorParameters),
             _constructorInductive = sym
           }
   registerConstructor info
   return info
   where
-    ctorTag :: Sem r Tag
-    ctorTag = do
-      ctorInfo <- HashMap.lookupDefault impossible (ctor ^. Internal.inductiveConstructorName) <$> asks (^. Internal.infoConstructors)
-      case ctorInfo ^. Internal.constructorInfoBuiltin of
-        Just Internal.BuiltinBoolTrue -> return (BuiltinTag TagTrue)
-        Just Internal.BuiltinBoolFalse -> return (BuiltinTag TagFalse)
-        Just Internal.BuiltinNatZero -> freshTag
-        Just Internal.BuiltinNatSuc -> freshTag
-        Nothing -> freshTag
+    mBuiltin :: Sem r (Maybe Internal.BuiltinConstructor)
+    mBuiltin =
+      (^. Internal.constructorInfoBuiltin)
+        . HashMap.lookupDefault impossible (ctor ^. Internal.inductiveConstructorName)
+        <$> asks (^. Internal.infoConstructors)
+
+    ctorTag :: Maybe Internal.BuiltinConstructor -> Sem r Tag
+    ctorTag = \case
+      Just Internal.BuiltinBoolTrue -> return (BuiltinTag TagTrue)
+      Just Internal.BuiltinBoolFalse -> return (BuiltinTag TagFalse)
+      Just Internal.BuiltinNatZero -> freshTag
+      Just Internal.BuiltinNatSuc -> freshTag
+      Nothing -> freshTag
+
+    ctorType :: Sem r Type
+    ctorType =
+      runReader
+        initIndexTable
+        ( Internal.constructorType (ctor ^. Internal.inductiveConstructorName)
+            >>= goExpression
+        )
 
 goMutualBlock ::
   forall r.
@@ -171,15 +183,16 @@ goMutualBlock m = do
 
 goFunctionDefIden ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen] r =>
+  Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, NameIdGen] r =>
   (Internal.FunctionDef, Symbol) ->
   Sem r ()
 goFunctionDefIden (f, sym) = do
+  funTy <- runReader initIndexTable (goExpression (f ^. Internal.funDefType))
   let info =
         IdentifierInfo
           { _identifierName = Just (f ^. Internal.funDefName),
             _identifierSymbol = sym,
-            _identifierType = mkDynamic',
+            _identifierType = funTy,
             _identifierArgsNum = 0,
             _identifierArgsInfo = [],
             _identifierIsExported = False
@@ -243,19 +256,50 @@ goLambda l = do
       let vs = take nPatterns [varsNum ..]
       return (mkVar' <$> vs)
 
+goAxiomInductive ::
+  forall r.
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
+  Internal.AxiomDef ->
+  Sem r ()
+goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
+  where
+    builtinInductive :: Internal.BuiltinAxiom -> Sem r ()
+    builtinInductive = \case
+      Internal.BuiltinNatPrint -> return ()
+      Internal.BuiltinStringPrint -> return ()
+      Internal.BuiltinBoolPrint -> return ()
+      Internal.BuiltinIOSequence -> return ()
+      Internal.BuiltinString -> registerInductiveAxiom
+      Internal.BuiltinIO -> registerInductiveAxiom
+
+    registerInductiveAxiom :: Sem r ()
+    registerInductiveAxiom = do
+      sym <- freshSymbol
+      let info =
+            InductiveInfo
+              { _inductiveName = a ^. Internal.axiomName,
+                _inductiveSymbol = sym,
+                _inductiveKind = mkDynamic',
+                _inductiveConstructors = [],
+                _inductiveParams = [],
+                _inductivePositive = False
+              }
+      registerInductive info
+
 goAxiomDef ::
   forall r.
-  Members '[InfoTableBuilder, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Internal.AxiomDef ->
   Sem r ()
 goAxiomDef a = case a ^. Internal.axiomBuiltin >>= builtinBody of
   Just body -> do
     sym <- freshSymbol
+    ty <- axiomType'
     let info =
           IdentifierInfo
             { _identifierName = Just (a ^. Internal.axiomName),
               _identifierSymbol = sym,
-              _identifierType = mkDynamic',
+              _identifierType = ty,
               _identifierArgsNum = 0,
               _identifierArgsInfo = [],
               _identifierIsExported = False
@@ -281,6 +325,9 @@ goAxiomDef a = case a ^. Internal.axiomBuiltin >>= builtinBody of
           )
       Internal.BuiltinString -> Nothing
       Internal.BuiltinIO -> Nothing
+
+    axiomType' :: Sem r Type
+    axiomType' = runReader initIndexTable (goExpression (a ^. Internal.axiomType))
 
     writeLambda :: Node
     writeLambda = mkLambda' (mkConstr' (BuiltinTag TagWrite) [mkVar' 0])
@@ -412,7 +459,12 @@ goExpression' = \case
         Just (IdentFun sym) -> mkIdent (Info.singleton (NameInfo n)) sym
         Just _ -> error ("internal to core: not a function: " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
-    Internal.IdenInductive {} -> unsupported "goExpression inductive"
+    Internal.IdenInductive n -> do
+      m <- getIdent identIndex
+      return $ case m of
+        Just (IdentInd sym) -> mkTypeConstr (Info.singleton (NameInfo n)) sym []
+        Just _ -> error ("internal to core: not an inductive: " <> txt)
+        Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenConstructor n -> do
       m <- getIdent identIndex
       case m of
@@ -423,7 +475,8 @@ goExpression' = \case
       m <- getIdent identIndex
       return $ case m of
         Just (IdentFun sym) -> mkIdent (Info.singleton (NameInfo n)) sym
-        Just _ -> error ("internal to core: not a function: " <> txt)
+        Just (IdentInd sym) -> mkTypeConstr (Info.singleton (NameInfo n)) sym []
+        Just _ -> error ("internal to core: not an axiom: " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     where
       identIndex :: Text
@@ -437,28 +490,30 @@ goExpression' = \case
   Internal.ExpressionApplication a -> goApplication a
   Internal.ExpressionSimpleLambda l -> goSimpleLambda l
   Internal.ExpressionLambda l -> goLambda l
-  Internal.ExpressionFunction f -> unsupported ("goExpression function: " <> show (Loc.getLoc f))
+  e@(Internal.ExpressionFunction {}) -> goFunction (Internal.unfoldFunType e)
   Internal.ExpressionHole h -> error ("goExpression hole: " <> show (Loc.getLoc h))
-  Internal.ExpressionUniverse u -> error ("goExpression universe: " <> show (Loc.getLoc u))
+  Internal.ExpressionUniverse {} -> return (mkUniv' (fromIntegral smallLevel))
+
+goFunction ::
+  forall r.
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
+  ([Internal.FunctionParameter], Internal.Expression) ->
+  Sem r Node
+goFunction (params, returnTypeExpr) = foldr f (goExpression returnTypeExpr) params
+  where
+    f :: Internal.FunctionParameter -> Sem r Node -> Sem r Node
+    f param acc = do
+      paramBinder <- Binder (param ^. Internal.paramName) <$> goExpression (param ^. Internal.paramType)
+      case param ^. Internal.paramName of
+        Nothing -> mkPi mempty paramBinder <$> acc
+        Just vn -> mkPi mempty paramBinder <$> localAddName vn acc
 
 goSimpleLambda ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
   Internal.SimpleLambda ->
   Sem r Node
-goSimpleLambda l = do
-  updateFn <- update
-  local
-    updateFn
-    (mkLambda' <$> goExpression (l ^. Internal.slambdaBody))
-  where
-    update :: Sem r (IndexTable -> IndexTable)
-    update = do
-      idx <- asks (^. indexTableVarsNum)
-      return
-        ( over indexTableVars (HashMap.insert (l ^. Internal.slambdaVar . nameId) idx)
-            . over indexTableVarsNum (+ 1)
-        )
+goSimpleLambda l = localAddName (l ^. Internal.slambdaVar) (mkLambda' <$> goExpression (l ^. Internal.slambdaBody))
 
 goApplication ::
   forall r.
