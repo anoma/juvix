@@ -275,6 +275,7 @@ fromAsmCase tab si Asm.CmdCase {..} brs def =
                    in CaseBranch
                         { _caseBranchTag = tag,
                           _caseBranchMemRep = ci ^. constructorRepresentation,
+                          _caseBranchArgsNum = ci ^. constructorArgsNum,
                           _caseBranchCode = code
                         }
               )

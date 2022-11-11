@@ -148,6 +148,7 @@ data CaseBranch = CaseBranch
   { _caseBranchTag :: Tag,
     -- | Memory representation of the constructor corresponding to the branch.
     _caseBranchMemRep :: MemRep,
+    _caseBranchArgsNum :: Int,
     _caseBranchCode :: Code
   }
 

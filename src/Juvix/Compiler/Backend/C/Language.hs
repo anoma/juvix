@@ -43,6 +43,7 @@ data Declaration = Declaration
 
 data Initializer
   = ExprInitializer Expression
+  | ListInitializer [Initializer]
   | DesignatorInitializer [DesigInit]
   deriving stock (Show, Eq)
 
@@ -94,6 +95,7 @@ data DeclType
   | DeclTypeDef DeclType
   | DeclEnum Enum
   | DeclFunPtr FunPtr
+  | DeclArray Array
   | DeclJuvixClosure
   | BoolType
   deriving stock (Show, Eq)
@@ -120,6 +122,12 @@ data FunPtr = FunPtr
   { _funPtrReturnType :: DeclType,
     _funPtrIsPtr :: Bool,
     _funPtrArgs :: [CDeclType]
+  }
+  deriving stock (Show, Eq)
+
+data Array = Array
+  { _arrayType :: DeclType,
+    _arraySize :: Integer
   }
   deriving stock (Show, Eq)
 
@@ -272,7 +280,7 @@ data If = If
 data Switch = Switch
   { _switchCondition :: Expression,
     _switchCases :: [Case],
-    _switchDefault :: Maybe Expression
+    _switchDefault :: Maybe Statement
   }
   deriving stock (Show, Eq)
 
@@ -316,6 +324,9 @@ macroCall name = \case
 
 integer :: Integral a => a -> Expression
 integer x = ExpressionLiteral (LiteralInt (fromIntegral x))
+
+string :: Text -> Expression
+string x = ExpressionLiteral (LiteralString x)
 
 ptrType :: DeclType -> Text -> Declaration
 ptrType typ n =

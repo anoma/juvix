@@ -1,134 +1,210 @@
 module Juvix.Compiler.Backend.C.Translation.FromReg where
 
+import Data.HashMap.Strict qualified as HashMap
 import Data.List qualified as List
-import Juvix.Compiler.Backend.C.Extra.Serialization qualified as C
-import Juvix.Compiler.Backend.C.Language qualified as C
+import Juvix.Compiler.Backend
+import Juvix.Compiler.Backend.C.Data.CBuilder
+import Juvix.Compiler.Backend.C.Extra.Serialization
+import Juvix.Compiler.Backend.C.Language as C
+import Juvix.Compiler.Backend.C.Translation.FromReg.Base
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Extra qualified as Reg
 import Juvix.Compiler.Reg.Language qualified as Reg
 import Juvix.Prelude
 
-fromReg :: Reg.InfoTable -> Text
-fromReg tab = undefined
-
-fromRegFunction :: Reg.InfoTable -> Reg.FunctionInfo -> [C.BodyItem]
-fromRegFunction tab funInfo = undefined
-
-fromRegCode :: Reg.InfoTable -> Reg.Code -> [C.Statement]
-fromRegCode tab code = undefined
-
-fromRegInstr :: Reg.InfoTable -> Reg.Instruction -> [C.Statement]
-fromRegInstr tab = \case
-  Reg.Nop ->
-    []
-  Reg.Binop x ->
-    [fromBinaryOp x]
-  Reg.Assign Reg.InstrAssign {..} ->
-    stmtsAssign (fromVarRef _instrAssignResult) (fromValue _instrAssignValue)
-  Reg.Trace Reg.InstrTrace {..} ->
-    [C.StatementExpr $ C.macroCall "JUVIX_TRACE" [fromValue _instrTraceValue]]
-  Reg.Dump ->
-    [C.StatementExpr $ C.macroVar "JUVIX_DUMP"]
-  Reg.Failure Reg.InstrFailure {..} ->
-    [C.StatementExpr $ C.macroCall "JUVIX_FAILURE" [fromValue _instrFailure]]
-  Reg.Prealloc Reg.InstrPrealloc {..} ->
-    [ C.StatementExpr $
-        C.macroCall
-          "PREALLOC"
-          [ C.integer _instrPreallocWordsNum,
-            C.ExpressionStatement $ C.StatementCompound $ stmtsPushVars _instrPreallocLiveVars,
-            C.ExpressionStatement $ C.StatementCompound $ stmtsPopVars _instrPreallocLiveVars
-          ]
-    ]
-  Reg.Alloc a@Reg.InstrAlloc {..} ->
-    case _instrAllocMemRep of
-      Reg.MemRepConstr ->
-        stmtsAllocConstr a "ALLOC_CONSTR_BOXED" "CONSTR_ARG"
-      Reg.MemRepTag ->
-        [ C.StatementExpr $
-            C.macroCall
-              "ALLOC_CONSTR_UNBOXED"
-              [fromVarRef _instrAllocResult, C.integer $ getUID _instrAllocTag]
-        ]
-      Reg.MemRepTuple ->
-        stmtsAllocConstr a "ALLOC_CONSTR_TUPLE" "FIELD"
-      Reg.MemRepUnit ->
-        stmtsAssign (fromVarRef _instrAllocResult) (C.macroVar "OBJ_UNIT")
-      Reg.MemRepUnpacked {} ->
-        stmtsAssign (fromVarRef _instrAllocResult) (fromValue (List.head _instrAllocArgs))
-  Reg.AllocClosure Reg.InstrAllocClosure {..} ->
-    C.StatementExpr
-      ( C.macroCall
-          "ALLOC_CLOSURE"
-          [ fromVarRef _instrAllocClosureResult,
-            C.integer (getFUID _instrAllocClosureSymbol),
-            exprAddr _instrAllocClosureSymbol,
-            C.integer (length _instrAllocClosureArgs),
-            C.integer (_instrAllocClosureExpectedArgsNum - length _instrAllocClosureArgs)
-          ]
-      )
-      : stmtsAssignArgs Nothing "CLOSURE_ARG" (Just _instrAllocClosureResult) _instrAllocClosureArgs
-  Reg.ExtendClosure Reg.InstrExtendClosure {..} ->
-    [ C.StatementExpr $
-        C.macroCall
-          "EXTEND_CLOSURE"
-          [ fromVarRef _instrExtendClosureResult,
-            fromVarRef _instrExtendClosureValue,
-            C.integer (length _instrExtendClosureArgs),
-            C.ExpressionStatement $
-              C.StatementCompound $
-                stmtsAssignArgs
-                  (Just (C.ExpressionVar "juvix_closure_nargs"))
-                  "CLOSURE_ARG"
-                  (Just _instrExtendClosureResult)
-                  _instrExtendClosureArgs
-          ]
-    ]
-  Reg.Call Reg.InstrCall {..} ->
-    ( if
-          | _instrCallIsTail -> []
-          | otherwise ->
-              stmtsPushVars _instrCallLiveVars
-    )
-      ++ stmtsAssignArgs
-        Nothing
-        "ARG"
-        Nothing
-        _instrCallArgs
-      ++ ( if
-               | _instrCallIsTail ->
-                   [ C.StatementExpr $
-                       C.macroCall
-                         "CALL"
-                         []
-                   ]
-               | otherwise -> []
-         )
-  Reg.CallClosures Reg.InstrCallClosures {..} ->
-    []
-  Reg.Return ->
-    []
-  Reg.Branch Reg.InstrBranch {..} ->
-    []
-  Reg.Case Reg.InstrCase {..} ->
-    []
+fromReg :: Limits -> Reg.InfoTable -> Text
+fromReg lims tab =
+  serialize $ CCodeUnit [includeApi, constrInfo, functionInfo, mainFunction]
   where
-    getUID :: Reg.Tag -> Int
-    getUID = undefined
+    info :: Reg.ExtraInfo
+    info = Reg.computeExtraInfo lims tab
 
-    getFUID :: Reg.Symbol -> Int
-    getFUID = undefined
+    includeApi :: CCode
+    includeApi = ExternalMacro (CppIncludeSystem "juvix/api.h")
 
-    getLabel :: Reg.Symbol -> Text
-    getLabel = undefined
+    constrInfo :: CCode
+    constrInfo =
+      ExternalDecl $
+        Declaration
+          { _declType =
+              DeclArray
+                Array
+                  { _arrayType = DeclTypeDefType "constr_info_t",
+                    _arraySize = fromIntegral (info ^. Reg.extraInfoConstrsNum)
+                  },
+            _declIsPtr = False,
+            _declName = Just "juvix_constr_info_array",
+            _declInitializer =
+              Just $
+                ListInitializer $
+                  ExprInitializer (macroVar "BUILTIN_UIDS_INFO")
+                    : map
+                      (\ci -> ListInitializer [ExprInitializer $ string (ci ^. Reg.constructorName)])
+                      (HashMap.elems (tab ^. Reg.infoConstrs))
+          }
 
-    getClosureLabel :: Reg.Symbol -> Text
-    getClosureLabel = undefined
+    functionInfo :: CCode
+    functionInfo =
+      ExternalDecl $
+        Declaration
+          { _declType =
+              DeclArray
+                Array
+                  { _arrayType = DeclTypeDefType "function_info_t",
+                    _arraySize = fromIntegral (info ^. Reg.extraInfoFunctionsNum)
+                  },
+            _declIsPtr = False,
+            _declName = Just "juvix_function_info_array",
+            _declInitializer =
+              Just $
+                ListInitializer $
+                  map
+                    (\ci -> ListInitializer [ExprInitializer $ string (ci ^. Reg.functionName)])
+                    (HashMap.elems (tab ^. Reg.infoFunctions))
+          }
 
-    fromBinaryOp :: Reg.BinaryOp -> C.Statement
+    mainFunction :: CCode
+    mainFunction =
+      ExternalFunc $
+        Function
+          { _funcSig = mainSig,
+            _funcBody = map BodyStatement mainBody
+          }
+
+    mainSig :: FunctionSig
+    mainSig =
+      FunctionSig
+        { _funcReturnType = DeclTypeDefType "int",
+          _funcIsPtr = False,
+          _funcQualifier = None,
+          _funcName = "main",
+          _funcArgs = []
+        }
+
+    mainBody :: [Statement]
+    mainBody =
+      argDecls
+        ++ [ StatementExpr $ macroCall "JUVIX_PROLOGUE" [integer (info ^. Reg.extraInfoMaxArgsNum)],
+             stmtAssign (ExpressionVar "juvix_constrs_num") (integer (info ^. Reg.extraInfoConstrsNum)),
+             stmtAssign (ExpressionVar "juvix_constr_info") (ExpressionVar "juvix_constr_info_array"),
+             stmtAssign (ExpressionVar "juvix_functions_num") (integer (info ^. Reg.extraInfoFunctionsNum)),
+             stmtAssign (ExpressionVar "juvix_function_info") (ExpressionVar "juvix_function_info_array")
+           ]
+        ++ jumpMainFunction
+        ++ juvixFunctions
+        ++ [ StatementExpr $ macroVar "JUVIX_EPILOGUE",
+             StatementReturn (Just (integer (0 :: Int)))
+           ]
+
+    argDecls :: [Statement]
+    argDecls =
+      map (\(i :: Int) -> StatementExpr $ macroCall "DECL_REG_ARG" [integer i]) [0 .. 3]
+        ++ map (\i -> StatementExpr $ macroCall "DECL_ARG" [integer i]) [4 .. n - 1]
+      where
+        n = info ^. Reg.extraInfoMaxArgsNum
+
+    jumpMainFunction :: [Statement]
+    jumpMainFunction = case tab ^. Reg.infoMainFunction of
+      Nothing -> error "no main function"
+      Just main ->
+        [ StatementExpr $ macroCall "STACK_PUSH_ADDR" [exprAddr info main],
+          StatementGoto $ Goto $ getLabel info main
+        ]
+
+    juvixFunctions :: [Statement]
+    juvixFunctions =
+      run $
+        runCBuilder $
+          concatMapM (fromRegFunction info) (HashMap.elems (tab ^. Reg.infoFunctions))
+
+fromRegFunction :: Member CBuilder r => Reg.ExtraInfo -> Reg.FunctionInfo -> Sem r [Statement]
+fromRegFunction info funInfo = do
+  body <- fromRegCode bNoStack info (funInfo ^. Reg.functionCode)
+  let stmpDecls = mkDecls "DECL_STMP" (funInfo ^. Reg.functionStackVarsNum)
+      tmpDecls = mkDecls "DECL_TMP" (funInfo ^. Reg.functionTempVarsNum)
+  return
+    [closureDecl, functionDecl, StatementCompound (stmpDecls ++ tmpDecls ++ body)]
+  where
+    mkDecls :: Text -> Int -> [Statement]
+    mkDecls decl n = map (\i -> StatementExpr (macroCall decl [integer i])) [0 .. n - 1]
+
+    sym :: Reg.Symbol
+    sym = funInfo ^. Reg.functionSymbol
+
+    maxStackHeight :: Int
+    maxStackHeight = getMaxStackHeight info sym
+
+    bNoStack :: Bool
+    bNoStack = maxStackHeight == 0
+
+    functionDecl :: Statement
+    functionDecl =
+      if
+          | bNoStack ->
+              StatementExpr
+                (macroCall "FUNCTION_NS" [exprLabel info sym])
+          | otherwise ->
+              StatementExpr
+                (macroCall "FUNCTION" [exprLabel info sym, integer maxStackHeight])
+
+    closureDecl :: Statement
+    closureDecl =
+      StatementLabel
+        Label
+          { _labelName = getClosureLabel info sym,
+            _labelCode =
+              StatementCompound $
+                map
+                  (\i -> stmtAssign (macroCall "ARG" [integer i]) (macroCall "CARG" [integer i]))
+                  [0 .. funInfo ^. Reg.functionArgsNum - 1]
+          }
+
+fromRegCode :: Member CBuilder r => Bool -> Reg.ExtraInfo -> Reg.Code -> Sem r [Statement]
+fromRegCode bNoStack info = concatMapM (fromRegInstr bNoStack info)
+
+fromRegInstr :: forall r. Member CBuilder r => Bool -> Reg.ExtraInfo -> Reg.Instruction -> Sem r [Statement]
+fromRegInstr bNoStack info = \case
+  Reg.Nop ->
+    return []
+  Reg.Binop x ->
+    return [fromBinaryOp x]
+  Reg.Assign Reg.InstrAssign {..} ->
+    return $ stmtsAssign (fromVarRef _instrAssignResult) (fromValue _instrAssignValue)
+  Reg.Trace Reg.InstrTrace {..} ->
+    return [StatementExpr $ macroCall "JUVIX_TRACE" [fromValue _instrTraceValue]]
+  Reg.Dump ->
+    return [StatementExpr $ macroVar "JUVIX_DUMP"]
+  Reg.Failure Reg.InstrFailure {..} ->
+    return [StatementExpr $ macroCall "JUVIX_FAILURE" [fromValue _instrFailure]]
+  Reg.Prealloc x ->
+    return [fromPrealloc x]
+  Reg.Alloc x ->
+    return $ fromAlloc x
+  Reg.AllocClosure x ->
+    return $ fromAllocClosure x
+  Reg.ExtendClosure x ->
+    return [fromExtendClosure x]
+  Reg.Call x@Reg.InstrCall {..}
+    | _instrCallIsTail ->
+        return $ fromTailCall x
+  Reg.Call x ->
+    fromCall x
+  Reg.CallClosures x@Reg.InstrCallClosures {..}
+    | _instrCallClosuresIsTail ->
+        return $ fromTailCallClosures x
+  Reg.CallClosures x ->
+    fromCallClosures x
+  Reg.Return ->
+    return [StatementExpr (macroVar (if bNoStack then "RETURN_NS" else "RETURN"))]
+  Reg.Branch x ->
+    fromBranch x
+  Reg.Case x ->
+    fromCase x
+  where
+    fromBinaryOp :: Reg.BinaryOp -> Statement
     fromBinaryOp Reg.BinaryOp {..} =
-      C.StatementExpr $
-        C.macroCall
+      StatementExpr $
+        macroCall
           (getOpcodeMacro _binaryOpCode)
           [ fromVarRef _binaryOpResult,
             fromValue _binaryOpArg1,
@@ -146,9 +222,9 @@ fromRegInstr tab = \case
       Reg.OpIntLe -> "JUVIX_INT_LE"
       Reg.OpEq -> "JUVIX_VAL_EQ"
 
-    fromVarRef :: Reg.VarRef -> C.Expression
+    fromVarRef :: Reg.VarRef -> Expression
     fromVarRef Reg.VarRef {..} =
-      C.macroCall g [C.ExpressionLiteral (C.LiteralInt (toInteger _varRefIndex))]
+      macroCall g [ExpressionLiteral (LiteralInt (toInteger _varRefIndex))]
       where
         g =
           case _varRefGroup of
@@ -156,76 +232,271 @@ fromRegInstr tab = \case
             Reg.VarGroupStack -> "STMP"
             Reg.VarGroupTemp -> "TMP"
 
-    fromValue :: Reg.Value -> C.Expression
+    fromValue :: Reg.Value -> Expression
     fromValue = \case
-      Reg.ConstInt x -> C.macroCall "make_smallint" [C.integer x]
-      Reg.ConstBool True -> C.macroVar "BOOL_TRUE"
-      Reg.ConstBool False -> C.macroVar "BOOL_FALSE"
-      Reg.ConstString x -> C.macroCall "MAKE_CSTRING" [C.ExpressionLiteral (C.LiteralString x)]
-      Reg.ConstUnit -> C.macroVar "OBJ_UNIT"
-      Reg.ConstVoid -> C.macroVar "OBJ_VOID"
+      Reg.ConstInt x -> macroCall "make_smallint" [integer x]
+      Reg.ConstBool True -> macroVar "BOOL_TRUE"
+      Reg.ConstBool False -> macroVar "BOOL_FALSE"
+      Reg.ConstString x -> macroCall "MAKE_CSTRING" [ExpressionLiteral (LiteralString x)]
+      Reg.ConstUnit -> macroVar "OBJ_UNIT"
+      Reg.ConstVoid -> macroVar "OBJ_VOID"
       Reg.CRef Reg.ConstrField {..} ->
         case _constrFieldMemRep of
           Reg.MemRepConstr ->
-            C.macroCall "CONSTR_ARG" [fromVarRef _constrFieldRef, C.integer _constrFieldIndex]
+            macroCall "CONSTR_ARG" [fromVarRef _constrFieldRef, integer _constrFieldIndex]
           Reg.MemRepTag ->
-            C.macroCall "MAKE_HEADER" [C.integer (getUID _constrFieldTag), C.integer (0 :: Int)]
+            macroCall "MAKE_HEADER" [integer (getUID info _constrFieldTag), integer (0 :: Int)]
           Reg.MemRepTuple ->
-            C.macroCall "FIELD" [fromVarRef _constrFieldRef, C.integer _constrFieldIndex]
+            macroCall "FIELD" [fromVarRef _constrFieldRef, integer _constrFieldIndex]
           Reg.MemRepUnit ->
-            C.macroVar "OBJ_UNIT"
+            macroVar "OBJ_UNIT"
           Reg.MemRepUnpacked {} ->
             fromVarRef _constrFieldRef
       Reg.VRef x -> fromVarRef x
 
-    exprAddr :: Reg.Symbol -> C.Expression
-    exprAddr sym = C.macroCall "LABEL_ADDR" [exprClosureLabel sym]
+    fromPrealloc :: Reg.InstrPrealloc -> Statement
+    fromPrealloc Reg.InstrPrealloc {..} =
+      StatementExpr $
+        macroCall
+          "PREALLOC"
+          [ integer _instrPreallocWordsNum,
+            ExpressionStatement $ StatementCompound $ stmtsPushVars _instrPreallocLiveVars,
+            ExpressionStatement $ StatementCompound $ stmtsPopVars _instrPreallocLiveVars
+          ]
 
-    exprLabel :: Reg.Symbol -> C.Expression
-    exprLabel sym = C.ExpressionVar $ getLabel sym
+    fromAlloc :: Reg.InstrAlloc -> [Statement]
+    fromAlloc a@Reg.InstrAlloc {..} =
+      case _instrAllocMemRep of
+        Reg.MemRepConstr ->
+          if
+              | null _instrAllocArgs ->
+                  stmtsCall
+                    "ALLOC_CONSTR_BOXED_TAG"
+                    [fromVarRef _instrAllocResult, integer $ getUID info _instrAllocTag]
+              | otherwise ->
+                  stmtsAllocConstr a "ALLOC_CONSTR_BOXED" "CONSTR_ARG"
+        Reg.MemRepTag ->
+          stmtsCall
+            "ALLOC_CONSTR_UNBOXED"
+            [fromVarRef _instrAllocResult, integer $ getUID info _instrAllocTag]
+        Reg.MemRepTuple ->
+          stmtsAllocConstr a "ALLOC_CONSTR_TUPLE" "FIELD"
+        Reg.MemRepUnit ->
+          stmtsAssign (fromVarRef _instrAllocResult) (macroVar "OBJ_UNIT")
+        Reg.MemRepUnpacked {} ->
+          stmtsAssign (fromVarRef _instrAllocResult) (fromValue (List.head _instrAllocArgs))
 
-    exprClosureLabel :: Reg.Symbol -> C.Expression
-    exprClosureLabel sym = C.ExpressionVar $ getClosureLabel sym
+    fromAllocClosure :: Reg.InstrAllocClosure -> [Statement]
+    fromAllocClosure Reg.InstrAllocClosure {..} =
+      StatementExpr
+        ( macroCall
+            "ALLOC_CLOSURE"
+            [ fromVarRef _instrAllocClosureResult,
+              integer (getFUID info _instrAllocClosureSymbol),
+              exprAddr info _instrAllocClosureSymbol,
+              integer (length _instrAllocClosureArgs),
+              integer (_instrAllocClosureExpectedArgsNum - length _instrAllocClosureArgs)
+            ]
+        )
+        : stmtsAssignArgs
+          Nothing
+          "CLOSURE_ARG"
+          (Just _instrAllocClosureResult)
+          _instrAllocClosureArgs
 
-    stmtsAllocConstr :: Reg.InstrAlloc -> Text -> Text -> [C.Statement]
+    fromExtendClosure :: Reg.InstrExtendClosure -> Statement
+    fromExtendClosure Reg.InstrExtendClosure {..} =
+      StatementExpr $
+        macroCall
+          "EXTEND_CLOSURE"
+          [ fromVarRef _instrExtendClosureResult,
+            fromVarRef _instrExtendClosureValue,
+            integer (length _instrExtendClosureArgs),
+            ExpressionStatement $
+              StatementCompound $
+                stmtsAssignArgs
+                  (Just (ExpressionVar "juvix_closure_nargs"))
+                  "CLOSURE_ARG"
+                  (Just _instrExtendClosureResult)
+                  _instrExtendClosureArgs
+          ]
+
+    fromTailCall :: Reg.InstrCall -> [Statement]
+    fromTailCall Reg.InstrCall {..} =
+      case _instrCallType of
+        Reg.CallFun sym ->
+          stmtsAssignFunArgs _instrCallArgs
+            ++ [ StatementExpr $
+                   macroCall
+                     (if bNoStack then "TAIL_CALL_NS" else "TAIL_CALL")
+                     [integer (getFUID info sym), exprLabel info sym]
+               ]
+        Reg.CallClosure vr ->
+          stmtsAssignCArgs vr _instrCallArgs
+            ++ [ StatementExpr $
+                   macroCall
+                     (if bNoStack then "TAIL_CALL_CLOSURE_NS" else "TAIL_CALL_CLOSURE")
+                     [fromVarRef vr]
+               ]
+
+    fromCall :: Reg.InstrCall -> Sem r [Statement]
+    fromCall Reg.InstrCall {..} = do
+      lab <- freshLabel
+      return $
+        case _instrCallType of
+          Reg.CallFun sym ->
+            stmtsPushVars _instrCallLiveVars
+              ++ stmtsAssignFunArgs _instrCallArgs
+              ++ [ StatementExpr $
+                     macroCall
+                       "CALL"
+                       [integer (getFUID info sym), exprLabel info sym, ExpressionVar lab],
+                   stmtAssign (fromVarRef _instrCallResult) (ExpressionVar "juvix_result")
+                 ]
+              ++ stmtsPopVars _instrCallLiveVars
+          Reg.CallClosure vr ->
+            stmtsPushVars _instrCallLiveVars
+              ++ stmtsAssignCArgs vr _instrCallArgs
+              ++ [ StatementExpr $
+                     macroCall
+                       "CALL_CLOSURE"
+                       [fromVarRef vr, ExpressionVar lab],
+                   stmtAssign (fromVarRef _instrCallResult) (ExpressionVar "juvix_result")
+                 ]
+              ++ stmtsPopVars _instrCallLiveVars
+
+    fromTailCallClosures :: Reg.InstrCallClosures -> [Statement]
+    fromTailCallClosures Reg.InstrCallClosures {..} =
+      stmtsPush (reverse (map fromValue _instrCallClosuresArgs))
+        ++ [ StatementExpr $
+               macroCall
+                 "TAIL_CALL_CLOSURES"
+                 [ fromVarRef _instrCallClosuresValue,
+                   integer (length _instrCallClosuresArgs)
+                 ]
+           ]
+
+    fromCallClosures :: Reg.InstrCallClosures -> Sem r [Statement]
+    fromCallClosures Reg.InstrCallClosures {..} = do
+      lab <- freshLabel
+      return $
+        stmtsPushVars _instrCallClosuresLiveVars
+          ++ stmtsPush (reverse (map fromValue _instrCallClosuresArgs))
+          ++ [ StatementExpr $
+                 macroCall
+                   "CALL_CLOSURES"
+                   [ fromVarRef _instrCallClosuresValue,
+                     integer (length _instrCallClosuresArgs),
+                     ExpressionVar lab
+                   ],
+               stmtAssign (fromVarRef _instrCallClosuresResult) (ExpressionVar "juvix_result")
+             ]
+          ++ stmtsPopVars _instrCallClosuresLiveVars
+
+    fromBranch :: Reg.InstrBranch -> Sem r [Statement]
+    fromBranch Reg.InstrBranch {..} = do
+      br1 <- fromRegCode bNoStack info _instrBranchTrue
+      br2 <- fromRegCode bNoStack info _instrBranchFalse
+      return
+        [ StatementIf $
+            If
+              { _ifCondition = macroCall "is_true" [fromValue _instrBranchValue],
+                _ifThen = StatementCompound br1,
+                _ifElse = Just (StatementCompound br2)
+              }
+        ]
+
+    fromCase :: Reg.InstrCase -> Sem r [Statement]
+    fromCase Reg.InstrCase {..} = do
+      brs <- mapM fromCaseBranch _instrCaseBranches
+      def <- case _instrCaseDefault of
+        Nothing -> return Nothing
+        Just code -> Just <$> fromRegCode bNoStack info code
+      case _instrCaseIndRep of
+        Reg.IndRepStandard ->
+          return
+            [ StatementSwitch $
+                Switch
+                  { _switchCondition = macroCall "get_header" [fromValue _instrCaseValue],
+                    _switchCases = brs,
+                    _switchDefault = fmap StatementCompound def
+                  }
+            ]
+        Reg.IndRepEnum ->
+          error "unsupported constructor representation"
+        Reg.IndRepEnumRecord ->
+          error "unsupported constructor representation"
+        Reg.IndRepEnumMaybe {} ->
+          error "unsupported constructor representation"
+        Reg.IndRepRecord ->
+          error "unsupported constructor representation"
+        Reg.IndRepUnit ->
+          error "unsupported constructor representation"
+        Reg.IndRepNewtype {} ->
+          error "unsupported constructor representation"
+        Reg.IndRepMixed ->
+          error "unsupported constructor representation"
+
+    fromCaseBranch :: Reg.CaseBranch -> Sem r Case
+    fromCaseBranch Reg.CaseBranch {..} = do
+      stmts <- fromRegCode bNoStack info _caseBranchCode
+      return
+        Case
+          { _caseValue =
+              macroCall
+                "MAKE_HEADER"
+                [ integer (getUID info _caseBranchTag),
+                  integer _caseBranchArgsNum
+                ],
+            _caseCode = StatementCompound stmts
+          }
+
+    stmtsAllocConstr :: Reg.InstrAlloc -> Text -> Text -> [Statement]
     stmtsAllocConstr Reg.InstrAlloc {..} alloc carg =
-      C.StatementExpr
-        ( C.macroCall
+      StatementExpr
+        ( macroCall
             alloc
             [ fromVarRef _instrAllocResult,
-              C.integer $ getUID _instrAllocTag,
-              C.integer $ length _instrAllocArgs
+              integer $ getUID info _instrAllocTag,
+              integer $ length _instrAllocArgs
             ]
         )
         : stmtsAssignArgs Nothing carg (Just _instrAllocResult) _instrAllocArgs
 
-    stmtAssign :: C.Expression -> C.Expression -> C.Statement
-    stmtAssign result value =
-      C.StatementExpr $ C.ExpressionAssign (C.Assign result value)
-
-    stmtsAssign :: C.Expression -> C.Expression -> [C.Statement]
-    stmtsAssign result value = [stmtAssign result value]
-
-    stmtsAssignArgs :: Maybe C.Expression -> Text -> Maybe Reg.VarRef -> [Reg.Value] -> [C.Statement]
+    stmtsAssignArgs :: Maybe Expression -> Text -> Maybe Reg.VarRef -> [Reg.Value] -> [Statement]
     stmtsAssignArgs off carg ref args =
       zipWith
         ( \v idx ->
-            stmtAssign (C.macroCall carg (maybe [] (\x -> [fromVarRef x]) ref ++ [getIndex idx])) (fromValue v)
+            stmtAssign (macroCall carg (maybe [] (\x -> [fromVarRef x]) ref ++ [getIndex idx])) (fromValue v)
         )
         args
         [0 ..]
       where
-        getIndex :: Int -> C.Expression
+        getIndex :: Int -> Expression
         getIndex idx =
           case off of
-            Nothing -> C.integer idx
-            Just e -> C.ExpressionBinary $ C.Binary C.Plus e (C.integer idx)
+            Nothing -> integer idx
+            Just e -> ExpressionBinary $ C.Binary C.Plus e (integer idx)
 
-    stmtsPushVars :: [Reg.VarRef] -> [C.Statement]
+    stmtsAssignFunArgs :: [Reg.Value] -> [Statement]
+    stmtsAssignFunArgs = stmtsAssignArgs Nothing "ARG" Nothing
+
+    stmtsAssignCArgs :: Reg.VarRef -> [Reg.Value] -> [Statement]
+    stmtsAssignCArgs vr args =
+      [ StatementExpr $
+          macroCall
+            "ASSIGN_CARGS"
+            [ fromVarRef vr,
+              ExpressionStatement $
+                StatementCompound $
+                  stmtsAssignArgs (Just (ExpressionVar "juvix_closure_nargs")) "CARG" (Just vr) args
+            ]
+      ]
+
+    stmtsPushVars :: [Reg.VarRef] -> [Statement]
     stmtsPushVars =
-      map (\vr -> C.StatementExpr $ C.macroCall "STACK_PUSH" [fromVarRef vr])
+      stmtsPush . map fromVarRef
 
-    stmtsPopVars :: [Reg.VarRef] -> [C.Statement]
+    stmtsPopVars :: [Reg.VarRef] -> [Statement]
     stmtsPopVars =
-      map (\vr -> C.StatementExpr $ C.macroCall "STACK_POP" [fromVarRef vr])
-        . reverse
+      stmtsPop . map fromVarRef

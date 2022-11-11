@@ -77,6 +77,18 @@ mkCDecl Declaration {..} = case _declType of
       funDerDeclr = [CFunDeclr (Right (funArgs, False)) [] C.undefNode]
       funArgs :: [CDecl]
       funArgs = mkCDecl . goTypeDecl' <$> _funPtrArgs
+  DeclArray Array {..} ->
+    CDecl
+      (mkDeclSpecifier _arrayType)
+      [(Just declr, initializer, Nothing)]
+      C.undefNode
+    where
+      declr :: CDeclr
+      declr = CDeclr (mkIdent <$> _declName) derivedDeclr Nothing [] C.undefNode
+      derivedDeclr :: [CDerivedDeclr]
+      derivedDeclr = [CArrDeclr [] (CArrSize True (CConst (CIntConst (cInteger _arraySize) C.undefNode))) C.undefNode]
+      initializer :: Maybe CInit
+      initializer = mkCInit <$> _declInitializer
   _ ->
     CDecl
       (mkDeclSpecifier _declType)
@@ -93,6 +105,7 @@ mkCDecl Declaration {..} = case _declType of
 mkCInit :: Initializer -> CInit
 mkCInit = \case
   ExprInitializer e -> CInitExpr (mkCExpr e) C.undefNode
+  ListInitializer l -> CInitList (map (\i -> ([], mkCInit i)) l) C.undefNode
   DesignatorInitializer ds -> CInitList (f <$> ds) C.undefNode
   where
     f :: DesigInit -> ([CDesignator], CInit)
@@ -184,7 +197,7 @@ mkCStat = \case
       caseDefault =
         maybe
           [CDefault (mkCStat (StatementExpr (macroVar "UNREACHABLE"))) C.undefNode]
-          (\x -> [CDefault (CExpr (Just (mkCExpr x)) C.undefNode) C.undefNode])
+          (\x -> [CDefault (mkCStat x) C.undefNode])
           _switchDefault
   StatementLabel Label {..} ->
     CLabel (mkIdent _labelName) (mkCStat _labelCode) [] C.undefNode
@@ -216,6 +229,7 @@ mkDeclSpecifier = \case
   DeclJuvixClosure -> mkTypeDefTypeSpec Str.juvixFunctionT
   BoolType -> [CTypeSpec (CBoolType C.undefNode)]
   DeclFunPtr {} -> []
+  DeclArray {} -> [CStorageSpec (CStatic C.undefNode)]
 
 mkEnumSpec :: Maybe Text -> Maybe [Text] -> [CDeclSpec]
 mkEnumSpec name members = [CTypeSpec (CEnumType enum C.undefNode)]
