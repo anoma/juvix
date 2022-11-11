@@ -2,7 +2,7 @@ module Commands.Dev.Core.Read.Options where
 
 import Commands.Dev.Core.Eval.Options qualified as Eval
 import CommonOptions
-import Evaluator qualified as Evaluator
+import Evaluator qualified
 import Juvix.Compiler.Core.Data.TransformationId.Parser
 import Juvix.Compiler.Core.Pretty.Options qualified as Core
 
@@ -58,7 +58,7 @@ parseCoreReadOptions = do
           <> short 't'
           <> value mempty
           <> metavar "[Transform]"
-          <> help "comma sep list of transformations. Available: lifting"
+          <> help "comma sep list of transformations. Available: lifting, top-eta-expand, identity"
       )
   _coreReadInputFile <- parseInputJuvixCoreFile
   pure CoreReadOptions {..}

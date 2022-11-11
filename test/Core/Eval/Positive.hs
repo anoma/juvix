@@ -244,5 +244,10 @@ tests =
       "Dependent lambda-abstractions"
       "."
       "test043.jvc"
-      "out/test043.out"
+      "out/test043.out",
+    PosTest
+      "Eta-expansion"
+      "."
+      "test044.jvc"
+      "out/test044.out"
   ]
