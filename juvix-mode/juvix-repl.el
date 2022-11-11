@@ -47,4 +47,16 @@
     (when proc-alive
       (comint-simple-send juvix-repl-buffer-name (concat ":load " filename)))))
 
+(defun juvix-repl-restart ()
+  "Restart the juvix REPL."
+  (interactive)
+  (let* ((buffer (get-buffer juvix-repl-buffer-name))
+         (proc-alive (comint-check-proc buffer))
+         (process (get-buffer-process buffer)))
+    (if proc-alive
+        (progn
+          (set-process-sentinel process (lambda (p e) (run-juvix-repl)))
+          (kill-process process))
+      (error "No juvix repl process is runnning. Use run-juvix-repl"))))
+
 (provide 'juvix-repl)
