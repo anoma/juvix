@@ -152,12 +152,44 @@ mkCExpr = \case
     CUnary (mkUnaryOp _unaryOp) (mkCExpr _unarySubject) C.undefNode
   ExpressionMember MemberAccess {..} ->
     CMember (mkCExpr _memberSubject) (mkIdent _memberField) (_memberOp == Pointer) C.undefNode
+  ExpressionStatement stmt ->
+    CStatExpr (mkCStat stmt) C.undefNode
 
 mkCStat :: Statement -> CStat
 mkCStat = \case
   StatementReturn me -> CReturn (mkCExpr <$> me) C.undefNode
   StatementIf If {..} ->
     CIf (mkCExpr _ifCondition) (mkCStat _ifThen) (mkCStat <$> _ifElse) C.undefNode
+  StatementSwitch Switch {..} ->
+    CSwitch
+      (mkCExpr _switchCondition)
+      (CCompound [] (map CBlockStmt (caseStmts ++ caseDefault)) C.undefNode)
+      C.undefNode
+    where
+      caseStmts =
+        map
+          ( \Case {..} ->
+              CCase
+                (mkCExpr _caseValue)
+                ( CCompound
+                    []
+                    [ CBlockStmt (mkCStat _caseCode),
+                      CBlockStmt (CBreak C.undefNode)
+                    ]
+                    C.undefNode
+                )
+                C.undefNode
+          )
+          _switchCases
+      caseDefault =
+        maybe
+          [CDefault (mkCStat (StatementExpr (macroVar "UNREACHABLE"))) C.undefNode]
+          (\x -> [CDefault (CExpr (Just (mkCExpr x)) C.undefNode) C.undefNode])
+          _switchDefault
+  StatementLabel Label {..} ->
+    CLabel (mkIdent _labelName) (mkCStat _labelCode) [] C.undefNode
+  StatementGoto Goto {..} ->
+    CGoto (mkIdent _gotoLabel) C.undefNode
   StatementExpr e -> CExpr (Just (mkCExpr e)) C.undefNode
   StatementCompound ss -> CCompound [] (CBlockStmt . mkCStat <$> ss) C.undefNode
 
@@ -167,6 +199,7 @@ mkBinaryOp = \case
   Neq -> CNeqOp
   And -> CLndOp
   Or -> CLorOp
+  Plus -> CAddOp
 
 mkUnaryOp :: UnaryOp -> CUnaryOp
 mkUnaryOp = \case

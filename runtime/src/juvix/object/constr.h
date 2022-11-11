@@ -9,12 +9,12 @@
         var = make_header(uid, 0);     \
     } while (0)
 
-#define ALLOC_CONSTR_BOXED(var, uid, nfields)      \
-    do {                                           \
-        void *tmp;                                 \
-        ALLOC(tmp, (nfields) + 1);                 \
-        var = (word_t)tmp;                         \
-        FIELD(var, 0) = make_header(uid, nfields); \
+#define ALLOC_CONSTR_BOXED(var, uid, nargs)      \
+    do {                                         \
+        void *tmp;                               \
+        ALLOC(tmp, (nargs) + 1);                 \
+        var = (word_t)tmp;                       \
+        FIELD(var, 0) = make_header(uid, nargs); \
     } while (0)
 
 #define ALLOC_CONSTR_BOXED_TAG(var, uid)     \
@@ -26,12 +26,14 @@
         FIELD(var, 1) = 1;                   \
     } while (0)
 
-#define ALLOC_CONSTR_PAIR(var) \
-    do {                       \
-        void *tmp;             \
-        ALLOC(tmp, 2);         \
-        var = (word_t)tmp;     \
+#define ALLOC_CONSTR_TUPLE(var, nargs) \
+    do {                               \
+        void *tmp;                     \
+        ALLOC(tmp, nargs);             \
+        var = (word_t)tmp;             \
     } while (0)
+
+#define ALLOC_CONSTR_PAIR(var) ALLOC_CONSTR_TUPLE(var, 2)
 
 #define FST(var) FIELD(var, 0)
 #define SND(var) FIELD(var, 1)

@@ -151,6 +151,11 @@ data Expression
   | ExpressionBinary Binary
   | ExpressionUnary Unary
   | ExpressionMember MemberAccess
+  | -- We need the "statement expression" GCC/clang extension because the
+    -- Language.C library does not provide any special syntax for macros and we
+    -- want to produce stuff like:
+    -- PREALLOC(n, {STACK_PUSH(ARG(0));}, {STACK_POP(ARG(0));}).
+    ExpressionStatement Statement
   deriving stock (Show, Eq)
 
 data Assign = Assign
@@ -209,6 +214,7 @@ data BinaryOp
   | Neq
   | And
   | Or
+  | Plus
   deriving stock (Show, Eq)
 
 data Binary = Binary
@@ -249,14 +255,43 @@ data MemberAccess = MemberAccess
 data Statement
   = StatementReturn (Maybe Expression)
   | StatementIf If
+  | StatementSwitch Switch
+  | StatementLabel Label
+  | StatementGoto Goto
   | StatementExpr Expression
   | StatementCompound [Statement]
+  deriving stock (Show, Eq)
 
 data If = If
   { _ifCondition :: Expression,
     _ifThen :: Statement,
     _ifElse :: Maybe Statement
   }
+  deriving stock (Show, Eq)
+
+data Switch = Switch
+  { _switchCondition :: Expression,
+    _switchCases :: [Case],
+    _switchDefault :: Maybe Expression
+  }
+  deriving stock (Show, Eq)
+
+data Case = Case
+  { _caseValue :: Expression,
+    _caseCode :: Statement
+  }
+  deriving stock (Show, Eq)
+
+data Label = Label
+  { _labelName :: Text,
+    _labelCode :: Statement
+  }
+  deriving stock (Show, Eq)
+
+newtype Goto = Goto
+  { _gotoLabel :: Text
+  }
+  deriving stock (Show, Eq)
 
 --------------------------------------------------------------------------------
 -- Constructions
@@ -270,6 +305,17 @@ functionCall fExpr args =
           _callArgs = args
         }
     )
+
+macroVar :: Text -> Expression
+macroVar = ExpressionVar
+
+macroCall :: Text -> [Expression] -> Expression
+macroCall name = \case
+  [] -> macroVar name
+  args -> functionCall (ExpressionVar name) args
+
+integer :: Integral a => a -> Expression
+integer x = ExpressionLiteral (LiteralInt (fromIntegral x))
 
 ptrType :: DeclType -> Text -> Declaration
 ptrType typ n =

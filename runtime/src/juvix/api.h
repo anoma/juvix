@@ -89,7 +89,7 @@ closure_label:
     } while (0)
 
 #define JUVIX_ALLOC_INT(var, val) (var = make_smallint(val))
-// ALLOC_CONSTR_BOXED(var, uid, nfields)
+// ALLOC_CONSTR_BOXED(var, uid, nargs)
 // ALLOC_CONSTR_BOXED_TAG(var, uid)
 // ALLOC_CONSTR_UNBOXED(var, uid)
 // ALLOC_CONSTR_PAIR(var)
