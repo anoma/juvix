@@ -86,12 +86,12 @@ mkCDecl Declaration {..} = case _declType of
       declr :: CDeclr
       declr = CDeclr (mkIdent <$> _declName) derivedDeclr Nothing [] C.undefNode
       derivedDeclr :: [CDerivedDeclr]
-      derivedDeclr = [CArrDeclr [] (CArrSize True (CConst (CIntConst (cInteger _arraySize) C.undefNode))) C.undefNode]
+      derivedDeclr = [CArrDeclr [] (CArrSize False (CConst (CIntConst (cInteger _arraySize) C.undefNode))) C.undefNode]
       initializer :: Maybe CInit
       initializer = mkCInit <$> _declInitializer
   _ ->
     CDecl
-      (mkDeclSpecifier _declType)
+      (CStorageSpec (CStatic C.undefNode) : mkDeclSpecifier _declType)
       [(Just declrName, initializer, Nothing)]
       C.undefNode
     where
@@ -229,7 +229,7 @@ mkDeclSpecifier = \case
   DeclJuvixClosure -> mkTypeDefTypeSpec Str.juvixFunctionT
   BoolType -> [CTypeSpec (CBoolType C.undefNode)]
   DeclFunPtr {} -> []
-  DeclArray {} -> [CStorageSpec (CStatic C.undefNode)]
+  DeclArray {} -> []
 
 mkEnumSpec :: Maybe Text -> Maybe [Text] -> [CDeclSpec]
 mkEnumSpec name members = [CTypeSpec (CEnumType enum C.undefNode)]

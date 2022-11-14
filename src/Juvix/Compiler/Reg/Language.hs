@@ -48,7 +48,7 @@ data Instruction
   | ExtendClosure InstrExtendClosure
   | Call InstrCall
   | CallClosures InstrCallClosures
-  | Return
+  | Return InstrReturn
   | Branch InstrBranch
   | Case InstrCase
 
@@ -152,6 +152,10 @@ data CaseBranch = CaseBranch
     _caseBranchCode :: Code
   }
 
+newtype InstrReturn = InstrReturn
+  { _instrReturnValue :: Value
+  }
+
 makeLenses ''ConstrField
 makeLenses ''BinaryOp
 makeLenses ''InstrAssign
@@ -166,3 +170,4 @@ makeLenses ''InstrCallClosures
 makeLenses ''InstrBranch
 makeLenses ''InstrCase
 makeLenses ''CaseBranch
+makeLenses ''InstrReturn

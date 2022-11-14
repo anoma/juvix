@@ -108,7 +108,7 @@ fromReg lims tab =
     jumpMainFunction = case tab ^. Reg.infoMainFunction of
       Nothing -> error "no main function"
       Just main ->
-        [ StatementExpr $ macroCall "STACK_PUSH_ADDR" [exprAddr info main],
+        [ StatementExpr $ macroCall "STACK_PUSH_ADDR" [macroCall "LABEL_ADDR" [ExpressionVar "juvix_program_end"]],
           StatementGoto $ Goto $ getLabel info main
         ]
 
@@ -143,10 +143,10 @@ fromRegFunction info funInfo = do
       if
           | bNoStack ->
               StatementExpr
-                (macroCall "FUNCTION_NS" [exprLabel info sym])
+                (macroCall "JUVIX_FUNCTION_NS" [exprLabel info sym])
           | otherwise ->
               StatementExpr
-                (macroCall "FUNCTION" [exprLabel info sym, integer maxStackHeight])
+                (macroCall "JUVIX_FUNCTION" [exprLabel info sym, integer maxStackHeight])
 
     closureDecl :: Statement
     closureDecl =
@@ -195,8 +195,8 @@ fromRegInstr bNoStack info = \case
         return $ fromTailCallClosures x
   Reg.CallClosures x ->
     fromCallClosures x
-  Reg.Return ->
-    return [StatementExpr (macroVar (if bNoStack then "RETURN_NS" else "RETURN"))]
+  Reg.Return x ->
+    return $ fromReturn x
   Reg.Branch x ->
     fromBranch x
   Reg.Case x ->
@@ -451,6 +451,12 @@ fromRegInstr bNoStack info = \case
                 ],
             _caseCode = StatementCompound stmts
           }
+
+    fromReturn :: Reg.InstrReturn -> [Statement]
+    fromReturn Reg.InstrReturn {..} =
+      [ stmtAssign (ExpressionVar "juvix_result") (fromValue _instrReturnValue),
+        StatementExpr (macroVar (if bNoStack then "RETURN_NS" else "RETURN"))
+      ]
 
     stmtsAllocConstr :: Reg.InstrAlloc -> Text -> Text -> [Statement]
     stmtsAllocConstr Reg.InstrAlloc {..} alloc carg =

@@ -96,7 +96,8 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     Asm.TailCall x -> return $ mkCall True x
     Asm.CallClosures x -> return $ mkCallClosures False x
     Asm.TailCallClosures x -> return $ mkCallClosures True x
-    Asm.Return -> return Return
+    Asm.Return ->
+      return $ Return InstrReturn {_instrReturnValue = VRef $ VarRef VarGroupStack 0}
   where
     -- `n` is the index of the top of the value stack *before* executing the
     -- instruction
@@ -120,7 +121,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
       Binop
         ( BinaryOp
             { _binaryOpCode = op,
-              _binaryOpResult = VarRef VarGroupStack n,
+              _binaryOpResult = VarRef VarGroupStack (n - 1),
               _binaryOpArg1 = VRef $ VarRef VarGroupStack n,
               _binaryOpArg2 = VRef $ VarRef VarGroupStack (n - 1)
             }
