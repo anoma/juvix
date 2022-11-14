@@ -28,6 +28,11 @@ data Tag = BuiltinTag BuiltinDataTag | UserTag Word
 
 instance Hashable Tag
 
+isBuiltinTag :: Tag -> Bool
+isBuiltinTag = \case
+  BuiltinTag {} -> True
+  UserTag {} -> False
+
 -- | de Bruijn index
 type Index = Int
 

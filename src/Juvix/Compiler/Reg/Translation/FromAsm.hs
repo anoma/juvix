@@ -110,8 +110,8 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     liveVars :: Int -> [VarRef]
     liveVars k =
       map (VarRef VarGroupStack) [0 .. n - k]
-        ++ map (VarRef VarGroupTemp) [0 .. si ^. Asm.stackInfoTempStackHeight]
-        ++ map (VarRef VarGroupArgs) [0 .. (funInfo ^. Asm.functionArgsNum)]
+        ++ map (VarRef VarGroupTemp) [0 .. si ^. Asm.stackInfoTempStackHeight - 1]
+        ++ map (VarRef VarGroupArgs) [0 .. funInfo ^. Asm.functionArgsNum - 1]
 
     getArgs :: Int -> Int -> [Value]
     getArgs s k = map (\i -> VRef $ VarRef VarGroupStack (n - i)) [s .. (s + k - 1)]
@@ -180,45 +180,50 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
       Alloc $
         InstrAlloc
           { _instrAllocTag = tag,
-            _instrAllocResult = VarRef VarGroupStack n,
+            _instrAllocResult = VarRef VarGroupStack m,
             _instrAllocArgs = getArgs 0 (ci ^. Asm.constructorArgsNum),
             _instrAllocMemRep = ci ^. Asm.constructorRepresentation
           }
       where
         ci = fromJust impossible $ HashMap.lookup tag (tab ^. Asm.infoConstrs)
+        m = n - ci ^. Asm.constructorArgsNum + 1
 
     mkAllocClosure :: Asm.InstrAllocClosure -> Instruction
     mkAllocClosure Asm.InstrAllocClosure {..} =
       AllocClosure $
         InstrAllocClosure
           { _instrAllocClosureSymbol = fi ^. Asm.functionSymbol,
-            _instrAllocClosureResult = VarRef VarGroupStack n,
+            _instrAllocClosureResult = VarRef VarGroupStack m,
             _instrAllocClosureExpectedArgsNum = fi ^. Asm.functionArgsNum,
             _instrAllocClosureArgs = getArgs 0 _allocClosureArgsNum
           }
       where
         fi = fromJust impossible $ HashMap.lookup _allocClosureFunSymbol (tab ^. Asm.infoFunctions)
+        m = n - fi ^. Asm.functionArgsNum + 1
 
     mkExtendClosure :: Asm.InstrExtendClosure -> Instruction
     mkExtendClosure Asm.InstrExtendClosure {..} =
       ExtendClosure $
         InstrExtendClosure
-          { _instrExtendClosureResult = VarRef VarGroupStack n,
+          { _instrExtendClosureResult = VarRef VarGroupStack m,
             _instrExtendClosureValue = VarRef VarGroupStack n,
             _instrExtendClosureArgs = getArgs 1 _extendClosureArgsNum
           }
+      where
+        m = n - _extendClosureArgsNum + 1
 
     mkCall :: Bool -> Asm.InstrCall -> Instruction
     mkCall isTail Asm.InstrCall {..} =
       Call $
         InstrCall
-          { _instrCallResult = VarRef VarGroupStack n,
+          { _instrCallResult = VarRef VarGroupStack m,
             _instrCallType = ct,
             _instrCallIsTail = isTail,
             _instrCallArgs = getArgs s _callArgsNum,
             _instrCallLiveVars = liveVars (_callArgsNum + s)
           }
       where
+        m = n - _callArgsNum - s + 1
         ct = case _callType of
           Asm.CallFun f -> CallFun f
           Asm.CallClosure -> CallClosure (VarRef VarGroupStack n)
@@ -230,12 +235,14 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     mkCallClosures isTail Asm.InstrCallClosures {..} =
       CallClosures $
         InstrCallClosures
-          { _instrCallClosuresResult = VarRef VarGroupStack n,
+          { _instrCallClosuresResult = VarRef VarGroupStack m,
             _instrCallClosuresValue = VarRef VarGroupStack n,
             _instrCallClosuresIsTail = isTail,
             _instrCallClosuresArgs = getArgs 1 _callClosuresArgsNum,
             _instrCallClosuresLiveVars = liveVars _callClosuresArgsNum
           }
+      where
+        m = n - _callClosuresArgsNum + 1
 
 fromAsmBranch ::
   Asm.StackInfo ->

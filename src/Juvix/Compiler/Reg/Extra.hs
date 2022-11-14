@@ -5,6 +5,11 @@ import Juvix.Compiler.Backend
 import Juvix.Compiler.Reg.Data.InfoTable
 import Juvix.Compiler.Reg.Language
 
+userConstrs :: InfoTable -> [ConstructorInfo]
+userConstrs tab =
+  filter (\ci -> not (isBuiltinTag (ci ^. constructorTag))) $
+    HashMap.elems (tab ^. infoConstrs)
+
 -- | Compute the maximum runtime stack height
 computeMaxStackHeight :: Limits -> Code -> Int
 computeMaxStackHeight lims = maximum . map go
@@ -45,7 +50,8 @@ computeMaxStackHeight lims = maximum . map go
           (maybe 0 (computeMaxStackHeight lims) _instrCaseDefault)
 
 data ExtraInfo = ExtraInfo
-  { _extraInfoUIDs :: HashMap Tag Int,
+  { _extraInfoTable :: InfoTable,
+    _extraInfoUIDs :: HashMap Tag Int,
     _extraInfoFUIDs :: HashMap Symbol Int,
     _extraInfoMaxStackHeight :: HashMap Symbol Int,
     _extraInfoMaxArgsNum :: Int,
@@ -60,7 +66,7 @@ computeUIDs lims tab =
   HashMap.fromList $
     zipWith
       (\ci uid -> (ci ^. constructorTag, uid))
-      (HashMap.elems (tab ^. infoConstrs))
+      (userConstrs tab)
       [lims ^. limitsBuiltinUIDsNum ..]
 
 computeFUIDs :: InfoTable -> HashMap Symbol Int
@@ -69,12 +75,13 @@ computeFUIDs tab =
     zipWith
       (\fi fuid -> (fi ^. functionSymbol, fuid))
       (HashMap.elems (tab ^. infoFunctions))
-      [1 ..]
+      [0 ..]
 
 computeExtraInfo :: Limits -> InfoTable -> ExtraInfo
 computeExtraInfo lims tab =
   ExtraInfo
-    { _extraInfoUIDs = computeUIDs lims tab,
+    { _extraInfoTable = tab,
+      _extraInfoUIDs = computeUIDs lims tab,
       _extraInfoFUIDs = computeFUIDs tab,
       _extraInfoMaxStackHeight =
         HashMap.map
@@ -83,7 +90,7 @@ computeExtraInfo lims tab =
       _extraInfoMaxArgsNum =
         maximum (map (^. functionArgsNum) (HashMap.elems (tab ^. infoFunctions))),
       _extraInfoConstrsNum =
-        HashMap.size (tab ^. infoConstrs) + lims ^. limitsBuiltinUIDsNum,
+        length (userConstrs tab) + lims ^. limitsBuiltinUIDsNum,
       _extraInfoFunctionsNum =
         HashMap.size (tab ^. infoFunctions)
     }

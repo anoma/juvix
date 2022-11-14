@@ -79,7 +79,7 @@ mkCDecl Declaration {..} = case _declType of
       funArgs = mkCDecl . goTypeDecl' <$> _funPtrArgs
   DeclArray Array {..} ->
     CDecl
-      (mkDeclSpecifier _arrayType)
+      (CStorageSpec (CStatic C.undefNode) : mkDeclSpecifier _arrayType)
       [(Just declr, initializer, Nothing)]
       C.undefNode
     where
@@ -91,7 +91,7 @@ mkCDecl Declaration {..} = case _declType of
       initializer = mkCInit <$> _declInitializer
   _ ->
     CDecl
-      (CStorageSpec (CStatic C.undefNode) : mkDeclSpecifier _declType)
+      (mkDeclSpecifier _declType)
       [(Just declrName, initializer, Nothing)]
       C.undefNode
     where

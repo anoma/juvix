@@ -41,7 +41,7 @@ fromReg lims tab =
                   ExprInitializer (macroVar "BUILTIN_UIDS_INFO")
                     : map
                       (\ci -> ListInitializer [ExprInitializer $ string (ci ^. Reg.constructorName)])
-                      (HashMap.elems (tab ^. Reg.infoConstrs))
+                      (Reg.userConstrs tab)
           }
 
     functionInfo :: CCode

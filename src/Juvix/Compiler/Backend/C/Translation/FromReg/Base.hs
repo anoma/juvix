@@ -2,9 +2,13 @@ module Juvix.Compiler.Backend.C.Translation.FromReg.Base where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Backend.C.Language
+import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Extra qualified as Reg
 import Juvix.Compiler.Reg.Language qualified as Reg
 import Juvix.Prelude
+
+getFunctionName :: Reg.ExtraInfo -> Reg.Symbol -> Text
+getFunctionName info sym = ((info ^. Reg.extraInfoTable . Reg.infoFunctions) HashMap.! sym) ^. Reg.functionName
 
 getUID :: Reg.ExtraInfo -> Reg.Tag -> Int
 getUID info tag = fromJust $ HashMap.lookup tag (info ^. Reg.extraInfoUIDs)
@@ -16,10 +20,10 @@ getMaxStackHeight :: Reg.ExtraInfo -> Reg.Symbol -> Int
 getMaxStackHeight info sym = fromJust $ HashMap.lookup sym (info ^. Reg.extraInfoMaxStackHeight)
 
 getLabel :: Reg.ExtraInfo -> Reg.Symbol -> Text
-getLabel info sym = "juvix_function_" <> show (getFUID info sym)
+getLabel info sym = "juvix_function_" <> getFunctionName info sym <> "_" <> show (getFUID info sym)
 
 getClosureLabel :: Reg.ExtraInfo -> Reg.Symbol -> Text
-getClosureLabel info sym = "juvix_closure_" <> show (getFUID info sym)
+getClosureLabel info sym = "juvix_closure_" <> getFunctionName info sym <> "_" <> show (getFUID info sym)
 
 exprAddr :: Reg.ExtraInfo -> Reg.Symbol -> Expression
 exprAddr info sym = macroCall "LABEL_ADDR" [exprClosureLabel info sym]
