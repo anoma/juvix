@@ -3,6 +3,7 @@ module Juvix.Compiler.Backend where
 import Juvix.Prelude
 
 data Target = TargetCWasm32Wasi | TargetCNative64
+  deriving stock (Data)
 
 data Limits = Limits
   { _limitsMaxConstrs :: Int,

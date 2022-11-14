@@ -4,6 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.List qualified as List
 import Juvix.Compiler.Backend
 import Juvix.Compiler.Backend.C.Data.CBuilder
+import Juvix.Compiler.Backend.C.Data.Types
 import Juvix.Compiler.Backend.C.Extra.Serialization
 import Juvix.Compiler.Backend.C.Language as C
 import Juvix.Compiler.Backend.C.Translation.FromReg.Base
@@ -12,9 +13,9 @@ import Juvix.Compiler.Reg.Extra qualified as Reg
 import Juvix.Compiler.Reg.Language qualified as Reg
 import Juvix.Prelude
 
-fromReg :: Limits -> Reg.InfoTable -> Text
+fromReg :: Limits -> Reg.InfoTable -> MiniCResult
 fromReg lims tab =
-  serialize $ CCodeUnit [includeApi, constrInfo, functionInfo, mainFunction]
+  MiniCResult $ serialize $ CCodeUnit [includeApi, constrInfo, functionInfo, mainFunction]
   where
     info :: Reg.ExtraInfo
     info = Reg.computeExtraInfo lims tab
@@ -98,7 +99,7 @@ fromReg lims tab =
 
     argDecls :: [Statement]
     argDecls =
-      map (\(i :: Int) -> StatementExpr $ macroCall "DECL_REG_ARG" [integer i]) [0 .. 3]
+      map (\(i :: Int) -> StatementExpr $ macroCall "DECL_REG_ARG" [integer i]) [0 .. min 3 (n - 1)]
         ++ map (\i -> StatementExpr $ macroCall "DECL_ARG" [integer i]) [4 .. n - 1]
       where
         n = info ^. Reg.extraInfoMaxArgsNum
