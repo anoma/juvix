@@ -14,6 +14,7 @@
 // MAX_ARGS is the maximum number of function arguments, at least 1.
 #define JUVIX_PROLOGUE(MAX_ARGS)                    \
     MEM_DECLS;                                      \
+    UNUSED word_t juvix_temp_var;                   \
     FUNCALL_DECLS(MAX_ARGS);                        \
     JUVIX_INIT;                                     \
     STACK_PUSH_ADDR(LABEL_ADDR(juvix_program_end)); \

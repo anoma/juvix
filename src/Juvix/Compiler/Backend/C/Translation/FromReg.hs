@@ -184,7 +184,7 @@ fromRegInstr bNoStack info = \case
   Reg.AllocClosure x ->
     return $ fromAllocClosure x
   Reg.ExtendClosure x ->
-    return [fromExtendClosure x]
+    return $ fromExtendClosure x
   Reg.Call x@Reg.InstrCall {..}
     | _instrCallIsTail ->
         return $ fromTailCall x
@@ -292,7 +292,7 @@ fromRegInstr bNoStack info = \case
       StatementExpr
         ( macroCall
             "ALLOC_CLOSURE"
-            [ fromVarRef _instrAllocClosureResult,
+            [ ExpressionVar "juvix_temp_var",
               integer (getFUID info _instrAllocClosureSymbol),
               exprAddr info _instrAllocClosureSymbol,
               integer (length _instrAllocClosureArgs),
@@ -302,25 +302,28 @@ fromRegInstr bNoStack info = \case
         : stmtsAssignArgs
           Nothing
           "CLOSURE_ARG"
-          (Just _instrAllocClosureResult)
+          (Just (ExpressionVar "juvix_temp_var"))
           _instrAllocClosureArgs
+        ++ stmtsAssign (fromVarRef _instrAllocClosureResult) (ExpressionVar "juvix_temp_var")
 
-    fromExtendClosure :: Reg.InstrExtendClosure -> Statement
+    fromExtendClosure :: Reg.InstrExtendClosure -> [Statement]
     fromExtendClosure Reg.InstrExtendClosure {..} =
-      StatementExpr $
-        macroCall
-          "EXTEND_CLOSURE"
-          [ fromVarRef _instrExtendClosureResult,
-            fromVarRef _instrExtendClosureValue,
-            integer (length _instrExtendClosureArgs),
-            ExpressionStatement $
-              StatementCompound $
-                stmtsAssignArgs
-                  (Just (ExpressionVar "juvix_closure_nargs"))
-                  "CLOSURE_ARG"
-                  (Just _instrExtendClosureResult)
-                  _instrExtendClosureArgs
-          ]
+      StatementExpr
+        ( macroCall
+            "EXTEND_CLOSURE"
+            [ ExpressionVar "juvix_temp_var",
+              fromVarRef _instrExtendClosureValue,
+              integer (length _instrExtendClosureArgs),
+              ExpressionStatement $
+                StatementCompound $
+                  stmtsAssignArgs
+                    (Just (ExpressionVar "juvix_closure_nargs"))
+                    "CLOSURE_ARG"
+                    (Just (ExpressionVar "juvix_temp_var"))
+                    _instrExtendClosureArgs
+            ]
+        )
+        : stmtsAssign (fromVarRef _instrExtendClosureResult) (ExpressionVar "juvix_temp_var")
 
     fromTailCall :: Reg.InstrCall -> [Statement]
     fromTailCall Reg.InstrCall {..} =
@@ -463,18 +466,19 @@ fromRegInstr bNoStack info = \case
       StatementExpr
         ( macroCall
             alloc
-            [ fromVarRef _instrAllocResult,
+            [ ExpressionVar "juvix_temp_var",
               integer $ getUID info _instrAllocTag,
               integer $ length _instrAllocArgs
             ]
         )
-        : stmtsAssignArgs Nothing carg (Just _instrAllocResult) _instrAllocArgs
+        : stmtsAssignArgs Nothing carg (Just (ExpressionVar "juvix_temp_var")) _instrAllocArgs
+        ++ stmtsAssign (fromVarRef _instrAllocResult) (ExpressionVar "juvix_temp_var")
 
-    stmtsAssignArgs :: Maybe Expression -> Text -> Maybe Reg.VarRef -> [Reg.Value] -> [Statement]
+    stmtsAssignArgs :: Maybe Expression -> Text -> Maybe Expression -> [Reg.Value] -> [Statement]
     stmtsAssignArgs off carg ref args =
       zipWith
         ( \v idx ->
-            stmtAssign (macroCall carg (maybe [] (\x -> [fromVarRef x]) ref ++ [getIndex idx])) (fromValue v)
+            stmtAssign (macroCall carg (maybeToList ref ++ [getIndex idx])) (fromValue v)
         )
         args
         [0 ..]
