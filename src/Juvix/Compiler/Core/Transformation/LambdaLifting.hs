@@ -139,7 +139,7 @@ lambdaLiftNode aboveBl top =
           return (Recur res)
 
 lambdaLifting :: InfoTable -> InfoTable
-lambdaLifting = run . mapT' (lambdaLiftNode mempty)
+lambdaLifting = run . mapT' (const (lambdaLiftNode mempty))
 
 -- | True if lambdas are only found at the top level
 nodeIsLifted :: Node -> Bool

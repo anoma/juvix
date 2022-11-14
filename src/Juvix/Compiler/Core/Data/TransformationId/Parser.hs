@@ -30,3 +30,4 @@ transformation :: MonadParsec e Text m => m TransformationId
 transformation =
   symbol "lifting" $> LambdaLifting
     <|> symbol "identity" $> Identity
+    <|> symbol "top-eta-expand" $> TopEtaExpand
