@@ -12,11 +12,8 @@
     funcall_init()
 
 // MAX_ARGS is the maximum number of function arguments, at least 1.
-// ARG_DECLS declares the argument variables (using DECL_ARG and DECL_REG_ARG
-// from funcall/funcall.h)
-#define JUVIX_PROLOGUE(MAX_ARGS, ARG_DECLS)         \
+#define JUVIX_PROLOGUE(MAX_ARGS)                    \
     MEM_DECLS;                                      \
-    ARG_DECLS;                                      \
     FUNCALL_DECLS(MAX_ARGS);                        \
     JUVIX_INIT;                                     \
     STACK_PUSH_ADDR(LABEL_ADDR(juvix_program_end)); \
