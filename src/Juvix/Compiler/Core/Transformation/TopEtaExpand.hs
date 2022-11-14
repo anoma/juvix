@@ -35,8 +35,8 @@ topEtaExpand info = run (mapT' go info)
         expand :: Node -> [PiLhs] -> Node
         expand n lhs = reLambdas (map lambdaFromPi lhs) body'
           where
-          len = length lhs
-          body' = mkApps' (shift len n) [mkVar' v | v <- reverse [0 .. len - 1]]
+            len = length lhs
+            body' = mkApps' (shift len n) [mkVar' v | v <- reverse [0 .. len - 1]]
         -- We keep the name and type. We drop the other info
         lambdaFromPi :: PiLhs -> LambdaLhs
         lambdaFromPi pi = LambdaLhs mempty (pi ^. piLhsBinder)
