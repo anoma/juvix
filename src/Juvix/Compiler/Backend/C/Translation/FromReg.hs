@@ -496,7 +496,7 @@ fromRegInstr bNoStack info = \case
             [ fromVarRef vr,
               ExpressionStatement $
                 StatementCompound $
-                  stmtsAssignArgs (Just (ExpressionVar "juvix_closure_nargs")) "CARG" (Just vr) args
+                  stmtsAssignArgs (Just (ExpressionVar "juvix_closure_nargs")) "CARG" Nothing args
             ]
       ]
 

@@ -159,7 +159,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
                 _constrFieldMemRep = ci ^. Asm.constructorRepresentation
               }
           where
-            ci = fromJust impossible $ HashMap.lookup _fieldTag (tab ^. Asm.infoConstrs)
+            ci = fromMaybe impossible $ HashMap.lookup _fieldTag (tab ^. Asm.infoConstrs)
 
     mkVar :: Asm.DirectRef -> VarRef
     mkVar = \case
@@ -185,7 +185,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
             _instrAllocMemRep = ci ^. Asm.constructorRepresentation
           }
       where
-        ci = fromJust impossible $ HashMap.lookup tag (tab ^. Asm.infoConstrs)
+        ci = fromMaybe impossible $ HashMap.lookup tag (tab ^. Asm.infoConstrs)
         m = n - ci ^. Asm.constructorArgsNum + 1
 
     mkAllocClosure :: Asm.InstrAllocClosure -> Instruction
@@ -198,8 +198,8 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
             _instrAllocClosureArgs = getArgs 0 _allocClosureArgsNum
           }
       where
-        fi = fromJust impossible $ HashMap.lookup _allocClosureFunSymbol (tab ^. Asm.infoFunctions)
-        m = n - fi ^. Asm.functionArgsNum + 1
+        fi = fromMaybe impossible $ HashMap.lookup _allocClosureFunSymbol (tab ^. Asm.infoFunctions)
+        m = n - _allocClosureArgsNum + 1
 
     mkExtendClosure :: Asm.InstrExtendClosure -> Instruction
     mkExtendClosure Asm.InstrExtendClosure {..} =
@@ -272,18 +272,18 @@ fromAsmCase tab si Asm.CmdCase {..} brs def =
       InstrCase
         { _instrCaseValue = VRef $ VarRef VarGroupStack (si ^. Asm.stackInfoValueStackHeight - 1),
           _instrCaseInductive = _cmdCaseInductive,
-          _instrCaseIndRep = ii ^. inductiveRepresentation,
+          _instrCaseIndRep = ii ^. Asm.inductiveRepresentation,
           _instrCaseBranches =
             zipWithExact
               ( \br code ->
                   let tag = br ^. Asm.caseBranchTag
                       ci =
-                        fromJust impossible $
+                        fromMaybe impossible $
                           HashMap.lookup tag (tab ^. Asm.infoConstrs)
                    in CaseBranch
                         { _caseBranchTag = tag,
-                          _caseBranchMemRep = ci ^. constructorRepresentation,
-                          _caseBranchArgsNum = ci ^. constructorArgsNum,
+                          _caseBranchMemRep = ci ^. Asm.constructorRepresentation,
+                          _caseBranchArgsNum = ci ^. Asm.constructorArgsNum,
                           _caseBranchCode = code
                         }
               )
@@ -293,5 +293,5 @@ fromAsmCase tab si Asm.CmdCase {..} brs def =
         }
   where
     ii =
-      fromJust impossible $
+      fromMaybe impossible $
         HashMap.lookup _cmdCaseInductive (tab ^. Asm.infoInductives)
