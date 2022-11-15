@@ -1,11 +1,18 @@
 module Juvix.Compiler.Backend.C.Translation.FromReg.Base where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.Text qualified as T
 import Juvix.Compiler.Backend.C.Language
 import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Extra qualified as Reg
 import Juvix.Compiler.Reg.Language qualified as Reg
 import Juvix.Prelude
+
+mkCIdent :: Text -> Text
+mkCIdent ident = T.filter isValidChar ident
+  where
+    isValidChar :: Char -> Bool
+    isValidChar c = c == '_' || ((isLetter c || isDigit c) && isAscii c)
 
 getFunctionName :: Reg.ExtraInfo -> Reg.Symbol -> Text
 getFunctionName info sym = ((info ^. Reg.extraInfoTable . Reg.infoFunctions) HashMap.! sym) ^. Reg.functionName
@@ -35,10 +42,10 @@ getMaxStackHeight :: Reg.ExtraInfo -> Reg.Symbol -> Int
 getMaxStackHeight info sym = fromJust $ HashMap.lookup sym (info ^. Reg.extraInfoMaxStackHeight)
 
 getLabel :: Reg.ExtraInfo -> Reg.Symbol -> Text
-getLabel info sym = "juvix_function_" <> getFunctionName info sym <> "_" <> show (getFUID info sym)
+getLabel info sym = mkCIdent $ "juvix_function_" <> getFunctionName info sym <> "_" <> show (getFUID info sym)
 
 getClosureLabel :: Reg.ExtraInfo -> Reg.Symbol -> Text
-getClosureLabel info sym = "juvix_closure_" <> getFunctionName info sym <> "_" <> show (getFUID info sym)
+getClosureLabel info sym = mkCIdent $ "juvix_closure_" <> getFunctionName info sym <> "_" <> show (getFUID info sym)
 
 exprAddr :: Reg.ExtraInfo -> Reg.Symbol -> Expression
 exprAddr info sym = macroCall "LABEL_ADDR" [exprClosureLabel info sym]
