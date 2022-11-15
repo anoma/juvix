@@ -61,6 +61,6 @@ function main() {
   call fact;
   trace;
   pop;
-  push 100;
+  push 12;
   tcall fact;
 }

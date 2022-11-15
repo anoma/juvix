@@ -5,8 +5,8 @@
 #include <juvix/mem/stack.h>
 #include <juvix/object/closure.h>
 
-#define DECL_REG_ARG(k) register word_t juvix_arg_##k
-#define DECL_ARG(k) word_t juvix_arg_##k
+#define DECL_REG_ARG(k) UNUSED register word_t juvix_arg_##k
+#define DECL_ARG(k) UNUSED word_t juvix_arg_##k
 
 // Function result is stored in juvix_result
 #define DECL_RESULT register word_t juvix_result
