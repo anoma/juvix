@@ -1,0 +1,5 @@
+name: my-project
+version: "1.0"
+dependencies:
+- "../Dep1"
+- "../Dep2"

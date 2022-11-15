@@ -52,10 +52,8 @@ newtype ModulesCache = ModulesCache
 
 makeLenses ''ModulesCache
 
-data ScopeParameters = ScopeParameters
-  { -- | Usually set to ".juvix".
-    _scopeFileExtension :: String,
-    -- | Used for import cycle detection.
+newtype ScopeParameters = ScopeParameters
+  { -- | Used for import cycle detection.
     _scopeTopParents :: [Import 'Parsed]
   }
 

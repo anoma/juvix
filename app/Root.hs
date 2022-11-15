@@ -29,11 +29,18 @@ findRoot minputFile = do
       l <- findFile (possiblePaths c) Paths.juvixYamlFile
       case l of
         Nothing -> return (c, emptyPackage)
-        Just yaml -> do
-          bs <- ByteString.readFile yaml
+        Just yamlPath -> do
+          bs <- ByteString.readFile yamlPath
           let isEmpty = ByteString.null bs
+              root = takeDirectory yamlPath
           pkg <-
             if
                 | isEmpty -> return emptyPackage
-                | otherwise -> decodeThrow bs
-          return (takeDirectory yaml, pkg)
+                | otherwise -> decodeThrow bs >>= mkAbsPaths root
+          return (root, pkg)
+
+mkAbsPaths :: FilePath -> Package -> IO Package
+mkAbsPaths root pkg = traverseOf (packageDependencies . each . dependencyPath) go pkg
+  where
+    go :: FilePath -> IO FilePath
+    go p = canonicalizePath (root </> p)

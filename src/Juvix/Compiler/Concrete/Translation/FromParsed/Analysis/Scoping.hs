@@ -20,11 +20,13 @@ import Juvix.Compiler.Concrete.Data.Scope qualified as S
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.FromSource (runModuleParser)
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context (ParserResult)
+import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
 
 iniScoperState :: ScoperState
@@ -38,24 +40,24 @@ iniScoperState =
 iniScopeParameters :: ScopeParameters
 iniScopeParameters =
   ScopeParameters
-    { _scopeFileExtension = ".juvix",
-      _scopeTopParents = mempty
+    { _scopeTopParents = mempty
     }
 
 scopeCheck ::
-  Members '[Files, Error ScoperError, NameIdGen] r =>
+  Members '[Files, Error ScoperError, NameIdGen, Reader EntryPoint] r =>
   ParserResult ->
   InfoTable ->
   NonEmpty (Module 'Parsed 'ModuleTop) ->
   Sem r ScoperResult
 scopeCheck pr tab modules =
   fmap mkResult $
-    Parser.runInfoTableBuilder $
-      runInfoTableBuilder tab $
-        runReader iniScopeParameters $
-          runState iniScoperState $ do
-            mergeTable (pr ^. Parser.resultTable)
-            checkTopModules modules
+    runPathResolverPipe $
+      Parser.runInfoTableBuilder $
+        runInfoTableBuilder tab $
+          runReader iniScopeParameters $
+            runState iniScoperState $ do
+              mergeTable (pr ^. Parser.resultTable)
+              checkTopModules modules
   where
     mkResult :: (Parser.InfoTable, (InfoTable, (ScoperState, (NonEmpty (Module 'Scoped 'ModuleTop), HashSet NameId)))) -> ScoperResult
     mkResult (pt, (st, (scoperSt, (ms, exp)))) =
@@ -215,7 +217,7 @@ bindLocalModuleSymbol _moduleExportInfo _moduleRefModule =
 
 checkImport ::
   forall r.
-  Members '[Error ScoperError, State Scope, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, State Scope, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
 checkImport import_@(Import path) = do
@@ -383,25 +385,23 @@ exportScope Scope {..} = do
                     (MultipleExportConflict _scopePath s (e :| es))
                 )
 
+resolvePath' :: forall r. Members '[PathResolver, Error ScoperError] r => TopModulePath -> Sem r FilePath
+resolvePath' mp = resolvePath mp >>= either err return
+  where
+    err :: FilesError -> Sem r a
+    err = throw . ErrTopModulePath . TopModulePathError mp
+
 readParseModule ::
-  Members '[Error ScoperError, Reader ScopeParameters, Files, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, Reader ScopeParameters, Files, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   TopModulePath ->
   Sem r (Module 'Parsed 'ModuleTop)
 readParseModule mp = do
-  path <- modulePathToFilePath mp
+  path <- resolvePath' mp
   txt <- readFile' path
   pr <- runModuleParser path txt
   case pr of
     Left err -> throw (ErrParser (MegaParsecError err))
     Right (tbl, m) -> Parser.mergeTable tbl $> m
-
-modulePathToFilePath ::
-  Members '[Reader ScopeParameters, Files] r =>
-  TopModulePath ->
-  Sem r FilePath
-modulePathToFilePath mp = do
-  ext <- asks (^. scopeFileExtension)
-  topModulePathToFilePath' (Just ext) mp
 
 checkOperatorSyntaxDef ::
   forall r.
@@ -509,7 +509,7 @@ createExportsTable ei = foldr (HashSet.insert . getNameId) HashSet.empty (HashMa
 
 checkTopModules ::
   forall r.
-  Members '[Error ScoperError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   NonEmpty (Module 'Parsed 'ModuleTop) ->
   Sem r (NonEmpty (Module 'Scoped 'ModuleTop), HashSet NameId)
 checkTopModules modules = do
@@ -519,14 +519,14 @@ checkTopModules modules = do
 
 checkTopModule_ ::
   forall r.
-  Members '[Error ScoperError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (Module 'Scoped 'ModuleTop)
 checkTopModule_ = fmap (^. moduleRefModule) . checkTopModule
 
 checkTopModule ::
   forall r.
-  Members '[Error ScoperError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
 checkTopModule m@(Module path params doc body) = do
@@ -535,9 +535,9 @@ checkTopModule m@(Module path params doc body) = do
   modify (over (scoperModulesCache . cachedModules) (HashMap.insert path r))
   return r
   where
-    checkPath :: Members '[Files, Reader ScopeParameters, Error ScoperError] s => Sem s ()
+    checkPath :: Members '[Files, Reader ScopeParameters, Error ScoperError, PathResolver] s => Sem s ()
     checkPath = do
-      expectedPath <- modulePathToFilePath path
+      expectedPath <- resolvePath' path
       let actualPath = getLoc path ^. intervalFile
       unlessM (fromMaybe True <$> equalPaths' expectedPath actualPath) $
         throw
@@ -597,7 +597,7 @@ withScope ma = do
 
 checkModuleBody ::
   forall r.
-  Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   [Statement 'Parsed] ->
   Sem r (ExportInfo, [Statement 'Scoped])
 checkModuleBody body = do
@@ -609,7 +609,7 @@ checkModuleBody body = do
 
 checkLocalModule ::
   forall r.
-  Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
@@ -705,7 +705,7 @@ getExportInfo modId = do
     _ :&: ent -> ent ^. moduleExportInfo
 
 checkOpenImportModule ::
-  Members '[Error ScoperError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenImportModule op
@@ -782,7 +782,7 @@ checkOpenModuleNoImport OpenModule {..}
 
 checkOpenModule ::
   forall r.
-  Members '[Error ScoperError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenModule op
@@ -1294,7 +1294,7 @@ checkParsePatternAtom ::
 checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
 
 checkStatement ::
-  Members '[Error ScoperError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   Statement 'Parsed ->
   Sem r (Statement 'Scoped)
 checkStatement s = case s of

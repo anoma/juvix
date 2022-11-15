@@ -1,12 +1,18 @@
-module Juvix.Compiler.Pipeline.Package where
+module Juvix.Compiler.Pipeline.Package
+  ( module Juvix.Compiler.Pipeline.Package,
+    module Juvix.Compiler.Pipeline.Package.Dependency,
+  )
+where
 
 import Data.Aeson.TH
+import Juvix.Compiler.Pipeline.Package.Dependency
 import Juvix.Prelude
 import Lens.Micro.Platform qualified as Lens
 
 data Package = Package
   { _packageName :: Maybe Text,
-    _packageVersion :: Maybe Text
+    _packageVersion :: Maybe Text,
+    _packageDependencies :: [Dependency]
   }
   deriving stock (Eq, Show, Generic)
 
@@ -22,7 +28,8 @@ emptyPackage :: Package
 emptyPackage =
   Package
     { _packageName = Nothing,
-      _packageVersion = Nothing
+      _packageVersion = Nothing,
+      _packageDependencies = mempty
     }
 
 makeLenses ''Package

@@ -79,31 +79,6 @@ instance HasLoc TopModulePath where
       [] -> getLoc _modulePathName
       (x : _) -> getLoc x <> getLoc _modulePathName
 
-topModulePathToFilePath :: Member Files r => TopModulePath -> Sem r FilePath
-topModulePathToFilePath = topModulePathToFilePath' (Just ".juvix")
-
-topModulePathToRelativeFilePath :: Maybe String -> String -> (FilePath -> FilePath -> FilePath) -> TopModulePath -> FilePath
-topModulePathToRelativeFilePath ext suffix joinpath mp = relFilePath
-  where
-    relDirPath :: FilePath
-    relDirPath = foldr (joinpath . toPath) mempty (mp ^. modulePathDir)
-    relFilePath :: FilePath
-    relFilePath = addExt (relDirPath `joinpath'` toPath (mp ^. modulePathName) <> suffix)
-    joinpath' :: FilePath -> FilePath -> FilePath
-    joinpath' l r
-      | null l = r
-      | otherwise = joinpath l r
-    addExt = case ext of
-      Nothing -> id
-      Just e -> (<.> e)
-    toPath :: Symbol -> FilePath
-    toPath s = unpack (s ^. symbolText)
-
-topModulePathToFilePath' ::
-  Member Files r => Maybe String -> TopModulePath -> Sem r FilePath
-topModulePathToFilePath' ext mp =
-  getAbsPath (topModulePathToRelativeFilePath ext "" (</>) mp)
-
 topModulePathToDottedPath :: IsString s => TopModulePath -> s
 topModulePathToDottedPath (TopModulePath l r) =
   fromText $ mconcat $ intersperse "." $ map (^. symbolText) $ l ++ [r]

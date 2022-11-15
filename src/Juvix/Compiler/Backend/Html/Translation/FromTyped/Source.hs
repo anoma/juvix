@@ -12,6 +12,7 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Base
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Extra.Paths
 import Juvix.Extra.Version
@@ -218,7 +219,7 @@ nameIdAttr (S.NameId k) = fromString . show $ k
 moduleDocRelativePath :: Members '[Reader HtmlOptions] r => TopModulePath -> Sem r FilePath
 moduleDocRelativePath m = do
   suff <- kindSuffix <$> asks (^. htmlOptionsKind)
-  return (topModulePathToRelativeFilePath (Just "html") suff joinDot m)
+  return (topModulePathToRelativeFilePath ".html" suff joinDot m)
   where
     joinDot :: FilePath -> FilePath -> FilePath
     joinDot l r = l <.> r

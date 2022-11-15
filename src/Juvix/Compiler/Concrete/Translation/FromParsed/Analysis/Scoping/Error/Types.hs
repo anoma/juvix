@@ -18,6 +18,25 @@ import Juvix.Data.CodeAnn
 import Juvix.Parser.Error qualified as Parser
 import Juvix.Prelude
 
+data TopModulePathError = TopModulePathError
+  { _topModulePathErrorPath :: TopModulePath,
+    _topModulePathError :: FilesError
+  }
+  deriving stock (Show)
+
+instance ToGenericError TopModulePathError where
+  genericError TopModulePathError {..} = do
+    e <- genericError _topModulePathError
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = e ^. genericErrorMessage,
+          _genericErrorIntervals = i : e ^. genericErrorIntervals
+        }
+    where
+      i :: Interval
+      i = getLoc _topModulePathErrorPath
+
 data MultipleDeclarations = MultipleDeclarations
   { _multipleDeclEntry :: SymbolEntry,
     _multipleDeclSymbol :: Text,

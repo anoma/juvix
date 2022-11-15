@@ -5,7 +5,9 @@ import Juvix.Data.Loc
 import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
 
-data FilesErrorCause = StdlibConflict
+data FilesErrorCause
+  = StdlibConflict
+  | DependencyConflict
   deriving stock (Show)
 
 data FilesError = FilesError
@@ -33,6 +35,7 @@ instance ToGenericError FilesError where
       msg :: Text
       msg = case _filesErrorCause of
         StdlibConflict -> "The module defined in " <> pack _filesErrorPath <> " conflicts with a module defined in the standard library."
+        DependencyConflict -> "The module defined in " <> pack _filesErrorPath <> " conflicts with a module defined in another dependency."
 
 noFileLoc :: FileLoc
 noFileLoc =

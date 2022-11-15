@@ -47,7 +47,8 @@ getPackage = do
   return
     Package
       { _packageName = Just tproj,
-        _packageVersion = Just (prettySemVer tversion)
+        _packageVersion = Just (prettySemVer tversion),
+        _packageDependencies = mempty
       }
 
 getProjName :: forall r. Members '[Embed IO] r => Sem r Text
