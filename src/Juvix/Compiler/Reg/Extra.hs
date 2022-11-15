@@ -27,11 +27,19 @@ computeMaxStackHeight lims = maximum . map go
       Alloc {} -> 0
       AllocClosure {} -> 0
       ExtendClosure {} -> 0
+      Call InstrCall {..} | _instrCallIsTail -> 0
       Call InstrCall {..} ->
         length _instrCallLiveVars + 1
+      CallClosures InstrCallClosures {..}
+        | _instrCallClosuresIsTail ->
+            length _instrCallClosuresArgs
+              + 1
+              + lims
+              ^. limitsDispatchStackSize
       CallClosures InstrCallClosures {..} ->
         length _instrCallClosuresLiveVars
           + length _instrCallClosuresArgs
+          + 1
           + lims
           ^. limitsDispatchStackSize
       Return {} -> 0

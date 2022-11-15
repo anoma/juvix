@@ -3,8 +3,8 @@
 #include <juvix/object/equality.h>
 
 bool juvix_constr_equal(word_t x, word_t y) {
-    ASSERT(!is_ptr(x));
-    ASSERT(!is_ptr(y));
+    ASSERT(is_ptr(x));
+    ASSERT(is_ptr(y));
     word_t hx = get_header(x);
     word_t hy = get_header(y);
     if (hx != hy) {

@@ -74,7 +74,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
           ( \x y ->
               if
                   | y == 0 -> runtimeError "division by zero"
-                  | otherwise -> return $ ValInteger (x `div` y)
+                  | otherwise -> return $ ValInteger (x `quot` y)
           )
         goCode cont
       Binop IntMod -> do
@@ -82,7 +82,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
           ( \x y ->
               if
                   | y == 0 -> runtimeError "division by zero"
-                  | otherwise -> return $ ValInteger (x `mod` y)
+                  | otherwise -> return $ ValInteger (x `rem` y)
           )
         goCode cont
       Binop IntLt ->

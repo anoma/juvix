@@ -210,7 +210,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
             _instrExtendClosureArgs = getArgs 1 _extendClosureArgsNum
           }
       where
-        m = n - _extendClosureArgsNum + 1
+        m = n - _extendClosureArgsNum
 
     mkCall :: Bool -> Asm.InstrCall -> Instruction
     mkCall isTail Asm.InstrCall {..} =
@@ -239,7 +239,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
             _instrCallClosuresValue = VarRef VarGroupStack n,
             _instrCallClosuresIsTail = isTail,
             _instrCallClosuresArgs = getArgs 1 _callClosuresArgsNum,
-            _instrCallClosuresLiveVars = liveVars _callClosuresArgsNum
+            _instrCallClosuresLiveVars = liveVars (_callClosuresArgsNum + 1)
           }
       where
         -- note: the value (closure) is also on the stack
