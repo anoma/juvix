@@ -20,10 +20,9 @@
 #define ALLOC_CONSTR_BOXED_TAG(var, uid)     \
     do {                                     \
         void *tmp;                           \
-        ALLOC(tmp, 2);                       \
+        ALLOC(tmp, 1);                       \
         var = (word_t)tmp;                   \
-        FIELD(var, 0) = make_header(uid, 1); \
-        FIELD(var, 1) = 1;                   \
+        FIELD(var, 0) = make_header(uid, 0); \
     } while (0)
 
 #define ALLOC_CONSTR_TUPLE(var, nargs) \
