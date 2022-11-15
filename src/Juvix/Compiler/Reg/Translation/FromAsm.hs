@@ -242,7 +242,8 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
             _instrCallClosuresLiveVars = liveVars _callClosuresArgsNum
           }
       where
-        m = n - _callClosuresArgsNum + 1
+        -- note: the value (closure) is also on the stack
+        m = n - _callClosuresArgsNum
 
 fromAsmBranch ::
   Asm.StackInfo ->
