@@ -85,8 +85,9 @@ fromReg lims tab =
     mainBody :: [Statement]
     mainBody =
       argDecls
-        ++ [ StatementExpr $ macroCall "JUVIX_PROLOGUE" [integer (info ^. Reg.extraInfoMaxArgsNum)],
-             stmtAssign (ExpressionVar "juvix_constrs_num") (integer (info ^. Reg.extraInfoConstrsNum)),
+        ++ [StatementExpr $ macroCall "JUVIX_PROLOGUE" [integer (info ^. Reg.extraInfoMaxArgsNum)]]
+        ++ makeCStrings
+        ++ [ stmtAssign (ExpressionVar "juvix_constrs_num") (integer (info ^. Reg.extraInfoConstrsNum)),
              stmtAssign (ExpressionVar "juvix_constr_info") (ExpressionVar "juvix_constr_info_array"),
              stmtAssign (ExpressionVar "juvix_functions_num") (integer (info ^. Reg.extraInfoFunctionsNum)),
              stmtAssign (ExpressionVar "juvix_function_info") (ExpressionVar "juvix_function_info_array")
@@ -104,13 +105,26 @@ fromReg lims tab =
       where
         n = info ^. Reg.extraInfoMaxArgsNum
 
+    makeCStrings :: [Statement]
+    makeCStrings =
+      if
+          | n > 0 ->
+              StatementExpr (macroCall "DECL_CONST_CSTRINGS" [integer n])
+                : StatementExpr (macroVar "SAVE_MEMORY_POINTERS")
+                : map
+                  ( \(txt, i) ->
+                      StatementExpr $ macroCall "MAKE_CONST_CSTRING" [integer i, string txt]
+                  )
+                  (HashMap.toList (info ^. Reg.extraInfoStringMap))
+                ++ [StatementExpr (macroVar "RESTORE_MEMORY_POINTERS")]
+          | otherwise -> []
+      where
+        n = HashMap.size (info ^. Reg.extraInfoStringMap)
+
     jumpMainFunction :: [Statement]
     jumpMainFunction = case tab ^. Reg.infoMainFunction of
       Nothing -> error "no main function"
-      Just main ->
-        [ StatementExpr $ macroCall "STACK_PUSH_ADDR" [macroCall "LABEL_ADDR" [ExpressionVar "juvix_program_end"]],
-          StatementGoto $ Goto $ getLabel info main
-        ]
+      Just main -> [StatementGoto $ Goto $ getLabel info main]
 
     juvixFunctions :: [Statement]
     juvixFunctions =
@@ -176,7 +190,7 @@ fromRegInstr bNoStack info = \case
   Reg.Dump ->
     return [StatementExpr $ macroVar "JUVIX_DUMP"]
   Reg.Failure Reg.InstrFailure {..} ->
-    return [StatementExpr $ macroCall "JUVIX_FAILURE" [fromValue _instrFailure]]
+    return [StatementExpr $ macroCall "JUVIX_FAILURE" [fromValue _instrFailureValue]]
   Reg.Prealloc x ->
     return [fromPrealloc x]
   Reg.Alloc x ->
@@ -238,7 +252,7 @@ fromRegInstr bNoStack info = \case
       Reg.ConstInt x -> macroCall "make_smallint" [integer x]
       Reg.ConstBool True -> macroVar "BOOL_TRUE"
       Reg.ConstBool False -> macroVar "BOOL_FALSE"
-      Reg.ConstString x -> macroCall "MAKE_CSTRING" [ExpressionLiteral (LiteralString x)]
+      Reg.ConstString x -> macroCall "GET_CONST_CSTRING" [integer (getStringId info x)]
       Reg.ConstUnit -> macroVar "OBJ_UNIT"
       Reg.ConstVoid -> macroVar "OBJ_VOID"
       Reg.CRef Reg.ConstrField {..} ->

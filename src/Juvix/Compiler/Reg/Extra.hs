@@ -49,10 +49,60 @@ computeMaxStackHeight lims = maximum . map go
           )
           (maybe 0 (computeMaxStackHeight lims) _instrCaseDefault)
 
+computeStringMap :: HashMap Text Int -> Code -> HashMap Text Int
+computeStringMap strs = snd . run . execState (0 :: Int, strs) . mapM go
+  where
+    go :: Member (State (Int, HashMap Text Int)) r => Instruction -> Sem r ()
+    go = \case
+      Nop -> return ()
+      Binop BinaryOp {..} -> do
+        goVal _binaryOpArg1
+        goVal _binaryOpArg2
+      Assign InstrAssign {..} ->
+        goVal _instrAssignValue
+      Trace InstrTrace {..} ->
+        goVal _instrTraceValue
+      Dump -> return ()
+      Failure InstrFailure {..} ->
+        goVal _instrFailureValue
+      Prealloc {} -> return ()
+      Alloc InstrAlloc {..} ->
+        mapM_ goVal _instrAllocArgs
+      AllocClosure InstrAllocClosure {..} ->
+        mapM_ goVal _instrAllocClosureArgs
+      ExtendClosure InstrExtendClosure {..} ->
+        mapM_ goVal _instrExtendClosureArgs
+      Call InstrCall {..} ->
+        mapM_ goVal _instrCallArgs
+      CallClosures InstrCallClosures {..} ->
+        mapM_ goVal _instrCallClosuresArgs
+      Return InstrReturn {..} ->
+        goVal _instrReturnValue
+      Branch InstrBranch {..} -> do
+        goVal _instrBranchValue
+        mapM_ go _instrBranchTrue
+        mapM_ go _instrBranchFalse
+      Case InstrCase {..} -> do
+        goVal _instrCaseValue
+        mapM_ (mapM_ go . (^. caseBranchCode)) _instrCaseBranches
+        maybe (return ()) (mapM_ go) _instrCaseDefault
+
+    goVal :: Member (State (Int, HashMap Text Int)) r => Value -> Sem r ()
+    goVal = \case
+      ConstString str ->
+        modify'
+          ( \(sid :: Int, sstrs) ->
+              if
+                  | HashMap.member str sstrs -> (sid, sstrs)
+                  | otherwise -> (sid + 1, HashMap.insert str sid sstrs)
+          )
+      _ -> return ()
+
 data ExtraInfo = ExtraInfo
   { _extraInfoTable :: InfoTable,
     _extraInfoUIDs :: HashMap Tag Int,
     _extraInfoFUIDs :: HashMap Symbol Int,
+    _extraInfoStringMap :: HashMap Text Int,
     _extraInfoMaxStackHeight :: HashMap Symbol Int,
     _extraInfoMaxArgsNum :: Int,
     _extraInfoConstrsNum :: Int,
@@ -83,6 +133,11 @@ computeExtraInfo lims tab =
     { _extraInfoTable = tab,
       _extraInfoUIDs = computeUIDs lims tab,
       _extraInfoFUIDs = computeFUIDs tab,
+      _extraInfoStringMap =
+        foldr
+          (\fi mp -> computeStringMap mp (fi ^. functionCode))
+          HashMap.empty
+          (tab ^. infoFunctions),
       _extraInfoMaxStackHeight =
         HashMap.map
           (computeMaxStackHeight lims . (^. functionCode))

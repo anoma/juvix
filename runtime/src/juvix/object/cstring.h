@@ -36,4 +36,9 @@ static inline char *get_cstring(word_t x) {
 // function.
 word_t alloc_cstring(const char *str);
 
+#define GET_CONST_CSTRING(n) juvix_strings[n]
+#define MAKE_CONST_CSTRING(n, str) juvix_strings[n] = alloc_cstring(str)
+
+#define DECL_CONST_CSTRINGS(n) static word_t juvix_strings[n]
+
 #endif

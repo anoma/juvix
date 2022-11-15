@@ -8,6 +8,7 @@ data Type
   | TyBool TypeBool
   | TyString
   | TyUnit
+  | TyVoid
   | TyInductive TypeInductive
   | -- | TyConstr represents the type of a specific constructor. It is a subtype
     -- of an appropriate TyInductive.
@@ -77,6 +78,7 @@ instance HasAtomicity Type where
     TyBool x -> atomicity x
     TyString -> Atom
     TyUnit -> Atom
+    TyVoid -> Atom
     TyInductive x -> atomicity x
     TyConstr x -> atomicity x
     TyFun x -> atomicity x

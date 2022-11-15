@@ -78,12 +78,12 @@ closure_label:
 
 #define JUVIX_ASSIGN(var0, val) (var0 = val)
 
-#define JUVIX_TRACE(val) (io_print_toplevel(val))
+#define JUVIX_TRACE(val) (io_trace(val))
 #define JUVIX_DUMP (stacktrace_dump())
-#define JUVIX_FAILURE(val)      \
-    do {                        \
-        io_print_toplevel(val); \
-        error_exit();           \
+#define JUVIX_FAILURE(val) \
+    do {                   \
+        io_trace(val);     \
+        error_exit();      \
     } while (0)
 
 #define JUVIX_ALLOC_INT(var, val) (var = make_smallint(val))

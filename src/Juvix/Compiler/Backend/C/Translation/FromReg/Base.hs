@@ -28,6 +28,9 @@ getUID info tag = case tag of
 getFUID :: Reg.ExtraInfo -> Reg.Symbol -> Int
 getFUID info sym = fromJust $ HashMap.lookup sym (info ^. Reg.extraInfoFUIDs)
 
+getStringId :: Reg.ExtraInfo -> Text -> Int
+getStringId info txt = fromJust $ HashMap.lookup txt (info ^. Reg.extraInfoStringMap)
+
 getMaxStackHeight :: Reg.ExtraInfo -> Reg.Symbol -> Int
 getMaxStackHeight info sym = fromJust $ HashMap.lookup sym (info ^. Reg.extraInfoMaxStackHeight)
 

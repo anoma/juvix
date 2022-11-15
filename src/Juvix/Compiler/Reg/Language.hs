@@ -81,7 +81,7 @@ newtype InstrTrace = InstrTrace
   }
 
 newtype InstrFailure = InstrFailure
-  { _instrFailure :: Value
+  { _instrFailureValue :: Value
   }
 
 data InstrPrealloc = InstrPrealloc
@@ -130,6 +130,10 @@ data InstrCallClosures = InstrCallClosures
     _instrCallClosuresLiveVars :: [VarRef]
   }
 
+newtype InstrReturn = InstrReturn
+  { _instrReturnValue :: Value
+  }
+
 data InstrBranch = InstrBranch
   { _instrBranchValue :: Value,
     _instrBranchTrue :: Code,
@@ -150,10 +154,6 @@ data CaseBranch = CaseBranch
     _caseBranchMemRep :: MemRep,
     _caseBranchArgsNum :: Int,
     _caseBranchCode :: Code
-  }
-
-newtype InstrReturn = InstrReturn
-  { _instrReturnValue :: Value
   }
 
 makeLenses ''ConstrField
