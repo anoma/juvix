@@ -1,7 +1,7 @@
 module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
   ( PathResolver,
     addDependency,
-    resolvePath,
+    -- resolvePath,
     withPath,
     runPathResolver,
     runPathResolverPipe,
@@ -23,22 +23,21 @@ data PathResolver m a where
 
 makeSem ''PathResolver
 
-newtype ResolverEnv = ResolverEnv {
-  _envRoot :: FilePath
+newtype ResolverEnv = ResolverEnv
+  { _envRoot :: FilePath
   }
 
 data ResolverState = ResolverState
-  {
-    -- | juvix files indexed by relative path
-    _stateFiles ::  HashMap FilePath (NonEmpty PackageInfo),
+  { -- | juvix files indexed by relative path
+    _stateFiles :: HashMap FilePath (NonEmpty PackageInfo),
     -- | PackageInfos indexed by root
     _statePackages :: HashMap FilePath PackageInfo
   }
 
-data PackageInfo = PackageInfo {
-  _packageRoot :: FilePath,
-  _packageRelativeFiles :: HashSet FilePath,
-  _packagePackage :: Package
+data PackageInfo = PackageInfo
+  { _packageRoot :: FilePath,
+    _packageRelativeFiles :: HashSet FilePath,
+    _packagePackage :: Package
   }
 
 makeLenses ''PackageInfo
@@ -48,8 +47,7 @@ makeLenses ''ResolverEnv
 iniResolverState :: ResolverState
 iniResolverState =
   ResolverState
-    { 
-      _statePackages = mempty,
+    { _statePackages = mempty,
       _stateFiles = mempty
     }
 
@@ -89,9 +87,6 @@ topModulePathToRelativeFilePath ext suffix joinpath mp = relFilePath
     toPath :: Symbol -> FilePath
     toPath s = unpack (s ^. symbolText)
 
-resolvePath :: Members '[PathResolver] r => TopModulePath -> Sem r (Either FilesError FilePath)
-resolvePath mp = withPath mp return
-
 resolvePath' :: Members '[State ResolverState, Reader ResolverEnv] r => TopModulePath -> Sem r (Either FilesError FilePath)
 resolvePath' mp = do
   let rel = topModulePathToRelativeFilePath ".juvix" "" (</>) mp
@@ -100,15 +95,19 @@ resolvePath' mp = do
     Just (r :| rs) -> case rs of
       [] -> return (Right (r ^. packageRoot </> rel))
       _ -> return (Left (error "file conflict"))
-    Nothing -> error "file does nto exist"
+    Nothing -> error ("file does not exist: " <> pack rel)
 
-re :: forall r a. Members '[Files, Error Text] r => Sem (PathResolver ': r) a
-    -> Sem (Reader ResolverEnv ': State ResolverState ': r) a
+re ::
+  forall r a.
+  Members '[Files, Error Text] r =>
+  Sem (PathResolver ': r) a ->
+  Sem (Reader ResolverEnv ': State ResolverState ': r) a
 re = reinterpret2H helper
-    where
-    helper :: forall rInitial x.
-       PathResolver (Sem rInitial) x
-       -> Tactical PathResolver (Sem rInitial) (Reader ResolverEnv ': (State ResolverState ': r)) x
+  where
+    helper ::
+      forall rInitial x.
+      PathResolver (Sem rInitial) x ->
+      Tactical PathResolver (Sem rInitial) (Reader ResolverEnv ': (State ResolverState ': r)) x
     helper = \case
       AddDependency m -> addDependency' m >>= pureT
       WithPath m a -> do

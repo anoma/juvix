@@ -385,8 +385,13 @@ exportScope Scope {..} = do
                     (MultipleExportConflict _scopePath s (e :| es))
                 )
 
-resolvePath' :: forall r. Members '[PathResolver, Error ScoperError] r => TopModulePath -> Sem r FilePath
-resolvePath' mp = resolvePath mp >>= either err return
+withPath' ::
+  forall r a.
+  Members '[PathResolver, Error ScoperError] r =>
+  TopModulePath ->
+  (FilePath -> Sem r a) ->
+  Sem r a
+withPath' mp a = withPath mp (either err a)
   where
     err :: FilesError -> Sem r a
     err = throw . ErrTopModulePath . TopModulePathError mp
@@ -395,8 +400,7 @@ readParseModule ::
   Members '[Error ScoperError, Reader ScopeParameters, Files, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   TopModulePath ->
   Sem r (Module 'Parsed 'ModuleTop)
-readParseModule mp = do
-  path <- resolvePath' mp
+readParseModule mp = withPath' mp $ \path -> do
   txt <- readFile' path
   pr <- runModuleParser path txt
   case pr of
@@ -536,18 +540,18 @@ checkTopModule m@(Module path params doc body) = do
   return r
   where
     checkPath :: Members '[Files, Reader ScopeParameters, Error ScoperError, PathResolver] s => Sem s ()
-    checkPath = do
-      expectedPath <- resolvePath' path
-      let actualPath = getLoc path ^. intervalFile
-      unlessM (fromMaybe True <$> equalPaths' expectedPath actualPath) $
-        throw
-          ( ErrWrongTopModuleName
-              WrongTopModuleName
-                { _wrongTopModuleNameActualName = path,
-                  _wrongTopModuleNameExpectedPath = expectedPath,
-                  _wrongTopModuleNameActualPath = actualPath
-                }
-          )
+    checkPath =
+      withPath' path $ \expectedPath -> do
+        let actualPath = getLoc path ^. intervalFile
+        unlessM (fromMaybe True <$> equalPaths' expectedPath actualPath) $
+          throw
+            ( ErrWrongTopModuleName
+                WrongTopModuleName
+                  { _wrongTopModuleNameActualName = path,
+                    _wrongTopModuleNameExpectedPath = expectedPath,
+                    _wrongTopModuleNameActualPath = actualPath
+                  }
+            )
     freshTopModulePath ::
       forall s.
       Members '[State ScoperState, NameIdGen] s =>

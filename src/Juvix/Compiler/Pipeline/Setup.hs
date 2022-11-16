@@ -1,15 +1,27 @@
 module Juvix.Compiler.Pipeline.Setup where
 
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
 
 entrySetup ::
-  Members '[Reader EntryPoint, Files] r =>
+  Members '[Reader EntryPoint, Files, PathResolver] r =>
   Sem r EntryPoint
 entrySetup = do
   e <- ask
   unless (e ^. entryPointNoStdlib) setupStdlib
+  registerDependencies
   return e
+
+registerDependencies :: Members '[Reader EntryPoint, PathResolver] r => Sem r ()
+registerDependencies = do
+  root <- asks (^. entryPointRoot)
+  let -- we register the entry root as a dependency
+      entryDep :: Dependency
+      entryDep = Dependency root
+  addDependency entryDep
+  deps <- asks (^. entryPointPackage . packageDependencies)
+  forM_ deps addDependency
 
 setupStdlib ::
   Members '[Reader EntryPoint, Files] r =>

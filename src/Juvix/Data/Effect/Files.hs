@@ -5,6 +5,7 @@ module Juvix.Data.Effect.Files
   )
 where
 
+import Data.ByteString qualified as ByteString
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Data.Effect.Files.Error
@@ -12,7 +13,6 @@ import Juvix.Extra.Stdlib qualified as Stdlib
 import Juvix.Prelude.Base
 import System.FilePath.Find (FilterPredicate, FindClause, RecursionPredicate)
 import System.FilePath.Find qualified as Find
-import Data.ByteString qualified as ByteString
 
 data Files m a where
   ReadFile' :: FilePath -> Files m Text
@@ -131,14 +131,14 @@ runFilesPure rootPath fs = interpret $ \case
   FilesFind {} -> error "to be implemented"
   ReadFileBS' f -> encodeUtf8 <$> readHelper f
   where
-  readHelper :: forall m. Monad m => FilePath -> m Text
-  readHelper f = case HashMap.lookup f fs of
-    Nothing ->
-      error $
-        pack $
-          "file "
-            <> f
-            <> " does not exist."
-            <> "\nThe contents of the mocked file system are:\n"
-            <> unlines (HashMap.keys fs)
-    Just c -> return c
+    readHelper :: forall m. Monad m => FilePath -> m Text
+    readHelper f = case HashMap.lookup f fs of
+      Nothing ->
+        error $
+          pack $
+            "file "
+              <> f
+              <> " does not exist."
+              <> "\nThe contents of the mocked file system are:\n"
+              <> unlines (HashMap.keys fs)
+      Just c -> return c

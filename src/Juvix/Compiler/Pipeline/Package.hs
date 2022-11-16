@@ -4,10 +4,10 @@ module Juvix.Compiler.Pipeline.Package
   )
 where
 
-import Juvix.Extra.Paths
-import Data.Yaml
 import Data.Aeson.TH
+import Data.Yaml
 import Juvix.Compiler.Pipeline.Package.Dependency
+import Juvix.Extra.Paths
 import Juvix.Prelude
 import Lens.Micro.Platform qualified as Lens
 
@@ -51,7 +51,7 @@ packageVersion' f p = (\(Const r) -> Const r) (f name)
 -- | given some directory d it tries to read the file d/juvix.yaml and parse its contents
 readPackage :: Members '[Files, Error Text] r => FilePath -> Sem r Package
 readPackage dir = do
-   bs <- readFileBS' yamlPath
-   either (throw . pack . prettyPrintParseException) return (decodeEither' bs)
-   where
+  bs <- readFileBS' yamlPath
+  either (throw . pack . prettyPrintParseException) return (decodeEither' bs)
+  where
     yamlPath = dir </> juvixYamlFile

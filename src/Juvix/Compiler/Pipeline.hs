@@ -10,6 +10,7 @@ import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Translation qualified as Core
@@ -19,7 +20,7 @@ import Juvix.Compiler.Pipeline.ExpressionContext
 import Juvix.Compiler.Pipeline.Setup
 import Juvix.Prelude
 
-type PipelineEff = '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, Embed IO]
+type PipelineEff = '[PathResolver, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, Embed IO]
 
 arityCheckExpression ::
   Members '[Error JuvixError, NameIdGen, Builtins] r =>
@@ -104,49 +105,49 @@ compile ::
 compile = typecheck >=> C.fromInternal
 
 upToParsing ::
-  Members '[Reader EntryPoint, Files, Error JuvixError, NameIdGen] r =>
+  Members '[Reader EntryPoint, Files, Error JuvixError, NameIdGen, PathResolver] r =>
   Sem r Parser.ParserResult
 upToParsing = entrySetup >>= Parser.fromSource
 
 upToScoping ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError] r =>
+  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, PathResolver] r =>
   Sem r Scoper.ScoperResult
 upToScoping = upToParsing >>= Scoper.fromParsed
 
 upToAbstract ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
+  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r =>
   Sem r Abstract.AbstractResult
 upToAbstract = upToScoping >>= Abstract.fromConcrete
 
 upToInternal ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
+  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r =>
   Sem r Internal.InternalResult
 upToInternal = upToAbstract >>= Internal.fromAbstract
 
 upToInternalArity ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError] r =>
+  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r =>
   Sem r Internal.InternalArityResult
 upToInternalArity = upToInternal >>= Internal.arityChecking
 
 upToInternalTyped ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins] r =>
+  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r =>
   Sem r Internal.InternalTypedResult
 upToInternalTyped = upToInternalArity >>= Internal.typeChecking
 
 upToInternalReachability ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins] r =>
+  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r =>
   Sem r Internal.InternalTypedResult
 upToInternalReachability =
   Internal.filterUnreachable <$> upToInternalTyped
 
 upToCore ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins] r =>
+  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r =>
   Sem r Core.CoreResult
 upToCore =
   upToInternalReachability >>= Core.fromInternal
 
 upToMiniC ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins] r =>
+  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r =>
   Sem r C.MiniCResult
 upToMiniC = upToInternalReachability >>= C.fromInternal
 
@@ -159,6 +160,7 @@ runIOEither builtinsState entry =
     . mapError (JuvixError @FilesError)
     . runFilesIO (entry ^. entryPointRoot)
     . runReader entry
+    . runPathResolverPipe
 
 runIO :: BuiltinsState -> GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (BuiltinsState, a)
 runIO builtinsState opts entry = runIOEither builtinsState entry >=> mayThrow
