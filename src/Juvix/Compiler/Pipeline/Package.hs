@@ -4,6 +4,8 @@ module Juvix.Compiler.Pipeline.Package
   )
 where
 
+import Juvix.Extra.Paths
+import Data.Yaml
 import Data.Aeson.TH
 import Juvix.Compiler.Pipeline.Package.Dependency
 import Juvix.Prelude
@@ -45,3 +47,11 @@ packageVersion' f p = (\(Const r) -> Const r) (f name)
   where
     name :: Text
     name = fromMaybe "no version" (p ^. packageVersion)
+
+-- | given some directory d it tries to read the file d/juvix.yaml and parse its contents
+readPackage :: Members '[Files, Error Text] r => FilePath -> Sem r Package
+readPackage dir = do
+   bs <- readFileBS' yamlPath
+   either (throw . pack . prettyPrintParseException) return (decodeEither' bs)
+   where
+    yamlPath = dir </> juvixYamlFile

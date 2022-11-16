@@ -12,9 +12,11 @@ import Juvix.Extra.Stdlib qualified as Stdlib
 import Juvix.Prelude.Base
 import System.FilePath.Find (FilterPredicate, FindClause, RecursionPredicate)
 import System.FilePath.Find qualified as Find
+import Data.ByteString qualified as ByteString
 
 data Files m a where
   ReadFile' :: FilePath -> Files m Text
+  ReadFileBS' :: FilePath -> Files m ByteString
   FileExists' :: FilePath -> Files m Bool
   EqualPaths' :: FilePath -> FilePath -> Files m (Maybe Bool)
   GetAbsPath :: FilePath -> Files m FilePath
@@ -85,6 +87,7 @@ runFilesIO' ::
   Sem (State FilesState ': (Error FilesError ': r)) a
 runFilesIO' rootPath = reinterpret2 $ \case
   ReadFile' f -> embed (readFile f)
+  ReadFileBS' f -> embed (ByteString.readFile f)
   FileExists' f -> embed (doesFileExist f)
   EqualPaths' f h -> embed $ do
     f' <- canonicalizePath f
@@ -119,7 +122,17 @@ runFilesEmpty rootPath = runFilesPure rootPath mempty
 
 runFilesPure :: FilePath -> HashMap FilePath Text -> Sem (Files ': r) a -> Sem r a
 runFilesPure rootPath fs = interpret $ \case
-  ReadFile' f -> case HashMap.lookup f fs of
+  ReadFile' f -> readHelper f
+  EqualPaths' {} -> return Nothing
+  FileExists' f -> return (HashMap.member f fs)
+  RegisterStdlib {} -> return ()
+  UpdateStdlib {} -> return ()
+  GetAbsPath f -> return (rootPath </> f)
+  FilesFind {} -> error "to be implemented"
+  ReadFileBS' f -> encodeUtf8 <$> readHelper f
+  where
+  readHelper :: forall m. Monad m => FilePath -> m Text
+  readHelper f = case HashMap.lookup f fs of
     Nothing ->
       error $
         pack $
@@ -129,9 +142,3 @@ runFilesPure rootPath fs = interpret $ \case
             <> "\nThe contents of the mocked file system are:\n"
             <> unlines (HashMap.keys fs)
     Just c -> return c
-  EqualPaths' {} -> return Nothing
-  FileExists' f -> return (HashMap.member f fs)
-  RegisterStdlib {} -> return ()
-  UpdateStdlib {} -> return ()
-  GetAbsPath f -> return (rootPath </> f)
-  FilesFind {} -> error "to be implemented"
