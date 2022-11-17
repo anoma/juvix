@@ -1,6 +1,9 @@
 module Main;
 
-import Dep1.Library
+import Dep1.Lib;
+import Dep2.Lib;
+
+import Conflict2;
 
 
 end;

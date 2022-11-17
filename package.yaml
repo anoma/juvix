@@ -18,6 +18,7 @@ extra-source-files:
 
 dependencies:
 - aeson == 2.0.*
+- aeson-better-errors == 0.9.*
 - ansi-terminal == 0.11.*
 - base == 4.16.*
 - blaze-html == 0.9.*

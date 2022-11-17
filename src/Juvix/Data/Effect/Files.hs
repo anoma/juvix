@@ -20,6 +20,7 @@ data Files m a where
   FileExists' :: FilePath -> Files m Bool
   EqualPaths' :: FilePath -> FilePath -> Files m (Maybe Bool)
   GetAbsPath :: FilePath -> Files m FilePath
+  CanonicalizePath' :: FilePath -> Files m FilePath
   RegisterStdlib :: FilePath -> Files m ()
   UpdateStdlib :: FilePath -> Files m ()
   FilesFind :: RecursionPredicate -> FilterPredicate -> FilePath -> Files m [FilePath]
@@ -109,6 +110,7 @@ runFilesIO' rootPath = reinterpret2 $ \case
       )
   UpdateStdlib p -> runReader p Stdlib.updateStdlib
   FilesFind re f p -> embed (Find.find re f p)
+  CanonicalizePath' f -> embed (canonicalizePath f)
   GetAbsPath f -> do
     s <- gets (^. stdlibState)
     p <- stdlibOrFile f rootPath s
@@ -128,6 +130,7 @@ runFilesPure rootPath fs = interpret $ \case
   RegisterStdlib {} -> return ()
   UpdateStdlib {} -> return ()
   GetAbsPath f -> return (rootPath </> f)
+  CanonicalizePath' f -> return (normalise (rootPath </> f))
   FilesFind {} -> error "to be implemented"
   ReadFileBS' f -> encodeUtf8 <$> readHelper f
   where

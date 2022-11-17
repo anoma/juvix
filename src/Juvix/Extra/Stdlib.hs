@@ -8,10 +8,14 @@ import Juvix.Prelude.Base
 type RootPath = FilePath
 
 stdlibFiles :: [(FilePath, ByteString)]
-stdlibFiles = filter isJuvixFile $(stdlibDir)
+stdlibFiles = filter (isStdLibFile . fst) $(stdlibDir)
   where
-    isJuvixFile :: (FilePath, ByteString) -> Bool
-    isJuvixFile (fp, _) = takeExtension fp == ".juvix"
+    isStdLibFile :: FilePath -> Bool
+    isStdLibFile = isJuvixFile .||. isYamlFile
+    isJuvixFile :: FilePath -> Bool
+    isJuvixFile fp = takeExtension fp == ".juvix"
+    isYamlFile :: FilePath -> Bool
+    isYamlFile = (== juvixYamlFile)
 
 writeStdlib :: forall r. Members '[Reader RootPath, Embed IO] r => Sem r ()
 writeStdlib = do

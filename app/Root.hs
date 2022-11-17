@@ -2,7 +2,6 @@ module Root where
 
 import Control.Exception qualified as IO
 import Data.ByteString qualified as ByteString
-import Data.Yaml
 import Juvix.Compiler.Pipeline
 import Juvix.Extra.Paths qualified as Paths
 import Juvix.Prelude
@@ -36,11 +35,5 @@ findRoot minputFile = do
           pkg <-
             if
                 | isEmpty -> return emptyPackage
-                | otherwise -> decodeThrow bs >>= mkAbsPaths root
+                | otherwise -> readPackageIO root
           return (root, pkg)
-
-mkAbsPaths :: FilePath -> Package -> IO Package
-mkAbsPaths root pkg = traverseOf (packageDependencies . each . dependencyPath) go pkg
-  where
-    go :: FilePath -> IO FilePath
-    go p = canonicalizePath (root </> p)

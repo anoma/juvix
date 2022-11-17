@@ -42,6 +42,13 @@ stylize a = case a of
   AnnDef {} -> mempty
   AnnRef {} -> mempty
 
+class PrettyCodeAnn a where
+  ppCodeAnn :: a -> Doc CodeAnn
+
+instance HasAnsiBackend (Doc CodeAnn) where
+  toAnsiDoc = fmap stylize
+  toAnsiStream = fmap stylize . layoutPretty defaultLayoutOptions
+
 -- | for builtin stuff
 primitive :: Text -> Doc Ann
 primitive = annotate (AnnKind KNameAxiom) . pretty

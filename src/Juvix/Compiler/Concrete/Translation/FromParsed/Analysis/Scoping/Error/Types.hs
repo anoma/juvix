@@ -13,6 +13,7 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Language qualified as L
 import Juvix.Compiler.Concrete.Pretty.Options (Options, fromGenericOptions)
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
 import Juvix.Data.CodeAnn
 import Juvix.Parser.Error qualified as Parser
@@ -20,18 +21,18 @@ import Juvix.Prelude
 
 data TopModulePathError = TopModulePathError
   { _topModulePathErrorPath :: TopModulePath,
-    _topModulePathError :: FilesError
+    _topModulePathError :: PathResolverError
   }
   deriving stock (Show)
 
 instance ToGenericError TopModulePathError where
   genericError TopModulePathError {..} = do
-    e <- genericError _topModulePathError
+    let msg = ppCodeAnn _topModulePathError
     return
       GenericError
         { _genericErrorLoc = i,
-          _genericErrorMessage = e ^. genericErrorMessage,
-          _genericErrorIntervals = i : e ^. genericErrorIntervals
+          _genericErrorMessage = AnsiText msg,
+          _genericErrorIntervals = [i]
         }
     where
       i :: Interval

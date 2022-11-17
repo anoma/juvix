@@ -20,8 +20,6 @@ registerDependencies = do
       entryDep :: Dependency
       entryDep = Dependency root
   addDependency entryDep
-  deps <- asks (^. entryPointPackage . packageDependencies)
-  forM_ deps addDependency
 
 setupStdlib ::
   Members '[Reader EntryPoint, Files] r =>

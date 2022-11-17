@@ -123,3 +123,6 @@ ordinal = \case
   11 -> "eleventh"
   12 -> "twelfth"
   n -> pretty n <> "th"
+
+itemize :: (Functor f, Foldable f) => f (Doc ann) -> Doc ann
+itemize = vsep . fmap ("• " <>)

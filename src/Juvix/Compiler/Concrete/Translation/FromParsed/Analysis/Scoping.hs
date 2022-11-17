@@ -44,20 +44,19 @@ iniScopeParameters =
     }
 
 scopeCheck ::
-  Members '[Files, Error ScoperError, NameIdGen, Reader EntryPoint] r =>
+  Members '[Files, Error ScoperError, NameIdGen, Reader EntryPoint, PathResolver] r =>
   ParserResult ->
   InfoTable ->
   NonEmpty (Module 'Parsed 'ModuleTop) ->
   Sem r ScoperResult
 scopeCheck pr tab modules =
   fmap mkResult $
-    runPathResolverPipe $
-      Parser.runInfoTableBuilder $
-        runInfoTableBuilder tab $
-          runReader iniScopeParameters $
-            runState iniScoperState $ do
-              mergeTable (pr ^. Parser.resultTable)
-              checkTopModules modules
+    Parser.runInfoTableBuilder $
+      runInfoTableBuilder tab $
+        runReader iniScopeParameters $
+          runState iniScoperState $ do
+            mergeTable (pr ^. Parser.resultTable)
+            checkTopModules modules
   where
     mkResult :: (Parser.InfoTable, (InfoTable, (ScoperState, (NonEmpty (Module 'Scoped 'ModuleTop), HashSet NameId)))) -> ScoperResult
     mkResult (pt, (st, (scoperSt, (ms, exp)))) =
@@ -393,7 +392,7 @@ withPath' ::
   Sem r a
 withPath' mp a = withPath mp (either err a)
   where
-    err :: FilesError -> Sem r a
+    err :: PathResolverError -> Sem r a
     err = throw . ErrTopModulePath . TopModulePathError mp
 
 readParseModule ::
