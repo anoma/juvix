@@ -28,12 +28,12 @@ $( deriveToJSON
  )
 
 instance FromJSON Package where
-  parseJSON = toAesonParser' p
+  parseJSON = toAesonParser' (fromMaybe emptyPackage <$> p)
     where
-      p :: Parse' Package
-      p = do
-        _packageName <- perhaps (key "name" asText)
-        _packageVersion <- perhaps (key "version" asText)
+      p :: Parse' (Maybe Package)
+      p = perhaps $ do
+        _packageName <- keyMay "name" asText
+        _packageVersion <- keyMay "version" asText
         _packageDependencies <- fromMaybe [] <$> keyMay "dependencies" fromAesonParser
         return Package {..}
 

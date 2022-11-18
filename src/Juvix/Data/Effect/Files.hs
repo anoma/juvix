@@ -21,7 +21,7 @@ data Files m a where
   EqualPaths' :: FilePath -> FilePath -> Files m (Maybe Bool)
   GetAbsPath :: FilePath -> Files m FilePath
   CanonicalizePath' :: FilePath -> Files m FilePath
-  RegisterStdlib :: FilePath -> Files m ()
+  -- RegisterStdlib :: FilePath -> Files m ()
   UpdateStdlib :: FilePath -> Files m ()
   FilesFind :: RecursionPredicate -> FilterPredicate -> FilePath -> Files m [FilePath]
 
@@ -94,20 +94,20 @@ runFilesIO' rootPath = reinterpret2 $ \case
     f' <- canonicalizePath f
     h' <- canonicalizePath h
     return (Just (equalFilePath f' h'))
-  RegisterStdlib stdlibRootPath -> do
-    absStdlibRootPath <- embed (makeAbsolute stdlibRootPath)
-    fs <- embed (getFilesRecursive absStdlibRootPath)
-    let paths = normalise . makeRelative absStdlibRootPath <$> fs
-    modify
-      ( set
-          stdlibState
-          ( Just
-              StdlibState
-                { _stdlibRoot = absStdlibRootPath,
-                  _stdlibFilePaths = HashSet.fromList paths
-                }
-          )
-      )
+  -- RegisterStdlib stdlibRootPath -> do
+  --   absStdlibRootPath <- embed (makeAbsolute stdlibRootPath)
+  --   fs <- embed (getFilesRecursive absStdlibRootPath)
+  --   let paths = normalise . makeRelative absStdlibRootPath <$> fs
+  --   modify
+  --     ( set
+  --         stdlibState
+  --         ( Just
+  --             StdlibState
+  --               { _stdlibRoot = absStdlibRootPath,
+  --                 _stdlibFilePaths = HashSet.fromList paths
+  --               }
+  --         )
+  --     )
   UpdateStdlib p -> runReader p Stdlib.updateStdlib
   FilesFind re f p -> embed (Find.find re f p)
   CanonicalizePath' f -> embed (canonicalizePath f)
@@ -127,7 +127,7 @@ runFilesPure rootPath fs = interpret $ \case
   ReadFile' f -> readHelper f
   EqualPaths' {} -> return Nothing
   FileExists' f -> return (HashMap.member f fs)
-  RegisterStdlib {} -> return ()
+  -- RegisterStdlib {} -> return ()
   UpdateStdlib {} -> return ()
   GetAbsPath f -> return (rootPath </> f)
   CanonicalizePath' f -> return (normalise (rootPath </> f))

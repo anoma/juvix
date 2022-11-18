@@ -14,15 +14,10 @@ entrySetup = do
   return e
 
 registerDependencies :: Members '[Reader EntryPoint, PathResolver] r => Sem r ()
-registerDependencies = do
-  root <- asks (^. entryPointRoot)
-  let -- we register the entry root as a dependency
-      entryDep :: Dependency
-      entryDep = Dependency root
-  addDependency entryDep
+registerDependencies = asks (^. entryPointRoot) >>= addDependency . Dependency
 
 setupStdlib ::
-  Members '[Reader EntryPoint, Files] r =>
+  Members '[Reader EntryPoint, Files, PathResolver] r =>
   Sem r ()
 setupStdlib = do
   e <- ask
@@ -30,6 +25,7 @@ setupStdlib = do
     Nothing -> do
       let d = defaultStdlibPath (e ^. entryPointRoot)
       updateStdlib d
-      return d
-    Just p -> return p
-  registerStdlib stdlibRootPath
+      getAbsPath d
+    Just p -> getAbsPath p
+  traceM ("stdlib at " <> pack stdlibRootPath)
+  addDependency (Dependency stdlibRootPath)

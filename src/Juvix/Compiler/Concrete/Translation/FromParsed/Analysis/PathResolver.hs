@@ -18,6 +18,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Erro
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 import System.FilePath.Find as Find
 
 data PathResolver m a where
@@ -52,8 +53,7 @@ iniResolverState =
 mkPackageInfo :: Members '[Files, Error Text] r => FilePath -> Sem r PackageInfo
 mkPackageInfo _packageRoot = do
   _packagePackage <- readPackage _packageRoot
-  -- traceM ("Package root = " <> pack _packageRoot)
-  fs <- map (normalise . makeRelative _packageRoot) <$> filesFind recur (extension ==? ".juvix") _packageRoot
+  fs <- map (normalise . makeRelative _packageRoot) <$> filesFind recur (extension ==? ".juvix") (_packageRoot </> "")
   let _packageRelativeFiles = HashSet.fromList fs
       _packageAvailableRoots =
         HashSet.fromList (_packageRoot : map (^. dependencyPath) (_packagePackage ^. packageDependencies))
@@ -73,12 +73,12 @@ addDependency' :: Members '[State ResolverState, Files, Error Text] r => Depende
 addDependency' d = do
   let p = d ^. dependencyPath
   unlessM (dependencyCached d) $ do
-    -- traceM ("adding dependency: " <> pack p)
     pkgInfo <- mkPackageInfo p
+    traceM ("adding dependency " <> pack p)
+    traceM ("has " <> prettyText (pkgInfo ^. packageRelativeFiles . to HashSet.size) <> " files")
     modify' (set (statePackages . at p) (Just pkgInfo))
     forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
-      -- traceM ("adding file: " <> pack f <> " to " <> pack (pkgInfo ^. packageRoot))
-      -- modify' (over (stateFiles . at f) (Just . maybe (pure pkgInfo) (NonEmpty.cons pkgInfo)))
+      traceM ("adding file " <> pack f)
       modify' (over stateFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
     forM_ (pkgInfo ^. packagePackage . packageDependencies) addDependency'
 

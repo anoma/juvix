@@ -8,11 +8,13 @@ module Commands.Dev.Options
     module Commands.Dev.Scope.Options,
     module Commands.Dev.Doc.Options,
     module Commands.Dev.Termination.Options,
+    module Commands.Dev.DisplayRoot.Options,
   )
 where
 
 import Commands.Dev.Asm.Options
 import Commands.Dev.Core.Options
+import Commands.Dev.DisplayRoot.Options
 import Commands.Dev.Doc.Options
 import Commands.Dev.Highlight.Options
 import Commands.Dev.Internal.Options
@@ -24,7 +26,7 @@ import Commands.Dev.Termination.Options
 import CommonOptions
 
 data DevCommand
-  = DisplayRoot
+  = DisplayRoot RootOptions
   | Highlight HighlightOptions
   | Internal InternalCommand
   | Core CoreCommand
@@ -122,7 +124,7 @@ commandShowRoot :: Mod CommandFields DevCommand
 commandShowRoot =
   command "root" $
     info
-      (pure DisplayRoot)
+      (DisplayRoot <$> parseRoot)
       (progDesc "Show the root path for a Juvix project")
 
 commandTermination :: Mod CommandFields DevCommand

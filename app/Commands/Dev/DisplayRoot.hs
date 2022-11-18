@@ -1,6 +1,15 @@
 module Commands.Dev.DisplayRoot where
 
 import Commands.Base
+import Commands.Dev.DisplayRoot.Options
+import Data.Yaml
 
-runCommand :: Members '[Embed IO, App] r => Sem r ()
-runCommand = askRoot >>= say . pack
+runCommand :: forall r. Members '[Embed IO, App] r => RootOptions -> Sem r ()
+runCommand RootOptions {..} = do
+  askRoot >>= say . pack
+  when _rootPrintPackage printPackage
+  where
+    printPackage :: Sem r ()
+    printPackage = do
+      say "+----------------------------+"
+      askPackage >>= say . decodeUtf8 . encode

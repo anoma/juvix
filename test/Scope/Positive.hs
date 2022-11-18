@@ -6,6 +6,7 @@ import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Extra
 import Juvix.Compiler.Concrete.Pretty qualified as M
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline
@@ -79,23 +80,31 @@ testDescr PosTest {..} =
 
             let scopedPretty = renderCode s2
                 parsedPretty = renderCode p2
+                runHelper ::
+                  HashMap FilePath Text ->
+                  Sem
+                    '[ PathResolver,
+                       Reader EntryPoint,
+                       Files,
+                       NameIdGen,
+                       Error JuvixError,
+                       Reader GenericOptions,
+                       Embed IO
+                     ]
+                    a ->
+                  IO a
+                runHelper files = runM . runErrorIO' @JuvixError . runNameIdGen . runFilesPure cwd files . runReader entryPoint . runPathResolverPipe
 
             step "Parsing pretty scoped"
             let fs2 = unionStdlib (HashMap.singleton entryFile scopedPretty)
-            p' :: Parser.ParserResult <-
-              (runM . runErrorIO' @JuvixError . runNameIdGen . runFilesPure cwd fs2 . runReader entryPoint)
-                upToParsing
+            p' :: Parser.ParserResult <- runHelper fs2 upToParsing
 
             step "Parsing pretty parsed"
             let fs3 = unionStdlib (HashMap.singleton entryFile parsedPretty)
-            parsedPretty' :: Parser.ParserResult <-
-              (runM . runErrorIO' @JuvixError . runNameIdGen . runFilesPure cwd fs3 . runReader entryPoint)
-                upToParsing
+            parsedPretty' :: Parser.ParserResult <- runHelper fs3 upToParsing
 
             step "Scoping the scoped"
-            s' :: Scoper.ScoperResult <-
-              (runM . runErrorIO' @JuvixError . runNameIdGen . runFilesPure cwd fs . runReader entryPoint)
-                upToScoping
+            s' :: Scoper.ScoperResult <- runHelper fs upToScoping
 
             step "Checks"
             let smodules = s ^. Scoper.resultModules

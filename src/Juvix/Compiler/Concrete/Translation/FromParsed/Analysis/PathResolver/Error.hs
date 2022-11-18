@@ -29,7 +29,7 @@ instance PrettyCodeAnn DependencyConflict where
       <> code (pretty _conflictPath)
       <> " is ambiguous. It is defined in these packages:"
       <> line
-      <> indent' (itemize (item <$> _conflictPackages))
+      <> indent' (itemize (item <$> toList _conflictPackages))
     where
       item :: PackageInfo -> Doc CodeAnn
       item pkg = pcode (pkg ^. packagePackage . packageName') <+> "at" <+> pretty (pkg ^. packageRoot)
@@ -56,4 +56,6 @@ instance PrettyCodeAnn MissingModule where
         "It should be in"
           <+> pcode (_missingInfo ^. packageRoot </> topModulePathToRelativeFilePath' _missingModule)
             <> line
-            <> "or in one of the dependencies"
+            <> "or in one of the dependencies:"
+            <> line
+            <> itemize (map pcode (_missingInfo ^.. packagePackage . packageDependencies . each . dependencyPath))
