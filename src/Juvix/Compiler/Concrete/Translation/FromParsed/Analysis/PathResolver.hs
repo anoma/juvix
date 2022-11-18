@@ -53,14 +53,14 @@ iniResolverState =
 mkPackageInfo :: Members '[Files, Error Text] r => FilePath -> Sem r PackageInfo
 mkPackageInfo _packageRoot = do
   _packagePackage <- readPackage _packageRoot
-  fs <- map (normalise . makeRelative _packageRoot) <$> filesFind recur (extension ==? ".juvix") (_packageRoot </> "")
+  fs <- map (normalise . makeRelative _packageRoot) <$> filesFind recur (extension ==? ".juvix") _packageRoot
   let _packageRelativeFiles = HashSet.fromList fs
       _packageAvailableRoots =
         HashSet.fromList (_packageRoot : map (^. dependencyPath) (_packagePackage ^. packageDependencies))
   return PackageInfo {..}
   where
     recur :: FindClause Bool
-    recur = notHidden . takeFileName <$> directory
+    recur = notHidden <$> fileName
       where
         notHidden = \case
           [] -> True
