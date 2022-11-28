@@ -7,6 +7,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.Map.Strict qualified as Map
+import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Core.Data.BinderList as BL
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Stripped
@@ -29,14 +30,6 @@ class PrettyCode c where
 
 runPrettyCode :: PrettyCode c => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
-
-instance PrettyCode NameId where
-  ppCode (NameId k) = return (pretty k)
-
-instance PrettyCode Name where
-  ppCode n = do
-    showNameId <- asks (^. optShowNameIds)
-    return (prettyName showNameId n)
 
 instance PrettyCode BuiltinOp where
   ppCode = \case
@@ -71,22 +64,25 @@ instance PrettyCode Primitive where
     PrimBool _ -> return $ annotate (AnnKind KNameInductive) (pretty ("bool" :: String))
     PrimString -> return $ annotate (AnnKind KNameInductive) (pretty ("string" :: String))
 
-ppCodeVar' :: Member (Reader Options) r => Maybe Name -> Var' i -> Sem r (Doc Ann)
-ppCodeVar' name v =
+ppName :: NameKind -> Sem r (Doc Ann) -> Text -> Sem r (Doc Ann)
+ppName kind def name =
   case name of
-    Just nm -> do
-      showDeBruijn <- asks (^. optShowDeBruijnIndices)
-      n <- ppCode nm
-      if showDeBruijn
-        then return $ n <> kwDeBruijnVar <> pretty (v ^. varIndex)
-        else return n
-    Nothing -> return $ kwDeBruijnVar <> pretty (v ^. varIndex)
+    "" -> def
+    _ -> return $ annotate (AnnKind kind) (pretty name)
 
-ppCodeIdent' :: Member (Reader Options) r => Maybe Name -> Ident' i -> Sem r (Doc Ann)
-ppCodeIdent' name idt =
+ppCodeVar' :: Member (Reader Options) r => Text -> Var' i -> Sem r (Doc Ann)
+ppCodeVar' name v = do
+  let name' = annotate (AnnKind KNameLocal) (pretty name)
+  showDeBruijn <- asks (^. optShowDeBruijnIndices)
+  if showDeBruijn || name == ""
+    then return $ name' <> kwDeBruijnVar <> pretty (v ^. varIndex)
+    else return name'
+
+ppCodeIdent' :: Text -> Ident' i -> Sem r (Doc Ann)
+ppCodeIdent' name idt = do
   case name of
-    Just nm -> ppCode nm
-    Nothing -> return $ kwUnnamedIdent <> pretty (idt ^. identSymbol)
+    "" -> return $ kwUnnamedIdent <> pretty (idt ^. identSymbol)
+    _ -> ppName KNameLocal (return kwUnnamedIdent) name
 
 instance PrettyCode (Constant' i) where
   ppCode = \case
@@ -118,12 +114,10 @@ instance (PrettyCode a, HasAtomicity a) => PrettyCode (BuiltinApp' i a) where
     op' <- ppCode _builtinAppOp
     return $ foldl' (<+>) op' args'
 
-ppCodeConstr' :: (PrettyCode a, HasAtomicity a, Member (Reader Options) r) => Maybe Name -> Constr' i a -> Sem r (Doc Ann)
+ppCodeConstr' :: (PrettyCode a, HasAtomicity a, Member (Reader Options) r) => Text -> Constr' i a -> Sem r (Doc Ann)
 ppCodeConstr' name c = do
   args' <- mapM (ppRightExpression appFixity) (c ^. constrArgs)
-  n' <- case name of
-    Just nm -> ppCode nm
-    Nothing -> ppCode (c ^. constrTag)
+  n' <- ppName KNameConstructor (ppCode (c ^. constrTag)) name
   return $ foldl' (<+>) n' args'
 
 instance (Pretty k, PrettyCode a) => PrettyCode (Map k a) where
@@ -151,18 +145,16 @@ instance PrettyCode a => PrettyCode (BinderList a) where
     return $ brackets (hsep $ punctuate "," m)
 
 instance PrettyCode a => PrettyCode (Binder' a) where
-  ppCode (Binder mname ty) = do
-    name' <- case mname of
-      Nothing -> return "_"
-      Just n -> ppCode n
+  ppCode (Binder mname _ ty) = do
+    let name' = case mname of
+          "" -> "_"
+          _ -> mname
     ty' <- ppCode ty
-    return (parens (name' <+> kwColon <+> ty'))
+    return (parens (pretty name' <+> kwColon <+> ty'))
 
-ppCodeLet' :: (PrettyCode a, Member (Reader Options) r) => Maybe Name -> Maybe (Doc Ann) -> Let' i a ty -> Sem r (Doc Ann)
+ppCodeLet' :: (PrettyCode a, Member (Reader Options) r) => Text -> Maybe (Doc Ann) -> Let' i a ty -> Sem r (Doc Ann)
 ppCodeLet' name mty lt = do
-  n' <- case name of
-    Just nm -> ppCode nm
-    Nothing -> return kwQuestion
+  n' <- ppName KNameConstructor (return kwQuestion) name
   v' <- ppCode (lt ^. letItem . letItemValue)
   b' <- ppCode (lt ^. letBody)
   let tty = case mty of
@@ -172,12 +164,12 @@ ppCodeLet' name mty lt = do
           mempty
   return $ kwLet <+> n' <> tty <+> kwAssign <+> v' <+> kwIn <> line <> b'
 
-ppCodeCase' :: (PrettyCode a, Member (Reader Options) r) => [[Maybe Name]] -> [Maybe Name] -> Case' i bi a -> Sem r (Doc Ann)
+ppCodeCase' :: (PrettyCode a, Member (Reader Options) r) => [[Text]] -> [Text] -> Case' i bi a -> Sem r (Doc Ann)
 ppCodeCase' branchBinderNames branchTagNames Case {..} = do
   let branchTags = map (^. caseBranchTag) _caseBranches
   let branchBodies = map (^. caseBranchBody) _caseBranches
-  bns <- mapM (mapM (maybe (return kwQuestion) ppCode)) branchBinderNames
-  cns <- zipWithM (\tag -> maybe (ppCode tag) ppCode) branchTags branchTagNames
+  bns <- mapM (mapM (ppName KNameLocal (return kwQuestion))) branchBinderNames
+  cns <- zipWithM (ppName KNameConstructor . ppCode) branchTags branchTagNames
   v <- ppCode _caseValue
   bs' <- sequence $ zipWith3Exact (\cn bn br -> ppCode br >>= \br' -> return $ foldl' (<+>) cn bn <+> kwAssign <+> br') cns bns branchBodies
   bs'' <-
@@ -194,9 +186,7 @@ instance PrettyCode PatternWildcard where
 
 instance PrettyCode PatternBinder where
   ppCode PatternBinder {..} = do
-    n <- case _patternBinder ^. binderName of
-      Just name -> ppCode name
-      Nothing -> return kwQuestion
+    n <- ppName KNameLocal (return kwQuestion) (_patternBinder ^. binderName)
     case _patternBinderPattern of
       PatWildcard {} -> return n
       _ -> do
@@ -205,7 +195,7 @@ instance PrettyCode PatternBinder where
 
 instance PrettyCode PatternConstr where
   ppCode PatternConstr {..} = do
-    n <- maybe (ppCode _patternConstrTag) ppCode (getInfoName _patternConstrInfo)
+    n <- ppName KNameConstructor (ppCode _patternConstrTag) (getInfoName _patternConstrInfo)
     args <- mapM (ppRightExpression appFixity) _patternConstrArgs
     return $ foldl' (<+>) n args
 
@@ -250,10 +240,7 @@ instance PrettyCode LetRec where
          in kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
     where
       getName :: Binder -> Sem r (Doc Ann)
-      getName i =
-        case i ^. binderName of
-          Just name -> ppCode name
-          Nothing -> return kwQuestion
+      getName i = ppName KNameLocal (return kwQuestion) (i ^. binderName)
 
 instance PrettyCode Node where
   ppCode :: forall r. Member (Reader Options) r => Node -> Sem r (Doc Ann)
@@ -272,15 +259,13 @@ instance PrettyCode Node where
        in ppCodeConstr' name x
     NLam (Lambda _ bi body) -> do
       b <- ppCode body
-      lam <- case bi ^. binderName of
-        Just name -> do
-          n <- ppCode name
-          case bi ^. binderType of
-            NDyn {} -> return $ kwLambda <> n
-            ty -> do
-              tty <- ppCode ty
-              return $ kwLambda <> parens (n <+> kwColon <+> tty)
-        Nothing -> return $ kwLambda <> kwQuestion
+      lam <- do
+        n <- ppName KNameLocal (return kwQuestion) (bi ^. binderName)
+        case bi ^. binderType of
+          NDyn {} -> return $ kwLambda <> n
+          ty -> do
+            tty <- ppCode ty
+            return $ kwLambda <> parens (n <+> kwColon <+> tty)
       return (lam <+> b)
     NLet x -> ppCode x
     NRec l -> ppCode l
@@ -299,24 +284,21 @@ instance PrettyCode Node where
     NPi Pi {..} ->
       let piType = _piBinder ^. binderType
        in case _piBinder ^. binderName of
-            Just name -> do
-              n <- ppCode name
-              ty <- ppCode piType
-              b <- ppCode _piBody
-              return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
-            Nothing -> do
+            "" -> do
               ty <- ppLeftExpression funFixity piType
               b <- ppRightExpression funFixity _piBody
               return $ ty <+> kwArrow <+> b
+            name -> do
+              n <- ppName KNameLocal (return kwQuestion) name
+              ty <- ppCode piType
+              b <- ppCode _piBody
+              return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
     NUniv Univ {..} ->
       return $ kwType <+> pretty _univLevel
     NPrim TypePrim {..} -> ppCode _typePrimPrimitive
     NTyp TypeConstr {..} -> do
       args' <- mapM (ppRightExpression appFixity) _typeConstrArgs
-      n' <-
-        case getInfoName _typeConstrInfo of
-          Just name -> ppCode name
-          Nothing -> return $ kwUnnamedIdent <> pretty _typeConstrSymbol
+      n' <- ppName KNameConstructor (return $ kwUnnamedIdent <> pretty _typeConstrSymbol) (getInfoName _typeConstrInfo)
       return $ foldl' (<+>) n' args'
     NDyn {} -> return kwDynamic
     Closure env l@Lambda {} ->
@@ -325,9 +307,7 @@ instance PrettyCode Node where
 instance PrettyCode Stripped.TypeApp where
   ppCode Stripped.TypeApp {..} = do
     args' <- mapM (ppRightExpression appFixity) _typeAppArgs
-    n' <- case _typeAppName of
-      Just nm -> ppCode nm
-      Nothing -> return $ kwUnnamedIdent <> pretty _typeAppSymbol
+    n' <- ppName KNameLocal (return $ kwUnnamedIdent <> pretty _typeAppSymbol) _typeAppName
     return $ foldl' (<+>) n' args'
 
 instance PrettyCode Stripped.TypeFun where
@@ -379,10 +359,10 @@ instance PrettyCode InfoTable where
         where
           ppDef :: Symbol -> Node -> Sem r (Doc Ann)
           ppDef s n = do
-            let mname :: Maybe Name
-                mname = tbl ^? infoIdentifiers . at s . _Just . identifierName . _Just
-                mname' = over (_Just . namePretty) (\nm -> nm <> "!" <> prettyText s) mname
-            sym' <- maybe (return (pretty s)) ppCode mname'
+            let mname :: Text
+                mname = tbl ^. infoIdentifiers . at s . _Just . identifierName
+                mname' = (\nm -> nm <> "!" <> prettyText s) mname
+            sym' <- ppName KNameLocal (return (pretty s)) mname'
             body' <- ppCode n
             return (kwDef <+> sym' <+> kwAssign <+> nest 2 body')
 
@@ -399,7 +379,7 @@ instance PrettyCode Stripped.InfoTable where
         where
           ppDef :: Symbol -> Stripped.FunctionInfo -> Sem r (Doc Ann)
           ppDef s fi = do
-            sym' <- maybe (return (pretty s)) ppCode (fi ^. Stripped.functionName)
+            sym' <- ppName KNameFunction (return (pretty s)) (fi ^. Stripped.functionName)
             body' <- ppCode (fi ^. Stripped.functionBody)
             return (kwDef <+> sym' <+> kwAssign <+> body')
 

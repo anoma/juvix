@@ -29,6 +29,7 @@ topEtaExpand info = run (mapT' go info)
         toArgumentInfo pi =
           ArgumentInfo
             { _argumentName = pi ^. piLhsBinder . binderName,
+              _argumentLocation = pi ^. piLhsBinder . binderLocation,
               _argumentType = pi ^. piLhsBinder . binderType,
               _argumentIsImplicit = Explicit
             }

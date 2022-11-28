@@ -8,9 +8,9 @@ import Juvix.Compiler.Core.Language
 data InfoTableBuilder m a where
   FreshSymbol :: InfoTableBuilder m Symbol
   FreshTag :: InfoTableBuilder m Tag
-  RegisterIdent :: IdentifierInfo -> InfoTableBuilder m ()
-  RegisterConstructor :: ConstructorInfo -> InfoTableBuilder m ()
-  RegisterInductive :: InductiveInfo -> InfoTableBuilder m ()
+  RegisterIdent :: Text -> IdentifierInfo -> InfoTableBuilder m ()
+  RegisterConstructor :: Text -> ConstructorInfo -> InfoTableBuilder m ()
+  RegisterInductive :: Text -> InductiveInfo -> InfoTableBuilder m ()
   RegisterIdentNode :: Symbol -> Node -> InfoTableBuilder m ()
   RegisterMain :: Symbol -> InfoTableBuilder m ()
   OverIdentArgsInfo :: Symbol -> ([ArgumentInfo] -> [ArgumentInfo]) -> InfoTableBuilder m ()
@@ -18,8 +18,6 @@ data InfoTableBuilder m a where
   GetInfoTable :: InfoTableBuilder m InfoTable
 
 makeSem ''InfoTableBuilder
-
-type MkIdentIndex = Name -> Text
 
 getConstructorInfo :: Member InfoTableBuilder r => Tag -> Sem r ConstructorInfo
 getConstructorInfo tag = do
@@ -34,8 +32,8 @@ checkSymbolDefined sym = do
 setIdentArgsInfo :: Member InfoTableBuilder r => Symbol -> [ArgumentInfo] -> Sem r ()
 setIdentArgsInfo sym = overIdentArgsInfo sym . const
 
-runInfoTableBuilder :: forall r a. MkIdentIndex -> InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
-runInfoTableBuilder mkIdentIndex tab =
+runInfoTableBuilder :: forall r a. InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+runInfoTableBuilder tab =
   runState tab
     . reinterpret interp
   where
@@ -49,16 +47,15 @@ runInfoTableBuilder mkIdentIndex tab =
         s <- get
         modify' (over infoNextTag (+ 1))
         return (UserTag (s ^. infoNextTag))
-      RegisterIdent ii -> do
+      RegisterIdent idt ii -> do
         modify' (over infoIdentifiers (HashMap.insert (ii ^. identifierSymbol) ii))
-        whenJust (ii ^? identifierName . _Just) $ \n ->
-          modify' (over identMap (HashMap.insert (mkIdentIndex n) (IdentFun (ii ^. identifierSymbol))))
-      RegisterConstructor ci -> do
+        modify' (over identMap (HashMap.insert idt (IdentFun (ii ^. identifierSymbol))))
+      RegisterConstructor idt ci -> do
         modify' (over infoConstructors (HashMap.insert (ci ^. constructorTag) ci))
-        modify' (over identMap (HashMap.insert (mkIdentIndex (ci ^. constructorName)) (IdentConstr (ci ^. constructorTag))))
-      RegisterInductive ii -> do
+        modify' (over identMap (HashMap.insert idt (IdentConstr (ci ^. constructorTag))))
+      RegisterInductive idt ii -> do
         modify' (over infoInductives (HashMap.insert (ii ^. inductiveSymbol) ii))
-        modify' (over identMap (HashMap.insert (mkIdentIndex (ii ^. inductiveName)) (IdentInd (ii ^. inductiveSymbol))))
+        modify' (over identMap (HashMap.insert idt (IdentInd (ii ^. inductiveSymbol))))
       RegisterIdentNode sym node ->
         modify' (over identContext (HashMap.insert sym node))
       RegisterMain sym -> do
