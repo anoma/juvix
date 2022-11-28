@@ -10,7 +10,8 @@ data InfoTable = InfoTable
   }
 
 data FunctionInfo = FunctionInfo
-  { _functionName :: Maybe Name,
+  { _functionName :: Text,
+    _functionLocation :: Maybe Location,
     _functionSymbol :: Symbol,
     -- _functionBody has `_functionArgsNum` free variables corresponding to the
     -- function arguments
@@ -23,25 +24,29 @@ data FunctionInfo = FunctionInfo
   }
 
 data ArgumentInfo = ArgumentInfo
-  { _argumentName :: Maybe Name,
+  { _argumentName :: Text,
+    _argumentLocation :: Maybe Location,
     _argumentType :: Type
   }
 
 data InductiveInfo = InductiveInfo
-  { _inductiveName :: Name,
+  { _inductiveName :: Text,
+    _inductiveLocation :: Maybe Location,
     _inductiveKind :: Type,
     _inductiveConstructors :: [ConstructorInfo],
     _inductiveParams :: [ParameterInfo]
   }
 
 data ConstructorInfo = ConstructorInfo
-  { _constructorName :: Maybe Name,
+  { _constructorName :: Text,
+    _constructorLocation :: Maybe Location,
     _constructorTag :: Tag,
     _constructorType :: Type
   }
 
 data ParameterInfo = ParameterInfo
-  { _paramName :: Maybe Name,
+  { _paramName :: Text,
+    _paramLocation :: Maybe Location,
     _paramKind :: Type,
     _paramIsImplicit :: Bool
   }

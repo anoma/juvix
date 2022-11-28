@@ -2,6 +2,7 @@ module Juvix.Compiler.Core.Translation.FromInternal where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty (fromList)
+import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Concrete.Data.Literal (LiteralLoc)
 import Juvix.Compiler.Core.Data
 import Juvix.Compiler.Core.Extra
@@ -29,7 +30,7 @@ mkIdentIndex = show . (^. Internal.nameId . Internal.unNameId)
 
 fromInternal :: Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do
-  (res, _) <- runInfoTableBuilder mkIdentIndex emptyInfoTable (runReader (i ^. InternalTyped.resultIdenTypes) f)
+  (res, _) <- runInfoTableBuilder emptyInfoTable (runReader (i ^. InternalTyped.resultIdenTypes) f)
   return $
     CoreResult
       { _coreResultTable = res,
@@ -53,7 +54,6 @@ fromInternalExpression res exp = do
     <$> runReader
       (Internal.buildTable modules)
       ( runInfoTableBuilder
-          mkIdentIndex
           (res ^. coreResultTable)
           ( runReader
               (res ^. coreResultInternalTypedResult . InternalTyped.resultIdenTypes)
@@ -115,14 +115,15 @@ goInductiveDef i = do
   ctorInfos <- mapM (goConstructor sym) (i ^. Internal.inductiveConstructors)
   let info =
         InductiveInfo
-          { _inductiveName = i ^. Internal.inductiveName,
+          { _inductiveName = i ^. Internal.inductiveName . nameText,
+            _inductiveLocation = Just $ i ^. Internal.inductiveName . nameLoc,
             _inductiveSymbol = sym,
             _inductiveKind = mkDynamic',
             _inductiveConstructors = ctorInfos,
             _inductiveParams = [],
             _inductivePositive = i ^. Internal.inductivePositive
           }
-  registerInductive info
+  registerInductive (mkIdentIndex (i ^. Internal.inductiveName)) info
 
 goConstructor ::
   forall r.
@@ -135,13 +136,14 @@ goConstructor sym ctor = do
   ty <- ctorType
   let info =
         ConstructorInfo
-          { _constructorName = ctor ^. Internal.inductiveConstructorName,
+          { _constructorName = ctor ^. Internal.inductiveConstructorName . nameText,
+            _constructorLocation = Just $ ctor ^. Internal.inductiveConstructorName . nameLoc,
             _constructorTag = tag,
             _constructorType = ty,
             _constructorArgsNum = length (ctor ^. Internal.inductiveConstructorParameters),
             _constructorInductive = sym
           }
-  registerConstructor info
+  registerConstructor (mkIdentIndex (ctor ^. Internal.inductiveConstructorName)) info
   return info
   where
     mBuiltin :: Sem r (Maybe Internal.BuiltinConstructor)
@@ -190,14 +192,15 @@ goFunctionDefIden (f, sym) = do
   funTy <- runReader initIndexTable (goExpression (f ^. Internal.funDefType))
   let info =
         IdentifierInfo
-          { _identifierName = Just (f ^. Internal.funDefName),
+          { _identifierName = f ^. Internal.funDefName . nameText,
+            _identifierLocation = Just $ f ^. Internal.funDefName . nameLoc,
             _identifierSymbol = sym,
             _identifierType = funTy,
             _identifierArgsNum = 0,
             _identifierArgsInfo = [],
             _identifierIsExported = False
           }
-  registerIdent info
+  registerIdent (mkIdentIndex (f ^. Internal.funDefName)) info
   when (f ^. Internal.funDefName . Internal.nameText == Str.main) (registerMain sym)
 
 goFunctionDef ::
@@ -277,14 +280,15 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       sym <- freshSymbol
       let info =
             InductiveInfo
-              { _inductiveName = a ^. Internal.axiomName,
+              { _inductiveName = a ^. Internal.axiomName . nameText,
+                _inductiveLocation = Just $ a ^. Internal.axiomName . nameLoc,
                 _inductiveSymbol = sym,
                 _inductiveKind = mkDynamic',
                 _inductiveConstructors = [],
                 _inductiveParams = [],
                 _inductivePositive = False
               }
-      registerInductive info
+      registerInductive (mkIdentIndex (a ^. Internal.axiomName)) info
 
 goAxiomDef ::
   forall r.
@@ -297,14 +301,15 @@ goAxiomDef a = case a ^. Internal.axiomBuiltin >>= builtinBody of
     ty <- axiomType'
     let info =
           IdentifierInfo
-            { _identifierName = Just (a ^. Internal.axiomName),
+            { _identifierName = a ^. Internal.axiomName . nameText,
+              _identifierLocation = Just $ a ^. Internal.axiomName . nameLoc,
               _identifierSymbol = sym,
               _identifierType = ty,
               _identifierArgsNum = 0,
               _identifierArgsInfo = [],
               _identifierIsExported = False
             }
-    registerIdent info
+    registerIdent (mkIdentIndex (a ^. Internal.axiomName)) info
     registerIdentNode sym body
   Nothing -> return ()
   where
@@ -339,7 +344,7 @@ fromPattern ::
   Sem r Pattern
 fromPattern = \case
   Internal.PatternWildcard {} -> return wildcard
-  Internal.PatternVariable n -> return $ PatBinder (PatternBinder (Binder (Just n) mkDynamic') wildcard)
+  Internal.PatternVariable n -> return $ PatBinder (PatternBinder (Binder (n ^. nameText) (Just (n ^. nameLoc)) mkDynamic') wildcard)
   Internal.PatternConstructorApp c -> do
     let n = c ^. Internal.constrAppConstructor
         explicitPatterns =
@@ -347,11 +352,10 @@ fromPattern = \case
             <$> filter
               isExplicit
               (c ^. Internal.constrAppParameters)
-
     args <- mapM fromPattern explicitPatterns
     m <- getIdent identIndex
     case m of
-      Just (IdentConstr tag) -> return $ PatConstr (PatternConstr (setInfoName n Info.empty) tag args)
+      Just (IdentConstr tag) -> return $ PatConstr (PatternConstr (setInfoLocation (n ^. nameLoc) (setInfoName (n ^. nameText) Info.empty)) tag args)
       Just _ -> error ("internal to core: not a constructor " <> txt)
       Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     where
@@ -364,6 +368,19 @@ fromPattern = \case
     wildcard :: Pattern
     wildcard = PatWildcard (PatternWildcard Info.empty)
 
+getPatternVars :: Internal.Pattern -> [Name]
+getPatternVars = \case
+  Internal.PatternWildcard {} -> []
+  Internal.PatternVariable n -> [n]
+  Internal.PatternConstructorApp c ->
+    concatMap getPatternVars explicitPatterns
+    where
+      explicitPatterns =
+        (^. Internal.patternArgPattern)
+          <$> filter
+            isExplicit
+            (c ^. Internal.constrAppParameters)
+
 goPatterns ::
   forall r.
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
@@ -374,15 +391,15 @@ goPatterns body ps = do
   vars <- asks (^. indexTableVars)
   varsNum <- asks (^. indexTableVarsNum)
   pats <- patterns
-  let bs :: [Binder]
-      bs = concatMap getPatternBinders pats
+  let bs :: [Name]
+      bs = concatMap getPatternVars (reverse ps)
       (vars', varsNum') =
         foldl'
           ( \(vs, k) name ->
               (HashMap.insert (name ^. nameId) k vs, k + 1)
           )
           (vars, varsNum)
-          (map (fromJust . (^. binderName)) bs)
+          bs
       body' :: Sem r Node
       body' =
         local
@@ -452,30 +469,30 @@ goExpression' = \case
     Internal.IdenVar n -> do
       k <- HashMap.lookupDefault impossible id_ <$> asks (^. indexTableVars)
       varsNum <- asks (^. indexTableVarsNum)
-      return (mkVar (Info.singleton (NameInfo n)) (varsNum - k - 1))
+      return (mkVar (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) (varsNum - k - 1))
     Internal.IdenFunction n -> do
       m <- getIdent identIndex
       return $ case m of
-        Just (IdentFun sym) -> mkIdent (Info.singleton (NameInfo n)) sym
+        Just (IdentFun sym) -> mkIdent (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) sym
         Just _ -> error ("internal to core: not a function: " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenInductive n -> do
       m <- getIdent identIndex
       return $ case m of
-        Just (IdentInd sym) -> mkTypeConstr (Info.singleton (NameInfo n)) sym []
+        Just (IdentInd sym) -> mkTypeConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) sym []
         Just _ -> error ("internal to core: not an inductive: " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenConstructor n -> do
       m <- getIdent identIndex
       case m of
-        Just (IdentConstr tag) -> return (mkConstr (Info.singleton (NameInfo n)) tag [])
+        Just (IdentConstr tag) -> return (mkConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) tag [])
         Just _ -> error ("internal to core: not a constructor " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenAxiom n -> do
       m <- getIdent identIndex
       return $ case m of
-        Just (IdentFun sym) -> mkIdent (Info.singleton (NameInfo n)) sym
-        Just (IdentInd sym) -> mkTypeConstr (Info.singleton (NameInfo n)) sym []
+        Just (IdentFun sym) -> mkIdent (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) sym
+        Just (IdentInd sym) -> mkTypeConstr (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) sym []
         Just _ -> error ("internal to core: not an axiom: " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     where
@@ -503,7 +520,7 @@ goFunction (params, returnTypeExpr) = foldr f (goExpression returnTypeExpr) para
   where
     f :: Internal.FunctionParameter -> Sem r Node -> Sem r Node
     f param acc = do
-      paramBinder <- Binder (param ^. Internal.paramName) <$> goExpression (param ^. Internal.paramType)
+      paramBinder <- Binder (maybe "" (^. nameText) $ param ^. Internal.paramName) (fmap (^. nameLoc) $ param ^. Internal.paramName) <$> goExpression (param ^. Internal.paramType)
       case param ^. Internal.paramName of
         Nothing -> mkPi mempty paramBinder <$> acc
         Just vn -> mkPi mempty paramBinder <$> localAddName vn acc

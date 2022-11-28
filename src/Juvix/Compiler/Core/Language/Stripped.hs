@@ -15,23 +15,27 @@ import Juvix.Compiler.Core.Language.Stripped.Type
 {---------------------------------------------------------------------------------}
 
 data VarInfo = VarInfo
-  { _varInfoName :: Maybe Name,
+  { _varInfoName :: Text,
+    _varInfoLocation :: Maybe Location,
     _varInfoType :: Type -- TyDynamic if not available
   }
 
 data IdentInfo = IdentInfo
-  { _identInfoName :: Maybe Name,
+  { _identInfoName :: Text,
+    _identInfoLocation :: Maybe Location,
     _identInfoType :: Type
   }
 
 data ConstrInfo = ConstrInfo
-  { _constrInfoName :: Maybe Name,
+  { _constrInfoName :: Text,
+    _constrInfoLocation :: Maybe Location,
     _constrInfoType :: Type,
     _constrInfoInductive :: Symbol
   }
 
 data LetInfo = LetInfo
-  { _letInfoBinderName :: Maybe Name,
+  { _letInfoBinderName :: Text,
+    _letInfoBinderLocation :: Maybe Location,
     _letInfoBinderType :: Type
   }
 
@@ -40,9 +44,9 @@ newtype CaseInfo = CaseInfo
   }
 
 data CaseBranchInfo = CaseBranchInfo
-  { _caseBranchInfoBinderNames :: [Maybe Name],
+  { _caseBranchInfoBinderNames :: [Text],
     _caseBranchInfoBinderTypes :: [Type],
-    _caseBranchInfoConstrName :: Maybe Name,
+    _caseBranchInfoConstrName :: Text,
     _caseBranchInfoConstrType :: Type
   }
 

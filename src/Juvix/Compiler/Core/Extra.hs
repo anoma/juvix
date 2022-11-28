@@ -20,8 +20,6 @@ import Juvix.Compiler.Core.Extra.Info
 import Juvix.Compiler.Core.Extra.Recursors
 import Juvix.Compiler.Core.Extra.Recursors.Fold.Named
 import Juvix.Compiler.Core.Extra.Recursors.Map.Named
-import Juvix.Compiler.Core.Info.NameInfo
-import Juvix.Compiler.Core.Info.TypeInfo
 import Juvix.Compiler.Core.Language
 
 isClosed :: Node -> Bool
@@ -190,15 +188,7 @@ argumentInfoFromBinder :: Binder -> ArgumentInfo
 argumentInfoFromBinder i =
   ArgumentInfo
     { _argumentName = i ^. binderName,
+      _argumentLocation = i ^. binderLocation,
       _argumentType = i ^. binderType,
       _argumentIsImplicit = Explicit
     }
-
-infoFromArgumentInfo :: ArgumentInfo -> Info
-infoFromArgumentInfo arg =
-  setInfoType (arg ^. argumentType) $
-    setName
-      mempty
-  where
-    setName :: Info -> Info
-    setName i = maybe i (`setInfoName` i) (arg ^. argumentName)
