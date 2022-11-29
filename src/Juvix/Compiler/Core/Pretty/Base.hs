@@ -64,11 +64,8 @@ instance PrettyCode Primitive where
     PrimBool _ -> return $ annotate (AnnKind KNameInductive) (pretty ("bool" :: String))
     PrimString -> return $ annotate (AnnKind KNameInductive) (pretty ("string" :: String))
 
-ppName :: NameKind -> Sem r (Doc Ann) -> Text -> Sem r (Doc Ann)
-ppName kind def name =
-  case name of
-    "" -> def
-    _ -> return $ annotate (AnnKind kind) (pretty name)
+ppName :: NameKind -> Text -> Sem r (Doc Ann)
+ppName kind name = return $ annotate (AnnKind kind) (pretty name)
 
 ppCodeVar' :: Member (Reader Options) r => Text -> Var' i -> Sem r (Doc Ann)
 ppCodeVar' name v = do
@@ -77,12 +74,6 @@ ppCodeVar' name v = do
   if showDeBruijn || name == ""
     then return $ name' <> kwDeBruijnVar <> pretty (v ^. varIndex)
     else return name'
-
-ppCodeIdent' :: Text -> Ident' i -> Sem r (Doc Ann)
-ppCodeIdent' name idt = do
-  case name of
-    "" -> return $ kwUnnamedIdent <> pretty (idt ^. identSymbol)
-    _ -> ppName KNameLocal (return kwUnnamedIdent) name
 
 instance PrettyCode (Constant' i) where
   ppCode = \case
@@ -100,7 +91,7 @@ instance (PrettyCode a, HasAtomicity a) => PrettyCode (App' i a) where
 instance PrettyCode Stripped.Fun where
   ppCode = \case
     Stripped.FunVar x -> ppCodeVar' (x ^. (varInfo . Stripped.varInfoName)) x
-    Stripped.FunIdent x -> ppCodeIdent' (x ^. (identInfo . Stripped.identInfoName)) x
+    Stripped.FunIdent x -> ppName KNameLocal (x ^. (identInfo . Stripped.identInfoName))
 
 instance (PrettyCode f, PrettyCode a, HasAtomicity a) => PrettyCode (Apps' f i a) where
   ppCode Apps {..} = do
@@ -117,7 +108,9 @@ instance (PrettyCode a, HasAtomicity a) => PrettyCode (BuiltinApp' i a) where
 ppCodeConstr' :: (PrettyCode a, HasAtomicity a, Member (Reader Options) r) => Text -> Constr' i a -> Sem r (Doc Ann)
 ppCodeConstr' name c = do
   args' <- mapM (ppRightExpression appFixity) (c ^. constrArgs)
-  n' <- ppName KNameConstructor (ppCode (c ^. constrTag)) name
+  n' <- case c ^. constrTag of
+    BuiltinTag tag -> ppCode tag
+    _ -> ppName KNameConstructor name
   return $ foldl' (<+>) n' args'
 
 instance (Pretty k, PrettyCode a) => PrettyCode (Map k a) where
@@ -154,7 +147,7 @@ instance PrettyCode a => PrettyCode (Binder' a) where
 
 ppCodeLet' :: (PrettyCode a, Member (Reader Options) r) => Text -> Maybe (Doc Ann) -> Let' i a ty -> Sem r (Doc Ann)
 ppCodeLet' name mty lt = do
-  n' <- ppName KNameConstructor (return kwQuestion) name
+  n' <- ppName KNameConstructor name
   v' <- ppCode (lt ^. letItem . letItemValue)
   b' <- ppCode (lt ^. letBody)
   let tty = case mty of
@@ -166,10 +159,9 @@ ppCodeLet' name mty lt = do
 
 ppCodeCase' :: (PrettyCode a, Member (Reader Options) r) => [[Text]] -> [Text] -> Case' i bi a -> Sem r (Doc Ann)
 ppCodeCase' branchBinderNames branchTagNames Case {..} = do
-  let branchTags = map (^. caseBranchTag) _caseBranches
   let branchBodies = map (^. caseBranchBody) _caseBranches
-  bns <- mapM (mapM (ppName KNameLocal (return kwQuestion))) branchBinderNames
-  cns <- zipWithM (ppName KNameConstructor . ppCode) branchTags branchTagNames
+  bns <- mapM (mapM (ppName KNameLocal)) branchBinderNames
+  cns <- mapM (ppName KNameConstructor) branchTagNames
   v <- ppCode _caseValue
   bs' <- sequence $ zipWith3Exact (\cn bn br -> ppCode br >>= \br' -> return $ foldl' (<+>) cn bn <+> kwAssign <+> br') cns bns branchBodies
   bs'' <-
@@ -186,7 +178,7 @@ instance PrettyCode PatternWildcard where
 
 instance PrettyCode PatternBinder where
   ppCode PatternBinder {..} = do
-    n <- ppName KNameLocal (return kwQuestion) (_patternBinder ^. binderName)
+    n <- ppName KNameLocal (_patternBinder ^. binderName)
     case _patternBinderPattern of
       PatWildcard {} -> return n
       _ -> do
@@ -195,7 +187,7 @@ instance PrettyCode PatternBinder where
 
 instance PrettyCode PatternConstr where
   ppCode PatternConstr {..} = do
-    n <- ppName KNameConstructor (ppCode _patternConstrTag) (getInfoName _patternConstrInfo)
+    n <- ppName KNameConstructor (getInfoName _patternConstrInfo)
     args <- mapM (ppRightExpression appFixity) _patternConstrArgs
     return $ foldl' (<+>) n args
 
@@ -240,7 +232,7 @@ instance PrettyCode LetRec where
          in kwLetRec <> nss <> line <> bss <> line <> kwIn <> line <> b'
     where
       getName :: Binder -> Sem r (Doc Ann)
-      getName i = ppName KNameLocal (return kwQuestion) (i ^. binderName)
+      getName i = ppName KNameLocal (i ^. binderName)
 
 instance PrettyCode Node where
   ppCode :: forall r. Member (Reader Options) r => Node -> Sem r (Doc Ann)
@@ -250,7 +242,7 @@ instance PrettyCode Node where
        in ppCodeVar' name x
     NIdt x ->
       let name = getInfoName (x ^. identInfo)
-       in ppCodeIdent' name x
+       in ppName KNameLocal name
     NCst x -> ppCode x
     NApp x -> ppCode x
     NBlt x -> ppCode x
@@ -260,7 +252,7 @@ instance PrettyCode Node where
     NLam (Lambda _ bi body) -> do
       b <- ppCode body
       lam <- do
-        n <- ppName KNameLocal (return kwQuestion) (bi ^. binderName)
+        n <- ppName KNameLocal (bi ^. binderName)
         case bi ^. binderType of
           NDyn {} -> return $ kwLambda <> n
           ty -> do
@@ -289,7 +281,7 @@ instance PrettyCode Node where
               b <- ppRightExpression funFixity _piBody
               return $ ty <+> kwArrow <+> b
             name -> do
-              n <- ppName KNameLocal (return kwQuestion) name
+              n <- ppName KNameLocal name
               ty <- ppCode piType
               b <- ppCode _piBody
               return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
@@ -298,7 +290,7 @@ instance PrettyCode Node where
     NPrim TypePrim {..} -> ppCode _typePrimPrimitive
     NTyp TypeConstr {..} -> do
       args' <- mapM (ppRightExpression appFixity) _typeConstrArgs
-      n' <- ppName KNameConstructor (return $ kwUnnamedIdent <> pretty _typeConstrSymbol) (getInfoName _typeConstrInfo)
+      n' <- ppName KNameConstructor (getInfoName _typeConstrInfo)
       return $ foldl' (<+>) n' args'
     NDyn {} -> return kwDynamic
     Closure env l@Lambda {} ->
@@ -307,7 +299,7 @@ instance PrettyCode Node where
 instance PrettyCode Stripped.TypeApp where
   ppCode Stripped.TypeApp {..} = do
     args' <- mapM (ppRightExpression appFixity) _typeAppArgs
-    n' <- ppName KNameLocal (return $ kwUnnamedIdent <> pretty _typeAppSymbol) _typeAppName
+    n' <- ppName KNameLocal _typeAppName
     return $ foldl' (<+>) n' args'
 
 instance PrettyCode Stripped.TypeFun where
@@ -330,7 +322,7 @@ instance PrettyCode Stripped.Node where
        in ppCodeVar' name x
     Stripped.NIdt x ->
       let name = x ^. (identInfo . Stripped.identInfoName)
-       in ppCodeIdent' name x
+       in ppName KNameLocal name
     Stripped.NCst x -> ppCode x
     Stripped.NApp x -> ppCode x
     Stripped.NBlt x -> ppCode x
@@ -362,7 +354,7 @@ instance PrettyCode InfoTable where
             let mname :: Text
                 mname = tbl ^. infoIdentifiers . at s . _Just . identifierName
                 mname' = (\nm -> nm <> "!" <> prettyText s) mname
-            sym' <- ppName KNameLocal (return (pretty s)) mname'
+            sym' <- ppName KNameLocal mname'
             body' <- ppCode n
             return (kwDef <+> sym' <+> kwAssign <+> nest 2 body')
 
@@ -378,8 +370,8 @@ instance PrettyCode Stripped.InfoTable where
         return (vsep defs)
         where
           ppDef :: Symbol -> Stripped.FunctionInfo -> Sem r (Doc Ann)
-          ppDef s fi = do
-            sym' <- ppName KNameFunction (return (pretty s)) (fi ^. Stripped.functionName)
+          ppDef _ fi = do
+            sym' <- ppName KNameFunction (fi ^. Stripped.functionName)
             body' <- ppCode (fi ^. Stripped.functionBody)
             return (kwDef <+> sym' <+> kwAssign <+> body')
 
