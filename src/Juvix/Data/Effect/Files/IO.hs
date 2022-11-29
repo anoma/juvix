@@ -49,39 +49,45 @@ stdlibOrFile p rootPath m = case m of
         andM [return (cRootPath /= cStdlibPath), embed (doesFileExist pAbsPath)]
 
 runFilesIO' ::
-  forall r a.
-  Member (Embed IO) r =>
+  forall r a r'.
+  (r' ~ Embed IO : State FilesState ': Error FilesError ': r) =>
   FilePath ->
   Sem (Files ': r) a ->
-  Sem (State FilesState ': (Error FilesError ': r)) a
-runFilesIO' rootPath = reinterpret2 $ \case
-  ReadFile' f -> embed (readFile f)
-  ReadFileBS' f -> embed (ByteString.readFile f)
-  FileExists' f -> embed (doesFileExist f)
-  EqualPaths' f h -> embed $ do
-    f' <- canonicalizePath f
-    h' <- canonicalizePath h
-    return (Just (equalFilePath f' h'))
-  RegisterStdlib stdlibRootPath -> do
-    absStdlibRootPath <- embed (makeAbsolute stdlibRootPath)
-    fs <- embed (getFilesRecursive absStdlibRootPath)
-    let paths = normalise . makeRelative absStdlibRootPath <$> fs
-    modify
-      ( set
-          stdlibState
-          ( Just
-              StdlibState
-                { _stdlibRoot = absStdlibRootPath,
-                  _stdlibFilePaths = HashSet.fromList paths
-                }
+  Sem r' a
+runFilesIO' rootPath = reinterpret3 helper
+  where
+    helper :: forall rInitial x. Files (Sem rInitial) x -> Sem r' x
+    helper = \case
+      ReadFile' f -> embed (readFile f)
+      ReadFileBS' f -> embed (ByteString.readFile f)
+      FileExists' f -> embed (doesFileExist f)
+      EqualPaths' f h ->
+        embed
+          ( do
+              f' <- canonicalizePath f
+              h' <- canonicalizePath h
+              return (Just (equalFilePath f' h'))
           )
-      )
-  UpdateStdlib p -> runReader p Stdlib.updateStdlib
-  CanonicalizePath' f -> embed (canonicalizePath f)
-  GetAbsPath f -> do
-    s <- gets (^. stdlibState)
-    p <- stdlibOrFile f rootPath s
-    embed (canonicalizePath p)
+      RegisterStdlib stdlibRootPath -> do
+        absStdlibRootPath <- embed (makeAbsolute stdlibRootPath)
+        fs <- embed (getFilesRecursive absStdlibRootPath)
+        let paths = normalise . makeRelative absStdlibRootPath <$> fs
+        modify
+          ( set
+              stdlibState
+              ( Just
+                  StdlibState
+                    { _stdlibRoot = absStdlibRootPath,
+                      _stdlibFilePaths = HashSet.fromList paths
+                    }
+              )
+          )
+      UpdateStdlib p -> runReader p Stdlib.updateStdlib
+      CanonicalizePath' f -> embed (canonicalizePath f)
+      GetAbsPath f -> do
+        s <- gets (^. stdlibState)
+        p <- stdlibOrFile f rootPath s
+        embed (canonicalizePath p)
 
 runFilesIO :: Member (Embed IO) r => FilePath -> Sem (Files ': r) a -> Sem (Error FilesError ': r) a
-runFilesIO rootPath = evalState initState . runFilesIO' rootPath
+runFilesIO rootPath = evalState initState . subsume . runFilesIO' rootPath

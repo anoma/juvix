@@ -6,6 +6,15 @@ where
 
 import Juvix.Data.Effect.Files.Error
 import Juvix.Prelude.Base
+import Path
+
+data RecursorArgs = RecursorArgs
+  { _recCurDir :: Path Rel Dir,
+    _recDirs :: [Path Rel Dir],
+    _recFiles :: [Path Rel File]
+  }
+
+makeLenses ''RecursorArgs
 
 data Files m a where
   ReadFile' :: FilePath -> Files m Text
@@ -33,4 +42,3 @@ makeLenses ''StdlibState
 
 initState :: FilesState
 initState = FilesState Nothing
-
