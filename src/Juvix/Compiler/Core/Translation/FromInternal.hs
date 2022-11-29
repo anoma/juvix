@@ -373,7 +373,7 @@ getPatternVars = \case
   Internal.PatternWildcard {} -> []
   Internal.PatternVariable n -> [n]
   Internal.PatternConstructorApp c ->
-    concatMap getPatternVars (reverse explicitPatterns)
+    concatMap getPatternVars explicitPatterns
     where
       explicitPatterns =
         (^. Internal.patternArgPattern)
