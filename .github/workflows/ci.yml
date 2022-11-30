@@ -174,10 +174,6 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.ghc }}-stack-work-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}-${{ hashFiles('main/**/*.hs') }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
-      - name: Setup Stack GHC
-        run : |
-          cd main
-          stack setup
       - name: Cache LLVM and Clang
         id: cache-llvm
         uses: actions/cache@v3
