@@ -174,10 +174,12 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.ghc }}-stack-work-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}-${{ hashFiles('main/**/*.hs') }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
-      - name: Setup Stack GHC
-        run : |
-          cd main
-          stack setup
+      - uses: haskell/actions/setup@v1
+        name: Setup Haskell
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          enable-stack: true
+          stack-version: 'latest'
       - name: Cache LLVM and Clang
         id: cache-llvm
         uses: actions/cache@v3
@@ -257,10 +259,12 @@ jobs:
         with:
           mdbook-version: 'latest'
 
-      - name: Setup Stack GHC
-        run : |
-          cd main
-          stack setup
+      - uses: haskell/actions/setup@v1
+        name: Setup Haskell
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          enable-stack: true
+          stack-version: 'latest'
 
       - name: Cache LLVM and Clang
         id: cache-llvm
