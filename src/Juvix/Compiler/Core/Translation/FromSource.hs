@@ -5,7 +5,6 @@ module Juvix.Compiler.Core.Translation.FromSource
 where
 
 import Control.Monad.Combinators.NonEmpty qualified as NonEmpty
-import Control.Monad.Fail qualified as P
 import Control.Monad.Trans.Class (lift)
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty (fromList)
@@ -558,7 +557,6 @@ atom varsNum vars =
     <|> exprConstString
     <|> exprUniverse
     <|> exprDynamic
-    <|> exprTypePrim
     <|> exprPi varsNum vars
     <|> exprLambda varsNum vars
     <|> exprLetrecMany varsNum vars
@@ -588,14 +586,6 @@ exprUniverse = do
 
 exprDynamic :: ParsecS r Type
 exprDynamic = kw kwAny $> mkDynamic'
-
-exprTypePrim :: ParsecS r Type
-exprTypePrim = P.try $ do
-  txt <- identifier
-  case txt of
-    "int" -> return mkTypeInteger'
-    "string" -> return mkTypeString'
-    _ -> P.fail "not a primitive type"
 
 parseLocalName ::
   forall r.
@@ -940,21 +930,24 @@ exprNamed ::
 exprNamed varsNum vars = do
   off <- P.getOffset
   (txt, i) <- identifierL
-  case HashMap.lookup txt vars of
-    Just k -> do
-      name <- lift $ freshName KNameLocal txt i
-      return $ mkVar (Info.singleton (NameInfo name)) (varsNum - k - 1)
-    Nothing -> do
-      r <- lift (getIdent txt)
-      case r of
-        Just (IdentFun sym) -> do
-          name <- lift $ freshName KNameFunction txt i
-          return $ mkIdent (Info.singleton (NameInfo name)) sym
-        Just (IdentInd sym) -> do
-          name <- lift $ freshName KNameConstructor txt i
-          return $ mkTypeConstr (Info.singleton (NameInfo name)) sym []
-        Just (IdentConstr tag) -> do
-          name <- lift $ freshName KNameConstructor txt i
-          return $ mkConstr (Info.singleton (NameInfo name)) tag []
-        Nothing ->
-          parseFailure off ("undeclared identifier: " ++ fromText txt)
+  case txt of
+    "int" -> return mkTypeInteger'
+    "string" -> return mkTypeString'
+    _ -> case HashMap.lookup txt vars of
+      Just k -> do
+        name <- lift $ freshName KNameLocal txt i
+        return $ mkVar (Info.singleton (NameInfo name)) (varsNum - k - 1)
+      Nothing -> do
+        r <- lift (getIdent txt)
+        case r of
+          Just (IdentFun sym) -> do
+            name <- lift $ freshName KNameFunction txt i
+            return $ mkIdent (Info.singleton (NameInfo name)) sym
+          Just (IdentInd sym) -> do
+            name <- lift $ freshName KNameConstructor txt i
+            return $ mkTypeConstr (Info.singleton (NameInfo name)) sym []
+          Just (IdentConstr tag) -> do
+            name <- lift $ freshName KNameConstructor txt i
+            return $ mkConstr (Info.singleton (NameInfo name)) tag []
+          Nothing ->
+            parseFailure off ("undeclared identifier: " ++ fromText txt)
