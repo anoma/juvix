@@ -4,8 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.Tree
 import Juvix.Data.Effect.Files.Base
 import Juvix.Prelude.Base
-import Path hiding ((</>))
-import Path qualified
+import Juvix.Prelude.Path
 import Prelude qualified
 
 data FS = FS
@@ -47,19 +46,6 @@ mkFS tbl = case (HashMap.toList (rootNode ^. dirDirs), toList (rootNode ^. dirFi
             where
               helper :: Maybe FSNode -> FSNode
               helper = maybe (helper (Just emptyNode)) (go ds)
-
-relFile :: FilePath -> Path Rel File
-relFile = fromJust . parseRelFile
-
-relDir :: FilePath -> Path Rel Dir
-relDir = fromJust . parseRelDir
-
-destructPath :: Path b Dir -> [Path Rel Dir]
-destructPath p = map relDir (splitPath (toFilePath p))
-
-destructFilePath :: Path b File -> ([Path Rel Dir], Path Rel File)
-destructFilePath p = case nonEmptyUnsnoc (nonEmpty' (splitPath (toFilePath p))) of
-  (ps, f) -> (fmap relDir (maybe [] toList ps), relFile f)
 
 toTree :: FS -> Tree FilePath
 toTree fs = Node (toFilePath (fs ^. fsRoot)) (go (fs ^. fsNode))
@@ -130,7 +116,7 @@ walkDirRel' root f start = go (root ^. fsRoot) fs0
     go cur (FSNode files dirs) = do
       w <- f args
       let dirs' = filter (w . fst) (HashMap.toList dirs)
-      forM_ dirs' $ \(d, n) -> go (cur Path.</> d) n
+      forM_ dirs' $ \(d, n) -> go (cur <//> d) n
       where
         args :: RecursorArgs
         args =
