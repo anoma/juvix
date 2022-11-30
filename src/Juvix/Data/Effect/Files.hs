@@ -9,4 +9,4 @@ where
 import Juvix.Data.Effect.Files.Base
 import Juvix.Data.Effect.Files.Error
 import Juvix.Data.Effect.Files.IO
-import Juvix.Data.Effect.Files.Pure
+import Juvix.Data.Effect.Files.Pure (runFilesPure)
