@@ -24,11 +24,13 @@ Consult the GitHub documentation on how to do this:
 
 https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#authenticating-to-the-container-registry
 
-Then authenticate:
+Set the token to the variable `CR_PAT` and then authenticate:
 
 ``` shell
 echo $CR_PAT | docker login ghcr.io -u USERNAME --password-stdin
 ```
+
+NB: You do not substitue your username for `USERNAME` in the command above.
 
 ## Testing the image
 
