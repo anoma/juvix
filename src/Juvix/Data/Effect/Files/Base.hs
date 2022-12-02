@@ -1,10 +1,12 @@
 module Juvix.Data.Effect.Files.Base
   ( module Juvix.Data.Effect.Files.Base,
     module Juvix.Data.Effect.Files.Error,
+    module Juvix.Data.Uid,
   )
 where
 
 import Juvix.Data.Effect.Files.Error
+import Juvix.Data.Uid
 import Juvix.Prelude.Base
 import Path
 
@@ -14,8 +16,8 @@ data RecursorArgs = RecursorArgs
     _recFiles :: [Path Rel File]
   }
 
-data Recurse r =
-  RecurseNever
+data Recurse r
+  = RecurseNever
   | RecurseFilter (Path r Dir -> Bool)
 
 makeLenses ''RecursorArgs
@@ -28,22 +30,7 @@ data Files m a where
   GetAbsPath :: FilePath -> Files m FilePath
   GetDirAbsPath :: Path r Dir -> Files m (Path Abs Dir)
   CanonicalizePath' :: FilePath -> Files m FilePath
-  HashPath :: Path a b -> Files m Int
+  PathUid :: Path Abs b -> Files m Uid
   ListDirRel :: Path a Dir -> Files m ([Path Rel Dir], [Path Rel File])
 
 makeSem ''Files
-
-data StdlibState = StdlibState
-  { _stdlibRoot :: FilePath,
-    _stdlibFilePaths :: HashSet FilePath
-  }
-
-newtype FilesState = FilesState
-  { _stdlibState :: Maybe StdlibState
-  }
-
-makeLenses ''FilesState
-makeLenses ''StdlibState
-
-initState :: FilesState
-initState = FilesState Nothing

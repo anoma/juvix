@@ -66,14 +66,16 @@ runFilesEmpty :: FilePath -> Sem (Files ': r) a -> Sem r a
 runFilesEmpty rootPath = runFilesPure rootPath mempty
 
 runFilesPure :: FilePath -> HashMap FilePath Text -> Sem (Files ': r) a -> Sem r a
-runFilesPure rootPath fs = interpretH $ \case
-  ReadFile' f -> pureT (readHelper f)
-  EqualPaths' {} -> pureT Nothing
-  FileExists' f -> pureT (HashMap.member f fs)
-  GetAbsPath f -> pureT (rootPath </> f)
-  CanonicalizePath' f -> pureT (normalise (rootPath </> f))
-  ReadFileBS' f -> pureT (encodeUtf8 (readHelper f))
+runFilesPure rootPath fs = interpret $ \case
+  ReadFile' f -> return (readHelper f)
+  EqualPaths' {} -> return Nothing
+  FileExists' f -> return (HashMap.member f fs)
+  GetAbsPath f -> return (rootPath </> f)
+  CanonicalizePath' f -> return (canonicalized f)
+  PathUid p -> return (Uid (toFilePath p))
+  ReadFileBS' f -> return (encodeUtf8 (readHelper f))
   where
+    canonicalized f = normalise (rootPath </> f)
     root :: FS
     root = mkFS fs
     readHelper :: FilePath -> Text

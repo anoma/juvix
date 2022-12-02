@@ -8,6 +8,7 @@ module Juvix.Data
     module Juvix.Data.IsImplicit,
     module Juvix.Data.Loc,
     module Juvix.Data.NameId,
+    module Juvix.Data.Uid,
     module Juvix.Data.Universe,
     module Juvix.Data.Usage,
     module Juvix.Data.Wildcard,
@@ -26,6 +27,7 @@ import Juvix.Data.Hole
 import Juvix.Data.IsImplicit
 import Juvix.Data.Loc
 import Juvix.Data.NameId qualified
+import Juvix.Data.Uid
 import Juvix.Data.Universe
 import Juvix.Data.Usage
 import Juvix.Data.Wildcard

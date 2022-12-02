@@ -7,7 +7,7 @@ module Juvix.Data.Effect.Files
   )
 where
 
-import Data.IntSet qualified as IntSet
+import Data.HashSet qualified as HashSet
 import Juvix.Data.Effect.Files.Base
 import Juvix.Data.Effect.Files.Error
 import Juvix.Data.Effect.Files.IO
@@ -15,7 +15,8 @@ import Juvix.Data.Effect.Files.Pure (runFilesPure)
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
 
-walkDirRelAccum :: forall acc b r.
+walkDirRelAccum ::
+  forall acc b r.
   Member Files r =>
   (Path Rel Dir -> [Path Rel Dir] -> [Path Rel File] -> acc -> Sem r (acc, Recurse Rel)) ->
   Path b Dir ->
@@ -23,11 +24,11 @@ walkDirRelAccum :: forall acc b r.
   Sem r acc
 walkDirRelAccum handler topdir' ini = execState ini (walkDirRel helper topdir')
   where
-  helper :: Path Rel Dir -> [Path Rel Dir] -> [Path Rel File] -> Sem (State acc ': r) (Recurse Rel)
-  helper cd dirs files = do
-    (acc', r) <- get >>= raise . handler cd dirs files
-    put acc'
-    return r
+    helper :: Path Rel Dir -> [Path Rel Dir] -> [Path Rel File] -> Sem (State acc ': r) (Recurse Rel)
+    helper cd dirs files = do
+      (acc', r) <- get >>= raise . handler cd dirs files
+      put acc'
+      return r
 
 walkDirRel ::
   forall b r.
@@ -37,11 +38,11 @@ walkDirRel ::
   Sem r ()
 walkDirRel handler topdir' = do
   topdir <- getDirAbsPath topdir'
-  let walkAvoidLoop :: Path Rel Dir -> Sem (State IntSet ': r) ()
+  let walkAvoidLoop :: Path Rel Dir -> Sem (State (HashSet Uid) ': r) ()
       walkAvoidLoop curdir =
         unlessM (checkLoop (topdir <//> curdir)) $
           walktree curdir
-      walktree :: Path Rel Dir -> Sem (State IntSet ': r) ()
+      walktree :: Path Rel Dir -> Sem (State (HashSet Uid) ': r) ()
       walktree curdir = do
         (subdirs, files) <- listDirRel (topdir <//> curdir)
         action <- raise (handler curdir subdirs files)
@@ -50,11 +51,11 @@ walkDirRel handler topdir' = do
           RecurseFilter fi ->
             let ds = map (curdir <//>) (filter fi subdirs)
              in mapM_ walkAvoidLoop ds
-      checkLoop :: Path Abs Dir -> Sem (State IntSet ': r) Bool
+      checkLoop :: Path Abs Dir -> Sem (State (HashSet Uid) ': r) Bool
       checkLoop dir = do
         visited <- get
-        ufid <- hashPath dir
+        ufid <- pathUid dir
         if
-          | IntSet.member ufid visited -> return True
-          | otherwise -> modify' (IntSet.insert ufid) $> False
-  void (evalState mempty $ walkAvoidLoop $(mkRelDir "."))
+            | HashSet.member ufid visited -> return True
+            | otherwise -> modify' (HashSet.insert ufid) $> False
+  evalState mempty (walkAvoidLoop $(mkRelDir "."))
