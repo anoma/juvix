@@ -23,7 +23,7 @@ instance HasLoc Name where
     NameUnqualified s -> getLoc s
 
 instance Pretty QualifiedName where
-  pretty (QualifiedName (Path path) s) =
+  pretty (QualifiedName (SymbolPath path) s) =
     let symbols = snoc (toList path) s
      in dotted (map pretty symbols)
     where
@@ -35,13 +35,13 @@ instance Pretty Name where
     NameQualified q -> pretty q
     NameUnqualified s -> pretty s
 
-newtype Path = Path
+newtype SymbolPath = SymbolPath
   { _pathParts :: NonEmpty Symbol
   }
   deriving stock (Show, Eq, Ord)
 
 data QualifiedName = QualifiedName
-  { _qualifiedPath :: Path,
+  { _qualifiedPath :: SymbolPath,
     _qualifiedSymbol :: Symbol
   }
   deriving stock (Show, Eq, Ord, Generic)
@@ -52,13 +52,13 @@ instance HasLoc QualifiedName where
 
 instance Hashable QualifiedName
 
-instance HasLoc Path where
-  getLoc (Path p) = getLoc (NonEmpty.head p) <> getLoc (NonEmpty.last p)
+instance HasLoc SymbolPath where
+  getLoc (SymbolPath p) = getLoc (NonEmpty.head p) <> getLoc (NonEmpty.last p)
 
-deriving newtype instance Hashable Path
+deriving newtype instance Hashable SymbolPath
 
 makeLenses ''QualifiedName
-makeLenses ''Path
+makeLenses ''SymbolPath
 
 -- | A.B.C corresponds to TopModulePath [A,B] C
 data TopModulePath = TopModulePath

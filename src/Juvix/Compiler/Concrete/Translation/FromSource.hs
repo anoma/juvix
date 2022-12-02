@@ -118,7 +118,7 @@ name :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r Name
 name = do
   parts <- dottedSymbol
   return $ case nonEmptyUnsnoc parts of
-    (Just p, n) -> NameQualified (QualifiedName (Path p) n)
+    (Just p, n) -> NameQualified (QualifiedName (SymbolPath p) n)
     (Nothing, n) -> NameUnqualified n
 
 mkTopModulePath :: NonEmpty Symbol -> TopModulePath

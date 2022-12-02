@@ -18,6 +18,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Erro
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
+import Juvix.Prelude.Path
 import Juvix.Prelude.Pretty
 import System.FilePath.Find as Find
 
@@ -50,7 +51,7 @@ iniResolverState =
     }
 
 -- | the argument should be an absolute path
-mkPackageInfo :: Members '[Files, Error Text] r => FilePath -> Sem r PackageInfo
+mkPackageInfo :: Members '[Files, Error Text] r => Path Abs Dir -> Sem r PackageInfo
 mkPackageInfo _packageRoot = do
   _packagePackage <- readPackage _packageRoot
   fs <- map (normalise . makeRelative _packageRoot) <$> filesFind recur (extension ==? ".juvix") _packageRoot
