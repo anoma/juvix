@@ -20,6 +20,12 @@ relFile = fromJust . parseRelFile
 relDir :: FilePath -> Path Rel Dir
 relDir = fromJust . parseRelDir
 
+absFile :: FilePath -> Path Abs File
+absFile = fromJust . parseAbsFile
+
+absDir :: FilePath -> Path Abs Dir
+absDir = fromJust . parseAbsDir
+
 destructPath :: Path b Dir -> [Path Rel Dir]
 destructPath p = map relDir (splitPath (toFilePath p))
 

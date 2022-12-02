@@ -73,12 +73,14 @@ module Juvix.Prelude.Base
     HashSet,
     IsString (..),
     Alternative (..),
+    MonadIO (..),
   )
 where
 
 import Control.Applicative
 import Control.Monad.Extra hiding (fail)
 import Control.Monad.Fix
+import Control.Monad.IO.Class (MonadIO (..))
 import Data.Bifunctor hiding (first, second)
 import Data.Bitraversable
 import Data.Bool

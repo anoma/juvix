@@ -14,6 +14,10 @@ data RecursorArgs = RecursorArgs
     _recFiles :: [Path Rel File]
   }
 
+data Recurse r =
+  RecurseNever
+  | RecurseFilter (Path r Dir -> Bool)
+
 makeLenses ''RecursorArgs
 
 data Files m a where
@@ -22,9 +26,10 @@ data Files m a where
   FileExists' :: FilePath -> Files m Bool
   EqualPaths' :: FilePath -> FilePath -> Files m (Maybe Bool)
   GetAbsPath :: FilePath -> Files m FilePath
+  GetDirAbsPath :: Path r Dir -> Files m (Path Abs Dir)
   CanonicalizePath' :: FilePath -> Files m FilePath
-  RegisterStdlib :: FilePath -> Files m ()
-  UpdateStdlib :: FilePath -> Files m ()
+  HashPath :: Path a b -> Files m Int
+  ListDirRel :: Path a Dir -> Files m ([Path Rel Dir], [Path Rel File])
 
 makeSem ''Files
 
