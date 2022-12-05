@@ -1,7 +1,6 @@
 * Juvix community
 
-We would love to hear what you think of Juvix! Join us on
-[[https://discord.gg/PpDqtCjy][Discord]]
+Join us on our [[https://discord.gg/waYhQ2Qr][Discord server]]
 
 This project is part of a bigger effort called [[https://anoma.net/][Anoma]].
 Anoma is a suite of protocols and mechanisms for self-contained, self-sovereign coordination.
