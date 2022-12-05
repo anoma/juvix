@@ -10,6 +10,7 @@ import Data.Yaml
 import Juvix.Compiler.Pipeline.Package.Dependency
 import Juvix.Extra.Paths
 import Juvix.Prelude
+import Juvix.Prelude.Path
 import Lens.Micro.Platform qualified as Lens
 
 data Package = Package
@@ -60,11 +61,12 @@ packageVersion' f p = (\(Const r) -> Const r) (f ver)
     ver = fromMaybe "no version" (p ^. packageVersion)
 
 -- | given some directory d it tries to read the file d/juvix.yaml and parse its contents
-readPackage :: forall r. Members '[Files, Error Text] r => FilePath -> Sem r Package
-readPackage dir = do
+readPackage :: forall r. Members '[Files, Error Text] r => Path Abs Dir -> Sem r Package
+readPackage adir = do
   bs <- readFileBS' yamlPath
   either (throw . pack . prettyPrintParseException) (mkAbsPaths dir) (decodeEither' bs)
   where
+    dir = toFilePath adir
     yamlPath = dir </> juvixYamlFile
     mkAbsPaths :: FilePath -> Package -> Sem r Package
     mkAbsPaths root pkg = traverseOf (packageDependencies . each . dependencyPath) go pkg
@@ -72,7 +74,7 @@ readPackage dir = do
         go :: FilePath -> Sem r FilePath
         go p = canonicalizePath' (root </> p)
 
-readPackageIO :: FilePath -> IO Package
+readPackageIO :: Path Abs Dir -> IO Package
 readPackageIO dir = do
   d <- getCurrentDirectory
   let x :: Sem '[Error Text, Files, Embed IO] Package

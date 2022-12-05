@@ -23,14 +23,19 @@ data Recurse r
 makeLenses ''RecursorArgs
 
 data Files m a where
-  ReadFile' :: FilePath -> Files m Text
-  ReadFileBS' :: FilePath -> Files m ByteString
-  FileExists' :: FilePath -> Files m Bool
+  CanonicalizePath' :: FilePath -> Files m FilePath
+  CreateDirectoryIfMissing' :: Path b Dir -> Files m ()
+  DirectoryExists' :: Path a Dir -> Files m Bool
   EqualPaths' :: FilePath -> FilePath -> Files m (Maybe Bool)
+  FileExists' :: FilePath -> Files m Bool
   GetAbsPath :: FilePath -> Files m FilePath
   GetDirAbsPath :: Path r Dir -> Files m (Path Abs Dir)
-  CanonicalizePath' :: FilePath -> Files m FilePath
-  PathUid :: Path Abs b -> Files m Uid
   ListDirRel :: Path a Dir -> Files m ([Path Rel Dir], [Path Rel File])
+  PathUid :: Path Abs b -> Files m Uid
+  ReadFile' :: FilePath -> Files m Text
+  ReadFileBS' :: FilePath -> Files m ByteString
+  RemoveDirectoryRecursive' :: Path a Dir -> Files m ()
+  WriteFile' :: Path a b -> Text -> Files m ()
+  WriteFileBS :: Path a b -> ByteString -> Files m ()
 
 makeSem ''Files

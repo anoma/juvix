@@ -219,10 +219,7 @@ nameIdAttr (S.NameId k) = fromString . show $ k
 moduleDocRelativePath :: Members '[Reader HtmlOptions] r => TopModulePath -> Sem r FilePath
 moduleDocRelativePath m = do
   suff <- kindSuffix <$> asks (^. htmlOptionsKind)
-  return (topModulePathToRelativeFilePath ".html" suff joinDot m)
-  where
-    joinDot :: FilePath -> FilePath -> FilePath
-    joinDot l r = l <.> r
+  return (topModulePathToRelativeFilePathDot ".html" suff m)
 
 nameIdAttrRef :: Members '[Reader HtmlOptions] r => TopModulePath -> Maybe S.NameId -> Sem r AttributeValue
 nameIdAttrRef tp s = do

@@ -28,6 +28,7 @@ import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context (ParserResult)
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
+import Juvix.Prelude.Path
 
 iniScoperState :: ScoperState
 iniScoperState =
@@ -334,7 +335,7 @@ checkQualifiedExpr ::
   Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r =>
   QualifiedName ->
   Sem r ScopedIden
-checkQualifiedExpr q@(QualifiedName (Path p) sym) = do
+checkQualifiedExpr q@(QualifiedName (SymbolPath p) sym) = do
   es <- filter entryIsExpression <$> lookupQualifiedSymbol (toList p, sym)
   case es of
     [] -> notInScope
@@ -388,9 +389,9 @@ withPath' ::
   forall r a.
   Members '[PathResolver, Error ScoperError] r =>
   TopModulePath ->
-  (FilePath -> Sem r a) ->
+  (Path Abs File -> Sem r a) ->
   Sem r a
-withPath' mp a = withPath mp (either err a)
+withPath' mp a = withPathFile mp (either err a)
   where
     err :: PathResolverError -> Sem r a
     err = throw . ErrTopModulePath . TopModulePathError mp
@@ -400,8 +401,8 @@ readParseModule ::
   TopModulePath ->
   Sem r (Module 'Parsed 'ModuleTop)
 readParseModule mp = withPath' mp $ \path -> do
-  txt <- readFile' path
-  pr <- runModuleParser path txt
+  txt <- readFile' (toFilePath path)
+  pr <- runModuleParser (toFilePath path) txt
   case pr of
     Left err -> throw (ErrParser (MegaParsecError err))
     Right (tbl, m) -> Parser.mergeTable tbl $> m
@@ -542,13 +543,13 @@ checkTopModule m@(Module path params doc body) = do
     checkPath =
       withPath' path $ \expectedPath -> do
         let actualPath = getLoc path ^. intervalFile
-        unlessM (fromMaybe True <$> equalPaths' expectedPath actualPath) $
+        unlessM (fromMaybe True <$> equalPaths' (toFilePath expectedPath) actualPath) $
           throw
             ( ErrWrongTopModuleName
                 WrongTopModuleName
                   { _wrongTopModuleNameActualName = path,
                     _wrongTopModuleNameExpectedPath = expectedPath,
-                    _wrongTopModuleNameActualPath = actualPath
+                    _wrongTopModuleNameActualPath = absFile actualPath
                   }
             )
     freshTopModulePath ::
@@ -688,7 +689,7 @@ lookupModuleSymbol n = do
     notInScope = throw (ErrModuleNotInScope (ModuleNotInScope n))
     (path, sym) = case n of
       NameUnqualified s -> ([], s)
-      NameQualified (QualifiedName (Path p) s) -> (toList p, s)
+      NameQualified (QualifiedName (SymbolPath p) s) -> (toList p, s)
 
 getModuleRef :: SymbolEntry -> Maybe (ModuleRef' 'S.NotConcrete)
 getModuleRef = \case
@@ -716,7 +717,7 @@ checkOpenImportModule op
       let moduleNameToTopModulePath :: Name -> TopModulePath
           moduleNameToTopModulePath = \case
             NameUnqualified s -> TopModulePath [] s
-            NameQualified (QualifiedName (Path p) s) -> TopModulePath (toList p) s
+            NameQualified (QualifiedName (SymbolPath p) s) -> TopModulePath (toList p) s
           import_ :: Import 'Parsed
           import_ = Import (moduleNameToTopModulePath (op ^. openModuleName))
        in do
@@ -1104,14 +1105,14 @@ checkPatternName n = do
     Nothing -> PatternScopedVar <$> groupBindLocalVariable sym -- the symbol is a variable
   where
     (path, sym) = case n of
-      NameQualified (QualifiedName (Path p) s) -> (toList p, s)
+      NameQualified (QualifiedName (SymbolPath p) s) -> (toList p, s)
       NameUnqualified s -> ([], s)
     -- check whether the symbol is a constructor in scope
     getConstructorRef :: Sem r (Maybe ConstructorRef)
     getConstructorRef = do
       entries <- mapMaybe getConstructor <$> lookupQualifiedSymbol (path, sym)
       case entries of
-        [] -> case Path <$> nonEmpty path of
+        [] -> case SymbolPath <$> nonEmpty path of
           Nothing -> return Nothing -- There is no constructor with such a name
           Just pth -> throw (ErrQualSymNotInScope (QualSymNotInScope (QualifiedName pth sym)))
         [e] -> return (Just (set (constructorRefName . S.nameConcrete) n e)) -- There is one constructor with such a name

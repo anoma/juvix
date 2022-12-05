@@ -23,8 +23,13 @@ runFilesIO' rootPath = reinterpret helper
     helper :: forall rInitial x. Files (Sem rInitial) x -> Sem (Error FilesError ': r) x
     helper = \case
       ReadFile' f -> embed (readFile f)
+      WriteFileBS p bs -> embed (ByteString.writeFile (toFilePath p) bs)
+      WriteFile' f txt -> embed (writeFile (toFilePath f) txt)
+      CreateDirectoryIfMissing' p -> Path.ensureDir p
+      DirectoryExists' p -> Path.doesDirExist p
       ReadFileBS' f -> embed (ByteString.readFile f)
       FileExists' f -> embed (doesFileExist f)
+      RemoveDirectoryRecursive' d -> embed (removeDirectoryRecursive (toFilePath d))
       ListDirRel p -> embed @IO (Path.listDirRel p)
       EqualPaths' f h ->
         embed

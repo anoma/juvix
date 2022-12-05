@@ -3,9 +3,8 @@ module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error,
     PathResolver,
     addDependency,
-    -- resolvePath,
     withPath,
-    -- runPathResolver,
+    withPathFile,
     runPathResolverPipe,
   )
 where
@@ -19,24 +18,25 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Pack
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
 import Juvix.Prelude.Path
-import Juvix.Prelude.Pretty
-import System.FilePath.Find as Find
 
 data PathResolver m a where
   AddDependency :: Dependency -> PathResolver m ()
-  WithPath :: TopModulePath -> (Either PathResolverError FilePath -> m a) -> PathResolver m a
+  WithPath ::
+    TopModulePath ->
+    (Either PathResolverError (Path Abs Dir, Path Rel File) -> m x) ->
+    PathResolver m x
 
 makeSem ''PathResolver
 
 newtype ResolverEnv = ResolverEnv
-  { _envRoot :: FilePath
+  { _envRoot :: Path Abs Dir
   }
 
 data ResolverState = ResolverState
   { -- | juvix files indexed by relative path
-    _stateFiles :: HashMap FilePath (NonEmpty PackageInfo),
+    _stateFiles :: HashMap (Path Rel File) (NonEmpty PackageInfo),
     -- | PackageInfos indexed by root
-    _statePackages :: HashMap FilePath PackageInfo
+    _statePackages :: HashMap (Path Abs Dir) PackageInfo
   }
   deriving stock (Show)
 
@@ -50,36 +50,37 @@ iniResolverState =
       _stateFiles = mempty
     }
 
--- | the argument should be an absolute path
-mkPackageInfo :: Members '[Files, Error Text] r => Path Abs Dir -> Sem r PackageInfo
+mkPackageInfo :: forall r. Members '[Files, Error Text] r => Path Abs Dir -> Sem r PackageInfo
 mkPackageInfo _packageRoot = do
   _packagePackage <- readPackage _packageRoot
-  fs <- map (normalise . makeRelative _packageRoot) <$> filesFind recur (extension ==? ".juvix") _packageRoot
+  fs <- map (fromJust . stripProperPrefix _packageRoot) <$> walkDirRelAccum juvixAccum _packageRoot []
   let _packageRelativeFiles = HashSet.fromList fs
       _packageAvailableRoots =
-        HashSet.fromList (_packageRoot : map (^. dependencyPath) (_packagePackage ^. packageDependencies))
+        HashSet.fromList (_packageRoot : map (^. dependencyPath . to absDir) (_packagePackage ^. packageDependencies))
   return PackageInfo {..}
   where
-    recur :: FindClause Bool
-    recur = notHidden <$> fileName
+    juvixAccum :: Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> [Path Abs File] -> Sem r ([Path Abs File], Recurse Rel)
+    juvixAccum cd _ files acc = return (newJuvixFiles <> acc, RecurseFilter (not . isHiddenDirectory))
       where
-        notHidden = \case
-          [] -> True
-          (h : _) -> h /= '.'
+        newJuvixFiles :: [Path Abs File]
+        newJuvixFiles = [cd <//> f | f <- files, isJuvixFile f]
 
 dependencyCached :: Members '[State ResolverState] r => Dependency -> Sem r Bool
-dependencyCached d = HashMap.member (d ^. dependencyPath) <$> gets (^. statePackages)
+dependencyCached d = HashMap.member (absDir (d ^. dependencyPath)) <$> gets (^. statePackages)
+
+withPathFile :: Members '[PathResolver] r => TopModulePath -> (Either PathResolverError (Path Abs File) -> Sem r a) -> Sem r a
+withPathFile m f = withPath m (f . mapRight (uncurry (<//>)))
 
 addDependency' :: Members '[State ResolverState, Files, Error Text] r => Dependency -> Sem r ()
 addDependency' d = do
-  let p = d ^. dependencyPath
+  let p = absDir (d ^. dependencyPath)
   unlessM (dependencyCached d) $ do
     pkgInfo <- mkPackageInfo p
-    traceM ("adding dependency " <> pack p)
-    traceM ("has " <> prettyText (pkgInfo ^. packageRelativeFiles . to HashSet.size) <> " files")
+    -- traceM ("adding dependency " <> pack (toFilePath p))
+    -- traceM ("has " <> prettyText (pkgInfo ^. packageRelativeFiles . to HashSet.size) <> " files")
     modify' (set (statePackages . at p) (Just pkgInfo))
     forM_ (pkgInfo ^. packageRelativeFiles) $ \f -> do
-      traceM ("adding file " <> pack f)
+      -- traceM ("adding file " <> pack (toFilePath f))
       modify' (over stateFiles (HashMap.insertWith (<>) f (pure pkgInfo)))
     forM_ (pkgInfo ^. packagePackage . packageDependencies) addDependency'
 
@@ -88,16 +89,18 @@ currentPackage = do
   curRoot <- asks (^. envRoot)
   gets (^?! statePackages . at curRoot . _Just)
 
-resolvePath' :: Members '[State ResolverState, Reader ResolverEnv] r => TopModulePath -> Sem r (Either PathResolverError FilePath)
+-- | Returns the root of the package where the module belongs and the path to
+-- the module relative to the root.
+resolvePath' :: Members '[State ResolverState, Reader ResolverEnv] r => TopModulePath -> Sem r (Either PathResolverError (Path Abs Dir, Path Rel File))
 resolvePath' mp = do
   z <- gets (^. stateFiles)
   curPkg <- currentPackage
   let rel = topModulePathToRelativeFilePath' mp
-      m = z ^. at rel
+      packagesWithModule = z ^. at rel
       visible :: PackageInfo -> Bool
       visible p = HashSet.member (p ^. packageRoot) (curPkg ^. packageAvailableRoots)
-  return $ case filter visible (maybe [] toList m) of
-    [r] -> Right (r ^. packageRoot </> rel)
+  return $ case filter visible (maybe [] toList packagesWithModule) of
+    [r] -> Right (r ^. packageRoot, rel)
     [] ->
       Left
         ( ErrMissingModule
@@ -129,21 +132,24 @@ re = reinterpret2H helper
     helper = \case
       AddDependency m -> addDependency' m >>= pureT
       WithPath m a -> do
-        x :: Either PathResolverError FilePath <- resolvePath' m
-        root <- asks (^. envRoot)
+        x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolvePath' m
+        oldroot <- asks (^. envRoot)
         x' <- pureT x
         a' <- bindT a
         st' <- get
-        let root' = fromRight root x
+        let root' = case x of
+              Left {} -> oldroot
+              Right (r, _) -> r
         raise (runPathResolver' st' root' (a' x'))
 
-runPathResolver' :: Members '[Files, Error Text] r => ResolverState -> FilePath -> Sem (PathResolver ': r) a -> Sem r a
+runPathResolver' :: Members '[Files, Error Text] r => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
 runPathResolver' st root = evalState st . runReader (ResolverEnv root) . re
 
-runPathResolver :: Members '[Files, Error Text] r => FilePath -> Sem (PathResolver ': r) a -> Sem r a
+runPathResolver :: Members '[Files, Error Text] r => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r a
 runPathResolver = runPathResolver' iniResolverState
 
 runPathResolverPipe :: Members '[Files, Reader EntryPoint] r => Sem (PathResolver ': r) a -> Sem r a
 runPathResolverPipe a = do
   r <- asks (^. entryPointRoot)
-  runError (runPathResolver r (raiseUnder a)) >>= either error return
+  let r' = absDir r
+  runError (runPathResolver r' (raiseUnder a)) >>= either error return

@@ -70,10 +70,14 @@ runFilesPure rootPath fs = interpret $ \case
   ReadFile' f -> return (readHelper f)
   EqualPaths' {} -> return Nothing
   FileExists' f -> return (HashMap.member f fs)
-  GetAbsPath f -> return (rootPath </> f)
   CanonicalizePath' f -> return (canonicalized f)
   PathUid p -> return (Uid (toFilePath p))
   ReadFileBS' f -> return (encodeUtf8 (readHelper f))
+  GetAbsPath f -> return (rootPath </> f)
+  GetDirAbsPath p -> return (absDir (rootPath </> toFilePath p))
+  ListDirRel p ->
+    let n = findDir root p
+     in return (HashMap.keys (n ^. dirDirs), HashMap.keys (n ^. dirFiles))
   where
     canonicalized f = normalise (rootPath </> f)
     root :: FS
@@ -91,7 +95,7 @@ missingErr root f =
         <> "\nThe contents of the mocked file system are:\n"
         <> Prelude.show root
 
-findDir :: FS -> Path Rel Dir -> FSNode
+findDir :: FS -> Path r Dir -> FSNode
 findDir root p = go (root ^. fsNode) (destructPath p)
   where
     go :: FSNode -> [Path Rel Dir] -> FSNode
@@ -100,28 +104,3 @@ findDir root p = go (root ^. fsNode) (destructPath p)
       (h : hs) -> go (HashMap.lookupDefault err h (d ^. dirDirs)) hs
     err :: a
     err = missingErr root (toFilePath p)
-
-walkDirRel' ::
-  forall m.
-  Monad m =>
-  FS ->
-  (RecursorArgs -> m (Path Rel Dir -> Bool)) ->
-  Maybe (Path Rel Dir) ->
-  m ()
-walkDirRel' root f start = go (root ^. fsRoot) fs0
-  where
-    fs0 :: FSNode
-    fs0 = maybe (root ^. fsNode) (findDir root) start
-    go :: Path Rel Dir -> FSNode -> m ()
-    go cur (FSNode files dirs) = do
-      w <- f args
-      let dirs' = filter (w . fst) (HashMap.toList dirs)
-      forM_ dirs' $ \(d, n) -> go (cur <//> d) n
-      where
-        args :: RecursorArgs
-        args =
-          RecursorArgs
-            { _recCurDir = cur,
-              _recFiles = HashMap.keys files,
-              _recDirs = HashMap.keys dirs
-            }
