@@ -82,5 +82,7 @@ docs/**/*.md
 *.cmi
 *.cmx
 *.cmo
-
+.history
 docs/org/README.org
+# Binary files (produced by `make check`)
+examples/milestone/HelloWorld/HelloWorld
