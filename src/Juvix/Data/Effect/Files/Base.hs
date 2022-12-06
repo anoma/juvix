@@ -24,18 +24,18 @@ makeLenses ''RecursorArgs
 
 data Files m a where
   CanonicalizePath' :: FilePath -> Files m FilePath
-  CreateDirectoryIfMissing' :: Path b Dir -> Files m ()
-  DirectoryExists' :: Path a Dir -> Files m Bool
+  EnsureDir' :: Path Abs Dir -> Files m ()
+  DirectoryExists' :: Path Abs Dir -> Files m Bool
   EqualPaths' :: FilePath -> FilePath -> Files m (Maybe Bool)
-  FileExists' :: FilePath -> Files m Bool
+  FileExists' :: Path Abs File -> Files m Bool
   GetAbsPath :: FilePath -> Files m FilePath
   GetDirAbsPath :: Path r Dir -> Files m (Path Abs Dir)
-  ListDirRel :: Path a Dir -> Files m ([Path Rel Dir], [Path Rel File])
+  ListDirRel :: Path Abs Dir -> Files m ([Path Rel Dir], [Path Rel File])
   PathUid :: Path Abs b -> Files m Uid
-  ReadFile' :: FilePath -> Files m Text
-  ReadFileBS' :: FilePath -> Files m ByteString
-  RemoveDirectoryRecursive' :: Path a Dir -> Files m ()
-  WriteFile' :: Path a b -> Text -> Files m ()
-  WriteFileBS :: Path a b -> ByteString -> Files m ()
+  ReadFile' :: Path Abs File -> Files m Text
+  ReadFileBS' :: Path Abs File -> Files m ByteString
+  RemoveDirectoryRecursive' :: Path Abs Dir -> Files m ()
+  WriteFile' :: Path Abs File -> Text -> Files m ()
+  WriteFileBS :: Path Abs File -> ByteString -> Files m ()
 
 makeSem ''Files

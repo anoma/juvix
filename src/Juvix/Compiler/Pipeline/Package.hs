@@ -67,7 +67,7 @@ readPackage adir = do
   either (throw . pack . prettyPrintParseException) (mkAbsPaths dir) (decodeEither' bs)
   where
     dir = toFilePath adir
-    yamlPath = dir </> juvixYamlFile
+    yamlPath = adir <//> juvixYamlFile'
     mkAbsPaths :: FilePath -> Package -> Sem r Package
     mkAbsPaths root pkg = traverseOf (packageDependencies . each . dependencyPath) go pkg
       where

@@ -101,7 +101,7 @@ import Data.Hashable
 import Data.Int
 import Data.IntMap.Strict (IntMap)
 import Data.IntSet (IntSet)
-import Data.List.Extra hiding (groupSortOn, head, last, mconcatMap)
+import Data.List.Extra hiding (allSame, groupSortOn, head, last, mconcatMap)
 import Data.List.Extra qualified as List
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.List.NonEmpty.Extra
@@ -199,6 +199,14 @@ toUpperFirst (x : xs) = Char.toUpper x : xs
 --------------------------------------------------------------------------------
 -- Foldable
 --------------------------------------------------------------------------------
+
+allSame :: forall t a. (Eq a, Foldable t) => t a -> Bool
+allSame t
+  | null t = True
+  | otherwise = all (== h) t
+  where
+    h :: a
+    h = foldr1 const t
 
 mconcatMap :: (Monoid c, Foldable t) => (a -> c) -> t a -> c
 mconcatMap f = List.mconcatMap f . toList

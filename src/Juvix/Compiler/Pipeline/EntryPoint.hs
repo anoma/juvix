@@ -5,9 +5,9 @@ module Juvix.Compiler.Pipeline.EntryPoint
 where
 
 import Juvix.Compiler.Pipeline.Package
-import Juvix.Prelude.Path
 import Juvix.Extra.Paths (juvixStdlibDir)
 import Juvix.Prelude
+import Juvix.Prelude.Path
 
 -- | The head of _entryModulePaths is assumed to be the Main module
 data EntryPoint = EntryPoint

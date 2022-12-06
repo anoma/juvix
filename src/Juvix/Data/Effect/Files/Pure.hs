@@ -8,7 +8,7 @@ import Juvix.Prelude.Path
 import Prelude qualified
 
 data FS = FS
-  { _fsRoot :: Path Rel Dir,
+  { _fsRoot :: Path Abs Dir,
     _fsNode :: FSNode
   }
 
@@ -16,6 +16,13 @@ data FSNode = FSNode
   { _dirFiles :: HashMap (Path Rel File) Text,
     _dirDirs :: HashMap (Path Rel Dir) FSNode
   }
+
+emptyFS :: FS
+emptyFS =
+  FS
+    { _fsRoot = $(mkAbsDir "/"),
+      _fsNode = emptyNode
+    }
 
 emptyNode :: FSNode
 emptyNode =
@@ -27,25 +34,13 @@ emptyNode =
 makeLenses ''FS
 makeLenses ''FSNode
 
--- | Files should have a common root
-mkFS :: HashMap FilePath Text -> FS
-mkFS tbl = case (HashMap.toList (rootNode ^. dirDirs), toList (rootNode ^. dirFiles)) of
-  ([(r, d')], []) -> FS r d'
-  _ -> impossible
+mkFS :: HashMap (Path Abs File) Text -> FS
+mkFS tbl = run (execState emptyFS go)
   where
-    rootNode :: FSNode
-    rootNode = HashMap.foldlWithKey' insertFile emptyNode tbl
-    insertFile :: FSNode -> FilePath -> Text -> FSNode
-    insertFile dir0 fp contents = go (splitPath fp) dir0
-      where
-        go :: [FilePath] -> FSNode -> FSNode
-        go l dir = case l of
-          [] -> impossible
-          [f] -> set (dirFiles . at (relFile f)) (Just contents) dir
-          (d : ds) -> over dirDirs (HashMap.alter (Just . helper) (relDir d)) dir
-            where
-              helper :: Maybe FSNode -> FSNode
-              helper = maybe (helper (Just emptyNode)) (go ds)
+    go :: Sem '[State FS] ()
+    go = forM_ (HashMap.toList tbl) $ \(p, txt) -> do
+      ensureDirHelper (parent p)
+      writeFileHelper p txt
 
 toTree :: FS -> Tree FilePath
 toTree fs = Node (toFilePath (fs ^. fsRoot)) (go (fs ^. fsNode))
@@ -62,31 +57,38 @@ toTree fs = Node (toFilePath (fs ^. fsRoot)) (go (fs ^. fsNode))
 instance Show FS where
   show = drawTree . toTree
 
-runFilesEmpty :: FilePath -> Sem (Files ': r) a -> Sem r a
-runFilesEmpty rootPath = runFilesPure rootPath mempty
+runFilesEmpty :: Sem (Files ': r) a -> Sem r a
+runFilesEmpty = runFilesPure mempty $(mkAbsDir "/")
 
-runFilesPure :: FilePath -> HashMap FilePath Text -> Sem (Files ': r) a -> Sem r a
-runFilesPure rootPath fs = interpret $ \case
-  ReadFile' f -> return (readHelper f)
+runFilesPure :: HashMap (Path Abs File) Text -> Path Abs Dir -> Sem (Files ': r) a -> Sem r a
+runFilesPure ini cwd a = evalState (mkFS ini) (re cwd a)
+
+re :: Path Abs Dir -> Sem (Files ': r) a -> Sem (State FS ': r) a
+re cwd = reinterpret $ \case
+  ReadFile' f -> lookupFile' f
   EqualPaths' {} -> return Nothing
-  FileExists' f -> return (HashMap.member f fs)
+  FileExists' f -> isJust <$> lookupFile f
   CanonicalizePath' f -> return (canonicalized f)
   PathUid p -> return (Uid (toFilePath p))
-  ReadFileBS' f -> return (encodeUtf8 (readHelper f))
-  GetAbsPath f -> return (rootPath </> f)
-  GetDirAbsPath p -> return (absDir (rootPath </> toFilePath p))
-  ListDirRel p ->
-    let n = findDir root p
-     in return (HashMap.keys (n ^. dirDirs), HashMap.keys (n ^. dirFiles))
+  ReadFileBS' f -> encodeUtf8 <$> lookupFile' f
+  GetAbsPath f -> return (cwd' </> f)
+  GetDirAbsPath p -> return (absDir (cwd' </> toFilePath p))
+  EnsureDir' p -> ensureDirHelper p
+  DirectoryExists' p -> isJust <$> lookupDir p
+  WriteFile' p t -> writeFileHelper p t
+  WriteFileBS p t -> writeFileHelper p (decodeUtf8 t)
+  RemoveDirectoryRecursive' p -> removeDirRecurHelper p
+  ListDirRel p -> do
+    n <- lookupDir' p
+    return (HashMap.keys (n ^. dirDirs), HashMap.keys (n ^. dirFiles))
   where
-    canonicalized f = normalise (rootPath </> f)
-    root :: FS
-    root = mkFS fs
-    readHelper :: FilePath -> Text
-    readHelper f = fromMaybe (missingErr root f) (HashMap.lookup f fs)
+    cwd' :: FilePath
+    cwd' = toFilePath cwd
+    canonicalized f = normalise (cwd' </> f)
 
-missingErr :: FS -> FilePath -> a
-missingErr root f =
+missingErr :: Members '[State FS] r => FilePath -> Sem r a
+missingErr f = do
+  root <- get @FS
   error $
     pack $
       "file "
@@ -95,12 +97,79 @@ missingErr root f =
         <> "\nThe contents of the mocked file system are:\n"
         <> Prelude.show root
 
-findDir :: FS -> Path r Dir -> FSNode
-findDir root p = go (root ^. fsNode) (destructPath p)
+checkRoot :: Members '[State FS] r => Path Abs Dir -> Sem r ()
+checkRoot r = do
+  root <- gets (^. fsRoot)
+  unless (r == root) (error ("roots do not match: " <> pack (toFilePath root) <> "\n" <> pack (toFilePath r)))
+
+removeDirRecurHelper :: Members '[State FS] r => Path Abs Dir -> Sem r ()
+removeDirRecurHelper p = do
+  checkRoot r
+  modify (over fsNode (fromMaybe emptyNode . go dirs))
   where
-    go :: FSNode -> [Path Rel Dir] -> FSNode
+    (r, dirs) = destructAbsDir p
+    go :: [Path Rel Dir] -> FSNode -> Maybe FSNode
+    go = \case
+      [] -> const Nothing
+      (d : ds) -> Just . over dirDirs (HashMap.alter helper d)
+        where
+          helper :: Maybe FSNode -> Maybe FSNode
+          helper = go ds . fromMaybe emptyNode
+
+ensureDirHelper :: Members '[State FS] r => Path Abs Dir -> Sem r ()
+ensureDirHelper p = do
+  checkRoot r
+  modify (over fsNode (go dirs))
+  where
+    (r, dirs) = destructAbsDir p
+    go :: [Path Rel Dir] -> FSNode -> FSNode
+    go = \case
+      [] -> id
+      (d : ds) -> over dirDirs (HashMap.alter (Just . helper) d)
+        where
+          helper :: Maybe FSNode -> FSNode
+          helper = go ds . fromMaybe emptyNode
+
+writeFileHelper :: Members '[State FS] r => Path Abs File -> Text -> Sem r ()
+writeFileHelper p contents = do
+  checkRoot r
+  modify (over fsNode (go dirs))
+  where
+    (r, dirs, f) = destructAbsFile p
+    go :: [Path Rel Dir] -> FSNode -> FSNode
+    go = \case
+      [] -> set (dirFiles . at f) (Just contents)
+      (d : ds) -> over dirDirs (HashMap.alter (Just . helper) d)
+        where
+          helper :: Maybe FSNode -> FSNode
+          helper = maybe (error "directory does not exist") (go ds)
+
+lookupDir :: Members '[State FS] r => Path Abs Dir -> Sem r (Maybe FSNode)
+lookupDir p = do
+  checkRoot p
+  r <- gets (^. fsNode)
+  return (go r (snd (destructAbsDir p)))
+  where
+    go :: FSNode -> [Path Rel Dir] -> Maybe FSNode
     go d = \case
-      [] -> d
-      (h : hs) -> go (HashMap.lookupDefault err h (d ^. dirDirs)) hs
-    err :: a
-    err = missingErr root (toFilePath p)
+      [] -> return d
+      (h : hs) -> do
+        d' <- HashMap.lookup h (d ^. dirDirs)
+        go d' hs
+
+lookupDir' :: forall r. Members '[State FS] r => Path Abs Dir -> Sem r FSNode
+lookupDir' p = fromMaybeM err (lookupDir p)
+  where
+    err :: Sem r FSNode
+    err = missingErr (toFilePath p)
+
+lookupFile :: Members '[State FS] r => Path Abs File -> Sem r (Maybe Text)
+lookupFile p = do
+  node <- lookupDir (parent p)
+  return (node >>= HashMap.lookup (filename p) . (^. dirFiles))
+
+lookupFile' :: Members '[State FS] r => Path Abs File -> Sem r Text
+lookupFile' p =
+  fromMaybeM err (lookupFile p)
+  where
+    err = missingErr (toFilePath p)

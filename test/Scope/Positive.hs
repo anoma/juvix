@@ -12,6 +12,7 @@ import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Setup
 import Juvix.Extra.Stdlib
+import Juvix.Prelude.Path
 import Juvix.Prelude.Pretty
 
 data PosTest = PosTest
@@ -36,7 +37,7 @@ testDescr PosTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Steps $ \step -> do
-            cwd <- getCurrentDirectory
+            cwd <- getCurrentDir
             entryFile <- canonicalizePath _file
             let noStdlib = _stdlibMode == StdlibExclude
                 entryPoint =

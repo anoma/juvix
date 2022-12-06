@@ -18,6 +18,7 @@ import Juvix.Compiler.Concrete.Translation.FromSource.Lexer hiding (symbol)
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Parser.Error
 import Juvix.Prelude
+import Juvix.Prelude.Path
 import Juvix.Prelude.Pretty (Pretty, prettyText)
 
 type JudocStash = State (Maybe (Judoc 'Parsed))
@@ -27,14 +28,14 @@ fromSource ::
   EntryPoint ->
   Sem r ParserResult
 fromSource e = mapError (JuvixError @ParserError) $ do
-  (_resultTable, _resultModules) <- runInfoTableBuilder (runReader e (mapM goFile (e ^. entryPointModulePaths)))
+  (_resultTable, _resultModules) <- runInfoTableBuilder (runReader e (mapM (goFile . absFile) (e ^. entryPointModulePaths)))
   let _resultEntry = e
   return ParserResult {..}
   where
     goFile ::
       forall r.
       Members '[Files, Error ParserError, InfoTableBuilder, NameIdGen] r =>
-      FilePath ->
+      Path Abs File ->
       Sem r (Module 'Parsed 'ModuleTop)
     goFile fileName = do
       input <- getFileContents fileName
@@ -43,9 +44,9 @@ fromSource e = mapError (JuvixError @ParserError) $ do
         Left er -> throw er
         Right (tbl, m) -> mergeTable tbl $> m
       where
-        getFileContents :: FilePath -> Sem r Text
+        getFileContents :: Path Abs File -> Sem r Text
         getFileContents fp
-          | fp == e ^. mainModulePath,
+          | fp == absFile (e ^. mainModulePath),
             Just txt <- e ^. entryPointStdin =
               return txt
           | otherwise = readFile' fp
@@ -65,12 +66,12 @@ expressionFromTextSource fp txt = mapError (JuvixError @ParserError) $ do
 
 -- | The fileName is only used for reporting errors. It is safe to pass
 -- an empty string.
-runModuleParser :: Members '[NameIdGen] r => FilePath -> Text -> Sem r (Either ParserError (InfoTable, Module 'Parsed 'ModuleTop))
+runModuleParser :: Members '[NameIdGen] r => Path Abs File -> Text -> Sem r (Either ParserError (InfoTable, Module 'Parsed 'ModuleTop))
 runModuleParser fileName input = do
   m <-
     runInfoTableBuilder $
       evalState (Nothing @(Judoc 'Parsed)) $
-        P.runParserT topModuleDef fileName input
+        P.runParserT topModuleDef (toFilePath fileName) input
   case m of
     (_, Left err) -> return (Left (ParserError err))
     (tbl, Right r) -> return (Right (tbl, r))

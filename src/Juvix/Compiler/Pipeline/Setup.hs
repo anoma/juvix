@@ -25,11 +25,10 @@ setupStdlib = do
   e <- ask
   stdlibRootPath <- case e ^. entryPointStdlibPath of
     Nothing -> do
-      let
-        d :: Path Abs Dir
-        d = defaultStdlibPath (absDir (e ^. entryPointRoot))
+      let d :: Path Abs Dir
+          d = defaultStdlibPath (absDir (e ^. entryPointRoot))
       runReader d updateStdlib
-      getAbsPath d
-    Just p -> getAbsPath p
-  traceM ("stdlib at " <> pack stdlibRootPath)
-  addDependency (Dependency stdlibRootPath)
+      return d
+    Just p -> absDir <$> canonicalizePath' p
+  traceM ("stdlib at " <> pack (toFilePath stdlibRootPath))
+  addDependency (Dependency (toFilePath stdlibRootPath))

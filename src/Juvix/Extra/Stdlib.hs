@@ -30,7 +30,7 @@ writeStdlib = do
   where
     writeJuvixFile :: Path Abs File -> ByteString -> Sem r ()
     writeJuvixFile p bs = do
-      createDirectoryIfMissing' (parent p)
+      ensureDir' (parent p)
       writeFileBS p bs
 
 stdlibVersionFile :: Member (Reader RootPath) r => Sem r (Path Abs File)
@@ -41,7 +41,7 @@ writeVersion = stdlibVersionFile >>= flip writeFile' versionTag
 
 readVersion :: Members '[Reader RootPath, Files] r => Sem r (Maybe Text)
 readVersion = do
-  vf <- toFilePath <$> stdlibVersionFile
+  vf <- stdlibVersionFile
   whenMaybeM (fileExists' vf) (readFile' vf)
 
 updateStdlib :: forall r. Members '[Reader RootPath, Files] r => Sem r ()

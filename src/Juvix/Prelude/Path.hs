@@ -1,12 +1,14 @@
 module Juvix.Prelude.Path
   ( module Juvix.Prelude.Path,
     module Path,
+    module Path.IO,
   )
 where
 
 import Juvix.Prelude.Base
 import Path hiding ((<.>), (</>))
 import Path qualified
+import Path.IO hiding (canonicalizePath, doesFileExist, listDirRel, walkDirRel)
 
 -- | Synonym for Path.</>. Useful to avoid name clashes
 infixr 5 <//>
@@ -26,12 +28,21 @@ absFile = fromJust . parseAbsFile
 absDir :: FilePath -> Path Abs Dir
 absDir = fromJust . parseAbsDir
 
-destructPath :: Path b Dir -> [Path Rel Dir]
-destructPath p = map relDir (splitPath (toFilePath p))
+destructAbsDir :: Path Abs Dir -> (Path Abs Dir, [Path Rel Dir])
+destructAbsDir d = go d []
+  where
+    go :: Path Abs Dir -> [Path Rel Dir] -> (Path Abs Dir, [Path Rel Dir])
+    go p acc
+      | isRoot p = (p, acc)
+      | otherwise = go (parent p) (dirname p : acc)
+    isRoot :: Path Abs Dir -> Bool
+    isRoot p = parent p == p
 
-destructFilePath :: Path b File -> ([Path Rel Dir], Path Rel File)
-destructFilePath p = case nonEmptyUnsnoc (nonEmpty' (splitPath (toFilePath p))) of
-  (ps, f) -> (fmap relDir (maybe [] toList ps), relFile f)
+-- | is the root of absolute files always "/" ?
+destructAbsFile :: Path Abs File -> (Path Abs Dir, [Path Rel Dir], Path Rel File)
+destructAbsFile x = (root, dirs, filename x)
+  where
+    (root, dirs) = destructAbsDir (parent x)
 
 isJuvixFile :: Path b File -> Bool
 isJuvixFile = maybe False (== ".juvix") . fileExtension

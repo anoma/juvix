@@ -16,25 +16,25 @@ import Juvix.Prelude.Base
 import Juvix.Prelude.Path
 
 walkDirRelAccum ::
-  forall acc b r.
+  forall acc r.
   Member Files r =>
-  (Path b Dir -> [Path Rel Dir] -> [Path Rel File] -> acc -> Sem r (acc, Recurse Rel)) ->
-  Path b Dir ->
+  (Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> acc -> Sem r (acc, Recurse Rel)) ->
+  Path Abs Dir ->
   acc ->
   Sem r acc
 walkDirRelAccum handler topdir' ini = execState ini (walkDirRel helper topdir')
   where
-    helper :: Path b Dir -> [Path Rel Dir] -> [Path Rel File] -> Sem (State acc ': r) (Recurse Rel)
+    helper :: Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> Sem (State acc ': r) (Recurse Rel)
     helper cd dirs files = do
       (acc', r) <- get >>= raise . handler cd dirs files
       put acc'
       return r
 
 walkDirRel ::
-  forall b r.
+  forall r.
   Member Files r =>
-  (Path b Dir -> [Path Rel Dir] -> [Path Rel File] -> Sem r (Recurse Rel)) ->
-  Path b Dir ->
+  (Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> Sem r (Recurse Rel)) ->
+  Path Abs Dir ->
   Sem r ()
 walkDirRel handler topdir' = do
   topdir :: Path Abs Dir <- getDirAbsPath topdir'
@@ -44,7 +44,7 @@ walkDirRel handler topdir' = do
           walktree curdir
       walktree :: Path Rel Dir -> Sem (State (HashSet Uid) ': r) ()
       walktree curdir = do
-        let fullDir :: Path b Dir = topdir' <//> curdir
+        let fullDir :: Path Abs Dir = topdir' <//> curdir
         (subdirs, files) <- listDirRel fullDir
         action <- raise (handler fullDir subdirs files)
         case action of
