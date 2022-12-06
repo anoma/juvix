@@ -17,6 +17,7 @@ import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Extra.Paths
 import Juvix.Extra.Version
 import Juvix.Prelude
+import Juvix.Prelude.Path
 import Prettyprinter.Render.Util.SimpleDocTree
 import Text.Blaze.Html
 import Text.Blaze.Html.Renderer.Text qualified as Html
@@ -216,12 +217,12 @@ putTag ann x = case ann of
 nameIdAttr :: S.NameId -> AttributeValue
 nameIdAttr (S.NameId k) = fromString . show $ k
 
-moduleDocRelativePath :: Members '[Reader HtmlOptions] r => TopModulePath -> Sem r FilePath
+moduleDocRelativePath :: Members '[Reader HtmlOptions] r => TopModulePath -> Sem r (Path Rel File)
 moduleDocRelativePath m = do
   suff <- kindSuffix <$> asks (^. htmlOptionsKind)
   return (topModulePathToRelativeFilePathDot ".html" suff m)
 
 nameIdAttrRef :: Members '[Reader HtmlOptions] r => TopModulePath -> Maybe S.NameId -> Sem r AttributeValue
 nameIdAttrRef tp s = do
-  pth <- moduleDocRelativePath tp
+  pth <- toFilePath <$> moduleDocRelativePath tp
   return (fromString pth <> preEscapedToValue '#' <>? (nameIdAttr <$> s))
