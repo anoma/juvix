@@ -6,6 +6,8 @@ module Juvix.Compiler.Pipeline
 where
 
 import Juvix.Compiler.Abstract.Translation qualified as Abstract
+import Juvix.Compiler.Asm.Pipeline qualified as Asm
+import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete qualified as Concrete
@@ -17,6 +19,8 @@ import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.ExpressionContext
 import Juvix.Compiler.Pipeline.Setup
+import Juvix.Compiler.Reg.Data.InfoTable qualified as Reg
+import Juvix.Compiler.Reg.Translation.FromAsm qualified as Reg
 import Juvix.Prelude
 
 type PipelineEff = '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, Embed IO]
@@ -149,6 +153,20 @@ upToMiniC ::
   Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins] r =>
   Sem r C.MiniCResult
 upToMiniC = upToInternalReachability >>= C.fromInternal
+
+--------------------------------------------------------------------------------
+-- Internal workflows
+--------------------------------------------------------------------------------
+
+asmToMiniC :: Member (Error JuvixError) r => Asm.Options -> Asm.InfoTable -> Sem r C.MiniCResult
+asmToMiniC opts = Asm.toReg opts >=> regToMiniC (opts ^. Asm.optLimits) . Reg.fromAsm
+
+regToMiniC :: Backend.Limits -> Reg.InfoTable -> Sem r C.MiniCResult
+regToMiniC lims = return . C.fromReg lims
+
+--------------------------------------------------------------------------------
+-- Run pipeline
+--------------------------------------------------------------------------------
 
 runIOEither :: forall a. BuiltinsState -> EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (BuiltinsState, a))
 runIOEither builtinsState entry =

@@ -74,7 +74,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
           ( \x y ->
               if
                   | y == 0 -> runtimeError "division by zero"
-                  | otherwise -> return $ ValInteger (x `div` y)
+                  | otherwise -> return $ ValInteger (x `quot` y)
           )
         goCode cont
       Binop IntMod -> do
@@ -82,7 +82,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
           ( \x y ->
               if
                   | y == 0 -> runtimeError "division by zero"
-                  | otherwise -> return $ ValInteger (x `mod` y)
+                  | otherwise -> return $ ValInteger (x `rem` y)
           )
         goCode cont
       Binop IntLt ->
@@ -183,8 +183,8 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
       ConstInt i -> return (ValInteger i)
       ConstBool b -> return (ValBool b)
       ConstString s -> return (ValString s)
-      ConstUnit -> return (ValUnit (Unit True))
-      ConstVoid -> return (ValUnit (Unit False))
+      ConstUnit -> return ValUnit
+      ConstVoid -> return ValVoid
       Ref r -> getMemVal r
 
     getMemVal :: Member Runtime r => MemValue -> Sem r Val
@@ -321,10 +321,10 @@ hRunIO hin hout infoTable funInfo = \case
     hRunIO hin hout infoTable funInfo x''
   ValConstr (Constr (BuiltinTag TagWrite) [ValString s]) -> do
     hPutStr hout s
-    return $ ValUnit (Unit False)
+    return ValVoid
   ValConstr (Constr (BuiltinTag TagWrite) [arg]) -> do
     hPutStr hout (ppPrint infoTable arg)
-    return $ ValUnit (Unit False)
+    return ValVoid
   ValConstr (Constr (BuiltinTag TagReadLn) []) -> do
     hFlush hout
     s <- hGetLine hin

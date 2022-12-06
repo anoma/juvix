@@ -129,8 +129,8 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       OpIntLt -> binNumCmpOp (<)
       OpIntLe -> binNumCmpOp (<=)
       OpEq -> binOp nodeFromBool id structEq
-      OpIntDiv -> divOp div
-      OpIntMod -> divOp mod
+      OpIntDiv -> divOp quot
+      OpIntMod -> divOp rem
       OpFail -> unary $ \msg -> Exception.throw (EvalError (fromString ("failure: " ++ printNode (eval' env msg))) Nothing)
       OpTrace -> binary $ \msg x -> Debug.trace (printNode (eval' env msg)) (eval' env x)
       where

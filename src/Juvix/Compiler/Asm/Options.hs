@@ -14,5 +14,12 @@ data Options = Options
 
 makeLenses ''Options
 
+makeOptions :: Target -> Bool -> Options
+makeOptions tgt debug =
+  Options
+    { _optDebug = debug,
+      _optLimits = getLimits tgt debug
+    }
+
 getClosureSize :: Options -> Int -> Int
 getClosureSize opts argsNum = opts ^. optLimits . limitsClosureHeadSize + argsNum

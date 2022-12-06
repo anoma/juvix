@@ -18,8 +18,10 @@
 // have the value MAX_UIDS.
 #define MAX_UIDS 1048576U
 
-// Maximum number of different constructors (globally).
-#define MAX_CONSTR_TAGS MAX_UIDS
+#define BUILTIN_UIDS_NUM 8U
+
+// Maximum number of different user constructors (globally).
+#define MAX_CONSTR_TAGS (MAX_UIDS - BUILTIN_UIDS_NUM)
 
 // Maximum number of special UIDs. Make sure this corresponds to the number of
 // bits in the SUID field in a special header word (see: juvix/object.h).

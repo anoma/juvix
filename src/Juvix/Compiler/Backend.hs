@@ -3,6 +3,7 @@ module Juvix.Compiler.Backend where
 import Juvix.Prelude
 
 data Target = TargetCWasm32Wasi | TargetCNative64
+  deriving stock (Data)
 
 data Limits = Limits
   { _limitsMaxConstrs :: Int,
@@ -13,7 +14,8 @@ data Limits = Limits
     _limitsClosureHeadSize :: Int,
     _limitsMaxStackDelta :: Int,
     _limitsMaxFunctionAlloc :: Int,
-    _limitsDispatchStackSize :: Int
+    _limitsDispatchStackSize :: Int,
+    _limitsBuiltinUIDsNum :: Int
   }
 
 makeLenses ''Limits
@@ -24,7 +26,7 @@ getLimits :: Target -> Bool -> Limits
 getLimits tgt debug = case tgt of
   TargetCWasm32Wasi ->
     Limits
-      { _limitsMaxConstrs = 1048576,
+      { _limitsMaxConstrs = 1048568,
         _limitsMaxConstrArgs = 255,
         _limitsMaxFunctionArgs = 253,
         _limitsMaxLocalVars = 2048,
@@ -32,11 +34,12 @@ getLimits tgt debug = case tgt of
         _limitsClosureHeadSize = if debug then 3 else 2,
         _limitsMaxStackDelta = 16368,
         _limitsMaxFunctionAlloc = 16368,
-        _limitsDispatchStackSize = 4
+        _limitsDispatchStackSize = 4,
+        _limitsBuiltinUIDsNum = 8
       }
   TargetCNative64 ->
     Limits
-      { _limitsMaxConstrs = 1048576,
+      { _limitsMaxConstrs = 1048568,
         _limitsMaxConstrArgs = 255,
         _limitsMaxFunctionArgs = 253,
         _limitsMaxLocalVars = 1024,
@@ -44,5 +47,6 @@ getLimits tgt debug = case tgt of
         _limitsClosureHeadSize = if debug then 3 else 2,
         _limitsMaxStackDelta = 8184,
         _limitsMaxFunctionAlloc = 8184,
-        _limitsDispatchStackSize = 4
+        _limitsDispatchStackSize = 4,
+        _limitsBuiltinUIDsNum = 8
       }

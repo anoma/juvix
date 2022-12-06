@@ -21,7 +21,8 @@ static function_info_t juvix_function_info_array[FUIDS_NUM] = {
     {"<closure>"}, {"compose"}, {"plus"}, {"inc"}, {"id"}};
 
 int main() {
-    JUVIX_PROLOGUE(3, JUVIX_DECL_ARGS);
+    JUVIX_DECL_ARGS;
+    JUVIX_PROLOGUE(3);
 
     DECL_ZEROARG_CLOSURE(id, FUID_ID, 1);
     DECL_ZEROARG_CLOSURE(inc, FUID_INC, 1);

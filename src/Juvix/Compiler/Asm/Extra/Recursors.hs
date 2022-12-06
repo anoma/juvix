@@ -391,7 +391,7 @@ recurseS' sig = go
 
         fixStackCallClosures :: StackInfo -> InstrCallClosures -> Sem r StackInfo
         fixStackCallClosures si InstrCallClosures {..} = do
-          return $ stackInfoPopValueStack (_callClosuresArgsNum - 1) si
+          return $ stackInfoPopValueStack _callClosuresArgsNum si
 
     goBranch :: StackInfo -> CmdBranch -> Sem r (StackInfo, a)
     goBranch si cmd@CmdBranch {..} = do
