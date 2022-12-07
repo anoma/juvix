@@ -9,8 +9,8 @@ import System.Process qualified as Process
 runCommand :: Members '[Embed IO, App] r => DocOptions -> Sem r ()
 runCommand DocOptions {..} = do
   ctx <- runPipeline _docInputFile upToInternalTyped
-  let docDir = _docOutputDir ^. pathPath
+  docDir <- someBaseToAbs' (_docOutputDir ^. pathPath)
   Doc.compile docDir "proj" ctx
   when _docOpen $ case openCmd of
     Nothing -> say "Could not recognize the 'open' command for your OS"
-    Just opencmd -> embed (void (Process.spawnProcess opencmd [docDir </> Doc.indexFileName]))
+    Just opencmd -> embed (void (Process.spawnProcess opencmd [toFilePath (docDir <//> Doc.indexFileName)]))

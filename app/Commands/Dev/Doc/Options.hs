@@ -3,11 +3,10 @@ module Commands.Dev.Doc.Options where
 import CommonOptions
 
 data DocOptions = DocOptions
-  { _docOutputDir :: Path,
+  { _docOutputDir :: AppPath Dir,
     _docOpen :: Bool,
-    _docInputFile :: Path
+    _docInputFile :: AppPath File
   }
-  deriving stock (Data)
 
 makeLenses ''DocOptions
 
@@ -15,7 +14,7 @@ parseDoc :: Parser DocOptions
 parseDoc = do
   _docOutputDir <-
     parseGenericOutputDir
-      ( value "doc"
+      ( value (Rel (relDir "doc"))
           <> showDefault
           <> help "html output directory"
       )

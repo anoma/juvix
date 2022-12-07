@@ -7,8 +7,9 @@ import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 
 runCommand :: forall r. Members '[Embed IO, App] r => AsmValidateOptions -> Sem r ()
 runCommand opts = do
-  s <- embed (readFile file)
-  case Asm.runParser file s of
+  afile :: Path Abs File <- someBaseToAbs' file
+  s <- embed (readFile (toFilePath afile))
+  case Asm.runParser (toFilePath afile) s of
     Left err -> exitJuvixError (JuvixError err)
     Right tab -> do
       case Asm.validate' tab of
@@ -17,5 +18,5 @@ runCommand opts = do
         Nothing ->
           exitMsg ExitSuccess "validation succeeded"
   where
-    file :: FilePath
+    file :: SomeBase File
     file = opts ^. asmValidateInputFile . pathPath

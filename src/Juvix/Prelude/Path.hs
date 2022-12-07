@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Juvix.Prelude.Path
   ( module Juvix.Prelude.Path,
     module Path,
@@ -7,18 +5,14 @@ module Juvix.Prelude.Path
   )
 where
 
+import Juvix.Prelude.Path.OrphanInstances ()
 import Juvix.Prelude.Base
 import Path hiding ((<.>), (</>))
 import Path qualified
-import Path.IO hiding (doesFileExist, listDirRel, walkDirRel)
-import Prettyprinter
+import Path.IO hiding (listDirRel, walkDirRel)
 
 -- | Synonym for Path.</>. Useful to avoid name clashes
 infixr 5 <//>
-
--- | this orphan instance is very convenient
-instance Pretty (Path a b) where
-  pretty = pretty . toFilePath
 
 (<//>) :: Path b Dir -> Path Rel t -> Path b t
 (<//>) = (Path.</>)
@@ -62,3 +56,8 @@ isHiddenDirectory p = case toFilePath (dirname p) of
 
 parseRelFile' :: FilePath -> Path Rel File
 parseRelFile' = fromJust . parseRelFile
+
+someBaseToAbs :: Path Abs Dir -> SomeBase b -> Path Abs b
+someBaseToAbs root = \case
+  Rel r -> root <//> r
+  Abs a -> a

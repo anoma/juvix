@@ -7,7 +7,6 @@ import CommonOptions
 data AsmCommand
   = Run AsmRunOptions
   | Validate AsmValidateOptions
-  deriving stock (Data)
 
 parseAsmCommand :: Parser AsmCommand
 parseAsmCommand =

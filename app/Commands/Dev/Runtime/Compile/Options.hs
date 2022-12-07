@@ -2,18 +2,19 @@ module Commands.Dev.Runtime.Compile.Options where
 
 import CommonOptions
 
-data RuntimeCompileTarget = TargetWasm32Wasi | TargetNative64
+data RuntimeCompileTarget =
+  TargetWasm32Wasi
+   | TargetNative64
   deriving stock (Show, Data)
 
 data RuntimeCompileOptions = RuntimeCompileOptions
   { _runtimeCompileDebug :: Bool,
     _runtimeCompilePreprocess :: Bool,
     _runtimeCompileAssembly :: Bool,
-    _runtimeCompileOutputFile :: Maybe Path,
+    _runtimeCompileOutputFile :: Maybe (AppPath File),
     _runtimeCompileTarget :: RuntimeCompileTarget,
-    _runtimeCompileInputFile :: Path
+    _runtimeCompileInputFile :: AppPath File
   }
-  deriving stock (Data)
 
 makeLenses ''RuntimeCompileOptions
 

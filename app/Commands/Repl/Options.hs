@@ -3,10 +3,9 @@ module Commands.Repl.Options where
 import CommonOptions
 
 data ReplOptions = ReplOptions
-  { _replInputFile :: Maybe Path,
+  { _replInputFile :: Maybe (AppPath File),
     _replNoPrelude :: Bool
   }
-  deriving stock (Data)
 
 makeLenses ''ReplOptions
 

@@ -9,9 +9,8 @@ import Juvix.Compiler.Concrete.Data.Highlight
 
 data HighlightOptions = HighlightOptions
   { _highlightBackend :: HighlightBackend,
-    _highlightInputFile :: Path
+    _highlightInputFile :: AppPath File
   }
-  deriving stock (Data)
 
 parseHighlight :: Parser HighlightOptions
 parseHighlight = do

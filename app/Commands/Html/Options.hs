@@ -6,11 +6,10 @@ import Juvix.Compiler.Backend.Html.Data.Theme
 data HtmlOptions = HtmlOptions
   { _htmlRecursive :: Bool,
     _htmlTheme :: Theme,
-    _htmlOutputDir :: Path,
-    _htmlInputFile :: Path,
+    _htmlOutputDir :: (AppPath Dir),
+    _htmlInputFile :: (AppPath File),
     _htmlPrintMetadata :: Bool
   }
-  deriving stock (Data)
 
 makeLenses ''HtmlOptions
 
@@ -33,7 +32,7 @@ parseHtml = do
       )
   _htmlOutputDir <-
     parseGenericOutputDir
-      ( value "html"
+      ( value (Rel $(mkRelDir "html"))
           <> showDefault
           <> help "html output directory"
           <> action "directory"

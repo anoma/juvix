@@ -13,17 +13,17 @@ data App m a where
   ExitMsg :: ExitCode -> Text -> App m a
   ExitJuvixError :: JuvixError -> App m a
   PrintJuvixError :: JuvixError -> App m ()
-  AskRoot :: App m FilePath
+  AskRoot :: App m (Path Abs Dir)
   AskPackage :: App m Package
   AskGlobalOptions :: App m GlobalOptions
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
-  RunPipelineEither :: Path -> Sem PipelineEff a -> App m (Either JuvixError (BuiltinsState, a))
+  RunPipelineEither :: AppPath File -> Sem PipelineEff a -> App m (Either JuvixError (BuiltinsState, a))
   Say :: Text -> App m ()
   SayRaw :: ByteString -> App m ()
 
 makeSem ''App
 
-runAppIO :: forall r a. Member (Embed IO) r => GlobalOptions -> FilePath -> Package -> Sem (App ': r) a -> Sem r a
+runAppIO :: forall r a. Member (Embed IO) r => GlobalOptions -> Path Abs Dir -> Package -> Sem (App ': r) a -> Sem r a
 runAppIO g root pkg = interpret $ \case
   RenderStdOut t
     | g ^. globalOnlyErrors -> return ()
@@ -50,7 +50,7 @@ runAppIO g root pkg = interpret $ \case
     printErr e =
       embed $ hPutStrLn stderr $ run $ runReader (project' @GenericOptions g) $ Error.render (not (g ^. globalNoColors)) (g ^. globalOnlyErrors) e
 
-getEntryPoint' :: GlobalOptions -> Path Abs Dir -> Package -> Path -> IO EntryPoint
+getEntryPoint' :: GlobalOptions -> Path Abs Dir -> Package -> AppPath File -> IO EntryPoint
 getEntryPoint' opts root pkg inputFile = do
   estdin <-
     if
@@ -62,24 +62,29 @@ getEntryPoint' opts root pkg inputFile = do
         _entryPointNoTermination = opts ^. globalNoTermination,
         _entryPointNoPositivity = opts ^. globalNoPositivity,
         _entryPointNoStdlib = opts ^. globalNoStdlib,
-        _entryPointStdlibPath = opts ^. globalStdlibPath,
+        _entryPointStdlibPath = someBaseToAbs root <$> opts ^. globalStdlibPath,
         _entryPointPackage = pkg,
-        _entryPointModulePaths = pure (inputFile ^. pathPath),
+        _entryPointModulePaths = pure (someBaseToAbs root (inputFile ^. pathPath)),
         _entryPointGenericOptions = project opts,
         _entryPointStdin = estdin
       }
 
+someBaseToAbs' :: Members '[App] r => SomeBase a -> Sem r (Path Abs a)
+someBaseToAbs' f = do
+  r <- askRoot
+  return (someBaseToAbs r f)
+
 askGenericOptions :: Members '[App] r => Sem r GenericOptions
 askGenericOptions = project <$> askGlobalOptions
 
-getEntryPoint :: Members '[Embed IO, App] r => Path -> Sem r EntryPoint
+getEntryPoint :: Members '[Embed IO, App] r => AppPath File -> Sem r EntryPoint
 getEntryPoint inputFile = do
   opts <- askGlobalOptions
   root <- askRoot
   pkg <- askPackage
   embed (getEntryPoint' opts root pkg inputFile)
 
-runPipeline :: Member App r => Path -> Sem PipelineEff a -> Sem r a
+runPipeline :: Member App r => AppPath File -> Sem PipelineEff a -> Sem r a
 runPipeline input p = do
   r <- runPipelineEither input p
   case r of

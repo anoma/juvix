@@ -32,7 +32,7 @@ init = do
 
 checkNotInProject :: forall r. Members '[Embed IO] r => Sem r ()
 checkNotInProject =
-  whenM (embed (doesFileExist juvixYamlFile)) err
+  whenM (doesFileExist juvixYamlFile') err
   where
     err :: Sem r ()
     err = do
@@ -67,7 +67,7 @@ getProjName = do
   where
     getDefault :: Sem r (Maybe Text)
     getDefault = runFail $ do
-      dir <- map toLower <$> (embed getCurrentDirectory >>= Fail.last . splitDirectories)
+      dir <- map toLower . dropTrailingPathSeparator . toFilePath . dirname <$> getCurrentDir
       Fail.fromRight (parse projectNameParser (pack dir))
     readName :: Maybe Text -> Sem r Text
     readName def = go

@@ -68,7 +68,7 @@ type DoctorEff = '[Log, Embed IO]
 
 checkCmdOnPath :: Members DoctorEff r => String -> [Text] -> Sem r ()
 checkCmdOnPath cmd errMsg =
-  whenM (isNothing <$> embed (findExecutable cmd)) (mapM_ warning errMsg)
+  whenM (isNothing <$> findExecutable (relFile cmd)) (mapM_ warning errMsg)
 
 checkClangTargetSupported :: Members DoctorEff r => String -> [Text] -> Sem r ()
 checkClangTargetSupported target errMsg = do

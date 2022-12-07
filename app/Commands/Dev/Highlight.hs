@@ -26,4 +26,4 @@ runCommand HighlightOptions {..} = do
                 { _highlightNames = names,
                   _highlightParsed = items
                 }
-      raw (Highlight.go _highlightBackend hinput)
+      sayRaw (Highlight.go _highlightBackend hinput)

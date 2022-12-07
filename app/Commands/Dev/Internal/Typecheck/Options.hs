@@ -4,9 +4,8 @@ import CommonOptions
 
 data InternalTypeOptions = InternalTypeOptions
   { _internalTypePrint :: Bool,
-    _internalTypeInputFile :: Path
+    _internalTypeInputFile :: AppPath File
   }
-  deriving stock (Data)
 
 makeLenses ''InternalTypeOptions
 

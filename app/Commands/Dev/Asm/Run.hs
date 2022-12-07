@@ -12,8 +12,9 @@ import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 
 runCommand :: forall r. Members '[Embed IO, App] r => AsmRunOptions -> Sem r ()
 runCommand opts = do
-  s <- embed (readFile file)
-  case Asm.runParser file s of
+  afile :: Path Abs File <- someBaseToAbs' file
+  s <- embed (readFile (toFilePath afile))
+  case Asm.runParser (toFilePath afile) s of
     Left err -> exitJuvixError (JuvixError err)
     Right tab ->
       let v = if opts ^. asmRunNoValidate then Nothing else Asm.validate' tab
@@ -35,7 +36,7 @@ runCommand opts = do
                 Nothing ->
                   exitMsg (ExitFailure 1) "no 'main' function"
   where
-    file :: FilePath
+    file :: SomeBase File
     file = opts ^. asmRunInputFile . pathPath
 
     doRun ::

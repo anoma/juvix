@@ -7,9 +7,8 @@ import Juvix.Compiler.Core.Pretty.Options qualified as Core
 data InternalCoreEvalOptions = InternalCoreEvalOptions
   { _internalCoreEvalShowDeBruijn :: Bool,
     _internalCoreEvalNoIO :: Bool,
-    _internalCoreEvalInputFile :: Path
+    _internalCoreEvalInputFile :: AppPath File
   }
-  deriving stock (Data)
 
 makeLenses ''InternalCoreEvalOptions
 

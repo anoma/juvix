@@ -3,9 +3,8 @@ module Commands.Dev.Asm.Validate.Options where
 import CommonOptions
 
 newtype AsmValidateOptions = AsmValidateOptions
-  { _asmValidateInputFile :: Path
+  { _asmValidateInputFile :: AppPath File
   }
-  deriving stock (Data)
 
 makeLenses ''AsmValidateOptions
 

@@ -153,7 +153,7 @@ import Prettyprinter (Doc, (<+>))
 import Safe.Exact
 import Safe.Foldable
 import System.Exit
-import System.FilePath (FilePath, normalise, (<.>), (</>))
+import System.FilePath (FilePath, normalise, (<.>), (</>), dropTrailingPathSeparator)
 import System.IO hiding
   ( appendFile,
     getContents,

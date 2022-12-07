@@ -11,9 +11,8 @@ data CoreReadOptions = CoreReadOptions
     _coreReadShowDeBruijn :: Bool,
     _coreReadEval :: Bool,
     _coreReadNoPrint :: Bool,
-    _coreReadInputFile :: Path
+    _coreReadInputFile :: AppPath File
   }
-  deriving stock (Data)
 
 makeLenses ''CoreReadOptions
 

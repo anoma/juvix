@@ -5,9 +5,8 @@ import Data.Text qualified as Text
 
 data CallGraphOptions = CallGraphOptions
   { _graphFunctionNameFilter :: Maybe (NonEmpty Text),
-    _graphInputFile :: Path
+    _graphInputFile :: AppPath File
   }
-  deriving stock (Data)
 
 makeLenses ''CallGraphOptions
 

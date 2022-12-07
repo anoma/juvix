@@ -13,7 +13,7 @@ import Juvix.Compiler.Core.Pretty qualified as Core
 import Text.Megaparsec.Pos qualified as M
 
 data EvalOptions = EvalOptions
-  { _evalInputFile :: Path,
+  { _evalInputFile :: AppPath File,
     _evalNoIO :: Bool
   }
 
@@ -58,6 +58,6 @@ evalAndPrint opts tab node = do
       embed (putStrLn "")
   where
     defaultLoc :: Interval
-    defaultLoc = singletonInterval (mkLoc 0 (M.initialPos f))
-    f :: FilePath
+    defaultLoc = singletonInterval (mkLoc 0 (M.initialPos (fromSomeFile f)))
+    f :: SomeBase File
     f = project opts ^. evalInputFile . pathPath
