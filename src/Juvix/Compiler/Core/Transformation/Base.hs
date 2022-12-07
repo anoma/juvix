@@ -10,7 +10,17 @@ import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Language
 
-type Transformation = InfoTable -> InfoTable
+mapIdents :: (IdentifierInfo -> IdentifierInfo) -> InfoTable -> InfoTable
+mapIdents = over infoIdentifiers . fmap
+
+mapInductives :: (InductiveInfo -> InductiveInfo) -> InfoTable -> InfoTable
+mapInductives = over infoInductives . fmap
+
+mapConstructors :: (ConstructorInfo -> ConstructorInfo) -> InfoTable -> InfoTable
+mapConstructors = over infoConstructors . fmap
+
+mapAxioms :: (AxiomInfo -> AxiomInfo) -> InfoTable -> InfoTable
+mapAxioms = over infoAxioms . fmap
 
 mapT :: (Symbol -> Node -> Node) -> InfoTable -> InfoTable
 mapT f tab = tab {_identContext = HashMap.mapWithKey f (tab ^. identContext)}

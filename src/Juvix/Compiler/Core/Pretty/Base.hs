@@ -342,7 +342,7 @@ instance PrettyCode InfoTable where
   ppCode :: forall r. Member (Reader Options) r => InfoTable -> Sem r (Doc Ann)
   ppCode tbl = do
     ctx' <- ppContext (tbl ^. identContext)
-    return ("-- IdentContext" <> line <> ctx' <> line)
+    return ("-- Identifiers" <> line <> ctx' <> line)
     where
       ppContext :: IdentContext -> Sem r (Doc Ann)
       ppContext ctx = do
@@ -356,7 +356,11 @@ instance PrettyCode InfoTable where
                 mname' = (\nm -> nm <> "!" <> prettyText s) mname
             sym' <- ppName KNameLocal mname'
             body' <- ppCode n
-            return (kwDef <+> sym' <+> kwAssign <+> nest 2 body')
+            let ii = fromJust $ HashMap.lookup s (tbl ^. infoIdentifiers)
+                ty = ii ^. identifierType
+            ty' <- ppCode ty
+            let tydoc = if isDynamic ty then mempty else space <> colon <+> ty'
+            return (kwDef <+> sym' <> tydoc <+> kwAssign <+> nest 2 body')
 
 instance PrettyCode Stripped.InfoTable where
   ppCode :: forall r. Member (Reader Options) r => Stripped.InfoTable -> Sem r (Doc Ann)

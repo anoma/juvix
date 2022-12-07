@@ -14,6 +14,7 @@ import Juvix.Compiler.Core.Transformation.Eta
 import Juvix.Compiler.Core.Transformation.Identity
 import Juvix.Compiler.Core.Transformation.LambdaLifting
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
+import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 
 applyTransformations :: [TransformationId] -> InfoTable -> InfoTable
 applyTransformations ts tbl = foldl' (flip appTrans) tbl ts
@@ -23,3 +24,4 @@ applyTransformations ts tbl = foldl' (flip appTrans) tbl ts
       LambdaLifting -> lambdaLifting
       Identity -> identity
       TopEtaExpand -> topEtaExpand
+      RemoveTypeArgs -> removeTypeArgs

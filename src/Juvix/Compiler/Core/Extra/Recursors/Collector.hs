@@ -32,3 +32,12 @@ binderNumCollector' ini = Collector ini (\(k, _) c -> c + k)
 
 binderNumCollector :: Collector (Int, [Binder]) Index
 binderNumCollector = binderNumCollector' 0
+
+pairCollector :: Collector a b -> Collector a c -> Collector a (b, c)
+pairCollector coll1 coll2 = Collector {
+    _cEmpty = (coll1 ^. cEmpty, coll2 ^. cEmpty),
+    _cCollect = \a (b, c) -> ((coll1 ^. cCollect) a b, (coll2 ^. cCollect) a c)
+  }
+
+identityCollector :: c -> Collector a c
+identityCollector ini = Collector ini (const id)
