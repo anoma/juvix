@@ -18,7 +18,8 @@ static constr_info_t juvix_constr_info_array[CONSTRS_NUM] = {
 #define CONSTR_NIL MAKE_HEADER(UID_NIL, 0)
 
 int main() {
-    JUVIX_PROLOGUE(3, JUVIX_DECL_ARGS);
+    JUVIX_DECL_ARGS;
+    JUVIX_PROLOGUE(3);
 
     juvix_constrs_num = CONSTRS_NUM;
     juvix_constr_info = juvix_constr_info_array;

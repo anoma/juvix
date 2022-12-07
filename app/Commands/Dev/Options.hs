@@ -12,7 +12,7 @@ module Commands.Dev.Options
   )
 where
 
-import Commands.Dev.Asm.Options
+import Commands.Dev.Asm.Options hiding (Compile)
 import Commands.Dev.Core.Options
 import Commands.Dev.DisplayRoot.Options
 import Commands.Dev.Doc.Options

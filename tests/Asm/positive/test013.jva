@@ -7,9 +7,11 @@ function fib'(integer, integer, integer) : integer {
   br {
     true: { push arg[1]; ret; }
     false: {
+      push 16777216;
       push arg[2];
       push arg[1];
       add;
+      mod;
       push arg[2];
       push 1;
       push arg[0];

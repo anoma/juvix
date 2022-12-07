@@ -10,7 +10,8 @@ static constr_info_t juvix_constr_info_array[CONSTRS_NUM] = {BUILTIN_UIDS_INFO,
                                                              {"box"}};
 
 int main() {
-    JUVIX_PROLOGUE(1, JUVIX_DECL_ARGS);
+    JUVIX_DECL_ARGS;
+    JUVIX_PROLOGUE(1);
 
     juvix_constrs_num = CONSTRS_NUM;
     juvix_constr_info = juvix_constr_info_array;

@@ -21,14 +21,10 @@ data Val
   = ValInteger Integer
   | ValBool Bool
   | ValString Text
-  | ValUnit Unit
+  | ValUnit
+  | ValVoid
   | ValConstr Constr
   | ValClosure Closure
-  deriving stock (Eq)
-
-newtype Unit = Unit
-  { _unitDisplay :: Bool
-  }
   deriving stock (Eq)
 
 data Constr = Constr
@@ -43,7 +39,6 @@ data Closure = Closure
   }
   deriving stock (Eq)
 
-makeLenses ''Unit
 makeLenses ''Constr
 makeLenses ''Closure
 
@@ -62,6 +57,7 @@ instance HasAtomicity Val where
     ValInteger {} -> Atom
     ValBool {} -> Atom
     ValString {} -> Atom
-    ValUnit {} -> Atom
+    ValUnit -> Atom
+    ValVoid -> Atom
     ValConstr c -> atomicity c
     ValClosure cl -> atomicity cl

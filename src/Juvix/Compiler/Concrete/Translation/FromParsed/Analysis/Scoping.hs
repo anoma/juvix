@@ -78,13 +78,14 @@ scopeCheckExpression ::
   Sem r Expression
 scopeCheckExpression tab scope as = mapError (JuvixError @ScoperError) $ do
   snd
-    <$> ( runInfoTableBuilder tab $
-            runReader iniScopeParameters $
-              evalState iniScoperState $
-                evalState scope $
-                  localScope $
-                    checkParseExpressionAtoms as
-        )
+    <$> runInfoTableBuilder
+      tab
+      ( runReader iniScopeParameters $
+          evalState iniScoperState $
+            evalState scope $
+              localScope $
+                checkParseExpressionAtoms as
+      )
 
 checkParseExpressionAtoms' ::
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>

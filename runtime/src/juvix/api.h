@@ -12,11 +12,9 @@
     funcall_init()
 
 // MAX_ARGS is the maximum number of function arguments, at least 1.
-// ARG_DECLS declares the argument variables (using DECL_ARG and DECL_REG_ARG
-// from funcall/funcall.h)
-#define JUVIX_PROLOGUE(MAX_ARGS, ARG_DECLS)         \
+#define JUVIX_PROLOGUE(MAX_ARGS)                    \
     MEM_DECLS;                                      \
-    ARG_DECLS;                                      \
+    UNUSED word_t juvix_temp_var;                   \
     FUNCALL_DECLS(MAX_ARGS);                        \
     JUVIX_INIT;                                     \
     STACK_PUSH_ADDR(LABEL_ADDR(juvix_program_end)); \
@@ -80,16 +78,16 @@ closure_label:
 
 #define JUVIX_ASSIGN(var0, val) (var0 = val)
 
-#define JUVIX_TRACE(val) (io_print_toplevel(val))
+#define JUVIX_TRACE(val) (io_trace(val))
 #define JUVIX_DUMP (stacktrace_dump())
-#define JUVIX_FAILURE(val)      \
-    do {                        \
-        io_print_toplevel(val); \
-        error_exit();           \
+#define JUVIX_FAILURE(val) \
+    do {                   \
+        io_trace(val);     \
+        error_exit();      \
     } while (0)
 
 #define JUVIX_ALLOC_INT(var, val) (var = make_smallint(val))
-// ALLOC_CONSTR_BOXED(var, uid, nfields)
+// ALLOC_CONSTR_BOXED(var, uid, nargs)
 // ALLOC_CONSTR_BOXED_TAG(var, uid)
 // ALLOC_CONSTR_UNBOXED(var, uid)
 // ALLOC_CONSTR_PAIR(var)

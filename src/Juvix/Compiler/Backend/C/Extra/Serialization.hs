@@ -77,6 +77,18 @@ mkCDecl Declaration {..} = case _declType of
       funDerDeclr = [CFunDeclr (Right (funArgs, False)) [] C.undefNode]
       funArgs :: [CDecl]
       funArgs = mkCDecl . goTypeDecl' <$> _funPtrArgs
+  DeclArray Array {..} ->
+    CDecl
+      (CStorageSpec (CStatic C.undefNode) : mkDeclSpecifier _arrayType)
+      [(Just declr, initializer, Nothing)]
+      C.undefNode
+    where
+      declr :: CDeclr
+      declr = CDeclr (mkIdent <$> _declName) derivedDeclr Nothing [] C.undefNode
+      derivedDeclr :: [CDerivedDeclr]
+      derivedDeclr = [CArrDeclr [] (CArrSize False (CConst (CIntConst (cInteger _arraySize) C.undefNode))) C.undefNode]
+      initializer :: Maybe CInit
+      initializer = mkCInit <$> _declInitializer
   _ ->
     CDecl
       (mkDeclSpecifier _declType)
@@ -93,6 +105,7 @@ mkCDecl Declaration {..} = case _declType of
 mkCInit :: Initializer -> CInit
 mkCInit = \case
   ExprInitializer e -> CInitExpr (mkCExpr e) C.undefNode
+  ListInitializer l -> CInitList (map (\i -> ([], mkCInit i)) l) C.undefNode
   DesignatorInitializer ds -> CInitList (f <$> ds) C.undefNode
   where
     f :: DesigInit -> ([CDesignator], CInit)
@@ -152,12 +165,44 @@ mkCExpr = \case
     CUnary (mkUnaryOp _unaryOp) (mkCExpr _unarySubject) C.undefNode
   ExpressionMember MemberAccess {..} ->
     CMember (mkCExpr _memberSubject) (mkIdent _memberField) (_memberOp == Pointer) C.undefNode
+  ExpressionStatement stmt ->
+    CStatExpr (mkCStat stmt) C.undefNode
 
 mkCStat :: Statement -> CStat
 mkCStat = \case
   StatementReturn me -> CReturn (mkCExpr <$> me) C.undefNode
   StatementIf If {..} ->
     CIf (mkCExpr _ifCondition) (mkCStat _ifThen) (mkCStat <$> _ifElse) C.undefNode
+  StatementSwitch Switch {..} ->
+    CSwitch
+      (mkCExpr _switchCondition)
+      (CCompound [] (map CBlockStmt (caseStmts ++ caseDefault)) C.undefNode)
+      C.undefNode
+    where
+      caseStmts =
+        map
+          ( \Case {..} ->
+              CCase
+                (mkCExpr _caseValue)
+                ( CCompound
+                    []
+                    [ CBlockStmt (mkCStat _caseCode),
+                      CBlockStmt (CBreak C.undefNode)
+                    ]
+                    C.undefNode
+                )
+                C.undefNode
+          )
+          _switchCases
+      caseDefault =
+        maybe
+          [CDefault (mkCStat (StatementExpr (macroVar "UNREACHABLE"))) C.undefNode]
+          (\x -> [CDefault (mkCStat x) C.undefNode])
+          _switchDefault
+  StatementLabel Label {..} ->
+    CLabel (mkIdent _labelName) (mkCStat _labelCode) [] C.undefNode
+  StatementGoto Goto {..} ->
+    CGoto (mkIdent _gotoLabel) C.undefNode
   StatementExpr e -> CExpr (Just (mkCExpr e)) C.undefNode
   StatementCompound ss -> CCompound [] (CBlockStmt . mkCStat <$> ss) C.undefNode
 
@@ -167,6 +212,7 @@ mkBinaryOp = \case
   Neq -> CNeqOp
   And -> CLndOp
   Or -> CLorOp
+  Plus -> CAddOp
 
 mkUnaryOp :: UnaryOp -> CUnaryOp
 mkUnaryOp = \case
@@ -183,6 +229,7 @@ mkDeclSpecifier = \case
   DeclJuvixClosure -> mkTypeDefTypeSpec Str.juvixFunctionT
   BoolType -> [CTypeSpec (CBoolType C.undefNode)]
   DeclFunPtr {} -> []
+  DeclArray {} -> []
 
 mkEnumSpec :: Maybe Text -> Maybe [Text] -> [CDeclSpec]
 mkEnumSpec name members = [CTypeSpec (CEnumType enum C.undefNode)]

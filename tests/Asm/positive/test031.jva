@@ -1,4 +1,4 @@
--- Temporary stack with branching
+-- temporary stack with branching
 
 inductive tree {
   leaf : tree;
@@ -57,11 +57,13 @@ function f(tree) : integer {
         }
         node: {
           pusht;
+          push 32768;
           push tmp[3].node[1];
           call f;
           push tmp[3].node[0];
           call f;
           add;
+          mod;
           popt;
         }
       };
@@ -70,11 +72,13 @@ function f(tree) : integer {
       case tree {
         node: {
           pusht;
+          push 32768;
           push tmp[4].node[1];
           call f;
           push tmp[4].node[0];
           call f;
           add;
+          mod;
           popt;
         }
         default: {
@@ -83,9 +87,11 @@ function f(tree) : integer {
         }
       };
       pusht;
+      push 32768;
       push tmp[3];
       push tmp[4];
       mul;
+      mod;
       ret;
     }
   };

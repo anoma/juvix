@@ -83,8 +83,10 @@ instance PrettyCode Val where
       return $ annotate (AnnKind KNameConstructor) (pretty ("false" :: String))
     ValString txt ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
-    ValUnit {} ->
+    ValUnit ->
       return $ annotate (AnnKind KNameConstructor) (pretty ("unit" :: String))
+    ValVoid ->
+      return $ annotate (AnnKind KNameConstructor) (pretty ("void" :: String))
     ValConstr c ->
       ppCode c
     ValClosure cl ->
@@ -169,6 +171,8 @@ instance PrettyCode Type where
       return $ annotate (AnnKind KNameInductive) (pretty ("string" :: String))
     TyUnit ->
       return $ annotate (AnnKind KNameInductive) (pretty ("unit" :: String))
+    TyVoid ->
+      return $ annotate (AnnKind KNameInductive) (pretty ("void" :: String))
     TyInductive x ->
       ppCode x
     TyConstr x ->

@@ -6,6 +6,7 @@
 void io_init();
 void io_flush();
 
+void io_trace(word_t x);
 void io_print_toplevel(word_t x);
 
 // If the returned value is true, `ret` constains a closure and `arg` an

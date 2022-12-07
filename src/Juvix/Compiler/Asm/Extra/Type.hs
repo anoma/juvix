@@ -80,10 +80,13 @@ unifyTypes ty1 ty2 = case (ty1, ty2) of
     | ty1 == ty2 -> return ty1
   (TyString, TyString) -> return TyString
   (TyUnit, TyUnit) -> return TyUnit
+  (TyVoid, TyVoid) -> return TyVoid
   (TyInductive {}, TyInductive {})
     | ty1 == ty2 -> return ty1
   (TyUnit, _) -> err
   (_, TyUnit) -> err
+  (TyVoid, _) -> err
+  (_, TyVoid) -> err
   (TyInteger {}, _) -> err
   (_, TyInteger {}) -> err
   (TyString, _) -> err
@@ -131,9 +134,12 @@ isSubtype ty1 ty2 = case (ty1, ty2) of
   (TyBool {}, TyBool {}) -> True
   (TyString, TyString) -> True
   (TyUnit, TyUnit) -> True
+  (TyVoid, TyVoid) -> True
   (TyInductive {}, TyInductive {}) -> ty1 == ty2
   (TyUnit, _) -> False
   (_, TyUnit) -> False
+  (TyVoid, _) -> False
+  (_, TyVoid) -> False
   (TyInteger {}, _) -> False
   (_, TyInteger {}) -> False
   (TyString, _) -> False

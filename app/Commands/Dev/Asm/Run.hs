@@ -28,7 +28,7 @@ runCommand opts = do
                   case r of
                     Left err ->
                       exitJuvixError (JuvixError err)
-                    Right (Asm.ValUnit (Asm.Unit False)) ->
+                    Right Asm.ValVoid ->
                       return ()
                     Right val -> do
                       renderStdOut (Asm.ppOut (Asm.defaultOptions tab) val)

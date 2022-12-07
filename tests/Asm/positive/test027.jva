@@ -61,7 +61,7 @@ function main() {
   call power;
   trace;
   pop;
-  push 21;
+  push 11;
   push 5;
   call power;
   trace;

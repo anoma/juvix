@@ -50,7 +50,7 @@ do
             cd c
             for f in *.c; do
                 execute "clang -O3 -o `basename $f .c`.exe $f"
-                execute "clang -Os --target=wasm32-wasi --sysroot $WASI_SYSROOT_PATH -o `basename $f .c`.wasm $f"
+                execute "clang -Os -nodefaultlibs --target=wasm32-wasi --sysroot $WASI_SYSROOT_PATH -o `basename $f .c`.wasm $f -lc"
             done
             cd ..
         fi

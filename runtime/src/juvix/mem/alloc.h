@@ -54,7 +54,8 @@ static inline void alloc_save_memory_pointer(word_t *ptr) {
 
 // Allocate n words. Cannot call GC. This function doesn't require preallocation
 // and cancels all preallocations made. One needs to save the memory pointers
-// beforehand.
+// beforehand and restore them afterwards (with SAVE_MEMORY_POINTERS and
+// RESTORE_MEMORY_POINTERS).
 word_t *alloc(size_t n);
 
 #endif

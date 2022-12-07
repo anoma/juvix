@@ -92,9 +92,9 @@ follows:
 
 #+begin_src shell
 cd /tmp
-curl -OL https://github.com/anoma/juvix/releases/download/v0.2.6/juvix-linux_x86_64-v0.2.6.zip
-unzip juvix-linux_x86_64-v0.2.6.zip
-mv juvix-linux_x86_64-v0.2.6 ~/.local/bin/juvix
+curl -OL https://github.com/anoma/juvix/releases/download/v0.2.7/juvix-linux_x86_64-v0.2.7.zip
+unzip juvix-linux_x86_64-v0.2.7.zip
+mv juvix-linux_x86_64-v0.2.7 ~/.local/bin/juvix
 #+end_src
 
 *** Building Juvix from source
@@ -196,10 +196,7 @@ standard library's website]]. For futher details, please refer to
 
 For the language:
 
-- lambda expressions
-- =let= expressions
 - tail call optimization
-- inference for mutually recursive functions
 - compilation to circuits
 - coverage checking (i.e. exhaustiveness and useless clauses)
 
@@ -210,5 +207,8 @@ For the compiler:
 
 ** Community
 
-We would love to hear what you think of Juvix! Join us on
-[[https://discord.gg/vEQappb7wG][the Anoma Discord]].
+Join us on our [[https://discord.gg/waYhQ2Qr][Discord server]]
+
+This project is part of a bigger effort called [[https://anoma.net/][Anoma]].
+Anoma is a suite of protocols and mechqanisms for self-contained, self-sovereign coordination.
+Join the [[https://anoma.net/community][Anoma project]].

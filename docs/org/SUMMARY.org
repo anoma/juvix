@@ -26,6 +26,8 @@
   - [[./tooling/testing.md][Haskell test suite]]
 
 - [[./notes/README.md][Notes]]
+  - [[./notes/runtime-benchmark-results.md][Runtime benchmark results]]
+  - [[./notes/monomorphization.md][Monomorphization]]
   - [[./examples/validity-predicates/README.md][Validity predicates]]
   - [[./notes/strictly-positive-data-types.md][Strictly positive data types]]
 

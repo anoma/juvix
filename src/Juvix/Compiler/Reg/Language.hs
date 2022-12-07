@@ -48,7 +48,7 @@ data Instruction
   | ExtendClosure InstrExtendClosure
   | Call InstrCall
   | CallClosures InstrCallClosures
-  | Return
+  | Return InstrReturn
   | Branch InstrBranch
   | Case InstrCase
 
@@ -81,7 +81,7 @@ newtype InstrTrace = InstrTrace
   }
 
 newtype InstrFailure = InstrFailure
-  { _instrFailure :: Value
+  { _instrFailureValue :: Value
   }
 
 data InstrPrealloc = InstrPrealloc
@@ -130,6 +130,10 @@ data InstrCallClosures = InstrCallClosures
     _instrCallClosuresLiveVars :: [VarRef]
   }
 
+newtype InstrReturn = InstrReturn
+  { _instrReturnValue :: Value
+  }
+
 data InstrBranch = InstrBranch
   { _instrBranchValue :: Value,
     _instrBranchTrue :: Code,
@@ -148,6 +152,7 @@ data CaseBranch = CaseBranch
   { _caseBranchTag :: Tag,
     -- | Memory representation of the constructor corresponding to the branch.
     _caseBranchMemRep :: MemRep,
+    _caseBranchArgsNum :: Int,
     _caseBranchCode :: Code
   }
 
@@ -165,3 +170,4 @@ makeLenses ''InstrCallClosures
 makeLenses ''InstrBranch
 makeLenses ''InstrCase
 makeLenses ''CaseBranch
+makeLenses ''InstrReturn

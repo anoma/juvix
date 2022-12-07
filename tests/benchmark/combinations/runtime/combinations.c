@@ -11,7 +11,8 @@
 static constr_info_t juvix_constr_info_array[CONSTRS_NUM] = {BUILTIN_UIDS_INFO};
 
 int main() {
-    JUVIX_PROLOGUE(2, JUVIX_DECL_ARGS);
+    JUVIX_DECL_ARGS;
+    JUVIX_PROLOGUE(2);
 
     juvix_constrs_num = CONSTRS_NUM;
     juvix_constr_info = juvix_constr_info_array;

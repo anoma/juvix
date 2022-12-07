@@ -96,7 +96,8 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     Asm.TailCall x -> return $ mkCall True x
     Asm.CallClosures x -> return $ mkCallClosures False x
     Asm.TailCallClosures x -> return $ mkCallClosures True x
-    Asm.Return -> return Return
+    Asm.Return ->
+      return $ Return InstrReturn {_instrReturnValue = VRef $ VarRef VarGroupStack 0}
   where
     -- `n` is the index of the top of the value stack *before* executing the
     -- instruction
@@ -109,8 +110,8 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     liveVars :: Int -> [VarRef]
     liveVars k =
       map (VarRef VarGroupStack) [0 .. n - k]
-        ++ map (VarRef VarGroupTemp) [0 .. si ^. Asm.stackInfoTempStackHeight]
-        ++ map (VarRef VarGroupArgs) [0 .. (funInfo ^. Asm.functionArgsNum)]
+        ++ map (VarRef VarGroupTemp) [0 .. si ^. Asm.stackInfoTempStackHeight - 1]
+        ++ map (VarRef VarGroupArgs) [0 .. funInfo ^. Asm.functionArgsNum - 1]
 
     getArgs :: Int -> Int -> [Value]
     getArgs s k = map (\i -> VRef $ VarRef VarGroupStack (n - i)) [s .. (s + k - 1)]
@@ -120,7 +121,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
       Binop
         ( BinaryOp
             { _binaryOpCode = op,
-              _binaryOpResult = VarRef VarGroupStack n,
+              _binaryOpResult = VarRef VarGroupStack (n - 1),
               _binaryOpArg1 = VRef $ VarRef VarGroupStack n,
               _binaryOpArg2 = VRef $ VarRef VarGroupStack (n - 1)
             }
@@ -158,7 +159,7 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
                 _constrFieldMemRep = ci ^. Asm.constructorRepresentation
               }
           where
-            ci = fromJust impossible $ HashMap.lookup _fieldTag (tab ^. Asm.infoConstrs)
+            ci = fromMaybe impossible $ HashMap.lookup _fieldTag (tab ^. Asm.infoConstrs)
 
     mkVar :: Asm.DirectRef -> VarRef
     mkVar = \case
@@ -179,45 +180,50 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
       Alloc $
         InstrAlloc
           { _instrAllocTag = tag,
-            _instrAllocResult = VarRef VarGroupStack n,
+            _instrAllocResult = VarRef VarGroupStack m,
             _instrAllocArgs = getArgs 0 (ci ^. Asm.constructorArgsNum),
             _instrAllocMemRep = ci ^. Asm.constructorRepresentation
           }
       where
-        ci = fromJust impossible $ HashMap.lookup tag (tab ^. Asm.infoConstrs)
+        ci = fromMaybe impossible $ HashMap.lookup tag (tab ^. Asm.infoConstrs)
+        m = n - ci ^. Asm.constructorArgsNum + 1
 
     mkAllocClosure :: Asm.InstrAllocClosure -> Instruction
     mkAllocClosure Asm.InstrAllocClosure {..} =
       AllocClosure $
         InstrAllocClosure
           { _instrAllocClosureSymbol = fi ^. Asm.functionSymbol,
-            _instrAllocClosureResult = VarRef VarGroupStack n,
+            _instrAllocClosureResult = VarRef VarGroupStack m,
             _instrAllocClosureExpectedArgsNum = fi ^. Asm.functionArgsNum,
             _instrAllocClosureArgs = getArgs 0 _allocClosureArgsNum
           }
       where
-        fi = fromJust impossible $ HashMap.lookup _allocClosureFunSymbol (tab ^. Asm.infoFunctions)
+        fi = fromMaybe impossible $ HashMap.lookup _allocClosureFunSymbol (tab ^. Asm.infoFunctions)
+        m = n - _allocClosureArgsNum + 1
 
     mkExtendClosure :: Asm.InstrExtendClosure -> Instruction
     mkExtendClosure Asm.InstrExtendClosure {..} =
       ExtendClosure $
         InstrExtendClosure
-          { _instrExtendClosureResult = VarRef VarGroupStack n,
+          { _instrExtendClosureResult = VarRef VarGroupStack m,
             _instrExtendClosureValue = VarRef VarGroupStack n,
             _instrExtendClosureArgs = getArgs 1 _extendClosureArgsNum
           }
+      where
+        m = n - _extendClosureArgsNum
 
     mkCall :: Bool -> Asm.InstrCall -> Instruction
     mkCall isTail Asm.InstrCall {..} =
       Call $
         InstrCall
-          { _instrCallResult = VarRef VarGroupStack n,
+          { _instrCallResult = VarRef VarGroupStack m,
             _instrCallType = ct,
             _instrCallIsTail = isTail,
             _instrCallArgs = getArgs s _callArgsNum,
             _instrCallLiveVars = liveVars (_callArgsNum + s)
           }
       where
+        m = n - _callArgsNum - s + 1
         ct = case _callType of
           Asm.CallFun f -> CallFun f
           Asm.CallClosure -> CallClosure (VarRef VarGroupStack n)
@@ -229,12 +235,15 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
     mkCallClosures isTail Asm.InstrCallClosures {..} =
       CallClosures $
         InstrCallClosures
-          { _instrCallClosuresResult = VarRef VarGroupStack n,
+          { _instrCallClosuresResult = VarRef VarGroupStack m,
             _instrCallClosuresValue = VarRef VarGroupStack n,
             _instrCallClosuresIsTail = isTail,
             _instrCallClosuresArgs = getArgs 1 _callClosuresArgsNum,
-            _instrCallClosuresLiveVars = liveVars _callClosuresArgsNum
+            _instrCallClosuresLiveVars = liveVars (_callClosuresArgsNum + 1)
           }
+      where
+        -- note: the value (closure) is also on the stack
+        m = n - _callClosuresArgsNum
 
 fromAsmBranch ::
   Asm.StackInfo ->
@@ -264,17 +273,18 @@ fromAsmCase tab si Asm.CmdCase {..} brs def =
       InstrCase
         { _instrCaseValue = VRef $ VarRef VarGroupStack (si ^. Asm.stackInfoValueStackHeight - 1),
           _instrCaseInductive = _cmdCaseInductive,
-          _instrCaseIndRep = ii ^. inductiveRepresentation,
+          _instrCaseIndRep = ii ^. Asm.inductiveRepresentation,
           _instrCaseBranches =
             zipWithExact
               ( \br code ->
                   let tag = br ^. Asm.caseBranchTag
                       ci =
-                        fromJust impossible $
+                        fromMaybe impossible $
                           HashMap.lookup tag (tab ^. Asm.infoConstrs)
                    in CaseBranch
                         { _caseBranchTag = tag,
-                          _caseBranchMemRep = ci ^. constructorRepresentation,
+                          _caseBranchMemRep = ci ^. Asm.constructorRepresentation,
+                          _caseBranchArgsNum = ci ^. Asm.constructorArgsNum,
                           _caseBranchCode = code
                         }
               )
@@ -284,5 +294,5 @@ fromAsmCase tab si Asm.CmdCase {..} brs def =
         }
   where
     ii =
-      fromJust impossible $
+      fromMaybe impossible $
         HashMap.lookup _cmdCaseInductive (tab ^. Asm.infoInductives)

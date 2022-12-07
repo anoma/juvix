@@ -12,7 +12,7 @@ jobs:
   build:
     name: Build static binary
     runs-on: ubuntu-latest
-    container: ghcr.io/paulcadman/ghc-alpine:9.2.4
+    container: ghcr.io/paulcadman/ghc-alpine:9.2.5
     steps:
       - name: checkout code
         uses: actions/checkout@v3
@@ -30,6 +30,9 @@ jobs:
 
       - name: Stack permissions bug workaround
         run: "chown -R $(id -un):$(id -gn) ~"
+
+      - name: Runtime build
+        run: make runtime
 
       - name: build Juvix
         run: stack install --allow-different-user --system-ghc --ghc-options='-split-sections -optl-static'
