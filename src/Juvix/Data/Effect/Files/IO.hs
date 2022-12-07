@@ -12,13 +12,12 @@ import Path.IO qualified as Path
 import System.Posix.Types qualified as P
 import System.PosixCompat.Files qualified as P
 
-runFilesIO' ::
+runFilesIO ::
   forall r a.
   Member (Embed IO) r =>
-  FilePath ->
   Sem (Files ': r) a ->
   Sem (Error FilesError ': r) a
-runFilesIO' rootPath = reinterpret helper
+runFilesIO = reinterpret helper
   where
     helper :: forall rInitial x. Files (Sem rInitial) x -> Sem (Error FilesError ': r) x
     helper = \case
@@ -29,23 +28,11 @@ runFilesIO' rootPath = reinterpret helper
       DirectoryExists' p -> Path.doesDirExist p
       ReadFileBS' f -> embed (ByteString.readFile (toFilePath f))
       FileExists' f -> Path.doesFileExist f
-      RemoveDirectoryRecursive' d -> embed (removeDirectoryRecursive (toFilePath d))
+      RemoveDirectoryRecursive' d -> removeDirRecur d
       ListDirRel p -> embed @IO (Path.listDirRel p)
-      EqualPaths' f h ->
-        embed
-          ( do
-              f' <- canonicalizePath f
-              h' <- canonicalizePath h
-              return (Just (equalFilePath f' h'))
-          )
-      CanonicalizePath' f -> embed (canonicalizePath f)
       PathUid f -> do
         status <- embed (P.getFileStatus (toFilePath f))
         let P.CDev dev = P.deviceID status
             P.CIno fid = P.fileID status
         return (Uid (dev, fid))
-      GetDirAbsPath f -> absDir <$> embed (canonicalizePath (rootPath </> toFilePath f))
-      GetAbsPath p -> embed (canonicalizePath (rootPath </> p))
-
-runFilesIO :: Member (Embed IO) r => FilePath -> Sem (Files ': r) a -> Sem (Error FilesError ': r) a
-runFilesIO rootPath = runFilesIO' rootPath
+      GetDirAbsPath f -> canonicalizePath f

@@ -13,8 +13,8 @@ import System.Process
 import Prelude (show)
 
 -- | Paths that are input are used to detect the root of the project.
-data Path = Path
-  { _pathPath :: FilePath,
+data AppPath f = AppPath
+  { _pathPath :: SomeBase f,
     _pathIsInput :: Bool
   }
   deriving stock (Data)

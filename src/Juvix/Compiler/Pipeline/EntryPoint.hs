@@ -5,31 +5,28 @@ module Juvix.Compiler.Pipeline.EntryPoint
 where
 
 import Juvix.Compiler.Pipeline.Package
-import Juvix.Extra.Paths (juvixStdlibDir)
 import Juvix.Prelude
-import Juvix.Prelude.Path
 
 -- | The head of _entryModulePaths is assumed to be the Main module
 data EntryPoint = EntryPoint
-  { _entryPointRoot :: FilePath,
+  { _entryPointRoot :: Path Abs Dir,
     _entryPointNoTermination :: Bool,
     _entryPointNoPositivity :: Bool,
     _entryPointNoStdlib :: Bool,
-    _entryPointStdlibPath :: Maybe FilePath,
+    _entryPointStdlibPath :: Maybe (Path Abs Dir),
     _entryPointPackage :: Package,
     _entryPointStdin :: Maybe Text,
     _entryPointGenericOptions :: GenericOptions,
-    _entryPointModulePaths :: NonEmpty FilePath
+    _entryPointModulePaths :: NonEmpty (Path Abs File)
   }
   deriving stock (Eq, Show)
 
-defaultStdlibPath :: Path Abs Dir -> Path Abs Dir
-defaultStdlibPath root = root <//> relDir juvixStdlibDir
+makeLenses ''EntryPoint
 
-defaultEntryPoint :: FilePath -> EntryPoint
-defaultEntryPoint mainFile =
+defaultRawEntryPoint :: Path Abs Dir -> Path Rel File -> EntryPoint
+defaultRawEntryPoint root mainFile =
   EntryPoint
-    { _entryPointRoot = ".",
+    { _entryPointRoot = root,
       _entryPointNoTermination = False,
       _entryPointNoPositivity = False,
       _entryPointNoStdlib = False,
@@ -37,10 +34,8 @@ defaultEntryPoint mainFile =
       _entryPointStdin = Nothing,
       _entryPointPackage = emptyPackage,
       _entryPointGenericOptions = defaultGenericOptions,
-      _entryPointModulePaths = pure mainFile
+      _entryPointModulePaths = pure (root <//> mainFile)
     }
 
-makeLenses ''EntryPoint
-
-mainModulePath :: Lens' EntryPoint FilePath
+mainModulePath :: Lens' EntryPoint (Path Abs File)
 mainModulePath = entryPointModulePaths . _head1

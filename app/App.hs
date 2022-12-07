@@ -19,7 +19,7 @@ data App m a where
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
   RunPipelineEither :: Path -> Sem PipelineEff a -> App m (Either JuvixError (BuiltinsState, a))
   Say :: Text -> App m ()
-  Raw :: ByteString -> App m ()
+  SayRaw :: ByteString -> App m ()
 
 makeSem ''App
 
@@ -45,12 +45,12 @@ runAppIO g root pkg = interpret $ \case
     printErr e
     embed exitFailure
   ExitMsg exitCode t -> embed (putStrLn t >> exitWith exitCode)
-  Raw b -> embed (ByteString.putStr b)
+  SayRaw b -> embed (ByteString.putStr b)
   where
     printErr e =
       embed $ hPutStrLn stderr $ run $ runReader (project' @GenericOptions g) $ Error.render (not (g ^. globalNoColors)) (g ^. globalOnlyErrors) e
 
-getEntryPoint' :: GlobalOptions -> FilePath -> Package -> Path -> IO EntryPoint
+getEntryPoint' :: GlobalOptions -> Path Abs Dir -> Package -> Path -> IO EntryPoint
 getEntryPoint' opts root pkg inputFile = do
   estdin <-
     if

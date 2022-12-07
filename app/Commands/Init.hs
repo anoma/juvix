@@ -27,7 +27,7 @@ init = do
   say "I will help you set it up"
   pkg <- getPackage
   say ("creating " <> pack juvixYamlFile)
-  embed (encodeFile juvixYamlFile pkg)
+  embed (encodeFile juvixYamlFile (rawPackage pkg))
   say "you are all set"
 
 checkNotInProject :: forall r. Members '[Embed IO] r => Sem r ()
@@ -43,11 +43,11 @@ getPackage :: forall r. Members '[Embed IO] r => Sem r Package
 getPackage = do
   tproj <- getProjName
   say "Tell me the version of your project [leave empty for 0.0.0]"
-  tversion <- getVersion
+  tversion :: SemVer <- getVersion
   return
     Package
-      { _packageName = Just tproj,
-        _packageVersion = Just (prettySemVer tversion),
+      { _packageName = tproj,
+        _packageVersion = Ideal tversion,
         _packageDependencies = mempty
       }
 

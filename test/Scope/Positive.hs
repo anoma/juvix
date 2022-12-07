@@ -12,7 +12,6 @@ import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Setup
 import Juvix.Extra.Stdlib
-import Juvix.Prelude.Path
 import Juvix.Prelude.Pretty
 
 data PosTest = PosTest

@@ -15,6 +15,10 @@ import Juvix.Data.Effect.Files.Pure (runFilesPure)
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
 
+-- | for now we only check for string equality
+equalPaths :: Path Abs File -> Path Abs File -> Sem r Bool
+equalPaths a b = return (a == b)
+
 walkDirRelAccum ::
   forall acc r.
   Member Files r =>
@@ -36,15 +40,14 @@ walkDirRel ::
   (Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> Sem r (Recurse Rel)) ->
   Path Abs Dir ->
   Sem r ()
-walkDirRel handler topdir' = do
-  topdir :: Path Abs Dir <- getDirAbsPath topdir'
+walkDirRel handler topdir = do
   let walkAvoidLoop :: Path Rel Dir -> Sem (State (HashSet Uid) ': r) ()
       walkAvoidLoop curdir =
         unlessM (checkLoop (topdir <//> curdir)) $
           walktree curdir
       walktree :: Path Rel Dir -> Sem (State (HashSet Uid) ': r) ()
       walktree curdir = do
-        let fullDir :: Path Abs Dir = topdir' <//> curdir
+        let fullDir :: Path Abs Dir = topdir <//> curdir
         (subdirs, files) <- listDirRel fullDir
         action <- raise (handler fullDir subdirs files)
         case action of

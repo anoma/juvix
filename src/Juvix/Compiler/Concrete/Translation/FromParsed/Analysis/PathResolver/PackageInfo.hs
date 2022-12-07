@@ -2,7 +2,6 @@ module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Pack
 
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
-import Juvix.Prelude.Path
 
 data PackageInfo = PackageInfo
   { _packageRoot :: Path Abs Dir,

@@ -1,27 +1,15 @@
-module Juvix.Extra.Paths where
+module Juvix.Extra.Paths
+  ( module Juvix.Extra.Paths,
+    module Juvix.Extra.Paths.Base,
+  )
+where
 
-import Data.FileEmbed qualified as FE
+import Juvix.Extra.Paths.Base
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
-import Language.Haskell.TH.Syntax
 
-assetsDir :: Q Exp
-assetsDir = FE.makeRelativeToProject "assets" >>= FE.embedDir
+relToProject :: Path Rel a -> Path Abs a
+relToProject r = $(projectPath) <//> r
 
-stdlibDir :: Q Exp
-stdlibDir = FE.makeRelativeToProject "juvix-stdlib" >>= FE.embedDir
-
-juvixYamlFile :: FilePath
-juvixYamlFile = "juvix.yaml"
-
-juvixYamlFile' :: Path Rel File
-juvixYamlFile' = $(mkRelFile "juvix.yaml")
-
-juvixBuildDir :: FilePath
-juvixBuildDir = ".juvix-build"
-
-juvixStdlibDir :: FilePath
-juvixStdlibDir = juvixBuildDir </> "stdlib"
-
-preludePath :: FilePath
-preludePath = "Stdlib" </> "Prelude.juvix"
+assetsDir :: [(Path Rel File, ByteString)]
+assetsDir = map (first relFile) $(assetsDirQ)

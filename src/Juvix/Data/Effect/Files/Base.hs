@@ -23,13 +23,10 @@ data Recurse r
 makeLenses ''RecursorArgs
 
 data Files m a where
-  CanonicalizePath' :: FilePath -> Files m FilePath
   EnsureDir' :: Path Abs Dir -> Files m ()
   DirectoryExists' :: Path Abs Dir -> Files m Bool
-  EqualPaths' :: FilePath -> FilePath -> Files m (Maybe Bool)
   FileExists' :: Path Abs File -> Files m Bool
-  GetAbsPath :: FilePath -> Files m FilePath
-  GetDirAbsPath :: Path r Dir -> Files m (Path Abs Dir)
+  GetDirAbsPath :: Path Rel Dir -> Files m (Path Abs Dir)
   ListDirRel :: Path Abs Dir -> Files m ([Path Rel Dir], [Path Rel File])
   PathUid :: Path Abs b -> Files m Uid
   ReadFile' :: Path Abs File -> Files m Text

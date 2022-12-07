@@ -28,7 +28,6 @@ import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context (ParserResult)
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
-import Juvix.Prelude.Path
 
 iniScoperState :: ScoperState
 iniScoperState =
@@ -542,14 +541,14 @@ checkTopModule m@(Module path params doc body) = do
     checkPath :: Members '[Files, Reader ScopeParameters, Error ScoperError, PathResolver] s => Sem s ()
     checkPath =
       withPath' path $ \expectedPath -> do
-        let actualPath = getLoc path ^. intervalFile
-        unlessM (fromMaybe True <$> equalPaths' (toFilePath expectedPath) actualPath) $
+        let actualPath = absFile (getLoc path ^. intervalFile)
+        unlessM (equalPaths expectedPath actualPath) $
           throw
             ( ErrWrongTopModuleName
                 WrongTopModuleName
                   { _wrongTopModuleNameActualName = path,
                     _wrongTopModuleNameExpectedPath = expectedPath,
-                    _wrongTopModuleNameActualPath = absFile actualPath
+                    _wrongTopModuleNameActualPath = actualPath
                   }
             )
     freshTopModulePath ::

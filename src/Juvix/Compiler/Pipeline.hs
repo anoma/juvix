@@ -158,7 +158,7 @@ runIOEither builtinsState entry =
     . runBuiltins builtinsState
     . runNameIdGen
     . mapError (JuvixError @FilesError)
-    . runFilesIO (entry ^. entryPointRoot)
+    . runFilesIO
     . runReader entry
     . runPathResolverPipe
 

@@ -2,7 +2,6 @@ module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
 
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Prelude
-import Juvix.Prelude.Path as Path
 
 topModulePathToRelativeFilePath' :: TopModulePath -> Path Rel File
 topModulePathToRelativeFilePath' = topModulePathToRelativeFilePath ".juvix" "" (</>)

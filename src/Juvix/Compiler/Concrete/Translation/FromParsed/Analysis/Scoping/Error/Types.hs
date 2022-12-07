@@ -18,7 +18,6 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pre
 import Juvix.Data.CodeAnn
 import Juvix.Parser.Error qualified as Parser
 import Juvix.Prelude
-import Juvix.Prelude.Path
 
 data TopModulePathError = TopModulePathError
   { _topModulePathErrorPath :: TopModulePath,
@@ -451,11 +450,11 @@ instance ToGenericError WrongTopModuleName where
               <+> ppCode opts' _wrongTopModuleNameActualName
               <+> "is defined in the file:"
                 <> line
-                <> pretty (toFilePath _wrongTopModuleNameActualPath)
+                <> pretty _wrongTopModuleNameActualPath
                 <> line
                 <> "But it should be in the file:"
                 <> line
-                <> pretty (toFilePath _wrongTopModuleNameExpectedPath)
+                <> pretty _wrongTopModuleNameExpectedPath
 
 data AmbiguousSym = AmbiguousSym
   { _ambiguousSymName :: Name,

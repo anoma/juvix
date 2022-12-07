@@ -9,6 +9,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Builder qualified as Builder
 import Data.HashMap.Strict qualified as HashMap
 import Data.Time.Clock
+import Data.Versions (prettyV)
 import Juvix.Compiler.Abstract.Translation.FromConcrete qualified as Abstract
 import Juvix.Compiler.Backend.Html.Data
 import Juvix.Compiler.Backend.Html.Extra
@@ -28,7 +29,6 @@ import Juvix.Extra.Strings qualified as Str
 import Juvix.Extra.Version
 import Juvix.Prelude
 import Juvix.Prelude qualified as Prelude
-import Juvix.Prelude.Path
 import Text.Blaze.Html.Renderer.Utf8 qualified as Html
 import Text.Blaze.Html5 as Html hiding (map)
 import Text.Blaze.Html5.Attributes qualified as Attr
@@ -151,12 +151,12 @@ compile dir baseName ctx = runReader params . runReader normTable . runReader en
       toAssetsDir <- (<//> $(mkRelDir "assets")) <$> asks (^. docOutputDir)
       let writeAsset :: (Path Rel File, BS.ByteString) -> Sem s ()
           writeAsset (filePath, fileContents) =
-            Prelude.embed $ BS.writeFile (toFilePath (toAssetsDir <//> filename filePath)) fileContents
+            Prelude.embed $ BS.writeFile (toFilePath (toAssetsDir <//> filePath)) fileContents
       ensureDir toAssetsDir
       mapM_ writeAsset assetFiles
       where
         assetFiles :: [(Path Rel File, BS.ByteString)]
-        assetFiles = map (first relFile) $(assetsDir)
+        assetFiles = assetsDir
 
     params :: DocParams
     params =
@@ -216,8 +216,8 @@ template rightMenu' content' = do
 
     packageHeader :: Sem r Html
     packageHeader = do
-      pkgName' <- toHtml <$> asks (^. entryPointPackage . packageName')
-      version' <- toHtml <$> asks (^. entryPointPackage . packageVersion')
+      pkgName' <- toHtml <$> asks (^. entryPointPackage . packageName)
+      version' <- toHtml <$> asks (^. entryPointPackage . packageVersion . to prettyV)
       return $
         Html.div ! Attr.id "package-header" $
           ( Html.span ! Attr.class_ "caption" $

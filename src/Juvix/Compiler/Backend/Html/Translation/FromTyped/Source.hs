@@ -17,7 +17,6 @@ import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Extra.Paths
 import Juvix.Extra.Version
 import Juvix.Prelude
-import Juvix.Prelude.Path
 import Prettyprinter.Render.Util.SimpleDocTree
 import Text.Blaze.Html
 import Text.Blaze.Html.Renderer.Text qualified as Html
@@ -36,11 +35,11 @@ kindSuffix = \case
   HtmlSrc -> "-src"
   HtmlOnly -> ""
 
-genHtml :: Options -> Bool -> Theme -> FilePath -> Bool -> Module 'Scoped 'ModuleTop -> IO ()
+genHtml :: Options -> Bool -> Theme -> Path Abs Dir -> Bool -> Module 'Scoped 'ModuleTop -> IO ()
 genHtml opts recursive theme outputDir printMetadata entry = do
-  createDirectoryIfMissing True outputDir
+  ensureDir outputDir
   copyAssetFiles
-  withCurrentDirectory outputDir $ do
+  withCurrentDir outputDir $ do
     mapM_ outputModule allModules
   where
     allModules
@@ -49,25 +48,26 @@ genHtml opts recursive theme outputDir printMetadata entry = do
 
     copyAssetFiles :: IO ()
     copyAssetFiles = do
-      createDirectoryIfMissing True toAssetsDir
+      ensureDir toAssetsDir
       mapM_ writeAsset assetFiles
       where
-        assetFiles :: [(FilePath, BS.ByteString)]
-        assetFiles = $(assetsDir)
+        assetFiles :: [(Path Rel File, BS.ByteString)]
+        assetFiles = assetsDir
 
-        writeAsset :: (FilePath, BS.ByteString) -> IO ()
+        writeAsset :: (Path Rel File, BS.ByteString) -> IO ()
         writeAsset (filePath, fileContents) =
-          BS.writeFile (toAssetsDir </> takeFileName filePath) fileContents
-        toAssetsDir = outputDir </> "assets"
+          BS.writeFile (toFilePath (toAssetsDir <//> filePath)) fileContents
+        toAssetsDir = outputDir <//> $(mkRelDir "assets")
 
     outputModule :: Module 'Scoped 'ModuleTop -> IO ()
     outputModule m = do
-      createDirectoryIfMissing True (takeDirectory htmlFile)
-      putStrLn $ "Writing " <> pack htmlFile
+      ensureDir (parent htmlFile)
+      putStrLn $ "Writing " <> pack (toFilePath htmlFile)
       utc <- getCurrentTime
-      Text.writeFile htmlFile (genModule opts HtmlOnly printMetadata utc theme m)
+      Text.writeFile (toFilePath htmlFile) (genModule opts HtmlOnly printMetadata utc theme m)
       where
-        htmlFile = topModulePathToDottedPath (m ^. modulePath . S.nameConcrete) <.> ".html"
+        htmlFile :: Path Rel File
+        htmlFile = relFile (topModulePathToDottedPath (m ^. modulePath . S.nameConcrete) <.> ".html")
 
 genModuleHtml :: Options -> HtmlKind -> Bool -> UTCTime -> Theme -> Module 'Scoped 'ModuleTop -> Html
 genModuleHtml opts htmlKind printMetadata utc theme m =

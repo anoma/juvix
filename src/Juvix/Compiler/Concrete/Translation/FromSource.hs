@@ -18,7 +18,6 @@ import Juvix.Compiler.Concrete.Translation.FromSource.Lexer hiding (symbol)
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Parser.Error
 import Juvix.Prelude
-import Juvix.Prelude.Path
 import Juvix.Prelude.Pretty (Pretty, prettyText)
 
 type JudocStash = State (Maybe (Judoc 'Parsed))
@@ -28,7 +27,7 @@ fromSource ::
   EntryPoint ->
   Sem r ParserResult
 fromSource e = mapError (JuvixError @ParserError) $ do
-  (_resultTable, _resultModules) <- runInfoTableBuilder (runReader e (mapM (goFile . absFile) (e ^. entryPointModulePaths)))
+  (_resultTable, _resultModules) <- runInfoTableBuilder (runReader e (mapM goFile (e ^. entryPointModulePaths)))
   let _resultEntry = e
   return ParserResult {..}
   where
@@ -46,7 +45,7 @@ fromSource e = mapError (JuvixError @ParserError) $ do
       where
         getFileContents :: Path Abs File -> Sem r Text
         getFileContents fp
-          | fp == absFile (e ^. mainModulePath),
+          | fp == e ^. mainModulePath,
             Just txt <- e ^. entryPointStdin =
               return txt
           | otherwise = readFile' fp

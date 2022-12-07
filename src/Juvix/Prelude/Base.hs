@@ -58,7 +58,6 @@ module Juvix.Prelude.Base
     module Polysemy.State,
     module Language.Haskell.TH.Syntax,
     module Prettyprinter,
-    module System.Directory,
     module System.Exit,
     module System.FilePath,
     module System.IO,
@@ -143,8 +142,6 @@ import GHC.Real
 import GHC.Stack.Types
 import Language.Haskell.TH.Syntax (Lift)
 import Lens.Micro.Platform hiding (both)
-import Path (parseAbsDir, toFilePath)
-import Path.IO (listDirRecur)
 import Polysemy
 import Polysemy.Embed
 import Polysemy.Error hiding (fromEither)
@@ -155,9 +152,8 @@ import Polysemy.State
 import Prettyprinter (Doc, (<+>))
 import Safe.Exact
 import Safe.Foldable
-import System.Directory
 import System.Exit
-import System.FilePath
+import System.FilePath (FilePath, normalise, (<.>), (</>))
 import System.IO hiding
   ( appendFile,
     getContents,
@@ -167,6 +163,8 @@ import System.IO hiding
     hPutStr,
     hPutStrLn,
     interact,
+    openBinaryTempFile,
+    openTempFile,
     putStr,
     putStrLn,
     readFile,
@@ -350,19 +348,6 @@ fromRightIO' pp = do
 
 fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
 fromRightIO pp = fromRightIO' (putStrLn . pp)
-
---------------------------------------------------------------------------------
--- Files
---------------------------------------------------------------------------------
-
--- | Recursively get all files in the given directory.
---
--- The function returns absolute paths.
-getFilesRecursive :: FilePath -> IO [FilePath]
-getFilesRecursive p = do
-  pathP <- makeAbsolute p >>= parseAbsDir
-  (_, files) <- listDirRecur pathP
-  return (toFilePath <$> files)
 
 --------------------------------------------------------------------------------
 -- Misc

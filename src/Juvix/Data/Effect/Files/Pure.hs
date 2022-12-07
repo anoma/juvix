@@ -66,12 +66,9 @@ runFilesPure ini cwd a = evalState (mkFS ini) (re cwd a)
 re :: Path Abs Dir -> Sem (Files ': r) a -> Sem (State FS ': r) a
 re cwd = reinterpret $ \case
   ReadFile' f -> lookupFile' f
-  EqualPaths' {} -> return Nothing
   FileExists' f -> isJust <$> lookupFile f
-  CanonicalizePath' f -> return (canonicalized f)
   PathUid p -> return (Uid (toFilePath p))
   ReadFileBS' f -> encodeUtf8 <$> lookupFile' f
-  GetAbsPath f -> return (cwd' </> f)
   GetDirAbsPath p -> return (absDir (cwd' </> toFilePath p))
   EnsureDir' p -> ensureDirHelper p
   DirectoryExists' p -> isJust <$> lookupDir p
@@ -84,7 +81,6 @@ re cwd = reinterpret $ \case
   where
     cwd' :: FilePath
     cwd' = toFilePath cwd
-    canonicalized f = normalise (cwd' </> f)
 
 missingErr :: Members '[State FS] r => FilePath -> Sem r a
 missingErr f = do

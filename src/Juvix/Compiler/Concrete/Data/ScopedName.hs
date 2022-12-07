@@ -40,11 +40,11 @@ instance Hashable AbsModulePath
 -- | Tells whether the first argument is an immediate child of the second argument.
 -- In other words, tells whether the first argument is a local module of the second.
 isChildOf :: AbsModulePath -> AbsModulePath -> Bool
-isChildOf child parent
+isChildOf child parentMod
   | null (child ^. absLocalPath) = False
   | otherwise =
-      init (child ^. absLocalPath) == parent ^. absLocalPath
-        && child ^. absTopModulePath == parent ^. absTopModulePath
+      init (child ^. absLocalPath) == parentMod ^. absLocalPath
+        && child ^. absTopModulePath == parentMod ^. absTopModulePath
 
 -- | Appends a local path to the absolute path
 -- e.g. TopMod.Local <.> Inner == TopMod.Local.Inner

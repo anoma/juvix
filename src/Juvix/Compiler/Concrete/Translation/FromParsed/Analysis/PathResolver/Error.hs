@@ -5,8 +5,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.Package
 import Juvix.Data.CodeAnn
-import Juvix.Prelude.Base
-import Juvix.Prelude.Path
+import Juvix.Prelude
 
 data PathResolverError
   = ErrDependencyConflict DependencyConflict
@@ -33,7 +32,7 @@ instance PrettyCodeAnn DependencyConflict where
       <> indent' (itemize (item <$> toList _conflictPackages))
     where
       item :: PackageInfo -> Doc CodeAnn
-      item pkg = pcode (pkg ^. packagePackage . packageName') <+> "at" <+> pretty (toFilePath (pkg ^. packageRoot))
+      item pkg = pcode (pkg ^. packagePackage . packageName) <+> "at" <+> pretty (pkg ^. packageRoot)
 
 pcode :: Pretty a => a -> Doc CodeAnn
 pcode = code . pretty
@@ -55,7 +54,7 @@ instance PrettyCodeAnn MissingModule where
       suggestion :: Doc Ann
       suggestion =
         "It should be in"
-          <+> pcode (toFilePath (_missingInfo ^. packageRoot <//> topModulePathToRelativeFilePath' _missingModule))
+          <+> pcode (_missingInfo ^. packageRoot <//> topModulePathToRelativeFilePath' _missingModule)
             <> line
             <> "or in one of the dependencies:"
             <> line

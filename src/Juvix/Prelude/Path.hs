@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Juvix.Prelude.Path
   ( module Juvix.Prelude.Path,
     module Path,
@@ -8,25 +10,30 @@ where
 import Juvix.Prelude.Base
 import Path hiding ((<.>), (</>))
 import Path qualified
-import Path.IO hiding (canonicalizePath, doesFileExist, listDirRel, walkDirRel)
+import Path.IO hiding (doesFileExist, listDirRel, walkDirRel)
+import Prettyprinter
 
 -- | Synonym for Path.</>. Useful to avoid name clashes
 infixr 5 <//>
+
+-- | this orphan instance is very convenient
+instance Pretty (Path a b) where
+  pretty = pretty . toFilePath
 
 (<//>) :: Path b Dir -> Path Rel t -> Path b t
 (<//>) = (Path.</>)
 
 relFile :: FilePath -> Path Rel File
-relFile = fromJust . parseRelFile
+relFile r = fromMaybe (error ("not a relative file path: " <> pack r)) (parseRelFile r)
 
 relDir :: FilePath -> Path Rel Dir
-relDir = fromJust . parseRelDir
+relDir r = fromMaybe (error ("not a relative directory path: " <> pack r)) (parseRelDir r)
 
 absFile :: FilePath -> Path Abs File
-absFile = fromJust . parseAbsFile
+absFile r = fromMaybe (error ("not an absolute file path: " <> pack r)) (parseAbsFile r)
 
 absDir :: FilePath -> Path Abs Dir
-absDir = fromJust . parseAbsDir
+absDir r = fromMaybe (error ("not an absolute file path: " <> pack r)) (parseAbsDir r)
 
 destructAbsDir :: Path Abs Dir -> (Path Abs Dir, [Path Rel Dir])
 destructAbsDir d = go d []
@@ -45,7 +52,7 @@ destructAbsFile x = (root, dirs, filename x)
     (root, dirs) = destructAbsDir (parent x)
 
 isJuvixFile :: Path b File -> Bool
-isJuvixFile = maybe False (== ".juvix") . fileExtension
+isJuvixFile = (== Just ".juvix") . fileExtension
 
 isHiddenDirectory :: Path b Dir -> Bool
 isHiddenDirectory p = case toFilePath (dirname p) of

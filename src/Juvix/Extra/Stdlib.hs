@@ -3,8 +3,7 @@ module Juvix.Extra.Stdlib where
 import Juvix.Data.Effect.Files
 import Juvix.Extra.Paths
 import Juvix.Extra.Version
-import Juvix.Prelude.Base
-import Juvix.Prelude.Path
+import Juvix.Prelude
 
 type RootPath = Path Abs Dir
 
