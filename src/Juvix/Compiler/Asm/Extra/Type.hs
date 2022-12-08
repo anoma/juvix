@@ -23,16 +23,6 @@ mkTypeFun args tgt = case args of
   [] -> tgt
   a : args' -> TyFun (TypeFun (a :| args') tgt)
 
-typeArgs :: Type -> [Type]
-typeArgs = \case
-  TyFun x -> toList (x ^. typeFunArgs)
-  _ -> []
-
-typeTarget :: Type -> Type
-typeTarget ty = case ty of
-  TyFun x -> x ^. typeFunTarget
-  _ -> ty
-
 unfoldType :: Type -> ([Type], Type)
 unfoldType ty = (typeArgs ty, typeTarget ty)
 

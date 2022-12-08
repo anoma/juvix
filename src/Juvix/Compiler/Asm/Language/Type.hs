@@ -82,3 +82,13 @@ instance HasAtomicity Type where
     TyInductive x -> atomicity x
     TyConstr x -> atomicity x
     TyFun x -> atomicity x
+
+typeArgs :: Type -> [Type]
+typeArgs = \case
+  TyFun x -> toList (x ^. typeFunArgs)
+  _ -> []
+
+typeTarget :: Type -> Type
+typeTarget ty = case ty of
+  TyFun x -> x ^. typeFunTarget
+  _ -> ty

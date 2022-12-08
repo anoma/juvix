@@ -2,6 +2,7 @@ module Commands.Dev.Asm.Validate where
 
 import Commands.Base
 import Commands.Dev.Asm.Validate.Options
+import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Asm.Transformation.Validate qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 
@@ -16,7 +17,12 @@ runCommand opts = do
         Just err ->
           exitJuvixError (JuvixError err)
         Nothing ->
-          exitMsg ExitSuccess "validation succeeded"
+          if
+              | opts ^. asmValidateNoPrint ->
+                  exitMsg ExitSuccess "validation succeeded"
+              | otherwise -> do
+                  renderStdOut (Asm.ppOutDefault tab tab)
+                  exitMsg ExitSuccess ""
   where
     file :: SomeBase File
     file = opts ^. asmValidateInputFile . pathPath
