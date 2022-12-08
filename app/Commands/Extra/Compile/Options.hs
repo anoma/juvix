@@ -2,7 +2,10 @@ module Commands.Extra.Compile.Options where
 
 import CommonOptions
 
-data CompileTarget = TargetWasm32Wasi | TargetNative64 | TargetC
+data CompileTarget =
+  TargetWasm32Wasi
+  | TargetNative64
+  | TargetC
   deriving stock (Show, Data)
 
 data CompileOptions = CompileOptions
@@ -13,7 +16,6 @@ data CompileOptions = CompileOptions
     _compileTarget :: CompileTarget,
     _compileInputFile :: Path
   }
-  deriving stock (Data)
 
 makeLenses ''CompileOptions
 
