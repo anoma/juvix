@@ -10,10 +10,13 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
 convertNode :: InfoTable -> Node -> Node
-convertNode tab = dmapLR (go 0)
+convertNode tab = convert 0 mempty
   where
     unsupported :: forall a. a
     unsupported = error "remove type arguments: unsupported node"
+
+    convert :: Int -> BinderList Binder -> Node -> Node
+    convert k bl = dmapLR' (bl, go k)
 
     go :: Int -> BinderList Binder -> Node -> Recur
     go k vars node = case node of
@@ -34,20 +37,22 @@ convertNode tab = dmapLR (go 0)
                 _ -> unsupported
             args' = filterArgs ty args
          in if
-                | null args' -> Recur h
-                | otherwise -> Recur (mkApps h args')
+                | null args' ->
+                  End (convert k vars h)
+                | otherwise ->
+                  End (mkApps (convert k vars h) (map (second (convert k vars)) args'))
       NCtr (Constr {..}) ->
         let ci = fromJust $ HashMap.lookup _constrTag (tab ^. infoConstructors)
             ty = ci ^. constructorType
             args' = filterArgs ty _constrArgs
-         in Recur (mkConstr _constrInfo _constrTag args')
+         in End (mkConstr _constrInfo _constrTag (map (convert k vars) args'))
       -- TODO: adjust Case expressions
       NLam (Lambda {..})
         | isTypeConstr (_lambdaBinder ^. binderType) ->
-            End (dmapLR' (BL.cons _lambdaBinder vars, go (k + 1)) _lambdaBody)
+            End (convert (k + 1) (BL.cons _lambdaBinder vars) _lambdaBody)
       NPi (Pi {..})
         | isTypeConstr (_piBinder ^. binderType) && not (isTypeConstr _piBody) ->
-            End (dmapLR' (BL.cons _piBinder vars, go (k + 1)) _piBody)
+            End (convert (k + 1) (BL.cons _piBinder vars) _piBody)
       _ -> Recur node
       where
         filterArgs :: Type -> [a] -> [a]
