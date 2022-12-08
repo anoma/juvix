@@ -467,7 +467,7 @@ destruct = \case
                 nonEmpty'
                   [ LetItem (Binder name loc ty') (v' ^. childNode)
                     | (v', ty', name, loc) <-
-                        zip4
+                        zip4Exact
                           values'
                           tys'
                           (map (^. letItemBinder . binderName) (toList vs))
