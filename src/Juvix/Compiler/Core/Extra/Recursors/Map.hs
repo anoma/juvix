@@ -102,9 +102,12 @@ fromSimple :: Functor g => c -> g Node -> g (Recur' c)
 fromSimple c = fmap (\x -> Recur' (c, x))
 
 fromRecur :: Functor g => c -> g Recur -> g (Recur' c)
-fromRecur c = fmap (\case
-                      End x -> End' x
-                      Recur x -> Recur' (c, x))
+fromRecur c =
+  fmap
+    ( \case
+        End x -> End' x
+        Recur x -> Recur' (c, x)
+    )
 
 fromPair :: Functor g => d -> g (c, Node) -> g (Recur' (c, d))
 fromPair d = fmap (\(c, x) -> Recur' ((c, d), x))

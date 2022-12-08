@@ -13,8 +13,8 @@ import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Eta
 import Juvix.Compiler.Core.Transformation.Identity
 import Juvix.Compiler.Core.Transformation.LambdaLifting
-import Juvix.Compiler.Core.Transformation.TopEtaExpand
 import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
+import Juvix.Compiler.Core.Transformation.TopEtaExpand
 
 applyTransformations :: [TransformationId] -> InfoTable -> InfoTable
 applyTransformations ts tbl = foldl' (flip appTrans) tbl ts

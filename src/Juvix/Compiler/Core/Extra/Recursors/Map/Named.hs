@@ -1,9 +1,9 @@
 module Juvix.Compiler.Core.Extra.Recursors.Map.Named where
 
+import Data.Functor.Identity
 import Juvix.Compiler.Core.Extra.Recursors.Base
 import Juvix.Compiler.Core.Extra.Recursors.Map
 import Juvix.Compiler.Core.Extra.Recursors.Parameters
-import Data.Functor.Identity
 
 dmapLRM :: Monad m => (BinderList Binder -> Node -> m Recur) -> Node -> m Node
 dmapLRM f = nodeMapG' STopDown binderInfoCollector (\bi -> fromRecur bi . f bi)
