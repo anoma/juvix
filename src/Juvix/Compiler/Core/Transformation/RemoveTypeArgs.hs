@@ -25,8 +25,8 @@ convertNode tab = convert mempty
          in if
                 | isTypeConstr ty -> End (mkDynamic _varInfo)
                 | otherwise -> End (NVar (shiftVar (-k) v))
-                where
-                  k = length (filter (isTypeConstr . (^. binderType)) (take _varIndex (toList vars)))
+        where
+          k = length (filter (isTypeConstr . (^. binderType)) (take _varIndex (toList vars)))
       NApp (App {}) ->
         let (h, args) = unfoldApps node
             ty =
@@ -40,9 +40,9 @@ convertNode tab = convert mempty
             args' = filterArgs ty args
          in if
                 | null args' ->
-                  End (convert vars h)
+                    End (convert vars h)
                 | otherwise ->
-                  End (mkApps (convert vars h) (map (second (convert vars)) args'))
+                    End (mkApps (convert vars h) (map (second (convert vars)) args'))
       NCtr (Constr {..}) ->
         let ci = fromJust $ HashMap.lookup _constrTag (tab ^. infoConstructors)
             ty = ci ^. constructorType
@@ -54,20 +54,20 @@ convertNode tab = convert mempty
           convertBranch :: CaseBranch -> CaseBranch
           convertBranch br@CaseBranch {..} =
             let binders' = filterBinders vars _caseBranchBinders
-                body' = convert
-                          (BL.prependRev _caseBranchBinders vars)
-                          _caseBranchBody
-            in
-              br
-                {
-                  _caseBranchBinders = binders',
-                  _caseBranchBindersNum = length binders',
-                  _caseBranchBody = body'
-                }
+                body' =
+                  convert
+                    (BL.prependRev _caseBranchBinders vars)
+                    _caseBranchBody
+             in br
+                  { _caseBranchBinders = binders',
+                    _caseBranchBindersNum = length binders',
+                    _caseBranchBody = body'
+                  }
           filterBinders :: BinderList Binder -> [Binder] -> [Binder]
           filterBinders _ [] = []
-          filterBinders vars' (b : bs) | isTypeConstr (b ^. binderType) =
-            filterBinders (BL.cons b vars') bs
+          filterBinders vars' (b : bs)
+            | isTypeConstr (b ^. binderType) =
+                filterBinders (BL.cons b vars') bs
           filterBinders vars' (b : bs) =
             over binderType (convert vars') b : filterBinders (BL.cons b vars') bs
       NLam (Lambda {..})

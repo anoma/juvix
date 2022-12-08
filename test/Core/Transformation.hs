@@ -3,8 +3,8 @@ module Core.Transformation where
 import Base
 import Core.Transformation.Identity qualified as Identity
 import Core.Transformation.Lifting qualified as Lifting
-import Core.Transformation.TopEtaExpand qualified as TopEtaExpand
 import Core.Transformation.RemoveTypeArgs qualified as RemoveTypeArgs
+import Core.Transformation.TopEtaExpand qualified as TopEtaExpand
 
 allTests :: TestTree
 allTests =

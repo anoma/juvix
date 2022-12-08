@@ -21,14 +21,14 @@ runCommand opts = do
     doEval :: Core.InfoTable -> Core.Node -> Sem r ()
     doEval tab' node =
       if
-        | project opts ^. coreReadEval -> do
-          embed (putStrLn "--------------------------------")
-          embed (putStrLn "|            Eval              |")
-          embed (putStrLn "--------------------------------")
-          Eval.evalAndPrint opts tab' node
-        | otherwise -> do
-          embed (putStrLn "-- Node")
-          renderStdOut (Core.ppOut opts node)
-          embed (putStrLn "")
+          | project opts ^. coreReadEval -> do
+              embed (putStrLn "--------------------------------")
+              embed (putStrLn "|            Eval              |")
+              embed (putStrLn "--------------------------------")
+              Eval.evalAndPrint opts tab' node
+          | otherwise -> do
+              embed (putStrLn "-- Node")
+              renderStdOut (Core.ppOut opts node)
+              embed (putStrLn "")
     f :: FilePath
     f = project opts ^. coreReadInputFile . pathPath
