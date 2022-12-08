@@ -10,21 +10,23 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
 convertNode :: InfoTable -> Node -> Node
-convertNode tab = convert 0 mempty
+convertNode tab = convert mempty
   where
     unsupported :: forall a. a
     unsupported = error "remove type arguments: unsupported node"
 
-    convert :: Int -> BinderList Binder -> Node -> Node
-    convert k vars = dmapLR' (vars, go k)
+    convert :: BinderList Binder -> Node -> Node
+    convert vars = dmapLR' (vars, go)
 
-    go :: Int -> BinderList Binder -> Node -> Recur
-    go k vars node = case node of
+    go :: BinderList Binder -> Node -> Recur
+    go vars node = case node of
       NVar v@(Var {..}) ->
         let ty = BL.lookup _varIndex vars ^. binderType
          in if
                 | isTypeConstr ty -> End (mkDynamic _varInfo)
                 | otherwise -> End (NVar (shiftVar (-k) v))
+                where
+                  k = length (filter (isTypeConstr . (^. binderType)) (take _varIndex (toList vars)))
       NApp (App {}) ->
         let (h, args) = unfoldApps node
             ty =
@@ -38,22 +40,21 @@ convertNode tab = convert 0 mempty
             args' = filterArgs ty args
          in if
                 | null args' ->
-                  End (convert k vars h)
+                  End (convert vars h)
                 | otherwise ->
-                  End (mkApps (convert k vars h) (map (second (convert k vars)) args'))
+                  End (mkApps (convert vars h) (map (second (convert vars)) args'))
       NCtr (Constr {..}) ->
         let ci = fromJust $ HashMap.lookup _constrTag (tab ^. infoConstructors)
             ty = ci ^. constructorType
             args' = filterArgs ty _constrArgs
-         in End (mkConstr _constrInfo _constrTag (map (convert k vars) args'))
+         in End (mkConstr _constrInfo _constrTag (map (convert vars) args'))
       NCase (Case {..}) ->
-        End (mkCase _caseInfo (convert k vars _caseValue) (map convertBranch _caseBranches) (fmap (convert k vars) _caseDefault))
+        End (mkCase _caseInfo (convert vars _caseValue) (map convertBranch _caseBranches) (fmap (convert vars) _caseDefault))
         where
           convertBranch :: CaseBranch -> CaseBranch
           convertBranch br@CaseBranch {..} =
-            let binders' = filterBinders k vars _caseBranchBinders
+            let binders' = filterBinders vars _caseBranchBinders
                 body' = convert
-                          (k + _caseBranchBindersNum - length binders')
                           (BL.prependRev _caseBranchBinders vars)
                           _caseBranchBody
             in
@@ -63,18 +64,18 @@ convertNode tab = convert 0 mempty
                   _caseBranchBindersNum = length binders',
                   _caseBranchBody = body'
                 }
-          filterBinders :: Int -> BinderList Binder -> [Binder] -> [Binder]
-          filterBinders _ _ [] = []
-          filterBinders k' vars' (b : bs) | isTypeConstr (b ^. binderType) =
-            filterBinders (k' + 1) (BL.cons b vars') bs
-          filterBinders k' vars' (b : bs) =
-            over binderType (convert k' vars') b : filterBinders k' (BL.cons b vars') bs
+          filterBinders :: BinderList Binder -> [Binder] -> [Binder]
+          filterBinders _ [] = []
+          filterBinders vars' (b : bs) | isTypeConstr (b ^. binderType) =
+            filterBinders (BL.cons b vars') bs
+          filterBinders vars' (b : bs) =
+            over binderType (convert vars') b : filterBinders (BL.cons b vars') bs
       NLam (Lambda {..})
         | isTypeConstr (_lambdaBinder ^. binderType) ->
-            End (convert (k + 1) (BL.cons _lambdaBinder vars) _lambdaBody)
+            End (convert (BL.cons _lambdaBinder vars) _lambdaBody)
       NPi (Pi {..})
         | isTypeConstr (_piBinder ^. binderType) && not (isTypeConstr _piBody) ->
-            End (convert (k + 1) (BL.cons _piBinder vars) _piBody)
+            End (convert (BL.cons _piBinder vars) _piBody)
       _ -> Recur node
       where
         filterArgs :: Type -> [a] -> [a]
