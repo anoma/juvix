@@ -150,7 +150,7 @@ static inline word_t get_suid(word_t ptr) { return GET_SUID(FIELD(ptr, 0)); }
 #define UID_WRITE 6
 #define UID_READLN 7
 
-#define BUILTIN_UIDS_NUM 8
+STATIC_ASSERT(BUILTIN_UIDS_NUM > UID_READLN);
 
 #define FIRST_USER_UID BUILTIN_UIDS_NUM
 
@@ -181,7 +181,7 @@ static inline bool is_cstring(word_t x) {
     return is_ptr(x) && has_special_header(x) && get_suid(x) == SUID_CSTRING;
 }
 
-#define OBJ_UNIT make_header(UID_UNIT, 0)
-#define OBJ_VOID make_header(UID_VOID, 0)
+#define OBJ_UNIT MAKE_HEADER(UID_UNIT, 0)
+#define OBJ_VOID MAKE_HEADER(UID_VOID, 0)
 
 #endif

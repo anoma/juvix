@@ -103,6 +103,14 @@ static word_t io_readln() {
 #endif
 }
 
+void io_trace(word_t x) {
+    if (x == OBJ_VOID) {
+        print_msg("void");
+    } else {
+        io_print_toplevel(x);
+    }
+}
+
 void io_print_toplevel(word_t x) {
     if (x != OBJ_VOID) {
         io_write(x);

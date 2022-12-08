@@ -8,7 +8,8 @@
     DECL_ARG(2)
 
 int main() {
-    JUVIX_PROLOGUE(3, JUVIX_DECL_ARGS);
+    JUVIX_DECL_ARGS;
+    JUVIX_PROLOGUE(3);
 
     CALL(0, juvix_function_main, juvix_label_0);
     goto juvix_program_end;

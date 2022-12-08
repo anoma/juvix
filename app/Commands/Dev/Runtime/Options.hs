@@ -4,7 +4,7 @@ import Commands.Dev.Runtime.Compile.Options
 import CommonOptions
 
 newtype RuntimeCommand
-  = Compile RuntimeCompileOptions
+  = Compile CompileOptions
   deriving stock (Data)
 
 parseRuntimeCommand :: Parser RuntimeCommand
@@ -20,5 +20,5 @@ parseRuntimeCommand =
     compileInfo :: ParserInfo RuntimeCommand
     compileInfo =
       info
-        (Compile <$> parseRuntimeCompileOptions)
+        (Compile <$> parseCompileOptions)
         (progDesc "Compile a C file with Juvix runtime included")

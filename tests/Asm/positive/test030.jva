@@ -12,6 +12,7 @@ function f(integer) : integer {
       ret;
     }
     false: {
+      push 268435456;
       push 1;
       push arg[0];
       sub;
@@ -20,6 +21,7 @@ function f(integer) : integer {
       push 2;
       mul;
       add;
+      mod;
       ret;
     }
   };
@@ -37,12 +39,14 @@ function g(integer) : integer {
       ret;
     }
     false: {
+      push 268435456;
       push 1;
       push arg[0];
       sub;
       call h;
       push arg[0];
       add;
+      mod;
       ret;
     }
   };
@@ -58,12 +62,14 @@ function h(integer) : integer {
       ret;
     }
     false: {
+      push 268435456;
       push 1;
       push arg[0];
       sub;
       call f;
       push arg[0];
       mul;
+      mod;
       ret;
     }
   };

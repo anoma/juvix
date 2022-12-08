@@ -34,10 +34,10 @@ def log := \x \y log' x y 0;
 def fast_power' := \x \y \acc
   if y = 0 then
     acc
-  else if y % 2 = 1 then
-    fast_power' (x * x) (y / 2) (x * acc)
+  else if y % 2 = 0 then
+    fast_power' (x * x) (y / 2) acc
   else
-    fast_power' (x * x) (y / 2) acc;
+    fast_power' (x * x) (y / 2) (x * acc);
 def fast_power := \x \y fast_power' x y 1;
 
 def writeLn := \x write x >> write "\n";

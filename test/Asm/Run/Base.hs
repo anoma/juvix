@@ -41,7 +41,7 @@ asmRunAssertion mainFile expectedFile trans testTrans step = do
                             assertFailure (show (pretty err))
                           Right value' -> do
                             case value' of
-                              ValUnit (Unit False) -> return ()
+                              ValVoid -> return ()
                               _ -> hPutStrLn hout (ppPrint tab value')
                             hClose hout
                             actualOutput <- TIO.readFile outputFile
