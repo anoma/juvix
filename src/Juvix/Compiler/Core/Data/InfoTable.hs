@@ -12,7 +12,7 @@ data InfoTable = InfoTable
     _infoIdentifiers :: HashMap Symbol IdentifierInfo,
     _infoInductives :: HashMap Symbol InductiveInfo,
     _infoConstructors :: HashMap Tag ConstructorInfo,
-    _infoAxioms :: HashMap Name AxiomInfo,
+    _infoAxioms :: HashMap Text AxiomInfo,
     _infoNextSymbol :: Word,
     _infoNextTag :: Word
   }
@@ -37,7 +37,8 @@ data IdentKind
   | IdentConstr Tag
 
 data IdentifierInfo = IdentifierInfo
-  { _identifierName :: Maybe Name,
+  { _identifierName :: Text,
+    _identifierLocation :: Maybe Location,
     _identifierSymbol :: Symbol,
     _identifierType :: Type,
     -- _identifierArgsNum will be used often enough to justify avoiding recomputation
@@ -47,13 +48,15 @@ data IdentifierInfo = IdentifierInfo
   }
 
 data ArgumentInfo = ArgumentInfo
-  { _argumentName :: Maybe Name,
+  { _argumentName :: Text,
+    _argumentLocation :: Maybe Location,
     _argumentType :: Type,
     _argumentIsImplicit :: IsImplicit
   }
 
 data InductiveInfo = InductiveInfo
-  { _inductiveName :: Name,
+  { _inductiveName :: Text,
+    _inductiveLocation :: Maybe Location,
     _inductiveSymbol :: Symbol,
     _inductiveKind :: Type,
     _inductiveConstructors :: [ConstructorInfo],
@@ -62,7 +65,8 @@ data InductiveInfo = InductiveInfo
   }
 
 data ConstructorInfo = ConstructorInfo
-  { _constructorName :: Name,
+  { _constructorName :: Text,
+    _constructorLocation :: Maybe Location,
     _constructorTag :: Tag,
     _constructorType :: Type,
     _constructorArgsNum :: Int,
@@ -70,13 +74,15 @@ data ConstructorInfo = ConstructorInfo
   }
 
 data ParameterInfo = ParameterInfo
-  { _paramName :: Name,
+  { _paramName :: Text,
+    _paramLocation :: Maybe Location,
     _paramKind :: Type,
     _paramIsImplicit :: Bool
   }
 
 data AxiomInfo = AxiomInfo
-  { _axiomName :: Name,
+  { _axiomName :: Text,
+    _axiomLocation :: Maybe Location,
     _axiomType :: Type
   }
 

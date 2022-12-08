@@ -34,7 +34,8 @@ data ConstantValue
 
 -- | Info about a single binder. Associated with Lambda and Pi.
 data Binder' ty = Binder
-  { _binderName :: Maybe Name,
+  { _binderName :: Text,
+    _binderLocation :: Maybe Location,
     _binderType :: ty
   }
 

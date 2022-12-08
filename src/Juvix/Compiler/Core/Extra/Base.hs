@@ -104,7 +104,7 @@ mkPi :: Info -> Binder -> Type -> Type
 mkPi i bi b = NPi (Pi i bi b)
 
 mkPi' :: Type -> Type -> Type
-mkPi' = mkPi Info.empty . Binder Nothing
+mkPi' = mkPi Info.empty . Binder "" Nothing
 
 mkPis :: [Binder] -> Type -> Type
 mkPis tys ty = foldr (mkPi mempty) ty tys
@@ -301,7 +301,7 @@ data NodeDetails = NodeDetails
     _nodeChildren :: [NodeChild],
     -- | 'nodeReassemble' reassembles the node from the info, the subinfos and
     -- the children (which should be in the same fixed order as in the
-    -- 'nodeSubinfos' and 'nodeChildren' component).
+    -- 'nodeSubinfos' and 'nodeChildren' components).
     _nodeReassemble :: Info -> [Info] -> [NodeChild] -> Node
   }
 
@@ -465,12 +465,13 @@ destruct = \case
               (values', tys') = second (map (^. childNode)) (splitAtExact numItems valuesTys')
               items' =
                 nonEmpty'
-                  [ LetItem (Binder name ty') (v' ^. childNode)
-                    | (v', ty', name) <-
-                        zip3Exact
+                  [ LetItem (Binder name loc ty') (v' ^. childNode)
+                    | (v', ty', name, loc) <-
+                        zip4Exact
                           values'
                           tys'
                           (map (^. letItemBinder . binderName) (toList vs))
+                          (map (^. letItemBinder . binderLocation) (toList vs))
                   ]
            in mkLetRec i' items' (b' ^. childNode)
       }

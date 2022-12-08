@@ -11,7 +11,8 @@ data Type
   deriving stock (Eq)
 
 data TypeApp = TypeApp
-  { _typeAppName :: Maybe Name,
+  { _typeAppName :: Text,
+    _typeAppLocation :: Maybe Location,
     _typeAppSymbol :: Symbol,
     _typeAppArgs :: [Type]
   }
