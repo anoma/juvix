@@ -7,6 +7,7 @@ where
 import Data.Foldable
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
+import Juvix.Compiler.Abstract.Data.Name
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Extra.Base
 import Juvix.Compiler.Asm.Interpreter.Base

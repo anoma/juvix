@@ -27,8 +27,8 @@ genCode infoTable fi =
             )
             (fi ^. Core.functionBody)
    in FunctionInfo
-        { _functionName = maybe "function" (^. nameText) (fi ^. Core.functionName),
-          _functionLocation = fmap (^. nameLoc) (fi ^. Core.functionName),
+        { _functionName = fi ^. Core.functionName,
+          _functionLocation = fi ^. Core.functionLocation,
           _functionSymbol = fi ^. Core.functionSymbol,
           _functionArgsNum = fi ^. Core.functionArgsNum,
           _functionType = convertType (fi ^. Core.functionArgsNum) (fi ^. Core.functionType),

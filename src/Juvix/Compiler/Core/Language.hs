@@ -135,6 +135,7 @@ instance HasAtomicity Node where
 emptyBinder :: Binder
 emptyBinder =
   Binder
-    { _binderName = Nothing,
+    { _binderName = "?",
+      _binderLocation = Nothing,
       _binderType = NDyn (Dynamic mempty)
     }
