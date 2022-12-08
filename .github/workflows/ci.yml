@@ -95,7 +95,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-20.04, macos-12]
         ghc: ["9.2.5"]
     steps:
       - name: Checkout our repository
@@ -127,7 +127,8 @@ jobs:
           enable-stack: true
           stack-version: 'latest'
 
-      - name: Cache LLVM and Clang
+      - name: Cache LLVM and Clang (Linux)
+        if: runner.os == 'Linux'
         id: cache-llvm
         uses: actions/cache@v3
         with:
@@ -136,13 +137,27 @@ jobs:
             ./llvm
           key: ${{ runner.os }}-llvm-13
 
-      - name: Install LLVM and Clang
+      - name: Install LLVM and Clang (Linux)
+        if: runner.os == 'Linux'
         uses: KyleMayes/install-llvm-action@v1
         with:
           version: "13.0"
           cached: ${{ steps.cache-llvm.outputs.cache-hit }}
 
-      - name: Build Project
+      - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          echo "CC=$(brew --prefix llvm@14)/bin/clang" >> $GITHUB_ENV
+          echo "LIBTOOL=$(brew --prefix llvm@14)/bin/llvm-ar" >> $GITHUB_ENV
+
+      - name: Build Project (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cd main
+          make CC=$CC LIBTOOL=$LIBTOOL build
+
+      - name: Build Project (Linux)
+        if: runner.os == 'Linux'
         run: |
           cd main
           make build
@@ -152,7 +167,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-20.04, macos-12]
         ghc: ["9.2.5"]
     steps:
       - name: Checkout the main repository
@@ -160,6 +175,7 @@ jobs:
         with:
           path: main
           submodules: recursive
+
       - uses: actions/cache@v3
         name: Cache ~/.stack
         with:
@@ -167,6 +183,7 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.ghc }}-stack-global-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.ghc }}-stack-global-
+
       - uses: actions/cache@v3
         name: Cache .stack-work
         with:
@@ -174,13 +191,16 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.ghc }}-stack-work-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}-${{ hashFiles('main/**/*.hs') }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
+
       - uses: haskell/actions/setup@v1
         name: Setup Haskell
         with:
           ghc-version: ${{ matrix.ghc }}
           enable-stack: true
           stack-version: 'latest'
-      - name: Cache LLVM and Clang
+
+      - name: Cache LLVM and Clang (Linux)
+        if: runner.os == 'Linux'
         id: cache-llvm
         uses: actions/cache@v3
         with:
@@ -188,43 +208,70 @@ jobs:
             C:/Program Files/LLVM
             ./llvm
           key: ${{ runner.os }}-llvm-13
-      - name: Install LLVM and Clang
+
+      - name: Install LLVM and Clang (Linux)
+        if: runner.os == 'Linux'
         uses: KyleMayes/install-llvm-action@v1
         with:
           version: "13.0"
           cached: ${{ steps.cache-llvm.outputs.cache-hit }}
+
       - name: Download and extract wasi-sysroot
         run: |
           curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/wasi-sysroot-15.0.tar.gz -OL
           tar xfv wasi-sysroot-15.0.tar.gz
-      - name: Download and extract libclang_rt.builtins-wasm32-wasi
-        run: |
-          curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/libclang_rt.builtins-wasm32-wasi-15.0.tar.gz -OL
-          tar xfv libclang_rt.builtins-wasm32-wasi-15.0.tar.gz
-        working-directory: ${{ env.LLVM_PATH }}
+
       - name: Set WASI_SYSROOT_PATH
         run: |
           echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
+
       - name: Setup Wasmer
         uses: wasmerio/setup-wasmer@v1
-      - name: Test suite
+
+      - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          echo "CC=$(brew --prefix llvm@14)/bin/clang" >> $GITHUB_ENV
+          echo "LIBTOOL=$(brew --prefix llvm@14)/bin/llvm-ar" >> $GITHUB_ENV
+
+      - name: stack setup (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cd main
+          stack setup
+
+      - name: Add homebrew clang to the PATH (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          echo "$(brew --prefix llvm@14)/bin" >> $GITHUB_PATH
+
+      - name: Test suite (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cd main
+          make CC=$CC LIBTOOL=$LIBTOOL test
+
+      - name: Test suite (linux)
         id: test
+        if: runner.os == 'Linux'
         run: |
           cd main
           make test
-      - name : Shell tests
+
+      - name : Shell tests (Linux)
         id: shell-tests
-        if: matrix.os == 'ubuntu-latest'
+        if: runner.os == 'Linux'
         run : |
           cd main
           echo "$GITHUB_WORKSPACE/.local/bin" >> $GITHUB_PATH
           make test-shell
+
   docs:
     needs: build
     if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-20.04]
         ghc: ["9.2.5"]
     runs-on: ${{ matrix.os }}
     steps:
