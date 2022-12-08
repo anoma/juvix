@@ -249,5 +249,10 @@ tests =
       "Eta-expansion"
       "."
       "test044.jvc"
-      "out/test044.out"
+      "out/test044.out",
+    PosTest
+      "Type application and abstraction"
+      "."
+      "test045.jvc"
+      "out/test045.out"
   ]

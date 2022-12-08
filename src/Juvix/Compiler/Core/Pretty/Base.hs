@@ -341,7 +341,7 @@ instance PrettyCode Stripped.Node where
 instance PrettyCode ConstructorInfo where
   ppCode :: Member (Reader Options) r => ConstructorInfo -> Sem r (Doc Ann)
   ppCode ci = do
-    name <- ppCode (ci ^. constructorName)
+    name <- ppName KNameConstructor (ci ^. constructorName)
     ty <- ppCode (ci ^. constructorType)
     return $ name <+> colon <+> ty
 
@@ -376,7 +376,7 @@ instance PrettyCode InfoTable where
         where
           ppInductive :: InductiveInfo -> Sem r (Doc Ann)
           ppInductive ii = do
-            name <- ppCode (ii ^. inductiveName)
+            name <- ppName KNameInductive (ii ^. inductiveName)
             ctrs <- mapM (fmap (<> semi) . ppCode) (ii ^. inductiveConstructors)
             return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line))
 

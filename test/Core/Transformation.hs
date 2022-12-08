@@ -4,6 +4,7 @@ import Base
 import Core.Transformation.Identity qualified as Identity
 import Core.Transformation.Lifting qualified as Lifting
 import Core.Transformation.TopEtaExpand qualified as TopEtaExpand
+import Core.Transformation.RemoveTypeArgs qualified as RemoveTypeArgs
 
 allTests :: TestTree
 allTests =
@@ -11,5 +12,6 @@ allTests =
     "JuvixCore transformations"
     [ Identity.allTests,
       TopEtaExpand.allTests,
-      Lifting.allTests
+      Lifting.allTests,
+      RemoveTypeArgs.allTests
     ]
