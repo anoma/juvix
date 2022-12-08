@@ -14,8 +14,8 @@ import Juvix.Compiler.Asm.Interpreter.Base
 import Juvix.Compiler.Asm.Interpreter.RuntimeState
 import Juvix.Compiler.Asm.Pretty.Options
 import Juvix.Compiler.Core.Pretty.Base qualified as Core
-import Juvix.Extra.Strings qualified as Str
 import Juvix.Data.CodeAnn
+import Juvix.Extra.Strings qualified as Str
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
 doc opts =
