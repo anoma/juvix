@@ -801,7 +801,7 @@ caseMatchingBranch varsNum vars = do
                 ns
       br <- bracedExpr (varsNum + bindersNum) vars'
       let info = setInfoName (ci ^. constructorName) mempty
-          binders = [Binder name (Just loc) mkDynamic' | (name, loc) <- ns]
+          binders = zipWith (\(name, loc) -> Binder name (Just loc)) ns (typeArgs (ci ^. constructorType) ++ repeat mkDynamic')
       return $ CaseBranch info tag binders bindersNum br
     Nothing ->
       parseFailure off ("undeclared identifier: " ++ fromText txt)

@@ -16,7 +16,7 @@ convertNode tab = convert 0 mempty
     unsupported = error "remove type arguments: unsupported node"
 
     convert :: Int -> BinderList Binder -> Node -> Node
-    convert k bl = dmapLR' (bl, go k)
+    convert k vars = dmapLR' (vars, go k)
 
     go :: Int -> BinderList Binder -> Node -> Recur
     go k vars node = case node of
@@ -46,7 +46,29 @@ convertNode tab = convert 0 mempty
             ty = ci ^. constructorType
             args' = filterArgs ty _constrArgs
          in End (mkConstr _constrInfo _constrTag (map (convert k vars) args'))
-      -- TODO: adjust Case expressions
+      NCase (Case {..}) ->
+        End (mkCase _caseInfo (convert k vars _caseValue) (map convertBranch _caseBranches) (fmap (convert k vars) _caseDefault))
+        where
+          convertBranch :: CaseBranch -> CaseBranch
+          convertBranch br@CaseBranch {..} =
+            let binders' = filterBinders k vars _caseBranchBinders
+                body' = convert
+                          (k + _caseBranchBindersNum - length binders')
+                          (BL.prependRev _caseBranchBinders vars)
+                          _caseBranchBody
+            in
+              br
+                {
+                  _caseBranchBinders = binders',
+                  _caseBranchBindersNum = length binders',
+                  _caseBranchBody = body'
+                }
+          filterBinders :: Int -> BinderList Binder -> [Binder] -> [Binder]
+          filterBinders _ _ [] = []
+          filterBinders k' vars' (b : bs) | isTypeConstr (b ^. binderType) =
+            filterBinders (k' + 1) (BL.cons b vars') bs
+          filterBinders k' vars' (b : bs) =
+            over binderType (convert k' vars') b : filterBinders k' (BL.cons b vars') bs
       NLam (Lambda {..})
         | isTypeConstr (_lambdaBinder ^. binderType) ->
             End (convert (k + 1) (BL.cons _lambdaBinder vars) _lambdaBody)
