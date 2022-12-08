@@ -45,6 +45,7 @@ pcompletions = do
       TopEtaExpand -> strTopEtaExpand
       Identity -> strIdentity
       RemoveTypeArgs -> strRemoveTypeArgs
+      MoveApps -> strMoveApps
 
 lexeme :: MonadParsec e Text m => m a -> m a
 lexeme = L.lexeme L.hspace
@@ -61,13 +62,15 @@ transformation =
     <|> symbol strIdentity $> Identity
     <|> symbol strTopEtaExpand $> TopEtaExpand
     <|> symbol strRemoveTypeArgs $> RemoveTypeArgs
+    <|> symbol strMoveApps $> MoveApps
 
 allStrings :: [Text]
 allStrings =
   [ strLifting,
     strTopEtaExpand,
     strIdentity,
-    strRemoveTypeArgs
+    strRemoveTypeArgs,
+    strMoveApps
   ]
 
 strLifting :: Text
@@ -81,3 +84,6 @@ strIdentity = "identity"
 
 strRemoveTypeArgs :: Text
 strRemoveTypeArgs = "remove-type-args"
+
+strMoveApps :: Text
+strMoveApps = "move-apps"

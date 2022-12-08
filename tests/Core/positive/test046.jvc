@@ -1,0 +1,12 @@
+-- applications with lets and cases in function position
+
+inductive list {
+  nil : list;
+  cons : any -> list -> list;
+};
+
+def f := \l (case l of { cons x _ := x; nil := \x x } ) (let y := \x x in (let z := \x x in case l of { _ := \x x } z) y) 7;
+
+def main := f (cons (\x \y x y + 2) nil);
+
+main

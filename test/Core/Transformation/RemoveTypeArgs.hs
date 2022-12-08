@@ -6,10 +6,10 @@ import Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation
 
 allTests :: TestTree
-allTests = testGroup "Remove type arguments" (map liftTest Eval.tests)
+allTests = testGroup "Move applications and remove type arguments" (map liftTest Eval.tests)
 
 pipe :: [TransformationId]
-pipe = [LambdaLifting, RemoveTypeArgs]
+pipe = [LambdaLifting, MoveApps, RemoveTypeArgs]
 
 liftTest :: Eval.PosTest -> TestTree
 liftTest _testEval =

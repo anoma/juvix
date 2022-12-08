@@ -6,5 +6,6 @@ data TransformationId
   = LambdaLifting
   | TopEtaExpand
   | RemoveTypeArgs
+  | MoveApps
   | Identity
   deriving stock (Data)
