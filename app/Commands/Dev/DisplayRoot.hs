@@ -6,10 +6,10 @@ import Data.Yaml
 
 runCommand :: forall r. Members '[Embed IO, App] r => RootOptions -> Sem r ()
 runCommand RootOptions {..} = do
-  askRoot >>= say . pack
+  askRoot >>= say . pack . toFilePath
   when _rootPrintPackage printPackage
   where
     printPackage :: Sem r ()
     printPackage = do
       say "+----------------------------+"
-      askPackage >>= say . decodeUtf8 . encode
+      askPackage >>= say . decodeUtf8 . encode . rawPackage

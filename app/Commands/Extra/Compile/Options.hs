@@ -12,9 +12,9 @@ data CompileOptions = CompileOptions
   { _compileDebug :: Bool,
     _compilePreprocess :: Bool,
     _compileAssembly :: Bool,
-    _compileOutputFile :: Maybe Path,
+    _compileOutputFile :: Maybe (AppPath File),
     _compileTarget :: CompileTarget,
-    _compileInputFile :: Path
+    _compileInputFile :: AppPath File
   }
 
 makeLenses ''CompileOptions

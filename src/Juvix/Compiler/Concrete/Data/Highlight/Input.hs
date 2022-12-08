@@ -15,12 +15,12 @@ data HighlightInput = HighlightInput
 
 makeLenses ''HighlightInput
 
-filterInput :: FilePath -> HighlightInput -> HighlightInput
+filterInput :: Path Abs File -> HighlightInput -> HighlightInput
 filterInput absPth HighlightInput {..} =
   HighlightInput
     { _highlightNames = filterByLoc absPth _highlightNames,
       _highlightParsed = filterByLoc absPth _highlightParsed
     }
 
-filterByLoc :: HasLoc p => FilePath -> [p] -> [p]
-filterByLoc absPth = filter ((== absPth) . (^. intervalFile) . getLoc)
+filterByLoc :: HasLoc p => Path Abs File -> [p] -> [p]
+filterByLoc p = filter ((== toFilePath p) . (^. intervalFile) . getLoc)

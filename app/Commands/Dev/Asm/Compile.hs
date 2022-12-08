@@ -12,20 +12,21 @@ import Juvix.Extra.Paths
 
 runCommand :: forall r. Members '[Embed IO, App] r => AsmCompileOptions -> Sem r ()
 runCommand opts = do
-  s <- embed (readFile file)
-  case Asm.runParser file s of
+  file <- getFile
+  s <- embed (readFile (toFilePath file))
+  case Asm.runParser (toFilePath file) s of
     Left err -> exitJuvixError (JuvixError err)
     Right tab -> case run $ runError $ asmToMiniC asmOpts tab of
       Left err -> exitJuvixError err
       Right C.MiniCResult {..} -> do
         root <- askRoot
-        embed $ createDirectoryIfMissing True (root </> juvixBuildDir)
-        let cFile = inputCFile root file
-        embed $ TIO.writeFile cFile _resultCCode
-        Compile.runCommand opts {_compileInputFile = Path cFile False}
+        ensureDir (root <//> juvixBuildDir')
+        cFile <- inputCFile file
+        embed $ TIO.writeFile (toFilePath cFile) _resultCCode
+        Compile.runCommand opts {_compileInputFile = AppPath (Abs cFile) False}
   where
-    file :: FilePath
-    file = opts ^. compileInputFile . pathPath
+    getFile :: Sem r (Path Abs File)
+    getFile = someBaseToAbs' (opts ^. compileInputFile . pathPath)
 
     asmOpts :: Asm.Options
     asmOpts = Asm.makeOptions (asmTarget (opts ^. compileTarget)) (opts ^. compileDebug)
@@ -36,9 +37,10 @@ runCommand opts = do
       TargetNative64 -> Backend.TargetCNative64
       TargetC -> Backend.TargetCWasm32Wasi
 
-inputCFile :: FilePath -> FilePath -> FilePath
-inputCFile projRoot inputFileCompile =
-  projRoot </> juvixBuildDir </> outputMiniCFile
+inputCFile :: Members '[App] r => Path Abs File -> Sem r (Path Abs File)
+inputCFile inputFileCompile = do
+  root <- askRoot
+  return (root <//> juvixBuildDir' <//> outputMiniCFile)
   where
-    outputMiniCFile :: FilePath
-    outputMiniCFile = takeBaseName inputFileCompile <> ".c"
+    outputMiniCFile :: Path Rel File
+    outputMiniCFile = replaceExtension' ".c" (filename inputFileCompile)

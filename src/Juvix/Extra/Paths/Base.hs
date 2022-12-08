@@ -28,6 +28,9 @@ juvixBuildDir = toFilePath juvixBuildDir'
 juvixBuildDir' :: Path Rel Dir
 juvixBuildDir' = $(mkRelDir ".juvix-build")
 
+juvixIncludeDir' :: Path Rel Dir
+juvixIncludeDir' = juvixBuildDir' <//> $(mkRelDir "include")
+
 juvixStdlibDir' :: Path Rel Dir
 juvixStdlibDir' = juvixBuildDir' <//> $(mkRelDir "stdlib")
 

@@ -61,3 +61,12 @@ someBaseToAbs :: Path Abs Dir -> SomeBase b -> Path Abs b
 someBaseToAbs root = \case
   Rel r -> root <//> r
   Abs a -> a
+
+removeExtension :: Path b File -> Maybe (Path b File)
+removeExtension = fmap fst . splitExtension
+
+removeExtension' :: Path b File -> Path b File
+removeExtension' = fromJust . fmap fst . splitExtension
+
+replaceExtension' :: String -> Path b File -> Path b File
+replaceExtension' ext = fromJust . replaceExtension ext
