@@ -14,6 +14,7 @@ import Juvix.Compiler.Asm.Interpreter.Base
 import Juvix.Compiler.Asm.Interpreter.RuntimeState
 import Juvix.Compiler.Asm.Pretty.Options
 import Juvix.Compiler.Core.Pretty.Base qualified as Core
+import Juvix.Extra.Strings qualified as Str
 import Juvix.Data.CodeAnn
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
@@ -88,15 +89,15 @@ instance PrettyCode Val where
     ValInteger i ->
       return $ integer i
     ValBool True ->
-      return $ annotate (AnnKind KNameConstructor) (pretty ("true" :: String))
+      return $ annotate (AnnKind KNameConstructor) (pretty (Str.true_ :: String))
     ValBool False ->
-      return $ annotate (AnnKind KNameConstructor) (pretty ("false" :: String))
+      return $ annotate (AnnKind KNameConstructor) (pretty (Str.false_ :: String))
     ValString txt ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
     ValUnit ->
-      return $ annotate (AnnKind KNameConstructor) (pretty ("unit" :: String))
+      return $ annotate (AnnKind KNameConstructor) (pretty (Str.unit :: String))
     ValVoid ->
-      return $ annotate (AnnKind KNameConstructor) (pretty ("void" :: String))
+      return $ annotate (AnnKind KNameConstructor) (pretty (Str.void :: String))
     ValConstr c ->
       ppCode c
     ValClosure cl ->
@@ -117,9 +118,9 @@ instance PrettyCode ValueStack where
 instance PrettyCode Frame where
   ppCode :: Member (Reader Options) r => Frame -> Sem r (Doc Ann)
   ppCode Frame {..} = do
-    n <- maybe (return $ annotate (AnnKind KNameFunction) $ pretty ("main" :: String)) ppFunName _frameFunction
+    n <- maybe (return $ annotate (AnnKind KNameFunction) $ pretty (Str.main :: String)) ppFunName _frameFunction
     let header =
-          pretty ("function" :: String)
+          pretty (Str.function :: String)
             <+> n
               <> maybe mempty (\loc -> pretty (" called at" :: String) <+> pretty loc) _frameCallLocation
     args <- ppCode _frameArgs
@@ -178,17 +179,17 @@ instance PrettyCode Type where
   ppCode :: Member (Reader Options) r => Type -> Sem r (Doc Ann)
   ppCode = \case
     TyDynamic ->
-      return $ annotate (AnnKind KNameInductive) (pretty ("*" :: String))
+      return $ annotate (AnnKind KNameInductive) (pretty (Str.mul :: String))
     TyInteger {} ->
-      return $ annotate (AnnKind KNameInductive) (pretty ("integer" :: String))
+      return $ annotate (AnnKind KNameInductive) (pretty (Str.integer :: String))
     TyBool {} ->
-      return $ annotate (AnnKind KNameInductive) (pretty ("bool" :: String))
+      return $ annotate (AnnKind KNameInductive) (pretty (Str.bool :: String))
     TyString ->
-      return $ annotate (AnnKind KNameInductive) (pretty ("string" :: String))
+      return $ annotate (AnnKind KNameInductive) (pretty (Str.string :: String))
     TyUnit ->
-      return $ annotate (AnnKind KNameInductive) (pretty ("unit" :: String))
+      return $ annotate (AnnKind KNameInductive) (pretty (Str.unit :: String))
     TyVoid ->
-      return $ annotate (AnnKind KNameInductive) (pretty ("void" :: String))
+      return $ annotate (AnnKind KNameInductive) (pretty (Str.void :: String))
     TyInductive x ->
       ppCode x
     TyConstr x ->
@@ -199,9 +200,9 @@ instance PrettyCode Type where
 instance PrettyCode DirectRef where
   ppCode :: DirectRef -> Sem r (Doc Ann)
   ppCode = \case
-    StackRef -> return $ variable "$"
-    ArgRef off -> return $ variable "arg" <> lbracket <> integer off <> rbracket
-    TempRef off -> return $ variable "tmp" <> lbracket <> integer off <> rbracket
+    StackRef -> return $ variable Str.dollar
+    ArgRef off -> return $ variable Str.arg <> lbracket <> integer off <> rbracket
+    TempRef off -> return $ variable Str.tmp <> lbracket <> integer off <> rbracket
 
 instance PrettyCode Field where
   ppCode :: Member (Reader Options) r => Field -> Sem r (Doc Ann)
@@ -222,15 +223,15 @@ instance PrettyCode Value where
     ConstInt v ->
       return $ annotate AnnLiteralInteger (pretty v)
     ConstBool True ->
-      return $ annotate (AnnKind KNameConstructor) (pretty ("true" :: String))
+      return $ annotate (AnnKind KNameConstructor) (pretty (Str.true_ :: String))
     ConstBool False ->
-      return $ annotate (AnnKind KNameConstructor) (pretty ("false" :: String))
+      return $ annotate (AnnKind KNameConstructor) (pretty (Str.false_ :: String))
     ConstString txt ->
       return $ annotate AnnLiteralString (pretty (show txt :: String))
     ConstUnit {} ->
-      return $ annotate (AnnKind KNameConstructor) (pretty ("unit" :: String))
+      return $ annotate (AnnKind KNameConstructor) (pretty (Str.unit :: String))
     ConstVoid {} ->
-      return $ annotate (AnnKind KNameConstructor) (pretty ("void" :: String))
+      return $ annotate (AnnKind KNameConstructor) (pretty (Str.void :: String))
     Ref mval ->
       ppCode mval
 
@@ -240,41 +241,41 @@ ppCall call InstrCall {..} = case _callType of
     fn <- ppFunName sym
     return $ call <+> fn
   CallClosure ->
-    return $ call <+> variable "$" <+> integer _callArgsNum
+    return $ call <+> variable Str.dollar <+> integer _callArgsNum
 
 instance PrettyCode Instruction where
   ppCode :: Member (Reader Options) r => Instruction -> Sem r (Doc Ann)
   ppCode = \case
-    Binop IntAdd -> return $ primitive "add"
-    Binop IntSub -> return $ primitive "sub"
-    Binop IntMul -> return $ primitive "mul"
-    Binop IntDiv -> return $ primitive "div"
-    Binop IntMod -> return $ primitive "mod"
-    Binop IntLt -> return $ primitive "lt"
-    Binop IntLe -> return $ primitive "le"
-    Binop ValEq -> return $ primitive "eq"
-    Push val -> (primitive "push" <+>) <$> ppCode val
-    Pop -> return $ primitive "pop"
-    PushTemp -> return $ primitive "pusht"
-    PopTemp -> return $ primitive "popt"
-    Trace -> return $ primitive "trace"
-    Dump -> return $ primitive "dump"
-    Failure -> return $ primitive "fail"
+    Binop IntAdd -> return $ primitive Str.instrAdd
+    Binop IntSub -> return $ primitive Str.instrSub
+    Binop IntMul -> return $ primitive Str.instrMul
+    Binop IntDiv -> return $ primitive Str.instrDiv
+    Binop IntMod -> return $ primitive Str.instrMod
+    Binop IntLt -> return $ primitive Str.instrLt
+    Binop IntLe -> return $ primitive Str.instrLe
+    Binop ValEq -> return $ primitive Str.instrEq
+    Push val -> (primitive Str.instrPush <+>) <$> ppCode val
+    Pop -> return $ primitive Str.instrPop
+    PushTemp -> return $ primitive Str.instrPusht
+    PopTemp -> return $ primitive Str.instrPopt
+    Trace -> return $ primitive Str.instrTrace
+    Dump -> return $ primitive Str.instrDump
+    Failure -> return $ primitive Str.instrFailure
     Prealloc InstrPrealloc {..} ->
-      return $ primitive "prealloc" <+> integer _preallocWordsNum
-    AllocConstr tag -> (primitive "alloc" <+>) <$> ppConstrName tag
+      return $ primitive Str.instrPrealloc <+> integer _preallocWordsNum
+    AllocConstr tag -> (primitive Str.instrAlloc <+>) <$> ppConstrName tag
     AllocClosure InstrAllocClosure {..} -> do
       fn <- ppFunName _allocClosureFunSymbol
-      return $ primitive "calloc" <+> fn <+> integer _allocClosureArgsNum
+      return $ primitive Str.instrCalloc <+> fn <+> integer _allocClosureArgsNum
     ExtendClosure InstrExtendClosure {..} ->
-      return $ primitive "cextend" <+> integer _extendClosureArgsNum
-    Call c -> ppCall (primitive "call") c
-    TailCall c -> ppCall (primitive "tcall") c
+      return $ primitive Str.instrCextend <+> integer _extendClosureArgsNum
+    Call c -> ppCall (primitive Str.instrCall) c
+    TailCall c -> ppCall (primitive Str.instrTcall) c
     CallClosures InstrCallClosures {..} ->
-      return $ primitive "ccall" <+> integer _callClosuresArgsNum
+      return $ primitive Str.instrCcall <+> integer _callClosuresArgsNum
     TailCallClosures InstrCallClosures {..} ->
-      return $ primitive "tccall" <+> integer _callClosuresArgsNum
-    Return -> return $ primitive "ret"
+      return $ primitive Str.instrTccall <+> integer _callClosuresArgsNum
+    Return -> return $ primitive Str.instrReturn
 
 ppCodeCode :: Member (Reader Options) r => Code -> Sem r (Doc Ann)
 ppCodeCode x = do
@@ -296,12 +297,12 @@ instance PrettyCode Command where
       br1 <- ppCodeCode _cmdBranchTrue
       br2 <- ppCodeCode _cmdBranchFalse
       return $
-        primitive "br"
+        primitive Str.instrBr
           <+> braces'
-            ( constr "true" <> colon
+            ( constr Str.true_ <> colon
                 <+> braces' br1
                   <> line
-                  <> constr "false"
+                  <> constr Str.false_
                   <> colon
                 <+> braces' br2
             )
@@ -312,12 +313,12 @@ instance PrettyCode Command where
         Just def -> do
           d <-
             ( ppCodeCode
-                >=> (\x -> return $ primitive "default" <> colon <+> braces' x)
+                >=> (\x -> return $ primitive Str.default_ <> colon <+> braces' x)
               )
               def
           return $ brs ++ [d]
         Nothing -> return brs
-      return $ primitive "case" <+> name <+> braces' (vsep brs')
+      return $ primitive Str.case_ <+> name <+> braces' (vsep brs')
 
 instance PrettyCode a => PrettyCode [a] where
   ppCode x = do
@@ -330,7 +331,7 @@ instance PrettyCode FunctionInfo where
     targetty <- ppCode (typeTarget _functionType)
     c <- ppCodeCode _functionCode
     return $
-      keyword "function"
+      keyword Str.function
         <+> annotate (AnnKind KNameFunction) (pretty _functionName)
           <> encloseSep lparen rparen ", " argtys
         <+> colon
@@ -345,7 +346,7 @@ instance PrettyCode ConstructorInfo where
 instance PrettyCode InductiveInfo where
   ppCode InductiveInfo {..} = do
     ctrs <- mapM ppCode _inductiveConstructors
-    return $ keyword "inductive" <+> annotate (AnnKind KNameInductive) (pretty _inductiveName) <+> braces' (vcat (map (<> semi) ctrs))
+    return $ kwInductive <+> annotate (AnnKind KNameInductive) (pretty _inductiveName) <+> braces' (vcat (map (<> semi) ctrs))
 
 instance PrettyCode InfoTable where
   ppCode InfoTable {..} = do

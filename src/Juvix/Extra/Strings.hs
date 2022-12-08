@@ -290,6 +290,9 @@ true_ = "true"
 false_ :: IsString s => s
 false_ = "false"
 
+default_ :: IsString s => s
+default_ = "default"
+
 arg_ :: IsString s => s
 arg_ = "arg"
 
@@ -388,6 +391,93 @@ fun_ = "function"
 
 fwd_ :: IsString s => s
 fwd_ = "forward"
+
+integer :: IsString s => s
+integer = "integer"
+
+bool :: IsString s => s
+bool = "bool"
+
+arg :: IsString s => s
+arg = "arg"
+
+tmp :: IsString s => s
+tmp = "tmp"
+
+instrAdd :: IsString s => s
+instrAdd = "add"
+
+instrSub :: IsString s => s
+instrSub = "sub"
+
+instrMul :: IsString s => s
+instrMul = "mul"
+
+instrDiv :: IsString s => s
+instrDiv = "div"
+
+instrMod :: IsString s => s
+instrMod = "mod"
+
+instrLt :: IsString s => s
+instrLt = "lt"
+
+instrLe :: IsString s => s
+instrLe = "le"
+
+instrEq :: IsString s => s
+instrEq = "eq"
+
+instrPush :: IsString s => s
+instrPush = "push"
+
+instrPop :: IsString s => s
+instrPop = "pop"
+
+instrPusht :: IsString s => s
+instrPusht = "pusht"
+
+instrPopt :: IsString s => s
+instrPopt = "popt"
+
+instrTrace :: IsString s => s
+instrTrace = "trace"
+
+instrDump :: IsString s => s
+instrDump = "dump"
+
+instrFailure :: IsString s => s
+instrFailure = "fail"
+
+instrPrealloc :: IsString s => s
+instrPrealloc = "prealloc"
+
+instrAlloc :: IsString s => s
+instrAlloc = "alloc"
+
+instrCalloc :: IsString s => s
+instrCalloc = "calloc"
+
+instrCextend :: IsString s => s
+instrCextend = "cextend"
+
+instrCall :: IsString s => s
+instrCall = "call"
+
+instrTcall :: IsString s => s
+instrTcall = "tcall"
+
+instrCcall :: IsString s => s
+instrCcall = "ccall"
+
+instrTccall :: IsString s => s
+instrTccall = "tccall"
+
+instrReturn :: IsString s => s
+instrReturn = "return"
+
+instrBr :: IsString s => s
+instrBr = "br"
 
 juvixFunctionT :: IsString s => s
 juvixFunctionT = "juvix_function_t"
