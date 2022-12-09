@@ -1,3 +1,0 @@
-ghc-options:
-  "$locals": -optP-Wno-nonportable-include-path
-resolver: lts-20.2

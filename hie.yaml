@@ -1,10 +1,10 @@
 cradle:
-  stack:
+  cabal:
     - path: "./src"
-      component: "juvix:lib"
+      component: "lib:juvix"
 
     - path: "./app"
-      component: "juvix:exe:juvix"
+      component: "exe:juvix"
 
     - path: "./test"
-      component: "juvix:test:juvix-test"
+      component: "test:juvix-test"
