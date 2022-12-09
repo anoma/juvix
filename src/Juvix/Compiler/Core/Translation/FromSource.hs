@@ -45,20 +45,19 @@ guardSymbolNotDefined sym err = do
 
 createBuiltinConstr ::
   Symbol ->
-  BuiltinDataTag ->
+  Tag ->
   Text ->
   Type ->
   Interval ->
   Sem r ConstructorInfo
-createBuiltinConstr sym btag nameTxt ty i = do
-  let n = builtinConstrArgsNum btag
+createBuiltinConstr sym tag nameTxt ty i = do
   return $
     ConstructorInfo
       { _constructorName = nameTxt,
         _constructorLocation = Just i,
-        _constructorTag = BuiltinTag btag,
+        _constructorTag = tag,
         _constructorType = ty,
-        _constructorArgsNum = n,
+        _constructorArgsNum = length (typeArgs ty),
         _constructorInductive = sym,
         _constructorBuiltin = Nothing
       }
@@ -67,7 +66,7 @@ declareInductiveBuiltins ::
   Member InfoTableBuilder r =>
   Text ->
   Maybe BuiltinInductive ->
-  [(BuiltinDataTag, Text, Type -> Type)] ->
+  [(Tag, Text, Type -> Type)] ->
   ParsecS r ()
 declareInductiveBuiltins indName blt ctrs = do
   loc <- curLoc
@@ -96,10 +95,10 @@ declareIOBuiltins =
   declareInductiveBuiltins
     "IO"
     Nothing
-    [ (TagReturn, "return", mkPi' mkDynamic'),
-      (TagBind, "bind", \ty -> mkPi' ty (mkPi' (mkPi' mkDynamic' ty) ty)),
-      (TagWrite, "write", mkPi' mkDynamic'),
-      (TagReadLn, "readLn", id)
+    [ (BuiltinTag TagReturn, "return", mkPi' mkDynamic'),
+      (BuiltinTag TagBind, "bind", \ty -> mkPi' ty (mkPi' (mkPi' mkDynamic' ty) ty)),
+      (BuiltinTag TagWrite, "write", mkPi' mkDynamic'),
+      (BuiltinTag TagReadLn, "readLn", id)
     ]
 
 declareBoolBuiltins :: Member InfoTableBuilder r => ParsecS r ()
@@ -107,8 +106,19 @@ declareBoolBuiltins =
   declareInductiveBuiltins
     "bool"
     (Just BuiltinBool)
-    [ (TagTrue, "true", id),
-      (TagFalse, "false", id)
+    [ (BuiltinTag TagTrue, "true", id),
+      (BuiltinTag TagFalse, "false", id)
+    ]
+
+declareNatBuiltins :: Member InfoTableBuilder r => ParsecS r ()
+declareNatBuiltins = do
+  tagZero <- lift freshTag
+  tagSuc <- lift freshTag
+  declareInductiveBuiltins
+    "nat"
+    (Just BuiltinNat)
+    [ (tagZero, "zero", id),
+      (tagSuc, "suc", \x -> mkPi' x x)
     ]
 
 parseToplevel ::
@@ -117,6 +127,7 @@ parseToplevel ::
 parseToplevel = do
   declareIOBuiltins
   declareBoolBuiltins
+  declareNatBuiltins
   space
   P.endBy statement (kw kwSemicolon)
   r <- optional expression
