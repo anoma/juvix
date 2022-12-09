@@ -73,10 +73,10 @@ mkLetRec i vs b = NRec (LetRec i vs b)
 mkLetRec' :: NonEmpty Node -> Node -> Node
 mkLetRec' = mkLetRec Info.empty . fmap mkLetItem'
 
-mkCase :: Info -> Node -> [CaseBranch] -> Maybe Node -> Node
-mkCase i v bs def = NCase (Case i v bs def)
+mkCase :: Info -> Symbol -> Node -> [CaseBranch] -> Maybe Node -> Node
+mkCase i sym v bs def = NCase (Case i sym v bs def)
 
-mkCase' :: Node -> [CaseBranch] -> Maybe Node -> Node
+mkCase' :: Symbol -> Node -> [CaseBranch] -> Maybe Node -> Node
 mkCase' = mkCase Info.empty
 
 mkMatch :: Info -> NonEmpty Node -> [MatchBranch] -> Node
@@ -85,8 +85,8 @@ mkMatch i vs bs = NMatch (Match i vs bs)
 mkMatch' :: NonEmpty Node -> [MatchBranch] -> Node
 mkMatch' = mkMatch Info.empty
 
-mkIf :: Info -> Node -> Node -> Node -> Node
-mkIf i v b1 b2 = mkCase i v [br] (Just b2)
+mkIf :: Info -> Symbol -> Node -> Node -> Node -> Node
+mkIf i sym v b1 b2 = mkCase i sym v [br] (Just b2)
   where
     br =
       CaseBranch
@@ -97,7 +97,7 @@ mkIf i v b1 b2 = mkCase i v [br] (Just b2)
           _caseBranchBody = b1
         }
 
-mkIf' :: Node -> Node -> Node -> Node
+mkIf' :: Symbol -> Node -> Node -> Node -> Node
 mkIf' = mkIf Info.empty
 
 {------------------------------------------------------------------------}
@@ -483,7 +483,7 @@ destruct = \case
                   ]
            in mkLetRec i' items' (b' ^. childNode)
       }
-  NCase (Case i v brs mdef) ->
+  NCase (Case i sym v brs mdef) ->
     let branchChildren :: [([Binder], NodeChild)]
         branchChildren =
           [ (binders, manyBinders binders (br ^. caseBranchBody))
@@ -523,7 +523,7 @@ destruct = \case
                 _nodeSubinfos = map (^. caseBranchInfo) brs,
                 _nodeChildren = noBinders v : allNodes,
                 _nodeReassemble = someChildrenI $ \i' is' (v' :| allNodes') ->
-                  mkCase i' (v' ^. childNode) (mkBranches is' allNodes') Nothing
+                  mkCase i' sym (v' ^. childNode) (mkBranches is' allNodes') Nothing
               }
           Just def ->
             NodeDetails
@@ -531,7 +531,7 @@ destruct = \case
                 _nodeSubinfos = map (^. caseBranchInfo) brs,
                 _nodeChildren = noBinders v : noBinders def : allNodes,
                 _nodeReassemble = twoManyChildrenI $ \i' is' v' def' allNodes' ->
-                  mkCase i' (v' ^. childNode) (mkBranches is' allNodes') (Just (def' ^. childNode))
+                  mkCase i' sym (v' ^. childNode) (mkBranches is' allNodes') (Just (def' ^. childNode))
               }
   NMatch (Match i vs branches) ->
     let allNodes :: [NodeChild]

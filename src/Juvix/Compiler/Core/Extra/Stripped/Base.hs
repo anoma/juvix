@@ -52,5 +52,5 @@ mkLet i v b = NLet (Let i item b)
 mkLet' :: Node -> Node -> Node
 mkLet' = mkLet (LetInfo "" Nothing TyDynamic)
 
-mkCase :: CaseInfo -> Node -> [CaseBranch] -> Maybe Node -> Node
-mkCase ci v bs def = NCase (Case ci v bs def)
+mkCase :: CaseInfo -> Symbol -> Node -> [CaseBranch] -> Maybe Node -> Node
+mkCase ci sym v bs def = NCase (Case ci sym v bs def)

@@ -24,6 +24,16 @@ getConstructorInfo tag = do
   tab <- getInfoTable
   return $ fromJust (HashMap.lookup tag (tab ^. infoConstructors))
 
+getInductiveInfo :: Member InfoTableBuilder r => Symbol -> Sem r InductiveInfo
+getInductiveInfo sym = do
+  tab <- getInfoTable
+  return $ fromJust (HashMap.lookup sym (tab ^. infoInductives))
+
+getBoolSymbol :: Member InfoTableBuilder r => Sem r Symbol
+getBoolSymbol = do
+  ci <- getConstructorInfo (BuiltinTag TagTrue)
+  return $ ci ^. constructorInductive
+
 checkSymbolDefined :: Member InfoTableBuilder r => Symbol -> Sem r Bool
 checkSymbolDefined sym = do
   tab <- getInfoTable

@@ -70,10 +70,10 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
         let !vs' = map (eval' env' . (^. letItemValue)) (toList vs)
             !env' = revAppend vs' env
          in foldr GHC.pseq (eval' env' b) vs'
-      NCase (Case i v bs def) ->
+      NCase (Case i sym v bs def) ->
         case eval' env v of
           NCtr (Constr _ tag args) -> branch n env args tag def bs
-          v' -> evalError "matching on non-data" (substEnv env (mkCase i v' bs def))
+          v' -> evalError "matching on non-data" (substEnv env (mkCase i sym v' bs def))
       NMatch (Match _ vs bs) ->
         let !vs' = map' (eval' env) (toList vs)
          in match n env vs' bs

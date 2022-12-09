@@ -1,10 +1,11 @@
-module Juvix.Compiler.Core.Data.InfoTable(
-  module Juvix.Compiler.Core.Data.InfoTable,
-  module Juvix.Compiler.Concrete.Data.Builtins
-) where
+module Juvix.Compiler.Core.Data.InfoTable
+  ( module Juvix.Compiler.Core.Data.InfoTable,
+    module Juvix.Compiler.Concrete.Data.Builtins,
+  )
+where
 
-import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Concrete.Data.Builtins
+import Juvix.Compiler.Core.Language
 
 type IdentContext = HashMap Symbol Node
 
@@ -65,7 +66,8 @@ data InductiveInfo = InductiveInfo
     _inductiveKind :: Type,
     _inductiveConstructors :: [ConstructorInfo],
     _inductiveParams :: [ParameterInfo],
-    _inductivePositive :: Bool
+    _inductivePositive :: Bool,
+    _inductiveBuiltin :: Maybe BuiltinInductive
   }
 
 data ConstructorInfo = ConstructorInfo

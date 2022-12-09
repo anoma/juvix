@@ -121,7 +121,8 @@ goInductiveDef i = do
             _inductiveKind = mkDynamic',
             _inductiveConstructors = ctorInfos,
             _inductiveParams = [],
-            _inductivePositive = i ^. Internal.inductivePositive
+            _inductivePositive = i ^. Internal.inductivePositive,
+            _inductiveBuiltin = i ^. Internal.inductiveBuiltin
           }
   registerInductive (mkIdentIndex (i ^. Internal.inductiveName)) info
 
@@ -289,7 +290,8 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
                 _inductiveKind = mkDynamic',
                 _inductiveConstructors = [],
                 _inductiveParams = [],
-                _inductivePositive = False
+                _inductivePositive = False,
+                _inductiveBuiltin = Nothing
               }
       registerInductive (mkIdentIndex (a ^. Internal.axiomName)) info
 
@@ -558,9 +560,10 @@ goApplication a = do
       funInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoFunctions)
       case funInfo ^. Internal.functionInfoDef . Internal.funDefBuiltin of
         Just Internal.BuiltinBoolIf -> do
+          sym <- getBoolSymbol
           as <- exprArgs
           case as of
-            (v : b1 : b2 : xs) -> return (mkApps' (mkIf' v b1 b2) xs)
+            (v : b1 : b2 : xs) -> return (mkApps' (mkIf' sym v b1 b2) xs)
             _ -> error "if must be called with 3 arguments"
         _ -> app
     _ -> app
