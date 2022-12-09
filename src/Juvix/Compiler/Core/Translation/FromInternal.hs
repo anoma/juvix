@@ -132,7 +132,8 @@ goConstructor ::
   Internal.InductiveConstructorDef ->
   Sem r ConstructorInfo
 goConstructor sym ctor = do
-  tag <- mBuiltin >>= ctorTag
+  mblt <- mBuiltin
+  tag <- ctorTag mblt
   ty <- ctorType
   let info =
         ConstructorInfo
@@ -141,7 +142,8 @@ goConstructor sym ctor = do
             _constructorTag = tag,
             _constructorType = ty,
             _constructorArgsNum = length (ctor ^. Internal.inductiveConstructorParameters),
-            _constructorInductive = sym
+            _constructorInductive = sym,
+            _constructorBuiltin = mblt
           }
   registerConstructor (mkIdentIndex (ctor ^. Internal.inductiveConstructorName)) info
   return info
@@ -198,7 +200,8 @@ goFunctionDefIden (f, sym) = do
             _identifierType = funTy,
             _identifierArgsNum = 0,
             _identifierArgsInfo = [],
-            _identifierIsExported = False
+            _identifierIsExported = False,
+            _identifierBuiltin = f ^. Internal.funDefBuiltin
           }
   registerIdent (mkIdentIndex (f ^. Internal.funDefName)) info
   when (f ^. Internal.funDefName . Internal.nameText == Str.main) (registerMain sym)
@@ -307,7 +310,8 @@ goAxiomDef a = case a ^. Internal.axiomBuiltin >>= builtinBody of
               _identifierType = ty,
               _identifierArgsNum = 0,
               _identifierArgsInfo = [],
-              _identifierIsExported = False
+              _identifierIsExported = False,
+              _identifierBuiltin = Nothing
             }
     registerIdent (mkIdentIndex (a ^. Internal.axiomName)) info
     registerIdentNode sym body

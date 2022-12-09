@@ -55,6 +55,9 @@ mkLambda i bi b = NLam (Lambda i bi b)
 mkLambda' :: Node -> Node
 mkLambda' = mkLambda Info.empty emptyBinder
 
+mkLambdaTy :: Node -> Node -> Node
+mkLambdaTy ty = mkLambda Info.empty (Binder "?" Nothing ty)
+
 mkLetItem' :: Node -> LetItem
 mkLetItem' = LetItem emptyBinder
 

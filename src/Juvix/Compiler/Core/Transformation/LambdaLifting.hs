@@ -57,7 +57,8 @@ lambdaLiftNode aboveBl top =
                 _identifierType = typeFromArgs argsInfo,
                 _identifierArgsNum = length allfreevars,
                 _identifierArgsInfo = argsInfo,
-                _identifierIsExported = False
+                _identifierIsExported = False,
+                _identifierBuiltin = Nothing
               }
           registerIdentNode f fBody'
           let fApp = mkApps' (mkIdent mempty f) (map NVar allfreevars)
@@ -117,7 +118,8 @@ lambdaLiftNode aboveBl top =
                             _identifierType = typeFromArgs argsInfo,
                             _identifierArgsNum = length recItemsFreeVars,
                             _identifierArgsInfo = argsInfo,
-                            _identifierIsExported = False
+                            _identifierIsExported = False,
+                            _identifierBuiltin = Nothing
                           }
                     | (sym, (itemBinder, b)) <- zipExact topSyms (zipExact letRecBinders' liftedDefs)
                   ]

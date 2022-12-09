@@ -59,7 +59,8 @@ createBuiltinConstr sym btag nameTxt ty i = do
         _constructorTag = BuiltinTag btag,
         _constructorType = ty,
         _constructorArgsNum = n,
-        _constructorInductive = sym
+        _constructorInductive = sym,
+        _constructorBuiltin = Nothing
       }
 
 declareInductiveBuiltins ::
@@ -156,7 +157,8 @@ statementDef = do
                 _identifierType = ty,
                 _identifierArgsNum = 0,
                 _identifierArgsInfo = [],
-                _identifierIsExported = False
+                _identifierIsExported = False,
+                _identifierBuiltin = Nothing
               }
       lift $ registerIdent txt info
       void $ optional (parseDefinition sym ty)
@@ -233,7 +235,8 @@ constrDecl symInd = do
             _constructorTag = tag,
             _constructorArgsNum = length (typeArgs ty),
             _constructorType = ty,
-            _constructorInductive = symInd
+            _constructorInductive = symInd,
+            _constructorBuiltin = Nothing
           }
   lift $ registerConstructor txt ci
   return ci

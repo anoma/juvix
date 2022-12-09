@@ -1,6 +1,10 @@
-module Juvix.Compiler.Core.Data.InfoTable where
+module Juvix.Compiler.Core.Data.InfoTable(
+  module Juvix.Compiler.Core.Data.InfoTable,
+  module Juvix.Compiler.Concrete.Data.Builtins
+) where
 
 import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Concrete.Data.Builtins
 
 type IdentContext = HashMap Symbol Node
 
@@ -43,7 +47,8 @@ data IdentifierInfo = IdentifierInfo
     _identifierType :: Type,
     _identifierArgsNum :: Int,
     _identifierArgsInfo :: [ArgumentInfo],
-    _identifierIsExported :: Bool
+    _identifierIsExported :: Bool,
+    _identifierBuiltin :: Maybe BuiltinFunction
   }
 
 data ArgumentInfo = ArgumentInfo
@@ -69,7 +74,8 @@ data ConstructorInfo = ConstructorInfo
     _constructorTag :: Tag,
     _constructorType :: Type,
     _constructorArgsNum :: Int,
-    _constructorInductive :: Symbol
+    _constructorInductive :: Symbol,
+    _constructorBuiltin :: Maybe BuiltinConstructor
   }
 
 data ParameterInfo = ParameterInfo
