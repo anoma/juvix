@@ -62,14 +62,14 @@ convertNode tab = convert [] 0
                 sym = ci ^. constructorInductive
              in case _caseBranchBindersNum of
                   0 ->
-                    Recur' (levels, mkIf _caseInfo sym _caseValue _caseBranchBody br)
+                    Recur' (levels, mkIf _caseInfo sym (mkBuiltinApp' OpEq [_caseValue, mkConstant' (ConstInteger 0)]) _caseBranchBody br)
                   1 ->
                     End' $
-                      mkLet' (convert levels bl _caseValue) $
+                      mkLet' (mkBuiltinApp' OpIntSub [convert levels bl _caseValue, mkConstant' (ConstInteger 1)]) $
                         mkIf
                           _caseInfo
                           sym
-                          (mkVar' 0)
+                          (mkBuiltinApp' OpIntLe [mkConstant' (ConstInteger 0), mkVar' 0])
                           (convert levels (bl + 1) _caseBranchBody)
                           (convert (bl : levels) bl br)
                   _ -> impossible
