@@ -36,8 +36,9 @@ destructAbsDir d = go d []
     go p acc
       | isRoot p = (p, acc)
       | otherwise = go (parent p) (dirname p : acc)
-    isRoot :: Path Abs Dir -> Bool
-    isRoot p = parent p == p
+
+isRoot :: Path a Dir -> Bool
+isRoot p = parent p == p
 
 -- | is the root of absolute files always "/" ?
 destructAbsFile :: Path Abs File -> (Path Abs Dir, [Path Rel Dir], Path Rel File)
@@ -70,3 +71,11 @@ removeExtension' = fromJust . fmap fst . splitExtension
 
 replaceExtension' :: String -> Path b File -> Path b File
 replaceExtension' ext = fromJust . replaceExtension ext
+
+parents :: Path Abs a -> [Path Abs Dir]
+parents = go [] . parent
+  where
+  go :: [Path Abs Dir] -> Path Abs Dir -> [Path Abs Dir]
+  go ac p
+    | isRoot p = reverse (p : ac)
+    | otherwise = go (p : ac) (parent p)

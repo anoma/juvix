@@ -6,9 +6,9 @@ import Juvix.Compiler.Pipeline
 import Juvix.Extra.Paths qualified as Paths
 import Juvix.Prelude
 
-findRoot :: Maybe FilePath -> IO (FilePath, Package)
+findRoot :: Maybe (Path Abs File) -> IO (Path Abs Dir, Package)
 findRoot minputFile = do
-  whenJust (takeDirectory <$> minputFile) setCurrentDirectory
+  whenJust (parent <$> minputFile) setCurrentDir
   r <- IO.try go
   case r of
     Left (err :: IO.SomeException) -> do
@@ -17,21 +17,19 @@ findRoot minputFile = do
       exitFailure
     Right root -> return root
   where
-    possiblePaths :: FilePath -> [FilePath]
-    possiblePaths start = takeWhile (/= "/") (aux start)
-      where
-        aux f = f : aux (takeDirectory f)
+    possiblePaths :: Path Abs Dir -> [Path Abs Dir]
+    possiblePaths = parents
 
-    go :: IO (FilePath, Package)
+    go :: IO (Path Abs Dir, Package)
     go = do
-      c <- getCurrentDirectory
-      l <- findFile (possiblePaths c) Paths.juvixYamlFile
+      c <- getCurrentDir
+      l <- findFile (possiblePaths c) Paths.juvixYamlFile'
       case l of
         Nothing -> return (c, emptyPackage)
         Just yamlPath -> do
-          bs <- ByteString.readFile yamlPath
+          bs <- ByteString.readFile (toFilePath yamlPath)
           let isEmpty = ByteString.null bs
-              root = takeDirectory yamlPath
+              root = parent yamlPath
           pkg <-
             if
                 | isEmpty -> return emptyPackage
