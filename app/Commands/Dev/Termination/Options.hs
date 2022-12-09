@@ -13,6 +13,7 @@ import Options.Applicative
 data TerminationCommand
   = Calls CallsOptions
   | CallGraph CallGraphOptions
+  deriving stock (Data)
 
 parseTerminationCommand :: Parser TerminationCommand
 parseTerminationCommand =

@@ -11,6 +11,7 @@ data HighlightOptions = HighlightOptions
   { _highlightBackend :: HighlightBackend,
     _highlightInputFile :: AppPath File
   }
+  deriving stock (Data)
 
 parseHighlight :: Parser HighlightOptions
 parseHighlight = do

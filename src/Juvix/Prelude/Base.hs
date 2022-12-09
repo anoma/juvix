@@ -62,6 +62,7 @@ module Juvix.Prelude.Base
     module System.FilePath,
     module System.IO,
     module Text.Show,
+    module Control.Monad.Catch,
     Data,
     Text,
     pack,
@@ -77,6 +78,7 @@ module Juvix.Prelude.Base
 where
 
 import Control.Applicative
+import Control.Monad.Catch (MonadMask, MonadThrow, throwM)
 import Control.Monad.Extra hiding (fail)
 import Control.Monad.Fix
 import Control.Monad.IO.Class (MonadIO (..))
@@ -142,6 +144,8 @@ import GHC.Real
 import GHC.Stack.Types
 import Language.Haskell.TH.Syntax (Lift)
 import Lens.Micro.Platform hiding (both)
+import Path
+import Path.IO qualified as Path
 import Polysemy
 import Polysemy.Embed
 import Polysemy.Error hiding (fromEither)
@@ -153,7 +157,7 @@ import Prettyprinter (Doc, (<+>))
 import Safe.Exact
 import Safe.Foldable
 import System.Exit
-import System.FilePath (FilePath, normalise, (<.>), (</>), dropTrailingPathSeparator)
+import System.FilePath (FilePath, dropTrailingPathSeparator, normalise, (<.>), (</>))
 import System.IO hiding
   ( appendFile,
     getContents,
@@ -171,6 +175,7 @@ import System.IO hiding
     readFile',
     writeFile,
   )
+import System.IO.Error
 import Text.Show (Show)
 import Text.Show qualified as Show
 
@@ -399,3 +404,9 @@ instance CanonicalProjection a () where
 -- | 'project' with type arguments swapped. Useful for type application
 project' :: forall b a. CanonicalProjection a b => a -> b
 project' = project
+
+ensureFile :: (MonadIO m, MonadThrow m) => Path Abs File -> m ()
+ensureFile f =
+  unlessM
+    (Path.doesFileExist f)
+    (throwM (mkIOError doesNotExistErrorType "" Nothing (Just (toFilePath f))))

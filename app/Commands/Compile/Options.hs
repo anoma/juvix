@@ -2,8 +2,8 @@ module Commands.Compile.Options where
 
 import CommonOptions
 
-data CompileTarget =
-  TargetC
+data CompileTarget
+  = TargetC
   | TargetWasm
   | TargetNative
   deriving stock (Show, Data)
@@ -20,6 +20,7 @@ data CompileOptions = CompileOptions
     _compileOutputFile :: Maybe (AppPath File),
     _compileInputFile :: AppPath File
   }
+  deriving stock (Data)
 
 makeLenses ''CompileOptions
 

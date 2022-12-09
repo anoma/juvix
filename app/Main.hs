@@ -10,9 +10,9 @@ import TopCommand.Options
 main :: IO ()
 main = do
   let p = prefs showHelpOnEmpty
-  (global, cli) <- customExecParser p descr >>= secondM makeAbsPaths
+  (global, cli) <- customExecParser p descr
   (root, pkg) <- findRoot' cli
   runM (runAppIO global root pkg (runTopCommand cli))
   where
-    findRoot' :: TopCommand -> IO (FilePath, Package)
+    findRoot' :: TopCommand -> IO (Path Abs Dir, Package)
     findRoot' cli = findRoot (topCommandInputFile cli)

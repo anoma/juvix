@@ -3,12 +3,10 @@ module GlobalOptions
   )
 where
 
+import CommonOptions
 import Juvix.Compiler.Abstract.Pretty.Options qualified as Abstract
 import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
 import Juvix.Data.Error.GenericError qualified as E
-import Juvix.Prelude
-import Options.Applicative hiding (hidden)
-import CommonOptions
 
 data GlobalOptions = GlobalOptions
   { _globalNoColors :: Bool,
@@ -104,7 +102,8 @@ parseGlobalFlags = do
       )
   _globalStdlibPath <-
     optional
-      ( option someDir
+      ( option
+          someDirOpt
           ( long "stdlib-path"
               <> metavar "PATH"
               <> help "Specify path to the standard library"

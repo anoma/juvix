@@ -6,6 +6,7 @@ data ParseOptions = ParseOptions
   { _parseNoPrettyShow :: Bool,
     _parseInputFile :: AppPath File
   }
+  deriving stock (Data)
 
 makeLenses ''ParseOptions
 

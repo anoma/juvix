@@ -11,6 +11,7 @@ data InternalCommand
   | TypeCheck InternalTypeOptions
   | Arity InternalArityOptions
   | CoreEval InternalCoreEvalOptions
+  deriving stock (Data)
 
 parseInternalCommand :: Parser InternalCommand
 parseInternalCommand =

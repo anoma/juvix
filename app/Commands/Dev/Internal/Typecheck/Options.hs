@@ -6,6 +6,7 @@ data InternalTypeOptions = InternalTypeOptions
   { _internalTypePrint :: Bool,
     _internalTypeInputFile :: AppPath File
   }
+  deriving stock (Data)
 
 makeLenses ''InternalTypeOptions
 

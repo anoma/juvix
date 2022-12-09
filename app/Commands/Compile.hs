@@ -101,13 +101,12 @@ clangCompile ::
 clangCompile inputFileCompile o = do
   outputFile <- getOutputFile
   inputFile <- getInputFile
-  let
-    clangArgs :: Sem r [String]
-    clangArgs = case o ^. compileRuntime of
-      RuntimeStandalone -> do
-        standaloneLibArgs outputFile inputFile
-      RuntimeWasiStandalone -> wasiStandaloneArgs outputFile inputFile
-      RuntimeWasiLibC -> wasiLibcArgs outputFile inputFile
+  let clangArgs :: Sem r [String]
+      clangArgs = case o ^. compileRuntime of
+        RuntimeStandalone -> do
+          standaloneLibArgs outputFile inputFile
+        RuntimeWasiStandalone -> wasiStandaloneArgs outputFile inputFile
+        RuntimeWasiLibC -> wasiLibcArgs outputFile inputFile
 
   clangArgs >>= runClang
   where
@@ -120,10 +119,10 @@ clangCompile inputFileCompile o = do
     getInputFile :: Sem r (Path Abs File)
     getInputFile = inputCFile inputFileCompile
 
-
 sysrootEnvVar :: Members '[Error Text, Embed IO] r => Sem r (Path Abs Dir)
-sysrootEnvVar = absDir <$>
-  fromMaybeM (throw msg) (embed (lookupEnv "WASI_SYSROOT_PATH"))
+sysrootEnvVar =
+  absDir
+    <$> fromMaybeM (throw msg) (embed (lookupEnv "WASI_SYSROOT_PATH"))
   where
     msg :: Text
     msg = "Missing environment variable WASI_SYSROOT_PATH"
@@ -141,23 +140,25 @@ commonArgs wasmOutputFile =
 standaloneLibArgs :: Members '[App, Embed IO] r => Path Abs File -> Path Abs File -> Sem r [String]
 standaloneLibArgs wasmOutputFile inputFile = do
   root <- askRoot
-  return $ commonArgs wasmOutputFile
-    <> [ "--target=wasm32",
-         "-nodefaultlibs",
-         "-nostartfiles",
-         "-Wl,--no-entry",
-         toFilePath (root <//> juvixBuildDir' <//> $(mkRelFile "walloc.c")),
-         toFilePath inputFile
-       ]
+  return $
+    commonArgs wasmOutputFile
+      <> [ "--target=wasm32",
+           "-nodefaultlibs",
+           "-nostartfiles",
+           "-Wl,--no-entry",
+           toFilePath (root <//> juvixBuildDir' <//> $(mkRelFile "walloc.c")),
+           toFilePath inputFile
+         ]
 
 wasiStandaloneArgs :: Members '[App, Error Text, Embed IO] r => Path Abs File -> Path Abs File -> Sem r [String]
 wasiStandaloneArgs wasmOutputFile inputFile = do
   root <- askRoot
   com <- wasiCommonArgs wasmOutputFile
-  return $ com
-    <> [ toFilePath (root <//> juvixBuildDir' <//> $(mkRelFile "walloc.c")),
-         toFilePath inputFile
-       ]
+  return $
+    com
+      <> [ toFilePath (root <//> juvixBuildDir' <//> $(mkRelFile "walloc.c")),
+           toFilePath inputFile
+         ]
 
 wasiLibcArgs :: Members '[App, Error Text, Embed IO] r => Path Abs File -> Path Abs File -> Sem r [String]
 wasiLibcArgs wasmOutputFile inputFile = do
@@ -171,12 +172,13 @@ nativeArgs outputFile inputFile =
 wasiCommonArgs :: Members '[App, Error Text, Embed IO] r => Path Abs File -> Sem r [String]
 wasiCommonArgs wasmOutputFile = do
   sysrootPath <- sysrootEnvVar
-  return $ commonArgs wasmOutputFile
-    <> [ "-nodefaultlibs",
-         "--target=wasm32-wasi",
-         "--sysroot",
-         toFilePath sysrootPath
-       ]
+  return $
+    commonArgs wasmOutputFile
+      <> [ "-nodefaultlibs",
+           "--target=wasm32-wasi",
+           "--sysroot",
+           toFilePath sysrootPath
+         ]
 
 runClang ::
   Members '[Embed IO, Error Text] r =>

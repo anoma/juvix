@@ -27,6 +27,7 @@ dependencies:
 - directory == 1.3.*
 - dlist == 1.0.*
 - edit-distance == 0.2.*
+- exceptions == 0.10.*
 - extra == 1.7.*
 - file-embed == 0.0.*
 - filepath == 1.4.*
@@ -45,7 +46,6 @@ dependencies:
 - prettyprinter-ansi-terminal == 1.1.*
 - process == 1.6.*
 - safe == 0.3.*
-- semirings == 0.6.*
 - singletons == 3.0.*
 - singletons-th == 3.1.*
 - Stream == 0.4.*

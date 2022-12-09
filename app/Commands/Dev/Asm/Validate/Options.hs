@@ -5,6 +5,7 @@ import CommonOptions
 newtype AsmValidateOptions = AsmValidateOptions
   { _asmValidateInputFile :: AppPath File
   }
+  deriving stock (Data)
 
 makeLenses ''AsmValidateOptions
 

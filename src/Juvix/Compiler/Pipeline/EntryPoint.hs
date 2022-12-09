@@ -23,8 +23,13 @@ data EntryPoint = EntryPoint
 
 makeLenses ''EntryPoint
 
-defaultRawEntryPoint :: Path Abs Dir -> Path Rel File -> EntryPoint
-defaultRawEntryPoint root mainFile =
+defaultEntryPointCwd :: Path Rel File -> IO EntryPoint
+defaultEntryPointCwd mainFile = do
+  cwd <- getCurrentDir
+  return (defaultEntryPoint cwd mainFile)
+
+defaultEntryPoint :: Path Abs Dir -> Path Rel File -> EntryPoint
+defaultEntryPoint root mainFile =
   EntryPoint
     { _entryPointRoot = root,
       _entryPointNoTermination = False,

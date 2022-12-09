@@ -9,6 +9,7 @@ data AsmCommand
   = Run AsmRunOptions
   | Validate AsmValidateOptions
   | Compile AsmCompileOptions
+  deriving stock (Data)
 
 parseAsmCommand :: Parser AsmCommand
 parseAsmCommand =

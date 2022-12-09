@@ -9,6 +9,7 @@ data CoreEvalOptions = CoreEvalOptions
     _coreEvalInputFile :: AppPath File,
     _coreEvalShowDeBruijn :: Bool
   }
+  deriving stock (Data)
 
 makeLenses ''CoreEvalOptions
 

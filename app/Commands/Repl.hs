@@ -5,7 +5,6 @@ module Commands.Repl where
 import Commands.Base hiding (command)
 import Commands.Repl.Options
 import Control.Exception (throwIO)
-import Control.Monad.IO.Class
 import Control.Monad.State.Strict qualified as State
 import Data.String.Interpolate (i, __i)
 import Evaluator
@@ -41,10 +40,10 @@ data ReplContext = ReplContext
   }
 
 data ReplState = ReplState
-  { _replStateReplRoot :: FilePath,
+  { _replStateReplRoot :: Path Abs Dir,
     _replStateContext :: Maybe ReplContext,
     _replStateGlobalOptions :: GlobalOptions,
-    _replStateMkEntryPoint :: FilePath -> Repl EntryPoint
+    _replStateMkEntryPoint :: SomeBase File -> Repl EntryPoint
   }
 
 makeLenses ''ReplState
@@ -101,8 +100,8 @@ runCommand opts = do
                   )
               )
           )
-        let epPath :: FilePath = ep ^. entryPointModulePaths . _head1
-        liftIO (putStrLn [i|OK loaded: #{epPath}|])
+        let epPath :: Path Abs File = ep ^. entryPointModulePaths . _head1
+        liftIO (putStrLn [i|OK loaded: #{toFilePath epPath}|])
 
       reloadFile :: String -> Repl ()
       reloadFile _ = do
@@ -112,10 +111,12 @@ runCommand opts = do
             loadEntryPoint entryPoint
           Nothing -> noFileLoadedMsg
 
-      loadFile :: String -> Repl ()
-      loadFile args = do
+      pSomeFile :: String -> SomeBase File
+      pSomeFile = someFile . unpack . strip . pack
+
+      loadFile :: SomeBase File -> Repl ()
+      loadFile f = do
         mkEntryPoint <- State.gets (^. replStateMkEntryPoint)
-        let f = unpack (strip (pack args))
         entryPoint <- mkEntryPoint f
         loadEntryPoint entryPoint
 
@@ -125,8 +126,8 @@ runCommand opts = do
         case mStdlibPath of
           Nothing -> loadDefaultPrelude
           Just stdlibDir' -> do
-            absStdlibDir <- liftIO (makeAbsolute stdlibDir')
-            loadFile (absStdlibDir </> preludePath)
+            absStdlibDir :: Path Abs Dir <- makeAbsolute stdlibDir'
+            loadFile (Abs (absStdlibDir <//> preludePath'))
 
       loadDefaultPrelude :: Repl ()
       loadDefaultPrelude = defaultPreludeEntryPoint >>= loadEntryPoint
@@ -134,7 +135,7 @@ runCommand opts = do
       printRoot :: String -> Repl ()
       printRoot _ = do
         r <- State.gets (^. replStateReplRoot)
-        liftIO $ putStrLn (pack r)
+        liftIO $ putStrLn (pack (toFilePath r))
 
       displayVersion :: String -> Repl ()
       displayVersion _ = liftIO (putStrLn versionTag)
@@ -202,7 +203,7 @@ runCommand opts = do
           -- `repline`'s `multilineCommand` logic overrides this no-op.
           (multilineCmd, Repline.dontCrash . \_ -> return ()),
           ("quit", quit),
-          ("load", Repline.dontCrash . loadFile),
+          ("load", Repline.dontCrash . loadFile . pSomeFile),
           ("reload", Repline.dontCrash . reloadFile),
           ("prelude", Repline.dontCrash . const loadPrelude),
           ("root", printRoot),
@@ -269,25 +270,29 @@ defaultPreludeEntryPoint :: Repl EntryPoint
 defaultPreludeEntryPoint = do
   opts <- State.gets (^. replStateGlobalOptions)
   root <- State.gets (^. replStateReplRoot)
+  let stdlib :: Maybe (Path Abs Dir) = someBaseToAbs root <$> opts ^. globalStdlibPath
   return $
     EntryPoint
       { _entryPointRoot = root,
         _entryPointNoTermination = opts ^. globalNoTermination,
         _entryPointNoPositivity = opts ^. globalNoPositivity,
         _entryPointNoStdlib = opts ^. globalNoStdlib,
-        _entryPointStdlibPath = opts ^. globalStdlibPath,
+        _entryPointStdlibPath = stdlib,
         _entryPointPackage = emptyPackage,
-        _entryPointModulePaths = pure (defaultStdlibPath root </> preludePath),
+        _entryPointModulePaths = pure (defaultStdlibPath root <//> preludePath'),
         _entryPointGenericOptions = project opts,
         _entryPointStdin = Nothing
       }
 
-getReplEntryPoint :: FilePath -> Repl EntryPoint
+getReplEntryPoint :: SomeBase File -> Repl EntryPoint
 getReplEntryPoint inputFile = do
   opts <- State.gets (^. replStateGlobalOptions)
-  absInputFile <- liftIO (makeAbsolute inputFile)
-  absStdlibPath <- liftIO (mapM makeAbsolute (opts ^. globalStdlibPath))
-  (root, package) <- liftIO (findRoot (Just absInputFile))
+  absInputFile :: Path Abs File <- makeAbsolute inputFile
+  absStdlibPath :: Maybe (Path Abs Dir) <- case opts ^. globalStdlibPath of
+    Nothing -> return Nothing
+    Just (Abs p) -> return (Just p)
+    Just (Rel p) -> Just <$> makeAbsolute p
+  (root, package) <- liftIO (findRoot (Just inputFile))
   return $
     EntryPoint
       { _entryPointRoot = root,

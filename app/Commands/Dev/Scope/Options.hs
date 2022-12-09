@@ -8,6 +8,7 @@ data ScopeOptions = ScopeOptions
   { _scopeInlineImports :: Bool,
     _scopeInputFile :: AppPath File
   }
+  deriving stock (Data)
 
 makeLenses ''ScopeOptions
 

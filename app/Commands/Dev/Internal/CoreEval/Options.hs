@@ -9,6 +9,7 @@ data InternalCoreEvalOptions = InternalCoreEvalOptions
     _internalCoreEvalNoIO :: Bool,
     _internalCoreEvalInputFile :: AppPath File
   }
+  deriving stock (Data)
 
 makeLenses ''InternalCoreEvalOptions
 

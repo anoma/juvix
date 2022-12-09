@@ -13,6 +13,7 @@ data CoreReadOptions = CoreReadOptions
     _coreReadNoPrint :: Bool,
     _coreReadInputFile :: AppPath File
   }
+  deriving stock (Data)
 
 makeLenses ''CoreReadOptions
 

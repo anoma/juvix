@@ -5,6 +5,7 @@ import CommonOptions
 
 newtype RuntimeCommand
   = Compile CompileOptions
+  deriving stock (Data)
 
 parseRuntimeCommand :: Parser RuntimeCommand
 parseRuntimeCommand =

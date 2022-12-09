@@ -6,6 +6,7 @@ import CommonOptions
 newtype TypecheckOptions = TypecheckOptions
   { _typecheckInputFile :: AppPath File
   }
+  deriving stock (Data)
 
 makeLenses ''TypecheckOptions
 

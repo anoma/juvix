@@ -7,6 +7,7 @@ data DocOptions = DocOptions
     _docOpen :: Bool,
     _docInputFile :: AppPath File
   }
+  deriving stock (Data)
 
 makeLenses ''DocOptions
 

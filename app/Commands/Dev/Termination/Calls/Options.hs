@@ -10,6 +10,7 @@ data CallsOptions = CallsOptions
     _callsShowDecreasingArgs :: Abstract.ShowDecrArgs,
     _callsInputFile :: AppPath File
   }
+  deriving stock (Data)
 
 makeLenses ''CallsOptions
 

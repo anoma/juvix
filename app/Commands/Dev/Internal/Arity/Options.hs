@@ -5,6 +5,7 @@ import CommonOptions
 newtype InternalArityOptions = InternalArityOptions
   { _internalArityInputFile :: AppPath File
   }
+  deriving stock (Data)
 
 makeLenses ''InternalArityOptions
 

@@ -6,9 +6,11 @@ import Juvix.Compiler.Pipeline
 import Juvix.Extra.Paths qualified as Paths
 import Juvix.Prelude
 
-findRoot :: Maybe (Path Abs File) -> IO (Path Abs Dir, Package)
+findRoot :: Maybe (SomeBase File) -> IO (Path Abs Dir, Package)
 findRoot minputFile = do
-  whenJust (parent <$> minputFile) setCurrentDir
+  whenJust minputFile $ \case
+    (Abs d) -> setCurrentDir (parent d)
+    (Rel d) -> setCurrentDir (parent d)
   r <- IO.try go
   case r of
     Left (err :: IO.SomeException) -> do

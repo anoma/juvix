@@ -7,6 +7,7 @@ data CallGraphOptions = CallGraphOptions
   { _graphFunctionNameFilter :: Maybe (NonEmpty Text),
     _graphInputFile :: AppPath File
   }
+  deriving stock (Data)
 
 makeLenses ''CallGraphOptions
 

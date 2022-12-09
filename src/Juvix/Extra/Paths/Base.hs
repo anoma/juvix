@@ -37,8 +37,11 @@ juvixStdlibDir' = juvixBuildDir' <//> $(mkRelDir "stdlib")
 juvixStdlibDir :: FilePath
 juvixStdlibDir = toFilePath juvixStdlibDir'
 
+preludePath' :: Path Rel File
+preludePath' = $(mkRelFile "Stdlib/Prelude.juvix")
+
 preludePath :: FilePath
-preludePath = "Stdlib" </> "Prelude.juvix"
+preludePath = toFilePath preludePath'
 
 defaultStdlibPath :: Path Abs Dir -> Path Abs Dir
 defaultStdlibPath root = root <//> relDir juvixStdlibDir

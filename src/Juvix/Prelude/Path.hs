@@ -5,17 +5,26 @@ module Juvix.Prelude.Path
   )
 where
 
-import Juvix.Prelude.Path.OrphanInstances ()
 import Juvix.Prelude.Base
+import Juvix.Prelude.Path.OrphanInstances ()
 import Path hiding ((<.>), (</>))
 import Path qualified
 import Path.IO hiding (listDirRel, walkDirRel)
 
--- | Synonym for Path.</>. Useful to avoid name clashes
+absDir :: FilePath -> Path Abs Dir
+absDir r = fromMaybe (error ("not an absolute file path: " <> pack r)) (parseAbsDir r)
+
 infixr 5 <//>
 
+-- | Synonym for Path.</>. Useful to avoid name clashes
 (<//>) :: Path b Dir -> Path Rel t -> Path b t
 (<//>) = (Path.</>)
+
+someFile :: FilePath -> SomeBase File
+someFile r = fromMaybe (error ("not a file path: " <> pack r)) (parseSomeFile r)
+
+someDir :: FilePath -> SomeBase Dir
+someDir r = fromMaybe (error ("not a dir path: " <> pack r)) (parseSomeDir r)
 
 relFile :: FilePath -> Path Rel File
 relFile r = fromMaybe (error ("not a relative file path: " <> pack r)) (parseRelFile r)
@@ -25,9 +34,6 @@ relDir r = fromMaybe (error ("not a relative directory path: " <> pack r)) (pars
 
 absFile :: FilePath -> Path Abs File
 absFile r = fromMaybe (error ("not an absolute file path: " <> pack r)) (parseAbsFile r)
-
-absDir :: FilePath -> Path Abs Dir
-absDir r = fromMaybe (error ("not an absolute file path: " <> pack r)) (parseAbsDir r)
 
 destructAbsDir :: Path Abs Dir -> (Path Abs Dir, [Path Rel Dir])
 destructAbsDir d = go d []
@@ -75,7 +81,10 @@ replaceExtension' ext = fromJust . replaceExtension ext
 parents :: Path Abs a -> [Path Abs Dir]
 parents = go [] . parent
   where
-  go :: [Path Abs Dir] -> Path Abs Dir -> [Path Abs Dir]
-  go ac p
-    | isRoot p = reverse (p : ac)
-    | otherwise = go (p : ac) (parent p)
+    go :: [Path Abs Dir] -> Path Abs Dir -> [Path Abs Dir]
+    go ac p
+      | isRoot p = reverse (p : ac)
+      | otherwise = go (p : ac) (parent p)
+
+withTempDir' :: (MonadIO m, MonadMask m) => (Path Abs Dir -> m a) -> m a
+withTempDir' = withTempDir $(mkRelDir ".") "tmp"

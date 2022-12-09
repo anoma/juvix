@@ -5,6 +5,7 @@ import CommonOptions
 newtype InternalPrettyOptions = InternalPrettyOptions
   { _internalPrettyInputFile :: AppPath File
   }
+  deriving stock (Data)
 
 makeLenses ''InternalPrettyOptions
 

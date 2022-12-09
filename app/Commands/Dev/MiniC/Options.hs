@@ -5,6 +5,7 @@ import CommonOptions
 newtype MiniCOptions = MiniCOptions
   { _miniCInputFile :: AppPath File
   }
+  deriving stock (Data)
 
 makeLenses ''MiniCOptions
 

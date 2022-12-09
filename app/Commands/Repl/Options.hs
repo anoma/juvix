@@ -6,6 +6,7 @@ data ReplOptions = ReplOptions
   { _replInputFile :: Maybe (AppPath File),
     _replNoPrelude :: Bool
   }
+  deriving stock (Data)
 
 makeLenses ''ReplOptions
 

@@ -37,6 +37,7 @@ data DevCommand
   | Scope ScopeOptions
   | Termination TerminationCommand
   | Doc DocOptions
+  deriving stock (Data)
 
 parseDevCommand :: Parser DevCommand
 parseDevCommand =

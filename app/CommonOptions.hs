@@ -17,6 +17,7 @@ data AppPath f = AppPath
   { _pathPath :: SomeBase f,
     _pathIsInput :: Bool
   }
+  deriving stock (Data)
 
 makeLenses ''AppPath
 
@@ -27,7 +28,7 @@ parseInputJuvixFile :: Parser (AppPath File)
 parseInputJuvixFile = do
   _pathPath <-
     argument
-      someFile
+      someFileOpt
       ( metavar "JUVIX_FILE"
           <> help "Path to a .juvix file"
           <> completer juvixCompleter
@@ -38,7 +39,7 @@ parseInputJuvixCoreFile :: Parser (AppPath File)
 parseInputJuvixCoreFile = do
   _pathPath <-
     argument
-      someFile
+      someFileOpt
       ( metavar "JUVIX_CORE_FILE"
           <> help "Path to a .jvc file"
           <> completer juvixCoreCompleter
@@ -49,7 +50,7 @@ parseInputJuvixAsmFile :: Parser (AppPath File)
 parseInputJuvixAsmFile = do
   _pathPath <-
     argument
-      someFile
+      someFileOpt
       ( metavar "JUVIX_ASM_FILE"
           <> help "Path to a .jva file"
           <> completer juvixAsmCompleter
@@ -60,7 +61,7 @@ parseInputCFile :: Parser (AppPath File)
 parseInputCFile = do
   _pathPath <-
     argument
-      someFile
+      someFileOpt
       ( metavar "C_FILE"
           <> help "Path to a .c file"
           <> completer juvixCCompleter
@@ -71,7 +72,7 @@ parseGenericOutputFile :: Parser (AppPath File)
 parseGenericOutputFile = do
   _pathPath <-
     option
-      someFile
+      someFileOpt
       ( long "output"
           <> short 'o'
           <> metavar "OUTPUT_FILE"
@@ -84,7 +85,7 @@ parseGenericOutputDir :: Mod OptionFields (SomeBase Dir) -> Parser (AppPath Dir)
 parseGenericOutputDir m = do
   _pathPath <-
     option
-      someDir
+      someDirOpt
       ( long "output-dir"
           <> metavar "OUTPUT_DIR"
           <> help "Path to output directory"
@@ -93,17 +94,17 @@ parseGenericOutputDir m = do
       )
   pure AppPath {_pathIsInput = False, ..}
 
-someFile :: ReadM (SomeBase File)
-someFile = eitherReader aux
+someFileOpt :: ReadM (SomeBase File)
+someFileOpt = eitherReader aux
   where
-  aux :: String -> Either String (SomeBase File)
-  aux s = maybe (Left $ s <> " is not a file path") Right (parseSomeFile s)
+    aux :: String -> Either String (SomeBase File)
+    aux s = maybe (Left $ s <> " is not a file path") Right (parseSomeFile s)
 
-someDir :: ReadM (SomeBase Dir)
-someDir = eitherReader aux
+someDirOpt :: ReadM (SomeBase Dir)
+someDirOpt = eitherReader aux
   where
-  aux :: String -> Either String (SomeBase Dir)
-  aux s = maybe (Left $ s <> " is not a directory path") Right (parseSomeDir s)
+    aux :: String -> Either String (SomeBase Dir)
+    aux s = maybe (Left $ s <> " is not a directory path") Right (parseSomeDir s)
 
 extCompleter :: String -> Completer
 extCompleter ext = mkCompleter $ \word -> do

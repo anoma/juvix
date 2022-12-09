@@ -9,6 +9,7 @@ data CoreCommand
   = Repl CoreReplOptions
   | Eval CoreEvalOptions
   | Read CoreReadOptions
+  deriving stock (Data)
 
 parseCoreCommand :: Parser CoreCommand
 parseCoreCommand =

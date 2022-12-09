@@ -6,6 +6,7 @@ data AsmRunOptions = AsmRunOptions
   { _asmRunNoValidate :: Bool,
     _asmRunInputFile :: AppPath File
   }
+  deriving stock (Data)
 
 makeLenses ''AsmRunOptions
 

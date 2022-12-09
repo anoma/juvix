@@ -50,8 +50,9 @@ prepareRuntime projRoot o = do
     nativeDebugRuntime = $(FE.makeRelativeToProject "runtime/_build.native64-debug/libjuvix.a" >>= FE.embedFile)
 
     writeRuntime :: BS.ByteString -> Sem r ()
-    writeRuntime = embed .
-      BS.writeFile (toFilePath (projRoot <//> juvixBuildDir' <//> $(mkRelFile "libjuvix.a")))
+    writeRuntime =
+      embed
+        . BS.writeFile (toFilePath (projRoot <//> juvixBuildDir' <//> $(mkRelFile "libjuvix.a")))
 
     headersDir :: [(Path Rel File, BS.ByteString)]
     headersDir = map (first relFile) $(FE.makeRelativeToProject "runtime/include" >>= FE.embedDir)
@@ -60,7 +61,6 @@ prepareRuntime projRoot o = do
     writeHeader (filePath, contents) = embed $ do
       ensureDir (projRoot <//> juvixIncludeDir' <//> parent filePath)
       BS.writeFile (toFilePath (projRoot <//> juvixIncludeDir' <//> filePath)) contents
-
 
 clangNativeCompile ::
   forall r.
@@ -102,15 +102,16 @@ clangWasmWasiCompile inputFile o = clangArgs >>= runClang
     defaultOutputFile :: Path Abs File
     defaultOutputFile = replaceExtension' extension inputFile
       where
-      extension :: String
-      extension
-        | o ^. compilePreprocess = ".out.c"
-        | o ^. compileAssembly = ".wat"
-        | otherwise = ".wasm"
+        extension :: String
+        extension
+          | o ^. compilePreprocess = ".out.c"
+          | o ^. compileAssembly = ".wat"
+          | otherwise = ".wasm"
 
     sysrootEnvVar :: Sem r (Path Abs Dir)
-    sysrootEnvVar = absDir <$>
-      fromMaybeM (throw msg) (embed (lookupEnv "WASI_SYSROOT_PATH"))
+    sysrootEnvVar =
+      absDir
+        <$> fromMaybeM (throw msg) (embed (lookupEnv "WASI_SYSROOT_PATH"))
       where
         msg :: Text
         msg = "Missing environment variable WASI_SYSROOT_PATH"
