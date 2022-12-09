@@ -1,0 +1,649 @@
+cabal-version: 2.4
+
+-- This file has been generated from package.yaml by hpack version 0.34.4.
+--
+-- see: https://github.com/sol/hpack
+
+name:           juvix
+version:        0.2.7
+description:    The Juvix compiler
+category:       Compilers/Interpreters
+homepage:       https://juvix.org
+bug-reports:    https://github.com/anoma/juvix/issues
+author:         Jonathan Prieto-Cubides,
+                Jan Mas Rovira,
+                Paul Cadman,
+                Lukasz Czajka,
+                Github's contributors
+maintainer:     The PLT Team at Heliax AG <hello@heliax.dev>
+copyright:      (c) 2022- Heliax AG.
+license:        GPL-3.0-only
+license-file:   LICENSE
+build-type:     Simple
+tested-with:
+    ghc == 9.2.4
+extra-source-files:
+    README.org
+    assets/highlight.js
+    assets/linuwial.css
+    assets/seating-mascot.051c86a.svg
+    assets/Seating_Tara_smiling.svg
+    assets/source-ayu-light.css
+    assets/source-nord.css
+    assets/teaching-mascot.f828959.svg
+    juvix-stdlib/**/*.juvix
+    runtime/**/*.a
+    runtime/include/**/*.h
+    c-runtime/**/*.h
+    c-runtime/walloc/walloc.c
+
+source-repository head
+  type: git
+  location: https://github.com/anoma/juvix
+
+library
+  exposed-modules:
+      Juvix.Compiler.Abstract.Data
+      Juvix.Compiler.Abstract.Data.InfoTable
+      Juvix.Compiler.Abstract.Data.InfoTableBuilder
+      Juvix.Compiler.Abstract.Data.Name
+      Juvix.Compiler.Abstract.Data.NameDependencyInfo
+      Juvix.Compiler.Abstract.Extra
+      Juvix.Compiler.Abstract.Extra.DependencyBuilder
+      Juvix.Compiler.Abstract.Extra.Functions
+      Juvix.Compiler.Abstract.Language
+      Juvix.Compiler.Abstract.Pretty
+      Juvix.Compiler.Abstract.Pretty.Base
+      Juvix.Compiler.Abstract.Pretty.Options
+      Juvix.Compiler.Abstract.Translation
+      Juvix.Compiler.Abstract.Translation.FromConcrete
+      Juvix.Compiler.Abstract.Translation.FromConcrete.Data.Context
+      Juvix.Compiler.Asm.Data.InfoTable
+      Juvix.Compiler.Asm.Data.InfoTableBuilder
+      Juvix.Compiler.Asm.Data.Stack
+      Juvix.Compiler.Asm.Error
+      Juvix.Compiler.Asm.Extra
+      Juvix.Compiler.Asm.Extra.Base
+      Juvix.Compiler.Asm.Extra.Memory
+      Juvix.Compiler.Asm.Extra.Recursors
+      Juvix.Compiler.Asm.Extra.Type
+      Juvix.Compiler.Asm.Interpreter
+      Juvix.Compiler.Asm.Interpreter.Base
+      Juvix.Compiler.Asm.Interpreter.Error
+      Juvix.Compiler.Asm.Interpreter.Extra
+      Juvix.Compiler.Asm.Interpreter.Runtime
+      Juvix.Compiler.Asm.Interpreter.RuntimeState
+      Juvix.Compiler.Asm.Keywords
+      Juvix.Compiler.Asm.Language
+      Juvix.Compiler.Asm.Language.Rep
+      Juvix.Compiler.Asm.Language.Type
+      Juvix.Compiler.Asm.Options
+      Juvix.Compiler.Asm.Pipeline
+      Juvix.Compiler.Asm.Pretty
+      Juvix.Compiler.Asm.Pretty.Base
+      Juvix.Compiler.Asm.Pretty.Options
+      Juvix.Compiler.Asm.Transformation
+      Juvix.Compiler.Asm.Transformation.Base
+      Juvix.Compiler.Asm.Transformation.Prealloc
+      Juvix.Compiler.Asm.Transformation.StackUsage
+      Juvix.Compiler.Asm.Transformation.Validate
+      Juvix.Compiler.Asm.Translation.FromCore
+      Juvix.Compiler.Asm.Translation.FromSource
+      Juvix.Compiler.Asm.Translation.FromSource.Lexer
+      Juvix.Compiler.Backend
+      Juvix.Compiler.Backend.C
+      Juvix.Compiler.Backend.C.Data.Base
+      Juvix.Compiler.Backend.C.Data.BuiltinTable
+      Juvix.Compiler.Backend.C.Data.CBuilder
+      Juvix.Compiler.Backend.C.Data.Closure
+      Juvix.Compiler.Backend.C.Data.CNames
+      Juvix.Compiler.Backend.C.Data.Types
+      Juvix.Compiler.Backend.C.Extra.Serialization
+      Juvix.Compiler.Backend.C.Language
+      Juvix.Compiler.Backend.C.Translation
+      Juvix.Compiler.Backend.C.Translation.FromInternal
+      Juvix.Compiler.Backend.C.Translation.FromReg
+      Juvix.Compiler.Backend.C.Translation.FromReg.Base
+      Juvix.Compiler.Backend.Html.Data
+      Juvix.Compiler.Backend.Html.Data.Theme
+      Juvix.Compiler.Backend.Html.Extra
+      Juvix.Compiler.Backend.Html.Translation.FromTyped
+      Juvix.Compiler.Backend.Html.Translation.FromTyped.Source
+      Juvix.Compiler.Builtins
+      Juvix.Compiler.Builtins.Base
+      Juvix.Compiler.Builtins.Bool
+      Juvix.Compiler.Builtins.Effect
+      Juvix.Compiler.Builtins.Error
+      Juvix.Compiler.Builtins.IO
+      Juvix.Compiler.Builtins.Nat
+      Juvix.Compiler.Builtins.String
+      Juvix.Compiler.Concrete
+      Juvix.Compiler.Concrete.Data
+      Juvix.Compiler.Concrete.Data.Builtins
+      Juvix.Compiler.Concrete.Data.Highlight
+      Juvix.Compiler.Concrete.Data.Highlight.Input
+      Juvix.Compiler.Concrete.Data.Highlight.Properties
+      Juvix.Compiler.Concrete.Data.Highlight.SExp
+      Juvix.Compiler.Concrete.Data.InfoTable
+      Juvix.Compiler.Concrete.Data.InfoTableBuilder
+      Juvix.Compiler.Concrete.Data.Literal
+      Juvix.Compiler.Concrete.Data.ModuleIsTop
+      Juvix.Compiler.Concrete.Data.Name
+      Juvix.Compiler.Concrete.Data.NameRef
+      Juvix.Compiler.Concrete.Data.ParsedInfoTable
+      Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
+      Juvix.Compiler.Concrete.Data.ParsedItem
+      Juvix.Compiler.Concrete.Data.PublicAnn
+      Juvix.Compiler.Concrete.Data.Scope
+      Juvix.Compiler.Concrete.Data.ScopedName
+      Juvix.Compiler.Concrete.Data.VisibilityAnn
+      Juvix.Compiler.Concrete.Extra
+      Juvix.Compiler.Concrete.Extra.Base
+      Juvix.Compiler.Concrete.Keywords
+      Juvix.Compiler.Concrete.Language
+      Juvix.Compiler.Concrete.Pretty
+      Juvix.Compiler.Concrete.Pretty.Base
+      Juvix.Compiler.Concrete.Pretty.Options
+      Juvix.Compiler.Concrete.Translation
+      Juvix.Compiler.Concrete.Translation.FromParsed
+      Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping
+      Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
+      Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
+      Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
+      Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Types
+      Juvix.Compiler.Concrete.Translation.FromSource
+      Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
+      Juvix.Compiler.Concrete.Translation.FromSource.Lexer
+      Juvix.Compiler.Core
+      Juvix.Compiler.Core.Data
+      Juvix.Compiler.Core.Data.BinderList
+      Juvix.Compiler.Core.Data.InfoTable
+      Juvix.Compiler.Core.Data.InfoTableBuilder
+      Juvix.Compiler.Core.Data.Stripped.InfoTable
+      Juvix.Compiler.Core.Data.TransformationId
+      Juvix.Compiler.Core.Data.TransformationId.Parser
+      Juvix.Compiler.Core.Error
+      Juvix.Compiler.Core.Evaluator
+      Juvix.Compiler.Core.Extra
+      Juvix.Compiler.Core.Extra.Base
+      Juvix.Compiler.Core.Extra.Equality
+      Juvix.Compiler.Core.Extra.Info
+      Juvix.Compiler.Core.Extra.Recursors
+      Juvix.Compiler.Core.Extra.Recursors.Base
+      Juvix.Compiler.Core.Extra.Recursors.Collector
+      Juvix.Compiler.Core.Extra.Recursors.Fold
+      Juvix.Compiler.Core.Extra.Recursors.Fold.Named
+      Juvix.Compiler.Core.Extra.Recursors.Map
+      Juvix.Compiler.Core.Extra.Recursors.Map.Named
+      Juvix.Compiler.Core.Extra.Recursors.Parameters
+      Juvix.Compiler.Core.Extra.Recursors.Recur
+      Juvix.Compiler.Core.Extra.Stripped.Base
+      Juvix.Compiler.Core.Info
+      Juvix.Compiler.Core.Info.FreeVarsInfo
+      Juvix.Compiler.Core.Info.IdentInfo
+      Juvix.Compiler.Core.Info.LocationInfo
+      Juvix.Compiler.Core.Info.NameInfo
+      Juvix.Compiler.Core.Info.NoDisplayInfo
+      Juvix.Compiler.Core.Info.TypeInfo
+      Juvix.Compiler.Core.Keywords
+      Juvix.Compiler.Core.Language
+      Juvix.Compiler.Core.Language.Base
+      Juvix.Compiler.Core.Language.Builtins
+      Juvix.Compiler.Core.Language.Nodes
+      Juvix.Compiler.Core.Language.Primitives
+      Juvix.Compiler.Core.Language.Stripped
+      Juvix.Compiler.Core.Language.Stripped.Type
+      Juvix.Compiler.Core.Pretty
+      Juvix.Compiler.Core.Pretty.Base
+      Juvix.Compiler.Core.Pretty.Options
+      Juvix.Compiler.Core.Scoper
+      Juvix.Compiler.Core.Transformation
+      Juvix.Compiler.Core.Transformation.Base
+      Juvix.Compiler.Core.Transformation.Eta
+      Juvix.Compiler.Core.Transformation.Identity
+      Juvix.Compiler.Core.Transformation.LambdaLifting
+      Juvix.Compiler.Core.Transformation.TopEtaExpand
+      Juvix.Compiler.Core.Translation
+      Juvix.Compiler.Core.Translation.FromInternal
+      Juvix.Compiler.Core.Translation.FromInternal.Data
+      Juvix.Compiler.Core.Translation.FromInternal.Data.Context
+      Juvix.Compiler.Core.Translation.FromInternal.Data.IndexTable
+      Juvix.Compiler.Core.Translation.FromSource
+      Juvix.Compiler.Core.Translation.FromSource.Lexer
+      Juvix.Compiler.Core.Translation.Stripped.FromCore
+      Juvix.Compiler.Internal
+      Juvix.Compiler.Internal.Data
+      Juvix.Compiler.Internal.Data.InfoTable
+      Juvix.Compiler.Internal.Data.LocalVars
+      Juvix.Compiler.Internal.Extra
+      Juvix.Compiler.Internal.Language
+      Juvix.Compiler.Internal.Pretty
+      Juvix.Compiler.Internal.Pretty.Base
+      Juvix.Compiler.Internal.Pretty.Options
+      Juvix.Compiler.Internal.Translation
+      Juvix.Compiler.Internal.Translation.Extra
+      Juvix.Compiler.Internal.Translation.FromAbstract
+      Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination
+      Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Checker
+      Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data
+      Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data.FunctionCall
+      Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data.Graph
+      Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data.SizeInfo
+      Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Data.SizeRelation
+      Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Error
+      Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Error.Types
+      Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.FunctionCall
+      Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.LexOrder
+      Juvix.Compiler.Internal.Translation.FromAbstract.Data
+      Juvix.Compiler.Internal.Translation.FromAbstract.Data.Context
+      Juvix.Compiler.Internal.Translation.FromInternal
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Checker
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.LocalVars
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Types
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Error.Types
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Checker
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Reachability
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Checker
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.FunctionsTable
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Pretty
+      Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error.Types
+      Juvix.Compiler.Internal.Translation.FromInternal.Data
+      Juvix.Compiler.Pipeline
+      Juvix.Compiler.Pipeline.EntryPoint
+      Juvix.Compiler.Pipeline.ExpressionContext
+      Juvix.Compiler.Pipeline.Package
+      Juvix.Compiler.Pipeline.Setup
+      Juvix.Compiler.Reg.Data.InfoTable
+      Juvix.Compiler.Reg.Extra
+      Juvix.Compiler.Reg.Language
+      Juvix.Compiler.Reg.Language.Base
+      Juvix.Compiler.Reg.Translation.FromAsm
+      Juvix.Data
+      Juvix.Data.Ape
+      Juvix.Data.Ape.Base
+      Juvix.Data.Ape.Pretty
+      Juvix.Data.Backends
+      Juvix.Data.CodeAnn
+      Juvix.Data.DependencyInfo
+      Juvix.Data.Effect
+      Juvix.Data.Effect.Fail
+      Juvix.Data.Effect.Fail.Extra
+      Juvix.Data.Effect.Files
+      Juvix.Data.Effect.Files.Base
+      Juvix.Data.Effect.Files.Error
+      Juvix.Data.Effect.Files.IO
+      Juvix.Data.Effect.Files.Pure
+      Juvix.Data.Effect.Log
+      Juvix.Data.Effect.NameIdGen
+      Juvix.Data.Error
+      Juvix.Data.Error.GenericError
+      Juvix.Data.Fixity
+      Juvix.Data.ForeignBlock
+      Juvix.Data.Hole
+      Juvix.Data.IsImplicit
+      Juvix.Data.Keyword
+      Juvix.Data.Keyword.All
+      Juvix.Data.Loc
+      Juvix.Data.NameId
+      Juvix.Data.NameKind
+      Juvix.Data.PPOutput
+      Juvix.Data.Universe
+      Juvix.Data.Usage
+      Juvix.Data.Wildcard
+      Juvix.Data.WithLoc
+      Juvix.Extra.Paths
+      Juvix.Extra.Process
+      Juvix.Extra.Stdlib
+      Juvix.Extra.Strings
+      Juvix.Extra.Version
+      Juvix.LSP.Server
+      Juvix.Parser.Error
+      Juvix.Parser.Lexer
+      Juvix.Prelude
+      Juvix.Prelude.Base
+      Juvix.Prelude.Lens
+      Juvix.Prelude.Path
+      Juvix.Prelude.Pretty
+      Juvix.Prelude.Trace
+  other-modules:
+      Paths_juvix
+  hs-source-dirs:
+      src
+  default-extensions:
+      ApplicativeDo
+      DataKinds
+      DerivingStrategies
+      GADTs
+      GeneralizedNewtypeDeriving
+      ImportQualifiedPost
+      LambdaCase
+      MultiWayIf
+      NoFieldSelectors
+      NoImplicitPrelude
+      OverloadedStrings
+      RecordWildCards
+      TemplateHaskell
+      TypeFamilyDependencies
+  ghc-options: -Weverything -Wno-all-missed-specialisations -Wno-missing-export-lists -Wno-missing-import-lists -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages -fhide-source-paths -fwrite-ide-info -hiedir=.hie -O2 -flate-specialise -fspecialise-aggressively
+  build-depends:
+      Diff ==0.4.*
+    , Stream ==0.4.*
+    , aeson ==2.0.*
+    , ansi-terminal ==0.11.*
+    , base ==4.16.*
+    , blaze-html ==0.9.*
+    , bytestring ==0.11.*
+    , containers ==0.6.*
+    , directory ==1.3.*
+    , dlist ==1.0.*
+    , edit-distance ==0.2.*
+    , extra ==1.7.*
+    , file-embed ==0.0.*
+    , filepath ==1.4.*
+    , gitrev ==1.3.*
+    , hashable ==1.4.*
+    , language-c ==0.9.*
+    , megaparsec ==9.2.*
+    , microlens-platform ==0.4.*
+    , parser-combinators ==1.3.*
+    , path ==0.9.*
+    , path-io ==1.7.*
+    , polysemy ==1.7.*
+    , polysemy-plugin ==0.4.*
+    , pretty ==1.1.*
+    , pretty-show ==1.10.*
+    , prettyprinter ==1.7.*
+    , prettyprinter-ansi-terminal ==1.1.*
+    , process ==1.6.*
+    , safe ==0.3.*
+    , semirings ==0.6.*
+    , singletons ==3.0.*
+    , singletons-th ==3.1.*
+    , tasty
+    , tasty-hunit
+    , template-haskell ==2.18.*
+    , text ==1.2.*
+    , th-utilities ==0.2.*
+    , time ==1.11.*
+    , transformers ==0.5.*
+    , unordered-containers ==0.2.*
+    , versions ==5.0.*
+    , yaml ==0.11.*
+  default-language: GHC2021
+
+executable juvix
+  main-is: Main.hs
+  other-modules:
+      App
+      Commands.Base
+      Commands.Compile
+      Commands.Compile.Options
+      Commands.Dev
+      Commands.Dev.Asm
+      Commands.Dev.Asm.Compile
+      Commands.Dev.Asm.Compile.Options
+      Commands.Dev.Asm.Options
+      Commands.Dev.Asm.Run
+      Commands.Dev.Asm.Run.Options
+      Commands.Dev.Asm.Validate
+      Commands.Dev.Asm.Validate.Options
+      Commands.Dev.Core
+      Commands.Dev.Core.Eval
+      Commands.Dev.Core.Eval.Options
+      Commands.Dev.Core.Options
+      Commands.Dev.Core.Read
+      Commands.Dev.Core.Read.Options
+      Commands.Dev.Core.Repl
+      Commands.Dev.Core.Repl.Options
+      Commands.Dev.DisplayRoot
+      Commands.Dev.Doc
+      Commands.Dev.Doc.Options
+      Commands.Dev.Highlight
+      Commands.Dev.Highlight.Options
+      Commands.Dev.Internal
+      Commands.Dev.Internal.Arity
+      Commands.Dev.Internal.Arity.Options
+      Commands.Dev.Internal.CoreEval
+      Commands.Dev.Internal.CoreEval.Options
+      Commands.Dev.Internal.Options
+      Commands.Dev.Internal.Pretty
+      Commands.Dev.Internal.Pretty.Options
+      Commands.Dev.Internal.Typecheck
+      Commands.Dev.Internal.Typecheck.Options
+      Commands.Dev.MiniC
+      Commands.Dev.MiniC.Options
+      Commands.Dev.Options
+      Commands.Dev.Parse
+      Commands.Dev.Parse.Options
+      Commands.Dev.Runtime
+      Commands.Dev.Runtime.Compile
+      Commands.Dev.Runtime.Compile.Options
+      Commands.Dev.Runtime.Options
+      Commands.Dev.Scope
+      Commands.Dev.Scope.Options
+      Commands.Dev.Termination
+      Commands.Dev.Termination.CallGraph
+      Commands.Dev.Termination.CallGraph.Options
+      Commands.Dev.Termination.Calls
+      Commands.Dev.Termination.Calls.Options
+      Commands.Dev.Termination.Options
+      Commands.Doctor
+      Commands.Doctor.Options
+      Commands.Extra.Compile
+      Commands.Extra.Compile.Options
+      Commands.Html
+      Commands.Html.Options
+      Commands.Init
+      Commands.Repl
+      Commands.Repl.Options
+      Commands.Typecheck
+      Commands.Typecheck.Options
+      CommonOptions
+      Evaluator
+      GlobalOptions
+      Root
+      TopCommand
+      TopCommand.Options
+      Paths_juvix
+  hs-source-dirs:
+      app
+  default-extensions:
+      ApplicativeDo
+      DataKinds
+      DerivingStrategies
+      GADTs
+      GeneralizedNewtypeDeriving
+      ImportQualifiedPost
+      LambdaCase
+      MultiWayIf
+      NoFieldSelectors
+      NoImplicitPrelude
+      OverloadedStrings
+      RecordWildCards
+      TemplateHaskell
+      TypeFamilyDependencies
+  ghc-options: -Weverything -Wno-all-missed-specialisations -Wno-missing-export-lists -Wno-missing-import-lists -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages -fhide-source-paths -fwrite-ide-info -hiedir=.hie -O2 -flate-specialise -fspecialise-aggressively
+  build-depends:
+      Diff ==0.4.*
+    , Stream ==0.4.*
+    , aeson ==2.0.*
+    , ansi-terminal ==0.11.*
+    , base ==4.16.*
+    , blaze-html ==0.9.*
+    , bytestring ==0.11.*
+    , containers ==0.6.*
+    , directory ==1.3.*
+    , dlist ==1.0.*
+    , edit-distance ==0.2.*
+    , extra ==1.7.*
+    , file-embed ==0.0.*
+    , filepath ==1.4.*
+    , gitrev ==1.3.*
+    , hashable ==1.4.*
+    , haskeline ==0.8.*
+    , http-conduit ==2.3.*
+    , juvix
+    , language-c ==0.9.*
+    , megaparsec ==9.2.*
+    , microlens-platform ==0.4.*
+    , mtl ==2.2.*
+    , optparse-applicative ==0.17.*
+    , parser-combinators ==1.3.*
+    , path ==0.9.*
+    , path-io ==1.7.*
+    , polysemy ==1.7.*
+    , polysemy-plugin ==0.4.*
+    , pretty ==1.1.*
+    , pretty-show ==1.10.*
+    , prettyprinter ==1.7.*
+    , prettyprinter-ansi-terminal ==1.1.*
+    , process ==1.6.*
+    , repline ==0.4.*
+    , safe ==0.3.*
+    , semirings ==0.6.*
+    , singletons ==3.0.*
+    , singletons-th ==3.1.*
+    , string-interpolate ==0.3.*
+    , tasty
+    , tasty-hunit
+    , template-haskell ==2.18.*
+    , text ==1.2.*
+    , th-utilities ==0.2.*
+    , time ==1.11.*
+    , transformers ==0.5.*
+    , uniplate ==1.6.*
+    , unordered-containers ==0.2.*
+    , versions ==5.0.*
+    , yaml ==0.11.*
+  default-language: GHC2021
+
+test-suite juvix-test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Arity
+      Arity.Negative
+      Asm
+      Asm.Compile
+      Asm.Compile.Base
+      Asm.Compile.Positive
+      Asm.Run
+      Asm.Run.Base
+      Asm.Run.Negative
+      Asm.Run.Positive
+      Asm.Transformation
+      Asm.Transformation.Base
+      Asm.Transformation.Prealloc
+      Asm.Validate
+      Asm.Validate.Base
+      Asm.Validate.Negative
+      BackendC
+      BackendC.Base
+      BackendC.Examples
+      BackendC.Positive
+      Base
+      Core
+      Core.Eval
+      Core.Eval.Base
+      Core.Eval.Negative
+      Core.Eval.Positive
+      Core.Transformation
+      Core.Transformation.Base
+      Core.Transformation.Identity
+      Core.Transformation.Lifting
+      Core.Transformation.TopEtaExpand
+      Internal
+      Internal.Eval
+      Internal.Eval.Base
+      Internal.Eval.Positive
+      Parsing
+      Parsing.Negative
+      Reachability
+      Reachability.Positive
+      Runtime
+      Runtime.Base
+      Runtime.Positive
+      Scope
+      Scope.Negative
+      Scope.Positive
+      Termination
+      Termination.Negative
+      Termination.Positive
+      Typecheck
+      Typecheck.Negative
+      Typecheck.Positive
+      Paths_juvix
+  hs-source-dirs:
+      test
+  default-extensions:
+      ApplicativeDo
+      DataKinds
+      DerivingStrategies
+      GADTs
+      GeneralizedNewtypeDeriving
+      ImportQualifiedPost
+      LambdaCase
+      MultiWayIf
+      NoFieldSelectors
+      NoImplicitPrelude
+      OverloadedStrings
+      RecordWildCards
+      TemplateHaskell
+      TypeFamilyDependencies
+  ghc-options: -Weverything -Wno-all-missed-specialisations -Wno-missing-export-lists -Wno-missing-import-lists -Wno-missing-kind-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages -fhide-source-paths -fwrite-ide-info -hiedir=.hie -O2 -flate-specialise -fspecialise-aggressively
+  build-depends:
+      Diff ==0.4.*
+    , Stream ==0.4.*
+    , aeson ==2.0.*
+    , ansi-terminal ==0.11.*
+    , base ==4.16.*
+    , blaze-html ==0.9.*
+    , bytestring ==0.11.*
+    , containers ==0.6.*
+    , directory ==1.3.*
+    , dlist ==1.0.*
+    , edit-distance ==0.2.*
+    , extra ==1.7.*
+    , file-embed ==0.0.*
+    , filepath ==1.4.*
+    , gitrev ==1.3.*
+    , hashable ==1.4.*
+    , juvix
+    , language-c ==0.9.*
+    , megaparsec ==9.2.*
+    , microlens-platform ==0.4.*
+    , parser-combinators ==1.3.*
+    , path ==0.9.*
+    , path-io ==1.7.*
+    , polysemy ==1.7.*
+    , polysemy-plugin ==0.4.*
+    , pretty ==1.1.*
+    , pretty-show ==1.10.*
+    , prettyprinter ==1.7.*
+    , prettyprinter-ansi-terminal ==1.1.*
+    , process ==1.6.*
+    , safe ==0.3.*
+    , semirings ==0.6.*
+    , singletons ==3.0.*
+    , singletons-th ==3.1.*
+    , tasty
+    , tasty-hunit
+    , template-haskell ==2.18.*
+    , text ==1.2.*
+    , th-utilities ==0.2.*
+    , time ==1.11.*
+    , transformers ==0.5.*
+    , unordered-containers ==0.2.*
+    , versions ==5.0.*
+    , yaml ==0.11.*
+  default-language: GHC2021
