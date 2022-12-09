@@ -102,7 +102,6 @@ jobs:
       - name: Checkout our repository
         uses: actions/checkout@v2
         with:
-          path: main
           submodules: true
 
       # - uses: actions/cache@v3
@@ -148,13 +147,11 @@ jobs:
       - name: Build Project (macOS)
         if: runner.os == 'macOS'
         run: |
-          cd main
           make CC=$CC LIBTOOL=$LIBTOOL build
 
       - name: Build Project (Linux)
         if: runner.os == 'Linux'
         run: |
-          cd main
           make build
 
   test:
@@ -169,7 +166,6 @@ jobs:
       - name: Checkout the main repository
         uses: actions/checkout@v2
         with:
-          path: main
           submodules: recursive
 
       # - uses: actions/cache@v3
@@ -232,14 +228,12 @@ jobs:
       - name: Test suite (macOS)
         if: runner.os == 'macOS'
         run: |
-          cd main
           make CC=$CC LIBTOOL=$LIBTOOL test
 
       - name: Test suite (linux)
         id: test
         if: runner.os == 'Linux'
         run: |
-          cd main
           make test
 
       - run: echo "$HOME/.cabal/bin" >> $GITHUB_PATH
@@ -248,7 +242,6 @@ jobs:
         id: shell-tests
         if: runner.os == 'Linux'
         run : |
-          cd main
           echo "$GITHUB_WORKSPACE/.local/bin" >> $GITHUB_PATH
           make test-shell
 
@@ -265,7 +258,6 @@ jobs:
       - name: Checkout our repository
         uses: actions/checkout@v2
         with:
-          path: main
           submodules: recursive
 
       - uses: r-lib/actions/setup-pandoc@v1
@@ -311,14 +303,12 @@ jobs:
 
       - name: Generate Markdown files for each Org file
         run: |
-          cd main
           make markdown-docs
 
       - run: echo "$HOME/.cabal/bin" >> $GITHUB_PATH
 
       - name : Generate HTML and Web App files from milestone examples
         run : |
-          cd main
           echo "$GITHUB_WORKSPACE/.local/bin" >> $GITHUB_PATH
           make install
           make html-examples
