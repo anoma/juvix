@@ -174,11 +174,11 @@ submodules:
 
 .PHONY: build
 build: submodules runtime
-	stack build ${STACKFLAGS}
+	@cabal build
 
 .PHONY: fast-build
 fast-build: submodules runtime
-	stack build --fast ${STACKFLAGS}
+	@cabal build
 
 .PHONY: runtime
 runtime:
@@ -188,21 +188,21 @@ runtime:
 
 .PHONY : install
 install: runtime submodules
-	@stack install ${STACKFLAGS}
+	@cabal install
 
 .PHONY : fast-install
 fast-install: runtime submodules
-	@stack install --fast ${STACKFLAGS}
+	@cabal install
 
 # -- Testing
 
 .PHONY : test
 test: build
-	@stack test ${STACKFLAGS}
+	@cabal test
 
 .PHONY : fast-test
 fast-test: fast-build
-	@stack test --fast ${STACKFLAGS}
+	@cabal test
 
 .PHONY : test-skip-slow
 test-skip-slow:
@@ -216,7 +216,7 @@ SHELLTEST := $(shell command -v shelltest 2> /dev/null)
 
 .PHONY : test-shell
 test-shell : install
-	@$(if $(SHELLTEST),, stack install shelltestrunner)
+	@$(if $(SHELLTEST),, cabal install shelltestrunner)
 	shelltest --color --diff -a tests
 
 # -- Release

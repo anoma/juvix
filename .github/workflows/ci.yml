@@ -97,6 +97,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04, macos-12]
         ghc: ["9.2.5"]
+        cabal: ["3.6.2.0"]
     steps:
       - name: Checkout our repository
         uses: actions/checkout@v2
@@ -104,28 +105,22 @@ jobs:
           path: main
           submodules: true
 
-      - uses: actions/cache@v3
-        name: Cache ~/.stack
-        with:
-          path: ~/.stack
-          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-global-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.ghc }}-stack-global-
+      # - uses: actions/cache@v3
+      #   with:
+      #     path: |
+      #       ~/.cabal/store
+      #       dist-newstyle
+      #     key: ${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('cabal.project.freeze') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-${{ matrix.ghc }}-
 
-      - uses: actions/cache@v3
-        name: Cache .stack-work
-        with:
-          path: main/.stack-work
-          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-work-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}-${{ hashFiles('main/**/*.hs') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
-
-      - uses: haskell/actions/setup@v1
+      - uses: haskell/actions/setup@v2
         name: Setup Haskell
         with:
           ghc-version: ${{ matrix.ghc }}
-          enable-stack: true
-          stack-version: 'latest'
+          cabal-version: ${{ matrix.cabal }}
+
+      - run: cabal update
 
       - name: Cache LLVM and Clang (Linux)
         if: runner.os == 'Linux'
@@ -169,6 +164,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04, macos-12]
         ghc: ["9.2.5"]
+        cabal: ["3.6.2.0"]
     steps:
       - name: Checkout the main repository
         uses: actions/checkout@v2
@@ -176,28 +172,22 @@ jobs:
           path: main
           submodules: recursive
 
-      - uses: actions/cache@v3
-        name: Cache ~/.stack
-        with:
-          path: ~/.stack
-          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-global-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.ghc }}-stack-global-
+      # - uses: actions/cache@v3
+      #   with:
+      #     path: |
+      #       ~/.cabal/store
+      #       dist-newstyle
+      #     key: ${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('cabal.project.freeze') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-${{ matrix.ghc }}-
 
-      - uses: actions/cache@v3
-        name: Cache .stack-work
-        with:
-          path: main/.stack-work
-          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-work-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}-${{ hashFiles('main/**/*.hs') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
-
-      - uses: haskell/actions/setup@v1
+      - uses: haskell/actions/setup@v2
         name: Setup Haskell
         with:
           ghc-version: ${{ matrix.ghc }}
-          enable-stack: true
-          stack-version: 'latest'
+          cabal-version: ${{ matrix.cabal }}
+
+      - run: cabal update
 
       - name: Cache LLVM and Clang (Linux)
         if: runner.os == 'Linux'
@@ -234,12 +224,6 @@ jobs:
           echo "CC=$(brew --prefix llvm@14)/bin/clang" >> $GITHUB_ENV
           echo "LIBTOOL=$(brew --prefix llvm@14)/bin/llvm-ar" >> $GITHUB_ENV
 
-      - name: stack setup (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          cd main
-          stack setup
-
       - name: Add homebrew clang to the PATH (macOS)
         if: runner.os == 'macOS'
         run: |
@@ -258,6 +242,8 @@ jobs:
           cd main
           make test
 
+      - run: echo "$HOME/.cabal/bin" >> $GITHUB_PATH
+
       - name : Shell tests (Linux)
         id: shell-tests
         if: runner.os == 'Linux'
@@ -273,6 +259,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04]
         ghc: ["9.2.5"]
+        cabal: ["3.6.2.0"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout our repository
@@ -280,22 +267,6 @@ jobs:
         with:
           path: main
           submodules: recursive
-
-      - uses: actions/cache@v3
-        name: Cache ~/.stack
-        with:
-          path: ~/.stack
-          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-global-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.ghc }}-stack-global-
-
-      - uses: actions/cache@v3
-        name: Cache .stack-work
-        with:
-          path: main/.stack-work
-          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-work-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}-${{ hashFiles('main/**/*.hs') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
 
       - uses: r-lib/actions/setup-pandoc@v1
         with:
@@ -306,12 +277,22 @@ jobs:
         with:
           mdbook-version: 'latest'
 
-      - uses: haskell/actions/setup@v1
+      # - uses: actions/cache@v3
+      #   with:
+      #     path: |
+      #       ~/.cabal/store
+      #       dist-newstyle
+      #     key: ${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('cabal.project.freeze') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-${{ matrix.ghc }}-
+
+      - uses: haskell/actions/setup@v2
         name: Setup Haskell
         with:
           ghc-version: ${{ matrix.ghc }}
-          enable-stack: true
-          stack-version: 'latest'
+          cabal-version: ${{ matrix.cabal }}
+
+      - run: cabal update
 
       - name: Cache LLVM and Clang
         id: cache-llvm
@@ -332,6 +313,8 @@ jobs:
         run: |
           cd main
           make markdown-docs
+
+      - run: echo "$HOME/.cabal/bin" >> $GITHUB_PATH
 
       - name : Generate HTML and Web App files from milestone examples
         run : |
