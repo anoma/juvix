@@ -138,11 +138,23 @@ parseToplevel = do
 statement ::
   Member InfoTableBuilder r =>
   ParsecS r ()
-statement = statementDef <|> statementInductive
+statement = statementBuiltin <|> void statementDef <|> statementInductive
+
+statementBuiltin ::
+  Member InfoTableBuilder r =>
+  ParsecS r ()
+statementBuiltin = do
+  off <- P.getOffset
+  kw kwBuiltin
+  sym <- statementDef
+  ii <- lift $ getIdentifierInfo sym
+  case ii ^. identifierName of
+    "plus" -> lift $ registerIdent (ii ^. identifierName) ii{_identifierBuiltin = Just BuiltinNatPlus}
+    _ -> parseFailure off "unrecorgnized builtin definition"
 
 statementDef ::
   Member InfoTableBuilder r =>
-  ParsecS r ()
+  ParsecS r Symbol
 statementDef = do
   kw kwDef
   off <- P.getOffset
@@ -157,6 +169,7 @@ statementDef = do
       let fi = fromMaybe impossible $ HashMap.lookup sym (tab ^. infoIdentifiers)
           ty = fi ^. identifierType
       parseDefinition sym ty
+      return sym
     Just IdentInd {} ->
       parseFailure off ("duplicate identifier: " ++ fromText txt)
     Just IdentConstr {} ->
@@ -178,6 +191,7 @@ statementDef = do
               }
       lift $ registerIdent txt info
       void $ optional (parseDefinition sym ty)
+      return sym
 
 parseDefinition ::
   Member InfoTableBuilder r =>

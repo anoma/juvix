@@ -29,6 +29,11 @@ getInductiveInfo sym = do
   tab <- getInfoTable
   return $ fromJust (HashMap.lookup sym (tab ^. infoInductives))
 
+getIdentifierInfo :: Member InfoTableBuilder r => Symbol -> Sem r IdentifierInfo
+getIdentifierInfo sym = do
+  tab <- getInfoTable
+  return $ fromJust (HashMap.lookup sym (tab ^. infoIdentifiers))
+
 getBoolSymbol :: Member InfoTableBuilder r => Sem r Symbol
 getBoolSymbol = do
   ci <- getConstructorInfo (BuiltinTag TagTrue)
