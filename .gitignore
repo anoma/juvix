@@ -88,5 +88,5 @@ docs/**/*.md
 # Binary files (produced by `make check`)
 examples/**/*
 examples/**/!*.*
-test/**/*
-test/**/!*.*
+tests/**/*
+tests/**/!*.*
