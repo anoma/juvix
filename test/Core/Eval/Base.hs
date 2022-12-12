@@ -12,12 +12,11 @@ import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.FromSource
-import System.IO.Extra (withTempDir)
 import Text.Megaparsec.Pos qualified as M
 
 coreEvalAssertion ::
-  FilePath ->
-  FilePath ->
+  Path Abs File ->
+  Path Abs File ->
   [TransformationId] ->
   (InfoTable -> Assertion) ->
   (String -> IO ()) ->
@@ -29,15 +28,15 @@ coreEvalAssertion mainFile expectedFile trans testTrans step = do
     Left err -> assertFailure (show (pretty err))
     Right (_, Nothing) -> do
       step "Compare expected and actual program output"
-      expected <- TIO.readFile expectedFile
-      assertEqDiff ("Check: EVAL output = " <> expectedFile) "" expected
+      expected <- TIO.readFile (toFilePath expectedFile)
+      assertEqDiff ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) -> do
       let tab = applyTransformations trans tabIni
       testTrans tab
-      withTempDir
+      withTempDir'
         ( \dirPath -> do
-            let outputFile = dirPath </> "out.out"
-            hout <- openFile outputFile WriteMode
+            let outputFile = dirPath <//> $(mkRelFile "out.out")
+            hout <- openFile (toFilePath outputFile) WriteMode
             step "Evaluate"
             r' <- doEval mainFile hout tab node
             case r' of
@@ -49,13 +48,13 @@ coreEvalAssertion mainFile expectedFile trans testTrans step = do
                   (Info.member kNoDisplayInfo (getInfo value))
                   (hPutStrLn hout (ppPrint value))
                 hClose hout
-                actualOutput <- TIO.readFile outputFile
+                actualOutput <- TIO.readFile (toFilePath outputFile)
                 step "Compare expected and actual program output"
-                expected <- TIO.readFile expectedFile
-                assertEqDiff ("Check: EVAL output = " <> expectedFile) actualOutput expected
+                expected <- TIO.readFile (toFilePath expectedFile)
+                assertEqDiff ("Check: EVAL output = " <> toFilePath expectedFile) actualOutput expected
         )
 
-coreEvalErrorAssertion :: FilePath -> (String -> IO ()) -> Assertion
+coreEvalErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 coreEvalErrorAssertion mainFile step = do
   step "Parse"
   r <- parseFile mainFile
@@ -63,10 +62,10 @@ coreEvalErrorAssertion mainFile step = do
     Left _ -> assertBool "" True
     Right (_, Nothing) -> assertFailure "no error"
     Right (tab, Just node) -> do
-      withTempDir
+      withTempDir'
         ( \dirPath -> do
-            let outputFile = dirPath </> "out.out"
-            hout <- openFile outputFile WriteMode
+            let outputFile = dirPath <//> $(mkRelFile "out.out")
+            hout <- openFile (toFilePath outputFile) WriteMode
             step "Evaluate"
             r' <- doEval mainFile hout tab node
             hClose hout
@@ -75,13 +74,14 @@ coreEvalErrorAssertion mainFile step = do
               Right _ -> assertFailure "no error"
         )
 
-parseFile :: FilePath -> IO (Either ParserError (InfoTable, Maybe Node))
+parseFile :: Path Abs File -> IO (Either ParserError (InfoTable, Maybe Node))
 parseFile f = do
-  s <- readFile f
-  return $ runParser f emptyInfoTable s
+  let f' = toFilePath f
+  s <- readFile f'
+  return $ runParser f' emptyInfoTable s
 
 doEval ::
-  FilePath ->
+  Path Abs File ->
   Handle ->
   InfoTable ->
   Node ->
@@ -89,4 +89,4 @@ doEval ::
 doEval f hout tab node =
   catchEvalErrorIO defaultLoc (hEvalIO stdin hout (tab ^. identContext) [] node)
   where
-    defaultLoc = singletonInterval (mkLoc 0 (M.initialPos f))
+    defaultLoc = singletonInterval (mkLoc 0 (M.initialPos (toFilePath f)))

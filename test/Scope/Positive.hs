@@ -16,37 +16,42 @@ import Juvix.Prelude.Pretty
 
 data PosTest = PosTest
   { _name :: String,
-    _relDir :: FilePath,
+    _relDir :: Path Rel Dir,
     _stdlibMode :: StdlibMode,
-    _file :: FilePath
+    _file :: Path Rel File
   }
 
 makeLenses ''PosTest
 
-root :: FilePath
-root = "tests/positive"
+root :: Path Abs Dir
+root = relToProject $(mkRelDir "tests/positive")
 
 renderCode :: M.PrettyCode c => c -> Text
 renderCode = prettyText . M.ppOutDefault
 
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
-  let tRoot = root </> _relDir
+  let tRoot = root <//> _relDir
+      file' = tRoot <//> _file
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Steps $ \step -> do
             cwd <- getCurrentDir
-            entryFile <- canonicalizePath _file
+
             let noStdlib = _stdlibMode == StdlibExclude
                 entryPoint =
-                  (defaultEntryPoint entryFile)
+                  (defaultEntryPoint cwd file')
                     { _entryPointRoot = cwd,
                       _entryPointNoStdlib = noStdlib
                     }
-                stdlibMap :: HashMap FilePath Text
-                stdlibMap = HashMap.mapKeys (cwd </>) (HashMap.fromList (second decodeUtf8 <$> stdlibFiles))
-                unionStdlib :: HashMap FilePath Text -> HashMap FilePath Text
+                stdlibMap :: HashMap (Path Abs File) Text
+                stdlibMap =
+                  HashMap.fromList
+                    [ (cwd <//> p, decodeUtf8 c)
+                      | (p, c) <- stdlibFiles
+                    ]
+                unionStdlib :: HashMap (Path Abs File) Text -> HashMap (Path Abs File) Text
                 unionStdlib fs
                   | noStdlib = fs
                   | otherwise = HashMap.union fs stdlibMap
@@ -69,11 +74,11 @@ testDescr PosTest {..} =
 
             let s2 = head (s ^. Scoper.resultModules)
 
-                fs :: HashMap FilePath Text
+                fs :: HashMap (Path Abs File) Text
                 fs =
                   unionStdlib
                     ( HashMap.fromList
-                        [ (getModuleFileAbsPath cwd m, renderCode m)
+                        [ (absFile (getModuleFileAbsPath (toFilePath cwd) m), renderCode m)
                           | m <- toList (getAllModules s2)
                         ]
                     )
@@ -81,7 +86,7 @@ testDescr PosTest {..} =
             let scopedPretty = renderCode s2
                 parsedPretty = renderCode p2
                 runHelper ::
-                  HashMap FilePath Text ->
+                  HashMap (Path Abs File) Text ->
                   Sem
                     '[ PathResolver,
                        Reader EntryPoint,
@@ -93,14 +98,14 @@ testDescr PosTest {..} =
                      ]
                     a ->
                   IO a
-                runHelper files = runM . runErrorIO' @JuvixError . runNameIdGen . runFilesPure cwd files . runReader entryPoint . runPathResolverPipe
+                runHelper files = runM . runErrorIO' @JuvixError . runNameIdGen . runFilesPure files cwd . runReader entryPoint . runPathResolverPipe
 
             step "Parsing pretty scoped"
-            let fs2 = unionStdlib (HashMap.singleton entryFile scopedPretty)
+            let fs2 = unionStdlib (HashMap.singleton file' scopedPretty)
             p' :: Parser.ParserResult <- runHelper fs2 upToParsing
 
             step "Parsing pretty parsed"
-            let fs3 = unionStdlib (HashMap.singleton entryFile parsedPretty)
+            let fs3 = unionStdlib (HashMap.singleton file' parsedPretty)
             parsedPretty' :: Parser.ParserResult <- runHelper fs3 upToParsing
 
             step "Scoping the scoped"
@@ -129,102 +134,102 @@ tests :: [PosTest]
 tests =
   [ PosTest
       "Inductive"
-      "."
+      $(mkRelDir ".")
       StdlibInclude
-      "Inductive.juvix",
+      $(mkRelFile "Inductive.juvix"),
     PosTest
       "Imports and qualified names"
-      "Imports"
+      $(mkRelDir "Imports")
       StdlibInclude
-      "A.juvix",
+      $(mkRelFile "A.juvix"),
     PosTest
       "Data.Bool from the stdlib"
-      "StdlibList"
+      $(mkRelDir "StdlibList")
       StdlibExclude
-      "Data/Bool.juvix",
+      $(mkRelFile "Data/Bool.juvix"),
     PosTest
       "Data.Nat from the stdlib"
-      "StdlibList"
+      $(mkRelDir "StdlibList")
       StdlibExclude
-      "Data/Nat.juvix",
+      $(mkRelFile "Data/Nat.juvix"),
     PosTest
       "Data.Ord from the stdlib"
-      "StdlibList"
+      $(mkRelDir "StdlibList")
       StdlibExclude
-      "Data/Ord.juvix",
+      $(mkRelFile "Data/Ord.juvix"),
     PosTest
       "Data.Product from the stdlib"
-      "StdlibList"
+      $(mkRelDir "StdlibList")
       StdlibExclude
-      "Data/Product.juvix",
+      $(mkRelFile "Data/Product.juvix"),
     PosTest
       "Data.List and friends from the stdlib"
-      "StdlibList"
+      $(mkRelDir "StdlibList")
       StdlibExclude
-      "Data/List.juvix",
+      $(mkRelFile "Data/List.juvix"),
     PosTest
       "Operators (+)"
-      "."
+      $(mkRelDir ".")
       StdlibExclude
-      "Operators.juvix",
+      $(mkRelFile "Operators.juvix"),
     PosTest
       "Literals"
-      "."
+      $(mkRelDir ".")
       StdlibExclude
-      "Literals.juvix",
+      $(mkRelFile "Literals.juvix"),
     PosTest
       "Axiom with backends"
-      "."
+      $(mkRelDir ".")
       StdlibExclude
-      "Axiom.juvix",
+      $(mkRelFile "Axiom.juvix"),
     PosTest
       "Foreign block parsing"
-      "."
+      $(mkRelDir ".")
       StdlibExclude
-      "Foreign.juvix",
+      $(mkRelFile "Foreign.juvix"),
     PosTest
       "Multiple modules non-ambiguous symbol - same file"
-      "QualifiedSymbol"
+      $(mkRelDir "QualifiedSymbol")
       StdlibExclude
-      "M.juvix",
+      $(mkRelFile "M.juvix"),
     PosTest
       "Multiple modules non-ambiguous symbol"
-      "QualifiedSymbol2"
+      $(mkRelDir "QualifiedSymbol2")
       StdlibExclude
-      "N.juvix",
+      $(mkRelFile "N.juvix"),
     PosTest
       "Multiple modules constructor non-ambiguous symbol"
-      "QualifiedConstructor"
+      $(mkRelDir "QualifiedConstructor")
       StdlibExclude
-      "M.juvix",
+      $(mkRelFile "M.juvix"),
     PosTest
       "Parsing"
-      "."
+      $(mkRelDir ".")
       StdlibExclude
-      "Parsing.juvix",
+      $(mkRelFile "Parsing.juvix"),
     PosTest
       "open overrides open public"
-      "."
+      $(mkRelDir ".")
       StdlibExclude
-      "ShadowPublicOpen.juvix",
+      $(mkRelFile "ShadowPublicOpen.juvix"),
     PosTest
       "Infix chains"
-      "."
+      $(mkRelDir ".")
       StdlibInclude
-      "Ape.juvix",
+      $(mkRelFile "Ape.juvix"),
     PosTest
       "Import embedded standard library"
-      "StdlibImport"
+      $(mkRelDir "StdlibImport")
       StdlibInclude
-      "StdlibImport.juvix",
+      $(mkRelFile "StdlibImport.juvix"),
     PosTest
       "Check Valid Symbols"
-      ""
+      $(mkRelDir ".")
       StdlibInclude
-      "Symbols.juvix",
+      $(mkRelFile "Symbols.juvix"),
     PosTest
       "Builtin bool"
-      "."
+      $(mkRelDir ".")
       StdlibExclude
-      "BuiltinsBool.juvix"
+      $(mkRelFile "BuiltinsBool.juvix")
   ]

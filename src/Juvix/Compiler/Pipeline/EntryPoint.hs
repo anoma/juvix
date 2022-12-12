@@ -23,12 +23,7 @@ data EntryPoint = EntryPoint
 
 makeLenses ''EntryPoint
 
-defaultEntryPointCwd :: Path Rel File -> IO EntryPoint
-defaultEntryPointCwd mainFile = do
-  cwd <- getCurrentDir
-  return (defaultEntryPoint cwd mainFile)
-
-defaultEntryPoint :: Path Abs Dir -> Path Rel File -> EntryPoint
+defaultEntryPoint :: Path Abs Dir -> Path Abs File -> EntryPoint
 defaultEntryPoint root mainFile =
   EntryPoint
     { _entryPointRoot = root,
@@ -39,7 +34,7 @@ defaultEntryPoint root mainFile =
       _entryPointStdin = Nothing,
       _entryPointPackage = emptyPackage,
       _entryPointGenericOptions = defaultGenericOptions,
-      _entryPointModulePaths = pure (root <//> mainFile)
+      _entryPointModulePaths = pure mainFile
     }
 
 mainModulePath :: Lens' EntryPoint (Path Abs File)

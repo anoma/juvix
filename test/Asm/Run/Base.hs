@@ -10,9 +10,8 @@ import Juvix.Compiler.Asm.Pretty
 import Juvix.Compiler.Asm.Transformation.Validate
 import Juvix.Compiler.Asm.Translation.FromSource
 import Juvix.Data.PPOutput
-import System.IO.Extra (withTempDir)
 
-asmRunAssertion :: FilePath -> FilePath -> (InfoTable -> Either AsmError InfoTable) -> (InfoTable -> Assertion) -> (String -> IO ()) -> Assertion
+asmRunAssertion :: Path Abs File -> Path Abs File -> (InfoTable -> Either AsmError InfoTable) -> (InfoTable -> Assertion) -> (String -> IO ()) -> Assertion
 asmRunAssertion mainFile expectedFile trans testTrans step = do
   step "Parse"
   r <- parseFile mainFile
@@ -29,10 +28,10 @@ asmRunAssertion mainFile expectedFile trans testTrans step = do
             Nothing ->
               case tab ^. infoMainFunction of
                 Just sym -> do
-                  withTempDir
+                  withTempDir'
                     ( \dirPath -> do
-                        let outputFile = dirPath </> "out.out"
-                        hout <- openFile outputFile WriteMode
+                        let outputFile = dirPath <//> $(mkRelFile "out.out")
+                        hout <- openFile (toFilePath outputFile) WriteMode
                         step "Interpret"
                         r' <- doRun hout tab (getFunInfo tab sym)
                         case r' of
@@ -44,14 +43,14 @@ asmRunAssertion mainFile expectedFile trans testTrans step = do
                               ValVoid -> return ()
                               _ -> hPutStrLn hout (ppPrint tab value')
                             hClose hout
-                            actualOutput <- TIO.readFile outputFile
+                            actualOutput <- TIO.readFile (toFilePath outputFile)
                             step "Compare expected and actual program output"
-                            expected <- TIO.readFile expectedFile
-                            assertEqDiff ("Check: RUN output = " <> expectedFile) actualOutput expected
+                            expected <- TIO.readFile (toFilePath expectedFile)
+                            assertEqDiff ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
                     )
                 Nothing -> assertFailure "no 'main' function"
 
-asmRunErrorAssertion :: FilePath -> (String -> IO ()) -> Assertion
+asmRunErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 asmRunErrorAssertion mainFile step = do
   step "Parse"
   r <- parseFile mainFile
@@ -64,10 +63,10 @@ asmRunErrorAssertion mainFile step = do
         Nothing ->
           case tab ^. infoMainFunction of
             Just sym -> do
-              withTempDir
+              withTempDir'
                 ( \dirPath -> do
-                    let outputFile = dirPath </> "out.out"
-                    hout <- openFile outputFile WriteMode
+                    let outputFile = dirPath <//> $(mkRelFile "out.out")
+                    hout <- openFile (toFilePath outputFile) WriteMode
                     step "Interpret"
                     r' <- doRun hout tab (getFunInfo tab sym)
                     hClose hout
@@ -77,10 +76,11 @@ asmRunErrorAssertion mainFile step = do
                 )
             Nothing -> assertBool "" True
 
-parseFile :: FilePath -> IO (Either ParserError InfoTable)
+parseFile :: Path Abs File -> IO (Either ParserError InfoTable)
 parseFile f = do
-  s <- readFile f
-  return $ runParser f s
+  let f' = toFilePath f
+  s <- readFile f'
+  return $ runParser f' s
 
 doRun ::
   Handle ->

@@ -9,22 +9,23 @@ type FailMsg = String
 
 data NegTest a = NegTest
   { _name :: String,
-    _relDir :: FilePath,
-    _file :: FilePath,
+    _relDir :: Path Rel Dir,
+    _file :: Path Rel  File,
     _checkErr :: a -> Maybe FailMsg
   }
 
-root :: FilePath
-root = "tests/negative"
+root :: Path Abs Dir
+root = relToProject $(mkRelDir "tests/negative")
 
 testDescr :: Typeable a => NegTest a -> TestDescr
 testDescr NegTest {..} =
-  let tRoot = root </> _relDir
+  let tRoot = root <//> _relDir
+      file' = tRoot <//> _file
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = defaultEntryPoint _file
+            let entryPoint = defaultEntryPoint tRoot file'
             res <- runIOEither iniState entryPoint upToAbstract
             case mapLeft fromJuvixError res of
               Left (Just err) -> whenJust (_checkErr err) assertFailure
@@ -47,211 +48,211 @@ scoperErrorTests :: [NegTest ScoperError]
 scoperErrorTests =
   [ NegTest
       "Not in scope"
-      "."
-      "NotInScope.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "NotInScope.juvix")
       $ \case
         ErrSymNotInScope {} -> Nothing
         _ -> wrongError,
     NegTest
       "Qualified not in scope"
-      "."
-      "QualSymNotInScope.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "QualSymNotInScope.juvix")
       $ \case
         ErrQualSymNotInScope {} -> Nothing
         _ -> wrongError,
     NegTest
       "Multiple declarations"
-      "."
-      "MultipleDeclarations.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "MultipleDeclarations.juvix")
       $ \case
         ErrMultipleDeclarations {} -> Nothing
         _ -> wrongError,
     NegTest
       "Import cycle"
-      "ImportCycle"
-      "A.juvix"
+      $(mkRelDir "ImportCycle")
+      $(mkRelFile "A.juvix")
       $ \case
         ErrImportCycle {} -> Nothing
         _ -> wrongError,
     NegTest
       "Binding group conflict (function clause)"
-      "BindGroupConflict"
-      "Clause.juvix"
+      $(mkRelDir "BindGroupConflict")
+      $(mkRelFile "Clause.juvix")
       $ \case
         ErrBindGroup {} -> Nothing
         _ -> wrongError,
     NegTest
       "Binding group conflict (lambda clause)"
-      "BindGroupConflict"
-      "Lambda.juvix"
+      $(mkRelDir "BindGroupConflict")
+      $(mkRelFile "Lambda.juvix")
       $ \case
         ErrBindGroup {} -> Nothing
         _ -> wrongError,
     NegTest
       "Infix error (expression)"
-      "."
-      "InfixError.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "InfixError.juvix")
       $ \case
         ErrInfixParser {} -> Nothing
         _ -> wrongError,
     NegTest
       "Infix error (pattern)"
-      "."
-      "InfixErrorP.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "InfixErrorP.juvix")
       $ \case
         ErrInfixPattern {} -> Nothing
         _ -> wrongError,
     NegTest
       "Duplicate fixity declaration"
-      "."
-      "DuplicateFixity.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "DuplicateFixity.juvix")
       $ \case
         ErrDuplicateFixity {} -> Nothing
         _ -> wrongError,
     NegTest
       "Multiple export conflict"
-      "."
-      "MultipleExportConflict.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "MultipleExportConflict.juvix")
       $ \case
         ErrMultipleExport {} -> Nothing
         _ -> wrongError,
     NegTest
       "Module not in scope"
-      "."
-      "ModuleNotInScope.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "ModuleNotInScope.juvix")
       $ \case
         ErrModuleNotInScope {} -> Nothing
         _ -> wrongError,
     NegTest
       "Unused operator syntax definition"
-      "."
-      "UnusedOperatorDef.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "UnusedOperatorDef.juvix")
       $ \case
         ErrUnusedOperatorDef {} -> Nothing
         _ -> wrongError,
     NegTest
       "Ambiguous symbol"
-      "."
-      "AmbiguousSymbol.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "AmbiguousSymbol.juvix")
       $ \case
         ErrAmbiguousSym {} -> Nothing
         _ -> wrongError,
     NegTest
       "Lacks function clause"
-      "."
-      "LacksFunctionClause.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "LacksFunctionClause.juvix")
       $ \case
         ErrLacksFunctionClause {} -> Nothing
         _ -> wrongError,
     NegTest
       "Incorrect top module path"
-      "."
-      "WrongModuleName.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "WrongModuleName.juvix")
       $ \case
         ErrWrongTopModuleName {} -> Nothing
         _ -> wrongError,
     NegTest
       "Ambiguous export"
-      "."
-      "AmbiguousExport.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "AmbiguousExport.juvix")
       $ \case
         ErrMultipleExport {} -> Nothing
         _ -> wrongError,
     NegTest
       "Ambiguous nested modules"
-      "."
-      "AmbiguousModule.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "AmbiguousModule.juvix")
       $ \case
         ErrAmbiguousModuleSym {} -> Nothing
         _ -> wrongError,
     NegTest
       "Ambiguous nested constructors"
-      "."
-      "AmbiguousConstructor.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "AmbiguousConstructor.juvix")
       $ \case
         ErrAmbiguousSym {} -> Nothing
         _ -> wrongError,
     NegTest
       "Wrong location of a compile block"
-      "CompileBlocks"
-      "WrongLocationCompileBlock.juvix"
+      $(mkRelDir "CompileBlocks")
+      $(mkRelFile "WrongLocationCompileBlock.juvix")
       $ \case
         ErrWrongLocationCompileBlock {} -> Nothing
         _ -> wrongError,
     NegTest
       "Implicit argument on the left of an application"
-      "."
-      "AppLeftImplicit.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "AppLeftImplicit.juvix")
       $ \case
         ErrAppLeftImplicit {} -> Nothing
         _ -> wrongError,
     NegTest
       "Multiple compile blocks for the same name"
-      "CompileBlocks"
-      "MultipleCompileBlockSameName.juvix"
+      $(mkRelDir "CompileBlocks")
+      $(mkRelFile "MultipleCompileBlockSameName.juvix")
       $ \case
         ErrMultipleCompileBlockSameName {} -> Nothing
         _ -> wrongError,
     NegTest
       "Multiple rules for a backend inside a compile block"
-      "CompileBlocks"
-      "MultipleCompileRuleSameBackend.juvix"
+      $(mkRelDir "CompileBlocks")
+      $(mkRelFile "MultipleCompileRuleSameBackend.juvix")
       $ \case
         ErrMultipleCompileRuleSameBackend {} -> Nothing
         _ -> wrongError,
     NegTest
       "issue 230"
-      "230"
-      "Prod.juvix"
+      $(mkRelDir "230")
+      $(mkRelFile "Prod.juvix")
       $ \case
         ErrQualSymNotInScope {} -> Nothing
         _ -> wrongError,
     NegTest
       "Double braces in pattern"
-      "."
-      "NestedPatternBraces.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "NestedPatternBraces.juvix")
       $ \case
         ErrDoubleBracesPattern {} -> Nothing
         _ -> wrongError,
     NegTest
       "As-Pattern aliasing variable"
-      "."
-      "AsPatternAlias.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "AsPatternAlias.juvix")
       $ \case
         ErrAliasBinderPattern {} -> Nothing
         _ -> wrongError,
     NegTest
       "Nested As-Patterns"
-      "."
-      "NestedAsPatterns.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "NestedAsPatterns.juvix")
       $ \case
         ErrDoubleBinderPattern {} -> Nothing
         _ -> wrongError,
     NegTest
       "Pattern matching an implicit argument on the left of an application"
-      "."
-      "ImplicitPatternLeftApplication.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "ImplicitPatternLeftApplication.juvix")
       $ \case
         ErrImplicitPatternLeftApplication {} -> Nothing
         _ -> wrongError,
     NegTest
       "Constructor expected on the left of a pattern application"
-      "."
-      "ConstructorExpectedLeftApplication.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "ConstructorExpectedLeftApplication.juvix")
       $ \case
         ErrConstructorExpectedLeftApplication {} -> Nothing
         _ -> wrongError,
     NegTest
       "Compile block for a unsupported kind of expression"
-      "CompileBlocks"
-      "WrongKindExpressionCompileBlock.juvix"
+      $(mkRelDir "CompileBlocks")
+      $(mkRelFile "WrongKindExpressionCompileBlock.juvix")
       $ \case
         ErrWrongKindExpressionCompileBlock {} -> Nothing
         _ -> wrongError,
     NegTest
       "A type parameter name occurs twice when declaring an inductive type"
-      "."
-      "DuplicateInductiveParameterName.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "DuplicateInductiveParameterName.juvix")
       $ \case
         ErrDuplicateInductiveParameterName {} -> Nothing
         _ -> wrongError
@@ -261,14 +262,14 @@ filesErrorTests :: [NegTest FilesError]
 filesErrorTests =
   [ NegTest
       "A module that conflicts with a module in the stdlib"
-      "StdlibConflict"
-      "Stdlib/Data/Bool.juvix"
+      $(mkRelDir "StdlibConflict")
+      $(mkRelFile "Stdlib/Data/Bool.juvix")
       $ \case
         FilesError {} -> Nothing,
     NegTest
       "Importing a module that conflicts with a module in the stdlib"
-      "StdlibConflict"
-      "Input.juvix"
+      $(mkRelDir "StdlibConflict")
+      $(mkRelFile "Input.juvix")
       $ \case
         FilesError {} -> Nothing
   ]

@@ -5,20 +5,21 @@ import Base
 
 data NegTest = NegTest
   { _name :: String,
-    _relDir :: FilePath,
-    _file :: FilePath
+    _relDir :: Path Rel Dir,
+    _file :: Path Rel File
   }
 
-root :: FilePath
-root = "tests/Asm/negative"
+root :: Path Abs Dir
+root = relToProject $(mkRelDir "tests/Asm/negative")
 
 testDescr :: NegTest -> TestDescr
 testDescr NegTest {..} =
-  let tRoot = root </> _relDir
+  let tRoot = root <//> _relDir
+      file' = tRoot <//> _file
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ asmValidateErrorAssertion _file
+          _testAssertion = Steps $ asmValidateErrorAssertion file'
         }
 
 allTests :: TestTree
@@ -31,42 +32,42 @@ tests :: [NegTest]
 tests =
   [ NegTest
       "Wrong stack height on exit"
-      "."
-      "vtest001.jva",
+      $(mkRelDir ".")
+      $(mkRelFile "vtest001.jva"),
     NegTest
       "Arithmetic type mismatch"
-      "."
-      "vtest002.jva",
+      $(mkRelDir ".")
+      $(mkRelFile "vtest002.jva"),
     NegTest
       "Function type mismatch"
-      "."
-      "vtest003.jva",
+      $(mkRelDir ".")
+      $(mkRelFile "vtest003.jva"),
     NegTest
       "Not enough function arguments"
-      "."
-      "vtest004.jva",
+      $(mkRelDir ".")
+      $(mkRelFile "vtest004.jva"),
     NegTest
       "Missing return"
-      "."
-      "vtest005.jva",
+      $(mkRelDir ".")
+      $(mkRelFile "vtest005.jva"),
     NegTest
       "Branch stack height mismatch"
-      "."
-      "vtest006.jva",
+      $(mkRelDir ".")
+      $(mkRelFile "vtest006.jva"),
     NegTest
       "Branch type mismatch"
-      "."
-      "vtest007.jva",
+      $(mkRelDir ".")
+      $(mkRelFile "vtest007.jva"),
     NegTest
       "Case stack height mismatch"
-      "."
-      "vtest008.jva",
+      $(mkRelDir ".")
+      $(mkRelFile "vtest008.jva"),
     NegTest
       "Case type mismatch"
-      "."
-      "vtest009.jva",
+      $(mkRelDir ".")
+      $(mkRelFile "vtest009.jva"),
     NegTest
       "Value stack type mismatch"
-      "."
-      "vtest010.jva"
+      $(mkRelDir ".")
+      $(mkRelFile "vtest010.jva")
   ]

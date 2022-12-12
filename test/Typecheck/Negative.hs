@@ -9,19 +9,20 @@ type FailMsg = String
 
 data NegTest = NegTest
   { _name :: String,
-    _relDir :: FilePath,
-    _file :: FilePath,
+    _relDir :: Path Rel Dir,
+    _file :: Path Rel File,
     _checkErr :: TypeCheckerError -> Maybe FailMsg
   }
 
 testDescr :: NegTest -> TestDescr
 testDescr NegTest {..} =
-  let tRoot = root </> _relDir
+  let tRoot = root <//> _relDir
+      file' = tRoot <//> _file
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = defaultEntryPoint _file
+            let entryPoint = defaultEntryPoint tRoot file'
             result <- runIOEither iniState entryPoint upToInternalTyped
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
@@ -41,8 +42,8 @@ allTests =
         (map (mkTest . testDescr) negPositivityTests)
     ]
 
-root :: FilePath
-root = "tests/negative"
+root :: Path Abs Dir
+root = relToProject $(mkRelDir "tests/negative")
 
 wrongError :: Maybe FailMsg
 wrongError = Just "Incorrect error"
@@ -51,71 +52,71 @@ tests :: [NegTest]
 tests =
   [ NegTest
       "Constructor in pattern type error"
-      "Internal"
-      "PatternConstructor.juvix"
+      $(mkRelDir "Internal")
+      $(mkRelFile "PatternConstructor.juvix")
       $ \case
         ErrWrongConstructorType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Check pattern with hole type"
-      "265"
-      "M.juvix"
+      $(mkRelDir "265")
+      $(mkRelFile "M.juvix")
       $ \case
         ErrWrongConstructorType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Type vs inferred type mismatch"
-      "Internal"
-      "WrongType.juvix"
+      $(mkRelDir "Internal")
+      $(mkRelFile "WrongType.juvix")
       $ \case
         ErrWrongType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Function application with non-function type"
-      "Internal"
-      "ExpectedFunctionType.juvix"
+      $(mkRelDir "Internal")
+      $(mkRelFile "ExpectedFunctionType.juvix")
       $ \case
         ErrExpectedFunctionType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Unsolved hole"
-      "Internal"
-      "UnsolvedMeta.juvix"
+      $(mkRelDir "Internal")
+      $(mkRelFile "UnsolvedMeta.juvix")
       $ \case
         ErrUnsolvedMeta {} -> Nothing
         _ -> wrongError,
     NegTest
       "Multiple type errors are captured"
-      "Internal"
-      "MultiWrongType.juvix"
+      $(mkRelDir "Internal")
+      $(mkRelFile "MultiWrongType.juvix")
       $ \case
         ErrWrongType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Unexpected braces in pattern"
-      "issue1337"
-      "Braces.juvix"
+      $(mkRelDir "issue1337")
+      $(mkRelFile "Braces.juvix")
       $ \case
         ErrArity (ErrWrongPatternIsImplicit {}) -> Nothing
         _ -> wrongError,
     NegTest
       "Wrong return type name for a constructor of a simple data type"
-      "Internal"
-      "WrongReturnType.juvix"
+      $(mkRelDir "Internal")
+      $(mkRelFile "WrongReturnType.juvix")
       $ \case
         ErrWrongReturnType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Too few arguments for the return type of a constructor"
-      "Internal"
-      "WrongReturnTypeTooFewArguments.juvix"
+      $(mkRelDir "Internal")
+      $(mkRelFile "WrongReturnTypeTooFewArguments.juvix")
       $ \case
         ErrWrongType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Too many arguments for the return type of a constructor"
-      "Internal"
-      "WrongReturnTypeTooManyArguments.juvix"
+      $(mkRelDir "Internal")
+      $(mkRelFile "WrongReturnTypeTooManyArguments.juvix")
       $ \case
         ErrExpectedFunctionType {} -> Nothing
         _ -> wrongError
@@ -123,39 +124,39 @@ tests =
 
 negPositivityTests :: [NegTest]
 negPositivityTests =
-  [ NegTest "E1" "Internal/Positivity" "E1.juvix" $
+  [ NegTest "E1" $(mkRelDir "Internal/Positivity") $(mkRelFile "E1.juvix") $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E2" "Internal/Positivity" "E2.juvix" $
+    NegTest "E2" $(mkRelDir "Internal/Positivity") $(mkRelFile "E2.juvix") $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E3" "Internal/Positivity" "E3.juvix" $
+    NegTest "E3" $(mkRelDir "Internal/Positivity") $(mkRelFile "E3.juvix") $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E4" "Internal/Positivity" "E4.juvix" $
+    NegTest "E4" $(mkRelDir "Internal/Positivity") $(mkRelFile "E4.juvix") $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E5" "Internal/Positivity" "E5.juvix" $
+    NegTest "E5" $(mkRelDir "Internal/Positivity") $(mkRelFile "E5.juvix") $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E6" "Internal/Positivity" "E6.juvix" $
+    NegTest "E6" $(mkRelDir "Internal/Positivity") $(mkRelFile "E6.juvix") $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E7" "Internal/Positivity" "E7.juvix" $
+    NegTest "E7" $(mkRelDir "Internal/Positivity") $(mkRelFile "E7.juvix") $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E8" "Internal/Positivity" "E8.juvix" $
+    NegTest "E8" $(mkRelDir "Internal/Positivity") $(mkRelFile "E8.juvix") $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError,
-    NegTest "E9" "Internal/Positivity" "E9.juvix" $
+    NegTest "E9" $(mkRelDir "Internal/Positivity") $(mkRelFile "E9.juvix") $
       \case
         ErrNoPositivity {} -> Nothing
         _ -> wrongError

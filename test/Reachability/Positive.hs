@@ -9,30 +9,29 @@ import Juvix.Compiler.Pipeline
 
 data PosTest = PosTest
   { _name :: String,
-    _relDir :: FilePath,
+    _relDir :: Path Rel Dir,
     _stdlibMode :: StdlibMode,
-    _file :: FilePath,
+    _file :: Path Rel File,
     _reachable :: HashSet String
   }
 
 makeLenses ''PosTest
 
-root :: FilePath
-root = "tests/positive"
+root :: Path Abs Dir
+root = relToProject $(mkRelDir "tests/positive")
 
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
-  let tRoot = root </> _relDir
+  let tRoot = root <//> _relDir
+      file' = tRoot <//> _file
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Steps $ \step -> do
-            cwd <- getCurrentDirectory
-            entryFile <- canonicalizePath _file
             let noStdlib = _stdlibMode == StdlibExclude
                 entryPoint =
-                  (defaultEntryPoint entryFile)
-                    { _entryPointRoot = cwd,
+                  (defaultEntryPoint tRoot file')
+                    { _entryPointRoot = tRoot,
                       _entryPointNoStdlib = noStdlib
                     }
 
@@ -67,25 +66,25 @@ tests :: [PosTest]
 tests =
   [ PosTest
       "Reachability with modules"
-      "Reachability"
+      $(mkRelDir "Reachability")
       StdlibInclude
-      "M.juvix"
+      $(mkRelFile "M.juvix")
       ( HashSet.fromList
           ["f", "g", "h", "Bool", "Maybe"]
       ),
     PosTest
       "Reachability with modules and standard library"
-      "Reachability"
+      $(mkRelDir "Reachability")
       StdlibInclude
-      "N.juvix"
+      $(mkRelFile "N.juvix")
       ( HashSet.fromList
           ["test", "Unit"]
       ),
     PosTest
       "Reachability with public imports"
-      "Reachability"
+      $(mkRelDir "Reachability")
       StdlibInclude
-      "O.juvix"
+      $(mkRelFile "O.juvix")
       ( HashSet.fromList
           ["f", "g", "h", "k", "Bool", "Maybe"]
       )

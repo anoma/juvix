@@ -15,15 +15,17 @@ data Test = Test
 fromTest :: Test -> TestTree
 fromTest = mkTest . toTestDescr
 
-troot :: FilePath
-troot = "tests/Core/positive/"
+root :: Path Abs Dir
+root = relToProject $(mkRelDir "tests/Core/positive/")
 
 toTestDescr :: Test -> TestDescr
 toTestDescr Test {..} =
   let Eval.PosTest {..} = _testEval
-      tRoot = troot </> _relDir
+      tRoot = root <//> _relDir
+      file' = tRoot <//> _file
+      expected' = tRoot <//> _expectedFile
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ coreEvalAssertion _file _expectedFile _testTransformations _testAssertion
+          _testAssertion = Steps $ coreEvalAssertion file' expected' _testTransformations _testAssertion
         }

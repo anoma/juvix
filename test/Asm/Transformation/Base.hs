@@ -15,15 +15,17 @@ data Test = Test
 fromTest :: Test -> TestTree
 fromTest = mkTest . toTestDescr
 
-troot :: FilePath
-troot = "tests/Asm/positive/"
+troot :: Path Abs Dir
+troot = relToProject $(mkRelDir "tests/Asm/positive/")
 
 toTestDescr :: Test -> TestDescr
 toTestDescr Test {..} =
   let Run.PosTest {..} = _testEval
-      tRoot = troot </> _relDir
+      tRoot = troot <//> _relDir
+      file' = tRoot <//> _file
+      expected' = tRoot <//> _expectedFile
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ asmRunAssertion _file _expectedFile _testTransformation _testAssertion
+          _testAssertion = Steps $ asmRunAssertion file' expected' _testTransformation _testAssertion
         }
