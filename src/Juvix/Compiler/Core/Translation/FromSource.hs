@@ -49,8 +49,9 @@ createBuiltinConstr ::
   Text ->
   Type ->
   Interval ->
+  Maybe BuiltinConstructor ->
   Sem r ConstructorInfo
-createBuiltinConstr sym tag nameTxt ty i = do
+createBuiltinConstr sym tag nameTxt ty i cblt = do
   return $
     ConstructorInfo
       { _constructorName = nameTxt,
@@ -59,21 +60,21 @@ createBuiltinConstr sym tag nameTxt ty i = do
         _constructorType = ty,
         _constructorArgsNum = length (typeArgs ty),
         _constructorInductive = sym,
-        _constructorBuiltin = Nothing
+        _constructorBuiltin = cblt
       }
 
 declareInductiveBuiltins ::
   Member InfoTableBuilder r =>
   Text ->
   Maybe BuiltinInductive ->
-  [(Tag, Text, Type -> Type)] ->
+  [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] ->
   ParsecS r ()
 declareInductiveBuiltins indName blt ctrs = do
   loc <- curLoc
   let i = mkInterval loc loc
   sym <- lift freshSymbol
   let ty = mkIdent' sym
-  constrs <- lift $ mapM (\(tag, name, fty) -> createBuiltinConstr sym tag name (fty ty) i) ctrs
+  constrs <- lift $ mapM (\(tag, name, fty, cblt) -> createBuiltinConstr sym tag name (fty ty) i cblt) ctrs
   lift $
     registerInductive
       indName
@@ -95,10 +96,10 @@ declareIOBuiltins =
   declareInductiveBuiltins
     "IO"
     Nothing
-    [ (BuiltinTag TagReturn, "return", mkPi' mkDynamic'),
-      (BuiltinTag TagBind, "bind", \ty -> mkPi' ty (mkPi' (mkPi' mkDynamic' ty) ty)),
-      (BuiltinTag TagWrite, "write", mkPi' mkDynamic'),
-      (BuiltinTag TagReadLn, "readLn", id)
+    [ (BuiltinTag TagReturn, "return", mkPi' mkDynamic', Nothing),
+      (BuiltinTag TagBind, "bind", \ty -> mkPi' ty (mkPi' (mkPi' mkDynamic' ty) ty), Nothing),
+      (BuiltinTag TagWrite, "write", mkPi' mkDynamic', Nothing),
+      (BuiltinTag TagReadLn, "readLn", id, Nothing)
     ]
 
 declareBoolBuiltins :: Member InfoTableBuilder r => ParsecS r ()
@@ -106,8 +107,8 @@ declareBoolBuiltins =
   declareInductiveBuiltins
     "bool"
     (Just BuiltinBool)
-    [ (BuiltinTag TagTrue, "true", id),
-      (BuiltinTag TagFalse, "false", id)
+    [ (BuiltinTag TagTrue, "true", id, Just BuiltinBoolTrue),
+      (BuiltinTag TagFalse, "false", id, Just BuiltinBoolFalse)
     ]
 
 declareNatBuiltins :: Member InfoTableBuilder r => ParsecS r ()
@@ -117,8 +118,8 @@ declareNatBuiltins = do
   declareInductiveBuiltins
     "nat"
     (Just BuiltinNat)
-    [ (tagZero, "zero", id),
-      (tagSuc, "suc", \x -> mkPi' x x)
+    [ (tagZero, "zero", id, Just BuiltinNatZero),
+      (tagSuc, "suc", \x -> mkPi' x x, Just BuiltinNatSuc)
     ]
 
 parseToplevel ::

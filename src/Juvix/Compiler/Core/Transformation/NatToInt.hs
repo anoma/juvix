@@ -1,14 +1,17 @@
 module Juvix.Compiler.Core.Transformation.NatToInt (natToInt) where
 
+import Data.List qualified as List
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
+import Juvix.Compiler.Core.Info qualified as Info
+import Juvix.Compiler.Core.Info.NameInfo
 
 convertNode :: InfoTable -> Node -> Node
 convertNode tab = convert [] 0
   where
     convert :: [Level] -> Level -> Node -> Node
-    convert levels bl = dmapCNR' (bl, go) levels
+    convert levels bl node = dmapCNR' (bl, go) levels node
 
     go :: [Level] -> Level -> Node -> Recur' [Level]
     go levels bl node = case node of
@@ -41,7 +44,7 @@ convertNode tab = convert [] 0
       NCase (Case {..}) ->
         let ii = fromJust $ HashMap.lookup _caseInductive (tab ^. infoInductives)
          in case ii ^. inductiveBuiltin of
-              Just BuiltinBool ->
+              Just BuiltinNat ->
                 case _caseBranches of
                   [br] -> makeIf br (maybeBranch _caseDefault)
                   [br1, br2] ->
@@ -65,13 +68,15 @@ convertNode tab = convert [] 0
                     Recur' (levels, mkIf _caseInfo sym (mkBuiltinApp' OpEq [_caseValue, mkConstant' (ConstInteger 0)]) _caseBranchBody br)
                   1 ->
                     End' $
-                      mkLet' (mkBuiltinApp' OpIntSub [convert levels bl _caseValue, mkConstant' (ConstInteger 1)]) $
+                      mkLet mempty (emptyBinder{_binderName = name}) (mkBuiltinApp' OpIntSub [convert levels bl _caseValue, mkConstant' (ConstInteger 1)]) $
                         mkIf
                           _caseInfo
                           sym
-                          (mkBuiltinApp' OpIntLe [mkConstant' (ConstInteger 0), mkVar' 0])
+                          (mkBuiltinApp' OpIntLe [mkConstant' (ConstInteger 0), mkVar (Info.singleton (NameInfo name)) 0])
                           (convert levels (bl + 1) _caseBranchBody)
                           (convert (bl : levels) bl br)
+                    where
+                      name = List.head _caseBranchBinders ^. binderName
                   _ -> impossible
           maybeBranch :: Maybe Node -> Node
           maybeBranch = fromMaybe (mkBuiltinApp' OpFail [mkConstant' (ConstString "no matching branch")])

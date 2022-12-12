@@ -46,6 +46,7 @@ pcompletions = do
       Identity -> strIdentity
       RemoveTypeArgs -> strRemoveTypeArgs
       MoveApps -> strMoveApps
+      NatToInt -> strNatToInt
 
 lexeme :: MonadParsec e Text m => m a -> m a
 lexeme = L.lexeme L.hspace
@@ -63,6 +64,7 @@ transformation =
     <|> symbol strTopEtaExpand $> TopEtaExpand
     <|> symbol strRemoveTypeArgs $> RemoveTypeArgs
     <|> symbol strMoveApps $> MoveApps
+    <|> symbol strNatToInt $> NatToInt
 
 allStrings :: [Text]
 allStrings =
@@ -87,3 +89,6 @@ strRemoveTypeArgs = "remove-type-args"
 
 strMoveApps :: Text
 strMoveApps = "move-apps"
+
+strNatToInt :: Text
+strNatToInt = "nat-to-int"

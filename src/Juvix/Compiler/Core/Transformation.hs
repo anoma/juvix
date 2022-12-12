@@ -15,6 +15,7 @@ import Juvix.Compiler.Core.Transformation.Identity
 import Juvix.Compiler.Core.Transformation.LambdaLifting
 import Juvix.Compiler.Core.Transformation.MoveApps
 import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
+import Juvix.Compiler.Core.Transformation.NatToInt
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
 
 applyTransformations :: [TransformationId] -> InfoTable -> InfoTable
@@ -27,3 +28,4 @@ applyTransformations ts tbl = foldl' (flip appTrans) tbl ts
       TopEtaExpand -> topEtaExpand
       RemoveTypeArgs -> removeTypeArgs
       MoveApps -> moveApps
+      NatToInt -> natToInt
