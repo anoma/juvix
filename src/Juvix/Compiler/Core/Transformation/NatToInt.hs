@@ -1,11 +1,11 @@
 module Juvix.Compiler.Core.Transformation.NatToInt (natToInt) where
 
-import Data.List qualified as List
 import Data.HashMap.Strict qualified as HashMap
+import Data.List qualified as List
 import Juvix.Compiler.Core.Extra
-import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NameInfo
+import Juvix.Compiler.Core.Transformation.Base
 
 convertNode :: InfoTable -> Node -> Node
 convertNode tab = convert [] 0
@@ -68,7 +68,7 @@ convertNode tab = convert [] 0
                     Recur' (levels, mkIf _caseInfo sym (mkBuiltinApp' OpEq [_caseValue, mkConstant' (ConstInteger 0)]) _caseBranchBody br)
                   1 ->
                     End' $
-                      mkLet mempty (emptyBinder{_binderName = name}) (mkBuiltinApp' OpIntSub [convert levels bl _caseValue, mkConstant' (ConstInteger 1)]) $
+                      mkLet mempty (emptyBinder {_binderName = name}) (mkBuiltinApp' OpIntSub [convert levels bl _caseValue, mkConstant' (ConstInteger 1)]) $
                         mkIf
                           _caseInfo
                           sym

@@ -149,7 +149,7 @@ statementBuiltin = do
   sym <- statementDef
   ii <- lift $ getIdentifierInfo sym
   case ii ^. identifierName of
-    "plus" -> lift $ registerIdent (ii ^. identifierName) ii{_identifierBuiltin = Just BuiltinNatPlus}
+    "plus" -> lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatPlus}
     _ -> parseFailure off "unrecorgnized builtin definition"
 
 statementDef ::
