@@ -74,5 +74,5 @@ etaExpandApps tab =
         Just ci -> length (ci ^. inductiveParams)
         Nothing -> 0
 
-etaExpansionApps :: Transformation
+etaExpansionApps :: InfoTable -> InfoTable
 etaExpansionApps tab = mapT (const (etaExpandApps tab)) tab

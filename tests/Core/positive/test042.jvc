@@ -7,8 +7,10 @@ inductive list : Π A : Type, Type {
 
 def id : Π A : Type, A → A := λ(A : Type) λ(x : A) x;
 
-def hd : Π A : Type, list A → A := λA λl case l of { cons _ x _ := x };
+def hd : Π A : Type, list A → A := λ(A : Type) λl case l of { cons _ x _ := x };
 
-def tl : Π A : Type, list A → list A := λA λl case l of { cons _ _ y := y };
+def tl : Π A : Type, list A → list A := λ(A : Type) λl case l of { cons _ _ y := y };
 
-hd int (tl int (id (list int) (cons int 1 (cons int 2 (nil int)))))
+def main := hd int (tl int (id (list int) (cons int 1 (cons int 2 (nil int)))));
+
+main

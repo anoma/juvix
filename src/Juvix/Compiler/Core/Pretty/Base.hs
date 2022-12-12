@@ -338,11 +338,19 @@ instance PrettyCode Stripped.Node where
           branchTagNames = map (^. (caseBranchInfo . Stripped.caseBranchInfoConstrName)) _caseBranches
        in ppCodeCase' branchBinderNames branchTagNames x
 
+instance PrettyCode ConstructorInfo where
+  ppCode :: Member (Reader Options) r => ConstructorInfo -> Sem r (Doc Ann)
+  ppCode ci = do
+    name <- ppName KNameConstructor (ci ^. constructorName)
+    ty <- ppCode (ci ^. constructorType)
+    return $ name <+> colon <+> ty
+
 instance PrettyCode InfoTable where
   ppCode :: forall r. Member (Reader Options) r => InfoTable -> Sem r (Doc Ann)
   ppCode tbl = do
+    tys <- ppInductives (toList (tbl ^. infoInductives))
     ctx' <- ppContext (tbl ^. identContext)
-    return ("-- IdentContext" <> line <> ctx' <> line)
+    return ("-- Types" <> line <> tys <> line <> "-- Identifiers" <> line <> ctx' <> line)
     where
       ppContext :: IdentContext -> Sem r (Doc Ann)
       ppContext ctx = do
@@ -356,7 +364,21 @@ instance PrettyCode InfoTable where
                 mname' = (\nm -> nm <> "!" <> prettyText s) mname
             sym' <- ppName KNameLocal mname'
             body' <- ppCode n
-            return (kwDef <+> sym' <+> kwAssign <+> nest 2 body')
+            let ii = fromJust $ HashMap.lookup s (tbl ^. infoIdentifiers)
+                ty = ii ^. identifierType
+            ty' <- ppCode ty
+            let tydoc = if isDynamic ty then mempty else space <> colon <+> ty'
+            return (kwDef <+> sym' <> tydoc <+> kwAssign <+> nest 2 body')
+      ppInductives :: [InductiveInfo] -> Sem r (Doc Ann)
+      ppInductives inds = do
+        inds' <- mapM ppInductive inds
+        return (vsep inds')
+        where
+          ppInductive :: InductiveInfo -> Sem r (Doc Ann)
+          ppInductive ii = do
+            name <- ppName KNameInductive (ii ^. inductiveName)
+            ctrs <- mapM (fmap (<> semi) . ppCode) (ii ^. inductiveConstructors)
+            return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line))
 
 instance PrettyCode Stripped.InfoTable where
   ppCode :: forall r. Member (Reader Options) r => Stripped.InfoTable -> Sem r (Doc Ann)

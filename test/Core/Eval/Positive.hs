@@ -251,5 +251,10 @@ tests =
       "Eta-expansion"
       $(mkRelDir ".")
       $(mkRelFile "test044.jvc")
-      $(mkRelFile "out/test044.out")
+      $(mkRelFile "out/test044.out"),
+    PosTest
+      "Type application and abstraction"
+      $(mkRelDir ".")
+      $(mkRelFile "test045.jvc")
+      $(mkRelFile "out/test045.out")
   ]
