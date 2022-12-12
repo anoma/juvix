@@ -271,7 +271,7 @@ instance HasAtomicity (Pattern' i a) where
     PatConstr x -> atomicity x
 
 instance HasAtomicity (Pi' i a) where
-  atomicity _ = Aggregate lambdaFixity
+  atomicity _ = Aggregate funFixity
 
 instance HasAtomicity (Univ' i) where
   atomicity _ = Atom

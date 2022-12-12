@@ -14,14 +14,21 @@ runCommand opts = do
   (tab, mnode) <- getRight (mapLeft JuvixError (Core.runParser f Core.emptyInfoTable s'))
   let tab' = Core.applyTransformations (project opts ^. coreReadTransformations) tab
   embed (Scoper.scopeTrace tab')
-  unless (project opts ^. coreReadNoPrint) (renderStdOut (Core.ppOut opts tab'))
+  unless (project opts ^. coreReadNoPrint) $ do
+    renderStdOut (Core.ppOut opts tab')
   whenJust mnode $ doEval tab'
   where
     doEval :: Core.InfoTable -> Core.Node -> Sem r ()
-    doEval tab' node = when (project opts ^. coreReadEval) $ do
-      embed (putStrLn "--------------------------------")
-      embed (putStrLn "|            Eval              |")
-      embed (putStrLn "--------------------------------")
-      Eval.evalAndPrint opts tab' node
+    doEval tab' node =
+      if
+          | project opts ^. coreReadEval -> do
+              embed (putStrLn "--------------------------------")
+              embed (putStrLn "|            Eval              |")
+              embed (putStrLn "--------------------------------")
+              Eval.evalAndPrint opts tab' node
+          | otherwise -> do
+              embed (putStrLn "-- Node")
+              renderStdOut (Core.ppOut opts node)
+              embed (putStrLn "")
     f :: FilePath
     f = project opts ^. coreReadInputFile . pathPath

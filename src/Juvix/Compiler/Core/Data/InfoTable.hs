@@ -41,7 +41,6 @@ data IdentifierInfo = IdentifierInfo
     _identifierLocation :: Maybe Location,
     _identifierSymbol :: Symbol,
     _identifierType :: Type,
-    -- _identifierArgsNum will be used often enough to justify avoiding recomputation
     _identifierArgsNum :: Int,
     _identifierArgsInfo :: [ArgumentInfo],
     _identifierIsExported :: Bool
