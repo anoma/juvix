@@ -67,6 +67,7 @@ docs/*.html
 /src/Juvix/Utils/OldParser.hs
 CHANGELOG.md
 UPDATES-FOR-CHANGELOG.org
+docs/org/README.org
 .juvix-build
 
 # C Code generation
