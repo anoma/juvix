@@ -9,9 +9,3 @@ data Recur' c
 data Recur
   = End Node
   | Recur Node
-
-{- recurNode :: Lens' (Recur c) (c, Node)
-recurNode f = \case
-  End n -> End <$> f n
-  Recur n -> Recur <$> f n
- -}
