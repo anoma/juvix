@@ -258,13 +258,23 @@ jobs:
           cd main
           make test
 
+      - name: Add ~/.local/bin to PATH
+        run: |
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name : Shell tests (Linux)
-        id: shell-tests
+        id: shell-tests-linux
         if: runner.os == 'Linux'
         run : |
           cd main
-          echo "$GITHUB_WORKSPACE/.local/bin" >> $GITHUB_PATH
           make test-shell
+
+      - name : Shell tests (macOS)
+        id: shell-tests-macos
+        if: runner.os == 'macOS'
+        run : |
+          cd main
+          make CC=$CC LIBTOOL=$LIBTOOL test-shell
 
   docs:
     needs: build
