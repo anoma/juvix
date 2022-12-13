@@ -16,7 +16,7 @@ To compile and run the terminal application use the following steps:
 #+begin_src shell
 cd CLI
 juvix compile TicTacToe.juvix
-./TicTacToe.juvix
+./TicTacToe
 #+end_src
 
 You will see the following output:
