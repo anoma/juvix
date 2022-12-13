@@ -16,8 +16,8 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Prelude
 import Juvix.Extra.Stdlib (ensureStdlib)
+import Juvix.Prelude
 
 data PathResolver m a where
   -- | Currently, we pass (Just entrypoint) only for the current package and Nothing for all dependencies

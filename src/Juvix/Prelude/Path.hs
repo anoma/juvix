@@ -5,8 +5,8 @@ module Juvix.Prelude.Path
   )
 where
 
-import Juvix.Prelude.Base
 import Data.List.NonEmpty qualified as NonEmpty
+import Juvix.Prelude.Base
 import Juvix.Prelude.Path.OrphanInstances ()
 import Path hiding ((<.>), (</>))
 import Path qualified

@@ -17,7 +17,7 @@ testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
   let tRoot = root <//> _relDir
       file' = tRoot <//> _file
-      expected' =  tRoot <//> _expectedFile
+      expected' = tRoot <//> _expectedFile
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,

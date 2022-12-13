@@ -11,7 +11,6 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Setup
-import Juvix.Extra.Stdlib
 import Juvix.Prelude.Pretty
 
 data PosTest = PosTest
@@ -45,16 +44,6 @@ testDescr PosTest {..} =
                     { _entryPointRoot = cwd,
                       _entryPointNoStdlib = noStdlib
                     }
-                stdlibMap :: HashMap (Path Abs File) Text
-                stdlibMap =
-                  HashMap.fromList
-                    [ (cwd <//> p, decodeUtf8 c)
-                      | (p, c) <- stdlibFiles
-                    ]
-                unionStdlib :: HashMap (Path Abs File) Text -> HashMap (Path Abs File) Text
-                unionStdlib fs
-                  | noStdlib = fs
-                  | otherwise = HashMap.union fs stdlibMap
 
             step "Parsing"
             p :: Parser.ParserResult <- snd <$> runIO' iniState entryPoint upToParsing
@@ -76,12 +65,10 @@ testDescr PosTest {..} =
 
                 fs :: HashMap (Path Abs File) Text
                 fs =
-                  unionStdlib
-                    ( HashMap.fromList
-                        [ (absFile (getModuleFileAbsPath (toFilePath cwd) m), renderCode m)
-                          | m <- toList (getAllModules s2)
-                        ]
-                    )
+                  HashMap.fromList
+                    [ (absFile (getModuleFileAbsPath (toFilePath cwd) m), renderCode m)
+                      | m <- toList (getAllModules s2)
+                    ]
 
             let scopedPretty = renderCode s2
                 parsedPretty = renderCode p2
@@ -101,11 +88,11 @@ testDescr PosTest {..} =
                 runHelper files = runM . runErrorIO' @JuvixError . runNameIdGen . runFilesPure files cwd . runReader entryPoint . runPathResolverPipe
 
             step "Parsing pretty scoped"
-            let fs2 = unionStdlib (HashMap.singleton file' scopedPretty)
+            let fs2 = HashMap.singleton file' scopedPretty
             p' :: Parser.ParserResult <- runHelper fs2 upToParsing
 
             step "Parsing pretty parsed"
-            let fs3 = unionStdlib (HashMap.singleton file' parsedPretty)
+            let fs3 = HashMap.singleton file' parsedPretty
             parsedPretty' :: Parser.ParserResult <- runHelper fs3 upToParsing
 
             step "Scoping the scoped"

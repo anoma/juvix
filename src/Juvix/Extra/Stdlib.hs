@@ -1,7 +1,7 @@
 module Juvix.Extra.Stdlib where
 
-import Juvix.Data.Effect.Files
 import Juvix.Compiler.Pipeline.Package.Dependency
+import Juvix.Data.Effect.Files
 import Juvix.Extra.Paths
 import Juvix.Extra.Version
 import Juvix.Prelude
@@ -26,13 +26,13 @@ stdlibFiles = mapMaybe helper $(stdlibDir)
 ensureStdlib :: Members '[Files] r => Path Abs Dir -> [Dependency] -> Sem r ()
 ensureStdlib pkgRoot deps = whenJust (firstJust isStdLib deps) $ \stdlibRoot ->
   runReader stdlibRoot updateStdlib
- where
-  isStdLib :: Dependency -> Maybe (Path Abs Dir)
-  isStdLib dep = do
-    case stripProperPrefix pkgRoot (dep ^. dependencyPath) of
-      Just p
-        | p == juvixStdlibDir -> Just (dep ^. dependencyPath)
-      _ -> Nothing
+  where
+    isStdLib :: Dependency -> Maybe (Path Abs Dir)
+    isStdLib dep = do
+      case stripProperPrefix pkgRoot (dep ^. dependencyPath) of
+        Just p
+          | p == juvixStdlibDir -> Just (dep ^. dependencyPath)
+        _ -> Nothing
 
 writeStdlib :: forall r. Members '[Reader StdlibRoot, Files] r => Sem r ()
 writeStdlib = do

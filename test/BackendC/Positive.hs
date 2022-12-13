@@ -49,7 +49,7 @@ testDescr PosTest {..} =
   let tRoot = root <//> _relDir
       mainFile' = tRoot <//> mainFile
       expectedFile' = tRoot <//> expectedFile
-  in TestDescr
+   in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Steps $ case _compileMode of

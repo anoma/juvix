@@ -10,7 +10,7 @@ type FailMsg = String
 data NegTest a = NegTest
   { _name :: String,
     _relDir :: Path Rel Dir,
-    _file :: Path Rel  File,
+    _file :: Path Rel File,
     _checkErr :: a -> Maybe FailMsg
   }
 

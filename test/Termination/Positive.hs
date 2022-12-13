@@ -54,28 +54,34 @@ testDescrFlag N.NegTest {..} =
 
 tests :: [PosTest]
 tests =
-  [ PosTest "Ackerman nice def. is terminating"
-    $(mkRelDir ".")
-    $(mkRelFile "Ack.juvix"),
-    PosTest "Fibonacci with nested pattern"
-    $(mkRelDir ".")
-    $(mkRelFile "Fib.juvix"),
-    PosTest "Recursive functions on Lists"
-    $(mkRelDir ".")
-    $(mkRelFile "Data/List.juvix")
+  [ PosTest
+      "Ackerman nice def. is terminating"
+      $(mkRelDir ".")
+      $(mkRelFile "Ack.juvix"),
+    PosTest
+      "Fibonacci with nested pattern"
+      $(mkRelDir ".")
+      $(mkRelFile "Fib.juvix"),
+    PosTest
+      "Recursive functions on Lists"
+      $(mkRelDir ".")
+      $(mkRelFile "Data/List.juvix")
   ]
 
 testsWithKeyword :: [PosTest]
 testsWithKeyword =
-  [ PosTest "terminating added to fx:=fx"
-    $(mkRelDir ".")
-    $(mkRelFile "ToEmpty.juvix"),
-    PosTest "terminating for all functions in the mutual block"
-    $(mkRelDir ".")
-    $(mkRelFile "Mutual.juvix"),
-    PosTest "Undefined is terminating by assumption"
-    $(mkRelDir ".")
-    $(mkRelFile "Undefined.juvix")
+  [ PosTest
+      "terminating added to fx:=fx"
+      $(mkRelDir ".")
+      $(mkRelFile "ToEmpty.juvix"),
+    PosTest
+      "terminating for all functions in the mutual block"
+      $(mkRelDir ".")
+      $(mkRelFile "Mutual.juvix"),
+    PosTest
+      "Undefined is terminating by assumption"
+      $(mkRelDir ".")
+      $(mkRelFile "Undefined.juvix")
   ]
 
 negTests :: [N.NegTest]
