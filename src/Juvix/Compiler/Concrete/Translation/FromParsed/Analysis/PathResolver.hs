@@ -17,8 +17,10 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Erro
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
+import Juvix.Extra.Stdlib (ensureStdlib)
 
 data PathResolver m a where
+  -- | Currently, we pass (Just entrypoint) only for the current package and Nothing for all dependencies
   AddDependency :: Maybe EntryPoint -> Dependency -> PathResolver m ()
   WithPath ::
     TopModulePath ->
@@ -57,12 +59,14 @@ mkPackageInfo ::
   Maybe EntryPoint ->
   Path Abs Dir ->
   Sem r PackageInfo
-mkPackageInfo me _packageRoot = do
-  _packagePackage <- readPackage _packageRoot
+mkPackageInfo mpackageEntry _packageRoot = do
+  _packagePackage <- maybe (readPackage _packageRoot) (return . (^. entryPointPackage)) mpackageEntry
+  let deps :: [Dependency] = _packagePackage ^. packageDependencies
+  ensureStdlib _packageRoot deps
   files :: [Path Rel File] <- map (fromJust . stripProperPrefix _packageRoot) <$> walkDirRelAccum juvixAccum _packageRoot []
   let _packageRelativeFiles = HashSet.fromList files
       _packageAvailableRoots =
-        HashSet.fromList (_packageRoot : map (^. dependencyPath) (_packagePackage ^. packageDependencies))
+        HashSet.fromList (_packageRoot : map (^. dependencyPath) deps)
   return PackageInfo {..}
   where
     juvixAccum :: Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> [Path Abs File] -> Sem r ([Path Abs File], Recurse Rel)

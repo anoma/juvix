@@ -32,7 +32,7 @@ defaultEntryPoint root mainFile =
       _entryPointNoStdlib = False,
       _entryPointStdlibPath = Nothing,
       _entryPointStdin = Nothing,
-      _entryPointPackage = emptyPackage,
+      _entryPointPackage = defaultPackage root,
       _entryPointGenericOptions = defaultGenericOptions,
       _entryPointModulePaths = pure mainFile
     }

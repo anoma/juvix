@@ -96,7 +96,7 @@ missingErr f = do
 checkRoot :: Members '[State FS] r => Path Abs Dir -> Sem r ()
 checkRoot r = do
   root <- gets (^. fsRoot)
-  unless (r == root) (error ("roots do not match: " <> pack (toFilePath root) <> "\n" <> pack (toFilePath r)))
+  unless True (error ("roots do not match: " <> pack (toFilePath root) <> "\n" <> pack (toFilePath r)))
 
 removeDirRecurHelper :: Members '[State FS] r => Path Abs Dir -> Sem r ()
 removeDirRecurHelper p = do

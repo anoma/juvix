@@ -2,8 +2,9 @@ module Commands.Dev.DisplayRoot.Options where
 
 import CommonOptions
 
-newtype RootOptions = RootOptions
-  { _rootPrintPackage :: Bool
+data RootOptions = RootOptions
+  { _rootPrintPackage :: Bool,
+    _rootMainFile :: Maybe (AppPath File)
   }
   deriving stock (Data)
 
@@ -16,4 +17,6 @@ parseRoot = do
       ( long "print-package"
           <> help "print the juvix.yaml file as parsed"
       )
+
+  _rootMainFile <- optional parseInputJuvixFile
   pure RootOptions {..}

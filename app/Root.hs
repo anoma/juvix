@@ -20,20 +20,20 @@ findRoot minputFile = do
     Right root -> return root
   where
     possiblePaths :: Path Abs Dir -> [Path Abs Dir]
-    possiblePaths = parents
+    possiblePaths p = p : toList (parents p)
 
     go :: IO (Path Abs Dir, Package)
     go = do
-      c <- getCurrentDir
-      l <- findFile (possiblePaths c) Paths.juvixYamlFile
+      cwd <- getCurrentDir
+      l <- findFile (possiblePaths cwd) Paths.juvixYamlFile
       case l of
-        Nothing -> return (c, emptyPackage)
+        Nothing -> return (cwd, defaultPackage cwd)
         Just yamlPath -> do
           bs <- ByteString.readFile (toFilePath yamlPath)
           let isEmpty = ByteString.null bs
               root = parent yamlPath
           pkg <-
             if
-                | isEmpty -> return emptyPackage
+                | isEmpty -> return (defaultPackage root)
                 | otherwise -> readPackageIO root
           return (root, pkg)

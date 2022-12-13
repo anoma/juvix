@@ -6,6 +6,7 @@ module Juvix.Prelude.Path
 where
 
 import Juvix.Prelude.Base
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Prelude.Path.OrphanInstances ()
 import Path hiding ((<.>), (</>))
 import Path qualified
@@ -73,17 +74,17 @@ removeExtension :: Path b File -> Maybe (Path b File)
 removeExtension = fmap fst . splitExtension
 
 removeExtension' :: Path b File -> Path b File
-removeExtension' = fromJust . fmap fst . splitExtension
+removeExtension' = fst . fromJust . splitExtension
 
 replaceExtension' :: String -> Path b File -> Path b File
 replaceExtension' ext = fromJust . replaceExtension ext
 
-parents :: Path Abs a -> [Path Abs Dir]
+parents :: Path Abs a -> NonEmpty (Path Abs Dir)
 parents = go [] . parent
   where
-    go :: [Path Abs Dir] -> Path Abs Dir -> [Path Abs Dir]
+    go :: [Path Abs Dir] -> Path Abs Dir -> NonEmpty (Path Abs Dir)
     go ac p
-      | isRoot p = reverse (p : ac)
+      | isRoot p = NonEmpty.reverse (p :| ac)
       | otherwise = go (p : ac) (parent p)
 
 withTempDir' :: (MonadIO m, MonadMask m) => (Path Abs Dir -> m a) -> m a
