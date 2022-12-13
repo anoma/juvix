@@ -29,24 +29,11 @@ data IdentInfo = IdentInfo
 data ConstrInfo = ConstrInfo
   { _constrInfoName :: Text,
     _constrInfoLocation :: Maybe Location,
-    _constrInfoType :: Type,
-    _constrInfoInductive :: Symbol
-  }
-
-data LetInfo = LetInfo
-  { _letInfoBinderName :: Text,
-    _letInfoBinderLocation :: Maybe Location,
-    _letInfoBinderType :: Type
-  }
-
-newtype CaseInfo = CaseInfo
-  { _caseInfoInductive :: Symbol
+    _constrInfoType :: Type
   }
 
 data CaseBranchInfo = CaseBranchInfo
-  { _caseBranchInfoBinderNames :: [Text],
-    _caseBranchInfoBinderTypes :: [Type],
-    _caseBranchInfoConstrName :: Text,
+  { _caseBranchInfoConstrName :: Text,
     _caseBranchInfoConstrType :: Type
   }
 
@@ -58,7 +45,7 @@ type Ident = Ident' IdentInfo
 
 type Constant = Constant' ()
 
-type Apps = Apps' Fun () Node
+type Apps = Apps' () Fun Node
 
 data Fun
   = FunVar Var
@@ -73,11 +60,11 @@ type Binder = Binder' Type
 
 type LetItem = LetItem' Node Type
 
-type Let = Let' LetInfo Node Type
+type Let = Let' () Node Type
 
-type Case = Case' CaseInfo CaseBranchInfo Node
+type Case = Case' () CaseBranchInfo Node Type
 
-type CaseBranch = CaseBranch' CaseBranchInfo Node
+type CaseBranch = CaseBranch' CaseBranchInfo Node Type
 
 {---------------------------------------------------------------------------------}
 
@@ -106,6 +93,4 @@ instance HasAtomicity Node where
 makeLenses ''VarInfo
 makeLenses ''IdentInfo
 makeLenses ''ConstrInfo
-makeLenses ''LetInfo
-makeLenses ''CaseInfo
 makeLenses ''CaseBranchInfo

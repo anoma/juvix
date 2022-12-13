@@ -173,7 +173,7 @@ genCode infoTable fi =
         ( Case $
             CmdCase
               { _cmdCaseInfo = emptyInfo,
-                _cmdCaseInductive = _caseInfo ^. Core.caseInfoInductive,
+                _cmdCaseInductive = _caseInductive,
                 _cmdCaseBranches = compileCaseBranches _caseBranches,
                 _cmdCaseDefault = fmap compileCaseDefault _caseDefault
               }

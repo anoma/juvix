@@ -57,10 +57,10 @@ typeArgs = snd . unfoldType
 typeTarget :: Type -> Type
 typeTarget = fst . unfoldType
 
-targetIsDynamic :: Type -> Bool
-targetIsDynamic ty = typeTarget ty == TyDynamic
-
--- the number of arguments is statically determinable only if the target is not
--- Dynamic
 typeArgsNum :: Type -> Int
 typeArgsNum = length . typeArgs
+
+mkFunType :: [Type] -> Type -> Type
+mkFunType tyargs target = case tyargs of
+  [] -> target
+  ty : tyargs' -> TyFun (TypeFun ty (mkFunType tyargs' target))

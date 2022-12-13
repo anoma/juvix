@@ -93,7 +93,7 @@ instance PrettyCode Stripped.Fun where
     Stripped.FunVar x -> ppCodeVar' (x ^. (varInfo . Stripped.varInfoName)) x
     Stripped.FunIdent x -> ppName KNameLocal (x ^. (identInfo . Stripped.identInfoName))
 
-instance (PrettyCode f, PrettyCode a, HasAtomicity a) => PrettyCode (Apps' f i a) where
+instance (PrettyCode f, PrettyCode a, HasAtomicity a) => PrettyCode (Apps' i f a) where
   ppCode Apps {..} = do
     args' <- mapM (ppRightExpression appFixity) _appsArgs
     n' <- ppCode _appsFun
@@ -157,7 +157,7 @@ ppCodeLet' name mty lt = do
           mempty
   return $ kwLet <+> n' <> tty <+> kwAssign <+> v' <+> kwIn <> line <> b'
 
-ppCodeCase' :: (PrettyCode a, Member (Reader Options) r) => [[Text]] -> [Text] -> Case' i bi a -> Sem r (Doc Ann)
+ppCodeCase' :: (PrettyCode a, Member (Reader Options) r) => [[Text]] -> [Text] -> Case' i bi a ty -> Sem r (Doc Ann)
 ppCodeCase' branchBinderNames branchTagNames Case {..} =
   case _caseBranches of
     [CaseBranch _ (BuiltinTag TagTrue) _ _ br1, CaseBranch _ (BuiltinTag TagTrue) _ _ br2] -> do
@@ -342,11 +342,11 @@ instance PrettyCode Stripped.Node where
       let name = x ^. (constrInfo . Stripped.constrInfoName)
        in ppCodeConstr' name x
     Stripped.NLet x ->
-      let name = x ^. (letInfo . Stripped.letInfoBinderName)
-          ty = x ^. (letInfo . Stripped.letInfoBinderType)
+      let name = x ^. (letItem . letItemBinder . binderName)
+          ty = x ^. (letItem . letItemBinder . binderType)
        in ppCode ty >>= \tty -> ppCodeLet' name (Just tty) x
     Stripped.NCase x@Stripped.Case {..} ->
-      let branchBinderNames = map (^. (caseBranchInfo . Stripped.caseBranchInfoBinderNames)) _caseBranches
+      let branchBinderNames = map (map (^. binderName) . (^. caseBranchBinders)) _caseBranches
           branchTagNames = map (^. (caseBranchInfo . Stripped.caseBranchInfoConstrName)) _caseBranches
        in ppCodeCase' branchBinderNames branchTagNames x
 

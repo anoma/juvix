@@ -48,7 +48,7 @@ data App' i a = App
     _appRight :: !a
   }
 
-data Apps' f i a = Apps
+data Apps' i f a = Apps
   { _appsInfo :: i,
     _appsFun :: !f,
     _appsArgs :: ![a]
@@ -103,7 +103,7 @@ data LetItem' a ty = LetItem
 -- | Represents a block of mutually recursive local definitions. Both in the
 -- body and in the values `length _letRecValues` implicit binders are introduced
 -- which hold the functions/values being defined.
--- the last item _letRecValues will have have index $0 in the body.
+-- the last item in _letRecValues will have have index $0 in the body.
 data LetRec' i a ty = LetRec
   { _letRecInfo :: i,
     _letRecValues :: !(NonEmpty (LetItem' a ty)),
@@ -112,21 +112,21 @@ data LetRec' i a ty = LetRec
 
 -- | One-level case matching on the tag of a data constructor: `Case value
 -- branches default`. `Case` is lazy: only the selected branch is evaluated.
-data Case' i bi a = Case
+data Case' i bi a ty = Case
   { _caseInfo :: i,
     _caseInductive :: Symbol,
     _caseValue :: !a,
-    _caseBranches :: ![CaseBranch' bi a],
+    _caseBranches :: ![CaseBranch' bi a ty],
     _caseDefault :: !(Maybe a)
   }
 
 -- | `CaseBranch tag binders bindersNum branch`
 -- - `binders` are the arguments of the constructor tagged with `tag`,
 --  length of `binders` is equal to `bindersNum`
-data CaseBranch' i a = CaseBranch
+data CaseBranch' i a ty = CaseBranch
   { _caseBranchInfo :: i,
     _caseBranchTag :: !Tag,
-    _caseBranchBinders :: [Binder' a],
+    _caseBranchBinders :: [Binder' ty],
     _caseBranchBindersNum :: !Int,
     _caseBranchBody :: !a
   }
@@ -248,7 +248,7 @@ instance HasAtomicity (Let' i a ty) where
 instance HasAtomicity (LetRec' i a ty) where
   atomicity _ = Aggregate lambdaFixity
 
-instance HasAtomicity (Case' i bi a) where
+instance HasAtomicity (Case' i bi a ty) where
   atomicity _ = Aggregate lambdaFixity
 
 instance HasAtomicity (Match' i a) where
@@ -329,7 +329,7 @@ instance Eq (Constant' i) where
 instance Eq a => Eq (App' i a) where
   (App _ l1 r1) == (App _ l2 r2) = l1 == l2 && r1 == r2
 
-instance (Eq f, Eq a) => Eq (Apps' f i a) where
+instance (Eq f, Eq a) => Eq (Apps' i f a) where
   (Apps _ op1 args1) == (Apps _ op2 args2) = op1 == op2 && args1 == args2
 
 instance Eq a => Eq (BuiltinApp' i a) where
@@ -338,10 +338,10 @@ instance Eq a => Eq (BuiltinApp' i a) where
 instance Eq a => Eq (Constr' i a) where
   (Constr _ tag1 args1) == (Constr _ tag2 args2) = tag1 == tag2 && args1 == args2
 
-instance Eq a => Eq (Case' i bi a) where
+instance Eq a => Eq (Case' i bi a ty) where
   (Case _ sym1 v1 bs1 def1) == (Case _ sym2 v2 bs2 def2) = sym1 == sym2 && v1 == v2 && bs1 == bs2 && def1 == def2
 
-instance Eq a => Eq (CaseBranch' i a) where
+instance Eq a => Eq (CaseBranch' i a ty) where
   (==) =
     eqOn (^. caseBranchTag)
       ..&&.. eqOn (^. caseBranchBody)

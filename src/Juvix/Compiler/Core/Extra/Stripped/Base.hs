@@ -29,28 +29,15 @@ mkBuiltinApp op args = NBlt (BuiltinApp () op args)
 mkConstr :: ConstrInfo -> Tag -> [Node] -> Node
 mkConstr i tag args = NCtr (Constr i tag args)
 
-mkConstr' :: Symbol -> Tag -> [Node] -> Node
-mkConstr' sym = mkConstr (ConstrInfo "" Nothing TyDynamic sym)
-
-mkLet :: LetInfo -> Node -> Node -> Node
-mkLet i v b = NLet (Let i item b)
+mkLet :: Binder -> Node -> Node -> Node
+mkLet binder value body = NLet (Let () item body)
   where
-    binder :: Binder
-    binder =
-      Binder
-        { _binderName = i ^. letInfoBinderName,
-          _binderLocation = i ^. letInfoBinderLocation,
-          _binderType = i ^. letInfoBinderType
-        }
     item :: LetItem
     item =
       LetItem
         { _letItemBinder = binder,
-          _letItemValue = v
+          _letItemValue = value
         }
 
-mkLet' :: Node -> Node -> Node
-mkLet' = mkLet (LetInfo "" Nothing TyDynamic)
-
-mkCase :: CaseInfo -> Symbol -> Node -> [CaseBranch] -> Maybe Node -> Node
-mkCase ci sym v bs def = NCase (Case ci sym v bs def)
+mkCase :: Symbol -> Node -> [CaseBranch] -> Maybe Node -> Node
+mkCase sym v bs def = NCase (Case () sym v bs def)
