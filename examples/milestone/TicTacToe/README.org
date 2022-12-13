@@ -1,0 +1,56 @@
+#+TITLE: TicTacToe
+
+** TicTacToe
+
+This directory contains Juvix code for a Tic-Tac-Toe game that can be run as a
+terminal application or a Web application.
+
+The common logic code is in =Logic/=, the code specific to the terminal
+application is in =CLI/= and the code specific to the Web application is in
+=Web/=.
+
+*** Terminal application
+
+To compile and run the terminal application use the following steps:
+
+#+begin_src shell
+cd CLI
+juvix compile TicTacToe.juvix
+./TicTacToe
+#+end_src
+
+You will see the following output:
+
+#+begin_src shell
+MiniTicTacToe
+-------------
+
+Type a number then ENTER to make a move
+
++---+---+---+
+| 1 | 2 | 3 |
++---+---+---+
+| 4 | 5 | 6 |
++---+---+---+
+| 7 | 8 | 9 |
++---+---+---+
+Player X:
+#+end_src
+
+*** Web application
+
+To compile the Web application use the following steps:
+
+#+begin_src shell
+cd Web
+juvix compile -t wasm -r standalone TicTacToe.juvix
+#+end_src
+
+To run the Web application you must first serve the files in the =Web/=
+directory, using Python for example:
+
+#+begin_src shell
+python3 -m http.server
+#+end_src
+
+Then navigate to [[http://localhost:8000]] in your browser.
