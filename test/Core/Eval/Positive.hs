@@ -256,5 +256,10 @@ tests =
       "Type application and abstraction"
       $(mkRelDir ".")
       $(mkRelFile "test045.jvc")
+      $(mkRelFile "out/test045.out"),
+    PosTest
+      "Applications with lets and cases in function position"
+      $(mkRelDir ".")
+      $(mkRelFile "test045.jvc")
       $(mkRelFile "out/test045.out")
   ]
