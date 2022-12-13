@@ -20,7 +20,7 @@ stdlibFiles = mapMaybe helper $(stdlibDir)
     isStdLibFile :: Path Rel File -> Bool
     isStdLibFile = isJuvixFile .||. isYamlFile
     isYamlFile :: Path Rel File -> Bool
-    isYamlFile = (== juvixYamlFile) . toFilePath
+    isYamlFile = (== juvixYamlFile)
 
 writeStdlib :: forall r. Members '[Reader RootPath, Files] r => Sem r ()
 writeStdlib = do

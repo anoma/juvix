@@ -22,7 +22,7 @@ runCommand opts@CompileOptions {..} = do
 inputCFile :: Members '[App] r => Path Abs File -> Sem r (Path Abs File)
 inputCFile inputFileCompile = do
   root <- askRoot
-  return (root <//> juvixBuildDir' <//> outputMiniCFile)
+  return (root <//> juvixBuildDir <//> outputMiniCFile)
   where
     outputMiniCFile :: Path Rel File
     outputMiniCFile = replaceExtension' ".c" (filename inputFileCompile)
@@ -30,7 +30,7 @@ inputCFile inputFileCompile = do
 runCompile :: Members '[Embed IO, App] r => Path Abs File -> CompileOptions -> Text -> Sem r (Either Text ())
 runCompile inputFileCompile o minic = do
   root <- askRoot
-  ensureDir (root <//> juvixBuildDir')
+  ensureDir (root <//> juvixBuildDir)
   f <- inputCFile inputFileCompile
   embed (TIO.writeFile (toFilePath f) minic)
   prepareRuntime o
@@ -53,7 +53,7 @@ prepareRuntime o = mapM_ writeRuntime runtimeProjectDir
     writeRuntime :: (Path Rel File, BS.ByteString) -> Sem r ()
     writeRuntime (filePath, contents) = do
       root <- askRoot
-      embed (BS.writeFile (toFilePath (root <//> juvixBuildDir' <//> filePath)) contents)
+      embed (BS.writeFile (toFilePath (root <//> juvixBuildDir <//> filePath)) contents)
 
 wasiStandaloneRuntimeDir :: [(Path Rel File, BS.ByteString)]
 wasiStandaloneRuntimeDir = map (first relFile) $(FE.makeRelativeToProject "c-runtime/wasi-standalone" >>= FE.embedDir)
@@ -132,7 +132,7 @@ commonArgs wasmOutputFile =
   [ "-std=c99",
     "-Oz",
     "-I",
-    juvixBuildDir,
+    toFilePath juvixBuildDir,
     "-o",
     toFilePath wasmOutputFile
   ]
@@ -146,7 +146,7 @@ standaloneLibArgs wasmOutputFile inputFile = do
            "-nodefaultlibs",
            "-nostartfiles",
            "-Wl,--no-entry",
-           toFilePath (root <//> juvixBuildDir' <//> $(mkRelFile "walloc.c")),
+           toFilePath (root <//> juvixBuildDir <//> $(mkRelFile "walloc.c")),
            toFilePath inputFile
          ]
 
@@ -156,7 +156,7 @@ wasiStandaloneArgs wasmOutputFile inputFile = do
   com <- wasiCommonArgs wasmOutputFile
   return $
     com
-      <> [ toFilePath (root <//> juvixBuildDir' <//> $(mkRelFile "walloc.c")),
+      <> [ toFilePath (root <//> juvixBuildDir <//> $(mkRelFile "walloc.c")),
            toFilePath inputFile
          ]
 

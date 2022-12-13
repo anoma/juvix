@@ -26,13 +26,13 @@ init = do
   say "✨ Your next Juvix adventure is about to begin! ✨"
   say "I will help you set it up"
   pkg <- getPackage
-  say ("creating " <> pack juvixYamlFile)
-  embed (encodeFile juvixYamlFile (rawPackage pkg))
+  say ("creating " <> pack (toFilePath juvixYamlFile))
+  embed (encodeFile (toFilePath juvixYamlFile) (rawPackage pkg))
   say "you are all set"
 
 checkNotInProject :: forall r. Members '[Embed IO] r => Sem r ()
 checkNotInProject =
-  whenM (doesFileExist juvixYamlFile') err
+  whenM (doesFileExist juvixYamlFile) err
   where
     err :: Sem r ()
     err = do

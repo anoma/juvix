@@ -20,7 +20,7 @@ runCommand opts = do
       Left err -> exitJuvixError err
       Right C.MiniCResult {..} -> do
         root <- askRoot
-        ensureDir (root <//> juvixBuildDir')
+        ensureDir (root <//> juvixBuildDir)
         cFile <- inputCFile file
         embed $ TIO.writeFile (toFilePath cFile) _resultCCode
         Compile.runCommand opts {_compileInputFile = AppPath (Abs cFile) False}
@@ -40,7 +40,7 @@ runCommand opts = do
 inputCFile :: Members '[App] r => Path Abs File -> Sem r (Path Abs File)
 inputCFile inputFileCompile = do
   root <- askRoot
-  return (root <//> juvixBuildDir' <//> outputMiniCFile)
+  return (root <//> juvixBuildDir <//> outputMiniCFile)
   where
     outputMiniCFile :: Path Rel File
     outputMiniCFile = replaceExtension' ".c" (filename inputFileCompile)

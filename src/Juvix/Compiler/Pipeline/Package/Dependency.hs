@@ -60,6 +60,6 @@ processDependency r (Dependency p) = case p of
   Abs a -> Dependency a
 
 stdlibDefaultDep :: RawDependency
-stdlibDefaultDep = Dependency (Rel juvixStdlibDir')
+stdlibDefaultDep = Dependency (Rel juvixStdlibDir)
 
 makeLenses ''Dependency'

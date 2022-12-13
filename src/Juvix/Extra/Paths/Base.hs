@@ -16,32 +16,20 @@ projectPath = FE.makeRelativeToProject "." >>= lift . absDir
 stdlibDir :: Q Exp
 stdlibDir = FE.makeRelativeToProject "juvix-stdlib" >>= FE.embedDir
 
-juvixYamlFile :: FilePath
-juvixYamlFile = toFilePath juvixYamlFile'
+juvixYamlFile :: Path Rel File
+juvixYamlFile = $(mkRelFile "juvix.yaml")
 
-juvixYamlFile' :: Path Rel File
-juvixYamlFile' = $(mkRelFile "juvix.yaml")
+juvixBuildDir :: Path Rel Dir
+juvixBuildDir = $(mkRelDir ".juvix-build")
 
-juvixBuildDir :: FilePath
-juvixBuildDir = toFilePath juvixBuildDir'
+juvixIncludeDir :: Path Rel Dir
+juvixIncludeDir = juvixBuildDir <//> $(mkRelDir "include")
 
-juvixBuildDir' :: Path Rel Dir
-juvixBuildDir' = $(mkRelDir ".juvix-build")
+juvixStdlibDir :: Path Rel Dir
+juvixStdlibDir = juvixBuildDir <//> $(mkRelDir "stdlib")
 
-juvixIncludeDir' :: Path Rel Dir
-juvixIncludeDir' = juvixBuildDir' <//> $(mkRelDir "include")
-
-juvixStdlibDir' :: Path Rel Dir
-juvixStdlibDir' = juvixBuildDir' <//> $(mkRelDir "stdlib")
-
-juvixStdlibDir :: FilePath
-juvixStdlibDir = toFilePath juvixStdlibDir'
-
-preludePath' :: Path Rel File
-preludePath' = $(mkRelFile "Stdlib/Prelude.juvix")
-
-preludePath :: FilePath
-preludePath = toFilePath preludePath'
+preludePath :: Path Rel File
+preludePath = $(mkRelFile "Stdlib/Prelude.juvix")
 
 defaultStdlibPath :: Path Abs Dir -> Path Abs Dir
-defaultStdlibPath root = root <//> relDir juvixStdlibDir
+defaultStdlibPath root = root <//> juvixStdlibDir

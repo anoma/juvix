@@ -19,8 +19,8 @@ runCommand opts = do
 
 runCompile :: Members '[App, Embed IO] r => Path Abs Dir -> Path Abs File -> CompileOptions -> Sem r (Either Text ())
 runCompile projRoot inputFile o = do
-  ensureDir (projRoot <//> juvixBuildDir')
-  ensureDir (projRoot <//> juvixIncludeDir')
+  ensureDir (projRoot <//> juvixBuildDir)
+  ensureDir (projRoot <//> juvixIncludeDir)
   prepareRuntime projRoot o
   case o ^. compileTarget of
     TargetWasm32Wasi -> runError (clangWasmWasiCompile inputFile o)
@@ -52,15 +52,15 @@ prepareRuntime projRoot o = do
     writeRuntime :: BS.ByteString -> Sem r ()
     writeRuntime =
       embed
-        . BS.writeFile (toFilePath (projRoot <//> juvixBuildDir' <//> $(mkRelFile "libjuvix.a")))
+        . BS.writeFile (toFilePath (projRoot <//> juvixBuildDir <//> $(mkRelFile "libjuvix.a")))
 
     headersDir :: [(Path Rel File, BS.ByteString)]
     headersDir = map (first relFile) $(FE.makeRelativeToProject "runtime/include" >>= FE.embedDir)
 
     writeHeader :: (Path Rel File, BS.ByteString) -> Sem r ()
     writeHeader (filePath, contents) = embed $ do
-      ensureDir (projRoot <//> juvixIncludeDir' <//> parent filePath)
-      BS.writeFile (toFilePath (projRoot <//> juvixIncludeDir' <//> filePath)) contents
+      ensureDir (projRoot <//> juvixIncludeDir <//> parent filePath)
+      BS.writeFile (toFilePath (projRoot <//> juvixIncludeDir <//> filePath)) contents
 
 clangNativeCompile ::
   forall r.
@@ -128,14 +128,14 @@ commonArgs o outputFile =
          "-Werror",
          "-std=c11",
          "-I",
-         toFilePath juvixIncludeDir',
+         toFilePath juvixIncludeDir,
          "-o",
          toFilePath outputFile
        ]
     <> ( if
              | not (o ^. compilePreprocess || o ^. compileAssembly) ->
                  [ "-L",
-                   juvixBuildDir
+                   toFilePath juvixBuildDir
                  ]
              | otherwise -> []
        )

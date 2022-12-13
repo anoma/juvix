@@ -140,7 +140,7 @@ readPackage adir = do
   bs <- readFileBS' yamlPath
   either (throw . pack . prettyPrintParseException) (processPackage adir) (decodeEither' bs)
   where
-    yamlPath = adir <//> juvixYamlFile'
+    yamlPath = adir <//> juvixYamlFile
 
 readPackageIO :: Path Abs Dir -> IO Package
 readPackageIO dir = do

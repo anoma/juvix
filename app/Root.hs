@@ -9,8 +9,8 @@ import Juvix.Prelude
 findRoot :: Maybe (SomeBase File) -> IO (Path Abs Dir, Package)
 findRoot minputFile = do
   whenJust minputFile $ \case
-    (Abs d) -> setCurrentDir (parent d)
-    (Rel d) -> setCurrentDir (parent d)
+    Abs d -> setCurrentDir (parent d)
+    Rel d -> setCurrentDir (parent d)
   r <- IO.try go
   case r of
     Left (err :: IO.SomeException) -> do
@@ -25,7 +25,7 @@ findRoot minputFile = do
     go :: IO (Path Abs Dir, Package)
     go = do
       c <- getCurrentDir
-      l <- findFile (possiblePaths c) Paths.juvixYamlFile'
+      l <- findFile (possiblePaths c) Paths.juvixYamlFile
       case l of
         Nothing -> return (c, emptyPackage)
         Just yamlPath -> do

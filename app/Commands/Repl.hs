@@ -127,7 +127,7 @@ runCommand opts = do
           Nothing -> loadDefaultPrelude
           Just stdlibDir' -> do
             absStdlibDir :: Path Abs Dir <- makeAbsolute stdlibDir'
-            loadFile (Abs (absStdlibDir <//> preludePath'))
+            loadFile (Abs (absStdlibDir <//> preludePath))
 
       loadDefaultPrelude :: Repl ()
       loadDefaultPrelude = defaultPreludeEntryPoint >>= loadEntryPoint
@@ -279,7 +279,7 @@ defaultPreludeEntryPoint = do
         _entryPointNoStdlib = opts ^. globalNoStdlib,
         _entryPointStdlibPath = stdlib,
         _entryPointPackage = emptyPackage,
-        _entryPointModulePaths = pure (defaultStdlibPath root <//> preludePath'),
+        _entryPointModulePaths = pure (defaultStdlibPath root <//> preludePath),
         _entryPointGenericOptions = project opts,
         _entryPointStdin = Nothing
       }
