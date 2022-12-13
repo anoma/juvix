@@ -254,5 +254,10 @@ tests =
       "Type application and abstraction"
       "."
       "test045.jvc"
-      "out/test045.out"
+      "out/test045.out",
+    PosTest
+      "Applications with lets and cases in function position"
+      "."
+      "test046.jvc"
+      "out/test046.out"
   ]
