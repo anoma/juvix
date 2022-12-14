@@ -76,8 +76,11 @@ lambdaLiftNode aboveBl top =
           letRecBinders' :: [Binder] <- mapM (lambdaLiftBinder bl) (letr ^.. letRecValues . each . letItemBinder)
           let bl' :: BinderList Binder
               -- the reverse is necessary because the last item in letRecBinders has index 0
-              bl' = BL.prependRev (reverse letRecBinders') bl
+              bl' = BL.prependRev letRecBinders' bl
           topSyms :: [Symbol] <- forM defs (const freshSymbol)
+
+          let topSymsWithName :: [(Symbol, Text)]
+              topSymsWithName = zipExact topSyms (map (^. binderName) letRecBinders')
 
           let recItemsFreeVars :: [(Var, Binder)]
               recItemsFreeVars = mapMaybe helper (concatMap (freeVarsCtx' bl') defs)
@@ -93,8 +96,8 @@ lambdaLiftNode aboveBl top =
               subsCalls =
                 substs
                   ( reverse
-                      [ mkApps' (mkIdent' sym) (map (NVar . fst) recItemsFreeVars)
-                        | sym <- topSyms
+                      [ mkApps' (mkIdent (setInfoName name mempty) sym) (map (NVar . fst) recItemsFreeVars)
+                        | (sym, name) <- topSymsWithName
                       ]
                   )
           -- NOTE that we are first substituting the calls and then performing
@@ -109,7 +112,9 @@ lambdaLiftNode aboveBl top =
                   [ do
                       let topBody = captureFreeVars (map (first (^. varIndex)) recItemsFreeVars) b
                           argsInfo :: [ArgumentInfo]
-                          argsInfo = map (argumentInfoFromBinder . snd) recItemsFreeVars
+                          argsInfo =
+                            map (argumentInfoFromBinder . snd) recItemsFreeVars ++
+                            map (argumentInfoFromBinder . (^. lambdaLhsBinder)) (fst (unfoldLambdas b))
                           name = uniqueName (itemBinder ^. binderName) sym
                       registerIdentNode sym topBody
                       registerIdent
@@ -119,7 +124,7 @@ lambdaLiftNode aboveBl top =
                             _identifierName = name,
                             _identifierLocation = itemBinder ^. binderLocation,
                             _identifierType = typeFromArgs argsInfo,
-                            _identifierArgsNum = length recItemsFreeVars,
+                            _identifierArgsNum = length argsInfo,
                             _identifierArgsInfo = argsInfo,
                             _identifierIsExported = False,
                             _identifierBuiltin = Nothing
@@ -129,24 +134,24 @@ lambdaLiftNode aboveBl top =
               letItems :: [Node]
               letItems =
                 let fv = recItemsFreeVars
-                 in [ mkApps' (mkIdent' s) (map (NVar . fst) fv)
-                      | s <- topSyms
+                 in [ mkApps' (mkIdent (setInfoName name mempty) s) (map (NVar . fst) fv)
+                      | (s, name) <- topSymsWithName
                     ]
           declareTopSyms
 
           let -- TODO it can probably be simplified
-              shiftHelper :: Node -> NonEmpty Node -> Node
+              shiftHelper :: Node -> NonEmpty (Node, Binder) -> Node
               shiftHelper b = goShift 0
                 where
-                  goShift :: Int -> NonEmpty Node -> Node
+                  goShift :: Int -> NonEmpty (Node, Binder) -> Node
                   goShift k = \case
-                    x :| yys -> case yys of
+                    (x, bnd) :| yys -> case yys of
                       []
-                        | k == ndefs - 1 -> mkLet' (shift k x) b
+                        | k == ndefs - 1 -> mkLet mempty bnd (shift k x) b
                         | otherwise -> impossible
-                      (y : ys) -> mkLet' (shift k x) (goShift (k + 1) (y :| ys))
+                      (y : ys) -> mkLet mempty bnd (shift k x) (goShift (k + 1) (y :| ys))
           let res :: Node
-              res = shiftHelper body' (nonEmpty' letItems)
+              res = shiftHelper body' (nonEmpty' (zipExact letItems letRecBinders'))
           return (Recur res)
 
 lambdaLifting :: InfoTable -> InfoTable

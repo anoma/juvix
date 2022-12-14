@@ -155,7 +155,7 @@ ppCodeLet' name mty lt = do
           mempty <+> kwColon <+> ty
         Nothing ->
           mempty
-  return $ kwLet <+> n' <> tty <+> kwAssign <+> v' <+> kwIn <> line <> b'
+  return $ kwLet <+> n' <> tty <+> kwAssign <+> v' <+> kwIn <+> b'
 
 ppCodeCase' :: (PrettyCode a, Member (Reader Options) r) => [[Text]] -> [Text] -> Case' i bi a ty -> Sem r (Doc Ann)
 ppCodeCase' branchBinderNames branchTagNames Case {..} =
