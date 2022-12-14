@@ -87,12 +87,17 @@ convertIdent :: InfoTable -> IdentifierInfo -> IdentifierInfo
 convertIdent tab ii =
   ii
     { _identifierType = ty',
-      _identifierArgsInfo = map (over argumentType (convertNode tab) . fst) $ filter (not . isTypeConstr . snd) (zipExact (ii ^. identifierArgsInfo) tyargs),
+      _identifierArgsInfo =
+        map (uncurry (set argumentType)) $
+        zipExact tyargs' $
+        map fst $
+        filter (not . isTypeConstr . snd) (zipExact (ii ^. identifierArgsInfo) tyargs),
       _identifierArgsNum = length (typeArgs ty')
     }
   where
     tyargs = typeArgs (ii ^. identifierType)
     ty' = convertNode tab (ii ^. identifierType)
+    tyargs' = typeArgs ty'
 
 convertConstructor :: InfoTable -> ConstructorInfo -> ConstructorInfo
 convertConstructor tab ci =
