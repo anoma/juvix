@@ -67,7 +67,6 @@ docs/*.html
 /src/Juvix/Utils/OldParser.hs
 CHANGELOG.md
 UPDATES-FOR-CHANGELOG.org
-docs/org/README.org
 .juvix-build
 
 # C Code generation
@@ -84,9 +83,6 @@ docs/**/*.md
 *.cmx
 *.cmo
 .history
-
+docs/org/README.org
 # Binary files (produced by `make check`)
-examples/**/*
-examples/**/!*.*
-tests/**/*
-tests/**/!*.*
+examples/milestone/HelloWorld/HelloWorld
