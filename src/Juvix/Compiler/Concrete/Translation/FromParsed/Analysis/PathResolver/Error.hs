@@ -54,7 +54,7 @@ instance PrettyCodeAnn MissingModule where
       suggestion :: Doc Ann
       suggestion =
         "It should be in"
-          <+> pcode (_missingInfo ^. packageRoot <//> topModulePathToRelativeFilePath' _missingModule)
+          <+> pcode (_missingInfo ^. packageRoot <//> topModulePathToRelativePath' _missingModule)
             <> line
             <> "or in one of the dependencies:"
             <> line

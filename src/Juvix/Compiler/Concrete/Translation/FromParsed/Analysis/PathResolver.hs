@@ -5,6 +5,7 @@ module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
     addDependency,
     withPath,
     withPathFile,
+    expectedModulePath,
     runPathResolverPipe,
   )
 where
@@ -22,6 +23,7 @@ import Juvix.Prelude
 data PathResolver m a where
   -- | Currently, we pass (Just entrypoint) only for the current package and Nothing for all dependencies
   AddDependency :: Maybe EntryPoint -> Dependency -> PathResolver m ()
+  ExpectedModulePath :: TopModulePath -> PathResolver m (Path Abs File)
   WithPath ::
     TopModulePath ->
     (Either PathResolverError (Path Abs Dir, Path Rel File) -> m x) ->
@@ -51,8 +53,6 @@ iniResolverState =
       _stateFiles = mempty
     }
 
--- TODO use entrypoint to determine whether stdlib needs to be added
--- stdlib files need to be copied if necessary
 mkPackageInfo ::
   forall r.
   Members '[Files, Error Text] r =>
@@ -109,7 +109,7 @@ resolvePath' :: Members '[State ResolverState, Reader ResolverEnv] r => TopModul
 resolvePath' mp = do
   z <- gets (^. stateFiles)
   curPkg <- currentPackage
-  let rel = topModulePathToRelativeFilePath' mp
+  let rel = topModulePathToRelativePath' mp
       packagesWithModule = z ^. at rel
       visible :: PackageInfo -> Bool
       visible p = HashSet.member (p ^. packageRoot) (curPkg ^. packageAvailableRoots)
@@ -132,6 +132,11 @@ resolvePath' mp = do
               }
         )
 
+expectedPath' :: Members '[Reader ResolverEnv] r => TopModulePath -> Sem r (Path Abs File)
+expectedPath' m = do
+  root <- asks (^. envRoot)
+  return (root <//> topModulePathToRelativePath' m)
+
 re ::
   forall r a.
   Members '[Files, Error Text] r =>
@@ -145,6 +150,7 @@ re = reinterpret2H helper
       Tactical PathResolver (Sem rInitial) (Reader ResolverEnv ': (State ResolverState ': r)) x
     helper = \case
       AddDependency me m -> addDependency' me m >>= pureT
+      ExpectedModulePath m -> expectedPath' m >>= pureT
       WithPath m a -> do
         x :: Either PathResolverError (Path Abs Dir, Path Rel File) <- resolvePath' m
         oldroot <- asks (^. envRoot)

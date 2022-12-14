@@ -539,19 +539,19 @@ checkTopModule m@(Module path params doc body) = do
   modify (over (scoperModulesCache . cachedModules) (HashMap.insert path r))
   return r
   where
-    checkPath :: Members '[Files, Reader ScopeParameters, Error ScoperError, PathResolver] s => Sem s ()
-    checkPath =
-      withPath' path $ \expectedPath -> do
-        let actualPath = absFile (getLoc path ^. intervalFile)
-        unlessM (equalPaths expectedPath actualPath) $
-          throw
-            ( ErrWrongTopModuleName
-                WrongTopModuleName
-                  { _wrongTopModuleNameActualName = path,
-                    _wrongTopModuleNameExpectedPath = expectedPath,
-                    _wrongTopModuleNameActualPath = actualPath
-                  }
-            )
+    checkPath :: Members '[Error ScoperError, PathResolver] s => Sem s ()
+    checkPath = do
+      expectedPath <- expectedModulePath path
+      let actualPath = absFile (getLoc path ^. intervalFile)
+      unlessM (equalPaths expectedPath actualPath) $
+        throw
+          ( ErrWrongTopModuleName
+              WrongTopModuleName
+                { _wrongTopModuleNameActualName = path,
+                  _wrongTopModuleNameExpectedPath = expectedPath,
+                  _wrongTopModuleNameActualPath = actualPath
+                }
+          )
     freshTopModulePath ::
       forall s.
       Members '[State ScoperState, NameIdGen] s =>

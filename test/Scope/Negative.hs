@@ -2,8 +2,8 @@ module Scope.Negative (allTests) where
 
 import Base
 import Juvix.Compiler.Builtins (iniState)
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Pipeline
 
 type FailMsg = String

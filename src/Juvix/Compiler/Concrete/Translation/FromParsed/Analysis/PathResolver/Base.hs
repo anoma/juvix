@@ -3,11 +3,11 @@ module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Prelude
 
-topModulePathToRelativeFilePath' :: TopModulePath -> Path Rel File
-topModulePathToRelativeFilePath' = topModulePathToRelativeFilePath ".juvix" "" (</>)
+topModulePathToRelativePath' :: TopModulePath -> Path Rel File
+topModulePathToRelativePath' = topModulePathToRelativePath ".juvix" "" (</>)
 
-topModulePathToRelativeFilePath :: String -> String -> (FilePath -> FilePath -> FilePath) -> TopModulePath -> Path Rel File
-topModulePathToRelativeFilePath ext suffix joinpath mp = relFile relFilePath
+topModulePathToRelativePath :: String -> String -> (FilePath -> FilePath -> FilePath) -> TopModulePath -> Path Rel File
+topModulePathToRelativePath ext suffix joinpath mp = relFile relFilePath
   where
     relDirPath :: FilePath
     relDirPath = foldr (joinpath . toPath) mempty (mp ^. modulePathDir)
@@ -21,8 +21,8 @@ topModulePathToRelativeFilePath ext suffix joinpath mp = relFile relFilePath
     toPath :: Symbol -> FilePath
     toPath s = unpack (s ^. symbolText)
 
-topModulePathToRelativeFilePathDot :: String -> String -> TopModulePath -> Path Rel File
-topModulePathToRelativeFilePathDot ext suff m = topModulePathToRelativeFilePath ext suff joinDot m
+topModulePathToRelativePathDot :: String -> String -> TopModulePath -> Path Rel File
+topModulePathToRelativePathDot ext suff m = topModulePathToRelativePath ext suff joinDot m
   where
     joinDot :: FilePath -> FilePath -> FilePath
     joinDot l r = l <.> r
