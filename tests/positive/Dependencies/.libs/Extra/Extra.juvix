@@ -1,0 +1,9 @@
+module Extra;
+
+open import Base;
+
+axiom Extra : Type;
+
+axiom _A : Base;
+
+end;

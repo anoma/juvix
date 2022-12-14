@@ -1,0 +1,6 @@
+name: main-project
+version: 0.0.1
+dependencies:
+- .libs/Extra
+- .libs/Base
+- .juvix-build/stdlib
