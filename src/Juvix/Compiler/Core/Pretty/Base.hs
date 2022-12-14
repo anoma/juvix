@@ -392,6 +392,13 @@ instance PrettyCode InfoTable where
             ctrs <- mapM (fmap (<> semi) . ppCode) (ii ^. inductiveConstructors)
             return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line))
 
+instance PrettyCode Stripped.ArgumentInfo where
+  ppCode :: Member (Reader Options) r => Stripped.ArgumentInfo -> Sem r (Doc Ann)
+  ppCode Stripped.ArgumentInfo {..} = do
+    name <- ppName KNameLocal _argumentName
+    ty <- ppCode _argumentType
+    return $ name <+> colon <+> ty
+
 instance PrettyCode Stripped.InfoTable where
   ppCode :: forall r. Member (Reader Options) r => Stripped.InfoTable -> Sem r (Doc Ann)
   ppCode tbl = do
@@ -406,8 +413,9 @@ instance PrettyCode Stripped.InfoTable where
           ppDef :: Symbol -> Stripped.FunctionInfo -> Sem r (Doc Ann)
           ppDef _ fi = do
             sym' <- ppName KNameFunction (fi ^. Stripped.functionName)
+            args <- mapM ppCode (fi ^. Stripped.functionArgsInfo)
             body' <- ppCode (fi ^. Stripped.functionBody)
-            return (kwDef <+> sym' <+> kwAssign <+> body')
+            return (kwDef <+> sym' <> encloseSep lparen rparen ", " args <+> kwAssign <+> body')
 
 instance PrettyCode a => PrettyCode (NonEmpty a) where
   ppCode x = ppCode (toList x)

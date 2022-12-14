@@ -1,4 +1,4 @@
-module Juvix.Compiler.Core.Translation.Stripped.FromCore where
+module Juvix.Compiler.Core.Translation.Stripped.FromCore (fromCore) where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.InfoTable
@@ -25,7 +25,10 @@ translateFunctionInfo tab IdentifierInfo {..} =
     { _functionName = _identifierName,
       _functionLocation = _identifierLocation,
       _functionSymbol = _identifierSymbol,
-      _functionBody = translateNode (fromJust $ HashMap.lookup _identifierSymbol (tab ^. identContext)),
+      _functionBody =
+        translateFunction
+          _identifierArgsNum
+          (fromJust $ HashMap.lookup _identifierSymbol (tab ^. identContext)),
       _functionType = translateType _identifierType,
       _functionArgsNum = _identifierArgsNum,
       _functionArgsInfo = map translateArgInfo _identifierArgsInfo,
@@ -67,6 +70,13 @@ translateConstructorInfo ConstructorInfo {..} =
       _constructorTag = _constructorTag,
       _constructorType = translateType _constructorType
     }
+
+translateFunction :: Int -> Node -> Stripped.Node
+translateFunction argsNum node =
+  let (k, body) = unfoldLambdas' node
+   in if
+          | k /= argsNum -> error "wrong number of arguments"
+          | otherwise -> translateNode body
 
 translateNode :: Node -> Stripped.Node
 translateNode node = case node of

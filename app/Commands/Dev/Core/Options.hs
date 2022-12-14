@@ -3,12 +3,14 @@ module Commands.Dev.Core.Options where
 import Commands.Dev.Core.Eval.Options
 import Commands.Dev.Core.Read.Options
 import Commands.Dev.Core.Repl.Options
+import Commands.Dev.Core.Strip.Options
 import CommonOptions
 
 data CoreCommand
   = Repl CoreReplOptions
   | Eval CoreEvalOptions
   | Read CoreReadOptions
+  | Strip CoreStripOptions
   deriving stock (Data)
 
 parseCoreCommand :: Parser CoreCommand
@@ -17,7 +19,8 @@ parseCoreCommand =
     mconcat
       [ commandRepl,
         commandEval,
-        commandRead
+        commandRead,
+        commandStrip
       ]
   where
     commandRepl :: Mod CommandFields CoreCommand
@@ -28,6 +31,9 @@ parseCoreCommand =
 
     commandRead :: Mod CommandFields CoreCommand
     commandRead = command "read" readInfo
+
+    commandStrip :: Mod CommandFields CoreCommand
+    commandStrip = command "strip" stripInfo
 
     replInfo :: ParserInfo CoreCommand
     replInfo =
@@ -46,3 +52,9 @@ parseCoreCommand =
       info
         (Read <$> parseCoreReadOptions)
         (progDesc "Read a JuvixCore file, transform it, and pretty print it")
+
+    stripInfo :: ParserInfo CoreCommand
+    stripInfo =
+      info
+        (Strip <$> parseCoreStripOptions)
+        (progDesc "Translate a JuvixCore file to Core.Stripped and pretty print the result")

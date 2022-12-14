@@ -7,6 +7,7 @@ where
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
+import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
@@ -45,7 +46,9 @@ lambdaLiftNode aboveBl top =
               allfreevars :: [Var]
               allfreevars = map fst freevarsAssocs
               argsInfo :: [ArgumentInfo]
-              argsInfo = map (argumentInfoFromBinder . snd) freevarsAssocs
+              argsInfo =
+                map (argumentInfoFromBinder . snd) freevarsAssocs
+                  ++ map (argumentInfoFromBinder . (^. lambdaLhsBinder)) (fst (unfoldLambdas l'))
           f <- freshSymbol
           let name = uniqueName "lambda" f
           registerIdent
@@ -55,13 +58,13 @@ lambdaLiftNode aboveBl top =
                 _identifierName = name,
                 _identifierLocation = Nothing,
                 _identifierType = typeFromArgs argsInfo,
-                _identifierArgsNum = length allfreevars,
+                _identifierArgsNum = length argsInfo,
                 _identifierArgsInfo = argsInfo,
                 _identifierIsExported = False,
                 _identifierBuiltin = Nothing
               }
           registerIdentNode f fBody'
-          let fApp = mkApps' (mkIdent mempty f) (map NVar allfreevars)
+          let fApp = mkApps' (mkIdent (setInfoName name mempty) f) (map NVar allfreevars)
           return (End fApp)
 
         goLetRec :: LetRec -> Sem r Recur
