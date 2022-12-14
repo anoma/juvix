@@ -79,8 +79,9 @@ lambdaLiftNode aboveBl top =
               bl' = BL.prependRev letRecBinders' bl
           topSyms :: [Symbol] <- forM defs (const freshSymbol)
 
-          let topSymsWithName :: [(Symbol, Text)]
-              topSymsWithName = zipExact topSyms (map (^. binderName) letRecBinders')
+          let topNames :: [Text]
+              topNames = zipWithExact uniqueName (map (^. binderName) letRecBinders') topSyms
+              topSymsWithName = zipExact topSyms topNames
 
           let recItemsFreeVars :: [(Var, Binder)]
               recItemsFreeVars = mapMaybe helper (concatMap (freeVarsCtx' bl') defs)
@@ -92,14 +93,12 @@ lambdaLiftNode aboveBl top =
                     where
                       idx' = (v ^. varIndex) - ndefs
 
+              letItems :: [Node]
+              letItems = [ mkApps' (mkIdent (setInfoName name mempty) sym) (map (NVar . fst) recItemsFreeVars)
+                        | (sym, name) <- topSymsWithName ]
+
               subsCalls :: Node -> Node
-              subsCalls =
-                substs
-                  ( reverse
-                      [ mkApps' (mkIdent (setInfoName name mempty) sym) (map (NVar . fst) recItemsFreeVars)
-                        | (sym, name) <- topSymsWithName
-                      ]
-                  )
+              subsCalls = substs (reverse letItems)
           -- NOTE that we are first substituting the calls and then performing
           -- lambda lifting. This is a tradeoff. We have slower compilation but
           -- slightly faster execution time, since it minimizes the number of
@@ -114,8 +113,7 @@ lambdaLiftNode aboveBl top =
                           argsInfo :: [ArgumentInfo]
                           argsInfo =
                             map (argumentInfoFromBinder . snd) recItemsFreeVars ++
-                            map (argumentInfoFromBinder . (^. lambdaLhsBinder)) (fst (unfoldLambdas b))
-                          name = uniqueName (itemBinder ^. binderName) sym
+                            map (over argumentType (shift (-ndefs)) . argumentInfoFromBinder . (^. lambdaLhsBinder)) (fst (unfoldLambdas b))
                       registerIdentNode sym topBody
                       registerIdent
                         name
@@ -129,14 +127,8 @@ lambdaLiftNode aboveBl top =
                             _identifierIsExported = False,
                             _identifierBuiltin = Nothing
                           }
-                    | (sym, (itemBinder, b)) <- zipExact topSyms (zipExact letRecBinders' liftedDefs)
+                    | ((sym, name), (itemBinder, b)) <- zipExact topSymsWithName (zipExact letRecBinders' liftedDefs)
                   ]
-              letItems :: [Node]
-              letItems =
-                let fv = recItemsFreeVars
-                 in [ mkApps' (mkIdent (setInfoName name mempty) s) (map (NVar . fst) fv)
-                      | (s, name) <- topSymsWithName
-                    ]
           declareTopSyms
 
           let -- TODO it can probably be simplified
@@ -147,9 +139,12 @@ lambdaLiftNode aboveBl top =
                   goShift k = \case
                     (x, bnd) :| yys -> case yys of
                       []
-                        | k == ndefs - 1 -> mkLet mempty bnd (shift k x) b
+                        | k == ndefs - 1 -> mkLet mempty bnd' (shift k x) b
                         | otherwise -> impossible
-                      (y : ys) -> mkLet mempty bnd (shift k x) (goShift (k + 1) (y :| ys))
+                      (y : ys) -> mkLet mempty bnd' (shift k x) (goShift (k + 1) (y :| ys))
+                      where
+                        bnd' = over binderType (shift k . subsCalls . shift (-ndefs)) bnd
+                        -- TODO: the types should also be lambda-lifted
           let res :: Node
               res = shiftHelper body' (nonEmpty' (zipExact letItems letRecBinders'))
           return (Recur res)
