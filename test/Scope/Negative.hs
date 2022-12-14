@@ -264,7 +264,7 @@ filesErrorTests =
   [ NegTest
       "A module that conflicts with a module in the stdlib"
       $(mkRelDir "StdlibConflict")
-      $(mkRelFile "Stdlib/Data/Bool.juvix")
+      $(mkRelFile "Input.juvix")
       $ \case
         ErrTopModulePath
           TopModulePathError {_topModulePathError = ErrDependencyConflict {}} -> Nothing

@@ -223,7 +223,7 @@ checkImport ::
 checkImport import_@(Import path) = do
   checkCycle
   cache <- gets (^. scoperModulesCache . cachedModules)
-  moduleRef <- maybe (readParseModule path >>= local addImport . checkTopModule) return (cache ^. at path)
+  moduleRef <- maybe (readScopeModule import_) return (cache ^. at path)
   let checked = moduleRef ^. moduleRefModule
       sname = checked ^. modulePath
       moduleId = sname ^. S.nameId
@@ -233,8 +233,6 @@ checkImport import_@(Import path) = do
   modify (over scoperModules (HashMap.insert moduleId moduleRef'))
   return (Import checked)
   where
-    addImport :: ScopeParameters -> ScopeParameters
-    addImport = over scopeTopParents (cons import_)
     checkCycle :: Sem r ()
     checkCycle = do
       topp <- asks (^. scopeTopParents)
@@ -396,16 +394,21 @@ withPath' mp a = withPathFile mp (either err a)
     err :: PathResolverError -> Sem r a
     err = throw . ErrTopModulePath . TopModulePathError mp
 
-readParseModule ::
-  Members '[Error ScoperError, Reader ScopeParameters, Files, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
-  TopModulePath ->
-  Sem r (Module 'Parsed 'ModuleTop)
-readParseModule mp = withPath' mp $ \path -> do
+readScopeModule ::
+  Members '[Error ScoperError, Reader ScopeParameters, Files, Parser.InfoTableBuilder, NameIdGen, PathResolver, State ScoperState, InfoTableBuilder] r =>
+  Import 'Parsed ->
+  Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
+readScopeModule import_ = withPath' (import_ ^. importModule) $ \path -> do
   txt <- readFile' path
   pr <- runModuleParser path txt
   case pr of
     Left err -> throw (ErrParser (MegaParsecError err))
-    Right (tbl, m) -> Parser.mergeTable tbl $> m
+    Right (tbl, m) -> do
+      Parser.mergeTable tbl
+      local addImport (checkTopModule m)
+  where
+    addImport :: ScopeParameters -> ScopeParameters
+    addImport = over scopeTopParents (cons import_)
 
 checkOperatorSyntaxDef ::
   forall r.
