@@ -3,6 +3,7 @@ module Scope.Negative (allTests) where
 import Base
 import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Pipeline
 
 type FailMsg = String
@@ -29,8 +30,8 @@ testDescr NegTest {..} =
             res <- runIOEither iniState entryPoint upToAbstract
             case mapLeft fromJuvixError res of
               Left (Just err) -> whenJust (_checkErr err) assertFailure
-              Left Nothing -> assertFailure "The scope checker did not find an error."
-              Right _ -> assertFailure "An error ocurred but it was not in the scoper."
+              Left Nothing -> assertFailure "An error ocurred but it was not in the scoper."
+              Right {} -> assertFailure "The scope checker did not find an error."
         }
 
 allTests :: TestTree
@@ -258,18 +259,22 @@ scoperErrorTests =
         _ -> wrongError
   ]
 
-filesErrorTests :: [NegTest FilesError]
+filesErrorTests :: [NegTest ScoperError]
 filesErrorTests =
   [ NegTest
       "A module that conflicts with a module in the stdlib"
       $(mkRelDir "StdlibConflict")
       $(mkRelFile "Stdlib/Data/Bool.juvix")
       $ \case
-        FilesError {} -> Nothing,
+        ErrTopModulePath
+          TopModulePathError {_topModulePathError = ErrDependencyConflict {}} -> Nothing
+        _ -> wrongError,
     NegTest
       "Importing a module that conflicts with a module in the stdlib"
       $(mkRelDir "StdlibConflict")
       $(mkRelFile "Input.juvix")
       $ \case
-        FilesError {} -> Nothing
+        ErrTopModulePath
+          TopModulePathError {_topModulePathError = ErrDependencyConflict {}} -> Nothing
+        _ -> wrongError
   ]
