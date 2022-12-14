@@ -1,0 +1,10 @@
+cradle:
+  cabal:
+    - path: "./src"
+      component: "lib:juvix"
+
+    - path: "./app"
+      component: "exe:juvix"
+
+    - path: "./test"
+      component: "test:juvix-test"
