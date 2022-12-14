@@ -7,6 +7,6 @@ def fun' := λ(T : Type → Type) λ(A : Type) λ(B : T A) λ(x : B)
   let h := λ(b : B) λ(a : A) a * b - b in
   f (λ(y : B) h y x);
 
-def main := fun int 2 + fun' (λA A) int int 3;
+def main := fun int 2 + fun' (λ(A : Type) A) int int 3;
 
 main
