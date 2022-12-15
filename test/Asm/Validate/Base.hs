@@ -8,7 +8,7 @@ import Juvix.Compiler.Asm.Translation.FromSource
 asmValidateErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 asmValidateErrorAssertion mainFile step = do
   step "Parse"
-  r <- parseFile (mainFile)
+  r <- parseFile mainFile
   case r of
     Left _ -> assertBool "" True
     Right tab -> do

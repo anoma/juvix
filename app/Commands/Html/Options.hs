@@ -6,8 +6,8 @@ import Juvix.Compiler.Backend.Html.Data.Theme
 data HtmlOptions = HtmlOptions
   { _htmlRecursive :: Bool,
     _htmlTheme :: Theme,
-    _htmlOutputDir :: (AppPath Dir),
-    _htmlInputFile :: (AppPath File),
+    _htmlOutputDir :: AppPath Dir,
+    _htmlInputFile :: AppPath File,
     _htmlPrintMetadata :: Bool
   }
   deriving stock (Data)
