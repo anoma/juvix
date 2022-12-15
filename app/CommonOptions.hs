@@ -7,6 +7,7 @@ module CommonOptions
 where
 
 import Control.Exception qualified as GHC
+import Juvix.Compiler.Core.Data.TransformationId.Parser
 import Juvix.Prelude
 import Options.Applicative
 import System.Process
@@ -194,3 +195,18 @@ optDeBruijn =
     ( long "show-de-bruijn"
         <> help "Show variable de Bruijn indices"
     )
+
+optTransformationIds :: Parser [TransformationId]
+optTransformationIds =
+  option
+    (eitherReader parseTransf)
+    ( long "transforms"
+        <> short 't'
+        <> value mempty
+        <> metavar "[Transform]"
+        <> completer (mkCompleter (return . completionsString))
+        <> help "hint: use autocomplete"
+    )
+  where
+    parseTransf :: String -> Either String [TransformationId]
+    parseTransf = mapLeft unpack . parseTransformations . pack
