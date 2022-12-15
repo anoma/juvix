@@ -178,7 +178,7 @@ runIOEither builtinsState entry =
     . mapError (JuvixError @FilesError)
     . runFilesIO
     . runReader entry
-    . runPathResolverPipe
+    . evalPathResolverPipe
 
 runIO :: BuiltinsState -> GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (BuiltinsState, a)
 runIO builtinsState opts entry = runIOEither builtinsState entry >=> mayThrow

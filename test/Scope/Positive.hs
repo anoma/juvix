@@ -28,6 +28,16 @@ root = relToProject $(mkRelDir "tests/positive")
 renderCode :: M.PrettyCode c => c -> Text
 renderCode = prettyText . M.ppOutDefault
 
+type Pipe =
+  '[ PathResolver,
+     Reader EntryPoint,
+     Files,
+     NameIdGen,
+     Error JuvixError,
+     Reader GenericOptions,
+     Embed IO
+   ]
+
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
   let tRoot = root <//> _relDir
@@ -72,31 +82,26 @@ testDescr PosTest {..} =
 
             let scopedPretty = renderCode s2
                 parsedPretty = renderCode p2
-                runHelper ::
-                  HashMap (Path Abs File) Text ->
-                  Sem
-                    '[ PathResolver,
-                       Reader EntryPoint,
-                       Files,
-                       NameIdGen,
-                       Error JuvixError,
-                       Reader GenericOptions,
-                       Embed IO
-                     ]
-                    a ->
-                  IO a
-                runHelper files = runM . runErrorIO' @JuvixError . runNameIdGen . runFilesPure files cwd . runReader entryPoint . runPathResolverPipe
+                runHelper :: HashMap (Path Abs File) Text -> Sem Pipe a -> IO (ResolverState, a)
+                runHelper files = runM
+                  . runErrorIO' @JuvixError
+                  . runNameIdGen
+                  . runFilesPure files cwd
+                  . runReader entryPoint
+                  . runPathResolverPipe
+                evalHelper :: HashMap (Path Abs File) Text -> Sem Pipe a -> IO a
+                evalHelper files = fmap snd . runHelper files
 
             step "Parsing pretty scoped"
             let fs2 = HashMap.singleton file' scopedPretty
-            p' :: Parser.ParserResult <- runHelper fs2 upToParsing
+            p' :: Parser.ParserResult <- evalHelper fs2 upToParsing
 
             step "Parsing pretty parsed"
             let fs3 = HashMap.singleton file' parsedPretty
-            parsedPretty' :: Parser.ParserResult <- runHelper fs3 upToParsing
+            parsedPretty' :: Parser.ParserResult <- evalHelper fs3 upToParsing
 
             step "Scoping the scoped"
-            s' :: Scoper.ScoperResult <- runHelper fs upToScoping
+            s' :: Scoper.ScoperResult <- evalHelper fs upToScoping
 
             step "Checks"
             let smodules = s ^. Scoper.resultModules
