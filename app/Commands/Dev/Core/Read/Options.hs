@@ -3,7 +3,7 @@ module Commands.Dev.Core.Read.Options where
 import Commands.Dev.Core.Eval.Options qualified as Eval
 import CommonOptions
 import Evaluator qualified
-import Juvix.Compiler.Core.Data.TransformationId.Parser
+import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Pretty.Options qualified as Core
 
 data CoreReadOptions = CoreReadOptions
@@ -51,18 +51,6 @@ parseCoreReadOptions = do
       ( long "eval"
           <> help "evaluate after the transformation"
       )
-  _coreReadTransformations <-
-    option
-      (eitherReader parseTransf)
-      ( long "transforms"
-          <> short 't'
-          <> value mempty
-          <> metavar "[Transform]"
-          <> completer (mkCompleter (return . completionsString))
-          <> help "hint: use autocomplete"
-      )
+  _coreReadTransformations <- optTransformationIds
   _coreReadInputFile <- parseInputJuvixCoreFile
   pure CoreReadOptions {..}
-  where
-    parseTransf :: String -> Either String [TransformationId]
-    parseTransf = mapLeft unpack . parseTransformations . pack

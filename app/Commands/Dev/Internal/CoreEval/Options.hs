@@ -2,10 +2,12 @@ module Commands.Dev.Internal.CoreEval.Options where
 
 import CommonOptions
 import Evaluator qualified as Eval
+import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Pretty.Options qualified as Core
 
 data InternalCoreEvalOptions = InternalCoreEvalOptions
-  { _internalCoreEvalShowDeBruijn :: Bool,
+  { _internalCoreEvalTransformations :: [TransformationId],
+    _internalCoreEvalShowDeBruijn :: Bool,
     _internalCoreEvalNoIO :: Bool,
     _internalCoreEvalInputFile :: AppPath File
   }
@@ -28,6 +30,7 @@ instance CanonicalProjection InternalCoreEvalOptions Eval.EvalOptions where
 
 parseInternalCoreEval :: Parser InternalCoreEvalOptions
 parseInternalCoreEval = do
+  _internalCoreEvalTransformations <- optTransformationIds
   _internalCoreEvalShowDeBruijn <-
     switch
       ( long "show-de-bruijn"
