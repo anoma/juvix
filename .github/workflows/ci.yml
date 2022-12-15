@@ -314,7 +314,7 @@ jobs:
       - name: MDBook setup
         uses: peaceiris/actions-mdbook@v1
         with:
-          mdbook-version: 'latest'
+          mdbook-version: '0.4.22'
 
       - uses: haskell/actions/setup@v1
         name: Setup Haskell
