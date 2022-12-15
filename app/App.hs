@@ -17,7 +17,7 @@ data App m a where
   AskPackage :: App m Package
   AskGlobalOptions :: App m GlobalOptions
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
-  RunPipelineEither :: AppPath File -> Sem PipelineEff a -> App m (Either JuvixError (BuiltinsState, a))
+  RunPipelineEither :: AppPath File -> Sem PipelineEff a -> App m (Either JuvixError (Artifacts, a))
   Say :: Text -> App m ()
   SayRaw :: ByteString -> App m ()
 

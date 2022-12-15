@@ -87,13 +87,13 @@ runCommand opts = do
 
       loadEntryPoint :: EntryPoint -> Repl ()
       loadEntryPoint ep = do
-        (bs, res) <- liftIO (runIO' iniState ep upToCore)
+        (artif, res) <- liftIO (runIO' iniState ep upToCore)
         State.modify
           ( set
               replStateContext
               ( Just
                   ( ReplContext
-                      { _replContextBuiltins = bs,
+                      { _replContextBuiltins = artif ^. artifactBuiltins,
                         _replContextExpContext = expressionContext res,
                         _replContextEntryPoint = ep
                       }

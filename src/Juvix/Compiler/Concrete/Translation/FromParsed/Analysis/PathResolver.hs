@@ -1,6 +1,7 @@
 module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
   ( module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base,
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error,
+    module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo,
     PathResolver,
     addDependency,
     withPath,

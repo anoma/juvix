@@ -39,3 +39,9 @@ defaultEntryPoint root mainFile =
 
 mainModulePath :: Lens' EntryPoint (Path Abs File)
 mainModulePath = entryPointModulePaths . _head1
+
+entryPointFromPackage :: Path Abs Dir -> Path Abs File -> Package -> EntryPoint
+entryPointFromPackage root mainFile pkg =
+  (defaultEntryPoint root mainFile)
+    { _entryPointPackage = pkg
+    }

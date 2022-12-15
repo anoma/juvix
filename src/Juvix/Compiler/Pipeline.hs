@@ -1,6 +1,7 @@
 module Juvix.Compiler.Pipeline
   ( module Juvix.Compiler.Pipeline,
     module Juvix.Compiler.Pipeline.EntryPoint,
+    module Juvix.Compiler.Pipeline.Artifacts,
     module Juvix.Compiler.Pipeline.ExpressionContext,
   )
 where
@@ -17,6 +18,7 @@ import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Translation qualified as Core
 import Juvix.Compiler.Internal qualified as Internal
+import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.ExpressionContext
 import Juvix.Compiler.Pipeline.Setup
@@ -169,18 +171,28 @@ regToMiniC lims = return . C.fromReg lims
 -- Run pipeline
 --------------------------------------------------------------------------------
 
-runIOEither :: forall a. BuiltinsState -> EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (BuiltinsState, a))
+runIOEither :: forall a. BuiltinsState -> EntryPoint -> Sem PipelineEff a -> IO (Either JuvixError (Artifacts, a))
 runIOEither builtinsState entry =
   runM
     . runError
+    . fmap makeArtifacts
     . runBuiltins builtinsState
     . runNameIdGen
     . mapError (JuvixError @FilesError)
     . runFilesIO
     . runReader entry
-    . evalPathResolverPipe
+    . runPathResolverPipe
+  where
+    makeArtifacts :: (BuiltinsState, (ResolverState, any)) -> (Artifacts, any)
+    makeArtifacts (builtins, (resolver, a)) =
+      ( Artifacts
+          { _artifactBuiltins = builtins,
+            _artifactResolver = resolver
+          },
+        a
+      )
 
-runIO :: BuiltinsState -> GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (BuiltinsState, a)
+runIO :: BuiltinsState -> GenericOptions -> EntryPoint -> Sem PipelineEff a -> IO (Artifacts, a)
 runIO builtinsState opts entry = runIOEither builtinsState entry >=> mayThrow
   where
     mayThrow :: Either JuvixError r -> IO r
@@ -188,5 +200,5 @@ runIO builtinsState opts entry = runIOEither builtinsState entry >=> mayThrow
       Left err -> runM $ runReader opts $ printErrorAnsiSafe err >> embed exitFailure
       Right r -> return r
 
-runIO' :: BuiltinsState -> EntryPoint -> Sem PipelineEff a -> IO (BuiltinsState, a)
+runIO' :: BuiltinsState -> EntryPoint -> Sem PipelineEff a -> IO (Artifacts, a)
 runIO' builtinsState = runIO builtinsState defaultGenericOptions
