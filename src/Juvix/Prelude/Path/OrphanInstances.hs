@@ -1,5 +1,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
 {-# HLINT ignore "Avoid restricted extensions" #-}
 {-# HLINT ignore "Avoid restricted flags" #-}
 
