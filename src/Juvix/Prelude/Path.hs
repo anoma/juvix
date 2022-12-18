@@ -75,8 +75,14 @@ removeExtension = fmap fst . splitExtension
 removeExtension' :: Path b File -> Path b File
 removeExtension' = fst . fromJust . splitExtension
 
+addExtension' :: String -> Path b File -> Path b File
+addExtension' ext = fromJust . addExtension ext
+
 replaceExtension' :: String -> Path b File -> Path b File
 replaceExtension' ext = fromJust . replaceExtension ext
+
+dirnameToFile :: Path x Dir -> Path Rel File
+dirnameToFile = relFile . dropTrailingPathSeparator . toFilePath . dirname
 
 parents :: Path Abs a -> NonEmpty (Path Abs Dir)
 parents = go [] . parent

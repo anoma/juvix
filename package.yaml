@@ -72,6 +72,9 @@ dependencies:
 - Diff == 0.4.*
 - pretty-show == 1.10.*
 
+# benchmarks
+- gauge == 0.2.*
+- shake == 0.19.*
 ghc-options:
 # Warnings
 - -Weverything
@@ -130,6 +133,15 @@ tests:
   juvix-test:
     main:                Main.hs
     source-dirs:         test
+    dependencies:
+    - juvix
+    verbatim:
+      default-language: GHC2021
+
+benchmarks:
+  juvix-bench:
+    main:                Main.hs
+    source-dirs:         bench
     dependencies:
     - juvix
     verbatim:
