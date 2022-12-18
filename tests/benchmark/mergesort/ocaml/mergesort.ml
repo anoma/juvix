@@ -43,4 +43,4 @@ let rec gen n acc = if n = 0 then acc else gen (n - 1) (n :: acc)
 
 ;;
 
-print_endline (if sorted (sort (gen 2000000 [])) then "true" else "false");;
+print_endline (if sorted (sort (gen 200000 [])) then "true" else "false");;

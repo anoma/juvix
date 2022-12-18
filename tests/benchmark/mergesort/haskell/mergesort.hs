@@ -30,4 +30,4 @@ gen 0 acc = acc
 gen n acc = gen (n - 1) (n : acc)
 
 main :: IO ()
-main = putStrLn (show (sorted (sort (gen 2000000 []))))
+main = putStrLn (show (sorted (sort (gen 200000 []))))
