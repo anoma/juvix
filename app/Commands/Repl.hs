@@ -84,7 +84,6 @@ runCommand opts = do
         absStdlibPath :: Maybe (Path Abs Dir) <- case gopts ^. globalStdlibPath of
           Nothing -> return Nothing
           Just p -> Just <$> replMakeAbsolute p
-        -- (root, package) <- liftIO (findRoot (Just inputFile))
         return $
           EntryPoint
             { _entryPointRoot = root,
