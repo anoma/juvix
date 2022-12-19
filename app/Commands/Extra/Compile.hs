@@ -10,7 +10,7 @@ import System.Process qualified as P
 
 runCommand :: forall r. Members '[Embed IO, App] r => CompileOptions -> Sem r ()
 runCommand opts = do
-  root <- askRoot
+  root <- askPkgDir
   inputFile <- someBaseToAbs' (opts ^. compileInputFile . pathPath)
   result <- runCompile root inputFile opts
   case result of

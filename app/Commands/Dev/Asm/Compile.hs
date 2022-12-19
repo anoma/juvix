@@ -19,7 +19,7 @@ runCommand opts = do
     Right tab -> case run $ runError $ asmToMiniC asmOpts tab of
       Left err -> exitJuvixError err
       Right C.MiniCResult {..} -> do
-        root <- askRoot
+        root <- askPkgDir
         ensureDir (root <//> juvixBuildDir)
         cFile <- inputCFile file
         embed $ TIO.writeFile (toFilePath cFile) _resultCCode
@@ -39,7 +39,7 @@ runCommand opts = do
 
 inputCFile :: Members '[App] r => Path Abs File -> Sem r (Path Abs File)
 inputCFile inputFileCompile = do
-  root <- askRoot
+  root <- askPkgDir
   return (root <//> juvixBuildDir <//> outputMiniCFile)
   where
     outputMiniCFile :: Path Rel File

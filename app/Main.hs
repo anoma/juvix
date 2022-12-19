@@ -9,6 +9,7 @@ import TopCommand.Options
 main :: IO ()
 main = do
   let p = prefs showHelpOnEmpty
+  cwd <- getCurrentDir
   (global, cli) <- customExecParser p descr
   (root, pkg) <- findRoot (topCommandInputFile cli)
-  runM (runAppIO global root pkg (runTopCommand cli))
+  runM (runAppIO global cwd root pkg (runTopCommand cli))

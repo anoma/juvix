@@ -21,7 +21,7 @@ runCommand opts@CompileOptions {..} = do
 
 inputCFile :: Members '[App] r => Path Abs File -> Sem r (Path Abs File)
 inputCFile inputFileCompile = do
-  root <- askRoot
+  root <- askPkgDir
   return (root <//> juvixBuildDir <//> outputMiniCFile)
   where
     outputMiniCFile :: Path Rel File
@@ -29,7 +29,7 @@ inputCFile inputFileCompile = do
 
 runCompile :: Members '[Embed IO, App] r => Path Abs File -> CompileOptions -> Text -> Sem r (Either Text ())
 runCompile inputFileCompile o minic = do
-  root <- askRoot
+  root <- askPkgDir
   ensureDir (root <//> juvixBuildDir)
   f <- inputCFile inputFileCompile
   embed (TIO.writeFile (toFilePath f) minic)
@@ -52,7 +52,7 @@ prepareRuntime o = mapM_ writeRuntime runtimeProjectDir
 
     writeRuntime :: (Path Rel File, BS.ByteString) -> Sem r ()
     writeRuntime (filePath, contents) = do
-      root <- askRoot
+      root <- askPkgDir
       embed (BS.writeFile (toFilePath (root <//> juvixBuildDir <//> filePath)) contents)
 
 wasiStandaloneRuntimeDir :: [(Path Rel File, BS.ByteString)]
@@ -139,7 +139,7 @@ commonArgs wasmOutputFile =
 
 standaloneLibArgs :: Members '[App, Embed IO] r => Path Abs File -> Path Abs File -> Sem r [String]
 standaloneLibArgs wasmOutputFile inputFile = do
-  root <- askRoot
+  root <- askPkgDir
   return $
     commonArgs wasmOutputFile
       <> [ "--target=wasm32",
@@ -152,7 +152,7 @@ standaloneLibArgs wasmOutputFile inputFile = do
 
 wasiStandaloneArgs :: Members '[App, Error Text, Embed IO] r => Path Abs File -> Path Abs File -> Sem r [String]
 wasiStandaloneArgs wasmOutputFile inputFile = do
-  root <- askRoot
+  root <- askPkgDir
   com <- wasiCommonArgs wasmOutputFile
   return $
     com

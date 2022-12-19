@@ -6,7 +6,7 @@ import Data.Yaml
 
 runCommand :: forall r. Members '[Embed IO, App] r => RootOptions -> Sem r ()
 runCommand RootOptions {..} = do
-  askRoot >>= say . pack . toFilePath
+  askPkgDir >>= say . pack . toFilePath
   when _rootPrintPackage printPackage
   where
     printPackage :: Sem r ()

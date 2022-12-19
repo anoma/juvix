@@ -252,7 +252,7 @@ runCommand opts = do
       replAction :: ReplS ()
       replAction = evalReplOpts ReplOpts {..}
 
-  root <- askRoot
+  root <- askPkgDir
   globalOptions <- askGlobalOptions
   embed
     ( State.evalStateT
