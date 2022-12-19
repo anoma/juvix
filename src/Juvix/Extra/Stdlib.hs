@@ -45,7 +45,7 @@ writeStdlib = do
       writeFileBS p bs
 
 stdlibVersionFile :: Member (Reader StdlibRoot) r => Sem r (Path Abs File)
-stdlibVersionFile = (<//> parseRelFile' ".version") <$> ask
+stdlibVersionFile = (<//> $(mkRelFile ".version")) <$> ask
 
 writeVersion :: forall r. Members '[Reader StdlibRoot, Files] r => Sem r ()
 writeVersion = stdlibVersionFile >>= flip writeFile' versionTag
