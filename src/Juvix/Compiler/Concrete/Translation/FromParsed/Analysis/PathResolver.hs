@@ -178,7 +178,7 @@ runPathResolver = runPathResolver' iniResolverState
 
 runPathResolverPipe :: Members '[Files, Reader EntryPoint] r => Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolverPipe a = do
-  r <- asks (^. entryPointRoot)
+  r <- asks (^. entryPointResolverRoot)
   runError (runPathResolver r (raiseUnder a)) >>= either error return
 
 evalPathResolverPipe :: Members '[Files, Reader EntryPoint] r => Sem (PathResolver ': r) a -> Sem r a

@@ -61,6 +61,7 @@ getEntryPoint' invokeDir opts root pkg inputFile = do
   return
     EntryPoint
       { _entryPointRoot = root,
+        _entryPointResolverRoot = root,
         _entryPointNoTermination = opts ^. globalNoTermination,
         _entryPointNoPositivity = opts ^. globalNoPositivity,
         _entryPointNoStdlib = opts ^. globalNoStdlib,

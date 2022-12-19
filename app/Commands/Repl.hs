@@ -22,7 +22,6 @@ import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Extra.Paths
 import Juvix.Extra.Version
 import Juvix.Prelude.Pretty qualified as P
-import Root
 import System.Console.ANSI qualified as Ansi
 import System.Console.Haskeline
 import System.Console.Repline
@@ -40,10 +39,10 @@ data ReplContext = ReplContext
   }
 
 data ReplState = ReplState
-  { _replStateReplRoot :: Path Abs Dir,
+  { _replStatePkgDir :: Path Abs Dir,
+    _replStateInvokeDir :: Path Abs Dir,
     _replStateContext :: Maybe ReplContext,
-    _replStateGlobalOptions :: GlobalOptions,
-    _replStateMkEntryPoint :: SomeBase File -> Repl EntryPoint
+    _replStateGlobalOptions :: GlobalOptions
   }
 
 makeLenses ''ReplState
@@ -76,7 +75,31 @@ welcomeMsg = liftIO (putStrLn [i|Juvix REPL version #{versionTag}: https://juvix
 
 runCommand :: Members '[Embed IO, App] r => ReplOptions -> Sem r ()
 runCommand opts = do
-  let printHelpTxt :: String -> Repl ()
+  root <- askPkgDir
+  package <- askPackage
+  let getReplEntryPoint :: SomeBase File -> Repl EntryPoint
+      getReplEntryPoint inputFile = do
+        gopts <- State.gets (^. replStateGlobalOptions)
+        absInputFile :: Path Abs File <- replMakeAbsolute inputFile
+        absStdlibPath :: Maybe (Path Abs Dir) <- case gopts ^. globalStdlibPath of
+          Nothing -> return Nothing
+          Just p -> Just <$> replMakeAbsolute p
+        -- (root, package) <- liftIO (findRoot (Just inputFile))
+        return $
+          EntryPoint
+            { _entryPointRoot = root,
+              _entryPointResolverRoot = root,
+              _entryPointNoTermination = gopts ^. globalNoTermination,
+              _entryPointNoPositivity = gopts ^. globalNoPositivity,
+              _entryPointNoStdlib = gopts ^. globalNoStdlib,
+              _entryPointStdlibPath = absStdlibPath,
+              _entryPointPackage = package,
+              _entryPointModulePaths = pure absInputFile,
+              _entryPointGenericOptions = project gopts,
+              _entryPointStdin = Nothing
+            }
+
+      printHelpTxt :: String -> Repl ()
       printHelpTxt _ = helpTxt
 
       multilineCmd :: String
@@ -116,8 +139,7 @@ runCommand opts = do
 
       loadFile :: SomeBase File -> Repl ()
       loadFile f = do
-        mkEntryPoint <- State.gets (^. replStateMkEntryPoint)
-        entryPoint <- mkEntryPoint f
+        entryPoint <- getReplEntryPoint f
         loadEntryPoint entryPoint
 
       loadPrelude :: Repl ()
@@ -126,7 +148,7 @@ runCommand opts = do
         case mStdlibPath of
           Nothing -> loadDefaultPrelude
           Just stdlibDir' -> do
-            absStdlibDir :: Path Abs Dir <- makeAbsolute stdlibDir'
+            absStdlibDir :: Path Abs Dir <- replMakeAbsolute stdlibDir'
             loadFile (Abs (absStdlibDir <//> preludePath))
 
       loadDefaultPrelude :: Repl ()
@@ -134,7 +156,7 @@ runCommand opts = do
 
       printRoot :: String -> Repl ()
       printRoot _ = do
-        r <- State.gets (^. replStateReplRoot)
+        r <- State.gets (^. replStatePkgDir)
         liftIO $ putStrLn (pack (toFilePath r))
 
       displayVersion :: String -> Repl ()
@@ -250,18 +272,30 @@ runCommand opts = do
       tabComplete = Prefix (wordCompleter optsCompleter) defaultMatcher
 
       replAction :: ReplS ()
-      replAction = evalReplOpts ReplOpts {..}
+      replAction = do
+        evalReplOpts
+          ReplOpts
+            { prefix,
+              multilineCommand,
+              initialiser,
+              finaliser,
+              tabComplete,
+              command,
+              options,
+              banner
+            }
 
-  root <- askPkgDir
+  pkgDir <- askPkgDir
+  invokeDir <- askInvokeDir
   globalOptions <- askGlobalOptions
   embed
     ( State.evalStateT
         replAction
         ( ReplState
-            { _replStateReplRoot = root,
+            { _replStatePkgDir = pkgDir,
+              _replStateInvokeDir = invokeDir,
               _replStateContext = Nothing,
-              _replStateGlobalOptions = globalOptions,
-              _replStateMkEntryPoint = getReplEntryPoint
+              _replStateGlobalOptions = globalOptions
             }
         )
     )
@@ -269,42 +303,29 @@ runCommand opts = do
 defaultPreludeEntryPoint :: Repl EntryPoint
 defaultPreludeEntryPoint = do
   opts <- State.gets (^. replStateGlobalOptions)
-  root <- State.gets (^. replStateReplRoot)
-  let stdlib :: Maybe (Path Abs Dir) = someBaseToAbs root <$> opts ^. globalStdlibPath
+  root <- State.gets (^. replStatePkgDir)
+  invokeDir <- State.gets (^. replStateInvokeDir)
+  let stdlib :: Maybe (Path Abs Dir) = someBaseToAbs invokeDir <$> opts ^. globalStdlibPath
   return $
     EntryPoint
       { _entryPointRoot = root,
+        _entryPointResolverRoot = defaultStdlibPath root,
         _entryPointNoTermination = opts ^. globalNoTermination,
         _entryPointNoPositivity = opts ^. globalNoPositivity,
         _entryPointNoStdlib = opts ^. globalNoStdlib,
         _entryPointStdlibPath = stdlib,
-        _entryPointPackage = emptyPackage,
+        _entryPointPackage = defaultPackage root,
         _entryPointModulePaths = pure (defaultStdlibPath root <//> preludePath),
         _entryPointGenericOptions = project opts,
         _entryPointStdin = Nothing
       }
 
-getReplEntryPoint :: SomeBase File -> Repl EntryPoint
-getReplEntryPoint inputFile = do
-  opts <- State.gets (^. replStateGlobalOptions)
-  absInputFile :: Path Abs File <- makeAbsolute inputFile
-  absStdlibPath :: Maybe (Path Abs Dir) <- case opts ^. globalStdlibPath of
-    Nothing -> return Nothing
-    Just (Abs p) -> return (Just p)
-    Just (Rel p) -> Just <$> makeAbsolute p
-  (root, package) <- liftIO (findRoot (Just inputFile))
-  return $
-    EntryPoint
-      { _entryPointRoot = root,
-        _entryPointNoTermination = opts ^. globalNoTermination,
-        _entryPointNoPositivity = opts ^. globalNoPositivity,
-        _entryPointNoStdlib = opts ^. globalNoStdlib,
-        _entryPointStdlibPath = absStdlibPath,
-        _entryPointPackage = package,
-        _entryPointModulePaths = pure absInputFile,
-        _entryPointGenericOptions = project opts,
-        _entryPointStdin = Nothing
-      }
+replMakeAbsolute :: SomeBase b -> Repl (Path Abs b)
+replMakeAbsolute = \case
+  Abs p -> return p
+  Rel r -> do
+    invokeDir <- State.gets (^. replStateInvokeDir)
+    return (invokeDir <//> r)
 
 inferExpressionIO' :: ReplContext -> Text -> IO (Either JuvixError Internal.Expression)
 inferExpressionIO' ctx = inferExpressionIO "" (ctx ^. replContextExpContext) (ctx ^. replContextBuiltins)
