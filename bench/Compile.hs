@@ -2,7 +2,6 @@ module Compile where
 
 import Base
 import Development.Shake
-import Juvix.Extra.Paths
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path as Path hiding (doesFileExist, (-<.>))
 

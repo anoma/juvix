@@ -75,6 +75,14 @@ removeExtension = fmap fst . splitExtension
 removeExtension' :: Path b File -> Path b File
 removeExtension' = fst . fromJust . splitExtension
 
+addExtensions :: MonadThrow m => [String] -> Path b File -> m (Path b File)
+addExtensions ext p = case ext of
+  [] -> return p
+  (e : es) -> addExtension e p >>= addExtensions es
+
+addExtensions' :: [String] -> Path b File -> Path b File
+addExtensions' ext = fromJust . addExtensions ext
+
 addExtension' :: String -> Path b File -> Path b File
 addExtension' ext = fromJust . addExtension ext
 

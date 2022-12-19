@@ -2,40 +2,69 @@ module Main where
 
 import Base
 import Compile qualified
-import Gauge.Benchmark
-import Gauge.Main
+import Gauge
 import Juvix.Prelude
-import Juvix.Prelude.Path as Path
 import System.Process
 
 main :: IO ()
 main = do
   Compile.compile
-  defaultMain benchmarks
+  defaultMainWith config benchmarks
 
 runExe :: Path Abs File -> IO ()
 runExe p = void (readProcess (toFilePath p) [] "")
 
-hsm :: Path Abs File
-hsm = root Path.<//> $(mkRelFile "mergesort/haskell/mergesort.exe")
+config :: Config
+config =
+  defaultConfig
+    { timeLimit = Just 0.0,
+      quickMode = False,
+      csvFile = Just "results.csv"
+    }
 
-hssm :: Path Abs File
-hssm = root Path.<//> $(mkRelFile "mergesort/haskell/mergesort.strict.exe")
+defaultBench :: String -> Bench
+defaultBench title =
+  Bench
+    { _benchTitle = title,
+      _benchVariants =
+        [ defaultVariant Haskell,
+          defaultVariant C,
+          defaultVariant Ocaml,
+          defaultVariant Runtime,
+          defaultVariant Juvix,
+          Variant
+            { _variantTitle = Just "strict",
+              _variantLanguage = Haskell,
+              _variantExtensions = [".strict", ".exe"]
+            },
+          Variant
+            { _variantTitle = Just "byte",
+              _variantLanguage = Ocaml,
+              _variantExtensions = [".byte", ".exe"]
+            }
+        ]
+    }
 
-cm :: Path Abs File
-cm = root Path.<//> $(mkRelFile "mergesort/c/mergesort.exe")
+mergesort :: Bench
+mergesort = defaultBench "mergesort"
 
-mlm :: Path Abs File
-mlm = root Path.<//> $(mkRelFile "mergesort/ocaml/mergesort.exe")
-
-jm :: Path Abs File
-jm = root Path.<//> $(mkRelFile "mergesort/juvix/mergesort.exe")
+fromBench :: Bench -> [Benchmark]
+fromBench b = map go (b ^. benchVariants)
+  where
+    go :: Variant -> Benchmark
+    go v = bench title (nfIO (runExe exe))
+      where
+        title :: String
+        title = b ^. benchTitle <> maybe "" (" " <>) (v ^. variantTitle) <> " - " <> show (v ^. variantLanguage)
+        exe :: Path Abs File
+        exe =
+          addExtensions'
+            (v ^. variantExtensions)
+            ( root
+                <//> relDir (b ^. benchTitle)
+                <//> langPath (v ^. variantLanguage)
+                <//> relFile (b ^. benchTitle)
+            )
 
 benchmarks :: [Benchmark]
-benchmarks =
-  [ bench "haskell mergesort" (nfIO (runExe hsm)),
-    bench "haskell strict mergesort" (nfIO (runExe hssm)),
-    bench "c mergesort" (nfIO (runExe cm)),
-    bench "juvix mergesort" (nfIO (runExe jm)),
-    bench "ocaml mergesort" (nfIO (runExe mlm))
-  ]
+benchmarks = fromBench mergesort
