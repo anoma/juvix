@@ -11,6 +11,7 @@ import Juvix.Prelude.Path.OrphanInstances ()
 import Path hiding ((<.>), (</>))
 import Path qualified
 import Path.IO hiding (listDirRel, walkDirRel)
+import Path.Internal
 
 absDir :: FilePath -> Path Abs Dir
 absDir r = fromMaybe (error ("not an absolute file path: " <> pack r)) (parseAbsDir r)
@@ -57,13 +58,11 @@ isJuvixFile :: Path b File -> Bool
 isJuvixFile = (== Just ".juvix") . fileExtension
 
 isHiddenDirectory :: Path b Dir -> Bool
-isHiddenDirectory p = case toFilePath (dirname p) of
-  "./" -> False
-  '.' : _ -> True
-  _ -> False
-
-parseRelFile' :: FilePath -> Path Rel File
-parseRelFile' = fromJust . parseRelFile
+isHiddenDirectory p
+  | toFilePath p == relRootFP = False
+  | otherwise = case toFilePath (dirname p) of
+      '.' : _ -> True
+      _ -> False
 
 someBaseToAbs :: Path Abs Dir -> SomeBase b -> Path Abs b
 someBaseToAbs root = \case
@@ -88,4 +87,4 @@ parents = go [] . parent
       | otherwise = go (p : ac) (parent p)
 
 withTempDir' :: (MonadIO m, MonadMask m) => (Path Abs Dir -> m a) -> m a
-withTempDir' = withTempDir $(mkRelDir ".") "tmp"
+withTempDir' = withSystemTempDir "tmp"
