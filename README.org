@@ -164,15 +164,25 @@ juvix compile --target wasm HelloWorld.juvix
 wasmer HelloWorld.wasm
 #+end_src
 
+** LSP support
+
+We provide a sammple =hie.yaml= configuration file for both =cabal= and =stack=.
+
+If you prefer =stack=, run:
+#+begin_src shell
+cp stack.hie.yaml hie.yaml
+#+end_src
+If you prefer =cabal=, run:
+#+begin_src shell
+cp cabal.hie.yaml hie.yaml
+#+end_src
+
 ** Building the project with =cabal=
 
 We recommend that contributors use the =stack= build tool with this project.
 
 If you would prefer to use the =cabal= build tool instead then you must generate
 the =juvix.cabal= file using [[https://github.com/sol/hpack][hpack]] before running =cabal build=.
-
-To configure the Haskell LSP server to use =cabal= then replace =hie.yaml= with
-=cabal.hie.yaml= in the root of the repostiory.
 
 ** The Juvix programming language
 
