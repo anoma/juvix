@@ -5,23 +5,24 @@ import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Pipeline
 import Juvix.Parser.Error
 
-root :: FilePath
-root = "tests/negative"
+root :: Path Abs Dir
+root = relToProject $(mkRelDir "tests/negative")
 
 data NegTest = NegTest
   { _name :: String,
-    _relDir :: FilePath,
-    _file :: FilePath
+    _relDir :: Path Rel Dir,
+    _file :: Path Rel File
   }
 
 testDescr :: NegTest -> TestDescr
 testDescr NegTest {..} =
-  let tRoot = root </> _relDir
+  let tRoot = root <//> _relDir
+      file' = tRoot <//> _file
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = defaultEntryPoint _file
+            let entryPoint = defaultEntryPoint tRoot file'
             res <- runIOEither iniState entryPoint upToParsing
             case mapLeft fromJuvixError res of
               Left (Just (_ :: ParserError)) -> return ()
@@ -40,6 +41,6 @@ scoperErrorTests :: [NegTest]
 scoperErrorTests =
   [ NegTest
       "Tab character"
-      "."
-      "Tab.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "Tab.juvix")
   ]

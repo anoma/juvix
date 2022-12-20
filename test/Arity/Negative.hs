@@ -9,19 +9,20 @@ type FailMsg = String
 
 data NegTest = NegTest
   { _name :: String,
-    _relDir :: FilePath,
-    _file :: FilePath,
+    _relDir :: Path Rel Dir,
+    _file :: Path Rel File,
     _checkErr :: ArityCheckerError -> Maybe FailMsg
   }
 
 testDescr :: NegTest -> TestDescr
 testDescr NegTest {..} =
-  let tRoot = root </> _relDir
+  let tRoot = root <//> _relDir
+      file' = tRoot <//> _file
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = defaultEntryPoint _file
+            let entryPoint = defaultEntryPoint tRoot file'
             result <- runIOEither iniState entryPoint upToInternalArity
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
@@ -35,8 +36,8 @@ allTests =
     "Arity checker negative tests"
     (map (mkTest . testDescr) tests)
 
-root :: FilePath
-root = "tests/negative"
+root :: Path Abs Dir
+root = relToProject $(mkRelDir "tests/negative")
 
 wrongError :: Maybe FailMsg
 wrongError = Just "Incorrect error"
@@ -45,43 +46,43 @@ tests :: [NegTest]
 tests =
   [ NegTest
       "Too many arguments in expression"
-      "Internal"
-      "TooManyArguments.juvix"
+      $(mkRelDir "Internal")
+      $(mkRelFile "TooManyArguments.juvix")
       $ \case
         ErrTooManyArguments {} -> Nothing
         _ -> wrongError,
     NegTest
       "Pattern match a function type"
-      "Internal"
-      "FunctionPattern.juvix"
+      $(mkRelDir "Internal")
+      $(mkRelFile "FunctionPattern.juvix")
       $ \case
         ErrPatternFunction {} -> Nothing
         _ -> wrongError,
     NegTest
       "Function type (* → *) application"
-      "Internal"
-      "FunctionApplied.juvix"
+      $(mkRelDir "Internal")
+      $(mkRelFile "FunctionApplied.juvix")
       $ \case
         ErrFunctionApplied {} -> Nothing
         _ -> wrongError,
     NegTest
       "Expected explicit pattern"
-      "Internal"
-      "ExpectedExplicitPattern.juvix"
+      $(mkRelDir "Internal")
+      $(mkRelFile "ExpectedExplicitPattern.juvix")
       $ \case
         ErrWrongPatternIsImplicit {} -> Nothing
         _ -> wrongError,
     NegTest
       "Expected explicit argument"
-      "Internal"
-      "ExpectedExplicitArgument.juvix"
+      $(mkRelDir "Internal")
+      $(mkRelFile "ExpectedExplicitArgument.juvix")
       $ \case
         ErrExpectedExplicitArgument {} -> Nothing
         _ -> wrongError,
     NegTest
       "Function clause with two many patterns in the lhs"
-      "Internal"
-      "LhsTooManyPatterns.juvix"
+      $(mkRelDir "Internal")
+      $(mkRelFile "LhsTooManyPatterns.juvix")
       $ \case
         ErrLhsTooManyPatterns {} -> Nothing
         _ -> wrongError

@@ -34,7 +34,7 @@ fromSource e = mapError (JuvixError @ParserError) $ do
     goFile ::
       forall r.
       Members '[Files, Error ParserError, InfoTableBuilder, NameIdGen] r =>
-      FilePath ->
+      Path Abs File ->
       Sem r (Module 'Parsed 'ModuleTop)
     goFile fileName = do
       input <- getFileContents fileName
@@ -43,7 +43,7 @@ fromSource e = mapError (JuvixError @ParserError) $ do
         Left er -> throw er
         Right (tbl, m) -> mergeTable tbl $> m
       where
-        getFileContents :: FilePath -> Sem r Text
+        getFileContents :: Path Abs File -> Sem r Text
         getFileContents fp
           | fp == e ^. mainModulePath,
             Just txt <- e ^. entryPointStdin =
@@ -65,12 +65,12 @@ expressionFromTextSource fp txt = mapError (JuvixError @ParserError) $ do
 
 -- | The fileName is only used for reporting errors. It is safe to pass
 -- an empty string.
-runModuleParser :: Members '[NameIdGen] r => FilePath -> Text -> Sem r (Either ParserError (InfoTable, Module 'Parsed 'ModuleTop))
+runModuleParser :: Members '[NameIdGen] r => Path Abs File -> Text -> Sem r (Either ParserError (InfoTable, Module 'Parsed 'ModuleTop))
 runModuleParser fileName input = do
   m <-
     runInfoTableBuilder $
       evalState (Nothing @(Judoc 'Parsed)) $
-        P.runParserT topModuleDef fileName input
+        P.runParserT topModuleDef (toFilePath fileName) input
   case m of
     (_, Left err) -> return (Left (ParserError err))
     (tbl, Right r) -> return (Right (tbl, r))
@@ -118,7 +118,7 @@ name :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r Name
 name = do
   parts <- dottedSymbol
   return $ case nonEmptyUnsnoc parts of
-    (Just p, n) -> NameQualified (QualifiedName (Path p) n)
+    (Just p, n) -> NameQualified (QualifiedName (SymbolPath p) n)
     (Nothing, n) -> NameUnqualified n
 
 mkTopModulePath :: NonEmpty Symbol -> TopModulePath

@@ -3,7 +3,7 @@ module Commands.Dev.Internal.Arity.Options where
 import CommonOptions
 
 newtype InternalArityOptions = InternalArityOptions
-  { _internalArityInputFile :: Path
+  { _internalArityInputFile :: AppPath File
   }
   deriving stock (Data)
 

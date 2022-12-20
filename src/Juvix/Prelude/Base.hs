@@ -58,11 +58,11 @@ module Juvix.Prelude.Base
     module Polysemy.State,
     module Language.Haskell.TH.Syntax,
     module Prettyprinter,
-    module System.Directory,
     module System.Exit,
     module System.FilePath,
     module System.IO,
     module Text.Show,
+    module Control.Monad.Catch,
     Data,
     Text,
     pack,
@@ -73,12 +73,15 @@ module Juvix.Prelude.Base
     HashSet,
     IsString (..),
     Alternative (..),
+    MonadIO (..),
   )
 where
 
 import Control.Applicative
+import Control.Monad.Catch (MonadMask, MonadThrow, throwM)
 import Control.Monad.Extra hiding (fail)
 import Control.Monad.Fix
+import Control.Monad.IO.Class (MonadIO (..))
 import Data.Bifunctor hiding (first, second)
 import Data.Bitraversable
 import Data.Bool
@@ -99,7 +102,7 @@ import Data.Hashable
 import Data.Int
 import Data.IntMap.Strict (IntMap)
 import Data.IntSet (IntSet)
-import Data.List.Extra hiding (groupSortOn, head, last, mconcatMap)
+import Data.List.Extra hiding (allSame, groupSortOn, head, last, mconcatMap)
 import Data.List.Extra qualified as List
 import Data.List.NonEmpty qualified as NonEmpty
 import Data.List.NonEmpty.Extra
@@ -141,8 +144,8 @@ import GHC.Real
 import GHC.Stack.Types
 import Language.Haskell.TH.Syntax (Lift)
 import Lens.Micro.Platform hiding (both)
-import Path (parseAbsDir, toFilePath)
-import Path.IO (listDirRecur)
+import Path
+import Path.IO qualified as Path
 import Polysemy
 import Polysemy.Embed
 import Polysemy.Error hiding (fromEither)
@@ -153,9 +156,8 @@ import Polysemy.State
 import Prettyprinter (Doc, (<+>))
 import Safe.Exact
 import Safe.Foldable
-import System.Directory
 import System.Exit
-import System.FilePath
+import System.FilePath (FilePath, dropTrailingPathSeparator, normalise, (<.>), (</>))
 import System.IO hiding
   ( appendFile,
     getContents,
@@ -165,12 +167,15 @@ import System.IO hiding
     hPutStr,
     hPutStrLn,
     interact,
+    openBinaryTempFile,
+    openTempFile,
     putStr,
     putStrLn,
     readFile,
     readFile',
     writeFile,
   )
+import System.IO.Error
 import Text.Show (Show)
 import Text.Show qualified as Show
 
@@ -197,6 +202,14 @@ toUpperFirst (x : xs) = Char.toUpper x : xs
 --------------------------------------------------------------------------------
 -- Foldable
 --------------------------------------------------------------------------------
+
+allSame :: forall t a. (Eq a, Foldable t) => t a -> Bool
+allSame t
+  | null t = True
+  | otherwise = all (== h) t
+  where
+    h :: a
+    h = foldr1 const t
 
 mconcatMap :: (Monoid c, Foldable t) => (a -> c) -> t a -> c
 mconcatMap f = List.mconcatMap f . toList
@@ -347,19 +360,6 @@ fromRightIO :: (e -> Text) -> IO (Either e r) -> IO r
 fromRightIO pp = fromRightIO' (putStrLn . pp)
 
 --------------------------------------------------------------------------------
--- Files
---------------------------------------------------------------------------------
-
--- | Recursively get all files in the given directory.
---
--- The function returns absolute paths.
-getFilesRecursive :: FilePath -> IO [FilePath]
-getFilesRecursive p = do
-  pathP <- makeAbsolute p >>= parseAbsDir
-  (_, files) <- listDirRecur pathP
-  return (toFilePath <$> files)
-
---------------------------------------------------------------------------------
 -- Misc
 --------------------------------------------------------------------------------
 
@@ -409,3 +409,9 @@ instance CanonicalProjection a () where
 -- | 'project' with type arguments swapped. Useful for type application
 project' :: forall b a. CanonicalProjection a b => a -> b
 project' = project
+
+ensureFile :: (MonadIO m, MonadThrow m) => Path Abs File -> m ()
+ensureFile f =
+  unlessM
+    (Path.doesFileExist f)
+    (throwM (mkIOError doesNotExistErrorType "" Nothing (Just (toFilePath f))))

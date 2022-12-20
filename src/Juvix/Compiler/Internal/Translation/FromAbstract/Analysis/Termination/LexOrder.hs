@@ -115,10 +115,10 @@ reflexiveEdges (CompleteCallGraph es) = mapMaybe reflexive (toList es)
           Just $ ReflexiveEdge (e ^. edgeFrom) (e ^. edgeMatrices)
       | otherwise = Nothing
 
-callMatrixDiag :: CallMatrix -> [Rel]
+callMatrixDiag :: CallMatrix -> [SizeRel]
 callMatrixDiag m = [col i r | (i, r) <- zip [0 :: Int ..] m]
   where
-    col :: Int -> CallRow -> Rel
+    col :: Int -> CallRow -> SizeRel
     col i (CallRow row) = case row of
       Nothing -> RNothing
       Just (j, r')
@@ -134,7 +134,7 @@ recursiveBehaviour re =
 findOrder :: RecursiveBehaviour -> Maybe LexOrder
 findOrder rb = LexOrder <$> listToMaybe (mapMaybe (isLexOrder >=> nonEmpty) allPerms)
   where
-    b0 :: [[Rel]]
+    b0 :: [[SizeRel]]
     b0 = rb ^. recursiveBehaviourMatrix
 
     indexed = map (zip [0 :: Int ..] . take minLength) b0
@@ -144,13 +144,13 @@ findOrder rb = LexOrder <$> listToMaybe (mapMaybe (isLexOrder >=> nonEmpty) allP
     startB = removeUselessColumns indexed
 
     -- removes columns that don't have at least one ≺ in them
-    removeUselessColumns :: [[(Int, Rel)]] -> [[(Int, Rel)]]
+    removeUselessColumns :: [[(Int, SizeRel)]] -> [[(Int, SizeRel)]]
     removeUselessColumns = transpose . filter (any (isLess . snd)) . transpose
 
     isLexOrder :: [Int] -> Maybe [Int]
     isLexOrder = go startB
       where
-        go :: [[(Int, Rel)]] -> [Int] -> Maybe [Int]
+        go :: [[(Int, SizeRel)]] -> [Int] -> Maybe [Int]
         go [] _ = Just []
         go b perm = case perm of
           [] -> error "The permutation should have one element at least!"

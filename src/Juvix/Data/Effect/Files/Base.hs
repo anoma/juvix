@@ -1,10 +1,12 @@
 module Juvix.Data.Effect.Files.Base
   ( module Juvix.Data.Effect.Files.Base,
     module Juvix.Data.Effect.Files.Error,
+    module Juvix.Data.Uid,
   )
 where
 
 import Juvix.Data.Effect.Files.Error
+import Juvix.Data.Uid
 import Juvix.Prelude.Base
 import Path
 
@@ -14,31 +16,23 @@ data RecursorArgs = RecursorArgs
     _recFiles :: [Path Rel File]
   }
 
+data Recurse r
+  = RecurseNever
+  | RecurseFilter (Path r Dir -> Bool)
+
 makeLenses ''RecursorArgs
 
 data Files m a where
-  ReadFile' :: FilePath -> Files m Text
-  ReadFileBS' :: FilePath -> Files m ByteString
-  FileExists' :: FilePath -> Files m Bool
-  EqualPaths' :: FilePath -> FilePath -> Files m (Maybe Bool)
-  GetAbsPath :: FilePath -> Files m FilePath
-  CanonicalizePath' :: FilePath -> Files m FilePath
-  RegisterStdlib :: FilePath -> Files m ()
-  UpdateStdlib :: FilePath -> Files m ()
+  EnsureDir' :: Path Abs Dir -> Files m ()
+  DirectoryExists' :: Path Abs Dir -> Files m Bool
+  FileExists' :: Path Abs File -> Files m Bool
+  GetDirAbsPath :: Path Rel Dir -> Files m (Path Abs Dir)
+  ListDirRel :: Path Abs Dir -> Files m ([Path Rel Dir], [Path Rel File])
+  PathUid :: Path Abs b -> Files m Uid
+  ReadFile' :: Path Abs File -> Files m Text
+  ReadFileBS' :: Path Abs File -> Files m ByteString
+  RemoveDirectoryRecursive' :: Path Abs Dir -> Files m ()
+  WriteFile' :: Path Abs File -> Text -> Files m ()
+  WriteFileBS :: Path Abs File -> ByteString -> Files m ()
 
 makeSem ''Files
-
-data StdlibState = StdlibState
-  { _stdlibRoot :: FilePath,
-    _stdlibFilePaths :: HashSet FilePath
-  }
-
-newtype FilesState = FilesState
-  { _stdlibState :: Maybe StdlibState
-  }
-
-makeLenses ''FilesState
-makeLenses ''StdlibState
-
-initState :: FilesState
-initState = FilesState Nothing

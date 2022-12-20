@@ -4,7 +4,7 @@ import Commands.Dev.Internal.Typecheck.Options qualified as Internal
 import CommonOptions
 
 newtype TypecheckOptions = TypecheckOptions
-  { _typecheckInputFile :: Path
+  { _typecheckInputFile :: AppPath File
   }
   deriving stock (Data)
 

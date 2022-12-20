@@ -7,21 +7,22 @@ import Termination.Negative qualified as N
 
 data PosTest = PosTest
   { _name :: String,
-    _relDir :: FilePath,
-    _file :: FilePath
+    _relDir :: Path Rel Dir,
+    _file :: Path Rel File
   }
 
-root :: FilePath
-root = "tests/positive/Termination"
+root :: Path Abs Dir
+root = relToProject $(mkRelDir "tests/positive/Termination")
 
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
-  let tRoot = root </> _relDir
+  let tRoot = root <//> _relDir
+      file' = tRoot <//> _file
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = (defaultEntryPoint _file) {_entryPointNoStdlib = True}
+            let entryPoint = (defaultEntryPoint tRoot file') {_entryPointNoStdlib = True}
             (void . runIO' iniState entryPoint) upToInternal
         }
 
@@ -29,20 +30,20 @@ testDescr PosTest {..} =
 -- Testing --no-termination flag with all termination negative tests
 --------------------------------------------------------------------------------
 
-rootNegTests :: FilePath
-rootNegTests = "tests/negative/Termination"
+rootNegTests :: Path Abs Dir
+rootNegTests = relToProject $(mkRelDir "tests/negative/Termination")
 
 testDescrFlag :: N.NegTest -> TestDescr
 testDescrFlag N.NegTest {..} =
-  let tRoot = rootNegTests </> _relDir
+  let tRoot = rootNegTests <//> _relDir
+      file' = tRoot <//> _file
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint =
-                  (defaultEntryPoint _file)
-                    { _entryPointRoot = ".",
-                      _entryPointNoTermination = True,
+                  (defaultEntryPoint tRoot file')
+                    { _entryPointNoTermination = True,
                       _entryPointNoStdlib = True
                     }
 
@@ -53,16 +54,34 @@ testDescrFlag N.NegTest {..} =
 
 tests :: [PosTest]
 tests =
-  [ PosTest "Ackerman nice def. is terminating" "." "Ack.juvix",
-    PosTest "Fibonacci with nested pattern" "." "Fib.juvix",
-    PosTest "Recursive functions on Lists" "." "Data/List.juvix"
+  [ PosTest
+      "Ackerman nice def. is terminating"
+      $(mkRelDir ".")
+      $(mkRelFile "Ack.juvix"),
+    PosTest
+      "Fibonacci with nested pattern"
+      $(mkRelDir ".")
+      $(mkRelFile "Fib.juvix"),
+    PosTest
+      "Recursive functions on Lists"
+      $(mkRelDir ".")
+      $(mkRelFile "Data/List.juvix")
   ]
 
 testsWithKeyword :: [PosTest]
 testsWithKeyword =
-  [ PosTest "terminating added to fx:=fx" "." "ToEmpty.juvix",
-    PosTest "terminating for all functions in the mutual block" "." "Mutual.juvix",
-    PosTest "Undefined is terminating by assumption" "." "Undefined.juvix"
+  [ PosTest
+      "terminating added to fx:=fx"
+      $(mkRelDir ".")
+      $(mkRelFile "ToEmpty.juvix"),
+    PosTest
+      "terminating for all functions in the mutual block"
+      $(mkRelDir ".")
+      $(mkRelFile "Mutual.juvix"),
+    PosTest
+      "Undefined is terminating by assumption"
+      $(mkRelDir ".")
+      $(mkRelFile "Undefined.juvix")
   ]
 
 negTests :: [N.NegTest]

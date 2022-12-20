@@ -8,7 +8,7 @@ import Juvix.Compiler.Abstract.Pretty.Base qualified as Abstract
 data CallsOptions = CallsOptions
   { _callsFunctionNameFilter :: Maybe (NonEmpty Text),
     _callsShowDecreasingArgs :: Abstract.ShowDecrArgs,
-    _callsInputFile :: Path
+    _callsInputFile :: AppPath File
   }
   deriving stock (Data)
 

@@ -28,7 +28,7 @@ data ReflexiveEdge = ReflexiveEdge
 
 data RecursiveBehaviour = RecursiveBehaviour
   { _recursiveBehaviourFun :: FunctionName,
-    _recursiveBehaviourMatrix :: [[Rel]]
+    _recursiveBehaviourMatrix :: [[SizeRel]]
   }
   deriving stock (Show)
 

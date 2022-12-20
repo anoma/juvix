@@ -20,11 +20,13 @@ import Juvix.Compiler.Concrete.Data.Scope qualified as S
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Language
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.FromSource (runModuleParser)
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context (ParserResult)
+import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
 
 iniScoperState :: ScoperState
@@ -38,12 +40,11 @@ iniScoperState =
 iniScopeParameters :: ScopeParameters
 iniScopeParameters =
   ScopeParameters
-    { _scopeFileExtension = ".juvix",
-      _scopeTopParents = mempty
+    { _scopeTopParents = mempty
     }
 
 scopeCheck ::
-  Members '[Files, Error ScoperError, NameIdGen] r =>
+  Members '[Files, Error ScoperError, NameIdGen, Reader EntryPoint, PathResolver] r =>
   ParserResult ->
   InfoTable ->
   NonEmpty (Module 'Parsed 'ModuleTop) ->
@@ -216,13 +217,13 @@ bindLocalModuleSymbol _moduleExportInfo _moduleRefModule =
 
 checkImport ::
   forall r.
-  Members '[Error ScoperError, State Scope, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, State Scope, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
 checkImport import_@(Import path) = do
   checkCycle
   cache <- gets (^. scoperModulesCache . cachedModules)
-  moduleRef <- maybe (readParseModule path >>= local addImport . checkTopModule) return (cache ^. at path)
+  moduleRef <- maybe (readScopeModule import_) return (cache ^. at path)
   let checked = moduleRef ^. moduleRefModule
       sname = checked ^. modulePath
       moduleId = sname ^. S.nameId
@@ -232,8 +233,6 @@ checkImport import_@(Import path) = do
   modify (over scoperModules (HashMap.insert moduleId moduleRef'))
   return (Import checked)
   where
-    addImport :: ScopeParameters -> ScopeParameters
-    addImport = over scopeTopParents (cons import_)
     checkCycle :: Sem r ()
     checkCycle = do
       topp <- asks (^. scopeTopParents)
@@ -334,7 +333,7 @@ checkQualifiedExpr ::
   Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder] r =>
   QualifiedName ->
   Sem r ScopedIden
-checkQualifiedExpr q@(QualifiedName (Path p) sym) = do
+checkQualifiedExpr q@(QualifiedName (SymbolPath p) sym) = do
   es <- filter entryIsExpression <$> lookupQualifiedSymbol (toList p, sym)
   case es of
     [] -> notInScope
@@ -384,25 +383,32 @@ exportScope Scope {..} = do
                     (MultipleExportConflict _scopePath s (e :| es))
                 )
 
-readParseModule ::
-  Members '[Error ScoperError, Reader ScopeParameters, Files, Parser.InfoTableBuilder, NameIdGen] r =>
+withPath' ::
+  forall r a.
+  Members '[PathResolver, Error ScoperError] r =>
   TopModulePath ->
-  Sem r (Module 'Parsed 'ModuleTop)
-readParseModule mp = do
-  path <- modulePathToFilePath mp
+  (Path Abs File -> Sem r a) ->
+  Sem r a
+withPath' mp a = withPathFile mp (either err a)
+  where
+    err :: PathResolverError -> Sem r a
+    err = throw . ErrTopModulePath . TopModulePathError mp
+
+readScopeModule ::
+  Members '[Error ScoperError, Reader ScopeParameters, Files, Parser.InfoTableBuilder, NameIdGen, PathResolver, State ScoperState, InfoTableBuilder] r =>
+  Import 'Parsed ->
+  Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
+readScopeModule import_ = withPath' (import_ ^. importModule) $ \path -> do
   txt <- readFile' path
   pr <- runModuleParser path txt
   case pr of
     Left err -> throw (ErrParser (MegaParsecError err))
-    Right (tbl, m) -> Parser.mergeTable tbl $> m
-
-modulePathToFilePath ::
-  Members '[Reader ScopeParameters, Files] r =>
-  TopModulePath ->
-  Sem r FilePath
-modulePathToFilePath mp = do
-  ext <- asks (^. scopeFileExtension)
-  topModulePathToFilePath' (Just ext) mp
+    Right (tbl, m) -> do
+      Parser.mergeTable tbl
+      local addImport (checkTopModule m)
+  where
+    addImport :: ScopeParameters -> ScopeParameters
+    addImport = over scopeTopParents (cons import_)
 
 checkOperatorSyntaxDef ::
   forall r.
@@ -510,7 +516,7 @@ createExportsTable ei = foldr (HashSet.insert . getNameId) HashSet.empty (HashMa
 
 checkTopModules ::
   forall r.
-  Members '[Error ScoperError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   NonEmpty (Module 'Parsed 'ModuleTop) ->
   Sem r (NonEmpty (Module 'Scoped 'ModuleTop), HashSet NameId)
 checkTopModules modules = do
@@ -520,14 +526,14 @@ checkTopModules modules = do
 
 checkTopModule_ ::
   forall r.
-  Members '[Error ScoperError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (Module 'Scoped 'ModuleTop)
 checkTopModule_ = fmap (^. moduleRefModule) . checkTopModule
 
 checkTopModule ::
   forall r.
-  Members '[Error ScoperError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
 checkTopModule m@(Module path params doc body) = do
@@ -536,11 +542,11 @@ checkTopModule m@(Module path params doc body) = do
   modify (over (scoperModulesCache . cachedModules) (HashMap.insert path r))
   return r
   where
-    checkPath :: Members '[Files, Reader ScopeParameters, Error ScoperError] s => Sem s ()
+    checkPath :: Members '[Error ScoperError, PathResolver] s => Sem s ()
     checkPath = do
-      expectedPath <- modulePathToFilePath path
-      let actualPath = getLoc path ^. intervalFile
-      unlessM (fromMaybe True <$> equalPaths' expectedPath actualPath) $
+      expectedPath <- expectedModulePath path
+      let actualPath = absFile (getLoc path ^. intervalFile)
+      unlessM (equalPaths expectedPath actualPath) $
         throw
           ( ErrWrongTopModuleName
               WrongTopModuleName
@@ -598,7 +604,7 @@ withScope ma = do
 
 checkModuleBody ::
   forall r.
-  Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   [Statement 'Parsed] ->
   Sem r (ExportInfo, [Statement 'Scoped])
 checkModuleBody body = do
@@ -610,7 +616,7 @@ checkModuleBody body = do
 
 checkLocalModule ::
   forall r.
-  Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, Files, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   Module 'Parsed 'ModuleLocal ->
   Sem r (Module 'Scoped 'ModuleLocal)
 checkLocalModule Module {..} = do
@@ -686,7 +692,7 @@ lookupModuleSymbol n = do
     notInScope = throw (ErrModuleNotInScope (ModuleNotInScope n))
     (path, sym) = case n of
       NameUnqualified s -> ([], s)
-      NameQualified (QualifiedName (Path p) s) -> (toList p, s)
+      NameQualified (QualifiedName (SymbolPath p) s) -> (toList p, s)
 
 getModuleRef :: SymbolEntry -> Maybe (ModuleRef' 'S.NotConcrete)
 getModuleRef = \case
@@ -706,7 +712,7 @@ getExportInfo modId = do
     _ :&: ent -> ent ^. moduleExportInfo
 
 checkOpenImportModule ::
-  Members '[Error ScoperError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenImportModule op
@@ -714,7 +720,7 @@ checkOpenImportModule op
       let moduleNameToTopModulePath :: Name -> TopModulePath
           moduleNameToTopModulePath = \case
             NameUnqualified s -> TopModulePath [] s
-            NameQualified (QualifiedName (Path p) s) -> TopModulePath (toList p) s
+            NameQualified (QualifiedName (SymbolPath p) s) -> TopModulePath (toList p) s
           import_ :: Import 'Parsed
           import_ = Import (moduleNameToTopModulePath (op ^. openModuleName))
        in do
@@ -783,7 +789,7 @@ checkOpenModuleNoImport OpenModule {..}
 
 checkOpenModule ::
   forall r.
-  Members '[Error ScoperError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenModule op
@@ -1102,14 +1108,14 @@ checkPatternName n = do
     Nothing -> PatternScopedVar <$> groupBindLocalVariable sym -- the symbol is a variable
   where
     (path, sym) = case n of
-      NameQualified (QualifiedName (Path p) s) -> (toList p, s)
+      NameQualified (QualifiedName (SymbolPath p) s) -> (toList p, s)
       NameUnqualified s -> ([], s)
     -- check whether the symbol is a constructor in scope
     getConstructorRef :: Sem r (Maybe ConstructorRef)
     getConstructorRef = do
       entries <- mapMaybe getConstructor <$> lookupQualifiedSymbol (path, sym)
       case entries of
-        [] -> case Path <$> nonEmpty path of
+        [] -> case SymbolPath <$> nonEmpty path of
           Nothing -> return Nothing -- There is no constructor with such a name
           Just pth -> throw (ErrQualSymNotInScope (QualSymNotInScope (QualifiedName pth sym)))
         [e] -> return (Just (set (constructorRefName . S.nameConcrete) n e)) -- There is one constructor with such a name
@@ -1295,7 +1301,7 @@ checkParsePatternAtom ::
 checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
 
 checkStatement ::
-  Members '[Error ScoperError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen] r =>
+  Members '[Error ScoperError, Reader ScopeParameters, Files, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   Statement 'Parsed ->
   Sem r (Statement 'Scoped)
 checkStatement s = case s of

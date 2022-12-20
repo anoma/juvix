@@ -15,6 +15,7 @@ github:          anoma/juvix
 extra-source-files:
 - README.org
 - assets/*
+- juvix-stdlib/juvix.yaml
 - juvix-stdlib/**/*.juvix
 - runtime/include/**/*.h
 - runtime/**/*.a
@@ -23,6 +24,7 @@ extra-source-files:
 
 dependencies:
 - aeson == 2.0.*
+- aeson-better-errors == 0.9.*
 - ansi-terminal == 0.11.*
 - base == 4.16.*
 - blaze-html == 0.9.*
@@ -31,8 +33,8 @@ dependencies:
 - directory == 1.3.*
 - dlist == 1.0.*
 - edit-distance == 0.2.*
+- exceptions == 0.10.*
 - extra == 1.7.*
-- transformers == 0.5.*
 - file-embed == 0.0.*
 - filepath == 1.4.*
 - gitrev == 1.3.*
@@ -45,19 +47,20 @@ dependencies:
 - path-io == 1.7.*
 - polysemy == 1.7.*
 - polysemy-plugin == 0.4.*
+- pretty == 1.1.*
 - prettyprinter == 1.7.*
 - prettyprinter-ansi-terminal == 1.1.*
-- pretty == 1.1.*
 - process == 1.6.*
 - safe == 0.3.*
-- semirings == 0.6.*
 - singletons == 3.0.*
 - singletons-th == 3.1.*
 - Stream == 0.4.*
-- time == 1.11.*
 - template-haskell == 2.18.*
 - text == 1.2.*
 - th-utilities == 0.2.*
+- time == 1.11.*
+- transformers == 0.5.*
+- unix-compat == 0.5.*
 - unordered-containers == 0.2.*
 - versions == 5.0.*
 - yaml == 0.11.*

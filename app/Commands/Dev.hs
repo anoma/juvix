@@ -30,4 +30,4 @@ runCommand = \case
   Core opts -> Core.runCommand opts
   Asm opts -> Asm.runCommand opts
   Runtime opts -> Runtime.runCommand opts
-  DisplayRoot -> DisplayRoot.runCommand
+  DisplayRoot opts -> DisplayRoot.runCommand opts

@@ -3,7 +3,7 @@ module Commands.Dev.Internal.Pretty.Options where
 import CommonOptions
 
 newtype InternalPrettyOptions = InternalPrettyOptions
-  { _internalPrettyInputFile :: Path
+  { _internalPrettyInputFile :: AppPath File
   }
   deriving stock (Data)
 

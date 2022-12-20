@@ -12,19 +12,19 @@ import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Translation.FromInternal.Data as Core
 import Juvix.Compiler.Pipeline
-import System.IO.Extra (withTempDir)
 
-internalCoreAssertion :: FilePath -> FilePath -> (String -> IO ()) -> Assertion
+internalCoreAssertion :: Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
 internalCoreAssertion mainFile expectedFile step = do
   step "Translate to Core"
-  let entryPoint = defaultEntryPoint mainFile
+  cwd <- getCurrentDir
+  let entryPoint = defaultEntryPoint cwd mainFile
   tab <- (^. Core.coreResultTable) . snd <$> runIO' iniState entryPoint upToCore
   case (tab ^. infoMain) >>= ((tab ^. identContext) HashMap.!?) of
     Just node -> do
-      withTempDir
+      withTempDir'
         ( \dirPath -> do
-            let outputFile = dirPath </> "out.out"
-            hout <- openFile outputFile WriteMode
+            let outputFile = dirPath <//> $(mkRelFile "out.out")
+            hout <- openFile (toFilePath outputFile) WriteMode
             step "Evaluate"
             r' <- doEval mainFile hout tab node
             case r' of
@@ -36,9 +36,9 @@ internalCoreAssertion mainFile expectedFile step = do
                   (Info.member kNoDisplayInfo (getInfo value))
                   (hPutStrLn hout (ppPrint value))
                 hClose hout
-                actualOutput <- TIO.readFile outputFile
+                actualOutput <- TIO.readFile (toFilePath outputFile)
                 step "Compare expected and actual program output"
-                expected <- TIO.readFile expectedFile
-                assertEqDiff ("Check: EVAL output = " <> expectedFile) actualOutput expected
+                expected <- TIO.readFile (toFilePath expectedFile)
+                assertEqDiff ("Check: EVAL output = " <> toFilePath expectedFile) actualOutput expected
         )
-    Nothing -> assertFailure ("No main function registered in: " <> mainFile)
+    Nothing -> assertFailure ("No main function registered in: " <> toFilePath mainFile)

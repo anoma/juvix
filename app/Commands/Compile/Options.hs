@@ -2,7 +2,10 @@ module Commands.Compile.Options where
 
 import CommonOptions
 
-data CompileTarget = TargetC | TargetWasm | TargetNative
+data CompileTarget
+  = TargetC
+  | TargetWasm
+  | TargetNative
   deriving stock (Show, Data)
 
 data CompileRuntime
@@ -14,8 +17,8 @@ data CompileRuntime
 data CompileOptions = CompileOptions
   { _compileTarget :: CompileTarget,
     _compileRuntime :: CompileRuntime,
-    _compileOutputFile :: Maybe Path,
-    _compileInputFile :: Path
+    _compileOutputFile :: Maybe (AppPath File),
+    _compileInputFile :: AppPath File
   }
   deriving stock (Data)
 

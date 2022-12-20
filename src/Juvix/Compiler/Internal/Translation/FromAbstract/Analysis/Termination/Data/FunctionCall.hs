@@ -17,7 +17,7 @@ data FunCall = FunCall
   }
 
 newtype CallRow = CallRow
-  { _callRow :: Maybe (Int, Rel')
+  { _callRow :: Maybe (Int, SizeRel')
   }
   deriving stock (Eq, Show, Generic)
 

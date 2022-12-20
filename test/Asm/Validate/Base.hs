@@ -5,7 +5,7 @@ import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Transformation.Validate
 import Juvix.Compiler.Asm.Translation.FromSource
 
-asmValidateErrorAssertion :: FilePath -> (String -> IO ()) -> Assertion
+asmValidateErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 asmValidateErrorAssertion mainFile step = do
   step "Parse"
   r <- parseFile mainFile
@@ -17,7 +17,7 @@ asmValidateErrorAssertion mainFile step = do
         Just _ -> assertBool "" True
         Nothing -> assertFailure "no error"
 
-parseFile :: FilePath -> IO (Either ParserError InfoTable)
+parseFile :: Path Abs File -> IO (Either ParserError InfoTable)
 parseFile f = do
-  s <- readFile f
-  return $ runParser f s
+  s <- readFile (toFilePath f)
+  return $ runParser (toFilePath f) s

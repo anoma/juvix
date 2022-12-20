@@ -6,11 +6,13 @@ import Base
 
 testDescr :: Run.PosTest -> TestDescr
 testDescr Run.PosTest {..} =
-  let tRoot = Run.root </> _relDir
+  let tRoot = Run.root <//> _relDir
+      file' = tRoot <//> _file
+      expected' = tRoot <//> _expectedFile
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ asmCompileAssertion _file _expectedFile
+          _testAssertion = Steps $ asmCompileAssertion file' expected'
         }
 
 allTests :: TestTree

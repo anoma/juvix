@@ -7,21 +7,22 @@ import Typecheck.Negative qualified as N
 
 data PosTest = PosTest
   { _name :: String,
-    _relDir :: FilePath,
-    _file :: FilePath
+    _relDir :: Path Rel Dir,
+    _file :: Path Rel File
   }
 
-root :: FilePath
-root = "tests/positive"
+root :: Path Abs Dir
+root = relToProject $(mkRelDir "tests/positive")
 
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
-  let tRoot = root </> _relDir
+  let tRoot = root <//> _relDir
+      file' = tRoot <//> _file
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = defaultEntryPoint _file
+            let entryPoint = defaultEntryPoint tRoot file'
             (void . runIO' iniState entryPoint) upToInternalTyped
         }
 
@@ -29,18 +30,19 @@ testDescr PosTest {..} =
 -- Testing --no-positivity flag with all related negative tests
 --------------------------------------------------------------------------------
 
-rootNegTests :: FilePath
-rootNegTests = "tests/negative/"
+rootNegTests :: Path Abs Dir
+rootNegTests = relToProject $(mkRelDir "tests/negative/")
 
 testNoPositivityFlag :: N.NegTest -> TestDescr
 testNoPositivityFlag N.NegTest {..} =
-  let tRoot = rootNegTests </> _relDir
+  let tRoot = rootNegTests <//> _relDir
+      file' = tRoot <//> _file
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
             let entryPoint =
-                  (defaultEntryPoint _file)
+                  (defaultEntryPoint tRoot file')
                     { _entryPointNoPositivity = True
                     }
 
@@ -54,8 +56,8 @@ testPositivityKeyword :: [PosTest]
 testPositivityKeyword =
   [ PosTest
       "Mark T0 data type as strictly positive"
-      "Internal/Positivity"
-      "E5.juvix"
+      $(mkRelDir "Internal/Positivity")
+      $(mkRelFile "E5.juvix")
   ]
 
 positivityTestGroup :: TestTree
@@ -86,90 +88,90 @@ tests :: [PosTest]
 tests =
   [ PosTest
       "Simple"
-      "Internal"
-      "Simple.juvix",
+      $(mkRelDir "Internal")
+      $(mkRelFile "Simple.juvix"),
     PosTest
       "Literal String matches any type"
-      "Internal"
-      "LiteralString.juvix",
+      $(mkRelDir "Internal")
+      $(mkRelFile "LiteralString.juvix"),
     PosTest
       "Box type"
-      "Internal"
-      "Box.juvix",
+      $(mkRelDir "Internal")
+      $(mkRelFile "Box.juvix"),
     PosTest
       "Literal Int matches any type"
-      "Internal"
-      "LiteralInt.juvix",
+      $(mkRelDir "Internal")
+      $(mkRelFile "LiteralInt.juvix"),
     PosTest
       "PolySimpleFungibleToken"
-      "FullExamples"
-      "SimpleFungibleTokenImplicit.juvix",
+      $(mkRelDir "FullExamples")
+      $(mkRelFile "SimpleFungibleTokenImplicit.juvix"),
     PosTest
       "GHC backend MonoSimpleFungibleToken"
-      "FullExamples"
-      "MonoSimpleFungibleToken.juvix",
+      $(mkRelDir "FullExamples")
+      $(mkRelFile "MonoSimpleFungibleToken.juvix"),
     PosTest
       "Axiom"
-      "."
-      "Axiom.juvix",
+      $(mkRelDir ".")
+      $(mkRelFile "Axiom.juvix"),
     PosTest
       "Inductive"
-      "."
-      "Inductive.juvix",
+      $(mkRelDir ".")
+      $(mkRelFile "Inductive.juvix"),
     PosTest
       "Operators"
-      "."
-      "Operators.juvix",
+      $(mkRelDir ".")
+      $(mkRelFile "Operators.juvix"),
     PosTest
       "Holes in type signature"
-      "Internal"
-      "HoleInSignature.juvix",
+      $(mkRelDir "Internal")
+      $(mkRelFile "HoleInSignature.juvix"),
     PosTest
       "Polymorphism and higher rank functions"
-      "."
-      "Polymorphism.juvix",
+      $(mkRelDir ".")
+      $(mkRelFile "Polymorphism.juvix"),
     PosTest
       "Polymorphism and higher rank functions with explicit holes"
-      "."
-      "PolymorphismHoles.juvix",
+      $(mkRelDir ".")
+      $(mkRelFile "PolymorphismHoles.juvix"),
     PosTest
       "Implicit arguments"
-      "Internal"
-      "Implicit.juvix",
+      $(mkRelDir "Internal")
+      $(mkRelFile "Implicit.juvix"),
     PosTest
       "Simple type alias"
-      "."
-      "TypeAlias.juvix",
+      $(mkRelDir ".")
+      $(mkRelFile "TypeAlias.juvix"),
     PosTest
       "Refine hole in type signature"
-      "272"
-      "M.juvix",
+      $(mkRelDir "272")
+      $(mkRelFile "M.juvix"),
     PosTest
       "Pattern match a hole type"
-      "265"
-      "M.juvix",
+      $(mkRelDir "265")
+      $(mkRelFile "M.juvix"),
     PosTest
       "Pattern match type synonym"
-      "issue1466"
-      "M.juvix",
+      $(mkRelDir "issue1466")
+      $(mkRelFile "M.juvix"),
     PosTest
       "Import a builtin multiple times"
-      "BuiltinsMultiImport"
-      "Input.juvix",
+      $(mkRelDir "BuiltinsMultiImport")
+      $(mkRelFile "Input.juvix"),
     PosTest
       "Basic lambda functions"
-      "Internal"
-      "Lambda.juvix",
+      $(mkRelDir "Internal")
+      $(mkRelFile "Lambda.juvix"),
     PosTest
       "Simple mutual inference"
-      "Internal"
-      "Mutual.juvix",
+      $(mkRelDir "Internal")
+      $(mkRelFile "Mutual.juvix"),
     PosTest
       "open import a builtin multiple times"
-      "BuiltinsMultiOpenImport"
-      "Input.juvix",
+      $(mkRelDir "BuiltinsMultiOpenImport")
+      $(mkRelFile "Input.juvix"),
     PosTest
       "As Patterns"
-      "Internal"
-      "AsPattern.juvix"
+      $(mkRelDir "Internal")
+      $(mkRelFile "AsPattern.juvix")
   ]

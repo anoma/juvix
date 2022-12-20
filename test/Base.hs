@@ -3,12 +3,14 @@ module Base
     module Test.Tasty.HUnit,
     module Juvix.Prelude,
     module Base,
+    module Juvix.Extra.Paths,
   )
 where
 
 import Control.Monad.Extra as Monad
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
+import Juvix.Extra.Paths
 import Juvix.Prelude
 import System.Environment (lookupEnv)
 import Test.Tasty
@@ -21,13 +23,13 @@ data AssertionDescr
 
 data TestDescr = TestDescr
   { _testName :: String,
-    _testRoot :: FilePath,
+    _testRoot :: Path Abs Dir,
     -- | relative to root
     _testAssertion :: AssertionDescr
   }
 
 newtype WASMInfo = WASMInfo
-  { _wasmInfoActual :: FilePath -> IO Text
+  { _wasmInfoActual :: Path Abs File -> IO Text
   }
 
 makeLenses ''TestDescr
@@ -39,8 +41,8 @@ data CompileMode = WASI StdlibMode | WASM WASMInfo
 
 mkTest :: TestDescr -> TestTree
 mkTest TestDescr {..} = case _testAssertion of
-  Single assertion -> testCase _testName $ withCurrentDirectory _testRoot assertion
-  Steps steps -> testCaseSteps _testName (withCurrentDirectory _testRoot . steps)
+  Single assertion -> testCase _testName $ withCurrentDir _testRoot assertion
+  Steps steps -> testCaseSteps _testName (withCurrentDir _testRoot . steps)
 
 assertEqDiff :: (Eq a, Show a) => String -> a -> a -> Assertion
 assertEqDiff msg a b
@@ -53,9 +55,9 @@ assertEqDiff msg a b
     pa = lines $ ppShow a
     pb = lines $ ppShow b
 
-assertCmdExists :: FilePath -> Assertion
+assertCmdExists :: Path Rel File -> Assertion
 assertCmdExists cmd =
-  assertBool ("Command: " <> cmd <> " is not present on $PATH")
+  assertBool ("Command: " <> toFilePath cmd <> " is not present on $PATH")
     . isJust
     =<< findExecutable cmd
 

@@ -6,7 +6,7 @@ import Juvix.Compiler.Core.Pretty.Options qualified as Core
 
 data CoreEvalOptions = CoreEvalOptions
   { _coreEvalNoIO :: Bool,
-    _coreEvalInputFile :: Path,
+    _coreEvalInputFile :: AppPath File,
     _coreEvalShowDeBruijn :: Bool
   }
   deriving stock (Data)

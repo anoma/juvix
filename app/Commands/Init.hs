@@ -26,13 +26,13 @@ init = do
   say "✨ Your next Juvix adventure is about to begin! ✨"
   say "I will help you set it up"
   pkg <- getPackage
-  say ("creating " <> pack juvixYamlFile)
-  embed (encodeFile juvixYamlFile pkg)
+  say ("creating " <> pack (toFilePath juvixYamlFile))
+  embed (encodeFile (toFilePath juvixYamlFile) (rawPackage pkg))
   say "you are all set"
 
 checkNotInProject :: forall r. Members '[Embed IO] r => Sem r ()
 checkNotInProject =
-  whenM (embed (doesFileExist juvixYamlFile)) err
+  whenM (doesFileExist juvixYamlFile) err
   where
     err :: Sem r ()
     err = do
@@ -43,11 +43,12 @@ getPackage :: forall r. Members '[Embed IO] r => Sem r Package
 getPackage = do
   tproj <- getProjName
   say "Tell me the version of your project [leave empty for 0.0.0]"
-  tversion <- getVersion
+  tversion :: SemVer <- getVersion
   return
     Package
-      { _packageName = Just tproj,
-        _packageVersion = Just (prettySemVer tversion)
+      { _packageName = tproj,
+        _packageVersion = Ideal tversion,
+        _packageDependencies = mempty
       }
 
 getProjName :: forall r. Members '[Embed IO] r => Sem r Text
@@ -66,7 +67,7 @@ getProjName = do
   where
     getDefault :: Sem r (Maybe Text)
     getDefault = runFail $ do
-      dir <- map toLower <$> (embed getCurrentDirectory >>= Fail.last . splitDirectories)
+      dir <- map toLower . dropTrailingPathSeparator . toFilePath . dirname <$> getCurrentDir
       Fail.fromRight (parse projectNameParser (pack dir))
     readName :: Maybe Text -> Sem r Text
     readName def = go

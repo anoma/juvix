@@ -1,0 +1,5 @@
+module Base;
+
+  axiom Base : Type;
+
+end;

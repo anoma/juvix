@@ -23,10 +23,10 @@ data TopCommand
   | JuvixRepl ReplOptions
   deriving stock (Data)
 
-topCommandInputFile :: TopCommand -> Maybe FilePath
+topCommandInputFile :: TopCommand -> Maybe (SomeBase File)
 topCommandInputFile = firstJust getInputFile . universeBi
   where
-    getInputFile :: Path -> Maybe FilePath
+    getInputFile :: AppPath File -> Maybe (SomeBase File)
     getInputFile p
       | p ^. pathIsInput = Just (p ^. pathPath)
       | otherwise = Nothing
@@ -133,12 +133,6 @@ parseTopCommand =
     <|> parseDisplayHelp
     <|> parseCompilerCommand
     <|> parseUtility
-
-makeAbsPaths :: TopCommand -> IO TopCommand
-makeAbsPaths = transformBiM go
-  where
-    go :: Path -> IO Path
-    go = traverseOf pathPath canonicalizePath
 
 descr :: ParserInfo (GlobalOptions, TopCommand)
 descr =

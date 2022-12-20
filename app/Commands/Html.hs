@@ -10,4 +10,5 @@ runCommand :: Members '[Embed IO, App] r => HtmlOptions -> Sem r ()
 runCommand HtmlOptions {..} = do
   res <- runPipeline _htmlInputFile upToScoping
   let m = head (res ^. Scoper.resultModules)
-  embed (Html.genHtml Concrete.defaultOptions _htmlRecursive _htmlTheme (_htmlOutputDir ^. pathPath) _htmlPrintMetadata m)
+  outDir <- someBaseToAbs' (_htmlOutputDir ^. pathPath)
+  embed (Html.genHtml Concrete.defaultOptions _htmlRecursive _htmlTheme outDir _htmlPrintMetadata m)

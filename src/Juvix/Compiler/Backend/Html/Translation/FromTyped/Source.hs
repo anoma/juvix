@@ -12,6 +12,7 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Base
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Extra.Paths
 import Juvix.Extra.Version
@@ -34,11 +35,11 @@ kindSuffix = \case
   HtmlSrc -> "-src"
   HtmlOnly -> ""
 
-genHtml :: Options -> Bool -> Theme -> FilePath -> Bool -> Module 'Scoped 'ModuleTop -> IO ()
+genHtml :: Options -> Bool -> Theme -> Path Abs Dir -> Bool -> Module 'Scoped 'ModuleTop -> IO ()
 genHtml opts recursive theme outputDir printMetadata entry = do
-  createDirectoryIfMissing True outputDir
+  ensureDir outputDir
   copyAssetFiles
-  withCurrentDirectory outputDir $ do
+  withCurrentDir outputDir $ do
     mapM_ outputModule allModules
   where
     allModules
@@ -47,25 +48,26 @@ genHtml opts recursive theme outputDir printMetadata entry = do
 
     copyAssetFiles :: IO ()
     copyAssetFiles = do
-      createDirectoryIfMissing True toAssetsDir
+      ensureDir toAssetsDir
       mapM_ writeAsset assetFiles
       where
-        assetFiles :: [(FilePath, BS.ByteString)]
-        assetFiles = $(assetsDir)
+        assetFiles :: [(Path Rel File, BS.ByteString)]
+        assetFiles = assetsDir
 
-        writeAsset :: (FilePath, BS.ByteString) -> IO ()
+        writeAsset :: (Path Rel File, BS.ByteString) -> IO ()
         writeAsset (filePath, fileContents) =
-          BS.writeFile (toAssetsDir </> takeFileName filePath) fileContents
-        toAssetsDir = outputDir </> "assets"
+          BS.writeFile (toFilePath (toAssetsDir <//> filePath)) fileContents
+        toAssetsDir = outputDir <//> $(mkRelDir "assets")
 
     outputModule :: Module 'Scoped 'ModuleTop -> IO ()
     outputModule m = do
-      createDirectoryIfMissing True (takeDirectory htmlFile)
-      putStrLn $ "Writing " <> pack htmlFile
+      ensureDir (parent htmlFile)
+      putStrLn $ "Writing " <> pack (toFilePath htmlFile)
       utc <- getCurrentTime
-      Text.writeFile htmlFile (genModule opts HtmlOnly printMetadata utc theme m)
+      Text.writeFile (toFilePath htmlFile) (genModule opts HtmlOnly printMetadata utc theme m)
       where
-        htmlFile = topModulePathToDottedPath (m ^. modulePath . S.nameConcrete) <.> ".html"
+        htmlFile :: Path Rel File
+        htmlFile = relFile (topModulePathToDottedPath (m ^. modulePath . S.nameConcrete) <.> ".html")
 
 genModuleHtml :: Options -> HtmlKind -> Bool -> UTCTime -> Theme -> Module 'Scoped 'ModuleTop -> Html
 genModuleHtml opts htmlKind printMetadata utc theme m =
@@ -215,15 +217,12 @@ putTag ann x = case ann of
 nameIdAttr :: S.NameId -> AttributeValue
 nameIdAttr (S.NameId k) = fromString . show $ k
 
-moduleDocRelativePath :: Members '[Reader HtmlOptions] r => TopModulePath -> Sem r FilePath
+moduleDocRelativePath :: Members '[Reader HtmlOptions] r => TopModulePath -> Sem r (Path Rel File)
 moduleDocRelativePath m = do
   suff <- kindSuffix <$> asks (^. htmlOptionsKind)
-  return (topModulePathToRelativeFilePath (Just "html") suff joinDot m)
-  where
-    joinDot :: FilePath -> FilePath -> FilePath
-    joinDot l r = l <.> r
+  return (topModulePathToRelativePathDot ".html" suff m)
 
 nameIdAttrRef :: Members '[Reader HtmlOptions] r => TopModulePath -> Maybe S.NameId -> Sem r AttributeValue
 nameIdAttrRef tp s = do
-  pth <- moduleDocRelativePath tp
+  pth <- toFilePath <$> moduleDocRelativePath tp
   return (fromString pth <> preEscapedToValue '#' <>? (nameIdAttr <$> s))

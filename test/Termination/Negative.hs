@@ -9,19 +9,20 @@ type FailMsg = String
 
 data NegTest = NegTest
   { _name :: String,
-    _relDir :: FilePath,
-    _file :: FilePath,
+    _relDir :: Path Rel Dir,
+    _file :: Path Rel File,
     _checkErr :: TerminationError -> Maybe FailMsg
   }
 
 testDescr :: NegTest -> TestDescr
 testDescr NegTest {..} =
-  let tRoot = root </> _relDir
+  let tRoot = root <//> _relDir
+      file' = tRoot <//> _file
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
-            let entryPoint = (defaultEntryPoint _file) {_entryPointNoStdlib = True}
+            let entryPoint = (defaultEntryPoint tRoot file') {_entryPointNoStdlib = True}
             result <- runIOEither iniState entryPoint upToInternal
             case mapLeft fromJuvixError result of
               Left (Just lexError) -> whenJust (_checkErr lexError) assertFailure
@@ -35,51 +36,51 @@ allTests =
     "Termination negative tests"
     (map (mkTest . testDescr) tests)
 
-root :: FilePath
-root = "tests/negative/Termination"
+root :: Path Abs Dir
+root = relToProject $(mkRelDir "tests/negative/Termination")
 
 tests :: [NegTest]
 tests =
   [ NegTest
       "Mutual recursive functions non terminating"
-      "."
-      "Mutual.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "Mutual.juvix")
       $ \case
         ErrNoLexOrder {} -> Nothing,
     NegTest
       "Another mutual block non terminating"
-      "."
-      "Ord.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "Ord.juvix")
       $ \case
         ErrNoLexOrder {} -> Nothing,
     NegTest
       "Only one function, f, marked terminating in a mutual block"
-      "."
-      "TerminatingF.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "TerminatingF.juvix")
       $ \case
         ErrNoLexOrder {} -> Nothing,
     NegTest
       "Only one function, g, marked terminating in a mutual block"
-      "."
-      "TerminatingG.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "TerminatingG.juvix")
       $ \case
         ErrNoLexOrder {} -> Nothing,
     NegTest
       "f x := f x is not terminating"
-      "."
-      "ToEmpty.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "ToEmpty.juvix")
       $ \case
         ErrNoLexOrder {} -> Nothing,
     NegTest
       "Tree"
-      "."
-      "Data/Tree.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "Data/Tree.juvix")
       $ \case
         ErrNoLexOrder {} -> Nothing,
     NegTest
       "Quicksort is not terminating"
-      "."
-      "Data/QuickSort.juvix"
+      $(mkRelDir ".")
+      $(mkRelFile "Data/QuickSort.juvix")
       $ \case
         ErrNoLexOrder {} -> Nothing
   ]

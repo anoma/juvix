@@ -13,10 +13,30 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Language qualified as L
 import Juvix.Compiler.Concrete.Pretty.Options (Options, fromGenericOptions)
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
 import Juvix.Data.CodeAnn
 import Juvix.Parser.Error qualified as Parser
 import Juvix.Prelude
+
+data TopModulePathError = TopModulePathError
+  { _topModulePathErrorPath :: TopModulePath,
+    _topModulePathError :: PathResolverError
+  }
+  deriving stock (Show)
+
+instance ToGenericError TopModulePathError where
+  genericError TopModulePathError {..} = do
+    let msg = ppCodeAnn _topModulePathError
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = AnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _topModulePathErrorPath
 
 data MultipleDeclarations = MultipleDeclarations
   { _multipleDeclEntry :: SymbolEntry,
@@ -406,8 +426,8 @@ instance ToGenericError UnusedOperatorDef where
               <> ppCode opts' _unusedOperatorDef
 
 data WrongTopModuleName = WrongTopModuleName
-  { _wrongTopModuleNameExpectedPath :: FilePath,
-    _wrongTopModuleNameActualPath :: FilePath,
+  { _wrongTopModuleNameExpectedPath :: Path Abs File,
+    _wrongTopModuleNameActualPath :: Path Abs File,
     _wrongTopModuleNameActualName :: TopModulePath
   }
   deriving stock (Show)

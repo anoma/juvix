@@ -5,7 +5,8 @@ import Juvix.Data.Loc
 import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
 
-data FilesErrorCause = StdlibConflict
+data FilesErrorCause
+  = StdlibConflict
   deriving stock (Show)
 
 data FilesError = FilesError

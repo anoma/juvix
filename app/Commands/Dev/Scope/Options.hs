@@ -6,7 +6,7 @@ import Juvix.Compiler.Concrete.Pretty qualified as Scoper
 
 data ScopeOptions = ScopeOptions
   { _scopeInlineImports :: Bool,
-    _scopeInputFile :: Path
+    _scopeInputFile :: AppPath File
   }
   deriving stock (Data)
 

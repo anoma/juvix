@@ -4,7 +4,7 @@ module Juvix.Compiler.Core.Info where
 
 import Data.Dynamic
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Prelude
+import Juvix.Prelude hiding (insert)
 
 class Typeable a => IsInfo a
 
@@ -21,7 +21,7 @@ empty :: Info
 empty = Info HashMap.empty
 
 singleton :: forall a. IsInfo a => a -> Info
-singleton a = Juvix.Compiler.Core.Info.insert a Juvix.Compiler.Core.Info.empty
+singleton a = insert a mempty
 
 member :: forall a. IsInfo a => Key a -> Info -> Bool
 member k i = HashMap.member (typeRep k) (i ^. infoMap)

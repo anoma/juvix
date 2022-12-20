@@ -5,20 +5,21 @@ import Core.Eval.Base
 
 data NegTest = NegTest
   { _name :: String,
-    _relDir :: FilePath,
-    _file :: FilePath
+    _relDir :: Path Rel Dir,
+    _file :: Path Rel File
   }
 
-root :: FilePath
-root = "tests/Core/negative"
+root :: Path Abs Dir
+root = relToProject $(mkRelDir "tests/Core/negative")
 
 testDescr :: NegTest -> TestDescr
 testDescr NegTest {..} =
-  let tRoot = root </> _relDir
+  let tRoot = root <//> _relDir
+      file' = tRoot <//> _file
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ coreEvalErrorAssertion _file
+          _testAssertion = Steps $ coreEvalErrorAssertion file'
         }
 
 allTests :: TestTree
@@ -31,42 +32,42 @@ tests :: [NegTest]
 tests =
   [ NegTest
       "Division by zero"
-      "."
-      "test001.jvc",
+      $(mkRelDir ".")
+      $(mkRelFile "test001.jvc"),
     NegTest
       "Arithmetic operations on non-numbers"
-      "."
-      "test002.jvc",
+      $(mkRelDir ".")
+      $(mkRelFile "test002.jvc"),
     NegTest
       "Matching on non-data"
-      "."
-      "test003.jvc",
+      $(mkRelDir ".")
+      $(mkRelFile "test003.jvc"),
     NegTest
       "If on non-boolean"
-      "."
-      "test004.jvc",
+      $(mkRelDir ".")
+      $(mkRelFile "test004.jvc"),
     NegTest
       "No matching case branch"
-      "."
-      "test005.jvc",
+      $(mkRelDir ".")
+      $(mkRelFile "test005.jvc"),
     NegTest
       "Invalid application"
-      "."
-      "test006.jvc",
+      $(mkRelDir ".")
+      $(mkRelFile "test006.jvc"),
     NegTest
       "Invalid builtin application"
-      "."
-      "test007.jvc",
+      $(mkRelDir ".")
+      $(mkRelFile "test007.jvc"),
     NegTest
       "Undefined symbol"
-      "."
-      "test008.jvc",
+      $(mkRelDir ".")
+      $(mkRelFile "test008.jvc"),
     NegTest
       "Erroneous Church numerals"
-      "."
-      "test009.jvc",
+      $(mkRelDir ".")
+      $(mkRelFile "test009.jvc"),
     NegTest
       "Empty letrec"
-      "."
-      "test010.jvc"
+      $(mkRelDir ".")
+      $(mkRelFile "test010.jvc")
   ]

@@ -5,20 +5,21 @@ import Base
 
 data NegTest = NegTest
   { _name :: String,
-    _relDir :: FilePath,
-    _file :: FilePath
+    _relDir :: Path Rel Dir,
+    _file :: Path Rel File
   }
 
-root :: FilePath
-root = "tests/Asm/negative"
+root :: Path Abs Dir
+root = relToProject $(mkRelDir "tests/Asm/negative")
 
 testDescr :: NegTest -> TestDescr
 testDescr NegTest {..} =
-  let tRoot = root </> _relDir
+  let tRoot = root <//> _relDir
+      file' = tRoot <//> _file
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ asmRunErrorAssertion _file
+          _testAssertion = Steps $ asmRunErrorAssertion file'
         }
 
 allTests :: TestTree
@@ -31,14 +32,14 @@ tests :: [NegTest]
 tests =
   [ NegTest
       "Division by zero"
-      "."
-      "test001.jva",
+      $(mkRelDir ".")
+      $(mkRelFile "test001.jva"),
     NegTest
       "Invalid memory access"
-      "."
-      "test002.jva",
+      $(mkRelDir ".")
+      $(mkRelFile "test002.jva"),
     NegTest
       "No matching case branch"
-      "."
-      "test003.jva"
+      $(mkRelDir ".")
+      $(mkRelFile "test003.jva")
   ]

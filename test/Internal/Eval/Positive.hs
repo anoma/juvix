@@ -5,24 +5,26 @@ import Internal.Eval.Base
 
 data PosTest = PosTest
   { _name :: String,
-    _relDir :: FilePath,
-    _file :: FilePath,
-    _expectedFile :: FilePath
+    _relDir :: Path Rel Dir,
+    _file :: Path Rel File,
+    _expectedFile :: Path Rel File
   }
 
-root :: FilePath
-root = "tests/Internal/positive"
+root :: Path Abs Dir
+root = relToProject $(mkRelDir "tests/Internal/positive")
 
-coreRoot :: FilePath
-coreRoot = "tests/Internal/Core/positive"
+coreRoot :: Path Abs Dir
+coreRoot = relToProject $(mkRelDir "tests/Internal/Core/positive")
 
-testDescr :: FilePath -> PosTest -> TestDescr
+testDescr :: Path Abs Dir -> PosTest -> TestDescr
 testDescr r PosTest {..} =
-  let tRoot = r </> _relDir
+  let tRoot = r <//> _relDir
+      file' = tRoot <//> _file
+      expected' = tRoot <//> _expectedFile
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ internalCoreAssertion _file _expectedFile
+          _testAssertion = Steps $ internalCoreAssertion file' expected'
         }
 
 allTests :: TestTree
@@ -35,131 +37,131 @@ coreTests :: [PosTest]
 coreTests =
   [ PosTest
       "If then else"
-      "."
-      "test006.juvix"
-      "out/test006.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test006.juvix")
+      $(mkRelFile "out/test006.out"),
     PosTest
       "Fibonacci"
-      "."
-      "test011.juvix"
-      "out/test011.out"
+      $(mkRelDir ".")
+      $(mkRelFile "test011.juvix")
+      $(mkRelFile "out/test011.out")
   ]
 
 tests :: [PosTest]
 tests =
   [ PosTest
       "An integer literal"
-      "."
-      "IntegerLiteral.juvix"
-      "out/IntegerLiteral.out",
+      $(mkRelDir ".")
+      $(mkRelFile "IntegerLiteral.juvix")
+      $(mkRelFile "out/IntegerLiteral.out"),
     PosTest
       "A zero argument function"
-      "."
-      "IdenFunctionIntegerLiteral.juvix"
-      "out/IdenFunctionIntegerLiteral.out",
+      $(mkRelDir ".")
+      $(mkRelFile "IdenFunctionIntegerLiteral.juvix")
+      $(mkRelFile "out/IdenFunctionIntegerLiteral.out"),
     PosTest
       "A two argument function"
-      "."
-      "IdenFunctionArgs.juvix"
-      "out/IdenFunctionArgs.out",
+      $(mkRelDir ".")
+      $(mkRelFile "IdenFunctionArgs.juvix")
+      $(mkRelFile "out/IdenFunctionArgs.out"),
     PosTest
       "A function with implicit arguments"
-      "."
-      "IdenFunctionArgsImplicit.juvix"
-      "out/IdenFunctionArgsImplicit.out",
+      $(mkRelDir ".")
+      $(mkRelFile "IdenFunctionArgsImplicit.juvix")
+      $(mkRelFile "out/IdenFunctionArgsImplicit.out"),
     PosTest
       "A function with no explicit arguments"
-      "."
-      "IdenFunctionArgsNoExplicit.juvix"
-      "out/IdenFunctionArgsNoExplicit.out",
+      $(mkRelDir ".")
+      $(mkRelFile "IdenFunctionArgsNoExplicit.juvix")
+      $(mkRelFile "out/IdenFunctionArgsNoExplicit.out"),
     PosTest
       "A module that imports another"
-      "Import"
-      "Importer.juvix"
-      "out/Importer.out",
+      $(mkRelDir "Import")
+      $(mkRelFile "Importer.juvix")
+      $(mkRelFile "out/Importer.out"),
     PosTest
       "A constructor valued function"
-      "."
-      "FunctionReturnConstructor.juvix"
-      "out/FunctionReturnConstructor.out",
+      $(mkRelDir ".")
+      $(mkRelFile "FunctionReturnConstructor.juvix")
+      $(mkRelFile "out/FunctionReturnConstructor.out"),
     PosTest
       "Pattern matching on a constructor"
-      "."
-      "MatchConstructor.juvix"
-      "out/MatchConstructor.out",
+      $(mkRelDir ".")
+      $(mkRelFile "MatchConstructor.juvix")
+      $(mkRelFile "out/MatchConstructor.out"),
     PosTest
       "Pattern matching Nat under suc"
-      "."
-      "NatMatch1.juvix"
-      "out/NatMatch1.out",
+      $(mkRelDir ".")
+      $(mkRelFile "NatMatch1.juvix")
+      $(mkRelFile "out/NatMatch1.out"),
     PosTest
       "Pattern matching Nat as binder"
-      "."
-      "NatMatch2.juvix"
-      "out/NatMatch2.out",
+      $(mkRelDir ".")
+      $(mkRelFile "NatMatch2.juvix")
+      $(mkRelFile "out/NatMatch2.out"),
     PosTest
       "Literal integer is Core integer"
-      "."
-      "LitInteger.juvix"
-      "out/LitInteger.out",
+      $(mkRelDir ".")
+      $(mkRelFile "LitInteger.juvix")
+      $(mkRelFile "out/LitInteger.out"),
     PosTest
       "Literal integer is Core string"
-      "."
-      "LitString.juvix"
-      "out/LitString.out",
+      $(mkRelDir ".")
+      $(mkRelFile "LitString.juvix")
+      $(mkRelFile "out/LitString.out"),
     PosTest
       "Mutually defined functions"
-      "."
-      "Mutual.juvix"
-      "out/Mutual.out",
+      $(mkRelDir ".")
+      $(mkRelFile "Mutual.juvix")
+      $(mkRelFile "out/Mutual.out"),
     PosTest
       "Calling builtin addition"
-      "."
-      "BuiltinAdd.juvix"
-      "out/BuiltinAdd.out",
+      $(mkRelDir ".")
+      $(mkRelFile "BuiltinAdd.juvix")
+      $(mkRelFile "out/BuiltinAdd.out"),
     PosTest
       "Builtin bool"
-      "."
-      "BuiltinBool.juvix"
-      "out/BuiltinBool.out",
+      $(mkRelDir ".")
+      $(mkRelFile "BuiltinBool.juvix")
+      $(mkRelFile "out/BuiltinBool.out"),
     PosTest
       "Builtin if"
-      "."
-      "BuiltinIf.juvix"
-      "out/BuiltinIf.out",
+      $(mkRelDir ".")
+      $(mkRelFile "BuiltinIf.juvix")
+      $(mkRelFile "out/BuiltinIf.out"),
     PosTest
       "Lambda"
-      "."
-      "Lambda.juvix"
-      "out/Lambda.out",
+      $(mkRelDir ".")
+      $(mkRelFile "Lambda.juvix")
+      $(mkRelFile "out/Lambda.out"),
     PosTest
       "Pattern args"
-      "."
-      "PatternArgs.juvix"
-      "out/PatternArgs.out",
+      $(mkRelDir ".")
+      $(mkRelFile "PatternArgs.juvix")
+      $(mkRelFile "out/PatternArgs.out"),
     PosTest
       "QuickSort"
-      "."
-      "QuickSort.juvix"
-      "out/QuickSort.out",
+      $(mkRelDir ".")
+      $(mkRelFile "QuickSort.juvix")
+      $(mkRelFile "out/QuickSort.out"),
     PosTest
       "Universe"
-      "."
-      "Universe.juvix"
-      "out/Universe.out",
+      $(mkRelDir ".")
+      $(mkRelFile "Universe.juvix")
+      $(mkRelFile "out/Universe.out"),
     PosTest
       "Inductive type constructor"
-      "."
-      "Inductive.juvix"
-      "out/Inductive.out",
+      $(mkRelDir ".")
+      $(mkRelFile "Inductive.juvix")
+      $(mkRelFile "out/Inductive.out"),
     PosTest
       "Function type"
-      "."
-      "FunctionType.juvix"
-      "out/FunctionType.out",
+      $(mkRelDir ".")
+      $(mkRelFile "FunctionType.juvix")
+      $(mkRelFile "out/FunctionType.out"),
     PosTest
       "Builtin Inductive type"
-      "."
-      "BuiltinInductive.juvix"
-      "out/BuiltinInductive.out"
+      $(mkRelDir ".")
+      $(mkRelFile "BuiltinInductive.juvix")
+      $(mkRelFile "out/BuiltinInductive.out")
   ]

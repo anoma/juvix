@@ -1,49 +1,72 @@
 module Juvix.Extra.Stdlib where
 
-import Data.ByteString qualified as BS
+import Juvix.Compiler.Pipeline.Package.Dependency
+import Juvix.Data.Effect.Files
 import Juvix.Extra.Paths
 import Juvix.Extra.Version
-import Juvix.Prelude.Base
+import Juvix.Prelude
 
-type RootPath = FilePath
+type StdlibRoot = Path Abs Dir
 
-stdlibFiles :: [(FilePath, ByteString)]
-stdlibFiles = filter isJuvixFile $(stdlibDir)
+stdlibFiles :: [(Path Rel File, ByteString)]
+stdlibFiles = mapMaybe helper $(stdlibDir)
   where
-    isJuvixFile :: (FilePath, ByteString) -> Bool
-    isJuvixFile (fp, _) = takeExtension fp == ".juvix"
+    helper :: (FilePath, ByteString) -> Maybe (Path Rel File, ByteString)
+    helper (fp', bs)
+      | isStdLibFile fp = Just (fp, bs)
+      | otherwise = Nothing
+      where
+        fp :: Path Rel File
+        fp = relFile fp'
+    isStdLibFile :: Path Rel File -> Bool
+    isStdLibFile = isJuvixFile .||. isYamlFile
+    isYamlFile :: Path Rel File -> Bool
+    isYamlFile = (== juvixYamlFile)
 
-writeStdlib :: forall r. Members '[Reader RootPath, Embed IO] r => Sem r ()
+ensureStdlib :: Members '[Files] r => Path Abs Dir -> [Dependency] -> Sem r ()
+ensureStdlib pkgRoot deps = whenJust (firstJust isStdLib deps) $ \stdlibRoot ->
+  runReader stdlibRoot updateStdlib
+  where
+    isStdLib :: Dependency -> Maybe (Path Abs Dir)
+    isStdLib dep = do
+      case stripProperPrefix pkgRoot (dep ^. dependencyPath) of
+        Just p
+          | p == juvixStdlibDir -> Just (dep ^. dependencyPath)
+        _ -> Nothing
+
+writeStdlib :: forall r. Members '[Reader StdlibRoot, Files] r => Sem r ()
 writeStdlib = do
   rootDir <- ask
-  forM_ (first (rootDir </>) <$> stdlibFiles) (uncurry writeJuvixFile)
+  forM_ (first (rootDir <//>) <$> stdlibFiles) (uncurry writeJuvixFile)
   where
-    writeJuvixFile :: FilePath -> ByteString -> Sem r ()
-    writeJuvixFile p bs = embed (createDirectoryIfMissing True (takeDirectory p) >> BS.writeFile p bs)
+    writeJuvixFile :: Path Abs File -> ByteString -> Sem r ()
+    writeJuvixFile p bs = do
+      ensureDir' (parent p)
+      writeFileBS p bs
 
-stdlibVersionFile :: Member (Reader RootPath) r => Sem r FilePath
-stdlibVersionFile = (</> ".version") <$> ask
+stdlibVersionFile :: Member (Reader StdlibRoot) r => Sem r (Path Abs File)
+stdlibVersionFile = (<//> $(mkRelFile ".version")) <$> ask
 
-writeVersion :: forall r. Members '[Reader RootPath, Embed IO] r => Sem r ()
-writeVersion = (embed . flip writeFile versionTag) =<< stdlibVersionFile
+writeVersion :: forall r. Members '[Reader StdlibRoot, Files] r => Sem r ()
+writeVersion = stdlibVersionFile >>= flip writeFile' versionTag
 
-readVersion :: Members '[Reader RootPath, Embed IO] r => Sem r (Maybe Text)
+readVersion :: Members '[Reader StdlibRoot, Files] r => Sem r (Maybe Text)
 readVersion = do
   vf <- stdlibVersionFile
-  embed (whenMaybeM (doesFileExist vf) (readFile vf))
+  whenMaybeM (fileExists' vf) (readFile' vf)
 
-updateStdlib :: forall r. Members '[Reader RootPath, Embed IO] r => Sem r ()
+updateStdlib :: forall r. Members '[Reader StdlibRoot, Files] r => Sem r ()
 updateStdlib =
   whenM shouldUpdate $ do
     whenM
-      (embed . doesDirectoryExist =<< ask)
-      (embed . removeDirectoryRecursive =<< ask)
+      (ask @StdlibRoot >>= directoryExists')
+      (ask @StdlibRoot >>= removeDirectoryRecursive')
     writeStdlib
     writeVersion
   where
     shouldUpdate :: Sem r Bool
     shouldUpdate =
       orM
-        [ not <$> (embed . doesDirectoryExist =<< ask),
+        [ not <$> (ask @StdlibRoot >>= directoryExists'),
           (Just versionTag /=) <$> readVersion
         ]

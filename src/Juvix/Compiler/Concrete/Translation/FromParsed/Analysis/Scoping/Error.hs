@@ -39,6 +39,7 @@ data ScoperError
   | ErrAliasBinderPattern AliasBinderPattern
   | ErrImplicitPatternLeftApplication ImplicitPatternLeftApplication
   | ErrConstructorExpectedLeftApplication ConstructorExpectedLeftApplication
+  | ErrTopModulePath TopModulePathError
   deriving stock (Show)
 
 instance ToGenericError ScoperError where
@@ -71,3 +72,4 @@ instance ToGenericError ScoperError where
     ErrAliasBinderPattern e -> genericError e
     ErrImplicitPatternLeftApplication e -> genericError e
     ErrConstructorExpectedLeftApplication e -> genericError e
+    ErrTopModulePath e -> genericError e

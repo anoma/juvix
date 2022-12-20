@@ -9,7 +9,7 @@ data InternalCoreEvalOptions = InternalCoreEvalOptions
   { _internalCoreEvalTransformations :: [TransformationId],
     _internalCoreEvalShowDeBruijn :: Bool,
     _internalCoreEvalNoIO :: Bool,
-    _internalCoreEvalInputFile :: Path
+    _internalCoreEvalInputFile :: AppPath File
   }
   deriving stock (Data)
 

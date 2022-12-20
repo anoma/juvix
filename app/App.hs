@@ -13,18 +13,19 @@ data App m a where
   ExitMsg :: ExitCode -> Text -> App m a
   ExitJuvixError :: JuvixError -> App m a
   PrintJuvixError :: JuvixError -> App m ()
-  AskRoot :: App m FilePath
+  AskInvokeDir :: App m (Path Abs Dir)
+  AskPkgDir :: App m (Path Abs Dir)
   AskPackage :: App m Package
   AskGlobalOptions :: App m GlobalOptions
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
-  RunPipelineEither :: Path -> Sem PipelineEff a -> App m (Either JuvixError (BuiltinsState, a))
+  RunPipelineEither :: AppPath File -> Sem PipelineEff a -> App m (Either JuvixError (Artifacts, a))
   Say :: Text -> App m ()
-  Raw :: ByteString -> App m ()
+  SayRaw :: ByteString -> App m ()
 
 makeSem ''App
 
-runAppIO :: forall r a. Member (Embed IO) r => GlobalOptions -> FilePath -> Package -> Sem (App ': r) a -> Sem r a
-runAppIO g root pkg = interpret $ \case
+runAppIO :: forall r a. Member (Embed IO) r => GlobalOptions -> Path Abs Dir -> Path Abs Dir -> Package -> Sem (App ': r) a -> Sem r a
+runAppIO g invokeDir pkgDir pkg = interpret $ \case
   RenderStdOut t
     | g ^. globalOnlyErrors -> return ()
     | otherwise -> embed $ do
@@ -32,9 +33,10 @@ runAppIO g root pkg = interpret $ \case
         renderIO (not (g ^. globalNoColors) && sup) t
   AskGlobalOptions -> return g
   AskPackage -> return pkg
-  AskRoot -> return root
+  AskInvokeDir -> return invokeDir
+  AskPkgDir -> return pkgDir
   RunPipelineEither input p -> do
-    entry <- embed (getEntryPoint' g root pkg input)
+    entry <- embed (getEntryPoint' invokeDir g pkgDir pkg input)
     embed (runIOEither iniState entry p)
   Say t
     | g ^. globalOnlyErrors -> return ()
@@ -45,13 +47,13 @@ runAppIO g root pkg = interpret $ \case
     printErr e
     embed exitFailure
   ExitMsg exitCode t -> embed (putStrLn t >> exitWith exitCode)
-  Raw b -> embed (ByteString.putStr b)
+  SayRaw b -> embed (ByteString.putStr b)
   where
     printErr e =
       embed $ hPutStrLn stderr $ run $ runReader (project' @GenericOptions g) $ Error.render (not (g ^. globalNoColors)) (g ^. globalOnlyErrors) e
 
-getEntryPoint' :: GlobalOptions -> FilePath -> Package -> Path -> IO EntryPoint
-getEntryPoint' opts root pkg inputFile = do
+getEntryPoint' :: Path Abs Dir -> GlobalOptions -> Path Abs Dir -> Package -> AppPath File -> IO EntryPoint
+getEntryPoint' invokeDir opts root pkg inputFile = do
   estdin <-
     if
         | opts ^. globalStdin -> Just <$> getContents
@@ -59,27 +61,33 @@ getEntryPoint' opts root pkg inputFile = do
   return
     EntryPoint
       { _entryPointRoot = root,
+        _entryPointResolverRoot = root,
         _entryPointNoTermination = opts ^. globalNoTermination,
         _entryPointNoPositivity = opts ^. globalNoPositivity,
         _entryPointNoStdlib = opts ^. globalNoStdlib,
-        _entryPointStdlibPath = opts ^. globalStdlibPath,
         _entryPointPackage = pkg,
-        _entryPointModulePaths = pure (inputFile ^. pathPath),
+        _entryPointModulePaths = pure (someBaseToAbs invokeDir (inputFile ^. pathPath)),
         _entryPointGenericOptions = project opts,
         _entryPointStdin = estdin
       }
 
+someBaseToAbs' :: Members '[App] r => SomeBase a -> Sem r (Path Abs a)
+someBaseToAbs' f = do
+  r <- askInvokeDir
+  return (someBaseToAbs r f)
+
 askGenericOptions :: Members '[App] r => Sem r GenericOptions
 askGenericOptions = project <$> askGlobalOptions
 
-getEntryPoint :: Members '[Embed IO, App] r => Path -> Sem r EntryPoint
+getEntryPoint :: Members '[Embed IO, App] r => AppPath File -> Sem r EntryPoint
 getEntryPoint inputFile = do
   opts <- askGlobalOptions
-  root <- askRoot
+  root <- askPkgDir
   pkg <- askPackage
-  embed (getEntryPoint' opts root pkg inputFile)
+  invokeDir <- askInvokeDir
+  embed (getEntryPoint' invokeDir opts root pkg inputFile)
 
-runPipeline :: Member App r => Path -> Sem PipelineEff a -> Sem r a
+runPipeline :: Member App r => AppPath File -> Sem PipelineEff a -> Sem r a
 runPipeline input p = do
   r <- runPipelineEither input p
   case r of

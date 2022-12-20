@@ -5,23 +5,25 @@ import Runtime.Base
 
 data PosTest = PosTest
   { _name :: String,
-    _relDir :: FilePath,
-    _file :: FilePath,
-    _expectedFile :: FilePath
+    _relDir :: Path Rel Dir,
+    _file :: Path Rel File,
+    _expectedFile :: Path Rel File
   }
 
 makeLenses ''PosTest
 
-root :: FilePath
-root = "tests/runtime/positive/"
+root :: Path Abs Dir
+root = relToProject $(mkRelDir "tests/runtime/positive/")
 
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
-  let tRoot = root </> _relDir
+  let tRoot = root <//> _relDir
+      file' = tRoot <//> _file
+      expected' = tRoot <//> _expectedFile
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ clangAssertion _file _expectedFile ""
+          _testAssertion = Steps $ clangAssertion file' expected' ""
         }
 
 allTests :: TestTree
@@ -34,102 +36,102 @@ tests :: [PosTest]
 tests =
   [ PosTest
       "HelloWorld"
-      "."
-      "test001.c"
-      "out/test001.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test001.c")
+      $(mkRelFile "out/test001.out"),
     PosTest
       "Page allocation"
-      "."
-      "test002.c"
-      "out/test002.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test002.c")
+      $(mkRelFile "out/test002.out"),
     PosTest
       "Printing of integers"
-      "."
-      "test003.c"
-      "out/test003.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test003.c")
+      $(mkRelFile "out/test003.out"),
     PosTest
       "Allocator for unstructured objects"
-      "."
-      "test004.c"
-      "out/test004.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test004.c")
+      $(mkRelFile "out/test004.out"),
     PosTest
       "Allocator for unstructured objects (macro API)"
-      "."
-      "test005.c"
-      "out/test005.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test005.c")
+      $(mkRelFile "out/test005.out"),
     PosTest
       "Stack"
-      "."
-      "test006.c"
-      "out/test006.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test006.c")
+      $(mkRelFile "out/test006.out"),
     PosTest
       "Prologue and epilogue"
-      "."
-      "test007.c"
-      "out/test007.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test007.c")
+      $(mkRelFile "out/test007.out"),
     PosTest
       "Basic arithmetic"
-      "."
-      "test008.c"
-      "out/test008.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test008.c")
+      $(mkRelFile "out/test008.out"),
     PosTest
       "Direct call"
-      "."
-      "test009.c"
-      "out/test009.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test009.c")
+      $(mkRelFile "out/test009.out"),
     PosTest
       "Indirect call"
-      "."
-      "test010.c"
-      "out/test010.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test010.c")
+      $(mkRelFile "out/test010.out"),
     PosTest
       "Tail calls"
-      "."
-      "test011.c"
-      "out/test011.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test011.c")
+      $(mkRelFile "out/test011.out"),
     PosTest
       "Tracing and strings"
-      "."
-      "test012.c"
-      "out/test012.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test012.c")
+      $(mkRelFile "out/test012.out"),
     PosTest
       "IO builtins"
-      "."
-      "test013.c"
-      "out/test013.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test013.c")
+      $(mkRelFile "out/test013.out"),
     PosTest
       "Higher-order functions"
-      "."
-      "test014.c"
-      "out/test014.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test014.c")
+      $(mkRelFile "out/test014.out"),
     PosTest
       "Branching, matching and recursion on lists"
-      "."
-      "test015.c"
-      "out/test015.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test015.c")
+      $(mkRelFile "out/test015.out"),
     PosTest
       "Closure extension"
-      "."
-      "test016.c"
-      "out/test016.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test016.c")
+      $(mkRelFile "out/test016.out"),
     PosTest
       "Recursion through higher-order functions"
-      "."
-      "test017.c"
-      "out/test017.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test017.c")
+      $(mkRelFile "out/test017.out"),
     PosTest
       "Tail recursion through higher-order functions"
-      "."
-      "test018.c"
-      "out/test018.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test018.c")
+      $(mkRelFile "out/test018.out"),
     PosTest
       "Dynamic closure extension"
-      "."
-      "test019.c"
-      "out/test019.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test019.c")
+      $(mkRelFile "out/test019.out"),
     PosTest
       "Higher-order function composition"
-      "."
-      "test020.c"
-      "out/test020.out"
+      $(mkRelDir ".")
+      $(mkRelFile "test020.c")
+      $(mkRelFile "out/test020.out")
   ]

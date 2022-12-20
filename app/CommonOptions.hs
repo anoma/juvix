@@ -14,86 +14,98 @@ import System.Process
 import Prelude (show)
 
 -- | Paths that are input are used to detect the root of the project.
-data Path = Path
-  { _pathPath :: FilePath,
+data AppPath f = AppPath
+  { _pathPath :: SomeBase f,
     _pathIsInput :: Bool
   }
   deriving stock (Data)
 
-makeLenses ''Path
+makeLenses ''AppPath
 
-instance Show Path where
-  show = (^. pathPath)
+instance Show (AppPath f) where
+  show = Prelude.show . (^. pathPath)
 
-parseInputJuvixFile :: Parser Path
+parseInputJuvixFile :: Parser (AppPath File)
 parseInputJuvixFile = do
   _pathPath <-
     argument
-      str
+      someFileOpt
       ( metavar "JUVIX_FILE"
           <> help "Path to a .juvix file"
           <> completer juvixCompleter
       )
-  pure Path {_pathIsInput = True, ..}
+  pure AppPath {_pathIsInput = True, ..}
 
-parseInputJuvixCoreFile :: Parser Path
+parseInputJuvixCoreFile :: Parser (AppPath File)
 parseInputJuvixCoreFile = do
   _pathPath <-
     argument
-      str
+      someFileOpt
       ( metavar "JUVIX_CORE_FILE"
           <> help "Path to a .jvc file"
           <> completer juvixCoreCompleter
       )
-  pure Path {_pathIsInput = True, ..}
+  pure AppPath {_pathIsInput = True, ..}
 
-parseInputJuvixAsmFile :: Parser Path
+parseInputJuvixAsmFile :: Parser (AppPath File)
 parseInputJuvixAsmFile = do
   _pathPath <-
     argument
-      str
+      someFileOpt
       ( metavar "JUVIX_ASM_FILE"
           <> help "Path to a .jva file"
           <> completer juvixAsmCompleter
       )
-  pure Path {_pathIsInput = True, ..}
+  pure AppPath {_pathIsInput = True, ..}
 
-parseInputCFile :: Parser Path
+parseInputCFile :: Parser (AppPath File)
 parseInputCFile = do
   _pathPath <-
     argument
-      str
+      someFileOpt
       ( metavar "C_FILE"
           <> help "Path to a .c file"
           <> completer juvixCCompleter
       )
-  pure Path {_pathIsInput = True, ..}
+  pure AppPath {_pathIsInput = True, ..}
 
-parseGenericOutputFile :: Parser Path
+parseGenericOutputFile :: Parser (AppPath File)
 parseGenericOutputFile = do
   _pathPath <-
     option
-      str
+      someFileOpt
       ( long "output"
           <> short 'o'
           <> metavar "OUTPUT_FILE"
           <> help "Path to output file"
           <> action "file"
       )
-  pure Path {_pathIsInput = False, ..}
+  pure AppPath {_pathIsInput = False, ..}
 
-parseGenericOutputDir :: Mod OptionFields FilePath -> Parser Path
+parseGenericOutputDir :: Mod OptionFields (SomeBase Dir) -> Parser (AppPath Dir)
 parseGenericOutputDir m = do
   _pathPath <-
     option
-      str
+      someDirOpt
       ( long "output-dir"
           <> metavar "OUTPUT_DIR"
           <> help "Path to output directory"
           <> action "directory"
           <> m
       )
-  pure Path {_pathIsInput = False, ..}
+  pure AppPath {_pathIsInput = False, ..}
+
+someFileOpt :: ReadM (SomeBase File)
+someFileOpt = eitherReader aux
+  where
+    aux :: String -> Either String (SomeBase File)
+    aux s = maybe (Left $ s <> " is not a file path") Right (parseSomeFile s)
+
+someDirOpt :: ReadM (SomeBase Dir)
+someDirOpt = eitherReader aux
+  where
+    aux :: String -> Either String (SomeBase Dir)
+    aux s = maybe (Left $ s <> " is not a directory path") Right (parseSomeDir s)
 
 extCompleter :: String -> Completer
 extCompleter ext = mkCompleter $ \word -> do
@@ -186,7 +198,7 @@ requote s =
         goX [] =
           []
 
-class HasPaths a where
+class HasAppPaths a where
   paths :: Traversal' a FilePath
 
 optDeBruijn :: Parser Bool

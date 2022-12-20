@@ -5,41 +5,45 @@ module Juvix.Compiler.Pipeline.EntryPoint
 where
 
 import Juvix.Compiler.Pipeline.Package
-import Juvix.Extra.Paths (juvixStdlibDir)
 import Juvix.Prelude
 
 -- | The head of _entryModulePaths is assumed to be the Main module
 data EntryPoint = EntryPoint
-  { _entryPointRoot :: FilePath,
+  { _entryPointRoot :: Path Abs Dir,
+    -- | initial root for the path resolver. Usually it should be equal to
+    -- _entryPointRoot. Used only for the command `juvix repl`.
+    _entryPointResolverRoot :: Path Abs Dir,
     _entryPointNoTermination :: Bool,
     _entryPointNoPositivity :: Bool,
     _entryPointNoStdlib :: Bool,
-    _entryPointStdlibPath :: Maybe FilePath,
     _entryPointPackage :: Package,
     _entryPointStdin :: Maybe Text,
     _entryPointGenericOptions :: GenericOptions,
-    _entryPointModulePaths :: NonEmpty FilePath
+    _entryPointModulePaths :: NonEmpty (Path Abs File)
   }
   deriving stock (Eq, Show)
 
-defaultStdlibPath :: FilePath -> FilePath
-defaultStdlibPath root = root </> juvixStdlibDir
+makeLenses ''EntryPoint
 
-defaultEntryPoint :: FilePath -> EntryPoint
-defaultEntryPoint mainFile =
+defaultEntryPoint :: Path Abs Dir -> Path Abs File -> EntryPoint
+defaultEntryPoint root mainFile =
   EntryPoint
-    { _entryPointRoot = ".",
+    { _entryPointRoot = root,
+      _entryPointResolverRoot = root,
       _entryPointNoTermination = False,
       _entryPointNoPositivity = False,
       _entryPointNoStdlib = False,
-      _entryPointStdlibPath = Nothing,
       _entryPointStdin = Nothing,
-      _entryPointPackage = emptyPackage,
+      _entryPointPackage = defaultPackage root,
       _entryPointGenericOptions = defaultGenericOptions,
       _entryPointModulePaths = pure mainFile
     }
 
-makeLenses ''EntryPoint
-
-mainModulePath :: Lens' EntryPoint FilePath
+mainModulePath :: Lens' EntryPoint (Path Abs File)
 mainModulePath = entryPointModulePaths . _head1
+
+entryPointFromPackage :: Path Abs Dir -> Path Abs File -> Package -> EntryPoint
+entryPointFromPackage root mainFile pkg =
+  (defaultEntryPoint root mainFile)
+    { _entryPointPackage = pkg
+    }

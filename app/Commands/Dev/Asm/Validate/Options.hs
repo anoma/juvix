@@ -3,7 +3,7 @@ module Commands.Dev.Asm.Validate.Options where
 import CommonOptions
 
 data AsmValidateOptions = AsmValidateOptions
-  { _asmValidateInputFile :: Path,
+  { _asmValidateInputFile :: AppPath File,
     _asmValidateNoPrint :: Bool
   }
   deriving stock (Data)

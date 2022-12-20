@@ -2,16 +2,19 @@ module Commands.Extra.Compile.Options where
 
 import CommonOptions
 
-data CompileTarget = TargetWasm32Wasi | TargetNative64 | TargetC
+data CompileTarget
+  = TargetWasm32Wasi
+  | TargetNative64
+  | TargetC
   deriving stock (Show, Data)
 
 data CompileOptions = CompileOptions
   { _compileDebug :: Bool,
     _compilePreprocess :: Bool,
     _compileAssembly :: Bool,
-    _compileOutputFile :: Maybe Path,
+    _compileOutputFile :: Maybe (AppPath File),
     _compileTarget :: CompileTarget,
-    _compileInputFile :: Path
+    _compileInputFile :: AppPath File
   }
   deriving stock (Data)
 

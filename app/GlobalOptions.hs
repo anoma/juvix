@@ -3,11 +3,10 @@ module GlobalOptions
   )
 where
 
+import CommonOptions
 import Juvix.Compiler.Abstract.Pretty.Options qualified as Abstract
 import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
 import Juvix.Data.Error.GenericError qualified as E
-import Juvix.Prelude
-import Options.Applicative hiding (hidden)
 
 data GlobalOptions = GlobalOptions
   { _globalNoColors :: Bool,
@@ -17,10 +16,9 @@ data GlobalOptions = GlobalOptions
     _globalStdin :: Bool,
     _globalNoTermination :: Bool,
     _globalNoPositivity :: Bool,
-    _globalNoStdlib :: Bool,
-    _globalStdlibPath :: Maybe FilePath
+    _globalNoStdlib :: Bool
   }
-  deriving stock (Eq, Show, Data)
+  deriving stock (Eq, Show)
 
 makeLenses ''GlobalOptions
 
@@ -53,8 +51,7 @@ defaultGlobalOptions =
       _globalNoTermination = False,
       _globalStdin = False,
       _globalNoPositivity = False,
-      _globalNoStdlib = False,
-      _globalStdlibPath = Nothing
+      _globalNoStdlib = False
     }
 
 -- | Get a parser for global flags which can be hidden or not depending on
@@ -101,14 +98,4 @@ parseGlobalFlags = do
       ( long "no-stdlib"
           <> help "Do not use the standard library"
       )
-  _globalStdlibPath <-
-    optional
-      ( strOption
-          ( long "stdlib-path"
-              <> metavar "PATH"
-              <> help "Specify path to the standard library"
-              <> action "directory"
-          )
-      )
-
   return GlobalOptions {..}

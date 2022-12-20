@@ -4,7 +4,7 @@ import CommonOptions
 
 data AsmRunOptions = AsmRunOptions
   { _asmRunNoValidate :: Bool,
-    _asmRunInputFile :: Path
+    _asmRunInputFile :: AppPath File
   }
   deriving stock (Data)
 

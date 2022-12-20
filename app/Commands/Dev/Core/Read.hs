@@ -10,8 +10,9 @@ import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 
 runCommand :: forall r a. (Members '[Embed IO, App] r, CanonicalProjection a Eval.EvalOptions, CanonicalProjection a Core.Options, CanonicalProjection a CoreReadOptions) => a -> Sem r ()
 runCommand opts = do
-  s' <- embed (readFile f)
-  (tab, mnode) <- getRight (mapLeft JuvixError (Core.runParser f Core.emptyInfoTable s'))
+  inputFile :: Path Abs File <- someBaseToAbs' sinputFile
+  s' <- embed . readFile . toFilePath $ inputFile
+  (tab, mnode) <- getRight (mapLeft JuvixError (Core.runParser (toFilePath inputFile) Core.emptyInfoTable s'))
   let tab' = Core.applyTransformations (project opts ^. coreReadTransformations) tab
   embed (Scoper.scopeTrace tab')
   unless (project opts ^. coreReadNoPrint) $ do
@@ -30,5 +31,5 @@ runCommand opts = do
               embed (putStrLn "-- Node")
               renderStdOut (Core.ppOut opts node)
               embed (putStrLn "")
-    f :: FilePath
-    f = project opts ^. coreReadInputFile . pathPath
+    sinputFile :: SomeBase File
+    sinputFile = project opts ^. coreReadInputFile . pathPath

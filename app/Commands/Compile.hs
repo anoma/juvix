@@ -12,54 +12,37 @@ import System.Process qualified as P
 
 runCommand :: Members '[Embed IO, App] r => CompileOptions -> Sem r ()
 runCommand opts@CompileOptions {..} = do
-  root <- askRoot
   miniC <- (^. MiniC.resultCCode) <$> runPipeline _compileInputFile upToMiniC
-  let inputFile = _compileInputFile ^. pathPath
-  result <- embed (runCompile root inputFile opts miniC)
+  inputFile <- someBaseToAbs' (_compileInputFile ^. pathPath)
+  result <- runCompile inputFile opts miniC
   case result of
     Left err -> printFailureExit err
     _ -> return ()
 
-inputCFile :: FilePath -> FilePath -> FilePath
-inputCFile projRoot inputFileCompile =
-  projRoot </> juvixBuildDir </> outputMiniCFile
+inputCFile :: Members '[App] r => Path Abs File -> Sem r (Path Abs File)
+inputCFile inputFileCompile = do
+  root <- askPkgDir
+  return (root <//> juvixBuildDir <//> outputMiniCFile)
   where
-    outputMiniCFile :: FilePath
-    outputMiniCFile = takeBaseName inputFileCompile <> ".c"
+    outputMiniCFile :: Path Rel File
+    outputMiniCFile = replaceExtension' ".c" (filename inputFileCompile)
 
-runCompile :: FilePath -> FilePath -> CompileOptions -> Text -> IO (Either Text ())
-runCompile projRoot inputFileCompile o minic = do
-  createDirectoryIfMissing True (projRoot </> juvixBuildDir)
-  TIO.writeFile (inputCFile projRoot inputFileCompile) minic
-  prepareRuntime projRoot o
+runCompile :: Members '[Embed IO, App] r => Path Abs File -> CompileOptions -> Text -> Sem r (Either Text ())
+runCompile inputFileCompile o minic = do
+  root <- askPkgDir
+  ensureDir (root <//> juvixBuildDir)
+  f <- inputCFile inputFileCompile
+  embed (TIO.writeFile (toFilePath f) minic)
+  prepareRuntime o
   case o ^. compileTarget of
-    TargetWasm -> runM (runError (clangCompile projRoot inputFileCompile o))
+    TargetWasm -> runError (clangCompile inputFileCompile o)
     TargetC -> return (Right ())
-    TargetNative -> runM (runError (clangNativeCompile projRoot inputFileCompile o))
+    TargetNative -> runError (clangNativeCompile inputFileCompile o)
 
-prepareRuntime :: FilePath -> CompileOptions -> IO ()
-prepareRuntime projRoot o = do
-  mapM_ writeRuntime runtimeProjectDir
+prepareRuntime :: forall r. Members '[Embed IO, App] r => CompileOptions -> Sem r ()
+prepareRuntime o = mapM_ writeRuntime runtimeProjectDir
   where
-    wasiStandaloneRuntimeDir :: [(FilePath, BS.ByteString)]
-    wasiStandaloneRuntimeDir = $(FE.makeRelativeToProject "c-runtime/wasi-standalone" >>= FE.embedDir)
-
-    standaloneRuntimeDir :: [(FilePath, BS.ByteString)]
-    standaloneRuntimeDir = $(FE.makeRelativeToProject "c-runtime/standalone" >>= FE.embedDir)
-
-    wasiLibCRuntimeDir :: [(FilePath, BS.ByteString)]
-    wasiLibCRuntimeDir = $(FE.makeRelativeToProject "c-runtime/wasi-libc" >>= FE.embedDir)
-
-    builtinCRuntimeDir :: [(FilePath, BS.ByteString)]
-    builtinCRuntimeDir = $(FE.makeRelativeToProject "c-runtime/builtins" >>= FE.embedDir)
-
-    wallocDir :: [(FilePath, BS.ByteString)]
-    wallocDir = $(FE.makeRelativeToProject "c-runtime/walloc" >>= FE.embedDir)
-
-    libcRuntime :: [(FilePath, BS.ByteString)]
-    libcRuntime = wasiLibCRuntimeDir <> builtinCRuntimeDir
-
-    runtimeProjectDir :: [(FilePath, BS.ByteString)]
+    runtimeProjectDir :: [(Path Rel File, BS.ByteString)]
     runtimeProjectDir = case o ^. compileTarget of
       TargetNative -> libcRuntime
       _ -> case o ^. compileRuntime of
@@ -67,99 +50,135 @@ prepareRuntime projRoot o = do
         RuntimeWasiLibC -> libcRuntime
         RuntimeStandalone -> standaloneRuntimeDir <> builtinCRuntimeDir <> wallocDir
 
-    writeRuntime :: (FilePath, BS.ByteString) -> IO ()
-    writeRuntime (filePath, contents) =
-      BS.writeFile (projRoot </> juvixBuildDir </> takeFileName filePath) contents
+    writeRuntime :: (Path Rel File, BS.ByteString) -> Sem r ()
+    writeRuntime (filePath, contents) = do
+      root <- askPkgDir
+      embed (BS.writeFile (toFilePath (root <//> juvixBuildDir <//> filePath)) contents)
+
+wasiStandaloneRuntimeDir :: [(Path Rel File, BS.ByteString)]
+wasiStandaloneRuntimeDir = map (first relFile) $(FE.makeRelativeToProject "c-runtime/wasi-standalone" >>= FE.embedDir)
+
+standaloneRuntimeDir :: [(Path Rel File, BS.ByteString)]
+standaloneRuntimeDir = map (first relFile) $(FE.makeRelativeToProject "c-runtime/standalone" >>= FE.embedDir)
+
+wasiLibCRuntimeDir :: [(Path Rel File, BS.ByteString)]
+wasiLibCRuntimeDir = map (first relFile) $(FE.makeRelativeToProject "c-runtime/wasi-libc" >>= FE.embedDir)
+
+builtinCRuntimeDir :: [(Path Rel File, BS.ByteString)]
+builtinCRuntimeDir = map (first relFile) $(FE.makeRelativeToProject "c-runtime/builtins" >>= FE.embedDir)
+
+wallocDir :: [(Path Rel File, BS.ByteString)]
+wallocDir = map (first relFile) $(FE.makeRelativeToProject "c-runtime/walloc" >>= FE.embedDir)
+
+libcRuntime :: [(Path Rel File, BS.ByteString)]
+libcRuntime = wasiLibCRuntimeDir <> builtinCRuntimeDir
 
 clangNativeCompile ::
   forall r.
-  Members '[Embed IO, Error Text] r =>
-  FilePath ->
-  FilePath ->
+  Members '[Embed IO, App, Error Text] r =>
+  Path Abs File ->
   CompileOptions ->
   Sem r ()
-clangNativeCompile projRoot inputFileCompile o = runClang (nativeArgs outputFile inputFile)
+clangNativeCompile inputFileCompile o = do
+  inputFile <- getInputFile
+  outputFile <- getOutputFile
+  runClang (nativeArgs outputFile inputFile)
   where
-    outputFile :: FilePath
-    outputFile = maybe (takeBaseName inputFileCompile) (^. pathPath) (o ^. compileOutputFile)
+    getOutputFile :: Sem r (Path Abs File)
+    getOutputFile = case o ^. compileOutputFile of
+      Nothing -> return (removeExtension' inputFileCompile)
+      Just f -> someBaseToAbs' (f ^. pathPath)
 
-    inputFile :: FilePath
-    inputFile = inputCFile projRoot inputFileCompile
+    getInputFile :: Sem r (Path Abs File)
+    getInputFile = inputCFile inputFileCompile
 
 clangCompile ::
   forall r.
-  Members '[Embed IO, Error Text] r =>
-  FilePath ->
-  FilePath ->
+  Members '[Embed IO, App, Error Text] r =>
+  Path Abs File ->
   CompileOptions ->
   Sem r ()
-clangCompile projRoot inputFileCompile o = clangArgs >>= runClang
+clangCompile inputFileCompile o = do
+  outputFile <- getOutputFile
+  inputFile <- getInputFile
+  let clangArgs :: Sem r [String]
+      clangArgs = case o ^. compileRuntime of
+        RuntimeStandalone -> do
+          standaloneLibArgs outputFile inputFile
+        RuntimeWasiStandalone -> wasiStandaloneArgs outputFile inputFile
+        RuntimeWasiLibC -> wasiLibcArgs outputFile inputFile
+
+  clangArgs >>= runClang
   where
-    clangArgs :: Sem r [String]
-    clangArgs = case o ^. compileRuntime of
-      RuntimeStandalone ->
-        return (standaloneLibArgs projRoot outputFile inputFile)
-      RuntimeWasiStandalone -> wasiStandaloneArgs projRoot outputFile inputFile <$> sysrootEnvVar
-      RuntimeWasiLibC -> wasiLibcArgs outputFile inputFile <$> sysrootEnvVar
+    getOutputFile :: Sem r (Path Abs File)
+    getOutputFile = maybe (return defaultOutputFile) someBaseToAbs' (o ^? compileOutputFile . _Just . pathPath)
 
-    outputFile :: FilePath
-    outputFile = maybe (takeBaseName inputFileCompile <> ".wasm") (^. pathPath) (o ^. compileOutputFile)
+    defaultOutputFile :: Path Abs File
+    defaultOutputFile = replaceExtension' ".wasm" inputFileCompile
 
-    inputFile :: FilePath
-    inputFile = inputCFile projRoot inputFileCompile
+    getInputFile :: Sem r (Path Abs File)
+    getInputFile = inputCFile inputFileCompile
 
-    sysrootEnvVar :: Sem r String
-    sysrootEnvVar =
-      fromMaybeM (throw msg) (embed (lookupEnv "WASI_SYSROOT_PATH"))
-      where
-        msg :: Text
-        msg = "Missing environment variable WASI_SYSROOT_PATH"
+sysrootEnvVar :: Members '[Error Text, Embed IO] r => Sem r (Path Abs Dir)
+sysrootEnvVar =
+  absDir
+    <$> fromMaybeM (throw msg) (embed (lookupEnv "WASI_SYSROOT_PATH"))
+  where
+    msg :: Text
+    msg = "Missing environment variable WASI_SYSROOT_PATH"
 
-commonArgs :: FilePath -> [String]
+commonArgs :: Path Abs File -> [String]
 commonArgs wasmOutputFile =
   [ "-std=c99",
     "-Oz",
     "-I",
-    juvixBuildDir,
+    toFilePath juvixBuildDir,
     "-o",
-    wasmOutputFile
+    toFilePath wasmOutputFile
   ]
 
-standaloneLibArgs :: FilePath -> FilePath -> FilePath -> [String]
-standaloneLibArgs projRoot wasmOutputFile inputFile =
-  commonArgs wasmOutputFile
-    <> [ "--target=wasm32",
-         "-nodefaultlibs",
-         "-nostartfiles",
-         "-Wl,--no-entry",
-         projRoot </> juvixBuildDir </> "walloc.c",
-         inputFile
-       ]
+standaloneLibArgs :: Members '[App, Embed IO] r => Path Abs File -> Path Abs File -> Sem r [String]
+standaloneLibArgs wasmOutputFile inputFile = do
+  root <- askPkgDir
+  return $
+    commonArgs wasmOutputFile
+      <> [ "--target=wasm32",
+           "-nodefaultlibs",
+           "-nostartfiles",
+           "-Wl,--no-entry",
+           toFilePath (root <//> juvixBuildDir <//> $(mkRelFile "walloc.c")),
+           toFilePath inputFile
+         ]
 
-wasiStandaloneArgs :: FilePath -> FilePath -> FilePath -> FilePath -> [String]
-wasiStandaloneArgs projRoot wasmOutputFile inputFile sysrootPath =
-  wasiCommonArgs sysrootPath wasmOutputFile
-    <> [ projRoot </> juvixBuildDir </> "walloc.c",
-         inputFile
-       ]
+wasiStandaloneArgs :: Members '[App, Error Text, Embed IO] r => Path Abs File -> Path Abs File -> Sem r [String]
+wasiStandaloneArgs wasmOutputFile inputFile = do
+  root <- askPkgDir
+  com <- wasiCommonArgs wasmOutputFile
+  return $
+    com
+      <> [ toFilePath (root <//> juvixBuildDir <//> $(mkRelFile "walloc.c")),
+           toFilePath inputFile
+         ]
 
-wasiLibcArgs :: FilePath -> FilePath -> FilePath -> [String]
-wasiLibcArgs wasmOutputFile inputFile sysrootPath =
-  wasiCommonArgs sysrootPath wasmOutputFile
-    <> ["-lc", inputFile]
+wasiLibcArgs :: Members '[App, Error Text, Embed IO] r => Path Abs File -> Path Abs File -> Sem r [String]
+wasiLibcArgs wasmOutputFile inputFile = do
+  com <- wasiCommonArgs wasmOutputFile
+  return $ com <> ["-lc", toFilePath inputFile]
 
-nativeArgs :: FilePath -> FilePath -> [String]
+nativeArgs :: Path Abs File -> Path Abs File -> [String]
 nativeArgs outputFile inputFile =
-  commonArgs outputFile <> [inputFile]
+  commonArgs outputFile <> [toFilePath inputFile]
 
-wasiCommonArgs :: FilePath -> FilePath -> [String]
-wasiCommonArgs sysrootPath wasmOutputFile =
-  commonArgs wasmOutputFile
-    <> [ "-nodefaultlibs",
-         "--target=wasm32-wasi",
-         "--sysroot",
-         sysrootPath
-       ]
+wasiCommonArgs :: Members '[App, Error Text, Embed IO] r => Path Abs File -> Sem r [String]
+wasiCommonArgs wasmOutputFile = do
+  sysrootPath <- sysrootEnvVar
+  return $
+    commonArgs wasmOutputFile
+      <> [ "-nodefaultlibs",
+           "--target=wasm32-wasi",
+           "--sysroot",
+           toFilePath sysrootPath
+         ]
 
 runClang ::
   Members '[Embed IO, Error Text] r =>

@@ -5,21 +5,23 @@ import Core.Eval.Base
 
 data PosTest = PosTest
   { _name :: String,
-    _relDir :: FilePath,
-    _file :: FilePath,
-    _expectedFile :: FilePath
+    _relDir :: Path Rel Dir,
+    _file :: Path Rel File,
+    _expectedFile :: Path Rel File
   }
 
-root :: FilePath
-root = "tests/Core/positive"
+root :: Path Abs Dir
+root = relToProject $(mkRelDir "tests/Core/positive")
 
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
-  let tRoot = root </> _relDir
+  let tRoot = root <//> _relDir
+      file' = tRoot <//> _file
+      expected' = tRoot <//> _expectedFile
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ coreEvalAssertion _file _expectedFile [] (const (return ()))
+          _testAssertion = Steps $ coreEvalAssertion file' expected' [] (const (return ()))
         }
 
 allTests :: TestTree
@@ -32,237 +34,237 @@ tests :: [PosTest]
 tests =
   [ PosTest
       "Arithmetic operators"
-      "."
-      "test001.jvc"
-      "out/test001.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test001.jvc")
+      $(mkRelFile "out/test001.out"),
     PosTest
       "Arithmetic operators inside lambdas"
-      "."
-      "test002.jvc"
-      "out/test002.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test002.jvc")
+      $(mkRelFile "out/test002.out"),
     PosTest
       "Empty program with comments"
-      "."
-      "test003.jvc"
-      "out/test003.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test003.jvc")
+      $(mkRelFile "out/test003.out"),
     PosTest
       "IO builtins"
-      "."
-      "test004.jvc"
-      "out/test004.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test004.jvc")
+      $(mkRelFile "out/test004.out"),
     PosTest
       "Higher-order functions"
-      "."
-      "test005.jvc"
-      "out/test005.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test005.jvc")
+      $(mkRelFile "out/test005.out"),
     PosTest
       "If-then-else"
-      "."
-      "test006.jvc"
-      "out/test006.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test006.jvc")
+      $(mkRelFile "out/test006.out"),
     PosTest
       "Case"
-      "."
-      "test007.jvc"
-      "out/test007.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test007.jvc")
+      $(mkRelFile "out/test007.out"),
     PosTest
       "Recursion"
-      "."
-      "test008.jvc"
-      "out/test008.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test008.jvc")
+      $(mkRelFile "out/test008.out"),
     PosTest
       "Tail recursion"
-      "."
-      "test009.jvc"
-      "out/test009.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test009.jvc")
+      $(mkRelFile "out/test009.out"),
     PosTest
       "Let"
-      "."
-      "test010.jvc"
-      "out/test010.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test010.jvc")
+      $(mkRelFile "out/test010.out"),
     PosTest
       "Tail recursion: Fibonacci numbers in linear time"
-      "."
-      "test011.jvc"
-      "out/test011.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test011.jvc")
+      $(mkRelFile "out/test011.out"),
     PosTest
       "Trees"
-      "."
-      "test012.jvc"
-      "out/test012.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test012.jvc")
+      $(mkRelFile "out/test012.out"),
     PosTest
       "Functions returning functions with variable capture"
-      "."
-      "test013.jvc"
-      "out/test013.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test013.jvc")
+      $(mkRelFile "out/test013.out"),
     PosTest
       "Arithmetic"
-      "."
-      "test014.jvc"
-      "out/test014.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test014.jvc")
+      $(mkRelFile "out/test014.out"),
     PosTest
       "Local functions with free variables"
-      "."
-      "test015.jvc"
-      "out/test015.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test015.jvc")
+      $(mkRelFile "out/test015.out"),
     PosTest
       "Recursion through higher-order functions"
-      "."
-      "test016.jvc"
-      "out/test016.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test016.jvc")
+      $(mkRelFile "out/test016.out"),
     PosTest
       "Tail recursion through higher-order functions"
-      "."
-      "test017.jvc"
-      "out/test017.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test017.jvc")
+      $(mkRelFile "out/test017.out"),
     PosTest
       "Higher-order functions and recursion"
-      "."
-      "test018.jvc"
-      "out/test018.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test018.jvc")
+      $(mkRelFile "out/test018.out"),
     PosTest
       "Self-application"
-      "."
-      "test019.jvc"
-      "out/test019.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test019.jvc")
+      $(mkRelFile "out/test019.out"),
     PosTest
       "Recursive functions: McCarthy's 91 function, subtraction by increments"
-      "."
-      "test020.jvc"
-      "out/test020.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test020.jvc")
+      $(mkRelFile "out/test020.out"),
     PosTest
       "Higher-order recursive functions"
-      "."
-      "test021.jvc"
-      "out/test021.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test021.jvc")
+      $(mkRelFile "out/test021.out"),
     PosTest
       "Fast exponentiation"
-      "."
-      "test022.jvc"
-      "out/test022.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test022.jvc")
+      $(mkRelFile "out/test022.out"),
     PosTest
       "Lists"
-      "."
-      "test023.jvc"
-      "out/test023.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test023.jvc")
+      $(mkRelFile "out/test023.out"),
     PosTest
       "Structural equality"
-      "."
-      "test024.jvc"
-      "out/test024.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test024.jvc")
+      $(mkRelFile "out/test024.out"),
     PosTest
       "Mutual recursion"
-      "."
-      "test025.jvc"
-      "out/test025.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test025.jvc")
+      $(mkRelFile "out/test025.out"),
     PosTest
       "Nested 'case', 'let' and 'if' with variable capture"
-      "."
-      "test026.jvc"
-      "out/test026.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test026.jvc")
+      $(mkRelFile "out/test026.out"),
     PosTest
       "Euclid's algorithm"
-      "."
-      "test027.jvc"
-      "out/test027.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test027.jvc")
+      $(mkRelFile "out/test027.out"),
     PosTest
       "Functional queues"
-      "."
-      "test028.jvc"
-      "out/test028.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test028.jvc")
+      $(mkRelFile "out/test028.out"),
     PosTest
       "Church numerals"
-      "."
-      "test029.jvc"
-      "out/test029.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test029.jvc")
+      $(mkRelFile "out/test029.out"),
     PosTest
       "Streams without memoization"
-      "."
-      "test030.jvc"
-      "out/test030.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test030.jvc")
+      $(mkRelFile "out/test030.out"),
     PosTest
       "Ackermann function"
-      "."
-      "test031.jvc"
-      "out/test031.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test031.jvc")
+      $(mkRelFile "out/test031.out"),
     PosTest
       "Ackermann function (higher-order definition)"
-      "."
-      "test032.jvc"
-      "out/test032.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test032.jvc")
+      $(mkRelFile "out/test032.out"),
     PosTest
       "Nested lists"
-      "."
-      "test033.jvc"
-      "out/test033.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test033.jvc")
+      $(mkRelFile "out/test033.out"),
     {-    PosTest
           "Evaluation order"
-          "."
-          "test034.jvc"
-          "out/test034.out", -}
+          $(mkRelDir ".")
+          $(mkRelFile "test034.jvc")
+          $(mkRelFile "out/test034.out"), -}
     PosTest
       "Merge sort"
-      "."
-      "test035.jvc"
-      "out/test035.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test035.jvc")
+      $(mkRelFile "out/test035.out"),
     PosTest
       "Big numbers"
-      "."
-      "test036.jvc"
-      "out/test036.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test036.jvc")
+      $(mkRelFile "out/test036.out"),
     PosTest
       "Global variables"
-      "."
-      "test037.jvc"
-      "out/test037.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test037.jvc")
+      $(mkRelFile "out/test037.out"),
     PosTest
       "Global variables and forward declarations"
-      "."
-      "test038.jvc"
-      "out/test038.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test038.jvc")
+      $(mkRelFile "out/test038.out"),
     PosTest
       "Eta-expansion of builtins and constructors"
-      "."
-      "test039.jvc"
-      "out/test039.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test039.jvc")
+      $(mkRelFile "out/test039.out"),
     PosTest
       "LetRec"
-      "."
-      "test040.jvc"
-      "out/test040.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test040.jvc")
+      $(mkRelFile "out/test040.out"),
     PosTest
       "Match with complex patterns"
-      "."
-      "test041.jvc"
-      "out/test041.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test041.jvc")
+      $(mkRelFile "out/test041.out"),
     PosTest
       "Type annotations"
-      "."
-      "test042.jvc"
-      "out/test042.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test042.jvc")
+      $(mkRelFile "out/test042.out"),
     PosTest
       "Dependent lambda-abstractions"
-      "."
-      "test043.jvc"
-      "out/test043.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test043.jvc")
+      $(mkRelFile "out/test043.out"),
     PosTest
       "Eta-expansion"
-      "."
-      "test044.jvc"
-      "out/test044.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test044.jvc")
+      $(mkRelFile "out/test044.out"),
     PosTest
       "Type application and abstraction"
-      "."
-      "test045.jvc"
-      "out/test045.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test045.jvc")
+      $(mkRelFile "out/test045.out"),
     PosTest
       "Applications with lets and cases in function position"
-      "."
-      "test046.jvc"
-      "out/test046.out",
+      $(mkRelDir ".")
+      $(mkRelFile "test046.jvc")
+      $(mkRelFile "out/test046.out"),
     PosTest
       "Builtin natural numbers"
-      "."
-      "test047.jvc"
-      "out/test047.out"
+      $(mkRelDir ".")
+      $(mkRelFile "test047.jvc")
+      $(mkRelFile "out/test047.out")
   ]

@@ -2,14 +2,15 @@ module Root where
 
 import Control.Exception qualified as IO
 import Data.ByteString qualified as ByteString
-import Data.Yaml
 import Juvix.Compiler.Pipeline
 import Juvix.Extra.Paths qualified as Paths
 import Juvix.Prelude
 
-findRoot :: Maybe FilePath -> IO (FilePath, Package)
-findRoot minputFile = do
-  whenJust (takeDirectory <$> minputFile) setCurrentDirectory
+findRootAndChangeDir :: Maybe (SomeBase File) -> IO (Path Abs Dir, Package)
+findRootAndChangeDir minputFile = do
+  whenJust minputFile $ \case
+    Abs d -> setCurrentDir (parent d)
+    Rel d -> setCurrentDir (parent d)
   r <- IO.try go
   case r of
     Left (err :: IO.SomeException) -> do
@@ -18,22 +19,21 @@ findRoot minputFile = do
       exitFailure
     Right root -> return root
   where
-    possiblePaths :: FilePath -> [FilePath]
-    possiblePaths start = takeWhile (/= "/") (aux start)
-      where
-        aux f = f : aux (takeDirectory f)
+    possiblePaths :: Path Abs Dir -> [Path Abs Dir]
+    possiblePaths p = p : toList (parents p)
 
-    go :: IO (FilePath, Package)
+    go :: IO (Path Abs Dir, Package)
     go = do
-      c <- getCurrentDirectory
-      l <- findFile (possiblePaths c) Paths.juvixYamlFile
+      cwd <- getCurrentDir
+      l <- findFile (possiblePaths cwd) Paths.juvixYamlFile
       case l of
-        Nothing -> return (c, emptyPackage)
-        Just yaml -> do
-          bs <- ByteString.readFile yaml
+        Nothing -> return (cwd, defaultPackage cwd)
+        Just yamlPath -> do
+          bs <- ByteString.readFile (toFilePath yamlPath)
           let isEmpty = ByteString.null bs
+              root = parent yamlPath
           pkg <-
             if
-                | isEmpty -> return emptyPackage
-                | otherwise -> decodeThrow bs
-          return (takeDirectory yaml, pkg)
+                | isEmpty -> return (defaultPackage root)
+                | otherwise -> readPackageIO root
+          return (root, pkg)

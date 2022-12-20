@@ -9,6 +9,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Builder qualified as Builder
 import Data.HashMap.Strict qualified as HashMap
 import Data.Time.Clock
+import Data.Versions (prettyV)
 import Juvix.Compiler.Abstract.Translation.FromConcrete qualified as Abstract
 import Juvix.Compiler.Backend.Html.Data
 import Juvix.Compiler.Backend.Html.Extra
@@ -34,7 +35,7 @@ import Text.Blaze.Html5.Attributes qualified as Attr
 
 data DocParams = DocParams
   { _docParamBase :: Text,
-    _docOutputDir :: FilePath
+    _docOutputDir :: Path Abs Dir
   }
 
 makeLenses ''DocParams
@@ -64,8 +65,8 @@ indexTree = foldr insertModule emptyTree
     emptyTree :: Tree Symbol (Maybe TopModulePath)
     emptyTree = Tree Nothing mempty
 
-indexFileName :: FilePath
-indexFileName = "index.html"
+indexFileName :: Path Rel File
+indexFileName = $(mkRelFile "index.html")
 
 createIndexFile ::
   forall r.
@@ -74,7 +75,7 @@ createIndexFile ::
   Sem r ()
 createIndexFile ps = do
   outDir <- asks (^. docOutputDir)
-  indexHtml >>= (template mempty >=> writeHtml (outDir </> indexFileName))
+  indexHtml >>= (template mempty >=> writeHtml (outDir <//> indexFileName))
   where
     indexHtml :: Sem r Html
     indexHtml = do
@@ -126,7 +127,7 @@ createIndexFile ps = do
                         summary "Subtree"
                           <> ul (mconcatMap li c')
 
-compile :: Members '[Embed IO] r => FilePath -> Text -> InternalTypedResult -> Sem r ()
+compile :: Members '[Embed IO] r => Path Abs Dir -> Text -> InternalTypedResult -> Sem r ()
 compile dir baseName ctx = runReader params . runReader normTable . runReader entry $ do
   copyAssets
   mapM_ goTopModule topModules
@@ -147,15 +148,15 @@ compile dir baseName ctx = runReader params . runReader normTable . runReader en
         . Scoped.mainModule
     copyAssets :: forall s. Members '[Embed IO, Reader DocParams] s => Sem s ()
     copyAssets = do
-      toAssetsDir <- (</> "assets") <$> asks (^. docOutputDir)
-      let writeAsset :: (FilePath, BS.ByteString) -> Sem s ()
+      toAssetsDir <- (<//> $(mkRelDir "assets")) <$> asks (^. docOutputDir)
+      let writeAsset :: (Path Rel File, BS.ByteString) -> Sem s ()
           writeAsset (filePath, fileContents) =
-            Prelude.embed $ BS.writeFile (toAssetsDir </> takeFileName filePath) fileContents
-      Prelude.embed (createDirectoryIfMissing True toAssetsDir)
+            Prelude.embed $ BS.writeFile (toFilePath (toAssetsDir <//> filePath)) fileContents
+      ensureDir toAssetsDir
       mapM_ writeAsset assetFiles
       where
-        assetFiles :: [(FilePath, BS.ByteString)]
-        assetFiles = $(assetsDir)
+        assetFiles :: [(Path Rel File, BS.ByteString)]
+        assetFiles = assetsDir
 
     params :: DocParams
     params =
@@ -166,19 +167,19 @@ compile dir baseName ctx = runReader params . runReader normTable . runReader en
     topModules :: HashMap NameId (Module 'Scoped 'ModuleTop)
     topModules = getAllModules mainMod
 
-writeHtml :: Members '[Embed IO] r => FilePath -> Html -> Sem r ()
+writeHtml :: Members '[Embed IO] r => Path Abs File -> Html -> Sem r ()
 writeHtml f h = Prelude.embed $ do
-  createDirectoryIfMissing True dir
-  Builder.writeFile f (Html.renderHtmlBuilder h)
+  ensureDir dir
+  Builder.writeFile (toFilePath f) (Html.renderHtmlBuilder h)
   where
-    dir :: FilePath
-    dir = takeDirectory f
+    dir :: Path Abs Dir
+    dir = parent f
 
-moduleDocPath :: Members '[Reader HtmlOptions, Reader DocParams] r => Module 'Scoped 'ModuleTop -> Sem r FilePath
+moduleDocPath :: Members '[Reader HtmlOptions, Reader DocParams] r => Module 'Scoped 'ModuleTop -> Sem r (Path Abs File)
 moduleDocPath m = do
   relPath <- moduleDocRelativePath (m ^. modulePath . S.nameConcrete)
   outDir <- asks (^. docOutputDir)
-  return (outDir </> relPath)
+  return (outDir <//> relPath)
 
 topModulePath ::
   Module 'Scoped 'ModuleTop -> TopModulePath
@@ -215,8 +216,8 @@ template rightMenu' content' = do
 
     packageHeader :: Sem r Html
     packageHeader = do
-      pkgName' <- toHtml <$> asks (^. entryPointPackage . packageName')
-      version' <- toHtml <$> asks (^. entryPointPackage . packageVersion')
+      pkgName' <- toHtml <$> asks (^. entryPointPackage . packageName)
+      version' <- toHtml <$> asks (^. entryPointPackage . packageVersion . to prettyV)
       return $
         Html.div ! Attr.id "package-header" $
           ( Html.span ! Attr.class_ "caption" $
@@ -258,7 +259,7 @@ goTopModule ::
 goTopModule m = do
   runReader docHtmlOpts $ do
     fpath <- moduleDocPath m
-    Prelude.embed (putStrLn ("processing " <> pack fpath))
+    Prelude.embed (putStrLn ("processing " <> pack (toFilePath fpath)))
     docHtml >>= writeHtml fpath
 
   runReader srcHtmlOpts $ do
@@ -285,7 +286,7 @@ goTopModule m = do
           return $
             ul ! Attr.id "page-menu" ! Attr.class_ "links" $
               li (a ! Attr.href sourceRef' $ "Source")
-                <> li (a ! Attr.href (fromString indexFileName) $ "Index")
+                <> li (a ! Attr.href (fromString (toFilePath indexFileName)) $ "Index")
 
         content :: Sem s Html
         content = do
