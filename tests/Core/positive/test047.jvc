@@ -1,0 +1,38 @@
+-- builtin natural numbers
+
+builtin def plus := \x \y case x of {
+  zero := y;
+  suc x' := suc (plus x' y);
+};
+
+def from_int := \n if n = 0 then zero else suc (from_int (n - 1));
+
+def to_int := \x case x of {
+  suc x' := to_int x' + 1;
+  zero := 0;
+};
+
+def even := \x case x of {
+  suc x' := case x' of {
+    zero := false;
+    suc y := even y;
+  };
+  _ := true;
+};
+
+def f := \x case x of {
+  suc x' := (\z case z of {
+    zero := even x';
+    suc y := f y;
+  }) x';
+  _ := even x;
+};
+
+def writeLn := \x write x >> write "\n";
+
+def main :=
+  writeLn (to_int (if even (from_int 124) then plus (suc zero) (suc (suc zero)) else zero)) >>
+  writeLn (to_int (plus (from_int 126) (from_int 10))) >>
+  writeLn (f (from_int 65));
+
+main

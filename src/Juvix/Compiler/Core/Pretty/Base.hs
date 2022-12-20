@@ -158,20 +158,32 @@ ppCodeLet' name mty lt = do
   return $ kwLet <+> n' <> tty <+> kwAssign <+> v' <+> kwIn <> line <> b'
 
 ppCodeCase' :: (PrettyCode a, Member (Reader Options) r) => [[Text]] -> [Text] -> Case' i bi a -> Sem r (Doc Ann)
-ppCodeCase' branchBinderNames branchTagNames Case {..} = do
-  let branchBodies = map (^. caseBranchBody) _caseBranches
-  bns <- mapM (mapM (ppName KNameLocal)) branchBinderNames
-  cns <- mapM (ppName KNameConstructor) branchTagNames
-  v <- ppCode _caseValue
-  bs' <- sequence $ zipWith3Exact (\cn bn br -> ppCode br >>= \br' -> return $ foldl' (<+>) cn bn <+> kwAssign <+> br') cns bns branchBodies
-  bs'' <-
-    case _caseDefault of
-      Just def -> do
-        d' <- ppCode def
-        return $ bs' ++ [kwDefault <+> kwAssign <+> d']
-      Nothing -> return bs'
-  let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs''
-  return $ kwCase <+> v <+> kwOf <+> bss
+ppCodeCase' branchBinderNames branchTagNames Case {..} =
+  case _caseBranches of
+    [CaseBranch _ (BuiltinTag TagTrue) _ _ br1, CaseBranch _ (BuiltinTag TagTrue) _ _ br2] -> do
+      br1' <- ppCode br1
+      br2' <- ppCode br2
+      v <- ppCode _caseValue
+      return $ kwIf <+> v <+> kwThen <+> br1' <+> kwElse <+> br2'
+    [CaseBranch _ (BuiltinTag TagTrue) _ _ br1] | isJust _caseDefault -> do
+      br1' <- ppCode br1
+      br2' <- ppCode (fromJust _caseDefault)
+      v <- ppCode _caseValue
+      return $ kwIf <+> v <+> kwThen <+> br1' <+> kwElse <+> br2'
+    _ -> do
+      let branchBodies = map (^. caseBranchBody) _caseBranches
+      bns <- mapM (mapM (ppName KNameLocal)) branchBinderNames
+      cns <- mapM (ppName KNameConstructor) branchTagNames
+      v <- ppCode _caseValue
+      bs' <- sequence $ zipWith3Exact (\cn bn br -> ppCode br >>= \br' -> return $ foldl' (<+>) cn bn <+> kwAssign <+> br') cns bns branchBodies
+      bs'' <-
+        case _caseDefault of
+          Just def -> do
+            d' <- ppCode def
+            return $ bs' ++ [kwDefault <+> kwAssign <+> d']
+          Nothing -> return bs'
+      let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs''
+      return $ kwCase <+> v <+> kwOf <+> bss
 
 instance PrettyCode PatternWildcard where
   ppCode _ = return kwWildcard
@@ -504,6 +516,15 @@ kwMatch = keyword Str.match_
 
 kwWith :: Doc Ann
 kwWith = keyword Str.with_
+
+kwIf :: Doc Ann
+kwIf = keyword Str.if_
+
+kwThen :: Doc Ann
+kwThen = keyword Str.then_
+
+kwElse :: Doc Ann
+kwElse = keyword Str.else_
 
 kwDefault :: Doc Ann
 kwDefault = keyword Str.underscore

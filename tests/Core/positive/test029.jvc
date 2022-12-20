@@ -9,11 +9,11 @@ def snd := \p case p of { pair _ x := x };
 
 def compose := \f \g \x f (g x);
 
-def zero := \f \x x;
+def czero := \f \x x;
 
 def num := \n
   if n = 0 then
-    zero
+    czero
   else
     \f compose f (num (n - 1) f);
 
@@ -32,7 +32,7 @@ def pred := \n
           pair (fst x) (succ (snd x))
         else
           pair (succ (fst x)) (succ (snd x)))
-      (pair zero zero)
+      (pair czero czero)
   );
 
 def toInt := \n n (+ 1) 0;
@@ -41,11 +41,11 @@ def writeLn := \x write x >> write "\n";
 
 def fib := \n
   if isZero n then
-    zero
+    czero
   else
     let n' := pred n in
     if isZero n' then
-      succ zero
+      succ czero
     else
       add (fib n') (fib (pred n'));
 

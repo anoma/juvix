@@ -45,34 +45,36 @@ guardSymbolNotDefined sym err = do
 
 createBuiltinConstr ::
   Symbol ->
-  BuiltinDataTag ->
+  Tag ->
   Text ->
   Type ->
   Interval ->
+  Maybe BuiltinConstructor ->
   Sem r ConstructorInfo
-createBuiltinConstr sym btag nameTxt ty i = do
-  let n = builtinConstrArgsNum btag
+createBuiltinConstr sym tag nameTxt ty i cblt = do
   return $
     ConstructorInfo
       { _constructorName = nameTxt,
         _constructorLocation = Just i,
-        _constructorTag = BuiltinTag btag,
+        _constructorTag = tag,
         _constructorType = ty,
-        _constructorArgsNum = n,
-        _constructorInductive = sym
+        _constructorArgsNum = length (typeArgs ty),
+        _constructorInductive = sym,
+        _constructorBuiltin = cblt
       }
 
 declareInductiveBuiltins ::
   Member InfoTableBuilder r =>
   Text ->
-  [(BuiltinDataTag, Text, Type -> Type)] ->
+  Maybe BuiltinInductive ->
+  [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] ->
   ParsecS r ()
-declareInductiveBuiltins indName ctrs = do
+declareInductiveBuiltins indName blt ctrs = do
   loc <- curLoc
   let i = mkInterval loc loc
   sym <- lift freshSymbol
   let ty = mkIdent' sym
-  constrs <- lift $ mapM (\(tag, name, fty) -> createBuiltinConstr sym tag name (fty ty) i) ctrs
+  constrs <- lift $ mapM (\(tag, name, fty, cblt) -> createBuiltinConstr sym tag name (fty ty) i cblt) ctrs
   lift $
     registerInductive
       indName
@@ -83,7 +85,8 @@ declareInductiveBuiltins indName ctrs = do
             _inductiveKind = mkDynamic',
             _inductiveConstructors = constrs,
             _inductivePositive = True,
-            _inductiveParams = []
+            _inductiveParams = [],
+            _inductiveBuiltin = blt
           }
       )
   lift $ mapM_ (\ci -> registerConstructor (ci ^. constructorName) ci) constrs
@@ -92,18 +95,31 @@ declareIOBuiltins :: Member InfoTableBuilder r => ParsecS r ()
 declareIOBuiltins =
   declareInductiveBuiltins
     "IO"
-    [ (TagReturn, "return", mkPi' mkDynamic'),
-      (TagBind, "bind", \ty -> mkPi' ty (mkPi' (mkPi' mkDynamic' ty) ty)),
-      (TagWrite, "write", mkPi' mkDynamic'),
-      (TagReadLn, "readLn", id)
+    Nothing
+    [ (BuiltinTag TagReturn, "return", mkPi' mkDynamic', Nothing),
+      (BuiltinTag TagBind, "bind", \ty -> mkPi' ty (mkPi' (mkPi' mkDynamic' ty) ty), Nothing),
+      (BuiltinTag TagWrite, "write", mkPi' mkDynamic', Nothing),
+      (BuiltinTag TagReadLn, "readLn", id, Nothing)
     ]
 
 declareBoolBuiltins :: Member InfoTableBuilder r => ParsecS r ()
 declareBoolBuiltins =
   declareInductiveBuiltins
     "bool"
-    [ (TagTrue, "true", id),
-      (TagFalse, "false", id)
+    (Just BuiltinBool)
+    [ (BuiltinTag TagTrue, "true", id, Just BuiltinBoolTrue),
+      (BuiltinTag TagFalse, "false", id, Just BuiltinBoolFalse)
+    ]
+
+declareNatBuiltins :: Member InfoTableBuilder r => ParsecS r ()
+declareNatBuiltins = do
+  tagZero <- lift freshTag
+  tagSuc <- lift freshTag
+  declareInductiveBuiltins
+    "nat"
+    (Just BuiltinNat)
+    [ (tagZero, "zero", id, Just BuiltinNatZero),
+      (tagSuc, "suc", \x -> mkPi' x x, Just BuiltinNatSuc)
     ]
 
 parseToplevel ::
@@ -112,6 +128,7 @@ parseToplevel ::
 parseToplevel = do
   declareIOBuiltins
   declareBoolBuiltins
+  declareNatBuiltins
   space
   P.endBy statement (kw kwSemicolon)
   r <- optional expression
@@ -121,11 +138,23 @@ parseToplevel = do
 statement ::
   Member InfoTableBuilder r =>
   ParsecS r ()
-statement = statementDef <|> statementInductive
+statement = statementBuiltin <|> void statementDef <|> statementInductive
+
+statementBuiltin ::
+  Member InfoTableBuilder r =>
+  ParsecS r ()
+statementBuiltin = do
+  off <- P.getOffset
+  kw kwBuiltin
+  sym <- statementDef
+  ii <- lift $ getIdentifierInfo sym
+  case ii ^. identifierName of
+    "plus" -> lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatPlus}
+    _ -> parseFailure off "unrecorgnized builtin definition"
 
 statementDef ::
   Member InfoTableBuilder r =>
-  ParsecS r ()
+  ParsecS r Symbol
 statementDef = do
   kw kwDef
   off <- P.getOffset
@@ -140,6 +169,7 @@ statementDef = do
       let fi = fromMaybe impossible $ HashMap.lookup sym (tab ^. infoIdentifiers)
           ty = fi ^. identifierType
       parseDefinition sym ty
+      return sym
     Just IdentInd {} ->
       parseFailure off ("duplicate identifier: " ++ fromText txt)
     Just IdentConstr {} ->
@@ -156,10 +186,12 @@ statementDef = do
                 _identifierType = ty,
                 _identifierArgsNum = 0,
                 _identifierArgsInfo = [],
-                _identifierIsExported = False
+                _identifierIsExported = False,
+                _identifierBuiltin = Nothing
               }
       lift $ registerIdent txt info
       void $ optional (parseDefinition sym ty)
+      return sym
 
 parseDefinition ::
   Member InfoTableBuilder r =>
@@ -208,7 +240,8 @@ statementInductive = do
             _inductiveKind = fromMaybe (mkUniv' 0) mty,
             _inductiveConstructors = [],
             _inductiveParams = [],
-            _inductivePositive = True
+            _inductivePositive = True,
+            _inductiveBuiltin = Nothing
           }
   lift $ registerInductive txt ii
   ctrs <- braces $ P.sepEndBy (constrDecl sym) (kw kwSemicolon)
@@ -233,7 +266,8 @@ constrDecl symInd = do
             _constructorTag = tag,
             _constructorArgsNum = length (typeArgs ty),
             _constructorType = ty,
-            _constructorInductive = symInd
+            _constructorInductive = symInd,
+            _constructorBuiltin = Nothing
           }
   lift $ registerConstructor txt ci
   return ci
@@ -742,13 +776,25 @@ exprCase' off value varsNum vars = do
   bs <- P.sepEndBy (caseBranchP varsNum vars) (kw kwSemicolon)
   let bss = map fromLeft' $ filter isLeft bs
   let def' = map fromRight' $ filter isRight bs
-  case def' of
-    [def] ->
-      return $ mkCase' value bss (Just def)
+  case bss of
+    CaseBranch {..} : _ -> do
+      ci <- lift $ getConstructorInfo _caseBranchTag
+      let sym = ci ^. constructorInductive
+      case def' of
+        [def] ->
+          return $ mkCase' sym value bss (Just def)
+        [] ->
+          return $ mkCase' sym value bss Nothing
+        _ ->
+          parseFailure off "multiple default branches"
     [] ->
-      return $ mkCase' value bss Nothing
-    _ ->
-      parseFailure off "multiple default branches"
+      case def' of
+        [_] ->
+          parseFailure off "case with only the default branch not allowed"
+        [] ->
+          parseFailure off "case without branches not allowed"
+        _ ->
+          parseFailure off "multiple default branches"
 
 caseBranchP ::
   Member InfoTableBuilder r =>
@@ -818,7 +864,8 @@ exprIf varsNum vars = do
   br1 <- bracedExpr varsNum vars
   kw kwElse
   br2 <- bracedExpr varsNum vars
-  return $ mkIf Info.empty value br1 br2
+  sym <- lift getBoolSymbol
+  return $ mkIf mempty sym value br1 br2
 
 exprMatch ::
   Member InfoTableBuilder r =>

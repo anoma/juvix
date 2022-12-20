@@ -259,5 +259,10 @@ tests =
       "Applications with lets and cases in function position"
       "."
       "test046.jvc"
-      "out/test046.out"
+      "out/test046.out",
+    PosTest
+      "Builtin natural numbers"
+      "."
+      "test047.jvc"
+      "out/test047.out"
   ]

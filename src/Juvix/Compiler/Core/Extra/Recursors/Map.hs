@@ -112,6 +112,14 @@ fromRecur c =
 fromPair :: Functor g => d -> g (c, Node) -> g (Recur' (c, d))
 fromPair d = fmap (\(c, x) -> Recur' ((c, d), x))
 
+fromRecur' :: Functor g => d -> g (Recur' c) -> g (Recur' (c, d))
+fromRecur' d =
+  fmap
+    ( \case
+        End' x -> End' x
+        Recur' (c, x) -> Recur' ((c, d), x)
+    )
+
 nodeMapG' ::
   Monad m =>
   Sing dir ->
