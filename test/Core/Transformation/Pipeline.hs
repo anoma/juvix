@@ -1,4 +1,4 @@
-module Core.Transformation.RemoveTypeArgs (allTests) where
+module Core.Transformation.Pipeline (allTests) where
 
 import Base
 import Core.Eval.Positive qualified as Eval
@@ -6,10 +6,10 @@ import Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation
 
 allTests :: TestTree
-allTests = testGroup "Move applications and remove type arguments" (map liftTest Eval.tests)
+allTests = testGroup "Transformation pipeline" (map liftTest Eval.tests)
 
 pipe :: [TransformationId]
-pipe = [LambdaLifting, MoveApps, RemoveTypeArgs]
+pipe = [NatToInt, LambdaLifting, MoveApps, RemoveTypeArgs, TopEtaExpand]
 
 liftTest :: Eval.PosTest -> TestTree
 liftTest _testEval =

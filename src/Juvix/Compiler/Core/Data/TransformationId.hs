@@ -7,5 +7,6 @@ data TransformationId
   | TopEtaExpand
   | RemoveTypeArgs
   | MoveApps
+  | NatToInt
   | Identity
   deriving stock (Data)

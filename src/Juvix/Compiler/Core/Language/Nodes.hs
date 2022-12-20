@@ -114,6 +114,7 @@ data LetRec' i a ty = LetRec
 -- branches default`. `Case` is lazy: only the selected branch is evaluated.
 data Case' i bi a = Case
   { _caseInfo :: i,
+    _caseInductive :: Symbol,
     _caseValue :: !a,
     _caseBranches :: ![CaseBranch' bi a],
     _caseDefault :: !(Maybe a)
@@ -338,7 +339,7 @@ instance Eq a => Eq (Constr' i a) where
   (Constr _ tag1 args1) == (Constr _ tag2 args2) = tag1 == tag2 && args1 == args2
 
 instance Eq a => Eq (Case' i bi a) where
-  (Case _ v1 bs1 def1) == (Case _ v2 bs2 def2) = v1 == v2 && bs1 == bs2 && def1 == def2
+  (Case _ sym1 v1 bs1 def1) == (Case _ sym2 v2 bs2 def2) = sym1 == sym2 && v1 == v2 && bs1 == bs2 && def1 == def2
 
 instance Eq a => Eq (CaseBranch' i a) where
   (==) =

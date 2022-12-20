@@ -260,6 +260,11 @@ tests =
     PosTest
       "Applications with lets and cases in function position"
       $(mkRelDir ".")
-      $(mkRelFile "test045.jvc")
-      $(mkRelFile "out/test045.out")
+      $(mkRelFile "test046.jvc")
+      $(mkRelFile "out/test046.out"),
+    PosTest
+      "Builtin natural numbers"
+      $(mkRelDir ".")
+      $(mkRelFile "test047.jvc")
+      $(mkRelFile "out/test047.out")
   ]

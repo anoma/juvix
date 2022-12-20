@@ -121,7 +121,8 @@ goInductiveDef i = do
             _inductiveKind = mkDynamic',
             _inductiveConstructors = ctorInfos,
             _inductiveParams = [],
-            _inductivePositive = i ^. Internal.inductivePositive
+            _inductivePositive = i ^. Internal.inductivePositive,
+            _inductiveBuiltin = i ^. Internal.inductiveBuiltin
           }
   registerInductive (mkIdentIndex (i ^. Internal.inductiveName)) info
 
@@ -132,7 +133,8 @@ goConstructor ::
   Internal.InductiveConstructorDef ->
   Sem r ConstructorInfo
 goConstructor sym ctor = do
-  tag <- mBuiltin >>= ctorTag
+  mblt <- mBuiltin
+  tag <- ctorTag mblt
   ty <- ctorType
   let info =
         ConstructorInfo
@@ -141,7 +143,8 @@ goConstructor sym ctor = do
             _constructorTag = tag,
             _constructorType = ty,
             _constructorArgsNum = length (ctor ^. Internal.inductiveConstructorParameters),
-            _constructorInductive = sym
+            _constructorInductive = sym,
+            _constructorBuiltin = mblt
           }
   registerConstructor (mkIdentIndex (ctor ^. Internal.inductiveConstructorName)) info
   return info
@@ -198,7 +201,8 @@ goFunctionDefIden (f, sym) = do
             _identifierType = funTy,
             _identifierArgsNum = 0,
             _identifierArgsInfo = [],
-            _identifierIsExported = False
+            _identifierIsExported = False,
+            _identifierBuiltin = f ^. Internal.funDefBuiltin
           }
   registerIdent (mkIdentIndex (f ^. Internal.funDefName)) info
   when (f ^. Internal.funDefName . Internal.nameText == Str.main) (registerMain sym)
@@ -286,7 +290,8 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
                 _inductiveKind = mkDynamic',
                 _inductiveConstructors = [],
                 _inductiveParams = [],
-                _inductivePositive = False
+                _inductivePositive = False,
+                _inductiveBuiltin = Nothing
               }
       registerInductive (mkIdentIndex (a ^. Internal.axiomName)) info
 
@@ -307,7 +312,8 @@ goAxiomDef a = case a ^. Internal.axiomBuiltin >>= builtinBody of
               _identifierType = ty,
               _identifierArgsNum = 0,
               _identifierArgsInfo = [],
-              _identifierIsExported = False
+              _identifierIsExported = False,
+              _identifierBuiltin = Nothing
             }
     registerIdent (mkIdentIndex (a ^. Internal.axiomName)) info
     registerIdentNode sym body
@@ -554,9 +560,10 @@ goApplication a = do
       funInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoFunctions)
       case funInfo ^. Internal.functionInfoDef . Internal.funDefBuiltin of
         Just Internal.BuiltinBoolIf -> do
+          sym <- getBoolSymbol
           as <- exprArgs
           case as of
-            (v : b1 : b2 : xs) -> return (mkApps' (mkIf' v b1 b2) xs)
+            (v : b1 : b2 : xs) -> return (mkApps' (mkIf' sym v b1 b2) xs)
             _ -> error "if must be called with 3 arguments"
         _ -> app
     _ -> app

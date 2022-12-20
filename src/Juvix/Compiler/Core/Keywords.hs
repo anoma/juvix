@@ -10,6 +10,7 @@ import Juvix.Data.Keyword.All
   ( kwAny,
     kwAssign,
     kwBind,
+    kwBuiltin,
     kwCase,
     kwColon,
     kwComma,
@@ -52,6 +53,7 @@ allKeywordStrings = keywordsStrings allKeywords
 allKeywords :: [Keyword]
 allKeywords =
   [ kwAssign,
+    kwBuiltin,
     kwLet,
     kwLetRec,
     kwIn,

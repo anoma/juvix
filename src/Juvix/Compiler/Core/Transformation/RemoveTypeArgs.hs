@@ -49,7 +49,7 @@ convertNode tab = convert mempty
             args' = filterArgs ty _constrArgs
          in End (mkConstr _constrInfo _constrTag (map (convert vars) args'))
       NCase (Case {..}) ->
-        End (mkCase _caseInfo (convert vars _caseValue) (map convertBranch _caseBranches) (fmap (convert vars) _caseDefault))
+        End (mkCase _caseInfo _caseInductive (convert vars _caseValue) (map convertBranch _caseBranches) (fmap (convert vars) _caseDefault))
         where
           convertBranch :: CaseBranch -> CaseBranch
           convertBranch br@CaseBranch {..} =

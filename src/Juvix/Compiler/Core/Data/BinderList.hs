@@ -1,6 +1,6 @@
 module Juvix.Compiler.Core.Data.BinderList where
 
-import Juvix.Compiler.Core.Language hiding (cons, lookup, uncons)
+import Juvix.Compiler.Core.Language hiding (cons, drop, lookup, uncons)
 import Juvix.Prelude qualified as Prelude
 
 -- | if we have \x\y. b, the binderlist in b is [y, x]
@@ -14,11 +14,11 @@ makeLenses ''BinderList
 fromList :: [a] -> BinderList a
 fromList l = BinderList (length l) l
 
-drop' :: Int -> BinderList a -> BinderList a
-drop' k (BinderList n l) = BinderList (n - k) (dropExact k l)
+drop :: Int -> BinderList a -> BinderList a
+drop k (BinderList n l) = BinderList (n - k) (dropExact k l)
 
-tail' :: BinderList a -> BinderList a
-tail' = snd . fromJust . uncons
+tail :: BinderList a -> BinderList a
+tail = snd . fromJust . uncons
 
 uncons :: BinderList a -> Maybe (a, BinderList a)
 uncons l = second helper <$> Prelude.uncons (l ^. blMap)
@@ -60,7 +60,7 @@ lookupsSortedRev bl = go [] 0 bl
       (v : vs) ->
         let skipped = v ^. varIndex - off
             off' = off + skipped
-            ctx' = drop' skipped ctx
+            ctx' = drop skipped ctx
          in go ((v, head' ctx') : acc) off' ctx' vs
     head' :: BinderList a -> a
     head' = lookup 0
