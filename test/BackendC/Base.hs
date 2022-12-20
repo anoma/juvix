@@ -59,11 +59,7 @@ wasiClangAssertion stdlibMode mainFile expectedFile stdinText step = do
   assertCmdExists $(mkRelFile "wasmer")
 
   step "Lookup WASI_SYSROOT_PATH"
-  sysrootPath <-
-    absDir
-      <$> assertEnvVar
-        "Env var WASI_SYSROOT_PATH missing. Set to the location of the wasi-clib sysroot"
-        "WASI_SYSROOT_PATH"
+  sysrootPath <- getWasiSysrootPath
 
   root <- getCurrentDir
   step "C Generation"

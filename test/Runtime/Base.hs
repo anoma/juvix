@@ -31,11 +31,7 @@ clangAssertion inputFile expectedFile stdinText step = do
   assertCmdExists $(mkRelFile "wasmer")
 
   step "Lookup WASI_SYSROOT_PATH"
-  sysrootPath :: Path Abs Dir <-
-    absDir
-      <$> assertEnvVar
-        "Env var WASI_SYSROOT_PATH missing. Set to the location of the wasi-clib sysroot"
-        "WASI_SYSROOT_PATH"
+  sysrootPath :: Path Abs Dir <- getWasiSysrootPath
 
   expected <- TIO.readFile (toFilePath expectedFile)
 

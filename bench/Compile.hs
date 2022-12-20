@@ -3,6 +3,7 @@ module Compile where
 import Base
 import Development.Shake
 import Juvix.Prelude.Base
+import Juvix.Prelude.Env
 import Juvix.Prelude.Path as Path hiding (doesFileExist, (-<.>))
 
 dirs :: [Path Rel Dir]
@@ -41,8 +42,7 @@ mkBenchMark dir = do
   mkOcaml dir
   mkJuvix dir
   mkJuvixRuntime dir
-
--- mkClang dir FIXME
+  mkClang dir
 
 -- | e.g. dir = fibonacci
 mkHaskell :: Path Abs Dir -> Rules ()
@@ -150,7 +150,8 @@ mkClang dir = do
     command_ [] "clang" ["-O3", "-o", toFilePath exeFile, toFilePath cFile]
   recipe wasmFile $ do
     need [toFilePath cFile]
-    command_ [] "clang" ["-Os", "-nodefaultlibs", "--sysroot", "$WASI_SYSROOT_Path", "-lc", "--target=wasm32-wasi", "-o", toFilePath wasmFile, toFilePath cFile]
+    wasipath <- getWasiSysrootPathStr
+    command_ [] "clang" ["-Os", "-nodefaultlibs", "--sysroot", wasipath, "-lc", "--target=wasm32-wasi", "-o", toFilePath wasmFile, toFilePath cFile]
   where
     cDir :: Path Abs Dir
     cDir = dir Path.<//> $(mkRelDir "c")

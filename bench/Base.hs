@@ -1,7 +1,6 @@
 module Base where
 
 import Juvix.Extra.Paths
-import Juvix.Prelude.Path as Path
 import Juvix.Prelude
 import Prelude (Show (show))
 
