@@ -232,7 +232,7 @@ int main() {
     JUVIX_FUNCTION(juvix_function_main, 1);
     {
         ARG(1) = CONSTR_NIL;
-        ARG(0) = make_smallint(200000);
+        ARG(0) = make_smallint(100000);
         CALL(0, gen, juvix_label_main_1);
         ARG(0) = juvix_result;
         CALL(0, sort, juvix_label_2);
