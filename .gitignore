@@ -88,4 +88,4 @@ docs/org/README.org
 examples/milestone/HelloWorld/HelloWorld
 hie.yaml
 /.shake/
-hie.yaml
+/.benchmark-results/

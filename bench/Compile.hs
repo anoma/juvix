@@ -1,163 +1,91 @@
 module Compile where
 
 import Base
-import Development.Shake
+import Gauge
+import System.Process
+import Development.Shake hiding ((<//>))
 import Juvix.Prelude.Base
-import Juvix.Prelude.Env
 import Juvix.Prelude.Path as Path hiding (doesFileExist, (-<.>))
-
-dirs :: [Path Rel Dir]
-dirs =
-  [ $(mkRelDir "ackermann"),
-    $(mkRelDir "combinations"),
-    $(mkRelDir "cps"),
-    $(mkRelDir "fibonacci"),
-    $(mkRelDir "fold"),
-    $(mkRelDir "mapfold"),
-    $(mkRelDir "mapfun"),
-    $(mkRelDir "maybe"),
-    $(mkRelDir "mergesort"),
-    $(mkRelDir "prime")
-  ]
-
-absDirs :: [Path Abs Dir]
-absDirs = map (root Path.<//>) dirs
+import Juvix.Prelude.Path qualified as Path
+import Suites
 
 compile :: IO ()
-compile = shakeArgs opts $ do
-  phony "clean" $ do
-    putInfo "TODO: Cleaning... "
-  forM_ absDirs mkBenchMark
+compile = shakeArgs opts compileRules
   where
     opts :: ShakeOptions
     opts = shakeOptions
 
+compileRules :: Rules ()
+compileRules = do
+  phony "clean" $ do
+    putInfo "TODO: Cleaning... "
+  forM_ suites suiteRules
+
+suiteRules :: Suite -> Rules ()
+suiteRules s = do
+  forM_ (s ^. suiteVariants) (variantRules s)
+  csvRules s
+
 recipe :: Path Abs File -> Action () -> Rules ()
 recipe out howto = toFilePath out %> const howto
 
--- | e.g. dir = fibonacci
-mkBenchMark :: Path Abs Dir -> Rules ()
-mkBenchMark dir = do
-  mkHaskell dir
-  mkOcaml dir
-  mkJuvix dir
-  mkJuvixRuntime dir
-  mkClang dir
-
--- | e.g. dir = fibonacci
-mkHaskell :: Path Abs Dir -> Rules ()
-mkHaskell dir = do
+variantRules :: Suite -> Variant -> Rules ()
+variantRules s v = do
   action $
     whenM
-      (doesFileExist (toFilePath hsFile))
-      (need [toFilePath exeFile, toFilePath sexeFile])
-  let opts :: [String] = ["-O2", "-no-keep-hi-files", "-no-keep-o-files"]
+      (doesFileExist (toFilePath srcFile))
+      (need [toFilePath exeFile])
   recipe exeFile $ do
-    need [toFilePath hsFile]
-    command_ [] "ghc" (opts ++ ["-o", toFilePath exeFile, toFilePath hsFile])
-  recipe sexeFile $ do
-    need [toFilePath hsFile]
-    command_ [] "ghc" (opts ++ ["-XStrict", "-o", toFilePath sexeFile, toFilePath hsFile])
+    need [toFilePath srcFile]
+    ensureDir outDir
+    (v ^. variantBuild) args
   where
-    haskellDir :: Path Abs Dir
-    haskellDir = dir Path.<//> $(mkRelDir "haskell")
-    hsFile :: Path Abs File
-    hsFile = addExtension' ".hs" (haskellDir Path.<//> dirnameToFile dir)
+    args :: BuildArgs
+    args =
+      BuildArgs
+        { _buildSrc = srcFile,
+          _buildOutDir = variantBinDir s v
+        }
+    srcDir :: Path Abs Dir
+    srcDir = suiteSrcDir s
+    srcFile :: Path Abs File
+    srcFile = addExtension' (langExtension (v ^. variantLanguage)) (srcDir Path.<//> suiteBaseFile s)
     exeFile :: Path Abs File
-    exeFile = replaceExtension' ".exe" hsFile
-    sexeFile :: Path Abs File
-    sexeFile = addExtension' ".exe" (replaceExtension' ".strict" hsFile)
+    exeFile = replaceExtensions' (v ^. variantExtensions) srcFile
 
--- | e.g. dir = fibonacci
-mkOcaml :: Path Abs Dir -> Rules ()
-mkOcaml dir = do
-  action $
-    whenM
-      (doesFileExist (toFilePath mlFile))
-      (need [toFilePath exeFile, toFilePath byteexeFile])
-  recipe exeFile $ do
-    need [toFilePath mlFile]
-    command_ [] "ocamlopt" ["-O2", "-o", toFilePath exeFile, toFilePath mlFile]
-  recipe byteexeFile $ do
-    need [toFilePath mlFile]
-    command_ [] "ocamlc" ["-o", toFilePath byteexeFile, toFilePath mlFile]
-  where
-    ocamlDir :: Path Abs Dir
-    ocamlDir = dir Path.<//> $(mkRelDir "ocaml")
-    mlFile :: Path Abs File
-    mlFile = addExtension' ".ml" (ocamlDir Path.<//> dirnameToFile dir)
-    exeFile :: Path Abs File
-    exeFile = replaceExtension' ".exe" mlFile
-    byteexeFile :: Path Abs File
-    byteexeFile = addExtension' ".exe" (replaceExtension' ".byte" mlFile)
+csvRules :: Suite -> Rules ()
+csvRules s = do
+  let csv :: Path Abs File = suiteCsvFile s
+  recipe csv $ do
+    need [ toFilePath (variantBinFile s v) | v <- s ^. suiteVariants  ]
+    ensureDir (parent csv)
+    whenM (Path.doesFileExist csv) (removeFile csv)
+    liftIO (runMode DefaultMode (config s) [] [fromSuite s])
 
--- | e.g. dir = fibonacci
-mkJuvix :: Path Abs Dir -> Rules ()
-mkJuvix dir = do
-  action $
-    whenM
-      (doesFileExist (toFilePath juvixFile))
-      (need [toFilePath exeFile, toFilePath wasmFile])
-  let opts :: [String] = ["compile"]
-  recipe exeFile $ do
-    need [toFilePath juvixFile]
-    command_ [] "juvix" (opts <> ["-o", toFilePath exeFile, toFilePath juvixFile])
-  recipe wasmFile $ do
-    need [toFilePath juvixFile]
-    command_ [] "juvix" (opts <> ["--target=wasm", "-o", toFilePath wasmFile, toFilePath juvixFile])
-  where
-    ocamlDir :: Path Abs Dir
-    ocamlDir = dir Path.<//> $(mkRelDir "juvix")
-    juvixFile :: Path Abs File
-    juvixFile = addExtension' ".juvix" (ocamlDir Path.<//> dirnameToFile dir)
-    exeFile :: Path Abs File
-    exeFile = replaceExtension' ".exe" juvixFile
-    wasmFile :: Path Abs File
-    wasmFile = replaceExtension' ".wasm" juvixFile
+runExe :: Path Abs File -> IO ()
+runExe p = void (readProcess (toFilePath p) [] "")
 
--- | e.g. dir = fibonacci
-mkJuvixRuntime :: Path Abs Dir -> Rules ()
-mkJuvixRuntime dir = do
-  action $
-    whenM
-      (doesFileExist (toFilePath cFile))
-      (need [toFilePath exeFile, toFilePath wasmFile])
-  let opts :: [String] = ["dev", "runtime", "compile"]
-  recipe exeFile $ do
-    need [toFilePath cFile]
-    command_ [] "juvix" (opts <> ["-o", toFilePath exeFile, toFilePath cFile])
-  recipe wasmFile $ do
-    need [toFilePath cFile]
-    command_ [] "juvix" (opts <> ["--target=wasm32-wasi", "-o", toFilePath wasmFile, toFilePath cFile])
+fromSuite :: Suite -> Benchmark
+fromSuite b = bgroup (b ^. suiteTitle) (map go (b ^. suiteVariants))
   where
-    runtimeDir :: Path Abs Dir
-    runtimeDir = dir Path.<//> $(mkRelDir "runtime")
-    cFile :: Path Abs File
-    cFile = addExtension' ".c" (runtimeDir Path.<//> dirnameToFile dir)
-    exeFile :: Path Abs File
-    exeFile = replaceExtension' ".exe" cFile
-    wasmFile :: Path Abs File
-    wasmFile = replaceExtension' ".wasm" cFile
-
-mkClang :: Path Abs Dir -> Rules ()
-mkClang dir = do
-  action $
-    whenM
-      (doesFileExist (toFilePath cFile))
-      (need [toFilePath exeFile, toFilePath wasmFile])
-  recipe exeFile $ do
-    need [toFilePath cFile]
-    command_ [] "clang" ["-O3", "-o", toFilePath exeFile, toFilePath cFile]
-  recipe wasmFile $ do
-    need [toFilePath cFile]
-    wasipath <- getWasiSysrootPathStr
-    command_ [] "clang" ["-Os", "-nodefaultlibs", "--sysroot", wasipath, "-lc", "--target=wasm32-wasi", "-o", toFilePath wasmFile, toFilePath cFile]
-  where
-    cDir :: Path Abs Dir
-    cDir = dir Path.<//> $(mkRelDir "c")
-    cFile :: Path Abs File
-    cFile = addExtension' ".c" (cDir Path.<//> dirnameToFile dir)
-    exeFile :: Path Abs File
-    exeFile = replaceExtension' ".exe" cFile
-    wasmFile :: Path Abs File
-    wasmFile = replaceExtension' ".wasm" cFile
+    go :: Variant -> Benchmark
+    go v = bench title (nfIO (runExe exe))
+      where
+        title :: String
+        title = show (v ^. variantLanguage) <> maybe "" (" " <>) (v ^. variantTitle)
+        exe :: Path Abs File
+        exe =
+          addExtensions'
+            (v ^. variantExtensions)
+            ( root
+                <//> relDir (b ^. suiteTitle)
+                <//> langPath (v ^. variantLanguage)
+                <//> relFile (b ^. suiteTitle)
+            )
+config :: Suite -> Config
+config s =
+  defaultConfig
+    { timeLimit = Just 0.0,
+      quickMode = False,
+      csvFile = Just (toFilePath (suiteCsvFile s))
+    }

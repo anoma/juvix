@@ -69,6 +69,9 @@ someBaseToAbs root = \case
   Rel r -> root <//> r
   Abs a -> a
 
+removeExtensions :: Path b File -> Path b File
+removeExtensions p = maybe p removeExtensions (removeExtension p)
+
 removeExtension :: Path b File -> Maybe (Path b File)
 removeExtension = fmap fst . splitExtension
 
@@ -79,6 +82,12 @@ addExtensions :: MonadThrow m => [String] -> Path b File -> m (Path b File)
 addExtensions ext p = case ext of
   [] -> return p
   (e : es) -> addExtension e p >>= addExtensions es
+
+replaceExtensions :: MonadThrow m => [String] -> Path b File -> m (Path b File)
+replaceExtensions ext = addExtensions ext . removeExtensions
+
+replaceExtensions' :: [String] -> Path b File -> Path b File
+replaceExtensions' ext = fromJust . replaceExtensions ext
 
 addExtensions' :: [String] -> Path b File -> Path b File
 addExtensions' ext = fromJust . addExtensions ext
