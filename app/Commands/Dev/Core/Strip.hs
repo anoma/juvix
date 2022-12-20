@@ -9,11 +9,12 @@ import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 
 runCommand :: forall r a. (Members '[Embed IO, App] r, CanonicalProjection a Core.Options, CanonicalProjection a CoreStripOptions) => a -> Sem r ()
 runCommand opts = do
-  s' <- embed (readFile f)
-  (tab, _) <- getRight (mapLeft JuvixError (Core.runParser f Core.emptyInfoTable s'))
+  inputFile :: Path Abs File <- someBaseToAbs' sinputFile
+  s' <- embed (readFile $ toFilePath inputFile)
+  (tab, _) <- getRight (mapLeft JuvixError (Core.runParser (toFilePath inputFile) Core.emptyInfoTable s'))
   let tab' = Stripped.fromCore (Core.toStripped tab)
   unless (project opts ^. coreStripNoPrint) $ do
     renderStdOut (Core.ppOut opts tab')
   where
-    f :: FilePath
-    f = project opts ^. coreStripInputFile . pathPath
+    sinputFile :: SomeBase File
+    sinputFile = project opts ^. coreStripInputFile . pathPath

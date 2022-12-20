@@ -6,7 +6,7 @@ import Juvix.Compiler.Core.Pretty.Options qualified as Core
 data CoreStripOptions = CoreStripOptions
   { _coreStripShowDeBruijn :: Bool,
     _coreStripNoPrint :: Bool,
-    _coreStripInputFile :: Path
+    _coreStripInputFile :: AppPath File
   }
   deriving stock (Data)
 
