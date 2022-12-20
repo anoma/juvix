@@ -65,7 +65,6 @@ getEntryPoint' invokeDir opts root pkg inputFile = do
         _entryPointNoTermination = opts ^. globalNoTermination,
         _entryPointNoPositivity = opts ^. globalNoPositivity,
         _entryPointNoStdlib = opts ^. globalNoStdlib,
-        _entryPointStdlibPath = someBaseToAbs invokeDir <$> opts ^. globalStdlibPath,
         _entryPointPackage = pkg,
         _entryPointModulePaths = pure (someBaseToAbs invokeDir (inputFile ^. pathPath)),
         _entryPointGenericOptions = project opts,

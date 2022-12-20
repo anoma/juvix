@@ -81,9 +81,6 @@ runCommand opts = do
       getReplEntryPoint inputFile = do
         gopts <- State.gets (^. replStateGlobalOptions)
         absInputFile :: Path Abs File <- replMakeAbsolute inputFile
-        absStdlibPath :: Maybe (Path Abs Dir) <- case gopts ^. globalStdlibPath of
-          Nothing -> return Nothing
-          Just p -> Just <$> replMakeAbsolute p
         return $
           EntryPoint
             { _entryPointRoot = root,
@@ -91,7 +88,6 @@ runCommand opts = do
               _entryPointNoTermination = gopts ^. globalNoTermination,
               _entryPointNoPositivity = gopts ^. globalNoPositivity,
               _entryPointNoStdlib = gopts ^. globalNoStdlib,
-              _entryPointStdlibPath = absStdlibPath,
               _entryPointPackage = package,
               _entryPointModulePaths = pure absInputFile,
               _entryPointGenericOptions = project gopts,
@@ -142,13 +138,7 @@ runCommand opts = do
         loadEntryPoint entryPoint
 
       loadPrelude :: Repl ()
-      loadPrelude = do
-        mStdlibPath <- State.gets (^. replStateGlobalOptions . globalStdlibPath)
-        case mStdlibPath of
-          Nothing -> loadDefaultPrelude
-          Just stdlibDir' -> do
-            absStdlibDir :: Path Abs Dir <- replMakeAbsolute stdlibDir'
-            loadFile (Abs (absStdlibDir <//> preludePath))
+      loadPrelude = loadDefaultPrelude
 
       loadDefaultPrelude :: Repl ()
       loadDefaultPrelude = defaultPreludeEntryPoint >>= loadEntryPoint
@@ -303,8 +293,6 @@ defaultPreludeEntryPoint :: Repl EntryPoint
 defaultPreludeEntryPoint = do
   opts <- State.gets (^. replStateGlobalOptions)
   root <- State.gets (^. replStatePkgDir)
-  invokeDir <- State.gets (^. replStateInvokeDir)
-  let stdlib :: Maybe (Path Abs Dir) = someBaseToAbs invokeDir <$> opts ^. globalStdlibPath
   return $
     EntryPoint
       { _entryPointRoot = root,
@@ -312,7 +300,6 @@ defaultPreludeEntryPoint = do
         _entryPointNoTermination = opts ^. globalNoTermination,
         _entryPointNoPositivity = opts ^. globalNoPositivity,
         _entryPointNoStdlib = opts ^. globalNoStdlib,
-        _entryPointStdlibPath = stdlib,
         _entryPointPackage = defaultPackage root,
         _entryPointModulePaths = pure (defaultStdlibPath root <//> preludePath),
         _entryPointGenericOptions = project opts,

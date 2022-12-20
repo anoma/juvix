@@ -28,10 +28,7 @@ stdlibDep = Dependency <$> getRoot
     getRoot :: Sem r (Path Abs Dir)
     getRoot = do
       e <- ask
-      case e ^. entryPointStdlibPath of
-        Nothing -> do
-          let d :: Path Abs Dir
-              d = defaultStdlibPath (e ^. entryPointRoot)
-          runReader d updateStdlib
-          return d
-        Just p -> return p
+      let d :: Path Abs Dir
+          d = defaultStdlibPath (e ^. entryPointRoot)
+      runReader d updateStdlib
+      return d

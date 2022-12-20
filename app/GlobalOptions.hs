@@ -16,8 +16,7 @@ data GlobalOptions = GlobalOptions
     _globalStdin :: Bool,
     _globalNoTermination :: Bool,
     _globalNoPositivity :: Bool,
-    _globalNoStdlib :: Bool,
-    _globalStdlibPath :: Maybe (SomeBase Dir)
+    _globalNoStdlib :: Bool
   }
   deriving stock (Eq, Show)
 
@@ -52,8 +51,7 @@ defaultGlobalOptions =
       _globalNoTermination = False,
       _globalStdin = False,
       _globalNoPositivity = False,
-      _globalNoStdlib = False,
-      _globalStdlibPath = Nothing
+      _globalNoStdlib = False
     }
 
 -- | Get a parser for global flags which can be hidden or not depending on
@@ -100,15 +98,4 @@ parseGlobalFlags = do
       ( long "no-stdlib"
           <> help "Do not use the standard library"
       )
-  _globalStdlibPath <-
-    optional
-      ( option
-          someDirOpt
-          ( long "stdlib-path"
-              <> metavar "PATH"
-              <> help "Specify path to the standard library"
-              <> action "directory"
-          )
-      )
-
   return GlobalOptions {..}
