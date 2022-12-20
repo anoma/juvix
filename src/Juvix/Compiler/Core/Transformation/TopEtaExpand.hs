@@ -22,7 +22,7 @@ topEtaExpand info = run (mapT' go info)
             NLam l -> NLam <$> traverseOf lambdaBody (skipLambdas as) l
             _ -> do
               let newArgsInfo :: [ArgumentInfo]
-                  newArgsInfo = map toArgumentInfo as
+                  newArgsInfo = map toArgumentInfo args
               overIdentArgsInfo sym (++ newArgsInfo)
               return (expand node args)
         toArgumentInfo :: PiLhs -> ArgumentInfo
