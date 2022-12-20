@@ -10,4 +10,4 @@ import Juvix.Compiler.Core.Transformation
 -- | Perform transformations on Core necessary before the translation to
 -- Core.Stripped
 toStripped :: InfoTable -> InfoTable
-toStripped = applyTransformations [NatToInt, LambdaLifting, MoveApps, RemoveTypeArgs, TopEtaExpand]
+toStripped = applyTransformations [NatToInt, LambdaLifting, MoveApps, TopEtaExpand, RemoveTypeArgs]

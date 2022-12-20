@@ -288,7 +288,7 @@ instance PrettyCode Node where
     NPi Pi {..} ->
       let piType = _piBinder ^. binderType
        in case _piBinder ^. binderName of
-            "" -> do
+            "?" -> do
               ty <- ppLeftExpression funFixity piType
               b <- ppRightExpression funFixity _piBody
               return $ ty <+> kwArrow <+> b

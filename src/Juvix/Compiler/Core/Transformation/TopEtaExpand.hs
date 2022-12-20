@@ -24,7 +24,7 @@ topEtaExpand info = run (mapT' go info)
               let newArgsInfo :: [ArgumentInfo]
                   newArgsInfo = map toArgumentInfo as
               overIdentArgsInfo sym (++ newArgsInfo)
-              return (expand node (reverse args))
+              return (expand node args)
         toArgumentInfo :: PiLhs -> ArgumentInfo
         toArgumentInfo pi =
           ArgumentInfo

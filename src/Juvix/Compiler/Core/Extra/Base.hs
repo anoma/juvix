@@ -107,7 +107,7 @@ mkPi :: Info -> Binder -> Type -> Type
 mkPi i bi b = NPi (Pi i bi b)
 
 mkPi' :: Type -> Type -> Type
-mkPi' = mkPi Info.empty . Binder "" Nothing
+mkPi' = mkPi Info.empty . Binder "?" Nothing
 
 mkPis :: [Binder] -> Type -> Type
 mkPis tys ty = foldr (mkPi mempty) ty tys
