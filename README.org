@@ -92,9 +92,9 @@ follows:
 
 #+begin_src shell
 cd /tmp
-curl -OL https://github.com/anoma/juvix/releases/download/v0.2.7/juvix-linux_x86_64-v0.2.7.zip
-unzip juvix-linux_x86_64-v0.2.7.zip
-mv juvix-linux_x86_64-v0.2.7 ~/.local/bin/juvix
+curl -OL https://github.com/anoma/juvix/releases/download/v0.2.8/juvix-linux_x86_64-v0.2.8.zip
+unzip juvix-linux_x86_64-v0.2.8.zip
+mv juvix-linux_x86_64-v0.2.8 ~/.local/bin/juvix
 #+end_src
 
 *** Building Juvix from source

@@ -6,6 +6,31 @@
 </a>
 #+end_html
 
+** [[https://github.com/anoma/juvix/tree/v0.2.8][v0.2.8]] (2022-12-20)
+[[https://github.com/anoma/juvix/compare/v0.2.7...v0.2.8][Full
+Changelog]]
+
+**Implemented enhancements:**
+
+- Support basic dependencies [\#1622](https://github.com/anoma/juvix/pull/1622) ([janmasrovira](https://github.com/janmasrovira))
+
+**Merged pull requests:**
+
+- Refactor hie.yaml and add entry in the readme [\#1672](https://github.com/anoma/juvix/pull/1672) ([janmasrovira](https://github.com/janmasrovira))
+- Fix inline monospace formatted text in README [\#1671](https://github.com/anoma/juvix/pull/1671) ([paulcadman](https://github.com/paulcadman))
+- Pin mdbook to version 0.4.22 in docs build [\#1670](https://github.com/anoma/juvix/pull/1670) ([paulcadman](https://github.com/paulcadman))
+- Add option to specify Core transformations to `dev internal core-eval` [\#1669](https://github.com/anoma/juvix/pull/1669) ([paulcadman](https://github.com/paulcadman))
+- Add configuration files so the project can be built with cabal [\#1667](https://github.com/anoma/juvix/pull/1667) ([paulcadman](https://github.com/paulcadman))
+- Add documentation for compiling/running the TicTacToe example [\#1664](https://github.com/anoma/juvix/pull/1664) ([paulcadman](https://github.com/paulcadman))
+- Conversion of Nat representation to JuvixCore integers [\#1661](https://github.com/anoma/juvix/pull/1661) ([lukaszcz](https://github.com/lukaszcz))
+- Move applications inside Lets and Cases [\#1659](https://github.com/anoma/juvix/pull/1659) ([lukaszcz](https://github.com/lukaszcz))
+- Run shelltests on macOS build [\#1658](https://github.com/anoma/juvix/pull/1658) ([paulcadman](https://github.com/paulcadman))
+- Restore macOS CI build/test [\#1657](https://github.com/anoma/juvix/pull/1657) ([paulcadman](https://github.com/paulcadman))
+- Remove type arguments and type abstractions from Nodes [\#1655](https://github.com/anoma/juvix/pull/1655) ([lukaszcz](https://github.com/lukaszcz))
+- Pretty printing of JuvixAsm code [\#1650](https://github.com/anoma/juvix/pull/1650) ([lukaszcz](https://github.com/lukaszcz))
+- Remove NameId from Core [\#1649](https://github.com/anoma/juvix/pull/1649) ([lukaszcz](https://github.com/lukaszcz))
+- Translation from JuvixAsm to C [\#1619](https://github.com/anoma/juvix/pull/1619) ([lukaszcz](https://github.com/lukaszcz))
+
 ** [[https://github.com/anoma/juvix/tree/v0.2.7][v0.2.7]] (2022-12-05)
 [[https://github.com/anoma/juvix/compare/v0.2.6...v0.2.7][Full
 Changelog]]
