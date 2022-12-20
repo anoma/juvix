@@ -1,4 +1,4 @@
-module Juvix.Compiler.Asm.Translation.FromCore where
+module Juvix.Compiler.Asm.Translation.FromCore(fromCore) where
 
 import Data.DList qualified as DL
 import Data.HashMap.Strict qualified as HashMap
@@ -15,6 +15,15 @@ type BinderList = BL.BinderList
 
 -- DList for O(1) snoc and append
 type Code' = DL.DList Command
+
+fromCore :: Core.InfoTable -> InfoTable
+fromCore tab =
+  InfoTable
+    { _infoMainFunction = tab ^. Core.infoMain,
+      _infoFunctions = fmap (genCode tab) (tab ^. Core.infoFunctions),
+      _infoInductives = fmap translateInductiveInfo (tab ^. Core.infoInductives),
+      _infoConstrs = fmap translateConstructorInfo (tab ^. Core.infoConstructors)
+    }
 
 -- Generate code for a single function.
 genCode :: Core.InfoTable -> Core.FunctionInfo -> FunctionInfo
@@ -274,12 +283,37 @@ genCode infoTable fi =
     snocPopTemp False code = DL.snoc code (mkInstr PopTemp)
     snocPopTemp True code = code
 
-    -- Be mindful that JuvixAsm types are explicitly uncurried, while
-    -- Core.Stripped types are always curried. If a function takes `n` arguments,
-    -- then the first `n` arguments should be uncurried in its JuvixAsm type.
-    convertType :: Int -> Core.Type -> Type
-    convertType argsNum ty =
-      let (tgt, tyargs) = Core.unfoldType ty
-          tyargs' = map (convertType 0) tyargs
-          tgt' = convertType 0 tgt
-       in mkTypeFun (take argsNum tyargs') (mkTypeFun (drop argsNum tyargs') tgt')
+-- Be mindful that JuvixAsm types are explicitly uncurried, while
+-- Core.Stripped types are always curried. If a function takes `n` arguments,
+-- then the first `n` arguments should be uncurried in its JuvixAsm type.
+convertType :: Int -> Core.Type -> Type
+convertType argsNum ty =
+  let (tgt, tyargs) = Core.unfoldType ty
+      tyargs' = map (convertType 0) tyargs
+      tgt' = convertType 0 tgt
+    in mkTypeFun (take argsNum tyargs') (mkTypeFun (drop argsNum tyargs') tgt')
+
+translateInductiveInfo :: Core.InductiveInfo -> InductiveInfo
+translateInductiveInfo ii =
+  InductiveInfo {
+    _inductiveName = ii ^. Core.inductiveName,
+    _inductiveLocation = ii ^. Core.inductiveLocation,
+    _inductiveSymbol = ii ^. Core.inductiveSymbol,
+    _inductiveKind = convertType 0 (ii ^. Core.inductiveKind),
+    _inductiveConstructors = map translateConstructorInfo (ii ^. Core.inductiveConstructors),
+    _inductiveRepresentation = IndRepStandard
+  }
+
+translateConstructorInfo :: Core.ConstructorInfo -> ConstructorInfo
+translateConstructorInfo ci =
+  ConstructorInfo {
+    _constructorName = ci ^. Core.constructorName,
+    _constructorLocation = ci ^. Core.constructorLocation,
+    _constructorTag = ci ^. Core.constructorTag,
+    _constructorArgsNum = length (typeArgs ty),
+    _constructorType = ty,
+    _constructorInductive = ci ^. Core.constructorInductive,
+    _constructorRepresentation = MemRepConstr
+  }
+  where
+    ty = convertType 0 (ci ^. Core.constructorType)

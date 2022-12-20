@@ -32,6 +32,7 @@ data ArgumentInfo = ArgumentInfo
 data InductiveInfo = InductiveInfo
   { _inductiveName :: Text,
     _inductiveLocation :: Maybe Location,
+    _inductiveSymbol :: Symbol,
     _inductiveKind :: Type,
     _inductiveConstructors :: [ConstructorInfo],
     _inductiveParams :: [ParameterInfo]
@@ -40,6 +41,7 @@ data InductiveInfo = InductiveInfo
 data ConstructorInfo = ConstructorInfo
   { _constructorName :: Text,
     _constructorLocation :: Maybe Location,
+    _constructorInductive :: Symbol,
     _constructorTag :: Tag,
     _constructorType :: Type
   }

@@ -6,6 +6,7 @@ import Commands.Dev.Core.Options
 import Commands.Dev.Core.Read as Read
 import Commands.Dev.Core.Repl as Repl
 import Commands.Dev.Core.Strip as Strip
+import Commands.Dev.Core.Asm as Asm
 
 runCommand :: forall r. Members '[Embed IO, App] r => CoreCommand -> Sem r ()
 runCommand = \case
@@ -13,3 +14,4 @@ runCommand = \case
   Eval opts -> Eval.runCommand opts
   Read opts -> Read.runCommand opts
   Strip opts -> Strip.runCommand opts
+  CoreAsm opts -> Asm.runCommand opts

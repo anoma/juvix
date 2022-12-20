@@ -4,6 +4,7 @@ import Commands.Dev.Core.Eval.Options
 import Commands.Dev.Core.Read.Options
 import Commands.Dev.Core.Repl.Options
 import Commands.Dev.Core.Strip.Options
+import Commands.Dev.Core.Asm.Options
 import CommonOptions
 
 data CoreCommand
@@ -11,6 +12,7 @@ data CoreCommand
   | Eval CoreEvalOptions
   | Read CoreReadOptions
   | Strip CoreStripOptions
+  | CoreAsm CoreAsmOptions
   deriving stock (Data)
 
 parseCoreCommand :: Parser CoreCommand
@@ -20,7 +22,8 @@ parseCoreCommand =
       [ commandRepl,
         commandEval,
         commandRead,
-        commandStrip
+        commandStrip,
+        commandAsm
       ]
   where
     commandRepl :: Mod CommandFields CoreCommand
@@ -34,6 +37,9 @@ parseCoreCommand =
 
     commandStrip :: Mod CommandFields CoreCommand
     commandStrip = command "strip" stripInfo
+
+    commandAsm :: Mod CommandFields CoreCommand
+    commandAsm = command "asm" asmInfo
 
     replInfo :: ParserInfo CoreCommand
     replInfo =
@@ -58,3 +64,9 @@ parseCoreCommand =
       info
         (Strip <$> parseCoreStripOptions)
         (progDesc "Translate a JuvixCore file to Core.Stripped and pretty print the result")
+
+    asmInfo :: ParserInfo CoreCommand
+    asmInfo =
+      info
+        (CoreAsm <$> parseCoreAsmOptions)
+        (progDesc "Translate a JuvixCore file to JuvixAsm and run the result")

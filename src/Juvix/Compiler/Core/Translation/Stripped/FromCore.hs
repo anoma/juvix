@@ -48,6 +48,7 @@ translateInductiveInfo InductiveInfo {..} =
   Stripped.InductiveInfo
     { _inductiveName = _inductiveName,
       _inductiveLocation = _inductiveLocation,
+      _inductiveSymbol = _inductiveSymbol,
       _inductiveKind = translateType _inductiveKind,
       _inductiveConstructors = map translateConstructorInfo _inductiveConstructors,
       _inductiveParams = map translateParamInfo _inductiveParams
@@ -67,6 +68,7 @@ translateConstructorInfo ConstructorInfo {..} =
   Stripped.ConstructorInfo
     { _constructorName = _constructorName,
       _constructorLocation = _constructorLocation,
+      _constructorInductive = _constructorInductive,
       _constructorTag = _constructorTag,
       _constructorType = translateType _constructorType
     }
