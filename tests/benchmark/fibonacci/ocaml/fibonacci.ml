@@ -11,5 +11,5 @@ let fib k =
 
 ;;
 
-print_int (fib 100000000);
+print_int (fib 1000000);
 print_newline ()

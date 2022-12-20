@@ -14,6 +14,6 @@ static int fib(int k) {
 }
 
 int main() {
-    printf("%d\n", fib(100000000));
+    printf("%d\n", fib(1000000));
     return 0;
 }
