@@ -8,12 +8,12 @@ module Base
   )
 where
 
-import Juvix.Prelude.Env
 import Control.Monad.Extra as Monad
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
 import Juvix.Extra.Paths
 import Juvix.Prelude
+import Juvix.Prelude.Env
 import Test.Tasty
 import Test.Tasty.HUnit
 import Text.Show.Pretty hiding (Html)
@@ -35,13 +35,13 @@ newtype WASMInfo = WASMInfo
 
 makeLenses ''TestDescr
 
-data StdlibMode =
-  StdlibInclude
+data StdlibMode
+  = StdlibInclude
   | StdlibExclude
   deriving stock (Show, Eq)
 
-data CompileMode =
-  WASI StdlibMode
+data CompileMode
+  = WASI StdlibMode
   | WASM WASMInfo
 
 mkTest :: TestDescr -> TestTree

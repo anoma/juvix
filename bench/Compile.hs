@@ -1,13 +1,13 @@
 module Compile where
 
 import Base
-import Gauge
-import System.Process
 import Development.Shake hiding ((<//>))
+import Gauge
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path as Path hiding (doesFileExist, (-<.>))
 import Juvix.Prelude.Path qualified as Path
 import Suites
+import System.Process
 
 compile :: IO ()
 compile = shakeArgs opts compileRules
@@ -31,10 +31,11 @@ recipe out howto = toFilePath out %> const howto
 
 variantRules :: Suite -> Variant -> Rules ()
 variantRules s v = do
-  action $
+  action $ do
     whenM
       (doesFileExist (toFilePath srcFile))
       (need [toFilePath exeFile])
+
   recipe exeFile $ do
     need [toFilePath srcFile]
     ensureDir outDir
@@ -44,20 +45,26 @@ variantRules s v = do
     args =
       BuildArgs
         { _buildSrc = srcFile,
-          _buildOutDir = variantBinDir s v
+          _buildOutDir = outDir
         }
-    srcDir :: Path Abs Dir
-    srcDir = suiteSrcDir s
+    lang :: Lang
+    lang = v ^. variantLanguage
     srcFile :: Path Abs File
-    srcFile = addExtension' (langExtension (v ^. variantLanguage)) (srcDir Path.<//> suiteBaseFile s)
+    srcFile =
+      addExtension'
+        (langExtension lang)
+        (suiteSrcDir s <//> langPath lang <//> suiteBaseFile s)
     exeFile :: Path Abs File
-    exeFile = replaceExtensions' (v ^. variantExtensions) srcFile
+    exeFile = outDir <//> replaceExtensions' (v ^. variantExtensions) (filename srcFile)
+    outDir :: Path Abs Dir
+    outDir = variantBinDir s v
 
 csvRules :: Suite -> Rules ()
 csvRules s = do
   let csv :: Path Abs File = suiteCsvFile s
+  want [toFilePath csv]
   recipe csv $ do
-    need [ toFilePath (variantBinFile s v) | v <- s ^. suiteVariants  ]
+    need [toFilePath (variantBinFile s v) | v <- s ^. suiteVariants]
     ensureDir (parent csv)
     whenM (Path.doesFileExist csv) (removeFile csv)
     liftIO (runMode DefaultMode (config s) [] [fromSuite s])
@@ -82,6 +89,7 @@ fromSuite b = bgroup (b ^. suiteTitle) (map go (b ^. suiteVariants))
                 <//> langPath (v ^. variantLanguage)
                 <//> relFile (b ^. suiteTitle)
             )
+
 config :: Suite -> Config
 config s =
   defaultConfig

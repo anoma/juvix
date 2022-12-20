@@ -20,8 +20,8 @@ envVarHint = \case
 getEnvVar :: MonadIO m => EnvVar -> m String
 getEnvVar var = fromMaybeM (error (pack msg)) (liftIO (lookupEnv (envVarString var)))
   where
-  msg :: String
-  msg = "Missing environment variable " <> envVarString var <> maybe "" (". " <>) (envVarHint var)
+    msg :: String
+    msg = "Missing environment variable " <> envVarString var <> maybe "" (". " <>) (envVarHint var)
 
 getWasiSysrootPathStr :: MonadIO m => m String
 getWasiSysrootPathStr = getEnvVar EnvWasiSysrootPath

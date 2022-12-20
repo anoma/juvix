@@ -6,27 +6,24 @@ import Juvix.Prelude
 import Juvix.Prelude.Env
 
 defaultVariants :: [Variant]
-defaultVariants = [
-  ocamlExe,
-  ocamlByteExe,
-  juvixExe,
-  -- juvixWasm,
-  clangExe,
-  -- clangWasm,
-  runtimeExe,
-  -- runtimeWasm,
-  haskellExe,
-  haskellStrictExe
+defaultVariants =
+  [ ocamlExe,
+    ocamlByteExe,
+    juvixExe,
+    -- juvixWasm,
+    clangExe,
+    -- clangWasm,
+    runtimeExe,
+    -- runtimeWasm,
+    haskellExe,
+    haskellStrictExe
   ]
 
 defaultExt :: [String]
 defaultExt = [".exe"]
 
-outFile :: BuildArgs -> [String] -> Path Abs File
-outFile args ext = args ^. buildOutDir <//> replaceExtensions' ext (filename (args ^. buildSrc))
-
 outOptions :: BuildArgs -> [String] -> [String]
-outOptions args ext = ["-o", toFilePath (outFile args ext)]
+outOptions args ext = ["-o", toFilePath (binFile args ext)]
 
 commonOptions :: BuildArgs -> [String] -> [String]
 commonOptions args ext = toFilePath (args ^. buildSrc) : outOptions args ext

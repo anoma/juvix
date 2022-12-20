@@ -1,9 +1,9 @@
 module Base where
 
+import Development.Shake hiding ((<//>))
 import Juvix.Extra.Paths
 import Juvix.Prelude
 import Prelude (Show (show))
-import Development.Shake hiding ((<//>))
 
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/benchmark")
@@ -48,12 +48,12 @@ langFile = relFile . Prelude.show
 
 langExtension :: Lang -> String
 langExtension = \case
-    Ocaml -> ".ml"
-    Haskell -> ".hs"
-    C -> ".c"
-    Juvix -> ".juvix"
-    Runtime -> ".c"
-    Core -> ".jvc"
+  Ocaml -> ".ml"
+  Haskell -> ".hs"
+  C -> ".c"
+  Juvix -> ".juvix"
+  Runtime -> ".c"
+  Core -> ".jvc"
 
 data Variant = Variant
   { _variantTitle :: Maybe String,
@@ -62,9 +62,9 @@ data Variant = Variant
     _variantBuild :: BuildArgs -> Action ()
   }
 
-data BuildArgs = BuildArgs {
-  _buildSrc :: Path Abs File,
-  _buildOutDir :: Path Abs Dir
+data BuildArgs = BuildArgs
+  { _buildSrc :: Path Abs File,
+    _buildOutDir :: Path Abs Dir
   }
 
 data Suite = Suite
@@ -96,3 +96,6 @@ variantBinDir s v = binDir <//> suitePath s <//> langPath (v ^. variantLanguage)
 
 variantBinFile :: Suite -> Variant -> Path Abs File
 variantBinFile s v = variantBinDir s v <//> addExtensions' (v ^. variantExtensions) (suiteBaseFile s)
+
+binFile :: BuildArgs -> [String] -> Path Abs File
+binFile args ext = args ^. buildOutDir <//> replaceExtensions' ext (filename (args ^. buildSrc))
