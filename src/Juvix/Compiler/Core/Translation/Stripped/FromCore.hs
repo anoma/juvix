@@ -121,8 +121,9 @@ translateNode node = case node of
       (translateNode _caseValue)
       (map translateCaseBranch _caseBranches)
       (fmap translateNode _caseDefault)
-  _ | isType node ->
-    Stripped.mkConstr (Stripped.ConstrInfo "()" Nothing Stripped.TyDynamic) (BuiltinTag TagTrue) []
+  _
+    | isType node ->
+        Stripped.mkConstr (Stripped.ConstrInfo "()" Nothing Stripped.TyDynamic) (BuiltinTag TagTrue) []
   _ ->
     unsupported
   where

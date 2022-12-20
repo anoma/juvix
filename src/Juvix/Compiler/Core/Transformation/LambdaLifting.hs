@@ -92,8 +92,10 @@ lambdaLiftNode aboveBl top =
                       idx' = (v ^. varIndex) - ndefs
 
               letItems :: [Node]
-              letItems = [ mkApps' (mkIdent (setInfoName name mempty) sym) (map (NVar . fst) recItemsFreeVars)
-                        | (sym, name) <- topSymsWithName ]
+              letItems =
+                [ mkApps' (mkIdent (setInfoName name mempty) sym) (map (NVar . fst) recItemsFreeVars)
+                  | (sym, name) <- topSymsWithName
+                ]
 
               subsCalls :: Node -> Node
               subsCalls = substs (reverse letItems)
@@ -141,7 +143,7 @@ lambdaLiftNode aboveBl top =
                       (y : ys) -> mkLet mempty bnd' (shift k x) (goShift (k + 1) (y :| ys))
                       where
                         bnd' = over binderType (shift k . subsCalls . shift (-ndefs)) bnd
-                        -- TODO: the types should also be lambda-lifted
+          -- TODO: the types should also be lambda-lifted
           let res :: Node
               res = shiftHelper body' (nonEmpty' (zipExact letItems letRecBinders'))
           return (Recur res)

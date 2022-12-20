@@ -89,9 +89,9 @@ convertIdent tab ii =
     { _identifierType = ty',
       _identifierArgsInfo =
         map (uncurry (set argumentType)) $
-        zipExact tyargs' $
-        map fst $
-        filter (not . isTypeConstr . snd) (zipExact (ii ^. identifierArgsInfo) tyargs),
+          zipExact tyargs' $
+            map fst $
+              filter (not . isTypeConstr . snd) (zipExact (ii ^. identifierArgsInfo) tyargs),
       _identifierArgsNum = length (typeArgs ty')
     }
   where

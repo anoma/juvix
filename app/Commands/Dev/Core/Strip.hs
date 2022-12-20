@@ -2,8 +2,8 @@ module Commands.Dev.Core.Strip where
 
 import Commands.Base
 import Commands.Dev.Core.Strip.Options
-import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Pipeline qualified as Core
+import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 
