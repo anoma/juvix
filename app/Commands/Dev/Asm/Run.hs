@@ -1,8 +1,8 @@
 module Commands.Dev.Asm.Run where
 
+import AsmInterpreter
 import Commands.Base
 import Commands.Dev.Asm.Run.Options
-import AsmInterpreter
 import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 
 runCommand :: forall r. Members '[Embed IO, App] r => AsmRunOptions -> Sem r ()

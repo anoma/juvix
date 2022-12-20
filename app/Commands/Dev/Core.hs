@@ -1,12 +1,12 @@
 module Commands.Dev.Core where
 
 import Commands.Base
+import Commands.Dev.Core.Asm as Asm
 import Commands.Dev.Core.Eval as Eval
 import Commands.Dev.Core.Options
 import Commands.Dev.Core.Read as Read
 import Commands.Dev.Core.Repl as Repl
 import Commands.Dev.Core.Strip as Strip
-import Commands.Dev.Core.Asm as Asm
 
 runCommand :: forall r. Members '[Embed IO, App] r => CoreCommand -> Sem r ()
 runCommand = \case

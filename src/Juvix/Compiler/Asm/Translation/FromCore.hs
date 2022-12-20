@@ -1,4 +1,4 @@
-module Juvix.Compiler.Asm.Translation.FromCore(fromCore) where
+module Juvix.Compiler.Asm.Translation.FromCore (fromCore) where
 
 import Data.DList qualified as DL
 import Data.HashMap.Strict qualified as HashMap
@@ -291,29 +291,29 @@ convertType argsNum ty =
   let (tgt, tyargs) = Core.unfoldType ty
       tyargs' = map (convertType 0) tyargs
       tgt' = convertType 0 tgt
-    in mkTypeFun (take argsNum tyargs') (mkTypeFun (drop argsNum tyargs') tgt')
+   in mkTypeFun (take argsNum tyargs') (mkTypeFun (drop argsNum tyargs') tgt')
 
 translateInductiveInfo :: Core.InductiveInfo -> InductiveInfo
 translateInductiveInfo ii =
-  InductiveInfo {
-    _inductiveName = ii ^. Core.inductiveName,
-    _inductiveLocation = ii ^. Core.inductiveLocation,
-    _inductiveSymbol = ii ^. Core.inductiveSymbol,
-    _inductiveKind = convertType 0 (ii ^. Core.inductiveKind),
-    _inductiveConstructors = map translateConstructorInfo (ii ^. Core.inductiveConstructors),
-    _inductiveRepresentation = IndRepStandard
-  }
+  InductiveInfo
+    { _inductiveName = ii ^. Core.inductiveName,
+      _inductiveLocation = ii ^. Core.inductiveLocation,
+      _inductiveSymbol = ii ^. Core.inductiveSymbol,
+      _inductiveKind = convertType 0 (ii ^. Core.inductiveKind),
+      _inductiveConstructors = map translateConstructorInfo (ii ^. Core.inductiveConstructors),
+      _inductiveRepresentation = IndRepStandard
+    }
 
 translateConstructorInfo :: Core.ConstructorInfo -> ConstructorInfo
 translateConstructorInfo ci =
-  ConstructorInfo {
-    _constructorName = ci ^. Core.constructorName,
-    _constructorLocation = ci ^. Core.constructorLocation,
-    _constructorTag = ci ^. Core.constructorTag,
-    _constructorArgsNum = length (typeArgs ty),
-    _constructorType = ty,
-    _constructorInductive = ci ^. Core.constructorInductive,
-    _constructorRepresentation = MemRepConstr
-  }
+  ConstructorInfo
+    { _constructorName = ci ^. Core.constructorName,
+      _constructorLocation = ci ^. Core.constructorLocation,
+      _constructorTag = ci ^. Core.constructorTag,
+      _constructorArgsNum = length (typeArgs ty),
+      _constructorType = ty,
+      _constructorInductive = ci ^. Core.constructorInductive,
+      _constructorRepresentation = MemRepConstr
+    }
   where
     ty = convertType 0 (ci ^. Core.constructorType)
