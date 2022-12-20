@@ -86,5 +86,6 @@ docs/**/*.md
 docs/org/README.org
 # Binary files (produced by `make check`)
 examples/milestone/HelloWorld/HelloWorld
+hie.yaml
 /.shake/
 hie.yaml
