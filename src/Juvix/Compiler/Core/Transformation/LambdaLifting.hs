@@ -46,9 +46,7 @@ lambdaLiftNode aboveBl top =
               allfreevars :: [Var]
               allfreevars = map fst freevarsAssocs
               argsInfo :: [ArgumentInfo]
-              argsInfo =
-                map (argumentInfoFromBinder . snd) freevarsAssocs
-                  ++ map (argumentInfoFromBinder . (^. lambdaLhsBinder)) (fst (unfoldLambdas l'))
+              argsInfo = map (argumentInfoFromBinder . (^. lambdaLhsBinder)) (fst (unfoldLambdas fBody'))
           f <- freshSymbol
           let name = uniqueName "lambda" f
           registerIdent
@@ -112,8 +110,7 @@ lambdaLiftNode aboveBl top =
                       let topBody = captureFreeVars (map (first (^. varIndex)) recItemsFreeVars) b
                           argsInfo :: [ArgumentInfo]
                           argsInfo =
-                            map (argumentInfoFromBinder . snd) recItemsFreeVars ++
-                            map (over argumentType (shift (-ndefs)) . argumentInfoFromBinder . (^. lambdaLhsBinder)) (fst (unfoldLambdas b))
+                            map (argumentInfoFromBinder . (^. lambdaLhsBinder)) (fst (unfoldLambdas topBody))
                       registerIdentNode sym topBody
                       registerIdent
                         name
