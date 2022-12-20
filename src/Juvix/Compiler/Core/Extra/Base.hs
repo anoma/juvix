@@ -260,6 +260,15 @@ unfoldLambdas = first reverse . unfoldLambdasRev
 unfoldLambdas' :: Node -> (Int, Node)
 unfoldLambdas' = first length . unfoldLambdas
 
+isType :: Node -> Bool
+isType = \case
+  NPi {} -> True
+  NUniv {} -> True
+  NPrim {} -> True
+  NTyp {} -> True
+  NDyn {} -> True
+  _ -> False
+
 {------------------------------------------------------------------------}
 {- functions on Pattern -}
 

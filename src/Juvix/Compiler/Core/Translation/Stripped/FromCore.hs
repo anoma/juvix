@@ -121,7 +121,10 @@ translateNode node = case node of
       (translateNode _caseValue)
       (map translateCaseBranch _caseBranches)
       (fmap translateNode _caseDefault)
-  _ -> unsupported
+  _ | isType node ->
+    Stripped.mkConstr (Stripped.ConstrInfo "()" Nothing Stripped.TyDynamic) (BuiltinTag TagTrue) []
+  _ ->
+    unsupported
   where
     unsupported :: a
     unsupported = error "Core to Core.Stripped: unsupported node"
@@ -164,6 +167,8 @@ translateNode node = case node of
 
 translateType :: Node -> Stripped.Type
 translateType node = case node of
+  NVar {} ->
+    Stripped.TyDynamic
   NPi Pi {} ->
     let (args, tgt) = unfoldPi node
         tyargs = map (^. piLhsBinder . binderType) args
