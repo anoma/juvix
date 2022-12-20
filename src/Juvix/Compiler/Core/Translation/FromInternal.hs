@@ -576,7 +576,7 @@ goFunction (params, returnTypeExpr) = foldr f (goExpression returnTypeExpr) para
   where
     f :: Internal.FunctionParameter -> Sem r Node -> Sem r Node
     f param acc = do
-      paramBinder <- Binder (maybe "" (^. nameText) $ param ^. Internal.paramName) (fmap (^. nameLoc) $ param ^. Internal.paramName) <$> goExpression (param ^. Internal.paramType)
+      paramBinder <- Binder (maybe "?" (^. nameText) $ param ^. Internal.paramName) (fmap (^. nameLoc) $ param ^. Internal.paramName) <$> goExpression (param ^. Internal.paramType)
       case param ^. Internal.paramName of
         Nothing -> mkPi mempty paramBinder <$> acc
         Just vn -> mkPi mempty paramBinder <$> localAddName vn acc
