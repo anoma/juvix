@@ -4,9 +4,11 @@ import Data.DList qualified as DL
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Extra.Base
+import Juvix.Compiler.Asm.Extra.Type
 import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Core
+import Juvix.Compiler.Core.Extra.Stripped.Base qualified as Core
 import Juvix.Compiler.Core.Language.Stripped qualified as Core
 
 type BinderList = BL.BinderList
@@ -37,9 +39,6 @@ genCode infoTable fi =
           _functionMaxValueStackHeight = -1
         }
   where
-    unimplemented :: forall a. a
-    unimplemented = error "not yet implemented"
-
     -- Assumption: the BinderList does not contain references to the value stack
     -- (directly or indirectly).
     go :: Bool -> Int -> BinderList Value -> Core.Node -> Code'
@@ -80,7 +79,11 @@ genCode infoTable fi =
           DL.singleton $
             mkInstr $
               Push (ConstInt i)
-      _ -> unimplemented
+      Core.Constant _ (Core.ConstString s) ->
+        snocReturn isTail $
+          DL.singleton $
+            mkInstr $
+              Push (ConstString s)
 
     goApps :: Bool -> Int -> BinderList Value -> Core.Apps -> Code'
     goApps isTail tempSize refs (Core.Apps {..}) =
@@ -105,35 +108,21 @@ genCode infoTable fi =
                       -- (with Call) and then use CallClosures or
                       -- TailCallClosures on the result with the remaining
                       -- arguments.
-                      unimplemented
-              where
-                argsNum = getArgsNum _identSymbol
-            Core.FunVar Core.Var {..} ->
-              if
-                  | argsNum > suppliedArgsNum ->
-                      snocReturn isTail $
-                        DL.snoc
-                          ( DL.snoc
-                              (DL.concat (map (go False tempSize refs) suppliedArgs))
-                              (mkInstr $ Push (BL.lookup _varIndex refs))
-                          )
-                          (mkInstr $ ExtendClosure (InstrExtendClosure suppliedArgsNum))
-                  | argsNum == suppliedArgsNum ->
                       DL.snoc
                         ( DL.snoc
                             (DL.concat (map (go False tempSize refs) suppliedArgs))
-                            (mkInstr $ Push (BL.lookup _varIndex refs))
+                            (mkInstr $ Call (InstrCall (CallFun _identSymbol) argsNum))
                         )
-                        (mkInstr $ (if isTail then TailCall else Call) (InstrCall CallClosure argsNum))
-                  | otherwise ->
-                      -- Here use CallClosures or TailCallClosures.
-                      unimplemented
+                        (mkInstr $ (if isTail then TailCallClosures else CallClosures) (InstrCallClosures (suppliedArgsNum - argsNum)))
               where
-                argsNum :: Int
-                argsNum = case _varInfo ^. Core.varInfoType of
-                  Core.TyDynamic -> -1
-                  ty -> Core.typeArgsNum ty
-
+                argsNum = getArgsNum _identSymbol
+            Core.FunVar Core.Var {..} ->
+              DL.snoc
+                ( DL.snoc
+                    (DL.concat (map (go False tempSize refs) suppliedArgs))
+                    (mkInstr $ Push (BL.lookup _varIndex refs))
+                )
+                (mkInstr $ (if isTail then TailCallClosures else CallClosures) (InstrCallClosures suppliedArgsNum))
     goBuiltinApp :: Bool -> Int -> BinderList Value -> Core.BuiltinApp -> Code'
     goBuiltinApp isTail tempSize refs (Core.BuiltinApp {..}) =
       snocReturn isTail $
@@ -167,18 +156,49 @@ genCode infoTable fi =
 
     goCase :: Bool -> Int -> BinderList Value -> Core.Case -> Code'
     goCase isTail tempSize refs (Core.Case {..}) =
-      -- TODO: special case for if-then-else (use Branch instead of Case)
-      DL.snoc
-        (go False tempSize refs _caseValue)
-        ( Case $
-            CmdCase
-              { _cmdCaseInfo = emptyInfo,
-                _cmdCaseInductive = _caseInductive,
-                _cmdCaseBranches = compileCaseBranches _caseBranches,
-                _cmdCaseDefault = fmap compileCaseDefault _caseDefault
-              }
-        )
+      case _caseBranches of
+        [br@Core.CaseBranch {..}]
+          | _caseBranchTag == Core.BuiltinTag Core.TagTrue ->
+              compileIf _caseValue (br ^. Core.caseBranchBody) (fromMaybe branchFailure _caseDefault)
+        [br@Core.CaseBranch {..}]
+          | _caseBranchTag == Core.BuiltinTag Core.TagFalse ->
+              compileIf _caseValue (fromMaybe branchFailure _caseDefault) (br ^. Core.caseBranchBody)
+        [br1, br2]
+          | br1 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagTrue ->
+              compileIf _caseValue (br1 ^. Core.caseBranchBody) (br2 ^. Core.caseBranchBody)
+        [br1, br2]
+          | br1 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagFalse ->
+              compileIf _caseValue (br2 ^. Core.caseBranchBody) (br1 ^. Core.caseBranchBody)
+        _ ->
+          DL.snoc
+            (go False tempSize refs _caseValue)
+            ( Case $
+                CmdCase
+                  { _cmdCaseInfo = emptyInfo,
+                    _cmdCaseInductive = _caseInductive,
+                    _cmdCaseBranches = compileCaseBranches _caseBranches,
+                    _cmdCaseDefault = fmap compileCaseDefault _caseDefault
+                  }
+            )
       where
+        compileIf :: Core.Node -> Core.Node -> Core.Node -> Code'
+        compileIf value br1 br2 =
+          DL.snoc
+            (go False tempSize refs value)
+            ( Branch $
+                CmdBranch
+                  { _cmdBranchInfo = emptyInfo,
+                    _cmdBranchTrue = DL.toList $ go isTail tempSize refs br1,
+                    _cmdBranchFalse = DL.toList $ go isTail tempSize refs br2
+                  }
+            )
+
+        branchFailure :: Core.Node
+        branchFailure =
+          Core.mkBuiltinApp
+            Core.OpFail
+            [Core.mkConstant (Core.ConstString "illegal `if` branch")]
+
         compileCaseBranches :: [Core.CaseBranch] -> [CaseBranch]
         compileCaseBranches branches =
           map
@@ -232,10 +252,12 @@ genCode infoTable fi =
       Core.OpIntSub -> mkBinop IntSub
       Core.OpIntMul -> mkBinop IntMul
       Core.OpIntDiv -> mkBinop IntDiv
+      Core.OpIntMod -> mkBinop IntMod
       Core.OpIntLt -> mkBinop IntLt
       Core.OpIntLe -> mkBinop IntLe
       Core.OpEq -> mkBinop ValEq
-      _ -> unimplemented
+      Core.OpTrace -> mkInstr Trace
+      Core.OpFail -> mkInstr Failure
 
     getArgsNum :: Symbol -> Int
     getArgsNum sym =
@@ -252,9 +274,12 @@ genCode infoTable fi =
     snocPopTemp False code = DL.snoc code (mkInstr PopTemp)
     snocPopTemp True code = code
 
+    -- Be mindful that JuvixAsm types are explicitly uncurried, while
+    -- Core.Stripped types are always curried. If a function takes `n` arguments,
+    -- then the first `n` arguments should be uncurried in its JuvixAsm type.
     convertType :: Int -> Core.Type -> Type
-    convertType = unimplemented
-
--- Be mindful that JuvixAsm types are explicitly uncurried, while
--- Core.Stripped types are always curried. If a function takes `n` arguments
--- then the first `n` arguments should be uncurried in its JuvixAsm type.
+    convertType argsNum ty =
+      let (tgt, tyargs) = Core.unfoldType ty
+          tyargs' = map (convertType 0) tyargs
+          tgt' = convertType 0 tgt
+       in mkTypeFun (take argsNum tyargs') (mkTypeFun (drop argsNum tyargs') tgt')
