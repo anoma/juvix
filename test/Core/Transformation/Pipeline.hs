@@ -9,7 +9,7 @@ allTests :: TestTree
 allTests = testGroup "Transformation pipeline" (map liftTest Eval.tests)
 
 pipe :: [TransformationId]
-pipe = [NatToInt, LambdaLifting, MoveApps, RemoveTypeArgs, TopEtaExpand]
+pipe = [NatToInt, LambdaLifting, MoveApps, TopEtaExpand, RemoveTypeArgs]
 
 liftTest :: Eval.PosTest -> TestTree
 liftTest _testEval =
