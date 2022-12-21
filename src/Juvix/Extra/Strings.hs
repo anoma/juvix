@@ -495,7 +495,7 @@ instrTccall :: IsString s => s
 instrTccall = "tccall"
 
 instrReturn :: IsString s => s
-instrReturn = "return"
+instrReturn = "ret"
 
 instrBr :: IsString s => s
 instrBr = "br"

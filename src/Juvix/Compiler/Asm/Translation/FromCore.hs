@@ -288,10 +288,22 @@ genCode infoTable fi =
 -- then the first `n` arguments should be uncurried in its JuvixAsm type.
 convertType :: Int -> Core.Type -> Type
 convertType argsNum ty =
-  let (tgt, tyargs) = Core.unfoldType ty
-      tyargs' = map (convertType 0) tyargs
-      tgt' = convertType 0 tgt
-   in mkTypeFun (take argsNum tyargs') (mkTypeFun (drop argsNum tyargs') tgt')
+  case ty of
+    Core.TyDynamic ->
+      TyDynamic
+    Core.TyPrim (Core.PrimInteger Core.PrimIntegerInfo {..}) ->
+      TyInteger (TypeInteger _infoMinValue _infoMaxValue)
+    Core.TyPrim (Core.PrimBool Core.PrimBoolInfo {..}) ->
+      TyBool (TypeBool _infoTrueTag _infoFalseTag)
+    Core.TyPrim Core.PrimString ->
+      TyString
+    Core.TyApp Core.TypeApp {..} ->
+      TyInductive (TypeInductive _typeAppSymbol)
+    Core.TyFun {} ->
+      let (tgt, tyargs) = Core.unfoldType ty
+          tyargs' = map (convertType 0) tyargs
+          tgt' = convertType 0 tgt
+      in mkTypeFun (take argsNum tyargs') (mkTypeFun (drop argsNum tyargs') tgt')
 
 translateInductiveInfo :: Core.InductiveInfo -> InductiveInfo
 translateInductiveInfo ii =
