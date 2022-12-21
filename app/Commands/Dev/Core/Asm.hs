@@ -13,7 +13,7 @@ runCommand :: forall r a. (Members '[Embed IO, App] r, CanonicalProjection a Cor
 runCommand opts = do
   inputFile :: Path Abs File <- someBaseToAbs' sinputFile
   s' <- embed (readFile $ toFilePath inputFile)
-  (tab, _) <- getRight (mapLeft JuvixError (Core.runParser (toFilePath inputFile) Core.emptyInfoTable s'))
+  tab <- getRight (mapLeft JuvixError (Core.runParserMain (toFilePath inputFile) Core.emptyInfoTable s'))
   let tab' = Asm.fromCore $ Stripped.fromCore (Core.toStripped tab)
   if
     | project opts ^. coreAsmPrint ->

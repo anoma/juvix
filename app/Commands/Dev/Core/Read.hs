@@ -12,12 +12,12 @@ runCommand :: forall r a. (Members '[Embed IO, App] r, CanonicalProjection a Eva
 runCommand opts = do
   inputFile :: Path Abs File <- someBaseToAbs' sinputFile
   s' <- embed . readFile . toFilePath $ inputFile
-  (tab, mnode) <- getRight (mapLeft JuvixError (Core.runParser (toFilePath inputFile) Core.emptyInfoTable s'))
+  tab <- getRight (mapLeft JuvixError (Core.runParserMain (toFilePath inputFile) Core.emptyInfoTable s'))
   let tab' = Core.applyTransformations (project opts ^. coreReadTransformations) tab
   embed (Scoper.scopeTrace tab')
   unless (project opts ^. coreReadNoPrint) $ do
     renderStdOut (Core.ppOut opts tab')
-  whenJust mnode $ doEval tab'
+  whenJust (tab' ^. Core.infoMain) $ \sym -> doEval tab' (fromJust $ tab' ^. Core.identContext . at sym)
   where
     doEval :: Core.InfoTable -> Core.Node -> Sem r ()
     doEval tab' node =
