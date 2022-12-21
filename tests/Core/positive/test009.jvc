@@ -9,7 +9,6 @@ def fact := \x fact' x 1;
 def writeLn := \x write x >> write "\n";
 
 writeLn (sum 10000) >>
-writeLn (sum 100000) >>
 writeLn (fact 5) >>
 writeLn (fact 10) >>
-writeLn (fact 100)
+writeLn (fact 12)
