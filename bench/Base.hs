@@ -59,6 +59,7 @@ data Variant = Variant
   { _variantTitle :: Maybe String,
     _variantLanguage :: Lang,
     _variantExtensions :: [String],
+    _variantColor :: Int,
     _variantBuild :: BuildArgs -> Action ()
   }
 
@@ -75,6 +76,12 @@ data Suite = Suite
 makeLenses ''Suite
 makeLenses ''BuildArgs
 makeLenses ''Variant
+
+gnuplotFile :: Path Abs File
+gnuplotFile = relToProject $(mkRelFile "gnuplot/bars.gp")
+
+suitePdfFile :: Suite -> Path Abs File
+suitePdfFile s = addExtension' ".pdf" (plotDir <//> suiteBaseFile s)
 
 suiteCsvFile :: Suite -> Path Abs File
 suiteCsvFile s = addExtension' ".csv" (csvDir <//> suiteBaseFile s)

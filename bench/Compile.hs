@@ -2,6 +2,7 @@ module Compile where
 
 import Base
 import Development.Shake hiding ((<//>))
+import Data.Text qualified as Text
 import Gauge
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path as Path hiding (doesFileExist, (-<.>))
@@ -25,6 +26,7 @@ suiteRules :: Suite -> Rules ()
 suiteRules s = do
   forM_ (s ^. suiteVariants) (variantRules s)
   csvRules s
+  plotRules s
 
 recipe :: Path Abs File -> Action () -> Rules ()
 recipe out howto = toFilePath out %> const howto
@@ -59,21 +61,48 @@ variantRules s v = do
     outDir :: Path Abs Dir
     outDir = variantBinDir s v
 
+plotRules :: Suite -> Rules ()
+plotRules s = do
+  let pdf :: Path Abs File = suitePdfFile s
+      csv :: Path Abs File = suiteCsvFile s
+  want [toFilePath pdf]
+  recipe pdf $ do
+    need [toFilePath csv, toFilePath gnuplotFile]
+    ensureDir (parent pdf)
+    command_ [] "gnuplot" (
+      gpArg "name" (s ^. suiteTitle)
+      ++ gpArg "outfile" (toFilePath pdf)
+      ++ gpArg "csvfile" (toFilePath csv)
+      ++ [toFilePath gnuplotFile]
+       )
+  where
+  gpArg :: String -> String -> [String]
+  gpArg arg val = ["-e", arg <> "='" <> val <> "'"]
+
+
 csvRules :: Suite -> Rules ()
 csvRules s = do
-  let csv :: Path Abs File = suiteCsvFile s
   want [toFilePath csv]
   recipe csv $ do
     need [toFilePath (variantBinFile s v) | v <- s ^. suiteVariants]
     ensureDir (parent csv)
     whenM (Path.doesFileExist csv) (removeFile csv)
-    liftIO (runMode DefaultMode (config s) [] [fromSuite s])
+    liftIO (runMode DefaultMode (config s) [] (fromSuite s))
+    liftIO addColorColumn
+  where
+  csv :: Path Abs File = suiteCsvFile s
+  addColorColumn :: IO ()
+  addColorColumn = do
+    header :| rows <- nonEmpty' . Text.lines <$> readFile (toFilePath csv)
+    let rows' = [ show (v ^. variantColor) <> "," <> r | (v, r) <- zipExact (s ^. suiteVariants) rows ]
+        header' = "Color," <> header
+    writeFile (toFilePath csv) (Text.unlines (header' : rows'))
 
 runExe :: Path Abs File -> IO ()
 runExe p = void (readProcess (toFilePath p) [] "")
 
-fromSuite :: Suite -> Benchmark
-fromSuite s = bgroup (s ^. suiteTitle) (map go (s ^. suiteVariants))
+fromSuite :: Suite -> [Benchmark]
+fromSuite s = map go (s ^. suiteVariants)
   where
     go :: Variant -> Benchmark
     go v = bench title (nfIO (runExe (variantBinFile s v)))
