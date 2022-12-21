@@ -35,7 +35,7 @@ ocamlExe =
       _variantLanguage = Ocaml,
       _variantExtensions = ext,
       _variantBuild = \args ->
-        command_ [] "ocamlc" (commonOptions args ext)
+        command_ [] "ocamlopt" ("-O2" : commonOptions args ext)
     }
   where
     ext :: [String]
@@ -48,7 +48,7 @@ ocamlByteExe =
       _variantLanguage = Ocaml,
       _variantExtensions = ext,
       _variantBuild = \args ->
-        command_ [] "ocamlopt" ("-O2" : commonOptions args ext)
+        command_ [] "ocamlc" (commonOptions args ext)
     }
   where
     ext :: [String]
