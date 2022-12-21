@@ -303,7 +303,7 @@ convertType argsNum ty =
       let (tgt, tyargs) = Core.unfoldType ty
           tyargs' = map (convertType 0) tyargs
           tgt' = convertType 0 tgt
-      in mkTypeFun (take argsNum tyargs') (mkTypeFun (drop argsNum tyargs') tgt')
+       in mkTypeFun (take argsNum tyargs') (mkTypeFun (drop argsNum tyargs') tgt')
 
 translateInductiveInfo :: Core.InductiveInfo -> InductiveInfo
 translateInductiveInfo ii =
