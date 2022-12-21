@@ -27,9 +27,6 @@ runCommand opts = do
               embed (putStrLn "|            Eval              |")
               embed (putStrLn "--------------------------------")
               Eval.evalAndPrint opts tab' node
-          | otherwise -> do
-              embed (putStrLn "-- Node")
-              renderStdOut (Core.ppOut opts node)
-              embed (putStrLn "")
+          | otherwise -> return ()
     sinputFile :: SomeBase File
     sinputFile = project opts ^. coreReadInputFile . pathPath
