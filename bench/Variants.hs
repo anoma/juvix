@@ -1,6 +1,7 @@
 module Variants where
 
 import Base
+import Data.Colour.Names
 import Development.Shake hiding ((<//>))
 import Juvix.Prelude
 import Juvix.Prelude.Env
@@ -15,7 +16,7 @@ defaultVariants =
     -- clangWasm,
     runtimeExe,
     -- runtimeWasm,
-    -- haskellExe,
+    haskellExe,
     -- coreJvc,
     haskellStrictExe
   ]
@@ -35,7 +36,7 @@ ocamlExe =
     { _variantTitle = Nothing,
       _variantLanguage = Ocaml,
       _variantExtensions = ext,
-      _variantColor = 0,
+      _variantColor = darkorange,
       _variantBuild = \args ->
         command_ [] "ocamlopt" ("-O2" : commonOptions args ext)
     }
@@ -49,7 +50,7 @@ ocamlByteExe =
     { _variantTitle = Just "byte",
       _variantLanguage = Ocaml,
       _variantExtensions = ext,
-      _variantColor = 1,
+      _variantColor = orangered,
       _variantBuild = \args ->
         command_ [] "ocamlc" (commonOptions args ext)
     }
@@ -66,7 +67,7 @@ haskellExe =
     { _variantTitle = Nothing,
       _variantLanguage = Haskell,
       _variantExtensions = ext,
-      _variantColor = 2,
+      _variantColor = purple,
       _variantBuild = \args ->
         command_ [] "ghc" (haskellCommon ++ commonOptions args ext)
     }
@@ -80,7 +81,7 @@ haskellStrictExe =
     { _variantTitle = Just "strict",
       _variantLanguage = Haskell,
       _variantExtensions = ext,
-      _variantColor = 3,
+      _variantColor = powderblue,
       _variantBuild = \args ->
         command_ [] "ghc" (haskellCommon ++ ["-XStrict"] ++ commonOptions args ext)
     }
@@ -94,7 +95,7 @@ juvixExe =
     { _variantTitle = Nothing,
       _variantLanguage = Juvix,
       _variantExtensions = ext,
-      _variantColor = 4,
+      _variantColor = plum,
       _variantBuild = \args ->
         command_ [] "juvix" (juvixCommon ++ commonOptions args ext)
     }
@@ -112,7 +113,7 @@ juvixWasm =
     { _variantTitle = Just "wasm",
       _variantLanguage = Juvix,
       _variantExtensions = ext,
-      _variantColor = 5,
+      _variantColor = sandybrown,
       _variantBuild = \args ->
         command_ [] "juvix" (juvixCommon ++ ["--target=wasm"] ++ commonOptions args ext)
     }
@@ -129,7 +130,7 @@ runtimeExe =
     { _variantTitle = Nothing,
       _variantLanguage = Runtime,
       _variantExtensions = ext,
-      _variantColor = 6,
+      _variantColor = navy,
       _variantBuild = \args ->
         command_ [] "juvix" (runtimeCommon ++ commonOptions args ext)
     }
@@ -143,7 +144,7 @@ runtimeWasm =
     { _variantTitle = Nothing,
       _variantLanguage = Runtime,
       _variantExtensions = ext,
-      _variantColor = 7,
+      _variantColor = turquoise,
       _variantBuild = \args ->
         command_ [] "juvix" (runtimeCommon ++ ["--target=wasm32-wasi"] ++ commonOptions args ext)
     }
@@ -157,7 +158,7 @@ clangExe =
     { _variantTitle = Nothing,
       _variantLanguage = C,
       _variantExtensions = ext,
-      _variantColor = 10,
+      _variantColor = black,
       _variantBuild = \args ->
         command_ [] "clang" ("-O3" : commonOptions args ext)
     }
@@ -171,7 +172,7 @@ clangWasm =
     { _variantTitle = Nothing,
       _variantLanguage = C,
       _variantExtensions = ext,
-      _variantColor = 9,
+      _variantColor = palevioletred,
       _variantBuild = \args -> do
         wasipath <- getWasiSysrootPathStr
         command_ [] "clang" (["-Os", "-nodefaultlibs", "--sysroot", wasipath, "-lc", "--target=wasm32-wasi"] ++ commonOptions args ext)
@@ -186,7 +187,7 @@ coreJvc =
     { _variantTitle = Nothing,
       _variantLanguage = Core,
       _variantExtensions = ext,
-      _variantColor = 10,
+      _variantColor = orchid,
       _variantBuild = \args ->
         command_ [] "cp" (map toFilePath [args ^. buildSrc, binFile args ext])
     }

@@ -1,8 +1,8 @@
 module Compile where
 
 import Base
-import Development.Shake hiding ((<//>))
 import Data.Text qualified as Text
+import Development.Shake hiding ((<//>))
 import Gauge
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path as Path hiding (doesFileExist, (-<.>))
@@ -74,16 +74,17 @@ plotRules s = do
   multiRecipe [pdf, svg] $ do
     need [toFilePath csv, toFilePath gnuplotFile]
     ensureDir (parent pdf)
-    command_ [] "gnuplot" (
-      gpArg "name" (s ^. suiteTitle)
-      ++ gpArg "outfile" (toFilePath out)
-      ++ gpArg "csvfile" (toFilePath csv)
-      ++ [toFilePath gnuplotFile]
-       )
+    command_
+      []
+      "gnuplot"
+      ( gpArg "name" (s ^. suiteTitle)
+          ++ gpArg "outfile" (toFilePath out)
+          ++ gpArg "csvfile" (toFilePath csv)
+          ++ [toFilePath gnuplotFile]
+      )
   where
-  gpArg :: String -> String -> [String]
-  gpArg arg val = ["-e", arg <> "='" <> val <> "'"]
-
+    gpArg :: String -> String -> [String]
+    gpArg arg val = ["-e", arg <> "='" <> val <> "'"]
 
 csvRules :: Suite -> Rules ()
 csvRules s =
@@ -94,13 +95,16 @@ csvRules s =
     liftIO (runMode DefaultMode (config s) [] (fromSuite s))
     liftIO addColorColumn
   where
-  csv :: Path Abs File = suiteCsvFile s
-  addColorColumn :: IO ()
-  addColorColumn = do
-    header :| rows <- nonEmpty' . Text.lines <$> readFile (toFilePath csv)
-    let rows' = [ show (v ^. variantColor) <> "," <> r | (v, r) <- zipExact (s ^. suiteVariants) rows ]
-        header' = "Color," <> header
-    writeFile (toFilePath csv) (Text.unlines (header' : rows'))
+    csv :: Path Abs File = suiteCsvFile s
+    addColorColumn :: IO ()
+    addColorColumn = do
+      header :| rows <- nonEmpty' . Text.lines <$> readFile (toFilePath csv)
+      let rows' =
+            [ showColour (v ^. variantColor) <> "," <> r
+              | (v, r) <- zipExact (s ^. suiteVariants) rows
+            ]
+          header' = "Color," <> header
+      writeFile (toFilePath csv) (Text.unlines (header' : rows'))
 
 runExe :: Path Abs File -> IO ()
 runExe p = void (readProcess (toFilePath p) [] "")

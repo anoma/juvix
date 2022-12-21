@@ -1,9 +1,11 @@
 module Base where
 
+import Data.Colour
+import Data.Colour.SRGB
 import Development.Shake hiding ((<//>))
 import Juvix.Extra.Paths
 import Juvix.Prelude
-import Prelude (Show (show))
+import Prelude (Double, Show (show))
 
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/benchmark")
@@ -22,6 +24,10 @@ plotDir = resultsDir <//> $(mkRelDir "plot")
 
 csvDir :: Path Abs Dir
 csvDir = resultsDir <//> $(mkRelDir "csv")
+
+-- | e.g. 0xf0f8ff (format supported by gnuplot)
+showColour :: Colour Double -> Text
+showColour = pack . ("0x" <>) . dropExact 1 . sRGB24show
 
 data Lang
   = Ocaml
@@ -59,7 +65,7 @@ data Variant = Variant
   { _variantTitle :: Maybe String,
     _variantLanguage :: Lang,
     _variantExtensions :: [String],
-    _variantColor :: Int,
+    _variantColor :: Colour Double,
     _variantBuild :: BuildArgs -> Action ()
   }
 

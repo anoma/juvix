@@ -12,7 +12,8 @@ set style fill solid
 
 set terminal pdf
 set output outfile.'.pdf'
-plot csvfile using "Mean":"Color":xtic(2) title col lc variable
+set yrange [0 : *]
+plot csvfile using "Mean":"Color":xtic(2) title col lc rgbcolor variable
 
 set terminal svg enhanced mouse
 set output outfile.'.svg'
