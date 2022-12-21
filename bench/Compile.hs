@@ -73,22 +73,13 @@ runExe :: Path Abs File -> IO ()
 runExe p = void (readProcess (toFilePath p) [] "")
 
 fromSuite :: Suite -> Benchmark
-fromSuite b = bgroup (b ^. suiteTitle) (map go (b ^. suiteVariants))
+fromSuite s = bgroup (s ^. suiteTitle) (map go (s ^. suiteVariants))
   where
     go :: Variant -> Benchmark
-    go v = bench title (nfIO (runExe exe))
+    go v = bench title (nfIO (runExe (variantBinFile s v)))
       where
         title :: String
         title = show (v ^. variantLanguage) <> maybe "" (" " <>) (v ^. variantTitle)
-        exe :: Path Abs File
-        exe =
-          addExtensions'
-            (v ^. variantExtensions)
-            ( root
-                <//> relDir (b ^. suiteTitle)
-                <//> langPath (v ^. variantLanguage)
-                <//> relFile (b ^. suiteTitle)
-            )
 
 config :: Suite -> Config
 config s =
