@@ -28,6 +28,9 @@ suiteRules s = do
   csvRules s
   plotRules s
 
+multiRecipe :: [Path Abs File] -> Action () -> Rules ()
+multiRecipe out howto = map toFilePath out &%> const howto
+
 recipe :: Path Abs File -> Action () -> Rules ()
 recipe out howto = toFilePath out %> const howto
 
@@ -65,13 +68,15 @@ plotRules :: Suite -> Rules ()
 plotRules s = do
   let pdf :: Path Abs File = suitePdfFile s
       csv :: Path Abs File = suiteCsvFile s
-  want [toFilePath pdf]
-  recipe pdf $ do
+      svg :: Path Abs File = suiteSvgFile s
+      out :: Path Abs File = suitePlotFile s
+  want [toFilePath pdf, toFilePath svg]
+  multiRecipe [pdf, svg] $ do
     need [toFilePath csv, toFilePath gnuplotFile]
     ensureDir (parent pdf)
     command_ [] "gnuplot" (
       gpArg "name" (s ^. suiteTitle)
-      ++ gpArg "outfile" (toFilePath pdf)
+      ++ gpArg "outfile" (toFilePath out)
       ++ gpArg "csvfile" (toFilePath csv)
       ++ [toFilePath gnuplotFile]
        )
@@ -81,8 +86,7 @@ plotRules s = do
 
 
 csvRules :: Suite -> Rules ()
-csvRules s = do
-  want [toFilePath csv]
+csvRules s =
   recipe csv $ do
     need [toFilePath (variantBinFile s v) | v <- s ^. suiteVariants]
     ensureDir (parent csv)

@@ -80,8 +80,14 @@ makeLenses ''Variant
 gnuplotFile :: Path Abs File
 gnuplotFile = relToProject $(mkRelFile "gnuplot/bars.gp")
 
+suitePlotFile :: Suite -> Path Abs File
+suitePlotFile s = plotDir <//> suiteBaseFile s
+
 suitePdfFile :: Suite -> Path Abs File
-suitePdfFile s = addExtension' ".pdf" (plotDir <//> suiteBaseFile s)
+suitePdfFile s = addExtension' ".pdf" (suitePlotFile s)
+
+suiteSvgFile :: Suite -> Path Abs File
+suiteSvgFile s = addExtension' ".svg" (suitePlotFile s)
 
 suiteCsvFile :: Suite -> Path Abs File
 suiteCsvFile s = addExtension' ".csv" (csvDir <//> suiteBaseFile s)

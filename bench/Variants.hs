@@ -15,7 +15,8 @@ defaultVariants =
     -- clangWasm,
     runtimeExe,
     -- runtimeWasm,
-    haskellExe,
+    -- haskellExe,
+    -- coreJvc,
     haskellStrictExe
   ]
 
@@ -156,7 +157,7 @@ clangExe =
     { _variantTitle = Nothing,
       _variantLanguage = C,
       _variantExtensions = ext,
-      _variantColor = 8,
+      _variantColor = 10,
       _variantBuild = \args ->
         command_ [] "clang" ("-O3" : commonOptions args ext)
     }
@@ -178,3 +179,17 @@ clangWasm =
   where
     ext :: [String]
     ext = defaultExt
+
+coreJvc :: Variant
+coreJvc =
+  Variant
+    { _variantTitle = Nothing,
+      _variantLanguage = Core,
+      _variantExtensions = ext,
+      _variantColor = 10,
+      _variantBuild = \args ->
+        command_ [] "cp" (map toFilePath [args ^. buildSrc, binFile args ext])
+    }
+  where
+    ext :: [String]
+    ext = [langExtension Core]
