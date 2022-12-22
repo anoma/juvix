@@ -1,8 +1,8 @@
 module Core.Compile.Positive where
 
+import Base
 import Core.Compile.Base
 import Core.Eval.Positive qualified as Eval
-import Base
 
 allTests :: TestTree
 allTests = testGroup "JuvixCore compile tests" (map liftTest (Eval.filterOutTests ignoredTests Eval.tests))

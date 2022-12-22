@@ -2,13 +2,13 @@ module Asm.Compile.Base where
 
 import Base
 import Data.Text.IO qualified as TIO
+import Juvix.Compiler.Asm.Data.InfoTable
 import Juvix.Compiler.Asm.Options
 import Juvix.Compiler.Asm.Translation.FromSource
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Pipeline qualified as Pipeline
 import Runtime.Base qualified as Runtime
-import Juvix.Compiler.Asm.Data.InfoTable
 
 asmCompileAssertion' :: InfoTable -> Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
 asmCompileAssertion' tab mainFile expectedFile step = do

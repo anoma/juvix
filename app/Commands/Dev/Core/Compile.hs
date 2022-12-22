@@ -5,10 +5,10 @@ import Commands.Dev.Core.Compile.Options
 import Commands.Extra.Compile qualified as Compile
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Asm.Options qualified as Asm
-import Juvix.Compiler.Core.Translation.FromSource qualified as Core
-import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
+import Juvix.Compiler.Core.Data.InfoTable qualified as Core
+import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 import Juvix.Extra.Paths
 
 runCommand :: forall r. Members '[Embed IO, App] r => CoreCompileOptions -> Sem r ()

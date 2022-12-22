@@ -9,8 +9,6 @@ where
 import Juvix.Compiler.Abstract.Translation qualified as Abstract
 import Juvix.Compiler.Asm.Pipeline qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromCore qualified as Asm
-import Juvix.Compiler.Core.Pipeline qualified as Core
-import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Builtins
@@ -19,7 +17,9 @@ import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Core.Language qualified as Core
+import Juvix.Compiler.Core.Pipeline qualified as Core
 import Juvix.Compiler.Core.Translation qualified as Core
+import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
