@@ -58,7 +58,7 @@ computeMaxStackHeight lims = maximum . map go
           (maybe 0 (computeMaxStackHeight lims) _instrCaseDefault)
 
 computeStringMap :: HashMap Text Int -> Code -> HashMap Text Int
-computeStringMap strs = snd . run . execState (0 :: Int, strs) . mapM go
+computeStringMap strs = snd . run . execState (HashMap.size strs, strs) . mapM go
   where
     go :: Member (State (Int, HashMap Text Int)) r => Instruction -> Sem r ()
     go = \case
