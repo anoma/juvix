@@ -50,7 +50,7 @@ int main() {
 
     JUVIX_FUNCTION_NS(juvix_function_main);
     {
-        ARG(0) = make_smallint(1000000);
+        ARG(0) = make_smallint(100000000);
         TAIL_CALL_NS(0, fib);
     }
 

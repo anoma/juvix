@@ -20,12 +20,12 @@ go k n m := if (k Data.Int.Ops.== Int_0)
 fib : Int -> Int;
 fib n := go n Int_0 Int_1;
 
-axiom Int_1000000 : Int;
-compile Int_1000000 {
-  c ↦ "1000000";
+axiom Int_100000000 : Int;
+compile Int_100000000 {
+  c ↦ "100000000";
 };
 
 main : IO;
-main := printInt (fib Int_1000000);
+main := printInt (fib Int_100000000);
 
 end;

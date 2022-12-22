@@ -8,4 +8,4 @@ fib n = go n 0 1
     go k n m = go (k - 1) m ((n + m) `mod` (2 ^ 28))
 
 main :: IO ()
-main = putStrLn (show (fib 1000000))
+main = putStrLn (show (fib 100000000))

@@ -9,4 +9,4 @@ def fib := \k
   in
   go k 0 1;
 
-fib 1000000
+fib 100000000
