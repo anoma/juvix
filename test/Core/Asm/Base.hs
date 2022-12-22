@@ -1,14 +1,14 @@
 module Core.Asm.Base where
 
+import Asm.Run.Base qualified as Asm
 import Base
-import Data.Text.IO qualified as TIO
 import Core.Eval.Base
 import Core.Eval.Positive qualified as Eval
-import Asm.Run.Base qualified as Asm
+import Data.Text.IO qualified as TIO
+import Juvix.Compiler.Asm.Translation.FromCore qualified as Asm
 import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Translation.FromSource
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
-import Juvix.Compiler.Asm.Translation.FromCore qualified as Asm
 import Juvix.Data.PPOutput
 
 newtype Test = Test
