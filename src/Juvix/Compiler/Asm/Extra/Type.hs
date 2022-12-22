@@ -34,6 +34,14 @@ uncurryType ty = case typeArgs ty of
     let ty' = uncurryType (typeTarget ty)
      in mkTypeFun (tyargs ++ typeArgs ty') (typeTarget ty')
 
+curryType :: Type -> Type
+curryType ty = case typeArgs ty of
+  [] ->
+    ty
+  tyargs ->
+    let ty' = curryType (typeTarget ty)
+     in foldr (\tyarg ty'' -> mkTypeFun [tyarg] ty'') (typeTarget ty') tyargs
+
 unifyTypes :: forall r. Members '[Error AsmError, Reader (Maybe Location), Reader InfoTable] r => Type -> Type -> Sem r Type
 unifyTypes ty1 ty2 = case (ty1, ty2) of
   (TyDynamic, x) -> return x
@@ -95,7 +103,18 @@ unifyTypes ty1 ty2 = case (ty1, ty2) of
       throw $ AsmError loc ("not unifiable: " <> ppTrace tab ty1 <> ", " <> ppTrace tab ty2)
 
 unifyTypes' :: Member (Error AsmError) r => Maybe Location -> InfoTable -> Type -> Type -> Sem r Type
-unifyTypes' loc tab ty1 ty2 = runReader loc $ runReader tab $ unifyTypes ty1 ty2
+unifyTypes' loc tab ty1 ty2 =
+  runReader loc $
+    runReader tab $
+      if
+          | typeTarget (uncurryType ty1) == TyDynamic && typeTarget (uncurryType ty2) == TyDynamic ->
+              unifyTypes (curryType ty1) (curryType ty2)
+          | typeTarget (uncurryType ty1) == TyDynamic ->
+              unifyTypes (uncurryType ty1) ty2
+          | typeTarget (uncurryType ty2) == TyDynamic ->
+              unifyTypes ty1 (uncurryType ty2)
+          | otherwise ->
+              unifyTypes ty1 ty2
 
 isSubtype :: Type -> Type -> Bool
 isSubtype ty1 ty2 = case (ty1, ty2) of

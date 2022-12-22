@@ -6,5 +6,4 @@ def sum := \x sum' x 0;
 
 def writeLn := \x write x >> write "\n";
 
-writeLn (sum 10000) >>
-writeLn (sum 100000)
+writeLn (sum 10000)

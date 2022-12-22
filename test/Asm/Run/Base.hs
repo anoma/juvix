@@ -11,6 +11,36 @@ import Juvix.Compiler.Asm.Transformation.Validate
 import Juvix.Compiler.Asm.Translation.FromSource
 import Juvix.Data.PPOutput
 
+asmRunAssertion' :: InfoTable -> Path Abs File -> (String -> IO ()) -> Assertion
+asmRunAssertion' tab expectedFile step = do
+  step "Validate"
+  case validate' tab of
+    Just err -> assertFailure (show (pretty err))
+    Nothing ->
+      case tab ^. infoMainFunction of
+        Just sym -> do
+          withTempDir'
+            ( \dirPath -> do
+                let outputFile = dirPath <//> $(mkRelFile "out.out")
+                hout <- openFile (toFilePath outputFile) WriteMode
+                step "Interpret"
+                r' <- doRun hout tab (getFunInfo tab sym)
+                case r' of
+                  Left err -> do
+                    hClose hout
+                    assertFailure (show (pretty err))
+                  Right value' -> do
+                    case value' of
+                      ValVoid -> return ()
+                      _ -> hPutStrLn hout (ppPrint tab value')
+                    hClose hout
+                    actualOutput <- TIO.readFile (toFilePath outputFile)
+                    step "Compare expected and actual program output"
+                    expected <- TIO.readFile (toFilePath expectedFile)
+                    assertEqDiff ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
+            )
+        Nothing -> assertFailure "no 'main' function"
+
 asmRunAssertion :: Path Abs File -> Path Abs File -> (InfoTable -> Either AsmError InfoTable) -> (InfoTable -> Assertion) -> (String -> IO ()) -> Assertion
 asmRunAssertion mainFile expectedFile trans testTrans step = do
   step "Parse"
@@ -22,33 +52,7 @@ asmRunAssertion mainFile expectedFile trans testTrans step = do
         Left err -> assertFailure (show (pretty err))
         Right tab -> do
           testTrans tab
-          step "Validate"
-          case validate' tab of
-            Just err -> assertFailure (show (pretty err))
-            Nothing ->
-              case tab ^. infoMainFunction of
-                Just sym -> do
-                  withTempDir'
-                    ( \dirPath -> do
-                        let outputFile = dirPath <//> $(mkRelFile "out.out")
-                        hout <- openFile (toFilePath outputFile) WriteMode
-                        step "Interpret"
-                        r' <- doRun hout tab (getFunInfo tab sym)
-                        case r' of
-                          Left err -> do
-                            hClose hout
-                            assertFailure (show (pretty err))
-                          Right value' -> do
-                            case value' of
-                              ValVoid -> return ()
-                              _ -> hPutStrLn hout (ppPrint tab value')
-                            hClose hout
-                            actualOutput <- TIO.readFile (toFilePath outputFile)
-                            step "Compare expected and actual program output"
-                            expected <- TIO.readFile (toFilePath expectedFile)
-                            assertEqDiff ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
-                    )
-                Nothing -> assertFailure "no 'main' function"
+          asmRunAssertion' tab expectedFile step
 
 asmRunErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 asmRunErrorAssertion mainFile step = do

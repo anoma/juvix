@@ -9,42 +9,45 @@ type list {
   cons : any -> list -> list;
 };
 
-def force := \f f unit;
+inductive Stream {
+  scons : any -> (Unit -> Stream) -> Stream;
+};
 
-def filter := \p \s \_
+def force : (Unit -> Stream) -> Stream := \f f unit;
+
+def filter : (any -> bool) -> (Unit -> Stream) -> Unit -> Stream := \p \s \_
   case force s of {
-    cons h t :=
+    scons h t :=
       if p h then
-        cons h (filter p t)
+        scons h (filter p t)
       else
         force (filter p t)
   };
 
-def take := \n \s
+def take : int -> (Unit -> Stream) -> list := \n \s
   if n = 0 then
     nil
   else
     case force s of {
-      cons h t := cons h (take (n - 1) t)
+      scons h t := cons h (take (n - 1) t)
     };
 
-def nth := \n \s
+def nth : int -> (Unit -> Stream) -> any := \n \s
   case force s of {
-    cons h t := if n = 0 then h else nth (n - 1) t
+    scons h t := if n = 0 then h else nth (n - 1) t
   };
 
-def numbers := \n \_ cons n (numbers (n + 1));
+def numbers : int -> Unit -> Stream := \n \_ scons n (numbers (n + 1));
 
-def indivisible := \n \x if x % n = 0 then false else true;
-def eratostenes := \s \_
+def indivisible : int -> int -> bool := \n \x if x % n = 0 then false else true;
+def eratostenes : (Unit -> Stream) -> Unit -> Stream := \s \_
   case force s of {
-    cons n t :=
-      cons n (eratostenes (filter (indivisible n) t))
+    scons n t :=
+      scons n (eratostenes (filter (indivisible n) t))
   };
-def primes := eratostenes (numbers 2);
+def primes : Unit -> Stream := eratostenes (numbers 2);
 
 def writeLn := \x write x >> write "\n";
 
 writeLn (take 10 primes) >>
-writeLn (nth 100 primes) >>
-writeLn (nth 200 primes)
+writeLn (nth 100 primes)

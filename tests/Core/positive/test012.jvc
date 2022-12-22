@@ -17,7 +17,7 @@ def gen : int -> tree := \n
   else
     node3 (gen (n - 1)) (gen (n - 1)) (gen (n - 1));
 
-def preorder : tree -> tree := \t case t of {
+def preorder : tree -> IO := \t case t of {
   node1 c := write 1 >> preorder c;
   node2 l r := write 2 >> preorder l >> preorder r;
   node3 l m r := write 3 >> preorder l >> preorder m >> preorder r;

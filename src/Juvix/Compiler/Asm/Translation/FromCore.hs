@@ -301,9 +301,22 @@ convertType argsNum ty =
       TyInductive (TypeInductive _typeAppSymbol)
     Core.TyFun {} ->
       let (tgt, tyargs) = Core.unfoldType ty
-          tyargs' = map (convertType 0) tyargs
+          tyargs' = map convertNestedType tyargs
           tgt' = convertType 0 tgt
        in mkTypeFun (take argsNum tyargs') (mkTypeFun (drop argsNum tyargs') tgt')
+
+convertNestedType :: Core.Type -> Type
+convertNestedType ty =
+  case ty of
+    Core.TyFun {} ->
+      let (tgt, tyargs) = Core.unfoldType ty
+       in case tgt of
+            Core.TyDynamic ->
+              curryType (convertType 0 ty)
+            _ ->
+              mkTypeFun (map convertNestedType tyargs) (convertType 0 tgt)
+    _ ->
+      convertType 0 ty
 
 translateInductiveInfo :: Core.InductiveInfo -> InductiveInfo
 translateInductiveInfo ii =

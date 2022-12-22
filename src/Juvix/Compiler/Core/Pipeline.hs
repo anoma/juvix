@@ -7,7 +7,10 @@ where
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Transformation
 
+toStrippedTransformations :: [TransformationId]
+toStrippedTransformations = [NatToInt, ConvertBuiltinTypes, LambdaLifting, MoveApps, TopEtaExpand, RemoveTypeArgs]
+
 -- | Perform transformations on Core necessary before the translation to
 -- Core.Stripped
 toStripped :: InfoTable -> InfoTable
-toStripped = applyTransformations [NatToInt, LambdaLifting, MoveApps, TopEtaExpand, RemoveTypeArgs]
+toStripped = applyTransformations toStrippedTransformations

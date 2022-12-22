@@ -15,4 +15,4 @@ writeLn (ack 1 7) >>
 writeLn (ack 1 13) >>
 writeLn (ack 2 7) >>
 writeLn (ack 2 13) >>
-writeLn (ack 3 7)
+writeLn (ack 3 4)

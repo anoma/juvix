@@ -22,4 +22,4 @@ def writeLn := \x write x >> write "\n";
 writeLn (plus 3 7) >>
 writeLn (mult 3 7) >>
 writeLn (exp 3 7) >>
-writeLn (ackermann 3 7)
+writeLn (ackermann 3 4)

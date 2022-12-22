@@ -2,9 +2,6 @@ cons 10 (cons 9 (cons 8 (cons 7 (cons 6 (cons 5 (cons 4 (cons 3 (cons 2 (cons 1 
 cons 1 (cons 2 (cons 3 (cons 4 (cons 5 (cons 6 (cons 7 (cons 8 (cons 9 (cons 10 nil)))))))))
 cons 10 (cons 9 (cons 8 (cons 7 (cons 6 nil))))
 cons 0 (cons 1 (cons 2 (cons 3 (cons 4 (cons 5 (cons 6 (cons 7 (cons 8 (cons 9 nil)))))))))
-50005000
-5000050000
-50005000
-5000050000
-50005000
-5000050000
+500500
+500500
+500500
