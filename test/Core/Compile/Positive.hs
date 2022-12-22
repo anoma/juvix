@@ -5,7 +5,7 @@ import Core.Compile.Base
 import Core.Eval.Positive qualified as Eval
 
 allTests :: TestTree
-allTests = testGroup "JuvixCore compile tests" (map liftTest (Eval.filterOutTests ignoredTests Eval.tests))
+allTests = testGroup "JuvixCore compilation tests" (map liftTest (Eval.filterOutTests ignoredTests Eval.tests))
 
 -- Arbitrary precision integers and general pattern matching not yet supported
 ignoredTests :: [String]
