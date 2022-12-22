@@ -76,6 +76,7 @@ dependencies:
 - gauge == 0.2.*
 - shake == 0.19.*
 - colour == 2.3.*
+- palette == 0.3.*
 ghc-options:
 # Warnings
 - -Weverything

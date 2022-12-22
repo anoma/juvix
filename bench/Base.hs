@@ -5,7 +5,7 @@ import Data.Colour.SRGB
 import Development.Shake hiding ((<//>))
 import Juvix.Extra.Paths
 import Juvix.Prelude
-import Prelude (Double, Show (show))
+import Prelude (Show (show))
 
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/benchmark")
@@ -66,6 +66,7 @@ data Variant = Variant
     _variantLanguage :: Lang,
     _variantExtensions :: [String],
     _variantColor :: Colour Double,
+    _variantRun :: Path Abs File -> IO (),
     _variantBuild :: BuildArgs -> Action ()
   }
 

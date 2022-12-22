@@ -32,6 +32,7 @@ module Juvix.Prelude.Base
     module Data.Monoid,
     module Data.Ord,
     module Data.Semigroup,
+    module Prelude,
     module Data.Singletons,
     module Data.Singletons.Sigma,
     module Data.Singletons.TH,
@@ -178,6 +179,7 @@ import System.IO hiding
 import System.IO.Error
 import Text.Show (Show)
 import Text.Show qualified as Show
+import Prelude (Double)
 
 --------------------------------------------------------------------------------
 

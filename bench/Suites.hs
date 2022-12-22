@@ -27,5 +27,5 @@ defaultSuite :: String -> Suite
 defaultSuite title =
   Suite
     { _suiteTitle = title,
-      _suiteVariants = defaultVariants
+      _suiteVariants = allVariants
     }

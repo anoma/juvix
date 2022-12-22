@@ -8,7 +8,6 @@ import Juvix.Prelude.Base
 import Juvix.Prelude.Path as Path hiding (doesFileExist, (-<.>))
 import Juvix.Prelude.Path qualified as Path
 import Suites
-import System.Process
 
 compile :: IO ()
 compile = shakeArgs opts compileRules
@@ -19,7 +18,8 @@ compile = shakeArgs opts compileRules
 compileRules :: Rules ()
 compileRules = do
   phony "clean" $ do
-    putInfo "TODO: Cleaning... "
+    putInfo ("Deleting " <> toFilePath resultsDir)
+    removePathForcibly resultsDir
   forM_ suites suiteRules
 
 suiteRules :: Suite -> Rules ()
@@ -106,14 +106,11 @@ csvRules s =
           header' = "Color," <> header
       writeFile (toFilePath csv) (Text.unlines (header' : rows'))
 
-runExe :: Path Abs File -> IO ()
-runExe p = void (readProcess (toFilePath p) [] "")
-
 fromSuite :: Suite -> [Benchmark]
 fromSuite s = map go (s ^. suiteVariants)
   where
     go :: Variant -> Benchmark
-    go v = bench title (nfIO (runExe (variantBinFile s v)))
+    go v = bench title (nfIO ((v ^. variantRun) (variantBinFile s v)))
       where
         title :: String
         title = show (v ^. variantLanguage) <> maybe "" (" " <>) (v ^. variantTitle)
