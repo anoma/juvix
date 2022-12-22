@@ -19,7 +19,7 @@
   "haskell.toolchain": {
     "ghc": "9.2.5",
     "hls": "latest",
-    "cabal": "3.6.2.0",
+    "cabal": "3.8.1.0",
   },
   "files.trimTrailingWhitespace": true,
   "haskell.plugin.callHierarchy.globalOn": true,
