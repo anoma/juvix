@@ -134,7 +134,7 @@ clang-format:
 .PHONY: check-ormolu
 check-ormolu: export ORMOLUMODE = check
 check-ormolu:
-	make format
+	@make -s format
 
 .PHONY : hlint
 hlint :
@@ -154,16 +154,21 @@ pre-commit :
 # -- Build-Install-Test-Release
 # ------------------------------------------------------------------------------
 
+MAKEAUXFLAGS?=-s
+MAKE=make ${MAKEAUXFLAGS}
+
 STACKFLAGS?=--jobs $(THREADS)
+STACKTESTFLAGS?=--ta --hide-successes --ta --ansi-tricks=false
+SHELLTESTFLAGS?=--color --diff -a --hide-successes
 
 .PHONY: check
 check:
-	@make build
-	@make install
-	@make test
-	@make test-shell
-	@make format
-	@make pre-commit
+	@${MAKE} build
+	@${MAKE} install
+	@${MAKE} test
+	@${MAKE} test-shell
+	@${MAKE} format
+	@${MAKE} pre-commit
 
 # -- Build requirements
 
@@ -198,26 +203,26 @@ fast-install: runtime submodules
 
 .PHONY : test
 test: build
-	@stack test ${STACKFLAGS}
+	@stack test ${STACKFLAGS} ${STACKTESTFLAGS}
 
 .PHONY : fast-test
 fast-test: fast-build
-	@stack test --fast ${STACKFLAGS}
+	@stack test --fast ${STACKFLAGS} ${STACKTESTFLAGS}
 
 .PHONY : test-skip-slow
 test-skip-slow:
-	@stack test ${STACKFLAGS} --ta '-p "! /slow tests/"'
+	@stack test ${STACKFLAGS} ${STACKTESTFLAGS} --ta '-p "! /slow tests/"'
 
 .PHONY : fast-test-skip-slow
 fast-test-skip-slow:
-	@stack test --fast ${STACKFLAGS} --ta '-p "! /slow tests/"'
+	@stack test --fast ${STACKFLAGS} ${STACKTESTFLAGS} --ta '-p "! /slow tests/"'
 
 SHELLTEST := $(shell command -v shelltest 2> /dev/null)
 
 .PHONY : test-shell
 test-shell : install
 	@$(if $(SHELLTEST),, stack install shelltestrunner)
-	shelltest --color --diff -a tests
+	shelltest ${SHELLTESTFLAGS} tests
 
 # -- Release
 
