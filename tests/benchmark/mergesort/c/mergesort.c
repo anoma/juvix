@@ -44,7 +44,7 @@ static bool sorted(int *tab, int size) {
     return true;
 }
 
-#define N 100000
+#define N 200000
 
 int main() {
     int *tab = malloc(N * sizeof(int));
