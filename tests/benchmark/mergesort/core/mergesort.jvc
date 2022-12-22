@@ -51,4 +51,4 @@ def sorted := \xs
 
 def gen := \n \acc if n = 0 then acc else gen (n - 1) (cons n acc);
 
-sorted (sort (gen 100000 nil))
+sorted (sort (gen 2000000 nil))

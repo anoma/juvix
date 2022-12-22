@@ -44,12 +44,12 @@ terminating
 gen : Int -> List Int -> List Int;
 gen n acc := if (n Data.Int.Ops.== Int_0) acc (gen (n Data.Int.Ops.- Int_1) (n ∷ acc));
 
-axiom Int_200000 : Int;
-compile Int_200000 {
-  c ↦ "200000";
+axiom Int_2000000 : Int;
+compile Int_2000000 {
+  c ↦ "2000000";
 };
 
 main : IO;
-main := if (sorted (sort (gen Int_200000 nil))) (putStrLn "true") (putStrLn "false");
+main := if (sorted (sort (gen Int_2000000 nil))) (putStrLn "true") (putStrLn "false");
 
 end;
