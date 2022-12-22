@@ -9,19 +9,17 @@ suites =
   map
     defaultSuite
     [ "mergesort",
-      "fibonacci"
+      "fibonacci",
+      "ackermann",
+      "combinations",
+      "cps",
+      "fold",
+      "mapfold",
+      "mapfun",
+      "maybe",
+      "prime"
     ]
 
--- "ackermann"
--- "combinations"
--- "cps"
--- "fibonacci"
--- "fold"
--- "mapfold"
--- "mapfun"
--- "maybe"
--- "mergesort"
--- "prime
 
 defaultSuite :: String -> Suite
 defaultSuite title =
