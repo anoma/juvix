@@ -42,7 +42,7 @@ parseCompileOptions = do
       )
   _compileTarget <- optCompileTarget
   _compileOutputFile <- optional parseGenericOutputFile
-  _compileInputFile <- parseInputCFile
+  _compileInputFile <- parseGenericInputFile
   pure CompileOptions {..}
 
 optCompileTarget :: Parser CompileTarget

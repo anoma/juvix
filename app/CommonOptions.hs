@@ -69,6 +69,17 @@ parseInputCFile = do
       )
   pure AppPath {_pathIsInput = True, ..}
 
+parseGenericInputFile :: Parser (AppPath File)
+parseGenericInputFile = do
+  _pathPath <-
+    argument
+      someFileOpt
+      ( metavar "INPUT_FILE"
+          <> help "Path to input file"
+          <> action "file"
+      )
+  pure AppPath {_pathIsInput = True, ..}
+
 parseGenericOutputFile :: Parser (AppPath File)
 parseGenericOutputFile = do
   _pathPath <-

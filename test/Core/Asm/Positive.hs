@@ -5,7 +5,7 @@ import Core.Asm.Base
 import Core.Eval.Positive qualified as Eval
 
 allTests :: TestTree
-allTests = testGroup "JuvixCore to JuvixAsm positive tests" (map liftTest (filterOutTests ignoredTests Eval.tests))
+allTests = testGroup "JuvixCore to JuvixAsm positive tests" (map liftTest (Eval.filterOutTests ignoredTests Eval.tests))
 
 ignoredTests :: [String]
 ignoredTests =
@@ -18,6 +18,3 @@ liftTest _testEval =
     Test
       { _testEval
       }
-
-filterOutTests :: [String] -> [Eval.PosTest] -> [Eval.PosTest]
-filterOutTests out = filter (\Eval.PosTest {..} -> _name `notElem` out)

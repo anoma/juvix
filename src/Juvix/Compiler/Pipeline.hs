@@ -8,6 +8,9 @@ where
 
 import Juvix.Compiler.Abstract.Translation qualified as Abstract
 import Juvix.Compiler.Asm.Pipeline qualified as Asm
+import Juvix.Compiler.Asm.Translation.FromCore qualified as Asm
+import Juvix.Compiler.Core.Pipeline qualified as Core
+import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Builtins
@@ -160,6 +163,9 @@ upToMiniC = upToInternalReachability >>= C.fromInternal
 --------------------------------------------------------------------------------
 -- Internal workflows
 --------------------------------------------------------------------------------
+
+coreToMiniC :: Member (Error JuvixError) r => Asm.Options -> Core.InfoTable -> Sem r C.MiniCResult
+coreToMiniC opts = asmToMiniC opts . Asm.fromCore . Stripped.fromCore . Core.toStripped
 
 asmToMiniC :: Member (Error JuvixError) r => Asm.Options -> Asm.InfoTable -> Sem r C.MiniCResult
 asmToMiniC opts = Asm.toReg opts >=> regToMiniC (opts ^. Asm.optLimits) . Reg.fromAsm

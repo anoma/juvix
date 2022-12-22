@@ -8,6 +8,23 @@ import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Pipeline qualified as Pipeline
 import Runtime.Base qualified as Runtime
+import Juvix.Compiler.Asm.Data.InfoTable
+
+asmCompileAssertion' :: InfoTable -> Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
+asmCompileAssertion' tab mainFile expectedFile step = do
+  step "Generate C code"
+  case run $ runError @JuvixError $ Pipeline.asmToMiniC asmOpts tab of
+    Left {} -> assertFailure "code generation failed"
+    Right C.MiniCResult {..} ->
+      withTempDir'
+        ( \dirPath -> do
+            let cFile = dirPath <//> replaceExtension' ".c" (filename mainFile)
+            TIO.writeFile (toFilePath cFile) _resultCCode
+            Runtime.clangAssertion cFile expectedFile "" step
+        )
+  where
+    asmOpts :: Options
+    asmOpts = makeOptions Backend.TargetCNative64 True
 
 asmCompileAssertion :: Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
 asmCompileAssertion mainFile expectedFile step = do
@@ -15,17 +32,4 @@ asmCompileAssertion mainFile expectedFile step = do
   s <- readFile (toFilePath mainFile)
   case runParser (toFilePath mainFile) s of
     Left err -> assertFailure (show err)
-    Right tab -> do
-      step "Generate C code"
-      case run $ runError @JuvixError $ Pipeline.asmToMiniC asmOpts tab of
-        Left {} -> assertFailure "code generation failed"
-        Right C.MiniCResult {..} ->
-          withTempDir'
-            ( \dirPath -> do
-                let cFile = dirPath <//> replaceExtension' ".c" (filename mainFile)
-                TIO.writeFile (toFilePath cFile) _resultCCode
-                Runtime.clangAssertion cFile expectedFile "" step
-            )
-  where
-    asmOpts :: Options
-    asmOpts = makeOptions Backend.TargetCNative64 True
+    Right tab -> asmCompileAssertion' tab mainFile expectedFile step
