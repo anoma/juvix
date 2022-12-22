@@ -211,20 +211,12 @@ goFunctionClause ::
 goFunctionClause FunctionClause {..} = do
   _clausePatterns' <- mapM goPatternArg _clausePatterns
   _clauseBody' <- goExpression _clauseBody
-  goWhereBlock _clauseWhere
   return
     Abstract.FunctionClause
       { _clauseName = goSymbol _clauseOwnerFunction,
         _clausePatterns = _clausePatterns',
         _clauseBody = _clauseBody'
       }
-
-goWhereBlock ::
-  Maybe (WhereBlock 'Scoped) ->
-  Sem r ()
-goWhereBlock w = case w of
-  Just _ -> unsupported "where block"
-  Nothing -> return ()
 
 goInductiveParameter ::
   Member (Error ScoperError) r =>

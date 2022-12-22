@@ -39,12 +39,12 @@ length _ (nil _) := zero;
 length a (∷ _ _ l) := suc (length a l);
 
 reverse : (a : Type) → List a → List a;
-reverse a l := rev l (nil a)
-  where {
+reverse a l := 
+  let  {
   rev : List a → List a → List a;
   rev (nil _) a := a;
   rev (∷ _ x xs) a := rev xs (∷ a x a)
-  };
+  } in rev l (nil a);
 
 replicate : (a : Type) → ℕ → a → List a;
 replicate a zero _ := nil a;
@@ -85,9 +85,7 @@ quickSort : (a : Type) → (a → a → Ordering) → List a → List a;
 quickSort a _ (nil _) := nil a;
 quickSort a _ (∷ _ x (nil _)) := ∷ a x (nil a);
 quickSort a cmp (∷ _ x ys) :=
-  ++ a (quickSort a (filter a ltx) ys)
-  (++ a (∷ a x (nil a)) (quickSort a (filter a gex) ys))
-  where {
+  let {
     ltx : a → Bool;
     ltx y := match (cmp y x) λ{
       LT := true;
@@ -95,6 +93,10 @@ quickSort a cmp (∷ _ x ys) :=
     };
     gex : a → Bool;
     gex y := not (ltx y)
+  } in 
+  {
+     ++ a (quickSort a (filter a ltx) ys)
+    (++ a (∷ a x (nil a)) (quickSort a (filter a gex) ys))
   };
 
 end;
