@@ -20,10 +20,9 @@ suites =
       "prime"
     ]
 
-
 defaultSuite :: String -> Suite
 defaultSuite title =
   Suite
     { _suiteTitle = title,
-      _suiteVariants = allVariants
+      _suiteVariants = defaultVariants
     }

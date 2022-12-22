@@ -11,6 +11,9 @@ import System.Process
 allVariants :: [Variant]
 allVariants = map getVariant allElements
 
+defaultVariants :: [Variant]
+defaultVariants = map getVariant (delete CoreEval allElements)
+
 data VariantId
   = OcamlExe
   | OcamlByte
