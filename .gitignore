@@ -45,9 +45,6 @@ tags
 # Atom
 .haskell-ghc-mod.json
 
-# VS
-.vscode/
-
 # Emacs
 *#
 .dir-locals.el
