@@ -796,31 +796,6 @@ checkOpenModule op
   | op ^. openModuleImport = checkOpenImportModule op
   | otherwise = checkOpenModuleNoImport op
 
-checkWhereBlock ::
-  forall r.
-  Members
-    '[ Error ScoperError,
-       State Scope,
-       State ScoperState,
-       Reader LocalVars,
-       InfoTableBuilder,
-       NameIdGen
-     ]
-    r =>
-  WhereBlock 'Parsed ->
-  Sem r (WhereBlock 'Scoped)
-checkWhereBlock WhereBlock {..} = WhereBlock <$> mapM checkWhereClause whereClauses
-
-checkWhereClause ::
-  forall r.
-  Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
-  WhereClause 'Parsed ->
-  Sem r (WhereClause 'Scoped)
-checkWhereClause c = case c of
-  WhereOpenModule o -> WhereOpenModule <$> checkOpenModuleNoImport o
-  WhereTypeSig s -> WhereTypeSig <$> checkTypeSignature s
-  WhereFunClause f -> WhereFunClause <$> checkFunctionClause f
-
 checkFunctionClause ::
   forall r.
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
@@ -829,20 +804,18 @@ checkFunctionClause ::
 checkFunctionClause clause@FunctionClause {..} = do
   clauseOwnerFunction' <- checkTypeSigInScope
   registerName (S.unqualifiedSymbol clauseOwnerFunction')
-  (clausePatterns', clauseWhere', clauseBody') <- do
+  (clausePatterns', clauseBody') <- do
     clp <- mapM checkParsePatternAtom _clausePatterns
     withBindCurrentGroup $ do
       s <- get @Scope
-      clw <- mapM checkWhereBlock _clauseWhere
       clb <- checkParseExpressionAtoms _clauseBody
       put s
-      return (clp, clw, clb)
+      return (clp, clb)
   registerFunctionClause'
     FunctionClause
       { _clauseOwnerFunction = clauseOwnerFunction',
         _clausePatterns = clausePatterns',
-        _clauseBody = clauseBody',
-        _clauseWhere = clauseWhere'
+        _clauseBody = clauseBody'
       }
   where
     fun = _clauseOwnerFunction

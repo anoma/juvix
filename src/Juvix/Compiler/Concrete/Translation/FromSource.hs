@@ -471,23 +471,6 @@ function = do
   return Function {..}
 
 --------------------------------------------------------------------------------
--- Where block clauses
---------------------------------------------------------------------------------
-
-whereBlock :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (WhereBlock 'Parsed)
-whereBlock = do
-  kw kwWhere
-  WhereBlock <$> braces (P.sepEndBy1 whereClause (kw kwSemicolon))
-
-whereClause :: forall r. Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (WhereClause 'Parsed)
-whereClause =
-  (WhereOpenModule <$> openModule)
-    <|> sigOrFun
-  where
-    sigOrFun :: ParsecS r (WhereClause 'Parsed)
-    sigOrFun = either WhereTypeSig WhereFunClause <$> auxTypeSigFunClause
-
---------------------------------------------------------------------------------
 -- Lambda expression
 --------------------------------------------------------------------------------
 
@@ -574,7 +557,6 @@ functionClause _clauseOwnerFunction = do
   _clausePatterns <- P.many patternAtom
   kw kwAssign
   _clauseBody <- parseExpressionAtoms
-  _clauseWhere <- optional whereBlock
   return FunctionClause {..}
 
 --------------------------------------------------------------------------------

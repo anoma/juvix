@@ -351,8 +351,7 @@ type FunctionName s = SymbolType s
 data FunctionClause (s :: Stage) = FunctionClause
   { _clauseOwnerFunction :: FunctionName s,
     _clausePatterns :: [PatternType s],
-    _clauseBody :: ExpressionType s,
-    _clauseWhere :: Maybe (WhereBlock s)
+    _clauseBody :: ExpressionType s
   }
 
 deriving stock instance
@@ -622,73 +621,6 @@ deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (
 deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Function s)
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Function s)
-
---------------------------------------------------------------------------------
--- Where block clauses
---------------------------------------------------------------------------------
-
-newtype WhereBlock (s :: Stage) = WhereBlock
-  { whereClauses :: NonEmpty (WhereClause s)
-  }
-
-deriving stock instance
-  ( Show (PatternType s),
-    Show (IdentifierType s),
-    Show (ModuleRefType s),
-    Show (SymbolType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (WhereBlock s)
-
-deriving stock instance
-  ( Eq (PatternType s),
-    Eq (IdentifierType s),
-    Eq (ModuleRefType s),
-    Eq (SymbolType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (WhereBlock s)
-
-deriving stock instance
-  ( Ord (PatternType s),
-    Ord (IdentifierType s),
-    Ord (ModuleRefType s),
-    Ord (SymbolType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (WhereBlock s)
-
-data WhereClause (s :: Stage)
-  = WhereOpenModule (OpenModule s)
-  | WhereTypeSig (TypeSignature s)
-  | WhereFunClause (FunctionClause s)
-
-deriving stock instance
-  ( Show (PatternType s),
-    Show (IdentifierType s),
-    Show (ModuleRefType s),
-    Show (SymbolType s),
-    Show (ExpressionType s)
-  ) =>
-  Show (WhereClause s)
-
-deriving stock instance
-  ( Eq (PatternType s),
-    Eq (IdentifierType s),
-    Eq (ModuleRefType s),
-    Eq (SymbolType s),
-    Eq (ExpressionType s)
-  ) =>
-  Eq (WhereClause s)
-
-deriving stock instance
-  ( Ord (PatternType s),
-    Ord (IdentifierType s),
-    Ord (ModuleRefType s),
-    Ord (SymbolType s),
-    Ord (ExpressionType s)
-  ) =>
-  Ord (WhereClause s)
 
 --------------------------------------------------------------------------------
 -- Lambda expression

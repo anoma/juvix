@@ -493,25 +493,11 @@ instance SingI s => PrettyCode (FunctionClause s) where
       Nothing -> return Nothing
       Just ne -> Just . hsep <$> mapM ppPatternAtom ne
     clauseBody' <- ppExpression _clauseBody
-    clauseWhere' <- mapM ppCode _clauseWhere
     return $
       clauseOwnerFunction'
         <+?> clausePatterns'
         <+> kwAssign
-        <+> nest
-          2
-          ( clauseBody'
-              <+?> ((line <>) <$> clauseWhere')
-          )
-
-instance SingI s => PrettyCode (WhereBlock s) where
-  ppCode WhereBlock {..} = indent' . (kwWhere <+>) <$> ppBlock whereClauses
-
-instance SingI s => PrettyCode (WhereClause s) where
-  ppCode c = case c of
-    WhereOpenModule o -> ppCode o
-    WhereTypeSig sig -> ppCode sig
-    WhereFunClause fun -> ppCode fun
+        <+> nest 2 clauseBody'
 
 instance SingI s => PrettyCode (AxiomDef s) where
   ppCode AxiomDef {..} = do
