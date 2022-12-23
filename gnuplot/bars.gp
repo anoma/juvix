@@ -21,21 +21,28 @@ unset key
 set yrange [0 : *]
 
 set multiplot layout 2, 1 title ('suite '.name) font ",24" scale 1, 1
-do for [target in targets] {
-    set title target font ",20"
-    plot csvfile \
-        using target:colorCol:xtic(2) notitle column(2) lc rgbcolor variable, \
-     '' using 0:target:(sprintf("%1.4f",column(target))) with labels font ",13" center offset 0, 0.4 title target, \
 
-}
+set title meanCol font ",20"
+plot csvfile \
+        using meanCol:colorCol:xtic(2) notitle linecolor rgbcolor variable, \
+     '' using 0:meanCol:(sprintf("%1.4f",column(meanCol))) with labels font ",13" center offset 0, 0.4 title meanCol, \
+
+
+set title "Standard deviation" font ",20"
+unset ylabel
+
+f(x) = column(stddevCol)*100/column(meanCol)
+plot csvfile \
+        using (f('')):colorCol:xtic(2) notitle linecolor rgbcolor variable, \
+     '' using 0:(f('')):(sprintf("%1.2f%",(f('')))) with labels font ",13" center offset -9,0.4 notitle
 
 unset multiplot
 
 set terminal svg enhanced mouse size 600, 1100
 set output outfile.'.svg'
 set multiplot layout 2, 1 title ('suite '.name) font ",24" scale 1, 1
-do for [target in targets] {
 set key outside
+do for [target in targets] {
 replot
 }
 unset multiplot

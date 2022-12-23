@@ -10,8 +10,8 @@ suites =
     defaultSuite
     [ "mergesort",
       "fibonacci",
-      "ackermann",
-      "combinations",
+      "ackermann", -- juvix crashes
+      "combinations", -- juvix crashes: out of call stack
       "cps",
       "fold",
       "mapfold",
