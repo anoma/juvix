@@ -81,6 +81,7 @@ fromInternal i = do
 
     f :: Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r => Sem r ()
     f = do
+      declareIOBuiltins
       let resultModules = toList (i ^. InternalTyped.resultModules)
       runReader (Internal.buildTable resultModules) (mapM_ coreModule resultModules)
       where

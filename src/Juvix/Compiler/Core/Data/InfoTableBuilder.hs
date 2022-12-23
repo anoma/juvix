@@ -85,3 +85,82 @@ runInfoTableBuilder tab =
         return $ HashMap.lookup txt (s ^. identMap)
       GetInfoTable ->
         get
+
+--------------------------------------------
+-- Builtin declarations
+--------------------------------------------
+
+createBuiltinConstr ::
+  Symbol ->
+  Tag ->
+  Text ->
+  Type ->
+  Maybe BuiltinConstructor ->
+  Sem r ConstructorInfo
+createBuiltinConstr sym tag nameTxt ty cblt = do
+  return $
+    ConstructorInfo
+      { _constructorName = nameTxt,
+        _constructorLocation = Nothing,
+        _constructorTag = tag,
+        _constructorType = ty,
+        _constructorArgsNum = length (typeArgs ty),
+        _constructorInductive = sym,
+        _constructorBuiltin = cblt
+      }
+
+declareInductiveBuiltins ::
+  Member InfoTableBuilder r =>
+  Text ->
+  Maybe BuiltinInductive ->
+  [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] ->
+  Sem r ()
+declareInductiveBuiltins indName blt ctrs = do
+  sym <- freshSymbol
+  let ty = mkIdent' sym
+  constrs <- mapM (\(tag, name, fty, cblt) -> createBuiltinConstr sym tag name (fty ty) cblt) ctrs
+  registerInductive
+    indName
+    ( InductiveInfo
+        { _inductiveName = indName,
+          _inductiveLocation = Nothing,
+          _inductiveSymbol = sym,
+          _inductiveKind = mkDynamic',
+          _inductiveConstructors = constrs,
+          _inductivePositive = True,
+          _inductiveParams = [],
+          _inductiveBuiltin = blt
+        }
+    )
+  mapM_ (\ci -> registerConstructor (ci ^. constructorName) ci) constrs
+
+declareIOBuiltins :: Member InfoTableBuilder r => Sem r ()
+declareIOBuiltins =
+  declareInductiveBuiltins
+    "IO"
+    Nothing
+    [ (BuiltinTag TagReturn, "return", mkPi' mkDynamic', Nothing),
+      (BuiltinTag TagBind, "bind", \ty -> mkPi' ty (mkPi' (mkPi' mkDynamic' ty) ty), Nothing),
+      (BuiltinTag TagWrite, "write", mkPi' mkDynamic', Nothing),
+      (BuiltinTag TagReadLn, "readLn", id, Nothing)
+    ]
+
+declareBoolBuiltins :: Member InfoTableBuilder r => Sem r ()
+declareBoolBuiltins =
+  declareInductiveBuiltins
+    "bool"
+    (Just BuiltinBool)
+    [ (BuiltinTag TagTrue, "true", id, Just BuiltinBoolTrue),
+      (BuiltinTag TagFalse, "false", id, Just BuiltinBoolFalse)
+    ]
+
+declareNatBuiltins :: Member InfoTableBuilder r => Sem r ()
+declareNatBuiltins = do
+  tagZero <- freshTag
+  tagSuc <- freshTag
+  declareInductiveBuiltins
+    "nat"
+    (Just BuiltinNat)
+    [ (tagZero, "zero", id, Just BuiltinNatZero),
+      (tagSuc, "suc", \x -> mkPi' x x, Just BuiltinNatSuc)
+    ]
