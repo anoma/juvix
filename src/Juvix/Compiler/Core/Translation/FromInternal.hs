@@ -29,32 +29,37 @@ mkIdentIndex :: Name -> Text
 mkIdentIndex = show . (^. Internal.nameId . Internal.unNameId)
 
 setupIntToNat :: Symbol -> InfoTable -> InfoTable
-setupIntToNat sym tab = tab{
-    _infoIdentifiers = HashMap.insert sym ii (tab ^. infoIdentifiers),
-    _identContext = HashMap.insert sym node (tab ^. identContext),
-    _infoIntToNat = Just sym
-  }
-  where
-    ii = IdentifierInfo {
-      _identifierSymbol = sym,
-      _identifierName = "intToNat",
-      _identifierLocation = Nothing,
-      _identifierArgsNum = 1,
-      _identifierArgsInfo = [ArgumentInfo {
-        _argumentName = "x",
-        _argumentLocation = Nothing,
-        _argumentType = mkTypePrim' (PrimInteger $ PrimIntegerInfo Nothing Nothing),
-        _argumentIsImplicit = Explicit
-      }],
-      _identifierType = mkDynamic',
-      _identifierIsExported = False,
-      _identifierBuiltin = Nothing
+setupIntToNat sym tab =
+  tab
+    { _infoIdentifiers = HashMap.insert sym ii (tab ^. infoIdentifiers),
+      _identContext = HashMap.insert sym node (tab ^. identContext),
+      _infoIntToNat = Just sym
     }
+  where
+    ii =
+      IdentifierInfo
+        { _identifierSymbol = sym,
+          _identifierName = "intToNat",
+          _identifierLocation = Nothing,
+          _identifierArgsNum = 1,
+          _identifierArgsInfo =
+            [ ArgumentInfo
+                { _argumentName = "x",
+                  _argumentLocation = Nothing,
+                  _argumentType = mkTypePrim' (PrimInteger $ PrimIntegerInfo Nothing Nothing),
+                  _argumentIsImplicit = Explicit
+                }
+            ],
+          _identifierType = mkDynamic',
+          _identifierIsExported = False,
+          _identifierBuiltin = Nothing
+        }
     node =
       case (tagZeroM, tagSucM, boolSymM) of
         (Just tagZero, Just tagSuc, Just boolSym) ->
           mkLambda' $
-            mkIf' boolSym
+            mkIf'
+              boolSym
               (mkBuiltinApp' OpEq [mkVar' 0, mkConstant' (ConstInteger 0)])
               (mkConstr (setInfoName "zero" mempty) tagZero [])
               (mkConstr (setInfoName "suc" mempty) tagSuc [mkApp' (mkIdent' sym) (mkBuiltinApp' OpIntSub [mkVar' 0, mkConstant' (ConstInteger 1)])])
@@ -74,7 +79,7 @@ fromInternal i = do
       }
   where
     tab0 :: InfoTable
-    tab0 = emptyInfoTable{_infoIntToNat = Just intToNatSym, _infoNextSymbol = intToNatSym + 1}
+    tab0 = emptyInfoTable {_infoIntToNat = Just intToNatSym, _infoNextSymbol = intToNatSym + 1}
 
     intToNatSym :: Symbol
     intToNatSym = 0

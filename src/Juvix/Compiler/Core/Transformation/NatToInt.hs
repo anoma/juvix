@@ -17,8 +17,9 @@ convertNode tab = convert [] 0
     go levels bl node = case node of
       NVar (Var {..}) ->
         End' (mkVar _varInfo (_varIndex + length (filter (\x -> x >= bl - _varIndex) levels)))
-      NApp (App _ (NIdt (Ident {..})) l) | Just _identSymbol == tab ^. infoIntToNat ->
-        End' (convert levels bl l)
+      NApp (App _ (NIdt (Ident {..})) l)
+        | Just _identSymbol == tab ^. infoIntToNat ->
+            End' (convert levels bl l)
       NApp (App _ (NApp (App _ (NIdt (Ident {..})) l)) r) ->
         Recur' (levels, convertIdentApp node (\op -> mkBuiltinApp _identInfo op [l, r]) _identSymbol)
       NApp (App _ (NIdt (Ident {..})) l) ->
@@ -97,6 +98,6 @@ natToInt tab = mapT (const (convertNode tab')) tab'
     tab' =
       case tab ^. infoIntToNat of
         Just sym ->
-          tab{_identContext = HashMap.insert sym (mkLambda' (mkVar' 0)) (tab ^. identContext)}
+          tab {_identContext = HashMap.insert sym (mkLambda' (mkVar' 0)) (tab ^. identContext)}
         Nothing ->
           tab
