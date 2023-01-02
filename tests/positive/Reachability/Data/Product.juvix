@@ -1,8 +1,7 @@
 module Data.Product;
 
 infixr 2 ×;
-inductive × (a : Type) (b : Type) {
+type × (a : Type) (b : Type) :=
   , : a → b → a × b;
-};
 
 end;

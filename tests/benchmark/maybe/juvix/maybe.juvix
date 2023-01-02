@@ -6,7 +6,7 @@ open import Stdlib.Prelude;
 open import Data.Int;
 open import Data.Int.Ops;
 
-inductive Tree {
+type Tree {
   leaf : Tree;
   node : Int -> Tree -> Tree -> Tree;
 };

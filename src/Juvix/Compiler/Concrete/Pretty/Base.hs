@@ -108,13 +108,16 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
         symbolParsed sym = case sing :: SStage s of
           SParsed -> sym
           SScoped -> sym ^. S.nameConcrete
+
         syms :: InductiveDef s -> [Symbol]
-        syms InductiveDef {..} = case sing :: SStage s of
-          SParsed -> _inductiveName : map (^. constructorName) _inductiveConstructors
-          SScoped ->
-            _inductiveName
-              ^. S.nameConcrete
-              : map (^. constructorName . S.nameConcrete) _inductiveConstructors
+        syms InductiveDef {..} =
+          let constructors = toList _inductiveConstructors
+           in case sing :: SStage s of
+                SParsed -> _inductiveName : map (^. constructorName) constructors
+                SScoped ->
+                  _inductiveName
+                    ^. S.nameConcrete
+                    : map (^. constructorName . S.nameConcrete) constructors
 
 instance SingI s => PrettyCode [Statement s] where
   ppCode ss = vsep2 <$> mapM (fmap vsep . mapM (fmap endSemicolon . ppCode)) (groupStatements ss)
@@ -288,8 +291,19 @@ instance SingI s => PrettyCode (InductiveDef s) where
   ppCode d@InductiveDef {..} = do
     doc' <- mapM ppCode _inductiveDoc
     sig' <- ppInductiveSignature d
-    inductiveConstructors' <- ppBlock _inductiveConstructors
-    return $ doc' ?<> sig' <+> inductiveConstructors'
+    inductiveConstructors' <- ppConstructorBlock _inductiveConstructors
+    return $
+      doc' ?<> sig'
+        <+> kwAssign
+          <> line
+          <> (indent' . align) inductiveConstructors'
+    where
+      ppConstructorBlock ::
+        NonEmpty (InductiveConstructorDef s) -> Sem r (Doc Ann)
+      ppConstructorBlock cs =
+        do
+          concatWith (\x y -> x <> softline <> kwPipe <+> y)
+          <$> mapM ppCode (toList cs)
 
 dotted :: Foldable f => f (Doc Ann) -> Doc Ann
 dotted = concatWith (surround kwDot)

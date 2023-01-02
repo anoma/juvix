@@ -1,7 +1,6 @@
 module Data.Ord;
-    inductive Ordering {
-      LT : Ordering;
-      EQ : Ordering;
+    type Ordering :=
+      LT : Ordering |
+      EQ : Ordering |
       GT : Ordering;
-    };
 end;

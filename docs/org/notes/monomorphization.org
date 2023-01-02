@@ -31,7 +31,7 @@
 * More examples
 ** Mutual recursion
 #+begin_src juvix
-inductive List (A : Type) {
+type List (A : Type) {
   nil : List A;
   cons : A → List A → List A;
 };

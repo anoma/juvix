@@ -1,8 +1,7 @@
 module FunctionReturnConstructor;
 
-inductive Foo {
+type Foo :=
   foo : Foo;
-};
 
 main : Foo;
 main := foo;

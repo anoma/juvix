@@ -1,6 +1,6 @@
 -- successively map K functions to a list of N integers
 
-inductive list {
+type list {
   nil : list;
   cons : * -> list -> list;
 };

@@ -6,8 +6,7 @@ open import Stdlib.Prelude;
 test : {A : Type} -> A -> A;
 test x := x;
 
-inductive Unit {
+type Unit :=
   unit : Unit;
-};
 
 end;

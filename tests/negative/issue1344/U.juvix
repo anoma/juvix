@@ -1,6 +1,4 @@
 module U;
-  inductive Unit {
-    t : Unit;
-  };
+  type Unit := t : Unit;
   
 end;

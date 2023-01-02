@@ -1,6 +1,6 @@
 -- applications with lets and cases in function position
 
-inductive list {
+type list {
   nil : list;
   cons : any -> list -> list;
 };

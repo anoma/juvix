@@ -1,11 +1,11 @@
 -- merge sort
 
-inductive list {
+type list {
   nil : list;
   cons : any -> list -> list;
 };
 
-inductive product {
+type product {
   pair : any -> any -> product;
 };
 

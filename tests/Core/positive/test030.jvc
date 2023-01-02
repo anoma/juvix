@@ -1,10 +1,10 @@
 -- streams without memoization
 
-inductive Unit {
+type Unit {
   unit : Unit;
 };
 
-inductive list {
+type list {
   nil : list;
   cons : any -> list -> list;
 };

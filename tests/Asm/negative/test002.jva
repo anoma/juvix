@@ -1,6 +1,6 @@
 -- invalid memory access
 
-inductive list {
+type list {
   nil : list;
   cons : * -> list -> list;
 }

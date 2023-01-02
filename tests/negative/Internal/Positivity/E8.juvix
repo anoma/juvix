@@ -1,5 +1,4 @@
 module E8;
-inductive B (A : Type) {
+type B (A : Type) :=
 b : (A -> B (B A -> A)) -> B A;
-};
 end;

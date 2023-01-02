@@ -1,6 +1,6 @@
 -- match
 
-inductive list {
+type list {
   cons : any -> list -> list;
   nil : list;
 };
@@ -14,7 +14,7 @@ def sum2 := \x {
   }
 };
 
-inductive tree {
+type tree {
   leaf : tree;
   node : tree -> tree -> tree;
 };

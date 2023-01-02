@@ -1,6 +1,6 @@
 -- trees
 
-inductive tree : Type {
+type tree : Type {
   node1 : tree -> tree;
   node2 : tree -> tree -> tree;
   node3 : tree -> tree -> tree -> tree;

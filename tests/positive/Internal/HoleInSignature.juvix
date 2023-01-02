@@ -1,12 +1,10 @@
 module HoleInSignature;
-inductive Pair (A : Type) (B : Type) {
+type Pair (A : Type) (B : Type) :=
   mkPair : A → B → Pair A B;
-};
 
-inductive Bool {
-  true : Bool;
+type Bool :=
+  true : Bool |
   false : Bool;
-};
 
 p : Pair _ _;
 p := mkPair true false;

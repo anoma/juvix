@@ -1,6 +1,6 @@
 -- fold a list of N integers
 
-inductive list {
+type list {
   nil : list;
   cons : any -> list -> list;
 };

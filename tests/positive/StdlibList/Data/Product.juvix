@@ -2,8 +2,7 @@ module Data.Product;
 
 infixr 2 ×;
 -- infixr 4 ,; waiting for implicit arguments
-inductive × (a : Type) (b : Type) {
+type × (a : Type) (b : Type) :=
   , : a → b → a × b;
-};
 
 end;

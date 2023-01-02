@@ -4,10 +4,9 @@ module Input;
 -- Booleans
 --------------------------------------------------------------------------------
 
-inductive Bool {
-  true : Bool;
-  false : Bool;
-};
+type Bool :=
+     true : Bool
+  | false : Bool;
 
 --------------------------------------------------------------------------------
 -- Strings
@@ -65,9 +64,8 @@ bool-to-str false := "False";
 
 infixr 2 ×;
 infixr 4 ,;
-inductive × (A : Type) (B : Type) {
+type × (A : Type) (B : Type) :=
   , : A → B → A × B;
-};
 
 fst : {A : Type} → {B : Type} → A × B → A;
 fst (a, b) := a;

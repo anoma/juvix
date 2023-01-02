@@ -5,10 +5,9 @@ infixr 9 ∘;
 ∘ {_} {B} {_} f g x := f (g x);
 
 builtin nat
-inductive Nat {
-  zero : Nat;
+type Nat :=
+  zero : Nat |
   suc : Nat → Nat;
-};
 
 infixl 6 +;
 builtin nat-plus
@@ -18,9 +17,8 @@ builtin nat-plus
 
 infixr 2 ×;
 infixr 4 ,;
-inductive × (A : Type) (B : Type) {
+type × (A : Type) (B : Type) :=
   , : A → B → A × B;
-};
 
 fst : {A : Type} → {B : Type} → (A × B) → A;
 fst p@(a, _) := a;

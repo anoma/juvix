@@ -4,16 +4,14 @@ infixr 9 ∘;
 ∘ : {A : Type} → {B : Type} → {C : Type} → (B → C) → (A → B) → A → C;
 ∘ f g x := f (g x);
 
-inductive Nat {
-  zero : Nat;
+type Nat :=
+  zero : Nat |
   suc : Nat → Nat;
-};
 
 infixr 2 ×;
 infixr 4 ,;
-inductive × (A : Type) (B : Type) {
+type × (A : Type) (B : Type) :=
   , : A → B → A × B;
-};
 
 uncurry : {A : Type} → {B : Type} → {C : Type} → (A → B → C) → A × B → C;
 uncurry f (a, b) := f a b;
@@ -36,20 +34,18 @@ second f (a, b) := a, f b;
 both : {A : Type} → {B : Type} → (A → B) → A × A → B × B;
 both f (a, b) := f a, f b;
 
-inductive Bool {
-  true : Bool;
-  false : Bool;
-};
+type Bool :=
+     true : Bool
+  | false : Bool;
 
 if : {A : Type} → Bool → A → A → A;
 if true a _ := a;
 if false _ b := b;
 
 infixr 5 ∷;
-inductive List (A : Type) {
-  nil : List A;
-  ∷ : A → List A → List A;
-};
+type List (A : Type) :=
+  nil : List A
+  | ∷ : A → List A → List A;
 
 upToTwo : _;
 upToTwo := zero ∷ suc zero ∷ suc (suc zero) ∷ nil;
@@ -57,9 +53,8 @@ upToTwo := zero ∷ suc zero ∷ suc (suc zero) ∷ nil;
 p1 : Nat → Nat → Nat × Nat;
 p1 a b := a, b ;
 
-inductive Proxy (A : Type) {
+type Proxy (A : Type) :=
  proxy : Proxy A;
-};
 
 t2' : {A : Type} → Proxy A;
 t2' := proxy;

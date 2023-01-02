@@ -1,7 +1,6 @@
 module M;
 
-inductive T (A : Type) {
+type T (A : Type) :=
 c : T _;
-};
 
 end;

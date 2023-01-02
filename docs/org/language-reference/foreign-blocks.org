@@ -19,7 +19,7 @@ foreign c {
    \}
 };
 
-inductive Bool {
+type Bool {
     true : Bool;
     false : Bool;
 };

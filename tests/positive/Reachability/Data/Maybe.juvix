@@ -1,8 +1,7 @@
 module Data.Maybe;
 
-  inductive Maybe (a : Type) {
-     nothing : Maybe a;
+  type Maybe (a : Type) :=
+     nothing : Maybe a |
      just : a → Maybe a;
-  }
 
 end;

@@ -1,14 +1,12 @@
 module HelloWorld;
 
-inductive ℕ {
-  zero : ℕ;
+type ℕ :=
+  zero : ℕ |
   suc : ℕ → ℕ;
-};
 
-inductive V {
-  zeroV : V;
+type V :=
+  zeroV : V |
   sucV : V;
-};
 
 
 infixl 6 +;

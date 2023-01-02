@@ -1,5 +1,5 @@
 module DuplicateInductiveParameterName;
 
-inductive T (A : Type) (B : Type) (A : Type) {};
+type T (A : Type) (B : Type) (A : Type) := c : T A B A;
 
 end;

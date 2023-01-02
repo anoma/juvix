@@ -33,7 +33,7 @@ in_ :: IsString s => s
 in_ = "in"
 
 inductive :: IsString s => s
-inductive = "inductive"
+inductive = "type"
 
 function :: IsString s => s
 function = "function"

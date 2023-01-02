@@ -4,18 +4,16 @@ open import Stdlib.Prelude;
 open import Logic.Extra;
 open import Logic.Board;
 
-inductive Error {
+type Error :=
 --- no error occurred
-  noError : Error;
+  noError : Error |
 --- a non-fatal error occurred
-  continue : String → Error;
+continue : String → Error |
 --- a fatal occurred
-  terminate : String → Error;
-};
+terminate : String → Error;
 
-inductive GameState {
+type GameState :=
   state : Board → Symbol → Error → GameState;
-};
 
 --- Textual representation of a ;GameState;
 showGameState : GameState → String;

@@ -10,7 +10,7 @@ of definitions:
 1. Builtin inductive definitions. For example:
    #+begin_example
    builtin nat
-   inductive Nat {
+   type Nat {
      zero : Nat;
      suc : Nat → Nat;
    };
@@ -41,7 +41,7 @@ what are the terms that refer to them. For instance, imagine that we find this
 definitions in a juvix module:
 #+begin_src text
 builtin nat
-inductive MyNat {
+type MyNat {
     z : MyNat;
     s : MyNat → MyNat;
 };

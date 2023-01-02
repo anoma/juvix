@@ -1,7 +1,5 @@
 module A;
 
-inductive Foo {
-  bar : Foo;
-};
+type Foo := bar : Foo;
 
 end;
