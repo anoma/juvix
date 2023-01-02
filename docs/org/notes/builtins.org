@@ -10,10 +10,9 @@ of definitions:
 1. Builtin inductive definitions. For example:
    #+begin_example
    builtin nat
-   type Nat {
-     zero : Nat;
+   type Nat :=
+     zero : Nat |
      suc : Nat → Nat;
-   };
    #+end_example
    We will call this the canonical definition of natural numbers.
 
@@ -41,10 +40,9 @@ what are the terms that refer to them. For instance, imagine that we find this
 definitions in a juvix module:
 #+begin_src text
 builtin nat
-type MyNat {
-    z : MyNat;
+type MyNat :=
+    z : MyNat |
     s : MyNat → MyNat;
-};
 #+end_src
 We need to take care of the following:
 1. Check that the definition =MyInt= is up to renaming equal to the canonical
