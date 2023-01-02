@@ -248,6 +248,13 @@ registerBuiltinFunction ::
   Sem r ()
 registerBuiltinFunction d = \case
   BuiltinNatPlus -> registerNatPlus d
+  BuiltinNatSub -> registerNatSub d
+  BuiltinNatMul -> registerNatMul d
+  BuiltinNatDiv -> registerNatDiv d
+  BuiltinNatMod -> registerNatMod d
+  BuiltinNatLe -> registerNatLe d
+  BuiltinNatLt -> registerNatLt d
+  BuiltinNatEq -> registerNatEq d
   BuiltinBoolIf -> registerIf d
 
 registerBuiltinAxiom ::

@@ -263,7 +263,7 @@ goFunctionDef ::
 goFunctionDef (f, sym) = do
   mbody <- case f ^. Internal.funDefBuiltin of
     Just Internal.BuiltinBoolIf -> return Nothing
-    Just Internal.BuiltinNatPlus -> Just <$> mkBody
+    Just _ -> Just <$> mkBody
     Nothing -> Just <$> mkBody
   forM_ mbody (registerIdentNode sym)
   where
