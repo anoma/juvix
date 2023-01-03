@@ -232,5 +232,5 @@ changelog-updates :
 	@pandoc CHANGELOG.md --from markdown --to org -o UPDATES-FOR-CHANGELOG.org
 
 .PHONY : bench
-install: runtime submodules
+bench: runtime submodules
 	@stack bench
