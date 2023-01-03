@@ -52,12 +52,12 @@ mapIO f xs := sequenceIO (map f xs);
 -- List extensions
 
 zip : {A : Type} → {B : Type} → List A → List B → List (A × B);
-zip (a ∷ as) (b ∷ bs) := (a, b) ∷ zip as bs;
+zip (a :: as) (b :: bs) := (a, b) :: zip as bs;
 zip _ _ := nil;
 
 rangeAux : Nat → Nat → List Nat;
 rangeAux _ zero := nil;
-rangeAux m (suc n) := m ∷ rangeAux (suc m) n;
+rangeAux m (suc n) := m :: rangeAux (suc m) n;
 
 range : Nat → List Nat;
 range n := rangeAux zero n;

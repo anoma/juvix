@@ -20,10 +20,10 @@ change2-key : String;
 change2-key := "change2-key";
 
 verifiers : List String;
-verifiers := owner-address ∷ nil;
+verifiers := owner-address :: nil;
 
 keys-changed : List String;
-keys-changed := change1-key ∷ change2-key ∷ nil;
+keys-changed := change1-key :: change2-key :: nil;
 
 show-result : Bool → String;
 show-result true := "OK";

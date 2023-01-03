@@ -13,13 +13,13 @@ compile ++str {
 
 --- Concatenates a list of strings
 ---
---- ;concat (("a" ∷ nil) ∷ ("b" ∷ nil)); evaluates to ;"a" ∷ "b" ∷ nil;
+--- ;concat (("a" :: nil) :: ("b" :: nil)); evaluates to ;"a" :: "b" :: nil;
 concat : List String → String;
 concat := foldl (++str) "";
 
 --- It inserts the first ;String; at the beginning, in between, and at the end of the second list
 surround : String → List String → List String;
-surround x xs := (x ∷ intersperse x xs) ++ (x ∷ nil);
+surround x xs := (x :: intersperse x xs) ++ (x :: nil);
 
 --- It inserts the first ;String; in between the ;String;s in the second list and concatenates the result
 intercalate : String → List String → String;

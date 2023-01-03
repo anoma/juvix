@@ -3,30 +3,30 @@ module Data.List;
 import Data.Bool;
 open Data.Bool;
 
--- infixr 5 ∷; waiting for implicit arguments
+-- infixr 5 ::; waiting for implicit arguments
 type List (A : Type) :=
   nil : List A
-  | ∷ : A → List A → List A;
+  | :: : A → List A → List A;
 
 match : {A : Type} → {B : Type} → A → (A → B) → B;
 match x f := f x;
 
 foldr : (a : Type) → (b : Type) → (a → b → b) → b → List a → b;
 foldr _ _ _ z (nil _) := z;
-foldr a b f z (∷ _ h hs) := f h (foldr a b f z hs);
+foldr a b f z (:: _ h hs) := f h (foldr a b f z hs);
 
 foldl : (a : Type) → (b : Type) → (b → a → b) → b → List a → b;
 foldl a b f z (nil _) := z ;
-foldl a b f z (∷ _ h hs) := foldl a b f (f z h) hs;
+foldl a b f z (:: _ h hs) := foldl a b f (f z h) hs;
 
 map : (a : Type) → (b : Type) → (a → b) → List a → List b;
 map _ b f (nil _) := nil b;
-map a b f (∷ _ h hs) := ∷ a (f h) (map a b f hs);
+map a b f (:: _ h hs) := :: a (f h) (map a b f hs);
 
 filter : (a : Type) → (a → Bool) → List a → List a;
 filter a f (nil _) := nil a;
-filter a f (∷ _ h hs) := match (f h) λ{
-  true := ∷ a h (filter a f hs);
+filter a f (:: _ h hs) := match (f h) λ{
+  true := :: a h (filter a f hs);
   false := filter a f hs;
 };
 
@@ -35,22 +35,22 @@ open Data.Nat;
 
 length : (a : Type) → List a → ℕ;
 length _ (nil _) := zero;
-length a (∷ _ _ l) := suc (length a l);
+length a (:: _ _ l) := suc (length a l);
 
 reverse : (a : Type) → List a → List a;
-reverse a l := 
+reverse a l :=
   let  {
   rev : List a → List a → List a;
   rev (nil _) a := a;
-  rev (∷ _ x xs) a := rev xs (∷ a x a)
+  rev (:: _ x xs) a := rev xs (:: a x a)
   } in rev l (nil a);
 
 replicate : (a : Type) → ℕ → a → List a;
 replicate a zero _ := nil a;
-replicate a (suc n) x := ∷ a x (replicate a n x);
+replicate a (suc n) x := :: a x (replicate a n x);
 
 take : (a : Type) → ℕ → List a → List a;
-take a (suc n) (∷ _ x xs) := ∷ a x (take a n xs);
+take a (suc n) (:: _ x xs) := :: a x (take a n xs);
 take a _ _ := nil a;
 
 import Data.Ord;
@@ -62,15 +62,15 @@ open Data.Product;
 splitAt : (a : Type) → ℕ → List a → List a;
 splitAt a _ (nil _) := nil a, nil a;
 splitAt a zero xs := , (List a) (List a) (nil a) xs;
-splitAt a (suc zero) (∷ _ x xs) := , (List a) (List a) (∷ a x (nil a)) xs;
-splitAt a (suc (suc m)) (∷ _ x xs) := match (splitAt a m xs) λ {
-    (, la _ xs' xs'') := , la la (∷ a x xs') xs'';
+splitAt a (suc zero) (:: _ x xs) := , (List a) (List a) (:: a x (nil a)) xs;
+splitAt a (suc (suc m)) (:: _ x xs) := match (splitAt a m xs) λ {
+    (, la _ xs' xs'') := , la la (:: a x xs') xs'';
   };
 
 merge : (a : Type) → (a → a → Ordering) → List a → List a → List a;
-merge a cmp (∷ _ x xs) (∷ _ y ys) := match (cmp x y) λ{
-    LT := ∷ a x (merge a cmp xs (∷ a y ys));
-    _ := ∷ a y (merge a cmp (∷ a x xs) ys);
+merge a cmp (:: _ x xs) (:: _ y ys) := match (cmp x y) λ{
+    LT := :: a x (merge a cmp xs (:: a y ys));
+    _ := :: a y (merge a cmp (:: a x xs) ys);
   };
 merge _ _ (nil _) ys := ys;
 merge _ _ xs (nil _) := xs;
@@ -78,12 +78,12 @@ merge _ _ xs (nil _) := xs;
 -- infixr 5 ++; waiting for implicit arguments
 ++ : (a : Type) → List a → List a → List a;
 ++ a (nil _) ys := ys;
-++ a (∷ _ x xs) ys := ∷ a x (++ a xs ys);
+++ a (:: _ x xs) ys := :: a x (++ a xs ys);
 
 quickSort : (a : Type) → (a → a → Ordering) → List a → List a;
 quickSort a _ (nil _) := nil a;
-quickSort a _ (∷ _ x (nil _)) := ∷ a x (nil a);
-quickSort a cmp (∷ _ x ys) :=
+quickSort a _ (:: _ x (nil _)) := :: a x (nil a);
+quickSort a cmp (:: _ x ys) :=
   let {
     ltx : a → Bool;
     ltx y := match (cmp y x) λ{
@@ -92,10 +92,10 @@ quickSort a cmp (∷ _ x ys) :=
     };
     gex : a → Bool;
     gex y := not (ltx y)
-  } in 
+  } in
   {
      ++ a (quickSort a (filter a ltx) ys)
-    (++ a (∷ a x (nil a)) (quickSort a (filter a gex) ys))
+    (++ a (:: a x (nil a)) (quickSort a (filter a gex) ys))
   };
 
 end;
