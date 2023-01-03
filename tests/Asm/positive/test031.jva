@@ -1,6 +1,6 @@
 -- temporary stack with branching
 
-inductive tree {
+type tree {
   leaf : tree;
   node : tree -> tree -> tree;
 }

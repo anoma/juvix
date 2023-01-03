@@ -4,10 +4,9 @@ module Input;
 -- Booleans
 --------------------------------------------------------------------------------
 
-inductive Bool {
-  true : Bool;
-  false : Bool;
-};
+type Bool :=
+     true : Bool
+  | false : Bool;
 
 --------------------------------------------------------------------------------
 -- Strings
@@ -108,10 +107,9 @@ compile to-str {
 -- Natural Numbers
 --------------------------------------------------------------------------------
 
-inductive Nat {
-  zero : Nat;
-  suc : Nat → Nat;
-};
+type Nat :=
+  zero : Nat
+  | suc : Nat → Nat;
 
 infixl 6 +;
 + : Nat → Nat → Nat;

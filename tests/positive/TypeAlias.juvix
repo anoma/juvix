@@ -1,12 +1,10 @@
 module TypeAlias;
 
-inductive T {
+type T :=
  t : T;
-};
 
-inductive T2 {
+type T2 :=
  t2 : T2;
-};
 
 alias : Type;
 alias := T;
@@ -27,9 +25,8 @@ x2 := t;
 flip : (Type → Type → Type) → id Type → Type → (id ⊙ id) Type;
 flip f a b := f b a;
 
-inductive Pair (A : Type) (B : Type) {
+type Pair (A : Type) (B : Type) :=
  mkPair : id T → id (id A) → B → Pair A B;
-};
 
 p : {A : Type} → A → Pair A A;
 p a := mkPair t a a;

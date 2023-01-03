@@ -6,10 +6,9 @@ open Data.Bool;
 import Data.Nat;
 open Data.Nat;
 
-inductive List (A : Type) {
-  nil  : List A;
+type List (A : Type) :=
+  nil  : List A |
   cons : A → List A → List A;
-};
 
 filter : (A : Type) → (A → Bool) → List A → List A;
 filter A f nil         := nil A;

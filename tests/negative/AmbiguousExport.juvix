@@ -2,9 +2,8 @@ module AmbiguousExport;
 
   module N;
     module O;
-      inductive T {
+      type T :=
         A : T;
-      };
     end;
   end;
 

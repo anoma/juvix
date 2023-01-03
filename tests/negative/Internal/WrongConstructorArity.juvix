@@ -1,7 +1,6 @@
 module WrongConstructorArity;
-  inductive T {
+  type T :=
     A : T → T;
-  };
 
   f : T → T;
   f (A i x) := i;

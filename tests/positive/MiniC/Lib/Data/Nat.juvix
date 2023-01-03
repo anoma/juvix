@@ -3,10 +3,9 @@ module Data.Nat;
 open import Data.String;
 open import Data.Int;
 
-inductive Nat {
-  zero : Nat;
-  suc : Nat → Nat;
-};
+type Nat :=
+  zero : Nat
+  | suc : Nat → Nat;
 
 foreign c {
   void* natInd(int n, void* zeroCtor, juvix_function_t* sucCtor) {

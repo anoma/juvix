@@ -1,6 +1,6 @@
 -- map and fold a list of N integers K times
 
-inductive list {
+type list {
   nil : list;
   cons : any -> list -> list;
 };

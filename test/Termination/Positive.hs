@@ -71,10 +71,6 @@ tests =
 testsWithKeyword :: [PosTest]
 testsWithKeyword =
   [ PosTest
-      "terminating added to fx:=fx"
-      $(mkRelDir ".")
-      $(mkRelFile "ToEmpty.juvix"),
-    PosTest
       "terminating for all functions in the mutual block"
       $(mkRelDir ".")
       $(mkRelFile "Mutual.juvix"),

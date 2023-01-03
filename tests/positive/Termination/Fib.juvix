@@ -1,9 +1,8 @@
 module Fib;
 
-inductive Nat {
-  zero : Nat;
-  suc : Nat → Nat;
-};
+type Nat :=
+  zero : Nat
+  | suc : Nat → Nat;
 
 infixl 6 +;
 + : Nat → Nat → Nat;

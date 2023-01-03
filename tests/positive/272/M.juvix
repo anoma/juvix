@@ -1,26 +1,22 @@
 module M;
 
-inductive Bool {
-  false : Bool;
-  true : Bool;
-};
+type Bool :=
+     true : Bool
+  | false : Bool;
 
-inductive T {
+type T :=
 t : T;
-};
 
-inductive Nat {
-  zero : Nat;
-  suc : Nat → Nat;
-};
+type Nat :=
+  zero : Nat
+  | suc : Nat → Nat;
 
 f : _;
 f false false := true;
 f true _ := false;
 
-inductive Pair (A : Type) (B : Type) {
+type Pair (A : Type) (B : Type) :=
   mkPair : A → B → Pair A B;
-};
 
 g : _;
 g (mkPair (mkPair zero false) true) := mkPair false zero;

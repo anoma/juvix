@@ -1,8 +1,7 @@
 module WrongReturnType;
 
 axiom B : Type;
-inductive A {
+type A :=
 c : B;
-};
 
 end;

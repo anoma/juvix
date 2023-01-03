@@ -6,9 +6,8 @@ open import Logic.Symbol public;
 open import Logic.Extra;
 
 --- A 3x3 grid of ;Square;s
-inductive Board {
+type Board :=
   board : List (List Square) → Board;
-};
 
 --- Returns the list of numbers corresponding to the empty ;Square;s
 possibleMoves : List Square → List Nat;

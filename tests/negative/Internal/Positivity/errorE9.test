@@ -1,5 +1,5 @@
 $ juvix typecheck tests/negative/Internal/Positivity/E9.juvix --no-colors
->2 /.*\.juvix\:8:13\-14\: error\:
+>2 /.*\.juvix\:7:13\-14\: error\:
 The type T is not strictly positive.
 It appears at a negative position in one of the arguments of the constructor c.
 /

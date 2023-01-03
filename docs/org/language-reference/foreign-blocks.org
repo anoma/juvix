@@ -19,10 +19,9 @@ foreign c {
    \}
 };
 
-inductive Bool {
-    true : Bool;
+type Bool :=
+    true : Bool |
     false : Bool;
-};
 
 infix 4 <';
 axiom <' : Int -> Int -> Bool;

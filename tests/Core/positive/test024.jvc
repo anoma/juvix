@@ -1,6 +1,6 @@
 -- structural equality
 
-inductive list {
+type list {
   nil : list;
   cons : any -> list -> list;
 };

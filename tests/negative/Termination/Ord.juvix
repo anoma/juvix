@@ -3,11 +3,10 @@ module Ord;
 import Data.Nat;
 open Data.Nat;
 
-inductive Ord {
-  ZOrd : Ord;
-  SOrd : Ord -> Ord;
+type Ord :=
+  ZOrd : Ord |
+  SOrd : Ord -> Ord |
   Lim  : (ℕ -> Ord) -> Ord;
-};
 
 addord : Ord -> Ord -> Ord;
 aux-addord : (ℕ -> Ord) -> Ord -> (ℕ -> Ord);

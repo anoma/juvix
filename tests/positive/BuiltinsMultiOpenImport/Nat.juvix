@@ -1,9 +1,8 @@
 module Nat;
 
 builtin nat
-inductive Nat {
-  zero : Nat;
-  suc : Nat → Nat;
-};
+type Nat :=
+  zero : Nat
+  | suc : Nat → Nat;
 
 end;

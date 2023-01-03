@@ -1,7 +1,6 @@
 module Other;
 
-  inductive Unit {
+  type Unit :=
   t : Unit;
-  };
 
 end;

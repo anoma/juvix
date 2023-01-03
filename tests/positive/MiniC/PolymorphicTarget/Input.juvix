@@ -1,8 +1,7 @@
 module Input;
 
-inductive Unit {
+type Unit :=
   unit : Unit;
-};
 
 terminating
 loop : {A : Type} -> A;

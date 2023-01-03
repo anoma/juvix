@@ -496,10 +496,16 @@ inductiveDef _inductiveBuiltin = do
   _inductivePositive <- isJust <$> optional (kw kwPositive)
   kw kwInductive
   _inductiveDoc <- getJudoc
-  _inductiveName <- symbol
-  _inductiveParameters <- P.many inductiveParam
-  _inductiveType <- optional (kw kwColon >> parseExpressionAtoms)
-  _inductiveConstructors <- braces $ P.sepEndBy constructorDef (kw kwSemicolon)
+  _inductiveName <- symbol P.<?> "<type name>"
+  _inductiveParameters <-
+    P.many inductiveParam
+      P.<?> "<type parameter e.g. '(A : Type)'>"
+  _inductiveType <-
+    optional (kw kwColon >> parseExpressionAtoms)
+      P.<?> "<type annotation e.g. ': Type'>"
+  kw kwAssign P.<?> "<assignment symbol ':='>"
+  _inductiveConstructors <-
+    P.sepBy1 constructorDef (kw kwPipe) P.<?> "<constructor definition>"
   return InductiveDef {..}
 
 inductiveParam :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (InductiveParameter 'Parsed)
@@ -512,9 +518,10 @@ inductiveParam = parens $ do
 constructorDef :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (InductiveConstructorDef 'Parsed)
 constructorDef = do
   _constructorDoc <- optional stashJudoc >> getJudoc
-  _constructorName <- symbol
-  kw kwColon
-  _constructorType <- parseExpressionAtoms
+  _constructorName <- symbol P.<?> "<constructor name>"
+  _constructorType <-
+    kw kwColon >> parseExpressionAtoms
+      P.<?> "<constructor type signature (:)>"
   return InductiveConstructorDef {..}
 
 wildcard :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r Wildcard

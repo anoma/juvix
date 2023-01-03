@@ -1,12 +1,10 @@
 module Box;
 
- inductive Box (A : Type) {
+ type Box (A : Type) :=
    box : A → Box A;
- };
 
- inductive T {
+ type T :=
    t : T;
-   };
 
 b : Box _;
 b := box t;

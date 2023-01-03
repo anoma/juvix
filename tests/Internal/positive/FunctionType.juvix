@@ -1,8 +1,7 @@
 module FunctionType;
 
-inductive A {
+type A :=
   a : A;
-};
 
 main : Type;
 main := (A : Type) -> (B : Type) -> A -> B;

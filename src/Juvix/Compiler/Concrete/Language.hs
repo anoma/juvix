@@ -249,7 +249,7 @@ data InductiveDef (s :: Stage) = InductiveDef
     _inductiveName :: InductiveName s,
     _inductiveParameters :: [InductiveParameter s],
     _inductiveType :: Maybe (ExpressionType s),
-    _inductiveConstructors :: [InductiveConstructorDef s],
+    _inductiveConstructors :: NonEmpty (InductiveConstructorDef s),
     _inductivePositive :: Bool
   }
 

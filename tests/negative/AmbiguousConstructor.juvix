@@ -1,14 +1,12 @@
 module AmbiguousConstructor;
   module M;
-    inductive T1 {
+    type T1 :=
       A : T1;
-    };
   end;
 
   module N;
-    inductive T2 {
+    type T2 :=
       A : T2;
-    };
   end;
 
   open M;

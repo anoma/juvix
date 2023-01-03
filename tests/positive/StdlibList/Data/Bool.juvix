@@ -1,8 +1,7 @@
 module Data.Bool;
-  inductive Bool {
-    true : Bool;
+  type Bool :=
+    true : Bool |
     false : Bool;
-  };
 
   not : Bool → Bool;
   not true := false;

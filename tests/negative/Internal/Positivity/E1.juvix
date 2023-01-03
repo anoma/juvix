@@ -1,8 +1,7 @@
 module E1;
 
 axiom B : Type;
-inductive X  {
+type X :=
   c : (X -> B) -> X;
-};
 
 end;

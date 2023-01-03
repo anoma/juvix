@@ -1,6 +1,6 @@
 -- case stack height mismatch
 
-inductive list {
+type list {
   nil : list;
   cons : * -> list -> list;
 }

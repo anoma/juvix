@@ -1,8 +1,7 @@
 module UnsolvedMeta;
 
-inductive Proxy (A : Type) {
+type Proxy (A : Type) :=
   x : Proxy A;
-};
 
 t : Proxy _;
 t := x;

@@ -44,10 +44,9 @@ compile plus {
 apply : (Int → Int → Int) → Int → Int → Int;
 apply f a b := f a b;
 
-inductive Nat {
-  zero : Nat;
-  suc : Nat → Nat;
-};
+type Nat :=
+  zero : Nat
+  | suc : Nat → Nat;
 
 plus-nat : Nat → Nat → Nat;
 plus-nat zero n := n;

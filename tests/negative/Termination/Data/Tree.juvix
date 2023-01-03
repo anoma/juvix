@@ -1,8 +1,7 @@
 module Data.Tree;
-inductive Tree (A : Type) {
-  leaf : Tree A;
+type Tree (A : Type) :=
+  leaf : Tree A |
   branch  : Tree A → Tree A → Tree A;
-};
 
 f : (A : Type) → Tree A → Tree A → Tree A;
 f A x leaf         := x;

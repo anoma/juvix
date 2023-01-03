@@ -1,11 +1,9 @@
 module MultiWrongType;
-  inductive A {
+  type A :=
     a : A;
-  };
 
-  inductive B {
+  type B :=
     b : B;
-  };
 
   f : A;
   f := b;

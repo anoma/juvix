@@ -8,10 +8,9 @@ foreign ghc {
 -- Booleans
 --------------------------------------------------------------------------------
 
-inductive Bool {
-  true : Bool;
-  false : Bool;
-};
+type Bool :=
+     true : Bool
+  | false : Bool;
 
 infixr 2 ||;
 || : Bool → Bool → Bool;
@@ -126,10 +125,9 @@ infix 4 ==String;
 -- Lists
 --------------------------------------------------------------------------------
 
-inductive ListString {
-  Nil : ListString;
+type ListString :=
+  Nil : ListString |
   Cons : String → ListString → ListString;
-};
 
 elem : String → ListString → Bool;
 elem s Nil := false;
@@ -139,9 +137,8 @@ elem s (Cons x xs) := (s ==String x) || elem s xs;
 -- Pair
 --------------------------------------------------------------------------------
 
-inductive PairIntBool {
+type PairIntBool :=
   MakePair : Int → Bool → PairIntBool;
-};
 
 if-pairIntBool : Bool → PairIntBool → PairIntBool → PairIntBool;
 if-pairIntBool true x _ := x;
@@ -151,10 +148,9 @@ if-pairIntBool false _ y := y;
 -- Optionals
 --------------------------------------------------------------------------------
 
-inductive OptionInt {
-  NothingInt : OptionInt;
+type OptionInt :=
+  NothingInt : OptionInt |
   JustInt : Int -> OptionInt;
-};
 
 if-optionInt : Bool → OptionInt → OptionInt → OptionInt;
 if-optionInt true x _ := x;
@@ -167,10 +163,9 @@ maybe-int : Int → OptionInt → Int;
 maybe-int d NothingInt := d;
 maybe-int _ (JustInt i) := i;
 
-inductive OptionString {
-  NothingString : OptionString;
+type OptionString :=
+  NothingString : OptionString |
   JustString : String -> OptionString;
-};
 
 if-optionString : Bool → OptionString → OptionString → OptionString;
 if-optionString true x _ := x;

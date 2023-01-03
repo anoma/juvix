@@ -1,6 +1,6 @@
 -- eta-expansion of builtins and constructors
 
-inductive stream {
+type stream {
   cons : any -> any -> stream;
 };
 

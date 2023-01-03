@@ -1,8 +1,7 @@
 module Data.Pair;
 
-inductive Pair (A : Type) (B : Type) {
+type Pair (A : Type) (B : Type) :=
  mkPair : A → B → Pair A B;
-};
 
 fst : (A : Type) → (B : Type) → Pair A B → A;
 fst _ _ (mkPair a b) := a;

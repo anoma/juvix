@@ -3,9 +3,7 @@ module Judoc;
 axiom A : Type;
 axiom b : Type;
 
-inductive T {
-
-};
+type T := t : T;
 
 --- he ;id A; and ;A A id T A id; this is another ;id id id; example
 --- hahahah

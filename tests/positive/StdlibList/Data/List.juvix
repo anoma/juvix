@@ -4,10 +4,9 @@ import Data.Bool;
 open Data.Bool;
 
 -- infixr 5 ∷; waiting for implicit arguments
-inductive List (a : Type) {
-  nil : List a;
-  ∷ : a → List a → List a;
-};
+type List (A : Type) :=
+  nil : List A
+  | ∷ : A → List A → List A;
 
 match : {A : Type} → {B : Type} → A → (A → B) → B;
 match x f := f x;

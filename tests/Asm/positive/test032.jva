@@ -1,6 +1,6 @@
 -- Church numerals
 
-inductive Pair {
+type Pair {
   pair : * -> * -> Pair;
 }
 

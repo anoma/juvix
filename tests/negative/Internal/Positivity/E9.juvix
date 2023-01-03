@@ -1,11 +1,9 @@
 module E9;
 
-inductive B {
+type B :=
 b : B;
-};
 
-inductive T {
+type T :=
   c : ((B → T) -> T) -> T;
-};
 
 end;

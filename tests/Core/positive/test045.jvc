@@ -1,6 +1,6 @@
 -- type application and abstraction
 
-inductive list : Π A : Type, Type {
+type list : Π A : Type, Type {
   cons : Π A : Type, A → list A → list A;
   nil : Π A : Type, list A;
 };
