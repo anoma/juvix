@@ -9,7 +9,7 @@ type list {
   cons : any -> list -> list;
 };
 
-inductive Stream {
+type Stream {
   scons : any -> (Unit -> Stream) -> Stream;
 };
 
