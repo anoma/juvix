@@ -90,3 +90,9 @@ $ juvix repl tests/Internal/positive/BuiltinBool.juvix
 $ juvix repl
 > /\//
 >= 0
+
+<
+1 + 2
+$ juvix repl
+> /Stdlib.Prelude> suc \(suc \(suc zero\)\)/
+>= 0
