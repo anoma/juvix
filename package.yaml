@@ -73,10 +73,11 @@ dependencies:
 - pretty-show == 1.10.*
 
 # benchmarks
-- gauge == 0.2.*
+- criterion == 1.5.*
 - shake == 0.19.*
 - colour == 2.3.*
 - palette == 0.3.*
+
 ghc-options:
 # Warnings
 - -Weverything

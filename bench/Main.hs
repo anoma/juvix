@@ -1,9 +1,11 @@
 module Main where
 
 import Base
+import Criterion.Main
+import Criterion.Main.Options hiding (config)
+import Criterion.Types
 import Data.Text qualified as Text
 import Development.Shake hiding ((<//>))
-import Gauge
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path as Path hiding (doesFileExist, (-<.>))
 import Juvix.Prelude.Path qualified as Path
@@ -92,7 +94,7 @@ csvRules s =
     need [toFilePath (variantBinFile s v) | v <- s ^. suiteVariants]
     ensureDir (parent csv)
     whenM (Path.doesFileExist csv) (removeFile csv)
-    liftIO (runMode DefaultMode (config s) [] (fromSuite s) >> addColorColumn)
+    liftIO (runMode (Run (config s) Glob []) (fromSuite s) >> addColorColumn)
   where
     csv :: Path Abs File = suiteCsvFile s
     addColorColumn :: IO ()
@@ -117,7 +119,6 @@ fromSuite s = map go (s ^. suiteVariants)
 config :: Suite -> Config
 config s =
   defaultConfig
-    { quickMode = False,
-      csvFile = Just (toFilePath (suiteCsvFile s)),
-      timeLimit = Just 30
+    { csvFile = Just (toFilePath (suiteCsvFile s)),
+      timeLimit = 30
     }

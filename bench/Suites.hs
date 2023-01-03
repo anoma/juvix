@@ -13,14 +13,14 @@ suites =
       "maybe"
     ]
     <> [ Suite "fold" (allVariantsExcept [C] [CoreEval]),
-         Suite "mapfold" (allVariantsExcept [C] [CoreEval]),
-         Suite "mapfun" (allVariantsExcept [C] [CoreEval])
+         Suite "mapfold" (allVariantsExcept [C] [CoreEval])
        ]
 
+-- "mapfun" -- juvix crashes: Address boundary error
 -- "ackermann", -- juvix crashes
 -- "combinations", -- juvix crashes:  call stack exhausted
--- "cps", call stack exhausted
--- "prime" -- Address boundary error
+-- "cps", juvix: call stack exhausted
+-- "prime" -- juvix: Address boundary error
 
 defaultSuite :: String -> Suite
 defaultSuite title =
