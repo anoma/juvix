@@ -42,13 +42,13 @@ if : {A : Type} → Bool → A → A → A;
 if true a _ := a;
 if false _ b := b;
 
-infixr 5 ∷;
+infixr 5 ::;
 type List (A : Type) :=
   nil : List A
-  | ∷ : A → List A → List A;
+  | :: : A → List A → List A;
 
 upToTwo : _;
-upToTwo := zero ∷ suc zero ∷ suc (suc zero) ∷ nil;
+upToTwo := zero :: suc zero :: suc (suc zero) :: nil;
 
 p1 : Nat → Nat → Nat × Nat;
 p1 a b := a, b ;
@@ -73,7 +73,7 @@ t4' := t3 proxy proxy ;
 
 map : {A : Type} → {B : Type} → (A → B) → List A → List B;
 map f nil := nil;
-map f (x ∷ xs) := f x ∷ map f xs;
+map f (x :: xs) := f x :: map f xs;
 
 t : {A : Type} → Proxy A;
 t {_} := proxy;
@@ -98,20 +98,20 @@ pairEval' (f, x) := f {Nat} x;
 
 foldr : {A : Type} → {B : Type} → (A → B → B) → B → List A → B;
 foldr _ z nil := z;
-foldr f z (h ∷ hs) := f h (foldr f z hs);
+foldr f z (h :: hs) := f h (foldr f z hs);
 
 foldl : {A : Type} → {B : Type} → (B → A → B) → B → List A → B;
 foldl f z nil := z ;
-foldl f z (h ∷ hs) := foldl f (f z h) hs;
+foldl f z (h :: hs) := foldl f (f z h) hs;
 
 filter : {A : Type} → (A → Bool) → List A → List A;
 filter _ nil := nil;
-filter f (h ∷ hs) := if (f h)
-   (h ∷ filter f hs)
+filter f (h :: hs) := if (f h)
+   (h :: filter f hs)
    (filter f hs);
 
 partition : {A : Type} → (A → Bool) → List A → List A × List A;
 partition _ nil := nil, nil;
-partition f (x ∷ xs) := (if (f x) first second) ((∷) x) (partition f xs);
+partition f (x :: xs) := (if (f x) first second) ((::) x) (partition f xs);
 
 end;

@@ -12,16 +12,16 @@ open import Stdlib.Prelude;
 zipWith : {A : Type} → {B : Type} → {C : Type} → (A → B → C) -> List A → List B → List C;
 zipWith f nil _ := nil;
 zipWith f _ nil := nil;
-zipWith f (x ∷ xs) (y ∷ ys) := f x y ∷ zipWith f xs ys;
+zipWith f (x :: xs) (y :: ys) := f x y :: zipWith f xs ys;
 
 --- Return a list of repeated applications of a given function
 iterate : {A : Type} → Nat → (A → A) → A → List A;
 iterate zero _ _ := nil;
-iterate (suc n) f a := a ∷ iterate n f (f a);
+iterate (suc n) f a := a :: iterate n f (f a);
 
 --- Produce a singleton List
 singleton : {A : Type} → A → List A;
-singleton a := a ∷ nil;
+singleton a := a :: nil;
 
 --- Concatenation of ;String;s
 infixr 5 ++str;
@@ -32,7 +32,7 @@ compile ++str {
 
 --- Concatenates a list of strings
 ---
---- ;concat (("a" ∷ nil) ∷ ("b" ∷ nil)); evaluates to ;"a" ∷ "b" ∷ nil;
+--- ;concat (("a" :: nil) :: ("b" :: nil)); evaluates to ;"a" :: "b" :: nil;
 concat : List String → String;
 concat := foldl (++str) "";
 

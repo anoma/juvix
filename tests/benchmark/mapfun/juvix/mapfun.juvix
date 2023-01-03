@@ -8,13 +8,13 @@ open import Data.Int.Ops;
 
 mapfun : {A : Type} -> List (A -> A) -> List A -> List A;
 mapfun nil xs := xs;
-mapfun (f ∷ fs) xs := mapfun fs (map f xs);
+mapfun (f :: fs) xs := mapfun fs (map f xs);
 
 terminating
 genfs : Int -> List (Int -> Int);
 genfs n := if (n Data.Int.Ops.== Int_0)
               nil
-              (((Data.Int.Ops.-) n) ∷ genfs (n Data.Int.Ops.- Int_1));
+              (((Data.Int.Ops.-) n) :: genfs (n Data.Int.Ops.- Int_1));
 
 step : Int -> (Int -> Int) -> Int -> Int;
 step n f x := f (x Data.Int.Ops.+ n);
@@ -23,11 +23,11 @@ terminating
 genffs : Int -> List ((Int -> Int) -> Int -> Int);
 genffs n := if (n Data.Int.Ops.== Int_0)
                nil
-               (step n ∷ genffs (n Data.Int.Ops.- Int_1));
+               (step n :: genffs (n Data.Int.Ops.- Int_1));
 
 sum_go : Int -> List Int -> Int;
 sum_go acc nil := acc;
-sum_go acc (h ∷ t) := sum_go (acc Data.Int.Ops.+ h) t;
+sum_go acc (h :: t) := sum_go (acc Data.Int.Ops.+ h) t;
 
 sum : List Int -> Int;
 sum := sum_go Int_0;
@@ -35,8 +35,8 @@ sum := sum_go Int_0;
 terminating
 gen : Int -> Int -> List Int;
 gen k n := if (k Data.Int.Ops.== n)
-              (k ∷ nil)
-              (k ∷ gen (k Data.Int.Ops.+ Int_1) n);
+              (k :: nil)
+              (k :: gen (k Data.Int.Ops.+ Int_1) n);
 
 axiom Int_100 : Int;
 compile Int_100 {

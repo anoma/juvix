@@ -2,16 +2,16 @@ module Input;
 
 open import Data.IO;
 
-infixr 5 ∷;
+infixr 5 ::;
 type List (A : Type) :=
   nil : List A
-  | ∷ : A → List A → List A;
+  | :: : A → List A → List A;
 
 type Foo :=
   a : Foo;
 
 l : List (List Foo) → List (List Foo);
-l ((_ ∷ nil) ∷ nil) := nil ∷ nil;
+l ((_ :: nil) :: nil) := nil :: nil;
 
 main : Action;
 main := put-str-ln "no errors";

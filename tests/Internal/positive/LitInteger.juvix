@@ -9,6 +9,6 @@ nilNat : List Nat;
 nilNat := nil;
 
 cons : Nat -> List Nat -> List Nat;
-cons a xs := a ∷ xs;
+cons a xs := a :: xs;
 
 end;
