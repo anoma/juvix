@@ -5,9 +5,10 @@ meanCol = 'Mean'
 colorCol = 'Color'
 stddevCol = 'Stddev'
 targets = meanCol . ' ' . stddevCol
-
-set terminal pdf size 18cm, 26cm
-set output outfile.'.pdf'
+set terminal svg enhanced mouse size 800, 1100
+set output outfile.'.svg'
+set multiplot layout 2, 1 title ('suite '.name) font ",24"
+set key outside
 set tmargin 3
 set style data histogram
 set datafile separator ","
@@ -20,8 +21,6 @@ set style fill solid
 unset key
 set yrange [0 : *]
 set offsets graph 0,0.5
-
-set multiplot layout 2, 1 title ('suite '.name) font ",24" scale 1, 1
 
 set title meanCol font ",20"
 plot csvfile \
@@ -37,13 +36,4 @@ plot csvfile \
         using (f('')):colorCol:xtic(2) notitle linecolor rgbcolor variable, \
      '' using ($0 - 1):(f('')):(sprintf("%1.2f%",(f('')))) with labels font ",13" center offset 0, 0.4 notitle
 
-unset multiplot
-
-set terminal svg enhanced mouse size 800, 1100
-set output outfile.'.svg'
-set multiplot layout 2, 1 title ('suite '.name) font ",24"
-set key outside
-do for [target in targets] {
-replot
-}
 unset multiplot

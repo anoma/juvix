@@ -68,14 +68,13 @@ variantRules s v = do
 
 plotRules :: Suite -> Rules ()
 plotRules s = do
-  let pdf :: Path Abs File = suitePdfFile s
-      csv :: Path Abs File = suiteCsvFile s
+  let csv :: Path Abs File = suiteCsvFile s
       svg :: Path Abs File = suiteSvgFile s
       out :: Path Abs File = suitePlotFile s
-  want [toFilePath pdf, toFilePath svg]
-  multiRecipe [pdf, svg] $ do
+  want [toFilePath svg]
+  multiRecipe [svg] $ do
     need [toFilePath csv, toFilePath gnuplotFile]
-    ensureDir (parent pdf)
+    ensureDir (parent svg)
     command_
       []
       "gnuplot"
