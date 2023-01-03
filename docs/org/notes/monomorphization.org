@@ -31,10 +31,9 @@
 * More examples
 ** Mutual recursion
 #+begin_src juvix
-type List (A : Type) {
-  nil : List A;
+type List (A : Type) :=
+  nil : List A |
   cons : A → List A → List A;
-};
 
 even : (A : Type) → List A → Bool;
 even A nil := true ;

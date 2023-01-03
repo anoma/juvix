@@ -156,18 +156,16 @@ foldl f z (h ∷ hs) := foldl f (f z h) hs;
 
 infixr 4 ,;
 infixr 2 ×;
-type × (A : Type) (B : Type) {
+type × (A : Type) (B : Type) :=
   , : A → B → A × B;
-};
 
 --------------------------------------------------------------------------------
 -- Maybe
 --------------------------------------------------------------------------------
 
-type Maybe (A : Type) {
- nothing : Maybe A;
+type Maybe (A : Type) :=
+ nothing : Maybe A |
  just : A → Maybe A;
-};
 
 from-int : Int → Maybe Int;
 from-int i := if (i < 0) nothing (just i);
