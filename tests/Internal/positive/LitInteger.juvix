@@ -3,7 +3,7 @@ module LitInteger;
 open import Stdlib.Prelude public;
 
 main : Nat;
-main := 1;
+main := 1 + 2;
 
 nilNat : List Nat;
 nilNat := nil;

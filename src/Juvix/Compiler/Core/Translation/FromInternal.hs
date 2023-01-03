@@ -28,21 +28,69 @@ isExplicit = (== Internal.Explicit) . (^. Internal.patternArgIsImplicit)
 mkIdentIndex :: Name -> Text
 mkIdentIndex = show . (^. Internal.nameId . Internal.unNameId)
 
+setupIntToNat :: Symbol -> InfoTable -> InfoTable
+setupIntToNat sym tab =
+  tab
+    { _infoIdentifiers = HashMap.insert sym ii (tab ^. infoIdentifiers),
+      _identContext = HashMap.insert sym node (tab ^. identContext),
+      _infoIntToNat = Just sym
+    }
+  where
+    ii =
+      IdentifierInfo
+        { _identifierSymbol = sym,
+          _identifierName = "intToNat",
+          _identifierLocation = Nothing,
+          _identifierArgsNum = 1,
+          _identifierArgsInfo =
+            [ ArgumentInfo
+                { _argumentName = "x",
+                  _argumentLocation = Nothing,
+                  _argumentType = mkTypePrim' (PrimInteger $ PrimIntegerInfo Nothing Nothing),
+                  _argumentIsImplicit = Explicit
+                }
+            ],
+          _identifierType = mkDynamic',
+          _identifierIsExported = False,
+          _identifierBuiltin = Nothing
+        }
+    node =
+      case (tagZeroM, tagSucM, boolSymM) of
+        (Just tagZero, Just tagSuc, Just boolSym) ->
+          mkLambda' $
+            mkIf'
+              boolSym
+              (mkBuiltinApp' OpEq [mkVar' 0, mkConstant' (ConstInteger 0)])
+              (mkConstr (setInfoName "zero" mempty) tagZero [])
+              (mkConstr (setInfoName "suc" mempty) tagSuc [mkApp' (mkIdent' sym) (mkBuiltinApp' OpIntSub [mkVar' 0, mkConstant' (ConstInteger 1)])])
+        _ ->
+          mkLambda' $ mkVar' 0
+    tagZeroM = fmap ((^. constructorTag) . fst) $ uncons $ filter (\ci -> ci ^. constructorBuiltin == Just BuiltinNatZero) $ HashMap.elems (tab ^. infoConstructors)
+    tagSucM = fmap ((^. constructorTag) . fst) $ uncons $ filter (\ci -> ci ^. constructorBuiltin == Just BuiltinNatSuc) $ HashMap.elems (tab ^. infoConstructors)
+    boolSymM = fmap ((^. inductiveSymbol) . fst) $ uncons $ filter (\ind -> ind ^. inductiveBuiltin == Just BuiltinBool) $ HashMap.elems (tab ^. infoInductives)
+
 fromInternal :: Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do
-  (res, _) <- runInfoTableBuilder emptyInfoTable (runReader (i ^. InternalTyped.resultIdenTypes) f)
+  (res, _) <- runInfoTableBuilder tab0 (runReader (i ^. InternalTyped.resultIdenTypes) f)
   return $
     CoreResult
-      { _coreResultTable = res,
+      { _coreResultTable = setupIntToNat intToNatSym res,
         _coreResultInternalTypedResult = i
       }
   where
+    tab0 :: InfoTable
+    tab0 = emptyInfoTable {_infoIntToNat = Just intToNatSym, _infoNextSymbol = intToNatSym + 1}
+
+    intToNatSym :: Symbol
+    intToNatSym = 0
+
     f :: Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r => Sem r ()
     f = do
+      declareIOBuiltins
       let resultModules = toList (i ^. InternalTyped.resultModules)
-      runNameIdGen (runReader (Internal.buildTable resultModules) (mapM_ coreModule resultModules))
+      runReader (Internal.buildTable resultModules) (mapM_ coreModule resultModules)
       where
-        coreModule :: Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, NameIdGen] r => Internal.Module -> Sem r ()
+        coreModule :: Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r => Internal.Module -> Sem r ()
         coreModule m = do
           registerInductiveDefs m
           registerFunctionDefs m
@@ -86,14 +134,14 @@ registerInductiveDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
 
 registerFunctionDefs ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Internal.Module ->
   Sem r ()
 registerFunctionDefs m = registerFunctionDefsBody (m ^. Internal.moduleBody)
 
 registerFunctionDefsBody ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Internal.ModuleBody ->
   Sem r ()
 registerFunctionDefsBody body = mapM_ go (body ^. Internal.moduleStatements)
@@ -173,7 +221,7 @@ goConstructor sym ctor = do
 
 goMutualBlock ::
   forall r.
-  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, NameIdGen, Reader Internal.InfoTable] r =>
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r =>
   Internal.MutualBlock ->
   Sem r ()
 goMutualBlock m = do
@@ -188,7 +236,7 @@ goMutualBlock m = do
 
 goFunctionDefIden ::
   forall r.
-  Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, NameIdGen] r =>
+  Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable] r =>
   (Internal.FunctionDef, Symbol) ->
   Sem r ()
 goFunctionDefIden (f, sym) = do
@@ -470,7 +518,9 @@ goExpression' ::
   Internal.Expression ->
   Sem r Node
 goExpression' = \case
-  Internal.ExpressionLiteral l -> return (goLiteral l)
+  Internal.ExpressionLiteral l -> do
+    tab <- getInfoTable
+    return (goLiteral (fromJust $ tab ^. infoIntToNat) l)
   Internal.ExpressionIden i -> case i of
     Internal.IdenVar n -> do
       k <- HashMap.lookupDefault impossible id_ <$> asks (^. indexTableVars)
@@ -568,10 +618,10 @@ goApplication a = do
         _ -> app
     _ -> app
 
-goLiteral :: LiteralLoc -> Node
-goLiteral l = case l ^. withLocParam of
+goLiteral :: Symbol -> LiteralLoc -> Node
+goLiteral intToNat l = case l ^. withLocParam of
   Internal.LitString s -> mkLitConst (ConstString s)
-  Internal.LitInteger i -> mkLitConst (ConstInteger i)
+  Internal.LitInteger i -> mkApp' (mkIdent' intToNat) (mkLitConst (ConstInteger i))
   where
     mkLitConst :: ConstantValue -> Node
     mkLitConst = mkConstant (Info.singleton (LocationInfo (l ^. withLocInt)))

@@ -100,12 +100,12 @@ tests =
       $(mkRelFile "NatMatch2.juvix")
       $(mkRelFile "out/NatMatch2.out"),
     PosTest
-      "Literal integer is Core integer"
+      "Literal Nat"
       $(mkRelDir ".")
       $(mkRelFile "LitInteger.juvix")
       $(mkRelFile "out/LitInteger.out"),
     PosTest
-      "Literal integer is Core string"
+      "Literal String"
       $(mkRelDir ".")
       $(mkRelFile "LitString.juvix")
       $(mkRelFile "out/LitString.out"),
