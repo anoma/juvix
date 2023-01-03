@@ -1,6 +1,6 @@
 $ juvix typecheck tests/negative/Internal/Positivity/E5.juvix --no-colors
->2 /.*\.juvix\:13:21\-23\: error\:
+>2 /.*\.juvix\:11:21\-23\: error\:
 The type T2 is not strictly positive.
 It appears at a negative position in one of the arguments of the constructor c2.
 /
->= 1
+>= 1 
