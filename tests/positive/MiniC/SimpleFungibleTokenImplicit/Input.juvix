@@ -187,18 +187,18 @@ infix 4 ==String;
 -- Lists
 --------------------------------------------------------------------------------
 
-infixr 5 ∷;
+infixr 5 ::;
 type List (A : Type) :=
   nil : List A
-  | ∷ : A → List A → List A;
+  | :: : A → List A → List A;
 
 elem : {A : Type} → (A → A → Bool) → A → List A → Bool;
 elem _ _ nil := false;
-elem eq s (x ∷ xs) := eq s x || elem eq s xs;
+elem eq s (x :: xs) := eq s x || elem eq s xs;
 
 foldl : {A : Type} → {B : Type} → (B → A → B) → B → List A → B;
 foldl f z nil := z;
-foldl f z (h ∷ hs) := foldl f (f z h) hs;
+foldl f z (h :: hs) := foldl f (f z h) hs;
 
 --------------------------------------------------------------------------------
 -- Pair
@@ -346,10 +346,10 @@ change2-key : String;
 change2-key := "change2-key";
 
 verifiers : List String;
-verifiers := owner-address ∷ nil;
+verifiers := owner-address :: nil;
 
 keys-changed : List String;
-keys-changed := change1-key ∷ change2-key ∷ nil;
+keys-changed := change1-key :: change2-key :: nil;
 
 main : Action;
 main :=

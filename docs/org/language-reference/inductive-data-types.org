@@ -42,14 +42,14 @@ the list, we usually called it =cons=. One possible definition for this type is
 the following type taken from the Juvix standard library:
 
 #+begin_example
-infixr 5 ∷;
+infixr 5 ::;
 type List (A : Type) :=
     nil : List A
-  | ∷ : A -> List A -> List A;
+  | :: : A -> List A -> List A;
 
 elem : {A : Type} -> (A -> A -> Bool) -> A -> List A -> Bool;
 elem _ _ nil := false;
-elem eq s (x ∷ xs) := eq s x || elem eq s xs;
+elem eq s (x :: xs) := eq s x || elem eq s xs;
 #+end_example
 
 To see more examples of inductive types and how to use them, please check out

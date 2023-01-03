@@ -1,1 +1,1 @@
-∷ (suc (suc zero)) (∷ (suc (suc (suc zero))) (∷ (suc (suc (suc (suc zero)))) (∷ (suc (suc (suc (suc (suc zero))))) (∷ (suc (suc (suc (suc (suc (suc zero)))))) (∷ (suc (suc (suc (suc (suc (suc (suc zero))))))) nil)))))
+:: (suc (suc zero)) (:: (suc (suc (suc zero))) (:: (suc (suc (suc (suc zero)))) (:: (suc (suc (suc (suc (suc zero))))) (:: (suc (suc (suc (suc (suc (suc zero)))))) (:: (suc (suc (suc (suc (suc (suc (suc zero))))))) nil)))))

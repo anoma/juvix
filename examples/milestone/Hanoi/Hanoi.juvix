@@ -23,7 +23,7 @@ compile ++str {
 
 --- Concatenates a list of strings
 ---
---- ;concat (("a" ∷ nil) ∷ ("b" ∷ nil)); evaluates to ;"a" ∷ "b" ∷ nil;
+--- ;concat (("a" :: nil) :: ("b" :: nil)); evaluates to ;"a" :: "b" :: nil;
 concat : List String → String;
 concat := foldl (++str) "";
 
@@ -36,7 +36,7 @@ unlines := intercalate "\n";
 
 --- Produce a singleton List
 singleton : {A : Type} → A → List A;
-singleton a := a ∷ nil;
+singleton a := a :: nil;
 
 --- Produce a ;String; representation of a ;List Nat;
 showList : List Nat → String;

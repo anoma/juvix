@@ -7,22 +7,22 @@ open import Data.Int.Ops;
 
 split_go : {A : Type} -> List A -> List A -> List A -> List A × List A;
 split_go nil ys zs := (ys, zs);
-split_go (x ∷ xs') ys zs := split_go xs' zs (x ∷ ys);
+split_go (x :: xs') ys zs := split_go xs' zs (x :: ys);
 
 split : {A : Type} -> List A -> List A × List A;
 split xs := split_go xs nil nil;
 
 revappend : {A : Type} -> List A -> List A -> List A;
 revappend nil ys := ys;
-revappend (x ∷ xs) ys := revappend xs (x ∷ ys);
+revappend (x :: xs) ys := revappend xs (x :: ys);
 
 merget : List Int -> List Int -> List Int -> List Int;
 merget nil ys acc := revappend acc ys;
 merget xs nil acc := revappend acc xs;
-merget (x ∷ xs') (y ∷ ys') acc :=
+merget (x :: xs') (y :: ys') acc :=
        if (x Data.Int.Ops.<= y)
-          (merget xs' (y ∷ ys') (x ∷ acc))
-          (merget (x ∷ xs') ys' (y ∷ acc));
+          (merget xs' (y :: ys') (x :: acc))
+          (merget (x :: xs') ys' (y :: acc));
 
 terminating
 sort' : List Int × List Int -> List Int;
@@ -30,19 +30,19 @@ sort' : List Int × List Int -> List Int;
 terminating
 sort : List Int -> List Int;
 sort nil := nil;
-sort (x ∷ nil) := x ∷ nil;
+sort (x :: nil) := x :: nil;
 sort xs := sort' (split xs);
 
 sort' (l1, l2) := merget (sort l1) (sort l2) nil;
 
 sorted : List Int -> Bool;
 sorted nil := true;
-sorted (_ ∷ nil) := true;
-sorted (x ∷ y ∷ t) := if (x Data.Int.Ops.<= y) (sorted (y ∷ t)) false;
+sorted (_ :: nil) := true;
+sorted (x :: y :: t) := if (x Data.Int.Ops.<= y) (sorted (y :: t)) false;
 
 terminating
 gen : Int -> List Int -> List Int;
-gen n acc := if (n Data.Int.Ops.== Int_0) acc (gen (n Data.Int.Ops.- Int_1) (n ∷ acc));
+gen n acc := if (n Data.Int.Ops.== Int_0) acc (gen (n Data.Int.Ops.- Int_1) (n :: acc));
 
 axiom Int_2000000 : Int;
 compile Int_2000000 {

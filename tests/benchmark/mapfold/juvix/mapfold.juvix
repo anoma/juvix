@@ -17,8 +17,8 @@ terminating
 gen : Int -> Int -> List Int;
 gen k n :=
   if (k == n)
-     (k ∷ nil)
-     (k ∷ gen (k Data.Int.Ops.+ Int_1) n);
+     (k :: nil)
+     (k :: gen (k Data.Int.Ops.+ Int_1) n);
 
 axiom Int_10000 : Int;
 compile Int_10000 {

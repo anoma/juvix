@@ -23,7 +23,7 @@ terminating
 gen : Int -> List Int -> List Int;
 gen n acc := if (n Data.Int.Ops.== Int_0)
                 acc
-                (gen (n Data.Int.Ops.- Int_1) (n ∷ acc));
+                (gen (n Data.Int.Ops.- Int_1) (n :: acc));
 
 axiom Int_100000 : Int;
 compile Int_100000 {

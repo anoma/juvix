@@ -7,7 +7,7 @@ open import Data.Int.Ops;
 
 checkDivisible : Int -> List Int -> Bool;
 checkDivisible p nil := false;
-checkDivisible p (h ∷ t) := if ((p % h) == Int_0) true (checkDivisible p t);
+checkDivisible p (h :: t) := if ((p % h) == Int_0) true (checkDivisible p t);
 
 terminating
 go : Int -> Int -> List Int -> Int;
@@ -16,7 +16,7 @@ go n p lst :=
     (head lst)
     (if (checkDivisible p lst)
         (go n (p Data.Int.Ops.+ Int_1) lst)
-        (go (n - Int_1) (p Data.Int.Ops.+ Int_1) (p ∷ lst)));
+        (go (n - Int_1) (p Data.Int.Ops.+ Int_1) (p :: lst)));
 
 prime : Int -> Int;
 prime n := go n Int_2 nil;
