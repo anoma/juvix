@@ -35,13 +35,13 @@ unset ylabel
 f(x) = column(stddevCol)*100/column(meanCol)
 plot csvfile \
         using (f('')):colorCol:xtic(2) notitle linecolor rgbcolor variable, \
-     '' using 0:(f('')):(sprintf("%1.2f%",(f('')))) with labels font ",13" center offset -9,0.4 notitle
+     '' using ($0 - 1):(f('')):(sprintf("%1.2f%",(f('')))) with labels font ",13" center offset 0, 0.4 notitle
 
 unset multiplot
 
-set terminal svg enhanced mouse size 600, 1100
+set terminal svg enhanced mouse size 800, 1100
 set output outfile.'.svg'
-set multiplot layout 2, 1 title ('suite '.name) font ",24" scale 1, 1
+set multiplot layout 2, 1 title ('suite '.name) font ",24"
 set key outside
 do for [target in targets] {
 replot
