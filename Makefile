@@ -230,3 +230,7 @@ test-shell : install
 changelog-updates :
 	@github_changelog_generator
 	@pandoc CHANGELOG.md --from markdown --to org -o UPDATES-FOR-CHANGELOG.org
+
+.PHONY : bench
+install: runtime submodules
+	@stack bench
