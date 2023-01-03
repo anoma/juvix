@@ -234,8 +234,9 @@ builtinTypeSig ::
   BuiltinFunction ->
   ParsecS r (TypeSignature 'Parsed)
 builtinTypeSig b = do
+  terminating <- isJust <$> optional (kw kwTerminating)
   fun <- symbol
-  typeSignature False fun (Just b)
+  typeSignature terminating fun (Just b)
 
 builtinStatement :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (Statement 'Parsed)
 builtinStatement = do
