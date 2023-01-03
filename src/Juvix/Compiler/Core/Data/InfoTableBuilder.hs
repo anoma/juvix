@@ -117,7 +117,7 @@ declareInductiveBuiltins ::
   Sem r ()
 declareInductiveBuiltins indName blt ctrs = do
   sym <- freshSymbol
-  let ty = mkIdent' sym
+  let ty = mkTypeConstr' sym []
   constrs <- mapM (\(tag, name, fty, cblt) -> createBuiltinConstr sym tag name (fty ty) cblt) ctrs
   registerInductive
     indName
@@ -150,8 +150,8 @@ declareBoolBuiltins =
   declareInductiveBuiltins
     "bool"
     (Just BuiltinBool)
-    [ (BuiltinTag TagTrue, "true", id, Just BuiltinBoolTrue),
-      (BuiltinTag TagFalse, "false", id, Just BuiltinBoolFalse)
+    [ (BuiltinTag TagTrue, "true", const mkTypeBool', Just BuiltinBoolTrue),
+      (BuiltinTag TagFalse, "false", const mkTypeBool', Just BuiltinBoolFalse)
     ]
 
 declareNatBuiltins :: Member InfoTableBuilder r => Sem r ()
