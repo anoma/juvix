@@ -36,6 +36,7 @@ data Lang
   | Juvix
   | Runtime
   | Core
+  deriving stock (Eq)
 
 instance Show Lang where
   show = \case

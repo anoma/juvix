@@ -8,11 +8,15 @@ import Juvix.Prelude
 import Juvix.Prelude.Env
 import System.Process
 
+allVariantsExcept :: [Lang] -> [VariantId] -> [Variant]
+allVariantsExcept ls vs = filter (\v -> (v ^. variantLanguage) `notElem` ls)
+   (map getVariant (filter (`notElem` vs) allElements))
+
 allVariants :: [Variant]
 allVariants = map getVariant allElements
 
 defaultVariants :: [Variant]
-defaultVariants = map getVariant (delete CoreEval allElements)
+defaultVariants = allVariantsExcept [] [CoreEval]
 
 data VariantId
   = OcamlExe

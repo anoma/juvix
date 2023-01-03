@@ -19,6 +19,7 @@ set ylabel "execution time (s)" font ", 20"
 set style fill solid
 unset key
 set yrange [0 : *]
+set offsets graph 0,0.5
 
 set multiplot layout 2, 1 title ('suite '.name) font ",24" scale 1, 1
 
