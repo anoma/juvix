@@ -93,11 +93,10 @@ lightBackgroundColor := "#c7737a";
 
 -- Rendering
 
-inductive Align {
-  left : Align;
-  right : Align;
-  center : Align;
-};
+type Align :=
+    left : Align
+  | right : Align
+  | center : Align;
 
 alignNum : Align → Nat;
 alignNum left := zero;

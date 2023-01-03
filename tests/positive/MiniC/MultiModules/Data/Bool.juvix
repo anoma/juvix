@@ -2,10 +2,9 @@ module Data.Bool;
 
 open import Data.String;
 
-inductive Bool {
-  true : Bool;
-  false : Bool;
-};
+type Bool :=
+     true : Bool
+  | false : Bool;
 
 not : Bool → Bool;
 not true := false;

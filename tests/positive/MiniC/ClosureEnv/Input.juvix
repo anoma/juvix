@@ -36,10 +36,9 @@ compile plus {
   c ↦ "cplus";
 };
 
-inductive Nat {
-  zero : Nat;
-  suc : Nat → Nat;
-};
+type Nat :=
+  zero : Nat
+  | suc : Nat → Nat;
 
 nplus : Nat → Nat → Nat;
 nplus zero n := n;

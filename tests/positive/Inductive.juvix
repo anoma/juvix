@@ -1,6 +1,5 @@
 module Inductive;
 
-  inductive T {
-    t : T;
-  };
+  type T := t : T;
+  
 end ;

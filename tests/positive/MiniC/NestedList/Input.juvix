@@ -3,14 +3,12 @@ module Input;
 open import Data.IO;
 
 infixr 5 ∷;
-inductive List (A : Type) {
-  nil : List A;
-  ∷ : A → List A → List A;
-};
+type List (A : Type) :=
+  nil : List A
+  | ∷ : A → List A → List A;
 
-inductive Foo {
+type Foo :=
   a : Foo;
-};
 
 l : List (List Foo) → List (List Foo);
 l ((_ ∷ nil) ∷ nil) := nil ∷ nil;

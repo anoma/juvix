@@ -1,6 +1,6 @@
 -- functional queues
 
-inductive list {
+type list {
   nil : list;
   cons : any -> list -> list;
 };
@@ -15,7 +15,7 @@ def rev' := \l \acc case l of {
 
 def rev := \l rev' l nil;
 
-inductive Queue {
+type Queue {
   queue : list -> list -> Queue;
 };
 

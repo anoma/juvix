@@ -1,8 +1,7 @@
 module Data.Nat;
-  inductive ℕ  {
-    zero : ℕ;
+  type ℕ  :=
+    zero : ℕ |
     suc : ℕ → ℕ;
-  };
 
   infixl 6 +;
   + : ℕ → ℕ → ℕ;

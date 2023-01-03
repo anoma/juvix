@@ -1,11 +1,9 @@
 module PatternConstructor;
-  inductive A {
+  type A :=
     a : A;
-  };
 
-inductive B {
+type B :=
     b : B;
-  };
 
   f : A → B;
   f b := b;

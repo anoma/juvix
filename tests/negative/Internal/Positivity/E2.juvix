@@ -2,8 +2,7 @@ module E2;
 
 open import NegParam;
 
-inductive D {
+type D :=
 d : T D -> D;
-};
 
 end;

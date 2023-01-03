@@ -411,9 +411,9 @@ goInductive def = do
     inductiveHeader =
       runReader defaultOptions (ppInductiveSignature def) >>= ppCodeHtml
 
-goConstructors :: forall r. Members '[Reader HtmlOptions, Reader NormalizedTable] r => [InductiveConstructorDef 'Scoped] -> Sem r Html
+goConstructors :: forall r. Members '[Reader HtmlOptions, Reader NormalizedTable] r => NonEmpty (InductiveConstructorDef 'Scoped) -> Sem r Html
 goConstructors cc = do
-  tbl' <- table . tbody <$> mconcatMapM goConstructor cc
+  tbl' <- table . tbody <$> mconcatMapM goConstructor (toList cc)
   return $
     Html.div ! Attr.class_ "subs constructors" $
       (p ! Attr.class_ "caption" $ "Constructors")

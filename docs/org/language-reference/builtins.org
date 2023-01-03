@@ -7,10 +7,9 @@ Juvix has support for the built-in natural type and a few functions that are com
 
    #+begin_example
    builtin nat
-   inductive Nat {
-     zero : Nat;
+   type Nat :=
+     zero : Nat |
      suc : Nat → Nat;
-   };
    #+end_example
 
 2. Builtin function definitions.

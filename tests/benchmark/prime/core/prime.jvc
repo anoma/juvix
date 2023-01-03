@@ -1,6 +1,6 @@
 -- Compute the Nth prime
 
-inductive list {
+type list {
   nil : list;
   cons : any -> list -> list;
 };

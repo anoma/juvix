@@ -1,14 +1,12 @@
 module Mutual;
 
-inductive Bool {
-  false : Bool;
-  true : Bool;
-};
+type Bool :=
+     true : Bool
+  | false : Bool;
 
-inductive Nat {
-  zero : Nat;
-  suc : Nat → Nat;
-};
+type Nat :=
+  zero : Nat
+  | suc : Nat → Nat;
 
 not : _;
 not false := true;

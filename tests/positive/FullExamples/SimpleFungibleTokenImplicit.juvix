@@ -8,10 +8,9 @@ foreign ghc {
 -- Booleans
 --------------------------------------------------------------------------------
 
-inductive Bool {
-  true : Bool;
-  false : Bool;
-};
+type Bool :=
+     true : Bool
+  | false : Bool;
 
 infixr 2 ||;
 || : Bool → Bool → Bool;
@@ -146,10 +145,9 @@ infix 4 ==String;
 --------------------------------------------------------------------------------
 
 infixr 5 ∷;
-inductive List (A : Type) {
-  nil : List A;
-  ∷ : A → List A → List A;
-};
+type List (A : Type) :=
+  nil : List A
+  | ∷ : A → List A → List A;
 
 elem : {A : Type} → (A → A → Bool) → A → List A → Bool;
 elem _ _ nil := false;
@@ -165,18 +163,16 @@ foldl f z (h ∷ hs) := foldl f (f z h) hs;
 
 infixr 4 ,;
 infixr 2 ×;
-inductive × (A : Type) (B : Type) {
+type × (A : Type) (B : Type) :=
   , : A → B → A × B;
-};
 
 --------------------------------------------------------------------------------
 -- Maybe
 --------------------------------------------------------------------------------
 
-inductive Maybe (A : Type) {
- nothing : Maybe A;
+type Maybe (A : Type) :=
+ nothing : Maybe A |
  just : A → Maybe A;
-};
 
 from-int : Int → Maybe Int;
 from-int i := if (i < Int_0) nothing (just i);

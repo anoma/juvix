@@ -1,6 +1,6 @@
 -- nested case, let & if
 
-inductive tree {
+type tree {
   leaf : tree;
   node : tree -> tree -> tree;
 };

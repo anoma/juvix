@@ -3,9 +3,7 @@ module AmbiguousSymbol;
   axiom A : Type;
 
   module O;
-    inductive T {
-      A : T;
-    };
+    type T := A : T;
   end;
   open O;
 

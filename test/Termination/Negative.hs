@@ -66,12 +66,6 @@ tests =
       $ \case
         ErrNoLexOrder {} -> Nothing,
     NegTest
-      "f x := f x is not terminating"
-      $(mkRelDir ".")
-      $(mkRelFile "ToEmpty.juvix")
-      $ \case
-        ErrNoLexOrder {} -> Nothing,
-    NegTest
       "Tree"
       $(mkRelDir ".")
       $(mkRelFile "Data/Tree.juvix")

@@ -1,6 +1,6 @@
 -- streams without memoization
 
-inductive stream {
+type stream {
   cons : integer -> (unit -> stream) -> stream;
 }
 

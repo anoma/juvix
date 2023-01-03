@@ -43,11 +43,10 @@ showList : List Nat → String;
 showList xs := "[" ++str intercalate "," (map natToStr xs) ++str "]";
 
 --- A Peg represents a peg in the towers of Hanoi game
-inductive Peg {
-  left : Peg;
-  middle : Peg;
-  right : Peg;
-};
+type Peg :=
+    left : Peg
+  | middle : Peg
+  | right : Peg;
 
 showPeg : Peg → String;
 showPeg left := "left";
@@ -56,9 +55,7 @@ showPeg right := "right";
 
 
 --- A Move represents a move between pegs
-inductive Move {
-  move : Peg → Peg → Move;
-};
+type Move := move : Peg → Peg → Move;
 
 showMove : Move → String;
 showMove (move from to) := showPeg from ++str " -> " ++str showPeg to;

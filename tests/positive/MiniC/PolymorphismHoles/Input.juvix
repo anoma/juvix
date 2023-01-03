@@ -4,10 +4,9 @@ module Input;
 -- Booleans
 --------------------------------------------------------------------------------
 
-inductive Bool {
-  true : Bool;
-  false : Bool;
-};
+type Bool :=
+     true : Bool
+  | false : Bool;
 
 --------------------------------------------------------------------------------
 -- Strings
@@ -68,9 +67,8 @@ bool-to-str false := "False";
 -- Pair
 --------------------------------------------------------------------------------
 
-inductive Pair (A : Type) (B : Type) {
+type Pair (A : Type) (B : Type) :=
  mkPair : A → B → Pair A B;
-};
 
 fst : {A : Type} → {B : Type} → Pair A B → A;
 fst (mkPair a b) := a;

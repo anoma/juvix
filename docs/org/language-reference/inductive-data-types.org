@@ -1,15 +1,16 @@
 * Inductive data types
 
 The =inductive= keyword is reserved for declaring inductive data types. An
-inductive type declaration requires a unique name for its type and its
-constructors, functions for building its terms. Constructors can be used as
-normal identifiers and also in patterns. As shown later, one can also provide
-type parameters to widen the family of inductive types one can define in Juvix.
+inductive type declaration requires a unique name for its type and a non-empty
+list of constructor declarations, functions for building the terms of the
+inductive data type. Constructors can be used as normal identifiers and also in
+patterns. As shown later, one can also provide type parameters to widen the
+family of inductive types one can define in Juvix.
 
-The simplest inductive type is the =Empty= type with no constructors.
+The simplest inductive type is the =Unit= type with one constructor called =unit=.
 
 #+begin_example
-inductive Empty {};
+type Unit := unit : Unit;
 #+end_example
 
 In the following example, we declare the inductive type =Nat=, the unary
@@ -18,10 +19,9 @@ namely =zero= and =suc=. A term of the type =Nat= is the number one, represented
 by =suc zero= or the number two represented by =suc (suc zero)=, etc.
 
 #+begin_example
-inductive Nat {
-    zero : Nat;
-    suc : Nat -> Nat;
-};
+type Nat :=
+    zero : Nat
+  | suc : Nat -> Nat;
 #+end_example
 
 The way to use inductive types is by declaring functions by pattern matching.
@@ -43,10 +43,9 @@ the following type taken from the Juvix standard library:
 
 #+begin_example
 infixr 5 ∷;
-inductive List (A : Type) {
-  nil : List A;
-  ∷ : A -> List A -> List A;
-};
+type List (A : Type) :=
+    nil : List A
+  | ∷ : A -> List A -> List A;
 
 elem : {A : Type} -> (A -> A -> Bool) -> A -> List A -> Bool;
 elem _ _ nil := false;

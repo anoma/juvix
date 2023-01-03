@@ -1,6 +1,6 @@
 -- global variables
 
-inductive Unit {
+type Unit {
   unit : Unit;
 };
 

@@ -2,9 +2,8 @@ module Input;
 
 open import Stdlib.Prelude;
 
-inductive Unit {
+type Unit :=
   unit : Unit;
-};
 
 axiom ignore : Unit -> Unit;
 

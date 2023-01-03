@@ -1,12 +1,7 @@
 module LiteralInt;
   open import Stdlib.Prelude;
-  inductive A {
-    a : A;
-  };
-
-  inductive B {
-    b : B;
-  };
+  type A := a : A;
+  type B := b : B;
 
   f : Nat;
   f := 1;

@@ -2,10 +2,9 @@ module MatchConstructor;
 
 open import Stdlib.Prelude;
 
-inductive Foo {
-  foo1 : Nat → Foo;
+type Foo :=
+  foo1 : Nat → Foo |
   foo2 : Foo;
-};
 
 toNat : Foo → Nat;
 toNat (foo1 n) := n;

@@ -1,9 +1,8 @@
 module M;
 
-inductive ℕ {
-  z : ℕ;
+type ℕ :=
+  z : ℕ |
   s : ℕ → ℕ;
-};
 
 nat : Type;
 nat := ℕ;

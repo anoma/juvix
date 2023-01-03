@@ -6,10 +6,9 @@ open import Stdlib.Prelude;
 open import Data.Int;
 open import Data.Int.Ops;
 
-inductive Tree {
-  leaf : Tree;
+type Tree :=
+  leaf : Tree |
   node : Int -> Tree -> Tree -> Tree;
-};
 
 mknode : Int -> Tree -> Tree;
 mknode n t := node n t t;

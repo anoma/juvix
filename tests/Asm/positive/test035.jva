@@ -1,6 +1,6 @@
 -- Nested lists
 
-inductive list {
+type list {
   nil : list;
   cons : * -> list -> list;
 }

@@ -1,7 +1,6 @@
 module LhsTooManyPatterns;
-  inductive T {
+  type T :=
     A : T;
-  };
 
   f : T → T;
   f A x := A;

@@ -1,23 +1,19 @@
 module Polymorphism;
 
-inductive Pair (A : Type) (B : Type) {
+type Pair (A : Type) (B : Type) :=
  mkPair : A → B → Pair A B;
-};
 
-inductive Nat {
- zero : Nat;
+type Nat :=
+ zero : Nat |
  suc : Nat → Nat;
-};
 
-inductive List (A : Type) {
- nil : List A;
+type List (A : Type) :=
+ nil : List A |
  cons : A → List A → List A;
-};
 
-inductive Bool {
- false : Bool;
+type Bool :=
+ false : Bool |
  true : Bool;
-};
 
 id : (A : Type) → A → A;
 id _ a := a;

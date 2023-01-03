@@ -1,7 +1,6 @@
 module WrongReturnTypeTooFewArguments;
 
-inductive A (B : Type) {
+type A (B : Type) :=
 c : A;
-};
 
 end;

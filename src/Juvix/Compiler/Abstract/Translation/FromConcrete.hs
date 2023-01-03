@@ -279,7 +279,7 @@ goInductive ty@InductiveDef {..} = do
             _inductiveBuiltin = _inductiveBuiltin,
             _inductiveName = goSymbol _inductiveName,
             _inductiveType = fromMaybe (Abstract.ExpressionUniverse (smallUniverse loc)) _inductiveType',
-            _inductiveConstructors = _inductiveConstructors',
+            _inductiveConstructors = toList _inductiveConstructors',
             _inductiveExamples = _inductiveExamples',
             _inductivePositive = ty ^. inductivePositive
           }

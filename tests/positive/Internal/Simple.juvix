@@ -1,21 +1,18 @@
 module Simple;
-  inductive T {
+  type T :=
     tt : T;
-  };
 
   someT : T;
   someT := tt;
 
-  inductive Bool  {
-    false : Bool;
+  type Bool  :=
+    false : Bool |
     true : Bool;
-  };
 
 
-  inductive Nat  {
-     zero : Nat;
+  type Nat  :=
+     zero : Nat |
      suc : Nat → Nat;
-  };
 
   infix 3 ==;
   == : Nat → Nat → Bool;
@@ -29,10 +26,9 @@ module Simple;
   + (suc a) b := suc (a + b);
 
   infixr 5 ∷;
-  inductive List {
-    nil : List;
+  type List :=
+    nil : List |
     ∷ : Nat → List → List;
-   };
 
   foldr : (Nat → Nat → Nat) → Nat → List → Nat;
   foldr _ v nil := v;

@@ -1,11 +1,11 @@
 -- optionally sum N integers from a binary tree K times
 
-inductive tree {
+type tree {
   node : int -> tree -> tree -> tree;
   leaf : tree;
 };
 
-inductive maybe {
+type maybe {
   just : any -> maybe;
   nothing : maybe;
 };

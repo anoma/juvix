@@ -1,9 +1,8 @@
 module M;
   import Other;
 
-  inductive Unit {
+  type Unit :=
   t : Unit;
-  };
 
   u : Other.Unit;
   u := t;

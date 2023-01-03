@@ -1,10 +1,9 @@
 module Input;
 
 builtin bool
-inductive Bool {
-  true : Bool;
-  false : Bool;
-};
+type Bool :=
+     true : Bool
+  | false : Bool;
 
 builtin bool-if
 if : {A : Type} → Bool → A → A → A;
@@ -12,10 +11,9 @@ if true t _ := t;
 if false _ e := e;
 
 builtin nat
-inductive ℕ {
- zero : ℕ;
+type ℕ :=
+ zero : ℕ |
  suc : ℕ → ℕ;
-};
 
 boolToNat : Bool → ℕ;
 boolToNat false := zero;

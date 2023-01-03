@@ -1,11 +1,9 @@
 module ExpectedFunctionType;
-  inductive Pair (A : Type) {
+  type Pair (A : Type) :=
     mkPair : A → A → Pair A;
-  };
 
-  inductive B {
+  type B :=
     b : B;
-  };
 
   f : Pair B → Pair B;
   f (mkPair a b) := a b;
