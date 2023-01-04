@@ -79,6 +79,7 @@ tests =
     PosTest "Mutually recursive function" $(mkRelDir "MutuallyRecursive") (WASI StdlibExclude),
     PosTest "Nested List type" $(mkRelDir "NestedList") (WASI StdlibExclude),
     PosTest "Builtin types and functions" $(mkRelDir "Builtins") (WASI StdlibExclude),
+    PosTest "Builtin types and functions from stdlib" $(mkRelDir "BuiltinsStdlib") (WASI StdlibInclude),
     PosTest "Import from embedded standard library" $(mkRelDir "StdlibImport") (WASI StdlibInclude),
     PosTest "Axiom without a compile block" $(mkRelDir "AxiomNoCompile") (WASI StdlibInclude),
     PosTest "Invoke a function using exported name" $(mkRelDir "ExportName") (WASM (WASMInfo (actualCallExport "fun" []))),

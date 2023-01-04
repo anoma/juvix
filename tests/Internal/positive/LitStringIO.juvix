@@ -1,0 +1,8 @@
+module LitStringIO;
+
+open import Stdlib.Prelude;
+
+main : IO;
+main := printStringLn "hello";
+
+end;

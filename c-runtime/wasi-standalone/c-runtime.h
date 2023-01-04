@@ -194,7 +194,11 @@ int debug(const char* str) {
 }
 
 prim_io prim_printNat(prim_nat n) {
-    return putStrLn(intToStr(n));
+    return putStr(intToStr(n));
+}
+
+prim_io prim_printString(prim_string s) {
+    return putStr(s);
 }
 
 // Tries to parse str as a positive integer.
