@@ -99,7 +99,15 @@ int debug(const char* str) {
 }
 
 prim_io prim_printNat(prim_nat n) {
-    return putStrLn(intToStr(n));
+    return putStr(intToStr(n));
+}
+
+prim_io prim_printString(prim_string s) {
+    return putStr(s);
+}
+
+prim_io prim_printBool(prim_bool b) {
+    return putStr(b ? "true" : "false");
 }
 
 #endif // C_RUNTIME_H_
