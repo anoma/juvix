@@ -161,7 +161,7 @@ runCommand opts = do
               Left err -> printError err
               Right n
                 | Info.member Info.kNoDisplayInfo (Core.getInfo n) -> return ()
-              Right n -> renderOut (Core.ppOut (ctx' ^. replContextEntryPoint . entryPointGenericOptions) n)
+              Right n -> renderOut (Core.ppOut opts n)
           Nothing -> noFileLoadedMsg
         where
           defaultLoc :: Interval
@@ -186,13 +186,12 @@ runCommand opts = do
       core :: String -> Repl ()
       core input = Repline.dontCrash $ do
         ctx <- State.gets (^. replStateContext)
-        gopts <- State.gets (^. replStateGlobalOptions)
         case ctx of
           Just ctx' -> do
             compileRes <- liftIO (compileExpressionIO' ctx' (strip (pack input)))
             case compileRes of
               Left err -> printError err
-              Right n -> renderOut (Core.ppOut (project' @GenericOptions gopts) n)
+              Right n -> renderOut (Core.ppOut opts n)
           Nothing -> noFileLoadedMsg
 
       inferType :: String -> Repl ()
