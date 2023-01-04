@@ -132,6 +132,10 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "Inductive.juvix"),
     PosTest
+      "Pipes symbol as possible prefix for each data constructor"
+      $(mkRelDir ".")
+      $(mkRelFile "InductivePipes.juvix"),
+    PosTest
       "Imports and qualified names"
       $(mkRelDir "Imports")
       $(mkRelFile "A.juvix"),
