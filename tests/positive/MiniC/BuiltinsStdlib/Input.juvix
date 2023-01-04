@@ -3,17 +3,14 @@ module Input;
 open import Stdlib.Prelude;
 open import Stdlib.Data.Nat.Ord;
 
-boolToNat : Bool → Nat;
-boolToNat false := zero;
-boolToNat true := suc zero;
-
 mult : Nat → Nat → Nat;
 mult zero _ := zero;
 mult (suc n) m := m + (mult n m);
 
 main : IO;
-main := printNatLn (boolToNat true)
-     >> printNatLn (boolToNat false)
+main := printStringLn "hello"
+     >> printBoolLn true
+     >> printBoolLn false
      >> printNatLn (mult 3 (2 + 2))
      >> printNatLn 2
      >> printNatLn (if (1 == 2) 100 200)

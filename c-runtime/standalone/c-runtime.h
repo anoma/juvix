@@ -160,6 +160,10 @@ prim_io prim_printString(prim_string s) {
     exit(1);
 }
 
+prim_io prim_printBool(prim_bool b) {
+    exit(1);
+}
+
 // Tries to parse str as a positive integer.
 // Returns -1 if parsing fails.
 int parsePositiveInt(char *str) {
