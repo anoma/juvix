@@ -9,6 +9,7 @@ import Development.Shake hiding ((<//>))
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path as Path hiding (doesFileExist, (-<.>))
 import Juvix.Prelude.Path qualified as Path
+import Statistics.Types
 import Suites
 
 main :: IO ()
@@ -119,5 +120,5 @@ config :: Suite -> Config
 config s =
   defaultConfig
     { csvFile = Just (toFilePath (suiteCsvFile s)),
-      timeLimit = 30
+      confInterval = cl90
     }

@@ -74,6 +74,7 @@ dependencies:
 
 # benchmarks
 - criterion == 1.5.*
+- statistics == 0.16.*
 - shake == 0.19.*
 - colour == 2.3.*
 - palette == 0.3.*

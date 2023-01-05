@@ -12,15 +12,13 @@ suites =
       "fibonacci",
       "maybe"
     ]
-    <> [ Suite "fold" (allVariantsExcept [C] [CoreEval]),
-         Suite "mapfold" (allVariantsExcept [C] [CoreEval])
+    <> [ Suite suiteName (allVariantsExcept [C] [CoreEval])
+         | suiteName <- ["fold", "mapfold"]
        ]
-
--- "mapfun" -- juvix crashes: Address boundary error
--- "ackermann", -- juvix crashes
--- "combinations", -- juvix crashes:  call stack exhausted
--- "cps", juvix: call stack exhausted
--- "prime" -- juvix: Address boundary error
+    <> [Suite "mapfun" (allVariantsExcept [C] [CoreEval, JuvixExe, JuvixWasm])]
+    <> [ Suite suiteName (allVariantsExcept [] [CoreEval, JuvixExe, JuvixWasm])
+         | suiteName <- ["ackermann", "combinations", "cps", "prime"]
+       ]
 
 defaultSuite :: String -> Suite
 defaultSuite title =
