@@ -43,7 +43,7 @@ clean: clean-runtime
 	@rm -rf docs/md
 
 .PHONY: clean-runtime
-clean-runtime:
+clean-runtime: clean-juvix-build
 	@cd runtime && make clean
 
 .PHONY: clean-juvix-build
