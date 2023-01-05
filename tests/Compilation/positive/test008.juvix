@@ -1,0 +1,13 @@
+-- recursion
+module test008;
+
+open import Stdlib.Prelude;
+
+sum : Nat → Nat;
+sum zero := 0;
+sum (suc x) := suc x + sum x;
+
+main : IO;
+main := printNatLn (sum 10000);
+
+end;

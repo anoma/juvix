@@ -1,0 +1,15 @@
+-- Test IO builtins
+module test004;
+
+open import Stdlib.Prelude;
+
+main : IO;
+main :=
+    printNat 1 >>
+    printNat 2 >>
+    printNat 3 >>
+    printNat 4 >>
+    printNat 5 >>
+    printString "\n";
+
+end;

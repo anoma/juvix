@@ -1,0 +1,32 @@
+-- local functions with free variables
+module test015;
+
+open import Stdlib.Prelude;
+open import Stdlib.Data.Nat.Ord;
+
+f : Nat → Nat → Nat;
+f x :=
+    let {g : Nat → Nat; g y := x + y} in
+    if (x == 0)
+       (f 10)
+       (if (x < 10)
+           λ{y := g (f (sub x 1) y)}
+           g);
+
+g : Nat → (Nat → Nat) → Nat;
+g x h := x + h x;
+
+h : Nat → Nat;
+h zero := 0;
+h (suc x) := g x h;
+
+main : IO;
+main :=
+    printNatLn (f 100 500) >> -- 600
+    printNatLn (f 5 0) >> -- 25
+    printNatLn (f 5 5) >> -- 30
+    printNatLn (h 10) >> -- 45
+    printNatLn (g 10 h) >> -- 55
+    printNatLn (g 3 (f 10));
+
+end;

@@ -1,0 +1,12 @@
+-- Empty module with comments
+module test003;
+
+{-
+
+Multiline comment
+
+{- nested comments don't work -- }
+
+-}
+
+end;
