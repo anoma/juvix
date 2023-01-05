@@ -1,0 +1,21 @@
+module Input;
+
+open import Stdlib.Prelude;
+open import Stdlib.Data.Nat.Ord;
+
+mult : Nat → Nat → Nat;
+mult zero _ := zero;
+mult (suc n) m := m + (mult n m);
+
+main : IO;
+main := printStringLn "hello"
+     >> printBoolLn true
+     >> printBoolLn false
+     >> printNatLn (mult 3 (2 + 2))
+     >> printNatLn 2
+     >> printNatLn (if (1 == 2) 100 200)
+     >> printNatLn (if (1 == 1) 300 400)
+     >> if (1 == 2) (printNatLn 500) (printNatLn 600)
+     >> if (1 == 1) (printNatLn 700) (printNatLn 800);
+
+end;

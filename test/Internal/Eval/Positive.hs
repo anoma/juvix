@@ -110,6 +110,11 @@ tests =
       $(mkRelFile "LitString.juvix")
       $(mkRelFile "out/LitString.out"),
     PosTest
+      "Literal String IO"
+      $(mkRelDir ".")
+      $(mkRelFile "LitStringIO.juvix")
+      $(mkRelFile "out/LitStringIO.out"),
+    PosTest
       "Mutually defined functions"
       $(mkRelDir ".")
       $(mkRelFile "Mutual.juvix")
