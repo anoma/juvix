@@ -8,3 +8,6 @@ cradle:
 
     - path: "./test"
       component: "test:juvix-test"
+
+    - path: "./bench"
+      component: "bench:juvix-bench"

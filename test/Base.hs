@@ -4,6 +4,7 @@ module Base
     module Juvix.Prelude,
     module Base,
     module Juvix.Extra.Paths,
+    module Juvix.Prelude.Env,
   )
 where
 
@@ -12,7 +13,7 @@ import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
 import Juvix.Extra.Paths
 import Juvix.Prelude
-import System.Environment (lookupEnv)
+import Juvix.Prelude.Env
 import Test.Tasty
 import Test.Tasty.HUnit
 import Text.Show.Pretty hiding (Html)
@@ -34,10 +35,14 @@ newtype WASMInfo = WASMInfo
 
 makeLenses ''TestDescr
 
-data StdlibMode = StdlibInclude | StdlibExclude
+data StdlibMode
+  = StdlibInclude
+  | StdlibExclude
   deriving stock (Show, Eq)
 
-data CompileMode = WASI StdlibMode | WASM WASMInfo
+data CompileMode
+  = WASI StdlibMode
+  | WASM WASMInfo
 
 mkTest :: TestDescr -> TestTree
 mkTest TestDescr {..} = case _testAssertion of
@@ -60,6 +65,3 @@ assertCmdExists cmd =
   assertBool ("Command: " <> toFilePath cmd <> " is not present on $PATH")
     . isJust
     =<< findExecutable cmd
-
-assertEnvVar :: String -> String -> IO String
-assertEnvVar msg varName = fromMaybeM (assertFailure msg) (lookupEnv varName)

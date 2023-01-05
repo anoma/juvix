@@ -69,14 +69,37 @@ someBaseToAbs root = \case
   Rel r -> root <//> r
   Abs a -> a
 
+removeExtensions :: Path b File -> Path b File
+removeExtensions p = maybe p removeExtensions (removeExtension p)
+
 removeExtension :: Path b File -> Maybe (Path b File)
 removeExtension = fmap fst . splitExtension
 
 removeExtension' :: Path b File -> Path b File
 removeExtension' = fst . fromJust . splitExtension
 
+addExtensions :: MonadThrow m => [String] -> Path b File -> m (Path b File)
+addExtensions ext p = case ext of
+  [] -> return p
+  (e : es) -> addExtension e p >>= addExtensions es
+
+replaceExtensions :: MonadThrow m => [String] -> Path b File -> m (Path b File)
+replaceExtensions ext = addExtensions ext . removeExtensions
+
+replaceExtensions' :: [String] -> Path b File -> Path b File
+replaceExtensions' ext = fromJust . replaceExtensions ext
+
+addExtensions' :: [String] -> Path b File -> Path b File
+addExtensions' ext = fromJust . addExtensions ext
+
+addExtension' :: String -> Path b File -> Path b File
+addExtension' ext = fromJust . addExtension ext
+
 replaceExtension' :: String -> Path b File -> Path b File
 replaceExtension' ext = fromJust . replaceExtension ext
+
+dirnameToFile :: Path x Dir -> Path Rel File
+dirnameToFile = relFile . dropTrailingPathSeparator . toFilePath . dirname
 
 parents :: Path Abs a -> NonEmpty (Path Abs Dir)
 parents = go [] . parent
