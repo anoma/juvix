@@ -63,6 +63,13 @@ instance Hashable BuiltinConstructor
 
 data BuiltinFunction
   = BuiltinNatPlus
+  | BuiltinNatSub
+  | BuiltinNatMul
+  | BuiltinNatDiv
+  | BuiltinNatMod
+  | BuiltinNatLe
+  | BuiltinNatLt
+  | BuiltinNatEq
   | BuiltinBoolIf
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
 
@@ -71,6 +78,13 @@ instance Hashable BuiltinFunction
 instance Pretty BuiltinFunction where
   pretty = \case
     BuiltinNatPlus -> Str.natPlus
+    BuiltinNatSub -> Str.natSub
+    BuiltinNatMul -> Str.natMul
+    BuiltinNatDiv -> Str.natDiv
+    BuiltinNatMod -> Str.natMod
+    BuiltinNatLe -> Str.natLe
+    BuiltinNatLt -> Str.natLt
+    BuiltinNatEq -> Str.natEq
     BuiltinBoolIf -> Str.boolIf
 
 data BuiltinAxiom

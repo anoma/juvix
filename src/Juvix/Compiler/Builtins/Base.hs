@@ -12,6 +12,12 @@ data BuiltinsEnum
   | BuiltinsZero
   | BuiltinsSuc
   | BuiltinsNatPlus
+  | BuiltinsNatMul
+  | BuiltinsNatDiv
+  | BuiltinsNatMod
+  | BuiltinsNatLe
+  | BuiltinsNatLt
+  | BuiltinsNatEq
   | BuiltinsNatPrint
   | BuiltinsIO
   | BuiltinsIOSequence
@@ -25,6 +31,12 @@ instance Pretty BuiltinsEnum where
     BuiltinsZero -> "zero"
     BuiltinsSuc -> "suc"
     BuiltinsNatPlus -> Str.natPlus
+    BuiltinsNatMul -> Str.natMul
+    BuiltinsNatDiv -> Str.natDiv
+    BuiltinsNatMod -> Str.natMod
+    BuiltinsNatLe -> Str.natLe
+    BuiltinsNatLt -> Str.natLt
+    BuiltinsNatEq -> Str.natEq
     BuiltinsNatPrint -> Str.natPrint
     BuiltinsIO -> Str.io
     BuiltinsIOSequence -> Str.ioSequence

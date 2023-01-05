@@ -34,7 +34,7 @@ emptyInfoTable =
       _infoConstructors = mempty,
       _infoAxioms = mempty,
       _infoIntToNat = Nothing,
-      _infoNextSymbol = 0,
+      _infoNextSymbol = 1,
       _infoNextTag = 0
     }
 

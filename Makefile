@@ -43,8 +43,12 @@ clean: clean-runtime
 	@rm -rf docs/md
 
 .PHONY: clean-runtime
-clean-runtime:
+clean-runtime: clean-juvix-build
 	@cd runtime && make clean
+
+.PHONY: clean-juvix-build
+clean-juvix-build:
+	@find . -type d -name '.juvix-build' | xargs rm -rf
 
 repl:
 	@stack ghci Juvix:lib

@@ -21,21 +21,6 @@ axiom hostFillRect : Nat → Nat → Nat → Nat → String → IO;
 -- XCoord → YCoord → Text → Size → Color → Align → IO
 axiom hostFillText : Nat → Nat → String → Nat → String → Nat → IO;
 
--- Nat extension
-
-foreign c {
-  int div(n, d) {
-    return n/d;
-  \}
-};
-
-infixl 7 div;
-axiom div : Nat → Nat → Nat;
-
-compile div {
-  c ↦ "div";
-};
-
 -- IO extensions
 
 axiom IOUnit : IO;
@@ -149,7 +134,7 @@ renderAndReturn : GameState → GameState;
 renderAndReturn s := const s (renderGameState s);
 
 selectedSquare : Nat → Nat → Nat;
-selectedSquare row col := 3 * (col div squareWidth) + (row div squareWidth) + 1;
+selectedSquare row col := 3 * (div col squareWidth) + (div row squareWidth) + 1;
 
 -- API
 
