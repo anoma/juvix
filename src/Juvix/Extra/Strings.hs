@@ -116,6 +116,27 @@ natPrint = "nat-print"
 natPlus :: IsString s => s
 natPlus = "nat-plus"
 
+natSub :: IsString s => s
+natSub = "nat-sub"
+
+natMul :: IsString s => s
+natMul = "nat-mul"
+
+natDiv :: IsString s => s
+natDiv = "nat-div"
+
+natMod :: IsString s => s
+natMod = "nat-mod"
+
+natLe :: IsString s => s
+natLe = "nat-le"
+
+natLt :: IsString s => s
+natLt = "nat-lt"
+
+natEq :: IsString s => s
+natEq = "nat-eq"
+
 boolIf :: IsString s => s
 boolIf = "bool-if"
 

@@ -47,6 +47,27 @@ ioseq = primPrefix "sequence"
 natplus :: Text
 natplus = primPrefix "natplus"
 
+natsub :: Text
+natsub = primPrefix "natsub"
+
+natmul :: Text
+natmul = primPrefix "natmul"
+
+natdiv :: Text
+natdiv = primPrefix "natdiv"
+
+natmod :: Text
+natmod = primPrefix "natmod"
+
+natle :: Text
+natle = primPrefix "natle"
+
+natlt :: Text
+natlt = primPrefix "natlt"
+
+nateq :: Text
+nateq = primPrefix "nateq"
+
 boolif :: Text
 boolif = primPrefix "if"
 

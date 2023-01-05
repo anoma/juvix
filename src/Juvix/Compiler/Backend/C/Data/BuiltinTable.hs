@@ -28,6 +28,13 @@ builtinAxiomName = \case
 builtinFunctionName :: BuiltinFunction -> Maybe Text
 builtinFunctionName = \case
   BuiltinNatPlus -> Just natplus
+  BuiltinNatSub -> Just natsub
+  BuiltinNatMul -> Just natmul
+  BuiltinNatDiv -> Just natdiv
+  BuiltinNatMod -> Just natmod
+  BuiltinNatLe -> Just natle
+  BuiltinNatLt -> Just natlt
+  BuiltinNatEq -> Just nateq
   BuiltinBoolIf -> Just boolif
 
 builtinName :: BuiltinPrim -> Maybe Text
