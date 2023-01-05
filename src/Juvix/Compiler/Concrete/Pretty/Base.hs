@@ -301,9 +301,7 @@ instance SingI s => PrettyCode (InductiveDef s) where
       ppConstructorBlock ::
         NonEmpty (InductiveConstructorDef s) -> Sem r (Doc Ann)
       ppConstructorBlock cs =
-        do
-          concatWith (\x y -> x <> softline <> kwPipe <+> y)
-          <$> mapM ppCode (toList cs)
+        vsep <$> mapM (fmap (kwPipe <+>) . ppCode) (toList cs)
 
 dotted :: Foldable f => f (Doc Ann) -> Doc Ann
 dotted = concatWith (surround kwDot)

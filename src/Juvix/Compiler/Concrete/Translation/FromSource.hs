@@ -506,7 +506,9 @@ inductiveDef _inductiveBuiltin = do
       P.<?> "<type annotation e.g. ': Type'>"
   kw kwAssign P.<?> "<assignment symbol ':='>"
   _inductiveConstructors <-
-    P.sepBy1 constructorDef (kw kwPipe) P.<?> "<constructor definition>"
+    optional (kw kwPipe)
+      >> P.sepBy1 constructorDef (kw kwPipe)
+      P.<?> "<constructor definition>"
   return InductiveDef {..}
 
 inductiveParam :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (InductiveParameter 'Parsed)
