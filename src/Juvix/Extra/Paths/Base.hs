@@ -19,17 +19,20 @@ stdlibDir = FE.makeRelativeToProject "juvix-stdlib" >>= FE.embedDir
 juvixYamlFile :: Path Rel File
 juvixYamlFile = $(mkRelFile "juvix.yaml")
 
-juvixBuildDir :: Path Rel Dir
-juvixBuildDir = $(mkRelDir ".juvix-build")
+relBuildDir :: Path Rel Dir
+relBuildDir = $(mkRelDir ".juvix-build")
 
-juvixIncludeDir :: Path Rel Dir
-juvixIncludeDir = juvixBuildDir <//> $(mkRelDir "include")
+rootBuildDir :: Path Abs Dir -> Path Abs Dir
+rootBuildDir root = root <//> relBuildDir
 
-juvixStdlibDir :: Path Rel Dir
-juvixStdlibDir = juvixBuildDir <//> $(mkRelDir "stdlib")
+juvixIncludeDir :: Path Abs Dir -> Path Abs Dir
+juvixIncludeDir buildDir = buildDir <//> $(mkRelDir "include")
+
+juvixStdlibDir :: Path Abs Dir -> Path Abs Dir
+juvixStdlibDir buildDir = buildDir <//> $(mkRelDir "stdlib")
 
 preludePath :: Path Rel File
 preludePath = $(mkRelFile "Stdlib/Prelude.juvix")
 
 defaultStdlibPath :: Path Abs Dir -> Path Abs Dir
-defaultStdlibPath root = root <//> juvixStdlibDir
+defaultStdlibPath root = root <//> $(mkRelDir "stdlib")

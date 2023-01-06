@@ -8,7 +8,6 @@ import Juvix.Compiler.Asm.Options qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
-import Juvix.Extra.Paths
 
 runCommand :: forall r. Members '[Embed IO, App] r => AsmCompileOptions -> Sem r ()
 runCommand opts = do
@@ -19,8 +18,8 @@ runCommand opts = do
     Right tab -> case run $ runError $ asmToMiniC asmOpts tab of
       Left err -> exitJuvixError err
       Right C.MiniCResult {..} -> do
-        root <- askPkgDir
-        ensureDir (root <//> juvixBuildDir)
+        buildDir <- askBuildDir
+        ensureDir buildDir
         cFile <- inputCFile file
         embed $ TIO.writeFile (toFilePath cFile) _resultCCode
         Compile.runCommand opts {_compileInputFile = AppPath (Abs cFile) False}
@@ -39,8 +38,8 @@ runCommand opts = do
 
 inputCFile :: Members '[App] r => Path Abs File -> Sem r (Path Abs File)
 inputCFile inputFileCompile = do
-  root <- askPkgDir
-  return (root <//> juvixBuildDir <//> outputMiniCFile)
+  buildDir <- askBuildDir
+  return (buildDir <//> outputMiniCFile)
   where
     outputMiniCFile :: Path Rel File
     outputMiniCFile = replaceExtension' ".c" (filename inputFileCompile)

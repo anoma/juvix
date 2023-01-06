@@ -7,10 +7,12 @@ import CommonOptions
 import Juvix.Compiler.Abstract.Pretty.Options qualified as Abstract
 import Juvix.Compiler.Internal.Pretty.Options qualified as Internal
 import Juvix.Data.Error.GenericError qualified as E
+import Juvix.Extra.Paths
 
 data GlobalOptions = GlobalOptions
   { _globalNoColors :: Bool,
     _globalShowNameIds :: Bool,
+    _globalBuildDir :: Maybe (AppPath Dir),
     _globalOnlyErrors :: Bool,
     _globalNoApe :: Bool,
     _globalStdin :: Bool,
@@ -49,6 +51,7 @@ defaultGlobalOptions =
       _globalOnlyErrors = False,
       _globalNoApe = False,
       _globalNoTermination = False,
+      _globalBuildDir = Nothing,
       _globalStdin = False,
       _globalNoPositivity = False,
       _globalNoStdlib = False
@@ -67,6 +70,14 @@ parseGlobalFlags = do
     switch
       ( long "show-name-ids"
           <> help "Show the unique number of each identifier when pretty printing"
+      )
+  _globalBuildDir <-
+    optional
+      ( parseGenericOutputDir
+          ( value (Rel relBuildDir)
+              <> showDefault
+              <> help "directory for compiler output"
+          )
       )
   _globalNoApe <-
     switch

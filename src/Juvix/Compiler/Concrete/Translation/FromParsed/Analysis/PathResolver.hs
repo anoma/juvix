@@ -22,6 +22,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
 import Juvix.Prelude
 
@@ -65,9 +66,10 @@ mkPackageInfo ::
   Path Abs Dir ->
   Sem r PackageInfo
 mkPackageInfo mpackageEntry _packageRoot = do
-  _packagePackage <- maybe (readPackage _packageRoot) (return . (^. entryPointPackage)) mpackageEntry
+  let buildDir = maybe (rootBuildDir _packageRoot) (^. entryPointBuildDir) mpackageEntry
+  _packagePackage <- maybe (readPackage _packageRoot buildDir) (return . (^. entryPointPackage)) mpackageEntry
   let deps :: [Dependency] = _packagePackage ^. packageDependencies
-  ensureStdlib _packageRoot deps
+  ensureStdlib buildDir deps
   files :: [Path Rel File] <- map (fromJust . stripProperPrefix _packageRoot) <$> walkDirRelAccum juvixAccum _packageRoot []
   let _packageRelativeFiles = HashSet.fromList files
       _packageAvailableRoots =

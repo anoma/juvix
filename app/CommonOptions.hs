@@ -18,7 +18,7 @@ data AppPath f = AppPath
   { _pathPath :: SomeBase f,
     _pathIsInput :: Bool
   }
-  deriving stock (Data)
+  deriving stock (Data, Eq)
 
 makeLenses ''AppPath
 

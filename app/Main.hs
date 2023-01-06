@@ -11,5 +11,5 @@ main = do
   let p = prefs showHelpOnEmpty
   cwd <- getCurrentDir
   (global, cli) <- customExecParser p descr
-  (root, pkg) <- findRootAndChangeDir (topCommandInputFile cli)
-  runM (runAppIO global cwd root pkg (runTopCommand cli))
+  (root, pkg, buildDir) <- findRootAndChangeDir (topCommandInputFile cli) global
+  runM (runAppIO global cwd root buildDir pkg (runTopCommand cli))

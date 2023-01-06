@@ -15,6 +15,7 @@ data App m a where
   PrintJuvixError :: JuvixError -> App m ()
   AskInvokeDir :: App m (Path Abs Dir)
   AskPkgDir :: App m (Path Abs Dir)
+  AskBuildDir :: App m (Path Abs Dir)
   AskPackage :: App m Package
   AskGlobalOptions :: App m GlobalOptions
   RenderStdOut :: (HasAnsiBackend a, HasTextBackend a) => a -> App m ()
@@ -24,8 +25,8 @@ data App m a where
 
 makeSem ''App
 
-runAppIO :: forall r a. Member (Embed IO) r => GlobalOptions -> Path Abs Dir -> Path Abs Dir -> Package -> Sem (App ': r) a -> Sem r a
-runAppIO g invokeDir pkgDir pkg = interpret $ \case
+runAppIO :: forall r a. Member (Embed IO) r => GlobalOptions -> Path Abs Dir -> Path Abs Dir -> Path Abs Dir -> Package -> Sem (App ': r) a -> Sem r a
+runAppIO g invokeDir buildDir pkgDir pkg = interpret $ \case
   RenderStdOut t
     | g ^. globalOnlyErrors -> return ()
     | otherwise -> embed $ do
@@ -35,8 +36,9 @@ runAppIO g invokeDir pkgDir pkg = interpret $ \case
   AskPackage -> return pkg
   AskInvokeDir -> return invokeDir
   AskPkgDir -> return pkgDir
+  AskBuildDir -> return buildDir
   RunPipelineEither input p -> do
-    entry <- embed (getEntryPoint' invokeDir g pkgDir pkg input)
+    entry <- embed (getEntryPoint' invokeDir buildDir g pkgDir pkg input)
     embed (runIOEither iniState entry p)
   Say t
     | g ^. globalOnlyErrors -> return ()
@@ -52,8 +54,8 @@ runAppIO g invokeDir pkgDir pkg = interpret $ \case
     printErr e =
       embed $ hPutStrLn stderr $ run $ runReader (project' @GenericOptions g) $ Error.render (not (g ^. globalNoColors)) (g ^. globalOnlyErrors) e
 
-getEntryPoint' :: Path Abs Dir -> GlobalOptions -> Path Abs Dir -> Package -> AppPath File -> IO EntryPoint
-getEntryPoint' invokeDir opts root pkg inputFile = do
+getEntryPoint' :: Path Abs Dir -> Path Abs Dir -> GlobalOptions -> Path Abs Dir -> Package -> AppPath File -> IO EntryPoint
+getEntryPoint' invokeDir buildDir opts root pkg inputFile = do
   estdin <-
     if
         | opts ^. globalStdin -> Just <$> getContents
@@ -62,6 +64,7 @@ getEntryPoint' invokeDir opts root pkg inputFile = do
     EntryPoint
       { _entryPointRoot = root,
         _entryPointResolverRoot = root,
+        _entryPointBuildDir = buildDir,
         _entryPointNoTermination = opts ^. globalNoTermination,
         _entryPointNoPositivity = opts ^. globalNoPositivity,
         _entryPointNoStdlib = opts ^. globalNoStdlib,
@@ -84,8 +87,9 @@ getEntryPoint inputFile = do
   opts <- askGlobalOptions
   root <- askPkgDir
   pkg <- askPackage
+  buildDir <- askBuildDir
   invokeDir <- askInvokeDir
-  embed (getEntryPoint' invokeDir opts root pkg inputFile)
+  embed (getEntryPoint' invokeDir buildDir opts root pkg inputFile)
 
 runPipeline :: Member App r => AppPath File -> Sem PipelineEff a -> Sem r a
 runPipeline input p = do
