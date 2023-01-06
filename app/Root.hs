@@ -6,7 +6,6 @@ import Data.ByteString qualified as ByteString
 import GlobalOptions
 import Juvix.Compiler.Pipeline
 import Juvix.Extra.Paths qualified as Paths
-import Juvix.Prelude
 
 type RootDir = Path Abs Dir
 
@@ -15,8 +14,9 @@ type BuildDir = Path Abs Dir
 findRootAndChangeDir ::
   Maybe (SomeBase File) ->
   GlobalOptions ->
+  Path Abs Dir ->
   IO (RootDir, Package, BuildDir)
-findRootAndChangeDir minputFile gopts = do
+findRootAndChangeDir minputFile gopts invokeDir = do
   whenJust minputFile $ \case
     Abs d -> setCurrentDir (parent d)
     Rel d -> setCurrentDir (parent d)
@@ -37,13 +37,13 @@ findRootAndChangeDir minputFile gopts = do
       l <- findFile (possiblePaths cwd) Paths.juvixYamlFile
       case l of
         Nothing -> do
-          let buildDir = getBuildDir gopts cwd cwd
+          let buildDir = getBuildDir gopts invokeDir cwd
           return (cwd, defaultPackage cwd buildDir, buildDir)
         Just yamlPath -> do
           bs <- ByteString.readFile (toFilePath yamlPath)
           let isEmpty = ByteString.null bs
               root = parent yamlPath
-              buildDir = getBuildDir gopts cwd root
+              buildDir = getBuildDir gopts invokeDir root
           pkg <-
             if
                 | isEmpty -> return (defaultPackage root buildDir)

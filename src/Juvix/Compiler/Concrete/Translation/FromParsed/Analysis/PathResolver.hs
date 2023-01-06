@@ -173,7 +173,8 @@ evalPathResolver' :: Members '[Files, Error Text] r => ResolverState -> Path Abs
 evalPathResolver' st root = fmap snd . runPathResolver' st root
 
 runPathResolver' :: Members '[Files, Error Text] r => ResolverState -> Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
-runPathResolver' st root = runState st . runReader (ResolverEnv root) . re
+runPathResolver' st root x = do
+  runState st (runReader (ResolverEnv root) (re x))
 
 runPathResolver :: Members '[Files, Error Text] r => Path Abs Dir -> Sem (PathResolver ': r) a -> Sem r (ResolverState, a)
 runPathResolver = runPathResolver' iniResolverState

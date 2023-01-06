@@ -8,8 +8,8 @@ import TopCommand.Options
 
 main :: IO ()
 main = do
-  let p = prefs showHelpOnEmpty
-  cwd <- getCurrentDir
-  (global, cli) <- customExecParser p descr
-  (root, pkg, buildDir) <- findRootAndChangeDir (topCommandInputFile cli) global
-  runM (runAppIO global cwd root buildDir pkg (runTopCommand cli))
+  let parserPreferences = prefs showHelpOnEmpty
+  _runAppIOArgsInvokeDir <- getCurrentDir
+  (_runAppIOArgsGlobalOptions, cli) <- customExecParser parserPreferences descr
+  (_runAppIOArgsPkgDir, _runAppIOArgsPkg, _runAppIOArgsBuildDir) <- findRootAndChangeDir (topCommandInputFile cli) _runAppIOArgsGlobalOptions _runAppIOArgsInvokeDir
+  runM (runAppIO (RunAppIOArgs {..}) (runTopCommand cli))

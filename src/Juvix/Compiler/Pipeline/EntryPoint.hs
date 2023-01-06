@@ -12,7 +12,7 @@ import Juvix.Prelude
 data EntryPoint = EntryPoint
   { _entryPointRoot :: Path Abs Dir,
     -- | initial root for the path resolver. Usually it should be equal to
-    -- _entryPointRoot. Used only for the command `juvix repl`.
+    -- _entryPointRoot. It only differs for `juvix repl`.
     _entryPointResolverRoot :: Path Abs Dir,
     _entryPointBuildDir :: Path Abs Dir,
     _entryPointNoTermination :: Bool,

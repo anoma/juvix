@@ -29,6 +29,6 @@ stdlibDep = Dependency <$> getRoot
     getRoot = do
       e <- ask
       let d :: Path Abs Dir
-          d = defaultStdlibPath (e ^. entryPointRoot)
+          d = defaultStdlibPath (e ^. entryPointBuildDir)
       runReader d updateStdlib
       return d

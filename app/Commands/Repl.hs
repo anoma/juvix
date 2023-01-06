@@ -294,16 +294,18 @@ defaultPreludeEntryPoint :: Repl EntryPoint
 defaultPreludeEntryPoint = do
   opts <- State.gets (^. replStateGlobalOptions)
   root <- State.gets (^. replStatePkgDir)
+  let buildDir = rootBuildDir root
+      defStdlibDir = defaultStdlibPath buildDir
   return $
     EntryPoint
       { _entryPointRoot = root,
-        _entryPointResolverRoot = defaultStdlibPath root,
-        _entryPointBuildDir = root,
+        _entryPointResolverRoot = defStdlibDir,
+        _entryPointBuildDir = buildDir,
         _entryPointNoTermination = opts ^. globalNoTermination,
         _entryPointNoPositivity = opts ^. globalNoPositivity,
         _entryPointNoStdlib = opts ^. globalNoStdlib,
-        _entryPointPackage = defaultPackage root (rootBuildDir root),
-        _entryPointModulePaths = pure (defaultStdlibPath root <//> preludePath),
+        _entryPointPackage = defaultPackage root buildDir,
+        _entryPointModulePaths = pure (defStdlibDir <//> preludePath),
         _entryPointGenericOptions = project opts,
         _entryPointStdin = Nothing
       }

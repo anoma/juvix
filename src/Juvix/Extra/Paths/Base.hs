@@ -35,4 +35,4 @@ preludePath :: Path Rel File
 preludePath = $(mkRelFile "Stdlib/Prelude.juvix")
 
 defaultStdlibPath :: Path Abs Dir -> Path Abs Dir
-defaultStdlibPath root = root <//> $(mkRelDir "stdlib")
+defaultStdlibPath buildDir = buildDir <//> $(mkRelDir "stdlib")
