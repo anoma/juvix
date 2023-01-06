@@ -1,13 +1,22 @@
 module Root where
 
+import CommonOptions
 import Control.Exception qualified as IO
 import Data.ByteString qualified as ByteString
+import GlobalOptions
 import Juvix.Compiler.Pipeline
 import Juvix.Extra.Paths qualified as Paths
-import Juvix.Prelude
 
-findRootAndChangeDir :: Maybe (SomeBase File) -> IO (Path Abs Dir, Package)
-findRootAndChangeDir minputFile = do
+type RootDir = Path Abs Dir
+
+type BuildDir = Path Abs Dir
+
+findRootAndChangeDir ::
+  Maybe (SomeBase File) ->
+  GlobalOptions ->
+  Path Abs Dir ->
+  IO (RootDir, Package, BuildDir)
+findRootAndChangeDir minputFile gopts invokeDir = do
   whenJust minputFile $ \case
     Abs d -> setCurrentDir (parent d)
     Rel d -> setCurrentDir (parent d)
@@ -22,18 +31,28 @@ findRootAndChangeDir minputFile = do
     possiblePaths :: Path Abs Dir -> [Path Abs Dir]
     possiblePaths p = p : toList (parents p)
 
-    go :: IO (Path Abs Dir, Package)
+    go :: IO (RootDir, Package, BuildDir)
     go = do
       cwd <- getCurrentDir
       l <- findFile (possiblePaths cwd) Paths.juvixYamlFile
       case l of
-        Nothing -> return (cwd, defaultPackage cwd)
+        Nothing -> do
+          let buildDir = getBuildDir gopts invokeDir cwd
+          return (cwd, defaultPackage cwd buildDir, buildDir)
         Just yamlPath -> do
           bs <- ByteString.readFile (toFilePath yamlPath)
           let isEmpty = ByteString.null bs
               root = parent yamlPath
+              buildDir = getBuildDir gopts invokeDir root
           pkg <-
             if
-                | isEmpty -> return (defaultPackage root)
-                | otherwise -> readPackageIO root
-          return (root, pkg)
+                | isEmpty -> return (defaultPackage root buildDir)
+                | otherwise -> readPackageIO root buildDir
+          return (root, pkg, buildDir)
+
+getBuildDir :: GlobalOptions -> Path Abs Dir -> Path Abs Dir -> Path Abs Dir
+getBuildDir g invokeDir pkgDir = case g ^. globalBuildDir of
+  Nothing -> Paths.rootBuildDir pkgDir
+  Just (AppPath p _) -> case p of
+    Rel r -> invokeDir <//> r
+    Abs a -> a

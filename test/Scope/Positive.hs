@@ -47,7 +47,7 @@ testDescr PosTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Steps $ \step -> do
-            pkg <- readPackageIO tRoot
+            pkg <- readPackageIO tRoot (rootBuildDir tRoot)
             let entryPoint = entryPointFromPackage tRoot file' pkg
                 runHelper :: HashMap (Path Abs File) Text -> Sem Pipe a -> IO (ResolverState, a)
                 runHelper files =

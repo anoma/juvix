@@ -10,25 +10,29 @@ import System.Process qualified as P
 
 runCommand :: forall r. Members '[Embed IO, App] r => CompileOptions -> Sem r ()
 runCommand opts = do
-  root <- askPkgDir
   inputFile <- someBaseToAbs' (opts ^. compileInputFile . pathPath)
-  result <- runCompile root inputFile opts
+  result <- runCompile inputFile opts
   case result of
     Left err -> printFailureExit err
     _ -> return ()
 
-runCompile :: Members '[App, Embed IO] r => Path Abs Dir -> Path Abs File -> CompileOptions -> Sem r (Either Text ())
-runCompile projRoot inputFile o = do
-  ensureDir (projRoot <//> juvixBuildDir)
-  ensureDir (projRoot <//> juvixIncludeDir)
-  prepareRuntime projRoot o
+runCompile ::
+  Members '[App, Embed IO] r =>
+  Path Abs File ->
+  CompileOptions ->
+  Sem r (Either Text ())
+runCompile inputFile o = do
+  buildDir <- askBuildDir
+  ensureDir buildDir
+  ensureDir (juvixIncludeDir buildDir)
+  prepareRuntime buildDir o
   case o ^. compileTarget of
     TargetWasm32Wasi -> runError (clangWasmWasiCompile inputFile o)
     TargetNative64 -> runError (clangNativeCompile inputFile o)
     TargetC -> return $ Right ()
 
 prepareRuntime :: forall r. Members '[App, Embed IO] r => Path Abs Dir -> CompileOptions -> Sem r ()
-prepareRuntime projRoot o = do
+prepareRuntime buildDir o = do
   mapM_ writeHeader headersDir
   case o ^. compileTarget of
     TargetWasm32Wasi | o ^. compileDebug -> writeRuntime wasiDebugRuntime
@@ -52,15 +56,18 @@ prepareRuntime projRoot o = do
     writeRuntime :: BS.ByteString -> Sem r ()
     writeRuntime =
       embed
-        . BS.writeFile (toFilePath (projRoot <//> juvixBuildDir <//> $(mkRelFile "libjuvix.a")))
+        . BS.writeFile (toFilePath (buildDir <//> $(mkRelFile "libjuvix.a")))
 
     headersDir :: [(Path Rel File, BS.ByteString)]
     headersDir = map (first relFile) $(FE.makeRelativeToProject "runtime/include" >>= FE.embedDir)
 
+    includeDir :: Path Abs Dir
+    includeDir = juvixIncludeDir buildDir
+
     writeHeader :: (Path Rel File, BS.ByteString) -> Sem r ()
     writeHeader (filePath, contents) = embed $ do
-      ensureDir (projRoot <//> juvixIncludeDir <//> parent filePath)
-      BS.writeFile (toFilePath (projRoot <//> juvixIncludeDir <//> filePath)) contents
+      ensureDir (includeDir <//> parent filePath)
+      BS.writeFile (toFilePath (includeDir <//> filePath)) contents
 
 clangNativeCompile ::
   forall r.
@@ -70,7 +77,8 @@ clangNativeCompile ::
   Sem r ()
 clangNativeCompile inputFile o = do
   outputFile' <- outputFile
-  runClang (native64Args o outputFile' inputFile)
+  buildDir <- askBuildDir
+  runClang (native64Args buildDir o outputFile' inputFile)
   where
     outputFile :: Sem r (Path Abs File)
     outputFile = maybe (return defaultOutputFile) someBaseToAbs' (o ^? compileOutputFile . _Just . pathPath)
@@ -92,7 +100,8 @@ clangWasmWasiCompile inputFile o = clangArgs >>= runClang
     clangArgs :: Sem r [String]
     clangArgs = do
       outputFile' <- outputFile
-      wasiArgs o outputFile' inputFile <$> sysrootEnvVar
+      buildDir <- askBuildDir
+      wasiArgs buildDir o outputFile' inputFile <$> sysrootEnvVar
 
     outputFile :: Sem r (Path Abs File)
     outputFile = case o ^? compileOutputFile . _Just . pathPath of
@@ -116,8 +125,8 @@ clangWasmWasiCompile inputFile o = clangArgs >>= runClang
         msg :: Text
         msg = "Missing environment variable WASI_SYSROOT_PATH"
 
-commonArgs :: CompileOptions -> Path Abs File -> [String]
-commonArgs o outputFile =
+commonArgs :: Path Abs Dir -> CompileOptions -> Path Abs File -> [String]
+commonArgs buildDir o outputFile =
   ["-E" | o ^. compilePreprocess]
     <> ["-S" | o ^. compileAssembly]
     <> (if o ^. compileDebug then ["-DDEBUG"] else ["-DNDEBUG"])
@@ -128,21 +137,21 @@ commonArgs o outputFile =
          "-Werror",
          "-std=c11",
          "-I",
-         toFilePath juvixIncludeDir,
+         toFilePath (juvixIncludeDir buildDir),
          "-o",
          toFilePath outputFile
        ]
     <> ( if
              | not (o ^. compilePreprocess || o ^. compileAssembly) ->
                  [ "-L",
-                   toFilePath juvixBuildDir
+                   toFilePath buildDir
                  ]
              | otherwise -> []
        )
 
-native64Args :: CompileOptions -> Path Abs File -> Path Abs File -> [String]
-native64Args o outputFile inputFile =
-  commonArgs o outputFile
+native64Args :: Path Abs Dir -> CompileOptions -> Path Abs File -> Path Abs File -> [String]
+native64Args buildDir o outputFile inputFile =
+  commonArgs buildDir o outputFile
     <> [ "-DARCH_NATIVE64",
          "-DAPI_LIBC",
          "-m64",
@@ -155,9 +164,9 @@ native64Args o outputFile inputFile =
              | otherwise -> []
        )
 
-wasiArgs :: CompileOptions -> Path Abs File -> Path Abs File -> Path Abs Dir -> [String]
-wasiArgs o outputFile inputFile sysrootPath =
-  commonArgs o outputFile
+wasiArgs :: Path Abs Dir -> CompileOptions -> Path Abs File -> Path Abs File -> Path Abs Dir -> [String]
+wasiArgs buildDir o outputFile inputFile sysrootPath =
+  commonArgs buildDir o outputFile
     <> [ "-DARCH_WASM32",
          "-DAPI_WASI",
          "-Os",

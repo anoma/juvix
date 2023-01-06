@@ -24,15 +24,17 @@ stdlibFiles = mapMaybe helper $(stdlibDir)
     isYamlFile = (== juvixYamlFile)
 
 ensureStdlib :: Members '[Files] r => Path Abs Dir -> [Dependency] -> Sem r ()
-ensureStdlib pkgRoot deps = whenJust (firstJust isStdLib deps) $ \stdlibRoot ->
-  runReader stdlibRoot updateStdlib
+ensureStdlib buildDir deps =
+  whenJust (firstJust isStdLib deps) $ \stdlibRoot ->
+    runReader stdlibRoot updateStdlib
   where
+    stdLibBuildDir :: Path Abs Dir
+    stdLibBuildDir = juvixStdlibDir buildDir
+
     isStdLib :: Dependency -> Maybe (Path Abs Dir)
-    isStdLib dep = do
-      case stripProperPrefix pkgRoot (dep ^. dependencyPath) of
-        Just p
-          | p == juvixStdlibDir -> Just (dep ^. dependencyPath)
-        _ -> Nothing
+    isStdLib dep
+      | dep == Dependency stdLibBuildDir = Just stdLibBuildDir
+      | otherwise = Nothing
 
 writeStdlib :: forall r. Members '[Reader StdlibRoot, Files] r => Sem r ()
 writeStdlib = do

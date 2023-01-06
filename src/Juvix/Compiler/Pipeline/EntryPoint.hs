@@ -5,14 +5,16 @@ module Juvix.Compiler.Pipeline.EntryPoint
 where
 
 import Juvix.Compiler.Pipeline.Package
+import Juvix.Extra.Paths
 import Juvix.Prelude
 
 -- | The head of _entryModulePaths is assumed to be the Main module
 data EntryPoint = EntryPoint
   { _entryPointRoot :: Path Abs Dir,
     -- | initial root for the path resolver. Usually it should be equal to
-    -- _entryPointRoot. Used only for the command `juvix repl`.
+    -- _entryPointRoot. It only differs for `juvix repl`.
     _entryPointResolverRoot :: Path Abs Dir,
+    _entryPointBuildDir :: Path Abs Dir,
     _entryPointNoTermination :: Bool,
     _entryPointNoPositivity :: Bool,
     _entryPointNoStdlib :: Bool,
@@ -30,14 +32,17 @@ defaultEntryPoint root mainFile =
   EntryPoint
     { _entryPointRoot = root,
       _entryPointResolverRoot = root,
+      _entryPointBuildDir = buildDir,
       _entryPointNoTermination = False,
       _entryPointNoPositivity = False,
       _entryPointNoStdlib = False,
       _entryPointStdin = Nothing,
-      _entryPointPackage = defaultPackage root,
+      _entryPointPackage = defaultPackage root buildDir,
       _entryPointGenericOptions = defaultGenericOptions,
       _entryPointModulePaths = pure mainFile
     }
+  where
+    buildDir = rootBuildDir root
 
 mainModulePath :: Lens' EntryPoint (Path Abs File)
 mainModulePath = entryPointModulePaths . _head1

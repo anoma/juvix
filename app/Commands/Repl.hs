@@ -76,6 +76,7 @@ welcomeMsg = liftIO (putStrLn [i|Juvix REPL version #{versionTag}: https://juvix
 runCommand :: Members '[Embed IO, App] r => ReplOptions -> Sem r ()
 runCommand opts = do
   root <- askPkgDir
+  buildDir <- askBuildDir
   package <- askPackage
   let getReplEntryPoint :: SomeBase File -> Repl EntryPoint
       getReplEntryPoint inputFile = do
@@ -84,6 +85,7 @@ runCommand opts = do
         return $
           EntryPoint
             { _entryPointRoot = root,
+              _entryPointBuildDir = buildDir,
               _entryPointResolverRoot = root,
               _entryPointNoTermination = gopts ^. globalNoTermination,
               _entryPointNoPositivity = gopts ^. globalNoPositivity,
@@ -292,15 +294,18 @@ defaultPreludeEntryPoint :: Repl EntryPoint
 defaultPreludeEntryPoint = do
   opts <- State.gets (^. replStateGlobalOptions)
   root <- State.gets (^. replStatePkgDir)
+  let buildDir = rootBuildDir root
+      defStdlibDir = defaultStdlibPath buildDir
   return $
     EntryPoint
       { _entryPointRoot = root,
-        _entryPointResolverRoot = defaultStdlibPath root,
+        _entryPointResolverRoot = defStdlibDir,
+        _entryPointBuildDir = buildDir,
         _entryPointNoTermination = opts ^. globalNoTermination,
         _entryPointNoPositivity = opts ^. globalNoPositivity,
         _entryPointNoStdlib = opts ^. globalNoStdlib,
-        _entryPointPackage = defaultPackage root,
-        _entryPointModulePaths = pure (defaultStdlibPath root <//> preludePath),
+        _entryPointPackage = defaultPackage root buildDir,
+        _entryPointModulePaths = pure (defStdlibDir <//> preludePath),
         _entryPointGenericOptions = project opts,
         _entryPointStdin = Nothing
       }

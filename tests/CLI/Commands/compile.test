@@ -10,3 +10,7 @@ $ cd tests/positive/MiniC/HelloWorld && juvix compile Input.juvix -o hello.wasm
 $ cd examples/milestone/HelloWorld && juvix compile -t native HelloWorld.juvix && ./HelloWorld
 hello world!
 >= 0
+
+$ temp=$(mktemp -d) && cd examples/milestone/HelloWorld && juvix compile HelloWorld.juvix --output-dir "$temp" && find "$temp"| wc -l && rm -rf "$temp"
+> /\s*([2-9]|[1-9][0-9]+)/
+>= 0

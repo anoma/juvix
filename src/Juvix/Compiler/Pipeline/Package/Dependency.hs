@@ -3,7 +3,6 @@ module Juvix.Compiler.Pipeline.Package.Dependency
     Dependency,
     Dependency' (..),
     processDependency,
-    stdlibDefaultDep,
     dependencyPath,
     rawDependency,
   )
@@ -13,7 +12,6 @@ where
 import Data.Aeson.BetterErrors
 import Data.Kind qualified as GHC
 import Data.Yaml
-import Juvix.Extra.Paths
 import Juvix.Prelude
 
 type PathType :: IsProcessed -> GHC.Type
@@ -58,8 +56,5 @@ processDependency :: Path Abs Dir -> RawDependency -> Dependency
 processDependency r (Dependency p) = case p of
   Rel a -> Dependency (r <//> a)
   Abs a -> Dependency a
-
-stdlibDefaultDep :: RawDependency
-stdlibDefaultDep = Dependency (Rel juvixStdlibDir)
 
 makeLenses ''Dependency'

@@ -92,8 +92,8 @@ rawDefaultPackage =
     }
 
 -- | Has the implicit stdlib dependency
-defaultPackage :: Path Abs Dir -> Package
-defaultPackage r = fromRight impossible . run . runError @Text . processPackage r $ rawDefaultPackage
+defaultPackage :: Path Abs Dir -> Path Abs Dir -> Package
+defaultPackage r buildDir = fromRight impossible . run . runError @Text . processPackage r buildDir $ rawDefaultPackage
 
 -- | Has no dependencies
 emptyPackage :: Package
@@ -112,11 +112,12 @@ rawPackage pkg =
       _packageDependencies = Just (map rawDependency (pkg ^. packageDependencies))
     }
 
-processPackage :: forall r. Members '[Error Text] r => Path Abs Dir -> Package' 'Raw -> Sem r Package
-processPackage dir pkg = do
+processPackage :: forall r. Members '[Error Text] r => Path Abs Dir -> Path Abs Dir -> Package' 'Raw -> Sem r Package
+processPackage dir buildDir pkg = do
   let _packageName = fromMaybe defaultPackageName (pkg ^. packageName)
+      stdlib = Dependency (Abs (juvixStdlibDir buildDir))
       _packageDependencies =
-        let rawDeps :: [RawDependency] = fromMaybe [stdlibDefaultDep] (pkg ^. packageDependencies)
+        let rawDeps :: [RawDependency] = fromMaybe [stdlib] (pkg ^. packageDependencies)
          in map (processDependency dir) rawDeps
   _packageVersion <- getVersion
   return Package {..}
@@ -135,17 +136,22 @@ defaultVersion :: SemVer
 defaultVersion = SemVer 0 0 0 [] Nothing
 
 -- | given some directory d it tries to read the file d/juvix.yaml and parse its contents
-readPackage :: forall r. Members '[Files, Error Text] r => Path Abs Dir -> Sem r Package
-readPackage adir = do
+readPackage ::
+  forall r.
+  Members '[Files, Error Text] r =>
+  Path Abs Dir ->
+  Path Abs Dir ->
+  Sem r Package
+readPackage adir buildDir = do
   bs <- readFileBS' yamlPath
-  either (throw . pack . prettyPrintParseException) (processPackage adir) (decodeEither' bs)
+  either (throw . pack . prettyPrintParseException) (processPackage adir buildDir) (decodeEither' bs)
   where
     yamlPath = adir <//> juvixYamlFile
 
-readPackageIO :: Path Abs Dir -> IO Package
-readPackageIO dir = do
+readPackageIO :: Path Abs Dir -> Path Abs Dir -> IO Package
+readPackageIO dir buildDir = do
   let x :: Sem '[Error Text, Files, Embed IO] Package
-      x = readPackage dir
+      x = readPackage dir buildDir
   m <- runM $ runError $ runFilesIO (runError x)
   case m of
     Left err -> runM (runReader defaultGenericOptions (printErrorAnsiSafe err)) >> exitFailure

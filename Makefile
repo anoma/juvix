@@ -166,7 +166,7 @@ STACKTESTFLAGS?=--ta --hide-successes --ta --ansi-tricks=false
 SHELLTESTFLAGS?=--color --diff -a --hide-successes
 
 .PHONY: check
-check:
+check: clean
 	@${MAKE} build
 	@${MAKE} install
 	@${MAKE} test
