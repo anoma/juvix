@@ -262,6 +262,24 @@ jobs:
         run: |
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+      - name: Download Smoke binary (Linux)
+        uses: giantswarm/install-binary-action@VERSION
+        if: runner.os == 'macOS'
+        with:
+          binary: "smoke"
+          version: "2.3.1"
+          download_url: "https://github.com/SamirTalwar/smoke/releases/download/v2.3.1/smoke-v2.3.1-Darwin-x86_64"
+          smoke_test: "${binary} --version"
+
+      - name: Download Smoke binary (Linux)
+        uses: giantswarm/install-binary-action@VERSION
+        if: runner.os == 'macOS'
+        with:
+          binary: "smoke"
+          version: "2.3.1"
+          download_url: "https://github.com/SamirTalwar/smoke/releases/download/v2.3.1/smoke-v2.3.1-Linux-x86_64"
+          smoke_test: "${binary} --version"
+
       - name : Smoke testing (Linux)
         id: smoke-linux
         if: runner.os == 'Linux'
