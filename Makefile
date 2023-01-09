@@ -9,7 +9,6 @@ ASSETS = 	seating-mascot.051c86a.svg \
 
 ORGFILES = $(shell find docs/org -type f -name '*.org')
 MDFILES:=$(patsubst docs/org/%,docs/md/%,$(ORGFILES:.org=.md))
-SMOKETESTS= $(shell find tests/ -type f -name '*.smoke.yaml')
 
 EXAMPLEMILESTONE=examples/milestone
 EXAMPLEHTMLOUTPUT=_docs/examples/html
@@ -226,7 +225,7 @@ SMOKE := $(shell command -v smoke 2> /dev/null)
 
 .PHONY : smoke
 smoke: install
-	@$(if $(SMOKE),, stack install smoke)
+	@$(if $(SMOKE),, $(error "Smoke not found, please install from the sources"))
 	@find tests/ -type f -name '*.smoke.yaml' \
 		-exec sh -c "echo -n 'Running {}'; echo ; ${SMOKE} ${SMOKEFLAGS} {}" \;
 

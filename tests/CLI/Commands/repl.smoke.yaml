@@ -180,3 +180,4 @@ tests:
       contains: |
         suc (suc (suc zero))
     exit-status: 0
+    
