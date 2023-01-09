@@ -225,8 +225,8 @@ fast-test-skip-slow:
 SMOKE := $(shell command -v smoke 2> /dev/null)
 
 .PHONY : smoke
-smoke: 
-	@$(if $(SHELLTEST),, stack install smoke)
+smoke: install
+	@$(if $(SMOKE),, stack install smoke)
 	@find tests/ -type f -name '*.smoke.yaml' \
 		-exec sh -c "echo -n 'Running {}'; echo ; ${SMOKE} ${SMOKEFLAGS} {}" \;
 

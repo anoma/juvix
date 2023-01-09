@@ -262,19 +262,19 @@ jobs:
         run: |
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name : Shell tests (Linux)
-        id: shell-tests-linux
+      - name : Smoke testing (Linux)
+        id: smoke-linux
         if: runner.os == 'Linux'
         run : |
           cd main
-          make test-shell
+          make smoke
 
-      - name : Shell tests (macOS)
-        id: shell-tests-macos
+      - name : Smoke testing (macOS)
+        id: smoke-macos
         if: runner.os == 'macOS'
         run : |
           cd main
-          make CC=$CC LIBTOOL=$LIBTOOL test-shell
+          make CC=$CC LIBTOOL=$LIBTOOL smoke
 
   docs:
     needs: build
