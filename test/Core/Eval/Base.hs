@@ -31,14 +31,15 @@ coreEvalAssertion mainFile expectedFile trans testTrans step = do
       expected <- TIO.readFile (toFilePath expectedFile)
       assertEqDiff ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) -> do
-      let tab = applyTransformations trans tabIni
+      let tab = applyTransformations trans (setupMainFunction tabIni node)
       testTrans tab
+      let node' = fromJust $ tab ^. identContext . at (fromJust $ tab ^. infoMain)
       withTempDir'
         ( \dirPath -> do
             let outputFile = dirPath <//> $(mkRelFile "out.out")
             hout <- openFile (toFilePath outputFile) WriteMode
             step "Evaluate"
-            r' <- doEval mainFile hout tab node
+            r' <- doEval mainFile hout tab node'
             case r' of
               Left err -> do
                 hClose hout

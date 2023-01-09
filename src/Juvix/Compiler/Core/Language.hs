@@ -35,9 +35,9 @@ type Let = Let' Info Node Type
 
 type LetRec = LetRec' Info Node Type
 
-type Case = Case' Info Info Node
+type Case = Case' Info Info Node Type
 
-type CaseBranch = CaseBranch' Info Node
+type CaseBranch = CaseBranch' Info Node Type
 
 type Match = Match' Info Node
 

@@ -8,5 +8,6 @@ data TransformationId
   | RemoveTypeArgs
   | MoveApps
   | NatToInt
+  | ConvertBuiltinTypes
   | Identity
   deriving stock (Data)

@@ -34,6 +34,35 @@ runParser fileName tab input =
     (_, Left err) -> Left (ParserError err)
     (tbl, Right r) -> Right (tbl, r)
 
+runParserMain :: FilePath -> InfoTable -> Text -> Either ParserError InfoTable
+runParserMain fileName tab input =
+  case runParser fileName tab input of
+    Left err -> Left err
+    Right (tab', Nothing) -> Right tab'
+    Right (tab', Just node) -> Right $ setupMainFunction tab' node
+
+setupMainFunction :: InfoTable -> Node -> InfoTable
+setupMainFunction tab node =
+  tab
+    { _infoMain = Just sym,
+      _identContext = HashMap.insert sym node (tab ^. identContext),
+      _infoIdentifiers = HashMap.insert sym info (tab ^. infoIdentifiers),
+      _infoNextSymbol = tab ^. infoNextSymbol + 1
+    }
+  where
+    sym = tab ^. infoNextSymbol
+    info =
+      IdentifierInfo
+        { _identifierName = "main",
+          _identifierLocation = Nothing,
+          _identifierSymbol = sym,
+          _identifierArgsNum = 0,
+          _identifierArgsInfo = [],
+          _identifierType = mkDynamic',
+          _identifierBuiltin = Nothing,
+          _identifierIsExported = True
+        }
+
 guardSymbolNotDefined ::
   Member InfoTableBuilder r =>
   Symbol ->

@@ -107,7 +107,7 @@ mkPi :: Info -> Binder -> Type -> Type
 mkPi i bi b = NPi (Pi i bi b)
 
 mkPi' :: Type -> Type -> Type
-mkPi' = mkPi Info.empty . Binder "" Nothing
+mkPi' = mkPi Info.empty . Binder "?" Nothing
 
 mkPis :: [Binder] -> Type -> Type
 mkPis tys ty = foldr (mkPi mempty) ty tys
@@ -259,6 +259,26 @@ unfoldLambdas = first reverse . unfoldLambdasRev
 
 unfoldLambdas' :: Node -> (Int, Node)
 unfoldLambdas' = first length . unfoldLambdas
+
+isType :: Node -> Bool
+isType = \case
+  NPi {} -> True
+  NUniv {} -> True
+  NPrim {} -> True
+  NTyp {} -> True
+  NDyn {} -> True
+  NVar {} -> False
+  NIdt {} -> False
+  NCst {} -> False
+  NApp {} -> False
+  NBlt {} -> False
+  NCtr {} -> False
+  NLam {} -> False
+  NLet {} -> False
+  NRec {} -> False
+  NCase {} -> False
+  NMatch {} -> False
+  Closure {} -> False
 
 {------------------------------------------------------------------------}
 {- functions on Pattern -}

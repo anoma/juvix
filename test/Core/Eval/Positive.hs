@@ -24,6 +24,9 @@ testDescr PosTest {..} =
           _testAssertion = Steps $ coreEvalAssertion file' expected' [] (const (return ()))
         }
 
+filterOutTests :: [String] -> [PosTest] -> [PosTest]
+filterOutTests out = filter (\PosTest {..} -> _name `notElem` out)
+
 allTests :: TestTree
 allTests =
   testGroup

@@ -338,6 +338,18 @@ instance PrettyCode FunctionInfo where
         <+> targetty
         <+> braces' c
 
+ppFunSig :: Member (Reader Options) r => FunctionInfo -> Sem r (Doc Ann)
+ppFunSig FunctionInfo {..} = do
+  argtys <- mapM ppCode (typeArgs _functionType)
+  targetty <- ppCode (typeTarget _functionType)
+  return $
+    keyword Str.function
+      <+> annotate (AnnKind KNameFunction) (pretty _functionName)
+        <> encloseSep lparen rparen ", " argtys
+      <+> colon
+      <+> targetty
+        <> semi
+
 instance PrettyCode ConstructorInfo where
   ppCode ConstructorInfo {..} = do
     ty <- ppCode _constructorType
@@ -351,8 +363,9 @@ instance PrettyCode InductiveInfo where
 instance PrettyCode InfoTable where
   ppCode InfoTable {..} = do
     inds <- mapM ppCode (HashMap.elems _infoInductives)
+    funsigs <- mapM ppFunSig (HashMap.elems _infoFunctions)
     funs <- mapM ppCode (HashMap.elems _infoFunctions)
-    return $ vcat (map (<> line) inds) <> line <> vcat (map (<> line) funs)
+    return $ vcat (map (<> line) inds) <> line <> vcat funsigs <> line <> line <> vcat (map (<> line) funs)
 
 {--------------------------------------------------------------------------------}
 {- helper functions -}

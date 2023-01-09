@@ -29,7 +29,7 @@
     io_print_toplevel(juvix_result);
 
 // Temporary vars
-#define DECL_TMP(k) word_t juvix_tmp_##k
+#define DECL_TMP(k) UNUSED word_t juvix_tmp_##k
 #define TMP(k) juvix_tmp_##k
 
 // Value stack temporary vars

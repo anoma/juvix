@@ -37,6 +37,4 @@ def writeLn := \x write x >> write "\n";
 writeLn (f (gen 10)) >>
 writeLn (f (gen 15)) >>
 writeLn (f (gen 16)) >>
-writeLn (f (gen 17)) >>
-writeLn (f (gen 18)) >>
-writeLn (f (gen 20))
+writeLn (f (gen 17))

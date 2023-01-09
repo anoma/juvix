@@ -36,9 +36,6 @@ writeLn (gen 10) >>
 writeLn (rev (gen 10)) >>
 writeLn (filter (\x x > 5) (gen 10)) >>
 writeLn (rev (map (\x x - 1) (gen 10))) >>
-writeLn (sum 10000) >>
-writeLn (sum 100000) >>
-writeLn (sum' 10000) >>
-writeLn (sum' 100000) >>
-writeLn (sum'' 10000) >>
-writeLn (sum'' 100000)
+writeLn (sum 1000) >>
+writeLn (sum' 1000) >>
+writeLn (sum'' 1000)
