@@ -1,0 +1,35 @@
+tests:
+  - name: typecheck-help
+    command: 
+      - juvix 
+      - typecheck
+    exit-status: 0
+    stdout:
+      contains:
+        "Usage: juvix typecheck JUVIX\_FILE"
+
+# $ juvix typecheck --help
+# > /Usage: juvix typecheck JUVIX\_FILE.*/
+# >= 0
+
+# $ juvix typecheck tests/positive/Internal/Simple.juvix
+# >
+# Well done! It type checks
+# >= 0
+
+# $ juvix --only-errors typecheck tests/positive/Internal/Simple.juvix
+# >
+# >= 0
+
+# $ juvix --only-errors typecheck tests/positive/Internal/Simple.juvix
+# >
+# >= 0
+
+# $ juvix --only-errors typecheck tests/positive/Internal/Simple.juvix
+# >
+# >= 0
+
+# $ juvix --no-colors typecheck tests/negative/Internal/MultiWrongType.juvix
+# >2 /(.+)\/([^\/]+)\.juvix\:[0-9]*\:[0-9]*\-[0-9]*\: error.*
+# .*/
+# >= 1
