@@ -1,0 +1,52 @@
+working-directory: ./../../../../tests
+
+tests:
+  - name: requires-subcommand
+    command: 
+      - juvix 
+      - dev 
+      - internal
+    stderr:
+      contains: |
+        Usage: juvix dev internal COMMAND
+    exit-status: 1
+
+  - name: internal-typecheck
+    command: 
+      - juvix 
+      - dev 
+      - internal 
+      - typecheck
+    args:
+      - positive/Internal/Simple.juvix
+    stdout:
+      contains: |
+          Well done! It type checks
+    exit-status: 0
+
+  - name: internal-typecheck-only-errors
+    command: 
+      - juvix
+      - --only-errors 
+      - dev 
+      - internal 
+      - typecheck
+    args:
+      - positive/Internal/Simple.juvix
+    stdout: ""
+    exit-status: 0
+
+  - name: internal-typecheck-no-colors
+    command: 
+      - juvix
+      - --no-colors 
+      - dev 
+      - internal 
+      - typecheck
+    args:
+      - negative/Internal/MultiWrongType.juvix
+    stdout: ""
+    stderr: 
+      matches: |-
+        (.+)\/([^\/]+)\.juvix\:[0-9]*\:[0-9]*\-[0-9]*\: error
+    exit-status: 1
