@@ -1,0 +1,36 @@
+working-directory: ./../../../../tests
+
+tests:
+    - name: requires-subcommand
+      command: 
+        - juvix 
+        - dev 
+        - termination
+      stderr:
+        contains: |
+          Usage: juvix dev termination COMMAND
+      exit-status: 1
+
+    - name: calls-autocompletion-requires-files-arg
+      command: 
+        - juvix 
+        - dev 
+        - termination 
+        - calls
+        - --help
+      stdout:
+        contains: |
+            JUVIX_FILE
+      exit-status: 0
+
+    - name: graph-cmd-autocompletion-requires-files-arg
+      command: 
+        - juvix 
+        - dev 
+        - termination 
+        - graph
+        - --help
+      stdout:
+        contains: |
+            JUVIX_FILE
+      exit-status: 0

@@ -1,0 +1,13 @@
+working-directory: ./../../../../tests
+
+tests:
+  - name: show
+    command:
+      - juvix
+      - dev
+      - root
+    stdout:
+      matches: |
+        .*?/juvix/tests/
+    exit-status: 0
+   
