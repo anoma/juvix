@@ -47,15 +47,16 @@ instance Pretty Name where
       <> "@"
       <> pretty (n ^. nameId)
 
+addNameIdTag :: Bool -> NameId -> Doc a -> Doc a
+addNameIdTag showNameId nid
+  | showNameId = (<> ("@" <> pretty nid))
+  | otherwise = id
+
 prettyName :: HasNameKindAnn a => Bool -> Name -> Doc a
 prettyName showNameId n =
   annotate
     (annNameKind (n ^. nameKind))
-    (pretty (n ^. namePretty) <>? uid)
-  where
-    uid
-      | showNameId = Just ("@" <> pretty (n ^. nameId))
-      | otherwise = Nothing
+    (addNameIdTag showNameId (n ^. nameId) (pretty (n ^. namePretty)))
 
 type FunctionName = Name
 

@@ -529,7 +529,8 @@ inferExpression' hint e = case e of
   ExpressionLambda l -> goLambda l
   where
     goHole :: Hole -> Sem r TypedExpression
-    goHole h =
+    goHole h = do
+      void (queryMetavar h)
       return
         TypedExpression
           { _typedExpression = ExpressionHole h,

@@ -119,6 +119,13 @@ tests =
       $(mkRelFile "WrongReturnTypeTooManyArguments.juvix")
       $ \case
         ErrExpectedFunctionType {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Ambiguous hole"
+      $(mkRelDir "Internal")
+      $(mkRelFile "IdenFunctionArgsNoExplicit.juvix")
+      $ \case
+        ErrUnsolvedMeta {} -> Nothing
         _ -> wrongError
   ]
 

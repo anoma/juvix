@@ -173,5 +173,9 @@ tests =
     PosTest
       "As Patterns"
       $(mkRelDir "Internal")
-      $(mkRelFile "AsPattern.juvix")
+      $(mkRelFile "AsPattern.juvix"),
+    PosTest
+      "Issue 1693 (Inference and higher order functions)"
+      $(mkRelDir "issue1693")
+      $(mkRelFile "M.juvix")
   ]
