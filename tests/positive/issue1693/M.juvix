@@ -8,7 +8,7 @@ module M;
   K x y := x;
 
   I : {A : Type} → A → A;
-  I {A} := S K (K {_} {Bool});
+  I := S K (K {_} {Bool});
 
   main : IO;
   main := printNatLn
