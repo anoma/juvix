@@ -262,25 +262,10 @@ jobs:
         run: |
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Download and cache Smoke binary (macOS)
-        uses: jaxxstorm/action-install-gh-release@v1.9.0
-        if: runner.os == 'macOS'
-        with: # Grab a pure binary from the release
-          repo: SamirTalwar/smoke
-          platform: darwin
-          tag: v2.3.1
-          cache: enable
-          extension-matching: disable
-          rename-to: smoke
-          chmod: 0755
-
       - name: Download Smoke binary (Linux)
         uses: jaxxstorm/action-install-gh-release@v1.9.0
-        if: runner.os == 'Linux'
         with:
           repo: SamirTalwar/smoke
-          platform: linux
-          arch: x86-64
           tag: v2.3.1
           cache: enable
           extension-matching: disable
