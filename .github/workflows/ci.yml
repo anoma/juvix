@@ -262,7 +262,7 @@ jobs:
         run: |
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Download Smoke binary (Linux)
+      - name: Download Smoke binary
         uses: jaxxstorm/action-install-gh-release@v1.9.0
         with:
           repo: SamirTalwar/smoke
