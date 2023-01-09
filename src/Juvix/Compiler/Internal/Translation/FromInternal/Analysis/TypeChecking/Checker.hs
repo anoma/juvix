@@ -300,15 +300,17 @@ checkClause clauseType clausePats body = do
     go :: [PatternArg] -> Expression -> Sem (State LocalVars ': r) Expression
     go pats bodyTy = case pats of
       [] -> return bodyTy
-      (p : ps) -> case bodyTy of
-        ExpressionHole h -> do
-          fun <- holeRefineToFunction h
-          go pats (ExpressionFunction fun)
-        _ -> case unfoldFunType bodyTy of
-          ([], _) -> error "too many patterns"
-          (par : pars, ret) -> do
-            checkPattern par p
-            go ps (foldFunType pars ret)
+      (p : ps) -> do
+        bodyTy' <- weakNormalize bodyTy
+        case bodyTy' of
+          ExpressionHole h -> do
+            fun <- holeRefineToFunction h
+            go pats (ExpressionFunction fun)
+          _ -> case unfoldFunType bodyTy' of
+            ([], _) -> error "too many patterns"
+            (par : pars, ret) -> do
+              checkPattern par p
+              go ps (foldFunType pars ret)
 
 -- | Refines a hole into a function type. I.e. '_@1' is matched with '_@fresh → _@fresh'
 holeRefineToFunction :: Members '[Inference, NameIdGen] r => Hole -> Sem r Function
