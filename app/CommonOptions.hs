@@ -82,6 +82,19 @@ parseGenericOutputFile = do
       )
   pure AppPath {_pathIsInput = False, ..}
 
+parseBuildDir :: Mod OptionFields (SomeBase Dir) -> Parser (AppPath Dir)
+parseBuildDir m = do
+  _pathPath <-
+    option
+      someDirOpt
+      ( long "internal-build-dir"
+          <> metavar "BUILD_DIR"
+          <> help "Path to output directory"
+          <> action "directory"
+          <> m
+      )
+  pure AppPath {_pathIsInput = False, ..}
+
 parseGenericOutputDir :: Mod OptionFields (SomeBase Dir) -> Parser (AppPath Dir)
 parseGenericOutputDir m = do
   _pathPath <-

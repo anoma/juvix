@@ -73,10 +73,10 @@ parseGlobalFlags = do
       )
   _globalBuildDir <-
     optional
-      ( parseGenericOutputDir
+      ( parseBuildDir
           ( value (Rel relBuildDir)
               <> showDefault
-              <> help "directory for compiler output"
+              <> help "directory for compiler internal output"
           )
       )
   _globalNoApe <-
