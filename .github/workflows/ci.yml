@@ -262,7 +262,7 @@ jobs:
         run: |
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Download Smoke binary (Linux)
+      - name: Download Smoke binary (macOS)
         uses: giantswarm/install-binary-action@v1.0.0
         if: runner.os == 'macOS'
         with:
@@ -273,7 +273,7 @@ jobs:
 
       - name: Download Smoke binary (Linux)
         uses: giantswarm/install-binary-action@v1.0.0
-        if: runner.os == 'macOS'
+        if: runner.os == 'Linux'
         with:
           binary: "smoke"
           version: "2.3.1"
