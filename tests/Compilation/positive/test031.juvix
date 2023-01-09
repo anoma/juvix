@@ -1,0 +1,22 @@
+-- nested lists
+module test031;
+
+open import Stdlib.Prelude;
+
+mklst : Nat → List Nat;
+mklst zero := nil;
+mklst (suc n) := suc n :: mklst n;
+
+mklst2 : Nat → List (List Nat);
+mklst2 zero := nil;
+mklst2 (suc n) := mklst (suc n) :: mklst2 n;
+
+printListNatLn : List Nat → IO;
+printListNatLn nil := printStringLn "nil";
+printListNatLn (x :: xs) := printNat x >> printString " :: " >> printListNatLn xs;
+
+main : IO;
+main :=
+  printListNatLn (flatten (mklst2 4));
+
+end;

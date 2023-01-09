@@ -1,0 +1,29 @@
+-- Ackermann function (higher-order definition)
+module test030;
+
+open import Stdlib.Prelude;
+
+iterate : {A : Type} → (A → A) → Nat → A → A;
+iterate f zero x := x;
+iterate f (suc n) := f ∘ (iterate f n);
+
+plus : Nat → Nat → Nat;
+plus := iterate suc;
+
+mult : Nat → Nat → Nat;
+mult m n := iterate (plus n) m 0;
+
+exp : Nat → Nat → Nat;
+exp m n := iterate (mult m) n 1;
+
+ackermann : Nat → Nat → Nat;
+ackermann m := iterate (λ{f n := iterate f (suc n) 1}) m suc;
+
+main : IO;
+main :=
+  printNatLn (plus 3 7) >>
+  printNatLn (mult 3 7) >>
+  printNatLn (exp 3 7) >>
+  printNatLn (ackermann 3 7);
+
+end;

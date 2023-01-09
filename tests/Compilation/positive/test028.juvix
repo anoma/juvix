@@ -1,0 +1,56 @@
+-- streams without memoization
+module test028;
+
+open import Stdlib.Prelude;
+open import Stdlib.Data.Nat.Ord;
+
+case : {A : Type} -> {B : Type} -> A -> (A -> B) -> B;
+case expr b := b expr;
+
+type Unit := unit : Unit;
+
+type Stream := cons : Nat → (Unit → Stream) → Stream;
+
+force : (Unit → Stream) → Stream;
+force f := f unit;
+
+terminating
+sfilter : (Nat → Bool) → (Unit → Stream) → Unit → Stream;
+sfilter p s unit := case (force s) λ{
+  (cons h t) := if (p h) (cons h (sfilter p t)) (force (sfilter p t))
+};
+
+shead : Stream → Nat;
+shead (cons h _) := h;
+
+stail : Stream → Unit → Stream;
+stail (cons _ t) := t;
+
+snth : Nat → (Unit → Stream) → Nat;
+snth zero s := shead (force s);
+snth (suc n) s := snth n (stail (force s));
+
+terminating
+numbers : Nat → Unit → Stream;
+numbers n unit := cons n (numbers (suc n));
+
+indivisible : Nat → Nat → Bool;
+indivisible n x := not (mod x n == 0);
+
+terminating
+eratostenes : (Unit → Stream) → Unit → Stream;
+eratostenes s unit := case (force s) λ{
+  (cons n t) := cons n (eratostenes (sfilter (indivisible n) t))
+};
+
+primes : Unit → Stream;
+primes := eratostenes (numbers 2);
+
+main : IO;
+main :=
+  printNatLn (snth 10 primes) >>
+  printNatLn (snth 50 primes) >>
+  printNatLn (snth 100 primes) >>
+  printNatLn (snth 200 primes);
+
+end;
