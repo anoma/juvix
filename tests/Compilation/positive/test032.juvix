@@ -4,9 +4,6 @@ module test032;
 open import Stdlib.Prelude;
 open import Stdlib.Data.Nat.Ord;
 
-case : {A : Type} -> {B : Type} -> A -> (A -> B) -> B;
-case expr b := b expr;
-
 split : {A : Type} → Nat → List A → List A × List A;
 split zero xs := (nil, xs);
 split (suc n) nil := (nil, nil);

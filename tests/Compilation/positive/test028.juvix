@@ -4,9 +4,6 @@ module test028;
 open import Stdlib.Prelude;
 open import Stdlib.Data.Nat.Ord;
 
-case : {A : Type} -> {B : Type} -> A -> (A -> B) -> B;
-case expr b := b expr;
-
 type Unit := unit : Unit;
 
 type Stream := cons : Nat → (Unit → Stream) → Stream;

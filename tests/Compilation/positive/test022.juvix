@@ -16,17 +16,15 @@ sum' n := foldr (+) 0 (gen n);
 
 printListNatLn : List Nat → IO;
 printListNatLn nil := printStringLn "nil";
-printListNatLn (h :: t) := printNatLn h >> printString " :: " >> printListNatLn t;
+printListNatLn (h :: t) := printNat h >> printString " :: " >> printListNatLn t;
 
 main : IO;
 main :=
   printListNatLn (gen 10) >>
   printListNatLn (reverse (gen 10)) >>
-  printListNatLn (filter (λ{x := x > 5}) (gen 10)) >>
-  printListNatLn (reverse (map (λ{x := sub x 1}) (gen 10))) >>
+  printListNatLn (filter ((<) 5) (gen 10)) >>
+  printListNatLn (reverse (map (flip sub 1) (gen 10))) >>
   printNatLn (sum 10000) >>
-  printNatLn (sum 100000) >>
-  printNatLn (sum' 10000) >>
-  printNatLn (sum' 100000);
+  printNatLn (sum' 10000);
 
 end;

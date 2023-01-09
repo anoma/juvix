@@ -3,9 +3,6 @@ module test037;
 
 open import Stdlib.Prelude;
 
-case : {A : Type} -> {B : Type} -> A -> (A -> B) -> B;
-case expr b := b expr;
-
 f : List ((Nat → Nat) → Nat → Nat) → Nat;
 f l :=
   (case l λ{(x :: _) := x; nil := id})

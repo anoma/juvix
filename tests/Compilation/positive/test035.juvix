@@ -3,9 +3,6 @@ module test035;
 
 open import Stdlib.Prelude;
 
-case : {A : Type} -> {B : Type} -> A -> (A -> B) -> B;
-case expr b := b expr;
-
 lgen : Nat → List Nat;
 lgen zero := nil;
 lgen (suc n) := suc n :: lgen n;

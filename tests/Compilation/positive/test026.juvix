@@ -5,9 +5,6 @@ open import Stdlib.Prelude;
 
 type Queue (A : Type) := queue : List A → List A → Queue A;
 
-case : {A : Type} -> {B : Type} -> A -> (A -> B) -> B;
-case expr b := b expr;
-
 qfst : {A : Type} → Queue A → List A;
 qfst (queue x _) := x;
 
@@ -52,6 +49,6 @@ printListNatLn nil := printStringLn "nil";
 printListNatLn (h :: t) := printNatLn h >> printString " :: " >> printListNatLn t;
 
 main : IO;
-main := printListNatLn (f 100 empty);
+main := printListNatLn (f 100 empty); -- list of numbers from 1 to 100
 
 end;

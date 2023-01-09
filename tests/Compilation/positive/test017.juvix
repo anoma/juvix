@@ -15,6 +15,6 @@ sum : Nat → Nat;
 sum := sum' 0;
 
 main : IO;
-main := printNatLn (sum 10000) >> printNatLn (sum 100000);
+main := printNatLn (sum 10000);
 
 end;

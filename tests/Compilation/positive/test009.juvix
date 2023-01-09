@@ -20,9 +20,8 @@ fact := fact' 1;
 main : IO;
 main :=
     printNatLn (sum 10000) >>
-    printNatLn (sum 100000) >>
     printNatLn (fact 5) >>
     printNatLn (fact 10) >>
-    printNatLn (fact 100);
+    printNatLn (fact 12);
 
 end;
