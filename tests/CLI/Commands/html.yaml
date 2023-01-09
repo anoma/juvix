@@ -1,0 +1,63 @@
+working-directory: ./../../../examples/
+
+tests:
+  - name: html-stdout
+    command:
+      shell:
+        - bash
+      script: |
+        cd milestone/ValidityPredicates
+        juvix html SimpleFungibleToken.juvix
+        cat html/SimpleFungibleToken.html
+    stdout: 
+      contains:
+        <!DOCTYPE HTML>
+    exit-status: 0
+
+  - name: output-dir
+    command:
+      shell:
+        - bash
+      script: |
+        rm -rf html
+        juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --output-dir=html
+        [ -d html/assets ]
+        [ -f html/SimpleFungibleToken.html ]
+    stdout: 
+      equals: |
+        Writing SimpleFungibleToken.html
+    exit-status: 0
+
+  - name: recursive-generation
+    command:
+      shell:
+        - bash
+      script: |
+        rm -rf html
+        juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --output-dir=html --recursive
+        [ -d html/assets ]
+        [ -f html/SimpleFungibleToken.html ]
+        (ls html | wc -l)
+        cd html
+        [ -f Stdlib.Data.Ord.html ]
+        [ -f Stdlib.Data.String.html ]
+        [ -f Stdlib.Data.Nat.html ]
+        [ -f Stdlib.System.IO.html ]
+        [ -f Stdlib.Function.html ]
+        [ -f Stdlib.Data.List.html ]
+        [ -f Stdlib.Data.String.Ord.html ]
+        [ -f Stdlib.Data.Product.html ]
+        [ -f Data.Int.Ops.html ]
+        [ -f Stdlib.Data.Maybe.html ]
+        [ -f Data.Int.html ]
+        [ -f Stdlib.Data.Bool.html ]
+        [ -f Stdlib.Prelude.html ]
+        [ -f Anoma.Base.html ]
+        [ -f SimpleFungibleToken.html ]
+        [ -f assets/highlight.js   ]
+        [ -f assets/source-ayu-light.css ]
+        [ -f assets/source-nord.css ]
+    stdout: 
+      contains: |
+        Writing SimpleFungibleToken.html
+    exit-status: 0
