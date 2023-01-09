@@ -267,7 +267,18 @@ isType = \case
   NPrim {} -> True
   NTyp {} -> True
   NDyn {} -> True
-  _ -> False
+  NVar {} -> False
+  NIdt {} -> False
+  NCst {} -> False
+  NApp {} -> False
+  NBlt {} -> False
+  NCtr {} -> False
+  NLam {} -> False
+  NLet {} -> False
+  NRec {} -> False
+  NCase {} -> False
+  NMatch {} -> False
+  Closure {} -> False
 
 {------------------------------------------------------------------------}
 {- functions on Pattern -}

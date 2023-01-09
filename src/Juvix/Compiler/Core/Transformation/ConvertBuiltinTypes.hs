@@ -12,7 +12,7 @@ convertNode tab = umap go
   where
     go :: Node -> Node
     go node = case node of
-      NTyp (TypeConstr {..}) ->
+      NTyp TypeConstr {..} ->
         case ii ^. inductiveBuiltin of
           Just BuiltinBool -> mkTypeBool'
           _ -> node

@@ -26,6 +26,7 @@ mkTypeFun args tgt = case args of
 unfoldType :: Type -> ([Type], Type)
 unfoldType ty = (typeArgs ty, typeTarget ty)
 
+-- converts e.g. `A -> B -> C -> D` to `(A, B, C) -> D` where `D` is an atom
 uncurryType :: Type -> Type
 uncurryType ty = case typeArgs ty of
   [] ->
@@ -34,6 +35,8 @@ uncurryType ty = case typeArgs ty of
     let ty' = uncurryType (typeTarget ty)
      in mkTypeFun (tyargs ++ typeArgs ty') (typeTarget ty')
 
+-- converts e.g. `(A, B, C) -> (D, E) -> F` to `A -> B -> C -> D -> E -> F`
+-- where `F` is an atom
 curryType :: Type -> Type
 curryType ty = case typeArgs ty of
   [] ->
@@ -106,15 +109,20 @@ unifyTypes' :: Member (Error AsmError) r => Maybe Location -> InfoTable -> Type 
 unifyTypes' loc tab ty1 ty2 =
   runReader loc $
     runReader tab $
+    -- The `if` is to ensure correct behaviour with dynamic type targets. E.g.
+    -- `(A, B) -> *` should unify with `A -> B -> C -> D`.
       if
-          | typeTarget (uncurryType ty1) == TyDynamic && typeTarget (uncurryType ty2) == TyDynamic ->
+          | tgt1 == TyDynamic && tgt2 == TyDynamic ->
               unifyTypes (curryType ty1) (curryType ty2)
-          | typeTarget (uncurryType ty1) == TyDynamic ->
+          | tgt1 == TyDynamic ->
               unifyTypes (uncurryType ty1) ty2
-          | typeTarget (uncurryType ty2) == TyDynamic ->
+          | tgt2 == TyDynamic ->
               unifyTypes ty1 (uncurryType ty2)
           | otherwise ->
               unifyTypes ty1 ty2
+  where
+    tgt1 = uncurryType ty1
+    tgt2 = uncurryType ty2
 
 isSubtype :: Type -> Type -> Bool
 isSubtype ty1 ty2 = case (ty1, ty2) of

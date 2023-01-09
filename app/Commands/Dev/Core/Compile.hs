@@ -14,16 +14,15 @@ runCommand :: forall r. Members '[Embed IO, App] r => CoreCompileOptions -> Sem 
 runCommand opts = do
   file <- getFile
   s <- embed (readFile (toFilePath file))
-  case Core.runParserMain (toFilePath file) Core.emptyInfoTable s of
-    Left err -> exitJuvixError (JuvixError err)
-    Right tab -> case run $ runError $ coreToMiniC asmOpts tab of
-      Left err -> exitJuvixError err
-      Right C.MiniCResult {..} -> do
-        buildDir <- askBuildDir
-        ensureDir buildDir
-        cFile <- inputCFile file
-        embed $ TIO.writeFile (toFilePath cFile) _resultCCode
-        Compile.runCommand opts {_compileInputFile = AppPath (Abs cFile) False}
+  tab <- getRight (mapLeft JuvixError (Core.runParserMain (toFilePath file) Core.emptyInfoTable s))
+  case run $ runError $ coreToMiniC asmOpts tab of
+    Left err -> exitJuvixError err
+    Right C.MiniCResult {..} -> do
+      buildDir <- askBuildDir
+      ensureDir buildDir
+      cFile <- inputCFile file
+      embed $ TIO.writeFile (toFilePath cFile) _resultCCode
+      Compile.runCommand opts {_compileInputFile = AppPath (Abs cFile) False}
   where
     getFile :: Sem r (Path Abs File)
     getFile = someBaseToAbs' (opts ^. compileInputFile . pathPath)

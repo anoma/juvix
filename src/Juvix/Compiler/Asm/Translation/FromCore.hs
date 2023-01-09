@@ -173,10 +173,11 @@ genCode infoTable fi =
           | _caseBranchTag == Core.BuiltinTag Core.TagFalse ->
               compileIf _caseValue (fromMaybe branchFailure _caseDefault) (br ^. Core.caseBranchBody)
         [br1, br2]
-          | br1 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagTrue ->
+          | br1 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagTrue &&
+            br2 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagFalse ->
               compileIf _caseValue (br1 ^. Core.caseBranchBody) (br2 ^. Core.caseBranchBody)
-        [br1, br2]
-          | br1 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagFalse ->
+          | br1 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagFalse &&
+            br2 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagTrue ->
               compileIf _caseValue (br2 ^. Core.caseBranchBody) (br1 ^. Core.caseBranchBody)
         _ ->
           DL.snoc
@@ -291,12 +292,8 @@ convertType argsNum ty =
   case ty of
     Core.TyDynamic ->
       TyDynamic
-    Core.TyPrim (Core.PrimInteger Core.PrimIntegerInfo {..}) ->
-      TyInteger (TypeInteger _infoMinValue _infoMaxValue)
-    Core.TyPrim (Core.PrimBool Core.PrimBoolInfo {..}) ->
-      TyBool (TypeBool _infoTrueTag _infoFalseTag)
-    Core.TyPrim Core.PrimString ->
-      TyString
+    Core.TyPrim x ->
+      convertPrimitiveType x
     Core.TyApp Core.TypeApp {..} ->
       TyInductive (TypeInductive _typeAppSymbol)
     Core.TyFun {} ->
@@ -305,6 +302,17 @@ convertType argsNum ty =
           tgt' = convertType 0 tgt
        in mkTypeFun (take argsNum tyargs') (mkTypeFun (drop argsNum tyargs') tgt')
 
+convertPrimitiveType :: Core.Primitive -> Type
+convertPrimitiveType = \case
+  Core.PrimInteger Core.PrimIntegerInfo {..} ->
+    TyInteger (TypeInteger _infoMinValue _infoMaxValue)
+  Core.PrimBool Core.PrimBoolInfo {..} ->
+    TyBool (TypeBool _infoTrueTag _infoFalseTag)
+  Core.PrimString ->
+    TyString
+
+-- `convertNestedType` ensures that the conversion of a type with Dynamic in the
+-- target is curried. The result of `convertType 0 ty` is always uncurried.
 convertNestedType :: Core.Type -> Type
 convertNestedType ty =
   case ty of
