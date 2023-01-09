@@ -284,7 +284,7 @@ genCode infoTable fi =
     snocPopTemp False code = DL.snoc code (mkInstr PopTemp)
     snocPopTemp True code = code
 
--- Be mindful that JuvixAsm types are explicitly uncurried, while
+-- | Be mindful that JuvixAsm types are explicitly uncurried, while
 -- Core.Stripped types are always curried. If a function takes `n` arguments,
 -- then the first `n` arguments should be uncurried in its JuvixAsm type.
 convertType :: Int -> Core.Type -> Type
@@ -311,7 +311,7 @@ convertPrimitiveType = \case
   Core.PrimString ->
     TyString
 
--- `convertNestedType` ensures that the conversion of a type with Dynamic in the
+-- | `convertNestedType` ensures that the conversion of a type with Dynamic in the
 -- target is curried. The result of `convertType 0 ty` is always uncurried.
 convertNestedType :: Core.Type -> Type
 convertNestedType ty =

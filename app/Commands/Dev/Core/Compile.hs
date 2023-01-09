@@ -15,14 +15,12 @@ runCommand opts = do
   file <- getFile
   s <- embed (readFile (toFilePath file))
   tab <- getRight (mapLeft JuvixError (Core.runParserMain (toFilePath file) Core.emptyInfoTable s))
-  case run $ runError $ coreToMiniC asmOpts tab of
-    Left err -> exitJuvixError err
-    Right C.MiniCResult {..} -> do
-      buildDir <- askBuildDir
-      ensureDir buildDir
-      cFile <- inputCFile file
-      embed $ TIO.writeFile (toFilePath cFile) _resultCCode
-      Compile.runCommand opts {_compileInputFile = AppPath (Abs cFile) False}
+  C.MiniCResult {..} <- getRight (run (runError (coreToMiniC asmOpts tab :: Sem '[Error JuvixError] C.MiniCResult)))
+  buildDir <- askBuildDir
+  ensureDir buildDir
+  cFile <- inputCFile file
+  embed $ TIO.writeFile (toFilePath cFile) _resultCCode
+  Compile.runCommand opts {_compileInputFile = AppPath (Abs cFile) False}
   where
     getFile :: Sem r (Path Abs File)
     getFile = someBaseToAbs' (opts ^. compileInputFile . pathPath)
