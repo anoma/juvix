@@ -74,15 +74,14 @@ parseGlobalFlags = do
   _globalBuildDir <-
     optional
       ( parseBuildDir
-          ( value (Rel relBuildDir)
-              <> showDefault
-              <> help "directory for compiler internal output"
+          ( long "internal-build-dir"
+              <> help "Directory for compiler internal output"
           )
       )
   _globalNoApe <-
     switch
       ( long "no-format"
-          <> help "disable the new pretty printing algorithm"
+          <> help "Disable the new pretty printing algorithm"
       )
   _globalStdin <-
     switch
@@ -116,10 +115,10 @@ parseBuildDir m = do
   _pathPath <-
     option
       someDirOpt
-      ( long "internal-build-dir"
+      ( value (Rel relBuildDir)
           <> metavar "BUILD_DIR"
-          <> help "Path to output directory"
           <> action "directory"
+          <> showDefault
           <> m
       )
   pure AppPath {_pathIsInput = False, ..}
