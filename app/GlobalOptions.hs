@@ -111,7 +111,6 @@ parseGlobalFlags = do
       )
   return GlobalOptions {..}
 
-
 parseBuildDir :: Mod OptionFields (SomeBase Dir) -> Parser (AppPath Dir)
 parseBuildDir m = do
   _pathPath <-
