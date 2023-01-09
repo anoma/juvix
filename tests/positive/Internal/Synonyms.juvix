@@ -1,0 +1,21 @@
+module Synonyms;
+
+open import Stdlib.Prelude;
+
+Ty1 : Type;
+Ty1 := Bool → Bool;
+
+Ty2 : Type;
+Ty2 := Ty1;
+
+k : Ty2;
+k x := x;
+
+appTy : Type;
+appTy := {A : Type} → (A → A) → A → A;
+
+-- we need the explicit `{_}` since we do not normalize types in the arity checker
+t : appTy;
+t {_} f x := x;
+
+end;
