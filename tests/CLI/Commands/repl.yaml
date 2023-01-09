@@ -77,8 +77,10 @@ tests:
       - repl
     stdin: "true && false"
     stdout: 
-      contains:
-        "false"
+      matches: |
+        Juvix REPL .*
+        OK loaded: .*
+        Stdlib.Prelude> false
     exit-status: 0    
 
   - name: eval-and-operations-with-spaces

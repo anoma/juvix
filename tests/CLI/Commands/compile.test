@@ -1,16 +1,51 @@
-$ juvix compile --help
-> /Usage: juvix compile \[\-t\|\-\-target TARGET\] \[\-r\|\-\-runtime RUNTIME\] 
-                     \[\-o\|\-\-output OUTPUT_FILE\] JUVIX_FILE.*/
->= 0
+working-directory: ./../../../tests
 
-$ cd tests/positive/MiniC/HelloWorld && juvix compile Input.juvix -o hello.wasm
->
->= 0
+tests:
+  - name: shows-file-argument-for-autocompletion
+    command:
+      - juvix
+      - compile
+      - --help
+    stdout:
+      contains:
+        JUVIX_FILE
+    exit-status: 0
 
-$ cd examples/milestone/HelloWorld && juvix compile -t native HelloWorld.juvix && ./HelloWorld
-hello world!
->= 0
+  - name: minic-compilation
+    command:
+      shell:
+        - bash
+      script: |
+        juvix compile positive/MiniC/HelloWorld/Input.juvix -o hello.wasm
+        [ -f hello.wasm ]
+        
+    stdout: ""
+    exit-status: 0
+  
+  - name: hello-world
+    command:
+      shell:
+        - bash
+      script: |
+        cd ./../examples/milestone/HelloWorld
+        juvix compile HelloWorld.juvix
+        [ -f HelloWorld ] 
+        ./HelloWorld
+    exit-status: 0
+    stdout: |
+      hello world!
 
-$ temp=$(mktemp -d) && cd examples/milestone/HelloWorld && juvix compile HelloWorld.juvix --internal-build-dir "$temp" && find "$temp"| wc -l && rm -rf "$temp"
-> /\s*([2-9]|[1-9][0-9]+)/
->= 0
+  - name: flag-internal-build-dir
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        cd ./../examples/milestone/HelloWorld
+        juvix compile HelloWorld.juvix --internal-build-dir "$temp"
+        find "$temp" | wc -l
+        rm -rf "$temp"
+    stdout:
+      matches: |
+        \s*([2-9]|[1-9][0-9]+)
+    exit-status: 0
