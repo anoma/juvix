@@ -121,8 +121,8 @@ unifyTypes' loc tab ty1 ty2 =
           | otherwise ->
               unifyTypes ty1 ty2
   where
-    tgt1 = uncurryType ty1
-    tgt2 = uncurryType ty2
+    tgt1 = typeTarget (uncurryType ty1)
+    tgt2 = typeTarget (uncurryType ty2)
 
 isSubtype :: Type -> Type -> Bool
 isSubtype ty1 ty2 = case (ty1, ty2) of
