@@ -109,8 +109,8 @@ unifyTypes' :: Member (Error AsmError) r => Maybe Location -> InfoTable -> Type 
 unifyTypes' loc tab ty1 ty2 =
   runReader loc $
     runReader tab $
-    -- The `if` is to ensure correct behaviour with dynamic type targets. E.g.
-    -- `(A, B) -> *` should unify with `A -> B -> C -> D`.
+      -- The `if` is to ensure correct behaviour with dynamic type targets. E.g.
+      -- `(A, B) -> *` should unify with `A -> B -> C -> D`.
       if
           | tgt1 == TyDynamic && tgt2 == TyDynamic ->
               unifyTypes (curryType ty1) (curryType ty2)

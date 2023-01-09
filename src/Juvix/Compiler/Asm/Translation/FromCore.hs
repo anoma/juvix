@@ -173,11 +173,11 @@ genCode infoTable fi =
           | _caseBranchTag == Core.BuiltinTag Core.TagFalse ->
               compileIf _caseValue (fromMaybe branchFailure _caseDefault) (br ^. Core.caseBranchBody)
         [br1, br2]
-          | br1 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagTrue &&
-            br2 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagFalse ->
+          | br1 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagTrue
+              && br2 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagFalse ->
               compileIf _caseValue (br1 ^. Core.caseBranchBody) (br2 ^. Core.caseBranchBody)
-          | br1 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagFalse &&
-            br2 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagTrue ->
+          | br1 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagFalse
+              && br2 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagTrue ->
               compileIf _caseValue (br2 ^. Core.caseBranchBody) (br1 ^. Core.caseBranchBody)
         _ ->
           DL.snoc
