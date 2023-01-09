@@ -1,3 +1,6 @@
 ghc-options:
   "$locals": -optP-Wno-nonportable-include-path
 resolver: lts-20.2
+extra-deps:
+- github: SamirTalwar/smoke
+  commit: master

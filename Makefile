@@ -9,6 +9,7 @@ ASSETS = 	seating-mascot.051c86a.svg \
 
 ORGFILES = $(shell find docs/org -type f -name '*.org')
 MDFILES:=$(patsubst docs/org/%,docs/md/%,$(ORGFILES:.org=.md))
+SMOKETESTS= $(shell find tests/ -type f -name '*.smoke.yaml')
 
 EXAMPLEMILESTONE=examples/milestone
 EXAMPLEHTMLOUTPUT=_docs/examples/html
@@ -163,14 +164,14 @@ MAKE=make ${MAKEAUXFLAGS}
 
 STACKFLAGS?=--jobs $(THREADS)
 STACKTESTFLAGS?=--ta --hide-successes --ta --ansi-tricks=false
-SHELLTESTFLAGS?=--color --diff -a --hide-successes
+SMOKEFLAGS?=--color --diff=git
 
 .PHONY: check
 check: clean
 	@${MAKE} build
 	@${MAKE} install
 	@${MAKE} test
-	@${MAKE} test-shell
+	@${MAKE} smoke
 	@${MAKE} format
 	@${MAKE} pre-commit
 
@@ -221,12 +222,13 @@ test-skip-slow:
 fast-test-skip-slow:
 	@stack test --fast ${STACKFLAGS} ${STACKTESTFLAGS} --ta '-p "! /slow tests/"'
 
-SHELLTEST := $(shell command -v shelltest 2> /dev/null)
+SMOKE := $(shell command -v smoke 2> /dev/null)
 
-.PHONY : test-shell
-test-shell : install
-	@$(if $(SHELLTEST),, stack install shelltestrunner)
-	shelltest ${SHELLTESTFLAGS} tests
+.PHONY : smoke
+smoke: 
+	@$(if $(SHELLTEST),, stack install smoke)
+	@find tests/ -type f -name '*.smoke.yaml' \
+		-exec sh -c "echo -n 'Running {}'; echo ; ${SMOKE} ${SMOKEFLAGS} {}" \;
 
 # -- Release
 

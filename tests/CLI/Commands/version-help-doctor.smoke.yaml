@@ -1,9 +1,4 @@
-
 tests:
-
-# ------------------------------------------------------------------------------
-# -- Version, help, doctor commands
-# ------------------------------------------------------------------------------
   - name: cli-flag-version
     command:
       - juvix
@@ -39,16 +34,4 @@ tests:
       > Checking that WASI_SYSROOT_PATH is set...
       > Checking for wasmer...
 
-# ------------------------------------------------------------------------------
-# -- Typechecking
-# ------------------------------------------------------------------------------
 
-  - name: cli-cmd-typecheck --help
-    command:
-      - juvix 
-      - typecheck 
-      - --help
-    exit-status: 0
-    matches:
-      regex: |-
-        ^Usage: juvix typecheck JUVIX\_FILE.*
