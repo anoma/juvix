@@ -73,16 +73,15 @@ parseGlobalFlags = do
       )
   _globalBuildDir <-
     optional
-      ( parseGenericOutputDir
-          ( value (Rel relBuildDir)
-              <> showDefault
-              <> help "directory for compiler output"
+      ( parseBuildDir
+          ( long "internal-build-dir"
+              <> help "Directory for compiler internal output"
           )
       )
   _globalNoApe <-
     switch
       ( long "no-format"
-          <> help "disable the new pretty printing algorithm"
+          <> help "Disable the new pretty printing algorithm"
       )
   _globalStdin <-
     switch
@@ -110,3 +109,16 @@ parseGlobalFlags = do
           <> help "Do not use the standard library"
       )
   return GlobalOptions {..}
+
+parseBuildDir :: Mod OptionFields (SomeBase Dir) -> Parser (AppPath Dir)
+parseBuildDir m = do
+  _pathPath <-
+    option
+      someDirOpt
+      ( value (Rel relBuildDir)
+          <> metavar "BUILD_DIR"
+          <> action "directory"
+          <> showDefault
+          <> m
+      )
+  pure AppPath {_pathIsInput = False, ..}
