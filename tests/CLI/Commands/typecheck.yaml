@@ -1,35 +1,44 @@
+working-directory: ./../../../tests/
 tests:
   - name: typecheck-help
     command: 
       - juvix 
       - typecheck
+      - --help
     exit-status: 0
     stdout:
       contains:
-        "Usage: juvix typecheck JUVIX\_FILE"
+        "Usage: juvix typecheck JUVIX_FILE"
 
-# $ juvix typecheck --help
-# > /Usage: juvix typecheck JUVIX\_FILE.*/
-# >= 0
+  - name: typecheck-simple
+    command:
+      - juvix
+      - typecheck
+    args:
+      - positive/Internal/Simple.juvix
+    exit-status: 0
+    stdout: "Well done! It type checks\n"
 
-# $ juvix typecheck tests/positive/Internal/Simple.juvix
-# >
-# Well done! It type checks
-# >= 0
+  - name: typecheck-only-errors
+    command:
+      - juvix
+      - --only-errors
+      - typecheck
+    args:
+      - positive/Internal/Simple.juvix
+    exit-status: 0
+    stdout: ""
 
-# $ juvix --only-errors typecheck tests/positive/Internal/Simple.juvix
-# >
-# >= 0
-
-# $ juvix --only-errors typecheck tests/positive/Internal/Simple.juvix
-# >
-# >= 0
-
-# $ juvix --only-errors typecheck tests/positive/Internal/Simple.juvix
-# >
-# >= 0
-
-# $ juvix --no-colors typecheck tests/negative/Internal/MultiWrongType.juvix
-# >2 /(.+)\/([^\/]+)\.juvix\:[0-9]*\:[0-9]*\-[0-9]*\: error.*
-# .*/
-# >= 1
+  - name: typechecking-error
+    command:
+      - juvix
+      - --no-colors
+      - typecheck
+    args:
+      - negative/Internal/MultiWrongType.juvix
+    exit-status: 1
+    stdout: ""
+    stderr: 
+      matches:
+        regex: |-
+          (.+)\/([^\/]+)\.juvix\:[0-9]*\:[0-9]*\-[0-9]*\: error
