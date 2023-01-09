@@ -110,3 +110,17 @@ parseGlobalFlags = do
           <> help "Do not use the standard library"
       )
   return GlobalOptions {..}
+
+
+parseBuildDir :: Mod OptionFields (SomeBase Dir) -> Parser (AppPath Dir)
+parseBuildDir m = do
+  _pathPath <-
+    option
+      someDirOpt
+      ( long "internal-build-dir"
+          <> metavar "BUILD_DIR"
+          <> help "Path to output directory"
+          <> action "directory"
+          <> m
+      )
+  pure AppPath {_pathIsInput = False, ..}
