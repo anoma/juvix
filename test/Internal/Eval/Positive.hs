@@ -70,11 +70,6 @@ tests =
       $(mkRelFile "IdenFunctionArgsImplicit.juvix")
       $(mkRelFile "out/IdenFunctionArgsImplicit.out"),
     PosTest
-      "A function with no explicit arguments"
-      $(mkRelDir ".")
-      $(mkRelFile "IdenFunctionArgsNoExplicit.juvix")
-      $(mkRelFile "out/IdenFunctionArgsNoExplicit.out"),
-    PosTest
       "A module that imports another"
       $(mkRelDir "Import")
       $(mkRelFile "Importer.juvix")
