@@ -104,7 +104,9 @@ instance PrettyCode Function where
     return $ funParameter' <+> kwArrow <+> funReturn'
 
 instance PrettyCode Hole where
-  ppCode _ = return kwHole
+  ppCode h = do
+    showNameId <- asks (^. optShowNameIds)
+    return (addNameIdTag showNameId (h ^. holeId) kwHole)
 
 instance PrettyCode InductiveConstructorDef where
   ppCode c = do

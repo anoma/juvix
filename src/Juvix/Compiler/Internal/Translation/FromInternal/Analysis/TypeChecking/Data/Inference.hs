@@ -1,4 +1,3 @@
--- TODO: RENAME!
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
   ( module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference,
     module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.FunctionsTable,
@@ -7,6 +6,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.FunctionsTable
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
@@ -63,9 +63,14 @@ closeState = \case
       Sem r' ()
     f m = mapM_ goHole (HashMap.keys m)
       where
+        getState :: Hole -> MetavarState
+        getState h = fromMaybe err (m ^. at h)
+          where
+            err :: a
+            err = error ("Impossible: could not find the state for the hole " <> ppTrace h)
         goHole :: Hole -> Sem r' Expression
         goHole h =
-          let st = fromJust (m ^. at h)
+          let st = getState h
            in case st of
                 Fresh -> throw (ErrUnsolvedMeta (UnsolvedMeta h))
                 Refined t -> do
