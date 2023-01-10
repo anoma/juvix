@@ -564,10 +564,19 @@ parsePatternAtoms = do
 
 functionClause :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => Symbol -> ParsecS r (FunctionClause 'Parsed)
 functionClause _clauseOwnerFunction = do
-  _clausePatterns <- P.many patternAtom
-  kw kwAssign
+  _clausePatterns <-functionClausePatterns
   _clauseBody <- parseExpressionAtoms
   return FunctionClause {..}
+
+functionClausePatterns :: forall r . Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r [PatternAtom 'Parsed]
+functionClausePatterns =
+  P.manyTill patternAtom (kw kwAssign <|> wrongEq)
+  where
+    wrongEq :: ParsecS r ()
+    wrongEq = do
+      P.chunk "="
+      off <- P.getOffset
+      parseFailure off "expected \":=\" instead of \"=\""
 
 --------------------------------------------------------------------------------
 -- Module declaration
