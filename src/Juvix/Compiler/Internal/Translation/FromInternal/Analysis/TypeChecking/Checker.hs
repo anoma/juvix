@@ -300,15 +300,17 @@ checkClause clauseType clausePats body = do
     go :: [PatternArg] -> Expression -> Sem (State LocalVars ': r) Expression
     go pats bodyTy = case pats of
       [] -> return bodyTy
-      (p : ps) -> case bodyTy of
-        ExpressionHole h -> do
-          fun <- holeRefineToFunction h
-          go pats (ExpressionFunction fun)
-        _ -> case unfoldFunType bodyTy of
-          ([], _) -> error "too many patterns"
-          (par : pars, ret) -> do
-            checkPattern par p
-            go ps (foldFunType pars ret)
+      (p : ps) -> do
+        bodyTy' <- weakNormalize bodyTy
+        case bodyTy' of
+          ExpressionHole h -> do
+            fun <- holeRefineToFunction h
+            go pats (ExpressionFunction fun)
+          _ -> case unfoldFunType bodyTy' of
+            ([], _) -> error "too many patterns"
+            (par : pars, ret) -> do
+              checkPattern par p
+              go ps (foldFunType pars ret)
 
 -- | Refines a hole into a function type. I.e. '_@1' is matched with '_@fresh → _@fresh'
 holeRefineToFunction :: Members '[Inference, NameIdGen] r => Hole -> Sem r Function
@@ -610,35 +612,37 @@ inferExpression' hint e = case e of
     goApplication (Application l r iapp) = inferExpression' Nothing l >>= helper
       where
         helper :: TypedExpression -> Sem r TypedExpression
-        helper l' = case l' ^. typedType of
-          ExpressionFunction (Function (FunctionParameter paraName ifun funL) funR) -> do
-            r' <- checkExpression funL r
-            unless (iapp == ifun) (error "implicitness mismatch")
-            return
-              TypedExpression
-                { _typedExpression =
-                    ExpressionApplication
-                      Application
-                        { _appLeft = l' ^. typedExpression,
-                          _appRight = r',
-                          _appImplicit = iapp
-                        },
-                  _typedType = substitutionApp (paraName, r') funR
-                }
-          ExpressionHole h -> do
-            fun <- ExpressionFunction <$> holeRefineToFunction h
-            helper (set typedType fun l')
-          _ -> throw tyErr
-            where
-              tyErr :: TypeCheckerError
-              tyErr =
-                ErrExpectedFunctionType
-                  ( ExpectedFunctionType
-                      { _expectedFunctionTypeExpression = e,
-                        _expectedFunctionTypeApp = l,
-                        _expectedFunctionTypeType = l' ^. typedType
-                      }
-                  )
+        helper l' = do
+          l'ty <- weakNormalize (l' ^. typedType)
+          case l'ty of
+            ExpressionFunction (Function (FunctionParameter paraName ifun funL) funR) -> do
+              r' <- checkExpression funL r
+              unless (iapp == ifun) (error "implicitness mismatch")
+              return
+                TypedExpression
+                  { _typedExpression =
+                      ExpressionApplication
+                        Application
+                          { _appLeft = l' ^. typedExpression,
+                            _appRight = r',
+                            _appImplicit = iapp
+                          },
+                    _typedType = substitutionApp (paraName, r') funR
+                  }
+            ExpressionHole h -> do
+              fun <- ExpressionFunction <$> holeRefineToFunction h
+              helper (set typedType fun l')
+            _ -> throw tyErr
+              where
+                tyErr :: TypeCheckerError
+                tyErr =
+                  ErrExpectedFunctionType
+                    ( ExpectedFunctionType
+                        { _expectedFunctionTypeExpression = e,
+                          _expectedFunctionTypeApp = l,
+                          _expectedFunctionTypeType = l' ^. typedType
+                        }
+                    )
 
 viewInductiveApp ::
   Members '[Error TypeCheckerError, Inference, Reader FunctionsTable] r =>

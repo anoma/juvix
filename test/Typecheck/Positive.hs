@@ -177,5 +177,9 @@ tests =
     PosTest
       "Issue 1693 (Inference and higher order functions)"
       $(mkRelDir "issue1693")
-      $(mkRelFile "M.juvix")
+      $(mkRelFile "M.juvix"),
+    PosTest
+      "Issue 1704 (Type synonyms)"
+      $(mkRelDir "Internal")
+      $(mkRelFile "Synonyms.juvix")
   ]
