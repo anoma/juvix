@@ -51,7 +51,7 @@ RUN sudo bash -c 'curl -sSL https://get.haskellstack.org/ | sh'
 ENV PATH=${PATH}:/home/vscode/.ghcup/bin
 ENV PATH=${PATH}:/home/vscode/.local/bin
 
-RUN sudo bash -c 'curl https://get.wasmer.io -sSfL | sudo WASMER_DIR=/home/vscode/.local/bin sh'
+RUN sudo bash -c 'curl https://get.wasmer.io -sSfL | sudo WASMER_DIR=/home/vscode/.local sh'
 RUN sudo bash -c 'mkdir -p /home/vscode/.local/bin'
 RUN sudo bash -c 'mkdir -p /home/vscode/.juvix'
 RUN sudo bash -c 'curl -s https://api.github.com/repos/anoma/juvix/releases/latest \
