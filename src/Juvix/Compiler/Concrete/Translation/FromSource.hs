@@ -564,11 +564,11 @@ parsePatternAtoms = do
 
 functionClause :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => Symbol -> ParsecS r (FunctionClause 'Parsed)
 functionClause _clauseOwnerFunction = do
-  _clausePatterns <-functionClausePatterns
+  _clausePatterns <- functionClausePatterns
   _clauseBody <- parseExpressionAtoms
   return FunctionClause {..}
 
-functionClausePatterns :: forall r . Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r [PatternAtom 'Parsed]
+functionClausePatterns :: forall r. Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r [PatternAtom 'Parsed]
 functionClausePatterns =
   P.manyTill patternAtom (kw kwAssign <|> wrongEq)
   where
