@@ -6,8 +6,15 @@
       "VARIANT": "ubuntu-22.04"
     }
   },
-  // "forwardPorts": [4000],
-  "postCreateCommand": "make install",
+
+	"runArgs": [
+		"--privileged"
+	],
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb",
+    "storage": "64gb"
+  },
   "settings" :{
       "editor.tabSize": 2,
       "editor.renderWhitespace": "trailing",
@@ -37,12 +44,13 @@
       "haskell.plugin.tactics.hoverOn": true,
       "haskell.trace.client": "debug",
       "haskell.upgradeGHCup": true,
-      "haskell.indentationRules.enabled": true
+      "haskell.indentationRules.enabled": true,
+      "Heliax.juvix-mode.opts.internalBuildDir": "/home/vscode/.juvix"
   },
   "extensions": [
     "haskell.haskell",
     "ms-vscode.cpptools",
-    "heliax.juvix-mode"
+    "Heliax.juvix-mode"
   ],
   "remoteUser": "vscode"
 }
