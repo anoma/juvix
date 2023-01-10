@@ -3,27 +3,30 @@ module test027;
 
 open import Stdlib.Prelude;
 
-czero : {A : Type} → (A → A) → A → A;
-czero f x := x;
+Num : Type;
+Num := {A : Type} → (A → A) → A → A;
 
-csuc : ({A : Type} → (A → A) → A → A) → {A : Type} → (A → A) → A → A;
-csuc n f := f ∘ n f;
+czero : Num;
+czero {_} f x := x;
 
-num : Nat → {A : Type} → (A → A) → A → A;
+csuc : Num → Num;
+csuc n {_} f := f ∘ n {_} f;
+
+num : Nat → Num;
 num zero := czero;
 num (suc n) := csuc (num n);
 
-add : ({A : Type} → (A → A) → A → A) → ({A : Type} → (A → A) → A → A) → {A : Type} → (A → A) → A → A;
-add n m f := n f ∘ m f;
+add : Num → Num → Num;
+add n m {_} f := n {_} f ∘ m {_} f;
 
-mul : ({A : Type} → (A → A) → A → A) → ({A : Type} → (A → A) → A → A) → {A : Type} → (A → A) → A → A;
-mul n m := n ∘ m;
+mul : Num → Num → Num;
+mul n m {_} := n {_} ∘ m {_};
 
-isZero : ({A : Type} → (A → A) → A → A) → Bool;
-isZero n := n (const false) true;
+isZero : Num → Bool;
+isZero n := n {_} (const false) true;
 
-toNat : ({A : Type} → (A → A) → A → A) → Nat;
-toNat n := n ((+) 1) 0;
+toNat : Num → Nat;
+toNat n := n {_} ((+) 1) 0;
 
 main : IO;
 main :=
