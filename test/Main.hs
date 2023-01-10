@@ -4,6 +4,7 @@ import Arity qualified
 import Asm qualified
 import BackendC qualified
 import Base
+import Compilation qualified
 import Core qualified
 import Internal qualified
 import Parsing qualified
@@ -21,7 +22,8 @@ slowTests =
       Core.allTests,
       Asm.allTests,
       Internal.allTests,
-      Runtime.allTests
+      Runtime.allTests,
+      Compilation.allTests
     ]
 
 fastTests :: TestTree

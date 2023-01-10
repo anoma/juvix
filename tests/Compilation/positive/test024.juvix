@@ -1,4 +1,4 @@
--- nested case, let & if
+-- nested binders with variable capture
 module test024;
 
 open import Stdlib.Prelude;

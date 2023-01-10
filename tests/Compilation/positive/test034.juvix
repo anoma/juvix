@@ -1,4 +1,4 @@
--- letrec
+-- recursive let
 module test034;
 
 open import Stdlib.Prelude;
