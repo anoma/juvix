@@ -18,4 +18,5 @@ module M;
       + I 1
       + I (I I) I (I I I) 1
       + I I I (I I I (I I)) I (I I) I I I 1;
+
 end;

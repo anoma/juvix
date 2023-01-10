@@ -59,12 +59,18 @@ data FunctionDef = FunctionDef
     _funDefClauses :: NonEmpty FunctionClause,
     _funDefBuiltin :: Maybe BuiltinFunction
   }
+  deriving stock (Eq, Generic)
+
+instance Hashable FunctionDef
 
 data FunctionClause = FunctionClause
   { _clauseName :: FunctionName,
     _clausePatterns :: [PatternArg],
     _clauseBody :: Expression
   }
+  deriving stock (Eq, Generic)
+
+instance Hashable FunctionClause
 
 data Iden
   = IdenFunction Name
@@ -89,12 +95,27 @@ data TypedExpression = TypedExpression
     _typedExpression :: Expression
   }
 
+newtype LetClause
+  = LetFunDef FunctionDef
+  deriving stock (Eq, Generic)
+
+instance Hashable LetClause
+
+data Let = Let
+  { _letClauses :: NonEmpty LetClause,
+    _letExpression :: Expression
+  }
+  deriving stock (Eq, Generic)
+
+instance Hashable Let
+
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
   | ExpressionFunction Function
   | ExpressionLiteral LiteralLoc
   | ExpressionHole Hole
+  | ExpressionLet Let
   | ExpressionUniverse SmallUniverse
   | ExpressionSimpleLambda SimpleLambda
   | ExpressionLambda Lambda
@@ -106,6 +127,9 @@ data Example = Example
   { _exampleId :: NameId,
     _exampleExpression :: Expression
   }
+  deriving stock (Eq, Generic)
+
+instance Hashable Example
 
 data SimpleLambda = SimpleLambda
   { _slambdaVar :: VarName,
@@ -210,6 +234,7 @@ data Function = Function
 instance Hashable Function
 
 makeLenses ''Module
+makeLenses ''Let
 makeLenses ''MutualBlock
 makeLenses ''Example
 makeLenses ''PatternArg
@@ -236,6 +261,9 @@ instance HasAtomicity Application where
 instance HasAtomicity SimpleLambda where
   atomicity = const Atom
 
+instance HasAtomicity Let where
+  atomicity = const Atom
+
 instance HasAtomicity Lambda where
   atomicity = const Atom
 
@@ -244,6 +272,7 @@ instance HasAtomicity Expression where
     ExpressionIden {} -> Atom
     ExpressionApplication a -> atomicity a
     ExpressionLiteral l -> atomicity l
+    ExpressionLet l -> atomicity l
     ExpressionHole {} -> Atom
     ExpressionUniverse u -> atomicity u
     ExpressionFunction f -> atomicity f
@@ -294,12 +323,26 @@ instance HasLoc LambdaClause where
 instance HasLoc Lambda where
   getLoc l = getLocSpan (l ^. lambdaClauses)
 
+instance HasLoc FunctionClause where
+  getLoc f = getLoc (f ^. clauseName) <> getLoc (f ^. clauseBody)
+
+instance HasLoc FunctionDef where
+  getLoc f = getLoc (f ^. funDefName) <> getLocSpan (f ^. funDefClauses)
+
+instance HasLoc LetClause where
+  getLoc = \case
+    LetFunDef f -> getLoc f
+
+instance HasLoc Let where
+  getLoc l = getLocSpan (l ^. letClauses) <> getLoc (l ^. letExpression)
+
 instance HasLoc Expression where
   getLoc = \case
     ExpressionIden i -> getLoc i
     ExpressionApplication a -> getLoc a
     ExpressionLiteral l -> getLoc l
     ExpressionHole h -> getLoc h
+    ExpressionLet l -> getLoc l
     ExpressionUniverse u -> getLoc u
     ExpressionFunction u -> getLoc u
     ExpressionSimpleLambda l -> getLoc l
