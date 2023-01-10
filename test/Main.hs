@@ -19,10 +19,10 @@ slowTests =
   testGroup
     "Juvix slow tests"
     [ BackendC.allTests,
-      Core.allTests,
-      Asm.allTests,
-      Internal.allTests,
       Runtime.allTests,
+      Asm.allTests,
+      Core.allTests,
+      Internal.allTests,
       Compilation.allTests
     ]
 
