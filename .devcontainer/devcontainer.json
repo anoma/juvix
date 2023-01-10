@@ -1,0 +1,48 @@
+{
+  "name": "Ubuntu",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      "VARIANT": "ubuntu-22.04"
+    }
+  },
+  // "forwardPorts": [4000],
+  "postCreateCommand": "make install",
+  "settings" :{
+      "editor.tabSize": 2,
+      "editor.renderWhitespace": "trailing",
+      "files.trimTrailingWhitespace": true,
+      "haskell.formattingProvider": "ormolu",
+      "haskell.openSourceInHackage": false,
+      "haskell.openDocumentationInHackage": false,
+      "haskell.checkProject": true,
+      "haskell.plugin.callHierarchy.globalOn": true,
+      "haskell.plugin.changeTypeSignature.globalOn": true,
+      "haskell.plugin.class.codeActionsOn": true,
+      "haskell.plugin.class.codeLensOn": true,
+      "haskell.plugin.fourmolu.config.external": false,
+      "haskell.plugin.gadt.globalOn": true,
+      "haskell.plugin.ghcide-code-actions-bindings.globalOn": true,
+      "haskell.plugin.ghcide-code-actions-fill-holes.globalOn": true,
+      "haskell.plugin.ghcide-code-actions-imports-exports.globalOn": true,
+      "haskell.plugin.ghcide-code-actions-type-signatures.globalOn": true,
+      "haskell.plugin.ghcide-completions.globalOn": true,
+      "haskell.plugin.hlint.diagnosticsOn": false,
+      "haskell.plugin.rename.config.crossModule": true,
+      "haskell.plugin.rename.globalOn": true,
+      "haskell.plugin.retrie.globalOn": true,
+      "haskell.plugin.splice.globalOn": true,
+      "haskell.plugin.tactics.codeLensOn": true,
+      "haskell.plugin.tactics.config.proofstate_styling": true,
+      "haskell.plugin.tactics.hoverOn": true,
+      "haskell.trace.client": "debug",
+      "haskell.upgradeGHCup": true,
+      "haskell.indentationRules.enabled": true
+  },
+  "extensions": [
+    "haskell.haskell",
+    "ms-vscode.cpptools",
+    "heliax.juvix-mode"
+  ],
+  "remoteUser": "vscode"
+}
