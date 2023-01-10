@@ -46,6 +46,9 @@ RUN apt-get update && \
     libtool \
     autoconf && apt-get clean
 
+RUN sudo bash -c 'curl -sSL https://get.haskellstack.org/ | sh'
+RUN sudo bash -c 'curl https://get.wasmer.io -sSfL | sh'
+
 ENV PATH=${PATH}:/home/vscode/.ghcup/bin
 ENV PATH=${PATH}:/home/vscode/.local/bin
 RUN sudo bash -c 'mkdir -p /home/vscode/.local/bin'
