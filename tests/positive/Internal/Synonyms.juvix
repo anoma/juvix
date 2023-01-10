@@ -11,11 +11,14 @@ Ty2 := Ty1;
 k : Ty2;
 k x := x;
 
-appTy : Type;
-appTy := {A : Type} → (A → A) → A → A;
+Num : Type;
+Num := {A : Type} → (A → A) → A → A;
 
 -- we need the explicit `{_}` since we do not normalize types in the arity checker
-t : appTy;
-t {_} f x := x;
+czero : Num;
+czero {_} f x := x;
+
+csuc : Num → Num;
+csuc n {_} f := f ∘ n {_} f;
 
 end;
