@@ -1,11 +1,11 @@
 module Compilation.Base where
 
-import Data.HashMap.Strict qualified as HashMap
 import Base
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Builtins (iniState)
-import Juvix.Compiler.Pipeline
-import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
+import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
+import Juvix.Compiler.Pipeline
 
 compileAssertion ::
   Path Abs File ->

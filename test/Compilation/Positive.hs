@@ -34,17 +34,21 @@ allTests :: TestTree
 allTests =
   testGroup
     "Juvix compilation pipeline positive tests"
-    (map (mkTest . toTestDescr)
-      (filterOutTests
-        ["Let",
-         "Local functions with free variables",
-         "Nested binders with variable capture",
-         "Functional queues",
-         "Merge sort",
-         "Recursive let",
-         "Applications with lets and cases in function position",
-         "Self-application"]
-        tests))
+    ( map
+        (mkTest . toTestDescr)
+        ( filterOutTests
+            [ "Let",
+              "Local functions with free variables",
+              "Nested binders with variable capture",
+              "Functional queues",
+              "Merge sort",
+              "Recursive let",
+              "Applications with lets and cases in function position",
+              "Self-application"
+            ]
+            tests
+        )
+    )
 
 tests :: [PosTest]
 tests =
