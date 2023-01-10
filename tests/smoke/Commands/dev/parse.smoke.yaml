@@ -1,0 +1,26 @@
+working-directory: ./../../../../tests
+
+tests:
+  - name: can-parse
+    command:
+      - juvix
+      - dev
+      - parse
+    args:
+      - positive/Axiom.juvix
+    stdout:
+      contains: "Module"
+    exit-status: 0
+    
+  - name: no-pretty-show
+    command:
+      - juvix
+      - dev
+      - parse
+      - --no-pretty-show
+    args:
+      - positive/Axiom.juvix
+    stdout:
+      matches: |
+        Module \{.*
+    exit-status: 0

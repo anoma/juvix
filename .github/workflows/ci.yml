@@ -262,19 +262,29 @@ jobs:
         run: |
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name : Shell tests (Linux)
-        id: shell-tests-linux
+      - name: Download Smoke binary
+        uses: jaxxstorm/action-install-gh-release@v1.9.0
+        with:
+          repo: SamirTalwar/smoke
+          tag: v2.3.1
+          cache: enable
+          extension-matching: disable
+          rename-to: smoke
+          chmod: 0755
+
+      - name : Smoke testing (Linux)
+        id: smoke-linux
         if: runner.os == 'Linux'
         run : |
           cd main
-          make test-shell
+          make smoke
 
-      - name : Shell tests (macOS)
-        id: shell-tests-macos
+      - name : Smoke testing (macOS)
+        id: smoke-macos
         if: runner.os == 'macOS'
         run : |
           cd main
-          make CC=$CC LIBTOOL=$LIBTOOL test-shell
+          make CC=$CC LIBTOOL=$LIBTOOL smoke
 
   docs:
     needs: build

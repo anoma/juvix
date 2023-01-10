@@ -1,0 +1,44 @@
+working-directory: ./../../../tests/
+tests:
+  - name: flag-help-shows-juvix-file-for-autocompletion
+    command: 
+      - juvix 
+      - typecheck
+      - --help
+    stdout:
+      contains:
+        "Usage: juvix typecheck JUVIX_FILE"
+    exit-status: 0
+
+  - name: check-simple-file
+    command:
+      - juvix
+      - typecheck
+    args:
+      - positive/Internal/Simple.juvix
+    stdout: 
+      equals: "Well done! It type checks\n"
+    exit-status: 0
+
+  - name: flag-only-errors
+    command:
+      - juvix
+      - --only-errors
+      - typecheck
+    args:
+      - positive/Internal/Simple.juvix
+    stdout: ""
+    exit-status: 0
+
+  - name: get-typechecking-error
+    command:
+      - juvix
+      - --no-colors
+      - typecheck
+    args:
+      - negative/Internal/MultiWrongType.juvix
+    stdout: ""
+    stderr: 
+      matches: |-
+        (.+)\/([^\/]+)\.juvix\:[0-9]*\:[0-9]*\-[0-9]*\: error
+    exit-status: 1

@@ -1,7 +1,0 @@
-$ juvix --version
-> /Juvix version 0.2.8-([a-f0-9]{7})
-Branch: .*
-Commit: .*
-Date: .*
-/
->= 0

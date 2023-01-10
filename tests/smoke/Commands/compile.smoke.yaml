@@ -1,0 +1,51 @@
+working-directory: ./../../../tests
+
+tests:
+  - name: shows-file-argument-for-autocompletion
+    command:
+      - juvix
+      - compile
+      - --help
+    stdout:
+      contains:
+        JUVIX_FILE
+    exit-status: 0
+
+  - name: minic-compilation
+    command:
+      shell:
+        - bash
+      script: |
+        juvix compile positive/MiniC/HelloWorld/Input.juvix -o hello.wasm
+        [ -f hello.wasm ]
+        
+    stdout: ""
+    exit-status: 0
+  
+  - name: hello-world
+    command:
+      shell:
+        - bash
+      script: |
+        cd ./../examples/milestone/HelloWorld
+        juvix compile HelloWorld.juvix
+        [ -f HelloWorld ] 
+        ./HelloWorld
+    exit-status: 0
+    stdout: |
+      hello world!
+
+  - name: flag-internal-build-dir
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        cd ./../examples/milestone/HelloWorld
+        juvix compile HelloWorld.juvix --internal-build-dir "$temp"
+        find "$temp" | wc -l
+        rm -rf "$temp"
+    stdout:
+      matches: |
+        \s*([2-9]|[1-9][0-9]+)
+    exit-status: 0

@@ -1,0 +1,183 @@
+working-directory: ./../../../tests/
+
+tests:
+  - name: open
+    command:
+      - juvix
+      - repl
+    stdout:
+      contains: "Juvix REPL"
+    exit-status: 0
+    
+  - name: quit
+    command:
+      - juvix
+      - repl
+    stdout: 
+      contains: "Juvix REPL"
+    stdin: ":quit"
+    exit-status: 0
+
+  - name: load-stdlib-by-default
+    command:
+      - juvix
+      - repl
+    stdout:
+      matches:
+        regex: |
+          Juvix REPL .*
+          OK loaded: .*/tests/.juvix-build/stdlib/Stdlib/Prelude.juvix
+    exit-status: 0
+
+  - name: version-shows-same-juvix-version
+    command:
+      - juvix
+      - repl
+    stdin: ":version"
+    stdout:
+      matches:
+        regex: |
+          Juvix REPL version ([0-9]+\.[0-9]+\.[0-9]\-[a-z0-9]+): .*
+          OK loaded: .*
+          Stdlib.Prelude> \1
+    exit-status: 0
+    
+  - name: check-type-suc
+    command:
+      - juvix
+      - repl
+    stdout: 
+      contains: "Nat → Nat"
+    stdin: ":type suc"
+    exit-status: 0
+
+  - name: check-type-suc-short
+    command:
+      - juvix
+      - repl
+    stdout: 
+      contains: "Nat → Nat"
+    stdin: ":t suc"
+    exit-status: 0    
+
+  - name: check-type-suc-short-stdlib
+    command:
+      shell:
+        - bash
+      script: |
+        cd ./../../juvix-stdlib && juvix repl
+    stdout: 
+      contains: "Nat → Nat"
+    stdin: ":t suc"
+    exit-status: 0    
+
+  - name: eval-and-operations
+    command:
+      - juvix
+      - repl
+    stdin: "true && false"
+    stdout: 
+      matches: |
+        Juvix REPL .*
+        OK loaded: .*
+        Stdlib.Prelude> false
+    exit-status: 0    
+
+  - name: eval-and-operations-with-spaces
+    command:
+      - juvix
+      - repl
+    stdin: "   true    &&    false"
+    stdout: 
+      contains:
+        "false"
+    exit-status: 0    
+
+  - name: eval-suc-true
+    command:
+      - juvix
+      - repl
+    stdin: "suc true"
+    stdout: 
+      contains:
+        "Stdlib.Prelude> "
+    stderr:
+      contains: |
+        The expression true has type:
+          Bool
+        but is expected to have type:
+          Nat
+    exit-status: 0 
+
+  - name: load-builtin-bool
+    command:
+      shell:
+        - bash
+      script: |
+        cd ./Internal/positive/ && juvix repl
+    stdin: ":load BuiltinBool.juvix"
+    stdout:
+      contains:
+        BuiltinBool>  
+    exit-status: 0
+
+  - name: load-builtin-bool-with-spaces
+    command:
+      shell:
+        - bash
+      script: |
+        cd ./Internal/positive/ && juvix repl
+    stdin: ":load    BuiltinBool.juvix"
+    stdout: 
+      contains:
+        BuiltinBool> 
+    exit-status: 0
+
+  - name: load-builtin-bool-short-form
+    command:
+      shell:
+        - bash
+      script: |
+        cd ./Internal/positive/ && juvix repl
+    stdin: |
+      :l BuiltinBool.juvix
+      main
+    stdout: 
+      contains: |
+        true
+    exit-status: 0
+
+  - name: repl-file
+    command:
+      - juvix 
+      - repl
+    args:
+      - Internal/positive/BuiltinBool.juvix
+    stdin: main
+    stdout: 
+      contains: |
+        true
+    exit-status: 0
+    
+  - name: root
+    command:
+      - juvix
+      - repl
+    stdin: ":root"
+    stdout: 
+      matches: |
+        Juvix REPL .*
+        OK loaded: .*
+        Stdlib.Prelude> .*/tests/
+    exit-status: 0
+
+  - name: eval-adding-two-literal-nats
+    command:
+      - juvix
+      - repl
+    stdin: "1 + 2"
+    stdout: 
+      contains: |
+        suc (suc (suc zero))
+    exit-status: 0
+    

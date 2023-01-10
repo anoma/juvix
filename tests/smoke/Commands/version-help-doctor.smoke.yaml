@@ -1,0 +1,37 @@
+tests:
+  - name: cli-flag-version
+    command:
+      - juvix
+      - --version
+    exit-status: 0
+    stdout:
+      matches:
+        regex: |-
+          ^Juvix version 0.2.8-([a-f0-9]{7}).*
+
+  - name: cli-flag-help  
+    command:
+      - juvix
+      - --help
+    exit-status: 0
+    stdout:
+      matches:
+        regex: |-
+          ^Usage: juvix .*
+
+  - name: cli-cmd-doctor
+    command:
+      - juvix
+      - doctor
+      - --offline
+    exit-status: 0
+    stdout: |
+      > Checking for clang...
+      > Checking clang version...
+      > Checking for wasm-ld...
+      > Checking that clang supports wasm32...
+      > Checking that clang supports wasm32-wasi...
+      > Checking that WASI_SYSROOT_PATH is set...
+      > Checking for wasmer...
+
+
