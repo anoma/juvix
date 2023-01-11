@@ -708,7 +708,7 @@ instance HasFixity PostfixApplication where
 --------------------------------------------------------------------------------
 
 data LetBlock (s :: Stage) = LetBlock
-  { _letClauses :: [LetClause s],
+  { _letClauses :: NonEmpty (LetClause s),
     _letExpression :: ExpressionType s
   }
 

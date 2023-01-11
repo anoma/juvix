@@ -16,8 +16,8 @@ import Juvix.Prelude
 
 checkTermination ::
   Members '[Error TerminationError] r =>
-  Abstract.TopModule ->
-  Abstract.InfoTable ->
+  TopModule ->
+  InfoTable ->
   Sem r ()
 checkTermination topModule infotable = do
   let callmap = buildCallMap infotable topModule
@@ -26,9 +26,12 @@ checkTermination topModule infotable = do
       recBehav = map recursiveBehaviour rEdges
   forM_ recBehav $ \r -> do
     let funName = r ^. recursiveBehaviourFun
-        funRef = Abstract.FunctionRef funName
-        funInfo = HashMap.lookupDefault impossible funRef (infotable ^. Abstract.infoFunctions)
-        markedTerminating = funInfo ^. (Abstract.functionInfoDef . Abstract.funDefTerminating)
+        markedTerminating :: Bool = funInfo ^. (Abstract.functionInfoDef . Abstract.funDefTerminating)
+        funRef = FunctionRef funName
+        funInfo :: FunctionInfo
+        funInfo = HashMap.lookupDefault err funRef (infotable ^. Abstract.infoFunctions)
+          where
+            err = error ("Impossible: function not found: " <> funRef ^. functionRefName . nameText)
     if
         | markedTerminating -> return ()
         | otherwise ->
@@ -86,12 +89,15 @@ scanFunctionClause FunctionClause {..} = go (reverse _clausePatterns) _clauseBod
         goClause :: LambdaClause -> Sem r ()
         goClause (LambdaClause pats clBody) = go (reverse (toList pats) ++ revArgs) clBody
 
-scanLet :: Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r =>
-  Let -> Sem r ()
+scanLet ::
+  Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r =>
+  Let ->
+  Sem r ()
 scanLet l = do
   mapM_ scanLetClause (l ^. letClauses)
   scanExpression (l ^. letExpression)
 
+-- NOTE that we forget about the arguments of the hosting function
 scanLetClause :: Members '[State CallMap] r => LetClause -> Sem r ()
 scanLetClause = \case
   LetFunDef d -> scanFunctionDef d

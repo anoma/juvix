@@ -99,6 +99,9 @@ simplelambda = error "simple lambda expressions are not supported by the arity c
 withEmptyLocalVars :: Sem (Reader LocalVars : r) a -> Sem r a
 withEmptyLocalVars = runReader emptyLocalVars
 
+arityLet :: Members '[Reader InfoTable] r => Let -> Sem r Arity
+arityLet l = guessArity (l ^. letExpression)
+
 guessArity ::
   forall r.
   Members '[Reader InfoTable] r =>
@@ -113,6 +116,7 @@ guessArity = \case
   ExpressionUniverse {} -> return arityUniverse
   ExpressionSimpleLambda {} -> simplelambda
   ExpressionLambda l -> return (arityLambda l)
+  ExpressionLet l -> arityLet l
   where
     idenHelper :: Iden -> Sem r Arity
     idenHelper i = case i of
@@ -298,6 +302,21 @@ checkConstructorApp ca@(ConstructorApp c ps) = do
   ps' <- zipWithM checkPattern arities ps
   return (ConstructorApp c ps')
 
+checkLet ::
+  forall r.
+  Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r =>
+  Arity ->
+  Let ->
+  Sem r Let
+checkLet ari l = do
+  _letExpression <- checkExpression ari (l ^. letExpression)
+  _letClauses <- mapM checkLetClause (l ^. letClauses)
+  return Let {..}
+  where
+    checkLetClause :: LetClause -> Sem r LetClause
+    checkLetClause = \case
+      LetFunDef f -> LetFunDef <$> checkFunctionDef f
+
 checkLambda ::
   forall r.
   Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r =>
@@ -357,6 +376,10 @@ typeArity = go
       ExpressionLambda {} -> ArityUnknown
       ExpressionUniverse {} -> ArityUnit
       ExpressionSimpleLambda {} -> simplelambda
+      ExpressionLet l -> goLet l
+
+    goLet :: Let -> Arity
+    goLet l = typeArity (l ^. letExpression)
 
     goIden :: Iden -> Arity
     goIden = \case
@@ -402,6 +425,7 @@ checkExpression hintArity expr = case expr of
   ExpressionHole {} -> return expr
   ExpressionSimpleLambda {} -> simplelambda
   ExpressionLambda l -> ExpressionLambda <$> checkLambda hintArity l
+  ExpressionLet l -> ExpressionLet <$> checkLet hintArity l
   where
     goApp :: Application -> Sem r Expression
     goApp = uncurry appHelper . second toList . unfoldApplication'
@@ -413,6 +437,7 @@ checkExpression hintArity expr = case expr of
         ExpressionIden i -> idenArity i >>= helper (getLoc i)
         ExpressionLiteral l -> helper (getLoc l) (arityLiteral l)
         ExpressionUniverse l -> helper (getLoc l) arityUniverse
+        ExpressionLet l -> arityLet l >>= helper (getLoc l)
         ExpressionSimpleLambda {} -> simplelambda
         ExpressionFunction f ->
           throw

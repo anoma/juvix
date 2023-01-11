@@ -35,7 +35,7 @@ fromConcrete _resultScoper =
     ms = _resultScoper ^. Scoper.resultModules
 
 fromConcreteExpression :: Members '[Error JuvixError, NameIdGen] r => Scoper.Expression -> Sem r Abstract.Expression
-fromConcreteExpression = mapError (JuvixError @ScoperError) . goExpression
+fromConcreteExpression = mapError (JuvixError @ScoperError) . ignoreInfoTableBuilder . goExpression
 
 goTopModule ::
   Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r =>
@@ -190,7 +190,7 @@ goFunctionDef TypeSignature {..} clauses = do
 
 goExamples ::
   forall r.
-  Member (Error ScoperError) r =>
+  Members '[Error ScoperError, InfoTableBuilder] r =>
   Maybe (Judoc 'Scoped) ->
   Sem r [Abstract.Example]
 goExamples = mapM goExample . maybe [] judocExamples
@@ -205,7 +205,7 @@ goExamples = mapM goExample . maybe [] judocExamples
           }
 
 goFunctionClause ::
-  Member (Error ScoperError) r =>
+  Members '[Error ScoperError, InfoTableBuilder] r =>
   FunctionClause 'Scoped ->
   Sem r Abstract.FunctionClause
 goFunctionClause FunctionClause {..} = do
@@ -219,7 +219,7 @@ goFunctionClause FunctionClause {..} = do
       }
 
 goInductiveParameter ::
-  Member (Error ScoperError) r =>
+  Members '[Error ScoperError, InfoTableBuilder] r =>
   InductiveParameter 'Scoped ->
   Sem r Abstract.FunctionParameter
 goInductiveParameter InductiveParameter {..} = do
@@ -296,7 +296,7 @@ goInductive ty@InductiveDef {..} = do
   return (inductiveInfo ^. inductiveInfoDef)
 
 goConstructorDef ::
-  Member (Error ScoperError) r =>
+  Members [Error ScoperError, InfoTableBuilder] r =>
   InductiveConstructorDef 'Scoped ->
   Sem r Abstract.InductiveConstructorDef
 goConstructorDef InductiveConstructorDef {..} = do
@@ -311,7 +311,7 @@ goConstructorDef InductiveConstructorDef {..} = do
 
 goExpression ::
   forall r.
-  Member (Error ScoperError) r =>
+  Members [Error ScoperError, InfoTableBuilder] r =>
   Expression ->
   Sem r Abstract.Expression
 goExpression = \case
@@ -323,7 +323,7 @@ goExpression = \case
   ExpressionLiteral l -> return (Abstract.ExpressionLiteral l)
   ExpressionLambda l -> Abstract.ExpressionLambda <$> goLambda l
   ExpressionBraces b -> throw (ErrAppLeftImplicit (AppLeftImplicit b))
-  ExpressionLetBlock {} -> unsupported "Let Block"
+  ExpressionLetBlock l -> Abstract.ExpressionLet <$> goLet l
   ExpressionUniverse uni -> return (Abstract.ExpressionUniverse (goUniverse uni))
   ExpressionFunction func -> Abstract.ExpressionFunction <$> goFunction func
   ExpressionHole h -> return (Abstract.ExpressionHole h)
@@ -335,6 +335,39 @@ goExpression = \case
       ScopedVar v -> Abstract.IdenVar (goSymbol v)
       ScopedFunction fun -> Abstract.IdenFunction (Abstract.FunctionRef (goName (fun ^. Concrete.functionRefName)))
       ScopedConstructor c -> Abstract.IdenConstructor (Abstract.ConstructorRef (goName (c ^. Concrete.constructorRefName)))
+
+    goLet :: LetBlock 'Scoped -> Sem r Abstract.Let
+    goLet l = do
+      _letExpression <- goExpression (l ^. letExpression)
+      _letClauses <- goLetClauses (l ^. letClauses)
+      return Abstract.Let {..}
+      where
+        goLetClauses :: NonEmpty (LetClause 'Scoped) -> Sem r (NonEmpty Abstract.LetClause)
+        goLetClauses cl =
+          nonEmpty' <$> sequence [Abstract.LetFunDef <$> goSig sig | LetTypeSig sig <- toList cl]
+          where
+            goSig :: TypeSignature 'Scoped -> Sem r Abstract.FunctionDef
+            goSig sig = do
+              _funDefClauses <- getClauses
+              _funDefTypeSig <- goExpression (sig ^. sigType)
+              let _funDefBuiltin = sig ^. sigBuiltin
+                  _funDefTerminating = sig ^. sigTerminating
+                  _funDefName = goSymbol (sig ^. sigName)
+                  _funDefExamples :: [Abstract.Example] = []
+              registerFunction' Abstract.FunctionDef {..}
+              where
+                getClauses :: Sem r (NonEmpty Abstract.FunctionClause)
+                getClauses = do
+                  cls <-
+                    sequence
+                      [ goFunctionClause c | LetFunClause c <- toList cl, sig ^. sigName == c ^. clauseOwnerFunction
+                      ]
+                  case nonEmpty cls of
+                    Nothing ->
+                      throw
+                        ( ErrLacksFunctionClause (LacksFunctionClause sig)
+                        )
+                    Just r -> return r
 
     goApplication :: Application -> Sem r Abstract.Application
     goApplication (Application l arg) = do
@@ -360,7 +393,7 @@ goExpression = \case
       r' <- goExpression r
       return (Abstract.Application l'' r' Explicit)
 
-goLambda :: forall r. Member (Error ScoperError) r => Lambda 'Scoped -> Sem r Abstract.Lambda
+goLambda :: forall r. Members '[Error ScoperError, InfoTableBuilder] r => Lambda 'Scoped -> Sem r Abstract.Lambda
 goLambda (Lambda cl) = Abstract.Lambda <$> mapM goClause cl
   where
     goClause :: LambdaClause 'Scoped -> Sem r Abstract.LambdaClause
@@ -372,7 +405,7 @@ goLambda (Lambda cl) = Abstract.Lambda <$> mapM goClause cl
 goUniverse :: Universe -> Universe
 goUniverse = id
 
-goFunction :: Member (Error ScoperError) r => Function 'Scoped -> Sem r Abstract.Function
+goFunction :: Members '[Error ScoperError, InfoTableBuilder] r => Function 'Scoped -> Sem r Abstract.Function
 goFunction (Function l r) = do
   _funParameter <- goFunctionParameter l
   _funReturn <- goExpression r
@@ -385,7 +418,7 @@ goUsage :: Maybe Usage -> Usage
 goUsage = fromMaybe defaultUsage
 
 goFunctionParameter ::
-  Member (Error ScoperError) r =>
+  Members '[Error ScoperError, InfoTableBuilder] r =>
   FunctionParameter 'Scoped ->
   Sem r Abstract.FunctionParameter
 goFunctionParameter (FunctionParameter {..}) = do
@@ -399,30 +432,30 @@ goFunctionParameter (FunctionParameter {..}) = do
       }
 
 goPatternApplication ::
-  Member (Error ScoperError) r =>
+  Members '[Error ScoperError, InfoTableBuilder] r =>
   PatternApp ->
   Sem r Abstract.ConstructorApp
 goPatternApplication a = uncurry Abstract.ConstructorApp <$> viewApp (PatternApplication a)
 
 goPatternConstructor ::
-  Member (Error ScoperError) r =>
+  Members '[Error ScoperError, InfoTableBuilder] r =>
   ConstructorRef ->
   Sem r Abstract.ConstructorApp
 goPatternConstructor a = uncurry Abstract.ConstructorApp <$> viewApp (PatternConstructor a)
 
 goInfixPatternApplication ::
-  Member (Error ScoperError) r =>
+  Members '[Error ScoperError, InfoTableBuilder] r =>
   PatternInfixApp ->
   Sem r Abstract.ConstructorApp
 goInfixPatternApplication a = uncurry Abstract.ConstructorApp <$> viewApp (PatternInfixApplication a)
 
 goPostfixPatternApplication ::
-  Member (Error ScoperError) r =>
+  Members '[Error ScoperError, InfoTableBuilder] r =>
   PatternPostfixApp ->
   Sem r Abstract.ConstructorApp
 goPostfixPatternApplication a = uncurry Abstract.ConstructorApp <$> viewApp (PatternPostfixApplication a)
 
-viewApp :: forall r. Member (Error ScoperError) r => Pattern -> Sem r (Abstract.ConstructorRef, [Abstract.PatternArg])
+viewApp :: forall r. Members '[Error ScoperError, InfoTableBuilder] r => Pattern -> Sem r (Abstract.ConstructorRef, [Abstract.PatternArg])
 viewApp p = case p of
   PatternConstructor c -> return (goConstructorRef c, [])
   PatternApplication app@(PatternApp _ r) -> do
@@ -448,7 +481,7 @@ viewApp p = case p of
 goConstructorRef :: ConstructorRef -> Abstract.ConstructorRef
 goConstructorRef (ConstructorRef' n) = Abstract.ConstructorRef (goName n)
 
-goPatternArg :: Member (Error ScoperError) r => PatternArg -> Sem r Abstract.PatternArg
+goPatternArg :: Members '[Error ScoperError, InfoTableBuilder] r => PatternArg -> Sem r Abstract.PatternArg
 goPatternArg p = do
   pat' <- goPattern (p ^. patternArgPattern)
   return
@@ -458,7 +491,7 @@ goPatternArg p = do
         _patternArgPattern = pat'
       }
 
-goPattern :: Member (Error ScoperError) r => Pattern -> Sem r Abstract.Pattern
+goPattern :: Members '[Error ScoperError, InfoTableBuilder] r => Pattern -> Sem r Abstract.Pattern
 goPattern p = case p of
   PatternVariable a -> return $ Abstract.PatternVariable (goSymbol a)
   PatternConstructor c -> Abstract.PatternConstructorApp <$> goPatternConstructor c
