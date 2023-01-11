@@ -8,7 +8,7 @@
 
 To install Juvix, follow the instruction in the  [[./howto/installing.md][Installation How-to]].
 
-After installation, run =juvix --help= to see the list of commands available.
+After installation, run =juvix --help= to see the list of commands.
 
 Run Juvix doctor to check your system setup:
 

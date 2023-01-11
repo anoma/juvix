@@ -9,7 +9,7 @@ If you want to compile to WebAssembly, you also need:
 - [[https://lld.llvm.org][wasm-ld]] - the LLVM linker for WASM (NB: On Linux you may need to install the
   =lld= package; on macOS this is installed as part of =llvm=).
 
-See [[./installing.md#installing-dependencies][below]] for instruction on how to install the dependencies.
+See [[./installing.md#installing-dependencies][below]] for instructions on how to install the dependencies.
 
 * Installing Juvix
 
@@ -30,7 +30,7 @@ brew install juvix
 #+end_src
 
 
-Helpful information on the shell can also be obtained by running:
+Helpful information can also be obtained by running:
 
 #+begin_src shell
 brew info juvix
@@ -40,10 +40,10 @@ brew info juvix
 
 A Juvix compiler binary executable for Linux x86_64 is available on the [[https://github.com/anoma/juvix/releases/latest][Juvix release page]].
 
-To install this executable, downlaod and unzip the linked file and add move it
+To install this executable, downlaod and unzip the linked file and move it
 to a directory on your shell's =PATH=.
 
-For example if =~/.local/bin= is on your shell's =PATH= you can install Juvix as
+For example if =~/.local/bin= is on your shell's =PATH=, you can install Juvix as
 follows:
 
 #+begin_src shell
@@ -68,8 +68,8 @@ The C compiler and linker paths can be specified as options to the =make install
 make install CC=path/to/clang LIBTOOL=path/to/llvm-ar
 #+end_src
 
-On MacOS you can alternatively run the following command for Homebrew. The flag
-=--HEAD= used below is optional, use it to build the latest version of Juvix in
+On MacOS, you can alternatively run the following command for Homebrew. The flag
+=--HEAD= used below is optional -- use it to build the latest version of Juvix in
 the =main= branch on Github.
 
 #+begin_src shell
@@ -80,7 +80,7 @@ brew install --build-from-source --HEAD juvix --verbose
 
 We recommend to use the =stack= build tool with this project.
 
-If you would prefer to use the =cabal= build tool instead then you must generate
+If you prefer the =cabal= build tool instead, then you need to generate
 the =juvix.cabal= file using [[https://github.com/sol/hpack][hpack]] before running =cabal build=.
 
 You also need to compile the runtime first:

@@ -1,9 +1,8 @@
 * Function declaration
 
-A function declaration is a type signature /and/ a group of definitions called
-/function clauses/.
+A function declaration consists of a type signature and a group of /function clauses/.
 
-In the following example we define a function called =multiplyByTwo=. The first
+In the following example, we define a function =multiplyByTwo=. The first
 line =multiplyByTwo : Nat -> Nat;= is the type signature and the second line
 ~multiplyByTwo n := 2 * n;~ is a function clause.
 
@@ -27,13 +26,13 @@ neg true := false;
 neg false := true;
 #+end_example
 
-When =neg= is called with =true= the first clause is used and the function
-returns =false=. Similarly, when =neg= is called with =false= the second clause
+When =neg= is called with =true=, the first clause is used and the function
+returns =false=. Similarly, when =neg= is called with =false=, the second clause
 is used and the function returns =true=.
 
 ** Mutually recursive functions
 
-Function declarations can depend on others recursively. In the following example we define a function that checks if a number is =even= by calling a function that checks if a number is =odd=.
+Function declarations can depend on each other recursively. In the following example, we define a function that checks if a number is =even= by calling a function that checks if a number is =odd=.
 
 #+begin_example
 open import Stdlib.Prelude;

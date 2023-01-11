@@ -1,22 +1,20 @@
-* Inductive data types
+* Data types
 
-The =inductive= keyword is reserved for declaring inductive data types. An
-inductive type declaration requires a unique name for its type and a non-empty
-list of constructor declarations, functions for building the terms of the
-inductive data type. Constructors can be used as normal identifiers and also in
-patterns. As shown later, one can also provide type parameters to widen the
-family of inductive types one can define in Juvix.
+A data type declaration consists of:
+- the =type= keyword,
+- a unique name for the type,
+- the =:== symbol,
+- a non-empty list of constructor declarations -- functions for building the elements of the data type.
 
-The simplest inductive type is the =Unit= type with one constructor called =unit=.
+The simplest data type is the =Unit= type with one constructor called =unit=.
 
 #+begin_example
 type Unit := unit : Unit;
 #+end_example
 
-In the following example, we declare the inductive type =Nat=, the unary
-representation of natural numbers. This type comes with two data constructors,
-namely =zero= and =suc=. A term of the type =Nat= is the number one, represented
-by =suc zero= or the number two represented by =suc (suc zero)=, etc.
+In the following example, we declare the type =Nat= -- the unary
+representation of natural numbers. This type comes with two constructors: =zero= and =suc=. Example elements of type =Nat= are the number one represented
+by =suc zero=, the number two represented by =suc (suc zero)=, etc.
 
 #+begin_example
 type Nat :=
@@ -24,8 +22,7 @@ type Nat :=
   | suc : Nat -> Nat;
 #+end_example
 
-The way to use inductive types is by declaring functions by pattern matching.
-Let us define, for example, the function for adding two natural numbers.
+Constructors can be used like normal functions or in patterns when defining functions by pattern matching. For example, here is a function adding two natural numbers:
 
 #+begin_src text
 inifl 6 +;
@@ -34,12 +31,9 @@ inifl 6 +;
 + (suc a) b := suc (a + b);
 #+end_src
 
-As mentioned earlier, an inductive type may have type parameters. The canonical
-example is the polymorphic type =List=. The type =List= is the inductive type that
-considers the type of the elements in the list as a parameter. A constructor to
-build the empty list, that is the base case, and another constructor to enlarge
-the list, we usually called it =cons=. One possible definition for this type is
-the following type taken from the Juvix standard library:
+A data type may have type parameters. A data type with a type
+parameter =A= is called /polymorphic in/ =A=. A canonical example is
+the type =List= polymorphic in the type of list elements.
 
 #+begin_example
 infixr 5 ::;
@@ -52,5 +46,5 @@ elem _ _ nil := false;
 elem eq s (x :: xs) := eq s x || elem eq s xs;
 #+end_example
 
-To see more examples of inductive types and how to use them, please check out
-[[https://anoma.github.io/juvix-stdlib/][the Juvix standard library]]
+For more examples of inductive types and how to use them, see
+[[https://anoma.github.io/juvix-stdlib/][the Juvix standard library]].
