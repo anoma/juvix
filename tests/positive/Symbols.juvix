@@ -32,7 +32,7 @@ module Symbols;
   axiom = : Type;
 
   K : Nat → Nat → Nat;
-  K =a@zero (=) := =a · =;
-  K =a@(suc =) (==) := = · ==;
+  K =a@zero (=) :=(=a · =);
+  K =a@(suc =) == := = · ==;
 
 end;
