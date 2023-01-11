@@ -1,7 +1,0 @@
-* Internal Juvix languages
-
-** Languages
-
-- [[./language/abstract.md][Abstract Language]]
-- [[./language/concrete.md][Concrete language]]
-- [[./language/microjuvix.md][MicroJuvix Language]]

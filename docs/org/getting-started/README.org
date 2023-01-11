@@ -1,2 +1,0 @@
-- [[./quick-start.md][Quick start]]
-- [[./dependencies.md][Installing dependencies]]
