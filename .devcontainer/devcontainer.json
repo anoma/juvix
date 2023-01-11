@@ -7,17 +7,23 @@
       "VARIANT": "ubuntu-22.04"
     }
   },
-	"runArgs": [
-		"--privileged"
-	],
+  "runArgs": [
+    "--privileged"
+  ],
   "hostRequirements": {
     "cpus": 4,
     "memory": "8gb",
     "storage": "64gb"
   },
-  "settings" :{
+  "settings": {
     "editor.tabSize": 2,
     "editor.renderWhitespace": "trailing",
+    "editor.wordWrap": "wordWrapColumn",
+    "editor.fontSize": 16,
+    "editor.minimap.enabled": false,
+    "editor.hover.delay": 700,
+    "explorer.confirmDelete": false,
+    "explorer.confirmDragAndDrop": false,
     "files.trimTrailingWhitespace": true,
     "haskell.formattingProvider": "ormolu",
     "haskell.openSourceInHackage": false,
@@ -47,14 +53,12 @@
     "haskell.indentationRules.enabled": true,
     "workbench.preferredDarkColorTheme": "Visual Studio Dark",
     "workbench.colorTheme": "Visual Studio Dark",
-    "workbench.colorCustomizations": {
-
-    },
+    "workbench.colorCustomizations": {},
     "breadcrumbs.enabled": false,
     "extensions.ignoreRecommendations": true,
     "terminal.integrated.confirmOnKill": "never",
     "juvix-mode.opts": {
-      "internalBuildDir": ".juvix-build"
+      "internalBuildDir": "/home/vscode/.local/juvix"
     },
     "juvix-mode.bin.path": "/home/vscode/.local/bin/juvix",
     "juvix-mode.input.languages": [
@@ -62,12 +66,14 @@
       "JuvixCore",
       "Haskell"
     ],
-    "juvix-mode.reloadReplOnSave": true,
+    "juvix-mode.reloadReplOnSave": true
   },
   "extensions": [
     "haskell.haskell",
     "ms-vscode.cpptools",
-    "Heliax.juvix-mode"
+    "Heliax.juvix-mode",
+    "Meowcolm024.runner2",
+    "doomsec.doom-theme"
   ],
   "remoteUser": "vscode"
 }
