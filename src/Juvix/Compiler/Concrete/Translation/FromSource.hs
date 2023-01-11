@@ -537,25 +537,40 @@ wildcard = Wildcard . snd <$> interval (kw kwWildcard)
 patternAtomAnon :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (PatternAtom 'Parsed)
 patternAtomAnon =
   PatternAtomWildcard <$> wildcard
-    <|> PatternAtomParens <$> parens parsePatternAtoms
-    <|> PatternAtomBraces <$> braces parsePatternAtoms
+    <|> PatternAtomParens <$> parens parsePatternAtomsNested
+    <|> PatternAtomBraces <$> braces parsePatternAtomsNested
 
 patternAtomAt :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => SymbolType 'Parsed -> ParsecS r (PatternAtom 'Parsed)
 patternAtomAt s = kw kwAt >> PatternAtomAt . PatternBinding s <$> patternAtom
 
-patternAtomNamed :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (PatternAtom 'Parsed)
-patternAtomNamed = do
+patternAtomNamed :: forall r. Members '[InfoTableBuilder, JudocStash, NameIdGen] r => Bool -> ParsecS r (PatternAtom 'Parsed)
+patternAtomNamed nested = do
+  off <- P.getOffset
   n <- name
   case n of
     NameQualified _ -> return (PatternAtomIden n)
-    NameUnqualified s -> patternAtomAt s <|> return (PatternAtomIden n)
+    NameUnqualified s -> do
+      checkWrongEq off s
+      patternAtomAt s <|> return (PatternAtomIden n)
+  where
+    checkWrongEq :: Int -> WithLoc Text -> ParsecS r ()
+    checkWrongEq off t =
+      when
+        (not nested && t ^. withLocParam == "=")
+        (parseFailure off "expected \":=\" instead of \"=\"")
+
+patternAtomNested :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (PatternAtom 'Parsed)
+patternAtomNested = patternAtom' True
 
 patternAtom :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (PatternAtom 'Parsed)
-patternAtom = P.label "<pattern>" $ patternAtomNamed <|> patternAtomAnon
+patternAtom = patternAtom' False
 
-parsePatternAtoms :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (PatternAtoms 'Parsed)
-parsePatternAtoms = do
-  (_patternAtoms, _patternAtomsLoc) <- interval (P.some patternAtom)
+patternAtom' :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => Bool -> ParsecS r (PatternAtom 'Parsed)
+patternAtom' nested = P.label "<pattern>" $ patternAtomNamed nested <|> patternAtomAnon
+
+parsePatternAtomsNested :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (PatternAtoms 'Parsed)
+parsePatternAtomsNested = do
+  (_patternAtoms, _patternAtomsLoc) <- interval (P.some patternAtomNested)
   return PatternAtoms {..}
 
 --------------------------------------------------------------------------------

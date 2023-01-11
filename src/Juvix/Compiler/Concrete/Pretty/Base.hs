@@ -592,7 +592,10 @@ ppPattern = case sing :: SStage s of
 ppPatternAtom :: forall s r. (SingI s, Members '[Reader Options] r) => PatternType s -> Sem r (Doc Ann)
 ppPatternAtom = case sing :: SStage s of
   SParsed -> ppCodeAtom
-  SScoped -> ppCodeAtom
+  SScoped -> \pat ->
+    case pat ^. patternArgPattern of
+      PatternVariable s | s ^. S.nameVerbatim == "=" -> parens <$> ppCodeAtom pat
+      _ -> ppCodeAtom pat
 
 instance PrettyCode Text where
   ppCode = return . pretty

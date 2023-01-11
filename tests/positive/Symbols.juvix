@@ -1,13 +1,12 @@
 module Symbols;
-
   open import Stdlib.Data.Nat;
 
   ╘⑽╛ : Nat;
   ╘⑽╛ := suc nine;
 
-   -- no - function!?
-   - : Nat -> Nat -> Nat;
-   - := (+);
+  -- no - function!?
+  - : Nat -> Nat -> Nat;
+  - := (+);
 
   （-） : Nat -> Nat -> Nat;
   （-） := (-);
@@ -28,4 +27,10 @@ module Symbols;
 
   主功能 : Nat;
   主功能 := （0）;
+
+  axiom = : Type;
+
+  K : Nat → Nat → Nat;
+  K =a@zero (=) := =a · =;
+  K =a@(suc =) == := = · ==;
 end;
