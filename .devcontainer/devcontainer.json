@@ -13,7 +13,7 @@
   "hostRequirements": {
     "cpus": 4,
     "memory": "8gb",
-    "storage": "64gb"
+    "storage": "32gb"
   },
   "settings": {
     "editor.tabSize": 2,
