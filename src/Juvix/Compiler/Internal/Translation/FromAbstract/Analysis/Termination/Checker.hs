@@ -37,101 +37,101 @@ checkTermination topModule infotable = do
               Just _ -> return ()
 
 buildCallMap :: InfoTable -> TopModule -> CallMap
-buildCallMap infotable = run . execState mempty . runReader infotable . checkModule
+buildCallMap infotable = run . execState mempty . runReader infotable . scanModule
 
-checkModule ::
+scanModule ::
   Members '[State CallMap, Reader InfoTable] r =>
   TopModule ->
   Sem r ()
-checkModule m = checkModuleBody (m ^. moduleBody)
+scanModule m = scanModuleBody (m ^. moduleBody)
 
-checkModuleBody :: Members '[State CallMap, Reader InfoTable] r => ModuleBody -> Sem r ()
-checkModuleBody body = do
-  mapM_ checkFunctionDef moduleFunctions
-  mapM_ checkLocalModule moduleLocalModules
+scanModuleBody :: Members '[State CallMap, Reader InfoTable] r => ModuleBody -> Sem r ()
+scanModuleBody body = do
+  mapM_ scanFunctionDef moduleFunctions
+  mapM_ scanLocalModule moduleLocalModules
   where
     moduleFunctions = [f | StatementFunction f <- body ^. moduleStatements]
     moduleLocalModules = [f | StatementLocalModule f <- body ^. moduleStatements]
 
-checkLocalModule :: Members '[State CallMap, Reader InfoTable] r => LocalModule -> Sem r ()
-checkLocalModule m = checkModuleBody (m ^. moduleBody)
+scanLocalModule :: Members '[State CallMap, Reader InfoTable] r => LocalModule -> Sem r ()
+scanLocalModule m = scanModuleBody (m ^. moduleBody)
 
-checkFunctionDef ::
+scanFunctionDef ::
   Members '[State CallMap, Reader InfoTable] r =>
   FunctionDef ->
   Sem r ()
-checkFunctionDef FunctionDef {..} =
+scanFunctionDef FunctionDef {..} =
   runReader (FunctionRef _funDefName) $ do
-    checkTypeSignature _funDefTypeSig
-    mapM_ checkFunctionClause _funDefClauses
+    scanTypeSignature _funDefTypeSig
+    mapM_ scanFunctionClause _funDefClauses
 
-checkTypeSignature ::
+scanTypeSignature ::
   Members '[State CallMap, Reader FunctionRef, Reader InfoTable] r =>
   Expression ->
   Sem r ()
-checkTypeSignature = runReader (emptySizeInfo :: SizeInfo) . checkExpression
+scanTypeSignature = runReader emptySizeInfo . scanExpression
 
-checkFunctionClause ::
+scanFunctionClause ::
   forall r.
   Members '[State CallMap, Reader FunctionRef, Reader InfoTable] r =>
   FunctionClause ->
   Sem r ()
-checkFunctionClause FunctionClause {..} = go (reverse _clausePatterns) _clauseBody
+scanFunctionClause FunctionClause {..} = go (reverse _clausePatterns) _clauseBody
   where
     go :: [PatternArg] -> Expression -> Sem r ()
     go revArgs body = case body of
       ExpressionLambda (Lambda cl) -> mapM_ goClause cl
-      _ -> runReader (mkSizeInfo (reverse revArgs)) (checkExpression body)
+      _ -> runReader (mkSizeInfo (reverse revArgs)) (scanExpression body)
       where
         goClause :: LambdaClause -> Sem r ()
         goClause (LambdaClause pats clBody) = go (reverse (toList pats) ++ revArgs) clBody
 
-checkExpression ::
+scanExpression ::
   Members '[State CallMap, Reader FunctionRef, Reader InfoTable, Reader SizeInfo] r =>
   Expression ->
   Sem r ()
-checkExpression e =
+scanExpression e =
   viewCall e >>= \case
     Just c -> do
       registerCall c
-      mapM_ (checkExpression . snd) (c ^. callArgs)
+      mapM_ (scanExpression . snd) (c ^. callArgs)
     Nothing -> case e of
-      ExpressionApplication a -> checkApplication a
-      ExpressionFunction f -> checkFunction f
-      ExpressionLambda l -> checkLambda l
+      ExpressionApplication a -> scanApplication a
+      ExpressionFunction f -> scanFunction f
+      ExpressionLambda l -> scanLambda l
       ExpressionIden {} -> return ()
       ExpressionHole {} -> return ()
       ExpressionUniverse {} -> return ()
       ExpressionLiteral {} -> return ()
 
-checkLambda ::
+scanLambda ::
   forall r.
   Members '[State CallMap, Reader FunctionRef, Reader InfoTable, Reader SizeInfo] r =>
   Lambda ->
   Sem r ()
-checkLambda (Lambda cl) = mapM_ checkClause cl
+scanLambda (Lambda cl) = mapM_ scanClause cl
   where
-    checkClause :: LambdaClause -> Sem r ()
-    checkClause LambdaClause {..} = checkExpression _lambdaBody
+    scanClause :: LambdaClause -> Sem r ()
+    scanClause LambdaClause {..} = scanExpression _lambdaBody
 
-checkApplication ::
+scanApplication ::
   Members '[State CallMap, Reader FunctionRef, Reader InfoTable, Reader SizeInfo] r =>
   Application ->
   Sem r ()
-checkApplication (Application l r _) = do
-  checkExpression l
-  checkExpression r
+scanApplication (Application l r _) = do
+  scanExpression l
+  scanExpression r
 
-checkFunction ::
+scanFunction ::
   Members '[State CallMap, Reader FunctionRef, Reader InfoTable, Reader SizeInfo] r =>
   Function ->
   Sem r ()
-checkFunction (Function l r) = do
-  checkFunctionParameter l
-  checkExpression r
+scanFunction (Function l r) = do
+  scanFunctionParameter l
+  scanExpression r
 
-checkFunctionParameter ::
+scanFunctionParameter ::
   Members '[State CallMap, Reader FunctionRef, Reader InfoTable, Reader SizeInfo] r =>
   FunctionParameter ->
   Sem r ()
-checkFunctionParameter p = checkExpression (p ^. paramType)
+scanFunctionParameter p = scanExpression (p ^. paramType)
