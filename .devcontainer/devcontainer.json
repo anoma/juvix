@@ -3,10 +3,10 @@
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
+      "USERNAME": "vscode",
       "VARIANT": "ubuntu-22.04"
     }
   },
-
 	"runArgs": [
 		"--privileged"
 	],
@@ -45,7 +45,8 @@
       "haskell.trace.client": "debug",
       "haskell.upgradeGHCup": true,
       "haskell.indentationRules.enabled": true,
-      "Heliax.juvix-mode.opts.internalBuildDir": "/home/vscode/.juvix"
+      "Heliax.juvix-mode.opts.internalBuildDir": "/home/vscode/.juvix",
+      "Heliax.juvix-mode.bin.path": "/home/vscode/.local/bin/juvix"
   },
   "extensions": [
     "haskell.haskell",

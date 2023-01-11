@@ -23,6 +23,8 @@ RUN apt-get update && \
     make \
     cmake \
     clang \
+    lldb \
+    lld \
     llvm \
     automake \
     rsync \
@@ -49,12 +51,17 @@ RUN apt-get update && \
 RUN sudo bash -c 'curl -sSL https://get.haskellstack.org/ | sh'
 
 ENV PATH=${PATH}:/home/vscode/.ghcup/bin
-ENV PATH=${PATH}:/home/vscode/.local/bin
 
+ENV PATH=${PATH}:/home/vscode/.local/bin
+RUN sudo bash -c 'mkdir -p /home/vscode/.local/bin'
+RUN sudo bash -c "chown -R vscode /home/vscode/.local/"
 
 RUN sudo bash -c 'curl https://get.wasmer.io -sSfL | sudo WASMER_DIR=/home/vscode/.local sh'
-RUN sudo bash -c 'mkdir -p /home/vscode/.local/bin'
-RUN sudo bash -c 'mkdir -p /home/vscode/.juvix'
+
+# to be used by the juvix extension
+RUN sudo bash -c 'mkdir -p /home/vscode/.local/juvix'
+RUN sudo bash -c 'chmod -R a+rXw /home/vscode/.local/juvix'
+
 RUN sudo bash -c 'curl -s https://api.github.com/repos/anoma/juvix/releases/latest \
       | grep -a "browser_download_url.*linux" \
       | cut -d : -f 2,3 \
@@ -63,6 +70,14 @@ RUN sudo bash -c 'curl -s https://api.github.com/repos/anoma/juvix/releases/late
       && unzip juvix.zip \
       && mv juvix-linux* /home/vscode/.local/bin/juvix'
 
+RUN sudo bash -c 'mkdir -p /home/vscode/.local/wasi-sdk'
+RUN sudo bash -c 'curl -s https://api.github.com/repos/WebAssembly/wasi-sdk/releases/tags/wasi-sdk-16 \
+      | grep -a "browser_download_url.*tar.gz" \
+      | cut -d : -f 2,3 \
+      | tr -d \" \
+      | wget --output-document wasi-sdk.tar.gz -qi - \
+      && tar xvf wasi-sdk.tar.gz --directory /home/vscode/.local/wasi-sdk/'
+ENV WASI_SYSROOT_PATH=/home/vscode/.local/wasi-sdk/
 
 RUN sudo bash -c 'curl -s https://api.github.com/repos/SamirTalwar/smoke/releases/latest \
       | grep -a "browser_download_url.*Linux" \
@@ -74,4 +89,3 @@ RUN sudo bash -c 'curl -s https://api.github.com/repos/SamirTalwar/smoke/release
 
 USER vscode
 RUN bash -c "curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh"
-RUN sudo bash -c "chown -R vscode /home/vscode/.local/"
