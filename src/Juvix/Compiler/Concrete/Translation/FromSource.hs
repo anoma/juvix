@@ -574,7 +574,9 @@ functionClausePatterns =
   where
     wrongEq :: ParsecS r ()
     wrongEq = do
-      P.chunk "="
+      P.try $ do
+        w <- morpheme
+        unless (w == "=") (P.failure Nothing mempty)
       off <- P.getOffset
       parseFailure off "expected \":=\" instead of \"=\""
 
