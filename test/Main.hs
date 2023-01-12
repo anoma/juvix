@@ -4,6 +4,7 @@ import Arity qualified
 import Asm qualified
 import BackendC qualified
 import Base
+import Compilation qualified
 import Core qualified
 import Internal qualified
 import Parsing qualified
@@ -18,10 +19,11 @@ slowTests =
   testGroup
     "Juvix slow tests"
     [ BackendC.allTests,
-      Core.allTests,
+      Runtime.allTests,
       Asm.allTests,
+      Core.allTests,
       Internal.allTests,
-      Runtime.allTests
+      Compilation.allTests
     ]
 
 fastTests :: TestTree

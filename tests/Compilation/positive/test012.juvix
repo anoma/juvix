@@ -1,0 +1,36 @@
+-- trees
+module test012;
+
+open import Stdlib.Prelude;
+open import Stdlib.Data.Nat.Ord;
+
+type Tree :=
+    leaf : Tree
+|   node1 : Tree → Tree
+|   node2 : Tree → Tree → Tree
+|   node3 : Tree → Tree → Tree → Tree;
+
+terminating
+gen : Nat → Tree;
+gen zero := leaf;
+gen n := if (mod n 3 == 0)
+            (node1 (gen (sub n 1)))
+            (if (mod n 3 == 1)
+                (node2 (gen (sub n 1)) (gen (sub n 1)))
+                (node3 (gen (sub n 1)) (gen (sub n 1)) (gen (sub n 1))));
+
+preorder : Tree → IO;
+preorder leaf := printNat 0;
+preorder (node1 c) := printNat 1 >> preorder c;
+preorder (node2 l r) := printNat 2 >> preorder l >> preorder r;
+preorder (node3 l m r) := printNat 3 >> preorder l >> preorder m >> preorder r;
+
+main : IO;
+main :=
+    preorder (gen 3) >> printString "\n" >>
+    preorder (gen 4) >> printString "\n" >>
+    preorder (gen 5) >> printString "\n" >>
+    preorder (gen 6) >> printString "\n" >>
+    preorder (gen 7) >> printString "\n";
+
+end;

@@ -1,0 +1,54 @@
+-- pattern matching
+module test035;
+
+open import Stdlib.Prelude;
+
+lgen : Nat → List Nat;
+lgen zero := nil;
+lgen (suc n) := suc n :: lgen n;
+
+sum2 : List Nat → List Nat;
+sum2 (x :: (y :: xs)) := x + y :: sum2 (y :: xs);
+sum2 xs := xs;
+
+type Tree :=
+  leaf : Tree
+| node : Tree -> Tree -> Tree;
+
+gen : Nat → Tree;
+gen zero := leaf;
+gen (suc zero) := node leaf leaf;
+gen (suc (suc n)) := node (gen n) (gen (suc n));
+
+g : Tree → Tree;
+
+terminating
+f : Tree → Nat;
+f leaf := 1;
+f (node l r) :=
+  case (g l, g r) λ{
+    (leaf, leaf) := 3;
+    (node l r, leaf) := (f l + f r) * 2;
+    (node l1 r1, node l2 r2) := (f l1 + f r1) * (f l2 + f r2);
+    (_, node l r) := f l + f r;
+  };
+
+g leaf := leaf;
+g (node (node _ _) r) := r;
+g (node l r) := node r l;
+
+printListNatLn : List Nat → IO;
+printListNatLn nil := printStringLn "nil";
+printListNatLn (x :: xs) := printNat x >> printString " :: " >> printListNatLn xs;
+
+main : IO;
+main :=
+  printListNatLn (sum2 (lgen 5)) >>
+  printNatLn (f (gen 10)) >>
+  printNatLn (f (gen 15)) >>
+  printNatLn (f (gen 16)) >>
+  printNatLn (f (gen 17)) >>
+  printNatLn (f (gen 18)) >>
+  printNatLn (f (gen 20));
+
+end;

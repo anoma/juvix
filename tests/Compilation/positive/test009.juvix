@@ -1,0 +1,27 @@
+-- tail recursion
+module test009;
+
+open import Stdlib.Prelude;
+
+sum' : Nat → Nat → Nat;
+sum' acc zero := acc;
+sum' acc (suc x) := sum' (suc x + acc) x;
+
+sum : Nat → Nat;
+sum := sum' 0;
+
+fact' : Nat → Nat → Nat;
+fact' acc zero := acc;
+fact' acc (suc x) := fact' (acc * suc x) x;
+
+fact : Nat → Nat;
+fact := fact' 1;
+
+main : IO;
+main :=
+    printNatLn (sum 10000) >>
+    printNatLn (fact 5) >>
+    printNatLn (fact 10) >>
+    printNatLn (fact 12);
+
+end;

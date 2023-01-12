@@ -1,0 +1,15 @@
+-- if then else
+module test006;
+
+open import Stdlib.Prelude;
+open import Stdlib.Data.Nat.Ord;
+
+terminating
+loop : Nat;
+loop := loop;
+
+main : IO;
+main := printNatLn $ (if (3 > 0) 1 loop) + (if (2 < 1) loop (if (7 >= 8) loop 1));
+
+
+end;

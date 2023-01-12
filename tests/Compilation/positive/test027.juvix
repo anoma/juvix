@@ -1,0 +1,37 @@
+-- Church numerals
+module test027;
+
+open import Stdlib.Prelude;
+
+Num : Type;
+Num := {A : Type} → (A → A) → A → A;
+
+czero : Num;
+czero {_} f x := x;
+
+csuc : Num → Num;
+csuc n {_} f := f ∘ n {_} f;
+
+num : Nat → Num;
+num zero := czero;
+num (suc n) := csuc (num n);
+
+add : Num → Num → Num;
+add n m {_} f := n {_} f ∘ m {_} f;
+
+mul : Num → Num → Num;
+mul n m {_} := n {_} ∘ m {_};
+
+isZero : Num → Bool;
+isZero n := n {_} (const false) true;
+
+toNat : Num → Nat;
+toNat n := n {_} ((+) 1) 0;
+
+main : IO;
+main :=
+  printNatLn (toNat (num 7)) >>
+  printNatLn (toNat (add (num 7) (num 3))) >>
+  printNatLn (toNat (mul (num 7) (num 3)));
+
+end;

@@ -33,6 +33,17 @@ toTestDescr Test {..} =
           _testAssertion = Steps $ coreCompileAssertion file' expected'
         }
 
+coreCompileAssertion' ::
+  InfoTable ->
+  Path Abs File ->
+  Path Abs File ->
+  (String -> IO ()) ->
+  Assertion
+coreCompileAssertion' tab mainFile expectedFile step = do
+  step "Translate to JuvixAsm"
+  let tab' = Asm.fromCore $ Stripped.fromCore $ toStripped tab
+  Asm.asmCompileAssertion' tab' mainFile expectedFile step
+
 coreCompileAssertion ::
   Path Abs File ->
   Path Abs File ->
@@ -47,7 +58,5 @@ coreCompileAssertion mainFile expectedFile step = do
       step "Empty program: compare expected and actual program output"
       expected <- TIO.readFile (toFilePath expectedFile)
       assertEqDiff ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
-    Right (tabIni, Just node) -> do
-      step "Translate to JuvixAsm"
-      let tab = Asm.fromCore $ Stripped.fromCore $ toStripped $ setupMainFunction tabIni node
-      Asm.asmCompileAssertion' tab mainFile expectedFile step
+    Right (tabIni, Just node) ->
+      coreCompileAssertion' (setupMainFunction tabIni node) mainFile expectedFile step

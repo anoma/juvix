@@ -1,0 +1,40 @@
+-- arithmetic
+module test014;
+
+open import Stdlib.Prelude;
+
+f : Nat → Nat → IO;
+f x y := printNatLn (x + y);
+
+g : Nat → Nat → Nat;
+g x y := sub (x + 21) (y * 7);
+
+h : (Nat → Nat → Nat) → Nat → Nat → Nat;
+h f y z := f y y * z;
+
+x : Nat;
+x := 5;
+
+y : Nat;
+y := 17;
+
+func : Nat → Nat;
+func x := x + 4;
+
+z : Nat;
+z := 0;
+
+vx : Nat;
+vx := 30;
+
+vy : Nat;
+vy := 7;
+
+main : IO;
+main :=
+    printNatLn (func (div y x)) >> -- 17 div 5 + 4 = 7
+    printNatLn (y + x * z) >> -- 17
+    printNatLn (vx + vy * (z + 1)) >> -- 37
+    f (h g 2 3) 4 -- (g 2 2) * 3 + 4 = (2+21-2*7)*3 + 4 = 9*3 + 4 = 27+4 = 31
+
+end;

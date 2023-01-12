@@ -1,0 +1,51 @@
+-- merge sort
+module test032;
+
+open import Stdlib.Prelude;
+open import Stdlib.Data.Nat.Ord;
+
+split : {A : Type} → Nat → List A → List A × List A;
+split zero xs := (nil, xs);
+split (suc n) nil := (nil, nil);
+split (suc n) (x :: xs) := case (split n xs) λ{
+  (l1, l2) := (x :: l1, l2)
+};
+
+merge' : List Nat → List Nat → List Nat;
+merge' nil ys := ys;
+merge' xs nil := xs;
+merge' xs@(x :: xs') ys@(y :: ys') := if (x <= y) (x :: merge' xs' ys) (y :: merge' xs ys');
+
+sort : List Nat → List Nat;
+sort xs :=
+  let {n : Nat; n := length xs} in
+  if (n <= 1)
+    xs
+    (case (split (div n 2) xs) λ{
+      (l1, l2) := merge' (sort l1) (sort l2)
+    });
+
+uniq : List Nat → List Nat;
+uniq nil := nil;
+uniq (x :: nil) := x :: nil;
+uniq (x :: xs@(x' :: _)) := if (x == x') (uniq xs) (x :: uniq xs);
+
+gen : Nat → Nat → (Nat → Nat) → List Nat;
+gen acc zero f := acc;
+gen acc (suc n) f := gen (f (suc n) :: acc) n f;
+
+gen2 : Nat → Nat → Nat → List (List Nat);
+gen2 acc m zero := acc;
+gen2 acc m (suc n) := gen2 (gen m ((+) n) nil :: acc) m n;
+
+printListNatLn : List Nat → IO;
+printListNatLn nil := printStringLn "nil";
+printListNatLn (x :: xs) := printNat x >> printString " :: " >> printListNatLn xs;
+
+main : IO;
+main :=
+  printListNatLn (take 10 (uniq (sort (flatten (gen2 6 40 nil))))) >>
+  printListNatLn (take 10 (uniq (sort (flatten (gen2 9 80 nil))))) >>
+  printListNatLn (take 10 (uniq (sort (flatten (gen2 6 80 nil)))));
+
+end;

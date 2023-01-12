@@ -1,0 +1,8 @@
+module test002;
+
+open import Stdlib.Prelude;
+
+main : IO;
+main := printNatLn ((\{ x y z := z + x * y }) 2 3 5);
+
+end;

@@ -1,0 +1,34 @@
+-- nested binders with variable capture
+module test024;
+
+open import Stdlib.Prelude;
+
+type Tree := leaf : Tree | node : Tree → Tree → Tree;
+
+gen : Nat → Tree;
+gen zero := leaf;
+gen (suc zero) := node leaf leaf;
+gen (suc (suc n')) := node (gen n') (gen (suc n'));
+
+g : Tree → Tree;
+
+f : Tree → Nat;
+f leaf := 1;
+f (node l r) :=
+  let {l : Tree; l := g l} in
+  let {r : Tree; r := g r} in
+  let {a : Nat; a := λ{leaf := 1; node l r := f l + f r} l} in
+  let {b : Nat; b := λ{node l r := f l + f r; _ := 2} r} in
+  a * b;
+
+isNode : Tree → Bool;
+isNode (node _ _) := true;
+isNode leaf := false;
+
+g leaf := leaf;
+g (node l r) := if (isNode l) r (node r l);
+
+main : IO;
+main := printNatLn (f (gen 10));
+
+end;
