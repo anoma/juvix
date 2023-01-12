@@ -75,10 +75,10 @@ buildTable1 m = InfoTable {..} <> buildTable (map (^. includeModule) includes)
       HashMap.fromList
         [ (c ^. inductiveConstructorName, ConstructorInfo params args ind builtin)
           | StatementInductive d <- ss,
-            let ind = d ^. inductiveName,
-            let n = length (d ^. inductiveConstructors),
-            let params = d ^. inductiveParameters,
-            let builtins = maybe (replicate n Nothing) (map Just . builtinConstructors) (d ^. inductiveBuiltin),
+            let ind = d ^. inductiveName
+                n = length (d ^. inductiveConstructors)
+                params = d ^. inductiveParameters
+                builtins = maybe (replicate n Nothing) (map Just . builtinConstructors) (d ^. inductiveBuiltin),
             (builtin, c) <- zipExact builtins (d ^. inductiveConstructors),
             let args = c ^. inductiveConstructorParameters
         ]
