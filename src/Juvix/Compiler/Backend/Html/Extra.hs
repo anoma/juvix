@@ -9,6 +9,7 @@ mathJaxCdn :: Members '[Reader PlainHtmlOptions] r => Sem r Html
 mathJaxCdn = do
   baseUrl <- textValue <$> asks (^. htmlOptionsBaseUrl)
   let script1 =
+      -- TODO: Should we keep the js in the assets
         script
           ! Attr.src "https://polyfill.io/v3/polyfill.min.js?features=es6"
           $ mempty
@@ -78,3 +79,5 @@ highlightJs = do
 
 metaUtf8 :: Html
 metaUtf8 = meta ! Attr.charset "UTF-8"
+
+-- TODO : Where is Tara's images

@@ -199,9 +199,12 @@ moduleDocPath m = do
 topModulePath :: Module 'Scoped 'ModuleTop -> TopModulePath
 topModulePath = (^. modulePath . S.nameConcrete)
 
+-- TODO:
 srcHtmlOpts :: PlainHtmlOptions
 srcHtmlOpts = PlainHtmlOptions HtmlSrc ""
 
+
+-- TODO:
 docHtmlOpts :: PlainHtmlOptions
 docHtmlOpts = PlainHtmlOptions HtmlDoc ""
 
