@@ -54,6 +54,7 @@ parseHtml = do
   _htmlBaseUrl <-
     strOption
       ( value ""
+          <> long "base-dir"
           <> showDefault
           <> help "Prefix for hyperlinks and assets urls"
       )

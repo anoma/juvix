@@ -298,4 +298,9 @@ moduleDocRelativePath m = do
 nameIdAttrRef :: Members '[Reader PlainHtmlOptions] r => TopModulePath -> Maybe S.NameId -> Sem r AttributeValue
 nameIdAttrRef tp s = do
   pth <- toFilePath <$> moduleDocRelativePath tp
-  return (fromString pth <> preEscapedToValue '#' <>? (nameIdAttr <$> s))
+  baseUrl <- unpack <$> asks @PlainHtmlOptions (^. htmlOptionsBaseUrl)
+  return $
+    fromString baseUrl
+      <> fromString pth
+      <> preEscapedToValue '#'
+      <>? (nameIdAttr <$> s)
