@@ -207,62 +207,65 @@ docHtmlOpts = PlainHtmlOptions HtmlDoc ""
 
 template :: forall r. Members '[Reader EntryPoint, Reader PlainHtmlOptions] r => Html -> Html -> Sem r Html
 template rightMenu' content' = do
+  mathJax <- mathJaxCdn
+  ayuTheme <- ayuCss
+  judocTheme <- linuwialCss
+  let mhead :: Html
+      mhead =
+        Html.head $
+          title titleStr
+            <> Html.meta
+              ! Attr.httpEquiv "Content-Type"
+              ! Attr.content "text/html; charset=UTF-8"
+            <> Html.meta
+              ! Attr.name "viewport"
+              ! Attr.content "width=device-width, initial-scale=1"
+            <> mathJax
+            <> livejs
+            <> ayuTheme
+            <> judocTheme
+
+      titleStr :: Html
+      titleStr = "Juvix Documentation"
+
+      packageHeader :: Sem r Html
+      packageHeader = do
+        pkgName' <- toHtml <$> asks (^. entryPointPackage . packageName)
+        version' <- toHtml <$> asks (^. entryPointPackage . packageVersion . to prettyV)
+        return $
+          Html.div ! Attr.id "package-header" $
+            ( Html.span ! Attr.class_ "caption" $
+                pkgName' <> " - " <> version'
+            )
+              <> rightMenu'
+
+      mbody :: Sem r Html
+      mbody = do
+        bodyHeader' <- packageHeader
+        return $
+          body ! Attr.class_ "js-enabled" $
+            bodyHeader'
+              <> content'
+              <> mfooter
+
+      mfooter :: Html
+      mfooter =
+        Html.div ! Attr.id "footer" $
+          p
+            ( "Build by "
+                <> (Html.a ! Attr.href Str.juvixDotOrg $ "Juvix")
+                <> " version "
+                <> toHtml versionDoc
+            )
+            <> ( Html.a ! Attr.href Str.juvixDotOrg $
+                   Html.img
+                     ! Attr.id "tara"
+                     ! Attr.src "assets/Seating_Tara_smiling.svg"
+                     ! Attr.alt "Tara"
+               )
+
   body' <- mbody
-  return (docTypeHtml (mhead <> body'))
-  where
-    mhead :: Html
-    mhead =
-      Html.head $
-        title titleStr
-          <> Html.meta
-            ! Attr.httpEquiv "Content-Type"
-            ! Attr.content "text/html; charset=UTF-8"
-          <> Html.meta
-            ! Attr.name "viewport"
-            ! Attr.content "width=device-width, initial-scale=1"
-          <> mathJaxCdn
-          <> livejs
-          <> ayuCss
-          <> linuwialCss
-
-    titleStr :: Html
-    titleStr = "Juvix Documentation"
-
-    packageHeader :: Sem r Html
-    packageHeader = do
-      pkgName' <- toHtml <$> asks (^. entryPointPackage . packageName)
-      version' <- toHtml <$> asks (^. entryPointPackage . packageVersion . to prettyV)
-      return $
-        Html.div ! Attr.id "package-header" $
-          ( Html.span ! Attr.class_ "caption" $
-              pkgName' <> " - " <> version'
-          )
-            <> rightMenu'
-
-    mbody :: Sem r Html
-    mbody = do
-      bodyHeader' <- packageHeader
-      return $
-        body ! Attr.class_ "js-enabled" $
-          bodyHeader'
-            <> content'
-            <> mfooter
-
-    mfooter :: Html
-    mfooter =
-      Html.div ! Attr.id "footer" $
-        p
-          ( "Build by "
-              <> (Html.a ! Attr.href Str.juvixDotOrg $ "Juvix")
-              <> " version "
-              <> toHtml versionDoc
-          )
-          <> ( Html.a ! Attr.href Str.juvixDotOrg $
-                 Html.img
-                   ! Attr.id "tara"
-                   ! Attr.src "assets/Seating_Tara_smiling.svg"
-                   ! Attr.alt "Tara"
-             )
+  return $ docTypeHtml (mhead <> body')
 
 -- | This function compiles a datalang module into Html documentation.
 goTopModule ::

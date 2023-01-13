@@ -6,7 +6,7 @@ import Data.Text.IO qualified as Text
 import Data.Text.Lazy (toStrict)
 import Data.Time.Clock
 import Data.Time.Format
-import Juvix.Compiler.Backend.Html.Data.Theme
+import Juvix.Compiler.Backend.Html.Data.Options
 import Juvix.Compiler.Backend.Html.Extra
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra
@@ -23,12 +23,6 @@ import Text.Blaze.Html.Renderer.Text qualified as Html
 import Text.Blaze.Html5 as Html hiding (map)
 import Text.Blaze.Html5.Attributes qualified as Attr
 
-data PlainHtmlOptions = PlainHtmlOptions
-  { _htmlOptionsKind :: HtmlKind,
-    _htmlOptionsBaseUrl :: Text
-  }
-
-makeLenses ''PlainHtmlOptions
 
 kindSuffix :: HtmlKind -> String
 kindSuffix = \case
@@ -154,10 +148,17 @@ genModuleHtml o =
     theme = o ^. genModuleHtmlArgsTheme
     m = o ^. genModuleHtmlArgsEntryPoint
 
+    plainOptions :: PlainHtmlOptions
+    plainOptions = PlainHtmlOptions {
+      _htmlOptionsKind = htmlKind
+      , _htmlOptionsBaseUrl = baseUrl
+    }
+
+
     themeCss :: Html
     themeCss = case theme of
-      Ayu -> ayuCss
-      Nord -> nordCss
+      Ayu -> run . runReader plainOptions $ ayuCss
+      Nord -> run . runReader plainOptions $ nordCss
 
     htmlOpts :: PlainHtmlOptions
     htmlOpts =
@@ -183,7 +184,7 @@ genModuleHtml o =
     mhead =
       metaUtf8
         <> themeCss
-        <> highlightJs
+        <> (run . runReader plainOptions $ highlightJs)
 
     mbody :: Html
     mbody =
@@ -202,6 +203,7 @@ genModuleHtml o =
         commitAddress :: Text
         commitAddress = "https://github.com/anoma/juvix/commit/" <> shortHash
 
+        formattedTime :: String
         formattedTime = formatTime defaultTimeLocale "%Y-%m-%d %-H:%M %Z" utc
 
 docStream' :: PrettyCode a => Options -> a -> SimpleDocStream Ann

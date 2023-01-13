@@ -1,7 +1,7 @@
 module Commands.Html.Options where
 
 import CommonOptions
-import Juvix.Compiler.Backend.Html.Data.Theme
+import Juvix.Compiler.Backend.Html.Data.Options
 
 data HtmlOptions = HtmlOptions
   { _htmlRecursive :: Bool,
