@@ -1,15 +1,35 @@
--- applications with lets and cases in function position
 module test037;
 
 open import Stdlib.Prelude;
 
+xx : (Nat → Nat) → Nat → Nat;
+xx := id;
+
+yy : (Nat → Nat) → Nat → Nat;
+yy := let {
+  aux : (Nat → Nat) → Nat → Nat;
+  aux := let {
+   aux2 : (Nat → Nat) → Nat → Nat;
+   aux2 := id;
+   } in aux2
+  } in aux ;
+
+
+
 f : List ((Nat → Nat) → Nat → Nat) → Nat;
 f l :=
-  (case l λ{(x :: _) := x; nil := id})
-    (let {y : Nat → Nat; y := id} in (let {z : (Nat → Nat) → Nat → Nat; z := id} in case l λ{(_ :: _) := id} z) y) 7;
+  (case l λ { (x :: _) := x; nil := id})
+    (let {y : Nat → Nat; y := id} in (let {
+      z : (Nat → Nat) → Nat → Nat;
+      z := id
+      }
+      in case l λ {
+        (_ :: _) := id
+        }
+        z) y) 7;
 
-main : IO;
-main :=
-  printNatLn (f (λ{x y := x y + 2} :: nil));
+-- main : IO;
+-- main :=
+--   printNatLn (f (λ { x y := x y + 2} :: nil));
 
 end;

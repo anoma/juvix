@@ -4,6 +4,7 @@ module test015;
 open import Stdlib.Prelude;
 open import Stdlib.Data.Nat.Ord;
 
+terminating
 f : Nat → Nat → Nat;
 f x :=
     let {g : Nat → Nat; g y := x + y} in
@@ -16,6 +17,7 @@ f x :=
 g : Nat → (Nat → Nat) → Nat;
 g x h := x + h x;
 
+terminating
 h : Nat → Nat;
 h zero := 0;
 h (suc x) := g x h;

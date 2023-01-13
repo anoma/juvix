@@ -5,9 +5,9 @@ import Compilation.Base
 
 data PosTest = PosTest
   { _name :: String,
-    _relDir :: Path Rel Dir,
-    _file :: Path Rel File,
-    _expectedFile :: Path Rel File
+    _dir :: Path Abs Dir,
+    _file :: Path Abs File,
+    _expectedFile :: Path Abs File
   }
 
 fromTest :: PosTest -> TestTree
@@ -18,9 +18,9 @@ root = relToProject $(mkRelDir "tests/Compilation/positive/")
 
 toTestDescr :: PosTest -> TestDescr
 toTestDescr PosTest {..} =
-  let tRoot = root <//> _relDir
-      file' = tRoot <//> _file
-      expected' = tRoot <//> _expectedFile
+  let tRoot = _dir
+      file' = _file
+      expected' = _expectedFile
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
@@ -50,184 +50,191 @@ allTests =
         )
     )
 
+posTest :: String -> Path Rel Dir -> Path Rel File -> Path Rel File -> PosTest
+posTest _name rdir rfile routfile =
+  let _dir = root <//> rdir
+      _file = _dir <//> rfile
+      _expectedFile = root <//> routfile
+   in PosTest {..}
+
 tests :: [PosTest]
 tests =
-  [ PosTest
+  [ posTest
       "Arithmetic operators"
       $(mkRelDir ".")
       $(mkRelFile "test001.juvix")
       $(mkRelFile "out/test001.out"),
-    PosTest
+    posTest
       "Arithmetic operators inside lambdas"
       $(mkRelDir ".")
       $(mkRelFile "test002.juvix")
       $(mkRelFile "out/test002.out"),
-    PosTest
+    posTest
       "IO builtins"
       $(mkRelDir ".")
       $(mkRelFile "test004.juvix")
       $(mkRelFile "out/test004.out"),
-    PosTest
+    posTest
       "Higher-order functions"
       $(mkRelDir ".")
       $(mkRelFile "test005.juvix")
       $(mkRelFile "out/test005.out"),
-    PosTest
+    posTest
       "If-then-else"
       $(mkRelDir ".")
       $(mkRelFile "test006.juvix")
       $(mkRelFile "out/test006.out"),
-    PosTest
+    posTest
       "Pattern matching and lambda-case"
       $(mkRelDir ".")
       $(mkRelFile "test007.juvix")
       $(mkRelFile "out/test007.out"),
-    PosTest
+    posTest
       "Recursion"
       $(mkRelDir ".")
       $(mkRelFile "test008.juvix")
       $(mkRelFile "out/test008.out"),
-    PosTest
+    posTest
       "Tail recursion"
       $(mkRelDir ".")
       $(mkRelFile "test009.juvix")
       $(mkRelFile "out/test009.out"),
-    PosTest
+    posTest
       "Let"
       $(mkRelDir ".")
       $(mkRelFile "test010.juvix")
       $(mkRelFile "out/test010.out"),
-    PosTest
+    posTest
       "Tail recursion: Fibonacci numbers in linear time"
       $(mkRelDir ".")
       $(mkRelFile "test011.juvix")
       $(mkRelFile "out/test011.out"),
-    PosTest
+    posTest
       "Trees"
       $(mkRelDir ".")
       $(mkRelFile "test012.juvix")
       $(mkRelFile "out/test012.out"),
-    PosTest
+    posTest
       "Functions returning functions with variable capture"
       $(mkRelDir ".")
       $(mkRelFile "test013.juvix")
       $(mkRelFile "out/test013.out"),
-    PosTest
+    posTest
       "Arithmetic"
       $(mkRelDir ".")
       $(mkRelFile "test014.juvix")
       $(mkRelFile "out/test014.out"),
-    PosTest
+    posTest
       "Local functions with free variables"
       $(mkRelDir ".")
       $(mkRelFile "test015.juvix")
       $(mkRelFile "out/test015.out"),
-    PosTest
+    posTest
       "Recursion through higher-order functions"
       $(mkRelDir ".")
       $(mkRelFile "test016.juvix")
       $(mkRelFile "out/test016.out"),
-    PosTest
+    posTest
       "Tail recursion through higher-order functions"
       $(mkRelDir ".")
       $(mkRelFile "test017.juvix")
       $(mkRelFile "out/test017.out"),
-    PosTest
+    posTest
       "Higher-order functions and recursion"
       $(mkRelDir ".")
       $(mkRelFile "test018.juvix")
       $(mkRelFile "out/test018.out"),
-    PosTest
+    posTest
       "Self-application"
       $(mkRelDir ".")
       $(mkRelFile "test019.juvix")
       $(mkRelFile "out/test019.out"),
-    PosTest
+    posTest
       "Recursive functions: McCarthy's 91 function, subtraction by increments"
       $(mkRelDir ".")
       $(mkRelFile "test020.juvix")
       $(mkRelFile "out/test020.out"),
-    PosTest
+    posTest
       "Fast exponentiation"
       $(mkRelDir ".")
       $(mkRelFile "test021.juvix")
       $(mkRelFile "out/test021.out"),
-    PosTest
+    posTest
       "Lists"
       $(mkRelDir ".")
       $(mkRelFile "test022.juvix")
       $(mkRelFile "out/test022.out"),
-    PosTest
+    posTest
       "Mutual recursion"
       $(mkRelDir ".")
       $(mkRelFile "test023.juvix")
       $(mkRelFile "out/test023.out"),
-    PosTest
+    posTest
       "Nested binders with variable capture"
       $(mkRelDir ".")
       $(mkRelFile "test024.juvix")
       $(mkRelFile "out/test024.out"),
-    PosTest
+    posTest
       "Euclid's algorithm"
       $(mkRelDir ".")
       $(mkRelFile "test025.juvix")
       $(mkRelFile "out/test025.out"),
-    PosTest
+    posTest
       "Functional queues"
       $(mkRelDir ".")
       $(mkRelFile "test026.juvix")
       $(mkRelFile "out/test026.out"),
-    PosTest
+    posTest
       "Church numerals"
       $(mkRelDir ".")
       $(mkRelFile "test027.juvix")
       $(mkRelFile "out/test027.out"),
-    PosTest
+    posTest
       "Streams without memoization"
       $(mkRelDir ".")
       $(mkRelFile "test028.juvix")
       $(mkRelFile "out/test028.out"),
-    PosTest
+    posTest
       "Ackermann function"
       $(mkRelDir ".")
       $(mkRelFile "test029.juvix")
       $(mkRelFile "out/test029.out"),
-    PosTest
+    posTest
       "Ackermann function (higher-order definition)"
       $(mkRelDir ".")
       $(mkRelFile "test030.juvix")
       $(mkRelFile "out/test030.out"),
-    PosTest
+    posTest
       "Nested lists"
       $(mkRelDir ".")
       $(mkRelFile "test031.juvix")
       $(mkRelFile "out/test031.out"),
-    PosTest
+    posTest
       "Merge sort"
       $(mkRelDir ".")
       $(mkRelFile "test032.juvix")
       $(mkRelFile "out/test032.out"),
-    PosTest
+    posTest
       "Eta-expansion of builtins and constructors"
       $(mkRelDir ".")
       $(mkRelFile "test033.juvix")
       $(mkRelFile "out/test033.out"),
-    PosTest
+    posTest
       "Recursive let"
       $(mkRelDir ".")
       $(mkRelFile "test034.juvix")
       $(mkRelFile "out/test034.out"),
-    PosTest
+    posTest
       "Pattern matching"
       $(mkRelDir ".")
       $(mkRelFile "test035.juvix")
       $(mkRelFile "out/test035.out"),
-    PosTest
+    posTest
       "Eta-expansion"
       $(mkRelDir ".")
       $(mkRelFile "test036.juvix")
       $(mkRelFile "out/test036.out"),
-    PosTest
+    posTest
       "Applications with lets and cases in function position"
       $(mkRelDir ".")
       $(mkRelFile "test037.juvix")

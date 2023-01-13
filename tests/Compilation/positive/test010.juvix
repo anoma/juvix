@@ -10,6 +10,6 @@ main :=
     let { x3 : Nat; x3 := x1 * x1 } in
     let { y : Nat; y := x3 + 2 } in
     let { z : Nat; z := x3 + y } in
-    x + y + z;
+    printNat (x + y + z);
 
 end;

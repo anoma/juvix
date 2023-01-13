@@ -14,9 +14,9 @@ qsnd (queue _ x) := x;
 front : {A : Type} → Queue A → A;
 front q := head (qfst q);
 
-pop_front : {A : Type} → Queue A → A;
+pop_front : {A : Type} → Queue A → Queue A;
 pop_front {A} q :=
-  let {q' : Queue A; q' := queue (tail (qfst q) (qsnd q))} in
+  let {q' : Queue A; q' := queue (tail (qfst q)) (qsnd q)} in
   case (qfst q') λ{
     nil := queue (reverse (qsnd q')) nil;
     _ := q'
@@ -37,11 +37,12 @@ is_empty q := case (qfst q) λ{
 empty : {A : Type} → Queue A;
 empty := queue nil nil;
 
+terminating
 g : List Nat → Queue Nat → List Nat;
-g acc q := if (is_empty q) acc (g (pop_front q) (front q :: acc));
+g acc q := if (is_empty q) acc (g (front q :: acc) (pop_front q));
 
 f : Nat → Queue Nat → List Nat;
-f zero q := g q;
+f zero q := g nil q;
 f n@(suc n') q := f n' (push_back q n);
 
 printListNatLn : List Nat → IO;

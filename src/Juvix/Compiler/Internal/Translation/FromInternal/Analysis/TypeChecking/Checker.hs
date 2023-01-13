@@ -57,7 +57,7 @@ checkStatement ::
   Statement ->
   Sem r Statement
 checkStatement s = case s of
-  StatementFunction funs -> StatementFunction <$> checkMutualBlock funs
+  StatementFunction funs -> StatementFunction <$> runReader emptyLocalVars (checkMutualBlock funs)
   StatementForeign {} -> return s
   StatementInductive ind -> StatementInductive <$> readerState @FunctionsTable (checkInductiveDef ind)
   StatementInclude i -> StatementInclude <$> checkInclude i
@@ -127,7 +127,7 @@ withEmptyVars :: Sem (Reader LocalVars : r) a -> Sem r a
 withEmptyVars = runReader emptyLocalVars
 
 checkMutualBlock ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r =>
+  Members '[Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins] r =>
   MutualBlock ->
   Sem r MutualBlock
 checkMutualBlock (MutualBlock ds) =
@@ -135,12 +135,12 @@ checkMutualBlock (MutualBlock ds) =
     MutualBlock <$> runInferenceDefs (mapM checkFunctionDef ds)
 
 checkFunctionDef ::
-  Members '[Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Inference] r =>
+  Members '[Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, State TypesTable, State FunctionsTable, Output Example, Builtins, Inference] r =>
   FunctionDef ->
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
   funDef <- readerState @FunctionsTable $ do
-    _funDefType' <- withEmptyVars (checkFunctionDefType _funDefType)
+    _funDefType' <- checkFunctionDefType _funDefType
     registerIden _funDefName _funDefType'
     _funDefClauses' <- mapM (checkFunctionClause _funDefType') _funDefClauses
     return
@@ -265,12 +265,12 @@ lookupVar v = HashMap.lookupDefault err v <$> asks (^. localTypes)
 
 checkFunctionClause ::
   forall r.
-  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Inference, Builtins, State TypesTable, Output Example] r =>
+  Members '[Reader InfoTable, Reader FunctionsTable, Error TypeCheckerError, NameIdGen, Inference, Builtins, State TypesTable, Output Example, Reader LocalVars] r =>
   Expression ->
   FunctionClause ->
   Sem r FunctionClause
 checkFunctionClause clauseType FunctionClause {..} = do
-  body' <- runReader emptyLocalVars (checkClause clauseType _clausePatterns _clauseBody)
+  body' <- checkClause clauseType _clausePatterns _clauseBody
   return
     FunctionClause
       { _clauseBody = body',

@@ -344,8 +344,8 @@ checkLet ::
   Let ->
   Sem r Let
 checkLet ari l = do
-  _letExpression <- checkExpression ari (l ^. letExpression)
   _letClauses <- mapM checkLetClause (l ^. letClauses)
+  _letExpression <- checkExpression ari (l ^. letExpression)
   return Let {..}
   where
     checkLetClause :: LetClause -> Sem r LetClause
@@ -472,7 +472,9 @@ checkExpression hintArity expr = case expr of
         ExpressionIden i -> idenArity i >>= helper (getLoc i)
         ExpressionLiteral l -> helper (getLoc l) (arityLiteral l)
         ExpressionUniverse l -> helper (getLoc l) arityUniverse
-        ExpressionLet l -> arityLet l >>= helper (getLoc l)
+        ExpressionLet l -> do
+          -- l' <- checkLet ArityUnknown l
+          arityLet l' >>= helper (getLoc l')
         ExpressionSimpleLambda {} -> simplelambda
         ExpressionFunction f ->
           throw
