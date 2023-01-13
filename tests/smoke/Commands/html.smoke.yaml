@@ -7,9 +7,9 @@ tests:
         - bash
       script: |
         cd milestone/ValidityPredicates
-        juvix html SimpleFungibleToken.juvix
+        juvix html SimpleFungibleToken.juvix --plain
         cat html/SimpleFungibleToken.html
-    stdout: 
+    stdout:
       contains:
         <!DOCTYPE HTML>
     exit-status: 0
@@ -20,10 +20,10 @@ tests:
         - bash
       script: |
         rm -rf html
-        juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --output-dir=html
+        juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --plain --output-dir=html
         [ -d html/assets ]
         [ -f html/SimpleFungibleToken.html ]
-    stdout: 
+    stdout:
       equals: |
         Writing SimpleFungibleToken.html
     exit-status: 0
@@ -34,7 +34,7 @@ tests:
         - bash
       script: |
         rm -rf html
-        juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --output-dir=html --recursive
+        juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --plain --output-dir=html --recursive
         [ -d html/assets ]
         [ -f html/SimpleFungibleToken.html ]
         (ls html | wc -l)
@@ -57,7 +57,7 @@ tests:
         [ -f assets/highlight.js   ]
         [ -f assets/source-ayu-light.css ]
         [ -f assets/source-nord.css ]
-    stdout: 
+    stdout:
       contains: |
         Writing SimpleFungibleToken.html
     exit-status: 0

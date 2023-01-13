@@ -23,11 +23,12 @@ import Text.Blaze.Html.Renderer.Text qualified as Html
 import Text.Blaze.Html5 as Html hiding (map)
 import Text.Blaze.Html5.Attributes qualified as Attr
 
-newtype HtmlOptions = HtmlOptions
-  { _htmlOptionsKind :: HtmlKind
+data PlainHtmlOptions = PlainHtmlOptions
+  { _htmlOptionsKind :: HtmlKind,
+    _htmlOptionsBaseUrl :: Text
   }
 
-makeLenses ''HtmlOptions
+makeLenses ''PlainHtmlOptions
 
 kindSuffix :: HtmlKind -> String
 kindSuffix = \case
@@ -35,13 +36,70 @@ kindSuffix = \case
   HtmlSrc -> "-src"
   HtmlOnly -> ""
 
-genHtml :: Options -> Bool -> Theme -> Path Abs Dir -> Bool -> Module 'Scoped 'ModuleTop -> IO ()
-genHtml opts recursive theme outputDir printMetadata entry = do
+data PlainHtmlArgs = PlainHtmlArgs
+  { _plainHtmlArgsConcreteOpts :: Options,
+    _plainHtmlArgsRecursive :: Bool,
+    _plainHtmlArgsTheme :: Theme,
+    _plainHtmlArgsOutputDir :: Path Abs Dir,
+    _plainHtmlArgsBaseUrl :: Text,
+    _plainHtmlArgsPrintMetaData :: Bool,
+    _plainHtmlArgsEntryPoint :: Module 'Scoped 'ModuleTop
+  }
+
+data GenModuleArgs = GenModuleArgs
+  { _genModuleArgsConcreteOpts :: Options,
+    _genModuleArgsHtmlKind :: HtmlKind,
+    _genModuleArgsPrintMetata :: Bool,
+    _genModuleArgsBaseUrl :: Text,
+    _genModuleArgsUTC :: UTCTime,
+    _genModuleArgsTheme :: Theme,
+    _genModuleArgsEntryPoint :: Module 'Scoped 'ModuleTop
+  }
+
+data GenModuleHtmlArgs = GenModuleHtmlArgs
+  { _genModuleHtmlArgsConcreteOpts :: Options,
+    _genModuleHtmlArgsHtmlKind :: HtmlKind,
+    _genModuleHtmlArgsPrintMetadata :: Bool,
+    _genModuleHtmlArgsBaseUrl :: Text,
+    _genModuleHtmlArgsUTC :: UTCTime,
+    _genModuleHtmlArgsTheme :: Theme,
+    _genModuleHtmlArgsEntryPoint :: Module 'Scoped 'ModuleTop
+  }
+
+makeLenses ''GenModuleArgs
+makeLenses ''PlainHtmlArgs
+makeLenses ''GenModuleHtmlArgs
+
+genModule :: GenModuleArgs -> Text
+genModule GenModuleArgs {..} =
+  toStrict
+    . Html.renderHtml
+    . genModuleHtml
+    $ GenModuleHtmlArgs
+      { _genModuleHtmlArgsConcreteOpts = _genModuleArgsConcreteOpts,
+        _genModuleHtmlArgsHtmlKind = _genModuleArgsHtmlKind,
+        _genModuleHtmlArgsPrintMetadata = _genModuleArgsPrintMetata,
+        _genModuleHtmlArgsBaseUrl = _genModuleArgsBaseUrl,
+        _genModuleHtmlArgsUTC = _genModuleArgsUTC,
+        _genModuleHtmlArgsTheme = _genModuleArgsTheme,
+        _genModuleHtmlArgsEntryPoint = _genModuleArgsEntryPoint
+      }
+
+genPlainHtml :: PlainHtmlArgs -> IO ()
+genPlainHtml o = do
+  let outputDir = o ^. plainHtmlArgsOutputDir
   ensureDir outputDir
   copyAssetFiles
   withCurrentDir outputDir $ do
     mapM_ outputModule allModules
   where
+    opts = o ^. plainHtmlArgsConcreteOpts
+    recursive = o ^. plainHtmlArgsRecursive
+    theme = o ^. plainHtmlArgsTheme
+    printMetadata = o ^. plainHtmlArgsPrintMetaData
+    entry = o ^. plainHtmlArgsEntryPoint
+    baseUrl = o ^. plainHtmlArgsBaseUrl
+
     allModules
       | recursive = toList (getAllModules entry)
       | otherwise = pure entry
@@ -57,34 +115,55 @@ genHtml opts recursive theme outputDir printMetadata entry = do
         writeAsset :: (Path Rel File, BS.ByteString) -> IO ()
         writeAsset (filePath, fileContents) =
           BS.writeFile (toFilePath (toAssetsDir <//> filePath)) fileContents
-        toAssetsDir = outputDir <//> $(mkRelDir "assets")
+        toAssetsDir = (o ^. plainHtmlArgsOutputDir) <//> $(mkRelDir "assets")
 
     outputModule :: Module 'Scoped 'ModuleTop -> IO ()
     outputModule m = do
       ensureDir (parent htmlFile)
       putStrLn $ "Writing " <> pack (toFilePath htmlFile)
       utc <- getCurrentTime
-      Text.writeFile (toFilePath htmlFile) (genModule opts HtmlOnly printMetadata utc theme m)
+      Text.writeFile
+        (toFilePath htmlFile)
+        ( genModule
+            GenModuleArgs
+              { _genModuleArgsConcreteOpts = opts,
+                _genModuleArgsHtmlKind = HtmlOnly,
+                _genModuleArgsPrintMetata = printMetadata,
+                _genModuleArgsBaseUrl = baseUrl,
+                _genModuleArgsUTC = utc,
+                _genModuleArgsTheme = theme,
+                _genModuleArgsEntryPoint = m
+              }
+        )
       where
         htmlFile :: Path Rel File
         htmlFile = relFile (topModulePathToDottedPath (m ^. modulePath . S.nameConcrete) <.> ".html")
 
-genModuleHtml :: Options -> HtmlKind -> Bool -> UTCTime -> Theme -> Module 'Scoped 'ModuleTop -> Html
-genModuleHtml opts htmlKind printMetadata utc theme m =
+genModuleHtml :: GenModuleHtmlArgs -> Html
+genModuleHtml o =
   docTypeHtml ! Attr.xmlns "http://www.w3.org/1999/xhtml" $
     mhead
       <> mbody
       <> if printMetadata then infoFooter else mempty
   where
+    opts = o ^. genModuleHtmlArgsConcreteOpts
+    htmlKind = o ^. genModuleHtmlArgsHtmlKind
+    printMetadata = o ^. genModuleHtmlArgsPrintMetadata
+    baseUrl = o ^. genModuleHtmlArgsBaseUrl
+    utc = o ^. genModuleHtmlArgsUTC
+    theme = o ^. genModuleHtmlArgsTheme
+    m = o ^. genModuleHtmlArgsEntryPoint
+
     themeCss :: Html
     themeCss = case theme of
       Ayu -> ayuCss
       Nord -> nordCss
 
-    htmlOpts :: HtmlOptions
+    htmlOpts :: PlainHtmlOptions
     htmlOpts =
-      HtmlOptions
-        { _htmlOptionsKind = htmlKind
+      PlainHtmlOptions
+        { _htmlOptionsKind = htmlKind,
+          _htmlOptionsBaseUrl = baseUrl
         }
 
     pp :: PrettyCode a => a -> Html
@@ -125,37 +204,31 @@ genModuleHtml opts htmlKind printMetadata utc theme m =
 
         formattedTime = formatTime defaultTimeLocale "%Y-%m-%d %-H:%M %Z" utc
 
-genModule :: Options -> HtmlKind -> Bool -> UTCTime -> Theme -> Module 'Scoped 'ModuleTop -> Text
-genModule opts htmlKind printMetadata utc theme =
-  toStrict
-    . Html.renderHtml
-    . genModuleHtml opts htmlKind printMetadata utc theme
-
 docStream' :: PrettyCode a => Options -> a -> SimpleDocStream Ann
 docStream' opts m = layoutPretty defaultLayoutOptions (runPrettyCode opts m)
 
-renderTree :: Members '[Reader HtmlOptions] r => SimpleDocTree Ann -> Sem r Html
+renderTree :: Members '[Reader PlainHtmlOptions] r => SimpleDocTree Ann -> Sem r Html
 renderTree = go
 
-ppCodeHtml' :: PrettyCode a => HtmlOptions -> Options -> a -> Html
+ppCodeHtml' :: PrettyCode a => PlainHtmlOptions -> Options -> a -> Html
 ppCodeHtml' htmlOpts opts = run . runReader htmlOpts . renderTree . treeForm . docStream' opts
 
-ppCodeHtml :: (Members '[Reader HtmlOptions] r, PrettyCode a) => a -> Sem r Html
+ppCodeHtml :: (Members '[Reader PlainHtmlOptions] r, PrettyCode a) => a -> Sem r Html
 ppCodeHtml x = do
   o <- ask
   return (ppCodeHtml' o defaultOptions x)
 
-ppCodeHtmlInternal :: (Members '[Reader HtmlOptions] r, Internal.PrettyCode a) => a -> Sem r Html
+ppCodeHtmlInternal :: (Members '[Reader PlainHtmlOptions] r, Internal.PrettyCode a) => a -> Sem r Html
 ppCodeHtmlInternal x = do
   o <- ask
   return (ppCodeHtmlInternal' o Internal.defaultOptions x)
   where
-    ppCodeHtmlInternal' :: Internal.PrettyCode a => HtmlOptions -> Internal.Options -> a -> Html
+    ppCodeHtmlInternal' :: Internal.PrettyCode a => PlainHtmlOptions -> Internal.Options -> a -> Html
     ppCodeHtmlInternal' htmlOpts opts = run . runReader htmlOpts . renderTree . treeForm . docStreamInternal' opts
     docStreamInternal' :: Internal.PrettyCode a => Internal.Options -> a -> SimpleDocStream Ann
     docStreamInternal' opts m = layoutPretty defaultLayoutOptions (Internal.runPrettyCode opts m)
 
-go :: Members '[Reader HtmlOptions] r => SimpleDocTree Ann -> Sem r Html
+go :: Members '[Reader PlainHtmlOptions] r => SimpleDocTree Ann -> Sem r Html
 go sdt = case sdt of
   STEmpty -> return mempty
   STChar c -> return (toHtml c)
@@ -167,7 +240,7 @@ go sdt = case sdt of
     textSpaces :: Int -> Text
     textSpaces n = Text.replicate n (Text.singleton ' ')
 
-putTag :: forall r. Members '[Reader HtmlOptions] r => Ann -> Html -> Sem r Html
+putTag :: forall r. Members '[Reader PlainHtmlOptions] r => Ann -> Html -> Sem r Html
 putTag ann x = case ann of
   AnnKind k -> return (tagKind k x)
   AnnLiteralInteger -> return (Html.span ! Attr.class_ "ju-number" $ x)
@@ -217,12 +290,12 @@ putTag ann x = case ann of
 nameIdAttr :: S.NameId -> AttributeValue
 nameIdAttr (S.NameId k) = fromString . show $ k
 
-moduleDocRelativePath :: Members '[Reader HtmlOptions] r => TopModulePath -> Sem r (Path Rel File)
+moduleDocRelativePath :: Members '[Reader PlainHtmlOptions] r => TopModulePath -> Sem r (Path Rel File)
 moduleDocRelativePath m = do
   suff <- kindSuffix <$> asks (^. htmlOptionsKind)
   return (topModulePathToRelativePathDot ".html" suff m)
 
-nameIdAttrRef :: Members '[Reader HtmlOptions] r => TopModulePath -> Maybe S.NameId -> Sem r AttributeValue
+nameIdAttrRef :: Members '[Reader PlainHtmlOptions] r => TopModulePath -> Maybe S.NameId -> Sem r AttributeValue
 nameIdAttrRef tp s = do
   pth <- toFilePath <$> moduleDocRelativePath tp
   return (fromString pth <> preEscapedToValue '#' <>? (nameIdAttr <$> s))

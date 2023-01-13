@@ -5,10 +5,13 @@ import Juvix.Compiler.Backend.Html.Data.Theme
 
 data HtmlOptions = HtmlOptions
   { _htmlRecursive :: Bool,
+    _htmlPlain :: Bool,
     _htmlTheme :: Theme,
     _htmlOutputDir :: AppPath Dir,
     _htmlInputFile :: AppPath File,
-    _htmlPrintMetadata :: Bool
+    _htmlPrintMetadata :: Bool,
+    _htmlBaseUrl :: Text,
+    _htmlOpen :: Bool
   }
   deriving stock (Data)
 
@@ -19,7 +22,12 @@ parseHtml = do
   _htmlRecursive <-
     switch
       ( long "recursive"
-          <> help "export imported modules recursively"
+          <> help "Export imported modules recursively"
+      )
+  _htmlPlain <-
+    switch
+      ( long "plain"
+          <> help "Generate a Html file with the highlighted source code"
       )
   _htmlTheme <-
     option
@@ -28,14 +36,14 @@ parseHtml = do
           <> metavar "THEME"
           <> value Ayu
           <> showDefault
-          <> help "selects a theme: ayu (light); nord (dark)"
+          <> help "Color theme for when the flag --only-source is used. Options: ayu (light) and nord (dark)."
           <> completeWith (map show allThemes)
       )
   _htmlOutputDir <-
     parseGenericOutputDir
       ( value (Rel $(mkRelDir "html"))
           <> showDefault
-          <> help "html output directory"
+          <> help "Html output directory"
           <> action "directory"
       )
   _htmlPrintMetadata <-
@@ -43,11 +51,23 @@ parseHtml = do
       ( long "print-metadata"
           <> help "Add HTML footer with metadata"
       )
+  _htmlBaseUrl <-
+    strOption
+      ( value ""
+          <> showDefault
+          <> help "Prefix for hyperlinks and assets urls"
+      )
+  _htmlOpen <-
+    switch
+      ( long "open"
+          <> help "Open the documentation after generating it"
+      )
   _htmlInputFile <- parseInputJuvixFile
   pure HtmlOptions {..}
   where
     allThemes :: [Theme]
     allThemes = allElements
+
     parseTheme :: String -> Either String Theme
     parseTheme s = case map toLower s of
       "nord" -> Right Nord
