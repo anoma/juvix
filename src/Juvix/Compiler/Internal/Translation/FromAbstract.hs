@@ -334,11 +334,11 @@ goExpression e = case e of
   Abstract.ExpressionHole h -> return (ExpressionHole h)
   Abstract.ExpressionLet l -> ExpressionLet <$> goLet l
 
-goLetClause :: Abstract.LetClause -> Sem r LetClause
+goLetClause :: Members '[NameIdGen] r => Abstract.LetClause -> Sem r LetClause
 goLetClause = \case
   Abstract.LetFunDef f -> LetFunDef <$> goFunctionDef f
 
-goLet :: Abstract.Let -> Sem r Let
+goLet :: Members '[NameIdGen] r => Abstract.Let -> Sem r Let
 goLet l = do
   _letExpression <- goExpression (l ^. Abstract.letExpression)
   _letClauses <- mapM goLetClause (l ^. Abstract.letClauses)
