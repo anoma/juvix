@@ -18,6 +18,4 @@ data HtmlKind
   | HtmlOnly
   deriving stock (Data)
 
-
-
 makeLenses ''PlainHtmlOptions

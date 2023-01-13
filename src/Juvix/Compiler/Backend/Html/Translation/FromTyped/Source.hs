@@ -23,7 +23,6 @@ import Text.Blaze.Html.Renderer.Text qualified as Html
 import Text.Blaze.Html5 as Html hiding (map)
 import Text.Blaze.Html5.Attributes qualified as Attr
 
-
 kindSuffix :: HtmlKind -> String
 kindSuffix = \case
   HtmlDoc -> ""
@@ -149,11 +148,11 @@ genModuleHtml o =
     m = o ^. genModuleHtmlArgsEntryPoint
 
     plainOptions :: PlainHtmlOptions
-    plainOptions = PlainHtmlOptions {
-      _htmlOptionsKind = htmlKind
-      , _htmlOptionsBaseUrl = baseUrl
-    }
-
+    plainOptions =
+      PlainHtmlOptions
+        { _htmlOptionsKind = htmlKind,
+          _htmlOptionsBaseUrl = baseUrl
+        }
 
     themeCss :: Html
     themeCss = case theme of
