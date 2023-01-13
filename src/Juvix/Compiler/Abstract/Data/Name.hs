@@ -26,7 +26,7 @@ makeLenses ''Name
 varFromWildcard :: Members '[NameIdGen] r => Wildcard -> Sem r VarName
 varFromWildcard w = do
   _nameId <- freshNameId
-  let _nameText :: Text = "ω" <> prettyText _nameId
+  let _nameText :: Text = "_ω" <> prettyText _nameId
       _nameKind = KNameLocal
       _namePretty = _nameText
       _nameLoc = getLoc w
