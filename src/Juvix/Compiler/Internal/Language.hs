@@ -26,14 +26,17 @@ data Module = Module
     _moduleExamples :: [Example],
     _moduleBody :: ModuleBody
   }
+  deriving stock (Data)
 
 newtype Include = Include
   { _includeModule :: Module
   }
+  deriving stock (Data)
 
 newtype ModuleBody = ModuleBody
   { _moduleStatements :: [Statement]
   }
+  deriving stock (Data)
 
 data Statement
   = StatementInductive InductiveDef
@@ -41,16 +44,19 @@ data Statement
   | StatementForeign ForeignBlock
   | StatementAxiom AxiomDef
   | StatementInclude Include
+  deriving stock (Data)
 
 newtype MutualBlock = MutualBlock
   { _mutualFunctions :: NonEmpty FunctionDef
   }
+  deriving stock (Data)
 
 data AxiomDef = AxiomDef
   { _axiomName :: AxiomName,
     _axiomBuiltin :: Maybe BuiltinAxiom,
     _axiomType :: Expression
   }
+  deriving stock (Data)
 
 data FunctionDef = FunctionDef
   { _funDefName :: FunctionName,
@@ -59,7 +65,7 @@ data FunctionDef = FunctionDef
     _funDefClauses :: NonEmpty FunctionClause,
     _funDefBuiltin :: Maybe BuiltinFunction
   }
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Generic, Data)
 
 instance Hashable FunctionDef
 
@@ -68,7 +74,7 @@ data FunctionClause = FunctionClause
     _clausePatterns :: [PatternArg],
     _clauseBody :: Expression
   }
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Generic, Data)
 
 instance Hashable FunctionClause
 
@@ -78,7 +84,7 @@ data Iden
   | IdenVar VarName
   | IdenAxiom Name
   | IdenInductive Name
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Generic, Data)
 
 getName :: Iden -> Name
 getName = \case
@@ -97,7 +103,7 @@ data TypedExpression = TypedExpression
 
 newtype LetClause
   = LetFunDef FunctionDef
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Generic, Data)
 
 instance Hashable LetClause
 
@@ -105,7 +111,7 @@ data Let = Let
   { _letClauses :: NonEmpty LetClause,
     _letExpression :: Expression
   }
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Generic, Data)
 
 instance Hashable Let
 
@@ -119,7 +125,7 @@ data Expression
   | ExpressionUniverse SmallUniverse
   | ExpressionSimpleLambda SimpleLambda
   | ExpressionLambda Lambda
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Generic, Data)
 
 instance Hashable Expression
 
@@ -127,7 +133,7 @@ data Example = Example
   { _exampleId :: NameId,
     _exampleExpression :: Expression
   }
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Generic, Data)
 
 instance Hashable Example
 
@@ -136,18 +142,18 @@ data SimpleLambda = SimpleLambda
     _slambdaVarType :: Expression,
     _slambdaBody :: Expression
   }
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Generic, Data)
 
 newtype Lambda = Lambda
   { _lambdaClauses :: NonEmpty LambdaClause
   }
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Generic, Data)
 
 data LambdaClause = LambdaClause
   { _lambdaPatterns :: NonEmpty PatternArg, -- only explicit patterns are allowed
     _lambdaBody :: Expression
   }
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Generic, Data)
 
 instance Hashable Lambda
 
@@ -160,6 +166,7 @@ data Application = Application
     _appRight :: Expression,
     _appImplicit :: IsImplicit
   }
+  deriving stock (Data)
 
 -- TODO: Eq and Hashable instances ignore the _appImplicit field
 --  to workaround a crash in Micro->Mono translation when looking up
@@ -175,7 +182,7 @@ data ConstructorApp = ConstructorApp
   { _constrAppConstructor :: Name,
     _constrAppParameters :: [PatternArg]
   }
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Generic, Data)
 
 instance Hashable ConstructorApp
 
@@ -184,21 +191,21 @@ data PatternArg = PatternArg
     _patternArgName :: Maybe VarName,
     _patternArgPattern :: Pattern
   }
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Generic, Data)
 
 instance Hashable PatternArg
 
 data Pattern
   = PatternVariable VarName
   | PatternConstructorApp ConstructorApp
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Generic, Data)
 
 instance Hashable Pattern
 
 newtype InductiveParameter = InductiveParameter
   { _inductiveParamName :: VarName
   }
-  deriving stock (Eq)
+  deriving stock (Eq, Data)
 
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
@@ -208,6 +215,7 @@ data InductiveDef = InductiveDef
     _inductiveConstructors :: [InductiveConstructorDef],
     _inductivePositive :: Bool
   }
+  deriving stock (Data)
 
 data InductiveConstructorDef = InductiveConstructorDef
   { _inductiveConstructorName :: ConstrName,
@@ -215,13 +223,14 @@ data InductiveConstructorDef = InductiveConstructorDef
     _inductiveConstructorExamples :: [Example],
     _inductiveConstructorReturnType :: Expression
   }
+  deriving stock (Data)
 
 data FunctionParameter = FunctionParameter
   { _paramName :: Maybe VarName,
     _paramImplicit :: IsImplicit,
     _paramType :: Expression
   }
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Generic, Data)
 
 instance Hashable FunctionParameter
 
@@ -229,7 +238,7 @@ data Function = Function
   { _functionLeft :: FunctionParameter,
     _functionRight :: Expression
   }
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Generic, Data)
 
 instance Hashable Function
 

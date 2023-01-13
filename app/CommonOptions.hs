@@ -209,9 +209,6 @@ requote s =
         goX [] =
           []
 
-class HasAppPaths a where
-  paths :: Traversal' a FilePath
-
 optDeBruijn :: Parser Bool
 optDeBruijn =
   switch

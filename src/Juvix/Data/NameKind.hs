@@ -19,7 +19,7 @@ data NameKind
     KNameLocalModule
   | -- | A top module name.
     KNameTopModule
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Data)
 
 class HasNameKind a where
   getNameKind :: a -> NameKind

@@ -2,8 +2,10 @@ module Juvix.Data.Backends where
 
 import Juvix.Prelude.Base
 
-data Backend = BackendGhc | BackendC
-  deriving stock (Show, Eq, Ord, Generic)
+data Backend
+  = BackendGhc
+  | BackendC
+  deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable Backend
 

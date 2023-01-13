@@ -7,7 +7,7 @@ import Prettyprinter
 newtype Wildcard = Wildcard
   { _wildcardLoc :: Interval
   }
-  deriving stock (Show)
+  deriving stock (Show, Data)
 
 makeLenses ''Wildcard
 

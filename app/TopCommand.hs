@@ -17,7 +17,7 @@ showHelpText = do
   let p = prefs showHelpOnEmpty
   progn <- getProgName
   let helpText = parserFailure p descr (ShowHelpText Nothing) []
-  let (msg, _) = renderFailure helpText progn
+      (msg, _) = renderFailure helpText progn
   putStrLn (pack msg)
 
 runTopCommand :: forall r. Members '[Embed IO, App] r => TopCommand -> Sem r ()

@@ -1,5 +1,6 @@
 module Juvix.Compiler.Internal.Data.InfoTable where
 
+import Data.Generics.Uniplate.Data
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
@@ -98,11 +99,20 @@ buildTable1' m = do
         ]
     _infoFunctions :: HashMap Name FunctionInfo
     _infoFunctions =
-      HashMap.fromList
+      HashMap.fromList $
         [ (f ^. funDefName, FunctionInfo f)
           | StatementFunction (MutualBlock b) <- ss,
             f <- toList b
         ]
+          <> [ (f ^. funDefName, FunctionInfo f)
+               | s <- filter (not . isInclude) ss,
+                 LetFunDef f <- universeBi s
+             ]
+      where
+        isInclude :: Statement -> Bool
+        isInclude = \case
+          StatementInclude {} -> True
+          _ -> False
     _infoAxioms :: HashMap Name AxiomInfo
     _infoAxioms =
       HashMap.fromList
