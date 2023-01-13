@@ -330,7 +330,6 @@ patternVariables :: Traversal' Pattern VarName
 patternVariables f p = case p of
   PatternVariable v -> PatternVariable <$> f v
   PatternConstructorApp a -> PatternConstructorApp <$> goApp f a
-  PatternWildcard {} -> pure p
   where
     goApp :: Traversal' ConstructorApp VarName
     goApp g = traverseOf constrAppParameters (traverse (patternArgVariables g))

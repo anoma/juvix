@@ -363,11 +363,8 @@ matchPatterns (PatternArg impl1 name1 pat1) (PatternArg impl2 name2 pat2) =
     goName _ _ = err
     goPattern :: Pattern -> Pattern -> Sem r Bool
     goPattern p1 p2 = case (p1, p2) of
-      (PatternWildcard {}, PatternWildcard {}) -> ok
       (PatternVariable v1, PatternVariable v2) -> modify (HashMap.insert v1 v2) $> True
       (PatternConstructorApp c1, PatternConstructorApp c2) -> goConstructor c1 c2
-      (PatternWildcard {}, _) -> err
-      (_, PatternWildcard {}) -> err
       (PatternVariable {}, _) -> err
       (_, PatternVariable {}) -> err
     goConstructor :: ConstructorApp -> ConstructorApp -> Sem r Bool

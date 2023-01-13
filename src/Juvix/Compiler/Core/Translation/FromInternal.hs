@@ -397,7 +397,6 @@ fromPattern ::
   Internal.Pattern ->
   Sem r Pattern
 fromPattern = \case
-  Internal.PatternWildcard {} -> return wildcard
   Internal.PatternVariable n -> return $ PatBinder (PatternBinder (Binder (n ^. nameText) (Just (n ^. nameLoc)) mkDynamic') wildcard)
   Internal.PatternConstructorApp c -> do
     let n = c ^. Internal.constrAppConstructor
@@ -424,7 +423,6 @@ fromPattern = \case
 
 getPatternVars :: Internal.Pattern -> [Name]
 getPatternVars = \case
-  Internal.PatternWildcard {} -> []
   Internal.PatternVariable n -> [n]
   Internal.PatternConstructorApp c ->
     concatMap getPatternVars explicitPatterns

@@ -167,7 +167,6 @@ instance Hashable PatternArg
 data Pattern
   = PatternVariable VarName
   | PatternConstructorApp ConstructorApp
-  | PatternWildcard Wildcard
   deriving stock (Eq, Generic)
 
 instance Hashable Pattern
@@ -269,7 +268,6 @@ instance HasAtomicity Pattern where
   atomicity p = case p of
     PatternConstructorApp a -> atomicity a
     PatternVariable {} -> Atom
-    PatternWildcard {} -> Atom
 
 instance HasLoc InductiveParameter where
   getLoc (InductiveParameter n) = getLoc n
@@ -319,7 +317,6 @@ instance HasLoc Pattern where
   getLoc = \case
     PatternVariable v -> getLoc v
     PatternConstructorApp a -> getLoc a
-    PatternWildcard i -> getLoc i
 
 instance HasLoc PatternArg where
   getLoc a = fmap getLoc (a ^. patternArgName) ?<> getLoc (a ^. patternArgPattern)

@@ -219,7 +219,6 @@ buildPatternInfoTable argTyps c =
           [(v ^. Internal.nameText, BindingInfo {_bindingInfoExpr = exp, _bindingInfoType = typ})]
       Internal.PatternConstructorApp Internal.ConstructorApp {..} ->
         goConstructorApp exp _constrAppConstructor _constrAppParameters
-      Internal.PatternWildcard {} -> return []
 
     goConstructorApp :: Expression -> Internal.Name -> [Internal.PatternArg] -> Sem r [(Text, BindingInfo)]
     goConstructorApp exp constructorName ps = do
