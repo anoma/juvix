@@ -573,6 +573,12 @@ data Expression
   | ExpressionBraces (WithLoc Expression)
   deriving stock (Show, Eq, Ord)
 
+instance HasAtomicity (LetBlock 'Scoped) where
+  atomicity (LetBlock _ e) = atomicity e
+
+instance HasAtomicity (Lambda s) where
+  atomicity = const Atom
+
 instance HasAtomicity Expression where
   atomicity e = case e of
     ExpressionIdentifier {} -> Atom
@@ -581,9 +587,9 @@ instance HasAtomicity Expression where
     ExpressionApplication {} -> Aggregate appFixity
     ExpressionInfixApplication a -> Aggregate (getFixity a)
     ExpressionPostfixApplication a -> Aggregate (getFixity a)
-    ExpressionLambda {} -> Atom
-    ExpressionLiteral {} -> Atom
-    ExpressionLetBlock {} -> Atom
+    ExpressionLambda l -> atomicity l
+    ExpressionLiteral l-> atomicity l
+    ExpressionLetBlock l -> atomicity l
     ExpressionBraces {} -> Atom
     ExpressionUniverse {} -> Atom
     ExpressionFunction {} -> Aggregate funFixity

@@ -271,7 +271,7 @@ instance HasAtomicity SimpleLambda where
   atomicity = const Atom
 
 instance HasAtomicity Let where
-  atomicity = const Atom
+  atomicity l = atomicity (l ^. letExpression)
 
 instance HasAtomicity Lambda where
   atomicity = const Atom

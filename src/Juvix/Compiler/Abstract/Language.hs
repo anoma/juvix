@@ -144,7 +144,7 @@ instance HasAtomicity Application where
   atomicity = const (Aggregate appFixity)
 
 instance HasAtomicity Let where
-  atomicity = const Atom
+  atomicity Let {..} = atomicity _letExpression
 
 instance HasAtomicity Lambda where
   atomicity = const Atom
