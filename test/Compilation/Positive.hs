@@ -10,6 +10,8 @@ data PosTest = PosTest
     _expectedFile :: Path Abs File
   }
 
+makeLenses ''PosTest
+
 fromTest :: PosTest -> TestTree
 fromTest = mkTest . toTestDescr
 

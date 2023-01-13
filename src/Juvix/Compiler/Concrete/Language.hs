@@ -588,7 +588,7 @@ instance HasAtomicity Expression where
     ExpressionInfixApplication a -> Aggregate (getFixity a)
     ExpressionPostfixApplication a -> Aggregate (getFixity a)
     ExpressionLambda l -> atomicity l
-    ExpressionLiteral l-> atomicity l
+    ExpressionLiteral l -> atomicity l
     ExpressionLetBlock l -> atomicity l
     ExpressionBraces {} -> Atom
     ExpressionUniverse {} -> Atom

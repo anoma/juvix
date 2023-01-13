@@ -23,13 +23,13 @@ posTest _name rdir rfile =
 
 testDescr :: PosTest -> TestDescr
 testDescr PosTest {..} =
-   TestDescr
-        { _testName = _name,
-          _testRoot = _dir,
-          _testAssertion = Single $ do
-            let entryPoint = defaultEntryPoint _dir _file
-            (void . runIO' iniState entryPoint) upToInternalTyped
-        }
+  TestDescr
+    { _testName = _name,
+      _testRoot = _dir,
+      _testAssertion = Single $ do
+        let entryPoint = defaultEntryPoint _dir _file
+        (void . runIO' iniState entryPoint) upToInternalTyped
+    }
 
 --------------------------------------------------------------------------------
 -- Testing --no-positivity flag with all related negative tests
@@ -191,4 +191,5 @@ tests =
       $(mkRelDir "Internal")
       $(mkRelFile "Synonyms.juvix")
   ]
-    <> [compilationTest t | t <- Compilation.tests]
+    <> [ compilationTest t | t <- Compilation.tests, t ^. Compilation.name `notElem` ["Self-application"]
+       ]
