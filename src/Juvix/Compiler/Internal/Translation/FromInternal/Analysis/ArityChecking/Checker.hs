@@ -187,11 +187,12 @@ checkLhs loc guessedBody ariSignature pats = do
     -- between explicit parameters already in the pattern.
     goLhs :: Arity -> [PatternArg] -> Sem (State LocalVars ': r) ([PatternArg], Arity)
     goLhs a = \case
-      [] -> return $ case tailHelper a of
-        Nothing -> ([], a)
-        Just tailUnderscores ->
+      [] -> case tailHelper a of
+        Nothing -> return ([], a)
+        Just tailUnderscores -> do
+          wildcard <- genWildcard
           let a' = foldArity (over ufoldArityParams (drop tailUnderscores) (unfoldArity' a))
-           in (replicate tailUnderscores wildcard, a')
+          return (replicate tailUnderscores wildcard, a')
       lhs@(p : ps) -> case a of
         ArityUnit ->
           throw
@@ -216,14 +217,17 @@ checkLhs loc guessedBody ariSignature pats = do
                         _wrongPatternIsImplicitActual = p
                       }
                 )
-            (Explicit, ParamImplicit) ->
+            (Explicit, ParamImplicit) -> do
+              wildcard <- genWildcard
               first (wildcard :) <$> goLhs r lhs
             (Explicit, ParamExplicit pa) -> do
               p' <- checkPattern pa p
               first (p' :) <$> goLhs r ps
       where
-        wildcard :: PatternArg
-        wildcard = PatternArg Implicit Nothing (PatternWildcard (Wildcard loc))
+        genWildcard :: forall r'. Members '[NameIdGen] r' => Sem r' PatternArg
+        genWildcard = do
+          var <- varFromWildcard (Wildcard loc)
+          return (PatternArg Implicit Nothing (PatternVariable var))
 
     -- This is an heuristic and it can have an undesired result.
     -- Sometimes the outcome may even be confusing.
@@ -259,7 +263,6 @@ checkPattern ari = traverseOf (patternArgName . each) nameAri >=> traverseOf pat
     patternAri :: Pattern -> Sem r Pattern
     patternAri = \case
       PatternVariable v -> addArity v ari $> PatternVariable v
-      PatternWildcard i -> return (PatternWildcard i)
       PatternConstructorApp c -> case ari of
         ArityUnit -> PatternConstructorApp <$> checkConstructorApp c
         ArityUnknown -> PatternConstructorApp <$> checkConstructorApp c

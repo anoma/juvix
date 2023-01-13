@@ -342,7 +342,6 @@ goFunctionClause funSig argTyps clause = do
                 )
         fmap (isCtor :) subConditions
       Micro.PatternVariable {} -> return []
-      Micro.PatternWildcard {} -> return []
 
     clauseCondition :: Sem r (Maybe Expression)
     clauseCondition = fmap (foldr1 f) . nonEmpty <$> conditions

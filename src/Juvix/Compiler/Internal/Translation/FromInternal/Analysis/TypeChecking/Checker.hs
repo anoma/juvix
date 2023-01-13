@@ -360,7 +360,6 @@ checkPattern = go
           name = patArg ^. patternArgName
       whenJust name (\n -> addVar n ty argTy)
       case pat of
-        PatternWildcard {} -> return ()
         PatternVariable v -> addVar v ty argTy
         PatternConstructorApp a -> do
           s <- checkSaturatedInductive ty
