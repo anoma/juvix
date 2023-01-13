@@ -466,16 +466,19 @@ checkExpression hintArity expr = case expr of
     goApp = uncurry appHelper . second toList . unfoldApplication'
 
     appHelper :: Expression -> [(IsImplicit, Expression)] -> Sem r Expression
-    appHelper fun args = do
-      args' :: [(IsImplicit, Expression)] <- case fun of
-        ExpressionHole {} -> mapM (secondM (checkExpression ArityUnknown)) args
-        ExpressionIden i -> idenArity i >>= helper (getLoc i)
-        ExpressionLiteral l -> helper (getLoc l) (arityLiteral l)
-        ExpressionUniverse l -> helper (getLoc l) arityUniverse
-        ExpressionLet l -> do
-          -- l' <- checkLet ArityUnknown l
-          arityLet l' >>= helper (getLoc l')
+    appHelper fun0 args = do
+      (fun', args') :: (Expression, [(IsImplicit, Expression)]) <- case fun0 of
+        ExpressionHole {} -> (fun0,) <$> mapM (secondM (checkExpression ArityUnknown)) args
+        ExpressionIden i -> (fun0,) <$> (idenArity i >>= helper (getLoc i))
+        ExpressionLiteral l -> (fun0,) <$> helper (getLoc l) (arityLiteral l)
+        ExpressionUniverse l -> (fun0,) <$> helper (getLoc l) arityUniverse
+        ExpressionLambda l -> do
+          l' <- checkLambda ArityUnknown l
+          (ExpressionLambda l',) <$> helper (getLoc l') (arityLambda l')
         ExpressionSimpleLambda {} -> simplelambda
+        ExpressionLet l -> do
+          l' <- checkLet ArityUnknown l
+          (ExpressionLet l',) <$> (arityLet l' >>= helper (getLoc l'))
         ExpressionFunction f ->
           throw
             ( ErrFunctionApplied
@@ -485,8 +488,7 @@ checkExpression hintArity expr = case expr of
                   }
             )
         ExpressionApplication {} -> impossible
-        ExpressionLambda l -> helper (getLoc l) (arityLambda l)
-      return (foldApplication fun args')
+      return (foldApplication fun' args')
       where
         helper :: Interval -> Arity -> Sem r [(IsImplicit, Expression)]
         helper i ari = do
@@ -529,7 +531,7 @@ checkExpression hintArity expr = case expr of
                 throw
                   ( ErrExpectedExplicitArgument
                       ExpectedExplicitArgument
-                        { _expectedExplicitArgumentApp = (fun, args),
+                        { _expectedExplicitArgumentApp = (fun0, args),
                           _expectedExplicitArgumentIx = idx
                         }
                   )
@@ -539,7 +541,7 @@ checkExpression hintArity expr = case expr of
                 throw
                   ( ErrTooManyArguments
                       TooManyArguments
-                        { _tooManyArgumentsApp = (fun, args),
+                        { _tooManyArgumentsApp = (fun0, args),
                           _tooManyArgumentsUnexpected = length goargs
                         }
                   )
