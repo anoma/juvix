@@ -58,10 +58,24 @@ instance Monoid InfoTable where
 buildTable :: Foldable f => f Module -> InfoTable
 buildTable = mconcatMap buildTable1
 
--- TODO avoid building a table for the same module twice
 buildTable1 :: Module -> InfoTable
-buildTable1 m = InfoTable {..} <> buildTable (map (^. includeModule) includes)
+buildTable1 = run . evalState (mempty :: Cache) . buildTable1'
+
+buildTable' :: (Members '[State Cache] r, Foldable f) => f Module -> Sem r InfoTable
+buildTable' = mconcatMap buildTable1'
+
+-- | moduleName ↦ infoTable
+type Cache = HashMap Name InfoTable
+
+buildTable1' :: forall r. Members '[State Cache] r => Module -> Sem r InfoTable
+buildTable1' m = do
+  mi <- gets @Cache (^. at (m ^. moduleName))
+  maybe compute return mi
   where
+    compute :: Sem r InfoTable
+    compute = do
+      infoInc <- buildTable' (map (^. includeModule) includes)
+      return (InfoTable {..} <> infoInc)
     includes :: [Include]
     includes = [i | StatementInclude i <- ss]
     _infoInductives :: HashMap Name InductiveInfo

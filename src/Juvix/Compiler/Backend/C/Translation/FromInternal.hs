@@ -18,24 +18,25 @@ import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoper
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as Scoper
 import Juvix.Compiler.Concrete.Language qualified as C
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
+import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Extra (mkPolyType')
-import Juvix.Compiler.Internal.Extra qualified as Micro
+import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Trans
 import Juvix.Compiler.Internal.Translation.FromAbstract qualified as Internal
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as Micro1
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Micro
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as Internal1
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Typed
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding (Binary, Unary)
 
 type CompileInfoTable = HashMap Scoper.NameId Scoper.CompileInfo
 
-compileInfoTable :: Micro.InternalTypedResult -> CompileInfoTable
+compileInfoTable :: Typed.InternalTypedResult -> CompileInfoTable
 compileInfoTable r =
   HashMap.mapKeys
     (^. Scoper.nameId)
     ( r
-        ^. Micro.resultInternalArityResult
-        . Micro1.resultInternalResult
+        ^. Typed.resultInternalArityResult
+        . Internal1.resultInternalResult
         . Internal.resultAbstract
         . Abstract.resultScoper
         . Scoper.resultScoperTable
@@ -45,15 +46,15 @@ compileInfoTable r =
 fromInternal ::
   forall r.
   Member Builtins r =>
-  Micro.InternalTypedResult ->
+  Typed.InternalTypedResult ->
   Sem r MiniCResult
 fromInternal i = MiniCResult . serialize <$> cunitResult
   where
     compileInfo :: CompileInfoTable
     compileInfo = compileInfoTable i
 
-    typesTable :: Micro.TypesTable
-    typesTable = i ^. Micro.resultIdenTypes
+    typesTable :: Typed.TypesTable
+    typesTable = i ^. Typed.resultIdenTypes
 
     cunitResult :: Sem r CCodeUnit
     cunitResult = do
@@ -71,94 +72,94 @@ fromInternal i = MiniCResult . serialize <$> cunitResult
           CppIncludeFile Str.minicRuntime
         ]
 
-    cmodule :: Micro.Module -> Sem r [CCode]
+    cmodule :: Internal.Module -> Sem r [CCode]
     cmodule m = do
-      let buildTable = Micro.buildTable [m]
+      let infoTable = buildTable1 m
       let defs =
             genStructDefs m
-              <> run (runReader compileInfo (runReader buildTable (genAxioms m)))
-              <> run (runReader buildTable (genCTypes m))
-              <> run (runReader buildTable (runReader typesTable (genFunctionSigs m)))
-              <> run (runReader buildTable (runReader typesTable (genClosures m)))
-      funDefs <- runReader buildTable (runReader typesTable (genFunctionDefs m))
+              <> run (runReader compileInfo (runReader infoTable (genAxioms m)))
+              <> run (runReader infoTable (genCTypes m))
+              <> run (runReader infoTable (runReader typesTable (genFunctionSigs m)))
+              <> run (runReader infoTable (runReader typesTable (genClosures m)))
+      funDefs <- runReader infoTable (runReader typesTable (genFunctionDefs m))
       return (defs <> funDefs)
 
     cmodules :: Sem r [CCode]
-    cmodules = concatMapM cmodule (toList (i ^. Micro.resultModules))
+    cmodules = concatMapM cmodule (toList (i ^. Typed.resultModules))
 
 validWasmIdent :: Text -> Bool
 validWasmIdent = T.all (\c -> c == '_' || isAlphaNum c)
 
-genStructDefs :: Micro.Module -> [CCode]
-genStructDefs Micro.Module {..} =
-  concatMap go (_moduleBody ^. Micro.moduleStatements)
+genStructDefs :: Internal.Module -> [CCode]
+genStructDefs Internal.Module {..} =
+  concatMap go (_moduleBody ^. Internal.moduleStatements)
   where
-    go :: Micro.Statement -> [CCode]
+    go :: Internal.Statement -> [CCode]
     go = \case
-      Micro.StatementInductive d -> mkInductiveTypeDef d
-      Micro.StatementInclude i ->
-        concatMap go (i ^. Micro.includeModule . Micro.moduleBody . Micro.moduleStatements)
+      Internal.StatementInductive d -> mkInductiveTypeDef d
+      Internal.StatementInclude i ->
+        concatMap go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
       _ -> []
 
-genAxioms :: forall r. Members '[Reader Micro.InfoTable, Reader CompileInfoTable] r => Micro.Module -> Sem r [CCode]
-genAxioms Micro.Module {..} =
-  concatMapM go (_moduleBody ^. Micro.moduleStatements)
+genAxioms :: forall r. Members '[Reader Internal.InfoTable, Reader CompileInfoTable] r => Internal.Module -> Sem r [CCode]
+genAxioms Internal.Module {..} =
+  concatMapM go (_moduleBody ^. Internal.moduleStatements)
   where
-    go :: Micro.Statement -> Sem r [CCode]
+    go :: Internal.Statement -> Sem r [CCode]
     go = \case
-      Micro.StatementInductive {} -> return []
-      Micro.StatementAxiom d -> goAxiom d
-      Micro.StatementForeign {} -> return []
-      Micro.StatementFunction {} -> return []
-      Micro.StatementInclude i ->
-        concatMapM go (i ^. Micro.includeModule . Micro.moduleBody . Micro.moduleStatements)
+      Internal.StatementInductive {} -> return []
+      Internal.StatementAxiom d -> goAxiom d
+      Internal.StatementForeign {} -> return []
+      Internal.StatementFunction {} -> return []
+      Internal.StatementInclude i ->
+        concatMapM go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
 
-genCTypes :: forall r. Member (Reader Micro.InfoTable) r => Micro.Module -> Sem r [CCode]
-genCTypes Micro.Module {..} =
-  concatMapM go (_moduleBody ^. Micro.moduleStatements)
+genCTypes :: forall r. Member (Reader Internal.InfoTable) r => Internal.Module -> Sem r [CCode]
+genCTypes Internal.Module {..} =
+  concatMapM go (_moduleBody ^. Internal.moduleStatements)
   where
-    go :: Micro.Statement -> Sem r [CCode]
+    go :: Internal.Statement -> Sem r [CCode]
     go = \case
-      Micro.StatementInductive d -> goInductiveDef d
-      Micro.StatementAxiom {} -> return []
-      Micro.StatementForeign d -> return (goForeign d)
-      Micro.StatementFunction {} -> return []
-      Micro.StatementInclude i ->
-        concatMapM go (i ^. Micro.includeModule . Micro.moduleBody . Micro.moduleStatements)
+      Internal.StatementInductive d -> goInductiveDef d
+      Internal.StatementAxiom {} -> return []
+      Internal.StatementForeign d -> return (goForeign d)
+      Internal.StatementFunction {} -> return []
+      Internal.StatementInclude i ->
+        concatMapM go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
 
-genFunctionSigs :: forall r. Members '[Reader Micro.InfoTable, Reader Micro.TypesTable] r => Micro.Module -> Sem r [CCode]
-genFunctionSigs Micro.Module {..} =
-  concatMapM (applyOnFunStatement genFunctionDef) (_moduleBody ^. Micro.moduleStatements)
+genFunctionSigs :: forall r. Members '[Reader Internal.InfoTable, Reader Typed.TypesTable] r => Internal.Module -> Sem r [CCode]
+genFunctionSigs Internal.Module {..} =
+  concatMapM (applyOnFunStatement genFunctionDef) (_moduleBody ^. Internal.moduleStatements)
   where
-    genFunctionDef :: Micro.FunctionDef -> Sem r [CCode]
+    genFunctionDef :: Internal.FunctionDef -> Sem r [CCode]
     genFunctionDef d
       | validWasmIdent nameText = (ExternalAttribute (ExportName nameText) :) <$> sig
       | otherwise = sig
       where
         nameText :: Text
-        nameText = d ^. Micro.funDefName . Micro.nameText
+        nameText = d ^. Internal.funDefName . Internal.nameText
 
         sig :: Sem r [CCode]
         sig = genFunctionSig d
 
 genFunctionDefs ::
-  Members '[Reader Micro.InfoTable, Reader Micro.TypesTable, Builtins] r =>
-  Micro.Module ->
+  Members '[Reader Internal.InfoTable, Reader Typed.TypesTable, Builtins] r =>
+  Internal.Module ->
   Sem r [CCode]
-genFunctionDefs Micro.Module {..} = genFunctionDefsBody _moduleBody
+genFunctionDefs Internal.Module {..} = genFunctionDefsBody _moduleBody
 
 genFunctionDefsBody ::
-  Members '[Reader Micro.InfoTable, Reader Micro.TypesTable, Builtins] r =>
-  Micro.ModuleBody ->
+  Members '[Reader Internal.InfoTable, Reader Typed.TypesTable, Builtins] r =>
+  Internal.ModuleBody ->
   Sem r [CCode]
-genFunctionDefsBody Micro.ModuleBody {..} =
+genFunctionDefsBody Internal.ModuleBody {..} =
   concatMapM (applyOnFunStatement goFunctionDef) _moduleStatements
 
 isNullary :: Text -> CFunType -> Bool
 isNullary funName funType = null (funType ^. cFunArgTypes) && funName /= Str.main_
 
-mkFunctionSig :: forall r. Members '[Reader Micro.InfoTable, Reader Micro.TypesTable] r => Micro.FunctionDef -> Sem r FunctionSig
-mkFunctionSig Micro.FunctionDef {..} =
+mkFunctionSig :: forall r. Members '[Reader Internal.InfoTable, Reader Typed.TypesTable] r => Internal.FunctionDef -> Sem r FunctionSig
+mkFunctionSig Internal.FunctionDef {..} =
   cFunTypeToFunSig <$> funName <*> funType
   where
     baseFunType :: Sem r CFunType
@@ -189,8 +190,8 @@ mkFunctionSig Micro.FunctionDef {..} =
     funName :: Sem r Text
     funName = bool funcBasename (asNullary funcBasename) <$> funIsNullary
 
-genFunctionSig :: forall r. Members '[Reader Micro.InfoTable, Reader Micro.TypesTable] r => Micro.FunctionDef -> Sem r [CCode]
-genFunctionSig d@(Micro.FunctionDef {..}) = do
+genFunctionSig :: forall r. Members '[Reader Internal.InfoTable, Reader Typed.TypesTable] r => Internal.FunctionDef -> Sem r [CCode]
+genFunctionSig d@(Internal.FunctionDef {..}) = do
   sig <- mkFunctionSig d
   nullaryDefine' <- nullaryDefine
   return
@@ -239,10 +240,10 @@ genFunctionSig d@(Micro.FunctionDef {..}) = do
         <$> funIsNullary
 
 goFunctionDef ::
-  Members '[Reader Micro.InfoTable, Reader Micro.TypesTable, Builtins] r =>
-  Micro.FunctionDef ->
+  Members '[Reader Internal.InfoTable, Reader Typed.TypesTable, Builtins] r =>
+  Internal.FunctionDef ->
   Sem r [CCode]
-goFunctionDef d@(Micro.FunctionDef {..})
+goFunctionDef d@(Internal.FunctionDef {..})
   | isJust _funDefBuiltin = return []
   | otherwise = do
       funSig <- mkFunctionSig d
@@ -287,7 +288,7 @@ goFunctionDef d@(Micro.FunctionDef {..})
                     ( LiteralString
                         ( "Error: Pattern match(es) are non-exhaustive in "
                             <> _funDefName
-                            ^. Micro.nameText
+                            ^. Internal.nameText
                         )
                     )
                 ]
@@ -302,10 +303,10 @@ goFunctionDef d@(Micro.FunctionDef {..})
 
 goFunctionClause ::
   forall r.
-  Members '[Reader Micro.InfoTable, Reader Micro.TypesTable, Builtins] r =>
+  Members '[Reader Internal.InfoTable, Reader Typed.TypesTable, Builtins] r =>
   FunctionSig ->
-  [Micro.PolyType] ->
-  Micro.FunctionClause ->
+  [Internal.PolyType] ->
+  Internal.FunctionClause ->
   Sem r ((Maybe Expression, Statement), [Function])
 goFunctionClause funSig argTyps clause = do
   (stmt, decls) <- returnStmt
@@ -321,9 +322,9 @@ goFunctionClause funSig argTyps clause = do
             | (p, arg) <- zip pats funArgs
           ]
 
-    patternCondition :: Expression -> Micro.Pattern -> Sem r [Expression]
+    patternCondition :: Expression -> Internal.Pattern -> Sem r [Expression]
     patternCondition arg = \case
-      Micro.PatternConstructorApp Micro.ConstructorApp {..} -> do
+      Internal.PatternConstructorApp Internal.ConstructorApp {..} -> do
         ctorName <- getConstructorCName _constrAppConstructor
         ty <- typeOfConstructor _constrAppConstructor
 
@@ -338,10 +339,10 @@ goFunctionClause funSig argTyps clause = do
                 ( zipWithM
                     patternCondition
                     (map projCtor ctorArgs)
-                    (_constrAppParameters ^.. each . Micro.patternArgPattern)
+                    (_constrAppParameters ^.. each . Internal.patternArgPattern)
                 )
         fmap (isCtor :) subConditions
-      Micro.PatternVariable {} -> return []
+      Internal.PatternVariable {} -> return []
 
     clauseCondition :: Sem r (Maybe Expression)
     clauseCondition = fmap (foldr1 f) . nonEmpty <$> conditions
@@ -358,68 +359,68 @@ goFunctionClause funSig argTyps clause = do
     returnStmt :: Sem r (Statement, [Function])
     returnStmt = do
       bindings <- buildPatternInfoTable argTyps clause
-      (decls :: [Function], clauseResult) <- runOutputList (runReader bindings (goExpression (clause ^. Micro.clauseBody)))
+      (decls :: [Function], clauseResult) <- runOutputList (runReader bindings (goExpression (clause ^. Internal.clauseBody)))
       return (StatementReturn (Just (castClause clauseResult)), decls)
       where
         castClause clauseResult =
           castToType (CDeclType {_typeDeclType = funSig ^. funcReturnType, _typeIsPtr = funSig ^. funcIsPtr}) clauseResult
 
-goExpression :: Members '[Reader Micro.InfoTable, Reader Micro.TypesTable, Builtins, Reader PatternInfoTable] r => Micro.Expression -> Sem r Expression
+goExpression :: Members '[Reader Internal.InfoTable, Reader Typed.TypesTable, Builtins, Reader PatternInfoTable] r => Internal.Expression -> Sem r Expression
 goExpression = \case
-  Micro.ExpressionIden i -> do
-    let rootFunMicroName = Micro.getName i
-        rootFunName = mkName rootFunMicroName
+  Internal.ExpressionIden i -> do
+    let rootFunInternalName = Internal.getName i
+        rootFunName = mkName rootFunInternalName
         evalFunName = asEval (rootFunName <> "_0")
     case i of
-      Micro.IdenVar {} -> goIden i
+      Internal.IdenVar {} -> goIden i
       _ -> do
         (t, _) <- getType i
         let argTyps = t ^. cFunArgTypes
         (if null argTyps then goIden i else return $ functionCall (ExpressionVar evalFunName) [])
-  Micro.ExpressionApplication a -> goApplication a
-  Micro.ExpressionLiteral l -> return (ExpressionLiteral (goLiteral l))
-  Micro.ExpressionFunction {} -> impossible
-  Micro.ExpressionHole {} -> impossible
-  Micro.ExpressionUniverse {} -> impossible
-  Micro.ExpressionSimpleLambda {} -> impossible
-  Micro.ExpressionLambda {} -> impossible
-  Micro.ExpressionLet {} -> impossible
+  Internal.ExpressionApplication a -> goApplication a
+  Internal.ExpressionLiteral l -> return (ExpressionLiteral (goLiteral l))
+  Internal.ExpressionFunction {} -> impossible
+  Internal.ExpressionHole {} -> impossible
+  Internal.ExpressionUniverse {} -> impossible
+  Internal.ExpressionSimpleLambda {} -> impossible
+  Internal.ExpressionLambda {} -> impossible
+  Internal.ExpressionLet {} -> impossible
 
-goIden :: Members '[Reader PatternInfoTable, Builtins, Reader Micro.InfoTable] r => Micro.Iden -> Sem r Expression
+goIden :: Members '[Reader PatternInfoTable, Builtins, Reader Internal.InfoTable] r => Internal.Iden -> Sem r Expression
 goIden = \case
-  Micro.IdenFunction n -> do
-    funInfo <- HashMap.lookupDefault impossible n <$> asks (^. Micro.infoFunctions)
-    let varName = case funInfo ^. Micro.functionInfoDef . Micro.funDefBuiltin of
+  Internal.IdenFunction n -> do
+    funInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoFunctions)
+    let varName = case funInfo ^. Internal.functionInfoDef . Internal.funDefBuiltin of
           Just builtin -> fromJust (builtinFunctionName builtin)
           Nothing -> mkName n
     return (ExpressionVar varName)
-  Micro.IdenConstructor n -> ExpressionVar <$> getConstructorCName n
-  Micro.IdenVar n ->
-    (^. bindingInfoExpr) . HashMap.lookupDefault impossible (n ^. Micro.nameText) <$> asks (^. patternBindings)
-  Micro.IdenAxiom n -> ExpressionVar <$> getAxiomCName n
-  Micro.IdenInductive {} -> impossible
+  Internal.IdenConstructor n -> ExpressionVar <$> getConstructorCName n
+  Internal.IdenVar n ->
+    (^. bindingInfoExpr) . HashMap.lookupDefault impossible (n ^. Internal.nameText) <$> asks (^. patternBindings)
+  Internal.IdenAxiom n -> ExpressionVar <$> getAxiomCName n
+  Internal.IdenInductive {} -> impossible
 
-goApplication :: forall r. Members '[Reader PatternInfoTable, Reader Micro.TypesTable, Builtins, Reader Micro.InfoTable] r => Micro.Application -> Sem r Expression
+goApplication :: forall r. Members '[Reader PatternInfoTable, Reader Typed.TypesTable, Builtins, Reader Internal.InfoTable] r => Internal.Application -> Sem r Expression
 goApplication a = do
   (f, args0) <- Trans.unfoldPolyApplication a
   if
       | null args0 -> goExpression f
       | otherwise -> case f of
-          Micro.ExpressionLiteral {} -> goExpression f
-          Micro.ExpressionIden iden -> do
+          Internal.ExpressionLiteral {} -> goExpression f
+          Internal.ExpressionIden iden -> do
             fArgs <- toList <$> mapM goExpression args0
             case iden of
-              Micro.IdenVar n -> do
-                BindingInfo {..} <- HashMap.lookupDefault impossible (n ^. Micro.nameText) <$> asks (^. patternBindings)
+              Internal.IdenVar n -> do
+                BindingInfo {..} <- HashMap.lookupDefault impossible (n ^. Internal.nameText) <$> asks (^. patternBindings)
                 return $ juvixFunctionCall _bindingInfoType _bindingInfoExpr fArgs
-              Micro.IdenFunction n -> do
-                info <- HashMap.lookupDefault impossible n <$> asks (^. Micro.infoFunctions)
+              Internal.IdenFunction n -> do
+                info <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoFunctions)
                 nPatterns <- functionInfoPatternsNum info
                 (idenType, _) <- getType iden
                 let nArgTyps = length (idenType ^. cFunArgTypes)
                 if
                     | length fArgs < nArgTyps -> do
-                        let name = mkName (Micro.getName iden)
+                        let name = mkName (Internal.getName iden)
                             evalName = asEval (name <> "_" <> show (length fArgs))
                         return $ functionCallCasted idenType (ExpressionVar evalName) fArgs
                     | nPatterns < nArgTyps -> do
@@ -432,12 +433,12 @@ goApplication a = do
                     | otherwise -> do
                         idenExp <- goIden iden
                         return $ functionCallCasted idenType idenExp fArgs
-              Micro.IdenConstructor n -> returnFunCall iden fArgs n
-              Micro.IdenAxiom n -> returnFunCall iden fArgs n
-              Micro.IdenInductive {} -> impossible
+              Internal.IdenConstructor n -> returnFunCall iden fArgs n
+              Internal.IdenAxiom n -> returnFunCall iden fArgs n
+              Internal.IdenInductive {} -> impossible
           _ -> impossible
   where
-    returnFunCall :: Micro.Iden -> [Expression] -> Micro.Name -> Sem r Expression
+    returnFunCall :: Internal.Iden -> [Expression] -> Internal.Name -> Sem r Expression
     returnFunCall iden fArgs name = do
       (idenType, _) <- getType iden
       ( if length fArgs < length (idenType ^. cFunArgTypes)
@@ -459,13 +460,13 @@ goLiteral l = case l ^. C.withLocParam of
   C.LitInteger i -> LiteralInt i
 
 goAxiom ::
-  Members [Reader Micro.InfoTable, Reader CompileInfoTable] r =>
-  Micro.AxiomDef ->
+  Members [Reader Internal.InfoTable, Reader CompileInfoTable] r =>
+  Internal.AxiomDef ->
   Sem r [CCode]
 goAxiom a
-  | isJust (a ^. Micro.axiomBuiltin) = return []
+  | isJust (a ^. Internal.axiomBuiltin) = return []
   | otherwise = do
-      backend <- runFail (lookupBackends (axiomName ^. Micro.nameId) >>= firstBackendMatch)
+      backend <- runFail (lookupBackends (axiomName ^. Internal.nameId) >>= firstBackendMatch)
       case backend of
         Nothing -> genFunctionDef a
         Just defineBody ->
@@ -480,8 +481,8 @@ goAxiom a
                 )
             ]
   where
-    axiomName :: Micro.Name
-    axiomName = a ^. Micro.axiomName
+    axiomName :: Internal.Name
+    axiomName = a ^. Internal.axiomName
     defineName :: Text
     defineName = mkName axiomName
     getCode :: BackendItem -> Maybe Text
@@ -501,19 +502,19 @@ goAxiom a
     lookupBackends f = ask >>= failMaybe . fmap (^. Scoper.compileInfoBackendItems) . HashMap.lookup f
     genFunctionDef ::
       forall r.
-      Members [Reader Micro.InfoTable, Reader CompileInfoTable] r =>
-      Micro.AxiomDef ->
+      Members [Reader Internal.InfoTable, Reader CompileInfoTable] r =>
+      Internal.AxiomDef ->
       Sem r [CCode]
     genFunctionDef d
-      | validWasmIdent nameText = (ExternalAttribute (ImportName (axiomName ^. Micro.nameText)) :) <$> sig
+      | validWasmIdent nameText = (ExternalAttribute (ImportName (axiomName ^. Internal.nameText)) :) <$> sig
       | otherwise = sig
       where
         nameText :: Text
-        nameText = axiomName ^. Micro.nameText
+        nameText = axiomName ^. Internal.nameText
 
         sig :: Sem r [CCode]
         sig = do
-          s <- cFunTypeToFunSig defineName <$> typeToFunType (mkPolyType' (d ^. Micro.axiomType))
+          s <- cFunTypeToFunSig defineName <$> typeToFunType (mkPolyType' (d ^. Internal.axiomType))
           return [ExternalFuncSig s]
 
 goForeign :: ForeignBlock -> [CCode]
@@ -521,13 +522,13 @@ goForeign b = case b ^. foreignBackend of
   BackendC -> [Verbatim (b ^. foreignCode)]
   _ -> []
 
-mkInductiveName :: Micro.InductiveDef -> Text
-mkInductiveName i = mkName (i ^. Micro.inductiveName)
+mkInductiveName :: Internal.InductiveDef -> Text
+mkInductiveName i = mkName (i ^. Internal.inductiveName)
 
-mkInductiveConstructorNames :: Micro.InductiveDef -> [Text]
-mkInductiveConstructorNames i = mkName . view Micro.inductiveConstructorName <$> i ^. Micro.inductiveConstructors
+mkInductiveConstructorNames :: Internal.InductiveDef -> [Text]
+mkInductiveConstructorNames i = mkName . view Internal.inductiveConstructorName <$> i ^. Internal.inductiveConstructors
 
-mkInductiveTypeDef :: Micro.InductiveDef -> [CCode]
+mkInductiveTypeDef :: Internal.InductiveDef -> [CCode]
 mkInductiveTypeDef i =
   [ExternalDecl structTypeDef]
   where
@@ -545,15 +546,15 @@ mkInductiveTypeDef i =
         )
 
     baseName :: Text
-    baseName = mkName (i ^. Micro.inductiveName)
+    baseName = mkName (i ^. Internal.inductiveName)
 
-goInductiveDef :: Members '[Reader Micro.InfoTable] r => Micro.InductiveDef -> Sem r [CCode]
+goInductiveDef :: Members '[Reader Internal.InfoTable] r => Internal.InductiveDef -> Sem r [CCode]
 goInductiveDef i
-  | isJust (i ^. Micro.inductiveBuiltin) = return []
+  | isJust (i ^. Internal.inductiveBuiltin) = return []
   | otherwise = do
-      ctorDefs <- concatMapM goInductiveConstructorDef (i ^. Micro.inductiveConstructors)
-      ctorNews <- concatMapM (goInductiveConstructorNew i) (i ^. Micro.inductiveConstructors)
-      projections <- concatMapM (goProjections inductiveTypeDef) (i ^. Micro.inductiveConstructors)
+      ctorDefs <- concatMapM goInductiveConstructorDef (i ^. Internal.inductiveConstructors)
+      ctorNews <- concatMapM (goInductiveConstructorNew i) (i ^. Internal.inductiveConstructors)
+      projections <- concatMapM (goProjections inductiveTypeDef) (i ^. Internal.inductiveConstructors)
       return
         ( [ExternalDecl tagsType]
             <> ctorDefs
@@ -565,7 +566,7 @@ goInductiveDef i
         )
   where
     baseName :: Text
-    baseName = mkName (i ^. Micro.inductiveName)
+    baseName = mkName (i ^. Internal.inductiveName)
 
     constructorNames :: [Text]
     constructorNames = mkInductiveConstructorNames i
@@ -668,9 +669,9 @@ goInductiveDef i
 
 goInductiveConstructorNew ::
   forall r.
-  Members '[Reader Micro.InfoTable] r =>
-  Micro.InductiveDef ->
-  Micro.InductiveConstructorDef ->
+  Members '[Reader Internal.InfoTable] r =>
+  Internal.InductiveDef ->
+  Internal.InductiveConstructorDef ->
   Sem r [CCode]
 goInductiveConstructorNew i ctor = ctorNewFun
   where
@@ -678,13 +679,13 @@ goInductiveConstructorNew i ctor = ctorNewFun
     ctorNewFun = if null ctorParams then return ctorNewNullary else ctorNewNary
 
     baseName :: Text
-    baseName = mkName (ctor ^. Micro.inductiveConstructorName)
+    baseName = mkName (ctor ^. Internal.inductiveConstructorName)
 
     inductiveName :: Text
     inductiveName = mkInductiveName i
 
-    ctorParams :: [Micro.PolyType]
-    ctorParams = map mkPolyType' (ctor ^. Micro.inductiveConstructorParameters)
+    ctorParams :: [Internal.PolyType]
+    ctorParams = map mkPolyType' (ctor ^. Internal.inductiveConstructorParameters)
 
     ctorNewNullary :: [CCode]
     ctorNewNullary =
@@ -830,21 +831,21 @@ goInductiveConstructorNew i ctor = ctorNewFun
             )
         )
 
-inductiveCtorParams :: Members '[Reader Micro.InfoTable] r => Micro.InductiveConstructorDef -> Sem r [CDeclType]
-inductiveCtorParams ctor = mapM (goType . mkPolyType') (ctor ^. Micro.inductiveConstructorParameters)
+inductiveCtorParams :: Members '[Reader Internal.InfoTable] r => Internal.InductiveConstructorDef -> Sem r [CDeclType]
+inductiveCtorParams ctor = mapM (goType . mkPolyType') (ctor ^. Internal.inductiveConstructorParameters)
 
-inductiveCtorArgs :: Members '[Reader Micro.InfoTable] r => Micro.InductiveConstructorDef -> Sem r [Declaration]
+inductiveCtorArgs :: Members '[Reader Internal.InfoTable] r => Internal.InductiveConstructorDef -> Sem r [Declaration]
 inductiveCtorArgs ctor = namedArgs asCtorArg <$> inductiveCtorParams ctor
 
-inductiveCtorTypes :: Members '[Reader Micro.InfoTable] r => Micro.Name -> Sem r [CDeclType]
+inductiveCtorTypes :: Members '[Reader Internal.InfoTable] r => Internal.Name -> Sem r [CDeclType]
 inductiveCtorTypes ctor = do
-  info <- Micro.lookupConstructor ctor
-  mapM (goType . mkPolyType') (snd (Micro.constructorArgTypes info))
+  info <- Internal.lookupConstructor ctor
+  mapM (goType . mkPolyType') (snd (Internal.constructorArgTypes info))
 
 goInductiveConstructorDef ::
   forall r.
-  Members '[Reader Micro.InfoTable] r =>
-  Micro.InductiveConstructorDef ->
+  Members '[Reader Internal.InfoTable] r =>
+  Internal.InductiveConstructorDef ->
   Sem r [CCode]
 goInductiveConstructorDef ctor = do
   d <- ctorDecl
@@ -854,10 +855,10 @@ goInductiveConstructorDef ctor = do
     ctorDecl = if null ctorParams then return ctorBool else ctorStruct
 
     baseName :: Text
-    baseName = mkName (ctor ^. Micro.inductiveConstructorName)
+    baseName = mkName (ctor ^. Internal.inductiveConstructorName)
 
-    ctorParams :: [Micro.PolyType]
-    ctorParams = map mkPolyType' (ctor ^. Micro.inductiveConstructorParameters)
+    ctorParams :: [Internal.PolyType]
+    ctorParams = map mkPolyType' (ctor ^. Internal.inductiveConstructorParameters)
 
     ctorBool :: Declaration
     ctorBool = typeDefWrap (asTypeDef baseName) BoolType
@@ -879,16 +880,16 @@ goInductiveConstructorDef ctor = do
         )
 
 goProjections ::
-  Members '[Reader Micro.InfoTable] r =>
+  Members '[Reader Internal.InfoTable] r =>
   DeclType ->
-  Micro.InductiveConstructorDef ->
+  Internal.InductiveConstructorDef ->
   Sem r [CCode]
 goProjections inductiveTypeDef ctor = do
   params <- inductiveCtorParams ctor
   return (ExternalFunc <$> zipWith projFunction [0 ..] params)
   where
     baseName :: Text
-    baseName = mkName (ctor ^. Micro.inductiveConstructorName)
+    baseName = mkName (ctor ^. Internal.inductiveConstructorName)
 
     localName :: Text
     localName = "a"

@@ -50,8 +50,43 @@ checkStatement s = case s of
   StatementFunction b -> StatementFunction <$> checkMutualBlock b
   StatementInclude i -> StatementInclude <$> checkInclude i
   StatementForeign {} -> return s
-  StatementInductive {} -> return s
-  StatementAxiom {} -> return s
+  StatementInductive d -> StatementInductive <$> checkInductive d
+  StatementAxiom a -> StatementAxiom <$> checkAxiom a
+
+checkInductive :: forall r. Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r => InductiveDef -> Sem r InductiveDef
+checkInductive d = do
+  let _inductiveName = d ^. inductiveName
+      _inductiveBuiltin = d ^. inductiveBuiltin
+      _inductivePositive = d ^. inductivePositive
+  (localVars, _inductiveParameters) <- checkParameters (d ^. inductiveParameters)
+  _inductiveExamples <- runReader localVars (mapM checkExample (d ^. inductiveExamples))
+  _inductiveConstructors <- runReader localVars (mapM checkConstructor (d ^. inductiveConstructors))
+  return InductiveDef {..}
+  where
+    checkParameters :: [InductiveParameter] -> Sem r (LocalVars, [InductiveParameter])
+    checkParameters = runState emptyLocalVars . mapM checkParam
+      where
+        checkParam :: InductiveParameter -> Sem (State LocalVars ': r) InductiveParameter
+        checkParam = return
+
+checkConstructor :: Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r => InductiveConstructorDef -> Sem r InductiveConstructorDef
+checkConstructor c = do
+  let _inductiveConstructorName = c ^. inductiveConstructorName
+  _inductiveConstructorParameters <- mapM checkType (c ^. inductiveConstructorParameters)
+  _inductiveConstructorExamples <- mapM checkExample (c ^. inductiveConstructorExamples)
+  _inductiveConstructorReturnType <- checkType (c ^. inductiveConstructorReturnType)
+  return InductiveConstructorDef {..}
+
+-- | check the arity of some ty : Type
+checkType :: Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r => Expression -> Sem r Expression
+checkType = checkExpression ArityUnit -- TODO ArityUnit or ArityUnknown???
+
+checkAxiom :: Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r => AxiomDef -> Sem r AxiomDef
+checkAxiom a = do
+  let _axiomName = a ^. axiomName
+      _axiomBuiltin = a ^. axiomBuiltin
+  _axiomType <- withEmptyLocalVars (checkType (a ^. axiomType))
+  return AxiomDef {..}
 
 checkMutualBlock ::
   Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r =>

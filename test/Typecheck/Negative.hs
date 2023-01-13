@@ -26,8 +26,8 @@ testDescr NegTest {..} =
             result <- runIOEither iniState entryPoint upToInternalTyped
             case mapLeft fromJuvixError result of
               Left (Just tyError) -> whenJust (_checkErr tyError) assertFailure
-              Left Nothing -> assertFailure "The type checker did not find an error."
-              Right _ -> assertFailure "An error ocurred but it was not in the type checker."
+              Left Nothing -> assertFailure "An error ocurred but it was not in the type checker."
+              Right _ -> assertFailure "The type checker did not find an error."
         }
 
 allTests :: TestTree
@@ -112,13 +112,6 @@ tests =
       $(mkRelFile "WrongReturnTypeTooFewArguments.juvix")
       $ \case
         ErrWrongType {} -> Nothing
-        _ -> wrongError,
-    NegTest
-      "Too many arguments for the return type of a constructor"
-      $(mkRelDir "Internal")
-      $(mkRelFile "WrongReturnTypeTooManyArguments.juvix")
-      $ \case
-        ErrExpectedFunctionType {} -> Nothing
         _ -> wrongError,
     NegTest
       "Ambiguous hole"
