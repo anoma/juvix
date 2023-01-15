@@ -102,6 +102,9 @@ buildTable1 m = InfoTable {..} <> buildTable (map (^. includeModule) includes)
 lookupConstructor :: Member (Reader InfoTable) r => Name -> Sem r ConstructorInfo
 lookupConstructor f = HashMap.lookupDefault impossible f <$> asks (^. infoConstructors)
 
+lookupConstructorArgTypes :: Member (Reader InfoTable) r => Name -> Sem r ([VarName], [Expression])
+lookupConstructorArgTypes = fmap constructorArgTypes . lookupConstructor
+
 lookupInductive :: Member (Reader InfoTable) r => InductiveName -> Sem r InductiveInfo
 lookupInductive f = HashMap.lookupDefault impossible f <$> asks (^. infoInductives)
 

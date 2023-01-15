@@ -1,1 +1,1 @@
-:: (suc (suc zero)) (:: (suc (suc (suc zero))) (:: (suc (suc (suc (suc zero)))) (:: (suc (suc (suc (suc (suc zero))))) (:: (suc (suc (suc (suc (suc (suc zero)))))) (:: (suc (suc (suc (suc (suc (suc (suc zero))))))) nil)))))
+:: (Nat) (suc (suc zero)) (:: (Nat) (suc (suc (suc zero))) (:: (Nat) (suc (suc (suc (suc zero)))) (:: (Nat) (suc (suc (suc (suc (suc zero))))) (:: (Nat) (suc (suc (suc (suc (suc (suc zero)))))) (:: (Nat) (suc (suc (suc (suc (suc (suc (suc zero))))))) (nil (Nat)))))))

@@ -1,0 +1,21 @@
+module Church;
+
+open import Stdlib.Prelude;
+
+Num : Type;
+Num := {A : Type} → (A → A) → A → A;
+
+czero : Num;
+czero {_} f x := x;
+
+csuc : Num → Num;
+csuc n {_} f := f ∘ n {_} f;
+
+toNat : Num → Nat;
+toNat n := n {_} ((+) one) zero;
+
+main : IO;
+main :=
+  printNatLn (toNat (csuc (czero)));
+
+end;
