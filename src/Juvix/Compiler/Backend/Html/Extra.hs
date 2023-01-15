@@ -5,9 +5,9 @@ import Juvix.Prelude
 import Text.Blaze.Html5 as Html hiding (map)
 import Text.Blaze.Html5.Attributes qualified as Attr
 
-mathJaxCdn :: Members '[Reader PlainHtmlOptions] r => Sem r Html
+mathJaxCdn :: Members '[Reader HtmlOptions] r => Sem r Html
 mathJaxCdn = do
-  baseUrl <- textValue <$> asks (^. htmlOptionsBaseUrl)
+  assestsDir <- textValue <$> asks (^. htmlOptionsAssetsDir)
   let script1 =
       -- TODO: Should we keep the js in the assets
         script
@@ -18,7 +18,7 @@ mathJaxCdn = do
         script
           ! Attr.type_ "text/javascript"
           ! Attr.id "MathJax-script"
-          ! Attr.src (baseUrl <> "assets/tex-chtml.js")
+          ! Attr.src (assestsDir <> "js/tex-chtml.js")
           $ mempty
   return $ script1 <> script2
 
@@ -32,52 +32,36 @@ livejs =
     ! Attr.src "https://livejs.com/live.js"
     $ mempty
 
-linuwialCss :: Members '[Reader PlainHtmlOptions] r => Sem r Html
-linuwialCss = do
-  baseUrl <- textValue <$> asks (^. htmlOptionsBaseUrl)
-  return $
-    link
-      ! Attr.href (baseUrl <> "assets/linuwial.css")
-      ! Attr.rel "stylesheet"
-      ! Attr.type_ "text/css"
-      ! Attr.title "Linuwial"
 
-sourceCss :: Members '[Reader PlainHtmlOptions] r => Sem r Html
-sourceCss = do
-  baseUrl <- textValue <$> asks (^. htmlOptionsBaseUrl)
-  return $
-    link
-      ! Attr.href (baseUrl <> "assets/source.css")
-      ! Attr.rel "stylesheet"
-      ! Attr.type_ "text/css"
-
-cssLink :: Members '[Reader PlainHtmlOptions] r => AttributeValue -> Sem r Html
+cssLink :: Members '[Reader HtmlOptions] r => AttributeValue -> Sem r Html
 cssLink css = do
-  baseUrl <- textValue <$> asks (^. htmlOptionsBaseUrl)
+  assestDir <- textValue <$> asks (^. htmlOptionsAssetsDir)
   return $
     link
-      ! Attr.href (baseUrl <> css)
+      ! Attr.href (assestDir <> "css/" <> css)
       ! Attr.rel "stylesheet"
       ! Attr.type_ "text/css"
 
-ayuCss :: Members '[Reader PlainHtmlOptions] r => Sem r Html
-ayuCss = do
-  baseUrl <- textValue <$> asks (^. htmlOptionsBaseUrl)
-  cssLink (baseUrl <> "assets/source-ayu-light.css")
-
-nordCss :: Members '[Reader PlainHtmlOptions] r => Sem r Html
-nordCss = cssLink "assets/source-nord.css"
-
-highlightJs :: Members '[Reader PlainHtmlOptions] r => Sem r (Html)
-highlightJs = do
-  baseUrl <- textValue <$> asks (^. htmlOptionsBaseUrl)
+jsLink :: Members '[Reader HtmlOptions] r => AttributeValue -> Sem r Html
+jsLink js = do
+  assestDir <- textValue <$> asks (^. htmlOptionsAssetsDir)
   return
     $ script
-      ! Attr.src (baseUrl <> "assets/highlight.js")
+      ! Attr.src (assestDir <> "js/" <> js)
       ! Attr.type_ "text/javascript"
     $ mempty
 
+linuwialCss :: Members '[Reader HtmlOptions] r => Sem r Html
+linuwialCss = cssLink "linuwial.css"
+
+ayuCss :: Members '[Reader HtmlOptions] r => Sem r Html
+ayuCss = cssLink "source-ayu-light.css"
+
+nordCss :: Members '[Reader HtmlOptions] r => Sem r Html
+nordCss = cssLink "source-nord.css"
+
+highlightJs :: Members '[Reader HtmlOptions] r => Sem r (Html)
+highlightJs = jsLink "highlight.js"
+
 metaUtf8 :: Html
 metaUtf8 = meta ! Attr.charset "UTF-8"
-
--- TODO : Where is Tara's images

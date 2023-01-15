@@ -33,13 +33,6 @@ import Text.Blaze.Html.Renderer.Utf8 qualified as Html
 import Text.Blaze.Html5 as Html hiding (map)
 import Text.Blaze.Html5.Attributes qualified as Attr
 
-data DocParams = DocParams
-  { _docParamBase :: Text,
-    _docOutputDir :: Path Abs Dir
-  }
-
-makeLenses ''DocParams
-
 data Tree k a = Tree
   { _treeLabel :: a,
     _treeChildren :: HashMap k (Tree k a)
@@ -70,12 +63,12 @@ indexFileName = $(mkRelFile "index.html")
 
 createIndexFile ::
   forall r.
-  Members '[Reader DocParams, Embed IO, Reader PlainHtmlOptions, Reader EntryPoint] r =>
+  Members '[Embed IO, Reader HtmlOptions, Reader EntryPoint] r =>
   [TopModulePath] ->
   Sem r ()
 createIndexFile ps = do
-  outDir <- asks (^. docOutputDir)
-  indexHtml >>= (template mempty >=> writeHtml (outDir <//> indexFileName))
+  outputDir <- asks (^. htmlOptionsOutputDir)
+  indexHtml >>= (template mempty >=> writeHtml (outputDir <//> indexFileName))
   where
     indexHtml :: Sem r Html
     indexHtml = do
@@ -85,8 +78,10 @@ createIndexFile ps = do
           Html.div ! Attr.id "module-list" $
             (p ! Attr.class_ "caption" $ "Modules")
               <> tree'
+
     tree :: ModuleTree
     tree = indexTree ps
+
     root :: ModuleTree -> Sem r Html
     root (Tree _ t) = do
       c' <- mconcatMapM (uncurry goChild) (HashMap.toList t)
@@ -106,10 +101,13 @@ createIndexFile ps = do
             return $
               Html.span ! Attr.class_ attrBare $
                 (a ! Attr.href lnk $ toHtml (prettyText lbl'))
+
         attrBase :: Html.AttributeValue
         attrBase = "details-toggle-control details-toggle"
+
         attrBare :: Html.AttributeValue
         attrBare = attrBase <> " directory"
+
         node :: Sem r Html
         node = do
           row' <- nodeRow
@@ -130,21 +128,19 @@ createIndexFile ps = do
 data JudocArgs = JudocArgs
   { _judocArgsOutputDir :: Path Abs Dir,
     _judocArgsBaseName :: Text,
-    _judocArgsBaseUrl :: Text,
+    _judocArgsAssetsDir :: Text,
+    _judocArgsPrefixUrl :: Text,
     _judocArgsCtx :: InternalTypedResult
   }
 
+makeLenses ''JudocArgs
+
 genJudocHtml :: Members '[Embed IO] r => JudocArgs -> Sem r ()
-genJudocHtml JudocArgs {..} = runReader params . runReader normTable . runReader entry $ do
-  copyAssets
-  mapM_ goTopModule topModules
-  runReader
-    ( PlainHtmlOptions
-        { _htmlOptionsKind = HtmlDoc,
-          _htmlOptionsBaseUrl = _judocArgsBaseUrl
-        }
-    )
-    (createIndexFile (map topModulePath (toList topModules)))
+genJudocHtml JudocArgs {..} =
+  runReader htmlOpts . runReader normTable . runReader entry $ do
+    copyAssets
+    mapM_ goTopModule topModules
+    runReader (createIndexFile (map topModulePath (toList topModules)))
   where
     entry :: EntryPoint
     entry = _judocArgsCtx ^. InternalTyped.internalTypedResultEntryPoint
@@ -161,9 +157,12 @@ genJudocHtml JudocArgs {..} = runReader params . runReader normTable . runReader
         . Abstract.resultScoper
         . Scoped.mainModule
 
-    copyAssets :: forall s. Members '[Embed IO, Reader DocParams] s => Sem s ()
+    copyAssets ::
+      forall s.
+      Members '[Embed IO, Reader HtmlOptions] s =>
+      Sem s ()
     copyAssets = do
-      toAssetsDir <- (<//> $(mkRelDir "assets")) <$> asks (^. docOutputDir)
+      toAssetsDir <- (<//> $(mkRelDir "assets")) <$> asks (^. htmlOptionsOutputDir)
       let writeAsset :: (Path Rel File, BS.ByteString) -> Sem s ()
           writeAsset (filePath, fileContents) =
             Prelude.embed $ BS.writeFile (toFilePath (toAssetsDir <//> filePath)) fileContents
@@ -173,12 +172,16 @@ genJudocHtml JudocArgs {..} = runReader params . runReader normTable . runReader
         assetFiles :: [(Path Rel File, BS.ByteString)]
         assetFiles = assetsDir
 
-    params :: DocParams
-    params =
-      DocParams
-        { _docParamBase = _judocArgsBaseName,
-          _docOutputDir = _judocArgsOutputDir
+    htmlOpts :: HtmlOptions
+    htmlOpts =
+      HtmlOptions
+        { _htmlOptionsKind = HtmlDoc,
+          _htmlOptionsAssetsDir = _judocArgsAssetsDir,
+          _htmlOptionsOutputDir = _judocArgsOutputDir,
+          _htmlOptionsPrefixUrl = _judocArgsPrefixUrl,
+          _htmlOptionsParamBase = _judocArgsBaseName
         }
+
     topModules :: HashMap NameId (Module 'Scoped 'ModuleTop)
     topModules = getAllModules mainMod
 
@@ -190,25 +193,16 @@ writeHtml f h = Prelude.embed $ do
     dir :: Path Abs Dir
     dir = parent f
 
-moduleDocPath :: Members '[Reader PlainHtmlOptions, Reader DocParams] r => Module 'Scoped 'ModuleTop -> Sem r (Path Abs File)
+moduleDocPath :: Members '[Reader HtmlOptions] r => Module 'Scoped 'ModuleTop -> Sem r (Path Abs File)
 moduleDocPath m = do
   relPath <- moduleDocRelativePath (m ^. modulePath . S.nameConcrete)
-  outDir <- asks (^. docOutputDir)
-  return (outDir <//> relPath)
+  outputDir <- asks (^. htmlOptionsOutputDir)
+  return (outputDir <//> relPath)
 
 topModulePath :: Module 'Scoped 'ModuleTop -> TopModulePath
 topModulePath = (^. modulePath . S.nameConcrete)
 
--- TODO:
-srcHtmlOpts :: PlainHtmlOptions
-srcHtmlOpts = PlainHtmlOptions HtmlSrc ""
-
-
--- TODO:
-docHtmlOpts :: PlainHtmlOptions
-docHtmlOpts = PlainHtmlOptions HtmlDoc ""
-
-template :: forall r. Members '[Reader EntryPoint, Reader PlainHtmlOptions] r => Html -> Html -> Sem r Html
+template :: forall r. Members '[Reader EntryPoint, Reader HtmlOptions] r => Html -> Html -> Sem r Html
 template rightMenu' content' = do
   mathJax <- mathJaxCdn
   ayuTheme <- ayuCss
@@ -263,7 +257,7 @@ template rightMenu' content' = do
             <> ( Html.a ! Attr.href Str.juvixDotOrg $
                    Html.img
                      ! Attr.id "tara"
-                     ! Attr.src "assets/Seating_Tara_smiling.svg"
+                     ! Attr.src "assets/tara-smiling.svg"
                      ! Attr.alt "Tara"
                )
 
@@ -273,32 +267,30 @@ template rightMenu' content' = do
 -- | This function compiles a datalang module into Html documentation.
 goTopModule ::
   forall r.
-  Members '[Reader DocParams, Embed IO, Reader EntryPoint, Reader NormalizedTable] r =>
+  Members '[Reader HtmlOptions, Embed IO, Reader EntryPoint, Reader NormalizedTable] r =>
   Module 'Scoped 'ModuleTop ->
   Sem r ()
 goTopModule m = do
-  runReader docHtmlOpts $ do
+  htmlOpts <- ask @HtmlOptions
+  runReader (htmlOpts {_htmlOptionsKind = HtmlDoc}) $ do
     fpath <- moduleDocPath m
     Prelude.embed (putStrLn ("processing " <> pack (toFilePath fpath)))
     docHtml >>= writeHtml fpath
 
-  runReader srcHtmlOpts $ do
+  runReader (htmlOpts {_htmlOptionsKind = HtmlDoc}) $ do
     fpath <- moduleDocPath m
     srcHtml >>= writeHtml fpath
   where
     tmp :: TopModulePath
     tmp = m ^. modulePath . S.nameConcrete
 
-    srcHtml :: forall s. Members '[Reader PlainHtmlOptions, Embed IO] s => Sem s Html
+    srcHtml :: forall s. Members '[Reader HtmlOptions, Embed IO] s => Sem s Html
     srcHtml = do
       utc <- Prelude.embed getCurrentTime
-      baseUrl <- asks @PlainHtmlOptions (^. htmlOptionsBaseUrl)
       return
         ( genModuleHtml
             GenModuleHtmlArgs
               { _genModuleHtmlArgsConcreteOpts = defaultOptions,
-                _genModuleHtmlArgsHtmlKind = HtmlSrc,
-                _genModuleHtmlArgsBaseUrl = baseUrl,
                 _genModuleHtmlArgsPrintMetadata = True,
                 _genModuleHtmlArgsUTC = utc,
                 _genModuleHtmlArgsTheme = Ayu,
@@ -306,7 +298,7 @@ goTopModule m = do
               }
         )
 
-    docHtml :: forall s. Members '[Reader PlainHtmlOptions, Reader EntryPoint, Reader NormalizedTable] s => Sem s Html
+    docHtml :: forall s. Members '[Reader HtmlOptions, Reader EntryPoint, Reader NormalizedTable] s => Sem s Html
     docHtml = do
       content' <- content
       rightMenu' <- rightMenu
@@ -317,7 +309,7 @@ goTopModule m = do
           sourceRef' <- local (set htmlOptionsKind HtmlSrc) (nameIdAttrRef tmp Nothing)
           return $
             ul ! Attr.id "page-menu" ! Attr.class_ "links" $
-              li (a ! Attr.href sourceRef' $ "Source")
+              li (a ! Attr.href sourceRef' $ "Source") -- TODO: review here
                 <> li (a ! Attr.href (fromString (toFilePath indexFileName)) $ "Index")
 
         content :: Sem s Html
@@ -375,18 +367,20 @@ goTopModule m = do
               )
                 <> sigs'
 
-goJudocMay :: Members '[Reader PlainHtmlOptions, Reader NormalizedTable] r => Maybe (Judoc 'Scoped) -> Sem r Html
+goJudocMay :: Members '[Reader HtmlOptions, Reader NormalizedTable] r => Maybe (Judoc 'Scoped) -> Sem r Html
 goJudocMay = maybe (return mempty) goJudoc
 
-goJudoc :: forall r. Members '[Reader PlainHtmlOptions, Reader NormalizedTable] r => Judoc 'Scoped -> Sem r Html
+goJudoc :: forall r. Members '[Reader HtmlOptions, Reader NormalizedTable] r => Judoc 'Scoped -> Sem r Html
 goJudoc (Judoc bs) = mconcatMapM goBlock bs
   where
     goBlock :: JudocBlock 'Scoped -> Sem r Html
     goBlock = \case
       JudocParagraph ls -> Html.p . concatWith (\l r -> l <> " " <> r) <$> mapM goLine (toList ls)
       JudocExample e -> goExample e
+
     goLine :: JudocParagraphLine 'Scoped -> Sem r Html
     goLine (JudocParagraphLine atoms) = mconcatMapM goAtom (toList atoms)
+
     goExample :: Example 'Scoped -> Sem r Html
     goExample ex = do
       e' <- ppCodeHtml (ex ^. exampleExpression)
@@ -398,12 +392,13 @@ goJudoc (Judoc bs) = mconcatMapM goBlock bs
             <> e'
             <> "\n"
             <> norm'
+
     goAtom :: JudocAtom 'Scoped -> Sem r Html
     goAtom = \case
       JudocExpression e -> ppCodeHtml e
       JudocText txt -> return (toHtml txt)
 
-goStatement :: Members '[Reader PlainHtmlOptions, Reader NormalizedTable] r => Statement 'Scoped -> Sem r Html
+goStatement :: Members '[Reader HtmlOptions, Reader NormalizedTable] r => Statement 'Scoped -> Sem r Html
 goStatement = \case
   StatementTypeSignature t -> goTypeSignature t
   StatementAxiom t -> goAxiom t
@@ -411,12 +406,12 @@ goStatement = \case
   StatementOpenModule t -> goOpen t
   _ -> mempty
 
-goOpen :: forall r. Members '[Reader PlainHtmlOptions] r => OpenModule 'Scoped -> Sem r Html
+goOpen :: forall r. Members '[Reader HtmlOptions] r => OpenModule 'Scoped -> Sem r Html
 goOpen op
   | Public <- op ^. openPublic = noDefHeader <$> ppCodeHtml op
   | otherwise = mempty
 
-goAxiom :: forall r. Members '[Reader PlainHtmlOptions, Reader NormalizedTable] r => AxiomDef 'Scoped -> Sem r Html
+goAxiom :: forall r. Members '[Reader HtmlOptions, Reader NormalizedTable] r => AxiomDef 'Scoped -> Sem r Html
 goAxiom axiom = do
   header' <- axiomHeader
   defHeader tmp uid header' (axiom ^. axiomDoc)
@@ -428,7 +423,7 @@ goAxiom axiom = do
     axiomHeader :: Sem r Html
     axiomHeader = ppCodeHtml (set axiomDoc Nothing axiom)
 
-goInductive :: forall r. Members '[Reader PlainHtmlOptions, Reader NormalizedTable] r => InductiveDef 'Scoped -> Sem r Html
+goInductive :: forall r. Members '[Reader HtmlOptions, Reader NormalizedTable] r => InductiveDef 'Scoped -> Sem r Html
 goInductive def = do
   sig' <- inductiveHeader
   header' <- defHeader tmp uid sig' (def ^. inductiveDoc)
@@ -443,7 +438,7 @@ goInductive def = do
     inductiveHeader =
       runReader defaultOptions (ppInductiveSignature def) >>= ppCodeHtml
 
-goConstructors :: forall r. Members '[Reader PlainHtmlOptions, Reader NormalizedTable] r => NonEmpty (InductiveConstructorDef 'Scoped) -> Sem r Html
+goConstructors :: forall r. Members '[Reader HtmlOptions, Reader NormalizedTable] r => NonEmpty (InductiveConstructorDef 'Scoped) -> Sem r Html
 goConstructors cc = do
   tbl' <- table . tbody <$> mconcatMapM goConstructor (toList cc)
   return $
@@ -472,7 +467,7 @@ goConstructors cc = do
 noDefHeader :: Html -> Html
 noDefHeader = p ! Attr.class_ "src"
 
-defHeader :: forall r. Members '[Reader PlainHtmlOptions, Reader NormalizedTable] r => TopModulePath -> NameId -> Html -> Maybe (Judoc 'Scoped) -> Sem r Html
+defHeader :: forall r. Members '[Reader HtmlOptions, Reader NormalizedTable] r => TopModulePath -> NameId -> Html -> Maybe (Judoc 'Scoped) -> Sem r Html
 defHeader tmp uid sig mjudoc = do
   funHeader' <- functionHeader
   judoc' <- judoc
@@ -491,7 +486,7 @@ defHeader tmp uid sig mjudoc = do
       sourceLink' <- sourceAndSelfLink tmp uid
       return $ noDefHeader (sig <> sourceLink')
 
-goTypeSignature :: forall r. Members '[Reader PlainHtmlOptions, Reader NormalizedTable] r => TypeSignature 'Scoped -> Sem r Html
+goTypeSignature :: forall r. Members '[Reader HtmlOptions, Reader NormalizedTable] r => TypeSignature 'Scoped -> Sem r Html
 goTypeSignature sig = do
   sig' <- typeSig
   defHeader tmp uid sig' (sig ^. sigDoc)
@@ -503,7 +498,7 @@ goTypeSignature sig = do
     typeSig :: Sem r Html
     typeSig = ppCodeHtml (set sigDoc Nothing sig)
 
-sourceAndSelfLink :: Members '[Reader PlainHtmlOptions] r => TopModulePath -> NameId -> Sem r Html
+sourceAndSelfLink :: Members '[Reader HtmlOptions] r => TopModulePath -> NameId -> Sem r Html
 sourceAndSelfLink tmp name = do
   ref' <- local (set htmlOptionsKind HtmlSrc) (nameIdAttrRef tmp (Just name))
   return $

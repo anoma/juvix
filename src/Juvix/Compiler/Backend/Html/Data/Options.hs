@@ -2,10 +2,14 @@ module Juvix.Compiler.Backend.Html.Data.Options where
 
 import Juvix.Prelude
 
-data PlainHtmlOptions = PlainHtmlOptions
+data HtmlOptions = HtmlOptions
   { _htmlOptionsKind :: HtmlKind,
-    _htmlOptionsBaseUrl :: Text
+    _htmlOptionsAssetsDir :: Text, -- TODO: can we have a path here.
+    _htmlOptionsPrefixUrl :: Text,
+    _htmlOptionsOutputDir :: Path Abs Dir,
+    _htmlOptionsParamBase :: Text
   }
+
 
 data Theme
   = Nord
@@ -18,4 +22,4 @@ data HtmlKind
   | HtmlOnly
   deriving stock (Data)
 
-makeLenses ''PlainHtmlOptions
+makeLenses ''HtmlOptions

@@ -10,7 +10,8 @@ data HtmlOptions = HtmlOptions
     _htmlOutputDir :: AppPath Dir,
     _htmlInputFile :: AppPath File,
     _htmlPrintMetadata :: Bool,
-    _htmlBaseUrl :: Text,
+    _htmlAssetsDir :: Text,
+    _htmlPrefixUrl :: Text,
     _htmlOpen :: Bool
   }
   deriving stock (Data)
@@ -51,12 +52,19 @@ parseHtml = do
       ( long "print-metadata"
           <> help "Add HTML footer with metadata"
       )
-  _htmlBaseUrl <-
+  _htmlAssestDir <-
     strOption
       ( value ""
-          <> long "base-dir"
+          <> long "assets-dir"
           <> showDefault
-          <> help "Prefix for hyperlinks and assets urls"
+          <> help "Prefix for file path's assets"
+      )
+  _htmlPrefixUrl <-
+    strOption
+      ( value ""
+          <> long "prefix-url"
+          <> showDefault
+          <> help "Prefix for Juvix source hyperlinks"
       )
   _htmlOpen <-
     switch
