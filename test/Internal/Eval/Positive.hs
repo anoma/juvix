@@ -163,5 +163,10 @@ tests =
       "Builtin Inductive type"
       $(mkRelDir ".")
       $(mkRelFile "BuiltinInductive.juvix")
-      $(mkRelFile "out/BuiltinInductive.out")
+      $(mkRelFile "out/BuiltinInductive.out"),
+    PosTest
+      "Higher Order Lambda"
+      $(mkRelDir ".")
+      $(mkRelFile "HigherOrderLambda.juvix")
+      $(mkRelFile "out/HigherOrderLambda.out")
   ]

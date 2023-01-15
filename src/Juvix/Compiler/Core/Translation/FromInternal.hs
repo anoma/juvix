@@ -298,18 +298,12 @@ goLambda l = do
     local
       (over indexTableVarsNum (+ nPatterns))
       (mapM goLambdaClause (l ^. Internal.lambdaClauses))
-  values' <- values
-  let match = mkMatch' (fromList values') (toList ms)
-  return $ foldr (\_ n -> mkLambda' n) match values'
+  let values = take nPatterns (mkVar' <$> [0 ..])
+      match = mkMatch' (fromList values) (toList ms)
+  return $ foldr (\_ n -> mkLambda' n) match values
   where
     nPatterns :: Int
     nPatterns = length (l ^. Internal.lambdaClauses . _head1 . Internal.lambdaPatterns)
-
-    values :: Sem r [Node]
-    values = do
-      varsNum <- asks (^. indexTableVarsNum)
-      let vs = take nPatterns [varsNum ..]
-      return (mkVar' <$> vs)
 
 goAxiomInductive ::
   forall r.
