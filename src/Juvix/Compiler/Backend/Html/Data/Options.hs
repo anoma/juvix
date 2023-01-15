@@ -4,12 +4,12 @@ import Juvix.Prelude
 
 data HtmlOptions = HtmlOptions
   { _htmlOptionsKind :: HtmlKind,
-    _htmlOptionsAssetsDir :: Text, -- TODO: can we have a path here.
+    _htmlOptionsAssetsPrefix :: Text, -- TODO: can we have a path here.
     _htmlOptionsPrefixUrl :: Text,
     _htmlOptionsOutputDir :: Path Abs Dir,
-    _htmlOptionsParamBase :: Text
+    _htmlOptionsParamBase :: Text,
+    _htmlOptionsTheme :: Theme
   }
-
 
 data Theme
   = Nord

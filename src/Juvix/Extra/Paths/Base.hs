@@ -7,6 +7,16 @@ import Language.Haskell.TH.Syntax
 assetsDirQ :: Q Exp
 assetsDirQ = FE.makeRelativeToProject "assets" >>= FE.embedDir
 
+cssDirQ :: Q Exp
+cssDirQ = FE.makeRelativeToProject "assets/css" >>= FE.embedDir
+
+jsDirQ :: Q Exp
+jsDirQ = FE.makeRelativeToProject "assets/js" >>= FE.embedDir
+
+imagesDirQ :: Q Exp
+imagesDirQ = FE.makeRelativeToProject "assets/images" >>= FE.embedDir
+
+
 projectFilePath :: Q Exp
 projectFilePath = FE.makeRelativeToProject "." >>= lift
 

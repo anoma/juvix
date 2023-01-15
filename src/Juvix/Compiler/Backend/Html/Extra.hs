@@ -7,9 +7,8 @@ import Text.Blaze.Html5.Attributes qualified as Attr
 
 mathJaxCdn :: Members '[Reader HtmlOptions] r => Sem r Html
 mathJaxCdn = do
-  assestsDir <- textValue <$> asks (^. htmlOptionsAssetsDir)
+  assetsPrefix <- textValue <$> asks (^. htmlOptionsAssetsPrefix)
   let script1 =
-      -- TODO: Should we keep the js in the assets
         script
           ! Attr.src "https://polyfill.io/v3/polyfill.min.js?features=es6"
           $ mempty
@@ -18,7 +17,7 @@ mathJaxCdn = do
         script
           ! Attr.type_ "text/javascript"
           ! Attr.id "MathJax-script"
-          ! Attr.src (assestsDir <> "js/tex-chtml.js")
+          ! Attr.src (assetsPrefix <> "assets/js/tex-chtml.js")
           $ mempty
   return $ script1 <> script2
 
@@ -32,22 +31,21 @@ livejs =
     ! Attr.src "https://livejs.com/live.js"
     $ mempty
 
-
 cssLink :: Members '[Reader HtmlOptions] r => AttributeValue -> Sem r Html
 cssLink css = do
-  assestDir <- textValue <$> asks (^. htmlOptionsAssetsDir)
+  assetsPrefix <- textValue <$> asks (^. htmlOptionsAssetsPrefix)
   return $
     link
-      ! Attr.href (assestDir <> "css/" <> css)
+      ! Attr.href (assetsPrefix <> "assets/css/" <> css)
       ! Attr.rel "stylesheet"
       ! Attr.type_ "text/css"
 
 jsLink :: Members '[Reader HtmlOptions] r => AttributeValue -> Sem r Html
 jsLink js = do
-  assestDir <- textValue <$> asks (^. htmlOptionsAssetsDir)
+  assetsPrefix <- textValue <$> asks (^. htmlOptionsAssetsPrefix)
   return
     $ script
-      ! Attr.src (assestDir <> "js/" <> js)
+      ! Attr.src (assetsPrefix <> "assets/js/" <> js)
       ! Attr.type_ "text/javascript"
     $ mempty
 
@@ -60,8 +58,24 @@ ayuCss = cssLink "source-ayu-light.css"
 nordCss :: Members '[Reader HtmlOptions] r => Sem r Html
 nordCss = cssLink "source-nord.css"
 
-highlightJs :: Members '[Reader HtmlOptions] r => Sem r (Html)
+themeCss :: Members '[Reader HtmlOptions] r => Sem r Html
+themeCss = do
+  theme <- asks (^. htmlOptionsTheme)
+  case theme of
+    Ayu -> ayuCss
+    Nord -> nordCss
+
+highlightJs :: Members '[Reader HtmlOptions] r => Sem r Html
 highlightJs = jsLink "highlight.js"
 
 metaUtf8 :: Html
 metaUtf8 = meta ! Attr.charset "UTF-8"
+
+taraSmiling :: Members '[Reader HtmlOptions] r => Sem r Html
+taraSmiling = do
+  assetsPrefix <- textValue <$> asks (^. htmlOptionsAssetsPrefix)
+  return $
+    Html.img
+      ! Attr.id "tara"
+      ! Attr.src (assetsPrefix <> "assets/images/tara-smiling.svg")
+      ! Attr.alt "Tara"

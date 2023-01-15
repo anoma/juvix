@@ -3,9 +3,10 @@ PREFIX="$(PWD)/.stack-work/prefix"
 UNAME := $(shell uname)
 HLINTQUIET :=
 
-ASSETS = 	seating-mascot.051c86a.svg \
-			Seating_Tara_smiling.svg \
-			teaching-mascot.f828959.svg
+
+ASSETS = 	images/tara-seating.svg \
+					images/tara-smiling.svg \
+					images/tara-teaching.svg
 
 ORGFILES = $(shell find docs/org -type f -name '*.org')
 MDFILES:=$(patsubst docs/org/%,docs/md/%,$(ORGFILES:.org=.md))

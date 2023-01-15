@@ -2,9 +2,9 @@ module Commands.Html where
 
 import Commands.Base
 import Commands.Html.Options
-import Juvix.Compiler.Backend.Html.Data.Options qualified as Html
-import Juvix.Compiler.Backend.Html.Translation.FromTyped (JudocArgs (..), PlainHtmlArgs (..))
+import Juvix.Compiler.Backend.Html.Translation.FromTyped (JudocArgs (..))
 import Juvix.Compiler.Backend.Html.Translation.FromTyped qualified as Html
+import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source (GetPlainHtmlArgs (..))
 import Juvix.Compiler.Concrete.Pretty qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Extra.Process
@@ -15,44 +15,47 @@ runSourceHtmlCommand HtmlOptions {..} = do
   res <- runPipeline _htmlInputFile upToScoping
   let m = head (res ^. Scoper.resultModules)
   outputDir <- someBaseToAbs' (_htmlOutputDir ^. pathPath)
-  let htmlOpts = Html.HtmlOptions {
-      _htmlOptionsOutputDir = outputDir
-    }
   embed $
-    Html.genPlainHtml htmlOpts
-          PlainHtmlArgs
-            { _plainHtmlArgsConcreteOpts = Concrete.defaultOptions,
-              _plainHtmlArgsRecursive = _htmlRecursive,
-              _plainHtmlArgsTheme = _htmlTheme,
-              _plainHtmlArgsPrintMetaData = _htmlPrintMetadata,
-              _plainHtmlArgsEntryPoint = m
-            }
-
+    Html.genPlainHtml
+      GetPlainHtmlArgs
+        { _genPlainHtmlArgsAssetsDir = _htmlAssetsDir,
+          _genPlainHtmlArgsHtmlKind = Html.HtmlSrc,
+          _genPlainHtmlArgsParamBase = "",
+          _genPlainHtmlArgsPrefixUrl = _htmlPrefixUrl,
+          _getPlainHtmlArgsConcreteOpts = Concrete.defaultOptions,
+          _getPlainHtmlArgsEntryPoint = m,
+          _getPlainHtmlArgsOutputDir = outputDir,
+          _getPlainHtmlArgsPrintMetaData = _htmlPrintMetadata,
+          _getPlainHtmlArgsRecursive = _htmlRecursive,
+          _getPlainHtmlArgsTheme = _htmlTheme
+        }
 
 runCommand :: Members '[Embed IO, App] r => HtmlOptions -> Sem r ()
 runCommand HtmlOptions {..}
   | _htmlPlain = runSourceHtmlCommand HtmlOptions {..}
-  | otherwise = _
-    --  do
-    --   ctx <- runPipeline _htmlInputFile upToInternalTyped
-    --   outputDir <- someBaseToAbs' (_htmlOutputDir ^. pathPath)
-    --   Html.genJudocHtml
-    --     JudocArgs
-    --       { _judocArgsOutputDir = outputDir,
-    --         _judocArgsBaseName = "proj",
-    --         _judocArgsCtx = ctx,
-    --         _judocArgsAssetsDir = _htmlBaseUrl
-    --       }
-    --   when _htmlOpen $ case openCmd of
-    --     Nothing -> say "Could not recognize the 'open' command for your OS"
-    --     Just opencmd ->
-    --       embed
-    --         ( void
-    --             ( Process.spawnProcess
-    --                 opencmd
-    --                 [ toFilePath
-    --                     ( outputDir <//> Html.indexFileName
-    --                     )
-    --                 ]
-    --             )
-    --         )
+  | otherwise =
+      do
+        ctx <- runPipeline _htmlInputFile upToInternalTyped
+        outputDir <- someBaseToAbs' (_htmlOutputDir ^. pathPath)
+        Html.genJudocHtml
+          JudocArgs
+            { _judocArgsAssetsDir = _htmlAssetsDir,
+              _judocArgsBaseName = "proj",
+              _judocArgsCtx = ctx,
+              _judocArgsOutputDir = outputDir,
+              _judocArgsPrefixUrl = _htmlPrefixUrl,
+              _judocArgsTheme = _htmlTheme
+            }
+        when _htmlOpen $ case openCmd of
+          Nothing -> say "Could not recognize the 'open' command for your OS"
+          Just opencmd ->
+            embed
+              ( void
+                  ( Process.spawnProcess
+                      opencmd
+                      [ toFilePath
+                          ( outputDir <//> Html.indexFileName
+                          )
+                      ]
+                  )
+              )

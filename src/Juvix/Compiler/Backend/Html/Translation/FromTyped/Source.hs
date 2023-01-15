@@ -6,7 +6,6 @@ import Data.Text.IO qualified as Text
 import Data.Text.Lazy (toStrict)
 import Data.Time.Clock
 import Data.Time.Format
-import Juvix.Extra.Strings qualified as Str
 import Juvix.Compiler.Backend.Html.Data.Options
 import Juvix.Compiler.Backend.Html.Extra
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
@@ -16,6 +15,7 @@ import Juvix.Compiler.Concrete.Pretty.Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Extra.Paths
+import Juvix.Extra.Strings qualified as Str
 import Juvix.Extra.Version
 import Juvix.Prelude
 import Prettyprinter.Render.Util.SimpleDocTree
@@ -30,42 +30,42 @@ kindSuffix = \case
   HtmlSrc -> "-src"
   HtmlOnly -> ""
 
-
 data GetPlainHtmlArgs = GetPlainHtmlArgs
   { _getPlainHtmlArgsConcreteOpts :: Options,
-    _getPlainHtmlArgsRecursive :: Bool,
-    _getPlainHtmlArgsTheme :: Theme,
+    _genPlainHtmlArgsAssetsDir :: Text,
+    _genPlainHtmlArgsHtmlKind :: HtmlKind,
+    _genPlainHtmlArgsParamBase :: Text,
+    _genPlainHtmlArgsPrefixUrl :: Text,
+    _getPlainHtmlArgsEntryPoint :: Module 'Scoped 'ModuleTop,
     _getPlainHtmlArgsOutputDir :: Path Abs Dir,
     _getPlainHtmlArgsPrintMetaData :: Bool,
-    _getPlainHtmlArgsEntryPoint :: Module 'Scoped 'ModuleTop,
-    _genPlainHtmlArgsHtmlOptions :: HtmlOptions
+    _getPlainHtmlArgsRecursive :: Bool,
+    _getPlainHtmlArgsTheme :: Theme
   }
+
+makeLenses ''GetPlainHtmlArgs
 
 data GenModuleHtmlArgs = GenModuleHtmlArgs
   { _genModuleHtmlArgsConcreteOpts :: Options,
-    _genModuleHtmlArgsPrintMetadata :: Bool, -- TODO: add this HtmlOptions
+    _genModuleHtmlArgsPrintMetadata :: Bool,
     _genModuleHtmlArgsUTC :: UTCTime,
-    _genModuleHtmlArgsTheme :: Theme,
     _genModuleHtmlArgsEntryPoint :: Module 'Scoped 'ModuleTop
   }
 
+makeLenses ''GenModuleHtmlArgs
 
 data GenModuleArgs = GenModuleArgs
   { _genModuleArgsConcreteOpts :: Options,
     _genModuleArgsPrintMetata :: Bool,
     _genModuleArgsUTC :: UTCTime,
-    _genModuleArgsTheme :: Theme,
     _genModuleArgsEntryPoint :: Module 'Scoped 'ModuleTop
   }
 
-
-makeLenses ''GetPlainHtmlArgs
-makeLenses ''GenModuleHtmlArgs
 makeLenses ''GenModuleArgs
 
 genPlainHtml :: GetPlainHtmlArgs -> IO ()
-genPlainHtml o = do
-  let outputDir = o ^. getPlainHtmlArgsOutputDir
+genPlainHtml o@GetPlainHtmlArgs {..} = do
+  let outputDir = _getPlainHtmlArgsOutputDir
   ensureDir outputDir
   copyAssetFiles
   withCurrentDir outputDir $ do
@@ -73,13 +73,19 @@ genPlainHtml o = do
   where
     opts = o ^. getPlainHtmlArgsConcreteOpts
     recursive = o ^. getPlainHtmlArgsRecursive
-    theme = o ^. getPlainHtmlArgsTheme
     printMetadata = o ^. getPlainHtmlArgsPrintMetaData
     entry = o ^. getPlainHtmlArgsEntryPoint
-    outputDir = o ^. getPlainHtmlArgsOutputDir
 
     htmlOptions :: HtmlOptions
-    htmlOptions = o ^. genPlainHtmlArgsHtmlOptions
+    htmlOptions =
+      HtmlOptions
+        { _htmlOptionsOutputDir = o ^. getPlainHtmlArgsOutputDir,
+          _htmlOptionsPrefixUrl = o ^. genPlainHtmlArgsPrefixUrl,
+          _htmlOptionsAssetsPrefix = o ^. genPlainHtmlArgsAssetsDir,
+          _htmlOptionsKind = o ^. genPlainHtmlArgsHtmlKind,
+          _htmlOptionsParamBase = o ^. genPlainHtmlArgsParamBase,
+          _htmlOptionsTheme = o ^. getPlainHtmlArgsTheme
+        }
 
     allModules
       | recursive = toList (getAllModules entry)
@@ -96,7 +102,9 @@ genPlainHtml o = do
         writeAsset :: (Path Rel File, BS.ByteString) -> IO ()
         writeAsset (filePath, fileContents) =
           BS.writeFile (toFilePath (toAssetsDir <//> filePath)) fileContents
-        toAssetsDir = outputDir <//> $(mkRelDir "assets")
+
+        toAssetsDir :: Path Abs Dir
+        toAssetsDir = (htmlOptions ^. htmlOptionsOutputDir) <//> $(mkRelDir "assets")
 
     outputModule :: Module 'Scoped 'ModuleTop -> IO ()
     outputModule m = do
@@ -105,37 +113,38 @@ genPlainHtml o = do
       utc <- getCurrentTime
       Text.writeFile
         (toFilePath htmlFile)
-        ""
-        -- (genModule
-        --     GenModuleArgs
-        --       { _genModuleArgsConcreteOpts = opts,
-        --         _genModuleArgsPrintMetata = printMetadata,
-        --         _genModuleArgsUTC = utc,
-        --         _genModuleArgsTheme = theme,
-        --         _genModuleArgsEntryPoint = m
-        --       }
-        -- )
+        ( run . runReader htmlOptions $
+            genModuleText
+              GenModuleArgs
+                { _genModuleArgsConcreteOpts = opts,
+                  _genModuleArgsPrintMetata = printMetadata,
+                  _genModuleArgsUTC = utc,
+                  _genModuleArgsEntryPoint = m
+                }
+        )
       where
         htmlFile :: Path Rel File
         htmlFile = relFile (topModulePathToDottedPath (m ^. modulePath . S.nameConcrete) <.> ".html")
 
-
-
-genModule :: forall r . Members '[Reader HtmlOptions] r => GenModuleArgs -> Sem r Text
-genModule GenModuleArgs {..} = do
-  outputHtml <- genModuleHtml
-    $ GenModuleHtmlArgs
-      { _genModuleHtmlArgsConcreteOpts = _genModuleArgsConcreteOpts,
-        _genModuleHtmlArgsPrintMetadata = _genModuleArgsPrintMetata,
-        _genModuleHtmlArgsUTC = _genModuleArgsUTC,
-        _genModuleHtmlArgsTheme = _genModuleArgsTheme,
-        _genModuleHtmlArgsEntryPoint = _genModuleArgsEntryPoint
-      }
+genModuleText ::
+  forall r.
+  Members '[Reader HtmlOptions] r =>
+  GenModuleArgs ->
+  Sem r Text
+genModuleText GenModuleArgs {..} = do
+  outputHtml <-
+    genModuleHtml $
+      GenModuleHtmlArgs
+        { _genModuleHtmlArgsConcreteOpts = _genModuleArgsConcreteOpts,
+          _genModuleHtmlArgsPrintMetadata = _genModuleArgsPrintMetata,
+          _genModuleHtmlArgsUTC = _genModuleArgsUTC,
+          _genModuleHtmlArgsEntryPoint = _genModuleArgsEntryPoint
+        }
   return . toStrict . Html.renderHtml $ outputHtml
 
-
 genModuleHtml ::
-  forall r . Members '[Reader HtmlOptions] r =>
+  forall r.
+  Members '[Reader HtmlOptions] r =>
   GenModuleHtmlArgs ->
   Sem r Html
 genModuleHtml o = do
@@ -147,7 +156,6 @@ genModuleHtml o = do
     opts = o ^. genModuleHtmlArgsConcreteOpts
     printMetadata = o ^. genModuleHtmlArgsPrintMetadata
     utc = o ^. genModuleHtmlArgsUTC
-    theme = o ^. genModuleHtmlArgsTheme
     m = o ^. genModuleHtmlArgsEntryPoint
 
     mhead :: Sem r Html
@@ -166,11 +174,6 @@ genModuleHtml o = do
           prettySrc,
           infoFooter
         ]
-
-    themeCss :: Sem r Html
-    themeCss = case theme of
-      Ayu -> ayuCss
-      Nord -> nordCss
 
     prettySrc :: Sem r Html
     prettySrc = do
@@ -196,7 +199,10 @@ genModuleHtml o = do
                 <> formattedTime
       where
         juvixLink :: Html
-        juvixLink = a ! Attr.href Str.juvixDotOrg $ toHtml ("Juvix CLI " :: Text)
+        juvixLink =
+          a ! Attr.href Str.juvixDotOrg $
+            toHtml ("Juvix CLI " :: Text)
+
         commitInfo :: Html
         commitInfo =
           a
@@ -308,9 +314,9 @@ moduleDocRelativePath m = do
 nameIdAttrRef :: Members '[Reader HtmlOptions] r => TopModulePath -> Maybe S.NameId -> Sem r AttributeValue
 nameIdAttrRef tp s = do
   pth <- toFilePath <$> moduleDocRelativePath tp
-  baseUrl <- unpack <$> asks @HtmlOptions (^. htmlOptionsAssetsDir)
+  prefixUrl <- unpack <$> asks (^. htmlOptionsPrefixUrl)
   return $
-    fromString baseUrl
+    fromString prefixUrl
       <> fromString pth
       <> preEscapedToValue '#'
       <>? (nameIdAttr <$> s)

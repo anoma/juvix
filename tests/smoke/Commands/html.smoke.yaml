@@ -54,9 +54,9 @@ tests:
         [ -f Stdlib.Prelude.html ]
         [ -f Anoma.Base.html ]
         [ -f SimpleFungibleToken.html ]
-        [ -f assets/highlight.js   ]
-        [ -f assets/source-ayu-light.css ]
-        [ -f assets/source-nord.css ]
+        [ -f assets/css/highlight.js   ]
+        [ -f assets/css/source-ayu-light.css ]
+        [ -f assets/css/source-nord.css ]
     stdout:
       contains: |
         Writing SimpleFungibleToken.html

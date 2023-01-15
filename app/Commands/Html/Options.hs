@@ -1,7 +1,7 @@
 module Commands.Html.Options where
 
 import CommonOptions
-import Juvix.Compiler.Backend.Html.Data.Options
+import Juvix.Compiler.Backend.Html.Data.Options hiding (HtmlOptions)
 
 data HtmlOptions = HtmlOptions
   { _htmlRecursive :: Bool,
@@ -52,19 +52,19 @@ parseHtml = do
       ( long "print-metadata"
           <> help "Add HTML footer with metadata"
       )
-  _htmlAssestDir <-
+  _htmlAssetsDir <-
     strOption
       ( value ""
-          <> long "assets-dir"
+          <> long "prefix-assets"
           <> showDefault
-          <> help "Prefix for file path's assets"
+          <> help "Prefix used for assets's source path"
       )
   _htmlPrefixUrl <-
     strOption
       ( value ""
           <> long "prefix-url"
           <> showDefault
-          <> help "Prefix for Juvix source hyperlinks"
+          <> help "Prefix used for inner Juvix hyperlinks"
       )
   _htmlOpen <-
     switch

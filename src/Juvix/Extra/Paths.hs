@@ -15,6 +15,15 @@ relToProject r = $(projectPath) <//> r
 assetsDir :: [(Path Rel File, ByteString)]
 assetsDir = map (first relFile) $(assetsDirQ)
 
+cssDir :: [(Path Rel File, ByteString)]
+cssDir = map (first relFile) $(cssDirQ)
+
+jsDir :: [(Path Rel File, ByteString)]
+jsDir = map (first relFile) $(jsDirQ)
+
+imagesDir :: [(Path Rel File, ByteString)]
+imagesDir = map (first relFile) $(imagesDirQ)
+
 -- | Given a relative file from the root of the project, checks that the file
 -- exists and returns the absolute path
 mkProjFile :: Path Rel File -> Q Exp
