@@ -29,20 +29,20 @@ kindSuffix = \case
   HtmlSrc -> "-src"
   HtmlOnly -> ""
 
-data GenHtmlArgs = GenHtmlArgs
-  { _genHtmlArgsConcreteOpts :: Options,
-    _genHtmlArgsAssetsDir :: Text,
-    _genHtmlArgsHtmlKind :: HtmlKind,
-    _genHtmlArgsParamBase :: Text,
-    _genHtmlArgsUrlPrefix :: Text,
-    _genHtmlArgsEntryPoint :: Module 'Scoped 'ModuleTop,
-    _genHtmlArgsOutputDir :: Path Abs Dir,
-    _genHtmlArgsPrintMetaData :: Bool,
-    _genHtmlArgsRecursive :: Bool,
-    _genHtmlArgsTheme :: Theme
+data GenSourceHtmlArgs = GenSourceHtmlArgs
+  { _genSourceHtmlArgsConcreteOpts :: Options,
+    _genSourceHtmlArgsAssetsDir :: Text,
+    _genSourceHtmlArgsHtmlKind :: HtmlKind,
+    _genSourceHtmlArgsParamBase :: Text,
+    _genSourceHtmlArgsUrlPrefix :: Text,
+    _genSourceHtmlArgsEntryPoint :: Module 'Scoped 'ModuleTop,
+    _genSourceHtmlArgsOutputDir :: Path Abs Dir,
+    _genSourceHtmlArgsPrintMetaData :: Bool,
+    _genSourceHtmlArgsRecursive :: Bool,
+    _genSourceHtmlArgsTheme :: Theme
   }
 
-makeLenses ''GenHtmlArgs
+makeLenses ''GenSourceHtmlArgs
 
 data GenModuleHtmlArgs = GenModuleHtmlArgs
   { _genModuleHtmlArgsConcreteOpts :: Options,
@@ -62,28 +62,28 @@ data GenModuleArgs = GenModuleArgs
 
 makeLenses ''GenModuleArgs
 
-genHtml :: GenHtmlArgs -> IO ()
-genHtml o@GenHtmlArgs {..} = do
-  let outputDir = _genHtmlArgsOutputDir
+genSourceHtml :: GenSourceHtmlArgs -> IO ()
+genSourceHtml o@GenSourceHtmlArgs {..} = do
+  let outputDir = _genSourceHtmlArgsOutputDir
   ensureDir outputDir
   writeAssets outputDir
   withCurrentDir outputDir $ do
     mapM_ outputModule allModules
   where
-    opts = o ^. genHtmlArgsConcreteOpts
-    recursive = o ^. genHtmlArgsRecursive
-    printMetadata = o ^. genHtmlArgsPrintMetaData
-    entry = o ^. genHtmlArgsEntryPoint
+    opts = o ^. genSourceHtmlArgsConcreteOpts
+    recursive = o ^. genSourceHtmlArgsRecursive
+    printMetadata = o ^. genSourceHtmlArgsPrintMetaData
+    entry = o ^. genSourceHtmlArgsEntryPoint
 
     htmlOptions :: HtmlOptions
     htmlOptions =
       HtmlOptions
-        { _htmlOptionsOutputDir = o ^. genHtmlArgsOutputDir,
-          _htmlOptionsUrlPrefix = o ^. genHtmlArgsUrlPrefix,
-          _htmlOptionsAssetsPrefix = o ^. genHtmlArgsAssetsDir,
-          _htmlOptionsKind = o ^. genHtmlArgsHtmlKind,
-          _htmlOptionsParamBase = o ^. genHtmlArgsParamBase,
-          _htmlOptionsTheme = o ^. genHtmlArgsTheme
+        { _htmlOptionsOutputDir = o ^. genSourceHtmlArgsOutputDir,
+          _htmlOptionsUrlPrefix = o ^. genSourceHtmlArgsUrlPrefix,
+          _htmlOptionsAssetsPrefix = o ^. genSourceHtmlArgsAssetsDir,
+          _htmlOptionsKind = o ^. genSourceHtmlArgsHtmlKind,
+          _htmlOptionsParamBase = o ^. genSourceHtmlArgsParamBase,
+          _htmlOptionsTheme = o ^. genSourceHtmlArgsTheme
         }
 
     allModules

@@ -5,36 +5,36 @@ import Commands.Html.Options
 import Juvix.Compiler.Backend.Html.Translation.FromTyped (JudocArgs (..))
 import Juvix.Compiler.Backend.Html.Translation.FromTyped qualified as Html
 import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source
-  ( GenHtmlArgs (..),
+  ( GenSourceHtmlArgs (..),
   )
 import Juvix.Compiler.Concrete.Pretty qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Extra.Process
 import System.Process qualified as Process
 
-runGenHtmlCommand :: Members '[Embed IO, App] r => HtmlOptions -> Sem r ()
-runGenHtmlCommand HtmlOptions {..} = do
+runGenSourceHtml :: Members '[Embed IO, App] r => HtmlOptions -> Sem r ()
+runGenSourceHtml HtmlOptions {..} = do
   res <- runPipeline _htmlInputFile upToScoping
   let m = head (res ^. Scoper.resultModules)
   outputDir <- someBaseToAbs' (_htmlOutputDir ^. pathPath)
   embed $
-    Html.genHtml
-      GenHtmlArgs
-        { _genHtmlArgsAssetsDir = _htmlAssetsPrefix,
-          _genHtmlArgsHtmlKind = Html.HtmlSrc,
-          _genHtmlArgsParamBase = "",
-          _genHtmlArgsUrlPrefix = _htmlUrlPrefix,
-          _genHtmlArgsConcreteOpts = Concrete.defaultOptions,
-          _genHtmlArgsEntryPoint = m,
-          _genHtmlArgsOutputDir = outputDir,
-          _genHtmlArgsPrintMetaData = _htmlPrintMetadata,
-          _genHtmlArgsRecursive = _htmlRecursive,
-          _genHtmlArgsTheme = _htmlTheme
+    Html.genSourceHtml
+      GenSourceHtmlArgs
+        { _genSourceHtmlArgsAssetsDir = _htmlAssetsPrefix,
+          _genSourceHtmlArgsHtmlKind = Html.HtmlSrc,
+          _genSourceHtmlArgsParamBase = "",
+          _genSourceHtmlArgsUrlPrefix = _htmlUrlPrefix,
+          _genSourceHtmlArgsConcreteOpts = Concrete.defaultOptions,
+          _genSourceHtmlArgsEntryPoint = m,
+          _genSourceHtmlArgsOutputDir = outputDir,
+          _genSourceHtmlArgsPrintMetaData = _htmlPrintMetadata,
+          _genSourceHtmlArgsRecursive = _htmlRecursive,
+          _genSourceHtmlArgsTheme = _htmlTheme
         }
 
 runCommand :: Members '[Embed IO, App] r => HtmlOptions -> Sem r ()
 runCommand HtmlOptions {..}
-  | _htmlPlain = runGenHtmlCommand HtmlOptions {..}
+  | _htmlPlain = runGenSourceHtml HtmlOptions {..}
   | otherwise =
       do
         ctx <- runPipeline _htmlInputFile upToInternalTyped
