@@ -462,7 +462,7 @@ checkExpression hintArity expr = case expr of
       (fun', args') :: (Expression, [(IsImplicit, Expression)]) <- case fun0 of
         ExpressionHole {} -> (fun0,) <$> mapM (secondM (checkExpression ArityUnknown)) args
         ExpressionIden i -> (fun0,) <$> (idenArity i >>= helper (getLoc i))
-        ExpressionLiteral {} -> (fun0,) <$> helper (getLoc l) arityLiteral
+        ExpressionLiteral l -> (fun0,) <$> helper (getLoc l) arityLiteral
         ExpressionUniverse l -> (fun0,) <$> helper (getLoc l) arityUniverse
         ExpressionLambda l -> do
           l' <- checkLambda ArityUnknown l
