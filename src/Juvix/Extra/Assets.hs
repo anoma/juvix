@@ -3,10 +3,10 @@ module Juvix.Extra.Assets
   )
 where
 
+import Data.ByteString qualified as BS
 import Juvix.Extra.Paths
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
-import Data.ByteString qualified as BS
 
 data AssetKind
   = Css
@@ -31,14 +31,19 @@ absDirAssetsByKind baseDir k = baseDir <//> $(mkRelDir "assets") <//> dir
 
 assetsWithAbsPathAndContent :: Path Abs Dir -> [(Path Abs File, ByteString)]
 assetsWithAbsPathAndContent baseDir =
-  [ (absDirAssetsByKind baseDir kind <//> relPart, content)
-    | kind <- [Css, Js, Images]
-    , (relPart, content) <- assetsDirByKind kind
+  [ (absPath, content)
+    | kind <- [Css, Js, Images],
+      (relPart, content) <- assetsDirByKind kind,
+      let absPath = absDirAssetsByKind baseDir kind <//> relPart
   ]
 
 writeAssets :: Path Abs Dir -> IO ()
 writeAssets baseDir = do
-  ensureDir baseDir
-  mapM_ (\(path, content)->
-    BS.writeFile (toFilePath path) content)
-    (assetsWithAbsPathAndContent baseDir)
+  putStrLn $ "Copying assets files to " <> pack (toFilePath baseDir)
+  mapM_ writeAssetFile (assetsWithAbsPathAndContent baseDir)
+  where
+    writeAssetFile :: (Path Abs File, ByteString) -> IO ()
+    writeAssetFile (p, content) = do
+      let dirFile = parent p
+      createDirIfMissing True dirFile
+      BS.writeFile (toFilePath p) content

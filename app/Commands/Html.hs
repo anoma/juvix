@@ -5,7 +5,8 @@ import Commands.Html.Options
 import Juvix.Compiler.Backend.Html.Translation.FromTyped (JudocArgs (..))
 import Juvix.Compiler.Backend.Html.Translation.FromTyped qualified as Html
 import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source
- (GenHtmlArgs(..))
+  ( GenHtmlArgs (..),
+  )
 import Juvix.Compiler.Concrete.Pretty qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Extra.Process

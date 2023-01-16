@@ -65,6 +65,7 @@ makeLenses ''GenModuleArgs
 genHtml :: GenHtmlArgs -> IO ()
 genHtml o@GenHtmlArgs {..} = do
   let outputDir = _genHtmlArgsOutputDir
+  ensureDir outputDir
   writeAssets outputDir
   withCurrentDir outputDir $ do
     mapM_ outputModule allModules

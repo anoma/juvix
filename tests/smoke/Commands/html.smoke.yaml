@@ -24,7 +24,8 @@ tests:
         [ -d html/assets ]
         [ -f html/SimpleFungibleToken.html ]
     stdout:
-      equals: |
+      matches: |
+        Copying assets files to .*
         Writing SimpleFungibleToken.html
     exit-status: 0
 
@@ -35,8 +36,6 @@ tests:
       script: |
         rm -rf html
         juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --plain --output-dir=html --recursive
-        [ -d html/assets ]
-        [ -f html/SimpleFungibleToken.html ]
         (ls html | wc -l)
         cd html
         [ -f Stdlib.Data.Ord.html ]
@@ -54,9 +53,16 @@ tests:
         [ -f Stdlib.Prelude.html ]
         [ -f Anoma.Base.html ]
         [ -f SimpleFungibleToken.html ]
-        [ -f assets/css/highlight.js   ]
         [ -f assets/css/source-ayu-light.css ]
         [ -f assets/css/source-nord.css ]
+        [ -f assets/images/tara-magicien.png ]
+        [ -f assets/images/tara-seating.svg ]
+        [ -f assets/images/tara-smiling.png ]
+        [ -f assets/images/tara-smiling.svg ]
+        [ -f assets/images/tara-teaching.png ]
+        [ -f assets/images/tara-teaching.svg ]
+        [ -f assets/js/highlight.js ]
+        [ -f assets/js/tex-chtml.js ]
     stdout:
       contains: |
         Writing SimpleFungibleToken.html
