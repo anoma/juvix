@@ -21,9 +21,6 @@ import Juvix.Extra.Strings qualified as Str
 unsupported :: Text -> a
 unsupported thing = error ("Internal to Core: Not yet supported: " <> thing)
 
-isExplicit :: Internal.PatternArg -> Bool
-isExplicit = (== Internal.Explicit) . (^. Internal.patternArgIsImplicit)
-
 -- Translation of a Name into the identifier index used in the Core InfoTable
 mkIdentIndex :: Name -> Text
 mkIdentIndex = show . (^. Internal.nameId . Internal.unNameId)
@@ -184,16 +181,19 @@ goConstructor sym ctor = do
   mblt <- mBuiltin
   tag <- ctorTag mblt
   ty <- ctorType
+  argsNum' <- argsNum
+
   let info =
         ConstructorInfo
-          { _constructorName = ctor ^. Internal.inductiveConstructorName . nameText,
-            _constructorLocation = Just $ ctor ^. Internal.inductiveConstructorName . nameLoc,
+          { _constructorName = ctorName ^. nameText,
+            _constructorLocation = Just $ ctorName ^. nameLoc,
             _constructorTag = tag,
             _constructorType = ty,
-            _constructorArgsNum = length (ctor ^. Internal.inductiveConstructorParameters),
+            _constructorArgsNum = argsNum',
             _constructorInductive = sym,
             _constructorBuiltin = mblt
           }
+
   registerConstructor (mkIdentIndex (ctor ^. Internal.inductiveConstructorName)) info
   return info
   where
@@ -202,6 +202,9 @@ goConstructor sym ctor = do
       (^. Internal.constructorInfoBuiltin)
         . HashMap.lookupDefault impossible (ctor ^. Internal.inductiveConstructorName)
         <$> asks (^. Internal.infoConstructors)
+
+    ctorName :: Internal.Name
+    ctorName = ctor ^. Internal.inductiveConstructorName
 
     ctorTag :: Maybe Internal.BuiltinConstructor -> Sem r Tag
     ctorTag = \case
@@ -215,9 +218,14 @@ goConstructor sym ctor = do
     ctorType =
       runReader
         initIndexTable
-        ( Internal.constructorType (ctor ^. Internal.inductiveConstructorName)
+        ( Internal.constructorType ctorName
             >>= goExpression
         )
+
+    argsNum :: Sem r Int
+    argsNum = do
+      (indParams, ctorArgs) <- InternalTyped.lookupConstructorArgTypes ctorName
+      return (length indParams + length ctorArgs)
 
 goMutualBlock ::
   forall r.
@@ -268,25 +276,24 @@ goFunctionDef (f, sym) = do
   forM_ mbody (registerIdentNode sym)
   where
     mkBody :: Sem r Node
-    mkBody =
-      if
-          | nExplicitPatterns == 0 -> runReader initIndexTable (goExpression (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody))
-          | otherwise ->
-              ( do
-                  let values :: [Node]
-                      values = mkVar Info.empty <$> vs
-                      indexTable :: IndexTable
-                      indexTable = IndexTable {_indexTableVarsNum = nExplicitPatterns, _indexTableVars = mempty}
-                  ms <- mapM (runReader indexTable . goFunctionClause) (f ^. Internal.funDefClauses)
-                  let match = mkMatch' (fromList values) (toList ms)
-                  return $ foldr (\_ n -> mkLambda' n) match vs
-              )
+    mkBody
+      | nPatterns == 0 = runReader initIndexTable (goExpression (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody))
+      | otherwise =
+          ( do
+              let values :: [Node]
+                  values = mkVar Info.empty <$> vs
+                  indexTable :: IndexTable
+                  indexTable = IndexTable {_indexTableVarsNum = nPatterns, _indexTableVars = mempty}
+              ms <- mapM (runReader indexTable . goFunctionClause) (f ^. Internal.funDefClauses)
+              let match = mkMatch' (fromList values) (toList ms)
+              return $ foldr (\_ n -> mkLambda' n) match vs
+          )
     -- Assumption: All clauses have the same number of patterns
-    nExplicitPatterns :: Int
-    nExplicitPatterns = length $ filter isExplicit (f ^. Internal.funDefClauses . _head1 . Internal.clausePatterns)
+    nPatterns :: Int
+    nPatterns = length (f ^. Internal.funDefClauses . _head1 . Internal.clausePatterns)
 
     vs :: [Index]
-    vs = take nExplicitPatterns [0 ..]
+    vs = take nPatterns [0 ..]
 
 goLambda ::
   forall r.
@@ -393,19 +400,24 @@ fromPattern ::
 fromPattern = \case
   Internal.PatternVariable n -> return $ PatBinder (PatternBinder (Binder (n ^. nameText) (Just (n ^. nameLoc)) mkDynamic') wildcard)
   Internal.PatternConstructorApp c -> do
-    let n = c ^. Internal.constrAppConstructor
-        explicitPatterns =
-          (^. Internal.patternArgPattern)
-            <$> filter
-              isExplicit
-              (c ^. Internal.constrAppParameters)
-    args <- mapM fromPattern explicitPatterns
+    (indParams, _) <- InternalTyped.lookupConstructorArgTypes n
+    patternArgs <- mapM fromPattern patterns
+    let indArgs = replicate (length indParams) wildcard
+        args = indArgs ++ patternArgs
     m <- getIdent identIndex
     case m of
       Just (IdentConstr tag) -> return $ PatConstr (PatternConstr (setInfoLocation (n ^. nameLoc) (setInfoName (n ^. nameText) Info.empty)) tag args)
       Just _ -> error ("internal to core: not a constructor " <> txt)
       Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     where
+      n :: Name
+      n = c ^. Internal.constrAppConstructor
+
+      patterns :: [Internal.Pattern]
+      patterns =
+        (^. Internal.patternArgPattern)
+          <$> (c ^. Internal.constrAppParameters)
+
       identIndex :: Text
       identIndex = mkIdentIndex (c ^. Internal.constrAppConstructor)
 
@@ -419,13 +431,11 @@ getPatternVars :: Internal.Pattern -> [Name]
 getPatternVars = \case
   Internal.PatternVariable n -> [n]
   Internal.PatternConstructorApp c ->
-    concatMap getPatternVars explicitPatterns
+    concatMap getPatternVars patterns
     where
-      explicitPatterns =
+      patterns =
         (^. Internal.patternArgPattern)
-          <$> filter
-            isExplicit
-            (c ^. Internal.constrAppParameters)
+          <$> (c ^. Internal.constrAppParameters)
 
 goPatterns ::
   forall r.
@@ -461,22 +471,22 @@ goFunctionClause ::
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
   Internal.FunctionClause ->
   Sem r MatchBranch
-goFunctionClause clause =
+goFunctionClause clause = do
   local
     (over indexTableVars (HashMap.union patternArgs))
     (goPatterns (clause ^. Internal.clauseBody) ps)
   where
-    explicitPatternArgs :: [Internal.PatternArg]
-    explicitPatternArgs = filter isExplicit (clause ^. Internal.clausePatterns)
+    internalPatternArgs :: [Internal.PatternArg]
+    internalPatternArgs = clause ^. Internal.clausePatterns
 
     ps :: [Internal.Pattern]
-    ps = (^. Internal.patternArgPattern) <$> explicitPatternArgs
+    ps = (^. Internal.patternArgPattern) <$> internalPatternArgs
 
     patternArgs :: HashMap NameId Index
     patternArgs = HashMap.fromList (first (^. nameId) <$> patternArgNames)
       where
         patternArgNames :: [(Name, Index)]
-        patternArgNames = catFstMaybes (first (^. Internal.patternArgName) <$> zip explicitPatternArgs [0 ..])
+        patternArgNames = catFstMaybes (first (^. Internal.patternArgName) <$> zip internalPatternArgs [0 ..])
 
         catFstMaybes :: [(Maybe a, b)] -> [(a, b)]
         catFstMaybes = mapMaybe f
@@ -586,16 +596,14 @@ goApplication ::
   Internal.Application ->
   Sem r Node
 goApplication a = do
-  (f, args) <- Internal.unfoldPolyApplication a
-  let exprArgs :: Sem r [Node]
+  let (f, args) = second toList (Internal.unfoldApplication a)
+      exprArgs :: Sem r [Node]
       exprArgs = mapM goExpression args
 
       app :: Sem r Node
       app = do
         fExpr <- goExpression f
-        case a ^. Internal.appImplicit of
-          Internal.Implicit -> return fExpr
-          Internal.Explicit -> mkApps' fExpr <$> exprArgs
+        mkApps' fExpr <$> exprArgs
 
   case f of
     Internal.ExpressionIden (Internal.IdenFunction n) -> do
@@ -605,14 +613,14 @@ goApplication a = do
           sym <- getBoolSymbol
           as <- exprArgs
           case as of
-            (v : b1 : b2 : xs) -> return (mkApps' (mkIf' sym v b1 b2) xs)
+            (_ : v : b1 : b2 : xs) -> return (mkApps' (mkIf' sym v b1 b2) xs)
             _ -> error "if must be called with 3 arguments"
         _ -> app
     _ -> app
 
 goLiteral :: Symbol -> LiteralLoc -> Node
 goLiteral intToNat l = case l ^. withLocParam of
-  Internal.LitString s -> mkLitConst (ConstString s)
+  Internal.LitString s -> mkLambda' (mkLitConst (ConstString s))
   Internal.LitInteger i -> mkApp' (mkIdent' intToNat) (mkLitConst (ConstInteger i))
   where
     mkLitConst :: ConstantValue -> Node
