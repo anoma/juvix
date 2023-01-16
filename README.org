@@ -52,12 +52,12 @@ See [[./quick-start.md][Quick start]] to start with Juvix.
 
 ** The Juvix programming language
 
-Juvix allows us to write programs with a high degree of assurance. The Juvix
-compiler runs several static analyses during the compilation phase to guarantee
-no runtime errors. Analyses permormed during this phase include scope,
-termination, arity, and type checkiqng. As a result, functional programs,
-especially validity predicates, can be written with greater confidence that they
-will be free of runtime errors.
+Juvix provides a high degree of assurance. The Juvix compiler runs
+several static analyses which guarantee the absence of runtime
+errors. Analyses performed include termination, arity, and type
+checking. As a result, functional programs, especially validity
+predicates, can be written with greater confidence in their
+correctness.
 
 Some of the language features in Juvix include:
 
@@ -69,15 +69,11 @@ Some of the language features in Juvix include:
 - holes in expressions
 - axioms for non-computable terms
 
-Additionally, the foreign and compile blocks syntax enable developers to compile
-a program to different backends including the =C= language. The Juvix module
-system further permits splitting programs into several modules to build
-libraries which can be later documented by generating HTML files based on the
-codebase, see for example, [[https://anoma.github.io/juvix-stdlib/][the Juvix
-standard library's website]]. For futher details, please refer to
-[[https://anoma.github.io/juvix/][the Juvix book]] which includes our
-[[https://anoma.github.io/juvix/introduction/changelog.html][latest updates]].
-
+The Juvix module system further permits splitting programs into
+several modules to build libraries which can be later documented by
+generating HTML files based on the codebase, see for example, [[https://anoma.github.io/juvix-stdlib/][the
+Juvix standard library's website]]. For further details, please refer to
+[[https://anoma.github.io/juvix/][the Juvix book]] which includes our [[https://anoma.github.io/juvix/changelog.html][latest updates]].
 
 ** Community
 

@@ -65,7 +65,7 @@ module HelloWorld;
 open import Stdlib.Prelude;
 
 main : IO;
-main := putStrLn "hello world!";
+main := printStringLn "hello world!";
 
 end;
 #+end_src

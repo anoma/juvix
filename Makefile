@@ -17,7 +17,8 @@ EXAMPLES= 	HelloWorld/HelloWorld.juvix \
             Hanoi/Hanoi.juvix \
             PascalsTriangle/PascalsTriangle.juvix \
 			TicTacToe/CLI/TicTacToe.juvix \
-			ValidityPredicates/SimpleFungibleToken.juvix
+			ValidityPredicates/SimpleFungibleToken.juvix \
+			Tutorial/Tutorial.juvix
 
 EXAMPLE_WEBAPP_OUTPUT=_docs/examples/webapp
 WEBAPP_EXAMPLES=TicTacToe/Web/TicTacToe.juvix

@@ -5,7 +5,7 @@
 - [[./quick-start.md][Quick start]]
 
 * Tutorials
-- [[./tutorials/learn.md][Learn Juvix in X minutes]]
+- [[./tutorials/learn.md][Learn Juvix in minutes]]
 - [[./tutorials/structure.md][Structuring Juvix projects]]
 - [[./tutorials/emacs.md][Juvix Emacs mode]]
 - [[./tutorials/vscode.md][Juvix VSCode extension]]
