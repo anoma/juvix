@@ -14,8 +14,6 @@ import Juvix.Compiler.Concrete.Pretty.Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Extra.Assets (writeAssets)
-import Juvix.Extra.Strings qualified as Str
-import Juvix.Extra.Version
 import Juvix.Prelude
 import Prettyprinter.Render.Util.SimpleDocTree
 import Text.Blaze.Html
@@ -37,8 +35,8 @@ data GenSourceHtmlArgs = GenSourceHtmlArgs
     _genSourceHtmlArgsUrlPrefix :: Text,
     _genSourceHtmlArgsEntryPoint :: Module 'Scoped 'ModuleTop,
     _genSourceHtmlArgsOutputDir :: Path Abs Dir,
-    _genSourceHtmlArgsPrintMetaData :: Bool,
     _genSourceHtmlArgsNonRecursive :: Bool,
+    _genSourceHtmlArgsNoFooter :: Bool,
     _genSourceHtmlArgsTheme :: Theme
   }
 
@@ -46,21 +44,19 @@ makeLenses ''GenSourceHtmlArgs
 
 data GenModuleHtmlArgs = GenModuleHtmlArgs
   { _genModuleHtmlArgsConcreteOpts :: Options,
-    _genModuleHtmlArgsPrintMetadata :: Bool,
     _genModuleHtmlArgsUTC :: UTCTime,
     _genModuleHtmlArgsEntryPoint :: Module 'Scoped 'ModuleTop
   }
 
 makeLenses ''GenModuleHtmlArgs
 
-data GenModuleArgs = GenModuleArgs
-  { _genModuleArgsConcreteOpts :: Options,
-    _genModuleArgsPrintMetata :: Bool,
-    _genModuleArgsUTC :: UTCTime,
-    _genModuleArgsEntryPoint :: Module 'Scoped 'ModuleTop
+data GenModuleTextArgs = GenModuleTextArgs
+  { _genModuleTextArgsConcreteOpts :: Options,
+    _genModuleTextArgsUTC :: UTCTime,
+    _genModuleTextArgsEntryPoint :: Module 'Scoped 'ModuleTop
   }
 
-makeLenses ''GenModuleArgs
+makeLenses ''GenModuleTextArgs
 
 genSourceHtml :: GenSourceHtmlArgs -> IO ()
 genSourceHtml o@GenSourceHtmlArgs {..} = do
@@ -70,8 +66,6 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
   withCurrentDir outputDir $ do
     mapM_ outputModule allModules
   where
-    entry = o ^. genSourceHtmlArgsEntryPoint
-
     htmlOptions :: HtmlOptions
     htmlOptions =
       HtmlOptions
@@ -80,8 +74,11 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
           _htmlOptionsAssetsPrefix = o ^. genSourceHtmlArgsAssetsDir,
           _htmlOptionsKind = o ^. genSourceHtmlArgsHtmlKind,
           _htmlOptionsParamBase = o ^. genSourceHtmlArgsParamBase,
-          _htmlOptionsTheme = o ^. genSourceHtmlArgsTheme
+          _htmlOptionsTheme = o ^. genSourceHtmlArgsTheme,
+          _htmlOptionsNoFooter = o ^. genSourceHtmlArgsNoFooter
         }
+
+    entry = o ^. genSourceHtmlArgsEntryPoint
 
     allModules
       | _genSourceHtmlArgsNonRecursive = pure entry
@@ -100,11 +97,10 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
         (toFilePath htmlFile)
         ( run . runReader htmlOptions $
             genModuleText
-              GenModuleArgs
-                { _genModuleArgsConcreteOpts = o ^. genSourceHtmlArgsConcreteOpts,
-                  _genModuleArgsPrintMetata = o ^. genSourceHtmlArgsPrintMetaData,
-                  _genModuleArgsUTC = utc,
-                  _genModuleArgsEntryPoint = m
+              GenModuleTextArgs
+                { _genModuleTextArgsConcreteOpts = o ^. genSourceHtmlArgsConcreteOpts,
+                  _genModuleTextArgsUTC = utc,
+                  _genModuleTextArgsEntryPoint = m
                 }
         )
       where
@@ -114,16 +110,15 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
 genModuleText ::
   forall r.
   Members '[Reader HtmlOptions] r =>
-  GenModuleArgs ->
+  GenModuleTextArgs ->
   Sem r Text
-genModuleText GenModuleArgs {..} = do
+genModuleText GenModuleTextArgs {..} = do
   outputHtml <-
     genModuleHtml $
       GenModuleHtmlArgs
-        { _genModuleHtmlArgsConcreteOpts = _genModuleArgsConcreteOpts,
-          _genModuleHtmlArgsPrintMetadata = _genModuleArgsPrintMetata,
-          _genModuleHtmlArgsUTC = _genModuleArgsUTC,
-          _genModuleHtmlArgsEntryPoint = _genModuleArgsEntryPoint
+        { _genModuleHtmlArgsConcreteOpts = _genModuleTextArgsConcreteOpts,
+          _genModuleHtmlArgsUTC = _genModuleTextArgsUTC,
+          _genModuleHtmlArgsEntryPoint = _genModuleTextArgsEntryPoint
         }
   return . toStrict . Html.renderHtml $ outputHtml
 
@@ -152,8 +147,19 @@ genModuleHtml o = do
       fold
         [ mheader,
           prettySrc,
-          infoFooter
+          htmlJuvixFooter,
+          formattedTime
         ]
+
+    formattedTime :: Sem r Html
+    formattedTime =
+      return $
+        Html.span . toHtml $
+          "Last modified on "
+            <> formatTime
+              defaultTimeLocale
+              "%Y-%m-%d %-H:%M %Z"
+              (o ^. genModuleHtmlArgsUTC)
 
     prettySrc :: Sem r Html
     prettySrc = do
@@ -168,36 +174,6 @@ genModuleHtml o = do
       return $
         Html.div ! Attr.id "package-header" $
           (Html.span ! Attr.class_ "caption" $ "")
-
-    infoFooter :: Sem r Html
-    infoFooter
-      | not (o ^. genModuleHtmlArgsPrintMetadata) = return mempty
-      | otherwise =
-          return $
-            footer . pre $
-              toHtml ("Powered by " :: Text)
-                <> juvixLink
-                <> commitInfo
-                <> br
-                <> formattedTime
-      where
-        juvixLink :: Html
-        juvixLink =
-          a ! Attr.href Str.juvixDotOrg $
-            toHtml ("Juvix CLI " :: Text)
-
-        commitInfo :: Html
-        commitInfo =
-          a
-            ! Attr.href
-              (textValue ("https://github.com/anoma/juvix/commit/" <> shortHash))
-            $ toHtml versionTag
-
-        formattedTime :: Html
-        formattedTime =
-          Html.span . toHtml $
-            "Last modified on "
-              <> formatTime defaultTimeLocale "%Y-%m-%d %-H:%M %Z" (o ^. genModuleHtmlArgsUTC)
 
 docStream' :: PrettyCode a => Options -> a -> SimpleDocStream Ann
 docStream' opts m = layoutPretty defaultLayoutOptions (runPrettyCode opts m)

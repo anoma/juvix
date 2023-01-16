@@ -8,7 +8,8 @@ data HtmlOptions = HtmlOptions
     _htmlOptionsUrlPrefix :: Text,
     _htmlOptionsOutputDir :: Path Abs Dir,
     _htmlOptionsParamBase :: Text,
-    _htmlOptionsTheme :: Theme
+    _htmlOptionsTheme :: Theme,
+    _htmlOptionsNoFooter :: Bool
   }
 
 data Theme

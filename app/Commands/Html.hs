@@ -27,7 +27,7 @@ runGenSourceHtml HtmlOptions {..} = do
           _genSourceHtmlArgsConcreteOpts = Concrete.defaultOptions,
           _genSourceHtmlArgsEntryPoint = m,
           _genSourceHtmlArgsOutputDir = outputDir,
-          _genSourceHtmlArgsPrintMetaData = _htmlPrintMetadata,
+          _genSourceHtmlArgsNoFooter = _htmlNoFooter,
           _genSourceHtmlArgsNonRecursive = _htmlNonRecursive,
           _genSourceHtmlArgsTheme = _htmlTheme
         }
@@ -47,7 +47,8 @@ runCommand HtmlOptions {..}
               _judocArgsOutputDir = outputDir,
               _judocArgsUrlPrefix = _htmlUrlPrefix,
               _judocArgsTheme = _htmlTheme,
-              _judocArgsNonRecursive = _htmlNonRecursive
+              _judocArgsNonRecursive = _htmlNonRecursive,
+              _judocArgsNoFooter = _htmlNoFooter
             }
         when _htmlOpen $ case openCmd of
           Nothing -> say "Could not recognize the 'open' command for your OS"

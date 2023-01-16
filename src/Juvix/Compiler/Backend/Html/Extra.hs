@@ -1,6 +1,8 @@
 module Juvix.Compiler.Backend.Html.Extra where
 
 import Juvix.Compiler.Backend.Html.Data.Options
+import Juvix.Extra.Strings qualified as Str
+import Juvix.Extra.Version
 import Juvix.Prelude
 import Text.Blaze.Html5 as Html hiding (map)
 import Text.Blaze.Html5.Attributes qualified as Attr
@@ -75,7 +77,45 @@ taraSmiling :: Members '[Reader HtmlOptions] r => Sem r Html
 taraSmiling = do
   assetsPrefix <- textValue <$> asks (^. htmlOptionsAssetsPrefix)
   return $
-    Html.img
-      ! Attr.id "tara"
-      ! Attr.src (assetsPrefix <> "assets/images/tara-smiling.svg")
-      ! Attr.alt "Tara"
+    Html.a ! Attr.href Str.juvixDotOrg $
+      Html.img
+        ! Attr.id "tara"
+        ! Attr.src (assetsPrefix <> "assets/images/tara-smiling.svg")
+        ! Attr.alt "Tara"
+
+htmlJuvixFooter ::
+  Members '[Reader HtmlOptions] r =>
+  Sem r Html
+htmlJuvixFooter = do
+  noFooter <- asks (^. htmlOptionsNoFooter)
+  htmlKind <- asks (^. htmlOptionsKind)
+  tara <- taraSmiling
+  if
+      | noFooter -> return mempty
+      | otherwise -> do
+          let juvixLinkOrg :: Html
+              juvixLinkOrg =
+                a ! Attr.href Str.juvixDotOrg $
+                  toHtml ("Juvix v" :: Text)
+                    <> toHtml versionDoc
+
+              commitInfo :: Html
+              commitInfo =
+                a
+                  ! Attr.href
+                    (textValue ("https://github.com/anoma/juvix/commit/" <> shortHash))
+                  $ toHtml versionTag
+
+              juvixVersion :: Html
+              juvixVersion =
+                toHtml ("Powered by " :: Text)
+                  <> juvixLinkOrg
+                  <> commitInfo
+
+          return $
+            case htmlKind of
+              HtmlDoc ->
+                Html.div ! Attr.id "footer" $
+                  p juvixVersion
+                    <> tara
+              _ -> footer . pre $ juvixVersion

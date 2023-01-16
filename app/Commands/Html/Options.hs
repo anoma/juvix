@@ -9,7 +9,7 @@ data HtmlOptions = HtmlOptions
     _htmlTheme :: Theme,
     _htmlOutputDir :: AppPath Dir,
     _htmlInputFile :: AppPath File,
-    _htmlPrintMetadata :: Bool,
+    _htmlNoFooter :: Bool,
     _htmlAssetsPrefix :: Text,
     _htmlUrlPrefix :: Text,
     _htmlOpen :: Bool
@@ -37,7 +37,7 @@ parseHtml = do
           <> metavar "THEME"
           <> value Ayu
           <> showDefault
-          <> help "Source code colour theme. Options: ayu (light) and nord (dark)."
+          <> help "Theme for syntax highlighting. Options: ayu (light) and nord (dark)."
           <> completeWith (map show allThemes)
       )
   _htmlOutputDir <-
@@ -47,10 +47,10 @@ parseHtml = do
           <> help "Html output directory"
           <> action "directory"
       )
-  _htmlPrintMetadata <-
+  _htmlNoFooter <-
     switch
-      ( long "print-metadata"
-          <> help "Add HTML footer with metadata"
+      ( long "no-footer"
+          <> help "Remove HTML Juvix footer"
       )
   _htmlAssetsPrefix <-
     strOption

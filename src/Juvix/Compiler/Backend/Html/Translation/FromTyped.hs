@@ -25,7 +25,6 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Extra.Assets
 import Juvix.Extra.Strings qualified as Str
-import Juvix.Extra.Version
 import Juvix.Prelude
 import Juvix.Prelude qualified as Prelude
 import Text.Blaze.Html.Renderer.Utf8 qualified as Html
@@ -39,7 +38,8 @@ data JudocArgs = JudocArgs
     _judocArgsUrlPrefix :: Text,
     _judocArgsCtx :: InternalTypedResult,
     _judocArgsTheme :: Theme,
-    _judocArgsNonRecursive :: Bool
+    _judocArgsNonRecursive :: Bool,
+    _judocArgsNoFooter :: Bool
   }
 
 makeLenses ''JudocArgs
@@ -174,7 +174,8 @@ genJudocHtml JudocArgs {..} =
           _htmlOptionsOutputDir = _judocArgsOutputDir,
           _htmlOptionsUrlPrefix = _judocArgsUrlPrefix,
           _htmlOptionsParamBase = _judocArgsBaseName,
-          _htmlOptionsTheme = _judocArgsTheme
+          _htmlOptionsTheme = _judocArgsTheme,
+          _htmlOptionsNoFooter = _judocArgsNoFooter
         }
 
     allModules
@@ -230,25 +231,12 @@ template rightMenu' content' = do
       mbody :: Sem r Html
       mbody = do
         bodyHeader' <- packageHeader
-        footer' <- mfooter
+        footer' <- htmlJuvixFooter
         return $
           body ! Attr.class_ "js-enabled" $
             bodyHeader'
               <> content'
               <> footer'
-
-      mfooter :: Sem r Html
-      mfooter = do
-        tara <- taraSmiling
-        return $
-          Html.div ! Attr.id "footer" $
-            p
-              ( "Build by "
-                  <> (Html.a ! Attr.href Str.juvixDotOrg $ "Juvix")
-                  <> " version "
-                  <> toHtml versionDoc
-              )
-              <> (Html.a ! Attr.href Str.juvixDotOrg $ tara)
 
   body' <- mbody
   return $ docTypeHtml (mhead <> body')
@@ -279,7 +267,6 @@ goTopModule m = do
       genModuleHtml
         GenModuleHtmlArgs
           { _genModuleHtmlArgsConcreteOpts = defaultOptions,
-            _genModuleHtmlArgsPrintMetadata = True,
             _genModuleHtmlArgsUTC = utc,
             _genModuleHtmlArgsEntryPoint = m
           }
