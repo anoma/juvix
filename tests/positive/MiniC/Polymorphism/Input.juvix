@@ -12,7 +12,7 @@ type Bool :=
 -- Strings
 --------------------------------------------------------------------------------
 
-axiom String : Type;
+builtin string axiom String : Type;
 
 compile String {
   ghc ↦ "[Char]";

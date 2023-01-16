@@ -1,10 +1,12 @@
 module LiteralString;
+  builtin string axiom String : Type;
+
   type A :=
     a : A;
 
   type B :=
     b : B;
 
-  f : A;
+  f : String;
   f := "a";
 end;
