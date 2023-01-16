@@ -621,7 +621,7 @@ goApplication a = do
 
 goLiteral :: Symbol -> LiteralLoc -> Node
 goLiteral intToNat l = case l ^. withLocParam of
-  Internal.LitString s -> mkLambda' (mkLitConst (ConstString s))
+  Internal.LitString s -> mkLitConst (ConstString s)
   Internal.LitInteger i -> mkApp' (mkIdent' intToNat) (mkLitConst (ConstInteger i))
   where
     mkLitConst :: ConstantValue -> Node

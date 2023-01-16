@@ -145,7 +145,7 @@ guessArity ::
 guessArity = \case
   ExpressionHole {} -> return ArityUnknown
   ExpressionFunction {} -> return ArityUnit
-  ExpressionLiteral l -> return (arityLiteral l)
+  ExpressionLiteral {} -> return arityLiteral
   ExpressionApplication a -> appHelper a
   ExpressionIden i -> idenHelper i
   ExpressionUniverse {} -> return arityUniverse
@@ -180,16 +180,8 @@ guessArity = \case
         arif :: Sem r Arity
         arif = guessArity f
 
-arityLiteral :: LiteralLoc -> Arity
-arityLiteral (WithLoc _ l) = case l of
-  LitInteger {} -> ArityUnit
-  -- The arity of all strings is assumed to be: {} -> 1
-  LitString {} ->
-    ArityFunction
-      FunctionArity
-        { _functionArityLeft = ParamImplicit,
-          _functionArityRight = ArityUnit
-        }
+arityLiteral :: Arity
+arityLiteral = ArityUnit
 
 arityUniverse :: Arity
 arityUniverse = ArityUnit
@@ -470,7 +462,7 @@ checkExpression hintArity expr = case expr of
       (fun', args') :: (Expression, [(IsImplicit, Expression)]) <- case fun0 of
         ExpressionHole {} -> (fun0,) <$> mapM (secondM (checkExpression ArityUnknown)) args
         ExpressionIden i -> (fun0,) <$> (idenArity i >>= helper (getLoc i))
-        ExpressionLiteral l -> (fun0,) <$> helper (getLoc l) (arityLiteral l)
+        ExpressionLiteral {} -> (fun0,) <$> helper (getLoc l) arityLiteral
         ExpressionUniverse l -> (fun0,) <$> helper (getLoc l) arityUniverse
         ExpressionLambda l -> do
           l' <- checkLambda ArityUnknown l

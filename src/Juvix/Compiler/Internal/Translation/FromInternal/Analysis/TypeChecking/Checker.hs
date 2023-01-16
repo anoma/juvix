@@ -479,39 +479,13 @@ literalType lit@(WithLoc i l) = case l of
         { _typedExpression = ExpressionLiteral lit,
           _typedType = ExpressionIden (IdenInductive nat)
         }
-  LitString {} -> literalMagicType lit
-
--- | Returns {A : Expression} → A
-literalMagicType :: Members '[NameIdGen] r => LiteralLoc -> Sem r TypedExpression
-literalMagicType l = do
-  uid <- freshNameId
-  let strA :: Text
-      strA = "A"
-      typeVar =
-        Name
-          { _nameText = strA,
-            _nameId = uid,
-            _namePretty = strA,
-            _nameKind = KNameLocal,
-            _nameLoc = getLoc l
-          }
-      param =
-        FunctionParameter
-          { _paramName = Just typeVar,
-            _paramImplicit = Implicit,
-            _paramType = smallUniverseE (getLoc l)
-          }
-      type_ =
-        ExpressionFunction
-          Function
-            { _functionLeft = param,
-              _functionRight = ExpressionIden (IdenVar typeVar)
-            }
-  return
-    TypedExpression
-      { _typedType = type_,
-        _typedExpression = ExpressionLiteral l
-      }
+  LitString {} -> do
+    str <- getBuiltinName i BuiltinString
+    return
+      TypedExpression
+        { _typedExpression = ExpressionLiteral lit,
+          _typedType = ExpressionIden (IdenAxiom str)
+        }
 
 inferExpression' ::
   forall r.

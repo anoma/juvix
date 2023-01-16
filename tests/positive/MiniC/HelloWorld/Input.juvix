@@ -1,6 +1,6 @@
 module Input;
 
-axiom String : Type;
+builtin string axiom String : Type;
 
 compile String {
   c ↦ "char*";
