@@ -1,6 +1,5 @@
 module Juvix.Compiler.Backend.Html.Translation.FromTyped.Source where
 
-import Data.ByteString qualified as BS
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Text.Lazy (toStrict)
@@ -14,7 +13,7 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Base
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Internal.Pretty qualified as Internal
-import Juvix.Extra.Paths
+import Juvix.Extra.Assets (writeAssets)
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Extra.Version
 import Juvix.Prelude
@@ -30,20 +29,20 @@ kindSuffix = \case
   HtmlSrc -> "-src"
   HtmlOnly -> ""
 
-data GetPlainHtmlArgs = GetPlainHtmlArgs
-  { _getPlainHtmlArgsConcreteOpts :: Options,
-    _genPlainHtmlArgsAssetsDir :: Text,
-    _genPlainHtmlArgsHtmlKind :: HtmlKind,
-    _genPlainHtmlArgsParamBase :: Text,
-    _genPlainHtmlArgsUrlPrefix :: Text,
-    _getPlainHtmlArgsEntryPoint :: Module 'Scoped 'ModuleTop,
-    _getPlainHtmlArgsOutputDir :: Path Abs Dir,
-    _getPlainHtmlArgsPrintMetaData :: Bool,
-    _getPlainHtmlArgsRecursive :: Bool,
-    _getPlainHtmlArgsTheme :: Theme
+data GenHtmlArgs = GenHtmlArgs
+  { _genHtmlArgsConcreteOpts :: Options,
+    _genHtmlArgsAssetsDir :: Text,
+    _genHtmlArgsHtmlKind :: HtmlKind,
+    _genHtmlArgsParamBase :: Text,
+    _genHtmlArgsUrlPrefix :: Text,
+    _genHtmlArgsEntryPoint :: Module 'Scoped 'ModuleTop,
+    _genHtmlArgsOutputDir :: Path Abs Dir,
+    _genHtmlArgsPrintMetaData :: Bool,
+    _genHtmlArgsRecursive :: Bool,
+    _genHtmlArgsTheme :: Theme
   }
 
-makeLenses ''GetPlainHtmlArgs
+makeLenses ''GenHtmlArgs
 
 data GenModuleHtmlArgs = GenModuleHtmlArgs
   { _genModuleHtmlArgsConcreteOpts :: Options,
@@ -63,48 +62,32 @@ data GenModuleArgs = GenModuleArgs
 
 makeLenses ''GenModuleArgs
 
-genPlainHtml :: GetPlainHtmlArgs -> IO ()
-genPlainHtml o@GetPlainHtmlArgs {..} = do
-  let outputDir = _getPlainHtmlArgsOutputDir
-  ensureDir outputDir
-  copyAssetFiles
+genHtml :: GenHtmlArgs -> IO ()
+genHtml o@GenHtmlArgs {..} = do
+  let outputDir = _genHtmlArgsOutputDir
+  writeAssets outputDir
   withCurrentDir outputDir $ do
     mapM_ outputModule allModules
   where
-    opts = o ^. getPlainHtmlArgsConcreteOpts
-    recursive = o ^. getPlainHtmlArgsRecursive
-    printMetadata = o ^. getPlainHtmlArgsPrintMetaData
-    entry = o ^. getPlainHtmlArgsEntryPoint
+    opts = o ^. genHtmlArgsConcreteOpts
+    recursive = o ^. genHtmlArgsRecursive
+    printMetadata = o ^. genHtmlArgsPrintMetaData
+    entry = o ^. genHtmlArgsEntryPoint
 
     htmlOptions :: HtmlOptions
     htmlOptions =
       HtmlOptions
-        { _htmlOptionsOutputDir = o ^. getPlainHtmlArgsOutputDir,
-          _htmlOptionsUrlPrefix = o ^. genPlainHtmlArgsUrlPrefix,
-          _htmlOptionsAssetsPrefix = o ^. genPlainHtmlArgsAssetsDir,
-          _htmlOptionsKind = o ^. genPlainHtmlArgsHtmlKind,
-          _htmlOptionsParamBase = o ^. genPlainHtmlArgsParamBase,
-          _htmlOptionsTheme = o ^. getPlainHtmlArgsTheme
+        { _htmlOptionsOutputDir = o ^. genHtmlArgsOutputDir,
+          _htmlOptionsUrlPrefix = o ^. genHtmlArgsUrlPrefix,
+          _htmlOptionsAssetsPrefix = o ^. genHtmlArgsAssetsDir,
+          _htmlOptionsKind = o ^. genHtmlArgsHtmlKind,
+          _htmlOptionsParamBase = o ^. genHtmlArgsParamBase,
+          _htmlOptionsTheme = o ^. genHtmlArgsTheme
         }
 
     allModules
       | recursive = toList (getAllModules entry)
       | otherwise = pure entry
-
-    copyAssetFiles :: IO ()
-    copyAssetFiles = do
-      ensureDir toAssetsDir
-      mapM_ writeAsset assetFiles
-      where
-        assetFiles :: [(Path Rel File, BS.ByteString)]
-        assetFiles = assetsDir
-
-        writeAsset :: (Path Rel File, BS.ByteString) -> IO ()
-        writeAsset (filePath, fileContents) =
-          BS.writeFile (toFilePath (toAssetsDir <//> filePath)) fileContents
-
-        toAssetsDir :: Path Abs Dir
-        toAssetsDir = (htmlOptions ^. htmlOptionsOutputDir) <//> $(mkRelDir "assets")
 
     outputModule :: Module 'Scoped 'ModuleTop -> IO ()
     outputModule m = do

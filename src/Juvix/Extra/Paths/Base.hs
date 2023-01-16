@@ -16,7 +16,6 @@ jsDirQ = FE.makeRelativeToProject "assets/js" >>= FE.embedDir
 imagesDirQ :: Q Exp
 imagesDirQ = FE.makeRelativeToProject "assets/images" >>= FE.embedDir
 
-
 projectFilePath :: Q Exp
 projectFilePath = FE.makeRelativeToProject "." >>= lift
 

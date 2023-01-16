@@ -181,9 +181,9 @@ genJudocHtml JudocArgs {..} =
         assetFiles :: [(Path Rel File, BS.ByteString)]
         assetFiles =
           fold
-            [ cssDir
-            , jsDir
-            , imagesDir
+            [ cssDir,
+              jsDir,
+              imagesDir
             ]
 
     htmlOpts :: HtmlOptions

@@ -4,9 +4,7 @@ UNAME := $(shell uname)
 HLINTQUIET :=
 
 
-ASSETS = 	images/tara-seating.svg \
-					images/tara-smiling.svg \
-					images/tara-teaching.svg
+IMAGES = 	$(shell find assets/images -type f)
 
 ORGFILES = $(shell find docs/org -type f -name '*.org')
 MDFILES:=$(patsubst docs/org/%,docs/md/%,$(ORGFILES:.org=.md))
@@ -34,6 +32,9 @@ else ifeq ($(UNAME), Linux)
 else
 	THREADS := $(shell echo %NUMBER_OF_PROCESSORS%)
 endif
+
+images:
+	echo $(IMAGES)
 
 all: install
 
@@ -98,8 +99,8 @@ markdown-files: docs/md/README.md docs/md/changelog.md $(MDFILES)
 .PHONY: markdown-docs
 markdown-docs: markdown-files
 	@echo "copying assets ..."
-	@mkdir -p docs/md/assets
-	@cp -v $(addprefix assets/,$(ASSETS)) docs/md/assets
+	@mkdir -p docs/md/assets/images
+	@cp -v $(IMAGES) docs/md/assets/images/
 	@mdbook build
 
 .PHONY: serve-docs
