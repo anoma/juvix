@@ -4,7 +4,7 @@ import Juvix.Prelude
 
 data HtmlOptions = HtmlOptions
   { _htmlOptionsKind :: HtmlKind,
-    _htmlOptionsAssetsPrefix :: Text, -- TODO: can we have a path here.
+    _htmlOptionsAssetsPrefix :: Text,
     _htmlOptionsUrlPrefix :: Text,
     _htmlOptionsOutputDir :: Path Abs Dir,
     _htmlOptionsParamBase :: Text,

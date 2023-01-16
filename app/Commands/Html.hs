@@ -41,7 +41,7 @@ runCommand HtmlOptions {..}
         outputDir <- someBaseToAbs' (_htmlOutputDir ^. pathPath)
         Html.genJudocHtml
           JudocArgs
-            { _judocArgsAssetsDir = _htmlAssetsPrefix,
+            { _judocArgsAssetsPrefix = _htmlAssetsPrefix,
               _judocArgsBaseName = "proj",
               _judocArgsCtx = ctx,
               _judocArgsOutputDir = outputDir,

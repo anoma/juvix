@@ -5,7 +5,6 @@ module Juvix.Compiler.Backend.Html.Translation.FromTyped
   )
 where
 
-import Data.ByteString qualified as BS
 import Data.ByteString.Builder qualified as Builder
 import Data.HashMap.Strict qualified as HashMap
 import Data.Time.Clock
@@ -24,7 +23,7 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.D
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Extra.Paths
+import Juvix.Extra.Assets
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Extra.Version
 import Juvix.Prelude
@@ -36,7 +35,7 @@ import Text.Blaze.Html5.Attributes qualified as Attr
 data JudocArgs = JudocArgs
   { _judocArgsOutputDir :: Path Abs Dir,
     _judocArgsBaseName :: Text,
-    _judocArgsAssetsDir :: Text,
+    _judocArgsAssetsPrefix :: Text,
     _judocArgsUrlPrefix :: Text,
     _judocArgsCtx :: InternalTypedResult,
     _judocArgsTheme :: Theme
@@ -147,7 +146,7 @@ writeHtml f h = Prelude.embed $ do
 genJudocHtml :: Members '[Embed IO] r => JudocArgs -> Sem r ()
 genJudocHtml JudocArgs {..} =
   runReader htmlOpts . runReader normTable . runReader entry $ do
-    copyAssets
+    Prelude.embed (writeAssets _judocArgsOutputDir)
     mapM_ goTopModule topModules
     runReader htmlOpts (createIndexFile (map topModulePath (toList topModules)))
   where
@@ -166,31 +165,11 @@ genJudocHtml JudocArgs {..} =
         . Abstract.resultScoper
         . Scoped.mainModule
 
-    copyAssets ::
-      forall s.
-      Members '[Embed IO, Reader HtmlOptions] s =>
-      Sem s ()
-    copyAssets = do
-      toAssetsDir <- (<//> $(mkRelDir "assets")) <$> asks (^. htmlOptionsOutputDir)
-      let writeAsset :: (Path Rel File, BS.ByteString) -> Sem s ()
-          writeAsset (filePath, fileContents) =
-            Prelude.embed $ BS.writeFile (toFilePath (toAssetsDir <//> filePath)) fileContents
-      ensureDir toAssetsDir
-      mapM_ writeAsset assetFiles
-      where
-        assetFiles :: [(Path Rel File, BS.ByteString)]
-        assetFiles =
-          fold
-            [ cssDir,
-              jsDir,
-              imagesDir
-            ]
-
     htmlOpts :: HtmlOptions
     htmlOpts =
       HtmlOptions
         { _htmlOptionsKind = HtmlDoc,
-          _htmlOptionsAssetsPrefix = _judocArgsAssetsDir,
+          _htmlOptionsAssetsPrefix = _judocArgsAssetsPrefix,
           _htmlOptionsOutputDir = _judocArgsOutputDir,
           _htmlOptionsUrlPrefix = _judocArgsUrlPrefix,
           _htmlOptionsParamBase = _judocArgsBaseName,
@@ -279,7 +258,7 @@ goTopModule m = do
   htmlOpts <- ask @HtmlOptions
   runReader (htmlOpts {_htmlOptionsKind = HtmlDoc}) $ do
     fpath <- moduleDocPath m
-    Prelude.embed (putStrLn ("processing " <> pack (toFilePath fpath)))
+    Prelude.embed (putStrLn ("Writing " <> pack (toFilePath fpath)))
     docHtml >>= writeHtml fpath
 
   runReader (htmlOpts {_htmlOptionsKind = HtmlSrc}) $ do

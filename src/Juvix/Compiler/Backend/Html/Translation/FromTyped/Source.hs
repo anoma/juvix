@@ -70,9 +70,6 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
   withCurrentDir outputDir $ do
     mapM_ outputModule allModules
   where
-    opts = o ^. genSourceHtmlArgsConcreteOpts
-    recursive = o ^. genSourceHtmlArgsRecursive
-    printMetadata = o ^. genSourceHtmlArgsPrintMetaData
     entry = o ^. genSourceHtmlArgsEntryPoint
 
     htmlOptions :: HtmlOptions
@@ -87,21 +84,22 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
         }
 
     allModules
-      | recursive = toList (getAllModules entry)
+      | o ^. genSourceHtmlArgsRecursive = toList (getAllModules entry)
       | otherwise = pure entry
 
     outputModule :: Module 'Scoped 'ModuleTop -> IO ()
     outputModule m = do
       ensureDir (parent htmlFile)
-      putStrLn $ "Writing " <> pack (toFilePath htmlFile)
+      let absPath = (htmlOptions ^. htmlOptionsOutputDir) <//> htmlFile
+      putStrLn $ "Writing " <> pack (toFilePath absPath)
       utc <- getCurrentTime
       Text.writeFile
         (toFilePath htmlFile)
         ( run . runReader htmlOptions $
             genModuleText
               GenModuleArgs
-                { _genModuleArgsConcreteOpts = opts,
-                  _genModuleArgsPrintMetata = printMetadata,
+                { _genModuleArgsConcreteOpts = o ^. genSourceHtmlArgsConcreteOpts,
+                  _genModuleArgsPrintMetata = o ^. genSourceHtmlArgsPrintMetaData,
                   _genModuleArgsUTC = utc,
                   _genModuleArgsEntryPoint = m
                 }
@@ -137,11 +135,6 @@ genModuleHtml o = do
     docTypeHtml ! Attr.xmlns "http://www.w3.org/1999/xhtml" $
       outHtml
   where
-    opts = o ^. genModuleHtmlArgsConcreteOpts
-    printMetadata = o ^. genModuleHtmlArgsPrintMetadata
-    utc = o ^. genModuleHtmlArgsUTC
-    m = o ^. genModuleHtmlArgsEntryPoint
-
     mhead :: Sem r Html
     mhead = do
       css <- themeCss
@@ -161,7 +154,10 @@ genModuleHtml o = do
 
     prettySrc :: Sem r Html
     prettySrc = do
-      pp <- ppCodeHtml opts m
+      pp <-
+        ppCodeHtml
+          (o ^. genModuleHtmlArgsConcreteOpts)
+          (o ^. genModuleHtmlArgsEntryPoint)
       return $ (pre ! Attr.id "src-content") pp
 
     mheader :: Sem r Html
@@ -172,7 +168,7 @@ genModuleHtml o = do
 
     infoFooter :: Sem r Html
     infoFooter
-      | not printMetadata = return mempty
+      | not (o ^. genModuleHtmlArgsPrintMetadata) = return mempty
       | otherwise =
           return $
             footer . pre $
@@ -198,7 +194,7 @@ genModuleHtml o = do
         formattedTime =
           Html.span . toHtml $
             "Last modified on "
-              <> formatTime defaultTimeLocale "%Y-%m-%d %-H:%M %Z" utc
+              <> formatTime defaultTimeLocale "%Y-%m-%d %-H:%M %Z" (o ^. genModuleHtmlArgsUTC)
 
 docStream' :: PrettyCode a => Options -> a -> SimpleDocStream Ann
 docStream' opts m = layoutPretty defaultLayoutOptions (runPrettyCode opts m)

@@ -26,7 +26,7 @@ tests:
     stdout:
       matches: |
         Copying assets files to .*
-        Writing SimpleFungibleToken.html
+        Writing .*SimpleFungibleToken.html
     exit-status: 0
 
   - name: recursive-generation
@@ -65,5 +65,46 @@ tests:
         [ -f assets/js/tex-chtml.js ]
     stdout:
       contains: |
-        Writing SimpleFungibleToken.html
+        SimpleFungibleToken.html
+    exit-status: 0
+
+
+  - name: judoc-assets
+    command:
+      shell:
+        - bash
+      script: |
+        rm -rf html
+        juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --output-dir=html
+        (ls html | wc -l)
+        cd html
+        [ -f Stdlib.Data.Ord.html ]
+        [ -f Stdlib.Data.String.html ]
+        [ -f Stdlib.Data.Nat.html ]
+        [ -f Stdlib.System.IO.html ]
+        [ -f Stdlib.Function.html ]
+        [ -f Stdlib.Data.List.html ]
+        [ -f Stdlib.Data.String.Ord.html ]
+        [ -f Stdlib.Data.Product.html ]
+        [ -f Data.Int.Ops.html ]
+        [ -f Stdlib.Data.Maybe.html ]
+        [ -f Data.Int.html ]
+        [ -f Stdlib.Data.Bool.html ]
+        [ -f Stdlib.Prelude.html ]
+        [ -f Anoma.Base.html ]
+        [ -f SimpleFungibleToken.html ]
+        [ -f assets/css/source-ayu-light.css ]
+        [ -f assets/css/source-nord.css ]
+        [ -f assets/css/linuwial.css ]
+        [ -f assets/images/tara-magicien.png ]
+        [ -f assets/images/tara-seating.svg ]
+        [ -f assets/images/tara-smiling.png ]
+        [ -f assets/images/tara-smiling.svg ]
+        [ -f assets/images/tara-teaching.png ]
+        [ -f assets/images/tara-teaching.svg ]
+        [ -f assets/js/highlight.js ]
+        [ -f assets/js/tex-chtml.js ]
+    stdout:
+      contains: |
+        SimpleFungibleToken.html
     exit-status: 0
