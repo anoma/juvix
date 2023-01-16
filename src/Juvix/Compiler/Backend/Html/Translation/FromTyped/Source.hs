@@ -38,7 +38,7 @@ data GenSourceHtmlArgs = GenSourceHtmlArgs
     _genSourceHtmlArgsEntryPoint :: Module 'Scoped 'ModuleTop,
     _genSourceHtmlArgsOutputDir :: Path Abs Dir,
     _genSourceHtmlArgsPrintMetaData :: Bool,
-    _genSourceHtmlArgsRecursive :: Bool,
+    _genSourceHtmlArgsNonRecursive :: Bool,
     _genSourceHtmlArgsTheme :: Theme
   }
 
@@ -84,8 +84,11 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
         }
 
     allModules
-      | o ^. genSourceHtmlArgsRecursive = toList (getAllModules entry)
-      | otherwise = pure entry
+      | _genSourceHtmlArgsNonRecursive = pure entry
+      | otherwise = toList topModules
+
+    topModules :: HashMap NameId (Module 'Scoped 'ModuleTop)
+    topModules = getAllModules entry
 
     outputModule :: Module 'Scoped 'ModuleTop -> IO ()
     outputModule m = do

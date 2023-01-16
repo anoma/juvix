@@ -4,7 +4,7 @@ import CommonOptions
 import Juvix.Compiler.Backend.Html.Data.Options hiding (HtmlOptions)
 
 data HtmlOptions = HtmlOptions
-  { _htmlRecursive :: Bool,
+  { _htmlNonRecursive :: Bool,
     _htmlPlain :: Bool,
     _htmlTheme :: Theme,
     _htmlOutputDir :: AppPath Dir,
@@ -20,9 +20,9 @@ makeLenses ''HtmlOptions
 
 parseHtml :: Parser HtmlOptions
 parseHtml = do
-  _htmlRecursive <-
+  _htmlNonRecursive <-
     switch
-      ( long "recursive"
+      ( long "non-recursive"
           <> help "Export imported modules recursively"
       )
   _htmlPlain <-

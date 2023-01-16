@@ -38,7 +38,8 @@ data JudocArgs = JudocArgs
     _judocArgsAssetsPrefix :: Text,
     _judocArgsUrlPrefix :: Text,
     _judocArgsCtx :: InternalTypedResult,
-    _judocArgsTheme :: Theme
+    _judocArgsTheme :: Theme,
+    _judocArgsNonRecursive :: Bool
   }
 
 makeLenses ''JudocArgs
@@ -148,7 +149,7 @@ genJudocHtml JudocArgs {..} =
   runReader htmlOpts . runReader normTable . runReader entry $ do
     Prelude.embed (writeAssets _judocArgsOutputDir)
     mapM_ goTopModule topModules
-    runReader htmlOpts (createIndexFile (map topModulePath (toList topModules)))
+    createIndexFile (map topModulePath (toList allModules))
   where
     entry :: EntryPoint
     entry = _judocArgsCtx ^. InternalTyped.internalTypedResultEntryPoint
@@ -175,6 +176,10 @@ genJudocHtml JudocArgs {..} =
           _htmlOptionsParamBase = _judocArgsBaseName,
           _htmlOptionsTheme = _judocArgsTheme
         }
+
+    allModules
+      | _judocArgsNonRecursive = pure mainMod
+      | otherwise = toList topModules
 
     topModules :: HashMap NameId (Module 'Scoped 'ModuleTop)
     topModules = getAllModules mainMod

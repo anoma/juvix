@@ -20,7 +20,7 @@ tests:
         - bash
       script: |
         rm -rf html
-        juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --plain --output-dir=html
+        juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --plain --output-dir=html --non-recursive
         [ -d html/assets ]
         [ -f html/SimpleFungibleToken.html ]
     stdout:
@@ -35,7 +35,7 @@ tests:
         - bash
       script: |
         rm -rf html
-        juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --plain --output-dir=html --recursive
+        juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --plain --output-dir=html
         (ls html | wc -l)
         cd html
         [ -f Stdlib.Data.Ord.html ]

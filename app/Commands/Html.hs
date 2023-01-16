@@ -28,7 +28,7 @@ runGenSourceHtml HtmlOptions {..} = do
           _genSourceHtmlArgsEntryPoint = m,
           _genSourceHtmlArgsOutputDir = outputDir,
           _genSourceHtmlArgsPrintMetaData = _htmlPrintMetadata,
-          _genSourceHtmlArgsRecursive = _htmlRecursive,
+          _genSourceHtmlArgsNonRecursive = _htmlNonRecursive,
           _genSourceHtmlArgsTheme = _htmlTheme
         }
 
@@ -46,7 +46,8 @@ runCommand HtmlOptions {..}
               _judocArgsCtx = ctx,
               _judocArgsOutputDir = outputDir,
               _judocArgsUrlPrefix = _htmlUrlPrefix,
-              _judocArgsTheme = _htmlTheme
+              _judocArgsTheme = _htmlTheme,
+              _judocArgsNonRecursive = _htmlNonRecursive
             }
         when _htmlOpen $ case openCmd of
           Nothing -> say "Could not recognize the 'open' command for your OS"
