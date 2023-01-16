@@ -146,6 +146,13 @@ scoperErrorTests =
         ErrLacksFunctionClause {} -> Nothing
         _ -> wrongError,
     NegTest
+      "Lacks function clause inside let"
+      $(mkRelDir ".")
+      $(mkRelFile "LetMissingClause.juvix")
+      $ \case
+        ErrLacksFunctionClause {} -> Nothing
+        _ -> wrongError,
+    NegTest
       "Incorrect top module path"
       $(mkRelDir ".")
       $(mkRelFile "WrongModuleName.juvix")
