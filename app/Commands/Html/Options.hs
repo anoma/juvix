@@ -10,8 +10,8 @@ data HtmlOptions = HtmlOptions
     _htmlOutputDir :: AppPath Dir,
     _htmlInputFile :: AppPath File,
     _htmlPrintMetadata :: Bool,
-    _htmlAssetsDir :: Text,
-    _htmlPrefixUrl :: Text,
+    _htmlAssetsPrefix :: Text,
+    _htmlUrlPrefix :: Text,
     _htmlOpen :: Bool
   }
   deriving stock (Data)
@@ -37,7 +37,7 @@ parseHtml = do
           <> metavar "THEME"
           <> value Ayu
           <> showDefault
-          <> help "Color theme for when the flag --only-source is used. Options: ayu (light) and nord (dark)."
+          <> help "Source code colour theme. Options: ayu (light) and nord (dark)."
           <> completeWith (map show allThemes)
       )
   _htmlOutputDir <-
@@ -52,14 +52,14 @@ parseHtml = do
       ( long "print-metadata"
           <> help "Add HTML footer with metadata"
       )
-  _htmlAssetsDir <-
+  _htmlAssetsPrefix <-
     strOption
       ( value ""
           <> long "prefix-assets"
           <> showDefault
           <> help "Prefix used for assets's source path"
       )
-  _htmlPrefixUrl <-
+  _htmlUrlPrefix <-
     strOption
       ( value ""
           <> long "prefix-url"

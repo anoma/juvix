@@ -37,7 +37,7 @@ data JudocArgs = JudocArgs
   { _judocArgsOutputDir :: Path Abs Dir,
     _judocArgsBaseName :: Text,
     _judocArgsAssetsDir :: Text,
-    _judocArgsPrefixUrl :: Text,
+    _judocArgsUrlPrefix :: Text,
     _judocArgsCtx :: InternalTypedResult,
     _judocArgsTheme :: Theme
   }
@@ -192,7 +192,7 @@ genJudocHtml JudocArgs {..} =
         { _htmlOptionsKind = HtmlDoc,
           _htmlOptionsAssetsPrefix = _judocArgsAssetsDir,
           _htmlOptionsOutputDir = _judocArgsOutputDir,
-          _htmlOptionsPrefixUrl = _judocArgsPrefixUrl,
+          _htmlOptionsUrlPrefix = _judocArgsUrlPrefix,
           _htmlOptionsParamBase = _judocArgsBaseName,
           _htmlOptionsTheme = _judocArgsTheme
         }

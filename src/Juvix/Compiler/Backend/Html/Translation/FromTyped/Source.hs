@@ -35,7 +35,7 @@ data GetPlainHtmlArgs = GetPlainHtmlArgs
     _genPlainHtmlArgsAssetsDir :: Text,
     _genPlainHtmlArgsHtmlKind :: HtmlKind,
     _genPlainHtmlArgsParamBase :: Text,
-    _genPlainHtmlArgsPrefixUrl :: Text,
+    _genPlainHtmlArgsUrlPrefix :: Text,
     _getPlainHtmlArgsEntryPoint :: Module 'Scoped 'ModuleTop,
     _getPlainHtmlArgsOutputDir :: Path Abs Dir,
     _getPlainHtmlArgsPrintMetaData :: Bool,
@@ -80,7 +80,7 @@ genPlainHtml o@GetPlainHtmlArgs {..} = do
     htmlOptions =
       HtmlOptions
         { _htmlOptionsOutputDir = o ^. getPlainHtmlArgsOutputDir,
-          _htmlOptionsPrefixUrl = o ^. genPlainHtmlArgsPrefixUrl,
+          _htmlOptionsUrlPrefix = o ^. genPlainHtmlArgsUrlPrefix,
           _htmlOptionsAssetsPrefix = o ^. genPlainHtmlArgsAssetsDir,
           _htmlOptionsKind = o ^. genPlainHtmlArgsHtmlKind,
           _htmlOptionsParamBase = o ^. genPlainHtmlArgsParamBase,
@@ -314,7 +314,7 @@ moduleDocRelativePath m = do
 nameIdAttrRef :: Members '[Reader HtmlOptions] r => TopModulePath -> Maybe S.NameId -> Sem r AttributeValue
 nameIdAttrRef tp s = do
   pth <- toFilePath <$> moduleDocRelativePath tp
-  prefixUrl <- unpack <$> asks (^. htmlOptionsPrefixUrl)
+  prefixUrl <- unpack <$> asks (^. htmlOptionsUrlPrefix)
   return $
     fromString prefixUrl
       <> fromString pth

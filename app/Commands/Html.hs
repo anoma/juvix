@@ -18,10 +18,10 @@ runSourceHtmlCommand HtmlOptions {..} = do
   embed $
     Html.genPlainHtml
       GetPlainHtmlArgs
-        { _genPlainHtmlArgsAssetsDir = _htmlAssetsDir,
+        { _genPlainHtmlArgsAssetsDir = _htmlAssetsPrefix,
           _genPlainHtmlArgsHtmlKind = Html.HtmlSrc,
           _genPlainHtmlArgsParamBase = "",
-          _genPlainHtmlArgsPrefixUrl = _htmlPrefixUrl,
+          _genPlainHtmlArgsUrlPrefix = _htmlUrlPrefix,
           _getPlainHtmlArgsConcreteOpts = Concrete.defaultOptions,
           _getPlainHtmlArgsEntryPoint = m,
           _getPlainHtmlArgsOutputDir = outputDir,
@@ -39,11 +39,11 @@ runCommand HtmlOptions {..}
         outputDir <- someBaseToAbs' (_htmlOutputDir ^. pathPath)
         Html.genJudocHtml
           JudocArgs
-            { _judocArgsAssetsDir = _htmlAssetsDir,
+            { _judocArgsAssetsDir = _htmlAssetsPrefix,
               _judocArgsBaseName = "proj",
               _judocArgsCtx = ctx,
               _judocArgsOutputDir = outputDir,
-              _judocArgsPrefixUrl = _htmlPrefixUrl,
+              _judocArgsUrlPrefix = _htmlUrlPrefix,
               _judocArgsTheme = _htmlTheme
             }
         when _htmlOpen $ case openCmd of
