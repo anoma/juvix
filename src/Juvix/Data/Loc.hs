@@ -88,6 +88,12 @@ singletonInterval l =
 intervalLength :: Interval -> Int
 intervalLength i = fromIntegral (i ^. intervalEnd . locOffset - i ^. intervalStart . locOffset) + 1
 
+intervalEndLine :: Interval -> Int
+intervalEndLine a = a ^. intervalEnd . locLine . unPos . to fromIntegral
+
+intervalStartLine :: Interval -> Int
+intervalStartLine a = a ^. intervalStart . locLine . unPos . to fromIntegral
+
 intervalStartLoc :: Interval -> Loc
 intervalStartLoc i =
   Loc
