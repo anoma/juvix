@@ -96,8 +96,7 @@ htmlJuvixFooter = do
           let juvixLinkOrg :: Html
               juvixLinkOrg =
                 a ! Attr.href Str.juvixDotOrg $
-                  toHtml ("Juvix v" :: Text)
-                    <> toHtml versionDoc
+                  toHtml ("Juvix " :: Text)
 
               commitInfo :: Html
               commitInfo =
