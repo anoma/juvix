@@ -45,8 +45,7 @@ allTests =
               "Functional queues",
               "Merge sort",
               "Recursive let",
-              "Applications with lets and cases in function position",
-              "Self-application"
+              "Applications with lets and cases in function position"
             ]
             tests
         )

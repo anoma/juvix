@@ -3,7 +3,11 @@ module test019;
 
 open import Stdlib.Prelude;
 
+-- change this to a lambda once we have type annotations for lambdas
+app : ({A : Type} → A → A) → {A : Type} → A → A;
+app x := x x;
+
 main : IO;
-main := printNatLn (λ {x := x x} id (3 + 4));
+main := printNatLn (app id (3 + 4));
 
 end;

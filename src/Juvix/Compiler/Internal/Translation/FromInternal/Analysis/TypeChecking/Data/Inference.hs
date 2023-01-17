@@ -213,7 +213,7 @@ queryMetavar' h = do
     Just (Refined e) -> return (Just e)
 
 re ::
-  Members '[Reader FunctionsTable] r =>
+  Members '[Reader FunctionsTable, Error TypeCheckerError] r =>
   Sem (Inference ': r) a ->
   Sem (State InferenceState ': r) a
 re = reinterpret $ \case
@@ -227,14 +227,14 @@ re = reinterpret $ \case
     registerIden' i ty = modify (over inferenceIdens (HashMap.insert i ty))
 
     -- Supports alpha equivalence.
-    matchTypes' :: Members '[State InferenceState, Reader FunctionsTable] r => Expression -> Expression -> Sem r (Maybe MatchError)
+    matchTypes' :: Members '[State InferenceState, Reader FunctionsTable, Error TypeCheckerError] r => Expression -> Expression -> Sem r (Maybe MatchError)
     matchTypes' ty = runReader ini . go ty
       where
         ini :: HashMap VarName VarName
         ini = mempty
         go ::
           forall r.
-          Members '[State InferenceState, Reader (HashMap VarName VarName), Reader FunctionsTable] r =>
+          Members '[State InferenceState, Reader (HashMap VarName VarName), Reader FunctionsTable, Error TypeCheckerError] r =>
           Expression ->
           Expression ->
           Sem r (Maybe MatchError)
@@ -292,9 +292,11 @@ re = reinterpret $ \case
                       | ExpressionHole h' <- holTy, h' == hol = return ()
                       | otherwise =
                           do
+                            holTy' <- strongNormalize' holTy
+                            when (ExpressionHole hol `elem` holTy' ^.. leafExpressions) (throw (ErrUnsolvedMeta (UnsolvedMeta hol)))
                             s <- gets (fromJust . (^. inferenceMap . at hol))
                             case s of
-                              Fresh -> modify (over inferenceMap (HashMap.insert hol (Refined holTy)))
+                              Fresh -> modify (over inferenceMap (HashMap.insert hol (Refined holTy')))
                               Refined {} -> impossible
 
                 goIden :: Iden -> Iden -> Sem r (Maybe MatchError)

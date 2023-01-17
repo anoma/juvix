@@ -119,6 +119,13 @@ tests =
       $(mkRelFile "IdenFunctionArgsNoExplicit.juvix")
       $ \case
         ErrUnsolvedMeta {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Cycle in hole"
+      $(mkRelDir "issue1700")
+      $(mkRelFile "SelfApplication.juvix")
+      $ \case
+        ErrUnsolvedMeta {} -> Nothing
         _ -> wrongError
   ]
 
