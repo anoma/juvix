@@ -53,6 +53,9 @@ natsub = primPrefix "natsub"
 natmul :: Text
 natmul = primPrefix "natmul"
 
+natudiv :: Text
+natudiv = primPrefix "natudiv"
+
 natdiv :: Text
 natdiv = primPrefix "natdiv"
 
