@@ -79,7 +79,7 @@ RUN sudo bash -c 'curl -s https://api.github.com/repos/WebAssembly/wasi-sdk/rele
       && tar xvf wasi-sdk.tar.gz --directory /home/vscode/.local/wasi-sdk/'
 ENV WASI_SYSROOT_PATH=/home/vscode/.local/wasi-sdk/
 
-RUN sudo bash -c 'curl -s https://api.github.com/repos/SamirTalwar/smoke/releases/latest \
+RUN sudo bash -c 'curl -s https://api.github.com/repos/jonaprieto/smoke/releases/latest \
       | grep -a "browser_download_url.*Linux" \
       | cut -d : -f 2,3 \
       | tr -d \" \
