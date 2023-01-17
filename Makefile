@@ -3,9 +3,8 @@ PREFIX="$(PWD)/.stack-work/prefix"
 UNAME := $(shell uname)
 HLINTQUIET :=
 
-ASSETS = 	seating-mascot.051c86a.svg \
-			Seating_Tara_smiling.svg \
-			teaching-mascot.f828959.svg
+
+IMAGES = 	$(shell find assets/images -type f)
 
 ORGFILES = $(shell find docs/org -type f -name '*.org')
 MDFILES:=$(patsubst docs/org/%,docs/md/%,$(ORGFILES:.org=.md))
@@ -33,6 +32,9 @@ else ifeq ($(UNAME), Linux)
 else
 	THREADS := $(shell echo %NUMBER_OF_PROCESSORS%)
 endif
+
+images:
+	echo $(IMAGES)
 
 all: install
 
@@ -97,8 +99,8 @@ markdown-files: docs/md/README.md docs/md/changelog.md $(MDFILES)
 .PHONY: markdown-docs
 markdown-docs: markdown-files
 	@echo "copying assets ..."
-	@mkdir -p docs/md/assets
-	@cp -v $(addprefix assets/,$(ASSETS)) docs/md/assets
+	@mkdir -p docs/md/assets/images
+	@cp -v $(IMAGES) docs/md/assets/images/
 	@mdbook build
 
 .PHONY: serve-docs
@@ -191,7 +193,7 @@ fast-build: submodules runtime
 
 .PHONY: runtime
 runtime:
-	cd runtime && make -j 4
+	cd runtime && make -j 4 -s
 
 # -- Install
 

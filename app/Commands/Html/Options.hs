@@ -1,14 +1,18 @@
 module Commands.Html.Options where
 
 import CommonOptions
-import Juvix.Compiler.Backend.Html.Data.Theme
+import Juvix.Compiler.Backend.Html.Data.Options hiding (HtmlOptions)
 
 data HtmlOptions = HtmlOptions
-  { _htmlRecursive :: Bool,
+  { _htmlNonRecursive :: Bool,
+    _htmlOnlySource :: Bool,
     _htmlTheme :: Theme,
     _htmlOutputDir :: AppPath Dir,
     _htmlInputFile :: AppPath File,
-    _htmlPrintMetadata :: Bool
+    _htmlNoFooter :: Bool,
+    _htmlAssetsPrefix :: Text,
+    _htmlUrlPrefix :: Text,
+    _htmlOpen :: Bool
   }
   deriving stock (Data)
 
@@ -16,10 +20,15 @@ makeLenses ''HtmlOptions
 
 parseHtml :: Parser HtmlOptions
 parseHtml = do
-  _htmlRecursive <-
+  _htmlNonRecursive <-
     switch
-      ( long "recursive"
-          <> help "export imported modules recursively"
+      ( long "non-recursive"
+          <> help "Export imported modules recursively"
+      )
+  _htmlOnlySource <-
+    switch
+      ( long "only-source"
+          <> help "Generate only Html for the source code with syntax highlighting"
       )
   _htmlTheme <-
     option
@@ -28,26 +37,46 @@ parseHtml = do
           <> metavar "THEME"
           <> value Ayu
           <> showDefault
-          <> help "selects a theme: ayu (light); nord (dark)"
+          <> help "Theme for syntax highlighting. Options: ayu (light) and nord (dark)"
           <> completeWith (map show allThemes)
       )
   _htmlOutputDir <-
     parseGenericOutputDir
       ( value (Rel $(mkRelDir "html"))
           <> showDefault
-          <> help "html output directory"
+          <> help "Html output directory"
           <> action "directory"
       )
-  _htmlPrintMetadata <-
+  _htmlNoFooter <-
     switch
-      ( long "print-metadata"
-          <> help "Add HTML footer with metadata"
+      ( long "no-footer"
+          <> help "Remove HTML Juvix footer"
+      )
+  _htmlAssetsPrefix <-
+    strOption
+      ( value ""
+          <> long "prefix-assets"
+          <> showDefault
+          <> help "Prefix used for assets's source path"
+      )
+  _htmlUrlPrefix <-
+    strOption
+      ( value ""
+          <> long "prefix-url"
+          <> showDefault
+          <> help "Prefix used for inner Juvix hyperlinks"
+      )
+  _htmlOpen <-
+    switch
+      ( long "open"
+          <> help "Open the documentation after generating it"
       )
   _htmlInputFile <- parseInputJuvixFile
   pure HtmlOptions {..}
   where
     allThemes :: [Theme]
     allThemes = allElements
+
     parseTheme :: String -> Either String Theme
     parseTheme s = case map toLower s of
       "nord" -> Right Nord

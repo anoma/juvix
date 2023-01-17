@@ -6,7 +6,6 @@ module Commands.Dev.Options
     module Commands.Dev.Parse.Options,
     module Commands.Dev.Highlight.Options,
     module Commands.Dev.Scope.Options,
-    module Commands.Dev.Doc.Options,
     module Commands.Dev.Termination.Options,
     module Commands.Dev.DisplayRoot.Options,
   )
@@ -15,7 +14,6 @@ where
 import Commands.Dev.Asm.Options hiding (Compile)
 import Commands.Dev.Core.Options
 import Commands.Dev.DisplayRoot.Options
-import Commands.Dev.Doc.Options
 import Commands.Dev.Highlight.Options
 import Commands.Dev.Internal.Options
 import Commands.Dev.MiniC.Options
@@ -36,7 +34,6 @@ data DevCommand
   | Parse ParseOptions
   | Scope ScopeOptions
   | Termination TerminationCommand
-  | Doc DocOptions
   deriving stock (Data)
 
 parseDevCommand :: Parser DevCommand
@@ -50,19 +47,11 @@ parseDevCommand =
           commandRuntime,
           commandMiniC,
           commandParse,
-          commandDoc,
           commandScope,
           commandShowRoot,
           commandTermination
         ]
     )
-
-commandDoc :: Mod CommandFields DevCommand
-commandDoc =
-  command "doc" $
-    info
-      (Doc <$> parseDoc)
-      (progDesc "Generate documentation")
 
 commandHighlight :: Mod CommandFields DevCommand
 commandHighlight =

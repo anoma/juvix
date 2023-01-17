@@ -14,7 +14,10 @@ github:          anoma/juvix
 
 extra-source-files:
 - README.org
-- assets/*
+- assets/css/*.css
+- assets/js/*.js
+- assets/images/*.svg
+- assets/images/*.png
 - juvix-stdlib/juvix.yaml
 - juvix-stdlib/**/*.juvix
 - runtime/include/**/*.h

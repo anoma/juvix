@@ -2,7 +2,7 @@
 
 #+begin_html
 <a href="https://github.com/anoma/juvix">
-<img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/Seating_Tara_smiling.svg" />
+<img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 #+end_html
 

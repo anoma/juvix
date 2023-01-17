@@ -278,16 +278,15 @@ goFunctionDef (f, sym) = do
     mkBody :: Sem r Node
     mkBody
       | nPatterns == 0 = runReader initIndexTable (goExpression (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody))
-      | otherwise =
-          ( do
-              let values :: [Node]
-                  values = mkVar Info.empty <$> vs
-                  indexTable :: IndexTable
-                  indexTable = IndexTable {_indexTableVarsNum = nPatterns, _indexTableVars = mempty}
-              ms <- mapM (runReader indexTable . goFunctionClause) (f ^. Internal.funDefClauses)
-              let match = mkMatch' (fromList values) (toList ms)
-              return $ foldr (\_ n -> mkLambda' n) match vs
-          )
+      | otherwise = do
+          let values :: [Node]
+              values = mkVar Info.empty <$> vs
+              indexTable :: IndexTable
+              indexTable = IndexTable {_indexTableVarsNum = nPatterns, _indexTableVars = mempty}
+          ms <- mapM (runReader indexTable . goFunctionClause) (f ^. Internal.funDefClauses)
+          let match = mkMatch' (fromList values) (toList ms)
+          return $ foldr (\_ n -> mkLambda' n) match vs
+
     -- Assumption: All clauses have the same number of patterns
     nPatterns :: Int
     nPatterns = length (f ^. Internal.funDefClauses . _head1 . Internal.clausePatterns)
