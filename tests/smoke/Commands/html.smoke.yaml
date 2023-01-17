@@ -118,8 +118,8 @@ tests:
         juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --output-dir=html --non-recursive
         (ls html | wc -l)
         cd html
-        [ -d html/assets ]
-        [ -f html/SimpleFungibleToken.html ]
+        [ -d assets ]
+        [ -f SimpleFungibleToken.html ]
     stdout:
       matches: |
         Copying assets files to .*

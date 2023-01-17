@@ -35,31 +35,30 @@ runGenOnlySourceHtml HtmlOptions {..} = do
 runCommand :: Members '[Embed IO, App] r => HtmlOptions -> Sem r ()
 runCommand HtmlOptions {..}
   | _htmlOnlySource = runGenOnlySourceHtml HtmlOptions {..}
-  | otherwise =
-      do
-        ctx <- runPipeline _htmlInputFile upToInternalTyped
-        outputDir <- someBaseToAbs' (_htmlOutputDir ^. pathPath)
-        Html.genJudocHtml
-          JudocArgs
-            { _judocArgsAssetsPrefix = _htmlAssetsPrefix,
-              _judocArgsBaseName = "proj",
-              _judocArgsCtx = ctx,
-              _judocArgsOutputDir = outputDir,
-              _judocArgsUrlPrefix = _htmlUrlPrefix,
-              _judocArgsTheme = _htmlTheme,
-              _judocArgsNonRecursive = _htmlNonRecursive,
-              _judocArgsNoFooter = _htmlNoFooter
-            }
-        when _htmlOpen $ case openCmd of
-          Nothing -> say "Could not recognize the 'open' command for your OS"
-          Just opencmd ->
-            embed
-              ( void
-                  ( Process.spawnProcess
-                      opencmd
-                      [ toFilePath
-                          ( outputDir <//> Html.indexFileName
-                          )
-                      ]
-                  )
-              )
+  | otherwise = do
+      ctx <- runPipeline _htmlInputFile upToInternalTyped
+      outputDir <- someBaseToAbs' (_htmlOutputDir ^. pathPath)
+      Html.genJudocHtml
+        JudocArgs
+          { _judocArgsAssetsPrefix = _htmlAssetsPrefix,
+            _judocArgsBaseName = "proj",
+            _judocArgsCtx = ctx,
+            _judocArgsOutputDir = outputDir,
+            _judocArgsUrlPrefix = _htmlUrlPrefix,
+            _judocArgsTheme = _htmlTheme,
+            _judocArgsNonRecursive = _htmlNonRecursive,
+            _judocArgsNoFooter = _htmlNoFooter
+          }
+      when _htmlOpen $ case openCmd of
+        Nothing -> say "Could not recognize the 'open' command for your OS"
+        Just opencmd ->
+          embed
+            ( void
+                ( Process.spawnProcess
+                    opencmd
+                    [ toFilePath
+                        ( outputDir <//> Html.indexFileName
+                        )
+                    ]
+                )
+            )

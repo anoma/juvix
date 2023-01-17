@@ -191,5 +191,5 @@ tests =
       $(mkRelDir "Internal")
       $(mkRelFile "Synonyms.juvix")
   ]
-    <> [ compilationTest t | t <- Compilation.tests, t ^. Compilation.name `notElem` ["Self-application"]
+    <> [ compilationTest t | t <- Compilation.tests, t ^. Compilation.name /= "Self-application"
        ]
