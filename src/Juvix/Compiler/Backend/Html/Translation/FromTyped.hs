@@ -148,7 +148,7 @@ genJudocHtml :: Members '[Embed IO] r => JudocArgs -> Sem r ()
 genJudocHtml JudocArgs {..} =
   runReader htmlOpts . runReader normTable . runReader entry $ do
     Prelude.embed (writeAssets _judocArgsOutputDir)
-    mapM_ goTopModule topModules
+    mapM_ goTopModule allModules
     createIndexFile (map topModulePath (toList allModules))
   where
     entry :: EntryPoint
