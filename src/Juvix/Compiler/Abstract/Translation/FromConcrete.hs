@@ -250,6 +250,7 @@ registerBuiltinFunction d = \case
   BuiltinNatPlus -> registerNatPlus d
   BuiltinNatSub -> registerNatSub d
   BuiltinNatMul -> registerNatMul d
+  BuiltinNatUDiv -> registerNatUDiv d
   BuiltinNatDiv -> registerNatDiv d
   BuiltinNatMod -> registerNatMod d
   BuiltinNatLe -> registerNatLe d
