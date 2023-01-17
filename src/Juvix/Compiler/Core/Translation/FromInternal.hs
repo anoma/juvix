@@ -520,6 +520,7 @@ goExpression' ::
   Internal.Expression ->
   Sem r Node
 goExpression' = \case
+  Internal.ExpressionLet {} -> error "to be implemented"
   Internal.ExpressionLiteral l -> do
     tab <- getInfoTable
     return (goLiteral (fromJust $ tab ^. infoIntToNat) l)

@@ -85,5 +85,12 @@ tests =
       $(mkRelFile "LhsTooManyPatterns.juvix")
       $ \case
         ErrLhsTooManyPatterns {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Too many arguments for the return type of a constructor"
+      $(mkRelDir "Internal")
+      $(mkRelFile "WrongReturnTypeTooManyArguments.juvix")
+      $ \case
+        ErrTooManyArguments {} -> Nothing
         _ -> wrongError
   ]

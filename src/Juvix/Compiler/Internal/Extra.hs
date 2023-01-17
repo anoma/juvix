@@ -95,6 +95,7 @@ mkConcreteType = fmap ConcreteType . go
         r' <- go r
         return (ExpressionApplication (Application l' r' i))
       ExpressionUniverse {} -> return t
+      ExpressionLet l -> ExpressionLet <$> goLet l
       ExpressionSimpleLambda (SimpleLambda v ty b) -> do
         b' <- go b
         ty' <- go ty
@@ -112,15 +113,45 @@ mkConcreteType = fmap ConcreteType . go
         IdenConstructor {} -> return t
         IdenAxiom {} -> return t
         IdenVar {} -> Nothing
+
     goClause :: LambdaClause -> Maybe LambdaClause
     goClause (LambdaClause ps b) = do
       b' <- go b
       return (LambdaClause ps b')
+
     goParam :: FunctionParameter -> Maybe FunctionParameter
     goParam (FunctionParameter m i e) = do
       guard (isNothing m)
       e' <- go e
       return (FunctionParameter m i e')
+
+    goLet :: Let -> Maybe Let
+    goLet =
+      traverseOf (letClauses . each) goLetClause
+        >=> traverseOf letExpression go
+
+    goLetClause :: LetClause -> Maybe LetClause
+    goLetClause = \case
+      LetFunDef f -> LetFunDef <$> goFunctionDef f
+
+    goFunctionDef :: FunctionDef -> Maybe FunctionDef
+    goFunctionDef f = do
+      let _funDefName = f ^. funDefName
+          _funDefBuiltin = f ^. funDefBuiltin
+      _funDefExamples <- mapM goExample (f ^. funDefExamples)
+      _funDefClauses <- mapM goFunctionClause (f ^. funDefClauses)
+      _funDefType <- go (f ^. funDefType)
+      return FunctionDef {..}
+
+    goFunctionClause :: FunctionClause -> Maybe FunctionClause
+    goFunctionClause c = do
+      let _clauseName = c ^. clauseName
+          _clausePatterns = c ^. clausePatterns
+      _clauseBody <- go (c ^. clauseBody)
+      return FunctionClause {..}
+
+    goExample :: Example -> Maybe Example
+    goExample = traverseOf exampleExpression go
 
 newtype PolyType = PolyType {_unpolyType :: Expression}
   deriving stock (Eq, Generic)
@@ -154,6 +185,7 @@ mkPolyType = fmap PolyType . go
         | otherwise -> go r
       ExpressionHole {} -> Nothing
       ExpressionLiteral {} -> return t
+      ExpressionLet {} -> error "Lets are not supported in the old backend"
       ExpressionIden IdenFunction {} -> return t
       ExpressionIden IdenInductive {} -> return t
       ExpressionIden IdenConstructor {} -> return t
@@ -186,9 +218,20 @@ instance HasExpressions Expression where
     ExpressionFunction fun -> ExpressionFunction <$> leafExpressions f fun
     ExpressionSimpleLambda l -> ExpressionSimpleLambda <$> leafExpressions f l
     ExpressionLambda l -> ExpressionLambda <$> leafExpressions f l
+    ExpressionLet l -> ExpressionLet <$> leafExpressions f l
     ExpressionLiteral {} -> f e
     ExpressionUniverse {} -> f e
     ExpressionHole {} -> f e
+
+instance HasExpressions LetClause where
+  leafExpressions f = \case
+    LetFunDef d -> LetFunDef <$> leafExpressions f d
+
+instance HasExpressions Let where
+  leafExpressions f l = do
+    _letClauses :: NonEmpty LetClause <- traverse (leafExpressions f) (l ^. letClauses)
+    _letExpression <- leafExpressions f (l ^. letExpression)
+    pure Let {..}
 
 instance HasExpressions TypedExpression where
   leafExpressions f t@TypedExpression {..} = do

@@ -9,7 +9,7 @@ data WithLoc a = WithLoc
   { _withLocInt :: Interval,
     _withLocParam :: a
   }
-  deriving stock (Show)
+  deriving stock (Show, Data)
 
 makeLenses ''WithLoc
 

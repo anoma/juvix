@@ -101,9 +101,20 @@ data Iden
   | IdenAxiom AxiomRef
   deriving stock (Eq, Show)
 
+newtype LetClause
+  = LetFunDef FunctionDef
+  deriving stock (Eq, Show)
+
+data Let = Let
+  { _letClauses :: NonEmpty LetClause,
+    _letExpression :: Expression
+  }
+  deriving stock (Eq, Show)
+
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
+  | ExpressionLet Let
   | ExpressionUniverse Universe
   | ExpressionFunction Function
   | ExpressionLiteral LiteralLoc
@@ -116,6 +127,7 @@ instance HasAtomicity Expression where
     ExpressionIden {} -> Atom
     ExpressionHole {} -> Atom
     ExpressionUniverse u -> atomicity u
+    ExpressionLet l -> atomicity l
     ExpressionApplication a -> atomicity a
     ExpressionFunction f -> atomicity f
     ExpressionLiteral f -> atomicity f
@@ -130,6 +142,9 @@ data Application = Application
 
 instance HasAtomicity Application where
   atomicity = const (Aggregate appFixity)
+
+instance HasAtomicity Let where
+  atomicity Let {..} = atomicity _letExpression
 
 instance HasAtomicity Lambda where
   atomicity = const Atom
@@ -208,6 +223,7 @@ data AxiomDef = AxiomDef
   deriving stock (Eq, Show)
 
 makeLenses ''Module
+makeLenses ''Let
 makeLenses ''Example
 makeLenses ''PatternArg
 makeLenses ''FunctionParameter
@@ -235,6 +251,12 @@ instance HasAtomicity Pattern where
     PatternConstructorApp a -> atomicity a
     PatternWildcard {} -> Atom
     PatternEmpty -> Atom
+
+instance HasAtomicity PatternArg where
+  atomicity p
+    | Implicit <- p ^. patternArgIsImplicit = Atom
+    | isJust (p ^. patternArgName) = Atom
+    | otherwise = atomicity (p ^. patternArgPattern)
 
 instance HasLoc InductiveConstructorDef where
   getLoc = getLoc . (^. constructorName)

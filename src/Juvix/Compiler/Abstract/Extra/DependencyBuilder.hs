@@ -70,34 +70,44 @@ goLocalModule mn m = do
 -- declarations in a module depend on the module, not the other way round (a
 -- module is reachable if at least one of the declarations in it is reachable)
 goStatement :: Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State VisitedModules] r => Name -> Statement -> Sem r ()
-goStatement mn = \case
+goStatement modName = \case
   StatementAxiom ax -> do
     checkStartNode (ax ^. axiomName)
-    addEdge (ax ^. axiomName) mn
+    addEdge (ax ^. axiomName) modName
     goExpression (ax ^. axiomName) (ax ^. axiomType)
   StatementForeign {} -> return ()
-  StatementFunction f -> do
-    checkStartNode (f ^. funDefName)
-    addEdge (f ^. funDefName) mn
-    goExpression (f ^. funDefName) (f ^. funDefTypeSig)
-    mapM_ (goFunctionClause (f ^. funDefName)) (f ^. funDefClauses)
+  StatementFunction f -> goTopFunctionDef modName f
   StatementImport m -> guardNotVisited (m ^. moduleName) (goModule m)
-  StatementLocalModule m -> goLocalModule mn m
+  StatementLocalModule m -> goLocalModule modName m
   StatementInductive i -> do
     checkStartNode (i ^. inductiveName)
-    addEdge (i ^. inductiveName) mn
+    addEdge (i ^. inductiveName) modName
     mapM_ (goFunctionParameter (i ^. inductiveName)) (i ^. inductiveParameters)
     goExpression (i ^. inductiveName) (i ^. inductiveType)
     mapM_ (goConstructorDef (i ^. inductiveName)) (i ^. inductiveConstructors)
 
+goTopFunctionDef :: Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r => Name -> FunctionDef -> Sem r ()
+goTopFunctionDef modName f = do
+  addEdge (f ^. funDefName) modName
+  goFunctionDefHelper f
+
+goFunctionDefHelper ::
+  Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r =>
+  FunctionDef ->
+  Sem r ()
+goFunctionDefHelper f = do
+  checkStartNode (f ^. funDefName)
+  goExpression (f ^. funDefName) (f ^. funDefTypeSig)
+  mapM_ (goFunctionClause (f ^. funDefName)) (f ^. funDefClauses)
+
 -- constructors of an inductive type depend on the inductive type, not the other
 -- way round; an inductive type depends on the types of its constructors
-goConstructorDef :: Member (State DependencyGraph) r => Name -> InductiveConstructorDef -> Sem r ()
+goConstructorDef :: Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r => Name -> InductiveConstructorDef -> Sem r ()
 goConstructorDef indName c = do
   addEdge (c ^. constructorName) indName
   goExpression indName (c ^. constructorType)
 
-goFunctionClause :: Member (State DependencyGraph) r => Name -> FunctionClause -> Sem r ()
+goFunctionClause :: Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r => Name -> FunctionClause -> Sem r ()
 goFunctionClause p c = do
   mapM_ (goPattern p) (c ^. clausePatterns)
   goExpression p (c ^. clauseBody)
@@ -114,7 +124,7 @@ goPattern n p = case p ^. patternArgPattern of
       addEdge n (ctr ^. constructorRefName)
       mapM_ (goPattern n) ps
 
-goExpression :: forall r. Member (State DependencyGraph) r => Name -> Expression -> Sem r ()
+goExpression :: forall r. Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r => Name -> Expression -> Sem r ()
 goExpression p e = case e of
   ExpressionIden i -> addEdge p (idenName i)
   ExpressionUniverse {} -> return ()
@@ -127,6 +137,7 @@ goExpression p e = case e of
   ExpressionLiteral {} -> return ()
   ExpressionHole {} -> return ()
   ExpressionLambda l -> goLambda l
+  ExpressionLet l -> goLet l
   where
     goLambda :: Lambda -> Sem r ()
     goLambda (Lambda clauses) = mapM_ goClause clauses
@@ -136,5 +147,16 @@ goExpression p e = case e of
           goExpression p _lambdaBody
           mapM_ (goPattern p) _lambdaParameters
 
-goFunctionParameter :: Member (State DependencyGraph) r => Name -> FunctionParameter -> Sem r ()
+    goLet :: Let -> Sem r ()
+    goLet l = do
+      mapM_ goLetClause (l ^. letClauses)
+      goExpression p (l ^. letExpression)
+
+    goLetClause :: LetClause -> Sem r ()
+    goLetClause = \case
+      LetFunDef f -> do
+        addEdge p (f ^. funDefName)
+        goFunctionDefHelper f
+
+goFunctionParameter :: Members '[State DependencyGraph, State StartNodes, Reader ExportsTable] r => Name -> FunctionParameter -> Sem r ()
 goFunctionParameter p param = goExpression p (param ^. paramType)

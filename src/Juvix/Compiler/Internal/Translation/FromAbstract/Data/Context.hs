@@ -13,7 +13,6 @@ import Juvix.Prelude
 
 data InternalResult = InternalResult
   { _resultAbstract :: Abstract.AbstractResult,
-    -- _resultTable :: InfoTable,
     _resultModules :: NonEmpty Module,
     _resultDepInfo :: DepInfo.NameDependencyInfo
   }

@@ -58,6 +58,7 @@ typeCheckExpressionType (InternalTypedResult {..}) exp =
       runReader _resultFunctions
       . evalState _resultIdenTypes
       . runReader table
+      . ignoreOutput @Example
       . withEmptyVars
       . runInferenceDef
     $ inferExpression' Nothing exp

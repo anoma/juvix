@@ -8,12 +8,12 @@ data Universe = Universe
   { _universeLevel :: Maybe Natural,
     _universeLoc :: Interval
   }
-  deriving stock (Show, Ord)
+  deriving stock (Show, Ord, Data)
 
 newtype SmallUniverse = SmallUniverse
   { _smallUniverseLoc :: Interval
   }
-  deriving stock (Generic, Show)
+  deriving stock (Generic, Show, Data)
 
 instance Eq SmallUniverse where
   _ == _ = True

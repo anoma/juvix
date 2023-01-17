@@ -9,7 +9,7 @@ type LiteralLoc = WithLoc Literal
 data Literal
   = LitString Text
   | LitInteger Integer
-  deriving stock (Show, Eq, Ord, Generic)
+  deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable Literal
 

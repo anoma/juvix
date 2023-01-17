@@ -47,6 +47,7 @@ genClosureExpression ::
   Micro.Expression ->
   Sem r [ClosureInfo]
 genClosureExpression funArgTyps = \case
+  Micro.ExpressionLet {} -> error "To be implemented"
   Micro.ExpressionIden i -> do
     let rootFunMicroName = Micro.getName i
         rootFunNameId = rootFunMicroName ^. Micro.nameId

@@ -19,7 +19,7 @@ data Name = Name
     _namePretty :: Text, -- How to print this name in error messages
     _nameLoc :: Interval
   }
-  deriving stock (Show)
+  deriving stock (Show, Data)
 
 makeLenses ''Name
 

@@ -1,5 +1,6 @@
 module Juvix.Compiler.Internal.Data.InfoTable where
 
+import Data.Generics.Uniplate.Data
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
@@ -58,10 +59,24 @@ instance Monoid InfoTable where
 buildTable :: Foldable f => f Module -> InfoTable
 buildTable = mconcatMap buildTable1
 
--- TODO avoid building a table for the same module twice
 buildTable1 :: Module -> InfoTable
-buildTable1 m = InfoTable {..} <> buildTable (map (^. includeModule) includes)
+buildTable1 = run . evalState (mempty :: Cache) . buildTable1'
+
+buildTable' :: (Members '[State Cache] r, Foldable f) => f Module -> Sem r InfoTable
+buildTable' = mconcatMap buildTable1'
+
+-- | moduleName ↦ infoTable
+type Cache = HashMap Name InfoTable
+
+buildTable1' :: forall r. Members '[State Cache] r => Module -> Sem r InfoTable
+buildTable1' m = do
+  mi <- gets @Cache (^. at (m ^. moduleName))
+  maybe compute return mi
   where
+    compute :: Sem r InfoTable
+    compute = do
+      infoInc <- buildTable' (map (^. includeModule) includes)
+      return (InfoTable {..} <> infoInc)
     includes :: [Include]
     includes = [i | StatementInclude i <- ss]
     _infoInductives :: HashMap Name InductiveInfo
@@ -75,20 +90,29 @@ buildTable1 m = InfoTable {..} <> buildTable (map (^. includeModule) includes)
       HashMap.fromList
         [ (c ^. inductiveConstructorName, ConstructorInfo params args ind builtin)
           | StatementInductive d <- ss,
-            let ind = d ^. inductiveName,
-            let n = length (d ^. inductiveConstructors),
-            let params = d ^. inductiveParameters,
-            let builtins = maybe (replicate n Nothing) (map Just . builtinConstructors) (d ^. inductiveBuiltin),
+            let ind = d ^. inductiveName
+                n = length (d ^. inductiveConstructors)
+                params = d ^. inductiveParameters
+                builtins = maybe (replicate n Nothing) (map Just . builtinConstructors) (d ^. inductiveBuiltin),
             (builtin, c) <- zipExact builtins (d ^. inductiveConstructors),
             let args = c ^. inductiveConstructorParameters
         ]
     _infoFunctions :: HashMap Name FunctionInfo
     _infoFunctions =
-      HashMap.fromList
+      HashMap.fromList $
         [ (f ^. funDefName, FunctionInfo f)
           | StatementFunction (MutualBlock b) <- ss,
             f <- toList b
         ]
+          <> [ (f ^. funDefName, FunctionInfo f)
+               | s <- filter (not . isInclude) ss,
+                 LetFunDef f <- universeBi s
+             ]
+      where
+        isInclude :: Statement -> Bool
+        isInclude = \case
+          StatementInclude {} -> True
+          _ -> False
     _infoAxioms :: HashMap Name AxiomInfo
     _infoAxioms =
       HashMap.fromList

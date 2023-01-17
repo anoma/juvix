@@ -7,6 +7,6 @@ data ForeignBlock = ForeignBlock
   { _foreignBackend :: Backend,
     _foreignCode :: Text
   }
-  deriving stock (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show, Data)
 
 makeLenses ''ForeignBlock

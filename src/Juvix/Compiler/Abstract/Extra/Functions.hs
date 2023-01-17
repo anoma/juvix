@@ -163,6 +163,9 @@ matchExpressions = go
         unless (ia == ib) err
       (ExpressionLiteral {}, _) -> err
       (_, ExpressionLiteral {}) -> err
+      (ExpressionLet {}, ExpressionLet {}) -> error "not implemented"
+      (_, ExpressionLet {}) -> err
+      (ExpressionLet {}, _) -> err
       (ExpressionHole _, ExpressionHole _) -> return ()
     addIfFreeVar :: VarName -> VarName -> Sem r ()
     addIfFreeVar va vb = whenM (isSoftFreeVar va) (addName va vb)

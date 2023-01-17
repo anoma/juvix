@@ -278,6 +278,7 @@ goType e = case e of
   Abstract.ExpressionLiteral {} -> unsupported "literals in types"
   Abstract.ExpressionHole h -> return (ExpressionHole h)
   Abstract.ExpressionLambda {} -> unsupported "lambda in types"
+  Abstract.ExpressionLet {} -> unsupported "let in types"
 
 goLambda :: forall r. Members '[NameIdGen] r => Abstract.Lambda -> Sem r Lambda
 goLambda (Abstract.Lambda cl) = case nonEmpty cl of
@@ -331,6 +332,17 @@ goExpression e = case e of
   Abstract.ExpressionLambda l -> ExpressionLambda <$> goLambda l
   Abstract.ExpressionLiteral l -> return (ExpressionLiteral l)
   Abstract.ExpressionHole h -> return (ExpressionHole h)
+  Abstract.ExpressionLet l -> ExpressionLet <$> goLet l
+
+goLetClause :: Members '[NameIdGen] r => Abstract.LetClause -> Sem r LetClause
+goLetClause = \case
+  Abstract.LetFunDef f -> LetFunDef <$> goFunctionDef f
+
+goLet :: Members '[NameIdGen] r => Abstract.Let -> Sem r Let
+goLet l = do
+  _letExpression <- goExpression (l ^. Abstract.letExpression)
+  _letClauses <- mapM goLetClause (l ^. Abstract.letClauses)
+  return Let {..}
 
 goInductiveParameter :: Abstract.FunctionParameter -> Sem r InductiveParameter
 goInductiveParameter f =
@@ -394,6 +406,7 @@ viewConstructorType = \case
   Abstract.ExpressionUniverse u -> return ([], smallUniverseE (getLoc u))
   Abstract.ExpressionLiteral {} -> unsupported "literal in a type"
   Abstract.ExpressionLambda {} -> unsupported "lambda in a constructor type"
+  Abstract.ExpressionLet {} -> unsupported "let in a constructor type"
   where
     viewFunctionType :: Abstract.Function -> Sem r (NonEmpty Expression, Expression)
     viewFunctionType (Abstract.Function p r) = do

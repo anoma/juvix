@@ -24,7 +24,7 @@ data BuiltinPrim
   | BuiltinsConstructor BuiltinConstructor
   | BuiltinsFunction BuiltinFunction
   | BuiltinsAxiom BuiltinAxiom
-  deriving stock (Show, Eq, Ord, Generic)
+  deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable BuiltinPrim
 
@@ -43,7 +43,7 @@ builtinConstructors = \case
 data BuiltinInductive
   = BuiltinNat
   | BuiltinBool
-  deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
+  deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinInductive
 
@@ -57,7 +57,7 @@ data BuiltinConstructor
   | BuiltinNatSuc
   | BuiltinBoolTrue
   | BuiltinBoolFalse
-  deriving stock (Show, Eq, Ord, Generic)
+  deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable BuiltinConstructor
 
@@ -71,7 +71,7 @@ data BuiltinFunction
   | BuiltinNatLt
   | BuiltinNatEq
   | BuiltinBoolIf
-  deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
+  deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinFunction
 
@@ -94,7 +94,7 @@ data BuiltinAxiom
   | BuiltinString
   | BuiltinIO
   | BuiltinIOSequence
-  deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
+  deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinAxiom
 

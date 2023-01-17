@@ -50,8 +50,43 @@ checkStatement s = case s of
   StatementFunction b -> StatementFunction <$> checkMutualBlock b
   StatementInclude i -> StatementInclude <$> checkInclude i
   StatementForeign {} -> return s
-  StatementInductive {} -> return s
-  StatementAxiom {} -> return s
+  StatementInductive d -> StatementInductive <$> checkInductive d
+  StatementAxiom a -> StatementAxiom <$> checkAxiom a
+
+checkInductive :: forall r. Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r => InductiveDef -> Sem r InductiveDef
+checkInductive d = do
+  let _inductiveName = d ^. inductiveName
+      _inductiveBuiltin = d ^. inductiveBuiltin
+      _inductivePositive = d ^. inductivePositive
+  (localVars, _inductiveParameters) <- checkParameters (d ^. inductiveParameters)
+  _inductiveExamples <- runReader localVars (mapM checkExample (d ^. inductiveExamples))
+  _inductiveConstructors <- runReader localVars (mapM checkConstructor (d ^. inductiveConstructors))
+  return InductiveDef {..}
+  where
+    checkParameters :: [InductiveParameter] -> Sem r (LocalVars, [InductiveParameter])
+    checkParameters = runState emptyLocalVars . mapM checkParam
+      where
+        checkParam :: InductiveParameter -> Sem (State LocalVars ': r) InductiveParameter
+        checkParam = return
+
+checkConstructor :: Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r => InductiveConstructorDef -> Sem r InductiveConstructorDef
+checkConstructor c = do
+  let _inductiveConstructorName = c ^. inductiveConstructorName
+  _inductiveConstructorParameters <- mapM checkType (c ^. inductiveConstructorParameters)
+  _inductiveConstructorExamples <- mapM checkExample (c ^. inductiveConstructorExamples)
+  _inductiveConstructorReturnType <- checkType (c ^. inductiveConstructorReturnType)
+  return InductiveConstructorDef {..}
+
+-- | check the arity of some ty : Type
+checkType :: Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r => Expression -> Sem r Expression
+checkType = checkExpression ArityUnit -- TODO ArityUnit or ArityUnknown???
+
+checkAxiom :: Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r => AxiomDef -> Sem r AxiomDef
+checkAxiom a = do
+  let _axiomName = a ^. axiomName
+      _axiomBuiltin = a ^. axiomBuiltin
+  _axiomType <- withEmptyLocalVars (checkType (a ^. axiomType))
+  return AxiomDef {..}
 
 checkMutualBlock ::
   Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r =>
@@ -99,6 +134,9 @@ simplelambda = error "simple lambda expressions are not supported by the arity c
 withEmptyLocalVars :: Sem (Reader LocalVars : r) a -> Sem r a
 withEmptyLocalVars = runReader emptyLocalVars
 
+arityLet :: Members '[Reader InfoTable] r => Let -> Sem r Arity
+arityLet l = guessArity (l ^. letExpression)
+
 guessArity ::
   forall r.
   Members '[Reader InfoTable] r =>
@@ -113,6 +151,7 @@ guessArity = \case
   ExpressionUniverse {} -> return arityUniverse
   ExpressionSimpleLambda {} -> simplelambda
   ExpressionLambda l -> return (arityLambda l)
+  ExpressionLet l -> arityLet l
   where
     idenHelper :: Iden -> Sem r Arity
     idenHelper i = case i of
@@ -290,6 +329,21 @@ checkConstructorApp ca@(ConstructorApp c ps) = do
   ps' <- zipWithM checkPattern arities ps
   return (ConstructorApp c ps')
 
+checkLet ::
+  forall r.
+  Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r =>
+  Arity ->
+  Let ->
+  Sem r Let
+checkLet ari l = do
+  _letClauses <- mapM checkLetClause (l ^. letClauses)
+  _letExpression <- checkExpression ari (l ^. letExpression)
+  return Let {..}
+  where
+    checkLetClause :: LetClause -> Sem r LetClause
+    checkLetClause = \case
+      LetFunDef f -> LetFunDef <$> checkFunctionDef f
+
 checkLambda ::
   forall r.
   Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r =>
@@ -349,6 +403,10 @@ typeArity = go
       ExpressionLambda {} -> ArityUnknown
       ExpressionUniverse {} -> ArityUnit
       ExpressionSimpleLambda {} -> simplelambda
+      ExpressionLet l -> goLet l
+
+    goLet :: Let -> Arity
+    goLet l = typeArity (l ^. letExpression)
 
     goIden :: Iden -> Arity
     goIden = \case
@@ -394,18 +452,25 @@ checkExpression hintArity expr = case expr of
   ExpressionHole {} -> return expr
   ExpressionSimpleLambda {} -> simplelambda
   ExpressionLambda l -> ExpressionLambda <$> checkLambda hintArity l
+  ExpressionLet l -> ExpressionLet <$> checkLet hintArity l
   where
     goApp :: Application -> Sem r Expression
     goApp = uncurry appHelper . second toList . unfoldApplication'
 
     appHelper :: Expression -> [(IsImplicit, Expression)] -> Sem r Expression
-    appHelper fun args = do
-      args' :: [(IsImplicit, Expression)] <- case fun of
-        ExpressionHole {} -> mapM (secondM (checkExpression ArityUnknown)) args
-        ExpressionIden i -> idenArity i >>= helper (getLoc i)
-        ExpressionLiteral l -> helper (getLoc l) arityLiteral
-        ExpressionUniverse l -> helper (getLoc l) arityUniverse
+    appHelper fun0 args = do
+      (fun', args') :: (Expression, [(IsImplicit, Expression)]) <- case fun0 of
+        ExpressionHole {} -> (fun0,) <$> mapM (secondM (checkExpression ArityUnknown)) args
+        ExpressionIden i -> (fun0,) <$> (idenArity i >>= helper (getLoc i))
+        ExpressionLiteral l -> (fun0,) <$> helper (getLoc l) arityLiteral
+        ExpressionUniverse l -> (fun0,) <$> helper (getLoc l) arityUniverse
+        ExpressionLambda l -> do
+          l' <- checkLambda ArityUnknown l
+          (ExpressionLambda l',) <$> helper (getLoc l') (arityLambda l')
         ExpressionSimpleLambda {} -> simplelambda
+        ExpressionLet l -> do
+          l' <- checkLet ArityUnknown l
+          (ExpressionLet l',) <$> (arityLet l' >>= helper (getLoc l'))
         ExpressionFunction f ->
           throw
             ( ErrFunctionApplied
@@ -415,8 +480,7 @@ checkExpression hintArity expr = case expr of
                   }
             )
         ExpressionApplication {} -> impossible
-        ExpressionLambda l -> helper (getLoc l) (arityLambda l)
-      return (foldApplication fun args')
+      return (foldApplication fun' args')
       where
         helper :: Interval -> Arity -> Sem r [(IsImplicit, Expression)]
         helper i ari = do
@@ -459,7 +523,7 @@ checkExpression hintArity expr = case expr of
                 throw
                   ( ErrExpectedExplicitArgument
                       ExpectedExplicitArgument
-                        { _expectedExplicitArgumentApp = (fun, args),
+                        { _expectedExplicitArgumentApp = (fun0, args),
                           _expectedExplicitArgumentIx = idx
                         }
                   )
@@ -469,7 +533,7 @@ checkExpression hintArity expr = case expr of
                 throw
                   ( ErrTooManyArguments
                       TooManyArguments
-                        { _tooManyArgumentsApp = (fun, args),
+                        { _tooManyArgumentsApp = (fun0, args),
                           _tooManyArgumentsUnexpected = length goargs
                         }
                   )

@@ -69,7 +69,25 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
       ExpressionUniverse {} -> return ()
       ExpressionSimpleLambda l -> helperSimpleLambda l
       ExpressionLambda l -> helperLambda l
+      ExpressionLet l -> helperLet l
       where
+        helperLet :: Let -> Sem r ()
+        helperLet l = do
+          helper inside (l ^. letExpression)
+          mapM_ helperLetClause (l ^. letClauses)
+
+        helperLetClause :: LetClause -> Sem r ()
+        helperLetClause = \case
+          LetFunDef f -> helperFunctionDef f
+
+        helperFunctionDef :: FunctionDef -> Sem r ()
+        helperFunctionDef d = do
+          helper inside (d ^. funDefType)
+          mapM_ helperFunctionClause (d ^. funDefClauses)
+
+        helperFunctionClause :: FunctionClause -> Sem r ()
+        helperFunctionClause c = helper inside (c ^. clauseBody)
+
         helperSimpleLambda :: SimpleLambda -> Sem r ()
         helperSimpleLambda (SimpleLambda _ lamVarTy lamBody) = do
           helper inside lamVarTy

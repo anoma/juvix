@@ -142,6 +142,36 @@ instance PrettyCode Expression where
     ExpressionLiteral l -> ppSCode l
     ExpressionHole h -> ppSCode h
     ExpressionLambda l -> ppCode l
+    ExpressionLet l -> ppCode l
+
+instance PrettyCode FunctionClause where
+  ppCode c = do
+    funName <- ppCode (c ^. clauseName)
+    clausePatterns' <- hsepMaybe <$> mapM ppCodeAtom (c ^. clausePatterns)
+    clauseBody' <- ppCode (c ^. clauseBody)
+    return $ funName <+?> clausePatterns' <+> kwAssign <+> clauseBody'
+
+instance PrettyCode FunctionDef where
+  ppCode f = do
+    funDefName' <- ppCode (f ^. funDefName)
+    funDefType' <- ppCode (f ^. funDefTypeSig)
+    clauses' <- mapM ppCode (f ^. funDefClauses)
+    return $
+      funDefName'
+        <+> kwColonColon
+        <+> funDefType'
+          <> line
+          <> vsep (toList clauses')
+
+instance PrettyCode LetClause where
+  ppCode = \case
+    LetFunDef f -> ppCode f
+
+instance PrettyCode Let where
+  ppCode l = do
+    letClauses' <- ppBlock (l ^. letClauses)
+    letExpression' <- ppCode (l ^. letExpression)
+    return $ kwLet <+> letClauses' <+> kwIn <+> letExpression'
 
 instance PrettyCode Usage where
   ppCode u = return $ case u of

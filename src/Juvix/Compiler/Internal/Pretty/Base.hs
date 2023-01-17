@@ -70,6 +70,17 @@ instance PrettyCode Expression where
     ExpressionLiteral l -> return (pretty l)
     ExpressionSimpleLambda l -> ppCode l
     ExpressionLambda l -> ppCode l
+    ExpressionLet l -> ppCode l
+
+instance PrettyCode Let where
+  ppCode l = do
+    letClauses' <- ppBlock (l ^. letClauses)
+    letExpression' <- ppCode (l ^. letExpression)
+    return $ kwLet <+> letClauses' <+> kwIn <+> letExpression'
+
+instance PrettyCode LetClause where
+  ppCode = \case
+    LetFunDef f -> ppCode f
 
 instance PrettyCode LambdaClause where
   ppCode LambdaClause {..} = do
