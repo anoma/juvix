@@ -30,6 +30,7 @@ builtinFunctionName = \case
   BuiltinNatPlus -> Just natplus
   BuiltinNatSub -> Just natsub
   BuiltinNatMul -> Just natmul
+  BuiltinNatUDiv -> Just natudiv
   BuiltinNatDiv -> Just natdiv
   BuiltinNatMod -> Just natmod
   BuiltinNatLe -> Just natle

@@ -65,6 +65,7 @@ data BuiltinFunction
   = BuiltinNatPlus
   | BuiltinNatSub
   | BuiltinNatMul
+  | BuiltinNatUDiv
   | BuiltinNatDiv
   | BuiltinNatMod
   | BuiltinNatLe
@@ -80,6 +81,7 @@ instance Pretty BuiltinFunction where
     BuiltinNatPlus -> Str.natPlus
     BuiltinNatSub -> Str.natSub
     BuiltinNatMul -> Str.natMul
+    BuiltinNatUDiv -> Str.natUDiv
     BuiltinNatDiv -> Str.natDiv
     BuiltinNatMod -> Str.natMod
     BuiltinNatLe -> Str.natLe

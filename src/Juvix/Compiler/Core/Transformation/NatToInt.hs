@@ -22,19 +22,18 @@ convertNode tab = convert [] 0
         | Just _identSymbol == tab ^. infoIntToNat ->
             End' (convert levels bl l)
       NApp (App _ (NApp (App _ (NIdt (Ident {..})) l)) r) ->
-        Recur' (levels, convertIdentApp node (\op g -> g $ mkBuiltinApp _identInfo op [l, r]) _identSymbol)
+        Recur' (levels, convertIdentApp node (\g -> g _identInfo l r) _identSymbol)
       NApp (App _ (NIdt (Ident {..})) l) ->
-        Recur' (levels, convertIdentApp node (\op g -> mkLet' l $ mkLambdaTy mkTypeInteger' $ g $ mkBuiltinApp _identInfo op [mkVar' 1, mkVar' 0]) _identSymbol)
+        Recur' (levels, convertIdentApp node (\g -> mkLet' l $ mkLambdaTy mkTypeInteger' $ g _identInfo (mkVar' 1) (mkVar' 0)) _identSymbol)
       NIdt (Ident {..}) ->
         Recur'
           ( levels,
             convertIdentApp
               node
-              ( \op g ->
+              ( \g ->
                   mkLambdaTy mkTypeInteger' $
                     mkLambdaTy mkTypeInteger' $
-                      g $
-                        mkBuiltinApp _identInfo op [mkVar' 1, mkVar' 0]
+                      g _identInfo (mkVar' 1) (mkVar' 0)
               )
               _identSymbol
           )
@@ -87,16 +86,15 @@ convertNode tab = convert [] 0
           maybeBranch = fromMaybe (mkBuiltinApp' OpFail [mkConstant' (ConstString "no matching branch")])
       _ -> Recur' (levels, node)
 
-    convertIdentApp :: Node -> (BuiltinOp -> (Node -> Node) -> Node) -> Symbol -> Node
+    convertIdentApp :: Node -> ((Info -> Node -> Node -> Node) -> Node) -> Symbol -> Node
     convertIdentApp node f sym =
       let ii = fromJust $ HashMap.lookup sym (tab ^. infoIdentifiers)
        in case ii ^. identifierBuiltin of
-            Just BuiltinNatPlus -> f OpIntAdd id
+            Just BuiltinNatPlus -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
             Just BuiltinNatSub ->
               f
-                OpIntSub
-                ( \node' ->
-                    mkLet' node' $
+                ( \info x y ->
+                    mkLet' (mkBuiltinApp info OpIntSub [x, y]) $
                       mkIf'
                         boolSymbol
                         (mkBuiltinApp' OpIntLe [mkConstant' (ConstInteger 0), mkVar' 0])
@@ -106,12 +104,17 @@ convertNode tab = convert [] 0
               where
                 boolSymbol =
                   fromJust (HashMap.lookup (BuiltinTag TagTrue) (tab ^. infoConstructors)) ^. constructorInductive
-            Just BuiltinNatMul -> f OpIntMul id
-            Just BuiltinNatDiv -> f OpIntDiv id
-            Just BuiltinNatMod -> f OpIntMod id
-            Just BuiltinNatLe -> f OpIntLe id
-            Just BuiltinNatLt -> f OpIntLt id
-            Just BuiltinNatEq -> f OpEq id
+            Just BuiltinNatMul -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
+            Just BuiltinNatUDiv ->
+              f
+                ( \info x y ->
+                    mkBuiltinApp info OpIntDiv [mkBuiltinApp' OpIntAdd [x, mkBuiltinApp' OpIntSub [y, mkConstant' (ConstInteger 1)]], y]
+                )
+            Just BuiltinNatDiv -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
+            Just BuiltinNatMod -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
+            Just BuiltinNatLe -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
+            Just BuiltinNatLt -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
+            Just BuiltinNatEq -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
             _ -> node
 
 natToInt :: InfoTable -> InfoTable

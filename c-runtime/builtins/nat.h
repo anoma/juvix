@@ -21,6 +21,8 @@ prim_nat prim_natsub(prim_nat a, prim_nat b) { return a - b; }
 
 prim_nat prim_natmul(prim_nat a, prim_nat b) { return a * b; }
 
+prim_nat prim_natudiv(prim_nat a, prim_nat b) { return (a + b - 1) / b; }
+
 prim_nat prim_natdiv(prim_nat a, prim_nat b) { return a / b; }
 
 prim_nat prim_natmod(prim_nat a, prim_nat b) { return a % b; }

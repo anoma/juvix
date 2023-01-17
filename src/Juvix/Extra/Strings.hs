@@ -122,6 +122,9 @@ natSub = "nat-sub"
 natMul :: IsString s => s
 natMul = "nat-mul"
 
+natUDiv :: IsString s => s
+natUDiv = "nat-udiv"
+
 natDiv :: IsString s => s
 natDiv = "nat-div"
 

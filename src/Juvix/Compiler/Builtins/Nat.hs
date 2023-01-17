@@ -126,8 +126,8 @@ registerNatSub f = do
         ]
   registerNatFun f BuiltinNatSub (nat --> nat --> nat) exClauses [varn, varm]
 
-registerNatDiv :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
-registerNatDiv f = do
+registerNatUDiv :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerNatUDiv f = do
   nat <- getBuiltinName (getLoc f) BuiltinNat
   zero <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatZero
   suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
@@ -144,6 +144,25 @@ registerNatDiv f = do
       exClauses =
         [ (zero ./. h, zero),
           (n ./. m, suc @@ ((sub @@ n @@ m) ./. m))
+        ]
+  registerNatFun f BuiltinNatUDiv (nat --> nat --> nat) exClauses [varn, varm]
+
+registerNatDiv :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerNatDiv f = do
+  nat <- getBuiltinName (getLoc f) BuiltinNat
+  suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
+  udiv <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatUDiv
+  sub <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSub
+  let divop = f ^. funDefName
+  varn <- freshVar "n"
+  varm <- freshVar "m"
+  let n = toExpression varn
+      m = toExpression varm
+      (./.) :: (IsExpression a, IsExpression b) => a -> b -> Expression
+      x ./. y = divop @@ x @@ y
+      exClauses :: [(Expression, Expression)]
+      exClauses =
+        [ (n ./. m, udiv @@ (sub @@ (suc @@ n) @@ m) @@ m)
         ]
   registerNatFun f BuiltinNatDiv (nat --> nat --> nat) exClauses [varn, varm]
 
