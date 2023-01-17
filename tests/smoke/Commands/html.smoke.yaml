@@ -7,7 +7,7 @@ tests:
         - bash
       script: |
         cd milestone/ValidityPredicates
-        juvix html SimpleFungibleToken.juvix --plain
+        juvix html SimpleFungibleToken.juvix --only-source
         cat html/SimpleFungibleToken.html
     stdout:
       contains:
@@ -20,7 +20,7 @@ tests:
         - bash
       script: |
         rm -rf html
-        juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --plain --output-dir=html --non-recursive
+        juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --only-source --output-dir=html --non-recursive
         [ -d html/assets ]
         [ -f html/SimpleFungibleToken.html ]
     stdout:
@@ -35,7 +35,7 @@ tests:
         - bash
       script: |
         rm -rf html
-        juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --plain --output-dir=html
+        juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --only-source --output-dir=html
         (ls html | wc -l)
         cd html
         [ -f Stdlib.Data.Ord.html ]
@@ -107,4 +107,40 @@ tests:
     stdout:
       contains: |
         SimpleFungibleToken.html
+    exit-status: 0
+
+  - name: non-recursive-generation
+    command:
+      shell:
+        - bash
+      script: |
+        rm -rf html
+        juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --output-dir=html --non-recursive
+        (ls html | wc -l)
+        cd html
+        [ -d html/assets ]
+        [ -f html/SimpleFungibleToken.html ]
+    stdout:
+      matches: |
+        Copying assets files to .*
+        Writing .*SimpleFungibleToken.html
+        2
+    exit-status: 0
+
+  - name: non-recursive-generation-only-source
+    command:
+      shell:
+        - bash
+      script: |
+        rm -rf html
+        juvix html milestone/ValidityPredicates/SimpleFungibleToken.juvix --output-dir=html --non-recursive --only-source
+        (ls html | wc -l)
+        cd html
+        [ -d assets/ ]
+        [ -f SimpleFungibleToken.html ]
+    stdout:
+      matches: |
+        Copying assets files to .*
+        Writing .*SimpleFungibleToken.html
+        2
     exit-status: 0

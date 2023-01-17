@@ -12,8 +12,8 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified
 import Juvix.Extra.Process
 import System.Process qualified as Process
 
-runGenSourceHtml :: Members '[Embed IO, App] r => HtmlOptions -> Sem r ()
-runGenSourceHtml HtmlOptions {..} = do
+runGenOnlySourceHtml :: Members '[Embed IO, App] r => HtmlOptions -> Sem r ()
+runGenOnlySourceHtml HtmlOptions {..} = do
   res <- runPipeline _htmlInputFile upToScoping
   let m = head (res ^. Scoper.resultModules)
   outputDir <- someBaseToAbs' (_htmlOutputDir ^. pathPath)
@@ -34,7 +34,7 @@ runGenSourceHtml HtmlOptions {..} = do
 
 runCommand :: Members '[Embed IO, App] r => HtmlOptions -> Sem r ()
 runCommand HtmlOptions {..}
-  | _htmlPlain = runGenSourceHtml HtmlOptions {..}
+  | _htmlOnlySource = runGenOnlySourceHtml HtmlOptions {..}
   | otherwise =
       do
         ctx <- runPipeline _htmlInputFile upToInternalTyped

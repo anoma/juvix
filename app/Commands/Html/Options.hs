@@ -5,7 +5,7 @@ import Juvix.Compiler.Backend.Html.Data.Options hiding (HtmlOptions)
 
 data HtmlOptions = HtmlOptions
   { _htmlNonRecursive :: Bool,
-    _htmlPlain :: Bool,
+    _htmlOnlySource :: Bool,
     _htmlTheme :: Theme,
     _htmlOutputDir :: AppPath Dir,
     _htmlInputFile :: AppPath File,
@@ -25,10 +25,10 @@ parseHtml = do
       ( long "non-recursive"
           <> help "Export imported modules recursively"
       )
-  _htmlPlain <-
+  _htmlOnlySource <-
     switch
-      ( long "plain"
-          <> help "Generate a Html file with the highlighted source code"
+      ( long "only-source"
+          <> help "Generate only Html for the source code with syntax highlighting"
       )
   _htmlTheme <-
     option
@@ -37,7 +37,7 @@ parseHtml = do
           <> metavar "THEME"
           <> value Ayu
           <> showDefault
-          <> help "Theme for syntax highlighting. Options: ayu (light) and nord (dark)."
+          <> help "Theme for syntax highlighting. Options: ayu (light) and nord (dark)"
           <> completeWith (map show allThemes)
       )
   _htmlOutputDir <-
