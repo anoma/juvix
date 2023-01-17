@@ -70,14 +70,14 @@ RUN sudo bash -c 'curl -s https://api.github.com/repos/anoma/juvix/releases/late
       && unzip juvix.zip \
       && mv juvix-linux* /home/vscode/.local/bin/juvix'
 
-RUN sudo bash -c 'mkdir -p /home/vscode/.local/wasi-sdk'
+RUN sudo bash -c 'mkdir -p /home/vscode/.local/wasi-sysroot'
 RUN sudo bash -c 'curl -s https://api.github.com/repos/WebAssembly/wasi-sdk/releases/tags/wasi-sdk-16 \
-      | grep -a "browser_download_url.*tar.gz" \
+      | grep -a "browser_download_url.*wasi-sysroot-16.*tar.gz" \
       | cut -d : -f 2,3 \
       | tr -d \" \
-      | wget --output-document wasi-sdk.tar.gz -qi - \
-      && tar xvf wasi-sdk.tar.gz --directory /home/vscode/.local/wasi-sdk/'
-ENV WASI_SYSROOT_PATH=/home/vscode/.local/wasi-sdk/
+      | wget --output-document wasi-sysroot.tar.gz -qi - \
+      && tar xvf wasi-sysroot.tar.gz --directory /home/vscode/.local/wasi-sysroot/'
+ENV WASI_SYSROOT_PATH=/home/vscode/.local/wasi-sysroot/
 
 RUN sudo bash -c 'curl -s https://api.github.com/repos/jonaprieto/smoke/releases/latest \
       | grep -a "browser_download_url.*Linux" \
