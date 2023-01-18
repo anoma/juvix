@@ -10,7 +10,7 @@ jobs: $ncpus
 allow-older: *
 allow-newer: *
 
-import: https://www.stackage.org/lts-20.2/cabal.config
+import: https://www.stackage.org/lts-20.7/cabal.config
 
 package juvix
     ghc-options: -optP-Wno-nonportable-include-path
