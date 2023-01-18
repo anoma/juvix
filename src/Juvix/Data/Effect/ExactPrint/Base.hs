@@ -8,7 +8,6 @@ where
 import Juvix.Data.Comment
 import Juvix.Data.Loc
 import Juvix.Prelude.Base
-import Juvix.Prelude.Trace
 import Prettyprinter qualified as P
 
 data ExactPrint ann m a where
@@ -51,16 +50,16 @@ re = reinterpretH h
     h = \case
       NoLoc p -> append' p >>= pureT
       Morpheme l p -> morpheme' l p >>= pureT
-      Region f m -> trace "region" $ do
-        st0 :: Builder ann <- get
-        modify @(Builder ann) (set builderDoc mempty)
-        k <- runT m
-        raise $ do
-          (st' :: Builder ann, b) <- evalExactPrint' st0 (region f k)
-          modify @(Builder ann) (over builderDoc (<> f (st' ^. builderDoc)))
-          modify @(Builder ann) (set builderComments (st' ^. builderComments))
-          modify @(Builder ann) (set builderEnd (st' ^. builderEnd))
-          return b
+      Region f m -> do
+        st0 :: Builder ann <- set builderDoc mempty <$> get @(Builder ann)
+        m' <- runT m
+        (st' :: Builder ann, fx) <- raise $ evalExactPrint' st0 m'
+
+        modify @(Builder ann) (over builderDoc (<> f (st' ^. builderDoc)))
+        modify @(Builder ann) (set builderComments (st' ^. builderComments))
+        modify @(Builder ann) (set builderEnd (st' ^. builderEnd))
+
+        return fx
 
 evalExactPrint' :: Builder ann -> Sem (ExactPrint ann ': r) a -> Sem r (Builder ann, a)
 evalExactPrint' b = runState b . re
@@ -82,7 +81,7 @@ line' :: forall ann r. Members '[State (Builder ann)] r => Proxy ann -> Sem r ()
 line' _ = append' @ann P.line
 
 morpheme' :: forall ann r. Members '[State (Builder ann)] r => Interval -> Doc ann -> Sem r ()
-morpheme' loc doc = trace "morpheme" $ do
+morpheme' loc doc = do
   mc <- popComment
   case mc of
     Nothing -> eprint loc doc
