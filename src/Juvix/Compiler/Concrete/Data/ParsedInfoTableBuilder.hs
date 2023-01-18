@@ -2,6 +2,7 @@ module Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
   ( InfoTableBuilder,
     registerLiteral,
     registerKeyword,
+    registerJudocText,
     registerComment,
     mergeTable,
     runInfoTableBuilder,
@@ -29,6 +30,14 @@ registerKeyword i =
     ParsedItem
       { _parsedLoc = i,
         _parsedTag = ParsedTagKeyword
+      }
+
+registerJudocText :: Member InfoTableBuilder r => Interval -> Sem r ()
+registerJudocText i =
+  registerItem
+    ParsedItem
+      { _parsedLoc = i,
+        _parsedTag = ParsedTagComment
       }
 
 registerLiteral :: Member InfoTableBuilder r => LiteralLoc -> Sem r LiteralLoc
@@ -61,10 +70,11 @@ iniState =
     }
 
 build :: BuilderState -> InfoTable
-build st = InfoTable {
-  _infoParsedItems = nubHashable (st ^. stateItems),
-  _infoParsedComments = st ^. stateComments
-  }
+build st =
+  InfoTable
+    { _infoParsedItems = nubHashable (st ^. stateItems),
+      _infoParsedComments = st ^. stateComments
+    }
 
 registerItem' :: Members '[State BuilderState] r => ParsedItem -> Sem r ()
 registerItem' i = modify' (over stateItems (i :))

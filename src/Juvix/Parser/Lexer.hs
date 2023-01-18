@@ -6,6 +6,7 @@ import Data.HashSet qualified as HashSet
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import GHC.Unicode
+import Juvix.Data.Comment
 import Juvix.Data.Keyword
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
@@ -24,19 +25,34 @@ space1 = void $ takeWhile1P (Just "white space (only spaces and newlines allowed
     isWhiteSpace :: Char -> Bool
     isWhiteSpace = (`elem` [' ', '\n'])
 
-space' :: forall r. Bool -> (forall a. ParsecS r a -> ParsecS r ()) -> ParsecS r ()
-space' judoc comment_ = L.space space1 lineComment block
+space' :: forall r. Bool -> ParsecS r [Comment]
+space' judoc = do
+  catMaybes
+    <$> P.many
+      ( hidden
+          ( choice
+              [space1 $> Nothing, Just <$> (lineComment <|> blockComment)]
+          )
+      )
   where
-    lineComment :: ParsecS r ()
-    lineComment = comment_ $ do
+    lineComment :: ParsecS r Comment
+    lineComment = do
+      let _commentType = CommentOneLine
       when
         judoc
         (notFollowedBy (P.chunk Str.judocStart))
-      void (P.chunk "--")
-      void (P.takeWhileP Nothing (/= '\n'))
+      (_commentText, _commentInterval) <- interval $ do
+        void (P.chunk "--")
+        P.takeWhileP Nothing (/= '\n')
+      return Comment {..}
 
-    block :: ParsecS r ()
-    block = comment_ (L.skipBlockComment "{-" "-}")
+    blockComment :: ParsecS r Comment
+    blockComment = do
+      let _commentType = CommentBlock
+      (_commentText, _commentInterval) <- interval $ do
+        void (P.chunk "{-")
+        pack <$> P.manyTill anySingle (P.chunk "-}")
+      return Comment {..}
 
 integer' :: ParsecS r (Integer, Interval) -> ParsecS r (Integer, Interval)
 integer' dec = do

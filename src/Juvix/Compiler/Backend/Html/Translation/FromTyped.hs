@@ -352,7 +352,7 @@ goJudoc (Judoc bs) = mconcatMapM goBlock bs
       JudocExample e -> goExample e
 
     goLine :: JudocParagraphLine 'Scoped -> Sem r Html
-    goLine (JudocParagraphLine atoms) = mconcatMapM goAtom (toList atoms)
+    goLine (JudocParagraphLine atoms) = mconcatMapM goAtom (map (^. withLocParam) (toList atoms))
 
     goExample :: Example 'Scoped -> Sem r Html
     goExample ex = do

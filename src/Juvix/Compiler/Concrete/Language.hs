@@ -857,6 +857,7 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Jud
 
 data Example (s :: Stage) = Example
   { _exampleId :: NameId,
+    _exampleLoc :: Interval,
     _exampleExpression :: ExpressionType s
   }
 
@@ -877,7 +878,7 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocB
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocBlock s)
 
 newtype JudocParagraphLine (s :: Stage)
-  = JudocParagraphLine (NonEmpty (JudocAtom s))
+  = JudocParagraphLine (NonEmpty (WithLoc (JudocAtom s)))
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocParagraphLine s)
 
@@ -977,6 +978,17 @@ deriving stock instance
 
 deriving stock instance
   Show (PatternAtom s) => Show (PatternAtoms s)
+
+instance HasLoc (Example s) where
+  getLoc e = e ^. exampleLoc
+
+instance HasLoc (JudocBlock s) where
+  getLoc = \case
+    JudocParagraph ls -> getLocSpan ls
+    JudocExample e -> getLoc e
+
+instance HasLoc (JudocParagraphLine s) where
+  getLoc (JudocParagraphLine atoms) = getLocSpan atoms
 
 instance HasLoc PatternScopedIden where
   getLoc = \case

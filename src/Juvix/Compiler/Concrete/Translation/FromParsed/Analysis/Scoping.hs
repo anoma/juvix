@@ -1250,7 +1250,7 @@ checkJudocLine ::
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
   JudocParagraphLine 'Parsed ->
   Sem r (JudocParagraphLine 'Scoped)
-checkJudocLine (JudocParagraphLine atoms) = JudocParagraphLine <$> mapM checkJudocAtom atoms
+checkJudocLine (JudocParagraphLine atoms) = JudocParagraphLine <$> mapM (mapM checkJudocAtom) atoms
 
 checkJudocAtom ::
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>

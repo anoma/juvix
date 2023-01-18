@@ -26,6 +26,7 @@ instance (SingI s) => PrettyPrint (Judoc s) where
   ppCode = P.ppCode >=> noLoc
 
 infixr 6 <+>
+
 (<+>) :: forall r. (Members '[ExactPrint Ann] r) => Sem r () -> Sem r () -> Sem r ()
 a <+> b = a >> noLoc @Ann space >> b
 

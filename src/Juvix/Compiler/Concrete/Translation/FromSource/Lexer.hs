@@ -20,17 +20,17 @@ import Text.Megaparsec.Char.Lexer qualified as L
 
 type OperatorSym = Text
 
-comment :: Members '[InfoTableBuilder] r => ParsecS r a -> ParsecS r a
-comment c = do
+judocText :: Members '[InfoTableBuilder] r => ParsecS r a -> ParsecS r a
+judocText c = do
   (a, i) <- interval c
-  P.lift (registerComment i)
+  P.lift (registerJudocText i)
   return a
 
-comment_ :: Members '[InfoTableBuilder] r => ParsecS r a -> ParsecS r ()
-comment_ = void . comment
+judocText_ :: Members '[InfoTableBuilder] r => ParsecS r a -> ParsecS r ()
+judocText_ = void . judocText_
 
 space :: forall r. Members '[InfoTableBuilder] r => ParsecS r ()
-space = space' True comment_
+space = space' True >>= mapM_ (P.lift . registerComment)
 
 lexeme :: Members '[InfoTableBuilder] r => ParsecS r a -> ParsecS r a
 lexeme = L.lexeme space

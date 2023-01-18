@@ -13,7 +13,7 @@ import Text.Megaparsec as P hiding (sepBy1, sepEndBy1, some)
 import Text.Megaparsec.Char.Lexer qualified as L
 
 space :: ParsecS r ()
-space = space' False void
+space = void (space' False)
 
 lexeme :: ParsecS r a -> ParsecS r a
 lexeme = L.lexeme space

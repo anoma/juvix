@@ -159,47 +159,49 @@ stashJudoc = do
     judocBlocks :: ParsecS r (Judoc 'Parsed)
     judocBlocks = Judoc <$> some judocBlock
     judocBlock :: ParsecS r (JudocBlock 'Parsed)
-    judocBlock = comment $ do
+    judocBlock = do
       p <-
         judocExample
           <|> judocParagraph
 
       void (many judocEmptyLine)
       return p
+
     judocParagraph :: ParsecS r (JudocBlock 'Parsed)
     judocParagraph = JudocParagraph <$> some1 judocLine
 
     judocExample :: ParsecS r (JudocBlock 'Parsed)
     judocExample = do
+      -- TODO judocText?
       P.try (judocStart >> judocExampleStart)
-      uid <- P.lift freshNameId
-      e <- parseExpressionAtoms
+      _exampleId <- P.lift freshNameId
+      (_exampleExpression, _exampleLoc) <- interval parseExpressionAtoms
       kw kwSemicolon
       space
-      return (JudocExample (Example uid e))
+      return (JudocExample (Example {..}))
 
     judocLine :: ParsecS r (JudocParagraphLine 'Parsed)
     judocLine = lexeme $ do
       P.try (judocStart >> P.notFollowedBy (P.choice [judocExampleStart, void P.newline]))
-      ln <- JudocParagraphLine <$> some1 judocAtom
+      ln <- JudocParagraphLine <$> some1 (withLoc judocAtom)
       P.newline
       return ln
 
 judocAtom :: forall r. Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (JudocAtom 'Parsed)
 judocAtom =
-  JudocText <$> judocText
+  JudocText <$> judocAtomText
     <|> JudocExpression <$> judocExpression
   where
-    judocText :: ParsecS r Text
-    judocText = comment (takeWhile1P Nothing isValidText)
+    judocAtomText :: ParsecS r Text
+    judocAtomText = judocText (takeWhile1P Nothing isValidText)
       where
         isValidText :: Char -> Bool
         isValidText = (`notElem` ['\n', ';'])
     judocExpression :: ParsecS r (ExpressionAtoms 'Parsed)
     judocExpression = do
-      comment_ (P.char ';')
+      judocText_ (P.char ';')
       e <- parseExpressionAtoms
-      comment_ (P.char ';')
+      judocText_ (P.char ';')
       return e
 
 builtinInductive :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r BuiltinInductive

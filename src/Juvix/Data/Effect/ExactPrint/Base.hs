@@ -67,12 +67,12 @@ evalExactPrint' b = runState b . re
 -- TODO add new lines?
 eprint :: forall ann r. Members '[State (Builder ann)] r => Interval -> Doc ann -> Sem r ()
 eprint _loc doc = append' doc
-  -- where
-    -- number of lines between two intervals. 0 if they are on the same line
-    -- it is assumed that a comes before b (i.e. a < b)
-    -- numLines :: Interval -> Interval -> Int
-    -- numLines a b = intervalStartLine b - intervalEndLine a
 
+-- where
+-- number of lines between two intervals. 0 if they are on the same line
+-- it is assumed that a comes before b (i.e. a < b)
+-- numLines :: Interval -> Interval -> Int
+-- numLines a b = intervalStartLine b - intervalEndLine a
 
 append' :: forall ann r. Members '[State (Builder ann)] r => Doc ann -> Sem r ()
 append' d = modify (over builderDoc (<> d))

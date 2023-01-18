@@ -4,9 +4,9 @@ module Juvix.Data.Effect.ExactPrint
   )
 where
 
-import Juvix.Data.Effect.ExactPrint.Base
-import Juvix.Data.CodeAnn qualified as C
 import Juvix.Data.CodeAnn (Ann)
+import Juvix.Data.CodeAnn qualified as C
+import Juvix.Data.Effect.ExactPrint.Base
 import Juvix.Prelude.Base
 import Prettyprinter qualified as P
 
@@ -23,13 +23,13 @@ line _ = noLoc @ann P.line
 semicolon :: forall r. Members '[ExactPrint Ann] r => Sem r ()
 semicolon = noLoc @Ann C.kwSemicolon
 
-sequenceEndWith :: forall l ann r. Foldable l => Proxy ann -> Sem r () ->  l (Sem r ()) -> Sem r ()
+sequenceEndWith :: forall l ann r. Foldable l => Proxy ann -> Sem r () -> l (Sem r ()) -> Sem r ()
 sequenceEndWith p sep l = sequenceWith p sep l >> sep
 
 endSemicolon :: forall l r. (Members '[ExactPrint Ann] r, Functor l) => l (Sem r ()) -> l (Sem r ())
 endSemicolon = fmap (>> semicolon)
 
-sequenceWith :: forall l ann r. Foldable l => Proxy ann -> Sem r () ->  l (Sem r ()) -> Sem r ()
+sequenceWith :: forall l ann r. Foldable l => Proxy ann -> Sem r () -> l (Sem r ()) -> Sem r ()
 sequenceWith _ sep = go . toList
   where
     go :: [Sem r ()] -> Sem r ()
