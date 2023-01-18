@@ -4,7 +4,6 @@ import Juvix.Prelude
 
 data Options = Options
   { _optShowNameIds :: Bool,
-    _optInlineImports :: Bool,
     _optNoApe :: Bool
   }
 
@@ -12,7 +11,6 @@ defaultOptions :: Options
 defaultOptions =
   Options
     { _optShowNameIds = False,
-      _optInlineImports = False,
       _optNoApe = False
     }
 

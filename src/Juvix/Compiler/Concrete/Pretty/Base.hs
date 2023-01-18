@@ -523,22 +523,11 @@ instance SingI s => PrettyCode (Import s) where
   ppCode :: forall r. Members '[Reader Options] r => Import s -> Sem r (Doc Ann)
   ppCode (Import m) = do
     modulePath' <- ppModulePath
-    inlineImport' <- inlineImport
-    return $ kwImport <+> modulePath' <+?> inlineImport'
+    return $ kwImport <+> modulePath'
     where
       ppModulePath = case sing :: SStage s of
         SParsed -> ppCode m
         SScoped -> ppTopModulePath (m ^. modulePath)
-      jumpLines :: Doc Ann -> Doc Ann
-      jumpLines x = line <> x <> line
-      inlineImport :: Sem r (Maybe (Doc Ann))
-      inlineImport = do
-        b <- asks (^. optInlineImports)
-        if b
-          then case sing :: SStage s of
-            SParsed -> return Nothing
-            SScoped -> Just . braces . jumpLines . indent' <$> ppCode m
-          else return Nothing
 
 instance PrettyCode PatternScopedIden where
   ppCode = \case
