@@ -3,6 +3,7 @@ module Juvix.Data.Loc where
 import Juvix.Prelude.Base
 import Prettyprinter
 import Text.Megaparsec qualified as M
+import Juvix.Prelude.Path
 
 newtype Pos = Pos {_unPos :: Word64}
   deriving stock (Show, Eq, Ord, Data)
@@ -31,7 +32,7 @@ instance Ord FileLoc where
 
 data Loc = Loc
   { -- | Name of source file
-    _locFile :: FilePath,
+    _locFile :: Path Abs File,
     -- | Position within the file
     _locFileLoc :: !FileLoc
   }
@@ -39,7 +40,7 @@ data Loc = Loc
 
 mkLoc :: Int -> M.SourcePos -> Loc
 mkLoc offset M.SourcePos {..} =
-  let _locFile = normalise sourceName
+  let _locFile = absFile (normalise sourceName)
    in Loc {..}
   where
     _locOffset = Pos (fromIntegral offset)
@@ -53,7 +54,7 @@ fromPos = Pos . fromIntegral . M.unPos
 
 -- | Inclusive interval
 data Interval = Interval
-  { _intervalFile :: FilePath,
+  { _intervalFile :: Path Abs File,
     _intervalStart :: FileLoc,
     _intervalEnd :: FileLoc
   }

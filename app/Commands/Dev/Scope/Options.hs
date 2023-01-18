@@ -6,7 +6,8 @@ import Juvix.Compiler.Concrete.Pretty qualified as Scoper
 
 data ScopeOptions = ScopeOptions
   { _scopeInlineImports :: Bool,
-    _scopeInputFile :: AppPath File
+    _scopeInputFile :: AppPath File,
+    _scopeWithComments :: Bool
   }
   deriving stock (Data)
 
@@ -14,6 +15,11 @@ makeLenses ''ScopeOptions
 
 parseScope :: Parser ScopeOptions
 parseScope = do
+  _scopeWithComments <-
+    switch
+      ( long "with-comments"
+          <> help "Include user comments when printing code"
+      )
   _scopeInlineImports <-
     switch
       ( long "inline-imports"

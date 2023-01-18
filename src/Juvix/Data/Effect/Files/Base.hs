@@ -1,11 +1,9 @@
 module Juvix.Data.Effect.Files.Base
   ( module Juvix.Data.Effect.Files.Base,
-    module Juvix.Data.Effect.Files.Error,
     module Juvix.Data.Uid,
   )
 where
 
-import Juvix.Data.Effect.Files.Error
 import Juvix.Data.Uid
 import Juvix.Prelude.Base
 import Path

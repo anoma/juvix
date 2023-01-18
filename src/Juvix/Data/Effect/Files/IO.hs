@@ -16,10 +16,10 @@ runFilesIO ::
   forall r a.
   Member (Embed IO) r =>
   Sem (Files ': r) a ->
-  Sem (Error FilesError ': r) a
-runFilesIO = reinterpret helper
+  Sem r a
+runFilesIO = interpret helper
   where
-    helper :: forall rInitial x. Files (Sem rInitial) x -> Sem (Error FilesError ': r) x
+    helper :: forall rInitial x. Files (Sem rInitial) x -> Sem r x
     helper = \case
       ReadFile' f -> embed (readFile (toFilePath f))
       WriteFileBS p bs -> embed (ByteString.writeFile (toFilePath p) bs)

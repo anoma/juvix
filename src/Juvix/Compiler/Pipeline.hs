@@ -184,7 +184,6 @@ runIOEither builtinsState entry =
     . fmap makeArtifacts
     . runBuiltins builtinsState
     . runNameIdGen
-    . mapError (JuvixError @FilesError)
     . runFilesIO
     . runReader entry
     . runPathResolverPipe

@@ -3,7 +3,6 @@ module Juvix.Compiler.Concrete.Extra
     mkScopedModule,
     getAllModules,
     getModuleFilePath,
-    getModuleFileAbsPath,
     unfoldApplication,
   )
 where
@@ -49,11 +48,8 @@ getAllModules' m = recordModule m
       SModuleLocal -> Nothing
       SModuleTop -> Just _moduleRefModule
 
-getModuleFilePath :: Module 'Scoped 'ModuleTop -> FilePath
+getModuleFilePath :: Module 'Scoped 'ModuleTop -> Path Abs File
 getModuleFilePath m = getLoc (m ^. modulePath) ^. intervalFile
-
-getModuleFileAbsPath :: FilePath -> Module 'Scoped 'ModuleTop -> FilePath
-getModuleFileAbsPath root m = normalise (root </> getModuleFilePath m)
 
 unfoldApplication :: Application -> (Expression, [Expression])
 unfoldApplication (Application l r) = go [r] l

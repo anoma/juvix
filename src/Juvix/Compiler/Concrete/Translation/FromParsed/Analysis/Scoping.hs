@@ -545,7 +545,7 @@ checkTopModule m@(Module path params doc body) = do
     checkPath :: Members '[Error ScoperError, PathResolver] s => Sem s ()
     checkPath = do
       expectedPath <- expectedModulePath path
-      let actualPath = absFile (getLoc path ^. intervalFile)
+      let actualPath = getLoc path ^. intervalFile
       unlessM (equalPaths expectedPath actualPath) $
         throw
           ( ErrWrongTopModuleName

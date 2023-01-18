@@ -73,7 +73,7 @@ build :: BuilderState -> InfoTable
 build st =
   InfoTable
     { _infoParsedItems = nubHashable (st ^. stateItems),
-      _infoParsedComments = st ^. stateComments
+      _infoParsedComments = mkComments (st ^. stateComments)
     }
 
 registerItem' :: Members '[State BuilderState] r => ParsedItem -> Sem r ()

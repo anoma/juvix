@@ -2,7 +2,20 @@ module Juvix.Data.Comment where
 
 import Juvix.Data.Loc
 import Juvix.Prelude.Base
+import Path
 import Prettyprinter
+
+newtype Comments = Comments
+  { _commentsByFile :: HashMap (Path Abs File) (NonEmpty FileComments)
+  }
+  deriving stock (Eq, Show, Generic, Data)
+
+data FileComments = FileComments
+  { -- | sorted by position
+    _fileCommentsSorted :: NonEmpty Comment,
+    _fileCommentsFile :: Path Abs File
+  }
+  deriving stock (Eq, Show, Generic, Data)
 
 data CommentType
   = CommentOneLine
@@ -17,6 +30,8 @@ data Comment = Comment
   deriving stock (Show, Eq, Ord, Generic, Data)
 
 makeLenses ''Comment
+makeLenses ''FileComments
+makeLenses ''Comments
 
 instance Pretty Comment where
   pretty :: Comment -> Doc ann
@@ -26,3 +41,6 @@ instance Pretty Comment where
       delim = case c ^. commentType of
         CommentOneLine -> (<> "--")
         CommentBlock -> enclose "{-" "-}"
+
+mkComments :: [Comment] -> Comments
+mkComments = undefined

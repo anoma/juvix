@@ -27,7 +27,7 @@ judocText c = do
   return a
 
 judocText_ :: Members '[InfoTableBuilder] r => ParsecS r a -> ParsecS r ()
-judocText_ = void . judocText_
+judocText_ = void . judocText
 
 space :: forall r. Members '[InfoTableBuilder] r => ParsecS r ()
 space = space' True >>= mapM_ (P.lift . registerComment)
