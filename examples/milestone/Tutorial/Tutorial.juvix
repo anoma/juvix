@@ -6,17 +6,14 @@ This is an advanced tutorial for the Juvix programming language. You should read
 the "Quick start" and the "Learn Juvix in minutes" pages in the documentation
 first.
 
+COMING SOON
+
 -}
 
 -- import the standard library prelude and bring it into scope
 open import Stdlib.Prelude;
 -- bring comparison operators on Nat into scope
 open import Stdlib.Data.Nat.Ord;
-
--- A monomorphic list of natural numbers.
-type NatList :=
-| NatNil : NatList
-| NatCons : Nat → NatList → NatList;
 
 main : IO;
 main := printStringLn "Hello world!";
