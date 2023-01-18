@@ -1,4 +1,4 @@
--- Empty module with comments
+-- Integer arithmetic
 module test003;
 
 {-
@@ -8,5 +8,15 @@ Multiline comment
 {- nested comments don't work -- }
 
 -}
+
+open import Stdlib.Prelude;
+
+main : IO;
+main :=
+  printNatLn (mod 3 2) >>
+  printNatLn (div 18 4) >>
+  printNatLn (mod 18 4) >>
+  printNatLn (div 16 4) >>
+  printNatLn (mod 16 4);
 
 end;
