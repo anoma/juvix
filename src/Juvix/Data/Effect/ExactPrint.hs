@@ -8,13 +8,17 @@ import Juvix.Data.CodeAnn (Ann)
 import Juvix.Data.CodeAnn qualified as C
 import Juvix.Data.Effect.ExactPrint.Base
 import Juvix.Prelude.Base
-import Prettyprinter qualified as P
+import Juvix.Prelude.Pretty qualified as P
+
+infixr 6 <+>
+(<+>) :: forall r. (Members '[ExactPrint Ann] r) => Sem r () -> Sem r () -> Sem r ()
+a <+> b = a >> noLoc @Ann P.space >> b
 
 -- NOTE that then you can use subsume indent' in the call site
 -- indent' :: forall ann r a. Sem (ExactPrint ann ': r) a -> Sem (ExactPrint ann ': r) a
 -- indent' = region @ann (P.indent 2)
 
-indent :: forall ann r a. Members '[ExactPrint ann] r => Proxy ann -> Sem r () -> Sem r ()
+indent :: forall ann r. Members '[ExactPrint ann] r => Proxy ann -> Sem r () -> Sem r ()
 indent _ = region @ann (P.indent 2)
 
 line :: forall ann r. Members '[ExactPrint ann] r => Proxy ann -> Sem r ()

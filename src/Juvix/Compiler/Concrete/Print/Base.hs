@@ -1,6 +1,7 @@
 module Juvix.Compiler.Concrete.Print.Base where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
+import Juvix.Prelude.Path
 -- import Data.Text qualified as T
 -- import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
@@ -14,7 +15,7 @@ import Juvix.Data.CodeAnn (Ann)
 import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.Keyword.All
 import Juvix.Prelude.Base hiding ((<+>))
-import Juvix.Prelude.Pretty (pretty, space)
+import Juvix.Prelude.Pretty (pretty)
 
 class PrettyPrint a where
   ppCode :: Members '[ExactPrint Ann, Reader Options] r => a -> Sem r ()
@@ -25,10 +26,16 @@ instance PrettyPrint Keyword where
 instance (SingI s) => PrettyPrint (Judoc s) where
   ppCode = P.ppCode >=> noLoc
 
-infixr 6 <+>
-
-(<+>) :: forall r. (Members '[ExactPrint Ann] r) => Sem r () -> Sem r () -> Sem r ()
-a <+> b = a >> noLoc @Ann space >> b
+doc :: (PrettyPrint c, HasLoc c) => Options -> Comments -> c -> Doc Ann
+doc opts cs x =
+  run
+    . execExactPrint (fileComments file cs)
+    . runReader opts
+    . ppCode
+    $ x
+  where
+  file :: Path Abs File
+  file = getLoc x ^. intervalFile
 
 ppModulePathType ::
   forall t s r.

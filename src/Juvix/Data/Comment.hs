@@ -1,18 +1,19 @@
 module Juvix.Data.Comment where
 
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Data.Loc
 import Juvix.Prelude.Base
 import Path
 import Prettyprinter
 
 newtype Comments = Comments
-  { _commentsByFile :: HashMap (Path Abs File) (NonEmpty FileComments)
+  { _commentsByFile :: HashMap (Path Abs File) FileComments
   }
   deriving stock (Eq, Show, Generic, Data)
 
 data FileComments = FileComments
   { -- | sorted by position
-    _fileCommentsSorted :: NonEmpty Comment,
+    _fileCommentsSorted :: [Comment],
     _fileCommentsFile :: Path Abs File
   }
   deriving stock (Eq, Show, Generic, Data)
@@ -43,4 +44,25 @@ instance Pretty Comment where
         CommentBlock -> enclose "{-" "-}"
 
 mkComments :: [Comment] -> Comments
-mkComments = undefined
+mkComments cs = Comments {..}
+  where
+    commentFile :: Comment -> Path Abs File
+    commentFile = (^. commentInterval . intervalFile)
+    _commentsByFile :: HashMap (Path Abs File) FileComments
+    _commentsByFile =
+      HashMap.fromList
+        [ (_fileCommentsFile, FileComments {..})
+          | filecomments :: NonEmpty Comment <- groupSortOn commentFile cs,
+            let _fileCommentsFile = commentFile (head filecomments),
+            let _fileCommentsSorted = sortOn (^. commentInterval) (toList filecomments)
+        ]
+
+emptyFileComments :: Path Abs File -> FileComments
+emptyFileComments _fileCommentsFile =
+  FileComments
+    { _fileCommentsSorted = [],
+      ..
+    }
+
+fileComments :: Path Abs File -> Comments -> FileComments
+fileComments f cs = HashMap.lookupDefault (emptyFileComments f) f (cs ^. commentsByFile)

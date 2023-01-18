@@ -979,6 +979,15 @@ deriving stock instance
 deriving stock instance
   Show (PatternAtom s) => Show (PatternAtoms s)
 
+instance (SingI s, SingI t) => HasLoc (Module s t) where
+  getLoc m =  case sing :: SStage s of
+    SParsed -> case sing :: SModuleIsTop t of
+      SModuleLocal -> getLoc (m ^. modulePath)
+      SModuleTop -> getLoc (m ^. modulePath)
+    SScoped -> case sing :: SModuleIsTop t of
+      SModuleLocal -> getLoc (m ^. modulePath)
+      SModuleTop -> getLoc (m ^. modulePath)
+
 instance HasLoc (Example s) where
   getLoc e = e ^. exampleLoc
 
