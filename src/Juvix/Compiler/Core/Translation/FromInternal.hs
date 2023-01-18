@@ -271,22 +271,28 @@ goFunctionDef ::
 goFunctionDef (f, sym) = do
   mbody <- case f ^. Internal.funDefBuiltin of
     Just Internal.BuiltinBoolIf -> return Nothing
-    Just _ -> Just <$> mkBody
-    Nothing -> Just <$> mkBody
+    Just _ -> Just <$> runReader initIndexTable (mkFunBody f)
+    Nothing -> Just <$> runReader initIndexTable (mkFunBody f)
   forM_ mbody (registerIdentNode sym)
-  where
-    mkBody :: Sem r Node
-    mkBody
-      | nPatterns == 0 = runReader initIndexTable (goExpression (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody))
-      | otherwise = do
+
+mkFunBody ::
+  forall r.
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
+  Internal.FunctionDef ->
+  Sem r Node
+mkFunBody f =
+  if
+      | nPatterns == 0 -> goExpression (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody)
+      | otherwise -> do
           let values :: [Node]
               values = mkVar Info.empty <$> vs
-              indexTable :: IndexTable
-              indexTable = IndexTable {_indexTableVarsNum = nPatterns, _indexTableVars = mempty}
-          ms <- mapM (runReader indexTable . goFunctionClause) (f ^. Internal.funDefClauses)
+          ms <-
+            local
+              (over indexTableVarsNum (+ nPatterns))
+              (mapM goFunctionClause (f ^. Internal.funDefClauses))
           let match = mkMatch' (fromList values) (toList ms)
           return $ foldr (\_ n -> mkLambda' n) match vs
-
+  where
     -- Assumption: All clauses have the same number of patterns
     nPatterns :: Int
     nPatterns = length (f ^. Internal.funDefClauses . _head1 . Internal.clausePatterns)
@@ -310,6 +316,40 @@ goLambda l = do
   where
     nPatterns :: Int
     nPatterns = length (l ^. Internal.lambdaClauses . _head1 . Internal.lambdaPatterns)
+
+goLet ::
+  forall r.
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
+  Internal.Let ->
+  Sem r Node
+goLet l = do
+  vars <- asks (^. indexTableVars)
+  varsNum <- asks (^. indexTableVarsNum)
+  let bs :: [Name]
+      bs = map (\(Internal.LetFunDef (Internal.FunctionDef {..})) -> _funDefName) (toList $ l ^. Internal.letClauses)
+      (vars', varsNum') =
+        foldl'
+          ( \(vs, k) name ->
+              (HashMap.insert (name ^. nameId) k vs, k + 1)
+          )
+          (vars, varsNum)
+          bs
+  defs <-
+    local
+      (set indexTableVars vars' . set indexTableVarsNum varsNum')
+      (mapM goLetClause (l ^. Internal.letClauses))
+  value <-
+    local
+      (set indexTableVars vars' . set indexTableVarsNum varsNum')
+      (goExpression (l ^. Internal.letExpression))
+  return $ mkLetRec' defs value
+
+goLetClause ::
+  forall r.
+  Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
+  Internal.LetClause ->
+  Sem r Node
+goLetClause (Internal.LetFunDef f) = mkFunBody f
 
 goAxiomInductive ::
   forall r.
@@ -519,7 +559,7 @@ goExpression' ::
   Internal.Expression ->
   Sem r Node
 goExpression' = \case
-  Internal.ExpressionLet {} -> error "to be implemented"
+  Internal.ExpressionLet l -> goLet l
   Internal.ExpressionLiteral l -> do
     tab <- getInfoTable
     return (goLiteral (fromJust $ tab ^. infoIntToNat) l)
@@ -529,11 +569,18 @@ goExpression' = \case
       varsNum <- asks (^. indexTableVarsNum)
       return (mkVar (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) (varsNum - k - 1))
     Internal.IdenFunction n -> do
-      m <- getIdent identIndex
-      return $ case m of
-        Just (IdentFun sym) -> mkIdent (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) sym
-        Just _ -> error ("internal to core: not a function: " <> txt)
-        Nothing -> error ("internal to core: undeclared identifier: " <> txt)
+      -- if the function was defined by a let, then in Core it is stored in a variable
+      vars <- asks (^. indexTableVars)
+      case HashMap.lookup id_ vars of
+        Nothing -> do
+          m <- getIdent identIndex
+          return $ case m of
+            Just (IdentFun sym) -> mkIdent (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) sym
+            Just _ -> error ("internal to core: not a function: " <> txt)
+            Nothing -> error ("internal to core: undeclared identifier: " <> txt)
+        Just k -> do
+          varsNum <- asks (^. indexTableVarsNum)
+          return (mkVar (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) (varsNum - k - 1))
     Internal.IdenInductive n -> do
       m <- getIdent identIndex
       return $ case m of
