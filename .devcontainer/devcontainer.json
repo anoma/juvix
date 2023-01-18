@@ -1,0 +1,79 @@
+{
+  "name": "Ubuntu",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      "USERNAME": "vscode",
+      "VARIANT": "ubuntu-22.04"
+    }
+  },
+  "runArgs": [
+    "--privileged"
+  ],
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
+  "settings": {
+    "editor.tabSize": 2,
+    "editor.renderWhitespace": "trailing",
+    "editor.wordWrap": "wordWrapColumn",
+    "editor.fontSize": 16,
+    "editor.minimap.enabled": false,
+    "editor.hover.delay": 700,
+    "explorer.confirmDelete": false,
+    "explorer.confirmDragAndDrop": false,
+    "files.trimTrailingWhitespace": true,
+    "haskell.formattingProvider": "ormolu",
+    "haskell.openSourceInHackage": false,
+    "haskell.openDocumentationInHackage": false,
+    "haskell.checkProject": true,
+    "haskell.plugin.callHierarchy.globalOn": true,
+    "haskell.plugin.changeTypeSignature.globalOn": true,
+    "haskell.plugin.class.codeActionsOn": true,
+    "haskell.plugin.class.codeLensOn": true,
+    "haskell.plugin.fourmolu.config.external": false,
+    "haskell.plugin.gadt.globalOn": true,
+    "haskell.plugin.ghcide-code-actions-bindings.globalOn": true,
+    "haskell.plugin.ghcide-code-actions-fill-holes.globalOn": true,
+    "haskell.plugin.ghcide-code-actions-imports-exports.globalOn": true,
+    "haskell.plugin.ghcide-code-actions-type-signatures.globalOn": true,
+    "haskell.plugin.ghcide-completions.globalOn": true,
+    "haskell.plugin.hlint.diagnosticsOn": false,
+    "haskell.plugin.rename.config.crossModule": true,
+    "haskell.plugin.rename.globalOn": true,
+    "haskell.plugin.retrie.globalOn": true,
+    "haskell.plugin.splice.globalOn": true,
+    "haskell.plugin.tactics.codeLensOn": true,
+    "haskell.plugin.tactics.config.proofstate_styling": true,
+    "haskell.plugin.tactics.hoverOn": true,
+    "haskell.trace.client": "debug",
+    "haskell.upgradeGHCup": true,
+    "haskell.indentationRules.enabled": true,
+    "workbench.preferredDarkColorTheme": "Visual Studio Dark",
+    "workbench.colorTheme": "Visual Studio Dark",
+    "workbench.colorCustomizations": {},
+    "breadcrumbs.enabled": false,
+    "extensions.ignoreRecommendations": true,
+    "terminal.integrated.confirmOnKill": "never",
+    "juvix-mode.opts": {
+      "internalBuildDir": "/home/vscode/.local/juvix"
+    },
+    "juvix-mode.bin.path": "/home/vscode/.local/bin/juvix",
+    "juvix-mode.input.languages": [
+      "Juvix",
+      "JuvixCore",
+      "Haskell"
+    ],
+    "juvix-mode.reloadReplOnSave": true
+  },
+  "extensions": [
+    "haskell.haskell",
+    "ms-vscode.cpptools",
+    "Heliax.juvix-mode",
+    "Meowcolm024.runner2",
+    "doomsec.doom-theme"
+  ],
+  "remoteUser": "vscode"
+}
