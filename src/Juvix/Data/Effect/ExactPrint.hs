@@ -11,6 +11,7 @@ import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty qualified as P
 
 infixr 6 <+>
+
 (<+>) :: forall r. (Members '[ExactPrint Ann] r) => Sem r () -> Sem r () -> Sem r ()
 a <+> b = a >> noLoc @Ann P.space >> b
 

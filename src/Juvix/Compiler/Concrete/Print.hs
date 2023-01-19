@@ -1,8 +1,8 @@
 module Juvix.Compiler.Concrete.Print where
 
+import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Concrete.Print.Base
 import Juvix.Data.Effect.ExactPrint
-import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Data.PPOutput
 import Juvix.Prelude
 

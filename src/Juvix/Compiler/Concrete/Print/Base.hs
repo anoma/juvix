@@ -1,7 +1,6 @@
 module Juvix.Compiler.Concrete.Print.Base where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
-import Juvix.Prelude.Path
 -- import Data.Text qualified as T
 -- import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
@@ -15,6 +14,7 @@ import Juvix.Data.CodeAnn (Ann)
 import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.Keyword.All
 import Juvix.Prelude.Base hiding ((<+>))
+import Juvix.Prelude.Path
 import Juvix.Prelude.Pretty (pretty)
 
 class PrettyPrint a where
@@ -34,8 +34,8 @@ doc opts cs x =
     . ppCode
     $ x
   where
-  file :: Path Abs File
-  file = getLoc x ^. intervalFile
+    file :: Path Abs File
+    file = getLoc x ^. intervalFile
 
 ppModulePathType ::
   forall t s r.
@@ -87,11 +87,11 @@ instance PrettyPrint c => PrettyPrint (WithLoc c) where
   ppCode = ppCode . (^. withLocParam)
 
 instance (HasLoc n, P.PrettyCode n) => PrettyPrint (S.Name' n) where
-  ppCode n = P.ppCode n >>= morpheme (getLoc n)
+  ppCode = ppMorpheme
 
 instance PrettyPrint Name where
   ppCode n = case n of
-    NameUnqualified s -> P.ppSymbol s >>= morpheme (getLoc s)
+    NameUnqualified s -> ppMorpheme s
     NameQualified s -> ppCode s
 
 instance PrettyPrint QualifiedName where
@@ -101,11 +101,24 @@ instance PrettyPrint QualifiedName where
     str <- P.dotted <$> mapM P.ppSymbol symbols
     morpheme (getLoc q) str
 
+ppMorpheme :: (Members '[ExactPrint Ann, Reader Options] r, P.PrettyCode c, HasLoc c) => c -> Sem r ()
+ppMorpheme n = P.ppCode n >>= morpheme (getLoc n)
+
+instance SingI s => PrettyPrint (Import s) where
+  ppCode :: Members '[ExactPrint Ann, Reader Options] r => Import s -> Sem r ()
+  ppCode (Import m) = do
+    ppCode kwImport
+      <+> ppModulePath
+    where
+      ppModulePath = case sing :: SStage s of
+        SParsed -> ppCode m
+        SScoped -> ppMorpheme (m ^. modulePath)
+
 instance SingI s => PrettyPrint (Statement s) where
   ppCode = \case
     StatementOperator op -> todo
     StatementTypeSignature sig -> todo
-    StatementImport i -> todo
+    StatementImport i -> ppCode i
     StatementInductive d -> todo
     StatementModule m -> todo
     StatementOpenModule o -> todo

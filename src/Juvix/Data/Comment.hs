@@ -40,8 +40,11 @@ instance Pretty Comment where
     where
       delim :: Doc ann -> Doc ann
       delim = case c ^. commentType of
-        CommentOneLine -> (<> "--")
+        CommentOneLine -> ("--" <>)
         CommentBlock -> enclose "{-" "-}"
+
+allComments :: Comments -> [Comment]
+allComments c = concat [ f ^. fileCommentsSorted| f <- toList (c ^. commentsByFile) ]
 
 mkComments :: [Comment] -> Comments
 mkComments cs = Comments {..}
@@ -66,3 +69,12 @@ emptyFileComments _fileCommentsFile =
 
 fileComments :: Path Abs File -> Comments -> FileComments
 fileComments f cs = HashMap.lookupDefault (emptyFileComments f) f (cs ^. commentsByFile)
+
+instance Pretty FileComments where
+  pretty fc =
+    pretty (fc ^. fileCommentsFile)
+      <> line
+      <> vsep [pretty c | c <- toList (fc ^. fileCommentsSorted)]
+
+instance Pretty Comments where
+  pretty c = vsep [pretty fc | fc <- toList (c ^. commentsByFile)]

@@ -1,9 +1,9 @@
 module Juvix.Data.Loc where
 
 import Juvix.Prelude.Base
+import Juvix.Prelude.Path
 import Prettyprinter
 import Text.Megaparsec qualified as M
-import Juvix.Prelude.Path
 
 newtype Pos = Pos {_unPos :: Word64}
   deriving stock (Show, Eq, Ord, Data)

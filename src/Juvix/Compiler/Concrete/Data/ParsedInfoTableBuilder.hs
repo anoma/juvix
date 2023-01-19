@@ -16,6 +16,7 @@ import Juvix.Compiler.Concrete.Data.ParsedInfoTable
 import Juvix.Compiler.Concrete.Data.ParsedItem
 import Juvix.Data.Comment
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 
 data InfoTableBuilder m a where
   RegisterItem :: ParsedItem -> InfoTableBuilder m ()
@@ -87,8 +88,9 @@ runInfoTableBuilder =
       ( \case
           RegisterItem i ->
             modify' (over stateItems (i :))
-          MergeTable tbl ->
+          MergeTable tbl -> do
             modify' (over stateItems ((tbl ^. infoParsedItems) <>))
+            modify' (over stateComments (allComments (tbl ^. infoParsedComments) <>))
           RegisterComment c -> do
             modify' (over stateComments (c :))
             registerItem'
