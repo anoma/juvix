@@ -38,7 +38,7 @@ getAllModules' m = recordModule m
 
     processStatement :: Statement 'Scoped -> Sem r ()
     processStatement = \case
-      StatementImport (Import ref) -> recordModule (ref ^. moduleRefModule)
+      StatementImport i -> recordModule (i ^. importModule . moduleRefModule)
       StatementModule n -> processModule (mkScopedModule n)
       StatementOpenModule n -> forM_ (getModuleRefTopModule (n ^. openModuleName)) recordModule
       _ -> return ()

@@ -242,7 +242,7 @@ builtinTypeSig b = do
 
 builtinStatement :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (Statement 'Parsed)
 builtinStatement = do
-  kw kwBuiltin
+  void (kw kwBuiltin)
   (builtinInductive >>= fmap StatementInductive . builtinInductiveDef)
     <|> (builtinFunction >>= fmap StatementTypeSignature . builtinTypeSig)
     <|> (builtinAxiom >>= fmap StatementAxiom . builtinAxiomDef)
@@ -308,7 +308,7 @@ operatorSyntaxDef = do
 
 import_ :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (Import 'Parsed)
 import_ = do
-  kw kwImport
+  _importKw <- kw kwImport
   _importModule <- topModulePath
   return Import {..}
 
@@ -597,7 +597,7 @@ pmodulePath = case sing :: SModuleIsTop t of
 
 moduleDef :: (SingI t, Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (Module 'Parsed t)
 moduleDef = P.label "<module definition>" $ do
-  kw kwModule
+  _moduleKw <- kw kwModule
   _moduleDoc <- getJudoc
   _modulePath <- pmodulePath
   _moduleParameters <- many inductiveParam
@@ -618,7 +618,7 @@ atomicExpression = do
 openModule :: forall r. Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (OpenModule 'Parsed)
 openModule = do
   kw kwOpen
-  _openModuleImport <- isJust <$> optional (kw kwImport)
+  _openModuleImportKw <- optional (kw kwImport)
   _openModuleName <- name
   _openParameters <- many atomicExpression
   _openUsingHiding <- optional usingOrHiding

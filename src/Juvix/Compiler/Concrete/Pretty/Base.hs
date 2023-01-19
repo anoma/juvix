@@ -6,6 +6,7 @@ module Juvix.Compiler.Concrete.Pretty.Base
 where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
+import Juvix.Data.Keyword
 import Data.Text qualified as T
 import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath, IsConcrete (..))
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
@@ -319,6 +320,12 @@ ppName = case sing :: SStage s of
 instance PrettyCode S.NameId where
   ppCode (S.NameId k) = return (pretty k)
 
+instance PrettyCode KeywordRef where
+  ppCode = return . annotate AnnKeyword . pretty
+
+instance PrettyCode Keyword where
+  ppCode = return . annotate AnnKeyword . pretty
+
 annDef :: forall s. SingI s => SymbolType s -> Doc Ann -> Doc Ann
 annDef nm = case sing :: SStage s of
   SScoped -> annSDef nm
@@ -365,11 +372,9 @@ instance SingI s => PrettyCode (OpenModule s) where
       SScoped -> ppCode _openModuleName
     openUsingHiding' <- mapM ppUsingHiding _openUsingHiding
     openParameters' <- ppOpenParams
+    importkw' <- mapM ppCode _openModuleImportKw
     let openPublic' = ppPublic
-        import_
-          | _openModuleImport = Just kwImport
-          | otherwise = Nothing
-    return $ kwOpen <+?> import_ <+> openModuleName' <+?> openParameters' <+?> openUsingHiding' <+?> openPublic'
+    return $ kwOpen <+?> importkw' <+> openModuleName' <+?> openParameters' <+?> openUsingHiding' <+?> openPublic'
     where
       ppAtom' = case sing :: SStage s of
         SParsed -> ppCodeAtom
@@ -523,13 +528,13 @@ instance SingI s => PrettyCode (AxiomDef s) where
 
 instance SingI s => PrettyCode (Import s) where
   ppCode :: forall r. Members '[Reader Options] r => Import s -> Sem r (Doc Ann)
-  ppCode (Import m) = do
+  ppCode i = do
     modulePath' <- ppModulePath
     return $ kwImport <+> modulePath'
     where
       ppModulePath = case sing :: SStage s of
-        SParsed -> ppCode m
-        SScoped -> ppCode m
+        SParsed -> ppCode (i ^. importModule)
+        SScoped -> ppCode (i ^. importModule)
 
 instance SingI t => PrettyCode (ModuleRef'' 'Concrete t) where
   ppCode m = case sing :: SModuleIsTop t of

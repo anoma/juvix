@@ -15,6 +15,7 @@ module Juvix.Compiler.Concrete.Language
 where
 
 import Data.Kind qualified as GHC
+import Juvix.Data.Keyword
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
@@ -151,8 +152,10 @@ deriving stock instance
 -- Import statement
 --------------------------------------------------------------------------------
 
-newtype Import (s :: Stage) = Import
-  { _importModule :: ImportType s
+data Import (s :: Stage) = Import
+  {
+    _importKw :: KeywordRef,
+    _importModule :: ImportType s
   }
 
 deriving stock instance (Show (ImportType s)) => Show (Import s)
@@ -160,9 +163,6 @@ deriving stock instance (Show (ImportType s)) => Show (Import s)
 deriving stock instance (Eq (ImportType s)) => Eq (Import s)
 
 deriving stock instance (Ord (ImportType s)) => Ord (Import s)
-
-instance HasLoc (Import 'Parsed) where
-  getLoc (Import t) = getLoc t
 
 --------------------------------------------------------------------------------
 -- Operator syntax declaration
@@ -388,7 +388,9 @@ deriving stock instance
 type LocalModuleName s = SymbolType s
 
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
-  { _modulePath :: ModulePathType s t,
+  {
+    _moduleKw :: KeywordRef,
+    _modulePath :: ModulePathType s t,
     _moduleParameters :: [InductiveParameter s],
     _moduleDoc :: Maybe (Judoc s),
     _moduleBody :: [Statement s]
@@ -500,7 +502,7 @@ newtype ExportInfo = ExportInfo
 
 data OpenModule (s :: Stage) = OpenModule
   { _openModuleName :: ModuleRefType s,
-    _openModuleImport :: Bool,
+    _openModuleImportKw :: Maybe KeywordRef,
     _openParameters :: [ExpressionType s],
     _openUsingHiding :: Maybe UsingHiding,
     _openPublic :: PublicAnn
@@ -989,6 +991,11 @@ deriving stock instance
 
 deriving stock instance
   Show (PatternAtom s) => Show (PatternAtoms s)
+
+instance SingI s => HasLoc (Import s) where
+  getLoc Import {..} = case sing :: SStage s of
+    SParsed -> getLoc _importModule
+    SScoped -> getLoc _importModule
 
 instance HasLoc (ModuleRef'' 'S.Concrete t) where
   getLoc ref = getLoc (ref ^. moduleRefName)

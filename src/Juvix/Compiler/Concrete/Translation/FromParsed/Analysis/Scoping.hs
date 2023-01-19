@@ -220,20 +220,20 @@ checkImport ::
   Members '[Error ScoperError, State Scope, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
-checkImport import_@(Import path) = do
+checkImport import_@(Import kw path) = do
   checkCycle
   cache <- gets (^. scoperModulesCache . cachedModules)
   moduleRef <- maybe (readScopeModule import_) return (cache ^. at path)
   let checked = moduleRef ^. moduleRefModule
       sname :: S.TopModulePath = checked ^. modulePath
-      sname' :: S.Name = over S.nameConcrete topModulePathToName sname
+      sname' :: S.Name = set S.nameConcrete (topModulePathToName path) sname
       moduleId = sname ^. S.nameId
       cmoduleRef :: ModuleRef'' 'S.Concrete 'ModuleTop = set moduleRefName sname' moduleRef
   modify (over scopeTopModules (HashMap.insert path moduleRef))
   registerName (set S.nameConcrete path sname)
   let moduleRef' = mkModuleRef' moduleRef
   modify (over scoperModules (HashMap.insert moduleId moduleRef'))
-  return (Import cmoduleRef)
+  return (Import kw cmoduleRef)
   where
     checkCycle :: Sem r ()
     checkCycle = do
@@ -538,7 +538,7 @@ checkTopModule ::
   Members '[Error ScoperError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r =>
   Module 'Parsed 'ModuleTop ->
   Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
-checkTopModule m@(Module path params doc body) = do
+checkTopModule m@(Module _moduleKw path params doc body) = do
   checkPath
   r <- checkedModule
   modify (over (scoperModulesCache . cachedModules) (HashMap.insert path r))
@@ -590,7 +590,8 @@ checkTopModule m@(Module path params doc body) = do
                     { _modulePath = path',
                       _moduleParameters = params',
                       _moduleBody = body',
-                      _moduleDoc = doc'
+                      _moduleDoc = doc',
+                      _moduleKw
                     }
                 _moduleRefName = set S.nameConcrete () path'
             return (ModuleRef'' {..}, path')
@@ -637,7 +638,8 @@ checkLocalModule Module {..} = do
           { _modulePath = _modulePath',
             _moduleParameters = moduleParameters',
             _moduleBody = moduleBody',
-            _moduleDoc = moduleDoc'
+            _moduleDoc = moduleDoc',
+            _moduleKw
           }
       entry :: ModuleRef' 'S.NotConcrete
       entry = mkModuleRef' @'ModuleLocal ModuleRef'' {..}
@@ -718,17 +720,17 @@ checkOpenImportModule ::
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenImportModule op
-  | op ^. openModuleImport =
+  | Just k <- op ^. openModuleImportKw =
       let moduleNameToTopModulePath :: Name -> TopModulePath
           moduleNameToTopModulePath = \case
             NameUnqualified s -> TopModulePath [] s
             NameQualified (QualifiedName (SymbolPath p) s) -> TopModulePath (toList p) s
           import_ :: Import 'Parsed
-          import_ = Import (moduleNameToTopModulePath (op ^. openModuleName))
+          import_ = Import k (moduleNameToTopModulePath (op ^. openModuleName))
        in do
             void (checkImport import_)
-            scopedOpen <- checkOpenModule (set openModuleImport False op)
-            return (set openModuleImport True scopedOpen)
+            scopedOpen <- checkOpenModule (set openModuleImportKw Nothing op)
+            return (set openModuleImportKw (Just k) scopedOpen)
   | otherwise = impossible
 
 checkOpenModuleNoImport ::
@@ -737,7 +739,7 @@ checkOpenModuleNoImport ::
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenModuleNoImport OpenModule {..}
-  | _openModuleImport = error "unsupported: open import statement"
+  | isJust _openModuleImportKw = error "unsupported: open import statement"
   | otherwise = do
       openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- lookupModuleSymbol _openModuleName
       openParameters' <- mapM checkParseExpressionAtoms _openParameters
@@ -795,7 +797,7 @@ checkOpenModule ::
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenModule op
-  | op ^. openModuleImport = checkOpenImportModule op
+  | Just k <- op ^. openModuleImportKw = checkOpenImportModule op
   | otherwise = checkOpenModuleNoImport op
 
 checkFunctionClause ::

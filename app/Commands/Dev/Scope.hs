@@ -23,6 +23,7 @@ runCommand opts = do
   when (opts ^. scopeListComments) $ do
     let mainFile :: Path Abs File = getLoc (res ^. Scoper.mainModule) ^. intervalFile
     newline
-    say "Coments:"
+    newline
+    say "Comments:"
     forM_ (fileComments mainFile (res ^. Scoper.comments) ^. fileCommentsSorted) $ \c ->
       say (prettyText (c :: Comment))

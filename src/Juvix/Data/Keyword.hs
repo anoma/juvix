@@ -1,8 +1,14 @@
 module Juvix.Data.Keyword where
 
 import Data.HashSet qualified as HashSet
+import Juvix.Data.Loc
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
+
+data IsUnicode =
+  Unicode
+  | Ascii
+  deriving stock (Eq, Show, Ord)
 
 data Keyword = Keyword
   { _keywordAscii :: Text,
@@ -10,8 +16,28 @@ data Keyword = Keyword
     -- | true if _keywordAscii has a reserved character (the unicode is assumed to not have any)
     _keywordHasReserved :: Bool
   }
+  deriving stock (Eq, Show, Ord)
+
+data KeywordRef = KeywordRef
+  { _keywordRefKeyword :: Keyword,
+    _keywordRefInterval :: Interval,
+    _keywordRefUnicode :: IsUnicode
+  }
+  deriving stock (Eq, Show, Ord)
 
 makeLenses ''Keyword
+makeLenses ''KeywordRef
+
+instance HasLoc KeywordRef where
+  getLoc = (^. keywordRefInterval)
+
+instance Pretty KeywordRef where
+  pretty r
+    | Unicode <- r ^. keywordRefUnicode = pretty (fromJust (k ^. keywordUnicode))
+    | otherwise = pretty (k ^. keywordAscii)
+    where
+      k :: Keyword
+      k = r ^. keywordRefKeyword
 
 -- | Unicode has preference
 instance Pretty Keyword where
@@ -19,6 +45,13 @@ instance Pretty Keyword where
 
 keywordsStrings :: [Keyword] -> HashSet Text
 keywordsStrings = HashSet.fromList . concatMap keywordStrings
+
+-- | Nothing if it does not match.
+keywordMatch :: Keyword -> Text -> Maybe IsUnicode
+keywordMatch Keyword {..} t
+  | Just t == _keywordUnicode = Just Unicode
+  | t == _keywordAscii = Just Ascii
+  | otherwise = Nothing
 
 keywordStrings :: Keyword -> [Text]
 keywordStrings Keyword {..} = maybe id (:) _keywordUnicode [_keywordAscii]

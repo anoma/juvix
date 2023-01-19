@@ -15,6 +15,7 @@ import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ParsedInfoTable
 import Juvix.Compiler.Concrete.Data.ParsedItem
 import Juvix.Data.Comment
+import Juvix.Data.Keyword
 import Juvix.Prelude
 
 data InfoTableBuilder m a where
@@ -24,13 +25,14 @@ data InfoTableBuilder m a where
 
 makeSem ''InfoTableBuilder
 
-registerKeyword :: Member InfoTableBuilder r => Interval -> Sem r ()
-registerKeyword i =
-  registerItem
-    ParsedItem
-      { _parsedLoc = i,
-        _parsedTag = ParsedTagKeyword
-      }
+registerKeyword :: Member InfoTableBuilder r => KeywordRef -> Sem r KeywordRef
+registerKeyword r =
+  r
+    <$ registerItem
+      ParsedItem
+        { _parsedLoc = getLoc r,
+          _parsedTag = ParsedTagKeyword
+        }
 
 registerJudocText :: Member InfoTableBuilder r => Interval -> Sem r ()
 registerJudocText i =
