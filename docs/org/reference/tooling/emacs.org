@@ -3,11 +3,17 @@
 There is an Emacs mode available for Juvix. Currently, it
 supports syntax highlighting for well-scoped modules.
 
+To get started, clone the Juvix Emacs mode repository:
+
+#+begin_src sh
+git clone https://github.com/anoma/emacs-juvix.git
+#+end_src
+
 To install it add the following lines to your
 Emacs configuration file:
 
 #+begin_src elisp
-(push "/path/to/juvix/juvix-mode/" load-path)
+(push "/path/to/juvix-mode/" load-path)
 (require 'juvix-mode)
 #+end_src
 
