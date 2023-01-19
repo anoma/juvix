@@ -280,18 +280,17 @@ mkFunBody ::
   Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r =>
   Internal.FunctionDef ->
   Sem r Node
-mkFunBody f =
-  if
-      | nPatterns == 0 -> goExpression (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody)
-      | otherwise -> do
-          let values :: [Node]
-              values = mkVar Info.empty <$> vs
-          ms <-
-            local
-              (over indexTableVarsNum (+ nPatterns))
-              (mapM goFunctionClause (f ^. Internal.funDefClauses))
-          let match = mkMatch' (fromList values) (toList ms)
-          return $ foldr (\_ n -> mkLambda' n) match vs
+mkFunBody f
+  | nPatterns == 0 = goExpression (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody)
+  | otherwise = do
+      let values :: [Node]
+          values = mkVar Info.empty <$> vs
+      ms <-
+        local
+          (over indexTableVarsNum (+ nPatterns))
+          (mapM goFunctionClause (f ^. Internal.funDefClauses))
+      let match = mkMatch' (fromList values) (toList ms)
+      return $ foldr (\_ n -> mkLambda' n) match vs
   where
     -- Assumption: All clauses have the same number of patterns
     nPatterns :: Int
@@ -334,14 +333,14 @@ goLet l = do
           )
           (vars, varsNum)
           bs
-  defs <-
+  (defs, value) <-
     local
       (set indexTableVars vars' . set indexTableVarsNum varsNum')
-      (mapM goLetClause (l ^. Internal.letClauses))
-  value <-
-    local
-      (set indexTableVars vars' . set indexTableVarsNum varsNum')
-      (goExpression (l ^. Internal.letExpression))
+      ( do
+          a <- mapM goLetClause (l ^. Internal.letClauses)
+          b <- goExpression (l ^. Internal.letExpression)
+          return (a, b)
+      )
   return $ mkLetRec' defs value
 
 goLetClause ::
