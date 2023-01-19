@@ -661,6 +661,18 @@ goApplication a = do
           case as of
             (_ : v : b1 : b2 : xs) -> return (mkApps' (mkIf' sym v b1 b2) xs)
             _ -> error "if must be called with 3 arguments"
+        Just Internal.BuiltinBoolOr -> do
+          sym <- getBoolSymbol
+          as <- exprArgs
+          case as of
+            (x : y : xs) -> return (mkApps' (mkIf' sym x (mkConstr' (BuiltinTag TagTrue) []) y) xs)
+            _ -> error "|| must be called with 2 arguments"
+        Just Internal.BuiltinBoolAnd -> do
+          sym <- getBoolSymbol
+          as <- exprArgs
+          case as of
+            (x : y : xs) -> return (mkApps' (mkIf' sym x y (mkConstr' (BuiltinTag TagFalse) [])) xs)
+            _ -> error "&& must be called with 2 arguments"
         _ -> app
     _ -> app
 

@@ -3,7 +3,9 @@ module Juvix.Compiler.Builtins.Effect
   )
 where
 
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Abstract.Extra
+import Juvix.Compiler.Abstract.Pretty
 import Juvix.Compiler.Builtins.Error
 import Juvix.Prelude
 
@@ -61,3 +63,30 @@ re = reinterpret $ \case
 
 runBuiltins :: (Member (Error JuvixError) r) => BuiltinsState -> Sem (Builtins ': r) a -> Sem r (BuiltinsState, a)
 runBuiltins s = runState s . re
+
+registerFun ::
+  Members '[Builtins, NameIdGen] r =>
+  FunctionDef ->
+  BuiltinFunction ->
+  Expression ->
+  [(Expression, Expression)] ->
+  [VarName] ->
+  [VarName] ->
+  Sem r ()
+registerFun f blt sig exClauses fvs ftvs = do
+  let op = f ^. funDefName
+      ty = f ^. funDefTypeSig
+  unless ((sig ==% ty) (HashSet.fromList ftvs)) (error "builtin has the wrong type signature")
+  registerBuiltin blt op
+  let freeVars = HashSet.fromList fvs
+      a =% b = (a ==% b) freeVars
+      clauses :: [(Expression, Expression)]
+      clauses =
+        [ (clauseLhsAsExpression c, c ^. clauseBody)
+          | c <- toList (f ^. funDefClauses)
+        ]
+  case zipExactMay exClauses clauses of
+    Nothing -> error "builtin has the wrong number of clauses"
+    Just z -> forM_ z $ \((exLhs, exBody), (lhs, body)) -> do
+      unless (exLhs =% lhs) (error "clause lhs does not match")
+      unless (exBody =% body) (error $ "clause body does not match " <> ppTrace exBody <> " | " <> ppTrace body)

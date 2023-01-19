@@ -72,6 +72,8 @@ data BuiltinFunction
   | BuiltinNatLt
   | BuiltinNatEq
   | BuiltinBoolIf
+  | BuiltinBoolOr
+  | BuiltinBoolAnd
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinFunction
@@ -88,6 +90,8 @@ instance Pretty BuiltinFunction where
     BuiltinNatLt -> Str.natLt
     BuiltinNatEq -> Str.natEq
     BuiltinBoolIf -> Str.boolIf
+    BuiltinBoolOr -> Str.boolOr
+    BuiltinBoolAnd -> Str.boolAnd
 
 data BuiltinAxiom
   = BuiltinNatPrint

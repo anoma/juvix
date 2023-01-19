@@ -1,6 +1,5 @@
 module Juvix.Compiler.Builtins.Nat where
 
-import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Abstract.Extra
 import Juvix.Compiler.Abstract.Pretty
 import Juvix.Compiler.Builtins.Effect
@@ -82,7 +81,7 @@ registerNatPlus f = do
         [ (zero .+. m, m),
           ((suc @@ n) .+. m, suc @@ (n .+. m))
         ]
-  registerNatFun f BuiltinNatPlus (nat --> nat --> nat) exClauses [varn, varm]
+  registerFun f BuiltinNatPlus (nat --> nat --> nat) exClauses [varn, varm] []
 
 registerNatMul :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatMul f = do
@@ -103,7 +102,7 @@ registerNatMul f = do
         [ (zero .*. h, zero),
           ((suc @@ n) .*. m, plus @@ m @@ (n .*. m))
         ]
-  registerNatFun f BuiltinNatMul (nat --> nat --> nat) exClauses [varn, varm]
+  registerFun f BuiltinNatMul (nat --> nat --> nat) exClauses [varn, varm] []
 
 registerNatSub :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatSub f = do
@@ -124,7 +123,7 @@ registerNatSub f = do
           (n .-. zero, n),
           ((suc @@ n) .-. (suc @@ m), n .-. m)
         ]
-  registerNatFun f BuiltinNatSub (nat --> nat --> nat) exClauses [varn, varm]
+  registerFun f BuiltinNatSub (nat --> nat --> nat) exClauses [varn, varm] []
 
 registerNatUDiv :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatUDiv f = do
@@ -145,7 +144,7 @@ registerNatUDiv f = do
         [ (zero ./. h, zero),
           (n ./. m, suc @@ ((sub @@ n @@ m) ./. m))
         ]
-  registerNatFun f BuiltinNatUDiv (nat --> nat --> nat) exClauses [varn, varm]
+  registerFun f BuiltinNatUDiv (nat --> nat --> nat) exClauses [varn, varm] []
 
 registerNatDiv :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatDiv f = do
@@ -164,7 +163,7 @@ registerNatDiv f = do
       exClauses =
         [ (n ./. m, udiv @@ (sub @@ (suc @@ n) @@ m) @@ m)
         ]
-  registerNatFun f BuiltinNatDiv (nat --> nat --> nat) exClauses [varn, varm]
+  registerFun f BuiltinNatDiv (nat --> nat --> nat) exClauses [varn, varm] []
 
 registerNatMod :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatMod f = do
@@ -180,7 +179,7 @@ registerNatMod f = do
       exClauses =
         [ (modop @@ n @@ m, sub @@ n @@ (mul @@ (divop @@ n @@ m) @@ m))
         ]
-  registerNatFun f BuiltinNatMod (nat --> nat --> nat) exClauses [varn, varm]
+  registerFun f BuiltinNatMod (nat --> nat --> nat) exClauses [varn, varm] []
 
 registerNatLe :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatLe f = do
@@ -204,7 +203,7 @@ registerNatLe f = do
           (h .<=. zero, false),
           ((suc @@ n) .<=. (suc @@ m), n .<=. m)
         ]
-  registerNatFun f BuiltinNatLe (nat --> nat --> tybool) exClauses [varn, varm]
+  registerFun f BuiltinNatLe (nat --> nat --> tybool) exClauses [varn, varm] []
 
 registerNatLt :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatLt f = do
@@ -221,7 +220,7 @@ registerNatLt f = do
       exClauses =
         [ (lt @@ n @@ m, le @@ (suc @@ n) @@ m)
         ]
-  registerNatFun f BuiltinNatLt (nat --> nat --> tybool) exClauses [varn, varm]
+  registerFun f BuiltinNatLt (nat --> nat --> tybool) exClauses [varn, varm] []
 
 registerNatEq :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatEq f = do
@@ -246,4 +245,4 @@ registerNatEq f = do
           (h .==. zero, false),
           ((suc @@ n) .==. (suc @@ m), n .==. m)
         ]
-  registerNatFun f BuiltinNatEq (nat --> nat --> tybool) exClauses [varn, varm]
+  registerFun f BuiltinNatEq (nat --> nat --> tybool) exClauses [varn, varm] []

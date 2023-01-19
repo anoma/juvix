@@ -143,7 +143,13 @@ natEq = "nat-eq"
 boolIf :: (IsString s) => s
 boolIf = "bool-if"
 
-builtin :: (IsString s) => s
+boolOr :: IsString s => s
+boolOr = "bool-or"
+
+boolAnd :: IsString s => s
+boolAnd = "bool-and"
+
+builtin :: IsString s => s
 builtin = "builtin"
 
 type_ :: (IsString s) => s

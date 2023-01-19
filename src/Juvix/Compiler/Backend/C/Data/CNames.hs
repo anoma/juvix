@@ -74,6 +74,12 @@ nateq = primPrefix "nateq"
 boolif :: Text
 boolif = primPrefix "if"
 
+boolor :: Text
+boolor = primPrefix "or"
+
+booland :: Text
+booland = primPrefix "and"
+
 funField :: Text
 funField = "fun"
 

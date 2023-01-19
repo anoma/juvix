@@ -80,7 +80,7 @@ tests =
       $(mkRelFile "test005.juvix")
       $(mkRelFile "out/test005.out"),
     posTest
-      "If-then-else"
+      "If-then-else and lazy boolean operators"
       $(mkRelDir ".")
       $(mkRelFile "test006.juvix")
       $(mkRelFile "out/test006.out"),
