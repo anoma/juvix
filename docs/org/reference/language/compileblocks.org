@@ -49,14 +49,14 @@ compile Action {
 - A compile block must be in the same module as their name definition.
 
 #+begin_src haskell
-$ cat A.mjuvix
+$ cat A.juvix
 ...
 axiom Action : Type;
 ...
 #+end_src
 
 #+begin_src haskell
-$ cat B.mjuvix
+$ cat B.juvix
 ...
 compile Action {
  c -> "int";

@@ -1,0 +1,512 @@
+* Juvix tutorial
+
+NOTE: This is a tutorial for Juvix version 0.3. Earlier versions do not support all of the syntax described here.
+
+  * [[./learn.md#juvix-repl][Juvix REPL]]
+  * [[./learn.md#basic-expressions][Basic expressions]]
+  * [[./learn.md#files-modules-and-compilation][Files, modules and compilation]]
+  * [[./learn.md#output][Output]]
+  * [[./learn.md#data-types-and-functions][Data types and functions]]
+  * [[./learn.md#pattern-matching][Pattern matching]]
+  * [[./learn.md#comparisons-and-conditionals][Comparisons and conditionals]]
+  * [[./learn.md#local-definitions][Local definitions]]
+  * [[./learn.md#recursion][Recursion]]
+  * [[./learn.md#partial-application-and-higher-order-functions][Partial application and higher-order functions]]
+  * [[./learn.md#polymorphism][Polymorphism]]
+  * [[./learn.md#tail-recursion][Tail recursion]]
+  * [[./learn.md#totality-checking][Totality checking]]
+  * [[./learn.md#exercises][Exercises]]
+
+** Juvix REPL
+
+After [[../howto/installing.md][installing Juvix]], launch the Juvix REPL:
+
+#+begin_src shell
+juvix repl
+#+end_src
+
+The response should be similar to:
+#+begin_example
+Juvix REPL version 0.3: https://juvix.org. Run :help for help
+OK loaded: ./.juvix-build/stdlib/Stdlib/Prelude.juvix
+Stdlib.Prelude>
+#+end_example
+
+Currently, the REPL supports evaluating expressions but it does not yet support adding new definitions. To see the list of available REPL commands type =:help=.
+
+** Basic expressions
+
+You can try evaluating simple arithmetic expressions in the REPL:
+#+begin_example
+Stdlib.Prelude> 3 + 4
+7
+Stdlib.Prelude> 1 + 3 * 7
+22
+Stdlib.Prelude> div 35 4
+8
+Stdlib.Prelude> mod 35 4
+3
+Stdlib.Prelude> sub 35 4
+31
+Stdlib.Prelude> sub 4 35
+0
+#+end_example
+By default Juvix operates on nonnegative natural numbers. Natural number subtraction is implemented by the function =sub=. Subtracting a bigger natural number from a smaller one yields =0=.
+
+You can also try boolean expressions
+#+begin_example
+Stdlib.Prelude> true
+true
+Stdlib.Prelude> not true
+false
+Stdlib.Prelude> true && false
+false
+Stdlib.Prelude> true || false
+true
+Stdlib.Prelude> if true 1 0
+1
+#+end_example
+and strings, pairs and lists:
+#+begin_example
+Stdlib.Prelude> "Hello world!"
+"Hello world!"
+Stdlib.Prelude> (1, 2)
+(1, 2)
+Stdlib.Prelude> 1 :: 2 :: nil
+1 :: 2 :: nil
+#+end_example
+
+In fact, you can use all functions and types from the [[https://anoma.github.io/juvix-stdlib/Stdlib.Prelude.html][Stdlib.Prelude]] module of the [[https://anoma.github.io/juvix-stdlib][standard library]], which is preloaded by default.
+
+#+begin_example
+Stdlib.Prelude> length (1 :: 2 :: nil)
+3
+Stdlib.Prelude> null (1 :: 2 :: nil)
+false
+Stdlib.Prelude> swap (1, 2)
+(2, 1)
+#+end_example
+
+** Files, modules and compilation
+
+Currently, the REPL does not support adding new definitions. To define new functions or data types, you need to put them in a separate file and either load the file in the REPL with =:load file.juvix= or compile the file to a binary executable with the shell command =juvix compile file.juvix=.
+
+To conveniently edit Juvix files, an [[./emacs.md][Emacs mode]] and a [[./vscode.md][VSCode extension]] are available.
+
+A Juvix file must declare a module whose name corresponds exactly to the name of the file. For example, a file =Hello.juvix= must declare a module =Hello=:
+#+begin_example
+-- Hello world example. This is a comment.
+module Hello;
+
+-- Import the standard library prelude, including the function 'printStringLn'
+open import Stdlib.Prelude;
+
+main : IO;
+main := printStringLn "Hello world!";
+
+end;
+#+end_example
+A file compiled to an executable must define the zero-argument function =main= of type =IO= which is evaluated when running the program.
+
+** Output
+
+In addition to =printStringLn=, the standard library includes the functions =printString=, =printNat=, =printNatLn=, =printBool=, =printBoolLn=. The =IO= computations can be sequenced with =>>=, e.g.,
+#+begin_example
+printNat 3 >> printString " + " >> printNatLn 4
+#+end_example
+has type =IO= and when executed prints =3 + 4= followed by a newline.
+
+The type =IO= is the type of IO actions, i.e., of data structures representing IO computations. The functions =printString=, =printNat=, etc., do not immediately print their arguments, but rather create a data structure representing an appropriate IO action. The IO actions created by the =main= function are executed only after the program has been evaluated.
+
+** Data types and functions
+
+To see the type of an expression, use the =:type= REPL command:
+#+begin_example
+Stdlib.Prelude> :type 1
+Nat
+Stdlib.Prelude> :type true
+Bool
+#+end_example
+
+The types =Nat= and =Bool= are defined in the standard library.
+
+The type =Bool= has two constructors =true= and =false=.
+#+begin_example
+type Bool :=
+| true : Bool
+| false : Bool;
+#+end_example
+The constructors of a data type can be used to build elements of the type. They can also appear as patterns in function definitions. For example, the =not= function is defined in the standard library by:
+#+begin_example
+not : Bool -> Bool;
+not true := false;
+not false := true;
+#+end_example
+The first line is the /signature/ which specifies the type of the definition. In this case, =not= is a function from =Bool= to =Bool=. The signature is followed by two /function clauses/ which specify the function result depending on the shape of the arguments. When a function call is evaluated, the first clause that matches the arguments is used.
+
+In contrast to languages like Python, Java or C/C++, Juvix doesn't require parentheses for function calls. All the arguments are just listed after the function. The general pattern for function application is: =func arg1 arg2 arg3 ...=
+
+A more complex example of a data type is the =Nat= type from the standard library:
+#+begin_example
+type Nat :=
+| zero : Nat
+| suc : Nat -> Nat;
+#+end_example
+The constructor =zero= represents =0= and =suc= represents the successor function -- =suc n= is the successor of =n=, i.e., =n+1=. For example, =suc zero= represents =1=. The number literals =0=, =1=, =2=, etc., are just shorthands for appropriate expressions built using =suc= and =zero=.
+
+The constructors of a data type specify how the elements of the type can be constructed. For instance, the above definition specifies that an element of =Nat= is either:
+  * =zero=, or
+  * =suc n= where =n= is an element of =Nat=, i.e., it is constructed by applying =suc= to appropriate arguments (in this case the argument of =suc= has type =Nat=).
+Any element of =Nat= can be built with the constructors in this way -- there are no other elements. Mathematically, this is an inductive definition, which is why the data type is called /inductive/.
+
+If implemented directly, the above unary representation of natural numbers would be extremely inefficient. The Juvix compiler uses a binary number representation under the hood and implements arithmetic operations using corresponding machine instructions, so the performance of natural number arithmetic is similar to other programming languages. The =Nat= type is a high-level presentation of natural numbers as seen by the user who does not need to worry about low-level arithmetic implementation details.
+
+One can use =zero= and =suc= in pattern matching, like any other constructors:
+#+begin_example
+infixl 6 +;
++ : Nat -> Nat -> Nat;
++ zero b := b;
++ (suc a) b := suc (a + b);
+#+end_example
+The =infixl 6 += declares =+= to be an infix left-associative operator with priority 6. The =+= is an ordinary function, except that function application for =+= is written in infix notation. The definitions of the clauses of =+= still need the prefix notation on the left-hand sides.
+
+The =a= and =b= in the patterns on the left-hand sides of the clauses are /variables/ which match arbitrary values of the corresponding type. They can be used on the right-hand side to refer to the values matched. For example, when evaluating
+#+begin_example
+(suc (suc zero)) + zero
+#+end_example
+the second clause of =+= matches, assigning =suc zero= to =a= and =zero= to =b=. Then the right-hand side of the clause is evaluated with =a= and =b= substituted by these values:
+#+begin_example
+suc (suc zero + zero)
+#+end_example
+Again, the second clause matches, now with both =a= and =b= being =zero=. After replacing with the right-hand side, we obtain:
+#+begin_example
+suc (suc (zero + zero))
+#+end_example
+Now the first clause matches and finally we obtain the result
+#+begin_example
+suc (suc zero)
+#+end_example
+which is just =2=.
+
+The function =+= is defined like above in the standard library, but the Juvix compiler treats it specially and generates efficient code using appropriate CPU instructions.
+
+** Pattern matching
+
+The patterns in function clauses do not have to match on a single constructor -- they may be arbitrarily deep. For example, here is an (inefficient) implementation of a function which checks whether a natural number is even:
+#+begin_example
+even : Nat -> Bool;
+even zero := true;
+even (suc zero) := false;
+even (suc (suc n)) := even n;
+#+end_example
+This definition states that a natural number =n= is even if either =n= is =zero= or, recursively, =n-2= is even.
+
+If a subpattern is to be ignored, then one can use a wildcard =_= instead of naming the subpattern.
+#+begin_example
+isPositive : Nat -> Bool;
+isPositive zero := false;
+isPositive (suc _) := true;
+#+end_example
+The above function could also be written as:
+#+begin_example
+isPositive : Nat -> Bool;
+isPositive zero := false;
+isPositive _ := true;
+#+end_example
+
+It is not necessary to define a separate function to perform pattern matching. One can use the =case= syntax to pattern match an expression directly.
+#+begin_example
+Stdlib.Prelude> case (1, 2) | (suc _, zero) := 0 | (suc _, suc x) := x | _ := 19
+1
+#+end_example
+
+** Comparisons and conditionals
+
+To use the comparison operators on natural numbers, one needs to import the =Stdlib.Data.Nat.Ord= module. The comparison operators are not in =Stdlib.Prelude= to avoid clashes with user-defined operators for other data types. The functions available in =Stdlib.Data.Nat.Org= include: =<=, =<==, =>=, =>==, ====, =/==, =min=, =max=.
+
+For example, one may define the function =max3= by:
+#+begin_example
+open import Stdlib.Data.Nat.Ord;
+
+max3 : Nat -> Nat -> Nat -> Nat;
+max3 x y z := if (x > y) (max x z) (max y z);
+#+end_example
+The conditional =if= is a special function which is evaluated lazily, i.e., first the condition (the first argument) is evaluated, and then depending on its truth-value one of the branches (the second or the third argument) is evaluated and returned.
+
+By default, evaluation in Juvix is /eager/ (or /strict/), meaning that the arguments to a function are fully evaluated before applying the function. Only =if=, =||= and =&&= are treated specially and evaluated lazily. These special functions cannot be partially applied (see [[./learn.md#partial-application-and-higher-order-functions][Partial application and higher-order functions]] below).
+
+** Local definitions
+
+Juvix supports local definitions with let-expressions.
+#+begin_example
+f : Nat -> Nat;
+f a := let x : Nat := a + 5;
+           y : Nat := a * 7 + x
+       in
+       x * y;
+#+end_example
+The variables =x= and =y= are not visible outside =f=.
+
+One can also use multi-clause definitions in =let=-expressions, with the same syntax as definitions inside a module. Complex definitions need to be enclosed in braces. For example:
+#+begin_example
+even' : Nat -> Bool;
+even' :=
+  let {
+    even : Nat -> Bool;
+    odd : Nat -> Bool;
+
+    even zero := true;
+    even (suc n) := odd n;
+
+    odd zero := false;
+    odd (suc n) := even n;
+  } in
+  even
+#+end_example
+The functions =even= and =odd= are not visible outside =even'=.
+
+** Recursion
+
+Juvix is a purely functional language, which means that functions have no side effects and all variables are immutable. An advantage of functional programming is that all expressions are /referentially transparent/ -- any expression can be replaced by its value without changing the meaning of the program. This makes it easier to reason about programs, in particular to prove their correctness. No errors involving implicit state are possible, because the state is always explicit.
+
+In a functional language, there are no imperative loops. Repetition is expressed using recursion. In many cases, the recursive definition of a function follows the inductive definition of a data structure the function analyses. For example, consider the following inductive type of lists of natural numbers:
+#+begin_example
+type NList :=
+| nnil : NList
+| ncons : Nat -> NList -> NList;
+#+end_example
+An element of =NList= is either =nnil= (empty) or =ncons x xs= where =x : Nat= and =xs : NList= (a list with head =x= and tail =xs=).
+
+A function computing the length of a list may be defined by:
+#+begin_example
+nlength : NList -> Nat;
+nlength nnil := 0;
+nlength (ncons _ xs) := nlength xs + 1;
+#+end_example
+The definition follows the inductive definition of =NList=. There are two function clauses for the two constructors. The case for =nnil= is easy -- the constructor has no arguments and the length of the empty list is =0=. For a constructor with some arguments, one typically needs to express the result of the function in terms of the constructor arguments, usually calling the function recursively on the constructor's inductive arguments (for =ncons= this is the second argument). In the case of =ncons _ xs=, we recursively call =nlength= on =xs= and add =1= to the result.
+
+Let's consider another example -- a function which returns the maximum of the numbers in a list or 0 for the empty list.
+#+begin_example
+open import Stdlib.Data.Nat.Ord; -- for `max`
+
+nmaximum : NList -> Nat;
+nmaximum nnil := 0;
+nmaximum (ncons x xs) := max x (nmaximum xs);
+#+end_example
+Again, there is a clause for each constructor. In the case for =ncons=, we recursively call the function on the list tail and take the maximum of the result and the list head.
+
+For an example of a constructor with more than one inductive argument, consider binary trees with natural numbers in nodes.
+#+begin_example
+type Tree :=
+| leaf : Nat -> Tree
+| node : Nat -> Tree -> Tree -> Tree;
+#+end_example
+The constructor =node= has two inductive arguments (the second and the third) which represent the left and the right subtree.
+
+A function which produces the mirror image of a tree may be defined by:
+#+begin_example
+mirror : Tree -> Tree;
+mirror (leaf x) := leaf x;
+mirror (node x l r) := node x (mirror r) (mirror l);
+#+end_example
+The definition of =mirror= follows the definition of =Tree=. There are two recursive calls for the two inductive constructors of =node= (the subtrees).
+
+** Partial application and higher-order functions
+
+Strictly speaking, all Juvix functions have only one argument. Multi-argument functions are really functions which return a function which takes the next argument and returns a function taking another argument, and so on for all arguments. The function type former =->= (the arrow) is right-associative. Hence, the type, e.g., =Nat -> Nat -> Nat= when fully parenthesised becomes =Nat -> (Nat -> Nat)=. It is the type of functions which given an argument of type =Nat= return a function of type =Nat -> Nat= which itself takes an argument of type =Nat= and produces a result of type =Nat=. Function application is left-associative. For example, =f a b= when fully parenthesised becomes =(f a) b=. So it is an application to =b= of the function obtained by applying =f= to =a=.
+
+Since a multi-argument function is just a one-argument function returning a function, it can be /partially applied/ to a smaller number of arguments than specified in its definition. The result is an appropriate function. For example, =sub 10= is a function which subtracts its argument from =10=, and =(+) 1= is a function which adds =1= to its argument. If the function has been declared as an infix operator (like =+=), then for partial application one needs to enclose it in parentheses.
+
+A function which takes a function as an argument is a /higher-order function/. An example is the =nmap= function which applies a given function to each element in a list of natural numbers.
+#+begin_example
+nmap : (Nat -> Nat) -> NList -> NList;
+nmap _ nnil := nnil;
+nmap f (ncons x xs) := ncons (f x) (nmap f xs);
+#+end_example
+
+The application
+#+begin_example
+nmap \{ x := div x 2 } lst
+#+end_example
+divides every element of =lst= by =2=, rounding down the result. The expression
+#+begin_example
+\{ x := div x 1 }
+#+end_example
+is an unnamed function, or a /lambda/, which divides its argument by =2=.
+
+** Polymorphism
+
+The type =NList= we have been working with above requires the list elements to be natural numbers. It is possible to define lists /polymorphically/, parameterising them by the element type. This is analogous to generics in languages like Java, C++ or Rust. Here is the polymorphic definition of lists from the standard library:
+#+begin_example
+infixr 5 ::;
+type List (A : Type) :=
+| nil : List A
+| :: : A -> List A -> List A;
+#+end_example
+The constructor =::= is declared as a right-associative infix operator with priority 5. The definition has a parameter =A= which is the element type.
+
+Now one can define the =map= function polymorphically:
+#+begin_example
+map : {A : Type} -> {B : Type} -> (A -> B) -> List A -> List B;
+map f nil := nil;
+map f (h :: hs) := f h :: map f hs;
+#+end_example
+This function has two /implicit type arguments/ =A= and =B=. These arguments are normally omitted in function application -- they are inferred automatically during type checking. The curly braces indicate that the argument is implicit and should be inferred.
+
+In fact, the constructors =nil= and =::= also have an implicit argument: the type of list elements. All type parameters of a data type definition become implicit arguments of the constructors.
+
+Usually, the implicit arguments in a function application can be inferred. However, sometimes this is not possible and then the implicit arguments need to be provided explicitly by enclosing them in braces:
+#+begin_example
+f {implArg1} .. {implArgK} arg1 .. argN
+#+end_example
+For example, =nil {Nat}= has type =List Nat= while =nil= by itself has type ={A : Type} -> List A=.
+
+** Tail recursion
+
+Any recursive call whose result is further processed by the calling function needs to create a new stack frame to save the calling function environment. This means that each such call will use a constant amount of memory. For example, a function =sum= implemented as follows will use an additional amount of memory proportional to the length of the processed list:
+#+begin_example
+sum : NList -> Nat;
+sum nnil := 0;
+sum (ncons x xs) := x + sum xs;
+#+end_example
+This is not acceptable if you care about performance. In an imperative language, one would use a simple loop going over the list without any memory allocation. In pseudocode:
+#+begin_example
+var sum : Nat := 0;
+while (lst /= nnil) {
+  sum := sum + head lst;
+  lst := tail lst;
+};
+return sum;
+#+end_example
+Fortunately, it is possible to rewrite this function to use /tail recursion/. A recursive call is /tail recursive/ if its result is also the result of the calling function, i.e., the calling function returns immediately after it without further processing. The Juvix compiler /guarantees/ that all tail calls will be eliminated, i.e., that they will be compiled to simple jumps without extra memory allocation. In a tail recursive call, instead of creating a new stack frame, the old one is reused.
+
+The following implementation of =sum= uses tail recursion.
+#+begin_example
+sum : NList -> Nat;
+sum lst := let {
+    go : Nat -> NList -> Nat;
+    go acc nnil := acc;
+    go acc (ncons x xs) := go (acc + x) xs;
+  } in
+  go 0 lst;
+#+end_example
+The first argument of =go= is an /accumulator/ which holds the sum computed so far. It is analogous to the =sum= variable in the imperative loop above. The initial value of the accumulator is 0. The function =go= uses only constant additional memory overall. The code generated for it by the Juvix compiler is equivalent to an imperative loop.
+
+A shorter way of writing the above =sum= function is to use a /named lambda/:
+#+begin_example
+sum : NList -> Nat;
+sum := go(acc := 0)@\{
+    acc nnil := acc;
+    acc (ncons x xs) := go (acc + x) xs;
+  };
+#+end_example
+The syntax
+#+begin_example
+go(acc1 := v1= ... accn := vn)@\{ <clauses> }
+#+end_example
+introduces a recursive function =go= with =n= accumulators =acc1=, ..., =accn= and further =k= arguments of the lambda expression (above =n = k = 1=). The value of the entire expression is =go v1 ... vn=. The scope of =go= is the lambda expression, i.e., it is not visible outside of it.
+
+Most imperative loops may be translated into tail recursive functional programs by converting the locally modified variables into accumulators and the loop condition into pattern matching. For example, here is a pseudocode for computing the nth Fibonacci number in linear time. The variables =cur= and =next= hold the last two computed Fibonacci numbers.
+#+begin_example
+var cur : Nat := 0;
+var next : Nat := 1;
+while (n /= 0) {
+  var tmp := next;
+  next := cur + next;
+  cur := tmp;
+  n := n - 1;
+};
+return cur;
+#+end_example
+An equivalent functional program is:
+#+begin_example
+fib : Nat -> Nat;
+fib := go(cur := 0; next := 1)@\{
+    cur _ zero := cur;
+    cur next (suc n) := go next (cur + next) n;
+  };
+#+end_example
+A naive definition of the Fibonacci function runs in exponential time:
+#+begin_example
+fib : Nat -> Nat;
+fib zero := 0;
+fib (suc zero) := 1;
+fib (suc (suc n)) := fib n + fib (suc n);
+#+end_example
+
+Tail recursion is less useful when the function needs to allocate memory anyway. For example, one could make the =map= function from the previous section tail recursive, but the time and memory use would still be proportional to the length of the input because of the need to allocate the result list.
+
+** Totality checking
+
+By default, the Juvix compiler requires all functions to be total. Totality consists of:
+  * [[../explanations/totality/termination.md][termination]],
+  * [[../explanations/totality/coverage.md][coverage]],
+  * [[../explanations/totality/positive.md][strict positivity]].
+
+The termination check ensures that all functions are structurally recursive, i.e., all recursive call are on structurally smaller value -- subpatterns of the matched pattern. For example, the termination checker rejects the definition
+#+begin_example
+fact : Nat -> Nat;
+fact x := if (x == 0) 1 (x * fact (sub x 1));
+#+end_example
+because the recursive call is not on a subpattern of a pattern matched on in the clause. One can reformulate this definition so that it is accepted by the termination checker:
+#+begin_example
+fact : Nat -> Nat;
+fact zero := 1;
+fact x@(suc n) := x * fact n;
+#+end_example
+Sometimes, such a reformulation is not possible. Then one can use the =terminating= keyword to forgoe the termination check.
+#+begin_example
+terminating
+log2 : Nat -> Nat;
+log2 n := if (n <= 1) 0 (suc (log2 (div n 2)));
+#+end_example
+
+Coverage checking ensures that there are no unhandled patterns in function clauses or =case= expressions. For example, the following definition is rejected because the case =suc zero= is not handled:
+#+begin_example
+even : Nat -> Bool;
+even zero := true;
+even (suc (suc n)) := even n;
+#+end_example
+
+** Exercises
+
+You have now learnt the very basics of Juvix. To consolidate your understanding of Juvix and functional programming, try doing some of the following exercises. To learn how to write more complex Juvix programs, see the [[https://docs.juvix.org/examples/html/Tutorial/Tutorial.html][advanced tutorial]] and the [[../reference/examples.md][Juvix program examples]].
+
+1. Define a function =prime : Nat -> Nat= which checks if a given natural number is prime.
+
+2. What is wrong with the following definition?
+   #+begin_example
+   half : Nat -> Nat;
+   half n := if (n < 2) 0 (half (n - 2) + 1);
+   #+end_example
+   How can you reformulate this definition so that it is accepted by Juvix?
+
+3. Define a polymorphic function which computes the last element of a list. What is the result of your function on the empty list?
+
+4. A /suffix/ of a list =l= is any list which can be obtained from =l= by removing some initial elements. For example, the suffixes of =1 :: 2 :: 3 :: nil= are: =1 :: 2 :: 3 :: nil=, =2 :: 3 :: nil=, =3 :: nil= and =nil=.
+
+   Define a function which computes the list of all suffixes of a given list in the order of decreasing length.
+
+5. Recall the =Tree= type from above.
+   #+begin_example
+   type Tree :=
+   | leaf : Nat -> Tree
+   | node : Nat -> Tree -> Tree -> Tree;
+   #+end_example
+   Analogously to the =map= function for lists, define a function
+   #+begin_example
+   tmap : (Nat -> Nat) -> Tree -> Tree
+   #+end_example
+   which applies a function to all natural numbers stored in a tree.
+
+6. Make the =Tree= type polymorphic in the element type and repeat the previous exercise.
+
+7. Write a tail recursive function which reverses a list.
+
+8. Write a tail recursive function which computes the factorial of a natural number.
+
+9. Define a function =comp : {A : Type} -> List (A -> A) -> A -> A= which composes all functions in a list. For example,
+   #+begin_example
+   comp (suc :: (*) 2 :: \{x := sub x 1} :: nil)
+   #+end_example
+   should be a function which given =x= computes =2(x - 1) + 1=.

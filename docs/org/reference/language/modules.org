@@ -17,7 +17,7 @@ A _Juvix project_ is a collection of Juvix modules inside one main project
 folder containing a metadata file named =juvix.yaml=. Each Juvix file has to
 define a _module_ of the same name. The name of the module must coincide with
 the path of the its file respect to its project. For example, if the file is
-=root/Data/List.juvix= then the module must be called =Data.List=, assumming
+=root/Data/List.juvix= then the module must be called =Data.List=, assuming
 =root= is the project's folder.
 
 To check that Juvix is correctly detecting your project's root, one can run the
@@ -138,7 +138,7 @@ end;
 The module =C= below does not typecheck. Both symbols, originally defined in
 module =A=, are not visible in module =C= after importing =B=. The symbols =A=
 and =a= are not exported by the module =B=. To export symbols from an imported
-module, one can use the =public= keyword at the end of the corresponing =open=
+module, one can use the =public= keyword at the end of the corresponding =open=
 statement. For example, in module =B=, after marking the import of =A= as
 =public=, the module =C= typechecks.
 

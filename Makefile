@@ -11,13 +11,15 @@ MDFILES:=$(patsubst docs/org/%,docs/md/%,$(ORGFILES:.org=.md))
 
 EXAMPLEMILESTONE=examples/milestone
 EXAMPLEHTMLOUTPUT=_docs/examples/html
-EXAMPLES= 	HelloWorld/HelloWorld.juvix \
-			Collatz/Collatz.juvix \
-			Fibonacci/Fibonacci.juvix \
-            Hanoi/Hanoi.juvix \
-            PascalsTriangle/PascalsTriangle.juvix \
-			TicTacToe/CLI/TicTacToe.juvix \
-			ValidityPredicates/SimpleFungibleToken.juvix
+EXAMPLES= Collatz/Collatz.juvix \
+	Demo/Demo.juvix \
+	Fibonacci/Fibonacci.juvix \
+	Hanoi/Hanoi.juvix \
+	HelloWorld/HelloWorld.juvix \
+	PascalsTriangle/PascalsTriangle.juvix \
+	TicTacToe/CLI/TicTacToe.juvix \
+	Tutorial/Tutorial.juvix \
+	ValidityPredicates/SimpleFungibleToken.juvix
 
 EXAMPLE_WEBAPP_OUTPUT=_docs/examples/webapp
 WEBAPP_EXAMPLES=TicTacToe/Web/TicTacToe.juvix
@@ -67,7 +69,7 @@ html-examples: $(EXAMPLES)
 $(EXAMPLES):
 	$(eval OUTPUTDIR=$(EXAMPLEHTMLOUTPUT)/$(dir $@))
 	@mkdir -p ${OUTPUTDIR}
-	@juvix html $(EXAMPLEMILESTONE)/$@ --recursive --output-dir=$(CURDIR)/${OUTPUTDIR} --print-metadata
+	@juvix html $(EXAMPLEMILESTONE)/$@ --output-dir=$(CURDIR)/${OUTPUTDIR}
 
 .PHONY: webapp-examples
 webapp-examples: $(WEBAPP_EXAMPLES)

@@ -1,8 +1,0 @@
-  - [[./comments.md][Comments]]
-  - [[./axiom.md][Axiom]]
-  - [[./functions.md][Function]]
-  - [[./modules.md][Module System]]
-  - [[./inductive-data-types.md][Inductive data type]]
-  - [[./termination-checking.md][Termination checking]]
-  - [[./compile-blocks.md][Compile block]]
-  - [[./foreign-blocks.md][Foreign block]]

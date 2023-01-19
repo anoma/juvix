@@ -1,0 +1,119 @@
+
+* Dependencies
+
+You need [[https://releases.llvm.org/download.html][Clang / LLVM]] version 13 or later. Note that on macOS the preinstalled clang does not support the wasm target, so use e.g. =brew install llvm= instead.
+
+If you want to compile to WebAssembly, you also need:
+- [[https://wasmer.io][wasmer]]
+- [[https://github.com/WebAssembly/wasi-sdk/releases][wasi-sdk]]
+- [[https://lld.llvm.org][wasm-ld]] - the LLVM linker for WASM (NB: On Linux you may need to install the
+  =lld= package; on macOS this is installed as part of =llvm=).
+
+See [[./installing.md#installing-dependencies][below]] for instructions on how to install the dependencies.
+
+* Installing Juvix
+
+*** MacOS
+
+The easiest way to install Juvix on MacOS is by using [[https://brew.sh][Homebrew]].
+
+To install the [[https://github.com/anoma/homebrew-juvix][homebrew-juvix tap]], run:
+
+#+begin_src shell
+brew tap anoma/juvix
+#+end_src
+
+To install Juvix, run:
+
+#+begin_src shell
+brew install juvix
+#+end_src
+
+
+Helpful information can also be obtained by running:
+
+#+begin_src shell
+brew info juvix
+#+end_src
+
+*** Linux x86_64
+
+A Juvix compiler binary executable for Linux x86_64 is available on the [[https://github.com/anoma/juvix/releases/latest][Juvix release page]].
+
+To install this executable, download and unzip the linked file and move it
+to a directory on your shell's =PATH=.
+
+For example if =~/.local/bin= is on your shell's =PATH=, you can install Juvix as
+follows:
+
+#+begin_src shell
+cd /tmp
+curl -OL https://github.com/anoma/juvix/releases/download/v0.2.8/juvix-linux_x86_64-v0.2.8.zip
+unzip juvix-linux_x86_64-v0.2.8.zip
+mv juvix-linux_x86_64-v0.2.8 ~/.local/bin/juvix
+#+end_src
+
+*** Building Juvix from source
+
+To install Juvix from source you must clone the [[https://github.com/anoma/juvix.git][Github repository]]. Then Juvix can be installed with the following commands. We assume you have [[https://haskellstack.org][Stack]] and [[https://www.gnu.org/software/make/][GNU Make]] installed.
+
+#+begin_src shell
+git clone --recursive https://github.com/anoma/juvix.git
+cd juvix
+make install
+#+end_src
+
+The C compiler and linker paths can be specified as options to the =make install= command, e.g.
+#+begin_src shell
+make install CC=path/to/clang LIBTOOL=path/to/llvm-ar
+#+end_src
+
+On MacOS, you can alternatively run the following command for Homebrew. The flag
+=--HEAD= used below is optional -- use it to build the latest version of Juvix in
+the =main= branch on Github.
+
+#+begin_src shell
+brew install --build-from-source --HEAD juvix --verbose
+#+end_src
+
+*** Building the project with =cabal=
+
+We recommend to use the =stack= build tool with this project.
+
+If you prefer the =cabal= build tool instead, then you need to generate
+the =juvix.cabal= file using [[https://github.com/sol/hpack][hpack]] before running =cabal build=.
+
+You also need to compile the runtime first:
+#+begin_src shell
+make runtime
+cabal build
+#+end_src
+
+* Installing dependencies
+
+To install =wasi-sdk= you need to download =libclang_rt= and =wasi-sysroot=
+precompiled archives from the [[https://github.com/WebAssembly/wasi-sdk/releases/][wasi-sdk release page]] and:
+
+1. Extract the =libclang_rt.builtins-wasm32-wasi-*.tar.gz= archive in the
+   =clang= installation root (for example =/usr/lib/clang/13= on Ubuntu or
+   =`brew --prefix llvm`= on macos).
+
+        For example on macos with homebrew clang:
+
+        #+begin_src shell
+        cd `brew --prefix llvm`
+        curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/libclang_rt.builtins-wasm32-wasi-15.0.tar.gz -OL
+        tar xf libclang_rt.builtins-wasm32-wasi-15.0.tar.gz
+        #+end_src
+
+2. Extract the =wasi-sysroot-*.tar.gz= archive on your local system and set
+   =WASI_SYSROOT_PATH= to its path.
+
+        For example:
+
+        #+begin_src shell
+        cd ~
+        curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/wasi-sysroot-15.0.tar.gz -OL
+        tar xf wasi-sysroot-15.0.tar.gz
+        export WASI_SYSROOT_PATH=~/wasi-sysroot
+        #+end_src

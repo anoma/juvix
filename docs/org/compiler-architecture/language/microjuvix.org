@@ -1,1 +1,0 @@
-* MicroJuvix Internal Language

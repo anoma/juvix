@@ -34,7 +34,7 @@ sudo pacman -S llvm lld
 
 The Juvix compiler required =wasm-ld= (the Wasm linker) to produce =Wasm= binaries.
 
-Recommened installation method:
+Recommended installation method:
 
 *** MacOS
 
