@@ -71,6 +71,11 @@ tests =
       $(mkRelFile "test002.juvix")
       $(mkRelFile "out/test002.out"),
     posTest
+      "Integer arithmetic"
+      $(mkRelDir ".")
+      $(mkRelFile "test003.juvix")
+      $(mkRelFile "out/test003.out"),
+    posTest
       "IO builtins"
       $(mkRelDir ".")
       $(mkRelFile "test004.juvix")
