@@ -1015,14 +1015,15 @@ checkLetBlock LetBlock {..} = do
   return
     LetBlock
       { _letClauses = letClauses',
-        _letExpression = letExpression'
+        _letExpression = letExpression',
+        _letKw
       }
 
 checkLambda ::
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
   Lambda 'Parsed ->
   Sem r (Lambda 'Scoped)
-checkLambda Lambda {..} = Lambda <$> mapM checkLambdaClause _lambdaClauses
+checkLambda Lambda {..} = Lambda _lambdaKw <$> mapM checkLambdaClause _lambdaClauses
 
 checkLambdaClause ::
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>

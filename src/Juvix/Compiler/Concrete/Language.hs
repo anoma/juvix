@@ -169,12 +169,13 @@ deriving stock instance (Ord (ImportType s)) => Ord (Import s)
 
 data OperatorSyntaxDef = OperatorSyntaxDef
   { _opSymbol :: Symbol,
-    _opFixity :: Fixity
+    _opFixity :: Fixity,
+    _opKw :: KeywordRef
   }
   deriving stock (Show, Eq, Ord)
 
 instance HasLoc OperatorSyntaxDef where
-  getLoc OperatorSyntaxDef {..} = getLoc _opSymbol
+  getLoc OperatorSyntaxDef {..} = getLoc _opKw <> getLoc _opSymbol
 
 -------------------------------------------------------------------------------
 -- Type signature declaration
@@ -199,9 +200,11 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Typ
 -------------------------------------------------------------------------------
 
 data AxiomDef (s :: Stage) = AxiomDef
-  { _axiomDoc :: Maybe (Judoc s),
+  {
+    _axiomKw :: KeywordRef,
+    _axiomDoc :: Maybe (Judoc s),
     _axiomName :: SymbolType s,
-    _axiomBuiltin :: Maybe BuiltinAxiom,
+    _axiomBuiltin :: Maybe (WithLoc BuiltinAxiom),
     _axiomType :: ExpressionType s
   }
 
@@ -581,26 +584,8 @@ data Expression
   | ExpressionBraces (WithLoc Expression)
   deriving stock (Show, Eq, Ord)
 
-instance HasAtomicity (LetBlock 'Scoped) where
-  atomicity (LetBlock _ e) = atomicity e
-
 instance HasAtomicity (Lambda s) where
   atomicity = const Atom
-
-instance HasAtomicity Expression where
-  atomicity e = case e of
-    ExpressionIdentifier {} -> Atom
-    ExpressionHole {} -> Atom
-    ExpressionParensIdentifier {} -> Atom
-    ExpressionApplication {} -> Aggregate appFixity
-    ExpressionInfixApplication a -> Aggregate (getFixity a)
-    ExpressionPostfixApplication a -> Aggregate (getFixity a)
-    ExpressionLambda l -> atomicity l
-    ExpressionLiteral l -> atomicity l
-    ExpressionLetBlock l -> atomicity l
-    ExpressionBraces {} -> Atom
-    ExpressionUniverse {} -> Atom
-    ExpressionFunction {} -> Aggregate funFixity
 
 --------------------------------------------------------------------------------
 -- Function expression
@@ -643,8 +628,10 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Fun
 -- Notes: An empty lambda, here called 'the impossible case', is a lambda
 -- expression with empty list of arguments and empty body.
 
-newtype Lambda (s :: Stage) = Lambda
-  { _lambdaClauses :: [LambdaClause s]
+data Lambda (s :: Stage) = Lambda
+  {
+    _lambdaKw :: KeywordRef,
+    _lambdaClauses :: [LambdaClause s]
   }
 
 deriving stock instance
@@ -722,7 +709,9 @@ instance HasFixity PostfixApplication where
 --------------------------------------------------------------------------------
 
 data LetBlock (s :: Stage) = LetBlock
-  { _letClauses :: NonEmpty (LetClause s),
+  {
+    _letKw :: KeywordRef,
+    _letClauses :: NonEmpty (LetClause s),
     _letExpression :: ExpressionType s
   }
 
@@ -906,6 +895,8 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Jud
 
 makeLenses ''PatternArg
 makeLenses ''Example
+makeLenses ''Lambda
+makeLenses ''LambdaClause
 makeLenses ''Judoc
 makeLenses ''Function
 makeLenses ''InductiveDef
@@ -932,6 +923,24 @@ makeLenses ''Compile
 makeLenses ''PatternBinding
 makeLenses ''PatternAtoms
 makeLenses ''ExpressionAtoms
+
+instance HasAtomicity Expression where
+  atomicity e = case e of
+    ExpressionIdentifier {} -> Atom
+    ExpressionHole {} -> Atom
+    ExpressionParensIdentifier {} -> Atom
+    ExpressionApplication {} -> Aggregate appFixity
+    ExpressionInfixApplication a -> Aggregate (getFixity a)
+    ExpressionPostfixApplication a -> Aggregate (getFixity a)
+    ExpressionLambda l -> atomicity l
+    ExpressionLiteral l -> atomicity l
+    ExpressionLetBlock l -> atomicity l
+    ExpressionBraces {} -> Atom
+    ExpressionUniverse {} -> Atom
+    ExpressionFunction {} -> Aggregate funFixity
+
+instance HasAtomicity (LetBlock 'Scoped) where
+  atomicity l = atomicity (l ^. letExpression)
 
 instance Eq (ModuleRef'' 'S.Concrete t) where
   (==) = (==) `on` (^. moduleRefName)
@@ -989,6 +998,53 @@ deriving stock instance
 
 deriving stock instance
   Show (PatternAtom s) => Show (PatternAtoms s)
+
+instance HasLoc ScopedIden where
+  getLoc = \case
+    ScopedAxiom a -> getLoc a
+    ScopedConstructor a -> getLoc a
+    ScopedInductive a -> getLoc a
+    ScopedFunction a -> getLoc a
+    ScopedVar a -> getLoc a
+
+instance HasLoc Application where
+  getLoc (Application l r) = getLoc l <> getLoc r
+
+instance HasLoc InfixApplication where
+  getLoc (InfixApplication l _ r) = getLoc l <> getLoc r
+
+instance HasLoc PostfixApplication where
+  getLoc (PostfixApplication l o) = getLoc l <> getLoc o
+
+instance HasLoc (LambdaClause 'Scoped) where
+  getLoc c = getLocSpan (c ^. lambdaParameters) <> getLoc (c ^. lambdaBody)
+
+instance HasLoc (Lambda 'Scoped) where
+  getLoc l = getLoc (l ^. lambdaKw) <>? (getLocSpan <$> nonEmpty (l ^. lambdaClauses))
+
+instance HasLoc (FunctionParameter 'Scoped) where
+  getLoc p = (getLoc <$> p ^. paramName) ?<> getLoc (p ^. paramType)
+
+instance HasLoc (Function 'Scoped) where
+  getLoc f = getLoc (f ^. funParameter) <> getLoc (f ^. funReturn)
+
+instance HasLoc (LetBlock 'Scoped) where
+  getLoc l = getLoc (l ^. letKw) <> getLoc (l ^. letExpression)
+
+instance HasLoc Expression where
+  getLoc = \case
+    ExpressionIdentifier i -> getLoc i
+    ExpressionParensIdentifier i -> getLoc i
+    ExpressionApplication i -> getLoc i
+    ExpressionInfixApplication i -> getLoc i
+    ExpressionPostfixApplication i -> getLoc i
+    ExpressionLambda i -> getLoc i
+    ExpressionLetBlock i -> getLoc i
+    ExpressionUniverse i -> getLoc i
+    ExpressionLiteral i -> getLoc i
+    ExpressionFunction i -> getLoc i
+    ExpressionHole i -> getLoc i
+    ExpressionBraces i -> getLoc i
 
 instance SingI s => HasLoc (Import s) where
   getLoc Import {..} = case sing :: SStage s of

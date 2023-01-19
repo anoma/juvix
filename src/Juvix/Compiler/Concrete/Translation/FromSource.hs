@@ -204,41 +204,41 @@ judocAtom =
       judocText_ (P.char ';')
       return e
 
-builtinInductive :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r BuiltinInductive
+builtinInductive :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (WithLoc BuiltinInductive)
 builtinInductive = builtinHelper
 
-builtinFunction :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r BuiltinFunction
+builtinFunction :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (WithLoc BuiltinFunction)
 builtinFunction = builtinHelper
 
-builtinAxiom :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r BuiltinAxiom
+builtinAxiom :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (WithLoc BuiltinAxiom)
 builtinAxiom = builtinHelper
 
 builtinHelper ::
   (Members '[InfoTableBuilder, JudocStash, NameIdGen] r, Bounded a, Enum a, Pretty a) =>
-  ParsecS r a
+  ParsecS r (WithLoc a)
 builtinHelper =
   P.choice
-    [ kw (asciiKw (prettyText a)) $> a
+    [ (`WithLoc`a) <$> onlyInterval (kw (asciiKw (prettyText a)))
       | a <- allElements
     ]
 
-builtinInductiveDef :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => BuiltinInductive -> ParsecS r (InductiveDef 'Parsed)
-builtinInductiveDef = inductiveDef . Just
+builtinInductiveDef :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => WithLoc BuiltinInductive -> ParsecS r (InductiveDef 'Parsed)
+builtinInductiveDef = inductiveDef . Just . (^. withLocParam)
 
 builtinAxiomDef ::
   Members '[InfoTableBuilder, JudocStash, NameIdGen] r =>
-  BuiltinAxiom ->
+  WithLoc BuiltinAxiom ->
   ParsecS r (AxiomDef 'Parsed)
 builtinAxiomDef = axiomDef . Just
 
 builtinTypeSig ::
   Members '[InfoTableBuilder, JudocStash, NameIdGen] r =>
-  BuiltinFunction ->
+  WithLoc BuiltinFunction ->
   ParsecS r (TypeSignature 'Parsed)
 builtinTypeSig b = do
   terminating <- isJust <$> optional (kw kwTerminating)
   fun <- symbol
-  typeSignature terminating fun (Just b)
+  typeSignature terminating fun (Just (b ^. withLocParam))
 
 builtinStatement :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (Statement 'Parsed)
 builtinStatement = do
@@ -289,18 +289,18 @@ precedence = PrecNat <$> (fst <$> decimal)
 
 operatorSyntaxDef :: forall r. Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r OperatorSyntaxDef
 operatorSyntaxDef = do
-  _fixityArity <- arity
+  (_fixityArity, _opKw) <- arity
   _fixityPrecedence <- precedence
   _opSymbol <- symbol
   let _opFixity = Fixity {..}
   return OperatorSyntaxDef {..}
   where
-    arity :: ParsecS r OperatorArity
+    arity :: ParsecS r (OperatorArity, KeywordRef)
     arity =
-      Binary AssocRight <$ kw kwInfixr
-        <|> Binary AssocLeft <$ kw kwInfixl
-        <|> Binary AssocNone <$ kw kwInfix
-        <|> Unary AssocPostfix <$ kw kwPostfix
+      (Binary AssocRight,) <$> kw kwInfixr
+        <|> (Binary AssocLeft,) <$> kw kwInfixl
+        <|> (Binary AssocNone,) <$> kw kwInfix
+        <|> (Unary AssocPostfix,) <$> kw kwPostfix
 
 --------------------------------------------------------------------------------
 -- Import statement
@@ -370,7 +370,7 @@ letClause = either LetTypeSig LetFunClause <$> auxTypeSigFunClause
 
 letBlock :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (LetBlock 'Parsed)
 letBlock = do
-  kw kwLet
+  _letKw <- kw kwLet
   _letClauses <- braces (P.sepEndBy1 letClause (kw kwSemicolon))
   kw kwIn
   _letExpression <- parseExpressionAtoms
@@ -420,10 +420,10 @@ auxTypeSigFunClause = do
 
 axiomDef ::
   Members '[InfoTableBuilder, JudocStash, NameIdGen] r =>
-  Maybe BuiltinAxiom ->
+  Maybe (WithLoc BuiltinAxiom) ->
   ParsecS r (AxiomDef 'Parsed)
 axiomDef _axiomBuiltin = do
-  kw kwAxiom
+  _axiomKw <- kw kwAxiom
   _axiomDoc <- getJudoc
   _axiomName <- symbol
   kw kwColon
@@ -486,7 +486,7 @@ lambdaClause = do
 
 lambda :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (Lambda 'Parsed)
 lambda = do
-  kw kwLambda
+  _lambdaKw <- kw kwLambda
   _lambdaClauses <- braces (P.sepEndBy lambdaClause (kw kwSemicolon))
   return Lambda {..}
 

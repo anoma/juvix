@@ -5,12 +5,12 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Base qualified as P
 import Juvix.Compiler.Concrete.Pretty.Options
-import Juvix.Data.CodeAnn (Ann)
+import Juvix.Data.CodeAnn (CodeAnn(..),Ann)
 import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.Keyword.All
-import Juvix.Prelude.Base hiding ((<+>))
+import Juvix.Prelude.Base hiding ((<+>), (?<>), (<?+>))
 import Juvix.Prelude.Path
-import Juvix.Prelude.Pretty (pretty)
+import Juvix.Prelude.Pretty (pretty,annotate)
 
 class PrettyPrint a where
   ppCode :: Members '[ExactPrint, Reader Options] r => a -> Sem r ()
@@ -20,9 +20,6 @@ instance PrettyPrint Keyword where
 
 instance PrettyPrint KeywordRef where
   ppCode = ppMorpheme
-
-instance (SingI s) => PrettyPrint (Judoc s) where
-  ppCode = P.ppCode >=> noLoc
 
 doc :: (PrettyPrint c, HasLoc c) => Options -> Comments -> c -> Doc Ann
 doc opts cs x =
@@ -48,13 +45,12 @@ ppModulePathType x = case sing :: SStage s of
     SModuleLocal -> P.ppCode x >>= morpheme (getLoc x) . P.annSDef x
     SModuleTop -> P.ppCode x >>= morpheme (getLoc x) . P.annSDef x
 
-instance (SingI s, SingI t) => PrettyPrint (Module s t) where
-  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Module s t -> Sem r ()
+instance (SingI t) => PrettyPrint (Module 'Scoped t) where
+  ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Module 'Scoped t -> Sem r ()
   ppCode Module {..} = do
     let moduleBody' = indent (ppCode _moduleBody)
         modulePath' = ppModulePathType _modulePath
         moduleDoc' :: Sem r () = maybe (return ()) ppCode _moduleDoc
-    -- return $
     moduleDoc'
       <> ppCode _moduleKw
       <+> modulePath'
@@ -70,11 +66,11 @@ instance (SingI s, SingI t) => PrettyPrint (Module s t) where
         SModuleLocal -> return ()
         SModuleTop -> semicolon
 
-instance SingI s => PrettyPrint [Statement s] where
-  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => [Statement s] -> Sem r ()
+instance PrettyPrint [Statement 'Scoped] where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => [Statement 'Scoped] -> Sem r ()
   ppCode ss = vsep2 (map ppGroup (P.groupStatements ss))
     where
-      ppGroup :: [Statement s] -> Sem r ()
+      ppGroup :: [Statement 'Scoped] -> Sem r ()
       ppGroup = vsep . endSemicolon . map ppCode
 
 instance PrettyPrint TopModulePath where
@@ -105,26 +101,80 @@ ppMorpheme n = P.ppCode n >>= morpheme (getLoc n)
 instance PrettyPrint (ModuleRef'' 'S.Concrete 'ModuleTop) where
   ppCode m = ppCode (m ^. moduleRefName)
 
-instance SingI s => PrettyPrint (Import s) where
-  ppCode :: Members '[ExactPrint, Reader Options] r => Import s -> Sem r ()
+instance PrettyPrint (Import 'Scoped) where
+  ppCode :: Members '[ExactPrint, Reader Options] r => Import 'Scoped -> Sem r ()
   ppCode i = do
     ppCode (i ^. importKw)
-      <+> ppImportType
-    where
-      ppImportType = case sing :: SStage s of
-        SParsed -> ppCode (i ^. importModule)
-        SScoped -> ppCode (i ^. importModule)
+      <+> ppCode (i ^. importModule)
 
-instance SingI s => PrettyPrint (Statement s) where
+instance PrettyPrint OperatorSyntaxDef where
+  ppCode OperatorSyntaxDef {..} = do
+    opSymbol' <- P.ppUnkindedSymbol _opSymbol
+    fi
+      <+> morpheme (getLoc _opSymbol) opSymbol'
+   where
+   fi = do
+     p <- P.ppCode (_opFixity ^. fixityPrecedence)
+     ppCode _opKw <+> noLoc p
+
+instance PrettyPrint Expression where
+  ppCode = ppMorpheme
+
+instance PrettyPrint (Example 'Scoped) where
+  ppCode e =
+    noLoc P.ppJudocStart
+     <+> noLoc P.ppJudocExampleStart
+     <+> ppCode (e ^. exampleExpression)
+     <> noLoc P.kwSemicolon
+     <> line
+
+instance PrettyPrint (JudocParagraphLine 'Scoped) where
+  ppCode = ppMorpheme
+
+instance PrettyPrint (Judoc 'Scoped) where
+  ppCode (Judoc blocks) = mconcatMapM ppCode blocks
+
+instance PrettyPrint (JudocBlock 'Scoped) where
   ppCode = \case
-    StatementOperator {} -> todo
+    JudocParagraph l -> vsep (ppCode <$> l)
+    JudocExample e -> ppCode e
+
+instance PrettyPrint (JudocAtom 'Scoped) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => JudocAtom 'Scoped -> Sem r ()
+  ppCode = \case
+    JudocExpression e -> semiDelim (ppCode e)
+    JudocText t -> noLoc (annotate AnnComment (pretty t))
+    where
+      semiDelim :: Sem r () -> Sem r ()
+      semiDelim x = semi >> x >> semi
+        where
+        semi :: Sem r ()
+        semi = noLoc (annotate AnnComment (pretty @Text ";"))
+
+instance PrettyPrint (AxiomDef 'Scoped) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => AxiomDef 'Scoped -> Sem r ()
+  ppCode AxiomDef {..} = do
+    axiomName' <- P.annDef _axiomName <$> P.ppSymbol _axiomName
+    let builtin' :: Maybe (Sem r ()) = (\x -> P.ppCode x >>= morpheme (getLoc x)) <$> _axiomBuiltin
+        _axiomDoc' :: Maybe (Sem r ()) =  ppCode <$> _axiomDoc
+    _axiomDoc'
+      ?<> builtin'
+      <?+> hang
+        (ppCode _axiomKw
+         <+> morpheme (getLoc _axiomName) axiomName'
+         <+> noLoc P.kwColon
+         <+> ppCode _axiomType)
+
+instance PrettyPrint (Statement 'Scoped) where
+  ppCode = \case
+    StatementOperator o -> ppCode o
     StatementTypeSignature {} -> todo
     StatementImport i -> ppCode i
     StatementInductive {} -> todo
     StatementModule {} -> todo
     StatementOpenModule {} -> todo
     StatementFunctionClause {} -> todo
-    StatementAxiom {} -> todo
+    StatementAxiom a -> ppCode a
     StatementForeign {} -> todo
     StatementCompile {} -> todo
 

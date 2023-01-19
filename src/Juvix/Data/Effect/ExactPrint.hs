@@ -6,7 +6,7 @@ where
 
 import Juvix.Data.CodeAnn qualified as C
 import Juvix.Data.Effect.ExactPrint.Base
-import Juvix.Prelude.Base
+import Juvix.Prelude.Base hiding ((<+>))
 import Juvix.Prelude.Pretty qualified as P
 
 infixr 6 <+>
@@ -14,9 +14,22 @@ infixr 6 <+>
 (<+>) :: forall r. (Members '[ExactPrint] r) => Sem r () -> Sem r () -> Sem r ()
 a <+> b = a >> noLoc P.space >> b
 
+infixr 7 ?<>
+(?<>) :: forall r. Maybe (Sem r ()) -> Sem r () -> Sem r ()
+(?<>) = maybe id (<>)
+
+infixr 7 <?+>
+(<?+>) :: forall r. (Members '[ExactPrint] r) =>  Maybe (Sem r ()) -> Sem r () -> Sem r ()
+(<?+>) =  \case
+  Nothing -> id
+  Just a -> (a <+>)
+
 -- NOTE that then you can use subsume indent' in the call site
 -- indent' :: forall ann r a. Sem (ExactPrint ann ': r) a -> Sem (ExactPrint ann ': r) a
 -- indent' = region @ann (P.indent 2)
+
+hang :: forall r. Members '[ExactPrint] r => Sem r () -> Sem r ()
+hang = region (P.hang 2)
 
 indent :: forall r. Members '[ExactPrint] r => Sem r () -> Sem r ()
 indent = region (P.indent 2)

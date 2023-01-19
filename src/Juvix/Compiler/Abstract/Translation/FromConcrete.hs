@@ -395,7 +395,7 @@ goExpression = \case
       return (Abstract.Application l'' r' Explicit)
 
 goLambda :: forall r. Members '[Error ScoperError, InfoTableBuilder] r => Lambda 'Scoped -> Sem r Abstract.Lambda
-goLambda (Lambda cl) = Abstract.Lambda <$> mapM goClause cl
+goLambda l = Abstract.Lambda <$> mapM goClause (l ^. lambdaClauses)
   where
     goClause :: LambdaClause 'Scoped -> Sem r Abstract.LambdaClause
     goClause (LambdaClause ps b) = do
@@ -508,8 +508,8 @@ goAxiom a = do
   let axiom =
         Abstract.AxiomDef
           { _axiomType = _axiomType',
-            _axiomBuiltin = a ^. axiomBuiltin,
+            _axiomBuiltin = (^. withLocParam) <$> a ^. axiomBuiltin,
             _axiomName = goSymbol (a ^. axiomName)
           }
-  whenJust (a ^. axiomBuiltin) (registerBuiltinAxiom axiom)
+  whenJust (a ^. axiomBuiltin) (registerBuiltinAxiom axiom . (^. withLocParam))
   registerAxiom' axiom
