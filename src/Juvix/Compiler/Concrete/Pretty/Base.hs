@@ -7,7 +7,7 @@ where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Text qualified as T
-import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath)
+import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath, IsConcrete (..))
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (unfoldApplication)
 import Juvix.Compiler.Concrete.Language
@@ -76,10 +76,10 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
         SScoped ->
           i
             ^. importModule
+            . moduleRefModule
             . modulePath
             . S.nameId
-            == projSigma2 (^. moduleRefName) (o ^. openModuleName . unModuleRef')
-            ^. S.nameId
+            == getModuleRefNameId (o ^. openModuleName)
       (StatementImport _, _) -> False
       (StatementOpenModule {}, StatementOpenModule {}) -> True
       (StatementOpenModule {}, _) -> False
@@ -353,7 +353,9 @@ instance PrettyCode n => PrettyCode (S.Name' n) where
       annSRef = annotate (AnnRef (_nameDefinedIn ^. S.absTopModulePath) _nameId)
 
 instance PrettyCode ModuleRef where
-  ppCode = ppCode . projSigma2 (^. moduleRefName) . (^. unModuleRef')
+  ppCode (ModuleRef' (t :&: ModuleRef'' {..})) = case t of
+    SModuleTop -> ppCode _moduleRefName
+    SModuleLocal -> ppCode _moduleRefName
 
 instance SingI s => PrettyCode (OpenModule s) where
   ppCode :: forall r. Members '[Reader Options] r => OpenModule s -> Sem r (Doc Ann)
@@ -527,7 +529,12 @@ instance SingI s => PrettyCode (Import s) where
     where
       ppModulePath = case sing :: SStage s of
         SParsed -> ppCode m
-        SScoped -> ppTopModulePath (m ^. modulePath)
+        SScoped -> ppCode m
+
+instance SingI t => PrettyCode (ModuleRef'' 'Concrete t) where
+  ppCode m = case sing :: SModuleIsTop t of
+    SModuleTop -> ppCode (m ^. moduleRefName)
+    SModuleLocal -> ppCode (m ^. moduleRefName)
 
 instance PrettyCode PatternScopedIden where
   ppCode = \case

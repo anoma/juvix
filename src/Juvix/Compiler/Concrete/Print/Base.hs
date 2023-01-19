@@ -4,6 +4,7 @@ import Data.List.NonEmpty.Extra qualified as NonEmpty
 -- import Data.Text qualified as T
 -- import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
+-- import Juvix.Compiler.Concrete.Data.ScopedName (IsConcrete(..))
 -- import Juvix.Compiler.Concrete.Extra (unfoldApplication)
 import Juvix.Compiler.Concrete.Language
 -- import Juvix.Extra.Strings qualified as Str
@@ -112,7 +113,10 @@ instance SingI s => PrettyPrint (Import s) where
     where
       ppModulePath = case sing :: SStage s of
         SParsed -> ppCode m
-        SScoped -> ppMorpheme (m ^. modulePath)
+        SScoped -> undefined
+
+-- instance SingI r => PrettyPrint (ModuleRef'' Concrete s) where
+--           ppMorpheme (m ^. modulePath)
 
 instance SingI s => PrettyPrint (Statement s) where
   ppCode = \case

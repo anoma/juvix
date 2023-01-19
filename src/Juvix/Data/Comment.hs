@@ -44,7 +44,7 @@ instance Pretty Comment where
         CommentBlock -> enclose "{-" "-}"
 
 allComments :: Comments -> [Comment]
-allComments c = concat [ f ^. fileCommentsSorted| f <- toList (c ^. commentsByFile) ]
+allComments c = concat [f ^. fileCommentsSorted | f <- toList (c ^. commentsByFile)]
 
 mkComments :: [Comment] -> Comments
 mkComments cs = Comments {..}

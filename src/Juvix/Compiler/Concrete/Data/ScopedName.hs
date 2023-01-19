@@ -17,7 +17,9 @@ import Juvix.Prelude.Pretty
 -- Names
 --------------------------------------------------------------------------------
 
-data IsConcrete = NotConcrete | Concrete
+data IsConcrete
+  = NotConcrete
+  | Concrete
 
 $(genSingletons [''IsConcrete])
 

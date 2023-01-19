@@ -225,13 +225,15 @@ checkImport import_@(Import path) = do
   cache <- gets (^. scoperModulesCache . cachedModules)
   moduleRef <- maybe (readScopeModule import_) return (cache ^. at path)
   let checked = moduleRef ^. moduleRefModule
-      sname = checked ^. modulePath
+      sname :: S.TopModulePath = checked ^. modulePath
+      sname' :: S.Name = over S.nameConcrete topModulePathToName sname
       moduleId = sname ^. S.nameId
+      cmoduleRef :: ModuleRef'' 'S.Concrete 'ModuleTop = set moduleRefName sname' moduleRef
   modify (over scopeTopModules (HashMap.insert path moduleRef))
   registerName (set S.nameConcrete path sname)
   let moduleRef' = mkModuleRef' moduleRef
   modify (over scoperModules (HashMap.insert moduleId moduleRef'))
-  return (Import checked)
+  return (Import cmoduleRef)
   where
     checkCycle :: Sem r ()
     checkCycle = do
@@ -512,7 +514,7 @@ createExportsTable ei = foldr (HashSet.insert . getNameId) HashSet.empty (HashMa
       EntryInductive r -> getNameRefId (r ^. inductiveRefName)
       EntryFunction r -> getNameRefId (r ^. functionRefName)
       EntryConstructor r -> getNameRefId (r ^. constructorRefName)
-      EntryModule r -> getNameRefId (getModuleRefNameType r)
+      EntryModule r -> getModuleRefNameId r
 
 checkTopModules ::
   forall r.

@@ -85,7 +85,7 @@ testDescr PosTest {..} =
                 fs :: HashMap (Path Abs File) Text
                 fs =
                   HashMap.fromList $
-                    [ (absFile (getModuleFileAbsPath (toFilePath tRoot) m), renderCode m)
+                    [ (getModuleFilePath m, renderCode m)
                       | m <- toList (getAllModules s2)
                     ]
                       <> yamlFiles

@@ -89,7 +89,7 @@ type family PatternAtType s = res | res -> s where
 
 type family ImportType (s :: Stage) :: GHC.Type where
   ImportType 'Parsed = TopModulePath
-  ImportType 'Scoped = Module 'Scoped 'ModuleTop
+  ImportType 'Scoped = ModuleRef'' 'S.Concrete 'ModuleTop
 
 type ModulePathType :: Stage -> ModuleIsTop -> GHC.Type
 type family ModulePathType s t = res | res -> t s where
@@ -461,11 +461,19 @@ getModuleExportInfo (ModuleRef' (_ :&: ModuleRef'' {..})) = _moduleExportInfo
 getModuleRefNameType :: ModuleRef' c -> RefNameType c
 getModuleRefNameType (ModuleRef' (_ :&: ModuleRef'' {..})) = _moduleRefName
 
+getModuleRefNameId :: forall c. SingI c => ModuleRef' c -> S.NameId
+getModuleRefNameId (ModuleRef' (t :&: ModuleRef'' {..})) =
+  case sing :: S.SIsConcrete c of
+    S.SConcrete -> case t of
+      SModuleTop -> _moduleRefName ^. S.nameId
+      SModuleLocal -> _moduleRefName ^. S.nameId
+    S.SNotConcrete -> _moduleRefName ^. S.nameId
+
 instance SingI c => Eq (ModuleRef' c) where
-  (==) = (==) `on` (getNameRefId . getModuleRefNameType)
+  (==) = (==) `on` getModuleRefNameId
 
 instance SingI c => Ord (ModuleRef' c) where
-  compare = compare `on` (getNameRefId . getModuleRefNameType)
+  compare = compare `on` getModuleRefNameId
 
 data ModuleRef'' (c :: S.IsConcrete) (t :: ModuleIsTop) = ModuleRef''
   { _moduleRefName :: RefNameType c,
@@ -925,6 +933,9 @@ makeLenses ''PatternBinding
 makeLenses ''PatternAtoms
 makeLenses ''ExpressionAtoms
 
+instance Eq (ModuleRef'' 'S.Concrete t) where
+  (==) = (==) `on` (^. moduleRefName)
+
 instance HasAtomicity (PatternAtom 'Parsed) where
   atomicity = const Atom
 
@@ -978,6 +989,9 @@ deriving stock instance
 
 deriving stock instance
   Show (PatternAtom s) => Show (PatternAtoms s)
+
+instance HasLoc (ModuleRef'' 'S.Concrete t) where
+  getLoc ref = getLoc (ref ^. moduleRefName)
 
 instance (SingI s, SingI t) => HasLoc (Module s t) where
   getLoc m = case sing :: SStage s of
