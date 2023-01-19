@@ -6,7 +6,7 @@ module Juvix.Data.Effect.ExactPrint.Base
 where
 
 import Juvix.Data.Comment
-import Juvix.Data.CodeAnn
+import Juvix.Data.CodeAnn hiding (line')
 import Juvix.Data.Loc
 import Juvix.Prelude.Base
 import Prettyprinter qualified as P
@@ -78,8 +78,8 @@ eprint _loc doc = append' doc
 append' :: forall r. Members '[State Builder] r => Doc Ann -> Sem r ()
 append' d = modify (over builderDoc (<> d))
 
-line' :: forall r. Members '[State Builder] r => Proxy Ann -> Sem r ()
-line' _ = append' P.line
+line' :: forall r. Members '[State Builder] r => Sem r ()
+line' = append' P.line
 
 morpheme' :: forall r. Members '[State Builder] r => Interval -> Doc Ann -> Sem r ()
 morpheme' loc doc = do
@@ -93,7 +93,8 @@ morpheme' loc doc = do
 
     printComment :: Comment -> Sem r ()
     printComment c = do
-      eprint (c ^. commentInterval) (P.pretty (c ^. commentText))
+      eprint (c ^. commentInterval) (annotate AnnComment (P.pretty c))
+      line'
 
     popComment :: Sem r (Maybe Comment)
     popComment = do

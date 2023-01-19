@@ -23,10 +23,16 @@ data KeywordRef = KeywordRef
     _keywordRefInterval :: Interval,
     _keywordRefUnicode :: IsUnicode
   }
-  deriving stock (Eq, Show, Ord)
+  deriving stock (Show)
 
 makeLenses ''Keyword
 makeLenses ''KeywordRef
+
+instance Eq KeywordRef where
+  a == b = (a ^. keywordRefKeyword, a ^. keywordRefUnicode) == (b ^. keywordRefKeyword, b ^. keywordRefUnicode)
+
+instance Ord KeywordRef where
+  compare a b = compare (a ^. keywordRefKeyword, a ^. keywordRefUnicode) (b ^. keywordRefKeyword, b ^. keywordRefUnicode)
 
 instance HasLoc KeywordRef where
   getLoc = (^. keywordRefInterval)

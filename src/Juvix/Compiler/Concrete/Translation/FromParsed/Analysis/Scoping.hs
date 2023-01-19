@@ -797,7 +797,7 @@ checkOpenModule ::
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenModule op
-  | Just k <- op ^. openModuleImportKw = checkOpenImportModule op
+  | isJust (op ^. openModuleImportKw) = checkOpenImportModule op
   | otherwise = checkOpenModuleNoImport op
 
 checkFunctionClause ::
