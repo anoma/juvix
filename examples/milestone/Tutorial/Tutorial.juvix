@@ -1,14 +1,9 @@
+--- This is an advanced tutorial for the Juvix programming language. You should read
+--- the "Quick start" and the "Learn Juvix in minutes" pages in the documentation
+--- first.
+
 module Tutorial;
 
-{-
-
-This is an advanced tutorial for the Juvix programming language. You should read
-the "Quick start" and the "Learn Juvix in minutes" pages in the documentation
-first.
-
-COMING SOON
-
--}
 
 -- import the standard library prelude and bring it into scope
 open import Stdlib.Prelude;

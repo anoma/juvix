@@ -25,7 +25,7 @@ type Nat :=
 Constructors can be used like normal functions or in patterns when defining functions by pattern matching. For example, here is a function adding two natural numbers:
 
 #+begin_src text
-inifl 6 +;
+infixl 6 +;
 + : Nat -> Nat -> Nat;
 + zero b := b;
 + (suc a) b := suc (a + b);

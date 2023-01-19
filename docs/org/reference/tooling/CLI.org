@@ -10,8 +10,6 @@ juvix [Global options] ((-v|--version) | (-h|--help) | COMPILER_CMD | UTILITY_CM
 
 - =-v,--version=
   Print the version and exit
-- =--show-root=
-  Print the detected root of the project
 - =-h,--help=
   Show this help text
 
@@ -65,8 +63,6 @@ juvix dev COMMAND
   Subcommands related to JuvixCore
 - =asm=
   Subcommands related to JuvixAsm
-- =doc=
-  Generate documentation
 - =root=
   Show the root path for a Juvix project
 - =termination=
@@ -74,7 +70,7 @@ juvix dev COMMAND
 - =internal=
   Subcommands related to Internal
 - =minic=
-  Translate a Juvix file to MiniC
+  Translate a Juvix file to a subset of C
 
 ** CLI Auto-completion Scripts
 

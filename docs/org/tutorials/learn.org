@@ -231,7 +231,7 @@ open import Stdlib.Data.Nat.Ord;
 max3 : Nat -> Nat -> Nat -> Nat;
 max3 x y z := if (x > y) (max x z) (max y z);
 #+end_example
-The condiditional =if= is a special function which is evaluated lazily, i.e., first the condition (the first argument) is evaluated, and then depending on its truth-value one of the branches (the second or the third argument) is evaluated and returned.
+The conditional =if= is a special function which is evaluated lazily, i.e., first the condition (the first argument) is evaluated, and then depending on its truth-value one of the branches (the second or the third argument) is evaluated and returned.
 
 By default, evaluation in Juvix is /eager/ (or /strict/), meaning that the arguments to a function are fully evaluated before applying the function. Only =if=, =||= and =&&= are treated specially and evaluated lazily. These special functions cannot be partially applied (see [[./learn.md#partial-application-and-higher-order-functions][Partial application and higher-order functions]] below).
 
@@ -267,7 +267,7 @@ The functions =even= and =odd= are not visible outside =even'=.
 
 ** Recursion
 
-Juvix is a purely functional language, which means that functions have no side effects and all variables are immutable. An advantage of functional programming is that all expressions are /referentially transparent/ -- any expression can be replaced by its value without changing the meaning of the program. This makes it easier to reason about programs, in particular to prove their correctness. No errors involving implict state are possible, because the state is always explicit.
+Juvix is a purely functional language, which means that functions have no side effects and all variables are immutable. An advantage of functional programming is that all expressions are /referentially transparent/ -- any expression can be replaced by its value without changing the meaning of the program. This makes it easier to reason about programs, in particular to prove their correctness. No errors involving implicit state are possible, because the state is always explicit.
 
 In a functional language, there are no imperative loops. Repetition is expressed using recursion. In many cases, the recursive definition of a function follows the inductive definition of a data structure the function analyses. For example, consider the following inductive type of lists of natural numbers:
 #+begin_example
@@ -283,7 +283,7 @@ nlength : NList -> Nat;
 nlength nnil := 0;
 nlength (ncons _ xs) := nlength xs + 1;
 #+end_example
-The definition follows the inductive definition of =NList=. There are two function clauses for the two constructors. The case for =nnil= is easy -- the constructor has no arguments and the length of the empty list is =0=. For a constructor with some arguments, one typically needs to express the result of the function in terms of the constructor arguments, usually calling the function recursively on the constructor's inductive arguments (for =ncons= this is the second argument). In the case of =ncons _ xs=, we recusively call =nlength= on =xs= and add =1= to the result.
+The definition follows the inductive definition of =NList=. There are two function clauses for the two constructors. The case for =nnil= is easy -- the constructor has no arguments and the length of the empty list is =0=. For a constructor with some arguments, one typically needs to express the result of the function in terms of the constructor arguments, usually calling the function recursively on the constructor's inductive arguments (for =ncons= this is the second argument). In the case of =ncons _ xs=, we recursively call =nlength= on =xs= and add =1= to the result.
 
 Let's consider another example -- a function which returns the maximum of the numbers in a list or 0 for the empty list.
 #+begin_example
@@ -315,7 +315,7 @@ The definition of =mirror= follows the definition of =Tree=. There are two recur
 
 Strictly speaking, all Juvix functions have only one argument. Multi-argument functions are really functions which return a function which takes the next argument and returns a function taking another argument, and so on for all arguments. The function type former =->= (the arrow) is right-associative. Hence, the type, e.g., =Nat -> Nat -> Nat= when fully parenthesised becomes =Nat -> (Nat -> Nat)=. It is the type of functions which given an argument of type =Nat= return a function of type =Nat -> Nat= which itself takes an argument of type =Nat= and produces a result of type =Nat=. Function application is left-associative. For example, =f a b= when fully parenthesised becomes =(f a) b=. So it is an application to =b= of the function obtained by applying =f= to =a=.
 
-Since a multi-argument function is just a one-argument function returning a function, it can be /partially applied/ to a smaller number of arguments than specified in its definition. The result is an approriate function. For example, =sub 10= is a function which subtracts its argument from =10=, and =(+) 1= is a function which adds =1= to its argument. If the function has been declared as an infix operator (like =+=), then for partial application one needs to enclose it in parentheses.
+Since a multi-argument function is just a one-argument function returning a function, it can be /partially applied/ to a smaller number of arguments than specified in its definition. The result is an appropriate function. For example, =sub 10= is a function which subtracts its argument from =10=, and =(+) 1= is a function which adds =1= to its argument. If the function has been declared as an infix operator (like =+=), then for partial application one needs to enclose it in parentheses.
 
 A function which takes a function as an argument is a /higher-order function/. An example is the =nmap= function which applies a given function to each element in a list of natural numbers.
 #+begin_example
@@ -461,7 +461,7 @@ log2 : Nat -> Nat;
 log2 n := if (n <= 1) 0 (suc (log2 (div n 2)));
 #+end_example
 
-Coverage checking ensures that there are no unhandles patterns in function clauses or =case= expressions. For example, the following definition is rejected because the case =suc zero= is not handled:
+Coverage checking ensures that there are no unhandled patterns in function clauses or =case= expressions. For example, the following definition is rejected because the case =suc zero= is not handled:
 #+begin_example
 even : Nat -> Bool;
 even zero := true;

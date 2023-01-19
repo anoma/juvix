@@ -8,7 +8,7 @@ $A$ is a type, and there exists a term $x$ that inhabits $A$. Then the program w
 -- Example.juvix
 module Example;
  axiom A : Type;
- axom x : A;
+ axiom x : A;
 end;
 #+end_src
 

@@ -15,7 +15,7 @@ Juvix has support for the built-in natural type and a few functions that are com
 2. Builtin function definitions.
 
    #+begin_example
-   inifl 6 +;
+   infixl 6 +;
    builtin nat-plus
    + : Nat → Nat → Nat;
    + zero b := b;

@@ -9,7 +9,6 @@ The following is an example taken from the Juvix standard library.
 
 #+begin_example
 module Integers;
-
 axiom Int : Type;
 compile Int {  c -> "int" };
 
@@ -28,8 +27,4 @@ axiom <' : Int -> Int -> Bool;
 compile <' {
   c -> "lessThan";
 };
-
-infix 4 <;
-< : Int -> Int -> Bool;
-< a b := from-backend-bool (a <' b);
 #+end_example
