@@ -15,7 +15,6 @@ module Juvix.Compiler.Concrete.Language
 where
 
 import Data.Kind qualified as GHC
-import Juvix.Data.Keyword
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
@@ -28,6 +27,7 @@ import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Data
 import Juvix.Data.Ape.Base as Ape
 import Juvix.Data.Fixity
+import Juvix.Data.Keyword
 import Juvix.Data.NameKind
 import Juvix.Prelude hiding (show)
 import Prelude (show)
@@ -153,8 +153,7 @@ deriving stock instance
 --------------------------------------------------------------------------------
 
 data Import (s :: Stage) = Import
-  {
-    _importKw :: KeywordRef,
+  { _importKw :: KeywordRef,
     _importModule :: ImportType s
   }
 
@@ -388,8 +387,7 @@ deriving stock instance
 type LocalModuleName s = SymbolType s
 
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
-  {
-    _moduleKw :: KeywordRef,
+  { _moduleKw :: KeywordRef,
     _modulePath :: ModulePathType s t,
     _moduleParameters :: [InductiveParameter s],
     _moduleDoc :: Maybe (Judoc s),

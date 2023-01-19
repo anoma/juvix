@@ -5,8 +5,8 @@ import Juvix.Data.Loc
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
-data IsUnicode =
-  Unicode
+data IsUnicode
+  = Unicode
   | Ascii
   deriving stock (Eq, Show, Ord)
 

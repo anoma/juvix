@@ -3,7 +3,6 @@ module Juvix.Compiler.Concrete.Print.Base where
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
-
 import Juvix.Compiler.Concrete.Pretty.Base qualified as P
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Data.CodeAnn (Ann)

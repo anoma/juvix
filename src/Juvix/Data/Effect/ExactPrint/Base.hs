@@ -5,8 +5,8 @@ module Juvix.Data.Effect.ExactPrint.Base
   )
 where
 
-import Juvix.Data.Comment
 import Juvix.Data.CodeAnn hiding (line')
+import Juvix.Data.Comment
 import Juvix.Data.Loc
 import Juvix.Prelude.Base
 import Prettyprinter qualified as P
