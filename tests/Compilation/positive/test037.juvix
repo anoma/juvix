@@ -19,5 +19,5 @@ module test037;
     7;
 
   main : IO;
-  main := printNatLn (f (λ {   x y := x y + 2; } :: nil));
+  main := printNatLn (f (λ { x y := x y + 2; } :: nil));
 end;

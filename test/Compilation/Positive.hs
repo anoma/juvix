@@ -39,13 +39,7 @@ allTests =
     ( map
         (mkTest . toTestDescr)
         ( filterOutTests
-            [ "Let",
-              "Local functions with free variables",
-              "Nested binders with variable capture",
-              "Functional queues",
-              "Merge sort",
-              "Recursive let",
-              "Applications with lets and cases in function position"
+            [ "Merge sort"
             ]
             tests
         )
