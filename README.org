@@ -39,7 +39,7 @@ alt="pages-build-deployment" /></a>
 
 ** Description
 
-Juvix is a research programming language created by [[https://heliax.dev/][Heliax]] as a first step toward creating more robust and reliable alternatives for formally verified smart contracts than existing languages. The Juvix language is constantly evolving, open-source, functional, and statically typed with special support for compiling [[https://anoma.network/blog/validity-predicates/][validity predicates]] to the =C= language, which can be deployed to various distributed ledgers including [[https://anoma.net/][Anoma]].
+Juvix is a research programming language created by [[https://heliax.dev/][Heliax]] as a first step toward creating more robust and reliable alternatives for formally verified smart contracts than existing languages. The Juvix language is constantly evolving, open-source, functional, and statically typed with special support for compiling [[https://anoma.network/blog/validity-predicates/][validity predicates]] to [[https://webassembly.org/][WebAssembly]], which can be deployed to various distributed ledgers including [[https://anoma.net/][Anoma]].
 
 The Juvix language and related tools are documented in [[https://anoma.github.io/juvix/][the Juvix book]]. To write
 and test Juvix programs, you can use your favorite text editor, the =juvix=
@@ -48,7 +48,7 @@ plugin in [[https://marketplace.visualstudio.com/items?itemName=heliax.juvix-mod
 
 ** Quick start
 
-See [[./quick-start.md][Quick start]] to start with Juvix.
+See [[https://docs.juvix.org/quick-start.html][Quick start]] to start with Juvix.
 
 ** The Juvix programming language
 
