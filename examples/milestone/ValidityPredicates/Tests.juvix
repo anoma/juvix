@@ -31,7 +31,7 @@ show-result false := "FAIL";
 
 main : IO;
 main :=
-    (putStr "VP Status: ")
-    >> (putStrLn (show-result (vp token keys-changed verifiers)));
+    (printString "VP Status: ")
+    >> (printStringLn (show-result (vp token keys-changed verifiers)));
 
 end;

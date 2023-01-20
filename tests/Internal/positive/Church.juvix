@@ -12,7 +12,7 @@ csuc : Num → Num;
 csuc n {_} f := f ∘ n {_} f;
 
 toNat : Num → Nat;
-toNat n := n {_} ((+) one) zero;
+toNat n := n {_} ((+) (suc zero)) zero;
 
 main : IO;
 main :=

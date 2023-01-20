@@ -8,6 +8,6 @@ type Unit :=
 axiom ignore : Unit -> Unit;
 
 main : IO;
-main := putStrLn "Hello";
+main := printStringLn "Hello";
 
 end;
