@@ -223,7 +223,7 @@ builtinHelper =
     ]
 
 builtinInductiveDef :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => WithLoc BuiltinInductive -> ParsecS r (InductiveDef 'Parsed)
-builtinInductiveDef = inductiveDef . Just . (^. withLocParam)
+builtinInductiveDef = inductiveDef . Just
 
 builtinAxiomDef ::
   Members '[InfoTableBuilder, JudocStash, NameIdGen] r =>
@@ -236,9 +236,9 @@ builtinTypeSig ::
   WithLoc BuiltinFunction ->
   ParsecS r (TypeSignature 'Parsed)
 builtinTypeSig b = do
-  terminating <- isJust <$> optional (kw kwTerminating)
+  terminating <- optional (kw kwTerminating)
   fun <- symbol
-  typeSignature terminating fun (Just (b ^. withLocParam))
+  typeSignature terminating fun (Just b)
 
 builtinStatement :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (Statement 'Parsed)
 builtinStatement = do
@@ -398,9 +398,9 @@ getJudoc = P.lift $ do
 
 typeSignature ::
   Members '[InfoTableBuilder, JudocStash, NameIdGen] r =>
-  Bool ->
+  Maybe KeywordRef ->
   Symbol ->
-  Maybe BuiltinFunction ->
+  Maybe (WithLoc BuiltinFunction) ->
   ParsecS r (TypeSignature 'Parsed)
 typeSignature _sigTerminating _sigName _sigBuiltin = do
   kw kwColon
@@ -413,7 +413,7 @@ auxTypeSigFunClause ::
   Members '[InfoTableBuilder, JudocStash, NameIdGen] r =>
   ParsecS r (Either (TypeSignature 'Parsed) (FunctionClause 'Parsed))
 auxTypeSigFunClause = do
-  terminating <- isJust <$> optional (kw kwTerminating)
+  terminating <- optional (kw kwTerminating)
   sym <- symbol
   (Left <$> typeSignature terminating sym Nothing)
     <|> (Right <$> functionClause sym)
@@ -494,10 +494,10 @@ lambda = do
 -- Data type construction declaration
 -------------------------------------------------------------------------------
 
-inductiveDef :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => Maybe BuiltinInductive -> ParsecS r (InductiveDef 'Parsed)
+inductiveDef :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => Maybe (WithLoc BuiltinInductive) -> ParsecS r (InductiveDef 'Parsed)
 inductiveDef _inductiveBuiltin = do
   _inductivePositive <- isJust <$> optional (kw kwPositive)
-  kw kwInductive
+  _inductiveKw <- kw kwInductive
   _inductiveDoc <- getJudoc
   _inductiveName <- symbol P.<?> "<type name>"
   _inductiveParameters <-
@@ -617,7 +617,7 @@ atomicExpression = do
 
 openModule :: forall r. Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (OpenModule 'Parsed)
 openModule = do
-  kw kwOpen
+  _openModuleKw <- kw kwOpen
   _openModuleImportKw <- optional (kw kwImport)
   _openModuleName <- name
   _openParameters <- many atomicExpression

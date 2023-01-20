@@ -439,7 +439,7 @@ instance SingI s => PrettyCode (JudocAtom s) where
 
 instance SingI s => PrettyCode (TypeSignature s) where
   ppCode TypeSignature {..} = do
-    let sigTerminating' = if _sigTerminating then kwTerminating <> line else mempty
+    let sigTerminating' = if isJust _sigTerminating then kwTerminating <> line else mempty
     sigName' <- annDef _sigName <$> ppSymbol _sigName
     sigType' <- ppExpression _sigType
     builtin' <- traverse ppCode _sigBuiltin

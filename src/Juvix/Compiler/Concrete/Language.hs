@@ -185,8 +185,8 @@ data TypeSignature (s :: Stage) = TypeSignature
   { _sigName :: FunctionName s,
     _sigType :: ExpressionType s,
     _sigDoc :: Maybe (Judoc s),
-    _sigBuiltin :: Maybe BuiltinFunction,
-    _sigTerminating :: Bool
+    _sigBuiltin :: Maybe (WithLoc BuiltinFunction),
+    _sigTerminating :: Maybe KeywordRef
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (TypeSignature s)
@@ -200,8 +200,7 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Typ
 -------------------------------------------------------------------------------
 
 data AxiomDef (s :: Stage) = AxiomDef
-  {
-    _axiomKw :: KeywordRef,
+  { _axiomKw :: KeywordRef,
     _axiomDoc :: Maybe (Judoc s),
     _axiomName :: SymbolType s,
     _axiomBuiltin :: Maybe (WithLoc BuiltinAxiom),
@@ -246,7 +245,8 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Induct
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveParameter s)
 
 data InductiveDef (s :: Stage) = InductiveDef
-  { _inductiveBuiltin :: Maybe BuiltinInductive,
+  { _inductiveKw :: KeywordRef,
+    _inductiveBuiltin :: Maybe (WithLoc BuiltinInductive),
     _inductiveDoc :: Maybe (Judoc s),
     _inductiveName :: InductiveName s,
     _inductiveParameters :: [InductiveParameter s],
@@ -502,7 +502,9 @@ newtype ExportInfo = ExportInfo
   deriving stock (Show)
 
 data OpenModule (s :: Stage) = OpenModule
-  { _openModuleName :: ModuleRefType s,
+  {
+    _openModuleKw :: KeywordRef,
+    _openModuleName :: ModuleRefType s,
     _openModuleImportKw :: Maybe KeywordRef,
     _openParameters :: [ExpressionType s],
     _openUsingHiding :: Maybe UsingHiding,
@@ -629,8 +631,7 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Fun
 -- expression with empty list of arguments and empty body.
 
 data Lambda (s :: Stage) = Lambda
-  {
-    _lambdaKw :: KeywordRef,
+  { _lambdaKw :: KeywordRef,
     _lambdaClauses :: [LambdaClause s]
   }
 
@@ -709,8 +710,7 @@ instance HasFixity PostfixApplication where
 --------------------------------------------------------------------------------
 
 data LetBlock (s :: Stage) = LetBlock
-  {
-    _letKw :: KeywordRef,
+  { _letKw :: KeywordRef,
     _letClauses :: NonEmpty (LetClause s),
     _letExpression :: ExpressionType s
   }

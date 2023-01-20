@@ -179,13 +179,13 @@ goFunctionDef ::
   Sem r Abstract.FunctionDef
 goFunctionDef TypeSignature {..} clauses = do
   let _funDefName = goSymbol _sigName
-      _funDefTerminating = _sigTerminating
-      _funDefBuiltin = _sigBuiltin
+      _funDefTerminating = isJust _sigTerminating
+      _funDefBuiltin = (^. withLocParam) <$> _sigBuiltin
   _funDefClauses <- mapM goFunctionClause clauses
   _funDefTypeSig <- goExpression _sigType
   _funDefExamples <- goExamples _sigDoc
   let fun = Abstract.FunctionDef {..}
-  whenJust _sigBuiltin (registerBuiltinFunction fun)
+  whenJust _sigBuiltin (registerBuiltinFunction fun . (^. withLocParam))
   registerFunction' fun
 
 goExamples ::
@@ -284,14 +284,14 @@ goInductive ty@InductiveDef {..} = do
       indDef =
         Abstract.InductiveDef
           { _inductiveParameters = _inductiveParameters',
-            _inductiveBuiltin = _inductiveBuiltin,
+            _inductiveBuiltin = (^. withLocParam) <$> _inductiveBuiltin ,
             _inductiveName = goSymbol _inductiveName,
             _inductiveType = fromMaybe (Abstract.ExpressionUniverse (smallUniverse loc)) _inductiveType',
             _inductiveConstructors = toList _inductiveConstructors',
             _inductiveExamples = _inductiveExamples',
             _inductivePositive = ty ^. inductivePositive
           }
-  whenJust _inductiveBuiltin (registerBuiltinInductive indDef)
+  whenJust ((^. withLocParam) <$> _inductiveBuiltin) (registerBuiltinInductive indDef)
   inductiveInfo <- registerInductive indDef
   forM_ _inductiveConstructors' (registerConstructor inductiveInfo)
   return (inductiveInfo ^. inductiveInfoDef)
@@ -351,8 +351,8 @@ goExpression = \case
             goSig sig = do
               _funDefClauses <- getClauses
               _funDefTypeSig <- goExpression (sig ^. sigType)
-              let _funDefBuiltin = sig ^. sigBuiltin
-                  _funDefTerminating = sig ^. sigTerminating
+              let _funDefBuiltin = (^. withLocParam) <$> sig ^. sigBuiltin
+                  _funDefTerminating = isJust (sig ^. sigTerminating)
                   _funDefName = goSymbol (sig ^. sigName)
                   _funDefExamples :: [Abstract.Example] = []
               registerFunction' Abstract.FunctionDef {..}

@@ -503,7 +503,8 @@ checkInductiveDef ty@InductiveDef {..} = do
           _inductiveParameters = inductiveParameters',
           _inductiveType = inductiveType',
           _inductiveConstructors = inductiveConstructors',
-          _inductivePositive = ty ^. inductivePositive
+          _inductivePositive = ty ^. inductivePositive,
+          _inductiveKw
         }
 
 createExportsTable :: ExportInfo -> HashSet NameId
