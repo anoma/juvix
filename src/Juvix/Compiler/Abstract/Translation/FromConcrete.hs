@@ -284,7 +284,7 @@ goInductive ty@InductiveDef {..} = do
       indDef =
         Abstract.InductiveDef
           { _inductiveParameters = _inductiveParameters',
-            _inductiveBuiltin = (^. withLocParam) <$> _inductiveBuiltin ,
+            _inductiveBuiltin = (^. withLocParam) <$> _inductiveBuiltin,
             _inductiveName = goSymbol _inductiveName,
             _inductiveType = fromMaybe (Abstract.ExpressionUniverse (smallUniverse loc)) _inductiveType',
             _inductiveConstructors = toList _inductiveConstructors',

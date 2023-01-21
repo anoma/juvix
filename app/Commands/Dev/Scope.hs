@@ -26,4 +26,4 @@ runCommand opts = do
     newline
     say "Comments:"
     forM_ (fileComments mainFile (res ^. Scoper.comments) ^. fileCommentsSorted) $ \c ->
-      say (prettyText (c ^. commentInterval) <> " " <>  prettyText c)
+      say (prettyText (c ^. commentInterval) <> " " <> prettyText c)

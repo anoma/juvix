@@ -1,14 +1,15 @@
 module Juvix.Compiler.Concrete.Print.Base where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
+import Data.Text qualified as Text
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Base qualified as P
 import Juvix.Compiler.Concrete.Pretty.Options
-import Juvix.Data.CodeAnn (Ann, CodeAnn (..))
+import Juvix.Data.CodeAnn (Ann, CodeAnn (..), ppStringLit)
 import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.Keyword.All
-import Juvix.Prelude.Base hiding ((<+>), (<?+>), (?<>), (<+?>))
+import Juvix.Prelude.Base hiding ((<+>), (<+?>), (<?+>), (?<>))
 import Juvix.Prelude.Path
 import Juvix.Prelude.Pretty (annotate, pretty)
 
@@ -170,17 +171,19 @@ instance PrettyPrint (WithLoc BuiltinFunction) where
 instance PrettyPrint (TypeSignature 'Scoped) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => TypeSignature 'Scoped -> Sem r ()
   ppCode TypeSignature {..} = do
-    let termin' :: Maybe (Sem r ()) = ppCode <$> _sigTerminating
+    let termin' :: Maybe (Sem r ()) = (<> line) . ppCode <$> _sigTerminating
         doc' :: Maybe (Sem r ()) = ppCode <$> _sigDoc
         builtin' :: Maybe (Sem r ()) = ppCode <$> _sigBuiltin
         type' = ppCode _sigType
         name' = region (P.annDef _sigName) (ppCode _sigName)
     doc'
-     ?<> builtin'
-     <?+> termin'
-     <?+> hang (name'
-     <+> noLoc P.kwColon
-     <+> type')
+      ?<> builtin'
+      <?+> termin'
+        ?<> hang
+          ( name'
+              <+> noLoc P.kwColon
+              <+> type'
+          )
 
 instance PrettyPrint Pattern where
   ppCode = ppMorpheme
@@ -196,7 +199,7 @@ instance PrettyPrint PatternArg where
         pat' = ppCode _patternArgPattern
     (name' <&> (<> noLoc P.kwAt))
       ?<> delimIf _patternArgIsImplicit delimCond pat'
-      where
+    where
       delimCond :: Bool
       delimCond = isJust _patternArgName && not (isAtomic _patternArgPattern)
 
@@ -208,17 +211,20 @@ ppUnkindedSymbol = region (annotate AnnUnkindedSym) . ppCode
 
 ppAtom :: (HasAtomicity c, PrettyPrint c, Members '[ExactPrint, Reader Options] r) => c -> Sem r ()
 ppAtom c
-   | isAtomic c = ppCode c
-   | otherwise = parens (ppCode c)
+  | isAtomic c = ppCode c
+  | otherwise = parens (ppCode c)
 
 instance PrettyPrint UsingHiding where
   ppCode uh = do
-     let bracedList =
-           encloseSep (noLoc P.kwBraceL) (noLoc P.kwBraceR) (noLoc P.kwSemicolon)
-              (ppUnkindedSymbol <$> syms)
-     noLoc (pretty word) <+> bracedList
-     where
-     (word, syms) = case uh of
+    let bracedList =
+          encloseSep
+            (noLoc P.kwBraceL)
+            (noLoc P.kwBraceR)
+            (noLoc P.kwSemicolon)
+            (ppUnkindedSymbol <$> syms)
+    noLoc (pretty word) <+> bracedList
+    where
+      (word, syms) = case uh of
         Using s -> (kwUsing, s)
         Hiding s -> (kwHiding, s)
 
@@ -261,7 +267,6 @@ instance PrettyPrint (InductiveParameter 'Scoped) where
         ty' = ppCode _inductiveParameterType
     parens (name' <+> ppCode kwColon <+> ty')
 
-
 instance PrettyPrint (NonEmpty (InductiveParameter 'Scoped)) where
   ppCode = hsep . fmap ppCode
 
@@ -290,15 +295,50 @@ instance PrettyPrint (InductiveDef 'Scoped) where
             <+?> params'
             <+?> ty'
     doc'
-     ?<> sig'
-     <+> noLoc P.kwAssign
-     <> line
-     <> (indent . align) constrs'
+      ?<> sig'
+      <+> noLoc P.kwAssign
+        <> line
+        <> (indent . align) constrs'
     where
-     ppConstructorBlock :: NonEmpty (InductiveConstructorDef 'Scoped) -> Sem r ()
-     ppConstructorBlock cs =
+      ppConstructorBlock :: NonEmpty (InductiveConstructorDef 'Scoped) -> Sem r ()
+      ppConstructorBlock cs =
         vsep (map ((noLoc P.kwPipe <+>) . ppCode) (toList cs))
 
+instance PrettyPrint (WithLoc Backend) where
+  ppCode = ppMorpheme
+
+instance PrettyPrint ForeignBlock where
+  ppCode ForeignBlock {..} = do
+    let _foreignBackend' = ppCode _foreignBackend
+    ppCode _foreignKw
+      <+> _foreignBackend'
+      <+> lbrace
+        <> line
+        <> noLoc (pretty (escape _foreignCode))
+        <> line
+        <> rbrace
+    where
+      escape :: Text -> Text
+      escape = Text.replace "}" "\\}"
+
+instance PrettyPrint BackendItem where
+  ppCode BackendItem {..} = do
+    let backend' = ppCode _backendItemBackend
+    backend'
+      <+> noLoc P.kwMapsto
+      <+> noLoc (ppStringLit _backendItemCode)
+
+instance PrettyPrint (Compile 'Scoped) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => Compile 'Scoped -> Sem r ()
+  ppCode Compile {..} = do
+    let name' = ppCode _compileName
+        items' = ppBlock _compileBackendItems
+    ppCode _compileKw
+      <+> name'
+      <+> items'
+    where
+      ppBlock :: PrettyPrint c => [c] -> Sem r ()
+      ppBlock = bracesIndent . vsep . map ((<> semicolon) . ppCode)
 
 instance PrettyPrint (Statement 'Scoped) where
   ppCode = \case
@@ -310,8 +350,5 @@ instance PrettyPrint (Statement 'Scoped) where
     StatementOpenModule o -> ppCode o
     StatementFunctionClause c -> ppCode c
     StatementAxiom a -> ppCode a
-    StatementForeign {} -> todo
-    StatementCompile {} -> todo
-
-todo :: a
-todo = error "todo"
+    StatementForeign f -> ppCode f
+    StatementCompile c -> ppCode c

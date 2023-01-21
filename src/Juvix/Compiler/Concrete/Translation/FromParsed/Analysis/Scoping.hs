@@ -902,7 +902,7 @@ checkBackendItems ::
   Sem r (HashSet Backend)
 checkBackendItems _ [] bset = return bset
 checkBackendItems sym (b : bs) bset =
-  let cBackend = b ^. backendItemBackend
+  let cBackend = b ^. backendItemBackend . withLocParam
    in if
           | HashSet.member cBackend bset ->
               throw

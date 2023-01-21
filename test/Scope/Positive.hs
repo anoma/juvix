@@ -7,6 +7,7 @@ import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Extra
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty qualified as M
+import Juvix.Compiler.Concrete.Print qualified as P
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
@@ -26,8 +27,11 @@ makeLenses ''PosTest
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/positive")
 
-renderCode :: M.PrettyCode c => c -> Text
-renderCode = prettyText . M.ppOutDefault
+renderCode2 :: M.PrettyCode c => c -> Text
+renderCode2 = prettyText . M.ppOutDefault
+
+renderCode :: P.PrettyPrint c => c -> Text
+renderCode = prettyText . P.ppOutDefault
 
 type Pipe =
   '[ PathResolver,

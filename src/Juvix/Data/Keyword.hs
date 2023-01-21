@@ -2,13 +2,13 @@ module Juvix.Data.Keyword where
 
 import Data.HashSet qualified as HashSet
 import Juvix.Data.Loc
-import Juvix.Prelude
+import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
 
 data IsUnicode
   = Unicode
   | Ascii
-  deriving stock (Eq, Show, Ord)
+  deriving stock (Eq, Show, Ord, Data)
 
 data Keyword = Keyword
   { _keywordAscii :: Text,
@@ -16,14 +16,14 @@ data Keyword = Keyword
     -- | true if _keywordAscii has a reserved character (the unicode is assumed to not have any)
     _keywordHasReserved :: Bool
   }
-  deriving stock (Eq, Show, Ord)
+  deriving stock (Eq, Show, Ord, Data)
 
 data KeywordRef = KeywordRef
   { _keywordRefKeyword :: Keyword,
     _keywordRefInterval :: Interval,
     _keywordRefUnicode :: IsUnicode
   }
-  deriving stock (Show)
+  deriving stock (Show, Data)
 
 makeLenses ''Keyword
 makeLenses ''KeywordRef

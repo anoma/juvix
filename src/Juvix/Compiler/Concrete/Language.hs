@@ -502,8 +502,7 @@ newtype ExportInfo = ExportInfo
   deriving stock (Show)
 
 data OpenModule (s :: Stage) = OpenModule
-  {
-    _openModuleKw :: KeywordRef,
+  { _openModuleKw :: KeywordRef,
     _openModuleName :: ModuleRefType s,
     _openModuleImportKw :: Maybe KeywordRef,
     _openParameters :: [ExpressionType s],
@@ -778,7 +777,8 @@ deriving stock instance
 --------------------------------------------------------------------------------
 
 data Compile s = Compile
-  { _compileName :: SymbolType s,
+  { _compileKw :: KeywordRef,
+    _compileName :: SymbolType s,
     _compileBackendItems :: [BackendItem]
   }
 

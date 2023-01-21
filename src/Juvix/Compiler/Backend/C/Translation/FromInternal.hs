@@ -487,7 +487,7 @@ goAxiom a
     defineName = mkName axiomName
     getCode :: BackendItem -> Maybe Text
     getCode b =
-      guard (BackendC == b ^. backendItemBackend)
+      guard (BackendC == b ^. backendItemBackend . withLocParam)
         $> b
         ^. backendItemCode
     firstBackendMatch ::
@@ -518,7 +518,7 @@ goAxiom a
           return [ExternalFuncSig s]
 
 goForeign :: ForeignBlock -> [CCode]
-goForeign b = case b ^. foreignBackend of
+goForeign b = case b ^. foreignBackend . withLocParam of
   BackendC -> [Verbatim (b ^. foreignCode)]
   _ -> []
 

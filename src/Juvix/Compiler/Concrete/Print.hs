@@ -1,4 +1,9 @@
-module Juvix.Compiler.Concrete.Print where
+module Juvix.Compiler.Concrete.Print
+  ( module Juvix.Compiler.Concrete.Print,
+    module Juvix.Compiler.Concrete.Print.Base,
+    module Juvix.Data.Effect.ExactPrint,
+  )
+where
 
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Concrete.Print.Base

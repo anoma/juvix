@@ -218,7 +218,7 @@ builtinHelper ::
   ParsecS r (WithLoc a)
 builtinHelper =
   P.choice
-    [ (`WithLoc`a) <$> onlyInterval (kw (asciiKw (prettyText a)))
+    [ (`WithLoc` a) <$> onlyInterval (kw (asciiKw (prettyText a)))
       | a <- allElements
     ]
 
@@ -270,12 +270,15 @@ compileBlock = do
 -- Foreign
 --------------------------------------------------------------------------------
 
-backend :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r Backend
-backend = kw ghc $> BackendGhc <|> kw cBackend $> BackendC
+backend :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (WithLoc Backend)
+backend =
+  withLoc $
+    kw ghc $> BackendGhc
+      <|> kw cBackend $> BackendC
 
 foreignBlock :: Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r ForeignBlock
 foreignBlock = do
-  kw kwForeign
+  _foreignKw <- kw kwForeign
   _foreignBackend <- backend
   _foreignCode <- bracedString
   return ForeignBlock {..}

@@ -18,29 +18,31 @@ space = noLoc P.space
 a <+> b = a >> noLoc P.space >> b
 
 infixr 7 ?<>
+
 (?<>) :: Maybe (Sem r ()) -> Sem r () -> Sem r ()
 (?<>) = maybe id (<>)
 
 infixr 7 <?+>
-(<?+>) :: Members '[ExactPrint] r =>  Maybe (Sem r ()) -> Sem r () -> Sem r ()
-(<?+>) =  \case
+
+(<?+>) :: Members '[ExactPrint] r => Maybe (Sem r ()) -> Sem r () -> Sem r ()
+(<?+>) = \case
   Nothing -> id
   Just a -> (a <+>)
 
 infixl 7 <+?>
-(<+?>) :: Members '[ExactPrint] r =>  Sem r () -> Maybe (Sem r ()) -> Sem r ()
-(<+?>) a = maybe a (a <+>)
 
+(<+?>) :: Members '[ExactPrint] r => Sem r () -> Maybe (Sem r ()) -> Sem r ()
+(<+?>) a = maybe a (a <+>)
 
 -- NOTE that then you can use subsume indent' in the call site
 -- indent' :: forall ann r a. Sem (ExactPrint ann ': r) a -> Sem (ExactPrint ann ': r) a
 -- indent' = region @ann (P.indent 2)
 
 parens :: Members '[ExactPrint] r => Sem r () -> Sem r ()
-parens = region P.parens
+parens = region C.parens
 
 braces :: Members '[ExactPrint] r => Sem r () -> Sem r ()
-braces = region P.braces
+braces = region C.braces
 
 nest :: Members '[ExactPrint] r => Sem r () -> Sem r ()
 nest = region (P.nest 2)
@@ -56,6 +58,15 @@ indent = region (P.indent 2)
 
 line :: Members '[ExactPrint] r => Sem r ()
 line = noLoc P.line
+
+lbrace :: Members '[ExactPrint] r => Sem r ()
+lbrace = noLoc C.kwBraceL
+
+rbrace :: Members '[ExactPrint] r => Sem r ()
+rbrace = noLoc C.kwBraceR
+
+bracesIndent :: Members '[ExactPrint] r => Sem r () -> Sem r ()
+bracesIndent d = braces (line <> indent d <> line)
 
 semicolon :: Members '[ExactPrint] r => Sem r ()
 semicolon = noLoc C.kwSemicolon
