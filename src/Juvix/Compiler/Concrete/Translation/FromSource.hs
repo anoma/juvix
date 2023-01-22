@@ -253,7 +253,7 @@ builtinStatement = do
 
 compileBlock :: forall r. Members '[InfoTableBuilder, JudocStash, NameIdGen] r => ParsecS r (Compile 'Parsed)
 compileBlock = do
-  kw kwCompile
+  _compileKw <- kw kwCompile
   _compileName <- symbol
   _compileBackendItems <- backends
   return Compile {..}

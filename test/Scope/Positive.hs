@@ -13,6 +13,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Setup
+import Juvix.Data.Comment
 import Juvix.Prelude.Aeson
 import Juvix.Prelude.Pretty
 
@@ -30,8 +31,8 @@ root = relToProject $(mkRelDir "tests/positive")
 renderCode2 :: M.PrettyCode c => c -> Text
 renderCode2 = prettyText . M.ppOutDefault
 
-renderCode :: P.PrettyPrint c => c -> Text
-renderCode = prettyText . P.ppOutDefault
+renderCode :: (HasLoc c, P.PrettyPrint c) => c -> Text
+renderCode = prettyText . P.ppOutDefault emptyComments
 
 type Pipe =
   '[ PathResolver,
@@ -95,7 +96,7 @@ testDescr PosTest {..} =
                       <> yamlFiles
 
             let scopedPretty = renderCode s2
-                parsedPretty = renderCode p2
+                parsedPretty = renderCode2 p2
                 onlyMainFile :: Text -> HashMap (Path Abs File) Text
                 onlyMainFile t = HashMap.fromList $ (file', t) : yamlFiles
 

@@ -7,7 +7,7 @@ module A;
   end ;
   infix 2 +;
   axiom + : Type → Type → Type;
-  end ;
+  end;
   import M;
   f : M.N.T;
   f (_ M.N.t _) := Type M.+ Type;

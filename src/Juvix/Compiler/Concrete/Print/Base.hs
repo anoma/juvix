@@ -254,12 +254,18 @@ instance PrettyPrint (FunctionClause 'Scoped) where
     let clauseFun' = ppCode _clauseOwnerFunction
         clausePatterns' = case nonEmpty _clausePatterns of
           Nothing -> Nothing
-          Just ne -> Just (hsep (ppCode <$> ne))
+          Just ne -> Just (hsep (ppPatternAtom <$> ne))
         clauseBody' = ppCode _clauseBody
     clauseFun'
       <+?> clausePatterns'
       <+> noLoc P.kwAssign
       <+> nest clauseBody'
+
+ppPatternAtom :: forall r. (Members '[Reader Options, ExactPrint] r) => PatternArg -> Sem r ()
+ppPatternAtom pat =
+  case pat ^. patternArgPattern of
+    PatternVariable s | s ^. S.nameVerbatim == "=" -> parens (ppAtom pat)
+    _ -> ppAtom pat
 
 instance PrettyPrint (InductiveParameter 'Scoped) where
   ppCode InductiveParameter {..} = do

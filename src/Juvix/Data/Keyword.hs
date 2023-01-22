@@ -29,7 +29,7 @@ makeLenses ''Keyword
 makeLenses ''KeywordRef
 
 instance Eq KeywordRef where
-  a == b = (a ^. keywordRefKeyword, a ^. keywordRefUnicode) == (b ^. keywordRefKeyword, b ^. keywordRefUnicode)
+  a == b = a ^. keywordRefKeyword == b ^. keywordRefKeyword
 
 instance Ord KeywordRef where
   compare a b = compare (a ^. keywordRefKeyword, a ^. keywordRefUnicode) (b ^. keywordRefKeyword, b ^. keywordRefUnicode)

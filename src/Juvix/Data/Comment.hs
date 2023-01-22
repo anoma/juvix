@@ -60,6 +60,9 @@ mkComments cs = Comments {..}
             let _fileCommentsSorted = sortOn (^. commentInterval) (toList filecomments)
         ]
 
+emptyComments :: Comments
+emptyComments = Comments mempty
+
 emptyFileComments :: Path Abs File -> FileComments
 emptyFileComments _fileCommentsFile =
   FileComments
