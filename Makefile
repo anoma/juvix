@@ -12,7 +12,6 @@ MDFILES:=$(patsubst docs/org/%,docs/md/%,$(ORGFILES:.org=.md))
 EXAMPLEMILESTONE=examples/milestone
 EXAMPLEHTMLOUTPUT=_docs/examples/html
 EXAMPLES= Collatz/Collatz.juvix \
-	Demo/Demo.juvix \
 	Fibonacci/Fibonacci.juvix \
 	Hanoi/Hanoi.juvix \
 	HelloWorld/HelloWorld.juvix \
@@ -23,6 +22,7 @@ EXAMPLES= Collatz/Collatz.juvix \
 
 EXAMPLE_WEBAPP_OUTPUT=_docs/examples/webapp
 WEBAPP_EXAMPLES=TicTacToe/Web/TicTacToe.juvix
+DEMO_EXAMPLE=examples/demo/Demo.juvix
 
 ORGTOMDPRG ?=pandoc
 ORGOPTS=--from org --to markdown_strict -s -o $@
@@ -70,6 +70,12 @@ $(EXAMPLES):
 	$(eval OUTPUTDIR=$(EXAMPLEHTMLOUTPUT)/$(dir $@))
 	@mkdir -p ${OUTPUTDIR}
 	@juvix html $(EXAMPLEMILESTONE)/$@ --output-dir=$(CURDIR)/${OUTPUTDIR}
+
+.PHONY: demo-example
+demo-example:
+	$(eval OUTPUTDIR=$(EXAMPLEHTMLOUTPUT)/Demo)
+	@mkdir -p ${OUTPUTDIR}
+	@juvix html $(DEMO_EXAMPLE) --output-dir=$(CURDIR)/${OUTPUTDIR}
 
 .PHONY: webapp-examples
 webapp-examples: $(WEBAPP_EXAMPLES)
