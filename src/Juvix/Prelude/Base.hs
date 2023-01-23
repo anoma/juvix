@@ -287,7 +287,7 @@ zip4Exact _ _ _ _ = error "zip4Exact"
 nonEmptyUnsnoc :: NonEmpty a -> (Maybe (NonEmpty a), a)
 nonEmptyUnsnoc e = (NonEmpty.nonEmpty (NonEmpty.init e), NonEmpty.last e)
 
-nonEmpty' :: (HasCallStack) => [a] -> NonEmpty a
+nonEmpty' :: HasCallStack => [a] -> NonEmpty a
 nonEmpty' = fromJust . nonEmpty
 
 _nonEmpty :: Lens' [a] (Maybe (NonEmpty a))

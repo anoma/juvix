@@ -124,6 +124,9 @@ haddock :
 # -- Codebase Health
 # ------------------------------------------------------------------------------
 
+MAKEAUXFLAGS?=-s
+MAKE=make ${MAKEAUXFLAGS}
+
 ORMOLU?=stack exec -- ormolu
 ORMOLUFILES = $(shell git ls-files '*.hs' '*.hs-boot' | grep -v '^contrib/')
 ORMOLUFLAGS?=--no-cabal
@@ -131,7 +134,7 @@ ORMOLUMODE?=inplace
 
 .PHONY: format
 format: clang-format
-	@${ORMOLU} ${ORMOLUFLAGS} \
+	${ORMOLU} ${ORMOLUFLAGS} \
 		--ghc-opt -XStandaloneDeriving \
 		--ghc-opt -XUnicodeSyntax \
 		--ghc-opt -XDerivingStrategies \
@@ -143,17 +146,19 @@ format: clang-format
 
 .PHONY: clang-format
 clang-format:
-	@cd runtime && make format
+	@cd runtime && ${MAKE} format
 
 .PHONY: check-ormolu
 check-ormolu: export ORMOLUMODE = check
 check-ormolu:
-	@make -s format
+	@${MAKE} format
 
 HLINT?=stack exec -- hlint
 .PHONY : hlint
 hlint :
-	@${HLINT} src app test ${HLINTQUIET}
+	${HLINT} app ${HLINTQUIET}
+	${HLINT} src ${HLINTQUIET}
+	${HLINT} test ${HLINTQUIET}
 
 PRECOMMIT := $(shell command -v pre-commit 2> /dev/null)
 
@@ -168,9 +173,6 @@ pre-commit :
 # ------------------------------------------------------------------------------
 # -- Build-Install-Test-Release
 # ------------------------------------------------------------------------------
-
-MAKEAUXFLAGS?=-s
-MAKE=make ${MAKEAUXFLAGS}
 
 STACKFLAGS?=--jobs $(THREADS)
 STACKTESTFLAGS?=--ta --hide-successes --ta --ansi-tricks=false
