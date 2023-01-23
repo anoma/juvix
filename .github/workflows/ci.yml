@@ -160,7 +160,7 @@ jobs:
           brew install icu4c
           brew link icu4c --force
 
-      - name: Install libicu
+      - name: Install libicu for testing
         if: startsWith(matrix.os, 'ubuntu-')
         run: sudo apt install -y libicu66
 
