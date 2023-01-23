@@ -48,7 +48,7 @@ plugin in [[https://marketplace.visualstudio.com/items?itemName=heliax.juvix-mod
 
 ** Quick start
 
-See [[https://docs.juvix.org/quick-start.html][Quick start]] to start with Juvix.
+See [[https://docs.juvix.org/getting-started/quick-start.html][Quick start]] to start with Juvix.
 
 ** The Juvix programming language
 
