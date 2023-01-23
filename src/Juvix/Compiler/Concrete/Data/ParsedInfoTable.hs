@@ -11,17 +11,3 @@ data InfoTable = InfoTable
   deriving stock (Eq, Show)
 
 makeLenses ''InfoTable
-
--- instance Semigroup InfoTable where
---   (InfoTable a b) <> (InfoTable a' b') =
---     InfoTable
---       { _infoParsedItems = a <> a',
---         _infoParsedComments = b <> b'
---       }
-
--- instance Monoid InfoTable where
---   mempty =
---     InfoTable
---       { _infoParsedItems = mempty,
---         _infoParsedComments = mempty
---       }
