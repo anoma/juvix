@@ -301,8 +301,7 @@ jobs:
           path: smoke
           
       - name: Install Smoke
-        if: steps.cache-build.outputs.cache-hit != 'true'
-        if: runner.os == 'Linux'
+        if: steps.cache-build.outputs.cache-hit != 'true' && runner.os == 'Linux'
         run: |
           cd smoke
           stack install
