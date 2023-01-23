@@ -28,9 +28,6 @@ doc opts =
 class PrettyCode c where
   ppCode :: (Member (Reader Options) r) => c -> Sem r (Doc Ann)
 
-runPrettyCode :: (PrettyCode c) => Options -> c -> Doc Ann
-runPrettyCode opts = run . runReader opts . ppCode
-
 instance PrettyCode BuiltinOp where
   ppCode = \case
     OpIntAdd -> return primPlus
@@ -427,9 +424,6 @@ instance (PrettyCode a) => PrettyCode [a] where
 
 {--------------------------------------------------------------------------------}
 {- helper functions -}
-
-parensIf :: Bool -> Doc Ann -> Doc Ann
-parensIf t = if t then parens else id
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>

@@ -509,7 +509,52 @@ instrReturn = "ret"
 instrBr :: (IsString s) => s
 instrBr = "br"
 
-juvixFunctionT :: (IsString s) => s
+gebAbsurd :: IsString s => s
+gebAbsurd = "absurd"
+
+gebUnit :: IsString s => s
+gebUnit = "unit"
+
+gebLeft :: IsString s => s
+gebLeft = "left"
+
+gebRight :: IsString s => s
+gebRight = "right"
+
+gebCase :: IsString s => s
+gebCase = "case-on"
+
+gebPair :: IsString s => s
+gebPair = "pair"
+
+gebFst :: IsString s => s
+gebFst = "fst"
+
+gebSnd :: IsString s => s
+gebSnd = "snd"
+
+gebLamb :: IsString s => s
+gebLamb = "lamb"
+
+gebApp :: IsString s => s
+gebApp = "app"
+
+gebVar :: IsString s => s
+gebVar = "index"
+
+gebInitial :: IsString s => s
+gebInitial = "so0"
+
+gebTerminal :: IsString s => s
+gebTerminal = "so1"
+
+gebProd :: IsString s => s
+gebProd = "prod"
+
+gebCoprod :: IsString s => s
+gebCoprod = "coprod"
+
+juvixFunctionT :: IsString s => s
 juvixFunctionT = "juvix_function_t"
 
 juvixDotOrg :: (IsString s) => s

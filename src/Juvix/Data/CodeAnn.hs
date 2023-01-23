@@ -221,6 +221,9 @@ parens = enclose kwParenL kwParenR
 bracesIf :: Bool -> Doc Ann -> Doc Ann
 bracesIf t = if t then braces else id
 
+parensIf :: Bool -> Doc Ann -> Doc Ann
+parensIf t = if t then parens else id
+
 implicitDelim :: IsImplicit -> Doc Ann -> Doc Ann
 implicitDelim = \case
   Implicit -> braces
