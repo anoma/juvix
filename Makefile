@@ -1,7 +1,6 @@
 PWD=$(CURDIR)
 PREFIX="$(PWD)/.stack-work/prefix"
 UNAME := $(shell uname)
-HLINTQUIET :=
 
 IMAGES = 	$(shell find assets/images -type f)
 
@@ -154,11 +153,14 @@ check-ormolu:
 	@${MAKE} format
 
 HLINT?=stack exec -- hlint
+HLINTFLAGS?=
+HLINTQUIET :=
+
 .PHONY : hlint
 hlint :
-	${HLINT} app ${HLINTQUIET}
-	${HLINT} src ${HLINTQUIET}
-	${HLINT} test ${HLINTQUIET}
+	${HLINT} ${HLINTFLAGS} app ${HLINTQUIET}
+	${HLINT} ${HLINTFLAGS} src ${HLINTQUIET}
+	${HLINT} ${HLINTFLAGS} test ${HLINTQUIET}
 
 PRECOMMIT := $(shell command -v pre-commit 2> /dev/null)
 
