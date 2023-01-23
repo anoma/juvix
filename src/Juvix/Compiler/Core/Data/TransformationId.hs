@@ -10,4 +10,6 @@ data TransformationId
   | NatToInt
   | ConvertBuiltinTypes
   | Identity
+  | UnrollRecursion
+  | ComputeTypeInfo
   deriving stock (Data)

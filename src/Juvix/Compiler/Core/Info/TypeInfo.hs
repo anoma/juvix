@@ -1,7 +1,7 @@
 module Juvix.Compiler.Core.Info.TypeInfo where
 
-import Juvix.Compiler.Core.Data.InfoTable
-import Juvix.Compiler.Core.Extra
+import Juvix.Compiler.Core.Extra.Base
+import Juvix.Compiler.Core.Extra.Info
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Language
 
@@ -23,8 +23,11 @@ getInfoType i =
 setInfoType :: Type -> Info -> Info
 setInfoType = Info.insert . TypeInfo
 
+getNodeType :: Node -> Type
+getNodeType = getInfoType . getInfo
+
+setNodeType :: Type -> Node -> Node
+setNodeType = modifyInfo . setInfoType
+
 removeTypeInfo :: Node -> Node
 removeTypeInfo = removeInfo kTypeInfo
-
-inferTypeInfo :: InfoTable -> Node -> Node
-inferTypeInfo _ = umap id -- TODO: store the type of each node in its info
