@@ -365,6 +365,7 @@ jobs:
           make install
           make html-examples
           make webapp-examples
+          make demo-example
 
       - name: Deploy HTML to github pages
         uses: peaceiris/actions-gh-pages@v3
