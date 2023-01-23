@@ -241,7 +241,7 @@ jobs:
           echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
 
       - name: Setup Wasmer
-        uses: wasmerio/setup-wasmer@v1
+        uses: wasmerio/setup-wasmer@v2
 
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
         if: runner.os == 'macOS'
