@@ -18,6 +18,8 @@ import Juvix.Compiler.Core.Transformation.MoveApps
 import Juvix.Compiler.Core.Transformation.NatToInt
 import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
+import Juvix.Compiler.Core.Transformation.ComputeTypeInfo
+import Juvix.Compiler.Core.Transformation.UnrollRecursion
 
 applyTransformations :: [TransformationId] -> InfoTable -> InfoTable
 applyTransformations ts tbl = foldl' (flip appTrans) tbl ts
@@ -31,3 +33,5 @@ applyTransformations ts tbl = foldl' (flip appTrans) tbl ts
       MoveApps -> moveApps
       NatToInt -> natToInt
       ConvertBuiltinTypes -> convertBuiltinTypes
+      ComputeTypeInfo -> computeTypeInfo
+      UnrollRecursion -> unrollRecursion

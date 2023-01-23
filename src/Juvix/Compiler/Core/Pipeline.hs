@@ -14,3 +14,10 @@ toStrippedTransformations = [NatToInt, ConvertBuiltinTypes, LambdaLifting, MoveA
 -- Core.Stripped
 toStripped :: InfoTable -> InfoTable
 toStripped = applyTransformations toStrippedTransformations
+
+toGebTransformations :: [TransformationId]
+toGebTransformations = [NatToInt, ConvertBuiltinTypes, UnrollRecursion, ComputeTypeInfo]
+
+-- | Perform transformations on Core necessary before the translation to GEB
+toGeb :: InfoTable -> InfoTable
+toGeb = applyTransformations toGebTransformations

@@ -48,6 +48,8 @@ pcompletions = do
       MoveApps -> strMoveApps
       NatToInt -> strNatToInt
       ConvertBuiltinTypes -> strConvertBuiltinTypes
+      ComputeTypeInfo -> strComputeTypeInfo
+      UnrollRecursion -> strUnrollRecursion
 
 lexeme :: (MonadParsec e Text m) => m a -> m a
 lexeme = L.lexeme L.hspace
@@ -99,3 +101,9 @@ strNatToInt = "nat-to-int"
 
 strConvertBuiltinTypes :: Text
 strConvertBuiltinTypes = "convert-builtin-types"
+
+strComputeTypeInfo :: Text
+strComputeTypeInfo = "compute-type-info"
+
+strUnrollRecursion :: Text
+strUnrollRecursion = "unroll-recursion"
