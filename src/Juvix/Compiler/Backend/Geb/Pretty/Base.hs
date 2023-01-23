@@ -5,11 +5,11 @@ module Juvix.Compiler.Backend.Geb.Pretty.Base
   )
 where
 
-import Juvix.Prelude
 import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Pretty.Options
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
+import Juvix.Prelude
 
 doc :: PrettyCode c => Options -> c -> Doc Ann
 doc opts =

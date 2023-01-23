@@ -1,9 +1,9 @@
 module Juvix.Compiler.Core.Info.TypeInfo where
 
+import Juvix.Compiler.Core.Data.InfoTable
+import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Language
-import Juvix.Compiler.Core.Extra
-import Juvix.Compiler.Core.Data.InfoTable
 
 newtype TypeInfo = TypeInfo {_infoType :: Type}
 
