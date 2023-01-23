@@ -40,7 +40,7 @@ data Loc = Loc
 
 mkLoc :: Int -> M.SourcePos -> Loc
 mkLoc offset M.SourcePos {..} =
-  let _locFile = absFile (normalise sourceName)
+  let _locFile = absFile' (normalise sourceName)
    in Loc {..}
   where
     _locOffset = Pos (fromIntegral offset)
@@ -48,6 +48,11 @@ mkLoc offset M.SourcePos {..} =
       where
         _locLine = fromPos sourceLine
         _locCol = fromPos sourceColumn
+    absFile' :: FilePath -> Path Abs File
+    absFile' fp = fromMaybe err (parseAbsFile fp)
+      where
+        err :: a
+        err = error ("The path \"" <> pack fp <> "\" is not absolute. Remember to pass an absolute path to Megaparsec when running a parser")
 
 fromPos :: M.Pos -> Pos
 fromPos = Pos . fromIntegral . M.unPos

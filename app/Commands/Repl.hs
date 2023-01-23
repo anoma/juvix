@@ -317,11 +317,15 @@ replMakeAbsolute = \case
     invokeDir <- State.gets (^. replStateInvokeDir)
     return (invokeDir <//> r)
 
+-- | imaginary file path for error messages in the repl.
+replPath :: Path Abs File
+replPath = $(mkAbsFile "/<repl>")
+
 inferExpressionIO' :: ReplContext -> Text -> IO (Either JuvixError Internal.Expression)
-inferExpressionIO' ctx = inferExpressionIO "" (ctx ^. replContextExpContext) (ctx ^. replContextBuiltins)
+inferExpressionIO' ctx = inferExpressionIO replPath (ctx ^. replContextExpContext) (ctx ^. replContextBuiltins)
 
 compileExpressionIO' :: ReplContext -> Text -> IO (Either JuvixError Core.Node)
-compileExpressionIO' ctx = compileExpressionIO "" (ctx ^. replContextExpContext) (ctx ^. replContextBuiltins)
+compileExpressionIO' ctx = compileExpressionIO replPath (ctx ^. replContextExpContext) (ctx ^. replContextBuiltins)
 
 render' :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl ()
 render' t = do

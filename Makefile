@@ -233,11 +233,15 @@ fast-test-skip-slow:
 
 SMOKE := $(shell command -v smoke 2> /dev/null)
 
-.PHONY : smoke
-smoke: install
+.PHONY : smoke-only
+smoke-only:
 	@$(if $(SMOKE),, $(error "Smoke not found, please install it from https://github.com/SamirTalwar/smoke"))
 	@find tests/smoke -type f -name '*.smoke.yaml' \
 		-exec sh -c "echo -n 'Running {}'; echo ; ${SMOKE} ${SMOKEFLAGS} {}" \;
+
+.PHONY : smoke
+smoke: install
+	@${MAKE} smoke-only
 
 # -- Release
 
