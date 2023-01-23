@@ -2,7 +2,7 @@ PWD=$(CURDIR)
 PREFIX="$(PWD)/.stack-work/prefix"
 UNAME := $(shell uname)
 
-IMAGES = 	$(shell find assets/images -type f)
+IMAGES = $(shell find assets/images -type f)
 
 ORGFILES = $(shell find docs/org -type f -name '*.org')
 MDFILES:=$(patsubst docs/org/%,docs/md/%,$(ORGFILES:.org=.md))
@@ -241,7 +241,7 @@ SMOKE := $(shell command -v smoke 2> /dev/null)
 .PHONY : smoke
 smoke: install
 	@$(if $(SMOKE),, $(error "Smoke not found, please install it from https://github.com/SamirTalwar/smoke"))
-	@smoke $(find tests -name '*.smoke.yaml')
+	@smoke $(shell find tests -name '*.smoke.yaml')
 
 # -- Release
 
