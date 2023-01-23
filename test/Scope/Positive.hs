@@ -28,11 +28,11 @@ makeLenses ''PosTest
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/positive")
 
-renderCode2 :: M.PrettyCode c => c -> Text
-renderCode2 = prettyText . M.ppOutDefault
+renderCodeOld :: M.PrettyCode c => c -> Text
+renderCodeOld = prettyText . M.ppOutDefault
 
-renderCode :: (HasLoc c, P.PrettyPrint c) => c -> Text
-renderCode = prettyText . P.ppOutDefault emptyComments
+renderCodeNew :: (HasLoc c, P.PrettyPrint c) => c -> Text
+renderCodeNew = prettyText . P.ppOutDefault emptyComments
 
 type Pipe =
   '[ PathResolver,
@@ -44,91 +44,94 @@ type Pipe =
      Embed IO
    ]
 
-testDescr :: PosTest -> TestDescr
-testDescr PosTest {..} =
-  let tRoot = root <//> _relDir
-      file' = tRoot <//> _file
-   in TestDescr
-        { _testName = _name,
-          _testRoot = tRoot,
-          _testAssertion = Steps $ \step -> do
-            pkg <- readPackageIO tRoot (rootBuildDir tRoot)
-            let entryPoint = entryPointFromPackage tRoot file' pkg
-                runHelper :: HashMap (Path Abs File) Text -> Sem Pipe a -> IO (ResolverState, a)
-                runHelper files =
-                  runM
-                    . runErrorIO' @JuvixError
-                    . runNameIdGen
-                    . runFilesPure files tRoot
-                    . runReader entryPoint
-                    . runPathResolverPipe
-                evalHelper :: HashMap (Path Abs File) Text -> Sem Pipe a -> IO a
-                evalHelper files = fmap snd . runHelper files
+testDescr :: PosTest -> [TestDescr]
+testDescr PosTest {..} = helper renderCodeOld "" : [helper renderCodeNew " (with comments)"]
+  where
+  helper :: (forall c. (HasLoc c, P.PrettyPrint c, M.PrettyCode c) => c -> Text) -> String -> TestDescr
+  helper renderArg tag =
+    let tRoot = root <//> _relDir
+        file' = tRoot <//> _file
+    in TestDescr
+          { _testName = _name <> tag,
+            _testRoot = tRoot,
+            _testAssertion = Steps $ \step -> do
+              pkg <- readPackageIO tRoot (rootBuildDir tRoot)
+              let entryPoint = entryPointFromPackage tRoot file' pkg
+                  runHelper :: HashMap (Path Abs File) Text -> Sem Pipe a -> IO (ResolverState, a)
+                  runHelper files =
+                    runM
+                      . runErrorIO' @JuvixError
+                      . runNameIdGen
+                      . runFilesPure files tRoot
+                      . runReader entryPoint
+                      . runPathResolverPipe
+                  evalHelper :: HashMap (Path Abs File) Text -> Sem Pipe a -> IO a
+                  evalHelper files = fmap snd . runHelper files
 
-            step "Parsing"
-            p :: Parser.ParserResult <- snd <$> runIO' iniState entryPoint upToParsing
+              step "Parsing"
+              p :: Parser.ParserResult <- snd <$> runIO' iniState entryPoint upToParsing
 
-            let p2 :: Module 'Parsed 'ModuleTop = head (p ^. Parser.resultModules)
+              let p2 :: Module 'Parsed 'ModuleTop = head (p ^. Parser.resultModules)
 
-            step "Scoping"
-            (artif :: Artifacts, s :: Scoper.ScoperResult) <-
-              runIO'
-                iniState
-                entryPoint
-                ( do
-                    void entrySetup
-                    Concrete.fromParsed p
-                )
+              step "Scoping"
+              (artif :: Artifacts, s :: Scoper.ScoperResult) <-
+                runIO'
+                  iniState
+                  entryPoint
+                  ( do
+                      void entrySetup
+                      Concrete.fromParsed p
+                  )
 
-            let s2 = head (s ^. Scoper.resultModules)
+              let s2 = head (s ^. Scoper.resultModules)
 
-                yamlFiles :: [(Path Abs File, Text)]
-                yamlFiles =
-                  [ (pkgi ^. packageRoot <//> juvixYamlFile, encodeToText (rawPackage (pkgi ^. packagePackage)))
-                    | pkgi <- toList (artif ^. artifactResolver . resolverPackages)
-                  ]
-                fs :: HashMap (Path Abs File) Text
-                fs =
-                  HashMap.fromList $
-                    [ (getModuleFilePath m, renderCode m)
-                      | m <- toList (getAllModules s2)
+                  yamlFiles :: [(Path Abs File, Text)]
+                  yamlFiles =
+                    [ (pkgi ^. packageRoot <//> juvixYamlFile, encodeToText (rawPackage (pkgi ^. packagePackage)))
+                      | pkgi <- toList (artif ^. artifactResolver . resolverPackages)
                     ]
-                      <> yamlFiles
+                  fs :: HashMap (Path Abs File) Text
+                  fs =
+                    HashMap.fromList $
+                      [ (getModuleFilePath m, renderArg m)
+                        | m <- toList (getAllModules s2)
+                      ]
+                        <> yamlFiles
 
-            let scopedPretty = renderCode s2
-                parsedPretty = renderCode2 p2
-                onlyMainFile :: Text -> HashMap (Path Abs File) Text
-                onlyMainFile t = HashMap.fromList $ (file', t) : yamlFiles
+              let scopedPretty = renderArg s2
+                  parsedPretty = renderCodeOld p2
+                  onlyMainFile :: Text -> HashMap (Path Abs File) Text
+                  onlyMainFile t = HashMap.fromList $ (file', t) : yamlFiles
 
-            step "Parsing pretty scoped"
-            let fs2 = onlyMainFile scopedPretty
-            p' :: Parser.ParserResult <- evalHelper fs2 upToParsing
+              step "Parsing pretty scoped"
+              let fs2 = onlyMainFile scopedPretty
+              p' :: Parser.ParserResult <- evalHelper fs2 upToParsing
 
-            step "Parsing pretty parsed"
-            let fs3 = onlyMainFile parsedPretty
-            parsedPretty' :: Parser.ParserResult <- evalHelper fs3 upToParsing
+              step "Parsing pretty parsed"
+              let fs3 = onlyMainFile parsedPretty
+              parsedPretty' :: Parser.ParserResult <- evalHelper fs3 upToParsing
 
-            step "Scoping the scoped"
-            s' :: Scoper.ScoperResult <- evalHelper fs upToScoping
+              step "Scoping the scoped"
+              s' :: Scoper.ScoperResult <- evalHelper fs upToScoping
 
-            step "Checks"
-            let smodules = s ^. Scoper.resultModules
-                smodules' = s' ^. Scoper.resultModules
+              step "Checks"
+              let smodules = s ^. Scoper.resultModules
+                  smodules' = s' ^. Scoper.resultModules
 
-            let pmodules = p ^. Parser.resultModules
-                pmodules' = p' ^. Parser.resultModules
-                parsedPrettyModules = parsedPretty' ^. Parser.resultModules
+              let pmodules = p ^. Parser.resultModules
+                  pmodules' = p' ^. Parser.resultModules
+                  parsedPrettyModules = parsedPretty' ^. Parser.resultModules
 
-            assertEqDiff "check: scope . parse . pretty . scope . parse = scope . parse" smodules smodules'
-            assertEqDiff "check: parse . pretty . scope . parse = parse" pmodules pmodules'
-            assertEqDiff "check: parse . pretty . parse = parse" pmodules parsedPrettyModules
-        }
+              assertEqDiff "check: scope . parse . pretty . scope . parse = scope . parse" smodules smodules'
+              assertEqDiff "check: parse . pretty . scope . parse = parse" pmodules pmodules'
+              assertEqDiff "check: parse . pretty . parse = parse" pmodules parsedPrettyModules
+          }
 
 allTests :: TestTree
 allTests =
   testGroup
     "Scope positive tests"
-    (map (mkTest . testDescr) tests)
+    (map mkTest (concatMap testDescr tests))
 
 tests :: [PosTest]
 tests =
