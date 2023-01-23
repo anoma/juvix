@@ -23,10 +23,8 @@ axiom hostFillText : Nat → Nat → String → Nat → String → Nat → IO;
 
 -- IO extensions
 
-axiom IOUnit : IO;
-compile IOUnit {
-  c ↦ "0";
-};
+IOUnit : IO;
+IOUnit := printString "";
 
 sequenceIO : List IO → IO;
 sequenceIO := foldr (>>) IOUnit;
@@ -84,9 +82,9 @@ type Align :=
   | center : Align;
 
 alignNum : Align → Nat;
-alignNum left := zero;
-alignNum right := one;
-alignNum center := two;
+alignNum left := 0;
+alignNum right := 1;
+alignNum center := 2;
 
 renderText : String → Nat → Nat → Align → IO;
 renderText t row col a := hostFillText ((squareWidth * row) + xTextOffset) ((squareWidth * col) + yTextOffset) t textSize textColor (alignNum a);

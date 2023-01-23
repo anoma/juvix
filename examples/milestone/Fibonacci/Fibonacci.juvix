@@ -10,6 +10,6 @@ fibonacci : Nat → Nat;
 fibonacci n := fib n 0 1;
 
 main : IO;
-main := putStrLn (natToStr (fibonacci 25));
+main := printNatLn (fibonacci 25);
 
 end;

@@ -2,7 +2,7 @@ module Symbols;
   open import Stdlib.Data.Nat;
 
   ╘⑽╛ : Nat;
-  ╘⑽╛ := suc nine;
+  ╘⑽╛ := suc 9;
 
   -- no - function!?
   - : Nat -> Nat -> Nat;

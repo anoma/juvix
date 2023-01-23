@@ -52,9 +52,9 @@ pascalNextRow row := zipWith (+) (singleton zero ++ row) (row ++ singleton zero)
 
 --- Produce Pascal's triangle to a given depth
 pascal : Nat → List (List Nat);
-pascal rows := iterate rows pascalNextRow (singleton one);
+pascal rows := iterate rows pascalNextRow (singleton 1);
 
 main : IO;
-main := putStrLn (unlines (map showList (pascal 10)));
+main := printStringLn (unlines (map showList (pascal 10)));
 
 end;

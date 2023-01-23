@@ -66,6 +66,6 @@ hanoi zero _ _ _ := nil;
 hanoi (suc n) p1 p2 p3 := hanoi n p1 p3 p2 ++ singleton (move p1 p2) ++ hanoi n p3 p2 p1;
 
 main : IO;
-main := putStrLn (unlines (map showMove (hanoi 5 left middle right)));
+main := printStringLn (unlines (map showMove (hanoi 5 left middle right)));
 
 end;

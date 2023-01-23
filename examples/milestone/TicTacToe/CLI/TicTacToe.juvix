@@ -36,9 +36,9 @@ prompt x := "\n" ++str (showGameState x) ++str "\nPlayer " ++str showSymbol (pla
 -- | Main loop
 terminating
 run : (IO × GameState → GameState) → GameState → IO;
-run _ (state b p (terminate msg)) := putStrLn ("\n" ++str (showGameState (state b p noError)) ++str "\n" ++str msg);
-run f (state b p (continue msg)) := run f (f (putStr (msg ++str prompt (state b p noError)), state b p noError));
-run f x := run f (f (putStr (prompt x), x));
+run _ (state b p (terminate msg)) := printStringLn ("\n" ++str (showGameState (state b p noError)) ++str "\n" ++str msg);
+run f (state b p (continue msg)) := run f (f (printString (msg ++str prompt (state b p noError)), state b p noError));
+run f x := run f (f (printString (prompt x), x));
 
 --- The welcome message
 welcome : String;
@@ -46,5 +46,5 @@ welcome := "MiniTicTacToe\n-------------\n\nType a number then ENTER to make a m
 
 --- The entry point of the program
 main : IO;
-main := putStrLn welcome >> run do beginState;
+main := printStringLn welcome >> run do beginState;
 end;

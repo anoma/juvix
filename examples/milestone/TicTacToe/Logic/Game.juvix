@@ -34,6 +34,6 @@ playMove (just k) (state (board s) player e) :=
 
 --- Returns ;just; if the given ;Nat; is in range of 1..9
 validMove : Nat → Maybe Nat;
-validMove n := if ((n <= nine) && (n >= one)) (just n) nothing;
+validMove n := if ((n <= 9) && (n >= 1)) (just n) nothing;
 
 end;

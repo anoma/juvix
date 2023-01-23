@@ -1,12 +1,11 @@
 module Input;
 
-
 -- import from stdlib
 open import Stdlib.Data.String;
 open import Stdlib.Data.Nat;
 open import Stdlib.System.IO;
 
 main : IO;
-main := putStrLn (natToStr (two + three));
+main := printNatLn (2 + 3);
 
 end;
