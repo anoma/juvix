@@ -21,6 +21,3 @@ filterInput absPth HighlightInput {..} =
     { _highlightNames = filterByLoc absPth _highlightNames,
       _highlightParsed = filterByLoc absPth _highlightParsed
     }
-
-filterByLoc :: HasLoc p => Path Abs File -> [p] -> [p]
-filterByLoc p = filter ((== p) . (^. intervalFile) . getLoc)
