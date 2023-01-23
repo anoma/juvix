@@ -12,7 +12,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified
 import Juvix.Extra.Process
 import System.Process qualified as Process
 
-runGenOnlySourceHtml :: Members '[Embed IO, App] r => HtmlOptions -> Sem r ()
+runGenOnlySourceHtml :: (Members '[Embed IO, App] r) => HtmlOptions -> Sem r ()
 runGenOnlySourceHtml HtmlOptions {..} = do
   res <- runPipeline _htmlInputFile upToScoping
   let m = head (res ^. Scoper.resultModules)
@@ -32,7 +32,7 @@ runGenOnlySourceHtml HtmlOptions {..} = do
           _genSourceHtmlArgsTheme = _htmlTheme
         }
 
-runCommand :: Members '[Embed IO, App] r => HtmlOptions -> Sem r ()
+runCommand :: (Members '[Embed IO, App] r) => HtmlOptions -> Sem r ()
 runCommand HtmlOptions {..}
   | _htmlOnlySource = runGenOnlySourceHtml HtmlOptions {..}
   | otherwise = do

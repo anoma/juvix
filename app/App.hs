@@ -35,7 +35,7 @@ data RunAppIOArgs = RunAppIOArgs
 
 runAppIO ::
   forall r a.
-  Member (Embed IO) r =>
+  (Member (Embed IO) r) =>
   RunAppIOArgs ->
   Sem (App ': r) a ->
   Sem r a
@@ -92,15 +92,15 @@ getEntryPoint' RunAppIOArgs {..} inputFile = do
         _entryPointStdin = estdin
       }
 
-someBaseToAbs' :: Members '[App] r => SomeBase a -> Sem r (Path Abs a)
+someBaseToAbs' :: (Members '[App] r) => SomeBase a -> Sem r (Path Abs a)
 someBaseToAbs' f = do
   r <- askInvokeDir
   return (someBaseToAbs r f)
 
-askGenericOptions :: Members '[App] r => Sem r GenericOptions
+askGenericOptions :: (Members '[App] r) => Sem r GenericOptions
 askGenericOptions = project <$> askGlobalOptions
 
-getEntryPoint :: Members '[Embed IO, App] r => AppPath File -> Sem r EntryPoint
+getEntryPoint :: (Members '[Embed IO, App] r) => AppPath File -> Sem r EntryPoint
 getEntryPoint inputFile = do
   _runAppIOArgsGlobalOptions <- askGlobalOptions
   _runAppIOArgsPkgDir <- askPkgDir
@@ -109,20 +109,20 @@ getEntryPoint inputFile = do
   _runAppIOArgsInvokeDir <- askInvokeDir
   embed (getEntryPoint' (RunAppIOArgs {..}) inputFile)
 
-runPipeline :: Member App r => AppPath File -> Sem PipelineEff a -> Sem r a
+runPipeline :: (Member App r) => AppPath File -> Sem PipelineEff a -> Sem r a
 runPipeline input p = do
   r <- runPipelineEither input p
   case r of
     Left err -> exitJuvixError err
     Right res -> return (snd res)
 
-newline :: Member App r => Sem r ()
+newline :: (Member App r) => Sem r ()
 newline = say ""
 
-printSuccessExit :: Member App r => Text -> Sem r a
+printSuccessExit :: (Member App r) => Text -> Sem r a
 printSuccessExit = exitMsg ExitSuccess
 
-printFailureExit :: Member App r => Text -> Sem r a
+printFailureExit :: (Member App r) => Text -> Sem r a
 printFailureExit = exitMsg (ExitFailure 1)
 
 getRight :: (Members '[App] r, AppError e) => Either e a -> Sem r a
@@ -135,4 +135,4 @@ instance AppError JuvixError where
   appError = exitJuvixError
 
 class AppError e where
-  appError :: Members '[App] r => e -> Sem r a
+  appError :: (Members '[App] r) => e -> Sem r a

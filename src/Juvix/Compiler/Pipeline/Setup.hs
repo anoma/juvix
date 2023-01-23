@@ -7,21 +7,21 @@ import Juvix.Extra.Stdlib
 import Juvix.Prelude
 
 entrySetup ::
-  Members '[Reader EntryPoint, Files, PathResolver] r =>
+  (Members '[Reader EntryPoint, Files, PathResolver] r) =>
   Sem r EntryPoint
 entrySetup = do
   e <- ask
   registerDependencies
   return e
 
-registerDependencies :: Members '[Reader EntryPoint, PathResolver] r => Sem r ()
+registerDependencies :: (Members '[Reader EntryPoint, PathResolver] r) => Sem r ()
 registerDependencies = do
   e <- ask
   addDependency (Just e) (Dependency (e ^. entryPointRoot))
 
 stdlibDep ::
   forall r.
-  Members '[Reader EntryPoint, Files, PathResolver] r =>
+  (Members '[Reader EntryPoint, Files, PathResolver] r) =>
   Sem r Dependency
 stdlibDep = Dependency <$> getRoot
   where

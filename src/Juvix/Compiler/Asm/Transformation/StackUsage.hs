@@ -2,7 +2,7 @@ module Juvix.Compiler.Asm.Transformation.StackUsage where
 
 import Juvix.Compiler.Asm.Transformation.Base
 
-computeFunctionStackUsage :: Member (Error AsmError) r => InfoTable -> FunctionInfo -> Sem r FunctionInfo
+computeFunctionStackUsage :: (Member (Error AsmError) r) => InfoTable -> FunctionInfo -> Sem r FunctionInfo
 computeFunctionStackUsage tab fi = do
   ps <- recurseS sig (fi ^. functionCode)
   let maxValueStack = maximum (map fst ps)
@@ -30,5 +30,5 @@ computeFunctionStackUsage tab fi = do
               )
         }
 
-computeStackUsage :: Member (Error AsmError) r => InfoTable -> Sem r InfoTable
+computeStackUsage :: (Member (Error AsmError) r) => InfoTable -> Sem r InfoTable
 computeStackUsage tab = liftFunctionTransformation (computeFunctionStackUsage tab) tab

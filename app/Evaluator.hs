@@ -21,7 +21,7 @@ makeLenses ''EvalOptions
 
 doEval ::
   forall r.
-  Members '[Embed IO] r =>
+  (Members '[Embed IO] r) =>
   Bool ->
   Interval ->
   Core.InfoTable ->

@@ -64,7 +64,7 @@ setupMainFunction tab node =
         }
 
 guardSymbolNotDefined ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Symbol ->
   ParsecS r () ->
   ParsecS r ()
@@ -73,7 +73,7 @@ guardSymbolNotDefined sym err = do
   when b err
 
 parseToplevel ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   ParsecS r (Maybe Node)
 parseToplevel = do
   lift declareIOBuiltins
@@ -86,12 +86,12 @@ parseToplevel = do
   return r
 
 statement ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   ParsecS r ()
 statement = statementBuiltin <|> void statementDef <|> statementInductive
 
 statementBuiltin ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   ParsecS r ()
 statementBuiltin = do
   off <- P.getOffset
@@ -103,7 +103,7 @@ statementBuiltin = do
     _ -> parseFailure off "unrecorgnized builtin definition"
 
 statementDef ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   ParsecS r Symbol
 statementDef = do
   kw kwDef
@@ -144,7 +144,7 @@ statementDef = do
       return sym
 
 parseDefinition ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Symbol ->
   Type ->
   ParsecS r ()
@@ -171,7 +171,7 @@ parseDefinition sym ty = do
         }
 
 statementInductive ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   ParsecS r ()
 statementInductive = do
   kw kwInductive
@@ -198,7 +198,7 @@ statementInductive = do
   lift $ registerInductive txt ii {_inductiveConstructors = ctrs}
 
 constrDecl ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Symbol ->
   ParsecS r ConstructorInfo
 constrDecl symInd = do
@@ -223,14 +223,14 @@ constrDecl symInd = do
   return ci
 
 typeAnnotation ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   ParsecS r Type
 typeAnnotation = do
   kw kwColon
   expression
 
 expression ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   ParsecS r Node
 expression = do
   node <- expr 0 mempty
@@ -238,7 +238,7 @@ expression = do
   return $ etaExpandApps tab node
 
 expr ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   -- | current de Bruijn index, i.e., the number of binders upwards
   Index ->
   -- | reverse de Bruijn indices (de Bruijn levels)
@@ -247,21 +247,21 @@ expr ::
 expr varsNum vars = typeExpr varsNum vars
 
 bracedExpr ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
 bracedExpr varsNum vars = braces (expr varsNum vars) <|> expr varsNum vars
 
 typeExpr ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
 typeExpr varsNum vars = ioExpr varsNum vars >>= typeExpr' varsNum vars
 
 typeExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -271,7 +271,7 @@ typeExpr' varsNum vars node =
     <|> return node
 
 typeFunExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -282,14 +282,14 @@ typeFunExpr' varsNum vars l = do
   return $ mkPi' l r
 
 ioExpr ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
 ioExpr varsNum vars = cmpExpr varsNum vars >>= ioExpr' varsNum vars
 
 ioExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -300,7 +300,7 @@ ioExpr' varsNum vars node =
     <|> return node
 
 bindExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -311,7 +311,7 @@ bindExpr' varsNum vars node = do
   ioExpr' varsNum vars (mkConstr Info.empty (BuiltinTag TagBind) [node, node'])
 
 seqExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -326,14 +326,14 @@ seqExpr' varsNum vars node = do
       [node, mkLambda mempty (Binder "_" (Just i) mkDynamic') node']
 
 cmpExpr ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
 cmpExpr varsNum vars = arithExpr varsNum vars >>= cmpExpr' varsNum vars
 
 cmpExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -347,7 +347,7 @@ cmpExpr' varsNum vars node =
     <|> return node
 
 eqExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -358,7 +358,7 @@ eqExpr' varsNum vars node = do
   return $ mkBuiltinApp' OpEq [node, node']
 
 ltExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -369,7 +369,7 @@ ltExpr' varsNum vars node = do
   return $ mkBuiltinApp' OpIntLt [node, node']
 
 leExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -380,7 +380,7 @@ leExpr' varsNum vars node = do
   return $ mkBuiltinApp' OpIntLe [node, node']
 
 gtExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -391,7 +391,7 @@ gtExpr' varsNum vars node = do
   return $ mkBuiltinApp' OpIntLt [node', node]
 
 geExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -402,14 +402,14 @@ geExpr' varsNum vars node = do
   return $ mkBuiltinApp' OpIntLe [node', node]
 
 arithExpr ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
 arithExpr varsNum vars = factorExpr varsNum vars >>= arithExpr' varsNum vars
 
 arithExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -420,7 +420,7 @@ arithExpr' varsNum vars node =
     <|> return node
 
 plusExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -431,7 +431,7 @@ plusExpr' varsNum vars node = do
   arithExpr' varsNum vars (mkBuiltinApp' OpIntAdd [node, node'])
 
 minusExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -442,14 +442,14 @@ minusExpr' varsNum vars node = do
   arithExpr' varsNum vars (mkBuiltinApp' OpIntSub [node, node'])
 
 factorExpr ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
 factorExpr varsNum vars = appExpr varsNum vars >>= factorExpr' varsNum vars
 
 factorExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -461,7 +461,7 @@ factorExpr' varsNum vars node =
     <|> return node
 
 mulExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -472,7 +472,7 @@ mulExpr' varsNum vars node = do
   factorExpr' varsNum vars (mkBuiltinApp' OpIntMul [node, node'])
 
 divExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -483,7 +483,7 @@ divExpr' varsNum vars node = do
   factorExpr' varsNum vars (mkBuiltinApp' OpIntDiv [node, node'])
 
 modExpr' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   Node ->
@@ -494,14 +494,14 @@ modExpr' varsNum vars node = do
   factorExpr' varsNum vars (mkBuiltinApp' OpIntMod [node, node'])
 
 appExpr ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
 appExpr varsNum vars = builtinAppExpr varsNum vars <|> atoms varsNum vars
 
 builtinAppExpr ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -520,7 +520,7 @@ builtinAppExpr varsNum vars = do
   return $ mkBuiltinApp' op args
 
 atoms ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -529,7 +529,7 @@ atoms varsNum vars = do
   return $ mkApps' (head es) (NonEmpty.tail es)
 
 atom ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -580,7 +580,7 @@ parseLocalName = parseWildcardName <|> parseIdentName
     parseIdentName = identifierL
 
 exprPi ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -596,7 +596,7 @@ exprPi varsNum vars = do
   return $ mkPi mempty bi body
 
 exprLambda ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -619,7 +619,7 @@ exprLambda varsNum vars = do
         <|> (\n -> (n, Nothing)) <$> parseLocalName
 
 exprLetrecOne ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -636,7 +636,7 @@ exprLetrecOne varsNum vars = do
   return $ mkLetRec mempty (pure item) body
 
 exprLetrecMany ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -656,7 +656,7 @@ letrecNames = P.between (symbol "[") (symbol "]") (NonEmpty.some identifier)
 
 letrecDefs ::
   forall r.
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   NonEmpty Text ->
   Index ->
   HashMap Text Level ->
@@ -675,7 +675,7 @@ letrecDefs names varsNum vars = forM names letrecItem
       return $ LetItem (Binder txt (Just i) mkDynamic') v
 
 letrecDef ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r (Text, Location, Node)
@@ -686,7 +686,7 @@ letrecDef varsNum vars = do
   return (txt, i, v)
 
 exprLet ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -703,7 +703,7 @@ exprLet varsNum vars = do
   return $ mkLet mempty binder value body
 
 exprCase ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -716,7 +716,7 @@ exprCase varsNum vars = do
     <|> exprCase' off value varsNum vars
 
 exprCase' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Int ->
   Node ->
   Index ->
@@ -747,7 +747,7 @@ exprCase' off value varsNum vars = do
           parseFailure off "multiple default branches"
 
 caseBranchP ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r (Either CaseBranch Node)
@@ -756,7 +756,7 @@ caseBranchP varsNum vars =
     <|> (caseMatchingBranch varsNum vars <&> Left)
 
 caseDefaultBranch ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -766,7 +766,7 @@ caseDefaultBranch varsNum vars = do
   bracedExpr varsNum vars
 
 caseMatchingBranch ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r CaseBranch
@@ -803,7 +803,7 @@ caseMatchingBranch varsNum vars = do
       parseFailure off ("undeclared identifier: " ++ fromText txt)
 
 exprIf ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -818,7 +818,7 @@ exprIf varsNum vars = do
   return $ mkIf mempty sym value br1 br2
 
 exprMatch ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node
@@ -830,7 +830,7 @@ exprMatch varsNum vars = do
     <|> exprMatch' values varsNum vars
 
 exprMatch' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   [Node] ->
   Index ->
   HashMap Text Level ->
@@ -840,7 +840,7 @@ exprMatch' values varsNum vars = do
   return $ mkMatch' (fromList values) bs
 
 matchBranch ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Int ->
   Index ->
   HashMap Text Level ->
@@ -864,7 +864,7 @@ matchBranch patsNum varsNum vars = do
   return $ MatchBranch Info.empty (fromList pats) br
 
 branchPattern ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   ParsecS r Pattern
 branchPattern =
   wildcardPattern
@@ -877,7 +877,7 @@ wildcardPattern = do
   return $ PatWildcard (PatternWildcard Info.empty)
 
 binderOrConstrPattern ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Bool ->
   ParsecS r Pattern
 binderOrConstrPattern parseArgs = do
@@ -900,7 +900,7 @@ binderOrConstrPattern parseArgs = do
       return $ PatBinder (PatternBinder binder pat)
 
 binderPattern ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   ParsecS r Pattern
 binderPattern = do
   symbolAt
@@ -909,7 +909,7 @@ binderPattern = do
     <|> parens branchPattern
 
 exprNamed ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Index ->
   HashMap Text Level ->
   ParsecS r Node

@@ -9,7 +9,7 @@ import Juvix.Compiler.Abstract.Translation.FromConcrete qualified as Abstract
 import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination qualified as Termination
 import Juvix.Prelude.Pretty
 
-runCommand :: Members '[Embed IO, App] r => CallGraphOptions -> Sem r ()
+runCommand :: (Members '[Embed IO, App] r) => CallGraphOptions -> Sem r ()
 runCommand CallGraphOptions {..} = do
   globalOpts <- askGlobalOptions
   results <- runPipeline _graphInputFile upToAbstract

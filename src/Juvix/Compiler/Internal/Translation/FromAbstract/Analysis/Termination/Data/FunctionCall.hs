@@ -38,7 +38,7 @@ newtype LexOrder = LexOrder (NonEmpty Int)
 makeLenses ''FunCall
 makeLenses ''CallMap
 
-filterCallMap :: Foldable f => f Text -> CallMap -> CallMap
+filterCallMap :: (Foldable f) => f Text -> CallMap -> CallMap
 filterCallMap funNames =
   over
     callMap
@@ -52,7 +52,7 @@ filterCallMap funNames =
 instance PrettyCode FunCall where
   ppCode ::
     forall r.
-    Members '[Reader Options] r =>
+    (Members '[Reader Options] r) =>
     FunCall ->
     Sem r (Doc Ann)
   ppCode (FunCall f args) = do
@@ -82,7 +82,7 @@ instance PrettyCode FunCall where
 instance PrettyCode CallMap where
   ppCode ::
     forall r.
-    Members '[Reader Options] r =>
+    (Members '[Reader Options] r) =>
     CallMap ->
     Sem r (Doc Ann)
   ppCode (CallMap m) = vsep <$> mapM ppEntry (HashMap.toList m)

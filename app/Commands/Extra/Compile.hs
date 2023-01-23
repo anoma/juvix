@@ -8,7 +8,7 @@ import Juvix.Extra.Paths
 import System.Environment
 import System.Process qualified as P
 
-runCommand :: forall r. Members '[Embed IO, App] r => CompileOptions -> Sem r ()
+runCommand :: forall r. (Members '[Embed IO, App] r) => CompileOptions -> Sem r ()
 runCommand opts = do
   inputFile <- someBaseToAbs' (opts ^. compileInputFile . pathPath)
   result <- runCompile inputFile opts
@@ -17,7 +17,7 @@ runCommand opts = do
     _ -> return ()
 
 runCompile ::
-  Members '[App, Embed IO] r =>
+  (Members '[App, Embed IO] r) =>
   Path Abs File ->
   CompileOptions ->
   Sem r (Either Text ())
@@ -31,7 +31,7 @@ runCompile inputFile o = do
     TargetNative64 -> runError (clangNativeCompile inputFile o)
     TargetC -> return $ Right ()
 
-prepareRuntime :: forall r. Members '[App, Embed IO] r => Path Abs Dir -> CompileOptions -> Sem r ()
+prepareRuntime :: forall r. (Members '[App, Embed IO] r) => Path Abs Dir -> CompileOptions -> Sem r ()
 prepareRuntime buildDir o = do
   mapM_ writeHeader headersDir
   case o ^. compileTarget of
@@ -71,7 +71,7 @@ prepareRuntime buildDir o = do
 
 clangNativeCompile ::
   forall r.
-  Members '[App, Embed IO, Error Text] r =>
+  (Members '[App, Embed IO, Error Text] r) =>
   Path Abs File ->
   CompileOptions ->
   Sem r ()
@@ -91,7 +91,7 @@ clangNativeCompile inputFile o = do
 
 clangWasmWasiCompile ::
   forall r.
-  Members '[App, Embed IO, Error Text] r =>
+  (Members '[App, Embed IO, Error Text] r) =>
   Path Abs File ->
   CompileOptions ->
   Sem r ()
@@ -183,7 +183,7 @@ wasiArgs buildDir o outputFile inputFile sysrootPath =
        )
 
 runClang ::
-  Members '[Embed IO, Error Text] r =>
+  (Members '[Embed IO, Error Text] r) =>
   [String] ->
   Sem r ()
 runClang args = do

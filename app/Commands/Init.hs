@@ -20,7 +20,7 @@ parse p t = mapLeft ppErr (P.runParser p "<stdin>" t)
 ppErr :: P.ParseErrorBundle Text Void -> Text
 ppErr = pack . errorBundlePretty
 
-init :: forall r. Members '[Embed IO] r => Sem r ()
+init :: forall r. (Members '[Embed IO] r) => Sem r ()
 init = do
   checkNotInProject
   say "✨ Your next Juvix adventure is about to begin! ✨"
@@ -30,7 +30,7 @@ init = do
   embed (encodeFile (toFilePath juvixYamlFile) (rawPackage pkg))
   say "you are all set"
 
-checkNotInProject :: forall r. Members '[Embed IO] r => Sem r ()
+checkNotInProject :: forall r. (Members '[Embed IO] r) => Sem r ()
 checkNotInProject =
   whenM (doesFileExist juvixYamlFile) err
   where
@@ -39,7 +39,7 @@ checkNotInProject =
       say "You are already in a Juvix project"
       embed exitFailure
 
-getPackage :: forall r. Members '[Embed IO] r => Sem r Package
+getPackage :: forall r. (Members '[Embed IO] r) => Sem r Package
 getPackage = do
   tproj <- getProjName
   say "Tell me the version of your project [leave empty for 0.0.0]"
@@ -51,7 +51,7 @@ getPackage = do
         _packageDependencies = mempty
       }
 
-getProjName :: forall r. Members '[Embed IO] r => Sem r Text
+getProjName :: forall r. (Members '[Embed IO] r) => Sem r Text
 getProjName = do
   d <- getDefault
   let defMsg :: Text
@@ -93,13 +93,13 @@ getProjName = do
               tryAgain
               go
 
-say :: Members '[Embed IO] r => Text -> Sem r ()
+say :: (Members '[Embed IO] r) => Text -> Sem r ()
 say = embed . putStrLn
 
-tryAgain :: Members '[Embed IO] r => Sem r ()
+tryAgain :: (Members '[Embed IO] r) => Sem r ()
 tryAgain = say "Please, try again:"
 
-getVersion :: forall r. Members '[Embed IO] r => Sem r SemVer
+getVersion :: forall r. (Members '[Embed IO] r) => Sem r SemVer
 getVersion = do
   txt <- embed getLine
   if

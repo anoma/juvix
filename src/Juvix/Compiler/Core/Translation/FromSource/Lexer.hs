@@ -27,7 +27,7 @@ symbol = void . L.symbol space
 kw :: Keyword -> ParsecS r ()
 kw = void . lexeme . kw'
 
-decimal :: Num n => ParsecS r (n, Interval)
+decimal :: (Num n) => ParsecS r (n, Interval)
 decimal = lexemeInterval L.decimal
 
 integer :: ParsecS r (Integer, Interval)

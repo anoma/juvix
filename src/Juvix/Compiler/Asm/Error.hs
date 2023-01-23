@@ -13,7 +13,7 @@ data AsmError = AsmError
 makeLenses ''AsmError
 
 instance ToGenericError AsmError where
-  genericError :: Member (Reader GenericOptions) r => AsmError -> Sem r GenericError
+  genericError :: (Member (Reader GenericOptions) r) => AsmError -> Sem r GenericError
   genericError e = ask >>= generr
     where
       generr :: GenericOptions -> Sem r GenericError

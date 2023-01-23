@@ -10,7 +10,7 @@ import Juvix.Prelude
 
 viewCall ::
   forall r.
-  Members '[Reader SizeInfo] r =>
+  (Members '[Reader SizeInfo] r) =>
   Expression ->
   Sem r (Maybe FunCall)
 viewCall = \case
@@ -71,7 +71,7 @@ addCall fun c = over callMap (HashMap.alter (Just . insertCall c) fun)
     addFunCall fc = HashMap.insertWith (flip (<>)) (fc ^. callRef) [fc]
 
 registerCall ::
-  Members '[State CallMap, Reader FunctionRef] r =>
+  (Members '[State CallMap, Reader FunctionRef] r) =>
   FunCall ->
   Sem r ()
 registerCall c = do

@@ -21,7 +21,7 @@ data InfoTableBuilder m a where
 
 makeSem ''InfoTableBuilder
 
-registerComment :: Member InfoTableBuilder r => Interval -> Sem r ()
+registerComment :: (Member InfoTableBuilder r) => Interval -> Sem r ()
 registerComment i =
   registerItem
     ParsedItem
@@ -29,7 +29,7 @@ registerComment i =
         _parsedTag = ParsedTagComment
       }
 
-registerKeyword :: Member InfoTableBuilder r => Interval -> Sem r ()
+registerKeyword :: (Member InfoTableBuilder r) => Interval -> Sem r ()
 registerKeyword i =
   registerItem
     ParsedItem
@@ -37,7 +37,7 @@ registerKeyword i =
         _parsedTag = ParsedTagKeyword
       }
 
-registerLiteral :: Member InfoTableBuilder r => LiteralLoc -> Sem r LiteralLoc
+registerLiteral :: (Member InfoTableBuilder r) => LiteralLoc -> Sem r LiteralLoc
 registerLiteral l =
   l
     <$ registerItem

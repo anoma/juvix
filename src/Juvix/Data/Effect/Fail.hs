@@ -15,13 +15,13 @@ runFail ::
 runFail = fmap (^? _Right) . runError @() . reinterpret (\Fail -> throw ())
 {-# INLINE runFail #-}
 
-failMaybe :: Member Fail r => Maybe a -> Sem r a
+failMaybe :: (Member Fail r) => Maybe a -> Sem r a
 failMaybe = \case
   Nothing -> fail
   Just x -> return x
 
 failFromException ::
-  Members '[Fail, Embed IO] r =>
+  (Members '[Fail, Embed IO] r) =>
   IO a ->
   Sem r a
 failFromException m = do

@@ -11,10 +11,10 @@ import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
-lambdaLiftBinder :: Member InfoTableBuilder r => BinderList Binder -> Binder -> Sem r Binder
+lambdaLiftBinder :: (Member InfoTableBuilder r) => BinderList Binder -> Binder -> Sem r Binder
 lambdaLiftBinder bl = traverseOf binderType (lambdaLiftNode bl)
 
-lambdaLiftNode :: forall r. Member InfoTableBuilder r => BinderList Binder -> Node -> Sem r Node
+lambdaLiftNode :: forall r. (Member InfoTableBuilder r) => BinderList Binder -> Node -> Sem r Node
 lambdaLiftNode aboveBl top =
   let topArgs :: [LambdaLhs]
       (topArgs, body) = unfoldLambdas top

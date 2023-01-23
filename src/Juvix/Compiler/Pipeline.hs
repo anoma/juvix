@@ -32,7 +32,7 @@ import Juvix.Prelude
 type PipelineEff = '[PathResolver, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, Embed IO]
 
 arityCheckExpression ::
-  Members '[Error JuvixError, NameIdGen, Builtins] r =>
+  (Members '[Error JuvixError, NameIdGen, Builtins] r) =>
   FilePath ->
   ExpressionContext ->
   Text ->
@@ -45,7 +45,7 @@ arityCheckExpression fp ctx txt =
     >>= Internal.arityCheckExpression (ctx ^. contextInternalResult)
 
 inferExpression ::
-  Members '[Error JuvixError, NameIdGen, Builtins] r =>
+  (Members '[Error JuvixError, NameIdGen, Builtins] r) =>
   FilePath ->
   ExpressionContext ->
   Text ->
@@ -55,7 +55,7 @@ inferExpression fp ctx txt =
     >>= Internal.inferExpressionType (ctx ^. contextInternalTypedResult)
 
 compileExpression ::
-  Members '[Error JuvixError, NameIdGen, Builtins] r =>
+  (Members '[Error JuvixError, NameIdGen, Builtins] r) =>
   FilePath ->
   ExpressionContext ->
   Text ->
@@ -96,7 +96,7 @@ inferExpressionIO fp ctx builtinsState txt =
 --------------------------------------------------------------------------------
 
 typecheck ::
-  Members PipelineEff r =>
+  (Members PipelineEff r) =>
   EntryPoint ->
   Sem r Internal.InternalTypedResult
 typecheck =
@@ -108,55 +108,55 @@ typecheck =
     >=> Internal.typeChecking
 
 compile ::
-  Members PipelineEff r =>
+  (Members PipelineEff r) =>
   EntryPoint ->
   Sem r C.MiniCResult
 compile = typecheck >=> C.fromInternal
 
 upToParsing ::
-  Members '[Reader EntryPoint, Files, Error JuvixError, NameIdGen, PathResolver] r =>
+  (Members '[Reader EntryPoint, Files, Error JuvixError, NameIdGen, PathResolver] r) =>
   Sem r Parser.ParserResult
 upToParsing = entrySetup >>= Parser.fromSource
 
 upToScoping ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, PathResolver] r =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r Scoper.ScoperResult
 upToScoping = upToParsing >>= Scoper.fromParsed
 
 upToAbstract ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r) =>
   Sem r Abstract.AbstractResult
 upToAbstract = upToScoping >>= Abstract.fromConcrete
 
 upToInternal ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r) =>
   Sem r Internal.InternalResult
 upToInternal = upToAbstract >>= Internal.fromAbstract
 
 upToInternalArity ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, PathResolver] r) =>
   Sem r Internal.InternalArityResult
 upToInternalArity = upToInternal >>= Internal.arityChecking
 
 upToInternalTyped ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Internal.InternalTypedResult
 upToInternalTyped = upToInternalArity >>= Internal.typeChecking
 
 upToInternalReachability ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Internal.InternalTypedResult
 upToInternalReachability =
   Internal.filterUnreachable <$> upToInternalTyped
 
 upToCore ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Core.CoreResult
 upToCore =
   upToInternalReachability >>= Core.fromInternal
 
 upToMiniC ::
-  Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r =>
+  (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r C.MiniCResult
 upToMiniC = upToInternalReachability >>= C.fromInternal
 
@@ -164,10 +164,10 @@ upToMiniC = upToInternalReachability >>= C.fromInternal
 -- Internal workflows
 --------------------------------------------------------------------------------
 
-coreToMiniC :: Member (Error JuvixError) r => Asm.Options -> Core.InfoTable -> Sem r C.MiniCResult
+coreToMiniC :: (Member (Error JuvixError) r) => Asm.Options -> Core.InfoTable -> Sem r C.MiniCResult
 coreToMiniC opts = asmToMiniC opts . Asm.fromCore . Stripped.fromCore . Core.toStripped
 
-asmToMiniC :: Member (Error JuvixError) r => Asm.Options -> Asm.InfoTable -> Sem r C.MiniCResult
+asmToMiniC :: (Member (Error JuvixError) r) => Asm.Options -> Asm.InfoTable -> Sem r C.MiniCResult
 asmToMiniC opts = Asm.toReg opts >=> regToMiniC (opts ^. Asm.optLimits) . Reg.fromAsm
 
 regToMiniC :: Backend.Limits -> Reg.InfoTable -> Sem r C.MiniCResult

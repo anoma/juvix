@@ -56,7 +56,7 @@ instance Monoid InfoTable where
         _infoInductives = mempty
       }
 
-buildTable :: Foldable f => f Module -> InfoTable
+buildTable :: (Foldable f) => f Module -> InfoTable
 buildTable = mconcatMap buildTable1
 
 buildTable1 :: Module -> InfoTable
@@ -68,7 +68,7 @@ buildTable' = mconcatMap buildTable1'
 -- | moduleName ↦ infoTable
 type Cache = HashMap Name InfoTable
 
-buildTable1' :: forall r. Members '[State Cache] r => Module -> Sem r InfoTable
+buildTable1' :: forall r. (Members '[State Cache] r) => Module -> Sem r InfoTable
 buildTable1' m = do
   mi <- gets @Cache (^. at (m ^. moduleName))
   maybe compute return mi
@@ -123,22 +123,22 @@ buildTable1' m = do
     ss :: [Statement]
     ss = m ^. (moduleBody . moduleStatements)
 
-lookupConstructor :: Member (Reader InfoTable) r => Name -> Sem r ConstructorInfo
+lookupConstructor :: (Member (Reader InfoTable) r) => Name -> Sem r ConstructorInfo
 lookupConstructor f = HashMap.lookupDefault impossible f <$> asks (^. infoConstructors)
 
-lookupConstructorArgTypes :: Member (Reader InfoTable) r => Name -> Sem r ([VarName], [Expression])
+lookupConstructorArgTypes :: (Member (Reader InfoTable) r) => Name -> Sem r ([VarName], [Expression])
 lookupConstructorArgTypes = fmap constructorArgTypes . lookupConstructor
 
-lookupInductive :: Member (Reader InfoTable) r => InductiveName -> Sem r InductiveInfo
+lookupInductive :: (Member (Reader InfoTable) r) => InductiveName -> Sem r InductiveInfo
 lookupInductive f = HashMap.lookupDefault impossible f <$> asks (^. infoInductives)
 
-lookupFunction :: Member (Reader InfoTable) r => Name -> Sem r FunctionInfo
+lookupFunction :: (Member (Reader InfoTable) r) => Name -> Sem r FunctionInfo
 lookupFunction f = HashMap.lookupDefault impossible f <$> asks (^. infoFunctions)
 
-lookupAxiom :: Member (Reader InfoTable) r => Name -> Sem r AxiomInfo
+lookupAxiom :: (Member (Reader InfoTable) r) => Name -> Sem r AxiomInfo
 lookupAxiom f = HashMap.lookupDefault impossible f <$> asks (^. infoAxioms)
 
-inductiveType :: Member (Reader InfoTable) r => Name -> Sem r Expression
+inductiveType :: (Member (Reader InfoTable) r) => Name -> Sem r Expression
 inductiveType v = do
   info <- lookupInductive v
   let ps = info ^. inductiveInfoDef . inductiveParameters
@@ -156,7 +156,7 @@ constructorArgTypes i =
     i ^. constructorInfoArgs
   )
 
-constructorType :: Member (Reader InfoTable) r => ConstrName -> Sem r Expression
+constructorType :: (Member (Reader InfoTable) r) => ConstrName -> Sem r Expression
 constructorType c = do
   info <- lookupConstructor c
   let (inductiveParams, constrArgs) = constructorArgTypes info
@@ -166,7 +166,7 @@ constructorType c = do
   saturatedTy <- constructorReturnType c
   return (foldFunType args saturatedTy)
 
-constructorReturnType :: Member (Reader InfoTable) r => ConstrName -> Sem r Expression
+constructorReturnType :: (Member (Reader InfoTable) r) => ConstrName -> Sem r Expression
 constructorReturnType c = do
   info <- lookupConstructor c
   let inductiveParams = fst (constructorArgTypes info)

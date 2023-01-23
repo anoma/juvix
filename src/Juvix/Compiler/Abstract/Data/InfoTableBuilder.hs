@@ -18,13 +18,13 @@ data InfoTableBuilder m a where
 makeSem ''InfoTableBuilder
 
 registerFunction' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   FunctionDef ->
   Sem r FunctionDef
 registerFunction' ts = registerFunction ts $> ts
 
 registerAxiom' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   AxiomDef ->
   Sem r AxiomDef
 registerAxiom' a = registerAxiom a $> a

@@ -10,7 +10,7 @@ import Juvix.Data.PPOutput
 import Juvix.Prelude
 import Text.EditDistance
 
-ppCode :: Scoped.PrettyCode c => Scoped.Options -> c -> Doc Ann
+ppCode :: (Scoped.PrettyCode c) => Scoped.Options -> c -> Doc Ann
 ppCode opts = runPP opts . Scoped.ppCode
 
 runPP :: Scoped.Options -> Sem '[Reader Scoped.Options] (Doc Scoped.Ann) -> Doc Ann

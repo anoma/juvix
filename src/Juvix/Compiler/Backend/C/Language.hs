@@ -322,7 +322,7 @@ macroCall name = \case
   [] -> macroVar name
   args -> functionCall (ExpressionVar name) args
 
-integer :: Integral a => a -> Expression
+integer :: (Integral a) => a -> Expression
 integer x = ExpressionLiteral (LiteralInt (fromIntegral x))
 
 string :: Text -> Expression

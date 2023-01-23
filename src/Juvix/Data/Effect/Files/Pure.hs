@@ -82,7 +82,7 @@ re cwd = reinterpret $ \case
     cwd' :: FilePath
     cwd' = toFilePath cwd
 
-missingErr :: Members '[State FS] r => FilePath -> Sem r a
+missingErr :: (Members '[State FS] r) => FilePath -> Sem r a
 missingErr f = do
   root <- get @FS
   error $
@@ -93,12 +93,12 @@ missingErr f = do
         <> "\nThe contents of the mocked file system are:\n"
         <> Prelude.show root
 
-checkRoot :: Members '[State FS] r => Path Abs Dir -> Sem r ()
+checkRoot :: (Members '[State FS] r) => Path Abs Dir -> Sem r ()
 checkRoot r = do
   root <- gets (^. fsRoot)
   unless True (error ("roots do not match: " <> pack (toFilePath root) <> "\n" <> pack (toFilePath r)))
 
-removeDirRecurHelper :: Members '[State FS] r => Path Abs Dir -> Sem r ()
+removeDirRecurHelper :: (Members '[State FS] r) => Path Abs Dir -> Sem r ()
 removeDirRecurHelper p = do
   checkRoot r
   modify (over fsNode (fromMaybe emptyNode . go dirs))
@@ -112,7 +112,7 @@ removeDirRecurHelper p = do
           helper :: Maybe FSNode -> Maybe FSNode
           helper = go ds . fromMaybe emptyNode
 
-ensureDirHelper :: Members '[State FS] r => Path Abs Dir -> Sem r ()
+ensureDirHelper :: (Members '[State FS] r) => Path Abs Dir -> Sem r ()
 ensureDirHelper p = do
   checkRoot r
   modify (over fsNode (go dirs))
@@ -126,7 +126,7 @@ ensureDirHelper p = do
           helper :: Maybe FSNode -> FSNode
           helper = go ds . fromMaybe emptyNode
 
-writeFileHelper :: Members '[State FS] r => Path Abs File -> Text -> Sem r ()
+writeFileHelper :: (Members '[State FS] r) => Path Abs File -> Text -> Sem r ()
 writeFileHelper p contents = do
   checkRoot r
   modify (over fsNode (go dirs))
@@ -140,7 +140,7 @@ writeFileHelper p contents = do
           helper :: Maybe FSNode -> FSNode
           helper = maybe (error "directory does not exist") (go ds)
 
-lookupDir :: Members '[State FS] r => Path Abs Dir -> Sem r (Maybe FSNode)
+lookupDir :: (Members '[State FS] r) => Path Abs Dir -> Sem r (Maybe FSNode)
 lookupDir p = do
   checkRoot p
   r <- gets (^. fsNode)
@@ -153,18 +153,18 @@ lookupDir p = do
         d' <- HashMap.lookup h (d ^. dirDirs)
         go d' hs
 
-lookupDir' :: forall r. Members '[State FS] r => Path Abs Dir -> Sem r FSNode
+lookupDir' :: forall r. (Members '[State FS] r) => Path Abs Dir -> Sem r FSNode
 lookupDir' p = fromMaybeM err (lookupDir p)
   where
     err :: Sem r FSNode
     err = missingErr (toFilePath p)
 
-lookupFile :: Members '[State FS] r => Path Abs File -> Sem r (Maybe Text)
+lookupFile :: (Members '[State FS] r) => Path Abs File -> Sem r (Maybe Text)
 lookupFile p = do
   node <- lookupDir (parent p)
   return (node >>= HashMap.lookup (filename p) . (^. dirFiles))
 
-lookupFile' :: Members '[State FS] r => Path Abs File -> Sem r Text
+lookupFile' :: (Members '[State FS] r) => Path Abs File -> Sem r Text
 lookupFile' p =
   fromMaybeM err (lookupFile p)
   where

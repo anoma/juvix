@@ -3,7 +3,6 @@ PREFIX="$(PWD)/.stack-work/prefix"
 UNAME := $(shell uname)
 HLINTQUIET :=
 
-
 IMAGES = 	$(shell find assets/images -type f)
 
 ORGFILES = $(shell find docs/org -type f -name '*.org')
@@ -88,7 +87,7 @@ $(WEBAPP_EXAMPLES):
 
 # -- MDBook
 
-docs/md/README.md : README.org
+docs/md/README.md : README.MNg
 	@mkdir -p docs/md
 	@${ORGTOMDPRG} README.org ${ORGOPTS}
 
@@ -125,13 +124,14 @@ haddock :
 # -- Codebase Health
 # ------------------------------------------------------------------------------
 
+ORMOLU?=stack exec -- ormolu
 ORMOLUFILES = $(shell git ls-files '*.hs' '*.hs-boot' | grep -v '^contrib/')
 ORMOLUFLAGS?=--no-cabal
 ORMOLUMODE?=inplace
 
 .PHONY: format
 format: clang-format
-	@stack exec -- ormolu ${ORMOLUFLAGS} \
+	@${ORMOLU} ${ORMOLUFLAGS} \
 		--ghc-opt -XStandaloneDeriving \
 		--ghc-opt -XUnicodeSyntax \
 		--ghc-opt -XDerivingStrategies \
@@ -150,9 +150,10 @@ check-ormolu: export ORMOLUMODE = check
 check-ormolu:
 	@make -s format
 
+HLINT?=stack exec -- hlint
 .PHONY : hlint
 hlint :
-	@hlint src app test ${HLINTQUIET}
+	@${HLINT} src app test ${HLINTQUIET}
 
 PRECOMMIT := $(shell command -v pre-commit 2> /dev/null)
 
@@ -196,7 +197,7 @@ build: submodules runtime
 	stack build ${STACKFLAGS}
 
 .PHONY: fast-build
-fast-build: submodules runtime
+fast-build: submodules runtimestack
 	stack build --fast ${STACKFLAGS}
 
 .PHONY: runtime

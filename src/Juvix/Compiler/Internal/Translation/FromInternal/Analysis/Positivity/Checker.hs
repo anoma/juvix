@@ -17,14 +17,15 @@ type ErrorReference = Maybe Expression
 type RecursionLimit = Int
 
 checkPositivity ::
-  Members
-    '[ Reader E.EntryPoint,
-       Reader InfoTable,
-       Error TypeCheckerError,
-       Inference,
-       State NegativeTypeParameters
-     ]
-    r =>
+  ( Members
+      '[ Reader E.EntryPoint,
+         Reader InfoTable,
+         Error TypeCheckerError,
+         Inference,
+         State NegativeTypeParameters
+       ]
+      r
+  ) =>
   InductiveDef ->
   Sem r ()
 checkPositivity ty = do
@@ -40,7 +41,7 @@ checkPositivity ty = do
 
 checkStrictlyPositiveOccurrences ::
   forall r.
-  Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters, Inference] r =>
+  (Members '[Reader InfoTable, Error TypeCheckerError, State NegativeTypeParameters, Inference] r) =>
   InductiveDef ->
   ConstrName ->
   Name ->

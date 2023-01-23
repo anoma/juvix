@@ -45,5 +45,5 @@ createDependencyInfo edges startNames =
 nameFromVertex :: DependencyInfo n -> Vertex -> n
 nameFromVertex depInfo v = fst $ (depInfo ^. depInfoNodeFromVertex) v
 
-isReachable :: Hashable n => DependencyInfo n -> n -> Bool
+isReachable :: (Hashable n) => DependencyInfo n -> n -> Bool
 isReachable depInfo n = HashSet.member n (depInfo ^. depInfoReachable)

@@ -7,7 +7,7 @@ import Juvix.Compiler.Builtins.Effect
 import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude
 
-registerNatDef :: Member Builtins r => InductiveDef -> Sem r ()
+registerNatDef :: (Member Builtins r) => InductiveDef -> Sem r ()
 registerNatDef d = do
   unless (null (d ^. inductiveParameters)) (error "Nats should have no type parameters")
   unless (isSmallUniverse' (d ^. inductiveType)) (error "Nats should be in the small universe")
@@ -16,7 +16,7 @@ registerNatDef d = do
     [c1, c2] -> registerZero c1 >> registerSuc c2
     _ -> error "Nat numbers should have exactly two constructors"
 
-registerZero :: Member Builtins r => InductiveConstructorDef -> Sem r ()
+registerZero :: (Member Builtins r) => InductiveConstructorDef -> Sem r ()
 registerZero d@InductiveConstructorDef {..} = do
   let zero = _constructorName
       ty = _constructorType
@@ -24,7 +24,7 @@ registerZero d@InductiveConstructorDef {..} = do
   unless (ty === nat) (error $ "zero has the wrong type " <> ppTrace ty <> " | " <> ppTrace nat)
   registerBuiltin BuiltinNatZero zero
 
-registerSuc :: Member Builtins r => InductiveConstructorDef -> Sem r ()
+registerSuc :: (Member Builtins r) => InductiveConstructorDef -> Sem r ()
 registerSuc d@InductiveConstructorDef {..} = do
   let suc = _constructorName
       ty = _constructorType
@@ -32,7 +32,7 @@ registerSuc d@InductiveConstructorDef {..} = do
   unless (ty === (nat --> nat)) (error "suc has the wrong type")
   registerBuiltin BuiltinNatSuc suc
 
-registerNatPrint :: Members '[Builtins] r => AxiomDef -> Sem r ()
+registerNatPrint :: (Members '[Builtins] r) => AxiomDef -> Sem r ()
 registerNatPrint f = do
   nat <- getBuiltinName (getLoc f) BuiltinNat
   io <- getBuiltinName (getLoc f) BuiltinIO
@@ -40,7 +40,7 @@ registerNatPrint f = do
   registerBuiltin BuiltinNatPrint (f ^. axiomName)
 
 registerNatFun ::
-  Members '[Builtins, NameIdGen] r =>
+  (Members '[Builtins, NameIdGen] r) =>
   FunctionDef ->
   BuiltinFunction ->
   Expression ->
@@ -65,7 +65,7 @@ registerNatFun f blt sig exClauses fvs = do
       unless (exLhs =% lhs) (error "clause lhs does not match")
       unless (exBody =% body) (error $ "clause body does not match " <> ppTrace exBody <> " | " <> ppTrace body)
 
-registerNatPlus :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerNatPlus :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatPlus f = do
   nat <- getBuiltinName (getLoc f) BuiltinNat
   zero <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatZero
@@ -84,7 +84,7 @@ registerNatPlus f = do
         ]
   registerNatFun f BuiltinNatPlus (nat --> nat --> nat) exClauses [varn, varm]
 
-registerNatMul :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerNatMul :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatMul f = do
   nat <- getBuiltinName (getLoc f) BuiltinNat
   zero <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatZero
@@ -105,7 +105,7 @@ registerNatMul f = do
         ]
   registerNatFun f BuiltinNatMul (nat --> nat --> nat) exClauses [varn, varm]
 
-registerNatSub :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerNatSub :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatSub f = do
   nat <- getBuiltinName (getLoc f) BuiltinNat
   zero <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatZero
@@ -126,7 +126,7 @@ registerNatSub f = do
         ]
   registerNatFun f BuiltinNatSub (nat --> nat --> nat) exClauses [varn, varm]
 
-registerNatUDiv :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerNatUDiv :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatUDiv f = do
   nat <- getBuiltinName (getLoc f) BuiltinNat
   zero <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatZero
@@ -147,7 +147,7 @@ registerNatUDiv f = do
         ]
   registerNatFun f BuiltinNatUDiv (nat --> nat --> nat) exClauses [varn, varm]
 
-registerNatDiv :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerNatDiv :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatDiv f = do
   nat <- getBuiltinName (getLoc f) BuiltinNat
   suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
@@ -166,7 +166,7 @@ registerNatDiv f = do
         ]
   registerNatFun f BuiltinNatDiv (nat --> nat --> nat) exClauses [varn, varm]
 
-registerNatMod :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerNatMod :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatMod f = do
   nat <- getBuiltinName (getLoc f) BuiltinNat
   sub <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSub
@@ -182,7 +182,7 @@ registerNatMod f = do
         ]
   registerNatFun f BuiltinNatMod (nat --> nat --> nat) exClauses [varn, varm]
 
-registerNatLe :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerNatLe :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatLe f = do
   nat <- getBuiltinName (getLoc f) BuiltinNat
   zero <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatZero
@@ -206,7 +206,7 @@ registerNatLe f = do
         ]
   registerNatFun f BuiltinNatLe (nat --> nat --> tybool) exClauses [varn, varm]
 
-registerNatLt :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerNatLt :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatLt f = do
   nat <- getBuiltinName (getLoc f) BuiltinNat
   suc <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatSuc
@@ -223,7 +223,7 @@ registerNatLt f = do
         ]
   registerNatFun f BuiltinNatLt (nat --> nat --> tybool) exClauses [varn, varm]
 
-registerNatEq :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerNatEq :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatEq f = do
   nat <- getBuiltinName (getLoc f) BuiltinNat
   zero <- toExpression <$> getBuiltinName (getLoc f) BuiltinNatZero

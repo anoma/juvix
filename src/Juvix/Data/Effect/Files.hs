@@ -21,7 +21,7 @@ equalPaths a b = return (a == b)
 
 walkDirRelAccum ::
   forall acc r.
-  Member Files r =>
+  (Member Files r) =>
   (Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> acc -> Sem r (acc, Recurse Rel)) ->
   Path Abs Dir ->
   acc ->
@@ -36,7 +36,7 @@ walkDirRelAccum handler topdir' ini = execState ini (walkDirRel helper topdir')
 
 walkDirRel ::
   forall r.
-  Member Files r =>
+  (Member Files r) =>
   (Path Abs Dir -> [Path Rel Dir] -> [Path Rel File] -> Sem r (Recurse Rel)) ->
   Path Abs Dir ->
   Sem r ()

@@ -15,7 +15,7 @@ import Juvix.Compiler.Internal.Translation.FromAbstract.Analysis.Termination.Lex
 import Juvix.Prelude
 
 checkTermination ::
-  Members '[Error TerminationError] r =>
+  (Members '[Error TerminationError] r) =>
   TopModule ->
   InfoTable ->
   Sem r ()
@@ -43,12 +43,12 @@ buildCallMap :: InfoTable -> TopModule -> CallMap
 buildCallMap infotable = run . execState mempty . runReader infotable . scanModule
 
 scanModule ::
-  Members '[State CallMap] r =>
+  (Members '[State CallMap] r) =>
   TopModule ->
   Sem r ()
 scanModule m = scanModuleBody (m ^. moduleBody)
 
-scanModuleBody :: Members '[State CallMap] r => ModuleBody -> Sem r ()
+scanModuleBody :: (Members '[State CallMap] r) => ModuleBody -> Sem r ()
 scanModuleBody body = do
   mapM_ scanFunctionDef moduleFunctions
   mapM_ scanLocalModule moduleLocalModules
@@ -56,11 +56,11 @@ scanModuleBody body = do
     moduleFunctions = [f | StatementFunction f <- body ^. moduleStatements]
     moduleLocalModules = [f | StatementLocalModule f <- body ^. moduleStatements]
 
-scanLocalModule :: Members '[State CallMap] r => LocalModule -> Sem r ()
+scanLocalModule :: (Members '[State CallMap] r) => LocalModule -> Sem r ()
 scanLocalModule m = scanModuleBody (m ^. moduleBody)
 
 scanFunctionDef ::
-  Members '[State CallMap] r =>
+  (Members '[State CallMap] r) =>
   FunctionDef ->
   Sem r ()
 scanFunctionDef FunctionDef {..} =
@@ -69,14 +69,14 @@ scanFunctionDef FunctionDef {..} =
     mapM_ scanFunctionClause _funDefClauses
 
 scanTypeSignature ::
-  Members '[State CallMap, Reader FunctionRef] r =>
+  (Members '[State CallMap, Reader FunctionRef] r) =>
   Expression ->
   Sem r ()
 scanTypeSignature = runReader emptySizeInfo . scanExpression
 
 scanFunctionClause ::
   forall r.
-  Members '[State CallMap, Reader FunctionRef] r =>
+  (Members '[State CallMap, Reader FunctionRef] r) =>
   FunctionClause ->
   Sem r ()
 scanFunctionClause FunctionClause {..} = go (reverse _clausePatterns) _clauseBody
@@ -90,7 +90,7 @@ scanFunctionClause FunctionClause {..} = go (reverse _clausePatterns) _clauseBod
         goClause (LambdaClause pats clBody) = go (reverse (toList pats) ++ revArgs) clBody
 
 scanLet ::
-  Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r =>
+  (Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r) =>
   Let ->
   Sem r ()
 scanLet l = do
@@ -98,12 +98,12 @@ scanLet l = do
   scanExpression (l ^. letExpression)
 
 -- NOTE that we forget about the arguments of the hosting function
-scanLetClause :: Members '[State CallMap] r => LetClause -> Sem r ()
+scanLetClause :: (Members '[State CallMap] r) => LetClause -> Sem r ()
 scanLetClause = \case
   LetFunDef d -> scanFunctionDef d
 
 scanExpression ::
-  Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r =>
+  (Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r) =>
   Expression ->
   Sem r ()
 scanExpression e =
@@ -123,7 +123,7 @@ scanExpression e =
 
 scanLambda ::
   forall r.
-  Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r =>
+  (Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r) =>
   Lambda ->
   Sem r ()
 scanLambda (Lambda cl) = mapM_ scanClause cl
@@ -132,7 +132,7 @@ scanLambda (Lambda cl) = mapM_ scanClause cl
     scanClause LambdaClause {..} = scanExpression _lambdaBody
 
 scanApplication ::
-  Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r =>
+  (Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r) =>
   Application ->
   Sem r ()
 scanApplication (Application l r _) = do
@@ -140,7 +140,7 @@ scanApplication (Application l r _) = do
   scanExpression r
 
 scanFunction ::
-  Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r =>
+  (Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r) =>
   Function ->
   Sem r ()
 scanFunction (Function l r) = do
@@ -148,7 +148,7 @@ scanFunction (Function l r) = do
   scanExpression r
 
 scanFunctionParameter ::
-  Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r =>
+  (Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r) =>
   FunctionParameter ->
   Sem r ()
 scanFunctionParameter p = scanExpression (p ^. paramType)

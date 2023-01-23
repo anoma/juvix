@@ -9,7 +9,7 @@ import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 
-runCommand :: forall r. Members '[Embed IO, App] r => AsmCompileOptions -> Sem r ()
+runCommand :: forall r. (Members '[Embed IO, App] r) => AsmCompileOptions -> Sem r ()
 runCommand opts = do
   file <- getFile
   s <- embed (readFile (toFilePath file))
@@ -36,7 +36,7 @@ runCommand opts = do
       TargetNative64 -> Backend.TargetCNative64
       TargetC -> Backend.TargetCWasm32Wasi
 
-inputCFile :: Members '[App] r => Path Abs File -> Sem r (Path Abs File)
+inputCFile :: (Members '[App] r) => Path Abs File -> Sem r (Path Abs File)
 inputCFile inputFileCompile = do
   buildDir <- askBuildDir
   return (buildDir <//> outputMiniCFile)

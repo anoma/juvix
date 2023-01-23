@@ -113,11 +113,11 @@ runRuntime tab = runState (RuntimeState (CallStack []) emptyFrame [] Nothing tab
       let logs = reverse (s ^. runtimeMessages)
        in map' (\x -> Debug.trace (fromText x) ()) logs `GHC.seq` ()
 
-hEvalRuntime :: forall r a. Member (Embed IO) r => Handle -> InfoTable -> Sem (Runtime ': r) a -> Sem r a
+hEvalRuntime :: forall r a. (Member (Embed IO) r) => Handle -> InfoTable -> Sem (Runtime ': r) a -> Sem r a
 hEvalRuntime h tab r = do
   (s, a) <- runRuntime tab r
   mapM_ (embed . hPutStrLn h) (reverse (s ^. runtimeMessages))
   return a
 
-evalRuntime :: forall r a. Member (Embed IO) r => InfoTable -> Sem (Runtime ': r) a -> Sem r a
+evalRuntime :: forall r a. (Member (Embed IO) r) => InfoTable -> Sem (Runtime ': r) a -> Sem r a
 evalRuntime = hEvalRuntime stdout

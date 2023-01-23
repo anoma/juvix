@@ -20,7 +20,7 @@ showHelpText = do
       (msg, _) = renderFailure helpText progn
   putStrLn (pack msg)
 
-runTopCommand :: forall r. Members '[Embed IO, App] r => TopCommand -> Sem r ()
+runTopCommand :: forall r. (Members '[Embed IO, App] r) => TopCommand -> Sem r ()
 runTopCommand = \case
   DisplayVersion -> embed runDisplayVersion
   DisplayHelp -> embed showHelpText

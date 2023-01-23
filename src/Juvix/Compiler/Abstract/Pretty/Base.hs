@@ -12,7 +12,7 @@ import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 
-doc :: PrettyCode c => Options -> c -> Doc Ann
+doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts =
   run
     . runReader opts
@@ -25,17 +25,17 @@ toSOptions Options {..} =
     }
 
 class PrettyCode c where
-  ppCode :: Members '[Reader Options] r => c -> Sem r (Doc Ann)
+  ppCode :: (Members '[Reader Options] r) => c -> Sem r (Doc Ann)
 
 ppSCode :: (Members '[Reader Options] r, S.PrettyCode c) => c -> Sem r (Doc Ann)
 ppSCode c = do
   opts <- asks toSOptions
   return $ S.runPrettyCode opts c
 
-ppDefault :: PrettyCode c => c -> Doc Ann
+ppDefault :: (PrettyCode c) => c -> Doc Ann
 ppDefault = runPrettyCode defaultOptions
 
-runPrettyCode :: PrettyCode c => Options -> c -> Doc Ann
+runPrettyCode :: (PrettyCode c) => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
 kwQuestion :: Doc Ann

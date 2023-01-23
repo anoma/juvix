@@ -58,7 +58,7 @@ instance PrettyCode Edge where
         pretty ("Matrix" :: Text) <+> pretty i <> colon <> line <> t
 
 instance PrettyCode CompleteCallGraph where
-  ppCode :: forall r. Members '[Reader Options] r => CompleteCallGraph -> Sem r (Doc Ann)
+  ppCode :: forall r. (Members '[Reader Options] r) => CompleteCallGraph -> Sem r (Doc Ann)
   ppCode (CompleteCallGraph edges)
     | null edges = return $ pretty ("Empty graph" :: Text)
     | otherwise = do
@@ -66,7 +66,7 @@ instance PrettyCode CompleteCallGraph where
         return $ pretty ("Complete call graph:" :: Text) <> line <> es <> pretty (length edges)
 
 instance PrettyCode RecursiveBehaviour where
-  ppCode :: Members '[Reader Options] r => RecursiveBehaviour -> Sem r (Doc Ann)
+  ppCode :: (Members '[Reader Options] r) => RecursiveBehaviour -> Sem r (Doc Ann)
   ppCode (RecursiveBehaviour f m0) = do
     f' <- ppCode f
     let m' = PP.vsep (map (PP.list . map pretty) m)

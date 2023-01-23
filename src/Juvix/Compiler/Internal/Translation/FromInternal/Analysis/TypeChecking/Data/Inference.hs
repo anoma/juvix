@@ -44,7 +44,7 @@ iniState :: InferenceState
 iniState = InferenceState mempty mempty
 
 closeState ::
-  Member (Error TypeCheckerError) r =>
+  (Member (Error TypeCheckerError) r) =>
   InferenceState ->
   Sem
     r
@@ -58,7 +58,7 @@ closeState = \case
   where
     f ::
       forall r'.
-      Members '[Error TypeCheckerError, State (HashMap Hole Expression)] r' =>
+      (Members '[Error TypeCheckerError, State (HashMap Hole Expression)] r') =>
       HashMap Hole MetavarState ->
       Sem r' ()
     f m = mapM_ goHole (HashMap.keys m)
@@ -89,12 +89,12 @@ closeState = \case
               ExpressionHole h -> goHole h
               e -> return e
 
-getMetavar :: Member (State InferenceState) r => Hole -> Sem r MetavarState
+getMetavar :: (Member (State InferenceState) r) => Hole -> Sem r MetavarState
 getMetavar h = do
   void (queryMetavar' h)
   gets (fromJust . (^. inferenceMap . at h))
 
-strongNormalize' :: forall r. Members '[Reader FunctionsTable, State InferenceState] r => Expression -> Sem r Expression
+strongNormalize' :: forall r. (Members '[Reader FunctionsTable, State InferenceState] r) => Expression -> Sem r Expression
 strongNormalize' = go
   where
     go :: Expression -> Sem r Expression
@@ -164,7 +164,7 @@ strongNormalize' = go
       where
         i' = ExpressionIden i
 
-weakNormalize' :: forall r. Members '[Reader FunctionsTable, State InferenceState] r => Expression -> Sem r Expression
+weakNormalize' :: forall r. (Members '[Reader FunctionsTable, State InferenceState] r) => Expression -> Sem r Expression
 weakNormalize' = go
   where
     go :: Expression -> Sem r Expression
@@ -202,7 +202,7 @@ weakNormalize' = go
         Fresh -> return (ExpressionHole h)
         Refined r -> go r
 
-queryMetavar' :: Members '[State InferenceState] r => Hole -> Sem r (Maybe Expression)
+queryMetavar' :: (Members '[State InferenceState] r) => Hole -> Sem r (Maybe Expression)
 queryMetavar' h = do
   m <- gets (^. inferenceMap . at h)
   case m of
@@ -213,7 +213,7 @@ queryMetavar' h = do
     Just (Refined e) -> return (Just e)
 
 re ::
-  Members '[Reader FunctionsTable, Error TypeCheckerError] r =>
+  (Members '[Reader FunctionsTable, Error TypeCheckerError] r) =>
   Sem (Inference ': r) a ->
   Sem (State InferenceState ': r) a
 re = reinterpret $ \case
@@ -223,18 +223,18 @@ re = reinterpret $ \case
   StrongNormalize ty -> strongNormalize' ty
   WeakNormalize ty -> weakNormalize' ty
   where
-    registerIden' :: Members '[State InferenceState] r => Name -> Expression -> Sem r ()
+    registerIden' :: (Members '[State InferenceState] r) => Name -> Expression -> Sem r ()
     registerIden' i ty = modify (over inferenceIdens (HashMap.insert i ty))
 
     -- Supports alpha equivalence.
-    matchTypes' :: Members '[State InferenceState, Reader FunctionsTable, Error TypeCheckerError] r => Expression -> Expression -> Sem r (Maybe MatchError)
+    matchTypes' :: (Members '[State InferenceState, Reader FunctionsTable, Error TypeCheckerError] r) => Expression -> Expression -> Sem r (Maybe MatchError)
     matchTypes' ty = runReader ini . go ty
       where
         ini :: HashMap VarName VarName
         ini = mempty
         go ::
           forall r.
-          Members '[State InferenceState, Reader (HashMap VarName VarName), Reader FunctionsTable, Error TypeCheckerError] r =>
+          (Members '[State InferenceState, Reader (HashMap VarName VarName), Reader FunctionsTable, Error TypeCheckerError] r) =>
           Expression ->
           Expression ->
           Sem r (Maybe MatchError)
@@ -356,14 +356,14 @@ re = reinterpret $ \case
 
 matchPatterns ::
   forall r.
-  Members '[State InferenceState, State (HashMap VarName VarName), Reader FunctionsTable] r =>
+  (Members '[State InferenceState, State (HashMap VarName VarName), Reader FunctionsTable] r) =>
   PatternArg ->
   PatternArg ->
   Sem r Bool
 matchPatterns (PatternArg impl1 name1 pat1) (PatternArg impl2 name2 pat2) =
   return (impl1 == impl2) &&>= goName name1 name2 &&>= goPattern pat1 pat2
   where
-    (&&>=) :: Monad m => m Bool -> m Bool -> m Bool
+    (&&>=) :: (Monad m) => m Bool -> m Bool -> m Bool
     (&&>=) = liftM2 (&&)
     goName :: Maybe VarName -> Maybe VarName -> Sem r Bool
     goName (Just n1) (Just n2) = modify (HashMap.insert n1 n2) $> True
@@ -403,12 +403,12 @@ runInferenceDef ::
   Sem r funDef
 runInferenceDef = fmap head . runInferenceDefs . fmap pure
 
-addIdens :: Member (State TypesTable) r => TypesTable -> Sem r ()
+addIdens :: (Member (State TypesTable) r) => TypesTable -> Sem r ()
 addIdens idens = modify (HashMap.union idens)
 
 -- | Assumes the given function has been type checked
 -- | NOTE: Registers the function *only* if the result type is Type
-functionDefEval :: forall r'. Member (Reader FunctionsTable) r' => FunctionDef -> Sem r' (Maybe Expression)
+functionDefEval :: forall r'. (Member (Reader FunctionsTable) r') => FunctionDef -> Sem r' (Maybe Expression)
 functionDefEval = runFail . goTop
   where
     goTop :: forall r. (Members '[Fail, Reader FunctionsTable] r) => FunctionDef -> Sem r Expression
@@ -453,6 +453,6 @@ functionDefEval = runFail . goTop
                 | Implicit <- p ^. patternArgIsImplicit -> fail
                 | otherwise -> go ps >>= goPattern (p ^. patternArgPattern, ty)
 
-registerFunctionDef :: Member (State FunctionsTable) r => FunctionDef -> Sem r ()
+registerFunctionDef :: (Member (State FunctionsTable) r) => FunctionDef -> Sem r ()
 registerFunctionDef f = whenJustM (readerState @FunctionsTable (functionDefEval f)) $ \e ->
   modify (over functionsTable (HashMap.insert (f ^. funDefName) e))

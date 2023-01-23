@@ -22,13 +22,13 @@ completionsString = map unpack . completions . pack
 completions :: Text -> [Text]
 completions = fromRight [] . parseHelper pcompletions
 
-transformations :: MonadParsec e Text m => m [TransformationId]
+transformations :: (MonadParsec e Text m) => m [TransformationId]
 transformations = do
   L.hspace
   sepEndBy transformation comma <* eof
 
 -- | returns a possible list of completions
-pcompletions :: MonadParsec e Text m => m [Text]
+pcompletions :: (MonadParsec e Text m) => m [Text]
 pcompletions = do
   L.hspace
   l <- sepEndBy transformation comma
@@ -49,16 +49,16 @@ pcompletions = do
       NatToInt -> strNatToInt
       ConvertBuiltinTypes -> strConvertBuiltinTypes
 
-lexeme :: MonadParsec e Text m => m a -> m a
+lexeme :: (MonadParsec e Text m) => m a -> m a
 lexeme = L.lexeme L.hspace
 
-comma :: MonadParsec e Text m => m ()
+comma :: (MonadParsec e Text m) => m ()
 comma = symbol ","
 
-symbol :: MonadParsec e Text m => Text -> m ()
+symbol :: (MonadParsec e Text m) => Text -> m ()
 symbol = void . lexeme . chunk
 
-transformation :: MonadParsec e Text m => m TransformationId
+transformation :: (MonadParsec e Text m) => m TransformationId
 transformation =
   symbol strLifting $> LambdaLifting
     <|> symbol strIdentity $> Identity

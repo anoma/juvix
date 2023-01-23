@@ -48,7 +48,7 @@ genericErrorHeader g =
       <> line
 
 class ToGenericError a where
-  genericError :: Member (Reader GenericOptions) r => a -> Sem r GenericError
+  genericError :: (Member (Reader GenericOptions) r) => a -> Sem r GenericError
 
 errorIntervals :: (ToGenericError e, Member (Reader GenericOptions) r) => e -> Sem r [Interval]
 errorIntervals e = do

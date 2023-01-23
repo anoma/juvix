@@ -14,7 +14,7 @@ import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude hiding (fromEither)
 
 checkModule ::
-  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r =>
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   Module ->
   Sem r Module
 checkModule Module {..} = do
@@ -26,7 +26,7 @@ checkModule Module {..} = do
       }
 
 checkModuleBody ::
-  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r =>
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   ModuleBody ->
   Sem r ModuleBody
 checkModuleBody ModuleBody {..} = do
@@ -37,13 +37,13 @@ checkModuleBody ModuleBody {..} = do
       }
 
 checkInclude ::
-  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r =>
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   Include ->
   Sem r Include
 checkInclude = traverseOf includeModule checkModule
 
 checkStatement ::
-  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r =>
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   Statement ->
   Sem r Statement
 checkStatement s = case s of
@@ -53,7 +53,7 @@ checkStatement s = case s of
   StatementInductive d -> StatementInductive <$> checkInductive d
   StatementAxiom a -> StatementAxiom <$> checkAxiom a
 
-checkInductive :: forall r. Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r => InductiveDef -> Sem r InductiveDef
+checkInductive :: forall r. (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => InductiveDef -> Sem r InductiveDef
 checkInductive d = do
   let _inductiveName = d ^. inductiveName
       _inductiveBuiltin = d ^. inductiveBuiltin
@@ -69,7 +69,7 @@ checkInductive d = do
         checkParam :: InductiveParameter -> Sem (State LocalVars ': r) InductiveParameter
         checkParam = return
 
-checkConstructor :: Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r => InductiveConstructorDef -> Sem r InductiveConstructorDef
+checkConstructor :: (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => InductiveConstructorDef -> Sem r InductiveConstructorDef
 checkConstructor c = do
   let _inductiveConstructorName = c ^. inductiveConstructorName
   _inductiveConstructorParameters <- mapM checkType (c ^. inductiveConstructorParameters)
@@ -78,10 +78,10 @@ checkConstructor c = do
   return InductiveConstructorDef {..}
 
 -- | check the arity of some ty : Type
-checkType :: Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r => Expression -> Sem r Expression
+checkType :: (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => Expression -> Sem r Expression
 checkType = checkExpression ArityUnit -- TODO ArityUnit or ArityUnknown???
 
-checkAxiom :: Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r => AxiomDef -> Sem r AxiomDef
+checkAxiom :: (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => AxiomDef -> Sem r AxiomDef
 checkAxiom a = do
   let _axiomName = a ^. axiomName
       _axiomBuiltin = a ^. axiomBuiltin
@@ -89,13 +89,13 @@ checkAxiom a = do
   return AxiomDef {..}
 
 checkMutualBlock ::
-  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r =>
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   MutualBlock ->
   Sem r MutualBlock
 checkMutualBlock (MutualBlock funs) = MutualBlock <$> mapM checkFunctionDef funs
 
 checkFunctionDef ::
-  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r =>
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   FunctionDef ->
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
@@ -110,7 +110,7 @@ checkFunctionDef FunctionDef {..} = do
       }
 
 checkFunctionClause ::
-  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r =>
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   Arity ->
   FunctionClause ->
   Sem r FunctionClause
@@ -134,12 +134,12 @@ simplelambda = error "simple lambda expressions are not supported by the arity c
 withEmptyLocalVars :: Sem (Reader LocalVars : r) a -> Sem r a
 withEmptyLocalVars = runReader emptyLocalVars
 
-arityLet :: Members '[Reader InfoTable] r => Let -> Sem r Arity
+arityLet :: (Members '[Reader InfoTable] r) => Let -> Sem r Arity
 arityLet l = guessArity (l ^. letExpression)
 
 guessArity ::
   forall r.
-  Members '[Reader InfoTable] r =>
+  (Members '[Reader InfoTable] r) =>
   Expression ->
   Sem r Arity
 guessArity = \case
@@ -202,7 +202,7 @@ arityLambda (Lambda cl) =
 
 checkLhs ::
   forall r.
-  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r =>
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) =>
   Interval ->
   Arity ->
   Arity ->
@@ -255,7 +255,7 @@ checkLhs loc guessedBody ariSignature pats = do
               p' <- checkPattern pa p
               first (p' :) <$> goLhs r ps
       where
-        genWildcard :: forall r'. Members '[NameIdGen] r' => Sem r' PatternArg
+        genWildcard :: forall r'. (Members '[NameIdGen] r') => Sem r' PatternArg
         genWildcard = do
           var <- varFromWildcard (Wildcard loc)
           return (PatternArg Implicit Nothing (PatternVariable var))
@@ -283,7 +283,7 @@ checkLhs loc guessedBody ariSignature pats = do
 
 checkPattern ::
   forall r.
-  Members '[Reader InfoTable, Error ArityCheckerError, State LocalVars] r =>
+  (Members '[Reader InfoTable, Error ArityCheckerError, State LocalVars] r) =>
   Arity ->
   PatternArg ->
   Sem r PatternArg
@@ -308,7 +308,7 @@ checkPattern ari = traverseOf (patternArgName . each) nameAri >=> traverseOf pat
 -- | TODO: insert holes for constructor implicit arguments
 checkConstructorApp ::
   forall r.
-  Members '[Reader InfoTable, Error ArityCheckerError, State LocalVars] r =>
+  (Members '[Reader InfoTable, Error ArityCheckerError, State LocalVars] r) =>
   ConstructorApp ->
   Sem r ConstructorApp
 checkConstructorApp ca@(ConstructorApp c ps) = do
@@ -331,7 +331,7 @@ checkConstructorApp ca@(ConstructorApp c ps) = do
 
 checkLet ::
   forall r.
-  Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r =>
+  (Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r) =>
   Arity ->
   Let ->
   Sem r Let
@@ -346,7 +346,7 @@ checkLet ari l = do
 
 checkLambda ::
   forall r.
-  Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r =>
+  (Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r) =>
   Arity ->
   Lambda ->
   Sem r Lambda
@@ -380,7 +380,7 @@ checkLambda ari (Lambda cl) = Lambda <$> mapM goClause cl
                   ArityRestUnit -> error ("too many patterns in lambda: " <> ppTrace (Lambda cl) <> "\n" <> prettyText ari)
                   ArityRestUnknown -> return (pats, [])
 
-idenArity :: Members '[Reader LocalVars, Reader InfoTable] r => Iden -> Sem r Arity
+idenArity :: (Members '[Reader LocalVars, Reader InfoTable] r) => Iden -> Sem r Arity
 idenArity = \case
   IdenVar v -> getLocalArity v
   IdenInductive i -> typeArity <$> inductiveType i
@@ -432,14 +432,14 @@ typeArity = go
 
 checkExample ::
   forall r.
-  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, Reader LocalVars] r =>
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, Reader LocalVars] r) =>
   Example ->
   Sem r Example
 checkExample = traverseOf exampleExpression (checkExpression ArityUnknown)
 
 checkExpression ::
   forall r.
-  Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, Reader LocalVars] r =>
+  (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError, Reader LocalVars] r) =>
   Arity ->
   Expression ->
   Sem r Expression
@@ -540,5 +540,5 @@ checkExpression hintArity expr = case expr of
               (ArityUnknown, []) -> return []
               (ArityUnknown, p : ps) -> (p :) <$> go (succ idx) ArityUnknown ps
 
-newHole :: Member NameIdGen r => Interval -> Sem r Hole
+newHole :: (Member NameIdGen r) => Interval -> Sem r Hole
 newHole loc = (`Hole` loc) <$> freshNameId

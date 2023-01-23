@@ -12,43 +12,43 @@ data InfoTableBuilder m a where
   RegisterInductive :: InductiveDef 'Scoped -> InfoTableBuilder m ()
   RegisterFunction :: TypeSignature 'Scoped -> InfoTableBuilder m ()
   RegisterFunctionClause :: FunctionClause 'Scoped -> InfoTableBuilder m ()
-  RegisterName :: HasLoc c => S.Name' c -> InfoTableBuilder m ()
+  RegisterName :: (HasLoc c) => S.Name' c -> InfoTableBuilder m ()
   RegisterCompile :: Compile 'Scoped -> InfoTableBuilder m ()
 
 makeSem ''InfoTableBuilder
 
 registerFunction' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   TypeSignature 'Scoped ->
   Sem r (TypeSignature 'Scoped)
 registerFunction' ts = registerFunction ts $> ts
 
 registerInductive' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   InductiveDef 'Scoped ->
   Sem r (InductiveDef 'Scoped)
 registerInductive' i = registerInductive i $> i
 
 registerConstructor' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   InductiveConstructorDef 'Scoped ->
   Sem r (InductiveConstructorDef 'Scoped)
 registerConstructor' c = registerConstructor c $> c
 
 registerAxiom' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   AxiomDef 'Scoped ->
   Sem r (AxiomDef 'Scoped)
 registerAxiom' a = registerAxiom a $> a
 
 registerCompile' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Compile 'Scoped ->
   Sem r (Compile 'Scoped)
 registerCompile' c = registerCompile c $> c
 
 registerFunctionClause' ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   FunctionClause 'Scoped ->
   Sem r (FunctionClause 'Scoped)
 registerFunctionClause' a = registerFunctionClause a $> a

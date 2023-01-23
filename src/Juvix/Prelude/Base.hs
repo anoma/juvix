@@ -227,7 +227,7 @@ concatWith f ds
 --------------------------------------------------------------------------------
 
 tableInsert ::
-  Hashable k =>
+  (Hashable k) =>
   (a -> v) ->
   (a -> v -> v) ->
   k ->
@@ -266,7 +266,7 @@ map' f (h : t) =
        in v : vs
 
 -- | longest common prefix
-commonPrefix :: forall a. Eq a => [a] -> [a] -> [a]
+commonPrefix :: forall a. (Eq a) => [a] -> [a] -> [a]
 commonPrefix a b = reverse (go [] a b)
   where
     go :: [a] -> [a] -> [a] -> [a]
@@ -287,31 +287,31 @@ zip4Exact _ _ _ _ = error "zip4Exact"
 nonEmptyUnsnoc :: NonEmpty a -> (Maybe (NonEmpty a), a)
 nonEmptyUnsnoc e = (NonEmpty.nonEmpty (NonEmpty.init e), NonEmpty.last e)
 
-nonEmpty' :: HasCallStack => [a] -> NonEmpty a
+nonEmpty' :: (HasCallStack) => [a] -> NonEmpty a
 nonEmpty' = fromJust . nonEmpty
 
 _nonEmpty :: Lens' [a] (Maybe (NonEmpty a))
 _nonEmpty f x = maybe [] toList <$> f (nonEmpty x)
 
-groupSortOn :: Ord b => (a -> b) -> [a] -> [NonEmpty a]
+groupSortOn :: (Ord b) => (a -> b) -> [a] -> [NonEmpty a]
 groupSortOn f = map (fromJust . nonEmpty) . List.groupSortOn f
 
-groupSortOn' :: Ord b => (a -> b) -> [a] -> [[a]]
+groupSortOn' :: (Ord b) => (a -> b) -> [a] -> [[a]]
 groupSortOn' = List.groupSortOn
 
 --------------------------------------------------------------------------------
 -- Errors
 --------------------------------------------------------------------------------
 
-error :: HasCallStack => Text -> a
+error :: (HasCallStack) => Text -> a
 error = Err.error . unpack
 
 {-# DEPRECATED undefined "undefined" #-}
-undefined :: HasCallStack => a
+undefined :: (HasCallStack) => a
 undefined = Err.error "undefined"
 
 -- | Used to indicate impossible corner cases.
-impossible :: HasCallStack => a
+impossible :: (HasCallStack) => a
 impossible = Err.error "impossible"
 
 --------------------------------------------------------------------------------
@@ -330,12 +330,12 @@ infixr 7 <?+>
 
 infixr 7 ?<>
 
-(?<>) :: Semigroup m => Maybe m -> m -> m
+(?<>) :: (Semigroup m) => Maybe m -> m -> m
 (?<>) = maybe id (<>)
 
 infixl 7 <>?
 
-(<>?) :: Semigroup m => m -> Maybe m -> m
+(<>?) :: (Semigroup m) => m -> Maybe m -> m
 (<>?) a = maybe a (a <>)
 
 data Indexed a = Indexed
@@ -349,7 +349,7 @@ instance Functor Indexed where
 
 makeLenses ''Indexed
 
-fromText :: IsString a => Text -> a
+fromText :: (IsString a) => Text -> a
 fromText = fromString . unpack
 
 fromRightIO' :: (e -> IO ()) -> IO (Either e r) -> IO r
@@ -369,7 +369,7 @@ fromRightIO pp = fromRightIO' (putStrLn . pp)
 iterateN :: Int -> (a -> a) -> a -> a
 iterateN n f = (!! n) . iterate f
 
-nubHashable :: Hashable a => [a] -> [a]
+nubHashable :: (Hashable a) => [a] -> [a]
 nubHashable = HashSet.toList . HashSet.fromList
 
 allElements :: (Bounded a, Enum a) => [a]
@@ -393,7 +393,7 @@ infixr 2 .||.
 (.||.) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
 (a .||. b) c = a c || b c
 
-eqOn :: Eq b => (a -> b) -> a -> a -> Bool
+eqOn :: (Eq b) => (a -> b) -> a -> a -> Bool
 eqOn = ((==) `on`)
 
 class CanonicalProjection a b where
@@ -409,7 +409,7 @@ instance CanonicalProjection a () where
   project = const ()
 
 -- | 'project' with type arguments swapped. Useful for type application
-project' :: forall b a. CanonicalProjection a b => a -> b
+project' :: forall b a. (CanonicalProjection a b) => a -> b
 project' = project
 
 ensureFile :: (MonadIO m, MonadThrow m) => Path Abs File -> m ()

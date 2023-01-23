@@ -74,30 +74,30 @@ toAnsiText useColors
   | useColors = Ansi.renderStrict . toAnsiStream
   | otherwise = Text.renderStrict . toTextStream
 
-prettyText :: Pretty a => a -> Text
+prettyText :: (Pretty a) => a -> Text
 prettyText = Text.renderStrict . layoutPretty defaultLayoutOptions . pretty
 
-vsep :: Foldable f => f (Doc a) -> Doc a
+vsep :: (Foldable f) => f (Doc a) -> Doc a
 vsep = PP.vsep . toList
 
-vsep2 :: Foldable f => f (Doc a) -> Doc a
+vsep2 :: (Foldable f) => f (Doc a) -> Doc a
 vsep2 = concatWith (\a b -> a <> line <> line <> b)
 
-hsep :: Foldable f => f (Doc a) -> Doc a
+hsep :: (Foldable f) => f (Doc a) -> Doc a
 hsep = PP.hsep . toList
 
-sep :: Foldable f => f (Doc a) -> Doc a
+sep :: (Foldable f) => f (Doc a) -> Doc a
 sep = PP.sep . toList
 
 enclose1 :: Doc a -> Doc a -> Doc a
 enclose1 delim = enclose delim delim
 
-vsepMaybe :: Foldable f => f (Doc a) -> Maybe (Doc a)
+vsepMaybe :: (Foldable f) => f (Doc a) -> Maybe (Doc a)
 vsepMaybe l
   | null l = Nothing
   | otherwise = Just (vsep l)
 
-hsepMaybe :: Foldable f => f (Doc a) -> Maybe (Doc a)
+hsepMaybe :: (Foldable f) => f (Doc a) -> Maybe (Doc a)
 hsepMaybe l
   | null l = Nothing
   | otherwise = Just (hsep l)

@@ -326,27 +326,27 @@ instance Eq (Ident' i) where
 instance Eq (Constant' i) where
   (Constant _ v1) == (Constant _ v2) = v1 == v2
 
-instance Eq a => Eq (App' i a) where
+instance (Eq a) => Eq (App' i a) where
   (App _ l1 r1) == (App _ l2 r2) = l1 == l2 && r1 == r2
 
 instance (Eq f, Eq a) => Eq (Apps' i f a) where
   (Apps _ op1 args1) == (Apps _ op2 args2) = op1 == op2 && args1 == args2
 
-instance Eq a => Eq (BuiltinApp' i a) where
+instance (Eq a) => Eq (BuiltinApp' i a) where
   (BuiltinApp _ op1 args1) == (BuiltinApp _ op2 args2) = op1 == op2 && args1 == args2
 
-instance Eq a => Eq (Constr' i a) where
+instance (Eq a) => Eq (Constr' i a) where
   (Constr _ tag1 args1) == (Constr _ tag2 args2) = tag1 == tag2 && args1 == args2
 
-instance Eq a => Eq (Case' i bi a ty) where
+instance (Eq a) => Eq (Case' i bi a ty) where
   (Case _ sym1 v1 bs1 def1) == (Case _ sym2 v2 bs2 def2) = sym1 == sym2 && v1 == v2 && bs1 == bs2 && def1 == def2
 
-instance Eq a => Eq (CaseBranch' i a ty) where
+instance (Eq a) => Eq (CaseBranch' i a ty) where
   (==) =
     eqOn (^. caseBranchTag)
       ..&&.. eqOn (^. caseBranchBody)
 
-instance Eq a => Eq (Match' i a) where
+instance (Eq a) => Eq (Match' i a) where
   (Match _ vs1 bs1) == (Match _ vs2 bs2) = vs1 == vs2 && bs1 == bs2
 
 instance Eq (PatternWildcard' i) where
@@ -355,7 +355,7 @@ instance Eq (PatternWildcard' i) where
 instance Eq (Univ' i) where
   (Univ _ l1) == (Univ _ l2) = l1 == l2
 
-instance Eq a => Eq (TypeConstr' i a) where
+instance (Eq a) => Eq (TypeConstr' i a) where
   (TypeConstr _ sym1 args1) == (TypeConstr _ sym2 args2) = sym1 == sym2 && args1 == args2
 
 instance Eq (TypePrim' i) where
@@ -364,39 +364,39 @@ instance Eq (TypePrim' i) where
 instance Eq (Dynamic' i) where
   (Dynamic _) == (Dynamic _) = True
 
-deriving stock instance Eq a => Eq (Pattern' i a)
+deriving stock instance (Eq a) => Eq (Pattern' i a)
 
-instance Eq a => Eq (LetItem' a ty) where
+instance (Eq a) => Eq (LetItem' a ty) where
   (==) = eqOn (^. letItemValue)
 
 -- | ignores the binder
-instance Eq a => Eq (Lambda' i a ty) where
+instance (Eq a) => Eq (Lambda' i a ty) where
   (==) = eqOn (^. lambdaBody)
 
 -- | ignores the binder
-instance Eq a => Eq (Let' i a ty) where
+instance (Eq a) => Eq (Let' i a ty) where
   (==) =
     eqOn (^. letItem)
       ..&&.. eqOn (^. letBody)
 
-instance Eq a => Eq (LetRec' i a ty) where
+instance (Eq a) => Eq (LetRec' i a ty) where
   (==) =
     eqOn (^. letRecBody)
       ..&&.. eqOn (^. letRecValues)
 
-instance Eq a => Eq (Pi' i a) where
+instance (Eq a) => Eq (Pi' i a) where
   (==) =
     eqOn (^. piBinder . binderType)
       ..&&.. eqOn (^. piBody)
 
 -- | ignores the binder
-instance Eq a => Eq (PatternBinder' i a) where
+instance (Eq a) => Eq (PatternBinder' i a) where
   (==) = eqOn (^. patternBinderPattern)
 
-instance Eq a => Eq (MatchBranch' i a) where
+instance (Eq a) => Eq (MatchBranch' i a) where
   (MatchBranch _ pats1 b1) == (MatchBranch _ pats2 b2) = pats1 == pats2 && b1 == b2
 
-instance Eq a => Eq (PatternConstr' i a) where
+instance (Eq a) => Eq (PatternConstr' i a) where
   (PatternConstr _ tag1 ps1) == (PatternConstr _ tag2 ps2) = tag1 == tag2 && ps1 == ps2
 
 instance Hashable (Ident' i) where

@@ -7,7 +7,7 @@ import Commands.Dev.Internal.Options
 import Commands.Dev.Internal.Pretty qualified as InternalPretty
 import Commands.Dev.Internal.Typecheck qualified as InternalTypecheck
 
-runCommand :: Members '[Embed IO, App] r => InternalCommand -> Sem r ()
+runCommand :: (Members '[Embed IO, App] r) => InternalCommand -> Sem r ()
 runCommand = \case
   Pretty opts -> InternalPretty.runCommand opts
   Arity opts -> Arity.runCommand opts

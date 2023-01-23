@@ -23,13 +23,13 @@ data RecursorSig m r a = RecursorSig
 
 makeLenses ''RecursorSig
 
-recurseFun :: Member (Error AsmError) r => RecursorSig Memory r a -> FunctionInfo -> Sem r [a]
+recurseFun :: (Member (Error AsmError) r) => RecursorSig Memory r a -> FunctionInfo -> Sem r [a]
 recurseFun sig fi = recurse sig (argumentsFromFunctionInfo fi) (fi ^. functionCode)
 
-recurse :: Member (Error AsmError) r => RecursorSig Memory r a -> Arguments -> Code -> Sem r [a]
+recurse :: (Member (Error AsmError) r) => RecursorSig Memory r a -> Arguments -> Code -> Sem r [a]
 recurse sig args = fmap snd . recurse' sig (mkMemory args)
 
-recurse' :: forall r a. Member (Error AsmError) r => RecursorSig Memory r a -> Memory -> Code -> Sem r (Memory, [a])
+recurse' :: forall r a. (Member (Error AsmError) r) => RecursorSig Memory r a -> Memory -> Code -> Sem r (Memory, [a])
 recurse' sig = go True
   where
     go :: Bool -> Memory -> Code -> Sem r (Memory, [a])
@@ -296,10 +296,10 @@ initialStackInfo = StackInfo {_stackInfoValueStackHeight = 0, _stackInfoTempStac
 -- program code which need only stack height information. Also, the code using
 -- the simplified recursor can itself be simpler if it doesn't need the extra
 -- info provided by the full recursor.
-recurseS :: forall r a. Member (Error AsmError) r => RecursorSig StackInfo r a -> Code -> Sem r [a]
+recurseS :: forall r a. (Member (Error AsmError) r) => RecursorSig StackInfo r a -> Code -> Sem r [a]
 recurseS sig code = snd <$> recurseS' sig initialStackInfo code
 
-recurseS' :: forall r a. Member (Error AsmError) r => RecursorSig StackInfo r a -> StackInfo -> Code -> Sem r (StackInfo, [a])
+recurseS' :: forall r a. (Member (Error AsmError) r) => RecursorSig StackInfo r a -> StackInfo -> Code -> Sem r (StackInfo, [a])
 recurseS' sig = go
   where
     go :: StackInfo -> Code -> Sem r (StackInfo, [a])
@@ -454,10 +454,10 @@ data FoldSig m r a = FoldSig
 
 makeLenses ''FoldSig
 
-foldS :: forall r a. Member (Error AsmError) r => FoldSig StackInfo r a -> Code -> a -> Sem r a
+foldS :: forall r a. (Member (Error AsmError) r) => FoldSig StackInfo r a -> Code -> a -> Sem r a
 foldS sig code a = snd <$> foldS' sig initialStackInfo code a
 
-foldS' :: forall r a. Member (Error AsmError) r => FoldSig StackInfo r a -> StackInfo -> Code -> a -> Sem r (StackInfo, a)
+foldS' :: forall r a. (Member (Error AsmError) r) => FoldSig StackInfo r a -> StackInfo -> Code -> a -> Sem r (StackInfo, a)
 foldS' sig si code acc = do
   (si', fs) <- recurseS' sig' si code
   a' <- compose fs acc
