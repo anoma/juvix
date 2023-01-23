@@ -186,7 +186,7 @@ jobs:
         ghc: ["9.2.5"]
     steps:
       - name: Checkout the main repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: main
           submodules: recursive
@@ -207,7 +207,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
 
-      - uses: haskell/actions/setup@v1
+      - uses: haskell/actions/setup@v2
         name: Setup Haskell
         with:
           ghc-version: ${{ matrix.ghc }}
@@ -302,7 +302,7 @@ jobs:
           path: smoke
 
       - name: Install Smoke
-        if: steps.cache-build.outputs.cache-hit != 'true' && runner.os == 'Linux'
+        if: runner.os == 'Linux'
         run: |
           cd smoke
           stack install
@@ -346,16 +346,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
 
-      - uses: r-lib/actions/setup-pandoc@v1
+      - uses: r-lib/actions/setup-pandoc@v2
         with:
-          pandoc-version: '2.13'
+          pandoc-version: '2.19.2'
 
       - name: MDBook setup
         uses: peaceiris/actions-mdbook@v1
         with:
           mdbook-version: '0.4.22'
 
-      - uses: haskell/actions/setup@v1
+      - uses: haskell/actions/setup@v2
         name: Setup Haskell
         with:
           ghc-version: ${{ matrix.ghc }}
