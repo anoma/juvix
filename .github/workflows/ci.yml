@@ -152,8 +152,8 @@ jobs:
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
         if: runner.os == 'macOS'
         run: |
-          echo "CC=$(brew --prefix llvm@14)/bin/clang" >> $GITHUB_ENV
-          echo "LIBTOOL=$(brew --prefix llvm@14)/bin/llvm-ar" >> $GITHUB_ENV
+          echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
+          echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
 
       - name: Build Project (macOS)
         if: runner.os == 'macOS'
@@ -236,8 +236,8 @@ jobs:
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
         if: runner.os == 'macOS'
         run: |
-          echo "CC=$(brew --prefix llvm@14)/bin/clang" >> $GITHUB_ENV
-          echo "LIBTOOL=$(brew --prefix llvm@14)/bin/llvm-ar" >> $GITHUB_ENV
+          echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
+          echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
 
       - name: stack setup (macOS)
         if: runner.os == 'macOS'
@@ -248,7 +248,7 @@ jobs:
       - name: Add homebrew clang to the PATH (macOS)
         if: runner.os == 'macOS'
         run: |
-          echo "$(brew --prefix llvm@14)/bin" >> $GITHUB_PATH
+          echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
 
       - name: Test suite (macOS)
         if: runner.os == 'macOS'
