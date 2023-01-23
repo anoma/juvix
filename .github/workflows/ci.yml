@@ -299,7 +299,7 @@ jobs:
         with:
           repository: jonaprieto/smoke
           path: smoke
-          
+
       - name: Install Smoke
         if: steps.cache-build.outputs.cache-hit != 'true' && runner.os == 'Linux'
         run: |
