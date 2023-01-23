@@ -1,4 +1,4 @@
-module Juvix.Compiler.Core.Transformation.UnrollRecursion(unrollRecursion) where
+module Juvix.Compiler.Core.Transformation.UnrollRecursion (unrollRecursion) where
 
 import Juvix.Compiler.Core.Transformation.Base
 

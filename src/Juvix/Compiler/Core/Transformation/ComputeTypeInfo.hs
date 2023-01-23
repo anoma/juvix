@@ -1,8 +1,8 @@
-module Juvix.Compiler.Core.Transformation.ComputeTypeInfo(computeTypeInfo) where
+module Juvix.Compiler.Core.Transformation.ComputeTypeInfo (computeTypeInfo) where
 
-import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
+import Juvix.Compiler.Core.Transformation.Base
 
 -- TODO: store the type of each node in its info
 computeNodeTypeInfo :: InfoTable -> Node -> Node
