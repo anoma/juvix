@@ -1,3 +1,7 @@
 ghc-options:
   "$locals": -optP-Wno-nonportable-include-path
 resolver: lts-20.7
+# The Github CI runs ormolu v0.5.2.0, which is not in the Stackage snapshot.
+# So we need to add it manually, until the resolver is updated.
+extra-deps:
+- ormolu-0.5.2.0@sha256:97c2611f53eac889737c715f4533e153498aaaa203c438eceb6ee2d192cb6b0e,5469

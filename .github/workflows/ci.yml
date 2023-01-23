@@ -18,7 +18,6 @@ on:
       - reopened
       - synchronize
       - ready_for_review
-      - review_requested
       - closed
 
 concurrency:
