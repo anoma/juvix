@@ -239,7 +239,7 @@ fast-test-skip-slow:
 SMOKE := $(shell command -v smoke 2> /dev/null)
 
 .PHONY : smoke
-smoke: install
+smoke: install submodules
 	@$(if $(SMOKE),, $(error "Smoke not found, please install it from https://github.com/SamirTalwar/smoke"))
 	@smoke $(shell find tests -name '*.smoke.yaml')
 
