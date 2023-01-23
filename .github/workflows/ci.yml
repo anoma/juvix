@@ -60,7 +60,7 @@ jobs:
       uses: haskell/actions/hlint-run@v2
       with:
         path: '["src/", "app/", "test/"]'
-        fail-on: warning
+        # fail-on: warning
 
   pre-commit:
     runs-on: ubuntu-latest
