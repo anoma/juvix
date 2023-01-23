@@ -9,42 +9,42 @@ import Juvix.Prelude
 -}
 
 data Case = Case
-  { _caseLeftType :: Type,
-    _caseRightType :: Type,
-    _caseCodomainType :: Type,
+  { _caseLeftType :: Obj,
+    _caseRightType :: Obj,
+    _caseCodomainType :: Obj,
     _caseOn :: Geb,
     _caseLeft :: Geb,
     _caseRight :: Geb
   }
 
 data Pair = Pair
-  { _pairLeftType :: Type,
-    _pairRightType :: Type,
+  { _pairLeftType :: Obj,
+    _pairRightType :: Obj,
     _pairLeft :: Geb,
     _pairRight :: Geb
   }
 
 data Fst = Fst
-  { _fstLeftType :: Type,
-    _fstRightType :: Type,
+  { _fstLeftType :: Obj,
+    _fstRightType :: Obj,
     _fstValue :: Geb
   }
 
 data Snd = Snd
-  { _sndLeftType :: Type,
-    _sndRightType :: Type,
+  { _sndLeftType :: Obj,
+    _sndRightType :: Obj,
     _sndValue :: Geb
   }
 
 data Lamb = Lamb
-  { _lambVarType :: Type,
-    _lambBodyType :: Type,
+  { _lambVarType :: Obj,
+    _lambBodyType :: Obj,
     _lambBody :: Geb
   }
 
 data App = App
-  { _appDomainType :: Type,
-    _appCodomainType :: Type,
+  { _appDomainType :: Obj,
+    _appCodomainType :: Obj,
     _appLeft :: Geb,
     _appRight :: Geb
   }
@@ -65,22 +65,29 @@ data Geb
   | GebVar Int
 
 data Prod = Prod
-  { _prodLeft :: Type,
-    _prodRight :: Type
+  { _prodLeft :: Obj,
+    _prodRight :: Obj
   }
 
 data Coprod = Coprod
-  { _coprodLeft :: Type,
-    _coprodRight :: Type
+  { _coprodLeft :: Obj,
+    _coprodRight :: Obj
   }
 
--- | Corresponds to a subset of the GEB type `substobj`
+-- | Function type
+data Hom = Hom
+  { _homDomain :: Obj,
+    _homCodomain :: Obj
+  }
+
+-- | Corresponds to the GEB type for types (objects of the category): `substobj`
 -- (https://github.com/anoma/geb/blob/main/src/specs/geb.lisp).
-data Type
-  = TypeInitial -- the empty type
-  | TypeTerminal -- the unit type
-  | TypeProd Prod
-  | TypeCoprod Coprod
+data Obj
+  = ObjInitial -- the empty type
+  | ObjTerminal -- the unit type
+  | ObjProd Prod
+  | ObjCoprod Coprod
+  | ObjHom Hom
 
 instance HasAtomicity Geb where
   atomicity = \case
@@ -96,9 +103,10 @@ instance HasAtomicity Geb where
     GebApp {} -> Aggregate appFixity
     GebVar {} -> Aggregate appFixity
 
-instance HasAtomicity Type where
+instance HasAtomicity Obj where
   atomicity = \case
-    TypeInitial -> Atom
-    TypeTerminal -> Atom
-    TypeProd {} -> Aggregate appFixity
-    TypeCoprod {} -> Aggregate appFixity
+    ObjInitial -> Atom
+    ObjTerminal -> Atom
+    ObjProd {} -> Aggregate appFixity
+    ObjCoprod {} -> Aggregate appFixity
+    ObjHom {} -> Aggregate appFixity

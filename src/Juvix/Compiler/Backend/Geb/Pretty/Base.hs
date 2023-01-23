@@ -99,12 +99,19 @@ instance PrettyCode Coprod where
     right <- ppArg _coprodRight
     return $ kwCoprod <+> left <+> right
 
-instance PrettyCode Type where
+instance PrettyCode Hom where
+  ppCode Hom {..} = do
+    dom <- ppArg _homDomain
+    cod <- ppArg _homCodomain
+    return $ kwHom <+> dom <+> cod
+
+instance PrettyCode Obj where
   ppCode = \case
-    TypeInitial -> return kwInitial
-    TypeTerminal -> return kwTerminal
-    TypeProd x -> ppCode x
-    TypeCoprod x -> ppCode x
+    ObjInitial -> return kwInitial
+    ObjTerminal -> return kwTerminal
+    ObjProd x -> ppCode x
+    ObjCoprod x -> ppCode x
+    ObjHom x -> ppCode x
 
 {--------------------------------------------------------------------------------}
 {- helper functions -}
@@ -186,3 +193,6 @@ kwProd = keyword Str.gebProd
 
 kwCoprod :: Doc Ann
 kwCoprod = keyword Str.gebCoprod
+
+kwHom :: Doc Ann
+kwHom = keyword Str.gebHom

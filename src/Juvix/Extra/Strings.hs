@@ -587,6 +587,9 @@ gebProd = "prod"
 gebCoprod :: IsString s => s
 gebCoprod = "coprod"
 
+gebHom :: IsString s => s
+gebHom = "hom"
+
 juvixFunctionT :: IsString s => s
 juvixFunctionT = "juvix_function_t"
 
