@@ -68,6 +68,8 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
     - uses: pre-commit/action@v3.0.0
       with:
         extra_args:
@@ -122,7 +124,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
 
-      - uses: haskell/actions/setup@v1
+      - uses: haskell/actions/setup@v2
         name: Setup Haskell
         with:
           ghc-version: ${{ matrix.ghc }}
@@ -274,27 +276,16 @@ jobs:
         run: |
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      # - name: Download Smoke binary
-      #   uses: jaxxstorm/action-install-gh-release@v1.9.0
-      #   with:
-      #     repo: jonaprieto/smoke
-      #     tag: v2.3.2
-      #     cache: enable
-      #     extension-matching: disable
-      #     rename-to: smoke
-      #     chmod: 0755
-
-      - uses: actions/checkout@v3
+      - name: Download Smoke binary
+        uses: jaxxstorm/action-install-gh-release@v1.9.0
+        if: runner.os == 'macOS'
         with:
-          repository: jonaprieto/smoke
-          path: smoke
-
-      - name: Install Smoke
-        if: steps.cache-build.outputs.cache-hit != 'true'
-        run: |
-          cd smoke
-          stack install
-        shell: bash
+          repo: jonaprieto/smoke
+          tag: v2.3.2
+          cache: enable
+          extension-matching: disable
+          rename-to: smoke
+          chmod: 0755
 
       - name : Smoke testing (macOS)
         id: smoke-macos
@@ -302,6 +293,27 @@ jobs:
         run : |
           cd main
           make CC=$CC LIBTOOL=$LIBTOOL smoke
+
+      - uses: actions/checkout@v3
+        if: runner.os == 'Linux'
+        with:
+          repository: jonaprieto/smoke
+          path: smoke
+          
+      - name: Install Smoke
+        if: steps.cache-build.outputs.cache-hit != 'true'
+        if: runner.os == 'Linux'
+        run: |
+          cd smoke
+          stack install
+        shell: bash
+
+      - name : Smoke testing (linux)
+        id: smoke-linux
+        if: runner.os == 'Linux'
+        run : |
+          cd main
+          make smoke
 
   docs:
     needs: build

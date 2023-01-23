@@ -80,3 +80,5 @@
 - ignore: {name: Eta reduce}
 - ignore: {name: Avoid restricted alias}
 - ignore: {name: Use tuple-section}
+- ignore: {name: Use map with tuple-section}
+
