@@ -6,7 +6,7 @@ supports syntax highlighting for well-scoped modules.
 To get started, clone the Juvix Emacs mode repository:
 
 #+begin_src sh
-git clone https://github.com/anoma/emacs-juvix.git
+git clone https://github.com/anoma/juvix-mode.git
 #+end_src
 
 To install it add the following lines to your
