@@ -32,8 +32,8 @@ jobs:
   ormolu:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: mrkkrp/ormolu-action@v6
+      - uses: actions/checkout@v3
+      - uses: mrkkrp/ormolu-action@v9
         with:
           extra-args: >-
             --ghc-opt -XDerivingStrategies
@@ -46,22 +46,19 @@ jobs:
   clang-format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: jidicula/clang-format-action@v4.9.0
+      - uses: actions/checkout@v3
+      - uses: jidicula/clang-format-action@v4.10.1
         with:
           clang-format-version: '15'
           check-path: 'runtime/src'
-
   hlint:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
     - name: 'Set up HLint'
-      uses: rwe/actions-hlint-setup@v1
-      with:
-        version: '3.4'
+      uses: haskell/actions/hlint-setup@v2
     - name: 'Run HLint'
-      uses: rwe/actions-hlint-run@v2.0.1
+      uses: haskell/actions/hlint-run@v2
       with:
         path: '["src/", "app/", "test/"]'
         fail-on: warning
@@ -69,8 +66,8 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-python@v2
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
     - uses: pre-commit/action@v3.0.0
       with:
         extra_args:
@@ -100,11 +97,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-12]
+        os: [macos-12 , ubuntu-20.04]
         ghc: ["9.2.5"]
     steps:
       - name: Checkout our repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: main
           submodules: true
@@ -154,6 +151,16 @@ jobs:
         run: |
           echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
           echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
+
+      - name: Install ICU4C
+        if: startsWith(matrix.os, 'macos-')
+        run: |
+          brew install icu4c
+          brew link icu4c --force
+
+      - name: Install libicu
+        if: startsWith(matrix.os, 'ubuntu-')
+        run: sudo apt install -y libicu66
 
       - name: Build Project (macOS)
         if: runner.os == 'macOS'
@@ -267,22 +274,27 @@ jobs:
         run: |
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Download Smoke binary
-        uses: jaxxstorm/action-install-gh-release@v1.9.0
-        with:
-          repo: SamirTalwar/smoke
-          tag: v2.3.1
-          cache: enable
-          extension-matching: disable
-          rename-to: smoke
-          chmod: 0755
+      # - name: Download Smoke binary
+      #   uses: jaxxstorm/action-install-gh-release@v1.9.0
+      #   with:
+      #     repo: jonaprieto/smoke
+      #     tag: v2.3.2
+      #     cache: enable
+      #     extension-matching: disable
+      #     rename-to: smoke
+      #     chmod: 0755
 
-      - name : Smoke testing (Linux)
-        id: smoke-linux
-        if: runner.os == 'Linux'
-        run : |
-          cd main
-          make smoke
+      - uses: actions/checkout@v3
+        with:
+          repository: jonaprieto/smoke
+          path: smoke
+
+      - name: Install Smoke
+        if: steps.cache-build.outputs.cache-hit != 'true'
+        run: |
+          cd smoke
+          stack install
+        shell: bash
 
       - name : Smoke testing (macOS)
         id: smoke-macos

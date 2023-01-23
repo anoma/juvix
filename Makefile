@@ -236,8 +236,7 @@ SMOKE := $(shell command -v smoke 2> /dev/null)
 .PHONY : smoke
 smoke: install
 	@$(if $(SMOKE),, $(error "Smoke not found, please install it from https://github.com/SamirTalwar/smoke"))
-	@find tests/smoke -type f -name '*.smoke.yaml' \
-		-exec sh -c "echo -n 'Running {}'; echo ; ${SMOKE} ${SMOKEFLAGS} {}" \;
+	@smoke $(find tests -name '*.smoke.yaml')
 
 # -- Release
 
