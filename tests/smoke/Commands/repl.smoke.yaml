@@ -42,6 +42,15 @@ tests:
           Stdlib.Prelude> \1
     exit-status: 0
     
+  - name: check-type-null
+    command:
+      - juvix
+      - repl
+    stdout:
+      contains: "{A : Type} → List A → Bool"
+    stdin: ":type null"
+    exit-status: 0
+
   - name: check-type-suc
     command:
       - juvix
@@ -180,4 +189,3 @@ tests:
       contains: |
         suc (suc (suc zero))
     exit-status: 0
-    
