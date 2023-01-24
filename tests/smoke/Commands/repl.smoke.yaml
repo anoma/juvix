@@ -118,6 +118,16 @@ tests:
           Nat
     exit-status: 0 
 
+  - name: eval-let-expression
+    command:
+      - juvix
+      - repl
+    stdin: "let {x : Bool; x := false} in x"
+    stdout:
+      contains:
+        "false"
+    exit-status: 0
+
   - name: load-builtin-bool
     command:
       shell:
