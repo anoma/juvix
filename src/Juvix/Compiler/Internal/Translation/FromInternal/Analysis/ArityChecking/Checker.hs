@@ -137,6 +137,11 @@ withEmptyLocalVars = runReader emptyLocalVars
 arityLet :: (Members '[Reader InfoTable] r) => Let -> Sem r Arity
 arityLet l = guessArity (l ^. letExpression)
 
+inferReplExpression :: Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r => Expression -> Sem r Expression
+inferReplExpression e = do
+  ari <- guessArity e
+  withEmptyLocalVars (checkExpression ari e)
+
 guessArity ::
   forall r.
   (Members '[Reader InfoTable] r) =>
