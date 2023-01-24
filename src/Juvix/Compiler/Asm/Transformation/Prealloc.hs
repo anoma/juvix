@@ -4,7 +4,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Asm.Options
 import Juvix.Compiler.Asm.Transformation.Base
 
-computeCodePrealloc :: forall r. Members '[Error AsmError, Reader Options] r => InfoTable -> Code -> Sem r Code
+computeCodePrealloc :: forall r. (Members '[Error AsmError, Reader Options] r) => InfoTable -> Code -> Sem r Code
 computeCodePrealloc tab code = prealloc <$> foldS sig code (0, [])
   where
     -- returns the maximum memory use and the mapping result (Code with the
@@ -70,13 +70,13 @@ computeCodePrealloc tab code = prealloc <$> foldS sig code (0, [])
     prealloc (0, c) = c
     prealloc (n, c) = mkInstr (Prealloc (InstrPrealloc n)) : c
 
-computeFunctionPrealloc :: Members '[Error AsmError, Reader Options] r => InfoTable -> FunctionInfo -> Sem r FunctionInfo
+computeFunctionPrealloc :: (Members '[Error AsmError, Reader Options] r) => InfoTable -> FunctionInfo -> Sem r FunctionInfo
 computeFunctionPrealloc tab = liftCodeTransformation (computeCodePrealloc tab)
 
-computePrealloc :: Members '[Error AsmError, Reader Options] r => InfoTable -> Sem r InfoTable
+computePrealloc :: (Members '[Error AsmError, Reader Options] r) => InfoTable -> Sem r InfoTable
 computePrealloc tab = liftFunctionTransformation (computeFunctionPrealloc tab) tab
 
-checkCodePrealloc :: forall r. Members '[Error AsmError, Reader Options] r => InfoTable -> Code -> Sem r Bool
+checkCodePrealloc :: forall r. (Members '[Error AsmError, Reader Options] r) => InfoTable -> Code -> Sem r Bool
 checkCodePrealloc tab code = do
   f <- foldS sig code id
   return $ f 0 >= 0

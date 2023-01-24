@@ -1,10 +1,8 @@
 PWD=$(CURDIR)
 PREFIX="$(PWD)/.stack-work/prefix"
 UNAME := $(shell uname)
-HLINTQUIET :=
 
-
-IMAGES = 	$(shell find assets/images -type f)
+IMAGES = $(shell find assets/images -type f)
 
 ORGFILES = $(shell find docs/org -type f -name '*.org')
 MDFILES:=$(patsubst docs/org/%,docs/md/%,$(ORGFILES:.org=.md))
@@ -125,13 +123,17 @@ haddock :
 # -- Codebase Health
 # ------------------------------------------------------------------------------
 
+MAKEAUXFLAGS?=-s
+MAKE=make ${MAKEAUXFLAGS}
+
+ORMOLU?=stack exec -- ormolu
 ORMOLUFILES = $(shell git ls-files '*.hs' '*.hs-boot' | grep -v '^contrib/')
 ORMOLUFLAGS?=--no-cabal
 ORMOLUMODE?=inplace
 
 .PHONY: format
 format: clang-format
-	@stack exec -- ormolu ${ORMOLUFLAGS} \
+	${ORMOLU} ${ORMOLUFLAGS} \
 		--ghc-opt -XStandaloneDeriving \
 		--ghc-opt -XUnicodeSyntax \
 		--ghc-opt -XDerivingStrategies \
@@ -143,16 +145,22 @@ format: clang-format
 
 .PHONY: clang-format
 clang-format:
-	@cd runtime && make format
+	@cd runtime && ${MAKE} format
 
 .PHONY: check-ormolu
 check-ormolu: export ORMOLUMODE = check
 check-ormolu:
-	@make -s format
+	@${MAKE} format
+
+HLINT?=stack exec -- hlint
+HLINTFLAGS?=
+HLINTQUIET :=
 
 .PHONY : hlint
 hlint :
-	@hlint src app test ${HLINTQUIET}
+	${HLINT} ${HLINTFLAGS} app ${HLINTQUIET}
+	${HLINT} ${HLINTFLAGS} src ${HLINTQUIET}
+	${HLINT} ${HLINTFLAGS} test ${HLINTQUIET}
 
 PRECOMMIT := $(shell command -v pre-commit 2> /dev/null)
 
@@ -167,9 +175,6 @@ pre-commit :
 # ------------------------------------------------------------------------------
 # -- Build-Install-Test-Release
 # ------------------------------------------------------------------------------
-
-MAKEAUXFLAGS?=-s
-MAKE=make ${MAKEAUXFLAGS}
 
 STACKFLAGS?=--jobs $(THREADS)
 STACKTESTFLAGS?=--ta --hide-successes --ta --ansi-tricks=false
@@ -234,10 +239,9 @@ fast-test-skip-slow:
 SMOKE := $(shell command -v smoke 2> /dev/null)
 
 .PHONY : smoke
-smoke: install
+smoke: install submodules
 	@$(if $(SMOKE),, $(error "Smoke not found, please install it from https://github.com/SamirTalwar/smoke"))
-	@find tests/smoke -type f -name '*.smoke.yaml' \
-		-exec sh -c "echo -n 'Running {}'; echo ; ${SMOKE} ${SMOKEFLAGS} {}" \;
+	@smoke $(shell find tests -name '*.smoke.yaml')
 
 # -- Release
 

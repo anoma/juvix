@@ -92,7 +92,7 @@ viewExpressionAsPattern e = case viewApp e of
       ExpressionIden (IdenVar n) -> Just n
       _ -> Nothing
 
-addName :: Member (State (HashMap Name Name)) r => Name -> Name -> Sem r ()
+addName :: (Member (State (HashMap Name Name)) r) => Name -> Name -> Sem r ()
 addName na nb = modify (HashMap.insert na nb)
 
 foldApplication :: Expression -> [ApplicationArg] -> Expression
@@ -102,7 +102,7 @@ foldApplication f args = case args of
 
 matchFunctionParameter ::
   forall r.
-  Members '[State (HashMap Name Name), Reader (HashSet VarName), Error Text] r =>
+  (Members '[State (HashMap Name Name), Reader (HashSet VarName), Error Text] r) =>
   FunctionParameter ->
   FunctionParameter ->
   Sem r ()
@@ -124,7 +124,7 @@ matchFunctionParameter pa pb = do
 
 matchExpressions ::
   forall r.
-  Members '[State (HashMap Name Name), Reader (HashSet VarName), Error Text] r =>
+  (Members '[State (HashMap Name Name), Reader (HashSet VarName), Error Text] r) =>
   Expression ->
   Expression ->
   Sem r ()
@@ -301,7 +301,7 @@ infixl 9 @@
 (@@) :: (IsExpression a, IsExpression b) => a -> b -> Expression
 a @@ b = toExpression (Application (toExpression a) (toExpression b) Explicit)
 
-freshVar :: Member NameIdGen r => Text -> Sem r VarName
+freshVar :: (Member NameIdGen r) => Text -> Sem r VarName
 freshVar n = do
   uid <- freshNameId
   return
@@ -313,7 +313,7 @@ freshVar n = do
         _nameLoc = error "freshVar with no location"
       }
 
-freshHole :: Member NameIdGen r => Sem r Expression
+freshHole :: (Member NameIdGen r) => Sem r Expression
 freshHole = do
   uid <- freshNameId
   return $

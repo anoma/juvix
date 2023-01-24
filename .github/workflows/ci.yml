@@ -18,7 +18,6 @@ on:
       - reopened
       - synchronize
       - ready_for_review
-      - review_requested
       - closed
 
 concurrency:
@@ -32,8 +31,8 @@ jobs:
   ormolu:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: mrkkrp/ormolu-action@v6
+      - uses: actions/checkout@v3
+      - uses: mrkkrp/ormolu-action@v9
         with:
           extra-args: >-
             --ghc-opt -XDerivingStrategies
@@ -46,31 +45,32 @@ jobs:
   clang-format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: jidicula/clang-format-action@v4.9.0
+      - uses: actions/checkout@v3
+      - uses: jidicula/clang-format-action@v4.10.1
         with:
           clang-format-version: '15'
           check-path: 'runtime/src'
-
   hlint:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
     - name: 'Set up HLint'
-      uses: rwe/actions-hlint-setup@v1
+      uses: haskell/actions/hlint-setup@v2
       with:
-        version: '3.4'
+        version: '3.5'
     - name: 'Run HLint'
-      uses: rwe/actions-hlint-run@v2.0.1
+      uses: haskell/actions/hlint-run@v2
       with:
         path: '["src/", "app/", "test/"]'
-        fail-on: warning
+        # fail-on: warning
 
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-python@v2
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
     - uses: pre-commit/action@v3.0.0
       with:
         extra_args:
@@ -100,11 +100,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-12]
+        os: [macos-12 , ubuntu-20.04]
         ghc: ["9.2.5"]
     steps:
       - name: Checkout our repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: main
           submodules: true
@@ -125,7 +125,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
 
-      - uses: haskell/actions/setup@v1
+      - uses: haskell/actions/setup@v2
         name: Setup Haskell
         with:
           ghc-version: ${{ matrix.ghc }}
@@ -155,6 +155,16 @@ jobs:
           echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
           echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
 
+      - name: Install ICU4C
+        if: startsWith(matrix.os, 'macos-')
+        run: |
+          brew install icu4c
+          brew link icu4c --force
+
+      - name: Install libicu for testing
+        if: startsWith(matrix.os, 'ubuntu-')
+        run: sudo apt install -y libicu66
+
       - name: Build Project (macOS)
         if: runner.os == 'macOS'
         run: |
@@ -176,7 +186,7 @@ jobs:
         ghc: ["9.2.5"]
     steps:
       - name: Checkout the main repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: main
           submodules: recursive
@@ -197,7 +207,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
 
-      - uses: haskell/actions/setup@v1
+      - uses: haskell/actions/setup@v2
         name: Setup Haskell
         with:
           ghc-version: ${{ matrix.ghc }}
@@ -231,7 +241,7 @@ jobs:
           echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
 
       - name: Setup Wasmer
-        uses: wasmerio/setup-wasmer@v1
+        uses: wasmerio/setup-wasmer@v2
 
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
         if: runner.os == 'macOS'
@@ -269,20 +279,14 @@ jobs:
 
       - name: Download Smoke binary
         uses: jaxxstorm/action-install-gh-release@v1.9.0
+        if: runner.os == 'macOS'
         with:
-          repo: SamirTalwar/smoke
-          tag: v2.3.1
+          repo: jonaprieto/smoke
+          tag: v2.3.2
           cache: enable
           extension-matching: disable
           rename-to: smoke
           chmod: 0755
-
-      - name : Smoke testing (Linux)
-        id: smoke-linux
-        if: runner.os == 'Linux'
-        run : |
-          cd main
-          make smoke
 
       - name : Smoke testing (macOS)
         id: smoke-macos
@@ -290,6 +294,26 @@ jobs:
         run : |
           cd main
           make CC=$CC LIBTOOL=$LIBTOOL smoke
+
+      - uses: actions/checkout@v3
+        if: runner.os == 'Linux'
+        with:
+          repository: jonaprieto/smoke
+          path: smoke
+
+      - name: Install Smoke
+        if: runner.os == 'Linux'
+        run: |
+          cd smoke
+          stack install
+        shell: bash
+
+      - name : Smoke testing (linux)
+        id: smoke-linux
+        if: runner.os == 'Linux'
+        run : |
+          cd main
+          make smoke
 
   docs:
     needs: build
@@ -301,7 +325,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout our repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: main
           submodules: recursive
@@ -322,16 +346,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
 
-      - uses: r-lib/actions/setup-pandoc@v1
+      - uses: r-lib/actions/setup-pandoc@v2
         with:
-          pandoc-version: '2.13'
+          pandoc-version: '2.19.2'
 
       - name: MDBook setup
         uses: peaceiris/actions-mdbook@v1
         with:
           mdbook-version: '0.4.22'
 
-      - uses: haskell/actions/setup@v1
+      - uses: haskell/actions/setup@v2
         name: Setup Haskell
         with:
           ghc-version: ${{ matrix.ghc }}

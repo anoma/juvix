@@ -10,7 +10,7 @@ import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 
-runCommand :: forall r. Members '[Embed IO, App] r => CoreCompileOptions -> Sem r ()
+runCommand :: forall r. (Members '[Embed IO, App] r) => CoreCompileOptions -> Sem r ()
 runCommand opts = do
   file <- getFile
   s <- embed (readFile (toFilePath file))
@@ -34,7 +34,7 @@ runCommand opts = do
       TargetNative64 -> Backend.TargetCNative64
       TargetC -> Backend.TargetCWasm32Wasi
 
-inputCFile :: Members '[App] r => Path Abs File -> Sem r (Path Abs File)
+inputCFile :: (Members '[App] r) => Path Abs File -> Sem r (Path Abs File)
 inputCFile inputFileCompile = do
   buildDir <- askBuildDir
   return (buildDir <//> outputMiniCFile)

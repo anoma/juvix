@@ -27,7 +27,7 @@ instance Pretty QualifiedName where
     let symbols = snoc (toList path) s
      in dotted (map pretty symbols)
     where
-      dotted :: Foldable f => f (Doc a) -> Doc a
+      dotted :: (Foldable f) => f (Doc a) -> Doc a
       dotted = concatWith (surround ".")
 
 instance Pretty Name where
@@ -79,7 +79,7 @@ instance HasLoc TopModulePath where
       [] -> getLoc _modulePathName
       (x : _) -> getLoc x <> getLoc _modulePathName
 
-topModulePathToDottedPath :: IsString s => TopModulePath -> s
+topModulePathToDottedPath :: (IsString s) => TopModulePath -> s
 topModulePathToDottedPath (TopModulePath l r) =
   fromText $ mconcat $ intersperse "." $ map (^. symbolText) $ l ++ [r]
 

@@ -34,7 +34,7 @@ instance PrettyCodeAnn DependencyConflict where
       item :: PackageInfo -> Doc CodeAnn
       item pkg = pcode (pkg ^. packagePackage . packageName) <+> "at" <+> pretty (pkg ^. packageRoot)
 
-pcode :: Pretty a => a -> Doc CodeAnn
+pcode :: (Pretty a) => a -> Doc CodeAnn
 pcode = code . pretty
 
 data MissingModule = MissingModule

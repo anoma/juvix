@@ -16,7 +16,7 @@ import Juvix.Prelude hiding (some)
 
 data ScopedModule = forall t. MkScopedModule (SModuleIsTop t) (Module 'Scoped t)
 
-mkScopedModule :: forall t. SingI t => Module 'Scoped t -> ScopedModule
+mkScopedModule :: forall t. (SingI t) => Module 'Scoped t -> ScopedModule
 mkScopedModule = MkScopedModule sing
 
 getAllModules :: Module 'Scoped 'ModuleTop -> HashMap S.NameId (Module 'Scoped 'ModuleTop)
@@ -24,7 +24,7 @@ getAllModules m = HashMap.fromList (fst (run (runOutputList (getAllModules' m)))
 
 getAllModules' ::
   forall r.
-  Member (Output (S.NameId, Module 'Scoped 'ModuleTop)) r =>
+  (Member (Output (S.NameId, Module 'Scoped 'ModuleTop)) r) =>
   Module 'Scoped 'ModuleTop ->
   Sem r ()
 getAllModules' m = recordModule m

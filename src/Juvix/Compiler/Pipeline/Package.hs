@@ -112,7 +112,7 @@ rawPackage pkg =
       _packageDependencies = Just (map rawDependency (pkg ^. packageDependencies))
     }
 
-processPackage :: forall r. Members '[Error Text] r => Path Abs Dir -> Path Abs Dir -> Package' 'Raw -> Sem r Package
+processPackage :: forall r. (Members '[Error Text] r) => Path Abs Dir -> Path Abs Dir -> Package' 'Raw -> Sem r Package
 processPackage dir buildDir pkg = do
   let _packageName = fromMaybe defaultPackageName (pkg ^. packageName)
       stdlib = Dependency (Abs (juvixStdlibDir buildDir))
@@ -138,7 +138,7 @@ defaultVersion = SemVer 0 0 0 [] Nothing
 -- | given some directory d it tries to read the file d/juvix.yaml and parse its contents
 readPackage ::
   forall r.
-  Members '[Files, Error Text] r =>
+  (Members '[Files, Error Text] r) =>
   Path Abs Dir ->
   Path Abs Dir ->
   Sem r Package

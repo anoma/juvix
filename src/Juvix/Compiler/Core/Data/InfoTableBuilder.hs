@@ -19,32 +19,32 @@ data InfoTableBuilder m a where
 
 makeSem ''InfoTableBuilder
 
-getConstructorInfo :: Member InfoTableBuilder r => Tag -> Sem r ConstructorInfo
+getConstructorInfo :: (Member InfoTableBuilder r) => Tag -> Sem r ConstructorInfo
 getConstructorInfo tag = do
   tab <- getInfoTable
   return $ fromJust (HashMap.lookup tag (tab ^. infoConstructors))
 
-getInductiveInfo :: Member InfoTableBuilder r => Symbol -> Sem r InductiveInfo
+getInductiveInfo :: (Member InfoTableBuilder r) => Symbol -> Sem r InductiveInfo
 getInductiveInfo sym = do
   tab <- getInfoTable
   return $ fromJust (HashMap.lookup sym (tab ^. infoInductives))
 
-getIdentifierInfo :: Member InfoTableBuilder r => Symbol -> Sem r IdentifierInfo
+getIdentifierInfo :: (Member InfoTableBuilder r) => Symbol -> Sem r IdentifierInfo
 getIdentifierInfo sym = do
   tab <- getInfoTable
   return $ fromJust (HashMap.lookup sym (tab ^. infoIdentifiers))
 
-getBoolSymbol :: Member InfoTableBuilder r => Sem r Symbol
+getBoolSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
 getBoolSymbol = do
   ci <- getConstructorInfo (BuiltinTag TagTrue)
   return $ ci ^. constructorInductive
 
-checkSymbolDefined :: Member InfoTableBuilder r => Symbol -> Sem r Bool
+checkSymbolDefined :: (Member InfoTableBuilder r) => Symbol -> Sem r Bool
 checkSymbolDefined sym = do
   tab <- getInfoTable
   return $ HashMap.member sym (tab ^. identContext)
 
-setIdentArgsInfo :: Member InfoTableBuilder r => Symbol -> [ArgumentInfo] -> Sem r ()
+setIdentArgsInfo :: (Member InfoTableBuilder r) => Symbol -> [ArgumentInfo] -> Sem r ()
 setIdentArgsInfo sym = overIdentArgsInfo sym . const
 
 runInfoTableBuilder :: forall r a. InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
@@ -110,7 +110,7 @@ createBuiltinConstr sym tag nameTxt ty cblt = do
       }
 
 declareInductiveBuiltins ::
-  Member InfoTableBuilder r =>
+  (Member InfoTableBuilder r) =>
   Text ->
   Maybe BuiltinInductive ->
   [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] ->
@@ -134,7 +134,7 @@ declareInductiveBuiltins indName blt ctrs = do
     )
   mapM_ (\ci -> registerConstructor (ci ^. constructorName) ci) constrs
 
-declareIOBuiltins :: Member InfoTableBuilder r => Sem r ()
+declareIOBuiltins :: (Member InfoTableBuilder r) => Sem r ()
 declareIOBuiltins =
   declareInductiveBuiltins
     "IO"
@@ -145,7 +145,7 @@ declareIOBuiltins =
       (BuiltinTag TagReadLn, "readLn", id, Nothing)
     ]
 
-declareBoolBuiltins :: Member InfoTableBuilder r => Sem r ()
+declareBoolBuiltins :: (Member InfoTableBuilder r) => Sem r ()
 declareBoolBuiltins =
   declareInductiveBuiltins
     "bool"
@@ -154,7 +154,7 @@ declareBoolBuiltins =
       (BuiltinTag TagFalse, "false", const mkTypeBool', Just BuiltinBoolFalse)
     ]
 
-declareNatBuiltins :: Member InfoTableBuilder r => Sem r ()
+declareNatBuiltins :: (Member InfoTableBuilder r) => Sem r ()
 declareNatBuiltins = do
   tagZero <- freshTag
   tagSuc <- freshTag

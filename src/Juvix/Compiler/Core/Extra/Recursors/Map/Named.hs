@@ -5,49 +5,49 @@ import Juvix.Compiler.Core.Extra.Recursors.Base
 import Juvix.Compiler.Core.Extra.Recursors.Map
 import Juvix.Compiler.Core.Extra.Recursors.Parameters
 
-dmapLRM :: Monad m => (BinderList Binder -> Node -> m Recur) -> Node -> m Node
+dmapLRM :: (Monad m) => (BinderList Binder -> Node -> m Recur) -> Node -> m Node
 dmapLRM f = dmapLRM' (mempty, f)
 
-dmapLM :: Monad m => (BinderList Binder -> Node -> m Node) -> Node -> m Node
+dmapLM :: (Monad m) => (BinderList Binder -> Node -> m Node) -> Node -> m Node
 dmapLM f = dmapLM' (mempty, f)
 
-umapLM :: Monad m => (BinderList Binder -> Node -> m Node) -> Node -> m Node
+umapLM :: (Monad m) => (BinderList Binder -> Node -> m Node) -> Node -> m Node
 umapLM f = nodeMapG' SBottomUp binderInfoCollector f
 
-dmapNRM :: Monad m => (Level -> Node -> m Recur) -> Node -> m Node
+dmapNRM :: (Monad m) => (Level -> Node -> m Recur) -> Node -> m Node
 dmapNRM f = dmapNRM' (0, f)
 
-dmapNM :: Monad m => (Level -> Node -> m Node) -> Node -> m Node
+dmapNM :: (Monad m) => (Level -> Node -> m Node) -> Node -> m Node
 dmapNM f = dmapNM' (0, f)
 
-umapNM :: Monad m => (Level -> Node -> m Node) -> Node -> m Node
+umapNM :: (Monad m) => (Level -> Node -> m Node) -> Node -> m Node
 umapNM f = nodeMapG' SBottomUp binderNumCollector f
 
-dmapRM :: Monad m => (Node -> m Recur) -> Node -> m Node
+dmapRM :: (Monad m) => (Node -> m Recur) -> Node -> m Node
 dmapRM f = nodeMapG' STopDown unitCollector (const (fromRecur mempty . f))
 
-dmapM :: Monad m => (Node -> m Node) -> Node -> m Node
+dmapM :: (Monad m) => (Node -> m Node) -> Node -> m Node
 dmapM f = nodeMapG' STopDown unitCollector (const (fromSimple mempty . f))
 
-umapM :: Monad m => (Node -> m Node) -> Node -> m Node
+umapM :: (Monad m) => (Node -> m Node) -> Node -> m Node
 umapM f = nodeMapG' SBottomUp unitCollector (const f)
 
-dmapLRM' :: Monad m => (BinderList Binder, BinderList Binder -> Node -> m Recur) -> Node -> m Node
+dmapLRM' :: (Monad m) => (BinderList Binder, BinderList Binder -> Node -> m Recur) -> Node -> m Node
 dmapLRM' f = nodeMapG' STopDown (binderInfoCollector' (fst f)) (\bi -> fromRecur bi . snd f bi)
 
-dmapLM' :: Monad m => (BinderList Binder, BinderList Binder -> Node -> m Node) -> Node -> m Node
+dmapLM' :: (Monad m) => (BinderList Binder, BinderList Binder -> Node -> m Node) -> Node -> m Node
 dmapLM' f = nodeMapG' STopDown (binderInfoCollector' (fst f)) (\bi -> fromSimple bi . snd f bi)
 
-umapLM' :: Monad m => (BinderList Binder, BinderList Binder -> Node -> m Node) -> Node -> m Node
+umapLM' :: (Monad m) => (BinderList Binder, BinderList Binder -> Node -> m Node) -> Node -> m Node
 umapLM' f = nodeMapG' SBottomUp (binderInfoCollector' (fst f)) (snd f)
 
-dmapNRM' :: Monad m => (Level, Level -> Node -> m Recur) -> Node -> m Node
+dmapNRM' :: (Monad m) => (Level, Level -> Node -> m Recur) -> Node -> m Node
 dmapNRM' f = nodeMapG' STopDown (binderNumCollector' (fst f)) (\bi -> fromRecur bi . snd f bi)
 
-dmapNM' :: Monad m => (Level, Level -> Node -> m Node) -> Node -> m Node
+dmapNM' :: (Monad m) => (Level, Level -> Node -> m Node) -> Node -> m Node
 dmapNM' f = nodeMapG' STopDown (binderNumCollector' (fst f)) (\bi -> fromSimple bi . snd f bi)
 
-umapNM' :: Monad m => (Level, Level -> Node -> m Node) -> Node -> m Node
+umapNM' :: (Monad m) => (Level, Level -> Node -> m Node) -> Node -> m Node
 umapNM' f = nodeMapG' SBottomUp (binderNumCollector' (fst f)) (snd f)
 
 dmapLR :: (BinderList Binder -> Node -> Recur) -> Node -> Node
@@ -95,22 +95,22 @@ dmapN' f = runIdentity . dmapNM' (embedIden f)
 umapN' :: (Level, Level -> Node -> Node) -> Node -> Node
 umapN' f = runIdentity . umapNM' (embedIden f)
 
-dmapCLM' :: Monad m => (BinderList Binder, c -> BinderList Binder -> Node -> m (c, Node)) -> c -> Node -> m Node
+dmapCLM' :: (Monad m) => (BinderList Binder, c -> BinderList Binder -> Node -> m (c, Node)) -> c -> Node -> m Node
 dmapCLM' f ini = nodeMapG' STopDown (pairCollector (identityCollector ini) (binderInfoCollector' (fst f))) (\(c, bi) -> fromPair bi . snd f c bi)
 
-dmapCLRM' :: Monad m => (BinderList Binder, c -> BinderList Binder -> Node -> m (Recur' c)) -> c -> Node -> m Node
+dmapCLRM' :: (Monad m) => (BinderList Binder, c -> BinderList Binder -> Node -> m (Recur' c)) -> c -> Node -> m Node
 dmapCLRM' f ini = nodeMapG' STopDown (pairCollector (identityCollector ini) (binderInfoCollector' (fst f))) (\(c, bi) -> fromRecur' bi . snd f c bi)
 
-dmapCNRM' :: Monad m => (Level, c -> Level -> Node -> m (Recur' c)) -> c -> Node -> m Node
+dmapCNRM' :: (Monad m) => (Level, c -> Level -> Node -> m (Recur' c)) -> c -> Node -> m Node
 dmapCNRM' f ini = nodeMapG' STopDown (pairCollector (identityCollector ini) (binderNumCollector' (fst f))) (\(c, bi) -> fromRecur' bi . snd f c bi)
 
-dmapCLM :: Monad m => (c -> BinderList Binder -> Node -> m (c, Node)) -> c -> Node -> m Node
+dmapCLM :: (Monad m) => (c -> BinderList Binder -> Node -> m (c, Node)) -> c -> Node -> m Node
 dmapCLM f = dmapCLM' (mempty, f)
 
-dmapCNM :: Monad m => (c -> Level -> Node -> m (c, Node)) -> c -> Node -> m Node
+dmapCNM :: (Monad m) => (c -> Level -> Node -> m (c, Node)) -> c -> Node -> m Node
 dmapCNM f ini = nodeMapG' STopDown (pairCollector (identityCollector ini) binderNumCollector) (\(c, bi) -> fromPair bi . f c bi)
 
-dmapCM :: Monad m => (c -> Node -> m (c, Node)) -> c -> Node -> m Node
+dmapCM :: (Monad m) => (c -> Node -> m (c, Node)) -> c -> Node -> m Node
 dmapCM f ini = nodeMapG' STopDown (identityCollector ini) (\c -> fmap Recur' . f c)
 
 dmapCL' :: (BinderList Binder, c -> BinderList Binder -> Node -> (c, Node)) -> c -> Node -> Node

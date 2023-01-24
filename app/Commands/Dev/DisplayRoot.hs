@@ -4,7 +4,7 @@ import Commands.Base
 import Commands.Dev.DisplayRoot.Options
 import Data.Yaml
 
-runCommand :: forall r. Members '[Embed IO, App] r => RootOptions -> Sem r ()
+runCommand :: forall r. (Members '[Embed IO, App] r) => RootOptions -> Sem r ()
 runCommand RootOptions {..} = do
   askPkgDir >>= say . pack . toFilePath
   when _rootPrintPackage printPackage

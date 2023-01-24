@@ -65,7 +65,7 @@ tests:
       shell:
         - bash
       script: |
-        cd ./../../juvix-stdlib && juvix repl
+        cd ./../juvix-stdlib && juvix repl
     stdout: 
       contains: "Nat → Nat"
     stdin: ":t suc"

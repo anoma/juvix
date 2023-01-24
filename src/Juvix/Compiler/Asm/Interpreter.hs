@@ -24,15 +24,15 @@ runCode = hRunCode stdout
 hRunCode :: Handle -> InfoTable -> FunctionInfo -> IO Val
 hRunCode h infoTable = runM . hEvalRuntime h infoTable . runCodeR infoTable
 
-runCodeR :: Member Runtime r => InfoTable -> FunctionInfo -> Sem r Val
+runCodeR :: (Member Runtime r) => InfoTable -> FunctionInfo -> Sem r Val
 runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueStack
   where
-    goCode :: Member Runtime r => Code -> Sem r ()
+    goCode :: (Member Runtime r) => Code -> Sem r ()
     goCode = \case
       cmd : cont -> goCommand cmd cont
       [] -> return ()
 
-    goCommand :: Member Runtime r => Command -> Code -> Sem r ()
+    goCommand :: (Member Runtime r) => Command -> Code -> Sem r ()
     goCommand cmd cont = case cmd of
       Instr CmdInstr {..} -> do
         registerLocation (_cmdInstrInfo ^. commandInfoLocation)
@@ -53,7 +53,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
           _ -> runtimeError "case on non-data"
         goCode cont
         where
-          branch :: Member Runtime r => Tag -> [CaseBranch] -> Maybe Code -> Sem r ()
+          branch :: (Member Runtime r) => Tag -> [CaseBranch] -> Maybe Code -> Sem r ()
           branch tag bs def = case bs of
             (CaseBranch {..}) : _ | _caseBranchTag == tag -> goCode _caseBranchCode
             _ : bs' -> branch tag bs' def
@@ -61,7 +61,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
               Just x -> goCode x
               Nothing -> runtimeError "no matching branch"
 
-    goInstr :: Member Runtime r => Maybe Location -> Instruction -> Code -> Sem r ()
+    goInstr :: (Member Runtime r) => Maybe Location -> Instruction -> Code -> Sem r ()
     goInstr loc instr cont = case instr of
       Binop IntAdd ->
         goIntBinOp (\x y -> ValInteger (x + y)) >> goCode cont
@@ -159,26 +159,26 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
                 pushValueStack v
                 goCode (cont' ^. contCode)
 
-    goBinOp' :: Member Runtime r => (Val -> Val -> Sem r Val) -> Sem r ()
+    goBinOp' :: (Member Runtime r) => (Val -> Val -> Sem r Val) -> Sem r ()
     goBinOp' op = do
       v1 <- popValueStack
       v2 <- popValueStack
       v <- op v1 v2
       pushValueStack v
 
-    goBinOp :: Member Runtime r => (Val -> Val -> Val) -> Sem r ()
+    goBinOp :: (Member Runtime r) => (Val -> Val -> Val) -> Sem r ()
     goBinOp op = goBinOp' (\x y -> return (op x y))
 
-    goIntBinOp' :: Member Runtime r => (Integer -> Integer -> Sem r Val) -> Sem r ()
+    goIntBinOp' :: (Member Runtime r) => (Integer -> Integer -> Sem r Val) -> Sem r ()
     goIntBinOp' op = goBinOp' $ \v1 v2 ->
       case (v1, v2) of
         (ValInteger i1, ValInteger i2) -> op i1 i2
         _ -> runtimeError "invalid operation: expected two integers on value stack"
 
-    goIntBinOp :: Member Runtime r => (Integer -> Integer -> Val) -> Sem r ()
+    goIntBinOp :: (Member Runtime r) => (Integer -> Integer -> Val) -> Sem r ()
     goIntBinOp op = goIntBinOp' (\v1 v2 -> return (op v1 v2))
 
-    getVal :: Member Runtime r => Value -> Sem r Val
+    getVal :: (Member Runtime r) => Value -> Sem r Val
     getVal = \case
       ConstInt i -> return (ValInteger i)
       ConstBool b -> return (ValBool b)
@@ -187,7 +187,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
       ConstVoid -> return ValVoid
       Ref r -> getMemVal r
 
-    getMemVal :: Member Runtime r => MemValue -> Sem r Val
+    getMemVal :: (Member Runtime r) => MemValue -> Sem r Val
     getMemVal = \case
       DRef dr -> getDirectRef dr
       ConstrRef cr -> do
@@ -201,13 +201,13 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
                     runtimeError "invalid constructor field access"
           _ -> runtimeError "invalid memory access: expected a constructor"
 
-    getDirectRef :: Member Runtime r => DirectRef -> Sem r Val
+    getDirectRef :: (Member Runtime r) => DirectRef -> Sem r Val
     getDirectRef = \case
       StackRef -> topValueStack
       ArgRef off -> readArg off
       TempRef off -> readTemp off
 
-    popLastValueStack :: Member Runtime r => Sem r Val
+    popLastValueStack :: (Member Runtime r) => Sem r Val
     popLastValueStack = do
       v <- popValueStack
       isNull <- nullValueStack
@@ -216,7 +216,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
         (runtimeError "value stack not empty on function return")
       return v
 
-    getCallDetails :: Member Runtime r => Maybe Location -> InstrCall -> Sem r (Code, Frame)
+    getCallDetails :: (Member Runtime r) => Maybe Location -> InstrCall -> Sem r (Code, Frame)
     getCallDetails loc InstrCall {..} = case _callType of
       CallFun sym -> do
         let fi = getFunInfo infoTable sym
@@ -241,12 +241,12 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
             return (fi ^. functionCode, frm)
           _ -> runtimeError "invalid indirect call: expected closure on top of value stack"
 
-    getCallFrame :: Member Runtime r => Maybe Location -> Closure -> FunctionInfo -> Int -> Sem r Frame
+    getCallFrame :: (Member Runtime r) => Maybe Location -> Closure -> FunctionInfo -> Int -> Sem r Frame
     getCallFrame loc cl fi argsNum = do
       args <- replicateM argsNum popValueStack
       return $ frameFromFunctionInfo loc fi ((cl ^. closureArgs) ++ args)
 
-    extendClosure :: Member Runtime r => Closure -> Int -> Sem r ()
+    extendClosure :: (Member Runtime r) => Closure -> Int -> Sem r ()
     extendClosure cl n = do
       args <- replicateM n popValueStack
       pushValueStack
@@ -257,7 +257,7 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
             )
         )
 
-    callClosures :: Member Runtime r => Maybe Location -> Bool -> Int -> Code -> Sem r ()
+    callClosures :: (Member Runtime r) => Maybe Location -> Bool -> Int -> Code -> Sem r ()
     callClosures loc isTail argsNum cont = do
       v <- popValueStack
       case v of

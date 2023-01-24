@@ -22,5 +22,5 @@ filterInput absPth HighlightInput {..} =
       _highlightParsed = filterByLoc absPth _highlightParsed
     }
 
-filterByLoc :: HasLoc p => Path Abs File -> [p] -> [p]
+filterByLoc :: (HasLoc p) => Path Abs File -> [p] -> [p]
 filterByLoc p = filter ((== toFilePath p) . (^. intervalFile) . getLoc)

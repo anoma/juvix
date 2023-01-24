@@ -36,7 +36,7 @@ iniState =
 makeLenses ''TranslationState
 
 fromAbstract ::
-  Members '[Error JuvixError, NameIdGen] r =>
+  (Members '[Error JuvixError, NameIdGen] r) =>
   Abstract.AbstractResult ->
   Sem r InternalResult
 fromAbstract abstractResults = do
@@ -68,14 +68,14 @@ fromAbstract abstractResults = do
     noTerminationOption =
       abstractResults
         ^. Abstract.abstractResultEntryPoint
-        . E.entryPointNoTermination
+          . E.entryPointNoTermination
     depInfo = buildDependencyInfo (abstractResults ^. Abstract.resultModules) (abstractResults ^. Abstract.resultExports)
 
-fromAbstractExpression :: Members '[NameIdGen] r => Abstract.Expression -> Sem r Expression
+fromAbstractExpression :: (Members '[NameIdGen] r) => Abstract.Expression -> Sem r Expression
 fromAbstractExpression = goExpression
 
 goModule ::
-  Members '[Reader ExportsTable, State TranslationState, NameIdGen] r =>
+  (Members '[Reader ExportsTable, State TranslationState, NameIdGen] r) =>
   Abstract.TopModule ->
   Sem r Module
 goModule m = do
@@ -115,7 +115,7 @@ unsupported :: Text -> a
 unsupported thing = error ("Abstract to Internal: Not yet supported: " <> thing)
 
 goModuleBody ::
-  Members '[Reader ExportsTable, State TranslationState, NameIdGen] r =>
+  (Members '[Reader ExportsTable, State TranslationState, NameIdGen] r) =>
   [NonEmpty Abstract.FunctionDef] ->
   Abstract.ModuleBody ->
   Sem r ModuleBody
@@ -127,7 +127,7 @@ goModuleBody mutualBlocks b = do
       { _moduleStatements = statements' <> mutualBlocks'
       }
 
-goImport :: Members '[Reader ExportsTable, State TranslationState, NameIdGen] r => Abstract.TopModule -> Sem r (Maybe Include)
+goImport :: (Members '[Reader ExportsTable, State TranslationState, NameIdGen] r) => Abstract.TopModule -> Sem r (Maybe Include)
 goImport m = do
   inc <- gets (HashSet.member (m ^. Abstract.moduleName) . (^. translationStateIncluded))
   if
@@ -143,7 +143,7 @@ goImport m = do
             )
 
 goStatement ::
-  Members '[Reader ExportsTable, State TranslationState, NameIdGen] r =>
+  (Members '[Reader ExportsTable, State TranslationState, NameIdGen] r) =>
   Abstract.Statement ->
   Sem r (Maybe Statement)
 goStatement = \case
@@ -193,7 +193,7 @@ goFunction (Abstract.Function l r) = do
   r' <- goType r
   return (Function l' r')
 
-goFunctionDef :: Members '[NameIdGen] r => Abstract.FunctionDef -> Sem r FunctionDef
+goFunctionDef :: (Members '[NameIdGen] r) => Abstract.FunctionDef -> Sem r FunctionDef
 goFunctionDef f = do
   _funDefClauses' <- mapM (goFunctionClause _funDefName') (f ^. Abstract.funDefClauses)
   _funDefType' <- goType (f ^. Abstract.funDefTypeSig)
@@ -210,7 +210,7 @@ goFunctionDef f = do
     _funDefName' :: Name
     _funDefName' = f ^. Abstract.funDefName
 
-goExample :: Members '[NameIdGen] r => Abstract.Example -> Sem r Example
+goExample :: (Members '[NameIdGen] r) => Abstract.Example -> Sem r Example
 goExample e = do
   e' <- goExpression (e ^. Abstract.exampleExpression)
   return
@@ -219,7 +219,7 @@ goExample e = do
         _exampleId = e ^. Abstract.exampleId
       }
 
-goFunctionClause :: Members '[NameIdGen] r => Name -> Abstract.FunctionClause -> Sem r FunctionClause
+goFunctionClause :: (Members '[NameIdGen] r) => Name -> Abstract.FunctionClause -> Sem r FunctionClause
 goFunctionClause n c = do
   _clauseBody' <- goExpression (c ^. Abstract.clauseBody)
   _clausePatterns' <- mapM goPatternArg (c ^. Abstract.clausePatterns)
@@ -230,7 +230,7 @@ goFunctionClause n c = do
         _clauseBody = _clauseBody'
       }
 
-goPatternArg :: Members '[NameIdGen] r => Abstract.PatternArg -> Sem r PatternArg
+goPatternArg :: (Members '[NameIdGen] r) => Abstract.PatternArg -> Sem r PatternArg
 goPatternArg p = do
   pat' <- goPattern (p ^. Abstract.patternArgPattern)
   return
@@ -240,14 +240,14 @@ goPatternArg p = do
         _patternArgPattern = pat'
       }
 
-goPattern :: Members '[NameIdGen] r => Abstract.Pattern -> Sem r Pattern
+goPattern :: (Members '[NameIdGen] r) => Abstract.Pattern -> Sem r Pattern
 goPattern p = case p of
   Abstract.PatternVariable v -> return (PatternVariable v)
   Abstract.PatternConstructorApp c -> PatternConstructorApp <$> goConstructorApp c
   Abstract.PatternWildcard w -> PatternVariable <$> varFromWildcard w
   Abstract.PatternEmpty -> unsupported "pattern empty"
 
-goConstructorApp :: Members '[NameIdGen] r => Abstract.ConstructorApp -> Sem r ConstructorApp
+goConstructorApp :: (Members '[NameIdGen] r) => Abstract.ConstructorApp -> Sem r ConstructorApp
 goConstructorApp c = do
   _constrAppParameters' <- mapM goPatternArg (c ^. Abstract.constrAppParameters)
   return
@@ -280,7 +280,7 @@ goType e = case e of
   Abstract.ExpressionLambda {} -> unsupported "lambda in types"
   Abstract.ExpressionLet {} -> unsupported "let in types"
 
-goLambda :: forall r. Members '[NameIdGen] r => Abstract.Lambda -> Sem r Lambda
+goLambda :: forall r. (Members '[NameIdGen] r) => Abstract.Lambda -> Sem r Lambda
 goLambda (Abstract.Lambda cl) = case nonEmpty cl of
   Nothing -> unsupported "empty lambda"
   Just cl' -> Lambda <$> mapM goClause cl'
@@ -296,7 +296,7 @@ goLambda (Abstract.Lambda cl) = case nonEmpty cl of
           Explicit -> p
           Implicit -> unsupported "implicit patterns in lambda"
 
-goApplication :: Members '[NameIdGen] r => Abstract.Application -> Sem r Application
+goApplication :: (Members '[NameIdGen] r) => Abstract.Application -> Sem r Application
 goApplication (Abstract.Application f x i) = do
   f' <- goExpression f
   x' <- goExpression x
@@ -310,7 +310,7 @@ goIden i = case i of
   Abstract.IdenAxiom a -> IdenAxiom (a ^. Abstract.axiomRefName)
   Abstract.IdenInductive a -> IdenInductive (a ^. Abstract.inductiveRefName)
 
-goExpressionFunction :: forall r. Members '[NameIdGen] r => Abstract.Function -> Sem r Function
+goExpressionFunction :: forall r. (Members '[NameIdGen] r) => Abstract.Function -> Sem r Function
 goExpressionFunction f = do
   l' <- goParam (f ^. Abstract.funParameter)
   r' <- goExpression (f ^. Abstract.funReturn)
@@ -323,7 +323,7 @@ goExpressionFunction f = do
           return (FunctionParameter (p ^. Abstract.paramName) (p ^. Abstract.paramImplicit) ty')
       | otherwise = unsupported "usages"
 
-goExpression :: Members '[NameIdGen] r => Abstract.Expression -> Sem r Expression
+goExpression :: (Members '[NameIdGen] r) => Abstract.Expression -> Sem r Expression
 goExpression e = case e of
   Abstract.ExpressionIden i -> return (ExpressionIden (goIden i))
   Abstract.ExpressionUniverse u -> return (ExpressionUniverse (goUniverse u))
@@ -334,11 +334,11 @@ goExpression e = case e of
   Abstract.ExpressionHole h -> return (ExpressionHole h)
   Abstract.ExpressionLet l -> ExpressionLet <$> goLet l
 
-goLetClause :: Members '[NameIdGen] r => Abstract.LetClause -> Sem r LetClause
+goLetClause :: (Members '[NameIdGen] r) => Abstract.LetClause -> Sem r LetClause
 goLetClause = \case
   Abstract.LetFunDef f -> LetFunDef <$> goFunctionDef f
 
-goLet :: Members '[NameIdGen] r => Abstract.Let -> Sem r Let
+goLet :: (Members '[NameIdGen] r) => Abstract.Let -> Sem r Let
 goLet l = do
   _letExpression <- goExpression (l ^. Abstract.letExpression)
   _letClauses <- mapM goLetClause (l ^. Abstract.letClauses)
@@ -356,7 +356,7 @@ goInductiveParameter f =
     (Just {}, _, _) -> unsupported "only type variables of small types are allowed"
     (Nothing, _, _) -> unsupported "unnamed inductive parameters"
 
-goInductiveDef :: forall r. Members '[NameIdGen] r => Abstract.InductiveDef -> Sem r InductiveDef
+goInductiveDef :: forall r. (Members '[NameIdGen] r) => Abstract.InductiveDef -> Sem r InductiveDef
 goInductiveDef i
   | not (isSmallType (i ^. Abstract.inductiveType)) = unsupported "inductive indices"
   | otherwise = do

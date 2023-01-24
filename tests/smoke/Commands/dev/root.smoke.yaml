@@ -8,6 +8,7 @@ tests:
       - root
     stdout:
       matches: |
-        .*?/juvix/tests/
+        .*?/(juvix|main)/tests/
+      # contains "main" for the CI
     exit-status: 0
    

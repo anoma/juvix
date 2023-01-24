@@ -2,7 +2,7 @@ module Juvix.Compiler.Asm.Transformation.Validate where
 
 import Juvix.Compiler.Asm.Transformation.Base
 
-validateCode :: forall r. Member (Error AsmError) r => InfoTable -> FunctionInfo -> Code -> Sem r Code
+validateCode :: forall r. (Member (Error AsmError) r) => InfoTable -> FunctionInfo -> Code -> Sem r Code
 validateCode tab fi code = do
   recurse sig (argumentsFromFunctionInfo fi) code
   return code
@@ -16,10 +16,10 @@ validateCode tab fi code = do
           _recurseCase = \_ _ _ _ -> return ()
         }
 
-validateFunction :: Member (Error AsmError) r => InfoTable -> FunctionInfo -> Sem r FunctionInfo
+validateFunction :: (Member (Error AsmError) r) => InfoTable -> FunctionInfo -> Sem r FunctionInfo
 validateFunction tab fi = liftCodeTransformation (validateCode tab fi) fi
 
-validate :: Member (Error AsmError) r => InfoTable -> Sem r InfoTable
+validate :: (Member (Error AsmError) r) => InfoTable -> Sem r InfoTable
 validate tab = liftFunctionTransformation (validateFunction tab) tab
 
 validate' :: InfoTable -> Maybe AsmError

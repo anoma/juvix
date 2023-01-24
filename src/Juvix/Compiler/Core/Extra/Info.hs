@@ -9,7 +9,7 @@ import Juvix.Compiler.Core.Language
 mapInfo :: (Info -> Info) -> Node -> Node
 mapInfo f = umap (modifyInfo f)
 
-removeInfo :: IsInfo i => Key i -> Node -> Node
+removeInfo :: (IsInfo i) => Key i -> Node -> Node
 removeInfo k = mapInfo (Info.delete k)
 
 lookupLocation :: Node -> Maybe Location

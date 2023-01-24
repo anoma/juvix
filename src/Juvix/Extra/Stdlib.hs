@@ -23,7 +23,7 @@ stdlibFiles = mapMaybe helper $(stdlibDir)
     isYamlFile :: Path Rel File -> Bool
     isYamlFile = (== juvixYamlFile)
 
-ensureStdlib :: Members '[Files] r => Path Abs Dir -> [Dependency] -> Sem r ()
+ensureStdlib :: (Members '[Files] r) => Path Abs Dir -> [Dependency] -> Sem r ()
 ensureStdlib buildDir deps =
   whenJust (firstJust isStdLib deps) $ \stdlibRoot ->
     runReader stdlibRoot updateStdlib
@@ -36,7 +36,7 @@ ensureStdlib buildDir deps =
       | dep == Dependency stdLibBuildDir = Just stdLibBuildDir
       | otherwise = Nothing
 
-writeStdlib :: forall r. Members '[Reader StdlibRoot, Files] r => Sem r ()
+writeStdlib :: forall r. (Members '[Reader StdlibRoot, Files] r) => Sem r ()
 writeStdlib = do
   rootDir <- ask
   forM_ (first (rootDir <//>) <$> stdlibFiles) (uncurry writeJuvixFile)
@@ -46,18 +46,18 @@ writeStdlib = do
       ensureDir' (parent p)
       writeFileBS p bs
 
-stdlibVersionFile :: Member (Reader StdlibRoot) r => Sem r (Path Abs File)
+stdlibVersionFile :: (Member (Reader StdlibRoot) r) => Sem r (Path Abs File)
 stdlibVersionFile = (<//> $(mkRelFile ".version")) <$> ask
 
-writeVersion :: forall r. Members '[Reader StdlibRoot, Files] r => Sem r ()
+writeVersion :: forall r. (Members '[Reader StdlibRoot, Files] r) => Sem r ()
 writeVersion = stdlibVersionFile >>= flip writeFile' versionTag
 
-readVersion :: Members '[Reader StdlibRoot, Files] r => Sem r (Maybe Text)
+readVersion :: (Members '[Reader StdlibRoot, Files] r) => Sem r (Maybe Text)
 readVersion = do
   vf <- stdlibVersionFile
   whenMaybeM (fileExists' vf) (readFile' vf)
 
-updateStdlib :: forall r. Members '[Reader StdlibRoot, Files] r => Sem r ()
+updateStdlib :: forall r. (Members '[Reader StdlibRoot, Files] r) => Sem r ()
 updateStdlib =
   whenM shouldUpdate $ do
     whenM

@@ -14,7 +14,7 @@ makeLenses ''IndexTable
 initIndexTable :: IndexTable
 initIndexTable = IndexTable 0 mempty
 
-localAddName :: forall r a. Member (Reader IndexTable) r => Name -> Sem r a -> Sem r a
+localAddName :: forall r a. (Member (Reader IndexTable) r) => Name -> Sem r a -> Sem r a
 localAddName n s = do
   updateFn <- update
   local updateFn s

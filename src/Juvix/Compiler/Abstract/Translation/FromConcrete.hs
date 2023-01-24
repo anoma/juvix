@@ -25,7 +25,7 @@ makeLenses ''ModulesCache
 unsupported :: Text -> a
 unsupported msg = error $ msg <> "Scoped to Abstract: not yet supported"
 
-fromConcrete :: Members '[Error JuvixError, Builtins, NameIdGen] r => Scoper.ScoperResult -> Sem r AbstractResult
+fromConcrete :: (Members '[Error JuvixError, Builtins, NameIdGen] r) => Scoper.ScoperResult -> Sem r AbstractResult
 fromConcrete _resultScoper =
   mapError (JuvixError @ScoperError) $ do
     (_resultTable, _resultModules) <- runInfoTableBuilder (evalState (ModulesCache mempty) (mapM goTopModule ms))
@@ -34,17 +34,17 @@ fromConcrete _resultScoper =
   where
     ms = _resultScoper ^. Scoper.resultModules
 
-fromConcreteExpression :: Members '[Error JuvixError, NameIdGen] r => Scoper.Expression -> Sem r Abstract.Expression
+fromConcreteExpression :: (Members '[Error JuvixError, NameIdGen] r) => Scoper.Expression -> Sem r Abstract.Expression
 fromConcreteExpression = mapError (JuvixError @ScoperError) . ignoreInfoTableBuilder . goExpression
 
 goTopModule ::
-  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r =>
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r) =>
   Module 'Scoped 'ModuleTop ->
   Sem r Abstract.TopModule
 goTopModule = goModule
 
 goLocalModule ::
-  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r =>
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r) =>
   Module 'Scoped 'ModuleLocal ->
   Sem r Abstract.LocalModule
 goLocalModule = goModule
@@ -104,7 +104,7 @@ goSymbol s =
 
 goModuleBody ::
   forall r.
-  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r =>
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r) =>
   [Statement 'Scoped] ->
   Sem r Abstract.ModuleBody
 goModuleBody ss' = do
@@ -141,7 +141,7 @@ goModuleBody ss' = do
 
 goStatement ::
   forall r.
-  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r =>
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r) =>
   Indexed (Statement 'Scoped) ->
   Sem r (Maybe (Indexed Abstract.Statement))
 goStatement (Indexed idx s) =
@@ -159,7 +159,7 @@ goStatement (Indexed idx s) =
 
 goOpenModule ::
   forall r.
-  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r =>
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen, State ModulesCache] r) =>
   OpenModule 'Scoped ->
   Sem r (Maybe Abstract.Statement)
 goOpenModule o
@@ -173,7 +173,7 @@ goOpenModule o
 
 goFunctionDef ::
   forall r.
-  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r =>
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r) =>
   TypeSignature 'Scoped ->
   NonEmpty (FunctionClause 'Scoped) ->
   Sem r Abstract.FunctionDef
@@ -190,7 +190,7 @@ goFunctionDef TypeSignature {..} clauses = do
 
 goExamples ::
   forall r.
-  Members '[Error ScoperError, InfoTableBuilder] r =>
+  (Members '[Error ScoperError, InfoTableBuilder] r) =>
   Maybe (Judoc 'Scoped) ->
   Sem r [Abstract.Example]
 goExamples = mapM goExample . maybe [] judocExamples
@@ -205,7 +205,7 @@ goExamples = mapM goExample . maybe [] judocExamples
           }
 
 goFunctionClause ::
-  Members '[Error ScoperError, InfoTableBuilder] r =>
+  (Members '[Error ScoperError, InfoTableBuilder] r) =>
   FunctionClause 'Scoped ->
   Sem r Abstract.FunctionClause
 goFunctionClause FunctionClause {..} = do
@@ -219,7 +219,7 @@ goFunctionClause FunctionClause {..} = do
       }
 
 goInductiveParameter ::
-  Members '[Error ScoperError, InfoTableBuilder] r =>
+  (Members '[Error ScoperError, InfoTableBuilder] r) =>
   InductiveParameter 'Scoped ->
   Sem r Abstract.FunctionParameter
 goInductiveParameter InductiveParameter {..} = do
@@ -233,7 +233,7 @@ goInductiveParameter InductiveParameter {..} = do
       }
 
 registerBuiltinInductive ::
-  Members '[InfoTableBuilder, Error ScoperError, Builtins] r =>
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins] r) =>
   Abstract.InductiveDef ->
   BuiltinInductive ->
   Sem r ()
@@ -242,7 +242,7 @@ registerBuiltinInductive d = \case
   BuiltinBool -> registerBoolDef d
 
 registerBuiltinFunction ::
-  Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r =>
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r) =>
   Abstract.FunctionDef ->
   BuiltinFunction ->
   Sem r ()
@@ -259,7 +259,7 @@ registerBuiltinFunction d = \case
   BuiltinBoolIf -> registerIf d
 
 registerBuiltinAxiom ::
-  Members '[InfoTableBuilder, Error ScoperError, Builtins] r =>
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins] r) =>
   Abstract.AxiomDef ->
   BuiltinAxiom ->
   Sem r ()
@@ -272,7 +272,7 @@ registerBuiltinAxiom d = \case
   BuiltinBoolPrint -> registerBoolPrint d
 
 goInductive ::
-  Members '[InfoTableBuilder, Builtins, Error ScoperError] r =>
+  (Members '[InfoTableBuilder, Builtins, Error ScoperError] r) =>
   InductiveDef 'Scoped ->
   Sem r Abstract.InductiveDef
 goInductive ty@InductiveDef {..} = do
@@ -297,7 +297,7 @@ goInductive ty@InductiveDef {..} = do
   return (inductiveInfo ^. inductiveInfoDef)
 
 goConstructorDef ::
-  Members [Error ScoperError, InfoTableBuilder] r =>
+  (Members [Error ScoperError, InfoTableBuilder] r) =>
   InductiveConstructorDef 'Scoped ->
   Sem r Abstract.InductiveConstructorDef
 goConstructorDef InductiveConstructorDef {..} = do
@@ -312,7 +312,7 @@ goConstructorDef InductiveConstructorDef {..} = do
 
 goExpression ::
   forall r.
-  Members [Error ScoperError, InfoTableBuilder] r =>
+  (Members [Error ScoperError, InfoTableBuilder] r) =>
   Expression ->
   Sem r Abstract.Expression
 goExpression = \case
@@ -394,7 +394,7 @@ goExpression = \case
       r' <- goExpression r
       return (Abstract.Application l'' r' Explicit)
 
-goLambda :: forall r. Members '[Error ScoperError, InfoTableBuilder] r => Lambda 'Scoped -> Sem r Abstract.Lambda
+goLambda :: forall r. (Members '[Error ScoperError, InfoTableBuilder] r) => Lambda 'Scoped -> Sem r Abstract.Lambda
 goLambda (Lambda cl) = Abstract.Lambda <$> mapM goClause cl
   where
     goClause :: LambdaClause 'Scoped -> Sem r Abstract.LambdaClause
@@ -406,7 +406,7 @@ goLambda (Lambda cl) = Abstract.Lambda <$> mapM goClause cl
 goUniverse :: Universe -> Universe
 goUniverse = id
 
-goFunction :: Members '[Error ScoperError, InfoTableBuilder] r => Function 'Scoped -> Sem r Abstract.Function
+goFunction :: (Members '[Error ScoperError, InfoTableBuilder] r) => Function 'Scoped -> Sem r Abstract.Function
 goFunction (Function l r) = do
   _funParameter <- goFunctionParameter l
   _funReturn <- goExpression r
@@ -419,7 +419,7 @@ goUsage :: Maybe Usage -> Usage
 goUsage = fromMaybe defaultUsage
 
 goFunctionParameter ::
-  Members '[Error ScoperError, InfoTableBuilder] r =>
+  (Members '[Error ScoperError, InfoTableBuilder] r) =>
   FunctionParameter 'Scoped ->
   Sem r Abstract.FunctionParameter
 goFunctionParameter (FunctionParameter {..}) = do
@@ -433,30 +433,30 @@ goFunctionParameter (FunctionParameter {..}) = do
       }
 
 goPatternApplication ::
-  Members '[Error ScoperError, InfoTableBuilder] r =>
+  (Members '[Error ScoperError, InfoTableBuilder] r) =>
   PatternApp ->
   Sem r Abstract.ConstructorApp
 goPatternApplication a = uncurry Abstract.ConstructorApp <$> viewApp (PatternApplication a)
 
 goPatternConstructor ::
-  Members '[Error ScoperError, InfoTableBuilder] r =>
+  (Members '[Error ScoperError, InfoTableBuilder] r) =>
   ConstructorRef ->
   Sem r Abstract.ConstructorApp
 goPatternConstructor a = uncurry Abstract.ConstructorApp <$> viewApp (PatternConstructor a)
 
 goInfixPatternApplication ::
-  Members '[Error ScoperError, InfoTableBuilder] r =>
+  (Members '[Error ScoperError, InfoTableBuilder] r) =>
   PatternInfixApp ->
   Sem r Abstract.ConstructorApp
 goInfixPatternApplication a = uncurry Abstract.ConstructorApp <$> viewApp (PatternInfixApplication a)
 
 goPostfixPatternApplication ::
-  Members '[Error ScoperError, InfoTableBuilder] r =>
+  (Members '[Error ScoperError, InfoTableBuilder] r) =>
   PatternPostfixApp ->
   Sem r Abstract.ConstructorApp
 goPostfixPatternApplication a = uncurry Abstract.ConstructorApp <$> viewApp (PatternPostfixApplication a)
 
-viewApp :: forall r. Members '[Error ScoperError, InfoTableBuilder] r => Pattern -> Sem r (Abstract.ConstructorRef, [Abstract.PatternArg])
+viewApp :: forall r. (Members '[Error ScoperError, InfoTableBuilder] r) => Pattern -> Sem r (Abstract.ConstructorRef, [Abstract.PatternArg])
 viewApp p = case p of
   PatternConstructor c -> return (goConstructorRef c, [])
   PatternApplication app@(PatternApp _ r) -> do
@@ -482,7 +482,7 @@ viewApp p = case p of
 goConstructorRef :: ConstructorRef -> Abstract.ConstructorRef
 goConstructorRef (ConstructorRef' n) = Abstract.ConstructorRef (goName n)
 
-goPatternArg :: Members '[Error ScoperError, InfoTableBuilder] r => PatternArg -> Sem r Abstract.PatternArg
+goPatternArg :: (Members '[Error ScoperError, InfoTableBuilder] r) => PatternArg -> Sem r Abstract.PatternArg
 goPatternArg p = do
   pat' <- goPattern (p ^. patternArgPattern)
   return
@@ -492,7 +492,7 @@ goPatternArg p = do
         _patternArgPattern = pat'
       }
 
-goPattern :: Members '[Error ScoperError, InfoTableBuilder] r => Pattern -> Sem r Abstract.Pattern
+goPattern :: (Members '[Error ScoperError, InfoTableBuilder] r) => Pattern -> Sem r Abstract.Pattern
 goPattern p = case p of
   PatternVariable a -> return $ Abstract.PatternVariable (goSymbol a)
   PatternConstructor c -> Abstract.PatternConstructorApp <$> goPatternConstructor c
@@ -502,7 +502,7 @@ goPattern p = case p of
   PatternWildcard i -> return (Abstract.PatternWildcard i)
   PatternEmpty {} -> return Abstract.PatternEmpty
 
-goAxiom :: Members '[InfoTableBuilder, Error ScoperError, Builtins] r => AxiomDef 'Scoped -> Sem r Abstract.AxiomDef
+goAxiom :: (Members '[InfoTableBuilder, Error ScoperError, Builtins] r) => AxiomDef 'Scoped -> Sem r Abstract.AxiomDef
 goAxiom a = do
   _axiomType' <- goExpression (a ^. axiomType)
   let axiom =

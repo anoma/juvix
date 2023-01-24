@@ -45,7 +45,7 @@ curryType ty = case typeArgs ty of
     let ty' = curryType (typeTarget ty)
      in foldr (\tyarg ty'' -> mkTypeFun [tyarg] ty'') (typeTarget ty') tyargs
 
-unifyTypes :: forall r. Members '[Error AsmError, Reader (Maybe Location), Reader InfoTable] r => Type -> Type -> Sem r Type
+unifyTypes :: forall r. (Members '[Error AsmError, Reader (Maybe Location), Reader InfoTable] r) => Type -> Type -> Sem r Type
 unifyTypes ty1 ty2 = case (ty1, ty2) of
   (TyDynamic, x) -> return x
   (x, TyDynamic) -> return x
@@ -105,7 +105,7 @@ unifyTypes ty1 ty2 = case (ty1, ty2) of
       tab <- ask
       throw $ AsmError loc ("not unifiable: " <> ppTrace tab ty1 <> ", " <> ppTrace tab ty2)
 
-unifyTypes' :: Member (Error AsmError) r => Maybe Location -> InfoTable -> Type -> Type -> Sem r Type
+unifyTypes' :: (Member (Error AsmError) r) => Maybe Location -> InfoTable -> Type -> Type -> Sem r Type
 unifyTypes' loc tab ty1 ty2 =
   runReader loc $
     runReader tab $

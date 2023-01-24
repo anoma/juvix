@@ -18,7 +18,7 @@ data NegTest a = NegTest
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/negative")
 
-testDescr :: Typeable a => NegTest a -> TestDescr
+testDescr :: (Typeable a) => NegTest a -> TestDescr
 testDescr NegTest {..} =
   let tRoot = root <//> _relDir
       file' = tRoot <//> _file

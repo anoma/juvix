@@ -10,7 +10,7 @@ import Juvix.Compiler.Internal.Translation
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context
 import Juvix.Prelude
 
-unfoldPolyApplication :: Member (Reader TypesTable) r => Application -> Sem r (Expression, [Expression])
+unfoldPolyApplication :: (Member (Reader TypesTable) r) => Application -> Sem r (Expression, [Expression])
 unfoldPolyApplication a =
   let (f, args) = unfoldApplication a
    in case f of
@@ -22,7 +22,7 @@ unfoldPolyApplication a =
         ExpressionLambda {} -> return (f, toList args)
         _ -> impossible
 
-filterCompileTimeArgsOrPatterns :: Member (Reader TypesTable) r => Name -> [a] -> Sem r [a]
+filterCompileTimeArgsOrPatterns :: (Member (Reader TypesTable) r) => Name -> [a] -> Sem r [a]
 filterCompileTimeArgsOrPatterns idenName lst = do
   tab <- ask
   let funParams = fst (unfoldFunType (ty tab))

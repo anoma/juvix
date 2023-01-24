@@ -17,29 +17,29 @@ import Juvix.Compiler.Core.Pretty.Base qualified as Core
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 
-doc :: PrettyCode c => Options -> c -> Doc Ann
+doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts =
   run
     . runReader opts
     . ppCode
 
 class PrettyCode c where
-  ppCode :: Member (Reader Options) r => c -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => c -> Sem r (Doc Ann)
 
-runPrettyCode :: PrettyCode c => Options -> c -> Doc Ann
+runPrettyCode :: (PrettyCode c) => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
 wrapCore ::
   forall r' c.
-  Member (Reader Options) r' =>
-  (forall r. Member (Reader Core.Options) r => c -> Sem r (Doc Ann)) ->
+  (Member (Reader Options) r') =>
+  (forall r. (Member (Reader Core.Options) r) => c -> Sem r (Doc Ann)) ->
   c ->
   Sem r' (Doc Ann)
 wrapCore f c = do
   opts <- ask
   return $ run $ runReader (toCoreOptions opts) $ f c
 
-ppConstrName :: Member (Reader Options) r => Tag -> Sem r (Doc Ann)
+ppConstrName :: (Member (Reader Options) r) => Tag -> Sem r (Doc Ann)
 ppConstrName tag = do
   opts <- ask
   let tab = opts ^. optInfoTable
@@ -48,13 +48,13 @@ ppConstrName tag = do
     (\ci -> return $ annotate (AnnKind KNameConstructor) (pretty (ci ^. constructorName)))
     (HashMap.lookup tag (tab ^. infoConstrs))
 
-ppIndName :: Member (Reader Options) r => Symbol -> Sem r (Doc Ann)
+ppIndName :: (Member (Reader Options) r) => Symbol -> Sem r (Doc Ann)
 ppIndName sym = do
   opts <- ask
   let ci = fromMaybe impossible $ HashMap.lookup sym (opts ^. optInfoTable . infoInductives)
   return $ annotate (AnnKind KNameInductive) (pretty (ci ^. inductiveName))
 
-ppFunName :: Member (Reader Options) r => Symbol -> Sem r (Doc Ann)
+ppFunName :: (Member (Reader Options) r) => Symbol -> Sem r (Doc Ann)
 ppFunName sym = do
   opts <- ask
   let tab = opts ^. optInfoTable
@@ -116,7 +116,7 @@ instance PrettyCode ValueStack where
     ppCode $ reverse _valueStack
 
 instance PrettyCode Frame where
-  ppCode :: Member (Reader Options) r => Frame -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => Frame -> Sem r (Doc Ann)
   ppCode Frame {..} = do
     n <- maybe (return $ annotate (AnnKind KNameFunction) $ pretty (Str.main :: String)) ppFunName _frameFunction
     let header =
@@ -137,21 +137,21 @@ instance PrettyCode Frame where
         <> line
 
 instance PrettyCode RuntimeState where
-  ppCode :: Member (Reader Options) r => RuntimeState -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => RuntimeState -> Sem r (Doc Ann)
   ppCode RuntimeState {..} = do
     frm <- ppCode _runtimeFrame
     calls <- mapM (ppCode . (^. contFrame)) (_runtimeCallStack ^. callStack)
     return $ frm <> fold calls
 
 instance PrettyCode TypeInductive where
-  ppCode :: Member (Reader Options) r => TypeInductive -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => TypeInductive -> Sem r (Doc Ann)
   ppCode TypeInductive {..} = do
     opts <- ask
     let ii = getInductiveInfo (opts ^. optInfoTable) _typeInductiveSymbol
     return $ annotate (AnnKind KNameInductive) (pretty (ii ^. inductiveName))
 
 instance PrettyCode TypeConstr where
-  ppCode :: Member (Reader Options) r => TypeConstr -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => TypeConstr -> Sem r (Doc Ann)
   ppCode TypeConstr {..} = do
     opts <- ask
     let tab = opts ^. optInfoTable
@@ -163,7 +163,7 @@ instance PrettyCode TypeConstr where
     return $ iname <> kwColon <> cname <> encloseSep "(" ")" ", " args
 
 instance PrettyCode TypeFun where
-  ppCode :: Member (Reader Options) r => TypeFun -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => TypeFun -> Sem r (Doc Ann)
   ppCode TypeFun {..} = do
     l <-
       if
@@ -176,7 +176,7 @@ instance PrettyCode TypeFun where
     return $ l <+> kwArrow <+> r
 
 instance PrettyCode Type where
-  ppCode :: Member (Reader Options) r => Type -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => Type -> Sem r (Doc Ann)
   ppCode = \case
     TyDynamic ->
       return $ annotate (AnnKind KNameInductive) (pretty (Str.mul :: String))
@@ -205,20 +205,20 @@ instance PrettyCode DirectRef where
     TempRef off -> return $ variable Str.tmp <> lbracket <> integer off <> rbracket
 
 instance PrettyCode Field where
-  ppCode :: Member (Reader Options) r => Field -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => Field -> Sem r (Doc Ann)
   ppCode Field {..} = do
     dr <- ppCode _fieldRef
     ctr <- ppConstrName _fieldTag
     return $ dr <> dot <> ctr <> lbracket <> integer _fieldOffset <> rbracket
 
 instance PrettyCode MemValue where
-  ppCode :: Member (Reader Options) r => MemValue -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => MemValue -> Sem r (Doc Ann)
   ppCode = \case
     DRef dr -> ppCode dr
     ConstrRef fld -> ppCode fld
 
 instance PrettyCode Value where
-  ppCode :: Member (Reader Options) r => Value -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => Value -> Sem r (Doc Ann)
   ppCode = \case
     ConstInt v ->
       return $ annotate AnnLiteralInteger (pretty v)
@@ -235,7 +235,7 @@ instance PrettyCode Value where
     Ref mval ->
       ppCode mval
 
-ppCall :: Member (Reader Options) r => Doc Ann -> InstrCall -> Sem r (Doc Ann)
+ppCall :: (Member (Reader Options) r) => Doc Ann -> InstrCall -> Sem r (Doc Ann)
 ppCall call InstrCall {..} = case _callType of
   CallFun sym -> do
     fn <- ppFunName sym
@@ -244,7 +244,7 @@ ppCall call InstrCall {..} = case _callType of
     return $ call <+> variable Str.dollar <+> integer _callArgsNum
 
 instance PrettyCode Instruction where
-  ppCode :: Member (Reader Options) r => Instruction -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => Instruction -> Sem r (Doc Ann)
   ppCode = \case
     Binop IntAdd -> return $ primitive Str.instrAdd
     Binop IntSub -> return $ primitive Str.instrSub
@@ -277,20 +277,20 @@ instance PrettyCode Instruction where
       return $ primitive Str.instrTccall <+> integer _callClosuresArgsNum
     Return -> return $ primitive Str.instrReturn
 
-ppCodeCode :: Member (Reader Options) r => Code -> Sem r (Doc Ann)
+ppCodeCode :: (Member (Reader Options) r) => Code -> Sem r (Doc Ann)
 ppCodeCode x = do
   cs <- mapM ppCode x
   return $ vcat $ map (<> semi) cs
 
 instance PrettyCode CaseBranch where
-  ppCode :: Member (Reader Options) r => CaseBranch -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => CaseBranch -> Sem r (Doc Ann)
   ppCode CaseBranch {..} = do
     name <- ppConstrName _caseBranchTag
     br <- ppCodeCode _caseBranchCode
     return $ name <> colon <+> braces' br
 
 instance PrettyCode Command where
-  ppCode :: Member (Reader Options) r => Command -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => Command -> Sem r (Doc Ann)
   ppCode = \case
     Instr CmdInstr {..} -> ppCode _cmdInstrInstruction
     Branch CmdBranch {..} -> do
@@ -320,7 +320,7 @@ instance PrettyCode Command where
         Nothing -> return brs
       return $ primitive Str.case_ <+> name <+> braces' (vsep brs')
 
-instance PrettyCode a => PrettyCode [a] where
+instance (PrettyCode a) => PrettyCode [a] where
   ppCode x = do
     cs <- mapM ppCode x
     return $ encloseSep "[" "]" ", " cs
@@ -338,7 +338,7 @@ instance PrettyCode FunctionInfo where
         <+> targetty
         <+> braces' c
 
-ppFunSig :: Member (Reader Options) r => FunctionInfo -> Sem r (Doc Ann)
+ppFunSig :: (Member (Reader Options) r) => FunctionInfo -> Sem r (Doc Ann)
 ppFunSig FunctionInfo {..} = do
   argtys <- mapM ppCode (typeArgs _functionType)
   targetty <- ppCode (typeTarget _functionType)
@@ -376,7 +376,7 @@ parensIf t = if t then parens else id
 braces' :: Doc Ann -> Doc Ann
 braces' d = braces (line <> indent' d <> line)
 
-integer :: Pretty a => a -> Doc Ann
+integer :: (Pretty a) => a -> Doc Ann
 integer i = annotate AnnLiteralInteger (pretty i)
 
 constr :: Text -> Doc Ann

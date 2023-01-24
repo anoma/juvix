@@ -14,7 +14,7 @@ import System.PosixCompat.Files qualified as P
 
 runFilesIO ::
   forall r a.
-  Member (Embed IO) r =>
+  (Member (Embed IO) r) =>
   Sem (Files ': r) a ->
   Sem (Error FilesError ': r) a
 runFilesIO = reinterpret helper

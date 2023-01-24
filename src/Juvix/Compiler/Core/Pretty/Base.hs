@@ -19,16 +19,16 @@ import Juvix.Compiler.Core.Pretty.Options
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 
-doc :: PrettyCode c => Options -> c -> Doc Ann
+doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts =
   run
     . runReader opts
     . ppCode
 
 class PrettyCode c where
-  ppCode :: Member (Reader Options) r => c -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => c -> Sem r (Doc Ann)
 
-runPrettyCode :: PrettyCode c => Options -> c -> Doc Ann
+runPrettyCode :: (PrettyCode c) => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
 instance PrettyCode BuiltinOp where
@@ -67,7 +67,7 @@ instance PrettyCode Primitive where
 ppName :: NameKind -> Text -> Sem r (Doc Ann)
 ppName kind name = return $ annotate (AnnKind kind) (pretty name)
 
-ppCodeVar' :: Member (Reader Options) r => Text -> Var' i -> Sem r (Doc Ann)
+ppCodeVar' :: (Member (Reader Options) r) => Text -> Var' i -> Sem r (Doc Ann)
 ppCodeVar' name v = do
   let name' = annotate (AnnKind KNameLocal) (pretty name)
   showDeBruijn <- asks (^. optShowDeBruijnIndices)
@@ -126,7 +126,7 @@ instance (Pretty k, PrettyCode a) => PrettyCode (Map k a) where
           ]
     return $ braces m'
 
-instance PrettyCode a => PrettyCode (BinderList a) where
+instance (PrettyCode a) => PrettyCode (BinderList a) where
   ppCode bl = do
     m <-
       sequence
@@ -137,7 +137,7 @@ instance PrettyCode a => PrettyCode (BinderList a) where
         ]
     return $ brackets (hsep $ punctuate "," m)
 
-instance PrettyCode a => PrettyCode (Binder' a) where
+instance (PrettyCode a) => PrettyCode (Binder' a) where
   ppCode (Binder mname _ ty) = do
     let name' = case mname of
           "" -> "_"
@@ -209,13 +209,13 @@ instance PrettyCode Pattern where
     PatBinder x -> ppCode x
     PatConstr x -> ppCode x
 
-ppPatterns :: Member (Reader Options) r => NonEmpty Pattern -> Sem r (Doc Ann)
+ppPatterns :: (Member (Reader Options) r) => NonEmpty Pattern -> Sem r (Doc Ann)
 ppPatterns pats = do
   ps' <- mapM ppCode pats
   return $ hsep (punctuate comma (toList ps'))
 
 instance PrettyCode Let where
-  ppCode :: forall r. Member (Reader Options) r => Let -> Sem r (Doc Ann)
+  ppCode :: forall r. (Member (Reader Options) r) => Let -> Sem r (Doc Ann)
   ppCode x = do
     let binder = x ^. letItem . letItemBinder
         name = binder ^. binderName
@@ -227,7 +227,7 @@ instance PrettyCode Let where
           ppCodeLet' name mty x
 
 instance PrettyCode LetRec where
-  ppCode :: forall r. Member (Reader Options) r => LetRec -> Sem r (Doc Ann)
+  ppCode :: forall r. (Member (Reader Options) r) => LetRec -> Sem r (Doc Ann)
   ppCode LetRec {..} = do
     names <- mapM (getName . (^. letItemBinder)) _letRecValues
     vs <- mapM (ppCode . (^. letItemValue)) _letRecValues
@@ -247,7 +247,7 @@ instance PrettyCode LetRec where
       getName i = ppName KNameLocal (i ^. binderName)
 
 instance PrettyCode Node where
-  ppCode :: forall r. Member (Reader Options) r => Node -> Sem r (Doc Ann)
+  ppCode :: forall r. (Member (Reader Options) r) => Node -> Sem r (Doc Ann)
   ppCode node = case node of
     NVar x ->
       let name = getInfoName (x ^. varInfo)
@@ -351,14 +351,14 @@ instance PrettyCode Stripped.Node where
        in ppCodeCase' branchBinderNames branchTagNames x
 
 instance PrettyCode ConstructorInfo where
-  ppCode :: Member (Reader Options) r => ConstructorInfo -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => ConstructorInfo -> Sem r (Doc Ann)
   ppCode ci = do
     name <- ppName KNameConstructor (ci ^. constructorName)
     ty <- ppCode (ci ^. constructorType)
     return $ name <+> colon <+> ty
 
 instance PrettyCode InfoTable where
-  ppCode :: forall r. Member (Reader Options) r => InfoTable -> Sem r (Doc Ann)
+  ppCode :: forall r. (Member (Reader Options) r) => InfoTable -> Sem r (Doc Ann)
   ppCode tbl = do
     tys <- ppInductives (toList (tbl ^. infoInductives))
     ctx' <- ppContext (tbl ^. identContext)
@@ -393,14 +393,14 @@ instance PrettyCode InfoTable where
             return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line))
 
 instance PrettyCode Stripped.ArgumentInfo where
-  ppCode :: Member (Reader Options) r => Stripped.ArgumentInfo -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => Stripped.ArgumentInfo -> Sem r (Doc Ann)
   ppCode Stripped.ArgumentInfo {..} = do
     name <- ppName KNameLocal _argumentName
     ty <- ppCode _argumentType
     return $ name <+> colon <+> ty
 
 instance PrettyCode Stripped.InfoTable where
-  ppCode :: forall r. Member (Reader Options) r => Stripped.InfoTable -> Sem r (Doc Ann)
+  ppCode :: forall r. (Member (Reader Options) r) => Stripped.InfoTable -> Sem r (Doc Ann)
   ppCode tbl = do
     ctx' <- ppFunctions (tbl ^. Stripped.infoFunctions)
     return ("-- Functions" <> line <> ctx' <> line)
@@ -417,10 +417,10 @@ instance PrettyCode Stripped.InfoTable where
             body' <- ppCode (fi ^. Stripped.functionBody)
             return (kwDef <+> sym' <> encloseSep lparen rparen ", " args <+> kwAssign <+> body')
 
-instance PrettyCode a => PrettyCode (NonEmpty a) where
+instance (PrettyCode a) => PrettyCode (NonEmpty a) where
   ppCode x = ppCode (toList x)
 
-instance PrettyCode a => PrettyCode [a] where
+instance (PrettyCode a) => PrettyCode [a] where
   ppCode x = do
     cs <- mapM ppCode x
     return $ encloseSep "(" ")" ", " cs

@@ -58,19 +58,19 @@ documentedMessage w = uncurry DocumentedMessage (first (baseUrl <>) warningInfo)
     baseUrl :: Text
     baseUrl = "https://docs.juvix.org/tooling/doctor.html#"
 
-heading :: Member Log r => Text -> Sem r ()
+heading :: (Member Log r) => Text -> Sem r ()
 heading = log . ("> " <>)
 
-warning :: Member Log r => Text -> Sem r ()
+warning :: (Member Log r) => Text -> Sem r ()
 warning = log . ("  ! " <>)
 
 type DoctorEff = '[Log, Embed IO]
 
-checkCmdOnPath :: Members DoctorEff r => String -> [Text] -> Sem r ()
+checkCmdOnPath :: (Members DoctorEff r) => String -> [Text] -> Sem r ()
 checkCmdOnPath cmd errMsg =
   whenM (isNothing <$> findExecutable (relFile cmd)) (mapM_ warning errMsg)
 
-checkClangTargetSupported :: Members DoctorEff r => String -> [Text] -> Sem r ()
+checkClangTargetSupported :: (Members DoctorEff r) => String -> [Text] -> Sem r ()
 checkClangTargetSupported target errMsg = do
   (code, _, _) <-
     embed
@@ -81,25 +81,25 @@ checkClangTargetSupported target errMsg = do
       )
   unless (code == ExitSuccess) (mapM_ warning errMsg)
 
-checkClangVersion :: Members DoctorEff r => Integer -> [Text] -> Sem r ()
+checkClangVersion :: (Members DoctorEff r) => Integer -> [Text] -> Sem r ()
 checkClangVersion expectedVersion errMsg = do
   versionString <- embed (P.readProcess "clang" ["-dumpversion"] "")
   case headMay (splitOn "." versionString) >>= readMaybe of
     Just majorVersion -> unless (majorVersion >= expectedVersion) (mapM_ warning errMsg)
     Nothing -> warning "Could not determine clang version"
 
-checkEnvVarSet :: Members DoctorEff r => String -> [Text] -> Sem r ()
+checkEnvVarSet :: (Members DoctorEff r) => String -> [Text] -> Sem r ()
 checkEnvVarSet var errMsg = do
   whenM (isNothing <$> embed (E.lookupEnv var)) (mapM_ warning errMsg)
 
-getLatestRelease :: Members '[Embed IO, Fail] r => Sem r GithubRelease
+getLatestRelease :: (Members '[Embed IO, Fail] r) => Sem r GithubRelease
 getLatestRelease = do
   request' <- failFromException (parseRequest "https://api.github.com/repos/anoma/juvix/releases/latest")
   let request = setRequestHeaders [("user-agent", "curl/7.79.1"), ("Accept", "application/vnd.github+json")] request'
   response <- failFromException (httpJSON request)
   return (getResponseBody response)
 
-checkVersion :: Members DoctorEff r => Sem r ()
+checkVersion :: (Members DoctorEff r) => Sem r ()
 checkVersion = do
   heading "Checking latest Juvix release on Github..."
   let tagName = "v" <> V.versionDoc
@@ -119,7 +119,7 @@ documentedCheck check w = check msg
     msg :: [Text]
     msg = [dmsg ^. documentedMessageMessage, dmsg ^. documentedMessageUrl]
 
-checkClang :: Members DoctorEff r => Sem r ()
+checkClang :: (Members DoctorEff r) => Sem r ()
 checkClang = do
   heading "Checking for clang..."
   documentedCheck (checkCmdOnPath "clang") NoClang
@@ -134,12 +134,12 @@ checkClang = do
   heading "Checking that WASI_SYSROOT_PATH is set..."
   documentedCheck (checkEnvVarSet "WASI_SYSROOT_PATH") NoSysroot
 
-checkWasmer :: Members DoctorEff r => Sem r ()
+checkWasmer :: (Members DoctorEff r) => Sem r ()
 checkWasmer = do
   heading "Checking for wasmer..."
   documentedCheck (checkCmdOnPath "wasmer") NoWasmer
 
-runCommand :: Members DoctorEff r => DoctorOptions -> Sem r ()
+runCommand :: (Members DoctorEff r) => DoctorOptions -> Sem r ()
 runCommand opts = do
   checkClang
   checkWasmer

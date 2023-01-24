@@ -20,7 +20,7 @@ import Juvix.Data.Effect.NameIdGen
 import Juvix.Prelude hiding (fromEither)
 
 arityChecking ::
-  Members '[Error JuvixError, NameIdGen] r =>
+  (Members '[Error JuvixError, NameIdGen] r) =>
   InternalResult ->
   Sem r ArityChecking.InternalArityResult
 arityChecking res@InternalResult {..} =
@@ -36,7 +36,7 @@ arityChecking res@InternalResult {..} =
     table = buildTable _resultModules
 
 arityCheckExpression ::
-  Members '[Error JuvixError, NameIdGen] r =>
+  (Members '[Error JuvixError, NameIdGen] r) =>
   InternalResult ->
   Expression ->
   Sem r Expression
@@ -48,7 +48,7 @@ arityCheckExpression InternalResult {..} exp =
     table = buildTable _resultModules
 
 typeCheckExpressionType ::
-  Members '[Error JuvixError, NameIdGen, Builtins] r =>
+  (Members '[Error JuvixError, NameIdGen, Builtins] r) =>
   InternalTypedResult ->
   Expression ->
   Sem r TypedExpression
@@ -67,21 +67,21 @@ typeCheckExpressionType (InternalTypedResult {..}) exp =
     table = buildTable _resultModules
 
 typeCheckExpression ::
-  Members '[Error JuvixError, NameIdGen, Builtins] r =>
+  (Members '[Error JuvixError, NameIdGen, Builtins] r) =>
   InternalTypedResult ->
   Expression ->
   Sem r Expression
 typeCheckExpression res exp = fmap (^. typedExpression) (typeCheckExpressionType res exp)
 
 inferExpressionType ::
-  Members '[Error JuvixError, NameIdGen, Builtins] r =>
+  (Members '[Error JuvixError, NameIdGen, Builtins] r) =>
   InternalTypedResult ->
   Expression ->
   Sem r Expression
 inferExpressionType res exp = fmap (^. typedType) (typeCheckExpressionType res exp)
 
 typeChecking ::
-  Members '[Error JuvixError, NameIdGen, Builtins] r =>
+  (Members '[Error JuvixError, NameIdGen, Builtins] r) =>
   ArityChecking.InternalArityResult ->
   Sem r InternalTypedResult
 typeChecking res@ArityChecking.InternalArityResult {..} =

@@ -12,12 +12,12 @@ import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 import Text.Megaparsec.Pos qualified as M
 
-runCommand :: forall r. Members '[Embed IO, App] r => CoreReplOptions -> Sem r ()
+runCommand :: forall r. (Members '[Embed IO, App] r) => CoreReplOptions -> Sem r ()
 runCommand opts = do
   showReplWelcome
   runRepl opts Core.emptyInfoTable
 
-runRepl :: forall r. Members '[Embed IO, App] r => CoreReplOptions -> Core.InfoTable -> Sem r ()
+runRepl :: forall r. (Members '[Embed IO, App] r) => CoreReplOptions -> Core.InfoTable -> Sem r ()
 runRepl opts tab = do
   embed (putStr "> ")
   embed (hFlush stdout)
@@ -86,7 +86,7 @@ runRepl opts tab = do
       where
         defaultLoc = singletonInterval (mkLoc 0 (M.initialPos "stdin"))
 
-showReplWelcome :: Members '[Embed IO, App] r => Sem r ()
+showReplWelcome :: (Members '[Embed IO, App] r) => Sem r ()
 showReplWelcome = embed $ do
   putStrLn "JuvixCore REPL"
   putStrLn ""

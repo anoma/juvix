@@ -17,28 +17,28 @@ newtype ApeParams a = ApeParams
 
 makeLenses ''ApeParams
 
-runApe :: forall a e. IsApe a e => ApeParams e -> a -> Doc CodeAnn
+runApe :: forall a e. (IsApe a e) => ApeParams e -> a -> Doc CodeAnn
 runApe p a = run . runReader p . ppApe $ ape
   where
     ape :: Ape e
     ape = toApe a
 
-ppLeaf :: Members '[Reader (ApeParams a)] r => Leaf a -> Sem r (Doc CodeAnn)
+ppLeaf :: (Members '[Reader (ApeParams a)] r) => Leaf a -> Sem r (Doc CodeAnn)
 ppLeaf l = do
   pp <- asks (^. apePP)
   return (pp (l ^. leafExpr))
 
-ppApe :: Members '[Reader (ApeParams a)] r => Ape a -> Sem r (Doc CodeAnn)
+ppApe :: (Members '[Reader (ApeParams a)] r) => Ape a -> Sem r (Doc CodeAnn)
 ppApe = ppCape . toCape
 
-ppCape :: Members '[Reader (ApeParams a)] r => Cape a -> Sem r (Doc CodeAnn)
+ppCape :: (Members '[Reader (ApeParams a)] r) => Cape a -> Sem r (Doc CodeAnn)
 ppCape = \case
   CapeLeaf l -> ppLeaf l
   CapeChain c -> ppChain c
   CapeAppChain c -> ppAppChain c
   CapeUChain c -> ppUChain c
 
-ppAppChain :: forall a r. Members '[Reader (ApeParams a)] r => AppChain a -> Sem r (Doc CodeAnn)
+ppAppChain :: forall a r. (Members '[Reader (ApeParams a)] r) => AppChain a -> Sem r (Doc CodeAnn)
 ppAppChain (AppChain f links) = do
   f' <- ppLinkExpr fx f
   args' <- mapM (ppLinkExpr fx) links
@@ -47,7 +47,7 @@ ppAppChain (AppChain f links) = do
     fx :: Precedence
     fx = appFixity ^. fixityPrecedence
 
-ppChain :: forall a r. Members '[Reader (ApeParams a)] r => Chain a -> Sem r (Doc CodeAnn)
+ppChain :: forall a r. (Members '[Reader (ApeParams a)] r) => Chain a -> Sem r (Doc CodeAnn)
 ppChain (Chain opFix f links) = do
   f' <- ppLinkExpr fx f
   args' <- mapM ppLink links
@@ -62,7 +62,7 @@ ppChain (Chain opFix f links) = do
       a' <- ppLinkExpr fx a
       return (op' <+> a')
 
-ppUChain :: forall a r. Members '[Reader (ApeParams a)] r => UChain a -> Sem r (Doc CodeAnn)
+ppUChain :: forall a r. (Members '[Reader (ApeParams a)] r) => UChain a -> Sem r (Doc CodeAnn)
 ppUChain (UChain opFix f links) = do
   f' <- ppLinkExpr fx f
   pp <- asks (^. apePP)
@@ -78,7 +78,7 @@ nestIf = \case
   False -> id
 
 ppLinkExpr ::
-  Members '[Reader (ApeParams a)] r => Precedence -> Cape a -> Sem r (Doc CodeAnn)
+  (Members '[Reader (ApeParams a)] r) => Precedence -> Cape a -> Sem r (Doc CodeAnn)
 ppLinkExpr opFix e =
   nestIf (apeNest (atomicity e) opFix)
     . parensCond cond

@@ -124,7 +124,7 @@ tests:
       matches: |
         Copying assets files to .*
         Writing .*SimpleFungibleToken.html
-        4
+        \s*4
     exit-status: 0
 
   - name: non-recursive-generation-only-source
@@ -142,5 +142,5 @@ tests:
       matches: |
         Copying assets files to .*
         Writing .*SimpleFungibleToken.html
-        2
+        \s*2
     exit-status: 0

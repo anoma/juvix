@@ -6,7 +6,7 @@ import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Asm.Transformation.Validate qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 
-runCommand :: forall r. Members '[Embed IO, App] r => AsmValidateOptions -> Sem r ()
+runCommand :: forall r. (Members '[Embed IO, App] r) => AsmValidateOptions -> Sem r ()
 runCommand opts = do
   afile :: Path Abs File <- someBaseToAbs' file
   s <- embed (readFile (toFilePath afile))

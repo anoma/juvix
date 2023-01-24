@@ -25,11 +25,11 @@ trace :: Text -> a -> a
 trace = traceLabel ""
 {-# WARNING trace "Using trace" #-}
 
-traceM :: Applicative f => Text -> f ()
+traceM :: (Applicative f) => Text -> f ()
 traceM t = traceLabel "" t (pure ())
 {-# WARNING traceM "Using traceM" #-}
 
-traceShow :: Show b => b -> b
+traceShow :: (Show b) => b -> b
 traceShow b = traceLabel "" (pack . show $ b) b
 {-# WARNING traceShow "Using traceShow" #-}
 

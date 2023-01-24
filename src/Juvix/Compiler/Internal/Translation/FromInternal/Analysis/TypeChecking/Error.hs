@@ -24,7 +24,7 @@ data TypeCheckerError
   | ErrNoPositivity NoPositivity
 
 instance ToGenericError TypeCheckerError where
-  genericError :: Member (Reader GenericOptions) r => TypeCheckerError -> Sem r GenericError
+  genericError :: (Member (Reader GenericOptions) r) => TypeCheckerError -> Sem r GenericError
   genericError = \case
     ErrWrongConstructorType e -> genericError e
     ErrWrongReturnType e -> genericError e

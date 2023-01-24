@@ -26,7 +26,7 @@ makeLenses ''PosTest
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/positive")
 
-renderCode :: M.PrettyCode c => c -> Text
+renderCode :: (M.PrettyCode c) => c -> Text
 renderCode = prettyText . M.ppOutDefault
 
 type Pipe =

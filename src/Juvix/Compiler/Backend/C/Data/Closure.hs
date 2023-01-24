@@ -11,7 +11,7 @@ import Juvix.Prelude
 
 genClosures ::
   forall r.
-  Members '[Reader Micro.InfoTable, Reader Micro.TypesTable] r =>
+  (Members '[Reader Micro.InfoTable, Reader Micro.TypesTable] r) =>
   Micro.Module ->
   Sem r [CCode]
 genClosures Micro.Module {..} = do
@@ -26,13 +26,13 @@ genCClosure c =
   ]
 
 functionDefClosures ::
-  Members '[Reader Micro.InfoTable, Reader Micro.TypesTable] r =>
+  (Members '[Reader Micro.InfoTable, Reader Micro.TypesTable] r) =>
   Micro.FunctionDef ->
   Sem r [ClosureInfo]
 functionDefClosures Micro.FunctionDef {..} =
   concatMapM (clauseClosures (fst (unfoldFunType (mkPolyType' _funDefType)))) (toList _funDefClauses)
 
-lookupBuiltinIden :: Members '[Reader Micro.InfoTable] r => Micro.Iden -> Sem r (Maybe Micro.BuiltinPrim)
+lookupBuiltinIden :: (Members '[Reader Micro.InfoTable] r) => Micro.Iden -> Sem r (Maybe Micro.BuiltinPrim)
 lookupBuiltinIden = \case
   Micro.IdenFunction f -> fmap toBuiltinPrim . (^. Micro.functionInfoDef . Micro.funDefBuiltin) <$> Micro.lookupFunction f
   Micro.IdenConstructor c -> fmap toBuiltinPrim . (^. Micro.constructorInfoBuiltin) <$> Micro.lookupConstructor c
@@ -42,7 +42,7 @@ lookupBuiltinIden = \case
 
 genClosureExpression ::
   forall r.
-  Members '[Reader Micro.InfoTable, Reader Micro.TypesTable, Reader PatternInfoTable] r =>
+  (Members '[Reader Micro.InfoTable, Reader Micro.TypesTable, Reader PatternInfoTable] r) =>
   [Micro.PolyType] ->
   Micro.Expression ->
   Sem r [ClosureInfo]
@@ -280,7 +280,7 @@ genClosureEval c =
         }
 
 clauseClosures ::
-  Members '[Reader Micro.InfoTable, Reader Micro.TypesTable] r =>
+  (Members '[Reader Micro.InfoTable, Reader Micro.TypesTable] r) =>
   [Micro.PolyType] ->
   Micro.FunctionClause ->
   Sem r [ClosureInfo]

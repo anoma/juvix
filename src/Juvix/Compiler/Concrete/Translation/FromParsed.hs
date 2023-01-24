@@ -16,7 +16,7 @@ import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Prelude
 
 fromParsed ::
-  Members '[Error JuvixError, Files, NameIdGen, Reader EntryPoint, PathResolver] r =>
+  (Members '[Error JuvixError, Files, NameIdGen, Reader EntryPoint, PathResolver] r) =>
   Parsed.ParserResult ->
   Sem r ScoperResult
 fromParsed pr = mapError (JuvixError @ScoperError) $ do

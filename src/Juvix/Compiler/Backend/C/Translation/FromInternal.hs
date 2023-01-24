@@ -36,16 +36,16 @@ compileInfoTable r =
     (^. Scoper.nameId)
     ( r
         ^. Typed.resultInternalArityResult
-        . Internal1.resultInternalResult
-        . Internal.resultAbstract
-        . Abstract.resultScoper
-        . Scoper.resultScoperTable
-        . Scoper.infoCompilationRules
+          . Internal1.resultInternalResult
+          . Internal.resultAbstract
+          . Abstract.resultScoper
+          . Scoper.resultScoperTable
+          . Scoper.infoCompilationRules
     )
 
 fromInternal ::
   forall r.
-  Member Builtins r =>
+  (Member Builtins r) =>
   Typed.InternalTypedResult ->
   Sem r MiniCResult
 fromInternal i = MiniCResult . serialize <$> cunitResult
@@ -101,7 +101,7 @@ genStructDefs Internal.Module {..} =
         concatMap go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
       _ -> []
 
-genAxioms :: forall r. Members '[Reader Internal.InfoTable, Reader CompileInfoTable] r => Internal.Module -> Sem r [CCode]
+genAxioms :: forall r. (Members '[Reader Internal.InfoTable, Reader CompileInfoTable] r) => Internal.Module -> Sem r [CCode]
 genAxioms Internal.Module {..} =
   concatMapM go (_moduleBody ^. Internal.moduleStatements)
   where
@@ -114,7 +114,7 @@ genAxioms Internal.Module {..} =
       Internal.StatementInclude i ->
         concatMapM go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
 
-genCTypes :: forall r. Member (Reader Internal.InfoTable) r => Internal.Module -> Sem r [CCode]
+genCTypes :: forall r. (Member (Reader Internal.InfoTable) r) => Internal.Module -> Sem r [CCode]
 genCTypes Internal.Module {..} =
   concatMapM go (_moduleBody ^. Internal.moduleStatements)
   where
@@ -127,7 +127,7 @@ genCTypes Internal.Module {..} =
       Internal.StatementInclude i ->
         concatMapM go (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
 
-genFunctionSigs :: forall r. Members '[Reader Internal.InfoTable, Reader Typed.TypesTable] r => Internal.Module -> Sem r [CCode]
+genFunctionSigs :: forall r. (Members '[Reader Internal.InfoTable, Reader Typed.TypesTable] r) => Internal.Module -> Sem r [CCode]
 genFunctionSigs Internal.Module {..} =
   concatMapM (applyOnFunStatement genFunctionDef) (_moduleBody ^. Internal.moduleStatements)
   where
@@ -143,13 +143,13 @@ genFunctionSigs Internal.Module {..} =
         sig = genFunctionSig d
 
 genFunctionDefs ::
-  Members '[Reader Internal.InfoTable, Reader Typed.TypesTable, Builtins] r =>
+  (Members '[Reader Internal.InfoTable, Reader Typed.TypesTable, Builtins] r) =>
   Internal.Module ->
   Sem r [CCode]
 genFunctionDefs Internal.Module {..} = genFunctionDefsBody _moduleBody
 
 genFunctionDefsBody ::
-  Members '[Reader Internal.InfoTable, Reader Typed.TypesTable, Builtins] r =>
+  (Members '[Reader Internal.InfoTable, Reader Typed.TypesTable, Builtins] r) =>
   Internal.ModuleBody ->
   Sem r [CCode]
 genFunctionDefsBody Internal.ModuleBody {..} =
@@ -158,7 +158,7 @@ genFunctionDefsBody Internal.ModuleBody {..} =
 isNullary :: Text -> CFunType -> Bool
 isNullary funName funType = null (funType ^. cFunArgTypes) && funName /= Str.main_
 
-mkFunctionSig :: forall r. Members '[Reader Internal.InfoTable, Reader Typed.TypesTable] r => Internal.FunctionDef -> Sem r FunctionSig
+mkFunctionSig :: forall r. (Members '[Reader Internal.InfoTable, Reader Typed.TypesTable] r) => Internal.FunctionDef -> Sem r FunctionSig
 mkFunctionSig Internal.FunctionDef {..} =
   cFunTypeToFunSig <$> funName <*> funType
   where
@@ -190,7 +190,7 @@ mkFunctionSig Internal.FunctionDef {..} =
     funName :: Sem r Text
     funName = bool funcBasename (asNullary funcBasename) <$> funIsNullary
 
-genFunctionSig :: forall r. Members '[Reader Internal.InfoTable, Reader Typed.TypesTable] r => Internal.FunctionDef -> Sem r [CCode]
+genFunctionSig :: forall r. (Members '[Reader Internal.InfoTable, Reader Typed.TypesTable] r) => Internal.FunctionDef -> Sem r [CCode]
 genFunctionSig d@(Internal.FunctionDef {..}) = do
   sig <- mkFunctionSig d
   nullaryDefine' <- nullaryDefine
@@ -240,7 +240,7 @@ genFunctionSig d@(Internal.FunctionDef {..}) = do
         <$> funIsNullary
 
 goFunctionDef ::
-  Members '[Reader Internal.InfoTable, Reader Typed.TypesTable, Builtins] r =>
+  (Members '[Reader Internal.InfoTable, Reader Typed.TypesTable, Builtins] r) =>
   Internal.FunctionDef ->
   Sem r [CCode]
 goFunctionDef d@(Internal.FunctionDef {..})
@@ -288,7 +288,7 @@ goFunctionDef d@(Internal.FunctionDef {..})
                     ( LiteralString
                         ( "Error: Pattern match(es) are non-exhaustive in "
                             <> _funDefName
-                            ^. Internal.nameText
+                              ^. Internal.nameText
                         )
                     )
                 ]
@@ -303,7 +303,7 @@ goFunctionDef d@(Internal.FunctionDef {..})
 
 goFunctionClause ::
   forall r.
-  Members '[Reader Internal.InfoTable, Reader Typed.TypesTable, Builtins] r =>
+  (Members '[Reader Internal.InfoTable, Reader Typed.TypesTable, Builtins] r) =>
   FunctionSig ->
   [Internal.PolyType] ->
   Internal.FunctionClause ->
@@ -365,7 +365,7 @@ goFunctionClause funSig argTyps clause = do
         castClause clauseResult =
           castToType (CDeclType {_typeDeclType = funSig ^. funcReturnType, _typeIsPtr = funSig ^. funcIsPtr}) clauseResult
 
-goExpression :: Members '[Reader Internal.InfoTable, Reader Typed.TypesTable, Builtins, Reader PatternInfoTable] r => Internal.Expression -> Sem r Expression
+goExpression :: (Members '[Reader Internal.InfoTable, Reader Typed.TypesTable, Builtins, Reader PatternInfoTable] r) => Internal.Expression -> Sem r Expression
 goExpression = \case
   Internal.ExpressionIden i -> do
     let rootFunInternalName = Internal.getName i
@@ -386,7 +386,7 @@ goExpression = \case
   Internal.ExpressionLambda {} -> impossible
   Internal.ExpressionLet {} -> impossible
 
-goIden :: Members '[Reader PatternInfoTable, Builtins, Reader Internal.InfoTable] r => Internal.Iden -> Sem r Expression
+goIden :: (Members '[Reader PatternInfoTable, Builtins, Reader Internal.InfoTable] r) => Internal.Iden -> Sem r Expression
 goIden = \case
   Internal.IdenFunction n -> do
     funInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoFunctions)
@@ -400,7 +400,7 @@ goIden = \case
   Internal.IdenAxiom n -> ExpressionVar <$> getAxiomCName n
   Internal.IdenInductive {} -> impossible
 
-goApplication :: forall r. Members '[Reader PatternInfoTable, Reader Typed.TypesTable, Builtins, Reader Internal.InfoTable] r => Internal.Application -> Sem r Expression
+goApplication :: forall r. (Members '[Reader PatternInfoTable, Reader Typed.TypesTable, Builtins, Reader Internal.InfoTable] r) => Internal.Application -> Sem r Expression
 goApplication a = do
   (f, args0) <- Trans.unfoldPolyApplication a
   if
@@ -460,7 +460,7 @@ goLiteral l = case l ^. C.withLocParam of
   C.LitInteger i -> LiteralInt i
 
 goAxiom ::
-  Members [Reader Internal.InfoTable, Reader CompileInfoTable] r =>
+  (Members [Reader Internal.InfoTable, Reader CompileInfoTable] r) =>
   Internal.AxiomDef ->
   Sem r [CCode]
 goAxiom a
@@ -489,20 +489,20 @@ goAxiom a
     getCode b =
       guard (BackendC == b ^. backendItemBackend)
         $> b
-        ^. backendItemCode
+          ^. backendItemCode
     firstBackendMatch ::
-      Member Fail r =>
+      (Member Fail r) =>
       [BackendItem] ->
       Sem r Text
     firstBackendMatch = failMaybe . firstJust getCode
     lookupBackends ::
-      Members '[Fail, Reader CompileInfoTable] r =>
+      (Members '[Fail, Reader CompileInfoTable] r) =>
       NameId ->
       Sem r [BackendItem]
     lookupBackends f = ask >>= failMaybe . fmap (^. Scoper.compileInfoBackendItems) . HashMap.lookup f
     genFunctionDef ::
       forall r.
-      Members [Reader Internal.InfoTable, Reader CompileInfoTable] r =>
+      (Members [Reader Internal.InfoTable, Reader CompileInfoTable] r) =>
       Internal.AxiomDef ->
       Sem r [CCode]
     genFunctionDef d
@@ -548,7 +548,7 @@ mkInductiveTypeDef i =
     baseName :: Text
     baseName = mkName (i ^. Internal.inductiveName)
 
-goInductiveDef :: Members '[Reader Internal.InfoTable] r => Internal.InductiveDef -> Sem r [CCode]
+goInductiveDef :: (Members '[Reader Internal.InfoTable] r) => Internal.InductiveDef -> Sem r [CCode]
 goInductiveDef i
   | isJust (i ^. Internal.inductiveBuiltin) = return []
   | otherwise = do
@@ -669,7 +669,7 @@ goInductiveDef i
 
 goInductiveConstructorNew ::
   forall r.
-  Members '[Reader Internal.InfoTable] r =>
+  (Members '[Reader Internal.InfoTable] r) =>
   Internal.InductiveDef ->
   Internal.InductiveConstructorDef ->
   Sem r [CCode]
@@ -831,20 +831,20 @@ goInductiveConstructorNew i ctor = ctorNewFun
             )
         )
 
-inductiveCtorParams :: Members '[Reader Internal.InfoTable] r => Internal.InductiveConstructorDef -> Sem r [CDeclType]
+inductiveCtorParams :: (Members '[Reader Internal.InfoTable] r) => Internal.InductiveConstructorDef -> Sem r [CDeclType]
 inductiveCtorParams ctor = mapM (goType . mkPolyType') (ctor ^. Internal.inductiveConstructorParameters)
 
-inductiveCtorArgs :: Members '[Reader Internal.InfoTable] r => Internal.InductiveConstructorDef -> Sem r [Declaration]
+inductiveCtorArgs :: (Members '[Reader Internal.InfoTable] r) => Internal.InductiveConstructorDef -> Sem r [Declaration]
 inductiveCtorArgs ctor = namedArgs asCtorArg <$> inductiveCtorParams ctor
 
-inductiveCtorTypes :: Members '[Reader Internal.InfoTable] r => Internal.Name -> Sem r [CDeclType]
+inductiveCtorTypes :: (Members '[Reader Internal.InfoTable] r) => Internal.Name -> Sem r [CDeclType]
 inductiveCtorTypes ctor = do
   info <- Internal.lookupConstructor ctor
   mapM (goType . mkPolyType') (snd (Internal.constructorArgTypes info))
 
 goInductiveConstructorDef ::
   forall r.
-  Members '[Reader Internal.InfoTable] r =>
+  (Members '[Reader Internal.InfoTable] r) =>
   Internal.InductiveConstructorDef ->
   Sem r [CCode]
 goInductiveConstructorDef ctor = do
@@ -880,7 +880,7 @@ goInductiveConstructorDef ctor = do
         )
 
 goProjections ::
-  Members '[Reader Internal.InfoTable] r =>
+  (Members '[Reader Internal.InfoTable] r) =>
   DeclType ->
   Internal.InductiveConstructorDef ->
   Sem r [CCode]
