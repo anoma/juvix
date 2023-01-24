@@ -681,463 +681,453 @@ Changelog]]
   [[https://github.com/anoma/juvix/pull/1320][#1320]]
   ([[https://github.com/mariari][mariari]])
 
-** [[https://github.com/anoma/minijuvix/tree/v0.2.1][v0.2.1]] (2022-07-12)
 
-[[https://github.com/anoma/minijuvix/compare/v0.2.0...v0.2.1][Full
-Changelog]]
+** New name: Juvix
+
+Since version 0.2.2, the project has been renamed from "Mini Juvix" to
+"Juvix". The new name reflects the fact that the project is no longer
+just a compiler for a subset of Juvix, but a full implementation of the
+language. Affected by this change are:
+
+- Github repository moved from the helium organization to the anoma
+  organization. "anoma/juvix" is the new repository name.
+- All references to "Mini Juvix" have been replaced with "Juvix". However, 
+old links to the Mini Juvix repository are broken and will not be fixed.
+
+** v0.2.1 (2022-07-12)
 
 *Implemented enhancements:*
 
 - Specialize commands of/for internal use
-  [[https://github.com/anoma/minijuvix/pull/270][#270]]
+  MiniJuvix-#270
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Improve handling of location information for different objs
-  [[https://github.com/anoma/minijuvix/pull/263][#263]]
+  MiniJuvix-#263
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Add issues and PR templates
-  [[https://github.com/anoma/minijuvix/pull/261][#261]]
+  MiniJuvix-#261
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Throw error when reading a file that conflicts with embedded stdlib
-  [[https://github.com/anoma/minijuvix/pull/243][#243]]
+  MiniJuvix-#243
   ([[https://github.com/paulcadman][paulcadman]])
 - Embed standard library in the minijuvix binary
-  [[https://github.com/anoma/minijuvix/pull/210][#210]]
+  MiniJuvix-#210
   ([[https://github.com/paulcadman][paulcadman]])
 
 *Fixed bugs:*
 
 - Fixed a bug with the path to walloc.c
-  [[https://github.com/anoma/minijuvix/pull/237][#237]]
+  MiniJuvix-#237
   ([[https://github.com/lukaszcz][lukaszcz]])
 - Perform ScopedToAbstract exactly once for each module
-  [[https://github.com/anoma/minijuvix/pull/223][#223]]
+  MiniJuvix-#223
   ([[https://github.com/paulcadman][paulcadman]])
 
 *Merged pull requests:*
 
-- Label renaming [[https://github.com/anoma/minijuvix/pull/275][#275]]
+- Label renaming MiniJuvix-#275
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Update link to discord
-  [[https://github.com/anoma/minijuvix/pull/264][#264]]
+  MiniJuvix-#264
   ([[https://github.com/Romainua][Romainua]])
 - Include =open import= statements when generating HTML
-  [[https://github.com/anoma/minijuvix/pull/260][#260]]
+  MiniJuvix-#260
   ([[https://github.com/paulcadman][paulcadman]])
 - Renaming MiniJuvix to Juvix
-  [[https://github.com/anoma/minijuvix/pull/259][#259]]
+  MiniJuvix-#259
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Updates tests to use the updated standard library
-  [[https://github.com/anoma/minijuvix/pull/253][#253]]
+  MiniJuvix-#253
   ([[https://github.com/paulcadman][paulcadman]])
 - Enforce C99 standard in the generated C files
-  [[https://github.com/anoma/minijuvix/pull/252][#252]]
+  MiniJuvix-#252
   ([[https://github.com/lukaszcz][lukaszcz]])
 - Restore mascot images to the minijuvix book
-  [[https://github.com/anoma/minijuvix/pull/250][#250]]
+  MiniJuvix-#250
   ([[https://github.com/paulcadman][paulcadman]])
 - Allow jumping to another module in emacs
-  [[https://github.com/anoma/minijuvix/pull/249][#249]]
+  MiniJuvix-#249
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Restore Juvix mascot image to README
-  [[https://github.com/anoma/minijuvix/pull/248][#248]]
+  MiniJuvix-#248
   ([[https://github.com/paulcadman][paulcadman]])
 - Add emacs option =minijuvix-disable-embedded-stdlib=
-  [[https://github.com/anoma/minijuvix/pull/247][#247]]
+  MiniJuvix-#247
   ([[https://github.com/paulcadman][paulcadman]])
 - Deprecate GHC backend
-  [[https://github.com/anoma/minijuvix/pull/244][#244]]
+  MiniJuvix-#244
   ([[https://github.com/lukaszcz][lukaszcz]])
 - Removed 'eval' and 'print' keywords (#214)
-  [[https://github.com/anoma/minijuvix/pull/242][#242]]
+  MiniJuvix-#242
   ([[https://github.com/lukaszcz][lukaszcz]])
 - Add option to disable minijuvix input method
-  [[https://github.com/anoma/minijuvix/pull/239][#239]]
+  MiniJuvix-#239
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Remove the 'match' keyword
-  [[https://github.com/anoma/minijuvix/pull/238][#238]]
+  MiniJuvix-#238
   ([[https://github.com/lukaszcz][lukaszcz]])
 - Removed tests/positive/HelloWorld.mjuvix and specified clang version
-  in the documentation [[https://github.com/anoma/minijuvix/pull/236][#236]]
+  in the documentation MiniJuvix-#236
   ([[https://github.com/lukaszcz][lukaszcz]])
 - Filter symbol entries properly in the scoper
-  [[https://github.com/anoma/minijuvix/pull/234][#234]]
+  MiniJuvix-#234
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Use the ModulesCache for =open= statements in ScopedToAbstract pass
-  [[https://github.com/anoma/minijuvix/pull/224][#224]]
+  MiniJuvix-#224
   ([[https://github.com/paulcadman][paulcadman]])
 - README: Include =--recursive= in git clone command to fetch stdlib
-  [[https://github.com/anoma/minijuvix/pull/211][#211]]
+  MiniJuvix-#211
   ([[https://github.com/paulcadman][paulcadman]])
 - Update project description v0.2.0
-  [[https://github.com/anoma/minijuvix/pull/209][#209]]
+  MiniJuvix-#209
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Unify AST representation of types and expressions in MicroJuvix
-  [[https://github.com/anoma/minijuvix/pull/188][#188]]
+  MiniJuvix-#188
   ([[https://github.com/janmasrovira][janmasrovira]])
 
-** [[https://github.com/anoma/minijuvix/tree/v0.2.0][v0.2.0]]
-(2022-06-28)
-
-[[https://github.com/anoma/minijuvix/compare/v0.1.4...v0.2.0][Full
-Changelog]]
+** v0.2.0 (2022-06-28)
 
 *Implemented enhancements:*
 
 - Support built in types
-  [[https://github.com/anoma/minijuvix/pull/192][#192]]
+  MiniJuvix-#192
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Support partial application and closure passing in C backend
-  [[https://github.com/anoma/minijuvix/pull/190][#190]]
+  MiniJuvix-#190
   ([[https://github.com/paulcadman][paulcadman]])
 - Allow =open import= statements
-  [[https://github.com/anoma/minijuvix/pull/175][#175]]
+  MiniJuvix-#175
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Remove TypeAny and adapt typechecking for literals
-  [[https://github.com/anoma/minijuvix/pull/173][#173]]
+  MiniJuvix-#173
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Allow holes to be refined into function types
-  [[https://github.com/anoma/minijuvix/pull/165][#165]]
+  MiniJuvix-#165
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Support implicit arguments
-  [[https://github.com/anoma/minijuvix/pull/144][#144]]
+  MiniJuvix-#144
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Add support for holes in type signatures
-  [[https://github.com/anoma/minijuvix/pull/141][#141]]
+  MiniJuvix-#141
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Support function closures with no environment in minic
-  [[https://github.com/anoma/minijuvix/pull/137][#137]]
+  MiniJuvix-#137
   ([[https://github.com/paulcadman][paulcadman]])
 - Add holes for expressions in function clauses and inference support
-  [[https://github.com/anoma/minijuvix/pull/136][#136]]
+  MiniJuvix-#136
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Add "-Oz" optimization flag to clang args
-  [[https://github.com/anoma/minijuvix/pull/133][#133]]
+  MiniJuvix-#133
   ([[https://github.com/paulcadman][paulcadman]])
 - Add version and help option and root command to the CLI
-  [[https://github.com/anoma/minijuvix/pull/131][#131]]
+  MiniJuvix-#131
   ([[https://github.com/jonaprieto][jonaprieto]])
 
 *Fixed bugs:*
 
 - Fix: Ignore implicit patterns and arguments in termination checking
-  [[https://github.com/anoma/minijuvix/pull/172][#172]]
+  MiniJuvix-#172
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Fix: pretty printing for terminating keyword
-  [[https://github.com/anoma/minijuvix/pull/145][#145]]
+  MiniJuvix-#145
   ([[https://github.com/jonaprieto][jonaprieto]])
 
 *Merged pull requests:*
 
 - Fix: proper error handling for typechecker errors
-  [[https://github.com/anoma/minijuvix/pull/189][#189]]
+  MiniJuvix-#189
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Add juvix version info and date to HTML output
-  [[https://github.com/anoma/minijuvix/pull/186][#186]]
+  MiniJuvix-#186
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Fix: Add check for constructor return types
-  [[https://github.com/anoma/minijuvix/pull/182][#182]]
+  MiniJuvix-#182
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Use Abstract name in Abstract syntax and Micro/MonoJuvix
-  [[https://github.com/anoma/minijuvix/pull/181][#181]]
+  MiniJuvix-#181
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Add an option to specify the path where to put the HTML output
-  [[https://github.com/anoma/minijuvix/pull/179][#179]]
+  MiniJuvix-#179
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Upgrade to ghc-9.2.3
-  [[https://github.com/anoma/minijuvix/pull/178][#178]]
+  MiniJuvix-#178
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Replace dead link in README with a link to the Juvix book
-  [[https://github.com/anoma/minijuvix/pull/177][#177]]
+  MiniJuvix-#177
   ([[https://github.com/paulcadman][paulcadman]])
 - Embed HTML assets in the juvix binary
-  [[https://github.com/anoma/minijuvix/pull/176][#176]]
+  MiniJuvix-#176
   ([[https://github.com/paulcadman][paulcadman]])
 - Fix: identifiers with a keyword prefix cannot be parsed
-  [[https://github.com/anoma/minijuvix/pull/171][#171]]
+  MiniJuvix-#171
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Improve filepath equality
-  [[https://github.com/anoma/minijuvix/pull/170][#170]]
+  MiniJuvix-#170
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Update validity predicate milestone example to 0.2 syntax
-  [[https://github.com/anoma/minijuvix/pull/167][#167]]
+  MiniJuvix-#167
   ([[https://github.com/paulcadman][paulcadman]])
 - Fix links in documentation and update to new syntax
-  [[https://github.com/anoma/minijuvix/pull/163][#163]]
+  MiniJuvix-#163
   ([[https://github.com/paulcadman][paulcadman]])
 - Update stdlib to work with version 0.2
-  [[https://github.com/anoma/minijuvix/pull/160][#160]]
+  MiniJuvix-#160
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Update README usage example to use the compile command
-  [[https://github.com/anoma/minijuvix/pull/158][#158]]
+  MiniJuvix-#158
   ([[https://github.com/paulcadman][paulcadman]])
 - Remove dead code related to the pipeline
-  [[https://github.com/anoma/minijuvix/pull/156][#156]]
+  MiniJuvix-#156
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Add negative test for AppLeftImplicit
-  [[https://github.com/anoma/minijuvix/pull/154][#154]]
+  MiniJuvix-#154
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Add positive test designed for implicit arguments
-  [[https://github.com/anoma/minijuvix/pull/153][#153]]
+  MiniJuvix-#153
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Remove ExpressionTyped from MicroJuvix
-  [[https://github.com/anoma/minijuvix/pull/143][#143]]
+  MiniJuvix-#143
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Revision for package.yaml and minor deletions
-  [[https://github.com/anoma/minijuvix/pull/135][#135]]
+  MiniJuvix-#135
   ([[https://github.com/jonaprieto][jonaprieto]])
 
-** [[https://github.com/anoma/minijuvix/tree/v0.1.4][v0.1.4]]
-(2022-05-30)
-
-[[https://github.com/anoma/minijuvix/compare/v0.1.3...v0.1.4][Full
-Changelog]]
-
+** v0.1.4 (2022-05-30)
 
 *Merged pull requests:*
 
 - Generic Errors and refactoring
-  [[https://github.com/anoma/minijuvix/pull/123][#123]]
+  MiniJuvix-#123
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Only generates docs if the pull request merges
-  [[https://github.com/anoma/minijuvix/pull/121][#121]]
+  MiniJuvix-#121
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Add initial docs generation website
-  [[https://github.com/anoma/minijuvix/pull/119][#119]]
+  MiniJuvix-#119
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Fix internal link in README
-  [[https://github.com/anoma/minijuvix/pull/116][#116]]
+  MiniJuvix-#116
   ([[https://github.com/paulcadman][paulcadman]])
 - Add minic-runtime for linking without libc
-  [[https://github.com/anoma/minijuvix/pull/113][#113]]
+  MiniJuvix-#113
   ([[https://github.com/paulcadman][paulcadman]])
 - Add termination checking to the pipeline
-  [[https://github.com/anoma/minijuvix/pull/111][#111]]
+  MiniJuvix-#111
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Support uncurried higher order functions
-  [[https://github.com/anoma/minijuvix/pull/110][#110]]
+  MiniJuvix-#110
   ([[https://github.com/paulcadman][paulcadman]])
 - Improve error generation and handling
-  [[https://github.com/anoma/minijuvix/pull/108][#108]]
+  MiniJuvix-#108
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Add MiniC tests with clang+wasi-sdk
-  [[https://github.com/anoma/minijuvix/pull/105][#105]]
+  MiniJuvix-#105
   ([[https://github.com/paulcadman][paulcadman]])
 - Add usage example and move developer docs
-  [[https://github.com/anoma/minijuvix/pull/96][#96]]
+  MiniJuvix-#96
   ([[https://github.com/paulcadman][paulcadman]])
 - Refactor warning related stuff
-  [[https://github.com/anoma/minijuvix/pull/91][#91]]
+  MiniJuvix-#91
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Remove Agda backend
-  [[https://github.com/anoma/minijuvix/pull/86][#86]]
+  MiniJuvix-#86
   ([[https://github.com/paulcadman][paulcadman]])
+
 
 *Implemented enhancements:*
 
 - Add =compile= subcommand to generate binaries
-  [[https://github.com/anoma/juvix/issues/128][#128]]
+  MiniJuvix-#128
 - Add intervals to flycheck errors
-  [[https://github.com/anoma/juvix/issues/124][#124]]
+  MiniJuvix-#124
 - Improve error handling in juvix-mode
-  [[https://github.com/anoma/juvix/issues/107][#107]]
+  MiniJuvix-#107
 - Support multiple modules in compilation
-  [[https://github.com/anoma/juvix/issues/93][#93]]
+  MiniJuvix-#93
 - Add compile command to CLI
-  [[https://github.com/anoma/minijuvix/pull/130][#130]]
+  MiniJuvix-#130
   ([[https://github.com/paulcadman][paulcadman]])
 - Use Interval in GenericErrors
-  [[https://github.com/anoma/minijuvix/pull/125][#125]]
+  MiniJuvix-#125
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Remove dev in the CI and other tweaks
-  [[https://github.com/anoma/minijuvix/pull/118][#118]]
+  MiniJuvix-#118
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Highlight comments correctly
-  [[https://github.com/anoma/minijuvix/pull/106][#106]]
+  MiniJuvix-#106
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Support multiple modules in compilation
-  [[https://github.com/anoma/minijuvix/pull/100][#100]]
+  MiniJuvix-#100
   ([[https://github.com/janmasrovira][janmasrovira]])
 - New target syntax and modular VP examples
-  [[https://github.com/anoma/minijuvix/pull/92][#92]]
+  MiniJuvix-#92
   ([[https://github.com/jonaprieto][jonaprieto]])
 
 *Fixed bugs:*
 
 - Missing error messages when using throw/error
-  [[https://github.com/anoma/juvix/issues/117][#117]]
+  MiniJuvix-#117
 - Fix highlight of comments
-  [[https://github.com/anoma/juvix/issues/104][#104]]
+  MiniJuvix-#104
 - Fix juvix-mode coloring for projects with multiple modules
-  [[https://github.com/anoma/juvix/issues/101][#101]]
+  MiniJuvix-#101
 - Fix =highlight= command for modules with import statements
-  [[https://github.com/anoma/minijuvix/pull/102][#102]]
+  MiniJuvix-#102
   ([[https://github.com/janmasrovira][janmasrovira]])
 
 *Closed issues:*
 
 - Deprecate the class JuvixError
-  [[https://github.com/anoma/juvix/issues/115][#115]]
+  MiniJuvix-#115
 - Add ToGenericError instance for the infix parsing errors
-  [[https://github.com/anoma/juvix/issues/114][#114]]
+  MiniJuvix-#114
 - Compile to WASM without linking libc
-  [[https://github.com/anoma/juvix/issues/112][#112]]
+  MiniJuvix-#112
 - Add the termination checker to the pipeline
-  [[https://github.com/anoma/juvix/issues/109][#109]]
+  MiniJuvix-#109
 - Use clang + wasi-sdk instead of emcc to compile to WASM
-  [[https://github.com/anoma/juvix/issues/103][#103]]
+  MiniJuvix-#103
 - Move developer tooling docs out of README
-  [[https://github.com/anoma/juvix/issues/95][#95]]
+  MiniJuvix-#95
 - Add pre-commit checks to CI checks
-  [[https://github.com/anoma/juvix/issues/94][#94]]
+  MiniJuvix-#94
 - Support higher order functions in C backend
-  [[https://github.com/anoma/juvix/issues/90][#90]]
+  MiniJuvix-#90
 - Remove dev from the list of branches in the CI
-  [[https://github.com/anoma/juvix/issues/89][#89]]
+  MiniJuvix-#89
 - Refactor warning related stuff
-  [[https://github.com/anoma/juvix/issues/87][#87]]
+  MiniJuvix-#87
 - The Juvix website
-  [[https://github.com/anoma/juvix/issues/51][#51]]
+  MiniJuvix-#51
 
 
-** [[https://github.com/anoma/minijuvix/tree/v0.1.3][v0.1.3]]
-(2022-05-05)
-
-[[https://github.com/anoma/minijuvix/compare/v0.1.2...v0.1.3][Full
-Changelog]]
+** v0.1.3 (2022-05-05)
 
 *Closed issues:*
 
 - Monomorphisation naming inconsistency
-  [[https://github.com/anoma/juvix/issues/84][#84]]
+  MiniJuvix-#84
 - Remove BackendAgda
-  [[https://github.com/anoma/juvix/issues/83][#83]]
+  MiniJuvix-#83
 - Change terminating keyword behavior
-  [[https://github.com/anoma/juvix/issues/81][#81]]
+  MiniJuvix-#81
 - MonoJuvix =ExpressionTyped= is never used
-  [[https://github.com/anoma/juvix/issues/79][#79]]
+  MiniJuvix-#79
 - Bump stackage nightly and delete =allow-newer: true= from =stack.yaml=
-  [[https://github.com/anoma/juvix/issues/75][#75]]
+  MiniJuvix-#75
 - Generate automatically CHANGELOG and Github Release Notes
-  [[https://github.com/anoma/juvix/issues/73][#73]]
+  MiniJuvix-#73
 - Make flag --show-name-ids global
-  [[https://github.com/anoma/juvix/issues/61][#61]]
+  MiniJuvix-#61
 - Add C code generation backend
-  [[https://github.com/anoma/juvix/issues/60][#60]]
+  MiniJuvix-#60
 - Add polymorphism
-  [[https://github.com/anoma/juvix/issues/59][#59]]
+  MiniJuvix-#59
 - Add the compile keyword to the frontend syntax (support up to Scoping)
-  [[https://github.com/anoma/juvix/issues/58][#58]]
+  MiniJuvix-#58
 - Error with undefined or underscores
-  [[https://github.com/anoma/juvix/issues/54][#54]]
+  MiniJuvix-#54
 - Add support for other GHC and Stack stable version
-  [[https://github.com/anoma/juvix/issues/52][#52]]
+  MiniJuvix-#52
 - Autodetect output ANSI support when prettyprinting
-  [[https://github.com/anoma/juvix/issues/38][#38]]
+  MiniJuvix-#38
 - Terminating for type signatures
-  [[https://github.com/anoma/juvix/issues/11][#11]]
+  MiniJuvix-#11
 
 *Merged pull requests:*
 
 - Remove agda backend
-  [[https://github.com/anoma/minijuvix/pull/86][#86]]
+  MiniJuvix-#86
   ([[https://github.com/paulcadman][paulcadman]])
 - 84 monomorphisation naming inconsistency
-  [[https://github.com/anoma/minijuvix/pull/85][#85]]
+  MiniJuvix-#85
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Change terminating keyword behavior
-  [[https://github.com/anoma/minijuvix/pull/82][#82]]
+  MiniJuvix-#82
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Remove unused constructor ExpressionTyped in Monojuvix
-  [[https://github.com/anoma/minijuvix/pull/80][#80]]
+  MiniJuvix-#80
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Stricter stack builds and pedantic mode for CI
-  [[https://github.com/anoma/minijuvix/pull/78][#78]]
+  MiniJuvix-#78
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Bump stackage version and remove allow-newer
-  [[https://github.com/anoma/minijuvix/pull/76][#76]]
+  MiniJuvix-#76
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Add automatically updates/issues/merged PRs to the changelog
-  [[https://github.com/anoma/minijuvix/pull/74][#74]]
+  MiniJuvix-#74
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Add terminating keyword
-  [[https://github.com/anoma/minijuvix/pull/71][#71]]
+  MiniJuvix-#71
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Monomorphization
-  [[https://github.com/anoma/minijuvix/pull/70][#70]]
+  MiniJuvix-#70
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Remove StatementCompile in AST after scoping
-  [[https://github.com/anoma/minijuvix/pull/69][#69]]
+  MiniJuvix-#69
   ([[https://github.com/paulcadman][paulcadman]])
 - Add C code generation backend
-  [[https://github.com/anoma/minijuvix/pull/68][#68]]
+  MiniJuvix-#68
   ([[https://github.com/paulcadman][paulcadman]])
 - Check if stderr supports ANSI and print accordingly
-  [[https://github.com/anoma/minijuvix/pull/67][#67]]
+  MiniJuvix-#67
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Add support for compile (by Jonathan)
-  [[https://github.com/anoma/minijuvix/pull/66][#66]]
+  MiniJuvix-#66
   ([[https://github.com/paulcadman][paulcadman]])
 - Add NameIdGen effect to the pipeline
-  [[https://github.com/anoma/minijuvix/pull/64][#64]]
+  MiniJuvix-#64
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Make the =--show-name-ids= flag global
-  [[https://github.com/anoma/minijuvix/pull/63][#63]]
+  MiniJuvix-#63
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Implement type checker with polymorphism
-  [[https://github.com/anoma/minijuvix/pull/62][#62]]
+  MiniJuvix-#62
   ([[https://github.com/janmasrovira][janmasrovira]])
 
-** [[https://github.com/anoma/minijuvix/tree/v0.1.2][v0.1.2]]
-(2022-04-11)
-
-[[https://github.com/anoma/minijuvix/compare/v0.1.1...v0.1.2][Full
-Changelog]]
+** v0.1.2 (2022-04-11)
 
 *Closed issues:*
 
 - Add en emacs mode with support for scoped highlighting
-  [[https://github.com/anoma/juvix/issues/25][#25]]
+  MiniJuvix-#25
 - Add support for project root detection through a juvix.yaml file
-  [[https://github.com/anoma/juvix/issues/24][#24]]
+  MiniJuvix-#24
 - Add CLI cmd to generate juvix autocompletion files for fish and
-  zsh [[https://github.com/anoma/juvix/issues/23][#23]]
+  zsh MiniJuvix-#23
 - Add pretty and typecheck subcommands to the microjuvix CLI
-  [[https://github.com/anoma/juvix/issues/21][#21]]
+  MiniJuvix-#21
 - Translate identifiers from MicroJuvix to MiniHaskell (valid Haskell)
-  [[https://github.com/anoma/juvix/issues/19][#19]]
+  MiniJuvix-#19
 - Implement the MiniHaskell to Haskell translation (prettyprinter)
-  [[https://github.com/anoma/juvix/issues/18][#18]]
+  MiniJuvix-#18
 - Implementation of a typechecker for MicroJuvix
-  [[https://github.com/anoma/juvix/issues/16][#16]]
+  MiniJuvix-#16
 - Add references to the Abstract AST to update compilation to
-  MiniHaskell [[https://github.com/anoma/juvix/issues/12][#12]]
+  MiniHaskell MiniJuvix-#12
 - Order in the house
-  [[https://github.com/anoma/juvix/issues/10][#10]]
+  MiniJuvix-#10
 
 *Merged pull requests:*
 
 - The Juvix project now follows the same goals as the original Juvix
-  project. [[https://github.com/anoma/minijuvix/pull/7][#7]]
+  project. MiniJuvix-#7
   ([[https://github.com/jonaprieto][jonaprieto]])
-- Dev→main [[https://github.com/anoma/minijuvix/pull/6][#6]]
+- Dev→main MiniJuvix-#6
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Big update including termination checking
-  [[https://github.com/anoma/minijuvix/pull/5][#5]]
+  MiniJuvix-#5
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Parser and scoper
-  [[https://github.com/anoma/minijuvix/pull/3][#3]]
+  MiniJuvix-#3
   ([[https://github.com/jonaprieto][jonaprieto]])
 - Upgrade to ghc9 and use hpack
-  [[https://github.com/anoma/minijuvix/pull/2][#2]]
+  MiniJuvix-#2
   ([[https://github.com/janmasrovira][janmasrovira]])
-- Merge [[https://github.com/anoma/minijuvix/pull/1][#1]]
+- Merge MiniJuvix-#1
   ([[https://github.com/jonaprieto][jonaprieto]])
 
-** [[https://github.com/anoma/minijuvix/tree/v0.1.1][v0.1.1]]
-(2022-03-25)
-
-[[https://github.com/anoma/minijuvix/compare/48abde93b4e5380acabac810e584f4b7a6618592...v0.1.1][Full
-Changelog]]
+** v0.1.1 (2022-03-25)
 
 - Add support in the parser/scoper for Axiom backends
 - Add support for =foreign= keyword
@@ -1151,6 +1141,6 @@ Changelog]]
 *Closed issues:*
 
 - Add diff output to the test suite
-  [[https://github.com/anoma/juvix/issues/9][#9]]
+  MiniJuvix-#9
 - Improve scoper ambiguity error messages
-  [[https://github.com/anoma/juvix/issues/8][#8]]
+  MiniJuvix-#8
