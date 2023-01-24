@@ -104,17 +104,17 @@ convertNode tab = convert [] 0
               where
                 boolSymbol =
                   fromJust (HashMap.lookup (BuiltinTag TagTrue) (tab ^. infoConstructors)) ^. constructorInductive
-            Just BuiltinNatMul -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
+            Just BuiltinNatMul -> f (\info x y -> mkBuiltinApp info OpIntMul [x, y])
             Just BuiltinNatUDiv ->
               f
                 ( \info x y ->
                     mkBuiltinApp info OpIntDiv [mkBuiltinApp' OpIntAdd [x, mkBuiltinApp' OpIntSub [y, mkConstant' (ConstInteger 1)]], y]
                 )
-            Just BuiltinNatDiv -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
-            Just BuiltinNatMod -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
-            Just BuiltinNatLe -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
-            Just BuiltinNatLt -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
-            Just BuiltinNatEq -> f (\info x y -> mkBuiltinApp info OpIntAdd [x, y])
+            Just BuiltinNatDiv -> f (\info x y -> mkBuiltinApp info OpIntDiv [x, y])
+            Just BuiltinNatMod -> f (\info x y -> mkBuiltinApp info OpIntMod [x, y])
+            Just BuiltinNatLe -> f (\info x y -> mkBuiltinApp info OpIntLe [x, y])
+            Just BuiltinNatLt -> f (\info x y -> mkBuiltinApp info OpIntLt [x, y])
+            Just BuiltinNatEq -> f (\info x y -> mkBuiltinApp info OpEq [x, y])
             _ -> node
 
 natToInt :: InfoTable -> InfoTable
