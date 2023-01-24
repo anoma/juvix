@@ -86,7 +86,7 @@ $(WEBAPP_EXAMPLES):
 
 # -- MDBook
 
-docs/md/README.md : README.MNg
+docs/md/README.md : README.org
 	@mkdir -p docs/md
 	@${ORGTOMDPRG} README.org ${ORGOPTS}
 
