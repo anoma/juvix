@@ -60,7 +60,7 @@ buildTable :: (Foldable f) => f Module -> InfoTable
 buildTable = mconcatMap buildTable1
 
 buildTableRepl :: (Foldable f) => Expression -> f Module -> InfoTable
-buildTableRepl e = extendWithReplExpression e . builtTable
+buildTableRepl e = extendWithReplExpression e . buildTable
 
 buildTable1 :: Module -> InfoTable
 buildTable1 = run . evalState (mempty :: Cache) . buildTable1'
