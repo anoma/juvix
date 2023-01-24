@@ -1,53 +1,56 @@
 module Data.Int.Ops;
+  open import Data.Int;
+  open import Stdlib.Data.Bool;
 
-open import Data.Int;
-open import Stdlib.Data.Bool;
+  foreign c {
+  bool lessThan(int l, int r) {
+    return l < r;
+  \}
 
-foreign c {
-   bool lessThan(int l, int r) {
-     return l < r;
-   \}
+  bool eqInt(int l, int r) {
+    return l == r;
+  \}
 
-   bool eqInt(int l, int r) {
-     return l == r;
-   \}
+  int plus(int l, int r) {
+    return l + r;
+  \}
 
-   int plus(int l, int r) {
-     return l + r;
-   \}
+  int minus(int l, int r) {
+    return l - r;
+  \}
+  };
 
-   int minus(int l, int r) {
-     return l - r;
-   \}
-};
+  infix 4 <;
+  axiom < : Int → Int → Bool;
 
-infix 4 <;
-axiom < : Int → Int → Bool;
-compile < {
-  c ↦ "lessThan";
-};
+  compile < {
+    c ↦ "lessThan";
+  };
 
-axiom eqInt : Int → Int → Bool;
-compile eqInt {
-  c ↦ "eqInt";
-};
+  axiom eqInt : Int → Int → Bool;
 
-infix 4 ==;
-axiom == : Int → Int → Bool;
-compile == {
-  c ↦ "eqInt";
-};
+  compile eqInt {
+    c ↦ "eqInt";
+  };
 
-infixl 6 -;
-axiom - : Int -> Int -> Int;
-compile - {
-  c ↦ "minus";
-};
+  infix 4 ==;
+  axiom == : Int → Int → Bool;
 
-infixl 6 +;
-axiom + : Int -> Int -> Int;
-compile + {
-  c ↦ "plus";
-};
+  compile == {
+    c ↦ "eqInt";
+  };
 
+  infixl 6 -;
+  axiom - : Int → Int → Int;
+
+  compile - {
+    c ↦ "minus";
+  };
+
+  infixl 6 +;
+  axiom + : Int → Int → Int;
+
+  compile + {
+    c ↦ "plus";
+  };
 end;

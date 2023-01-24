@@ -1,60 +1,64 @@
 --- Pascal's triangle is the arrangement of binomial coefficients in a triangular array.
----
 --- The rows of the triangle are staggered so that each number can be computed as the
+
 --- sum of the numbers to the left and right in the previous row.
----
 --- The function ;pascal; produces the triangle to a given depth.
-
 module PascalsTriangle;
+  open import Stdlib.Prelude;
 
-open import Stdlib.Prelude;
+  zipWith : {A : Type} → {B : Type} → {C : Type} → (A → B → C) → List
+    A → List B → List C;
+  zipWith f nil _ := nil;
+  zipWith f _ nil := nil;
+  zipWith f (x :: xs) (y :: ys) := f x y :: zipWith f xs ys;
 
-zipWith : {A : Type} → {B : Type} → {C : Type} → (A → B → C) -> List A → List B → List C;
-zipWith f nil _ := nil;
-zipWith f _ nil := nil;
-zipWith f (x :: xs) (y :: ys) := f x y :: zipWith f xs ys;
+  --- Return a list of repeated applications of a given function
+  iterate : {A : Type} → Nat → (A → A) → A → List A;
+  iterate zero _ _ := nil;
+  iterate (suc n) f a := a :: iterate n f (f a);
 
---- Return a list of repeated applications of a given function
-iterate : {A : Type} → Nat → (A → A) → A → List A;
-iterate zero _ _ := nil;
-iterate (suc n) f a := a :: iterate n f (f a);
+  --- Produce a singleton List
+  singleton : {A : Type} → A → List A;
+  singleton a := a :: nil;
 
---- Produce a singleton List
-singleton : {A : Type} → A → List A;
-singleton a := a :: nil;
+  infixr 5 ++str;
+  --- Concatenation of ;String;s
+  axiom ++str : String → String → String;
 
---- Concatenation of ;String;s
-infixr 5 ++str;
-axiom ++str : String → String → String;
-compile ++str {
-  c ↦ "concat";
-};
+  compile ++str {
+    c ↦ "concat";
+  };
 
---- Concatenates a list of strings
----
---- ;concat (("a" :: nil) :: ("b" :: nil)); evaluates to ;"a" :: "b" :: nil;
-concat : List String → String;
-concat := foldl (++str) "";
+  --- Concatenates a list of strings
+  --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
+  :: "b"
+  :: nil;
+  concat : List String → String;
+  concat := foldl (++str) "";
 
-intercalate : String → List String → String;
-intercalate sep xs := concat (intersperse sep xs);
+  intercalate : String → List String → String;
+  intercalate sep xs := concat (intersperse sep xs);
 
---- Joins a list of strings with the newline character
-unlines : List String → String;
-unlines := intercalate "\n";
+  --- Joins a list of strings with the newline character
+  unlines : List String → String;
+  unlines := intercalate "\n";
 
-showList : List Nat → String;
-showList xs := "[" ++str intercalate "," (map natToStr xs) ++str "]";
+  showList : List Nat → String;
+  showList xs := "["
+    ++str intercalate "," (map natToStr xs)
+    ++str "]";
 
---- Compute the next row of Pascal's triangle
-pascalNextRow : List Nat → List Nat;
-pascalNextRow row := zipWith (+) (singleton zero ++ row) (row ++ singleton zero);
+  --- Compute the next row of Pascal's triangle
+  pascalNextRow : List Nat → List Nat;
+  pascalNextRow row := zipWith
+    (+)
+    (singleton zero ++ row)
+    (row ++ singleton zero);
 
---- Produce Pascal's triangle to a given depth
-pascal : Nat → List (List Nat);
-pascal rows := iterate rows pascalNextRow (singleton 1);
+  --- Produce Pascal's triangle to a given depth
+  pascal : Nat → List (List Nat);
+  pascal rows := iterate rows pascalNextRow (singleton 1);
 
-main : IO;
-main := printStringLn (unlines (map showList (pascal 10)));
-
+  main : IO;
+  main := printStringLn (unlines (map showList (pascal 10)));
 end;

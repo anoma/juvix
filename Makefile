@@ -154,6 +154,18 @@ format: clang-format
 clang-format:
 	@cd runtime && ${MAKE} format
 
+TOFORMATFILES = ./examples
+TOFORMAT = $(shell find ${TOFORMATFILES} -name "*.juvix" -print)
+
+.PHONY: $(TOFORMAT)
+juvix-format: $(TOFORMAT)
+$(TOFORMAT): %:
+	@echo "Formatting $@"
+	@juvix dev scope $@ --with-comments > $@.tmp
+	@mv $@.tmp $@
+	@echo "Typechecking formatted $@"
+	@juvix typecheck $@ --only-errors
+
 .PHONY: check-ormolu
 check-ormolu: export ORMOLUMODE = check
 check-ormolu:
@@ -193,6 +205,7 @@ check: clean
 	@${MAKE} install
 	@${MAKE} test
 	@${MAKE} smoke
+	@${MAKE} juvix-format
 	@${MAKE} format
 	@${MAKE} pre-commit
 

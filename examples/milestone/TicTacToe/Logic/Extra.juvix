@@ -1,32 +1,32 @@
 --- Some generic helper definitions.
 module Logic.Extra;
+  open import Stdlib.Data.Nat.Ord;
+  open import Stdlib.Prelude;
 
-open import Stdlib.Data.Nat.Ord;
-open import Stdlib.Prelude;
+  infixr 5 ++str;
+  --- Primitive concatenation of ;String;s
+  axiom ++str : String → String → String;
 
-infixr 5 ++str;
---- Primitive concatenation of ;String;s
-axiom ++str : String → String → String;
-compile ++str {
-  c ↦ "concat";
-};
+  compile ++str {
+    c ↦ "concat";
+  };
 
---- Concatenates a list of strings
----
---- ;concat (("a" :: nil) :: ("b" :: nil)); evaluates to ;"a" :: "b" :: nil;
-concat : List String → String;
-concat := foldl (++str) "";
+  --- Concatenates a list of strings
+  --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
+  :: "b"
+  :: nil;
+  concat : List String → String;
+  concat := foldl (++str) "";
 
---- It inserts the first ;String; at the beginning, in between, and at the end of the second list
-surround : String → List String → List String;
-surround x xs := (x :: intersperse x xs) ++ (x :: nil);
+  --- It inserts the first ;String; at the beginning, in between, and at the end of the second list
+  surround : String → List String → List String;
+  surround x xs := (x :: intersperse x xs) ++ x :: nil;
 
---- It inserts the first ;String; in between the ;String;s in the second list and concatenates the result
-intercalate : String → List String → String;
-intercalate sep xs := concat (intersperse sep xs);
+  --- It inserts the first ;String; in between the ;String;s in the second list and concatenates the result
+  intercalate : String → List String → String;
+  intercalate sep xs := concat (intersperse sep xs);
 
---- Joins a list of strings with the newline character
-unlines : List String → String;
-unlines := intercalate "\n";
-
+  --- Joins a list of strings with the newline character
+  unlines : List String → String;
+  unlines := intercalate "\n";
 end;

@@ -1,10 +1,9 @@
 module Anoma.Base;
-
-foreign ghc {
+  foreign ghc {
   import Anoma.Base
-};
+  };
 
-foreign c {
+  foreign c {
   int readPre(const char *key) {
       if (strcmp("change1-key", key)) {
           return 100;
@@ -28,51 +27,58 @@ foreign c {
   char* isBalanceKey(const char* s1, const char* s2) {
       return "owner-address";
   \}
-};
+  };
 
-open import Stdlib.Prelude;
-open import Data.Int;
-open import Data.Int.Ops;
-import Stdlib.Data.String.Ord;
+  open import Stdlib.Prelude;
+  open import Data.Int;
+  open import Data.Int.Ops;
 
-from-int : Int → Maybe Int;
-from-int i := if (i < Int_0) nothing (just i);
+  import Stdlib.Data.String.Ord;
 
-from-string : String → Maybe String;
-from-string s := if (s Stdlib.Data.String.Ord.== "") nothing (just s);
+  from-int : Int → Maybe Int;
+  from-int i := if (i < Int_0) nothing (just i);
 
---------------------------------------------------------------------------------
--- Anoma
---------------------------------------------------------------------------------
+  from-string : String → Maybe String;
+  from-string s := if
+    (s Stdlib.Data.String.Ord.== "")
+    nothing
+    (just s);
 
-axiom readPre : String → Int;
-compile readPre {
-  c ↦ "readPre";
-  ghc ↦ "readPre";
-};
+  --- -----------------------------------------------------------------------------
 
-axiom readPost : String → Int;
-compile readPost {
-  c ↦ "readPost";
-  ghc ↦ "readPost";
-};
+  -- Anoma
+  --- -----------------------------------------------------------------------------
+  axiom readPre : String → Int;
 
-axiom isBalanceKey : String → String → String;
-compile isBalanceKey {
-  c ↦ "isBalanceKey";
-  ghc ↦ "isBalanceKey";
-};
+  compile readPre {
+    c ↦ "readPre";
+    ghc ↦ "readPre";
+  };
 
-read-pre : String → Maybe Int;
-read-pre s := from-int (readPre s);
+  axiom readPost : String → Int;
 
-read-post : String → Maybe Int;
-read-post s := from-int (readPost s);
+  compile readPost {
+    c ↦ "readPost";
+    ghc ↦ "readPost";
+  };
 
-is-balance-key : String → String → Maybe String;
-is-balance-key token key := from-string (isBalanceKey token key);
+  axiom isBalanceKey : String → String → String;
 
-unwrap-default : Maybe Int → Int;
-unwrap-default := maybe Int_0 id;
+  compile isBalanceKey {
+    c ↦ "isBalanceKey";
+    ghc ↦ "isBalanceKey";
+  };
 
+  read-pre : String → Maybe Int;
+  read-pre s := from-int (readPre s);
+
+  read-post : String → Maybe Int;
+  read-post s := from-int (readPost s);
+
+  is-balance-key : String → String → Maybe String;
+  is-balance-key token key := from-string
+    (isBalanceKey token key);
+
+  unwrap-default : Maybe Int → Int;
+  unwrap-default := maybe Int_0 id;
 end;

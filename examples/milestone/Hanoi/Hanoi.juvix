@@ -1,71 +1,78 @@
 --- Towers of Hanoi is a puzzle with three rods and n disks of decresing size.
----
 --- The disks are stacked ontop of each other through the first rod.
+
 --- The aim of the game is to move the stack of disks to another rod while
+
 --- following these rules:
----
 --- 1. Only one disk can be moved at a time
+
 --- 2. You may only move a disk from the top of one of the stacks to the top of another stack
+
 --- 3. No disk may be moved on top of a smaller disk
----
 --- The function ;hanoi; computes the sequence of moves to solve puzzle.
-
 module Hanoi;
+  open import Stdlib.Prelude;
 
-open import Stdlib.Prelude;
+  infixr 5 ++str;
+  --- Concatenation of ;String;s
+  axiom ++str : String → String → String;
 
---- Concatenation of ;String;s
-infixr 5 ++str;
-axiom ++str : String → String → String;
-compile ++str {
-  c ↦ "concat";
-};
+  compile ++str {
+    c ↦ "concat";
+  };
 
---- Concatenates a list of strings
----
---- ;concat (("a" :: nil) :: ("b" :: nil)); evaluates to ;"a" :: "b" :: nil;
-concat : List String → String;
-concat := foldl (++str) "";
+  --- Concatenates a list of strings
+  --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
+  :: "b"
+  :: nil;
+  concat : List String → String;
+  concat := foldl (++str) "";
 
-intercalate : String → List String → String;
-intercalate sep xs := concat (intersperse sep xs);
+  intercalate : String → List String → String;
+  intercalate sep xs := concat (intersperse sep xs);
 
---- Joins a list of strings with the newline character
-unlines : List String → String;
-unlines := intercalate "\n";
+  --- Joins a list of strings with the newline character
+  unlines : List String → String;
+  unlines := intercalate "\n";
 
---- Produce a singleton List
-singleton : {A : Type} → A → List A;
-singleton a := a :: nil;
+  --- Produce a singleton List
+  singleton : {A : Type} → A → List A;
+  singleton a := a :: nil;
 
---- Produce a ;String; representation of a ;List Nat;
-showList : List Nat → String;
-showList xs := "[" ++str intercalate "," (map natToStr xs) ++str "]";
+  --- Produce a ;String; representation of a ;List Nat;
+  showList : List Nat → String;
+  showList xs := "["
+    ++str intercalate "," (map natToStr xs)
+    ++str "]";
 
---- A Peg represents a peg in the towers of Hanoi game
-type Peg :=
-    left : Peg
-  | middle : Peg
-  | right : Peg;
+  --- A Peg represents a peg in the towers of Hanoi game
+  type Peg :=
+    | left : Peg
+    | middle : Peg
+    | right : Peg;
 
-showPeg : Peg → String;
-showPeg left := "left";
-showPeg middle := "middle";
-showPeg right := "right";
+  showPeg : Peg → String;
+  showPeg left := "left";
+  showPeg middle := "middle";
+  showPeg right := "right";
 
+  --- A Move represents a move between pegs
+  type Move :=
+    | move : Peg → Peg → Move;
 
---- A Move represents a move between pegs
-type Move := move : Peg → Peg → Move;
+  showMove : Move → String;
+  showMove (move from to) := showPeg from
+    ++str " -> "
+    ++str showPeg to;
 
-showMove : Move → String;
-showMove (move from to) := showPeg from ++str " -> " ++str showPeg to;
+  --- Produce a list of ;Move;s that solves the towers of Hanoi game
+  hanoi : Nat → Peg → Peg → Peg → List Move;
+  hanoi zero _ _ _ := nil;
+  hanoi (suc n) p1 p2 p3 := hanoi n p1 p3 p2
+    ++ singleton (move p1 p2)
+    ++ hanoi n p3 p2 p1;
 
---- Produce a list of ;Move;s that solves the towers of Hanoi game
-hanoi : Nat → Peg → Peg → Peg → List Move;
-hanoi zero _ _ _ := nil;
-hanoi (suc n) p1 p2 p3 := hanoi n p1 p3 p2 ++ singleton (move p1 p2) ++ hanoi n p3 p2 p1;
-
-main : IO;
-main := printStringLn (unlines (map showMove (hanoi 5 left middle right)));
-
+  main : IO;
+  main := printStringLn
+    (unlines (map showMove (hanoi 5 left middle right)));
 end;
