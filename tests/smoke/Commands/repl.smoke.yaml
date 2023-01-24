@@ -122,10 +122,10 @@ tests:
     command:
       - juvix
       - repl
-    stdin: "let {x : Bool; x := false} in x"
+    stdin: "let {x : Nat; x := 2 + 1} in x"
     stdout:
       contains:
-        "false"
+        "suc (suc (suc zero))"
     exit-status: 0
 
   - name: load-builtin-bool

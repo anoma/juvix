@@ -59,11 +59,22 @@ instance Monoid InfoTable where
 buildTable :: (Foldable f) => f Module -> InfoTable
 buildTable = mconcatMap buildTable1
 
+buildTableRepl :: (Foldable f) => Expression -> f Module -> InfoTable
+buildTableRepl e = extendWithReplExpression e . mconcatMap buildTable1
+
 buildTable1 :: Module -> InfoTable
 buildTable1 = run . evalState (mempty :: Cache) . buildTable1'
 
 buildTable' :: (Members '[State Cache] r, Foldable f) => f Module -> Sem r InfoTable
 buildTable' = mconcatMap buildTable1'
+
+extendWithReplExpression :: Expression -> InfoTable -> InfoTable
+extendWithReplExpression e =
+  over
+    infoFunctions
+    ( HashMap.union
+        (HashMap.fromList [(f ^. funDefName, FunctionInfo f) | LetFunDef f <- universeBi e])
+    )
 
 -- | moduleName ↦ infoTable
 type Cache = HashMap Name InfoTable
