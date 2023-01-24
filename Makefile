@@ -201,7 +201,7 @@ build: submodules runtime
 	stack build ${STACKFLAGS}
 
 .PHONY: fast-build
-fast-build: submodules runtimestack
+fast-build: submodules runtime
 	stack build --fast ${STACKFLAGS}
 
 .PHONY: runtime
