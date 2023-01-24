@@ -26,7 +26,7 @@ unfoldFunType t = (map (Internal.PolyType . (^. Internal.paramType)) params, Int
   where
     (params, ret) = Internal.unfoldFunType (t ^. Internal.unpolyType)
 
-unfoldPolyApp :: Member (Reader Internal.TypesTable) r => Internal.Application -> Sem r (Internal.Expression, [Internal.Expression])
+unfoldPolyApp :: (Member (Reader Internal.TypesTable) r) => Internal.Application -> Sem r (Internal.Expression, [Internal.Expression])
 unfoldPolyApp a =
   let (f, args) = Internal.unfoldApplication a
    in case f of
@@ -36,7 +36,7 @@ unfoldPolyApp a =
           return (f, args')
         _ -> impossible
 
-filterCompileTimeArgsOrPatterns :: Member (Reader Internal.TypesTable) r => Internal.Name -> [a] -> Sem r [a]
+filterCompileTimeArgsOrPatterns :: (Member (Reader Internal.TypesTable) r) => Internal.Name -> [a] -> Sem r [a]
 filterCompileTimeArgsOrPatterns idenName lst = do
   tab <- ask
   return $
@@ -85,7 +85,7 @@ mkName n =
     idSuffix :: Text
     idSuffix = "_" <> show (n ^. Internal.nameId . Internal.unNameId)
 
-goType :: forall r. Member (Reader Internal.InfoTable) r => Internal.PolyType -> Sem r CDeclType
+goType :: forall r. (Member (Reader Internal.InfoTable) r) => Internal.PolyType -> Sem r CDeclType
 goType t = case t ^. Internal.unpolyType of
   Internal.ExpressionIden ti -> getInternalType ti
   Internal.ExpressionFunction {} -> return declFunctionPtrType
@@ -115,7 +115,7 @@ goType t = case t ^. Internal.unpolyType of
             }
       _ -> impossible
 
-typeToFunType :: Member (Reader Internal.InfoTable) r => Internal.PolyType -> Sem r CFunType
+typeToFunType :: (Member (Reader Internal.InfoTable) r) => Internal.PolyType -> Sem r CFunType
 typeToFunType t = do
   let (args, ret) = unfoldFunType t
   _cFunArgTypes <- mapM goType args
@@ -123,7 +123,7 @@ typeToFunType t = do
   return CFunType {..}
 
 applyOnFunStatement ::
-  forall a. Monoid a => (Internal.FunctionDef -> a) -> Internal.Statement -> a
+  forall a. (Monoid a) => (Internal.FunctionDef -> a) -> Internal.Statement -> a
 applyOnFunStatement f = \case
   Internal.StatementFunction (Internal.MutualBlock x) -> mconcatMap f x
   Internal.StatementForeign {} -> mempty
@@ -131,7 +131,7 @@ applyOnFunStatement f = \case
   Internal.StatementInductive {} -> mempty
   Internal.StatementInclude i -> mconcat $ map (applyOnFunStatement f) (i ^. Internal.includeModule . Internal.moduleBody . Internal.moduleStatements)
 
-getConstructorCName :: Members '[Reader Internal.InfoTable] r => Internal.Name -> Sem r Text
+getConstructorCName :: (Members '[Reader Internal.InfoTable] r) => Internal.Name -> Sem r Text
 getConstructorCName n = do
   ctorInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoConstructors)
   return
@@ -140,7 +140,7 @@ getConstructorCName n = do
         Nothing -> mkName n
     )
 
-getAxiomCName :: Members '[Reader Internal.InfoTable] r => Internal.Name -> Sem r Text
+getAxiomCName :: (Members '[Reader Internal.InfoTable] r) => Internal.Name -> Sem r Text
 getAxiomCName n = do
   axiomInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoAxioms)
   return
@@ -149,7 +149,7 @@ getAxiomCName n = do
         Nothing -> mkName n
     )
 
-getInductiveCName :: Members '[Reader Internal.InfoTable] r => Internal.Name -> Sem r (Bool, Text)
+getInductiveCName :: (Members '[Reader Internal.InfoTable] r) => Internal.Name -> Sem r (Bool, Text)
 getInductiveCName n = do
   inductiveInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoInductives)
   return
@@ -158,7 +158,7 @@ getInductiveCName n = do
         Nothing -> (True, asTypeDef (mkName n))
     )
 
-getInductiveCType :: Member (Reader Internal.InfoTable) r => Internal.Name -> Sem r CDeclType
+getInductiveCType :: (Member (Reader Internal.InfoTable) r) => Internal.Name -> Sem r CDeclType
 getInductiveCType n = do
   (isPtr, name) <- getInductiveCName n
   return
@@ -168,27 +168,27 @@ getInductiveCType n = do
         }
     )
 
-typeOfConstructor :: Member (Reader Internal.InfoTable) r => Internal.Name -> Sem r CDeclType
+typeOfConstructor :: (Member (Reader Internal.InfoTable) r) => Internal.Name -> Sem r CDeclType
 typeOfConstructor name = do
   info <- Internal.lookupConstructor name
   getInductiveCType (info ^. Internal.constructorInfoInductive)
 
-getClausePatternArgs :: Member (Reader Internal.TypesTable) r => Internal.FunctionClause -> Sem r [Internal.PatternArg]
+getClausePatternArgs :: (Member (Reader Internal.TypesTable) r) => Internal.FunctionClause -> Sem r [Internal.PatternArg]
 getClausePatternArgs c =
   filterCompileTimeArgsOrPatterns
     (c ^. Internal.clauseName)
     (c ^. Internal.clausePatterns)
 
-getClausePatterns :: Member (Reader Internal.TypesTable) r => Internal.FunctionClause -> Sem r [Internal.Pattern]
+getClausePatterns :: (Member (Reader Internal.TypesTable) r) => Internal.FunctionClause -> Sem r [Internal.Pattern]
 getClausePatterns c = (^.. each . Internal.patternArgPattern) <$> getClausePatternArgs c
 
-functionInfoPatternsNum :: Member (Reader Internal.TypesTable) r => Internal.FunctionInfo -> Sem r Int
+functionInfoPatternsNum :: (Member (Reader Internal.TypesTable) r) => Internal.FunctionInfo -> Sem r Int
 functionInfoPatternsNum fInfo = do
   let c = head (fInfo ^. (Internal.functionInfoDef . Internal.funDefClauses))
   pats <- getClausePatternArgs c
   return (length pats)
 
-buildPatternInfoTable :: forall r. Members '[Reader Internal.InfoTable, Reader Internal.TypesTable] r => [Internal.PolyType] -> Internal.FunctionClause -> Sem r PatternInfoTable
+buildPatternInfoTable :: forall r. (Members '[Reader Internal.InfoTable, Reader Internal.TypesTable] r) => [Internal.PolyType] -> Internal.FunctionClause -> Sem r PatternInfoTable
 buildPatternInfoTable argTyps c =
   PatternInfoTable . HashMap.fromList <$> patBindings
   where
@@ -242,7 +242,7 @@ buildPatternInfoTable argTyps c =
           return (functionCall (ExpressionVar (asProjName ctorArg name)) [castToType ty exp])
 
 getType ::
-  Members '[Reader Internal.InfoTable, Reader Internal.TypesTable, Reader PatternInfoTable] r =>
+  (Members '[Reader Internal.InfoTable, Reader Internal.TypesTable, Reader PatternInfoTable] r) =>
   Internal.Iden ->
   Sem r (CFunType, CArity)
 getType = \case

@@ -15,19 +15,19 @@ filterUnreachable r = r {MicroTyped._resultModules = modules'}
     modules = r ^. MicroTyped.resultModules
     modules' = run $ runReader depInfo (mapM goModule modules)
 
-returnIfReachable :: Member (Reader NameDependencyInfo) r => Name -> a -> Sem r (Maybe a)
+returnIfReachable :: (Member (Reader NameDependencyInfo) r) => Name -> a -> Sem r (Maybe a)
 returnIfReachable n a = do
   depInfo <- ask
   return $ if isReachable depInfo n then Just a else Nothing
 
-goModule :: Member (Reader NameDependencyInfo) r => Module -> Sem r Module
+goModule :: (Member (Reader NameDependencyInfo) r) => Module -> Sem r Module
 goModule m = do
   stmts <- mapM goStatement (body ^. moduleStatements)
   return m {_moduleBody = body {_moduleStatements = catMaybes stmts}}
   where
     body = m ^. moduleBody
 
-goStatement :: Member (Reader NameDependencyInfo) r => Statement -> Sem r (Maybe Statement)
+goStatement :: (Member (Reader NameDependencyInfo) r) => Statement -> Sem r (Maybe Statement)
 goStatement s = case s of
   StatementInductive i -> returnIfReachable (i ^. inductiveName) s
   StatementFunction (MutualBlock (f :| _)) -> returnIfReachable (f ^. funDefName) s -- note that any function is reachable iff all are reachable

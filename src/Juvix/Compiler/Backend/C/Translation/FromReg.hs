@@ -132,7 +132,7 @@ fromReg lims tab =
         runCBuilder $
           concatMapM (fromRegFunction info) (HashMap.elems (tab ^. Reg.infoFunctions))
 
-fromRegFunction :: Member CBuilder r => Reg.ExtraInfo -> Reg.FunctionInfo -> Sem r [Statement]
+fromRegFunction :: (Member CBuilder r) => Reg.ExtraInfo -> Reg.FunctionInfo -> Sem r [Statement]
 fromRegFunction info funInfo = do
   body <- fromRegCode bNoStack info (funInfo ^. Reg.functionCode)
   let stmpDecls = mkDecls "DECL_STMP" (funInfo ^. Reg.functionStackVarsNum)
@@ -174,10 +174,10 @@ fromRegFunction info funInfo = do
                   [0 .. funInfo ^. Reg.functionArgsNum - 1]
           }
 
-fromRegCode :: Member CBuilder r => Bool -> Reg.ExtraInfo -> Reg.Code -> Sem r [Statement]
+fromRegCode :: (Member CBuilder r) => Bool -> Reg.ExtraInfo -> Reg.Code -> Sem r [Statement]
 fromRegCode bNoStack info = concatMapM (fromRegInstr bNoStack info)
 
-fromRegInstr :: forall r. Member CBuilder r => Bool -> Reg.ExtraInfo -> Reg.Instruction -> Sem r [Statement]
+fromRegInstr :: forall r. (Member CBuilder r) => Bool -> Reg.ExtraInfo -> Reg.Instruction -> Sem r [Statement]
 fromRegInstr bNoStack info = \case
   Reg.Nop ->
     return []

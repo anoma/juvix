@@ -27,7 +27,7 @@ instance Pretty QualifiedName where
     let symbols = snoc (toList path) s
      in dotted (map pretty symbols)
     where
-      dotted :: Foldable f => f (Doc a) -> Doc a
+      dotted :: (Foldable f) => f (Doc a) -> Doc a
       dotted = concatWith (surround ".")
 
 instance Pretty Name where

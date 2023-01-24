@@ -29,7 +29,7 @@ makeLenses ''BuiltinsState
 iniState :: BuiltinsState
 iniState = BuiltinsState mempty mempty
 
-re :: forall r a. Member (Error JuvixError) r => Sem (Builtins ': r) a -> Sem (State BuiltinsState ': r) a
+re :: forall r a. (Member (Error JuvixError) r) => Sem (Builtins ': r) a -> Sem (State BuiltinsState ': r) a
 re = reinterpret $ \case
   GetBuiltinName' i b -> fromMaybeM notDefined (gets (^. builtinsTable . at b))
     where
@@ -59,5 +59,5 @@ re = reinterpret $ \case
                 _alreadyDefinedLoc = getLoc n
               }
 
-runBuiltins :: Member (Error JuvixError) r => BuiltinsState -> Sem (Builtins ': r) a -> Sem r (BuiltinsState, a)
+runBuiltins :: (Member (Error JuvixError) r) => BuiltinsState -> Sem (Builtins ': r) a -> Sem r (BuiltinsState, a)
 runBuiltins s = runState s . re

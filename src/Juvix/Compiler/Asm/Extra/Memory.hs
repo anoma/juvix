@@ -104,7 +104,7 @@ getDirectRefType dr mem = case dr of
   TempRef off ->
     bottomTempStack off mem
 
-getValueType' :: Member (Error AsmError) r => Maybe Location -> InfoTable -> Memory -> Value -> Sem r Type
+getValueType' :: (Member (Error AsmError) r) => Maybe Location -> InfoTable -> Memory -> Value -> Sem r Type
 getValueType' loc tab mem = \case
   ConstInt _ -> return mkTypeInteger
   ConstBool _ -> return mkTypeBool
@@ -125,7 +125,7 @@ getValueType tab mem val =
     ty0 = getValueType' Nothing tab mem val
 
 -- | Check if the value stack has at least the given height
-checkValueStackHeight' :: Member (Error AsmError) r => Maybe Location -> Int -> Memory -> Sem r ()
+checkValueStackHeight' :: (Member (Error AsmError) r) => Maybe Location -> Int -> Memory -> Sem r ()
 checkValueStackHeight' loc n mem = do
   unless (length (mem ^. memoryValueStack) >= n) $
     throw $
@@ -140,7 +140,7 @@ checkValueStackHeight' loc n mem = do
 
 -- | Check if the values on top of the value stack have the given types (the
 -- first element of the list corresponds to the top of the stack)
-checkValueStack' :: Member (Error AsmError) r => Maybe Location -> InfoTable -> [Type] -> Memory -> Sem r ()
+checkValueStack' :: (Member (Error AsmError) r) => Maybe Location -> InfoTable -> [Type] -> Memory -> Sem r ()
 checkValueStack' loc tab tys mem = do
   checkValueStackHeight' loc (length tys) mem
   mapM_
@@ -162,7 +162,7 @@ checkValueStack' loc tab tys mem = do
 -- representations. Throws an error if some types cannot be unified, or the
 -- heights of the value stacks or the temporary stacks don't match, or the sizes
 -- of the argument areas don't match.
-unifyMemory' :: Member (Error AsmError) r => Maybe Location -> InfoTable -> Memory -> Memory -> Sem r Memory
+unifyMemory' :: (Member (Error AsmError) r) => Maybe Location -> InfoTable -> Memory -> Memory -> Sem r Memory
 unifyMemory' loc tab mem1 mem2 = do
   unless (length (mem1 ^. memoryValueStack) == length (mem2 ^. memoryValueStack)) $
     throw $

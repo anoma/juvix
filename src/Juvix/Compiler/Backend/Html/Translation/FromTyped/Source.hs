@@ -109,7 +109,7 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
 
 genModuleText ::
   forall r.
-  Members '[Reader HtmlOptions] r =>
+  (Members '[Reader HtmlOptions] r) =>
   GenModuleTextArgs ->
   Sem r Text
 genModuleText GenModuleTextArgs {..} = do
@@ -124,7 +124,7 @@ genModuleText GenModuleTextArgs {..} = do
 
 genModuleHtml ::
   forall r.
-  Members '[Reader HtmlOptions] r =>
+  (Members '[Reader HtmlOptions] r) =>
   GenModuleHtmlArgs ->
   Sem r Html
 genModuleHtml o = do
@@ -175,13 +175,13 @@ genModuleHtml o = do
         Html.div ! Attr.id "package-header" $
           (Html.span ! Attr.class_ "caption" $ "")
 
-docStream' :: PrettyCode a => Options -> a -> SimpleDocStream Ann
+docStream' :: (PrettyCode a) => Options -> a -> SimpleDocStream Ann
 docStream' opts m = layoutPretty defaultLayoutOptions (runPrettyCode opts m)
 
-renderTree :: Members '[Reader HtmlOptions] r => SimpleDocTree Ann -> Sem r Html
+renderTree :: (Members '[Reader HtmlOptions] r) => SimpleDocTree Ann -> Sem r Html
 renderTree = go
 
-ppCodeHtml' :: PrettyCode a => HtmlOptions -> Options -> a -> Html
+ppCodeHtml' :: (PrettyCode a) => HtmlOptions -> Options -> a -> Html
 ppCodeHtml' htmlOpts opts = run . runReader htmlOpts . renderTree . treeForm . docStream' opts
 
 ppCodeHtml ::
@@ -198,12 +198,12 @@ ppCodeHtmlInternal x = do
   o <- ask
   return (ppCodeHtmlInternal' o Internal.defaultOptions x)
   where
-    ppCodeHtmlInternal' :: Internal.PrettyCode a => HtmlOptions -> Internal.Options -> a -> Html
+    ppCodeHtmlInternal' :: (Internal.PrettyCode a) => HtmlOptions -> Internal.Options -> a -> Html
     ppCodeHtmlInternal' htmlOpts opts = run . runReader htmlOpts . renderTree . treeForm . docStreamInternal' opts
-    docStreamInternal' :: Internal.PrettyCode a => Internal.Options -> a -> SimpleDocStream Ann
+    docStreamInternal' :: (Internal.PrettyCode a) => Internal.Options -> a -> SimpleDocStream Ann
     docStreamInternal' opts m = layoutPretty defaultLayoutOptions (Internal.runPrettyCode opts m)
 
-go :: Members '[Reader HtmlOptions] r => SimpleDocTree Ann -> Sem r Html
+go :: (Members '[Reader HtmlOptions] r) => SimpleDocTree Ann -> Sem r Html
 go sdt = case sdt of
   STEmpty -> return mempty
   STChar c -> return (toHtml c)
@@ -215,7 +215,7 @@ go sdt = case sdt of
     textSpaces :: Int -> Text
     textSpaces n = Text.replicate n (Text.singleton ' ')
 
-putTag :: forall r. Members '[Reader HtmlOptions] r => Ann -> Html -> Sem r Html
+putTag :: forall r. (Members '[Reader HtmlOptions] r) => Ann -> Html -> Sem r Html
 putTag ann x = case ann of
   AnnKind k -> return (tagKind k x)
   AnnLiteralInteger -> return (Html.span ! Attr.class_ "ju-number" $ x)
@@ -265,12 +265,12 @@ putTag ann x = case ann of
 nameIdAttr :: S.NameId -> AttributeValue
 nameIdAttr (S.NameId k) = fromString . show $ k
 
-moduleDocRelativePath :: Members '[Reader HtmlOptions] r => TopModulePath -> Sem r (Path Rel File)
+moduleDocRelativePath :: (Members '[Reader HtmlOptions] r) => TopModulePath -> Sem r (Path Rel File)
 moduleDocRelativePath m = do
   suff <- kindSuffix <$> asks (^. htmlOptionsKind)
   return (topModulePathToRelativePathDot ".html" suff m)
 
-nameIdAttrRef :: Members '[Reader HtmlOptions] r => TopModulePath -> Maybe S.NameId -> Sem r AttributeValue
+nameIdAttrRef :: (Members '[Reader HtmlOptions] r) => TopModulePath -> Maybe S.NameId -> Sem r AttributeValue
 nameIdAttrRef tp s = do
   pth <- toFilePath <$> moduleDocRelativePath tp
   prefixUrl <- unpack <$> asks (^. htmlOptionsUrlPrefix)

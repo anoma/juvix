@@ -5,7 +5,7 @@ import Commands.Base
 import Commands.Dev.Asm.Run.Options
 import Juvix.Compiler.Asm.Translation.FromSource qualified as Asm
 
-runCommand :: forall r. Members '[Embed IO, App] r => AsmRunOptions -> Sem r ()
+runCommand :: forall r. (Members '[Embed IO, App] r) => AsmRunOptions -> Sem r ()
 runCommand opts = do
   afile :: Path Abs File <- someBaseToAbs' file
   s <- embed (readFile (toFilePath afile))

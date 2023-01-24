@@ -9,7 +9,7 @@ import Juvix.Compiler.Backend.C.Translation.FromInternal qualified as MiniC
 import System.Environment
 import System.Process qualified as P
 
-runCommand :: Members '[Embed IO, App] r => CompileOptions -> Sem r ()
+runCommand :: (Members '[Embed IO, App] r) => CompileOptions -> Sem r ()
 runCommand opts@CompileOptions {..} = do
   miniC <- (^. MiniC.resultCCode) <$> runPipeline _compileInputFile upToMiniC
   inputFile <- someBaseToAbs' (_compileInputFile ^. pathPath)
@@ -18,7 +18,7 @@ runCommand opts@CompileOptions {..} = do
     Left err -> printFailureExit err
     _ -> return ()
 
-inputCFile :: Members '[App] r => Path Abs File -> Sem r (Path Abs File)
+inputCFile :: (Members '[App] r) => Path Abs File -> Sem r (Path Abs File)
 inputCFile inputFileCompile = do
   buildDir <- askBuildDir
   return (buildDir <//> outputMiniCFile)
@@ -26,7 +26,7 @@ inputCFile inputFileCompile = do
     outputMiniCFile :: Path Rel File
     outputMiniCFile = replaceExtension' ".c" (filename inputFileCompile)
 
-runCompile :: Members '[Embed IO, App] r => Path Abs File -> CompileOptions -> Text -> Sem r (Either Text ())
+runCompile :: (Members '[Embed IO, App] r) => Path Abs File -> CompileOptions -> Text -> Sem r (Either Text ())
 runCompile inputFileCompile o minic = do
   buildDir <- askBuildDir
   ensureDir buildDir
@@ -38,7 +38,7 @@ runCompile inputFileCompile o minic = do
     TargetC -> return (Right ())
     TargetNative -> runError (clangNativeCompile inputFileCompile o)
 
-prepareRuntime :: forall r. Members '[Embed IO, App] r => CompileOptions -> Sem r ()
+prepareRuntime :: forall r. (Members '[Embed IO, App] r) => CompileOptions -> Sem r ()
 prepareRuntime o = mapM_ writeRuntime runtimeProjectDir
   where
     runtimeProjectDir :: [(Path Rel File, BS.ByteString)]
@@ -74,7 +74,7 @@ libcRuntime = wasiLibCRuntimeDir <> builtinCRuntimeDir
 
 clangNativeCompile ::
   forall r.
-  Members '[Embed IO, App, Error Text] r =>
+  (Members '[Embed IO, App, Error Text] r) =>
   Path Abs File ->
   CompileOptions ->
   Sem r ()
@@ -94,7 +94,7 @@ clangNativeCompile inputFileCompile o = do
 
 clangCompile ::
   forall r.
-  Members '[Embed IO, App, Error Text] r =>
+  (Members '[Embed IO, App, Error Text] r) =>
   Path Abs File ->
   CompileOptions ->
   Sem r ()
@@ -119,7 +119,7 @@ clangCompile inputFileCompile o = do
     getInputFile :: Sem r (Path Abs File)
     getInputFile = inputCFile inputFileCompile
 
-sysrootEnvVar :: Members '[Error Text, Embed IO] r => Sem r (Path Abs Dir)
+sysrootEnvVar :: (Members '[Error Text, Embed IO] r) => Sem r (Path Abs Dir)
 sysrootEnvVar =
   absDir
     <$> fromMaybeM (throw msg) (embed (lookupEnv "WASI_SYSROOT_PATH"))
@@ -137,7 +137,7 @@ commonArgs buildDir wasmOutputFile =
     toFilePath wasmOutputFile
   ]
 
-standaloneLibArgs :: Members '[App, Embed IO] r => Path Abs File -> Path Abs File -> Sem r [String]
+standaloneLibArgs :: (Members '[App, Embed IO] r) => Path Abs File -> Path Abs File -> Sem r [String]
 standaloneLibArgs wasmOutputFile inputFile = do
   buildDir <- askBuildDir
   return $
@@ -150,7 +150,7 @@ standaloneLibArgs wasmOutputFile inputFile = do
            toFilePath inputFile
          ]
 
-wasiStandaloneArgs :: Members '[App, Error Text, Embed IO] r => Path Abs File -> Path Abs File -> Sem r [String]
+wasiStandaloneArgs :: (Members '[App, Error Text, Embed IO] r) => Path Abs File -> Path Abs File -> Sem r [String]
 wasiStandaloneArgs wasmOutputFile inputFile = do
   buildDir <- askBuildDir
   com <- wasiCommonArgs wasmOutputFile
@@ -160,7 +160,7 @@ wasiStandaloneArgs wasmOutputFile inputFile = do
            toFilePath inputFile
          ]
 
-wasiLibcArgs :: Members '[App, Error Text, Embed IO] r => Path Abs File -> Path Abs File -> Sem r [String]
+wasiLibcArgs :: (Members '[App, Error Text, Embed IO] r) => Path Abs File -> Path Abs File -> Sem r [String]
 wasiLibcArgs wasmOutputFile inputFile = do
   com <- wasiCommonArgs wasmOutputFile
   return $ com <> ["-lc", toFilePath inputFile]
@@ -169,7 +169,7 @@ nativeArgs :: Path Abs Dir -> Path Abs File -> Path Abs File -> [String]
 nativeArgs buildDir outputFile inputFile =
   commonArgs buildDir outputFile <> [toFilePath inputFile]
 
-wasiCommonArgs :: Members '[App, Error Text, Embed IO] r => Path Abs File -> Sem r [String]
+wasiCommonArgs :: (Members '[App, Error Text, Embed IO] r) => Path Abs File -> Sem r [String]
 wasiCommonArgs wasmOutputFile = do
   sysrootPath <- sysrootEnvVar
   buildDir <- askBuildDir
@@ -182,7 +182,7 @@ wasiCommonArgs wasmOutputFile = do
          ]
 
 runClang ::
-  Members '[Embed IO, Error Text] r =>
+  (Members '[Embed IO, Error Text] r) =>
   [String] ->
   Sem r ()
 runClang args = do

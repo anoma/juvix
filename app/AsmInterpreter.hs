@@ -8,7 +8,7 @@ import Juvix.Compiler.Asm.Interpreter qualified as Asm
 import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Asm.Transformation.Validate qualified as Asm
 
-runAsm :: forall r. Members '[Embed IO, App] r => Bool -> Asm.InfoTable -> Sem r ()
+runAsm :: forall r. (Members '[Embed IO, App] r) => Bool -> Asm.InfoTable -> Sem r ()
 runAsm bValidate tab =
   let v = if bValidate then Asm.validate' tab else Nothing
    in case v of

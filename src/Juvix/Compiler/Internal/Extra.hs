@@ -267,13 +267,13 @@ _ExpressionHole f e = case e of
   ExpressionHole h -> ExpressionHole <$> f h
   _ -> pure e
 
-holes :: HasExpressions a => Traversal' a Hole
+holes :: (HasExpressions a) => Traversal' a Hole
 holes = leafExpressions . _ExpressionHole
 
-hasHoles :: HasExpressions a => a -> Bool
+hasHoles :: (HasExpressions a) => a -> Bool
 hasHoles = has holes
 
-subsHoles :: HasExpressions a => HashMap Hole Expression -> a -> a
+subsHoles :: (HasExpressions a) => HashMap Hole Expression -> a -> a
 subsHoles s = over leafExpressions helper
   where
     helper :: Expression -> Expression
@@ -388,7 +388,7 @@ renamePattern m = over patternVariables renameVar
       | Just v' <- m ^. at v = v'
       | otherwise = v
 
-inductiveTypeVarsAssoc :: Foldable f => InductiveDef -> f a -> HashMap VarName a
+inductiveTypeVarsAssoc :: (Foldable f) => InductiveDef -> f a -> HashMap VarName a
 inductiveTypeVarsAssoc def l
   | length vars < n = impossible
   | otherwise = HashMap.fromList (zip vars (toList l))
@@ -474,7 +474,7 @@ unfoldApplication = fmap (fmap snd) . unfoldApplication'
 reachableModules :: Module -> [Module]
 reachableModules = fst . run . runOutputList . evalState (mempty :: HashSet Name) . go
   where
-    go :: forall r. Members '[State (HashSet Name), Output Module] r => Module -> Sem r ()
+    go :: forall r. (Members '[State (HashSet Name), Output Module] r) => Module -> Sem r ()
     go m = do
       s <- get
       unless

@@ -444,7 +444,7 @@ newtype ModuleRef' (c :: S.IsConcrete) = ModuleRef'
   { _unModuleRef' :: Σ ModuleIsTop (TyCon1 (ModuleRef'' c))
   }
 
-instance SingI c => Show (ModuleRef' c) where
+instance (SingI c) => Show (ModuleRef' c) where
   show (ModuleRef' (isTop :&: r)) = case isTop of
     SModuleLocal -> case sing :: S.SIsConcrete c of
       S.SConcrete -> show r
@@ -453,7 +453,7 @@ instance SingI c => Show (ModuleRef' c) where
       S.SConcrete -> show r
       S.SNotConcrete -> show r
 
-getNameRefId :: forall c. SingI c => RefNameType c -> S.NameId
+getNameRefId :: forall c. (SingI c) => RefNameType c -> S.NameId
 getNameRefId = case sing :: S.SIsConcrete c of
   S.SConcrete -> (^. S.nameId)
   S.SNotConcrete -> (^. S.nameId)
@@ -484,7 +484,7 @@ data ModuleRef'' (c :: S.IsConcrete) (t :: ModuleIsTop) = ModuleRef''
     _moduleRefModule :: Module 'Scoped t
   }
 
-instance Show (RefNameType s) => Show (ModuleRef'' s t) where
+instance (Show (RefNameType s)) => Show (ModuleRef'' s t) where
   show ModuleRef'' {..} = show _moduleRefName
 
 data SymbolEntry
@@ -557,7 +557,7 @@ deriving stock instance
 deriving stock instance
   (Show (RefNameType s)) => Show (ScopedIden' s)
 
-identifierName :: forall n. SingI n => ScopedIden' n -> RefNameType n
+identifierName :: forall n. (SingI n) => ScopedIden' n -> RefNameType n
 identifierName = \case
   ScopedAxiom a -> a ^. axiomRefName
   ScopedInductive i -> i ^. inductiveRefName
@@ -798,26 +798,26 @@ deriving stock instance
 newtype Eval (s :: Stage) = Eval {evalExpression :: ExpressionType s}
 
 deriving stock instance
-  Show (ExpressionType s) => Show (Eval s)
+  (Show (ExpressionType s)) => Show (Eval s)
 
 deriving stock instance
-  Eq (ExpressionType s) => Eq (Eval s)
+  (Eq (ExpressionType s)) => Eq (Eval s)
 
 deriving stock instance
-  Ord (ExpressionType s) => Ord (Eval s)
+  (Ord (ExpressionType s)) => Ord (Eval s)
 
 --------------------------------------------------------------------------------
 
 newtype Print (s :: Stage) = Print {printExpression :: ExpressionType s}
 
 deriving stock instance
-  Show (ExpressionType s) => Show (Print s)
+  (Show (ExpressionType s)) => Show (Print s)
 
 deriving stock instance
-  Eq (ExpressionType s) => Eq (Print s)
+  (Eq (ExpressionType s)) => Eq (Print s)
 
 deriving stock instance
-  Ord (ExpressionType s) => Ord (Print s)
+  (Ord (ExpressionType s)) => Ord (Print s)
 
 --------------------------------------------------------------------------------
 -- Expression atom
@@ -858,11 +858,11 @@ data Example (s :: Stage) = Example
     _exampleExpression :: ExpressionType s
   }
 
-deriving stock instance Show (ExpressionType s) => Show (Example s)
+deriving stock instance (Show (ExpressionType s)) => Show (Example s)
 
-deriving stock instance Eq (ExpressionType s) => Eq (Example s)
+deriving stock instance (Eq (ExpressionType s)) => Eq (Example s)
 
-deriving stock instance Ord (ExpressionType s) => Ord (Example s)
+deriving stock instance (Ord (ExpressionType s)) => Ord (Example s)
 
 data JudocBlock (s :: Stage)
   = JudocParagraph (NonEmpty (JudocParagraphLine s))
@@ -997,7 +997,7 @@ deriving stock instance
   Ord (PatternAtom s)
 
 deriving stock instance
-  Show (PatternAtom s) => Show (PatternAtoms s)
+  (Show (PatternAtom s)) => Show (PatternAtoms s)
 
 instance HasLoc ScopedIden where
   getLoc = \case
@@ -1082,7 +1082,7 @@ instance HasLoc PatternScopedIden where
 instance HasLoc PatternBinding where
   getLoc (PatternBinding n p) = getLoc n <> getLoc p
 
-instance SingI s => HasLoc (PatternAtom s) where
+instance (SingI s) => HasLoc (PatternAtom s) where
   getLoc = \case
     PatternAtomIden i -> getLocIden i
     PatternAtomWildcard w -> getLoc w
@@ -1091,15 +1091,15 @@ instance SingI s => HasLoc (PatternAtom s) where
     PatternAtomBraces p -> getLocParens p
     PatternAtomAt p -> getLocAt p
     where
-      getLocAt :: forall r. SingI r => PatternAtType r -> Interval
+      getLocAt :: forall r. (SingI r) => PatternAtType r -> Interval
       getLocAt p = case sing :: SStage r of
         SParsed -> getLoc p
         SScoped -> getLoc p
-      getLocIden :: forall r. SingI r => PatternAtomIdenType r -> Interval
+      getLocIden :: forall r. (SingI r) => PatternAtomIdenType r -> Interval
       getLocIden p = case sing :: SStage r of
         SParsed -> getLoc p
         SScoped -> getLoc p
-      getLocParens :: forall r. SingI r => PatternParensType r -> Interval
+      getLocParens :: forall r. (SingI r) => PatternParensType r -> Interval
       getLocParens p = case sing :: SStage r of
         SParsed -> getLoc p
         SScoped -> getLoc p
@@ -1130,10 +1130,10 @@ instance HasLoc Pattern where
     PatternInfixApplication i -> getLoc i
     PatternPostfixApplication i -> getLoc i
 
-instance Eq (PatternAtom s) => Eq (PatternAtoms s) where
+instance (Eq (PatternAtom s)) => Eq (PatternAtoms s) where
   (==) = (==) `on` (^. patternAtoms)
 
-instance Ord (PatternAtom s) => Ord (PatternAtoms s) where
+instance (Ord (PatternAtom s)) => Ord (PatternAtoms s) where
   compare = compare `on` (^. patternAtoms)
 
 deriving stock instance

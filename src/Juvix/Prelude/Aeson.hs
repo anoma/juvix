@@ -10,5 +10,5 @@ import Data.Aeson.Text
 import Data.Text.Lazy qualified as Lazy
 import Juvix.Prelude.Base
 
-encodeToText :: ToJSON a => a -> Text
+encodeToText :: (ToJSON a) => a -> Text
 encodeToText = Lazy.toStrict . encodeToLazyText

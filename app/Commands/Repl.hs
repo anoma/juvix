@@ -48,7 +48,7 @@ data ReplState = ReplState
 makeLenses ''ReplState
 makeLenses ''ReplContext
 
-helpTxt :: MonadIO m => m ()
+helpTxt :: (MonadIO m) => m ()
 helpTxt =
   liftIO
     ( putStrLn
@@ -67,13 +67,13 @@ helpTxt =
   |]
     )
 
-noFileLoadedMsg :: MonadIO m => m ()
+noFileLoadedMsg :: (MonadIO m) => m ()
 noFileLoadedMsg = liftIO (putStrLn "No file loaded. Load a file using the `:load FILE` command.")
 
-welcomeMsg :: MonadIO m => m ()
+welcomeMsg :: (MonadIO m) => m ()
 welcomeMsg = liftIO (putStrLn [i|Juvix REPL version #{versionTag}: https://juvix.org. Run :help for help|])
 
-runCommand :: Members '[Embed IO, App] r => ReplOptions -> Sem r ()
+runCommand :: (Members '[Embed IO, App] r) => ReplOptions -> Sem r ()
 runCommand opts = do
   root <- askPkgDir
   buildDir <- askBuildDir
@@ -182,7 +182,7 @@ runCommand opts = do
               compileString :: Repl (Either JuvixError Core.Node)
               compileString = liftIO $ compileExpressionIO' ctx (strip (pack s))
 
-              bindEither :: Monad m => m (Either e a) -> (a -> m (Either e b)) -> m (Either e b)
+              bindEither :: (Monad m) => m (Either e a) -> (a -> m (Either e b)) -> m (Either e b)
               bindEither x f = join <$> (x >>= mapM f)
 
       core :: String -> Repl ()

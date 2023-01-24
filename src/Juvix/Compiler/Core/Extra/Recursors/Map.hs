@@ -18,7 +18,7 @@ type family DirTy d c = res | res -> d where
 -- recursive subnodes have already been mapped
 umapG ::
   forall c m.
-  Monad m =>
+  (Monad m) =>
   Collector (Int, [Binder]) c ->
   (c -> Node -> m Node) ->
   Node ->
@@ -34,7 +34,7 @@ umapG coll f = go (coll ^. cEmpty)
 
 dmapG ::
   forall c m.
-  Monad m =>
+  (Monad m) =>
   Collector (Int, [Binder]) c ->
   (c -> Node -> m (Recur' c)) ->
   Node ->
@@ -71,19 +71,19 @@ class EmbedIdentity a where
 class EmbedIdentity' a where
   embedIden' :: a -> OverIdentity' a
 
-instance EmbedIdentity' b => EmbedIdentity' (a -> b) where
+instance (EmbedIdentity' b) => EmbedIdentity' (a -> b) where
   embedIden' f = embedIden' . f
 
-instance EmbedIdentity' b => EmbedIdentity ((), b) where
+instance (EmbedIdentity' b) => EmbedIdentity ((), b) where
   embedIden (a, b) = (a, embedIden' b)
 
-instance EmbedIdentity' b => EmbedIdentity (Index, b) where
+instance (EmbedIdentity' b) => EmbedIdentity (Index, b) where
   embedIden (a, b) = (a, embedIden' b)
 
-instance EmbedIdentity' b => EmbedIdentity (BinderList Binder, b) where
+instance (EmbedIdentity' b) => EmbedIdentity (BinderList Binder, b) where
   embedIden (a, b) = (a, embedIden' b)
 
-instance EmbedIdentity' b => EmbedIdentity (a -> b) where
+instance (EmbedIdentity' b) => EmbedIdentity (a -> b) where
   embedIden a = embedIden' a
 
 instance EmbedIdentity' (c, Node) where
@@ -98,10 +98,10 @@ instance EmbedIdentity' Recur where
 instance EmbedIdentity' (Recur' c) where
   embedIden' = Identity
 
-fromSimple :: Functor g => c -> g Node -> g (Recur' c)
+fromSimple :: (Functor g) => c -> g Node -> g (Recur' c)
 fromSimple c = fmap (\x -> Recur' (c, x))
 
-fromRecur :: Functor g => c -> g Recur -> g (Recur' c)
+fromRecur :: (Functor g) => c -> g Recur -> g (Recur' c)
 fromRecur c =
   fmap
     ( \case
@@ -109,10 +109,10 @@ fromRecur c =
         Recur x -> Recur' (c, x)
     )
 
-fromPair :: Functor g => d -> g (c, Node) -> g (Recur' (c, d))
+fromPair :: (Functor g) => d -> g (c, Node) -> g (Recur' (c, d))
 fromPair d = fmap (\(c, x) -> Recur' ((c, d), x))
 
-fromRecur' :: Functor g => d -> g (Recur' c) -> g (Recur' (c, d))
+fromRecur' :: (Functor g) => d -> g (Recur' c) -> g (Recur' (c, d))
 fromRecur' d =
   fmap
     ( \case
@@ -121,7 +121,7 @@ fromRecur' d =
     )
 
 nodeMapG' ::
-  Monad m =>
+  (Monad m) =>
   Sing dir ->
   Collector (Int, [Binder]) c ->
   (c -> Node -> m (DirTy dir c)) ->

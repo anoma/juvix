@@ -9,7 +9,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified
 import Juvix.Data.Comment
 import Juvix.Prelude.Pretty
 
-runCommand :: Members '[Embed IO, App] r => ScopeOptions -> Sem r ()
+runCommand :: (Members '[Embed IO, App] r) => ScopeOptions -> Sem r ()
 runCommand opts = do
   globalOpts <- askGlobalOptions
   res :: Scoper.ScoperResult <- runPipeline (opts ^. scopeInputFile) upToScoping

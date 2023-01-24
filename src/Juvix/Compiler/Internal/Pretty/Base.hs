@@ -11,16 +11,16 @@ import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
-doc :: PrettyCode c => Options -> c -> Doc Ann
+doc :: (PrettyCode c) => Options -> c -> Doc Ann
 doc opts =
   run
     . runReader opts
     . ppCode
 
 class PrettyCode c where
-  ppCode :: Member (Reader Options) r => c -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => c -> Sem r (Doc Ann)
 
-runPrettyCode :: PrettyCode c => Options -> c -> Doc Ann
+runPrettyCode :: (PrettyCode c) => Options -> c -> Doc Ann
 runPrettyCode opts = run . runReader opts . ppCode
 
 instance PrettyCode NameId where
@@ -32,7 +32,7 @@ instance PrettyCode Name where
     return (prettyName showNameId n)
 
 instance PrettyCode Iden where
-  ppCode :: Member (Reader Options) r => Iden -> Sem r (Doc Ann)
+  ppCode :: (Member (Reader Options) r) => Iden -> Sem r (Doc Ann)
   ppCode i = case i of
     IdenFunction na -> ppCode na
     IdenConstructor na -> ppCode na
@@ -270,7 +270,7 @@ instance PrettyCode TypeCallsMap where
     elems' <- mapM ppCodeElem (sortOn fst elems)
     return $ title <> line <> vsep elems' <> line
     where
-      ppCodeElem :: Member (Reader Options) r => (Caller, TypeCall) -> Sem r (Doc Ann)
+      ppCodeElem :: (Member (Reader Options) r) => (Caller, TypeCall) -> Sem r (Doc Ann)
       ppCodeElem (caller, t) = do
         caller' <- ppCode caller
         t' <- ppCode t
@@ -319,12 +319,12 @@ ppCodeAtom c = do
   p' <- ppCode c
   return $ if isAtomic c then p' else parens p'
 
-instance PrettyCode a => PrettyCode [a] where
+instance (PrettyCode a) => PrettyCode [a] where
   ppCode x = do
     cs <- mapM ppCode (toList x)
     return $ encloseSep "(" ")" ", " cs
 
-instance PrettyCode a => PrettyCode (NonEmpty a) where
+instance (PrettyCode a) => PrettyCode (NonEmpty a) where
   ppCode x = ppCode (toList x)
 
 instance PrettyCode ConcreteType where

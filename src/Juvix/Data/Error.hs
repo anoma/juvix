@@ -15,5 +15,5 @@ data JuvixError
 instance ToGenericError JuvixError where
   genericError (JuvixError e) = genericError e
 
-fromJuvixError :: Typeable a => JuvixError -> Maybe a
+fromJuvixError :: (Typeable a) => JuvixError -> Maybe a
 fromJuvixError (JuvixError e) = cast e

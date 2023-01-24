@@ -60,7 +60,7 @@ computeMaxStackHeight lims = maximum . map go
 computeStringMap :: HashMap Text Int -> Code -> HashMap Text Int
 computeStringMap strs = snd . run . execState (HashMap.size strs, strs) . mapM go
   where
-    go :: Member (State (Int, HashMap Text Int)) r => Instruction -> Sem r ()
+    go :: (Member (State (Int, HashMap Text Int)) r) => Instruction -> Sem r ()
     go = \case
       Nop -> return ()
       Binop BinaryOp {..} -> do
@@ -95,7 +95,7 @@ computeStringMap strs = snd . run . execState (HashMap.size strs, strs) . mapM g
         mapM_ (mapM_ go . (^. caseBranchCode)) _instrCaseBranches
         maybe (return ()) (mapM_ go) _instrCaseDefault
 
-    goVal :: Member (State (Int, HashMap Text Int)) r => Value -> Sem r ()
+    goVal :: (Member (State (Int, HashMap Text Int)) r) => Value -> Sem r ()
     goVal = \case
       ConstString str ->
         modify'

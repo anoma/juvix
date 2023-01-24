@@ -405,7 +405,7 @@ twoManyChildrenI f i is = \case
   _ -> impossible
 
 {-# INLINE input' #-}
-input' :: Members '[Input (Maybe a)] r => Sem r a
+input' :: (Members '[Input (Maybe a)] r) => Sem r a
 input' = fmap fromJust input
 
 -- | Destruct a node into NodeDetails. This is an ugly internal function used to
@@ -576,7 +576,7 @@ destruct = \case
                 : concatMap getPatternInfos (br ^. matchBranchPatterns)
               | br <- branches
             ]
-        setPatternsInfos :: forall r. Members '[Input (Maybe Info), Input (Maybe NodeChild)] r => NonEmpty Pattern -> Sem r (NonEmpty Pattern)
+        setPatternsInfos :: forall r. (Members '[Input (Maybe Info), Input (Maybe NodeChild)] r) => NonEmpty Pattern -> Sem r (NonEmpty Pattern)
         setPatternsInfos = mapM goPattern
           where
             goPattern :: Pattern -> Sem r Pattern
@@ -690,7 +690,7 @@ schildren = map (^. childNode) . filter (\p -> null (p ^. childBinders)) . child
 getInfo :: Node -> Info
 getInfo = (^. nodeInfo) . destruct
 
-modifyInfoM :: Monad m => (Info -> m Info) -> Node -> m Node
+modifyInfoM :: (Monad m) => (Info -> m Info) -> Node -> m Node
 modifyInfoM f n =
   let ni = destruct n
    in do

@@ -7,7 +7,7 @@ import Juvix.Prelude
 import Text.Blaze.Html5 as Html hiding (map)
 import Text.Blaze.Html5.Attributes qualified as Attr
 
-mathJaxCdn :: Members '[Reader HtmlOptions] r => Sem r Html
+mathJaxCdn :: (Members '[Reader HtmlOptions] r) => Sem r Html
 mathJaxCdn = do
   assetsPrefix <- textValue <$> asks (^. htmlOptionsAssetsPrefix)
   let script1 =
@@ -33,7 +33,7 @@ livejs =
     ! Attr.src "https://livejs.com/live.js"
     $ mempty
 
-cssLink :: Members '[Reader HtmlOptions] r => AttributeValue -> Sem r Html
+cssLink :: (Members '[Reader HtmlOptions] r) => AttributeValue -> Sem r Html
 cssLink css = do
   assetsPrefix <- textValue <$> asks (^. htmlOptionsAssetsPrefix)
   return $
@@ -42,7 +42,7 @@ cssLink css = do
       ! Attr.rel "stylesheet"
       ! Attr.type_ "text/css"
 
-jsLink :: Members '[Reader HtmlOptions] r => AttributeValue -> Sem r Html
+jsLink :: (Members '[Reader HtmlOptions] r) => AttributeValue -> Sem r Html
 jsLink js = do
   assetsPrefix <- textValue <$> asks (^. htmlOptionsAssetsPrefix)
   return
@@ -51,29 +51,29 @@ jsLink js = do
       ! Attr.type_ "text/javascript"
     $ mempty
 
-linuwialCss :: Members '[Reader HtmlOptions] r => Sem r Html
+linuwialCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 linuwialCss = cssLink "linuwial.css"
 
-ayuCss :: Members '[Reader HtmlOptions] r => Sem r Html
+ayuCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 ayuCss = cssLink "source-ayu-light.css"
 
-nordCss :: Members '[Reader HtmlOptions] r => Sem r Html
+nordCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 nordCss = cssLink "source-nord.css"
 
-themeCss :: Members '[Reader HtmlOptions] r => Sem r Html
+themeCss :: (Members '[Reader HtmlOptions] r) => Sem r Html
 themeCss = do
   theme <- asks (^. htmlOptionsTheme)
   case theme of
     Ayu -> ayuCss
     Nord -> nordCss
 
-highlightJs :: Members '[Reader HtmlOptions] r => Sem r Html
+highlightJs :: (Members '[Reader HtmlOptions] r) => Sem r Html
 highlightJs = jsLink "highlight.js"
 
 metaUtf8 :: Html
 metaUtf8 = meta ! Attr.charset "UTF-8"
 
-taraSmiling :: Members '[Reader HtmlOptions] r => Sem r Html
+taraSmiling :: (Members '[Reader HtmlOptions] r) => Sem r Html
 taraSmiling = do
   assetsPrefix <- textValue <$> asks (^. htmlOptionsAssetsPrefix)
   return $
@@ -84,7 +84,7 @@ taraSmiling = do
         ! Attr.alt "Tara"
 
 htmlJuvixFooter ::
-  Members '[Reader HtmlOptions] r =>
+  (Members '[Reader HtmlOptions] r) =>
   Sem r Html
 htmlJuvixFooter = do
   noFooter <- asks (^. htmlOptionsNoFooter)

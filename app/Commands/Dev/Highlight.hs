@@ -7,7 +7,7 @@ import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 
-runCommand :: Members '[Embed IO, App] r => HighlightOptions -> Sem r ()
+runCommand :: (Members '[Embed IO, App] r) => HighlightOptions -> Sem r ()
 runCommand HighlightOptions {..} = do
   res <- runPipelineEither _highlightInputFile upToScoping
   case res of

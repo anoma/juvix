@@ -27,7 +27,7 @@ newtype SymbolInfo = SymbolInfo
   }
   deriving newtype (Show, Semigroup, Monoid)
 
-mkModuleRef' :: SingI t => ModuleRef'' 'S.NotConcrete t -> ModuleRef' 'S.NotConcrete
+mkModuleRef' :: (SingI t) => ModuleRef'' 'S.NotConcrete t -> ModuleRef' 'S.NotConcrete
 mkModuleRef' m = ModuleRef' (sing :&: m)
 
 data Scope = Scope

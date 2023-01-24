@@ -70,7 +70,7 @@ fromFunCall caller fc =
 
 -- | IMPORTANT: the resulting call graph is not complete. Use this function
 -- only to filter the pretty printed graph
-unsafeFilterGraph :: Foldable f => f Text -> CompleteCallGraph -> CompleteCallGraph
+unsafeFilterGraph :: (Foldable f) => f Text -> CompleteCallGraph -> CompleteCallGraph
 unsafeFilterGraph funNames (CompleteCallGraph g) =
   CompleteCallGraph (HashMap.filterWithKey (\(f, _) _ -> f ^. nameText `elem` funNames) g)
 

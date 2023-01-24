@@ -9,7 +9,7 @@ import Juvix.Compiler.Internal.Pretty.Base qualified as Micro
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
-ppCode :: Micro.PrettyCode c => Micro.Options -> c -> Doc Ann
+ppCode :: (Micro.PrettyCode c) => Micro.Options -> c -> Doc Ann
 ppCode opts = runPP opts . Micro.ppCode
 
 ppAtom :: (Micro.PrettyCode c, HasAtomicity c) => Micro.Options -> c -> Doc Ann

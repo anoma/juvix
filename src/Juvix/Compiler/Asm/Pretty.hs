@@ -12,17 +12,17 @@ import Juvix.Data.PPOutput
 import Juvix.Prelude
 import Prettyprinter.Render.Terminal qualified as Ansi
 
-ppOutDefault :: PrettyCode c => InfoTable -> c -> AnsiText
+ppOutDefault :: (PrettyCode c) => InfoTable -> c -> AnsiText
 ppOutDefault tab = AnsiText . PPOutput . doc (defaultOptions tab)
 
-ppOut :: PrettyCode c => Options -> c -> AnsiText
+ppOut :: (PrettyCode c) => Options -> c -> AnsiText
 ppOut o = AnsiText . PPOutput . doc o
 
-ppTrace' :: PrettyCode c => Options -> c -> Text
+ppTrace' :: (PrettyCode c) => Options -> c -> Text
 ppTrace' opts = Ansi.renderStrict . reAnnotateS stylize . layoutPretty defaultLayoutOptions . doc opts
 
-ppTrace :: PrettyCode c => InfoTable -> c -> Text
+ppTrace :: (PrettyCode c) => InfoTable -> c -> Text
 ppTrace tab = ppTrace' (defaultOptions tab)
 
-ppPrint :: PrettyCode c => InfoTable -> c -> Text
+ppPrint :: (PrettyCode c) => InfoTable -> c -> Text
 ppPrint tab = show . ppOutDefault tab

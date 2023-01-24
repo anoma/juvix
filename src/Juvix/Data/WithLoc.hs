@@ -16,16 +16,16 @@ makeLenses ''WithLoc
 instance HasLoc (WithLoc a) where
   getLoc = (^. withLocInt)
 
-instance HasAtomicity a => HasAtomicity (WithLoc a) where
+instance (HasAtomicity a) => HasAtomicity (WithLoc a) where
   atomicity (WithLoc _ a) = atomicity a
 
-instance Hashable a => Hashable (WithLoc a) where
+instance (Hashable a) => Hashable (WithLoc a) where
   hashWithSalt a (WithLoc _ p) = hashWithSalt a p
 
-instance Eq a => Eq (WithLoc a) where
+instance (Eq a) => Eq (WithLoc a) where
   (==) = (==) `on` (^. withLocParam)
 
-instance Ord a => Ord (WithLoc a) where
+instance (Ord a) => Ord (WithLoc a) where
   compare = compare `on` (^. withLocParam)
 
 instance Functor WithLoc where

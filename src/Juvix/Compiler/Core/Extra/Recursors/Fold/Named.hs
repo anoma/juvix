@@ -4,22 +4,22 @@ import Data.Functor.Identity
 import Juvix.Compiler.Core.Extra.Recursors.Base
 import Juvix.Compiler.Core.Extra.Recursors.Fold
 
-ufoldA :: Applicative f => (a -> [a] -> a) -> (Node -> f a) -> Node -> f a
+ufoldA :: (Applicative f) => (a -> [a] -> a) -> (Node -> f a) -> Node -> f a
 ufoldA uplus f = ufoldG unitCollector uplus (const f)
 
-ufoldLA :: Applicative f => (a -> [a] -> a) -> (BinderList Binder -> Node -> f a) -> Node -> f a
+ufoldLA :: (Applicative f) => (a -> [a] -> a) -> (BinderList Binder -> Node -> f a) -> Node -> f a
 ufoldLA uplus f = ufoldG binderInfoCollector uplus f
 
-ufoldNA :: Applicative f => (a -> [a] -> a) -> (Index -> Node -> f a) -> Node -> f a
+ufoldNA :: (Applicative f) => (a -> [a] -> a) -> (Index -> Node -> f a) -> Node -> f a
 ufoldNA uplus f = ufoldG binderNumCollector uplus f
 
-walk :: Applicative f => (Node -> f ()) -> Node -> f ()
+walk :: (Applicative f) => (Node -> f ()) -> Node -> f ()
 walk = ufoldA (foldr mappend)
 
-walkN :: Applicative f => (Index -> Node -> f ()) -> Node -> f ()
+walkN :: (Applicative f) => (Index -> Node -> f ()) -> Node -> f ()
 walkN = ufoldNA (foldr mappend)
 
-walkL :: Applicative f => (BinderList Binder -> Node -> f ()) -> Node -> f ()
+walkL :: (Applicative f) => (BinderList Binder -> Node -> f ()) -> Node -> f ()
 walkL = ufoldLA (foldr mappend)
 
 ufold :: (a -> [a] -> a) -> (Node -> a) -> Node -> a

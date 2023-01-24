@@ -90,14 +90,14 @@ makeLenses ''Name'
 instance HasNameKind (Name' n) where
   getNameKind = (^. nameKind)
 
-instance HasLoc n => HasLoc (Name' n) where
+instance (HasLoc n) => HasLoc (Name' n) where
   getLoc = getLoc . (^. nameConcrete)
 
-instance Pretty a => Pretty (Name' a) where
+instance (Pretty a) => Pretty (Name' a) where
   pretty = pretty . (^. nameConcrete)
 
 data AName = forall c.
-  HasLoc c =>
+  (HasLoc c) =>
   AName
   {_aName :: Name' c}
 
