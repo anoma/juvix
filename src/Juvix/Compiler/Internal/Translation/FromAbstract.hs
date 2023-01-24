@@ -68,7 +68,7 @@ fromAbstract abstractResults = do
     noTerminationOption =
       abstractResults
         ^. Abstract.abstractResultEntryPoint
-        . E.entryPointNoTermination
+          . E.entryPointNoTermination
     depInfo = buildDependencyInfo (abstractResults ^. Abstract.resultModules) (abstractResults ^. Abstract.resultExports)
 
 fromAbstractExpression :: Members '[NameIdGen] r => Abstract.Expression -> Sem r Expression

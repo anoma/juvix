@@ -36,11 +36,11 @@ compileInfoTable r =
     (^. Scoper.nameId)
     ( r
         ^. Typed.resultInternalArityResult
-        . Internal1.resultInternalResult
-        . Internal.resultAbstract
-        . Abstract.resultScoper
-        . Scoper.resultScoperTable
-        . Scoper.infoCompilationRules
+          . Internal1.resultInternalResult
+          . Internal.resultAbstract
+          . Abstract.resultScoper
+          . Scoper.resultScoperTable
+          . Scoper.infoCompilationRules
     )
 
 fromInternal ::
@@ -288,7 +288,7 @@ goFunctionDef d@(Internal.FunctionDef {..})
                     ( LiteralString
                         ( "Error: Pattern match(es) are non-exhaustive in "
                             <> _funDefName
-                            ^. Internal.nameText
+                              ^. Internal.nameText
                         )
                     )
                 ]
@@ -489,7 +489,7 @@ goAxiom a
     getCode b =
       guard (BackendC == b ^. backendItemBackend . withLocParam)
         $> b
-        ^. backendItemCode
+          ^. backendItemCode
     firstBackendMatch ::
       Member Fail r =>
       [BackendItem] ->

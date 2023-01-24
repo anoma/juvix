@@ -161,10 +161,10 @@ genJudocHtml JudocArgs {..} =
     mainMod =
       _judocArgsCtx
         ^. InternalTyped.resultInternalArityResult
-        . InternalArity.resultInternalResult
-        . Internal.resultAbstract
-        . Abstract.resultScoper
-        . Scoped.mainModule
+          . InternalArity.resultInternalResult
+          . Internal.resultAbstract
+          . Abstract.resultScoper
+          . Scoped.mainModule
 
     htmlOpts :: HtmlOptions
     htmlOpts =
