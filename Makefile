@@ -113,6 +113,13 @@ markdown-docs: markdown-files
 serve-docs: markdown-files
 	@mdbook serve --open
 
+
+cargo-dependencies:
+	@cargo install mdbook \
+		mdbook-katex \
+		mdbook-linkcheck \
+		mdbook-toc
+
 # -- Codebase Documentation
 
 .PHONY : haddock

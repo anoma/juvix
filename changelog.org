@@ -525,7 +525,7 @@ Changelog]]
   [[https://github.com/anoma/juvix/pull/1453][#1453]]
   ([[https://github.com/janmasrovira][janmasrovira]])
 - Add the option to output json in the =juvix internal highlight=
-  command [[https://github.com/anoma/juvix/pull/1450][#1450]] ([[https://github.com/janmasrovira][janmasrovira]]) for supporting the new [[https://marketplace.visualstudio.com/items?itemName=heliax.juvix-mode][Juvix Mode for Visual Studio Code]] ([[https://github.com/anoma/vscode-juvix][jonaprieto]])
+  command [[https://github.com/anoma/juvix/pull/1450][#1450]] ([[https://github.com/janmasrovira][janmasrovira]]) for supporting the new Juvix Mode for Visual Studio Code ([[https://github.com/anoma/vscode-juvix][jonaprieto]])
 - Allow _ in Wasm exported names to support Anoma signature
   [[https://github.com/anoma/juvix/pull/1449][#1449]]
   ([[https://github.com/paulcadman][paulcadman]])

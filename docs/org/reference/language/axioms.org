@@ -13,4 +13,4 @@ end;
 #+end_src
 
 Terms introduced by the =axiom= keyword lack any computational content. However,
-it is possible to attach computational content to an axiom by giving compilation rules, see [[./compile-blocks.md][the =compile= keyword]].
+it is possible to attach computational content to an axiom by giving compilation rules, see [[./compileblocks.md][the =compile= keyword]].
