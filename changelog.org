@@ -689,10 +689,11 @@ Since version 0.2.2, the project has been renamed from "Mini Juvix" to
 just a compiler for a subset of Juvix, but a full implementation of the
 language. Affected by this change are:
 
-- Github repository moved from the helium organization to the anoma
+- Github repository moved from the Heliax organization to the Anoma
   organization. "anoma/juvix" is the new repository name.
-- All references to "Mini Juvix" have been replaced with "Juvix". However,
-old links to the Mini Juvix repository are broken and will not be fixed.
+- All references to "Mini Juvix" have been replaced with "Juvix". Unfortunetly,
+due to the move, the old links to the Mini Juvix repository are broken and will
+not be fixed.
 
 ** v0.2.1 (2022-07-12)
 
