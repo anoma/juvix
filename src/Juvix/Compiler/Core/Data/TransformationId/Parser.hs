@@ -69,6 +69,8 @@ transformation =
     <|> symbol strMoveApps $> MoveApps
     <|> symbol strNatToInt $> NatToInt
     <|> symbol strConvertBuiltinTypes $> ConvertBuiltinTypes
+    <|> symbol strUnrollRecursion $> UnrollRecursion
+    <|> symbol strComputeTypeInfo $> ComputeTypeInfo
 
 allStrings :: [Text]
 allStrings =
@@ -78,7 +80,9 @@ allStrings =
     strRemoveTypeArgs,
     strMoveApps,
     strNatToInt,
-    strConvertBuiltinTypes
+    strConvertBuiltinTypes,
+    strUnrollRecursion,
+    strComputeTypeInfo
   ]
 
 strLifting :: Text
