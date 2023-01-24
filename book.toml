@@ -47,7 +47,7 @@ warning-policy = "warn"
 # in order to link check to succeed.
 #
 # This is a dictionary (map), with keys being regexes
-# matching a set of web sites, and values being an 
+# matching a set of web sites, and values being an
 
 [preprocessor.toc]
 command = "mdbook-toc"

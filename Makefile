@@ -103,7 +103,7 @@ docs/md/%.md : docs/org/%.org
 markdown-files: docs/md/README.md docs/md/changelog.md $(MDFILES)
 
 .PHONY: markdown-docs
-markdown-docs: markdown-files
+markdown-docs: cargo-dependencies markdown-files 
 	@echo "copying assets ..."
 	@mkdir -p docs/md/assets/images
 	@cp -v $(IMAGES) docs/md/assets/images/

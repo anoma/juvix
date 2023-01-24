@@ -691,7 +691,7 @@ language. Affected by this change are:
 
 - Github repository moved from the helium organization to the anoma
   organization. "anoma/juvix" is the new repository name.
-- All references to "Mini Juvix" have been replaced with "Juvix". However, 
+- All references to "Mini Juvix" have been replaced with "Juvix". However,
 old links to the Mini Juvix repository are broken and will not be fixed.
 
 ** v0.2.1 (2022-07-12)
