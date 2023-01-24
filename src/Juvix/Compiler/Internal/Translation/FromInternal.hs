@@ -42,7 +42,7 @@ arityCheckExpression ::
   Sem r Expression
 arityCheckExpression InternalResult {..} exp =
   mapError (JuvixError @ArityChecking.ArityCheckerError) $
-    runReader table (ArityChecking.withEmptyLocalVars (ArityChecking.checkExpression ArityChecking.ArityUnknown exp))
+    runReader table (ArityChecking.inferReplExpression exp)
   where
     table :: InfoTable
     table = buildTable _resultModules
