@@ -50,19 +50,6 @@ jobs:
         with:
           clang-format-version: '15'
           check-path: 'runtime/src'
-  hlint:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - name: 'Set up HLint'
-      uses: haskell/actions/hlint-setup@v2
-      with:
-        version: '3.5'
-    - name: 'Run HLint'
-      uses: haskell/actions/hlint-run@v2
-      with:
-        path: '["src/", "app/", "test/"]'
-        # fail-on: warning
 
   pre-commit:
     runs-on: ubuntu-latest
