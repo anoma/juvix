@@ -79,7 +79,12 @@ instance HasLoc TopModulePath where
       [] -> getLoc _modulePathName
       (x : _) -> getLoc x <> getLoc _modulePathName
 
-topModulePathToDottedPath :: (IsString s) => TopModulePath -> s
+topModulePathToName :: TopModulePath -> Name
+topModulePathToName (TopModulePath ms m) = case nonEmpty ms of
+  Nothing -> NameUnqualified m
+  Just ms' -> NameQualified (QualifiedName (SymbolPath ms') m)
+
+topModulePathToDottedPath :: IsString s => TopModulePath -> s
 topModulePathToDottedPath (TopModulePath l r) =
   fromText $ mconcat $ intersperse "." $ map (^. symbolText) $ l ++ [r]
 

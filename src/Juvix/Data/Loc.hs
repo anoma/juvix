@@ -1,6 +1,7 @@
 module Juvix.Data.Loc where
 
 import Juvix.Prelude.Base
+import Juvix.Prelude.Path
 import Prettyprinter
 import Text.Megaparsec qualified as M
 
@@ -31,7 +32,7 @@ instance Ord FileLoc where
 
 data Loc = Loc
   { -- | Name of source file
-    _locFile :: FilePath,
+    _locFile :: Path Abs File,
     -- | Position within the file
     _locFileLoc :: !FileLoc
   }
@@ -39,7 +40,7 @@ data Loc = Loc
 
 mkLoc :: Int -> M.SourcePos -> Loc
 mkLoc offset M.SourcePos {..} =
-  let _locFile = normalise sourceName
+  let _locFile = absFile' (normalise sourceName)
    in Loc {..}
   where
     _locOffset = Pos (fromIntegral offset)
@@ -47,13 +48,18 @@ mkLoc offset M.SourcePos {..} =
       where
         _locLine = fromPos sourceLine
         _locCol = fromPos sourceColumn
+    absFile' :: FilePath -> Path Abs File
+    absFile' fp = fromMaybe err (parseAbsFile fp)
+      where
+        err :: a
+        err = error ("The path \"" <> pack fp <> "\" is not absolute. Remember to pass an absolute path to Megaparsec when running a parser")
 
 fromPos :: M.Pos -> Pos
 fromPos = Pos . fromIntegral . M.unPos
 
 -- | Inclusive interval
 data Interval = Interval
-  { _intervalFile :: FilePath,
+  { _intervalFile :: Path Abs File,
     _intervalStart :: FileLoc,
     _intervalEnd :: FileLoc
   }
@@ -88,6 +94,12 @@ singletonInterval l =
 intervalLength :: Interval -> Int
 intervalLength i = fromIntegral (i ^. intervalEnd . locOffset - i ^. intervalStart . locOffset) + 1
 
+intervalEndLine :: Interval -> Int
+intervalEndLine a = a ^. intervalEnd . locLine . unPos . to fromIntegral
+
+intervalStartLine :: Interval -> Int
+intervalStartLine a = a ^. intervalStart . locLine . unPos . to fromIntegral
+
 intervalStartLoc :: Interval -> Loc
 intervalStartLoc i =
   Loc
@@ -98,6 +110,9 @@ intervalStartLoc i =
 mkInterval :: Loc -> Loc -> Interval
 mkInterval start end =
   Interval (start ^. locFile) (start ^. locFileLoc) (end ^. locFileLoc)
+
+filterByLoc :: HasLoc p => Path Abs File -> [p] -> [p]
+filterByLoc p = filter ((== p) . (^. intervalFile) . getLoc)
 
 instance Pretty Pos where
   pretty :: Pos -> Doc a

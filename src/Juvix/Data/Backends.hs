@@ -1,5 +1,6 @@
 module Juvix.Data.Backends where
 
+import Juvix.Data.WithLoc
 import Juvix.Prelude.Base
 
 data Backend
@@ -10,10 +11,10 @@ data Backend
 instance Hashable Backend
 
 data BackendItem = BackendItem
-  { _backendItemBackend :: Backend,
+  { _backendItemBackend :: WithLoc Backend,
     _backendItemCode :: Text
   }
-  deriving stock (Show, Ord, Eq, Generic)
+  deriving stock (Show, Ord, Eq, Generic, Data)
 
 instance Hashable BackendItem
 

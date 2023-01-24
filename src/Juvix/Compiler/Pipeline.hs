@@ -32,8 +32,8 @@ import Juvix.Prelude
 type PipelineEff = '[PathResolver, Reader EntryPoint, Files, NameIdGen, Builtins, Error JuvixError, Embed IO]
 
 arityCheckExpression ::
-  (Members '[Error JuvixError, NameIdGen, Builtins] r) =>
-  FilePath ->
+  Members '[Error JuvixError, NameIdGen, Builtins] r =>
+  Path Abs File ->
   ExpressionContext ->
   Text ->
   Sem r Internal.Expression
@@ -45,8 +45,8 @@ arityCheckExpression fp ctx txt =
     >>= Internal.arityCheckExpression (ctx ^. contextInternalResult)
 
 inferExpression ::
-  (Members '[Error JuvixError, NameIdGen, Builtins] r) =>
-  FilePath ->
+  Members '[Error JuvixError, NameIdGen, Builtins] r =>
+  Path Abs File ->
   ExpressionContext ->
   Text ->
   Sem r Internal.Expression
@@ -55,8 +55,8 @@ inferExpression fp ctx txt =
     >>= Internal.inferExpressionType (ctx ^. contextInternalTypedResult)
 
 compileExpression ::
-  (Members '[Error JuvixError, NameIdGen, Builtins] r) =>
-  FilePath ->
+  Members '[Error JuvixError, NameIdGen, Builtins] r =>
+  Path Abs File ->
   ExpressionContext ->
   Text ->
   Sem r Core.Node
@@ -66,7 +66,7 @@ compileExpression fp ctx txt =
     >>= Core.fromInternalExpression (ctx ^. contextCoreResult)
 
 compileExpressionIO ::
-  FilePath ->
+  Path Abs File ->
   ExpressionContext ->
   BuiltinsState ->
   Text ->
@@ -79,7 +79,7 @@ compileExpressionIO fp ctx builtinsState txt =
     $ compileExpression fp ctx txt
 
 inferExpressionIO ::
-  FilePath ->
+  Path Abs File ->
   ExpressionContext ->
   BuiltinsState ->
   Text ->
@@ -184,7 +184,6 @@ runIOEither builtinsState entry =
     . fmap makeArtifacts
     . runBuiltins builtinsState
     . runNameIdGen
-    . mapError (JuvixError @FilesError)
     . runFilesIO
     . runReader entry
     . runPathResolverPipe

@@ -27,6 +27,7 @@ import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Data
 import Juvix.Data.Ape.Base as Ape
 import Juvix.Data.Fixity
+import Juvix.Data.Keyword
 import Juvix.Data.NameKind
 import Juvix.Prelude hiding (show)
 import Prelude (show)
@@ -89,7 +90,7 @@ type family PatternAtType s = res | res -> s where
 
 type family ImportType (s :: Stage) :: GHC.Type where
   ImportType 'Parsed = TopModulePath
-  ImportType 'Scoped = Module 'Scoped 'ModuleTop
+  ImportType 'Scoped = ModuleRef'' 'S.Concrete 'ModuleTop
 
 type ModulePathType :: Stage -> ModuleIsTop -> GHC.Type
 type family ModulePathType s t = res | res -> t s where
@@ -151,8 +152,9 @@ deriving stock instance
 -- Import statement
 --------------------------------------------------------------------------------
 
-newtype Import (s :: Stage) = Import
-  { _importModule :: ImportType s
+data Import (s :: Stage) = Import
+  { _importKw :: KeywordRef,
+    _importModule :: ImportType s
   }
 
 deriving stock instance (Show (ImportType s)) => Show (Import s)
@@ -161,21 +163,19 @@ deriving stock instance (Eq (ImportType s)) => Eq (Import s)
 
 deriving stock instance (Ord (ImportType s)) => Ord (Import s)
 
-instance HasLoc (Import 'Parsed) where
-  getLoc (Import t) = getLoc t
-
 --------------------------------------------------------------------------------
 -- Operator syntax declaration
 --------------------------------------------------------------------------------
 
 data OperatorSyntaxDef = OperatorSyntaxDef
   { _opSymbol :: Symbol,
-    _opFixity :: Fixity
+    _opFixity :: Fixity,
+    _opKw :: KeywordRef
   }
   deriving stock (Show, Eq, Ord)
 
 instance HasLoc OperatorSyntaxDef where
-  getLoc OperatorSyntaxDef {..} = getLoc _opSymbol
+  getLoc OperatorSyntaxDef {..} = getLoc _opKw <> getLoc _opSymbol
 
 -------------------------------------------------------------------------------
 -- Type signature declaration
@@ -185,8 +185,8 @@ data TypeSignature (s :: Stage) = TypeSignature
   { _sigName :: FunctionName s,
     _sigType :: ExpressionType s,
     _sigDoc :: Maybe (Judoc s),
-    _sigBuiltin :: Maybe BuiltinFunction,
-    _sigTerminating :: Bool
+    _sigBuiltin :: Maybe (WithLoc BuiltinFunction),
+    _sigTerminating :: Maybe KeywordRef
   }
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (TypeSignature s)
@@ -200,9 +200,10 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Typ
 -------------------------------------------------------------------------------
 
 data AxiomDef (s :: Stage) = AxiomDef
-  { _axiomDoc :: Maybe (Judoc s),
+  { _axiomKw :: KeywordRef,
+    _axiomDoc :: Maybe (Judoc s),
     _axiomName :: SymbolType s,
-    _axiomBuiltin :: Maybe BuiltinAxiom,
+    _axiomBuiltin :: Maybe (WithLoc BuiltinAxiom),
     _axiomType :: ExpressionType s
   }
 
@@ -244,7 +245,8 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Induct
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveParameter s)
 
 data InductiveDef (s :: Stage) = InductiveDef
-  { _inductiveBuiltin :: Maybe BuiltinInductive,
+  { _inductiveKw :: KeywordRef,
+    _inductiveBuiltin :: Maybe (WithLoc BuiltinInductive),
     _inductiveDoc :: Maybe (Judoc s),
     _inductiveName :: InductiveName s,
     _inductiveParameters :: [InductiveParameter s],
@@ -388,7 +390,8 @@ deriving stock instance
 type LocalModuleName s = SymbolType s
 
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
-  { _modulePath :: ModulePathType s t,
+  { _moduleKw :: KeywordRef,
+    _modulePath :: ModulePathType s t,
     _moduleParameters :: [InductiveParameter s],
     _moduleDoc :: Maybe (Judoc s),
     _moduleBody :: [Statement s]
@@ -461,11 +464,19 @@ getModuleExportInfo (ModuleRef' (_ :&: ModuleRef'' {..})) = _moduleExportInfo
 getModuleRefNameType :: ModuleRef' c -> RefNameType c
 getModuleRefNameType (ModuleRef' (_ :&: ModuleRef'' {..})) = _moduleRefName
 
-instance (SingI c) => Eq (ModuleRef' c) where
-  (==) = (==) `on` (getNameRefId . getModuleRefNameType)
+getModuleRefNameId :: forall c. SingI c => ModuleRef' c -> S.NameId
+getModuleRefNameId (ModuleRef' (t :&: ModuleRef'' {..})) =
+  case sing :: S.SIsConcrete c of
+    S.SConcrete -> case t of
+      SModuleTop -> _moduleRefName ^. S.nameId
+      SModuleLocal -> _moduleRefName ^. S.nameId
+    S.SNotConcrete -> _moduleRefName ^. S.nameId
 
-instance (SingI c) => Ord (ModuleRef' c) where
-  compare = compare `on` (getNameRefId . getModuleRefNameType)
+instance SingI c => Eq (ModuleRef' c) where
+  (==) = (==) `on` getModuleRefNameId
+
+instance SingI c => Ord (ModuleRef' c) where
+  compare = compare `on` getModuleRefNameId
 
 data ModuleRef'' (c :: S.IsConcrete) (t :: ModuleIsTop) = ModuleRef''
   { _moduleRefName :: RefNameType c,
@@ -491,8 +502,9 @@ newtype ExportInfo = ExportInfo
   deriving stock (Show)
 
 data OpenModule (s :: Stage) = OpenModule
-  { _openModuleName :: ModuleRefType s,
-    _openModuleImport :: Bool,
+  { _openModuleKw :: KeywordRef,
+    _openModuleName :: ModuleRefType s,
+    _openModuleImportKw :: Maybe KeywordRef,
     _openParameters :: [ExpressionType s],
     _openUsingHiding :: Maybe UsingHiding,
     _openPublic :: PublicAnn
@@ -573,26 +585,8 @@ data Expression
   | ExpressionBraces (WithLoc Expression)
   deriving stock (Show, Eq, Ord)
 
-instance HasAtomicity (LetBlock 'Scoped) where
-  atomicity (LetBlock _ e) = atomicity e
-
 instance HasAtomicity (Lambda s) where
   atomicity = const Atom
-
-instance HasAtomicity Expression where
-  atomicity e = case e of
-    ExpressionIdentifier {} -> Atom
-    ExpressionHole {} -> Atom
-    ExpressionParensIdentifier {} -> Atom
-    ExpressionApplication {} -> Aggregate appFixity
-    ExpressionInfixApplication a -> Aggregate (getFixity a)
-    ExpressionPostfixApplication a -> Aggregate (getFixity a)
-    ExpressionLambda l -> atomicity l
-    ExpressionLiteral l -> atomicity l
-    ExpressionLetBlock l -> atomicity l
-    ExpressionBraces {} -> Atom
-    ExpressionUniverse {} -> Atom
-    ExpressionFunction {} -> Aggregate funFixity
 
 --------------------------------------------------------------------------------
 -- Function expression
@@ -635,8 +629,9 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Fun
 -- Notes: An empty lambda, here called 'the impossible case', is a lambda
 -- expression with empty list of arguments and empty body.
 
-newtype Lambda (s :: Stage) = Lambda
-  { _lambdaClauses :: [LambdaClause s]
+data Lambda (s :: Stage) = Lambda
+  { _lambdaKw :: KeywordRef,
+    _lambdaClauses :: [LambdaClause s]
   }
 
 deriving stock instance
@@ -714,7 +709,8 @@ instance HasFixity PostfixApplication where
 --------------------------------------------------------------------------------
 
 data LetBlock (s :: Stage) = LetBlock
-  { _letClauses :: NonEmpty (LetClause s),
+  { _letKw :: KeywordRef,
+    _letClauses :: NonEmpty (LetClause s),
     _letExpression :: ExpressionType s
   }
 
@@ -781,7 +777,8 @@ deriving stock instance
 --------------------------------------------------------------------------------
 
 data Compile s = Compile
-  { _compileName :: SymbolType s,
+  { _compileKw :: KeywordRef,
+    _compileName :: SymbolType s,
     _compileBackendItems :: [BackendItem]
   }
 
@@ -857,6 +854,7 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Jud
 
 data Example (s :: Stage) = Example
   { _exampleId :: NameId,
+    _exampleLoc :: Interval,
     _exampleExpression :: ExpressionType s
   }
 
@@ -877,7 +875,7 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (JudocB
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (JudocBlock s)
 
 newtype JudocParagraphLine (s :: Stage)
-  = JudocParagraphLine (NonEmpty (JudocAtom s))
+  = JudocParagraphLine (NonEmpty (WithLoc (JudocAtom s)))
 
 deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (JudocParagraphLine s)
 
@@ -897,6 +895,8 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Jud
 
 makeLenses ''PatternArg
 makeLenses ''Example
+makeLenses ''Lambda
+makeLenses ''LambdaClause
 makeLenses ''Judoc
 makeLenses ''Function
 makeLenses ''InductiveDef
@@ -923,6 +923,27 @@ makeLenses ''Compile
 makeLenses ''PatternBinding
 makeLenses ''PatternAtoms
 makeLenses ''ExpressionAtoms
+
+instance HasAtomicity Expression where
+  atomicity e = case e of
+    ExpressionIdentifier {} -> Atom
+    ExpressionHole {} -> Atom
+    ExpressionParensIdentifier {} -> Atom
+    ExpressionApplication {} -> Aggregate appFixity
+    ExpressionInfixApplication a -> Aggregate (getFixity a)
+    ExpressionPostfixApplication a -> Aggregate (getFixity a)
+    ExpressionLambda l -> atomicity l
+    ExpressionLiteral l -> atomicity l
+    ExpressionLetBlock l -> atomicity l
+    ExpressionBraces {} -> Atom
+    ExpressionUniverse {} -> Atom
+    ExpressionFunction {} -> Aggregate funFixity
+
+instance HasAtomicity (LetBlock 'Scoped) where
+  atomicity l = atomicity (l ^. letExpression)
+
+instance Eq (ModuleRef'' 'S.Concrete t) where
+  (==) = (==) `on` (^. moduleRefName)
 
 instance HasAtomicity (PatternAtom 'Parsed) where
   atomicity = const Atom
@@ -977,6 +998,81 @@ deriving stock instance
 
 deriving stock instance
   (Show (PatternAtom s)) => Show (PatternAtoms s)
+
+instance HasLoc ScopedIden where
+  getLoc = \case
+    ScopedAxiom a -> getLoc a
+    ScopedConstructor a -> getLoc a
+    ScopedInductive a -> getLoc a
+    ScopedFunction a -> getLoc a
+    ScopedVar a -> getLoc a
+
+instance HasLoc Application where
+  getLoc (Application l r) = getLoc l <> getLoc r
+
+instance HasLoc InfixApplication where
+  getLoc (InfixApplication l _ r) = getLoc l <> getLoc r
+
+instance HasLoc PostfixApplication where
+  getLoc (PostfixApplication l o) = getLoc l <> getLoc o
+
+instance HasLoc (LambdaClause 'Scoped) where
+  getLoc c = getLocSpan (c ^. lambdaParameters) <> getLoc (c ^. lambdaBody)
+
+instance HasLoc (Lambda 'Scoped) where
+  getLoc l = getLoc (l ^. lambdaKw) <>? (getLocSpan <$> nonEmpty (l ^. lambdaClauses))
+
+instance HasLoc (FunctionParameter 'Scoped) where
+  getLoc p = (getLoc <$> p ^. paramName) ?<> getLoc (p ^. paramType)
+
+instance HasLoc (Function 'Scoped) where
+  getLoc f = getLoc (f ^. funParameter) <> getLoc (f ^. funReturn)
+
+instance HasLoc (LetBlock 'Scoped) where
+  getLoc l = getLoc (l ^. letKw) <> getLoc (l ^. letExpression)
+
+instance HasLoc Expression where
+  getLoc = \case
+    ExpressionIdentifier i -> getLoc i
+    ExpressionParensIdentifier i -> getLoc i
+    ExpressionApplication i -> getLoc i
+    ExpressionInfixApplication i -> getLoc i
+    ExpressionPostfixApplication i -> getLoc i
+    ExpressionLambda i -> getLoc i
+    ExpressionLetBlock i -> getLoc i
+    ExpressionUniverse i -> getLoc i
+    ExpressionLiteral i -> getLoc i
+    ExpressionFunction i -> getLoc i
+    ExpressionHole i -> getLoc i
+    ExpressionBraces i -> getLoc i
+
+instance SingI s => HasLoc (Import s) where
+  getLoc Import {..} = case sing :: SStage s of
+    SParsed -> getLoc _importModule
+    SScoped -> getLoc _importModule
+
+instance HasLoc (ModuleRef'' 'S.Concrete t) where
+  getLoc ref = getLoc (ref ^. moduleRefName)
+
+instance (SingI s, SingI t) => HasLoc (Module s t) where
+  getLoc m = case sing :: SStage s of
+    SParsed -> case sing :: SModuleIsTop t of
+      SModuleLocal -> getLoc (m ^. modulePath)
+      SModuleTop -> getLoc (m ^. modulePath)
+    SScoped -> case sing :: SModuleIsTop t of
+      SModuleLocal -> getLoc (m ^. modulePath)
+      SModuleTop -> getLoc (m ^. modulePath)
+
+instance HasLoc (Example s) where
+  getLoc e = e ^. exampleLoc
+
+instance HasLoc (JudocBlock s) where
+  getLoc = \case
+    JudocParagraph ls -> getLocSpan ls
+    JudocExample e -> getLoc e
+
+instance HasLoc (JudocParagraphLine s) where
+  getLoc (JudocParagraphLine atoms) = getLocSpan atoms
 
 instance HasLoc PatternScopedIden where
   getLoc = \case

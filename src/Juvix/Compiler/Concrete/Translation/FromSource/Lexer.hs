@@ -20,17 +20,17 @@ import Text.Megaparsec.Char.Lexer qualified as L
 
 type OperatorSym = Text
 
-comment :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r a
-comment c = do
+judocText :: Members '[InfoTableBuilder] r => ParsecS r a -> ParsecS r a
+judocText c = do
   (a, i) <- interval c
-  P.lift (registerComment i)
+  P.lift (registerJudocText i)
   return a
 
-comment_ :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r ()
-comment_ = void . comment
+judocText_ :: Members '[InfoTableBuilder] r => ParsecS r a -> ParsecS r ()
+judocText_ = void . judocText
 
-space :: forall r. (Members '[InfoTableBuilder] r) => ParsecS r ()
-space = space' True comment_
+space :: forall r. Members '[InfoTableBuilder] r => ParsecS r ()
+space = space' True >>= mapM_ (P.lift . registerComment)
 
 lexeme :: (Members '[InfoTableBuilder] r) => ParsecS r a -> ParsecS r a
 lexeme = L.lexeme space
@@ -80,8 +80,11 @@ judocStart = P.chunk Str.judocStart >> hspace
 judocEmptyLine :: (Members '[InfoTableBuilder] r) => ParsecS r ()
 judocEmptyLine = lexeme (void (P.try (judocStart >> P.newline)))
 
-kw :: (Member InfoTableBuilder r) => Keyword -> ParsecS r ()
+kw :: Member InfoTableBuilder r => Keyword -> ParsecS r KeywordRef
 kw k = lexeme $ kw' k >>= P.lift . registerKeyword
+
+-- kwOld :: Member InfoTableBuilder r => Keyword -> ParsecS r ()
+-- kwOld k = lexeme $ kw' k >>= P.lift . registerKeyword
 
 -- | Same as @identifier@ but does not consume space after it.
 bareIdentifier :: ParsecS r (Text, Interval)

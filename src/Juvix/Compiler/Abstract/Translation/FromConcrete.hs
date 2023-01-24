@@ -147,7 +147,7 @@ goStatement ::
 goStatement (Indexed idx s) =
   fmap (Indexed idx) <$> case s of
     StatementAxiom d -> Just . Abstract.StatementAxiom <$> goAxiom d
-    StatementImport (Import t) -> Just . Abstract.StatementImport <$> goModule t
+    StatementImport t -> Just . Abstract.StatementImport <$> goModule (t ^. importModule . moduleRefModule)
     StatementOperator {} -> return Nothing
     StatementOpenModule o -> goOpenModule o
     StatementInductive i -> Just . Abstract.StatementInductive <$> goInductive i
@@ -163,7 +163,7 @@ goOpenModule ::
   OpenModule 'Scoped ->
   Sem r (Maybe Abstract.Statement)
 goOpenModule o
-  | o ^. openModuleImport =
+  | isJust (o ^. openModuleImportKw) =
       case o ^. openModuleName of
         ModuleRef' (SModuleTop :&: m) ->
           Just . Abstract.StatementImport
@@ -179,13 +179,13 @@ goFunctionDef ::
   Sem r Abstract.FunctionDef
 goFunctionDef TypeSignature {..} clauses = do
   let _funDefName = goSymbol _sigName
-      _funDefTerminating = _sigTerminating
-      _funDefBuiltin = _sigBuiltin
+      _funDefTerminating = isJust _sigTerminating
+      _funDefBuiltin = (^. withLocParam) <$> _sigBuiltin
   _funDefClauses <- mapM goFunctionClause clauses
   _funDefTypeSig <- goExpression _sigType
   _funDefExamples <- goExamples _sigDoc
   let fun = Abstract.FunctionDef {..}
-  whenJust _sigBuiltin (registerBuiltinFunction fun)
+  whenJust _sigBuiltin (registerBuiltinFunction fun . (^. withLocParam))
   registerFunction' fun
 
 goExamples ::
@@ -284,14 +284,14 @@ goInductive ty@InductiveDef {..} = do
       indDef =
         Abstract.InductiveDef
           { _inductiveParameters = _inductiveParameters',
-            _inductiveBuiltin = _inductiveBuiltin,
+            _inductiveBuiltin = (^. withLocParam) <$> _inductiveBuiltin,
             _inductiveName = goSymbol _inductiveName,
             _inductiveType = fromMaybe (Abstract.ExpressionUniverse (smallUniverse loc)) _inductiveType',
             _inductiveConstructors = toList _inductiveConstructors',
             _inductiveExamples = _inductiveExamples',
             _inductivePositive = ty ^. inductivePositive
           }
-  whenJust _inductiveBuiltin (registerBuiltinInductive indDef)
+  whenJust ((^. withLocParam) <$> _inductiveBuiltin) (registerBuiltinInductive indDef)
   inductiveInfo <- registerInductive indDef
   forM_ _inductiveConstructors' (registerConstructor inductiveInfo)
   return (inductiveInfo ^. inductiveInfoDef)
@@ -351,8 +351,8 @@ goExpression = \case
             goSig sig = do
               _funDefClauses <- getClauses
               _funDefTypeSig <- goExpression (sig ^. sigType)
-              let _funDefBuiltin = sig ^. sigBuiltin
-                  _funDefTerminating = sig ^. sigTerminating
+              let _funDefBuiltin = (^. withLocParam) <$> sig ^. sigBuiltin
+                  _funDefTerminating = isJust (sig ^. sigTerminating)
                   _funDefName = goSymbol (sig ^. sigName)
                   _funDefExamples :: [Abstract.Example] = []
               registerFunction' Abstract.FunctionDef {..}
@@ -394,8 +394,8 @@ goExpression = \case
       r' <- goExpression r
       return (Abstract.Application l'' r' Explicit)
 
-goLambda :: forall r. (Members '[Error ScoperError, InfoTableBuilder] r) => Lambda 'Scoped -> Sem r Abstract.Lambda
-goLambda (Lambda cl) = Abstract.Lambda <$> mapM goClause cl
+goLambda :: forall r. Members '[Error ScoperError, InfoTableBuilder] r => Lambda 'Scoped -> Sem r Abstract.Lambda
+goLambda l = Abstract.Lambda <$> mapM goClause (l ^. lambdaClauses)
   where
     goClause :: LambdaClause 'Scoped -> Sem r Abstract.LambdaClause
     goClause (LambdaClause ps b) = do
@@ -508,8 +508,8 @@ goAxiom a = do
   let axiom =
         Abstract.AxiomDef
           { _axiomType = _axiomType',
-            _axiomBuiltin = a ^. axiomBuiltin,
+            _axiomBuiltin = (^. withLocParam) <$> a ^. axiomBuiltin,
             _axiomName = goSymbol (a ^. axiomName)
           }
-  whenJust (a ^. axiomBuiltin) (registerBuiltinAxiom axiom)
+  whenJust (a ^. axiomBuiltin) (registerBuiltinAxiom axiom . (^. withLocParam))
   registerAxiom' axiom

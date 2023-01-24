@@ -19,7 +19,10 @@ newtype AxiomRef' (n :: S.IsConcrete) = AxiomRef'
 
 makeLenses ''AxiomRef'
 
-instance (Hashable (RefNameType s)) => Hashable (AxiomRef' s) where
+instance HasLoc AxiomRef where
+  getLoc = getLoc . (^. axiomRefName)
+
+instance Hashable (RefNameType s) => Hashable (AxiomRef' s) where
   hashWithSalt i = hashWithSalt i . (^. axiomRefName)
 
 instance (Eq (RefNameType s)) => Eq (AxiomRef' s) where
@@ -39,7 +42,10 @@ newtype InductiveRef' (n :: S.IsConcrete) = InductiveRef'
 
 makeLenses ''InductiveRef'
 
-instance (Hashable (RefNameType s)) => Hashable (InductiveRef' s) where
+instance HasLoc InductiveRef where
+  getLoc = getLoc . (^. inductiveRefName)
+
+instance Hashable (RefNameType s) => Hashable (InductiveRef' s) where
   hashWithSalt i = hashWithSalt i . (^. inductiveRefName)
 
 instance (Eq (RefNameType s)) => Eq (InductiveRef' s) where
@@ -59,7 +65,10 @@ newtype FunctionRef' (n :: S.IsConcrete) = FunctionRef'
 
 makeLenses ''FunctionRef'
 
-instance (Hashable (RefNameType s)) => Hashable (FunctionRef' s) where
+instance HasLoc FunctionRef where
+  getLoc = getLoc . (^. functionRefName)
+
+instance Hashable (RefNameType s) => Hashable (FunctionRef' s) where
   hashWithSalt i = hashWithSalt i . (^. functionRefName)
 
 instance (Eq (RefNameType s)) => Eq (FunctionRef' s) where
@@ -79,7 +88,10 @@ newtype ConstructorRef' (n :: S.IsConcrete) = ConstructorRef'
 
 makeLenses ''ConstructorRef'
 
-instance (Hashable (RefNameType s)) => Hashable (ConstructorRef' s) where
+instance HasLoc ConstructorRef where
+  getLoc = getLoc . (^. constructorRefName)
+
+instance Hashable (RefNameType s) => Hashable (ConstructorRef' s) where
   hashWithSalt i = hashWithSalt i . (^. constructorRefName)
 
 instance (Eq (RefNameType s)) => Eq (ConstructorRef' s) where
@@ -90,6 +102,3 @@ instance (Ord (RefNameType s)) => Ord (ConstructorRef' s) where
 
 instance (Show (RefNameType s)) => Show (ConstructorRef' s) where
   show = show . (^. constructorRefName)
-
-instance HasLoc (ConstructorRef' 'S.Concrete) where
-  getLoc (ConstructorRef' c) = getLoc c

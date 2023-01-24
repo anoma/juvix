@@ -220,18 +220,20 @@ checkImport ::
   (Members '[Error ScoperError, State Scope, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r) =>
   Import 'Parsed ->
   Sem r (Import 'Scoped)
-checkImport import_@(Import path) = do
+checkImport import_@(Import kw path) = do
   checkCycle
   cache <- gets (^. scoperModulesCache . cachedModules)
   moduleRef <- maybe (readScopeModule import_) return (cache ^. at path)
   let checked = moduleRef ^. moduleRefModule
-      sname = checked ^. modulePath
+      sname :: S.TopModulePath = checked ^. modulePath
+      sname' :: S.Name = set S.nameConcrete (topModulePathToName path) sname
       moduleId = sname ^. S.nameId
+      cmoduleRef :: ModuleRef'' 'S.Concrete 'ModuleTop = set moduleRefName sname' moduleRef
   modify (over scopeTopModules (HashMap.insert path moduleRef))
   registerName (set S.nameConcrete path sname)
   let moduleRef' = mkModuleRef' moduleRef
   modify (over scoperModules (HashMap.insert moduleId moduleRef'))
-  return (Import checked)
+  return (Import kw cmoduleRef)
   where
     checkCycle :: Sem r ()
     checkCycle = do
@@ -501,7 +503,8 @@ checkInductiveDef ty@InductiveDef {..} = do
           _inductiveParameters = inductiveParameters',
           _inductiveType = inductiveType',
           _inductiveConstructors = inductiveConstructors',
-          _inductivePositive = ty ^. inductivePositive
+          _inductivePositive = ty ^. inductivePositive,
+          _inductiveKw
         }
 
 createExportsTable :: ExportInfo -> HashSet NameId
@@ -512,7 +515,7 @@ createExportsTable ei = foldr (HashSet.insert . getNameId) HashSet.empty (HashMa
       EntryInductive r -> getNameRefId (r ^. inductiveRefName)
       EntryFunction r -> getNameRefId (r ^. functionRefName)
       EntryConstructor r -> getNameRefId (r ^. constructorRefName)
-      EntryModule r -> getNameRefId (getModuleRefNameType r)
+      EntryModule r -> getModuleRefNameId r
 
 checkTopModules ::
   forall r.
@@ -536,7 +539,7 @@ checkTopModule ::
   (Members '[Error ScoperError, Reader ScopeParameters, Files, State ScoperState, InfoTableBuilder, Parser.InfoTableBuilder, NameIdGen, PathResolver] r) =>
   Module 'Parsed 'ModuleTop ->
   Sem r (ModuleRef'' 'S.NotConcrete 'ModuleTop)
-checkTopModule m@(Module path params doc body) = do
+checkTopModule m@(Module _moduleKw path params doc body) = do
   checkPath
   r <- checkedModule
   modify (over (scoperModulesCache . cachedModules) (HashMap.insert path r))
@@ -545,7 +548,7 @@ checkTopModule m@(Module path params doc body) = do
     checkPath :: (Members '[Error ScoperError, PathResolver] s) => Sem s ()
     checkPath = do
       expectedPath <- expectedModulePath path
-      let actualPath = absFile (getLoc path ^. intervalFile)
+      let actualPath = getLoc path ^. intervalFile
       unlessM (equalPaths expectedPath actualPath) $
         throw
           ( ErrWrongTopModuleName
@@ -588,7 +591,8 @@ checkTopModule m@(Module path params doc body) = do
                     { _modulePath = path',
                       _moduleParameters = params',
                       _moduleBody = body',
-                      _moduleDoc = doc'
+                      _moduleDoc = doc',
+                      _moduleKw
                     }
                 _moduleRefName = set S.nameConcrete () path'
             return (ModuleRef'' {..}, path')
@@ -635,7 +639,8 @@ checkLocalModule Module {..} = do
           { _modulePath = _modulePath',
             _moduleParameters = moduleParameters',
             _moduleBody = moduleBody',
-            _moduleDoc = moduleDoc'
+            _moduleDoc = moduleDoc',
+            _moduleKw
           }
       entry :: ModuleRef' 'S.NotConcrete
       entry = mkModuleRef' @'ModuleLocal ModuleRef'' {..}
@@ -716,17 +721,17 @@ checkOpenImportModule ::
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenImportModule op
-  | op ^. openModuleImport =
+  | Just k <- op ^. openModuleImportKw =
       let moduleNameToTopModulePath :: Name -> TopModulePath
           moduleNameToTopModulePath = \case
             NameUnqualified s -> TopModulePath [] s
             NameQualified (QualifiedName (SymbolPath p) s) -> TopModulePath (toList p) s
           import_ :: Import 'Parsed
-          import_ = Import (moduleNameToTopModulePath (op ^. openModuleName))
+          import_ = Import k (moduleNameToTopModulePath (op ^. openModuleName))
        in do
             void (checkImport import_)
-            scopedOpen <- checkOpenModule (set openModuleImport False op)
-            return (set openModuleImport True scopedOpen)
+            scopedOpen <- checkOpenModule (set openModuleImportKw Nothing op)
+            return (set openModuleImportKw (Just k) scopedOpen)
   | otherwise = impossible
 
 checkOpenModuleNoImport ::
@@ -735,7 +740,7 @@ checkOpenModuleNoImport ::
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenModuleNoImport OpenModule {..}
-  | _openModuleImport = error "unsupported: open import statement"
+  | isJust _openModuleImportKw = error "unsupported: open import statement"
   | otherwise = do
       openModuleName'@(ModuleRef' (_ :&: moduleRef'')) <- lookupModuleSymbol _openModuleName
       openParameters' <- mapM checkParseExpressionAtoms _openParameters
@@ -793,7 +798,7 @@ checkOpenModule ::
   OpenModule 'Parsed ->
   Sem r (OpenModule 'Scoped)
 checkOpenModule op
-  | op ^. openModuleImport = checkOpenImportModule op
+  | isJust (op ^. openModuleImportKw) = checkOpenImportModule op
   | otherwise = checkOpenModuleNoImport op
 
 checkFunctionClause ::
@@ -897,7 +902,7 @@ checkBackendItems ::
   Sem r (HashSet Backend)
 checkBackendItems _ [] bset = return bset
 checkBackendItems sym (b : bs) bset =
-  let cBackend = b ^. backendItemBackend
+  let cBackend = b ^. backendItemBackend . withLocParam
    in if
           | HashSet.member cBackend bset ->
               throw
@@ -1011,14 +1016,15 @@ checkLetBlock LetBlock {..} = do
   return
     LetBlock
       { _letClauses = letClauses',
-        _letExpression = letExpression'
+        _letExpression = letExpression',
+        _letKw
       }
 
 checkLambda ::
   (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
   Lambda 'Parsed ->
   Sem r (Lambda 'Scoped)
-checkLambda Lambda {..} = Lambda <$> mapM checkLambdaClause _lambdaClauses
+checkLambda Lambda {..} = Lambda _lambdaKw <$> mapM checkLambdaClause _lambdaClauses
 
 checkLambdaClause ::
   (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
@@ -1250,7 +1256,7 @@ checkJudocLine ::
   (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
   JudocParagraphLine 'Parsed ->
   Sem r (JudocParagraphLine 'Scoped)
-checkJudocLine (JudocParagraphLine atoms) = JudocParagraphLine <$> mapM checkJudocAtom atoms
+checkJudocLine (JudocParagraphLine atoms) = JudocParagraphLine <$> mapM (mapM checkJudocAtom) atoms
 
 checkJudocAtom ::
   (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>

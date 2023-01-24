@@ -152,8 +152,7 @@ readPackageIO :: Path Abs Dir -> Path Abs Dir -> IO Package
 readPackageIO dir buildDir = do
   let x :: Sem '[Error Text, Files, Embed IO] Package
       x = readPackage dir buildDir
-  m <- runM $ runError $ runFilesIO (runError x)
+  m <- runM $ runFilesIO (runError x)
   case m of
-    Left err -> runM (runReader defaultGenericOptions (printErrorAnsiSafe err)) >> exitFailure
-    Right (Left err) -> putStrLn err >> exitFailure
-    Right (Right r) -> return r
+    Left err -> putStrLn err >> exitFailure
+    Right r -> return r

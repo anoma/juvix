@@ -93,6 +93,9 @@ instance PrettyCode Lambda where
     lambdaClauses' <- ppBlock _lambdaClauses
     return $ kwLambda <+> lambdaClauses'
 
+instance PrettyCode a => PrettyCode (WithLoc a) where
+  ppCode = ppCode . (^. withLocParam)
+
 instance PrettyCode BackendItem where
   ppCode BackendItem {..} = do
     backend <- ppCode _backendItemBackend

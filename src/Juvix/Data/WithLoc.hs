@@ -31,5 +31,12 @@ instance (Ord a) => Ord (WithLoc a) where
 instance Functor WithLoc where
   fmap = over withLocParam
 
-instance (Pretty a) => Pretty (WithLoc a) where
+instance Foldable WithLoc where
+  foldMap f (WithLoc _ a) = f a
+  foldr f b (WithLoc _ a) = f a b
+
+instance Traversable WithLoc where
+  traverse f (WithLoc i a) = WithLoc i <$> f a
+
+instance Pretty a => Pretty (WithLoc a) where
   pretty (WithLoc _ a) = pretty a

@@ -6,6 +6,7 @@ import Data.HashSet qualified as HashSet
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import GHC.Unicode
+import Juvix.Data.Comment
 import Juvix.Data.Keyword
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
@@ -24,19 +25,34 @@ space1 = void $ takeWhile1P (Just "white space (only spaces and newlines allowed
     isWhiteSpace :: Char -> Bool
     isWhiteSpace = (`elem` [' ', '\n'])
 
-space' :: forall r. Bool -> (forall a. ParsecS r a -> ParsecS r ()) -> ParsecS r ()
-space' judoc comment_ = L.space space1 lineComment block
+space' :: forall r. Bool -> ParsecS r [Comment]
+space' judoc = do
+  catMaybes
+    <$> P.many
+      ( hidden
+          ( choice
+              [space1 $> Nothing, Just <$> (lineComment <|> blockComment)]
+          )
+      )
   where
-    lineComment :: ParsecS r ()
-    lineComment = comment_ $ do
+    lineComment :: ParsecS r Comment
+    lineComment = do
+      let _commentType = CommentOneLine
       when
         judoc
         (notFollowedBy (P.chunk Str.judocStart))
-      void (P.chunk "--")
-      void (P.takeWhileP Nothing (/= '\n'))
+      (_commentText, _commentInterval) <- interval $ do
+        void (P.chunk "--")
+        P.takeWhileP Nothing (/= '\n')
+      return Comment {..}
 
-    block :: ParsecS r ()
-    block = comment_ (L.skipBlockComment "{-" "-}")
+    blockComment :: ParsecS r Comment
+    blockComment = do
+      let _commentType = CommentBlock
+      (_commentText, _commentInterval) <- interval $ do
+        void (P.chunk "{-")
+        pack <$> P.manyTill anySingle (P.chunk "-}")
+      return Comment {..}
 
 integer' :: ParsecS r (Integer, Interval) -> ParsecS r (Integer, Interval)
 integer' dec = do
@@ -60,21 +76,24 @@ string' :: ParsecS r Text
 string' = pack <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
 -- | The caller is responsible of consuming space after it.
-kw' :: Keyword -> ParsecS r Interval
+kw' :: Keyword -> ParsecS r KeywordRef
 kw' k@Keyword {..} = P.label (unpack _keywordAscii) (reserved <|> normal)
   where
     -- If the ascii representation uses reserved symbols, we use chunk so that we parse exactly the keyword
     -- (if chunk fails it does not consume anything so try is not needed)
-    reserved :: ParsecS r Interval
+    reserved :: ParsecS r KeywordRef
     reserved
-      | _keywordHasReserved = onlyInterval (P.chunk _keywordAscii)
+      | _keywordHasReserved = do
+          i <- onlyInterval (P.chunk _keywordAscii)
+          return (KeywordRef k i Ascii)
       | otherwise = empty
     -- we parse the longest valid identifier and then we check if it is the expected keyword
-    normal :: ParsecS r Interval
+    normal :: ParsecS r KeywordRef
     normal = P.try $ do
       (w, i) <- interval morpheme
-      unless (w `elem` keywordStrings k) (failure Nothing (Set.singleton (Label (fromJust $ nonEmpty $ unpack _keywordAscii))))
-      return i
+      case keywordMatch k w of
+        Just u -> return (KeywordRef k i u)
+        Nothing -> failure Nothing (Set.singleton (Label (fromJust $ nonEmpty $ unpack _keywordAscii)))
 
 rawIdentifier' :: (Char -> Bool) -> HashSet Text -> ParsecS r Text
 rawIdentifier' excludedTailChar allKeywords = label "<identifier>" $ P.try $ do

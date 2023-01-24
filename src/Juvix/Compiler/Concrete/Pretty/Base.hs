@@ -7,13 +7,14 @@ where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Text qualified as T
-import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath)
+import Juvix.Compiler.Concrete.Data.ScopedName (AbsModulePath, IsConcrete (..))
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra (unfoldApplication)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Data.Ape
 import Juvix.Data.CodeAnn
+import Juvix.Data.Keyword
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.Pretty qualified as PP
@@ -76,10 +77,10 @@ groupStatements = reverse . map reverse . uncurry cons . foldl' aux ([], [])
         SScoped ->
           i
             ^. importModule
+              . moduleRefModule
               . modulePath
               . S.nameId
-            == projSigma2 (^. moduleRefName) (o ^. openModuleName . unModuleRef')
-              ^. S.nameId
+            == getModuleRefNameId (o ^. openModuleName)
       (StatementImport _, _) -> False
       (StatementOpenModule {}, StatementOpenModule {}) -> True
       (StatementOpenModule {}, _) -> False
@@ -319,7 +320,13 @@ ppName = case sing :: SStage s of
 instance PrettyCode S.NameId where
   ppCode (S.NameId k) = return (pretty k)
 
-annDef :: forall s. (SingI s) => SymbolType s -> Doc Ann -> Doc Ann
+instance PrettyCode KeywordRef where
+  ppCode = return . annotate AnnKeyword . pretty
+
+instance PrettyCode Keyword where
+  ppCode = return . annotate AnnKeyword . pretty
+
+annDef :: forall s. SingI s => SymbolType s -> Doc Ann -> Doc Ann
 annDef nm = case sing :: SStage s of
   SScoped -> annSDef nm
   SParsed -> id
@@ -353,7 +360,9 @@ instance (PrettyCode n) => PrettyCode (S.Name' n) where
       annSRef = annotate (AnnRef (_nameDefinedIn ^. S.absTopModulePath) _nameId)
 
 instance PrettyCode ModuleRef where
-  ppCode = ppCode . projSigma2 (^. moduleRefName) . (^. unModuleRef')
+  ppCode (ModuleRef' (t :&: ModuleRef'' {..})) = case t of
+    SModuleTop -> ppCode _moduleRefName
+    SModuleLocal -> ppCode _moduleRefName
 
 instance (SingI s) => PrettyCode (OpenModule s) where
   ppCode :: forall r. (Members '[Reader Options] r) => OpenModule s -> Sem r (Doc Ann)
@@ -363,11 +372,9 @@ instance (SingI s) => PrettyCode (OpenModule s) where
       SScoped -> ppCode _openModuleName
     openUsingHiding' <- mapM ppUsingHiding _openUsingHiding
     openParameters' <- ppOpenParams
+    importkw' <- mapM ppCode _openModuleImportKw
     let openPublic' = ppPublic
-        import_
-          | _openModuleImport = Just kwImport
-          | otherwise = Nothing
-    return $ kwOpen <+?> import_ <+> openModuleName' <+?> openParameters' <+?> openUsingHiding' <+?> openPublic'
+    return $ kwOpen <+?> importkw' <+> openModuleName' <+?> openParameters' <+?> openUsingHiding' <+?> openPublic'
     where
       ppAtom' = case sing :: SStage s of
         SParsed -> ppCodeAtom
@@ -432,7 +439,7 @@ instance (SingI s) => PrettyCode (JudocAtom s) where
 
 instance (SingI s) => PrettyCode (TypeSignature s) where
   ppCode TypeSignature {..} = do
-    let sigTerminating' = if _sigTerminating then kwTerminating <> line else mempty
+    let sigTerminating' = if isJust _sigTerminating then kwTerminating <> line else mempty
     sigName' <- annDef _sigName <$> ppSymbol _sigName
     sigType' <- ppExpression _sigType
     builtin' <- traverse ppCode _sigBuiltin
@@ -519,26 +526,20 @@ instance (SingI s) => PrettyCode (AxiomDef s) where
     builtin' <- traverse ppCode _axiomBuiltin
     return $ axiomDoc' ?<> builtin' <?+> hang' (kwAxiom <+> axiomName' <+> kwColon <+> axiomType')
 
-instance (SingI s) => PrettyCode (Import s) where
-  ppCode :: forall r. (Members '[Reader Options] r) => Import s -> Sem r (Doc Ann)
-  ppCode (Import m) = do
+instance SingI s => PrettyCode (Import s) where
+  ppCode :: forall r. Members '[Reader Options] r => Import s -> Sem r (Doc Ann)
+  ppCode i = do
     modulePath' <- ppModulePath
-    inlineImport' <- inlineImport
-    return $ kwImport <+> modulePath' <+?> inlineImport'
+    return $ kwImport <+> modulePath'
     where
       ppModulePath = case sing :: SStage s of
-        SParsed -> ppCode m
-        SScoped -> ppTopModulePath (m ^. modulePath)
-      jumpLines :: Doc Ann -> Doc Ann
-      jumpLines x = line <> x <> line
-      inlineImport :: Sem r (Maybe (Doc Ann))
-      inlineImport = do
-        b <- asks (^. optInlineImports)
-        if b
-          then case sing :: SStage s of
-            SParsed -> return Nothing
-            SScoped -> Just . braces . jumpLines . indent' <$> ppCode m
-          else return Nothing
+        SParsed -> ppCode (i ^. importModule)
+        SScoped -> ppCode (i ^. importModule)
+
+instance SingI t => PrettyCode (ModuleRef'' 'Concrete t) where
+  ppCode m = case sing :: SModuleIsTop t of
+    SModuleTop -> ppCode (m ^. moduleRefName)
+    SModuleLocal -> ppCode (m ^. moduleRefName)
 
 instance PrettyCode PatternScopedIden where
   ppCode = \case

@@ -1,12 +1,13 @@
 module Juvix.Compiler.Concrete.Data.ParsedInfoTable where
 
 import Juvix.Compiler.Concrete.Data.ParsedItem
+import Juvix.Data.Comment
 import Juvix.Prelude
 
-newtype InfoTable = InfoTable
-  { _infoParsedItems :: [ParsedItem]
+data InfoTable = InfoTable
+  { _infoParsedItems :: [ParsedItem],
+    _infoParsedComments :: Comments
   }
-  deriving newtype (Semigroup, Monoid)
   deriving stock (Eq, Show)
 
 makeLenses ''InfoTable

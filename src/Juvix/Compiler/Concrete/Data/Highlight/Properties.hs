@@ -41,7 +41,7 @@ instance ToJSON Face where
 
 data PropertyGoto = PropertyGoto
   { _gotoInterval :: Interval,
-    _gotoFile :: FilePath,
+    _gotoFile :: Path Abs File,
     _gotoPos :: FileLoc
   }
 
@@ -61,12 +61,12 @@ data RawProperties = RawProperties
   }
 
 -- | (File, Row, Col, Length)
-type RawInterval = (FilePath, Int, Int, Int)
+type RawInterval = (Path Abs File, Int, Int, Int)
 
 type RawFace = (RawInterval, Face)
 
 -- | (Interval, TargetFile, TargetLine, TargetColumn)
-type RawGoto = (RawInterval, FilePath, Int, Int)
+type RawGoto = (RawInterval, Path Abs File, Int, Int)
 
 $( deriveToJSON
      defaultOptions
@@ -92,6 +92,7 @@ rawProperties Properties {..} =
       )
     rawFace :: PropertyFace -> RawFace
     rawFace PropertyFace {..} = (rawInterval _faceInterval, _faceFace)
+
     rawGoto :: PropertyGoto -> RawGoto
     rawGoto PropertyGoto {..} =
       ( rawInterval _gotoInterval,
@@ -125,7 +126,7 @@ instance ToSexp PropertyGoto where
       pos l = Int (succ (l ^. locOffset . unPos))
       start = pos (i ^. intervalStart)
       end = pos (i ^. intervalEnd)
-      gotoPair = Pair (String targetFile) (Int (targetPos ^. locOffset . to (succ . fromIntegral)))
+      gotoPair = Pair (String (toFilePath targetFile)) (Int (targetPos ^. locOffset . to (succ . fromIntegral)))
 
 instance ToSexp Properties where
   toSexp Properties {..} =
