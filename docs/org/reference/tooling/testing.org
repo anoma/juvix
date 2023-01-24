@@ -2,7 +2,7 @@
 
 *** Dependencies
 
-See [[../../getting-started/dependencies.md][Installing dependencies]] for instructions on how to setup the testing
+See [[./doctor.html][Installing dependencies]] for instructions on how to setup the testing
 environment for the WASM compiler tests.
 
 *** Running
