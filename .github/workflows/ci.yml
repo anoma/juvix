@@ -232,9 +232,6 @@ jobs:
         with:
           repo: wasmerio/wasmer
           tag: v3.1.0
-          cache: enable
-          rename-to: wasmer
-          chmod: 0755
 
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
         if: runner.os == 'macOS'
