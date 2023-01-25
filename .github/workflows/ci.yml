@@ -227,8 +227,13 @@ jobs:
         run: |
           echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
 
-      - name: Setup Wasmer
-        uses: wasmerio/setup-wasmer@v2
+      - name: Install the latest Wasmer version
+        uses: jonaprieto/action-install-gh-release@1
+        with:
+          repo: wasmerio/wasmer
+          tag: latest
+          binaries-location: bin
+          cache: true
 
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
         if: runner.os == 'macOS'
