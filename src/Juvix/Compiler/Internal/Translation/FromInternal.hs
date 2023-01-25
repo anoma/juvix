@@ -45,14 +45,14 @@ arityCheckExpression InternalResult {..} exp =
     runReader table (ArityChecking.inferReplExpression exp)
   where
     table :: InfoTable
-    table = buildTable _resultModules
+    table = buildTableRepl exp _resultModules
 
 typeCheckExpressionType ::
   (Members '[Error JuvixError, NameIdGen, Builtins] r) =>
   InternalTypedResult ->
   Expression ->
   Sem r TypedExpression
-typeCheckExpressionType (InternalTypedResult {..}) exp =
+typeCheckExpressionType InternalTypedResult {..} exp =
   mapError (JuvixError @TypeCheckerError)
     $ do
       runReader _resultFunctions
@@ -64,7 +64,7 @@ typeCheckExpressionType (InternalTypedResult {..}) exp =
     $ inferExpression' Nothing exp
   where
     table :: InfoTable
-    table = buildTable _resultModules
+    table = buildTableRepl exp _resultModules
 
 typeCheckExpression ::
   (Members '[Error JuvixError, NameIdGen, Builtins] r) =>

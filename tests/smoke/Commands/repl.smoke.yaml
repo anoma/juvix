@@ -118,6 +118,16 @@ tests:
           Nat
     exit-status: 0 
 
+  - name: eval-let-expression
+    command:
+      - juvix
+      - repl
+    stdin: "let {x : Nat; x := 2 + 1} in x"
+    stdout:
+      contains:
+        "suc (suc (suc zero))"
+    exit-status: 0
+
   - name: load-builtin-bool
     command:
       shell:
