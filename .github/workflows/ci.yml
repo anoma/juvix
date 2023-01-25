@@ -231,7 +231,9 @@ jobs:
         uses: jaxxstorm/action-install-gh-release@v1.9.0
         with:
           repo: wasmerio/wasmer
-          tag: v3.1.0
+          tag: latest
+          rename-to: wasmer
+          cache: true
 
       - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
         if: runner.os == 'macOS'
