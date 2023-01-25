@@ -1,54 +1,54 @@
 module Collatz;
+  open import Stdlib.Prelude;
 
-open import Stdlib.Prelude;
+  mapMaybe : {A : Type} → {B : Type} → (A → B) → Maybe
+    A → Maybe B;
+  mapMaybe _ nothing := nothing;
+  mapMaybe f (just x) := just (f x);
 
-mapMaybe : {A : Type} → {B : Type} → (A → B) → Maybe A → Maybe B;
-mapMaybe _ nothing := nothing;
-mapMaybe f (just x) := just (f x);
+  div2 : Nat → Maybe Nat;
+  div2 zero := just zero;
+  div2 (suc (suc n)) := mapMaybe suc (div2 n);
+  div2 _ := nothing;
 
-div2 : Nat → Maybe Nat;
-div2 zero := just zero;
-div2 (suc (suc n)) := mapMaybe suc (div2 n);
-div2 _ := nothing;
+  collatzNext : Nat → Nat;
+  collatzNext n := fromMaybe (suc (3 * n)) (div2 n);
 
-collatzNext : Nat → Nat;
-collatzNext n := fromMaybe (suc (3 * n)) (div2 n);
+  collatz : Nat → Nat;
+  collatz zero := zero;
+  collatz (suc zero) := suc zero;
+  collatz (suc (suc n)) := collatzNext (suc (suc n));
 
-collatz : Nat → Nat;
-collatz zero := zero;
-collatz (suc zero) := suc zero;
-collatz (suc (suc n)) := collatzNext (suc (suc n));
+  --- -----------------------------------------------------------------------------
 
---------------------------------------------------------------------------------
--- IO
---------------------------------------------------------------------------------
+  -- IO
+  --- -----------------------------------------------------------------------------
+  axiom readline : String;
 
-axiom readline : String;
-compile readline {
-  c ↦ "readline()";
-};
+  compile readline {
+    c ↦ "readline()";
+  };
 
-axiom parsePositiveInt : String → Nat;
+  axiom parsePositiveInt : String → Nat;
 
-compile parsePositiveInt {
-  c ↦ "parsePositiveInt";
-};
+  compile parsePositiveInt {
+    c ↦ "parsePositiveInt";
+  };
 
-getInitial : Nat;
-getInitial := parsePositiveInt (readline);
+  getInitial : Nat;
+  getInitial := parsePositiveInt (readline);
 
-output : Nat → Nat × IO;
-output n := (n, printNatLn n);
+  output : Nat → Nat × IO;
+  output n := n , printNatLn n;
 
-terminating
-run : (Nat → Nat) → Nat → IO;
-run _ (suc zero) := printStringLn "Finished!";
-run f n := run f (fst (output (f n)));
+  terminating
+  run : (Nat → Nat) → Nat → IO;
+  run _ (suc zero) := printStringLn "Finished!";
+  run f n := run f (fst (output (f n)));
 
-welcome : String;
-welcome := "Collatz calculator\n------------------\n\nType a number then ENTER";
+  welcome : String;
+  welcome := "Collatz calculator\n------------------\n\nType a number then ENTER";
 
-main : IO;
-main := printStringLn welcome >> run collatz getInitial;
-
+  main : IO;
+  main := printStringLn welcome >> run collatz getInitial;
 end;

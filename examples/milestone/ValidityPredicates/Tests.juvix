@@ -1,37 +1,35 @@
 module Tests;
+  open import Stdlib.Prelude;
+  open import SimpleFungibleToken;
 
-open import Stdlib.Prelude;
-open import SimpleFungibleToken;
+  --- -----------------------------------------------------------------------------
 
---------------------------------------------------------------------------------
--- Testing VP
---------------------------------------------------------------------------------
+  -- Testing VP
+  --- -----------------------------------------------------------------------------
+  token : String;
+  token := "owner-token";
 
-token : String;
-token := "owner-token";
+  owner-address : String;
+  owner-address := "owner-address";
 
-owner-address : String;
-owner-address := "owner-address";
+  change1-key : String;
+  change1-key := "change1-key";
 
-change1-key : String;
-change1-key := "change1-key";
+  change2-key : String;
+  change2-key := "change2-key";
 
-change2-key : String;
-change2-key := "change2-key";
+  verifiers : List String;
+  verifiers := owner-address :: nil;
 
-verifiers : List String;
-verifiers := owner-address :: nil;
+  keys-changed : List String;
+  keys-changed := change1-key :: change2-key :: nil;
 
-keys-changed : List String;
-keys-changed := change1-key :: change2-key :: nil;
+  show-result : Bool → String;
+  show-result true := "OK";
+  show-result false := "FAIL";
 
-show-result : Bool → String;
-show-result true := "OK";
-show-result false := "FAIL";
-
-main : IO;
-main :=
-    (printString "VP Status: ")
-    >> (printStringLn (show-result (vp token keys-changed verifiers)));
-
+  main : IO;
+  main := printString "VP Status: "
+    >> printStringLn
+      (show-result (vp token keys-changed verifiers));
 end;
