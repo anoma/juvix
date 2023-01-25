@@ -1,6 +1,5 @@
 module Juvix.Compiler.Builtins.Bool where
 
-import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Abstract.Extra
 import Juvix.Compiler.Abstract.Pretty
 import Juvix.Compiler.Builtins.Effect
@@ -36,34 +35,74 @@ registerIf f = do
   bool_ <- getBuiltinName (getLoc f) BuiltinBool
   true_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
   false_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
-  vart <- freshVar "t"
   let if_ = f ^. funDefName
-      ty = f ^. funDefTypeSig
-      freeTVars = HashSet.fromList [vart]
       u = ExpressionUniverse (Universe {_universeLevel = Nothing, _universeLoc = error "Universe with no location"})
-  unless (((u <>--> bool_ --> vart --> vart --> vart) ==% ty) freeTVars) (error "Bool if has the wrong type signature")
-  registerBuiltin BuiltinBoolIf if_
+  vart <- freshVar "t"
   vare <- freshVar "e"
   hole <- freshHole
   let e = toExpression vare
-      freeVars = HashSet.fromList [vare]
-      (=%) :: (IsExpression a, IsExpression b) => a -> b -> Bool
-      a =% b = (a ==% b) freeVars
       exClauses :: [(Expression, Expression)]
       exClauses =
         [ (if_ @@ true_ @@ e @@ hole, e),
           (if_ @@ false_ @@ hole @@ e, e)
         ]
-      clauses :: [(Expression, Expression)]
-      clauses =
-        [ (clauseLhsAsExpression c, c ^. clauseBody)
-          | c <- toList (f ^. funDefClauses)
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinBoolIf,
+        _funInfoSignature = u <>--> bool_ --> vart --> vart --> vart,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [vare],
+        _funInfoFreeTypeVars = [vart]
+      }
+
+registerOr :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerOr f = do
+  bool_ <- getBuiltinName (getLoc f) BuiltinBool
+  true_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
+  false_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
+  let or_ = f ^. funDefName
+  vare <- freshVar "e"
+  hole <- freshHole
+  let e = toExpression vare
+      exClauses :: [(Expression, Expression)]
+      exClauses =
+        [ (or_ @@ true_ @@ hole, true_),
+          (or_ @@ false_ @@ e, e)
         ]
-  case zipExactMay exClauses clauses of
-    Nothing -> error "Bool if has the wrong number of clauses"
-    Just z -> forM_ z $ \((exLhs, exBody), (lhs, body)) -> do
-      unless (exLhs =% lhs) (error "clause lhs does not match")
-      unless (exBody =% body) (error $ "clause body does not match " <> ppTrace exBody <> " | " <> ppTrace body)
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinBoolOr,
+        _funInfoSignature = bool_ --> bool_ --> bool_,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [vare],
+        _funInfoFreeTypeVars = []
+      }
+
+registerAnd :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
+registerAnd f = do
+  bool_ <- getBuiltinName (getLoc f) BuiltinBool
+  true_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolTrue
+  false_ <- toExpression <$> getBuiltinName (getLoc f) BuiltinBoolFalse
+  let and_ = f ^. funDefName
+  vare <- freshVar "e"
+  hole <- freshHole
+  let e = toExpression vare
+      exClauses :: [(Expression, Expression)]
+      exClauses =
+        [ (and_ @@ true_ @@ e, e),
+          (and_ @@ false_ @@ hole, false_)
+        ]
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinBoolAnd,
+        _funInfoSignature = bool_ --> bool_ --> bool_,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [vare],
+        _funInfoFreeTypeVars = []
+      }
 
 registerBoolPrint :: (Members '[Builtins] r) => AxiomDef -> Sem r ()
 registerBoolPrint f = do

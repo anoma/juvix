@@ -37,6 +37,8 @@ builtinFunctionName = \case
   BuiltinNatLt -> Just natlt
   BuiltinNatEq -> Just nateq
   BuiltinBoolIf -> Just boolif
+  BuiltinBoolOr -> Just boolor
+  BuiltinBoolAnd -> Just booland
 
 builtinName :: BuiltinPrim -> Maybe Text
 builtinName = \case

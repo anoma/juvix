@@ -1,6 +1,5 @@
 module Juvix.Compiler.Builtins.Nat where
 
-import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Abstract.Extra
 import Juvix.Compiler.Abstract.Pretty
 import Juvix.Compiler.Builtins.Effect
@@ -39,32 +38,6 @@ registerNatPrint f = do
   unless (f ^. axiomType === (nat --> io)) (error "Nat print has the wrong type signature")
   registerBuiltin BuiltinNatPrint (f ^. axiomName)
 
-registerNatFun ::
-  (Members '[Builtins, NameIdGen] r) =>
-  FunctionDef ->
-  BuiltinFunction ->
-  Expression ->
-  [(Expression, Expression)] ->
-  [VarName] ->
-  Sem r ()
-registerNatFun f blt sig exClauses fvs = do
-  let op = f ^. funDefName
-      ty = f ^. funDefTypeSig
-  unless (ty === sig) (error "builtin has the wrong type signature")
-  registerBuiltin blt op
-  let freeVars = HashSet.fromList fvs
-      a =% b = (a ==% b) freeVars
-      clauses :: [(Expression, Expression)]
-      clauses =
-        [ (clauseLhsAsExpression c, c ^. clauseBody)
-          | c <- toList (f ^. funDefClauses)
-        ]
-  case zipExactMay exClauses clauses of
-    Nothing -> error "builtin has the wrong number of clauses"
-    Just z -> forM_ z $ \((exLhs, exBody), (lhs, body)) -> do
-      unless (exLhs =% lhs) (error "clause lhs does not match")
-      unless (exBody =% body) (error $ "clause body does not match " <> ppTrace exBody <> " | " <> ppTrace body)
-
 registerNatPlus :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatPlus f = do
   nat <- getBuiltinName (getLoc f) BuiltinNat
@@ -82,7 +55,15 @@ registerNatPlus f = do
         [ (zero .+. m, m),
           ((suc @@ n) .+. m, suc @@ (n .+. m))
         ]
-  registerNatFun f BuiltinNatPlus (nat --> nat --> nat) exClauses [varn, varm]
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatPlus,
+        _funInfoSignature = nat --> nat --> nat,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }
 
 registerNatMul :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatMul f = do
@@ -103,7 +84,15 @@ registerNatMul f = do
         [ (zero .*. h, zero),
           ((suc @@ n) .*. m, plus @@ m @@ (n .*. m))
         ]
-  registerNatFun f BuiltinNatMul (nat --> nat --> nat) exClauses [varn, varm]
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatMul,
+        _funInfoSignature = nat --> nat --> nat,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }
 
 registerNatSub :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatSub f = do
@@ -124,7 +113,15 @@ registerNatSub f = do
           (n .-. zero, n),
           ((suc @@ n) .-. (suc @@ m), n .-. m)
         ]
-  registerNatFun f BuiltinNatSub (nat --> nat --> nat) exClauses [varn, varm]
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatSub,
+        _funInfoSignature = nat --> nat --> nat,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }
 
 registerNatUDiv :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatUDiv f = do
@@ -145,7 +142,15 @@ registerNatUDiv f = do
         [ (zero ./. h, zero),
           (n ./. m, suc @@ ((sub @@ n @@ m) ./. m))
         ]
-  registerNatFun f BuiltinNatUDiv (nat --> nat --> nat) exClauses [varn, varm]
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatUDiv,
+        _funInfoSignature = nat --> nat --> nat,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }
 
 registerNatDiv :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatDiv f = do
@@ -164,7 +169,15 @@ registerNatDiv f = do
       exClauses =
         [ (n ./. m, udiv @@ (sub @@ (suc @@ n) @@ m) @@ m)
         ]
-  registerNatFun f BuiltinNatDiv (nat --> nat --> nat) exClauses [varn, varm]
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatDiv,
+        _funInfoSignature = nat --> nat --> nat,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }
 
 registerNatMod :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatMod f = do
@@ -180,7 +193,15 @@ registerNatMod f = do
       exClauses =
         [ (modop @@ n @@ m, sub @@ n @@ (mul @@ (divop @@ n @@ m) @@ m))
         ]
-  registerNatFun f BuiltinNatMod (nat --> nat --> nat) exClauses [varn, varm]
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatMod,
+        _funInfoSignature = nat --> nat --> nat,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }
 
 registerNatLe :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatLe f = do
@@ -204,7 +225,15 @@ registerNatLe f = do
           (h .<=. zero, false),
           ((suc @@ n) .<=. (suc @@ m), n .<=. m)
         ]
-  registerNatFun f BuiltinNatLe (nat --> nat --> tybool) exClauses [varn, varm]
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatLe,
+        _funInfoSignature = nat --> nat --> tybool,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }
 
 registerNatLt :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatLt f = do
@@ -221,7 +250,15 @@ registerNatLt f = do
       exClauses =
         [ (lt @@ n @@ m, le @@ (suc @@ n) @@ m)
         ]
-  registerNatFun f BuiltinNatLt (nat --> nat --> tybool) exClauses [varn, varm]
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatLt,
+        _funInfoSignature = nat --> nat --> tybool,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }
 
 registerNatEq :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatEq f = do
@@ -246,4 +283,12 @@ registerNatEq f = do
           (h .==. zero, false),
           ((suc @@ n) .==. (suc @@ m), n .==. m)
         ]
-  registerNatFun f BuiltinNatEq (nat --> nat --> tybool) exClauses [varn, varm]
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatEq,
+        _funInfoSignature = nat --> nat --> tybool,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }
