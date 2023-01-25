@@ -16,7 +16,7 @@ import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source hiding (go)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Pretty
+import Juvix.Compiler.Concrete.Print
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoped
 import Juvix.Compiler.Internal.Translation.FromAbstract qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as InternalArity
@@ -27,6 +27,7 @@ import Juvix.Extra.Assets
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude qualified as Prelude
+import Juvix.Prelude.Pretty
 import Text.Blaze.Html.Renderer.Utf8 qualified as Html
 import Text.Blaze.Html5 as Html hiding (map)
 import Text.Blaze.Html5.Attributes qualified as Attr
@@ -148,9 +149,18 @@ genJudocHtml :: (Members '[Embed IO] r) => JudocArgs -> Sem r ()
 genJudocHtml JudocArgs {..} =
   runReader htmlOpts . runReader normTable . runReader entry $ do
     Prelude.embed (writeAssets _judocArgsOutputDir)
-    mapM_ goTopModule allModules
+    mapM_ (goTopModule cs) allModules
     createIndexFile (map topModulePath (toList allModules))
   where
+    cs :: Comments
+    cs =
+      _judocArgsCtx
+        ^. resultInternalArityResult
+          . InternalArity.resultInternalResult
+          . Internal.resultAbstract
+          . Abstract.resultScoper
+          . Scoped.comments
+
     entry :: EntryPoint
     entry = _judocArgsCtx ^. InternalTyped.internalTypedResultEntryPoint
 
@@ -241,13 +251,14 @@ template rightMenu' content' = do
   body' <- mbody
   return $ docTypeHtml (mhead <> body')
 
--- | This function compiles a datalang module into Html documentation.
+-- | This function compiles a module into Html documentation.
 goTopModule ::
   forall r.
   (Members '[Reader HtmlOptions, Embed IO, Reader EntryPoint, Reader NormalizedTable] r) =>
+  Comments ->
   Module 'Scoped 'ModuleTop ->
   Sem r ()
-goTopModule m = do
+goTopModule cs m = do
   htmlOpts <- ask @HtmlOptions
   runReader (htmlOpts {_htmlOptionsKind = HtmlDoc}) $ do
     fpath <- moduleDocPath m
@@ -268,7 +279,8 @@ goTopModule m = do
         GenModuleHtmlArgs
           { _genModuleHtmlArgsConcreteOpts = defaultOptions,
             _genModuleHtmlArgsUTC = utc,
-            _genModuleHtmlArgsEntryPoint = m
+            _genModuleHtmlArgsComments = cs,
+            _genModuleHtmlArgsModule = m
           }
 
     docHtml :: forall s. (Members '[Reader HtmlOptions, Reader EntryPoint, Reader NormalizedTable] s) => Sem s Html
@@ -408,8 +420,8 @@ goInductive def = do
     tmp :: TopModulePath
     tmp = def ^. inductiveName . S.nameDefinedIn . S.absTopModulePath
     inductiveHeader :: Sem r Html
-    inductiveHeader =
-      runReader defaultOptions (ppInductiveSignature def) >>= ppCodeHtml defaultOptions
+    inductiveHeader = do
+      docToHtml (run (runReader defaultOptions (execExactPrint Nothing (ppInductiveSignature def))))
 
 goConstructors :: forall r. (Members '[Reader HtmlOptions, Reader NormalizedTable] r) => NonEmpty (InductiveConstructorDef 'Scoped) -> Sem r Html
 goConstructors cc = do

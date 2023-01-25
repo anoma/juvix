@@ -10,11 +10,12 @@ import Juvix.Compiler.Backend.Html.Extra
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Pretty.Base
+import Juvix.Compiler.Concrete.Print
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Extra.Assets (writeAssets)
 import Juvix.Prelude
+import Prettyprinter
 import Prettyprinter.Render.Util.SimpleDocTree
 import Text.Blaze.Html
 import Text.Blaze.Html.Renderer.Text qualified as Html
@@ -33,10 +34,11 @@ data GenSourceHtmlArgs = GenSourceHtmlArgs
     _genSourceHtmlArgsHtmlKind :: HtmlKind,
     _genSourceHtmlArgsParamBase :: Text,
     _genSourceHtmlArgsUrlPrefix :: Text,
-    _genSourceHtmlArgsEntryPoint :: Module 'Scoped 'ModuleTop,
+    _genSourceHtmlArgsModule :: Module 'Scoped 'ModuleTop,
     _genSourceHtmlArgsOutputDir :: Path Abs Dir,
     _genSourceHtmlArgsNonRecursive :: Bool,
     _genSourceHtmlArgsNoFooter :: Bool,
+    _genSourceHtmlArgsComments :: Comments,
     _genSourceHtmlArgsTheme :: Theme
   }
 
@@ -45,7 +47,8 @@ makeLenses ''GenSourceHtmlArgs
 data GenModuleHtmlArgs = GenModuleHtmlArgs
   { _genModuleHtmlArgsConcreteOpts :: Options,
     _genModuleHtmlArgsUTC :: UTCTime,
-    _genModuleHtmlArgsEntryPoint :: Module 'Scoped 'ModuleTop
+    _genModuleHtmlArgsComments :: Comments,
+    _genModuleHtmlArgsModule :: Module 'Scoped 'ModuleTop
   }
 
 makeLenses ''GenModuleHtmlArgs
@@ -53,7 +56,8 @@ makeLenses ''GenModuleHtmlArgs
 data GenModuleTextArgs = GenModuleTextArgs
   { _genModuleTextArgsConcreteOpts :: Options,
     _genModuleTextArgsUTC :: UTCTime,
-    _genModuleTextArgsEntryPoint :: Module 'Scoped 'ModuleTop
+    _genModuleTextArgsComments :: Comments,
+    _genModuleTextArgsModule :: Module 'Scoped 'ModuleTop
   }
 
 makeLenses ''GenModuleTextArgs
@@ -78,7 +82,7 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
           _htmlOptionsNoFooter = o ^. genSourceHtmlArgsNoFooter
         }
 
-    entry = o ^. genSourceHtmlArgsEntryPoint
+    entry = o ^. genSourceHtmlArgsModule
 
     allModules
       | _genSourceHtmlArgsNonRecursive = pure entry
@@ -100,7 +104,8 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
               GenModuleTextArgs
                 { _genModuleTextArgsConcreteOpts = o ^. genSourceHtmlArgsConcreteOpts,
                   _genModuleTextArgsUTC = utc,
-                  _genModuleTextArgsEntryPoint = m
+                  _genModuleTextArgsComments = _genSourceHtmlArgsComments,
+                  _genModuleTextArgsModule = m
                 }
         )
       where
@@ -118,7 +123,8 @@ genModuleText GenModuleTextArgs {..} = do
       GenModuleHtmlArgs
         { _genModuleHtmlArgsConcreteOpts = _genModuleTextArgsConcreteOpts,
           _genModuleHtmlArgsUTC = _genModuleTextArgsUTC,
-          _genModuleHtmlArgsEntryPoint = _genModuleTextArgsEntryPoint
+          _genModuleHtmlArgsComments = _genModuleTextArgsComments,
+          _genModuleHtmlArgsModule = _genModuleTextArgsModule
         }
   return . toStrict . Html.renderHtml $ outputHtml
 
@@ -164,9 +170,10 @@ genModuleHtml o = do
     prettySrc :: Sem r Html
     prettySrc = do
       pp <-
-        ppCodeHtml
+        ppModuleSrcHtml
           (o ^. genModuleHtmlArgsConcreteOpts)
-          (o ^. genModuleHtmlArgsEntryPoint)
+          (o ^. genModuleHtmlArgsComments)
+          (o ^. genModuleHtmlArgsModule)
       return $ (pre ! Attr.id "src-content") pp
 
     mheader :: Sem r Html
@@ -175,23 +182,49 @@ genModuleHtml o = do
         Html.div ! Attr.id "package-header" $
           (Html.span ! Attr.class_ "caption" $ "")
 
-docStream' :: (PrettyCode a) => Options -> a -> SimpleDocStream Ann
-docStream' opts m = layoutPretty defaultLayoutOptions (runPrettyCode opts m)
-
 renderTree :: (Members '[Reader HtmlOptions] r) => SimpleDocTree Ann -> Sem r Html
 renderTree = go
 
-ppCodeHtml' :: (PrettyCode a) => HtmlOptions -> Options -> a -> Html
-ppCodeHtml' htmlOpts opts = run . runReader htmlOpts . renderTree . treeForm . docStream' opts
-
+-- | printed without comments
 ppCodeHtml ::
-  (Members '[Reader HtmlOptions] r, PrettyCode a) =>
+  (PrettyPrint a, Members '[Reader HtmlOptions] r) =>
   Options ->
   a ->
   Sem r Html
-ppCodeHtml opts x = do
-  o <- ask
-  return (ppCodeHtml' o opts x)
+ppCodeHtml opts = ppCodeHtmlHelper opts Nothing
+
+ppModuleSrcHtml ::
+  Members '[Reader HtmlOptions] r =>
+  Options ->
+  Comments ->
+  Module 'Scoped 'ModuleTop ->
+  Sem r Html
+ppModuleSrcHtml = ppCodeHtmlComments
+
+docToHtml :: Members '[Reader HtmlOptions] r => Doc Ann -> Sem r Html
+docToHtml d = ppCodeHtml' <$> ask
+  where
+    ppCodeHtml' :: HtmlOptions -> Html
+    ppCodeHtml' htmlOpts = run . runReader htmlOpts . renderTree . treeForm $ docStream'
+      where
+        docStream' :: SimpleDocStream Ann
+        docStream' = layoutPretty defaultLayoutOptions d
+
+ppCodeHtmlHelper ::
+  (PrettyPrint a, Members '[Reader HtmlOptions] r) =>
+  Options ->
+  Maybe FileComments ->
+  a ->
+  Sem r Html
+ppCodeHtmlHelper opts cs = docToHtml . docHelper cs opts
+
+ppCodeHtmlComments ::
+  (HasLoc a, PrettyPrint a, Members '[Reader HtmlOptions] r) =>
+  Options ->
+  Comments ->
+  a ->
+  Sem r Html
+ppCodeHtmlComments opts cs x = ppCodeHtmlHelper opts (Just (fileComments (getLoc x ^. intervalFile) cs)) x
 
 ppCodeHtmlInternal :: (Members '[Reader HtmlOptions] r, Internal.PrettyCode a) => a -> Sem r Html
 ppCodeHtmlInternal x = do

@@ -9,6 +9,7 @@ import Juvix.Compiler.Backend.Html.Translation.FromTyped.Source
   )
 import Juvix.Compiler.Concrete.Pretty qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
 import Juvix.Extra.Process
 import System.Process qualified as Process
 
@@ -25,7 +26,8 @@ runGenOnlySourceHtml HtmlOptions {..} = do
           _genSourceHtmlArgsParamBase = "",
           _genSourceHtmlArgsUrlPrefix = _htmlUrlPrefix,
           _genSourceHtmlArgsConcreteOpts = Concrete.defaultOptions,
-          _genSourceHtmlArgsEntryPoint = m,
+          _genSourceHtmlArgsModule = m,
+          _genSourceHtmlArgsComments = res ^. comments,
           _genSourceHtmlArgsOutputDir = outputDir,
           _genSourceHtmlArgsNoFooter = _htmlNoFooter,
           _genSourceHtmlArgsNonRecursive = _htmlNonRecursive,

@@ -1063,6 +1063,21 @@ instance (SingI s, SingI t) => HasLoc (Module s t) where
       SModuleLocal -> getLoc (m ^. modulePath)
       SModuleTop -> getLoc (m ^. modulePath)
 
+getLocExpressionType :: forall s. SingI s => ExpressionType s -> Interval
+getLocExpressionType = case sing :: SStage s of
+  SParsed -> getLoc
+  SScoped -> getLoc
+
+getJudocLoc :: Judoc s -> Maybe Interval
+getJudocLoc = fmap getLocSpan . nonEmpty . (^. block)
+
+instance SingI s => HasLoc (TypeSignature s) where
+  getLoc TypeSignature {..} =
+    (_sigDoc >>= getJudocLoc)
+      ?<> (getLoc <$> _sigBuiltin)
+      ?<> (getLoc <$> _sigTerminating)
+      ?<> getLocExpressionType _sigType
+
 instance HasLoc (Example s) where
   getLoc e = e ^. exampleLoc
 

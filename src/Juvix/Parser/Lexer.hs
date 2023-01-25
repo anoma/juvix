@@ -6,7 +6,6 @@ import Data.HashSet qualified as HashSet
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import GHC.Unicode
-import Juvix.Data.Comment
 import Juvix.Data.Keyword
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude

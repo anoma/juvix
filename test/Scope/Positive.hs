@@ -13,7 +13,6 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Setup
-import Juvix.Data.Comment
 import Juvix.Prelude.Aeson
 import Juvix.Prelude.Pretty
 

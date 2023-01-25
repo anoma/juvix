@@ -27,18 +27,18 @@ data Builder = Builder
 
 makeLenses ''Builder
 
-runExactPrint :: FileComments -> Sem (ExactPrint ': r) x -> Sem r (Doc Ann, x)
+runExactPrint :: Maybe FileComments -> Sem (ExactPrint ': r) x -> Sem r (Doc Ann, x)
 runExactPrint cs = fmap (first (^. builderDoc)) . runState ini . re
   where
     ini :: Builder
     ini =
       Builder
-        { _builderComments = cs ^. fileCommentsSorted,
+        { _builderComments = fromMaybe [] (cs ^? _Just . fileCommentsSorted),
           _builderDoc = mempty,
           _builderEnd = FileLoc 0 0 0
         }
 
-execExactPrint :: FileComments -> Sem (ExactPrint ': r) x -> Sem r (Doc Ann)
+execExactPrint :: Maybe FileComments -> Sem (ExactPrint ': r) x -> Sem r (Doc Ann)
 execExactPrint cs = fmap fst . runExactPrint cs
 
 re :: forall r a. Sem (ExactPrint ': r) a -> Sem (State Builder ': r) a
