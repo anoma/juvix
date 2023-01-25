@@ -55,13 +55,15 @@ registerNatPlus f = do
         [ (zero .+. m, m),
           ((suc @@ n) .+. m, suc @@ (n .+. m))
         ]
-  registerFun FunInfo {
-    _funInfoDef = f,
-    _funInfoBuiltin = BuiltinNatPlus,
-    _funInfoSignature = nat --> nat --> nat,
-    _funInfoClauses = exClauses,
-    _funInfoFreeVars = [varn, varm],
-    _funInfoFreeTypeVars = [] }
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatPlus,
+        _funInfoSignature = nat --> nat --> nat,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }
 
 registerNatMul :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatMul f = do
@@ -82,13 +84,15 @@ registerNatMul f = do
         [ (zero .*. h, zero),
           ((suc @@ n) .*. m, plus @@ m @@ (n .*. m))
         ]
-  registerFun FunInfo {
-    _funInfoDef = f,
-    _funInfoBuiltin = BuiltinNatMul,
-    _funInfoSignature = nat --> nat --> nat,
-    _funInfoClauses = exClauses,
-    _funInfoFreeVars = [varn, varm],
-    _funInfoFreeTypeVars = [] }
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatMul,
+        _funInfoSignature = nat --> nat --> nat,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }
 
 registerNatSub :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatSub f = do
@@ -109,13 +113,15 @@ registerNatSub f = do
           (n .-. zero, n),
           ((suc @@ n) .-. (suc @@ m), n .-. m)
         ]
-  registerFun FunInfo {
-    _funInfoDef = f,
-    _funInfoBuiltin = BuiltinNatSub,
-    _funInfoSignature = nat --> nat --> nat,
-    _funInfoClauses = exClauses,
-    _funInfoFreeVars = [varn, varm],
-    _funInfoFreeTypeVars = [] }
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatSub,
+        _funInfoSignature = nat --> nat --> nat,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }
 
 registerNatUDiv :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatUDiv f = do
@@ -136,13 +142,15 @@ registerNatUDiv f = do
         [ (zero ./. h, zero),
           (n ./. m, suc @@ ((sub @@ n @@ m) ./. m))
         ]
-  registerFun FunInfo {
-    _funInfoDef = f,
-    _funInfoBuiltin = BuiltinNatUDiv,
-    _funInfoSignature = nat --> nat --> nat,
-    _funInfoClauses = exClauses,
-    _funInfoFreeVars = [varn, varm],
-    _funInfoFreeTypeVars = [] }
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatUDiv,
+        _funInfoSignature = nat --> nat --> nat,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }
 
 registerNatDiv :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatDiv f = do
@@ -161,13 +169,15 @@ registerNatDiv f = do
       exClauses =
         [ (n ./. m, udiv @@ (sub @@ (suc @@ n) @@ m) @@ m)
         ]
-  registerFun FunInfo {
-    _funInfoDef = f,
-    _funInfoBuiltin = BuiltinNatDiv,
-    _funInfoSignature = nat --> nat --> nat,
-    _funInfoClauses = exClauses,
-    _funInfoFreeVars = [varn, varm],
-    _funInfoFreeTypeVars = [] }
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatDiv,
+        _funInfoSignature = nat --> nat --> nat,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }
 
 registerNatMod :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatMod f = do
@@ -183,13 +193,15 @@ registerNatMod f = do
       exClauses =
         [ (modop @@ n @@ m, sub @@ n @@ (mul @@ (divop @@ n @@ m) @@ m))
         ]
-  registerFun FunInfo {
-    _funInfoDef = f,
-    _funInfoBuiltin = BuiltinNatMod,
-    _funInfoSignature = nat --> nat --> nat,
-    _funInfoClauses = exClauses,
-    _funInfoFreeVars = [varn, varm],
-    _funInfoFreeTypeVars = [] }
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatMod,
+        _funInfoSignature = nat --> nat --> nat,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }
 
 registerNatLe :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatLe f = do
@@ -213,13 +225,15 @@ registerNatLe f = do
           (h .<=. zero, false),
           ((suc @@ n) .<=. (suc @@ m), n .<=. m)
         ]
-  registerFun FunInfo {
-    _funInfoDef = f,
-    _funInfoBuiltin = BuiltinNatLe,
-    _funInfoSignature = nat --> nat --> tybool,
-    _funInfoClauses = exClauses,
-    _funInfoFreeVars = [varn, varm],
-    _funInfoFreeTypeVars = [] }
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatLe,
+        _funInfoSignature = nat --> nat --> tybool,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }
 
 registerNatLt :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatLt f = do
@@ -236,13 +250,15 @@ registerNatLt f = do
       exClauses =
         [ (lt @@ n @@ m, le @@ (suc @@ n) @@ m)
         ]
-  registerFun FunInfo {
-    _funInfoDef = f,
-    _funInfoBuiltin = BuiltinNatLt,
-    _funInfoSignature = nat --> nat --> tybool,
-    _funInfoClauses = exClauses,
-    _funInfoFreeVars = [varn, varm],
-    _funInfoFreeTypeVars = [] }
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatLt,
+        _funInfoSignature = nat --> nat --> tybool,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }
 
 registerNatEq :: (Members '[Builtins, NameIdGen] r) => FunctionDef -> Sem r ()
 registerNatEq f = do
@@ -267,10 +283,12 @@ registerNatEq f = do
           (h .==. zero, false),
           ((suc @@ n) .==. (suc @@ m), n .==. m)
         ]
-  registerFun FunInfo {
-    _funInfoDef = f,
-    _funInfoBuiltin = BuiltinNatEq,
-    _funInfoSignature = nat --> nat --> tybool,
-    _funInfoClauses = exClauses,
-    _funInfoFreeVars = [varn, varm],
-    _funInfoFreeTypeVars = [] }
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinNatEq,
+        _funInfoSignature = nat --> nat --> tybool,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [varn, varm],
+        _funInfoFreeTypeVars = []
+      }

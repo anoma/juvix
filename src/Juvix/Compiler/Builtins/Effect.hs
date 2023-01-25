@@ -64,14 +64,14 @@ re = reinterpret $ \case
 runBuiltins :: (Member (Error JuvixError) r) => BuiltinsState -> Sem (Builtins ': r) a -> Sem r (BuiltinsState, a)
 runBuiltins s = runState s . re
 
-data FunInfo = FunInfo {
-  _funInfoDef :: FunctionDef,
-  _funInfoBuiltin :: BuiltinFunction,
-  _funInfoSignature :: Expression,
-  _funInfoClauses :: [(Expression, Expression)],
-  _funInfoFreeVars :: [VarName],
-  _funInfoFreeTypeVars :: [VarName]
-}
+data FunInfo = FunInfo
+  { _funInfoDef :: FunctionDef,
+    _funInfoBuiltin :: BuiltinFunction,
+    _funInfoSignature :: Expression,
+    _funInfoClauses :: [(Expression, Expression)],
+    _funInfoFreeVars :: [VarName],
+    _funInfoFreeTypeVars :: [VarName]
+  }
 
 makeLenses ''FunInfo
 

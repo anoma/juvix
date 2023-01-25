@@ -46,13 +46,15 @@ registerIf f = do
         [ (if_ @@ true_ @@ e @@ hole, e),
           (if_ @@ false_ @@ hole @@ e, e)
         ]
-  registerFun FunInfo {
-    _funInfoDef = f,
-    _funInfoBuiltin = BuiltinBoolIf,
-    _funInfoSignature = u <>--> bool_ --> vart --> vart --> vart,
-    _funInfoClauses = exClauses,
-    _funInfoFreeVars = [vare],
-    _funInfoFreeTypeVars = [vart] }
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinBoolIf,
+        _funInfoSignature = u <>--> bool_ --> vart --> vart --> vart,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [vare],
+        _funInfoFreeTypeVars = [vart]
+      }
 
 registerOr :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
 registerOr f = do
@@ -68,13 +70,15 @@ registerOr f = do
         [ (or_ @@ true_ @@ hole, true_),
           (or_ @@ false_ @@ e, e)
         ]
-  registerFun FunInfo {
-    _funInfoDef = f,
-    _funInfoBuiltin = BuiltinBoolOr,
-    _funInfoSignature = bool_ --> bool_ --> bool_,
-    _funInfoClauses = exClauses,
-    _funInfoFreeVars = [vare],
-    _funInfoFreeTypeVars = [] }
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinBoolOr,
+        _funInfoSignature = bool_ --> bool_ --> bool_,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [vare],
+        _funInfoFreeTypeVars = []
+      }
 
 registerAnd :: Members '[Builtins, NameIdGen] r => FunctionDef -> Sem r ()
 registerAnd f = do
@@ -90,13 +94,15 @@ registerAnd f = do
         [ (and_ @@ true_ @@ e, e),
           (and_ @@ false_ @@ hole, false_)
         ]
-  registerFun FunInfo {
-    _funInfoDef = f,
-    _funInfoBuiltin = BuiltinBoolAnd,
-    _funInfoSignature = bool_ --> bool_ --> bool_,
-    _funInfoClauses = exClauses,
-    _funInfoFreeVars = [vare],
-    _funInfoFreeTypeVars = [] }
+  registerFun
+    FunInfo
+      { _funInfoDef = f,
+        _funInfoBuiltin = BuiltinBoolAnd,
+        _funInfoSignature = bool_ --> bool_ --> bool_,
+        _funInfoClauses = exClauses,
+        _funInfoFreeVars = [vare],
+        _funInfoFreeTypeVars = []
+      }
 
 registerBoolPrint :: (Members '[Builtins] r) => AxiomDef -> Sem r ()
 registerBoolPrint f = do
