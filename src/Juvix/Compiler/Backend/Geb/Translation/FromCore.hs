@@ -7,38 +7,65 @@ import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Extra qualified as Core
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
-import Juvix.Compiler.Core.Language (Level, Symbol)
+import Juvix.Compiler.Core.Language (Index, Level, Symbol)
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Prelude
 
-{-
-  TODO: The translation of each identifier should be saved separately to avoid
-  exponential blow-up. For example, the program:
-  ```
-  a : A
-
-  f : A -> A
-  f x = F
-
-  g : A -> A
-  g x = f (f x)
-
-  main : A
-  main = g (g a)
-  ```
-  should be translated as:
-  ```
-  (\a -> (\f -> (\g -> g (g a)) (\x -> f (f x))) (\x -> F')) a'
-  ```
--}
-
 fromCore :: Core.InfoTable -> Core.Node -> Geb
-fromCore tab = convertNode mempty 0 []
+fromCore tab node = goIdents mempty 0 [] (HashMap.elems (tab ^. Core.infoIdentifiers))
   where
     unsupported :: forall a. a
     unsupported = error "unsupported"
 
-    -- `shiftLevels` contains the de Bruijn levels immediately after which a
+    nodeType :: Object
+    nodeType = convertType (Info.getNodeType node)
+
+    {-
+      The translation of each identifier is saved separately to avoid exponential
+      blow-up. For example, the program:
+      ```
+      a : A
+
+      f : A -> A
+      f x = F
+
+      g : A -> A
+      g x = f (f x)
+
+      main : A
+      main = g (g a)
+      ```
+      is translated as if it were a single node:
+      ```
+      (\a -> (\f -> (\g -> g (g a)) (\x -> f (f x))) (\x -> F)) a
+      ```
+    -}
+    goIdents :: HashMap Symbol Level -> Level -> [Level] -> [Core.IdentifierInfo] -> Geb
+    goIdents identMap level shiftLevels = \case
+      ii : idents ->
+        GebApp
+          App
+            { _appDomainType = argty,
+              _appCodomainType = nodeType,
+              _appLeft = lamb,
+              _appRight = convertNode identMap 0 shiftLevels fundef
+            }
+        where
+          sym = ii ^. Core.identifierSymbol
+          fundef = fromJust $ HashMap.lookup sym (tab ^. Core.identContext)
+          argty = convertType (Info.getNodeType fundef)
+          body = goIdents (HashMap.insert sym level identMap) (level + 1) (0 : shiftLevels) idents
+          lamb =
+            GebLamb
+              Lamb
+                { _lambVarType = argty,
+                  _lambBodyType = nodeType,
+                  _lambBody = body
+                }
+      [] ->
+        convertNode identMap 0 shiftLevels node
+
+    -- `shiftLevels` contains the de Bruijn levels immediately before which a
     -- binder was inserted
     convertNode :: HashMap Symbol Level -> Level -> [Level] -> Core.Node -> Geb
     convertNode identMap varsNum shiftLevels = \case
@@ -60,13 +87,17 @@ fromCore tab = convertNode mempty 0 []
       Core.NDyn {} -> unsupported
       Core.Closure {} -> unsupported
 
+    insertedBinders :: Level -> [Level] -> Index -> Int
+    insertedBinders varsNum shiftLevels idx =
+      length (filter ((varsNum - idx) <=) shiftLevels)
+
     convertVar :: HashMap Symbol Level -> Level -> [Level] -> Core.Var -> Geb
     convertVar _ varsNum shiftLevels Core.Var {..} =
-      GebVar (_varIndex + length (filter ((varsNum - _varIndex - 1) <=) shiftLevels))
+      GebVar (_varIndex + insertedBinders varsNum shiftLevels _varIndex)
 
     convertIdent :: HashMap Symbol Level -> Level -> [Level] -> Core.Ident -> Geb
-    convertIdent identMap varsNum _ Core.Ident {..} =
-      GebVar (varsNum - fromJust (HashMap.lookup _identSymbol identMap) - 1)
+    convertIdent identMap varsNum shiftLevels Core.Ident {..} =
+      GebVar (varsNum + length shiftLevels - fromJust (HashMap.lookup _identSymbol identMap) - 1)
 
     convertConstant :: HashMap Symbol Level -> Level -> [Level] -> Core.Constant -> Geb
     convertConstant _ _ _ Core.Constant {} = unsupported
@@ -161,7 +192,7 @@ fromCore tab = convertNode mempty 0 []
                             Lamb
                               { _lambVarType = ty,
                                 _lambBodyType = ty,
-                                _lambBody = go indty (varsNum - 1 : shiftLevels) _caseValue branches
+                                _lambBody = go indty (varsNum : shiftLevels) _caseValue branches
                               },
                         _appRight = convertNode identMap varsNum shiftLevels defaultNode
                       }
@@ -218,7 +249,7 @@ fromCore tab = convertNode mempty 0 []
                       Lamb
                         { _lambVarType = rty,
                           _lambBodyType = codty,
-                          _lambBody = go rty (varsNum - 1 : lvls) (Core.mkVar' 0) brs
+                          _lambBody = go rty (varsNum : lvls) (Core.mkVar' 0) brs
                         }
                 }
             where
@@ -232,7 +263,6 @@ fromCore tab = convertNode mempty 0 []
           mkApps (mkLambs argtys) (convertNode identMap varsNum lvls val) valty argtys
           where
             argtys = destructProd valty
-            lvls' = replicate _caseBranchBindersNum (varsNum - 1) ++ lvls
 
             mkApps :: Geb -> Geb -> Object -> [Object] -> Geb
             mkApps acc v vty = \case
@@ -284,7 +314,7 @@ fromCore tab = convertNode mempty 0 []
                         ObjectHom (Hom ty accty)
                       )
                   )
-                  (convertNode identMap varsNum lvls' _caseBranchBody, codty)
+                  (convertNode identMap (varsNum + _caseBranchBindersNum) lvls _caseBranchBody, codty)
 
     convertType :: Core.Type -> Object
     convertType = \case
