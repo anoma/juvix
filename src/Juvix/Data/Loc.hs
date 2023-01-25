@@ -54,6 +54,10 @@ mkLoc offset M.SourcePos {..} =
         err :: a
         err = error ("The path \"" <> pack fp <> "\" is not absolute. Remember to pass an absolute path to Megaparsec when running a parser")
 
+-- | Make a `Loc` that points to the beginning of a file.
+mkInitialLoc :: Path Abs File -> Loc
+mkInitialLoc = mkLoc 0 . M.initialPos . fromAbsFile
+
 fromPos :: M.Pos -> Pos
 fromPos = Pos . fromIntegral . M.unPos
 
