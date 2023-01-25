@@ -8,46 +8,46 @@ import Juvix.Prelude
   (https://github.com/anoma/geb/blob/main/src/specs/geb.lisp).
 -}
 
--- | Represents GEB's case-on. `_caseOn` is the value matched on of type `Dom`,
--- `_caseLeftType` has the form `Dom -> _caseCodomainType` and `_caseRightType`
--- has the form `Dom -> _caseCodomainType`.
+-- | Represents GEB's `case-on`. `_caseOn` is the value matched on of type
+-- `Dom`, `_caseLeft` has type `_caseLeftType -> _caseCodomainType` and
+-- `_caseRight` has type `_caseRightType -> _caseCodomainType`.
 data Case = Case
-  { _caseLeftType :: Obj,
-    _caseRightType :: Obj,
-    _caseCodomainType :: Obj,
+  { _caseLeftType :: Object,
+    _caseRightType :: Object,
+    _caseCodomainType :: Object,
     _caseOn :: Geb,
     _caseLeft :: Geb,
     _caseRight :: Geb
   }
 
 data Pair = Pair
-  { _pairLeftType :: Obj,
-    _pairRightType :: Obj,
+  { _pairLeftType :: Object,
+    _pairRightType :: Object,
     _pairLeft :: Geb,
     _pairRight :: Geb
   }
 
 data Fst = Fst
-  { _fstLeftType :: Obj,
-    _fstRightType :: Obj,
+  { _fstLeftType :: Object,
+    _fstRightType :: Object,
     _fstValue :: Geb
   }
 
 data Snd = Snd
-  { _sndLeftType :: Obj,
-    _sndRightType :: Obj,
+  { _sndLeftType :: Object,
+    _sndRightType :: Object,
     _sndValue :: Geb
   }
 
 data Lamb = Lamb
-  { _lambVarType :: Obj,
-    _lambBodyType :: Obj,
+  { _lambVarType :: Object,
+    _lambBodyType :: Object,
     _lambBody :: Geb
   }
 
 data App = App
-  { _appDomainType :: Obj,
-    _appCodomainType :: Obj,
+  { _appDomainType :: Object,
+    _appCodomainType :: Object,
     _appLeft :: Geb,
     _appRight :: Geb
   }
@@ -68,29 +68,29 @@ data Geb
   | GebVar Int
 
 data Prod = Prod
-  { _prodLeft :: Obj,
-    _prodRight :: Obj
+  { _prodLeft :: Object,
+    _prodRight :: Object
   }
 
 data Coprod = Coprod
-  { _coprodLeft :: Obj,
-    _coprodRight :: Obj
+  { _coprodLeft :: Object,
+    _coprodRight :: Object
   }
 
 -- | Function type
 data Hom = Hom
-  { _homDomain :: Obj,
-    _homCodomain :: Obj
+  { _homDomain :: Object,
+    _homCodomain :: Object
   }
 
 -- | Corresponds to the GEB type for types (objects of the category): `substobj`
 -- (https://github.com/anoma/geb/blob/main/src/specs/geb.lisp).
-data Obj
-  = ObjInitial -- empty type
-  | ObjTerminal -- unit type
-  | ObjProd Prod
-  | ObjCoprod Coprod
-  | ObjHom Hom -- function type
+data Object
+  = ObjectInitial -- empty type
+  | ObjectTerminal -- unit type
+  | ObjectProd Prod
+  | ObjectCoprod Coprod
+  | ObjectHom Hom -- function type
 
 instance HasAtomicity Geb where
   atomicity = \case
@@ -106,13 +106,13 @@ instance HasAtomicity Geb where
     GebApp {} -> Aggregate appFixity
     GebVar {} -> Aggregate appFixity
 
-instance HasAtomicity Obj where
+instance HasAtomicity Object where
   atomicity = \case
-    ObjInitial -> Atom
-    ObjTerminal -> Atom
-    ObjProd {} -> Aggregate appFixity
-    ObjCoprod {} -> Aggregate appFixity
-    ObjHom {} -> Aggregate appFixity
+    ObjectInitial -> Atom
+    ObjectTerminal -> Atom
+    ObjectProd {} -> Aggregate appFixity
+    ObjectCoprod {} -> Aggregate appFixity
+    ObjectHom {} -> Aggregate appFixity
 
 makeLenses ''Case
 makeLenses ''Pair
@@ -124,4 +124,4 @@ makeLenses ''Geb
 makeLenses ''Prod
 makeLenses ''Coprod
 makeLenses ''Hom
-makeLenses ''Obj
+makeLenses ''Object

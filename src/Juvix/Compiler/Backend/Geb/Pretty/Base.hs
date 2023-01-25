@@ -11,11 +11,13 @@ import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 
-doc :: PrettyCode c => Options -> c -> Doc Ann
-doc opts =
-  run
-    . runReader opts
-    . ppCode
+doc :: (HasAtomicity c, PrettyCode c) => Options -> c -> Doc Ann
+doc opts x =
+  run $
+    runReader opts $
+      case atomicity x of
+        Atom -> ppCode x
+        Aggregate _ -> parens <$> ppCode x
 
 class PrettyCode c where
   ppCode :: Member (Reader Options) r => c -> Sem r (Doc Ann)
@@ -105,13 +107,13 @@ instance PrettyCode Hom where
     cod <- ppArg _homCodomain
     return $ kwHom <+> dom <+> cod
 
-instance PrettyCode Obj where
+instance PrettyCode Object where
   ppCode = \case
-    ObjInitial -> return kwInitial
-    ObjTerminal -> return kwTerminal
-    ObjProd x -> ppCode x
-    ObjCoprod x -> ppCode x
-    ObjHom x -> ppCode x
+    ObjectInitial -> return kwInitial
+    ObjectTerminal -> return kwTerminal
+    ObjectProd x -> ppCode x
+    ObjectCoprod x -> ppCode x
+    ObjectHom x -> ppCode x
 
 {--------------------------------------------------------------------------------}
 {- helper functions -}
