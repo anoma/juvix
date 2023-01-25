@@ -25,7 +25,7 @@ data BuiltinDataTag
   | TagBind
   | TagWrite
   | TagReadLn
-  deriving stock (Eq, Generic)
+  deriving stock (Eq, Ord, Generic)
 
 instance Hashable BuiltinDataTag
 
