@@ -154,8 +154,8 @@ format: clang-format
 clang-format:
 	@cd runtime && ${MAKE} format
 
-TOFORMATFILES = ./examples
-TOFORMAT = $(shell find ${TOFORMATFILES} -name "*.juvix" -print)
+TOFORMATJUVIXFILES = ./examples
+TOFORMAT = $(shell find ${TOFORMATJUVIXFILES} -name "*.juvix" -print)
 
 .PHONY: $(TOFORMAT)
 juvix-format: $(TOFORMAT)

@@ -12,6 +12,7 @@ module Logic.Extra;
   };
 
   --- Concatenates a list of strings
+
   --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
   :: "b"
   :: nil;
