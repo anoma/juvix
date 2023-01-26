@@ -10,7 +10,7 @@ runCommand :: forall r. (Members '[Embed IO, App] r) => CoreEvalOptions -> Sem r
 runCommand opts = do
   f :: Path Abs File <- someBaseToAbs' b
   s <- embed (readFile (toFilePath f))
-  case Core.runParser (toFilePath f) Core.emptyInfoTable s of
+  case Core.runParser f Core.emptyInfoTable s of
     Left err -> exitJuvixError (JuvixError err)
     Right (tab, Just node) -> do evalAndPrint opts tab node
     Right (_, Nothing) -> return ()
