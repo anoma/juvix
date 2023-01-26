@@ -9,16 +9,20 @@ import Juvix.Compiler.Core.Extra qualified as Core
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
 import Juvix.Compiler.Core.Language (Index, Level, Symbol)
 import Juvix.Compiler.Core.Language qualified as Core
+import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Prelude
 
-fromCore :: Core.InfoTable -> Core.Node -> Geb
-fromCore tab node = goIdents mempty 0 [] (HashMap.elems (tab ^. Core.infoIdentifiers))
+fromCore :: Core.InfoTable -> Geb
+fromCore tab = case tab ^. Core.infoMain of
+  Just sym ->
+    let node = fromJust $ HashMap.lookup sym (tab ^. Core.identContext)
+        idents = HashMap.delete sym (tab ^. Core.infoIdentifiers)
+     in goIdents mempty 0 [] node (HashMap.elems idents)
+  Nothing ->
+    error "no main function"
   where
     unsupported :: forall a. a
     unsupported = error "unsupported"
-
-    nodeType :: Object
-    nodeType = convertType (Info.getNodeType node)
 
     {-
       The translation of each identifier is saved separately to avoid exponential
@@ -40,8 +44,8 @@ fromCore tab node = goIdents mempty 0 [] (HashMap.elems (tab ^. Core.infoIdentif
       (\a -> (\f -> (\g -> g (g a)) (\x -> f (f x))) (\x -> F)) a
       ```
     -}
-    goIdents :: HashMap Symbol Level -> Level -> [Level] -> [Core.IdentifierInfo] -> Geb
-    goIdents identMap level shiftLevels = \case
+    goIdents :: HashMap Symbol Level -> Level -> [Level] -> Core.Node -> [Core.IdentifierInfo] -> Geb
+    goIdents identMap level shiftLevels node = \case
       ii : idents ->
         GebApp
           App
@@ -54,7 +58,7 @@ fromCore tab node = goIdents mempty 0 [] (HashMap.elems (tab ^. Core.infoIdentif
           sym = ii ^. Core.identifierSymbol
           fundef = fromJust $ HashMap.lookup sym (tab ^. Core.identContext)
           argty = convertType (Info.getNodeType fundef)
-          body = goIdents (HashMap.insert sym level identMap) (level + 1) (0 : shiftLevels) idents
+          body = goIdents (HashMap.insert sym level identMap) (level + 1) (0 : shiftLevels) node idents
           lamb =
             GebLamb
               Lamb
@@ -64,11 +68,13 @@ fromCore tab node = goIdents mempty 0 [] (HashMap.elems (tab ^. Core.infoIdentif
                 }
       [] ->
         convertNode identMap 0 shiftLevels node
+      where
+        nodeType = convertType (Info.getNodeType node)
 
     -- `shiftLevels` contains the de Bruijn levels immediately before which a
     -- binder was inserted
     convertNode :: HashMap Symbol Level -> Level -> [Level] -> Core.Node -> Geb
-    convertNode identMap varsNum shiftLevels = \case
+    convertNode identMap varsNum shiftLevels node = trace (Core.ppTrace node) $ case node of
       Core.NVar x -> convertVar identMap varsNum shiftLevels x
       Core.NIdt x -> convertIdent identMap varsNum shiftLevels x
       Core.NCst x -> convertConstant identMap varsNum shiftLevels x
@@ -117,12 +123,15 @@ fromCore tab node = goIdents mempty 0 [] (HashMap.elems (tab ^. Core.infoIdentif
 
     convertConstr :: HashMap Symbol Level -> Level -> [Level] -> Core.Constr -> Geb
     convertConstr identMap varsNum shiftLevels Core.Constr {..} =
-      foldr ($) (GebLeft (convertProduct identMap varsNum shiftLevels _constrArgs)) (replicate tagNum GebRight)
+      foldr ($) prod (replicate tagNum GebRight)
       where
         ci = fromJust $ HashMap.lookup _constrTag (tab ^. Core.infoConstructors)
         sym = ci ^. Core.constructorInductive
         ctrs = fromJust (HashMap.lookup sym (tab ^. Core.infoInductives)) ^. Core.inductiveConstructors
         tagNum = fromJust $ elemIndex _constrTag (sort (map (^. Core.constructorTag) ctrs))
+        prod =
+          (if tagNum == length ctrs - 1 then id else GebLeft)
+            (convertProduct identMap varsNum shiftLevels _constrArgs)
 
     convertProduct :: HashMap Symbol Level -> Level -> [Level] -> [Core.Node] -> Geb
     convertProduct identMap varsNum shiftLevels = \case
@@ -178,35 +187,37 @@ fromCore tab node = goIdents mempty 0 [] (HashMap.elems (tab ^. Core.infoIdentif
 
     convertCase :: HashMap Symbol Level -> Level -> [Level] -> Core.Case -> Geb
     convertCase identMap varsNum shiftLevels Core.Case {..} =
-      if
-          | null branches ->
-              GebAbsurd (convertNode identMap varsNum shiftLevels _caseValue)
-          | length ctrBrs > 1 ->
-              let ty = convertType (Info.getNodeType defaultNode)
-               in GebApp
-                    App
-                      { _appDomainType = ty,
-                        _appCodomainType = ty,
-                        _appLeft =
-                          GebLamb
-                            Lamb
-                              { _lambVarType = ty,
-                                _lambBodyType = ty,
-                                _lambBody = go indty (varsNum : shiftLevels) _caseValue branches
-                              },
-                        _appRight = convertNode identMap varsNum shiftLevels defaultNode
-                      }
-          | otherwise -> go indty shiftLevels _caseValue branches
+      trace (show missingCtrsNum) $
+        if
+            | null branches ->
+                GebAbsurd (convertNode identMap varsNum shiftLevels _caseValue)
+            | missingCtrsNum > 1 ->
+                let ty = convertType (Info.getNodeType defaultNode)
+                 in GebApp
+                      App
+                        { _appDomainType = ty,
+                          _appCodomainType = ty,
+                          _appLeft =
+                            GebLamb
+                              Lamb
+                                { _lambVarType = ty,
+                                  _lambBodyType = ty,
+                                  _lambBody = go indty (varsNum : shiftLevels) _caseValue branches
+                                },
+                          _appRight = convertNode identMap varsNum shiftLevels defaultNode
+                        }
+            | otherwise -> go indty shiftLevels _caseValue branches
       where
         indty = convertInductive _caseInductive
         ii = fromJust $ HashMap.lookup _caseInductive (tab ^. Core.infoInductives)
-        ctrBranches = map mkCtrBranch (ii ^. Core.inductiveConstructors)
-        ctrBrs =
+        missingCtrs =
           filter
             ( \x ->
-                isNothing (find (\y -> x ^. Core.caseBranchTag == y ^. Core.caseBranchTag) _caseBranches)
+                isNothing (find (\y -> x ^. Core.constructorTag == y ^. Core.caseBranchTag) _caseBranches)
             )
-            ctrBranches
+            (ii ^. Core.inductiveConstructors)
+        missingCtrsNum = length missingCtrs
+        ctrBrs = map mkCtrBranch missingCtrs
         defaultNode = fromMaybe (error "not all cases covered") _caseDefault
         -- `branches` contains one branch for each constructor of the inductive type.
         -- `_caseDefault` is the body of those branches which were not present in
@@ -228,7 +239,7 @@ fromCore tab node = goIdents mempty 0 [] (HashMap.elems (tab ^. Core.infoIdentif
             n = length tyargs
             defaultBody =
               if
-                  | length ctrBrs > 1 -> Core.mkVar'
+                  | missingCtrsNum > 1 -> Core.mkVar'
                   | otherwise -> (`Core.shift` defaultNode)
 
         go :: Object -> [Level] -> Core.Node -> [Core.CaseBranch] -> Geb
@@ -243,7 +254,13 @@ fromCore tab node = goIdents mempty 0 [] (HashMap.elems (tab ^. Core.infoIdentif
                   _caseRightType = rty,
                   _caseCodomainType = codty,
                   _caseOn = convertNode identMap varsNum lvls val,
-                  _caseLeft = mkBranch lty lvls val br,
+                  _caseLeft =
+                    GebLamb
+                      Lamb
+                        { _lambVarType = lty,
+                          _lambBodyType = codty,
+                          _lambBody = mkBranch lty (varsNum : lvls) val br
+                        },
                   _caseRight =
                     GebLamb
                       Lamb
@@ -260,8 +277,13 @@ fromCore tab node = goIdents mempty 0 [] (HashMap.elems (tab ^. Core.infoIdentif
 
         mkBranch :: Object -> [Level] -> Core.Node -> Core.CaseBranch -> Geb
         mkBranch valty lvls val Core.CaseBranch {..} =
-          mkApps (mkLambs argtys) (convertNode identMap varsNum lvls val) valty argtys
+          if
+              | _caseBranchBindersNum == 0 ->
+                  branch
+              | otherwise ->
+                  mkApps (mkLambs argtys) (convertNode identMap varsNum lvls val) valty argtys
           where
+            branch = convertNode identMap (varsNum + _caseBranchBindersNum) lvls _caseBranchBody
             argtys = destructProd valty
 
             mkApps :: Geb -> Geb -> Object -> [Object] -> Geb
@@ -314,16 +336,24 @@ fromCore tab node = goIdents mempty 0 [] (HashMap.elems (tab ^. Core.infoIdentif
                         ObjectHom (Hom ty accty)
                       )
                   )
-                  (convertNode identMap (varsNum + _caseBranchBindersNum) lvls _caseBranchBody, codty)
+                  (branch, codty)
 
     convertType :: Core.Type -> Object
-    convertType = \case
-      Core.NPi x -> convertPi x
-      Core.NUniv {} -> unsupported -- no polymorphism yet
-      Core.NTyp x -> convertTypeConstr x
-      Core.NPrim x -> convertTypePrim x
-      Core.NDyn {} -> unsupported -- no dynamic type in GEB
-      _ -> unsupported -- not a type
+    convertType ty = trace (Core.ppTrace ty) $ case ty of
+      Core.NPi x ->
+        convertPi x
+      Core.NUniv {} ->
+        unsupported -- no polymorphism yet
+      Core.NTyp x ->
+        convertTypeConstr x
+      Core.NPrim x ->
+        convertTypePrim x
+      Core.NDyn {} ->
+        unsupported -- no dynamic type in GEB
+      Core.NLam Core.Lambda {..} ->
+        convertType _lambdaBody
+      _ ->
+        unsupported -- not a type
     convertPi :: Core.Pi -> Object
     convertPi Core.Pi {..} =
       ObjectHom
@@ -344,12 +374,12 @@ fromCore tab node = goIdents mempty 0 [] (HashMap.elems (tab ^. Core.infoIdentif
 
     convertInductive :: Symbol -> Object
     convertInductive sym =
-      case ctrs of
+      case reverse ctrs of
         ci : ctrs' ->
           foldr
             (\x acc -> ObjectCoprod (Coprod (convertConstructorType (x ^. Core.constructorType)) acc))
             (convertConstructorType (ci ^. Core.constructorType))
-            ctrs'
+            (reverse ctrs')
         [] ->
           ObjectInitial
       where
@@ -359,11 +389,11 @@ fromCore tab node = goIdents mempty 0 [] (HashMap.elems (tab ^. Core.infoIdentif
 
     convertConstructorType :: Core.Node -> Object
     convertConstructorType ty =
-      case Core.typeArgs ty of
+      case reverse (Core.typeArgs ty) of
         hty : tys ->
           foldr
             (\x acc -> ObjectProd (Prod (convertType x) acc))
             (convertType hty)
-            tys
+            (reverse tys)
         [] ->
           ObjectTerminal

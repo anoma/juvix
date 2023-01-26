@@ -26,10 +26,11 @@ instance PrettyCode Case where
   ppCode Case {..} = do
     lty <- ppArg _caseLeftType
     rty <- ppArg _caseRightType
+    cod <- ppArg _caseCodomainType
     val <- ppArg _caseOn
     left <- ppArg _caseLeft
     right <- ppArg _caseRight
-    return $ kwCase <+> lty <+> rty <+> val <+> left <+> right
+    return $ kwCase <+> lty <+> rty <+> cod <+> val <+> left <+> right
 
 instance PrettyCode Pair where
   ppCode Pair {..} = do

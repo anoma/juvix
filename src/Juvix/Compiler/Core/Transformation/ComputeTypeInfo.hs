@@ -57,7 +57,11 @@ computeNodeTypeInfo tab = umapL go
       NCtr Constr {..} ->
         let ci = fromJust $ HashMap.lookup _constrTag (tab ^. infoConstructors)
             ii = fromJust $ HashMap.lookup (ci ^. constructorInductive) (tab ^. infoInductives)
-         in mkTypeConstr' (ci ^. constructorInductive) (take (length (ii ^. inductiveParams)) _constrArgs)
+         in case ii ^. inductiveBuiltin of
+              Just BuiltinBool ->
+                mkTypeBool'
+              _ ->
+                mkTypeConstr' (ci ^. constructorInductive) (take (length (ii ^. inductiveParams)) _constrArgs)
       NLam Lambda {..} ->
         mkPi' (_lambdaBinder ^. binderType) (mkLambda' (Info.getNodeType _lambdaBody))
       NLet Let {..} ->

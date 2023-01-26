@@ -1,0 +1,7 @@
+
+type optbool {
+  Just : bool -> optbool;
+  Nothing : optbool;
+};
+
+\(x : bool) \(o : optbool) { case o of { Just b := if x then true else b; Nothing := false } }
