@@ -52,9 +52,10 @@ newtype ModulesCache = ModulesCache
 
 makeLenses ''ModulesCache
 
-newtype ScopeParameters = ScopeParameters
+data ScopeParameters = ScopeParameters
   { -- | Used for import cycle detection.
-    _scopeTopParents :: [Import 'Parsed]
+    _scopeTopParents :: [Import 'Parsed],
+    _scopeParsedModules :: HashMap TopModulePath (Module 'Parsed 'ModuleTop)
   }
 
 makeLenses ''ScopeParameters

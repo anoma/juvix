@@ -74,7 +74,7 @@ coreEvalErrorAssertion mainFile step = do
               Right _ -> assertFailure "no error"
         )
 
-parseFile :: Path Abs File -> IO (Either ParserError (InfoTable, Maybe Node))
+parseFile :: Path Abs File -> IO (Either MegaparsecError (InfoTable, Maybe Node))
 parseFile f = do
   let f' = toFilePath f
   s <- readFile f'

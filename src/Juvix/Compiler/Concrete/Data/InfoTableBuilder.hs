@@ -14,6 +14,7 @@ data InfoTableBuilder m a where
   RegisterFunctionClause :: FunctionClause 'Scoped -> InfoTableBuilder m ()
   RegisterName :: (HasLoc c) => S.Name' c -> InfoTableBuilder m ()
   RegisterCompile :: Compile 'Scoped -> InfoTableBuilder m ()
+  RegisterModule :: Module 'Scoped 'ModuleTop -> InfoTableBuilder m ()
 
 makeSem ''InfoTableBuilder
 
@@ -90,6 +91,7 @@ toState = reinterpret $ \case
         value = c
      in modify (over infoFunctionClauses (HashMap.insert key value))
   RegisterName n -> modify (over infoNames (cons (S.AName n)))
+  RegisterModule m -> modify (over infoModules (HashMap.insert (m ^. modulePath) m))
 
 runInfoTableBuilder :: InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
 runInfoTableBuilder tab = runState tab . toState

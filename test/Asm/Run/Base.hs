@@ -80,7 +80,7 @@ asmRunErrorAssertion mainFile step = do
                 )
             Nothing -> assertBool "" True
 
-parseFile :: Path Abs File -> IO (Either ParserError InfoTable)
+parseFile :: Path Abs File -> IO (Either MegaparsecError InfoTable)
 parseFile f = do
   let f' = toFilePath f
   s <- readFile f'

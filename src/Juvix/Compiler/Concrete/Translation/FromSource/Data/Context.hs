@@ -1,4 +1,8 @@
-module Juvix.Compiler.Concrete.Translation.FromSource.Data.Context where
+module Juvix.Compiler.Concrete.Translation.FromSource.Data.Context
+  ( module Juvix.Compiler.Concrete.Translation.FromSource.Data.Context,
+    module Juvix.Compiler.Concrete.Data.ParsedInfoTable,
+  )
+where
 
 import Juvix.Compiler.Concrete.Data.ParsedInfoTable
 import Juvix.Compiler.Concrete.Language

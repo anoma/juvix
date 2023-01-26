@@ -48,8 +48,8 @@ getAllModules' m = recordModule m
       SModuleLocal -> Nothing
       SModuleTop -> Just _moduleRefModule
 
-getModuleFilePath :: Module 'Scoped 'ModuleTop -> Path Abs File
-getModuleFilePath m = getLoc (m ^. modulePath) ^. intervalFile
+getModuleFilePath :: Module s 'ModuleTop -> Path Abs File
+getModuleFilePath m = getLoc (m ^. moduleKw) ^. intervalFile
 
 unfoldApplication :: Application -> (Expression, [Expression])
 unfoldApplication (Application l r) = go [r] l

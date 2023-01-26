@@ -80,4 +80,6 @@ instance Pretty FileComments where
       <> vsep [pretty c | c <- toList (fc ^. fileCommentsSorted)]
 
 instance Pretty Comments where
-  pretty c = vsep [pretty fc | fc <- toList (c ^. commentsByFile)]
+  pretty c
+    | null (c ^. commentsByFile) = "<empty comments>"
+    | otherwise = vsep [pretty fc | fc <- toList (c ^. commentsByFile)]

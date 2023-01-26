@@ -11,8 +11,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Typ
 import Juvix.Prelude
 
 data ScoperError
-  = ErrParser MegaParsecError
-  | ErrInfixParser InfixError
+  = ErrInfixParser InfixError
   | ErrAppLeftImplicit AppLeftImplicit
   | ErrInfixPattern InfixErrorP
   | ErrMultipleDeclarations MultipleDeclarations
@@ -28,7 +27,6 @@ data ScoperError
   | ErrAmbiguousSym AmbiguousSym
   | ErrAmbiguousModuleSym AmbiguousModuleSym
   | ErrUnusedOperatorDef UnusedOperatorDef
-  | ErrWrongTopModuleName WrongTopModuleName
   | ErrWrongLocationCompileBlock WrongLocationCompileBlock
   | ErrMultipleCompileBlockSameName MultipleCompileBlockSameName
   | ErrMultipleCompileRuleSameBackend MultipleCompileRuleSameBackend
@@ -39,12 +37,10 @@ data ScoperError
   | ErrAliasBinderPattern AliasBinderPattern
   | ErrImplicitPatternLeftApplication ImplicitPatternLeftApplication
   | ErrConstructorExpectedLeftApplication ConstructorExpectedLeftApplication
-  | ErrTopModulePath TopModulePathError
   deriving stock (Show)
 
 instance ToGenericError ScoperError where
   genericError = \case
-    ErrParser e -> genericError e
     ErrInfixParser e -> genericError e
     ErrAppLeftImplicit e -> genericError e
     ErrInfixPattern e -> genericError e
@@ -58,7 +54,6 @@ instance ToGenericError ScoperError where
     ErrDuplicateFixity e -> genericError e
     ErrMultipleExport e -> genericError e
     ErrAmbiguousSym e -> genericError e
-    ErrWrongTopModuleName e -> genericError e
     ErrAmbiguousModuleSym e -> genericError e
     ErrUnusedOperatorDef e -> genericError e
     ErrLacksFunctionClause e -> genericError e
@@ -72,4 +67,3 @@ instance ToGenericError ScoperError where
     ErrAliasBinderPattern e -> genericError e
     ErrImplicitPatternLeftApplication e -> genericError e
     ErrConstructorExpectedLeftApplication e -> genericError e
-    ErrTopModulePath e -> genericError e

@@ -5,7 +5,6 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Extra
-import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty qualified as M
 import Juvix.Compiler.Concrete.Print qualified as P
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
@@ -47,7 +46,7 @@ testDescr :: PosTest -> [TestDescr]
 testDescr PosTest {..} = helper renderCodeOld "" : [helper renderCodeNew " (with comments)"]
   where
     helper :: (forall c. (HasLoc c, P.PrettyPrint c, M.PrettyCode c) => c -> Text) -> String -> TestDescr
-    helper renderArg tag =
+    helper renderer tag =
       let tRoot = root <//> _relDir
           file' = tRoot <//> _file
        in TestDescr
@@ -70,8 +69,6 @@ testDescr PosTest {..} = helper renderCodeOld "" : [helper renderCodeNew " (with
                 step "Parsing"
                 p :: Parser.ParserResult <- snd <$> runIO' iniState entryPoint upToParsing
 
-                let p2 :: Module 'Parsed 'ModuleTop = head (p ^. Parser.resultModules)
-
                 step "Scoping"
                 (artif :: Artifacts, s :: Scoper.ScoperResult) <-
                   runIO'
@@ -82,36 +79,34 @@ testDescr PosTest {..} = helper renderCodeOld "" : [helper renderCodeNew " (with
                         Concrete.fromParsed p
                     )
 
-                let s2 = head (s ^. Scoper.resultModules)
-
-                    yamlFiles :: [(Path Abs File, Text)]
+                let yamlFiles :: [(Path Abs File, Text)]
                     yamlFiles =
                       [ (pkgi ^. packageRoot <//> juvixYamlFile, encodeToText (rawPackage (pkgi ^. packagePackage)))
                         | pkgi <- toList (artif ^. artifactResolver . resolverPackages)
                       ]
-                    fs :: HashMap (Path Abs File) Text
-                    fs =
+                    fsScoped :: HashMap (Path Abs File) Text
+                    fsScoped =
                       HashMap.fromList $
-                        [ (getModuleFilePath m, renderArg m)
-                          | m <- toList (getAllModules s2)
+                        [ (getModuleFilePath m, renderer m)
+                          | m <- toList (s ^. Scoper.resultScoperTable . Scoper.infoModules)
+                        ]
+                          <> yamlFiles
+                    fsParsed :: HashMap (Path Abs File) Text
+                    fsParsed =
+                      HashMap.fromList $
+                        [ (getModuleFilePath m, renderCodeOld m)
+                          | m <- toList (p ^. Parser.resultTable . Parser.infoParsedModules)
                         ]
                           <> yamlFiles
 
-                let scopedPretty = renderArg s2
-                    parsedPretty = renderCodeOld p2
-                    onlyMainFile :: Text -> HashMap (Path Abs File) Text
-                    onlyMainFile t = HashMap.fromList $ (file', t) : yamlFiles
-
                 step "Parsing pretty scoped"
-                let fs2 = onlyMainFile scopedPretty
-                p' :: Parser.ParserResult <- evalHelper fs2 upToParsing
+                p' :: Parser.ParserResult <- evalHelper fsScoped upToParsing
 
                 step "Parsing pretty parsed"
-                let fs3 = onlyMainFile parsedPretty
-                parsedPretty' :: Parser.ParserResult <- evalHelper fs3 upToParsing
+                parsedPretty' :: Parser.ParserResult <- evalHelper fsParsed upToParsing
 
                 step "Scoping the scoped"
-                s' :: Scoper.ScoperResult <- evalHelper fs upToScoping
+                s' :: Scoper.ScoperResult <- evalHelper fsScoped upToScoping
 
                 step "Checks"
                 let smodules = s ^. Scoper.resultModules
