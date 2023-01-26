@@ -10,7 +10,6 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
-import Text.Megaparsec.Pos qualified as M
 
 data EvalOptions = EvalOptions
   { _evalInputFile :: AppPath File,
@@ -47,7 +46,8 @@ evalAndPrint ::
   Core.Node ->
   Sem r ()
 evalAndPrint opts tab node = do
-  r <- doEval (project opts ^. evalNoIO) defaultLoc tab node
+  loc <- defaultLoc
+  r <- doEval (project opts ^. evalNoIO) loc tab node
   case r of
     Left err -> exitJuvixError (JuvixError err)
     Right node'
@@ -57,7 +57,7 @@ evalAndPrint opts tab node = do
       renderStdOut (Core.ppOut opts node')
       embed (putStrLn "")
   where
-    defaultLoc :: Interval
-    defaultLoc = singletonInterval (mkLoc 0 (M.initialPos (fromSomeFile f)))
+    defaultLoc :: Sem r Interval
+    defaultLoc = singletonInterval . mkInitialLoc <$> someBaseToAbs' f
     f :: SomeBase File
     f = project opts ^. evalInputFile . pathPath

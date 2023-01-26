@@ -12,7 +12,6 @@ import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.FromSource
-import Text.Megaparsec.Pos qualified as M
 
 coreEvalAssertion ::
   Path Abs File ->
@@ -90,4 +89,4 @@ doEval ::
 doEval f hout tab node =
   catchEvalErrorIO defaultLoc (hEvalIO stdin hout (tab ^. identContext) [] node)
   where
-    defaultLoc = singletonInterval (mkLoc 0 (M.initialPos (toFilePath f)))
+    defaultLoc = singletonInterval (mkInitialLoc f)
