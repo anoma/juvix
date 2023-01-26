@@ -21,20 +21,17 @@ import Juvix.Compiler.Core.Translation.FromSource.Lexer
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
-parseText :: InfoTable -> Text -> Either ParserError (InfoTable, Maybe Node)
-parseText = runParser ""
-
 -- | Note: only new symbols and tags that are not in the InfoTable already will be
 -- generated during parsing
-runParser :: FilePath -> InfoTable -> Text -> Either ParserError (InfoTable, Maybe Node)
+runParser :: Path Abs File -> InfoTable -> Text -> Either ParserError (InfoTable, Maybe Node)
 runParser fileName tab input =
   case run $
     runInfoTableBuilder tab $
-      P.runParserT parseToplevel fileName input of
+      P.runParserT parseToplevel (fromAbsFile fileName) input of
     (_, Left err) -> Left (ParserError err)
     (tbl, Right r) -> Right (tbl, r)
 
-runParserMain :: FilePath -> InfoTable -> Text -> Either ParserError InfoTable
+runParserMain :: Path Abs File -> InfoTable -> Text -> Either ParserError InfoTable
 runParserMain fileName tab input =
   case runParser fileName tab input of
     Left err -> Left err

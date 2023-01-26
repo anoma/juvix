@@ -14,7 +14,7 @@ runCommand :: forall r. (Members '[Embed IO, App] r) => CoreCompileOptions -> Se
 runCommand opts = do
   file <- getFile
   s <- embed (readFile (toFilePath file))
-  tab <- getRight (mapLeft JuvixError (Core.runParserMain (toFilePath file) Core.emptyInfoTable s))
+  tab <- getRight (mapLeft JuvixError (Core.runParserMain file Core.emptyInfoTable s))
   C.MiniCResult {..} <- getRight (run (runError (coreToMiniC asmOpts tab :: Sem '[Error JuvixError] C.MiniCResult)))
   buildDir <- askBuildDir
   ensureDir buildDir

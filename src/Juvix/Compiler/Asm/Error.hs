@@ -2,7 +2,6 @@ module Juvix.Compiler.Asm.Error where
 
 import Juvix.Compiler.Asm.Language
 import Juvix.Data.PPOutput
-import Text.Megaparsec.Pos qualified as M
 import Text.Show
 
 data AsmError = AsmError
@@ -37,4 +36,8 @@ instance Show AsmError where
 instance HasLoc AsmError where
   getLoc (AsmError {..}) = fromMaybe defaultLoc _asmErrorLoc
     where
-      defaultLoc = singletonInterval (mkLoc 0 (M.initialPos ""))
+      defaultLoc :: Interval
+      defaultLoc = singletonInterval (mkInitialLoc sourcePath)
+
+      sourcePath :: Path Abs File
+      sourcePath = $(mkAbsFile "/<asm>")

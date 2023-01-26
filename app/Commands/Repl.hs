@@ -3,6 +3,7 @@
 module Commands.Repl where
 
 import Commands.Base hiding (command)
+import Commands.Extra.Paths
 import Commands.Repl.Options
 import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
@@ -26,7 +27,6 @@ import System.Console.ANSI qualified as Ansi
 import System.Console.Haskeline
 import System.Console.Repline
 import System.Console.Repline qualified as Repline
-import Text.Megaparsec qualified as M
 
 type ReplS = State.StateT ReplState IO
 
@@ -167,7 +167,7 @@ runCommand opts = do
           Nothing -> noFileLoadedMsg
         where
           defaultLoc :: Interval
-          defaultLoc = singletonInterval (mkLoc 0 (M.initialPos ""))
+          defaultLoc = singletonInterval (mkInitialLoc replPath)
 
           compileThenEval :: ReplContext -> String -> Repl (Either JuvixError Core.Node)
           compileThenEval ctx s = bindEither compileString eval
@@ -316,10 +316,6 @@ replMakeAbsolute = \case
   Rel r -> do
     invokeDir <- State.gets (^. replStateInvokeDir)
     return (invokeDir <//> r)
-
--- | imaginary file path for error messages in the repl.
-replPath :: Path Abs File
-replPath = $(mkAbsFile "/<repl>")
 
 inferExpressionIO' :: ReplContext -> Text -> IO (Either JuvixError Internal.Expression)
 inferExpressionIO' ctx = inferExpressionIO replPath (ctx ^. replContextExpContext) (ctx ^. replContextBuiltins)

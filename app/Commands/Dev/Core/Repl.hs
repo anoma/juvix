@@ -2,6 +2,7 @@ module Commands.Dev.Core.Repl where
 
 import Commands.Base
 import Commands.Dev.Core.Repl.Options
+import Commands.Extra.Paths
 import Evaluator
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Extra.Base qualified as Core
@@ -10,12 +11,14 @@ import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
-import Text.Megaparsec.Pos qualified as M
 
 runCommand :: forall r. (Members '[Embed IO, App] r) => CoreReplOptions -> Sem r ()
 runCommand opts = do
   showReplWelcome
   runRepl opts Core.emptyInfoTable
+
+parseText :: Core.InfoTable -> Text -> Either Core.ParserError (Core.InfoTable, Maybe Core.Node)
+parseText = Core.runParser replPath
 
 runRepl :: forall r. (Members '[Embed IO, App] r) => CoreReplOptions -> Core.InfoTable -> Sem r ()
 runRepl opts tab = do
@@ -30,7 +33,7 @@ runRepl opts tab = do
         embed showReplHelp
         runRepl opts tab
       ':' : 'p' : ' ' : s' ->
-        case Core.parseText tab (fromString s') of
+        case parseText tab (fromString s') of
           Left err -> do
             printJuvixError (JuvixError err)
             runRepl opts tab
@@ -41,7 +44,7 @@ runRepl opts tab = do
           Right (tab', Nothing) ->
             runRepl opts tab'
       ':' : 'e' : ' ' : s' ->
-        case Core.parseText tab (fromString s') of
+        case parseText tab (fromString s') of
           Left err -> do
             printJuvixError (JuvixError err)
             runRepl opts tab
@@ -51,7 +54,8 @@ runRepl opts tab = do
             runRepl opts tab'
       ':' : 'l' : ' ' : f -> do
         s' <- embed (readFile f)
-        case Core.runParser f Core.emptyInfoTable s' of
+        sf <- someBaseToAbs' (someFile f)
+        case Core.runParser sf Core.emptyInfoTable s' of
           Left err -> do
             printJuvixError (JuvixError err)
             runRepl opts tab
@@ -61,7 +65,7 @@ runRepl opts tab = do
       ":r" ->
         runRepl opts Core.emptyInfoTable
       _ ->
-        case Core.parseText tab s of
+        case parseText tab s of
           Left err -> do
             printJuvixError (JuvixError err)
             runRepl opts tab
@@ -84,7 +88,7 @@ runRepl opts tab = do
               embed (putStrLn "")
               runRepl opts tab'
       where
-        defaultLoc = singletonInterval (mkLoc 0 (M.initialPos "stdin"))
+        defaultLoc = singletonInterval (mkInitialLoc replPath)
 
 showReplWelcome :: (Members '[Embed IO, App] r) => Sem r ()
 showReplWelcome = embed $ do
