@@ -186,25 +186,25 @@ fromCore tab = case tab ^. Core.infoMain of
 
     convertCase :: HashMap Symbol Level -> Level -> [Level] -> Core.Case -> Geb
     convertCase identMap varsNum shiftLevels Core.Case {..} =
-        if
-            | null branches ->
-                GebAbsurd (convertNode identMap varsNum shiftLevels _caseValue)
-            | missingCtrsNum > 1 ->
-                let ty = convertType (Info.getNodeType defaultNode)
-                 in GebApp
-                      App
-                        { _appDomainType = ty,
-                          _appCodomainType = ty,
-                          _appLeft =
-                            GebLamb
-                              Lamb
-                                { _lambVarType = ty,
-                                  _lambBodyType = ty,
-                                  _lambBody = go indty (varsNum : shiftLevels) _caseValue branches
-                                },
-                          _appRight = convertNode identMap varsNum shiftLevels defaultNode
-                        }
-            | otherwise -> go indty shiftLevels _caseValue branches
+      if
+          | null branches ->
+              GebAbsurd (convertNode identMap varsNum shiftLevels _caseValue)
+          | missingCtrsNum > 1 ->
+              let ty = convertType (Info.getNodeType defaultNode)
+               in GebApp
+                    App
+                      { _appDomainType = ty,
+                        _appCodomainType = ty,
+                        _appLeft =
+                          GebLamb
+                            Lamb
+                              { _lambVarType = ty,
+                                _lambBodyType = ty,
+                                _lambBody = go indty (varsNum : shiftLevels) _caseValue branches
+                              },
+                        _appRight = convertNode identMap varsNum shiftLevels defaultNode
+                      }
+          | otherwise -> go indty shiftLevels _caseValue branches
       where
         indty = convertInductive _caseInductive
         ii = fromJust $ HashMap.lookup _caseInductive (tab ^. Core.infoInductives)
