@@ -78,7 +78,7 @@ parseFile :: Path Abs File -> IO (Either ParserError (InfoTable, Maybe Node))
 parseFile f = do
   let f' = toFilePath f
   s <- readFile f'
-  return $ runParser f' emptyInfoTable s
+  return $ runParser f emptyInfoTable s
 
 doEval ::
   Path Abs File ->
