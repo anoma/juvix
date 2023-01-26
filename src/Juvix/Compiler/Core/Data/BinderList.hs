@@ -68,17 +68,14 @@ lookupsSortedRev bl = go [] 0 bl
 -- | lookup de Bruijn Index
 lookup :: Index -> BinderList a -> a
 lookup idx bl
-  | target < bl ^. blLength = (bl ^. blMap) !! target
+  | idx < bl ^. blLength = (bl ^. blMap) !! idx
   | otherwise = err
   where
-    target = idx
     err :: a
     err =
       error
         ( "invalid binder lookup. Got index "
             <> show idx
-            <> " that targets "
-            <> show target
             <> " and the length is "
             <> show (bl ^. blLength)
             <> ". Actual length is "
@@ -87,16 +84,16 @@ lookup idx bl
 
 -- | lookup de Bruijn Level
 lookupLevel :: Level -> BinderList a -> a
-lookupLevel idx bl
+lookupLevel lvl bl
   | target < bl ^. blLength = (bl ^. blMap) !! target
   | otherwise = err
   where
-    target = bl ^. blLength - 1 - idx
+    target = bl ^. blLength - 1 - lvl
     err :: a
     err =
       error
-        ( "invalid binder lookup. Got index "
-            <> show idx
+        ( "invalid binder lookup. Got de Bruijn level "
+            <> show lvl
             <> " that targets "
             <> show target
             <> " and the length is "
