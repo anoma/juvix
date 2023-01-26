@@ -9,7 +9,6 @@ import Juvix.Compiler.Core.Extra qualified as Core
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
 import Juvix.Compiler.Core.Language (Index, Level, Symbol)
 import Juvix.Compiler.Core.Language qualified as Core
-import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Prelude
 
 fromCore :: Core.InfoTable -> Geb
@@ -74,7 +73,7 @@ fromCore tab = case tab ^. Core.infoMain of
     -- `shiftLevels` contains the de Bruijn levels immediately before which a
     -- binder was inserted
     convertNode :: HashMap Symbol Level -> Level -> [Level] -> Core.Node -> Geb
-    convertNode identMap varsNum shiftLevels node = trace (Core.ppTrace node) $ case node of
+    convertNode identMap varsNum shiftLevels = \case
       Core.NVar x -> convertVar identMap varsNum shiftLevels x
       Core.NIdt x -> convertIdent identMap varsNum shiftLevels x
       Core.NCst x -> convertConstant identMap varsNum shiftLevels x
@@ -187,7 +186,6 @@ fromCore tab = case tab ^. Core.infoMain of
 
     convertCase :: HashMap Symbol Level -> Level -> [Level] -> Core.Case -> Geb
     convertCase identMap varsNum shiftLevels Core.Case {..} =
-      trace (show missingCtrsNum) $
         if
             | null branches ->
                 GebAbsurd (convertNode identMap varsNum shiftLevels _caseValue)
@@ -339,7 +337,7 @@ fromCore tab = case tab ^. Core.infoMain of
                   (branch, codty)
 
     convertType :: Core.Type -> Object
-    convertType ty = trace (Core.ppTrace ty) $ case ty of
+    convertType = \case
       Core.NPi x ->
         convertPi x
       Core.NUniv {} ->
