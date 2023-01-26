@@ -35,6 +35,7 @@ runCommand opts = do
       TargetWasm32Wasi -> Backend.TargetCWasm32Wasi
       TargetNative64 -> Backend.TargetCNative64
       TargetC -> Backend.TargetCWasm32Wasi
+      TargetGeb -> error "GEB target not supported for JuvixAsm"
 
 inputCFile :: (Members '[App] r) => Path Abs File -> Sem r (Path Abs File)
 inputCFile inputFileCompile = do
