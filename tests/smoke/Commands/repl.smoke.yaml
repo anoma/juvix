@@ -199,3 +199,48 @@ tests:
       contains: |
         suc (suc (suc zero))
     exit-status: 0
+
+  - name: repl-trace
+    command:
+      - juvix 
+      - repl
+    args:
+      - positive/issue1731/builtinTrace.juvix
+    stdin: trace 2 (printNatLn 3)
+    stdout: 
+      contains: |
+        suc (suc (suc zero))
+    stderr: |
+        suc (suc zero)
+    exit-status: 0
+
+  - name: repl-trace-file
+    command:
+      - juvix 
+      - repl
+    args:
+      - positive/issue1731/builtinTrace.juvix
+    stdin: f 4 0
+    stdout: 
+      contains: |
+       zero
+    stderr: |
+       suc (suc (suc (suc zero)))
+       suc (suc (suc zero))
+       suc (suc zero)
+       suc zero
+    exit-status: 0
+
+  - name: repl-fail
+    command:
+      - juvix 
+      - repl
+    args:
+      - positive/issue1731/builtinFail.juvix
+    stdin: main
+    stdout:
+      contains: builtinFail> builtinFail>
+    stderr:
+      contains: |
+        evaluation error: failure: Enough
+    exit-status: 0

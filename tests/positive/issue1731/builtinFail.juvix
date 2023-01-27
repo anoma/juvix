@@ -1,0 +1,10 @@
+module builtinFail;
+  open import Stdlib.Prelude;
+
+  builtin fail axiom fail : {A : Type} → String → A;
+
+  main : IO;
+  main := printStringLn "Get"
+    >> fail "Enough"
+    >> printStringLn "Sleep";
+end;

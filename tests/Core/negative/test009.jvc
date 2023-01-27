@@ -1,6 +1,8 @@
 -- erroneous Church numerals
 
-constr pair 2;
+type product {
+  pair : any -> any -> product;
+};
 
 def fst := \p case p of { pair x _ -> x };
 def snd := \p case p of { pair _ x -> x };
