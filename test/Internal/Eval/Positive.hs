@@ -100,6 +100,11 @@ tests =
       $(mkRelFile "LitInteger.juvix")
       $(mkRelFile "out/LitInteger.out"),
     PosTest
+      "Pattern matching on literal Nat"
+      $(mkRelDir ".")
+      $(mkRelFile "LitIntegerToNat.juvix")
+      $(mkRelFile "out/LitIntegerToNat.out"),
+    PosTest
       "Literal String"
       $(mkRelDir ".")
       $(mkRelFile "LitString.juvix")
