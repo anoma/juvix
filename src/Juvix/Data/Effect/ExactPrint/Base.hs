@@ -15,6 +15,7 @@ data ExactPrint m a where
   NoLoc :: Doc Ann -> ExactPrint m ()
   Morpheme :: Interval -> Doc Ann -> ExactPrint m ()
   Region :: (Doc Ann -> Doc Ann) -> m b -> ExactPrint m b
+  End :: ExactPrint m ()
 
 makeSem ''ExactPrint
 
@@ -51,6 +52,7 @@ re = reinterpretH h
     h = \case
       NoLoc p -> append' p >>= pureT
       Morpheme l p -> morpheme' l p >>= pureT
+      End -> end' >>= pureT
       Region f m -> do
         st0 :: Builder <- set builderDoc mempty <$> get
         m' <- runT m
@@ -65,21 +67,27 @@ re = reinterpretH h
 evalExactPrint' :: Builder -> Sem (ExactPrint ': r) a -> Sem r (Builder, a)
 evalExactPrint' b = runState b . re
 
--- TODO add new lines?
 eprint :: forall r. Members '[State Builder] r => Interval -> Doc Ann -> Sem r ()
 eprint _loc doc = append' doc
-
--- where
--- number of lines between two intervals. 0 if they are on the same line
--- it is assumed that a comes before b (i.e. a < b)
--- numLines :: Interval -> Interval -> Int
--- numLines a b = intervalStartLine b - intervalEndLine a
 
 append' :: forall r. Members '[State Builder] r => Doc Ann -> Sem r ()
 append' d = modify (over builderDoc (<> d))
 
 line' :: forall r. Members '[State Builder] r => Sem r ()
 line' = append' P.line
+
+-- | it prints all remaining comments
+end' :: forall r. Members '[State Builder] r => Sem r ()
+end' = do
+  cs <- gets (^. builderComments)
+  unless (null cs) line'
+  mapM_ printComment cs
+  modify' (set builderComments [])
+
+printComment :: Members '[State Builder] r => Comment -> Sem r ()
+printComment c = do
+  eprint (c ^. commentInterval) (annotate AnnComment (P.pretty c))
+  line'
 
 morpheme' :: forall r. Members '[State Builder] r => Interval -> Doc Ann -> Sem r ()
 morpheme' loc doc = do
@@ -90,11 +98,6 @@ morpheme' loc doc = do
   where
     cmp :: Comment -> Bool
     cmp c = c ^. commentInterval . intervalStart < loc ^. intervalStart
-
-    printComment :: Comment -> Sem r ()
-    printComment c = do
-      eprint (c ^. commentInterval) (annotate AnnComment (P.pretty c))
-      line'
 
     popComment :: Sem r (Maybe Comment)
     popComment = do

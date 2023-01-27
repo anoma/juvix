@@ -57,7 +57,7 @@ ppModulePathType x = case sing :: SStage s of
     SModuleLocal -> P.ppCode x >>= morpheme (getLoc x) . P.annSDef x
     SModuleTop -> P.ppCode x >>= morpheme (getLoc x) . P.annSDef x
 
-instance (SingI t) => PrettyPrint (Module 'Scoped t) where
+instance SingI t => PrettyPrint (Module 'Scoped t) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Module 'Scoped t -> Sem r ()
   ppCode Module {..} = do
     let moduleBody' = indent (ppCode _moduleBody)
@@ -76,7 +76,7 @@ instance (SingI t) => PrettyPrint (Module 'Scoped t) where
       lastSemicolon :: Sem r ()
       lastSemicolon = case sing :: SModuleIsTop t of
         SModuleLocal -> return ()
-        SModuleTop -> semicolon
+        SModuleTop -> semicolon >> end
 
 instance PrettyPrint [Statement 'Scoped] where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => [Statement 'Scoped] -> Sem r ()
