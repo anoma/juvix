@@ -671,7 +671,7 @@ goApplication a = do
           case as of
             (_ : _ : arg1 : arg2 : xs) ->
               return (mkApps' (mkBuiltinApp' OpTrace [arg1, arg2]) xs)
-            _ -> error "if must be called with 2 arguments"
+            _ -> error "trace must be called with 2 arguments"
         Just Internal.BuiltinFail -> app
         Nothing -> app
     Internal.ExpressionIden (Internal.IdenFunction n) -> do
