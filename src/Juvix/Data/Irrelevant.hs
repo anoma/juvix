@@ -5,8 +5,8 @@ module Juvix.Data.Irrelevant where
 import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty
 
-newtype Irrelevant a = Irrelevant {
-  _unIrrelevant :: a
+newtype Irrelevant a = Irrelevant
+  { _unIrrelevant :: a
   }
   deriving stock (Show)
 

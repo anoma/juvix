@@ -28,6 +28,7 @@ import Juvix.Data.Error
 import Juvix.Data.Fixity
 import Juvix.Data.ForeignBlock
 import Juvix.Data.Hole
+import Juvix.Data.Irrelevant
 import Juvix.Data.IsImplicit
 import Juvix.Data.Loc
 import Juvix.Data.NameId qualified
@@ -37,4 +38,3 @@ import Juvix.Data.Universe
 import Juvix.Data.Usage
 import Juvix.Data.Wildcard
 import Juvix.Data.WithLoc
-import Juvix.Data.Irrelevant
