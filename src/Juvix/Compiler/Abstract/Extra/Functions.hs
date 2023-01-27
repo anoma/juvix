@@ -285,7 +285,6 @@ infix 4 ===
 (===) :: (IsExpression a, IsExpression b) => a -> b -> Bool
 a === b = (toExpression a ==% toExpression b) mempty
 
--- TODO: make it symmetric
 leftEq :: (IsExpression a, IsExpression b) => a -> b -> HashSet Name -> Bool
 leftEq a b free =
   isRight
