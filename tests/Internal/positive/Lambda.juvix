@@ -1,28 +1,39 @@
 module Lambda;
+  open import Stdlib.Prelude public;
 
-open import Stdlib.Prelude public;
+  id' : {A : Type} → A → A;
+  id' := λ {
+      | a := a
+    };
 
-id' : {A : Type} → A → A;
-id' := λ { a := a };
+  uncurry' : {A : Type} → {B : Type} → {C : Type} → (A → B → C) → A
+    × B → C;
+  uncurry' := λ {
+      | f (a , b) := f a b
+    };
 
-uncurry' : {A : Type} → {B : Type} → {C : Type} → (A → B → C) → A × B → C;
-uncurry' := λ {f (a, b) := f a b};
+  fst' : {A : Type} → {B : Type} → A × B → A;
+  fst' {_} := λ {
+      | (a , _) := a
+    };
 
-fst' : {A : Type} → {B : Type} → A × B → A;
-fst' {_} := λ {(a, _) := a};
+  first' : {A : Type} → {B : Type} → {A' : Type} → (A → A') → A
+    × B → A' × B;
+  first' := λ {
+      | f (a , b) := f a , b
+    };
 
-first' : {A : Type} → {B : Type} → {A' : Type} → (A → A') → A × B → A' × B;
-first' := λ {f (a, b) := f a, b};
+  foldr' : {A : Type} → {B : Type} → (A → B → B) → B → List
+    A → B;
+  foldr' := λ {
+      | _ z nil := z
+      | f z (h :: hs) := f h (foldr' f z hs)
+    };
 
-foldr' : {A : Type} → {B : Type} → (A → B → B) → B → List A → B;
-foldr' := λ {_ z nil := z;
-             f z (h :: hs) := f h (foldr' f z hs)};
-
-main : IO;
-main := printNatLn (id' zero)
-        >> printNatLn (uncurry' (+) (1, 1))
-        >> printNatLn (fst' (zero, 1))
-        >> printNatLn (fst (first' ((+) 1) (1, zero)))
-        >> printNatLn (foldr' (+) zero (1 :: 2 :: 3 :: nil));
-
+  main : IO;
+  main := printNatLn (id' zero)
+    >> printNatLn (uncurry' (+) (1 , 1))
+    >> printNatLn (fst' (zero , 1))
+    >> printNatLn (fst (first' ((+) 1) (1 , zero)))
+    >> printNatLn (foldr' (+) zero (1 :: 2 :: 3 :: nil));
 end;

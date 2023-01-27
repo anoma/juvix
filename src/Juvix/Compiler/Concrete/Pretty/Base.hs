@@ -292,7 +292,7 @@ instance (SingI s) => PrettyCode (InductiveDef s) where
   ppCode d@InductiveDef {..} = do
     doc' <- mapM ppCode _inductiveDoc
     sig' <- ppInductiveSignature d
-    inductiveConstructors' <- ppConstructorBlock _inductiveConstructors
+    inductiveConstructors' <- ppPipeBlock _inductiveConstructors
     return $
       doc' ?<> sig'
         <+> kwAssign
@@ -494,6 +494,9 @@ instance (SingI s) => PrettyCode (LetClause s) where
 ppBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
 ppBlock items = bracesIndent . vsep <$> mapM (fmap endSemicolon . ppCode) items
 
+ppPipeBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
+ppPipeBlock items = vsep <$> mapM (fmap (kwPipe <+>) . ppCode) items
+
 instance (SingI s) => PrettyCode (LambdaClause s) where
   ppCode LambdaClause {..} = do
     lambdaParameters' <- hsep <$> mapM ppPatternAtom _lambdaParameters
@@ -502,7 +505,7 @@ instance (SingI s) => PrettyCode (LambdaClause s) where
 
 instance (SingI s) => PrettyCode (Lambda s) where
   ppCode Lambda {..} = do
-    lambdaClauses' <- ppBlock _lambdaClauses
+    lambdaClauses' <- bracesIndent <$> ppPipeBlock _lambdaClauses
     return $ kwLambda <+> lambdaClauses'
 
 instance (SingI s) => PrettyCode (FunctionClause s) where

@@ -7,8 +7,8 @@ module test034;
   sum := let {
       sum' : Nat → Nat;
       sum' := λ {
-          zero := zero;
-          (suc n) := suc n + sum' n;
+          zero := zero
+          | (suc n) := suc n + sum' n
         };
     } in sum';
 

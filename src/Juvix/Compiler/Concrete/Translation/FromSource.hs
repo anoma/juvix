@@ -85,6 +85,13 @@ runExpressionParser fileName input = do
     (_, Left err) -> return (Left (ErrMegaparsec (MegaparsecError err)))
     (_, Right r) -> return (Right r)
 
+-- | The first pipe is optional, and thus we need a `Maybe`. The rest of the elements are guaranted to be given a `Just`.
+pipeSep1 :: Member InfoTableBuilder r => (Irrelevant (Maybe KeywordRef) -> ParsecS r a) -> ParsecS r (NonEmpty a)
+pipeSep1 e = do
+  p <- Irrelevant <$> optional (kw kwPipe)
+  h <- e p
+  (h :|) <$> many (kw kwPipe >>= e . Irrelevant . Just)
+
 top ::
   (Member InfoTableBuilder r) =>
   ParsecS r a ->
@@ -511,8 +518,8 @@ function = do
 -- Lambda expression
 --------------------------------------------------------------------------------
 
-lambdaClause :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (LambdaClause 'Parsed)
-lambdaClause = do
+lambdaClause :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (LambdaClause 'Parsed)
+lambdaClause _lambdaPipe = do
   _lambdaParameters <- P.some patternAtom
   kw kwAssign
   _lambdaBody <- parseExpressionAtoms
@@ -521,7 +528,7 @@ lambdaClause = do
 lambda :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (Lambda 'Parsed)
 lambda = do
   _lambdaKw <- kw kwLambda
-  _lambdaClauses <- braces (P.sepEndBy lambdaClause (kw kwSemicolon))
+  _lambdaClauses <- braces (pipeSep1 lambdaClause)
   return Lambda {..}
 
 -------------------------------------------------------------------------------
@@ -541,9 +548,7 @@ inductiveDef _inductiveBuiltin = do
     optional (kw kwColon >> parseExpressionAtoms)
       P.<?> "<type annotation e.g. ': Type'>"
   kw kwAssign P.<?> "<assignment symbol ':='>"
-  _inductiveConstructors <-
-    optional (kw kwPipe)
-      >> P.sepBy1 constructorDef (kw kwPipe)
+  _inductiveConstructors <- pipeSep1 constructorDef
       P.<?> "<constructor definition>"
   return InductiveDef {..}
 
@@ -554,8 +559,8 @@ inductiveParam = parens $ do
   _inductiveParameterType <- parseExpressionAtoms
   return InductiveParameter {..}
 
-constructorDef :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (InductiveConstructorDef 'Parsed)
-constructorDef = do
+constructorDef :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (InductiveConstructorDef 'Parsed)
+constructorDef _constructorPipe = do
   _constructorDoc <- optional stashJudoc >> getJudoc
   _constructorName <- symbol P.<?> "<constructor name>"
   _constructorType <-

@@ -9,6 +9,7 @@ module Juvix.Data
     module Juvix.Data.Loc,
     module Juvix.Data.NameId,
     module Juvix.Data.Comment,
+    module Juvix.Data.Irrelevant,
     module Juvix.Data.Processed,
     module Juvix.Data.Uid,
     module Juvix.Data.Universe,
@@ -36,3 +37,4 @@ import Juvix.Data.Universe
 import Juvix.Data.Usage
 import Juvix.Data.Wildcard
 import Juvix.Data.WithLoc
+import Juvix.Data.Irrelevant

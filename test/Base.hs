@@ -53,7 +53,7 @@ assertEqDiff :: (Eq a, Show a) => String -> a -> a -> Assertion
 assertEqDiff msg a b
   | a == b = return ()
   | otherwise = do
-      putStrLn (pack $ ppDiff (getGroupedDiff pa pb))
+      -- putStrLn (pack $ ppDiff (getGroupedDiff pa pb))
       putStrLn "End diff"
       Monad.fail msg
   where

@@ -150,7 +150,7 @@ instance HasAtomicity Lambda where
   atomicity = const Atom
 
 newtype Lambda = Lambda
-  {_lambdaClauses :: [LambdaClause]}
+  {_lambdaClauses :: NonEmpty LambdaClause}
   deriving stock (Eq, Show)
 
 data LambdaClause = LambdaClause

@@ -3,7 +3,7 @@ module HigherOrderLambda;
 open import Stdlib.Prelude;
 
 map' : {A : Type} → {B : Type} → (A → B) → List A → List B;
-map' f := \{ nil := nil; (h :: t) := f h :: map' f t};
+map' f := \{ nil := nil | (h :: t) := f h :: map' f t};
 
 lst : List Nat;
 lst := zero :: suc zero :: nil;

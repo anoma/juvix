@@ -435,7 +435,8 @@ checkConstructorDef InductiveConstructorDef {..} = do
     InductiveConstructorDef
       { _constructorName = constructorName',
         _constructorType = constructorType',
-        _constructorDoc = doc'
+        _constructorDoc = doc',
+        _constructorPipe
       }
 
 withParams ::
@@ -1005,7 +1006,8 @@ checkLambdaClause LambdaClause {..} = do
   return
     LambdaClause
       { _lambdaParameters = lambdaParameters',
-        _lambdaBody = lambdaBody'
+        _lambdaBody = lambdaBody',
+        _lambdaPipe
       }
 
 scopedVar ::

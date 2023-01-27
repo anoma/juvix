@@ -402,9 +402,9 @@ goLambda :: forall r. (Members '[Error ScoperError, InfoTableBuilder] r) => Lamb
 goLambda l = Abstract.Lambda <$> mapM goClause (l ^. lambdaClauses)
   where
     goClause :: LambdaClause 'Scoped -> Sem r Abstract.LambdaClause
-    goClause (LambdaClause ps b) = do
-      ps' <- mapM goPatternArg ps
-      b' <- goExpression b
+    goClause lc = do
+      ps' <- mapM goPatternArg (lc ^. lambdaParameters)
+      b' <- goExpression (lc ^. lambdaBody)
       return (Abstract.LambdaClause ps' b')
 
 goUniverse :: Universe -> Universe

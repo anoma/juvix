@@ -287,12 +287,22 @@ instance PrettyPrint (InductiveParameter 'Scoped) where
 instance PrettyPrint (NonEmpty (InductiveParameter 'Scoped)) where
   ppCode = hsep . fmap ppCode
 
+instance (PrettyPrint a) => PrettyPrint (Irrelevant a) where
+  ppCode (Irrelevant a) = ppCode a
+
 instance PrettyPrint (InductiveConstructorDef 'Scoped) where
+  ppCode :: forall r. Members '[ExactPrint, Reader Options] r => InductiveConstructorDef 'Scoped -> Sem r ()
   ppCode InductiveConstructorDef {..} = do
     let constructorName' = region (P.annDef _constructorName) (ppCode _constructorName)
         constructorType' = ppCode _constructorType
         doc' = ppCode <$> _constructorDoc
-    doc' ?<> hang (constructorName' <+> noLoc P.kwColon <+> constructorType')
+    doc' ?<> hang (pipeHelper <+> constructorName' <+> noLoc P.kwColon <+> constructorType')
+    where
+      -- we use this helper so that comments appear before the first optional pipe if the pipe was omitted
+      pipeHelper :: Sem r ()
+      pipeHelper = case _constructorPipe ^. unIrrelevant of
+        Just p -> ppCode p
+        Nothing -> P.ppCode kwPipe >>= morpheme (getLoc _constructorName)
 
 ppInductiveSignature :: forall r. Members '[ExactPrint, Reader Options] r => InductiveDef 'Scoped -> Sem r ()
 ppInductiveSignature InductiveDef {..} = do
@@ -321,8 +331,7 @@ instance PrettyPrint (InductiveDef 'Scoped) where
         <> (indent . align) constrs'
     where
       ppConstructorBlock :: NonEmpty (InductiveConstructorDef 'Scoped) -> Sem r ()
-      ppConstructorBlock cs =
-        vsep (map ((noLoc P.kwPipe <+>) . ppCode) (toList cs))
+      ppConstructorBlock cs = vsep (ppCode <$> cs)
 
 instance PrettyPrint (WithLoc Backend) where
   ppCode = ppMorpheme
