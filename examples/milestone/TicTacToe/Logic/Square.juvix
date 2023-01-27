@@ -7,10 +7,9 @@ module Logic.Square;
   --- A square is each of the holes in a board
   type Square :=
     | --- An empty square has a ;Nat; that uniquely identifies it
-    empty : Nat → Square
-    | -- TODO: Check the line below using Judoc
-        -- - An occupied square has a ;Symbol; in it
-        occupied : Symbol → Square;
+      empty : Nat → Square
+    | --- An occupied square has a ;Symbol; in it
+      occupied : Symbol → Square;
 
   --- Equality for ;Square;s
   ==Square : Square → Square → Bool;

@@ -548,8 +548,7 @@ inductiveDef _inductiveBuiltin = do
     optional (kw kwColon >> parseExpressionAtoms)
       P.<?> "<type annotation e.g. ': Type'>"
   kw kwAssign P.<?> "<assignment symbol ':='>"
-  _inductiveConstructors <-
-    pipeSep1 constructorDef
+  _inductiveConstructors <- pipeSep1 constructorDef
       P.<?> "<constructor definition>"
   return InductiveDef {..}
 

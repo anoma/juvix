@@ -76,7 +76,7 @@ instance SingI t => PrettyPrint (Module 'Scoped t) where
       lastSemicolon :: Sem r ()
       lastSemicolon = case sing :: SModuleIsTop t of
         SModuleLocal -> return ()
-        SModuleTop -> semicolon >> end
+        SModuleTop -> semicolon >> line <> end
 
 instance PrettyPrint [Statement 'Scoped] where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => [Statement 'Scoped] -> Sem r ()
@@ -296,7 +296,7 @@ instance PrettyPrint (InductiveConstructorDef 'Scoped) where
     let constructorName' = region (P.annDef _constructorName) (ppCode _constructorName)
         constructorType' = ppCode _constructorType
         doc' = ppCode <$> _constructorDoc
-    doc' ?<> hang (pipeHelper <+> constructorName' <+> noLoc P.kwColon <+> constructorType')
+    hang (pipeHelper <+> doc' ?<> constructorName' <+> noLoc P.kwColon <+> constructorType')
     where
       -- we use this helper so that comments appear before the first optional pipe if the pipe was omitted
       pipeHelper :: Sem r ()
