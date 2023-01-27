@@ -32,6 +32,7 @@ data CompileInfo = CompileInfo
 
 data InfoTable = InfoTable
   { _infoConstructors :: HashMap ConstructorRef ConstructorInfo,
+    _infoModules :: HashMap S.TopModulePath (Module 'Scoped 'ModuleTop),
     _infoAxioms :: HashMap AxiomRef AxiomInfo,
     _infoInductives :: HashMap InductiveRef InductiveInfo,
     _infoFunctions :: HashMap FunctionRef FunctionInfo,
@@ -45,6 +46,7 @@ emptyInfoTable =
   InfoTable
     { _infoConstructors = mempty,
       _infoAxioms = mempty,
+      _infoModules = mempty,
       _infoInductives = mempty,
       _infoFunctions = mempty,
       _infoFunctionClauses = mempty,

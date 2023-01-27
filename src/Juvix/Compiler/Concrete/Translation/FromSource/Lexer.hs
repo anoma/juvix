@@ -83,9 +83,6 @@ judocEmptyLine = lexeme (void (P.try (judocStart >> P.newline)))
 kw :: Member InfoTableBuilder r => Keyword -> ParsecS r KeywordRef
 kw k = lexeme $ kw' k >>= P.lift . registerKeyword
 
--- kwOld :: Member InfoTableBuilder r => Keyword -> ParsecS r ()
--- kwOld k = lexeme $ kw' k >>= P.lift . registerKeyword
-
 -- | Same as @identifier@ but does not consume space after it.
 bareIdentifier :: ParsecS r (Text, Interval)
 bareIdentifier = interval (rawIdentifier allKeywordStrings)

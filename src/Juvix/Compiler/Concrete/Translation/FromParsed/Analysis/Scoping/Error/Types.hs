@@ -13,30 +13,9 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Language qualified as L
 import Juvix.Compiler.Concrete.Pretty.Options (Options, fromGenericOptions)
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
 import Juvix.Data.CodeAnn
-import Juvix.Parser.Error qualified as Parser
 import Juvix.Prelude
-
-data TopModulePathError = TopModulePathError
-  { _topModulePathErrorPath :: TopModulePath,
-    _topModulePathError :: PathResolverError
-  }
-  deriving stock (Show)
-
-instance ToGenericError TopModulePathError where
-  genericError TopModulePathError {..} = do
-    let msg = ppCodeAnn _topModulePathError
-    return
-      GenericError
-        { _genericErrorLoc = i,
-          _genericErrorMessage = AnsiText msg,
-          _genericErrorIntervals = [i]
-        }
-    where
-      i :: Interval
-      i = getLoc _topModulePathErrorPath
 
 data MultipleDeclarations = MultipleDeclarations
   { _multipleDeclEntry :: SymbolEntry,
@@ -394,14 +373,6 @@ instance ToGenericError ModuleNotInScope where
           i = getLoc (e ^. moduleNotInScopeName)
           msg = "The module" <+> ppCode opts' _moduleNotInScopeName <+> "is not in scope"
 
-newtype MegaParsecError = MegaParsecError
-  { _megaParsecError :: Parser.ParserError
-  }
-  deriving stock (Show)
-
-instance ToGenericError MegaParsecError where
-  genericError (MegaParsecError e) = genericError e
-
 newtype UnusedOperatorDef = UnusedOperatorDef
   { _unusedOperatorDef :: OperatorSyntaxDef
   }
@@ -424,37 +395,6 @@ instance ToGenericError UnusedOperatorDef where
             "Unused operator syntax definition:"
               <> line
               <> ppCode opts' _unusedOperatorDef
-
-data WrongTopModuleName = WrongTopModuleName
-  { _wrongTopModuleNameExpectedPath :: Path Abs File,
-    _wrongTopModuleNameActualPath :: Path Abs File,
-    _wrongTopModuleNameActualName :: TopModulePath
-  }
-  deriving stock (Show)
-
-instance ToGenericError WrongTopModuleName where
-  genericError WrongTopModuleName {..} = ask >>= generr
-    where
-      generr opts =
-        return
-          GenericError
-            { _genericErrorLoc = i,
-              _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = [i]
-            }
-        where
-          opts' = fromGenericOptions opts
-          i = getLoc _wrongTopModuleNameActualName
-          msg =
-            "The top module"
-              <+> ppCode opts' _wrongTopModuleNameActualName
-              <+> "is defined in the file:"
-                <> line
-                <> pretty _wrongTopModuleNameActualPath
-                <> line
-                <> "But it should be in the file:"
-                <> line
-                <> pretty _wrongTopModuleNameExpectedPath
 
 data AmbiguousSym = AmbiguousSym
   { _ambiguousSymName :: Name,

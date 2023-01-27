@@ -6,7 +6,6 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty qualified as Scoper
 import Juvix.Compiler.Concrete.Print qualified as Print
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
-import Juvix.Data.Comment
 import Juvix.Prelude.Pretty
 
 runCommand :: (Members '[Embed IO, App] r) => ScopeOptions -> Sem r ()
@@ -21,9 +20,7 @@ runCommand opts = do
         | otherwise ->
             renderStdOut (Scoper.ppOut (globalOpts, opts) s)
   when (opts ^. scopeListComments) $ do
-    let mainFile :: Path Abs File = getLoc (res ^. Scoper.mainModule) ^. intervalFile
     newline
     newline
     say "Comments:"
-    forM_ (fileComments mainFile (res ^. Scoper.comments) ^. fileCommentsSorted) $ \c ->
-      say (prettyText (c ^. commentInterval) <> " " <> prettyText c)
+    say (prettyText (res ^. Scoper.comments))

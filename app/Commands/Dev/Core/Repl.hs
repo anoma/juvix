@@ -17,7 +17,7 @@ runCommand opts = do
   showReplWelcome
   runRepl opts Core.emptyInfoTable
 
-parseText :: Core.InfoTable -> Text -> Either Core.ParserError (Core.InfoTable, Maybe Core.Node)
+parseText :: Core.InfoTable -> Text -> Either Core.MegaparsecError (Core.InfoTable, Maybe Core.Node)
 parseText = Core.runParser replPath
 
 runRepl :: forall r. (Members '[Embed IO, App] r) => CoreReplOptions -> Core.InfoTable -> Sem r ()

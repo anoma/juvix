@@ -1,3 +1,3 @@
 module M;
-  axiom T : Type;
+  axiom MType : Type;
 end;

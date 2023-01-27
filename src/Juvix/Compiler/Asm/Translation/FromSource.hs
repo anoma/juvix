@@ -15,16 +15,16 @@ import Juvix.Compiler.Asm.Translation.FromSource.Lexer
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
-parseText :: Text -> Either ParserError InfoTable
+parseText :: Text -> Either MegaparsecError InfoTable
 parseText = runParser ""
 
-runParser :: FilePath -> Text -> Either ParserError InfoTable
+runParser :: FilePath -> Text -> Either MegaparsecError InfoTable
 runParser fileName input =
   case run $
     runInfoTableBuilder $
       runNameIdGen $
         P.runParserT parseToplevel fileName input of
-    (_, Left err) -> Left (ParserError err)
+    (_, Left err) -> Left (MegaparsecError err)
     (tbl, Right ()) -> Right tbl
 
 createBuiltinConstr ::

@@ -2,7 +2,6 @@ module Scope.Negative (allTests) where
 
 import Base
 import Juvix.Compiler.Builtins (iniState)
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver.Error
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Pipeline
 
@@ -39,7 +38,6 @@ allTests =
   testGroup
     "Scope negative tests"
     ( map (mkTest . testDescr) scoperErrorTests
-        <> map (mkTest . testDescr) filesErrorTests
     )
 
 wrongError :: Maybe FailMsg
@@ -153,13 +151,6 @@ scoperErrorTests =
         ErrLacksFunctionClause {} -> Nothing
         _ -> wrongError,
     NegTest
-      "Incorrect top module path"
-      $(mkRelDir ".")
-      $(mkRelFile "WrongModuleName.juvix")
-      $ \case
-        ErrWrongTopModuleName {} -> Nothing
-        _ -> wrongError,
-    NegTest
       "Ambiguous export"
       $(mkRelDir ".")
       $(mkRelFile "AmbiguousExport.juvix")
@@ -263,25 +254,5 @@ scoperErrorTests =
       $(mkRelFile "DuplicateInductiveParameterName.juvix")
       $ \case
         ErrDuplicateInductiveParameterName {} -> Nothing
-        _ -> wrongError
-  ]
-
-filesErrorTests :: [NegTest ScoperError]
-filesErrorTests =
-  [ NegTest
-      "A module that conflicts with a module in the stdlib"
-      $(mkRelDir "StdlibConflict")
-      $(mkRelFile "Input.juvix")
-      $ \case
-        ErrTopModulePath
-          TopModulePathError {_topModulePathError = ErrDependencyConflict {}} -> Nothing
-        _ -> wrongError,
-    NegTest
-      "Importing a module that conflicts with a module in the stdlib"
-      $(mkRelDir "StdlibConflict")
-      $(mkRelFile "Input.juvix")
-      $ \case
-        ErrTopModulePath
-          TopModulePathError {_topModulePathError = ErrDependencyConflict {}} -> Nothing
         _ -> wrongError
   ]

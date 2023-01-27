@@ -1,4 +1,9 @@
-module Juvix.Compiler.Concrete.Print.Base where
+module Juvix.Compiler.Concrete.Print.Base
+  ( module Juvix.Compiler.Concrete.Print.Base,
+    module Juvix.Data.CodeAnn,
+    module Juvix.Compiler.Concrete.Pretty.Options,
+  )
+where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Data.Text qualified as Text
@@ -22,13 +27,19 @@ instance PrettyPrint Keyword where
 instance PrettyPrint KeywordRef where
   ppCode = ppMorpheme
 
-doc :: (PrettyPrint c, HasLoc c) => Options -> Comments -> c -> Doc Ann
-doc opts cs x =
+docNoComments :: PrettyPrint c => Options -> c -> Doc Ann
+docNoComments = docHelper Nothing
+
+docHelper :: PrettyPrint c => Maybe FileComments -> Options -> c -> Doc Ann
+docHelper cs opts x =
   run
-    . execExactPrint (fileComments file cs)
+    . execExactPrint cs
     . runReader opts
     . ppCode
     $ x
+
+doc :: (PrettyPrint c, HasLoc c) => Options -> Comments -> c -> Doc Ann
+doc opts cs x = docHelper (Just (fileComments file cs)) opts x
   where
     file :: Path Abs File
     file = getLoc x ^. intervalFile
@@ -46,7 +57,7 @@ ppModulePathType x = case sing :: SStage s of
     SModuleLocal -> P.ppCode x >>= morpheme (getLoc x) . P.annSDef x
     SModuleTop -> P.ppCode x >>= morpheme (getLoc x) . P.annSDef x
 
-instance (SingI t) => PrettyPrint (Module 'Scoped t) where
+instance SingI t => PrettyPrint (Module 'Scoped t) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Module 'Scoped t -> Sem r ()
   ppCode Module {..} = do
     let moduleBody' = indent (ppCode _moduleBody)
@@ -65,7 +76,7 @@ instance (SingI t) => PrettyPrint (Module 'Scoped t) where
       lastSemicolon :: Sem r ()
       lastSemicolon = case sing :: SModuleIsTop t of
         SModuleLocal -> return ()
-        SModuleTop -> semicolon
+        SModuleTop -> semicolon >> end
 
 instance PrettyPrint [Statement 'Scoped] where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => [Statement 'Scoped] -> Sem r ()
@@ -283,23 +294,26 @@ instance PrettyPrint (InductiveConstructorDef 'Scoped) where
         doc' = ppCode <$> _constructorDoc
     doc' ?<> hang (constructorName' <+> noLoc P.kwColon <+> constructorType')
 
+ppInductiveSignature :: forall r. Members '[ExactPrint, Reader Options] r => InductiveDef 'Scoped -> Sem r ()
+ppInductiveSignature InductiveDef {..} = do
+  let builtin' = ppCode <$> _inductiveBuiltin
+      name' = region (P.annDef _inductiveName) (ppCode _inductiveName)
+      params' = ppCode <$> nonEmpty _inductiveParameters
+      ty' = case _inductiveType of
+        Nothing -> Nothing
+        Just e -> Just (noLoc P.kwColon <+> ppCode e)
+  builtin'
+    <?+> ppCode _inductiveKw
+    <+> name'
+    <+?> params'
+    <+?> ty'
+
 instance PrettyPrint (InductiveDef 'Scoped) where
   ppCode :: forall r. Members '[ExactPrint, Reader Options] r => InductiveDef 'Scoped -> Sem r ()
-  ppCode InductiveDef {..} = do
+  ppCode d@InductiveDef {..} = do
     let doc' = ppCode <$> _inductiveDoc
         constrs' = ppConstructorBlock _inductiveConstructors
-        sig' = do
-          let builtin' = ppCode <$> _inductiveBuiltin
-              name' = region (P.annDef _inductiveName) (ppCode _inductiveName)
-              params' = ppCode <$> nonEmpty _inductiveParameters
-              ty' = case _inductiveType of
-                Nothing -> Nothing
-                Just e -> Just (noLoc P.kwColon <+> ppCode e)
-          builtin'
-            <?+> ppCode _inductiveKw
-            <+> name'
-            <+?> params'
-            <+?> ty'
+        sig' = ppInductiveSignature d
     doc'
       ?<> sig'
       <+> noLoc P.kwAssign

@@ -8,6 +8,7 @@ module Juvix.Data
     module Juvix.Data.IsImplicit,
     module Juvix.Data.Loc,
     module Juvix.Data.NameId,
+    module Juvix.Data.Comment,
     module Juvix.Data.Processed,
     module Juvix.Data.Uid,
     module Juvix.Data.Universe,
@@ -19,6 +20,7 @@ module Juvix.Data
 where
 
 import Juvix.Data.Backends
+import Juvix.Data.Comment
 import Juvix.Data.DependencyInfo
 import Juvix.Data.Effect
 import Juvix.Data.Error

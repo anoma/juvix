@@ -16,7 +16,7 @@ runCommand HighlightOptions {..} = do
       say (Highlight.goError (run $ runReader genOpts $ errorIntervals err))
     Right r -> do
       inputFile <- someBaseToAbs' (_highlightInputFile ^. pathPath)
-      let tbl = r ^. _2 . Scoper.resultParserTable
+      let tbl = r ^. _2 . Scoper.resultParserResult . Parser.resultTable
           items = tbl ^. Parser.infoParsedItems
           names = r ^. _2 . (Scoper.resultScoperTable . Scoper.infoNames)
           hinput =

@@ -4,24 +4,29 @@ module Juvix.Compiler.Concrete.Data.ParsedInfoTableBuilder
     registerKeyword,
     registerJudocText,
     registerComment,
-    mergeTable,
-    runInfoTableBuilder,
-    ignoreInfoTableBuilder,
+    registerModule,
+    moduleVisited,
+    visitModule,
+    runParserInfoTableBuilder,
     module Juvix.Compiler.Concrete.Data.ParsedInfoTable,
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ParsedInfoTable
 import Juvix.Compiler.Concrete.Data.ParsedItem
-import Juvix.Data.Comment
+import Juvix.Compiler.Concrete.Language
 import Juvix.Data.Keyword
 import Juvix.Prelude
 
 data InfoTableBuilder m a where
   RegisterItem :: ParsedItem -> InfoTableBuilder m ()
   RegisterComment :: Comment -> InfoTableBuilder m ()
-  MergeTable :: InfoTable -> InfoTableBuilder m ()
+  RegisterModule :: Module 'Parsed 'ModuleTop -> InfoTableBuilder m ()
+  VisitModule :: TopModulePath -> InfoTableBuilder m ()
+  ModuleVisited :: TopModulePath -> InfoTableBuilder m Bool
 
 makeSem ''InfoTableBuilder
 
@@ -58,7 +63,9 @@ registerLiteral l =
 
 data BuilderState = BuilderState
   { _stateItems :: [ParsedItem],
-    _stateComments :: [Comment]
+    _stateComments :: [Comment],
+    _stateVisited :: HashSet TopModulePath,
+    _stateModules :: HashMap TopModulePath (Module 'Parsed 'ModuleTop)
   }
   deriving stock (Show)
 
@@ -68,30 +75,34 @@ iniState :: BuilderState
 iniState =
   BuilderState
     { _stateItems = [],
-      _stateComments = []
+      _stateComments = [],
+      _stateVisited = mempty,
+      _stateModules = mempty
     }
 
 build :: BuilderState -> InfoTable
 build st =
   InfoTable
     { _infoParsedItems = nubHashable (st ^. stateItems),
-      _infoParsedComments = mkComments (st ^. stateComments)
+      _infoParsedComments = mkComments (st ^. stateComments),
+      _infoParsedModules = st ^. stateModules
     }
 
 registerItem' :: Members '[State BuilderState] r => ParsedItem -> Sem r ()
 registerItem' i = modify' (over stateItems (i :))
 
-runInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
-runInfoTableBuilder =
+runParserInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
+runParserInfoTableBuilder =
   fmap (first build)
     . runState iniState
     . reinterpret
       ( \case
+          ModuleVisited i -> HashSet.member i <$> gets (^. stateVisited)
+          VisitModule i -> modify' (over stateVisited (HashSet.insert i))
+          RegisterModule m ->
+            modify' (over stateModules (HashMap.insert (m ^. modulePath) m))
           RegisterItem i ->
             modify' (over stateItems (i :))
-          MergeTable tbl -> do
-            modify' (over stateItems ((tbl ^. infoParsedItems) <>))
-            modify' (over stateComments (allComments (tbl ^. infoParsedComments) <>))
           RegisterComment c -> do
             modify' (over stateComments (c :))
             registerItem'
@@ -100,6 +111,3 @@ runInfoTableBuilder =
                   _parsedTag = ParsedTagComment
                 }
       )
-
-ignoreInfoTableBuilder :: Sem (InfoTableBuilder ': r) a -> Sem r a
-ignoreInfoTableBuilder = fmap snd . runInfoTableBuilder

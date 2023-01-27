@@ -5,7 +5,6 @@ module Juvix.Compiler.Concrete.Translation.FromParsed
   )
 where
 
-import Juvix.Compiler.Concrete.Data.InfoTable
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.PathResolver
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping
@@ -21,4 +20,4 @@ fromParsed ::
   Sem r ScoperResult
 fromParsed pr = mapError (JuvixError @ScoperError) $ do
   let modules = pr ^. Parser.resultModules
-  scopeCheck pr emptyInfoTable modules
+  scopeCheck pr modules
