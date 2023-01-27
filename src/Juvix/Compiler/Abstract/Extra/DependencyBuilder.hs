@@ -51,6 +51,19 @@ checkStartNode n = do
     (HashSet.member (n ^. nameId) tab)
     (addStartNode n)
 
+-- BuiltinBool and BuiltinNat are required by the Internal to Core translation
+-- when translating literal integers to Nats.
+checkBuiltinInductiveStartNode :: forall r. Member (State StartNodes) r => InductiveDef -> Sem r ()
+checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
+  where
+    go :: BuiltinInductive -> Sem r ()
+    go = \case
+      BuiltinNat -> addInductiveStartNode
+      BuiltinBool -> addInductiveStartNode
+
+    addInductiveStartNode :: Sem r ()
+    addInductiveStartNode = addStartNode (i ^. inductiveName)
+
 guardNotVisited :: (Member (State VisitedModules) r) => Name -> Sem r () -> Sem r ()
 guardNotVisited n cont =
   unlessM
@@ -81,6 +94,7 @@ goStatement modName = \case
   StatementLocalModule m -> goLocalModule modName m
   StatementInductive i -> do
     checkStartNode (i ^. inductiveName)
+    checkBuiltinInductiveStartNode i
     addEdge (i ^. inductiveName) modName
     mapM_ (goFunctionParameter (i ^. inductiveName)) (i ^. inductiveParameters)
     goExpression (i ^. inductiveName) (i ^. inductiveType)

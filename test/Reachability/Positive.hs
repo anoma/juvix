@@ -78,7 +78,7 @@ tests =
       StdlibInclude
       $(mkRelFile "N.juvix")
       ( HashSet.fromList
-          ["test", "Unit"]
+          ["test", "Unit", "Bool", "Nat"]
       ),
     PosTest
       "Reachability with public imports"
@@ -86,6 +86,6 @@ tests =
       StdlibInclude
       $(mkRelFile "O.juvix")
       ( HashSet.fromList
-          ["f", "g", "h", "k", "Bool", "Maybe"]
+          ["f", "g", "h", "k", "Bool", "Maybe", "Nat"]
       )
   ]
