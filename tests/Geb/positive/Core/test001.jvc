@@ -1,2 +1,2 @@
 
-\(x : bool) if x then false else true
+(\(x : bool) if x then false else true) true

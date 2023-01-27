@@ -133,13 +133,13 @@ fromCore tab = case tab ^. Core.infoMain of
             (convertProduct identMap varsNum shiftLevels _constrArgs)
 
     convertProduct :: HashMap Symbol Level -> Level -> [Level] -> [Core.Node] -> Geb
-    convertProduct identMap varsNum shiftLevels = \case
+    convertProduct identMap varsNum shiftLevels args = case reverse args of
       h : t ->
         fst $
           foldr
             (\x -> mkPair (convertNode identMap varsNum shiftLevels x, convertType (Info.getNodeType x)))
             (convertNode identMap varsNum shiftLevels h, convertType (Info.getNodeType h))
-            t
+            (reverse t)
       [] ->
         GebUnit
       where
@@ -347,11 +347,12 @@ fromCore tab = case tab ^. Core.infoMain of
       Core.NPrim x ->
         convertTypePrim x
       Core.NDyn {} ->
-        unsupported -- no dynamic type in GEB
+        error "incomplete type information (dynamic type encountered)"
       Core.NLam Core.Lambda {..} ->
         convertType _lambdaBody
       _ ->
-        unsupported -- not a type
+        unsupported
+
     convertPi :: Core.Pi -> Object
     convertPi Core.Pi {..} =
       ObjectHom
