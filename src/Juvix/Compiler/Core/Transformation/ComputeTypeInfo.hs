@@ -37,7 +37,7 @@ computeNodeTypeInfo tab = umapL go
          in case lty of
               NPi Pi {..}
                 | rty == _piBinder ^. binderType ->
-                  _piBody
+                    _piBody
               _ ->
                 error "incorrect type information (application)"
       NBlt BuiltinApp {..} ->
