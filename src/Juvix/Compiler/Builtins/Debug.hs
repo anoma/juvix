@@ -13,7 +13,7 @@ registerTrace f = do
   b <- freshVar "b"
   let freeVars = HashSet.fromList [a, b]
   unless
-    (((u <>--> u <>--> a --> b --> b) ==% ftype) freeVars)
+    ((ftype ==% (u <>--> u <>--> a --> b --> b)) freeVars)
     (error "trace must be of type {A : Type} -> {B : Type} -> A -> B -> B")
   registerBuiltin BuiltinTrace (f ^. axiomName)
 
@@ -25,6 +25,6 @@ registerFail f = do
   let freeVars = HashSet.fromList [a]
   string_ <- getBuiltinName (getLoc f) BuiltinString
   unless
-    (((u <>--> string_ --> a) ==% ftype) freeVars)
+    ((ftype ==% (u <>--> string_ --> a)) freeVars)
     (error "fail must be of type {A : Type} -> String -> A")
   registerBuiltin BuiltinFail (f ^. axiomName)
