@@ -154,7 +154,9 @@ fromCore tab = case tab ^. Core.infoMain of
       return $ MorphismVar (Var (varsNum + length shiftLevels - fromJust (HashMap.lookup _identSymbol identMap) - 1))
 
     convertConstant :: Core.Constant -> Trans Morphism
-    convertConstant Core.Constant {} = unsupported
+    convertConstant _ _ _ Core.Constant {..} = case _constantValue of
+      Core.ConstInteger n -> MorphismInteger n
+      Core.ConstString {} -> unsupported
 
     convertApp :: Core.App -> Trans Morphism
     convertApp Core.App {..} = do
@@ -170,7 +172,39 @@ fromCore tab = case tab ^. Core.infoMain of
             }
 
     convertBuiltinApp :: Core.BuiltinApp -> Trans Morphism
-    convertBuiltinApp Core.BuiltinApp {} = unsupported
+    convertBuiltinApp Core.BuiltinApp {..} = case _builtinAppOp of
+      Core.OpIntAdd ->
+        case _builtinAppArgs of
+          [arg1, arg2] ->
+            GebAdd
+              ( Add
+                  (convertNode identMap varsNum shiftLevels arg1)
+                  (convertNode identMap varsNum shiftLevels arg2)
+              )
+          _ ->
+            error "wrong builtin application argument number"
+      Core.OpIntSub ->
+        case _builtinAppArgs of
+          [arg1, arg2] ->
+            GebSub
+              ( Sub
+                  (convertNode identMap varsNum shiftLevels arg1)
+                  (convertNode identMap varsNum shiftLevels arg2)
+              )
+          _ ->
+            error "wrong builtin application argument number"
+      Core.OpIntMul ->
+        case _builtinAppArgs of
+          [arg1, arg2] ->
+            GebMul
+              ( Mul
+                  (convertNode identMap varsNum shiftLevels arg1)
+                  (convertNode identMap varsNum shiftLevels arg2)
+              )
+          _ ->
+            error "wrong builtin application argument number"
+      _ ->
+        unsupported
 
     convertConstr :: Core.Constr -> Trans Morphism
     convertConstr Core.Constr {..} = do
@@ -434,8 +468,8 @@ fromCore tab = case tab ^. Core.infoMain of
     convertTypePrim :: Core.TypePrim -> Object
     convertTypePrim Core.TypePrim {..} =
       case _typePrimPrimitive of
-        Core.PrimInteger _ -> unsupported
-        Core.PrimBool _ -> ObjectCoproduct (Coproduct ObjectTerminal ObjectTerminal)
+        Core.PrimInteger _ -> ObjectInteger
+        Core.PrimBool _ -> ObjectCoprod (Coprod ObjectTerminal ObjectTerminal)
         Core.PrimString -> unsupported
 
     convertInductive :: Symbol -> Object

@@ -93,7 +93,7 @@ instance PrettyCode Morphism where
     MorphismVar idx -> do
       i <- ppCode idx
       return $ kwVar <+> i
-
+    MorphismInteger n -> return $ annotate AnnLiteralInteger (pretty n)
 instance PrettyCode Product where
   ppCode Product {..} = do
     left <- ppArg _productLeft
@@ -119,6 +119,7 @@ instance PrettyCode Object where
     ObjectProduct x -> ppCode x
     ObjectCoproduct x -> ppCode x
     ObjectHom x -> ppCode x
+    ObjectInteger -> return kwInteger
 
 --------------------------------------------------------------------------------
 -- helper functions
@@ -191,6 +192,15 @@ kwApp = keyword Str.gebApp
 kwVar :: Doc Ann
 kwVar = keyword Str.gebVar
 
+kwAdd :: Doc Ann
+kwAdd = keyword Str.gebAdd
+
+kwSub :: Doc Ann
+kwSub = keyword Str.gebSub
+
+kwMul :: Doc Ann
+kwMul = keyword Str.gebMul
+
 kwInitial :: Doc Ann
 kwInitial = keyword Str.gebInitial
 
@@ -205,3 +215,6 @@ kwCoprod = keyword Str.gebCoprod
 
 kwHom :: Doc Ann
 kwHom = keyword Str.gebHom
+
+kwInteger :: Doc Ann
+kwInteger = keyword Str.gebInteger

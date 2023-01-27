@@ -72,6 +72,7 @@ data Morphism
   | MorphismLambda Lambda
   | MorphismApplication Application
   | MorphismVar Var
+  | MorphismInteger Integer
 
 data Product = Product
   { _productLeft :: Object,
@@ -100,6 +101,7 @@ data Object
   | ObjectCoproduct Coproduct
   | -- | function type
     ObjectHom Hom
+  | ObjectInteger
 
 instance HasAtomicity Morphism where
   atomicity = \case
@@ -114,6 +116,7 @@ instance HasAtomicity Morphism where
     MorphismLambda {} -> Aggregate appFixity
     MorphismApplication {} -> Aggregate appFixity
     MorphismVar {} -> Aggregate appFixity
+    MorphismInteger {} -> Atom
 
 instance HasAtomicity Object where
   atomicity = \case
@@ -122,6 +125,7 @@ instance HasAtomicity Object where
     ObjectProduct {} -> Aggregate appFixity
     ObjectCoproduct {} -> Aggregate appFixity
     ObjectHom {} -> Aggregate appFixity
+    ObjectInteger -> Atom
 
 makeLenses ''Case
 makeLenses ''Pair
