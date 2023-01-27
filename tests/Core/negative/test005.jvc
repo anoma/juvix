@@ -1,7 +1,10 @@
 -- no matching case branch
 
-constr cons 2;
+type list {
+  nil : list;
+  cons : any -> list -> list;
+};
 
-case cons 1 2 of {
+case cons 1 nil of {
   nil -> true
 }

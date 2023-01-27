@@ -100,6 +100,8 @@ data BuiltinAxiom
   | BuiltinString
   | BuiltinIO
   | BuiltinIOSequence
+  | BuiltinTrace
+  | BuiltinFail
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinAxiom
@@ -112,3 +114,5 @@ instance Pretty BuiltinAxiom where
     BuiltinIO -> Str.io
     BuiltinString -> Str.string
     BuiltinIOSequence -> Str.ioSequence
+    BuiltinTrace -> Str.trace_
+    BuiltinFail -> Str.fail_

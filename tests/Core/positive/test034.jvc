@@ -2,18 +2,16 @@
 
 def g := \x trace x g;
 
-def f := \x \y
-  if x = 0 then
-    9
-  else
-    trace 1 (f (x - 1) (y 0));
+def f := \x \y if x = 0 then 9 else trace 1 (f (x - 1) (y 0));
 
 def h := \x trace 8 (trace x (x + x));
 
 def const := \x \y x;
 
-constr nil 0;
-constr cons 2;
+type list {
+  nil : list;
+  cons : any -> list -> list;
+};
 
 trace (const 0 (trace "!" 1)) (
 trace (const 0 (cons (trace "a" 1) (trace "b" (cons (trace "c" 1) (trace "d" nil))))) (

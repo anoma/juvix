@@ -24,6 +24,8 @@ builtinAxiomName = \case
   BuiltinString -> Just string_
   BuiltinStringPrint -> Just printString
   BuiltinBoolPrint -> Just printBool
+  BuiltinTrace -> Just trace_
+  BuiltinFail -> Just fail_
 
 builtinFunctionName :: BuiltinFunction -> Maybe Text
 builtinFunctionName = \case

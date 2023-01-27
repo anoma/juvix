@@ -261,7 +261,7 @@ registerBuiltinFunction d = \case
   BuiltinBoolAnd -> registerAnd d
 
 registerBuiltinAxiom ::
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins] r) =>
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r) =>
   Abstract.AxiomDef ->
   BuiltinAxiom ->
   Sem r ()
@@ -272,6 +272,8 @@ registerBuiltinAxiom d = \case
   BuiltinString -> registerString d
   BuiltinStringPrint -> registerStringPrint d
   BuiltinBoolPrint -> registerBoolPrint d
+  BuiltinTrace -> registerTrace d
+  BuiltinFail -> registerFail d
 
 goInductive ::
   (Members '[InfoTableBuilder, Builtins, Error ScoperError] r) =>
@@ -396,7 +398,7 @@ goExpression = \case
       r' <- goExpression r
       return (Abstract.Application l'' r' Explicit)
 
-goLambda :: forall r. Members '[Error ScoperError, InfoTableBuilder] r => Lambda 'Scoped -> Sem r Abstract.Lambda
+goLambda :: forall r. (Members '[Error ScoperError, InfoTableBuilder] r) => Lambda 'Scoped -> Sem r Abstract.Lambda
 goLambda l = Abstract.Lambda <$> mapM goClause (l ^. lambdaClauses)
   where
     goClause :: LambdaClause 'Scoped -> Sem r Abstract.LambdaClause
@@ -504,7 +506,7 @@ goPattern p = case p of
   PatternWildcard i -> return (Abstract.PatternWildcard i)
   PatternEmpty {} -> return Abstract.PatternEmpty
 
-goAxiom :: (Members '[InfoTableBuilder, Error ScoperError, Builtins] r) => AxiomDef 'Scoped -> Sem r Abstract.AxiomDef
+goAxiom :: (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r) => AxiomDef 'Scoped -> Sem r Abstract.AxiomDef
 goAxiom a = do
   _axiomType' <- goExpression (a ^. axiomType)
   let axiom =

@@ -365,6 +365,8 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinIOSequence -> return ()
       Internal.BuiltinString -> registerInductiveAxiom
       Internal.BuiltinIO -> registerInductiveAxiom
+      Internal.BuiltinTrace -> return ()
+      Internal.BuiltinFail -> return ()
 
     registerInductiveAxiom :: Sem r ()
     registerInductiveAxiom = do
@@ -423,6 +425,9 @@ goAxiomDef a = case a ^. Internal.axiomBuiltin >>= builtinBody of
           )
       Internal.BuiltinString -> Nothing
       Internal.BuiltinIO -> Nothing
+      Internal.BuiltinTrace -> Nothing
+      Internal.BuiltinFail ->
+        Just (mkLambda' (mkLambda' (mkBuiltinApp' OpFail [mkVar' 0])))
 
     axiomType' :: Sem r Type
     axiomType' = runReader initIndexTable (goExpression (a ^. Internal.axiomType))
@@ -652,6 +657,23 @@ goApplication a = do
         mkApps' fExpr <$> exprArgs
 
   case f of
+    Internal.ExpressionIden (Internal.IdenAxiom n) -> do
+      axiomInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoAxioms)
+      case axiomInfo ^. Internal.axiomInfoBuiltin of
+        Just Internal.BuiltinNatPrint -> app
+        Just Internal.BuiltinStringPrint -> app
+        Just Internal.BuiltinBoolPrint -> app
+        Just Internal.BuiltinString -> app
+        Just Internal.BuiltinIO -> app
+        Just Internal.BuiltinIOSequence -> app
+        Just Internal.BuiltinTrace -> do
+          as <- exprArgs
+          case as of
+            (_ : _ : arg1 : arg2 : xs) ->
+              return (mkApps' (mkBuiltinApp' OpTrace [arg1, arg2]) xs)
+            _ -> error "if must be called with 2 arguments"
+        Just Internal.BuiltinFail -> app
+        Nothing -> app
     Internal.ExpressionIden (Internal.IdenFunction n) -> do
       funInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoFunctions)
       case funInfo ^. Internal.functionInfoDef . Internal.funDefBuiltin of

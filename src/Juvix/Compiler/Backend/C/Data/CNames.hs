@@ -80,6 +80,12 @@ boolor = primPrefix "or"
 booland :: Text
 booland = primPrefix "and"
 
+trace_ :: Text
+trace_ = "trace"
+
+fail_ :: Text
+fail_ = "fail"
+
 funField :: Text
 funField = "fun"
 

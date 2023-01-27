@@ -189,7 +189,15 @@ tests =
     posTest
       "Issue 1704 (Type synonyms)"
       $(mkRelDir "Internal")
-      $(mkRelFile "Synonyms.juvix")
+      $(mkRelFile "Synonyms.juvix"),
+    posTest
+      "Issue 1731 Trace builtin for debugging"
+      $(mkRelDir "issue1731")
+      $(mkRelFile "builtinTrace.juvix"),
+    posTest
+      "Issue 1731 Fail builtin for debugging"
+      $(mkRelDir "issue1731")
+      $(mkRelFile "builtinFail.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests, t ^. Compilation.name /= "Self-application"
        ]

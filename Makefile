@@ -140,7 +140,7 @@ ORMOLUMODE?=inplace
 
 .PHONY: format
 format: clang-format
-	${ORMOLU} ${ORMOLUFLAGS} \
+	@${ORMOLU} ${ORMOLUFLAGS} \
 		--ghc-opt -XStandaloneDeriving \
 		--ghc-opt -XUnicodeSyntax \
 		--ghc-opt -XDerivingStrategies \

@@ -1,0 +1,25 @@
+module builtinTrace;
+  open import Stdlib.Prelude;
+  open import Stdlib.Data.Nat.Ord;
+
+  builtin trace axiom trace : {A : Type} → {B : Type} → A → B → B;
+
+  terminating
+  f : Nat → Nat → Nat;
+  f x y := if (x == 0) y (trace x (f (sub x 1) y));
+
+{-
+f 4 0 =
+trace 4 (f 3 0)
+=> trace 4 (trace 3 (f 2 0))
+=> trace 4 (trace 3 (trace 2 (f 1 0)))
+=> trace 4 (trace 3 (trace 2 (trace 1 (f 0 0))))
+=> trace 4 (trace 3 (trace 2 (trace 1 0)))
+= 0
+
+𝔸 β \X \Y . Apply (Apply trace X) Y 
+
+-}
+  main : IO;
+  main := printNatLn $ f 4 0;
+end;
