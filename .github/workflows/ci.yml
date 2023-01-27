@@ -3,10 +3,10 @@ name: The Juvix compiler CI
 on:
   workflow_dispatch:
     inputs:
-    ref:
-      description: 'the repository ref to build'
-      required: true
-      default: 'main'
+      ref:
+       description: 'the repository ref to build'
+       required: true
+       default: 'main'
   push:
     branches:
       - main
