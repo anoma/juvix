@@ -285,17 +285,19 @@ infix 4 ===
 (===) :: (IsExpression a, IsExpression b) => a -> b -> Bool
 a === b = (toExpression a ==% toExpression b) mempty
 
-infix 4 ==%
-
--- TODO: make it symmetric
-(==%) :: (IsExpression a, IsExpression b) => a -> b -> HashSet Name -> Bool
-(==%) a b free =
+leftEq :: (IsExpression a, IsExpression b) => a -> b -> HashSet Name -> Bool
+leftEq a b free =
   isRight
     . run
     . runError @Text
     . runReader free
     . evalState (mempty @(HashMap Name Name))
     $ matchExpressions (toExpression a) (toExpression b)
+
+infix 4 ==%
+
+(==%) :: (IsExpression a, IsExpression b) => a -> b -> HashSet Name -> Bool
+(==%) a b free = leftEq a b free || leftEq b a free
 
 infixl 9 @@
 
