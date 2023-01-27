@@ -4,4 +4,4 @@ type optbool {
   Nothing : optbool;
 };
 
-\(x : bool) \(o : optbool) { case o of { Just b := if x then true else b; Nothing := false } }
+(\(x : bool) \(o : optbool) { case o of { Just b := if x then true else b; Nothing := false } }) false (Just true)

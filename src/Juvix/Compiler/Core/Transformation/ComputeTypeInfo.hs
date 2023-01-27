@@ -37,7 +37,7 @@ computeNodeTypeInfo tab = umapL go
          in case lty of
               NPi Pi {..}
                 | rty == _piBinder ^. binderType ->
-                    _piBody
+                  _piBody
               _ ->
                 error "incorrect type information (application)"
       NBlt BuiltinApp {..} ->
@@ -63,7 +63,7 @@ computeNodeTypeInfo tab = umapL go
               _ ->
                 mkTypeConstr' (ci ^. constructorInductive) (take (length (ii ^. inductiveParams)) _constrArgs)
       NLam Lambda {..} ->
-        mkPi' (_lambdaBinder ^. binderType) (mkLambda' (Info.getNodeType _lambdaBody))
+        mkPi' (_lambdaBinder ^. binderType) (Info.getNodeType _lambdaBody)
       NLet Let {..} ->
         Info.getNodeType _letBody
       NRec LetRec {..} ->
