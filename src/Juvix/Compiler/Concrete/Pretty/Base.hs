@@ -298,11 +298,6 @@ instance (SingI s) => PrettyCode (InductiveDef s) where
         <+> kwAssign
           <> line
           <> (indent' . align) inductiveConstructors'
-    where
-      ppConstructorBlock ::
-        NonEmpty (InductiveConstructorDef s) -> Sem r (Doc Ann)
-      ppConstructorBlock cs =
-        vsep <$> mapM (fmap (kwPipe <+>) . ppCode) (toList cs)
 
 dotted :: (Foldable f) => f (Doc Ann) -> Doc Ann
 dotted = concatWith (surround kwDot)
