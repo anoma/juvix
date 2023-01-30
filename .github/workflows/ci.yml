@@ -96,20 +96,17 @@ jobs:
           submodules: true
 
       - uses: actions/cache@v3
-        name: Cache ~/.stack
-        with:
-          path: ~/.stack
-          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-global-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.ghc }}-stack-global-
 
-      - uses: actions/cache@v3
-        name: Cache .stack-work
+      - uses: actions/cache/restore@v3
+        id: cache
+        name: Stack cache
         with:
-          path: main/.stack-work
-          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-work-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}-${{ hashFiles('main/**/*.hs') }}
+          path: |
+            ~/.stack
+            main/.stack-work
+          key: ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
+            ${{ runner.os }}-
 
       - uses: haskell/actions/setup@v2
         name: Setup Haskell
@@ -163,6 +160,19 @@ jobs:
           cd main
           make build
 
+      - uses: actions/cache/save@v3
+        if: always() # Saving Stack cache even if the Juvix build fails
+        with:
+          path: |
+            ~/.stack
+          key: ${{ steps.stack-cache.outputs.key }}
+
+      - uses: actions/cache/save@v3
+        with:
+          path: |
+            main/.stack-work
+          key: ${{ steps.cache.outputs.key }}
+
   test:
     needs: build
     runs-on: ${{ matrix.os }}
@@ -177,21 +187,16 @@ jobs:
           path: main
           submodules: recursive
 
-      - uses: actions/cache@v3
-        name: Cache ~/.stack
+      - uses: actions/checkout@v3
+      - uses: actions/cache/restore@v3
+        id: cache
         with:
-          path: ~/.stack
-          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-global-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}
+          path: |
+            ~/.stack
+            main/.stack-work
+          key: ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.ghc }}-stack-global-
-
-      - uses: actions/cache@v3
-        name: Cache .stack-work
-        with:
-          path: main/.stack-work
-          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-work-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}-${{ hashFiles('main/**/*.hs') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
+            ${{ runner.os }}-
 
       - uses: haskell/actions/setup@v2
         name: Setup Haskell
@@ -306,6 +311,19 @@ jobs:
           cd main
           make smoke
 
+      - uses: actions/cache/save@v3
+        if: always() # Saving Stack cache even if the Juvix build fails
+        with:
+          path: |
+            ~/.stack
+          key: ${{ steps.stack-cache.outputs.key }}
+
+      - uses: actions/cache/save@v3
+        with:
+          path: |
+            main/.stack-work
+          key: ${{ steps.cache.outputs.key }}
+
   docs:
     needs: build
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
@@ -321,21 +339,16 @@ jobs:
           path: main
           submodules: recursive
 
-      - uses: actions/cache@v3
-        name: Cache ~/.stack
+      - uses: actions/checkout@v3
+      - uses: actions/cache/restore@v3
+        id: cache
         with:
-          path: ~/.stack
-          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-global-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}
+          path: |
+            ~/.stack
+            main/.stack-work
+          key: ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.ghc }}-stack-global-
-
-      - uses: actions/cache@v3
-        name: Cache .stack-work
-        with:
-          path: main/.stack-work
-          key: ${{ runner.os }}-${{ matrix.ghc }}-stack-work-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}-${{ hashFiles('main/**/*.hs') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.ghc }}-stack-work-
+            ${{ runner.os }}-
 
       - uses: r-lib/actions/setup-pandoc@v2
         with:
@@ -381,6 +394,13 @@ jobs:
           make html-examples
           make webapp-examples
           make demo-example
+
+      - uses: actions/cache/save@v3
+        with:
+          path: |
+            ~/.stack
+            main/.stack-work
+          key: ${{ steps.cache.outputs.key }}
 
       - name: Deploy HTML to github pages
         uses: peaceiris/actions-gh-pages@v3
