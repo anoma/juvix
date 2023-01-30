@@ -200,8 +200,8 @@ STACKFLAGS?=--jobs $(THREADS)
 STACKTESTFLAGS?=--ta --hide-successes --ta --ansi-tricks=false
 SMOKEFLAGS?=--color --diff=git
 
-.PHONY: check
-check: clean
+.PHONY: check-only
+check-only:
 	@${MAKE} build
 	@${MAKE} install
 	@${MAKE} test
@@ -209,6 +209,10 @@ check: clean
 	@${MAKE} juvix-format
 	@${MAKE} format
 	@${MAKE} pre-commit
+
+.PHONY: check
+check: clean
+	@${MAKE} check-only
 
 # -- Build requirements
 

@@ -5,9 +5,9 @@ module Logic.Symbol;
   --- A symbol represents a token that can be placed in a square
   type Symbol :=
     | --- The circle token
-    O : Symbol
+      O : Symbol
     | --- The cross token
-    X : Symbol;
+      X : Symbol;
 
   --- Equality for ;Symbol;s
   ==Symbol : Symbol → Symbol → Bool;

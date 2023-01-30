@@ -25,9 +25,9 @@ map a b f (:: _ h hs) := :: a (f h) (map a b f hs);
 
 filter : (a : Type) → (a → Bool) → List a → List a;
 filter a f (nil _) := nil a;
-filter a f (:: _ h hs) := match (f h) λ{
-  true := :: a h (filter a f hs);
-  false := filter a f hs;
+filter a f (:: _ h hs) := match (f h) λ {
+  | true := :: a h (filter a f hs)
+  | false := filter a f hs
 };
 
 import Data.Nat;
@@ -64,13 +64,13 @@ splitAt a _ (nil _) := nil a, nil a;
 splitAt a zero xs := , (List a) (List a) (nil a) xs;
 splitAt a (suc zero) (:: _ x xs) := , (List a) (List a) (:: a x (nil a)) xs;
 splitAt a (suc (suc m)) (:: _ x xs) := match (splitAt a m xs) λ {
-    (, la _ xs' xs'') := , la la (:: a x xs') xs'';
+    (, la _ xs' xs'') := , la la (:: a x xs') xs''
   };
 
 merge : (a : Type) → (a → a → Ordering) → List a → List a → List a;
-merge a cmp (:: _ x xs) (:: _ y ys) := match (cmp x y) λ{
-    LT := :: a x (merge a cmp xs (:: a y ys));
-    _ := :: a y (merge a cmp (:: a x xs) ys);
+merge a cmp (:: _ x xs) (:: _ y ys) := match (cmp x y) λ {
+    | LT := :: a x (merge a cmp xs (:: a y ys))
+    | _ := :: a y (merge a cmp (:: a x xs) ys)
   };
 merge _ _ (nil _) ys := ys;
 merge _ _ xs (nil _) := xs;
@@ -87,8 +87,8 @@ quickSort a cmp (:: _ x ys) :=
   let {
     ltx : a → Bool;
     ltx y := match (cmp y x) λ{
-      LT := true;
-      _  := false;
+      | LT := true
+      | _  := false
     };
     gex : a → Bool;
     gex y := not (ltx y)

@@ -5,11 +5,11 @@ module Logic.GameState;
 
   type Error :=
     | --- no error occurred
-    noError : Error
+      noError : Error
     | --- a non-fatal error occurred
-    continue : String → Error
+      continue : String → Error
     | --- a fatal occurred
-    terminate : String → Error;
+      terminate : String → Error;
 
   type GameState :=
     | state : Board → Symbol → Error → GameState;

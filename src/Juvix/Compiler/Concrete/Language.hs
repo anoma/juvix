@@ -222,7 +222,8 @@ type InductiveConstructorName s = SymbolType s
 type InductiveName s = SymbolType s
 
 data InductiveConstructorDef (s :: Stage) = InductiveConstructorDef
-  { _constructorName :: InductiveConstructorName s,
+  { _constructorPipe :: Irrelevant (Maybe KeywordRef),
+    _constructorName :: InductiveConstructorName s,
     _constructorDoc :: Maybe (Judoc s),
     _constructorType :: ExpressionType s
   }
@@ -631,7 +632,7 @@ deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (Fun
 
 data Lambda (s :: Stage) = Lambda
   { _lambdaKw :: KeywordRef,
-    _lambdaClauses :: [LambdaClause s]
+    _lambdaClauses :: NonEmpty (LambdaClause s)
   }
 
 deriving stock instance
@@ -653,7 +654,8 @@ deriving stock instance
   Ord (Lambda s)
 
 data LambdaClause (s :: Stage) = LambdaClause
-  { _lambdaParameters :: NonEmpty (PatternType s),
+  { _lambdaPipe :: Irrelevant (Maybe KeywordRef),
+    _lambdaParameters :: NonEmpty (PatternType s),
     _lambdaBody :: ExpressionType s
   }
 
@@ -1020,7 +1022,7 @@ instance HasLoc (LambdaClause 'Scoped) where
   getLoc c = getLocSpan (c ^. lambdaParameters) <> getLoc (c ^. lambdaBody)
 
 instance HasLoc (Lambda 'Scoped) where
-  getLoc l = getLoc (l ^. lambdaKw) <>? (getLocSpan <$> nonEmpty (l ^. lambdaClauses))
+  getLoc l = getLoc (l ^. lambdaKw) <> getLocSpan (l ^. lambdaClauses)
 
 instance HasLoc (FunctionParameter 'Scoped) where
   getLoc p = (getLoc <$> p ^. paramName) ?<> getLoc (p ^. paramType)

@@ -281,9 +281,7 @@ goType e = case e of
   Abstract.ExpressionLet {} -> unsupported "let in types"
 
 goLambda :: forall r. (Members '[NameIdGen] r) => Abstract.Lambda -> Sem r Lambda
-goLambda (Abstract.Lambda cl) = case nonEmpty cl of
-  Nothing -> unsupported "empty lambda"
-  Just cl' -> Lambda <$> mapM goClause cl'
+goLambda (Abstract.Lambda cl') = Lambda <$> mapM goClause cl'
   where
     goClause :: Abstract.LambdaClause -> Sem r LambdaClause
     goClause (Abstract.LambdaClause ps b) = do

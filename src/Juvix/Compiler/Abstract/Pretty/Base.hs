@@ -111,8 +111,11 @@ instance PrettyCode LambdaClause where
 
 instance PrettyCode Lambda where
   ppCode Lambda {..} = do
-    lambdaClauses' <- ppBlock _lambdaClauses
+    lambdaClauses' <- ppPipeBlock _lambdaClauses
     return $ kwLambda <+> lambdaClauses'
+
+ppPipeBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
+ppPipeBlock items = vsep <$> mapM (fmap (kwPipe <+>) . ppCode) items
 
 ppBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
 ppBlock items = bracesIndent . vsep . toList <$> mapM (fmap endSemicolon . ppCode) items
