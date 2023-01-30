@@ -82,7 +82,7 @@ jobs:
           path: |
             ~/.stack
             main/.stack-work
-          key: >-
+          cache-primary-key: >-
             ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{
             hashFiles('main/package.yaml') }}
           restore-keys: |
@@ -141,7 +141,7 @@ jobs:
           path: |
             ~/.stack
             main/.stack-work
-          key: ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{
+          cache-primary-key: ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{
             hashFiles('main/package.yaml') }}
           restore-keys: |
             ${{ runner.os }}-
@@ -354,7 +354,7 @@ jobs:
       - uses: actions/cache/restore@v3
         id: cache
         with:
-          fail-on-cache-miss: false
+          fail-on-cache-miss: true
           path: |
             ~/.stack
             main/.stack-work
