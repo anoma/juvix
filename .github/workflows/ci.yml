@@ -82,8 +82,7 @@ jobs:
           path: |
             ~/.stack
           key: >-
-            ${{ runner.os }}-stack-${{ hashFiles('main/stack.yaml') }}-${{
-            hashFiles('main/package.yaml') }}
+            ${{ runner.os }}-stack-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
           restore-keys: |
             ${{ runner.os }}-stack-
 
@@ -95,8 +94,7 @@ jobs:
             ~/.stack
             main/.stack-work
           key: >-
-            ${{ runner.os }}-stack-work-${{ hashFiles('main/stack.yaml') }}-${{
-            hashFiles('main/package.yaml') }}
+            ${{ runner.os }}-stack-work-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
           restore-keys: |
             ${{ runner.os }}-stack-work-
 
