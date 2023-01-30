@@ -439,7 +439,8 @@ instance (SingI s) => PrettyCode (TypeSignature s) where
     sigType' <- ppExpression _sigType
     builtin' <- traverse ppCode _sigBuiltin
     doc' <- mapM ppCode _sigDoc
-    return $ doc' ?<> builtin' <?+> sigTerminating' <> hang' (sigName' <+> kwColon <+> sigType')
+    body' :: Maybe (Doc Ann) <- fmap (kwAssign <+>) <$> mapM ppExpression _sigBody
+    return $ doc' ?<> builtin' <?+> sigTerminating' <> hang' (sigName' <+> kwColon <+> sigType' <+?> body')
 
 instance (SingI s) => PrettyCode (Function s) where
   ppCode :: forall r. (Members '[Reader Options] r) => Function s -> Sem r (Doc Ann)

@@ -186,6 +186,7 @@ data TypeSignature (s :: Stage) = TypeSignature
     _sigType :: ExpressionType s,
     _sigDoc :: Maybe (Judoc s),
     _sigBuiltin :: Maybe (WithLoc BuiltinFunction),
+    _sigBody :: Maybe (ExpressionType s),
     _sigTerminating :: Maybe KeywordRef
   }
 
@@ -1078,6 +1079,7 @@ instance SingI s => HasLoc (TypeSignature s) where
     (_sigDoc >>= getJudocLoc)
       ?<> (getLoc <$> _sigBuiltin)
       ?<> (getLoc <$> _sigTerminating)
+      ?<> (getLocExpressionType <$> _sigBody)
       ?<> getLocExpressionType _sigType
 
 instance HasLoc (Example s) where

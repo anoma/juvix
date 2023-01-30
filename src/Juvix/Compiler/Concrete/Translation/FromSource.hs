@@ -447,6 +447,7 @@ typeSignature _sigTerminating _sigName _sigBuiltin = do
   kw kwColon
   _sigType <- parseExpressionAtoms
   _sigDoc <- getJudoc
+  _sigBody <- optional (kw kwAssign >> parseExpressionAtoms)
   return TypeSignature {..}
 
 -- | Used to minimize the amount of required @P.try@s.

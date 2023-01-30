@@ -421,7 +421,8 @@ checkTypeSignature TypeSignature {..} = do
   sigType' <- checkParseExpressionAtoms _sigType
   sigName' <- bindFunctionSymbol _sigName
   sigDoc' <- mapM checkJudoc _sigDoc
-  registerFunction' TypeSignature {_sigName = sigName', _sigType = sigType', _sigDoc = sigDoc', ..}
+  sigBody' <- mapM checkParseExpressionAtoms _sigBody
+  registerFunction' TypeSignature {_sigName = sigName', _sigType = sigType', _sigDoc = sigDoc', _sigBody = sigBody', ..}
 
 checkConstructorDef ::
   (Members '[Error ScoperError, Reader LocalVars, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
@@ -588,7 +589,6 @@ checkModuleBody ::
 checkModuleBody body = do
   body' <- mapM checkStatement body
   checkOrphanFixities
-  checkClausesExist body'
   exported <- get >>= exportScope
   return (exported, body')
 
@@ -634,15 +634,6 @@ checkLocalModule Module {..} = do
         inheritSymbol (SymbolInfo s) = SymbolInfo (fmap inheritEntry s)
         inheritEntry :: SymbolEntry -> SymbolEntry
         inheritEntry = entryOverName (over S.nameWhyInScope S.BecauseInherited . set S.nameVisibilityAnn VisPrivate)
-
-checkClausesExist :: forall r. (Members '[Error ScoperError, State Scope] r) => [Statement 'Scoped] -> Sem r ()
-checkClausesExist ss = whenJust msig (throw . ErrLacksFunctionClause . LacksFunctionClause)
-  where
-    msig =
-      listToMaybe
-        [ ts | StatementTypeSignature ts <- ss, null
-                                                  [c | StatementFunctionClause c <- ss, c ^. clauseOwnerFunction == ts ^. sigName]
-        ]
 
 checkOrphanFixities :: forall r. (Members '[Error ScoperError, State Scope] r) => Sem r ()
 checkOrphanFixities = do

@@ -128,14 +128,11 @@ goModuleBody ss' = do
         [ Indexed i <$> funDef
           | Indexed i sig <- sigs,
             let name = sig ^. sigName,
-            let funDef = goFunctionDef sig (getClauses name)
+            let funDef = goTopFunctionDef sig (getClauses name)
         ]
       where
-        getClauses :: S.Symbol -> NonEmpty (FunctionClause 'Scoped)
-        getClauses name =
-          fromMaybe impossible $
-            nonEmpty
-              [c | StatementFunctionClause c <- ss', name == c ^. clauseOwnerFunction]
+        getClauses :: S.Symbol -> [FunctionClause 'Scoped]
+        getClauses name = [c | StatementFunctionClause c <- ss', name == c ^. clauseOwnerFunction]
         sigs :: [Indexed (TypeSignature 'Scoped)]
         sigs = [Indexed i t | (Indexed i (StatementTypeSignature t)) <- ss]
 
@@ -171,22 +168,52 @@ goOpenModule o
         _ -> impossible
   | otherwise = return Nothing
 
-goFunctionDef ::
-  forall r.
-  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r) =>
+goLetFunctionDef ::
+  (Members '[InfoTableBuilder, Error ScoperError] r) =>
   TypeSignature 'Scoped ->
-  NonEmpty (FunctionClause 'Scoped) ->
+  [FunctionClause 'Scoped] ->
   Sem r Abstract.FunctionDef
-goFunctionDef TypeSignature {..} clauses = do
+goLetFunctionDef = goFunctionDefHelper
+
+goFunctionDefHelper ::
+  forall r.
+  (Members '[InfoTableBuilder, Error ScoperError] r) =>
+  TypeSignature 'Scoped ->
+  [FunctionClause 'Scoped] ->
+  Sem r Abstract.FunctionDef
+goFunctionDefHelper sig@TypeSignature {..} clauses = do
   let _funDefName = goSymbol _sigName
       _funDefTerminating = isJust _sigTerminating
       _funDefBuiltin = (^. withLocParam) <$> _sigBuiltin
-  _funDefClauses <- mapM goFunctionClause clauses
   _funDefTypeSig <- goExpression _sigType
   _funDefExamples <- goExamples _sigDoc
+  _funDefClauses <- case (_sigBody, nonEmpty clauses) of
+    (Nothing, Nothing) -> throw (ErrLacksFunctionClause (LacksFunctionClause sig))
+    (Just {}, Just clauses') -> throw (ErrDuplicateFunctionClause (DuplicateFunctionClause sig (head clauses')))
+    (Just body, Nothing) -> do
+      body' <- goExpression body
+      return
+        ( pure
+            Abstract.FunctionClause
+              { _clauseName = _funDefName,
+                _clausePatterns = [],
+                _clauseBody = body'
+              }
+        )
+    (Nothing, Just clauses') -> mapM goFunctionClause clauses'
   let fun = Abstract.FunctionDef {..}
-  whenJust _sigBuiltin (registerBuiltinFunction fun . (^. withLocParam))
   registerFunction' fun
+
+goTopFunctionDef ::
+  forall r.
+  (Members '[InfoTableBuilder, Error ScoperError, Builtins, NameIdGen] r) =>
+  TypeSignature 'Scoped ->
+  [FunctionClause 'Scoped] ->
+  Sem r Abstract.FunctionDef
+goTopFunctionDef sig clauses = do
+  fun <- goFunctionDefHelper sig clauses
+  whenJust (sig ^. sigBuiltin) (registerBuiltinFunction fun . (^. withLocParam))
+  return fun
 
 goExamples ::
   forall r.
@@ -352,27 +379,12 @@ goExpression = \case
           nonEmpty' <$> sequence [Abstract.LetFunDef <$> goSig sig | LetTypeSig sig <- toList cl]
           where
             goSig :: TypeSignature 'Scoped -> Sem r Abstract.FunctionDef
-            goSig sig = do
-              _funDefClauses <- getClauses
-              _funDefTypeSig <- goExpression (sig ^. sigType)
-              let _funDefBuiltin = (^. withLocParam) <$> sig ^. sigBuiltin
-                  _funDefTerminating = isJust (sig ^. sigTerminating)
-                  _funDefName = goSymbol (sig ^. sigName)
-                  _funDefExamples :: [Abstract.Example] = []
-              registerFunction' Abstract.FunctionDef {..}
+            goSig sig = goLetFunctionDef sig getClauses
               where
-                getClauses :: Sem r (NonEmpty Abstract.FunctionClause)
-                getClauses = do
-                  cls <-
-                    sequence
-                      [ goFunctionClause c | LetFunClause c <- toList cl, sig ^. sigName == c ^. clauseOwnerFunction
-                      ]
-                  case nonEmpty cls of
-                    Nothing ->
-                      throw
-                        ( ErrLacksFunctionClause (LacksFunctionClause sig)
-                        )
-                    Just r -> return r
+                getClauses :: [FunctionClause 'Scoped]
+                getClauses =
+                  [ c | LetFunClause c <- toList cl, sig ^. sigName == c ^. clauseOwnerFunction
+                  ]
 
     goApplication :: Application -> Sem r Abstract.Application
     goApplication (Application l arg) = do
