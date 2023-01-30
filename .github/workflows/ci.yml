@@ -95,8 +95,6 @@ jobs:
           path: main
           submodules: true
 
-      - uses: actions/cache@v3
-
       - uses: actions/cache/restore@v3
         id: cache
         name: Stack cache
@@ -187,7 +185,6 @@ jobs:
           path: main
           submodules: recursive
 
-      - uses: actions/checkout@v3
       - uses: actions/cache/restore@v3
         id: cache
         with:
@@ -339,7 +336,6 @@ jobs:
           path: main
           submodules: recursive
 
-      - uses: actions/checkout@v3
       - uses: actions/cache/restore@v3
         id: cache
         with:
