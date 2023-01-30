@@ -24,7 +24,7 @@ instance ToGenericError NoLexOrder where
       i = getLoc name
 
       msg :: Doc Ann
-      msg =
+      msg = do
         "The function"
           <+> code (pretty name)
           <+> "fails the termination checker."
