@@ -254,5 +254,12 @@ scoperErrorTests =
       $(mkRelFile "DuplicateInductiveParameterName.juvix")
       $ \case
         ErrDuplicateInductiveParameterName {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "A function has a duplicate clause"
+      $(mkRelDir ".")
+      $(mkRelFile "DuplicateClause.juvix")
+      $ \case
+        ErrDuplicateFunctionClause {} -> Nothing
         _ -> wrongError
   ]
