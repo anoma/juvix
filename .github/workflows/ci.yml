@@ -107,11 +107,7 @@ jobs:
         with:
           version: '13.0'
           cached: '${{ steps.cache-llvm.outputs.cache-hit }}'
-      - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
-          echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
+
       - name: Install libicu for testing
         run: sudo apt install -y libicu66
       - name: Build Project
@@ -121,14 +117,14 @@ jobs:
       - uses: actions/cache/save@v3
         if: always()
         with:
+          key: '${{ steps.cache.outputs.key }}'
           path: |
             ~/.stack
-          key: '${{ steps.cache.outputs.key }}'
       - uses: actions/cache/save@v3
         with:
+          key: '${{ steps.cache.outputs.key }}'
           path: |
             main/.stack-work
-          key: '${{ steps.cache.outputs.key }}'
   test-linux:
     needs: build-linux
     runs-on: ubuntu-20.04
