@@ -82,6 +82,9 @@ instance PrettyCode LetClause where
   ppCode = \case
     LetFunDef f -> ppCode f
 
+ppPipeBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
+ppPipeBlock items = vsep <$> mapM (fmap (kwPipe <+>) . ppCode) items
+
 instance PrettyCode LambdaClause where
   ppCode LambdaClause {..} = do
     lambdaParameters' <- hsep <$> mapM ppCodeAtom _lambdaPatterns
@@ -90,7 +93,7 @@ instance PrettyCode LambdaClause where
 
 instance PrettyCode Lambda where
   ppCode Lambda {..} = do
-    lambdaClauses' <- ppBlock _lambdaClauses
+    lambdaClauses' <- ppPipeBlock _lambdaClauses
     return $ kwLambda <+> lambdaClauses'
 
 instance PrettyCode a => PrettyCode (WithLoc a) where
