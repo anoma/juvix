@@ -117,12 +117,12 @@ jobs:
       - uses: actions/cache/save@v3
         if: always()
         with:
-          key: '${{ steps.cache.outputs.key }}'
+          key: '${{ steps.cache.outputs.cache-primary-key }}'
           path: |
             ~/.stack
       - uses: actions/cache/save@v3
         with:
-          key: '${{ steps.cache.outputs.key }}'
+          key: '${{ steps.cache.outputs.cache-primary-key }}'
           path: |
             main/.stack-work
   test-linux:
@@ -141,8 +141,7 @@ jobs:
           path: |
             ~/.stack
             main/.stack-work
-          key: >-
-            ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{
+          key: ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{
             hashFiles('main/package.yaml') }}
           restore-keys: |
             ${{ runner.os }}-
@@ -209,12 +208,12 @@ jobs:
         with:
           path: |
             ~/.stack
-          key: '${{ steps.cache.outputs.key }}'
+          key: '${{ steps.cache.outputs.cache-primary-key }}'
       - uses: actions/cache/save@v3
         with:
           path: |
             main/.stack-work
-          key: '${{ steps.cache.outputs.key }}'
+          key: '${{ steps.cache.outputs.cache-primary-key }}'
 
 
   docs-linux:
@@ -284,7 +283,7 @@ jobs:
           path: |
             ~/.stack
             main/.stack-work
-          key: '${{ steps.cache.outputs.key }}'
+          key: '${{ steps.cache.outputs.cache-primary-key }}'
       - name: Deploy HTML to github pages
         uses: peaceiris/actions-gh-pages@v3
         with:
@@ -337,12 +336,12 @@ jobs:
         with:
           path: |
             ~/.stack
-          key: '${{ steps.cache.outputs.key }}'
+          key: '${{ steps.cache.outputs.cache-primary-key }}'
       - uses: actions/cache/save@v3
         with:
           path: |
             main/.stack-work
-          key: '${{ steps.cache.outputs.key }}'
+          key: '${{ steps.cache.outputs.cache-primary-key }}'
   test-macos:
     needs: build-macos
     runs-on: macos-12
@@ -425,9 +424,9 @@ jobs:
         with:
           path: |
             ~/.stack
-          key: '${{ steps.cache.outputs.key }}'
+          key: '${{ steps.cache.outputs.cache-primary-key }}'
       - uses: actions/cache/save@v3
         with:
           path: |
             main/.stack-work
-          key: '${{ steps.cache.outputs.key }}'
+          key: '${{ steps.cache.outputs.cache-primary-key }}'
