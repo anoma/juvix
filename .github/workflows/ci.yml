@@ -144,10 +144,13 @@ jobs:
       # - name: Install libicu for testing
       #   run: sudo apt install -y libicu66
 
-      # - name: Build Project
-      #   run: |
-      #     cd main
-      #     make build
+      - name: Build Project
+        run: |
+          mkdir -p ~/.stack
+          touch ~/.stack/config.yaml
+          cd main
+          mkdir -p .stack-work
+          touch .stack-work/stack.yaml
 
       # - name: Test suite
       #   id: test
