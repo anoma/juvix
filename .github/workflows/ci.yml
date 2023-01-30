@@ -82,102 +82,78 @@ jobs:
         extra_args:
           mixed-line-ending --all-files
 
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-12 , ubuntu-20.04]
-        ghc: ["9.2.5"]
-    steps:
-      - name: Checkout our repository
-        uses: actions/checkout@v3
-        with:
-          path: main
-          submodules: true
+  build-linux:
+    runs-on: ubuntu-20.04
+    setps:
+    - name: Checkout our repository
+      uses: actions/checkout@v3
+      with:
+        path: main
+        submodules: true
 
-      - uses: actions/cache/restore@v3
-        id: cache
-        name: Stack cache
-        with:
-          path: |
-            ~/.stack
-            main/.stack-work
-          key: ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-
+    - uses: actions/cache/restore@v3
+      id: cache
+      name: Stack cache
+      with:
+        path: |
+          ~/.stack
+          main/.stack-work
+        key: ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-
 
-      - uses: haskell/actions/setup@v2
-        name: Setup Haskell
-        with:
-          ghc-version: ${{ matrix.ghc }}
-          enable-stack: true
-          stack-version: 'latest'
+    - uses: haskell/actions/setup@v2
+      name: Setup Haskell
+      with:
+        ghc-version: 9.2.5
+        enable-stack: true
+        stack-version: 'latest'
 
-      - name: Cache LLVM and Clang (Linux)
-        if: runner.os == 'Linux'
-        id: cache-llvm
-        uses: actions/cache@v3
-        with:
-          path: |
-            C:/Program Files/LLVM
-            ./llvm
-          key: ${{ runner.os }}-llvm-13
+    - name: Cache LLVM and Clang
+      id: cache-llvm
+      uses: actions/cache@v3
+      with:
+        path: |
+          C:/Program Files/LLVM
+          ./llvm
+        key: ${{ runner.os }}-llvm-13
 
-      - name: Install LLVM and Clang (Linux)
-        if: runner.os == 'Linux'
-        uses: KyleMayes/install-llvm-action@v1
-        with:
-          version: "13.0"
-          cached: ${{ steps.cache-llvm.outputs.cache-hit }}
+    - name: Install LLVM and Clang
+      uses: KyleMayes/install-llvm-action@v1
+      with:
+        version: "13.0"
+        cached: ${{ steps.cache-llvm.outputs.cache-hit }}
 
-      - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
-          echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
+    - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
+        echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
 
-      - name: Install ICU4C
-        if: startsWith(matrix.os, 'macos-')
-        run: |
-          brew install icu4c
-          brew link icu4c --force
+    - name: Install libicu for testing
+      run: sudo apt install -y libicu66
 
-      - name: Install libicu for testing
-        if: startsWith(matrix.os, 'ubuntu-')
-        run: sudo apt install -y libicu66
+    - name: Build Project
+      run: |
+        cd main
+        make build
 
-      - name: Build Project (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          cd main
-          make CC=$CC LIBTOOL=$LIBTOOL build
+    - uses: actions/cache/save@v3
+      if: always() # Saving Stack cache even if the Juvix build fails
+      with:
+        path: |
+          ~/.stack
+        key: ${{ steps.stack-cache.outputs.key }}
 
-      - name: Build Project (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          cd main
-          make build
+    - uses: actions/cache/save@v3
+      with:
+        path: |
+          main/.stack-work
+        key: ${{ steps.cache.outputs.key }}
 
-      - uses: actions/cache/save@v3
-        if: always() # Saving Stack cache even if the Juvix build fails
-        with:
-          path: |
-            ~/.stack
-          key: ${{ steps.stack-cache.outputs.key }}
-
-      - uses: actions/cache/save@v3
-        with:
-          path: |
-            main/.stack-work
-          key: ${{ steps.cache.outputs.key }}
-
-  test:
-    needs: build
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-20.04, macos-12]
-        ghc: ["9.2.5"]
+  test-linux:
+    needs: build-linux
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout the main repository
         uses: actions/checkout@v3
@@ -198,12 +174,11 @@ jobs:
       - uses: haskell/actions/setup@v2
         name: Setup Haskell
         with:
-          ghc-version: ${{ matrix.ghc }}
+          ghc-version: 9.2.5
           enable-stack: true
           stack-version: 'latest'
 
       - name: Cache LLVM and Clang (Linux)
-        if: runner.os == 'Linux'
         id: cache-llvm
         uses: actions/cache@v3
         with:
@@ -213,7 +188,6 @@ jobs:
           key: ${{ runner.os }}-llvm-13
 
       - name: Install LLVM and Clang (Linux)
-        if: runner.os == 'Linux'
         uses: KyleMayes/install-llvm-action@v1
         with:
           version: "13.0"
@@ -236,32 +210,8 @@ jobs:
           binaries-location: bin
           cache: true
 
-      - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
-          echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
-
-      - name: stack setup (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          cd main
-          stack setup
-
-      - name: Add homebrew clang to the PATH (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
-
-      - name: Test suite (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          cd main
-          make CC=$CC LIBTOOL=$LIBTOOL test
-
-      - name: Test suite (linux)
+      - name: Test suite
         id: test
-        if: runner.os == 'Linux'
         run: |
           cd main
           make test
@@ -270,40 +220,19 @@ jobs:
         run: |
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Download Smoke binary
-        uses: jaxxstorm/action-install-gh-release@v1.9.0
-        if: runner.os == 'macOS'
-        with:
-          repo: jonaprieto/smoke
-          tag: v2.3.2
-          cache: enable
-          extension-matching: disable
-          rename-to: smoke
-          chmod: 0755
-
-      - name : Smoke testing (macOS)
-        id: smoke-macos
-        if: runner.os == 'macOS'
-        run : |
-          cd main
-          make CC=$CC LIBTOOL=$LIBTOOL smoke
-
       - uses: actions/checkout@v3
-        if: runner.os == 'Linux'
         with:
           repository: jonaprieto/smoke
           path: smoke
 
       - name: Install Smoke
-        if: runner.os == 'Linux'
         run: |
           cd smoke
           stack install
         shell: bash
 
-      - name : Smoke testing (linux)
+      - name : Smoke testing
         id: smoke-linux
-        if: runner.os == 'Linux'
         run : |
           cd main
           make smoke
@@ -321,14 +250,10 @@ jobs:
             main/.stack-work
           key: ${{ steps.cache.outputs.key }}
 
-  docs:
-    needs: build
+  docs-linux:
+    needs: build-linux
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-    strategy:
-      matrix:
-        os: [ubuntu-20.04]
-        ghc: ["9.2.5"]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout our repository
         uses: actions/checkout@v3
@@ -405,3 +330,155 @@ jobs:
           publish_dir: main/_docs
           enable_jekyll: false
           cname: docs.juvix.org
+
+  build-macos:
+    runs-on: macos-12
+    steps:
+      - name: Checkout our repository
+        uses: actions/checkout@v3
+        with:
+          path: main
+          submodules: true
+
+      - uses: actions/cache/restore@v3
+        id: cache
+        name: Stack cache
+        with:
+          path: |
+            ~/.stack
+            main/.stack-work
+          key: ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-
+
+      - uses: haskell/actions/setup@v2
+        name: Setup Haskell
+        with:
+          ghc-version: 9.2.5
+          enable-stack: true
+          stack-version: 'latest'
+
+      - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
+        run: |
+          echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
+          echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
+
+      - name: Install ICU4C
+        run: |
+          brew install icu4c
+          brew link icu4c --force
+
+      - name: Build Project (macOS)
+        run: |
+          cd main
+          make CC=$CC LIBTOOL=$LIBTOOL build
+
+      - uses: actions/cache/save@v3
+        if: always() # Saving Stack cache even if the Juvix build fails
+        with:
+          path: |
+            ~/.stack
+          key: ${{ steps.stack-cache.outputs.key }}
+
+      - uses: actions/cache/save@v3
+        with:
+          path: |
+            main/.stack-work
+          key: ${{ steps.cache.outputs.key }}
+
+  test-macos:
+    needs: build-macos
+    runs-on: macos-12
+    steps:
+      - name: Checkout the main repository
+        uses: actions/checkout@v3
+        with:
+          path: main
+          submodules: recursive
+
+      - uses: actions/cache/restore@v3
+        id: cache
+        with:
+          path: |
+            ~/.stack
+            main/.stack-work
+          key: ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{ hashFiles('main/package.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-
+
+      - uses: haskell/actions/setup@v2
+        name: Setup Haskell
+        with:
+          ghc-version: 9.2.5
+          enable-stack: true
+          stack-version: 'latest'
+
+      - name: Download and extract wasi-sysroot
+        run: |
+          curl https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/wasi-sysroot-15.0.tar.gz -OL
+          tar xfv wasi-sysroot-15.0.tar.gz
+
+      - name: Set WASI_SYSROOT_PATH
+        run: |
+          echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
+
+      - name: Install the latest Wasmer version
+        uses: jonaprieto/action-install-gh-release@1
+        with:
+          repo: wasmerio/wasmer
+          tag: latest
+          binaries-location: bin
+          cache: true
+
+      - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
+        run: |
+          echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
+          echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
+
+      - name: stack setup (macOS)
+        run: |
+          cd main
+          stack setup
+
+      - name: Add homebrew clang to the PATH (macOS)
+        run: |
+          echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
+
+      - name: Test suite (macOS)
+        run: |
+          cd main
+          make CC=$CC LIBTOOL=$LIBTOOL test
+
+      - name: Add ~/.local/bin to PATH
+        run: |
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Download Smoke binary
+        uses: jaxxstorm/action-install-gh-release@v1.9.0
+        with:
+          repo: jonaprieto/smoke
+          tag: v2.3.2
+          cache: enable
+          extension-matching: disable
+          rename-to: smoke
+          chmod: 0755
+
+      - name : Smoke testing (macOS)
+        id: smoke-macos
+        if: runner.os == 'macOS'
+        run : |
+          cd main
+          make CC=$CC LIBTOOL=$LIBTOOL smoke
+
+      - uses: actions/cache/save@v3
+        if: always() # Saving Stack cache even if the Juvix build fails
+        with:
+          path: |
+            ~/.stack
+          key: ${{ steps.stack-cache.outputs.key }}
+
+      - uses: actions/cache/save@v3
+        with:
+          path: |
+            main/.stack-work
+          key: ${{ steps.cache.outputs.key }}
