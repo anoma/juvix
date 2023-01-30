@@ -38,6 +38,8 @@ data VarRef = VarRef
 data Instruction
   = Nop -- no operation
   | Binop BinaryOp
+  | Show InstrShow
+  | StrToInt InstrStrToInt
   | Assign InstrAssign
   | Trace InstrTrace
   | Dump
@@ -70,6 +72,17 @@ data Opcode
   | OpIntLt
   | OpIntLe
   | OpEq
+  | OpStrConcat
+
+data InstrShow = InstrShow
+  { _instrShowResult :: VarRef,
+    _instrShowValue :: Value
+  }
+
+data InstrStrToInt = InstrStrToInt
+  { _instrStrToIntResult :: VarRef,
+    _instrStrToIntValue :: Value
+  }
 
 data InstrAssign = InstrAssign
   { _instrAssignResult :: VarRef,

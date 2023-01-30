@@ -19,10 +19,14 @@ builtinInductiveName = \case
 builtinAxiomName :: BuiltinAxiom -> Maybe Text
 builtinAxiomName = \case
   BuiltinNatPrint -> Just printNat
+  BuiltinNatToString -> Just natToString
   BuiltinIO -> Just io
   BuiltinIOSequence -> Just ioseq
+  BuiltinIOReadline -> Just ioreadline
   BuiltinString -> Just string_
   BuiltinStringPrint -> Just printString
+  BuiltinStringConcat -> Just stringConcat
+  BuiltinStringToNat -> Just stringToNat
   BuiltinBoolPrint -> Just printBool
   BuiltinTrace -> Just trace_
   BuiltinFail -> Just fail_

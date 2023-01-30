@@ -10,6 +10,7 @@
 #else
 size_t strlen(const char *str);
 char *strcpy(char *restrict dest, const char *restrict src);
+char *strcat(char *restrict dest, const char *restrict src);
 #endif
 
 static inline char *get_cstring(word_t x) {
@@ -32,6 +33,19 @@ static inline char *get_cstring(word_t x) {
         INIT_CSTRING(var, str, juvix_nfields);               \
     } while (0)
 
+#define CONCAT_CSTRINGS(var, str1, str2)                              \
+    do {                                                              \
+        size_t juvix_nfields = get_nfields(str1) + get_nfields(str2); \
+        if (juvix_nfields > MAX_FIELDS) {                             \
+            error_exit_msg("concat: string too long");                \
+        }                                                             \
+        void *tmp;                                                    \
+        ALLOC(tmp, juvix_nfields + 1);                                \
+        INIT_CSTRING((word_t)tmp, get_cstring(str1), juvix_nfields);  \
+        strcat((char *)tmp + sizeof(word_t), get_cstring(str2));      \
+        var = (word_t)tmp;                                            \
+    } while (0)
+
 // Memory pointers (see alloc.h) need to be saved before calling this
 // function.
 word_t alloc_cstring(const char *str);
@@ -40,5 +54,9 @@ word_t alloc_cstring(const char *str);
 #define MAKE_CONST_CSTRING(n, str) juvix_strings[n] = alloc_cstring(str)
 
 #define DECL_CONST_CSTRINGS(n) static word_t juvix_strings[n]
+
+// Converts a C string to an integer. Sets 'errno' to 'EINVAL' if the conversion
+// could not be performed.
+int strtoint(const char *str);
 
 #endif

@@ -266,6 +266,9 @@ genCode infoTable fi =
       Core.OpIntLt -> mkBinop IntLt
       Core.OpIntLe -> mkBinop IntLe
       Core.OpEq -> mkBinop ValEq
+      Core.OpShow -> mkInstr ValShow
+      Core.OpStrConcat -> mkBinop StrConcat
+      Core.OpStrToInt -> mkInstr StrToInt
       Core.OpTrace -> mkInstr Trace
       Core.OpFail -> mkInstr Failure
 

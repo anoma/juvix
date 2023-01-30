@@ -14,8 +14,17 @@ suc = primPrefix "suc"
 printNat :: Text
 printNat = primPrefix "printNat"
 
+natToString :: Text
+natToString = primPrefix "natToString"
+
 printString :: Text
 printString = primPrefix "printString"
+
+stringConcat :: Text
+stringConcat = primPrefix "stringConcat"
+
+stringToNat :: Text
+stringToNat = primPrefix "stringToNat"
 
 io :: Text
 io = primPrefix "io"
@@ -43,6 +52,9 @@ int_ = "int"
 
 ioseq :: Text
 ioseq = primPrefix "sequence"
+
+ioreadline :: Text
+ioreadline = primPrefix "readline"
 
 natplus :: Text
 natplus = primPrefix "natplus"

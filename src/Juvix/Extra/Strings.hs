@@ -95,6 +95,12 @@ nat = "nat"
 stringPrint :: (IsString s) => s
 stringPrint = "string-print"
 
+stringConcat :: (IsString s) => s
+stringConcat = "string-concat"
+
+stringToNat :: (IsString s) => s
+stringToNat = "string-to-nat"
+
 bool_ :: (IsString s) => s
 bool_ = "bool"
 
@@ -110,8 +116,14 @@ io = "IO"
 ioSequence :: (IsString s) => s
 ioSequence = "IO-sequence"
 
+ioReadline :: (IsString s) => s
+ioReadline = "IO-readline"
+
 natPrint :: (IsString s) => s
 natPrint = "nat-print"
+
+natToString :: (IsString s) => s
+natToString = "nat-to-string"
 
 natPlus :: (IsString s) => s
 natPlus = "nat-plus"
@@ -202,6 +214,15 @@ trace_ = "trace"
 
 fail_ :: (IsString s) => s
 fail_ = "fail"
+
+show_ :: (IsString s) => s
+show_ = "show"
+
+strConcat :: (IsString s) => s
+strConcat = "strConcat"
+
+strToInt :: (IsString s) => s
+strToInt = "strToInt"
 
 data_ :: (IsString s) => s
 data_ = "data"
@@ -457,6 +478,15 @@ instrLe = "le"
 
 instrEq :: (IsString s) => s
 instrEq = "eq"
+
+instrStrConcat :: (IsString s) => s
+instrStrConcat = "strcat"
+
+instrStrToInt :: (IsString s) => s
+instrStrToInt = "atoi"
+
+instrShow :: (IsString s) => s
+instrShow = "show"
 
 instrPush :: (IsString s) => s
 instrPush = "push"

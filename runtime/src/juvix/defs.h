@@ -4,8 +4,12 @@
 #include <juvix/arch/defs.h>
 
 #ifdef API_LIBC
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#else
+extern int errno;
+#define EINVAL 1
 #endif
 
 #ifdef API_WASI

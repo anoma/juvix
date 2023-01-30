@@ -15,3 +15,30 @@ registerStringPrint f = do
   io <- getBuiltinName (getLoc f) BuiltinIO
   unless (f ^. axiomType === (string_ --> io)) (error "String print has the wrong type signature")
   registerBuiltin BuiltinStringPrint (f ^. axiomName)
+
+registerIOReadline :: (Members '[Builtins, NameIdGen] r) => AxiomDef -> Sem r ()
+registerIOReadline d = do
+  string_ <- getBuiltinName (getLoc d) BuiltinString
+  io <- getBuiltinName (getLoc d) BuiltinIO
+  unless (((string_ --> io) --> io) === d ^. axiomType) (error "readline must be of type (string -> IO) -> IO")
+  registerBuiltin BuiltinIOReadline (d ^. axiomName)
+
+registerNatToString :: (Member Builtins r) => AxiomDef -> Sem r ()
+registerNatToString f = do
+  string_ <- getBuiltinName (getLoc f) BuiltinString
+  nat <- getBuiltinName (getLoc f) BuiltinNat
+  unless (f ^. axiomType === (nat --> string_)) (error "natToString has the wrong type signature")
+  registerBuiltin BuiltinNatToString (f ^. axiomName)
+
+registerStringToNat :: (Member Builtins r) => AxiomDef -> Sem r ()
+registerStringToNat f = do
+  string_ <- getBuiltinName (getLoc f) BuiltinString
+  nat <- getBuiltinName (getLoc f) BuiltinNat
+  unless (f ^. axiomType === (string_ --> nat)) (error "stringToNat has the wrong type signature")
+  registerBuiltin BuiltinStringToNat (f ^. axiomName)
+
+registerStringConcat :: (Member Builtins r) => AxiomDef -> Sem r ()
+registerStringConcat f = do
+  string_ <- getBuiltinName (getLoc f) BuiltinString
+  unless (f ^. axiomType === (string_ --> string_ --> string_)) (error "++str has the wrong type signature")
+  registerBuiltin BuiltinStringConcat (f ^. axiomName)
