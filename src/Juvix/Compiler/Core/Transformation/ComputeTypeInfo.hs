@@ -9,9 +9,9 @@ import Juvix.Compiler.Core.Transformation.Base
 -- | Computes the TypeInfo for each subnode.
 --
 -- Assumptions:
--- 1. No polymorphism.
--- 2. No dynamic type.
--- 3. All binders and identifiers are decorated with full type information.
+-- 1. All binders and identifiers are decorated with full type information.
+-- 2. No polymorphism.
+-- 3. No dynamic type.
 -- 4. All cases have at least one branch.
 -- 5. No `Match` nodes.
 -- 6. All inductives and function types are in universe 0.
