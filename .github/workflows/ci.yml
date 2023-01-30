@@ -150,7 +150,7 @@ jobs:
           touch ~/.stack/config.yaml
           cd main
           mkdir -p .stack-work
-          touch .stack-work/stack.yaml
+          touch stack.yaml
 
       # - name: Test suite
       #   id: test
