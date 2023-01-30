@@ -77,7 +77,7 @@ jobs:
           submodules: true
       - uses: actions/cache/restore@v3
         id: stack-cache
-        name: Stack cache
+        name: Restore .stack cache
         with:
           path: |
             ~/.stack
@@ -88,7 +88,7 @@ jobs:
 
       - uses: actions/cache/restore@v3
         id: stack-work-cache
-        name: Stack Work cache
+        name: Restore main/.stack-work cache
         with:
           path: |
             ~/.stack
@@ -177,14 +177,16 @@ jobs:
       #     cd main
       #     make smoke
 
-      - uses: actions/cache/save@v3
+      - name: Save cache .stack 
+        uses: actions/cache/save@v3
         if: always()
         with:
           path: |
             ~/.stack
           key: '${{ steps.stack-cache.outputs.cache-primary-key }}'
 
-      - uses: actions/cache/save@v3
+      - name: Save cache main/.stack-work if the job was successful
+        uses: actions/cache/save@v3
         with:
           path: |
             main/.stack-work
@@ -205,15 +207,14 @@ jobs:
           submodules: recursive
 
       - uses: actions/cache/restore@v3
+        name: Restore .stack cache
         id: stack-cache
         with:
           fail-on-cache-miss: true
           path: |
             ~/.stack
-            main/.stack-work
           key: >-
-            ${{ runner.os }}-stack-${{ hashFiles('main/stack.yaml') }}-${{
-            hashFiles('main/package.yaml') }}
+            ${{ runner.os }}-stack-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
           restore-keys: |
             ${{ runner.os }}-stack-
 
@@ -224,8 +225,7 @@ jobs:
           path: |
             main/.stack-work
           key: >-
-            ${{ runner.os }}-stack-work-${{ hashFiles('main/stack.yaml') }}-${{
-            hashFiles('main/package.yaml') }}
+            ${{ runner.os }}-stack-work-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
           restore-keys: |
             ${{ runner.os }}-stack-work-     
 
