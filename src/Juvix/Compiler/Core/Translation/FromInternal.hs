@@ -62,9 +62,9 @@ setupIntToNat sym tab =
               (mkConstr (setInfoName "suc" mempty) tagSuc [mkApp' (mkIdent' sym) (mkBuiltinApp' OpIntSub [mkVar' 0, mkConstant' (ConstInteger 1)])])
         _ ->
           mkLambda' $ mkVar' 0
-    tagZeroM = fmap ((^. constructorTag) . fst) $ uncons $ filter (\ci -> ci ^. constructorBuiltin == Just BuiltinNatZero) $ HashMap.elems (tab ^. infoConstructors)
-    tagSucM = fmap ((^. constructorTag) . fst) $ uncons $ filter (\ci -> ci ^. constructorBuiltin == Just BuiltinNatSuc) $ HashMap.elems (tab ^. infoConstructors)
-    boolSymM = fmap ((^. inductiveSymbol) . fst) $ uncons $ filter (\ind -> ind ^. inductiveBuiltin == Just BuiltinBool) $ HashMap.elems (tab ^. infoInductives)
+    tagZeroM = (^. constructorTag) <$> lookupBuiltinConstructor tab BuiltinNatZero
+    tagSucM = (^. constructorTag) <$> lookupBuiltinConstructor tab BuiltinNatSuc
+    boolSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinBool
 
 fromInternal :: Internal.InternalTypedResult -> Sem k CoreResult
 fromInternal i = do

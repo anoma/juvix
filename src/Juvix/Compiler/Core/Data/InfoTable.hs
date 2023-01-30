@@ -4,6 +4,7 @@ module Juvix.Compiler.Core.Data.InfoTable
   )
 where
 
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Core.Language
 
@@ -20,7 +21,8 @@ data InfoTable = InfoTable
     _infoAxioms :: HashMap Text AxiomInfo,
     _infoIntToNat :: Maybe Symbol,
     _infoNextSymbol :: Word,
-    _infoNextTag :: Word
+    _infoNextTag :: Word,
+    _infoBuiltins :: HashMap BuiltinPrim IdentKind
   }
 
 emptyInfoTable :: InfoTable
@@ -35,7 +37,8 @@ emptyInfoTable =
       _infoAxioms = mempty,
       _infoIntToNat = Nothing,
       _infoNextSymbol = 1,
-      _infoNextTag = 0
+      _infoNextTag = 0,
+      _infoBuiltins = mempty
     }
 
 data IdentKind
@@ -102,3 +105,36 @@ makeLenses ''InductiveInfo
 makeLenses ''ConstructorInfo
 makeLenses ''ParameterInfo
 makeLenses ''AxiomInfo
+
+lookupBuiltinInductive :: InfoTable -> BuiltinInductive -> Maybe InductiveInfo
+lookupBuiltinInductive tab b = (HashMap.!) (tab ^. infoInductives) . indSym <$> idenKind
+  where
+    idenKind :: Maybe IdentKind
+    idenKind = HashMap.lookup (BuiltinsInductive b) (tab ^. infoBuiltins)
+
+    indSym :: IdentKind -> Symbol
+    indSym = \case
+      IdentInd s -> s
+      _ -> error "core infotable: expected inductive identifier"
+
+lookupBuiltinConstructor :: InfoTable -> BuiltinConstructor -> Maybe ConstructorInfo
+lookupBuiltinConstructor tab b = (HashMap.!) (tab ^. infoConstructors) . ctorTag <$> idenKind
+  where
+    idenKind :: Maybe IdentKind
+    idenKind = HashMap.lookup (BuiltinsConstructor b) (tab ^. infoBuiltins)
+
+    ctorTag :: IdentKind -> Tag
+    ctorTag = \case
+      IdentConstr t -> t
+      _ -> error "core infotable: expected constructor identifier"
+
+lookupBuiltinFunction :: InfoTable -> BuiltinFunction -> Maybe IdentifierInfo
+lookupBuiltinFunction tab b = (HashMap.!) (tab ^. infoIdentifiers) . funSym <$> idenKind
+  where
+    idenKind :: Maybe IdentKind
+    idenKind = HashMap.lookup (BuiltinsFunction b) (tab ^. infoBuiltins)
+
+    funSym :: IdentKind -> Symbol
+    funSym = \case
+      IdentFun s -> s
+      _ -> error "core infotable: expected function identifier"

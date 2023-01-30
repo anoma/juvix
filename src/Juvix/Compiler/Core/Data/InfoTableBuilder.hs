@@ -63,14 +63,29 @@ runInfoTableBuilder tab =
         modify' (over infoNextTag (+ 1))
         return (UserTag (s ^. infoNextTag))
       RegisterIdent idt ii -> do
-        modify' (over infoIdentifiers (HashMap.insert (ii ^. identifierSymbol) ii))
-        modify' (over identMap (HashMap.insert idt (IdentFun (ii ^. identifierSymbol))))
+        let sym = ii ^. identifierSymbol
+        let identKind = IdentFun (ii ^. identifierSymbol)
+        whenJust
+          (ii ^. identifierBuiltin)
+          (\b -> modify' (over infoBuiltins (HashMap.insert (BuiltinsFunction b) identKind)))
+        modify' (over infoIdentifiers (HashMap.insert sym ii))
+        modify' (over identMap (HashMap.insert idt identKind))
       RegisterConstructor idt ci -> do
-        modify' (over infoConstructors (HashMap.insert (ci ^. constructorTag) ci))
-        modify' (over identMap (HashMap.insert idt (IdentConstr (ci ^. constructorTag))))
+        let tag = ci ^. constructorTag
+        let identKind = IdentConstr tag
+        whenJust
+          (ci ^. constructorBuiltin)
+          (\b -> modify' (over infoBuiltins (HashMap.insert (BuiltinsConstructor b) identKind)))
+        modify' (over infoConstructors (HashMap.insert tag ci))
+        modify' (over identMap (HashMap.insert idt identKind))
       RegisterInductive idt ii -> do
-        modify' (over infoInductives (HashMap.insert (ii ^. inductiveSymbol) ii))
-        modify' (over identMap (HashMap.insert idt (IdentInd (ii ^. inductiveSymbol))))
+        let sym = ii ^. inductiveSymbol
+        let identKind = IdentInd sym
+        whenJust
+          (ii ^. inductiveBuiltin)
+          (\b -> modify' (over infoBuiltins (HashMap.insert (BuiltinsInductive b) identKind)))
+        modify' (over infoInductives (HashMap.insert sym ii))
+        modify' (over identMap (HashMap.insert idt identKind))
       RegisterIdentNode sym node ->
         modify' (over identContext (HashMap.insert sym node))
       RegisterMain sym -> do
