@@ -176,7 +176,7 @@ jobs:
           cd main
           make smoke
 
-      - name: Save cache .stack 
+      - name: Save cache .stack
         uses: actions/cache/save@v3
         if: always()
         with:
@@ -193,7 +193,7 @@ jobs:
 
 
   docs-linux:
-    # needs: build-and-test-linux
+    needs: build-and-test-linux
     # if: >-
     #   github.ref == 'refs/heads/main' || github.event_name ==
     #   'workflow_dispatch'
@@ -226,7 +226,7 @@ jobs:
           key: >-
             ${{ runner.os }}-stack-work-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-stack-work-     
+            ${{ runner.os }}-stack-work-
 
       - uses: r-lib/actions/setup-pandoc@v2
         with:
