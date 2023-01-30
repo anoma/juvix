@@ -283,7 +283,7 @@ jobs:
           enable_jekyll: false
           cname: docs.juvix.org
 
-  build-macos:
+  build-and-test-macos:
     runs-on: macos-12
     steps:
       - name: Checkout our repository
