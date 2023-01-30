@@ -22,50 +22,52 @@ concurrency:
   cancel-in-progress: true
 env:
   STACKFLAGS: '--pedantic'
+
 jobs:
-  # ormolu:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: mrkkrp/ormolu-action@v9
-  #       with:
-  #         extra-args: >-
-  #           --ghc-opt -XDerivingStrategies --ghc-opt -XImportQualifiedPost
-  #           --ghc-opt -XMultiParamTypeClasses --ghc-opt -XStandaloneDeriving
-  #           --ghc-opt -XTemplateHaskell --ghc-opt -XUnicodeSyntax
-  # clang-format:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: jidicula/clang-format-action@v4.10.1
-  #       with:
-  #         clang-format-version: '15'
-  #         check-path: runtime/src
-  # pre-commit:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: actions/setup-python@v4
-  #       with:
-  #         python-version: '3.9'
-  #     - uses: pre-commit/action@v3.0.0
-  #       with:
-  #         extra_args: trailing-whitespace --all-files
-  #     - uses: pre-commit/action@v3.0.0
-  #       with:
-  #         extra_args: end-of-file-fixer --all-files
-  #     - uses: pre-commit/action@v3.0.0
-  #       with:
-  #         extra_args: check-yaml --all-files
-  #     - uses: pre-commit/action@v3.0.0
-  #       with:
-  #         extra_args: check-added-large-files --all-files
-  #     - uses: pre-commit/action@v3.0.0
-  #       with:
-  #         extra_args: check-case-conflict --all-files
-  #     - uses: pre-commit/action@v3.0.0
-  #       with:
-  #         extra_args: mixed-line-ending --all-files
+
+  ormolu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: mrkkrp/ormolu-action@v9
+        with:
+          extra-args: >-
+            --ghc-opt -XDerivingStrategies --ghc-opt -XImportQualifiedPost
+            --ghc-opt -XMultiParamTypeClasses --ghc-opt -XStandaloneDeriving
+            --ghc-opt -XTemplateHaskell --ghc-opt -XUnicodeSyntax
+  clang-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: jidicula/clang-format-action@v4.10.1
+        with:
+          clang-format-version: '15'
+          check-path: runtime/src
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: trailing-whitespace --all-files
+      - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: end-of-file-fixer --all-files
+      - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: check-yaml --all-files
+      - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: check-added-large-files --all-files
+      - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: check-case-conflict --all-files
+      - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: mixed-line-ending --all-files
 
   build-and-test-linux:
     runs-on: ubuntu-20.04
@@ -98,84 +100,81 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-stack-work-
 
-      # - uses: haskell/actions/setup@v2
-      #   name: Setup Haskell
-      #   with:
-      #     ghc-version: 9.2.5
-      #     enable-stack: true
-      #     stack-version: latest
+      - uses: haskell/actions/setup@v2
+        name: Setup Haskell
+        with:
+          ghc-version: 9.2.5
+          enable-stack: true
+          stack-version: latest
 
-      # - name: Cache LLVM and Clang
-      #   id: cache-llvm
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: |
-      #       C:/Program Files/LLVM
-      #       ./llvm
-      #     key: '${{ runner.os }}-llvm-13'
+      - name: Cache LLVM and Clang
+        id: cache-llvm
+        uses: actions/cache@v3
+        with:
+          path: |
+            C:/Program Files/LLVM
+            ./llvm
+          key: '${{ runner.os }}-llvm-13'
 
-      # - name: Install LLVM and Clang
-      #   uses: KyleMayes/install-llvm-action@v1
-      #   with:
-      #     version: '13.0'
-      #     cached: '${{ steps.cache-llvm.outputs.cache-hit }}'
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: '13.0'
+          cached: '${{ steps.cache-llvm.outputs.cache-hit }}'
 
-      # - name: Download and extract wasi-sysroot
-      #   run: >
-      #     curl
-      #     https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/wasi-sysroot-15.0.tar.gz
-      #     -OL
+      - name: Download and extract wasi-sysroot
+        run: >
+          curl
+          https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/wasi-sysroot-15.0.tar.gz
+          -OL
 
-      #     tar xfv wasi-sysroot-15.0.tar.gz
-      # - name: Set WASI_SYSROOT_PATH
-      #   run: |
-      #     echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
+          tar xfv wasi-sysroot-15.0.tar.gz
+      - name: Set WASI_SYSROOT_PATH
+        run: |
+          echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
 
-      # - name: Install the latest Wasmer version
-      #   uses: jonaprieto/action-install-gh-release@1
-      #   with:
-      #     repo: wasmerio/wasmer
-      #     tag: latest
-      #     binaries-location: bin
-      #     cache: true
+      - name: Install the latest Wasmer version
+        uses: jonaprieto/action-install-gh-release@1
+        with:
+          repo: wasmerio/wasmer
+          tag: latest
+          binaries-location: bin
+          cache: true
 
-      # - name: Install libicu for testing
-      #   run: sudo apt install -y libicu66
+      - name: Install libicu for testing
+        run: sudo apt install -y libicu66
 
       - name: Build Project
         run: |
-          mkdir -p ~/.stack
-          touch ~/.stack/config.yaml
           cd main
-          mkdir -p .stack-work
-          touch stack.yaml
+          make build
 
-      # - name: Test suite
-      #   id: test
-      #   run: |
-      #     cd main
-      #     make test
+      - name: Test suite
+        id: test
+        run: |
+          cd main
+          make test
 
-      # - name: Add ~/.local/bin to PATH
-      #   run: |
-      #     echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Add ~/.local/bin to PATH
+        run: |
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      # - uses: actions/checkout@v3
-      #   with:
-      #     repository: jonaprieto/smoke
-      #     path: smoke
+      - uses: actions/checkout@v3
+        with:
+          repository: jonaprieto/smoke
+          path: smoke
 
-      # - name: Install Smoke
-      #   run: |
-      #     cd smoke
-      #     stack install
-      #   shell: bash
+      - name: Install Smoke
+        run: |
+          cd smoke
+          stack install
+        shell: bash
 
-      # - name: Smoke testing
-      #   id: smoke-linux
-      #   run: |
-      #     cd main
-      #     make smoke
+      - name: Smoke testing
+        id: smoke-linux
+        run: |
+          cd main
+          make smoke
 
       - name: Save cache .stack 
         uses: actions/cache/save@v3
@@ -194,7 +193,7 @@ jobs:
 
 
   docs-linux:
-    needs: build-and-test-linux
+    # needs: build-and-test-linux
     # if: >-
     #   github.ref == 'refs/heads/main' || github.event_name ==
     #   'workflow_dispatch'
@@ -274,13 +273,13 @@ jobs:
           make webapp-examples
           make demo-example
 
-      - name: Deploy HTML to github pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: '${{ secrets.GITHUB_TOKEN }}'
-          publish_dir: main/_docs
-          enable_jekyll: false
-          cname: docs.juvix.org
+      # - name: Deploy HTML to github pages
+      #   uses: peaceiris/actions-gh-pages@v3
+      #   with:
+      #     github_token: '${{ secrets.GITHUB_TOKEN }}'
+      #     publish_dir: main/_docs
+      #     enable_jekyll: false
+      #     cname: docs.juvix.org
 
   # build-macos:
   #   runs-on: macos-12
