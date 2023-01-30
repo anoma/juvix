@@ -291,6 +291,7 @@ jobs:
         with:
           path: main
           submodules: true
+
       - uses: actions/cache/restore@v3
         id: stack-cache
         name: Restore .stack cache
@@ -302,16 +303,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-stack-
 
-        - uses: actions/cache/restore@v3
-          name: Restore main/.stack-work cache
-          id: stack-work-cache
-          with:
-            path: |
-              main/.stack-work
-            key: >-
-              ${{ runner.os }}-stack-work-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
-            restore-keys: |
-              ${{ runner.os }}-stack-work-
+      - uses: actions/cache/restore@v3
+        name: Restore main/.stack-work cache
+        id: stack-work-cache
+        with:
+          path: |
+            main/.stack-work
+          key: >-
+            ${{ runner.os }}-stack-work-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-stack-work-
 
       - uses: haskell/actions/setup@v2
         name: Setup Haskell
