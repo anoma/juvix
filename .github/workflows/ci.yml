@@ -23,51 +23,51 @@ concurrency:
 env:
   STACKFLAGS: '--pedantic'
 jobs:
-  ormolu:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: mrkkrp/ormolu-action@v9
-        with:
-          extra-args: >-
-            --ghc-opt -XDerivingStrategies --ghc-opt -XImportQualifiedPost
-            --ghc-opt -XMultiParamTypeClasses --ghc-opt -XStandaloneDeriving
-            --ghc-opt -XTemplateHaskell --ghc-opt -XUnicodeSyntax
-  clang-format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: jidicula/clang-format-action@v4.10.1
-        with:
-          clang-format-version: '15'
-          check-path: runtime/src
-  pre-commit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-      - uses: pre-commit/action@v3.0.0
-        with:
-          extra_args: trailing-whitespace --all-files
-      - uses: pre-commit/action@v3.0.0
-        with:
-          extra_args: end-of-file-fixer --all-files
-      - uses: pre-commit/action@v3.0.0
-        with:
-          extra_args: check-yaml --all-files
-      - uses: pre-commit/action@v3.0.0
-        with:
-          extra_args: check-added-large-files --all-files
-      - uses: pre-commit/action@v3.0.0
-        with:
-          extra_args: check-case-conflict --all-files
-      - uses: pre-commit/action@v3.0.0
-        with:
-          extra_args: mixed-line-ending --all-files
+  # ormolu:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: mrkkrp/ormolu-action@v9
+  #       with:
+  #         extra-args: >-
+  #           --ghc-opt -XDerivingStrategies --ghc-opt -XImportQualifiedPost
+  #           --ghc-opt -XMultiParamTypeClasses --ghc-opt -XStandaloneDeriving
+  #           --ghc-opt -XTemplateHaskell --ghc-opt -XUnicodeSyntax
+  # clang-format:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: jidicula/clang-format-action@v4.10.1
+  #       with:
+  #         clang-format-version: '15'
+  #         check-path: runtime/src
+  # pre-commit:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: actions/setup-python@v4
+  #       with:
+  #         python-version: '3.9'
+  #     - uses: pre-commit/action@v3.0.0
+  #       with:
+  #         extra_args: trailing-whitespace --all-files
+  #     - uses: pre-commit/action@v3.0.0
+  #       with:
+  #         extra_args: end-of-file-fixer --all-files
+  #     - uses: pre-commit/action@v3.0.0
+  #       with:
+  #         extra_args: check-yaml --all-files
+  #     - uses: pre-commit/action@v3.0.0
+  #       with:
+  #         extra_args: check-added-large-files --all-files
+  #     - uses: pre-commit/action@v3.0.0
+  #       with:
+  #         extra_args: check-case-conflict --all-files
+  #     - uses: pre-commit/action@v3.0.0
+  #       with:
+  #         extra_args: mixed-line-ending --all-files
 
-  build-linux:
+  build-and-test-linux:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout our repository
@@ -76,144 +76,118 @@ jobs:
           path: main
           submodules: true
       - uses: actions/cache/restore@v3
-        id: cache
+        id: stack-cache
         name: Stack cache
         with:
           path: |
             ~/.stack
-            main/.stack-work
-          cache-primary-key: >-
-            ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{
+          key: >-
+            ${{ runner.os }}-stack-${{ hashFiles('main/stack.yaml') }}-${{
             hashFiles('main/package.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-
+            ${{ runner.os }}-stack-
 
-      - uses: haskell/actions/setup@v2
-        name: Setup Haskell
-        with:
-          ghc-version: 9.2.5
-          enable-stack: true
-          stack-version: latest
-      - name: Cache LLVM and Clang
-        id: cache-llvm
-        uses: actions/cache@v3
-        with:
-          path: |
-            C:/Program Files/LLVM
-            ./llvm
-          key: '${{ runner.os }}-llvm-13'
-      - name: Install LLVM and Clang
-        uses: KyleMayes/install-llvm-action@v1
-        with:
-          version: '13.0'
-          cached: '${{ steps.cache-llvm.outputs.cache-hit }}'
-
-      - name: Install libicu for testing
-        run: sudo apt install -y libicu66
-      - name: Build Project
-        run: |
-          cd main
-          make build
-      - uses: actions/cache/save@v3
-        if: always()
-        with:
-          key: '${{ steps.cache.outputs.cache-primary-key }}'
-          path: |
-            ~/.stack
-      - uses: actions/cache/save@v3
-        with:
-          key: '${{ steps.cache.outputs.cache-primary-key }}'
-          path: |
-            main/.stack-work
-  test-linux:
-    needs: build-linux
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout the main repository
-        uses: actions/checkout@v3
-        with:
-          path: main
-          submodules: recursive
       - uses: actions/cache/restore@v3
-        id: cache
+        id: stack-work-cache
+        name: Stack Work cache
         with:
-          fail-on-cache-miss: true
           path: |
             ~/.stack
             main/.stack-work
-          cache-primary-key: ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{
+          key: >-
+            ${{ runner.os }}-stack-work-${{ hashFiles('main/stack.yaml') }}-${{
             hashFiles('main/package.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-
-      - uses: haskell/actions/setup@v2
-        name: Setup Haskell
-        with:
-          ghc-version: 9.2.5
-          enable-stack: true
-          stack-version: latest
-      - name: Cache LLVM and Clang (Linux)
-        id: cache-llvm
-        uses: actions/cache@v3
-        with:
-          path: |
-            C:/Program Files/LLVM
-            ./llvm
-          key: '${{ runner.os }}-llvm-13'
-      - name: Install LLVM and Clang (Linux)
-        uses: KyleMayes/install-llvm-action@v1
-        with:
-          version: '13.0'
-          cached: '${{ steps.cache-llvm.outputs.cache-hit }}'
-      - name: Download and extract wasi-sysroot
-        run: >
-          curl
-          https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/wasi-sysroot-15.0.tar.gz
-          -OL
+            ${{ runner.os }}-stack-work-
 
-          tar xfv wasi-sysroot-15.0.tar.gz
-      - name: Set WASI_SYSROOT_PATH
-        run: |
-          echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
-      - name: Install the latest Wasmer version
-        uses: jonaprieto/action-install-gh-release@1
-        with:
-          repo: wasmerio/wasmer
-          tag: latest
-          binaries-location: bin
-          cache: true
-      - name: Test suite
-        id: test
-        run: |
-          cd main
-          make test
-      - name: Add ~/.local/bin to PATH
-        run: |
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-      - uses: actions/checkout@v3
-        with:
-          repository: jonaprieto/smoke
-          path: smoke
-      - name: Install Smoke
-        run: |
-          cd smoke
-          stack install
-        shell: bash
-      - name: Smoke testing
-        id: smoke-linux
-        run: |
-          cd main
-          make smoke
+      # - uses: haskell/actions/setup@v2
+      #   name: Setup Haskell
+      #   with:
+      #     ghc-version: 9.2.5
+      #     enable-stack: true
+      #     stack-version: latest
+
+      # - name: Cache LLVM and Clang
+      #   id: cache-llvm
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: |
+      #       C:/Program Files/LLVM
+      #       ./llvm
+      #     key: '${{ runner.os }}-llvm-13'
+
+      # - name: Install LLVM and Clang
+      #   uses: KyleMayes/install-llvm-action@v1
+      #   with:
+      #     version: '13.0'
+      #     cached: '${{ steps.cache-llvm.outputs.cache-hit }}'
+
+      # - name: Download and extract wasi-sysroot
+      #   run: >
+      #     curl
+      #     https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/wasi-sysroot-15.0.tar.gz
+      #     -OL
+
+      #     tar xfv wasi-sysroot-15.0.tar.gz
+      # - name: Set WASI_SYSROOT_PATH
+      #   run: |
+      #     echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
+
+      # - name: Install the latest Wasmer version
+      #   uses: jonaprieto/action-install-gh-release@1
+      #   with:
+      #     repo: wasmerio/wasmer
+      #     tag: latest
+      #     binaries-location: bin
+      #     cache: true
+
+      # - name: Install libicu for testing
+      #   run: sudo apt install -y libicu66
+
+      # - name: Build Project
+      #   run: |
+      #     cd main
+      #     make build
+
+      # - name: Test suite
+      #   id: test
+      #   run: |
+      #     cd main
+      #     make test
+
+      # - name: Add ~/.local/bin to PATH
+      #   run: |
+      #     echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      # - uses: actions/checkout@v3
+      #   with:
+      #     repository: jonaprieto/smoke
+      #     path: smoke
+
+      # - name: Install Smoke
+      #   run: |
+      #     cd smoke
+      #     stack install
+      #   shell: bash
+
+      # - name: Smoke testing
+      #   id: smoke-linux
+      #   run: |
+      #     cd main
+      #     make smoke
+
       - uses: actions/cache/save@v3
         if: always()
         with:
           path: |
             ~/.stack
-          key: '${{ steps.cache.outputs.cache-primary-key }}'
+          key: '${{ steps.stack-cache.outputs.cache-primary-key }}'
+
       - uses: actions/cache/save@v3
         with:
           path: |
             main/.stack-work
-          key: '${{ steps.cache.outputs.cache-primary-key }}'
+          key: '${{ steps.stack-work-cache.outputs.cache-primary-key }}'
 
 
   docs-linux:
@@ -228,31 +202,48 @@ jobs:
         with:
           path: main
           submodules: recursive
+
       - uses: actions/cache/restore@v3
-        id: cache
+        id: stack-cache
         with:
           fail-on-cache-miss: true
           path: |
             ~/.stack
             main/.stack-work
           key: >-
-            ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{
+            ${{ runner.os }}-stack-${{ hashFiles('main/stack.yaml') }}-${{
             hashFiles('main/package.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-
+            ${{ runner.os }}-stack-
+
+      - uses: actions/cache/restore@v3
+        id: stack-work-cache
+        with:
+          fail-on-cache-miss: true
+          path: |
+            main/.stack-work
+          key: >-
+            ${{ runner.os }}-stack-work-${{ hashFiles('main/stack.yaml') }}-${{
+            hashFiles('main/package.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-stack-work-     
+
       - uses: r-lib/actions/setup-pandoc@v2
         with:
           pandoc-version: 2.19.2
+
       - name: MDBook setup
         uses: peaceiris/actions-mdbook@v1
         with:
           mdbook-version: 0.4.22
+
       - uses: haskell/actions/setup@v2
         name: Setup Haskell
         with:
-          ghc-version: '${{ matrix.ghc }}'
+          ghc-version: 9.2.5
           enable-stack: true
           stack-version: latest
+
       - name: Cache LLVM and Clang
         id: cache-llvm
         uses: actions/cache@v3
@@ -261,15 +252,18 @@ jobs:
             C:/Program Files/LLVM
             ./llvm
           key: '${{ runner.os }}-llvm-13'
+
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
         with:
           version: '13.0'
           cached: '${{ steps.cache-llvm.outputs.cache-hit }}'
+
       - name: Generate Markdown files for each Org file
         run: |
           cd main
           make markdown-docs
+
       - name: Generate HTML and Web App files from milestone examples
         run: |
           cd main
@@ -278,12 +272,7 @@ jobs:
           make html-examples
           make webapp-examples
           make demo-example
-      - uses: actions/cache/save@v3
-        with:
-          path: |
-            ~/.stack
-            main/.stack-work
-          key: '${{ steps.cache.outputs.cache-primary-key }}'
+
       - name: Deploy HTML to github pages
         uses: peaceiris/actions-gh-pages@v3
         with:
@@ -292,141 +281,140 @@ jobs:
           enable_jekyll: false
           cname: docs.juvix.org
 
+  # build-macos:
+  #   runs-on: macos-12
+  #   steps:
+  #     - name: Checkout our repository
+  #       uses: actions/checkout@v3
+  #       with:
+  #         path: main
+  #         submodules: true
+  #     - uses: actions/cache/restore@v3
+  #       id: cache
+  #       name: Stack cache
+  #       with:
+  #         path: |
+  #           ~/.stack
+  #           main/.stack-work
+  #         key: >-
+  #           ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{
+  #           hashFiles('main/package.yaml') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-
+  #     - uses: haskell/actions/setup@v2
+  #       name: Setup Haskell
+  #       with:
+  #         ghc-version: 9.2.5
+  #         enable-stack: true
+  #         stack-version: latest
+  #     - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
+  #       run: |
+  #         echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
+  #         echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
+  #     - name: Install ICU4C
+  #       run: |
+  #         brew install icu4c
+  #         brew link icu4c --force
+  #     - name: Build Project (macOS)
+  #       run: |
+  #         cd main
+  #         make CC=$CC LIBTOOL=$LIBTOOL build
+  #     - uses: actions/cache/save@v3
+  #       if: always()
+  #       with:
+  #         path: |
+  #           ~/.stack
+  #         key: '${{ steps.cache.outputs.cache-primary-key }}'
+  #     - uses: actions/cache/save@v3
+  #       with:
+  #         path: |
+  #           main/.stack-work
+  #         key: '${{ steps.cache.outputs.cache-primary-key }}'
+  # test-macos:
+  #   needs: build-macos
+  #   runs-on: macos-12
+  #   steps:
+  #     - name: Checkout the main repository
+  #       uses: actions/checkout@v3
+  #       with:
+  #         path: main
+  #         submodules: recursive
+  #     - uses: actions/cache/restore@v3
+  #       id: cache
+  #       with:
+  #         fail-on-cache-miss: true
+  #         path: |
+  #           ~/.stack
+  #           main/.stack-work
+  #         key: >-
+  #           ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{
+  #           hashFiles('main/package.yaml') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-
+  #     - uses: haskell/actions/setup@v2
+  #       name: Setup Haskell
+  #       with:
+  #         ghc-version: 9.2.5
+  #         enable-stack: true
+  #         stack-version: latest
+  #     - name: Download and extract wasi-sysroot
+  #       run: >
+  #         curl
+  #         https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/wasi-sysroot-15.0.tar.gz
+  #         -OL
 
-  build-macos:
-    runs-on: macos-12
-    steps:
-      - name: Checkout our repository
-        uses: actions/checkout@v3
-        with:
-          path: main
-          submodules: true
-      - uses: actions/cache/restore@v3
-        id: cache
-        name: Stack cache
-        with:
-          path: |
-            ~/.stack
-            main/.stack-work
-          key: >-
-            ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{
-            hashFiles('main/package.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-
-      - uses: haskell/actions/setup@v2
-        name: Setup Haskell
-        with:
-          ghc-version: 9.2.5
-          enable-stack: true
-          stack-version: latest
-      - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
-        run: |
-          echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
-          echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
-      - name: Install ICU4C
-        run: |
-          brew install icu4c
-          brew link icu4c --force
-      - name: Build Project (macOS)
-        run: |
-          cd main
-          make CC=$CC LIBTOOL=$LIBTOOL build
-      - uses: actions/cache/save@v3
-        if: always()
-        with:
-          path: |
-            ~/.stack
-          key: '${{ steps.cache.outputs.cache-primary-key }}'
-      - uses: actions/cache/save@v3
-        with:
-          path: |
-            main/.stack-work
-          key: '${{ steps.cache.outputs.cache-primary-key }}'
-  test-macos:
-    needs: build-macos
-    runs-on: macos-12
-    steps:
-      - name: Checkout the main repository
-        uses: actions/checkout@v3
-        with:
-          path: main
-          submodules: recursive
-      - uses: actions/cache/restore@v3
-        id: cache
-        with:
-          fail-on-cache-miss: true
-          path: |
-            ~/.stack
-            main/.stack-work
-          key: >-
-            ${{ runner.os }}-${{ hashFiles('main/stack.yaml') }}-${{
-            hashFiles('main/package.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-
-      - uses: haskell/actions/setup@v2
-        name: Setup Haskell
-        with:
-          ghc-version: 9.2.5
-          enable-stack: true
-          stack-version: latest
-      - name: Download and extract wasi-sysroot
-        run: >
-          curl
-          https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/wasi-sysroot-15.0.tar.gz
-          -OL
-
-          tar xfv wasi-sysroot-15.0.tar.gz
-      - name: Set WASI_SYSROOT_PATH
-        run: |
-          echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
-      - name: Install the latest Wasmer version
-        uses: jonaprieto/action-install-gh-release@1
-        with:
-          repo: wasmerio/wasmer
-          tag: latest
-          binaries-location: bin
-          cache: true
-      - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
-        run: |
-          echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
-          echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
-      - name: stack setup (macOS)
-        run: |
-          cd main
-          stack setup
-      - name: Add homebrew clang to the PATH (macOS)
-        run: |
-          echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
-      - name: Test suite (macOS)
-        run: |
-          cd main
-          make CC=$CC LIBTOOL=$LIBTOOL test
-      - name: Add ~/.local/bin to PATH
-        run: |
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-      - name: Download Smoke binary
-        uses: jaxxstorm/action-install-gh-release@v1.9.0
-        with:
-          repo: jonaprieto/smoke
-          tag: v2.3.2
-          cache: enable
-          extension-matching: disable
-          rename-to: smoke
-          chmod: 493
-      - name: Smoke testing (macOS)
-        id: smoke-macos
-        if: runner.os == 'macOS'
-        run: |
-          cd main
-          make CC=$CC LIBTOOL=$LIBTOOL smoke
-      - uses: actions/cache/save@v3
-        if: always()
-        with:
-          path: |
-            ~/.stack
-          key: '${{ steps.cache.outputs.cache-primary-key }}'
-      - uses: actions/cache/save@v3
-        with:
-          path: |
-            main/.stack-work
-          key: '${{ steps.cache.outputs.cache-primary-key }}'
+  #         tar xfv wasi-sysroot-15.0.tar.gz
+  #     - name: Set WASI_SYSROOT_PATH
+  #       run: |
+  #         echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
+  #     - name: Install the latest Wasmer version
+  #       uses: jonaprieto/action-install-gh-release@1
+  #       with:
+  #         repo: wasmerio/wasmer
+  #         tag: latest
+  #         binaries-location: bin
+  #         cache: true
+  #     - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
+  #       run: |
+  #         echo "CC=$(brew --prefix llvm)/bin/clang" >> $GITHUB_ENV
+  #         echo "LIBTOOL=$(brew --prefix llvm)/bin/llvm-ar" >> $GITHUB_ENV
+  #     - name: stack setup (macOS)
+  #       run: |
+  #         cd main
+  #         stack setup
+  #     - name: Add homebrew clang to the PATH (macOS)
+  #       run: |
+  #         echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
+  #     - name: Test suite (macOS)
+  #       run: |
+  #         cd main
+  #         make CC=$CC LIBTOOL=$LIBTOOL test
+  #     - name: Add ~/.local/bin to PATH
+  #       run: |
+  #         echo "$HOME/.local/bin" >> $GITHUB_PATH
+  #     - name: Download Smoke binary
+  #       uses: jaxxstorm/action-install-gh-release@v1.9.0
+  #       with:
+  #         repo: jonaprieto/smoke
+  #         tag: v2.3.2
+  #         cache: enable
+  #         extension-matching: disable
+  #         rename-to: smoke
+  #         chmod: 493
+  #     - name: Smoke testing (macOS)
+  #       id: smoke-macos
+  #       if: runner.os == 'macOS'
+  #       run: |
+  #         cd main
+  #         make CC=$CC LIBTOOL=$LIBTOOL smoke
+  #     - uses: actions/cache/save@v3
+  #       if: always()
+  #       with:
+  #         path: |
+  #           ~/.stack
+  #         key: '${{ steps.cache.outputs.cache-primary-key }}'
+  #     - uses: actions/cache/save@v3
+  #       with:
+  #         path: |
+  #           main/.stack-work
+  #         key: '${{ steps.cache.outputs.cache-primary-key }}'
