@@ -151,6 +151,7 @@ jobs:
 
       - name: Test suite
         id: test
+        if: ${{ success() }}
         run: |
           cd main
           make test
@@ -172,6 +173,7 @@ jobs:
 
       - name: Smoke testing
         id: smoke-linux
+        if: ${{ success() }}
         run: |
           cd main
           make smoke
@@ -190,7 +192,6 @@ jobs:
           path: |
             main/.stack-work
           key: '${{ steps.stack-work-cache.outputs.cache-primary-key }}'
-
 
   docs-linux:
     needs: build-and-test-linux
