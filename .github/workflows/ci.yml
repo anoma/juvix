@@ -195,9 +195,9 @@ jobs:
 
   docs-linux:
     needs: build-and-test-linux
-    if: >-
-      github.ref == 'refs/heads/main' || github.event_name ==
-      'workflow_dispatch'
+    # if: >-
+    #   github.ref == 'refs/heads/main' || github.event_name ==
+    #   'workflow_dispatch'
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout our repository
