@@ -435,63 +435,88 @@ goAxiomDef a = case a ^. Internal.axiomBuiltin >>= builtinBody of
     writeLambda :: Node
     writeLambda = mkLambda' (mkConstr' (BuiltinTag TagWrite) [mkVar' 0])
 
-fromPattern ::
+fromPatternArg ::
   forall r.
   (Members '[InfoTableBuilder, Reader Internal.InfoTable] r) =>
-  Internal.Pattern ->
+  Internal.PatternArg ->
   Sem r Pattern
-fromPattern = \case
-  Internal.PatternVariable n -> return $ PatBinder (PatternBinder (Binder (n ^. nameText) (Just (n ^. nameLoc)) mkDynamic') wildcard)
-  Internal.PatternConstructorApp c -> do
-    (indParams, _) <- InternalTyped.lookupConstructorArgTypes n
-    patternArgs <- mapM fromPattern patterns
-    let indArgs = replicate (length indParams) wildcard
-        args = indArgs ++ patternArgs
-    m <- getIdent identIndex
-    case m of
-      Just (IdentConstr tag) -> return $ PatConstr (PatternConstr (setInfoLocation (n ^. nameLoc) (setInfoName (n ^. nameText) Info.empty)) tag args)
-      Just _ -> error ("internal to core: not a constructor " <> txt)
-      Nothing -> error ("internal to core: undeclared identifier: " <> txt)
-    where
-      n :: Name
-      n = c ^. Internal.constrAppConstructor
-
-      patterns :: [Internal.Pattern]
-      patterns =
-        (^. Internal.patternArgPattern)
-          <$> (c ^. Internal.constrAppParameters)
-
-      identIndex :: Text
-      identIndex = mkIdentIndex (c ^. Internal.constrAppConstructor)
-
-      txt :: Text
-      txt = c ^. Internal.constrAppConstructor . Internal.nameText
+fromPatternArg pa = case (pa ^. Internal.patternArgName) of
+  Just pan -> wrapAsPattern pan <$> subPat
+  Nothing -> subPat
   where
-    wildcard :: Pattern
-    wildcard = PatWildcard (PatternWildcard Info.empty)
+    subPat :: Sem r Pattern
+    subPat = fromPattern (pa ^. Internal.patternArgPattern)
 
-getPatternVars :: Internal.Pattern -> [Name]
-getPatternVars = \case
-  Internal.PatternVariable n -> [n]
-  Internal.PatternConstructorApp c ->
-    concatMap getPatternVars patterns
-    where
-      patterns =
-        (^. Internal.patternArgPattern)
-          <$> (c ^. Internal.constrAppParameters)
+    wrapAsPattern :: Name -> Pattern -> Pattern
+    wrapAsPattern pan pat =
+      ( PatBinder
+          ( PatternBinder
+              { _patternBinder =
+                  Binder
+                    { _binderName = pan ^. nameText,
+                      _binderLocation = Just (pan ^. nameLoc),
+                      _binderType = mkDynamic'
+                    },
+                _patternBinderPattern = pat
+              }
+          )
+      )
 
-goPatterns ::
+    fromPattern :: Internal.Pattern -> Sem r Pattern
+    fromPattern = \case
+      Internal.PatternVariable n -> return $ PatBinder (PatternBinder (Binder (n ^. nameText) (Just (n ^. nameLoc)) mkDynamic') wildcard)
+      Internal.PatternConstructorApp c -> do
+        (indParams, _) <- InternalTyped.lookupConstructorArgTypes n
+        patternArgs <- mapM fromPatternArg params
+        let indArgs = replicate (length indParams) wildcard
+            args = indArgs ++ patternArgs
+        m <- getIdent identIndex
+        case m of
+          Just (IdentConstr tag) -> return $ PatConstr (PatternConstr (setInfoLocation (n ^. nameLoc) (setInfoName (n ^. nameText) Info.empty)) tag args)
+          Just _ -> error ("internal to core: not a constructor " <> txt)
+          Nothing -> error ("internal to core: undeclared identifier: " <> txt)
+        where
+          n :: Name
+          n = c ^. Internal.constrAppConstructor
+
+          params :: [Internal.PatternArg]
+          params = (c ^. Internal.constrAppParameters)
+
+          identIndex :: Text
+          identIndex = mkIdentIndex (c ^. Internal.constrAppConstructor)
+
+          txt :: Text
+          txt = c ^. Internal.constrAppConstructor . Internal.nameText
+      where
+        wildcard :: Pattern
+        wildcard = PatWildcard (PatternWildcard Info.empty)
+
+getPatternArgVars :: Internal.PatternArg -> [Name]
+getPatternArgVars pa = case pa ^. Internal.patternArgName of
+  Nothing -> subVars
+  Just pan -> pan : subVars
+  where
+    getPatternVars :: Internal.Pattern -> [Name]
+    getPatternVars = \case
+      Internal.PatternVariable n -> [n]
+      Internal.PatternConstructorApp c ->
+        concatMap getPatternArgVars (c ^. Internal.constrAppParameters)
+
+    subVars :: [Name]
+    subVars = getPatternVars (pa ^. Internal.patternArgPattern)
+
+goPatternArgs ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.Expression ->
-  [Internal.Pattern] ->
+  [Internal.PatternArg] ->
   Sem r MatchBranch
-goPatterns body ps = do
+goPatternArgs body ps = do
   vars <- asks (^. indexTableVars)
   varsNum <- asks (^. indexTableVarsNum)
   pats <- patterns
   let bs :: [Name]
-      bs = concatMap getPatternVars (reverse ps)
+      bs = concatMap getPatternArgVars (reverse ps)
       (vars', varsNum') =
         foldl'
           ( \(vs, k) name ->
@@ -507,45 +532,27 @@ goPatterns body ps = do
   MatchBranch Info.empty (fromList pats) <$> body'
   where
     patterns :: Sem r [Pattern]
-    patterns = reverse <$> mapM fromPattern ps
+    patterns = reverse <$> mapM fromPatternArg ps
 
 goFunctionClause ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.FunctionClause ->
   Sem r MatchBranch
-goFunctionClause clause = do
-  local
-    (over indexTableVars (HashMap.union patternArgs))
-    (goPatterns (clause ^. Internal.clauseBody) ps)
+goFunctionClause clause = goPatternArgs (clause ^. Internal.clauseBody) internalPatternArgs
   where
     internalPatternArgs :: [Internal.PatternArg]
     internalPatternArgs = clause ^. Internal.clausePatterns
-
-    ps :: [Internal.Pattern]
-    ps = (^. Internal.patternArgPattern) <$> internalPatternArgs
-
-    patternArgs :: HashMap NameId Index
-    patternArgs = HashMap.fromList (first (^. nameId) <$> patternArgNames)
-      where
-        patternArgNames :: [(Name, Index)]
-        patternArgNames = catFstMaybes (first (^. Internal.patternArgName) <$> zip internalPatternArgs [0 ..])
-
-        catFstMaybes :: [(Maybe a, b)] -> [(a, b)]
-        catFstMaybes = mapMaybe f
-          where
-            f :: (Maybe a, b) -> Maybe (a, b)
-            f (x, y) = fmap (\x' -> (x', y)) x
 
 goLambdaClause ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.LambdaClause ->
   Sem r MatchBranch
-goLambdaClause clause = goPatterns (clause ^. Internal.lambdaBody) ps
+goLambdaClause clause = goPatternArgs (clause ^. Internal.lambdaBody) ps
   where
-    ps :: [Internal.Pattern]
-    ps = (^. Internal.patternArgPattern) <$> toList (clause ^. Internal.lambdaPatterns)
+    ps :: [Internal.PatternArg]
+    ps = toList (clause ^. Internal.lambdaPatterns)
 
 goExpression ::
   forall r.

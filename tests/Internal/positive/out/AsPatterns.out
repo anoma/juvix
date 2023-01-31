@@ -1,0 +1,5 @@
+zero :: suc zero :: nil
+suc zero :: nil
+zero :: suc zero :: nil
+zero
+suc zero :: suc (suc zero) :: suc (suc (suc zero)) :: nil
