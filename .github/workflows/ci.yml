@@ -160,7 +160,7 @@ jobs:
       - name: Install Smoke
         run: |
           cd smoke
-          stack install
+          stack install --stack-root ${{ github.workspace }}/.stack
         shell: bash
 
       - name: Smoke testing
