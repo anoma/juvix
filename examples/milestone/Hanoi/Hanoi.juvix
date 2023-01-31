@@ -16,14 +16,6 @@
 module Hanoi;
   open import Stdlib.Prelude;
 
-  infixr 5 ++str;
-  --- Concatenation of ;String;s
-  axiom ++str : String → String → String;
-
-  compile ++str {
-    c ↦ "concat";
-  };
-
   --- Concatenates a list of strings
 
   --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
@@ -46,7 +38,7 @@ module Hanoi;
   --- Produce a ;String; representation of a ;List Nat;
   showList : List Nat → String;
   showList xs := "["
-    ++str intercalate "," (map natToStr xs)
+    ++str intercalate "," (map natToString xs)
     ++str "]";
 
   --- A Peg represents a peg in the towers of Hanoi game

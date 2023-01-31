@@ -102,7 +102,7 @@ prim_io prim_printString(prim_string s) { return putStr(s); }
 prim_io prim_printBool(prim_bool b) { return putStr(b ? "true" : "false"); }
 
 prim_io prim_readline(juvix_function_t* f) {
-    ((prim_io(*)(juvix_function_t*, prim_string))f->fun)(f, readline());
+    return ((prim_io(*)(juvix_function_t*, prim_string))f->fun)(f, readline());
 }
 
 prim_string prim_natToString(prim_nat n) { return intToStr(n); }

@@ -259,7 +259,7 @@ char* readline() {
 }
 
 prim_io prim_readline(juvix_function_t* f) {
-    ((prim_io(*)(juvix_function_t*, prim_string))f->fun)(f, readline());
+    return ((prim_io(*)(juvix_function_t*, prim_string))f->fun)(f, readline());
 }
 
 prim_string prim_natToString(prim_nat n) { return intToStr(n); }

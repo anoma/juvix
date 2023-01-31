@@ -23,20 +23,6 @@ module Collatz;
 
   -- IO
   --- -----------------------------------------------------------------------------
-  axiom readline : String;
-
-  compile readline {
-    c ↦ "readline()";
-  };
-
-  axiom parsePositiveInt : String → Nat;
-
-  compile parsePositiveInt {
-    c ↦ "parsePositiveInt";
-  };
-
-  getInitial : Nat;
-  getInitial := parsePositiveInt (readline);
 
   output : Nat → Nat × IO;
   output n := n , printNatLn n;
@@ -50,5 +36,5 @@ module Collatz;
   welcome := "Collatz calculator\n------------------\n\nType a number then ENTER";
 
   main : IO;
-  main := printStringLn welcome >> run collatz getInitial;
+  main := printStringLn welcome >> readLn (run collatz ∘ stringToNat);
 end;
