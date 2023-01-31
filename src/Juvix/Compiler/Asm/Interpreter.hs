@@ -13,6 +13,7 @@ import Juvix.Compiler.Asm.Interpreter.Base
 import Juvix.Compiler.Asm.Interpreter.Extra
 import Juvix.Compiler.Asm.Interpreter.Runtime
 import Juvix.Compiler.Asm.Pretty
+import Text.Read (readMaybe)
 
 -- | Interpret JuvixAsm code for a single function. The returned Val is the
 -- value on top of the value stack at exit, i.e., when executing a toplevel
@@ -91,6 +92,17 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
         goIntBinOp (\x y -> ValBool (x <= y)) >> goCode cont
       Binop ValEq ->
         goBinOp (\x y -> ValBool (x == y)) >> goCode cont
+      Binop StrConcat ->
+        goStrBinOp (\x y -> ValString (x <> y)) >> goCode cont
+      ValShow -> do
+        v <- popValueStack
+        pushValueStack (ValString (printVal v))
+        goCode cont
+      StrToInt -> do
+        v <- popValueStack
+        i <- valToInt v
+        pushValueStack (ValInteger i)
+        goCode cont
       Push ref -> do
         v <- getVal ref
         pushValueStack v
@@ -177,6 +189,15 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
 
     goIntBinOp :: (Member Runtime r) => (Integer -> Integer -> Val) -> Sem r ()
     goIntBinOp op = goIntBinOp' (\v1 v2 -> return (op v1 v2))
+
+    goStrBinOp' :: (Member Runtime r) => (Text -> Text -> Sem r Val) -> Sem r ()
+    goStrBinOp' op = goBinOp' $ \v1 v2 ->
+      case (v1, v2) of
+        (ValString s1, ValString s2) -> op s1 s2
+        _ -> runtimeError "invalid operation: expected two strings on value stack"
+
+    goStrBinOp :: (Member Runtime r) => (Text -> Text -> Val) -> Sem r ()
+    goStrBinOp op = goStrBinOp' (\v1 v2 -> return (op v1 v2))
 
     getVal :: (Member Runtime r) => Value -> Sem r Val
     getVal = \case
@@ -296,6 +317,15 @@ runCodeR infoTable funInfo = goCode (funInfo ^. functionCode) >> popLastValueSta
     printVal = \case
       ValString s -> s
       v -> ppPrint infoTable v
+
+    valToInt :: (Member Runtime r) => Val -> Sem r Integer
+    valToInt = \case
+      ValString s ->
+        case readMaybe (fromText s) of
+          Just i -> return i
+          Nothing -> runtimeError "string to integer conversion error"
+      ValInteger i -> return i
+      _ -> runtimeError "integer conversion error"
 
 -- | Interpret JuvixAsm code and the resulting IO actions.
 runCodeIO :: InfoTable -> FunctionInfo -> IO Val

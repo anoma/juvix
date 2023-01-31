@@ -295,9 +295,14 @@ registerBuiltinAxiom ::
 registerBuiltinAxiom d = \case
   BuiltinIO -> registerIO d
   BuiltinIOSequence -> registerIOSequence d
+  BuiltinIOReadline -> registerIOReadline d
   BuiltinNatPrint -> registerNatPrint d
+  BuiltinNatToString -> registerNatToString d
   BuiltinString -> registerString d
   BuiltinStringPrint -> registerStringPrint d
+  BuiltinStringConcat -> registerStringConcat d
+  BuiltinStringEq -> registerStringEq d
+  BuiltinStringToNat -> registerStringToNat d
   BuiltinBoolPrint -> registerBoolPrint d
   BuiltinTrace -> registerTrace d
   BuiltinFail -> registerFail d

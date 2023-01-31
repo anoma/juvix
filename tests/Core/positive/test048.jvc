@@ -1,0 +1,3 @@
+-- string builtins
+
+write (strConcat (show (strToInt "123" + 20)) ".\n")

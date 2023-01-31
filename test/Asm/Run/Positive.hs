@@ -211,5 +211,10 @@ tests =
       "Streams without memoization"
       $(mkRelDir ".")
       $(mkRelFile "test036.jva")
-      $(mkRelFile "out/test036.out")
+      $(mkRelFile "out/test036.out"),
+    PosTest
+      "String instructions"
+      $(mkRelDir ".")
+      $(mkRelFile "test037.jva")
+      $(mkRelFile "out/test037.out")
   ]

@@ -110,4 +110,20 @@ prim_io prim_printBool(prim_bool b) {
     return putStr(b ? "true" : "false");
 }
 
+prim_io prim_readline(juvix_function_t* f) {
+    return ((prim_io(*)(juvix_function_t*, prim_string))f->fun)(f, readline());
+}
+
+prim_string prim_natToString(prim_nat n) { return intToStr(n); }
+
+prim_nat prim_stringToNat(prim_string s) { return parsePositiveInt(s); }
+
+prim_string prim_stringConcat(prim_string s1, prim_string s2) {
+    return concat(s1, s2);
+}
+
+prim_bool prim_stringEq(prim_string s1, prim_string s2) {
+    return strcmp(s1, s2) == 0;
+}
+
 #endif // C_RUNTIME_H_

@@ -183,6 +183,10 @@ fromRegInstr bNoStack info = \case
     return []
   Reg.Binop x ->
     return [fromBinaryOp x]
+  Reg.Show Reg.InstrShow {..} ->
+    return [StatementExpr $ macroCall "JUVIX_SHOW" [fromVarRef _instrShowResult, fromValue _instrShowValue]]
+  Reg.StrToInt Reg.InstrStrToInt {..} ->
+    return [StatementExpr $ macroCall "JUVIX_STR_TO_INT" [fromVarRef _instrStrToIntResult, fromValue _instrStrToIntValue]]
   Reg.Assign Reg.InstrAssign {..} ->
     return $ stmtsAssign (fromVarRef _instrAssignResult) (fromValue _instrAssignValue)
   Reg.Trace Reg.InstrTrace {..} ->
@@ -236,6 +240,7 @@ fromRegInstr bNoStack info = \case
       Reg.OpIntLt -> "JUVIX_INT_LT"
       Reg.OpIntLe -> "JUVIX_INT_LE"
       Reg.OpEq -> "JUVIX_VAL_EQ"
+      Reg.OpStrConcat -> "JUVIX_STR_CONCAT"
 
     fromVarRef :: Reg.VarRef -> Expression
     fromVarRef Reg.VarRef {..} =

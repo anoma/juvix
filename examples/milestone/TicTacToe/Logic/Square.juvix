@@ -19,7 +19,7 @@ module Logic.Square;
 
   --- Textual representation of a ;Square;
   showSquare : Square → String;
-  showSquare (empty n) := " " ++str natToStr n ++str " ";
+  showSquare (empty n) := " " ++str natToString n ++str " ";
   showSquare (occupied s) := " " ++str showSymbol s ++str " ";
 
   replace : Symbol → Nat → Square → Square;

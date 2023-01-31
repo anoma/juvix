@@ -18,6 +18,8 @@ computeMaxStackHeight lims = maximum . map go
     go = \case
       Nop -> 0
       Binop {} -> 0
+      Show {} -> 0
+      StrToInt {} -> 0
       Assign {} -> 0
       Trace {} -> 0
       Dump -> 0
@@ -66,6 +68,10 @@ computeStringMap strs = snd . run . execState (HashMap.size strs, strs) . mapM g
       Binop BinaryOp {..} -> do
         goVal _binaryOpArg1
         goVal _binaryOpArg2
+      Show InstrShow {..} -> do
+        goVal _instrShowValue
+      StrToInt InstrStrToInt {..} -> do
+        goVal _instrStrToIntValue
       Assign InstrAssign {..} ->
         goVal _instrAssignValue
       Trace InstrTrace {..} ->
