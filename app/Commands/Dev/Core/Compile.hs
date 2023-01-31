@@ -11,11 +11,11 @@ import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 
-data PipelineArg = PipelineArg {
-  _pipelineArgOptions :: CoreCompileOptions,
-  _pipelineArgFile :: Path Abs File,
-  _pipelineArgInfoTable :: Core.InfoTable
-}
+data PipelineArg = PipelineArg
+  { _pipelineArgOptions :: CoreCompileOptions,
+    _pipelineArgFile :: Path Abs File,
+    _pipelineArgInfoTable :: Core.InfoTable
+  }
 
 makeLenses ''PipelineArg
 
