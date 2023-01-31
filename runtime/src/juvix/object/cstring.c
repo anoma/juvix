@@ -34,9 +34,9 @@ word_t alloc_cstring(const char *str) {
     return var;
 }
 
-int strtoint(const char *str) {
-    int result;
-    int puiss;
+int_t strtoint(const char *str) {
+    int_t result;
+    int_t puiss;
 
     errno = 0;
 

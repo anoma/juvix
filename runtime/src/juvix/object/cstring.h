@@ -57,6 +57,6 @@ word_t alloc_cstring(const char *str);
 
 // Converts a C string to an integer. Sets 'errno' to 'EINVAL' if the conversion
 // could not be performed.
-int strtoint(const char *str);
+int_t strtoint(const char *str);
 
 #endif
