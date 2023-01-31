@@ -216,5 +216,9 @@ tests =
     PosTest
       "Builtin bool"
       $(mkRelDir ".")
-      $(mkRelFile "BuiltinsBool.juvix")
+      $(mkRelFile "BuiltinsBool.juvix"),
+    PosTest
+      "Type signature with body"
+      $(mkRelDir ".")
+      $(mkRelFile "SignatureWithBody.juvix")
   ]

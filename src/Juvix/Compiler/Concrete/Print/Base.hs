@@ -187,6 +187,9 @@ instance PrettyPrint (TypeSignature 'Scoped) where
         builtin' :: Maybe (Sem r ()) = ppCode <$> _sigBuiltin
         type' = ppCode _sigType
         name' = region (P.annDef _sigName) (ppCode _sigName)
+        body' = case _sigBody of
+          Nothing -> Nothing
+          Just body -> Just (noLoc P.kwAssign <+> ppCode body)
     doc'
       ?<> builtin'
       <?+> termin'
@@ -194,6 +197,7 @@ instance PrettyPrint (TypeSignature 'Scoped) where
           ( name'
               <+> noLoc P.kwColon
               <+> type'
+              <+?> body'
           )
 
 instance PrettyPrint Pattern where

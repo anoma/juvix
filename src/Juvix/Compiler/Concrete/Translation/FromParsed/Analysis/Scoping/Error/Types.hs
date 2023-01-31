@@ -722,3 +722,32 @@ instance ToGenericError ConstructorExpectedLeftApplication where
           msg =
             "Constructor expected on the left of a pattern application:"
               <+> ppCode opts' pat
+
+data DuplicateFunctionClause = DuplicateFunctionClause
+  { _duplicateFunctionClauseSignature :: TypeSignature 'Scoped,
+    _duplicateFunctionClauseClause :: FunctionClause 'Scoped
+  }
+  deriving stock (Show)
+
+makeLenses ''DuplicateFunctionClause
+
+instance ToGenericError DuplicateFunctionClause where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = clLoc,
+              _genericErrorMessage = prettyError msg,
+              _genericErrorIntervals = [clLoc, sigLoc]
+            }
+        where
+          opts' = fromGenericOptions opts
+          cl :: FunctionClause 'Scoped
+          cl = e ^. duplicateFunctionClauseClause
+          name :: S.Symbol
+          name = e ^. duplicateFunctionClauseSignature . sigName
+          clLoc = getLoc (cl ^. clauseOwnerFunction)
+          sigLoc = getLoc name
+          msg =
+            "The function" <+> ppCode opts' name <+> "has already been assigned a definition and so it cannot have additional clauses"
