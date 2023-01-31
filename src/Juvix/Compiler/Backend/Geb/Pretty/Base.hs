@@ -84,8 +84,8 @@ instance PrettyCode Opcode where
 instance PrettyCode Binop where
   ppCode Binop {..} = do
     op <- ppCode _binopOpcode
-    left <- ppCode _binopLeft
-    right <- ppCode _binopRight
+    left <- ppArg _binopLeft
+    right <- ppArg _binopRight
     return $ op <+> left <+> right
 
 instance PrettyCode Morphism where
