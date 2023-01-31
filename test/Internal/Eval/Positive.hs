@@ -178,5 +178,10 @@ tests =
       "Type Aliases"
       $(mkRelDir ".")
       $(mkRelFile "Church.juvix")
-      $(mkRelFile "out/Church.out")
+      $(mkRelFile "out/Church.out"),
+    PosTest
+      "Nested as patterns"
+      $(mkRelDir ".")
+      $(mkRelFile "AsPatterns.juvix")
+      $(mkRelFile "out/AsPatterns.out")
   ]

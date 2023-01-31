@@ -1,0 +1,39 @@
+module AsPatterns;
+
+open import Stdlib.Prelude;
+
+printListNatLn : List Nat → IO;
+printListNatLn nil := printStringLn "nil";
+printListNatLn (x :: xs) := printNat x >> printString " :: " >> printListNatLn xs;
+
+f1 : List Nat -> List Nat;
+f1 a@(x :: (x' :: xs)) := a;
+f1 _ := nil;
+
+f2 : List Nat -> List Nat;
+f2  (x :: a@(x' :: xs)) := a;
+f2 _ := nil;
+
+f3 : Nat -> List Nat -> List Nat;
+f3 _ a@(x :: (x' :: xs)) := a;
+
+f4 : Nat -> List Nat -> Nat;
+f4 y (x :: a@(x' :: xs)) := y;
+
+f5 : List Nat -> List Nat -> List Nat;
+f5 (x :: a@(x' :: xs)) (y :: b@(y' :: ys)) := b;
+
+l1 : List Nat;
+l1 := zero :: suc zero :: nil;
+
+l2 : List Nat;
+l2 := zero :: suc zero :: suc (suc zero) :: suc (suc (suc zero)) :: nil;
+
+main : IO;
+main := printListNatLn (f1 l1)
+     >> printListNatLn (f2 l1)
+     >> printListNatLn (f3 zero l1)
+     >> printNatLn (f4 zero l1)
+     >> printListNatLn (f5 l1 l2);
+
+end;
