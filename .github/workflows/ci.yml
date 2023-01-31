@@ -368,10 +368,26 @@ jobs:
           cd main
           make CC=$CC LIBTOOL=$LIBTOOL test
 
+      - name: Save stack cache
+        uses: actions/cache/save@v3
+        if: always()
+        with:
+          path: |
+            ~/.stack
+          key: '${{ steps.stack-cache.outputs.cache-primary-key }}'
+
+      - name: Save stack-work cache
+        uses: actions/cache/save@v3
+        if: ${{ success() }}
+        with:
+          path: |
+            main/.stack-work
+          key: '${{ steps.stack-work-cache.outputs.cache-primary-key }}'
+
       - name: Add ~/.local/bin to PATH
         run: |
           echo "$HOME/.local/bin" >> $GITHUB_PATH
-          
+
       - name: Install Smoke
         uses: jonaprieto/action-install-gh-release@2
         with:
@@ -388,17 +404,3 @@ jobs:
         run: |
           cd main
           make CC=$CC LIBTOOL=$LIBTOOL smoke
-
-      - name: Save stack cache
-        uses: actions/cache/save@v3
-        if: always()
-        with:
-          path: |
-            ~/.stack
-          key: '${{ steps.stack-cache.outputs.cache-primary-key }}'
-      - name: Save stack-work cache
-        uses: actions/cache/save@v3
-        with:
-          path: |
-            main/.stack-work
-          key: '${{ steps.stack-work-cache.outputs.cache-primary-key }}'
