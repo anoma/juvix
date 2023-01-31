@@ -4,16 +4,16 @@ module test034;
   open import Stdlib.Data.Nat.Ord;
 
   sum : Nat → Nat;
-  sum := let {
+  sum := let
       sum' : Nat → Nat;
       sum' := λ {
           zero := zero
           | (suc n) := suc n + sum' n
         };
-    } in sum';
+     in sum';
 
   mutrec : IO;
-  mutrec := let {
+  mutrec := let
       terminating
       f : Nat → Nat;
       terminating
@@ -23,7 +23,7 @@ module test034;
       f x := if (x < 1) 1 (g (sub x 1) + 2 * x);
       g x := if (x < 1) 1 (x + h (sub x 1));
       h x := if (x < 1) 1 (x * f (sub x 1));
-    } in printNatLn (f 5)
+    in printNatLn (f 5)
     >> printNatLn (f 10)
     >> printNatLn (g 5)
     >> printNatLn (h 5);

@@ -258,4 +258,7 @@ ppStringLit = annotate AnnLiteralString . doubleQuotes . escaped
     escaped = mconcatMap (pretty . showChar) . unpack
 
 bracesIndent :: Doc Ann -> Doc Ann
-bracesIndent d = braces (line <> indent' d <> line)
+bracesIndent = braces . blockIndent
+
+blockIndent :: Doc Ann -> Doc Ann
+blockIndent d = line <> indent' d <> line

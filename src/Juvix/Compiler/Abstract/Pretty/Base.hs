@@ -118,7 +118,7 @@ ppPipeBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a
 ppPipeBlock items = vsep <$> mapM (fmap (kwPipe <+>) . ppCode) items
 
 ppBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
-ppBlock items = bracesIndent . vsep . toList <$> mapM (fmap endSemicolon . ppCode) items
+ppBlock items = vsep . toList <$> mapM (fmap endSemicolon . ppCode) items
 
 instance PrettyCode ConstructorApp where
   ppCode (ConstructorApp ctr args) = do
@@ -172,7 +172,7 @@ instance PrettyCode LetClause where
 
 instance PrettyCode Let where
   ppCode l = do
-    letClauses' <- ppBlock (l ^. letClauses)
+    letClauses' <- blockIndent <$> ppBlock (l ^. letClauses)
     letExpression' <- ppCode (l ^. letExpression)
     return $ kwLet <+> letClauses' <+> kwIn <+> letExpression'
 

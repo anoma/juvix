@@ -5,11 +5,11 @@ open import Stdlib.Prelude;
 
 main : IO;
 main :=
-    let { x : Nat; x := 1 } in
-    let { x1 : Nat; x1 := x + let { x2 : Nat; x2 := 2 } in x2 } in
-    let { x3 : Nat; x3 := x1 * x1 } in
-    let { y : Nat; y := x3 + 2 } in
-    let { z : Nat; z := x3 + y } in
+    let x : Nat; x := 1 in
+    let x1 : Nat; x1 := x + let x2 : Nat; x2 := 2 in x2 in
+    let x3 : Nat; x3 := x1 * x1 in
+    let y : Nat; y := x3 + 2 in
+    let z : Nat; z := x3 + y in
     printNatLn (x + y + z);
 
 end;
