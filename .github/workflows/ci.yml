@@ -344,7 +344,7 @@ jobs:
         run: |
           echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
       - name: Install the latest Wasmer version
-        uses: jonaprieto/action-install-gh-release@1
+        uses: jonaprieto/action-install-gh-release@2
         with:
           repo: wasmerio/wasmer
           tag: latest
