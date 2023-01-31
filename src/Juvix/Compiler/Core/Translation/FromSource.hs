@@ -504,18 +504,18 @@ builtinAppExpr ::
   ParsecS r Node
 builtinAppExpr varsNum vars = do
   op <-
-    (kw kwEq >> return OpEq)
-      <|> (kw kwLt >> return OpIntLt)
-      <|> (kw kwLe >> return OpIntLe)
-      <|> (kw kwPlus >> return OpIntAdd)
-      <|> (kw kwMinus >> return OpIntSub)
-      <|> (kw kwDiv >> return OpIntDiv)
-      <|> (kw kwMul >> return OpIntMul)
-      <|> (kw kwShow >> return OpShow)
-      <|> (kw kwStrConcat >> return OpStrConcat)
-      <|> (kw kwStrToInt >> return OpStrToInt)
-      <|> (kw kwTrace >> return OpTrace)
-      <|> (kw kwFail >> return OpFail)
+    (kw kwEq $> OpEq)
+      <|> (kw kwLt $> OpIntLt)
+      <|> (kw kwLe $> OpIntLe)
+      <|> (kw kwPlus $> OpIntAdd)
+      <|> (kw kwMinus $> OpIntSub)
+      <|> (kw kwDiv $> OpIntDiv)
+      <|> (kw kwMul $> OpIntMul)
+      <|> (kw kwShow $> OpShow)
+      <|> (kw kwStrConcat $> OpStrConcat)
+      <|> (kw kwStrToInt $> OpStrToInt)
+      <|> (kw kwTrace $> OpTrace)
+      <|> (kw kwFail $> OpFail)
   args <- P.many (atom varsNum vars)
   return $ mkBuiltinApp' op args
 

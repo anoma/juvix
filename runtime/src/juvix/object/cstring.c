@@ -51,7 +51,7 @@ int strtoint(const char *str) {
     while (*str >= '0' && *str <= '9') {
         result = result * 10 + (*str - '0');
         str++;
-        if (result > 107374180) {
+        if (result > (MAX_SMALLINT - 10) / 10) {
             errno = EINVAL;
             return result;
         }
