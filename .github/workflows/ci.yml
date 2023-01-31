@@ -21,8 +21,7 @@ concurrency:
   group: '${{ github.workflow }}-${{ github.head_ref || github.run_id }}'
   cancel-in-progress: true
 env:
-  STACKFLAGS: '--pedantic'
-  STACK_ROOT: ${{ github.workspace }}/.stack
+  STACKFLAGS: '--pedantic --stack-root ${{ github.workspace }}/.stack'
 
 jobs:
 
@@ -139,6 +138,7 @@ jobs:
       - name: Build Project
         run: |
           cd main
+          stack path --stack-root
           make build
 
       - name: Test suite
@@ -305,6 +305,7 @@ jobs:
       - name: Build Project (macOS)
         run: |
           cd main
+          stack path --stack-root
           make CC=$CC LIBTOOL=$LIBTOOL build
 
       - name: Download and extract wasi-sysroot
