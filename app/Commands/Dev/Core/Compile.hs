@@ -11,14 +11,24 @@ import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Translation.FromSource qualified as Core
 
+data PipelineArg = PipelineArg {
+  _pipelineArgOptions :: CoreCompileOptions,
+  _pipelineArgFile :: Path Abs File,
+  _pipelineArgInfoTable :: Core.InfoTable
+}
+
+makeLenses ''PipelineArg
+
 runCommand :: forall r. (Members '[Embed IO, App] r) => CoreCompileOptions -> Sem r ()
 runCommand opts = do
   file <- getFile
   s <- embed (readFile (toFilePath file))
   tab <- getRight (mapLeft JuvixError (Core.runParserMain file Core.emptyInfoTable s))
   case opts ^. compileTarget of
-    TargetGeb -> runGebPipeline opts file tab
-    _ -> runCPipeline opts file tab
+    TargetGeb -> runGebPipeline (PipelineArg opts file tab)
+    TargetWasm32Wasi -> runCPipeline (PipelineArg opts file tab)
+    TargetNative64 -> runCPipeline (PipelineArg opts file tab)
+    TargetC -> runCPipeline (PipelineArg opts file tab)
   where
     getFile :: Sem r (Path Abs File)
     getFile = someBaseToAbs' (opts ^. compileInputFile . pathPath)
@@ -26,18 +36,16 @@ runCommand opts = do
 runCPipeline ::
   forall r.
   (Members '[Embed IO, App] r) =>
-  CoreCompileOptions ->
-  Path Abs File ->
-  Core.InfoTable ->
+  PipelineArg ->
   Sem r ()
-runCPipeline opts file tab = do
-  C.MiniCResult {..} <- getRight (run (runError (coreToMiniC asmOpts tab :: Sem '[Error JuvixError] C.MiniCResult)))
-  cFile <- inputFile file ".c"
+runCPipeline PipelineArg {..} = do
+  C.MiniCResult {..} <- getRight (run (runError (coreToMiniC asmOpts _pipelineArgInfoTable :: Sem '[Error JuvixError] C.MiniCResult)))
+  cFile <- inputFile _pipelineArgFile ".c"
   embed $ TIO.writeFile (toFilePath cFile) _resultCCode
-  Compile.runCommand opts {_compileInputFile = AppPath (Abs cFile) False}
+  Compile.runCommand _pipelineArgOptions {_compileInputFile = AppPath (Abs cFile) False}
   where
     asmOpts :: Asm.Options
-    asmOpts = Asm.makeOptions (asmTarget (opts ^. compileTarget)) (opts ^. compileDebug)
+    asmOpts = Asm.makeOptions (asmTarget (_pipelineArgOptions ^. compileTarget)) (_pipelineArgOptions ^. compileDebug)
 
     asmTarget :: CompileTarget -> Backend.Target
     asmTarget = \case
@@ -49,13 +57,11 @@ runCPipeline opts file tab = do
 runGebPipeline ::
   forall r.
   (Members '[Embed IO, App] r) =>
-  CoreCompileOptions ->
-  Path Abs File ->
-  Core.InfoTable ->
+  PipelineArg ->
   Sem r ()
-runGebPipeline _ file tab = do
-  Geb.Result {..} <- getRight (run (runError (coreToGeb tab :: Sem '[Error JuvixError] Geb.Result)))
-  gebFile <- inputFile file ".geb"
+runGebPipeline PipelineArg {..} = do
+  Geb.Result {..} <- getRight (run (runError (coreToGeb _pipelineArgInfoTable :: Sem '[Error JuvixError] Geb.Result)))
+  gebFile <- inputFile _pipelineArgFile ".geb"
   embed $ TIO.writeFile (toFilePath gebFile) _resultCode
 
 inputFile :: (Members '[Embed IO, App] r) => Path Abs File -> String -> Sem r (Path Abs File)
