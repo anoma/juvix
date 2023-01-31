@@ -22,8 +22,8 @@ concurrency:
   cancel-in-progress: true
 env:
   STACKFLAGS: '--pedantic'
-  STACK_ROOT: ${{ github.workspace }}/.stack
-  STACK_WORK: ${{ github.workspace }}/main/.stack-work
+  STACK_ROOT: ~/.stack
+  STACK_WORK: .stack-work
 
 jobs:
 
