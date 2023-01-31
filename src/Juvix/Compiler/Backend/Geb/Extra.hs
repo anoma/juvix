@@ -12,11 +12,11 @@ destructProduct = \case
 objectBool :: Object
 objectBool = ObjectCoproduct (Coproduct ObjectTerminal ObjectTerminal)
 
-gebTrue :: Morphism
-gebTrue = MorphismLeft MorphismUnit
+morphismTrue :: Morphism
+morphismTrue = MorphismLeft MorphismUnit
 
-gebFalse :: Morphism
-gebFalse = MorphismRight MorphismUnit
+morphismFalse :: Morphism
+morphismFalse = MorphismRight MorphismUnit
 
 mkOr :: Morphism -> Morphism -> Morphism
 mkOr arg1 arg2 =
@@ -31,7 +31,7 @@ mkOr arg1 arg2 =
             Lambda
               { _lambdaVarType = ObjectTerminal,
                 _lambdaBodyType = objectBool,
-                _lambdaBody = gebTrue
+                _lambdaBody = morphismTrue
               },
         _caseRight =
           MorphismLambda

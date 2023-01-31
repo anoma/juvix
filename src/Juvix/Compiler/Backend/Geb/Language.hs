@@ -73,7 +73,7 @@ data Binop = Binop
     _binopRight :: Morphism
   }
 
--- | Corresponds to the GEB type for morphisms (terms): `stlc`
+-- | Corresponds to the GEB type for terms (morphisms of the category): `stlc`
 -- (https://github.com/anoma/geb/blob/main/src/specs/lambda.lisp).
 data Morphism
   = MorphismAbsurd Morphism
@@ -150,6 +150,7 @@ makeLenses ''First
 makeLenses ''Second
 makeLenses ''Lambda
 makeLenses ''Var
+makeLenses ''Binop
 makeLenses ''Application
 makeLenses ''Morphism
 makeLenses ''Product
