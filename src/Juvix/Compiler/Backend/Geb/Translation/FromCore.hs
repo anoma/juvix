@@ -10,12 +10,55 @@ import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
 import Juvix.Compiler.Core.Language (Index, Level, Symbol)
 import Juvix.Compiler.Core.Language qualified as Core
 
+data Env = Env
+  { _envIdentMap :: HashMap Symbol Level,
+    _envLevel :: Level,
+    _envShiftLevels :: [Level]
+  }
+
+-- | TODO documentation for each field
+emptyEnv :: Env
+emptyEnv =
+  Env
+    { _envIdentMap = mempty,
+      _envLevel = 0,
+      _envShiftLevels = []
+    }
+
+type Trans = Sem '[Reader Env]
+
+makeLenses ''Env
+
+zeroLevel :: Trans a -> Trans a
+zeroLevel = local (set envLevel 0)
+
+underBinders :: Int -> Trans a -> Trans a
+underBinders n = local (over envLevel (+ n))
+
+underBinder :: Trans a -> Trans a
+underBinder = underBinders 1
+
+shifting :: Trans a -> Trans a
+shifting m = do
+  varsNum <- asks (^. envLevel)
+  local (over envShiftLevels (varsNum :)) m
+
+-- HashMap.insert sym level identMap) (level + 1) (0 : shiftLevels) node idents
+withSymbol :: Symbol -> Trans a -> Trans a
+withSymbol sym a = do
+  level <- asks (^. envLevel)
+  let modif :: Env -> Env =
+        over envIdentMap (HashMap.insert sym level)
+          . over envLevel (+ 1)
+          . over envShiftLevels (0 :)
+  local modif a
+
 fromCore :: Core.InfoTable -> Morphism
 fromCore tab = case tab ^. Core.infoMain of
   Just sym ->
     let node = fromJust $ HashMap.lookup sym (tab ^. Core.identContext)
         idents = HashMap.delete sym (tab ^. Core.infoIdentifiers)
-     in goIdents mempty 0 [] node (HashMap.elems idents)
+     in run (runReader emptyEnv (goIdents node (HashMap.elems idents)))
   Nothing ->
     error "no main function"
   where
@@ -42,47 +85,52 @@ fromCore tab = case tab ^. Core.infoMain of
       (\a -> (\f -> (\g -> g (g a)) (\x -> f (f x))) (\x -> F)) a
       ```
     -}
-    goIdents :: HashMap Symbol Level -> Level -> [Level] -> Core.Node -> [Core.IdentifierInfo] -> Morphism
-    goIdents identMap level shiftLevels node = \case
-      ii : idents ->
-        MorphismApplication
-          Application
-            { _applicationDomainType = argty,
-              _applicationCodomainType = nodeType,
-              _applicationLeft = lamb,
-              _applicationRight = convertNode identMap 0 shiftLevels fundef
-            }
+    goIdents :: Core.Node -> [Core.IdentifierInfo] -> Trans Morphism
+    goIdents node = \case
+      [] ->
+        -- convertNode identMap 0 shiftLevels node
+        zeroLevel (convertNode node)
+      ii : idents -> do
+        lamb <- mkLambda
+        arg <- zeroLevel (convertNode fundef)
+        return $
+          MorphismApplication
+            Application
+              { _applicationDomainType = argty,
+                _applicationCodomainType = nodeType,
+                _applicationLeft = lamb,
+                _applicationRight = arg
+              }
         where
           sym = ii ^. Core.identifierSymbol
           fundef = fromJust $ HashMap.lookup sym (tab ^. Core.identContext)
           argty = convertType (Info.getNodeType fundef)
-          body = goIdents (HashMap.insert sym level identMap) (level + 1) (0 : shiftLevels) node idents
-          lamb =
-            MorphismLambda
-              Lambda
-                { _lambdaVarType = argty,
-                  _lambdaBodyType = nodeType,
-                  _lambdaBody = body
-                }
-      [] ->
-        convertNode identMap 0 shiftLevels node
+          mkLambda = do
+            body <- withSymbol sym (goIdents node idents)
+            return $
+              MorphismLambda
+                Lambda
+                  { _lambdaVarType = argty,
+                    _lambdaBodyType = nodeType,
+                    _lambdaBody = body
+                  }
       where
         nodeType = convertType (Info.getNodeType node)
 
     -- `shiftLevels` contains the de Bruijn levels immediately before which a
     -- binder was inserted
-    convertNode :: HashMap Symbol Level -> Level -> [Level] -> Core.Node -> Morphism
-    convertNode identMap varsNum shiftLevels = \case
-      Core.NVar x -> convertVar identMap varsNum shiftLevels x
-      Core.NIdt x -> convertIdent identMap varsNum shiftLevels x
-      Core.NCst x -> convertConstant identMap varsNum shiftLevels x
-      Core.NApp x -> convertApp identMap varsNum shiftLevels x
-      Core.NBlt x -> convertBuiltinApp identMap varsNum shiftLevels x
-      Core.NCtr x -> convertConstr identMap varsNum shiftLevels x
-      Core.NLam x -> convertLambda identMap varsNum shiftLevels x
-      Core.NLet x -> convertLet identMap varsNum shiftLevels x
+    convertNode :: Core.Node -> Trans Morphism
+    convertNode = \case
+      Core.NVar x -> convertVar x
+      Core.NIdt x -> convertIdent x
+      Core.NCst x -> convertConstant x
+      Core.NApp x -> convertApp x
+      Core.NBlt x -> convertBuiltinApp x
+      Core.NCtr x -> convertConstr x
+      Core.NLam x -> convertLambda x
+      Core.NLet x -> convertLet x
       Core.NRec {} -> unsupported -- LetRecs should be lifted out beforehand
-      Core.NCase x -> convertCase identMap varsNum shiftLevels x
+      Core.NCase x -> convertCase x
       Core.NMatch {} -> unsupported -- Pattern matching should be compiled beforehand
       Core.NPi {} -> unsupported
       Core.NUniv {} -> unsupported
@@ -95,52 +143,65 @@ fromCore tab = case tab ^. Core.infoMain of
     insertedBinders varsNum shiftLevels idx =
       length (filter ((varsNum - idx) <=) shiftLevels)
 
-    convertVar :: HashMap Symbol Level -> Level -> [Level] -> Core.Var -> Morphism
-    convertVar _ varsNum shiftLevels Core.Var {..} =
-      MorphismVar (Var (_varIndex + insertedBinders varsNum shiftLevels _varIndex))
+    convertVar :: Core.Var -> Trans Morphism
+    convertVar Core.Var {..} = do
+      varsNum <- asks (^. envLevel)
+      shiftLevels <- asks (^. envShiftLevels)
+      return $ MorphismVar (Var (_varIndex + insertedBinders varsNum shiftLevels _varIndex))
 
-    convertIdent :: HashMap Symbol Level -> Level -> [Level] -> Core.Ident -> Morphism
-    convertIdent identMap varsNum shiftLevels Core.Ident {..} =
-      MorphismVar (Var (varsNum + length shiftLevels - fromJust (HashMap.lookup _identSymbol identMap) - 1))
+    convertIdent :: Core.Ident -> Trans Morphism
+    convertIdent Core.Ident {..} = do
+      varsNum <- asks (^. envLevel)
+      shiftLevels <- asks (^. envShiftLevels)
+      identMap <- asks (^. envIdentMap)
+      return $ MorphismVar (Var (varsNum + length shiftLevels - fromJust (HashMap.lookup _identSymbol identMap) - 1))
 
-    convertConstant :: HashMap Symbol Level -> Level -> [Level] -> Core.Constant -> Morphism
-    convertConstant _ _ _ Core.Constant {} = unsupported
+    convertConstant :: Core.Constant -> Trans Morphism
+    convertConstant Core.Constant {} = unsupported
 
-    convertApp :: HashMap Symbol Level -> Level -> [Level] -> Core.App -> Morphism
-    convertApp identMap varsNum shiftLevels Core.App {..} =
-      MorphismApplication
-        Application
-          { _applicationDomainType = convertType (Info.getNodeType _appRight),
-            _applicationCodomainType = convertType (Info.getInfoType _appInfo),
-            _applicationLeft = convertNode identMap varsNum shiftLevels _appLeft,
-            _applicationRight = convertNode identMap varsNum shiftLevels _appRight
-          }
+    convertApp :: Core.App -> Trans Morphism
+    convertApp Core.App {..} = do
+      _applicationLeft <- convertNode _appLeft
+      _applicationRight <- convertNode _appRight
+      return $
+        MorphismApplication
+          Application
+            { _applicationDomainType = convertType (Info.getNodeType _appRight),
+              _applicationCodomainType = convertType (Info.getInfoType _appInfo),
+              _applicationLeft,
+              _applicationRight
+            }
 
-    convertBuiltinApp :: HashMap Symbol Level -> Level -> [Level] -> Core.BuiltinApp -> Morphism
-    convertBuiltinApp _ _ _ Core.BuiltinApp {} = unsupported
+    convertBuiltinApp :: Core.BuiltinApp -> Trans Morphism
+    convertBuiltinApp Core.BuiltinApp {} = unsupported
 
-    convertConstr :: HashMap Symbol Level -> Level -> [Level] -> Core.Constr -> Morphism
-    convertConstr identMap varsNum shiftLevels Core.Constr {..} =
-      foldr ($) prod (replicate tagNum MorphismRight)
+    convertConstr :: Core.Constr -> Trans Morphism
+    convertConstr Core.Constr {..} = do
+      prod <- mkProd
+      return (foldr ($) prod (replicate tagNum MorphismRight))
       where
         ci = fromJust $ HashMap.lookup _constrTag (tab ^. Core.infoConstructors)
         sym = ci ^. Core.constructorInductive
         ctrs = fromJust (HashMap.lookup sym (tab ^. Core.infoInductives)) ^. Core.inductiveConstructors
         tagNum = fromJust $ elemIndex _constrTag (sort (map (^. Core.constructorTag) ctrs))
-        prod =
+        mkProd :: Trans Morphism
+        mkProd =
           (if tagNum == length ctrs - 1 then id else MorphismLeft)
-            (convertProduct identMap varsNum shiftLevels _constrArgs)
+            <$> (convertProduct _constrArgs)
 
-    convertProduct :: HashMap Symbol Level -> Level -> [Level] -> [Core.Node] -> Morphism
-    convertProduct identMap varsNum shiftLevels args = case reverse args of
-      h : t ->
-        fst $
-          foldr
-            (\x -> mkPair (convertNode identMap varsNum shiftLevels x, convertType (Info.getNodeType x)))
-            (convertNode identMap varsNum shiftLevels h, convertType (Info.getNodeType h))
-            (reverse t)
-      [] ->
-        MorphismUnit
+    convertProduct :: [Core.Node] -> Trans Morphism
+    convertProduct args = do
+      case reverse args of
+        h : t -> do
+          env <- ask
+          let convertNode' = run . runReader env . convertNode
+          return $
+            fst $
+              foldr
+                (\x -> mkPair (convertNode' x, convertType (Info.getNodeType x)))
+                (convertNode' h, convertType (Info.getNodeType h))
+                (reverse t)
+        [] -> return MorphismUnit
       where
         mkPair :: (Morphism, Object) -> (Morphism, Object) -> (Morphism, Object)
         mkPair (x, xty) (y, yty) = (z, zty)
@@ -155,55 +216,60 @@ fromCore tab = case tab ^. Core.infoMain of
                   }
             zty = ObjectProduct (Product xty yty)
 
-    convertLet :: HashMap Symbol Level -> Level -> [Level] -> Core.Let -> Morphism
-    convertLet identMap varsNum shiftLevels Core.Let {..} =
-      MorphismApplication
-        Application
-          { _applicationCodomainType = domty,
-            _applicationDomainType = codty,
-            _applicationLeft =
-              MorphismLambda
-                Lambda
-                  { _lambdaVarType = domty,
-                    _lambdaBodyType = codty,
-                    _lambdaBody = convertNode identMap varsNum shiftLevels _letBody
-                  },
-            _applicationRight = convertNode identMap varsNum shiftLevels (_letItem ^. Core.letItemValue)
-          }
-      where
-        domty = convertType (_letItem ^. Core.letItemBinder . Core.binderType)
-        codty = convertType (Info.getNodeType _letBody)
+    convertLet :: Core.Let -> Trans Morphism
+    convertLet Core.Let {..} = do
+      _lambdaBody <- convertNode _letBody
+      let domty = convertType (_letItem ^. Core.letItemBinder . Core.binderType)
+          codty = convertType (Info.getNodeType _letBody)
+      arg <- convertNode (_letItem ^. Core.letItemValue)
+      return $
+        MorphismApplication
+          Application
+            { _applicationCodomainType = domty,
+              _applicationDomainType = codty,
+              _applicationLeft =
+                MorphismLambda
+                  Lambda
+                    { _lambdaVarType = domty,
+                      _lambdaBodyType = codty,
+                      _lambdaBody
+                    },
+              _applicationRight = arg
+            }
 
-    convertLambda :: HashMap Symbol Level -> Level -> [Level] -> Core.Lambda -> Morphism
-    convertLambda identMap varsNum shiftLevels Core.Lambda {..} =
-      MorphismLambda
-        Lambda
-          { _lambdaVarType = convertType (_lambdaBinder ^. Core.binderType),
-            _lambdaBodyType = convertType (Info.getNodeType _lambdaBody),
-            _lambdaBody = convertNode identMap (varsNum + 1) shiftLevels _lambdaBody
-          }
+    convertLambda :: Core.Lambda -> Trans Morphism
+    convertLambda Core.Lambda {..} = do
+      body <- underBinder (convertNode _lambdaBody)
+      return $
+        MorphismLambda
+          Lambda
+            { _lambdaVarType = convertType (_lambdaBinder ^. Core.binderType),
+              _lambdaBodyType = convertType (Info.getNodeType _lambdaBody),
+              _lambdaBody = body
+            }
 
-    convertCase :: HashMap Symbol Level -> Level -> [Level] -> Core.Case -> Morphism
-    convertCase identMap varsNum shiftLevels Core.Case {..} =
+    convertCase :: Core.Case -> Trans Morphism
+    convertCase Core.Case {..} = do
       if
-          | null branches ->
-              MorphismAbsurd (convertNode identMap varsNum shiftLevels _caseValue)
-          | missingCtrsNum > 1 ->
+          | null branches -> MorphismAbsurd <$> convertNode _caseValue
+          | missingCtrsNum > 1 -> do
+              arg <- convertNode defaultNode
+              body <- shifting (go indty _caseValue branches)
               let ty = convertType (Info.getNodeType defaultNode)
-               in MorphismApplication
-                    Application
-                      { _applicationDomainType = ty,
-                        _applicationCodomainType = ty,
-                        _applicationLeft =
-                          MorphismLambda
-                            Lambda
-                              { _lambdaVarType = ty,
-                                _lambdaBodyType = ty,
-                                _lambdaBody = go indty (varsNum : shiftLevels) _caseValue branches
-                              },
-                        _applicationRight = convertNode identMap varsNum shiftLevels defaultNode
-                      }
-          | otherwise -> go indty shiftLevels _caseValue branches
+              return $ MorphismApplication
+                Application
+                  { _applicationDomainType = ty,
+                    _applicationCodomainType = ty,
+                    _applicationLeft =
+                      MorphismLambda
+                        Lambda
+                          { _lambdaVarType = ty,
+                            _lambdaBodyType = ty,
+                            _lambdaBody = body
+                          },
+                    _applicationRight = arg
+                  }
+          | otherwise -> go indty _caseValue branches
       where
         indty = convertInductive _caseInductive
         ii = fromJust $ HashMap.lookup _caseInductive (tab ^. Core.infoInductives)
@@ -239,31 +305,34 @@ fromCore tab = case tab ^. Core.infoMain of
                   | missingCtrsNum > 1 -> Core.mkVar'
                   | otherwise -> (`Core.shift` defaultNode)
 
-        go :: Object -> [Level] -> Core.Node -> [Core.CaseBranch] -> Morphism
-        go ty lvls val = \case
+        go :: Object -> Core.Node -> [Core.CaseBranch] -> Trans Morphism
+        go ty val = \case
           [br] ->
             -- there is only one constructor, so `ty` is a product of its argument types
-            mkBranch ty lvls val br
-          br : brs ->
-            MorphismCase
+            mkBranch ty val br
+          br : brs -> do
+            _caseOn <- convertNode val
+            bodyLeft <- shifting (mkBranch lty val br)
+            bodyRight <- shifting (go rty (Core.mkVar' 0) brs)
+            return $ MorphismCase
               Case
                 { _caseLeftType = lty,
                   _caseRightType = rty,
                   _caseCodomainType = codty,
-                  _caseOn = convertNode identMap varsNum lvls val,
+                  _caseOn,
                   _caseLeft =
                     MorphismLambda
                       Lambda
                         { _lambdaVarType = lty,
                           _lambdaBodyType = codty,
-                          _lambdaBody = mkBranch lty (varsNum : lvls) val br
+                          _lambdaBody = bodyLeft
                         },
                   _caseRight =
                     MorphismLambda
                       Lambda
                         { _lambdaVarType = rty,
                           _lambdaBodyType = codty,
-                          _lambdaBody = go rty (varsNum : lvls) (Core.mkVar' 0) brs
+                          _lambdaBody = bodyRight
                         }
                 }
             where
@@ -272,15 +341,15 @@ fromCore tab = case tab ^. Core.infoMain of
                 _ -> impossible
           [] -> impossible
 
-        mkBranch :: Object -> [Level] -> Core.Node -> Core.CaseBranch -> Morphism
-        mkBranch valty lvls val Core.CaseBranch {..} =
+        mkBranch :: Object -> Core.Node -> Core.CaseBranch -> Trans Morphism
+        mkBranch valty val Core.CaseBranch {..} = do
+          branch <- underBinders _caseBranchBindersNum (convertNode _caseBranchBody)
           if
-              | _caseBranchBindersNum == 0 ->
-                  branch
-              | otherwise ->
-                  mkApps (mkLambs argtys) (convertNode identMap varsNum lvls val) valty argtys
+              | _caseBranchBindersNum == 0 -> return branch
+              | otherwise -> do
+                  val' <- convertNode val
+                  return $ mkApps (mkLambs branch argtys) val' valty argtys
           where
-            branch = convertNode identMap (varsNum + _caseBranchBindersNum) lvls _caseBranchBody
             argtys = destructProduct valty
 
             mkApps :: Morphism -> Morphism -> Object -> [Object] -> Morphism
@@ -319,8 +388,8 @@ fromCore tab = case tab ^. Core.infoMain of
               [] ->
                 acc
 
-            mkLambs :: [Object] -> Morphism
-            mkLambs =
+            mkLambs :: Morphism -> [Object] -> Morphism
+            mkLambs br =
               fst
                 . foldr
                   ( \ty (acc, accty) ->
@@ -333,7 +402,7 @@ fromCore tab = case tab ^. Core.infoMain of
                         ObjectHom (Hom ty accty)
                       )
                   )
-                  (branch, codty)
+                  (br, codty)
 
     convertType :: Core.Type -> Object
     convertType = \case
