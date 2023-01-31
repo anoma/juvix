@@ -23,6 +23,9 @@ printString = primPrefix "printString"
 stringConcat :: Text
 stringConcat = primPrefix "stringConcat"
 
+stringEq :: Text
+stringEq = primPrefix "stringEq"
+
 stringToNat :: Text
 stringToNat = primPrefix "stringToNat"
 

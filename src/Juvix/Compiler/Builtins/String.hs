@@ -42,3 +42,10 @@ registerStringConcat f = do
   string_ <- getBuiltinName (getLoc f) BuiltinString
   unless (f ^. axiomType === (string_ --> string_ --> string_)) (error "++str has the wrong type signature")
   registerBuiltin BuiltinStringConcat (f ^. axiomName)
+
+registerStringEq :: (Member Builtins r) => AxiomDef -> Sem r ()
+registerStringEq f = do
+  string_ <- getBuiltinName (getLoc f) BuiltinString
+  bool_ <- getBuiltinName (getLoc f) BuiltinBool
+  unless (f ^. axiomType === (string_ --> string_ --> bool_)) (error "string equality has the wrong type signature")
+  registerBuiltin BuiltinStringEq (f ^. axiomName)

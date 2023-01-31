@@ -369,6 +369,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinTrace -> return ()
       Internal.BuiltinFail -> return ()
       Internal.BuiltinStringConcat -> return ()
+      Internal.BuiltinStringEq -> return ()
       Internal.BuiltinStringToNat -> return ()
       Internal.BuiltinNatToString -> return ()
 
@@ -441,6 +442,8 @@ goAxiomDef a = do
           )
       Internal.BuiltinStringConcat ->
         Just (mkLambda' (mkLambda' (mkBuiltinApp' OpStrConcat [mkVar' 1, mkVar' 0])))
+      Internal.BuiltinStringEq ->
+        Just (mkLambda' (mkLambda' (mkBuiltinApp' OpEq [mkVar' 1, mkVar' 0])))
       Internal.BuiltinStringToNat -> do
         Just
           ( mkLambda'
@@ -708,6 +711,7 @@ goApplication a = do
         Just Internal.BuiltinIOSequence -> app
         Just Internal.BuiltinIOReadline -> app
         Just Internal.BuiltinStringConcat -> app
+        Just Internal.BuiltinStringEq -> app
         Just Internal.BuiltinStringToNat -> app
         Just Internal.BuiltinNatToString -> app
         Just Internal.BuiltinTrace -> do

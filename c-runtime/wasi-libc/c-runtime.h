@@ -113,4 +113,8 @@ prim_string prim_stringConcat(prim_string s1, prim_string s2) {
     return concat(s1, s2);
 }
 
+prim_bool prim_stringEq(prim_string s1, prim_string s2) {
+    return strcmp(s1, s2) == 0;
+}
+
 #endif  // C_RUNTIME_H_

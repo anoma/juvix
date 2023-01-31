@@ -26,6 +26,7 @@ builtinAxiomName = \case
   BuiltinString -> Just string_
   BuiltinStringPrint -> Just printString
   BuiltinStringConcat -> Just stringConcat
+  BuiltinStringEq -> Just stringEq
   BuiltinStringToNat -> Just stringToNat
   BuiltinBoolPrint -> Just printBool
   BuiltinTrace -> Just trace_

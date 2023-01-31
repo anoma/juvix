@@ -98,6 +98,7 @@ data BuiltinAxiom
   | BuiltinNatToString
   | BuiltinStringPrint
   | BuiltinStringConcat
+  | BuiltinStringEq
   | BuiltinStringToNat
   | BuiltinBoolPrint
   | BuiltinString
@@ -116,6 +117,7 @@ instance Pretty BuiltinAxiom where
     BuiltinNatToString -> Str.natToString
     BuiltinStringPrint -> Str.stringPrint
     BuiltinStringConcat -> Str.stringConcat
+    BuiltinStringEq -> Str.stringEq
     BuiltinStringToNat -> Str.stringToNat
     BuiltinBoolPrint -> Str.boolPrint
     BuiltinIO -> Str.io

@@ -98,6 +98,9 @@ stringPrint = "string-print"
 stringConcat :: (IsString s) => s
 stringConcat = "string-concat"
 
+stringEq :: (IsString s) => s
+stringEq = "string-eq"
+
 stringToNat :: (IsString s) => s
 stringToNat = "string-to-nat"
 

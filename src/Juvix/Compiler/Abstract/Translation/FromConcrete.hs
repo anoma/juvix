@@ -301,6 +301,7 @@ registerBuiltinAxiom d = \case
   BuiltinString -> registerString d
   BuiltinStringPrint -> registerStringPrint d
   BuiltinStringConcat -> registerStringConcat d
+  BuiltinStringEq -> registerStringEq d
   BuiltinStringToNat -> registerStringToNat d
   BuiltinBoolPrint -> registerBoolPrint d
   BuiltinTrace -> registerTrace d
