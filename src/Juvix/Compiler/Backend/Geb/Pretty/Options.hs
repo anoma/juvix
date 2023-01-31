@@ -2,23 +2,17 @@ module Juvix.Compiler.Backend.Geb.Pretty.Options where
 
 import Juvix.Prelude
 
-newtype Options = Options
-  { _optIndent :: Int
-  }
+-- no fields for now, but make it easier to add options in the future I don't
+-- remove this datatype entirely
+data Options = Options
 
 makeLenses ''Options
 
 defaultOptions :: Options
-defaultOptions =
-  Options
-    { _optIndent = 2
-    }
+defaultOptions = Options
 
 traceOptions :: Options
-traceOptions =
-  Options
-    { _optIndent = 2
-    }
+traceOptions = Options
 
 fromGenericOptions :: GenericOptions -> Options
 fromGenericOptions _ = defaultOptions

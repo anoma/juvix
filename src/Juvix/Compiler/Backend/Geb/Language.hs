@@ -1,6 +1,10 @@
-module Juvix.Compiler.Backend.Geb.Language where
+module Juvix.Compiler.Backend.Geb.Language
+  ( module Juvix.Compiler.Backend.Geb.Language,
+    module Juvix.Prelude,
+  )
+where
 
-import Juvix.Prelude
+import Juvix.Prelude hiding (First, Product)
 
 {-
   The following datatypes correspond to GEB types for terms
@@ -15,66 +19,68 @@ data Case = Case
   { _caseLeftType :: Object,
     _caseRightType :: Object,
     _caseCodomainType :: Object,
-    _caseOn :: Geb,
-    _caseLeft :: Geb,
-    _caseRight :: Geb
+    _caseOn :: Morphism,
+    _caseLeft :: Morphism,
+    _caseRight :: Morphism
   }
 
 data Pair = Pair
   { _pairLeftType :: Object,
     _pairRightType :: Object,
-    _pairLeft :: Geb,
-    _pairRight :: Geb
+    _pairLeft :: Morphism,
+    _pairRight :: Morphism
   }
 
-data Fst = Fst
-  { _fstLeftType :: Object,
-    _fstRightType :: Object,
-    _fstValue :: Geb
+data First = First
+  { _firstLeftType :: Object,
+    _firstRightType :: Object,
+    _firstValue :: Morphism
   }
 
-data Snd = Snd
-  { _sndLeftType :: Object,
-    _sndRightType :: Object,
-    _sndValue :: Geb
+data Second = Second
+  { _secondLeftType :: Object,
+    _secondRightType :: Object,
+    _secondValue :: Morphism
   }
 
-data Lamb = Lamb
-  { _lambVarType :: Object,
-    _lambBodyType :: Object,
-    _lambBody :: Geb
+data Lambda = Lambda
+  { _lambdaVarType :: Object,
+    _lambdaBodyType :: Object,
+    _lambdaBody :: Morphism
   }
 
-data App = App
-  { _appDomainType :: Object,
-    _appCodomainType :: Object,
-    _appLeft :: Geb,
-    _appRight :: Geb
+data Application = Application
+  { _applicationDomainType :: Object,
+    _applicationCodomainType :: Object,
+    _applicationLeft :: Morphism,
+    _applicationRight :: Morphism
   }
 
--- | Corresponds to the GEB type for terms: `stlc`
+newtype Var = Var {_varIndex :: Int}
+
+-- | Corresponds to the GEB type for morphisms (terms): `stlc`
 -- (https://github.com/anoma/geb/blob/main/src/specs/lambda.lisp).
-data Geb
-  = GebAbsurd Geb
-  | GebUnit
-  | GebLeft Geb
-  | GebRight Geb
-  | GebCase Case
-  | GebPair Pair
-  | GebFst Fst
-  | GebSnd Snd
-  | GebLamb Lamb
-  | GebApp App
-  | GebVar Int
+data Morphism
+  = MorphismAbsurd Morphism
+  | MorphismUnit
+  | MorphismLeft Morphism
+  | MorphismRight Morphism
+  | MorphismCase Case
+  | MorphismPair Pair
+  | MorphismFirst First
+  | MorphismSecond Second
+  | MorphismLambda Lambda
+  | MorphismApplication Application
+  | MorphismVar Var
 
-data Prod = Prod
-  { _prodLeft :: Object,
-    _prodRight :: Object
+data Product = Product
+  { _productLeft :: Object,
+    _productRight :: Object
   }
 
-data Coprod = Coprod
-  { _coprodLeft :: Object,
-    _coprodRight :: Object
+data Coproduct = Coproduct
+  { _coproductLeft :: Object,
+    _coproductRight :: Object
   }
 
 -- | Function type
@@ -86,42 +92,46 @@ data Hom = Hom
 -- | Corresponds to the GEB type for types (objects of the category): `substobj`
 -- (https://github.com/anoma/geb/blob/main/src/specs/geb.lisp).
 data Object
-  = ObjectInitial -- empty type
-  | ObjectTerminal -- unit type
-  | ObjectProd Prod
-  | ObjectCoprod Coprod
-  | ObjectHom Hom -- function type
+  = -- | empty type
+    ObjectInitial
+  | -- | unit type
+    ObjectTerminal
+  | ObjectProduct Product
+  | ObjectCoproduct Coproduct
+  | -- | function type
+    ObjectHom Hom
 
-instance HasAtomicity Geb where
+instance HasAtomicity Morphism where
   atomicity = \case
-    GebAbsurd {} -> Aggregate appFixity
-    GebUnit -> Atom
-    GebLeft {} -> Aggregate appFixity
-    GebRight {} -> Aggregate appFixity
-    GebCase {} -> Aggregate appFixity
-    GebPair {} -> Aggregate appFixity
-    GebFst {} -> Aggregate appFixity
-    GebSnd {} -> Aggregate appFixity
-    GebLamb {} -> Aggregate appFixity
-    GebApp {} -> Aggregate appFixity
-    GebVar {} -> Aggregate appFixity
+    MorphismAbsurd {} -> Aggregate appFixity
+    MorphismUnit -> Atom
+    MorphismLeft {} -> Aggregate appFixity
+    MorphismRight {} -> Aggregate appFixity
+    MorphismCase {} -> Aggregate appFixity
+    MorphismPair {} -> Aggregate appFixity
+    MorphismFirst {} -> Aggregate appFixity
+    MorphismSecond {} -> Aggregate appFixity
+    MorphismLambda {} -> Aggregate appFixity
+    MorphismApplication {} -> Aggregate appFixity
+    MorphismVar {} -> Aggregate appFixity
 
 instance HasAtomicity Object where
   atomicity = \case
     ObjectInitial -> Atom
     ObjectTerminal -> Atom
-    ObjectProd {} -> Aggregate appFixity
-    ObjectCoprod {} -> Aggregate appFixity
+    ObjectProduct {} -> Aggregate appFixity
+    ObjectCoproduct {} -> Aggregate appFixity
     ObjectHom {} -> Aggregate appFixity
 
 makeLenses ''Case
 makeLenses ''Pair
-makeLenses ''Fst
-makeLenses ''Snd
-makeLenses ''Lamb
-makeLenses ''App
-makeLenses ''Geb
-makeLenses ''Prod
-makeLenses ''Coprod
+makeLenses ''First
+makeLenses ''Second
+makeLenses ''Lambda
+makeLenses ''Var
+makeLenses ''Application
+makeLenses ''Morphism
+makeLenses ''Product
+makeLenses ''Coproduct
 makeLenses ''Hom
 makeLenses ''Object
