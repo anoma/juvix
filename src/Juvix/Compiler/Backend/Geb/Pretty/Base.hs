@@ -116,8 +116,9 @@ instance PrettyCode Object where
     ObjectCoprod x -> ppCode x
     ObjectHom x -> ppCode x
 
-{--------------------------------------------------------------------------------}
-{- helper functions -}
+--------------------------------------------------------------------------------
+-- helper functions
+--------------------------------------------------------------------------------
 
 ppArg ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
@@ -149,8 +150,9 @@ ppLRExpression associates fixlr e =
   parensIf (atomParens associates (atomicity e) fixlr)
     <$> ppCode e
 
-{--------------------------------------------------------------------------------}
-{- keywords -}
+--------------------------------------------------------------------------------
+-- keywords
+--------------------------------------------------------------------------------
 
 kwAbsurd :: Doc Ann
 kwAbsurd = keyword Str.gebAbsurd
