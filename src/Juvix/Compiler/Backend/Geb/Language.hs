@@ -58,8 +58,8 @@ data Application = Application
 
 newtype Var = Var {_varIndex :: Int}
 
-data Opcode =
-    OpAdd
+data Opcode
+  = OpAdd
   | OpSub
   | OpMul
   | OpDiv

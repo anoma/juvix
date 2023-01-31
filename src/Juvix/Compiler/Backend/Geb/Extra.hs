@@ -19,19 +19,25 @@ gebFalse :: Morphism
 gebFalse = MorphismRight MorphismUnit
 
 mkOr :: Morphism -> Morphism -> Morphism
-mkOr arg1 arg2 = MorphismCase Case {
-  _caseLeftType = ObjectTerminal,
-  _caseRightType = ObjectTerminal,
-  _caseCodomainType = objectBool,
-  _caseOn = arg1,
-  _caseLeft = MorphismLambda Lambda {
-    _lambdaVarType = ObjectTerminal,
-    _lambdaBodyType = objectBool,
-    _lambdaBody = gebTrue
-  },
-  _caseRight = MorphismLambda Lambda {
-    _lambdaVarType = ObjectTerminal,
-    _lambdaBodyType = objectBool,
-    _lambdaBody = arg2
-  }
-}
+mkOr arg1 arg2 =
+  MorphismCase
+    Case
+      { _caseLeftType = ObjectTerminal,
+        _caseRightType = ObjectTerminal,
+        _caseCodomainType = objectBool,
+        _caseOn = arg1,
+        _caseLeft =
+          MorphismLambda
+            Lambda
+              { _lambdaVarType = ObjectTerminal,
+                _lambdaBodyType = objectBool,
+                _lambdaBody = gebTrue
+              },
+        _caseRight =
+          MorphismLambda
+            Lambda
+              { _lambdaVarType = ObjectTerminal,
+                _lambdaBodyType = objectBool,
+                _lambdaBody = arg2
+              }
+      }
