@@ -224,8 +224,9 @@ fromCore tab = case tab ^. Core.infoMain of
             error "wrong builtin application argument number"
       Core.OpEq ->
         case _builtinAppArgs of
-          arg : _ | Info.getNodeType arg == Core.mkTypeInteger' ->
-            convertBinop identMap varsNum shiftLevels OpEq _builtinAppArgs
+          arg : _
+            | Info.getNodeType arg == Core.mkTypeInteger' ->
+                convertBinop identMap varsNum shiftLevels OpEq _builtinAppArgs
           _ ->
             error "unsupported equality argument types"
       _ ->
