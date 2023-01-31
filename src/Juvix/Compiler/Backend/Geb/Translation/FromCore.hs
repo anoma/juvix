@@ -174,37 +174,66 @@ fromCore tab = case tab ^. Core.infoMain of
     convertBuiltinApp :: Core.BuiltinApp -> Trans Morphism
     convertBuiltinApp Core.BuiltinApp {..} = case _builtinAppOp of
       Core.OpIntAdd ->
-        case _builtinAppArgs of
-          [arg1, arg2] ->
-            GebAdd
-              ( Add
-                  (convertNode identMap varsNum shiftLevels arg1)
-                  (convertNode identMap varsNum shiftLevels arg2)
-              )
-          _ ->
-            error "wrong builtin application argument number"
+        convertBinop identMap varsNum shiftLevels OpAdd _builtinAppArgs
       Core.OpIntSub ->
-        case _builtinAppArgs of
-          [arg1, arg2] ->
-            GebSub
-              ( Sub
-                  (convertNode identMap varsNum shiftLevels arg1)
-                  (convertNode identMap varsNum shiftLevels arg2)
-              )
-          _ ->
-            error "wrong builtin application argument number"
+        convertBinop identMap varsNum shiftLevels OpSub _builtinAppArgs
       Core.OpIntMul ->
+        convertBinop identMap varsNum shiftLevels OpMul _builtinAppArgs
+      Core.OpIntDiv ->
+        convertBinop identMap varsNum shiftLevels OpDiv _builtinAppArgs
+      Core.OpIntMod ->
+        convertBinop identMap varsNum shiftLevels OpMod _builtinAppArgs
+      Core.OpIntLt ->
+        convertBinop identMap varsNum shiftLevels OpLt _builtinAppArgs
+      Core.OpIntLe ->
         case _builtinAppArgs of
           [arg1, arg2] ->
-            GebMul
-              ( Mul
-                  (convertNode identMap varsNum shiftLevels arg1)
-                  (convertNode identMap varsNum shiftLevels arg2)
-              )
+            let arg1' = convertNode identMap varsNum shiftLevels arg1
+                arg2' = convertNode identMap varsNum shiftLevels arg2
+                le =
+                  MorphismLambda Lambda {
+                    _lambdaVarType = ObjectInteger,
+                    _lambdaBodyType = ObjectHom (Hom ObjectInteger objectBool),
+                    _lambdaBody = MorphismLambda Lambda {
+                      _lambdaVarType = ObjectInteger,
+                      _lambdaBodyType = objectBool,
+                      _lambdaBody =
+                        mkOr
+                          (MorphismBinop $ Binop OpLt (MorphismVar (Var 1)) (MorphismVar (Var 0)))
+                          (MorphismBinop $ Binop OpEq (MorphismVar (Var 1)) (MorphismVar (Var 0)))
+                    }
+                  }
+            in
+            MorphismApplication Application {
+              _applicationDomainType = ObjectInteger,
+              _applicationCodomainType = ObjectHom (Hom ObjectInteger objectBool),
+              _applicationLeft = MorphismApplication Application {
+                _applicationDomainType = ObjectInteger,
+                _applicationCodomainType = objectBool,
+                _applicationLeft = le,
+                _applicationRight = arg2'
+              },
+              _applicationRight = arg1'
+            }
           _ ->
             error "wrong builtin application argument number"
+      Core.OpEq ->
+        convertBinop identMap varsNum shiftLevels OpEq _builtinAppArgs
       _ ->
         unsupported
+
+    convertBinop :: HashMap Symbol Level -> Level -> [Level] -> Opcode -> [Core.Node] -> Morphism
+    convertBinop identMap varsNum shiftLevels op args =
+        case args of
+          [arg1, arg2] ->
+            MorphismBinop
+              ( Binop
+                  op
+                  (convertNode identMap varsNum shiftLevels arg1)
+                  (convertNode identMap varsNum shiftLevels arg2)
+              )
+          _ ->
+            error "wrong builtin application argument number"
 
     convertConstr :: Core.Constr -> Trans Morphism
     convertConstr Core.Constr {..} = do
@@ -469,7 +498,7 @@ fromCore tab = case tab ^. Core.infoMain of
     convertTypePrim Core.TypePrim {..} =
       case _typePrimPrimitive of
         Core.PrimInteger _ -> ObjectInteger
-        Core.PrimBool _ -> ObjectCoprod (Coprod ObjectTerminal ObjectTerminal)
+        Core.PrimBool _ -> objectBool
         Core.PrimString -> unsupported
 
     convertInductive :: Symbol -> Object

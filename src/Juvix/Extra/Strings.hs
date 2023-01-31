@@ -584,6 +584,18 @@ gebSub = "sub"
 gebMul :: IsString s => s
 gebMul = "mul"
 
+gebDiv :: IsString s => s
+gebDiv = "div"
+
+gebMod :: IsString s => s
+gebMod = "mod"
+
+gebEq :: IsString s => s
+gebEq = "eq"
+
+gebLt :: IsString s => s
+gebLt = "lt"
+
 gebInitial :: IsString s => s
 gebInitial = "so0"
 

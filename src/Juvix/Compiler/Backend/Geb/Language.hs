@@ -58,6 +58,21 @@ data Application = Application
 
 newtype Var = Var {_varIndex :: Int}
 
+data Opcode =
+    OpAdd
+  | OpSub
+  | OpMul
+  | OpDiv
+  | OpMod
+  | OpEq
+  | OpLt
+
+data Binop = Binop
+  { _binopOpcode :: Opcode,
+    _binopLeft :: Morphism,
+    _binopRight :: Morphism
+  }
+
 -- | Corresponds to the GEB type for morphisms (terms): `stlc`
 -- (https://github.com/anoma/geb/blob/main/src/specs/lambda.lisp).
 data Morphism
@@ -73,6 +88,7 @@ data Morphism
   | MorphismApplication Application
   | MorphismVar Var
   | MorphismInteger Integer
+  | MorphismBinop Binop
 
 data Product = Product
   { _productLeft :: Object,
@@ -117,6 +133,7 @@ instance HasAtomicity Morphism where
     MorphismApplication {} -> Aggregate appFixity
     MorphismVar {} -> Aggregate appFixity
     MorphismInteger {} -> Atom
+    MorphismBinop {} -> Aggregate appFixity
 
 instance HasAtomicity Object where
   atomicity = \case

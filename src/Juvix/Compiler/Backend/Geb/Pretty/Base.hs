@@ -71,6 +71,23 @@ instance PrettyCode Application where
 instance PrettyCode Var where
   ppCode Var {..} = return $ annotate AnnLiteralInteger (pretty _varIndex)
 
+instance PrettyCode Opcode where
+  ppCode = \case
+    OpAdd -> return kwAdd
+    OpSub -> return kwSub
+    OpMul -> return kwMul
+    OpDiv -> return kwDiv
+    OpMod -> return kwMod
+    OpEq -> return kwEq
+    OpLt -> return kwLt
+
+instance PrettyCode Binop where
+  ppCode Binop {..} = do
+    op <- ppCode _binopOpcode
+    left <- ppCode _binopLeft
+    right <- ppCode _binopRight
+    return $ op <+> left <+> right
+
 instance PrettyCode Morphism where
   ppCode = \case
     MorphismAbsurd val -> do
@@ -94,6 +111,8 @@ instance PrettyCode Morphism where
       i <- ppCode idx
       return $ kwVar <+> i
     MorphismInteger n -> return $ annotate AnnLiteralInteger (pretty n)
+    MorphismBinop x -> ppCode x
+
 instance PrettyCode Product where
   ppCode Product {..} = do
     left <- ppArg _productLeft
@@ -200,6 +219,18 @@ kwSub = keyword Str.gebSub
 
 kwMul :: Doc Ann
 kwMul = keyword Str.gebMul
+
+kwDiv :: Doc Ann
+kwDiv = keyword Str.gebDiv
+
+kwMod :: Doc Ann
+kwMod = keyword Str.gebMod
+
+kwEq :: Doc Ann
+kwEq = keyword Str.gebEq
+
+kwLt :: Doc Ann
+kwLt = keyword Str.gebLt
 
 kwInitial :: Doc Ann
 kwInitial = keyword Str.gebInitial
