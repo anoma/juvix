@@ -22,6 +22,8 @@ concurrency:
   cancel-in-progress: true
 env:
   STACKFLAGS: '--pedantic'
+  STACK_ROOT: ${{ github.workspace }}/.stack
+  STACK_WORK: ${{ github.workspace }}/main/.stack-work
 
 jobs:
 
@@ -82,20 +84,14 @@ jobs:
         name: Restore .stack cache
         with:
           path: ~/.stack
-          key: >-
-            ${{ runner.os }}-stack-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-stack-
+          key: ${{ runner.os }}-stack
 
       - uses: actions/cache/restore@v3
         id: stack-work-cache
         name: Restore main/.stack-work cache
         with:
           path: main/.stack-work
-          key: >-
-            ${{ runner.os }}-stack-work-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-stack-work-
+          key: ${{ runner.os }}-stack-work-
 
       - uses: haskell/actions/setup@v2
         name: Setup Haskell
@@ -207,10 +203,7 @@ jobs:
         with:
           fail-on-cache-miss: true
           path: ~/.stack
-          key: >-
-            ${{ runner.os }}-stack-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-stack-
+          key: ${{ runner.os }}-stack
 
       - uses: actions/cache/restore@v3
         name: Restore main/.stack-work cache
@@ -218,10 +211,7 @@ jobs:
         with:
           fail-on-cache-miss: true
           path: main/.stack-work
-          key: >-
-            ${{ runner.os }}-stack-work-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-stack-work-
+          key: ${{ runner.os }}-stack-work
 
       - uses: r-lib/actions/setup-pandoc@v2
         with:
@@ -290,20 +280,14 @@ jobs:
         name: Restore .stack cache
         with:
           path: ~/.stack
-          key: >-
-            ${{ runner.os }}-stack-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-stack-
+          key: ${{ runner.os }}-stack
 
       - uses: actions/cache/restore@v3
         name: Restore main/.stack-work cache
         id: stack-work-cache
         with:
           path: main/.stack-work
-          key: >-
-            ${{ runner.os }}-stack-work-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-stack-work-
+          key: ${{ runner.os }}-stack-work
 
       - uses: haskell/actions/setup@v2
         name: Setup Haskell
@@ -368,7 +352,7 @@ jobs:
 
       - name: Save stack-work cache
         uses: actions/cache/save@v3
-        if: ${{ success() }}
+        if: always()
         with:
           path: main/.stack-work
           key: '${{ steps.stack-work-cache.outputs.cache-primary-key }}'
