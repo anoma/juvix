@@ -134,7 +134,7 @@ jobs:
           echo "WASI_SYSROOT_PATH=$GITHUB_WORKSPACE/wasi-sysroot" >> $GITHUB_ENV
 
       - name: Install the latest Wasmer version
-        uses: jonaprieto/action-install-gh-release@1
+        uses: jonaprieto/action-install-gh-release@2
         with:
           repo: wasmerio/wasmer
           tag: latest
@@ -367,9 +367,7 @@ jobs:
         run: |
           cd main
           make CC=$CC LIBTOOL=$LIBTOOL test
-      - name: Add ~/.local/bin to PATH
-        run: |
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name: Download Smoke binary
         uses: jaxxstorm/action-install-gh-release@v1.9.0
         with:
@@ -379,12 +377,18 @@ jobs:
           extension-matching: disable
           rename-to: smoke
           chmod: 0755
+
+      - name: Add ~/.local/bin to PATH
+        run: |
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name: Smoke testing (macOS)
         id: smoke-macos
         if: ${{ success() }}
         run: |
           cd main
           make CC=$CC LIBTOOL=$LIBTOOL smoke
+
       - name: Save stack cache
         uses: actions/cache/save@v3
         if: always()
