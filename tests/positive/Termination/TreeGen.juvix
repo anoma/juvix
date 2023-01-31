@@ -1,0 +1,17 @@
+module TreeGen;
+  open import Stdlib.Prelude;
+
+  type Tree :=
+    | leaf : Tree
+    | node : Tree → Tree → Tree;
+
+  gen : Nat → Tree;
+  gen zero := leaf;
+  gen (suc zero) := node leaf leaf;
+  gen (suc (suc n')) := node (gen n') (gen (suc n'));
+
+  gen2 : Nat → Tree;
+  gen2 zero := leaf;
+  gen2 (suc zero) := node leaf leaf;
+  gen2 (suc n@(suc n')) := node (gen2 n') (gen2 n);
+end;
