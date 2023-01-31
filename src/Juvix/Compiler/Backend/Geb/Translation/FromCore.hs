@@ -9,9 +9,8 @@ import Juvix.Compiler.Core.Extra qualified as Core
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
 import Juvix.Compiler.Core.Language (Index, Level, Symbol)
 import Juvix.Compiler.Core.Language qualified as Core
-import Juvix.Prelude
 
-fromCore :: Core.InfoTable -> Geb
+fromCore :: Core.InfoTable -> Morphism
 fromCore tab = case tab ^. Core.infoMain of
   Just sym ->
     let node = fromJust $ HashMap.lookup sym (tab ^. Core.identContext)
@@ -43,15 +42,15 @@ fromCore tab = case tab ^. Core.infoMain of
       (\a -> (\f -> (\g -> g (g a)) (\x -> f (f x))) (\x -> F)) a
       ```
     -}
-    goIdents :: HashMap Symbol Level -> Level -> [Level] -> Core.Node -> [Core.IdentifierInfo] -> Geb
+    goIdents :: HashMap Symbol Level -> Level -> [Level] -> Core.Node -> [Core.IdentifierInfo] -> Morphism
     goIdents identMap level shiftLevels node = \case
       ii : idents ->
-        GebApp
-          App
-            { _appDomainType = argty,
-              _appCodomainType = nodeType,
-              _appLeft = lamb,
-              _appRight = convertNode identMap 0 shiftLevels fundef
+        MorphismApplication
+          Application
+            { _applicationDomainType = argty,
+              _applicationCodomainType = nodeType,
+              _applicationLeft = lamb,
+              _applicationRight = convertNode identMap 0 shiftLevels fundef
             }
         where
           sym = ii ^. Core.identifierSymbol
@@ -59,11 +58,11 @@ fromCore tab = case tab ^. Core.infoMain of
           argty = convertType (Info.getNodeType fundef)
           body = goIdents (HashMap.insert sym level identMap) (level + 1) (0 : shiftLevels) node idents
           lamb =
-            GebLamb
-              Lamb
-                { _lambVarType = argty,
-                  _lambBodyType = nodeType,
-                  _lambBody = body
+            MorphismLambda
+              Lambda
+                { _lambdaVarType = argty,
+                  _lambdaBodyType = nodeType,
+                  _lambdaBody = body
                 }
       [] ->
         convertNode identMap 0 shiftLevels node
@@ -72,7 +71,7 @@ fromCore tab = case tab ^. Core.infoMain of
 
     -- `shiftLevels` contains the de Bruijn levels immediately before which a
     -- binder was inserted
-    convertNode :: HashMap Symbol Level -> Level -> [Level] -> Core.Node -> Geb
+    convertNode :: HashMap Symbol Level -> Level -> [Level] -> Core.Node -> Morphism
     convertNode identMap varsNum shiftLevels = \case
       Core.NVar x -> convertVar identMap varsNum shiftLevels x
       Core.NIdt x -> convertIdent identMap varsNum shiftLevels x
@@ -96,43 +95,43 @@ fromCore tab = case tab ^. Core.infoMain of
     insertedBinders varsNum shiftLevels idx =
       length (filter ((varsNum - idx) <=) shiftLevels)
 
-    convertVar :: HashMap Symbol Level -> Level -> [Level] -> Core.Var -> Geb
+    convertVar :: HashMap Symbol Level -> Level -> [Level] -> Core.Var -> Morphism
     convertVar _ varsNum shiftLevels Core.Var {..} =
-      GebVar (_varIndex + insertedBinders varsNum shiftLevels _varIndex)
+      MorphismVar (Var (_varIndex + insertedBinders varsNum shiftLevels _varIndex))
 
-    convertIdent :: HashMap Symbol Level -> Level -> [Level] -> Core.Ident -> Geb
+    convertIdent :: HashMap Symbol Level -> Level -> [Level] -> Core.Ident -> Morphism
     convertIdent identMap varsNum shiftLevels Core.Ident {..} =
-      GebVar (varsNum + length shiftLevels - fromJust (HashMap.lookup _identSymbol identMap) - 1)
+      MorphismVar (Var (varsNum + length shiftLevels - fromJust (HashMap.lookup _identSymbol identMap) - 1))
 
-    convertConstant :: HashMap Symbol Level -> Level -> [Level] -> Core.Constant -> Geb
+    convertConstant :: HashMap Symbol Level -> Level -> [Level] -> Core.Constant -> Morphism
     convertConstant _ _ _ Core.Constant {} = unsupported
 
-    convertApp :: HashMap Symbol Level -> Level -> [Level] -> Core.App -> Geb
+    convertApp :: HashMap Symbol Level -> Level -> [Level] -> Core.App -> Morphism
     convertApp identMap varsNum shiftLevels Core.App {..} =
-      GebApp
-        App
-          { _appDomainType = convertType (Info.getNodeType _appRight),
-            _appCodomainType = convertType (Info.getInfoType _appInfo),
-            _appLeft = convertNode identMap varsNum shiftLevels _appLeft,
-            _appRight = convertNode identMap varsNum shiftLevels _appRight
+      MorphismApplication
+        Application
+          { _applicationDomainType = convertType (Info.getNodeType _appRight),
+            _applicationCodomainType = convertType (Info.getInfoType _appInfo),
+            _applicationLeft = convertNode identMap varsNum shiftLevels _appLeft,
+            _applicationRight = convertNode identMap varsNum shiftLevels _appRight
           }
 
-    convertBuiltinApp :: HashMap Symbol Level -> Level -> [Level] -> Core.BuiltinApp -> Geb
+    convertBuiltinApp :: HashMap Symbol Level -> Level -> [Level] -> Core.BuiltinApp -> Morphism
     convertBuiltinApp _ _ _ Core.BuiltinApp {} = unsupported
 
-    convertConstr :: HashMap Symbol Level -> Level -> [Level] -> Core.Constr -> Geb
+    convertConstr :: HashMap Symbol Level -> Level -> [Level] -> Core.Constr -> Morphism
     convertConstr identMap varsNum shiftLevels Core.Constr {..} =
-      foldr ($) prod (replicate tagNum GebRight)
+      foldr ($) prod (replicate tagNum MorphismRight)
       where
         ci = fromJust $ HashMap.lookup _constrTag (tab ^. Core.infoConstructors)
         sym = ci ^. Core.constructorInductive
         ctrs = fromJust (HashMap.lookup sym (tab ^. Core.infoInductives)) ^. Core.inductiveConstructors
         tagNum = fromJust $ elemIndex _constrTag (sort (map (^. Core.constructorTag) ctrs))
         prod =
-          (if tagNum == length ctrs - 1 then id else GebLeft)
+          (if tagNum == length ctrs - 1 then id else MorphismLeft)
             (convertProduct identMap varsNum shiftLevels _constrArgs)
 
-    convertProduct :: HashMap Symbol Level -> Level -> [Level] -> [Core.Node] -> Geb
+    convertProduct :: HashMap Symbol Level -> Level -> [Level] -> [Core.Node] -> Morphism
     convertProduct identMap varsNum shiftLevels args = case reverse args of
       h : t ->
         fst $
@@ -141,68 +140,68 @@ fromCore tab = case tab ^. Core.infoMain of
             (convertNode identMap varsNum shiftLevels h, convertType (Info.getNodeType h))
             (reverse t)
       [] ->
-        GebUnit
+        MorphismUnit
       where
-        mkPair :: (Geb, Object) -> (Geb, Object) -> (Geb, Object)
+        mkPair :: (Morphism, Object) -> (Morphism, Object) -> (Morphism, Object)
         mkPair (x, xty) (y, yty) = (z, zty)
           where
             z =
-              GebPair
+              MorphismPair
                 Pair
                   { _pairLeftType = xty,
                     _pairRightType = yty,
                     _pairLeft = x,
                     _pairRight = y
                   }
-            zty = ObjectProd (Prod xty yty)
+            zty = ObjectProduct (Product xty yty)
 
-    convertLet :: HashMap Symbol Level -> Level -> [Level] -> Core.Let -> Geb
+    convertLet :: HashMap Symbol Level -> Level -> [Level] -> Core.Let -> Morphism
     convertLet identMap varsNum shiftLevels Core.Let {..} =
-      GebApp
-        App
-          { _appCodomainType = domty,
-            _appDomainType = codty,
-            _appLeft =
-              GebLamb
-                Lamb
-                  { _lambVarType = domty,
-                    _lambBodyType = codty,
-                    _lambBody = convertNode identMap varsNum shiftLevels _letBody
+      MorphismApplication
+        Application
+          { _applicationCodomainType = domty,
+            _applicationDomainType = codty,
+            _applicationLeft =
+              MorphismLambda
+                Lambda
+                  { _lambdaVarType = domty,
+                    _lambdaBodyType = codty,
+                    _lambdaBody = convertNode identMap varsNum shiftLevels _letBody
                   },
-            _appRight = convertNode identMap varsNum shiftLevels (_letItem ^. Core.letItemValue)
+            _applicationRight = convertNode identMap varsNum shiftLevels (_letItem ^. Core.letItemValue)
           }
       where
         domty = convertType (_letItem ^. Core.letItemBinder . Core.binderType)
         codty = convertType (Info.getNodeType _letBody)
 
-    convertLambda :: HashMap Symbol Level -> Level -> [Level] -> Core.Lambda -> Geb
+    convertLambda :: HashMap Symbol Level -> Level -> [Level] -> Core.Lambda -> Morphism
     convertLambda identMap varsNum shiftLevels Core.Lambda {..} =
-      GebLamb
-        Lamb
-          { _lambVarType = convertType (_lambdaBinder ^. Core.binderType),
-            _lambBodyType = convertType (Info.getNodeType _lambdaBody),
-            _lambBody = convertNode identMap (varsNum + 1) shiftLevels _lambdaBody
+      MorphismLambda
+        Lambda
+          { _lambdaVarType = convertType (_lambdaBinder ^. Core.binderType),
+            _lambdaBodyType = convertType (Info.getNodeType _lambdaBody),
+            _lambdaBody = convertNode identMap (varsNum + 1) shiftLevels _lambdaBody
           }
 
-    convertCase :: HashMap Symbol Level -> Level -> [Level] -> Core.Case -> Geb
+    convertCase :: HashMap Symbol Level -> Level -> [Level] -> Core.Case -> Morphism
     convertCase identMap varsNum shiftLevels Core.Case {..} =
       if
           | null branches ->
-              GebAbsurd (convertNode identMap varsNum shiftLevels _caseValue)
+              MorphismAbsurd (convertNode identMap varsNum shiftLevels _caseValue)
           | missingCtrsNum > 1 ->
               let ty = convertType (Info.getNodeType defaultNode)
-               in GebApp
-                    App
-                      { _appDomainType = ty,
-                        _appCodomainType = ty,
-                        _appLeft =
-                          GebLamb
-                            Lamb
-                              { _lambVarType = ty,
-                                _lambBodyType = ty,
-                                _lambBody = go indty (varsNum : shiftLevels) _caseValue branches
+               in MorphismApplication
+                    Application
+                      { _applicationDomainType = ty,
+                        _applicationCodomainType = ty,
+                        _applicationLeft =
+                          MorphismLambda
+                            Lambda
+                              { _lambdaVarType = ty,
+                                _lambdaBodyType = ty,
+                                _lambdaBody = go indty (varsNum : shiftLevels) _caseValue branches
                               },
-                        _appRight = convertNode identMap varsNum shiftLevels defaultNode
+                        _applicationRight = convertNode identMap varsNum shiftLevels defaultNode
                       }
           | otherwise -> go indty shiftLevels _caseValue branches
       where
@@ -240,40 +239,40 @@ fromCore tab = case tab ^. Core.infoMain of
                   | missingCtrsNum > 1 -> Core.mkVar'
                   | otherwise -> (`Core.shift` defaultNode)
 
-        go :: Object -> [Level] -> Core.Node -> [Core.CaseBranch] -> Geb
+        go :: Object -> [Level] -> Core.Node -> [Core.CaseBranch] -> Morphism
         go ty lvls val = \case
           [br] ->
             -- there is only one constructor, so `ty` is a product of its argument types
             mkBranch ty lvls val br
           br : brs ->
-            GebCase
+            MorphismCase
               Case
                 { _caseLeftType = lty,
                   _caseRightType = rty,
                   _caseCodomainType = codty,
                   _caseOn = convertNode identMap varsNum lvls val,
                   _caseLeft =
-                    GebLamb
-                      Lamb
-                        { _lambVarType = lty,
-                          _lambBodyType = codty,
-                          _lambBody = mkBranch lty (varsNum : lvls) val br
+                    MorphismLambda
+                      Lambda
+                        { _lambdaVarType = lty,
+                          _lambdaBodyType = codty,
+                          _lambdaBody = mkBranch lty (varsNum : lvls) val br
                         },
                   _caseRight =
-                    GebLamb
-                      Lamb
-                        { _lambVarType = rty,
-                          _lambBodyType = codty,
-                          _lambBody = go rty (varsNum : lvls) (Core.mkVar' 0) brs
+                    MorphismLambda
+                      Lambda
+                        { _lambdaVarType = rty,
+                          _lambdaBodyType = codty,
+                          _lambdaBody = go rty (varsNum : lvls) (Core.mkVar' 0) brs
                         }
                 }
             where
               (lty, rty) = case ty of
-                ObjectCoprod Coprod {..} -> (_coprodLeft, _coprodRight)
+                ObjectCoproduct Coproduct {..} -> (_coproductLeft, _coproductRight)
                 _ -> impossible
           [] -> impossible
 
-        mkBranch :: Object -> [Level] -> Core.Node -> Core.CaseBranch -> Geb
+        mkBranch :: Object -> [Level] -> Core.Node -> Core.CaseBranch -> Morphism
         mkBranch valty lvls val Core.CaseBranch {..} =
           if
               | _caseBranchBindersNum == 0 ->
@@ -282,54 +281,54 @@ fromCore tab = case tab ^. Core.infoMain of
                   mkApps (mkLambs argtys) (convertNode identMap varsNum lvls val) valty argtys
           where
             branch = convertNode identMap (varsNum + _caseBranchBindersNum) lvls _caseBranchBody
-            argtys = destructProd valty
+            argtys = destructProduct valty
 
-            mkApps :: Geb -> Geb -> Object -> [Object] -> Geb
+            mkApps :: Morphism -> Morphism -> Object -> [Object] -> Morphism
             mkApps acc v vty = \case
               ty : tys ->
                 mkApps acc' v' rty tys
                 where
                   v' =
-                    GebSnd
-                      Snd
-                        { _sndLeftType = lty,
-                          _sndRightType = rty,
-                          _sndValue = v
+                    MorphismSecond
+                      Second
+                        { _secondLeftType = lty,
+                          _secondRightType = rty,
+                          _secondValue = v
                         }
                   acc' =
-                    GebApp
-                      App
-                        { _appDomainType = ty,
-                          _appCodomainType = vty,
-                          _appLeft = acc,
-                          _appRight =
+                    MorphismApplication
+                      Application
+                        { _applicationDomainType = ty,
+                          _applicationCodomainType = vty,
+                          _applicationLeft = acc,
+                          _applicationRight =
                             if
                                 | null tys ->
                                     v
                                 | otherwise ->
-                                    GebFst
-                                      Fst
-                                        { _fstLeftType = lty,
-                                          _fstRightType = rty,
-                                          _fstValue = v
+                                    MorphismFirst
+                                      First
+                                        { _firstLeftType = lty,
+                                          _firstRightType = rty,
+                                          _firstValue = v
                                         }
                         }
                   (lty, rty) = case vty of
-                    ObjectProd Prod {..} -> (_prodLeft, _prodRight)
+                    ObjectProduct Product {..} -> (_productLeft, _productRight)
                     _ -> impossible
               [] ->
                 acc
 
-            mkLambs :: [Object] -> Geb
+            mkLambs :: [Object] -> Morphism
             mkLambs =
               fst
                 . foldr
                   ( \ty (acc, accty) ->
-                      ( GebLamb
-                          Lamb
-                            { _lambVarType = ty,
-                              _lambBodyType = accty,
-                              _lambBody = acc
+                      ( MorphismLambda
+                          Lambda
+                            { _lambdaVarType = ty,
+                              _lambdaBodyType = accty,
+                              _lambdaBody = acc
                             },
                         ObjectHom (Hom ty accty)
                       )
@@ -368,7 +367,7 @@ fromCore tab = case tab ^. Core.infoMain of
     convertTypePrim Core.TypePrim {..} =
       case _typePrimPrimitive of
         Core.PrimInteger _ -> unsupported
-        Core.PrimBool _ -> ObjectCoprod (Coprod ObjectTerminal ObjectTerminal)
+        Core.PrimBool _ -> ObjectCoproduct (Coproduct ObjectTerminal ObjectTerminal)
         Core.PrimString -> unsupported
 
     convertInductive :: Symbol -> Object
@@ -376,7 +375,7 @@ fromCore tab = case tab ^. Core.infoMain of
       case reverse ctrs of
         ci : ctrs' ->
           foldr
-            (\x acc -> ObjectCoprod (Coprod (convertConstructorType (x ^. Core.constructorType)) acc))
+            (\x acc -> ObjectCoproduct (Coproduct (convertConstructorType (x ^. Core.constructorType)) acc))
             (convertConstructorType (ci ^. Core.constructorType))
             (reverse ctrs')
         [] ->
@@ -391,7 +390,7 @@ fromCore tab = case tab ^. Core.infoMain of
       case reverse (Core.typeArgs ty) of
         hty : tys ->
           foldr
-            (\x acc -> ObjectProd (Prod (convertType x) acc))
+            (\x acc -> ObjectProduct (Product (convertType x) acc))
             (convertType hty)
             (reverse tys)
         [] ->

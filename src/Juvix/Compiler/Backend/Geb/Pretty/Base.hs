@@ -9,7 +9,6 @@ import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Pretty.Options
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
-import Juvix.Prelude
 
 doc :: (HasAtomicity c, PrettyCode c) => Options -> c -> Doc Ann
 doc opts x =
@@ -40,66 +39,71 @@ instance PrettyCode Pair where
     right <- ppArg _pairRight
     return $ kwPair <+> lty <+> rty <+> left <+> right
 
-instance PrettyCode Fst where
-  ppCode Fst {..} = do
-    lty <- ppArg _fstLeftType
-    rty <- ppArg _fstRightType
-    val <- ppArg _fstValue
+instance PrettyCode First where
+  ppCode First {..} = do
+    lty <- ppArg _firstLeftType
+    rty <- ppArg _firstRightType
+    val <- ppArg _firstValue
     return $ kwFst <+> lty <+> rty <+> val
 
-instance PrettyCode Snd where
-  ppCode Snd {..} = do
-    lty <- ppArg _sndLeftType
-    rty <- ppArg _sndRightType
-    val <- ppArg _sndValue
+instance PrettyCode Second where
+  ppCode Second {..} = do
+    lty <- ppArg _secondLeftType
+    rty <- ppArg _secondRightType
+    val <- ppArg _secondValue
     return $ kwSnd <+> lty <+> rty <+> val
 
-instance PrettyCode Lamb where
-  ppCode Lamb {..} = do
-    vty <- ppArg _lambVarType
-    bty <- ppArg _lambBodyType
-    body <- ppArg _lambBody
+instance PrettyCode Lambda where
+  ppCode Lambda {..} = do
+    vty <- ppArg _lambdaVarType
+    bty <- ppArg _lambdaBodyType
+    body <- ppArg _lambdaBody
     return $ kwLamb <+> vty <+> bty <+> body
 
-instance PrettyCode App where
-  ppCode App {..} = do
-    dom <- ppArg _appDomainType
-    cod <- ppArg _appCodomainType
-    left <- ppArg _appLeft
-    right <- ppArg _appRight
+instance PrettyCode Application where
+  ppCode Application {..} = do
+    dom <- ppArg _applicationDomainType
+    cod <- ppArg _applicationCodomainType
+    left <- ppArg _applicationLeft
+    right <- ppArg _applicationRight
     return $ kwApp <+> dom <+> cod <+> left <+> right
 
-instance PrettyCode Geb where
+instance PrettyCode Var where
+  ppCode Var {..} = return $ annotate AnnLiteralInteger (pretty _varIndex)
+
+instance PrettyCode Morphism where
   ppCode = \case
-    GebAbsurd val -> do
+    MorphismAbsurd val -> do
       v <- ppArg val
       return $ kwAbsurd <+> v
-    GebUnit ->
+    MorphismUnit ->
       return kwUnit
-    GebLeft val -> do
+    MorphismLeft val -> do
       v <- ppArg val
       return $ kwLeft <+> v
-    GebRight val -> do
+    MorphismRight val -> do
       v <- ppArg val
       return $ kwRight <+> v
-    GebCase x -> ppCode x
-    GebPair x -> ppCode x
-    GebFst x -> ppCode x
-    GebSnd x -> ppCode x
-    GebLamb x -> ppCode x
-    GebApp x -> ppCode x
-    GebVar idx -> return $ kwVar <+> annotate AnnLiteralInteger (pretty idx)
+    MorphismCase x -> ppCode x
+    MorphismPair x -> ppCode x
+    MorphismFirst x -> ppCode x
+    MorphismSecond x -> ppCode x
+    MorphismLambda x -> ppCode x
+    MorphismApplication x -> ppCode x
+    MorphismVar idx -> do
+      i <- ppCode idx
+      return $ kwVar <+> i
 
-instance PrettyCode Prod where
-  ppCode Prod {..} = do
-    left <- ppArg _prodLeft
-    right <- ppArg _prodRight
+instance PrettyCode Product where
+  ppCode Product {..} = do
+    left <- ppArg _productLeft
+    right <- ppArg _productRight
     return $ kwProd <+> left <+> right
 
-instance PrettyCode Coprod where
-  ppCode Coprod {..} = do
-    left <- ppArg _coprodLeft
-    right <- ppArg _coprodRight
+instance PrettyCode Coproduct where
+  ppCode Coproduct {..} = do
+    left <- ppArg _coproductLeft
+    right <- ppArg _coproductRight
     return $ kwCoprod <+> left <+> right
 
 instance PrettyCode Hom where
@@ -112,8 +116,8 @@ instance PrettyCode Object where
   ppCode = \case
     ObjectInitial -> return kwInitial
     ObjectTerminal -> return kwTerminal
-    ObjectProd x -> ppCode x
-    ObjectCoprod x -> ppCode x
+    ObjectProduct x -> ppCode x
+    ObjectCoproduct x -> ppCode x
     ObjectHom x -> ppCode x
 
 --------------------------------------------------------------------------------
