@@ -368,19 +368,19 @@ jobs:
           cd main
           make CC=$CC LIBTOOL=$LIBTOOL test
 
-      - name: Download Smoke binary
-        uses: jaxxstorm/action-install-gh-release@v1.9.0
+      - name: Add ~/.local/bin to PATH
+        run: |
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          
+      - name: Install Smoke
+        uses: jonaprieto/action-install-gh-release@2
         with:
           repo: jonaprieto/smoke
-          tag: v2.3.2
-          cache: enable
+          tag: latest
           extension-matching: disable
           rename-to: smoke
           chmod: 0755
 
-      - name: Add ~/.local/bin to PATH
-        run: |
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Smoke testing (macOS)
         id: smoke-macos
