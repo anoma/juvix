@@ -81,8 +81,7 @@ jobs:
         id: stack-cache
         name: Restore .stack cache
         with:
-          path: |
-            ~/.stack
+          path: ~/.stack
           key: >-
             ${{ runner.os }}-stack-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
           restore-keys: |
@@ -92,9 +91,7 @@ jobs:
         id: stack-work-cache
         name: Restore main/.stack-work cache
         with:
-          path: |
-            ~/.stack
-            main/.stack-work
+          path: main/.stack-work
           key: >-
             ${{ runner.os }}-stack-work-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
           restore-keys: |
@@ -182,15 +179,13 @@ jobs:
         uses: actions/cache/save@v3
         if: always()
         with:
-          path: |
-            ~/.stack
+          path: ~/.stack
           key: '${{ steps.stack-cache.outputs.cache-primary-key }}'
 
       - name: Save cache main/.stack-work if the job was successful
         uses: actions/cache/save@v3
         with:
-          path: |
-            main/.stack-work
+          path: main/.stack-work
           key: '${{ steps.stack-work-cache.outputs.cache-primary-key }}'
 
   docs-linux:
@@ -211,8 +206,7 @@ jobs:
         id: stack-cache
         with:
           fail-on-cache-miss: true
-          path: |
-            ~/.stack
+          path: ~/.stack
           key: >-
             ${{ runner.os }}-stack-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
           restore-keys: |
@@ -223,8 +217,7 @@ jobs:
         id: stack-work-cache
         with:
           fail-on-cache-miss: true
-          path: |
-            main/.stack-work
+          path: main/.stack-work
           key: >-
             ${{ runner.os }}-stack-work-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
           restore-keys: |
@@ -296,8 +289,7 @@ jobs:
         id: stack-cache
         name: Restore .stack cache
         with:
-          path: |
-            ~/.stack
+          path: ~/.stack
           key: >-
             ${{ runner.os }}-stack-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
           restore-keys: |
@@ -307,8 +299,7 @@ jobs:
         name: Restore main/.stack-work cache
         id: stack-work-cache
         with:
-          path: |
-            main/.stack-work
+          path: main/.stack-work
           key: >-
             ${{ runner.os }}-stack-work-${{ hashFiles('main/stack.yaml','main/package.yaml') }}
           restore-keys: |
@@ -372,16 +363,14 @@ jobs:
         uses: actions/cache/save@v3
         if: always()
         with:
-          path: |
-            ~/.stack
+          path: ~/.stack
           key: '${{ steps.stack-cache.outputs.cache-primary-key }}'
 
       - name: Save stack-work cache
         uses: actions/cache/save@v3
         if: ${{ success() }}
         with:
-          path: |
-            main/.stack-work
+          path: main/.stack-work
           key: '${{ steps.stack-work-cache.outputs.cache-primary-key }}'
 
       - name: Add ~/.local/bin to PATH
@@ -396,7 +385,6 @@ jobs:
           extension-matching: disable
           rename-to: smoke
           chmod: 0755
-
 
       - name: Smoke testing (macOS)
         id: smoke-macos
