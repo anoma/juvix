@@ -378,7 +378,7 @@ jobs:
           cache: enable
           extension-matching: disable
           rename-to: smoke
-          chmod: 493
+          chmod: 0755
       - name: Smoke testing (macOS)
         id: smoke-macos
         if: ${{ success() }}
