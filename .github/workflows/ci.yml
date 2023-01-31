@@ -22,8 +22,7 @@ concurrency:
   cancel-in-progress: true
 env:
   STACKFLAGS: '--pedantic'
-  STACK_ROOT: ~/.stack
-  STACK_WORK: .stack-work
+  STACK_ROOT: ${{ github.workspace }}/.stack
 
 jobs:
 
@@ -83,7 +82,7 @@ jobs:
         id: stack-cache
         name: Restore .stack cache
         with:
-          path: ~/.stack
+          path: ${{ github.workspace }}/.stack
           key: ${{ runner.os }}-stack
 
       - uses: actions/cache/restore@v3
@@ -175,7 +174,7 @@ jobs:
         uses: actions/cache/save@v3
         if: always()
         with:
-          path: ~/.stack
+          path: ${{ github.workspace }}/.stack
           key: '${{ steps.stack-cache.outputs.cache-primary-key }}'
 
       - name: Save cache main/.stack-work if the job was successful
@@ -202,7 +201,7 @@ jobs:
         id: stack-cache
         with:
           fail-on-cache-miss: true
-          path: ~/.stack
+          path: ${{ github.workspace }}/.stack
           key: ${{ runner.os }}-stack
 
       - uses: actions/cache/restore@v3
@@ -279,7 +278,7 @@ jobs:
         id: stack-cache
         name: Restore .stack cache
         with:
-          path: ~/.stack
+          path: ${{ github.workspace }}/.stack
           key: ${{ runner.os }}-stack
 
       - uses: actions/cache/restore@v3
@@ -347,7 +346,7 @@ jobs:
         uses: actions/cache/save@v3
         if: always()
         with:
-          path: ~/.stack
+          path: ${{ github.workspace }}/.stack
           key: '${{ steps.stack-cache.outputs.cache-primary-key }}'
 
       - name: Save stack-work cache
