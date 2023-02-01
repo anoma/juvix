@@ -26,8 +26,8 @@ applyTransformations ts tbl = foldl' (flip appTrans) tbl ts
   where
     appTrans :: TransformationId -> InfoTable -> InfoTable
     appTrans = \case
-      LambdaLetRecLifting -> lambdaLifting
-      LetRecLifting -> letrecLifting
+      LambdaLetRecLifting -> lambdaLetRecLifting
+      LetRecLifting -> letRecLifting
       Identity -> identity
       TopEtaExpand -> topEtaExpand
       RemoveTypeArgs -> removeTypeArgs

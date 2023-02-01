@@ -69,6 +69,12 @@ shift m = umapN go
         | v ^. varIndex >= k -> NVar (shiftVar m v)
       n -> n
 
+-- | Prism for NRec
+_NRec :: SimpleFold Node LetRec
+_NRec f = \case
+  NRec l -> NRec <$> f l
+  n -> pure n
+
 -- | Prism for NLam
 _NLam :: SimpleFold Node Lambda
 _NLam f = \case

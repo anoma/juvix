@@ -6,7 +6,7 @@ import Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation
 
 allTests :: TestTree
-allTests = testGroup "Lambda lifting" (map liftTest Eval.tests)
+allTests = testGroup "Lambda and LetRec lifting" (map liftTest Eval.tests)
 
 pipe :: [TransformationId]
 pipe = [LambdaLetRecLifting]

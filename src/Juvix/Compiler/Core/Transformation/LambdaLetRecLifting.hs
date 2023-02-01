@@ -11,10 +11,12 @@ import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
-lambdaLiftBinder :: (Member InfoTableBuilder r) => BinderList Binder -> Binder -> Sem r Binder
+lambdaLiftBinder :: Members '[Reader OnlyLetRec, InfoTableBuilder] r => BinderList Binder -> Binder -> Sem r Binder
 lambdaLiftBinder bl = traverseOf binderType (lambdaLiftNode bl)
 
-lambdaLiftNode :: forall r. (Member InfoTableBuilder r) => BinderList Binder -> Node -> Sem r Node
+type OnlyLetRec = Bool
+
+lambdaLiftNode :: forall r. Members '[Reader OnlyLetRec, InfoTableBuilder] r => BinderList Binder -> Node -> Sem r Node
 lambdaLiftNode aboveBl top =
   let topArgs :: [LambdaLhs]
       (topArgs, body) = unfoldLambdas top
@@ -40,30 +42,37 @@ lambdaLiftNode aboveBl top =
       m -> return (Recur m)
       where
         goLambda :: Lambda -> Sem r Recur
-        goLambda lm = do
-          l' <- lambdaLiftNode bl (NLam lm)
-          let (freevarsAssocs, fBody') = captureFreeVarsCtx bl l'
-              allfreevars :: [Var]
-              allfreevars = map fst freevarsAssocs
-              argsInfo :: [ArgumentInfo]
-              argsInfo = map (argumentInfoFromBinder . (^. lambdaLhsBinder)) (fst (unfoldLambdas fBody'))
-          f <- freshSymbol
-          let name = uniqueName "lambda" f
-          registerIdent
-            name
-            IdentifierInfo
-              { _identifierSymbol = f,
-                _identifierName = name,
-                _identifierLocation = Nothing,
-                _identifierType = typeFromArgs argsInfo,
-                _identifierArgsNum = length argsInfo,
-                _identifierArgsInfo = argsInfo,
-                _identifierIsExported = False,
-                _identifierBuiltin = Nothing
-              }
-          registerIdentNode f fBody'
-          let fApp = mkApps' (mkIdent (setInfoName name mempty) f) (map NVar allfreevars)
-          return (End fApp)
+        goLambda l = do
+          onlyLetRec <- ask @OnlyLetRec
+          if
+              | onlyLetRec -> return (Recur (NLam l))
+              | otherwise -> goLambdaGo l
+          where
+            goLambdaGo :: Lambda -> Sem r Recur
+            goLambdaGo lm = do
+              l' <- lambdaLiftNode bl (NLam lm)
+              let (freevarsAssocs, fBody') = captureFreeVarsCtx bl l'
+                  allfreevars :: [Var]
+                  allfreevars = map fst freevarsAssocs
+                  argsInfo :: [ArgumentInfo]
+                  argsInfo = map (argumentInfoFromBinder . (^. lambdaLhsBinder)) (fst (unfoldLambdas fBody'))
+              f <- freshSymbol
+              let name = uniqueName "lambda" f
+              registerIdent
+                name
+                IdentifierInfo
+                  { _identifierSymbol = f,
+                    _identifierName = name,
+                    _identifierLocation = Nothing,
+                    _identifierType = typeFromArgs argsInfo,
+                    _identifierArgsNum = length argsInfo,
+                    _identifierArgsInfo = argsInfo,
+                    _identifierIsExported = False,
+                    _identifierBuiltin = Nothing
+                  }
+              registerIdentNode f fBody'
+              let fApp = mkApps' (mkIdent (setInfoName name mempty) f) (map NVar allfreevars)
+              return (End fApp)
 
         goLetRec :: LetRec -> Sem r Recur
         goLetRec letr = do
@@ -148,18 +157,31 @@ lambdaLiftNode aboveBl top =
               res = shiftHelper body' (nonEmpty' (zipExact letItems letRecBinders'))
           return (Recur res)
 
-lambdaLifting :: InfoTable -> InfoTable
-lambdaLifting = run . mapT' (const (lambdaLiftNode mempty))
+lifting :: Bool -> InfoTable -> InfoTable
+lifting onlyLetRec = run . runReader onlyLetRec . mapT' (const (lambdaLiftNode mempty))
 
-letrecLifting :: InfoTable -> InfoTable
-letrecLifting = run . mapT' (const (lambdaLiftNode mempty))
+lambdaLetRecLifting :: InfoTable -> InfoTable
+lambdaLetRecLifting = lifting False
+
+letRecLifting :: InfoTable -> InfoTable
+letRecLifting = lifting True
+
+nodeIsLifted :: Node -> Bool
+nodeIsLifted = nodeIsLambdaLifted .&&. nodeIsLetRecLifted
 
 -- | True if lambdas are only found at the top level
-nodeIsLifted :: Node -> Bool
-nodeIsLifted = not . hasNestedLambdas
+nodeIsLambdaLifted :: Node -> Bool
+nodeIsLambdaLifted = not . hasNestedLambdas
   where
     hasNestedLambdas :: Node -> Bool
     hasNestedLambdas = has (cosmos . _NLam) . snd . unfoldLambdas'
 
+-- | True if there are no letrec nodes
+nodeIsLetRecLifted :: Node -> Bool
+nodeIsLetRecLifted = not . hasLetRecs
+  where
+    hasLetRecs :: Node -> Bool
+    hasLetRecs = has (cosmos . _NRec)
+
 isLifted :: InfoTable -> Bool
-isLifted = all nodeIsLifted . toList . (^. identContext)
+isLifted = all nodeIsLifted . (^. identContext)
