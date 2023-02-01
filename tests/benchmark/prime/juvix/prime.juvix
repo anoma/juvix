@@ -1,37 +1,28 @@
 -- Compute the Nth prime
 module prime;
+  open import Stdlib.Prelude;
+  open import Stdlib.Data.Nat.Ord;
 
-open import Stdlib.Prelude;
-open import Data.Int;
-open import Data.Int.Ops;
+  checkDivisible : Nat → List Nat → Bool;
+  checkDivisible p nil := false;
+  checkDivisible p (h :: t) := if
+    (mod p h == 0)
+    true
+    (checkDivisible p t);
 
-checkDivisible : Int -> List Int -> Bool;
-checkDivisible p nil := false;
-checkDivisible p (h :: t) := if ((p % h) == Int_0) true (checkDivisible p t);
-
-terminating
-go : Int -> Int -> List Int -> Int;
-go n p lst :=
-  if (n == Int_0)
+  terminating
+  go : Nat → Nat → List Nat → Nat;
+  go n p lst := if
+    (n == 0)
     (head lst)
-    (if (checkDivisible p lst)
-        (go n (p Data.Int.Ops.+ Int_1) lst)
-        (go (n - Int_1) (p Data.Int.Ops.+ Int_1) (p :: lst)));
+    (if
+      (checkDivisible p lst)
+      (go n (p + 1) lst)
+      (go (sub n 1) (p + 1) (p :: lst)));
 
-prime : Int -> Int;
-prime n := go n Int_2 nil;
+  prime : Nat → Nat;
+  prime n := go n 2 nil;
 
-axiom Int_16384 : Int;
-compile Int_16384 {
-  c ↦ "16384";
-};
-
-axiom Int_10 : Int;
-compile Int_10 {
-  c ↦ "10";
-};
-
-main : IO;
-main := printInt (prime Int_16384);
-
+  main : IO;
+  main := printNatLn (prime 16384);
 end;

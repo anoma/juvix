@@ -1,41 +1,19 @@
 -- fold a list of N integers
 module fold;
+  open import Stdlib.Prelude;
+  open import Stdlib.Data.Nat.Ord;
 
-open import Stdlib.Prelude;
-open import Data.Int;
-open import Data.Int.Ops;
+  plusMod : Nat → Nat → Nat;
+  plusMod x y := mod (x + y) 268435456;
 
-axiom Int_268435456 : Int;
-compile Int_268435456 {
-  c ↦ "268435456";
-};
+  run : Nat → Nat → List Nat → Nat;
+  run zero acc lst := foldl plusMod acc lst;
+  run (suc n) acc lst := run n (foldl plusMod acc lst) lst;
 
-plusMod : Int -> Int -> Int;
-plusMod x y := (x Data.Int.Ops.+ y) Data.Int.Ops.% Int_268435456;
+  gen : Nat → List Nat → List Nat;
+  gen zero acc := acc;
+  gen (suc n) acc := gen n (suc n :: acc);
 
-terminating
-run : Int -> Int -> List Int -> Int;
-run n acc lst := if (n Data.Int.Ops.== Int_0)
-                    (foldl plusMod acc lst)
-                    (run (n Data.Int.Ops.- Int_1) (foldl plusMod (Int_0 Data.Int.Ops.- acc) lst) lst);
-
-terminating
-gen : Int -> List Int -> List Int;
-gen n acc := if (n Data.Int.Ops.== Int_0)
-                acc
-                (gen (n Data.Int.Ops.- Int_1) (n :: acc));
-
-axiom Int_100000 : Int;
-compile Int_100000 {
-  c ↦ "100000";
-};
-
-axiom Int_1000 : Int;
-compile Int_1000 {
-  c ↦ "1000";
-};
-
-main : IO;
-main := printInt (run Int_1000 Int_0 (gen Int_100000 nil));
-
+  main : IO;
+  main := printNatLn (run 1000 0 (gen 100000 nil));
 end;

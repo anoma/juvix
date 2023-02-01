@@ -1,32 +1,18 @@
 -- Ackermann function (higher-order definition)
 module ackermann;
+  open import Stdlib.Prelude;
+  open import Stdlib.Data.Nat.Ord;
 
-open import Stdlib.Prelude;
-open import Data.Int;
-open import Data.Int.Ops;
+  iter : {A : Type} → (A → A) → Nat → A → A;
+  iter f zero := id;
+  iter f (suc n) := f ∘ iter f n;
 
-terminating
-iter : {A : Type} -> (A -> A) -> Int -> A -> A;
-iter f n := if (n Data.Int.Ops.== Int_0) id (f ∘ (iter f (n Data.Int.Ops.- Int_1)));
+  step : (Nat → Nat) → Nat → Nat;
+  step f n := iter f (suc n) 1;
 
-step : (Int -> Int) -> Int -> Int;
-step f n := iter f (n Data.Int.Ops.+ Int_1) Int_1;
+  ackermann : Nat → Nat → Nat;
+  ackermann m := iter step m suc;
 
-ackermann : Int -> Int -> Int;
-ackermann m :=
-  iter step m ((Data.Int.Ops.+) Int_1);
-
-axiom Int_11 : Int;
-compile Int_11 {
-  c ↦ "11";
-};
-
-axiom Int_3 : Int;
-compile Int_3 {
-  c ↦ "3";
-};
-
-main : IO;
-main := printInt (ackermann Int_3 Int_11);
-
+  main : IO;
+  main := printNatLn (ackermann 3 11);
 end;

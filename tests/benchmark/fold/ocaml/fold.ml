@@ -6,7 +6,7 @@ let rec run n acc lst =
   if n == 0 then
     List.fold_left plusMod acc lst
   else
-    run (n - 1) (List.fold_left plusMod (-acc) lst) lst
+    run (n - 1) (List.fold_left plusMod acc lst) lst
 
 let rec gen n acc =
   if n == 0 then

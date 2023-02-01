@@ -1,31 +1,15 @@
 -- compute the Nth Fibonacci number modulo 2^28
-
 module fibonacci;
+  open import Stdlib.Prelude;
+  open import Stdlib.Data.Nat.Ord;
 
-open import Stdlib.Prelude;
-open import Data.Int;
-open import Data.Int.Ops;
+  go : Nat → Nat → Nat → Nat;
+  go zero n _ := n;
+  go (suc k) n m := go k m (mod (n + m) 268435456);
 
-axiom Int_268435456 : Int;
-compile Int_268435456 {
-  c ↦ "268435456";
-};
+  fib : Nat → Nat;
+  fib n := go n 0 1;
 
-terminating
-go : Int -> Int -> Int -> Int;
-go k n m := if (k Data.Int.Ops.== Int_0)
-               n
-               (go (k Data.Int.Ops.- Int_1) m ((n Data.Int.Ops.+ m) Data.Int.Ops.% Int_268435456));
-
-fib : Int -> Int;
-fib n := go n Int_0 Int_1;
-
-axiom Int_100000000 : Int;
-compile Int_100000000 {
-  c ↦ "100000000";
-};
-
-main : IO;
-main := printInt (fib Int_100000000);
-
+  main : IO;
+  main := printNatLn (fib 100000000);
 end;

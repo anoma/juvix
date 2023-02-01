@@ -1,70 +1,58 @@
 -- optionally sum N integers from a binary tree K times
-
 module maybe;
+  open import Stdlib.Prelude;
+  open import Stdlib.Data.Nat.Ord;
 
-open import Stdlib.Prelude;
-open import Data.Int;
-open import Data.Int.Ops;
+  type Tree :=
+    | leaf : Tree
+    | node : Nat → Tree → Tree → Tree;
 
-type Tree :=
-  leaf : Tree |
-  node : Int -> Tree -> Tree -> Tree;
+  mknode : Nat → Tree → Tree;
+  mknode n t := node n t t;
 
-mknode : Int -> Tree -> Tree;
-mknode n t := node n t t;
+  gen : Nat → Tree;
+  gen zero := leaf;
+  gen (suc n) := mknode (suc n) (gen n);
 
-terminating
-gen : Int -> Tree;
-gen n := if (n Data.Int.Ops.== Int_0)
-            leaf
-            (mknode n (gen (n Data.Int.Ops.- Int_1)));
+  terminating
+  sum : Nat → Tree → Maybe Nat;
 
-terminating
-sum : Int -> Tree -> Maybe Int;
+  step2 : Nat → Maybe Nat → Maybe Nat;
 
-step2 : Int -> Maybe Int -> Maybe Int;
+  terminating
+  step1 : Nat → Nat → Maybe Nat → Tree → Maybe Nat;
+  step1 x y (just s1) t := step2 (y + s1) (sum x t);
+  step1 _ _ nothing _ := nothing;
 
-terminating
-step1 : Int -> Int -> Maybe Int -> Tree -> Maybe Int;
+  step2 x (just y) := just (x + y);
+  step2 _ nothing := nothing;
 
-step1 x y (just s1) t := step2 (y Data.Int.Ops.+ s1) (sum x t);
-step1 _ _ nothing _ := nothing;
+  sum x leaf := just 0;
+  sum x (node y l r) := if
+    (x == y)
+    nothing
+    (step1 x y (sum x l) r);
 
-step2 x (just y) := just (x Data.Int.Ops.+ y);
-step2 _ nothing := nothing;
+  maybeStepRun : Nat → Nat → Maybe Nat;
+  maybeStepRun x y := just (sub y x);
 
-sum x leaf := just Int_0;
-sum x (node y l r) := if (x Data.Int.Ops.== y)
-                         nothing
-                         (step1 x y (sum x l) r);
+  run : Nat → Tree → Maybe Nat;
 
-maybeStepRun : Int -> Int -> Maybe Int;
-maybeStepRun x y := just (y Data.Int.Ops.- x);
+  stepRun : Nat → Tree → Maybe Nat → Maybe Nat;
 
-terminating
-run : Int -> Tree -> Maybe Int;
-stepRun : Int -> Tree -> Maybe Int -> Maybe Int;
-run n t := if (n Data.Int.Ops.== Int_0)
-              (sum Int_0 t)
-              (stepRun n t (run (n Data.Int.Ops.- Int_1) t));
-stepRun n t nothing := sum n t;
-stepRun n t (just x) := maybe nothing (maybeStepRun x) (sum n t);
+  run zero t := sum 0 t;
+  run (suc n) t := stepRun (suc n) t (run n t);
 
-axiom Int_20 : Int;
-compile Int_20 {
-  c ↦ "20";
-};
+  stepRun n t nothing := sum n t;
+  stepRun n t (just x) := maybe
+    nothing
+    (maybeStepRun x)
+    (sum n t);
 
-axiom Int_101 : Int;
-compile Int_101 {
-  c ↦ "101";
-};
+  printMaybeNat : Maybe Nat → IO;
+  printMaybeNat (just x) := printNatLn x;
+  printMaybeNat _ := printStringLn "nothing";
 
-printMaybeInt : Maybe Int -> IO;
-printMaybeInt (just x) := printInt x;
-printMaybeInt _ := putStrLn "nothing";
-
-main : IO;
-main := printMaybeInt (run Int_101 (gen Int_20));
-
+  main : IO;
+  main := printMaybeNat (run 101 (gen 20));
 end;
