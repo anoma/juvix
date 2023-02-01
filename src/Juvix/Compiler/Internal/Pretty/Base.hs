@@ -74,7 +74,7 @@ instance PrettyCode Expression where
 
 instance PrettyCode Let where
   ppCode l = do
-    letClauses' <- ppBlock (l ^. letClauses)
+    letClauses' <- blockIndent <$> ppBlock (l ^. letClauses)
     letExpression' <- ppCode (l ^. letExpression)
     return $ kwLet <+> letClauses' <+> kwIn <+> letExpression'
 
@@ -135,7 +135,7 @@ ppBlock ::
   (PrettyCode a, Members '[Reader Options] r, Traversable t) =>
   t a ->
   Sem r (Doc Ann)
-ppBlock items = bracesIndent . vsep . toList <$> mapM ppCode items
+ppBlock items = vsep . toList <$> mapM ppCode items
 
 instance PrettyCode InductiveParameter where
   ppCode (InductiveParameter v) = do

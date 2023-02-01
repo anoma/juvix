@@ -412,7 +412,7 @@ letClause = either LetTypeSig LetFunClause <$> auxTypeSigFunClause
 letBlock :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (LetBlock 'Parsed)
 letBlock = do
   _letKw <- kw kwLet
-  _letClauses <- braces (P.sepEndBy1 letClause (kw kwSemicolon))
+  _letClauses <- P.sepEndBy1 letClause (kw kwSemicolon)
   kw kwIn
   _letExpression <- parseExpressionAtoms
   return LetBlock {..}

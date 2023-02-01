@@ -144,7 +144,7 @@ instance PrettyCode Backend where
 instance (SingI s) => PrettyCode (Compile s) where
   ppCode Compile {..} = do
     compileName' <- ppSymbol _compileName
-    compileBackendItems' <- ppBlock _compileBackendItems
+    compileBackendItems' <- bracesIndent <$> ppBlock _compileBackendItems
     return $ kwCompile <+> compileName' <+> compileBackendItems'
 
 instance PrettyCode ForeignBlock where
@@ -478,7 +478,7 @@ instance PrettyCode Universe where
 
 instance (SingI s) => PrettyCode (LetBlock s) where
   ppCode LetBlock {..} = do
-    letClauses' <- ppBlock _letClauses
+    letClauses' <- blockIndent <$> ppBlock _letClauses
     letExpression' <- ppExpression _letExpression
     return $ kwLet <+> letClauses' <+> kwIn <+> letExpression'
 
@@ -488,7 +488,7 @@ instance (SingI s) => PrettyCode (LetClause s) where
     LetFunClause cl -> ppCode cl
 
 ppBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
-ppBlock items = bracesIndent . vsep <$> mapM (fmap endSemicolon . ppCode) items
+ppBlock items = vsep <$> mapM (fmap endSemicolon . ppCode) items
 
 ppPipeBlock :: (PrettyCode a, Members '[Reader Options] r, Traversable t) => t a -> Sem r (Doc Ann)
 ppPipeBlock items = vsep <$> mapM (fmap (kwPipe <+>) . ppCode) items

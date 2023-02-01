@@ -7,7 +7,7 @@ open import Stdlib.Data.Nat.Ord;
 terminating
 f : Nat → Nat → Nat;
 f x :=
-    let {g : Nat → Nat; g y := x + y} in
+    let g : Nat → Nat; g y := x + y in
     if (x == 0)
        (f 10)
        (if (x < 10)

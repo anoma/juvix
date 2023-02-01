@@ -20,7 +20,7 @@ merge' xs@(x :: xs') ys@(y :: ys') := if (x <= y) (x :: merge' xs' ys) (y :: mer
 terminating
 sort : List Nat → List Nat;
 sort xs :=
-  let {n : Nat; n := length xs} in
+  let n : Nat; n := length xs in
   if (n <= 1)
     xs
     (case (split (div n 2) xs) λ{
