@@ -519,9 +519,6 @@ primStrToInt = primitive Str.strToInt
 kwLetRec :: Doc Ann
 kwLetRec = keyword Str.letrec_
 
-kwCase :: Doc Ann
-kwCase = keyword Str.case_
-
 kwOf :: Doc Ann
 kwOf = keyword Str.of_
 

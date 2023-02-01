@@ -980,6 +980,34 @@ checkLetBlock LetBlock {..} = do
         _letKw
       }
 
+checkCaseBranch ::
+  Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
+  CaseBranch 'Parsed ->
+  Sem r (CaseBranch 'Scoped)
+checkCaseBranch CaseBranch {..} = do
+  pattern' <- checkParsePatternAtoms _caseBranchPattern
+  expression' <- withBindCurrentGroup (checkParseExpressionAtoms _caseBranchExpression)
+  return $
+    CaseBranch
+      { _caseBranchPattern = pattern',
+        _caseBranchExpression = expression',
+        ..
+      }
+
+checkCase ::
+  Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
+  Case 'Parsed ->
+  Sem r (Case 'Scoped)
+checkCase Case {..} = do
+  caseBranches' <- mapM checkCaseBranch _caseBranches
+  caseExpression' <- checkParseExpressionAtoms _caseExpression
+  return $
+    Case
+      { _caseExpression = caseExpression',
+        _caseBranches = caseBranches',
+        _caseKw
+      }
+
 checkLambda ::
   (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
   Lambda 'Parsed ->
@@ -1132,6 +1160,12 @@ checkPatternAtoms ::
   Sem r (PatternAtoms 'Scoped)
 checkPatternAtoms (PatternAtoms s i) = (`PatternAtoms` i) <$> mapM checkPatternAtom s
 
+checkParsePatternAtoms ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
+  PatternAtoms 'Parsed ->
+  Sem r PatternArg
+checkParsePatternAtoms = checkPatternAtoms >=> parsePatternAtoms
+
 checkPatternAtom ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
   PatternAtom 'Parsed ->
@@ -1140,8 +1174,8 @@ checkPatternAtom = \case
   PatternAtomIden n -> PatternAtomIden <$> checkPatternName n
   PatternAtomWildcard i -> return (PatternAtomWildcard i)
   PatternAtomEmpty i -> return (PatternAtomEmpty i)
-  PatternAtomParens e -> PatternAtomParens <$> (checkPatternAtoms e >>= parsePatternAtoms)
-  PatternAtomBraces a -> PatternAtomBraces <$> (checkPatternAtoms a >>= parsePatternAtoms)
+  PatternAtomParens e -> PatternAtomParens <$> checkParsePatternAtoms e
+  PatternAtomBraces e -> PatternAtomBraces <$> checkParsePatternAtoms e
   PatternAtomAt p -> PatternAtomAt <$> checkPatternBinding p
 
 checkName ::
@@ -1159,6 +1193,7 @@ checkExpressionAtom ::
 checkExpressionAtom e = case e of
   AtomIdentifier n -> AtomIdentifier <$> checkName n
   AtomLambda lam -> AtomLambda <$> checkLambda lam
+  AtomCase c -> AtomCase <$> checkCase c
   AtomLetBlock letBlock -> AtomLetBlock <$> checkLetBlock letBlock
   AtomUniverse uni -> return (AtomUniverse uni)
   AtomFunction fun -> AtomFunction <$> checkFunction fun
@@ -1378,6 +1413,7 @@ parseTerm =
       <|> parseHole
       <|> parseFunction
       <|> parseLambda
+      <|> parseCase
       <|> parseLiteral
       <|> parseLetBlock
       <|> parseBraces
@@ -1404,6 +1440,14 @@ parseTerm =
         lambda :: ExpressionAtom 'Scoped -> Maybe (Lambda 'Scoped)
         lambda s = case s of
           AtomLambda l -> Just l
+          _ -> Nothing
+
+    parseCase :: Parse Expression
+    parseCase = ExpressionCase <$> P.token case_ mempty
+      where
+        case_ :: ExpressionAtom 'Scoped -> Maybe (Case 'Scoped)
+        case_ s = case s of
+          AtomCase l -> Just l
           _ -> Nothing
 
     parseUniverse :: Parse Expression

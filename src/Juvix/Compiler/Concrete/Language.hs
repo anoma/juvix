@@ -578,6 +578,7 @@ data Expression
   | ExpressionApplication Application
   | ExpressionInfixApplication InfixApplication
   | ExpressionPostfixApplication PostfixApplication
+  | ExpressionCase (Case 'Scoped)
   | ExpressionLambda (Lambda 'Scoped)
   | ExpressionLetBlock (LetBlock 'Scoped)
   | ExpressionUniverse Universe
@@ -774,6 +775,30 @@ deriving stock instance
   ) =>
   Ord (LetClause s)
 
+data CaseBranch (s :: Stage) = CaseBranch
+  { _caseBranchPipe :: KeywordRef,
+    _caseBranchPattern :: PatternParensType s,
+    _caseBranchExpression :: ExpressionType s
+  }
+
+deriving stock instance (Eq (ExpressionType s), Eq (PatternParensType s)) => Eq (CaseBranch s)
+
+deriving stock instance (Show (ExpressionType s), Show (PatternParensType s)) => Show (CaseBranch s)
+
+deriving stock instance (Ord (ExpressionType s), Ord (PatternParensType s)) => Ord (CaseBranch s)
+
+data Case (s :: Stage) = Case
+  { _caseKw :: KeywordRef,
+    _caseExpression :: ExpressionType s,
+    _caseBranches :: NonEmpty (CaseBranch s)
+  }
+
+deriving stock instance (Eq (ExpressionType s), Eq (PatternParensType s)) => Eq (Case s)
+
+deriving stock instance (Show (ExpressionType s), Show (PatternParensType s)) => Show (Case s)
+
+deriving stock instance (Ord (ExpressionType s), Ord (PatternParensType s)) => Ord (Case s)
+
 --------------------------------------------------------------------------------
 -- Compile statements
 --------------------------------------------------------------------------------
@@ -829,6 +854,7 @@ deriving stock instance
 data ExpressionAtom (s :: Stage)
   = AtomIdentifier (IdentifierType s)
   | AtomLambda (Lambda s)
+  | AtomCase (Case s)
   | AtomHole (HoleType s)
   | AtomBraces (WithLoc (ExpressionType s))
   | AtomLetBlock (LetBlock s)
@@ -922,6 +948,8 @@ makeLenses ''PatternApp
 makeLenses ''PatternInfixApp
 makeLenses ''PatternPostfixApp
 makeLenses ''Compile
+makeLenses ''Case
+makeLenses ''CaseBranch
 makeLenses ''PatternBinding
 makeLenses ''PatternAtoms
 makeLenses ''ExpressionAtoms
@@ -940,6 +968,15 @@ instance HasAtomicity Expression where
     ExpressionBraces {} -> Atom
     ExpressionUniverse {} -> Atom
     ExpressionFunction {} -> Aggregate funFixity
+    ExpressionCase c -> atomicity c
+
+expressionAtomicity :: forall s. SingI s => ExpressionType s -> Atomicity
+expressionAtomicity e = case sing :: SStage s of
+  SParsed -> atomicity e
+  SScoped -> atomicity e
+
+instance SingI s => HasAtomicity (Case s) where
+  atomicity = expressionAtomicity . (^. caseBranches . to last . caseBranchExpression)
 
 instance HasAtomicity (LetBlock 'Scoped) where
   atomicity l = atomicity (l ^. letExpression)
@@ -1033,6 +1070,17 @@ instance HasLoc (Function 'Scoped) where
 instance HasLoc (LetBlock 'Scoped) where
   getLoc l = getLoc (l ^. letKw) <> getLoc (l ^. letExpression)
 
+instance SingI s => HasLoc (CaseBranch s) where
+  getLoc c = getLoc (c ^. caseBranchPipe) <> expressionLoc (c ^. caseBranchExpression)
+
+instance SingI s => HasLoc (Case s) where
+  getLoc c = getLoc (c ^. caseKw) <> getLoc (c ^. caseBranches . to last)
+
+expressionLoc :: forall s. SingI s => ExpressionType s -> Interval
+expressionLoc e = case sing :: SStage s of
+  SParsed -> getLoc e
+  SScoped -> getLoc e
+
 instance HasLoc Expression where
   getLoc = \case
     ExpressionIdentifier i -> getLoc i
@@ -1041,6 +1089,7 @@ instance HasLoc Expression where
     ExpressionInfixApplication i -> getLoc i
     ExpressionPostfixApplication i -> getLoc i
     ExpressionLambda i -> getLoc i
+    ExpressionCase i -> getLoc i
     ExpressionLetBlock i -> getLoc i
     ExpressionUniverse i -> getLoc i
     ExpressionLiteral i -> getLoc i
@@ -1160,6 +1209,7 @@ deriving stock instance
     Show (ModuleRefType s),
     Show (HoleType s),
     Show (SymbolType s),
+    Show (PatternParensType s),
     Show (PatternType s)
   ) =>
   Show (ExpressionAtom s)
@@ -1170,6 +1220,7 @@ deriving stock instance
     Eq (HoleType s),
     Eq (ModuleRefType s),
     Eq (SymbolType s),
+    Eq (PatternParensType s),
     Eq (PatternType s)
   ) =>
   Eq (ExpressionAtom s)
@@ -1180,6 +1231,7 @@ deriving stock instance
     Ord (ModuleRefType s),
     Ord (HoleType s),
     Ord (SymbolType s),
+    Ord (PatternParensType s),
     Ord (PatternType s)
   ) =>
   Ord (ExpressionAtom s)
@@ -1190,6 +1242,7 @@ deriving stock instance
     Show (ModuleRefType s),
     Show (HoleType s),
     Show (SymbolType s),
+    Show (PatternParensType s),
     Show (PatternType s)
   ) =>
   Show (ExpressionAtoms s)
@@ -1210,6 +1263,7 @@ instance
     Eq (ModuleRefType s),
     Eq (HoleType s),
     Eq (SymbolType s),
+    Eq (PatternParensType s),
     Eq (PatternType s)
   ) =>
   Eq (ExpressionAtoms s)
@@ -1222,6 +1276,7 @@ instance
     Ord (ModuleRefType s),
     Ord (HoleType s),
     Ord (SymbolType s),
+    Ord (PatternParensType s),
     Ord (PatternType s)
   ) =>
   Ord (ExpressionAtoms s)

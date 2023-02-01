@@ -1,0 +1,8 @@
+module Case;
+  open import Stdlib.Prelude;
+
+  isZero : Nat → Bool;
+  isZero n := case n
+      | zero := true
+      | suc _ := false;
+end;
