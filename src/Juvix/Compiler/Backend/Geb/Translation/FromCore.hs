@@ -206,20 +206,21 @@ fromCore tab = case tab ^. Core.infoMain of
                                     (MorphismBinop $ Binop OpEq (MorphismVar (Var 1)) (MorphismVar (Var 0)))
                               }
                       }
-             in return $ MorphismApplication
-                  Application
-                    { _applicationDomainType = ObjectInteger,
-                      _applicationCodomainType = ObjectHom (Hom ObjectInteger objectBool),
-                      _applicationLeft =
-                        MorphismApplication
-                          Application
-                            { _applicationDomainType = ObjectInteger,
-                              _applicationCodomainType = objectBool,
-                              _applicationLeft = le,
-                              _applicationRight = arg2'
-                            },
-                      _applicationRight = arg1'
-                    }
+             in return $
+                  MorphismApplication
+                    Application
+                      { _applicationDomainType = ObjectInteger,
+                        _applicationCodomainType = ObjectHom (Hom ObjectInteger objectBool),
+                        _applicationLeft =
+                          MorphismApplication
+                            Application
+                              { _applicationDomainType = ObjectInteger,
+                                _applicationCodomainType = objectBool,
+                                _applicationLeft = le,
+                                _applicationRight = arg2'
+                              },
+                        _applicationRight = arg1'
+                      }
           _ ->
             error "wrong builtin application argument number"
       Core.OpEq ->
