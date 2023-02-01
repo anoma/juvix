@@ -122,7 +122,7 @@ tests:
     command:
       - juvix
       - repl
-    stdin: "let {x : Nat; x := 2 + 1} in x"
+    stdin: "let x : Nat; x := 2 + 1 in x"
     stdout:
       contains:
         "suc (suc (suc zero))"
