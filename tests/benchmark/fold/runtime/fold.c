@@ -151,7 +151,6 @@ juvix_closure_plus:
             {
                 STACK_PUSH(ARG(0));
                 STACK_PUSH(ARG(2));
-                JUVIX_INT_SUB(ARG(1), make_smallint(0), ARG(1));
                 ARG(0) = juvix_zeroarg_closure_plus;
                 CALL(0, foldl, juvix_label_run_1);
                 STACK_POP(ARG(2));

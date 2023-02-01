@@ -1,37 +1,19 @@
 -- compute the Nth Fibonacci number modulo 2 ^ 28 with CPS
 module cps;
+  open import Stdlib.Prelude;
+  open import Stdlib.Data.Nat.Ord;
 
-open import Stdlib.Prelude;
-open import Data.Int;
-open import Data.Int.Ops;
+  step : Nat → Nat → Nat → (Nat → Nat → Nat → Nat) → Nat;
+  step zero n _ _ := n;
+  step (suc k) n m cont := cont k m (mod (n + m) 268435456);
 
-open import Stdlib.Prelude;
-open import Data.Int;
-open import Data.Int.Ops;
+  terminating
+  go : Nat → Nat → Nat → Nat;
+  go k n m := step k n m go;
 
-axiom Int_268435456 : Int;
-compile Int_268435456 {
-  c ↦ "268435456";
-};
+  fib : Nat → Nat;
+  fib n := go n 0 1;
 
-step : Int -> Int -> Int -> (Int -> Int -> Int -> Int) -> Int;
-step k n m cont := if (k Data.Int.Ops.== Int_0)
-                      n
-                      (cont (k Data.Int.Ops.- Int_1) m ((n Data.Int.Ops.+ m) Data.Int.Ops.% Int_268435456));
-
-terminating
-go : Int -> Int -> Int -> Int;
-go k n m := step k n m go;
-
-fib : Int -> Int;
-fib n := go n Int_0 Int_1;
-
-axiom Int_100000000 : Int;
-compile Int_100000000 {
-  c ↦ "100000000";
-};
-
-main : IO;
-main := printInt (fib Int_100000000);
-
+  main : IO;
+  main := printNatLn (fib 100000000);
 end;

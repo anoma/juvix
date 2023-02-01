@@ -16,7 +16,7 @@ def run := \n \acc \lst
   if n = 0 then
     foldl plusMod acc lst
   else
-    run (n - 1) (foldl plusMod (0 - acc) lst) lst;
+    run (n - 1) (foldl plusMod acc lst) lst;
 
 def gen := \n \acc
   if n = 0 then

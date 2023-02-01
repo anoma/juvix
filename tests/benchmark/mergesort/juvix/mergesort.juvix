@@ -1,55 +1,51 @@
 -- Merge sort a list of N integers
 module mergesort;
+  open import Stdlib.Prelude;
+  open import Stdlib.Data.Nat.Ord;
 
-open import Stdlib.Prelude;
-open import Data.Int;
-open import Data.Int.Ops;
+  split_go : {A : Type} → List A → List A → List A → List A
+    × List A;
+  split_go nil ys zs := ys , zs;
+  split_go (x :: xs') ys zs := split_go xs' zs (x :: ys);
 
-split_go : {A : Type} -> List A -> List A -> List A -> List A × List A;
-split_go nil ys zs := (ys, zs);
-split_go (x :: xs') ys zs := split_go xs' zs (x :: ys);
+  split : {A : Type} → List A → List A × List A;
+  split xs := split_go xs nil nil;
 
-split : {A : Type} -> List A -> List A × List A;
-split xs := split_go xs nil nil;
+  revappend : {A : Type} → List A → List A → List A;
+  revappend nil ys := ys;
+  revappend (x :: xs) ys := revappend xs (x :: ys);
 
-revappend : {A : Type} -> List A -> List A -> List A;
-revappend nil ys := ys;
-revappend (x :: xs) ys := revappend xs (x :: ys);
+  merget : List Nat → List Nat → List Nat → List Nat;
+  merget nil ys acc := revappend acc ys;
+  merget xs nil acc := revappend acc xs;
+  merget (x :: xs') (y :: ys') acc := if
+    (x <= y)
+    (merget xs' (y :: ys') (x :: acc))
+    (merget (x :: xs') ys' (y :: acc));
 
-merget : List Int -> List Int -> List Int -> List Int;
-merget nil ys acc := revappend acc ys;
-merget xs nil acc := revappend acc xs;
-merget (x :: xs') (y :: ys') acc :=
-       if (x Data.Int.Ops.<= y)
-          (merget xs' (y :: ys') (x :: acc))
-          (merget (x :: xs') ys' (y :: acc));
+  terminating
+  sort' : List Nat × List Nat → List Nat;
 
-terminating
-sort' : List Int × List Int -> List Int;
+  terminating
+  sort : List Nat → List Nat;
+  sort nil := nil;
+  sort (x :: nil) := x :: nil;
+  sort xs := sort' (split xs);
 
-terminating
-sort : List Int -> List Int;
-sort nil := nil;
-sort (x :: nil) := x :: nil;
-sort xs := sort' (split xs);
+  sort' (l1 , l2) := merget (sort l1) (sort l2) nil;
 
-sort' (l1, l2) := merget (sort l1) (sort l2) nil;
+  sorted : List Nat → Bool;
+  sorted nil := true;
+  sorted (_ :: nil) := true;
+  sorted (x :: y :: t) := if (x <= y) (sorted (y :: t)) false;
 
-sorted : List Int -> Bool;
-sorted nil := true;
-sorted (_ :: nil) := true;
-sorted (x :: y :: t) := if (x Data.Int.Ops.<= y) (sorted (y :: t)) false;
+  gen : Nat → List Nat → List Nat;
+  gen zero acc := acc;
+  gen (suc n) acc := gen n (suc n :: acc);
 
-terminating
-gen : Int -> List Int -> List Int;
-gen n acc := if (n Data.Int.Ops.== Int_0) acc (gen (n Data.Int.Ops.- Int_1) (n :: acc));
-
-axiom Int_2000000 : Int;
-compile Int_2000000 {
-  c ↦ "2000000";
-};
-
-main : IO;
-main := if (sorted (sort (gen Int_2000000 nil))) (putStrLn "true") (putStrLn "false");
-
+  main : IO;
+  main := if
+    (sorted (sort (gen 2000000 nil)))
+    (printStringLn "true")
+    (printStringLn "false");
 end;
