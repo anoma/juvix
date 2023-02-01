@@ -16,12 +16,13 @@ data Env = Env
     _envShiftLevels :: [Level]
   }
 
--- | TODO documentation for each field
 emptyEnv :: Env
 emptyEnv =
   Env
     { _envIdentMap = mempty,
       _envLevel = 0,
+      -- | `envShiftLevels` contains the de Bruijn levels immediately before which a
+      -- binder was inserted
       _envShiftLevels = []
     }
 
@@ -43,7 +44,6 @@ shifting m = do
   varsNum <- asks (^. envLevel)
   local (over envShiftLevels (varsNum :)) m
 
--- HashMap.insert sym level identMap) (level + 1) (0 : shiftLevels) node idents
 withSymbol :: Symbol -> Trans a -> Trans a
 withSymbol sym a = do
   level <- asks (^. envLevel)
@@ -116,8 +116,6 @@ fromCore tab = case tab ^. Core.infoMain of
       where
         nodeType = convertType (Info.getNodeType node)
 
-    -- `shiftLevels` contains the de Bruijn levels immediately before which a
-    -- binder was inserted
     convertNode :: Core.Node -> Trans Morphism
     convertNode = \case
       Core.NVar x -> convertVar x
