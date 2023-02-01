@@ -1,5 +1,5 @@
-module Juvix.Compiler.Core.Transformation.LambdaLifting
-  ( module Juvix.Compiler.Core.Transformation.LambdaLifting,
+module Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
+  ( module Juvix.Compiler.Core.Transformation.LambdaLetRecLifting,
     module Juvix.Compiler.Core.Transformation.Base,
   )
 where

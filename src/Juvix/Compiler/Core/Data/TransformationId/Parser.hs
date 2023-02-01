@@ -41,7 +41,7 @@ pcompletions = do
        in f . Text.intercalate "," . map ppTrans
     ppTrans :: TransformationId -> Text
     ppTrans = \case
-      LambdaLifting -> strLifting
+      LambdaLetRecLifting -> strLifting
       TopEtaExpand -> strTopEtaExpand
       Identity -> strIdentity
       RemoveTypeArgs -> strRemoveTypeArgs
@@ -62,7 +62,7 @@ symbol = void . lexeme . chunk
 
 transformation :: (MonadParsec e Text m) => m TransformationId
 transformation =
-  symbol strLifting $> LambdaLifting
+  symbol strLifting $> LambdaLetRecLifting
     <|> symbol strIdentity $> Identity
     <|> symbol strTopEtaExpand $> TopEtaExpand
     <|> symbol strRemoveTypeArgs $> RemoveTypeArgs

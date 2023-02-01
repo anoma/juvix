@@ -9,7 +9,7 @@ allTests :: TestTree
 allTests = testGroup "Lambda lifting" (map liftTest Eval.tests)
 
 pipe :: [TransformationId]
-pipe = [LambdaLifting]
+pipe = [LambdaLetRecLifting]
 
 liftTest :: Eval.PosTest -> TestTree
 liftTest _testEval =
