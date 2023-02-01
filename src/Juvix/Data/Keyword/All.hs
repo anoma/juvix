@@ -187,6 +187,15 @@ kwGt = asciiKw Str.greater
 kwGe :: Keyword
 kwGe = asciiKw Str.greaterEqual
 
+kwShow :: Keyword
+kwShow = asciiKw Str.show_
+
+kwStrConcat :: Keyword
+kwStrConcat = asciiKw Str.strConcat
+
+kwStrToInt :: Keyword
+kwStrToInt = asciiKw Str.strToInt
+
 kwBind :: Keyword
 kwBind = asciiKw Str.bind
 

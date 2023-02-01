@@ -251,6 +251,9 @@ instance PrettyCode Instruction where
     Binop IntLt -> return $ primitive Str.instrLt
     Binop IntLe -> return $ primitive Str.instrLe
     Binop ValEq -> return $ primitive Str.instrEq
+    Binop StrConcat -> return $ primitive Str.instrStrConcat
+    ValShow -> return $ primitive Str.instrShow
+    StrToInt -> return $ primitive Str.instrStrToInt
     Push val -> (primitive Str.instrPush <+>) <$> ppCode val
     Pop -> return $ primitive Str.instrPop
     PushTemp -> return $ primitive Str.instrPusht

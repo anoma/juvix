@@ -89,6 +89,13 @@ recurse' sig = go True
               fixMemBinOp mem mkTypeInteger mkTypeInteger mkTypeBool
             Binop ValEq ->
               fixMemBinOp mem TyDynamic TyDynamic mkTypeBool
+            Binop StrConcat ->
+              fixMemBinOp mem TyString TyString TyString
+            ValShow ->
+              return (pushValueStack TyString (popValueStack 1 mem))
+            StrToInt -> do
+              checkValueStack' loc (sig ^. recursorInfoTable) [TyString] mem
+              return (pushValueStack mkTypeInteger (popValueStack 1 mem))
             Push val -> do
               ty <- getValueType' loc (sig ^. recursorInfoTable) mem val
               return (pushValueStack ty mem)
@@ -344,6 +351,12 @@ recurseS' sig = go
               fixStackBinOp si
             Binop ValEq ->
               fixStackBinOp si
+            Binop StrConcat ->
+              fixStackBinOp si
+            ValShow ->
+              return si
+            StrToInt ->
+              return si
             Push {} -> do
               return (stackInfoPushValueStack 1 si)
             Pop -> do

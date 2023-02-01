@@ -52,6 +52,12 @@
 
 #define MAX_CLOSURE_SIZE (MAX_FUNCTION_ARGS + CLOSURE_HEAD_SIZE)
 
+#ifdef BITS32
+#define MAX_SMALLINT ((1L << 30L) - 1L)
+#else
+#define MAX_SMALLINT ((1LL << 62LL) - 1LL)
+#endif
+
 /*****************************************/
 /* Static asserts */
 

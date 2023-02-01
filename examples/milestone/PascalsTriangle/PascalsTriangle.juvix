@@ -23,14 +23,6 @@ module PascalsTriangle;
   singleton : {A : Type} → A → List A;
   singleton a := a :: nil;
 
-  infixr 5 ++str;
-  --- Concatenation of ;String;s
-  axiom ++str : String → String → String;
-
-  compile ++str {
-    c ↦ "concat";
-  };
-
   --- Concatenates a list of strings
 
   --- ;concat (("a" :: nil) :: "b" :: nil); evaluates to ;"a"
@@ -48,7 +40,7 @@ module PascalsTriangle;
 
   showList : List Nat → String;
   showList xs := "["
-    ++str intercalate "," (map natToStr xs)
+    ++str intercalate "," (map natToString xs)
     ++str "]";
 
   --- Compute the next row of Pascal's triangle

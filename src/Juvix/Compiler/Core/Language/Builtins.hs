@@ -13,6 +13,9 @@ data BuiltinOp
   | OpIntLt
   | OpIntLe
   | OpEq
+  | OpShow
+  | OpStrConcat
+  | OpStrToInt
   | OpTrace
   | OpFail
   deriving stock (Eq)
@@ -39,6 +42,9 @@ builtinOpArgsNum = \case
   OpIntLt -> 2
   OpIntLe -> 2
   OpEq -> 2
+  OpShow -> 1
+  OpStrConcat -> 2
+  OpStrToInt -> 1
   OpTrace -> 2
   OpFail -> 1
 

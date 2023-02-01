@@ -76,6 +76,21 @@ closure_label:
 #define JUVIX_VAL_EQ(var0, var1, var2) \
     (var0 = make_bool(juvix_equal(var1, var2)))
 
+#define JUVIX_STR_CONCAT(var0, var1, var2) CONCAT_CSTRINGS(var0, var1, var2)
+
+#define JUVIX_STR_TO_INT(var0, var1) \
+    (var0 = make_smallint(strtoint(get_cstring(var1))))
+
+#define JUVIX_SHOW(var0, var1)                                     \
+    do {                                                           \
+        char *juvix_buf = print(var1);                             \
+        if (strlen(juvix_buf) / sizeof(word_t) + 1 > MAX_FIELDS) { \
+            error_exit_msg("show: string too long");               \
+        }                                                          \
+        ALLOC_CSTRING(var0, juvix_buf);                            \
+        free_strbuf(juvix_buf);                                    \
+    } while (0)
+
 #define JUVIX_ASSIGN(var0, val) (var0 = val)
 
 #define JUVIX_TRACE(val) (io_trace(val))

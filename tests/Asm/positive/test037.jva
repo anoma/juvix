@@ -1,0 +1,13 @@
+-- string instructions
+
+function main() {
+    push ".\n";
+    push 20;
+    push "123";
+    atoi;
+    add;
+    show;
+    strcat;
+    alloc write;
+    ret;
+}

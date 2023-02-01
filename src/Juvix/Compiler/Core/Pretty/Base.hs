@@ -38,6 +38,9 @@ instance PrettyCode BuiltinOp where
     OpIntLt -> return primLess
     OpIntLe -> return primLessEquals
     OpEq -> return primEquals
+    OpShow -> return primShow
+    OpStrConcat -> return primStrConcat
+    OpStrToInt -> return primStrToInt
     OpTrace -> return primTrace
     OpFail -> return primFail
 
@@ -503,6 +506,15 @@ primMod = primitive Str.mod
 
 primEquals :: Doc Ann
 primEquals = primitive Str.equal
+
+primShow :: Doc Ann
+primShow = primitive Str.show_
+
+primStrConcat :: Doc Ann
+primStrConcat = primitive Str.strConcat
+
+primStrToInt :: Doc Ann
+primStrToInt = primitive Str.strToInt
 
 kwLetRec :: Doc Ann
 kwLetRec = keyword Str.letrec_

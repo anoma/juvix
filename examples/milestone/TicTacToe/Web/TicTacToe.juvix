@@ -99,7 +99,7 @@ module Web.TicTacToe;
 
   renderNumber : Nat → Nat → Nat → IO;
   renderNumber n row col := renderText
-    (natToStr n)
+    (natToString n)
     row
     col
     center;

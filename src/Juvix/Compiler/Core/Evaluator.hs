@@ -18,6 +18,7 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Pretty
+import Text.Read qualified as T
 
 data EvalError = EvalError
   { _evalErrorMsg :: !Text,
@@ -131,6 +132,23 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
       OpEq -> binOp nodeFromBool id structEq
       OpIntDiv -> divOp quot
       OpIntMod -> divOp rem
+      OpShow -> unary $ \arg -> mkConstant' (ConstString (ppPrint (eval' env arg)))
+      OpStrConcat -> binary $ \arg1 arg2 ->
+        case (eval' env arg1, eval' env arg2) of
+          (NCst (Constant _ (ConstString s1)), NCst (Constant _ (ConstString s2))) ->
+            mkConstant' (ConstString (s1 <> s2))
+          _ ->
+            evalError "string concatenation: argument not a string" n
+      OpStrToInt -> unary $ \arg ->
+        case eval' env arg of
+          NCst (Constant _ (ConstString s)) ->
+            case T.readMaybe (fromText s) of
+              Just i ->
+                mkConstant' (ConstInteger i)
+              Nothing ->
+                evalError "string to integer: not an integer" n
+          _ ->
+            evalError "string conversion: argument not a string" n
       OpFail -> unary $ \msg -> Exception.throw (EvalError (fromString ("failure: " ++ printNode (eval' env msg))) Nothing)
       OpTrace -> binary $ \msg x -> Debug.trace (printNode (eval' env msg)) (eval' env x)
       where

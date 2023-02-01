@@ -50,6 +50,9 @@ computeNodeTypeInfo tab = umapL go
           OpIntLt -> mkTypeBool'
           OpIntLe -> mkTypeBool'
           OpEq -> mkTypeBool'
+          OpShow -> mkTypeString'
+          OpStrConcat -> mkTypeString'
+          OpStrToInt -> mkTypeInteger'
           OpTrace -> case _builtinAppArgs of
             [_, arg2] -> Info.getNodeType arg2
             _ -> error "incorrect trace builtin application"

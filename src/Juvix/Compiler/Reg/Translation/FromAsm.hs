@@ -77,6 +77,8 @@ fromAsmInstr ::
 fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
   case _cmdInstrInstruction of
     Asm.Binop op -> return $ mkBinop (mkOpcode op)
+    Asm.ValShow -> return $ mkShow (VarRef VarGroupStack n) (VRef $ VarRef VarGroupStack n)
+    Asm.StrToInt -> return $ mkStrToInt (VarRef VarGroupStack n) (VRef $ VarRef VarGroupStack n)
     Asm.Push val -> return $ mkAssign (VarRef VarGroupStack (n + 1)) (mkValue val)
     Asm.Pop -> return Nop
     Asm.PushTemp ->
@@ -137,6 +139,13 @@ fromAsmInstr funInfo tab si Asm.CmdInstr {..} =
       Asm.IntLt -> OpIntLt
       Asm.IntLe -> OpIntLe
       Asm.ValEq -> OpEq
+      Asm.StrConcat -> OpStrConcat
+
+    mkShow :: VarRef -> Value -> Instruction
+    mkShow tgt src = Show (InstrShow tgt src)
+
+    mkStrToInt :: VarRef -> Value -> Instruction
+    mkStrToInt tgt src = StrToInt (InstrStrToInt tgt src)
 
     mkAssign :: VarRef -> Value -> Instruction
     mkAssign tgt src = Assign (InstrAssign tgt src)

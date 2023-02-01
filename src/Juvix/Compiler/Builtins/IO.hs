@@ -12,5 +12,5 @@ registerIO d = do
 registerIOSequence :: (Member Builtins r) => AxiomDef -> Sem r ()
 registerIOSequence d = do
   io <- getBuiltinName (getLoc d) BuiltinIO
-  unless (d ^. axiomType === (io --> io --> io)) (error "IO sequence have type IO → IO")
+  unless (d ^. axiomType === (io --> io --> io)) (error "IO sequence has type IO → IO")
   registerBuiltin BuiltinIOSequence (d ^. axiomName)

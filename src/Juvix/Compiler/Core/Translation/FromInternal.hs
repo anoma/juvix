@@ -363,10 +363,15 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinStringPrint -> return ()
       Internal.BuiltinBoolPrint -> return ()
       Internal.BuiltinIOSequence -> return ()
+      Internal.BuiltinIOReadline -> return ()
       Internal.BuiltinString -> registerInductiveAxiom
       Internal.BuiltinIO -> registerInductiveAxiom
       Internal.BuiltinTrace -> return ()
       Internal.BuiltinFail -> return ()
+      Internal.BuiltinStringConcat -> return ()
+      Internal.BuiltinStringEq -> return ()
+      Internal.BuiltinStringToNat -> return ()
+      Internal.BuiltinNatToString -> return ()
 
     registerInductiveAxiom :: Sem r ()
     registerInductiveAxiom = do
@@ -389,27 +394,29 @@ goAxiomDef ::
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r) =>
   Internal.AxiomDef ->
   Sem r ()
-goAxiomDef a = case a ^. Internal.axiomBuiltin >>= builtinBody of
-  Just body -> do
-    sym <- freshSymbol
-    ty <- axiomType'
-    let info =
-          IdentifierInfo
-            { _identifierName = a ^. Internal.axiomName . nameText,
-              _identifierLocation = Just $ a ^. Internal.axiomName . nameLoc,
-              _identifierSymbol = sym,
-              _identifierType = ty,
-              _identifierArgsNum = 0,
-              _identifierArgsInfo = [],
-              _identifierIsExported = False,
-              _identifierBuiltin = Nothing
-            }
-    registerIdent (mkIdentIndex (a ^. Internal.axiomName)) info
-    registerIdentNode sym body
-  Nothing -> return ()
+goAxiomDef a = do
+  boolSym <- getBoolSymbol
+  case a ^. Internal.axiomBuiltin >>= builtinBody boolSym of
+    Just body -> do
+      sym <- freshSymbol
+      ty <- axiomType'
+      let info =
+            IdentifierInfo
+              { _identifierName = a ^. Internal.axiomName . nameText,
+                _identifierLocation = Just $ a ^. Internal.axiomName . nameLoc,
+                _identifierSymbol = sym,
+                _identifierType = ty,
+                _identifierArgsNum = 0,
+                _identifierArgsInfo = [],
+                _identifierIsExported = False,
+                _identifierBuiltin = Nothing
+              }
+      registerIdent (mkIdentIndex (a ^. Internal.axiomName)) info
+      registerIdentNode sym body
+    Nothing -> return ()
   where
-    builtinBody :: Internal.BuiltinAxiom -> Maybe Node
-    builtinBody = \case
+    builtinBody :: Symbol -> Internal.BuiltinAxiom -> Maybe Node
+    builtinBody boolSym = \case
       Internal.BuiltinNatPrint -> Just writeLambda
       Internal.BuiltinStringPrint -> Just writeLambda
       Internal.BuiltinBoolPrint -> Just writeLambda
@@ -423,6 +430,35 @@ goAxiomDef a = case a ^. Internal.axiomBuiltin >>= builtinBody of
                   )
               )
           )
+      Internal.BuiltinIOReadline ->
+        Just
+          ( mkLambda'
+              ( mkConstr'
+                  (BuiltinTag TagBind)
+                  [ mkConstr' (BuiltinTag TagReadLn) [],
+                    mkVar' 0
+                  ]
+              )
+          )
+      Internal.BuiltinStringConcat ->
+        Just (mkLambda' (mkLambda' (mkBuiltinApp' OpStrConcat [mkVar' 1, mkVar' 0])))
+      Internal.BuiltinStringEq ->
+        Just (mkLambda' (mkLambda' (mkBuiltinApp' OpEq [mkVar' 1, mkVar' 0])))
+      Internal.BuiltinStringToNat -> do
+        Just
+          ( mkLambda'
+              ( mkLet'
+                  (mkBuiltinApp' OpStrToInt [mkVar' 0])
+                  ( mkIf'
+                      boolSym
+                      (mkBuiltinApp' OpIntLt [mkVar' 0, mkConstant' (ConstInteger 0)])
+                      (mkBuiltinApp' OpFail [mkConstant' (ConstString "stringToNat: negative value")])
+                      (mkVar' 0)
+                  )
+              )
+          )
+      Internal.BuiltinNatToString ->
+        Just (mkLambda' (mkBuiltinApp' OpShow [mkVar' 0]))
       Internal.BuiltinString -> Nothing
       Internal.BuiltinIO -> Nothing
       Internal.BuiltinTrace -> Nothing
@@ -673,6 +709,11 @@ goApplication a = do
         Just Internal.BuiltinString -> app
         Just Internal.BuiltinIO -> app
         Just Internal.BuiltinIOSequence -> app
+        Just Internal.BuiltinIOReadline -> app
+        Just Internal.BuiltinStringConcat -> app
+        Just Internal.BuiltinStringEq -> app
+        Just Internal.BuiltinStringToNat -> app
+        Just Internal.BuiltinNatToString -> app
         Just Internal.BuiltinTrace -> do
           as <- exprArgs
           case as of

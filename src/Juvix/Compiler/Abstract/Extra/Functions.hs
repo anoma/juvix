@@ -45,6 +45,20 @@ patternCosmos f p = case p of
       args' <- traverse (traverseOf patternArgPattern (patternCosmos f)) args
       pure (PatternConstructorApp (ConstructorApp r args'))
 
+patternArgNameFold :: SimpleFold (Maybe Name) Pattern
+patternArgNameFold f = \case
+  Nothing -> mempty
+  Just n -> Const (getConst (f (PatternVariable n)))
+
+-- | A fold over all transitive children, including self
+patternArgCosmos :: SimpleFold PatternArg Pattern
+patternArgCosmos f p = do
+  _patternArgPattern <- patternCosmos f (p ^. patternArgPattern)
+  _patternArgName <- patternArgNameFold f (p ^. patternArgName)
+  pure PatternArg {..}
+  where
+    _patternArgIsImplicit = p ^. patternArgIsImplicit
+
 -- | A fold over all transitive children, excluding self
 patternSubCosmos :: SimpleFold Pattern Pattern
 patternSubCosmos f p = case p of
@@ -52,7 +66,7 @@ patternSubCosmos f p = case p of
   PatternWildcard {} -> pure p
   PatternEmpty {} -> pure p
   PatternConstructorApp (ConstructorApp r args) -> do
-    args' <- traverse (traverseOf patternArgPattern (patternCosmos f)) args
+    args' <- traverse (patternArgCosmos f) args
     pure (PatternConstructorApp (ConstructorApp r args'))
 
 viewApp :: Expression -> (Expression, [ApplicationArg])

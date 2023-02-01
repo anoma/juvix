@@ -50,8 +50,6 @@ testDescrFlag N.NegTest {..} =
             (void . runIO' iniState entryPoint) upToInternal
         }
 
---------------------------------------------------------------------------------
-
 tests :: [PosTest]
 tests =
   [ PosTest
@@ -65,7 +63,11 @@ tests =
     PosTest
       "Recursive functions on Lists"
       $(mkRelDir ".")
-      $(mkRelFile "Data/List.juvix")
+      $(mkRelFile "Data/List.juvix"),
+    PosTest
+      "Recursive function on a tree"
+      $(mkRelDir ".")
+      $(mkRelFile "TreeGen.juvix")
   ]
 
 testsWithKeyword :: [PosTest]
@@ -82,8 +84,6 @@ testsWithKeyword =
 
 negTests :: [N.NegTest]
 negTests = N.tests
-
---------------------------------------------------------------------------------
 
 allTests :: TestTree
 allTests =

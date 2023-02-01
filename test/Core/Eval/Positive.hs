@@ -269,5 +269,10 @@ tests =
       "Builtin natural numbers"
       $(mkRelDir ".")
       $(mkRelFile "test047.jvc")
-      $(mkRelFile "out/test047.out")
+      $(mkRelFile "out/test047.out"),
+    PosTest
+      "String builtins"
+      $(mkRelDir ".")
+      $(mkRelFile "test048.jvc")
+      $(mkRelFile "out/test048.out")
   ]

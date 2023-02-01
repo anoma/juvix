@@ -51,10 +51,7 @@ instance HasNameKind Name where
   getNameKind = (^. nameKind)
 
 instance Pretty Name where
-  pretty n =
-    pretty (n ^. namePretty)
-      <> "@"
-      <> pretty (n ^. nameId)
+  pretty n = pretty (n ^. namePretty)
 
 addNameIdTag :: Bool -> NameId -> Doc a -> Doc a
 addNameIdTag showNameId nid

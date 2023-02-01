@@ -71,6 +71,11 @@ data Instruction
   = -- | An instruction which takes its operands from the two top stack cells,
     -- pops the stack by two, and then pushes the result.
     Binop Opcode
+  | -- | Convert the top stack cell to a string. JAV opcode: 'show'.
+    ValShow
+  | -- | Convert a string on top of the stack into an integer. JVA opcode:
+    -- 'atoi'.
+    StrToInt
   | -- | Push a value on top of the stack. JVA opcode: 'push <val>'.
     Push Value
   | -- | Pop the stack. JVA opcode: 'pop'.
@@ -170,6 +175,9 @@ data Opcode
   | -- | Compare the two top stack cells with structural equality, pop the stack
     -- by two, and push the result. JVA opcode: 'eq'.
     ValEq
+  | -- | Concatenate two string on top of the stack, pop the stack by two, and
+    -- push the result. JVA opcode: 'strcat'.
+    StrConcat
 
 newtype InstrPrealloc = InstrPrealloc
   { -- | How many words to preallocate?

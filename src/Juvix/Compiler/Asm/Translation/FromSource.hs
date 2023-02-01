@@ -276,6 +276,12 @@ command = do
       return $ mkBinop' loc IntLe
     "eq" ->
       return $ mkBinop' loc ValEq
+    "strcat" ->
+      return $ mkBinop' loc StrConcat
+    "show" ->
+      return $ mkInstr' loc ValShow
+    "atoi" ->
+      return $ mkInstr' loc StrToInt
     "push" ->
       mkInstr' loc . Push <$> value
     "pop" ->
