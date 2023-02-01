@@ -154,8 +154,8 @@ fromCore tab = case tab ^. Core.infoMain of
       return $ MorphismVar (Var (varsNum + length shiftLevels - fromJust (HashMap.lookup _identSymbol identMap) - 1))
 
     convertConstant :: Core.Constant -> Trans Morphism
-    convertConstant _ _ _ Core.Constant {..} = case _constantValue of
-      Core.ConstInteger n -> MorphismInteger n
+    convertConstant Core.Constant {..} = case _constantValue of
+      Core.ConstInteger n -> return $ MorphismInteger n
       Core.ConstString {} -> unsupported
 
     convertApp :: Core.App -> Trans Morphism
@@ -174,23 +174,23 @@ fromCore tab = case tab ^. Core.infoMain of
     convertBuiltinApp :: Core.BuiltinApp -> Trans Morphism
     convertBuiltinApp Core.BuiltinApp {..} = case _builtinAppOp of
       Core.OpIntAdd ->
-        convertBinop identMap varsNum shiftLevels OpAdd _builtinAppArgs
+        convertBinop OpAdd _builtinAppArgs
       Core.OpIntSub ->
-        convertBinop identMap varsNum shiftLevels OpSub _builtinAppArgs
+        convertBinop OpSub _builtinAppArgs
       Core.OpIntMul ->
-        convertBinop identMap varsNum shiftLevels OpMul _builtinAppArgs
+        convertBinop OpMul _builtinAppArgs
       Core.OpIntDiv ->
-        convertBinop identMap varsNum shiftLevels OpDiv _builtinAppArgs
+        convertBinop OpDiv _builtinAppArgs
       Core.OpIntMod ->
-        convertBinop identMap varsNum shiftLevels OpMod _builtinAppArgs
+        convertBinop OpMod _builtinAppArgs
       Core.OpIntLt ->
-        convertBinop identMap varsNum shiftLevels OpLt _builtinAppArgs
+        convertBinop OpLt _builtinAppArgs
       Core.OpIntLe ->
         case _builtinAppArgs of
-          [arg1, arg2] ->
-            let arg1' = convertNode identMap varsNum shiftLevels arg1
-                arg2' = convertNode identMap varsNum shiftLevels arg2
-                le =
+          [arg1, arg2] -> do
+            arg1' <- convertNode arg1
+            arg2' <- convertNode arg2
+            let le =
                   MorphismLambda
                     Lambda
                       { _lambdaVarType = ObjectInteger,
@@ -206,7 +206,7 @@ fromCore tab = case tab ^. Core.infoMain of
                                     (MorphismBinop $ Binop OpEq (MorphismVar (Var 1)) (MorphismVar (Var 0)))
                               }
                       }
-             in MorphismApplication
+             in return $ MorphismApplication
                   Application
                     { _applicationDomainType = ObjectInteger,
                       _applicationCodomainType = ObjectHom (Hom ObjectInteger objectBool),
@@ -226,22 +226,19 @@ fromCore tab = case tab ^. Core.infoMain of
         case _builtinAppArgs of
           arg : _
             | Info.getNodeType arg == Core.mkTypeInteger' ->
-                convertBinop identMap varsNum shiftLevels OpEq _builtinAppArgs
+                convertBinop OpEq _builtinAppArgs
           _ ->
             error "unsupported equality argument types"
       _ ->
         unsupported
 
-    convertBinop :: HashMap Symbol Level -> Level -> [Level] -> Opcode -> [Core.Node] -> Morphism
-    convertBinop identMap varsNum shiftLevels op args =
+    convertBinop :: Opcode -> [Core.Node] -> Trans Morphism
+    convertBinop op args =
       case args of
-        [arg1, arg2] ->
-          MorphismBinop
-            ( Binop
-                op
-                (convertNode identMap varsNum shiftLevels arg1)
-                (convertNode identMap varsNum shiftLevels arg2)
-            )
+        [arg1, arg2] -> do
+          arg1' <- convertNode arg1
+          arg2' <- convertNode arg2
+          return $ MorphismBinop (Binop op arg1' arg2')
         _ ->
           error "wrong builtin application argument number"
 
