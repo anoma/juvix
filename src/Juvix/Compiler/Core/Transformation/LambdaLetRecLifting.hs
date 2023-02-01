@@ -185,3 +185,6 @@ nodeIsLetRecLifted = not . hasLetRecs
 
 isLifted :: InfoTable -> Bool
 isLifted = all nodeIsLifted . (^. identContext)
+
+isLetRecLifted :: InfoTable -> Bool
+isLetRecLifted = all nodeIsLetRecLifted . (^. identContext)

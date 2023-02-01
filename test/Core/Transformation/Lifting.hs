@@ -6,10 +6,12 @@ import Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation
 
 allTests :: TestTree
-allTests = testGroup "Lambda and LetRec lifting" (map liftTest Eval.tests)
-
-pipe :: [TransformationId]
-pipe = [LambdaLetRecLifting]
+allTests =
+  testGroup
+    "Lifting"
+    [ testGroup "Lambda and LetRec lifting" (map liftTest Eval.tests),
+      testGroup "Only LetRec lifting" (map letRecLiftTest Eval.tests)
+    ]
 
 liftTest :: Eval.PosTest -> TestTree
 liftTest _testEval =
@@ -19,3 +21,18 @@ liftTest _testEval =
         _testAssertion = \i -> unless (isLifted i) (error "not lambda lifted"),
         _testEval
       }
+  where
+    pipe :: [TransformationId]
+    pipe = [LambdaLetRecLifting]
+
+letRecLiftTest :: Eval.PosTest -> TestTree
+letRecLiftTest _testEval =
+  fromTest
+    Test
+      { _testTransformations = pipe,
+        _testAssertion = \i -> unless (isLetRecLifted i) (error "not letrec lifted"),
+        _testEval
+      }
+  where
+    pipe :: [TransformationId]
+    pipe = [LetRecLifting]
