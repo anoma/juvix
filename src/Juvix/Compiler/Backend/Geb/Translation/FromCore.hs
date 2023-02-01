@@ -88,7 +88,6 @@ fromCore tab = case tab ^. Core.infoMain of
     goIdents :: Core.Node -> [Core.IdentifierInfo] -> Trans Morphism
     goIdents node = \case
       [] ->
-        -- convertNode identMap 0 shiftLevels node
         zeroLevel (convertNode node)
       ii : idents -> do
         lamb <- mkLambda
