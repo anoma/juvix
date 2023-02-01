@@ -256,19 +256,20 @@ fromCore tab = case tab ^. Core.infoMain of
               arg <- convertNode defaultNode
               body <- shifting (go indty _caseValue branches)
               let ty = convertType (Info.getNodeType defaultNode)
-              return $ MorphismApplication
-                Application
-                  { _applicationDomainType = ty,
-                    _applicationCodomainType = ty,
-                    _applicationLeft =
-                      MorphismLambda
-                        Lambda
-                          { _lambdaVarType = ty,
-                            _lambdaBodyType = ty,
-                            _lambdaBody = body
-                          },
-                    _applicationRight = arg
-                  }
+              return $
+                MorphismApplication
+                  Application
+                    { _applicationDomainType = ty,
+                      _applicationCodomainType = ty,
+                      _applicationLeft =
+                        MorphismLambda
+                          Lambda
+                            { _lambdaVarType = ty,
+                              _lambdaBodyType = ty,
+                              _lambdaBody = body
+                            },
+                      _applicationRight = arg
+                    }
           | otherwise -> go indty _caseValue branches
       where
         indty = convertInductive _caseInductive
@@ -314,27 +315,28 @@ fromCore tab = case tab ^. Core.infoMain of
             _caseOn <- convertNode val
             bodyLeft <- shifting (mkBranch lty val br)
             bodyRight <- shifting (go rty (Core.mkVar' 0) brs)
-            return $ MorphismCase
-              Case
-                { _caseLeftType = lty,
-                  _caseRightType = rty,
-                  _caseCodomainType = codty,
-                  _caseOn,
-                  _caseLeft =
-                    MorphismLambda
-                      Lambda
-                        { _lambdaVarType = lty,
-                          _lambdaBodyType = codty,
-                          _lambdaBody = bodyLeft
-                        },
-                  _caseRight =
-                    MorphismLambda
-                      Lambda
-                        { _lambdaVarType = rty,
-                          _lambdaBodyType = codty,
-                          _lambdaBody = bodyRight
-                        }
-                }
+            return $
+              MorphismCase
+                Case
+                  { _caseLeftType = lty,
+                    _caseRightType = rty,
+                    _caseCodomainType = codty,
+                    _caseOn,
+                    _caseLeft =
+                      MorphismLambda
+                        Lambda
+                          { _lambdaVarType = lty,
+                            _lambdaBodyType = codty,
+                            _lambdaBody = bodyLeft
+                          },
+                    _caseRight =
+                      MorphismLambda
+                        Lambda
+                          { _lambdaVarType = rty,
+                            _lambdaBodyType = codty,
+                            _lambdaBody = bodyRight
+                          }
+                  }
             where
               (lty, rty) = case ty of
                 ObjectCoproduct Coproduct {..} -> (_coproductLeft, _coproductRight)
