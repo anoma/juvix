@@ -16,6 +16,7 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
+import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
@@ -170,14 +171,20 @@ runCommand opts = do
           defaultLoc = singletonInterval (mkInitialLoc replPath)
 
           compileThenEval :: ReplContext -> String -> Repl (Either JuvixError Core.Node)
-          compileThenEval ctx s = bindEither compileString eval
+          compileThenEval ctx s = bindEither (fmap transformNode' <$> compileString) eval
             where
               eval :: Core.Node -> Repl (Either JuvixError Core.Node)
               eval n =
                 liftIO $
                   mapLeft
                     (JuvixError @Core.CoreError)
-                    <$> doEvalIO False defaultLoc (ctx ^. replContextExpContext . contextCoreResult . Core.coreResultTable) n
+                    <$> doEvalIO False defaultLoc infoTable n
+
+              infoTable :: Core.InfoTable
+              infoTable = ctx ^. replContextExpContext . contextCoreResult . Core.coreResultTable
+
+              transformNode' :: Core.Node -> Core.Node
+              transformNode' = transformNode infoTable (opts ^. replTransformations)
 
               compileString :: Repl (Either JuvixError Core.Node)
               compileString = liftIO $ compileExpressionIO' ctx (strip (pack s))

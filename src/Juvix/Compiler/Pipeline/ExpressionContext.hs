@@ -1,5 +1,6 @@
 module Juvix.Compiler.Pipeline.ExpressionContext where
 
+import Data.HashMap.Strict
 import Juvix.Compiler.Abstract.Translation qualified as Abstract
 import Juvix.Compiler.Concrete.Data.InfoTable qualified as Scoper
 import Juvix.Compiler.Concrete.Data.Scope qualified as S
@@ -7,10 +8,12 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language qualified as C
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Core.Data.InfoTableBuilder
+import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.ArityChecking.Data.Context qualified as InternalArity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as InternalTyped
-import Juvix.Prelude
 
 data ExpressionContext = ExpressionContext
   { _contextInternalTypedResult :: InternalTyped.InternalTypedResult,
@@ -53,3 +56,12 @@ mainModuleScope e = fromJust (moduleScope e (mainModuleTopPath e))
 
 mainModuleTopPath :: ExpressionContext -> C.TopModulePath
 mainModuleTopPath = (^. contextScoperResult . Scoper.mainModule . C.modulePath . S.nameConcrete)
+
+transformNode :: InfoTable -> [TransformationId] -> Node -> Node
+transformNode tab ts n = snd (run (runInfoTableBuilder tab transformNode'))
+  where
+    transformNode' :: Member InfoTableBuilder r => Sem r Node
+    transformNode' = do
+      sym <- freshSymbol
+      registerIdentNode sym n
+      lookupDefault impossible sym . (^. identContext) . applyTransformations ts <$> getInfoTable

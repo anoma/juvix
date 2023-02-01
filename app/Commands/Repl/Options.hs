@@ -2,11 +2,13 @@ module Commands.Repl.Options where
 
 import CommonOptions
 import Juvix.Compiler.Core.Pretty.Options qualified as Core
+import Juvix.Compiler.Core.Transformation
 
 data ReplOptions = ReplOptions
   { _replInputFile :: Maybe (AppPath File),
     _replShowDeBruijn :: Bool,
-    _replNoPrelude :: Bool
+    _replNoPrelude :: Bool,
+    _replTransformations :: [TransformationId]
   }
   deriving stock (Data)
 
@@ -20,6 +22,7 @@ instance CanonicalProjection ReplOptions Core.Options where
 
 parseRepl :: Parser ReplOptions
 parseRepl = do
+  _replTransformations <- optTransformationIds
   _replInputFile <- optional parseInputJuvixFile
   _replShowDeBruijn <-
     switch
