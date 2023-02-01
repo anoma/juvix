@@ -244,3 +244,14 @@ tests:
       contains: |
         evaluation error: failure: Enough
     exit-status: 0
+
+  - name: repl-nat-to-int-transform
+    command:
+      - juvix
+      - repl
+      - -t nat-to-int
+    stdin: "1 + 2"
+    stdout:
+      contains: |
+        3
+    exit-status: 0
