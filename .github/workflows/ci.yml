@@ -21,7 +21,7 @@ concurrency:
   group: '${{ github.workflow }}-${{ github.head_ref || github.run_id }}'
   cancel-in-progress: true
 env:
-  STACKFLAGS: '--pedantic --stack-root ${{ github.workspace }}/.stack'
+  STACKFLAGS: '--pedantic --stack-root ${{ github.workspace }}/.stack  --system-ghc'
 
 jobs:
 
@@ -185,9 +185,9 @@ jobs:
 
   docs-linux:
     needs: build-and-test-linux
-    if: >-
-      github.ref == 'refs/heads/main' || github.event_name ==
-      'workflow_dispatch'
+#     if: >-
+#       github.ref == 'refs/heads/main' || github.event_name ==
+#       'workflow_dispatch'
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout our repository
@@ -252,18 +252,17 @@ jobs:
         run: |
           cd main
           echo "$GITHUB_WORKSPACE/.local/bin" >> $GITHUB_PATH
-          make install
           make html-examples
           make webapp-examples
           make demo-example
 
-      - name: Deploy HTML to github pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: '${{ secrets.GITHUB_TOKEN }}'
-          publish_dir: main/_docs
-          enable_jekyll: false
-          cname: docs.juvix.org
+#       - name: Deploy HTML to github pages
+#         uses: peaceiris/actions-gh-pages@v3
+#         with:
+#           github_token: '${{ secrets.GITHUB_TOKEN }}'
+#           publish_dir: main/_docs
+#           enable_jekyll: false
+#           cname: docs.juvix.org
 
   build-and-test-macos:
     runs-on: macos-12
