@@ -13,6 +13,8 @@ import Juvix.Compiler.Core.Language qualified as Core
 data Env = Env
   { _envIdentMap :: HashMap Symbol Level,
     _envLevel :: Level,
+    -- | `envShiftLevels` contains the de Bruijn levels immediately before which a
+    -- | binder was inserted
     _envShiftLevels :: [Level]
   }
 
@@ -21,8 +23,6 @@ emptyEnv =
   Env
     { _envIdentMap = mempty,
       _envLevel = 0,
-      -- | `envShiftLevels` contains the de Bruijn levels immediately before which a
-      -- binder was inserted
       _envShiftLevels = []
     }
 
