@@ -42,6 +42,7 @@ pcompletions = do
     ppTrans :: TransformationId -> Text
     ppTrans = \case
       LambdaLetRecLifting -> strLifting
+      LetRecLifting -> strLetRecLifting
       TopEtaExpand -> strTopEtaExpand
       Identity -> strIdentity
       RemoveTypeArgs -> strRemoveTypeArgs
@@ -63,6 +64,7 @@ symbol = void . lexeme . chunk
 transformation :: (MonadParsec e Text m) => m TransformationId
 transformation =
   symbol strLifting $> LambdaLetRecLifting
+    <|> symbol strLetRecLifting $> LetRecLifting
     <|> symbol strIdentity $> Identity
     <|> symbol strTopEtaExpand $> TopEtaExpand
     <|> symbol strRemoveTypeArgs $> RemoveTypeArgs
@@ -87,6 +89,9 @@ allStrings =
 
 strLifting :: Text
 strLifting = "lifting"
+
+strLetRecLifting :: Text
+strLetRecLifting = "letrec-lifting"
 
 strTopEtaExpand :: Text
 strTopEtaExpand = "top-eta-expand"

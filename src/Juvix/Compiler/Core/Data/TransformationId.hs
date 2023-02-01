@@ -4,6 +4,7 @@ import Juvix.Prelude
 
 data TransformationId
   = LambdaLetRecLifting
+  | LetRecLifting
   | TopEtaExpand
   | RemoveTypeArgs
   | MoveApps

@@ -151,6 +151,9 @@ lambdaLiftNode aboveBl top =
 lambdaLifting :: InfoTable -> InfoTable
 lambdaLifting = run . mapT' (const (lambdaLiftNode mempty))
 
+letrecLifting :: InfoTable -> InfoTable
+letrecLifting = run . mapT' (const (lambdaLiftNode mempty))
+
 -- | True if lambdas are only found at the top level
 nodeIsLifted :: Node -> Bool
 nodeIsLifted = not . hasNestedLambdas
