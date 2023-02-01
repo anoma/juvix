@@ -30,6 +30,7 @@ runCompile inputFile o = do
     TargetWasm32Wasi -> runError (clangWasmWasiCompile inputFile o)
     TargetNative64 -> runError (clangNativeCompile inputFile o)
     TargetC -> return $ Right ()
+    TargetGeb -> return $ Right ()
 
 prepareRuntime :: forall r. (Members '[App, Embed IO] r) => Path Abs Dir -> CompileOptions -> Sem r ()
 prepareRuntime buildDir o = do
@@ -40,6 +41,7 @@ prepareRuntime buildDir o = do
     TargetNative64 | o ^. compileDebug -> writeRuntime nativeDebugRuntime
     TargetNative64 -> writeRuntime nativeReleaseRuntime
     TargetC -> return ()
+    TargetGeb -> return ()
   where
     wasiReleaseRuntime :: BS.ByteString
     wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFile)

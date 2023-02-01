@@ -6,6 +6,7 @@ data CompileTarget
   = TargetWasm32Wasi
   | TargetNative64
   | TargetC
+  | TargetGeb
   deriving stock (Show, Data)
 
 data CompileOptions = CompileOptions
@@ -54,13 +55,15 @@ optCompileTarget =
         <> metavar "TARGET"
         <> value TargetNative64
         <> showDefaultWith targetShow
-        <> help "select a target: wasm32-wasi, native, c"
+        <> help "select a target: wasm32-wasi, native, c, geb"
     )
   where
     parseTarget :: String -> Either String CompileTarget
     parseTarget = \case
       "wasm32-wasi" -> Right TargetWasm32Wasi
       "native" -> Right TargetNative64
+      "c" -> Right TargetC
+      "geb" -> Right TargetGeb
       s -> Left $ "unrecognised target: " <> s
 
     targetShow :: CompileTarget -> String
@@ -68,3 +71,4 @@ optCompileTarget =
       TargetWasm32Wasi -> "wasm32-wasi"
       TargetNative64 -> "native"
       TargetC -> "c"
+      TargetGeb -> "geb"

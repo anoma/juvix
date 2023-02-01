@@ -26,9 +26,6 @@ doc opts =
 class PrettyCode c where
   ppCode :: (Member (Reader Options) r) => c -> Sem r (Doc Ann)
 
-runPrettyCode :: (PrettyCode c) => Options -> c -> Doc Ann
-runPrettyCode opts = run . runReader opts . ppCode
-
 wrapCore ::
   forall r' c.
   (Member (Reader Options) r') =>
@@ -372,9 +369,6 @@ instance PrettyCode InfoTable where
 
 {--------------------------------------------------------------------------------}
 {- helper functions -}
-
-parensIf :: Bool -> Doc Ann -> Doc Ann
-parensIf t = if t then parens else id
 
 braces' :: Doc Ann -> Doc Ann
 braces' d = braces (line <> indent' d <> line)

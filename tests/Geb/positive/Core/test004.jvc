@@ -1,0 +1,5 @@
+
+def not : bool -> bool := \(x : bool) if x then false else true;
+def and : bool -> bool -> bool := \(x : bool) \(y : bool) if x then y else false;
+
+and (not false) (not (not true))

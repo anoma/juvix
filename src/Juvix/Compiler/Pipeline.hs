@@ -11,6 +11,7 @@ import Juvix.Compiler.Asm.Pipeline qualified as Asm
 import Juvix.Compiler.Asm.Translation.FromCore qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
+import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
@@ -172,6 +173,9 @@ asmToMiniC opts = Asm.toReg opts >=> regToMiniC (opts ^. Asm.optLimits) . Reg.fr
 
 regToMiniC :: Backend.Limits -> Reg.InfoTable -> Sem r C.MiniCResult
 regToMiniC lims = return . C.fromReg lims
+
+coreToGeb :: Core.InfoTable -> Sem r Geb.Result
+coreToGeb = return . Geb.toResult . Geb.fromCore . Core.toGeb
 
 --------------------------------------------------------------------------------
 -- Run pipeline
