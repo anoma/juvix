@@ -125,6 +125,7 @@ data Expression
   | ExpressionUniverse SmallUniverse
   | ExpressionSimpleLambda SimpleLambda
   | ExpressionLambda Lambda
+  | ExpressionCase Case
   deriving stock (Eq, Generic, Data)
 
 instance Hashable Expression
@@ -143,6 +144,22 @@ data SimpleLambda = SimpleLambda
     _slambdaBody :: Expression
   }
   deriving stock (Eq, Generic, Data)
+
+data CaseBranch = CaseBranch
+  { _caseBranchPattern :: PatternArg,
+    _caseBranchExpression :: Expression
+  }
+  deriving stock (Eq, Generic, Data)
+
+instance Hashable CaseBranch
+
+data Case = Case
+  { _caseExpression :: Expression,
+    _caseBranches :: NonEmpty CaseBranch
+  }
+  deriving stock (Eq, Generic, Data)
+
+instance Hashable Case
 
 newtype Lambda = Lambda
   { _lambdaClauses :: NonEmpty LambdaClause
@@ -242,6 +259,8 @@ data Function = Function
 
 instance Hashable Function
 
+makeLenses ''Case
+makeLenses ''CaseBranch
 makeLenses ''Module
 makeLenses ''Let
 makeLenses ''MutualBlock
@@ -263,6 +282,12 @@ makeLenses ''FunctionParameter
 makeLenses ''InductiveParameter
 makeLenses ''InductiveConstructorDef
 makeLenses ''ConstructorApp
+
+instance HasAtomicity CaseBranch where
+  atomicity = atomicity . (^. caseBranchExpression)
+
+instance HasAtomicity Case where
+  atomicity = atomicity . (^. caseBranches . to last)
 
 instance HasAtomicity Application where
   atomicity = const (Aggregate appFixity)
@@ -287,6 +312,7 @@ instance HasAtomicity Expression where
     ExpressionFunction f -> atomicity f
     ExpressionSimpleLambda l -> atomicity l
     ExpressionLambda l -> atomicity l
+    ExpressionCase l -> atomicity l
 
 instance HasAtomicity Function where
   atomicity = const (Aggregate funFixity)
@@ -345,6 +371,12 @@ instance HasLoc LetClause where
 instance HasLoc Let where
   getLoc l = getLocSpan (l ^. letClauses) <> getLoc (l ^. letExpression)
 
+instance HasLoc CaseBranch where
+  getLoc c = getLoc (c ^. caseBranchExpression)
+
+instance HasLoc Case where
+  getLoc c = getLoc (c ^. caseBranches . to last)
+
 instance HasLoc Expression where
   getLoc = \case
     ExpressionIden i -> getLoc i
@@ -356,6 +388,7 @@ instance HasLoc Expression where
     ExpressionFunction u -> getLoc u
     ExpressionSimpleLambda l -> getLoc l
     ExpressionLambda l -> getLoc l
+    ExpressionCase l -> getLoc l
 
 instance HasLoc Iden where
   getLoc = \case

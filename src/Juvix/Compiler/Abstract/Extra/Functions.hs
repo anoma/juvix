@@ -164,6 +164,7 @@ matchExpressions = go
       (_, ExpressionLambda {}) -> err
       (ExpressionCase {}, ExpressionCase {}) -> error "not implemented"
       (ExpressionCase {}, _) -> err
+      (_, ExpressionCase {}) -> err
       (ExpressionUniverse ia, ExpressionUniverse ib) ->
         unless (ia == ib) err
       (ExpressionUniverse {}, _) -> err

@@ -146,6 +146,19 @@ instance PrettyCode Expression where
     ExpressionHole h -> ppSCode h
     ExpressionLambda l -> ppCode l
     ExpressionLet l -> ppCode l
+    ExpressionCase c -> ppCode c
+
+instance PrettyCode CaseBranch where
+  ppCode CaseBranch {..} = do
+    pat <- ppCode _caseBranchPattern
+    e <- ppCode _caseBranchExpression
+    return $ kwPipe <+> pat <+> kwAssign <+> e
+
+instance PrettyCode Case where
+  ppCode Case {..} = do
+    exp <- ppCode _caseExpression
+    branches <- indent' . vsep <$> mapM ppCode _caseBranches
+    return $ kwCase <+> exp <> line <> branches
 
 instance PrettyCode FunctionClause where
   ppCode c = do

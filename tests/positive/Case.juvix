@@ -3,6 +3,6 @@ module Case;
 
   isZero : Nat → Bool;
   isZero n := case n
-      | a@{zero} := true
+      | zero := true
       | k@(suc _) := false;
 end;
