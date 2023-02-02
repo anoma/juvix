@@ -2,10 +2,10 @@
 module test005;
   open import Stdlib.Prelude;
 
-  S : {A : Type} → {B : Type} → {C : Type} → (A → B → C) → (A → B) → A → C;
+  S : {A B C : Type} → (A → B → C) → (A → B) → A → C;
   S x y z := x z (y z);
 
-  K : {A : Type} → {B : Type} → A → B → A;
+  K : {A B : Type} → A → B → A;
   K x y := x;
 
   I : {A : Type} → A → A;

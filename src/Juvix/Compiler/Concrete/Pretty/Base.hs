@@ -444,15 +444,51 @@ instance (SingI s) => PrettyCode (TypeSignature s) where
 
 instance (SingI s) => PrettyCode (Function s) where
   ppCode :: forall r. (Members '[Reader Options] r) => Function s -> Sem r (Doc Ann)
-  ppCode Function {..} = do
-    funParameter' <- ppCode _funParameter
-    funReturn' <- ppRightExpression' funFixity _funReturn
-    -- TODO: group parameters with the same type
-    return $ funParameter' <+> kwArrowR <+> funReturn'
+  ppCode fn =
+    if
+      | isJust (fn ^. funParameter . paramName) -> do
+        let (params, ret) = squashParams fn
+        funParamNames <- mapM (\n -> annDef n <$> ppSymbol n) params
+        funParamType <- ppExpression (fn ^. funParameter . paramType)
+        funReturn' <- ppRightExpression' funFixity ret
+        return $
+          implicitDelim
+            (fn ^. funParameter . paramImplicit)
+            (hsep funParamNames <+> kwColon <+> funParamType) <+>
+            kwArrowR <+>
+            funReturn'
+      | otherwise -> do
+        funParameter' <- ppCode (fn ^. funParameter)
+        funReturn' <- ppRightExpression' funFixity (fn ^. funReturn)
+        return $ funParameter' <+> kwArrowR <+> funReturn'
     where
       ppRightExpression' = case sing :: SStage s of
         SParsed -> ppRightExpression
         SScoped -> ppRightExpression
+
+      squashParams :: Function s -> (NonEmpty (SymbolType s), ExpressionType s)
+      squashParams Function {..} = case sing :: SStage s of
+        SParsed ->
+          let ExpressionAtoms {..} = _funReturn in
+            case _expressionAtoms of
+              AtomFunction fn' :| [] -> squash fn'
+              _ -> (NonEmpty.singleton (fromJust (_funParameter ^. paramName)), _funReturn)
+        SScoped -> case _funReturn of
+          ExpressionFunction fn' -> squash fn'
+          _ -> (NonEmpty.singleton (fromJust (_funParameter ^. paramName)), _funReturn)
+        where
+          squash :: Function s -> (NonEmpty (SymbolType s), ExpressionType s)
+          squash fn' | isJust (fn' ^. funParameter . paramName) &&
+                  tyEq (fn' ^. funParameter . paramType) (_funParameter ^. paramType) &&
+                  fn' ^. funParameter . paramImplicit == _funParameter ^. paramImplicit =
+                let (params, ret) = squashParams fn' in
+                  (NonEmpty.cons (fromJust (_funParameter ^. paramName)) params, ret)
+          squash _ = (NonEmpty.singleton (fromJust (_funParameter ^. paramName)), _funReturn)
+
+          tyEq :: ExpressionType s -> ExpressionType s -> Bool
+          tyEq = case sing :: SStage s of
+            SParsed -> (==)
+            SScoped -> (==)
 
 instance (SingI s) => PrettyCode (FunctionParameter s) where
   ppCode FunctionParameter {..} = do
