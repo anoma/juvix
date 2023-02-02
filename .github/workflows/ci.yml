@@ -252,6 +252,7 @@ jobs:
         run: |
           cd main
           echo "$GITHUB_WORKSPACE/.local/bin" >> $GITHUB_PATH
+          make install
           make html-examples
           make webapp-examples
           make demo-example
