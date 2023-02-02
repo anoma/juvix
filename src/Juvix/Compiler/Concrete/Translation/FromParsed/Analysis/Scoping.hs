@@ -946,7 +946,6 @@ checkFunction Function {..} = do
       return
         FunctionParameter
           { _paramName = paramName',
-            _paramUsage = _paramUsage,
             _paramImplicit = _paramImplicit,
             _paramType = paramType'
           }
@@ -1334,7 +1333,6 @@ makeExpressionTable2 (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ 
             param =
               FunctionParameter
                 { _paramName = Nothing,
-                  _paramUsage = Nothing,
                   _paramImplicit = Explicit,
                   _paramType = a
                 }

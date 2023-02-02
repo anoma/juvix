@@ -447,6 +447,7 @@ instance (SingI s) => PrettyCode (Function s) where
   ppCode Function {..} = do
     funParameter' <- ppCode _funParameter
     funReturn' <- ppRightExpression' funFixity _funReturn
+    -- TODO: group parameters with the same type
     return $ funParameter' <+> kwArrowR <+> funReturn'
     where
       ppRightExpression' = case sing :: SStage s of
@@ -460,18 +461,11 @@ instance (SingI s) => PrettyCode (FunctionParameter s) where
       Just n -> do
         paramName' <- annDef n <$> ppSymbol n
         paramType' <- ppExpression _paramType
-        return $ implicitDelim _paramImplicit (paramName' <+> ppUsage _paramUsage <+> paramType')
+        return $ implicitDelim _paramImplicit (paramName' <+> kwColon <+> paramType')
     where
       ppLeftExpression' = case sing :: SStage s of
         SParsed -> ppLeftExpression
         SScoped -> ppLeftExpression
-      ppUsage :: Maybe Usage -> Doc Ann
-      ppUsage m = case m of
-        Nothing -> kwColon
-        Just u -> case u of
-          UsageNone -> kwColonZero
-          UsageOnce -> kwColonOne
-          UsageOmega -> kwColonOmega
 
 instance PrettyCode Universe where
   ppCode (Universe n _) = return $ kwType <+?> (pretty <$> n)

@@ -4,7 +4,6 @@ module Juvix.Compiler.Abstract.Language
     module Juvix.Data.Hole,
     module Juvix.Compiler.Concrete.Data.Builtins,
     module Juvix.Compiler.Concrete.Data.Literal,
-    module Juvix.Data.Usage,
     module Juvix.Data.Universe,
     module Juvix.Compiler.Abstract.Data.Name,
     module Juvix.Data.Wildcard,
@@ -19,7 +18,6 @@ import Juvix.Compiler.Concrete.Language (BackendItem, ForeignBlock (..), symbolL
 import Juvix.Data.Hole
 import Juvix.Data.IsImplicit
 import Juvix.Data.Universe
-import Juvix.Data.Usage
 import Juvix.Data.Wildcard
 import Juvix.Prelude
 
@@ -161,7 +159,6 @@ data LambdaClause = LambdaClause
 
 data FunctionParameter = FunctionParameter
   { _paramName :: Maybe VarName,
-    _paramUsage :: Usage,
     _paramImplicit :: IsImplicit,
     _paramType :: Expression
   }
