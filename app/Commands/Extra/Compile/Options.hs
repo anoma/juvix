@@ -1,13 +1,21 @@
 module Commands.Extra.Compile.Options where
 
-import CommonOptions
+import CommonOptions hiding (show)
+import Prelude (Show (show))
 
 data CompileTarget
   = TargetWasm32Wasi
   | TargetNative64
   | TargetC
   | TargetGeb
-  deriving stock (Show, Data)
+  deriving stock (Data, Bounded, Enum)
+
+instance Show CompileTarget where
+  show = \case
+    TargetWasm32Wasi -> "wasm32-wasi"
+    TargetNative64 -> "native"
+    TargetC -> "c"
+    TargetGeb -> "geb"
 
 data CompileOptions = CompileOptions
   { _compileDebug :: Bool,
@@ -54,21 +62,14 @@ optCompileTarget =
         <> short 't'
         <> metavar "TARGET"
         <> value TargetNative64
-        <> showDefaultWith targetShow
-        <> help "select a target: wasm32-wasi, native, c, geb"
+        <> showDefault
+        <> help ("select a target: " <> show allTargets)
+        <> completeWith (map show allTargets)
     )
   where
+    allTargets :: [CompileTarget]
+    allTargets = allElements
     parseTarget :: String -> Either String CompileTarget
-    parseTarget = \case
-      "wasm32-wasi" -> Right TargetWasm32Wasi
-      "native" -> Right TargetNative64
-      "c" -> Right TargetC
-      "geb" -> Right TargetGeb
-      s -> Left $ "unrecognised target: " <> s
-
-    targetShow :: CompileTarget -> String
-    targetShow = \case
-      TargetWasm32Wasi -> "wasm32-wasi"
-      TargetNative64 -> "native"
-      TargetC -> "c"
-      TargetGeb -> "geb"
+    parseTarget txt = maybe err return (lookup (map toLower txt) [(Prelude.show t, t) | t <- allElements])
+      where
+        err = Left $ "unrecognised target: " <> txt
