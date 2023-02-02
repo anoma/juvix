@@ -294,12 +294,12 @@ ppInductiveParameters ::
   Maybe (Sem r ())
 ppInductiveParameters params = case params of
   InductiveParameter {..} : _ -> Just $ do
-      let params0 = takeWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
-          params1 = dropWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
-          names = hsep $ fmap (ppCode . (^. inductiveParameterName)) params0
-          ty = ppCode _inductiveParameterType
-          params' = ppInductiveParameters params1
-      parens (names <+> ppCode kwColon <+> ty) <+?> params'
+    let params0 = takeWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
+        params1 = dropWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
+        names = hsep $ fmap (ppCode . (^. inductiveParameterName)) params0
+        ty = ppCode _inductiveParameterType
+        params' = ppInductiveParameters params1
+    parens (names <+> ppCode kwColon <+> ty) <+?> params'
   _ ->
     Nothing
 
