@@ -197,24 +197,24 @@ ppInductiveParameters ::
   [InductiveParameter s] ->
   Sem r (Maybe (Doc Ann))
 ppInductiveParameters params = case params of
-    InductiveParameter {..} : _ ->
-      case sing :: SStage s of
-        SParsed -> do
-          let params0 = takeWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
-              params1 = dropWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
-          names <- mapM (ppCode . (^. inductiveParameterName)) params0
-          ty <- ppCode _inductiveParameterType
-          params' <- ppInductiveParameters params1
-          return $ Just $ parens (hsep names <+> kwColon <+> ty) <+?> params'
-        SScoped -> do
-          let params0 = takeWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
-              params1 = dropWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
-          names <- mapM (ppCode . (^. inductiveParameterName)) params0
-          ty <- ppCode _inductiveParameterType
-          params' <- ppInductiveParameters params1
-          return $ Just $ parens (hsep names <+> kwColon <+> ty) <+?> params'
-    _ ->
-      return Nothing
+  InductiveParameter {..} : _ ->
+    case sing :: SStage s of
+      SParsed -> do
+        let params0 = takeWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
+            params1 = dropWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
+        names <- mapM (ppCode . (^. inductiveParameterName)) params0
+        ty <- ppCode _inductiveParameterType
+        params' <- ppInductiveParameters params1
+        return $ Just $ parens (hsep names <+> kwColon <+> ty) <+?> params'
+      SScoped -> do
+        let params0 = takeWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
+            params1 = dropWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
+        names <- mapM (ppCode . (^. inductiveParameterName)) params0
+        ty <- ppCode _inductiveParameterType
+        params' <- ppInductiveParameters params1
+        return $ Just $ parens (hsep names <+> kwColon <+> ty) <+?> params'
+  _ ->
+    return Nothing
 
 instance (SingI s, SingI t) => PrettyCode (Module s t) where
   ppCode Module {..} = do
@@ -460,21 +460,21 @@ instance (SingI s) => PrettyCode (Function s) where
   ppCode :: forall r. (Members '[Reader Options] r) => Function s -> Sem r (Doc Ann)
   ppCode fn =
     if
-      | isJust (fn ^. funParameter . paramName) -> do
-        let (params, ret) = squashParams fn
-        funParamNames <- mapM (\n -> annDef n <$> ppSymbol n) params
-        funParamType <- ppExpression (fn ^. funParameter . paramType)
-        funReturn' <- ppRightExpression' funFixity ret
-        return $
-          implicitDelim
-            (fn ^. funParameter . paramImplicit)
-            (hsep funParamNames <+> kwColon <+> funParamType) <+>
-            kwArrowR <+>
-            funReturn'
-      | otherwise -> do
-        funParameter' <- ppCode (fn ^. funParameter)
-        funReturn' <- ppRightExpression' funFixity (fn ^. funReturn)
-        return $ funParameter' <+> kwArrowR <+> funReturn'
+        | isJust (fn ^. funParameter . paramName) -> do
+            let (params, ret) = squashParams fn
+            funParamNames <- mapM (\n -> annDef n <$> ppSymbol n) params
+            funParamType <- ppExpression (fn ^. funParameter . paramType)
+            funReturn' <- ppRightExpression' funFixity ret
+            return $
+              implicitDelim
+                (fn ^. funParameter . paramImplicit)
+                (hsep funParamNames <+> kwColon <+> funParamType)
+                <+> kwArrowR
+                <+> funReturn'
+        | otherwise -> do
+            funParameter' <- ppCode (fn ^. funParameter)
+            funReturn' <- ppRightExpression' funFixity (fn ^. funReturn)
+            return $ funParameter' <+> kwArrowR <+> funReturn'
     where
       ppRightExpression' = case sing :: SStage s of
         SParsed -> ppRightExpression
@@ -483,20 +483,21 @@ instance (SingI s) => PrettyCode (Function s) where
       squashParams :: Function s -> (NonEmpty (SymbolType s), ExpressionType s)
       squashParams Function {..} = case sing :: SStage s of
         SParsed ->
-          let ExpressionAtoms {..} = _funReturn in
-            case _expressionAtoms of
-              AtomFunction fn' :| [] -> squash fn'
-              _ -> (NonEmpty.singleton (fromJust (_funParameter ^. paramName)), _funReturn)
+          let ExpressionAtoms {..} = _funReturn
+           in case _expressionAtoms of
+                AtomFunction fn' :| [] -> squash fn'
+                _ -> (NonEmpty.singleton (fromJust (_funParameter ^. paramName)), _funReturn)
         SScoped -> case _funReturn of
           ExpressionFunction fn' -> squash fn'
           _ -> (NonEmpty.singleton (fromJust (_funParameter ^. paramName)), _funReturn)
         where
           squash :: Function s -> (NonEmpty (SymbolType s), ExpressionType s)
-          squash fn' | isJust (fn' ^. funParameter . paramName) &&
-                  tyEq (fn' ^. funParameter . paramType) (_funParameter ^. paramType) &&
-                  fn' ^. funParameter . paramImplicit == _funParameter ^. paramImplicit =
-                let (params, ret) = squashParams fn' in
-                  (NonEmpty.cons (fromJust (_funParameter ^. paramName)) params, ret)
+          squash fn'
+            | isJust (fn' ^. funParameter . paramName)
+                && tyEq (fn' ^. funParameter . paramType) (_funParameter ^. paramType)
+                && fn' ^. funParameter . paramImplicit == _funParameter ^. paramImplicit =
+                let (params, ret) = squashParams fn'
+                 in (NonEmpty.cons (fromJust (_funParameter ^. paramName)) params, ret)
           squash _ = (NonEmpty.singleton (fromJust (_funParameter ^. paramName)), _funReturn)
 
           tyEq :: ExpressionType s -> ExpressionType s -> Bool

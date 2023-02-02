@@ -497,14 +497,17 @@ functionParams = do
   implicitClose implicit
   return $
     NonEmpty.fromList $
-    map
-      (fmap
-        (\n -> FunctionParameter {
-          _paramName = n,
-          _paramType = ty,
-          _paramImplicit = implicit
-        }))
-      names
+      map
+        ( fmap
+            ( \n ->
+                FunctionParameter
+                  { _paramName = n,
+                    _paramType = ty,
+                    _paramImplicit = implicit
+                  }
+            )
+        )
+        names
   where
     pName :: ParsecS r (Maybe Symbol)
     pName =
@@ -521,13 +524,16 @@ function = do
   ret <- parseExpressionAtoms
   return $
     foldr
-      (\(param, loc) acc -> Function {
-        _funParameter = param,
-        _funReturn = ExpressionAtoms {
-          _expressionAtoms = NonEmpty.singleton (AtomFunction acc),
-          _expressionAtomsLoc = loc
-        }
-      })
+      ( \(param, loc) acc ->
+          Function
+            { _funParameter = param,
+              _funReturn =
+                ExpressionAtoms
+                  { _expressionAtoms = NonEmpty.singleton (AtomFunction acc),
+                    _expressionAtomsLoc = loc
+                  }
+            }
+      )
       (Function {_funParameter = lastParam, _funReturn = ret})
       (zipExact params locs)
 
