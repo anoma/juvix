@@ -175,17 +175,10 @@ goAxiomDef a = do
 goFunctionParameter :: Abstract.FunctionParameter -> Sem r FunctionParameter
 goFunctionParameter f = case f ^. Abstract.paramName of
   Just var
-    | isSmallType (f ^. Abstract.paramType) && isOmegaUsage (f ^. Abstract.paramUsage) ->
+    | isSmallType (f ^. Abstract.paramType) ->
         return (FunctionParameter (Just var) (f ^. Abstract.paramImplicit) (smallUniverseE (getLoc var)))
-    | otherwise -> unsupported "named function arguments only for small types without usages"
-  Nothing
-    | isOmegaUsage (f ^. Abstract.paramUsage) -> unnamedParameter <$> goType (f ^. Abstract.paramType)
-    | otherwise -> unsupported "usages"
-
-isOmegaUsage :: Usage -> Bool
-isOmegaUsage u = case u of
-  UsageOmega -> True
-  _ -> False
+    | otherwise -> unsupported "named function arguments only for small types"
+  Nothing -> unnamedParameter <$> goType (f ^. Abstract.paramType)
 
 goFunction :: Abstract.Function -> Sem r Function
 goFunction (Abstract.Function l r) = do
@@ -315,11 +308,9 @@ goExpressionFunction f = do
   return (Function l' r')
   where
     goParam :: Abstract.FunctionParameter -> Sem r FunctionParameter
-    goParam p
-      | isOmegaUsage (p ^. Abstract.paramUsage) = do
-          ty' <- goExpression (p ^. Abstract.paramType)
-          return (FunctionParameter (p ^. Abstract.paramName) (p ^. Abstract.paramImplicit) ty')
-      | otherwise = unsupported "usages"
+    goParam p = do
+      ty' <- goExpression (p ^. Abstract.paramType)
+      return (FunctionParameter (p ^. Abstract.paramName) (p ^. Abstract.paramImplicit) ty')
 
 goExpression :: (Members '[NameIdGen] r) => Abstract.Expression -> Sem r Expression
 goExpression e = case e of
@@ -344,15 +335,15 @@ goLet l = do
 
 goInductiveParameter :: Abstract.FunctionParameter -> Sem r InductiveParameter
 goInductiveParameter f =
-  case (f ^. Abstract.paramName, f ^. Abstract.paramUsage, f ^. Abstract.paramType) of
-    (Just var, UsageOmega, Abstract.ExpressionUniverse u)
+  case (f ^. Abstract.paramName, f ^. Abstract.paramType) of
+    (Just var, Abstract.ExpressionUniverse u)
       | isSmallUni u ->
           return
             InductiveParameter
               { _inductiveParamName = var
               }
-    (Just {}, _, _) -> unsupported "only type variables of small types are allowed"
-    (Nothing, _, _) -> unsupported "unnamed inductive parameters"
+    (Just {}, _) -> unsupported "only type variables of small types are allowed"
+    (Nothing, _) -> unsupported "unnamed inductive parameters"
 
 goInductiveDef :: forall r. (Members '[NameIdGen] r) => Abstract.InductiveDef -> Sem r InductiveDef
 goInductiveDef i

@@ -486,34 +486,50 @@ implicitClose = \case
   Implicit -> rbrace
   Explicit -> rparen
 
-functionParam :: forall r. (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (FunctionParameter 'Parsed)
-functionParam = do
-  (_paramName, _paramUsage, _paramImplicit) <- P.try $ do
+functionParams :: forall r. (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (NonEmpty (WithLoc (FunctionParameter 'Parsed)))
+functionParams = do
+  (names, implicit) <- P.try $ do
     impl <- implicitOpen
-    n <- pName
-    u <- pUsage
-    return (n, u, impl)
-  _paramType <- parseExpressionAtoms
-  implicitClose _paramImplicit
-  return FunctionParameter {..}
+    ns <- some (withLoc pName)
+    kw kwColon
+    return (ns, impl)
+  ty <- parseExpressionAtoms
+  implicitClose implicit
+  return $
+    NonEmpty.fromList $
+    map
+      (fmap
+        (\n -> FunctionParameter {
+          _paramName = n,
+          _paramType = ty,
+          _paramImplicit = implicit
+        }))
+      names
   where
     pName :: ParsecS r (Maybe Symbol)
     pName =
       (Just <$> symbol)
         <|> (Nothing <$ kw kwWildcard)
-    pUsage :: ParsecS r (Maybe Usage)
-    pUsage =
-      (Just UsageNone <$ kw kwColonZero)
-        <|> (Just UsageOnce <$ kw kwColonOne)
-        <|> (Just UsageOmega <$ kw kwColonOmega)
-        <|> (Nothing <$ kw kwColon)
 
 function :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (Function 'Parsed)
 function = do
-  _funParameter <- functionParam
+  rparams <- NonEmpty.reverse <$> functionParams
+  let lastParam = NonEmpty.head rparams ^. withLocParam
+      params = reverse $ map (^. withLocParam) (NonEmpty.tail rparams)
+      locs = NonEmpty.tail (NonEmpty.reverse (fmap getLoc rparams))
   kw kwRightArrow
-  _funReturn <- parseExpressionAtoms
-  return Function {..}
+  ret <- parseExpressionAtoms
+  return $
+    foldr
+      (\(param, loc) acc -> Function {
+        _funParameter = param,
+        _funReturn = ExpressionAtoms {
+          _expressionAtoms = NonEmpty.singleton (AtomFunction acc),
+          _expressionAtomsLoc = loc
+        }
+      })
+      (Function {_funParameter = lastParam, _funReturn = ret})
+      (zipExact params locs)
 
 --------------------------------------------------------------------------------
 -- Lambda expression

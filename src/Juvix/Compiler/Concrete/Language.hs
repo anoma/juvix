@@ -596,7 +596,6 @@ instance HasAtomicity (Lambda s) where
 
 data FunctionParameter (s :: Stage) = FunctionParameter
   { _paramName :: Maybe (SymbolType s),
-    _paramUsage :: Maybe Usage,
     _paramImplicit :: IsImplicit,
     _paramType :: ExpressionType s
   }
