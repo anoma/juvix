@@ -981,11 +981,13 @@ checkLetBlock LetBlock {..} = do
       }
 
 checkCaseBranch ::
+  forall r.
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>
   CaseBranch 'Parsed ->
   Sem r (CaseBranch 'Scoped)
 checkCaseBranch CaseBranch {..} = do
   pattern' <- checkParsePatternAtoms _caseBranchPattern
+  checkNotImplicit pattern'
   expression' <- withBindCurrentGroup (checkParseExpressionAtoms _caseBranchExpression)
   return $
     CaseBranch
@@ -993,6 +995,12 @@ checkCaseBranch CaseBranch {..} = do
         _caseBranchExpression = expression',
         ..
       }
+  where
+    checkNotImplicit :: PatternArg -> Sem r ()
+    checkNotImplicit p =
+      when
+        (p ^. patternArgIsImplicit == Implicit)
+        (throw (ErrCaseBranchImplicitPattern (CaseBranchImplicitPattern p)))
 
 checkCase ::
   Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r =>

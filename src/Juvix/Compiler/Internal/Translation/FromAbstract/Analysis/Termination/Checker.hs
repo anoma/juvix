@@ -89,6 +89,20 @@ scanFunctionClause FunctionClause {..} = go (reverse _clausePatterns) _clauseBod
         goClause :: LambdaClause -> Sem r ()
         goClause (LambdaClause pats clBody) = go (reverse (toList pats) ++ revArgs) clBody
 
+scanCase ::
+  (Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r) =>
+  Case ->
+  Sem r ()
+scanCase c = do
+  mapM_ scanCaseBranch (c ^. caseBranches)
+  scanExpression (c ^. caseExpression)
+
+scanCaseBranch ::
+  (Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r) =>
+  CaseBranch ->
+  Sem r ()
+scanCaseBranch = scanExpression . (^. caseBranchExpression)
+
 scanLet ::
   (Members '[State CallMap, Reader FunctionRef, Reader SizeInfo] r) =>
   Let ->
@@ -116,6 +130,7 @@ scanExpression e =
       ExpressionFunction f -> scanFunction f
       ExpressionLambda l -> scanLambda l
       ExpressionLet l -> scanLet l
+      ExpressionCase l -> scanCase l
       ExpressionIden {} -> return ()
       ExpressionHole {} -> return ()
       ExpressionUniverse {} -> return ()

@@ -751,3 +751,23 @@ instance ToGenericError DuplicateFunctionClause where
           sigLoc = getLoc name
           msg =
             "The function" <+> ppCode opts' name <+> "has already been assigned a definition and so it cannot have additional clauses"
+
+newtype CaseBranchImplicitPattern = CaseBranchImplicitPattern
+  { _caseBranchImplicitPattern :: PatternArg
+  }
+  deriving stock (Show)
+
+instance ToGenericError CaseBranchImplicitPattern where
+  genericError :: Member (Reader GenericOptions) r => CaseBranchImplicitPattern -> Sem r GenericError
+  genericError CaseBranchImplicitPattern {..} = do
+    opts <- fromGenericOptions <$> ask
+    let msg = "The pattern" <+> ppCode opts _caseBranchImplicitPattern <+> "is not valid because implicit patterns are not allowed in case branches"
+    return
+      GenericError
+        { _genericErrorLoc = i,
+          _genericErrorMessage = AnsiText msg,
+          _genericErrorIntervals = [i]
+        }
+    where
+      i :: Interval
+      i = getLoc _caseBranchImplicitPattern

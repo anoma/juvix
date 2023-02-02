@@ -99,6 +99,18 @@ data Iden
   | IdenAxiom AxiomRef
   deriving stock (Eq, Show)
 
+data CaseBranch = CaseBranch
+  { _caseBranchPattern :: PatternArg,
+    _caseBranchExpression :: Expression
+  }
+  deriving stock (Eq, Show)
+
+data Case = Case
+  { _caseExpression :: Expression,
+    _caseBranches :: NonEmpty CaseBranch
+  }
+  deriving stock (Eq, Show)
+
 newtype LetClause
   = LetFunDef FunctionDef
   deriving stock (Eq, Show)
@@ -113,6 +125,7 @@ data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
   | ExpressionLet Let
+  | ExpressionCase Case
   | ExpressionUniverse Universe
   | ExpressionFunction Function
   | ExpressionLiteral LiteralLoc
@@ -120,32 +133,12 @@ data Expression
   | ExpressionLambda Lambda
   deriving stock (Eq, Show)
 
-instance HasAtomicity Expression where
-  atomicity = \case
-    ExpressionIden {} -> Atom
-    ExpressionHole {} -> Atom
-    ExpressionUniverse u -> atomicity u
-    ExpressionLet l -> atomicity l
-    ExpressionApplication a -> atomicity a
-    ExpressionFunction f -> atomicity f
-    ExpressionLiteral f -> atomicity f
-    ExpressionLambda l -> atomicity l
-
 data Application = Application
   { _appLeft :: Expression,
     _appRight :: Expression,
     _appImplicit :: IsImplicit
   }
   deriving stock (Eq, Show)
-
-instance HasAtomicity Application where
-  atomicity = const (Aggregate appFixity)
-
-instance HasAtomicity Let where
-  atomicity Let {..} = atomicity _letExpression
-
-instance HasAtomicity Lambda where
-  atomicity = const Atom
 
 newtype Lambda = Lambda
   {_lambdaClauses :: NonEmpty LambdaClause}
@@ -220,7 +213,10 @@ data AxiomDef = AxiomDef
   deriving stock (Eq, Show)
 
 makeLenses ''Module
+makeLenses ''Case
+makeLenses ''CaseBranch
 makeLenses ''Let
+makeLenses ''LetClause
 makeLenses ''Example
 makeLenses ''PatternArg
 makeLenses ''FunctionParameter
@@ -236,6 +232,33 @@ makeLenses ''ConstructorRef
 makeLenses ''InductiveRef
 makeLenses ''AxiomRef
 makeLenses ''AxiomDef
+
+instance HasAtomicity Expression where
+  atomicity = \case
+    ExpressionIden {} -> Atom
+    ExpressionHole {} -> Atom
+    ExpressionUniverse u -> atomicity u
+    ExpressionCase u -> atomicity u
+    ExpressionLet l -> atomicity l
+    ExpressionApplication a -> atomicity a
+    ExpressionFunction f -> atomicity f
+    ExpressionLiteral f -> atomicity f
+    ExpressionLambda l -> atomicity l
+
+instance HasAtomicity CaseBranch where
+  atomicity = atomicity . (^. caseBranchExpression)
+
+instance HasAtomicity Case where
+  atomicity = atomicity . (^. caseBranches . to last)
+
+instance HasAtomicity Application where
+  atomicity = const (Aggregate appFixity)
+
+instance HasAtomicity Let where
+  atomicity Let {..} = atomicity _letExpression
+
+instance HasAtomicity Lambda where
+  atomicity = const Atom
 
 instance HasAtomicity ConstructorApp where
   atomicity (ConstructorApp _ ps)
