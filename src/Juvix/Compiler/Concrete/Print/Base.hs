@@ -288,8 +288,20 @@ instance PrettyPrint (InductiveParameter 'Scoped) where
         ty' = ppCode _inductiveParameterType
     parens (name' <+> ppCode kwColon <+> ty')
 
-instance PrettyPrint (NonEmpty (InductiveParameter 'Scoped)) where
-  ppCode = hsep . fmap ppCode
+ppInductiveParameters ::
+  (Members '[ExactPrint, Reader Options] r) =>
+  [InductiveParameter 'Scoped] ->
+  Maybe (Sem r ())
+ppInductiveParameters params = case params of
+  InductiveParameter {..} : _ -> Just $ do
+      let params0 = takeWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
+          params1 = dropWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
+          names = hsep $ fmap (ppCode . (^. inductiveParameterName)) params0
+          ty = ppCode _inductiveParameterType
+          params' = ppInductiveParameters params1
+      parens (names <+> ppCode kwColon <+> ty) <+?> params'
+  _ ->
+    Nothing
 
 instance (PrettyPrint a) => PrettyPrint (Irrelevant a) where
   ppCode (Irrelevant a) = ppCode a
@@ -312,7 +324,7 @@ ppInductiveSignature :: forall r. Members '[ExactPrint, Reader Options] r => Ind
 ppInductiveSignature InductiveDef {..} = do
   let builtin' = ppCode <$> _inductiveBuiltin
       name' = region (P.annDef _inductiveName) (ppCode _inductiveName)
-      params' = ppCode <$> nonEmpty _inductiveParameters
+      params' = ppInductiveParameters _inductiveParameters
       ty' = case _inductiveType of
         Nothing -> Nothing
         Just e -> Just (noLoc P.kwColon <+> ppCode e)
