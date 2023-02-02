@@ -1,0 +1,8 @@
+module MultiParams;
+
+  type Multi (A : Type) (B : Type) := mult : Multi A B;
+
+  f : {A B : Type} → (C : Type) → {D E F : Type} → Type → Type;
+  f C _ := C;
+
+end;

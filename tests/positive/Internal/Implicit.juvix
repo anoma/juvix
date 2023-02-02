@@ -1,117 +1,123 @@
 module Implicit;
+  infixr 9 ∘;
+  ∘ : {A B C : Type} → (B → C) → (A → B) → A → C;
+  ∘ f g x := f (g x);
 
-infixr 9 ∘;
-∘ : {A : Type} → {B : Type} → {C : Type} → (B → C) → (A → B) → A → C;
-∘ f g x := f (g x);
+  type Nat :=
+    | zero : Nat
+    | suc : Nat → Nat;
 
-type Nat :=
-  zero : Nat |
-  suc : Nat → Nat;
+  infixr 2 ×;
+  infixr 4 ,;
+  type × (A : Type) (B : Type) :=
+    | , : A → B → A × B;
 
-infixr 2 ×;
-infixr 4 ,;
-type × (A : Type) (B : Type) :=
-  , : A → B → A × B;
+  uncurry : {A B C : Type} → (A → B → C) → A × B → C;
+  uncurry f (a , b) := f a b;
 
-uncurry : {A : Type} → {B : Type} → {C : Type} → (A → B → C) → A × B → C;
-uncurry f (a, b) := f a b;
+  fst : {A B : Type} → A × B → A;
+  fst (a , _) := a;
 
-fst : {A : Type} → {B : Type} → A × B → A;
-fst (a, _) := a;
+  snd : {A B : Type} → A × B → B;
+  snd (_ , b) := b;
 
-snd : {A : Type} → {B : Type} → A × B → B;
-snd (_, b) := b;
+  swap : {A B : Type} → A × B → B × A;
+  swap (a , b) := b , a;
 
-swap : {A : Type} → {B : Type} → A × B → B × A;
-swap (a, b) := b, a;
+  first : {A B A' : Type} → (A → A') → A × B → A' × B;
+  first f (a , b) := f a , b;
 
-first : {A : Type} → {B : Type} → {A' : Type} → (A → A') → A × B → A' × B;
-first f (a, b) := f a, b;
+  second : {A B B' : Type} → (B → B') → A × B → A × B';
+  second f (a , b) := a , f b;
 
-second : {A : Type} → {B : Type} → {B' : Type} → (B → B') → A × B → A × B';
-second f (a, b) := a, f b;
+  both : {A B : Type} → (A → B) → A × A → B × B;
+  both f (a , b) := f a , f b;
 
-both : {A : Type} → {B : Type} → (A → B) → A × A → B × B;
-both f (a, b) := f a, f b;
+  type Bool :=
+    | true : Bool
+    | false : Bool;
 
-type Bool :=
-     true : Bool
-  | false : Bool;
+  if : {A : Type} → Bool → A → A → A;
+  if true a _ := a;
+  if false _ b := b;
 
-if : {A : Type} → Bool → A → A → A;
-if true a _ := a;
-if false _ b := b;
+  infixr 5 ::;
+  type List (A : Type) :=
+    | nil : List A
+    | :: : A → List A → List A;
 
-infixr 5 ::;
-type List (A : Type) :=
-  nil : List A
-  | :: : A → List A → List A;
+  upToTwo : _;
+  upToTwo := zero :: suc zero :: suc (suc zero) :: nil;
 
-upToTwo : _;
-upToTwo := zero :: suc zero :: suc (suc zero) :: nil;
+  p1 : Nat → Nat → Nat × Nat;
+  p1 a b := a , b;
 
-p1 : Nat → Nat → Nat × Nat;
-p1 a b := a, b ;
+  type Proxy (A : Type) :=
+    | proxy : Proxy A;
 
-type Proxy (A : Type) :=
- proxy : Proxy A;
+  t2' : {A : Type} → Proxy A;
+  t2' := proxy;
 
-t2' : {A : Type} → Proxy A;
-t2' := proxy;
+  t2 : {A : Type} → Proxy A;
+  t2 := proxy;
 
-t2 : {A : Type} → Proxy A;
-t2 := proxy;
+  t3 : ({A : Type} → Proxy A) → {B : Type} → Proxy B → Proxy
+    B;
+  t3 _ _ := proxy;
 
-t3 : ({A : Type} → Proxy A) → {B : Type} → Proxy B → Proxy B;
-t3 _ _ := proxy;
+  t4 : {B : Type} → Proxy B;
+  t4 {_} := t3 proxy proxy;
 
-t4 : {B : Type} → Proxy B;
-t4 {_} := t3 proxy proxy;
+  t4' : {B : Type} → Proxy B;
+  t4' := t3 proxy proxy;
 
-t4' : {B : Type} → Proxy B;
-t4' := t3 proxy proxy ;
+  map : {A B : Type} → (A → B) → List A → List B;
+  map f nil := nil;
+  map f (x :: xs) := f x :: map f xs;
 
-map : {A : Type} → {B : Type} → (A → B) → List A → List B;
-map f nil := nil;
-map f (x :: xs) := f x :: map f xs;
+  t : {A : Type} → Proxy A;
+  t {_} := proxy;
 
-t : {A : Type} → Proxy A;
-t {_} := proxy;
+  t' : {A : Type} → Proxy A;
+  t' := proxy;
 
-t' : {A : Type} → Proxy A;
-t' := proxy;
+  t5 : {A : Type} → Proxy A → Proxy A;
+  t5 p := p;
 
-t5 : {A : Type} → Proxy A → Proxy A;
-t5 p := p;
+  t5' : {A : Type} → Proxy A → Proxy A;
+  t5' proxy := proxy;
 
-t5' : {A : Type} → Proxy A → Proxy A;
-t5' proxy := proxy;
+  f : {A B : Type} → A → B → _;
+  f a b := a;
 
-f : {A : Type} → {B : Type} → A → B → _;
-f a b := a;
+  pairEval : {A B : Type} → (A → B) × A → B;
+  pairEval (f, x) := f x;
 
-pairEval : {A : Type} → {B : Type} → (A → B) × A → B;
-pairEval (f, x) := f x;
+  pairEval' : {A B : Type} → ({C : Type} → A → B) × A → B;
+  pairEval' (f, x) := f {Nat} x;
 
-pairEval' : {A : Type} → {B : Type} → ({C : Type} → A → B) × A → B;
-pairEval' (f, x) := f {Nat} x;
+  foldr : {A B : Type} → (A → B → B) → B → List A → B;
+  foldr _ z nil := z;
+  foldr f z (h :: hs) := f h (foldr f z hs);
 
-foldr : {A : Type} → {B : Type} → (A → B → B) → B → List A → B;
-foldr _ z nil := z;
-foldr f z (h :: hs) := f h (foldr f z hs);
+  foldl : {A B : Type} → (B → A → B) → B → List A → B;
+  foldl f z nil := z;
+  foldl f z (h :: hs) := foldl f (f z h) hs;
 
-foldl : {A : Type} → {B : Type} → (B → A → B) → B → List A → B;
-foldl f z nil := z ;
-foldl f z (h :: hs) := foldl f (f z h) hs;
+  filter : {A : Type} → (A → Bool) → List A → List A;
+  filter _ nil := nil;
+  filter f (h :: hs) := if
+    (f h)
+    (h :: filter f hs)
+    (filter f hs);
 
-filter : {A : Type} → (A → Bool) → List A → List A;
-filter _ nil := nil;
-filter f (h :: hs) := if (f h)
-   (h :: filter f hs)
-   (filter f hs);
-
-partition : {A : Type} → (A → Bool) → List A → List A × List A;
-partition _ nil := nil, nil;
-partition f (x :: xs) := (if (f x) first second) ((::) x) (partition f xs);
-
+  partition : {A : Type} → (A → Bool) → List A → List A
+    × List A;
+  partition _ nil := nil , nil;
+  partition f (x :: xs) := if
+    (f x)
+    first
+    second
+    ((::) x)
+    (partition f xs);
 end;

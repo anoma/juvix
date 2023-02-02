@@ -5,21 +5,21 @@ module Symbols;
   ╘⑽╛ := suc 9;
 
   -- no - function!?
-  - : Nat -> Nat -> Nat;
+    - : Nat → Nat → Nat;
   - := (+);
 
-  （-） : Nat -> Nat -> Nat;
+  （-） : Nat → Nat → Nat;
   （-） := (-);
 
-  （*） : Nat -> Nat -> Nat;
+  （*） : Nat → Nat → Nat;
   （*） := (*);
 
   infixl 6 －;
-  － : Nat -> Nat -> Nat;
+  － : Nat → Nat → Nat;
   － := （-）;
 
   infixl 7 ·;
-  · : Nat -> Nat -> Nat;
+  · : Nat → Nat → Nat;
   · := （*）;
 
   （0） : Nat;
