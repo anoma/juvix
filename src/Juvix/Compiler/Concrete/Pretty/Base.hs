@@ -185,9 +185,6 @@ instance (SingI s) => PrettyCode (InductiveParameter s) where
       SScoped -> ppCode _inductiveParameterType
     return $ parens (inductiveParameterName' <+> kwColon <+> inductiveParameterType')
 
-instance (SingI s) => PrettyCode [InductiveParameter s] where
-  ppCode = fmap hsep . mapM ppCode
-
 instance PrettyCode AbsModulePath where
   ppCode S.AbsModulePath {..} = do
     absLocalPath' <- mapM ppCode _absLocalPath
@@ -195,12 +192,29 @@ instance PrettyCode AbsModulePath where
     return $ dotted (absTopModulePath' : absLocalPath')
 
 ppInductiveParameters ::
+  forall s r.
   (SingI s, Members '[Reader Options] r) =>
   [InductiveParameter s] ->
   Sem r (Maybe (Doc Ann))
-ppInductiveParameters ps
-  | null ps = return Nothing
-  | otherwise = Just <$> ppCode ps
+ppInductiveParameters params = case params of
+    InductiveParameter {..} : _ ->
+      case sing :: SStage s of
+        SParsed -> do
+          let params0 = takeWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
+              params1 = dropWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
+          names <- mapM (ppCode . (^. inductiveParameterName)) params0
+          ty <- ppCode _inductiveParameterType
+          params' <- ppInductiveParameters params1
+          return $ Just $ parens (hsep names <+> kwColon <+> ty) <+?> params'
+        SScoped -> do
+          let params0 = takeWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
+              params1 = dropWhile (\p -> p ^. inductiveParameterType == _inductiveParameterType) params
+          names <- mapM (ppCode . (^. inductiveParameterName)) params0
+          ty <- ppCode _inductiveParameterType
+          params' <- ppInductiveParameters params1
+          return $ Just $ parens (hsep names <+> kwColon <+> ty) <+?> params'
+    _ ->
+      return Nothing
 
 instance (SingI s, SingI t) => PrettyCode (Module s t) where
   ppCode Module {..} = do

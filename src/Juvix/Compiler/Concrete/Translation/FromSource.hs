@@ -559,7 +559,7 @@ inductiveDef _inductiveBuiltin = do
   _inductiveDoc <- getJudoc
   _inductiveName <- symbol P.<?> "<type name>"
   _inductiveParameters <-
-    P.many inductiveParam
+    inductiveParams
       P.<?> "<type parameter e.g. '(A : Type)'>"
   _inductiveType <-
     optional (kw kwColon >> parseExpressionAtoms)
@@ -570,12 +570,12 @@ inductiveDef _inductiveBuiltin = do
       P.<?> "<constructor definition>"
   return InductiveDef {..}
 
-inductiveParam :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameter 'Parsed)
-inductiveParam = parens $ do
-  _inductiveParameterName <- symbol
+inductiveParams :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r [InductiveParameter 'Parsed]
+inductiveParams = fmap concat $ P.many $ parens $ do
+  names <- P.some symbol
   kw kwColon
-  _inductiveParameterType <- parseExpressionAtoms
-  return InductiveParameter {..}
+  ty <- parseExpressionAtoms
+  return $ map (`InductiveParameter` ty) $ toList names
 
 constructorDef :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (InductiveConstructorDef 'Parsed)
 constructorDef _constructorPipe = do
@@ -657,7 +657,7 @@ moduleDef = P.label "<module definition>" $ do
   _moduleKw <- kw kwModule
   _moduleDoc <- getJudoc
   _modulePath <- pmodulePath
-  _moduleParameters <- many inductiveParam
+  _moduleParameters <- inductiveParams
   kw kwSemicolon
   _moduleBody <- P.sepEndBy statement (kw kwSemicolon)
   kw kwEnd
