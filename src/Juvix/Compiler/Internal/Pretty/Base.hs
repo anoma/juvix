@@ -83,7 +83,7 @@ instance PrettyCode Case where
   ppCode Case {..} = do
     exp <- ppCode _caseExpression
     branches <- indent' . vsep <$> mapM ppCode _caseBranches
-    return $ kwCase <+> exp <> line <> branches
+    return $ parensIf _caseParens (kwCase <+> exp <> line <> branches)
 
 instance PrettyCode Let where
   ppCode l = do

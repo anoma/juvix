@@ -329,6 +329,7 @@ goCase :: Members '[NameIdGen] r => Abstract.Case -> Sem r Case
 goCase c = do
   _caseExpression <- goExpression (c ^. Abstract.caseExpression)
   _caseBranches <- mapM goCaseBranch (c ^. Abstract.caseBranches)
+  let _caseParens = c ^. Abstract.caseParens
   return Case {..}
 
 goCaseBranch :: Members '[NameIdGen] r => Abstract.CaseBranch -> Sem r CaseBranch

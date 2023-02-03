@@ -789,6 +789,9 @@ deriving stock instance (Ord (ExpressionType s), Ord (PatternParensType s)) => O
 
 data Case (s :: Stage) = Case
   { _caseKw :: KeywordRef,
+    -- | Due to limitations of the pretty printing algorithm, we store whether
+    -- the `case` was surrounded by parentheses in the code.
+    _caseParens :: Bool,
     _caseExpression :: ExpressionType s,
     _caseBranches :: NonEmpty (CaseBranch s)
   }
@@ -975,8 +978,8 @@ expressionAtomicity e = case sing :: SStage s of
   SParsed -> atomicity e
   SScoped -> atomicity e
 
-instance SingI s => HasAtomicity (Case s) where
-  atomicity = expressionAtomicity . (^. caseBranches . to last . caseBranchExpression)
+instance HasAtomicity (Case s) where
+  atomicity = const Atom
 
 instance HasAtomicity (LetBlock 'Scoped) where
   atomicity l = atomicity (l ^. letExpression)

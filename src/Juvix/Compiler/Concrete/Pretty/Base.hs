@@ -501,8 +501,8 @@ instance (SingI s) => PrettyCode (CaseBranch s) where
 instance (SingI s) => PrettyCode (Case s) where
   ppCode Case {..} = do
     exp <- ppExpression _caseExpression
-    branches <- indent' . vsep <$> mapM ppCode _caseBranches
-    return $ kwCase <+> exp <> line <> branches
+    branches <- indent' . vsepHard <$> mapM ppCode _caseBranches
+    return $ parensIf _caseParens (kwCase <+> exp <> line <> branches)
 
 instance (SingI s) => PrettyCode (Lambda s) where
   ppCode Lambda {..} = do

@@ -1013,7 +1013,8 @@ checkCase Case {..} = do
     Case
       { _caseExpression = caseExpression',
         _caseBranches = caseBranches',
-        _caseKw
+        _caseKw,
+        _caseParens
       }
 
 checkLambda ::

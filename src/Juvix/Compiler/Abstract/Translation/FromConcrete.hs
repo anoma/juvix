@@ -419,6 +419,7 @@ goCase :: forall r. (Members '[Error ScoperError, InfoTableBuilder] r) => Case '
 goCase c = do
   _caseExpression <- goExpression (c ^. caseExpression)
   _caseBranches <- mapM goBranch (c ^. caseBranches)
+  let _caseParens = c ^. caseParens
   return Abstract.Case {..}
   where
     goBranch :: CaseBranch 'Scoped -> Sem r Abstract.CaseBranch

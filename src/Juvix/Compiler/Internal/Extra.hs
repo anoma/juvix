@@ -242,6 +242,8 @@ instance HasExpressions Case where
     _caseBranches :: NonEmpty CaseBranch <- traverse (leafExpressions f) (l ^. caseBranches)
     _caseExpression <- leafExpressions f (l ^. caseExpression)
     pure Case {..}
+    where
+      _caseParens = l ^. caseParens
 
 instance HasExpressions LetClause where
   leafExpressions f = \case
@@ -371,6 +373,9 @@ substituteIndParams = substitutionE . HashMap.fromList . map (first (^. inductiv
 
 typeAbstraction :: IsImplicit -> Name -> FunctionParameter
 typeAbstraction i var = FunctionParameter (Just var) i (ExpressionUniverse (SmallUniverse (getLoc var)))
+
+mkFunction :: Expression -> Expression -> Function
+mkFunction a = Function (unnamedParameter a)
 
 unnamedParameter :: Expression -> FunctionParameter
 unnamedParameter ty =

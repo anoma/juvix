@@ -107,7 +107,8 @@ data CaseBranch = CaseBranch
 
 data Case = Case
   { _caseExpression :: Expression,
-    _caseBranches :: NonEmpty CaseBranch
+    _caseBranches :: NonEmpty CaseBranch,
+    _caseParens :: Bool
   }
   deriving stock (Eq, Show)
 

@@ -41,6 +41,11 @@ infixl 7 <+?>
 parens :: Members '[ExactPrint] r => Sem r () -> Sem r ()
 parens = region C.parens
 
+parensIf :: Members '[ExactPrint] r => Bool -> Sem r () -> Sem r ()
+parensIf b
+  | b = parens
+  | otherwise = id
+
 braces :: Members '[ExactPrint] r => Sem r () -> Sem r ()
 braces = region C.braces
 

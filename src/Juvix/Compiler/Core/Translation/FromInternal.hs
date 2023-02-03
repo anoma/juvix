@@ -299,6 +299,13 @@ mkFunBody f
     vs :: [Index]
     vs = take nPatterns [0 ..]
 
+goCase ::
+  forall r.
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  Internal.Case ->
+  Sem r Node
+goCase l = undefined
+
 goLambda ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
@@ -659,6 +666,7 @@ goExpression' = \case
   Internal.ExpressionApplication a -> goApplication a
   Internal.ExpressionSimpleLambda l -> goSimpleLambda l
   Internal.ExpressionLambda l -> goLambda l
+  Internal.ExpressionCase l -> goCase l
   e@(Internal.ExpressionFunction {}) -> goFunction (Internal.unfoldFunType e)
   Internal.ExpressionHole h -> error ("goExpression hole: " <> show (Loc.getLoc h))
   Internal.ExpressionUniverse {} -> return (mkUniv' (fromIntegral smallLevel))
