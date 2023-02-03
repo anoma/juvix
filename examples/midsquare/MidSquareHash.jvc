@@ -1,0 +1,51 @@
+-- This file implements the mid-square hashing function in JuvixCore. See:
+-- https://research.cs.vt.edu/AVresearch/hashing/midsquare.php
+--
+-- The implementation is for hashing natural numbers with maximum 16 bits into 6
+-- bits. In order to facilitate the translation to the current version of the
+-- GEB backend, no recursion is used (it is manually unrolled).
+--
+
+-- `powN` is 2 ^ N
+def pow0 := 1;
+def pow1 := 2 * pow0;
+def pow2 := 2 * pow1;
+def pow3 := 2 * pow2;
+def pow4 := 2 * pow3;
+def pow5 := 2 * pow4;
+def pow6 := 2 * pow5;
+def pow7 := 2 * pow6;
+def pow8 := 2 * pow7;
+def pow9 := 2 * pow8;
+def pow10 := 2 * pow9;
+def pow11 := 2 * pow10;
+def pow12 := 2 * pow11;
+def pow13 := 2 * pow12;
+def pow14 := 2 * pow13;
+def pow15 := 2 * pow14;
+def pow16 := 2 * pow15;
+
+-- `hashN` hashes a number with max N bits (i.e. smaller than 2^N) into 6 bits
+-- (i.e. smaller than 64) using the mid-square algorithm.
+def hash0 := \x 0;
+def hash1 := \x x * x;
+def hash2 := \x x * x;
+def hash3 := \x x * x;
+def hash4 := \x if x < pow3 then hash3 x else ((x * x) / pow1) % pow6;
+def hash5 := \x if x < pow4 then hash4 x else ((x * x) / pow2) % pow6;
+def hash6 := \x if x < pow5 then hash5 x else ((x * x) / pow3) % pow6;
+def hash7 := \x if x < pow6 then hash6 x else ((x * x) / pow4) % pow6;
+def hash8 := \x if x < pow7 then hash7 x else ((x * x) / pow5) % pow6;
+def hash9 := \x if x < pow8 then hash8 x else ((x * x) / pow6) % pow6;
+def hash10 := \x if x < pow9 then hash9 x else ((x * x) / pow7) % pow6;
+def hash11 := \x if x < pow10 then hash10 x else ((x * x) / pow8) % pow6;
+def hash12 := \x if x < pow11 then hash11 x else ((x * x) / pow9) % pow6;
+def hash13 := \x if x < pow12 then hash12 x else ((x * x) / pow10) % pow6;
+def hash14 := \x if x < pow13 then hash13 x else ((x * x) / pow11) % pow6;
+def hash15 := \x if x < pow14 then hash14 x else ((x * x) / pow12) % pow6;
+def hash16 := \x if x < pow15 then hash15 x else ((x * x) / pow13) % pow6;
+
+def hash := hash16;
+
+hash 1367
+-- result: 3
