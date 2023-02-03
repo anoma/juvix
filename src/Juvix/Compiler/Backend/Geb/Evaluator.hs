@@ -57,6 +57,7 @@ isGebValue = \case
       (Geb.MorphismVar _) -> isGebValue _applicationRight
       _ -> isGebValue _applicationLeft && isGebValue _applicationRight
   Geb.MorphismVar _ -> True
+  Geb.MorphismInteger _ -> True
 
 -- | Apply beta reduction to a term
 applyBeta :: Geb.Morphism -> Geb.Morphism

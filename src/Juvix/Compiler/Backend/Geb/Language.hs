@@ -62,8 +62,9 @@ data Application = Application
     _applicationLeft :: Morphism,
     _applicationRight :: Morphism
   }
+  deriving stock (Show, Eq)
 
-newtype Var = Var {_varIndex :: Int}
+newtype Var = Var {_varIndex :: Int} deriving stock (Show, Eq)
 
 data Opcode
   = OpAdd
