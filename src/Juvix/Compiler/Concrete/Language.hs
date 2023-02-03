@@ -15,6 +15,7 @@ module Juvix.Compiler.Concrete.Language
 where
 
 import Data.Kind qualified as GHC
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ModuleIsTop
@@ -595,26 +596,27 @@ instance HasAtomicity (Lambda s) where
 -- Function expression
 --------------------------------------------------------------------------------
 
-data FunctionParameter (s :: Stage) = FunctionParameter
-  { _paramName :: Maybe (SymbolType s),
+data FunctionParameters (s :: Stage) = FunctionParameters
+  { _paramNames :: NonEmpty (Maybe (SymbolType s)),
     _paramImplicit :: IsImplicit,
     _paramType :: ExpressionType s
   }
 
 deriving stock instance
   (Show (ExpressionType s), Show (SymbolType s)) =>
-  Show (FunctionParameter s)
+  Show (FunctionParameters s)
 
 deriving stock instance
   (Eq (ExpressionType s), Eq (SymbolType s)) =>
-  Eq (FunctionParameter s)
+  Eq (FunctionParameters s)
 
 deriving stock instance
   (Ord (ExpressionType s), Ord (SymbolType s)) =>
-  Ord (FunctionParameter s)
+  Ord (FunctionParameters s)
 
+-- | Function *type* representation
 data Function (s :: Stage) = Function
-  { _funParameter :: FunctionParameter s,
+  { _funParameters :: FunctionParameters s,
     _funReturn :: ExpressionType s
   }
 
@@ -935,7 +937,7 @@ makeLenses ''PostfixApplication
 makeLenses ''InfixApplication
 makeLenses ''Application
 makeLenses ''LetBlock
-makeLenses ''FunctionParameter
+makeLenses ''FunctionParameters
 makeLenses ''Import
 makeLenses ''OperatorSyntaxDef
 makeLenses ''InductiveConstructorDef
@@ -1064,11 +1066,11 @@ instance HasLoc (LambdaClause 'Scoped) where
 instance HasLoc (Lambda 'Scoped) where
   getLoc l = getLoc (l ^. lambdaKw) <> getLocSpan (l ^. lambdaClauses)
 
-instance HasLoc (FunctionParameter 'Scoped) where
-  getLoc p = (getLoc <$> p ^. paramName) ?<> getLoc (p ^. paramType)
+instance HasLoc (FunctionParameters 'Scoped) where
+  getLoc p = (getLoc <$> NonEmpty.head (p ^. paramNames)) ?<> getLoc (p ^. paramType)
 
 instance HasLoc (Function 'Scoped) where
-  getLoc f = getLoc (f ^. funParameter) <> getLoc (f ^. funReturn)
+  getLoc f = getLoc (f ^. funParameters) <> getLoc (f ^. funReturn)
 
 instance HasLoc (LetBlock 'Scoped) where
   getLoc l = getLoc (l ^. letKw) <> getLoc (l ^. letExpression)

@@ -928,33 +928,39 @@ checkFunction ::
   Function 'Parsed ->
   Sem r (Function 'Scoped)
 checkFunction Function {..} = do
-  funParameter' <- checkParam
-  let scoped = case funParameter' ^. paramName of
-        Nothing -> id
-        Just s -> withBindLocalVariable (LocalVariable s)
+  funParameters' <- checkParams
+  let scoped = foldr
+        (\param acc -> case param of
+          Nothing -> acc
+          Just s -> withBindLocalVariable (LocalVariable s) . acc)
+        id
+        (funParameters' ^. paramNames)
   funReturn' <- scoped (checkParseExpressionAtoms _funReturn)
   return
     Function
-      { _funParameter = funParameter',
+      { _funParameters = funParameters',
         _funReturn = funReturn'
       }
   where
-    checkParam :: Sem r (FunctionParameter 'Scoped)
-    checkParam = do
+    checkParams :: Sem r (FunctionParameters 'Scoped)
+    checkParams = do
       paramType' <- checkParseExpressionAtoms _paramType
-      paramName' <- checkParamName
+      paramNames' <- checkParamNames
       return
-        FunctionParameter
-          { _paramName = paramName',
+        FunctionParameters
+          { _paramNames = paramNames',
             _paramImplicit = _paramImplicit,
             _paramType = paramType'
           }
       where
-        FunctionParameter {..} = _funParameter
-        checkParamName :: Sem r (Maybe S.Symbol)
-        checkParamName = case _paramName of
-          Nothing -> return Nothing
-          Just s -> Just <$> freshVariable s
+        FunctionParameters {..} = _funParameters
+        checkParamNames :: Sem r (NonEmpty (Maybe S.Symbol))
+        checkParamNames =
+            mapM
+              (\case
+                  Nothing -> return Nothing
+                  Just s -> Just <$> freshVariable s)
+              _paramNames
 
 checkLetClause ::
   (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
@@ -1371,13 +1377,13 @@ makeExpressionTable2 (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ 
         nonDepFun a b =
           ExpressionFunction
             Function
-              { _funParameter = param,
+              { _funParameters = param,
                 _funReturn = b
               }
           where
             param =
-              FunctionParameter
-                { _paramName = Nothing,
+              FunctionParameters
+                { _paramNames = NonEmpty.singleton Nothing,
                   _paramImplicit = Explicit,
                   _paramType = a
                 }

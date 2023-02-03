@@ -445,7 +445,7 @@ instance (SingI s) => PrettyCode (TypeSignature s) where
 instance (SingI s) => PrettyCode (Function s) where
   ppCode :: forall r. (Members '[Reader Options] r) => Function s -> Sem r (Doc Ann)
   ppCode Function {..} = do
-    funParameter' <- ppCode _funParameter
+    funParameter' <- ppCode _funParameters
     funReturn' <- ppRightExpression' funFixity _funReturn
     return $ funParameter' <+> kwArrowR <+> funReturn'
     where
@@ -453,14 +453,18 @@ instance (SingI s) => PrettyCode (Function s) where
         SParsed -> ppRightExpression
         SScoped -> ppRightExpression
 
-instance (SingI s) => PrettyCode (FunctionParameter s) where
-  ppCode FunctionParameter {..} = do
-    case _paramName of
-      Nothing -> ppLeftExpression' funFixity _paramType
-      Just n -> do
-        paramName' <- annDef n <$> ppSymbol n
+instance (SingI s) => PrettyCode (FunctionParameters s) where
+  ppCode FunctionParameters {..} = do
+    case _paramNames of
+      Nothing :| [] -> ppLeftExpression' funFixity _paramType
+      _ -> do
+        paramNames' <- mapM
+          (\case
+            Just n -> annDef n <$> ppSymbol n
+            Nothing -> return kwWildcard)
+          _paramNames
         paramType' <- ppExpression _paramType
-        return $ implicitDelim _paramImplicit (paramName' <+> kwColon <+> paramType')
+        return $ implicitDelim _paramImplicit (hsep paramNames' <+> kwColon <+> paramType')
     where
       ppLeftExpression' = case sing :: SStage s of
         SParsed -> ppLeftExpression

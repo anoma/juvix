@@ -503,16 +503,16 @@ implicitClose = \case
   Implicit -> rbrace
   Explicit -> rparen
 
-functionParam :: forall r. (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (FunctionParameter 'Parsed)
-functionParam = do
-  (_paramName, _paramImplicit) <- P.try $ do
+functionParams :: forall r. (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (FunctionParameters 'Parsed)
+functionParams = do
+  (_paramNames, _paramImplicit) <- P.try $ do
     impl <- implicitOpen
-    n <- pName
+    n <- NonEmpty.fromList <$> some pName
     kw kwColon
     return (n, impl)
   _paramType <- parseExpressionAtoms
   implicitClose _paramImplicit
-  return FunctionParameter {..}
+  return FunctionParameters {..}
   where
     pName :: ParsecS r (Maybe Symbol)
     pName =
@@ -521,7 +521,7 @@ functionParam = do
 
 function :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (Function 'Parsed)
 function = do
-  _funParameter <- functionParam
+  _funParameters <- functionParams
   kw kwRightArrow
   _funReturn <- parseExpressionAtoms
   return Function {..}
