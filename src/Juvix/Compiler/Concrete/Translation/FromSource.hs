@@ -377,11 +377,10 @@ parseExpressionAtomsParens ::
   (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) =>
   ParsecS r (ExpressionAtoms 'Parsed)
 parseExpressionAtomsParens = do
-  (atoms, _expressionAtomsLoc) <- interval (P.some (expressionAtom))
-  let _expressionAtoms = case _expressionAtoms of
-        AtomCase c :| [] -> pure (AtomCase (set caseParens True c))
-        _ -> atoms
-  return ExpressionAtoms {..}
+  a <- parseExpressionAtoms
+  return $ case a ^. expressionAtoms of
+    AtomCase c :| [] -> set expressionAtoms (pure (AtomCase (set caseParens True c))) a
+    _ -> a
 
 parseExpressionAtoms ::
   (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) =>
