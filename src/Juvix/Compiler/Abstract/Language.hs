@@ -246,11 +246,8 @@ instance HasAtomicity Expression where
     ExpressionLiteral f -> atomicity f
     ExpressionLambda l -> atomicity l
 
-instance HasAtomicity CaseBranch where
-  atomicity = atomicity . (^. caseBranchExpression)
-
 instance HasAtomicity Case where
-  atomicity = atomicity . (^. caseBranches . to last)
+  atomicity = const Atom
 
 instance HasAtomicity Application where
   atomicity = const (Aggregate appFixity)
