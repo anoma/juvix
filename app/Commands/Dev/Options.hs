@@ -2,6 +2,7 @@ module Commands.Dev.Options
   ( module Commands.Dev.Options,
     module Commands.Dev.Asm.Options,
     module Commands.Dev.Core.Options,
+    module Commands.Dev.Geb.Options,
     module Commands.Dev.Internal.Options,
     module Commands.Dev.Parse.Options,
     module Commands.Dev.Highlight.Options,
@@ -14,6 +15,7 @@ where
 import Commands.Dev.Asm.Options hiding (Compile)
 import Commands.Dev.Core.Options
 import Commands.Dev.DisplayRoot.Options
+import Commands.Dev.Geb.Options
 import Commands.Dev.Highlight.Options
 import Commands.Dev.Internal.Options
 import Commands.Dev.MiniC.Options
@@ -28,6 +30,7 @@ data DevCommand
   | Highlight HighlightOptions
   | Internal InternalCommand
   | Core CoreCommand
+  | Geb GebCommand
   | Asm AsmCommand
   | Runtime RuntimeCommand
   | MiniC MiniCOptions
@@ -43,6 +46,7 @@ parseDevCommand =
         [ commandHighlight,
           commandInternal,
           commandCore,
+          commandGeb,
           commandAsm,
           commandRuntime,
           commandMiniC,
@@ -73,6 +77,13 @@ commandInternal =
     info
       (Internal <$> parseInternalCommand)
       (progDesc "Subcommands related to Internal")
+
+commandGeb :: Mod CommandFields DevCommand
+commandGeb =
+  command "geb" $
+    info
+      (Geb <$> parseGebCommand)
+      (progDesc "Subcommands related to JuvixGeb")
 
 commandCore :: Mod CommandFields DevCommand
 commandCore =

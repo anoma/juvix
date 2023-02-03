@@ -47,6 +47,17 @@ parseInputJuvixCoreFile = do
       )
   pure AppPath {_pathIsInput = True, ..}
 
+parseInputJuvixGebFile :: Parser (AppPath File)
+parseInputJuvixGebFile = do
+  _pathPath <-
+    argument
+      someFileOpt
+      ( metavar "JUVIX_GEB_FILE"
+          <> help "Path to a .geb file"
+          <> completer juvixGebCompleter
+      )
+  pure AppPath {_pathIsInput = True, ..}
+
 parseInputJuvixAsmFile :: Parser (AppPath File)
 parseInputJuvixAsmFile = do
   _pathPath <-
@@ -129,6 +140,9 @@ juvixCompleter = extCompleter "juvix"
 
 juvixCoreCompleter :: Completer
 juvixCoreCompleter = extCompleter "jvc"
+
+juvixGebCompleter :: Completer
+juvixGebCompleter = extCompleter "geb"
 
 juvixAsmCompleter :: Completer
 juvixAsmCompleter = extCompleter "jva"
