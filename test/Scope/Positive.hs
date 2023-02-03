@@ -224,5 +224,9 @@ tests =
     PosTest
       "Case expressions"
       $(mkRelDir "Internal")
-      $(mkRelFile "Case.juvix")
+      $(mkRelFile "Case.juvix"),
+    PosTest
+      "Short syntax for multiple parameters"
+      $(mkRelDir ".")
+      $(mkRelFile "MultiParams.juvix")
   ]
