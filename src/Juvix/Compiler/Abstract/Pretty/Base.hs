@@ -176,12 +176,6 @@ instance PrettyCode Let where
     letExpression' <- ppCode (l ^. letExpression)
     return $ kwLet <+> letClauses' <+> kwIn <+> letExpression'
 
-instance PrettyCode Usage where
-  ppCode u = return $ case u of
-    UsageNone -> kwColonZero
-    UsageOnce -> kwColonOne
-    UsageOmega -> kwColon
-
 instance PrettyCode FunctionParameter where
   ppCode FunctionParameter {..} = do
     case _paramName of
@@ -189,8 +183,7 @@ instance PrettyCode FunctionParameter where
       Just n -> do
         paramName' <- ppCode n
         paramType' <- ppCode _paramType
-        paramUsage' <- ppCode _paramUsage
-        return $ implicitDelim _paramImplicit (paramName' <+> paramUsage' <+> paramType')
+        return $ implicitDelim _paramImplicit (paramName' <+> kwColon <+> paramType')
 
 instance PrettyCode NameId where
   ppCode (NameId k) = return (pretty k)

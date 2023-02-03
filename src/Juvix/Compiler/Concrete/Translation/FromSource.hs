@@ -488,11 +488,11 @@ implicitClose = \case
 
 functionParam :: forall r. (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (FunctionParameter 'Parsed)
 functionParam = do
-  (_paramName, _paramUsage, _paramImplicit) <- P.try $ do
+  (_paramName, _paramImplicit) <- P.try $ do
     impl <- implicitOpen
     n <- pName
-    u <- pUsage
-    return (n, u, impl)
+    kw kwColon
+    return (n, impl)
   _paramType <- parseExpressionAtoms
   implicitClose _paramImplicit
   return FunctionParameter {..}
@@ -501,12 +501,6 @@ functionParam = do
     pName =
       (Just <$> symbol)
         <|> (Nothing <$ kw kwWildcard)
-    pUsage :: ParsecS r (Maybe Usage)
-    pUsage =
-      (Just UsageNone <$ kw kwColonZero)
-        <|> (Just UsageOnce <$ kw kwColonOne)
-        <|> (Just UsageOmega <$ kw kwColonOmega)
-        <|> (Nothing <$ kw kwColon)
 
 function :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (Function 'Parsed)
 function = do

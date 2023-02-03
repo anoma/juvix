@@ -122,16 +122,13 @@ matchFunctionParameter ::
   Sem r ()
 matchFunctionParameter pa pb = do
   goParamName (pa ^. paramName) (pb ^. paramName)
-  goParamUsage (pa ^. paramUsage) (pb ^. paramUsage)
   goParamImplicit (pa ^. paramImplicit) (pb ^. paramImplicit)
   goParamType (pa ^. paramType) (pb ^. paramType)
   where
     goParamType :: Expression -> Expression -> Sem r ()
     goParamType ua ub = matchExpressions ua ub
     goParamImplicit :: IsImplicit -> IsImplicit -> Sem r ()
-    goParamImplicit ua ub = unless (ua == ub) (throw @Text "implicit missmatch")
-    goParamUsage :: Usage -> Usage -> Sem r ()
-    goParamUsage ua ub = unless (ua == ub) (throw @Text "usage missmatch")
+    goParamImplicit ua ub = unless (ua == ub) (throw @Text "implicit mismatch")
     goParamName :: Maybe VarName -> Maybe VarName -> Sem r ()
     goParamName (Just va) (Just vb) = addName va vb
     goParamName _ _ = return ()
@@ -276,7 +273,6 @@ expressionArrow isImplicit a b =
     ( Function
         ( FunctionParameter
             { _paramName = Nothing,
-              _paramUsage = UsageOmega,
               _paramImplicit = isImplicit,
               _paramType = toExpression a
             }

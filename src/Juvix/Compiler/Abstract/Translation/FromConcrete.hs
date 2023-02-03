@@ -255,8 +255,7 @@ goInductiveParameter InductiveParameter {..} = do
     Abstract.FunctionParameter
       { _paramType = paramType',
         _paramName = Just (goSymbol _inductiveParameterName),
-        _paramImplicit = Explicit,
-        _paramUsage = UsageOmega
+        _paramImplicit = Explicit
       }
 
 registerBuiltinInductive ::
@@ -433,12 +432,6 @@ goFunction (Function l r) = do
   _funReturn <- goExpression r
   return Abstract.Function {..}
 
-defaultUsage :: Usage
-defaultUsage = UsageOmega
-
-goUsage :: Maybe Usage -> Usage
-goUsage = fromMaybe defaultUsage
-
 goFunctionParameter ::
   (Members '[Error ScoperError, InfoTableBuilder] r) =>
   FunctionParameter 'Scoped ->
@@ -447,8 +440,7 @@ goFunctionParameter (FunctionParameter {..}) = do
   _paramType' <- goExpression _paramType
   return
     Abstract.FunctionParameter
-      { Abstract._paramUsage = goUsage _paramUsage,
-        Abstract._paramType = _paramType',
+      { Abstract._paramType = _paramType',
         Abstract._paramImplicit = _paramImplicit,
         Abstract._paramName = goSymbol <$> _paramName
       }

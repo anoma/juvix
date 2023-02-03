@@ -13,7 +13,6 @@ module Juvix.Data
     module Juvix.Data.Processed,
     module Juvix.Data.Uid,
     module Juvix.Data.Universe,
-    module Juvix.Data.Usage,
     module Juvix.Data.Wildcard,
     module Juvix.Data.WithLoc,
     module Juvix.Data.DependencyInfo,
@@ -35,6 +34,5 @@ import Juvix.Data.NameId qualified
 import Juvix.Data.Processed
 import Juvix.Data.Uid
 import Juvix.Data.Universe
-import Juvix.Data.Usage
 import Juvix.Data.Wildcard
 import Juvix.Data.WithLoc
