@@ -246,18 +246,20 @@ goFunctionClause FunctionClause {..} = do
         _clauseBody = _clauseBody'
       }
 
-goInductiveParameter ::
+goInductiveParameters ::
   (Members '[Error ScoperError, InfoTableBuilder] r) =>
-  InductiveParameter 'Scoped ->
-  Sem r Abstract.FunctionParameter
-goInductiveParameter InductiveParameter {..} = do
-  paramType' <- goExpression _inductiveParameterType
-  return
-    Abstract.FunctionParameter
-      { _paramType = paramType',
-        _paramName = Just (goSymbol _inductiveParameterName),
-        _paramImplicit = Explicit
-      }
+  InductiveParameters 'Scoped ->
+  Sem r [Abstract.FunctionParameter]
+goInductiveParameters InductiveParameters {..} = do
+  paramType' <- goExpression _inductiveParametersType
+  return $
+    map
+      (\nm -> Abstract.FunctionParameter
+            { _paramType = paramType',
+              _paramName = Just (goSymbol nm),
+              _paramImplicit = Explicit
+            })
+      (toList _inductiveParametersNames)
 
 registerBuiltinInductive ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins] r) =>
@@ -312,7 +314,7 @@ goInductive ::
   InductiveDef 'Scoped ->
   Sem r Abstract.InductiveDef
 goInductive ty@InductiveDef {..} = do
-  _inductiveParameters' <- mapM goInductiveParameter _inductiveParameters
+  _inductiveParameters' <- concatMapM goInductiveParameters _inductiveParameters
   _inductiveType' <- mapM goExpression _inductiveType
   _inductiveConstructors' <- mapM goConstructorDef _inductiveConstructors
   _inductiveExamples' <- goExamples _inductiveDoc

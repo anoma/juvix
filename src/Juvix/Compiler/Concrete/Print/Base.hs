@@ -282,13 +282,13 @@ ppPatternAtom pat =
     PatternVariable s | s ^. S.nameVerbatim == "=" -> parens (ppAtom pat)
     _ -> ppAtom pat
 
-instance PrettyPrint (InductiveParameter 'Scoped) where
-  ppCode InductiveParameter {..} = do
-    let name' = region (P.annDef _inductiveParameterName) (ppCode _inductiveParameterName)
-        ty' = ppCode _inductiveParameterType
-    parens (name' <+> ppCode kwColon <+> ty')
+instance PrettyPrint (InductiveParameters 'Scoped) where
+  ppCode InductiveParameters {..} = do
+    let names' = fmap (\nm -> region (P.annDef nm) (ppCode nm)) _inductiveParametersNames
+        ty' = ppCode _inductiveParametersType
+    parens (hsep names' <+> ppCode kwColon <+> ty')
 
-instance PrettyPrint (NonEmpty (InductiveParameter 'Scoped)) where
+instance PrettyPrint (NonEmpty (InductiveParameters 'Scoped)) where
   ppCode = hsep . fmap ppCode
 
 instance (PrettyPrint a) => PrettyPrint (Irrelevant a) where

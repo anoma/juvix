@@ -236,23 +236,23 @@ deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (Induct
 
 deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveConstructorDef s)
 
-data InductiveParameter (s :: Stage) = InductiveParameter
-  { _inductiveParameterName :: SymbolType s,
-    _inductiveParameterType :: ExpressionType s
+data InductiveParameters (s :: Stage) = InductiveParameters
+  { _inductiveParametersNames :: NonEmpty (SymbolType s),
+    _inductiveParametersType :: ExpressionType s
   }
 
-deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (InductiveParameter s)
+deriving stock instance (Show (ExpressionType s), Show (SymbolType s)) => Show (InductiveParameters s)
 
-deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (InductiveParameter s)
+deriving stock instance (Eq (ExpressionType s), Eq (SymbolType s)) => Eq (InductiveParameters s)
 
-deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveParameter s)
+deriving stock instance (Ord (ExpressionType s), Ord (SymbolType s)) => Ord (InductiveParameters s)
 
 data InductiveDef (s :: Stage) = InductiveDef
   { _inductiveKw :: KeywordRef,
     _inductiveBuiltin :: Maybe (WithLoc BuiltinInductive),
     _inductiveDoc :: Maybe (Judoc s),
     _inductiveName :: InductiveName s,
-    _inductiveParameters :: [InductiveParameter s],
+    _inductiveParameters :: [InductiveParameters s],
     _inductiveType :: Maybe (ExpressionType s),
     _inductiveConstructors :: NonEmpty (InductiveConstructorDef s),
     _inductivePositive :: Bool
@@ -395,7 +395,7 @@ type LocalModuleName s = SymbolType s
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
   { _moduleKw :: KeywordRef,
     _modulePath :: ModulePathType s t,
-    _moduleParameters :: [InductiveParameter s],
+    _moduleParameters :: [InductiveParameters s],
     _moduleDoc :: Maybe (Judoc s),
     _moduleBody :: [Statement s]
   }
@@ -945,7 +945,7 @@ makeLenses ''Module
 makeLenses ''TypeSignature
 makeLenses ''AxiomDef
 makeLenses ''FunctionClause
-makeLenses ''InductiveParameter
+makeLenses ''InductiveParameters
 makeLenses ''ModuleRef'
 makeLenses ''ModuleRef''
 makeLenses ''OpenModule

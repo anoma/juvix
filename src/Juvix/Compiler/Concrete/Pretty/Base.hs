@@ -177,15 +177,18 @@ ppTopModulePath = case sing :: SStage s of
   SParsed -> ppCode
   SScoped -> ppCode
 
-instance (SingI s) => PrettyCode (InductiveParameter s) where
-  ppCode InductiveParameter {..} = do
-    inductiveParameterName' <- annDef _inductiveParameterName <$> ppSymbol _inductiveParameterName
-    inductiveParameterType' <- case sing :: SStage s of
-      SParsed -> ppCode _inductiveParameterType
-      SScoped -> ppCode _inductiveParameterType
-    return $ parens (inductiveParameterName' <+> kwColon <+> inductiveParameterType')
+instance (SingI s) => PrettyCode (InductiveParameters s) where
+  ppCode InductiveParameters {..} = do
+    inductiveParameterNames' <-
+      mapM
+        (\nm -> annDef nm <$> ppSymbol nm)
+        _inductiveParametersNames
+    inductiveParametersType' <- case sing :: SStage s of
+      SParsed -> ppCode _inductiveParametersType
+      SScoped -> ppCode _inductiveParametersType
+    return $ parens (hsep inductiveParameterNames' <+> kwColon <+> inductiveParametersType')
 
-instance (SingI s) => PrettyCode [InductiveParameter s] where
+instance (SingI s) => PrettyCode [InductiveParameters s] where
   ppCode = fmap hsep . mapM ppCode
 
 instance PrettyCode AbsModulePath where
@@ -196,7 +199,7 @@ instance PrettyCode AbsModulePath where
 
 ppInductiveParameters ::
   (SingI s, Members '[Reader Options] r) =>
-  [InductiveParameter s] ->
+  [InductiveParameters s] ->
   Sem r (Maybe (Doc Ann))
 ppInductiveParameters ps
   | null ps = return Nothing
