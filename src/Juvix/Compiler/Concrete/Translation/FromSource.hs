@@ -486,25 +486,16 @@ implicitClose = \case
   Implicit -> rbrace
   Explicit -> rparen
 
-functionParams :: forall r. (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (NonEmpty (WithLoc (FunctionParameter 'Parsed)))
-functionParams = do
-  (names, implicit) <- P.try $ do
+functionParam :: forall r. (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (FunctionParameter 'Parsed)
+functionParam = do
+  (_paramName, _paramImplicit) <- P.try $ do
     impl <- implicitOpen
-    ns <- some (withLoc pName)
+    n <- pName
     kw kwColon
-    return (ns, impl)
-  ty <- parseExpressionAtoms
-  implicitClose implicit
-  return $
-    NonEmpty.fromList $
-    map
-      (fmap
-        (\n -> FunctionParameter {
-          _paramName = n,
-          _paramType = ty,
-          _paramImplicit = implicit
-        }))
-      names
+    return (n, impl)
+  _paramType <- parseExpressionAtoms
+  implicitClose _paramImplicit
+  return FunctionParameter {..}
   where
     pName :: ParsecS r (Maybe Symbol)
     pName =
@@ -513,23 +504,10 @@ functionParams = do
 
 function :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (Function 'Parsed)
 function = do
-  rparams <- NonEmpty.reverse <$> functionParams
-  let lastParam = NonEmpty.head rparams ^. withLocParam
-      params = reverse $ map (^. withLocParam) (NonEmpty.tail rparams)
-      locs = NonEmpty.tail (NonEmpty.reverse (fmap getLoc rparams))
+  _funParameter <- functionParam
   kw kwRightArrow
-  ret <- parseExpressionAtoms
-  return $
-    foldr
-      (\(param, loc) acc -> Function {
-        _funParameter = param,
-        _funReturn = ExpressionAtoms {
-          _expressionAtoms = NonEmpty.singleton (AtomFunction acc),
-          _expressionAtomsLoc = loc
-        }
-      })
-      (Function {_funParameter = lastParam, _funReturn = ret})
-      (zipExact params locs)
+  _funReturn <- parseExpressionAtoms
+  return Function {..}
 
 --------------------------------------------------------------------------------
 -- Lambda expression
