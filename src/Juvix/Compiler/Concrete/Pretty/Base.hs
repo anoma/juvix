@@ -461,11 +461,13 @@ instance (SingI s) => PrettyCode (FunctionParameters s) where
     case _paramNames of
       Nothing :| [] -> ppLeftExpression' funFixity _paramType
       _ -> do
-        paramNames' <- mapM
-          (\case
-            Just n -> annDef n <$> ppSymbol n
-            Nothing -> return kwWildcard)
-          _paramNames
+        paramNames' <-
+          mapM
+            ( \case
+                Just n -> annDef n <$> ppSymbol n
+                Nothing -> return kwWildcard
+            )
+            _paramNames
         paramType' <- ppExpression _paramType
         return $ implicitDelim _paramImplicit (hsep paramNames' <+> kwColon <+> paramType')
     where

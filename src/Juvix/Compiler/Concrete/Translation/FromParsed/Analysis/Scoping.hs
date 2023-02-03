@@ -461,18 +461,19 @@ withParams xs a = go [] [] xs
             go' names' usedNames' = \case
               [] -> do
                 inductiveParametersType' <- checkParseExpressionAtoms _inductiveParametersType
-                let param' = InductiveParameters {
-                      _inductiveParametersType = inductiveParametersType',
-                      _inductiveParametersNames = NonEmpty.fromList (reverse names')
-                    }
+                let param' =
+                      InductiveParameters
+                        { _inductiveParametersType = inductiveParametersType',
+                          _inductiveParametersNames = NonEmpty.fromList (reverse names')
+                        }
                 go (inductiveParameters' ++ [param']) usedNames' ps
               nm : names ->
                 if
                     | nm `elem` usedNames' ->
                         throw
-                            ( ErrDuplicateInductiveParameterName
-                                (DuplicateInductiveParameterName nm)
-                            )
+                          ( ErrDuplicateInductiveParameterName
+                              (DuplicateInductiveParameterName nm)
+                          )
                     | otherwise -> do
                         nm' <- freshVariable nm
                         withBindLocalVariable (LocalVariable nm') $
@@ -935,12 +936,14 @@ checkFunction ::
   Sem r (Function 'Scoped)
 checkFunction Function {..} = do
   funParameters' <- checkParams
-  let scoped = foldr
-        (\param acc -> case param of
-          Nothing -> acc
-          Just s -> withBindLocalVariable (LocalVariable s) . acc)
-        id
-        (funParameters' ^. paramNames)
+  let scoped =
+        foldr
+          ( \param acc -> case param of
+              Nothing -> acc
+              Just s -> withBindLocalVariable (LocalVariable s) . acc
+          )
+          id
+          (funParameters' ^. paramNames)
   funReturn' <- scoped (checkParseExpressionAtoms _funReturn)
   return
     Function
@@ -962,11 +965,12 @@ checkFunction Function {..} = do
         FunctionParameters {..} = _funParameters
         checkParamNames :: Sem r (NonEmpty (Maybe S.Symbol))
         checkParamNames =
-            mapM
-              (\case
-                  Nothing -> return Nothing
-                  Just s -> Just <$> freshVariable s)
-              _paramNames
+          mapM
+            ( \case
+                Nothing -> return Nothing
+                Just s -> Just <$> freshVariable s
+            )
+            _paramNames
 
 checkLetClause ::
   (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>

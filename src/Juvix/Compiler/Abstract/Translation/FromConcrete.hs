@@ -254,11 +254,13 @@ goInductiveParameters InductiveParameters {..} = do
   paramType' <- goExpression _inductiveParametersType
   return $
     map
-      (\nm -> Abstract.FunctionParameter
+      ( \nm ->
+          Abstract.FunctionParameter
             { _paramType = paramType',
               _paramName = Just (goSymbol nm),
               _paramImplicit = Explicit
-            })
+            }
+      )
       (toList _inductiveParametersNames)
 
 registerBuiltinInductive ::
@@ -449,7 +451,7 @@ goFunction (Function l r) = do
   ret <- goExpression r
   return $
     Abstract.Function (NonEmpty.head params) $
-    foldr (\param acc -> Abstract.ExpressionFunction $ Abstract.Function param acc) ret (NonEmpty.tail params)
+      foldr (\param acc -> Abstract.ExpressionFunction $ Abstract.Function param acc) ret (NonEmpty.tail params)
 
 goFunctionParameters ::
   (Members '[Error ScoperError, InfoTableBuilder] r) =>
@@ -459,12 +461,13 @@ goFunctionParameters (FunctionParameters {..}) = do
   _paramType' <- goExpression _paramType
   return $
     fmap
-      (\param ->
-        Abstract.FunctionParameter
-          { Abstract._paramType = _paramType',
-            Abstract._paramImplicit = _paramImplicit,
-            Abstract._paramName = goSymbol <$> param
-          })
+      ( \param ->
+          Abstract.FunctionParameter
+            { Abstract._paramType = _paramType',
+              Abstract._paramImplicit = _paramImplicit,
+              Abstract._paramName = goSymbol <$> param
+            }
+      )
       _paramNames
 
 goPatternApplication ::
