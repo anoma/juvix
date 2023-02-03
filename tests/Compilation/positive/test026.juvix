@@ -17,22 +17,20 @@ front q := head (qfst q);
 pop_front : {A : Type} → Queue A → Queue A;
 pop_front {A} q :=
   let q' : Queue A; q' := queue (tail (qfst q)) (qsnd q) in
-  case (qfst q') λ{
-    nil := queue (reverse (qsnd q')) nil
+  case qfst q'
+    | nil := queue (reverse (qsnd q')) nil
     | _ := q'
-  };
+  ;
 
 push_back : {A : Type} → Queue A → A → Queue A;
-push_back q x := case (qfst q) λ{
-  nil := queue (x :: nil) (qsnd q)
-  | q' := queue q' (x :: qsnd q)
-};
+push_back q x := case qfst q
+  | nil := queue (x :: nil) (qsnd q)
+  | q' := queue q' (x :: qsnd q);
 
 is_empty : {A : Type} → Queue A → Bool;
-is_empty q := case (qfst q) λ{
-  nil := case (qsnd q) λ{nil := true | _ := false}
-  | _ := false
-};
+is_empty q := case qfst q
+  | nil := (case qsnd q | nil := true | _ := false)
+  | _ := false;
 
 empty : {A : Type} → Queue A;
 empty := queue nil nil;
