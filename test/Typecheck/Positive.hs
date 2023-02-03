@@ -197,7 +197,11 @@ tests =
     posTest
       "Issue 1731 Fail builtin for debugging"
       $(mkRelDir "issue1731")
-      $(mkRelFile "builtinFail.juvix")
+      $(mkRelFile "builtinFail.juvix"),
+    posTest
+      "Case expressions"
+      $(mkRelDir ".")
+      $(mkRelFile "Case.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests, t ^. Compilation.name /= "Self-application"
        ]
