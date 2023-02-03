@@ -62,28 +62,28 @@ instance PrettyCode Pair where
     rty <- ppArg _pairRightType
     left <- ppArg _pairLeft
     right <- ppArg _pairRight
-    return $ kwPair <> line <> indent 2 (vsep [lty, rty, left, right])
+    return $ kwPair <> line <> indent' (vsep [lty, rty, left, right])
 
 instance PrettyCode First where
   ppCode First {..} = do
     lty <- ppArg _firstLeftType
     rty <- ppArg _firstRightType
     val <- ppArg _firstValue
-    return $ kwFst <> line <> indent 2 (vsep [lty, rty, val])
+    return $ kwFst <> line <> indent' (vsep [lty, rty, val])
 
 instance PrettyCode Second where
   ppCode Second {..} = do
     lty <- ppArg _secondLeftType
     rty <- ppArg _secondRightType
     val <- ppArg _secondValue
-    return $ kwSnd <> line <> indent 2 (vsep [lty, rty, val])
+    return $ kwSnd <> line <> indent' (vsep [lty, rty, val])
 
 instance PrettyCode Lambda where
   ppCode Lambda {..} = do
     vty <- ppArg _lambdaVarType
     bty <- ppArg _lambdaBodyType
     body <- ppArg _lambdaBody
-    return $ kwLamb <> line <> indent 2 (vsep [vty, bty, body])
+    return $ kwLamb <> line <> indent' (vsep [vty, bty, body])
 
 instance PrettyCode Application where
   ppCode Application {..} = do
@@ -91,7 +91,7 @@ instance PrettyCode Application where
     cod <- ppArg _applicationCodomainType
     left <- ppArg _applicationLeft
     right <- ppArg _applicationRight
-    return $ kwApp <> line <> indent 2 (vsep [dom, cod, left, right])
+    return $ kwApp <> line <> indent' (vsep [dom, cod, left, right])
 
 instance PrettyCode Var where
   ppCode Var {..} = return $ annotate AnnLiteralInteger (pretty _varIndex)
@@ -142,19 +142,19 @@ instance PrettyCode Product where
   ppCode Product {..} = do
     left <- ppArg _productLeft
     right <- ppArg _productRight
-    return $ kwProd <> line <> indent 2 (vsep [left, right])
+    return $ kwProd <> line <> indent' (vsep [left, right])
 
 instance PrettyCode Coproduct where
   ppCode Coproduct {..} = do
     left <- ppArg _coproductLeft
     right <- ppArg _coproductRight
-    return $ kwCoprod <> line <> indent 2 (vsep [left, right])
+    return $ kwCoprod <> line <> indent' (vsep [left, right])
 
 instance PrettyCode Hom where
   ppCode Hom {..} = do
     dom <- ppArg _homDomain
     cod <- ppArg _homCodomain
-    return $ kwHom <> line <> indent 2 (vsep [dom, cod])
+    return $ kwHom <> line <> indent' (vsep [dom, cod])
 
 instance PrettyCode Object where
   ppCode = \case
