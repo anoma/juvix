@@ -23,8 +23,8 @@ module Case;
 
   appIf2 : {A : Type} → Bool → (A → A) → A → A;
   appIf2 b f a := (case b
-      | true := f
-      | false := id)
+        | true := f
+        | false := id)
     a;
 
   nestedCase1 : {A : Type} → Bool → (A → A) → A → A;
@@ -32,12 +32,4 @@ module Case;
       | true := (case b
         | _ := id)
       | false := id;
-
-  -- nestedCase1 : {A : Type} → Bool → (A → A) → A → A;
-  -- nestedCase1 b f := case b
-  --     | true := (case b
-  --       | _ := id)
-  --     | false := id;
-
-
 end;

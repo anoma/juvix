@@ -1233,6 +1233,7 @@ checkParens e@(ExpressionAtoms as _) = case as of
     scopedId <- checkName s
     let scopedIdenNoFix = idenOverName (set S.nameFixity Nothing) scopedId
     return (ExpressionParensIdentifier scopedIdenNoFix)
+  AtomCase c :| [] -> ExpressionCase . set caseParens True <$> checkCase c
   _ -> checkParseExpressionAtoms e
 
 checkExpressionAtoms ::

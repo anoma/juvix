@@ -369,18 +369,8 @@ expressionAtom =
       <|> (AtomLetBlock <$> letBlock)
       <|> (AtomFunArrow <$ kw kwRightArrow)
       <|> (AtomHole <$> hole)
-      <|> parens (AtomParens <$> parseExpressionAtomsParens)
+      <|> parens (AtomParens <$> parseExpressionAtoms)
       <|> braces (AtomBraces <$> withLoc parseExpressionAtoms)
-
--- | Necessary so we know whether a case expression was surrounded by parentheses.
-parseExpressionAtomsParens ::
-  (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) =>
-  ParsecS r (ExpressionAtoms 'Parsed)
-parseExpressionAtomsParens = do
-  a <- parseExpressionAtoms
-  return $ case a ^. expressionAtoms of
-    AtomCase c :| [] -> set expressionAtoms (pure (AtomCase (set caseParens True c))) a
-    _ -> a
 
 parseExpressionAtoms ::
   (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) =>

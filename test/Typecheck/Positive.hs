@@ -200,7 +200,7 @@ tests =
       $(mkRelFile "builtinFail.juvix"),
     posTest
       "Case expressions"
-      $(mkRelDir ".")
+      $(mkRelDir "Internal")
       $(mkRelFile "Case.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests, t ^. Compilation.name /= "Self-application"
