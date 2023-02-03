@@ -116,7 +116,6 @@ instance PrettyCode FunctionParameter where
 
 instance PrettyCode Function where
   ppCode (Function l r) = do
-    -- TODO: group parameters of the same type
     funParameter' <- ppCode l
     funReturn' <- ppRightExpression funFixity r
     return $ funParameter' <+> kwArrow <+> funReturn'

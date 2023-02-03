@@ -447,7 +447,6 @@ instance (SingI s) => PrettyCode (Function s) where
   ppCode Function {..} = do
     funParameter' <- ppCode _funParameter
     funReturn' <- ppRightExpression' funFixity _funReturn
-    -- TODO: group parameters with the same type
     return $ funParameter' <+> kwArrowR <+> funReturn'
     where
       ppRightExpression' = case sing :: SStage s of
