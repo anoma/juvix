@@ -24,11 +24,6 @@ steps opts e
       CallByName -> evalCallByName e
       Full -> evalFull e
 
-{-
-  Evaluation strategies here: call-by-value (eager evaluation) vs call-by-name (lazy evaluation). Call-by-value evaluates arguments before function is applied, call-by-name evaluates arguments only when used in function body.
-  The full strategy is a combination of the two, where arguments are evaluated to weak head normal form before being applied.
--}
-
 -- | Is the given Geb expression in normal form?
 isGebValue :: Geb.Morphism -> Bool
 isGebValue = \case
@@ -58,6 +53,8 @@ isGebValue = \case
       _ -> isGebValue _applicationLeft && isGebValue _applicationRight
   Geb.MorphismVar _ -> True
   Geb.MorphismInteger _ -> True
+  Geb.MorphismBinop (Geb.Binop {..}) ->
+    isGebValue _binopLeft && isGebValue _binopRight
 
 -- | Apply beta reduction to a term
 applyBeta :: Geb.Morphism -> Geb.Morphism
@@ -106,9 +103,10 @@ substitute idx x = \case
   Geb.MorphismSecond (Geb.Second {..}) ->
     Geb.MorphismSecond $
       Geb.Second {_secondValue = substitute idx x _secondValue, ..}
-  -- We have to increment the index of the variable we are substituting for, as -- we are going deeper into the lambda, but at the same time,
-  -- the body of the lambda is one level deeper than the lambda itself,
-  -- so, we also have to increment all the inner variables by 1.
+  -- We have to increment the index of the variable we are substituting for, as
+  -- we are going deeper into the lambda, but at the same time, the body of
+  -- the lambda is one level deeper than the lambda itself, so, we also have to
+  -- increment all the inner variables by 1.
   Geb.MorphismLambda (Geb.Lambda {..}) ->
     Geb.MorphismLambda $
       Geb.Lambda
@@ -124,6 +122,14 @@ substitute idx x = \case
       Geb.Application
         { _applicationLeft = substitute idx x _applicationLeft,
           _applicationRight = substitute idx x _applicationRight,
+          ..
+        }
+  t@(Geb.MorphismInteger _) -> t
+  (Geb.MorphismBinop (Geb.Binop {..})) ->
+    Geb.MorphismBinop $
+      Geb.Binop
+        { _binopLeft = substitute idx x _binopLeft,
+          _binopRight = substitute idx x _binopRight,
           ..
         }
 
@@ -171,6 +177,14 @@ increment n = \case
     if
         | _varIndex > n -> Geb.MorphismVar $ Geb.Var {_varIndex = _varIndex + 1}
         | otherwise -> t
+  t@(Geb.MorphismInteger _) -> t
+  (Geb.MorphismBinop (Geb.Binop {..})) ->
+    Geb.MorphismBinop $
+      Geb.Binop
+        { _binopLeft = increment n _binopLeft,
+          _binopRight = increment n _binopRight,
+          ..
+        }
 
 evalCallByValue :: Geb.Morphism -> Geb.Morphism
 evalCallByValue = \case
@@ -259,6 +273,14 @@ evalCallByValue = \case
               ..
             }
   v@(Geb.MorphismVar _) -> v
+  i@(Geb.MorphismInteger _) -> i
+  (Geb.MorphismBinop (Geb.Binop {..})) ->
+    Geb.MorphismBinop $
+      Geb.Binop
+        { _binopLeft = evalCallByValue _binopLeft,
+          _binopRight = evalCallByValue _binopRight,
+          ..
+        }
 
 evalCallByName :: Geb.Morphism -> Geb.Morphism
 evalCallByName = \case
@@ -340,6 +362,14 @@ evalCallByName = \case
               ..
             }
   v@(Geb.MorphismVar _) -> v
+  i@(Geb.MorphismInteger _) -> i
+  (Geb.MorphismBinop (Geb.Binop {..})) ->
+    Geb.MorphismBinop $
+      Geb.Binop
+        { _binopLeft = evalCallByName _binopLeft,
+          _binopRight = evalCallByName _binopRight,
+          ..
+        }
 
 evalFull :: Geb.Morphism -> Geb.Morphism
 evalFull = \case
@@ -421,3 +451,11 @@ evalFull = \case
               ..
             }
   v@(Geb.MorphismVar _) -> v
+  i@(Geb.MorphismInteger _) -> i
+  (Geb.MorphismBinop (Geb.Binop {..})) ->
+    Geb.MorphismBinop $
+      Geb.Binop
+        { _binopLeft = evalFull _binopLeft,
+          _binopRight = evalFull _binopRight,
+          ..
+        }

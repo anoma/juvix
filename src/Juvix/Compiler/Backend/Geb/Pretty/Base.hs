@@ -165,6 +165,11 @@ instance PrettyCode Object where
     ObjectHom x -> ppCode x
     ObjectInteger -> return kwInteger
 
+instance PrettyCode Expression where
+  ppCode = \case
+    ExpressionMorphism x -> ppCode x
+    ExpressionObject x -> ppCode x
+
 --------------------------------------------------------------------------------
 -- helper functions
 --------------------------------------------------------------------------------
