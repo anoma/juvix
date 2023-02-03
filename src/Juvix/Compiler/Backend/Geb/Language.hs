@@ -58,7 +58,22 @@ data Application = Application
 
 newtype Var = Var {_varIndex :: Int}
 
--- | Corresponds to the GEB type for morphisms (terms): `stlc`
+data Opcode
+  = OpAdd
+  | OpSub
+  | OpMul
+  | OpDiv
+  | OpMod
+  | OpEq
+  | OpLt
+
+data Binop = Binop
+  { _binopOpcode :: Opcode,
+    _binopLeft :: Morphism,
+    _binopRight :: Morphism
+  }
+
+-- | Corresponds to the GEB type for terms (morphisms of the category): `stlc`
 -- (https://github.com/anoma/geb/blob/main/src/specs/lambda.lisp).
 data Morphism
   = MorphismAbsurd Morphism
@@ -72,6 +87,8 @@ data Morphism
   | MorphismLambda Lambda
   | MorphismApplication Application
   | MorphismVar Var
+  | MorphismInteger Integer
+  | MorphismBinop Binop
 
 data Product = Product
   { _productLeft :: Object,
@@ -100,6 +117,7 @@ data Object
   | ObjectCoproduct Coproduct
   | -- | function type
     ObjectHom Hom
+  | ObjectInteger
 
 instance HasAtomicity Morphism where
   atomicity = \case
@@ -114,6 +132,8 @@ instance HasAtomicity Morphism where
     MorphismLambda {} -> Aggregate appFixity
     MorphismApplication {} -> Aggregate appFixity
     MorphismVar {} -> Aggregate appFixity
+    MorphismInteger {} -> Atom
+    MorphismBinop {} -> Aggregate appFixity
 
 instance HasAtomicity Object where
   atomicity = \case
@@ -122,6 +142,7 @@ instance HasAtomicity Object where
     ObjectProduct {} -> Aggregate appFixity
     ObjectCoproduct {} -> Aggregate appFixity
     ObjectHom {} -> Aggregate appFixity
+    ObjectInteger -> Atom
 
 makeLenses ''Case
 makeLenses ''Pair
@@ -129,6 +150,7 @@ makeLenses ''First
 makeLenses ''Second
 makeLenses ''Lambda
 makeLenses ''Var
+makeLenses ''Binop
 makeLenses ''Application
 makeLenses ''Morphism
 makeLenses ''Product

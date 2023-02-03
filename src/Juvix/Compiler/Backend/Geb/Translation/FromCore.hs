@@ -154,7 +154,9 @@ fromCore tab = case tab ^. Core.infoMain of
       return $ MorphismVar (Var (varsNum + length shiftLevels - fromJust (HashMap.lookup _identSymbol identMap) - 1))
 
     convertConstant :: Core.Constant -> Trans Morphism
-    convertConstant Core.Constant {} = unsupported
+    convertConstant Core.Constant {..} = case _constantValue of
+      Core.ConstInteger n -> return $ MorphismInteger n
+      Core.ConstString {} -> unsupported
 
     convertApp :: Core.App -> Trans Morphism
     convertApp Core.App {..} = do
@@ -170,7 +172,76 @@ fromCore tab = case tab ^. Core.infoMain of
             }
 
     convertBuiltinApp :: Core.BuiltinApp -> Trans Morphism
-    convertBuiltinApp Core.BuiltinApp {} = unsupported
+    convertBuiltinApp Core.BuiltinApp {..} = case _builtinAppOp of
+      Core.OpIntAdd ->
+        convertBinop OpAdd _builtinAppArgs
+      Core.OpIntSub ->
+        convertBinop OpSub _builtinAppArgs
+      Core.OpIntMul ->
+        convertBinop OpMul _builtinAppArgs
+      Core.OpIntDiv ->
+        convertBinop OpDiv _builtinAppArgs
+      Core.OpIntMod ->
+        convertBinop OpMod _builtinAppArgs
+      Core.OpIntLt ->
+        convertBinop OpLt _builtinAppArgs
+      Core.OpIntLe ->
+        case _builtinAppArgs of
+          [arg1, arg2] -> do
+            arg1' <- convertNode arg1
+            arg2' <- convertNode arg2
+            let le =
+                  MorphismLambda
+                    Lambda
+                      { _lambdaVarType = ObjectInteger,
+                        _lambdaBodyType = ObjectHom (Hom ObjectInteger objectBool),
+                        _lambdaBody =
+                          MorphismLambda
+                            Lambda
+                              { _lambdaVarType = ObjectInteger,
+                                _lambdaBodyType = objectBool,
+                                _lambdaBody =
+                                  mkOr
+                                    (MorphismBinop $ Binop OpLt (MorphismVar (Var 1)) (MorphismVar (Var 0)))
+                                    (MorphismBinop $ Binop OpEq (MorphismVar (Var 1)) (MorphismVar (Var 0)))
+                              }
+                      }
+             in return $
+                  MorphismApplication
+                    Application
+                      { _applicationDomainType = ObjectInteger,
+                        _applicationCodomainType = ObjectHom (Hom ObjectInteger objectBool),
+                        _applicationLeft =
+                          MorphismApplication
+                            Application
+                              { _applicationDomainType = ObjectInteger,
+                                _applicationCodomainType = objectBool,
+                                _applicationLeft = le,
+                                _applicationRight = arg2'
+                              },
+                        _applicationRight = arg1'
+                      }
+          _ ->
+            error "wrong builtin application argument number"
+      Core.OpEq ->
+        case _builtinAppArgs of
+          arg : _
+            | Info.getNodeType arg == Core.mkTypeInteger' ->
+                convertBinop OpEq _builtinAppArgs
+          _ ->
+            error "unsupported equality argument types"
+      _ ->
+        unsupported
+
+    convertBinop :: Opcode -> [Core.Node] -> Trans Morphism
+    convertBinop op args =
+      case args of
+        [arg1, arg2] -> do
+          arg1' <- convertNode arg1
+          arg2' <- convertNode arg2
+          return $ MorphismBinop (Binop op arg1' arg2')
+        _ ->
+          error "wrong builtin application argument number"
 
     convertConstr :: Core.Constr -> Trans Morphism
     convertConstr Core.Constr {..} = do
@@ -434,8 +505,8 @@ fromCore tab = case tab ^. Core.infoMain of
     convertTypePrim :: Core.TypePrim -> Object
     convertTypePrim Core.TypePrim {..} =
       case _typePrimPrimitive of
-        Core.PrimInteger _ -> unsupported
-        Core.PrimBool _ -> ObjectCoproduct (Coproduct ObjectTerminal ObjectTerminal)
+        Core.PrimInteger _ -> ObjectInteger
+        Core.PrimBool _ -> objectBool
         Core.PrimString -> unsupported
 
     convertInductive :: Symbol -> Object

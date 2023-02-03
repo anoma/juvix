@@ -575,6 +575,27 @@ gebApp = "app"
 gebVar :: IsString s => s
 gebVar = "index"
 
+gebAdd :: IsString s => s
+gebAdd = "add"
+
+gebSub :: IsString s => s
+gebSub = "sub"
+
+gebMul :: IsString s => s
+gebMul = "mul"
+
+gebDiv :: IsString s => s
+gebDiv = "div"
+
+gebMod :: IsString s => s
+gebMod = "mod"
+
+gebEq :: IsString s => s
+gebEq = "eq"
+
+gebLt :: IsString s => s
+gebLt = "lt"
+
 gebInitial :: IsString s => s
 gebInitial = "so0"
 
@@ -589,6 +610,9 @@ gebCoprod = "coprod"
 
 gebHom :: IsString s => s
 gebHom = "hom"
+
+gebInteger :: IsString s => s
+gebInteger = "int"
 
 juvixFunctionT :: IsString s => s
 juvixFunctionT = "juvix_function_t"
