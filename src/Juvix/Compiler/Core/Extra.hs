@@ -206,4 +206,4 @@ patternBinders f p = case p of
   PatBinder b -> f b $> p
 
 patternBindersNum :: Pattern -> Int
-patternBindersNum =  length . (^.. patternBinders)
+patternBindersNum = length . (^.. patternBinders)

@@ -235,7 +235,7 @@ instance HasExpressions Expression where
     ExpressionHole {} -> f e
 
 instance HasExpressions CaseBranch where
-  leafExpressions = traverseOf caseBranchExpression
+  leafExpressions f = traverseOf caseBranchExpression (leafExpressions f)
 
 instance HasExpressions Case where
   leafExpressions f l = do
