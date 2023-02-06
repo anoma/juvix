@@ -443,34 +443,40 @@ checkConstructorDef InductiveConstructorDef {..} = do
 withParams ::
   forall r a.
   (Members '[Reader LocalVars, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, NameIdGen] r) =>
-  [InductiveParameter 'Parsed] ->
-  ([InductiveParameter 'Scoped] -> Sem r a) ->
+  [InductiveParameters 'Parsed] ->
+  ([InductiveParameters 'Scoped] -> Sem r a) ->
   Sem r a
 withParams xs a = go [] [] xs
   where
-    go :: [InductiveParameter 'Scoped] -> [Symbol] -> [InductiveParameter 'Parsed] -> Sem r a
+    go :: [InductiveParameters 'Scoped] -> [Symbol] -> [InductiveParameters 'Parsed] -> Sem r a
     go inductiveParameters' usedNames params =
       case params of
         -- All params have been checked
         [] -> a inductiveParameters'
         -- More params to check
-        (InductiveParameter {..} : ps) -> do
-          inductiveParameterType' <- checkParseExpressionAtoms _inductiveParameterType
-          if
-              | _inductiveParameterName `elem` usedNames ->
-                  throw
-                    ( ErrDuplicateInductiveParameterName
-                        (DuplicateInductiveParameterName _inductiveParameterName)
-                    )
-              | otherwise -> do
-                  inductiveParameterName' <- freshVariable _inductiveParameterName
-                  let param' =
-                        InductiveParameter
-                          { _inductiveParameterType = inductiveParameterType',
-                            _inductiveParameterName = inductiveParameterName'
-                          }
-                  withBindLocalVariable (LocalVariable inductiveParameterName') $
-                    go (inductiveParameters' ++ [param']) (_inductiveParameterName : usedNames) ps
+        (InductiveParameters {..} : ps) ->
+          go' [] usedNames (toList _inductiveParametersNames)
+          where
+            go' :: [SymbolType 'Scoped] -> [Symbol] -> [SymbolType 'Parsed] -> Sem r a
+            go' names' usedNames' = \case
+              [] -> do
+                inductiveParametersType' <- checkParseExpressionAtoms _inductiveParametersType
+                let param' =
+                      InductiveParameters
+                        { _inductiveParametersType = inductiveParametersType',
+                          _inductiveParametersNames = NonEmpty.fromList (reverse names')
+                        }
+                go (inductiveParameters' ++ [param']) usedNames' ps
+              nm : names
+                | nm `elem` usedNames' ->
+                    throw
+                      ( ErrDuplicateInductiveParameterName
+                          (DuplicateInductiveParameterName nm)
+                      )
+                | otherwise -> do
+                    nm' <- freshVariable nm
+                    withBindLocalVariable (LocalVariable nm') $
+                      go' (nm' : names') (nm : usedNames) names
 
 checkInductiveDef ::
   forall r.
@@ -928,33 +934,39 @@ checkFunction ::
   Function 'Parsed ->
   Sem r (Function 'Scoped)
 checkFunction Function {..} = do
-  funParameter' <- checkParam
-  let scoped = case funParameter' ^. paramName of
-        Nothing -> id
-        Just s -> withBindLocalVariable (LocalVariable s)
+  funParameters' <- checkParams
+  let scoped = foldr go id (funParameters' ^. paramNames)
   funReturn' <- scoped (checkParseExpressionAtoms _funReturn)
   return
     Function
-      { _funParameter = funParameter',
+      { _funParameters = funParameters',
         _funReturn = funReturn'
       }
   where
-    checkParam :: Sem r (FunctionParameter 'Scoped)
-    checkParam = do
+    go :: Maybe (SymbolType 'Scoped) -> (Sem r a -> Sem r a) -> (Sem r a -> Sem r a)
+    go param acc = case param of
+      Nothing -> acc
+      Just s -> withBindLocalVariable (LocalVariable s) . acc
+    checkParams :: Sem r (FunctionParameters 'Scoped)
+    checkParams = do
       paramType' <- checkParseExpressionAtoms _paramType
-      paramName' <- checkParamName
+      paramNames' <- checkParamNames
       return
-        FunctionParameter
-          { _paramName = paramName',
+        FunctionParameters
+          { _paramNames = paramNames',
             _paramImplicit = _paramImplicit,
             _paramType = paramType'
           }
       where
-        FunctionParameter {..} = _funParameter
-        checkParamName :: Sem r (Maybe S.Symbol)
-        checkParamName = case _paramName of
-          Nothing -> return Nothing
-          Just s -> Just <$> freshVariable s
+        FunctionParameters {..} = _funParameters
+        checkParamNames :: Sem r (NonEmpty (Maybe S.Symbol))
+        checkParamNames =
+          forM
+            _paramNames
+            ( \case
+                Nothing -> return Nothing
+                Just s -> Just <$> freshVariable s
+            )
 
 checkLetClause ::
   (Members '[Error ScoperError, State Scope, State ScoperState, Reader LocalVars, InfoTableBuilder, NameIdGen] r) =>
@@ -1371,13 +1383,13 @@ makeExpressionTable2 (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ 
         nonDepFun a b =
           ExpressionFunction
             Function
-              { _funParameter = param,
+              { _funParameters = param,
                 _funReturn = b
               }
           where
             param =
-              FunctionParameter
-                { _paramName = Nothing,
+              FunctionParameters
+                { _paramNames = NonEmpty.singleton Nothing,
                   _paramImplicit = Explicit,
                   _paramType = a
                 }

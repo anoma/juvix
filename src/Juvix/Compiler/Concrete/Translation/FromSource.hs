@@ -503,16 +503,16 @@ implicitClose = \case
   Implicit -> rbrace
   Explicit -> rparen
 
-functionParam :: forall r. (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (FunctionParameter 'Parsed)
-functionParam = do
-  (_paramName, _paramImplicit) <- P.try $ do
+functionParams :: forall r. (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (FunctionParameters 'Parsed)
+functionParams = do
+  (_paramNames, _paramImplicit) <- P.try $ do
     impl <- implicitOpen
-    n <- pName
+    n <- some1 pName
     kw kwColon
     return (n, impl)
   _paramType <- parseExpressionAtoms
   implicitClose _paramImplicit
-  return FunctionParameter {..}
+  return FunctionParameters {..}
   where
     pName :: ParsecS r (Maybe Symbol)
     pName =
@@ -521,7 +521,7 @@ functionParam = do
 
 function :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (Function 'Parsed)
 function = do
-  _funParameter <- functionParam
+  _funParameters <- functionParams
   kw kwRightArrow
   _funReturn <- parseExpressionAtoms
   return Function {..}
@@ -554,7 +554,7 @@ inductiveDef _inductiveBuiltin = do
   _inductiveDoc <- getJudoc
   _inductiveName <- symbol P.<?> "<type name>"
   _inductiveParameters <-
-    P.many inductiveParam
+    P.many inductiveParams
       P.<?> "<type parameter e.g. '(A : Type)'>"
   _inductiveType <-
     optional (kw kwColon >> parseExpressionAtoms)
@@ -565,12 +565,12 @@ inductiveDef _inductiveBuiltin = do
       P.<?> "<constructor definition>"
   return InductiveDef {..}
 
-inductiveParam :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameter 'Parsed)
-inductiveParam = parens $ do
-  _inductiveParameterName <- symbol
+inductiveParams :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameters 'Parsed)
+inductiveParams = parens $ do
+  _inductiveParametersNames <- some1 symbol
   kw kwColon
-  _inductiveParameterType <- parseExpressionAtoms
-  return InductiveParameter {..}
+  _inductiveParametersType <- parseExpressionAtoms
+  return InductiveParameters {..}
 
 constructorDef :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => Irrelevant (Maybe KeywordRef) -> ParsecS r (InductiveConstructorDef 'Parsed)
 constructorDef _constructorPipe = do
@@ -657,7 +657,7 @@ moduleDef = P.label "<module definition>" $ do
   _moduleKw <- kw kwModule
   _moduleDoc <- getJudoc
   _modulePath <- pmodulePath
-  _moduleParameters <- many inductiveParam
+  _moduleParameters <- many inductiveParams
   kw kwSemicolon
   _moduleBody <- P.sepEndBy statement (kw kwSemicolon)
   kw kwEnd

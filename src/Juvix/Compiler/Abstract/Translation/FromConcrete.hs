@@ -5,6 +5,7 @@ module Juvix.Compiler.Abstract.Translation.FromConcrete
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Abstract.Data.InfoTableBuilder
 import Juvix.Compiler.Abstract.Language (FunctionDef (_funDefExamples))
 import Juvix.Compiler.Abstract.Language qualified as Abstract
@@ -245,18 +246,22 @@ goFunctionClause FunctionClause {..} = do
         _clauseBody = _clauseBody'
       }
 
-goInductiveParameter ::
+goInductiveParameters ::
   (Members '[Error ScoperError, InfoTableBuilder] r) =>
-  InductiveParameter 'Scoped ->
-  Sem r Abstract.FunctionParameter
-goInductiveParameter InductiveParameter {..} = do
-  paramType' <- goExpression _inductiveParameterType
-  return
-    Abstract.FunctionParameter
-      { _paramType = paramType',
-        _paramName = Just (goSymbol _inductiveParameterName),
-        _paramImplicit = Explicit
-      }
+  InductiveParameters 'Scoped ->
+  Sem r [Abstract.FunctionParameter]
+goInductiveParameters InductiveParameters {..} = do
+  paramType' <- goExpression _inductiveParametersType
+  return $
+    map
+      ( \nm ->
+          Abstract.FunctionParameter
+            { _paramType = paramType',
+              _paramName = Just (goSymbol nm),
+              _paramImplicit = Explicit
+            }
+      )
+      (toList _inductiveParametersNames)
 
 registerBuiltinInductive ::
   (Members '[InfoTableBuilder, Error ScoperError, Builtins] r) =>
@@ -311,7 +316,7 @@ goInductive ::
   InductiveDef 'Scoped ->
   Sem r Abstract.InductiveDef
 goInductive ty@InductiveDef {..} = do
-  _inductiveParameters' <- mapM goInductiveParameter _inductiveParameters
+  _inductiveParameters' <- concatMapM goInductiveParameters _inductiveParameters
   _inductiveType' <- mapM goExpression _inductiveType
   _inductiveConstructors' <- mapM goConstructorDef _inductiveConstructors
   _inductiveExamples' <- goExamples _inductiveDoc
@@ -442,22 +447,28 @@ goUniverse = id
 
 goFunction :: (Members '[Error ScoperError, InfoTableBuilder] r) => Function 'Scoped -> Sem r Abstract.Function
 goFunction (Function l r) = do
-  _funParameter <- goFunctionParameter l
-  _funReturn <- goExpression r
-  return Abstract.Function {..}
+  params <- goFunctionParameters l
+  ret <- goExpression r
+  return $
+    Abstract.Function (head params) $
+      foldr (\param acc -> Abstract.ExpressionFunction $ Abstract.Function param acc) ret (NonEmpty.tail params)
 
-goFunctionParameter ::
+goFunctionParameters ::
   (Members '[Error ScoperError, InfoTableBuilder] r) =>
-  FunctionParameter 'Scoped ->
-  Sem r Abstract.FunctionParameter
-goFunctionParameter (FunctionParameter {..}) = do
+  FunctionParameters 'Scoped ->
+  Sem r (NonEmpty Abstract.FunctionParameter)
+goFunctionParameters (FunctionParameters {..}) = do
   _paramType' <- goExpression _paramType
-  return
-    Abstract.FunctionParameter
-      { Abstract._paramType = _paramType',
-        Abstract._paramImplicit = _paramImplicit,
-        Abstract._paramName = goSymbol <$> _paramName
-      }
+  return $
+    fmap
+      ( \param ->
+          Abstract.FunctionParameter
+            { Abstract._paramType = _paramType',
+              Abstract._paramImplicit = _paramImplicit,
+              Abstract._paramName = goSymbol <$> param
+            }
+      )
+      _paramNames
 
 goPatternApplication ::
   (Members '[Error ScoperError, InfoTableBuilder] r) =>

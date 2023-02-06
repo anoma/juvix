@@ -177,15 +177,18 @@ ppTopModulePath = case sing :: SStage s of
   SParsed -> ppCode
   SScoped -> ppCode
 
-instance (SingI s) => PrettyCode (InductiveParameter s) where
-  ppCode InductiveParameter {..} = do
-    inductiveParameterName' <- annDef _inductiveParameterName <$> ppSymbol _inductiveParameterName
-    inductiveParameterType' <- case sing :: SStage s of
-      SParsed -> ppCode _inductiveParameterType
-      SScoped -> ppCode _inductiveParameterType
-    return $ parens (inductiveParameterName' <+> kwColon <+> inductiveParameterType')
+instance (SingI s) => PrettyCode (InductiveParameters s) where
+  ppCode InductiveParameters {..} = do
+    inductiveParameterNames' <-
+      forM
+        _inductiveParametersNames
+        (\nm -> annDef nm <$> ppSymbol nm)
+    inductiveParametersType' <- case sing :: SStage s of
+      SParsed -> ppCode _inductiveParametersType
+      SScoped -> ppCode _inductiveParametersType
+    return $ parens (hsep inductiveParameterNames' <+> kwColon <+> inductiveParametersType')
 
-instance (SingI s) => PrettyCode [InductiveParameter s] where
+instance (SingI s) => PrettyCode [InductiveParameters s] where
   ppCode = fmap hsep . mapM ppCode
 
 instance PrettyCode AbsModulePath where
@@ -196,7 +199,7 @@ instance PrettyCode AbsModulePath where
 
 ppInductiveParameters ::
   (SingI s, Members '[Reader Options] r) =>
-  [InductiveParameter s] ->
+  [InductiveParameters s] ->
   Sem r (Maybe (Doc Ann))
 ppInductiveParameters ps
   | null ps = return Nothing
@@ -445,7 +448,7 @@ instance (SingI s) => PrettyCode (TypeSignature s) where
 instance (SingI s) => PrettyCode (Function s) where
   ppCode :: forall r. (Members '[Reader Options] r) => Function s -> Sem r (Doc Ann)
   ppCode Function {..} = do
-    funParameter' <- ppCode _funParameter
+    funParameter' <- ppCode _funParameters
     funReturn' <- ppRightExpression' funFixity _funReturn
     return $ funParameter' <+> kwArrowR <+> funReturn'
     where
@@ -453,14 +456,20 @@ instance (SingI s) => PrettyCode (Function s) where
         SParsed -> ppRightExpression
         SScoped -> ppRightExpression
 
-instance (SingI s) => PrettyCode (FunctionParameter s) where
-  ppCode FunctionParameter {..} = do
-    case _paramName of
-      Nothing -> ppLeftExpression' funFixity _paramType
-      Just n -> do
-        paramName' <- annDef n <$> ppSymbol n
+instance (SingI s) => PrettyCode (FunctionParameters s) where
+  ppCode FunctionParameters {..} = do
+    case _paramNames of
+      Nothing :| [] -> ppLeftExpression' funFixity _paramType
+      _ -> do
+        paramNames' <-
+          forM
+            _paramNames
+            ( \case
+                Just n -> annDef n <$> ppSymbol n
+                Nothing -> return kwWildcard
+            )
         paramType' <- ppExpression _paramType
-        return $ implicitDelim _paramImplicit (paramName' <+> kwColon <+> paramType')
+        return $ implicitDelim _paramImplicit (hsep paramNames' <+> kwColon <+> paramType')
     where
       ppLeftExpression' = case sing :: SStage s of
         SParsed -> ppLeftExpression
