@@ -15,8 +15,9 @@ data Expression = ExpressionMorphism Morphism | ExpressionObject Object
 -}
 
 -- | Represents GEB's `case-on`. `_caseOn` is the value matched on of type
--- `Dom`, `_caseLeft` has type `_caseLeftType -> _caseCodomainType` and
--- `_caseRight` has type `_caseRightType -> _caseCodomainType`.
+-- `_caseLeftType + _caseRightType`, `_caseLeft` has type `_caseLeftType ->
+-- _caseCodomainType` and `_caseRight` has type `_caseRightType ->
+-- _caseCodomainType`.
 data Case = Case
   { _caseLeftType :: Object,
     _caseRightType :: Object,
@@ -133,6 +134,15 @@ data Object
     ObjectHom Hom
   | ObjectInteger
   deriving stock (Show, Eq)
+
+instance HasAtomicity Opcode where
+  atomicity OpAdd = Atom
+  atomicity OpSub = Atom
+  atomicity OpMul = Atom
+  atomicity OpDiv = Atom
+  atomicity OpMod = Atom
+  atomicity OpEq = Atom
+  atomicity OpLt = Atom
 
 instance HasAtomicity Morphism where
   atomicity = \case

@@ -34,16 +34,21 @@ evalAndPrint ::
   Sem r ()
 evalAndPrint opts = \case
   Geb.ExpressionMorphism m -> do
-    let opts' = project opts
-    let res = Geb.eval opts' m
-    renderStdOut (Geb.ppOut opts' res)
-  Geb.ExpressionObject _ -> do
-    error gebObjNoEvalMsg
+    let opts' :: Geb.EvaluatorOptions = project opts
+        morphism' =
+          Geb.eval'
+            Geb.EvalArgs
+              { _evalOptions = opts',
+                _evalTerm = m,
+                _evalContext = Geb.emptyContext
+              }
+    case morphism' of
+      Left err -> exitJuvixError (JuvixError err)
+      Right morphism -> renderStdOut (Geb.ppOut opts' morphism)
+  Geb.ExpressionObject _ -> error gebObjNoEvalMsg
 
 gebObjNoEvalMsg :: Text
-gebObjNoEvalMsg =
-  "Geb objects cannot be evaluated. \
-  \Please try with a morphism instead."
+gebObjNoEvalMsg = "Geb objects cannot be evaluated, only morphisms."
 
 data RunEvalArgs = RunEvalArgs
   { -- | The input file
@@ -59,8 +64,14 @@ makeLenses ''RunEvalArgs
 runEval :: RunEvalArgs -> Either JuvixError Geb.Expression
 runEval RunEvalArgs {..} =
   case Geb.runParser _runEvalArgsInputFile _runEvalArgsContent of
-    Left err -> Left (JuvixError err)
     Right (Geb.ExpressionMorphism gebMorph) ->
-      Right
-        (Geb.ExpressionMorphism (Geb.eval _runEvalArgsEvaluatorOptions gebMorph))
+      Geb.ExpressionMorphism
+        <$> ( Geb.eval'
+                Geb.EvalArgs
+                  { _evalOptions = _runEvalArgsEvaluatorOptions,
+                    _evalTerm = gebMorph,
+                    _evalContext = Geb.emptyContext
+                  }
+            )
     Right (Geb.ExpressionObject _) -> Left (error @JuvixError gebObjNoEvalMsg)
+    Left err -> Left (JuvixError err)

@@ -43,11 +43,9 @@ optEvalStrategy =
     parseStrategy = \case
       "call-by-value" -> Right Geb.CallByValue
       "call-by-name" -> Right Geb.CallByName
-      "full" -> Right Geb.Full
       s -> Left $ "unrecognised evaluation strategy: " <> s
 
     customShow :: Geb.EvalStrategy -> String
     customShow = \case
-      Geb.Full -> "full"
       Geb.CallByValue -> "call-by-value"
       Geb.CallByName -> "call-by-name"

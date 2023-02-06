@@ -615,7 +615,7 @@ gebCoprod :: IsString s => s
 gebCoprod = "coprod"
 
 gebHom :: IsString s => s
-gebHom = "hom"
+gebHom = "!->"
 
 gebInteger :: IsString s => s
 gebInteger = "int"

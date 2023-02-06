@@ -9,7 +9,7 @@ import Juvix.Prelude
   applied, call-by-name evaluates arguments only when used in function body.
 -}
 
-data EvalStrategy = Full | CallByName | CallByValue
+data EvalStrategy = CallByName | CallByValue
   deriving stock (Show, Data)
 
 defaultEvalStrategy :: EvalStrategy

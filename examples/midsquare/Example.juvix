@@ -1,0 +1,21 @@
+module Example;
+  open import Stdlib.Prelude;
+
+  CAPACITY : Nat;
+  CAPACITY := 5000;
+
+  -- axiom
+    toInt : String → Nat;
+  toInt _ := 1000;
+
+  hash1 : Nat → List String → Nat;
+  hash1 n nil := n;
+  hash1 n (x :: xs) := hash1 (mod (n + toInt x) CAPACITY) xs;
+
+  hash : List String → Nat;
+  hash s := hash1 0 s;
+
+  main : IO;
+  main := printNatLn
+    (hash ("H" :: "o" :: "l" :: " a" :: nil));
+end;
