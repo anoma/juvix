@@ -507,7 +507,7 @@ functionParams :: forall r. (Members '[InfoTableBuilder, JudocStash, NameIdGen] 
 functionParams = do
   (_paramNames, _paramImplicit) <- P.try $ do
     impl <- implicitOpen
-    n <- NonEmpty.fromList <$> some pName
+    n <- some1 pName
     kw kwColon
     return (n, impl)
   _paramType <- parseExpressionAtoms
@@ -567,7 +567,7 @@ inductiveDef _inductiveBuiltin = do
 
 inductiveParams :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (InductiveParameters 'Parsed)
 inductiveParams = parens $ do
-  _inductiveParametersNames <- NonEmpty.fromList <$> some symbol
+  _inductiveParametersNames <- some1 symbol
   kw kwColon
   _inductiveParametersType <- parseExpressionAtoms
   return InductiveParameters {..}

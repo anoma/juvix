@@ -450,7 +450,7 @@ goFunction (Function l r) = do
   params <- goFunctionParameters l
   ret <- goExpression r
   return $
-    Abstract.Function (NonEmpty.head params) $
+    Abstract.Function (head params) $
       foldr (\param acc -> Abstract.ExpressionFunction $ Abstract.Function param acc) ret (NonEmpty.tail params)
 
 goFunctionParameters ::

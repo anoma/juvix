@@ -180,9 +180,9 @@ ppTopModulePath = case sing :: SStage s of
 instance (SingI s) => PrettyCode (InductiveParameters s) where
   ppCode InductiveParameters {..} = do
     inductiveParameterNames' <-
-      mapM
-        (\nm -> annDef nm <$> ppSymbol nm)
+      forM
         _inductiveParametersNames
+        (\nm -> annDef nm <$> ppSymbol nm)
     inductiveParametersType' <- case sing :: SStage s of
       SParsed -> ppCode _inductiveParametersType
       SScoped -> ppCode _inductiveParametersType
@@ -462,12 +462,12 @@ instance (SingI s) => PrettyCode (FunctionParameters s) where
       Nothing :| [] -> ppLeftExpression' funFixity _paramType
       _ -> do
         paramNames' <-
-          mapM
+          forM
+            _paramNames
             ( \case
                 Just n -> annDef n <$> ppSymbol n
                 Nothing -> return kwWildcard
             )
-            _paramNames
         paramType' <- ppExpression _paramType
         return $ implicitDelim _paramImplicit (hsep paramNames' <+> kwColon <+> paramType')
     where
