@@ -314,11 +314,7 @@ goCaseBranch ::
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.CaseBranch ->
   Sem r MatchBranch
-goCaseBranch b = do
-  pat <- fromPatternArg (b ^. Internal.caseBranchPattern)
-  let nBinders = patternBindersNum pat
-  body <- underBinders nBinders (goExpression (b ^. Internal.caseBranchExpression))
-  return (mkMatchBranch' (pure pat) body)
+goCaseBranch b = goPatternArgs (b ^. Internal.caseBranchExpression) [b ^. Internal.caseBranchPattern]
 
 underBinders :: Members '[Reader IndexTable] r => Int -> Sem r a -> Sem r a
 underBinders nBinders = local (over indexTableVarsNum (+ nBinders))
