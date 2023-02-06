@@ -176,9 +176,22 @@ goFunctionParameter :: Abstract.FunctionParameter -> Sem r FunctionParameter
 goFunctionParameter f = case f ^. Abstract.paramName of
   Just var
     | isSmallType (f ^. Abstract.paramType) ->
-        return (FunctionParameter (Just var) (f ^. Abstract.paramImplicit) (smallUniverseE (getLoc var)))
+        return
+          FunctionParameter
+            { _paramName = Just var,
+              _paramImplicit = f ^. Abstract.paramImplicit,
+              _paramType = smallUniverseE (getLoc var)
+            }
     | otherwise -> unsupported "named function arguments only for small types"
-  Nothing -> unnamedParameter <$> goType (f ^. Abstract.paramType)
+  Nothing
+    | otherwise -> do
+        _paramType <- goType (f ^. Abstract.paramType)
+        return
+          FunctionParameter
+            { _paramName = Nothing,
+              _paramImplicit = f ^. Abstract.paramImplicit,
+              _paramType
+            }
 
 goFunction :: Abstract.Function -> Sem r Function
 goFunction (Abstract.Function l r) = do

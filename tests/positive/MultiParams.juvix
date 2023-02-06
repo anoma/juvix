@@ -4,4 +4,8 @@ module MultiParams;
 
   f : {A B : Type} → (C : Type) → {D E F : Type} → Type → Type;
   f C _ := C;
+
+  g : {A B : Type} → (C : Type) → {D _ F : Type} → Type → Type;
+  g C _ := C;
+
 end;
