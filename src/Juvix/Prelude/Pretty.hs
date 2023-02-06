@@ -77,6 +77,9 @@ toAnsiText useColors
 prettyText :: (Pretty a) => a -> Text
 prettyText = Text.renderStrict . layoutPretty defaultLayoutOptions . pretty
 
+vsepHard :: Foldable f => f (Doc a) -> Doc a
+vsepHard = concatWith (\a b -> a <> hardline <> b)
+
 vsep :: (Foldable f) => f (Doc a) -> Doc a
 vsep = PP.vsep . toList
 

@@ -149,6 +149,7 @@ goExpression p e = case e of
     goExpression p l
     goExpression p r
   ExpressionLiteral {} -> return ()
+  ExpressionCase c -> goCase c
   ExpressionHole {} -> return ()
   ExpressionLambda l -> goLambda l
   ExpressionLet l -> goLet l
@@ -160,6 +161,14 @@ goExpression p e = case e of
         goClause (LambdaClause {..}) = do
           goExpression p _lambdaBody
           mapM_ (goPattern p) _lambdaParameters
+
+    goCase :: Case -> Sem r ()
+    goCase c = do
+      goExpression p (c ^. caseExpression)
+      mapM_ goBranch (c ^. caseBranches)
+
+    goBranch :: CaseBranch -> Sem r ()
+    goBranch = goExpression p . (^. caseBranchExpression)
 
     goLet :: Let -> Sem r ()
     goLet l = do

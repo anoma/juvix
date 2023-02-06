@@ -183,5 +183,10 @@ tests =
       "Nested as patterns"
       $(mkRelDir ".")
       $(mkRelFile "AsPatterns.juvix")
-      $(mkRelFile "out/AsPatterns.out")
+      $(mkRelFile "out/AsPatterns.out"),
+    PosTest
+      "Case expression"
+      $(mkRelDir ".")
+      $(mkRelFile "Case.juvix")
+      $(mkRelFile "out/Case.out")
   ]

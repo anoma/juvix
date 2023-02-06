@@ -272,6 +272,7 @@ goType e = case e of
   Abstract.ExpressionHole h -> return (ExpressionHole h)
   Abstract.ExpressionLambda {} -> unsupported "lambda in types"
   Abstract.ExpressionLet {} -> unsupported "let in types"
+  Abstract.ExpressionCase {} -> unsupported "case in types"
 
 goLambda :: forall r. (Members '[NameIdGen] r) => Abstract.Lambda -> Sem r Lambda
 goLambda (Abstract.Lambda cl') = Lambda <$> mapM goClause cl'
@@ -322,6 +323,20 @@ goExpression e = case e of
   Abstract.ExpressionLiteral l -> return (ExpressionLiteral l)
   Abstract.ExpressionHole h -> return (ExpressionHole h)
   Abstract.ExpressionLet l -> ExpressionLet <$> goLet l
+  Abstract.ExpressionCase c -> ExpressionCase <$> goCase c
+
+goCase :: Members '[NameIdGen] r => Abstract.Case -> Sem r Case
+goCase c = do
+  _caseExpression <- goExpression (c ^. Abstract.caseExpression)
+  _caseBranches <- mapM goCaseBranch (c ^. Abstract.caseBranches)
+  let _caseParens = c ^. Abstract.caseParens
+  return Case {..}
+
+goCaseBranch :: Members '[NameIdGen] r => Abstract.CaseBranch -> Sem r CaseBranch
+goCaseBranch b = do
+  _caseBranchPattern <- goPatternArg (b ^. Abstract.caseBranchPattern)
+  _caseBranchExpression <- goExpression (b ^. Abstract.caseBranchExpression)
+  return CaseBranch {..}
 
 goLetClause :: (Members '[NameIdGen] r) => Abstract.LetClause -> Sem r LetClause
 goLetClause = \case
@@ -396,6 +411,7 @@ viewConstructorType = \case
   Abstract.ExpressionLiteral {} -> unsupported "literal in a type"
   Abstract.ExpressionLambda {} -> unsupported "lambda in a constructor type"
   Abstract.ExpressionLet {} -> unsupported "let in a constructor type"
+  Abstract.ExpressionCase {} -> unsupported "case in a constructor type"
   where
     viewFunctionType :: Abstract.Function -> Sem r (NonEmpty Expression, Expression)
     viewFunctionType (Abstract.Function p r) = do

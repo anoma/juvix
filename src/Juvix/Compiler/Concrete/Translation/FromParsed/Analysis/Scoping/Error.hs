@@ -38,10 +38,12 @@ data ScoperError
   | ErrAliasBinderPattern AliasBinderPattern
   | ErrImplicitPatternLeftApplication ImplicitPatternLeftApplication
   | ErrConstructorExpectedLeftApplication ConstructorExpectedLeftApplication
+  | ErrCaseBranchImplicitPattern CaseBranchImplicitPattern
   deriving stock (Show)
 
 instance ToGenericError ScoperError where
   genericError = \case
+    ErrCaseBranchImplicitPattern e -> genericError e
     ErrDuplicateFunctionClause e -> genericError e
     ErrInfixParser e -> genericError e
     ErrAppLeftImplicit e -> genericError e

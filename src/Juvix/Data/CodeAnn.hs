@@ -59,6 +59,9 @@ keyword = annotate AnnKeyword . pretty
 kwLambda :: Doc Ann
 kwLambda = keyword Str.lambdaUnicode
 
+kwCase :: Doc Ann
+kwCase = keyword Str.case_
+
 kwInclude :: Doc Ann
 kwInclude = keyword Str.include
 

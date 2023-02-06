@@ -364,6 +364,7 @@ expressionAtom =
       <|> (AtomIdentifier <$> name)
       <|> (AtomUniverse <$> universe)
       <|> (AtomLambda <$> lambda)
+      <|> (AtomCase <$> case_)
       <|> (AtomFunction <$> function)
       <|> (AtomLetBlock <$> letBlock)
       <|> (AtomFunArrow <$ kw kwRightArrow)
@@ -416,6 +417,22 @@ letBlock = do
   kw kwIn
   _letExpression <- parseExpressionAtoms
   return LetBlock {..}
+
+caseBranch :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (CaseBranch 'Parsed)
+caseBranch = do
+  _caseBranchPipe <- kw kwPipe
+  _caseBranchPattern <- parsePatternAtoms
+  kw kwAssign
+  _caseBranchExpression <- parseExpressionAtoms
+  return CaseBranch {..}
+
+case_ :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (Case 'Parsed)
+case_ = do
+  _caseKw <- kw kwCase
+  _caseExpression <- parseExpressionAtoms
+  _caseBranches <- some1 caseBranch
+  let _caseParens = False
+  return Case {..}
 
 --------------------------------------------------------------------------------
 -- Universe expression
@@ -604,6 +621,11 @@ patternAtom = patternAtom' False
 
 patternAtom' :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => Bool -> ParsecS r (PatternAtom 'Parsed)
 patternAtom' nested = P.label "<pattern>" $ patternAtomNamed nested <|> patternAtomAnon
+
+parsePatternAtoms :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (PatternAtoms 'Parsed)
+parsePatternAtoms = do
+  (_patternAtoms, _patternAtomsLoc) <- interval (P.some patternAtom)
+  return PatternAtoms {..}
 
 parsePatternAtomsNested :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (PatternAtoms 'Parsed)
 parsePatternAtomsNested = do

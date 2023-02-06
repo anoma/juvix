@@ -96,6 +96,7 @@ mkConcreteType = fmap ConcreteType . go
         return (ExpressionApplication (Application l' r' i))
       ExpressionUniverse {} -> return t
       ExpressionLet l -> ExpressionLet <$> goLet l
+      ExpressionCase l -> ExpressionCase <$> goCase l
       ExpressionSimpleLambda (SimpleLambda v ty b) -> do
         b' <- go b
         ty' <- go ty
@@ -124,6 +125,14 @@ mkConcreteType = fmap ConcreteType . go
       guard (isNothing m)
       e' <- go e
       return (FunctionParameter m i e')
+
+    goCase :: Case -> Maybe Case
+    goCase =
+      traverseOf (caseBranches . each) goCaseBranch
+        >=> traverseOf caseExpression go
+
+    goCaseBranch :: CaseBranch -> Maybe CaseBranch
+    goCaseBranch = traverseOf caseBranchExpression go
 
     goLet :: Let -> Maybe Let
     goLet =
@@ -186,6 +195,7 @@ mkPolyType = fmap PolyType . go
       ExpressionHole {} -> Nothing
       ExpressionLiteral {} -> return t
       ExpressionLet {} -> error "Lets are not supported in the old backend"
+      ExpressionCase {} -> error "Cases are not supported in the old backend"
       ExpressionIden IdenFunction {} -> return t
       ExpressionIden IdenInductive {} -> return t
       ExpressionIden IdenConstructor {} -> return t
@@ -219,9 +229,21 @@ instance HasExpressions Expression where
     ExpressionSimpleLambda l -> ExpressionSimpleLambda <$> leafExpressions f l
     ExpressionLambda l -> ExpressionLambda <$> leafExpressions f l
     ExpressionLet l -> ExpressionLet <$> leafExpressions f l
+    ExpressionCase c -> ExpressionCase <$> leafExpressions f c
     ExpressionLiteral {} -> f e
     ExpressionUniverse {} -> f e
     ExpressionHole {} -> f e
+
+instance HasExpressions CaseBranch where
+  leafExpressions f = traverseOf caseBranchExpression (leafExpressions f)
+
+instance HasExpressions Case where
+  leafExpressions f l = do
+    _caseBranches :: NonEmpty CaseBranch <- traverse (leafExpressions f) (l ^. caseBranches)
+    _caseExpression <- leafExpressions f (l ^. caseExpression)
+    pure Case {..}
+    where
+      _caseParens = l ^. caseParens
 
 instance HasExpressions LetClause where
   leafExpressions f = \case
@@ -351,6 +373,9 @@ substituteIndParams = substitutionE . HashMap.fromList . map (first (^. inductiv
 
 typeAbstraction :: IsImplicit -> Name -> FunctionParameter
 typeAbstraction i var = FunctionParameter (Just var) i (ExpressionUniverse (SmallUniverse (getLoc var)))
+
+mkFunction :: Expression -> Expression -> Function
+mkFunction a = Function (unnamedParameter a)
 
 unnamedParameter :: Expression -> FunctionParameter
 unnamedParameter ty =

@@ -71,7 +71,16 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
       ExpressionSimpleLambda l -> helperSimpleLambda l
       ExpressionLambda l -> helperLambda l
       ExpressionLet l -> helperLet l
+      ExpressionCase l -> helperCase l
       where
+        helperCase :: Case -> Sem r ()
+        helperCase l = do
+          helper inside (l ^. caseExpression)
+          mapM_ helperCaseBranch (l ^. caseBranches)
+
+        helperCaseBranch :: CaseBranch -> Sem r ()
+        helperCaseBranch b = helper inside (b ^. caseBranchExpression)
+
         helperLet :: Let -> Sem r ()
         helperLet l = do
           helper inside (l ^. letExpression)

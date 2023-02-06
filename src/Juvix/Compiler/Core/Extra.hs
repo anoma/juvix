@@ -198,3 +198,12 @@ argumentInfoFromBinder i =
       _argumentType = i ^. binderType,
       _argumentIsImplicit = Explicit
     }
+
+patternBinders :: SimpleFold Pattern PatternBinder
+patternBinders f p = case p of
+  PatWildcard {} -> pure p
+  PatConstr c -> traverseOf patternConstrArgs (traverse (patternBinders f)) c $> p
+  PatBinder b -> f b $> p
+
+patternBindersNum :: Pattern -> Int
+patternBindersNum = length . (^.. patternBinders)

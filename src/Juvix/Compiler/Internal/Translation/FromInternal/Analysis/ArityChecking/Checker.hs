@@ -79,7 +79,7 @@ checkConstructor c = do
 
 -- | check the arity of some ty : Type
 checkType :: (Members '[Reader LocalVars, Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => Expression -> Sem r Expression
-checkType = checkExpression ArityUnit -- TODO ArityUnit or ArityUnknown???
+checkType = checkExpression ArityUnit
 
 checkAxiom :: (Members '[Reader InfoTable, NameIdGen, Error ArityCheckerError] r) => AxiomDef -> Sem r AxiomDef
 checkAxiom a = do
@@ -157,6 +157,7 @@ guessArity = \case
   ExpressionSimpleLambda {} -> simplelambda
   ExpressionLambda l -> return (arityLambda l)
   ExpressionLet l -> arityLet l
+  ExpressionCase l -> arityCase l
   where
     idenHelper :: Iden -> Sem r Arity
     idenHelper i = case i of
@@ -190,6 +191,17 @@ arityLiteral = ArityUnit
 
 arityUniverse :: Arity
 arityUniverse = ArityUnit
+
+-- | All branches should have the same arity. If they are all the same, we
+-- return that, otherwise we return ArityUnknown. Probably something better can
+-- be done.
+arityCase :: Members '[Reader InfoTable] r => Case -> Sem r Arity
+arityCase c = do
+  aris <- mapM (guessArity . (^. caseBranchExpression)) (c ^. caseBranches)
+  return
+    if
+        | allSame aris -> head aris
+        | otherwise -> ArityUnknown
 
 -- | Lambdas can only have explicit arguments. Since we do not have dependent
 -- types, it is ok to (partially) infer the arity of the lambda from the clause
@@ -334,6 +346,21 @@ checkConstructorApp ca@(ConstructorApp c ps) = do
   ps' <- zipWithM checkPattern arities ps
   return (ConstructorApp c ps')
 
+checkCase ::
+  forall r.
+  Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r =>
+  Arity ->
+  Case ->
+  Sem r Case
+checkCase ari l = do
+  _caseBranches <- mapM checkCaseBranch (l ^. caseBranches)
+  _caseExpression <- checkExpression ArityUnit (l ^. caseExpression)
+  let _caseParens = l ^. caseParens
+  return Case {..}
+  where
+    checkCaseBranch :: CaseBranch -> Sem r CaseBranch
+    checkCaseBranch = traverseOf caseBranchExpression (checkExpression ari)
+
 checkLet ::
   forall r.
   (Members '[Error ArityCheckerError, Reader LocalVars, Reader InfoTable, NameIdGen] r) =>
@@ -406,6 +433,7 @@ typeArity = go
       ExpressionFunction f -> ArityFunction (goFun f)
       ExpressionHole {} -> ArityUnknown
       ExpressionLambda {} -> ArityUnknown
+      ExpressionCase {} -> ArityUnknown
       ExpressionUniverse {} -> ArityUnit
       ExpressionSimpleLambda {} -> simplelambda
       ExpressionLet l -> goLet l
@@ -458,6 +486,7 @@ checkExpression hintArity expr = case expr of
   ExpressionSimpleLambda {} -> simplelambda
   ExpressionLambda l -> ExpressionLambda <$> checkLambda hintArity l
   ExpressionLet l -> ExpressionLet <$> checkLet hintArity l
+  ExpressionCase l -> ExpressionCase <$> checkCase hintArity l
   where
     goApp :: Application -> Sem r Expression
     goApp = uncurry appHelper . second toList . unfoldApplication'
@@ -473,6 +502,9 @@ checkExpression hintArity expr = case expr of
           l' <- checkLambda ArityUnknown l
           (ExpressionLambda l',) <$> helper (getLoc l') (arityLambda l')
         ExpressionSimpleLambda {} -> simplelambda
+        ExpressionCase l -> do
+          l' <- checkCase ArityUnknown l
+          (ExpressionCase l',) <$> (arityCase l' >>= helper (getLoc l'))
         ExpressionLet l -> do
           l' <- checkLet ArityUnknown l
           (ExpressionLet l',) <$> (arityLet l' >>= helper (getLoc l'))

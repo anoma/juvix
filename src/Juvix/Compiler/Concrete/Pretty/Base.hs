@@ -492,6 +492,18 @@ instance (SingI s) => PrettyCode (LambdaClause s) where
     lambdaBody' <- ppExpression _lambdaBody
     return $ lambdaParameters' <+> kwAssign <+> lambdaBody'
 
+instance (SingI s) => PrettyCode (CaseBranch s) where
+  ppCode CaseBranch {..} = do
+    pat <- ppPatternParensType _caseBranchPattern
+    e <- ppExpression _caseBranchExpression
+    return $ kwPipe <+> pat <+> kwAssign <+> e
+
+instance (SingI s) => PrettyCode (Case s) where
+  ppCode Case {..} = do
+    exp <- ppExpression _caseExpression
+    branches <- indent' . vsepHard <$> mapM ppCode _caseBranches
+    return $ parensIf _caseParens (kwCase <+> exp <> line <> branches)
+
 instance (SingI s) => PrettyCode (Lambda s) where
   ppCode Lambda {..} = do
     lambdaClauses' <- bracesIndent <$> ppPipeBlock _lambdaClauses
@@ -550,8 +562,8 @@ instance PrettyCode PatternApp where
     r' <- ppRightExpression appFixity r
     return $ l' <+> r'
 
-ppPatternParenType :: forall s r. (SingI s, Member (Reader Options) r) => PatternParensType s -> Sem r (Doc Ann)
-ppPatternParenType p = case sing :: SStage s of
+ppPatternParensType :: forall s r. (SingI s, Member (Reader Options) r) => PatternParensType s -> Sem r (Doc Ann)
+ppPatternParensType p = case sing :: SStage s of
   SParsed -> ppCode p
   SScoped -> ppCode p
 
@@ -568,8 +580,8 @@ instance (SingI s) => PrettyCode (PatternAtom s) where
       SScoped -> ppCode n
     PatternAtomWildcard {} -> return kwWildcard
     PatternAtomEmpty {} -> return $ parens mempty
-    PatternAtomParens p -> parens <$> ppPatternParenType p
-    PatternAtomBraces p -> braces <$> ppPatternParenType p
+    PatternAtomParens p -> parens <$> ppPatternParensType p
+    PatternAtomBraces p -> braces <$> ppPatternParensType p
     PatternAtomAt p -> case sing :: SStage s of
       SParsed -> ppCode p
       SScoped -> ppCode p
@@ -669,6 +681,7 @@ instance PrettyCode Expression where
     ExpressionUniverse u -> ppCode u
     ExpressionLiteral l -> ppCode l
     ExpressionFunction f -> ppCode f
+    ExpressionCase c -> ppCode c
 
 instance PrettyCode Pattern where
   ppCode :: forall r. (Members '[Reader Options] r) => Pattern -> Sem r (Doc Ann)
@@ -748,6 +761,7 @@ instance (SingI s) => PrettyCode (ExpressionAtom s) where
     AtomIdentifier n -> ppName n
     AtomLambda l -> ppCode l
     AtomLetBlock lb -> ppCode lb
+    AtomCase c -> ppCode c
     AtomUniverse uni -> ppCode uni
     AtomFunction fun -> ppCode fun
     AtomLiteral lit -> ppCode lit

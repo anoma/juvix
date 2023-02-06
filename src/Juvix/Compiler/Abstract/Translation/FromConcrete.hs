@@ -354,6 +354,7 @@ goExpression = \case
   ExpressionIdentifier nt -> return (goIden nt)
   ExpressionParensIdentifier nt -> return (goIden nt)
   ExpressionApplication a -> Abstract.ExpressionApplication <$> goApplication a
+  ExpressionCase a -> Abstract.ExpressionCase <$> goCase a
   ExpressionInfixApplication ia -> Abstract.ExpressionApplication <$> goInfix ia
   ExpressionPostfixApplication pa -> Abstract.ExpressionApplication <$> goPostfix pa
   ExpressionLiteral l -> return (Abstract.ExpressionLiteral l)
@@ -413,6 +414,19 @@ goExpression = \case
           l'' = Abstract.ExpressionApplication (Abstract.Application op' l' Explicit)
       r' <- goExpression r
       return (Abstract.Application l'' r' Explicit)
+
+goCase :: forall r. (Members '[Error ScoperError, InfoTableBuilder] r) => Case 'Scoped -> Sem r Abstract.Case
+goCase c = do
+  _caseExpression <- goExpression (c ^. caseExpression)
+  _caseBranches <- mapM goBranch (c ^. caseBranches)
+  let _caseParens = c ^. caseParens
+  return Abstract.Case {..}
+  where
+    goBranch :: CaseBranch 'Scoped -> Sem r Abstract.CaseBranch
+    goBranch b = do
+      _caseBranchPattern <- goPatternArg (b ^. caseBranchPattern)
+      _caseBranchExpression <- goExpression (b ^. caseBranchExpression)
+      return Abstract.CaseBranch {..}
 
 goLambda :: forall r. (Members '[Error ScoperError, InfoTableBuilder] r) => Lambda 'Scoped -> Sem r Abstract.Lambda
 goLambda l = Abstract.Lambda <$> mapM goClause (l ^. lambdaClauses)

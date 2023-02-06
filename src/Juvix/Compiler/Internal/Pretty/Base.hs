@@ -71,6 +71,19 @@ instance PrettyCode Expression where
     ExpressionSimpleLambda l -> ppCode l
     ExpressionLambda l -> ppCode l
     ExpressionLet l -> ppCode l
+    ExpressionCase c -> ppCode c
+
+instance PrettyCode CaseBranch where
+  ppCode CaseBranch {..} = do
+    pat <- ppCode _caseBranchPattern
+    e <- ppCode _caseBranchExpression
+    return $ kwPipe <+> pat <+> kwAssign <+> e
+
+instance PrettyCode Case where
+  ppCode Case {..} = do
+    exp <- ppCode _caseExpression
+    branches <- indent' . vsep <$> mapM ppCode _caseBranches
+    return $ parensIf _caseParens (kwCase <+> exp <> line <> branches)
 
 instance PrettyCode Let where
   ppCode l = do

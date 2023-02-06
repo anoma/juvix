@@ -196,9 +196,6 @@ kwFst = keyword Str.gebFst
 kwSnd :: Doc Ann
 kwSnd = keyword Str.gebSnd
 
-kwCase :: Doc Ann
-kwCase = keyword Str.gebCase
-
 kwPair :: Doc Ann
 kwPair = keyword Str.gebPair
 

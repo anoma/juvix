@@ -78,6 +78,7 @@ genClosureExpression funArgTyps = \case
   Micro.ExpressionUniverse {} -> impossible
   Micro.ExpressionSimpleLambda {} -> impossible
   Micro.ExpressionLambda {} -> impossible
+  Micro.ExpressionCase {} -> impossible
   where
     exprApplication :: Micro.Application -> Sem r [ClosureInfo]
     exprApplication a = do

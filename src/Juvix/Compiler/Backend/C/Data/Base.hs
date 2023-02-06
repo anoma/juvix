@@ -96,6 +96,7 @@ goType t = case t ^. Internal.unpolyType of
   Internal.ExpressionSimpleLambda {} -> impossible
   Internal.ExpressionLambda {} -> impossible
   Internal.ExpressionLet {} -> impossible
+  Internal.ExpressionCase {} -> impossible
   where
     getInternalType :: Internal.Iden -> Sem r CDeclType
     getInternalType = \case

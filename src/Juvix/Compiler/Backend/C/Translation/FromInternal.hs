@@ -385,6 +385,7 @@ goExpression = \case
   Internal.ExpressionSimpleLambda {} -> impossible
   Internal.ExpressionLambda {} -> impossible
   Internal.ExpressionLet {} -> impossible
+  Internal.ExpressionCase {} -> impossible
 
 goIden :: (Members '[Reader PatternInfoTable, Builtins, Reader Internal.InfoTable] r) => Internal.Iden -> Sem r Expression
 goIden = \case

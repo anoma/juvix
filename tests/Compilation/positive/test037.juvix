@@ -2,22 +2,19 @@ module test037;
   open import Stdlib.Prelude;
 
   f : List ((Nat → Nat) → Nat → Nat) → Nat;
-  f l := case
-    l
-    λ {
-        (x :: _) := x
-        | nil := id
-      }
+  f l := (case l
+        | x :: _ := x
+        | nil := id)
     (let
         y : Nat → Nat;
         y := id;
-      in (let
+       in (let
           z : (Nat → Nat) → Nat → Nat;
           z := id;
-        in case l λ {   (_ :: _) := id } z)
+         in (case l   | _ :: _ := id) z)
       y)
     7;
 
   main : IO;
-  main := printNatLn (f (λ { x y := x y + 2 } :: nil));
+  main := printNatLn (f (λ {   | x y := x y + 2 } :: nil));
 end;

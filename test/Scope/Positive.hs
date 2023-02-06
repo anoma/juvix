@@ -220,5 +220,9 @@ tests =
     PosTest
       "Type signature with body"
       $(mkRelDir ".")
-      $(mkRelFile "SignatureWithBody.juvix")
+      $(mkRelFile "SignatureWithBody.juvix"),
+    PosTest
+      "Case expressions"
+      $(mkRelDir "Internal")
+      $(mkRelFile "Case.juvix")
   ]

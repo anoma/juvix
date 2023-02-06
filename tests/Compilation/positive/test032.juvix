@@ -7,9 +7,8 @@ open import Stdlib.Data.Nat.Ord;
 split : {A : Type} → Nat → List A → List A × List A;
 split zero xs := (nil, xs);
 split (suc n) nil := (nil, nil);
-split (suc n) (x :: xs) := case (split n xs) λ{
-  (l1, l2) := (x :: l1, l2)
-};
+split (suc n) (x :: xs) := case split n xs
+  | l1, l2 := (x :: l1, l2);
 
 terminating
 merge' : List Nat → List Nat → List Nat;
@@ -23,9 +22,9 @@ sort xs :=
   let n : Nat; n := length xs in
   if (n <= 1)
     xs
-    (case (split (div n 2) xs) λ{
-      (l1, l2) := merge' (sort l1) (sort l2)
-    });
+    (case split (div n 2) xs
+      | l1, l2 := merge' (sort l1) (sort l2)
+    );
 
 terminating
 uniq : List Nat → List Nat;

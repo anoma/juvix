@@ -85,6 +85,12 @@ mkMatch i vs bs = NMatch (Match i vs bs)
 mkMatch' :: NonEmpty Node -> [MatchBranch] -> Node
 mkMatch' = mkMatch Info.empty
 
+mkMatchBranch :: Info -> NonEmpty Pattern -> Node -> MatchBranch
+mkMatchBranch = MatchBranch
+
+mkMatchBranch' :: NonEmpty Pattern -> Node -> MatchBranch
+mkMatchBranch' = MatchBranch mempty
+
 mkIf :: Info -> Symbol -> Node -> Node -> Node -> Node
 mkIf i sym v b1 b2 = mkCase i sym v [br] (Just b2)
   where

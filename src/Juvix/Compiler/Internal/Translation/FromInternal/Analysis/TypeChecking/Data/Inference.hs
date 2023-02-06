@@ -110,6 +110,8 @@ strongNormalize' = go
       -- NOTE: we cannot always normalize let expressions because we do not have closures.
       -- We give up
       ExpressionLet {} -> error "normalization of let expressions is not supported yet"
+      -- TODO it should normalize like an applied lambda
+      ExpressionCase {} -> error "normalization of case expressions is not supported yet"
 
     goClause :: LambdaClause -> Sem r LambdaClause
     goClause (LambdaClause p b) = do
@@ -178,6 +180,7 @@ weakNormalize' = go
       ExpressionSimpleLambda {} -> return e
       ExpressionLambda {} -> return e
       ExpressionLet {} -> return e
+      ExpressionCase {} -> error "todo"
     goIden :: Iden -> Sem r Expression
     goIden i = case i of
       IdenFunction f -> do
@@ -266,6 +269,8 @@ re = reinterpret $ \case
                 (_, ExpressionUniverse {}) -> err
                 (ExpressionLambda {}, _) -> err
                 (_, ExpressionLambda {}) -> err
+                (_, ExpressionCase {}) -> error "not implemented"
+                (ExpressionCase {}, _) -> error "not implemented"
                 (_, ExpressionLet {}) -> error "not implemented"
                 (ExpressionLet {}, _) -> error "not implemented"
                 (ExpressionLiteral l, ExpressionLiteral l') -> check (l == l')

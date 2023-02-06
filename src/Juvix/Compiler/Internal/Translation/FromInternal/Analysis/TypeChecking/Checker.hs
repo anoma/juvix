@@ -504,6 +504,7 @@ inferExpression' hint e = case e of
   ExpressionSimpleLambda l -> goSimpleLambda l
   ExpressionLambda l -> goLambda l
   ExpressionLet l -> goLet l
+  ExpressionCase l -> goCase l
   where
     goLet :: Let -> Sem r TypedExpression
     goLet l = do
@@ -545,6 +546,30 @@ inferExpression' hint e = case e of
         TypedExpression
           { _typedType = ExpressionFunction fun,
             _typedExpression = ExpressionSimpleLambda (SimpleLambda v ty' (b' ^. typedExpression))
+          }
+
+    goCase :: Case -> Sem r TypedExpression
+    goCase c = do
+      ty <- case hint of
+        Nothing -> ExpressionHole <$> freshHole (getLoc c)
+        Just hi -> return hi
+      typedCaseExpression <- inferExpression' Nothing (c ^. caseExpression)
+      let _caseExpression = typedCaseExpression ^. typedExpression
+          goBranch :: CaseBranch -> Sem r CaseBranch
+          goBranch b =
+            traverseOf
+              caseBranchExpression
+              (checkClause funty (pure (b ^. caseBranchPattern)))
+              b
+            where
+              funty :: Expression
+              funty = ExpressionFunction (mkFunction (typedCaseExpression ^. typedType) ty)
+      _caseBranches <- mapM goBranch (c ^. caseBranches)
+      let _caseParens = c ^. caseParens
+      return
+        TypedExpression
+          { _typedType = ty,
+            _typedExpression = ExpressionCase Case {..}
           }
 
     goLambda :: Lambda -> Sem r TypedExpression

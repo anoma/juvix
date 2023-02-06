@@ -26,12 +26,11 @@ terminating
 f : Tree → Nat;
 f leaf := 1;
 f (node l r) :=
-  case (g l, g r) λ{
-    (leaf, leaf) := 3
+  case g l, g r
+    | (leaf, leaf) := 3
     | (node l r, leaf) := (f l + f r) * 2
     | (node l1 r1, node l2 r2) := (f l1 + f r1) * (f l2 + f r2)
-    | (_, node l r) := f l + f r
-  };
+    | (_, node l r) := f l + f r;
 
 g leaf := leaf;
 g (node (node _ _) r) := r;

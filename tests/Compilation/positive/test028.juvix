@@ -13,9 +13,8 @@ force f := f unit;
 
 terminating
 sfilter : (Nat → Bool) → (Unit → Stream) → Unit → Stream;
-sfilter p s unit := case (force s) λ{
-  (cons h t) := if (p h) (cons h (sfilter p t)) (force (sfilter p t))
-};
+sfilter p s unit := case force s
+  | cons h t := if (p h) (cons h (sfilter p t)) (force (sfilter p t));
 
 shead : Stream → Nat;
 shead (cons h _) := h;
@@ -36,9 +35,8 @@ indivisible n x := not (mod x n == 0);
 
 terminating
 eratostenes : (Unit → Stream) → Unit → Stream;
-eratostenes s unit := case (force s) λ{
-  (cons n t) := cons n (eratostenes (sfilter (indivisible n) t))
-};
+eratostenes s unit := case force s
+  | cons n t := cons n (eratostenes (sfilter (indivisible n) t));
 
 primes : Unit → Stream;
 primes := eratostenes (numbers 2);
