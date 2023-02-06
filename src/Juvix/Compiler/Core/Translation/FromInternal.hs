@@ -304,7 +304,24 @@ goCase ::
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.Case ->
   Sem r Node
-goCase l = undefined
+goCase c = do
+  expr <- goExpression (c ^. Internal.caseExpression)
+  branches <- toList <$> mapM goCaseBranch (c ^. Internal.caseBranches)
+  return (mkMatch' (pure expr) branches)
+
+goCaseBranch ::
+  forall r.
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  Internal.CaseBranch ->
+  Sem r MatchBranch
+goCaseBranch b = do
+  pat <- fromPatternArg (b ^. Internal.caseBranchPattern)
+  let nBinders = patternBindersNum pat
+  body <- underBinders nBinders (goExpression (b ^. Internal.caseBranchExpression))
+  return (mkMatchBranch' (pure pat) body)
+
+underBinders :: Members '[Reader IndexTable] r => Int -> Sem r a -> Sem r a
+underBinders nBinders = local (over indexTableVarsNum (+ nBinders))
 
 goLambda ::
   forall r.
@@ -312,16 +329,23 @@ goLambda ::
   Internal.Lambda ->
   Sem r Node
 goLambda l = do
-  ms <-
-    local
-      (over indexTableVarsNum (+ nPatterns))
-      (mapM goLambdaClause (l ^. Internal.lambdaClauses))
+  ms <- underBinders nPatterns (mapM goLambdaClause (l ^. Internal.lambdaClauses))
   let values = take nPatterns (mkVar' <$> [0 ..])
       match = mkMatch' (fromList values) (toList ms)
   return $ foldr (\_ n -> mkLambda' n) match values
   where
     nPatterns :: Int
     nPatterns = length (l ^. Internal.lambdaClauses . _head1 . Internal.lambdaPatterns)
+
+goLambdaClause ::
+  forall r.
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  Internal.LambdaClause ->
+  Sem r MatchBranch
+goLambdaClause clause = goPatternArgs (clause ^. Internal.lambdaBody) ps
+  where
+    ps :: [Internal.PatternArg]
+    ps = toList (clause ^. Internal.lambdaPatterns)
 
 goLet ::
   forall r.
@@ -483,7 +507,7 @@ fromPatternArg ::
   (Members '[InfoTableBuilder, Reader Internal.InfoTable] r) =>
   Internal.PatternArg ->
   Sem r Pattern
-fromPatternArg pa = case (pa ^. Internal.patternArgName) of
+fromPatternArg pa = case pa ^. Internal.patternArgName of
   Just pan -> wrapAsPattern pan <$> subPat
   Nothing -> subPat
   where
@@ -586,16 +610,6 @@ goFunctionClause clause = goPatternArgs (clause ^. Internal.clauseBody) internal
   where
     internalPatternArgs :: [Internal.PatternArg]
     internalPatternArgs = clause ^. Internal.clausePatterns
-
-goLambdaClause ::
-  forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
-  Internal.LambdaClause ->
-  Sem r MatchBranch
-goLambdaClause clause = goPatternArgs (clause ^. Internal.lambdaBody) ps
-  where
-    ps :: [Internal.PatternArg]
-    ps = toList (clause ^. Internal.lambdaPatterns)
 
 goExpression ::
   forall r.
