@@ -174,8 +174,8 @@ asmToMiniC opts = Asm.toReg opts >=> regToMiniC (opts ^. Asm.optLimits) . Reg.fr
 regToMiniC :: Backend.Limits -> Reg.InfoTable -> Sem r C.MiniCResult
 regToMiniC lims = return . C.fromReg lims
 
-coreToGeb :: Core.InfoTable -> Sem r Geb.Result
-coreToGeb = return . Geb.toResult . Geb.fromCore . Core.toGeb
+coreToGeb :: Geb.ResultSpec -> Core.InfoTable -> Sem r Geb.Result
+coreToGeb spec = return . uncurry (Geb.toResult spec) . Geb.fromCore . Core.toGeb
 
 --------------------------------------------------------------------------------
 -- Run pipeline

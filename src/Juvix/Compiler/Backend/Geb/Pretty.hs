@@ -6,10 +6,10 @@ module Juvix.Compiler.Backend.Geb.Pretty
   )
 where
 
+import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Pretty.Base
 import Juvix.Compiler.Backend.Geb.Pretty.Options
 import Juvix.Data.PPOutput
-import Juvix.Prelude
 import Prettyprinter.Render.Terminal qualified as Ansi
 
 ppOutDefault :: (HasAtomicity c, PrettyCode c) => c -> AnsiText
@@ -26,3 +26,7 @@ ppTrace = ppTrace' traceOptions
 
 ppPrint :: (HasAtomicity c, PrettyCode c) => c -> Text
 ppPrint = show . ppOutDefault
+
+ppPrintLisp :: Text -> Text -> Morphism -> Object -> Text
+ppPrintLisp packageName entryName morph obj =
+  show $ AnsiText $ PPOutput $ docLisp defaultOptions packageName entryName morph obj

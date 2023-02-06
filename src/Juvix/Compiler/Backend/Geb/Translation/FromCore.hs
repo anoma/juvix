@@ -53,12 +53,14 @@ withSymbol sym a = do
           . over envShiftLevels (0 :)
   local modif a
 
-fromCore :: Core.InfoTable -> Morphism
+fromCore :: Core.InfoTable -> (Morphism, Object)
 fromCore tab = case tab ^. Core.infoMain of
   Just sym ->
     let node = fromJust $ HashMap.lookup sym (tab ^. Core.identContext)
         idents = HashMap.delete sym (tab ^. Core.infoIdentifiers)
-     in run (runReader emptyEnv (goIdents node (HashMap.elems idents)))
+        morph = run (runReader emptyEnv (goIdents node (HashMap.elems idents)))
+        obj = convertType (Info.getNodeType node)
+     in (morph, obj)
   Nothing ->
     error "no main function"
   where
