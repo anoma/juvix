@@ -1,5 +1,6 @@
 module Juvix.Compiler.Core.Data.BinderList where
 
+import Control.DeepSeq
 import Juvix.Compiler.Core.Language hiding (cons, drop, lookup, uncons)
 import Juvix.Prelude qualified as Prelude
 
@@ -8,6 +9,9 @@ data BinderList a = BinderList
   { _blLength :: Int,
     _blMap :: [a]
   }
+  deriving stock (Generic)
+
+instance NFData a => NFData (BinderList a)
 
 makeLenses ''BinderList
 

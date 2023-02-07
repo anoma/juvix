@@ -4,6 +4,7 @@ module Juvix.Compiler.Backend.Geb.Language
   )
 where
 
+import Control.DeepSeq
 import Juvix.Prelude hiding (First, Product)
 
 data Expression = ExpressionMorphism Morphism | ExpressionObject Object
@@ -26,7 +27,9 @@ data Case = Case
     _caseLeft :: Morphism,
     _caseRight :: Morphism
   }
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+
+instance NFData Case
 
 data Pair = Pair
   { _pairLeftType :: Object,
@@ -34,28 +37,36 @@ data Pair = Pair
     _pairLeft :: Morphism,
     _pairRight :: Morphism
   }
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+
+instance NFData Pair
 
 data First = First
   { _firstLeftType :: Object,
     _firstRightType :: Object,
     _firstValue :: Morphism
   }
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+
+instance NFData First
 
 data Second = Second
   { _secondLeftType :: Object,
     _secondRightType :: Object,
     _secondValue :: Morphism
   }
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+
+instance NFData Second
 
 data Lambda = Lambda
   { _lambdaVarType :: Object,
     _lambdaBodyType :: Object,
     _lambdaBody :: Morphism
   }
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+
+instance NFData Lambda
 
 data Application = Application
   { _applicationDomainType :: Object,
@@ -63,9 +74,13 @@ data Application = Application
     _applicationLeft :: Morphism,
     _applicationRight :: Morphism
   }
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
 
-newtype Var = Var {_varIndex :: Int} deriving stock (Show, Eq)
+instance NFData Application
+
+newtype Var = Var {_varIndex :: Int} deriving stock (Show, Eq, Generic)
+
+instance NFData Var
 
 data Opcode
   = OpAdd
@@ -75,14 +90,18 @@ data Opcode
   | OpMod
   | OpEq
   | OpLt
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+
+instance NFData Opcode
 
 data Binop = Binop
   { _binopOpcode :: Opcode,
     _binopLeft :: Morphism,
     _binopRight :: Morphism
   }
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+
+instance NFData Binop
 
 -- | Corresponds to the GEB type for terms (morphisms of the category): `stlc`
 -- (https://github.com/anoma/geb/blob/main/src/specs/lambda.lisp).
@@ -100,26 +119,34 @@ data Morphism
   | MorphismVar Var
   | MorphismInteger Integer
   | MorphismBinop Binop
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+
+instance NFData Morphism
 
 data Product = Product
   { _productLeft :: Object,
     _productRight :: Object
   }
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+
+instance NFData Product
 
 data Coproduct = Coproduct
   { _coproductLeft :: Object,
     _coproductRight :: Object
   }
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+
+instance NFData Coproduct
 
 -- | Function type
 data Hom = Hom
   { _homDomain :: Object,
     _homCodomain :: Object
   }
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+
+instance NFData Hom
 
 -- | Corresponds to the GEB type for types (objects of the category): `substobj`
 -- (https://github.com/anoma/geb/blob/main/src/specs/geb.lisp).
@@ -133,7 +160,9 @@ data Object
   | -- | function type
     ObjectHom Hom
   | ObjectInteger
-  deriving stock (Show, Eq)
+  deriving stock (Show, Eq, Generic)
+
+instance NFData Object
 
 instance HasAtomicity Opcode where
   atomicity OpAdd = Atom
