@@ -95,32 +95,30 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
 
     match :: Node -> Env -> [Node] -> [MatchBranch] -> Node
     match n env vs = \case
+      [] -> evalError "no matching pattern" (substEnv env n)
       br : brs ->
         case matchPatterns [] vs (toList (br ^. matchBranchPatterns)) of
-          Just args -> eval' (args ++ env) (br ^. matchBranchBody)
+          Just (args, vs') -> eval' (args ++ env) (mkApps' (br ^. matchBranchBody) vs')
           Nothing -> match n env vs brs
         where
-          matchPatterns :: [Node] -> [Node] -> [Pattern] -> Maybe [Node]
-          matchPatterns acc (v : vs') (p : ps') =
-            case patmatch acc v p of
-              Just acc' -> matchPatterns acc' vs' ps'
-              Nothing -> Nothing
-          matchPatterns acc [] [] =
-            Just acc
-          matchPatterns _ _ _ =
-            evalError "the number of patterns doesn't match the number of arguments" (substEnv env n)
+          -- returns (extension of the environment, remaining arguments)
+          matchPatterns :: [Node] -> [Node] -> [Pattern] -> Maybe ([Node], [Node])
+          matchPatterns acc vals ps = case (vals, ps) of
+            (v : vs', p : ps') ->
+              case patmatch acc v p of
+                Just acc' -> matchPatterns acc' vs' ps'
+                Nothing -> Nothing
+            (_, []) -> Just (acc, vals)
+            ([], _ : _) -> evalError "There are more patterns than arguments provided" (substEnv env n)
 
           patmatch :: [Node] -> Node -> Pattern -> Maybe [Node]
-          patmatch acc _ PatWildcard {} =
-            Just acc
-          patmatch acc v (PatBinder PatternBinder {..}) =
-            patmatch (v : acc) v _patternBinderPattern
-          patmatch acc (NCtr (Constr _ tag args)) (PatConstr PatternConstr {..})
-            | tag == _patternConstrTag =
-                matchPatterns acc args _patternConstrArgs
-          patmatch _ _ _ = Nothing
-      [] ->
-        evalError "no matching pattern" (substEnv env n)
+          patmatch acc node p = case (node, p) of
+            (_, PatWildcard {}) -> Just acc
+            (v, PatBinder PatternBinder {..}) ->
+              patmatch (v : acc) v _patternBinderPattern
+            (NCtr (Constr _ tag args), PatConstr PatternConstr {..})
+              | tag == _patternConstrTag -> fst <$> matchPatterns acc args _patternConstrArgs
+            (_, PatConstr {}) -> Nothing
 
     applyBuiltin :: Node -> Env -> BuiltinOp -> [Node] -> Node
     applyBuiltin n env = \case

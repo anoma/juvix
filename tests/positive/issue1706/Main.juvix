@@ -1,0 +1,12 @@
+module Main;
+
+open import Stdlib.Prelude public;
+
+f : Nat → Nat → Nat;
+f zero x := x;
+f (suc n) := id;
+
+main : IO;
+main := printNatLn (f 1 2);
+
+end;
