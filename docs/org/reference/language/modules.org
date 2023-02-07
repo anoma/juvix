@@ -2,9 +2,8 @@
 
 ** Defining a module
 
-A module is of the following form. The =module= keyword stars the declaration of
-a module followed by its name and its body. The module declaration ends after
-seeing the =end= keyword.
+The =module= keyword stars the declaration of a module followed by its
+name and body. The module declaration ends with the =end= keyword.
 
 #+begin_example
 -- ModuleName.juvix
@@ -13,15 +12,16 @@ module ModuleName;
 end;
 #+end_example
 
-A _Juvix project_ is a collection of Juvix modules inside one main project
-folder containing a metadata file named =juvix.yaml=. Each Juvix file has to
-define a _module_ of the same name. The name of the module must coincide with
-the path of the its file respect to its project. For example, if the file is
-=root/Data/List.juvix= then the module must be called =Data.List=, assuming
-=root= is the project's folder.
+A _Juvix project_ is a collection of Juvix modules inside one main
+project folder containing a metadata file named =juvix.yaml=. Each
+Juvix file has to define a _module_ of the same name. The name of the
+module must coincide with the path of the its file relative to its
+project's root directory. For example, if the file is
+=root/Data/List.juvix= then the module must be called =Data.List=,
+assuming =root= is the project's folder.
 
 To check that Juvix is correctly detecting your project's root, one can run the
-command =juvix internal root File.juvix=.
+command =juvix dev root File.juvix=.
 
 # - Inside a module, other (sub) modules can be declared.
 
