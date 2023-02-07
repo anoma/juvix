@@ -10,7 +10,8 @@ newtype GebReadOptions = GebReadOptions
 
 makeLenses ''GebReadOptions
 
-instance CanonicalProjection GebReadOptions Geb.Options
+instance CanonicalProjection GebReadOptions Geb.Options where
+  project _ = Geb.defaultOptions
 
 parseGebReadOptions :: Parser GebReadOptions
 parseGebReadOptions = do

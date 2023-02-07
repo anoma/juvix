@@ -9,7 +9,7 @@ import Juvix.Compiler.Backend.Geb.Translation.FromSource qualified as Geb
 
 runCommand ::
   forall r a.
-  ( (Member App r, Member (Embed IO) r),
+  ( Members '[App, Embed IO] r,
     CanonicalProjection a Geb.EvaluatorOptions,
     CanonicalProjection a GebEvalOptions
   ) =>
@@ -26,25 +26,24 @@ runCommand opts = do
 
 evalAndPrint ::
   forall r a.
-  ( (Member App r, Member (Embed IO) r),
+  ( Members '[App, Embed IO] r,
     CanonicalProjection a Geb.EvaluatorOptions
   ) =>
   a ->
   Geb.Expression ->
   Sem r ()
 evalAndPrint opts = \case
-  Geb.ExpressionMorphism m -> do
+  Geb.ExpressionMorphism morphism -> do
     let opts' :: Geb.EvaluatorOptions = project opts
-        morphism' =
-          Geb.eval'
-            Geb.EvalArgs
-              { _evalOptions = opts',
-                _evalTerm = m,
-                _evalContext = Geb.emptyContext
-              }
-    case morphism' of
-      Left err -> exitJuvixError (JuvixError err)
-      Right morphism -> renderStdOut (Geb.ppOut opts' morphism)
+    let env :: Geb.Env =
+          Geb.Env
+            { _envEvaluatorOptions = opts',
+              _envContext = Geb.emptyContext
+            }
+    nf <- runM . runError . runReader env $ Geb.nf morphism
+    case nf of
+      Left err -> exitJuvixError err
+      Right m -> renderStdOut (Geb.ppOut opts' m)
   Geb.ExpressionObject _ -> error gebObjNoEvalMsg
 
 gebObjNoEvalMsg :: Text
@@ -64,14 +63,12 @@ makeLenses ''RunEvalArgs
 runEval :: RunEvalArgs -> Either JuvixError Geb.Expression
 runEval RunEvalArgs {..} =
   case Geb.runParser _runEvalArgsInputFile _runEvalArgsContent of
-    Right (Geb.ExpressionMorphism gebMorph) ->
-      Geb.ExpressionMorphism
-        <$> ( Geb.eval'
-                Geb.EvalArgs
-                  { _evalOptions = _runEvalArgsEvaluatorOptions,
-                    _evalTerm = gebMorph,
-                    _evalContext = Geb.emptyContext
-                  }
-            )
-    Right (Geb.ExpressionObject _) -> Left (error @JuvixError gebObjNoEvalMsg)
+    Right (Geb.ExpressionMorphism morphism) -> do
+      let env :: Geb.Env =
+            Geb.Env
+              { _envEvaluatorOptions = _runEvalArgsEvaluatorOptions,
+                _envContext = Geb.emptyContext
+              }
+      Geb.ExpressionMorphism <$> Geb.nf' morphism env
+    Right _ -> Left (error @JuvixError gebObjNoEvalMsg)
     Left err -> Left (JuvixError err)

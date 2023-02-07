@@ -6,10 +6,9 @@ where
 
 import Control.DeepSeq
 import Juvix.Compiler.Backend.Geb.Evaluator.Options
-import Juvix.Compiler.Backend.Geb.Language qualified as Geb
+import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.Inference as Geb
 import Juvix.Compiler.Core.Data.BinderList qualified as BinderList
-import Juvix.Prelude
 
 type Context = BinderList.BinderList GebValue
 
@@ -36,26 +35,20 @@ data GebValue
 
 instance NFData GebValue
 
-instance NFData ValueMorphismCase
-
-instance NFData ValueMorphismPair
-
-instance NFData ValueMorphismLambda
-
-instance NFData ValueMorphismBinop
-
-instance NFData ValueClosure
-
 newtype ValueMorphismLambda = ValueMorphismLambda
   { _valueMorphismLambdaFunction :: GebValue
   }
   deriving stock (Generic)
+
+instance NFData ValueMorphismLambda
 
 data ValueMorphismPair = ValueMorphismPair
   { _valueMorphismPairLeft :: GebValue,
     _valueMorphismPairRight :: GebValue
   }
   deriving stock (Generic)
+
+instance NFData ValueMorphismPair
 
 data ValueMorphismCase = ValueMorphismCase
   { _valueMorphismCaseOn :: GebValue,
@@ -64,18 +57,24 @@ data ValueMorphismCase = ValueMorphismCase
   }
   deriving stock (Generic)
 
+instance NFData ValueMorphismCase
+
 data ValueMorphismBinop = ValueMorphismBinop
-  { _valueMorphismBinopOpcode :: Geb.Opcode,
+  { _valueMorphismBinopOpcode :: Opcode,
     _valueMorphismBinopLeft :: GebValue,
     _valueMorphismBinopRight :: GebValue
   }
   deriving stock (Generic)
 
+instance NFData ValueMorphismBinop
+
 data ValueClosure = ValueClosure
   { _valueClosureEnv :: Context,
-    _valueClosureLambda :: Geb.Lambda
+    _valueClosureLambda :: Lambda
   }
   deriving stock (Generic)
+
+instance NFData ValueClosure
 
 instance HasAtomicity GebValue where
   atomicity = \case
@@ -99,77 +98,75 @@ makeLenses ''ValueClosure
 --------------------------------------------------------------------------------
 
 data Env = Env
-  { _envOptions :: EvaluatorOptions,
+  { _envEvaluatorOptions :: EvaluatorOptions,
     _envContext :: Context
   }
 
 makeLenses ''Env
 
--- eval' ::
---   Members '[Reader Env, Error JuvixError] r =>
---   Geb.Morphism ->
---   Sem r Geb.Morphism
--- eval' m = do
---   val <- eval m
---   obj <- Geb.inferObject m
---   fromGebValue obj val
+defaultEnv :: Env
+defaultEnv =
+  Env
+    { _envEvaluatorOptions = defaultEvaluatorOptions,
+      _envContext = emptyContext
+    }
 
 eval ::
   Members '[Reader Env, Error JuvixError] r =>
-  Geb.Morphism ->
+  Morphism ->
   Sem r GebValue
 eval = \case
-  Geb.MorphismAbsurd _ -> error "Absurd can not be evaluated."
-  Geb.MorphismVar var -> do
+  MorphismAbsurd _ -> error "Absurd can not be evaluated."
+  MorphismVar var -> do
     ctx <- asks (^. envContext)
-    return $ BinderList.lookup (var ^. Geb.varIndex) ctx
-  Geb.MorphismUnit -> return GebValueMorphismUnit
-  Geb.MorphismInteger i -> return $ GebValueMorphismInteger i
-  Geb.MorphismPair pair -> do
-    left <- eval $ pair ^. Geb.pairLeft
-    right <- eval $ pair ^. Geb.pairRight
+    return $ BinderList.lookup (var ^. varIndex) ctx
+  MorphismUnit -> return GebValueMorphismUnit
+  MorphismInteger i -> return $ GebValueMorphismInteger i
+  MorphismPair pair -> do
+    left <- eval $ pair ^. pairLeft
+    right <- eval $ pair ^. pairRight
     return $
       GebValueMorphismPair $
         ValueMorphismPair
           { _valueMorphismPairLeft = left,
             _valueMorphismPairRight = right
           }
-  Geb.MorphismFirst f -> do
-    res <- eval $ f ^. Geb.firstValue
+  MorphismFirst f -> do
+    res <- eval $ f ^. firstValue
     case res of
       GebValueMorphismPair pair ->
         return $ pair ^. valueMorphismPairLeft
       _ -> error "First can only be applied to pairs."
-  Geb.MorphismSecond s -> do
-    res <- eval $ s ^. Geb.secondValue
+  MorphismSecond s -> do
+    res <- eval $ s ^. secondValue
     case res of
       GebValueMorphismPair pair ->
         return $ pair ^. valueMorphismPairRight
       _ -> error "Second can only be applied to pairs."
-  Geb.MorphismBinop op -> do
-    left <- eval $ op ^. Geb.binopLeft
-    right <- eval $ op ^. Geb.binopRight
+  MorphismBinop op -> do
+    left <- eval $ op ^. binopLeft
+    right <- eval $ op ^. binopRight
     return $
       GebValueMorphismBinop $
         ValueMorphismBinop
-          { _valueMorphismBinopOpcode = op ^. Geb.binopOpcode,
+          { _valueMorphismBinopOpcode = op ^. binopOpcode,
             _valueMorphismBinopLeft = left,
             _valueMorphismBinopRight = right
           }
-  Geb.MorphismApplication app -> do
-    evalStrategy <- asks (^. envOptions . evaluatorOptionsEvalStrategy)
+  MorphismApplication app -> do
+    evalStrategy <- asks (^. envEvaluatorOptions . evaluatorOptionsEvalStrategy)
     let maybeForce :: GebValue -> GebValue
         maybeForce = case evalStrategy of
           CallByName -> id
           CallByValue -> force
-    arg <- maybeForce <$> eval (app ^. Geb.applicationRight)
-    fun <- eval $ app ^. Geb.applicationLeft
+    arg <- maybeForce <$> eval (app ^. applicationRight)
+    fun <- eval $ app ^. applicationLeft
     case fun of
       GebValueClosure cls ->
         local (over envContext (consContext arg)) $
-          eval (cls ^. valueClosureLambda . Geb.lambdaBody)
+          eval (cls ^. valueClosureLambda . lambdaBody)
       _ -> error "Can only apply functions."
-  Geb.MorphismLambda lambda -> do
+  MorphismLambda lambda -> do
     ctx <- asks (^. envContext)
     return $
       GebValueClosure $
@@ -177,13 +174,13 @@ eval = \case
           { _valueClosureLambda = lambda,
             _valueClosureEnv = ctx
           }
-  Geb.MorphismLeft m -> GebValueMorphismLeft <$> eval m
-  Geb.MorphismRight m ->
+  MorphismLeft m -> GebValueMorphismLeft <$> eval m
+  MorphismRight m ->
     GebValueMorphismRight <$> eval m
-  Geb.MorphismCase c -> do
-    vCaseOn <- eval $ c ^. Geb.caseOn
-    vCaseLeft <- eval $ c ^. Geb.caseLeft
-    vCaseRight <- eval $ c ^. Geb.caseRight
+  MorphismCase c -> do
+    vCaseOn <- eval $ c ^. caseOn
+    vCaseLeft <- eval $ c ^. caseLeft
+    vCaseRight <- eval $ c ^. caseRight
     return $
       GebValueMorphismCase
         ValueMorphismCase
@@ -192,97 +189,109 @@ eval = \case
             _valueMorphismCaseRight = vCaseRight
           }
 
--- -- | Quoting a GebValue to a Geb.Morphism.
+-- | Quoting a GebValue to a Morphism.
 fromGebValue ::
   Members '[Reader Env, Error JuvixError] r =>
-  Geb.Object ->
+  Object ->
   GebValue ->
-  Sem r Geb.Morphism
+  Sem r Morphism
 fromGebValue ty = \case
   GebValueMorphismInteger i -> case ty of
-    Geb.ObjectInteger -> return $ Geb.MorphismInteger i
+    ObjectInteger -> return $ MorphismInteger i
     _ -> error "fromGebValue: type mismatch. Expected Integer"
   GebValueMorphismUnit -> case ty of
-    Geb.ObjectTerminal -> return Geb.MorphismUnit
+    ObjectTerminal -> return MorphismUnit
     _ -> error "fromGebValue: type mismatch. Expected Unit"
   GebValueMorphismBinop m ->
     case ty of
-      Geb.ObjectHom (Geb.Hom a bc) -> do
+      ObjectHom (Hom a bc) -> do
         left <- fromGebValue a (m ^. valueMorphismBinopLeft)
         right <- fromGebValue bc (m ^. valueMorphismBinopRight)
         return $
-          Geb.MorphismBinop
-            Geb.Binop
+          MorphismBinop
+            Binop
               { _binopOpcode = m ^. valueMorphismBinopOpcode,
                 _binopLeft = left,
                 _binopRight = right
               }
       _ -> error "fromGebValue: type mismatch (binop)"
   GebValueMorphismCase m -> case ty of
-    Geb.ObjectHom h -> do
-      let (a, b) = case h ^. Geb.homDomain of
-            Geb.ObjectCoproduct coprod ->
-              (coprod ^. Geb.coproductLeft, coprod ^. Geb.coproductRight)
+    ObjectHom h -> do
+      let (a, b) = case h ^. homDomain of
+            ObjectCoproduct coprod ->
+              (coprod ^. coproductLeft, coprod ^. coproductRight)
             _ -> error "fromGebValue: type mismatch (case). Expected coproduct"
-          c = h ^. Geb.homCodomain
+          c = h ^. homCodomain
 
-          leftType :: Geb.Object
+          leftType :: Object
           leftType =
-            Geb.ObjectHom $
-              Geb.Hom
+            ObjectHom $
+              Hom
                 { _homDomain = a,
                   _homCodomain = c
                 }
-          rightType :: Geb.Object
+          rightType :: Object
           rightType =
-            Geb.ObjectHom $
-              Geb.Hom
+            ObjectHom $
+              Hom
                 { _homDomain = b,
                   _homCodomain = c
                 }
-          coprod' :: Geb.Object
+          coprod' :: Object
           coprod' =
-            Geb.ObjectCoproduct
-              ( Geb.Coproduct
+            ObjectCoproduct
+              ( Coproduct
                   { _coproductLeft = a,
                     _coproductRight = b
                   }
               )
-      caseOn <- fromGebValue coprod' (m ^. valueMorphismCaseOn)
-      caseLeft <- fromGebValue leftType (m ^. valueMorphismCaseLeft)
-      caseRight <- fromGebValue rightType (m ^. valueMorphismCaseRight)
+      cOn <- fromGebValue coprod' (m ^. valueMorphismCaseOn)
+      cLeft <- fromGebValue leftType (m ^. valueMorphismCaseLeft)
+      cRight <- fromGebValue rightType (m ^. valueMorphismCaseRight)
       return $
-        Geb.MorphismCase
-          Geb.Case
-            { _caseOn = caseOn,
-              _caseLeft = caseLeft,
-              _caseRight = caseRight,
+        MorphismCase
+          Case
+            { _caseOn = cOn,
+              _caseLeft = cLeft,
+              _caseRight = cRight,
               _caseLeftType = leftType,
               _caseRightType = rightType,
               _caseCodomainType = c
             }
     _ -> error "fromGebValue: type mismatch (case). Expected a homomorphism"
   GebValueMorphismLeft m -> case ty of
-    Geb.ObjectCoproduct _ -> Geb.MorphismLeft <$> fromGebValue ty m
+    ObjectCoproduct _ -> MorphismLeft <$> fromGebValue ty m
     _ -> error "fromGebValue: type mismatch (left). Expected a coproduct"
   GebValueMorphismRight m -> case ty of
-    Geb.ObjectCoproduct _ -> Geb.MorphismRight <$> fromGebValue ty m
+    ObjectCoproduct _ -> MorphismRight <$> fromGebValue ty m
     _ -> error "fromGebValue: type mismatch (right). Expected a coproduct"
   GebValueMorphismPair m -> case ty of
-    Geb.ObjectProduct prod -> do
-      let (a, b) = (prod ^. Geb.productLeft, prod ^. Geb.productRight)
+    ObjectProduct prod -> do
+      let (a, b) = (prod ^. productLeft, prod ^. productRight)
       pLeft <- fromGebValue a (m ^. valueMorphismPairLeft)
       pRight <- fromGebValue b (m ^. valueMorphismPairRight)
       return $
-        Geb.MorphismPair
-          Geb.Pair
+        MorphismPair
+          Pair
             { _pairLeft = pLeft,
               _pairRight = pRight,
               _pairLeftType = a,
               _pairRightType = b
             }
     _ -> error "fromGebValue: type mismatch (pair). Expected a product"
-  GebValueClosure cls -> case ty of
-    _ -> error "TODO"
-  -- Geb.ObjectHom _ -> Left $ error "fromGebValue: Lambda can not be converted to Geb morphisms."
-  _ -> error "fromGebValue: type mismatch (lambda). Expected a homomorphism"
+  GebValueClosure cls -> return $ MorphismLambda $ cls ^. valueClosureLambda
+
+nf ::
+  Members '[Reader Env, Error JuvixError] r =>
+  Morphism ->
+  Sem r Morphism
+nf m = do
+  ty <- inferObject m
+  val <- eval m
+  fromGebValue ty val
+
+nf' ::
+  Morphism ->
+  Env ->
+  Either JuvixError Morphism
+nf' m env = run . runError $ runReader env (nf m)
