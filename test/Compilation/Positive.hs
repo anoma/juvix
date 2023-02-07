@@ -238,5 +238,10 @@ tests =
       "Applications with lets and cases in function position"
       $(mkRelDir ".")
       $(mkRelFile "test037.juvix")
-      $(mkRelFile "out/test037.out")
+      $(mkRelFile "out/test037.out"),
+    posTest
+      "Match with more arguments than patterns"
+      $(mkRelDir ".")
+      $(mkRelFile "issue1706.juvix")
+      $(mkRelFile "out/issue1706.out")
   ]
