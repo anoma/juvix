@@ -4,15 +4,8 @@ import Juvix.Compiler.Backend.Geb.Extra qualified as Geb
 import Juvix.Compiler.Backend.Geb.Language qualified as Geb
 import Juvix.Prelude
 
-objectBinop :: Geb.Binop -> Geb.Object
-objectBinop op = case op ^. Geb.binopOpcode of
-  Geb.OpAdd -> Geb.ObjectInteger
-  Geb.OpSub -> Geb.ObjectInteger
-  Geb.OpMul -> Geb.ObjectInteger
-  Geb.OpDiv -> Geb.ObjectInteger
-  Geb.OpMod -> Geb.ObjectInteger
-  Geb.OpEq -> Geb.objectBool
-  Geb.OpLt -> Geb.objectBool
+inferObject' :: Geb.Morphism -> Either JuvixError Geb.Object
+inferObject' = run . runError @JuvixError . inferObject
 
 inferObject ::
   Members '[Error JuvixError] r =>
@@ -66,11 +59,27 @@ inferObject = \case
   Geb.MorphismBinop op -> do
     aTy <- inferObject (op ^. Geb.binopLeft)
     bTy <- inferObject (op ^. Geb.binopRight)
-    unless (aTy == bTy) (error "Binop arguments should have the same type")
-    return aTy
+    unless
+      (aTy == bTy)
+      (error "Arguments of a binary operation should have the same type")
+    return $ objectBinop op
+  Geb.MorphismVar {} ->
+    -- TODO: We should be able to infer the type of a variable.
+    error $ lackOfInformation <> " on a variable"
+  -- FIXME: Once https://github.com/anoma/geb/issues/53 is fixed, we should
+  -- modify the following cases.
   Geb.MorphismLeft {} -> error $ lackOfInformation <> " on a left morphism"
   Geb.MorphismRight {} -> error $ lackOfInformation <> " on a right morphism"
-  Geb.MorphismVar {} -> error $ lackOfInformation <> " on a variable"
 
 lackOfInformation :: Text
 lackOfInformation = "Not enough information to infer the type"
+
+objectBinop :: Geb.Binop -> Geb.Object
+objectBinop op = case op ^. Geb.binopOpcode of
+  Geb.OpAdd -> Geb.ObjectInteger
+  Geb.OpSub -> Geb.ObjectInteger
+  Geb.OpMul -> Geb.ObjectInteger
+  Geb.OpDiv -> Geb.ObjectInteger
+  Geb.OpMod -> Geb.ObjectInteger
+  Geb.OpEq -> Geb.objectBool
+  Geb.OpLt -> Geb.objectBool

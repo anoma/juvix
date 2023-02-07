@@ -30,9 +30,6 @@ formatIntro =
       Ansi.SetColor Ansi.Foreground Ansi.Dull promptColor
     ]
 
-formatLoading :: String
-formatLoading = formatIntro
-
 formatPrompt :: String
 formatPrompt =
   Ansi.setSGRCode

@@ -40,8 +40,7 @@ evalAndPrint opts = \case
             { _envEvaluatorOptions = opts',
               _envContext = Geb.emptyContext
             }
-    nf <- runM . runError . runReader env $ Geb.nf morphism
-    case nf of
+    case Geb.nf' env morphism of
       Left err -> exitJuvixError err
       Right m -> renderStdOut (Geb.ppOut opts' m)
   Geb.ExpressionObject _ -> error gebObjNoEvalMsg
@@ -69,6 +68,8 @@ runEval RunEvalArgs {..} =
               { _envEvaluatorOptions = _runEvalArgsEvaluatorOptions,
                 _envContext = Geb.emptyContext
               }
-      Geb.ExpressionMorphism <$> Geb.nf' morphism env
+      case Geb.nf' env morphism of
+        Right m -> Right (Geb.ExpressionMorphism m)
+        Left err -> Left (JuvixError err)
     Right _ -> Left (error @JuvixError gebObjNoEvalMsg)
     Left err -> Left (JuvixError err)

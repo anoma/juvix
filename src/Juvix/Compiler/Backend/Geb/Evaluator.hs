@@ -281,6 +281,12 @@ fromGebValue ty = \case
     _ -> error "fromGebValue: type mismatch (pair). Expected a product"
   GebValueClosure cls -> return $ MorphismLambda $ cls ^. valueClosureLambda
 
+eval' ::
+  Env ->
+  Morphism ->
+  Either JuvixError GebValue
+eval' env m = run . runError $ runReader env (eval m)
+
 nf ::
   Members '[Reader Env, Error JuvixError] r =>
   Morphism ->
@@ -291,7 +297,7 @@ nf m = do
   fromGebValue ty val
 
 nf' ::
-  Morphism ->
   Env ->
+  Morphism ->
   Either JuvixError Morphism
-nf' m env = run . runError $ runReader env (nf m)
+nf' env m = run . runError $ runReader env (nf m)
