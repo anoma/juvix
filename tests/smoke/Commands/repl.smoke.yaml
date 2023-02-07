@@ -8,12 +8,12 @@ tests:
     stdout:
       contains: "Juvix REPL"
     exit-status: 0
-    
+
   - name: quit
     command:
       - juvix
       - repl
-    stdout: 
+    stdout:
       contains: "Juvix REPL"
     stdin: ":quit"
     exit-status: 0
@@ -41,7 +41,7 @@ tests:
           OK loaded: .*
           Stdlib.Prelude> \1
     exit-status: 0
-    
+
   - name: check-type-null
     command:
       - juvix
@@ -55,7 +55,7 @@ tests:
     command:
       - juvix
       - repl
-    stdout: 
+    stdout:
       contains: "Nat → Nat"
     stdin: ":type suc"
     exit-status: 0
@@ -64,10 +64,10 @@ tests:
     command:
       - juvix
       - repl
-    stdout: 
+    stdout:
       contains: "Nat → Nat"
     stdin: ":t suc"
-    exit-status: 0    
+    exit-status: 0
 
   - name: check-type-suc-short-stdlib
     command:
@@ -75,39 +75,39 @@ tests:
         - bash
       script: |
         cd ./../juvix-stdlib && juvix repl
-    stdout: 
+    stdout:
       contains: "Nat → Nat"
     stdin: ":t suc"
-    exit-status: 0    
+    exit-status: 0
 
   - name: eval-and-operations
     command:
       - juvix
       - repl
     stdin: "true && false"
-    stdout: 
+    stdout:
       matches: |
         Juvix REPL .*
         OK loaded: .*
         Stdlib.Prelude> false
-    exit-status: 0    
+    exit-status: 0
 
   - name: eval-and-operations-with-spaces
     command:
       - juvix
       - repl
     stdin: "   true    &&    false"
-    stdout: 
+    stdout:
       contains:
         "false"
-    exit-status: 0    
+    exit-status: 0
 
   - name: eval-suc-true
     command:
       - juvix
       - repl
     stdin: "suc true"
-    stdout: 
+    stdout:
       contains:
         "Stdlib.Prelude> "
     stderr:
@@ -116,7 +116,7 @@ tests:
           Bool
         but is expected to have type:
           Nat
-    exit-status: 0 
+    exit-status: 0
 
   - name: eval-let-expression
     command:
@@ -137,7 +137,7 @@ tests:
     stdin: ":load BuiltinBool.juvix"
     stdout:
       contains:
-        BuiltinBool>  
+        BuiltinBool>
     exit-status: 0
 
   - name: load-builtin-bool-with-spaces
@@ -147,9 +147,9 @@ tests:
       script: |
         cd ./Internal/positive/ && juvix repl
     stdin: ":load    BuiltinBool.juvix"
-    stdout: 
+    stdout:
       contains:
-        BuiltinBool> 
+        BuiltinBool>
     exit-status: 0
 
   - name: load-builtin-bool-short-form
@@ -161,29 +161,29 @@ tests:
     stdin: |
       :l BuiltinBool.juvix
       main
-    stdout: 
+    stdout:
       contains: |
         true
     exit-status: 0
 
   - name: repl-file
     command:
-      - juvix 
+      - juvix
       - repl
     args:
       - Internal/positive/BuiltinBool.juvix
     stdin: main
-    stdout: 
+    stdout:
       contains: |
         true
     exit-status: 0
-    
+
   - name: root
     command:
       - juvix
       - repl
     stdin: ":root"
-    stdout: 
+    stdout:
       matches: |
         Juvix REPL .*
         OK loaded: .*
@@ -195,19 +195,19 @@ tests:
       - juvix
       - repl
     stdin: "1 + 2"
-    stdout: 
+    stdout:
       contains: |
         suc (suc (suc zero))
     exit-status: 0
 
   - name: repl-trace
     command:
-      - juvix 
+      - juvix
       - repl
     args:
       - positive/issue1731/builtinTrace.juvix
     stdin: trace 2 (printNatLn 3)
-    stdout: 
+    stdout:
       contains: |
         suc (suc (suc zero))
     stderr: |
@@ -216,12 +216,12 @@ tests:
 
   - name: repl-trace-file
     command:
-      - juvix 
+      - juvix
       - repl
     args:
       - positive/issue1731/builtinTrace.juvix
     stdin: f 4 0
-    stdout: 
+    stdout:
       contains: |
        zero
     stderr: |
@@ -233,13 +233,14 @@ tests:
 
   - name: repl-fail
     command:
-      - juvix 
+      - juvix
       - repl
     args:
       - positive/issue1731/builtinFail.juvix
     stdin: main
     stdout:
-      contains: builtinFail> builtinFail>
+      contains: |
+        Get
     stderr:
       contains: |
         evaluation error: failure: Enough
