@@ -6,7 +6,7 @@
 </a>
 #+end_html
 
-To install Juvix, follow the instruction in the [[./howto/installing.md][Installation How-to]].
+To install Juvix, follow the instructions in the [[./howto/installing.md][Installation How-to]].
 
 After installation, run =juvix --help= to see the list of commands.
 
