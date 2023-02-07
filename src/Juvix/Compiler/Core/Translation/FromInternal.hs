@@ -447,16 +447,7 @@ goAxiomDef a = do
       Internal.BuiltinNatPrint -> Just writeLambda
       Internal.BuiltinStringPrint -> Just writeLambda
       Internal.BuiltinBoolPrint -> Just writeLambda
-      Internal.BuiltinIOSequence ->
-        Just
-          ( mkLambda'
-              ( mkLambda'
-                  ( mkConstr'
-                      (BuiltinTag TagBind)
-                      [mkVar' 1, mkLambda' (mkVar' 1)]
-                  )
-              )
-          )
+      Internal.BuiltinIOSequence -> Nothing
       Internal.BuiltinIOReadline ->
         Just
           ( mkLambda'
@@ -726,7 +717,12 @@ goApplication a = do
         Just Internal.BuiltinBoolPrint -> app
         Just Internal.BuiltinString -> app
         Just Internal.BuiltinIO -> app
-        Just Internal.BuiltinIOSequence -> app
+        Just Internal.BuiltinIOSequence -> do
+          as <- exprArgs
+          case as of
+            (arg1 : arg2 : xs) ->
+              return (mkApps' (mkConstr' (BuiltinTag TagBind) [arg1, mkLambda' (shift 1 arg2)]) xs)
+            _ -> error ">> must be called with 2 arguments"
         Just Internal.BuiltinIOReadline -> app
         Just Internal.BuiltinStringConcat -> app
         Just Internal.BuiltinStringEq -> app
