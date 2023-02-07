@@ -30,8 +30,6 @@
   - [[./reference/language/modules.md][Modules]]
   - [[./reference/language/comments.md][Comments]]
   - [[./reference/language/axioms.md][Axioms]]
-  - [[./reference/language/compileblocks.md][Compile blocks]]
-  - [[./reference/language/foreign.md][Foreign blocks]]
 - [[./reference/examples.md][Example programs]]
 - [[./reference/benchmarks.md][Benchmarks]]
 - [[./reference/tooling/README.md][Tooling]]
