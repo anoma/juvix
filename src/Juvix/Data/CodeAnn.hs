@@ -62,6 +62,9 @@ kwLambda = keyword Str.lambdaUnicode
 kwCase :: Doc Ann
 kwCase = keyword Str.case_
 
+kwCaseOn :: Doc Ann
+kwCaseOn = keyword Str.caseOn
+
 kwInclude :: Doc Ann
 kwInclude = keyword Str.include
 

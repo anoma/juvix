@@ -53,7 +53,7 @@ instance PrettyCode Case where
     val <- ppArg _caseOn
     left <- ppArg _caseLeft
     right <- ppArg _caseRight
-    return $ kwCase <+> lty <+> rty <+> cod <+> val <+> left <+> right
+    return $ kwCaseOn <+> lty <+> rty <+> cod <+> val <+> left <+> right
 
 instance PrettyCode Pair where
   ppCode Pair {..} = do
