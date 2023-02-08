@@ -114,8 +114,7 @@ eval !ctx !env0 = convertRuntimeNodes . eval' env0
           patmatch :: [Node] -> Node -> Pattern -> Maybe [Node]
           patmatch acc node p = case (node, p) of
             (_, PatWildcard {}) -> Just acc
-            (v, PatBinder PatternBinder {..}) ->
-              patmatch (v : acc) v _patternBinderPattern
+            (v, PatBinder PatternBinder {..}) -> patmatch (v : acc) v _patternBinderPattern
             (NCtr (Constr _ tag args), PatConstr PatternConstr {..})
               | tag == _patternConstrTag -> fst <$> matchPatterns acc args _patternConstrArgs
             (_, PatConstr {}) -> Nothing

@@ -5,6 +5,15 @@ module issue1706;
   f zero x := x;
   f (suc n) := id;
 
+  g : Nat → Nat → Nat;
+  g (suc n) := id;
+  g zero x := x;
+
+
+  x : IO;
+  x := printNatLn (f 3 5);
+  -- >> printNatLn (g 1 5);
+
   main : IO;
-  main := printNatLn (f 1 2);
+  main := x;
 end;

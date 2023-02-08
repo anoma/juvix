@@ -281,23 +281,31 @@ mkFunBody ::
   Internal.FunctionDef ->
   Sem r Node
 mkFunBody f
-  | nPatterns == 0 = goExpression (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody)
+  | maxPatterns == 0 = goExpression (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody)
   | otherwise = do
       let values :: [Node]
           values = mkVar Info.empty <$> vs
       ms <-
-        local
-          (over indexTableVarsNum (+ nPatterns))
+        underBinders maxPatterns
           (mapM goFunctionClause (f ^. Internal.funDefClauses))
       let match = mkMatch' (fromList values) (toList ms)
       return $ foldr (\_ n -> mkLambda' n) match vs
   where
-    -- Assumption: All clauses have the same number of patterns
-    nPatterns :: Int
-    nPatterns = length (f ^. Internal.funDefClauses . _head1 . Internal.clausePatterns)
+    maxPatterns :: Int
+    maxPatterns = maximum1 (fmap (^. Internal.clausePatterns . to length) (f ^. Internal.funDefClauses))
 
     vs :: [Index]
-    vs = take nPatterns [0 ..]
+    vs = take maxPatterns [0 ..]
+
+    goFunctionClause :: Internal.FunctionClause -> Sem r MatchBranch
+    goFunctionClause clause =
+      over matchBranchBody (`mkApps'` extraArgs) <$> goPatternArgs (clause ^. Internal.clauseBody) internalPatternArgs
+      where
+      extraArgs :: [Node]
+      extraArgs = map mkVar' [0.. maxPatterns - nPatterns]
+      nPatterns = length internalPatternArgs
+      internalPatternArgs :: [Internal.PatternArg]
+      internalPatternArgs = clause ^. Internal.clausePatterns
 
 goCase ::
   forall r.
@@ -583,20 +591,10 @@ goPatternArgs body ps = do
         local
           (set indexTableVars vars' . set indexTableVarsNum varsNum')
           (goExpression body)
-  MatchBranch Info.empty (fromList pats) <$> body'
+  mkMatchBranch' (fromList pats) <$> body'
   where
     patterns :: Sem r [Pattern]
     patterns = reverse <$> mapM fromPatternArg ps
-
-goFunctionClause ::
-  forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
-  Internal.FunctionClause ->
-  Sem r MatchBranch
-goFunctionClause clause = goPatternArgs (clause ^. Internal.clauseBody) internalPatternArgs
-  where
-    internalPatternArgs :: [Internal.PatternArg]
-    internalPatternArgs = clause ^. Internal.clausePatterns
 
 goExpression ::
   forall r.
