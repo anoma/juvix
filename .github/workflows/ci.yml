@@ -225,6 +225,10 @@ jobs:
         with:
           mdbook-version: 0.4.22
 
+      - name: Workaround runner image issue
+        # https://github.com/actions/runner-images/issues/7061
+        run: sudo chown -R $USER /usr/local/.ghcup
+
       - uses: haskell/actions/setup@v2
         name: Setup Haskell
         with:
