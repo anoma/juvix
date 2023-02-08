@@ -18,6 +18,30 @@ doc opts x =
         Atom -> ppCode x
         Aggregate _ -> parens <$> ppCode x
 
+docLisp :: Options -> Text -> Text -> Morphism -> Object -> Doc Ann
+docLisp opts packageName entryName morph obj =
+  "(defpackage #:"
+    <> pretty packageName
+    <> line
+    <> indent' "(:shadowing-import-from :geb.lambda.spec #:func #:pair)"
+    <> line
+    <> indent' "(:shadowing-import-from :geb.spec #:case)"
+    <> line
+    <> indent' "(:use #:common-lisp #:geb.lambda.spec #:geb))"
+    <> line
+    <> line
+    <> "(in-package :"
+    <> pretty packageName
+    <> ")"
+    <> line
+    <> line
+    <> parens
+      ( "defparameter"
+          <+> pretty entryName
+            <> line
+            <> indent' (parens ("typed" <+> doc opts morph <+> doc opts obj))
+      )
+
 class PrettyCode c where
   ppCode :: Member (Reader Options) r => c -> Sem r (Doc Ann)
 
@@ -29,7 +53,7 @@ instance PrettyCode Case where
     val <- ppArg _caseOn
     left <- ppArg _caseLeft
     right <- ppArg _caseRight
-    return $ kwCase <+> lty <+> rty <+> cod <+> val <+> left <+> right
+    return $ kwCaseOn <+> lty <+> rty <+> cod <+> val <+> left <+> right
 
 instance PrettyCode Pair where
   ppCode Pair {..} = do

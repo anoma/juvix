@@ -431,6 +431,9 @@ pair = "pair"
 case_ :: (IsString s) => s
 case_ = "case"
 
+caseOn :: (IsString s) => s
+caseOn = "case-on"
+
 of_ :: (IsString s) => s
 of_ = "of"
 

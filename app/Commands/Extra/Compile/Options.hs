@@ -6,7 +6,6 @@ import Prelude (Show (show))
 data CompileTarget
   = TargetWasm32Wasi
   | TargetNative64
-  | TargetC
   | TargetGeb
   deriving stock (Data, Bounded, Enum)
 
@@ -14,13 +13,14 @@ instance Show CompileTarget where
   show = \case
     TargetWasm32Wasi -> "wasm32-wasi"
     TargetNative64 -> "native"
-    TargetC -> "c"
     TargetGeb -> "geb"
 
 data CompileOptions = CompileOptions
   { _compileDebug :: Bool,
+    _compileCOutput :: Bool,
     _compilePreprocess :: Bool,
     _compileAssembly :: Bool,
+    _compileTerm :: Bool,
     _compileOutputFile :: Maybe (AppPath File),
     _compileTarget :: CompileTarget,
     _compileInputFile :: AppPath File
@@ -37,17 +37,29 @@ parseCompileOptions = do
           <> long "debug"
           <> help "Generate debug information and runtime assertions"
       )
+  _compileCOutput <-
+    switch
+      ( short 'C'
+          <> long "only-c"
+          <> help "Produce C output only (for targets: wasm32-wasi, native)"
+      )
   _compilePreprocess <-
     switch
       ( short 'E'
-          <> long "preprocess"
-          <> help "Run the C preprocessor only"
+          <> long "only-preprocess"
+          <> help "Run the C preprocessor only (for targets: wasm32-wasi, native)"
       )
   _compileAssembly <-
     switch
       ( short 'S'
-          <> long "assemble"
-          <> help "Produce assembly output"
+          <> long "only-assemble"
+          <> help "Produce assembly output only (for targets: wasm32-wasi, native)"
+      )
+  _compileTerm <-
+    switch
+      ( short 'T'
+          <> long "only-term"
+          <> help "Produce term output only (for targets: geb)"
       )
   _compileTarget <- optCompileTarget
   _compileOutputFile <- optional parseGenericOutputFile

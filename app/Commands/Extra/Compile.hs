@@ -29,7 +29,6 @@ runCompile inputFile o = do
   case o ^. compileTarget of
     TargetWasm32Wasi -> runError (clangWasmWasiCompile inputFile o)
     TargetNative64 -> runError (clangNativeCompile inputFile o)
-    TargetC -> return $ Right ()
     TargetGeb -> return $ Right ()
 
 prepareRuntime :: forall r. (Members '[App, Embed IO] r) => Path Abs Dir -> CompileOptions -> Sem r ()
@@ -40,7 +39,6 @@ prepareRuntime buildDir o = do
     TargetWasm32Wasi -> writeRuntime wasiReleaseRuntime
     TargetNative64 | o ^. compileDebug -> writeRuntime nativeDebugRuntime
     TargetNative64 -> writeRuntime nativeReleaseRuntime
-    TargetC -> return ()
     TargetGeb -> return ()
   where
     wasiReleaseRuntime :: BS.ByteString
@@ -71,6 +69,29 @@ prepareRuntime buildDir o = do
       ensureDir (includeDir <//> parent filePath)
       BS.writeFile (toFilePath (includeDir <//> filePath)) contents
 
+outputFile :: Member App r => CompileOptions -> Path Abs File -> Sem r (Path Abs File)
+outputFile opts inputFile =
+  maybe (return defaultOutputFile) someBaseToAbs' (opts ^? compileOutputFile . _Just . pathPath)
+  where
+    defaultOutputFile :: Path Abs File
+    defaultOutputFile = case opts ^. compileTarget of
+      TargetGeb ->
+        if
+            | opts ^. compileTerm -> replaceExtension' ".geb" inputFile
+            | otherwise -> replaceExtension' ".lisp" inputFile
+      TargetNative64 ->
+        if
+            | opts ^. compileCOutput -> replaceExtension' ".c" inputFile
+            | opts ^. compilePreprocess -> addExtension' ".c" (addExtension' ".out" (removeExtension' inputFile))
+            | opts ^. compileAssembly -> replaceExtension' ".s" inputFile
+            | otherwise -> removeExtension' inputFile
+      TargetWasm32Wasi ->
+        if
+            | opts ^. compileCOutput -> replaceExtension' ".c" inputFile
+            | opts ^. compilePreprocess -> addExtension' ".c" (addExtension' ".out" (removeExtension' inputFile))
+            | opts ^. compileAssembly -> replaceExtension' ".wat" inputFile
+            | otherwise -> replaceExtension' ".wasm" inputFile
+
 clangNativeCompile ::
   forall r.
   (Members '[App, Embed IO, Error Text] r) =>
@@ -78,18 +99,13 @@ clangNativeCompile ::
   CompileOptions ->
   Sem r ()
 clangNativeCompile inputFile o = do
-  outputFile' <- outputFile
+  outputFile' <- outputFile o inputFile
   buildDir <- askBuildDir
-  runClang (native64Args buildDir o outputFile' inputFile)
-  where
-    outputFile :: Sem r (Path Abs File)
-    outputFile = maybe (return defaultOutputFile) someBaseToAbs' (o ^? compileOutputFile . _Just . pathPath)
-
-    defaultOutputFile :: Path Abs File
-    defaultOutputFile
-      | o ^. compilePreprocess = replaceExtension' ".out.c" inputFile
-      | o ^. compileAssembly = replaceExtension' ".s" inputFile
-      | otherwise = removeExtension' inputFile
+  if
+      | o ^. compileCOutput ->
+          copyFile inputFile outputFile'
+      | otherwise ->
+          runClang (native64Args buildDir o outputFile' inputFile)
 
 clangWasmWasiCompile ::
   forall r.
@@ -97,28 +113,16 @@ clangWasmWasiCompile ::
   Path Abs File ->
   CompileOptions ->
   Sem r ()
-clangWasmWasiCompile inputFile o = clangArgs >>= runClang
+clangWasmWasiCompile inputFile o = do
+  outputFile' <- outputFile o inputFile
+  buildDir <- askBuildDir
+  if
+      | o ^. compileCOutput ->
+          copyFile inputFile outputFile'
+      | otherwise -> do
+          clangArgs <- wasiArgs buildDir o outputFile' inputFile <$> sysrootEnvVar
+          runClang clangArgs
   where
-    clangArgs :: Sem r [String]
-    clangArgs = do
-      outputFile' <- outputFile
-      buildDir <- askBuildDir
-      wasiArgs buildDir o outputFile' inputFile <$> sysrootEnvVar
-
-    outputFile :: Sem r (Path Abs File)
-    outputFile = case o ^? compileOutputFile . _Just . pathPath of
-      Just f -> someBaseToAbs' f
-      Nothing -> return defaultOutputFile
-
-    defaultOutputFile :: Path Abs File
-    defaultOutputFile = replaceExtension' extension inputFile
-      where
-        extension :: String
-        extension
-          | o ^. compilePreprocess = ".out.c"
-          | o ^. compileAssembly = ".wat"
-          | otherwise = ".wasm"
-
     sysrootEnvVar :: Sem r (Path Abs Dir)
     sysrootEnvVar =
       absDir
@@ -128,7 +132,7 @@ clangWasmWasiCompile inputFile o = clangArgs >>= runClang
         msg = "Missing environment variable WASI_SYSROOT_PATH"
 
 commonArgs :: Path Abs Dir -> CompileOptions -> Path Abs File -> [String]
-commonArgs buildDir o outputFile =
+commonArgs buildDir o outfile =
   ["-E" | o ^. compilePreprocess]
     <> ["-S" | o ^. compileAssembly]
     <> (if o ^. compileDebug then ["-DDEBUG"] else ["-DNDEBUG"])
@@ -141,7 +145,7 @@ commonArgs buildDir o outputFile =
          "-I",
          toFilePath (juvixIncludeDir buildDir),
          "-o",
-         toFilePath outputFile
+         toFilePath outfile
        ]
     <> ( if
              | not (o ^. compilePreprocess || o ^. compileAssembly) ->
@@ -152,8 +156,8 @@ commonArgs buildDir o outputFile =
        )
 
 native64Args :: Path Abs Dir -> CompileOptions -> Path Abs File -> Path Abs File -> [String]
-native64Args buildDir o outputFile inputFile =
-  commonArgs buildDir o outputFile
+native64Args buildDir o outfile inputFile =
+  commonArgs buildDir o outfile
     <> [ "-DARCH_NATIVE64",
          "-DAPI_LIBC",
          "-m64",
@@ -167,8 +171,8 @@ native64Args buildDir o outputFile inputFile =
        )
 
 wasiArgs :: Path Abs Dir -> CompileOptions -> Path Abs File -> Path Abs File -> Path Abs Dir -> [String]
-wasiArgs buildDir o outputFile inputFile sysrootPath =
-  commonArgs buildDir o outputFile
+wasiArgs buildDir o outfile inputFile sysrootPath =
+  commonArgs buildDir o outfile
     <> [ "-DARCH_WASM32",
          "-DAPI_WASI",
          "-Os",

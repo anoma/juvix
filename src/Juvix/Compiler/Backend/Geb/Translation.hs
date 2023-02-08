@@ -12,5 +12,21 @@ newtype Result = Result
   { _resultCode :: Text
   }
 
-toResult :: Morphism -> Result
-toResult geb = Result (ppPrint geb <> "\n")
+data LispPackageSpec = LispPackageSpec
+  { _lispPackageName :: Text,
+    _lispPackageEntry :: Text
+  }
+
+data ResultSpec
+  = OnlyTerm
+  | LispPackage LispPackageSpec
+
+toResult :: ResultSpec -> Morphism -> Object -> Result
+toResult spec morph obj = case spec of
+  OnlyTerm ->
+    Result (ppPrint morph <> "\n")
+  LispPackage LispPackageSpec {..} ->
+    Result (ppPrintLisp _lispPackageName _lispPackageEntry morph obj <> "\n")
+
+makeLenses ''Result
+makeLenses ''LispPackageSpec
