@@ -18,6 +18,9 @@ makeLenses ''BinderList
 fromList :: [a] -> BinderList a
 fromList l = BinderList (length l) l
 
+empty :: BinderList a
+empty = fromList []
+
 drop :: Int -> BinderList a -> BinderList a
 drop k (BinderList n l) = BinderList (n - k) (dropExact k l)
 

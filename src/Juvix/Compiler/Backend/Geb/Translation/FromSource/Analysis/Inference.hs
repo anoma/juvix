@@ -1,23 +1,25 @@
 module Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.Inference where
 
+import Juvix.Compiler.Backend.Geb.Data.Context as Context
 import Juvix.Compiler.Backend.Geb.Extra qualified as Geb
 import Juvix.Compiler.Backend.Geb.Language qualified as Geb
 import Juvix.Prelude
 
 inferObject' :: Geb.Morphism -> Either JuvixError Geb.Object
-inferObject' = run . runError @JuvixError . inferObject
+inferObject' = run . runError . inferObject Context.empty
 
 inferObject ::
   Members '[Error JuvixError] r =>
+  Context Geb.Object ->
   Geb.Morphism ->
   Sem r Geb.Object
-inferObject = \case
+inferObject ctx = \case
   Geb.MorphismUnit -> return Geb.ObjectTerminal
   Geb.MorphismInteger {} -> return Geb.ObjectInteger
-  Geb.MorphismAbsurd x -> inferObject x
+  Geb.MorphismAbsurd x -> inferObject ctx x
   Geb.MorphismPair pair -> do
-    lTy <- inferObject (pair ^. Geb.pairLeft)
-    rTy <- inferObject (pair ^. Geb.pairRight)
+    lTy <- inferObject ctx (pair ^. Geb.pairLeft)
+    rTy <- inferObject ctx (pair ^. Geb.pairRight)
     unless
       (lTy == pair ^. Geb.pairLeftType)
       (error "Type mismatch: left type on a pair")
@@ -32,14 +34,21 @@ inferObject = \case
           }
   Geb.MorphismCase c -> return $ c ^. Geb.caseCodomainType
   Geb.MorphismFirst p -> do
-    ty <- inferObject (p ^. Geb.firstValue)
+    ty <- inferObject ctx (p ^. Geb.firstValue)
     unless (ty == p ^. Geb.firstLeftType) (error "Type mismatch")
     return ty
   Geb.MorphismSecond p -> do
-    ty <- inferObject (p ^. Geb.secondValue)
+    ty <- inferObject ctx (p ^. Geb.secondValue)
     unless (ty == p ^. Geb.secondRightType) (error "Type mismatch")
     return ty
-  Geb.MorphismLambda l ->
+  Geb.MorphismLambda l -> do
+    bTy <-
+      inferObject
+        (Context.cons (l ^. Geb.lambdaVarType) ctx)
+        (l ^. Geb.lambdaBody)
+    unless
+      (bTy == l ^. Geb.lambdaBodyType)
+      (error "Type mismatch: body of the lambda")
     return $
       Geb.ObjectHom $
         Geb.Hom
@@ -47,8 +56,8 @@ inferObject = \case
             _homCodomain = l ^. Geb.lambdaBodyType
           }
   Geb.MorphismApplication app -> do
-    lTy <- inferObject (app ^. Geb.applicationLeft)
-    rTy <- inferObject (app ^. Geb.applicationRight)
+    lTy <- inferObject ctx (app ^. Geb.applicationLeft)
+    rTy <- inferObject ctx (app ^. Geb.applicationRight)
     case lTy of
       Geb.ObjectHom h -> do
         unless
@@ -57,15 +66,13 @@ inferObject = \case
         return $ h ^. Geb.homCodomain
       _ -> error "Left side of the application should be a function"
   Geb.MorphismBinop op -> do
-    aTy <- inferObject (op ^. Geb.binopLeft)
-    bTy <- inferObject (op ^. Geb.binopRight)
+    aTy <- inferObject ctx (op ^. Geb.binopLeft)
+    bTy <- inferObject ctx (op ^. Geb.binopRight)
     unless
       (aTy == bTy)
       (error "Arguments of a binary operation should have the same type")
     return $ objectBinop op
-  Geb.MorphismVar {} ->
-    -- TODO: We should be able to infer the type of a variable.
-    error $ lackOfInformation <> " on a variable"
+  Geb.MorphismVar v -> return $ Context.lookup (v ^. Geb.varIndex) ctx
   -- FIXME: Once https://github.com/anoma/geb/issues/53 is fixed, we should
   -- modify the following cases.
   Geb.MorphismLeft {} -> error $ lackOfInformation <> " on a left morphism"

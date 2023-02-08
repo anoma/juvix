@@ -5,7 +5,11 @@ import Commands.Dev.Geb.Read.Options
 import Juvix.Compiler.Backend.Geb.Pretty qualified as Geb
 import Juvix.Compiler.Backend.Geb.Translation.FromSource qualified as Geb
 
-runCommand :: forall r. (Member App r, Member (Embed IO) r) => GebReadOptions -> Sem r ()
+runCommand ::
+  forall r.
+  (Member App r, Member (Embed IO) r) =>
+  GebReadOptions ->
+  Sem r ()
 runCommand opts = do
   let b :: SomeBase File
       b = opts ^. gebReadOptionsInputFile . pathPath

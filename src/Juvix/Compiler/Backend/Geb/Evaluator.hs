@@ -5,18 +5,10 @@ module Juvix.Compiler.Backend.Geb.Evaluator
 where
 
 import Control.DeepSeq
+import Juvix.Compiler.Backend.Geb.Data.Context as Context
 import Juvix.Compiler.Backend.Geb.Evaluator.Options
 import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.Inference as Geb
-import Juvix.Compiler.Core.Data.BinderList qualified as BinderList
-
-type Context = BinderList.BinderList GebValue
-
-emptyContext :: Context
-emptyContext = BinderList.fromList []
-
-consContext :: GebValue -> Context -> Context
-consContext val env = BinderList.cons val env
 
 --------------------------------------------------------------------------------
 -- Values
@@ -69,7 +61,7 @@ data ValueMorphismBinop = ValueMorphismBinop
 instance NFData ValueMorphismBinop
 
 data ValueClosure = ValueClosure
-  { _valueClosureEnv :: Context,
+  { _valueClosureEnv :: Context GebValue,
     _valueClosureLambda :: Lambda
   }
   deriving stock (Generic)
@@ -99,7 +91,7 @@ makeLenses ''ValueClosure
 
 data Env = Env
   { _envEvaluatorOptions :: EvaluatorOptions,
-    _envContext :: Context
+    _envContext :: Context GebValue
   }
 
 makeLenses ''Env
@@ -108,7 +100,7 @@ defaultEnv :: Env
 defaultEnv =
   Env
     { _envEvaluatorOptions = defaultEvaluatorOptions,
-      _envContext = emptyContext
+      _envContext = Context.empty
     }
 
 eval ::
@@ -119,7 +111,7 @@ eval = \case
   MorphismAbsurd _ -> error "Absurd can not be evaluated."
   MorphismVar var -> do
     ctx <- asks (^. envContext)
-    return $ BinderList.lookup (var ^. varIndex) ctx
+    return $ Context.lookup (var ^. varIndex) ctx
   MorphismUnit -> return GebValueMorphismUnit
   MorphismInteger i -> return $ GebValueMorphismInteger i
   MorphismPair pair -> do
@@ -163,7 +155,7 @@ eval = \case
     fun <- eval $ app ^. applicationLeft
     case fun of
       GebValueClosure cls ->
-        local (over envContext (consContext arg)) $
+        local (over envContext (Context.cons arg)) $
           eval (cls ^. valueClosureLambda . lambdaBody)
       _ -> error "Can only apply functions."
   MorphismLambda lambda -> do
@@ -292,7 +284,7 @@ nf ::
   Morphism ->
   Sem r Morphism
 nf m = do
-  ty <- inferObject m
+  ty <- inferObject Context.empty m
   val <- eval m
   fromGebValue ty val
 
