@@ -247,11 +247,11 @@ f a := let x : Nat := a + 5;
 #+end_example
 The variables =x= and =y= are not visible outside =f=.
 
-One can also use multi-clause definitions in =let=-expressions, with the same syntax as definitions inside a module. Complex definitions need to be enclosed in braces. For example:
+One can also use multi-clause definitions in =let=-expressions, with the same syntax as definitions inside a module. For example:
 #+begin_example
 even' : Nat -> Bool;
 even' :=
-  let {
+  let
     even : Nat -> Bool;
     odd : Nat -> Bool;
 
@@ -260,7 +260,7 @@ even' :=
 
     odd zero := false;
     odd (suc n) := even n;
-  } in
+  in
   even
 #+end_example
 The functions =even= and =odd= are not visible outside =even'=.
@@ -383,28 +383,29 @@ Fortunately, it is possible to rewrite this function to use /tail recursion/. A 
 The following implementation of =sum= uses tail recursion.
 #+begin_example
 sum : NList -> Nat;
-sum lst := let {
+sum lst :=
+  let
     go : Nat -> NList -> Nat;
     go acc nnil := acc;
     go acc (ncons x xs) := go (acc + x) xs;
-  } in
+  in
   go 0 lst;
 #+end_example
 The first argument of =go= is an /accumulator/ which holds the sum computed so far. It is analogous to the =sum= variable in the imperative loop above. The initial value of the accumulator is 0. The function =go= uses only constant additional memory overall. The code generated for it by the Juvix compiler is equivalent to an imperative loop.
 
-A shorter way of writing the above =sum= function is to use a /named lambda/:
-#+begin_example
-sum : NList -> Nat;
-sum := go(acc := 0)@\{
-    acc nnil := acc;
-    acc (ncons x xs) := go (acc + x) xs;
-  };
-#+end_example
-The syntax
-#+begin_example
-go(acc1 := v1= ... accn := vn)@\{ <clauses> }
-#+end_example
-introduces a recursive function =go= with =n= accumulators =acc1=, ..., =accn= and further =k= arguments of the lambda expression (above =n = k = 1=). The value of the entire expression is =go v1 ... vn=. The scope of =go= is the lambda expression, i.e., it is not visible outside of it.
+# A shorter way of writing the above =sum= function is to use a /named lambda/:
+# #+begin_example
+# sum : NList -> Nat;
+# sum := go(acc := 0)@\{
+#     acc nnil := acc;
+#     acc (ncons x xs) := go (acc + x) xs;
+#   };
+# #+end_example
+# The syntax
+# #+begin_example
+# go(acc1 := v1= ... accn := vn)@\{ <clauses> }
+# #+end_example
+# introduces a recursive function =go= with =n= accumulators =acc1=, ..., =accn= and further =k= arguments of the lambda expression (above =n = k = 1=). The value of the entire expression is =go v1 ... vn=. The scope of =go= is the lambda expression, i.e., it is not visible outside of it.
 
 Most imperative loops may be translated into tail recursive functional programs by converting the locally modified variables into accumulators and the loop condition into pattern matching. For example, here is a pseudocode for computing the nth Fibonacci number in linear time. The variables =cur= and =next= hold the last two computed Fibonacci numbers.
 #+begin_example
@@ -421,10 +422,12 @@ return cur;
 An equivalent functional program is:
 #+begin_example
 fib : Nat -> Nat;
-fib := go(cur := 0; next := 1)@\{
-    cur _ zero := cur;
-    cur next (suc n) := go next (cur + next) n;
-  };
+fib :=
+  let go : Nat -> Nat -> Nat -> Nat;
+      go cur _ zero := cur;
+      go cur next (suc n) := go next (cur + next) n;
+  in
+  go 0 1;
 #+end_example
 A naive definition of the Fibonacci function runs in exponential time:
 #+begin_example
@@ -467,6 +470,8 @@ even : Nat -> Bool;
 even zero := true;
 even (suc (suc n)) := even n;
 #+end_example
+
+NOTE: Coverage checking will be implemented only in Juvix version 0.4. Earlier versions of Juvix accept non-exhaustive patterns.
 
 ** Exercises
 
