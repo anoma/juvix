@@ -11,6 +11,16 @@ import Juvix.Parser.Error
 import Juvix.Prelude
 import Text.Megaparsec qualified as P
 
+fromSource ::
+  Member (Error ParserError) r =>
+  Path Abs File ->
+  Text ->
+  Sem r Geb.Expression
+fromSource fileName input =
+  case runParser fileName input of
+    Left err -> throw err
+    Right gebTerm -> pure gebTerm
+
 runParser ::
   Path Abs File ->
   Text ->

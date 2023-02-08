@@ -8,11 +8,7 @@ import Commands.Dev.Geb.Repl.Colors
 import Commands.Dev.Geb.Repl.Options
 import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
-import Juvix.Compiler.Backend.Geb.Evaluator qualified as Geb
-import Juvix.Compiler.Backend.Geb.Language qualified as Geb
-import Juvix.Compiler.Backend.Geb.Pretty qualified as Geb
-import Juvix.Compiler.Backend.Geb.Translation.FromSource qualified as Geb
-import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.Inference qualified as Geb
+import Juvix.Compiler.Backend.Geb qualified as Geb
 import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Extra.Version
 import Juvix.Prelude.Pretty qualified as P
@@ -98,8 +94,7 @@ runCommand _opts = do
       reloadFile _ = do
         mentryPoint <- State.gets (fmap (^. replContextEntryPoint) . (^. replStateContext))
         case mentryPoint of
-          Just entryPoint -> do
-            loadEntryPoint entryPoint
+          Just entryPoint -> loadEntryPoint entryPoint
           Nothing -> liftIO . putStrLn $ pack noFileLoadedMsg
 
       pSomeFile :: String -> SomeBase File

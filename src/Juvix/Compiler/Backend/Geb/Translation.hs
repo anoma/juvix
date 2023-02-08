@@ -1,12 +1,14 @@
 module Juvix.Compiler.Backend.Geb.Translation
   ( module Juvix.Compiler.Backend.Geb.Translation,
     module Juvix.Compiler.Backend.Geb.Translation.FromCore,
+    module Juvix.Compiler.Backend.Geb.Translation.FromSource,
   )
 where
 
 import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Pretty
-import Juvix.Compiler.Backend.Geb.Translation.FromCore
+import Juvix.Compiler.Backend.Geb.Translation.FromCore hiding (Env)
+import Juvix.Compiler.Backend.Geb.Translation.FromSource
 
 newtype Result = Result
   { _resultCode :: Text
