@@ -50,3 +50,43 @@ tests:
       matches: |-
         (.+)\/([^\/]+)\.juvix\:[0-9]*\:[0-9]*\-[0-9]*\: error
     exit-status: 1
+
+  - name: internal-core-eval
+    command:
+      - juvix
+      - dev
+      - internal
+      - core-eval
+    args:
+      - positive/Internal/LiteralInt.juvix
+    stdout: |
+      suc (suc zero)
+    exit-status: 0
+
+  - name: internal-core-eval-transform
+    command:
+      - juvix
+      - dev
+      - internal
+      - core-eval
+      - --transforms
+      - nat-to-int
+    args:
+      - positive/Internal/LiteralInt.juvix
+    stdout: |
+      2
+    exit-status: 0
+
+  - name: internal-core-eval-symbol-name
+    command:
+      - juvix
+      - dev
+      - internal
+      - core-eval
+      - --symbol-name
+      - f
+    args:
+      - positive/Internal/LiteralInt.juvix
+    stdout: |
+      suc zero
+    exit-status: 0

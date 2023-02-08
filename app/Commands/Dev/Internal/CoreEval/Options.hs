@@ -9,7 +9,8 @@ data InternalCoreEvalOptions = InternalCoreEvalOptions
   { _internalCoreEvalTransformations :: [TransformationId],
     _internalCoreEvalShowDeBruijn :: Bool,
     _internalCoreEvalNoIO :: Bool,
-    _internalCoreEvalInputFile :: AppPath File
+    _internalCoreEvalInputFile :: AppPath File,
+    _internalCoreEvalSymbolName :: Maybe Text
   }
   deriving stock (Data)
 
@@ -42,4 +43,12 @@ parseInternalCoreEval = do
           <> help "Don't interpret the IO effects"
       )
   _internalCoreEvalInputFile <- parseInputJuvixFile
+  _internalCoreEvalSymbolName <-
+    optional $
+      strOption
+        ( long "symbol-name"
+            <> short 's'
+            <> help "Evaluate a function identifier (default: main)"
+            <> metavar "NAME"
+        )
   pure InternalCoreEvalOptions {..}
