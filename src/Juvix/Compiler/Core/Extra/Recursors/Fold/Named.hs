@@ -21,9 +21,9 @@ The suffixes of `ufold`, etc., indicate the exact form of the folding functions,
 with similar conventions as with the mapping recursors (see
 Core/Extra/Recursors/Map/Named.hs).
 
-* A: Applicative version.
-* L: Provide the binder list.
-* N: Provide the de Bruijn level.
+\* A: Applicative version.
+\* L: Provide the binder list.
+\* N: Provide the de Bruijn level.
 
 -}
 
