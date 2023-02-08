@@ -5,4 +5,7 @@ module LiteralInt;
 
   f : Nat;
   f := 1;
+
+  main : IO;
+  main := printNatLn 2;
 end;
