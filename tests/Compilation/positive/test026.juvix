@@ -45,7 +45,7 @@ f n@(suc n') q := f n' (push_back q n);
 
 printListNatLn : List Nat → IO;
 printListNatLn nil := printStringLn "nil";
-printListNatLn (h :: t) := printNatLn h >> printString " :: " >> printListNatLn t;
+printListNatLn (h :: t) := printNat h >> printString " :: " >> printListNatLn t;
 
 main : IO;
 main := printListNatLn (f 100 empty); -- list of numbers from 1 to 100

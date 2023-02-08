@@ -347,7 +347,16 @@ data Indexed a = Indexed
 instance Functor Indexed where
   fmap f (Indexed i a) = Indexed i (f a)
 
+indexFrom :: Int -> [a] -> [Indexed a]
+indexFrom i = zipWith Indexed [i ..]
+
 makeLenses ''Indexed
+
+toTuple :: Indexed a -> (Int, a)
+toTuple i = (i ^. indexedIx, i ^. indexedThing)
+
+filterIndexed :: (a -> Bool) -> [Indexed a] -> [Indexed a]
+filterIndexed f = filter (f . (^. indexedThing))
 
 fromText :: (IsString a) => Text -> a
 fromText = fromString . unpack
