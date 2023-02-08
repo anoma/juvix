@@ -91,6 +91,10 @@ jobs:
           path: main/.stack-work
           key: ${{ runner.os }}-stack-work-
 
+      - name: Workaround runner image issue
+        # https://github.com/actions/runner-images/issues/7061
+        run: sudo chown -R $USER /usr/local/.ghcup
+
       - uses: haskell/actions/setup@v2
         name: Setup Haskell
         with:
