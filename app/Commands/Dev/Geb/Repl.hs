@@ -120,7 +120,7 @@ runCommand _opts = do
           Right (Geb.ExpressionMorphism morphism) -> do
             let inferRes = Geb.inferObject' morphism
             case inferRes of
-              Right n -> renderOut (Geb.ppOut Geb.defaultEvaluatorOptions n)
+              Right obj -> renderOut (Geb.ppOut Geb.defaultEvaluatorOptions obj)
               Left err -> printError err
           Right _ -> liftIO . putStrLn $ "Geb object has to be a Geb object?"
 
