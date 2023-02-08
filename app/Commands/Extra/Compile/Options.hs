@@ -57,8 +57,7 @@ parseCompileOptions = do
       )
   _compileTerm <-
     switch
-      ( short 'T'
-          <> long "only-term"
+      ( long "only-term"
           <> help "Produce term output only (for targets: geb)"
       )
   _compileTarget <- optCompileTarget
