@@ -4,6 +4,29 @@ import Data.Functor.Identity
 import Juvix.Compiler.Core.Extra.Recursors.Base
 import Juvix.Compiler.Core.Extra.Recursors.Fold
 
+{-
+
+There are three major versions of folding recursors.
+
+1. `ufold f g t` folds the term `t` bottom-up, first using `g` to map the
+   current subterm into a value `a`, and then using `f` to combine `a` with the
+   values for children.
+2. `walk f t` combines the applicative actions obtained by applying `f` to each
+   subterm of `t`.
+3. `gather f a t` goes through all subterms of `t` applying `f` to the current
+   value and the subterm to obtain the next value, with `a` being the initial
+   value.
+
+The suffixes of `ufold`, etc., indicate the exact form of the folding functions,
+with similar conventions as with the mapping recursors (see
+Core/Extra/Recursors/Map/Named.hs).
+
+* A: Applicative version.
+* L: Provide the binder list.
+* N: Provide the de Bruijn level.
+
+-}
+
 ufoldA :: (Applicative f) => (a -> [a] -> a) -> (Node -> f a) -> Node -> f a
 ufoldA uplus f = ufoldG unitCollector uplus (const f)
 
