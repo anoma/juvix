@@ -624,6 +624,12 @@ goExpression' = \case
       varsNum <- asks (^. indexTableVarsNum)
       return (mkVar (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) (varsNum - k - 1))
     Internal.IdenFunction n -> do
+      funInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoFunctions)
+      case funInfo ^. Internal.functionInfoDef . Internal.funDefBuiltin of
+        Just Internal.BuiltinBoolIf -> error "if must be called with 3 arguments"
+        Just Internal.BuiltinBoolOr -> error "|| must be called with 2 arguments"
+        Just Internal.BuiltinBoolAnd -> error "&& must be called with 2 arguments"
+        _ -> return ()
       -- if the function was defined by a let, then in Core it is stored in a variable
       vars <- asks (^. indexTableVars)
       case HashMap.lookup id_ vars of
@@ -649,6 +655,11 @@ goExpression' = \case
         Just _ -> error ("internal to core: not a constructor " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenAxiom n -> do
+      axiomInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoAxioms)
+      case axiomInfo ^. Internal.axiomInfoBuiltin of
+        Just Internal.BuiltinIOSequence -> error ">> must be called with 2 arguments"
+        Just Internal.BuiltinTrace -> error "trace must be called with 2 arguments"
+        _ -> return ()
       m <- getIdent identIndex
       return $ case m of
         Just (IdentFun sym) -> mkIdent (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) sym
