@@ -1,0 +1,45 @@
+working-directory: ./../../../../tests
+
+tests:
+  - name: core-from-source-eval
+    command:
+      - juvix
+      - dev
+      - core
+      - from-source
+      - --eval
+    args:
+      - positive/Internal/LiteralInt.juvix
+    stdout: |
+      suc (suc zero)
+    exit-status: 0
+
+  - name: core-from-source-eval
+    command:
+      - juvix
+      - dev
+      - core
+      - from-source
+      - --eval
+      - --transforms
+      - nat-to-int
+    args:
+      - positive/Internal/LiteralInt.juvix
+    stdout: |
+      2
+    exit-status: 0
+
+  - name: core-from-source-eval-s
+    command:
+      - juvix
+      - dev
+      - core
+      - from-source
+      - --eval
+      - --symbol-name
+      - f
+    args:
+      - positive/Internal/LiteralInt.juvix
+    stdout: |
+      suc zero
+    exit-status: 0
