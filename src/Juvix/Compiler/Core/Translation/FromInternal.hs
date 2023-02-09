@@ -447,16 +447,7 @@ goAxiomDef a = do
       Internal.BuiltinNatPrint -> Just writeLambda
       Internal.BuiltinStringPrint -> Just writeLambda
       Internal.BuiltinBoolPrint -> Just writeLambda
-      Internal.BuiltinIOSequence ->
-        Just
-          ( mkLambda'
-              ( mkLambda'
-                  ( mkConstr'
-                      (BuiltinTag TagBind)
-                      [mkVar' 1, mkLambda' (mkVar' 1)]
-                  )
-              )
-          )
+      Internal.BuiltinIOSequence -> Nothing
       Internal.BuiltinIOReadline ->
         Just
           ( mkLambda'
@@ -633,6 +624,12 @@ goExpression' = \case
       varsNum <- asks (^. indexTableVarsNum)
       return (mkVar (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) (varsNum - k - 1))
     Internal.IdenFunction n -> do
+      funInfoBuiltin <- getFunctionBuiltinInfo n
+      case funInfoBuiltin of
+        Just Internal.BuiltinBoolIf -> error "if must be called with 3 arguments"
+        Just Internal.BuiltinBoolOr -> error "|| must be called with 2 arguments"
+        Just Internal.BuiltinBoolAnd -> error "&& must be called with 2 arguments"
+        _ -> return ()
       -- if the function was defined by a let, then in Core it is stored in a variable
       vars <- asks (^. indexTableVars)
       case HashMap.lookup id_ vars of
@@ -658,6 +655,11 @@ goExpression' = \case
         Just _ -> error ("internal to core: not a constructor " <> txt)
         Nothing -> error ("internal to core: undeclared identifier: " <> txt)
     Internal.IdenAxiom n -> do
+      axiomInfoBuiltin <- getAxiomBuiltinInfo n
+      case axiomInfoBuiltin of
+        Just Internal.BuiltinIOSequence -> error ">> must be called with 2 arguments"
+        Just Internal.BuiltinTrace -> error "trace must be called with 2 arguments"
+        _ -> return ()
       m <- getIdent identIndex
       return $ case m of
         Just (IdentFun sym) -> mkIdent (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) sym
@@ -719,14 +721,19 @@ goApplication a = do
 
   case f of
     Internal.ExpressionIden (Internal.IdenAxiom n) -> do
-      axiomInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoAxioms)
-      case axiomInfo ^. Internal.axiomInfoBuiltin of
+      axiomInfoBuiltin <- getAxiomBuiltinInfo n
+      case axiomInfoBuiltin of
         Just Internal.BuiltinNatPrint -> app
         Just Internal.BuiltinStringPrint -> app
         Just Internal.BuiltinBoolPrint -> app
         Just Internal.BuiltinString -> app
         Just Internal.BuiltinIO -> app
-        Just Internal.BuiltinIOSequence -> app
+        Just Internal.BuiltinIOSequence -> do
+          as <- exprArgs
+          case as of
+            (arg1 : arg2 : xs) ->
+              return (mkApps' (mkConstr' (BuiltinTag TagBind) [arg1, mkLambda' (shift 1 arg2)]) xs)
+            _ -> error ">> must be called with 2 arguments"
         Just Internal.BuiltinIOReadline -> app
         Just Internal.BuiltinStringConcat -> app
         Just Internal.BuiltinStringEq -> app
@@ -741,8 +748,8 @@ goApplication a = do
         Just Internal.BuiltinFail -> app
         Nothing -> app
     Internal.ExpressionIden (Internal.IdenFunction n) -> do
-      funInfo <- HashMap.lookupDefault impossible n <$> asks (^. Internal.infoFunctions)
-      case funInfo ^. Internal.functionInfoDef . Internal.funDefBuiltin of
+      funInfoBuiltin <- getFunctionBuiltinInfo n
+      case funInfoBuiltin of
         Just Internal.BuiltinBoolIf -> do
           sym <- getBoolSymbol
           as <- exprArgs
@@ -771,3 +778,17 @@ goLiteral intToNat l = case l ^. withLocParam of
   where
     mkLitConst :: ConstantValue -> Node
     mkLitConst = mkConstant (Info.singleton (LocationInfo (l ^. withLocInt)))
+
+getAxiomBuiltinInfo :: Member (Reader Internal.InfoTable) r => Name -> Sem r (Maybe BuiltinAxiom)
+getAxiomBuiltinInfo n = do
+  maybeAxiomInfo <- HashMap.lookup n <$> asks (^. Internal.infoAxioms)
+  return $ case maybeAxiomInfo of
+    Just axiomInfo -> axiomInfo ^. Internal.axiomInfoBuiltin
+    Nothing -> Nothing
+
+getFunctionBuiltinInfo :: Member (Reader Internal.InfoTable) r => Name -> Sem r (Maybe BuiltinFunction)
+getFunctionBuiltinInfo n = do
+  maybeFunInfo <- HashMap.lookup n <$> asks (^. Internal.infoFunctions)
+  return $ case maybeFunInfo of
+    Just funInfo -> funInfo ^. Internal.functionInfoDef . Internal.funDefBuiltin
+    Nothing -> Nothing
