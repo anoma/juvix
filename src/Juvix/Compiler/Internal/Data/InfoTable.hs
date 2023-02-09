@@ -196,3 +196,17 @@ constructorReturnType c = do
           ind
           inductiveParams
   return saturatedTy
+
+getAxiomBuiltinInfo :: Member (Reader InfoTable) r => Name -> Sem r (Maybe BuiltinAxiom)
+getAxiomBuiltinInfo n = do
+  maybeAxiomInfo <- HashMap.lookup n <$> asks (^. infoAxioms)
+  return $ case maybeAxiomInfo of
+    Just axiomInfo -> axiomInfo ^. axiomInfoBuiltin
+    Nothing -> Nothing
+
+getFunctionBuiltinInfo :: Member (Reader InfoTable) r => Name -> Sem r (Maybe BuiltinFunction)
+getFunctionBuiltinInfo n = do
+  maybeFunInfo <- HashMap.lookup n <$> asks (^. infoFunctions)
+  return $ case maybeFunInfo of
+    Just funInfo -> funInfo ^. functionInfoDef . funDefBuiltin
+    Nothing -> Nothing
