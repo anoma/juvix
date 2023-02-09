@@ -9,8 +9,8 @@ import Juvix.Compiler.Core.Data.InfoTable qualified as Core
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
-import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Pipeline qualified as Core
+import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Pipeline
 
