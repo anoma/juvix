@@ -188,9 +188,10 @@ compilePattern numPatterns = \case
       )
     where
       mkArgCompiledPattern :: [Pattern] -> Sem r CompiledPattern
-      mkArgCompiledPattern args =
+      mkArgCompiledPattern args = do
+        bindersAbove <- asks (^. compileStateBindersAbove)
         let ctorArgsPatterns = compilePattern numPatterns <$> [cp | cp@(PatConstr {}) <- reverse args]
-         in runReader (stateWithBindersAbove (length args)) (combineCompiledPatterns ctorArgsPatterns)
+        runReader (stateWithBindersAbove (bindersAbove + length args)) (combineCompiledPatterns ctorArgsPatterns)
 
       mkCompiledBinder :: Pattern -> Sem r CompiledBinder
       mkCompiledBinder p = case p of
