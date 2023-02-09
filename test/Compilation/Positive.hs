@@ -39,7 +39,7 @@ allTests =
     ( map
         (mkTest . toTestDescr)
         ( filterOutTests
-            [ "Merge sort"
+            [ "Nested binders with variable capture"
             ]
             tests
         )

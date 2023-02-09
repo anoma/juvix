@@ -20,11 +20,11 @@ compileAssertion ::
   (String -> IO ()) ->
   Assertion
 compileAssertion mainFile expectedFile step = do
-  step "Translate to JuvixCore apply match-to-case, nat-to-int transformations and evaluate"
+  step "Translate to JuvixCore"
   cwd <- getCurrentDir
   let entryPoint = defaultEntryPoint cwd mainFile
   tab' <- (^. Core.coreResultTable) . snd <$> runIO' iniState entryPoint upToCore
-  let tab = Core.applyTransformations [Core.MatchToCase, Core.NatToInt] tab'
+  let tab = Core.applyTransformations [Core.MatchToCase, Core.NatToInt, Core.ConvertBuiltinTypes] tab'
   case (tab ^. Core.infoMain) >>= ((tab ^. Core.identContext) HashMap.!?) of
     Just node -> do
       withTempDir'

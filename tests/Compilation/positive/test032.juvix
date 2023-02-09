@@ -38,7 +38,7 @@ gen acc (suc n) f := gen (f (suc n) :: acc) n f;
 
 gen2 : List (List Nat) → Nat → Nat → List (List Nat);
 gen2 acc m zero := acc;
-gen2 acc m (suc n) := gen2 (gen nil m ((+) n) :: acc) m n;
+gen2 acc m (suc n) := gen2 (gen nil m ((+) (suc n)) :: acc) m n;
 
 printListNatLn : List Nat → IO;
 printListNatLn nil := printStringLn "nil";
