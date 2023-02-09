@@ -78,3 +78,10 @@ even := \{
   (suc n) := odd n;
 };
 #+end_example
+
+** Short definitions
+
+If a function has only one clause, then its definition can written in one line, with the body immediately following the signature:
+#+begin_example
+multiplyByTwo : Nat -> Nat := \{n := 2 * n};
+#+end_example

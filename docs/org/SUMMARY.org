@@ -28,6 +28,8 @@
   - [[./reference/language/functions.md][Functions]]
   - [[./reference/language/datatypes.md][Data types]]
   - [[./reference/language/modules.md][Modules]]
+  - [[./reference/language/let.md][Local definitions]]
+  - [[./reference/language/control.md][Control structures]]
   - [[./reference/language/comments.md][Comments]]
   - [[./reference/language/axioms.md][Axioms]]
 - [[./reference/examples.md][Example programs]]
