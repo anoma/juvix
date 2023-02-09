@@ -4,6 +4,7 @@ module Juvix.Compiler.Concrete.Language
   ( module Juvix.Compiler.Concrete.Language,
     module Juvix.Compiler.Concrete.Data.Name,
     module Juvix.Compiler.Concrete.Data.NameRef,
+    module Juvix.Data.Keyword,
     module Juvix.Compiler.Concrete.Data.Builtins,
     module Juvix.Compiler.Concrete.Data.Literal,
     module Juvix.Data,
@@ -617,6 +618,7 @@ deriving stock instance
 -- | Function *type* representation
 data Function (s :: Stage) = Function
   { _funParameters :: FunctionParameters s,
+    _funKw :: KeywordRef,
     _funReturn :: ExpressionType s
   }
 
@@ -865,7 +867,7 @@ data ExpressionAtom (s :: Stage)
   | AtomLetBlock (LetBlock s)
   | AtomUniverse Universe
   | AtomFunction (Function s)
-  | AtomFunArrow
+  | AtomFunArrow KeywordRef
   | AtomLiteral LiteralLoc
   | AtomParens (ExpressionType s)
 
@@ -1259,8 +1261,13 @@ instance HasAtomicity (ExpressionAtoms 'Parsed) where
   atomicity ExpressionAtoms {..} = case _expressionAtoms of
     (_ :| []) -> Atom
     (_ :| _)
-      | AtomFunArrow `elem` _expressionAtoms -> Aggregate funFixity
+      | any isArrow _expressionAtoms -> Aggregate funFixity
       | otherwise -> Aggregate appFixity
+      where
+        isArrow :: ExpressionAtom s -> Bool
+        isArrow = \case
+          AtomFunArrow {} -> True
+          _ -> False
 
 instance
   ( Eq (ExpressionType s),

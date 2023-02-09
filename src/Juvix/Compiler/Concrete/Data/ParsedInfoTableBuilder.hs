@@ -18,7 +18,6 @@ import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Compiler.Concrete.Data.ParsedInfoTable
 import Juvix.Compiler.Concrete.Data.ParsedItem
 import Juvix.Compiler.Concrete.Language
-import Juvix.Data.Keyword
 import Juvix.Prelude
 
 data InfoTableBuilder m a where

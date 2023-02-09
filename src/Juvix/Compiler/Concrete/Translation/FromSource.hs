@@ -367,7 +367,7 @@ expressionAtom =
       <|> (AtomCase <$> case_)
       <|> (AtomFunction <$> function)
       <|> (AtomLetBlock <$> letBlock)
-      <|> (AtomFunArrow <$ kw kwRightArrow)
+      <|> (AtomFunArrow <$> kw kwRightArrow)
       <|> (AtomHole <$> hole)
       <|> parens (AtomParens <$> parseExpressionAtoms)
       <|> braces (AtomBraces <$> withLoc parseExpressionAtoms)
@@ -522,7 +522,7 @@ functionParams = do
 function :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => ParsecS r (Function 'Parsed)
 function = do
   _funParameters <- functionParams
-  kw kwRightArrow
+  _funKw <- kw kwRightArrow
   _funReturn <- parseExpressionAtoms
   return Function {..}
 
@@ -668,7 +668,7 @@ atomicExpression :: (Members '[InfoTableBuilder, JudocStash, NameIdGen] r) => Pa
 atomicExpression = do
   (atom, loc) <- interval expressionAtom
   case atom of
-    AtomFunArrow -> P.failure Nothing mempty
+    AtomFunArrow {} -> P.failure Nothing mempty
     _ -> return ()
   return $ ExpressionAtoms (NonEmpty.singleton atom) loc
 

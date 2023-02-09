@@ -446,9 +446,9 @@ goUniverse :: Universe -> Universe
 goUniverse = id
 
 goFunction :: (Members '[Error ScoperError, InfoTableBuilder] r) => Function 'Scoped -> Sem r Abstract.Function
-goFunction (Function l r) = do
-  params <- goFunctionParameters l
-  ret <- goExpression r
+goFunction f = do
+  params <- goFunctionParameters (f ^. funParameters)
+  ret <- goExpression (f ^. funReturn)
   return $
     Abstract.Function (head params) $
       foldr (\param acc -> Abstract.ExpressionFunction $ Abstract.Function param acc) ret (NonEmpty.tail params)
