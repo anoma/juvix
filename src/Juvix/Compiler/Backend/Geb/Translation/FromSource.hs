@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-monomorphism-restriction #-}
-
 module Juvix.Compiler.Backend.Geb.Translation.FromSource
   ( module Juvix.Compiler.Backend.Geb.Translation.FromSource,
     module Juvix.Parser.Error,
@@ -7,25 +5,14 @@ module Juvix.Compiler.Backend.Geb.Translation.FromSource
 where
 
 import Juvix.Compiler.Backend.Geb.Keywords
-import Juvix.Compiler.Backend.Geb.Language (typedMorphismObject)
 import Juvix.Compiler.Backend.Geb.Language qualified as Geb
-import Juvix.Compiler.Core.Translation.FromSource.Lexer
-import Juvix.Compiler.Core.Translation.FromSource.Lexer qualified as P
+import Juvix.Compiler.Backend.Geb.Translation.FromSource.Lexer
 import Juvix.Parser.Error
 import Juvix.Prelude
 import Text.Megaparsec qualified as P
-import Text.Megaparsec.Char qualified as P
-import Text.Megaparsec.Char.Lexer qualified as L
-import Text.Megaparsec.Debug
-
-data GebLispExpr
-  = GebLispExprTypedMorphism Geb.TypedMorphism
-  | GebLispExprList [GebLispExpr]
-  | GebLispExprAtom String
-  deriving (Eq, Show)
 
 data LispDefParameter = LispDefParameter
-  { _lispDefParameterName :: String,
+  { _lispDefParameterName :: Text,
     _lispDefParameterMorphism :: Geb.TypedMorphism
   }
 
@@ -57,145 +44,101 @@ runParser fileName input =
       Left err -> Left . JuvixError $ ErrMegaparsec (MegaparsecError err)
       Right gebTerm -> Right gebTerm
 
--- Parser for spaces
-sc :: ParsecS r ()
-sc = L.space space1 lineCmnt blockCmnt
+parseLispSymbol :: ParsecS r Text
+parseLispSymbol =
+  P.label "<lisp symbol>" $ do
+    lexeme $
+      P.takeWhile1P Nothing validChars
   where
-    lineCmnt = L.skipLineComment ";"
-    blockCmnt = L.skipBlockComment "#|" "|#"
+    validChars :: Char -> Bool
+    validChars = (`notElem` ("() " :: String))
 
--- Parser for a symbol
-name :: ParsecS r String
-name = P.many (P.letterChar <|> P.digitChar <|> P.char '-' <|> P.char '_')
-
-name' :: ParsecS r String
-name' = P.char ':' >> many (name >> P.char '.') >> name <* P.newline
-
-parseLispAtom :: ParsecS r GebLispExpr
-parseLispAtom = GebLispExprAtom <$> name
-
-parseLispList :: ParsecS r GebLispExpr
+parseLispList :: ParsecS r ()
 parseLispList =
-  GebLispExprList
-    <$> P.between lparen rparen (P.many parseList)
+  P.label "<lisp list>" $
+    lexeme . parens $
+      P.skipSome parseLispExpr
 
-parseList :: ParsecS r GebLispExpr
-parseList =
-  P.try parseLispAtom
+parseLispExpr :: ParsecS r ()
+parseLispExpr =
+  void parseLispSymbol
     <|> parseLispList
 
-parseTypedMorphism :: ParsecS r Geb.TypedMorphism
-parseTypedMorphism =
-  P.label "<typed morphism>" $
-    P.between lparen rparen $
-      do
-        symbol "typed"
-        t <- morphism
-        Geb.TypedMorphism t <$> object
+parseTypeMorphism :: ParsecS r Geb.TypedMorphism
+parseTypeMorphism =
+  parens $ do
+    symbol "typed"
+    m <- morphism
+    o <- object
+    return $
+      Geb.TypedMorphism
+        { _typedMorphism = m,
+          _typedMorphismObject = o
+        }
 
 parseDefParameter :: ParsecS r LispDefParameter
 parseDefParameter =
-  P.label "<defparameter>" $
-    P.between lparen rparen $
-      do
-        symbol "defparameter"
-        entryName <- name
-        morph :: Geb.TypedMorphism <- parseTypedMorphism
-        return
-          LispDefParameter
-            { _lispDefParameterName = entryName,
-              _lispDefParameterMorphism = morph
-            }
-
-parseDefPackage :: ParsecS r GebLispExpr
-parseDefPackage = do
-  symbol "defpackage"
-  optional (P.char '#')
-  name'
-  GebLispExprList <$> many parseLispList
+  P.label "<defparameter>" $ do
+    parens $ do
+      symbol "defparameter"
+      n <- parseLispSymbol
+      m <- parseTypeMorphism
+      return $
+        LispDefParameter
+          { _lispDefParameterName = n,
+            _lispDefParameterMorphism = m
+          }
 
 parseGebLisp :: ParsecS r Geb.Expression
-parseGebLisp =
-  P.label "<lisp geb program>" $ do
-    parseDefPackage -- for defpackage
-    parseLispList -- for in-package
-    entry <- parseDefParameter -- for defparameter
-    return $
-      Geb.ExpressionMorphism $
-        entry
-          ^. lispDefParameterMorphism
-          . Geb.typedMorphism
+parseGebLisp = do
+  space
+  P.label "<defpackage>" parseLispExpr
+  P.label "<in-package>" parseLispExpr
+  entry <- parseDefParameter
+  P.eof
+  return $
+    Geb.ExpressionMorphism $
+      entry
+        ^. lispDefParameterMorphism
+        . Geb.typedMorphism
 
-{-
-
-(defpackage #:test001
-  (:shadowing-import-from :geb.lambda.spec #:func #:pair)
-  (:shadowing-import-from :geb.spec #:case)
-  (:use #:common-lisp #:geb.lambda.spec #:geb))
-
-docLisp :: Options -> Text -> Text -> Morphism -> Object -> Doc Ann
-docLisp opts packageName entryName morph obj =
-  "(defpackage #:"
-    <> pretty packageName
-    <> line
-    <> indent' "(:shadowing-import-from :geb.lambda.spec #:func #:pair)"
-    <> line
-    <> indent' "(:shadowing-import-from :geb.spec #:case)"
-    <> line
-    <> indent' "(:use #:common-lisp #:geb.lambda.spec #:geb))"
-    <> line
-    <> line
-    <> "(in-package :"
-    <> pretty packageName
-    <> ")"
-    <> line
-    <> line
-    <> parens
-      ( "defparameter"
-          <+> pretty entryName
-            <> line
-            <> indent' (parens ("typed" <+> doc opts morph <+> doc opts obj))
-      )
-      -}
+parseGebExpression :: ParsecS r Geb.Expression
+parseGebExpression =
+  P.try (Geb.ExpressionObject <$> object)
+    <|> Geb.ExpressionMorphism <$> morphism
 
 parseGeb :: ParsecS r Geb.Expression
 parseGeb =
   P.label "<geb program>" $
-    do
-      P.try (Geb.ExpressionObject <$> object)
-      <|> (Geb.ExpressionMorphism <$> morphism)
+    space *> parseGebExpression <* P.eof
 
 morphism :: ParsecS r Geb.Morphism
 morphism =
-  P.label "<geb morphism>" $
-    space *> do
-      lparen' <- optional lparen
-      ( morphismUnit
-          <|> (Geb.MorphismAbsurd <$> morphismAbsurd)
-          <|> (Geb.MorphismLeft <$> morphismLeft)
-          <|> (Geb.MorphismRight <$> morphismRight)
-          <|> (Geb.MorphismCase <$> morphismCase)
-          <|> (Geb.MorphismPair <$> morphismPair)
-          <|> (Geb.MorphismFirst <$> morphismFirst)
-          <|> (Geb.MorphismSecond <$> morphismSecond)
-          <|> (Geb.MorphismLambda <$> morphismLambda)
-          <|> (Geb.MorphismApplication <$> morphismApplication)
-          <|> (Geb.MorphismVar <$> morphismVar)
+  P.label "<geb morphism>" $ do
+    morphismUnit
+      <|> parens
+        ( Geb.MorphismAbsurd <$> morphismAbsurd
+            <|> Geb.MorphismLeft <$> morphismLeft
+            <|> Geb.MorphismRight <$> morphismRight
+            <|> Geb.MorphismCase <$> morphismCase
+            <|> Geb.MorphismPair <$> morphismPair
+            <|> Geb.MorphismFirst <$> morphismFirst
+            <|> Geb.MorphismSecond <$> morphismSecond
+            <|> Geb.MorphismLambda <$> morphismLambda
+            <|> Geb.MorphismApplication <$> morphismApplication
+            <|> Geb.MorphismVar <$> morphismVar
         )
-        <* whenJust lparen' (const rparen)
 
 object :: ParsecS r Geb.Object
 object =
-  P.label "<geb Object>" $
-    space *> do
-      lparen' <- optional lparen
-      ( objectInitial
-          <|> objectTerminal
-          <|> (Geb.ObjectProduct <$> objectProduct)
-          <|> (Geb.ObjectCoproduct <$> objectCoproduct)
-          <|> (Geb.ObjectHom <$> objectHom)
+  P.label "<geb Object>" $ do
+    objectInitial
+      <|> objectTerminal
+      <|> parens
+        ( Geb.ObjectProduct <$> objectProduct
+            <|> Geb.ObjectCoproduct <$> objectCoproduct
+            <|> Geb.ObjectHom <$> objectHom
         )
-        <* whenJust lparen' (const rparen)
 
 morphismUnit :: ParsecS r Geb.Morphism
 morphismUnit = do

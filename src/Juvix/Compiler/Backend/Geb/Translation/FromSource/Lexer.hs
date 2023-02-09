@@ -12,8 +12,11 @@ import Juvix.Prelude
 import Text.Megaparsec as P hiding (sepBy1, sepEndBy1, some)
 import Text.Megaparsec.Char.Lexer qualified as L
 
-space :: ParsecS r ()
-space = void (space' False)
+space :: forall r. ParsecS r ()
+space = L.space space1 lineCmnt blockCmnt
+  where
+    lineCmnt :: ParsecS r () = L.skipLineComment ";"
+    blockCmnt :: ParsecS r () = L.skipBlockComment "#|" "|#"
 
 lexeme :: ParsecS r a -> ParsecS r a
 lexeme = L.lexeme space
