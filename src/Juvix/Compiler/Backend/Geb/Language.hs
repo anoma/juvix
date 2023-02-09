@@ -7,9 +7,6 @@ where
 import Control.DeepSeq
 import Juvix.Prelude hiding (First, Product)
 
-data Expression = ExpressionMorphism Morphism | ExpressionObject Object
-  deriving stock (Show)
-
 {-
   The following datatypes correspond to GEB types for terms
   (https://github.com/anoma/geb/blob/main/src/specs/lambda.lisp) and types
@@ -165,6 +162,21 @@ data Object
 
 instance NFData Object
 
+data Expression
+  = ExpressionMorphism Morphism
+  | ExpressionObject Object
+  deriving stock (Show, Eq, Generic)
+
+instance NFData Expression
+
+data TypedMorphism = TypedMorphism
+  { _typedMorphism :: Morphism,
+    _typedMorphismObject :: Object
+  }
+  deriving stock (Show, Eq, Generic)
+
+instance NFData TypedMorphism
+
 instance HasAtomicity Opcode where
   atomicity OpAdd = Atom
   atomicity OpSub = Atom
@@ -217,3 +229,4 @@ makeLenses ''Product
 makeLenses ''Coproduct
 makeLenses ''Hom
 makeLenses ''Object
+makeLenses ''TypedMorphism

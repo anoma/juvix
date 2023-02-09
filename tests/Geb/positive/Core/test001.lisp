@@ -1,5 +1,4 @@
-(defpackage 
-  #:shadowing-import-from
+(defpackage #:test001
   (:shadowing-import-from :geb.lambda.spec #:func #:pair)
   (:shadowing-import-from :geb.spec #:case)
   (:use #:common-lisp #:geb.lambda.spec #:geb))

@@ -7,6 +7,7 @@ module Juvix.Compiler.Backend.Geb.Translation.FromSource
 where
 
 import Juvix.Compiler.Backend.Geb.Keywords
+import Juvix.Compiler.Backend.Geb.Language (typedMorphismObject)
 import Juvix.Compiler.Backend.Geb.Language qualified as Geb
 import Juvix.Compiler.Core.Translation.FromSource.Lexer
 import Juvix.Compiler.Core.Translation.FromSource.Lexer qualified as P
@@ -16,6 +17,19 @@ import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char qualified as P
 import Text.Megaparsec.Char.Lexer qualified as L
 import Text.Megaparsec.Debug
+
+data GebLispExpr
+  = GebLispExprTypedMorphism Geb.TypedMorphism
+  | GebLispExprList [GebLispExpr]
+  | GebLispExprAtom String
+  deriving (Eq, Show)
+
+data LispDefParameter = LispDefParameter
+  { _lispDefParameterName :: String,
+    _lispDefParameterMorphism :: Geb.TypedMorphism
+  }
+
+makeLenses ''LispDefParameter
 
 fromSource ::
   Member (Error JuvixError) r =>
@@ -43,20 +57,6 @@ runParser fileName input =
       Left err -> Left . JuvixError $ ErrMegaparsec (MegaparsecError err)
       Right gebTerm -> Right gebTerm
 
--- Definition of a Lisp expression
-
-data TypedMorphism = TypedMorphism
-  { _typedMorphism :: Geb.Morphism,
-    _typedMorphismObject :: Geb.Object
-  }
-  deriving (Eq, Show)
-
-data GebLispExpr
-  = GebLispExprTypedMorphism TypedMorphism
-  | GebLispList [GebLispExpr]
-  | GebLispAtom String
-  deriving (Eq, Show)
-
 -- Parser for spaces
 sc :: ParsecS r ()
 sc = L.space space1 lineCmnt blockCmnt
@@ -64,43 +64,34 @@ sc = L.space space1 lineCmnt blockCmnt
     lineCmnt = L.skipLineComment ";"
     blockCmnt = L.skipBlockComment "#|" "|#"
 
--- Parser for string literals
-lexeme :: ParsecS r a -> ParsecS r a
-lexeme = L.lexeme sc
-
 -- Parser for a symbol
 name :: ParsecS r String
 name = P.many (P.letterChar <|> P.digitChar <|> P.char '-' <|> P.char '_')
 
 name' :: ParsecS r String
-name' = P.char ':' >> many (name >> P.char '.') >> name
+name' = P.char ':' >> many (name >> P.char '.') >> name <* P.newline
 
 parseLispAtom :: ParsecS r GebLispExpr
-parseLispAtom = GebLispAtom <$> name
+parseLispAtom = GebLispExprAtom <$> name
 
 parseLispList :: ParsecS r GebLispExpr
 parseLispList =
-  GebLispList
-    <$> P.between lparen rparen (P.many parseLispExpr)
+  GebLispExprList
+    <$> P.between lparen rparen (P.many parseList)
 
-parseLispExpr :: ParsecS r GebLispExpr
-parseLispExpr =
+parseList :: ParsecS r GebLispExpr
+parseList =
   P.try parseLispAtom
     <|> parseLispList
 
-parseTypedMorphism :: ParsecS r TypedMorphism
+parseTypedMorphism :: ParsecS r Geb.TypedMorphism
 parseTypedMorphism =
   P.label "<typed morphism>" $
     P.between lparen rparen $
       do
         symbol "typed"
         t <- morphism
-        TypedMorphism t <$> object
-
-data LispDefParameter = LispDefParameter
-  { _lispDefParameterName :: String,
-    _lispDefParameterMorphism :: TypedMorphism
-  }
+        Geb.TypedMorphism t <$> object
 
 parseDefParameter :: ParsecS r LispDefParameter
 parseDefParameter =
@@ -109,7 +100,7 @@ parseDefParameter =
       do
         symbol "defparameter"
         entryName <- name
-        morph :: TypedMorphism <- parseTypedMorphism
+        morph :: Geb.TypedMorphism <- parseTypedMorphism
         return
           LispDefParameter
             { _lispDefParameterName = entryName,
@@ -119,23 +110,21 @@ parseDefParameter =
 parseDefPackage :: ParsecS r GebLispExpr
 parseDefPackage = do
   symbol "defpackage"
-  packageName <- name'
-  l <- many parseLispList
-  -- TODO
-  return $ GebLispList l
+  optional (P.char '#')
+  name'
+  GebLispExprList <$> many parseLispList
 
 parseGebLisp :: ParsecS r Geb.Expression
 parseGebLisp =
-  P.label "<lisp geb program>" $
-    dbg "package" $
-      -- P.between lparen rparen $
-      do
-        symbol "defpackage" P.<?> "defpackage"
-        optional (P.char '#')
-
-        -- many
-        --   (P.try P.letterChar <|> P.try P.digitChar)
-        return $ Geb.ExpressionMorphism Geb.MorphismUnit
+  P.label "<lisp geb program>" $ do
+    parseDefPackage -- for defpackage
+    parseLispList -- for in-package
+    entry <- parseDefParameter -- for defparameter
+    return $
+      Geb.ExpressionMorphism $
+        entry
+          ^. lispDefParameterMorphism
+          . Geb.typedMorphism
 
 {-
 

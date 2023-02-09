@@ -121,7 +121,7 @@ runCommand _opts = do
             case inferRes of
               Right obj -> renderOut (Geb.ppOut Geb.defaultEvaluatorOptions obj)
               Left err -> printError err
-          Right _ -> liftIO . putStrLn $ "Geb object has to be a Geb object?"
+          Right _ -> liftIO . putStrLn $ "No object inferred for a Geb object"
 
       command :: String -> Repl ()
       command gebProgram =
