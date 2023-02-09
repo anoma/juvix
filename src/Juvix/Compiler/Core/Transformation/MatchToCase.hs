@@ -174,7 +174,7 @@ compilePattern numPatterns = \case
   PatConstr c -> do
     let args = (c ^. patternConstrArgs)
     argBinders <- mapM mkCompiledBinder args
-    compiledArgs <- mkArgCompiledPattern args
+    compiledArgs <- mkArgCompiledPattern (extractAsPatterns <$> args)
     let vs = compiledArgs ^. compiledPatBinders
         nn = compiledArgs ^. compiledPatMkNode
     binders <- mapM mkBinder args
@@ -187,6 +187,11 @@ compilePattern numPatterns = \case
           }
       )
     where
+      extractAsPatterns :: Pattern -> Pattern
+      extractAsPatterns p = case p of
+        PatBinder (PatternBinder _ ctor@(PatConstr {})) -> ctor
+        _ -> p
+
       mkArgCompiledPattern :: [Pattern] -> Sem r CompiledPattern
       mkArgCompiledPattern args = do
         bindersAbove <- asks (^. compileStateBindersAbove)
