@@ -6,12 +6,14 @@ import Commands.Dev.Core.Eval.Options
 import Commands.Dev.Core.Read.Options
 import Commands.Dev.Core.Repl.Options
 import Commands.Dev.Core.Strip.Options
+import Commands.Dev.Core.FromSource.Options
 import CommonOptions
 
 data CoreCommand
   = Repl CoreReplOptions
   | Eval CoreEvalOptions
   | Read CoreReadOptions
+  | FromSource CoreFromSourceOptions
   | Strip CoreStripOptions
   | CoreAsm CoreAsmOptions
   | CoreCompile CoreCompileOptions
@@ -25,6 +27,7 @@ parseCoreCommand =
         commandEval,
         commandRead,
         commandStrip,
+        commandFromSource,
         commandAsm,
         commandCompile
       ]
@@ -44,6 +47,9 @@ parseCoreCommand =
     commandAsm :: Mod CommandFields CoreCommand
     commandAsm = command "asm" asmInfo
 
+    commandFromSource :: Mod CommandFields CoreCommand
+    commandFromSource = command "from-source" fromSourceInfo
+
     commandCompile :: Mod CommandFields CoreCommand
     commandCompile = command "compile" compileInfo
 
@@ -52,6 +58,12 @@ parseCoreCommand =
       info
         (Repl <$> parseCoreReplOptions)
         (progDesc "Start an interactive session of the JuvixCore evaluator")
+
+    fromSourceInfo :: ParserInfo CoreCommand
+    fromSourceInfo =
+      info
+        (FromSource <$> parseCoreFromSourceOptions)
+        (progDesc "Read a Juvix file and compile it to core")
 
     evalInfo :: ParserInfo CoreCommand
     evalInfo =

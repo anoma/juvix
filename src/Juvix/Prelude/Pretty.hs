@@ -39,6 +39,13 @@ data AnsiText = forall t.
   { _ansiText :: t
   }
 
+instance HasTextBackend Text where
+  toTextStream = toTextStream . pretty
+  toTextDoc = toTextDoc . pretty
+
+instance HasAnsiBackend Text where
+  toAnsiDoc = pretty
+
 instance HasTextBackend AnsiText where
   toTextStream (AnsiText t) = toTextStream t
   toTextDoc (AnsiText t) = toTextDoc t

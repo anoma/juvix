@@ -8,12 +8,14 @@ import Commands.Dev.Core.Options
 import Commands.Dev.Core.Read as Read
 import Commands.Dev.Core.Repl as Repl
 import Commands.Dev.Core.Strip as Strip
+import Commands.Dev.Core.FromSource as FromSource
 
 runCommand :: forall r. (Members '[Embed IO, App] r) => CoreCommand -> Sem r ()
 runCommand = \case
   Repl opts -> Repl.runCommand opts
   Eval opts -> Eval.runCommand opts
   Read opts -> Read.runCommand opts
+  FromSource opts -> FromSource.runCommand opts
   Strip opts -> Strip.runCommand opts
   CoreAsm opts -> Asm.runCommand opts
   CoreCompile opts -> Compile.runCommand opts
