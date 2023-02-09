@@ -18,8 +18,9 @@ runCommand localOpts = do
       inInputModule = (== Just path) . (^? identifierLocation . _Just . intervalFile)
 
       mainIdens :: [IdentifierInfo] =
-        sortOn (^. identifierLocation)
-        (filter inInputModule (toList (tab' ^. infoIdentifiers)))
+        sortOn
+          (^. identifierLocation)
+          (filter inInputModule (toList (tab' ^. infoIdentifiers)))
 
       mainInfo :: Maybe IdentifierInfo
       mainInfo = do
