@@ -16,11 +16,10 @@ front q := head (qfst q);
 
 pop_front : {A : Type} → Queue A → Queue A;
 pop_front {A} q :=
-  let q' : Queue A; q' := queue (tail (qfst q)) (qsnd q) in
+  let q' : Queue A := queue (tail (qfst q)) (qsnd q) in
   case qfst q'
     | nil := queue (reverse (qsnd q')) nil
-    | _ := q'
-  ;
+    | _ := q';
 
 push_back : {A : Type} → Queue A → A → Queue A;
 push_back q x := case qfst q
