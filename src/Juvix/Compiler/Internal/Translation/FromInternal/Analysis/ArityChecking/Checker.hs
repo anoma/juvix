@@ -501,10 +501,10 @@ checkExpression hintArity expr = case expr of
                 _ ->
                   throw $
                     ErrBuiltinNotFullyApplied
-                      BuiltinNotFullyApplied {
-                        _builtinNotFullyAppliedName = n,
-                        _builtinNotFullyAplliedExpectedArgsNum  = 2
-                      }
+                      BuiltinNotFullyApplied
+                        { _builtinNotFullyAppliedName = n,
+                          _builtinNotFullyAplliedExpectedArgsNum = 2
+                        }
             Just BuiltinTrace -> do
               case args of
                 ((Explicit, _) : _ : _) -> appHelper f args
@@ -513,10 +513,10 @@ checkExpression hintArity expr = case expr of
                 _ ->
                   throw $
                     ErrBuiltinNotFullyApplied
-                      BuiltinNotFullyApplied {
-                        _builtinNotFullyAppliedName = n,
-                        _builtinNotFullyAplliedExpectedArgsNum  = 2
-                      }
+                      BuiltinNotFullyApplied
+                        { _builtinNotFullyAppliedName = n,
+                          _builtinNotFullyAplliedExpectedArgsNum = 2
+                        }
             _ ->
               appHelper f args
         ExpressionIden (IdenFunction n) -> do
@@ -529,30 +529,30 @@ checkExpression hintArity expr = case expr of
                 _ ->
                   throw $
                     ErrBuiltinNotFullyApplied
-                      BuiltinNotFullyApplied {
-                        _builtinNotFullyAppliedName = n,
-                        _builtinNotFullyAplliedExpectedArgsNum  = 3
-                      }
+                      BuiltinNotFullyApplied
+                        { _builtinNotFullyAppliedName = n,
+                          _builtinNotFullyAplliedExpectedArgsNum = 3
+                        }
             Just BuiltinBoolOr ->
               case args of
                 (_ : _ : _) -> appHelper f args
                 _ ->
                   throw $
                     ErrBuiltinNotFullyApplied
-                      BuiltinNotFullyApplied {
-                        _builtinNotFullyAppliedName = n,
-                        _builtinNotFullyAplliedExpectedArgsNum  = 2
-                      }
+                      BuiltinNotFullyApplied
+                        { _builtinNotFullyAppliedName = n,
+                          _builtinNotFullyAplliedExpectedArgsNum = 2
+                        }
             Just BuiltinBoolAnd ->
               case args of
                 (_ : _ : _) -> appHelper f args
                 _ ->
                   throw $
                     ErrBuiltinNotFullyApplied
-                      BuiltinNotFullyApplied {
-                        _builtinNotFullyAppliedName = n,
-                        _builtinNotFullyAplliedExpectedArgsNum  = 2
-                      }
+                      BuiltinNotFullyApplied
+                        { _builtinNotFullyAppliedName = n,
+                          _builtinNotFullyAplliedExpectedArgsNum = 2
+                        }
             _ -> appHelper f args
         _ ->
           appHelper f args

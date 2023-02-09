@@ -234,8 +234,7 @@ instance ToGenericError FunctionApplied where
               <+> ppApp opts' (fun, args)
 
 data BuiltinNotFullyApplied = BuiltinNotFullyApplied
-  {
-    _builtinNotFullyAppliedName :: Name,
+  { _builtinNotFullyAppliedName :: Name,
     _builtinNotFullyAplliedExpectedArgsNum :: Int
   }
 
