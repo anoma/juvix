@@ -407,7 +407,7 @@ The first argument of =go= is an /accumulator/ which holds the sum computed so f
 # #+end_example
 # introduces a recursive function =go= with =n= accumulators =acc1=, ..., =accn= and further =k= arguments of the lambda expression (above =n = k = 1=). The value of the entire expression is =go v1 ... vn=. The scope of =go= is the lambda expression, i.e., it is not visible outside of it.
 
-Most imperative loops may be translated into tail recursive functional programs by converting the locally modified variables into accumulators and the loop condition into pattern matching. For example, here is a pseudocode for computing the nth Fibonacci number in linear time. The variables =cur= and =next= hold the last two computed Fibonacci numbers.
+Most imperative loops may be translated into tail recursive functional programs by converting the locally modified variables into accumulators and the loop condition into pattern matching. For example, here is an imperative pseudocode for computing the nth Fibonacci number in linear time. The variables =cur= and =next= hold the last two computed Fibonacci numbers.
 #+begin_example
 var cur : Nat := 0;
 var next : Nat := 1;
