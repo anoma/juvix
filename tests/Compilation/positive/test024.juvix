@@ -38,6 +38,6 @@ g leaf := leaf;
 g (node l r) := if (isNode l) r (node r l);
 
 main : IO;
-main := printNatLn (f (gen 5));
+main := printNatLn (f (gen 10));
 
 end;
