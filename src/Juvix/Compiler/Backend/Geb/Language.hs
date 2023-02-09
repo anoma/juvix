@@ -8,6 +8,7 @@ import Control.DeepSeq
 import Juvix.Prelude hiding (First, Product)
 
 data Expression = ExpressionMorphism Morphism | ExpressionObject Object
+  deriving stock (Show)
 
 {-
   The following datatypes correspond to GEB types for terms

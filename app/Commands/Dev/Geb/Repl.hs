@@ -37,9 +37,8 @@ makeLenses ''ReplContext
 noFileLoadedMsg :: String
 noFileLoadedMsg = formatError <> "No file loaded. Load a file using the `:load FILE` command."
 
--- | imaginary file path for error messages in the repl.
 replPath :: Path Abs File
-replPath = $(mkAbsFile "/<repl>")
+replPath = $(mkAbsFile "/repl.geb")
 
 runCommand :: (Members '[Embed IO, App] r) => GebReplOptions -> Sem r ()
 runCommand _opts = do

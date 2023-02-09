@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-monomorphism-restriction #-}
+
 module Juvix.Compiler.Backend.Geb.Translation.FromSource
   ( module Juvix.Compiler.Backend.Geb.Translation.FromSource,
     module Juvix.Parser.Error,
@@ -7,12 +9,16 @@ where
 import Juvix.Compiler.Backend.Geb.Keywords
 import Juvix.Compiler.Backend.Geb.Language qualified as Geb
 import Juvix.Compiler.Core.Translation.FromSource.Lexer
+import Juvix.Compiler.Core.Translation.FromSource.Lexer qualified as P
 import Juvix.Parser.Error
 import Juvix.Prelude
 import Text.Megaparsec qualified as P
+import Text.Megaparsec.Char qualified as P
+import Text.Megaparsec.Char.Lexer qualified as L
+import Text.Megaparsec.Debug
 
 fromSource ::
-  Member (Error ParserError) r =>
+  Member (Error JuvixError) r =>
   Path Abs File ->
   Text ->
   Sem r Geb.Expression
@@ -24,12 +30,144 @@ fromSource fileName input =
 runParser ::
   Path Abs File ->
   Text ->
-  Either ParserError Geb.Expression
+  Either JuvixError Geb.Expression
 runParser fileName input =
-  case run $
-    P.runParserT parseGeb (fromAbsFile fileName) input of
-    Left err -> Left $ ErrMegaparsec (MegaparsecError err)
-    Right gebTerm -> Right gebTerm
+  do
+    let parser :: ParsecS r Geb.Expression
+        parser
+          | isJuvixGebFile fileName = parseGeb
+          | isLispFile fileName = parseGebLisp
+          | otherwise = error "unknown file extension"
+    case run $
+      P.runParserT parser (fromAbsFile fileName) input of
+      Left err -> Left . JuvixError $ ErrMegaparsec (MegaparsecError err)
+      Right gebTerm -> Right gebTerm
+
+-- Definition of a Lisp expression
+
+data TypedMorphism = TypedMorphism
+  { _typedMorphism :: Geb.Morphism,
+    _typedMorphismObject :: Geb.Object
+  }
+  deriving (Eq, Show)
+
+data GebLispExpr
+  = GebLispExprTypedMorphism TypedMorphism
+  | GebLispList [GebLispExpr]
+  | GebLispAtom String
+  deriving (Eq, Show)
+
+-- Parser for spaces
+sc :: ParsecS r ()
+sc = L.space space1 lineCmnt blockCmnt
+  where
+    lineCmnt = L.skipLineComment ";"
+    blockCmnt = L.skipBlockComment "#|" "|#"
+
+-- Parser for string literals
+lexeme :: ParsecS r a -> ParsecS r a
+lexeme = L.lexeme sc
+
+-- Parser for a symbol
+name :: ParsecS r String
+name = P.many (P.letterChar <|> P.digitChar <|> P.char '-' <|> P.char '_')
+
+name' :: ParsecS r String
+name' = P.char ':' >> many (name >> P.char '.') >> name
+
+parseLispAtom :: ParsecS r GebLispExpr
+parseLispAtom = GebLispAtom <$> name
+
+parseLispList :: ParsecS r GebLispExpr
+parseLispList =
+  GebLispList
+    <$> P.between lparen rparen (P.many parseLispExpr)
+
+parseLispExpr :: ParsecS r GebLispExpr
+parseLispExpr =
+  P.try parseLispAtom
+    <|> parseLispList
+
+parseTypedMorphism :: ParsecS r TypedMorphism
+parseTypedMorphism =
+  P.label "<typed morphism>" $
+    P.between lparen rparen $
+      do
+        symbol "typed"
+        t <- morphism
+        TypedMorphism t <$> object
+
+data LispDefParameter = LispDefParameter
+  { _lispDefParameterName :: String,
+    _lispDefParameterMorphism :: TypedMorphism
+  }
+
+parseDefParameter :: ParsecS r LispDefParameter
+parseDefParameter =
+  P.label "<defparameter>" $
+    P.between lparen rparen $
+      do
+        symbol "defparameter"
+        entryName <- name
+        morph :: TypedMorphism <- parseTypedMorphism
+        return
+          LispDefParameter
+            { _lispDefParameterName = entryName,
+              _lispDefParameterMorphism = morph
+            }
+
+parseDefPackage :: ParsecS r GebLispExpr
+parseDefPackage = do
+  symbol "defpackage"
+  packageName <- name'
+  l <- many parseLispList
+  -- TODO
+  return $ GebLispList l
+
+parseGebLisp :: ParsecS r Geb.Expression
+parseGebLisp =
+  P.label "<lisp geb program>" $
+    dbg "package" $
+      -- P.between lparen rparen $
+      do
+        symbol "defpackage" P.<?> "defpackage"
+        optional (P.char '#')
+
+        -- many
+        --   (P.try P.letterChar <|> P.try P.digitChar)
+        return $ Geb.ExpressionMorphism Geb.MorphismUnit
+
+{-
+
+(defpackage #:test001
+  (:shadowing-import-from :geb.lambda.spec #:func #:pair)
+  (:shadowing-import-from :geb.spec #:case)
+  (:use #:common-lisp #:geb.lambda.spec #:geb))
+
+docLisp :: Options -> Text -> Text -> Morphism -> Object -> Doc Ann
+docLisp opts packageName entryName morph obj =
+  "(defpackage #:"
+    <> pretty packageName
+    <> line
+    <> indent' "(:shadowing-import-from :geb.lambda.spec #:func #:pair)"
+    <> line
+    <> indent' "(:shadowing-import-from :geb.spec #:case)"
+    <> line
+    <> indent' "(:use #:common-lisp #:geb.lambda.spec #:geb))"
+    <> line
+    <> line
+    <> "(in-package :"
+    <> pretty packageName
+    <> ")"
+    <> line
+    <> line
+    <> parens
+      ( "defparameter"
+          <+> pretty entryName
+            <> line
+            <> indent' (parens ("typed" <+> doc opts morph <+> doc opts obj))
+      )
+      -}
 
 parseGeb :: ParsecS r Geb.Expression
 parseGeb =

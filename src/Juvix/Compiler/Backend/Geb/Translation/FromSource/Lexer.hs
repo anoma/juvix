@@ -52,9 +52,6 @@ bareIdentifier = rawIdentifier allKeywordStrings
 symbolAt :: ParsecS r ()
 symbolAt = symbol Str.at_
 
-lambda :: ParsecS r ()
-lambda = symbol Str.lambdaUnicode <|> symbol Str.lambdaAscii
-
 lbrace :: ParsecS r ()
 lbrace = symbol "{"
 
