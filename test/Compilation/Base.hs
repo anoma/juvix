@@ -10,7 +10,7 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Pretty
-import Juvix.Compiler.Core.Transformation qualified as Core
+import Juvix.Compiler.Core.Pipeline qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Pipeline
 
@@ -24,7 +24,7 @@ compileAssertion mainFile expectedFile step = do
   cwd <- getCurrentDir
   let entryPoint = defaultEntryPoint cwd mainFile
   tab' <- (^. Core.coreResultTable) . snd <$> runIO' iniState entryPoint upToCore
-  let tab = Core.applyTransformations [Core.MatchToCase, Core.NatToInt, Core.ConvertBuiltinTypes] tab'
+  let tab = Core.toEval tab'
   case (tab ^. Core.infoMain) >>= ((tab ^. Core.identContext) HashMap.!?) of
     Just node -> do
       withTempDir'
