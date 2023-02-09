@@ -15,8 +15,7 @@ ignoredTests =
     "Nested 'case', 'let' and 'if' with variable capture",
     "Mutual recursion",
     "LetRec",
-    "Big numbers",
-    "Match with complex patterns"
+    "Big numbers"
   ]
 
 liftTest :: Eval.PosTest -> TestTree
