@@ -284,7 +284,7 @@ nf ::
   Morphism ->
   Sem r Morphism
 nf m = do
-  ty <- inferObject Context.empty m
+  ty <- inferObject Context.empty Nothing m
   val <- eval m
   fromGebValue ty val
 

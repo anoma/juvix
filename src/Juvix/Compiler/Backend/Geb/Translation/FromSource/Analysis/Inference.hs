@@ -6,25 +6,28 @@ import Juvix.Compiler.Backend.Geb.Language qualified as Geb
 import Juvix.Prelude
 
 inferObject' :: Geb.Morphism -> Either JuvixError Geb.Object
-inferObject' = run . runError . inferObject Context.empty
+inferObject' = run . runError . inferObject Context.empty Nothing
 
 inferObject ::
   Members '[Error JuvixError] r =>
   Context Geb.Object ->
+  Maybe Geb.Object ->
   Geb.Morphism ->
   Sem r Geb.Object
-inferObject ctx = \case
+inferObject ctx tyInfo = \case
   Geb.MorphismUnit -> return Geb.ObjectTerminal
   Geb.MorphismInteger {} -> return Geb.ObjectInteger
-  Geb.MorphismAbsurd x -> inferObject ctx x
+  Geb.MorphismAbsurd x -> inferObject ctx tyInfo x
   Geb.MorphismPair pair -> do
-    lTy <- inferObject ctx (pair ^. Geb.pairLeft)
-    rTy <- inferObject ctx (pair ^. Geb.pairRight)
+    let lType = pair ^. Geb.pairLeftType
+        rType = pair ^. Geb.pairRightType
+    lTy <- inferObject ctx (Just lType) (pair ^. Geb.pairLeft)
+    rTy <- inferObject ctx (Just rType) (pair ^. Geb.pairRight)
     unless
-      (lTy == pair ^. Geb.pairLeftType)
+      (lTy == lType)
       (error "Type mismatch: left type on a pair")
     unless
-      (rTy == pair ^. Geb.pairRightType)
+      (rTy == rType)
       (error "Type mismatch: right type on a pair")
     return $
       Geb.ObjectProduct
@@ -32,22 +35,28 @@ inferObject ctx = \case
           { _productLeft = lTy,
             _productRight = rTy
           }
-  Geb.MorphismCase c -> return $ c ^. Geb.caseCodomainType
+  Geb.MorphismCase c ->
+    -- TODO check leaves
+    return $ c ^. Geb.caseCodomainType
   Geb.MorphismFirst p -> do
-    ty <- inferObject ctx (p ^. Geb.firstValue)
-    unless (ty == p ^. Geb.firstLeftType) (error "Type mismatch")
+    let leftType = p ^. Geb.firstLeftType
+    ty <- inferObject ctx (Just leftType) (p ^. Geb.firstValue)
+    unless (ty == leftType) (error "Type mismatch")
     return ty
   Geb.MorphismSecond p -> do
-    ty <- inferObject ctx (p ^. Geb.secondValue)
-    unless (ty == p ^. Geb.secondRightType) (error "Type mismatch")
+    let rightType = p ^. Geb.secondRightType
+    ty <- inferObject ctx (Just rightType) (p ^. Geb.secondValue)
+    unless (ty == rightType) (error "Type mismatch")
     return ty
   Geb.MorphismLambda l -> do
+    let bodyTy = l ^. Geb.lambdaBodyType
     bTy <-
       inferObject
         (Context.cons (l ^. Geb.lambdaVarType) ctx)
+        (Just bodyTy)
         (l ^. Geb.lambdaBody)
     unless
-      (bTy == l ^. Geb.lambdaBodyType)
+      (bTy == bodyTy)
       (error "Type mismatch: body of the lambda")
     return $
       Geb.ObjectHom $
@@ -56,8 +65,8 @@ inferObject ctx = \case
             _homCodomain = l ^. Geb.lambdaBodyType
           }
   Geb.MorphismApplication app -> do
-    lTy <- inferObject ctx (app ^. Geb.applicationLeft)
-    rTy <- inferObject ctx (app ^. Geb.applicationRight)
+    lTy <- inferObject ctx Nothing (app ^. Geb.applicationLeft)
+    rTy <- inferObject ctx Nothing (app ^. Geb.applicationRight)
     case lTy of
       Geb.ObjectHom h -> do
         unless
@@ -66,17 +75,45 @@ inferObject ctx = \case
         return $ h ^. Geb.homCodomain
       _ -> error "Left side of the application should be a function"
   Geb.MorphismBinop op -> do
-    aTy <- inferObject ctx (op ^. Geb.binopLeft)
-    bTy <- inferObject ctx (op ^. Geb.binopRight)
+    let outTy = objectBinop op
+    aTy <- inferObject ctx (Just outTy) (op ^. Geb.binopLeft)
+    bTy <- inferObject ctx (Just outTy) (op ^. Geb.binopRight)
     unless
       (aTy == bTy)
       (error "Arguments of a binary operation should have the same type")
-    return $ objectBinop op
-  Geb.MorphismVar v -> return $ Context.lookup (v ^. Geb.varIndex) ctx
+    return outTy
+  Geb.MorphismVar v -> do
+    let envTy = Context.lookup (v ^. Geb.varIndex) ctx
+    unless (Just envTy == tyInfo) (error "Type mismatch: variable")
+    return envTy
   -- FIXME: Once https://github.com/anoma/geb/issues/53 is fixed, we should
-  -- modify the following cases.
-  Geb.MorphismLeft {} -> error $ lackOfInformation <> " on a left morphism"
-  Geb.MorphismRight {} -> error $ lackOfInformation <> " on a right morphism"
+  -- modify the following cases, and use the type information provided.
+  Geb.MorphismLeft a -> do
+    case tyInfo of
+      Just cTy@(Geb.ObjectCoproduct coprod) -> do
+        let leftTy = coprod ^. Geb.coproductLeft
+        aTy <- inferObject ctx (Just leftTy) a
+        unless
+          (aTy == leftTy)
+          (error "Type mismatch: left morphism")
+        return cTy
+      Just _ -> error "Expected a coproduct object for a left morphism."
+      Nothing ->
+        error $
+          lackOfInformation
+            <> " on the left morphism "
+            <> show a
+  Geb.MorphismRight b ->
+    case tyInfo of
+      Just cTy@(Geb.ObjectCoproduct coprod) -> do
+        let rightTy = coprod ^. Geb.coproductRight
+        bTy <- inferObject ctx (Just rightTy) b
+        unless
+          (bTy == rightTy)
+          (error "Type mismatch: right morphism")
+        return cTy
+      Just _ -> error "Expected a coproduct object for a right morphism."
+      Nothing -> error $ lackOfInformation <> " on a right morphism"
 
 lackOfInformation :: Text
 lackOfInformation = "Not enough information to infer the type"

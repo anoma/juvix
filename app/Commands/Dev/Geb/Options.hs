@@ -6,6 +6,7 @@ module Commands.Dev.Geb.Options
 where
 
 import Commands.Dev.Geb.Eval.Options
+import Commands.Dev.Geb.Infer.Options
 import Commands.Dev.Geb.Read.Options
 import Commands.Dev.Geb.Repl.Options
 import CommonOptions
@@ -14,6 +15,7 @@ data GebCommand
   = GebCommandRepl GebReplOptions
   | GebCommandEval GebEvalOptions
   | GebCommandRead GebReadOptions
+  | GebCommandInfer GebInferOptions
   deriving stock (Data)
 
 parseGebCommand :: Parser GebCommand
@@ -22,7 +24,8 @@ parseGebCommand =
     mconcat
       [ commandRepl,
         commandEval,
-        commandRead
+        commandRead,
+        commandInfer
       ]
   where
     commandRepl :: Mod CommandFields GebCommand
@@ -33,6 +36,9 @@ parseGebCommand =
 
     commandRead :: Mod CommandFields GebCommand
     commandRead = command "read" readInfo
+
+    commandInfer :: Mod CommandFields GebCommand
+    commandInfer = command "infer" inferInfo
 
     replInfo :: ParserInfo GebCommand
     replInfo =
@@ -51,3 +57,9 @@ parseGebCommand =
       info
         (GebCommandRead <$> parseGebReadOptions)
         (progDesc "Read a JuvixGeb file and pretty print it")
+
+    inferInfo :: ParserInfo GebCommand
+    inferInfo =
+      info
+        (GebCommandInfer <$> parseGebInferOptions)
+        (progDesc "Infer the GebObject for a Geb morphism found in the given file. ")
