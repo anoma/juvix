@@ -782,13 +782,13 @@ goLiteral intToNat l = case l ^. withLocParam of
 getAxiomBuiltinInfo :: Member (Reader Internal.InfoTable) r => Name -> Sem r (Maybe BuiltinAxiom)
 getAxiomBuiltinInfo n = do
   maybeAxiomInfo <- HashMap.lookup n <$> asks (^. Internal.infoAxioms)
-  case maybeAxiomInfo of
-    Just axiomInfo -> return $ axiomInfo ^. Internal.axiomInfoBuiltin
-    Nothing -> return Nothing
+  return $ case maybeAxiomInfo of
+    Just axiomInfo -> axiomInfo ^. Internal.axiomInfoBuiltin
+    Nothing -> Nothing
 
 getFunctionBuiltinInfo :: Member (Reader Internal.InfoTable) r => Name -> Sem r (Maybe BuiltinFunction)
 getFunctionBuiltinInfo n = do
   maybeFunInfo <- HashMap.lookup n <$> asks (^. Internal.infoFunctions)
-  case maybeFunInfo of
-    Just funInfo -> return $ funInfo ^. Internal.functionInfoDef . Internal.funDefBuiltin
-    Nothing -> return Nothing
+  return $ case maybeFunInfo of
+    Just funInfo -> funInfo ^. Internal.functionInfoDef . Internal.funDefBuiltin
+    Nothing -> Nothing
