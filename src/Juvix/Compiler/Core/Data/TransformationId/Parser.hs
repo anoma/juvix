@@ -45,6 +45,7 @@ pcompletions = do
       LetRecLifting -> strLetRecLifting
       TopEtaExpand -> strTopEtaExpand
       MatchToCase -> strMatchToCase
+      EtaExpandApps -> strEtaExpandApps
       Identity -> strIdentity
       RemoveTypeArgs -> strRemoveTypeArgs
       MoveApps -> strMoveApps
@@ -101,6 +102,9 @@ strTopEtaExpand = "top-eta-expand"
 
 strMatchToCase :: Text
 strMatchToCase = "match-to-case"
+
+strEtaExpandApps :: Text
+strEtaExpandApps = "eta-expand-apps"
 
 strIdentity :: Text
 strIdentity = "identity"

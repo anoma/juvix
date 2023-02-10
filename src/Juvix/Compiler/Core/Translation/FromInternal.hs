@@ -10,16 +10,12 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Language
-import Juvix.Compiler.Core.Transformation.Eta (etaExpandApps)
 import Juvix.Compiler.Core.Translation.FromInternal.Data
 import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Data.Loc qualified as Loc
 import Juvix.Extra.Strings qualified as Str
-
-unsupported :: Text -> a
-unsupported thing = error ("Internal to Core: Not yet supported: " <> thing)
 
 -- Translation of a Name into the identifier index used in the Core InfoTable
 mkIdentIndex :: Name -> Text
@@ -620,17 +616,7 @@ goExpression ::
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.Expression ->
   Sem r Node
-goExpression e = do
-  node <- goExpression' e
-  tab <- getInfoTable
-  return $ etaExpandApps tab node
-
-goExpression' ::
-  forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
-  Internal.Expression ->
-  Sem r Node
-goExpression' = \case
+goExpression = \case
   Internal.ExpressionLet l -> goLet l
   Internal.ExpressionLiteral l -> do
     tab <- getInfoTable
