@@ -14,26 +14,32 @@ fromCore :: InfoTable -> Stripped.InfoTable
 fromCore tab =
   Stripped.InfoTable
     { _infoMain = tab ^. infoMain,
-      _infoFunctions = fmap (translateFunctionInfo tab) (tab ^. infoIdentifiers),
+      _infoFunctions =
+        HashMap.fromList $
+          map (\fi -> (fi ^. Stripped.functionSymbol, fi)) $
+          mapMaybe (translateFunctionInfo tab) $
+          HashMap.elems (tab ^. infoIdentifiers),
       _infoInductives = fmap translateInductiveInfo (tab ^. infoInductives),
       _infoConstructors = fmap translateConstructorInfo (tab ^. infoConstructors)
     }
 
-translateFunctionInfo :: InfoTable -> IdentifierInfo -> Stripped.FunctionInfo
-translateFunctionInfo tab IdentifierInfo {..} =
-  Stripped.FunctionInfo
-    { _functionName = _identifierName,
-      _functionLocation = _identifierLocation,
-      _functionSymbol = _identifierSymbol,
-      _functionBody =
-        translateFunction
-          _identifierArgsNum
-          (fromJust $ HashMap.lookup _identifierSymbol (tab ^. identContext)),
-      _functionType = translateType _identifierType,
-      _functionArgsNum = _identifierArgsNum,
-      _functionArgsInfo = map translateArgInfo _identifierArgsInfo,
-      _functionIsExported = _identifierIsExported
-    }
+translateFunctionInfo :: InfoTable -> IdentifierInfo -> Maybe Stripped.FunctionInfo
+translateFunctionInfo tab IdentifierInfo {..} = case _identifierBuiltin of
+  Nothing ->
+    Just $ Stripped.FunctionInfo
+      { _functionName = _identifierName,
+        _functionLocation = _identifierLocation,
+        _functionSymbol = _identifierSymbol,
+        _functionBody =
+          translateFunction
+            _identifierArgsNum
+            (fromJust $ HashMap.lookup _identifierSymbol (tab ^. identContext)),
+        _functionType = translateType _identifierType,
+        _functionArgsNum = _identifierArgsNum,
+        _functionArgsInfo = map translateArgInfo _identifierArgsInfo,
+        _functionIsExported = _identifierIsExported
+      }
+  Just {} -> Nothing
 
 translateArgInfo :: ArgumentInfo -> Stripped.ArgumentInfo
 translateArgInfo ArgumentInfo {..} =
