@@ -13,7 +13,7 @@ case value
 
 For example, one can evaluate the following expression in the REPL:
 #+begin_example
-Stdlib.Prelude> case (1, 2) | (suc _, zero) := 0 | (suc _, suc x) := x | _ := 19
+Stdlib.Prelude> case 1, 2 | suc _, zero := 0 | suc _, suc x := x | _ := 19
 1
 #+end_example
 

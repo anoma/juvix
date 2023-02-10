@@ -53,10 +53,12 @@ even (suc n) := odd n;
 Anonymous functions, or /lambdas/, are introduced with the syntax:
 
 #+begin_example
-\{pat1 .. patN_1 := clause1;
-  ..
-  pat1 .. patN_M := clauseM}
+\{| pat1 .. patN_1 := clause1
+  | ..
+  | pat1 .. patN_M := clauseM}
 #+end_example
+
+The first pipe =|= is optional. Instead of =\= one can also use =λ=.
 
 An anonymous function just lists all clauses of a function without
 naming it. Any function declaration can be converted to use anonymous
@@ -68,12 +70,12 @@ open import Stdlib.Prelude;
 odd : Nat → Bool;
 even : Nat → Bool;
 
-odd := \{
+odd := λ{
   zero := false;
   (suc n) := even n;
 };
 
-even := \{
+even := λ{
   zero := true;
   (suc n) := odd n;
 };
@@ -83,5 +85,5 @@ even := \{
 
 If a function has only one clause, then its definition can written in one line, with the body immediately following the signature:
 #+begin_example
-multiplyByTwo : Nat -> Nat := \{n := 2 * n};
+multiplyByTwo : Nat → Nat := λ{n := 2 * n};
 #+end_example
