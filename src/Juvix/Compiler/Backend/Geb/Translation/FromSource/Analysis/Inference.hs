@@ -1,7 +1,7 @@
 module Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.Inference where
 
 import Juvix.Compiler.Backend.Geb.Data.Context as Context
-import Juvix.Compiler.Backend.Geb.Extra qualified as Geb
+import Juvix.Compiler.Backend.Geb.Extra
 import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Pretty
 
@@ -139,10 +139,19 @@ inferObject = \case
   MorphismVar v -> do
     ctx <- asks (^. inferenceEnvContext)
     let varTy = Context.lookup (v ^. varIndex) ctx
-    tyInfo <- asks (^. inferenceEnvTypeInfo)
+    tyInfo <-
+      fromMaybe (error "Expected type")
+        <$> asks (^. inferenceEnvTypeInfo)
     unless
-      (Just varTy == tyInfo)
-      (errorInferObject "Type mismatch: variable")
+      (varTy == tyInfo)
+      ( errorInferObject $
+          "\nType mismatch: variable "
+            <> ppPrint (MorphismVar v)
+            <> " has type:\n"
+            <> ppPrint varTy
+            <> " but it's expected to have type:\n"
+            <> ppPrint tyInfo
+      )
     return varTy
   -- FIXME: Once https://github.com/anoma/geb/issues/53 is fixed, we should
   -- modify the following cases, and use the type information provided.
@@ -186,13 +195,3 @@ errorInferObject = error . ("inferObject: " <>)
 
 lackOfInformation :: Text
 lackOfInformation = "Not enough information to infer the type"
-
-objectBinop :: Binop -> Object
-objectBinop op = case op ^. binopOpcode of
-  OpAdd -> ObjectInteger
-  OpSub -> ObjectInteger
-  OpMul -> ObjectInteger
-  OpDiv -> ObjectInteger
-  OpMod -> ObjectInteger
-  OpEq -> Geb.objectBool
-  OpLt -> Geb.objectBool

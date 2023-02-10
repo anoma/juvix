@@ -19,4 +19,3 @@ func (y / x) + -- 17 div 5 + 4 = 7
 (vx + vy * (z + 1)) + -- 37
 f (h g 2 3) 4 -- -29
 -- result: 32
--- DEBUG: CoreToGeb

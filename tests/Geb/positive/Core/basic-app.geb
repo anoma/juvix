@@ -1,0 +1,8 @@
+(app 
+ int
+ int
+ (lamb
+    int
+    int
+    (index 0))
+ (add 1000 2000))

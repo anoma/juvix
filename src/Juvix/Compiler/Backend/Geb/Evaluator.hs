@@ -16,14 +16,13 @@ import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.Inference as G
 --------------------------------------------------------------------------------
 
 data GebValue
-  = GebValueMorphismBinop ValueMorphismBinop
+  = GebValueMorphismUnit
   | GebValueMorphismInteger Integer
   | GebValueMorphismLeft GebValue
-  | GebValueMorphismPair ValueMorphismPair
   | GebValueMorphismRight GebValue
-  | GebValueMorphismUnit
+  | GebValueMorphismPair ValueMorphismPair
   | GebValueClosure ValueClosure
-  deriving stock (Show, Generic)
+  deriving stock (Show, Eq, Generic)
 
 instance NFData GebValue
 
@@ -38,7 +37,7 @@ data ValueMorphismPair = ValueMorphismPair
   { _valueMorphismPairLeft :: GebValue,
     _valueMorphismPairRight :: GebValue
   }
-  deriving stock (Show, Generic)
+  deriving stock (Show, Eq, Generic)
 
 instance NFData ValueMorphismPair
 
@@ -47,7 +46,7 @@ data ValueMorphismCase = ValueMorphismCase
     _valueMorphismCaseLeft :: GebValue,
     _valueMorphismCaseRight :: GebValue
   }
-  deriving stock (Show, Generic)
+  deriving stock (Show, Eq, Generic)
 
 instance NFData ValueMorphismCase
 
@@ -56,7 +55,7 @@ data ValueMorphismBinop = ValueMorphismBinop
     _valueMorphismBinopLeft :: GebValue,
     _valueMorphismBinopRight :: GebValue
   }
-  deriving stock (Show, Generic)
+  deriving stock (Show, Eq, Generic)
 
 instance NFData ValueMorphismBinop
 
@@ -64,13 +63,12 @@ data ValueClosure = ValueClosure
   { _valueClosureEnv :: Context GebValue,
     _valueClosureLambda :: Lambda
   }
-  deriving stock (Show, Generic)
+  deriving stock (Show, Eq, Generic)
 
 instance NFData ValueClosure
 
 instance HasAtomicity GebValue where
   atomicity = \case
-    GebValueMorphismBinop {} -> Aggregate appFixity
     GebValueMorphismInteger {} -> Atom
     GebValueMorphismLeft {} -> Aggregate appFixity
     GebValueMorphismPair {} -> Aggregate appFixity
@@ -134,16 +132,7 @@ eval = \case
       GebValueMorphismPair pair ->
         return $ pair ^. valueMorphismPairRight
       _ -> error "Second can only be applied to pairs."
-  MorphismBinop op -> do
-    left <- eval $ op ^. binopLeft
-    right <- eval $ op ^. binopRight
-    return $
-      GebValueMorphismBinop $
-        ValueMorphismBinop
-          { _valueMorphismBinopOpcode = op ^. binopOpcode,
-            _valueMorphismBinopLeft = left,
-            _valueMorphismBinopRight = right
-          }
+  MorphismBinop op -> applyBinop op
   MorphismApplication app ->
     apply (app ^. applicationLeft) (app ^. applicationRight)
   MorphismLambda lambda -> do
@@ -155,11 +144,9 @@ eval = \case
             _valueClosureEnv = ctx
           }
   MorphismLeft m -> GebValueMorphismLeft <$> eval m
-  MorphismRight m ->
-    GebValueMorphismRight <$> eval m
+  MorphismRight m -> GebValueMorphismRight <$> eval m
   MorphismCase c -> do
     vCaseOn <- eval $ c ^. caseOn
-    -- Check
     case vCaseOn of
       GebValueMorphismLeft leftArg -> do
         let fun' =
@@ -196,19 +183,6 @@ fromGebValue ty = \case
   GebValueMorphismUnit -> case ty of
     ObjectTerminal -> return MorphismUnit
     _ -> errorFromGebValue "type mismatch. Expected Unit"
-  GebValueMorphismBinop m -> do
-    let lTerm = m ^. valueMorphismBinopLeft
-        rTerm = m ^. valueMorphismBinopRight
-    left <- fromGebValue ObjectInteger lTerm
-    right <- fromGebValue ObjectInteger rTerm
-    return $
-      MorphismBinop
-        Binop
-          { _binopOpcode = m ^. valueMorphismBinopOpcode,
-            _binopLeft = left,
-            _binopRight = right
-          }
-  --   _ -> errorFromGebValue "type mismatch (binop)"
   GebValueMorphismLeft m -> case ty of
     ObjectCoproduct _ -> MorphismLeft <$> fromGebValue ty m
     _ -> errorFromGebValue "type mismatch (left). Expected a coproduct"
@@ -262,6 +236,50 @@ apply' fun arg =
         eval (cls ^. valueClosureLambda . lambdaBody)
     _ -> error "Can only apply functions."
 
+applyBinop ::
+  Members '[Reader Env, Error JuvixError] r =>
+  Binop ->
+  Sem r GebValue
+applyBinop binop = do
+  left <- eval $ binop ^. binopLeft
+  right <- eval $ binop ^. binopRight
+  return $
+    case (left, right) of
+      (GebValueMorphismInteger l, GebValueMorphismInteger r) ->
+        case binop ^. binopOpcode of
+          OpAdd -> GebValueMorphismInteger $ l + r
+          OpSub -> GebValueMorphismInteger $ l - r
+          OpMul -> GebValueMorphismInteger $ l * r
+          OpDiv -> GebValueMorphismInteger $ l `div` r
+          OpMod -> GebValueMorphismInteger $ l `mod` r
+          OpLt -> if l < r then valueTrue else valueFalse
+          OpEq -> if l == r then valueTrue else valueFalse
+      (m1, m2) -> case binop ^. binopOpcode of
+        OpEq ->
+          if
+              | sameKind m1 m2 -> if m1 == m2 then valueTrue else valueFalse
+              | otherwise -> error "Equality can only be applied to values of the same kind."
+        _ ->
+          error $
+            "Canot apply operation:\n"
+              <> (ppPrint (MorphismBinop binop))
+
+sameKind :: GebValue -> GebValue -> Bool
+sameKind l r = case (l, r) of
+  (GebValueMorphismInteger _, GebValueMorphismInteger _) -> True
+  (GebValueMorphismUnit, GebValueMorphismUnit) -> True
+  (GebValueMorphismLeft _, GebValueMorphismLeft _) -> True
+  (GebValueMorphismRight _, GebValueMorphismRight _) -> True
+  (GebValueMorphismPair _, GebValueMorphismPair _) -> True
+  (GebValueClosure _, GebValueClosure _) -> True
+  _ -> False
+
+valueTrue :: GebValue
+valueTrue = GebValueMorphismLeft GebValueMorphismUnit
+
+valueFalse :: GebValue
+valueFalse = GebValueMorphismRight GebValueMorphismUnit
+
 errorFromGebValue :: Text -> a
 errorFromGebValue = error . ("fromGebValue: " <>)
 
@@ -273,8 +291,11 @@ nf ::
   Morphism ->
   Sem r Morphism
 nf m = do
+  -- First, we infer (and check) the object of the term.
   ty <- runReader defaultInferenceEnv $ inferObject m
+  -- Then, we evaluate the term.
   val <- eval m
+  -- Finally, we convert the result back to a Morphism.
   fromGebValue ty val
 
 nf' :: Env -> Morphism -> Either JuvixError Morphism
