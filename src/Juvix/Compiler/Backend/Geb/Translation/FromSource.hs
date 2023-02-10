@@ -10,6 +10,7 @@ import Juvix.Compiler.Backend.Geb.Translation.FromSource.Lexer
 import Juvix.Parser.Error
 import Juvix.Prelude
 import Text.Megaparsec qualified as P
+import Text.Megaparsec.Debug
 
 data LispDefParameter = LispDefParameter
   { _lispDefParameterName :: Text,
@@ -115,7 +116,9 @@ parseGeb =
 morphism :: ParsecS r Geb.Morphism
 morphism =
   P.label "<geb morphism>" $ do
-    morphismUnit
+    ( morphismUnit
+        <|> Geb.MorphismInteger <$> morphismInteger
+      )
       <|> parens
         ( Geb.MorphismAbsurd <$> morphismAbsurd
             <|> Geb.MorphismLeft <$> morphismLeft
@@ -127,7 +130,37 @@ morphism =
             <|> Geb.MorphismLambda <$> morphismLambda
             <|> Geb.MorphismApplication <$> morphismApplication
             <|> Geb.MorphismVar <$> morphismVar
+            <|> Geb.MorphismBinop <$> morphismBinop
         )
+
+morphismInteger :: ParsecS r Integer
+morphismInteger = dbg "asd" $ do
+  P.label "<geb MorphismInteger>" $ do
+    fst <$> integer
+
+opcode :: ParsecS r Geb.Opcode
+opcode =
+  P.label "<geb Opcode>" $
+    (Geb.OpAdd <$ kw kwGebBinopAdd)
+      <|> Geb.OpSub <$ (kw kwGebBinopSub)
+      <|> Geb.OpMul <$ (kw kwGebBinopMul)
+      <|> Geb.OpDiv <$ (kw kwGebBinopDiv)
+      <|> Geb.OpMod <$ (kw kwGebBinopMod)
+      <|> Geb.OpEq <$ (kw kwGebBinopEq)
+      <|> Geb.OpLt <$ (kw kwGebBinopLt)
+
+morphismBinop :: ParsecS r Geb.Binop
+morphismBinop = do
+  P.label "<geb MorphismBinop>" $ do
+    op <- opcode
+    m1 <- morphism
+    m2 <- morphism
+    return
+      Geb.Binop
+        { _binopOpcode = op,
+          _binopLeft = m1,
+          _binopRight = m2
+        }
 
 object :: ParsecS r Geb.Object
 object =

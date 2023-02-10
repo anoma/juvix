@@ -9,7 +9,7 @@ data BinderList a = BinderList
   { _blLength :: Int,
     _blMap :: [a]
   }
-  deriving stock (Generic)
+  deriving stock (Show, Generic)
 
 instance NFData a => NFData (BinderList a)
 

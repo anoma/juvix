@@ -25,6 +25,14 @@ allKeywords =
     kwGebMorphismSecond,
     kwGebMorphismLambda,
     kwGebMorphismApplication,
+    kwGebMorphismInteger,
+    kwGebBinopAdd,
+    kwGebBinopSub,
+    kwGebBinopMul,
+    kwGebBinopDiv,
+    kwGebBinopMod,
+    kwGebBinopEq,
+    kwGebBinopLt,
     kwGebObjectInitial,
     kwGebObjectTerminal,
     kwGebObjectProduct,
@@ -62,6 +70,30 @@ kwGebMorphismLambda = asciiKw Str.gebLamb
 
 kwGebMorphismApplication :: Keyword
 kwGebMorphismApplication = asciiKw Str.gebApp
+
+kwGebBinopAdd :: Keyword
+kwGebBinopAdd = asciiKw Str.gebAdd
+
+kwGebBinopSub :: Keyword
+kwGebBinopSub = asciiKw Str.gebSub
+
+kwGebBinopMul :: Keyword
+kwGebBinopMul = asciiKw Str.gebMul
+
+kwGebBinopDiv :: Keyword
+kwGebBinopDiv = asciiKw Str.gebDiv
+
+kwGebBinopMod :: Keyword
+kwGebBinopMod = asciiKw Str.gebMod
+
+kwGebBinopEq :: Keyword
+kwGebBinopEq = asciiKw Str.gebEq
+
+kwGebBinopLt :: Keyword
+kwGebBinopLt = asciiKw Str.gebLt
+
+kwGebMorphismInteger :: Keyword
+kwGebMorphismInteger = asciiKw Str.gebInteger
 
 kwGebVar :: Keyword
 kwGebVar = asciiKw Str.gebVar

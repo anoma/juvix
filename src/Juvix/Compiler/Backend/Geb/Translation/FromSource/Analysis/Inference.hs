@@ -2,128 +2,197 @@ module Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.Inference wher
 
 import Juvix.Compiler.Backend.Geb.Data.Context as Context
 import Juvix.Compiler.Backend.Geb.Extra qualified as Geb
-import Juvix.Compiler.Backend.Geb.Language qualified as Geb
-import Juvix.Prelude
+import Juvix.Compiler.Backend.Geb.Language
+import Juvix.Compiler.Backend.Geb.Pretty
 
-inferObject' :: Geb.Morphism -> Either JuvixError Geb.Object
-inferObject' = run . runError . inferObject Context.empty Nothing
+-- Context.empty Nothing
+
+data InferenceEnv = InferenceEnv
+  { -- | The context of the term being inferred.
+    _inferenceEnvContext :: Context Object,
+    -- | A Geb object to help the inference process.
+    -- This is needed because some morphisms lack of type information.
+    -- For example, the case of the left injection of a coproduct.
+    _inferenceEnvTypeInfo :: Maybe Object
+  }
+  deriving stock (Show, Generic)
+
+makeLenses ''InferenceEnv
+
+defaultInferenceEnv :: InferenceEnv
+defaultInferenceEnv =
+  InferenceEnv
+    { _inferenceEnvContext = Context.empty,
+      _inferenceEnvTypeInfo = Nothing
+    }
+
+inferObject' :: Morphism -> Either JuvixError Object
+inferObject' m =
+  run . runError $ runReader defaultInferenceEnv (inferObject m)
 
 inferObject ::
-  Members '[Error JuvixError] r =>
-  Context Geb.Object ->
-  Maybe Geb.Object ->
-  Geb.Morphism ->
-  Sem r Geb.Object
-inferObject ctx tyInfo = \case
-  Geb.MorphismUnit -> return Geb.ObjectTerminal
-  Geb.MorphismInteger {} -> return Geb.ObjectInteger
-  Geb.MorphismAbsurd x -> inferObject ctx tyInfo x
-  Geb.MorphismPair pair -> do
-    let lType = pair ^. Geb.pairLeftType
-        rType = pair ^. Geb.pairRightType
-    lTy <- inferObject ctx (Just lType) (pair ^. Geb.pairLeft)
-    rTy <- inferObject ctx (Just rType) (pair ^. Geb.pairRight)
+  Members '[Reader InferenceEnv, Error JuvixError] r =>
+  Morphism ->
+  Sem r Object
+inferObject = \case
+  MorphismUnit -> return ObjectTerminal
+  MorphismInteger {} -> return ObjectInteger
+  MorphismAbsurd x -> inferObject x
+  MorphismPair pair -> do
+    let lType = pair ^. pairLeftType
+        rType = pair ^. pairRightType
+    infLeftType <-
+      local
+        (over inferenceEnvTypeInfo (const (Just lType)))
+        (inferObject (pair ^. pairLeft))
     unless
-      (lTy == lType)
-      (error "Type mismatch: left type on a pair")
+      (infLeftType == lType)
+      (errorInferObject "Type mismatch: left type on a pair")
+    infRightType <-
+      local
+        (over inferenceEnvTypeInfo (const (Just rType)))
+        (inferObject (pair ^. pairRight))
     unless
-      (rTy == rType)
-      (error "Type mismatch: right type on a pair")
+      (infRightType == rType)
+      (errorInferObject "Type mismatch: right type on a pair")
     return $
-      Geb.ObjectProduct
-        Geb.Product
-          { _productLeft = lTy,
-            _productRight = rTy
+      ObjectProduct
+        Product
+          { _productLeft = infLeftType,
+            _productRight = infRightType
           }
-  Geb.MorphismCase c ->
+  MorphismCase c -> do
     -- TODO check leaves
-    return $ c ^. Geb.caseCodomainType
-  Geb.MorphismFirst p -> do
-    let leftType = p ^. Geb.firstLeftType
-    ty <- inferObject ctx (Just leftType) (p ^. Geb.firstValue)
-    unless (ty == leftType) (error "Type mismatch")
+    return $ c ^. caseCodomainType
+  MorphismFirst p -> do
+    let leftType = p ^. firstLeftType
+    ty <-
+      local
+        (over inferenceEnvTypeInfo (const (Just leftType)))
+        (inferObject (p ^. firstValue))
+    unless (ty == leftType) (errorInferObject "Type mismatch")
     return ty
-  Geb.MorphismSecond p -> do
-    let rightType = p ^. Geb.secondRightType
-    ty <- inferObject ctx (Just rightType) (p ^. Geb.secondValue)
-    unless (ty == rightType) (error "Type mismatch")
+  MorphismSecond p -> do
+    let rightType = p ^. secondRightType
+    ty <-
+      local (over inferenceEnvTypeInfo (const (Just rightType))) $
+        inferObject (p ^. secondValue)
+    unless (ty == rightType) (errorInferObject "Type mismatch")
     return ty
-  Geb.MorphismLambda l -> do
-    let bodyTy = l ^. Geb.lambdaBodyType
+  MorphismLambda l -> do
+    let bodyTy = l ^. lambdaBodyType
+    ctx <- asks (^. inferenceEnvContext)
     bTy <-
-      inferObject
-        (Context.cons (l ^. Geb.lambdaVarType) ctx)
-        (Just bodyTy)
-        (l ^. Geb.lambdaBody)
+      local
+        ( const
+            ( InferenceEnv
+                { _inferenceEnvContext = Context.cons (l ^. lambdaVarType) ctx,
+                  _inferenceEnvTypeInfo = Just bodyTy
+                }
+            )
+        )
+        (inferObject (l ^. lambdaBody))
     unless
       (bTy == bodyTy)
-      (error "Type mismatch: body of the lambda")
+      (errorInferObject "Type mismatch: body of the lambda")
     return $
-      Geb.ObjectHom $
-        Geb.Hom
-          { _homDomain = l ^. Geb.lambdaVarType,
-            _homCodomain = l ^. Geb.lambdaBodyType
+      ObjectHom $
+        Hom
+          { _homDomain = l ^. lambdaVarType,
+            _homCodomain = l ^. lambdaBodyType
           }
-  Geb.MorphismApplication app -> do
-    lTy <- inferObject ctx Nothing (app ^. Geb.applicationLeft)
-    rTy <- inferObject ctx Nothing (app ^. Geb.applicationRight)
+  MorphismApplication app -> do
+    let leftTy = app ^. applicationDomainType -- A -> B
+        rightTy = app ^. applicationCodomainType -- A
+        homTy = ObjectHom $ Hom {_homDomain = rightTy, _homCodomain = leftTy}
+    lTy <-
+      local
+        (over inferenceEnvTypeInfo (const (Just homTy)))
+        ( inferObject
+            (app ^. applicationLeft)
+        )
+    rTy <-
+      local
+        (over inferenceEnvTypeInfo (const (Just rightTy)))
+        (inferObject (app ^. applicationRight))
     case lTy of
-      Geb.ObjectHom h -> do
+      ObjectHom h -> do
         unless
-          (h ^. Geb.homDomain == rTy)
-          (error "Type mismatch: domain of the function and the argument")
-        return $ h ^. Geb.homCodomain
-      _ -> error "Left side of the application should be a function"
-  Geb.MorphismBinop op -> do
+          (h ^. homDomain == rTy)
+          (errorInferObject "Type mismatch: domain of the function and the argument")
+        return $ h ^. homCodomain
+      _ -> errorInferObject "Left side of the application should be a function"
+  MorphismBinop op -> do
     let outTy = objectBinop op
-    aTy <- inferObject ctx (Just outTy) (op ^. Geb.binopLeft)
-    bTy <- inferObject ctx (Just outTy) (op ^. Geb.binopRight)
+    aTy <-
+      local
+        (over inferenceEnvTypeInfo (const (Just outTy)))
+        (inferObject (op ^. binopLeft))
+    bTy <-
+      local
+        (over inferenceEnvTypeInfo (const (Just outTy)))
+        (inferObject (op ^. binopRight))
     unless
       (aTy == bTy)
-      (error "Arguments of a binary operation should have the same type")
+      (errorInferObject "Arguments of a binary operation should have the same type")
     return outTy
-  Geb.MorphismVar v -> do
-    let envTy = Context.lookup (v ^. Geb.varIndex) ctx
-    unless (Just envTy == tyInfo) (error "Type mismatch: variable")
-    return envTy
+  MorphismVar v -> do
+    ctx <- asks (^. inferenceEnvContext)
+    let varTy = Context.lookup (v ^. varIndex) ctx
+    tyInfo <- asks (^. inferenceEnvTypeInfo)
+    unless
+      (Just varTy == tyInfo)
+      (errorInferObject "Type mismatch: variable")
+    return varTy
   -- FIXME: Once https://github.com/anoma/geb/issues/53 is fixed, we should
   -- modify the following cases, and use the type information provided.
-  Geb.MorphismLeft a -> do
+  MorphismLeft a -> do
+    tyInfo <- asks (^. inferenceEnvTypeInfo)
     case tyInfo of
-      Just cTy@(Geb.ObjectCoproduct coprod) -> do
-        let leftTy = coprod ^. Geb.coproductLeft
-        aTy <- inferObject ctx (Just leftTy) a
+      Just cTy@(ObjectCoproduct coprod) -> do
+        let leftTy = coprod ^. coproductLeft
+        aTy <-
+          local
+            (over inferenceEnvTypeInfo (const (Just leftTy)))
+            (inferObject a)
         unless
           (aTy == leftTy)
-          (error "Type mismatch: left morphism")
+          (errorInferObject "Type mismatch: left morphism")
         return cTy
-      Just _ -> error "Expected a coproduct object for a left morphism."
+      Just _ -> errorInferObject "Expected a coproduct object for a left morphism."
       Nothing ->
-        error $
+        errorInferObject $
           lackOfInformation
-            <> " on the left morphism "
-            <> show a
-  Geb.MorphismRight b ->
+            <> " on the left morphism:\n\t"
+            <> ppPrint a
+  MorphismRight b -> do
+    tyInfo <- asks (^. inferenceEnvTypeInfo)
     case tyInfo of
-      Just cTy@(Geb.ObjectCoproduct coprod) -> do
-        let rightTy = coprod ^. Geb.coproductRight
-        bTy <- inferObject ctx (Just rightTy) b
+      Just cTy@(ObjectCoproduct coprod) -> do
+        let rightTy = coprod ^. coproductRight
+        bTy <-
+          local
+            (over inferenceEnvTypeInfo (const (Just rightTy)))
+            (inferObject b)
         unless
           (bTy == rightTy)
-          (error "Type mismatch: right morphism")
+          (errorInferObject "Type mismatch: right morphism")
         return cTy
-      Just _ -> error "Expected a coproduct object for a right morphism."
-      Nothing -> error $ lackOfInformation <> " on a right morphism"
+      Just _ -> errorInferObject "Expected a coproduct object for a right morphism."
+      Nothing -> errorInferObject $ lackOfInformation <> " on a right morphism"
+
+errorInferObject :: Text -> a
+errorInferObject = error . ("inferObject: " <>)
 
 lackOfInformation :: Text
 lackOfInformation = "Not enough information to infer the type"
 
-objectBinop :: Geb.Binop -> Geb.Object
-objectBinop op = case op ^. Geb.binopOpcode of
-  Geb.OpAdd -> Geb.ObjectInteger
-  Geb.OpSub -> Geb.ObjectInteger
-  Geb.OpMul -> Geb.ObjectInteger
-  Geb.OpDiv -> Geb.ObjectInteger
-  Geb.OpMod -> Geb.ObjectInteger
-  Geb.OpEq -> Geb.objectBool
-  Geb.OpLt -> Geb.objectBool
+objectBinop :: Binop -> Object
+objectBinop op = case op ^. binopOpcode of
+  OpAdd -> ObjectInteger
+  OpSub -> ObjectInteger
+  OpMul -> ObjectInteger
+  OpDiv -> ObjectInteger
+  OpMod -> ObjectInteger
+  OpEq -> Geb.objectBool
+  OpLt -> Geb.objectBool
