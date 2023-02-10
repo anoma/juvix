@@ -494,68 +494,35 @@ checkExpression hintArity expr = case expr of
         ExpressionIden (IdenAxiom n) -> do
           blt <- getAxiomBuiltinInfo n
           case blt of
-            Just BuiltinIOSequence ->
-              case args of
-                (_ : _ : _) ->
-                  appHelper f args
-                _ ->
-                  throw $
-                    ErrBuiltinNotFullyApplied
-                      BuiltinNotFullyApplied
-                        { _builtinNotFullyAppliedName = n,
-                          _builtinNotFullyAplliedExpectedArgsNum = 2
-                        }
-            Just BuiltinTrace -> do
-              case args of
-                ((Explicit, _) : _ : _) -> appHelper f args
-                ((Implicit, _) : (Explicit, _) : _ : _) -> appHelper f args
-                ((Implicit, _) : (Implicit, _) : _ : _ : _) -> appHelper f args
-                _ ->
-                  throw $
-                    ErrBuiltinNotFullyApplied
-                      BuiltinNotFullyApplied
-                        { _builtinNotFullyAppliedName = n,
-                          _builtinNotFullyAplliedExpectedArgsNum = 2
-                        }
-            _ ->
-              appHelper f args
+            Just BuiltinIOSequence -> goBuiltinApp n 0 2 f args
+            Just BuiltinTrace -> goBuiltinApp n 2 2 f args
+            _ -> appHelper f args
         ExpressionIden (IdenFunction n) -> do
           blt <- getFunctionBuiltinInfo n
           case blt of
-            Just BuiltinBoolIf ->
-              case args of
-                ((Explicit, _) : _ : _ : _) -> appHelper f args
-                ((Implicit, _) : _ : _ : _ : _) -> appHelper f args
-                _ ->
-                  throw $
-                    ErrBuiltinNotFullyApplied
-                      BuiltinNotFullyApplied
-                        { _builtinNotFullyAppliedName = n,
-                          _builtinNotFullyAplliedExpectedArgsNum = 3
-                        }
-            Just BuiltinBoolOr ->
-              case args of
-                (_ : _ : _) -> appHelper f args
-                _ ->
-                  throw $
-                    ErrBuiltinNotFullyApplied
-                      BuiltinNotFullyApplied
-                        { _builtinNotFullyAppliedName = n,
-                          _builtinNotFullyAplliedExpectedArgsNum = 2
-                        }
-            Just BuiltinBoolAnd ->
-              case args of
-                (_ : _ : _) -> appHelper f args
-                _ ->
-                  throw $
-                    ErrBuiltinNotFullyApplied
-                      BuiltinNotFullyApplied
-                        { _builtinNotFullyAppliedName = n,
-                          _builtinNotFullyAplliedExpectedArgsNum = 2
-                        }
+            Just BuiltinBoolIf -> goBuiltinApp n 1 3 f args
+            Just BuiltinBoolOr -> goBuiltinApp n 0 2 f args
+            Just BuiltinBoolAnd -> goBuiltinApp n 0 2 f args
             _ -> appHelper f args
-        _ ->
-          appHelper f args
+        _ -> appHelper f args
+
+    goBuiltinApp :: Name -> Int -> Int -> Expression -> [(IsImplicit, Expression)] -> Sem r Expression
+    goBuiltinApp n implArgsNum argsNum f args = do
+      args' <- goImplArgs implArgsNum args
+      if
+          | length args' >= argsNum -> appHelper f args
+          | otherwise ->
+              throw $
+                ErrBuiltinNotFullyApplied
+                  BuiltinNotFullyApplied
+                    { _builtinNotFullyAppliedName = n,
+                      _builtinNotFullyAplliedExpectedArgsNum = argsNum
+                    }
+      where
+        goImplArgs :: Int -> [(IsImplicit, Expression)] -> Sem r [(IsImplicit, Expression)]
+        goImplArgs 0 as = return as
+        goImplArgs k ((Implicit, _) : as) = goImplArgs (k - 1) as
+        goImplArgs _ as = return as
 
     appHelper :: Expression -> [(IsImplicit, Expression)] -> Sem r Expression
     appHelper fun0 args = do
