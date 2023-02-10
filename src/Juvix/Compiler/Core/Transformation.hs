@@ -38,3 +38,4 @@ applyTransformations ts tbl = foldl' (flip appTrans) tbl ts
       ComputeTypeInfo -> computeTypeInfo
       UnrollRecursion -> unrollRecursion
       MatchToCase -> matchToCase
+      EtaExpandApps -> etaExpansionApps
