@@ -12,9 +12,35 @@ import Juvix.Compiler.Backend.Geb.Evaluator.Options
 import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Pretty qualified as Geb
 import Juvix.Compiler.Backend.Geb.Translation.FromGebValue
+import Juvix.Compiler.Backend.Geb.Translation.FromSource as Geb
 import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.Inference as Geb
 
--- TODO: use evalError
+data RunEvalArgs = RunEvalArgs
+  { -- | The input file
+    _runEvalArgsInputFile :: Path Abs File,
+    -- | The content of the input file
+    _runEvalArgsContent :: Text,
+    -- | The options
+    _runEvalArgsEvaluatorOptions :: EvaluatorOptions
+  }
+
+makeLenses ''RunEvalArgs
+
+runEval :: RunEvalArgs -> Either JuvixError GebValue
+runEval RunEvalArgs {..} =
+  case Geb.runParser _runEvalArgsInputFile _runEvalArgsContent of
+    Right (ExpressionMorphism m) -> do
+      let env :: Env =
+            Env
+              { _envEvaluatorOptions = _runEvalArgsEvaluatorOptions,
+                _envContext = Context.empty
+              }
+      eval' env m
+    Right _ -> Left (error @JuvixError objNoEvalMsg)
+    Left err -> Left (JuvixError err)
+
+objNoEvalMsg :: Text
+objNoEvalMsg = "Geb objects cannot be evaluated, only morphisms."
 
 eval ::
   Members '[Reader Env, Error JuvixError] r =>

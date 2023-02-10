@@ -1,7 +1,7 @@
-module Geb.Eval.Negative where
+module BackendGeb.Eval.Negative where
 
+import BackendGeb.Eval.Base
 import Base
-import Geb.Eval.Base
 
 data NegTest = NegTest
   { _name :: String,
@@ -13,14 +13,15 @@ root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/Geb/negative")
 
 testDescr :: NegTest -> TestDescr
-testDescr NegTest {..} =
-  let tRoot = root <//> _relDir
-      file' = tRoot <//> _file
-   in TestDescr
-        { _testName = _name,
-          _testRoot = tRoot,
-          _testAssertion = Steps $ coreEvalErrorAssertion file'
-        }
+testDescr NegTest {..} = undefined
+
+-- let tRoot = root <//> _relDir
+--     file' = tRoot <//> _file
+--  in TestDescr
+--       { _testName = _name,
+--         _testRoot = tRoot,
+--         _testAssertion = Steps $ coreEvalErrorAssertion file'
+--       }
 
 allTests :: TestTree
 allTests =

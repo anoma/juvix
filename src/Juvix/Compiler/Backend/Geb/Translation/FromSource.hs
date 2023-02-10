@@ -11,7 +11,6 @@ import Juvix.Parser.Error
 import Juvix.Prelude
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char.Lexer qualified as P
-import Text.Megaparsec.Debug
 
 data LispDefParameter = LispDefParameter
   { _lispDefParameterName :: Text,
@@ -27,13 +26,13 @@ fromSource ::
   Sem r Geb.Expression
 fromSource fileName input =
   case runParser fileName input of
-    Left err -> throw err
+    Left err -> throw (JuvixError err)
     Right gebTerm -> pure gebTerm
 
 runParser ::
   Path Abs File ->
   Text ->
-  Either JuvixError Geb.Expression
+  Either ParserError Geb.Expression
 runParser fileName input =
   do
     let parser :: ParsecS r Geb.Expression
@@ -43,7 +42,7 @@ runParser fileName input =
           | otherwise = error "unknown file extension"
     case run $
       P.runParserT parser (fromAbsFile fileName) input of
-      Left err -> Left . JuvixError $ ErrMegaparsec (MegaparsecError err)
+      Left err -> Left $ ErrMegaparsec (MegaparsecError err)
       Right gebTerm -> Right gebTerm
 
 parseLispSymbol :: ParsecS r Text
@@ -102,7 +101,7 @@ parseGebLisp = do
     Geb.ExpressionMorphism $
       entry
         ^. lispDefParameterMorphism
-          . Geb.typedMorphism
+        . Geb.typedMorphism
 
 parseGebExpression :: ParsecS r Geb.Expression
 parseGebExpression =

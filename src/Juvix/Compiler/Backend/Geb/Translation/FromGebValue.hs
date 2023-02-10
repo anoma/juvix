@@ -45,6 +45,8 @@ fromGebValueError msg val gebExpr =
         }
     )
 
+-- TODO: use fromGebValueError
+
 -- | Quoting a GebValue to a Morphism.
 -- Morphisms carry the type of the value they represent, in
 -- contrast to GebValues, which do not. To quote a GebValue,
