@@ -14,4 +14,5 @@ data TransformationId
   | UnrollRecursion
   | ComputeTypeInfo
   | MatchToCase
+  | EtaExpandApps
   deriving stock (Data)

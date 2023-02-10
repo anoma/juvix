@@ -8,7 +8,7 @@ import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Transformation
 
 toEvalTransformations :: [TransformationId]
-toEvalTransformations = [MatchToCase, NatToInt, ConvertBuiltinTypes]
+toEvalTransformations = [EtaExpandApps, MatchToCase, NatToInt, ConvertBuiltinTypes]
 
 -- | Perform transformations on Core necessary for efficient evaluation
 toEval :: InfoTable -> InfoTable
