@@ -7,6 +7,8 @@ data CompileTarget
   = TargetWasm32Wasi
   | TargetNative64
   | TargetGeb
+  | TargetCore
+  | TargetAsm
   deriving stock (Data, Bounded, Enum)
 
 instance Show CompileTarget where
@@ -14,6 +16,8 @@ instance Show CompileTarget where
     TargetWasm32Wasi -> "wasm32-wasi"
     TargetNative64 -> "native"
     TargetGeb -> "geb"
+    TargetCore -> "core"
+    TargetAsm -> "asm"
 
 data CompileOptions = CompileOptions
   { _compileDebug :: Bool,

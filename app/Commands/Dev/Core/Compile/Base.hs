@@ -5,6 +5,7 @@ import Commands.Dev.Core.Compile.Options
 import Commands.Extra.Compile qualified as Compile
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Asm.Options qualified as Asm
+import Juvix.Compiler.Asm.Pretty qualified as Pretty
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Geb qualified as Geb
@@ -36,6 +37,8 @@ runCPipeline PipelineArg {..} = do
       TargetWasm32Wasi -> Backend.TargetCWasm32Wasi
       TargetNative64 -> Backend.TargetCNative64
       TargetGeb -> impossible
+      TargetCore -> impossible
+      TargetAsm -> impossible
 
     inputCFile :: Path Abs File -> Sem r (Path Abs File)
     inputCFile inputFileCompile = do
@@ -61,3 +64,10 @@ runGebPipeline PipelineArg {..} = do
                     }
   Geb.Result {..} <- getRight (run (runError (coreToGeb spec _pipelineArgInfoTable :: Sem '[Error JuvixError] Geb.Result)))
   embed $ TIO.writeFile (toFilePath gebFile) _resultCode
+
+runAsmPipeline :: (Members '[Embed IO, App] r) => PipelineArg -> Sem r ()
+runAsmPipeline PipelineArg {..} = do
+  asmFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
+  let tab' = coreToAsm _pipelineArgInfoTable
+      code = Pretty.ppPrint tab' tab'
+  embed $ TIO.writeFile (toFilePath asmFile) code
