@@ -1,0 +1,19 @@
+working-directory: ./../../../tests/
+
+tests:
+  - name: init
+    command:
+      shell:
+        - bash
+      script: |
+        mkdir tmp
+        cd tmp
+        juvix init
+        cat juvix.yaml
+        cd ..
+        rm -rf tmp
+    stdout:
+      contains:
+        "name: tmp"
+    stdin: "\n\n"
+    exit-status: 0
