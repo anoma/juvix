@@ -30,6 +30,8 @@ runCompile inputFile o = do
     TargetWasm32Wasi -> runError (clangWasmWasiCompile inputFile o)
     TargetNative64 -> runError (clangNativeCompile inputFile o)
     TargetGeb -> return $ Right ()
+    TargetCore -> return $ Right ()
+    TargetAsm -> return $ Right ()
 
 prepareRuntime :: forall r. (Members '[App, Embed IO] r) => Path Abs Dir -> CompileOptions -> Sem r ()
 prepareRuntime buildDir o = do
@@ -40,6 +42,8 @@ prepareRuntime buildDir o = do
     TargetNative64 | o ^. compileDebug -> writeRuntime nativeDebugRuntime
     TargetNative64 -> writeRuntime nativeReleaseRuntime
     TargetGeb -> return ()
+    TargetCore -> return ()
+    TargetAsm -> return ()
   where
     wasiReleaseRuntime :: BS.ByteString
     wasiReleaseRuntime = $(FE.makeRelativeToProject "runtime/_build.wasm32-wasi/libjuvix.a" >>= FE.embedFile)
@@ -75,10 +79,6 @@ outputFile opts inputFile =
   where
     defaultOutputFile :: Path Abs File
     defaultOutputFile = case opts ^. compileTarget of
-      TargetGeb ->
-        if
-            | opts ^. compileTerm -> replaceExtension' ".geb" inputFile
-            | otherwise -> replaceExtension' ".lisp" inputFile
       TargetNative64 ->
         if
             | opts ^. compileCOutput -> replaceExtension' ".c" inputFile
@@ -91,6 +91,14 @@ outputFile opts inputFile =
             | opts ^. compilePreprocess -> addExtension' ".c" (addExtension' ".out" (removeExtension' inputFile))
             | opts ^. compileAssembly -> replaceExtension' ".wat" inputFile
             | otherwise -> replaceExtension' ".wasm" inputFile
+      TargetGeb ->
+        if
+            | opts ^. compileTerm -> replaceExtension' ".geb" inputFile
+            | otherwise -> replaceExtension' ".lisp" inputFile
+      TargetCore ->
+        replaceExtension' ".jvc" inputFile
+      TargetAsm ->
+        replaceExtension' ".jva" inputFile
 
 clangNativeCompile ::
   forall r.
