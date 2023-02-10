@@ -14,7 +14,7 @@ module Juvix.Compiler.Pipeline.Package
   )
 where
 
-import Data.Aeson (genericToEncoding)
+import Data.Aeson (genericToEncoding, genericToJSON)
 import Data.Aeson.BetterErrors
 import Data.Aeson.TH
 import Data.Kind qualified as GHC
@@ -61,15 +61,16 @@ deriving stock instance Show RawPackage
 
 deriving stock instance Show Package
 
+rawPackageOptions :: Options
+rawPackageOptions =
+  defaultOptions
+    { fieldLabelModifier = over Lens._head toLower . dropPrefix "_package",
+      rejectUnknownFields = True
+    }
+
 instance ToJSON RawPackage where
-  toEncoding = genericToEncoding options
-    where
-      options :: Options
-      options =
-        defaultOptions
-          { fieldLabelModifier = over Lens._head toLower . dropPrefix "_package",
-            rejectUnknownFields = True
-          }
+  toJSON = genericToJSON rawPackageOptions
+  toEncoding = genericToEncoding rawPackageOptions
 
 -- | TODO: is it a good idea to return the empty package if it fails to parse?
 instance FromJSON RawPackage where
@@ -93,7 +94,7 @@ rawDefaultPackage =
 
 -- | Has the implicit stdlib dependency
 defaultPackage :: Path Abs Dir -> Path Abs Dir -> Package
-defaultPackage r buildDir = fromRight impossible . run . runError @Text . processPackage r buildDir $ rawDefaultPackage
+defaultPackage root buildDir = fromRight impossible . run . runError @Text . processPackage root buildDir $ rawDefaultPackage
 
 -- | Has no dependencies
 emptyPackage :: Package
