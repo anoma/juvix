@@ -5,16 +5,12 @@ import Juvix.Prelude
 class IsApe a e where
   toApe :: a -> Ape e
 
--- TODO add ApeParens
-
 -- | Abstract pretty expression
 data Ape a
   = ApeLeaf (Leaf a)
   | ApeInfix (Infix a)
   | ApeApp (App a)
   | ApePostfix (Postfix a)
-
--- TODO add CapeParens
 
 -- | Abstract pretty expressions with chains
 data Cape a

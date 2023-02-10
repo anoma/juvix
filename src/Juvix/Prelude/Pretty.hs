@@ -112,6 +112,9 @@ hsepMaybe l
   | null l = Nothing
   | otherwise = Just (hsep l)
 
+nest' :: Doc ann -> Doc ann
+nest' = nest 2
+
 indent' :: Doc ann -> Doc ann
 indent' = indent 2
 
