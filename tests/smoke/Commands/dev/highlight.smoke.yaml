@@ -1,0 +1,32 @@
+working-directory: ./../../../../tests
+
+tests:
+  - name: highlight-emacs
+    command:
+      - juvix
+      - dev
+      - highlight
+    args:
+      - positive/Internal/LiteralInt.juvix
+
+    stdout:
+      contains: |
+          add-text-properties
+    exit-status: 0
+
+tests:
+  - name: highlight-vscode
+    command:
+      - juvix
+      - dev
+      - highlight
+      - --format
+      - json
+    args:
+      - positive/Internal/LiteralInt.juvix
+
+    stdout:
+      matches:
+        regex: |
+          what magic regex should I use?
+    exit-status: 0
