@@ -23,8 +23,11 @@ module Web.TicTacToe;
     IOUnit : IO;
   IOUnit := printString "";
 
+  ioseq : IO → IO → IO;
+  ioseq x y := x >> y;
+
   sequenceIO : List IO → IO;
-  sequenceIO := foldr (>>) IOUnit;
+  sequenceIO := foldr ioseq IOUnit;
 
   mapIO : {A : Type} → (A → IO) → List A → IO;
   mapIO f xs := sequenceIO (map f xs);

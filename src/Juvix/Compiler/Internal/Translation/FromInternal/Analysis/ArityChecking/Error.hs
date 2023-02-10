@@ -15,6 +15,7 @@ data ArityCheckerError
   | ErrPatternFunction PatternFunction
   | ErrTooManyArguments TooManyArguments
   | ErrFunctionApplied FunctionApplied
+  | ErrBuiltinNotFullyApplied BuiltinNotFullyApplied
 
 instance ToGenericError ArityCheckerError where
   genericError :: (Member (Reader GenericOptions) r) => ArityCheckerError -> Sem r GenericError
@@ -26,3 +27,4 @@ instance ToGenericError ArityCheckerError where
     ErrPatternFunction e -> genericError e
     ErrTooManyArguments e -> genericError e
     ErrFunctionApplied e -> genericError e
+    ErrBuiltinNotFullyApplied e -> genericError e

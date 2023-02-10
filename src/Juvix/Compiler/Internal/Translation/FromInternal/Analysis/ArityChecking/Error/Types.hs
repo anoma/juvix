@@ -232,3 +232,31 @@ instance ToGenericError FunctionApplied where
               <> softline
               <> "In the application"
               <+> ppApp opts' (fun, args)
+
+data BuiltinNotFullyApplied = BuiltinNotFullyApplied
+  { _builtinNotFullyAppliedName :: Name,
+    _builtinNotFullyAplliedExpectedArgsNum :: Int
+  }
+
+makeLenses ''BuiltinNotFullyApplied
+
+instance ToGenericError BuiltinNotFullyApplied where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = i,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [i]
+            }
+        where
+          opts' = fromGenericOptions opts
+          i = getLoc (e ^. builtinNotFullyAppliedName)
+          argsNum = e ^. builtinNotFullyAplliedExpectedArgsNum
+          msg =
+            "The lazy builtin"
+              <+> ppCode opts' (e ^. builtinNotFullyAppliedName)
+              <+> "must be applied to exactly"
+              <+> pretty argsNum
+              <+> "arguments"
