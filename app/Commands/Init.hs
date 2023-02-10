@@ -39,16 +39,17 @@ checkNotInProject =
       say "You are already in a Juvix project"
       embed exitFailure
 
-getPackage :: forall r. (Members '[Embed IO] r) => Sem r Package
+getPackage :: forall r. Members '[Embed IO] r => Sem r Package
 getPackage = do
   tproj <- getProjName
-  say "Tell me the version of your project [leave empty for 0.0.0]"
+  say "Write the version of your project [leave empty for 0.0.0]"
+  root <- getCurrentDir
+  let pkg = defaultPackage root (rootBuildDir root)
   tversion :: SemVer <- getVersion
   return
-    Package
+    pkg
       { _packageName = tproj,
-        _packageVersion = Ideal tversion,
-        _packageDependencies = mempty
+        _packageVersion = Ideal tversion
       }
 
 getProjName :: forall r. (Members '[Embed IO] r) => Sem r Text
@@ -59,7 +60,7 @@ getProjName = do
         Nothing -> mempty
         Just d' -> " [leave empty for '" <> d' <> "']"
   say
-    ( "Tell me the name of your project"
+    ( "Write the name of your project"
         <> defMsg
         <> " (lower case letters, numbers and dashes are allowed): "
     )

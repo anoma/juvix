@@ -38,6 +38,7 @@ deriving stock instance Show RawDependency
 deriving stock instance Show Dependency
 
 instance ToJSON RawDependency where
+  toJSON (Dependency p) = toJSON (fromSomeDir p)
   toEncoding (Dependency p) = toEncoding (fromSomeDir p)
 
 instance FromJSON RawDependency where
