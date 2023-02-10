@@ -25,7 +25,7 @@ testDescr NegTest {..} =
 allTests :: TestTree
 allTests =
   testGroup
-    "JuvixCore negative tests"
+    "JuvixGeb negative tests"
     (map (mkTest . testDescr) tests)
 
 tests :: [NegTest]
@@ -53,21 +53,5 @@ tests =
     NegTest
       "Invalid application"
       $(mkRelDir ".")
-      $(mkRelFile "test006.jvc"),
-    NegTest
-      "Invalid builtin application"
-      $(mkRelDir ".")
-      $(mkRelFile "test007.jvc"),
-    NegTest
-      "Undefined symbol"
-      $(mkRelDir ".")
-      $(mkRelFile "test008.jvc"),
-    NegTest
-      "Erroneous Church numerals"
-      $(mkRelDir ".")
-      $(mkRelFile "test009.jvc"),
-    NegTest
-      "Empty letrec"
-      $(mkRelDir ".")
-      $(mkRelFile "test010.jvc")
+      $(mkRelFile "test006.jvc")
   ]

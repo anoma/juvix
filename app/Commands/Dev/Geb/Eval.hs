@@ -6,6 +6,7 @@ import Juvix.Compiler.Backend.Geb.Data.Context as EvalContext
 import Juvix.Compiler.Backend.Geb.Evaluator qualified as Geb
 import Juvix.Compiler.Backend.Geb.Language qualified as Geb
 import Juvix.Compiler.Backend.Geb.Pretty qualified as Geb
+import Juvix.Compiler.Backend.Geb.Pretty.Values qualified as GebValue
 import Juvix.Compiler.Backend.Geb.Translation.FromSource qualified as Geb
 
 runCommand ::
@@ -41,9 +42,9 @@ evalAndPrint opts = \case
             { _envEvaluatorOptions = opts',
               _envContext = EvalContext.empty
             }
-    case Geb.nf' env morphism of
+    case Geb.eval' env morphism of
       Left err -> exitJuvixError err
-      Right m -> renderStdOut (Geb.ppOut opts' m)
+      Right m -> renderStdOut (GebValue.ppOut opts' m)
   Geb.ExpressionObject _ -> error gebObjNoEvalMsg
 
 gebObjNoEvalMsg :: Text
@@ -60,7 +61,7 @@ data RunEvalArgs = RunEvalArgs
 
 makeLenses ''RunEvalArgs
 
-runEval :: RunEvalArgs -> Either JuvixError Geb.Expression
+runEval :: RunEvalArgs -> Either JuvixError Geb.GebValue
 runEval RunEvalArgs {..} =
   case Geb.runParser _runEvalArgsInputFile _runEvalArgsContent of
     Right (Geb.ExpressionMorphism morphism) -> do
@@ -69,8 +70,6 @@ runEval RunEvalArgs {..} =
               { _envEvaluatorOptions = _runEvalArgsEvaluatorOptions,
                 _envContext = EvalContext.empty
               }
-      case Geb.nf' env morphism of
-        Right m -> Right (Geb.ExpressionMorphism m)
-        Left err -> Left (JuvixError err)
+      Geb.eval' env morphism
     Right _ -> Left (error @JuvixError gebObjNoEvalMsg)
     Left err -> Left (JuvixError err)

@@ -32,7 +32,7 @@ filterOutTests out = filter (\PosTest {..} -> _name `notElem` out)
 allTests :: TestTree
 allTests =
   testGroup
-    "JuvixCore positive tests"
+    "JuvixGeb positive tests"
     (map (mkTest . testDescr) tests)
 
 tests :: [PosTest]

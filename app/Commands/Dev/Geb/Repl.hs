@@ -9,6 +9,7 @@ import Commands.Dev.Geb.Repl.Options
 import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
 import Juvix.Compiler.Backend.Geb qualified as Geb
+import Juvix.Compiler.Backend.Geb.Pretty.Values qualified as GebValue
 import Juvix.Data.Error.GenericError qualified as Error
 import Juvix.Extra.Version
 import Juvix.Prelude.Pretty qualified as P
@@ -87,7 +88,7 @@ runCommand _opts = do
                   }
         case evalRes of
           Left err -> printError err
-          Right n -> renderOut (Geb.ppOut Geb.defaultEvaluatorOptions n)
+          Right n -> renderOut (GebValue.ppOut Geb.defaultEvaluatorOptions n)
 
       reloadFile :: String -> Repl ()
       reloadFile _ = do
@@ -135,7 +136,7 @@ runCommand _opts = do
                     }
           case evalRes of
             Left err -> printError err
-            Right n -> renderOut (Geb.ppOut Geb.defaultEvaluatorOptions n)
+            Right n -> renderOut (GebValue.ppOut Geb.defaultEvaluatorOptions n)
 
       options :: [(String, String -> Repl ())]
       options =

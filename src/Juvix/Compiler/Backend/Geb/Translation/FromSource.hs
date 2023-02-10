@@ -102,7 +102,7 @@ parseGebLisp = do
     Geb.ExpressionMorphism $
       entry
         ^. lispDefParameterMorphism
-        . Geb.typedMorphism
+          . Geb.typedMorphism
 
 parseGebExpression :: ParsecS r Geb.Expression
 parseGebExpression =
