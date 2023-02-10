@@ -37,9 +37,8 @@ Function declarations can depend on each other recursively. In the following exa
 #+begin_example
 open import Stdlib.Prelude;
 
-odd : Nat → Bool;
-
-even : Nat → Bool;
+odd : Nat -> Bool;
+even : Nat -> Bool;
 
 odd zero := false;
 odd (suc n) := even n;
@@ -67,15 +66,15 @@ functions:
 #+begin_example
 open import Stdlib.Prelude;
 
-odd : Nat → Bool;
-even : Nat → Bool;
+odd : Nat -> Bool;
+even : Nat -> Bool;
 
-odd := λ{
+odd := \{
   zero := false;
   (suc n) := even n;
 };
 
-even := λ{
+even := \{
   zero := true;
   (suc n) := odd n;
 };
@@ -85,5 +84,5 @@ even := λ{
 
 If a function has only one clause, then its definition can written in one line, with the body immediately following the signature:
 #+begin_example
-multiplyByTwo : Nat → Nat := λ{n := 2 * n};
+multiplyByTwo : Nat -> Nat := \{n := 2 * n};
 #+end_example
