@@ -26,7 +26,6 @@ tests:
       - positive/Internal/LiteralInt.juvix
 
     stdout:
-      matches:
-        regex: |
-          what magic regex should I use?
+      matches: |-
+          ^\{\"face\".*$
     exit-status: 0
