@@ -1,0 +1,27 @@
+* Control structures
+
+** Case
+
+A case expression has the following syntax:
+
+#+begin_example
+case value
+| pat1 := branch1
+..
+| patN := branchN
+#+end_example
+
+For example, one can evaluate the following expression in the REPL:
+#+begin_example
+Stdlib.Prelude> case 2 | zero := 0 | suc x := x | _ := 19
+1
+#+end_example
+
+** Lazy builtins
+
+The standard library provides several builtin functions which are treated specially and evaluated lazily. These builtins must always be fully applied.
+
+- =if condition branch1 branch2=. First evaluates =condition=, if true evaluates and returns =branch1=, otherwise evaluates and returns =branch2=.
+- =a || b=. Lazy disjunction. First evaluates =a=, if true returns true, otherwise evaluates and returns =b=.
+- =a && b=. Lazy conjunction. First evaluates =a=, if false returns false, otherwise evaluates and returns =b=.
+- =a >> b=. Sequences two IO actions. Lazy in the second argument.

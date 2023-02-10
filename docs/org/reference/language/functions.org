@@ -14,7 +14,7 @@ multiplyByTwo n := 2 * n;
 #+end_example
 
 A function may have more than one function clause. When a function is called,
-the first clause that matches the argument is used.
+the first clause that matches the arguments is used.
 
 The following function has two clauses.
 
@@ -37,13 +37,52 @@ Function declarations can depend on each other recursively. In the following exa
 #+begin_example
 open import Stdlib.Prelude;
 
-odd : Nat → Bool;
-
-even : Nat → Bool;
+odd : Nat -> Bool;
+even : Nat -> Bool;
 
 odd zero := false;
 odd (suc n) := even n;
 
 even zero := true;
 even (suc n) := odd n;
+#+end_example
+
+** Anonymous functions
+
+Anonymous functions, or /lambdas/, are introduced with the syntax:
+
+#+begin_example
+\{| pat1 .. patN_1 := clause1
+  | ..
+  | pat1 .. patN_M := clauseM}
+#+end_example
+
+The first pipe =|= is optional. Instead of =\= one can also use =λ=.
+
+An anonymous function just lists all clauses of a function without
+naming it. Any function declaration can be converted to use anonymous
+functions:
+
+#+begin_example
+open import Stdlib.Prelude;
+
+odd : Nat -> Bool;
+even : Nat -> Bool;
+
+odd := \{
+  | zero := false
+  | (suc n) := even n
+};
+
+even := \{
+  | zero := true
+  | (suc n) := odd n
+};
+#+end_example
+
+** Short definitions
+
+A function definition can be written in one line, with the body immediately following the signature:
+#+begin_example
+multiplyByTwo : Nat -> Nat := \{n := 2 * n};
 #+end_example

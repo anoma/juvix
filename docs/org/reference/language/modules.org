@@ -139,8 +139,8 @@ The module =C= below does not typecheck. Both symbols, originally defined in
 module =A=, are not visible in module =C= after importing =B=. The symbols =A=
 and =a= are not exported by the module =B=. To export symbols from an imported
 module, one can use the =public= keyword at the end of the corresponding =open=
-statement. For example, in module =B=, after marking the import of =A= as
-=public=, the module =C= typechecks.
+statement. For example, the module =C= typechecks after marking the import of =A= as
+=public= in module =B=.
 
 #+begin_example
 -- A.juvix
