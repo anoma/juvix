@@ -47,7 +47,7 @@ setupIntToNat sym tab =
                   _argumentIsImplicit = Explicit
                 }
             ],
-          _identifierType = mkDynamic',
+          _identifierType = mkPi' mkTypeInteger' (mkLambda' mkTypeInteger'),
           _identifierIsExported = False,
           _identifierBuiltin = Nothing
         }
@@ -255,6 +255,8 @@ goFunctionDefIden (f, sym) = do
             _identifierLocation = Just $ f ^. Internal.funDefName . nameLoc,
             _identifierSymbol = sym,
             _identifierType = funTy,
+            -- _identiferArgsNum needs to match the number of lambdas in the
+            -- body. This needs to be filled in later.
             _identifierArgsNum = 0,
             _identifierArgsInfo = [],
             _identifierIsExported = False,
@@ -274,6 +276,21 @@ goFunctionDef (f, sym) = do
     Just _ -> Just <$> runReader initIndexTable (mkFunBody f)
     Nothing -> Just <$> runReader initIndexTable (mkFunBody f)
   forM_ mbody (registerIdentNode sym)
+  forM_ mbody setIdentArgsInfo'
+  where
+    setIdentArgsInfo' :: Node -> Sem r ()
+    setIdentArgsInfo' node = do
+      let (is, _) = unfoldLambdas node
+      setIdentArgsInfo sym (map (toArgumentInfo . (^. lambdaLhsBinder)) is)
+
+    toArgumentInfo :: Binder -> ArgumentInfo
+    toArgumentInfo bi =
+      ArgumentInfo
+        { _argumentName = bi ^. binderName,
+          _argumentLocation = bi ^. binderLocation,
+          _argumentType = bi ^. binderType,
+          _argumentIsImplicit = Explicit
+        }
 
 mkFunBody ::
   forall r.
