@@ -196,19 +196,19 @@ fromGebValue ty = \case
   GebValueMorphismUnit -> case ty of
     ObjectTerminal -> return MorphismUnit
     _ -> errorFromGebValue "type mismatch. Expected Unit"
-  GebValueMorphismBinop m ->
-    case ty of
-      ObjectHom (Hom a bc) -> do
-        left <- fromGebValue a (m ^. valueMorphismBinopLeft)
-        right <- fromGebValue bc (m ^. valueMorphismBinopRight)
-        return $
-          MorphismBinop
-            Binop
-              { _binopOpcode = m ^. valueMorphismBinopOpcode,
-                _binopLeft = left,
-                _binopRight = right
-              }
-      _ -> errorFromGebValue "type mismatch (binop)"
+  GebValueMorphismBinop m -> do
+    let lTerm = m ^. valueMorphismBinopLeft
+        rTerm = m ^. valueMorphismBinopRight
+    left <- fromGebValue ObjectInteger lTerm
+    right <- fromGebValue ObjectInteger rTerm
+    return $
+      MorphismBinop
+        Binop
+          { _binopOpcode = m ^. valueMorphismBinopOpcode,
+            _binopLeft = left,
+            _binopRight = right
+          }
+  --   _ -> errorFromGebValue "type mismatch (binop)"
   GebValueMorphismLeft m -> case ty of
     ObjectCoproduct _ -> MorphismLeft <$> fromGebValue ty m
     _ -> errorFromGebValue "type mismatch (left). Expected a coproduct"
@@ -243,8 +243,8 @@ apply fun' arg' = do
         CallByName -> id
         CallByValue -> force
   arg <- maybeForce <$> eval arg'
-  fun' <- eval fun'
-  case fun' of
+  fun <- eval fun'
+  case fun of
     GebValueClosure cls ->
       local (over envContext (Context.cons arg)) $
         eval (cls ^. valueClosureLambda . lambdaBody)
@@ -255,7 +255,7 @@ apply' ::
   GebValue ->
   GebValue ->
   Sem r GebValue
-apply' fun arg = do
+apply' fun arg =
   case fun of
     GebValueClosure cls ->
       local (over envContext (Context.cons arg)) $
@@ -265,10 +265,7 @@ apply' fun arg = do
 errorFromGebValue :: Text -> a
 errorFromGebValue = error . ("fromGebValue: " <>)
 
-eval' ::
-  Env ->
-  Morphism ->
-  Either JuvixError GebValue
+eval' :: Env -> Morphism -> Either JuvixError GebValue
 eval' env m = run . runError $ runReader env (eval m)
 
 nf ::
@@ -280,8 +277,5 @@ nf m = do
   val <- eval m
   fromGebValue ty val
 
-nf' ::
-  Env ->
-  Morphism ->
-  Either JuvixError Morphism
+nf' :: Env -> Morphism -> Either JuvixError Morphism
 nf' env m = run . runError $ runReader env (nf m)

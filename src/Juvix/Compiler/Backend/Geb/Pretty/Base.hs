@@ -39,7 +39,14 @@ docLisp opts packageName entryName morph obj =
       ( "defparameter"
           <+> pretty entryName
             <> line
-            <> indent' (parens ("typed" <+> doc opts morph <+> doc opts obj))
+            <> indent'
+              ( parens
+                  ( "typed"
+                      <> line
+                      <> indent'
+                        (vsep [doc opts morph, doc opts obj])
+                  )
+              )
       )
 
 class PrettyCode c where
@@ -111,7 +118,7 @@ instance PrettyCode Binop where
     op <- ppCode _binopOpcode
     left <- ppArg _binopLeft
     right <- ppArg _binopRight
-    return $ op <+> left <+> right
+    return $ op <> line <> indent' (vsep [left, right])
 
 instance PrettyCode Morphism where
   ppCode = \case
@@ -122,10 +129,10 @@ instance PrettyCode Morphism where
       return kwUnit
     MorphismLeft val -> do
       v <- ppArg val
-      return $ kwLeft <+> v
+      return $ kwLeft <> line <> indent' v
     MorphismRight val -> do
       v <- ppArg val
-      return $ kwRight <+> v
+      return $ kwRight <> line <> indent' v
     MorphismCase x -> ppCode x
     MorphismPair x -> ppCode x
     MorphismFirst x -> ppCode x

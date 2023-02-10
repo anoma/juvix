@@ -6,29 +6,17 @@
 (in-package :test002)
 
 (defparameter *entry*
-  (typed (app
-    (coprod
-      (coprod
-        so1
-        so1)
-      so1)
-    (coprod
-      so1
-      so1)
+  (typed
     (app
       (coprod
-        so1
-        so1)
-      (!->
-        (coprod
-          (coprod
-            so1
-            so1)
-          so1)
         (coprod
           so1
-          so1))
-      (lamb
+          so1)
+        so1)
+      (coprod
+        so1
+        so1)
+      (app
         (coprod
           so1
           so1)
@@ -43,70 +31,89 @@
             so1))
         (lamb
           (coprod
-            (coprod
-              so1
-              so1)
-            so1)
-          (coprod
             so1
             so1)
-          (case-on
+          (!->
             (coprod
-              so1
-              so1)
-            so1
-            (coprod
-              so1
-              so1)
-            (index 0)
-            (lamb
               (coprod
                 so1
                 so1)
+              so1)
+            (coprod
+              so1
+              so1))
+          (lamb
+            (coprod
               (coprod
                 so1
                 so1)
-              (app
+              so1)
+            (coprod
+              so1
+              so1)
+            (case-on
+              (coprod
+                so1
+                so1)
+              so1
+              (coprod
+                so1
+                so1)
+              (index 0)
+              (lamb
                 (coprod
                   so1
                   so1)
                 (coprod
                   so1
                   so1)
-                (lamb
+                (app
                   (coprod
                     so1
                     so1)
                   (coprod
                     so1
                     so1)
-                  (case-on
-                    so1
-                    so1
+                  (lamb
                     (coprod
                       so1
                       so1)
-                    (index 3)
-                    (lamb
+                    (coprod
+                      so1
+                      so1)
+                    (case-on
+                      so1
                       so1
                       (coprod
                         so1
                         so1)
-                      (left unit))
-                    (lamb
-                      so1
-                      (coprod
+                      (index 3)
+                      (lamb
                         so1
-                        so1)
-                      (index 1))))
-                (index 1)))
-            (lamb
-              so1
-              (coprod
+                        (coprod
+                          so1
+                          so1)
+                        (left
+                          unit))
+                      (lamb
+                        so1
+                        (coprod
+                          so1
+                          so1)
+                        (index 1))))
+                  (index 1)))
+              (lamb
                 so1
-                so1)
-              (right unit)))))
-      (right unit))
-    (left (left unit))) (coprod
-    so1
-    so1)))
+                (coprod
+                  so1
+                  so1)
+                (right
+                  unit)))))
+        (right
+          unit))
+      (left
+        (left
+          unit)))
+    (coprod
+      so1
+      so1)))

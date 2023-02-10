@@ -57,3 +57,13 @@ objectRightCase Case {..} =
       { _homDomain = _caseRightType,
         _homCodomain = _caseCodomainType
       }
+
+objectBinop :: Binop -> Object
+objectBinop op = case op ^. binopOpcode of
+  OpAdd -> ObjectInteger
+  OpSub -> ObjectInteger
+  OpMul -> ObjectInteger
+  OpDiv -> ObjectInteger
+  OpMod -> ObjectInteger
+  OpEq -> objectBool
+  OpLt -> objectBool

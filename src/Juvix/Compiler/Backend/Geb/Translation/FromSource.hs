@@ -10,6 +10,7 @@ import Juvix.Compiler.Backend.Geb.Translation.FromSource.Lexer
 import Juvix.Parser.Error
 import Juvix.Prelude
 import Text.Megaparsec qualified as P
+import Text.Megaparsec.Char.Lexer qualified as P
 import Text.Megaparsec.Debug
 
 data LispDefParameter = LispDefParameter
@@ -116,9 +117,8 @@ parseGeb =
 morphism :: ParsecS r Geb.Morphism
 morphism =
   P.label "<geb morphism>" $ do
-    ( morphismUnit
-        <|> Geb.MorphismInteger <$> morphismInteger
-      )
+    morphismUnit
+      <|> Geb.MorphismInteger <$> morphismInteger
       <|> parens
         ( Geb.MorphismAbsurd <$> morphismAbsurd
             <|> Geb.MorphismLeft <$> morphismLeft
@@ -133,21 +133,22 @@ morphism =
             <|> Geb.MorphismBinop <$> morphismBinop
         )
 
+parseNatural :: ParsecS r Integer
+parseNatural = lexeme P.decimal
+
 morphismInteger :: ParsecS r Integer
-morphismInteger = dbg "asd" $ do
-  P.label "<geb MorphismInteger>" $ do
-    fst <$> integer
+morphismInteger = parseNatural
 
 opcode :: ParsecS r Geb.Opcode
 opcode =
   P.label "<geb Opcode>" $
-    (Geb.OpAdd <$ kw kwGebBinopAdd)
-      <|> Geb.OpSub <$ (kw kwGebBinopSub)
-      <|> Geb.OpMul <$ (kw kwGebBinopMul)
-      <|> Geb.OpDiv <$ (kw kwGebBinopDiv)
-      <|> Geb.OpMod <$ (kw kwGebBinopMod)
-      <|> Geb.OpEq <$ (kw kwGebBinopEq)
-      <|> Geb.OpLt <$ (kw kwGebBinopLt)
+    Geb.OpAdd <$ kw kwGebBinopAdd
+      <|> Geb.OpSub <$ kw kwGebBinopSub
+      <|> Geb.OpMul <$ kw kwGebBinopMul
+      <|> Geb.OpDiv <$ kw kwGebBinopDiv
+      <|> Geb.OpMod <$ kw kwGebBinopMod
+      <|> Geb.OpEq <$ kw kwGebBinopEq
+      <|> Geb.OpLt <$ kw kwGebBinopLt
 
 morphismBinop :: ParsecS r Geb.Binop
 morphismBinop = do
@@ -167,6 +168,7 @@ object =
   P.label "<geb Object>" $ do
     objectInitial
       <|> objectTerminal
+      <|> Geb.ObjectInteger <$ (kw kwGebObjectInteger)
       <|> parens
         ( Geb.ObjectProduct <$> objectProduct
             <|> Geb.ObjectCoproduct <$> objectCoproduct
@@ -260,7 +262,7 @@ morphismVar :: ParsecS r Geb.Var
 morphismVar = do
   P.label "<geb MorphismVar>" $ do
     kw kwGebVar <* space
-    _varIndex <- fromIntegral . fst <$> integer
+    _varIndex <- fromIntegral <$> parseNatural
     return Geb.Var {..}
 
 objectInitial :: ParsecS r Geb.Object
