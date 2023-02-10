@@ -160,25 +160,27 @@ upToAsm ::
   (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Asm.InfoTable
 upToAsm =
-  upToCore >>= \Core.CoreResult{..} -> return (coreToAsm _coreResultTable)
+  upToCore >>= \Core.CoreResult {..} -> return (coreToAsm _coreResultTable)
 
 upToMiniC ::
   (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
-  Asm.Options -> Sem r C.MiniCResult
+  Asm.Options ->
+  Sem r C.MiniCResult
 upToMiniC opts =
   upToAsm >>= asmToMiniC opts
 
 upToGeb ::
   (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
-  Geb.ResultSpec -> Sem r Geb.Result
+  Geb.ResultSpec ->
+  Sem r Geb.Result
 upToGeb spec =
-  upToCore >>= \Core.CoreResult{..} -> coreToGeb spec _coreResultTable
+  upToCore >>= \Core.CoreResult {..} -> coreToGeb spec _coreResultTable
 
 upToEval ::
   (Members '[Reader EntryPoint, Files, NameIdGen, Error JuvixError, Builtins, PathResolver] r) =>
   Sem r Core.CoreResult
 upToEval =
-  upToCore >>= \r -> return r{Core._coreResultTable = Core.toEval (r ^. Core.coreResultTable)}
+  upToCore >>= \r -> return r {Core._coreResultTable = Core.toEval (r ^. Core.coreResultTable)}
 
 --------------------------------------------------------------------------------
 -- Internal workflows
