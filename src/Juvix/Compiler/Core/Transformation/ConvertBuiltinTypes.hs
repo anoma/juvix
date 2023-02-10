@@ -15,6 +15,7 @@ convertNode tab = umap go
       NTyp TypeConstr {..} ->
         case ii ^. inductiveBuiltin of
           Just BuiltinBool -> mkTypeBool'
+          Just BuiltinNat -> mkTypeInteger'
           _ -> node
         where
           ii = fromJust $ tab ^. infoInductives . at _typeConstrSymbol
