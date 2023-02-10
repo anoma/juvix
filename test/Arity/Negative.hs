@@ -92,5 +92,12 @@ tests =
       $(mkRelFile "WrongReturnTypeTooManyArguments.juvix")
       $ \case
         ErrTooManyArguments {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "Lazy builtin not fully applied"
+      $(mkRelDir "Internal")
+      $(mkRelFile "LazyBuiltin.juvix")
+      $ \case
+        ErrBuiltinNotFullyApplied {} -> Nothing
         _ -> wrongError
   ]

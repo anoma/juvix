@@ -259,4 +259,4 @@ instance ToGenericError BuiltinNotFullyApplied where
               <+> ppCode opts' (e ^. builtinNotFullyAppliedName)
               <+> "must be applied to exactly"
               <+> pretty argsNum
-              <+> "arguments."
+              <+> "arguments"
