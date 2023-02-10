@@ -1,12 +1,12 @@
 working-directory: ./../../../../tests
 
 tests:
-  - name: core-from-source-eval
+  - name: core-from-concrete-eval
     command:
       - juvix
       - dev
       - core
-      - from-source
+      - from-concrete
       - --eval
     args:
       - positive/Internal/LiteralInt.juvix
@@ -14,12 +14,12 @@ tests:
       suc (suc zero)
     exit-status: 0
 
-  - name: core-from-source-eval
+  - name: core-from-concrete-eval
     command:
       - juvix
       - dev
       - core
-      - from-source
+      - from-concrete
       - --eval
       - --transforms
       - nat-to-int
@@ -29,12 +29,12 @@ tests:
       2
     exit-status: 0
 
-  - name: core-from-source-eval-s
+  - name: core-from-concrete-eval-s
     command:
       - juvix
       - dev
       - core
-      - from-source
+      - from-concrete
       - --eval
       - --symbol-name
       - f

@@ -1,18 +1,18 @@
-module Commands.Dev.Core.FromSource where
+module Commands.Dev.Core.FromConcrete where
 
 import Commands.Base
-import Commands.Dev.Core.FromSource.Options
+import Commands.Dev.Core.FromConcrete.Options
 import Evaluator
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Translation
 
-runCommand :: forall r. Members '[Embed IO, App] r => CoreFromSourceOptions -> Sem r ()
+runCommand :: forall r. Members '[Embed IO, App] r => CoreFromConcreteOptions -> Sem r ()
 runCommand localOpts = do
-  tab <- (^. coreResultTable) <$> runPipeline (localOpts ^. coreFromSourceInputFile) upToCore
-  path :: Path Abs File <- someBaseToAbs' (localOpts ^. coreFromSourceInputFile . pathPath)
-  let tab' :: InfoTable = Core.applyTransformations (project localOpts ^. coreFromSourceTransformations) tab
+  tab <- (^. coreResultTable) <$> runPipeline (localOpts ^. coreFromConcreteInputFile) upToCore
+  path :: Path Abs File <- someBaseToAbs' (localOpts ^. coreFromConcreteInputFile . pathPath)
+  let tab' :: InfoTable = Core.applyTransformations (project localOpts ^. coreFromConcreteTransformations) tab
 
       inInputModule :: IdentifierInfo -> Bool
       inInputModule = (== Just path) . (^? identifierLocation . _Just . intervalFile)
@@ -29,7 +29,7 @@ runCommand localOpts = do
 
       selInfo :: Maybe IdentifierInfo
       selInfo = do
-        s <- localOpts ^. coreFromSourceSymbolName
+        s <- localOpts ^. coreFromConcreteSymbolName
         find (^. identifierName . to (== s)) mainIdens
 
       goPrint :: Sem r ()
@@ -42,14 +42,14 @@ runCommand localOpts = do
             newline
             newline
           nodes :: [(Text, Core.Node)]
-            | isJust (localOpts ^. coreFromSourceSymbolName) = [fromMaybe err (getDef selInfo)]
+            | isJust (localOpts ^. coreFromConcreteSymbolName) = [fromMaybe err (getDef selInfo)]
             | otherwise = mapMaybe (getDef . Just) mainIdens
 
       goEval :: Sem r ()
       goEval = evalAndPrint localOpts tab' evalNode
         where
           evalNode :: Core.Node
-            | isJust (localOpts ^. coreFromSourceSymbolName) = getNode' selInfo
+            | isJust (localOpts ^. coreFromConcreteSymbolName) = getNode' selInfo
             | otherwise = getNode' mainInfo
 
       getDef :: Maybe IdentifierInfo -> Maybe (Text, Core.Node)
@@ -68,5 +68,5 @@ runCommand localOpts = do
       err = error "function not found"
 
   if
-      | localOpts ^. coreFromSourceEval -> goEval
+      | localOpts ^. coreFromConcreteEval -> goEval
       | otherwise -> goPrint
