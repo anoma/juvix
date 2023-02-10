@@ -18,7 +18,6 @@ import Commands.Dev.DisplayRoot.Options
 import Commands.Dev.Geb.Options
 import Commands.Dev.Highlight.Options
 import Commands.Dev.Internal.Options
-import Commands.Dev.MiniC.Options
 import Commands.Dev.Parse.Options
 import Commands.Dev.Runtime.Options
 import Commands.Dev.Scope.Options
@@ -33,7 +32,6 @@ data DevCommand
   | Geb GebCommand
   | Asm AsmCommand
   | Runtime RuntimeCommand
-  | MiniC MiniCOptions
   | Parse ParseOptions
   | Scope ScopeOptions
   | Termination TerminationCommand
@@ -49,7 +47,6 @@ parseDevCommand =
           commandGeb,
           commandAsm,
           commandRuntime,
-          commandMiniC,
           commandParse,
           commandScope,
           commandShowRoot,
@@ -63,13 +60,6 @@ commandHighlight =
     info
       (Highlight <$> parseHighlight)
       (progDesc "Highlight a Juvix file")
-
-commandMiniC :: Mod CommandFields DevCommand
-commandMiniC =
-  command "minic" $
-    info
-      (MiniC <$> parseMiniC)
-      (progDesc "Translate a Juvix file to MiniC")
 
 commandInternal :: Mod CommandFields DevCommand
 commandInternal =
