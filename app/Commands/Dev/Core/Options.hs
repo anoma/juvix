@@ -3,6 +3,7 @@ module Commands.Dev.Core.Options where
 import Commands.Dev.Core.Asm.Options
 import Commands.Dev.Core.Compile.Options
 import Commands.Dev.Core.Eval.Options
+import Commands.Dev.Core.FromConcrete.Options
 import Commands.Dev.Core.Read.Options
 import Commands.Dev.Core.Repl.Options
 import Commands.Dev.Core.Strip.Options
@@ -12,6 +13,7 @@ data CoreCommand
   = Repl CoreReplOptions
   | Eval CoreEvalOptions
   | Read CoreReadOptions
+  | FromConcrete CoreFromConcreteOptions
   | Strip CoreStripOptions
   | CoreAsm CoreAsmOptions
   | CoreCompile CoreCompileOptions
@@ -25,6 +27,7 @@ parseCoreCommand =
         commandEval,
         commandRead,
         commandStrip,
+        commandFromConcrete,
         commandAsm,
         commandCompile
       ]
@@ -44,6 +47,9 @@ parseCoreCommand =
     commandAsm :: Mod CommandFields CoreCommand
     commandAsm = command "asm" asmInfo
 
+    commandFromConcrete :: Mod CommandFields CoreCommand
+    commandFromConcrete = command "from-concrete" fromSourceInfo
+
     commandCompile :: Mod CommandFields CoreCommand
     commandCompile = command "compile" compileInfo
 
@@ -52,6 +58,12 @@ parseCoreCommand =
       info
         (Repl <$> parseCoreReplOptions)
         (progDesc "Start an interactive session of the JuvixCore evaluator")
+
+    fromSourceInfo :: ParserInfo CoreCommand
+    fromSourceInfo =
+      info
+        (FromConcrete <$> parseCoreFromConcreteOptions)
+        (progDesc "Read a Juvix file and compile it to core")
 
     evalInfo :: ParserInfo CoreCommand
     evalInfo =

@@ -1,0 +1,45 @@
+working-directory: ./../../../../tests
+
+tests:
+  - name: core-from-concrete-eval
+    command:
+      - juvix
+      - dev
+      - core
+      - from-concrete
+      - --eval
+    args:
+      - positive/Internal/LiteralInt.juvix
+    stdout: |
+      suc (suc zero)
+    exit-status: 0
+
+  - name: core-from-concrete-eval
+    command:
+      - juvix
+      - dev
+      - core
+      - from-concrete
+      - --eval
+      - --transforms
+      - nat-to-int
+    args:
+      - positive/Internal/LiteralInt.juvix
+    stdout: |
+      2
+    exit-status: 0
+
+  - name: core-from-concrete-eval-s
+    command:
+      - juvix
+      - dev
+      - core
+      - from-concrete
+      - --eval
+      - --symbol-name
+      - f
+    args:
+      - positive/Internal/LiteralInt.juvix
+    stdout: |
+      suc zero
+    exit-status: 0
