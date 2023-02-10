@@ -30,13 +30,17 @@ go = \case
   Emacs -> Text.encodeUtf8 . renderSExp . toSexp . buildProperties
   Json -> ByteString.toStrict . Aeson.encode . rawProperties . buildProperties
 
-goError :: [Interval] -> Text
-goError l =
-  renderSExp
-    (progn (map goIntervalErr l))
-  where
-    goIntervalErr :: Interval -> SExp
-    goIntervalErr i = toSexp (PropertyFace i FaceError)
+goErrors :: HighlightBackend -> [Interval] -> ByteString
+goErrors = \case
+  Emacs -> Text.encodeUtf8 . renderSExp . toSexp . errorProperties
+  Json -> ByteString.toStrict . Aeson.encode . rawProperties . errorProperties
+
+errorProperties :: [Interval] -> Properties
+errorProperties l =
+  Properties
+    { _propertiesFace = map goFaceError l,
+      _propertiesGoto = []
+    }
 
 buildProperties :: HighlightInput -> Properties
 buildProperties HighlightInput {..} =
@@ -56,6 +60,13 @@ nameKindFace = \case
   KNameLocalModule -> Just FaceModule
   KNameAxiom -> Just FaceAxiom
   KNameLocal -> Nothing
+
+goFaceError :: Interval -> PropertyFace
+goFaceError i =
+  PropertyFace
+    { _faceFace = FaceError,
+      _faceInterval = i
+    }
 
 goFaceParsedItem :: ParsedItem -> PropertyFace
 goFaceParsedItem i =

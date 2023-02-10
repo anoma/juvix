@@ -1,0 +1,30 @@
+working-directory: ./../../../../tests
+
+tests:
+  - name: highlight-emacs
+    command:
+      - juvix
+      - dev
+      - highlight
+    args:
+      - positive/Internal/LiteralInt.juvix
+
+    stdout:
+      contains: |
+          add-text-properties
+    exit-status: 0
+
+  - name: highlight-vscode
+    command:
+      - juvix
+      - dev
+      - highlight
+      - --format
+      - json
+    args:
+      - positive/Internal/LiteralInt.juvix
+
+    stdout:
+      matches: |-
+          ^\{\"face\".*$
+    exit-status: 0
