@@ -14,7 +14,6 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Data.Ape
 import Juvix.Data.CodeAnn
-import Juvix.Data.Keyword
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Juvix.Prelude.Pretty qualified as PP
@@ -450,7 +449,8 @@ instance (SingI s) => PrettyCode (Function s) where
   ppCode Function {..} = do
     funParameter' <- ppCode _funParameters
     funReturn' <- ppRightExpression' funFixity _funReturn
-    return $ funParameter' <+> kwArrowR <+> funReturn'
+    funKw' <- ppCode _funKw
+    return $ funParameter' <+> funKw' <+> funReturn'
     where
       ppRightExpression' = case sing :: SStage s of
         SParsed -> ppRightExpression
@@ -774,7 +774,7 @@ instance (SingI s) => PrettyCode (ExpressionAtom s) where
     AtomUniverse uni -> ppCode uni
     AtomFunction fun -> ppCode fun
     AtomLiteral lit -> ppCode lit
-    AtomFunArrow -> return kwArrowR
+    AtomFunArrow a -> ppCode a
     AtomParens e -> parens <$> ppExpression e
     AtomBraces e -> braces <$> ppExpression (e ^. withLocParam)
     AtomHole w -> ppHole w

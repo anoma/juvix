@@ -940,7 +940,8 @@ checkFunction Function {..} = do
   return
     Function
       { _funParameters = funParameters',
-        _funReturn = funReturn'
+        _funReturn = funReturn',
+        _funKw
       }
   where
     go :: Maybe (SymbolType 'Scoped) -> (Sem r a -> Sem r a) -> (Sem r a -> Sem r a)
@@ -1220,7 +1221,7 @@ checkExpressionAtom e = case e of
   AtomFunction fun -> AtomFunction <$> checkFunction fun
   AtomParens par -> AtomParens <$> checkParens par
   AtomBraces br -> AtomBraces <$> traverseOf withLocParam checkParseExpressionAtoms br
-  AtomFunArrow -> return AtomFunArrow
+  AtomFunArrow a -> return (AtomFunArrow a)
   AtomHole h -> AtomHole <$> checkHole h
   AtomLiteral l -> return (AtomLiteral l)
 
@@ -1377,14 +1378,19 @@ makeExpressionTable2 (ExpressionAtoms atoms _) = [appOpExplicit] : operators ++ 
 
     -- Non-dependent function type: A → B
     functionOp :: P.Operator Parse Expression
-    functionOp = P.InfixR (nonDepFun <$ P.single AtomFunArrow)
+    functionOp = P.InfixR (nonDepFun <$> P.token getArrow mempty)
       where
-        nonDepFun :: Expression -> Expression -> Expression
-        nonDepFun a b =
+        getArrow :: ExpressionAtom 'Scoped -> Maybe KeywordRef
+        getArrow = \case
+          AtomFunArrow r -> return r
+          _ -> Nothing
+        nonDepFun :: KeywordRef -> Expression -> Expression -> Expression
+        nonDepFun _funKw a b =
           ExpressionFunction
             Function
               { _funParameters = param,
-                _funReturn = b
+                _funReturn = b,
+                _funKw
               }
           where
             param =
