@@ -38,11 +38,14 @@ ppCape = \case
   CapeAppChain c -> ppAppChain c
   CapeUChain c -> ppUChain c
 
+chain :: Doc CodeAnn -> NonEmpty (Doc CodeAnn) -> Doc CodeAnn
+chain f' args' = PP.group (nest' (vsep (f' : toList args')))
+
 ppAppChain :: forall a r. (Members '[Reader (ApeParams a)] r) => AppChain a -> Sem r (Doc CodeAnn)
 ppAppChain (AppChain f links) = do
   f' <- ppLinkExpr fx f
   args' <- mapM (ppLinkExpr fx) links
-  return $ PP.group (vsep (f' : toList args'))
+  return $ chain f' args'
   where
     fx :: Precedence
     fx = appFixity ^. fixityPrecedence
@@ -51,7 +54,7 @@ ppChain :: forall a r. (Members '[Reader (ApeParams a)] r) => Chain a -> Sem r (
 ppChain (Chain opFix f links) = do
   f' <- ppLinkExpr fx f
   args' <- mapM ppLink links
-  return $ PP.group (vsep (f' : toList args'))
+  return $ chain f' args'
   where
     fx :: Precedence
     fx = opFix ^. fixityPrecedence
@@ -72,24 +75,11 @@ ppUChain (UChain opFix f links) = do
     fx :: Precedence
     fx = opFix ^. fixityPrecedence
 
-nestIf :: Bool -> Doc a -> Doc a
-nestIf = \case
-  True -> nest 2
-  False -> id
-
 ppLinkExpr ::
   (Members '[Reader (ApeParams a)] r) => Precedence -> Cape a -> Sem r (Doc CodeAnn)
-ppLinkExpr opFix e =
-  nestIf (apeNest (atomicity e) opFix)
-    . parensCond cond
-    <$> ppCape e
+ppLinkExpr opFix e = parensCond cond <$> ppCape e
   where
     cond = apeParens (atomicity e) opFix
-
-apeNest :: Atomicity -> Precedence -> Bool
-apeNest argAtom opPrec = case argAtom of
-  Atom -> True
-  Aggregate argFix -> argFix ^. fixityPrecedence >= opPrec
 
 apeParens :: Atomicity -> Precedence -> Bool
 apeParens argAtom opPrec = case argAtom of

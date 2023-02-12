@@ -105,3 +105,6 @@ enclose l r p = l >> p >> r
 
 encloseSep :: (Monad m, Foldable f) => m () -> m () -> m () -> f (m ()) -> m ()
 encloseSep l r sep f = l >> sequenceWith sep f >> r
+
+oneLineOrNext :: Members '[ExactPrint] r => Sem r () -> Sem r ()
+oneLineOrNext = region P.oneLineOrNext

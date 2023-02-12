@@ -530,7 +530,7 @@ instance (SingI s) => PrettyCode (FunctionClause s) where
       clauseOwnerFunction'
         <+?> clausePatterns'
         <+> kwAssign
-        <+> PP.group (flatAlt (line <> indent' clauseBody') clauseBody')
+        <+> oneLineOrNext clauseBody'
 
 instance (SingI s) => PrettyCode (AxiomDef s) where
   ppCode AxiomDef {..} = do
