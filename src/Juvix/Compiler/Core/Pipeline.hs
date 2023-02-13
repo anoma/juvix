@@ -15,7 +15,8 @@ toEval :: InfoTable -> InfoTable
 toEval = applyTransformations toEvalTransformations
 
 toStrippedTransformations :: [TransformationId]
-toStrippedTransformations = toEvalTransformations ++ [LambdaLetRecLifting, MoveApps, TopEtaExpand, RemoveTypeArgs]
+toStrippedTransformations =
+  toEvalTransformations ++ [LambdaLetRecLifting, MoveApps, TopEtaExpand, RemoveTypeArgs, RemoveBuiltins]
 
 -- | Perform transformations on Core necessary before the translation to
 -- Core.Stripped

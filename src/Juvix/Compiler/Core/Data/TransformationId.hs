@@ -15,4 +15,5 @@ data TransformationId
   | ComputeTypeInfo
   | MatchToCase
   | EtaExpandApps
+  | RemoveBuiltins
   deriving stock (Data)

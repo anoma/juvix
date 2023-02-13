@@ -132,6 +132,7 @@ genCode infoTable fi =
                     (mkInstr $ Push (BL.lookup _varIndex refs))
                 )
                 (mkInstr $ (if isTail then TailCallClosures else CallClosures) (InstrCallClosures suppliedArgsNum))
+
     goBuiltinApp :: Bool -> Int -> BinderList Value -> Core.BuiltinApp -> Code'
     goBuiltinApp isTail tempSize refs (Core.BuiltinApp {..}) =
       snocReturn isTail $
