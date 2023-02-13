@@ -10,9 +10,9 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Pretty
+import Juvix.Compiler.Core.Transformation (etaExpansionApps)
 import Juvix.Compiler.Core.Translation.FromInternal.Data as Core
 import Juvix.Compiler.Pipeline
-import Juvix.Compiler.Core.Transformation (etaExpansionApps)
 
 internalCoreAssertion :: Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
 internalCoreAssertion mainFile expectedFile step = do
