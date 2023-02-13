@@ -53,7 +53,6 @@ pcompletions = do
       ConvertBuiltinTypes -> strConvertBuiltinTypes
       ComputeTypeInfo -> strComputeTypeInfo
       UnrollRecursion -> strUnrollRecursion
-      RemoveBuiltins -> strRemoveBuiltins
 
 lexeme :: (MonadParsec e Text m) => m a -> m a
 lexeme = L.lexeme L.hspace
@@ -127,6 +126,3 @@ strComputeTypeInfo = "compute-type-info"
 
 strUnrollRecursion :: Text
 strUnrollRecursion = "unroll-recursion"
-
-strRemoveBuiltins :: Text
-strRemoveBuiltins = "remove-builtins"
