@@ -113,15 +113,15 @@ createBuiltinConstr ::
   Maybe BuiltinConstructor ->
   ConstructorInfo
 createBuiltinConstr sym tag nameTxt ty cblt =
-    ConstructorInfo
-      { _constructorName = nameTxt,
-        _constructorLocation = Nothing,
-        _constructorTag = tag,
-        _constructorType = ty,
-        _constructorArgsNum = length (typeArgs ty),
-        _constructorInductive = sym,
-        _constructorBuiltin = cblt
-      }
+  ConstructorInfo
+    { _constructorName = nameTxt,
+      _constructorLocation = Nothing,
+      _constructorTag = tag,
+      _constructorType = ty,
+      _constructorArgsNum = length (typeArgs ty),
+      _constructorInductive = sym,
+      _constructorBuiltin = cblt
+    }
 
 builtinConstrs ::
   Symbol ->
@@ -158,11 +158,11 @@ declareInductiveBuiltins indName blt ctrs = do
 
 builtinIOConstrs :: [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)]
 builtinIOConstrs =
-    [ (BuiltinTag TagReturn, "return", mkPi' mkDynamic', Nothing),
-      (BuiltinTag TagBind, "bind", \ty -> mkPi' ty (mkPi' (mkPi' mkDynamic' ty) ty), Nothing),
-      (BuiltinTag TagWrite, "write", mkPi' mkDynamic', Nothing),
-      (BuiltinTag TagReadLn, "readLn", id, Nothing)
-    ]
+  [ (BuiltinTag TagReturn, "return", mkPi' mkDynamic', Nothing),
+    (BuiltinTag TagBind, "bind", \ty -> mkPi' ty (mkPi' (mkPi' mkDynamic' ty) ty), Nothing),
+    (BuiltinTag TagWrite, "write", mkPi' mkDynamic', Nothing),
+    (BuiltinTag TagReadLn, "readLn", id, Nothing)
+  ]
 
 declareIOBuiltins :: (Member InfoTableBuilder r) => Sem r ()
 declareIOBuiltins =

@@ -182,8 +182,7 @@ translateType node = case node of
   NPi Pi {} ->
     let (args, tgt) = unfoldPi node
         tyargs = map (^. piLhsBinder . binderType) args
-     in
-      Stripped.mkFunType (map translateType tyargs) (translateType tgt)
+     in Stripped.mkFunType (map translateType tyargs) (translateType tgt)
   NUniv Univ {} ->
     Stripped.TyDynamic
   NTyp TypeConstr {..} ->
