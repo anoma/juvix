@@ -18,10 +18,10 @@ import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
 import Juvix.Compiler.Core.Transformation.MatchToCase
 import Juvix.Compiler.Core.Transformation.MoveApps
 import Juvix.Compiler.Core.Transformation.NatToInt
+import Juvix.Compiler.Core.Transformation.RemoveBuiltins
 import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
 import Juvix.Compiler.Core.Transformation.UnrollRecursion
-import Juvix.Compiler.Core.Transformation.RemoveBuiltins
 
 applyTransformations :: [TransformationId] -> InfoTable -> InfoTable
 applyTransformations ts tbl = foldl' (flip appTrans) tbl ts
