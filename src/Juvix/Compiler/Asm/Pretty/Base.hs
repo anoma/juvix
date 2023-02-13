@@ -362,10 +362,20 @@ instance PrettyCode InductiveInfo where
 
 instance PrettyCode InfoTable where
   ppCode InfoTable {..} = do
-    inds <- mapM ppCode (HashMap.elems _infoInductives)
+    inds <- mapM ppCode (HashMap.elems (filterOutBuiltins _infoInductives))
     funsigs <- mapM ppFunSig (HashMap.elems _infoFunctions)
     funs <- mapM ppCode (HashMap.elems _infoFunctions)
     return $ vcat (map (<> line) inds) <> line <> vcat funsigs <> line <> line <> vcat (map (<> line) funs)
+    where
+      filterOutBuiltins :: HashMap Symbol InductiveInfo -> HashMap Symbol InductiveInfo
+      filterOutBuiltins =
+        HashMap.filter
+          ( \ii -> case ii ^. inductiveConstructors of
+              ci : _ -> case ci ^. constructorTag of
+                BuiltinTag _ -> False
+                UserTag _ -> True
+              [] -> True
+          )
 
 {--------------------------------------------------------------------------------}
 {- helper functions -}

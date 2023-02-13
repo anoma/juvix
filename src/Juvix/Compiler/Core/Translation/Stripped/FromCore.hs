@@ -21,19 +21,19 @@ fromCore tab =
 
 translateFunctionInfo :: InfoTable -> IdentifierInfo -> Stripped.FunctionInfo
 translateFunctionInfo tab IdentifierInfo {..} =
-      Stripped.FunctionInfo
-        { _functionName = _identifierName,
-          _functionLocation = _identifierLocation,
-          _functionSymbol = _identifierSymbol,
-          _functionBody =
-            translateFunction
-              _identifierArgsNum
-              (fromJust $ HashMap.lookup _identifierSymbol (tab ^. identContext)),
-          _functionType = translateType _identifierType,
-          _functionArgsNum = _identifierArgsNum,
-          _functionArgsInfo = map translateArgInfo _identifierArgsInfo,
-          _functionIsExported = _identifierIsExported
-        }
+  Stripped.FunctionInfo
+    { _functionName = _identifierName,
+      _functionLocation = _identifierLocation,
+      _functionSymbol = _identifierSymbol,
+      _functionBody =
+        translateFunction
+          _identifierArgsNum
+          (fromJust $ HashMap.lookup _identifierSymbol (tab ^. identContext)),
+      _functionType = translateType _identifierType,
+      _functionArgsNum = _identifierArgsNum,
+      _functionArgsInfo = map translateArgInfo _identifierArgsInfo,
+      _functionIsExported = _identifierIsExported
+    }
 
 translateArgInfo :: ArgumentInfo -> Stripped.ArgumentInfo
 translateArgInfo ArgumentInfo {..} =
