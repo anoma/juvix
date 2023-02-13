@@ -45,7 +45,7 @@ ppAppChain :: forall a r. (Members '[Reader (ApeParams a)] r) => AppChain a -> S
 ppAppChain (AppChain f links) = do
   f' <- ppLinkExpr fx f
   args' <- mapM (ppLinkExpr fx) links
-  return $ chain  (vsep (f' : toList args'))
+  return $ chain (vsep (f' : toList args'))
   where
     fx :: Precedence
     fx = appFixity ^. fixityPrecedence
