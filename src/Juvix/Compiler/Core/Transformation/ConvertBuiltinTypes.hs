@@ -14,8 +14,9 @@ convertNode tab = umap go
     go node = case node of
       NTyp TypeConstr {..} ->
         case ii ^. inductiveBuiltin of
-          Just BuiltinBool -> mkTypeBool'
-          Just BuiltinNat -> mkTypeInteger'
+          Just (BuiltinTypeInductive BuiltinBool) -> mkTypeBool'
+          Just (BuiltinTypeInductive BuiltinNat) -> mkTypeInteger'
+          Just (BuiltinTypeAxiom BuiltinString) -> mkTypeString'
           _ -> node
         where
           ii = fromJust $ tab ^. infoInductives . at _typeConstrSymbol

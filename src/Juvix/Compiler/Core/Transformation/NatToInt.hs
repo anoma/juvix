@@ -25,6 +25,9 @@ convertNode tab = convert [] 0
         Recur' (levels, convertIdentApp node (\g -> g _identInfo l r) _identSymbol)
       NApp (App _ (NIdt (Ident {..})) l) ->
         Recur' (levels, convertIdentApp node (\g -> mkLet' l $ mkLambdaTy mkTypeInteger' $ g _identInfo (mkVar' 1) (mkVar' 0)) _identSymbol)
+      NIdt (Ident {..})
+        | Just _identSymbol == tab ^. infoIntToNat ->
+            End' (mkLambda mempty (Binder "?" Nothing mkTypeInteger') (mkVar' 0))
       NIdt (Ident {..}) ->
         Recur'
           ( levels,
@@ -48,7 +51,7 @@ convertNode tab = convert [] 0
       NCase (Case {..}) ->
         let ii = fromJust $ HashMap.lookup _caseInductive (tab ^. infoInductives)
          in case ii ^. inductiveBuiltin of
-              Just BuiltinNat ->
+              Just (BuiltinTypeInductive BuiltinNat) ->
                 case _caseBranches of
                   [br] -> makeIf br (maybeBranch _caseDefault)
                   [br1, br2] ->

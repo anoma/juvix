@@ -61,7 +61,7 @@ computeNodeTypeInfo tab = umapL go
         let ci = fromJust $ HashMap.lookup _constrTag (tab ^. infoConstructors)
             ii = fromJust $ HashMap.lookup (ci ^. constructorInductive) (tab ^. infoInductives)
          in case ii ^. inductiveBuiltin of
-              Just BuiltinBool ->
+              Just (BuiltinTypeInductive BuiltinBool) ->
                 mkTypeBool'
               _ ->
                 mkTypeConstr' (ci ^. constructorInductive) (take (length (ii ^. inductiveParams)) _constrArgs)

@@ -126,3 +126,20 @@ instance Pretty BuiltinAxiom where
     BuiltinIOReadline -> Str.ioReadline
     BuiltinTrace -> Str.trace_
     BuiltinFail -> Str.fail_
+
+data BuiltinType
+  = BuiltinTypeInductive BuiltinInductive
+  | BuiltinTypeAxiom BuiltinAxiom
+  deriving stock (Show, Eq, Ord, Generic, Data)
+
+instance Hashable BuiltinType
+
+instance Pretty BuiltinType where
+  pretty = \case
+    BuiltinTypeInductive ty -> pretty ty
+    BuiltinTypeAxiom ax -> pretty ax
+
+builtinTypeToPrim :: BuiltinType -> BuiltinPrim
+builtinTypeToPrim = \case
+  BuiltinTypeInductive b -> BuiltinsInductive b
+  BuiltinTypeAxiom b -> BuiltinsAxiom b
