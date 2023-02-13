@@ -41,3 +41,6 @@ mkLet binder value body = NLet (Let () item body)
 
 mkCase :: Symbol -> Node -> [CaseBranch] -> Maybe Node -> Node
 mkCase sym v bs def = NCase (Case () sym v bs def)
+
+mkIf :: Node -> Node -> Node -> Node
+mkIf v br1 br2 = NIf (If () v br1 br2)

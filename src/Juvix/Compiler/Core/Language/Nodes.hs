@@ -131,6 +131,14 @@ data CaseBranch' i a ty = CaseBranch
     _caseBranchBody :: !a
   }
 
+-- | A special form of `Case` for the booleans. Used only in Core.Stripped.
+data If' i a = If
+  { _ifInfo :: i,
+    _ifValue :: !a,
+    _ifTrue :: !a,
+    _ifFalse :: !a
+  }
+
 -- | Complex pattern match. `Match` is lazy: only the selected branch is evaluated.
 data Match' i a = Match
   { _matchInfo :: i,
@@ -251,6 +259,9 @@ instance HasAtomicity (LetRec' i a ty) where
 instance HasAtomicity (Case' i bi a ty) where
   atomicity _ = Aggregate lambdaFixity
 
+instance HasAtomicity (If' i a) where
+  atomicity _ = Aggregate lambdaFixity
+
 instance HasAtomicity (Match' i a) where
   atomicity _ = Aggregate lambdaFixity
 
@@ -340,6 +351,9 @@ instance (Eq a) => Eq (Constr' i a) where
 
 instance (Eq a) => Eq (Case' i bi a ty) where
   (Case _ sym1 v1 bs1 def1) == (Case _ sym2 v2 bs2 def2) = sym1 == sym2 && v1 == v2 && bs1 == bs2 && def1 == def2
+
+instance (Eq a) => Eq (If' i a) where
+  (If _ v1 b1 c1) == (If _ v2 b2 c2) = v1 == v2 && b1 == b2 && c1 == c2
 
 instance (Eq a) => Eq (CaseBranch' i a ty) where
   (==) =

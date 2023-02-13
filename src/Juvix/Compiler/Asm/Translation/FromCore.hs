@@ -8,7 +8,6 @@ import Juvix.Compiler.Asm.Extra.Type
 import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Core
-import Juvix.Compiler.Core.Extra.Stripped.Base qualified as Core
 import Juvix.Compiler.Core.Language.Stripped qualified as Core
 
 type BinderList = BL.BinderList
@@ -60,6 +59,7 @@ genCode infoTable fi =
       Core.NCtr ctr -> goConstr isTail tempSize refs ctr
       Core.NLet lt -> goLet isTail tempSize refs lt
       Core.NCase c -> goCase isTail tempSize refs c
+      Core.NIf x -> goIf isTail tempSize refs x
 
     goVar :: Bool -> BinderList Value -> Core.Var -> Code'
     goVar isTail refs Core.Var {..} =
@@ -166,50 +166,17 @@ genCode infoTable fi =
 
     goCase :: Bool -> Int -> BinderList Value -> Core.Case -> Code'
     goCase isTail tempSize refs (Core.Case {..}) =
-      case _caseBranches of
-        [br@Core.CaseBranch {..}]
-          | _caseBranchTag == Core.BuiltinTag Core.TagTrue ->
-              compileIf _caseValue (br ^. Core.caseBranchBody) (fromMaybe branchFailure _caseDefault)
-        [br@Core.CaseBranch {..}]
-          | _caseBranchTag == Core.BuiltinTag Core.TagFalse ->
-              compileIf _caseValue (fromMaybe branchFailure _caseDefault) (br ^. Core.caseBranchBody)
-        [br1, br2]
-          | br1 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagTrue
-              && br2 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagFalse ->
-              compileIf _caseValue (br1 ^. Core.caseBranchBody) (br2 ^. Core.caseBranchBody)
-          | br1 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagFalse
-              && br2 ^. Core.caseBranchTag == Core.BuiltinTag Core.TagTrue ->
-              compileIf _caseValue (br2 ^. Core.caseBranchBody) (br1 ^. Core.caseBranchBody)
-        _ ->
-          DL.snoc
-            (go False tempSize refs _caseValue)
-            ( Case $
-                CmdCase
-                  { _cmdCaseInfo = emptyInfo,
-                    _cmdCaseInductive = _caseInductive,
-                    _cmdCaseBranches = compileCaseBranches _caseBranches,
-                    _cmdCaseDefault = fmap compileCaseDefault _caseDefault
-                  }
-            )
+      DL.snoc
+        (go False tempSize refs _caseValue)
+        ( Case $
+            CmdCase
+              { _cmdCaseInfo = emptyInfo,
+                _cmdCaseInductive = _caseInductive,
+                _cmdCaseBranches = compileCaseBranches _caseBranches,
+                _cmdCaseDefault = fmap compileCaseDefault _caseDefault
+              }
+        )
       where
-        compileIf :: Core.Node -> Core.Node -> Core.Node -> Code'
-        compileIf value br1 br2 =
-          DL.snoc
-            (go False tempSize refs value)
-            ( Branch $
-                CmdBranch
-                  { _cmdBranchInfo = emptyInfo,
-                    _cmdBranchTrue = DL.toList $ go isTail tempSize refs br1,
-                    _cmdBranchFalse = DL.toList $ go isTail tempSize refs br2
-                  }
-            )
-
-        branchFailure :: Core.Node
-        branchFailure =
-          Core.mkBuiltinApp
-            Core.OpFail
-            [Core.mkConstant (Core.ConstString "illegal `if` branch")]
-
         compileCaseBranches :: [Core.CaseBranch] -> [CaseBranch]
         compileCaseBranches branches =
           map
@@ -256,6 +223,18 @@ genCode infoTable fi =
           DL.toList
             . DL.cons (mkInstr Pop)
             . go isTail tempSize refs
+
+    goIf :: Bool -> Int -> BinderList Value -> Core.If -> Code'
+    goIf isTail tempSize refs (Core.If {..}) =
+      DL.snoc
+        (go False tempSize refs _ifValue)
+        ( Branch $
+            CmdBranch
+              { _cmdBranchInfo = emptyInfo,
+                _cmdBranchTrue = DL.toList $ go isTail tempSize refs _ifTrue,
+                _cmdBranchFalse = DL.toList $ go isTail tempSize refs _ifFalse
+              }
+        )
 
     genOp :: Core.BuiltinOp -> Command
     genOp = \case
