@@ -43,7 +43,7 @@ setupIntToNat sym tab =
                   _argumentIsImplicit = Explicit
                 }
             ],
-          _identifierType = mkPi' mkTypeInteger' (mkLambda' mkTypeInteger'),
+          _identifierType = mkPi' mkTypeInteger' mkTypeInteger',
           _identifierIsExported = False,
           _identifierBuiltin = Nothing
         }
