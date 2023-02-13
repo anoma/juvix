@@ -79,7 +79,6 @@ fromInternal i = do
 
     f :: (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable] r) => Sem r ()
     f = do
-      declareIOBuiltins
       let resultModules = toList (i ^. InternalTyped.resultModules)
       runReader (Internal.buildTable resultModules) (mapM_ coreModule resultModules)
       where
@@ -158,11 +157,11 @@ goInductiveDef i = do
           { _inductiveName = i ^. Internal.inductiveName . nameText,
             _inductiveLocation = Just $ i ^. Internal.inductiveName . nameLoc,
             _inductiveSymbol = sym,
-            _inductiveKind = mkDynamic',
+            _inductiveKind = mkUniv' (fromIntegral smallLevel),
             _inductiveConstructors = [],
             _inductiveParams = [],
             _inductivePositive = i ^. Internal.inductivePositive,
-            _inductiveBuiltin = i ^. Internal.inductiveBuiltin
+            _inductiveBuiltin = fmap BuiltinTypeInductive (i ^. Internal.inductiveBuiltin)
           }
       idx = mkIdentIndex (i ^. Internal.inductiveName)
   -- The inductive needs to be registered before translating the constructors,
@@ -408,8 +407,8 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinBoolPrint -> return ()
       Internal.BuiltinIOSequence -> return ()
       Internal.BuiltinIOReadline -> return ()
-      Internal.BuiltinString -> registerInductiveAxiom
-      Internal.BuiltinIO -> registerInductiveAxiom
+      Internal.BuiltinString -> registerInductiveAxiom BuiltinString []
+      Internal.BuiltinIO -> registerInductiveAxiom BuiltinIO builtinIOConstrs
       Internal.BuiltinTrace -> return ()
       Internal.BuiltinFail -> return ()
       Internal.BuiltinStringConcat -> return ()
@@ -417,21 +416,24 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinStringToNat -> return ()
       Internal.BuiltinNatToString -> return ()
 
-    registerInductiveAxiom :: Sem r ()
-    registerInductiveAxiom = do
+    registerInductiveAxiom :: BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
+    registerInductiveAxiom ax ctrs = do
       sym <- freshSymbol
-      let info =
+      let ty = mkTypeConstr' sym []
+          ctrs' = builtinConstrs sym ty ctrs
+          info =
             InductiveInfo
               { _inductiveName = a ^. Internal.axiomName . nameText,
                 _inductiveLocation = Just $ a ^. Internal.axiomName . nameLoc,
                 _inductiveSymbol = sym,
-                _inductiveKind = mkDynamic',
-                _inductiveConstructors = [],
+                _inductiveKind = mkUniv' (fromIntegral smallLevel),
+                _inductiveConstructors = ctrs',
                 _inductiveParams = [],
                 _inductivePositive = False,
-                _inductiveBuiltin = Nothing
+                _inductiveBuiltin = Just (BuiltinTypeAxiom ax)
               }
       registerInductive (mkIdentIndex (a ^. Internal.axiomName)) info
+      mapM_ (\ci -> registerConstructor (ci ^. constructorName) ci) ctrs'
 
 goAxiomDef ::
   forall r.
@@ -450,7 +452,7 @@ goAxiomDef a = do
                 _identifierLocation = Just $ a ^. Internal.axiomName . nameLoc,
                 _identifierSymbol = sym,
                 _identifierType = ty,
-                _identifierArgsNum = 0,
+                _identifierArgsNum = 0, -- TODO: this is wrong
                 _identifierArgsInfo = [],
                 _identifierIsExported = False,
                 _identifierBuiltin = Nothing
@@ -710,6 +712,7 @@ goSimpleLambda ::
   Internal.SimpleLambda ->
   Sem r Node
 goSimpleLambda l = localAddName (l ^. Internal.slambdaVar) (mkLambda' <$> goExpression (l ^. Internal.slambdaBody))
+-- TODO: this is wrong -- lambdas always need a type annotation if they are to be translated to JuvixAsm / GEB
 
 goApplication ::
   forall r.
