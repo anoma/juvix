@@ -182,11 +182,8 @@ translateType node = case node of
   NPi Pi {} ->
     let (args, tgt) = unfoldPi node
         tyargs = map (^. piLhsBinder . binderType) args
-     in case tgt of
-          NLam Lambda {..} ->
-            Stripped.mkFunType (map translateType tyargs) (translateType _lambdaBody)
-          _ ->
-            error "Core to Core.Stripped: unsupported Pi type"
+     in
+      Stripped.mkFunType (map translateType tyargs) (translateType tgt)
   NUniv Univ {} ->
     Stripped.TyDynamic
   NTyp TypeConstr {..} ->
