@@ -22,6 +22,7 @@ makeLenses ''PosTest
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/positive")
 
+-- Fix empty comments
 renderCodeNew :: (HasLoc c, P.PrettyPrint c) => c -> Text
 renderCodeNew = prettyText . P.ppOutDefault emptyComments
 

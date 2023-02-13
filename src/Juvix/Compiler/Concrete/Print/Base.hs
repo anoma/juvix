@@ -275,7 +275,7 @@ instance PrettyPrint (FunctionClause 'Scoped) where
     clauseFun'
       <+?> clausePatterns'
       <+> noLoc P.kwAssign
-      <+> oneLineOrNext clauseBody'
+        <> oneLineOrNext clauseBody'
 
 ppPatternAtom :: forall r. (Members '[Reader Options, ExactPrint] r) => PatternArg -> Sem r ()
 ppPatternAtom pat =
