@@ -21,10 +21,10 @@ fromCore tab =
   where
     tab' =
       tab
-      { _infoIdentifiers = HashMap.filter (\ii -> isNothing (ii ^. identifierBuiltin)) (tab ^. infoIdentifiers),
-      _infoInductives = HashMap.filter (\ii -> isNothing (ii ^. inductiveBuiltin)) (tab ^. infoInductives),
-      _infoConstructors = HashMap.filter (\ci -> isNothing (ci ^. constructorBuiltin)) (tab ^. infoConstructors)
-      }
+        { _infoIdentifiers = HashMap.filter (\ii -> isNothing (ii ^. identifierBuiltin)) (tab ^. infoIdentifiers),
+          _infoInductives = HashMap.filter (\ii -> isNothing (ii ^. inductiveBuiltin)) (tab ^. infoInductives),
+          _infoConstructors = HashMap.filter (\ci -> isNothing (ci ^. constructorBuiltin)) (tab ^. infoConstructors)
+        }
 
 translateFunctionInfo :: InfoTable -> IdentifierInfo -> Stripped.FunctionInfo
 translateFunctionInfo tab IdentifierInfo {..} =
