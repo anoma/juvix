@@ -14,10 +14,17 @@ fromCore :: InfoTable -> Stripped.InfoTable
 fromCore tab =
   Stripped.InfoTable
     { _infoMain = tab ^. infoMain,
-      _infoFunctions = fmap (translateFunctionInfo tab) (tab ^. infoIdentifiers),
-      _infoInductives = fmap translateInductiveInfo (tab ^. infoInductives),
-      _infoConstructors = fmap translateConstructorInfo (tab ^. infoConstructors)
+      _infoFunctions = fmap (translateFunctionInfo tab) (tab' ^. infoIdentifiers),
+      _infoInductives = fmap translateInductiveInfo (tab' ^. infoInductives),
+      _infoConstructors = fmap translateConstructorInfo (tab' ^. infoConstructors)
     }
+  where
+    tab' =
+      tab
+      { _infoIdentifiers = HashMap.filter (\ii -> isNothing (ii ^. identifierBuiltin)) (tab ^. infoIdentifiers),
+      _infoInductives = HashMap.filter (\ii -> isNothing (ii ^. inductiveBuiltin)) (tab ^. infoInductives),
+      _infoConstructors = HashMap.filter (\ci -> isNothing (ci ^. constructorBuiltin)) (tab ^. infoConstructors)
+      }
 
 translateFunctionInfo :: InfoTable -> IdentifierInfo -> Stripped.FunctionInfo
 translateFunctionInfo tab IdentifierInfo {..} =
