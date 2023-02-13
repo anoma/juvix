@@ -712,6 +712,7 @@ goSimpleLambda ::
   Internal.SimpleLambda ->
   Sem r Node
 goSimpleLambda l = localAddName (l ^. Internal.slambdaVar) (mkLambda' <$> goExpression (l ^. Internal.slambdaBody))
+
 -- TODO: this is wrong -- lambdas always need a type annotation if they are to be translated to JuvixAsm / GEB
 
 goApplication ::
