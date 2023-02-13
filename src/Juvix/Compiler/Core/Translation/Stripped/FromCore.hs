@@ -14,19 +14,13 @@ fromCore :: InfoTable -> Stripped.InfoTable
 fromCore tab =
   Stripped.InfoTable
     { _infoMain = tab ^. infoMain,
-      _infoFunctions =
-        HashMap.fromList $
-          map (\fi -> (fi ^. Stripped.functionSymbol, fi)) $
-            mapMaybe (translateFunctionInfo tab) $
-              HashMap.elems (tab ^. infoIdentifiers),
+      _infoFunctions = fmap (translateFunctionInfo tab) (tab ^. infoIdentifiers),
       _infoInductives = fmap translateInductiveInfo (tab ^. infoInductives),
       _infoConstructors = fmap translateConstructorInfo (tab ^. infoConstructors)
     }
 
-translateFunctionInfo :: InfoTable -> IdentifierInfo -> Maybe Stripped.FunctionInfo
-translateFunctionInfo tab IdentifierInfo {..} = case _identifierBuiltin of
-  Nothing ->
-    Just $
+translateFunctionInfo :: InfoTable -> IdentifierInfo -> Stripped.FunctionInfo
+translateFunctionInfo tab IdentifierInfo {..} =
       Stripped.FunctionInfo
         { _functionName = _identifierName,
           _functionLocation = _identifierLocation,
@@ -40,7 +34,6 @@ translateFunctionInfo tab IdentifierInfo {..} = case _identifierBuiltin of
           _functionArgsInfo = map translateArgInfo _identifierArgsInfo,
           _functionIsExported = _identifierIsExported
         }
-  Just {} -> Nothing
 
 translateArgInfo :: ArgumentInfo -> Stripped.ArgumentInfo
 translateArgInfo ArgumentInfo {..} =
