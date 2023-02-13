@@ -38,14 +38,14 @@ ppCape = \case
   CapeAppChain c -> ppAppChain c
   CapeUChain c -> ppUChain c
 
-chain :: Doc CodeAnn -> NonEmpty (Doc CodeAnn) -> Doc CodeAnn
-chain f' args' = PP.group (nest' (vsep (f' : toList args')))
+chain :: Doc CodeAnn -> Doc CodeAnn
+chain = PP.group . nest'
 
 ppAppChain :: forall a r. (Members '[Reader (ApeParams a)] r) => AppChain a -> Sem r (Doc CodeAnn)
 ppAppChain (AppChain f links) = do
   f' <- ppLinkExpr fx f
   args' <- mapM (ppLinkExpr fx) links
-  return $ chain f' args'
+  return $ chain  (vsep (f' : toList args'))
   where
     fx :: Precedence
     fx = appFixity ^. fixityPrecedence
@@ -53,17 +53,23 @@ ppAppChain (AppChain f links) = do
 ppChain :: forall a r. (Members '[Reader (ApeParams a)] r) => Chain a -> Sem r (Doc CodeAnn)
 ppChain (Chain opFix f links) = do
   f' <- ppLinkExpr fx f
-  args' <- mapM ppLink links
-  return $ chain f' args'
+  chain <$> ppLinks f' (toList links)
   where
+    ppLinks :: Doc CodeAnn -> [Link a] -> Sem r (Doc CodeAnn)
+    ppLinks acc = \case
+      [] -> return acc
+      l : ls -> do
+        let sepHelper a b = a <> sp <> b
+            sp
+              | l ^. linkIsComma = line'
+              | otherwise = line
+        pp <- asks (^. apePP)
+        let op' = pp (l ^. linkOp)
+        a' <- ppLinkExpr fx (l ^. linkArg)
+        ppLinks (acc `sepHelper` op' <+> a') ls
+
     fx :: Precedence
     fx = opFix ^. fixityPrecedence
-    ppLink :: (a, Cape a) -> Sem r (Doc CodeAnn)
-    ppLink (op, a) = do
-      pp <- asks (^. apePP)
-      let op' = pp op
-      a' <- ppLinkExpr fx a
-      return (op' <+> a')
 
 ppUChain :: forall a r. (Members '[Reader (ApeParams a)] r) => UChain a -> Sem r (Doc CodeAnn)
 ppUChain (UChain opFix f links) = do

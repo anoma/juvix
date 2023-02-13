@@ -31,7 +31,9 @@ import Juvix.Data.Ape.Base as Ape
 import Juvix.Data.Fixity
 import Juvix.Data.Keyword
 import Juvix.Data.NameKind
+import Juvix.Parser.Lexer (isDelimiterStr)
 import Juvix.Prelude hiding (show)
+import Juvix.Prelude.Pretty (prettyText)
 import Prelude (show)
 
 data Stage
@@ -1312,6 +1314,7 @@ instance IsApe InfixApplication Expression where
         { _infixFixity = getFixity i,
           _infixLeft = toApe l,
           _infixRight = toApe r,
+          _infixIsComma = isDelimiterStr (prettyText (identifierName op ^. S.nameConcrete)),
           _infixOp = ExpressionIdentifier op
         }
 
