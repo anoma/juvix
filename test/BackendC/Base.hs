@@ -50,7 +50,7 @@ wasmClangAssertion WASMInfo {..} mainFile expectedFile step = do
   step "Compile C with wasm standalone runtime"
   actualStandalone <- clangCompile standaloneArgs p _wasmInfoActual step
   step "Compare expected and actual program output"
-  assertEqDiff ("Check: WASM output = " <> toFilePath expectedFile) actualStandalone expected
+  assertEqDiffText ("Check: WASM output = " <> toFilePath expectedFile) actualStandalone expected
 
 wasiClangAssertion :: StdlibMode -> Path Abs File -> Path Abs File -> Text -> ((String -> IO ()) -> Assertion)
 wasiClangAssertion stdlibMode mainFile expectedFile stdinText step = do
@@ -74,12 +74,12 @@ wasiClangAssertion stdlibMode mainFile expectedFile stdinText step = do
   step "Compile C with standalone runtime"
   actualStandalone <- clangCompile (wasiStandaloneArgs sysrootPath) p execute step
   step "Compare expected and actual program output"
-  assertEqDiff ("check: WASM output = " <> toFilePath expectedFile) actualStandalone expected
+  assertEqDiffText ("check: WASM output = " <> toFilePath expectedFile) actualStandalone expected
 
   step "Compile C with libc runtime"
   actualLibc <- clangCompile (libcArgs sysrootPath) p execute step
   step "Compare expected and actual program output"
-  assertEqDiff ("check: WASM output = " <> toFilePath expectedFile) actualLibc expected
+  assertEqDiffText ("check: WASM output = " <> toFilePath expectedFile) actualLibc expected
 
 builtinRuntime :: Path Abs Dir
 builtinRuntime = absDir $(makeRelativeToProject "c-runtime/builtins" >>= strToExp)

@@ -28,7 +28,7 @@ coreEvalAssertion mainFile expectedFile trans testTrans step = do
     Right (_, Nothing) -> do
       step "Compare expected and actual program output"
       expected <- TIO.readFile (toFilePath expectedFile)
-      assertEqDiff ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
+      assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) -> do
       let tab = applyTransformations trans (setupMainFunction tabIni node)
       testTrans tab
@@ -51,7 +51,7 @@ coreEvalAssertion mainFile expectedFile trans testTrans step = do
                 actualOutput <- TIO.readFile (toFilePath outputFile)
                 step "Compare expected and actual program output"
                 expected <- TIO.readFile (toFilePath expectedFile)
-                assertEqDiff ("Check: EVAL output = " <> toFilePath expectedFile) actualOutput expected
+                assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) actualOutput expected
         )
 
 coreEvalErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion

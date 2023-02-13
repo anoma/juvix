@@ -39,6 +39,6 @@ internalCoreAssertion mainFile expectedFile step = do
                 actualOutput <- TIO.readFile (toFilePath outputFile)
                 step "Compare expected and actual program output"
                 expected <- TIO.readFile (toFilePath expectedFile)
-                assertEqDiff ("Check: EVAL output = " <> toFilePath expectedFile) actualOutput expected
+                assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) actualOutput expected
         )
     Nothing -> assertFailure ("No main function registered in: " <> toFilePath mainFile)

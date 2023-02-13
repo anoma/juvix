@@ -37,7 +37,7 @@ asmRunAssertion' tab expectedFile step = do
                     actualOutput <- TIO.readFile (toFilePath outputFile)
                     step "Compare expected and actual program output"
                     expected <- TIO.readFile (toFilePath expectedFile)
-                    assertEqDiff ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
+                    assertEqDiffText ("Check: RUN output = " <> toFilePath expectedFile) actualOutput expected
             )
         Nothing -> assertFailure "no 'main' function"
 

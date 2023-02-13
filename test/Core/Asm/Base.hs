@@ -46,7 +46,7 @@ coreAsmAssertion mainFile expectedFile step = do
     Right (_, Nothing) -> do
       step "Empty program: compare expected and actual program output"
       expected <- TIO.readFile (toFilePath expectedFile)
-      assertEqDiff ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
+      assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) -> do
       step "Translate"
       let tab = Asm.fromCore $ Stripped.fromCore $ toStripped $ setupMainFunction tabIni node
