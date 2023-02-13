@@ -27,7 +27,12 @@ runCPipeline PipelineArg {..} = do
   C.MiniCResult {..} <- getRight (run (runError (coreToMiniC asmOpts _pipelineArgInfoTable :: Sem '[Error JuvixError] C.MiniCResult)))
   cFile <- inputCFile _pipelineArgFile
   embed $ TIO.writeFile (toFilePath cFile) _resultCCode
-  Compile.runCommand _pipelineArgOptions {_compileInputFile = AppPath (Abs cFile) False}
+  outfile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
+  Compile.runCommand
+    _pipelineArgOptions
+      { _compileInputFile = AppPath (Abs cFile) False,
+        _compileOutputFile = Just (AppPath (Abs outfile) False)
+      }
   where
     asmOpts :: Asm.Options
     asmOpts = Asm.makeOptions (asmTarget (_pipelineArgOptions ^. compileTarget)) (_pipelineArgOptions ^. compileDebug)
