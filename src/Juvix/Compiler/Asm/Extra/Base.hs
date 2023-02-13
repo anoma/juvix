@@ -30,7 +30,6 @@ isFinalInstr = \case
   Return -> True
   TailCall {} -> True
   TailCallClosures {} -> True
-  Failure -> True
   _ -> False
 
 getConstrSize :: MemRep -> Int -> Int
