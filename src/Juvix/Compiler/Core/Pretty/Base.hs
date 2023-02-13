@@ -186,6 +186,13 @@ ppCodeCase' branchBinderNames branchTagNames Case {..} =
       let bss = bracesIndent $ align $ concatWith (\a b -> a <> kwSemicolon <> line <> b) bs''
       return $ kwCase <+> v <+> kwOf <+> bss
 
+instance PrettyCode a => PrettyCode (If' i a) where
+  ppCode If {..} = do
+    v <- ppCode _ifValue
+    l <- ppCode _ifTrue
+    r <- ppCode _ifFalse
+    return $ kwIf <+> v <+> kwThen <+> l <+> kwElse <+> r
+
 instance PrettyCode PatternWildcard where
   ppCode _ = return kwWildcard
 
@@ -350,6 +357,7 @@ instance PrettyCode Stripped.Node where
       let branchBinderNames = map (map (^. binderName) . (^. caseBranchBinders)) _caseBranches
           branchTagNames = map (^. (caseBranchInfo . Stripped.caseBranchInfoConstrName)) _caseBranches
        in ppCodeCase' branchBinderNames branchTagNames x
+    Stripped.NIf x -> ppCode x
 
 instance PrettyCode ConstructorInfo where
   ppCode :: (Member (Reader Options) r) => ConstructorInfo -> Sem r (Doc Ann)
