@@ -208,11 +208,13 @@ compilePattern numPatterns = \case
           initState'' :: Sem r CompileState
           initState'' = do
             bindersAbove <- asks (^. compileStateBindersAbove)
-            return (CompileState
-              { _compileStateBindersAbove = bindersAbove + length args,
-                _compileStateCompiledPattern = initCompiledPattern,
-                _compileStateCurrentNode = mkVar' ((length args) - 1)
-              })
+            return
+              ( CompileState
+                  { _compileStateBindersAbove = bindersAbove + length args,
+                    _compileStateCompiledPattern = initCompiledPattern,
+                    _compileStateCurrentNode = mkVar' ((length args) - 1)
+                  }
+              )
 
       mkCompiledBinder :: Pattern -> Sem r CompiledBinder
       mkCompiledBinder p = case p of
