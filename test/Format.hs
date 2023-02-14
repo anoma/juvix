@@ -22,9 +22,8 @@ makeLenses ''PosTest
 root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/positive")
 
--- Fix empty comments
-renderCodeNew :: (HasLoc c, P.PrettyPrint c) => c -> Text
-renderCodeNew = prettyText . P.ppOutDefault emptyComments
+renderCode :: (HasLoc a, P.PrettyPrint a) => P.Comments -> a -> Text
+renderCode c = prettyText . P.ppOutDefault c
 
 type Pipe =
   '[ PathResolver,
@@ -66,7 +65,7 @@ testDescr PosTest {..} =
               )
 
         let formatted :: Text
-            formatted = renderCodeNew (s ^. Scoper.mainModule)
+            formatted = renderCode (s ^. Scoper.comments) (s ^. Scoper.mainModule)
 
         step "Format"
         assertEqDiffText "check: pretty . scope . parse = id" original formatted
