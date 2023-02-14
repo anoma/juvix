@@ -107,7 +107,8 @@ instance PrettyCode LambdaClause where
 instance PrettyCode Lambda where
   ppCode Lambda {..} = do
     lambdaClauses' <- ppPipeBlock _lambdaClauses
-    return $ kwLambda <+> lambdaClauses'
+    lambdaType' <- mapM ppCode _lambdaType
+    return $ kwLambda <+> (fmap (kwColon <+>) lambdaType') <?+> lambdaClauses'
 
 instance PrettyCode a => PrettyCode (WithLoc a) where
   ppCode = ppCode . (^. withLocParam)
