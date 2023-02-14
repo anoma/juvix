@@ -17,12 +17,14 @@ matchToCaseNode n = case n of
   NMatch m -> do
     let branches = m ^. matchBranches
         values = toList (m ^. matchValues)
-        numValues = length values
         matchType = getInfoType (m ^. matchInfo)
-        branchType = mkPis' (getInfoType . getInfo <$> values) matchType
+        valueTypes = (getInfoType . getInfo <$> values)
+        branchType = mkPis' valueTypes matchType
+
     -- Index from 1 because we prepend the fail branch.
+    failNode' <- failNode valueTypes
     branchNodes <-
-      (failNode numValues :)
+      (failNode' :)
         <$> mapM compileMatchBranch (indexFrom 1 (reverse branches))
 
     -- The appNode calls the first branch with the values of the match
@@ -31,13 +33,7 @@ matchToCaseNode n = case n of
     where
       mkBranchLet :: Node -> Node -> Node -> Sem r Node
       mkBranchLet ty v b = do
-        letSym <- freshSymbol
-        let binder =
-              Binder
-                { _binderName = uniqueName "matchBranch" letSym,
-                  _binderLocation = Nothing,
-                  _binderType = ty
-                }
+        binder <- mkUniqueBinder' "matchBranch" ty
         return (mkLet mempty binder v b)
   _ -> return n
 
@@ -252,13 +248,7 @@ compilePattern numPatterns = \case
               }
         PatConstr c' -> do
           let info = c' ^. patternConstrInfo
-          argSym <- freshSymbol
-          return
-            Binder
-              { _binderName = uniqueName "arg" argSym,
-                _binderLocation = getInfoLocation info,
-                _binderType = getInfoType info
-              }
+          mkUniqueBinder "arg" (getInfoLocation info) (getInfoType info)
 
       mkCaseFromBinders :: [Binder] -> Sem r (Node -> Node)
       mkCaseFromBinders binders = do
@@ -292,8 +282,23 @@ compilePattern numPatterns = \case
                     }
               )
 
-failNode :: Int -> Node
-failNode n = mkLambdas' n (mkBuiltinApp' OpFail [mkConstant' (ConstString "Non-exhaustive patterns")])
+failNode :: Member InfoTableBuilder r => [Node] -> Sem r Node
+failNode tys = do
+  bs <- mapM (mkUniqueBinder' "failNode") tys
+  return (mkLambdasB bs (mkBuiltinApp' OpFail [mkConstant' (ConstString "Non-exhaustive patterns")]))
+
+mkUniqueBinder' :: Member InfoTableBuilder r => Text -> Node -> Sem r Binder
+mkUniqueBinder' name ty = mkUniqueBinder name Nothing ty
+
+mkUniqueBinder :: Member InfoTableBuilder r => Text -> Maybe Location -> Node -> Sem r Binder
+mkUniqueBinder name loc ty = do
+  sym <- freshSymbol
+  return
+    Binder
+      { _binderName = uniqueName name sym,
+        _binderLocation = loc,
+        _binderType = ty
+      }
 
 -- | The default node in a case expression.
 -- It points to the next branch above.
