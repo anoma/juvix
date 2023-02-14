@@ -188,7 +188,7 @@ instance PrettyCode FunctionDef where
     clauses' <- mapM ppCode (f ^. funDefClauses)
     return $
       funDefName'
-        <+> kwColonColon
+        <+> kwColon
         <+> funDefType'
           <> line
           <> vsep (toList clauses')
