@@ -21,6 +21,9 @@ import Juvix.Extra.Strings qualified as Str
 mkIdentIndex :: Name -> Text
 mkIdentIndex = show . (^. Internal.nameId . Internal.unNameId)
 
+mkSmallUniv :: Type
+mkSmallUniv = mkUniv' (fromIntegral smallLevel)
+
 setupIntToNat :: Symbol -> InfoTable -> InfoTable
 setupIntToNat sym tab =
   tab
@@ -50,14 +53,14 @@ setupIntToNat sym tab =
     node =
       case (tagZeroM, tagSucM, boolSymM) of
         (Just tagZero, Just tagSuc, Just boolSym) ->
-          mkLambda' $
+          mkLambda' mkTypeInteger' $
             mkIf'
               boolSym
               (mkBuiltinApp' OpEq [mkVar' 0, mkConstant' (ConstInteger 0)])
               (mkConstr (setInfoName "zero" mempty) tagZero [])
               (mkConstr (setInfoName "suc" mempty) tagSuc [mkApp' (mkIdent' sym) (mkBuiltinApp' OpIntSub [mkVar' 0, mkConstant' (ConstInteger 1)])])
         _ ->
-          mkLambda' $ mkVar' 0
+          mkLambda' mkTypeInteger' $ mkVar' 0
     tagZeroM = (^. constructorTag) <$> lookupBuiltinConstructor tab BuiltinNatZero
     tagSucM = (^. constructorTag) <$> lookupBuiltinConstructor tab BuiltinNatSuc
     boolSymM = (^. inductiveSymbol) <$> lookupBuiltinInductive tab BuiltinBool
@@ -157,7 +160,7 @@ goInductiveDef i = do
           { _inductiveName = i ^. Internal.inductiveName . nameText,
             _inductiveLocation = Just $ i ^. Internal.inductiveName . nameLoc,
             _inductiveSymbol = sym,
-            _inductiveKind = mkUniv' (fromIntegral smallLevel),
+            _inductiveKind = mkSmallUniv,
             _inductiveConstructors = [],
             _inductiveParams = [],
             _inductivePositive = i ^. Internal.inductivePositive,
@@ -233,8 +236,8 @@ goMutualBlock ::
   Sem r ()
 goMutualBlock m = do
   funcsWithSym <- mapM withSym (m ^. Internal.mutualFunctions)
-  mapM_ goFunctionDefIden funcsWithSym
-  mapM_ goFunctionDef funcsWithSym
+  tys <- mapM goFunctionDefIden funcsWithSym
+  mapM_ goFunctionDef (zipExact (toList funcsWithSym) (toList tys))
   where
     withSym :: a -> Sem r (a, Symbol)
     withSym x = do
@@ -245,7 +248,7 @@ goFunctionDefIden ::
   forall r.
   (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable] r) =>
   (Internal.FunctionDef, Symbol) ->
-  Sem r ()
+  Sem r Type
 goFunctionDefIden (f, sym) = do
   funTy <- runReader initIndexTable (goExpression (f ^. Internal.funDefType))
   let info =
@@ -263,40 +266,33 @@ goFunctionDefIden (f, sym) = do
           }
   registerIdent (mkIdentIndex (f ^. Internal.funDefName)) info
   when (f ^. Internal.funDefName . Internal.nameText == Str.main) (registerMain sym)
+  return funTy
 
 goFunctionDef ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable] r) =>
-  (Internal.FunctionDef, Symbol) ->
+  ((Internal.FunctionDef, Symbol), Type) ->
   Sem r ()
-goFunctionDef (f, sym) = do
+goFunctionDef ((f, sym), ty) = do
   mbody <- case f ^. Internal.funDefBuiltin of
     Just Internal.BuiltinBoolIf -> return Nothing
-    Just _ -> Just <$> runReader initIndexTable (mkFunBody f)
-    Nothing -> Just <$> runReader initIndexTable (mkFunBody f)
+    Just _ -> Just <$> runReader initIndexTable (mkFunBody ty f)
+    Nothing -> Just <$> runReader initIndexTable (mkFunBody ty f)
   forM_ mbody (registerIdentNode sym)
   forM_ mbody setIdentArgsInfo'
   where
     setIdentArgsInfo' :: Node -> Sem r ()
     setIdentArgsInfo' node = do
       let (is, _) = unfoldLambdas node
-      setIdentArgsInfo sym (map (toArgumentInfo . (^. lambdaLhsBinder)) is)
-
-    toArgumentInfo :: Binder -> ArgumentInfo
-    toArgumentInfo bi =
-      ArgumentInfo
-        { _argumentName = bi ^. binderName,
-          _argumentLocation = bi ^. binderLocation,
-          _argumentType = bi ^. binderType,
-          _argumentIsImplicit = Explicit
-        }
+      setIdentArgsInfo sym (map (argumentInfoFromBinder . (^. lambdaLhsBinder)) is)
 
 mkFunBody ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
+  Type ->
   Internal.FunctionDef ->
   Sem r Node
-mkFunBody f
+mkFunBody ty f
   | nPatterns == 0 = goExpression (f ^. Internal.funDefClauses . _head1 . Internal.clauseBody)
   | otherwise = do
       let values :: [Node]
@@ -306,7 +302,8 @@ mkFunBody f
           (over indexTableVarsNum (+ nPatterns))
           (mapM goFunctionClause (f ^. Internal.funDefClauses))
       let match = mkMatch' (fromList values) (toList ms)
-      return $ foldr (\_ n -> mkLambda' n) match vs
+          argtys = take nPatterns (typeArgs ty)
+      return $ foldr mkLambda' match argtys
   where
     -- Assumption: All clauses have the same number of patterns
     nPatterns :: Int
@@ -344,8 +341,10 @@ goLambda l = do
   ms <- underBinders nPatterns (mapM goLambdaClause (l ^. Internal.lambdaClauses))
   let values = reverse (take nPatterns (mkVar' <$> [0 ..]))
       match = mkMatch' (fromList values) (toList ms)
-  return $ foldr (\_ n -> mkLambda' n) match values
+      argtys = replicate nPatterns mkDynamic' -- TODO: use actual argument types when available in Internal
+  return $ foldr mkLambda' match argtys
   where
+    -- Assumption: all clauses have the same number of patterns
     nPatterns :: Int
     nPatterns = length (l ^. Internal.lambdaClauses . _head1 . Internal.lambdaPatterns)
 
@@ -390,8 +389,11 @@ goLetClause ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.LetClause ->
-  Sem r Node
-goLetClause (Internal.LetFunDef f) = mkFunBody f
+  Sem r (Type, Node)
+goLetClause (Internal.LetFunDef f) = do
+  funTy <- goExpression (f ^. Internal.funDefType)
+  funBody <- mkFunBody funTy f
+  return (funTy, funBody)
 
 goAxiomInductive ::
   forall r.
@@ -426,7 +428,7 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
               { _inductiveName = a ^. Internal.axiomName . nameText,
                 _inductiveLocation = Just $ a ^. Internal.axiomName . nameLoc,
                 _inductiveSymbol = sym,
-                _inductiveKind = mkUniv' (fromIntegral smallLevel),
+                _inductiveKind = mkSmallUniv,
                 _inductiveConstructors = ctrs',
                 _inductiveParams = [],
                 _inductivePositive = False,
@@ -442,7 +444,8 @@ goAxiomDef ::
   Sem r ()
 goAxiomDef a = do
   boolSym <- getBoolSymbol
-  case a ^. Internal.axiomBuiltin >>= builtinBody boolSym of
+  natSym <- getNatSymbol
+  case a ^. Internal.axiomBuiltin >>= builtinBody boolSym natSym of
     Just body -> do
       sym <- freshSymbol
       ty <- axiomType'
@@ -452,24 +455,27 @@ goAxiomDef a = do
                 _identifierLocation = Just $ a ^. Internal.axiomName . nameLoc,
                 _identifierSymbol = sym,
                 _identifierType = ty,
-                _identifierArgsNum = 0, -- TODO: this is wrong
+                _identifierArgsNum = 0,
                 _identifierArgsInfo = [],
                 _identifierIsExported = False,
                 _identifierBuiltin = Nothing
               }
       registerIdent (mkIdentIndex (a ^. Internal.axiomName)) info
       registerIdentNode sym body
+      let (is, _) = unfoldLambdas body
+      setIdentArgsInfo sym (map (argumentInfoFromBinder . (^. lambdaLhsBinder)) is)
     Nothing -> return ()
   where
-    builtinBody :: Symbol -> Internal.BuiltinAxiom -> Maybe Node
-    builtinBody boolSym = \case
-      Internal.BuiltinNatPrint -> Just writeLambda
-      Internal.BuiltinStringPrint -> Just writeLambda
-      Internal.BuiltinBoolPrint -> Just writeLambda
+    builtinBody :: Symbol -> Symbol -> Internal.BuiltinAxiom -> Maybe Node
+    builtinBody boolSym natSym = \case
+      Internal.BuiltinNatPrint -> Just $ writeLambda (mkTypeConstr' natSym [])
+      Internal.BuiltinStringPrint -> Just $ writeLambda mkTypeString'
+      Internal.BuiltinBoolPrint -> Just $ writeLambda mkTypeBool'
       Internal.BuiltinIOSequence -> Nothing
       Internal.BuiltinIOReadline ->
         Just
           ( mkLambda'
+              mkTypeString'
               ( mkConstr'
                   (BuiltinTag TagBind)
                   [ mkConstr' (BuiltinTag TagReadLn) [],
@@ -478,13 +484,15 @@ goAxiomDef a = do
               )
           )
       Internal.BuiltinStringConcat ->
-        Just (mkLambda' (mkLambda' (mkBuiltinApp' OpStrConcat [mkVar' 1, mkVar' 0])))
+        Just (mkLambda' mkTypeString' (mkLambda' mkTypeString' (mkBuiltinApp' OpStrConcat [mkVar' 1, mkVar' 0])))
       Internal.BuiltinStringEq ->
-        Just (mkLambda' (mkLambda' (mkBuiltinApp' OpEq [mkVar' 1, mkVar' 0])))
+        Just (mkLambda' mkTypeString' (mkLambda' mkTypeString' (mkBuiltinApp' OpEq [mkVar' 1, mkVar' 0])))
       Internal.BuiltinStringToNat -> do
         Just
           ( mkLambda'
+              mkTypeString'
               ( mkLet'
+                  mkTypeInteger'
                   (mkBuiltinApp' OpStrToInt [mkVar' 0])
                   ( mkIf'
                       boolSym
@@ -495,49 +503,56 @@ goAxiomDef a = do
               )
           )
       Internal.BuiltinNatToString ->
-        Just (mkLambda' (mkBuiltinApp' OpShow [mkVar' 0]))
+        Just (mkLambda' (mkTypeConstr' natSym []) (mkBuiltinApp' OpShow [mkVar' 0]))
       Internal.BuiltinString -> Nothing
       Internal.BuiltinIO -> Nothing
       Internal.BuiltinTrace -> Nothing
       Internal.BuiltinFail ->
-        Just (mkLambda' (mkLambda' (mkBuiltinApp' OpFail [mkVar' 0])))
+        Just (mkLambda' mkSmallUniv (mkLambda' (mkVar' 0) (mkBuiltinApp' OpFail [mkVar' 0])))
 
     axiomType' :: Sem r Type
     axiomType' = runReader initIndexTable (goExpression (a ^. Internal.axiomType))
 
-    writeLambda :: Node
-    writeLambda = mkLambda' (mkConstr' (BuiltinTag TagWrite) [mkVar' 0])
+    writeLambda :: Type -> Node
+    writeLambda ty = mkLambda' ty (mkConstr' (BuiltinTag TagWrite) [mkVar' 0])
 
 fromPatternArg ::
   forall r.
-  (Members '[InfoTableBuilder, Reader Internal.InfoTable] r) =>
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.PatternArg ->
   Sem r Pattern
 fromPatternArg pa = case pa ^. Internal.patternArgName of
-  Just pan -> wrapAsPattern pan <$> subPat
+  Just pan -> do
+    ty <- getPatternType pan
+    wrapAsPattern pan ty <$> subPat
   Nothing -> subPat
   where
     subPat :: Sem r Pattern
     subPat = fromPattern (pa ^. Internal.patternArgPattern)
 
-    wrapAsPattern :: Name -> Pattern -> Pattern
-    wrapAsPattern pan pat =
+    wrapAsPattern :: Name -> Type -> Pattern -> Pattern
+    wrapAsPattern pan ty pat =
       ( PatBinder
           ( PatternBinder
               { _patternBinder =
                   Binder
                     { _binderName = pan ^. nameText,
                       _binderLocation = Just (pan ^. nameLoc),
-                      _binderType = mkDynamic'
+                      _binderType = ty
                     },
                 _patternBinderPattern = pat
               }
           )
       )
 
+    getPatternType :: Name -> Sem r Type
+    getPatternType n = asks (fromJust . HashMap.lookup n) >>= goExpression
+
     fromPattern :: Internal.Pattern -> Sem r Pattern
     fromPattern = \case
-      Internal.PatternVariable n -> return $ PatBinder (PatternBinder (Binder (n ^. nameText) (Just (n ^. nameLoc)) mkDynamic') wildcard)
+      Internal.PatternVariable n -> do
+        ty <- getPatternType n
+        return $ PatBinder (PatternBinder (Binder (n ^. nameText) (Just (n ^. nameLoc)) ty) wildcard)
       Internal.PatternConstructorApp c -> do
         (indParams, _) <- InternalTyped.lookupConstructorArgTypes n
         patternArgs <- mapM fromPatternArg params
@@ -584,28 +599,29 @@ goPatternArgs ::
   Internal.Expression ->
   [Internal.PatternArg] ->
   Sem r MatchBranch
-goPatternArgs body ps = do
-  vars <- asks (^. indexTableVars)
-  varsNum <- asks (^. indexTableVarsNum)
-  pats <- patterns
-  let bs :: [Name]
-      bs = concatMap getPatternArgVars ps
-      (vars', varsNum') =
-        foldl'
-          ( \(vs, k) name ->
-              (HashMap.insert (name ^. nameId) k vs, k + 1)
-          )
-          (vars, varsNum)
-          bs
-      body' :: Sem r Node
-      body' =
+goPatternArgs body ps = go [] ps
+  where
+    go :: [Pattern] -> [Internal.PatternArg] -> Sem r MatchBranch
+    go pats = \case
+      p : ps' -> do
+        pat <- fromPatternArg p
+        vars <- asks (^. indexTableVars)
+        varsNum <- asks (^. indexTableVarsNum)
+        let bs :: [Name]
+            bs = getPatternArgVars p
+            (vars', varsNum') =
+              foldl'
+                ( \(vs, k) name ->
+                    (HashMap.insert (name ^. nameId) k vs, k + 1)
+                )
+                (vars, varsNum)
+                bs
         local
           (set indexTableVars vars' . set indexTableVarsNum varsNum')
-          (goExpression body)
-  MatchBranch Info.empty (fromList pats) <$> body'
-  where
-    patterns :: Sem r [Pattern]
-    patterns = mapM fromPatternArg ps
+          (go (pat : pats) ps')
+      [] -> do
+        body' <- goExpression body
+        return $ MatchBranch Info.empty (fromList (reverse pats)) body'
 
 goFunctionClause ::
   forall r.
@@ -635,9 +651,9 @@ goExpression = \case
     Internal.IdenFunction n -> do
       funInfoBuiltin <- Internal.getFunctionBuiltinInfo n
       case funInfoBuiltin of
-        Just Internal.BuiltinBoolIf -> error "if must be called with 3 arguments"
-        Just Internal.BuiltinBoolOr -> error "|| must be called with 2 arguments"
-        Just Internal.BuiltinBoolAnd -> error "&& must be called with 2 arguments"
+        Just Internal.BuiltinBoolIf -> error "internal to core: if must be called with 3 arguments"
+        Just Internal.BuiltinBoolOr -> error "internal to core: || must be called with 2 arguments"
+        Just Internal.BuiltinBoolAnd -> error "internal to core: && must be called with 2 arguments"
         _ -> return ()
       -- if the function was defined by a let, then in Core it is stored in a variable
       vars <- asks (^. indexTableVars)
@@ -666,8 +682,8 @@ goExpression = \case
     Internal.IdenAxiom n -> do
       axiomInfoBuiltin <- Internal.getAxiomBuiltinInfo n
       case axiomInfoBuiltin of
-        Just Internal.BuiltinIOSequence -> error ">> must be called with 2 arguments"
-        Just Internal.BuiltinTrace -> error "trace must be called with 2 arguments"
+        Just Internal.BuiltinIOSequence -> error "internal to core: >> must be called with 2 arguments"
+        Just Internal.BuiltinTrace -> error "internal to core: trace must be called with 2 arguments"
         _ -> return ()
       m <- getIdent identIndex
       return $ case m of
@@ -689,8 +705,8 @@ goExpression = \case
   Internal.ExpressionLambda l -> goLambda l
   Internal.ExpressionCase l -> goCase l
   e@(Internal.ExpressionFunction {}) -> goFunction (Internal.unfoldFunType e)
-  Internal.ExpressionHole h -> error ("goExpression hole: " <> show (Loc.getLoc h))
-  Internal.ExpressionUniverse {} -> return (mkUniv' (fromIntegral smallLevel))
+  Internal.ExpressionHole h -> error ("internal to core: goExpression hole: " <> show (Loc.getLoc h))
+  Internal.ExpressionUniverse {} -> return mkSmallUniv
 
 goFunction ::
   forall r.
@@ -711,9 +727,9 @@ goSimpleLambda ::
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   Internal.SimpleLambda ->
   Sem r Node
-goSimpleLambda l = localAddName (l ^. Internal.slambdaVar) (mkLambda' <$> goExpression (l ^. Internal.slambdaBody))
-
--- TODO: this is wrong -- lambdas always need a type annotation if they are to be translated to JuvixAsm / GEB
+goSimpleLambda l = do
+  ty <- goExpression (l ^. Internal.slambdaVarType)
+  localAddName (l ^. Internal.slambdaVar) (mkLambda' ty <$> goExpression (l ^. Internal.slambdaBody))
 
 goApplication ::
   forall r.
@@ -740,11 +756,17 @@ goApplication a = do
         Just Internal.BuiltinString -> app
         Just Internal.BuiltinIO -> app
         Just Internal.BuiltinIOSequence -> do
+          ioSym <- getIOSymbol
           as <- exprArgs
           case as of
             (arg1 : arg2 : xs) ->
-              return (mkApps' (mkConstr' (BuiltinTag TagBind) [arg1, mkLambda' (shift 1 arg2)]) xs)
-            _ -> error ">> must be called with 2 arguments"
+              return $
+                mkApps'
+                  (mkConstr'
+                    (BuiltinTag TagBind)
+                    [arg1, mkLambda' (mkTypeConstr' ioSym []) (shift 1 arg2)])
+                  xs
+            _ -> error "internal to core: >> must be called with 2 arguments"
         Just Internal.BuiltinIOReadline -> app
         Just Internal.BuiltinStringConcat -> app
         Just Internal.BuiltinStringEq -> app
@@ -755,7 +777,7 @@ goApplication a = do
           case as of
             (_ : _ : arg1 : arg2 : xs) ->
               return (mkApps' (mkBuiltinApp' OpTrace [arg1, arg2]) xs)
-            _ -> error "trace must be called with 2 arguments"
+            _ -> error "internal to core: trace must be called with 2 arguments"
         Just Internal.BuiltinFail -> app
         Nothing -> app
     Internal.ExpressionIden (Internal.IdenFunction n) -> do
@@ -766,19 +788,19 @@ goApplication a = do
           as <- exprArgs
           case as of
             (_ : v : b1 : b2 : xs) -> return (mkApps' (mkIf' sym v b1 b2) xs)
-            _ -> error "if must be called with 3 arguments"
+            _ -> error "internal to core: if must be called with 3 arguments"
         Just Internal.BuiltinBoolOr -> do
           sym <- getBoolSymbol
           as <- exprArgs
           case as of
             (x : y : xs) -> return (mkApps' (mkIf' sym x (mkConstr' (BuiltinTag TagTrue) []) y) xs)
-            _ -> error "|| must be called with 2 arguments"
+            _ -> error "internal to core: || must be called with 2 arguments"
         Just Internal.BuiltinBoolAnd -> do
           sym <- getBoolSymbol
           as <- exprArgs
           case as of
             (x : y : xs) -> return (mkApps' (mkIf' sym x y (mkConstr' (BuiltinTag TagFalse) [])) xs)
-            _ -> error "&& must be called with 2 arguments"
+            _ -> error "internal to core: && must be called with 2 arguments"
         _ -> app
     _ -> app
 

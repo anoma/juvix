@@ -24,18 +24,26 @@ convertNode tab = convert [] 0
       NApp (App _ (NApp (App _ (NIdt (Ident {..})) l)) r) ->
         Recur' (levels, convertIdentApp node (\g -> g _identInfo l r) _identSymbol)
       NApp (App _ (NIdt (Ident {..})) l) ->
-        Recur' (levels, convertIdentApp node (\g -> mkLet' l $ mkLambdaTy mkTypeInteger' $ g _identInfo (mkVar' 1) (mkVar' 0)) _identSymbol)
+        Recur'
+          (levels,
+            convertIdentApp
+              node
+              (\g ->
+                mkLet' mkTypeInteger' l $
+                  mkLambda' mkTypeInteger' $
+                  g _identInfo (mkVar' 1) (mkVar' 0))
+              _identSymbol)
       NIdt (Ident {..})
         | Just _identSymbol == tab ^. infoIntToNat ->
-            End' (mkLambda mempty (Binder "?" Nothing mkTypeInteger') (mkVar' 0))
+            End' (mkLambda' mkTypeInteger' (mkVar' 0))
       NIdt (Ident {..}) ->
         Recur'
           ( levels,
             convertIdentApp
               node
               ( \g ->
-                  mkLambdaTy mkTypeInteger' $
-                    mkLambdaTy mkTypeInteger' $
+                  mkLambda' mkTypeInteger' $
+                    mkLambda' mkTypeInteger' $
                       g _identInfo (mkVar' 1) (mkVar' 0)
               )
               _identSymbol
@@ -97,7 +105,7 @@ convertNode tab = convert [] 0
             Just BuiltinNatSub ->
               f
                 ( \info x y ->
-                    mkLet' (mkBuiltinApp info OpIntSub [x, y]) $
+                    mkLet' mkTypeInteger' (mkBuiltinApp info OpIntSub [x, y]) $
                       mkIf'
                         boolSymbol
                         (mkBuiltinApp' OpIntLe [mkConstant' (ConstInteger 0), mkVar' 0])
@@ -126,6 +134,6 @@ natToInt tab = mapT (const (convertNode tab')) tab'
     tab' =
       case tab ^. infoIntToNat of
         Just sym ->
-          tab {_identContext = HashMap.insert sym (mkLambda' (mkVar' 0)) (tab ^. identContext)}
+          tab {_identContext = HashMap.insert sym (mkLambda' mkTypeInteger' (mkVar' 0)) (tab ^. identContext)}
         Nothing ->
           tab
