@@ -107,7 +107,8 @@ instance PrettyCode LambdaClause where
 instance PrettyCode Lambda where
   ppCode Lambda {..} = do
     lambdaClauses' <- ppPipeBlock _lambdaClauses
-    return $ kwLambda <+> lambdaClauses'
+    lambdaType' <- mapM ppCode _lambdaType
+    return $ kwLambda <+> (fmap (kwColon <+>) lambdaType') <?+> braces lambdaClauses'
 
 instance PrettyCode a => PrettyCode (WithLoc a) where
   ppCode = ppCode . (^. withLocParam)
@@ -187,7 +188,7 @@ instance PrettyCode FunctionDef where
     clauses' <- mapM ppCode (f ^. funDefClauses)
     return $
       funDefName'
-        <+> kwColonColon
+        <+> kwColon
         <+> funDefType'
           <> line
           <> vsep (toList clauses')
@@ -197,7 +198,7 @@ instance PrettyCode FunctionClause where
     funName <- ppCode (c ^. clauseName)
     clausePatterns' <- hsepMaybe <$> mapM ppCodeAtom (c ^. clausePatterns)
     clauseBody' <- ppCode (c ^. clauseBody)
-    return $ funName <+?> clausePatterns' <+> kwAssign <+> clauseBody'
+    return $ nest 2 (funName <+?> clausePatterns' <+> kwAssign <+> clauseBody')
 
 instance PrettyCode Backend where
   ppCode = \case

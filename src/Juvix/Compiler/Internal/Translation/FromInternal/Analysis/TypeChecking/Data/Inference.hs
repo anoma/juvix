@@ -119,7 +119,10 @@ strongNormalize' = go
       return (LambdaClause p b')
 
     goLambda :: Lambda -> Sem r Lambda
-    goLambda (Lambda cl) = Lambda <$> mapM goClause cl
+    goLambda l = do
+      _lambdaClauses <- mapM goClause (l ^. lambdaClauses)
+      _lambdaType <- mapM go (l ^. lambdaType)
+      return Lambda {..}
 
     goSimpleLambda :: SimpleLambda -> Sem r SimpleLambda
     goSimpleLambda (SimpleLambda lamVar lamTy lamBody) = do
@@ -342,9 +345,9 @@ re = reinterpret $ \case
                               _ -> id
                         bicheck (go l1 l2) (local' (go r1 r2))
                     | otherwise = err
-
+                -- NOTE type is ignored, I think it is ok
                 goLambda :: Lambda -> Lambda -> Sem r (Maybe MatchError)
-                goLambda (Lambda l1) (Lambda l2) = case zipExactMay (toList l1) (toList l2) of
+                goLambda (Lambda l1 _) (Lambda l2 _) = case zipExactMay (toList l1) (toList l2) of
                   Just z -> asum <$> mapM (uncurry goClause) z
                   _ -> err
                   where

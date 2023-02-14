@@ -104,7 +104,7 @@ checkStrictlyPositiveOccurrences ty ctorName name recLimit ref =
           helper inside lamBody
 
         helperLambda :: Lambda -> Sem r ()
-        helperLambda (Lambda cl) = mapM_ goClause cl
+        helperLambda l = mapM_ goClause (l ^. lambdaClauses)
           where
             goClause :: LambdaClause -> Sem r ()
             goClause (LambdaClause _ b) = helper inside b

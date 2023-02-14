@@ -162,8 +162,10 @@ data Case = Case
 
 instance Hashable Case
 
-newtype Lambda = Lambda
-  { _lambdaClauses :: NonEmpty LambdaClause
+data Lambda = Lambda
+  { _lambdaClauses :: NonEmpty LambdaClause,
+    -- | The typechecker fills this field
+    _lambdaType :: Maybe Expression
   }
   deriving stock (Eq, Generic, Data)
 

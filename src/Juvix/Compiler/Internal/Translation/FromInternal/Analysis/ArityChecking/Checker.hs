@@ -207,10 +207,10 @@ arityCase c = do
 -- types, it is ok to (partially) infer the arity of the lambda from the clause
 -- with the most patterns.
 arityLambda :: Lambda -> Arity
-arityLambda (Lambda cl) =
+arityLambda l =
   foldArity
     UnfoldedArity
-      { _ufoldArityParams = replicate (maximum1 (fmap numPatterns cl)) (ParamExplicit ArityUnknown),
+      { _ufoldArityParams = replicate (maximum1 (fmap numPatterns (l ^. lambdaClauses))) (ParamExplicit ArityUnknown),
         _ufoldArityRest = ArityRestUnknown
       }
   where
@@ -382,7 +382,10 @@ checkLambda ::
   Arity ->
   Lambda ->
   Sem r Lambda
-checkLambda ari (Lambda cl) = Lambda <$> mapM goClause cl
+checkLambda ari l = do
+  let _lambdaType = l ^. lambdaType
+  _lambdaClauses <- mapM goClause (l ^. lambdaClauses)
+  return Lambda {..}
   where
     goClause :: LambdaClause -> Sem r LambdaClause
     goClause (LambdaClause ps b) = do
@@ -409,7 +412,7 @@ checkLambda ari (Lambda cl) = Lambda <$> mapM goClause cl
                   -- TODO. think what to do in this case
                   return (pats, as)
                 (_ : _, []) -> case rest of
-                  ArityRestUnit -> error ("too many patterns in lambda: " <> ppTrace (Lambda cl) <> "\n" <> prettyText ari)
+                  ArityRestUnit -> error ("too many patterns in lambda: " <> ppTrace l <> "\n" <> prettyText ari)
                   ArityRestUnknown -> return (pats, [])
 
 idenArity :: (Members '[Reader LocalVars, Reader InfoTable] r) => Iden -> Sem r Arity

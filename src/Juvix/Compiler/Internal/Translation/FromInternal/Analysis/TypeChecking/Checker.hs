@@ -573,11 +573,13 @@ inferExpression' hint e = case e of
           }
 
     goLambda :: Lambda -> Sem r TypedExpression
-    goLambda l@(Lambda cl) = do
+    goLambda l = do
       ty <- case hint of
         Just hi -> return hi
         Nothing -> ExpressionHole <$> freshHole (getLoc l)
-      l' <- Lambda <$> mapM (goClause ty) cl
+      _lambdaClauses <- mapM (goClause ty) (l ^. lambdaClauses)
+      let _lambdaType = Just ty
+          l' = Lambda {..}
       return
         TypedExpression
           { _typedType = ty,

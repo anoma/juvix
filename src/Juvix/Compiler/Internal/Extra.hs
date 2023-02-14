@@ -101,7 +101,10 @@ mkConcreteType = fmap ConcreteType . go
         b' <- go b
         ty' <- go ty
         return (ExpressionSimpleLambda (SimpleLambda v ty' b'))
-      ExpressionLambda (Lambda c) -> ExpressionLambda . Lambda <$> mapM goClause c
+      ExpressionLambda (Lambda c ty) -> do
+        let _lambdaType = ty >>= go
+        _lambdaClauses <- mapM goClause c
+        return (ExpressionLambda Lambda {..})
       ExpressionFunction (Function l r) -> do
         l' <- goParam l
         r' <- go r
@@ -201,7 +204,10 @@ mkPolyType = fmap PolyType . go
       ExpressionIden IdenConstructor {} -> return t
       ExpressionIden IdenAxiom {} -> return t
       ExpressionIden IdenVar {} -> return t
-      ExpressionLambda (Lambda c) -> ExpressionLambda . Lambda <$> mapM goClause c
+      ExpressionLambda (Lambda c ty) -> do
+        let _lambdaType = ty >>= go
+        _lambdaClauses <- mapM goClause c
+        return (ExpressionLambda Lambda {..})
       ExpressionSimpleLambda (SimpleLambda v ty b) -> do
         b' <- go b
         ty' <- go ty
@@ -219,7 +225,10 @@ instance HasExpressions LambdaClause where
   leafExpressions f (LambdaClause ps b) = LambdaClause ps <$> leafExpressions f b
 
 instance HasExpressions Lambda where
-  leafExpressions f = traverseOf lambdaClauses (traverse (leafExpressions f))
+  leafExpressions f l = do
+    _lambdaClauses <- traverse (leafExpressions f) (l ^. lambdaClauses)
+    _lambdaType <- traverse (leafExpressions f) (l ^. lambdaType)
+    pure Lambda {..}
 
 instance HasExpressions Expression where
   leafExpressions f e = case e of

@@ -288,7 +288,10 @@ goType e = case e of
   Abstract.ExpressionCase {} -> unsupported "case in types"
 
 goLambda :: forall r. (Members '[NameIdGen] r) => Abstract.Lambda -> Sem r Lambda
-goLambda (Abstract.Lambda cl') = Lambda <$> mapM goClause cl'
+goLambda (Abstract.Lambda cl') = do
+  _lambdaClauses <- mapM goClause cl'
+  let _lambdaType :: Maybe Expression = Nothing
+  return Lambda {..}
   where
     goClause :: Abstract.LambdaClause -> Sem r LambdaClause
     goClause (Abstract.LambdaClause ps b) = do
