@@ -40,16 +40,11 @@ data CompiledPattern = CompiledPattern
 
 data CompileState = CompileState
   { _compileStateBindersAbove :: Int,
-    _compileStateCompiledPattern :: CompiledPattern,
-    _compileStateCurrentNode :: Node
+    _compileStateCompiledPattern :: CompiledPattern
   }
 
-initCompiledPattern :: CompiledPattern
-initCompiledPattern =
-  CompiledPattern
-    { _compiledPatBinders = [],
-      _compiledPatMkNode = id
-    }
+newtype CompileStateNode = CompileStateNode
+  {_compileStateNodeCurrent :: Node}
 
 initState :: CompileState
 initState =
@@ -59,8 +54,7 @@ initState =
         CompiledPattern
           { _compiledPatBinders = [],
             _compiledPatMkNode = id
-          },
-      _compileStateCurrentNode = mkVar' 0
+          }
     }
 
 stateWithBindersAbove :: Int -> CompileState
@@ -68,13 +62,24 @@ stateWithBindersAbove n = initState {_compileStateBindersAbove = n}
 
 makeLenses ''CompiledPattern
 makeLenses ''CompileState
+makeLenses ''CompileStateNode
 
 incBindersAbove :: Member (Reader CompileState) r => Sem r CompiledPattern -> Sem r CompiledPattern
 incBindersAbove = local (over compileStateBindersAbove (+ 1))
 
-resetCurrentNode :: Member (Reader CompileState) r => Sem r CompiledPattern -> Sem r CompiledPattern
-resetCurrentNode = local (set compileStateCurrentNode (mkVar' 0))
+resetCurrentNode :: Member (Reader CompileStateNode) r => Sem r CompiledPattern -> Sem r CompiledPattern
+resetCurrentNode = local (set compileStateNodeCurrent (mkVar' 0))
 
 instance Semigroup CompiledPattern where
-  cp1 <> cp2 = CompiledPattern {_compiledPatBinders=(cp1 ^. compiledPatBinders) <> (cp2 ^. compiledPatBinders),
-                                _compiledPatMkNode=(cp1 ^. compiledPatMkNode) . (cp2 ^. compiledPatMkNode)}
+  cp1 <> cp2 =
+    CompiledPattern
+      { _compiledPatBinders = (cp1 ^. compiledPatBinders) <> (cp2 ^. compiledPatBinders),
+        _compiledPatMkNode = (cp1 ^. compiledPatMkNode) . (cp2 ^. compiledPatMkNode)
+      }
+
+instance Monoid CompiledPattern where
+  mempty =
+    CompiledPattern
+      { _compiledPatBinders = [],
+        _compiledPatMkNode = id
+      }

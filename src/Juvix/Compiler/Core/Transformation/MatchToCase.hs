@@ -133,8 +133,7 @@ compileMatchBranch (Indexed branchNum br) = do
     initState' =
       CompileState
         { _compileStateBindersAbove = 0,
-          _compileStateCompiledPattern = initCompiledPattern,
-          _compileStateCurrentNode = mkVar' (patternsNum - 1)
+          _compileStateCompiledPattern = mempty
         }
 
 -- | Extract original binders (i.e binders which are referenced in the match
@@ -148,33 +147,33 @@ extractOriginalBinders vs = updateBinders $ fmap getBinder <$> reverse (filterIn
     updateBinders :: [Indexed a] -> [Indexed a]
     updateBinders = zipWith (over indexedIx . (+)) [0 ..]
 
-combineCompiledPatterns :: forall r. Member (Reader CompileState) r => [Sem r CompiledPattern] -> Sem r CompiledPattern
+combineCompiledPatterns :: forall r. Member (Reader CompileState) r => [Sem ((Reader CompileStateNode) ': r) CompiledPattern] -> Sem r CompiledPattern
 combineCompiledPatterns ps = do
   go indexedPatterns
   where
-    indexedPatterns :: [Indexed (Sem r CompiledPattern)]
-    indexedPatterns = reverse (indexFrom (-1) (reverse ps))
+    indexedPatterns :: [Indexed (Sem ((Reader CompileStateNode) ': r) CompiledPattern)]
+    indexedPatterns = reverse (indexFrom 0 (reverse ps))
 
-    go :: [Indexed (Sem r CompiledPattern)] -> Sem r CompiledPattern
+    go :: [Indexed (Sem ((Reader CompileStateNode) ': r) CompiledPattern)] -> Sem r CompiledPattern
     go [] = asks (^. compileStateCompiledPattern)
     go (Indexed depth cp : xs) = do
-      nextPattern <- cp
-      newBinders <- (^. compiledPatBinders) <$> cp
-      prevBinders <- asks (^. compileStateCompiledPattern . compiledPatBinders)
-      let updatedBinders = prevBinders ++ newBinders
-      local
-        ( (over compileStateBindersAbove (+ length newBinders))
-          . (over compileStateCompiledPattern (<> nextPattern))
-          . (set compileStateCurrentNode (mkVar' (length updatedBinders + depth)))
-        )
-        (go xs)
+      numBinders <- length <$> asks (^. compileStateCompiledPattern . compiledPatBinders)
+      nextPattern <- runReader (CompileStateNode (mkVar' (numBinders + depth))) cp
+      updateState nextPattern (go xs)
+      where
+        updateState :: CompiledPattern -> Sem r CompiledPattern -> Sem r CompiledPattern
+        updateState p =
+          local
+            ( over compileStateBindersAbove (+ length (p ^. compiledPatBinders))
+                . (over compileStateCompiledPattern (<> p))
+            )
 
-compilePattern :: forall r. Members [Reader CompileState, InfoTableBuilder] r => Int -> Pattern -> Sem r CompiledPattern
+compilePattern :: forall r. Members [Reader CompileState, Reader CompileStateNode, InfoTableBuilder] r => Int -> Pattern -> Sem r CompiledPattern
 compilePattern numPatterns = \case
   PatWildcard {} -> return (CompiledPattern [] id)
   PatBinder b -> do
     subPats <- resetCurrentNode (incBindersAbove (compilePattern numPatterns (b ^. patternBinderPattern)))
-    currentNode <- asks (^. compileStateCurrentNode)
+    currentNode <- asks (^. compileStateNodeCurrent)
     let newBinder = b ^. patternBinder
     return
       CompiledPattern
@@ -203,8 +202,7 @@ compilePattern numPatterns = \case
           mkState bindersAbove =
             ( CompileState
                 { _compileStateBindersAbove = bindersAbove + length args,
-                  _compileStateCompiledPattern = initCompiledPattern,
-                  _compileStateCurrentNode = mkVar' ((length args) - 1)
+                  _compileStateCompiledPattern = mempty
                 }
             )
 
@@ -233,7 +231,7 @@ compilePattern numPatterns = \case
       mkCaseFromBinders :: [Binder] -> Sem r (Node -> Node)
       mkCaseFromBinders binders = do
         indSym <- (^. constructorInductive) <$> ctorInfo
-        currentNode <- asks (^. compileStateCurrentNode)
+        currentNode <- asks (^. compileStateNodeCurrent)
         defaultNode'' <- defaultNode' numPatterns
         let mkCaseFromBranch :: CaseBranch -> Node
             mkCaseFromBranch b =
