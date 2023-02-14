@@ -22,6 +22,7 @@ matchToCaseNode n = case n of
       (failNode numValues :)
         <$> mapM compileMatchBranch (indexFrom 1 (reverse branches))
 
+    -- The appNode calls the first branch with the values of the match
     let appNode = mkApps' (mkVar' 0) (shift (length branchNodes) <$> values)
     return (foldr mkLet' appNode branchNodes)
   _ -> return n
@@ -146,6 +147,12 @@ extractOriginalBinders vs = updateBinders $ fmap getBinder <$> reverse (filterIn
     updateBinders :: [Indexed a] -> [Indexed a]
     updateBinders = zipWith (over indexedIx . (+)) [0 ..]
 
+-- | Combine the results of compiling the patterns of a match branch or patterns of constructor arguments.
+--
+-- If the arguments are a_1, .... a_n then the first pattern refers to its argument by index (n - 1), the second argument
+-- refers to its argument by index (n - 2) and so on. This is the purpose of the indexedPatterns and setting the CompileStateNode.
+--
+-- The patterns are then evaluated and combined from left to right in the list .
 combineCompiledPatterns :: forall r. Member (Reader CompileState) r => [Sem ((Reader CompileStateNode) ': r) CompiledPattern] -> Sem r CompiledPattern
 combineCompiledPatterns ps = go indexedPatterns
   where
@@ -166,6 +173,16 @@ combineCompiledPatterns ps = go indexedPatterns
                 . (over compileStateCompiledPattern (<> p))
             )
 
+-- | Compile a single pattern
+--
+-- A Wildcard introduces no new binders and do not modify the body.
+--
+-- A Binder introduces a binder and may also name a subpattern (i.e an as-pattern)
+--
+-- A Constructor is translated into a case statement. Each of its arguments
+-- (wildcard, binder or constructor) introduces an auxiliary binder.
+-- The arguments are then compiled recursively using a new CompileState context.
+-- The default case points to the next branch pattern.
 compilePattern :: forall r. Members [Reader CompileState, Reader CompileStateNode, InfoTableBuilder] r => Int -> Pattern -> Sem r CompiledPattern
 compilePattern numPatterns = \case
   PatWildcard {} -> return (CompiledPattern [] id)
@@ -173,11 +190,12 @@ compilePattern numPatterns = \case
     subPats <- resetCurrentNode (incBindersAbove (compilePattern numPatterns (b ^. patternBinderPattern)))
     currentNode <- asks (^. compileStateNodeCurrent)
     let newBinder = b ^. patternBinder
-    return
-      CompiledPattern
-        { _compiledPatBinders = OriginalBinder newBinder : subPats ^. compiledPatBinders,
-          _compiledPatMkNode = (mkLet mempty newBinder currentNode) . (subPats ^. compiledPatMkNode)
-        }
+    let compiledBinder =
+          CompiledPattern
+            { _compiledPatBinders = [OriginalBinder newBinder],
+              _compiledPatMkNode = mkLet mempty newBinder currentNode
+            }
+    return (compiledBinder <> subPats)
   PatConstr c -> do
     let args = (c ^. patternConstrArgs)
     compiledArgs <- compileArgs args
@@ -261,6 +279,8 @@ compilePattern numPatterns = \case
 failNode :: Int -> Node
 failNode n = mkLambdas' n (mkBuiltinApp' OpFail [mkConstant' (ConstString "Non-exhaustive patterns")])
 
+-- | The default node in a case expression.
+-- It points to the next branch above.
 defaultNode' :: Member (Reader CompileState) r => Int -> Sem r Node
 defaultNode' numMatchValues = do
   numBindersAbove <- asks (^. compileStateBindersAbove)
