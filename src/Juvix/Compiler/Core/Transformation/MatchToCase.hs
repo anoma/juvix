@@ -2,6 +2,7 @@ module Juvix.Compiler.Core.Transformation.MatchToCase where
 
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
+import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo (setInfoName)
 import Juvix.Compiler.Core.Info.TypeInfo
 import Juvix.Compiler.Core.Language
@@ -17,7 +18,8 @@ matchToCaseNode n = case n of
     let branches = m ^. matchBranches
         values = toList (m ^. matchValues)
         numValues = length values
-
+        matchType = getInfoType (m ^. matchInfo)
+        branchType = mkPis' (getInfoType . getInfo <$> values) matchType
     -- Index from 1 because we prepend the fail branch.
     branchNodes <-
       (failNode numValues :)
@@ -25,7 +27,18 @@ matchToCaseNode n = case n of
 
     -- The appNode calls the first branch with the values of the match
     let appNode = mkApps' (mkVar' 0) (shift (length branchNodes) <$> values)
-    return (foldr mkLet' appNode branchNodes)
+    foldrM (mkBranchLet branchType) appNode branchNodes
+    where
+      mkBranchLet :: Node -> Node -> Node -> Sem r Node
+      mkBranchLet ty v b = do
+        letSym <- freshSymbol
+        let binder =
+              Binder
+                { _binderName = uniqueName "matchBranch" letSym,
+                  _binderLocation = Nothing,
+                  _binderType = ty
+                }
+        return (mkLet mempty binder v b)
   _ -> return n
 
 -- | increase all free variable indices by a given value.
@@ -229,20 +242,22 @@ compilePattern numPatterns = \case
       mkBinder :: Pattern -> Sem r Binder
       mkBinder = \case
         PatBinder b -> return (b ^. patternBinder)
-        PatWildcard w ->
+        PatWildcard w -> do
+          let info = w ^. patternWildcardInfo
           return
             Binder
               { _binderName = "_",
-                _binderLocation = Nothing,
-                _binderType = getInfoType (w ^. patternWildcardInfo)
+                _binderLocation = getInfoLocation info,
+                _binderType = getInfoType info
               }
         PatConstr c' -> do
+          let info = c' ^. patternConstrInfo
           argSym <- freshSymbol
           return
             Binder
               { _binderName = uniqueName "arg" argSym,
-                _binderLocation = Nothing,
-                _binderType = getInfoType (c' ^. patternConstrInfo)
+                _binderLocation = getInfoLocation info,
+                _binderType = getInfoType info
               }
 
       mkCaseFromBinders :: [Binder] -> Sem r (Node -> Node)
