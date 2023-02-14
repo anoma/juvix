@@ -8,12 +8,13 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
+import Juvix.Compiler.Core.Pretty
 
 convertNode :: InfoTable -> Node -> Node
 convertNode tab = convert mempty
   where
-    unsupported :: forall a. a
-    unsupported = error "remove type arguments: unsupported node"
+    unsupported :: forall a. Node -> a
+    unsupported node = error ("remove type arguments: unsupported node\n\t" <> ppTrace node)
 
     convert :: BinderList Binder -> Node -> Node
     convert vars = dmapLR' (vars, go)
@@ -36,7 +37,7 @@ convertNode tab = convert mempty
                 NIdt (Ident {..}) ->
                   let fi = fromJust $ HashMap.lookup _identSymbol (tab ^. infoIdentifiers)
                    in fi ^. identifierType
-                _ -> unsupported
+                _ -> unsupported node
             args' = filterArgs ty args
          in if
                 | null args' ->
