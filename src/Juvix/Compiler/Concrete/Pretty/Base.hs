@@ -530,7 +530,7 @@ instance (SingI s) => PrettyCode (FunctionClause s) where
       clauseOwnerFunction'
         <+?> clausePatterns'
         <+> kwAssign
-        <+> nest 2 clauseBody'
+        <+> oneLineOrNext clauseBody'
 
 instance (SingI s) => PrettyCode (AxiomDef s) where
   ppCode AxiomDef {..} = do
@@ -636,7 +636,7 @@ instance PrettyCode Application where
       let (f, args) = unfoldApplication a
       f' <- ppCode f
       args' <- mapM ppCodeAtom args
-      return $ PP.group (f' <+> nest 2 (vsep args'))
+      return $ PP.group (f' <+> nest' (vsep args'))
 
 apeHelper :: (IsApe a Expression, Members '[Reader Options] r) => a -> Sem r (Doc CodeAnn) -> Sem r (Doc CodeAnn)
 apeHelper a alt = do

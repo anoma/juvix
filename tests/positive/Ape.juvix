@@ -1,5 +1,5 @@
 module Ape;
-  axiom String : Type;
+  builtin string axiom String : Type;
 
   infixl 7 *;
   axiom * : String → String → String;

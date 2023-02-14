@@ -112,11 +112,17 @@ hsepMaybe l
   | null l = Nothing
   | otherwise = Just (hsep l)
 
+nest' :: Doc ann -> Doc ann
+nest' = nest 2
+
 indent' :: Doc ann -> Doc ann
 indent' = indent 2
 
 hang' :: Doc ann -> Doc ann
 hang' = hang 2
+
+oneLineOrNext :: Doc ann -> Doc ann
+oneLineOrNext x = PP.group (flatAlt (line <> indent' x) x)
 
 ordinal :: Int -> Doc a
 ordinal = \case
