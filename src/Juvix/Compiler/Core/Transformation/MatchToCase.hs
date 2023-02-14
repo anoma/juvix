@@ -217,13 +217,7 @@ compilePattern numPatterns = \case
               )
 
       mkCompiledBinder :: Pattern -> Sem r CompiledBinder
-      mkCompiledBinder p = case p of
-        PatBinder {} -> AuxiliaryBinder <$> binder
-        PatWildcard {} -> AuxiliaryBinder <$> binder
-        PatConstr {} -> AuxiliaryBinder <$> binder
-        where
-          binder :: Sem r Binder
-          binder = mkBinder p
+      mkCompiledBinder p = AuxiliaryBinder <$> mkBinder p
 
       mkBinder :: Pattern -> Sem r Binder
       mkBinder = \case
