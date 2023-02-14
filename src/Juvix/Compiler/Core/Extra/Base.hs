@@ -52,32 +52,26 @@ mkConstr' = mkConstr Info.empty
 mkLambda :: Info -> Binder -> Node -> Node
 mkLambda i bi b = NLam (Lambda i bi b)
 
-mkLambda' :: Node -> Node
-mkLambda' = mkLambda Info.empty emptyBinder
+mkLambda' :: Type -> Node -> Node
+mkLambda' ty = mkLambda Info.empty (mkBinder' ty)
 
-mkLambdaTy :: Node -> Node -> Node
-mkLambdaTy ty = mkLambda Info.empty (Binder "?" Nothing ty)
+mkLambdas' :: [Type] -> Node -> Node
+mkLambdas' tys n = foldl' (flip mkLambda') n (reverse tys)
 
-mkLambdasTy :: [Type] -> Node -> Node
-mkLambdasTy tys n = foldl' (flip mkLambdaTy) n (reverse tys)
-
-mkLetItem' :: Node -> LetItem
-mkLetItem' = LetItem emptyBinder
+mkLetItem' :: Type -> Node -> LetItem
+mkLetItem' ty = LetItem (mkBinder' ty)
 
 mkLet :: Info -> Binder -> Node -> Node -> Node
 mkLet i bi v b = NLet (Let i (LetItem bi v) b)
 
-mkLetTy :: Info -> Type -> Node -> Node -> Node
-mkLetTy i ty = mkLet i (Binder "?" Nothing ty)
-
-mkLet' :: Node -> Node -> Node
-mkLet' = mkLet Info.empty emptyBinder
+mkLet' :: Type -> Node -> Node -> Node
+mkLet' ty = mkLet Info.empty (mkBinder' ty)
 
 mkLetRec :: Info -> NonEmpty LetItem -> Node -> Node
 mkLetRec i vs b = NRec (LetRec i vs b)
 
-mkLetRec' :: NonEmpty Node -> Node -> Node
-mkLetRec' = mkLetRec Info.empty . fmap mkLetItem'
+mkLetRec' :: NonEmpty (Type, Node) -> Node -> Node
+mkLetRec' = mkLetRec Info.empty . fmap (uncurry mkLetItem')
 
 mkCase :: Info -> Symbol -> Node -> [CaseBranch] -> Maybe Node -> Node
 mkCase i sym v bs def = NCase (Case i sym v bs def)
@@ -111,6 +105,12 @@ mkIf i sym v b1 b2 = mkCase i sym v [br] (Just b2)
 
 mkIf' :: Symbol -> Node -> Node -> Node -> Node
 mkIf' = mkIf Info.empty
+
+mkBinder :: Text -> Type -> Binder
+mkBinder name ty = Binder name Nothing ty
+
+mkBinder' :: Type -> Binder
+mkBinder' ty = Binder "?" Nothing ty
 
 {------------------------------------------------------------------------}
 {- Type constructors -}
@@ -252,8 +252,8 @@ mkLambdaB = mkLambda mempty
 mkLambdasB :: [Binder] -> Node -> Node
 mkLambdasB is n = foldl' (flip mkLambdaB) n (reverse is)
 
-mkLambdas' :: Int -> Node -> Node
-mkLambdas' k
+mkLambdasN :: Int -> Node -> Node
+mkLambdasN k
   | k < 0 = impossible
   | otherwise = mkLambdasB (replicate k emptyBinder)
 
@@ -271,6 +271,9 @@ unfoldLambdas = first reverse . unfoldLambdasRev
 
 unfoldLambdas' :: Node -> (Int, Node)
 unfoldLambdas' = first length . unfoldLambdas
+
+lambdaTypes :: Node -> [Type]
+lambdaTypes = map (\LambdaLhs{..} -> _lambdaLhsBinder ^. binderType) . fst . unfoldLambdas
 
 isType :: Node -> Bool
 isType = \case

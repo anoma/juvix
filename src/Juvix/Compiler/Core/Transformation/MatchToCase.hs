@@ -28,7 +28,7 @@ matchToCaseNode n = case n of
 
     -- The appNode calls the first branch with the values of the match
     let appNode = mkApps' (mkVar' 0) (shift (length branchNodes) <$> values)
-    return (foldr (mkLetTy mempty branchType) appNode branchNodes)
+    return (foldr (mkLet' branchType) appNode branchNodes)
   _ -> return n
 
 -- | increase all free variable indices by a given value.
@@ -111,7 +111,7 @@ shiftEmbedded wrappingLevel m = umapN go
 compileMatchBranch :: forall r. Members '[InfoTableBuilder] r => Indexed MatchBranch -> Sem r Node
 compileMatchBranch (Indexed branchNum br) = do
   compiledBranch <- runReader initState' (combineCompiledPatterns (map (compilePattern patternsNum) patterns))
-  return (mkLambdasTy (patternType <$> patterns) ((compiledBranch ^. compiledPatMkNode) (wrapBody (compiledBranch ^. compiledPatBinders))))
+  return (mkLambdas' (patternType <$> patterns) ((compiledBranch ^. compiledPatMkNode) (wrapBody (compiledBranch ^. compiledPatBinders))))
   where
     patterns :: [Pattern]
     patterns = toList (br ^. matchBranchPatterns)
@@ -208,7 +208,7 @@ compilePattern numPatterns = \case
     where
       compileCase :: [Pattern] -> Sem r CompiledPattern
       compileCase args = do
-        binders <- mapM mkBinder args
+        binders <- mapM mkBinder'' args
         CompiledPattern <$> mapM mkCompiledBinder args <*> mkCaseFromBinders binders
 
       compileArgs :: [Pattern] -> Sem r CompiledPattern
@@ -227,10 +227,10 @@ compilePattern numPatterns = \case
             )
 
       mkCompiledBinder :: Pattern -> Sem r CompiledBinder
-      mkCompiledBinder p = AuxiliaryBinder <$> mkBinder p
+      mkCompiledBinder p = AuxiliaryBinder <$> mkBinder'' p
 
-      mkBinder :: Pattern -> Sem r Binder
-      mkBinder = \case
+      mkBinder'' :: Pattern -> Sem r Binder
+      mkBinder'' = \case
         PatBinder b -> return (b ^. patternBinder)
         PatWildcard w -> do
           let info = w ^. patternWildcardInfo
@@ -277,7 +277,7 @@ compilePattern numPatterns = \case
               )
 
 failNode :: [Type] -> Node
-failNode tys = mkLambdasTy tys (mkBuiltinApp' OpFail [mkConstant' (ConstString "Non-exhaustive patterns")])
+failNode tys = mkLambdas' tys (mkBuiltinApp' OpFail [mkConstant' (ConstString "Non-exhaustive patterns")])
 
 mkUniqueBinder' :: Member InfoTableBuilder r => Text -> Node -> Sem r Binder
 mkUniqueBinder' name ty = mkUniqueBinder name Nothing ty

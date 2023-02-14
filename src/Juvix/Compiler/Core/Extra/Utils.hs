@@ -169,7 +169,7 @@ developBeta = umap go
 
 etaExpand :: Int -> Node -> Node
 etaExpand 0 n = n
-etaExpand k n = mkLambdas' k (mkApps' (shift k n) (map mkVar' (reverse [0 .. k - 1])))
+etaExpand k n = mkLambdasN k (mkApps' (shift k n) (map mkVar' (reverse [0 .. k - 1])))
 
 convertClosures :: Node -> Node
 convertClosures = umap go
