@@ -22,19 +22,13 @@ matchToCaseNode n = case n of
         branchType = mkPis' valueTypes matchType
 
     -- Index from 1 because we prepend the fail branch.
-    failNode' <- failNode valueTypes
     branchNodes <-
-      (failNode' :)
+      (failNode valueTypes :)
         <$> mapM compileMatchBranch (indexFrom 1 (reverse branches))
 
     -- The appNode calls the first branch with the values of the match
     let appNode = mkApps' (mkVar' 0) (shift (length branchNodes) <$> values)
-    foldrM (mkBranchLet branchType) appNode branchNodes
-    where
-      mkBranchLet :: Node -> Node -> Node -> Sem r Node
-      mkBranchLet ty v b = do
-        binder <- mkUniqueBinder' "matchBranch" ty
-        return (mkLet mempty binder v b)
+    return (foldr (mkLetTy mempty branchType) appNode branchNodes)
   _ -> return n
 
 -- | increase all free variable indices by a given value.
@@ -117,7 +111,7 @@ shiftEmbedded wrappingLevel m = umapN go
 compileMatchBranch :: forall r. Members '[InfoTableBuilder] r => Indexed MatchBranch -> Sem r Node
 compileMatchBranch (Indexed branchNum br) = do
   compiledBranch <- runReader initState' (combineCompiledPatterns (map (compilePattern patternsNum) patterns))
-  return (mkLambdas' patternsNum ((compiledBranch ^. compiledPatMkNode) (wrapBody (compiledBranch ^. compiledPatBinders))))
+  return (mkLambdasTy (patternType <$> patterns) ((compiledBranch ^. compiledPatMkNode) (wrapBody (compiledBranch ^. compiledPatBinders))))
   where
     patterns :: [Pattern]
     patterns = toList (br ^. matchBranchPatterns)
@@ -282,10 +276,8 @@ compilePattern numPatterns = \case
                     }
               )
 
-failNode :: Member InfoTableBuilder r => [Node] -> Sem r Node
-failNode tys = do
-  bs <- mapM (mkUniqueBinder' "failNode") tys
-  return (mkLambdasB bs (mkBuiltinApp' OpFail [mkConstant' (ConstString "Non-exhaustive patterns")]))
+failNode :: [Type] -> Node
+failNode tys = mkLambdasTy tys (mkBuiltinApp' OpFail [mkConstant' (ConstString "Non-exhaustive patterns")])
 
 mkUniqueBinder' :: Member InfoTableBuilder r => Text -> Node -> Sem r Binder
 mkUniqueBinder' name ty = mkUniqueBinder name Nothing ty
