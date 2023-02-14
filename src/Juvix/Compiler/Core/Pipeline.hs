@@ -16,7 +16,7 @@ toEval = applyTransformations toEvalTransformations
 
 toStrippedTransformations :: [TransformationId]
 toStrippedTransformations =
-  toEvalTransformations ++ [LambdaLetRecLifting, MoveApps, TopEtaExpand, RemoveTypeArgs]
+  toEvalTransformations ++ [LambdaLetRecLifting, TopEtaExpand, MoveApps, RemoveTypeArgs]
 
 -- | Perform transformations on Core necessary before the translation to
 -- Core.Stripped
