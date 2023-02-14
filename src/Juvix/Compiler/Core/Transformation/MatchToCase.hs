@@ -158,16 +158,14 @@ combineCompiledPatterns ps = do
     go :: [Indexed (Sem r CompiledPattern)] -> Sem r CompiledPattern
     go [] = asks (^. compileStateCompiledPattern)
     go (Indexed depth cp : xs) = do
+      nextPattern <- cp
       newBinders <- (^. compiledPatBinders) <$> cp
-      newMkBody <- (^. compiledPatMkNode) <$> cp
       prevBinders <- asks (^. compileStateCompiledPattern . compiledPatBinders)
-      prevMkBody <- asks (^. compileStateCompiledPattern . compiledPatMkNode)
       let updatedBinders = prevBinders ++ newBinders
       local
         ( (over compileStateBindersAbove (+ length newBinders))
-            . (set (compileStateCompiledPattern . compiledPatBinders) updatedBinders)
-            . (set (compileStateCompiledPattern . compiledPatMkNode) (prevMkBody . newMkBody))
-            . (set compileStateCurrentNode (mkVar' (length updatedBinders + depth)))
+          . (over compileStateCompiledPattern (<> nextPattern))
+          . (set compileStateCurrentNode (mkVar' (length updatedBinders + depth)))
         )
         (go xs)
 
@@ -185,36 +183,30 @@ compilePattern numPatterns = \case
         }
   PatConstr c -> do
     let args = (c ^. patternConstrArgs)
-    argBinders <- mapM mkCompiledBinder args
-    compiledArgs <- mkArgCompiledPattern args
-    let vs = compiledArgs ^. compiledPatBinders
-        nn = compiledArgs ^. compiledPatMkNode
-    binders <- mapM mkBinder args
-    newMkNode <- mkCaseFromBinders binders
-
-    return
-      ( CompiledPattern
-          { _compiledPatBinders = argBinders ++ vs,
-            _compiledPatMkNode = newMkNode . nn
-          }
-      )
+    compiledArgs <- compileArgs args
+    compiledCase <- compileCase args
+    return (compiledCase <> compiledArgs)
     where
-      mkArgCompiledPattern :: [Pattern] -> Sem r CompiledPattern
-      mkArgCompiledPattern args = do
+      compileCase :: [Pattern] -> Sem r CompiledPattern
+      compileCase args = do
+        binders <- mapM mkBinder args
+        CompiledPattern <$> mapM mkCompiledBinder args <*> mkCaseFromBinders binders
+
+      compileArgs :: [Pattern] -> Sem r CompiledPattern
+      compileArgs args = do
+        bindersAbove <- asks (^. compileStateBindersAbove)
         let ctorArgsPatterns = compilePattern numPatterns <$> args
-        initState' <- initState''
-        runReader initState' (combineCompiledPatterns ctorArgsPatterns)
+            state = mkState bindersAbove
+        runReader state (combineCompiledPatterns ctorArgsPatterns)
         where
-          initState'' :: Sem r CompileState
-          initState'' = do
-            bindersAbove <- asks (^. compileStateBindersAbove)
-            return
-              ( CompileState
-                  { _compileStateBindersAbove = bindersAbove + length args,
-                    _compileStateCompiledPattern = initCompiledPattern,
-                    _compileStateCurrentNode = mkVar' ((length args) - 1)
-                  }
-              )
+          mkState :: Int -> CompileState
+          mkState bindersAbove =
+            ( CompileState
+                { _compileStateBindersAbove = bindersAbove + length args,
+                  _compileStateCompiledPattern = initCompiledPattern,
+                  _compileStateCurrentNode = mkVar' ((length args) - 1)
+                }
+            )
 
       mkCompiledBinder :: Pattern -> Sem r CompiledBinder
       mkCompiledBinder p = AuxiliaryBinder <$> mkBinder p

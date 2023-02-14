@@ -74,3 +74,7 @@ incBindersAbove = local (over compileStateBindersAbove (+ 1))
 
 resetCurrentNode :: Member (Reader CompileState) r => Sem r CompiledPattern -> Sem r CompiledPattern
 resetCurrentNode = local (set compileStateCurrentNode (mkVar' 0))
+
+instance Semigroup CompiledPattern where
+  cp1 <> cp2 = CompiledPattern {_compiledPatBinders=(cp1 ^. compiledPatBinders) <> (cp2 ^. compiledPatBinders),
+                                _compiledPatMkNode=(cp1 ^. compiledPatMkNode) . (cp2 ^. compiledPatMkNode)}
