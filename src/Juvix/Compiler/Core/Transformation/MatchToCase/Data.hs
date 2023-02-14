@@ -44,6 +44,13 @@ data CompileState = CompileState
     _compileStateCurrentNode :: Node
   }
 
+initCompiledPattern :: CompiledPattern
+initCompiledPattern =
+  CompiledPattern
+    { _compiledPatBinders = [],
+      _compiledPatMkNode = id
+    }
+
 initState :: CompileState
 initState =
   CompileState
