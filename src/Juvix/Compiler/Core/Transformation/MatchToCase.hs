@@ -3,6 +3,7 @@ module Juvix.Compiler.Core.Transformation.MatchToCase where
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.NameInfo (setInfoName)
+import Juvix.Compiler.Core.Info.TypeInfo
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.MatchToCase.Data
@@ -228,20 +229,20 @@ compilePattern numPatterns = \case
       mkBinder :: Pattern -> Sem r Binder
       mkBinder = \case
         PatBinder b -> return (b ^. patternBinder)
-        PatWildcard {} ->
+        PatWildcard w ->
           return
             Binder
               { _binderName = "_",
                 _binderLocation = Nothing,
-                _binderType = mkDynamic'
+                _binderType = getInfoType (w ^. patternWildcardInfo)
               }
-        PatConstr {} -> do
+        PatConstr c' -> do
           argSym <- freshSymbol
           return
             Binder
               { _binderName = uniqueName "arg" argSym,
                 _binderLocation = Nothing,
-                _binderType = mkDynamic'
+                _binderType = getInfoType (c' ^. patternConstrInfo)
               }
 
       mkCaseFromBinders :: [Binder] -> Sem r (Node -> Node)
