@@ -156,16 +156,7 @@ parseDefinition sym ty = do
         && not (isDynamic (typeTarget ty))
     )
     $ parseFailure off "type mismatch: too many lambdas"
-  lift $ setIdentArgsInfo sym (map (toArgumentInfo . (^. lambdaLhsBinder)) is)
-  where
-    toArgumentInfo :: Binder -> ArgumentInfo
-    toArgumentInfo bi =
-      ArgumentInfo
-        { _argumentName = bi ^. binderName,
-          _argumentLocation = bi ^. binderLocation,
-          _argumentType = bi ^. binderType,
-          _argumentIsImplicit = Explicit
-        }
+  lift $ setIdentArgsInfo sym (map (argumentInfoFromBinder . (^. lambdaLhsBinder)) is)
 
 statementInductive ::
   (Member InfoTableBuilder r) =>

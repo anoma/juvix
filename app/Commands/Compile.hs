@@ -28,4 +28,4 @@ runCommand opts@CompileOptions {..} = do
 writeCoreFile :: (Members '[Embed IO, App] r) => Compile.PipelineArg -> Sem r ()
 writeCoreFile Compile.PipelineArg {..} = do
   coreFile <- Compile.outputFile _pipelineArgOptions _pipelineArgFile
-  embed $ TIO.writeFile (toFilePath coreFile) (Core.ppPrint _pipelineArgInfoTable)
+  embed $ TIO.writeFile (toFilePath coreFile) (show $ Core.ppOut Core.defaultOptions{Core._optShowDeBruijnIndices=True} _pipelineArgInfoTable)

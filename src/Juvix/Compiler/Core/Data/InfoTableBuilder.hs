@@ -39,6 +39,16 @@ getBoolSymbol = do
   ci <- getConstructorInfo (BuiltinTag TagTrue)
   return $ ci ^. constructorInductive
 
+getIOSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
+getIOSymbol = do
+  ci <- getConstructorInfo (BuiltinTag TagWrite)
+  return $ ci ^. constructorInductive
+
+getNatSymbol :: (Member InfoTableBuilder r) => Sem r Symbol
+getNatSymbol = do
+  tab <- getInfoTable
+  return $ fromJust (lookupBuiltinInductive tab BuiltinNat) ^. inductiveSymbol
+
 checkSymbolDefined :: (Member InfoTableBuilder r) => Symbol -> Sem r Bool
 checkSymbolDefined sym = do
   tab <- getInfoTable
