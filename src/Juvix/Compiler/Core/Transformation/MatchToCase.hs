@@ -49,7 +49,7 @@ shiftEmbedded wrappingLevel m = umapN go
 --
 --            * The auxillary bindings added in the translation (i.e bindings
 --              not present in the original match bindings, added for nested
---              cases).
+--              cases and case bindings).
 --
 --            * The number of previously bound matchbranches including the fail branch.
 --
@@ -68,11 +68,10 @@ shiftEmbedded wrappingLevel m = umapN go
 -- Translates to the following nested matches:
 --
 -- @
---      λ? λ? match ?$0, ?$1 with {
---        xs, x ↦ match xs$1 with {
---            :: _ y (:: _ z ys) ↦ + (+ x$3 y$2) z$1
---        }
---      }
+--       λ? λ? match ?$1, ?$0 with {
+--          x, xs ↦ match xs$0 with {
+--            :: _ y (:: _ z ys) ↦ + (+ x$4 y$2) z$1
+--          }
 -- @
 --
 -- The body of the match branch is @ + (+ x$3 y$2) z$1 @, the @x@ variable is
@@ -82,28 +81,28 @@ shiftEmbedded wrappingLevel m = umapN go
 -- The inner match compiles to:
 --
 -- @
---    λ? let ? := λ? fail "Non-exhaustive patterns" in
---       let ? := λ? case ?$0 of {
---              :: _ y arg_27 := case ?$0 of {
---                 :: _ z ys := let y := ?$4 in
+--    λ?
+--         let ? := λ? fail "Non-exhaustive patterns" in
+--         let ? := λ? case ?$0 of {
+--           :: _ y arg_11 := let y := ?$1 in case ?$1 of {
+--             :: _ z ys := let z := ?$1 in
+--                          let ys := ?$1 in
+--                              let y := ?$5 in
 --                              let z := ?$2 in
---                              let ys := ?$2 in
---                                 + (+ x$11 y$2) z$1;
---                 _ := ?$4 ?$3
---              };
---              _ := ?$1 ?$0
---            } in
---        ?$0 ?$2
+--                              let ys := ?$2 in + (+ x$15 y$2) z$1;
+--             _ := ?$5 ?$4
+--           };
+--           _ := ?$1 ?$0
 -- @
 --
 -- The body is wrapped in let bindings for `y`, `z` and `ys` in the
 -- correct order so that the indices of `y` and `z` in the body point to the
 -- correct variables above.
 --
--- The index for the free variable @x@ in the body has increased from 3 to 11.
--- This is because we have added 3 binders around the body, 3 auxillary binders
--- (arg_27 and two wildcards), 1 binder for the lambda surrounding the case and
--- 1 binder for the fail branch.
+-- The index for the free variable @x@ in the body has increased from 4 to 15.
+-- This is because we have added 3 binders around the body, 6 auxillary binders,
+-- 1 binder for the lambda surrounding the case and 1 binder for the fail
+-- branch.
 compileMatchBranch :: forall r. Members '[InfoTableBuilder] r => Indexed MatchBranch -> Sem r Node
 compileMatchBranch (Indexed branchNum br) = do
   compiledBranch <- runReader initState' (combineCompiledPatterns (map (compilePattern patternsNum) patterns))
@@ -148,8 +147,7 @@ extractOriginalBinders vs = updateBinders $ fmap getBinder <$> reverse (filterIn
     updateBinders = zipWith (over indexedIx . (+)) [0 ..]
 
 combineCompiledPatterns :: forall r. Member (Reader CompileState) r => [Sem ((Reader CompileStateNode) ': r) CompiledPattern] -> Sem r CompiledPattern
-combineCompiledPatterns ps = do
-  go indexedPatterns
+combineCompiledPatterns ps = go indexedPatterns
   where
     indexedPatterns :: [Indexed (Sem ((Reader CompileStateNode) ': r) CompiledPattern)]
     indexedPatterns = reverse (indexFrom 0 (reverse ps))
