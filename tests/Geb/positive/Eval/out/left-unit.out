@@ -1,0 +1,8 @@
+(lamb
+  lamb
+    so1
+    (coprod
+      so1
+      so1)
+    (left
+      unit))

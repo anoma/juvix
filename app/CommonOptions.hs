@@ -53,8 +53,9 @@ parseInputJuvixGebFile = do
     argument
       someFileOpt
       ( metavar "JUVIX_GEB_FILE"
-          <> help "Path to a .geb file"
+          <> help "Path to a .geb or custom .lisp file"
           <> completer juvixGebCompleter
+          <> completer juvixGebLispCompleter
       )
   pure AppPath {_pathIsInput = True, ..}
 
@@ -140,6 +141,9 @@ juvixCompleter = extCompleter "juvix"
 
 juvixCoreCompleter :: Completer
 juvixCoreCompleter = extCompleter "jvc"
+
+juvixGebLispCompleter :: Completer
+juvixGebLispCompleter = extCompleter "lisp"
 
 juvixGebCompleter :: Completer
 juvixGebCompleter = extCompleter "geb"

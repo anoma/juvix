@@ -1,204 +1,195 @@
-working-directory: ./../../../tests/
+working-directory: ./../../../../tests
 
 tests:
   - name: geb-open
     command:
-      - juvix dev geb repl
+      - juvix
+      - --no-colors
+      - dev 
+      - geb
+      - repl
     stdout:
       contains: "Welcome to the Juvix Geb REPL!"
     exit-status: 0
     
   - name: geb-quit
     command:
-      - juvix dev geb repl
+      - juvix
+      - --no-colors
+      - dev 
+      - geb
+      - repl
     stdout: 
       contains: "geb>"
     stdin: ":quit"
     exit-status: 0
 
-  - name: geb-version-shows-same-juvix-version
-    command:
-      - juvix dev geb repl
-    stdin: ":version"
-    stdout:
-      matches:
-        regex: |
-          Welcome to the Juvix Geb REPL!
-          Juvix ([0-9]+\.[0-9]+\.[0-9]\-[a-z0-9]+): .*
-          Run :help for help.*
-    exit-status: 0
-    
   - name: geb-check-type-unit
     command:
-      - juvix dev geb repl
+      - juvix
+      - --no-colors
+      - dev
+      - geb
+      - repl
+    stdin: ":type unit"
     stdout:
       contains: "so1"
-    stdin: ":type unit"
     exit-status: 0
+
+
 
   - name: geb-check-type-object
     command:
-      - juvix dev geb repl
+      - juvix
+      - --no-colors      
+      - dev
+      - geb
+      - repl
+    stdin: ":type so1"
     stdout: 
       contains: "No object inferred for a Geb object"
-    stdin: ":type so1"
     exit-status: 0
 
   - name: geb-check-type-integer
     command:
-      - juvix dev geb repl
+      - juvix
+      - --no-colors        
+      - dev
+      - geb
+      - repl
+    stdin: ":t (mul 2 3)"
     stdout: 
-      contains: "Nat → Nat"
-    stdin: ":t 1"
+      contains: "int"
     exit-status: 0    
+
 
   - name: geb-eval-and-operations
     command:
-      - juvix dev geb repl
-    stdin: "1 + 2"
+      - juvix
+      - --no-format
+      - dev
+      - geb
+      - repl
+    stdin: "(add 2 (mul 3 4))"
     stdout: 
-      containes: |
-        geb> 3
+      contains: |
+        14
     exit-status: 0    
 
   - name: geb-eval-with-spaces
     command:
-      - juvix dev geb repl
+      - juvix
+      - dev
+      - geb
+      - repl
     stdin: "  unit"
     stdout: 
       contains:
         "unit"
     exit-status:    
 
-  - name: geb-load-file
+  - name: geb-load-and-eval-gebext
     command:
       shell:
         - bash
       script: |
-        cd ./Geb/positive/Core && juvix dev geb repl
-    stdin: ":load    test001.geb"
+        cd ./Geb/positive/ && juvix dev geb repl
+    stdin: ":load    basic-app.geb"
     stdout: 
-      contains:
-        OK loaded 
-    exit-status: 1
-
-  - name: core-to-geb
-    command:
-      shell:
-        - bash
-      script: |
-        cd ./Geb/positive/Core
-        juvix dev core compile -t geb test001.jvc
-        [-f test001.lisp ]
-    stdout: 
-      contains: 
+      contains: |
+        3000
     exit-status: 0
 
-  - name: core-to-geb-only-term
+  - name: core-to-geblisp-file-generation
     command:
       shell:
         - bash
       script: |
-        cd ./Geb/positive/Core
-        juvix dev core compile -t geb test001.jvc --only-term
-        [-f test001.geb ]
+        cd ./Geb/positive
+        juvix dev core compile -t geb Core/test001.jvc
+        [ -f Core/test001.lisp ]
+        diff Core/test001.lisp test001.lisp
     stdout: 
       contains: 
+        ""
+    exit-status: 0
+
+  - name: core-to-geb-only-term-flag
+    command:
+      shell:
+        - bash
+      script: |
+        cd ./Geb/positive
+        juvix dev core compile -t geb Core/test001.jvc --only-term
+        [ -f Core/test001.geb ]
+        diff Core/test001.geb test001.geb
+    stdout: 
+      contains: 
+        ""
     exit-status: 0  
-
-  - name: geb-repl-file
-    command:
-      - juvix dev geb repl
-    args:
-      - Geb/positive/Core/test001.geb
-    stdout: 
-      contains: |
-        Ok loaded
-    exit-status: 1
-    
-  - name: geb-repl-file
-    command:
-      - juvix dev geb repl
-    args:
-      - Geb/positive/Core/test001.lisp
-    stdout: 
-      contains: |
-        Ok loaded
-    exit-status: 1
-
 
   - name: geb-root
     command:
-      - juvix dev geb repl
+      - juvix
+      - --no-colors
+      - dev
+      - geb
+      - repl
     stdin: ":root"
     stdout: 
       matches: |
-        Welcom .*
+        Welcome .*
         Juvix .*
-        Run .*
+        Type .*
         
         geb> .*/tests/
     exit-status: 0
 
-  - name: geb-eval-lisp-file
-    command:
-      - juvix dev geb eval
-    args:
-      - Geb/positive/Core/test001.lisp
-    stdout: 
-      contains: |
-        Ok loaded
-    exit-status: 1
-
-  - name: geb-eval-geb-file
-    command:
-      - juvix dev geb eval
-    args:
-      - Geb/positive/Core/test001.geb
-    stdout: 
-      contains: |
-        Ok loaded
-    exit-status: 1
-  
   - name: geb-read-file
     command:
-      - juvix dev geb read
+      - juvix
+      - dev
+      - geb
+      - read
     args:
       - Geb/positive/Core/test001.geb
-    stdout: 
-      contains: |
-        (app
+    stdout: |-
+      (app
+        (coprod
+          so1
+          so1)
+        (coprod
+          so1
+          so1)
+        (lamb
           (coprod
             so1
             so1)
           (coprod
             so1
             so1)
-          (lamb
+          (case-on
+            so1
+            so1
             (coprod
               so1
               so1)
-            (coprod
-              so1
-              so1)
-            (case-on
-              so1
+            (index 0)
+            (lamb
               so1
               (coprod
                 so1
                 so1)
-              (index 0)
-              (lamb
+              (right
+                unit))
+            (lamb
+              so1
+              (coprod
                 so1
-                (coprod
-                  so1
-                  so1)
-                (right unit))
-              (lamb
-                so1
-                (coprod
-                  so1
-                  so1)
-                (left unit))))
-          (left unit))
+                so1)
+              (left
+                unit))))
+        (left
+          unit))
+
     exit-status: 0

@@ -3,8 +3,9 @@ module BackendGeb.Eval.Base where
 import Base
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Backend.Geb qualified as Geb
-import Juvix.Parser.Error
-import Juvix.Prelude
+import Juvix.Compiler.Backend.Geb.Data.Context as Context
+import Juvix.Compiler.Backend.Geb.Pretty.Values qualified as PrettyGeb
+import Juvix.Prelude.Pretty
 
 gebEvalAssertion ::
   Path Abs File ->
@@ -14,28 +15,30 @@ gebEvalAssertion ::
 gebEvalAssertion mainFile expectedFile step = do
   step "Parse"
   input <- readFile (toFilePath mainFile)
-  let r = Geb.runParser mainFile input
-  case r of
-    Left err -> assertFailure undefined --- TODO
-    Right gebExpr -> do
+  case Geb.runParser mainFile input of
+    Left err -> assertFailure (show (pretty err))
+    Right (Geb.ExpressionObject _) -> do
+      step "No evalution for objects"
+      assertFailure (unpack Geb.objNoEvalMsg)
+    Right (Geb.ExpressionMorphism gebMorphism) -> do
+      let env :: Geb.Env =
+            Geb.Env
+              { _envEvaluatorOptions = Geb.defaultEvaluatorOptions,
+                _envContext = Context.empty
+              }
       withTempDir' $
         \dirPath -> do
           let outputFile = dirPath <//> $(mkRelFile "out.out")
-          hout <- openFile (toFilePath outputFile) WriteMode
           step "Evaluate"
-          let r' =
-                Geb.runEval
-                  Geb.RunEvalArgs
-                    { _runEvalArgsInputFile = mainFile,
-                      _runEvalArgsContent = undefined, -- TODO input,
-                      _runEvalArgsEvaluatorOptions = Geb.defaultEvaluatorOptions
-                    }
-          case r' of
+          hout <- openFile (toFilePath outputFile) WriteMode
+          let result = Geb.eval' env gebMorphism
+          case result of
             Left err -> do
               hClose hout
-              undefined -- TODO
-              -- assertFailure (show (pretty err))
+              assertFailure (show (pretty (fromJuvixError @GenericError err)))
             Right value -> do
+              hPutStrLn hout (PrettyGeb.ppPrint value)
+              hClose hout
               actualOutput <- TIO.readFile (toFilePath outputFile)
               expected <- TIO.readFile (toFilePath expectedFile)
               step "Compare expected and actual program output"
@@ -44,29 +47,20 @@ gebEvalAssertion mainFile expectedFile step = do
                 actualOutput
                 expected
 
--- unless
---   (Info.member kNoDisplayInfo (getInfo value))
---   (hPutStrLn hout (ppPrint value))
--- hClose hout
-
 gebEvalErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 gebEvalErrorAssertion mainFile step = do
-  undefined
-
--- step "Parse"
--- r <- parseFile mainFile
--- case r of
---   Left _ -> assertBool "" True
---   Right (_, Nothing) -> assertFailure "no error"
---   Right (tab, Just node) -> do
---     withTempDir'
---       ( \dirPath -> do
---           let outputFile = dirPath <//> $(mkRelFile "out.out")
---           hout <- openFile (toFilePath outputFile) WriteMode
---           step "Evaluate"
---           r' <- doEval mainFile hout tab node
---           hClose hout
---           case r' of
---             Left _ -> assertBool "" True
---             Right _ -> assertFailure "no error"
---       )
+  step "Parse"
+  input <- readFile (toFilePath mainFile)
+  case Geb.runParser mainFile input of
+    Left _ -> assertBool "" True
+    Right (Geb.ExpressionObject _) -> assertFailure "no error"
+    Right (Geb.ExpressionMorphism gebMorphism) -> do
+      step "Evaluate"
+      let env :: Geb.Env =
+            Geb.Env
+              { _envEvaluatorOptions = Geb.defaultEvaluatorOptions,
+                _envContext = Context.empty
+              }
+      case Geb.eval' env gebMorphism of
+        Left _ -> assertBool "" True
+        Right _ -> assertFailure "no error"

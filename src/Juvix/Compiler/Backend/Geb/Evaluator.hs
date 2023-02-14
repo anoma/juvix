@@ -26,7 +26,7 @@ data RunEvalArgs = RunEvalArgs
 
 makeLenses ''RunEvalArgs
 
-runEval :: RunEvalArgs -> Either JuvixError GebValue
+runEval :: RunEvalArgs -> Either JuvixError RunEvalResult
 runEval RunEvalArgs {..} =
   case Geb.runParser _runEvalArgsInputFile _runEvalArgsContent of
     Right (ExpressionMorphism m) -> do
@@ -35,7 +35,9 @@ runEval RunEvalArgs {..} =
               { _envEvaluatorOptions = _runEvalArgsEvaluatorOptions,
                 _envContext = Context.empty
               }
-      eval' env m
+      if _runEvalArgsEvaluatorOptions ^. evaluatorOptionsNormalise
+        then RunEvalResultMorphism <$> nf' env m
+        else RunEvalResultGebValue <$> eval' env m
     Right _ -> Left (error @JuvixError objNoEvalMsg)
     Left err -> Left (JuvixError err)
 

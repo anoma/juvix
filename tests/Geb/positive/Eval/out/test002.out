@@ -1,0 +1,43 @@
+(lamb
+  lamb
+    (coprod
+      so1
+      so1)
+    (coprod
+      so1
+      so1)
+    (app
+      (coprod
+        so1
+        so1)
+      (coprod
+        so1
+        so1)
+      (lamb
+        (coprod
+          so1
+          so1)
+        (coprod
+          so1
+          so1)
+        (case-on
+          so1
+          so1
+          (coprod
+            so1
+            so1)
+          (index 3)
+          (lamb
+            so1
+            (coprod
+              so1
+              so1)
+            (left
+              unit))
+          (lamb
+            so1
+            (coprod
+              so1
+              so1)
+            (index 1))))
+      (index 1)))

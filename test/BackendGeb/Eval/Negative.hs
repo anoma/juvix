@@ -13,15 +13,14 @@ root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/Geb/negative")
 
 testDescr :: NegTest -> TestDescr
-testDescr NegTest {..} = undefined
-
--- let tRoot = root <//> _relDir
---     file' = tRoot <//> _file
---  in TestDescr
---       { _testName = _name,
---         _testRoot = tRoot,
---         _testAssertion = Steps $ coreEvalErrorAssertion file'
---       }
+testDescr NegTest {..} =
+  let tRoot = root <//> _relDir
+      file' = tRoot <//> _file
+   in TestDescr
+        { _testName = _name,
+          _testRoot = tRoot,
+          _testAssertion = Steps $ gebEvalErrorAssertion file'
+        }
 
 allTests :: TestTree
 allTests =

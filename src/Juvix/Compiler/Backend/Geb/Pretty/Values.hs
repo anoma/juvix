@@ -6,7 +6,6 @@ module Juvix.Compiler.Backend.Geb.Pretty.Values
   )
 where
 
-import Juvix.Compiler.Backend.Geb.Evaluator.Data.Values
 import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Pretty.Options
 import Juvix.Compiler.Backend.Geb.Pretty.Values.Base

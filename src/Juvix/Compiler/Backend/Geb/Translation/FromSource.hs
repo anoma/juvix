@@ -32,7 +32,7 @@ fromSource fileName input =
 runParser ::
   Path Abs File ->
   Text ->
-  Either ParserError Geb.Expression
+  Either MegaparsecError Geb.Expression
 runParser fileName input =
   do
     let parser :: ParsecS r Geb.Expression
@@ -42,7 +42,7 @@ runParser fileName input =
           | otherwise = error "unknown file extension"
     case run $
       P.runParserT parser (fromAbsFile fileName) input of
-      Left err -> Left $ ErrMegaparsec (MegaparsecError err)
+      Left err -> Left (MegaparsecError err)
       Right gebTerm -> Right gebTerm
 
 parseLispSymbol :: ParsecS r Text
@@ -101,7 +101,7 @@ parseGebLisp = do
     Geb.ExpressionMorphism $
       entry
         ^. lispDefParameterMorphism
-        . Geb.typedMorphism
+          . Geb.typedMorphism
 
 parseGebExpression :: ParsecS r Geb.Expression
 parseGebExpression =

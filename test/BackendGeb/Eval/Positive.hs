@@ -14,18 +14,17 @@ root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/Geb/positive")
 
 testDescr :: PosTest -> TestDescr
-testDescr PosTest {..} = undefined
-
--- let tRoot = root <//> _relDir
---     file' = tRoot <//> _file
---     expected' = tRoot <//> _expectedFile
---  in TestDescr
---       { _testName = _name,
---         _testRoot = tRoot,
---         _testAssertion =
---           Steps $
---             gebEvalAssertion file' expected' [] (const (return ()))
---       }
+testDescr PosTest {..} =
+  let tRoot = root <//> _relDir
+      file' = tRoot <//> _file
+      expected' = tRoot <//> _expectedFile
+   in TestDescr
+        { _testName = _name,
+          _testRoot = tRoot,
+          _testAssertion =
+            Steps $
+              gebEvalAssertion file' expected'
+        }
 
 filterOutTests :: [String] -> [PosTest] -> [PosTest]
 filterOutTests out = filter (\PosTest {..} -> _name `notElem` out)

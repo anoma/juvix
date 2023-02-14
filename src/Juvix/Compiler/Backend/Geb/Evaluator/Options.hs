@@ -15,8 +15,9 @@ data EvalStrategy = CallByName | CallByValue
 defaultEvalStrategy :: EvalStrategy
 defaultEvalStrategy = CallByValue
 
-newtype EvaluatorOptions = EvaluatorOptions
-  { _evaluatorOptionsEvalStrategy :: EvalStrategy
+data EvaluatorOptions = EvaluatorOptions
+  { _evaluatorOptionsEvalStrategy :: EvalStrategy,
+    _evaluatorOptionsNormalise :: Bool
   }
 
 makeLenses ''EvaluatorOptions
@@ -28,5 +29,6 @@ defaultEvaluatorOptions :: EvaluatorOptions
 defaultEvaluatorOptions =
   EvaluatorOptions
     { _evaluatorOptionsEvalStrategy =
-        defaultEvalStrategy
+        defaultEvalStrategy,
+      _evaluatorOptionsNormalise = False
     }

@@ -3,8 +3,7 @@
 module Commands.Dev.Geb.Repl where
 
 import Commands.Base hiding (command)
-import Commands.Dev.Geb.Eval as Geb
-import Commands.Dev.Geb.Repl.Colors
+import Commands.Dev.Geb.Repl.Format
 import Commands.Dev.Geb.Repl.Options
 import Control.Exception (throwIO)
 import Control.Monad.State.Strict qualified as State
@@ -15,7 +14,6 @@ import Juvix.Extra.Version
 import Juvix.Prelude.Pretty qualified as P
 import System.Console.ANSI qualified as Ansi
 import System.Console.Haskeline
--- import System.Console.Repline
 import System.Console.Repline qualified as Repline
 
 type ReplS = State.StateT ReplState IO
@@ -34,9 +32,6 @@ data ReplState = ReplState
 
 makeLenses ''ReplState
 makeLenses ''ReplContext
-
-noFileLoadedMsg :: String
-noFileLoadedMsg = formatError <> "No file loaded. Load a file using the `:load FILE` command."
 
 replPath :: Path Abs File
 replPath = $(mkAbsFile "/repl.geb")
@@ -86,16 +81,12 @@ runCommand _opts = do
                     _runEvalArgsInputFile = epPath,
                     _runEvalArgsEvaluatorOptions = Geb.defaultEvaluatorOptions
                   }
-        case evalRes of
-          Left err -> printError err
-          Right n -> renderOut (GebValue.ppOut Geb.defaultEvaluatorOptions n)
+        printEvalResult evalRes
 
       reloadFile :: String -> Repl ()
       reloadFile _ = do
         mentryPoint <- State.gets (fmap (^. replContextEntryPoint) . (^. replStateContext))
-        case mentryPoint of
-          Just entryPoint -> loadEntryPoint entryPoint
-          Nothing -> liftIO . putStrLn $ pack noFileLoadedMsg
+        maybe noFileLoadedMsg loadEntryPoint mentryPoint
 
       pSomeFile :: String -> SomeBase File
       pSomeFile = someFile . unpack . strip . pack
@@ -125,18 +116,32 @@ runCommand _opts = do
           Right _ -> liftIO . putStrLn $ "No object inferred for a Geb object"
 
       command :: String -> Repl ()
-      command gebProgram =
+      command input =
+        Repline.dontCrash $
+          do
+            let evalRes =
+                  Geb.runEval $
+                    Geb.RunEvalArgs
+                      { _runEvalArgsContent = pack input,
+                        _runEvalArgsInputFile = replPath,
+                        _runEvalArgsEvaluatorOptions = Geb.defaultEvaluatorOptions
+                      }
+            printEvalResult evalRes
+
+      normaliseMorphism :: String -> Repl ()
+      normaliseMorphism input =
         Repline.dontCrash $ do
           let evalRes =
                 Geb.runEval $
                   Geb.RunEvalArgs
-                    { _runEvalArgsContent = pack gebProgram,
+                    { _runEvalArgsContent = pack input,
                       _runEvalArgsInputFile = replPath,
-                      _runEvalArgsEvaluatorOptions = Geb.defaultEvaluatorOptions
+                      _runEvalArgsEvaluatorOptions =
+                        Geb.defaultEvaluatorOptions
+                          { Geb._evaluatorOptionsNormalise = True
+                          }
                     }
-          case evalRes of
-            Left err -> printError err
-            Right n -> renderOut (GebValue.ppOut Geb.defaultEvaluatorOptions n)
+          printEvalResult evalRes
 
       options :: [(String, String -> Repl ())]
       options =
@@ -149,6 +154,7 @@ runCommand _opts = do
           ("reload", Repline.dontCrash . reloadFile),
           ("root", printRoot),
           ("type", inferObject),
+          ("normalise", normaliseMorphism),
           ("version", displayVersion)
         ]
 
@@ -193,20 +199,31 @@ runCommand _opts = do
         )
     )
 
+noFileLoadedMsg :: Repl ()
+noFileLoadedMsg =
+  renderOut
+    . ReplMessageDoc
+    $ P.annotate
+      ReplError
+      "No file loaded. Load a file using the `:load FILE` command."
+      <> P.line
+
 welcomeMsg :: Repl ()
 welcomeMsg =
-  liftIO . putStrLn . pack $
-    unlines
-      [ formatIntro <> "Welcome to the Juvix Geb REPL!" <> end,
-        mainFormat <> "Juvix " <> unpack versionTag ++ ": https://juvix.org." <> end,
-        "Run :help for help" ++ end
-      ]
+  renderOut
+    . ReplMessageDoc
+    $ P.annotate ReplIntro "Welcome to the Juvix Geb REPL!"
+      <> P.line
+      <> normal ("Juvix v" <> versionTag <> ": https://juvix.org.")
+      <> P.line
+      <> normal ("Type :help for help.")
+      <> P.line
 
 restartText :: Text
 restartText = "REPL restarted"
 
-promptText :: String
-promptText = formatPrompt ++ "geb> " ++ end
+replPromptText :: Repl String
+replPromptText = replString . ReplMessageDoc $ P.annotate ReplPrompt "geb> "
 
 defaultMatcher :: [(String, CompletionFunc ReplS)]
 defaultMatcher = [(":load", Repline.fileCompleter)]
@@ -214,23 +231,26 @@ defaultMatcher = [(":load", Repline.fileCompleter)]
 banner :: Repline.MultiLine -> Repl String
 banner = \case
   Repline.MultiLine -> return "... "
-  Repline.SingleLine -> return promptText
+  Repline.SingleLine -> replPromptText
 
 helpText :: String -> Repl ()
 helpText _ =
-  liftIO . putStrLn . pack $
-    unlines
-      [ mainFormat,
-        "EXPRESSION          Evaluate a Geb morphism",
-        ":help               Print this help",
-        ":load FILE          Load a file into the REPL",
-        ":reload             Reload the currently loaded file",
-        ":type EXPRESSION    Infer the type of a Geb expression",
-        ":version            Display the Juvix version",
-        ":multiline          Enter multiline mode",
-        ":root               Print the root directory of the REPL",
-        ":version            Display the Juvix version",
-        ":quit               Exit the REPL" <> end
+  renderOut
+    . ReplMessageDoc
+    . normal
+    . pack
+    $ unlines
+      [ "EXPRESSION              Evaluate a Geb morphism",
+        ":help                   Print this help",
+        ":load FILE              Load a file into the REPL",
+        ":reload                 Reload the currently loaded file",
+        ":type EXPRESSION        Infer the type of a Geb morphism",
+        ":normalise EXPRESSION   Return the normal form of a Geb morphism",
+        ":version                Display the Juvix version",
+        ":multiline              Enter multiline mode",
+        ":root                   Print the root directory of the REPL",
+        ":version                Display the Juvix version",
+        ":quit                   Exit the REPL"
       ]
 
 multilineCmd :: String
@@ -252,6 +272,12 @@ replMakeAbsolute = \case
     invokeDir <- State.gets (^. replStateInvokeDir)
     return (invokeDir <//> r)
 
+replString :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl String
+replString t = do
+  opts <- State.gets (^. replStateGlobalOptions)
+  hasAnsi <- liftIO (Ansi.hSupportsANSIColor stdout)
+  return . unpack $ P.toAnsiText (not (opts ^. globalNoColors) && hasAnsi) t
+
 render' :: (P.HasAnsiBackend a, P.HasTextBackend a) => a -> Repl ()
 render' t = do
   opts <- State.gets (^. replStateGlobalOptions)
@@ -265,4 +291,16 @@ printError :: JuvixError -> Repl ()
 printError e = do
   opts <- State.gets (^. replStateGlobalOptions)
   hasAnsi <- liftIO (Ansi.hSupportsANSIColor stderr)
-  liftIO $ hPutStrLn stderr $ run (runReader (project' @GenericOptions opts) (Error.render (not (opts ^. globalNoColors) && hasAnsi) False e))
+  liftIO
+    . hPutStrLn stderr
+    . run
+    . runReader (project' @GenericOptions opts)
+    $ Error.render (not (opts ^. globalNoColors) && hasAnsi) False e
+
+printEvalResult :: Either JuvixError Geb.RunEvalResult -> Repl ()
+printEvalResult = \case
+  Left err -> printError err
+  Right (Geb.RunEvalResultGebValue v) ->
+    renderOut (GebValue.ppOut Geb.defaultEvaluatorOptions v)
+  Right (Geb.RunEvalResultMorphism morphism) ->
+    renderOut (Geb.ppOut Geb.defaultEvaluatorOptions morphism)
