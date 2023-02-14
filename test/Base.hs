@@ -16,7 +16,6 @@ import Juvix.Prelude
 import Juvix.Prelude.Env
 import Test.Tasty
 import Test.Tasty.HUnit
-import Text.Show.Pretty hiding (Html)
 
 data AssertionDescr
   = Single Assertion
@@ -49,16 +48,22 @@ mkTest TestDescr {..} = case _testAssertion of
   Single assertion -> testCase _testName $ withCurrentDir _testRoot assertion
   Steps steps -> testCaseSteps _testName (withCurrentDir _testRoot . steps)
 
-assertEqDiff :: (Eq a, Show a) => String -> a -> a -> Assertion
-assertEqDiff msg a b
+assertEqDiffText :: String -> Text -> Text -> Assertion
+assertEqDiffText = assertEqDiff unpack
+
+assertEqDiff :: Eq a => (a -> String) -> String -> a -> a -> Assertion
+assertEqDiff show_ msg a b
   | a == b = return ()
   | otherwise = do
       putStrLn (pack $ ppDiff (getGroupedDiff pa pb))
       putStrLn "End diff"
       Monad.fail msg
   where
-    pa = lines $ ppShow a
-    pb = lines $ ppShow b
+    pa = lines $ show_ a
+    pb = lines $ show_ b
+
+assertEqDiffShow :: (Eq a, Show a) => String -> a -> a -> Assertion
+assertEqDiffShow = assertEqDiff show
 
 assertCmdExists :: Path Rel File -> Assertion
 assertCmdExists cmd =

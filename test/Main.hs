@@ -6,6 +6,7 @@ import BackendC qualified
 import Base
 import Compilation qualified
 import Core qualified
+import Format qualified
 import Internal qualified
 import Parsing qualified
 import Reachability qualified
@@ -35,7 +36,8 @@ fastTests =
       Termination.allTests,
       Arity.allTests,
       Typecheck.allTests,
-      Reachability.allTests
+      Reachability.allTests,
+      Format.allTests
     ]
 
 main :: IO ()

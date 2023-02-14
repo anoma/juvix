@@ -122,6 +122,14 @@ morpheme = morpheme' (const False)
 delimiterSymbols :: [Char]
 delimiterSymbols = ","
 
+isDelimiterStr :: Text -> Bool
+isDelimiterStr t = case unpack t of
+  [c] -> isDelimiter c
+  _ -> False
+
+isDelimiter :: Char -> Bool
+isDelimiter = (`elem` delimiterSymbols)
+
 validFirstChar :: Char -> Bool
 validFirstChar c = not (isNumber c || isSpace c || (c `elem` reservedSymbols))
 

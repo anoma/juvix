@@ -44,12 +44,12 @@ clangAssertion inputFile expectedFile stdinText step = do
   step "Compile C to WASM32-WASI"
   actualWasm <- clangCompile (wasiArgs sysrootPath) inputFile $(mkRelFile "Program.wasm") executeWasm step
   step "Compare expected and actual program output"
-  assertEqDiff ("check: WASM output = " <> toFilePath expectedFile) actualWasm expected
+  assertEqDiffText ("check: WASM output = " <> toFilePath expectedFile) actualWasm expected
 
   step "Compile C to native 64-bit code"
   actualNative <- clangCompile native64Args inputFile $(mkRelFile "Program") executeNative step
   step "Compare expected and actual program output"
-  assertEqDiff ("check: native output = " <> toFilePath expectedFile) actualNative expected
+  assertEqDiffText ("check: native output = " <> toFilePath expectedFile) actualNative expected
 
 commonArgs :: Path Abs File -> [String]
 commonArgs outputFile =

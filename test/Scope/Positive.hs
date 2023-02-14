@@ -116,9 +116,9 @@ testDescr PosTest {..} = helper renderCodeOld "" : [helper renderCodeNew " (with
                     pmodules' = p' ^. Parser.resultModules
                     parsedPrettyModules = parsedPretty' ^. Parser.resultModules
 
-                assertEqDiff "check: scope . parse . pretty . scope . parse = scope . parse" smodules smodules'
-                assertEqDiff "check: parse . pretty . scope . parse = parse" pmodules pmodules'
-                assertEqDiff "check: parse . pretty . parse = parse" pmodules parsedPrettyModules
+                assertEqDiffShow "check: scope . parse . pretty . scope . parse = scope . parse" smodules smodules'
+                assertEqDiffShow "check: parse . pretty . scope . parse = parse" pmodules pmodules'
+                assertEqDiffShow "check: parse . pretty . parse = parse" pmodules parsedPrettyModules
             }
 
 allTests :: TestTree

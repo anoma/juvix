@@ -102,7 +102,7 @@ morpheme' loc doc = do
     popComment = do
       cs <- gets (^. builderComments)
       case cs of
-        (h : hs)
+        h : hs
           | cmp h -> do
               modify' (set builderComments hs)
               return (Just h)

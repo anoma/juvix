@@ -122,7 +122,7 @@ hang' :: Doc ann -> Doc ann
 hang' = hang 2
 
 oneLineOrNext :: Doc ann -> Doc ann
-oneLineOrNext x = PP.group (flatAlt (line <> indent' x) x)
+oneLineOrNext x = PP.group (flatAlt (line <> indent' x) (space <> x))
 
 ordinal :: Int -> Doc a
 ordinal = \case

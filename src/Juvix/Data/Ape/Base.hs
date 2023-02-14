@@ -19,11 +19,17 @@ data Cape a
   | CapeAppChain (AppChain a)
   | CapeUChain (UChain a)
 
+data Link a = Link
+  { _linkOp :: a,
+    _linkIsComma :: Bool,
+    _linkArg :: Cape a
+  }
+
 -- | A binary chain of application with the same fixity
 data Chain a = Chain
   { _chainFixity :: Fixity,
     _chainHead :: Cape a,
-    _chainLinks :: NonEmpty (a, Cape a)
+    _chainLinks :: NonEmpty (Link a)
   }
 
 data AppChain a = AppChain
@@ -52,6 +58,10 @@ data Infix a = Infix
   { _infixFixity :: Fixity,
     _infixLeft :: Ape a,
     _infixOp :: a,
+    -- | When isComma is set to True, the operator will be printed without left
+    -- space if the chain fits in the same line, otherwise it will behave as a
+    -- regular infix operator.
+    _infixIsComma :: Bool,
     _infixRight :: Ape a
   }
 
@@ -67,6 +77,7 @@ makeLenses ''AppChain
 makeLenses ''UChain
 makeLenses ''Infix
 makeLenses ''Postfix
+makeLenses ''Link
 
 toCape :: forall a. Ape a -> Cape a
 toCape = \case
@@ -103,7 +114,7 @@ toCape = \case
               }
 
     unfoldInfix :: Infix a -> Chain a
-    unfoldInfix (Infix fx l op r)
+    unfoldInfix (Infix fx l op isComma r)
       | isLeftAssoc fx = leftAssoc
       | isRightAssoc fx = rightAssoc
       | otherwise = noAssoc
@@ -113,7 +124,7 @@ toCape = \case
           Chain
             { _chainFixity = fx,
               _chainHead = toCape l,
-              _chainLinks = pure (op, toCape r)
+              _chainLinks = pure (Link op isComma (toCape r))
             }
 
         rightAssoc :: Chain a
@@ -121,22 +132,22 @@ toCape = \case
           Chain
             { _chainFixity = fx,
               _chainHead = toCape l,
-              _chainLinks = go op r
+              _chainLinks = go op isComma r
             }
           where
-            go :: a -> Ape a -> NonEmpty (a, Cape a)
-            go prevOp = \case
-              ApeInfix (Infix fx' l' op' r')
-                | fx == fx' -> pure (prevOp, toCape l') <> go op' r'
-              e -> pure (prevOp, toCape e)
+            go :: a -> Bool -> Ape a -> NonEmpty (Link a)
+            go prevOp prevIsComma = \case
+              ApeInfix (Infix fx' l' op' isComma' r')
+                | fx == fx' -> pure (Link prevOp prevIsComma (toCape l')) <> go op' isComma' r'
+              e -> pure (Link prevOp prevIsComma (toCape e))
 
         leftAssoc :: Chain a
-        leftAssoc = go (pure (op, toCape r)) l
+        leftAssoc = go (pure (Link op isComma (toCape r))) l
           where
-            go :: NonEmpty (a, Cape a) -> Ape a -> Chain a
+            go :: NonEmpty (Link a) -> Ape a -> Chain a
             go ac = \case
-              ApeInfix (Infix fx' l' op' r')
-                | fx == fx' -> go (pure (op', toCape r') <> ac) l'
+              ApeInfix (Infix fx' l' op' isComma' r')
+                | fx == fx' -> go (pure (Link op' isComma' (toCape r')) <> ac) l'
               e ->
                 Chain
                   { _chainFixity = fx,

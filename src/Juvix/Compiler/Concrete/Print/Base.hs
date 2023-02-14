@@ -193,12 +193,13 @@ instance PrettyPrint (TypeSignature 'Scoped) where
     doc'
       ?<> builtin'
       <?+> termin'
-        ?<> hang
-          ( name'
-              <+> noLoc P.kwColon
-              <+> type'
-              <+?> body'
-          )
+        ?<> ( name'
+                <+> noLoc P.kwColon
+                <+> nest
+                  ( type'
+                      <+?> body'
+                  )
+            )
 
 instance PrettyPrint Pattern where
   ppCode = ppMorpheme
@@ -274,7 +275,7 @@ instance PrettyPrint (FunctionClause 'Scoped) where
     clauseFun'
       <+?> clausePatterns'
       <+> noLoc P.kwAssign
-      <+> oneLineOrNext clauseBody'
+        <> oneLineOrNext clauseBody'
 
 ppPatternAtom :: forall r. (Members '[Reader Options, ExactPrint] r) => PatternArg -> Sem r ()
 ppPatternAtom pat =
@@ -300,7 +301,7 @@ instance PrettyPrint (InductiveConstructorDef 'Scoped) where
     let constructorName' = region (P.annDef _constructorName) (ppCode _constructorName)
         constructorType' = ppCode _constructorType
         doc' = ppCode <$> _constructorDoc
-    hang (pipeHelper <+> doc' ?<> constructorName' <+> noLoc P.kwColon <+> constructorType')
+    nest (pipeHelper <+> doc' ?<> constructorName' <+> noLoc P.kwColon <+> constructorType')
     where
       -- we use this helper so that comments appear before the first optional pipe if the pipe was omitted
       pipeHelper :: Sem r ()
