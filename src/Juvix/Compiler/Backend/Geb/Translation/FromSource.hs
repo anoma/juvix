@@ -5,6 +5,7 @@ module Juvix.Compiler.Backend.Geb.Translation.FromSource
 where
 
 import Juvix.Compiler.Backend.Geb.Keywords
+import Juvix.Compiler.Backend.Geb.Language (typedMorphism)
 import Juvix.Compiler.Backend.Geb.Language qualified as Geb
 import Juvix.Compiler.Backend.Geb.Translation.FromSource.Lexer
 import Juvix.Parser.Error
@@ -45,6 +46,22 @@ runParser fileName input =
       Left err -> Left (MegaparsecError err)
       Right gebTerm -> Right gebTerm
 
+runParser' ::
+  Path Abs File ->
+  Text ->
+  Either MegaparsecError Geb.TypedMorphism
+runParser' fileName input =
+  do
+    let parser :: ParsecS r Geb.TypedMorphism
+        parser
+          | isJuvixGebFile fileName = parseTypedMorphism
+          | isLispFile fileName = parseGebLisp'
+          | otherwise = error "unknown file extension"
+    case run $
+      P.runParserT parser (fromAbsFile fileName) input of
+      Left err -> Left (MegaparsecError err)
+      Right gebTerm -> Right gebTerm
+
 parseLispSymbol :: ParsecS r Text
 parseLispSymbol =
   P.label "<lisp symbol>" $ do
@@ -65,8 +82,8 @@ parseLispExpr =
   void parseLispSymbol
     <|> parseLispList
 
-parseTypeMorphism :: ParsecS r Geb.TypedMorphism
-parseTypeMorphism =
+parseTypedMorphism :: ParsecS r Geb.TypedMorphism
+parseTypedMorphism =
   parens $ do
     symbol "typed"
     m <- morphism
@@ -83,8 +100,8 @@ parseDefParameter =
     parens $ do
       symbol "defparameter"
       n <- parseLispSymbol
-      m <- parseTypeMorphism
-      return $
+      m <- parseTypedMorphism
+      return
         LispDefParameter
           { _lispDefParameterName = n,
             _lispDefParameterMorphism = m
@@ -92,16 +109,22 @@ parseDefParameter =
 
 parseGebLisp :: ParsecS r Geb.Expression
 parseGebLisp = do
+  tyMorph <- parseGebLisp'
+  return $
+    Geb.ExpressionMorphism $
+      tyMorph
+        ^. typedMorphism
+
+parseGebLisp' :: ParsecS r Geb.TypedMorphism
+parseGebLisp' = do
   space
   P.label "<defpackage>" parseLispExpr
   P.label "<in-package>" parseLispExpr
   entry <- parseDefParameter
   P.eof
   return $
-    Geb.ExpressionMorphism $
-      entry
-        ^. lispDefParameterMorphism
-          . Geb.typedMorphism
+    entry
+      ^. lispDefParameterMorphism
 
 parseGebExpression :: ParsecS r Geb.Expression
 parseGebExpression =

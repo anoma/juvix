@@ -16,11 +16,8 @@ import Juvix.Compiler.Backend.Geb.Translation.FromSource as Geb
 import Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.Inference as Geb
 
 data RunEvalArgs = RunEvalArgs
-  { -- | The input file
-    _runEvalArgsInputFile :: Path Abs File,
-    -- | The content of the input file
+  { _runEvalArgsInputFile :: Path Abs File,
     _runEvalArgsContent :: Text,
-    -- | The options
     _runEvalArgsEvaluatorOptions :: EvaluatorOptions
   }
 
@@ -43,6 +40,26 @@ runEval RunEvalArgs {..} =
 
 objNoEvalMsg :: Text
 objNoEvalMsg = "Geb objects cannot be evaluated, only morphisms."
+
+eval' :: Env -> Morphism -> Either JuvixError GebValue
+eval' env m = run . runError $ runReader env (eval m)
+
+nf' :: Env -> Morphism -> Either JuvixError Morphism
+nf' env m = run . runError $ runReader env (nf m)
+
+nf ::
+  Members '[Reader Env, Error JuvixError] r =>
+  Morphism ->
+  Sem r Morphism
+nf m = do
+  val :: GebValue <- eval m
+  obj :: Object <- runReader defaultInferenceEnv (inferObject m)
+  fromGebValue
+    ( if needObjectInfo val
+        then Just obj
+        else Nothing
+    )
+    val
 
 eval ::
   Members '[Reader Env, Error JuvixError] r =>
@@ -214,23 +231,3 @@ valueTrue = GebValueMorphismLeft GebValueMorphismUnit
 
 valueFalse :: GebValue
 valueFalse = GebValueMorphismRight GebValueMorphismUnit
-
-eval' :: Env -> Morphism -> Either JuvixError GebValue
-eval' env m = run . runError $ runReader env (eval m)
-
-nf ::
-  Members '[Reader Env, Error JuvixError] r =>
-  Morphism ->
-  Sem r Morphism
-nf m = do
-  v :: GebValue <- eval m
-  o :: Object <- runReader defaultInferenceEnv (inferObject m)
-  fromGebValue
-    ( if needObjectInfo v
-        then Just o
-        else Nothing
-    )
-    v
-
-nf' :: Env -> Morphism -> Either JuvixError Morphism
-nf' env m = run . runError $ runReader env (nf m)
