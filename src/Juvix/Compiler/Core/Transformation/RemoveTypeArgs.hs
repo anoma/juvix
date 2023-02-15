@@ -74,6 +74,9 @@ convertNode tab = convert mempty
       NLam (Lambda {..})
         | isTypeConstr (_lambdaBinder ^. binderType) ->
             End (convert (BL.cons _lambdaBinder vars) _lambdaBody)
+      NLet (Let {..})
+        | isTypeConstr (_letItem ^. letItemBinder . binderType) ->
+            End (convert (BL.cons (_letItem ^. letItemBinder) vars) _letBody)
       NPi (Pi {..})
         | isTypeConstr (_piBinder ^. binderType) && not (isTypeConstr _piBody) ->
             End (convert (BL.cons _piBinder vars) _piBody)
