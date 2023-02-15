@@ -66,7 +66,22 @@ fromGebValue ::
 fromGebValue ty = \case
   GebValueMorphismInteger i -> return $ MorphismInteger i
   GebValueMorphismUnit -> return MorphismUnit
-  GebValueClosure cls -> return $ MorphismLambda $ cls ^. valueClosureLambda
+  GebValueClosure cls -> case ty of
+    Just (ObjectHom funObj) ->
+      return $
+        MorphismLambda
+          Lambda
+            { _lambdaVarType = funObj ^. homDomain,
+              _lambdaBodyType = funObj ^. homCodomain,
+              _lambdaBody =
+                cls ^. valueClosureLambdaBody
+            }
+    Just _ ->
+      fromGebValueError
+        "Got Helper wrong object. Expected function object (lambda)"
+        Nothing
+        ty
+    Nothing -> fromGebValueError "need object info" Nothing ty
   val@(GebValueMorphismLeft m) -> case ty of
     Just (ObjectCoproduct _) -> MorphismLeft <$> fromGebValue ty m
     Just _ ->

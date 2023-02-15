@@ -3,9 +3,11 @@ module Juvix.Compiler.Backend.Geb.Translation.FromSource.Analysis.TypeChecking.E
 import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Pretty
 
+-- | Errors that can occur during type checking / inference
 data CheckingError
   = CheckingErrorTypeMismatch TypeMismatch
   | CheckingErrorLackOfInformation LackOfInformation
+  | CheckingErrorWrongObject WrongObject
   deriving stock (Show, Eq)
 
 data TypeMismatch = TypeMismatch
@@ -22,8 +24,17 @@ data LackOfInformation = LackOfInformation
   }
   deriving stock (Show, Eq)
 
+data WrongObject = WrongObject
+  { _wrongObjectExpected :: Maybe Object,
+    _wrongObjectActual :: Maybe Object,
+    _wrongObjectMorphism :: Morphism,
+    _wrongObjectMessage :: String
+  }
+  deriving stock (Show, Eq)
+
 makeLenses ''TypeMismatch
 makeLenses ''LackOfInformation
+makeLenses ''WrongObject
 
 instance ToGenericError TypeMismatch where
   genericError e = ask >>= generr
@@ -84,9 +95,44 @@ instance ToGenericError LackOfInformation where
                     <> line
                     <> indent' (ppCode' opts' o)
 
+instance ToGenericError WrongObject where
+  genericError e = ask >>= generr
+    where
+      generr opts =
+        return
+          GenericError
+            { _genericErrorLoc = defaultLoc,
+              _genericErrorMessage = ppOutput msg,
+              _genericErrorIntervals = [defaultLoc]
+            }
+        where
+          opts' = fromGenericOptions opts
+          msg =
+            pretty (e ^. wrongObjectMessage)
+              <> line
+              <> "The morphism:"
+              <> line
+              <> indent' (ppCode' opts' (e ^. wrongObjectMorphism))
+              <> case e ^. wrongObjectExpected of
+                Nothing -> mempty
+                Just o ->
+                  line
+                    <> "The expected object:"
+                    <> line
+                    <> indent' (ppCode' opts' o)
+              <> case e ^. wrongObjectActual of
+                Nothing -> mempty
+                Just o ->
+                  line
+                    <> "The actual object:"
+                    <> line
+                    <> indent' (ppCode' opts' o)
+
 instance ToGenericError CheckingError where
-  genericError (CheckingErrorTypeMismatch e) = genericError e
-  genericError (CheckingErrorLackOfInformation e) = genericError e
+  genericError = \case
+    CheckingErrorTypeMismatch e -> genericError e
+    CheckingErrorLackOfInformation e -> genericError e
+    CheckingErrorWrongObject e -> genericError e
 
 -- TODO: use the real file
 mockFile :: Path Abs File

@@ -50,7 +50,7 @@ instance NFData ValueMorphismBinop
 
 data ValueClosure = ValueClosure
   { _valueClosureEnv :: Context GebValue,
-    _valueClosureLambda :: Lambda
+    _valueClosureLambdaBody :: Morphism
   }
   deriving stock (Show, Eq, Generic)
 

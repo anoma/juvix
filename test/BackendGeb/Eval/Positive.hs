@@ -63,14 +63,3 @@ tests =
       $(mkRelFile "test005.lisp")
       $(mkRelFile "Eval/out/test005.out")
   ]
-
--- PosTest
---   "IO builtins"
---   $(mkRelDir ".")
---   $(mkRelFile "test004.jvc")
---   $(mkRelFile "out/test004.out"),
--- PosTest
---   "Higher-order functions"
---   $(mkRelDir ".")
---   $(mkRelFile "test005.jvc")
---   $(mkRelFile "out/test005.out")

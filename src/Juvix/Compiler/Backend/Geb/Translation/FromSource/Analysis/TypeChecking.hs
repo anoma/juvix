@@ -44,6 +44,46 @@ infer = \case
   MorphismUnit -> return ObjectTerminal
   MorphismInteger {} -> return ObjectInteger
   MorphismAbsurd x -> infer x
+  MorphismApplication app -> do
+    let domainTy = app ^. applicationDomainType
+        codomainTy = app ^. applicationCodomainType
+        homTy =
+          ObjectHom $
+            Hom {_homDomain = domainTy, _homCodomain = codomainTy}
+    funTy <-
+      local
+        (over inferenceEnvTypeInfo (const (Just homTy)))
+        (infer (app ^. applicationLeft))
+    argTy <-
+      local
+        (over inferenceEnvTypeInfo (const (Just domainTy)))
+        (infer (app ^. applicationRight))
+    case funTy of
+      ObjectHom h -> do
+        unless
+          (h ^. homDomain == argTy)
+          ( throw
+              . JuvixError
+              $ CheckingErrorWrongObject
+                WrongObject
+                  { _wrongObjectExpected = Just $ h ^. homDomain,
+                    _wrongObjectActual = Just argTy,
+                    _wrongObjectMorphism = app ^. applicationRight,
+                    _wrongObjectMessage = "Type mismatch: domain of the function and the argument."
+                  }
+          )
+        return $ h ^. homCodomain
+      obj ->
+        ( throw
+            . JuvixError
+            $ CheckingErrorWrongObject
+              WrongObject
+                { _wrongObjectMessage = "Left side of the application should be a function",
+                  _wrongObjectExpected = Nothing,
+                  _wrongObjectActual = Just obj,
+                  _wrongObjectMorphism = app ^. applicationLeft
+                }
+        )
   MorphismPair pair -> do
     let lType = pair ^. pairLeftType
         rType = pair ^. pairRightType
@@ -107,27 +147,6 @@ infer = \case
           { _homDomain = l ^. lambdaVarType,
             _homCodomain = l ^. lambdaBodyType
           }
-  MorphismApplication app -> do
-    let leftTy = app ^. applicationDomainType -- A -> B
-        rightTy = app ^. applicationCodomainType -- A
-        homTy = ObjectHom $ Hom {_homDomain = rightTy, _homCodomain = leftTy}
-    lTy <-
-      local
-        (over inferenceEnvTypeInfo (const (Just homTy)))
-        ( infer
-            (app ^. applicationLeft)
-        )
-    rTy <-
-      local
-        (over inferenceEnvTypeInfo (const (Just rightTy)))
-        (infer (app ^. applicationRight))
-    case lTy of
-      ObjectHom h -> do
-        unless
-          (h ^. homDomain == rTy)
-          (errorInferObject "Type mismatch: domain of the function and the argument")
-        return $ h ^. homCodomain
-      _ -> errorInferObject "Left side of the application should be a function"
   MorphismBinop op -> do
     let outTy = objectBinop op
     aTy <-
@@ -145,20 +164,30 @@ infer = \case
   MorphismVar v -> do
     ctx <- asks (^. inferenceEnvContext)
     let varTy = Context.lookup (v ^. varIndex) ctx
-    tyInfo <-
-      fromMaybe (error "Expected type")
-        <$> asks (^. inferenceEnvTypeInfo)
-    unless
-      (varTy == tyInfo)
-      ( errorInferObject $
-          "\nType mismatch: variable "
-            <> ppPrint (MorphismVar v)
-            <> " has type:\n"
-            <> ppPrint varTy
-            <> " but it's expected to have type:\n"
-            <> ppPrint tyInfo
-      )
-    return varTy
+    tyInfo' <- asks (^. inferenceEnvTypeInfo)
+    case tyInfo' of
+      Nothing ->
+        throw
+          . JuvixError
+          $ CheckingErrorLackOfInformation
+            LackOfInformation
+              { _lackOfInformationMorphism = Just (MorphismVar v),
+                _lacOfInformationHelperObject = Nothing,
+                _lackOfInformationMessage = "Expected type information for variable"
+              }
+      Just tyInfo -> do
+        unless
+          (varTy == tyInfo)
+          ( throw
+              . JuvixError
+              $ CheckingErrorTypeMismatch
+                TypeMismatch
+                  { _typeMismatchExpected = tyInfo,
+                    _typeMismatchActual = varTy,
+                    _typeMismatchMorphism = MorphismVar v
+                  }
+          )
+        return varTy
   -- FIXME: Once https://github.com/anoma/geb/issues/53 is fixed, we should
   -- modify the following cases, and use the type information provided.
   MorphismLeft a -> do
@@ -172,15 +201,36 @@ infer = \case
             (infer a)
         unless
           (aTy == leftTy)
-          (errorInferObject "Type mismatch: left morphism")
+          ( throw
+              . JuvixError
+              $ CheckingErrorTypeMismatch
+                TypeMismatch
+                  { _typeMismatchExpected = aTy,
+                    _typeMismatchActual = leftTy,
+                    _typeMismatchMorphism = MorphismLeft a
+                  }
+          )
         return cTy
-      Just _ -> errorInferObject "Expected a coproduct object for a left morphism."
+      Just ty ->
+        throw
+          . JuvixError
+          $ CheckingErrorWrongObject
+            WrongObject
+              { _wrongObjectExpected = Nothing,
+                _wrongObjectActual = Just ty,
+                _wrongObjectMorphism = MorphismLeft a,
+                _wrongObjectMessage = "Expected a coproduct object for a left morphism."
+              }
       Nothing ->
-        errorInferObject $
-          lackOfInformation
-            <> " on the left morphism:\n\t"
-            <> ppPrint a
-  MorphismRight b -> do
+        throw
+          . JuvixError
+          $ CheckingErrorLackOfInformation
+            LackOfInformation
+              { _lackOfInformationMorphism = Just (MorphismLeft a),
+                _lacOfInformationHelperObject = tyInfo,
+                _lackOfInformationMessage = "on a left morphism"
+              }
+  MorphismRight bMorph -> do
     tyInfo <- asks (^. inferenceEnvTypeInfo)
     case tyInfo of
       Just cTy@(ObjectCoproduct coprod) -> do
@@ -188,13 +238,38 @@ infer = \case
         bTy <-
           local
             (over inferenceEnvTypeInfo (const (Just rightTy)))
-            (infer b)
+            (infer bMorph)
         unless
           (bTy == rightTy)
-          (errorInferObject "Type mismatch: right morphism")
+          ( throw
+              . JuvixError
+              $ CheckingErrorTypeMismatch
+                TypeMismatch
+                  { _typeMismatchExpected = bTy,
+                    _typeMismatchActual = rightTy,
+                    _typeMismatchMorphism = MorphismRight bMorph
+                  }
+          )
         return cTy
-      Just _ -> errorInferObject "Expected a coproduct object for a right morphism."
-      Nothing -> errorInferObject $ lackOfInformation <> " on a right morphism"
+      Just ty ->
+        throw
+          . JuvixError
+          $ CheckingErrorWrongObject
+            WrongObject
+              { _wrongObjectExpected = Nothing,
+                _wrongObjectActual = Just ty,
+                _wrongObjectMorphism = MorphismRight bMorph,
+                _wrongObjectMessage = "Expected a coproduct object for a right morphism."
+              }
+      Nothing ->
+        throw
+          . JuvixError
+          $ CheckingErrorLackOfInformation
+            LackOfInformation
+              { _lackOfInformationMorphism = Just (MorphismRight bMorph),
+                _lacOfInformationHelperObject = tyInfo,
+                _lackOfInformationMessage = "on a right morphism"
+              }
 
 errorInferObject :: Text -> a
 errorInferObject = error . ("infer: " <>)

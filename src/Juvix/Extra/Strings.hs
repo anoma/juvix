@@ -575,6 +575,15 @@ gebSnd = "snd"
 gebLamb :: IsString s => s
 gebLamb = "lamb"
 
+gebValueClosure :: IsString s => s
+gebValueClosure = "cls"
+
+gebValueClosureEnv :: IsString s => s
+gebValueClosureEnv = "env"
+
+lispNil :: IsString s => s
+lispNil = "nil"
+
 gebApp :: IsString s => s
 gebApp = "app"
 

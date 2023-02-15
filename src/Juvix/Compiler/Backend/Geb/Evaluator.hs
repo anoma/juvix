@@ -42,7 +42,8 @@ objNoEvalMsg :: Text
 objNoEvalMsg = "Geb objects cannot be evaluated, only morphisms."
 
 eval' :: Env -> Morphism -> Either JuvixError GebValue
-eval' env m = run . runError $ runReader env (eval m)
+eval' env m =
+  run . runError $ runReader env $ mapError (JuvixError @EvalError) $ eval m
 
 nf' :: Env -> Morphism -> Either JuvixError Morphism
 nf' env m = run . runError $ runReader env (nf m)
@@ -52,19 +53,24 @@ nf ::
   Morphism ->
   Sem r Morphism
 nf m = do
-  val :: GebValue <- eval m
+  val :: GebValue <- mapError (JuvixError @EvalError) $ eval m
   obj :: Object <- runReader defaultInferenceEnv (infer m)
   if
       | needObjectInfo val -> fromGebValue (Just obj) val
       | otherwise -> fromGebValue Nothing val
 
 eval ::
-  Members '[Reader Env, Error JuvixError] r =>
+  Members '[Reader Env, Error EvalError] r =>
   Morphism ->
   Sem r GebValue
 eval morph = case morph of
   MorphismAbsurd _ ->
-    evalError "Absurd can not be evaluated." Nothing (Just morph)
+    throw
+      EvalError
+        { _evalErrorMsg = "Absurd can not be evaluated.",
+          _evalErrorGebValue = Nothing,
+          _evalErrorGebExpression = Just morph
+        }
   MorphismVar var -> do
     ctx <- asks (^. envContext)
     return $ Context.lookup (var ^. varIndex) ctx
@@ -85,20 +91,24 @@ eval morph = case morph of
       GebValueMorphismPair pair ->
         return $ pair ^. valueMorphismPairLeft
       _ ->
-        evalError
-          "First can only be applied to pairs."
-          Nothing
-          (Just morph)
+        throw
+          EvalError
+            { _evalErrorMsg = "First can only be applied to pairs.",
+              _evalErrorGebValue = Nothing,
+              _evalErrorGebExpression = Just morph
+            }
   MorphismSecond s -> do
     res <- eval $ s ^. secondValue
     case res of
       GebValueMorphismPair pair ->
         return $ pair ^. valueMorphismPairRight
       _ ->
-        evalError
-          "Second can only be applied to pairs."
-          (Just res)
-          (Just morph)
+        throw
+          EvalError
+            { _evalErrorMsg = "Second can only be applied to pairs.",
+              _evalErrorGebValue = Just res,
+              _evalErrorGebExpression = Just morph
+            }
   MorphismBinop op -> applyBinop op
   MorphismApplication app ->
     apply (app ^. applicationLeft) (app ^. applicationRight)
@@ -107,7 +117,7 @@ eval morph = case morph of
     return $
       GebValueClosure $
         ValueClosure
-          { _valueClosureLambda = lambda,
+          { _valueClosureLambdaBody = lambda ^. lambdaBody,
             _valueClosureEnv = ctx
           }
   MorphismLeft m -> GebValueMorphismLeft <$> eval m
@@ -136,13 +146,15 @@ eval morph = case morph of
         fun <- eval fun'
         apply' fun rightArg
       _ ->
-        evalError
-          "Case can only be applied to terms of the coproduct object."
-          (Just vCaseOn)
-          (Just morph)
+        throw
+          EvalError
+            { _evalErrorMsg = "Case can only be applied to terms of the coproduct object.",
+              _evalErrorGebValue = Just vCaseOn,
+              _evalErrorGebExpression = Just morph
+            }
 
 apply ::
-  Members '[Reader Env, Error JuvixError] r =>
+  Members '[Reader Env, Error EvalError] r =>
   Morphism ->
   Morphism ->
   Sem r GebValue
@@ -157,11 +169,17 @@ apply fun' arg' = do
   case fun of
     GebValueClosure cls ->
       local (over envContext (Context.cons arg)) $
-        eval (cls ^. valueClosureLambda . lambdaBody)
-    _ -> evalError "Can only apply functions." (Just fun) (Just fun')
+        eval (cls ^. valueClosureLambdaBody)
+    _ ->
+      throw
+        EvalError
+          { _evalErrorMsg = "Can only apply functions.",
+            _evalErrorGebValue = Just fun,
+            _evalErrorGebExpression = Just fun'
+          }
 
 apply' ::
-  Members '[Reader Env, Error JuvixError] r =>
+  Members '[Reader Env, Error EvalError] r =>
   GebValue ->
   GebValue ->
   Sem r GebValue
@@ -169,11 +187,17 @@ apply' fun arg =
   case fun of
     GebValueClosure cls ->
       local (over envContext (Context.cons arg)) $
-        eval (cls ^. valueClosureLambda . lambdaBody)
-    _ -> evalError "Can only apply functions." (Just fun) Nothing
+        eval (cls ^. valueClosureLambdaBody)
+    _ ->
+      throw $
+        EvalError
+          { _evalErrorMsg = "Can only apply functions.",
+            _evalErrorGebValue = (Just fun),
+            _evalErrorGebExpression = Nothing
+          }
 
 applyBinop ::
-  Members '[Reader Env, Error JuvixError] r =>
+  Members '[Reader Env, Error EvalError] r =>
   Binop ->
   Sem r GebValue
 applyBinop binop = do
@@ -211,15 +235,19 @@ applyBinop binop = do
                     | m1 == m2 -> return valueTrue
                     | otherwise -> return valueFalse
             | otherwise ->
-                evalError
-                  "Equality can only be applied to values of the same kind."
-                  (Just (lfPair m1 m2))
-                  (Just (MorphismBinop binop))
+                throw
+                  EvalError
+                    { _evalErrorMsg = "Equality can only be applied to values of the same kind.",
+                      _evalErrorGebValue = Just (lfPair m1 m2),
+                      _evalErrorGebExpression = (Just (MorphismBinop binop))
+                    }
       _ ->
-        evalError
-          "Canot apply operation"
-          (Just (lfPair m1 m2))
-          (Just (MorphismBinop binop))
+        throw
+          EvalError
+            { _evalErrorMsg = "Canot apply operation",
+              _evalErrorGebValue = Just (lfPair m1 m2),
+              _evalErrorGebExpression = Just (MorphismBinop binop)
+            }
 
 sameKind :: GebValue -> GebValue -> Bool
 sameKind l r = case (l, r) of
