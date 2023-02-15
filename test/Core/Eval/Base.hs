@@ -1,5 +1,6 @@
 module Core.Eval.Base where
 
+import Data.HashMap.Strict qualified as HashMap
 import Base
 import Data.Text.IO qualified as TIO
 import Juvix.Compiler.Core.Data.InfoTable
@@ -12,6 +13,37 @@ import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.FromSource
+
+coreEvalAssertion' ::
+  InfoTable ->
+  Path Abs File ->
+  Path Abs File ->
+  (String -> IO ()) ->
+  Assertion
+coreEvalAssertion' tab mainFile expectedFile step =
+  case (tab ^. infoMain) >>= ((tab ^. identContext) HashMap.!?) of
+    Just node -> do
+      withTempDir'
+        ( \dirPath -> do
+            let outputFile = dirPath <//> $(mkRelFile "out.out")
+            hout <- openFile (toFilePath outputFile) WriteMode
+            step "Evaluate"
+            r' <- doEval mainFile hout tab node
+            case r' of
+              Left err -> do
+                hClose hout
+                assertFailure (show (pretty err))
+              Right value -> do
+                unless
+                  (Info.member kNoDisplayInfo (getInfo value))
+                  (hPutStrLn hout (ppPrint value))
+                hClose hout
+                actualOutput <- TIO.readFile (toFilePath outputFile)
+                step "Compare expected and actual program output"
+                expected <- TIO.readFile (toFilePath expectedFile)
+                assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) actualOutput expected
+        )
+    Nothing -> assertFailure ("No main function registered in: " <> toFilePath mainFile)
 
 coreEvalAssertion ::
   Path Abs File ->
@@ -32,27 +64,7 @@ coreEvalAssertion mainFile expectedFile trans testTrans step = do
     Right (tabIni, Just node) -> do
       let tab = applyTransformations trans (setupMainFunction tabIni node)
       testTrans tab
-      let node' = fromJust $ tab ^. identContext . at (fromJust $ tab ^. infoMain)
-      withTempDir'
-        ( \dirPath -> do
-            let outputFile = dirPath <//> $(mkRelFile "out.out")
-            hout <- openFile (toFilePath outputFile) WriteMode
-            step "Evaluate"
-            r' <- doEval mainFile hout tab node'
-            case r' of
-              Left err -> do
-                hClose hout
-                assertFailure (show (pretty err))
-              Right value -> do
-                unless
-                  (Info.member kNoDisplayInfo (getInfo value))
-                  (hPutStrLn hout (ppPrint value))
-                hClose hout
-                actualOutput <- TIO.readFile (toFilePath outputFile)
-                step "Compare expected and actual program output"
-                expected <- TIO.readFile (toFilePath expectedFile)
-                assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) actualOutput expected
-        )
+      coreEvalAssertion' tab mainFile expectedFile step
 
 coreEvalErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
 coreEvalErrorAssertion mainFile step = do
