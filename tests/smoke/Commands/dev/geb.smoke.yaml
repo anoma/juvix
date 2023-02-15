@@ -45,7 +45,7 @@ tests:
       - repl
     stdin: ":type so1"
     stdout: 
-      contains: "No object inferred for a Geb object"
+      contains: "Inference only works on Geb morphisms"
     exit-status: 0
 
   - name: geb-infer-type-integer
