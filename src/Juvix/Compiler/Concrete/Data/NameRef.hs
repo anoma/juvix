@@ -3,6 +3,7 @@
 module Juvix.Compiler.Concrete.Data.NameRef where
 
 import Data.Kind qualified as GHC
+import Juvix.Compiler.Concrete.Data.Name qualified as C
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Prelude hiding (show)
 import Prelude (show)
@@ -102,3 +103,6 @@ instance (Ord (RefNameType s)) => Ord (ConstructorRef' s) where
 
 instance (Show (RefNameType s)) => Show (ConstructorRef' s) where
   show = show . (^. constructorRefName)
+
+concreteFunctionRef :: C.Name -> FunctionRef' 'S.NotConcrete -> FunctionRef
+concreteFunctionRef s = over functionRefName (set S.nameConcrete s)

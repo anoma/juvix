@@ -472,7 +472,7 @@ instance (SingI s) => PrettyCode (LetBlock s) where
   ppCode LetBlock {..} = do
     letClauses' <- blockIndent <$> ppBlock _letClauses
     letExpression' <- ppExpression _letExpression
-    return $ kwLet <+> letClauses' <+> kwIn <+> letExpression'
+    return $ kwLet <> letClauses' <> kwIn <+> letExpression'
 
 instance (SingI s) => PrettyCode (LetClause s) where
   ppCode c = case c of
@@ -495,13 +495,13 @@ instance (SingI s) => PrettyCode (CaseBranch s) where
   ppCode CaseBranch {..} = do
     pat <- ppPatternParensType _caseBranchPattern
     e <- ppExpression _caseBranchExpression
-    return $ kwPipe <+> pat <+> kwAssign <+> e
+    return $ kwPipe <+> pat <+> kwAssign <> oneLineOrNext e
 
 instance (SingI s) => PrettyCode (Case s) where
   ppCode Case {..} = do
     exp <- ppExpression _caseExpression
     branches <- indent' . vsepHard <$> mapM ppCode _caseBranches
-    return $ parensIf _caseParens (kwCase <+> exp <> line <> branches)
+    return $ parensIf _caseParens (kwCase <+> exp <> hardline <> branches)
 
 instance (SingI s) => PrettyCode (Lambda s) where
   ppCode Lambda {..} = do
@@ -794,6 +794,7 @@ instance PrettyCode SymbolEntry where
         EntryInductive _ -> annotateKind S.KNameInductive (pretty' Str.inductive)
         EntryFunction _ -> annotateKind S.KNameFunction (pretty' Str.function)
         EntryConstructor _ -> annotateKind S.KNameConstructor (pretty' Str.constructor)
+        EntryVariable _ -> annotateKind S.KNameLocal (pretty' Str.variable)
         EntryModule (ModuleRef' (isTop :&: _))
           | SModuleTop <- isTop -> annotateKind S.KNameTopModule (pretty' Str.topModule)
           | SModuleLocal <- isTop -> annotateKind S.KNameLocalModule (pretty' Str.localModule)

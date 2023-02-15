@@ -11,16 +11,14 @@ import Data.List.NonEmpty.Extra qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Concrete.Language qualified as L
 import Juvix.Compiler.Concrete.Pretty.Options (Options, fromGenericOptions)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 
 data MultipleDeclarations = MultipleDeclarations
-  { _multipleDeclEntry :: SymbolEntry,
-    _multipleDeclSymbol :: Text,
-    _multipleDeclSecond :: Interval
+  { _multipleDeclFirst :: Interval,
+    _multipleDeclSecond :: Symbol
   }
   deriving stock (Show)
 
@@ -28,20 +26,22 @@ instance ToGenericError MultipleDeclarations where
   genericError MultipleDeclarations {..} =
     return
       GenericError
-        { _genericErrorLoc = i1,
+        { _genericErrorLoc = i2,
           _genericErrorMessage = prettyError msg,
-          _genericErrorIntervals = [i1, _multipleDeclSecond]
+          _genericErrorIntervals = [i1, i2]
         }
     where
       i1 :: Interval
-      i1 = entryName _multipleDeclEntry ^. S.nameDefined
+      i1 = _multipleDeclFirst
+      i2 :: Interval
+      i2 = getLoc _multipleDeclSecond
       msg =
         "Multiple declarations of"
-          <+> ppSymbolT _multipleDeclSymbol
+          <+> pretty _multipleDeclSecond
             <> line
             <> "Declared at:"
-          <+> align (vsep lst)
-      lst = map pretty [L.symbolEntryToSName _multipleDeclEntry ^. S.nameDefined, _multipleDeclSecond]
+            <> line
+            <> itemize (map pretty [i1, i2])
 
 -- | megaparsec error while resolving infixities.
 newtype InfixError = InfixError

@@ -35,6 +35,11 @@ data Scope = Scope
     _scopeFixities :: HashMap Symbol OperatorSyntaxDef,
     _scopeSymbols :: HashMap Symbol SymbolInfo,
     _scopeTopModules :: HashMap TopModulePath (ModuleRef'' 'S.NotConcrete 'ModuleTop),
+    -- | Symbols that have been defined in the current scope level. Every symbol
+    -- should map to itself. This is needed because we may query it with a
+    -- symbol with a different location but we may want the location of the
+    -- original symbol
+    _scopeLocalSymbols :: HashMap Symbol S.Symbol,
     _scopeBindGroup :: HashMap Symbol LocalVariable,
     _scopeCompilationRules :: HashMap Symbol CompileInfo
   }
@@ -75,6 +80,7 @@ emptyScope absPath =
       _scopeFixities = mempty,
       _scopeSymbols = mempty,
       _scopeTopModules = mempty,
+      _scopeLocalSymbols = mempty,
       _scopeBindGroup = mempty,
       _scopeCompilationRules = mempty
     }

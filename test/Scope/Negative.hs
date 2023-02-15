@@ -261,5 +261,19 @@ scoperErrorTests =
       $(mkRelFile "DuplicateClause.juvix")
       $ \case
         ErrDuplicateFunctionClause {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "A function lacks a type signature"
+      $(mkRelDir ".")
+      $(mkRelFile "LacksTypeSig.juvix")
+      $ \case
+        ErrLacksTypeSig {} -> Nothing
+        _ -> wrongError,
+    NegTest
+      "A function inside a let lacks a type signature that is at the top level"
+      $(mkRelDir ".")
+      $(mkRelFile "LacksTypeSig2.juvix")
+      $ \case
+        ErrLacksTypeSig {} -> Nothing
         _ -> wrongError
   ]

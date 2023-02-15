@@ -1,0 +1,13 @@
+module LetShadow;
+  type Nat :=
+    | zero : Nat
+    | suc : Nat → Nat;
+
+  t : Nat;
+  t :=
+    case zero
+      | x :=
+        let
+          x : Nat := suc zero;
+        in x;
+end;
