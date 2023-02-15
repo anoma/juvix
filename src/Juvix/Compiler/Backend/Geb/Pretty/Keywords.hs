@@ -1,7 +1,6 @@
 module Juvix.Compiler.Backend.Geb.Pretty.Keywords where
 
 import Juvix.Compiler.Backend.Geb.Language
-import Juvix.Compiler.Backend.Geb.Pretty.Options
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Strings qualified as Str
 

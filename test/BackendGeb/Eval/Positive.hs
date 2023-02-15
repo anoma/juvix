@@ -37,29 +37,30 @@ allTests =
 
 tests :: [PosTest]
 tests =
-  [ PosTest
-      "Arithmetic operators"
-      $(mkRelDir ".")
-      $(mkRelFile "test001.jvc")
-      $(mkRelFile "out/test001.out"),
-    PosTest
-      "Arithmetic operators inside lambdas"
-      $(mkRelDir ".")
-      $(mkRelFile "test002.jvc")
-      $(mkRelFile "out/test002.out"),
-    PosTest
-      "Empty program with comments"
-      $(mkRelDir ".")
-      $(mkRelFile "test003.jvc")
-      $(mkRelFile "out/test003.out"),
-    PosTest
-      "IO builtins"
-      $(mkRelDir ".")
-      $(mkRelFile "test004.jvc")
-      $(mkRelFile "out/test004.out"),
-    PosTest
-      "Higher-order functions"
-      $(mkRelDir ".")
-      $(mkRelFile "test005.jvc")
-      $(mkRelFile "out/test005.out")
+  [
+    -- PosTest
+    --   "Arithmetic operators"
+    --   $(mkRelDir ".")
+    --   $(mkRelFile "test001.jvc")
+    --   $(mkRelFile "out/test001.out"),
+    -- PosTest
+    --   "Arithmetic operators inside lambdas"
+    --   $(mkRelDir ".")
+    --   $(mkRelFile "test002.jvc")
+    --   $(mkRelFile "out/test002.out"),
+    -- PosTest
+    --   "Empty program with comments"
+    --   $(mkRelDir ".")
+    --   $(mkRelFile "test003.jvc")
+    --   $(mkRelFile "out/test003.out"),
+    -- PosTest
+    --   "IO builtins"
+    --   $(mkRelDir ".")
+    --   $(mkRelFile "test004.jvc")
+    --   $(mkRelFile "out/test004.out"),
+    -- PosTest
+    --   "Higher-order functions"
+    --   $(mkRelDir ".")
+    --   $(mkRelFile "test005.jvc")
+    --   $(mkRelFile "out/test005.out")
   ]

@@ -22,6 +22,9 @@ EXAMPLE_WEBAPP_OUTPUT=_docs/examples/webapp
 WEBAPP_EXAMPLES=TicTacToe/Web/TicTacToe.juvix
 DEMO_EXAMPLE=examples/demo/Demo.juvix
 
+MAKEAUXFLAGS?=-s
+MAKE=make ${MAKEAUXFLAGS}
+
 ORGTOMDPRG ?=pandoc
 ORGOPTS=--from org --to markdown_strict -s -o $@
 
@@ -46,7 +49,7 @@ clean: clean-runtime
 
 .PHONY: clean-runtime
 clean-runtime: clean-juvix-build
-	@cd runtime && make clean
+	@cd runtime && ${MAKE} clean
 
 .PHONY: clean-juvix-build
 clean-juvix-build:
@@ -129,9 +132,6 @@ haddock :
 # ------------------------------------------------------------------------------
 # -- Codebase Health
 # ------------------------------------------------------------------------------
-
-MAKEAUXFLAGS?=-s
-MAKE=make ${MAKEAUXFLAGS}
 
 ORMOLU?=stack exec -- ormolu
 ORMOLUFILES = $(shell git ls-files '*.hs' '*.hs-boot' | grep -v '^contrib/')

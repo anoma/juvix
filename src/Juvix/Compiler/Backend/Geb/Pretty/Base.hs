@@ -9,7 +9,6 @@ import Juvix.Compiler.Backend.Geb.Language
 import Juvix.Compiler.Backend.Geb.Pretty.Keywords
 import Juvix.Compiler.Backend.Geb.Pretty.Options
 import Juvix.Data.CodeAnn
-import Juvix.Extra.Strings qualified as Str
 
 doc :: (HasAtomicity c, PrettyCode c) => Options -> c -> Doc Ann
 doc opts x =
