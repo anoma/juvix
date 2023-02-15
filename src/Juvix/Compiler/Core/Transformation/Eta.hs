@@ -8,6 +8,11 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
+substDrop :: [Node] -> [Node] -> [Node]
+substDrop args argtys = zipWith (\ty n -> substs (map (shift n) args) ty) (drop k argtys) [k..]
+  where
+    k = length args
+
 etaExpandBuiltins :: Node -> Node
 etaExpandBuiltins = umap go
   where
@@ -15,31 +20,31 @@ etaExpandBuiltins = umap go
     go n = case n of
       NBlt BuiltinApp {..}
         | builtinOpArgsNum _builtinAppOp > length _builtinAppArgs ->
-            etaExpand (builtinOpArgsNum _builtinAppOp - length _builtinAppArgs) n
+            etaExpand (substDrop _builtinAppArgs (builtinOpArgTypes _builtinAppOp)) n
       _ -> n
 
-etaExpandConstrs :: (Tag -> Int) -> Node -> Node
-etaExpandConstrs argsNum = umap go
+etaExpandConstrs :: (Tag -> [Type]) -> Node -> Node
+etaExpandConstrs getArgtys = umap go
   where
     go :: Node -> Node
     go n = case n of
       NCtr Constr {..}
-        | k > length _constrArgs ->
-            etaExpand (k - length _constrArgs) n
+        | length argtys > length _constrArgs ->
+            etaExpand (substDrop _constrArgs argtys) n
         where
-          k = argsNum _constrTag
+          argtys = getArgtys _constrTag
       _ -> n
 
-etaExpandTypeConstrs :: (Symbol -> Int) -> Node -> Node
-etaExpandTypeConstrs argsNum = umap go
+etaExpandTypeConstrs :: (Symbol -> [Type]) -> Node -> Node
+etaExpandTypeConstrs getArgtys = umap go
   where
     go :: Node -> Node
     go n = case n of
       NTyp TypeConstr {..}
-        | k > length _typeConstrArgs ->
-            etaExpand (k - length _typeConstrArgs) n
+        | length argtys > length _typeConstrArgs ->
+            etaExpand (substDrop _typeConstrArgs argtys) n
         where
-          k = argsNum _typeConstrSymbol
+          argtys = getArgtys _typeConstrSymbol
       _ -> n
 
 squashApps :: Node -> Node
@@ -57,22 +62,22 @@ squashApps = dmap go
 etaExpandApps :: InfoTable -> Node -> Node
 etaExpandApps tab =
   squashApps
-    . etaExpandTypeConstrs typeConstrArgsNum
-    . etaExpandConstrs constrArgsNum
+    . etaExpandTypeConstrs typeConstrArgtys
+    . etaExpandConstrs constrArgtys
     . etaExpandBuiltins
     . squashApps
   where
-    constrArgsNum :: Tag -> Int
-    constrArgsNum tag =
+    constrArgtys :: Tag -> [Type]
+    constrArgtys tag =
       case HashMap.lookup tag (tab ^. infoConstructors) of
-        Just ci -> ci ^. constructorArgsNum
-        Nothing -> 0
+        Just ci -> typeArgs (ci ^. constructorType)
+        Nothing -> []
 
-    typeConstrArgsNum :: Symbol -> Int
-    typeConstrArgsNum sym =
+    typeConstrArgtys :: Symbol -> [Type]
+    typeConstrArgtys sym =
       case HashMap.lookup sym (tab ^. infoInductives) of
-        Just ci -> length (ci ^. inductiveParams)
-        Nothing -> 0
+        Just ci -> map (^. paramKind) (ci ^. inductiveParams)
+        Nothing -> []
 
 etaExpansionApps :: InfoTable -> InfoTable
 etaExpansionApps tab = mapT (const (etaExpandApps tab)) tab

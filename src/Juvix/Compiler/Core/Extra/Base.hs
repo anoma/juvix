@@ -252,11 +252,6 @@ mkLambdaB = mkLambda mempty
 mkLambdasB :: [Binder] -> Node -> Node
 mkLambdasB is n = foldl' (flip mkLambdaB) n (reverse is)
 
-mkLambdasN :: Int -> Node -> Node
-mkLambdasN k
-  | k < 0 = impossible
-  | otherwise = mkLambdasB (replicate k emptyBinder)
-
 -- | \x\y b gives ([y, x], b)
 unfoldLambdasRev :: Node -> ([LambdaLhs], Node)
 unfoldLambdasRev = go []
