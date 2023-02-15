@@ -1,8 +1,8 @@
 module Compilation.Base where
 
 import Base
-import Core.Eval.Base
 import Core.Compile.Base
+import Core.Eval.Base
 import Juvix.Compiler.Builtins (iniState)
 import Juvix.Compiler.Core.Pipeline qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
