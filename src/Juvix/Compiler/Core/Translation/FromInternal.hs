@@ -714,14 +714,23 @@ goFunction ::
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader Internal.InfoTable, Reader IndexTable] r) =>
   ([Internal.FunctionParameter], Internal.Expression) ->
   Sem r Node
-goFunction (params, returnTypeExpr) = foldr f (goExpression returnTypeExpr) params
+goFunction (params, returnTypeExpr) = go params
   where
-    f :: Internal.FunctionParameter -> Sem r Node -> Sem r Node
-    f param acc = do
-      paramBinder <- Binder (maybe "?" (^. nameText) $ param ^. Internal.paramName) (fmap (^. nameLoc) $ param ^. Internal.paramName) <$> goExpression (param ^. Internal.paramType)
-      case param ^. Internal.paramName of
-        Nothing -> mkPi mempty paramBinder <$> acc
-        Just vn -> mkPi mempty paramBinder <$> localAddName vn acc
+    go :: [Internal.FunctionParameter] -> Sem r Node
+    go = \case
+      param : params' -> do
+        paramTy <- goExpression (param ^. Internal.paramType)
+        let paramBinder =
+              Binder
+                { _binderName = maybe "?" (^. nameText) $ param ^. Internal.paramName,
+                  _binderLocation = fmap (^. nameLoc) $ param ^. Internal.paramName,
+                  _binderType = paramTy
+                }
+        case param ^. Internal.paramName of
+          Nothing -> mkPi mempty paramBinder <$> local (over indexTableVarsNum (+ 1)) (go params')
+          Just vn -> mkPi mempty paramBinder <$> localAddName vn (go params')
+      [] ->
+        goExpression returnTypeExpr
 
 goSimpleLambda ::
   forall r.
